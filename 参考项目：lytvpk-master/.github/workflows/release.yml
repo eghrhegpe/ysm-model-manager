@@ -1,0 +1,85 @@
+name: Release Build
+
+# 触发条件：当你推送以 'v' 开头的 tag 时触发 (例如 v1.0.1)
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: windows-latest # 使用 Windows 环境构建
+    permissions:
+      contents: write # 需要写权限来创建 Release
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 获取完整历史以计算变更日志
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24" # 确保与你的开发环境一致
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.2
+
+      - name: Build Windows App
+        shell: bash
+        run: |
+          # 1. 获取 Tag 名称 (例如 v1.0.1)
+          TAG_NAME=${{ github.ref_name }}
+          # 2. 去掉 'v' 前缀 (变成 1.0.1)，如果你希望保留 v，可以去掉这行处理
+          VERSION=${TAG_NAME#v}
+
+          echo "Building version: $VERSION"
+
+          # 3. 运行 Wails 构建
+          # -ldflags "-X main.AppVersion=$VERSION" 会将版本号注入到 main.go 的 AppVersion 变量中
+          # -o 指定输出文件名为 "LytVPK MOD管理器.exe"
+          wails build -platform windows/amd64 -ldflags "-X main.AppVersion=$VERSION" -o "LytVPK MOD管理器.exe"
+
+      - name: Generate Changelog
+        id: changelog
+        shell: bash
+        run: |
+          # 尝试获取上一个 Tag (HEAD^ 表示当前 commit 的父节点，避免获取到当前 tag)
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found. Listing all commits."
+            MSG=$(git log --pretty=format:"- %s (%h)")
+          else
+            echo "Generating changelog from $PREV_TAG to HEAD"
+            MSG=$(git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)")
+          fi
+
+          # 输出到 GITHUB_OUTPUT
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Compress Artifact
+        run: |
+          # 进入构建输出目录
+          cd build/bin
+          # 将 exe 压缩为 zip (go-github-selfupdate 要求 zip 格式)
+          # 命名格式建议: 应用名_版本_系统_架构.zip
+          Compress-Archive -Path "LytVPK MOD管理器.exe" -DestinationPath "../../LytVPK-MOD-Manager_${{ github.ref_name }}_windows_amd64.zip"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: LytVPK-MOD-Manager_${{ github.ref_name }}_windows_amd64.zip
+          body: ${{ steps.changelog.outputs.body }}
+          generate_release_notes: false # 使用提交消息作为发布说明
+          draft: false
+          prerelease: false

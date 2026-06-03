@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Web Component — Toast</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #11111b;
+    color: #cdd6f4;
+    padding: 40px;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; color: #fff; }
+  .subtitle { color: #6c7086; font-size: 12px; margin-bottom: 24px; }
+  .btn {
+    padding: 8px 18px; border-radius: 6px; border: 1px solid rgba(255,255,255,.08);
+    background: #181825; color: #cdd6f4; cursor: pointer; font-size: 12px;
+    font-family: inherit; transition: background .12s;
+  }
+  .btn:hover { background: #2a2a42; }
+  .btn.pri { background: #7c83ff; color: #fff; border-color: #7c83ff; }
+  .btn.pri:hover { filter: brightness(1.12); }
+  .btn-row { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
+  .demo-box {
+    background: #181825; border: 1px solid rgba(255,255,255,.06);
+    border-radius: 10px; padding: 20px; margin-bottom: 30px;
+  }
+  .demo-box h2 { font-size: 14px; color: #a6adc8; margin-bottom: 12px; }
+  .usage { font-size: 11px; color: #6c7086; line-height: 1.8; }
+  .usage code { background: #24243e; padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<h1>🧩 <code>&lt;app-toast&gt;</code> 组件</h1>
+<div class="subtitle">Shadow DOM 隔离 · 全局唯一实例 · 支持撤销回调</div>
+
+<div class="btn-row">
+  <button class="btn pri" onclick="showSimple()">普通通知</button>
+  <button class="btn" onclick="showWithUndo()">带撤销通知</button>
+  <button class="btn" onclick="showDanger()">错误通知</button>
+  <button class="btn" onclick="showMultiple()">连续三条</button>
+</div>
+
+<div class="demo-box">
+  <h2>📖 用法</h2>
+  <div class="usage">
+    在 HTML 中放置 <code>&lt;app-toast&gt;&lt;/app-toast&gt;</code>（只需一个实例）<br>
+    JS 调用：<code>document.querySelector('app-toast').show('消息')</code><br>
+    带撤销：<code>.show('已删除', () =&gt; { /* 撤销逻辑 */ })</code><br>
+    自定义类型：<code>.show('消息', null, 4000, 'error')</code>
+  </div>
+</div>
+
+<app-toast></app-toast>
+
+<script>
+class AppToast extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+          z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+        }
+        .toast {
+          display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+          border-radius: 8px; background: #2a2a42; color: #cdd6f4; font-size: 12px;
+          box-shadow: 0 6px 20px rgba(0,0,0,.4); animation: slideUp .25s ease;
+          border: 1px solid rgba(255,255,255,.06); pointer-events: auto;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+        .toast.error { border-left: 3px solid #f38ba8; }
+        .toast.success { border-left: 3px solid #a6e3a1; }
+        .toast .msg { flex: 1; }
+        .toast .undo-btn { padding: 4px 10px; border-radius: 5px; border: none; background: #7c83ff33; color: #7c83ff; cursor: pointer; font-size: 11px; font-family: inherit; transition: background .12s; }
+        .toast .undo-btn:hover { background: #7c83ff55; }
+        .toast .close-btn { background: none; border: none; color: #6c7086; cursor: pointer; font-size: 14px; padding: 0 2px; }
+        .toast .close-btn:hover { color: #cdd6f4; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(20px); opacity: 0; } }
+      </style>
+      <div id="container" style="display:flex;flex-direction:column;gap:8px"></div>
+    `;
+  }
+  show(msg, undoCallback, duration = 4000, type = '') {
+    const c = this.shadowRoot.getElementById('container');
+    const t = document.createElement('div');
+    t.className = 'toast' + (type ? ' ' + type : '');
+    t.innerHTML = `<span class="msg">${msg}</span>${undoCallback ? '<button class="undo-btn">↩ 撤销</button>' : ''}<button class="close-btn">✕</button>`;
+    c.appendChild(t);
+    if (undoCallback) {
+      t.querySelector('.undo-btn').onclick = () => { undoCallback(); this._remove(t); this.show('✅ 已撤销', null, 2000, 'success'); };
+    }
+    t.querySelector('.close-btn').onclick = () => this._remove(t);
+    t._timer = setTimeout(() => this._remove(t), duration);
+  }
+  _remove(t) {
+    if (t._timer) clearTimeout(t._timer);
+    if (!t.parentNode) return;
+    t.style.animation = 'slideOut .2s ease forwards';
+    setTimeout(() => t.remove(), 200);
+  }
+}
+customElements.define('app-toast', AppToast);
+
+const $t = () => document.querySelector('app-toast');
+function showSimple() { $t().show('✅ 已安装 steve_skin.ysm'); }
+function showWithUndo() { $t().show('🗑️ 已删除 dragon_armor.zip', () => {}); }
+function showDanger() { $t().show('❌ 安装失败：空间不足', null, 5000, 'error'); }
+function showMultiple() {
+  const t = $t();
+  t.show('📥 正在安装第 1/3...');
+  setTimeout(() => t.show('📥 正在安装第 2/3...'), 600);
+  setTimeout(() => t.show('✅ 全部安装完成 (3/3)', null, 5000, 'success'), 1200);
+}
+</script>
+
+</body>
+</html>

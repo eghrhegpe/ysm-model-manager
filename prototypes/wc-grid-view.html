@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Web Component — GridView</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #11111b; color: #cdd6f4; padding: 40px;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; color: #fff; }
+  .subtitle { color: #6c7086; font-size: 12px; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<h1>🧩 <code>&lt;grid-view&gt;</code> + <code>&lt;list-view&gt;</code> 组件</h1>
+<div class="subtitle">Shadow DOM 隔离 · 视图切换 · 搜索筛选 · 状态指示</div>
+
+<model-browser></model-browser>
+
+<div style="margin-top:24px;font-size:11px;color:#6c7086;line-height:1.8;max-width:800px">
+  <strong>💡 特性</strong><br>
+  · <code>&lt;model-browser&gt;</code> 组合了视图切换 + 搜索框 + 网格/列表两种模式<br>
+  · 网格模式：卡片缩略图区 + 左上角状态点 + 悬停操作按钮<br>
+  · 列表模式：紧凑行布局 + 状态色点<br>
+  · 搜索实时筛选，网格/列表同步更新<br>
+  · 全部在 Shadow DOM 内，不污染外部
+</div>
+
+<script>
+// ===== <model-browser> 主组件 =====
+class ModelBrowser extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this._view = 'grid'; // grid | list
+    this._filter = '';
+    this._models = [
+      { name: "steve_skin.ysm", size: "1.2 MB", status: "synced", banned: false },
+      { name: "alex_deluxe.ysm", size: "2.4 MB", status: "synced", banned: false },
+      { name: "dragon_armor.zip", size: "3.8 MB", status: "missing", banned: false },
+      { name: "custom_hat.ysm", size: "0.8 MB", status: "extra", banned: false },
+      { name: "neon_sword.ysm", size: "1.5 MB", status: "synced", banned: false },
+      { name: "photon_body.ysm", size: "2.1 MB", status: "synced", banned: false },
+      { name: "old_model.ysm", size: "0.9 MB", status: "synced", banned: true },
+      { name: "magic_staff.zip", size: "4.2 MB", status: "missing", banned: false },
+      { name: "steve_2d.ysm", size: "0.3 MB", status: "extra", banned: false },
+      { name: "ender_dragon.ysm", size: "6.7 MB", status: "synced", banned: false },
+    ];
+    this._render();
+  }
+
+  _render() {
+    const statusDot = { synced: '#a6e3a1', missing: '#f38ba8', extra: '#f9a826' };
+    const filtered = this._models.filter(m =>
+      !this._filter || m.name.toLowerCase().includes(this._filter.toLowerCase())
+    );
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { display: block; max-width: 800px; }
+        .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .toggle-group { display: flex; border: 1px solid rgba(255,255,255,.08); border-radius: 6px; overflow: hidden; }
+        .toggle-group button { padding: 6px 14px; border: none; background: #181825; color: #6c7086; cursor: pointer; font-size: 12px; font-family: inherit; transition: all .12s; }
+        .toggle-group button.active { background: #7c83ff22; color: #7c83ff; }
+        .toggle-group button:hover { background: #2a2a42; }
+        .toggle-group button.active:hover { background: #7c83ff33; }
+        .search-box { flex: 1; max-width: 240px; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,.08); background: #181825; color: #cdd6f4; font-size: 12px; outline: none; font-family: inherit; }
+        .search-box::placeholder { color: #6c7086; }
+
+        /* 网格 */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .grid .item { background: #181825; border-radius: 10px; border: 1px solid rgba(255,255,255,.06); overflow: hidden; position: relative; cursor: pointer; transition: border-color .15s, transform .12s; }
+        .grid .item:hover { border-color: #7c83ff55; transform: translateY(-2px); }
+        .grid .item.ban { opacity: .55; }
+        .grid .item .thumb { height: 100px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e1e32, #24243e); font-size: 36px; user-select: none; }
+        .grid .item .info { padding: 6px 10px; }
+        .grid .item .info .name { font-size: 11px; font-weight: 500; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .grid .item .info .meta { font-size: 10px; color: #6c7086; }
+        .grid .item .dot { position: absolute; top: 6px; left: 6px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #181825; }
+        .grid .item .ha { position: absolute; top: 0; right: 0; display: flex; gap: 2px; padding: 4px; opacity: 0; transition: opacity .12s; }
+        .grid .item:hover .ha { opacity: 1; }
+        .grid .item .ha button { width: 24px; height: 24px; border: none; border-radius: 4px; background: rgba(0,0,0,.6); color: #cdd6f4; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; transition: background .12s; }
+        .grid .item .ha button:hover { background: rgba(124,131,255,.7); }
+
+        /* 列表 */
+        .list { display: flex; flex-direction: column; gap: 2px; }
+        .list .item { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 6px; font-size: 12px; transition: background .12s; }
+        .list .item:hover { background: #2a2a42; }
+        .list .item.ban { opacity: .55; }
+        .list .item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .list .item .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .list .item .meta { font-size: 10px; color: #6c7086; white-space: nowrap; }
+        .status-bar { margin-top: 8px; font-size: 10px; color: #6c7086; }
+      </style>
+
+      <div class="toolbar">
+        <div class="toggle-group">
+          <button class="active" data-view="grid">▦ 网格</button>
+          <button data-view="list">☰ 列表</button>
+        </div>
+        <input class="search-box" placeholder="🔍 筛选模型..." autocomplete="off" autocapitalize="off">
+      </div>
+
+      <div class="${this._view === 'grid' ? 'grid' : 'list'}">
+        ${filtered.map(m => {
+          if (this._view === 'grid') {
+            return `
+              <div class="item${m.banned ? ' ban' : ''}">
+                <span class="dot" style="background:${m.banned ? '#6c7086' : statusDot[m.status]}"></span>
+                <div class="ha"><button title="${m.banned ? '启用' : '禁用'}">${m.banned ? '✅' : '⛔'}</button><button title="打开文件夹">📂</button></div>
+                <div class="thumb">🧊</div>
+                <div class="info">
+                  <div class="name">${m.name}</div>
+                  <div class="meta">${m.size}</div>
+                </div>
+              </div>
+            `;
+          } else {
+            const dotColor = m.banned ? '#6c7086' : statusDot[m.status];
+            return `
+              <div class="item${m.banned ? ' ban' : ''}">
+                <span class="dot" style="background:${dotColor}"></span>
+                <span class="name">${m.name}</span>
+                <span class="meta">${m.size}</span>
+              </div>
+            `;
+          }
+        }).join('')}
+      </div>
+      <div class="status-bar">共 ${filtered.length} 个模型${this._filter ? '（已筛选）' : ''}</div>
+    `;
+
+    // 视图切换
+    this.shadowRoot.querySelectorAll('.toggle-group button').forEach(btn => {
+      btn.onclick = () => {
+        this.shadowRoot.querySelectorAll('.toggle-group button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this._view = btn.dataset.view;
+        this._render();
+      };
+    });
+
+    // 搜索
+    this.shadowRoot.querySelector('.search-box').oninput = (e) => {
+      this._filter = e.target.value;
+      this._render();
+    };
+  }
+}
+customElements.define('model-browser', ModelBrowser);
+</script>
+
+</body>
+</html>

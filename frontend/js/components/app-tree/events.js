@@ -1,5 +1,12 @@
 // ===== 树事件层（只负责绑定事件，不生成 HTML） =====
 import { flashBtn } from "./utils.js";
+import {
+  ToggleModelEnable,
+  ScanModelEntries,
+  IsFileBanned,
+  OpenFolder,
+  LoadAppConfig,
+} from "../../../wailsjs/go/main/App.js";
 
 // 绑定树节点事件（每次 _renderTree 后调用）
 export function bindTreeEvents(container, vm) {
@@ -18,9 +25,9 @@ export function bindTreeEvents(container, vm) {
     };
   });
 
-  // 复选框
+  // 复选框 → 直接调 ToggleModelEnable
   container.querySelectorAll(".ck").forEach((el) => {
-    el.onclick = (ev) => {
+    el.onclick = async (ev) => {
       ev.stopPropagation();
       const wasOn = el.classList.contains("on");
       el.classList.toggle("on");
@@ -28,31 +35,52 @@ export function bindTreeEvents(container, vm) {
       const fl = el.closest(".fl");
       if (fl) fl.classList.add("flash");
       setTimeout(() => fl?.classList.remove("flash"), 400);
-      const path = el.dataset.path;
-      const fullPath = el.dataset.fullpath || path;
-      bus.emit("entry:toggle", {
-        path: fullPath,
-        relPath: path,
-        enabled: !wasOn,
+      const fullPath = el.dataset.fullpath || el.dataset.path;
+      try {
+        await ToggleModelEnable(fullPath);
+        // 重新读取条目状态（禁用/启用后 .ban 后缀变了）
+        await vm._load();
+        vm._renderTree();
+        bus.emit("stats:refresh");
+      } catch (e) {
+        // 恢复勾选状态
+        el.classList.toggle("on");
+        el.textContent = el.classList.contains("on") ? "✓" : "";
+      }
+    };
+  });
+
+  // 右键菜单 — 文件夹
+  container.querySelectorAll(".fh").forEach((el) => {
+    el.oncontextmenu = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      bus.emit("ctx:show", {
+        x: e.clientX,
+        y: e.clientY,
+        type: "dir",
+        dir: el.dataset.dir,
       });
     };
   });
 
-  // 右键菜单
+  // 右键菜单 — 文件
   container.querySelectorAll(".fl").forEach((el) => {
     el.oncontextmenu = (e) => {
       e.preventDefault();
-      const nm =
-        el.querySelector(".nm")?.textContent?.replace(/^\S+\s/, "") || "";
+      e.stopPropagation();
       const banned = !el.querySelector(".ck")?.classList.contains("on");
       const fullPath = el.dataset.fullpath || el.dataset.path;
+      // 获取文件名
+      const nameEl = el.querySelector(".nm");
+      const name = nameEl?.textContent?.replace(/^\S+\s/, "") || "";
       bus.emit("ctx:show", {
         x: e.clientX,
         y: e.clientY,
+        type: "file",
         path: fullPath,
-        relPath: el.dataset.path,
-        name: nm,
         banned,
+        name,
       });
     };
   });
@@ -92,5 +120,7 @@ export function bindToolbarEvents(root, vm) {
     r();
   });
 
-  $("btn-st")?.addEventListener("click", () => flashBtn($("btn-st")));
+  $("btn-st")?.addEventListener("click", () => {
+    bus.emit("sync:toggle-status");
+  });
 }

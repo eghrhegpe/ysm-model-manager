@@ -159,3 +159,38 @@ export namespace types {
 
 }
 
+export namespace ysm {
+	
+	export class YSMModelMeta {
+	    name: string;
+	    author: string;
+	    version: string;
+	    bones: number;
+	    textures: number;
+	    animations: number;
+	    vertices: number;
+	    faces: number;
+	    hasError: boolean;
+	    errorMsg?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new YSMModelMeta(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.author = source["author"];
+	        this.version = source["version"];
+	        this.bones = source["bones"];
+	        this.textures = source["textures"];
+	        this.animations = source["animations"];
+	        this.vertices = source["vertices"];
+	        this.faces = source["faces"];
+	        this.hasError = source["hasError"];
+	        this.errorMsg = source["errorMsg"];
+	    }
+	}
+
+}
+

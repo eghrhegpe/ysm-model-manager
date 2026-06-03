@@ -20,7 +20,7 @@ ysm-model-manager/
 │   │   │   └── icon.js     ← 文件图标映射
 │   │   └── components/     ← 所有 Web Components
 │   │       ├── app-tree/        ✅ 已拆（含 loader.js 对接 Go）
-│   │       ├── app-sidebar/     ✅ 已拆
+│   │       ├── app-sidebar/     ✅ 已拆（含 loader.js 对接 Go）
 │   │       ├── app-preview/     ✅ 已拆
 │   │       ├── app-content/     ✅ 已拆
 │   │       ├── app-toast.js     ✅ 精简

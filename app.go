@@ -362,6 +362,11 @@ func (a *App) IsFileBanned(path string) bool {
 	return strings.HasSuffix(strings.ToLower(path), ".ban")
 }
 
+// ========== YSM 模型解析 ==========
+func (a *App) AnalyzeYSMModel(path string) ysm.YSMModelMeta {
+	return ysm.AnalyzeYSMModel(path)
+}
+
 // ========== 安装 ==========
 func (a *App) InstallModelFile(src, mcRoot string) (string, error) {
 	return installer.InstallToGlobal(src, mcRoot)

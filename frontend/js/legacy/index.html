@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>YSM 模型管理器</title>
+<link rel="stylesheet" href="./css/variables.css">
+<link rel="stylesheet" href="./css/layout.css">
+<link rel="stylesheet" href="./css/components.css">
+<link rel="stylesheet" href="./css/scrollbar.css">
+<link rel="stylesheet" href="./style.css">
+<style>
+/* 全局禁用输入框自动大写 */
+input[type="text"], input[type="search"], input[type="checkbox"] {
+  -webkit-autocapitalize: none;
+  autocapitalize: off;
+  autocorrect: off;
+}
+</style>
+</head>
+<body>
+<div id="root">
+  <!--# 模块插槽 — 由 loader.js 异步加载各界面模板 #-->
+  <div id="slot-topbar"></div>
+  <div id="slot-sidebar"></div>
+  <div id="slot-main"></div>
+  <div id="slot-preview"></div>
+</div>
+<script src="./js/modules/loader.js?v=20250602a"></script>
+<script src="./js/lib/parse.js?v=20250602a"></script>
+<script src="./js/lib/state.js?v=20250602a"></script>
+<script src="./js/lib/tree.js?v=20250602a"></script>
+<script src="./js/dialogs/summary.js?v=20250602a"></script>
+<script src="./js/dialogs/confirm.js?v=20250602a"></script>
+<script src="./js/dialogs/logs.js?v=20250602a"></script>
+<script src="./js/dialogs/recycle.js?v=20250602a"></script>
+<script src="./js/dialogs/settings.js?v=20250602a"></script>
+<script src="./js/ui/cm-utils.js?v=20250602a"></script>
+<script src="./js/ui/cm-tree.js?v=20250602a"></script>
+<script src="./js/ui/cm-version.js?v=20250602a"></script>
+<script src="./js/ui/contextmenu.js?v=20250602a"></script>
+<script src="./js/ui/drop.js?v=20250602a"></script>
+<script src="./js/ui/toggle.js?v=20250602a"></script>
+<script src="./js/core/theme.js?v=20250602a"></script>
+<script src="./js/core/directories.js?v=20250602a"></script>
+<script src="./js/versions/data.js?v=20250602a"></script>
+<script src="./js/versions/stats.js?v=20250602a"></script>
+<script src="./js/versions/renderer.js?v=20250602a"></script>
+<script src="./js/versions/events.js?v=20250602a"></script>
+<script src="./js/versions/ops.js?v=20250602a"></script>
+<script src="./js/versions/versions.js?v=20250602a"></script>
+<script src="./js/sync.js?v=20250602a"></script>
+<script src="./js/core/lifecycle.js?v=20250602a"></script>
+<script src="./js/core/buttons.js?v=20250602a"></script>
+</body>
+</html>

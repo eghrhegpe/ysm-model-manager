@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>YSM 模型管理器</title>
+    <link rel="stylesheet" href="css/variables.css" />
+    <script src="js/bus.js"></script>
+    <script src="js/components/app-toast.js"></script>
+  </head>
+  <body>
+    <app-header></app-header>
+    <div id="main-layout">
+      <app-sidebar></app-sidebar>
+      <app-tree></app-tree>
+      <app-preview></app-preview>
+    </div>
+    <app-toast></app-toast>
+    <context-menu></context-menu>
+    <script>
+      document.addEventListener("DOMContentLoaded", () =>
+        bus.emit("toast:show", {
+          msg: "✅ 启动成功",
+          duration: 3000,
+          type: "success",
+        }),
+      );
+    </script>
+  </body>
+</html>

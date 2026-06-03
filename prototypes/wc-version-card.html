@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Web Component — VersionCard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #11111b; color: #cdd6f4; padding: 40px;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; color: #fff; }
+  .subtitle { color: #6c7086; font-size: 12px; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<h1>🧩 <code>&lt;version-card&gt;</code> 组件</h1>
+<div class="subtitle">Shadow DOM 隔离 · 展开/折叠 · 内部搜索 · 区块分类</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:800px">
+  <version-card
+    name="📦 我的整合包"
+    synced="3"
+    missing="1"
+    extra="2"
+    models='[
+      {"name":"steve_skin.ysm","status":"synced","size":"1.2 MB"},
+      {"name":"alex_deluxe.ysm","status":"synced","size":"2.4 MB"},
+      {"name":"dragon_armor.zip","status":"missing","size":"3.8 MB"},
+      {"name":"custom_hat.ysm","status":"extra","size":"0.8 MB"},
+      {"name":"neon_sword.ysm","status":"synced","size":"1.5 MB"},
+      {"name":"old_hat.ysm","status":"extra","size":"0.3 MB"}
+    ]'>
+  </version-card>
+
+  <version-card
+    name="📦 光影测试包"
+    synced="1"
+    missing="2"
+    extra="0"
+    models='[
+      {"name":"photon.ysm","status":"synced","size":"4.1 MB"},
+      {"name":"shader_core.zip","status":"missing","size":"2.2 MB"},
+      {"name":"bloom_fx.ysm","status":"missing","size":"1.7 MB"}
+    ]'>
+  </version-card>
+</div>
+
+<div style="margin-top:24px;font-size:11px;color:#6c7086;line-height:1.8;max-width:800px">
+  <strong>💡 特性</strong><br>
+  · 属性 <code>name</code>、<code>synced</code>、<code>missing</code>、<code>extra</code> 控制头部<br>
+  · 属性 <code>models</code>（JSON 字符串）传入模型列表<br>
+  · 头部点击展开/折叠，带动画<br>
+  · 卡片内搜索框可实时筛选模型<br>
+  · 模型按状态自动分区块：✅ 已同步 / ⬇️ 缺失 / 📤 额外<br>
+  · 滑出悬停操作按钮（同 wc-toast）<br>
+  · Shadow DOM 隔离，不污染外部样式
+</div>
+
+<app-toast></app-toast>
+
+<script>
+// ===== <app-toast>（同上，内联避免引用依赖）=====
+class AppToast extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+        .toast { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 8px; background: #2a2a42; color: #cdd6f4; font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.4); animation: slideUp .25s ease; border: 1px solid rgba(255,255,255,.06); pointer-events: auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+        .toast .msg { flex: 1; }
+        .toast .undo-btn { padding: 4px 10px; border-radius: 5px; border: none; background: #7c83ff33; color: #7c83ff; cursor: pointer; font-size: 11px; font-family: inherit; }
+        .toast .undo-btn:hover { background: #7c83ff55; }
+        .toast .close-btn { background: none; border: none; color: #6c7086; cursor: pointer; font-size: 14px; padding: 0 2px; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(20px); opacity: 0; } }
+      </style>
+      <div id="c" style="display:flex;flex-direction:column;gap:8px"></div>
+    `;
+  }
+  show(msg, undo, dur = 4000, typ = '') {
+    const c = this.shadowRoot.getElementById('c');
+    const t = document.createElement('div'); t.className = 'toast' + (typ ? ' ' + typ : '');
+    t.innerHTML = `<span class="msg">${msg}</span>${undo ? '<button class="undo-btn">↩ 撤销</button>' : ''}<button class="close-btn">✕</button>`;
+    c.appendChild(t);
+    if (undo) t.querySelector('.undo-btn').onclick = () => { undo(); this._remove(t); this.show('✅ 已撤销', null, 2000); };
+    t.querySelector('.close-btn').onclick = () => this._remove(t);
+    t._timer = setTimeout(() => this._remove(t), dur);
+  }
+  _remove(t) { if (t._timer) clearTimeout(t._timer); if (!t.parentNode) return; t.style.animation = 'slideOut .2s ease forwards'; setTimeout(() => t.remove(), 200); }
+}
+customElements.define('app-toast', AppToast);
+
+// ===== <version-card> =====
+class VersionCard extends HTMLElement {
+  static get observedAttributes() { return ['name','synced','missing','extra','models']; }
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this._open = false;
+    this._models = [];
+    this._filter = '';
+  }
+
+  connectedCallback() {
+    this._parseModels();
+    this._render();
+  }
+
+  attributeChangedCallback() {
+    if (this.shadowRoot && this.isConnected) {
+      this._parseModels();
+      this._render();
+    }
+  }
+
+  _parseModels() {
+    try {
+      this._models = JSON.parse(this.getAttribute('models') || '[]');
+    } catch(e) { this._models = []; }
+  }
+
+  _render() {
+    const name = this.getAttribute('name') || '未命名';
+    const synced = this.getAttribute('synced') || '0';
+    const missing = this.getAttribute('missing') || '0';
+    const extra = this.getAttribute('extra') || '0';
+
+    const statusColors = { synced: '#a6e3a1', missing: '#f38ba8', extra: '#f9a826' };
+    const statusLabels = { synced: '✅ 已同步', missing: '⬇️ 缺失', extra: '📤 额外' };
+
+    // 按状态分组 + 筛选
+    const groups = { synced: [], missing: [], extra: [] };
+    this._models.forEach(m => {
+      if (!this._filter || m.name.toLowerCase().includes(this._filter.toLowerCase())) {
+        if (groups[m.status]) groups[m.status].push(m);
+      }
+    });
+
+    const order = ['synced','missing','extra'];
+    const sections = order.map(st => {
+      const items = groups[st];
+      if (items.length === 0) return '';
+      return `
+        <div class="sec">
+          <div class="sec-title">${statusLabels[st]} (${items.length})</div>
+          ${items.map(m => `
+            <div class="row">
+              <span class="dot" style="background:${statusColors[st]}"></span>
+              <span class="rn">${m.name}</span>
+              <span class="sz">${m.size}</span>
+              <div class="hover-actions">
+                <button class="ha-btn" data-action="toggle" title="启用/禁用">⛔</button>
+                <button class="ha-btn" data-action="folder" title="打开文件夹">📂</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }).join('');
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { display: flex; flex-direction: column; background: #181825; border-radius: 10px; border: 1px solid rgba(255,255,255,.06); overflow: hidden; }
+        .header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; cursor: pointer; user-select: none; transition: background .12s; }
+        .header:hover { background: #2a2a42; }
+        .header .arrow { font-size: 8px; color: #6c7086; transition: transform .15s; width: 12px; }
+        .header .arrow.open { transform: rotate(90deg); }
+        .header .name { flex: 1; font-size: 13px; font-weight: 600; color: #fff; }
+        .header .stats { display: flex; gap: 6px; font-size: 10px; }
+        .header .stats span { padding: 1px 6px; border-radius: 4px; }
+        .stat-synced { background: #a6e3a122; color: #a6e3a1; }
+        .stat-missing { background: #f38ba822; color: #f38ba8; }
+        .stat-extra  { background: #f9a82622; color: #f9a826; }
+        .body { display: none; }
+        .body.open { display: block; animation: fadeIn .15s ease; }
+        .body-inner { padding: 2px 10px 8px; }
+        .search-bar { width: 100%; padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,.08); background: #11111b; color: #cdd6f4; font-size: 11px; outline: none; font-family: inherit; margin-bottom: 4px; }
+        .search-bar::placeholder { color: #6c7086; }
+        .sec { margin-top: 2px; }
+        .sec-title { font-size: 10px; color: #6c7086; padding: 5px 4px 2px; text-transform: uppercase; letter-spacing: .5px; }
+        .row { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 4px; font-size: 11px; position: relative; transition: background .12s; }
+        .row:hover { background: #2a2a42; }
+        .row .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .row .rn { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .row .sz { font-size: 10px; color: #6c7086; white-space: nowrap; }
+        .row .hover-actions { position: absolute; right: 4px; display: flex; gap: 2px; opacity: 0; pointer-events: none; transition: opacity .12s; }
+        .row:hover .hover-actions { opacity: 1; pointer-events: auto; }
+        .ha-btn { width: 22px; height: 22px; border: none; border-radius: 4px; background: #181825; color: #cdd6f4; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; transition: background .12s; }
+        .ha-btn:hover { background: #7c83ff33; color: #7c83ff; }
+        @keyframes fadeIn { from { opacity: .5; } to { opacity: 1; } }
+      </style>
+      <div class="header" id="header">
+        <span class="arrow" id="arrow">▶</span>
+        <span class="name">${name}</span>
+        <div class="stats">
+          <span class="stat-synced">✅ ${synced}</span>
+          <span class="stat-missing">⬇️ ${missing}</span>
+          <span class="stat-extra">📤 ${extra}</span>
+        </div>
+      </div>
+      <div class="body" id="body">
+        <div class="body-inner">
+          <input class="search-bar" id="search" placeholder="🔍 筛选模型..." autocomplete="off" autocapitalize="off">
+          ${sections}
+        </div>
+      </div>
+    `;
+
+    // 事件绑定
+    this.shadowRoot.getElementById('header').onclick = () => this._toggle();
+    this.shadowRoot.getElementById('search').oninput = (e) => {
+      this._filter = e.target.value;
+      this._render();
+    };
+
+    // 悬停操作按钮绑定（示例：显示 Toast）
+    this.shadowRoot.querySelectorAll('.ha-btn').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const row = btn.closest('.row');
+        const name = row ? row.querySelector('.rn').textContent : '';
+        const toast = document.querySelector('app-toast');
+        if (btn.dataset.action === 'toggle') {
+          if (toast) toast.show('⛔ 已禁用：' + name, () => toast.show('✅ 已启用：' + name));
+        } else if (btn.dataset.action === 'folder') {
+          if (toast) toast.show('📂 已打开：' + name);
+        }
+      };
+    });
+  }
+
+  _toggle() {
+    this._open = !this._open;
+    const body = this.shadowRoot.getElementById('body');
+    const arrow = this.shadowRoot.getElementById('arrow');
+    body.classList.toggle('open', this._open);
+    arrow.classList.toggle('open', this._open);
+  }
+}
+customElements.define('version-card', VersionCard);
+</script>
+
+</body>
+</html>

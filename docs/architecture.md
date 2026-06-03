@@ -1,82 +1,74 @@
-# 代码结构
+# YSM 模型管理器 — 前端架构（新架构）
 
-> 带 `*` 的是 Wails 构建工具/缓存自动生成的，**不要手动编辑**。
-> 所有手写源码都在 `frontend/`、`go/`、`app.go` 和配置文件里。
+## 核心原则
+
+**每个组件目录 = 1 个标签 + 1 个目录 + 若干文件，每文件 ≤ 80 行。**
 
 ```
-ysm-model-manager/
-├── app.go                     ← Go 后端主文件（Wails App struct + 所有 Binding）
-├── main.go                    ← Go 入口
-├── wails.json                 ← Wails 项目配置 + Binding 注册列表
-├── go.mod / go.sum            ← Go 模块依赖
-│
-├── go/                        ← Go 工具包
-│   ├── installer/             ← 安装/复制/链接逻辑
-│   ├── logs/                  ← 导入日志
-│   ├── recycle/               ← 回收站操作
-│   ├── sync/                  ← 同步状态
-│   ├── types/                 ← 共享数据类型
-│   └── ysm/                   ← YSM 模组检测
-│
-├── frontend/                  ← ★ 前端手写源码目录
-│   ├── index.html             ← 主页面 HTML
-│   ├── style.css              ← 全局样式覆盖
-│   ├── css/
-│   │   ├── variables.css      ← CSS 变量（主题色/尺寸）
-│   │   ├── layout.css         ← 三栏布局
-│   │   ├── components.css     ← 组件样式（树/卡片/按钮/搜索）
-│   │   └── scrollbar.css      ← 滚动条样式
-│   ├── js/
-│   │   ├── lib/
-│   │   │   ├── parse.js       ← esc / fmt / parseModelName / isBannedEntry / safeCall
-│   │   │   ├── state.js       ← 全局变量 + DOM 引用 + localStorage 工具
-│   │   │   └── tree.js        ← buildTree 仓库树渲染（含复选框 启用/禁用）
-│   │   ├── core/
-│   │   │   ├── theme.js       ← 主题切换 + initTheme
-│   │   │   ├── directories.js ← 目录选择 + saveConfig
-│   │   │   ├── lifecycle.js   ← loadAll / autoDetect / updateInstallBtn
-│   │   │   ├── buttons.js     ← 按钮事件绑定
-│   │   │   └── sync.js        ← doSyncAll / doSyncMissing / doDeduplicate
-│   │   ├── ui/
-│   │   │   ├── cm-utils.js    ← createMenu / renderMenuItems
-│   │   │   ├── cm-tree.js     ← 仓库树右键菜单（含 启用/禁用）
-│   │   │   ├── cm-version.js  ← 整合包右键菜单（卸载/上传/去重）
-│   │   │   ├── contextmenu.js ← 右键入口
-│   │   │   ├── drop.js        ← 拖拽导入 + 树内移动
-│   │   │   └── toggle.js      ← 侧栏/预览折叠
-│   │   ├── dialogs/
-│   │   │   ├── confirm.js     ← showConfirm / showToast
-│   │   │   ├── logs.js        ← openLogDialog
-│   │   │   ├── recycle.js     ← openRecycleDialog
-│   │   │   ├── settings.js    ← openSettingsDialog
-│   │   │   └── summary.js     ← showSummaryDialog
-│   │   └── versions/
-│   │       ├── data.js        ← filterInstances / sortInstances / calcVersionCounts
-│   │       ├── stats.js       ← updateVersionStats
-│   │       ├── renderer.js    ← renderVersionCard / createSection
-│   │       ├── events.js      ← bindVersionEvents / toggleVersionCard
-│   │       ├── ops.js         ← handleInstall / handleSyncBack
-│   │       └── versions.js    ← renderVersions / refreshAll
-│   └── wailsjs/               ← * Wails 自动生成的 JS Binding
-│       └── go/main/
-│           ├── App.d.ts
-│           └── App.js
-│
-├── html/                      ← * Wails 构建产物（不要编辑）
-│   ├── index.html             ← * 构建后的合并 HTML
-│   └── assets/
-│       ├── index.f4fc0296.css ← * 合并/压缩后的 CSS
-│       └── index.c9e23f9d.css ← * 旧版压缩 CSS
-│
-├── build/                     ← * Wails 构建输出
-│   └── bin/                   ← * 编译后的 EXE
-│
-├── docs/                      ← 文档
-│   ├── intro.md               ← 项目简介 + 已完成功能
-│   ├── architecture.md        ← 代码结构
-│   ├── roadmap.md             ← 待实现 + 路线图
-│   └── dev-notes.md           ← 开发笔记 + 已知问题
-│
-├── README.md                  ← 项目入口导航
-└── ysm_config.json            ← * 运行时生成的配置文件
+app-tree/
+├── index.js       # 生命周期编排（constructor → shadow → connected→disconnected）
+├── tpl.js         # 布局级 HTML 模板（纯字符串，不做事件绑定）
+├── row-tpl.js     # 节点级 HTML 模板（文件行/文件夹行等）
+├── data.js        # 数据逻辑（纯函数，不碰 DOM，不写 this.shadowRoot）
+├── render.js      # 渲染逻辑（输入数据 → 输出 HTML 字符串）
+├── events.js      # 事件绑定（onclick / oninput / oncontextmenu）
+└── utils.js       # 该组件特有的工具函数
 ```
+
+## 三层解耦
+
+```
+index.js（编排）
+  ├── data.js（纯数据，无 DOM）
+  ├── render.js（HTML 生成，无事件）
+  └── events.js（事件绑定，无模板）
+       ↑ 引用
+  tpl.js / row-tpl.js（纯 HTML 模板）
+```
+
+### 层间契约
+
+| 文件        | 可以做的                    | 不可以做的            |
+| ----------- | --------------------------- | --------------------- |
+| `index.js`  | 调 render / bindEvents      | 不写业务逻辑          |
+| `data.js`   | 数组操作、判断              | 不碰 DOM              |
+| `render.js` | innerHTML / textContent     | 不写 addEventListener |
+| `events.js` | addEventListener / bus.emit | 不拼 HTML             |
+| `tpl.js`    | HTML 模板字符串             | 不做事件绑定          |
+
+## 共享工具
+
+```
+js/utils/
+├── fmt.js     # 文件大小/日期格式化
+├── dom.js     # HTML 转义/搜索高亮
+└── icon.js    # 文件图标映射
+```
+
+## 当前组件状态
+
+| 组件             | 位置              | 状态      | 文件数 | 总行数 |
+| ---------------- | ----------------- | --------- | ------ | ------ |
+| `<app-tree>`     | `app-tree/`       | ✅ 已拆   | 7 文件 | 321    |
+| `<app-sidebar>`  | `app-sidebar/`    | ✅ 已拆   | 6 文件 | 227    |
+| `<app-preview>`  | `app-preview/`    | ✅ 已拆   | 6 文件 | 107    |
+| `<app-content>`  | `app-content/`    | ✅ 已拆   | 3 文件 | 96     |
+| `<app-toast>`    | `app-toast.js`    | ✅ 已精简 | 1 文件 | 75     |
+| `<app-nav>`      | `app-nav.js`      | 🔄 待评估 | 1 文件 | 115    |
+| `<context-menu>` | `context-menu.js` | 🔄 待评估 | 1 文件 | 98     |
+| `<app-header>`   | `app-header.js`   | ⏸️ 未引用 | 1 文件 | 95     |
+
+## 新增组件检查清单
+
+- [ ] 目录名与标签一致：`app-xxx/`
+- [ ] 有 `index.js`（生命周期编排）
+- [ ] 模板与数据分离（`data.js` 不碰 DOM）
+- [ ] 每文件 ≤ 80 行
+- [ ] 通用工具引用 `js/utils/` 而非重写
+- [ ] `index.html` 中非 module 组件用 `<script src="...">`，module 组件用 `<script type="module" src="...">`
+
+## 参考
+
+- 旧版代码：`frontend/js/legacy/`（26 个 JS 文件，全局变量 + DOM 直操）
+- 事件总线：`frontend/js/bus.js`
+- Vite 构建：`frontend/vite.config.js`

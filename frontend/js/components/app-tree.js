@@ -1,9 +1,11 @@
 // ===== <app-tree> — 仓库树（中央主区域） =====
+import { treeCSS } from "./app-tree-styles.js";
 
 class AppTree extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._root = this.attachShadow({ mode: "open" });
+    this._root.adoptedStyleSheets = [sheet];
     this._entries = [];
     this._search = "";
     this._sort = "name";
@@ -105,118 +107,67 @@ class AppTree extends HTMLElement {
   disconnectedCallback() {}
 
   render() {
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host { display:flex; flex-direction:column; flex:1; overflow:hidden; font-family:-apple-system,sans-serif; }
-        .hdr { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06); }
-        .hdr-row { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
-        .hdr-label { font-size:12px; font-weight:600; color:#a6adc8; flex:1; }
-        .hdr-btn { padding:3px 8px; border-radius:4px; border:1px solid rgba(255,255,255,.08); background:transparent; color:#cdd6f4; cursor:pointer; font-size:10px; font-family:inherit; transition:all .2s; }
-        .hdr-btn:hover { background:#2a2a42; }
-        .hdr-btn.accent { background:#7c83ff33; color:#7c83ff; border-color:#7c83ff55; }
-        .hdr-btn.accent:hover { background:#7c83ff55; }
-        .hdr-btn.flash { background:#a6e3a133; border-color:#a6e3a155; }
-        .srch-row { display:flex; align-items:center; gap:6px; }
-        .srch-inp { flex:1; padding:5px 8px; border-radius:6px; border:1px solid rgba(255,255,255,.08); background:#181825; color:#cdd6f4; font-size:11px; outline:none; font-family:inherit; }
-        .srch-inp::placeholder { color:#6c7086; }
-        .sort-sel { padding:5px 6px; border-radius:5px; border:1px solid rgba(255,255,255,.08); background:#181825; color:#cdd6f4; font-size:10px; outline:none; font-family:inherit; cursor:pointer; }
-        .tag { font-size:7px; background:#f9a82633; color:#f9a826; padding:0 4px; border-radius:3px; margin-left:2px; }
-        .list { flex:1; overflow-y:auto; padding:6px 8px; }
-        .list::-webkit-scrollbar { width:4px; }
-        .list::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:2px; }
-        .empty { text-align:center; padding:40px 16px; font-size:12px; color:#6c7086; line-height:1.8; }
-        .empty .big { font-size:36px; margin-bottom:8px; }
+    this._root.innerHTML =
+      '<div class="hdr">' +
+      '<div class="hdr-row">' +
+      '<span class="hdr-label">📦 仓库</span>' +
+      '<button class="hdr-btn" id="btn-ea">✅ 全部启用 <span class="tag">预告</span></button>' +
+      '<button class="hdr-btn" id="btn-da">⛔ 全部禁用 <span class="tag">预告</span></button>' +
+      '<button class="hdr-btn accent" id="btn-st">▶️ 同步状态 <span class="tag">预告</span></button>' +
+      "</div>" +
+      '<div class="srch-row">' +
+      '<input class="srch-inp" id="srch" type="text" placeholder="🔍 搜索模型名称" autocomplete="off">' +
+      '<select class="sort-sel" id="sort">' +
+      '<option value="name">名称</option>' +
+      '<option value="size">大小</option>' +
+      '<option value="date">日期</option>' +
+      "</select>" +
+      "</div>" +
+      "</div>" +
+      '<div class="list" id="tree">' +
+      '<div class="empty"><div class="big">📁</div>暂无模型文件</div>' +
+      "</div>" +
+      '<div class="ftr">' +
+      '<span class="stat" id="ftr-stat">共 0 项</span>' +
+      '<button class="hdr-btn" id="btn-repo">📁 选择仓库目录</button>' +
+      '<button class="hdr-btn" id="btn-dedup">🔗 去重 <span class="tag">预告</span></button>' +
+      '<button class="hdr-btn" id="btn-trash">🗑️ 回收站</button>' +
+      '<div style="flex:1"></div>' +
+      '<button class="hdr-btn" id="btn-pv">◀ 预览</button>' +
+      "</div>";
 
-        /* 文件夹 */
-        .fh { display:flex; align-items:center; gap:4px; padding:3px 4px; border-radius:4px; cursor:pointer; font-size:11px; transition:background .12s; }
-        .fh:hover { background:#2a2a42; }
-        .fh .ar { font-size:7px; color:#6c7086; width:10px; transition:transform .12s; flex-shrink:0; }
-        .fh .ar.open { transform:rotate(90deg); }
-        .fh .nm { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .fh .nm mark { background:#f9a82644; color:#f9a826; border-radius:2px; padding:0 2px; }
-        .fh.locked { opacity:.5; }
-        .fh.locked .nm { color:#585b70; }
-        .ch { padding-left:16px; }
-
-        /* 文件 */
-        .fl { display:flex; align-items:center; gap:6px; padding:3px 4px; border-radius:4px; font-size:11px; transition:all .15s; cursor:default; }
-        .fl:hover { background:#2a2a42; }
-        .fl .ck { width:12px; height:12px; border-radius:3px; border:1px solid rgba(255,255,255,.15); background:transparent; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:8px; transition:all .15s; }
-        .fl .ck.on { background:#7c83ff; border-color:#7c83ff; }
-        .fl .nm { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#cdd6f4; }
-        .fl .nm mark { background:#f9a82644; color:#f9a826; border-radius:2px; padding:0 2px; }
-        .fl .sz { font-size:9px; color:#6c7086; white-space:nowrap; }
-        .fl .dt { font-size:9px; color:#585b70; white-space:nowrap; margin-left:4px; }
-        .fl.ban { opacity:.5; }
-        .fl.flash { background:#a6e3a122; }
-
-        /* 文件图标颜色 */
-        .ficon { font-size:10px; }
-
-        .ftr { padding:8px 12px; border-top:1px solid rgba(255,255,255,.06); display:flex; gap:6px; align-items:center; }
-        .ftr .stat { font-size:10px; color:#6c7086; margin-right:auto; }
-      </style>
-      <div class="hdr">
-        <div class="hdr-row">
-          <span class="hdr-label">📦 仓库</span>
-          <button class="hdr-btn" id="btn-ea">✅ 全部启用 <span class="tag">预告</span></button>
-          <button class="hdr-btn" id="btn-da">⛔ 全部禁用 <span class="tag">预告</span></button>
-          <button class="hdr-btn accent" id="btn-st">▶️ 同步状态 <span class="tag">预告</span></button>
-        </div>
-        <div class="srch-row">
-          <input class="srch-inp" id="srch" type="text" placeholder="🔍 搜索模型名称" autocomplete="off">
-          <select class="sort-sel" id="sort">
-            <option value="name">名称</option>
-            <option value="size">大小</option>
-            <option value="date">日期</option>
-          </select>
-        </div>
-      </div>
-      <div class="list" id="tree">
-        <div class="empty"><div class="big">📁</div>暂无模型文件</div>
-      </div>
-      <div class="ftr">
-        <span class="stat" id="ftr-stat">共 0 项</span>
-        <button class="hdr-btn" id="btn-repo">📁 选择仓库目录</button>
-        <button class="hdr-btn" id="btn-dedup">🔗 去重 <span class="tag">预告</span></button>
-        <button class="hdr-btn" id="btn-trash">🗑️ 回收站</button>
-        <div style="flex:1"></div>
-        <button class="hdr-btn" id="btn-pv">◀ 预览</button>
-      </div>
-    `;
-
-    this.shadowRoot.getElementById("srch").oninput = (e) => {
+    this._root.getElementById("srch").oninput = (e) => {
       this._search = e.target.value;
       this._renderTree();
     };
-    this.shadowRoot.getElementById("sort").onchange = (e) => {
+    this._root.getElementById("sort").onchange = (e) => {
       this._sort = e.target.value;
       this._renderTree();
     };
-    this.shadowRoot.getElementById("btn-repo").onclick = () =>
+    this._root.getElementById("btn-repo").onclick = () =>
       bus.emit("dir:select-repo");
-    this.shadowRoot.getElementById("btn-dedup").onclick = () =>
+    this._root.getElementById("btn-dedup").onclick = () =>
       bus.emit("entries:dedup");
-    this.shadowRoot.getElementById("btn-trash").onclick = () =>
+    this._root.getElementById("btn-trash").onclick = () =>
       bus.emit("recycle:open");
-    this.shadowRoot.getElementById("btn-pv").onclick = () =>
+    this._root.getElementById("btn-pv").onclick = () =>
       bus.emit("preview:toggle");
-    this.shadowRoot.getElementById("btn-ea").onclick = () => {
-      this._flashBtn(this.shadowRoot.getElementById("btn-ea"));
+    this._root.getElementById("btn-ea").onclick = () => {
+      this._flashBtn(this._root.getElementById("btn-ea"));
       this._entries.forEach((e) => {
         e.banned = false;
       });
       this._renderTree();
     };
-    this.shadowRoot.getElementById("btn-da").onclick = () => {
-      this._flashBtn(this.shadowRoot.getElementById("btn-da"));
+    this._root.getElementById("btn-da").onclick = () => {
+      this._flashBtn(this._root.getElementById("btn-da"));
       this._entries.forEach((e) => {
         e.banned = true;
       });
       this._renderTree();
     };
-    this.shadowRoot.getElementById("btn-st").onclick = () => {
-      this._flashBtn(this.shadowRoot.getElementById("btn-st"));
+    this._root.getElementById("btn-st").onclick = () => {
+      this._flashBtn(this._root.getElementById("btn-st"));
     };
   }
 
@@ -245,7 +196,7 @@ class AppTree extends HTMLElement {
 
   // ===== 渲染树 =====
   _renderTree() {
-    const c = this.shadowRoot.getElementById("tree");
+    const c = this._root.getElementById("tree");
     const hasQuery = !!(this._search || "").trim();
     if (!this._entries.length) {
       c.innerHTML =
@@ -318,7 +269,7 @@ class AppTree extends HTMLElement {
     const total = this._entries.length;
     const enabled = this._entries.filter((e) => !e.banned).length;
     const totalSize = this._entries.reduce((s, e) => s + (e.size || 0), 0);
-    const el = this.shadowRoot.getElementById("ftr-stat");
+    const el = this._root.getElementById("ftr-stat");
     if (el)
       el.textContent = `共 ${total} 项 (已启用 ${enabled}) · ${this._fmt(totalSize)}`;
   }

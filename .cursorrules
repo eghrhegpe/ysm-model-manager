@@ -1,0 +1,26 @@
+# YSM 前端组件拆分规则
+
+## 文件拆分约束
+- 任何 Web Component 文件不得超过 80 行。
+- 超出则必须按以下模式拆成目录：
+  - index.js（生命周期编排）
+  - tpl.js / row-tpl.js（HTML 模板，纯字符串）
+  - data.js（数据逻辑，纯函数，不碰 DOM）
+  - render.js（渲染逻辑，不绑事件）
+  - events.js（事件绑定，不拼 HTML）
+  - utils.js（组件特有工具）
+- 通用工具引用 frontend/js/utils/ 下的共享模块（fmt.js / dom.js / icon.js）。
+
+## 引用方式
+- 非 module 组件（全局定义类）→ index.html 用 <script src="...">
+- module 组件（使用 import）→ index.html 用 <script type="module" src="...">
+- 组件内部用 ES module import 互相引用。
+
+## 共享状态
+- 跨组件状态通过 bus.js 事件总线传递，不直接引用全局变量。
+- 全局状态（repoRoot, mcRoot, entries 等）在 frontend/js/store.js 中维护（待创建）。
+
+## 数据流
+- connectedCallback 中订阅 bus 事件 → 更新内部状态 → 调 render → 调 bindEvents。
+- 用户操作 → events.js 触发 bus.emit → 其他组件收到通知。
+- 不通过 DOM 查询跨组件访问（不用 document.querySelector('app-sidebar')）。

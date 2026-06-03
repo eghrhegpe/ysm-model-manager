@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/ysm"
-	"syscall"
 )
 
 // 鎵弿妯″瀷锛堝嚱鏁扮被鍨嬶紝鐢?app.go 娉ㄥ叆锛?
@@ -51,15 +51,23 @@ func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.Instance
 			HasYSM:    ysm.HasYSMMod(filepath.Join(ins.VersionDir, "mods")),
 		}
 
-		for hash, e := range repoByHash {
+				for hash, e := range repoByHash {
 			if !customByHash[hash] {
-				status.Missing = append(status.Missing, e.Name)
+				name := e.Name
+				if strings.HasSuffix(strings.ToLower(name), ".ban") {
+					name = name[:len(name)-4]
+				}
+				status.Missing = append(status.Missing, name)
 			}
 		}
 		for _, c := range customEntries {
 			if c.Hash != "" {
 				if _, found := repoByHash[c.Hash]; !found {
-					status.Extra = append(status.Extra, c.Name)
+					name := c.Name
+					if strings.HasSuffix(strings.ToLower(name), ".ban") {
+						name = name[:len(name)-4]
+					}
+					status.Extra = append(status.Extra, name)
 				}
 			}
 		}
@@ -117,7 +125,7 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 		}
 	}
 	if len(repoStatus) == 0 {
-		return 0, 0, nil
+		return 0, 0, fmt.Errorf("仓库中未找到模型文件")
 	}
 
 	disableCount := 0

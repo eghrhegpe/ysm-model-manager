@@ -21,12 +21,21 @@ export function listContainerHTML() {
 }
 
 /** 单个整合包卡片头部 */
-export function vcHeaderHTML(name, synced, missing) {
+export function vcHeaderHTML(name, synced, missing, status, isOpen = false) {
+  // 整体状态图标
+  let statusIcon = "";
+  if (status === "complete") statusIcon = `<span class="tag green">✅</span>`;
+  else if (status === "extra")
+    statusIcon = `<span class="tag orange">📤</span>`;
+  else if (status === "missing") statusIcon = `<span class="tag red">⬇️</span>`;
+
   const parts = [];
   if (synced > 0) parts.push(`<span class="tag green">✅ ${synced}</span>`);
   if (missing > 0) parts.push(`<span class="tag red">⬇️ ${missing}</span>`);
+  const arrowClass = isOpen ? "arrow open" : "arrow";
   return `<div class="vc-header">
-<span class="arrow">▶</span>
+<span class="${arrowClass}">▶</span>
+${statusIcon}
 <span class="name">📦 ${esc(name)}</span>
 ${parts.join("")}
 </div>`;
@@ -37,11 +46,15 @@ export function sectionTitleHTML(text, count) {
   return `<div class="sec-title">${text} (${count})</div>`;
 }
 
-/** 单行模型条目 */
-export function rowHTML(dotColor, name, size) {
-  return `<div class="row"><span class="dot" style="background:${dotColor}"></span><span class="rn">${esc(name)}</span><span class="sz">${size}</span></div>`;
+/** 单行模型条目 — dotColor: 状态圆点色, name: 文件名, size: 大小, linkType: 链接图标 */
+export function rowHTML(dotColor, name, size, linkType) {
+  const linkIcon = linkType ? `<span class="link-icon">${linkType}</span>` : "";
+  return `<div class="row"><span class="dot" style="background:${dotColor}"></span><span class="rn">${esc(name)}</span>${linkIcon}<span class="sz">${size}</span></div>`;
 }
 
 function esc(s) {
-  return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return (s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }

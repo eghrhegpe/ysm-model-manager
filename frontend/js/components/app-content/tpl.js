@@ -20,11 +20,11 @@ export function dashboardHTML() {
 }
 
 export function repositoryHTML() {
-  return '<div class="repo-layout"><app-tree></app-tree></div>';
+  return '<div class="repo-layout"><app-tree></app-tree><app-preview mode="model"></app-preview></div>';
 }
 
 export function instancesHTML() {
-  return '<div class="repo-layout"><app-sidebar></app-sidebar><app-preview></app-preview></div>';
+  return '<div class="repo-layout"><app-sidebar></app-sidebar><app-preview mode="stat"></app-preview></div>';
 }
 
 export function settingsHTML() {
@@ -41,4 +41,42 @@ export function settingsHTML() {
 
 export function placeholderHTML(icon, label) {
   return `<div class="placeholder-box"><div class="big">${icon}</div><div>${label}</div><span class="ptag">预告</span></div>`;
+}
+
+export function diagnosticsHTML() {
+  return `<div class="diag-wrapper">
+<div class="diag-left">
+<button class="diag-btn active" data-diag="log">
+<span class="diag-btn-icon">📋</span>
+<span>操作日志</span>
+</button>
+<button class="diag-btn" data-diag="conflict">
+<span class="diag-btn-icon">⚡</span>
+<span>冲突检测</span>
+</button>
+<div class="diag-left-spacer"></div>
+<button class="diag-btn diag-btn-action" id="diag-refresh">
+<span>🔄</span>
+</button>
+<button class="diag-btn diag-btn-action" id="diag-clear">
+<span>🗑️</span>
+</button>
+</div>
+<div class="diag-right">
+<div class="diag-panel" id="diag-log">
+<div class="diag-panel-header">
+<span>📋 操作日志</span>
+<button class="hdr-btn" id="diag-refresh2" style="display:none">🔄</button>
+</div>
+<div id="diag-log-list"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">暂无日志</div></div>
+</div>
+<div class="diag-panel" id="diag-conflict" style="display:none">
+<div class="diag-panel-header">
+<span>⚡ 冲突检测</span>
+<button class="hdr-btn accent" id="diag-scan-conflict">⚡ 开始扫描</button>
+</div>
+<div id="diag-conflict-list"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">点击「开始扫描」检测整合包冲突</div></div>
+</div>
+</div>
+</div>`;
 }

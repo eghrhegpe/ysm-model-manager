@@ -6,6 +6,10 @@ export function AddImportLog(arg1, arg2, arg3, arg4, arg5, arg6) {
   return window['go']['main']['App']['AddImportLog'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
+export function AnalyzeYSMModel(arg1) {
+  return window['go']['main']['App']['AnalyzeYSMModel'](arg1);
+}
+
 export function CheckFileExists(arg1) {
   return window['go']['main']['App']['CheckFileExists'](arg1);
 }

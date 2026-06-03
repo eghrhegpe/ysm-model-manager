@@ -6,7 +6,7 @@ export function headerHTML() {
 <span class="hdr-label">📦 仓库</span>
 <button class="hdr-btn" id="btn-ea">✅ 全部启用 <span class="tag">预告</span></button>
 <button class="hdr-btn" id="btn-da">⛔ 全部禁用 <span class="tag">预告</span></button>
-<button class="hdr-btn accent" id="btn-st">▶️ 同步状态 <span class="tag">预告</span></button>
+<button class="hdr-btn accent" id="btn-st">▶️ 同步状态</button>
 </div>
 <div class="srch-row">
 <input class="srch-inp" id="srch" type="text" placeholder="🔍 搜索模型名称" autocomplete="off">

@@ -1,0 +1,43 @@
+/* ===== 过渡动画 ===== */
+.ti,
+.vh,
+.vb .row,
+.sb-btn,
+.preview button,
+#search-input,
+#ver-search,
+#sort-select,
+#ver-sort {
+    transition: background .12s, opacity .12s, color .12s;
+}
+
+.ch {
+    transition: display .12s;
+}
+
+/* ===== 滚动条 ===== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, .12);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, .2);
+}
+
+.light ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, .15);
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, .25);
+}

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>YSM 模型管理器</title>
+
+
+
+
+
+<style>
+/* 全局禁用输入框自动大写 */
+input[type="text"], input[type="search"], input[type="checkbox"] {
+  -webkit-autocapitalize: none;
+  autocapitalize: off;
+  autocorrect: off;
+}
+</style>
+  <link rel="stylesheet" href="/assets/index.f4fc0296.css">
+</head>
+<body>
+<div id="root">
+  <header class="topbar">
+    <div class="topbar-logo">🧱 YSM 模型管理器</div>
+    <span id="st">就绪</span>
+    <button id="btn-theme" class="tb-btn">🌙 暗色</button>
+    <button id="btn-settings" class="tb-btn">⚙️</button>
+  </header>
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-header-row">
+        <span class="sidebar-header-label">📂 版本列表</span>
+        <button id="btn-sync-all" class="sidebar-btn-small">📥 批量安装</button>
+        <span class="sidebar-header-stat" id="ver-stat"></span>
+        <label class="sidebar-ysm-filter">
+          <input type="checkbox" id="ysm-only">
+          <span>仅YSM</span>
+        </label>
+      </div>
+      <input id="ver-search" type="text" placeholder="🔍 搜索整合包" class="sidebar-search-input">
+    </div>
+    <div id="vg" class="sidebar-list">
+      <div style="color:var(--muted);font-size:12px;text-align:center;padding:30px 0">请指定 .minecraft 目录</div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="sb-btn" id="btn-mc">🎮 指定游戏路径</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="main-header">
+      <div class="main-header-row">
+        <button id="btn-toggle-sidebar" class="toggle-btn" title="折叠/展开左栏">◀</button>
+        <span class="main-header-label">📦 仓库</span>
+        <button id="btn-enable-all" class="main-btn-small">✅ 全部启用</button>
+        <button id="btn-disable-all" class="main-btn-small">⛔ 全部禁用</button>
+        <button id="btn-sync-toggle" class="main-btn-small">▶️ 同步状态</button>
+        <select id="sort-select" class="main-select">
+          <option value="name">名称</option>
+          <option value="size">大小</option>
+          <option value="date">日期</option>
+        </select>
+        <button id="btn-toggle-preview" class="toggle-btn" title="折叠/展开右栏">▶</button>
+      </div>
+      <input id="search-input" type="text" placeholder="🔍 搜索模型名称" class="main-search-input">
+    </div>
+    <div id="tree" class="main-list">
+      <div style="font-size:11px;color:var(--muted);padding:12px;text-align:center">请选择仓库目录</div>
+    </div>
+    <div class="main-footer">
+      <button class="sb-btn" id="btn-repo">📁 选择仓库目录</button>
+      <button id="btn-dedup" class="main-btn-small">🔗 去重</button>
+      <button id="btn-recycle" class="main-btn-small">🗑️ 回收站</button>
+    </div>
+  </main>
+  <aside class="preview">
+    <h3>📊 统计</h3>
+    <div class="sb">
+      仓库模型：<span class="n" id="s-repo">0</span><br>
+      整合包数：<span class="n" id="s-ver">0</span><br>
+      完全同步：<span class="n" id="s-ok">0</span>/<span class="n" id="s-tot">0</span><br>
+      待上传模型：<span class="n" id="s-pending">0</span>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--bd);margin:2px 0">
+    <div class="bg">
+      <button id="btn-refresh">🔄 刷新</button>
+      <button id="btn-upload">📤 上传待上传</button>
+      <button id="btn-logs">📋 日志</button>
+    </div>
+  </aside>
+</div>
+<script src="./js/lib/parse.js?v=20250602a"></script>
+<script src="./js/lib/state.js?v=20250602a"></script>
+<script src="./js/lib/tree.js?v=20250602a"></script>
+<script src="./js/dialogs/summary.js?v=20250602a"></script>
+<script src="./js/dialogs/confirm.js?v=20250602a"></script>
+<script src="./js/dialogs/logs.js?v=20250602a"></script>
+<script src="./js/dialogs/recycle.js?v=20250602a"></script>
+<script src="./js/dialogs/settings.js?v=20250602a"></script>
+<script src="./js/ui/cm-utils.js?v=20250602a"></script>
+<script src="./js/ui/cm-tree.js?v=20250602a"></script>
+<script src="./js/ui/cm-version.js?v=20250602a"></script>
+<script src="./js/ui/contextmenu.js?v=20250602a"></script>
+<script src="./js/ui/drop.js?v=20250602a"></script>
+<script src="./js/ui/toggle.js?v=20250602a"></script>
+<script src="./js/core/theme.js?v=20250602a"></script>
+<script src="./js/core/directories.js?v=20250602a"></script>
+<script src="./js/versions/data.js?v=20250602a"></script>
+<script src="./js/versions/stats.js?v=20250602a"></script>
+<script src="./js/versions/renderer.js?v=20250602a"></script>
+<script src="./js/versions/events.js?v=20250602a"></script>
+<script src="./js/versions/ops.js?v=20250602a"></script>
+<script src="./js/versions/versions.js?v=20250602a"></script>
+<script src="./js/sync.js?v=20250602a"></script>
+<script src="./js/core/lifecycle.js?v=20250602a"></script>
+<script src="./js/core/buttons.js?v=20250602a"></script>
+</body>
+</html>

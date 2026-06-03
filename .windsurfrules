@@ -1,0 +1,83 @@
+# ========== 1️⃣ 搜索文件优先级（Search Priority） ==========
+# 解决：之前用 PowerShell Select-String/findstr 搜索导致乱码、路径穿透失败
+# 解决：rg 不可用时退化到 PowerShell 导致括号路径崩溃
+rules:
+# ========== 1️⃣ 搜索文件优先级 ==========
+- "禁止使用 run_terminal_command 执行任何搜索命令（findstr、Select-String、grep、rg、type、cat）。"
+- "搜索必须严格按以下顺序调用 Continue 内置工具："
+- "  1. grep_search（正则搜索内容，优先）"
+- "  2. file_glob_search（按 glob 模式搜文件名）"
+- "  3. read_file（已知路径时直接读）"
+- "  4. ls（列出目录，禁止 deep recursive 到 dist/node_modules）。"
+- "grep_search 无结果时，换用更宽泛的模式重试，严禁退化到 Terminal。"
+- "禁止为搜索目的拼接 PowerShell 命令（如 `type file | findstr`）。"
+
+# ========== 2️⃣ 替换文本优先级（Replace Priority） ==========
+# 解决：之前 SEARCH/REPLACE 因缩进/换行/特殊字符不匹配而失败
+# 解决：AI 为了绕过匹配失败而全文重写文件
+- "优先使用 single_find_and_replace 做精确替换。"
+- "read_file 应以行区间为主（startLine/endLine 或估计 1-80 行）；仅在用户明确要求'全量分析'时才读完整文件。若文件 >300 行且目的只是找函数签名，先读前 80 行再决策。"
+- "如果 edit_existing_file / single_find_and_replace 报告文件不存在，但该文件经 read_file 可读取，则判定为路径识别 bug；此时：停止，输出诊断（file size / absolute path / first 4 bytes），等用户手动修路径映射，绝不允许自动降级到 Terminal 做 WriteAllText 字符串替换。"
+- "禁止全文重写整个文件来绕过替换匹配失败。"
+- "替换范围必须限定在目标函数、目标段落或目标行区间内。"
+- "替换代码块 >20 行时必须用 '// ... existing code ...' 等占位符省略未修改部分。"
+- "如果因缩进/特殊字符无法精确匹配，输出 unified diff 格式给用户参考，不要强行猜测。"
+
+# ========== 3️⃣ 重新生成文件优先级（Regeneration Priority） ==========
+# 解决：之前用 Set-Content 覆盖文件时丢失 BOM 或编码错误
+- "禁止在 Terminal 中用 echo >、cat >、Out-File、Set-Content 生成或重写代码文件。"
+- "新建文件必须使用 create_new_file 工具。"
+- "允许重建的文件类型：测试文件（.md）、配置文件（.json/.yaml）、文档（README.md）。"
+- "禁止重建的文件类型：Go 源文件（.go）、JS 源文件（.js）、CSS 文件（.css）、HTML 文件。"
+- "Go 源文件修改必须使用 single_find_and_replace 或 edit_existing_file。"
+- "前端 JS 文件修改优先使用 single_find_and_replace，其次 edit_existing_file。"
+
+# ========== 4️⃣ 工具可用性清单（Tool Audit） ==========
+# 解决：发现 PowerShell 5.1 没有 -Raw 参数、Out-File 不支持方括号路径
+- "read_file: ✅ 可用。安全读取任何 UTF-8 文件，优先使用。"
+- "grep_search: ✅ 可用。但可能因编码/中文截断无结果，换宽泛模式重试。"
+- "file_glob_search: ✅ 可用。用于查找文件名。"
+- "run_terminal_command: ⚠️ 受限可用。禁止用于搜索、禁止安装依赖。"
+- "ls: ✅ 可用。用于浏览目录结构，禁止传入 deep recursive=true 到 dist/node_modules。"
+- "create_new_file: ✅ 可用。新建非代码文件。"
+- "edit_existing_file: ✅ 可用。局部编辑。"
+- "single_find_and_replace: ✅ 可用。精确替换。"
+- "PowerShell 5.1 限制：没有 -Raw 参数，用 [System.IO.File]::ReadAllText() 替代。"
+- "PowerShell 5.1 限制：Out-File 不支持方括号[]路径，用 [System.IO.File]::WriteAllText() 替代。"
+- "PowerShell 5.1 限制：&& 管道符不可用，用 ; 分隔命令。
+- "VS Code 的工作区根目录是 C:\Users\xxx（默认），而不是项目目录。若使用绝对路径的工具会报错，请提示：A：File → Open Folder... → 选你的项目所在文件夹，B：用户将项目放入xx位置。"
+
+# ========== 5️⃣ Token 经济性（Token Efficiency） ==========
+# 解决：之前 AI 全量粘贴大文件、反复重试失败命令浪费 Token
+- "读取文件时优先局部读取（read_file + line range）而非全量读取。"
+- "超过 500 行的文件必须拆分或仅读取关键片段。"
+- "代码块 >20 行必须使用占位符（// ... existing code ...）。"
+- "同一命令失败后最多重试 2 次，之后换方案或向用户汇报。"
+- "先问清用户意图（确认需求/范围/方案）→ 再动手修改。"
+- "修改前先用 read_file 确认文件最新内容，避免基于过时内容修改。"
+- "回复中只展示修改部分，不要重复粘贴整个文件。"
+
+# ========== 6️⃣ 编码安全（Encoding Safety） ==========
+# 解决：之前遇到 BOM/乱码时 AI 自动转码或继续操作导致更严重的问题
+- "所有新建/编辑的文件必须保存为 UTF-8 无 BOM。"
+- "写入方法：$utf8NoBom = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText($path, $content, $utf8NoBom)。"
+- "发现文件含 BOM 头（0xEF 0xBB 0xBF）时：立即停止操作，向用户汇报文件路径和问题。"
+- "禁止自动转码、禁止自动去除 BOM、禁止自动执行 chcp 命令（除了 chcp 65001）。"
+- "遇到乱码（如 '��'、'???') 时：停止操作，用 read_file 查看原始字节，向用户展示前 50 字节 hex。"
+- "遇到 UnicodeDecodeError/UnicodeEncodeError：立即停止 Terminal 操作，改用 read_file。"
+- "字符串引号必须使用标准 ASCII 字符：单引号 ' (U+0027) 和双引号 \" (U+0022)。"
+- "禁止在代码块中出现：non-breaking space (U+00A0)、零宽字符、curly quotes。"
+
+# ========== 7️⃣ 环境约束（Environment Constraints） ==========
+# 解决：之前 AI 可能尝试安装 ripgrep/wails 等组件
+- "任何外部工具（rg/go/node/npm/pwsh）使用前，先用 which/存在性检查；不存在则只汇报，不执行任何相关命令，不把命令放进 Terminal 输入框。"
+- "允许的操作：cd、dir/Get-ChildItem、读取文件、已安装工具的执行（go build、wails dev）。"
+- "如果用户明确说「运行命令」或「编译」：仅执行用户要求的命令，不要连带安装依赖。"
+- "如环境有缺失，为用户打开 Terminal，提醒用户执行以下操作："
+- "  - go install / go get（安装 Go 包）"
+- "  - npm install / yarn add（安装 Node 包）"
+- "  - choco install / winget install（安装系统包）"
+- "  - scoop install（安装工具）"
+- "  - 更新 PowerShell 版本"
+- "  - 修改 PATH 环境变量"
+- "  - 安装 ripgrep、fd、jq 等搜索/处理工具。"

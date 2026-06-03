@@ -10,7 +10,7 @@
     <script src="js/components/app-toast.js"></script>
     <script src="js/components/app-nav.js"></script>
     <script src="js/components/context-menu.js"></script>
-    <script type="module" crossorigin src="/assets/index.7efdf5ea.js"></script>
+    <script type="module" crossorigin src="/assets/index.a4947bf0.js"></script>
     <link rel="stylesheet" href="/assets/index.5025bd42.css">
   </head>
   <body style="margin: 0; overflow: hidden">
@@ -18,11 +18,34 @@
       <app-nav></app-nav>
       <app-content></app-content>
     </div>
+    <div id="global-loader" style="position:fixed;top:12px;right:12px;z-index:9999;display:none">
+      <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="animation:spin .8s linear infinite">
+        <circle cx="12" cy="12" r="10" stroke="#7c83ff" stroke-width="3" fill="none" stroke-dasharray="31.4 10.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <style>
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
     <app-toast></app-toast>
     <context-menu></context-menu>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         bus.emit("nav:change", { page: "dashboard" });
+
+        // 加载动画控制
+        let loadingCount = 0;
+        bus.on("loading:start", () => {
+          loadingCount++;
+          document.getElementById("global-loader").style.display = "block";
+        });
+        bus.on("loading:end", () => {
+          loadingCount--;
+          if (loadingCount <= 0) {
+            loadingCount = 0;
+            document.getElementById("global-loader").style.display = "none";
+          }
+        });
+
         setTimeout(() => {
           bus.emit("toast:show", {
             msg: "✅ YSM 管理器 v1.0 预告版",
@@ -34,3 +57,4 @@
     </script>
   </body>
 </html>
+

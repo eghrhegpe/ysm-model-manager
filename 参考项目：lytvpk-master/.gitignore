@@ -1,9 +1,0 @@
-build/bin
-node_modules
-frontend/dist/*
-!frontend/dist/.gitkeep
-*.vpk
-*.exe
-.claude
-.codex
-.omo

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>主题色预览</title>
+<style>
+  /* ===== 基础 ===== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #11111b;
+    color: #cdd6f4;
+    padding: 40px;
+    line-height: 1.6;
+  }
+  h1 { font-size: 22px; margin-bottom: 8px; color: #fff; }
+  .subtitle { color: #6c7086; font-size: 13px; margin-bottom: 32px; }
+
+  /* ===== 色卡网格 ===== */
+  .palette-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+  .palette-card {
+    width: 140px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #181825;
+    box-shadow: 0 4px 12px rgba(0,0,0,.3);
+  }
+  .palette-card .swatch {
+    height: 80px;
+    display: flex;
+    align-items: flex-end;
+    padding: 8px;
+  }
+  .palette-card .swatch span {
+    font-size: 10px;
+    background: rgba(0,0,0,.5);
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  .palette-card .info {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .palette-card .info .name { font-weight: 600; color: #fff; }
+  .palette-card .info .hex { color: #6c7086; font-size: 10px; }
+
+  /* ===== 组件演示 ===== */
+  h2 { font-size: 16px; margin: 30px 0 12px; color: #a6adc8; }
+  .demo-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .btn {
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,.08);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .btn-default { background: #181825; color: #cdd6f4; }
+  .btn-default:hover { background: #2a2a42; }
+
+  /* 强调色变体 */
+  .btn-accent-cyan { background: #7c83ff; color: #fff; border-color: #7c83ff; }
+  .btn-accent-cyan:hover { filter: brightness(1.12); }
+  .btn-accent-green { background: #a6e3a1; color: #111; border-color: #a6e3a1; }
+  .btn-accent-green:hover { filter: brightness(1.12); }
+  .btn-accent-purple { background: #cba6f7; color: #111; border-color: #cba6f7; }
+  .btn-accent-purple:hover { filter: brightness(1.12); }
+  .btn-accent-orange { background: #f9a826; color: #111; border-color: #f9a826; }
+  .btn-accent-orange:hover { filter: brightness(1.12); }
+
+  /* 选中 / 高亮 */
+  .highlight-bg { background: #7c83ff22; color: #7c83ff; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+  /* ===== 字体对比 ===== */
+  .font-compare {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #181825;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+  .font-sample { font-size: 15px; }
+  .font-sample .label { font-size: 10px; color: #6c7086; display: block; margin-bottom: 2px; }
+  .font-current { font-family: -apple-system, Microsoft YaHei, Segoe UI, system-ui, sans-serif; }
+  .font-proposed { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+  .card-demo {
+    background: #181825;
+    border-radius: 10px;
+    padding: 16px;
+    width: 280px;
+    border: 1px solid rgba(255,255,255,.06);
+  }
+  .card-demo .title { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #fff; }
+  .card-demo .item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .card-demo .item:hover { background: #2a2a42; }
+  .card-demo .item .status { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .card-demo .item .status.synced { background: #a6e3a1; }
+  .card-demo .item .status.missing { background: #f38ba8; }
+  .card-demo .item .status.extra { background: #f9a826; }
+  .card-demo .item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<h1>🎨 主题色预览</h1>
+<div class="subtitle">以下为候选强调色，点击确认后替换到 CSS 变量中</div>
+
+<!-- 色卡 -->
+<div class="palette-grid">
+  <div class="palette-card">
+    <div class="swatch" style="background:#7c83ff"><span>当前</span></div>
+    <div class="info"><div class="name">靛蓝 (当前)</div><div class="hex">#7c83ff</div></div>
+  </div>
+  <div class="palette-card">
+    <div class="swatch" style="background:#a6e3a1"><span>候选</span></div>
+    <div class="info"><div class="name">柔和绿</div><div class="hex">#a6e3a1</div></div>
+  </div>
+  <div class="palette-card">
+    <div class="swatch" style="background:#cba6f7"><span>候选</span></div>
+    <div class="info"><div class="name">薰衣草紫</div><div class="hex">#cba6f7</div></div>
+  </div>
+  <div class="palette-card">
+    <div class="swatch" style="background:#89b4fa"><span>候选</span></div>
+    <div class="info"><div class="name">天空蓝</div><div class="hex">#89b4fa</div></div>
+  </div>
+  <div class="palette-card">
+    <div class="swatch" style="background:#f9a826"><span>候选</span></div>
+    <div class="info"><div class="name">琥珀橙</div><div class="hex">#f9a826</div></div>
+  </div>
+  <div class="palette-card">
+    <div class="swatch" style="background:#f5c2e7"><span>候选</span></div>
+    <div class="info"><div class="name">樱花粉</div><div class="hex">#f5c2e7</div></div>
+  </div>
+</div>
+
+<!-- 按钮 -->
+<h2>按钮变体</h2>
+<div class="demo-row">
+  <button class="btn btn-default">默认按钮</button>
+  <button class="btn btn-accent-cyan">靛蓝强调</button>
+  <button class="btn btn-accent-green">绿色强调</button>
+  <button class="btn btn-accent-purple">紫色强调</button>
+  <button class="btn btn-accent-orange">橙色强调</button>
+</div>
+<div class="demo-row">
+  <span class="highlight-bg">选中项高亮背景</span>
+</div>
+
+<!-- 字体对比 -->
+<h2>字体对比</h2>
+<div class="font-compare">
+  <div class="font-sample font-current">
+    <span class="label">当前：-apple-system, Microsoft YaHei, Segoe UI, system-ui</span>
+    YSM 模型管理器 — 整合包同步状态: ✅ 已同步 (3) / ✅ 已启用
+  </div>
+  <div class="font-sample font-proposed">
+    <span class="label">建议：-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, PingFang SC</span>
+    YSM 模型管理器 — 整合包同步状态: ✅ 已同步 (3) / ✅ 已启用
+  </div>
+</div>
+
+<!-- 卡片示例 -->
+<h2>卡片风格对比</h2>
+<div class="demo-row">
+  <div class="card-demo" style="border-left: 3px solid #7c83ff;">
+    <div class="title">📦 我的整合包</div>
+    <div class="item"><span class="status synced"></span><span class="name">steve_skin.ysm</span></div>
+    <div class="item"><span class="status synced"></span><span class="name">alex_deluxe.ysm</span></div>
+    <div class="item"><span class="status missing"></span><span class="name">dragon_armor.zip</span></div>
+    <div class="item"><span class="status extra"></span><span class="name">custom_hat.ysm</span></div>
+  </div>
+  <div class="card-demo" style="border-left: 3px solid #a6e3a1;">
+    <div class="title">📦 光影测试</div>
+    <div class="item"><span class="status synced"></span><span class="name">photon.ysm</span></div>
+    <div class="item"><span class="status synced"></span><span class="name">neon_sword.ysm</span></div>
+  </div>
+</div>
+
+</body>
+</html>

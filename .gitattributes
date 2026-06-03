@@ -1,0 +1,14 @@
+# 强制所有文本文件使用 UTF-8（无 BOM）
+* text=auto eol=lf
+
+# 特定文件类型
+*.go text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.yml text eol=lf
+*.yaml text eol=lf

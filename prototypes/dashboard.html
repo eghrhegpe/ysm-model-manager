@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>统计看板 + 骨架屏 + 启动动画</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #11111b;
+    color: #cdd6f4;
+    padding: 30px;
+  }
+
+  /* ===== 启动动画 ===== */
+  .splash-screen {
+    position: fixed;
+    inset: 0;
+    background: #11111b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    transition: opacity .5s ease;
+  }
+  .splash-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .splash-screen .logo {
+    font-size: 56px;
+    margin-bottom: 12px;
+    animation: logoPulse 1.5s ease-in-out infinite;
+  }
+  .splash-screen .app-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .splash-screen .loading-dots {
+    margin-top: 20px;
+    display: flex;
+    gap: 6px;
+  }
+  .splash-screen .loading-dots span {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #7c83ff;
+    animation: dotBounce .8s ease-in-out infinite;
+  }
+  .splash-screen .loading-dots span:nth-child(2) { animation-delay: .15s; }
+  .splash-screen .loading-dots span:nth-child(3) { animation-delay: .3s; }
+  .splash-screen .loading-dots span:nth-child(4) { animation-delay: .45s; }
+  .splash-screen .loading-dots span:nth-child(5) { animation-delay: .6s; }
+
+  @keyframes logoPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: .8; }
+  }
+  @keyframes dotBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  /* ===== 骨架屏 ===== */
+  .skeleton {
+    background: #181825;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+    animation: shimmer 1.5s ease-in-out infinite;
+    background: linear-gradient(90deg, #181825 25%, #24243e 50%, #181825 75%);
+    background-size: 200% 100%;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .skeleton .s-line {
+    height: 12px;
+    background: rgba(255,255,255,.06);
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+  .skeleton .s-line:nth-child(1) { width: 60%; }
+  .skeleton .s-line:nth-child(2) { width: 80%; }
+  .skeleton .s-line:nth-child(3) { width: 40%; }
+  .skeleton .s-line:last-child { margin-bottom: 0; }
+
+  .skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .skeleton-grid .s-card {
+    background: #181825;
+    border-radius: 10px;
+    padding: 16px;
+    animation: shimmer 1.5s ease-in-out infinite;
+    background: linear-gradient(90deg, #181825 25%, #24243e 50%, #181825 75%);
+    background-size: 200% 100%;
+  }
+  .skeleton-grid .s-card .s-line { height: 10px; background: rgba(255,255,255,.06); border-radius: 5px; margin-bottom: 6px; }
+  .skeleton-grid .s-card .s-line:nth-child(1) { width: 50%; }
+  .skeleton-grid .s-card .s-line:nth-child(2) { width: 30%; }
+  .skeleton-grid .s-card .s-line:last-child { width: 70%; margin-bottom: 0; }
+
+  /* ===== 统计看板 ===== */
+  .dashboard {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: #181825;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,.06);
+    transition: border-color .15s, transform .12s;
+    cursor: pointer;
+  }
+  .stat-card:hover {
+    border-color: #7c83ff55;
+    transform: translateY(-2px);
+  }
+  .stat-card .label {
+    font-size: 10px;
+    color: #6c7086;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 6px;
+  }
+  .stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    transition: all .3s ease;
+  }
+  .stat-card .value.counting {
+    color: #7c83ff;
+  }
+  .stat-card .sub {
+    font-size: 10px;
+    color: #6c7086;
+    margin-top: 2px;
+  }
+  /* 每个卡片左边框色 */
+  .stat-card:nth-child(1) { border-left: 3px solid #7c83ff; }
+  .stat-card:nth-child(2) { border-left: 3px solid #a6e3a1; }
+  .stat-card:nth-child(3) { border-left: 3px solid #f9a826; }
+  .stat-card:nth-child(4) { border-left: 3px solid #f38ba8; }
+
+  /* ===== 内容区域 ===== */
+  .main-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .panel {
+    background: #181825;
+    border-radius: 10px;
+    padding: 14px;
+    border: 1px solid rgba(255,255,255,.06);
+  }
+  .panel .panel-title {
+    font-size: 11px;
+    color: #6c7086;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+
+  /* ===== 控制按钮 ===== */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .btn-row button {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: #181825;
+    color: #cdd6f4;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+    transition: background .12s;
+  }
+  .btn-row button:hover { background: #2a2a42; }
+  .btn-row button.pri { background: #7c83ff; color: #fff; border-color: #7c83ff; }
+  .btn-row button.pri:hover { filter: brightness(1.12); }
+
+  /* ===== 隐藏控制 ===== */
+  .content-area { display: none; }
+  .content-area.visible { display: block; }
+  #hide-splash { 
+    margin-top: 16px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: #181825;
+    color: #cdd6f4;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+  }
+  #hide-splash:hover { background: #2a2a42; }
+</style>
+</head>
+<body>
+
+<!-- ===== 启动动画 ===== -->
+<div class="splash-screen" id="splash">
+  <div class="logo">🧱</div>
+  <div class="app-name">YSM 模型管理器</div>
+  <div class="loading-dots">
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- ===== 骨架屏 ===== -->
+<div id="skeleton-area">
+  <div class="skeleton-grid">
+    <div class="s-card"><div class="s-line"></div><div class="s-line"></div><div class="s-line"></div></div>
+    <div class="s-card"><div class="s-line"></div><div class="s-line"></div><div class="s-line"></div></div>
+    <div class="s-card"><div class="s-line"></div><div class="s-line"></div><div class="s-line"></div></div>
+  </div>
+  <div class="skeleton"><div class="s-line"></div><div class="s-line"></div><div class="s-line"></div></div>
+  <div class="skeleton"><div class="s-line"></div><div class="s-line"></div><div class="s-line"></div></div>
+</div>
+
+<!-- ===== 实际内容 ===== -->
+<div class="content-area" id="content-area">
+
+<h1>📊 统计面板</h1>
+<div class="subtitle" style="color:#6c7086;font-size:12px;margin-bottom:20px">带数字跳动微动效 + 骨架屏过渡</div>
+
+<div class="dashboard" id="dashboard">
+  <div class="stat-card">
+    <div class="label">📦 仓库模型</div>
+    <div class="value" data-target="128">0</div>
+    <div class="sub">已启用 120 · 已禁用 8</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">🎮 整合包数</div>
+    <div class="value" data-target="12">0</div>
+    <div class="sub">有 YSM 模组 10</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">✅ 完全同步</div>
+    <div class="value" data-target="8">0</div>
+    <div class="sub">共 12 个整合包</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">📤 待上传</div>
+    <div class="value" data-target="16">0</div>
+    <div class="sub">非仓库模型</div>
+  </div>
+</div>
+
+<div class="main-content">
+  <div class="panel">
+    <div class="panel-title">📈 安装历史</div>
+    <div style="font-size:11px;color:#6c7086">上次同步：刚刚<br>已安装 1,024 个文件<br>失败 3 次</div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">⏱️ 最近操作</div>
+    <div style="font-size:11px;color:#6c7086">
+      · 14:32:18 ✅ 已安装 steve_skin.ysm<br>
+      · 14:31:55 ⛔ 已禁用 dragon_armor.zip<br>
+      · 14:30:12 🔗 已去重 3 个文件
+    </div>
+  </div>
+</div>
+
+<div class="btn-row">
+  <button>🔄 刷新</button>
+  <button>📤 上传待上传</button>
+  <button class="pri">📥 批量安装</button>
+</div>
+
+</div>
+
+<br>
+<button id="hide-splash">▶ 重现启动动画</button>
+
+<script>
+// 数字跳动效果
+function animateCounter(el, target, duration = 800) {
+  el.classList.add('counting');
+  const start = 0;
+  const startTime = performance.now();
+  function step(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    // easeOutQuad
+    const eased = progress * (2 - progress);
+    const current = Math.round(start + (target - start) * eased);
+    el.textContent = current;
+    if (progress < 1) requestAnimationFrame(step);
+    else {
+      el.textContent = target;
+      el.classList.remove('counting');
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+// 模拟加载流程
+function simulateLoad() {
+  // 显示骨架屏、隐藏内容
+  document.getElementById('skeleton-area').style.display = 'block';
+  document.getElementById('content-area').classList.remove('visible');
+
+  // 1 秒后隐藏骨架屏、显示内容、启动数字
+  setTimeout(() => {
+    document.getElementById('skeleton-area').style.display = 'none';
+    document.getElementById('content-area').classList.add('visible');
+    document.querySelectorAll('.stat-card .value[data-target]').forEach(el => {
+      animateCounter(el, parseInt(el.dataset.target));
+    });
+  }, 1000);
+}
+
+// 启动动画 + 加载
+document.getElementById('splash').classList.remove('hidden');
+setTimeout(() => {
+  document.getElementById('splash').classList.add('hidden');
+  simulateLoad();
+}, 2000);
+
+// 重现启动动画
+document.getElementById('hide-splash').addEventListener('click', () => {
+  document.getElementById('splash').classList.remove('hidden');
+  document.getElementById('content-area').classList.remove('visible');
+  document.getElementById('skeleton-area').style.display = 'none';
+  // 重置数字
+  document.querySelectorAll('.stat-card .value[data-target]').forEach(el => el.textContent = '0');
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('hidden');
+    simulateLoad();
+  }, 2000);
+});
+</script>
+</body>
+</html>

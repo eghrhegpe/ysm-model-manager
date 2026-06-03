@@ -1,0 +1,56 @@
+{
+
+"terminal.integrated.defaultProfile.windows": "PowerShell",
+
+"terminal.integrated.profiles.windows": {
+
+"PowerShell": {
+
+"source": "PowerShell",
+
+"icon": "terminal-powershell",
+
+"args": [
+
+"-NoExit",
+
+"-Command",
+
+"Set-Location -Path '${workspaceFolder}'; $env:PYTHONIOENCODING='UTF-8'; chcp 65001"
+
+]
+
+}
+
+},
+
+"files.exclude": {
+
+"**/dist": true,
+
+"**/node_modules": true,
+
+"*/.exe": true,
+
+"*/.dll": true,
+
+"*/.so": true,
+
+"*/.dylib": true
+
+},
+
+"files.autoSave": "afterDelay",
+
+"editor.formatOnSave": true,
+
+"editor.defaultFormatter": "esbenp.prettier-vscode",
+
+"gopls": {
+
+"build.formatting.gofumpt": true
+
+},
+"js/ts.updateImportsOnFileMove.enabled": "always"
+
+}

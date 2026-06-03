@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>网格视图原型</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #11111b;
+    color: #cdd6f4;
+    padding: 30px;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; color: #fff; }
+  .subtitle { color: #6c7086; font-size: 12px; margin-bottom: 24px; }
+
+  /* ===== 视图切换栏 ===== */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .view-toggle {
+    display: flex;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .view-toggle button {
+    padding: 6px 14px;
+    border: none;
+    background: #181825;
+    color: #6c7086;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: background .12s, color .12s;
+  }
+  .view-toggle button.active {
+    background: #7c83ff22;
+    color: #7c83ff;
+  }
+  .view-toggle button:hover { background: #2a2a42; }
+  .view-toggle button.active:hover { background: #7c83ff33; }
+
+  .search-box {
+    flex: 1;
+    max-width: 240px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: #181825;
+    color: #cdd6f4;
+    font-size: 12px;
+    outline: none;
+    font-family: inherit;
+  }
+  .search-box::placeholder { color: #6c7086; }
+
+  /* ===== 网格 ===== */
+  .grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .grid-item {
+    background: #181825;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.06);
+    overflow: hidden;
+    transition: border-color .15s, transform .12s;
+    cursor: pointer;
+    position: relative;
+  }
+  .grid-item:hover {
+    border-color: #7c83ff55;
+    transform: translateY(-2px);
+  }
+  .grid-item.ban { opacity: .55; }
+
+  /* 缩略图区域 */
+  .grid-item .thumb {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1e1e32 0%, #24243e 100%);
+    font-size: 40px;
+    user-select: none;
+  }
+  .grid-item .thumb .icon { opacity: .5; }
+
+  /* 文件信息 */
+  .grid-item .info {
+    padding: 8px 10px;
+  }
+  .grid-item .info .name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .grid-item .info .meta {
+    font-size: 10px;
+    color: #6c7086;
+  }
+
+  /* 悬停覆盖操作 */
+  .grid-item .hover-actions {
+    position: absolute;
+    top: 0; right: 0;
+    display: flex;
+    gap: 2px;
+    padding: 6px;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .grid-item:hover .hover-actions { opacity: 1; }
+  .grid-item .hover-actions button {
+    width: 26px; height: 26px;
+    border: none;
+    border-radius: 5px;
+    background: rgba(0,0,0,.6);
+    color: #cdd6f4;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .12s;
+  }
+  .grid-item .hover-actions button:hover { background: rgba(124, 131, 255, .7); }
+
+  /* 状态指示点 */
+  .grid-item .status-dot {
+    position: absolute;
+    top: 8px; left: 8px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 2px solid #181825;
+  }
+  .grid-item .status-dot.synced { background: #a6e3a1; }
+  .grid-item .status-dot.missing { background: #f38ba8; }
+  .grid-item .status-dot.extra { background: #f9a826; }
+  .grid-item .status-dot.disabled { background: #6c7086; }
+
+  /* ===== 列表视图（对照） ===== */
+  .list-container { display: none; }
+  .list-container .list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .list-container .list-item:hover { background: #2a2a42; }
+  .list-container .list-item .name { flex: 1; }
+
+  .demo-data {
+    margin-top: 30px;
+    padding: 12px 16px;
+    background: #181825;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #6c7086;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<h1>网格视图原型</h1>
+<div class="subtitle">点击"网格 / 列表"按钮切换视图模式</div>
+
+<div class="toolbar">
+  <div class="view-toggle">
+    <button class="active" data-view="grid">▦ 网格</button>
+    <button data-view="list">☰ 列表</button>
+  </div>
+  <input class="search-box" placeholder="🔍 筛选模型..." value="steve">
+</div>
+
+<div class="grid-container" id="grid-view">
+  <!-- JS 生成 -->
+</div>
+
+<div class="list-container" id="list-view">
+  <!-- JS 生成 -->
+</div>
+
+<div class="demo-data">
+  <strong>💡 说明</strong><br>
+  · 缩略图区域目前显示默认图标，后续可读取模型文件内的预览图<br>
+  · 悬停在卡片上时右上角滑出操作按钮（启用/禁用、打开文件夹）<br>
+  · 左上角状态点：🟢 已同步 🔴 缺失 🟡 额外 ⚫ 禁用<br>
+  · 已禁用的模型卡片半透明
+</div>
+
+<script>
+// 模拟数据
+const mockEntries = [
+  { name: "steve_skin.ysm", size: "1.2 MB", status: "synced", banned: false },
+  { name: "alex_deluxe.ysm", size: "2.4 MB", status: "synced", banned: false },
+  { name: "dragon_armor.zip", size: "3.8 MB", status: "missing", banned: false },
+  { name: "custom_hat.ysm", size: "0.8 MB", status: "extra", banned: false },
+  { name: "neon_sword.ysm", size: "1.5 MB", status: "synced", banned: false },
+  { name: "photon_body.ysm", size: "2.1 MB", status: "synced", banned: false },
+  { name: "old_model.ysm", size: "0.9 MB", status: "synced", banned: true },
+  { name: "magic_staff.zip", size: "4.2 MB", status: "missing", banned: false },
+  { name: "steve_2d.ysm", size: "0.3 MB", status: "extra", banned: false },
+  { name: "ender_dragon.ysm", size: "6.7 MB", status: "synced", banned: false },
+];
+
+function renderGrid(items) {
+  const container = document.getElementById('grid-view');
+  container.innerHTML = items.map(item => `
+    <div class="grid-item ${item.banned ? 'ban' : ''}">
+      <span class="status-dot ${item.status}"></span>
+      <div class="hover-actions">
+        <button title="${item.banned ? '启用' : '禁用'}">${item.banned ? '✅' : '⛔'}</button>
+        <button title="打开文件夹">📂</button>
+      </div>
+      <div class="thumb"><span class="icon">🧊</span></div>
+      <div class="info">
+        <div class="name">${item.name}</div>
+        <div class="meta">${item.size} · ${({synced:'已同步', missing:'未安装', extra:'待上传'})[item.status]}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderList(items) {
+  const container = document.getElementById('list-view');
+  container.innerHTML = items.map((item, i) => `
+    <div class="list-item" style="${item.banned ? 'opacity:.55' : ''}">
+      <span style="width:8px;height:8px;border-radius:50%;background:${({synced:'#a6e3a1', missing:'#f38ba8', extra:'#f9a826'})[item.status]};flex-shrink:0"></span>
+      <span class="name">${item.name}</span>
+      <span style="font-size:10px;color:#6c7086">${item.size}</span>
+    </div>
+  `).join('');
+}
+
+// 初始筛选
+function filterItems(kw) {
+  if (!kw) return mockEntries;
+  return mockEntries.filter(e => e.name.toLowerCase().includes(kw.toLowerCase()));
+}
+
+function render(kw) {
+  const items = filterItems(kw);
+  renderGrid(items);
+  renderList(items);
+}
+
+// 视图切换
+document.querySelectorAll('.view-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.view;
+    document.getElementById('grid-view').style.display = view === 'grid' ? 'grid' : 'none';
+    document.getElementById('list-view').style.display = view === 'list' ? 'block' : 'none';
+  });
+});
+
+// 搜索
+document.querySelector('.search-box').addEventListener('input', e => {
+  render(e.target.value);
+});
+
+// 初始渲染
+render('steve');
+</script>
+
+</body>
+</html>

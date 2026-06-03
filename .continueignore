@@ -1,0 +1,104 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+out/
+target/# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+out/
+target/
+
+# Logs & Cache
+logs/
+*.log
+.pnpm-debug.log*
+.npm/
+.yarn/
+.cache/
+
+# IDE files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+
+# Environment & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Large media & binaries
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pdf
+*.zip
+*.tar.gz
+
+# Large data files (key to saving tokens)
+*.csv
+*.tsv
+*.sql
+*.dump
+
+# Minified files
+*.min.js
+*.min.css
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated docs (usually not needed)
+CHANGELOG*
+
+# Logs & Cache
+logs/
+.pnpm-debug.log*
+.npm/
+.yarn/
+.cache/
+
+# IDE files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+
+# Environment & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Large media & binaries
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pdf
+*.zip
+
+# Lock files (usually not needed for understanding logic)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

@@ -5,4 +5,5 @@ type AppConfig struct {
 	RepoRoot string `json:"repoRoot"`
 	McRoot   string `json:"mcRoot"`
 	LinkMode string `json:"linkMode"`
+	Theme    string `json:"theme"`
 }

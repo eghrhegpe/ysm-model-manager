@@ -1,4 +1,5 @@
 // ===== Go 数据加载层 =====
+import { bus } from "../../bus.js";
 import {
   ScanModelEntries,
   IsFileBanned,
@@ -7,35 +8,39 @@ import {
 
 /** 从 Go 后端加载仓库文件列表，返回格式化的 entries */
 export async function loadEntries() {
-  const cfg = await LoadAppConfig();
-  const repoRoot = cfg.repoRoot || cfg.RepoRoot || "";
-  if (!repoRoot) return null;
+  try {
+    const cfg = await LoadAppConfig();
+    const repoRoot = cfg.repoRoot || cfg.RepoRoot || "";
+    if (!repoRoot) return fallbackEntries();
 
-  const raw = await ScanModelEntries(repoRoot);
-  if (!raw || !raw.length) return null;
+    const raw = await ScanModelEntries(repoRoot);
+    if (!raw || !raw.length) return fallbackEntries();
 
-  const entries = [];
-  for (const e of raw) {
-    let banned = false;
-    try {
-      banned = await IsFileBanned(e.Path);
-    } catch (_) {}
+    const entries = [];
+    for (const e of raw) {
+      let banned = false;
+      try {
+        banned = await IsFileBanned(e.Path);
+      } catch (_) {}
 
-    let relPath = e.Path;
-    if (repoRoot && e.Path.startsWith(repoRoot)) {
-      relPath = e.Path.slice(repoRoot.length).replace(/^[/\\]+/, "");
+      let relPath = e.Path;
+      if (repoRoot && e.Path.startsWith(repoRoot)) {
+        relPath = e.Path.slice(repoRoot.length).replace(/^[/\\]+/, "");
+      }
+
+      entries.push({
+        name: e.Name,
+        path: relPath,
+        fullPath: e.Path,
+        size: e.Size,
+        modTime: e.ModTime,
+        banned,
+      });
     }
-
-    entries.push({
-      name: e.Name,
-      path: relPath,
-      fullPath: e.Path,
-      size: e.Size,
-      modTime: e.ModTime,
-      banned,
-    });
+    return { repoRoot, entries };
+  } catch {
+    return fallbackEntries();
   }
-  return { repoRoot, entries };
 }
 
 /** Go 不可用时的后备模拟数据 */

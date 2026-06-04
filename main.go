@@ -16,13 +16,14 @@ func main() {
 	app := NewApp()
 	err := wails.Run(&options.App{
 		Title:      "YSM 模型管理器",
-		Width:      960,
-		Height:     640,
+		Width:      1280,
+		Height:     800,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		OnStartup: app.startup,
-		Bind:      []any{app},
+		OnStartup:  app.startup,
+		OnShutdown: app.shutdown,
+		Bind:       []any{app},
 	})
 	if err != nil {
 		log.Fatal(err)

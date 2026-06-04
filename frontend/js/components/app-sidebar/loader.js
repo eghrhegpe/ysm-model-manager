@@ -18,10 +18,13 @@ export async function loadInstances() {
 
     if (!mcRoot || !repoRoot) return fallbackInstances();
 
-    // 获取仓库所有文件（用于算已同步数）
+    // 获取仓库所有文件（用于算已同步数，排除禁用模型）
     const repoEntries = await ScanModelEntries(repoRoot);
     const repoSet = new Set();
-    repoEntries.forEach((e) => repoSet.add(e.Name.replace(/\.ban$/i, "")));
+    repoEntries.forEach((e) => {
+      if (e.Name.match(/\.ban$/i)) return; // 跳过禁用模型
+      repoSet.add(e.Name.replace(/\.ban$/i, ""));
+    });
 
     // 获取整合包列表
     const rawInstances = await ListVersionInstances(mcRoot);
@@ -38,6 +41,7 @@ export async function loadInstances() {
       const st = statusMap[ins.Name] || {};
       const missingList = st.Missing || [];
       const extraList = st.Extra || [];
+      const disabledList = st.Disabled || [];
       const missingSet = new Set(
         missingList.map((n) => {
           const basename = n.split(/[/\\]/).pop() || n;
@@ -50,11 +54,18 @@ export async function loadInstances() {
           return basename.replace(/\.ban$/i, "");
         }),
       );
+      const disabledSet = new Set(
+        disabledList.map((n) => n.replace(/\.ban$/i, "")),
+      );
 
-      // 已同步 = 仓库有但不在 missing 和 extra 中
+      // 已同步 = 仓库有但不在 missing、extra、disabled 中
       const syncedNames = [];
       repoSet.forEach((name) => {
-        if (!missingSet.has(name) && !extraSet.has(name)) {
+        if (
+          !missingSet.has(name) &&
+          !extraSet.has(name) &&
+          !disabledSet.has(name)
+        ) {
           syncedNames.push(name);
         }
       });
@@ -68,6 +79,7 @@ export async function loadInstances() {
         synced: syncedNames.length,
         missing: missingList.length,
         extra: extraList.length,
+        disabled: disabledList.length,
         items: {
           synced: syncedNames.slice(0, 20).map((n) => {
             const linkType = getLinkType(n, st.Files);
@@ -81,6 +93,9 @@ export async function loadInstances() {
           extra: extraList.slice(0, 20).map((n) => {
             const linkType = getLinkType(n, st.Files);
             return { name: n, size: "", linkType };
+          }),
+          disabled: disabledList.slice(0, 20).map((n) => {
+            return { name: n, size: "", linkType: "" };
           }),
         },
       };

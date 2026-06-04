@@ -18,7 +18,6 @@ export function bindInstanceActions(root, instances) {
         duration: 2000,
         type: "info",
       });
-      // 逐个安装缺失项（这里只是演示，实际需结合目录参数）
       const { LoadAppConfig, ListVersionInstances } =
         await import("../../../wailsjs/go/main/App.js");
       const cfg = await LoadAppConfig();
@@ -53,13 +52,14 @@ export function bindInstanceActions(root, instances) {
     };
   });
 
-  // 缺失模型条目点击 → 安装单个
-  root.querySelectorAll(".row-missing").forEach((row) => {
-    row.onclick = async () => {
-      const name = row.dataset.path || row.dataset.name;
+  // 缺失模型条目 → 独立安装按钮点击
+  root.querySelectorAll(".btn-install-one").forEach((btn) => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      const name = btn.dataset.path;
       if (!name) return;
       // 查找所在整合包
-      const parentVc = row.closest(".vc-body")?.previousElementSibling;
+      const parentVc = btn.closest(".vc-body")?.previousElementSibling;
       const insName =
         parentVc?.querySelector(".name")?.textContent?.replace(/^📦\s*/, "") ||
         "";

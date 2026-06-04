@@ -35,13 +35,6 @@ export function vcHeaderHTML(
   isOpen = false,
   idx = -1,
 ) {
-  // 整体状态图标
-  let statusIcon = "";
-  if (status === "complete") statusIcon = `<span class="tag green">✅</span>`;
-  else if (status === "extra")
-    statusIcon = `<span class="tag orange">📤</span>`;
-  else if (status === "missing") statusIcon = `<span class="tag red">⬇️</span>`;
-
   const parts = [];
   if (synced > 0) parts.push(`<span class="tag green">✅ ${synced}</span>`);
   const arrowClass = isOpen ? "arrow open" : "arrow";
@@ -53,7 +46,6 @@ export function vcHeaderHTML(
     extra > 0 ? `<span class="tag orange">📤 ${extra}</span>` : "";
   return `<div class="vc-header">
 <span class="${arrowClass}">▶</span>
-${statusIcon}
 <span class="name">📦 ${esc(name)}</span>
 ${parts.join("")}
 ${extraTag}
@@ -66,11 +58,20 @@ export function sectionTitleHTML(text, count) {
   return `<div class="sec-title">${text} (${count})</div>`;
 }
 
-/** 单行模型条目 — dotColor: 状态圆点色, name: 文件名, size: 大小, linkType: 链接图标, extraCls: 额外 class, path: 完整路径（可选，存 data-path） */
-export function rowHTML(dotColor, name, size, linkType, extraCls = "", path) {
+/** 单行模型条目 — dotColor: 状态圆点色, name: 文件名, size: 大小, linkType: 链接图标, extraCls: 额外 class, path: 完整路径（可选，存 data-path）, btnHtml: 操作按钮HTML, rowCls: 额外CSS类 */
+export function rowHTML(
+  dotColor,
+  name,
+  size,
+  linkType,
+  extraCls = "",
+  path,
+  btnHtml = "",
+  rowCls = "",
+) {
   const linkIcon = linkType ? `<span class="link-icon">${linkType}</span>` : "";
   const pathAttr = path ? ` data-path="${esc(path)}"` : "";
-  return `<div class="row ${extraCls}" data-name="${esc(name)}"${pathAttr}><span class="dot" style="background:${dotColor}"></span><span class="rn">${esc(name)}</span>${linkIcon}<span class="sz">${size}</span></div>`;
+  return `<div class="row ${extraCls}${rowCls}" data-name="${esc(name)}"${pathAttr}><span class="dot" style="background:${dotColor}"></span><span class="rn">${esc(name)}</span>${linkIcon}<span class="sz">${size}</span>${btnHtml}</div>`;
 }
 
 function esc(s) {

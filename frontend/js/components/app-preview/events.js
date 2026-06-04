@@ -65,26 +65,22 @@ export function bindActions(root) {
       });
     });
 
-  // ===== 状态卡片点击展开详情列表 =====
-  const missingCard = root.getElementById("dp-card-missing");
-  const missingDetail = root.getElementById("dp-detail-missing");
-  if (missingCard && missingDetail) {
-    let missingOpen = false;
-    missingCard.onclick = () => {
-      missingOpen = !missingOpen;
-      missingDetail.style.display = missingOpen ? "" : "none";
-    };
-  }
-
-  const extraCard = root.getElementById("dp-card-extra");
-  const extraDetail = root.getElementById("dp-detail-extra");
-  if (extraCard && extraDetail) {
-    let extraOpen = false;
-    extraCard.onclick = () => {
-      extraOpen = !extraOpen;
-      extraDetail.style.display = extraOpen ? "" : "none";
-    };
-  }
+  // ===== 三张状态卡片点击展开详情列表 =====
+  [
+    { card: "dp-card-synced", detail: "dp-detail-synced" },
+    { card: "dp-card-missing", detail: "dp-detail-missing" },
+    { card: "dp-card-extra", detail: "dp-detail-extra" },
+  ].forEach(({ card, detail }) => {
+    const c = root.getElementById(card);
+    const d = root.getElementById(detail);
+    if (c && d) {
+      let open = false;
+      c.onclick = () => {
+        open = !open;
+        d.style.display = open ? "" : "none";
+      };
+    }
+  });
 }
 
 /** 启用/禁用手动作业栏的三个按钮 */
@@ -138,7 +134,7 @@ export function showPackageDetail(root, pkg) {
     }
   }
 
-  // 三张状态卡片（纯展示）
+  // 三张状态卡片
   const syncedNum = root.getElementById("dp-card-synced-num");
   const missingNum = root.getElementById("dp-card-missing-num");
   const extraNum = root.getElementById("dp-card-extra-num");
@@ -146,28 +142,25 @@ export function showPackageDetail(root, pkg) {
   if (missingNum) missingNum.textContent = pkg.missing || 0;
   if (extraNum) extraNum.textContent = pkg.extra || 0;
 
-  // 填充缺失/额外展开列表
-  const missingDetail = root.getElementById("dp-detail-missing");
-  if (missingDetail) {
-    const items = pkg.items?.missing || [];
-    missingDetail.innerHTML = items.length
+  // 填充三个展开列表（仅显示文件名，完整路径放 title）
+  [
+    { id: "dp-detail-synced", items: pkg.items?.synced || [], icon: "✅" },
+    { id: "dp-detail-missing", items: pkg.items?.missing || [], icon: "⬇️" },
+    { id: "dp-detail-extra", items: pkg.items?.extra || [], icon: "📤" },
+  ].forEach(({ id, items, icon }) => {
+    const el = root.getElementById(id);
+    if (!el) return;
+    el.innerHTML = items.length
       ? items
-          .map((it) => `<div class="dp-detail-item">⬇️ ${esc(it.name)}</div>`)
+          .map((it) => {
+            const display = it.displayName || it.name || "";
+            const fullPath = it.name || "";
+            return `<div class="dp-detail-item" title="${esc(fullPath)}">${icon} ${esc(display)}</div>`;
+          })
           .join("")
-      : '<div class="dp-detail-empty">无缺失</div>';
-    missingDetail.style.display = "none";
-  }
-
-  const extraDetail = root.getElementById("dp-detail-extra");
-  if (extraDetail) {
-    const items = pkg.items?.extra || [];
-    extraDetail.innerHTML = items.length
-      ? items
-          .map((it) => `<div class="dp-detail-item">📤 ${esc(it.name)}</div>`)
-          .join("")
-      : '<div class="dp-detail-empty">无额外</div>';
-    extraDetail.style.display = "none";
-  }
+      : `<div class="dp-detail-empty">无</div>`;
+    el.style.display = "none";
+  });
 
   // 恢复全局按钮状态
   resetGlobalButtons(root);
@@ -237,7 +230,11 @@ export function loadLogsPreview(root, logs) {
           })
         : "";
       const msg = l.ModelName + (l.ErrorMsg ? ": " + l.ErrorMsg : "");
-      return `<div class="log-entry"><span>${status}</span><span class="log-msg">${esc(msg)}</span><span class="log-time">${time}</span></div>`;
+      const prettyMsg = esc(msg).replace(
+        /\s+(问题描述|操作|源路径|目标路径|解决建议)[：:]?/g,
+        "<br>$1：",
+      );
+      return `<div class="log-entry"><span>${status}</span><span class="log-msg">${prettyMsg}</span><span class="log-time">${time}</span></div>`;
     })
     .join("");
   list.innerHTML = items;

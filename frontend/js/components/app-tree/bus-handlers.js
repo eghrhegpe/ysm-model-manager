@@ -19,9 +19,25 @@ export function bindBusEvents(vm) {
     bus.on("entry:toggle", async ({ path }) => {
       try {
         await ToggleModelEnable(path);
+        // 自动同步禁用/启用状态到所有整合包
+        try {
+          const { LoadAppConfig, ListVersionInstances, SyncModelToggleStatus } =
+            await import("../../../wailsjs/go/main/App.js");
+          const cfg = await LoadAppConfig();
+          const repoRoot = cfg.repoRoot || "";
+          const mcRoot = cfg.mcRoot || "";
+          if (repoRoot && mcRoot) {
+            const instances = await ListVersionInstances(mcRoot);
+            for (const ins of instances) {
+              if (!ins.Exists) continue;
+              try {
+                await SyncModelToggleStatus(ins.CustomDir, repoRoot);
+              } catch {}
+            }
+          }
+        } catch {}
       } catch (_) {}
       await reload(vm);
-      // 通知统计刷新
       bus.emit("stats:refresh");
     }),
   );

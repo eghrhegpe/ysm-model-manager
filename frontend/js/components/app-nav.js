@@ -12,11 +12,19 @@ class AppNav extends HTMLElement {
   connectedCallback() {
     this._unsub = bus.on("nav:changed", ({ page }) => {
       this._current = page;
+      try {
+        localStorage.setItem("nav_page", page);
+      } catch {}
       this.shadowRoot.querySelectorAll(".nav-item").forEach((el) => {
         el.classList.toggle("active", el.dataset.page === page);
       });
     });
     this.render();
+    // 恢复上次保存的页面
+    const saved = localStorage.getItem("nav_page");
+    if (saved && saved !== "instances") {
+      setTimeout(() => bus.emit("nav:change", { page: saved }), 50);
+    }
   }
 
   disconnectedCallback() {
@@ -38,8 +46,8 @@ class AppNav extends HTMLElement {
         :host {
           display: flex;
           flex-direction: column;
-          background: #11111b;
-          border-right: 1px solid rgba(255,255,255,.06);
+          background: var(--bg);
+          border-right: 1px solid var(--bd);
           width: 200px;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
         }
@@ -47,11 +55,11 @@ class AppNav extends HTMLElement {
           padding: 16px 14px 12px;
           font-size: 14px;
           font-weight: 600;
-          color: #fff;
+          color: var(--txt);
           display: flex;
           align-items: center;
           gap: 8px;
-          border-bottom: 1px solid rgba(255,255,255,.06);
+          border-bottom: 1px solid var(--bd);
         }
         .logo-icon { font-size: 20px; }
         .menu { padding: 8px; flex: 1; }
@@ -62,15 +70,15 @@ class AppNav extends HTMLElement {
           padding: 8px 10px;
           border-radius: 6px;
           font-size: 12px;
-          color: #a6adc8;
+          color: var(--muted);
           cursor: pointer;
           transition: all .12s;
           margin-bottom: 2px;
         }
-        .nav-item:hover { background: #2a2a42; color: #cdd6f4; }
+        .nav-item:hover { background: var(--hover); color: var(--txt); }
         .nav-item.active {
           background: #7c83ff22;
-          color: #7c83ff;
+          color: var(--accent);
         }
         .nav-item .icon { font-size: 14px; width: 20px; text-align: center; }
         .nav-item .tag {
@@ -83,9 +91,9 @@ class AppNav extends HTMLElement {
         }
         .version {
           padding: 10px 14px;
-          border-top: 1px solid rgba(255,255,255,.06);
+          border-top: 1px solid var(--bd);
           font-size: 10px;
-          color: #6c7086;
+          color: var(--muted);
         }
       </style>
       <div class="logo">

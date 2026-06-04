@@ -41,12 +41,12 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
         { divider: true },
         // 包体操作
         {
-          label: "安装缺失",
+          label: "从仓库导入模型",
           icon: "⬇️",
           onClick: () => bus.emit("sync:download-missing"),
         },
         {
-          label: "导出文件清单",
+          label: "复制您的模型清单",
           icon: "📄",
           onClick: () =>
             bus.emit("instance:export-list", { name: instanceName }),
@@ -54,7 +54,7 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
         { divider: true },
         // 危险操作
         {
-          label: "清空目录",
+          label: "清空此整合包的模型",
           icon: "🗑️",
           danger: true,
           onClick: () => bus.emit("instance:clear", { name: instanceName }),
@@ -69,7 +69,7 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
       y,
       items: [
         {
-          label: banned ? "✅ 启用" : "⛔ 禁用",
+          label: banned ? "启用" : "禁用",
           icon: banned ? "✅" : "⛔",
           onClick: async () => {
             try {
@@ -84,7 +84,7 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
           },
         },
         {
-          label: "📄 模型详情",
+          label: "模型详情",
           icon: "📄",
           onClick: async () => {
             try {
@@ -96,7 +96,7 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
           },
         },
         {
-          label: "📂 打开所在文件夹",
+          label: "打开所在文件夹",
           icon: "📂",
           onClick: () => {
             const dir = path.substring(0, path.lastIndexOf("\\"));
@@ -128,3 +128,40 @@ window.addEventListener("resize", () => {
     } catch (_) {}
   }, 500);
 });
+
+// ===== 全局主题控制 =====
+/** 应用主题：dark / light / system */
+function applyTheme(mode) {
+  if (mode === "system") {
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
+    document.body.classList.toggle("light", !prefersDark);
+  } else {
+    document.body.classList.toggle("light", mode === "light");
+  }
+}
+window.applyTheme = applyTheme;
+
+// 启动时加载主题
+(async () => {
+  try {
+    const { LoadAppConfig } = await import("../wailsjs/go/main/App.js");
+    const cfg = await LoadAppConfig();
+    const theme =
+      cfg.theme || cfg.Theme || localStorage.getItem("theme") || "system";
+    localStorage.setItem("theme", theme);
+    applyTheme(theme);
+  } catch {
+    const theme = localStorage.getItem("theme") || "system";
+    applyTheme(theme);
+  }
+})();
+
+// 监听系统主题变化
+window
+  .matchMedia("(prefers-color-scheme: dark)")
+  .addEventListener("change", () => {
+    const theme = localStorage.getItem("theme") || "system";
+    if (theme === "system") applyTheme("system");
+  });

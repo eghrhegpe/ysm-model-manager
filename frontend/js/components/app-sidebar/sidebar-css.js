@@ -45,6 +45,7 @@ export const sidebarCSS = `
 .vc-body .row:hover { background: var(--hover); }
 .vc-body .row .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .vc-body .row .rn { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vc-body .row.row-prefix .dot { opacity:0.35; }
 .vc-body .row .status-icon { font-size: 10px; margin-right: 4px; flex-shrink: 0; }
 .vc-body .row .link-icon { font-size: 10px; margin-right: 4px; flex-shrink: 0; }
 .vc-body .row .sz { font-size: 11px; color: var(--muted); }

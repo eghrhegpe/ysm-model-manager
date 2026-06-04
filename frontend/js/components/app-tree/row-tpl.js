@@ -10,7 +10,7 @@ export function fileRowHTML(e, nmHtml, icon, dateStr, extraCls = "") {
 <span class="ck${checked}" data-path="${p}" data-fullpath="${fp}"></span>
 <span class="ficon">${icon}</span>
 <span class="nm${extraCls}">${nmHtml}</span>
-<span class="sz">${size(e.size)}</span>${dateStr ? `<span class="dt">${dateStr}</span>` : ""}</div>`;
+<span class="sz ${sc(e.size)}">${size(e.size)}</span>${dateStr ? `<span class="dt">${dateStr}</span>` : ""}</div>`;
 }
 
 /** 文件夹行 HTML（含 .ch 容器开头） */
@@ -23,7 +23,7 @@ export function folderRowHTML(
   hasDisabled,
 ) {
   const fi = isLocked ? "🔒" : "📁";
-  const nc = isLocked ? "#585b70" : "#a6adc8";
+  const nc = isLocked ? "var(--muted)" : "var(--txt)";
   const lk = isLocked ? " locked" : "";
   const ar = isOpen ? "▾" : "▸";
   const ac = isOpen ? " open" : "";
@@ -49,4 +49,10 @@ function size(b) {
   if (b < 1024) return b + " B";
   if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
   return (b / 1048576).toFixed(1) + " MB";
+}
+function sc(b) {
+  if (!b && b !== 0) return "";
+  if (b < 1048576) return "sz-green";
+  if (b < 3145728) return "";
+  return "sz-red";
 }

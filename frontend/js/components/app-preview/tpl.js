@@ -13,21 +13,22 @@ export function statsHTML() {
     <span class="dp-status" id="dp-status"></span>
   </div>
   <div class="dp-cards" id="dp-cards">
-    <div class="dp-card green" id="dp-card-synced">
+    <div class="dp-card green" id="dp-card-synced" style="cursor:pointer">
       <div class="dp-card-num" id="dp-card-synced-num">0</div>
-      <div class="dp-card-label">已同步</div>
+      <div class="dp-card-label">已同步的模型列表</div>
     </div>
     <div class="dp-card red" id="dp-card-missing" style="cursor:pointer">
       <div class="dp-card-num" id="dp-card-missing-num">0</div>
-      <div class="dp-card-label">缺失文件</div>
+      <div class="dp-card-label">待同步的模型列表</div>
     </div>
     <div class="dp-card orange" id="dp-card-extra" style="cursor:pointer">
       <div class="dp-card-num" id="dp-card-extra-num">0</div>
-      <div class="dp-card-label">额外文件</div>
+      <div class="dp-card-label">可加入仓库的模型列表</div>
     </div>
   </div>
-  <div class="dp-detail" id="dp-detail-missing" style="display:none;max-height:100px;overflow-y:auto;margin-bottom:4px"></div>
-  <div class="dp-detail" id="dp-detail-extra" style="display:none;max-height:100px;overflow-y:auto;margin-bottom:4px"></div>
+  <div class="dp-detail" id="dp-detail-synced" style="display:none;flex:1;overflow-y:auto;margin-bottom:4px"></div>
+  <div class="dp-detail" id="dp-detail-missing" style="display:none;flex:1;overflow-y:auto;margin-bottom:4px"></div>
+  <div class="dp-detail" id="dp-detail-extra" style="display:none;flex:1;overflow-y:auto;margin-bottom:4px"></div>
   <hr class="divider">
   <div class="dp-global-actions">
     <div class="dp-section-title">⚙️ 全局管理</div>

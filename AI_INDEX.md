@@ -58,12 +58,12 @@ ysm-model-manager/
 
 ### 配置
 
-| 函数                                        | 用途                | 参数     | 返回值            |
-| ------------------------------------------- | ------------------- | -------- | ----------------- |
-| `SaveAppConfig(repoRoot, mcRoot, linkMode)` | 保存配置            | string×3 | error             |
-| `LoadAppConfig()`                           | 加载配置            | -        | AppConfig         |
-| `SelectDirectory()`                         | 系统目录选择对话框  | -        | (string, error)   |
-| `GetMinecraftPath()`                        | 自动检测 .minecraft | -        | string (含 emoji) |
+| 函数                                               | 用途                | 参数     | 返回值            |
+| -------------------------------------------------- | ------------------- | -------- | ----------------- |
+| `SaveAppConfig(repoRoot, mcRoot, linkMode, theme)` | 保存配置（含主题）  | string×4 | error             |
+| `LoadAppConfig()`                                  | 加载配置            | -        | AppConfig         |
+| `SelectDirectory()`                                | 系统目录选择对话框  | -        | (string, error)   |
+| `GetMinecraftPath()`                               | 自动检测 .minecraft | -        | string (含 emoji) |
 
 ### 仓库
 
@@ -149,24 +149,30 @@ ysm-model-manager/
 
 ## bus 事件总线
 
-| 事件名             | 方向          | 载荷                                   | 说明           |
-| ------------------ | ------------- | -------------------------------------- | -------------- |
-| `nav:change`       | → app-content | `{ page }`                             | 切换主页面     |
-| `nav:changed`      | app-content → | `{ page }`                             | 页面已切换     |
-| `toast:show`       | → app-toast   | `{ msg, undo?, duration?, type? }`     | 显示通知       |
-| `entry:toggle`     | app-tree →    | `{ path, enabled }`                    | 启用/禁用      |
-| `ctx:show`         | app-tree →    | `{ x, y, path, name, banned }`         | 显示右键菜单   |
-| `ver:search`       | app-sidebar → | `{ keyword }`                          | 搜索整合包     |
-| `dir:select-repo`  | 各组件 →      | -                                      | 选择仓库目录   |
-| `dir:select-mc`    | 各组件 →      | -                                      | 选择游戏目录   |
-| `stats:refresh`    | app-preview → | -                                      | 刷新统计       |
-| `stats:upload`     | app-preview → | -                                      | 上传待上传     |
-| `stats:logs`       | app-preview → | -                                      | 打开日志       |
-| `stats:updated`    | → app-preview | `{ repo?, ver?, ok?, tot?, pending? }` | 统计更新       |
-| `versions:updated` | → app-sidebar | `{ instances, stats }`                 | 整合包列表更新 |
-| `entries:dedup`    | app-tree →    | -                                      | 触发去重       |
-| `recycle:open`     | app-tree →    | -                                      | 打开回收站     |
-| `preview:toggle`   | app-tree →    | -                                      | 切换预览面板   |
+| 事件名                   | 方向                   | 载荷                               | 说明                                  |
+| ------------------------ | ---------------------- | ---------------------------------- | ------------------------------------- |
+| `nav:change`             | → app-content          | `{ page }`                         | 切换主页面                            |
+| `nav:changed`            | app-content →          | `{ page }`                         | 页面已切换                            |
+| `toast:show`             | → app-toast            | `{ msg, undo?, duration?, type? }` | 显示通知                              |
+| `entry:toggle`           | app-tree →             | `{ path }`                         | 启用/禁用（自动同步整合包）           |
+| `ctx:show`               | app-tree →             | `{ x, y, path, name, banned }`     | 显示右键菜单                          |
+| `dir:select-repo`        | 各组件 →               | -                                  | 选择仓库目录                          |
+| `dir:select-mc`          | 各组件 →               | -                                  | 选择游戏目录                          |
+| `stats:refresh`          | → 全部                 | -                                  | 刷新所有统计                          |
+| `stats:upload`           | app-preview →          | -                                  | 上传待上传                            |
+| `menu:show`              | → context-menu         | `{ x, y, items }`                  | 显示右键菜单                          |
+| `config:updated`         | settings →             | -                                  | 配置变更                              |
+| `tree:reload`            | app-content → app-tree | -                                  | 刷新仓库树                            |
+| `logs:refresh`           | → app-content          | -                                  | 刷新操作日志                          |
+| `package:selected`       | app-sidebar →          | `{ pkg }`                          | 选中整合包                            |
+| `model:select`           | app-tree →             | `{ path }`                         | 选中模型文件                          |
+| `sync:download-missing`  | app-preview/sidebar →  | -                                  | 导入缺失模型（app-content 常驻监听）  |
+| `sync:download-complete` | app-content →          | -                                  | 导入完成                              |
+| `sync:toggle-status`     | app-preview/sidebar →  | -                                  | 同步启用/禁用（app-content 常驻监听） |
+| `sync:toggle-complete`   | app-content →          | -                                  | 同步完成                              |
+| `sync:upload-complete`   | app-content →          | -                                  | 上传完成                              |
+| `instance:export-list`   | → app-content          | `{ name }`                         | 导出文件清单到剪贴板                  |
+| `instance:clear`         | → app-content          | `{ name }`                         | 清空整合包（有确认窗）                |
 
 ---
 

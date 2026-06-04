@@ -81,7 +81,7 @@
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background: #555;
+  background: var(--muted);
   border-radius: 13px;
   transition: 0.15s;
 }
@@ -93,7 +93,7 @@
   width: 9px;
   left: 2px;
   bottom: 2px;
-  background: #fff;
+  background: var(--txt);
   border-radius: 50%;
   transition: 0.15s;
 }

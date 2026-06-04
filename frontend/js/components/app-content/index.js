@@ -321,12 +321,8 @@ class AppContent extends HTMLElement {
     this._globalUnsubs.push(
       bus.on("instance:clear", async ({ name: insName }) => {
         try {
-          const {
-            LoadAppConfig,
-            ListVersionInstances,
-            ScanModelEntries,
-            MoveToRecycle,
-          } = await import("../../../wailsjs/go/main/App.js");
+          const { LoadAppConfig, ListVersionInstances } =
+            await import("../../../wailsjs/go/main/App.js");
           const cfg = await LoadAppConfig();
           const mcRoot = cfg.mcRoot || "";
           if (!mcRoot) {
@@ -360,14 +356,9 @@ class AppContent extends HTMLElement {
             return;
           }
           try {
-            const entries = await ScanModelEntries(ins.CustomDir);
-            let count = 0;
-            for (const e of entries || []) {
-              try {
-                await MoveToRecycle(e.Path);
-                count++;
-              } catch {}
-            }
+            const { ClearCustomDir } =
+              await import("../../../wailsjs/go/main/App.js");
+            const count = await ClearCustomDir(ins.CustomDir);
             bus.emit("stats:refresh");
             bus.emit("toast:show", {
               msg: `🗑️ ${insName}: 已清空 ${count} 个文件`,
@@ -580,11 +571,17 @@ class AppContent extends HTMLElement {
             : "";
           const msg =
             l.ModelName +
-            (l.TargetDir ? " → " + l.TargetDir : "") +
-            (l.ErrorMsg ? ": " + l.ErrorMsg : "");
+            (l.TargetDir ? "<br>📂 " + this._esc(l.TargetDir) : "") +
+            (l.ErrorMsg
+              ? "<br>❌ " +
+                this._esc(l.ErrorMsg).replace(
+                  /\s+(问题描述|操作|源路径|目标路径|解决建议)[：:]?/g,
+                  "<br>$1：",
+                )
+              : "");
           return `<div class="log-row">
 <span class="log-status ${status}">${statusLabel}</span>
-<span class="log-msg">${this._esc(msg)}</span>
+<span class="log-msg">${msg}</span>
 <span class="log-time">${t}</span>
 </div>`;
         })
@@ -834,9 +831,9 @@ class AppContent extends HTMLElement {
 
       // 主题：先读 Go 配置，再回退 localStorage
       let savedTheme = cfg.theme || cfg.Theme || "";
-      if (!savedTheme) savedTheme = localStorage.getItem("theme") || "dark";
+      if (!savedTheme) savedTheme = localStorage.getItem("theme") || "system";
       localStorage.setItem("theme", savedTheme);
-      document.body.classList.toggle("light", savedTheme === "light");
+      applyTheme(savedTheme);
       const themeSelect = root.getElementById("set-theme");
       if (themeSelect) themeSelect.value = savedTheme;
 
@@ -927,10 +924,16 @@ class AppContent extends HTMLElement {
       // 主题切换
       root.getElementById("set-theme")?.addEventListener("change", (e) => {
         const mode = e.target.value;
-        document.body.classList.toggle("light", mode === "light");
+        applyTheme(mode);
         localStorage.setItem("theme", mode);
+        const label =
+          mode === "dark"
+            ? "暗黑模式"
+            : mode === "light"
+              ? "明亮模式"
+              : "跟随系统";
         bus.emit("toast:show", {
-          msg: `✅ 主题已切换为: ${mode === "dark" ? "暗黑模式" : "明亮模式"}`,
+          msg: `✅ 主题已切换为: ${label}`,
           duration: 2000,
           type: "success",
         });

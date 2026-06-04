@@ -34,7 +34,7 @@ h3 { font-size: 11px; font-weight: 600; color: var(--txt); text-transform: upper
 .dp-card-action .btn { padding: 3px 6px; font-size: 9px; }
 .dp-expand-icon { font-size: 8px; margin-left: 2px; transition: transform .15s; }
 .dp-expand-icon.open { transform: rotate(90deg); }
-.dp-detail { font-size: 10px; color: var(--txt); padding: 2px 4px; background: var(--surf); border-radius: 4px; }
+.dp-detail { font-size: 10px; color: var(--txt); padding: 2px 4px; background: var(--surf); border-radius: 4px; flex:1; overflow-y:auto; min-height:0; }
 .dp-detail .dp-detail-item { padding: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dp-detail .dp-detail-empty { color: var(--muted); padding: 4px 0; text-align: center; }
 .dp-section-title { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
@@ -50,7 +50,7 @@ h3 { font-size: 11px; font-weight: 600; color: var(--txt); text-transform: upper
 .btn.accent:hover { background: #7c83ff55; }
 .btn.warn { background: #f9a82622; color: #f9a826; border-color: #f9a82655; }
 .log-entry { padding: 2px 0; font-size: 9px; color: var(--txt); display: flex; gap: 4px; white-space: nowrap; }
-.log-entry .log-msg { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.log-entry .log-msg { flex: 1; word-break: break-all; }
 .log-entry .log-time { font-size: 8px; color: var(--muted); flex-shrink: 0; }
 .md-row { font-size: 12px; color: var(--txt); padding: 3px 0; display: flex; justify-content: space-between; }
 .md-label { color: var(--muted); }

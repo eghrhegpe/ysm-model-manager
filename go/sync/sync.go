@@ -25,9 +25,14 @@ func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.Instance
 	repoEntries := scanFn(repoDir)
 	repoByHash := make(map[string]types.ModelEntry)
 	for _, e := range repoEntries {
-		if e.Hash != "" {
-			repoByHash[e.Hash] = e
+		if e.Hash == "" {
+			continue
 		}
+		// 跳过禁用的模型（.ban），它们不应出现在缺失列表中
+		if strings.HasSuffix(strings.ToLower(e.Name), ".ban") {
+			continue
+		}
+		repoByHash[e.Hash] = e
 	}
 
 	instances := listVersions(mcRoot)
@@ -57,30 +62,32 @@ func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.Instance
 						status.Missing = append(status.Missing, e.Path)
 					}
 				}
-		for _, c := range customEntries {
-			if c.Hash != "" {
-				if _, found := repoByHash[c.Hash]; !found {
-					name := c.Name
-					if strings.HasSuffix(strings.ToLower(name), ".ban") {
-						name = name[:len(name)-4]
-					}
-					status.Extra = append(status.Extra, name)
-				}
+		// 预构建禁用哈希集合
+		bannedHashes := make(map[string]bool)
+		for _, re := range repoEntries {
+			if strings.HasSuffix(strings.ToLower(re.Name), ".ban") && re.Hash != "" {
+				bannedHashes[re.Hash] = true
 			}
 		}
+
 		for _, c := range customEntries {
 			if c.Hash == "" {
 				continue
 			}
-			for _, re := range repoEntries {
-				if re.Hash == c.Hash && strings.HasSuffix(strings.ToLower(re.Name), ".ban") {
-					name := c.Name
-					if strings.HasSuffix(strings.ToLower(name), ".ban") {
-						name = name[:len(name)-4]
-					}
-					status.Disabled = append(status.Disabled, name)
-					break
+			if bannedHashes[c.Hash] {
+				// 仓库已禁用此模型 → 标记为已禁用，不入额外
+				name := c.Name
+				if strings.HasSuffix(strings.ToLower(name), ".ban") {
+					name = name[:len(name)-4]
 				}
+				status.Disabled = append(status.Disabled, name)
+			} else if _, found := repoByHash[c.Hash]; !found {
+				// 仓库中没有此哈希 → 额外
+				name := c.Name
+				if strings.HasSuffix(strings.ToLower(name), ".ban") {
+					name = name[:len(name)-4]
+				}
+				status.Extra = append(status.Extra, name)
 			}
 		}
 

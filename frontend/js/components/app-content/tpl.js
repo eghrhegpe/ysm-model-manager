@@ -58,6 +58,7 @@ export function settingsHTML() {
   <div class="setting-row">
     <span class="label">🌙 主题模式</span>
     <select id="set-theme" style="background:var(--bg,#1e1e2e);color:var(--txt,#cdd6f4);border:1px solid var(--bd,#444);border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer">
+      <option value="system">💻 跟随系统</option>
       <option value="dark">🌙 暗黑模式</option>
       <option value="light">☀️ 明亮模式</option>
     </select>

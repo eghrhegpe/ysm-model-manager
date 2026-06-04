@@ -60,8 +60,8 @@ type InstanceStatus struct {
 	Name      string           `json:"Name"`
 	CustomDir string           `json:"CustomDir"`
 	Status    string           `json:"Status"`    // "complete" | "missing" | "extra"
-	Missing   []string         `json:"Missing"`
-	Extra     []string         `json:"Extra"`
+	Missing   []string         `json:"Missing"`   // 完整路径
+	Extra     []string         `json:"Extra"`     // 文件名（供展示）
 	Disabled  []string         `json:"Disabled"`
 	HasYSM    bool             `json:"HasYSM"`
 	Files     []CustomFileInfo `json:"Files"`     // custom 目录下每个文件的链接类型
@@ -77,5 +77,13 @@ type AppError struct {
 }
 
 func (e AppError) Error() string {
-    return fmt.Sprintf("问题描述：%s 操作：%s 解决建议：%s", e.Reason, e.Operation, e.Suggestion)
+    msg := fmt.Sprintf("问题描述：%s 操作：%s", e.Reason, e.Operation)
+    if e.SourcePath != "" {
+        msg += fmt.Sprintf(" 源路径：%s", e.SourcePath)
+    }
+    if e.TargetPath != "" {
+        msg += fmt.Sprintf(" 目标路径：%s", e.TargetPath)
+    }
+    msg += fmt.Sprintf(" 解决建议：%s", e.Suggestion)
+    return msg
 }

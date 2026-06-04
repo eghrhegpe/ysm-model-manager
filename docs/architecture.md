@@ -65,10 +65,13 @@ js/utils/
 - [ ] 模板与数据分离（`data.js` 不碰 DOM）
 - [ ] 每文件 ≤ 80 行
 - [ ] 通用工具引用 `js/utils/` 而非重写
-- [ ] `index.html` 中非 module 组件用 `<script src="...">`，module 组件用 `<script type="module" src="...">`
+- [ ] 所有新组件为 ESM（使用 `export`/`import`）
+- [ ] 在 `app-modules.js` 中通过 `import` 引入，不在 `index.html` 加 `<script>` 标签
+- [ ] 禁止在 `public/` 目录放置 JS 文件
 
 ## 参考
 
 - 旧版代码：`frontend/js/legacy/`（26 个 JS 文件，全局变量 + DOM 直操）
-- 事件总线：`frontend/js/bus.js`
+- 事件总线：`frontend/js/bus.js`（ESM 导出 + `window.bus` 兼容）
 - Vite 构建：`frontend/vite.config.js`
+- 事故复盘：`docs/postmortem-20250604.md`

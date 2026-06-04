@@ -52,14 +52,11 @@ func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.Instance
 		}
 
 				for hash, e := range repoByHash {
-			if !customByHash[hash] {
-				name := e.Name
-				if strings.HasSuffix(strings.ToLower(name), ".ban") {
-					name = name[:len(name)-4]
+					if !customByHash[hash] {
+						// Missing 存完整路径，供安装时直接使用
+						status.Missing = append(status.Missing, e.Path)
+					}
 				}
-				status.Missing = append(status.Missing, name)
-			}
-		}
 		for _, c := range customEntries {
 			if c.Hash != "" {
 				if _, found := repoByHash[c.Hash]; !found {

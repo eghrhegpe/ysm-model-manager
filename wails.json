@@ -48,6 +48,8 @@
     "ClearCustomDir",
     "DeduplicateCustomDir",
     "CountLinkedModels",
-    "IsSymlink"
+    "IsSymlink",
+    "AnalyzeYSMModel",
+    "ExtractYsmSummary"
   ]
 }

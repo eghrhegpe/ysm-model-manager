@@ -23,6 +23,8 @@ export function DeleteFromRecycle(arg1:string):Promise<void>;
 
 export function EmptyRecycleBin(arg1:string):Promise<number>;
 
+export function ExtractYsmSummary(arg1:string):Promise<ysm.YsmSummary>;
+
 export function GetGlobalCustomDir(arg1:string):Promise<string>;
 
 export function GetImportLogs():Promise<Array<types.ImportLog>>;
@@ -67,7 +69,7 @@ export function OpenFolder(arg1:string):Promise<void>;
 
 export function RestoreFromRecycle(arg1:string,arg2:string):Promise<void>;
 
-export function SaveAppConfig(arg1:string,arg2:string,arg3:string):Promise<void>;
+export function SaveAppConfig(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function SaveWindowPosition(arg1:number,arg2:number,arg3:number,arg4:number):Promise<void>;
 

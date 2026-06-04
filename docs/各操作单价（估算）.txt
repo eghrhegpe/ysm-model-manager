@@ -1,0 +1,10 @@
+各操作单价（估算）：
+- grep_search: ~100 tokens/次
+- single_find_and_replace: ~300 tokens/次
+- edit_existing_file: ~1500 tokens/次
+- read_file（指定行）: ~500 tokens/次
+- read_file（全文件）: ~5000 tokens/次（禁止使用）
+- run_terminal_command（过滤 error）: ~50 tokens/次
+- run_terminal_command（全量）: ~300 tokens/次
+- create_new_file: ~2000 tokens/次
+- ls: ~50 tokens/次

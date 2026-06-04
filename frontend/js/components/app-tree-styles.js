@@ -49,9 +49,12 @@ export const treeCSS = `
 .fl .nm .nm-tag { color: #cba6f7; }
 .fl .nm .nm-bracket { color: #89b4fa; }
 .fl .nm.ysm { color: var(--txt); }
-.fl .sz { font-size: 9px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.fl .sz { font-size: 9px; white-space: nowrap; flex-shrink: 0; }
+.fl .sz.sz-green { color: #a6e3a1; }
+.fl .sz.sz-red { color: #f38ba8; }
+.fl .sz:not(.sz-green):not(.sz-red) { color: var(--muted); }
 .fl .dt { font-size: 9px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
-.ficon { font-size: 10px; }`;
-.ftr { padding: 8px 12px; border-top: 1px solid rgba(255,255,255,.06); display: flex; gap: 6px; align-items: center; }
-.ftr .stat { font-size: 10px; color: #6c7086; margin-right: auto; }
+.ficon { font-size: 10px; }
+.ftr { padding: 8px 12px; border-top: 1px solid var(--bd); display: flex; gap: 6px; align-items: center; }
+.ftr .stat { font-size: 10px; color: var(--muted); margin-right: auto; }
 `;

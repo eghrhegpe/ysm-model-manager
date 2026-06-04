@@ -6,6 +6,14 @@ export function fmt(b) {
   return (b / 1048576).toFixed(1) + " MB";
 }
 
+/** 文件大小颜色 class：<1MB 绿色，1-3MB 正常，>3MB 红色 */
+export function sizeColor(b) {
+  if (!b && b !== 0) return "";
+  if (b < 1048576) return "sz-green";
+  if (b < 3145728) return "";
+  return "sz-red";
+}
+
 // ===== 日期格式化 =====
 export function fmtDate(ts) {
   if (!ts) return "";
@@ -14,12 +22,9 @@ export function fmtDate(ts) {
   const isToday = d.toDateString() === now.toDateString();
   if (isToday)
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const diff = (now - d) / 86400000;
-  if (diff < 7)
-    return (
-      ["日", "一", "二", "三", "四", "五", "六"][d.getDay()] +
-      " " +
-      d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    );
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  // 今年显示 M月D日，往年显示 YYYY/M/D
+  if (d.getFullYear() === now.getFullYear()) {
+    return d.getMonth() + 1 + "月" + d.getDate() + "日";
+  }
+  return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
 }

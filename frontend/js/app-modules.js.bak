@@ -1,0 +1,99 @@
+// ===== 所有 ES module 组件的统一入口 =====
+// 新版 Web Component（通过 ES Module 导入以支持 shadow DOM）
+import "./components/app-tree/index.js";
+import "./components/app-sidebar/index.js";
+import "./components/app-preview/index.js";
+import "./components/app-content/index.js";
+
+// 旧版工具模块通过 index.html <script> 标签加载（非 module 模式），
+// 以便它们共享全局作用域互相引用函数/变量。
+
+// ===== 全局右键菜单映射 =====
+// 将 ctx:show 事件转换为新版组件使用的 menu:show 事件
+import { ToggleModelEnable, AnalyzeYSMModel } from "../wailsjs/go/main/App.js";
+
+bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
+  if (type === "instance") {
+    bus.emit("menu:show", {
+      x,
+      y,
+      items: [
+        { label: "📦 " + instanceName, icon: "📦", onClick: () => {} },
+        { divider: true },
+        {
+          label: "📥 从仓库安装模型",
+          onClick: () => bus.emit("instance:install", { name: instanceName }),
+        },
+        {
+          label: "🗑️ 清空目录",
+          danger: true,
+          onClick: () => bus.emit("instance:clear", { name: instanceName }),
+        },
+      ],
+    });
+    return;
+  }
+  if (type === "file") {
+    bus.emit("menu:show", {
+      x,
+      y,
+      items: [
+        {
+          label: banned ? "✅ 启用" : "⛔ 禁用",
+          icon: banned ? "✅" : "⛔",
+          onClick: async () => {
+            try {
+              await ToggleModelEnable(path);
+              bus.emit("stats:refresh");
+              const tree = document.querySelector("app-tree");
+              if (tree) {
+                await tree._load();
+                tree._renderTree();
+              }
+            } catch (_) {}
+          },
+        },
+        {
+          label: "📄 模型详情",
+          icon: "📄",
+          onClick: async () => {
+            try {
+              const meta = await AnalyzeYSMModel(path);
+              bus.emit("model:select", { path, meta });
+            } catch (_) {
+              bus.emit("model:select", { path });
+            }
+          },
+        },
+        {
+          label: "📂 打开所在文件夹",
+          icon: "📂",
+          onClick: () => {
+            const dir = path.substring(0, path.lastIndexOf("\\"));
+            window.go.main.App.OpenFolder(dir || path);
+          },
+        },
+      ],
+    });
+    return;
+  }
+  if (type === "dir") {
+    bus.emit("menu:show", {
+      x,
+      y,
+      items: [
+        {
+          label: "✅ 全部启用",
+          icon: "✅",
+          onClick: () => bus.emit("batch:enable", { dir }),
+        },
+        {
+          label: "⛔ 全部禁用",
+          icon: "⛔",
+          onClick: () => bus.emit("batch:disable", { dir }),
+        },
+      ],
+    });
+    return;
+  }
+});

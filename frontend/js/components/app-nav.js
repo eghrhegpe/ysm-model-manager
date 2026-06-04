@@ -1,5 +1,6 @@
 // ===== <app-nav> — 左侧导航菜单 =====
 // 事件：nav:change — 切换页面
+import { bus } from "../bus.js";
 
 class AppNav extends HTMLElement {
   constructor() {
@@ -27,9 +28,9 @@ class AppNav extends HTMLElement {
       { id: "instances", icon: "🎮", label: "整合包管理" },
       { id: "repository", icon: "📦", label: "模型仓库" },
       { id: "downloads", icon: "⬇️", label: "下载与更新" },
+      { id: "recycle", icon: "🗑️", label: "回收站" },
       { id: "diagnostics", icon: "🛠️", label: "诊断与冲突" },
       { id: "settings", icon: "⚙️", label: "设置" },
-      { id: "dashboard", icon: "🏠", label: "仪表盘" },
     ];
 
     this.shadowRoot.innerHTML = `
@@ -98,7 +99,7 @@ class AppNav extends HTMLElement {
           <div class="nav-item ${item.id === this._current ? "active" : ""}" data-page="${item.id}">
             <span class="icon">${item.icon}</span>
             <span>${item.label}</span>
-            ${item.id === "diagnostics" ? '<span class="tag">2</span>' : ""}
+            ${item.id === "diagnostics" ? '<span class="tag">!</span>' : ""}
           </div>
         `,
           )

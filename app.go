@@ -40,9 +40,23 @@ func (a *App) startup(ctx context.Context) {
 	// 启动时自动加载配置
 	a.loadAppConfig()
 
+	// 恢复窗口位置
+	pos := a.GetWindowPosition()
+	if pos.Width > 0 && pos.Height > 0 {
+		runtime.WindowSetSize(ctx, pos.Width, pos.Height)
+		runtime.WindowSetPosition(ctx, pos.X, pos.Y)
+	}
+
 	// 通过 runtime.EventsEmit 通知前端配置已加载
 	cfg := a.LoadAppConfig()
 	runtime.EventsEmit(ctx, "config-loaded", cfg.RepoRoot, cfg.McRoot, cfg.LinkMode)
+}
+
+func (a *App) shutdown(ctx context.Context) {
+	// 关闭时保存窗口位置
+	x, y := runtime.WindowGetPosition(ctx)
+	w, h := runtime.WindowGetSize(ctx)
+	a.SaveWindowPosition(x, y, w, h)
 }
 
 // ========== 配置持久化 ==========
@@ -68,11 +82,12 @@ func (a *App) loadAppConfig() {
 	}
 }
 
-func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode string) error {
+func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode, theme string) error {
 	cfg := types.AppConfig{
 		RepoRoot: repoRoot,
 		McRoot:   mcRoot,
 		LinkMode: linkMode,
+		Theme:    theme,
 	}
 	data, _ := json.MarshalIndent(cfg, "", "  ")
 	return os.WriteFile(configPath(), data, 0644)
@@ -365,6 +380,18 @@ func (a *App) IsFileBanned(path string) bool {
 // ========== YSM 模型解析 ==========
 func (a *App) AnalyzeYSMModel(path string) ysm.YSMModelMeta {
 	return ysm.AnalyzeYSMModel(path)
+}
+
+// ExtractYsmSummary 提取 YSM 模型的标准摘要（供右侧面板和 AI 搜索消费）
+func (a *App) ExtractYsmSummary(path string) ysm.YsmSummary {
+	summary, err := ysm.ExtractYsmSummary(path)
+	if err != nil {
+		summary = ysm.YsmSummary{
+			Schema: "ysm-summary/v1",
+			Source: filepath.Base(path),
+		}
+	}
+	return summary
 }
 
 // ========== 安装 ==========

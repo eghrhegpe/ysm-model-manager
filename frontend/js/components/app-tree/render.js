@@ -5,6 +5,7 @@ import { fmt, fmtDate } from "../../utils/fmt.js";
 import { fileIcon } from "../../utils/icon.js";
 import { emptyHTML } from "./tpl.js";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.js";
+import { isYsmName } from "../../utils/icon.js";
 
 // 直接导出旧版 buildTree 和 renderTree 逻辑
 // 由旧版 tree.js 移植
@@ -42,6 +43,29 @@ function buildTree(entries, sortMode, search) {
   return root;
 }
 
+/** 收集文件夹节点下的所有条目（含嵌套子文件夹） */
+function dirEntries(node, full, dirPath) {
+  const all = [];
+  const keys = Object.keys(node);
+  for (const k of keys) {
+    const v = node[k];
+    if (v._e) {
+      all.push(v._e);
+    } else {
+      const subFull = dirPath ? dirPath + "/" + k : k;
+      all.push(...dirEntries(v, subFull, dirPath));
+    }
+  }
+  return all;
+}
+
+/** 文件名高亮：标记 [] 和 【】中的内容 */
+function highlightName(name) {
+  return name
+    .replace(/\[([^\]]+)\]/g, '<span class="nm-tag">[$1]</span>')
+    .replace(/【([^】]+)】/g, '<span class="nm-bracket">【$1】</span>');
+}
+
 function renderNode(node, dirPath, search, sort, dirOpen) {
   const hasSearch = !!(search || "").trim();
   const keys = Object.keys(node).sort((a, b) => {
@@ -63,13 +87,25 @@ function renderNode(node, dirPath, search, sort, dirOpen) {
       const e = v._e;
       if (hasSearch && !e.name.toLowerCase().includes(search.toLowerCase()))
         return;
-      const nmHtml = hasSearch ? hl(e.name, search) : e.name;
+      const nmHtml = hasSearch ? hl(e.name, search) : highlightName(e.name);
       const dateStr = e.modTime ? fmtDate(e.modTime) : "";
-      h += fileRowHTML(e, nmHtml, fileIcon(e.name), dateStr);
+      const extraCls = isYsmName(e.name) ? " ysm" : "";
+      h += fileRowHTML(e, nmHtml, fileIcon(e.name), dateStr, extraCls);
     } else {
       const isLocked = k.startsWith("_");
       const shouldOpen = hasSearch || !!dirOpen[full];
-      h += folderRowHTML(k, full, shouldOpen, isLocked);
+      // 检查子文件启用/禁用状态
+      const subEntries = dirEntries(node[k], full, dirPath);
+      const hasEnabled = subEntries.some((e) => !e.banned);
+      const hasDisabled = subEntries.some((e) => e.banned);
+      h += folderRowHTML(
+        k,
+        full,
+        shouldOpen,
+        isLocked,
+        hasEnabled,
+        hasDisabled,
+      );
       h += renderNode(v, full, search, sort, dirOpen);
       h += "</div>";
     }

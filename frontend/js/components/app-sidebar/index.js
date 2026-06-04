@@ -1,4 +1,5 @@
 // ===== <app-sidebar> 入口 =====
+import { bus } from "../../bus.js";
 import { sidebarCSS } from "./sidebar-css.js";
 import { headerHTML, footerHTML, listContainerHTML } from "./tpl.js";
 import { renderVersionCards } from "./render.js";
@@ -9,7 +10,6 @@ import {
   bindBusUpdates,
 } from "./events.js";
 import { loadInstances } from "./loader.js";
-import { fallbackInstances } from "./data.js";
 import {
   SelectDirectory,
   SaveAppConfig,
@@ -37,7 +37,8 @@ class AppSidebar extends HTMLElement {
           const dir = await SelectDirectory();
           if (!dir) return;
           const cfg = await LoadAppConfig();
-          await SaveAppConfig(cfg.repoRoot || "", dir, cfg.linkMode || "copy");
+          const theme = localStorage.getItem("theme") || "dark";
+          await SaveAppConfig(cfg.repoRoot || "", dir, cfg.linkMode || "copy", theme);
         } catch (_) {}
         await this._reload();
       }),
@@ -61,19 +62,14 @@ class AppSidebar extends HTMLElement {
       ? this._instances.filter((ins) => ins.name.toLowerCase().includes(kw))
       : this._instances;
     renderVersionCards(container, filtered);
-    bindCardEvents(this._root);
+    bindCardEvents(this._root, this._instances);
   }
 
   async _reload() {
     try {
-      const r = await loadInstances();
-      if (r) {
-        this._instances = r;
-      } else {
-        this._instances = fallbackInstances();
-      }
+      this._instances = await loadInstances();
     } catch (_) {
-      this._instances = fallbackInstances();
+      this._instances = [];
     }
 
     // 更新统计数
@@ -82,7 +78,7 @@ class AppSidebar extends HTMLElement {
 
     this._renderCards();
     bindSearch(this._root, this);
-    bindFooter(this._root);
+    bindFooter(this._root, this._instances);
   }
 
   disconnectedCallback() {

@@ -13,8 +13,10 @@ export function renderVersionCards(container, instances) {
       ins.name,
       ins.synced,
       ins.missing,
+      ins.extra,
       ins.status,
       isOpen,
+      idx,
     );
     container.appendChild(vc);
 
@@ -38,7 +40,14 @@ function renderBody(ins) {
   if (ins.items.missing.length) {
     h += sectionTitleHTML("⬇️ 缺失", ins.items.missing.length);
     ins.items.missing.forEach((it) => {
-      h += rowHTML("#f38ba8", it.name, it.size, "");
+      h += rowHTML(
+        "#f38ba8",
+        it.displayName || it.name,
+        it.size,
+        "",
+        "row-missing",
+        it.name, // 完整路径，存 data-path
+      );
     });
   }
   if (ins.items.extra.length) {

@@ -4,6 +4,7 @@ export namespace types {
 	    repoRoot: string;
 	    mcRoot: string;
 	    linkMode: string;
+	    theme: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppConfig(source);
@@ -14,6 +15,7 @@ export namespace types {
 	        this.repoRoot = source["repoRoot"];
 	        this.mcRoot = source["mcRoot"];
 	        this.linkMode = source["linkMode"];
+	        this.theme = source["theme"];
 	    }
 	}
 	export class CustomFileInfo {
@@ -161,6 +163,102 @@ export namespace types {
 
 export namespace ysm {
 	
+	export class AnimGroup {
+	    id: string;
+	    name: string;
+	    items: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new AnimGroup(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.items = source["items"];
+	    }
+	}
+	export class Author {
+	    name: string;
+	    roles?: string;
+	    bilibili?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Author(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.roles = source["roles"];
+	        this.bilibili = source["bilibili"];
+	    }
+	}
+	export class ConfigMenu {
+	    id: string;
+	    name: string;
+	    controls: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ConfigMenu(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.controls = source["controls"];
+	    }
+	}
+	export class Link {
+	    home?: string;
+	    donate?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Link(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.home = source["home"];
+	        this.donate = source["donate"];
+	    }
+	}
+	export class PreviewInfo {
+	    defaultTexture?: string;
+	    hasGui: boolean;
+	    heightScale?: number;
+	    widthScale?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PreviewInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.defaultTexture = source["defaultTexture"];
+	        this.hasGui = source["hasGui"];
+	        this.heightScale = source["heightScale"];
+	        this.widthScale = source["widthScale"];
+	    }
+	}
+	export class Stats {
+	    textures: number;
+	    models: number;
+	    animations: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Stats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.textures = source["textures"];
+	        this.models = source["models"];
+	        this.animations = source["animations"];
+	    }
+	}
 	export class YSMModelMeta {
 	    name: string;
 	    author: string;
@@ -190,6 +288,62 @@ export namespace ysm {
 	        this.hasError = source["hasError"];
 	        this.errorMsg = source["errorMsg"];
 	    }
+	}
+	export class YsmSummary {
+	    schema: string;
+	    source: string;
+	    name: string;
+	    tips?: string;
+	    license?: string;
+	    authors?: Author[];
+	    links?: Link;
+	    spec: number;
+	    format: string;
+	    size: number;
+	    stats: Stats;
+	    animGroups?: AnimGroup[];
+	    configMenus?: ConfigMenu[];
+	    preview: PreviewInfo;
+	
+	    static createFrom(source: any = {}) {
+	        return new YsmSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.schema = source["schema"];
+	        this.source = source["source"];
+	        this.name = source["name"];
+	        this.tips = source["tips"];
+	        this.license = source["license"];
+	        this.authors = this.convertValues(source["authors"], Author);
+	        this.links = this.convertValues(source["links"], Link);
+	        this.spec = source["spec"];
+	        this.format = source["format"];
+	        this.size = source["size"];
+	        this.stats = this.convertValues(source["stats"], Stats);
+	        this.animGroups = this.convertValues(source["animGroups"], AnimGroup);
+	        this.configMenus = this.convertValues(source["configMenus"], ConfigMenu);
+	        this.preview = this.convertValues(source["preview"], PreviewInfo);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }

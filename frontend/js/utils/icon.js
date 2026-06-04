@@ -1,6 +1,6 @@
 // ===== 文件名 → 图标 =====
 export function fileIcon(name) {
-  const ext = (name.split(".").pop() || "").toLowerCase();
+  const ext = getExt(name);
   if (ext === "ysm") return "💎";
   if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) return "📦";
   if (["png", "jpg", "jpeg", "gif", "webp", "bmp"].includes(ext)) return "🖼️";
@@ -11,4 +11,12 @@ export function fileIcon(name) {
   )
     return "📄";
   return "🧊";
+}
+
+export function isYsmName(name) {
+  return getExt(name) === "ysm";
+}
+
+function getExt(name) {
+  return (name.split(".").pop() || "").toLowerCase();
 }

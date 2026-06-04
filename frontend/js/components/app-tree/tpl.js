@@ -4,9 +4,13 @@ export function headerHTML() {
   return `<div class="hdr">
 <div class="hdr-row">
 <span class="hdr-label">📦 仓库</span>
-<button class="hdr-btn" id="btn-ea">✅ 全部启用 <span class="tag">预告</span></button>
-<button class="hdr-btn" id="btn-da">⛔ 全部禁用 <span class="tag">预告</span></button>
-<button class="hdr-btn accent" id="btn-st">▶️ 同步状态</button>
+<div class="batch-dropdown" id="batch-dropdown">
+  <button class="hdr-btn" id="btn-batch-trigger">⚡ 批量管理 ▾</button>
+  <div class="batch-menu" id="batch-menu" style="display:none">
+    <button class="hdr-btn batch-item" id="btn-ea">✅ 全部启用</button>
+    <button class="hdr-btn batch-item" id="btn-da">⛔ 全部禁用</button>
+  </div>
+</div>
 </div>
 <div class="srch-row">
 <input class="srch-inp" id="srch" type="text" placeholder="🔍 搜索模型名称" autocomplete="off">

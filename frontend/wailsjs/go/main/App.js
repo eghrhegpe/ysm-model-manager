@@ -42,6 +42,10 @@ export function EmptyRecycleBin(arg1) {
   return window['go']['main']['App']['EmptyRecycleBin'](arg1);
 }
 
+export function ExtractYsmSummary(arg1) {
+  return window['go']['main']['App']['ExtractYsmSummary'](arg1);
+}
+
 export function GetGlobalCustomDir(arg1) {
   return window['go']['main']['App']['GetGlobalCustomDir'](arg1);
 }
@@ -130,8 +134,8 @@ export function RestoreFromRecycle(arg1, arg2) {
   return window['go']['main']['App']['RestoreFromRecycle'](arg1, arg2);
 }
 
-export function SaveAppConfig(arg1, arg2, arg3) {
-  return window['go']['main']['App']['SaveAppConfig'](arg1, arg2, arg3);
+export function SaveAppConfig(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SaveAppConfig'](arg1, arg2, arg3, arg4);
 }
 
 export function SaveWindowPosition(arg1, arg2, arg3, arg4) {

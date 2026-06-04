@@ -1,4 +1,6 @@
 // ===== sidebar 数据加载层 =====
+import { bus } from "../../bus.js";
+import { fallbackInstances } from "./data.js";
 import {
   LoadAppConfig,
   ListVersionInstances,
@@ -14,7 +16,7 @@ export async function loadInstances() {
     const mcRoot = cfg.mcRoot || cfg.McRoot || "";
     const repoRoot = cfg.repoRoot || cfg.RepoRoot || "";
 
-    if (!mcRoot || !repoRoot) return null;
+    if (!mcRoot || !repoRoot) return fallbackInstances();
 
     // 获取仓库所有文件（用于算已同步数）
     const repoEntries = await ScanModelEntries(repoRoot);
@@ -23,7 +25,7 @@ export async function loadInstances() {
 
     // 获取整合包列表
     const rawInstances = await ListVersionInstances(mcRoot);
-    if (!rawInstances || !rawInstances.length) return null;
+    if (!rawInstances || !rawInstances.length) return fallbackInstances();
 
     // 获取整合包状态
     const statusList = await GetInstanceStatus(mcRoot, repoRoot);
@@ -34,10 +36,20 @@ export async function loadInstances() {
 
     const instances = rawInstances.map((ins) => {
       const st = statusMap[ins.Name] || {};
-      const missing = st.Missing || [];
-      const extra = st.Extra || [];
-      const missingSet = new Set(missing.map((n) => n.replace(/\.ban$/i, "")));
-      const extraSet = new Set(extra.map((n) => n.replace(/\.ban$/i, "")));
+      const missingList = st.Missing || [];
+      const extraList = st.Extra || [];
+      const missingSet = new Set(
+        missingList.map((n) => {
+          const basename = n.split(/[/\\]/).pop() || n;
+          return basename.replace(/\.ban$/i, "");
+        }),
+      );
+      const extraSet = new Set(
+        extraList.map((n) => {
+          const basename = n.split(/[/\\]/).pop() || n;
+          return basename.replace(/\.ban$/i, "");
+        }),
+      );
 
       // 已同步 = 仓库有但不在 missing 和 extra 中
       const syncedNames = [];
@@ -49,22 +61,24 @@ export async function loadInstances() {
 
       return {
         name: ins.Name,
+        dir: ins.CustomDir || "",
         exists: ins.Exists,
         hasYSM: st.HasYSM,
         status: st.Status || "missing",
         synced: syncedNames.length,
-        missing: missing.length,
-        extra: extra.length,
+        missing: missingList.length,
+        extra: extraList.length,
         items: {
           synced: syncedNames.slice(0, 20).map((n) => {
             const linkType = getLinkType(n, st.Files);
             return { name: n, size: "", linkType };
           }),
-          missing: missing.slice(0, 20).map((n) => {
-            const linkType = getLinkType(n, st.Files);
-            return { name: n, size: "", linkType };
+          missing: missingList.slice(0, 20).map((fullPath) => {
+            const displayName = fullPath.split(/[/\\]/).pop() || fullPath;
+            const linkType = getLinkType(displayName, st.Files);
+            return { name: fullPath, displayName, size: "", linkType };
           }),
-          extra: extra.slice(0, 20).map((n) => {
+          extra: extraList.slice(0, 20).map((n) => {
             const linkType = getLinkType(n, st.Files);
             return { name: n, size: "", linkType };
           }),
@@ -73,6 +87,8 @@ export async function loadInstances() {
     });
 
     return instances;
+  } catch {
+    return fallbackInstances();
   } finally {
     bus.emit("loading:end");
   }

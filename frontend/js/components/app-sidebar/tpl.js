@@ -12,6 +12,10 @@ export function headerHTML() {
 
 export function footerHTML() {
   return `<div class="footer">
+<div class="footer-stats" id="footer-stats">
+  <span class="stat-item" id="stat-ins">📂 整合包: -</span>
+  <span class="stat-item" id="stat-pending">🔄 待处理: -</span>
+</div>
 <button class="footer-btn" id="btn-mc">🎮 指定游戏路径</button>
 </div>`;
 }
@@ -20,8 +24,17 @@ export function listContainerHTML() {
   return `<div class="list" id="vg"></div>`;
 }
 
-/** 单个整合包卡片头部 */
-export function vcHeaderHTML(name, synced, missing, status, isOpen = false) {
+/** 单个整合包卡片头部。
+ *  最后一个参数 idx 用于绑定安装缺失按钮的 data-idx */
+export function vcHeaderHTML(
+  name,
+  synced,
+  missing,
+  extra,
+  status,
+  isOpen = false,
+  idx = -1,
+) {
   // 整体状态图标
   let statusIcon = "";
   if (status === "complete") statusIcon = `<span class="tag green">✅</span>`;
@@ -31,13 +44,20 @@ export function vcHeaderHTML(name, synced, missing, status, isOpen = false) {
 
   const parts = [];
   if (synced > 0) parts.push(`<span class="tag green">✅ ${synced}</span>`);
-  if (missing > 0) parts.push(`<span class="tag red">⬇️ ${missing}</span>`);
   const arrowClass = isOpen ? "arrow open" : "arrow";
+  const installBtn =
+    missing > 0
+      ? `<button class="tag red btn-install-missing" data-idx="${idx}" style="cursor:pointer;border:none">⬇️ 安装缺失 (${missing})</button>`
+      : "";
+  const extraTag =
+    extra > 0 ? `<span class="tag orange">📤 ${extra}</span>` : "";
   return `<div class="vc-header">
 <span class="${arrowClass}">▶</span>
 ${statusIcon}
 <span class="name">📦 ${esc(name)}</span>
 ${parts.join("")}
+${extraTag}
+${installBtn}
 </div>`;
 }
 
@@ -46,10 +66,11 @@ export function sectionTitleHTML(text, count) {
   return `<div class="sec-title">${text} (${count})</div>`;
 }
 
-/** 单行模型条目 — dotColor: 状态圆点色, name: 文件名, size: 大小, linkType: 链接图标 */
-export function rowHTML(dotColor, name, size, linkType) {
+/** 单行模型条目 — dotColor: 状态圆点色, name: 文件名, size: 大小, linkType: 链接图标, extraCls: 额外 class, path: 完整路径（可选，存 data-path） */
+export function rowHTML(dotColor, name, size, linkType, extraCls = "", path) {
   const linkIcon = linkType ? `<span class="link-icon">${linkType}</span>` : "";
-  return `<div class="row"><span class="dot" style="background:${dotColor}"></span><span class="rn">${esc(name)}</span>${linkIcon}<span class="sz">${size}</span></div>`;
+  const pathAttr = path ? ` data-path="${esc(path)}"` : "";
+  return `<div class="row ${extraCls}" data-name="${esc(name)}"${pathAttr}><span class="dot" style="background:${dotColor}"></span><span class="rn">${esc(name)}</span>${linkIcon}<span class="sz">${size}</span></div>`;
 }
 
 function esc(s) {

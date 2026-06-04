@@ -3,7 +3,7 @@ import { treeCSS } from "../app-tree-styles.js";
 import { headerHTML, footerHTML } from "./tpl.js";
 import { renderTree, updateStat } from "./render.js";
 import { bindTreeEvents, bindToolbarEvents } from "./events.js";
-import { loadEntries, fallbackEntries } from "./loader.js";
+import { loadEntries } from "./loader.js";
 import { bindBusEvents } from "./bus-handlers.js";
 class AppTree extends HTMLElement {
   constructor() {
@@ -39,14 +39,14 @@ class AppTree extends HTMLElement {
   async _load() {
     try {
       const r = await loadEntries();
-      if (r) {
+      if (r && r.entries) {
         this._repoRoot = r.repoRoot;
         this._entries = r.entries;
       } else {
-        this._entries = fallbackEntries();
+        this._entries = [];
       }
     } catch (_) {
-      this._entries = fallbackEntries();
+      this._entries = [];
     }
   }
 

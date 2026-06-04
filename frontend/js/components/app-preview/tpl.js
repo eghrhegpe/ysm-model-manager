@@ -1,38 +1,65 @@
 // ===== preview HTML 模板 =====
 
+/** 整合包详情面板（stat mode） */
 export function statsHTML() {
-  return `<div class="tabs">
-<span class="tab active" data-tab="stat">📊 统计</span>
-<span class="tab" data-tab="log">📋 日志</span>
+  return `<div class="content" id="detail-panel">
+<div class="dp-placeholder" id="dp-placeholder">
+  <div class="big-icon">👈</div>
+  <div class="dp-hint">点击左侧整合包查看详情</div>
 </div>
-<div class="content" id="tab-stat">
-<h3>📊 模型统计</h3>
-<div class="stat-row"><span class="label">📦 仓库模型</span><span class="value" id="sv-repo">-</span></div>
-<div class="stat-row"><span class="label">📂 整合包</span><span class="value" id="sv-ver">-</span></div>
-<div class="stat-row"><span class="label accent">✅ 完全同步</span><span class="value accent" id="sv-ok">-</span></div>
-<hr class="divider">
-<div class="stat-row"><span class="label">⬇️ 待下载</span><span class="value" id="sv-miss">-</span></div>
-<div class="stat-row"><span class="label">📤 待上传</span><span class="value" id="sv-extra">-</span></div>
-<hr class="divider">
-<div class="btn-group">
-<button class="btn accent" id="btn-install-missing">📥 下载缺失</button>
-<button class="btn warn" id="btn-upload-extra">📤 上传待上传</button>
-<button class="btn" id="btn-refresh-stat">🔄 刷新</button>
-</div>
-</div>
-<div class="content" id="tab-log" style="display:none">
-<h3>📋 操作日志</h3>
-<div id="log-list"><div class="stat-row"><span class="label">暂无日志</span></div></div>
-<div class="btn-group" style="margin-top:8px">
-<button class="btn" id="btn-clear-logs">🗑️ 清空日志</button>
+<div class="dp-body" id="dp-body" style="display:none">
+  <div class="dp-header-row">
+    <span class="dp-name" id="dp-name">📦 -</span>
+    <span class="dp-status" id="dp-status"></span>
+  </div>
+  <div class="dp-cards" id="dp-cards">
+    <div class="dp-card green" id="dp-card-synced">
+      <div class="dp-card-num" id="dp-card-synced-num">0</div>
+      <div class="dp-card-label">已同步</div>
+    </div>
+    <div class="dp-card red" id="dp-card-missing" style="cursor:pointer">
+      <div class="dp-card-num" id="dp-card-missing-num">0</div>
+      <div class="dp-card-label">缺失文件</div>
+    </div>
+    <div class="dp-card orange" id="dp-card-extra" style="cursor:pointer">
+      <div class="dp-card-num" id="dp-card-extra-num">0</div>
+      <div class="dp-card-label">额外文件</div>
+    </div>
+  </div>
+  <div class="dp-detail" id="dp-detail-missing" style="display:none;max-height:100px;overflow-y:auto;margin-bottom:4px"></div>
+  <div class="dp-detail" id="dp-detail-extra" style="display:none;max-height:100px;overflow-y:auto;margin-bottom:4px"></div>
+  <hr class="divider">
+  <div class="dp-global-actions">
+    <div class="dp-section-title">⚙️ 全局管理</div>
+    <button class="btn accent" id="dp-btn-import-all">⬇️ 导入仓库模型</button>
+    <button class="btn warn" id="dp-btn-upload-all">📤 上传新模型</button>
+    <button class="btn" id="dp-btn-sync-all">🔄 同步状态</button>
+  </div>
+  <hr class="divider">
+  <div class="dp-section-title">📋 操作日志 <button class="dp-log-toggle" id="dp-log-toggle">展开 ▸</button></div>
+  <div class="dp-log-list" id="dp-log-list">
+    <div class="stat-row" style="font-size:10px;color:#6c7086">暂无日志</div>
+  </div>
+  <div class="dp-log-footer" id="dp-log-footer" style="display:none">
+    <button class="btn" style="font-size:10px" id="dp-btn-clear-logs">🗑️ 清空</button>
+  </div>
 </div>
 </div>`;
 }
 
 /** 模型详情面板（仓库页面） */
 export function modelDetailHTML(meta) {
-  if (!meta || meta.hasError) {
-    const errMsg = meta ? meta.errorMsg : "未知错误";
+  if (!meta) {
+    return `<div class="content" id="preview-content">
+<h3>📄 模型信息</h3>
+<div class="dp-placeholder">
+  <div class="big-icon">📄</div>
+  <div class="dp-hint">点击左侧仓库文件查看详情</div>
+</div>
+</div>`;
+  }
+  if (meta.hasError) {
+    const errMsg = meta.errorMsg || "未知错误";
     return `<div class="content" id="preview-content">
 <h3>📄 模型信息</h3>
 <div class="err">⚠️ ${errMsg}</div>

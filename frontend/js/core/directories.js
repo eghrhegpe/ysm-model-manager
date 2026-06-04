@@ -31,7 +31,8 @@ $btn("btn-mc").addEventListener("click", async () => {
 async function saveConfig() {
   const linkMode = localStorage.getItem("linkMode") || "";
   try {
-    await window.go.main.App.SaveAppConfig(repoRoot, mcRoot, linkMode);
+    const theme = localStorage.getItem("theme") || "dark";
+    await window.go.main.App.SaveAppConfig(repoRoot, mcRoot, linkMode, theme);
   } catch (e) {
     console.error("配置保存失败:", e);
   }

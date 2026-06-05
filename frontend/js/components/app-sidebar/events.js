@@ -15,17 +15,26 @@ export function bindCardEvents(root, instances) {
     if (!hdr || !body || !body.classList.contains("vc-body")) return;
 
     // 点击标题头：展开/折叠 + 发送选中事件到预览栏
-    hdr.onclick = () => {
+    hdr.onclick = (e) => {
+      // 如果点击的是按钮，不触发折叠
+      if (e.target.closest("button")) return;
       const arrow = hdr.querySelector(".arrow");
-      body.style.display = body.style.display === "none" ? "" : "none";
+      const isNowOpen = body.style.display !== "none";
+      body.style.display = isNowOpen ? "none" : "";
       if (arrow) arrow.classList.toggle("open");
+      // 持久化展开状态
+      const nameEl = hdr.querySelector(".name");
+      const name = nameEl ? nameEl.textContent.replace(/^📦\s*/, "") : "";
+      if (name)
+        try {
+          localStorage.setItem("sb_open_" + name, !isNowOpen);
+        } catch {}
 
       // 发送选中事件到预览栏
       const idx = parseInt(vc.dataset.idx, 10);
       const pkg = instances[idx];
       if (pkg) {
         bus.emit("package:selected", pkg);
-        // 记忆选中
         try {
           localStorage.setItem("sb_selectedIdx", idx);
         } catch (_) {}

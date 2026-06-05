@@ -77,8 +77,10 @@ class AppNav extends HTMLElement {
         }
         .nav-item:hover { background: var(--hover); color: var(--txt); }
         .nav-item.active {
-          background: #7c83ff22;
+          background: rgba(255,255,255,.06);
           color: var(--accent);
+          border-left: 3px solid var(--menu-indicator, var(--accent));
+          padding-left: 7px;
         }
         .nav-item .icon { font-size: 14px; width: 20px; text-align: center; }
         .nav-item .tag {

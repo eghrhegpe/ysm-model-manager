@@ -98,7 +98,85 @@ export function bindBusEvents(vm) {
     }),
   );
 
-  // 树刷新桥接：app-content 中的全局操作完成后通知 app-tree 刷新
+  // 文件夹操作
+  unsubs.push(
+    bus.on("dir:rename", async ({ dir }) => {
+      const name = prompt("请输入新文件夹名称：");
+      if (!name) return;
+      try {
+        const { RenameDir } = await import("../../../wailsjs/go/main/App.js");
+        await RenameDir(dir, name.trim());
+        await reload(vm);
+        bus.emit("stats:refresh");
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: `❌ 重命名失败: ${String(e)}`,
+          duration: 3000,
+          type: "error",
+        });
+      }
+    }),
+  );
+
+  unsubs.push(
+    bus.on("dir:mkdir", async ({ dir }) => {
+      const name = prompt("请输入新文件夹名称：");
+      if (!name) return;
+      try {
+        const { CreateDir } = await import("../../../wailsjs/go/main/App.js");
+        await CreateDir(dir + "/" + name.trim());
+        await reload(vm);
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: `❌ 创建失败: ${String(e)}`,
+          duration: 3000,
+          type: "error",
+        });
+      }
+    }),
+  );
+
+  unsubs.push(
+    bus.on("dir:recycle", async ({ dir }) => {
+      const confirmed = await window.showConfirm?.(
+        `♻️ 确定将文件夹移入回收站？\n${dir}`,
+      );
+      if (!confirmed) return;
+      try {
+        // 遍历文件夹内所有模型文件移入回收站
+        const { ScanModelEntries, MoveToRecycle } =
+          await import("../../../wailsjs/go/main/App.js");
+        const entries = await ScanModelEntries(dir);
+        let count = 0;
+        for (const e of entries || []) {
+          try {
+            await MoveToRecycle(e.Path);
+            count++;
+          } catch {}
+        }
+        // 尝试删除空文件夹
+        try {
+          const { RemoveDir } = await import("../../../wailsjs/go/main/App.js");
+          await RemoveDir(dir);
+        } catch {}
+        await reload(vm);
+        bus.emit("stats:refresh");
+        bus.emit("toast:show", {
+          msg: `♻️ 已回收 ${count} 个文件`,
+          duration: 3000,
+          type: "success",
+        });
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: `❌ 回收失败: ${String(e)}`,
+          duration: 3000,
+          type: "error",
+        });
+      }
+    }),
+  );
+
+  // 树刷新桥接
   unsubs.push(
     bus.on("tree:reload", async () => {
       await reload(vm);

@@ -116,10 +116,24 @@ export function registerGlobalHandlers() {
           errors.length ? "failed" : "success",
           `禁用 ${totalDisable} 启用 ${totalEnable}${errors.length ? ` | 错误: ${errors.join("; ")}` : ""}`,
         );
+        const parts = [];
+        if (totalDisable > 0) parts.push(`禁用 ${totalDisable} 项`);
+        if (totalEnable > 0) parts.push(`启用 ${totalEnable} 项`);
+        if (!parts.length) {
+          parts.push("状态已一致，无需更改");
+          // 单个实例时额外检查是否实际有动作
+          const activeInstances = instances.filter((i) => i.Exists);
+          if (activeInstances.length === 1) {
+            parts.push("（整合包文件已匹配）");
+          }
+        }
         bus.emit("toast:show", {
-          msg: `✅ 同步完成：禁用 ${totalDisable} 项，启用 ${totalEnable} 项`,
-          duration: 3000,
-          type: "success",
+          msg: `✅ 同步完成：${parts.join("，")}`,
+          duration: 4000,
+          type:
+            totalDisable + totalEnable > 0 || errors.length === 0
+              ? "success"
+              : "warn",
         });
         bus.emit("stats:refresh");
         bus.emit("logs:refresh");

@@ -35,7 +35,7 @@ func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.Instance
 		repoByHash[e.Hash] = e
 	}
 
-	instances := listVersions(mcRoot)
+	instances := ListVersions(mcRoot)
 	var results []types.InstanceStatus
 
 	for _, ins := range instances {
@@ -117,18 +117,22 @@ func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.Instance
 	return results
 }
 
-// SyncToggleStatus 鍚屾鍚敤/绂佺敤鐘舵€?
+// SyncToggleStatus 同步启用/禁用状态
 func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int, int, error) {
 	repoEntries := scanFn(repoRoot)
-	repoStatus := make(map[string]bool)
+	// 同时用哈希和文件名匹配（硬链接文件可能无法算哈希）
+	repoHash := make(map[string]bool) // hash → banned
+	repoName := make(map[string]bool) // basename(去.ban) → banned
 	for _, e := range repoEntries {
 		banned := strings.HasSuffix(strings.ToLower(e.Name), ".ban")
+		baseName := strings.TrimSuffix(e.Name, ".ban")
+		repoName[strings.ToLower(baseName)] = banned
 		hash := computeHash(e.Path)
 		if hash != "" {
-			repoStatus[hash] = banned
+			repoHash[hash] = banned
 		}
 	}
-	if len(repoStatus) == 0 {
+	if len(repoHash) == 0 && len(repoName) == 0 {
 		return 0, 0, fmt.Errorf("仓库中未找到模型文件")
 	}
 
@@ -150,14 +154,22 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 		if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
 			return nil
 		}
+
+		// 先试哈希匹配，失败则试文件名匹配
+		var shouldBeBanned bool
+		var matched bool
 		hash := computeHash(p)
-		if hash == "" {
+		if hash != "" {
+			shouldBeBanned, matched = repoHash[hash]
+		}
+		if !matched {
+			baseName := strings.ToLower(filepath.Base(actualPath))
+			shouldBeBanned, matched = repoName[baseName]
+		}
+		if !matched {
 			return nil
 		}
-		shouldBeBanned, exists := repoStatus[hash]
-		if !exists {
-			return nil
-		}
+
 		if shouldBeBanned && !isCurrentlyBanned {
 			newPath := p + ".ban"
 			if _, err := os.Stat(newPath); err == nil {
@@ -165,11 +177,17 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 			}
 			if err := os.Rename(p, newPath); err == nil {
 				disableCount++
+			} else if isFileLocked(err) {
+				// 文件被其他进程锁定（如 Minecraft），跳过
+			} else {
+				// 其他错误也跳过，不阻塞
 			}
 		} else if !shouldBeBanned && isCurrentlyBanned {
 			newPath := p[:len(p)-4]
 			if err := os.Rename(p, newPath); err == nil {
 				enableCount++
+			} else if isFileLocked(err) {
+				// 文件被其他进程锁定（如 Minecraft），跳过
 			}
 		}
 		return nil
@@ -177,7 +195,7 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 	return disableCount, enableCount, nil
 }
 
-func listVersions(mcRoot string) []types.VersionInstance {
+func ListVersions(mcRoot string) []types.VersionInstance {
 	versionsDir := filepath.Join(mcRoot, "versions")
 	ents, err := os.ReadDir(versionsDir)
 	if err != nil {
@@ -271,5 +289,22 @@ func checkHardLink(path string) types.LinkType {
 	return types.LinkCopy
 }
 
-
-
+// isFileLocked 判断错误是否因为文件被其他进程锁定
+func isFileLocked(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Windows 共享违例 (ERROR_SHARING_VIOLATION)
+	// 或权限拒绝 (ERROR_ACCESS_DENIED) — 文件被打开时常见
+	if linkErr, ok := err.(*os.LinkError); ok {
+		if linkErr.Err != nil {
+			msg := strings.ToLower(linkErr.Err.Error())
+			if strings.Contains(msg, "sharing") ||
+				strings.Contains(msg, "access") ||
+				strings.Contains(msg, "used by another process") {
+				return true
+			}
+		}
+	}
+	return false
+}

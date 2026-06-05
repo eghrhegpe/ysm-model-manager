@@ -46,9 +46,12 @@
     "HasYSMMod",
     "GetWindowPosition",
     "ClearCustomDir",
+    "RenameDir",
+    "RemoveDir",
     "DeduplicateCustomDir",
     "CountLinkedModels",
     "IsSymlink",
+    "RelinkCustomDir",
     "AnalyzeYSMModel",
     "ExtractYsmSummary"
   ]

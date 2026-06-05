@@ -14,7 +14,8 @@ export function renderVersionCards(container, instances) {
     const vc = document.createElement("div");
     vc.className = "vc";
     vc.dataset.idx = idx;
-    const isOpen = idx === 0;
+    const savedOpen = localStorage.getItem("sb_open_" + ins.name) !== "false";
+    const isOpen = idx === 0 && savedOpen;
     vc.innerHTML = vcHeaderHTML(
       ins.name,
       ins.synced,

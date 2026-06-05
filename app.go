@@ -320,6 +320,36 @@ func (a *App) CreateDir(dir string) error {
 	return os.MkdirAll(fullPath, 0755)
 }
 
+// RenameDir 重命名仓库内的文件夹
+func (a *App) RenameDir(oldPath, newName string) error {
+	oldPath = strings.TrimSpace(oldPath)
+	newName = strings.TrimSpace(newName)
+	if oldPath == "" || newName == "" {
+		return fmt.Errorf("参数为空")
+	}
+	if strings.Contains(newName, "..") || strings.ContainsAny(newName, "\\/") {
+		return fmt.Errorf("名称不能包含路径分隔符")
+	}
+	// 确保在仓库根目录下
+	if !strings.HasPrefix(filepath.Clean(oldPath), filepath.Clean(a.RepoRoot)+string(filepath.Separator)) {
+		return fmt.Errorf("只能在仓库根目录下操作")
+	}
+	newPath := filepath.Join(filepath.Dir(oldPath), newName)
+	if _, err := os.Stat(newPath); err == nil {
+		return fmt.Errorf("目标名称已存在")
+	}
+	return os.Rename(oldPath, newPath)
+}
+
+// RemoveDir 删除空文件夹（回收站用）
+func (a *App) RemoveDir(dir string) error {
+	dir = strings.TrimSpace(dir)
+	if dir == "" {
+		return fmt.Errorf("目录名为空")
+	}
+	return os.Remove(dir)
+}
+
 // 移动仓库内的模型文件（拖拽移动用）
 func (a *App) MoveModelFile(src, dstDir string) error {
 	src = strings.TrimSpace(src)
@@ -658,6 +688,48 @@ func (a *App) GetInstanceStatus(mcRoot, repoDir string) []types.InstanceStatus {
 
 func (a *App) SyncModelToggleStatus(instanceCustomDir, repoRoot string) (int, int, error) {
 	return sync.SyncToggleStatus(instanceCustomDir, repoRoot, a.ScanModelEntries)
+}
+
+// RelinkCustomDir 重新链接整合包 custom 目录下的已有模型（切换链接模式后用）
+func (a *App) RelinkCustomDir(customDir, repoRoot string) (int, error) {
+	customDir = strings.TrimSpace(customDir)
+	repoRoot = strings.TrimSpace(repoRoot)
+	if customDir == "" || repoRoot == "" {
+		return 0, fmt.Errorf("参数为空")
+	}
+
+	// 扫描仓库文件，建立 hash→路径 映射
+	repoEntries := a.ScanModelEntries(repoRoot)
+	repoByHash := make(map[string]string)
+	for _, e := range repoEntries {
+		if e.Hash != "" {
+			repoByHash[e.Hash] = e.Path
+		}
+	}
+
+	// 扫描 custom 目录
+	customEntries := a.ScanModelEntries(customDir)
+	count := 0
+
+	for _, ce := range customEntries {
+		if ce.Hash == "" {
+			continue
+		}
+		srcPath, found := repoByHash[ce.Hash]
+		if !found {
+			continue // 仓库无此文件，跳过
+		}
+		// 删除已有文件
+		if err := os.Remove(ce.Path); err != nil {
+			continue
+		}
+		// 用当前链接模式重新安装
+		if err := installer.Install(srcPath, customDir, repoRoot, a.LinkMode); err != nil {
+			continue
+		}
+		count++
+	}
+	return count, nil
 }
 
 // ========== YSM 检测 ==========

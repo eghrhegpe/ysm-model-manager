@@ -1,46 +1,66 @@
-:root {
-    --bg: #11111b;
-    --surf: #181825;
-    --card: #24243e;
-    --hover: #2a2a42;
-    --act: #313145;
-    --accent: #7c83ff;
-    --txt: #cdd6f4;
-    --muted: #6c7086;
-    --bd: rgba(255, 255, 255, .08);
-    --r: 8px;
-    --sw: 300px;
-    --pw: 240px;
-    --sidebar-width: 300px;
-    --preview-width: 240px;
+/* ===== 主题系统：赛博霓虹（默认深色） ===== */
+:root,
+.theme-cyber {
+  --bg: #11111b;
+  --surf: #161622;
+  --card: #24243e;
+  --hover: #2a2a42;
+  --act: #313145;
+  --accent: #66d9ef;
+  --txt: #cdd6f4;
+  --muted: #6c7086;
+  --bd: rgba(255, 255, 255, 0.08);
+  --menu-indicator: #66d9ef;
+  --r: 8px;
+  --sidebar-width: 300px;
+  --preview-width: 240px;
 }
 
-.light {
-    --bg: #f5f5f9;
-    --surf: #e8e8ee;
-    --card: #ffffff;
-    --hover: #dddde8;
-    --act: #d0d0dd;
-    --accent: #5b63d3;
-    --txt: #1a1a2e;
-    --muted: #6c7086;
-    --bd: rgba(0, 0, 0, .12);
-    --sidebar-width: 300px;
-    --preview-width: 240px;
+/* ===== 温暖木纹（明亮模式） ===== */
+.theme-warm {
+  --bg: #f5f0e1;
+  --surf: #e8e0cc;
+  --card: #ffffff;
+  --hover: #ddd0b8;
+  --act: #d0c0a8;
+  --accent: #8b4513;
+  --txt: #3e2723;
+  --muted: #8b7355;
+  --bd: rgba(139, 69, 19, 0.15);
+  --menu-indicator: #8b4513;
+  --sidebar-width: 300px;
+  --preview-width: 240px;
+}
+
+/* ===== 极简深邃（专业向深色） ===== */
+.theme-pro {
+  --bg: #0a0a0a;
+  --surf: #121212;
+  --card: #1a1a1a;
+  --hover: #222222;
+  --act: #2a2a2a;
+  --accent: #ffffff;
+  --txt: #e0e0e0;
+  --muted: #666666;
+  --bd: rgba(255, 255, 255, 0.06);
+  --menu-indicator: #ffffff;
+  --sidebar-width: 300px;
+  --preview-width: 240px;
 }
 
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html,
 body {
-    height: 100%;
-    width: 100%;
-    background: var(--bg);
-    color: var(--txt);
-    font-family: -apple-system, 'Microsoft YaHei', 'Segoe UI', system-ui, sans-serif;
-    overflow: hidden;
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+  color: var(--txt);
+  font-family:
+    -apple-system, "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
 }

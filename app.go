@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -431,6 +432,67 @@ func (a *App) SetRepoRoot(dir string) {
 	}
 	a.RepoRoot = dir
 }
+
+// GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub 模型仓库使用）
+// 格式：[{ name, path, size }]
+func (a *App) GenerateRepoIndex(repoPath string) (string, error) {
+	entries := a.ScanModelEntries(repoPath)
+	type indexEntry struct {
+		Name string `json:"name"`
+		Path string `json:"path"`
+		Size int64  `json:"size"`
+	}
+	var list []indexEntry
+	for _, e := range entries {
+		relPath := e.Path
+		if strings.HasPrefix(relPath, repoPath) {
+			relPath = strings.TrimPrefix(relPath, repoPath)
+			relPath = strings.TrimPrefix(relPath, "\\")
+			relPath = strings.TrimPrefix(relPath, "/")
+		}
+		list = append(list, indexEntry{
+			Name: e.Name,
+			Path: relPath,
+			Size: e.Size,
+		})
+	}
+	data, err := json.MarshalIndent(list, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	indexPath := filepath.Join(repoPath, "index.json")
+	if err := os.WriteFile(indexPath, data, 0644); err != nil {
+		return "", err
+	}
+	return indexPath, nil
+}
+
+// DownloadFromGitHub 从 GitHub Raw 下载文件到本地目录
+func (a *App) DownloadFromGitHub(rawURL string, saveDir string) (string, error) {
+	if err := os.MkdirAll(saveDir, 0755); err != nil {
+		return "", err
+	}
+	fileName := filepath.Base(rawURL)
+	savePath := filepath.Join(saveDir, fileName)
+	resp, err := http.Get(rawURL)
+	if err != nil {
+		return "", fmt.Errorf("下载失败: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("下载失败，HTTP %d", resp.StatusCode)
+	}
+	out, err := os.Create(savePath)
+	if err != nil {
+		return "", err
+	}
+	defer out.Close()
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		return "", err
+	}
+	return savePath, nil
+}
+
 func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {

@@ -580,8 +580,6 @@ class AppContent extends HTMLElement {
     const blockedEl = root.getElementById("ws-blocked");
     const popup = root.getElementById("ws-popup");
     const sourceInfo = root.getElementById("ws-source-info");
-    const searchInput = root.getElementById("ws-author-input");
-    const searchBtn = root.getElementById("ws-search-btn");
     const searchResults = root.getElementById("ws-search-results");
     const creatorView = root.getElementById("ws-creator-view");
     const creatorList = root.getElementById("ws-cr-list");
@@ -589,6 +587,7 @@ class AppContent extends HTMLElement {
     let currentSite = null;
     let allCreators = [];
     let repoAuthors = [];
+    let wsEditMode = false; // 创意工坊创作者编辑模式（放在外面以持久化）
 
     // 分组定义
     const GROUP_LABELS = {
@@ -749,23 +748,21 @@ class AppContent extends HTMLElement {
       searchResults.innerHTML = "";
       creatorView.style.display = "none";
 
-      let html = "";
+      // 筛选当前站点创作者
+      const creators = allCreators.filter(
+        (cr) => cr.type && cr.type.split(";").includes(site.id),
+      );
 
-      // 搜索框（如果有 searchUrl）
-      if (site.searchUrl) {
-        html +=
-          '<div style="padding:8px 12px 0;font-size:11px;font-weight:600;color:var(--txt)">🔍 ' +
-          this._esc(site.label) +
-          " 搜索</div>" +
-          '<div style="padding:4px 12px 6px;display:flex;gap:4px">' +
-          '<input class="ws-site-search" placeholder="输入搜索词..." style="flex:1;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">' +
-          '<button class="btn accent ws-site-search-btn" style="font-size:10px;padding:3px 8px">搜索</button>' +
-          "</div>";
+      // 按固定顺序构建 HTML
+      let parts = [];
 
-        // 预设搜索词
-        if (site.presetSearches && site.presetSearches.length) {
-          html +=
-            '<div style="padding:0 12px 4px;display:flex;gap:4px;flex-wrap:wrap">' +
+      // 1. 滚动容器
+      parts.push('<div style="flex:1;overflow-y:auto">');
+
+      // 2. 预设搜索按钮（如果有）
+      if (site.presetSearches && site.presetSearches.length) {
+        parts.push(
+          '<div style="padding:8px 12px 4px;display:flex;gap:4px;flex-wrap:wrap">' +
             site.presetSearches
               .map(
                 (ps) =>
@@ -776,61 +773,103 @@ class AppContent extends HTMLElement {
                   "</button>",
               )
               .join("") +
-            "</div>";
-        }
+            "</div>",
+        );
       }
 
-      // 创作者列表：按 type 标签筛选（如 "bilibili;afdian" 包含当前 site.id 即显示）
-      const creators = allCreators.filter(
-        (cr) => cr.type && cr.type.split(";").includes(site.id),
-      );
-
-      if (creators.length && site.searchUrl) {
-        html +=
-          '<div style="padding:6px 12px 4px;font-size:10px;font-weight:600;color:var(--txt)">🎨 活跃创作者</div>';
-        html += creators
-          .map(
-            (cr) =>
-              '<div class="ws-creator-card" data-name="' +
+      // 3. 创作者列表
+      if (!wsEditMode && creators.length) {
+        parts.push(
+          '<div style="padding:6px 12px 4px;display:flex;align-items:center;gap:4px">' +
+            '<span style="font-size:10px;font-weight:600;color:var(--txt)">🎨 活跃创作者</span>' +
+            '<span style="font-size:9px;color:var(--muted)">(' +
+            creators.length +
+            ")</span>" +
+            '<button class="ws-cr-edit-btn" style="margin-left:auto;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px">✏️ 管理</button>' +
+            "</div>",
+        );
+        parts.push(
+          creators
+            .map((cr) => {
+              const isGitHub = cr.type && cr.type.includes("github");
+              const repoParts = isGitHub ? cr.name.split("/") : null;
+              const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
+              return (
+                '<div class="ws-creator-card' +
+                (hasRepo ? ' ws-cr-has-repo"' : '"') +
+                ' data-name="' +
+                this._esc(cr.name) +
+                '">' +
+                '<div class="ws-creator-icon">🎨</div>' +
+                '<div class="ws-creator-body">' +
+                '<div class="ws-creator-name">' +
+                this._esc(cr.name) +
+                "</div>" +
+                '<div class="ws-creator-desc">' +
+                this._esc(cr.desc) +
+                "</div>" +
+                "</div>" +
+                (hasRepo
+                  ? '<button class="ws-browse-repo" data-repo="' +
+                    this._esc(cr.name) +
+                    '" style="padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px;flex-shrink:0">📦 浏览</button>'
+                  : "") +
+                '<div class="ws-creator-action">↗</div>' +
+                "</div>"
+              );
+            })
+            .join(""),
+        );
+      } else if (wsEditMode) {
+        parts.push(
+          '<div style="padding:6px 12px 4px;display:flex;align-items:center;gap:4px">' +
+            '<span style="font-size:10px;font-weight:600;color:var(--txt)">✏️ 编辑创作者</span>' +
+            '<span style="flex:1"></span>' +
+            '<button class="ws-cr-view-btn" style="padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px">✅ 完成</button>' +
+            '<button class="ws-cr-save-btn" style="padding:1px 8px;border-radius:4px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:9px">💾 保存</button>' +
+            "</div>",
+        );
+        creators.forEach((cr, idx) => {
+          parts.push(
+            '<div style="display:flex;align-items:center;gap:3px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);font-size:10px;margin:1px 12px">' +
+              "<span>🎨</span>" +
+              '<input class="ws-cr-ed" data-idx="' +
+              idx +
+              '" data-fld="name" value="' +
               this._esc(cr.name) +
-              '">' +
-              '<div class="ws-creator-icon">🎨</div>' +
-              '<div class="ws-creator-body">' +
-              '<div class="ws-creator-name">' +
-              this._esc(cr.name) +
-              "</div>" +
-              '<div class="ws-creator-desc">' +
+              '" style="flex:2;min-width:30px;padding:2px 4px;border-radius:3px;border:1px solid transparent;background:transparent;color:var(--txt);font-size:10px">' +
+              '<input class="ws-cr-ed" data-idx="' +
+              idx +
+              '" data-fld="desc" value="' +
               this._esc(cr.desc) +
-              "</div>" +
-              "</div>" +
-              '<div class="ws-creator-action">↗</div>' +
+              '" style="flex:2;min-width:30px;padding:2px 4px;border-radius:3px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:9px">' +
+              '<input class="ws-cr-ed" data-idx="' +
+              idx +
+              '" data-fld="type" value="' +
+              this._esc(cr.type) +
+              '" style="flex:1;min-width:30px;padding:2px 4px;border-radius:3px;border:1px solid transparent;background:transparent;color:var(--accent);font-size:9px;text-align:center" placeholder="bilibili">' +
+              '<button class="ws-cr-del" data-idx="' +
+              idx +
+              '" style="padding:1px 4px;border-radius:3px;border:1px solid transparent;background:transparent;color:#e5534b;cursor:pointer;font-size:10px">🗑️</button>' +
               "</div>",
-          )
-          .join("");
-      } else if (creators.length && !site.searchUrl) {
-        html +=
-          '<div style="padding:6px 12px 4px;font-size:10px;font-weight:600;color:var(--txt)">🎨 活跃创作者</div>';
-        html += creators
-          .map(
-            (cr) =>
-              '<div class="ws-creator-card" style="cursor:default">' +
-              '<div class="ws-creator-icon">🎨</div>' +
-              '<div class="ws-creator-body">' +
-              '<div class="ws-creator-name">' +
-              this._esc(cr.name) +
-              "</div>" +
-              '<div class="ws-creator-desc">' +
-              this._esc(cr.desc) +
-              "</div>" +
-              "</div>" +
-              "</div>",
-          )
-          .join("");
+          );
+        });
+        parts.push(
+          '<div style="padding:4px 12px">' +
+            '<button class="ws-cr-add" style="padding:2px 8px;border-radius:4px;border:1px dashed var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:10px;width:100%">➕ 新增</button>' +
+            "</div>",
+        );
       }
 
-      if (!html) {
+      // 4. 关闭滚动容器
+      parts.push("</div>");
+
+      let html = parts.join("");
+
+      if (!site.presetSearches?.length && !creators.length && !wsEditMode) {
+        // 无内容时显示 fallback
         html =
-          '<div style="padding:12px;color:var(--muted);font-size:10px">此站点无可操作内容。<br>点击「浏览器打开」访问：<br><a href="' +
+          '<div style="flex:1;overflow-y:auto;padding:12px;color:var(--muted);font-size:10px">此站点无可操作内容。<br>点击「浏览器打开」访问：<br><a href="' +
           this._esc(site.url) +
           '" target="_blank" style="color:var(--accent)">' +
           this._esc(site.url) +
@@ -838,21 +877,7 @@ class AppContent extends HTMLElement {
       }
 
       searchResults.innerHTML = html;
-
-      // 站点搜索框回车/点击
-      const siteSearchInput = searchResults.querySelector(".ws-site-search");
-      const siteSearchBtn = searchResults.querySelector(".ws-site-search-btn");
-      if (siteSearchInput && siteSearchBtn && site.searchUrl) {
-        const doSiteSearch = () => {
-          const q = siteSearchInput.value.trim();
-          if (!q) return;
-          window.open(fillSearch(site.searchUrl, q), "_blank");
-        };
-        siteSearchBtn.addEventListener("click", doSiteSearch);
-        siteSearchInput.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") doSiteSearch();
-        });
-      }
+      searchResults.innerHTML = html;
 
       // 预设搜索按钮
       searchResults.querySelectorAll(".ws-preset-btn").forEach((btn) => {
@@ -867,7 +892,9 @@ class AppContent extends HTMLElement {
       searchResults
         .querySelectorAll(".ws-creator-card[data-name]")
         .forEach((card) => {
-          card.addEventListener("click", () => {
+          card.addEventListener("click", (e) => {
+            // 如果点的是浏览按钮不触发跳转
+            if (e.target.closest(".ws-browse-repo")) return;
             const name = card.dataset.name;
             if (site.searchUrl && name) {
               const url = site.searchUrl.replace(
@@ -878,85 +905,201 @@ class AppContent extends HTMLElement {
             }
           });
         });
-    };
 
-    // ===== 全局搜索（默认视图） =====
-    const doGlobalSearch = () => {
-      const q = searchInput.value.trim();
-      creatorView.style.display = "none";
-
-      let html =
-        '<div style="padding:4px 0;font-size:10px;color:var(--muted)">搜索结果将在此平台的搜索页打开</div>';
-
-      // 找到所有有 searchUrl 的站点
-      const sites = grid._wsSites || [];
-      const searchable = sites.filter((s) => s.searchUrl);
-      if (searchable.length) {
-        html +=
-          '<div style="font-size:10px;font-weight:600;color:var(--txt);padding:6px 0 4px">🔍 在以下平台搜索</div>';
-        searchable.forEach((s) => {
-          html +=
-            '<div class="ws-creator-card" data-searchurl="' +
-            this._esc(s.searchUrl) +
-            '" data-q="' +
-            this._esc(q || searchInput.value.trim()) +
-            '">' +
-            '<div class="ws-creator-icon">' +
-            (s.icon || "🔗") +
-            "</div>" +
-            '<div class="ws-creator-body"><div class="ws-creator-name">' +
-            this._esc(s.label) +
-            "</div>" +
-            '<div class="ws-creator-desc">搜索：' +
-            this._esc(q || "(空)") +
-            "</div></div>" +
-            '<div class="ws-creator-action">↗</div>' +
-            "</div>";
-        });
-      }
-
-      // 仓库作者匹配
-      const matchedRepo = q
-        ? repoAuthors.filter((a) => a.toLowerCase().includes(q.toLowerCase()))
-        : [];
-      if (matchedRepo.length) {
-        html +=
-          '<div style="font-size:10px;font-weight:600;color:var(--txt);padding:6px 0 4px">📦 本地仓库中的作者</div>';
-        matchedRepo.forEach((author) => {
-          html +=
-            '<div class="ws-creator-card" style="cursor:default">' +
-            '<div class="ws-creator-icon">📦</div>' +
-            '<div class="ws-creator-body"><div class="ws-creator-name">' +
-            this._esc(author) +
-            "</div></div></div>";
-        });
-      }
-
-      if (!searchable.length && !matchedRepo.length) {
-        html =
-          '<div style="color:var(--muted);font-size:10px;padding:8px 0">未找到搜索平台</div>';
-      }
-
-      searchResults.innerHTML = html;
-
-      // 点击平台搜索卡片
-      searchResults
-        .querySelectorAll(".ws-creator-card[data-searchurl]")
-        .forEach((card) => {
-          card.addEventListener("click", () => {
-            const tpl = card.dataset.searchurl;
-            const query = card.dataset.q;
-            if (tpl && query) {
-              window.open(fillSearch(tpl, query), "_blank");
+      // 📦 浏览 GitHub 仓库模型
+      searchResults.querySelectorAll(".ws-browse-repo").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const repo = btn.dataset.repo;
+          const indexURL =
+            "https://raw.githubusercontent.com/" + repo + "/main/index.json";
+          btn.textContent = "⏳";
+          try {
+            const resp = await fetch(indexURL);
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            const models = await resp.json();
+            if (!models || !models.length) {
+              bus.emit("toast:show", {
+                msg: "📦 仓库为空或暂无 index.json",
+                duration: 3000,
+                type: "warn",
+              });
+              btn.textContent = "📦 浏览";
+              return;
             }
-          });
+            // 切换到模型列表视图
+            showRepoModels(repo, models);
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ 读取仓库失败: " + String(e),
+              duration: 4000,
+              type: "error",
+            });
+            btn.textContent = "📦 浏览";
+          }
+        });
+      });
+
+      // ===== 创作者编辑模式 =====
+      const refreshView = () => {
+        showSiteView(site);
+      };
+
+      searchResults
+        .querySelector(".ws-cr-edit-btn")
+        ?.addEventListener("click", () => {
+          wsEditMode = true;
+          refreshView();
+        });
+
+      searchResults
+        .querySelector(".ws-cr-view-btn")
+        ?.addEventListener("click", () => {
+          wsEditMode = false;
+          refreshView();
+        });
+
+      // 保存
+      searchResults
+        .querySelector(".ws-cr-save-btn")
+        ?.addEventListener("click", async () => {
+          try {
+            const { SaveWorkshopCreators } =
+              await import("../../../wailsjs/go/main/App.js");
+            await SaveWorkshopCreators(allCreators);
+            wsEditMode = false;
+            bus.emit("toast:show", {
+              msg: "✅ 创作者已保存",
+              duration: 2000,
+              type: "success",
+            });
+            refreshView();
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ 保存失败: " + String(e),
+              duration: 4000,
+              type: "error",
+            });
+          }
+        });
+
+      // 行内编辑
+      searchResults.querySelectorAll(".ws-cr-ed").forEach((inp) => {
+        inp.addEventListener("focus", () => {
+          inp.style.borderColor = "var(--bd)";
+          inp.style.background = "var(--surf)";
+        });
+        inp.addEventListener("blur", () => {
+          inp.style.borderColor = "transparent";
+          inp.style.background = "transparent";
+        });
+        inp.addEventListener("input", () => {
+          const idx = parseInt(inp.dataset.idx, 10);
+          if (creators[idx]) creators[idx][inp.dataset.fld] = inp.value.trim();
+        });
+      });
+
+      // 删除
+      searchResults.querySelectorAll(".ws-cr-del").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          if (creators[idx]) {
+            const realIdx = allCreators.indexOf(creators[idx]);
+            if (realIdx >= 0) allCreators.splice(realIdx, 1);
+            refreshView();
+          }
+        });
+      });
+
+      // 新增
+      searchResults
+        .querySelector(".ws-cr-add")
+        ?.addEventListener("click", () => {
+          creators.push({ name: "新作者", desc: "描述", type: site.id });
+          // 确保 allCreators 里也有
+          allCreators.push(creators[creators.length - 1]);
+          refreshView();
         });
     };
 
-    searchBtn.addEventListener("click", doGlobalSearch);
-    searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") doGlobalSearch();
-    });
+    // 📦 显示 GitHub 仓库模型列表
+    const showRepoModels = (repo, models) => {
+      searchResults.innerHTML =
+        '<div style="flex:1;overflow-y:auto;padding:0 12px">' +
+        '<div style="padding:8px 0 4px;display:flex;align-items:center;gap:4px">' +
+        '<button class="ws-back-repo" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:10px">← 返回</button>' +
+        '<span style="font-size:11px;font-weight:600;color:var(--txt)">📦 ' +
+        this._esc(repo) +
+        "</span>" +
+        '<span style="font-size:9px;color:var(--muted)">' +
+        models.length +
+        " 个模型</span>" +
+        "</div>" +
+        models
+          .map(
+            (m, i) =>
+              '<div style="display:flex;align-items:center;gap:4px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);font-size:10px;margin-bottom:2px">' +
+              '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
+              this._esc(m.name) +
+              "</span>" +
+              '<span style="font-size:9px;color:var(--muted);flex-shrink:0">' +
+              (m.size ? (m.size / 1024).toFixed(0) + "KB" : "") +
+              "</span>" +
+              '<button class="ws-dl-model" data-url="https://raw.githubusercontent.com/' +
+              this._esc(repo) +
+              "/main/" +
+              this._esc(m.path.replace(/\\/g, "/")) +
+              '" style="padding:1px 6px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">⬇️</button>' +
+              "</div>",
+          )
+          .join("") +
+        "</div>";
+
+      // 返回
+      searchResults
+        .querySelector(".ws-back-repo")
+        ?.addEventListener("click", () => {
+          if (currentSite) showSiteView(currentSite);
+        });
+
+      // 下载
+      searchResults.querySelectorAll(".ws-dl-model").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const url = btn.dataset.url;
+          btn.textContent = "⏳";
+          try {
+            const { LoadAppConfig, DownloadFromGitHub } =
+              await import("../../../wailsjs/go/main/App.js");
+            const cfg = await LoadAppConfig();
+            const repoRoot = cfg.repoRoot || "";
+            if (!repoRoot) {
+              bus.emit("toast:show", {
+                msg: "请先在设置中配置仓库目录",
+                duration: 3000,
+                type: "warn",
+              });
+              btn.textContent = "⬇️";
+              return;
+            }
+            const path = await DownloadFromGitHub(url, repoRoot);
+            bus.emit("stats:refresh");
+            bus.emit("tree:reload");
+            bus.emit("toast:show", {
+              msg: "✅ 已下载: " + path.split(/[/\\]/).pop(),
+              duration: 3000,
+              type: "success",
+            });
+            btn.textContent = "✅";
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ 下载失败: " + String(e),
+              duration: 4000,
+              type: "error",
+            });
+            btn.textContent = "⬇️";
+          }
+        });
+      });
+    };
 
     loadSites();
   }
@@ -1377,33 +1520,6 @@ class AppContent extends HTMLElement {
           } catch (e) {
             bus.emit("toast:show", {
               msg: "❌ 导入失败: " + String(e),
-              duration: 4000,
-              type: "error",
-            });
-          }
-        });
-
-      // 创作者管理器
-      root
-        .getElementById("set-cr-manager")
-        ?.addEventListener("click", async () => {
-          try {
-            const { showCreatorManager } =
-              await import("../../dialogs/creator-manager.js");
-            const { LoadWorkshopSites } =
-              await import("../../../wailsjs/go/main/App.js");
-            const sites = await LoadWorkshopSites();
-            const changed = await showCreatorManager(sites);
-            if (changed) {
-              bus.emit("toast:show", {
-                msg: "✅ 创作者配置已更新",
-                duration: 2000,
-                type: "success",
-              });
-            }
-          } catch (e) {
-            bus.emit("toast:show", {
-              msg: "❌ 操作失败: " + String(e),
               duration: 4000,
               type: "error",
             });

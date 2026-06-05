@@ -79,7 +79,9 @@ export function settingsHTML() {
   </div>
   <div class="setting-row">
     <span class="label">🎨 创作者配置 (workshop_creators.json)</span>
-    <button class="btn" id="set-cr-manager" style="font-size:10px">✏️ 管理创作者</button>
+  </div>
+  <div style="font-size:9px;color:#6c7086;padding:4px 0 0 0">
+    在创意工坊中选站点 → ✏️ 管理 可直接编辑创作者
   </div>
 </div>
 
@@ -230,14 +232,9 @@ export function workshopHTML() {
   <div class="ws-right" id="ws-right">
     <div class="ws-right-inner" id="ws-right-inner">
       <!-- 默认视图：作者搜索 -->
-      <div id="ws-search-view">
-        <div style="padding:8px 12px;font-size:12px;font-weight:600;color:var(--txt)">🔍 按作者搜索</div>
-        <div style="padding:0 12px 8px;display:flex;gap:4px">
-          <input id="ws-author-input" placeholder="输入作者名..." style="flex:1;padding:5px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-          <button class="btn accent" id="ws-search-btn" style="font-size:10px;padding:4px 10px">搜索</button>
-        </div>
+      <div id="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
         <div id="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">
-          <div style="color:var(--muted);font-size:10px;padding:4px 0">输入作者名，搜索仓库中的模型</div>
+          <div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">点击左侧站点查看详情</div>
         </div>
       </div>
       <!-- 创作者视图：选中站点时显示 -->

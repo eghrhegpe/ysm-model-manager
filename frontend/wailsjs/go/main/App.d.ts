@@ -30,6 +30,8 @@ export function DeduplicateCustomDir(arg1:string):Promise<number>;
 
 export function DeleteFromRecycle(arg1:string):Promise<void>;
 
+export function DownloadFromGitHub(arg1:string,arg2:string):Promise<string>;
+
 export function DownloadUpdate(arg1:string):Promise<string>;
 
 export function EmptyRecycleBin(arg1:string):Promise<number>;
@@ -43,6 +45,8 @@ export function ExportWorkshopSitesJSONFile():Promise<string>;
 export function ExtractYSMHeader(arg1:string):Promise<ysm.YSMHeader>;
 
 export function ExtractYsmSummary(arg1:string):Promise<ysm.YsmSummary>;
+
+export function GenerateRepoIndex(arg1:string):Promise<string>;
 
 export function GetGlobalCustomDir(arg1:string):Promise<string>;
 

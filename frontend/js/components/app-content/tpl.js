@@ -1,7 +1,18 @@
 // ===== app-content 页面模板 =====
 
 export function repositoryHTML() {
-  return '<div class="repo-layout"><app-tree></app-tree><app-preview mode="model"></app-preview></div>';
+  return (
+    '<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">' +
+    '<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
+    '<span style="font-size:12px;font-weight:600">📦 模型仓库</span>' +
+    '<span style="flex:1"></span>' +
+    '<button class="btn" id="repo-genindex" style="font-size:9px;padding:2px 8px" title="扫描本地仓库，生成 GitHub index.json">📇 生成 GitHub 索引</button>' +
+    "</div>" +
+    '<div class="repo-layout" style="flex:1"><app-tree></app-tree><app-preview mode="model"></app-preview></div>' +
+    '<div style="padding:3px 12px;font-size:9px;color:var(--muted);border-top:1px solid var(--bd);flex-shrink:0">' +
+    "📇 GitHub 索引：扫描本地仓库文件，生成 index.json，提交并推送到 GitHub 后即可在线浏览模型列表" +
+    "</div></div>"
+  );
 }
 
 export function instancesHTML() {
@@ -43,13 +54,15 @@ export function settingsHTML() {
       <input type="radio" name="link-mode" value="copy" id="lm-copy"> 📋 复制
     </label>
     <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer">
-      <input type="radio" name="link-mode" value="hardlink" id="lm-hardlink"> 🔗 硬链接
+      <input type="radio" name="link-mode" value="hardlink" id="lm-hardlink"> 🔗 硬链接 ✅
     </label>
     <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer">
       <input type="radio" name="link-mode" value="symlink" id="lm-symlink"> 🔗 符号链接
     </label>
   </div>
-  <div style="font-size:9px;color:#6c7086;padding:2px 0 0 0">硬链接省磁盘空间，源文件删除后模型仍在整合包中生效</div>
+  <div id="lm-hint-copy" style="font-size:9px;color:#6c7086;padding:2px 0 0 0;display:none">每个整合包独立占用磁盘空间，最兼容</div>
+  <div id="lm-hint-hardlink" style="font-size:9px;color:var(--muted,#6c7086);padding:2px 0 0 0;display:none">✅ 推荐：省磁盘空间，支持实时开关模型，YSM 兼容性好<br>📌 需要将模型仓库放在与游戏相同的分区（如 C: 游戏 / C: 模型仓库）</div>
+  <div id="lm-hint-symlink" style="display:none;padding:2px 0 0 0"><span style="font-size:9px;color:#e5534b">❌ 不推荐：符号链接文件 YSM 无法加载，且游戏运行时文件被锁定无法禁用，需手动删除</span></div>
 </div>
 
 <div class="section-title" style="margin-bottom:8px;margin-top:16px">⚙️ 界面与体验</div>
@@ -63,25 +76,6 @@ export function settingsHTML() {
       <option value="warm">☀️ 温暖木纹</option>
       <option value="pro">⚪ 极简深邃</option>
     </select>
-  </div>
-</div>
-
-<div class="section-title" style="margin-bottom:8px;margin-top:16px">⚙️ 创意工坊</div>
-
-<div class="settings-group" style="margin-bottom:12px">
-  <div class="setting-row">
-    <span class="label">🧩 站点配置 (workshop_sites.json)</span>
-  </div>
-  <div style="display:flex;gap:4px;padding:4px 0 8px 12px">
-    <button class="btn" id="set-ws-export" style="font-size:10px">📤 导出JSON</button>
-    <button class="btn" id="set-ws-import" style="font-size:10px">📥 导入JSON</button>
-    <button class="btn" id="set-ws-reset" style="font-size:10px;margin-left:auto">🗑️ 重置为默认</button>
-  </div>
-  <div class="setting-row">
-    <span class="label">🎨 创作者配置 (workshop_creators.json)</span>
-  </div>
-  <div style="font-size:9px;color:#6c7086;padding:4px 0 0 0">
-    在创意工坊中选站点 → ✏️ 管理 可直接编辑创作者
   </div>
 </div>
 
@@ -136,7 +130,12 @@ export function downloadsHTML() {
   <div style="font-size:11px;padding:4px 6px;border-radius:4px;background:var(--surf)">
     <span style="color:var(--muted)">最终命名：</span><span id="dl-preview" style="font-weight:500">-</span>
   </div>
-  <button class="btn accent" id="dl-import" style="padding:6px;font-size:12px">📥 导入到仓库</button>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+    <button class="btn accent" id="dl-import" style="padding:6px;font-size:12px;flex:1">📥 导入到仓库</button>
+    <label style="display:flex;align-items:center;gap:3px;font-size:9px;color:var(--muted);cursor:pointer;white-space:nowrap">
+      <input type="checkbox" id="dl-skip-check"> ⚠️ 跳过校验
+    </label>
+  </div>
 </div>
 <div style="margin:0 12px 4px;border-top:1px solid var(--bd);padding-top:4px">
   <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--txt);padding:2px 0">
@@ -217,8 +216,11 @@ export function workshopHTML() {
   return `<div class="ws-page" id="ws-page">
   <!-- 左栏：站点列表 -->
   <div class="ws-left" id="ws-left">
-    <div style="padding:10px 12px 4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+    <div style="padding:10px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:600">🧩 创意工坊</span>
+      <span style="flex:1"></span>
+      <button class="btn" id="ws-import-btn" style="font-size:9px;padding:2px 6px">📥</button>
+      <button class="btn" id="ws-export-btn" style="font-size:9px;padding:2px 6px">📤</button>
       <button class="btn" id="ws-refresh" style="font-size:9px;padding:2px 6px">🔄</button>
     </div>
     <div class="ws-grid" id="ws-grid">
@@ -254,7 +256,7 @@ export function workshopHTML() {
       <span class="ws-url" id="ws-url"></span>
       <button class="ws-open-btn" id="ws-open">↗ 浏览器打开</button>
     </div>
-    <iframe id="ws-iframe" style="flex:1;border:none;background:#fff" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+    <iframe id="ws-iframe" style="flex:1;border:none;background:#fff" sandbox="allow-scripts allow-forms allow-popups"></iframe>
     <div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:12px">
       <div style="font-size:32px">🚫</div>
       <div>此站点不允许内嵌浏览</div>

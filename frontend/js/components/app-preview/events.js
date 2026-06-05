@@ -11,14 +11,6 @@ export function bindActions(root) {
   // 初始状态：无选中包时禁用
   setGlobalButtonsEnabled(root, false);
 
-  console.log(
-    "[preview] bindActions, btnImport:",
-    !!btnImport,
-    "btnUpload:",
-    !!btnUpload,
-    "btnSync:",
-    !!btnSync,
-  );
   btnImport?.addEventListener("click", () => {
     console.log("[preview] ⬇️ 导入 按钮点击");
     btnImport.disabled = true;

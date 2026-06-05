@@ -223,7 +223,7 @@ async function batchToggle(vm, dir, enable) {
   }
   if (ok > 0) {
     await reload(vm);
-    bus.emit("stats:refresh");
+    bus.emit("sync:toggle-status");
   }
   bus.emit("toast:show", {
     msg: `批量${enable ? "启用" : "禁用"}: ${ok} 成功, ${fail} 失败`,
@@ -248,7 +248,7 @@ async function batchToggleAll(vm, enable) {
   }
   if (ok > 0) {
     await reload(vm);
-    bus.emit("stats:refresh");
+    bus.emit("sync:toggle-status");
   }
   bus.emit("toast:show", {
     msg: `全部${enable ? "启用" : "禁用"}: ${ok} 成功, ${fail} 失败`,

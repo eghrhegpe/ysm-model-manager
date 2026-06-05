@@ -34,14 +34,18 @@ export function vcHeaderHTML(
   status,
   isOpen = false,
   idx = -1,
+  hasYSM = true,
 ) {
   const parts = [];
   if (synced > 0) parts.push(`<span class="tag green">✅ ${synced}</span>`);
   const arrowClass = isOpen ? "arrow open" : "arrow";
   const installBtn =
-    missing > 0
+    missing > 0 && hasYSM
       ? `<button class="tag red btn-install-missing" data-idx="${idx}" style="cursor:pointer;border:none">⬇️ 安装缺失 (${missing})</button>`
       : "";
+  const noYsmTag = !hasYSM
+    ? `<span class="tag gray" style="color:var(--muted);font-size:9px">🚫 无YSM</span>`
+    : "";
   const extraTag =
     extra > 0 ? `<span class="tag orange">📤 ${extra}</span>` : "";
   return `<div class="vc-header">
@@ -49,6 +53,7 @@ export function vcHeaderHTML(
 <span class="name">📦 ${esc(name)}</span>
 ${parts.join("")}
 ${extraTag}
+${noYsmTag}
 ${installBtn}
 </div>`;
 }

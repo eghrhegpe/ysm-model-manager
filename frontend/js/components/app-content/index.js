@@ -77,6 +77,8 @@ class AppContent extends HTMLElement {
       this._initDownloads();
     } else if (this._current === "workshop") {
       this._initWorkshop();
+    } else if (this._current === "repository") {
+      this._initRepository();
     }
   }
 
@@ -122,6 +124,49 @@ class AppContent extends HTMLElement {
     });
 
     this._loadDiagnosticsLogs();
+  }
+
+  _initRepository() {
+    const btn = this._root.getElementById("repo-genindex");
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      btn.textContent = "⏳";
+      try {
+        const { LoadAppConfig, GenerateRepoIndex } =
+          await import("../../../wailsjs/go/main/App.js");
+        const cfg = await LoadAppConfig();
+        const repoRoot = cfg.repoRoot || "";
+        if (!repoRoot) {
+          bus.emit("toast:show", {
+            msg: "请先在设置中配置仓库目录",
+            duration: 2000,
+            type: "warn",
+          });
+          btn.textContent = "📇 生成 GitHub 索引";
+          return;
+        }
+        const path = await GenerateRepoIndex(repoRoot);
+        bus.emit("toast:show", {
+          msg:
+            "✅ index.json 已生成: " +
+            path +
+            "，用 GitHub Desktop 提交并推送即可在线浏览",
+          duration: 6000,
+          type: "success",
+        });
+        btn.textContent = "✅";
+        setTimeout(() => {
+          btn.textContent = "📇 生成 GitHub 索引";
+        }, 3000);
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: "❌ 索引失败: " + String(e),
+          duration: 4000,
+          type: "error",
+        });
+        btn.textContent = "📇 生成 GitHub 索引";
+      }
+    });
   }
 
   async _startDedup() {
@@ -457,8 +502,11 @@ class AppContent extends HTMLElement {
         ext;
 
       try {
-        const { LoadAppConfig, ImportModelFile } =
-          await import("../../../wailsjs/go/main/App.js");
+        const skipCheck = root.getElementById("dl-skip-check")?.checked;
+        const appModule = skipCheck
+          ? await import("../../../wailsjs/go/main/App.js")
+          : await import("../../../wailsjs/go/main/App.js");
+        const { LoadAppConfig, ImportModelFile, ImportModelFileSkipCheck } = appModule;
         const cfg = await LoadAppConfig();
         const repoRoot = cfg.repoRoot || "";
         if (!repoRoot) {
@@ -469,7 +517,11 @@ class AppContent extends HTMLElement {
           });
           return;
         }
-        await ImportModelFile(newName, currentBase64);
+        if (skipCheck) {
+          await ImportModelFileSkipCheck(newName, currentBase64);
+        } else {
+          await ImportModelFile(newName, currentBase64);
+        }
         bus.emit("stats:refresh");
         bus.emit("tree:reload");
         bus.emit("toast:show", {
@@ -743,6 +795,49 @@ class AppContent extends HTMLElement {
 
     root.getElementById("ws-refresh").addEventListener("click", loadSites);
 
+    // 站点导出/导入
+    root
+      .getElementById("ws-export-btn")
+      ?.addEventListener("click", async () => {
+        try {
+          const { ExportWorkshopSitesJSONFile } =
+            await import("../../../wailsjs/go/main/App.js");
+          const path = await ExportWorkshopSitesJSONFile();
+          bus.emit("toast:show", {
+            msg: "📤 站点已导出: " + path,
+            duration: 2000,
+            type: "success",
+          });
+        } catch (e) {
+          bus.emit("toast:show", {
+            msg: "❌ 导出失败: " + String(e),
+            duration: 4000,
+            type: "error",
+          });
+        }
+      });
+    root
+      .getElementById("ws-import-btn")
+      ?.addEventListener("click", async () => {
+        try {
+          const { ImportWorkshopSitesJSONFile } =
+            await import("../../../wailsjs/go/main/App.js");
+          const n = await ImportWorkshopSitesJSONFile();
+          await loadSites();
+          bus.emit("toast:show", {
+            msg: "✅ 已导入 " + n + " 个站点",
+            duration: 2000,
+            type: "success",
+          });
+        } catch (e) {
+          bus.emit("toast:show", {
+            msg: "❌ 导入失败: " + String(e),
+            duration: 4000,
+            type: "error",
+          });
+        }
+      });
+
     // ===== 右栏：JSON驱动的站点视图 =====
     const showSiteView = (site) => {
       searchResults.innerHTML = "";
@@ -785,7 +880,7 @@ class AppContent extends HTMLElement {
             '<span style="font-size:9px;color:var(--muted)">(' +
             creators.length +
             ")</span>" +
-            '<button class="ws-cr-edit-btn" style="margin-left:auto;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px">✏️ 管理</button>' +
+            '<button class="ws-cr-edit-btn" style="margin-left:auto;padding:4px 12px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">✏️ 管理</button>' +
             "</div>",
         );
         parts.push(
@@ -812,7 +907,7 @@ class AppContent extends HTMLElement {
                 (hasRepo
                   ? '<button class="ws-browse-repo" data-repo="' +
                     this._esc(cr.name) +
-                    '" style="padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px;flex-shrink:0">📦 浏览</button>'
+                    '" style="padding:4px 12px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:11px;flex-shrink:0">📦 浏览</button>'
                   : "") +
                 '<div class="ws-creator-action">↗</div>' +
                 "</div>"
@@ -825,8 +920,10 @@ class AppContent extends HTMLElement {
           '<div style="padding:6px 12px 4px;display:flex;align-items:center;gap:4px">' +
             '<span style="font-size:10px;font-weight:600;color:var(--txt)">✏️ 编辑创作者</span>' +
             '<span style="flex:1"></span>' +
-            '<button class="ws-cr-view-btn" style="padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px">✅ 完成</button>' +
-            '<button class="ws-cr-save-btn" style="padding:1px 8px;border-radius:4px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:9px">💾 保存</button>' +
+            '<button class="ws-cr-export-btn" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:9px">📤</button>' +
+            '<button class="ws-cr-import-btn" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:9px">📥</button>' +
+            '<button class="ws-cr-view-btn" style="padding:4px 12px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">✅ 完成</button>' +
+            '<button class="ws-cr-save-btn" style="padding:4px 14px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:11px">💾 保存</button>' +
             "</div>",
         );
         creators.forEach((cr, idx) => {
@@ -914,7 +1011,10 @@ class AppContent extends HTMLElement {
             "https://raw.githubusercontent.com/" + repo + "/main/index.json";
           btn.textContent = "⏳";
           try {
-            const resp = await fetch(indexURL);
+            const ctrl = new AbortController();
+            const tmr = setTimeout(() => ctrl.abort(), 6000);
+            const resp = await fetch(indexURL, { signal: ctrl.signal });
+            clearTimeout(tmr);
             if (!resp.ok) throw new Error("HTTP " + resp.status);
             const models = await resp.json();
             if (!models || !models.length) {
@@ -929,12 +1029,16 @@ class AppContent extends HTMLElement {
             // 切换到模型列表视图
             showRepoModels(repo, models);
           } catch (e) {
+            // 无 index.json → 标记为不可用，同时打开 GitHub 页面让用户手动浏览
+            btn.textContent = "❌ 无索引";
+            btn.style.color = "var(--muted)";
+            btn.style.cursor = "default";
             bus.emit("toast:show", {
-              msg: "❌ 读取仓库失败: " + String(e),
-              duration: 4000,
-              type: "error",
+              msg: "📦 " + repo + " 没有 index.json，已在浏览器中打开仓库",
+              duration: 5000,
+              type: "warn",
             });
-            btn.textContent = "📦 浏览";
+            window.open("https://github.com/" + repo, "_blank");
           }
         });
       });
@@ -976,6 +1080,59 @@ class AppContent extends HTMLElement {
           } catch (e) {
             bus.emit("toast:show", {
               msg: "❌ 保存失败: " + String(e),
+              duration: 4000,
+              type: "error",
+            });
+          }
+        });
+
+      // 创作者导出
+      searchResults
+        .querySelector(".ws-cr-export-btn")
+        ?.addEventListener("click", async () => {
+          try {
+            const { SaveWorkshopCreators, ExportWorkshopCreatorsJSONFile } =
+              await import("../../../wailsjs/go/main/App.js");
+            await SaveWorkshopCreators(allCreators);
+            const path = await ExportWorkshopCreatorsJSONFile();
+            bus.emit("toast:show", {
+              msg: "📤 已导出: " + path,
+              duration: 2000,
+              type: "success",
+            });
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ 导出失败: " + String(e),
+              duration: 4000,
+              type: "error",
+            });
+          }
+        });
+
+      // 创作者导入
+      searchResults
+        .querySelector(".ws-cr-import-btn")
+        ?.addEventListener("click", async () => {
+          try {
+            const { LoadWorkshopCreators, SaveWorkshopCreators } =
+              await import("../../../wailsjs/go/main/App.js");
+            const fresh = await LoadWorkshopCreators();
+            // 合并到 allCreators
+            fresh.forEach((cr) => {
+              if (!allCreators.find((c) => c.name === cr.name)) {
+                allCreators.push(cr);
+              }
+            });
+            wsEditMode = false;
+            bus.emit("toast:show", {
+              msg: "✅ 已合并导入，共 " + allCreators.length + " 位创作者",
+              duration: 2000,
+              type: "success",
+            });
+            refreshView();
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ 导入失败: " + String(e),
               duration: 4000,
               type: "error",
             });
@@ -1033,6 +1190,7 @@ class AppContent extends HTMLElement {
         '<span style="font-size:9px;color:var(--muted)">' +
         models.length +
         " 个模型</span>" +
+        '<button class="ws-index-btn" style="margin-left:auto;padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:9px">🔄 索引</button>' +
         "</div>" +
         models
           .map(
@@ -1061,6 +1219,46 @@ class AppContent extends HTMLElement {
           if (currentSite) showSiteView(currentSite);
         });
 
+      // 更新本地仓库索引
+      searchResults
+        .querySelector(".ws-index-btn")
+        ?.addEventListener("click", async () => {
+          const btn = searchResults.querySelector(".ws-index-btn");
+          btn.textContent = "⏳";
+          try {
+            const { LoadAppConfig, GenerateRepoIndex } =
+              await import("../../../wailsjs/go/main/App.js");
+            const cfg = await LoadAppConfig();
+            const repoRoot = cfg.repoRoot || "";
+            if (!repoRoot) {
+              bus.emit("toast:show", {
+                msg: "请先配置仓库目录",
+                duration: 2000,
+                type: "warn",
+              });
+              btn.textContent = "🔄 索引";
+              return;
+            }
+            const path = await GenerateRepoIndex(repoRoot);
+            bus.emit("toast:show", {
+              msg: "✅ 索引已更新: " + path + "，请提交并推送到 GitHub",
+              duration: 4000,
+              type: "success",
+            });
+            btn.textContent = "✅";
+            setTimeout(() => {
+              btn.textContent = "🔄 索引";
+            }, 3000);
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ 索引更新失败: " + String(e),
+              duration: 4000,
+              type: "error",
+            });
+            btn.textContent = "🔄 索引";
+          }
+        });
+
       // 下载
       searchResults.querySelectorAll(".ws-dl-model").forEach((btn) => {
         btn.addEventListener("click", async () => {
@@ -1080,15 +1278,41 @@ class AppContent extends HTMLElement {
               btn.textContent = "⬇️";
               return;
             }
+            // 计算本地路径
+            const afterMain = url.split("/main/")[1] || url.split("/").pop();
+            const localPath = repoRoot + "\\" + afterMain.replace(/\//g, "\\");
+            const fileName = afterMain.split("/").pop();
+            // 检查是否已存在
+            const { CheckFileExists } =
+              await import("../../../wailsjs/go/main/App.js");
+            const exists = await CheckFileExists(localPath);
+            if (exists) {
+              const ok = await window.showConfirm?.(
+                fileName + " 已存在，是否覆盖？",
+              );
+              if (!ok) {
+                bus.emit("toast:show", {
+                  msg: "⏭ 已跳过",
+                  duration: 1500,
+                  type: "info",
+                });
+                btn.textContent = "⬇️";
+                return;
+              }
+              // 删除旧文件
+              try {
+                const fs = await import("../../../wailsjs/go/main/App.js");
+                await fs.MoveToRecycle(localPath);
+              } catch {}
+            }
             const path = await DownloadFromGitHub(url, repoRoot);
             bus.emit("stats:refresh");
-            bus.emit("tree:reload");
             bus.emit("toast:show", {
-              msg: "✅ 已下载: " + path.split(/[/\\]/).pop(),
+              msg: "✅ 已下载: " + fileName,
               duration: 3000,
               type: "success",
             });
-            btn.textContent = "✅";
+            btn.textContent = "⬇️";
           } catch (e) {
             bus.emit("toast:show", {
               msg: "❌ 下载失败: " + String(e),
@@ -1349,10 +1573,20 @@ class AppContent extends HTMLElement {
           });
         });
 
+      // 链接模式提示切换
+      const updateLinkHint = (mode) => {
+        ["copy", "hardlink", "symlink"].forEach((m) => {
+          const el = root.getElementById("lm-hint-" + m);
+          if (el) el.style.display = m === mode ? "" : "none";
+        });
+      };
+      updateLinkHint(linkMode);
+
       // 链接模式变更
       root.querySelectorAll('input[name="link-mode"]').forEach((radio) => {
         radio.addEventListener("change", async () => {
           if (!radio.checked) return;
+          updateLinkHint(radio.value);
           const theme = localStorage.getItem("theme") || "dark";
           await SaveAppConfig(repoPath, mcPath, radio.value, theme);
           await SetLinkMode(radio.value);
@@ -1424,106 +1658,6 @@ class AppContent extends HTMLElement {
             duration: 2000,
             type: "success",
           });
-        });
-
-      // 重置创意工坊
-      root
-        .getElementById("set-ws-reset")
-        ?.addEventListener("click", async () => {
-          const confirmed = await window.showConfirm?.(
-            "重置创意工坊配置将恢复默认站点列表并清空创作者数据，确定继续吗？",
-          );
-          if (!confirmed) return;
-          try {
-            const { ResetWorkshopConfigs } =
-              await import("../../../wailsjs/go/main/App.js");
-            const sites = await ResetWorkshopConfigs();
-            bus.emit("toast:show", {
-              msg: `✅ 已重置 ${sites.length} 个默认站点，workshop_creators/ 已清空`,
-              duration: 4000,
-              type: "success",
-            });
-          } catch (e) {
-            bus.emit("toast:show", {
-              msg: `❌ 重置失败: ${String(e)}`,
-              duration: 5000,
-              type: "error",
-            });
-          }
-        });
-
-      // ===== CSV 导出/导入（创意工坊）=====
-      const csvDownload = (content, filename) => {
-        // WPS/Excel 友好：加 BOM 让中文正常显示
-        const bom = "\uFEFF";
-        const blob = new Blob([bom + content], {
-          type: "text/csv;charset=utf-8",
-        });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(a.href);
-      };
-
-      const csvUpload = async () => {
-        return new Promise((resolve) => {
-          const inp = document.createElement("input");
-          inp.type = "file";
-          inp.accept = ".csv";
-          inp.onchange = async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) {
-              resolve("");
-              return;
-            }
-            const text = await file.text();
-            resolve(text);
-          };
-          inp.click();
-        });
-      };
-
-      root
-        .getElementById("set-ws-export")
-        ?.addEventListener("click", async () => {
-          try {
-            const { ExportWorkshopSitesJSONFile } =
-              await import("../../../wailsjs/go/main/App.js");
-            const path = await ExportWorkshopSitesJSONFile();
-            bus.emit("toast:show", {
-              msg: "📤 已导出 JSON: " + path,
-              duration: 3000,
-              type: "success",
-            });
-          } catch (e) {
-            bus.emit("toast:show", {
-              msg: "❌ 导出失败: " + String(e),
-              duration: 4000,
-              type: "error",
-            });
-          }
-        });
-
-      root
-        .getElementById("set-ws-import")
-        ?.addEventListener("click", async () => {
-          try {
-            const { ImportWorkshopSitesJSONFile } =
-              await import("../../../wailsjs/go/main/App.js");
-            const count = await ImportWorkshopSitesJSONFile();
-            bus.emit("toast:show", {
-              msg: `✅ 已从 JSON 导入 ${count} 个站点`,
-              duration: 3000,
-              type: "success",
-            });
-          } catch (e) {
-            bus.emit("toast:show", {
-              msg: "❌ 导入失败: " + String(e),
-              duration: 4000,
-              type: "error",
-            });
-          }
         });
 
       // 显示版本号

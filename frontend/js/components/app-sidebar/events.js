@@ -70,6 +70,8 @@ function restoreSelectedCard(root, instances) {
     if (!savedName) return;
     const idx = instances.findIndex((i) => i.name === savedName);
     if (idx < 0) return;
+    const vc = root.querySelector(`.vc[data-idx="${idx}"]`);
+    if (!vc) return;
     const hdr = vc.querySelector(".vc-header");
     const body = vc.nextElementSibling;
     if (hdr && body && body.classList.contains("vc-body")) {

@@ -51,7 +51,7 @@ export function bindTreeEvents(container, vm) {
         await ToggleModelEnable(fullPath);
         await vm._load();
         vm._renderTree();
-        bus.emit("stats:refresh");
+        bus.emit("sync:toggle-status");
       } catch (_) {
         // 失败则恢复
         el.classList.toggle("on");
@@ -192,7 +192,7 @@ async function toggleFolderBatch(fhEl, vm) {
   if (ok > 0) {
     await vm._load();
     vm._renderTree();
-    bus.emit("stats:refresh");
+    bus.emit("sync:toggle-status");
   }
   bus.emit("toast:show", {
     msg: `文件夹${enable ? "启用" : "禁用"}: ${ok} 成功, ${fail} 失败`,

@@ -122,6 +122,10 @@ export function ImportModelFile(arg1, arg2) {
   return window['go']['main']['App']['ImportModelFile'](arg1, arg2);
 }
 
+export function ImportModelFileSkipCheck(arg1, arg2) {
+  return window['go']['main']['App']['ImportModelFileSkipCheck'](arg1, arg2);
+}
+
 export function ImportWorkshopSitesCSV(arg1) {
   return window['go']['main']['App']['ImportWorkshopSitesCSV'](arg1);
 }

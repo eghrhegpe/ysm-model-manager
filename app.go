@@ -22,6 +22,7 @@ import (
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/updater"
 	"ysm-model-manager/go/version"
+	"ysm-model-manager/go/watcher"
 	"ysm-model-manager/go/ysm"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -32,6 +33,7 @@ type App struct {
 	RepoRoot string
 	LinkMode string
 	logger   *logs.Logger
+	watcher  *watcher.Watcher
 }
 
 func NewApp() *App {
@@ -55,10 +57,21 @@ func (a *App) startup(ctx context.Context) {
 	// 通过 runtime.EventsEmit 通知前端配置已加载
 	cfg := a.LoadAppConfig()
 	runtime.EventsEmit(ctx, "config-loaded", cfg.RepoRoot, cfg.McRoot, cfg.LinkMode)
+
+	// 启动文件监听器（自动同步启用/禁用状态到整合包）
+	if cfg.RepoRoot != "" && cfg.McRoot != "" {
+		a.watcher = watcher.New(cfg.RepoRoot, cfg.McRoot, a.ScanModelEntries)
+		if err := a.watcher.Start(); err != nil {
+			println("[startup] 文件监听器启动失败:", err.Error())
+		}
+	}
 }
 
 func (a *App) shutdown(ctx context.Context) {
-	// 关闭时保存窗口位置
+	defer func() { recover() }() // 关闭时可能取不到窗口尺寸
+	if a.watcher != nil {
+		a.watcher.Stop()
+	}
 	x, y := runtime.WindowGetPosition(ctx)
 	w, h := runtime.WindowGetSize(ctx)
 	a.SaveWindowPosition(x, y, w, h)
@@ -95,7 +108,25 @@ func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode, theme string) error {
 		Theme:    theme,
 	}
 	data, _ := json.MarshalIndent(cfg, "", "  ")
-	return os.WriteFile(configPath(), data, 0644)
+	err := os.WriteFile(configPath(), data, 0644)
+	if err == nil {
+		a.restartWatcher(repoRoot, mcRoot)
+	}
+	return err
+}
+
+// restartWatcher 重启文件监听器
+func (a *App) restartWatcher(repoRoot, mcRoot string) {
+	if a.watcher != nil {
+		a.watcher.Stop()
+		a.watcher = nil
+	}
+	if repoRoot != "" && mcRoot != "" {
+		a.watcher = watcher.New(repoRoot, mcRoot, a.ScanModelEntries)
+		if err := a.watcher.Start(); err != nil {
+			println("[watcher] 重启失败:", err.Error())
+		}
+	}
 }
 
 func (a *App) LoadAppConfig() types.AppConfig {
@@ -472,8 +503,21 @@ func (a *App) DownloadFromGitHub(rawURL string, saveDir string) (string, error) 
 	if err := os.MkdirAll(saveDir, 0755); err != nil {
 		return "", err
 	}
-	fileName := filepath.Base(rawURL)
-	savePath := filepath.Join(saveDir, fileName)
+	// 从 raw URL 提取相对路径（/main/ 之后的部分）
+	relPath := ""
+	if idx := strings.Index(rawURL, "/main/"); idx > 0 {
+		relPath = rawURL[idx+6:]
+	}
+	if relPath == "" {
+		relPath = filepath.Base(rawURL)
+	}
+	// 确保路径使用系统分隔符
+	relPath = strings.ReplaceAll(relPath, "/", string(filepath.Separator))
+	savePath := filepath.Join(saveDir, relPath)
+	// 创建子目录
+	if err := os.MkdirAll(filepath.Dir(savePath), 0755); err != nil {
+		return "", err
+	}
 	resp, err := http.Get(rawURL)
 	if err != nil {
 		return "", fmt.Errorf("下载失败: %w", err)
@@ -932,6 +976,40 @@ func (a *App) ImportModelFile(fileName, base64Data string) error {
     }
     return os.WriteFile(destPath, data, 0644)
 }
+
+// ImportModelFileSkipCheck 导入模型文件，跳过文件头校验（用于已知安全但头损坏的文件）
+func (a *App) ImportModelFileSkipCheck(fileName, base64Data string) error {
+    if a.RepoRoot == "" {
+        return fmt.Errorf("请先选择仓库目录")
+    }
+    if strings.Contains(fileName, "..") || strings.ContainsAny(fileName, "\\/") {
+        return types.AppError{Code:"FILENAME_INVALID", Operation:"导入模型", SourcePath:fileName, Reason:"文件名包含非法路径分隔符", Suggestion:"请使用纯文件名，不要包含路径"}
+    }
+    ext := strings.ToLower(filepath.Ext(fileName))
+    if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
+        return types.AppError{Code:"FILE_TYPE_UNSUPPORTED", Operation:"导入模型", SourcePath:fileName, Reason:"不支持的文件格式", Suggestion:"仅支持 .ysm / .zip / .7z 格式"}
+    }
+    data, err := base64.StdEncoding.DecodeString(base64Data)
+    if err != nil {
+        return types.AppError{Code:"DECODE_FAILED", Operation:"导入模型", Reason:"Base64 解码失败", Suggestion:"文件可能已损坏，请重新下载"}
+    }
+    if len(data) > 500*1024*1024 {
+        return types.AppError{Code:"FILE_TOO_LARGE", Operation:"导入模型", SourcePath:fileName, Reason:"文件大小超过 500MB 限制", Suggestion:"请压缩文件至 500MB 以内"}
+    }
+    if len(data) == 0 {
+        return types.AppError{Code:"FILE_EMPTY", Operation:"导入模型", SourcePath:fileName, Reason:"文件内容为空", Suggestion:"请检查文件是否损坏"}
+    }
+    destPath := filepath.Join(a.RepoRoot, fileName)
+    destDir := filepath.Dir(destPath)
+    if err := os.MkdirAll(destDir, 0755); err != nil {
+        return types.AppError{Code:"MKDIR_FAILED", Operation:"导入模型", TargetPath:destDir, Reason:"无法创建目标目录", Suggestion:"请检查磁盘权限或空间"}
+    }
+    if _, err := os.Stat(destPath); err == nil {
+        return types.AppError{Code:"FILE_EXISTS", Operation:"导入模型", SourcePath:fileName, Reason:"文件已存在", Suggestion:"如需替换请先删除原文件"}
+    }
+    return os.WriteFile(destPath, data, 0644)
+}
+
 // ========== 回收站 ==========
 func (a *App) MoveToRecycle(src string) error {
 	return recycle.Move(src, a.RepoRoot)

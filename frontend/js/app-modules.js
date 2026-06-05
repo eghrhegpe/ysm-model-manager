@@ -141,21 +141,7 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
   }
 });
 
-// ===== 窗口状态实时保存 =====
-let resizeTimer;
-window.addEventListener("resize", () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(async () => {
-    try {
-      const { SaveWindowPosition } = await import("../wailsjs/go/main/App.js");
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      const x = window.screenX || 0;
-      const y = window.screenY || 0;
-      await SaveWindowPosition(x, y, w, h);
-    } catch (_) {}
-  }, 500);
-});
+//  窗口状态已由 Go 端 shutdown 保存，前端不再重复写入
 
 // ===== 全局主题控制 =====
 // 主题: cyber(赛博霓虹) | warm(温暖木纹) | pro(极简深邃) | system(跟随系统)

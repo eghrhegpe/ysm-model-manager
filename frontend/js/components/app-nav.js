@@ -35,7 +35,7 @@ class AppNav extends HTMLElement {
     const items = [
       { id: "instances", icon: "🎮", label: "整合包管理" },
       { id: "repository", icon: "📦", label: "模型仓库" },
-      { id: "downloads", icon: "⬇️", label: "下载与更新" },
+      { id: "downloads", icon: "⬇️", label: "导入与重命名" },
       { id: "workshop", icon: "🧩", label: "创意工坊" },
       { id: "recycle", icon: "🗑️", label: "回收站" },
       { id: "diagnostics", icon: "🛠️", label: "诊断与冲突" },

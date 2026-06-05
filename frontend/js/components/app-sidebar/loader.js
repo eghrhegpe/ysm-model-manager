@@ -101,6 +101,12 @@ export async function loadInstances() {
       };
     });
 
+    // 排序：有YSM > 无YSM，同组按已同步数量降序
+    instances.sort((a, b) => {
+      if (a.hasYSM !== b.hasYSM) return a.hasYSM ? -1 : 1;
+      return (b.synced || 0) - (a.synced || 0);
+    });
+
     return instances;
   } catch {
     return fallbackInstances();

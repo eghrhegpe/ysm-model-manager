@@ -11,6 +11,9 @@
   --muted: #6c7086;
   --bd: rgba(255, 255, 255, 0.08);
   --menu-indicator: #66d9ef;
+  --meta-author: #66d9ef;
+  --meta-work: #bd93f9;
+  --meta-date: #f1fa8c;
   --r: 8px;
   --sidebar-width: 300px;
   --preview-width: 240px;
@@ -28,6 +31,9 @@
   --muted: #8b7355;
   --bd: rgba(139, 69, 19, 0.15);
   --menu-indicator: #8b4513;
+  --meta-author: #8b4513;
+  --meta-work: #6a4e3a;
+  --meta-date: #a0866a;
   --sidebar-width: 300px;
   --preview-width: 240px;
 }
@@ -44,6 +50,9 @@
   --muted: #666666;
   --bd: rgba(255, 255, 255, 0.06);
   --menu-indicator: #ffffff;
+  --meta-author: #ffffff;
+  --meta-work: #999999;
+  --meta-date: #666666;
   --sidebar-width: 300px;
   --preview-width: 240px;
 }

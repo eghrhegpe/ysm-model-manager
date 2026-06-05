@@ -94,12 +94,20 @@ export function IsFileBanned(arg1) {
   return window['go']['main']['App']['IsFileBanned'](arg1);
 }
 
+export function IsProxyRunning() {
+  return window['go']['main']['App']['IsProxyRunning']();
+}
+
 export function IsSymlink(arg1) {
   return window['go']['main']['App']['IsSymlink'](arg1);
 }
 
 export function ListFileNames(arg1) {
   return window['go']['main']['App']['ListFileNames'](arg1);
+}
+
+export function ListModelAuthors() {
+  return window['go']['main']['App']['ListModelAuthors']();
 }
 
 export function ListRecycleBin(arg1) {
@@ -112,6 +120,14 @@ export function ListVersionInstances(arg1) {
 
 export function LoadAppConfig() {
   return window['go']['main']['App']['LoadAppConfig']();
+}
+
+export function LoadWorkshopCreators() {
+  return window['go']['main']['App']['LoadWorkshopCreators']();
+}
+
+export function LoadWorkshopSites() {
+  return window['go']['main']['App']['LoadWorkshopSites']();
 }
 
 export function MoveModelFile(arg1, arg2) {
@@ -142,6 +158,14 @@ export function RenameDir(arg1, arg2) {
   return window['go']['main']['App']['RenameDir'](arg1, arg2);
 }
 
+export function RenameFile(arg1, arg2) {
+  return window['go']['main']['App']['RenameFile'](arg1, arg2);
+}
+
+export function ResetWorkshopConfigs() {
+  return window['go']['main']['App']['ResetWorkshopConfigs']();
+}
+
 export function RestoreFromRecycle(arg1, arg2) {
   return window['go']['main']['App']['RestoreFromRecycle'](arg1, arg2);
 }
@@ -152,6 +176,14 @@ export function SaveAppConfig(arg1, arg2, arg3, arg4) {
 
 export function SaveWindowPosition(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['SaveWindowPosition'](arg1, arg2, arg3, arg4);
+}
+
+export function SaveWorkshopCreators(arg1) {
+  return window['go']['main']['App']['SaveWorkshopCreators'](arg1);
+}
+
+export function SaveWorkshopSites(arg1) {
+  return window['go']['main']['App']['SaveWorkshopSites'](arg1);
 }
 
 export function ScanCustomModels(arg1) {
@@ -172,6 +204,14 @@ export function SetLinkMode(arg1) {
 
 export function SetRepoRoot(arg1) {
   return window['go']['main']['App']['SetRepoRoot'](arg1);
+}
+
+export function StartProxy(arg1) {
+  return window['go']['main']['App']['StartProxy'](arg1);
+}
+
+export function StopProxy() {
+  return window['go']['main']['App']['StopProxy']();
 }
 
 export function SyncCustomToRepo(arg1, arg2) {

@@ -49,15 +49,23 @@ export function InstallModelWithOverlay(arg1:string,arg2:string):Promise<string>
 
 export function IsFileBanned(arg1:string):Promise<boolean>;
 
+export function IsProxyRunning():Promise<boolean>;
+
 export function IsSymlink(arg1:string):Promise<boolean>;
 
 export function ListFileNames(arg1:string):Promise<Array<string>>;
+
+export function ListModelAuthors():Promise<Array<string>>;
 
 export function ListRecycleBin(arg1:string):Promise<Array<types.ModelEntry>>;
 
 export function ListVersionInstances(arg1:string):Promise<Array<types.VersionInstance>>;
 
 export function LoadAppConfig():Promise<types.AppConfig>;
+
+export function LoadWorkshopCreators():Promise<Array<types.PlatformCreators>>;
+
+export function LoadWorkshopSites():Promise<Array<types.WorkshopSite>>;
 
 export function MoveModelFile(arg1:string,arg2:string):Promise<void>;
 
@@ -73,11 +81,19 @@ export function RemoveDir(arg1:string):Promise<void>;
 
 export function RenameDir(arg1:string,arg2:string):Promise<void>;
 
+export function RenameFile(arg1:string,arg2:string):Promise<void>;
+
+export function ResetWorkshopConfigs():Promise<Array<types.WorkshopSite>>;
+
 export function RestoreFromRecycle(arg1:string,arg2:string):Promise<void>;
 
 export function SaveAppConfig(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function SaveWindowPosition(arg1:number,arg2:number,arg3:number,arg4:number):Promise<void>;
+
+export function SaveWorkshopCreators(arg1:Array<types.PlatformCreators>):Promise<void>;
+
+export function SaveWorkshopSites(arg1:Array<types.WorkshopSite>):Promise<void>;
 
 export function ScanCustomModels(arg1:string):Promise<Array<types.ModelEntry>>;
 
@@ -88,6 +104,10 @@ export function SelectDirectory():Promise<string>;
 export function SetLinkMode(arg1:string):Promise<void>;
 
 export function SetRepoRoot(arg1:string):Promise<void>;
+
+export function StartProxy(arg1:number):Promise<void>;
+
+export function StopProxy():Promise<void>;
 
 export function SyncCustomToRepo(arg1:string,arg2:string):Promise<number>;
 

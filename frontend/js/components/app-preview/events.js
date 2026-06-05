@@ -1,5 +1,6 @@
 // ===== preview 事件层 =====
 import { bus } from "../../bus.js";
+import { renderDisplayName } from "../../utils/display.js";
 
 export function bindActions(root) {
   // ===== 全局操作栏（管辖范围：已选中的整合包） =====
@@ -153,9 +154,9 @@ export function showPackageDetail(root, pkg) {
     el.innerHTML = items.length
       ? items
           .map((it) => {
-            const display = it.displayName || it.name || "";
+            const display = renderDisplayName(it.displayName || it.name || "");
             const fullPath = it.name || "";
-            return `<div class="dp-detail-item" title="${esc(fullPath)}">${icon} ${esc(display)}</div>`;
+            return `<div class="dp-detail-item" title="${esc(fullPath)}">${icon} ${display}</div>`;
           })
           .join("")
       : `<div class="dp-detail-empty">无</div>`;
@@ -229,12 +230,16 @@ export function loadLogsPreview(root, logs) {
             second: "2-digit",
           })
         : "";
-      const msg = l.ModelName + (l.ErrorMsg ? ": " + l.ErrorMsg : "");
-      const prettyMsg = esc(msg).replace(
-        /\s+(问题描述|操作|源路径|目标路径|解决建议)[：:]?/g,
-        "<br>$1：",
-      );
-      return `<div class="log-entry"><span>${status}</span><span class="log-msg">${prettyMsg}</span><span class="log-time">${time}</span></div>`;
+      const nameHtml = renderDisplayName(l.ModelName);
+      const errHtml = l.ErrorMsg
+        ? '<span style="color:#f38ba8">: ' +
+          esc(l.ErrorMsg).replace(
+            /\s+(问题描述|操作|源路径|目标路径|解决建议)[：:]?/g,
+            "<br>$1：",
+          ) +
+          "</span>"
+        : "";
+      return `<div class="log-entry"><span>${status}</span><span class="log-msg">${nameHtml}${errHtml}</span><span class="log-time">${time}</span></div>`;
     })
     .join("");
   list.innerHTML = items;

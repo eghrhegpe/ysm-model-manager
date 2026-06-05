@@ -5,70 +5,100 @@
  * 支持格式: [作者]【作品】角色变体2023-05.ysm
  */
 export function parseModelName(raw) {
-  const result = { author: "", work: "", chara: "", date: "" };
-  // 去掉 .ban
   const name = raw.endsWith(".ban") ? raw.slice(0, -4) : raw;
-
-  // 提取 [作者]
+  const extMatch = name.match(/\.(\w+)$/);
   const aMatch = name.match(/^\[([^\]]+?)\]/);
-  if (aMatch) result.author = aMatch[1].trim();
-
-  // 提取 【作品】
   const wMatch = name.match(/【([^】]+?)】/);
-  if (wMatch) result.work = wMatch[1].trim();
-
-  // 提取日期：YYYY、YYYY-MM、YYYY_MM 等
   const dMatch = name.match(/(\d{4})[-_.]?(\d{1,2})?/);
-  if (dMatch) {
-    result.date = dMatch[2]
-      ? dMatch[1] + "-" + dMatch[2].padStart(2, "0")
-      : dMatch[1];
-  }
 
-  // 角色名 = 去掉作者、作品、日期后的剩余部分
-  let rest = name.replace(/\.\w+$/, ""); // 去扩展名
+  const author = (aMatch ? aMatch[1] : "").trim();
+  const work = (wMatch ? wMatch[1] : "").trim();
+  const date = dMatch
+    ? dMatch[2]
+      ? dMatch[1] + "-" + dMatch[2].padStart(2, "0")
+      : dMatch[1]
+    : "";
+
+  let rest = name.replace(/\.\w+$/, "");
   if (aMatch) rest = rest.slice(aMatch[0].length);
   if (wMatch) {
     const wi = rest.indexOf(wMatch[0]);
     if (wi >= 0) rest = rest.slice(0, wi) + rest.slice(wi + wMatch[0].length);
   }
-  rest = rest.replace(/\d{4}[-_.]?\d{0,2}/g, ""); // 去日期
-  rest = rest.replace(/[-_]{2,}/g, "-").replace(/^[-_\s]+|[-_\s]+$/g, "");
-  result.chara = rest || "";
+  rest = rest.replace(/\d{4}[-_.]?\d{0,2}/g, "");
+  const chara = rest
+    .replace(/[-_]{2,}/g, " ")
+    .replace(/^[-_\s]+|[-_\s]+$/g, "")
+    .replace(/_/g, " ");
 
-  return result;
+  return {
+    raw,
+    isBanned: raw.endsWith(".ban"),
+    author,
+    work,
+    chara: chara || "",
+    character: chara || "",
+    date,
+    ext: extMatch ? extMatch[1] : "",
+  };
 }
 
 /**
- * 渲染美化文件名 HTML
+ * 渲染美化文件名 HTML（通用接口）
+ * 应用 CSS 变量: --meta-author, --meta-work, --meta-date
  * @param {string} raw 原始文件名
- * @param {string} tpl 模板，支持 {author} {work} {chara} {date}
+ * @param {object|string} opts 选项对象或模板字符串（兼容旧调用）
  */
-export function renderDisplayName(raw, tpl = "{author}{work}{chara}") {
+export function renderDisplayName(raw, opts) {
   const p = parseModelName(raw);
-  // 无解析结果 → 兜底显示原文件名（去扩展名）
-  if (!p.author && !p.work && !p.chara) {
-    return esc(raw.replace(/\.\w+$/, ""));
-  }
+  if (p.isBanned) return esc(p.raw);
 
+  // 兼容旧调用: renderDisplayName(raw, "{author}{work}...")
+  const tpl =
+    (typeof opts === "string" ? opts : opts?.tpl) || "{author}{work}{chara}";
   let html = tpl
     .replace(
       "{author}",
-      p.author ? `<span class="nm-tag">[${esc(p.author)}]</span>` : "",
+      p.author ? `<span class="tag-author">[${esc(p.author)}]</span>` : "",
     )
     .replace(
       "{work}",
-      p.work ? `<span class="nm-bracket">【${esc(p.work)}】</span>` : "",
+      p.work ? `<span class="tag-work">【${esc(p.work)}】</span>` : "",
     )
     .replace("{chara}", esc(p.chara))
+    .replace("{character}", esc(p.character))
     .replace(
       "{date}",
-      p.date ? `<span class="nm-date"> ${esc(p.date)}</span>` : "",
+      p.date ? `<span class="tag-date"> ${esc(p.date)}</span>` : "",
     );
 
-  // 清理多余空格
   html = html.replace(/\s{2,}/g, " ").trim();
-  return html || esc(raw.replace(/\.\w+$/, ""));
+  if (!html) html = esc(raw.replace(/\.\w+$/, ""));
+  return html;
+}
+
+/** renderModelName = renderDisplayName 别名，options.showExt 支持 */
+export function renderModelName(raw, options = {}) {
+  const p = parseModelName(raw);
+  return (
+    renderDisplayName(raw, options.tpl) +
+    (options.showExt && p.ext
+      ? `<span class="tag-ext">.${esc(p.ext)}</span>`
+      : "")
+  );
+}
+
+/** 搜索高亮版 */
+export function renderModelNameWithHighlight(raw, keyword, options = {}) {
+  let html = renderDisplayName(raw, options);
+  if (keyword) {
+    const re = new RegExp(
+      `(${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi",
+    );
+    html = html.replace(re, "<mark>$1</mark>");
+  }
+  return html;
 }
 
 function esc(s) {

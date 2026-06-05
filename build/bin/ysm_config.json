@@ -1,6 +1,6 @@
 {
   "repoRoot": "D:\\硬链接、软连接测试",
   "mcRoot": "C:\\PCL2\\.minecraft",
-  "linkMode": "symlink",
-  "theme": "light"
+  "linkMode": "copy",
+  "theme": "cyber"
 }

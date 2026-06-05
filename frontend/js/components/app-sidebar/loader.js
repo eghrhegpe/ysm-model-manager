@@ -81,20 +81,20 @@ export async function loadInstances() {
         extra: extraList.length,
         disabled: disabledList.length,
         items: {
-          synced: syncedNames.slice(0, 20).map((n) => {
+          synced: syncedNames.map((n) => {
             const linkType = getLinkType(n, st.Files);
             return { name: n, size: "", linkType };
           }),
-          missing: missingList.slice(0, 20).map((fullPath) => {
+          missing: missingList.map((fullPath) => {
             const displayName = fullPath.split(/[/\\]/).pop() || fullPath;
             const linkType = getLinkType(displayName, st.Files);
             return { name: fullPath, displayName, size: "", linkType };
           }),
-          extra: extraList.slice(0, 20).map((n) => {
+          extra: extraList.map((n) => {
             const linkType = getLinkType(n, st.Files);
             return { name: n, size: "", linkType };
           }),
-          disabled: disabledList.slice(0, 20).map((n) => {
+          disabled: disabledList.map((n) => {
             return { name: n, size: "", linkType: "" };
           }),
         },

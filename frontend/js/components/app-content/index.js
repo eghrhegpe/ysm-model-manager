@@ -9,6 +9,7 @@ import {
   diagnosticsHTML,
   recycleHTML,
 } from "./tpl.js";
+import { registerGlobalHandlers } from "../../core/global-handlers.js";
 
 class AppContent extends HTMLElement {
   constructor() {
@@ -26,361 +27,13 @@ class AppContent extends HTMLElement {
       bus.emit("nav:changed", { page });
       this._render();
     });
-
     this._render();
-    this._registerGlobalHandlers();
+    this._globalUnsubs = registerGlobalHandlers();
   }
 
   disconnectedCallback() {
     if (this._unsub) this._unsub();
     this._globalUnsubs.forEach((fn) => fn());
-  }
-
-  /** 注册全局操作事件（app-preview 三个全局按钮），确保无论哪个页面都有效 */
-  _registerGlobalHandlers() {
-    // 导入仓库模型到所有整合包
-    this._globalUnsubs.push(
-      bus.on("sync:download-missing", async () => {
-        console.log("[app-content] sync:download-missing 收到");
-        try {
-          const {
-            LoadAppConfig,
-            ListVersionInstances,
-            GetInstanceStatus,
-            InstallModelTo,
-          } = await import("../../../wailsjs/go/main/App.js");
-          const cfg = await LoadAppConfig();
-          const mcRoot = cfg.mcRoot || "";
-          const repoRoot = cfg.repoRoot || "";
-          if (!mcRoot || !repoRoot) {
-            bus.emit("toast:show", {
-              msg: "请先设置路径",
-              duration: 3000,
-              type: "warn",
-            });
-            return;
-          }
-          const instances = await ListVersionInstances(mcRoot);
-          const statusList = await GetInstanceStatus(mcRoot, repoRoot);
-          let totalOk = 0,
-            totalFail = 0;
-          for (const st of statusList || []) {
-            for (const srcPath of st.Missing || []) {
-              try {
-                const ins = instances.find((i) => i.Name === st.Name);
-                if (!ins?.CustomDir) continue;
-                await InstallModelTo(srcPath, ins.CustomDir);
-                totalOk++;
-              } catch {
-                totalFail++;
-              }
-            }
-          }
-          bus.emit("stats:refresh");
-          bus.emit("toast:show", {
-            msg: `📥 导入完成: ${totalOk} 成功, ${totalFail} 失败`,
-            duration: 4000,
-            type: totalFail > 0 ? "warn" : "success",
-          });
-        } catch (e) {
-          bus.emit("toast:show", {
-            msg: `❌ 导入失败: ${String(e)}`,
-            duration: 5000,
-            type: "error",
-          });
-        } finally {
-          console.log(
-            "[app-content] sync:download-missing 完成 → emit sync:download-complete",
-          );
-          bus.emit("sync:download-complete");
-          bus.emit("tree:reload");
-        }
-      }),
-    );
-
-    // 同步状态：将仓库的启用/禁用状态应用到所有整合包
-    this._globalUnsubs.push(
-      bus.on("sync:toggle-status", async () => {
-        console.log("[app-content] sync:toggle-status 收到");
-        try {
-          const {
-            LoadAppConfig,
-            ListVersionInstances,
-            SyncModelToggleStatus,
-            AddImportLog,
-          } = await import("../../../wailsjs/go/main/App.js");
-          const cfg = await LoadAppConfig();
-          const repoRoot = cfg.repoRoot || "";
-          const mcRoot = cfg.mcRoot || "";
-          if (!repoRoot || !mcRoot) {
-            bus.emit("toast:show", {
-              msg: "请先配置目录",
-              duration: 3000,
-              type: "warn",
-            });
-            return;
-          }
-          const instances = await ListVersionInstances(mcRoot);
-          if (!instances?.length) {
-            bus.emit("toast:show", {
-              msg: "没有找到整合包",
-              duration: 2000,
-              type: "info",
-            });
-            return;
-          }
-          let totalDisable = 0,
-            totalEnable = 0,
-            errors = [];
-          for (const ins of instances) {
-            if (!ins.Exists) continue;
-            try {
-              const res = await SyncModelToggleStatus(ins.CustomDir, repoRoot);
-              totalDisable += res?.r0 || res?.[0] || 0;
-              totalEnable += res?.r1 || res?.[1] || 0;
-            } catch (e) {
-              errors.push(`${ins.Name}: ${String(e)}`);
-            }
-          }
-          await AddImportLog(
-            "sync-status",
-            `同步状态 (${instances.filter((i) => i.Exists).length} 个整合包)`,
-            repoRoot,
-            0,
-            errors.length ? "failed" : "success",
-            `禁用 ${totalDisable} 启用 ${totalEnable}` +
-              (errors.length ? ` | 错误: ${errors.join("; ")}` : ""),
-          );
-          bus.emit("toast:show", {
-            msg: `✅ 同步完成：禁用 ${totalDisable} 项，启用 ${totalEnable} 项`,
-            duration: 3000,
-            type: "success",
-          });
-          bus.emit("stats:refresh");
-          bus.emit("logs:refresh");
-        } catch (err) {
-          const { AddImportLog } =
-            await import("../../../wailsjs/go/main/App.js");
-          await AddImportLog(
-            "sync-status",
-            "同步失败",
-            "",
-            0,
-            "failed",
-            String(err),
-          );
-          bus.emit("toast:show", {
-            msg: `同步失败: ${String(err)}`,
-            duration: 8000,
-            type: "error",
-          });
-        } finally {
-          console.log(
-            "[app-content] sync:toggle-status 完成 → emit sync:toggle-complete",
-          );
-          bus.emit("sync:toggle-complete");
-          bus.emit("tree:reload");
-        }
-      }),
-    );
-
-    // 上传新模型到仓库
-    this._globalUnsubs.push(
-      bus.on("stats:upload", async () => {
-        console.log("[app-content] stats:upload 收到");
-        try {
-          const {
-            LoadAppConfig,
-            ListVersionInstances,
-            GetInstanceStatus,
-            ScanModelEntries,
-            SyncCustomToRepo,
-          } = await import("../../../wailsjs/go/main/App.js");
-          const cfg = await LoadAppConfig();
-          const repoRoot = cfg.repoRoot || "";
-          const mcRoot = cfg.mcRoot || "";
-          if (!repoRoot || !mcRoot) {
-            bus.emit("toast:show", {
-              msg: "请先配置目录",
-              duration: 3000,
-              type: "warn",
-            });
-            return;
-          }
-          const repoEntries = await ScanModelEntries(repoRoot);
-          const repoNames = new Set((repoEntries || []).map((e) => e.Name));
-          const allInstances = await ListVersionInstances(mcRoot);
-          const statusList = await GetInstanceStatus(mcRoot, repoRoot);
-          const pendingList = [];
-          (statusList || []).forEach((s) => {
-            (s.Extra || []).forEach((name) => {
-              if (!repoNames.has(name)) {
-                const ins = allInstances.find((x) => x.Name === s.Name);
-                pendingList.push({ name, customDir: ins ? ins.CustomDir : "" });
-              }
-            });
-          });
-          if (!pendingList.length) {
-            bus.emit("toast:show", {
-              msg: "没有待上传的模型",
-              duration: 2000,
-              type: "info",
-            });
-            return;
-          }
-          let ok = 0,
-            fail = 0;
-          for (const item of pendingList) {
-            if (!item.customDir) {
-              fail++;
-              continue;
-            }
-            try {
-              const n = await SyncCustomToRepo(item.customDir, repoRoot);
-              if (n > 0) ok++;
-              else fail++;
-            } catch {
-              fail++;
-            }
-          }
-          bus.emit("stats:refresh");
-          bus.emit("toast:show", {
-            msg: `📤 上传完成: ${ok} 成功, ${fail} 失败`,
-            duration: 4000,
-            type: fail > 0 ? "warn" : "success",
-          });
-        } catch (e) {
-          bus.emit("toast:show", {
-            msg: `❌ 上传失败: ${String(e)}`,
-            duration: 5000,
-            type: "error",
-          });
-        } finally {
-          console.log(
-            "[app-content] stats:upload 完成 → emit sync:upload-complete",
-          );
-          bus.emit("sync:upload-complete");
-          bus.emit("tree:reload");
-        }
-      }),
-    );
-
-    // 导出文件清单
-    this._globalUnsubs.push(
-      bus.on("instance:export-list", async ({ name: insName }) => {
-        try {
-          const { LoadAppConfig, ListVersionInstances, ListFileNames } =
-            await import("../../../wailsjs/go/main/App.js");
-          const cfg = await LoadAppConfig();
-          const mcRoot = cfg.mcRoot || "";
-          if (!mcRoot) {
-            bus.emit("toast:show", {
-              msg: "请先设置游戏路径",
-              duration: 3000,
-              type: "warn",
-            });
-            return;
-          }
-          const instances = await ListVersionInstances(mcRoot);
-          const ins = instances.find((i) => i.Name === insName);
-          if (!ins?.CustomDir) {
-            bus.emit("toast:show", {
-              msg: "未找到整合包",
-              duration: 3000,
-              type: "error",
-            });
-            return;
-          }
-          const files = await ListFileNames(ins.CustomDir);
-          if (!files?.length) {
-            bus.emit("toast:show", {
-              msg: "该整合包没有模型文件",
-              duration: 2000,
-              type: "info",
-            });
-            return;
-          }
-          const text = `📦 ${insName}\n📁 ${ins.CustomDir}\n📄 共 ${files.length} 个文件\n\n${files.join("\n")}`;
-          await navigator.clipboard.writeText(text);
-          bus.emit("toast:show", {
-            msg: `📋 已复制 ${files.length} 个文件清单到剪贴板`,
-            duration: 3000,
-            type: "success",
-          });
-        } catch (e) {
-          bus.emit("toast:show", {
-            msg: `❌ 导出失败: ${String(e)}`,
-            duration: 5000,
-            type: "error",
-          });
-        }
-      }),
-    );
-
-    // 清空目录
-    this._globalUnsubs.push(
-      bus.on("instance:clear", async ({ name: insName }) => {
-        try {
-          const { LoadAppConfig, ListVersionInstances } =
-            await import("../../../wailsjs/go/main/App.js");
-          const cfg = await LoadAppConfig();
-          const mcRoot = cfg.mcRoot || "";
-          if (!mcRoot) {
-            bus.emit("toast:show", {
-              msg: "请先设置游戏路径",
-              duration: 3000,
-              type: "warn",
-            });
-            return;
-          }
-          const instances = await ListVersionInstances(mcRoot);
-          const ins = instances.find((i) => i.Name === insName);
-          if (!ins?.CustomDir) {
-            bus.emit("toast:show", {
-              msg: "未找到整合包",
-              duration: 3000,
-              type: "error",
-            });
-            return;
-          }
-          // 确认弹窗
-          const confirmed = await window.showConfirm?.(
-            `🗑️ 清空 ${insName}\n将移除所有模型文件到回收站，确定继续吗？`,
-          );
-          if (!confirmed) {
-            bus.emit("toast:show", {
-              msg: "已取消",
-              duration: 1500,
-              type: "info",
-            });
-            return;
-          }
-          try {
-            const { ClearCustomDir } =
-              await import("../../../wailsjs/go/main/App.js");
-            const count = await ClearCustomDir(ins.CustomDir);
-            bus.emit("stats:refresh");
-            bus.emit("toast:show", {
-              msg: `🗑️ ${insName}: 已清空 ${count} 个文件`,
-              duration: 3000,
-              type: "success",
-            });
-          } catch (err) {
-            bus.emit("toast:show", {
-              msg: `❌ 清空失败: ${String(err)}`,
-              duration: 5000,
-              type: "error",
-            });
-          }
-        } catch (e) {
-          bus.emit("toast:show", {
-            msg: `❌ 操作失败: ${String(e)}`,
-            duration: 5000,
-            type: "error",
-          });
-        }
-      }),
-    );
   }
 
   _render() {
@@ -918,26 +571,70 @@ class AppContent extends HTMLElement {
             duration: 2000,
             type: "success",
           });
+          // 询问是否重新链接已有模型
+          const relink = await window.showConfirm?.(
+            "是否将已有模型重新链接为新模式？\n（将删除整合包中已安装的模型副本，用新模式重新安装）",
+          );
+          if (!relink) return;
+          try {
+            const { LoadAppConfig, ListVersionInstances, RelinkCustomDir } =
+              await import("../../../wailsjs/go/main/App.js");
+            const cfg = await LoadAppConfig();
+            const mcRoot = cfg.mcRoot || "";
+            const rRoot = cfg.repoRoot || "";
+            if (!mcRoot || !rRoot) return;
+            const instances = await ListVersionInstances(mcRoot);
+            let total = 0;
+            for (const ins of instances) {
+              if (!ins.Exists) continue;
+              try {
+                const n = await RelinkCustomDir(ins.CustomDir, rRoot);
+                total += n;
+              } catch {}
+            }
+            bus.emit("stats:refresh");
+            bus.emit("toast:show", {
+              msg: `🔄 已重新链接 ${total} 个文件`,
+              duration: 3000,
+              type: "success",
+            });
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: `❌ 重新链接失败: ${String(e)}`,
+              duration: 5000,
+              type: "error",
+            });
+          }
         });
       });
 
       // 主题切换
-      root.getElementById("set-theme")?.addEventListener("change", (e) => {
-        const mode = e.target.value;
-        applyTheme(mode);
-        localStorage.setItem("theme", mode);
-        const label =
-          mode === "dark"
-            ? "暗黑模式"
-            : mode === "light"
-              ? "明亮模式"
-              : "跟随系统";
-        bus.emit("toast:show", {
-          msg: `✅ 主题已切换为: ${label}`,
-          duration: 2000,
-          type: "success",
+      root
+        .getElementById("set-theme")
+        ?.addEventListener("change", async (e) => {
+          const mode = e.target.value;
+          applyTheme(mode);
+          localStorage.setItem("theme", mode);
+          // 同步到 Go 配置
+          try {
+            const { SaveAppConfig } =
+              await import("../../../wailsjs/go/main/App.js");
+            const theme2 = localStorage.getItem("theme") || mode;
+            await SaveAppConfig(repoPath, mcPath, linkMode, theme2);
+          } catch {}
+          const label =
+            {
+              cyber: "赛博霓虹",
+              warm: "温暖木纹",
+              pro: "极简深邃",
+              system: "跟随系统",
+            }[mode] || mode;
+          bus.emit("toast:show", {
+            msg: `✅ 主题已切换为: ${label}`,
+            duration: 2000,
+            type: "success",
+          });
         });
-      });
     } catch (e) {
       console.error("[settings] 初始化失败:", e);
     }

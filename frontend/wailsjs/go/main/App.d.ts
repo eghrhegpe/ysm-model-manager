@@ -10,6 +10,8 @@ export function AnalyzeYSMModel(arg1:string):Promise<ysm.YSMModelMeta>;
 
 export function ApplyUpdate(arg1:string):Promise<void>;
 
+export function BackupWorkshopCreators():Promise<string>;
+
 export function CheckFileExists(arg1:string):Promise<boolean>;
 
 export function CheckUpdate():Promise<updater.UpdateInfo>;
@@ -32,13 +34,13 @@ export function DownloadUpdate(arg1:string):Promise<string>;
 
 export function EmptyRecycleBin(arg1:string):Promise<number>;
 
-export function ExportWorkshopCreatorsCSV():Promise<string>;
-
-export function ExportWorkshopCreatorsCSVFile():Promise<string>;
+export function ExportWorkshopCreatorsJSONFile():Promise<string>;
 
 export function ExportWorkshopSitesCSV():Promise<string>;
 
-export function ExportWorkshopSitesCSVFile():Promise<string>;
+export function ExportWorkshopSitesJSONFile():Promise<string>;
+
+export function ExtractYSMHeader(arg1:string):Promise<ysm.YSMHeader>;
 
 export function ExtractYsmSummary(arg1:string):Promise<ysm.YsmSummary>;
 
@@ -58,13 +60,9 @@ export function HasYSMMod(arg1:string):Promise<boolean>;
 
 export function ImportModelFile(arg1:string,arg2:string):Promise<void>;
 
-export function ImportWorkshopCreatorsCSV(arg1:string):Promise<void>;
-
-export function ImportWorkshopCreatorsCSVFile():Promise<number>;
-
 export function ImportWorkshopSitesCSV(arg1:string):Promise<void>;
 
-export function ImportWorkshopSitesCSVFile():Promise<number>;
+export function ImportWorkshopSitesJSONFile():Promise<number>;
 
 export function InstallModelFile(arg1:string,arg2:string):Promise<string>;
 
@@ -88,9 +86,11 @@ export function ListVersionInstances(arg1:string):Promise<Array<types.VersionIns
 
 export function LoadAppConfig():Promise<types.AppConfig>;
 
-export function LoadWorkshopCreators():Promise<Array<types.PlatformCreators>>;
+export function LoadWorkshopCreators():Promise<Array<types.WorkshopCreator>>;
 
 export function LoadWorkshopSites():Promise<Array<types.WorkshopSite>>;
+
+export function MergeWorkshopCreatorsFromJSON(arg1:string):Promise<number>;
 
 export function MoveModelFile(arg1:string,arg2:string):Promise<void>;
 
@@ -108,6 +108,8 @@ export function RenameDir(arg1:string,arg2:string):Promise<void>;
 
 export function RenameFile(arg1:string,arg2:string):Promise<void>;
 
+export function ReplaceWorkshopCreatorsFromJSON(arg1:string):Promise<number>;
+
 export function ResetWorkshopConfigs():Promise<Array<types.WorkshopSite>>;
 
 export function RestoreFromRecycle(arg1:string,arg2:string):Promise<void>;
@@ -116,7 +118,7 @@ export function SaveAppConfig(arg1:string,arg2:string,arg3:string,arg4:string):P
 
 export function SaveWindowPosition(arg1:number,arg2:number,arg3:number,arg4:number):Promise<void>;
 
-export function SaveWorkshopCreators(arg1:Array<types.PlatformCreators>):Promise<void>;
+export function SaveWorkshopCreators(arg1:Array<types.WorkshopCreator>):Promise<void>;
 
 export function SaveWorkshopSites(arg1:Array<types.WorkshopSite>):Promise<void>;
 

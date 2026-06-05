@@ -73,20 +73,13 @@ export function settingsHTML() {
     <span class="label">🧩 站点配置 (workshop_sites.json)</span>
   </div>
   <div style="display:flex;gap:4px;padding:4px 0 8px 12px">
-    <button class="btn" id="set-ws-export" style="font-size:10px">📤 导出CSV</button>
-    <button class="btn" id="set-ws-import" style="font-size:10px">📥 导入CSV</button>
+    <button class="btn" id="set-ws-export" style="font-size:10px">📤 导出JSON</button>
+    <button class="btn" id="set-ws-import" style="font-size:10px">📥 导入JSON</button>
     <button class="btn" id="set-ws-reset" style="font-size:10px;margin-left:auto">🗑️ 重置为默认</button>
   </div>
   <div class="setting-row">
-    <span class="label">🎨 创作者配置 (workshop_creators/)</span>
-  </div>
-  <div style="display:flex;gap:4px;padding:4px 0 0 12px">
-    <button class="btn" id="set-cr-export" style="font-size:10px">📤 导出CSV</button>
-    <button class="btn" id="set-cr-import" style="font-size:10px">📥 导入CSV</button>
-  </div>
-  <div style="font-size:9px;color:#6c7086;padding:4px 0 0 0">
-    CSV 可用 WPS/Excel 编辑。<br>
-    编辑后点「导入CSV」即生效，原 JSON 文件自动更新。
+    <span class="label">🎨 创作者配置 (workshop_creators.json)</span>
+    <button class="btn" id="set-cr-manager" style="font-size:10px">✏️ 管理创作者</button>
   </div>
 </div>
 
@@ -113,7 +106,7 @@ export function placeholderHTML(icon, label) {
 export function downloadsHTML() {
   return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
 <div style="padding:12px 12px 4px;display:flex;gap:8px;align-items:center">
-<span style="font-size:14px;font-weight:600">⬇️ 下载与导入</span>
+<span style="font-size:14px;font-weight:600">⬇️ 导入与重命名</span>
 <span style="font-size:10px;color:var(--muted)">拖入 .ysm / .zip / .7z 到下方区域</span>
 </div>
 <div id="dl-drop" style="flex:1;margin:4px 12px;border:2px dashed var(--bd);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;transition:all .2s;cursor:pointer;min-height:80px">

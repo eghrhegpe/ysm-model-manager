@@ -27,15 +27,9 @@ type WorkshopSite struct {
 }
 
 // WorkshopCreator 创作者条目
+// Type 是平台标签，分号分隔，如 "bilibili;afdian"
 type WorkshopCreator struct {
-	Name      string `json:"name"`
-	URL       string `json:"url"`
-	Desc      string `json:"desc"`
-	SearchURL string `json:"searchUrl,omitempty"`
-}
-
-// PlatformCreators 某个平台下的创作者列表
-type PlatformCreators struct {
-	Platform string            `json:"platform"`
-	Creators []WorkshopCreator `json:"creators"`
+	Name string `json:"name"`
+	Desc string `json:"desc"`
+	Type string `json:"type,omitempty"`
 }

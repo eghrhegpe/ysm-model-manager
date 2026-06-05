@@ -1,5 +1,6 @@
 // ===== sidebar 渲染层 =====
 import { vcHeaderHTML, sectionTitleHTML, rowHTML } from "./tpl.js";
+import { renderDisplayName } from "../../utils/display.js";
 function esc(s) {
   return (s || "")
     .replace(/&/g, "&amp;")
@@ -14,8 +15,8 @@ export function renderVersionCards(container, instances) {
     const vc = document.createElement("div");
     vc.className = "vc";
     vc.dataset.idx = idx;
-    const savedOpen = localStorage.getItem("sb_open_" + ins.name) !== "false";
-    const isOpen = idx === 0 && savedOpen;
+    const savedOpen = localStorage.getItem("sb_open_" + ins.name) === "true";
+    const isOpen = savedOpen;
     vc.innerHTML = vcHeaderHTML(
       ins.name,
       ins.synced,
@@ -37,13 +38,14 @@ export function renderVersionCards(container, instances) {
 }
 
 function renderBody(ins) {
+  const sortByName = (a, b) => (a.displayName || a.name).localeCompare(b.displayName || b.name);
   let h = "";
   if (ins.items.synced.length) {
     h += sectionTitleHTML("✅ 已同步", ins.items.synced.length);
-    ins.items.synced.forEach((it) => {
+    ins.items.synced.sort(sortByName).forEach((it) => {
       h += rowHTML(
         "#a6e3a1",
-        it.name,
+        renderDisplayName(it.name),
         it.size,
         it.linkType,
         "",
@@ -55,11 +57,11 @@ function renderBody(ins) {
   }
   if (ins.items.missing.length) {
     h += sectionTitleHTML("⬇️ 缺失", ins.items.missing.length);
-    ins.items.missing.forEach((it) => {
+    ins.items.missing.sort(sortByName).forEach((it) => {
       const btnHtml = `<button class="btn-install-one" data-path="${esc(it.name)}" style="margin-left:4px;padding:1px 4px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">⬇️ 安装</button>`;
       h += rowHTML(
         "#f38ba8",
-        it.displayName || it.name,
+        renderDisplayName(it.displayName || it.name),
         it.size,
         "",
         "row-missing",
@@ -70,14 +72,33 @@ function renderBody(ins) {
   }
   if (ins.items.disabled && ins.items.disabled.length) {
     h += sectionTitleHTML("⚠️ 已禁用", ins.items.disabled.length);
-    ins.items.disabled.forEach((it) => {
-      h += rowHTML("#f9a826", it.name, it.size, "", "", "", "", " row-prefix");
+    ins.items.disabled.sort(sortByName).forEach((it) => {
+      h += rowHTML(
+        "#f9a826",
+        renderDisplayName(it.name),
+        it.size,
+        "",
+        "",
+        "",
+        "",
+        "",
+        " row-prefix",
+      );
     });
   }
   if (ins.items.extra.length) {
     h += sectionTitleHTML("📤 额外", ins.items.extra.length);
-    ins.items.extra.forEach((it) => {
-      h += rowHTML("#f9a826", it.name, it.size, "", "", "", "", " row-prefix");
+    ins.items.extra.sort(sortByName).forEach((it) => {
+      h += rowHTML(
+        "#f9a826",
+        renderDisplayName(it.name),
+        it.size,
+        "",
+        "",
+        "",
+        "",
+        " row-prefix",
+      );
     });
   }
   return h;

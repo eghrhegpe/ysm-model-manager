@@ -33,6 +33,9 @@ export const treeCSS = `
 .fh .ar { font-size: 10px; color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; }
 .fh .ar.open { transform: rotate(90deg); }
 .fh .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
+.fh .nm .tag-author { color: var(--meta-author, #66d9ef); }
+.fh .nm .tag-work { color: var(--meta-work, #bd93f9); }
+.fh .nm .tag-date { color: var(--meta-date, #f1fa8c); font-size: 0.9em; }
 .fh .nm mark { background: #f9a82644; color: #f9a826; border-radius: 2px; padding: 0 2px; }
 .fh.locked { opacity: .5; }
 .fh.locked .nm { color: var(--muted); }
@@ -46,8 +49,10 @@ export const treeCSS = `
 .fh .ck.partial { background: #f9a826; }
 .fh .ck.partial::after { left: 7px; }
 .fl .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fl .nm .nm-tag { color: #cba6f7; }
-.fl .nm .nm-bracket { color: #89b4fa; }
+.fl .nm .nm-tag, .fl .nm .tag-author { color: var(--meta-author, #66d9ef); }
+.fl .nm .nm-bracket, .fl .nm .tag-work { color: var(--meta-work, #bd93f9); }
+.fl .nm .tag-date { color: var(--meta-date, #f1fa8c); font-size: 0.9em; }
+.fl .nm .tag-ext { color: var(--muted); font-size: 0.85em; }
 .fl .nm.ysm { color: var(--txt); }
 .fl .sz { font-size: 9px; white-space: nowrap; flex-shrink: 0; }
 .fl .sz.sz-green { color: #a6e3a1; }

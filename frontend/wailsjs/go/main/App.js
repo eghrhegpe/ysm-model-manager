@@ -10,8 +10,16 @@ export function AnalyzeYSMModel(arg1) {
   return window['go']['main']['App']['AnalyzeYSMModel'](arg1);
 }
 
+export function ApplyUpdate(arg1) {
+  return window['go']['main']['App']['ApplyUpdate'](arg1);
+}
+
 export function CheckFileExists(arg1) {
   return window['go']['main']['App']['CheckFileExists'](arg1);
+}
+
+export function CheckUpdate() {
+  return window['go']['main']['App']['CheckUpdate']();
 }
 
 export function ClearCustomDir(arg1) {
@@ -30,6 +38,10 @@ export function CreateDir(arg1) {
   return window['go']['main']['App']['CreateDir'](arg1);
 }
 
+export function CurrentVersion() {
+  return window['go']['main']['App']['CurrentVersion']();
+}
+
 export function DeduplicateCustomDir(arg1) {
   return window['go']['main']['App']['DeduplicateCustomDir'](arg1);
 }
@@ -38,8 +50,28 @@ export function DeleteFromRecycle(arg1) {
   return window['go']['main']['App']['DeleteFromRecycle'](arg1);
 }
 
+export function DownloadUpdate(arg1) {
+  return window['go']['main']['App']['DownloadUpdate'](arg1);
+}
+
 export function EmptyRecycleBin(arg1) {
   return window['go']['main']['App']['EmptyRecycleBin'](arg1);
+}
+
+export function ExportWorkshopCreatorsCSV() {
+  return window['go']['main']['App']['ExportWorkshopCreatorsCSV']();
+}
+
+export function ExportWorkshopCreatorsCSVFile() {
+  return window['go']['main']['App']['ExportWorkshopCreatorsCSVFile']();
+}
+
+export function ExportWorkshopSitesCSV() {
+  return window['go']['main']['App']['ExportWorkshopSitesCSV']();
+}
+
+export function ExportWorkshopSitesCSVFile() {
+  return window['go']['main']['App']['ExportWorkshopSitesCSVFile']();
 }
 
 export function ExtractYsmSummary(arg1) {
@@ -76,6 +108,22 @@ export function HasYSMMod(arg1) {
 
 export function ImportModelFile(arg1, arg2) {
   return window['go']['main']['App']['ImportModelFile'](arg1, arg2);
+}
+
+export function ImportWorkshopCreatorsCSV(arg1) {
+  return window['go']['main']['App']['ImportWorkshopCreatorsCSV'](arg1);
+}
+
+export function ImportWorkshopCreatorsCSVFile() {
+  return window['go']['main']['App']['ImportWorkshopCreatorsCSVFile']();
+}
+
+export function ImportWorkshopSitesCSV(arg1) {
+  return window['go']['main']['App']['ImportWorkshopSitesCSV'](arg1);
+}
+
+export function ImportWorkshopSitesCSVFile() {
+  return window['go']['main']['App']['ImportWorkshopSitesCSVFile']();
 }
 
 export function InstallModelFile(arg1, arg2) {

@@ -70,12 +70,36 @@ export function settingsHTML() {
 
 <div class="settings-group" style="margin-bottom:12px">
   <div class="setting-row">
-    <span class="label">🧩 站点与创作者配置</span>
-    <button class="btn" id="set-ws-reset" style="font-size:10px">🗑️ 重置为默认</button>
+    <span class="label">🧩 站点配置 (workshop_sites.json)</span>
+  </div>
+  <div style="display:flex;gap:4px;padding:4px 0 8px 12px">
+    <button class="btn" id="set-ws-export" style="font-size:10px">📤 导出CSV</button>
+    <button class="btn" id="set-ws-import" style="font-size:10px">📥 导入CSV</button>
+    <button class="btn" id="set-ws-reset" style="font-size:10px;margin-left:auto">🗑️ 重置为默认</button>
+  </div>
+  <div class="setting-row">
+    <span class="label">🎨 创作者配置 (workshop_creators/)</span>
+  </div>
+  <div style="display:flex;gap:4px;padding:4px 0 0 12px">
+    <button class="btn" id="set-cr-export" style="font-size:10px">📤 导出CSV</button>
+    <button class="btn" id="set-cr-import" style="font-size:10px">📥 导入CSV</button>
+  </div>
+  <div style="font-size:9px;color:#6c7086;padding:4px 0 0 0">
+    CSV 可用 WPS/Excel 编辑。<br>
+    编辑后点「导入CSV」即生效，原 JSON 文件自动更新。
+  </div>
+</div>
+
+<div class="section-title" style="margin-bottom:8px;margin-top:16px">⚙️ 关于</div>
+
+<div class="settings-group" style="margin-bottom:12px">
+  <div class="setting-row">
+    <span class="label">📦 当前版本</span>
+    <span id="set-version" style="font-size:11px;color:var(--muted)">加载中...</span>
+    <button class="btn" id="set-check-update" style="font-size:10px">🔄 检查更新</button>
   </div>
   <div style="font-size:9px;color:#6c7086;padding:2px 0 0 0">
-    重置 workshop_sites.json 和 workshop_creators/ 文件夹为出厂默认值。<br>
-    编辑文件位于程序同目录，修改后可在创意工坊页点「🔄」刷新。
+    GitHub: <a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a>
   </div>
 </div>
 
@@ -118,6 +142,14 @@ export function downloadsHTML() {
     <span style="color:var(--muted)">最终命名：</span><span id="dl-preview" style="font-weight:500">-</span>
   </div>
   <button class="btn accent" id="dl-import" style="padding:6px;font-size:12px">📥 导入到仓库</button>
+</div>
+<div style="margin:0 12px 4px;border-top:1px solid var(--bd);padding-top:4px">
+  <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--txt);padding:2px 0">
+    <span>📋 已导入</span>
+    <span id="dl-count" style="font-size:10px;color:var(--muted);font-weight:400">0 个文件</span>
+    <button class="btn" id="dl-clear-list" style="font-size:9px;padding:1px 6px;margin-left:auto">🗑️ 清空</button>
+  </div>
+  <div id="dl-imported-list" style="display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto"></div>
 </div>
 </div>`;
 }

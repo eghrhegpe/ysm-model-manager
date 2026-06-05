@@ -6,11 +6,7 @@
     "url": "https://www.bilibili.com/",
     "desc": "搜索模型创作者和模型展示",
     "group": "search",
-    "searchUrl": "https://search.bilibili.com/all?keyword={{q}}",
-    "presetSearches": [
-      { "label": "免费模型", "q": "ysm模型免费分享" },
-      { "label": "付费模型", "q": "ysm模型展示" }
-    ]
+    "searchUrl": "https://search.bilibili.com/all?keyword={{q}}"
   },
   {
     "id": "afdian",
@@ -19,11 +15,7 @@
     "url": "https://afdian.com/",
     "desc": "赞助创作者平台",
     "group": "search",
-    "searchUrl": "https://afdian.com/search?q={{q}}",
-    "presetSearches": [
-      { "label": "作者搜索", "q": "碎de帆" },
-      { "label": "付费模型", "q": "YSM" }
-    ]
+    "searchUrl": "https://afdian.com/search?q={{q}}"
   },
   {
     "id": "github",

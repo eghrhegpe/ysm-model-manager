@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,6 +18,8 @@ import (
 	"ysm-model-manager/go/recycle"
 	"ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/updater"
+	"ysm-model-manager/go/version"
 	"ysm-model-manager/go/ysm"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -229,6 +232,196 @@ func (a *App) ResetWorkshopConfigs() ([]types.WorkshopSite, error) {
 	// 清空创作者文件夹
 	os.RemoveAll(workshopCreatorsDir())
 	return sites, nil
+}
+
+// ========== CSV 导出/导入（创意工坊）==========
+
+// ExportWorkshopSitesCSV 导出站点配置为 CSV（返回文本）
+func (a *App) ExportWorkshopSitesCSV() (string, error) {
+	sites := a.LoadWorkshopSites()
+	var buf strings.Builder
+	w := csv.NewWriter(&buf)
+	w.Write([]string{"id", "icon", "label", "url", "desc", "group", "searchUrl"})
+	for _, s := range sites {
+		w.Write([]string{s.ID, s.Icon, s.Label, s.URL, s.Desc, s.Group, s.SearchURL})
+	}
+	w.Flush()
+	return buf.String(), w.Error()
+}
+
+// ExportWorkshopSitesCSVFile 导出站点 CSV 到 exe 同目录，返回文件路径
+func (a *App) ExportWorkshopSitesCSVFile() (string, error) {
+	csv, err := a.ExportWorkshopSitesCSV()
+	if err != nil {
+		return "", err
+	}
+	path := workshopSitesPath() + ".csv"
+	// 写 BOM 让 WPS/Excel 识别 UTF-8
+	data := []byte{0xEF, 0xBB, 0xBF}
+	data = append(data, []byte(csv)...)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+// ImportWorkshopSitesCSV 从 CSV 文本导入站点配置
+func (a *App) ImportWorkshopSitesCSV(csvContent string) error {
+	r := csv.NewReader(strings.NewReader(csvContent))
+	rows, err := r.ReadAll()
+	if err != nil {
+		return err
+	}
+	if len(rows) < 2 {
+		return fmt.Errorf("CSV 为空或只有表头")
+	}
+	var sites []types.WorkshopSite
+	for _, row := range rows[1:] {
+		if len(row) < 6 {
+			continue
+		}
+		s := types.WorkshopSite{
+			ID:    row[0],
+			Icon:  row[1],
+			Label: row[2],
+			URL:   row[3],
+			Desc:  row[4],
+			Group: row[5],
+		}
+		if len(row) > 6 {
+			s.SearchURL = row[6]
+		}
+		sites = append(sites, s)
+	}
+	return a.SaveWorkshopSites(sites)
+}
+
+// ImportWorkshopSitesCSVFile 从 exe 同目录的 CSV 文件导入站点配置
+func (a *App) ImportWorkshopSitesCSVFile() (int, error) {
+	path := workshopSitesPath() + ".csv"
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, fmt.Errorf("未找到 CSV 文件，请先导出: %w", err)
+	}
+	content := string(data)
+	// 去掉 BOM
+	content = strings.TrimLeft(content, "\uFEFF")
+	if err := a.ImportWorkshopSitesCSV(content); err != nil {
+		return 0, err
+	}
+	return len(a.LoadWorkshopSites()), nil
+}
+
+// ExportWorkshopCreatorsCSV 导出所有平台的创作者为 CSV（含 platform 列）
+func (a *App) ExportWorkshopCreatorsCSV() (string, error) {
+	list := a.LoadWorkshopCreators()
+	var buf strings.Builder
+	w := csv.NewWriter(&buf)
+	w.Write([]string{"platform", "name", "url", "desc", "searchUrl"})
+	for _, pc := range list {
+		for _, cr := range pc.Creators {
+			w.Write([]string{pc.Platform, cr.Name, cr.URL, cr.Desc, cr.SearchURL})
+		}
+	}
+	w.Flush()
+	return buf.String(), w.Error()
+}
+
+// ExportWorkshopCreatorsCSVFile 导出创作者 CSV 到 exe 同目录
+func (a *App) ExportWorkshopCreatorsCSVFile() (string, error) {
+	csv, err := a.ExportWorkshopCreatorsCSV()
+	if err != nil {
+		return "", err
+	}
+	exe, _ := os.Executable()
+	path := filepath.Join(filepath.Dir(exe), "workshop_creators.csv")
+	data := []byte{0xEF, 0xBB, 0xBF}
+	data = append(data, []byte(csv)...)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+// ImportWorkshopCreatorsCSV 从 CSV 文本导入创作者
+func (a *App) ImportWorkshopCreatorsCSV(csvContent string) error {
+	r := csv.NewReader(strings.NewReader(csvContent))
+	rows, err := r.ReadAll()
+	if err != nil {
+		return err
+	}
+	if len(rows) < 2 {
+		return fmt.Errorf("CSV 为空或只有表头")
+	}
+	// 按 platform 分组
+	groups := map[string][]types.WorkshopCreator{}
+	for _, row := range rows[1:] {
+		if len(row) < 4 {
+			continue
+		}
+		platform := row[0]
+		cr := types.WorkshopCreator{
+			Name: row[1],
+			URL:  row[2],
+			Desc: row[3],
+		}
+		if len(row) > 4 {
+			cr.SearchURL = row[4]
+		}
+		groups[platform] = append(groups[platform], cr)
+	}
+	// 转成 PlatformCreators 列表
+	var list []types.PlatformCreators
+	for platform, creators := range groups {
+		list = append(list, types.PlatformCreators{
+			Platform: platform,
+			Creators: creators,
+		})
+	}
+	return a.SaveWorkshopCreators(list)
+}
+
+// ImportWorkshopCreatorsCSVFile 从 exe 同目录的 CSV 文件导入创作者
+func (a *App) ImportWorkshopCreatorsCSVFile() (int, error) {
+	exe, _ := os.Executable()
+	path := filepath.Join(filepath.Dir(exe), "workshop_creators.csv")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, fmt.Errorf("未找到 CSV 文件，请先导出: %w", err)
+	}
+	content := strings.TrimLeft(string(data), "\uFEFF")
+	if err := a.ImportWorkshopCreatorsCSV(content); err != nil {
+		return 0, err
+	}
+	// 返回导入后的创作者总数
+	list := a.LoadWorkshopCreators()
+	count := 0
+	for _, pc := range list {
+		count += len(pc.Creators)
+	}
+	return count, nil
+}
+
+// ========== 自动更新 ==========
+
+// CurrentVersion 返回当前版本号
+func (a *App) CurrentVersion() string {
+	return version.Version
+}
+
+// CheckUpdate 检查 GitHub 是否有新版本
+func (a *App) CheckUpdate() (*updater.UpdateInfo, error) {
+	return updater.Check(version.Version)
+}
+
+// DownloadUpdate 下载更新包，返回临时 zip 路径
+func (a *App) DownloadUpdate(url string) (string, error) {
+	return updater.Download(url)
+}
+
+// ApplyUpdate 应用更新（解压 + 启动 updater.bat + 退出）
+func (a *App) ApplyUpdate(zipPath string) error {
+	return updater.ApplyUpdate(zipPath)
 }
 
 // ========== 窗口状态 ==========

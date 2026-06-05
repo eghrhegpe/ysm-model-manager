@@ -464,7 +464,7 @@ class AppContent extends HTMLElement {
         if (!repoRoot) {
           bus.emit("toast:show", {
             msg: "请先在设置中配置仓库目录",
-            duration: 3000,
+            duration: 4000,
             type: "warn",
           });
           return;
@@ -780,18 +780,19 @@ class AppContent extends HTMLElement {
         }
       }
 
-      // 创作者列表
-      const platformCreators = allCreators.find((c) => c.platform === site.id);
-      const creators = platformCreators ? platformCreators.creators : [];
+      // 创作者列表：按 type 标签筛选（如 "bilibili;afdian" 包含当前 site.id 即显示）
+      const creators = allCreators.filter(
+        (cr) => cr.type && cr.type.split(";").includes(site.id),
+      );
 
-      if (creators.length) {
+      if (creators.length && site.searchUrl) {
         html +=
           '<div style="padding:6px 12px 4px;font-size:10px;font-weight:600;color:var(--txt)">🎨 活跃创作者</div>';
         html += creators
           .map(
             (cr) =>
-              '<div class="ws-creator-card" data-url="' +
-              this._esc(cr.searchUrl || cr.url) +
+              '<div class="ws-creator-card" data-name="' +
+              this._esc(cr.name) +
               '">' +
               '<div class="ws-creator-icon">🎨</div>' +
               '<div class="ws-creator-body">' +
@@ -803,6 +804,25 @@ class AppContent extends HTMLElement {
               "</div>" +
               "</div>" +
               '<div class="ws-creator-action">↗</div>' +
+              "</div>",
+          )
+          .join("");
+      } else if (creators.length && !site.searchUrl) {
+        html +=
+          '<div style="padding:6px 12px 4px;font-size:10px;font-weight:600;color:var(--txt)">🎨 活跃创作者</div>';
+        html += creators
+          .map(
+            (cr) =>
+              '<div class="ws-creator-card" style="cursor:default">' +
+              '<div class="ws-creator-icon">🎨</div>' +
+              '<div class="ws-creator-body">' +
+              '<div class="ws-creator-name">' +
+              this._esc(cr.name) +
+              "</div>" +
+              '<div class="ws-creator-desc">' +
+              this._esc(cr.desc) +
+              "</div>" +
+              "</div>" +
               "</div>",
           )
           .join("");
@@ -843,13 +863,21 @@ class AppContent extends HTMLElement {
         });
       });
 
-      // 创作者卡片
-      searchResults.querySelectorAll(".ws-creator-card").forEach((card) => {
-        card.addEventListener("click", () => {
-          const url = card.dataset.url;
-          if (url) window.open(url, "_blank");
+      // 创作者卡片点击 → 用网站的 searchUrl + 名字搜索
+      searchResults
+        .querySelectorAll(".ws-creator-card[data-name]")
+        .forEach((card) => {
+          card.addEventListener("click", () => {
+            const name = card.dataset.name;
+            if (site.searchUrl && name) {
+              const url = site.searchUrl.replace(
+                /\{\{q\}\}/g,
+                encodeURIComponent(name),
+              );
+              window.open(url, "_blank");
+            }
+          });
         });
-      });
     };
 
     // ===== 全局搜索（默认视图） =====
@@ -1317,11 +1345,11 @@ class AppContent extends HTMLElement {
         .getElementById("set-ws-export")
         ?.addEventListener("click", async () => {
           try {
-            const { ExportWorkshopSitesCSVFile } =
+            const { ExportWorkshopSitesJSONFile } =
               await import("../../../wailsjs/go/main/App.js");
-            const path = await ExportWorkshopSitesCSVFile();
+            const path = await ExportWorkshopSitesJSONFile();
             bus.emit("toast:show", {
-              msg: "📤 已导出到: " + path,
+              msg: "📤 已导出 JSON: " + path,
               duration: 3000,
               type: "success",
             });
@@ -1338,11 +1366,11 @@ class AppContent extends HTMLElement {
         .getElementById("set-ws-import")
         ?.addEventListener("click", async () => {
           try {
-            const { ImportWorkshopSitesCSVFile } =
+            const { ImportWorkshopSitesJSONFile } =
               await import("../../../wailsjs/go/main/App.js");
-            const count = await ImportWorkshopSitesCSVFile();
+            const count = await ImportWorkshopSitesJSONFile();
             bus.emit("toast:show", {
-              msg: `✅ 已从 CSV 导入 ${count} 个站点`,
+              msg: `✅ 已从 JSON 导入 ${count} 个站点`,
               duration: 3000,
               type: "success",
             });
@@ -1355,42 +1383,27 @@ class AppContent extends HTMLElement {
           }
         });
 
+      // 创作者管理器
       root
-        .getElementById("set-cr-export")
+        .getElementById("set-cr-manager")
         ?.addEventListener("click", async () => {
           try {
-            const { ExportWorkshopCreatorsCSVFile } =
+            const { showCreatorManager } =
+              await import("../../dialogs/creator-manager.js");
+            const { LoadWorkshopSites } =
               await import("../../../wailsjs/go/main/App.js");
-            const path = await ExportWorkshopCreatorsCSVFile();
-            bus.emit("toast:show", {
-              msg: "📤 已导出到: " + path,
-              duration: 3000,
-              type: "success",
-            });
+            const sites = await LoadWorkshopSites();
+            const changed = await showCreatorManager(sites);
+            if (changed) {
+              bus.emit("toast:show", {
+                msg: "✅ 创作者配置已更新",
+                duration: 2000,
+                type: "success",
+              });
+            }
           } catch (e) {
             bus.emit("toast:show", {
-              msg: "❌ 导出失败: " + String(e),
-              duration: 4000,
-              type: "error",
-            });
-          }
-        });
-
-      root
-        .getElementById("set-cr-import")
-        ?.addEventListener("click", async () => {
-          try {
-            const { ImportWorkshopCreatorsCSVFile } =
-              await import("../../../wailsjs/go/main/App.js");
-            const count = await ImportWorkshopCreatorsCSVFile();
-            bus.emit("toast:show", {
-              msg: `✅ 已从 CSV 导入 ${count} 个创作者`,
-              duration: 3000,
-              type: "success",
-            });
-          } catch (e) {
-            bus.emit("toast:show", {
-              msg: "❌ 导入失败: " + String(e),
+              msg: "❌ 操作失败: " + String(e),
               duration: 4000,
               type: "error",
             });

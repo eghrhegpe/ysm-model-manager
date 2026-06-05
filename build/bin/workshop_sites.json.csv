@@ -1,7 +1,0 @@
-﻿id,icon,label,url,desc,group,searchUrl
-bilibili,📺,B站,https://www.bilibili.com/,搜索模型创作者和模型展示,search,https://search.bilibili.com/all?keyword={{q}}
-afdian,❤️,爱发电,https://afdian.com/,赞助创作者平台,search,https://afdian.com/search?q={{q}}
-github,🐙,GitHub,https://github.com/,免费模型仓库,repo,https://github.com/search?q={{q}}
-mcmod,📖,MC百科,https://www.mcmod.cn/,模组与模型百科,browse,
-curseforge,🔥,CurseForge,https://www.curseforge.com/minecraft,全球 MC 资源站（无法下载YSM）,browse,
-modrinth,💎,Modrinth,https://modrinth.com/,开源 MC 平台（无法下载YSM）,browse,

@@ -4,13 +4,9 @@
     "icon": "📺",
     "label": "B站",
     "url": "https://www.bilibili.com/",
-    "desc": "搜索模型创作者和模型展示",
+    "desc": "搜索模型创作者和模型展示视频的主流平台",
     "group": "search",
-    "searchUrl": "https://search.bilibili.com/all?keyword={{q}}",
-    "presetSearches": [
-      { "label": "免费模型", "q": "ysm模型免费分享" },
-      { "label": "付费模型", "q": "ysm模型展示" }
-    ]
+    "searchUrl": "https://search.bilibili.com/all?keyword={{q}}"
   },
   {
     "id": "afdian",
@@ -19,11 +15,7 @@
     "url": "https://afdian.com/",
     "desc": "赞助创作者平台",
     "group": "search",
-    "searchUrl": "https://afdian.com/search?q={{q}}",
-    "presetSearches": [
-      { "label": "作者搜索", "q": "碎de帆" },
-      { "label": "付费模型", "q": "YSM" }
-    ]
+    "searchUrl": "https://afdian.com/search?q={{q}}"
   },
   {
     "id": "github",
@@ -32,24 +24,16 @@
     "url": "https://github.com/",
     "desc": "免费模型仓库",
     "group": "repo",
-    "searchUrl": "https://github.com/search?q={{q}}",
-    "presetSearches": [
-      { "label": "Elaina69品牌汇总", "q": "Yes-Steve-Model-Repo" },
-      { "label": "HSOS6根目录汇总", "q": "YSM-model" },
-      { "label": "nekohalawrence按作者分类的免费模型", "q": "FREE-YSM-AUTHOR" }
-    ]
+    "searchUrl": "https://github.com/search?q={{q}}"
   },
   {
     "id": "mcmod",
     "icon": "📖",
     "label": "MC百科",
-    "url": "https://search.mcmod.cn/s?key={{q}}",
+    "url": "https://www.mcmod.cn/",
     "desc": "模组与模型百科",
     "group": "browse",
-    "presetSearches": [
-      { "label": "基岩版模型加载器", "q": "是 史蒂夫模型" },
-      { "label": "基岩版模型：创意工坊", "q": "是，史蒂夫模型：创意工坊" }
-    ]
+    "searchUrl": "https://search.mcmod.cn/s?key={{q}}"
   },
   {
     "id": "curseforge",

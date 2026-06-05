@@ -13,9 +13,9 @@ function cleanText(text) {
 }
 
 /**
- * 从 YsmSummary 渲染为精简摘要卡片
+ * 从 YsmSummary + YSMHeader 渲染为精简摘要卡片
  */
-export function summaryCardHTML(summary) {
+export function summaryCardHTML(summary, header) {
   if (!summary) {
     return `<div class="content" id="preview-content">
 <h3>📄 模型信息</h3>
@@ -59,9 +59,16 @@ export function summaryCardHTML(summary) {
       .join("");
   }
 
+  // 免费/付费标记
+  const freeBadge = header?.isYsm
+    ? header.isFree
+      ? '<span style="display:inline-block;padding:1px 8px;border-radius:8px;font-size:9px;background:#a6e3a133;color:#a6e3a1;margin-left:6px">🆓 免费</span>'
+      : '<span style="display:inline-block;padding:1px 8px;border-radius:8px;font-size:9px;background:#f38ba833;color:#f38ba8;margin-left:6px">🔒 付费</span>'
+    : "";
+
   return `<div class="content" id="preview-content">
 <div class="model-detail-title">📄 模型详情</div>
-<h3>${esc(name)}</h3>
+<h3>${esc(name)}${freeBadge}</h3>
 
 ${tips ? `<div style="font-size:11px;color:#cdd6f4;margin-bottom:10px;line-height:1.6">${tips}</div>` : ""}
 

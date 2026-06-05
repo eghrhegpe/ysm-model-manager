@@ -1,35 +1,26 @@
 // ===== 主题切换 =====
+const TLABEL = {
+  cyber: "🌙 赛博霓虹",
+  warm: "☀️ 温暖木纹",
+  pro: "⚪ 极简深邃",
+  system: "💻 跟随系统",
+};
+const TMODES = ["cyber", "warm", "pro", "system"];
+
 function initTheme() {
   const saved = localStorage.getItem("theme") || "system";
-  if (window.applyTheme) {
-    window.applyTheme(saved);
-  } else if (saved === "light") {
-    document.body.classList.add("light");
-  }
+  if (window.applyTheme) window.applyTheme(saved);
   const btn = document.getElementById("btn-theme");
-  if (btn)
-    btn.textContent =
-      saved === "light"
-        ? "☀️ 亮色"
-        : saved === "system"
-          ? "💻 跟随系统"
-          : "🌙 暗色";
+  if (btn) btn.textContent = TLABEL[saved] || TLABEL.system;
 }
 
 const themeBtn = document.getElementById("btn-theme");
 if (themeBtn) {
   themeBtn.addEventListener("click", () => {
-    const modes = ["dark", "light", "system"];
-    const cur = localStorage.getItem("theme") || "dark";
-    const next = modes[(modes.indexOf(cur) + 1) % modes.length];
+    const cur = localStorage.getItem("theme") || "cyber";
+    const next = TMODES[(TMODES.indexOf(cur) + 1) % TMODES.length];
     if (window.applyTheme) window.applyTheme(next);
-    else document.body.classList.toggle("light");
     localStorage.setItem("theme", next);
-    themeBtn.textContent =
-      next === "light"
-        ? "☀️ 亮色"
-        : next === "system"
-          ? "💻 跟随系统"
-          : "🌙 暗色";
+    themeBtn.textContent = TLABEL[next];
   });
 }

@@ -2,10 +2,10 @@
 // 直接引用旧版 tree.js 的渲染逻辑
 import { hl } from "../../utils/dom.js";
 import { fmt, fmtDate } from "../../utils/fmt.js";
-import { fileIcon } from "../../utils/icon.js";
+import { fileIcon, isYsmName } from "../../utils/icon.js";
 import { emptyHTML } from "./tpl.js";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.js";
-import { isYsmName } from "../../utils/icon.js";
+import { renderDisplayName } from "../../utils/display.js";
 
 // 直接导出旧版 buildTree 和 renderTree 逻辑
 // 由旧版 tree.js 移植
@@ -59,13 +59,6 @@ function dirEntries(node, full, dirPath) {
   return all;
 }
 
-/** 文件名高亮：标记 [] 和 【】中的内容 */
-function highlightName(name) {
-  return name
-    .replace(/\[([^\]]+)\]/g, '<span class="nm-tag">[$1]</span>')
-    .replace(/【([^】]+)】/g, '<span class="nm-bracket">【$1】</span>');
-}
-
 function renderNode(node, dirPath, search, sort, dirOpen) {
   const hasSearch = !!(search || "").trim();
   const keys = Object.keys(node).sort((a, b) => {
@@ -87,7 +80,7 @@ function renderNode(node, dirPath, search, sort, dirOpen) {
       const e = v._e;
       if (hasSearch && !e.name.toLowerCase().includes(search.toLowerCase()))
         return;
-      const nmHtml = hasSearch ? hl(e.name, search) : highlightName(e.name);
+      const nmHtml = hasSearch ? hl(e.name, search) : renderDisplayName(e.name);
       const dateStr = e.modTime ? fmtDate(e.modTime) : "";
       const extraCls = isYsmName(e.name) ? " ysm" : "";
       h += fileRowHTML(e, nmHtml, fileIcon(e.name), dateStr, extraCls);

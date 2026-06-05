@@ -108,7 +108,38 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
     return;
   }
   if (type === "dir") {
-    // 文件夹右键功能已迁移到前面的大图标开关，不再需要菜单
+    bus.emit("menu:show", {
+      x,
+      y,
+      items: [
+        {
+          label: "重命名…",
+          icon: "✂️",
+          onClick: () => bus.emit("dir:rename", { dir }),
+        },
+        {
+          label: "打开所在文件夹",
+          icon: "📂",
+          onClick: () => {
+            const { OpenFolder } = window.go.main.App;
+            OpenFolder?.(dir || "");
+          },
+        },
+        { divider: true },
+        {
+          label: "新建子文件夹…",
+          icon: "🗂",
+          onClick: () => bus.emit("dir:mkdir", { dir }),
+        },
+        { divider: true },
+        {
+          label: "移入回收站",
+          icon: "♻️",
+          danger: true,
+          onClick: () => bus.emit("dir:recycle", { dir }),
+        },
+      ],
+    });
     return;
   }
 });
@@ -130,35 +161,37 @@ window.addEventListener("resize", () => {
 });
 
 // ===== 全局主题控制 =====
-/** 应用主题：dark / light / system */
+// 主题: cyber(赛博霓虹) | warm(温暖木纹) | pro(极简深邃) | system(跟随系统)
+const THEME_DARK = "cyber";
+const THEME_LIGHT = "warm";
+
 function applyTheme(mode) {
+  document.body.classList.remove("theme-cyber", "theme-warm", "theme-pro");
   if (mode === "system") {
     const prefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)",
     ).matches;
-    document.body.classList.toggle("light", !prefersDark);
+    document.body.classList.add(prefersDark ? "theme-cyber" : "theme-warm");
   } else {
-    document.body.classList.toggle("light", mode === "light");
+    document.body.classList.add("theme-" + mode);
   }
 }
 window.applyTheme = applyTheme;
 
-// 启动时加载主题
 (async () => {
   try {
     const { LoadAppConfig } = await import("../wailsjs/go/main/App.js");
     const cfg = await LoadAppConfig();
     const theme =
-      cfg.theme || cfg.Theme || localStorage.getItem("theme") || "system";
+      localStorage.getItem("theme") || cfg.theme || cfg.Theme || THEME_DARK;
     localStorage.setItem("theme", theme);
     applyTheme(theme);
   } catch {
-    const theme = localStorage.getItem("theme") || "system";
+    const theme = localStorage.getItem("theme") || THEME_DARK;
     applyTheme(theme);
   }
 })();
 
-// 监听系统主题变化
 window
   .matchMedia("(prefers-color-scheme: dark)")
   .addEventListener("change", () => {

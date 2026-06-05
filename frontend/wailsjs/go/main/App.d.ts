@@ -67,6 +67,12 @@ export function MoveToRecycleEx(arg1:string):Promise<string|string>;
 
 export function OpenFolder(arg1:string):Promise<void>;
 
+export function RelinkCustomDir(arg1:string,arg2:string):Promise<number>;
+
+export function RemoveDir(arg1:string):Promise<void>;
+
+export function RenameDir(arg1:string,arg2:string):Promise<void>;
+
 export function RestoreFromRecycle(arg1:string,arg2:string):Promise<void>;
 
 export function SaveAppConfig(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;

@@ -130,6 +130,18 @@ export function OpenFolder(arg1) {
   return window['go']['main']['App']['OpenFolder'](arg1);
 }
 
+export function RelinkCustomDir(arg1, arg2) {
+  return window['go']['main']['App']['RelinkCustomDir'](arg1, arg2);
+}
+
+export function RemoveDir(arg1) {
+  return window['go']['main']['App']['RemoveDir'](arg1);
+}
+
+export function RenameDir(arg1, arg2) {
+  return window['go']['main']['App']['RenameDir'](arg1, arg2);
+}
+
 export function RestoreFromRecycle(arg1, arg2) {
   return window['go']['main']['App']['RestoreFromRecycle'](arg1, arg2);
 }

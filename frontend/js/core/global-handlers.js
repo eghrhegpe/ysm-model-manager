@@ -302,7 +302,7 @@ export function registerGlobalHandlers() {
           return;
         }
         const confirmed = await window.showConfirm?.(
-          `🗑️ 清空 ${insName}\n将移除所有模型文件到回收站，确定继续吗？`,
+          `🗑️ 清空 ${insName}\n将删除整合包内已在仓库的模型（仓库保留原件），未入库的文件将被跳过。确定继续吗？`,
         );
         if (!confirmed) {
           bus.emit("toast:show", {

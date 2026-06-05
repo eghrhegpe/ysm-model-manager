@@ -60,7 +60,8 @@ export function summaryCardHTML(summary) {
   }
 
   return `<div class="content" id="preview-content">
-<h3>📄 ${esc(name)}</h3>
+<div class="model-detail-title">📄 模型详情</div>
+<h3>${esc(name)}</h3>
 
 ${tips ? `<div style="font-size:11px;color:#cdd6f4;margin-bottom:10px;line-height:1.6">${tips}</div>` : ""}
 

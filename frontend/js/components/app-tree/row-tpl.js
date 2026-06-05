@@ -1,4 +1,5 @@
 // ===== 树节点行 HTML 模板 =====
+import { renderDisplayName } from "../../utils/display.js";
 
 /** 文件行 HTML */
 export function fileRowHTML(e, nmHtml, icon, dateStr, extraCls = "") {
@@ -34,10 +35,11 @@ export function folderRowHTML(
   } else if (hasEnabled && !hasDisabled) {
     ckCls = " on";
   }
+  const dispName = k.startsWith("[") ? renderDisplayName(k) : attr(k);
   return `<div class="fh${lk}" data-dir="${attr(full)}">
 <span class="ck${ckCls}" data-dir="${attr(full)}"></span>
 <span class="ar${ac}">${ar}</span>
-<span class="nm" style="color:${nc}">${fi} ${attr(k)}</span></div>
+<span class="nm" style="color:${nc}">${fi} ${dispName}</span></div>
 <div class="ch" style="display:${isOpen ? "block" : "none"}">`;
 }
 

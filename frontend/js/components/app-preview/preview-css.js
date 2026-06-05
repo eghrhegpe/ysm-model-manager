@@ -36,6 +36,9 @@ h3 { font-size: 11px; font-weight: 600; color: var(--txt); text-transform: upper
 .dp-expand-icon.open { transform: rotate(90deg); }
 .dp-detail { font-size: 10px; color: var(--txt); padding: 2px 4px; background: var(--surf); border-radius: 4px; flex:1; overflow-y:auto; min-height:0; }
 .dp-detail .dp-detail-item { padding: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dp-detail .dp-detail-item .tag-author { color: var(--meta-author, #66d9ef); }
+.dp-detail .dp-detail-item .tag-work { color: var(--meta-work, #bd93f9); }
+.dp-detail .dp-detail-item .tag-date { color: var(--meta-date, #f1fa8c); font-size: 0.9em; }
 .dp-detail .dp-detail-empty { color: var(--muted); padding: 4px 0; text-align: center; }
 .dp-section-title { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
 .dp-log-toggle { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 10px; font-family: inherit; padding: 0; }

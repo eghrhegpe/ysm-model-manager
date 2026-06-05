@@ -62,6 +62,9 @@ class AppTree extends HTMLElement {
     renderTree(c, this._entries, this._search, this._sort, this._dirOpen);
     bindTreeEvents(c, this);
     updateStat(this._root.getElementById("ftr-stat"), this._entries);
+    // 仓库路径显示在按钮上
+    const repoBtn = this._root.getElementById("btn-repo");
+    if (repoBtn) repoBtn.textContent = this._repoRoot ? `📁 ${this._repoRoot}` : "📁 未设置";
   }
 }
 

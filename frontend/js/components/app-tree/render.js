@@ -5,7 +5,10 @@ import { fmt, fmtDate } from "../../utils/fmt.js";
 import { fileIcon, isYsmName } from "../../utils/icon.js";
 import { emptyHTML } from "./tpl.js";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.js";
-import { renderDisplayName } from "../../utils/display.js";
+import {
+  renderDisplayName,
+  renderModelNameWithHighlight,
+} from "../../utils/display.js";
 
 // 直接导出旧版 buildTree 和 renderTree 逻辑
 // 由旧版 tree.js 移植

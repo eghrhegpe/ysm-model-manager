@@ -25,6 +25,7 @@ export function renderVersionCards(container, instances) {
       ins.status,
       isOpen,
       idx,
+      ins.hasYSM,
     );
     container.appendChild(vc);
 
@@ -38,7 +39,8 @@ export function renderVersionCards(container, instances) {
 }
 
 function renderBody(ins) {
-  const sortByName = (a, b) => (a.displayName || a.name).localeCompare(b.displayName || b.name);
+  const sortByName = (a, b) =>
+    (a.displayName || a.name).localeCompare(b.displayName || b.name);
   let h = "";
   if (ins.items.synced.length) {
     h += sectionTitleHTML("✅ 已同步", ins.items.synced.length);

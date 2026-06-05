@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/logs"
@@ -172,54 +173,30 @@ func defaultWorkshopSites() []types.WorkshopSite {
 	}
 }
 
-// ========== 创意工坊创作者配置（按文件拆分） ==========
-func workshopCreatorsDir() string {
+// ========== 创意工坊创作者配置（单文件 + 标签）==========
+func workshopCreatorsPath() string {
 	exe, _ := os.Executable()
-	return filepath.Join(filepath.Dir(exe), "workshop_creators")
+	return filepath.Join(filepath.Dir(exe), "workshop_creators.json")
 }
 
-func (a *App) LoadWorkshopCreators() []types.PlatformCreators {
-	dir := workshopCreatorsDir()
-	entries, err := os.ReadDir(dir)
+func (a *App) LoadWorkshopCreators() []types.WorkshopCreator {
+	data, err := os.ReadFile(workshopCreatorsPath())
 	if err != nil {
 		return nil
 	}
-	var result []types.PlatformCreators
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
-			continue
-		}
-		platform := strings.TrimSuffix(e.Name(), ".json")
-		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
-		if err != nil {
-			continue
-		}
-		var creators []types.WorkshopCreator
-		if err := json.Unmarshal(data, &creators); err != nil {
-			continue
-		}
-		result = append(result, types.PlatformCreators{
-			Platform: platform,
-			Creators: creators,
-		})
+	var list []types.WorkshopCreator
+	if err := json.Unmarshal(data, &list); err != nil {
+		return nil
 	}
-	return result
+	return list
 }
 
-func (a *App) SaveWorkshopCreators(list []types.PlatformCreators) error {
-	dir := workshopCreatorsDir()
-	os.MkdirAll(dir, 0755)
-	for _, pc := range list {
-		data, err := json.MarshalIndent(pc.Creators, "", "  ")
-		if err != nil {
-			return err
-		}
-		path := filepath.Join(dir, pc.Platform+".json")
-		if err := os.WriteFile(path, data, 0644); err != nil {
-			return err
-		}
+func (a *App) SaveWorkshopCreators(list []types.WorkshopCreator) error {
+	data, err := json.MarshalIndent(list, "", "  ")
+	if err != nil {
+		return err
 	}
-	return nil
+	return os.WriteFile(workshopCreatorsPath(), data, 0644)
 }
 
 // ResetWorkshopConfigs 重置创意工坊配置为默认值
@@ -230,7 +207,7 @@ func (a *App) ResetWorkshopConfigs() ([]types.WorkshopSite, error) {
 		return nil, err
 	}
 	// 清空创作者文件夹
-	os.RemoveAll(workshopCreatorsDir())
+	os.Remove(workshopCreatorsPath())
 	return sites, nil
 }
 
@@ -249,20 +226,32 @@ func (a *App) ExportWorkshopSitesCSV() (string, error) {
 	return buf.String(), w.Error()
 }
 
-// ExportWorkshopSitesCSVFile 导出站点 CSV 到 exe 同目录，返回文件路径
-func (a *App) ExportWorkshopSitesCSVFile() (string, error) {
-	csv, err := a.ExportWorkshopSitesCSV()
+// ExportWorkshopSitesJSONFile 导出站点配置为 JSON 到 exe 同目录
+func (a *App) ExportWorkshopSitesJSONFile() (string, error) {
+	sites := a.LoadWorkshopSites()
+	data, err := json.MarshalIndent(sites, "", "  ")
 	if err != nil {
 		return "", err
 	}
-	path := workshopSitesPath() + ".csv"
-	// 写 BOM 让 WPS/Excel 识别 UTF-8
-	data := []byte{0xEF, 0xBB, 0xBF}
-	data = append(data, []byte(csv)...)
+	path := workshopSitesPath()
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return "", err
 	}
 	return path, nil
+}
+
+// ImportWorkshopSitesJSONFile 从 exe 同目录的 JSON 文件导入站点配置
+func (a *App) ImportWorkshopSitesJSONFile() (int, error) {
+	path := workshopSitesPath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, fmt.Errorf("未找到 JSON 文件: %w", err)
+	}
+	var sites []types.WorkshopSite
+	if err := json.Unmarshal(data, &sites); err != nil {
+		return 0, err
+	}
+	return len(sites), a.SaveWorkshopSites(sites)
 }
 
 // ImportWorkshopSitesCSV 从 CSV 文本导入站点配置
@@ -296,110 +285,63 @@ func (a *App) ImportWorkshopSitesCSV(csvContent string) error {
 	return a.SaveWorkshopSites(sites)
 }
 
-// ImportWorkshopSitesCSVFile 从 exe 同目录的 CSV 文件导入站点配置
-func (a *App) ImportWorkshopSitesCSVFile() (int, error) {
-	path := workshopSitesPath() + ".csv"
+// ExportWorkshopCreatorsJSONFile 导出创作者配置为 JSON（写入独立文件到 exe 同目录）
+func (a *App) ExportWorkshopCreatorsJSONFile() (string, error) {
+	if err := a.SaveWorkshopCreators(a.LoadWorkshopCreators()); err != nil {
+		return "", err
+	}
+	return workshopCreatorsPath(), nil
+}
+
+// BackupWorkshopCreators 备份创作者配置
+func (a *App) BackupWorkshopCreators() (string, error) {
+	path := workshopCreatorsPath()
+	bakPath := path + "." + time.Now().Format("20060102-150405") + ".bak"
 	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0, fmt.Errorf("未找到 CSV 文件，请先导出: %w", err)
-	}
-	content := string(data)
-	// 去掉 BOM
-	content = strings.TrimLeft(content, "\uFEFF")
-	if err := a.ImportWorkshopSitesCSV(content); err != nil {
-		return 0, err
-	}
-	return len(a.LoadWorkshopSites()), nil
-}
-
-// ExportWorkshopCreatorsCSV 导出所有平台的创作者为 CSV（含 platform 列）
-func (a *App) ExportWorkshopCreatorsCSV() (string, error) {
-	list := a.LoadWorkshopCreators()
-	var buf strings.Builder
-	w := csv.NewWriter(&buf)
-	w.Write([]string{"platform", "name", "url", "desc", "searchUrl"})
-	for _, pc := range list {
-		for _, cr := range pc.Creators {
-			w.Write([]string{pc.Platform, cr.Name, cr.URL, cr.Desc, cr.SearchURL})
-		}
-	}
-	w.Flush()
-	return buf.String(), w.Error()
-}
-
-// ExportWorkshopCreatorsCSVFile 导出创作者 CSV 到 exe 同目录
-func (a *App) ExportWorkshopCreatorsCSVFile() (string, error) {
-	csv, err := a.ExportWorkshopCreatorsCSV()
 	if err != nil {
 		return "", err
 	}
-	exe, _ := os.Executable()
-	path := filepath.Join(filepath.Dir(exe), "workshop_creators.csv")
-	data := []byte{0xEF, 0xBB, 0xBF}
-	data = append(data, []byte(csv)...)
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(bakPath, data, 0644); err != nil {
 		return "", err
 	}
-	return path, nil
+	return bakPath, nil
 }
 
-// ImportWorkshopCreatorsCSV 从 CSV 文本导入创作者
-func (a *App) ImportWorkshopCreatorsCSV(csvContent string) error {
-	r := csv.NewReader(strings.NewReader(csvContent))
-	rows, err := r.ReadAll()
-	if err != nil {
-		return err
+// MergeWorkshopCreatorsFromJSON 合并导入（局部更新，按 name 去重）
+func (a *App) MergeWorkshopCreatorsFromJSON(jsonContent string) (int, int, error) {
+	var imported []types.WorkshopCreator
+	if err := json.Unmarshal([]byte(jsonContent), &imported); err != nil {
+		return 0, 0, err
 	}
-	if len(rows) < 2 {
-		return fmt.Errorf("CSV 为空或只有表头")
+	a.BackupWorkshopCreators()
+	existing := a.LoadWorkshopCreators()
+	existMap := map[string]int{}
+	for i, cr := range existing {
+		existMap[cr.Name] = i
 	}
-	// 按 platform 分组
-	groups := map[string][]types.WorkshopCreator{}
-	for _, row := range rows[1:] {
-		if len(row) < 4 {
-			continue
+	added, updated := 0, 0
+	for _, cr := range imported {
+		if idx, ok := existMap[cr.Name]; ok {
+			existing[idx].Desc = cr.Desc
+			if cr.Type != "" { existing[idx].Type = cr.Type }
+			updated++
+		} else {
+			existing = append(existing, cr)
+			existMap[cr.Name] = len(existing) - 1
+			added++
 		}
-		platform := row[0]
-		cr := types.WorkshopCreator{
-			Name: row[1],
-			URL:  row[2],
-			Desc: row[3],
-		}
-		if len(row) > 4 {
-			cr.SearchURL = row[4]
-		}
-		groups[platform] = append(groups[platform], cr)
 	}
-	// 转成 PlatformCreators 列表
-	var list []types.PlatformCreators
-	for platform, creators := range groups {
-		list = append(list, types.PlatformCreators{
-			Platform: platform,
-			Creators: creators,
-		})
-	}
-	return a.SaveWorkshopCreators(list)
+	return added, updated, a.SaveWorkshopCreators(existing)
 }
 
-// ImportWorkshopCreatorsCSVFile 从 exe 同目录的 CSV 文件导入创作者
-func (a *App) ImportWorkshopCreatorsCSVFile() (int, error) {
-	exe, _ := os.Executable()
-	path := filepath.Join(filepath.Dir(exe), "workshop_creators.csv")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0, fmt.Errorf("未找到 CSV 文件，请先导出: %w", err)
-	}
-	content := strings.TrimLeft(string(data), "\uFEFF")
-	if err := a.ImportWorkshopCreatorsCSV(content); err != nil {
+// ReplaceWorkshopCreatorsFromJSON 覆盖导入（先备份再完全替换）
+func (a *App) ReplaceWorkshopCreatorsFromJSON(jsonContent string) (int, error) {
+	a.BackupWorkshopCreators()
+	var imported []types.WorkshopCreator
+	if err := json.Unmarshal([]byte(jsonContent), &imported); err != nil {
 		return 0, err
 	}
-	// 返回导入后的创作者总数
-	list := a.LoadWorkshopCreators()
-	count := 0
-	for _, pc := range list {
-		count += len(pc.Creators)
-	}
-	return count, nil
+	return len(imported), a.SaveWorkshopCreators(imported)
 }
 
 // ========== 自动更新 ==========
@@ -793,6 +735,11 @@ func (a *App) ExtractYsmSummary(path string) ysm.YsmSummary {
 		}
 	}
 	return summary
+}
+
+// ExtractYSMHeader 读取 YSM 文件的文本头部元数据（适用于加密和非加密模型）
+func (a *App) ExtractYSMHeader(path string) ysm.YSMHeader {
+	return ysm.AnalyzeYSMHeader(path)
 }
 
 // ========== 安装 ==========

@@ -62,6 +62,8 @@
     "SaveWorkshopCreators",
     "ListModelAuthors",
     "ResetWorkshopConfigs",
+    "GenerateRepoIndex",
+    "DownloadFromGitHub",
     "StartProxy",
     "StopProxy",
     "IsProxyRunning",

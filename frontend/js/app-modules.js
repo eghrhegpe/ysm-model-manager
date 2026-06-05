@@ -179,6 +179,15 @@ window.applyTheme = applyTheme;
   try {
     const { LoadAppConfig } = await import("../wailsjs/go/main/App.js");
     const cfg = await LoadAppConfig();
+    // 设置旧版全局 repoRoot（旧代码的拖拽检测依赖它）
+    if (cfg.repoRoot) {
+      try {
+        repoRoot = cfg.repoRoot;
+      } catch (_) {}
+      try {
+        localStorage.setItem("repoRoot", cfg.repoRoot);
+      } catch (_) {}
+    }
     const theme =
       localStorage.getItem("theme") || cfg.theme || cfg.Theme || THEME_DARK;
     localStorage.setItem("theme", theme);
@@ -188,6 +197,24 @@ window.applyTheme = applyTheme;
     applyTheme(theme);
   }
 })();
+
+// ===== 禁用旧版 document 拖拽处理器（新版组件已接管）=====
+document.addEventListener(
+  "dragover",
+  (e) => {
+    if (e.target?.closest?.("#ws-page, #dl-drop, .ws-page"))
+      e.stopPropagation();
+  },
+  true,
+);
+document.addEventListener(
+  "drop",
+  (e) => {
+    if (e.target?.closest?.("#ws-page, #dl-drop, .ws-page"))
+      e.stopPropagation();
+  },
+  true,
+);
 
 window
   .matchMedia("(prefers-color-scheme: dark)")

@@ -47,12 +47,22 @@
     "GetWindowPosition",
     "ClearCustomDir",
     "RenameDir",
+    "RenameFile",
     "RemoveDir",
     "DeduplicateCustomDir",
     "CountLinkedModels",
     "IsSymlink",
     "RelinkCustomDir",
     "AnalyzeYSMModel",
-    "ExtractYsmSummary"
+    "ExtractYsmSummary",
+    "LoadWorkshopSites",
+    "SaveWorkshopSites",
+    "LoadWorkshopCreators",
+    "SaveWorkshopCreators",
+    "ListModelAuthors",
+    "ResetWorkshopConfigs",
+    "StartProxy",
+    "StopProxy",
+    "IsProxyRunning"
   ]
 }

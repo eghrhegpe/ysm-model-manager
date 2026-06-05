@@ -5,11 +5,13 @@ import {
   repositoryHTML,
   instancesHTML,
   settingsHTML,
-  placeholderHTML,
+  downloadsHTML,
   diagnosticsHTML,
   recycleHTML,
+  workshopHTML,
 } from "./tpl.js";
 import { registerGlobalHandlers } from "../../core/global-handlers.js";
+import { renderDisplayName, parseModelName } from "../../utils/display.js";
 
 class AppContent extends HTMLElement {
   constructor() {
@@ -46,7 +48,10 @@ class AppContent extends HTMLElement {
         inner = instancesHTML();
         break;
       case "downloads":
-        inner = placeholderHTML("⬇️", "下载与更新");
+        inner = downloadsHTML();
+        break;
+      case "workshop":
+        inner = workshopHTML();
         break;
       case "recycle":
         inner = recycleHTML();
@@ -68,6 +73,10 @@ class AppContent extends HTMLElement {
       this._initRecycle();
     } else if (this._current === "settings") {
       this._initSettings();
+    } else if (this._current === "downloads") {
+      this._initDownloads();
+    } else if (this._current === "workshop") {
+      this._initWorkshop();
     }
   }
 
@@ -223,7 +232,7 @@ class AppContent extends HTMLElement {
               })
             : "";
           const msg =
-            l.ModelName +
+            renderDisplayName(l.ModelName) +
             (l.TargetDir ? "<br>📂 " + this._esc(l.TargetDir) : "") +
             (l.ErrorMsg
               ? "<br>❌ " +
@@ -314,6 +323,520 @@ class AppContent extends HTMLElement {
     }
   }
 
+  _initDownloads() {
+    const root = this._root;
+    const dropZone = root.getElementById("dl-drop");
+    const fileInput = root.getElementById("dl-file-input");
+    // 存储当前文件信息
+    let currentFile = null;
+    let currentBase64 = null;
+    let currentFileName = null;
+
+    const showForm = (file, base64) => {
+      currentFile = file;
+      currentBase64 = base64;
+      currentFileName = file.name;
+
+      const parsed = parseModelName(file.name);
+      root.getElementById("dl-fname").textContent = file.name;
+      root.getElementById("dl-fsize").textContent =
+        file.size < 1048576
+          ? (file.size / 1024).toFixed(1) + " KB"
+          : (file.size / 1048576).toFixed(1) + " MB";
+
+      root.getElementById("dl-author").value = parsed.author || "";
+      root.getElementById("dl-work").value = parsed.work || "";
+      root.getElementById("dl-chara").value = parsed.chara || "";
+      root.getElementById("dl-variant").value = "";
+      root.getElementById("dl-date").value = parsed.date || "";
+      updatePreview();
+
+      dropZone.style.display = "none";
+      root.getElementById("dl-form").style.display = "flex";
+    };
+
+    const updatePreview = () => {
+      const a = root.getElementById("dl-author").value.trim();
+      const w = root.getElementById("dl-work").value.trim();
+      const c = root.getElementById("dl-chara").value.trim();
+      const v = root.getElementById("dl-variant").value.trim();
+      const manualDate = root.getElementById("dl-date").value.trim();
+      const autoOn = root.getElementById("dl-date-auto").checked;
+      const autoDate =
+        new Date().getFullYear() +
+        "-" +
+        String(new Date().getMonth() + 1).padStart(2, "0");
+      const d = manualDate || (autoOn ? autoDate : "");
+      const parts = [];
+      if (a) parts.push("[" + a + "]");
+      if (w) parts.push("【" + w + "】");
+      parts.push(c || "?");
+      if (v) parts.push("-" + v);
+      if (d) parts.push("(" + d + ")");
+      root.getElementById("dl-preview").textContent =
+        parts.join(" ") + "." + (currentFileName?.split(".").pop() || "ysm");
+    };
+
+    ["dl-author", "dl-work", "dl-chara", "dl-variant", "dl-date"].forEach(
+      (id) => {
+        root.getElementById(id)?.addEventListener("input", updatePreview);
+      },
+    );
+    root
+      .getElementById("dl-date-auto")
+      ?.addEventListener("change", updatePreview);
+
+    // 拖拽事件
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = "var(--accent)";
+    });
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.style.borderColor = "";
+    });
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = "";
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+      const ext = file.name.split(".").pop().toLowerCase();
+      if (!["ysm", "zip", "7z"].includes(ext)) {
+        bus.emit("toast:show", {
+          msg: "仅支持 .ysm / .zip / .7z",
+          duration: 3000,
+          type: "warn",
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => showForm(file, reader.result.split(",")[1]);
+      reader.readAsDataURL(file);
+    });
+
+    // 点击选择文件
+    dropZone.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => showForm(file, reader.result.split(",")[1]);
+      reader.readAsDataURL(file);
+    });
+
+    // 导入按钮
+    root.getElementById("dl-import")?.addEventListener("click", async () => {
+      const a = root.getElementById("dl-author").value.trim();
+      const w = root.getElementById("dl-work").value.trim();
+      const c = root.getElementById("dl-chara").value.trim();
+      const v = root.getElementById("dl-variant").value.trim();
+      const d = root.getElementById("dl-date").value.trim();
+      const ext = currentFileName?.split(".").pop() || "ysm";
+
+      if (!a || !w || !c) {
+        bus.emit("toast:show", {
+          msg: "作者、作品品牌、角色名不能为空",
+          duration: 3000,
+          type: "warn",
+        });
+        return;
+      }
+
+      const newName =
+        "[" +
+        a +
+        "]【" +
+        w +
+        "】" +
+        c +
+        (v ? "-" + v : "") +
+        (d ? "(" + d + ")" : "") +
+        "." +
+        ext;
+
+      try {
+        const { LoadAppConfig, ImportModelFile } =
+          await import("../../../wailsjs/go/main/App.js");
+        const cfg = await LoadAppConfig();
+        const repoRoot = cfg.repoRoot || "";
+        if (!repoRoot) {
+          bus.emit("toast:show", {
+            msg: "请先在设置中配置仓库目录",
+            duration: 3000,
+            type: "warn",
+          });
+          return;
+        }
+        await ImportModelFile(newName, currentBase64);
+        bus.emit("stats:refresh");
+        bus.emit("tree:reload");
+        bus.emit("toast:show", {
+          msg: "✅ 已导入: " + newName,
+          duration: 3000,
+          type: "success",
+        });
+
+        // 重置表单
+        currentFile = null;
+        currentBase64 = null;
+        currentFileName = null;
+        root.getElementById("dl-form").style.display = "none";
+        dropZone.style.display = "flex";
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: "❌ 导入失败: " + String(e),
+          duration: 5000,
+          type: "error",
+        });
+      }
+    });
+  }
+
+  _initWorkshop() {
+    const root = this._root;
+    const grid = root.getElementById("ws-grid");
+    const browserEl = root.getElementById("ws-browser");
+    const iframe = root.getElementById("ws-iframe");
+    const urlEl = root.getElementById("ws-url");
+    const blockedEl = root.getElementById("ws-blocked");
+    const popup = root.getElementById("ws-popup");
+    const sourceInfo = root.getElementById("ws-source-info");
+    const searchInput = root.getElementById("ws-author-input");
+    const searchBtn = root.getElementById("ws-search-btn");
+    const searchResults = root.getElementById("ws-search-results");
+    const creatorView = root.getElementById("ws-creator-view");
+    const creatorList = root.getElementById("ws-cr-list");
+    const creatorTitle = root.getElementById("ws-cr-title");
+    let currentSite = null;
+    let allCreators = [];
+    let repoAuthors = [];
+
+    // 分组定义
+    const GROUP_LABELS = {
+      search: { icon: "🔍", label: "搜索平台" },
+      repo: { icon: "📦", label: "模型仓库" },
+      browse: { icon: "👁️", label: "浏览平台" },
+    };
+
+    // 替换 {{q}} 为查询词
+    const fillSearch = (tpl, q) => tpl.replace(/\{\{q\}\}/g, encodeURIComponent(q));
+
+    // 加载数据
+    const loadSites = async () => {
+      grid.innerHTML =
+        '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>';
+      try {
+        const App = await import("../../../wailsjs/go/main/App.js");
+        const [sites, creators, authors] = await Promise.all([
+          App.LoadWorkshopSites(),
+          App.LoadWorkshopCreators(),
+          App.ListModelAuthors(),
+        ]);
+        allCreators = creators || [];
+        repoAuthors = authors || [];
+        renderCards(sites);
+        grid._wsSites = sites;
+        sourceInfo.textContent = sites.length + " 站点 · JSON驱动";
+      } catch (e) {
+        grid.innerHTML =
+          '<div style="padding:24px;text-align:center;color:#f38ba8;font-size:11px">加载失败</div>';
+      }
+    };
+
+    // 渲染左栏卡片（按分组）
+    const renderCards = (sites) => {
+      // 按分组排列
+      const groups = {};
+      sites.forEach((s) => {
+        const g = s.group || "browse";
+        if (!groups[g]) groups[g] = [];
+        groups[g].push(s);
+      });
+
+      let html = "";
+      const order = ["search", "repo", "browse"];
+      order.forEach((g) => {
+        if (!groups[g] || !groups[g].length) return;
+        const info = GROUP_LABELS[g] || { icon: "🔗", label: g };
+        html +=
+          '<div style="font-size:9px;font-weight:600;color:var(--muted);padding:8px 8px 2px">' +
+          info.icon +
+          " " +
+          info.label +
+          "</div>";
+        groups[g].forEach((s, i) => {
+          const globalIdx = sites.indexOf(s);
+          html +=
+            '<div class="ws-card" data-index="' +
+            globalIdx +
+            '" data-group="' +
+            g +
+            '">' +
+            '<div class="ws-card-icon">' +
+            (s.icon || "🔗") +
+            "</div>" +
+            '<div class="ws-card-body">' +
+            '<div class="ws-card-label">' +
+            this._esc(s.label) +
+            "</div>" +
+            '<div class="ws-card-desc">' +
+            this._esc(s.desc) +
+            "</div>" +
+            "</div>" +
+            "</div>";
+        });
+      });
+
+      grid.innerHTML = html;
+
+      grid.querySelectorAll(".ws-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          grid.querySelectorAll(".ws-card").forEach((c) => c.classList.remove("active"));
+          card.classList.add("active");
+          const idx = parseInt(card.dataset.index, 10);
+          const sitesData = grid._wsSites;
+          if (sitesData && sitesData[idx]) {
+            currentSite = sitesData[idx];
+            showSiteView(currentSite);
+            const rect = card.getBoundingClientRect();
+            showPopup(rect);
+          }
+        });
+      });
+    };
+
+    // 二级菜单
+    const showPopup = (rect) => {
+      popup.style.display = "";
+      popup.style.top = rect.bottom + 4 + "px";
+      popup.style.left = Math.max(4, rect.left) + "px";
+    };
+    const hidePopup = () => { popup.style.display = "none"; };
+
+    popup.querySelectorAll(".ws-popup-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        if (!currentSite) return;
+        if (item.dataset.action === "browser") {
+          window.open(currentSite.url, "_blank");
+          hidePopup();
+        } else if (item.dataset.action === "embed") {
+          hidePopup();
+          openEmbedded(currentSite);
+        }
+      });
+    });
+
+    root.addEventListener("click", (e) => {
+      if (!e.target.closest(".ws-popup") && !e.target.closest(".ws-card")) hidePopup();
+    });
+
+    // 内嵌浏览
+    const PROXY_PORT = 18080;
+    const PROXY_BASE = "http://127.0.0.1:" + PROXY_PORT + "/proxy?url=";
+    const openEmbedded = async (site) => {
+      try {
+        const { StartProxy } = await import("../../../wailsjs/go/main/App.js");
+        await StartProxy(PROXY_PORT);
+      } catch (_) {}
+      urlEl.textContent = site.url;
+      iframe.style.display = "";
+      iframe.src = PROXY_BASE + encodeURIComponent(site.url);
+      browserEl.style.display = "flex";
+      blockedEl.style.display = "none";
+    };
+
+    root.getElementById("ws-back").addEventListener("click", () => {
+      iframe.src = "";
+      browserEl.style.display = "none";
+    });
+    const openCurrent = () => { if (currentSite) window.open(currentSite.url, "_blank"); };
+    root.getElementById("ws-open").addEventListener("click", openCurrent);
+    root.getElementById("ws-open-fallback").addEventListener("click", openCurrent);
+
+    root.getElementById("ws-refresh").addEventListener("click", loadSites);
+
+    // ===== 右栏：JSON驱动的站点视图 =====
+    const showSiteView = (site) => {
+      searchResults.innerHTML = "";
+      creatorView.style.display = "none";
+
+      let html = "";
+
+      // 搜索框（如果有 searchUrl）
+      if (site.searchUrl) {
+        html +=
+          '<div style="padding:8px 12px 0;font-size:11px;font-weight:600;color:var(--txt)">🔍 ' +
+          this._esc(site.label) +
+          " 搜索</div>" +
+          '<div style="padding:4px 12px 6px;display:flex;gap:4px">' +
+          '<input class="ws-site-search" placeholder="输入搜索词..." style="flex:1;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">' +
+          '<button class="btn accent ws-site-search-btn" style="font-size:10px;padding:3px 8px">搜索</button>' +
+          "</div>";
+
+        // 预设搜索词
+        if (site.presetSearches && site.presetSearches.length) {
+          html +=
+            '<div style="padding:0 12px 4px;display:flex;gap:4px;flex-wrap:wrap">' +
+            site.presetSearches
+              .map(
+                (ps) =>
+                  '<button class="ws-preset-btn" data-q="' +
+                  this._esc(ps.q) +
+                  '" style="padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--accent);cursor:pointer;font-size:9px">' +
+                  this._esc(ps.label) +
+                  "</button>",
+              )
+              .join("") +
+            "</div>";
+        }
+      }
+
+      // 创作者列表
+      const platformCreators = allCreators.find((c) => c.platform === site.id);
+      const creators = platformCreators ? platformCreators.creators : [];
+
+      if (creators.length) {
+        html +=
+          '<div style="padding:6px 12px 4px;font-size:10px;font-weight:600;color:var(--txt)">🎨 活跃创作者</div>';
+        html += creators
+          .map(
+            (cr) =>
+              '<div class="ws-creator-card" data-url="' +
+              this._esc(cr.searchUrl || cr.url) +
+              '">' +
+              '<div class="ws-creator-icon">🎨</div>' +
+              '<div class="ws-creator-body">' +
+              '<div class="ws-creator-name">' +
+              this._esc(cr.name) +
+              "</div>" +
+              '<div class="ws-creator-desc">' +
+              this._esc(cr.desc) +
+              "</div>" +
+              "</div>" +
+              '<div class="ws-creator-action">↗</div>' +
+              "</div>",
+          )
+          .join("");
+      }
+
+      if (!html) {
+        html =
+          '<div style="padding:12px;color:var(--muted);font-size:10px">此站点无可操作内容。<br>点击「浏览器打开」访问：<br><a href="' +
+          this._esc(site.url) +
+          '" target="_blank" style="color:var(--accent)">' +
+          this._esc(site.url) +
+          "</a></div>";
+      }
+
+      searchResults.innerHTML = html;
+
+      // 站点搜索框回车/点击
+      const siteSearchInput = searchResults.querySelector(".ws-site-search");
+      const siteSearchBtn = searchResults.querySelector(".ws-site-search-btn");
+      if (siteSearchInput && siteSearchBtn && site.searchUrl) {
+        const doSiteSearch = () => {
+          const q = siteSearchInput.value.trim();
+          if (!q) return;
+          window.open(fillSearch(site.searchUrl, q), "_blank");
+        };
+        siteSearchBtn.addEventListener("click", doSiteSearch);
+        siteSearchInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") doSiteSearch();
+        });
+      }
+
+      // 预设搜索按钮
+      searchResults.querySelectorAll(".ws-preset-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (site.searchUrl) {
+            window.open(fillSearch(site.searchUrl, btn.dataset.q), "_blank");
+          }
+        });
+      });
+
+      // 创作者卡片
+      searchResults.querySelectorAll(".ws-creator-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          const url = card.dataset.url;
+          if (url) window.open(url, "_blank");
+        });
+      });
+    };
+
+    // ===== 全局搜索（默认视图） =====
+    const doGlobalSearch = () => {
+      const q = searchInput.value.trim();
+      creatorView.style.display = "none";
+
+      let html = '<div style="padding:4px 0;font-size:10px;color:var(--muted)">搜索结果将在此平台的搜索页打开</div>';
+
+      // 找到所有有 searchUrl 的站点
+      const sites = grid._wsSites || [];
+      const searchable = sites.filter((s) => s.searchUrl);
+      if (searchable.length) {
+        html +=
+          '<div style="font-size:10px;font-weight:600;color:var(--txt);padding:6px 0 4px">🔍 在以下平台搜索</div>';
+        searchable.forEach((s) => {
+          html +=
+            '<div class="ws-creator-card" data-searchurl="' +
+            this._esc(s.searchUrl) +
+            '" data-q="' +
+            this._esc(q || searchInput.value.trim()) +
+            '">' +
+            '<div class="ws-creator-icon">' +
+            (s.icon || "🔗") +
+            "</div>" +
+            '<div class="ws-creator-body"><div class="ws-creator-name">' +
+            this._esc(s.label) +
+            "</div>" +
+            '<div class="ws-creator-desc">搜索：' +
+            this._esc(q || "(空)") +
+            "</div></div>" +
+            '<div class="ws-creator-action">↗</div>' +
+            "</div>";
+        });
+      }
+
+      // 仓库作者匹配
+      const matchedRepo = q ? repoAuthors.filter((a) => a.toLowerCase().includes(q.toLowerCase())) : [];
+      if (matchedRepo.length) {
+        html +=
+          '<div style="font-size:10px;font-weight:600;color:var(--txt);padding:6px 0 4px">📦 本地仓库中的作者</div>';
+        matchedRepo.forEach((author) => {
+          html +=
+            '<div class="ws-creator-card" style="cursor:default">' +
+            '<div class="ws-creator-icon">📦</div>' +
+            '<div class="ws-creator-body"><div class="ws-creator-name">' +
+            this._esc(author) +
+            "</div></div></div>";
+        });
+      }
+
+      if (!searchable.length && !matchedRepo.length) {
+        html = '<div style="color:var(--muted);font-size:10px;padding:8px 0">未找到搜索平台</div>';
+      }
+
+      searchResults.innerHTML = html;
+
+      // 点击平台搜索卡片
+      searchResults.querySelectorAll(".ws-creator-card[data-searchurl]").forEach((card) => {
+        card.addEventListener("click", () => {
+          const tpl = card.dataset.searchurl;
+          const query = card.dataset.q;
+          if (tpl && query) {
+            window.open(fillSearch(tpl, query), "_blank");
+          }
+        });
+      });
+    };
+
+    searchBtn.addEventListener("click", doGlobalSearch);
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doGlobalSearch();
+    });
+
+    loadSites();
+  }
+
   _initRecycle() {
     const root = this._root;
     root
@@ -393,7 +916,7 @@ class AppContent extends HTMLElement {
           const size = e.Size ? this._fmtSize(e.Size) : "?";
           return `<div class="recy-item" style="display:flex;flex-direction:column;gap:2px;padding:5px 8px;border-radius:5px;background:var(--bg,#1e1e2e);font-size:11px">
 <div style="display:flex;align-items:center;gap:6px">
-<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt,#cdd6f4)" title="${this._esc(e.Path)}">${this._esc(name)}</span>
+<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt,#cdd6f4)" title="${this._esc(e.Path)}">${renderDisplayName(name)}</span>
 <span style="font-size:9px;color:var(--muted,#6c7086)">${size}</span>
 <button class="recy-restore" data-path="${this._esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--bd,#444);background:var(--surf,#2a2a42);color:var(--txt,#cdd6f4);cursor:pointer;font-size:9px">↩️ 恢复</button>
 <button class="recy-del" data-path="${this._esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid #e5534b;background:transparent;color:#e5534b;cursor:pointer;font-size:9px">🗑️ 删除</button>
@@ -634,6 +1157,32 @@ class AppContent extends HTMLElement {
             duration: 2000,
             type: "success",
           });
+        });
+
+      // 重置创意工坊
+      root
+        .getElementById("set-ws-reset")
+        ?.addEventListener("click", async () => {
+          const confirmed = await window.showConfirm?.(
+            "重置创意工坊配置将恢复默认站点列表并清空创作者数据，确定继续吗？",
+          );
+          if (!confirmed) return;
+          try {
+            const { ResetWorkshopConfigs } =
+              await import("../../../wailsjs/go/main/App.js");
+            const sites = await ResetWorkshopConfigs();
+            bus.emit("toast:show", {
+              msg: `✅ 已重置 ${sites.length} 个默认站点，workshop_creators/ 已清空`,
+              duration: 4000,
+              type: "success",
+            });
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: `❌ 重置失败: ${String(e)}`,
+              duration: 5000,
+              type: "error",
+            });
+          }
         });
     } catch (e) {
       console.error("[settings] 初始化失败:", e);

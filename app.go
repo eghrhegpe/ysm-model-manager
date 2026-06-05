@@ -102,6 +102,135 @@ func (a *App) LoadAppConfig() types.AppConfig {
 	json.Unmarshal(data, &cfg)
 	return cfg
 }
+
+// ========== 创意工坊站点配置 ==========
+func workshopSitesPath() string {
+	exe, _ := os.Executable()
+	return filepath.Join(filepath.Dir(exe), "workshop_sites.json")
+}
+
+func (a *App) LoadWorkshopSites() []types.WorkshopSite {
+	data, err := os.ReadFile(workshopSitesPath())
+	if err != nil {
+		return defaultWorkshopSites()
+	}
+	var sites []types.WorkshopSite
+	if err := json.Unmarshal(data, &sites); err != nil {
+		return defaultWorkshopSites()
+	}
+	return sites
+}
+
+func (a *App) SaveWorkshopSites(sites []types.WorkshopSite) error {
+	data, err := json.MarshalIndent(sites, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(workshopSitesPath(), data, 0644)
+}
+
+func defaultWorkshopSites() []types.WorkshopSite {
+	return []types.WorkshopSite{
+		{
+			ID: "bilibili", Icon: "📺", Label: "B站", URL: "https://www.bilibili.com/",
+			Desc: "搜索模型创作者和模型展示", Group: "search",
+			SearchURL: "https://search.bilibili.com/all?keyword={{q}}",
+			PresetSearches: []types.WorkshopPresetSearch{
+				{Label: "免费模型", Q: "ysm模型免费分享"},
+				{Label: "付费模型", Q: "ysm模型展示"},
+			},
+		},
+		{
+			ID: "afdian", Icon: "❤️", Label: "爱发电", URL: "https://afdian.com/",
+			Desc: "赞助创作者平台", Group: "search",
+			SearchURL: "https://afdian.com/search?q={{q}}",
+			PresetSearches: []types.WorkshopPresetSearch{
+				{Label: "作者搜索", Q: "碎de帆"},
+				{Label: "付费模型", Q: "YSM"},
+			},
+		},
+		{
+			ID: "github", Icon: "🐙", Label: "GitHub", URL: "https://github.com/",
+			Desc: "免费模型仓库（前置）", Group: "repo",
+			SearchURL: "https://github.com/search?q={{q}}",
+		},
+		{
+			ID: "mcmod", Icon: "📖", Label: "MC百科", URL: "https://www.mcmod.cn/",
+			Desc: "模组与模型百科", Group: "browse",
+		},
+		{
+			ID: "curseforge", Icon: "🔥", Label: "CurseForge", URL: "https://www.curseforge.com/minecraft",
+			Desc: "全球 MC 资源站（无法下载YSM）", Group: "browse",
+		},
+		{
+			ID: "modrinth", Icon: "💎", Label: "Modrinth", URL: "https://modrinth.com/",
+			Desc: "开源 MC 平台（无法下载YSM）", Group: "browse",
+		},
+	}
+}
+
+// ========== 创意工坊创作者配置（按文件拆分） ==========
+func workshopCreatorsDir() string {
+	exe, _ := os.Executable()
+	return filepath.Join(filepath.Dir(exe), "workshop_creators")
+}
+
+func (a *App) LoadWorkshopCreators() []types.PlatformCreators {
+	dir := workshopCreatorsDir()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var result []types.PlatformCreators
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		platform := strings.TrimSuffix(e.Name(), ".json")
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		var creators []types.WorkshopCreator
+		if err := json.Unmarshal(data, &creators); err != nil {
+			continue
+		}
+		result = append(result, types.PlatformCreators{
+			Platform: platform,
+			Creators: creators,
+		})
+	}
+	return result
+}
+
+func (a *App) SaveWorkshopCreators(list []types.PlatformCreators) error {
+	dir := workshopCreatorsDir()
+	os.MkdirAll(dir, 0755)
+	for _, pc := range list {
+		data, err := json.MarshalIndent(pc.Creators, "", "  ")
+		if err != nil {
+			return err
+		}
+		path := filepath.Join(dir, pc.Platform+".json")
+		if err := os.WriteFile(path, data, 0644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ResetWorkshopConfigs 重置创意工坊配置为默认值
+func (a *App) ResetWorkshopConfigs() ([]types.WorkshopSite, error) {
+	sites := defaultWorkshopSites()
+	data, _ := json.MarshalIndent(sites, "", "  ")
+	if err := os.WriteFile(workshopSitesPath(), data, 0644); err != nil {
+		return nil, err
+	}
+	// 清空创作者文件夹
+	os.RemoveAll(workshopCreatorsDir())
+	return sites, nil
+}
+
 // ========== 窗口状态 ==========
 func (a *App) SaveWindowPosition(x, y, width, height int) {
 	state := types.WindowState{X: x, Y: y, Width: width, Height: height}
@@ -215,6 +344,34 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 
 func (a *App) ScanCustomModels(dir string) []types.ModelEntry {
 	return a.ScanModelEntries(strings.TrimSpace(dir))
+}
+
+// ListModelAuthors 扫描仓库，提取所有唯一作者名
+func (a *App) ListModelAuthors() []string {
+	if a.RepoRoot == "" {
+		return nil
+	}
+	entries := a.ScanModelEntries(a.RepoRoot)
+	seen := map[string]bool{}
+	var result []string
+	for _, e := range entries {
+		name := e.Name
+		// 移除 .ban 后缀
+		if strings.HasSuffix(strings.ToLower(name), ".ban") {
+			name = name[:len(name)-4]
+		}
+		// 提取 [Author]
+		if strings.HasPrefix(name, "[") {
+			if idx := strings.Index(name, "]"); idx > 0 {
+				author := name[1:idx]
+				if author != "" && !seen[author] {
+					seen[author] = true
+					result = append(result, author)
+				}
+			}
+		}
+	}
+	return result
 }
 
 // ========== 整合包 ==========
@@ -348,6 +505,27 @@ func (a *App) RemoveDir(dir string) error {
 		return fmt.Errorf("目录名为空")
 	}
 	return os.Remove(dir)
+}
+
+// RenameFile 重命名仓库内的模型文件
+func (a *App) RenameFile(oldPath, newName string) error {
+	oldPath = strings.TrimSpace(oldPath)
+	newName = strings.TrimSpace(newName)
+	if oldPath == "" || newName == "" {
+		return fmt.Errorf("参数为空")
+	}
+	// 防路径穿越
+	if strings.Contains(newName, "..") || strings.ContainsAny(newName, "\\/") {
+		return fmt.Errorf("名称不能包含路径分隔符")
+	}
+	if !strings.HasPrefix(filepath.Clean(oldPath), filepath.Clean(a.RepoRoot)+string(filepath.Separator)) {
+		return fmt.Errorf("只能在仓库根目录下操作")
+	}
+	newPath := filepath.Join(filepath.Dir(oldPath), newName)
+	if _, err := os.Stat(newPath); err == nil {
+		return fmt.Errorf("目标文件名已存在")
+	}
+	return os.Rename(oldPath, newPath)
 }
 
 // 移动仓库内的模型文件（拖拽移动用）

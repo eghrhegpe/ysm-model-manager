@@ -36,7 +36,7 @@ export function bindCardEvents(root, instances) {
       if (pkg) {
         bus.emit("package:selected", pkg);
         try {
-          localStorage.setItem("sb_selectedIdx", idx);
+          localStorage.setItem("sb_selectedName", pkg.name);
         } catch (_) {}
       }
     };
@@ -66,10 +66,10 @@ export function bindCardEvents(root, instances) {
 /** 根据 localStorage 选中最匹配的整合包 */
 function restoreSelectedCard(root, instances) {
   try {
-    const idx = parseInt(localStorage.getItem("sb_selectedIdx"), 10);
-    if (isNaN(idx) || idx < 0 || idx >= instances.length) return;
-    const vc = root.querySelector(`.vc[data-idx="${idx}"]`);
-    if (!vc) return;
+    const savedName = localStorage.getItem("sb_selectedName");
+    if (!savedName) return;
+    const idx = instances.findIndex((i) => i.name === savedName);
+    if (idx < 0) return;
     const hdr = vc.querySelector(".vc-header");
     const body = vc.nextElementSibling;
     if (hdr && body && body.classList.contains("vc-body")) {
@@ -93,17 +93,25 @@ export function bindSearch(root, vm) {
   }
 }
 
-// 绑定底部按钮
+// 绑定底部按钮 + 路径显示
 export function bindFooter(root, instances) {
   const btn = root.getElementById("btn-mc");
   if (btn) {
     btn.onclick = () => bus.emit("dir:select-mc");
+    (async () => {
+      try {
+        const { LoadAppConfig } =
+          await import("../../../wailsjs/go/main/App.js");
+        const cfg = await LoadAppConfig();
+        btn.textContent = cfg.mcRoot || "" ? `🎮 ${cfg.mcRoot}` : "🎮 未设置";
+      } catch {
+        btn.textContent = "🎮 未设置";
+      }
+    })();
   }
 
-  // 更新统计数据
   const statIns = root.getElementById("stat-ins");
   const statPending = root.getElementById("stat-pending");
-
   (async () => {
     if (!instances || !instances.length) return;
     let totalPending = 0;

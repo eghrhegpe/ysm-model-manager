@@ -327,10 +327,13 @@ class AppContent extends HTMLElement {
     const root = this._root;
     const dropZone = root.getElementById("dl-drop");
     const fileInput = root.getElementById("dl-file-input");
+    const importedList = root.getElementById("dl-imported-list");
+    const dlCount = root.getElementById("dl-count");
     // 存储当前文件信息
     let currentFile = null;
     let currentBase64 = null;
     let currentFileName = null;
+    const imported = []; // { name, time }
 
     const showForm = (file, base64) => {
       currentFile = file;
@@ -475,6 +478,13 @@ class AppContent extends HTMLElement {
           type: "success",
         });
 
+        // 加入已导入列表
+        imported.unshift({
+          name: newName,
+          time: new Date().toLocaleTimeString(),
+        });
+        renderImportedList();
+
         // 重置表单
         currentFile = null;
         currentBase64 = null;
@@ -489,6 +499,76 @@ class AppContent extends HTMLElement {
         });
       }
     });
+
+    // 渲染已导入列表
+    const renderImportedList = () => {
+      if (!imported.length) {
+        importedList.innerHTML =
+          '<div style="padding:6px 4px;font-size:10px;color:var(--muted)">暂无导入记录</div>';
+        dlCount.textContent = "0 个文件";
+        return;
+      }
+      dlCount.textContent = imported.length + " 个文件";
+      importedList.innerHTML = imported
+        .map(
+          (item, i) =>
+            '<div style="display:flex;align-items:center;gap:4px;padding:3px 4px;border-radius:4px;font-size:10px">' +
+            '<span style="color:var(--muted);flex-shrink:0">' +
+            item.time +
+            "</span>" +
+            '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
+            this._esc(item.name) +
+            "</span>" +
+            '<button class="dl-reimport" data-name="' +
+            this._esc(item.name) +
+            '" style="padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">✂️ 重命名</button>' +
+            "</div>",
+        )
+        .join("");
+
+      importedList.querySelectorAll(".dl-reimport").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const name = btn.dataset.name;
+          const { showRenameDialog } = await import("../../dialogs/rename.js");
+          const { RenameFile, LoadAppConfig } =
+            await import("../../../wailsjs/go/main/App.js");
+          const cfg = await LoadAppConfig();
+          const repoRoot = cfg.repoRoot || "";
+          // 在仓库中查找文件路径
+          const fullPath = repoRoot + "\\" + name;
+          const newName = await showRenameDialog(fullPath, name);
+          if (!newName) return;
+          try {
+            await RenameFile(fullPath, newName);
+            // 更新列表中的名称
+            const idx = imported.findIndex((it) => it.name === name);
+            if (idx >= 0) imported[idx].name = newName;
+            renderImportedList();
+            bus.emit("stats:refresh");
+            bus.emit("tree:reload");
+            bus.emit("toast:show", {
+              msg: "✅ 已重命名: " + newName,
+              duration: 3000,
+              type: "success",
+            });
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ 重命名失败: " + String(e),
+              duration: 5000,
+              type: "error",
+            });
+          }
+        });
+      });
+    };
+
+    // 清空列表
+    root.getElementById("dl-clear-list")?.addEventListener("click", () => {
+      imported.length = 0;
+      renderImportedList();
+    });
+
+    renderImportedList();
   }
 
   _initWorkshop() {
@@ -518,7 +598,8 @@ class AppContent extends HTMLElement {
     };
 
     // 替换 {{q}} 为查询词
-    const fillSearch = (tpl, q) => tpl.replace(/\{\{q\}\}/g, encodeURIComponent(q));
+    const fillSearch = (tpl, q) =>
+      tpl.replace(/\{\{q\}\}/g, encodeURIComponent(q));
 
     // 加载数据
     const loadSites = async () => {
@@ -590,7 +671,9 @@ class AppContent extends HTMLElement {
 
       grid.querySelectorAll(".ws-card").forEach((card) => {
         card.addEventListener("click", () => {
-          grid.querySelectorAll(".ws-card").forEach((c) => c.classList.remove("active"));
+          grid
+            .querySelectorAll(".ws-card")
+            .forEach((c) => c.classList.remove("active"));
           card.classList.add("active");
           const idx = parseInt(card.dataset.index, 10);
           const sitesData = grid._wsSites;
@@ -610,7 +693,9 @@ class AppContent extends HTMLElement {
       popup.style.top = rect.bottom + 4 + "px";
       popup.style.left = Math.max(4, rect.left) + "px";
     };
-    const hidePopup = () => { popup.style.display = "none"; };
+    const hidePopup = () => {
+      popup.style.display = "none";
+    };
 
     popup.querySelectorAll(".ws-popup-item").forEach((item) => {
       item.addEventListener("click", () => {
@@ -626,7 +711,8 @@ class AppContent extends HTMLElement {
     });
 
     root.addEventListener("click", (e) => {
-      if (!e.target.closest(".ws-popup") && !e.target.closest(".ws-card")) hidePopup();
+      if (!e.target.closest(".ws-popup") && !e.target.closest(".ws-card"))
+        hidePopup();
     });
 
     // 内嵌浏览
@@ -648,9 +734,13 @@ class AppContent extends HTMLElement {
       iframe.src = "";
       browserEl.style.display = "none";
     });
-    const openCurrent = () => { if (currentSite) window.open(currentSite.url, "_blank"); };
+    const openCurrent = () => {
+      if (currentSite) window.open(currentSite.url, "_blank");
+    };
     root.getElementById("ws-open").addEventListener("click", openCurrent);
-    root.getElementById("ws-open-fallback").addEventListener("click", openCurrent);
+    root
+      .getElementById("ws-open-fallback")
+      .addEventListener("click", openCurrent);
 
     root.getElementById("ws-refresh").addEventListener("click", loadSites);
 
@@ -767,7 +857,8 @@ class AppContent extends HTMLElement {
       const q = searchInput.value.trim();
       creatorView.style.display = "none";
 
-      let html = '<div style="padding:4px 0;font-size:10px;color:var(--muted)">搜索结果将在此平台的搜索页打开</div>';
+      let html =
+        '<div style="padding:4px 0;font-size:10px;color:var(--muted)">搜索结果将在此平台的搜索页打开</div>';
 
       // 找到所有有 searchUrl 的站点
       const sites = grid._wsSites || [];
@@ -797,7 +888,9 @@ class AppContent extends HTMLElement {
       }
 
       // 仓库作者匹配
-      const matchedRepo = q ? repoAuthors.filter((a) => a.toLowerCase().includes(q.toLowerCase())) : [];
+      const matchedRepo = q
+        ? repoAuthors.filter((a) => a.toLowerCase().includes(q.toLowerCase()))
+        : [];
       if (matchedRepo.length) {
         html +=
           '<div style="font-size:10px;font-weight:600;color:var(--txt);padding:6px 0 4px">📦 本地仓库中的作者</div>';
@@ -812,21 +905,24 @@ class AppContent extends HTMLElement {
       }
 
       if (!searchable.length && !matchedRepo.length) {
-        html = '<div style="color:var(--muted);font-size:10px;padding:8px 0">未找到搜索平台</div>';
+        html =
+          '<div style="color:var(--muted);font-size:10px;padding:8px 0">未找到搜索平台</div>';
       }
 
       searchResults.innerHTML = html;
 
       // 点击平台搜索卡片
-      searchResults.querySelectorAll(".ws-creator-card[data-searchurl]").forEach((card) => {
-        card.addEventListener("click", () => {
-          const tpl = card.dataset.searchurl;
-          const query = card.dataset.q;
-          if (tpl && query) {
-            window.open(fillSearch(tpl, query), "_blank");
-          }
+      searchResults
+        .querySelectorAll(".ws-creator-card[data-searchurl]")
+        .forEach((card) => {
+          card.addEventListener("click", () => {
+            const tpl = card.dataset.searchurl;
+            const query = card.dataset.q;
+            if (tpl && query) {
+              window.open(fillSearch(tpl, query), "_blank");
+            }
+          });
         });
-      });
     };
 
     searchBtn.addEventListener("click", doGlobalSearch);
@@ -1182,6 +1278,177 @@ class AppContent extends HTMLElement {
               duration: 5000,
               type: "error",
             });
+          }
+        });
+
+      // ===== CSV 导出/导入（创意工坊）=====
+      const csvDownload = (content, filename) => {
+        // WPS/Excel 友好：加 BOM 让中文正常显示
+        const bom = "\uFEFF";
+        const blob = new Blob([bom + content], {
+          type: "text/csv;charset=utf-8",
+        });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      };
+
+      const csvUpload = async () => {
+        return new Promise((resolve) => {
+          const inp = document.createElement("input");
+          inp.type = "file";
+          inp.accept = ".csv";
+          inp.onchange = async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) {
+              resolve("");
+              return;
+            }
+            const text = await file.text();
+            resolve(text);
+          };
+          inp.click();
+        });
+      };
+
+      root
+        .getElementById("set-ws-export")
+        ?.addEventListener("click", async () => {
+          try {
+            const { ExportWorkshopSitesCSVFile } =
+              await import("../../../wailsjs/go/main/App.js");
+            const path = await ExportWorkshopSitesCSVFile();
+            bus.emit("toast:show", {
+              msg: "📤 已导出到: " + path,
+              duration: 3000,
+              type: "success",
+            });
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ 导出失败: " + String(e),
+              duration: 4000,
+              type: "error",
+            });
+          }
+        });
+
+      root
+        .getElementById("set-ws-import")
+        ?.addEventListener("click", async () => {
+          try {
+            const { ImportWorkshopSitesCSVFile } =
+              await import("../../../wailsjs/go/main/App.js");
+            const count = await ImportWorkshopSitesCSVFile();
+            bus.emit("toast:show", {
+              msg: `✅ 已从 CSV 导入 ${count} 个站点`,
+              duration: 3000,
+              type: "success",
+            });
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ 导入失败: " + String(e),
+              duration: 4000,
+              type: "error",
+            });
+          }
+        });
+
+      root
+        .getElementById("set-cr-export")
+        ?.addEventListener("click", async () => {
+          try {
+            const { ExportWorkshopCreatorsCSVFile } =
+              await import("../../../wailsjs/go/main/App.js");
+            const path = await ExportWorkshopCreatorsCSVFile();
+            bus.emit("toast:show", {
+              msg: "📤 已导出到: " + path,
+              duration: 3000,
+              type: "success",
+            });
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ 导出失败: " + String(e),
+              duration: 4000,
+              type: "error",
+            });
+          }
+        });
+
+      root
+        .getElementById("set-cr-import")
+        ?.addEventListener("click", async () => {
+          try {
+            const { ImportWorkshopCreatorsCSVFile } =
+              await import("../../../wailsjs/go/main/App.js");
+            const count = await ImportWorkshopCreatorsCSVFile();
+            bus.emit("toast:show", {
+              msg: `✅ 已从 CSV 导入 ${count} 个创作者`,
+              duration: 3000,
+              type: "success",
+            });
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ 导入失败: " + String(e),
+              duration: 4000,
+              type: "error",
+            });
+          }
+        });
+
+      // 显示版本号
+      const showVersion = async () => {
+        try {
+          const { CurrentVersion } =
+            await import("../../../wailsjs/go/main/App.js");
+          const ver = await CurrentVersion();
+          const el = root.getElementById("set-version");
+          if (el) el.textContent = ver;
+        } catch {}
+      };
+      showVersion();
+
+      // 检查更新
+      root
+        .getElementById("set-check-update")
+        ?.addEventListener("click", async () => {
+          const btn = root.getElementById("set-check-update");
+          btn.textContent = "⏳ 检查中...";
+          btn.disabled = true;
+          try {
+            const { CheckUpdate, DownloadUpdate, ApplyUpdate, CurrentVersion } =
+              await import("../../../wailsjs/go/main/App.js");
+            const info = await CheckUpdate();
+            if (!info.available) {
+              bus.emit("toast:show", {
+                msg: `✅ 已是最新版本 (${info.current})`,
+                duration: 3000,
+                type: "success",
+              });
+              return;
+            }
+            const confirmed = await window.showConfirm?.(
+              `发现新版本 ${info.latest}（当前 ${info.current}）\n是否下载并更新？`,
+            );
+            if (!confirmed) return;
+            btn.textContent = "⬇️ 下载中...";
+            const zipPath = await DownloadUpdate(info.url);
+            btn.textContent = "🔄 更新中...";
+            await ApplyUpdate(zipPath);
+            // 触发应用重启
+            setTimeout(() => {
+              window.close?.();
+            }, 1000);
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: `❌ 更新失败: ${String(e)}`,
+              duration: 5000,
+              type: "error",
+            });
+          } finally {
+            btn.textContent = "🔄 检查更新";
+            btn.disabled = false;
           }
         });
     } catch (e) {

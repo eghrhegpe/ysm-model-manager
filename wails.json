@@ -63,6 +63,18 @@
     "ResetWorkshopConfigs",
     "StartProxy",
     "StopProxy",
-    "IsProxyRunning"
+    "IsProxyRunning",
+    "CurrentVersion",
+    "CheckUpdate",
+    "DownloadUpdate",
+    "ApplyUpdate",
+    "ExportWorkshopSitesCSV",
+    "ExportWorkshopSitesCSVFile",
+    "ImportWorkshopSitesCSV",
+    "ImportWorkshopSitesCSVFile",
+    "ExportWorkshopCreatorsCSV",
+    "ExportWorkshopCreatorsCSVFile",
+    "ImportWorkshopCreatorsCSV",
+    "ImportWorkshopCreatorsCSVFile"
   ]
 }

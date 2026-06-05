@@ -270,6 +270,29 @@ export namespace types {
 
 }
 
+export namespace updater {
+	
+	export class UpdateInfo {
+	    available: boolean;
+	    latest: string;
+	    current: string;
+	    url: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.available = source["available"];
+	        this.latest = source["latest"];
+	        this.current = source["current"];
+	        this.url = source["url"];
+	    }
+	}
+
+}
+
 export namespace ysm {
 	
 	export class AnimGroup {

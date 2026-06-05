@@ -31,5 +31,29 @@
   { "name": "白蛤蜊", "desc": "Alice In Cradle、OC", "type": "bilibili" },
   { "name": "苏溟0w0", "desc": "VUP、原创、自设", "type": "bilibili" },
   { "name": "爱吃园田海味", "desc": "东方project", "type": "bilibili" },
-  { "name": "YSM模型仓库", "desc": "GitHub 模型仓库", "type": "github" }
+  {
+    "name": "eghrhegpe/YSM-Model-Workshop",
+    "desc": "YSM-Model-Manager 整合仓库，141个模型",
+    "type": "github"
+  },
+  {
+    "name": "HSOS6/YSM-model",
+    "desc": "800+ YSM模型，来源于网络，仅学习使用",
+    "type": "github"
+  },
+  {
+    "name": "OrangeMiracle/winefox-ysm-models",
+    "desc": "工程师酒狐·黄铜工坊修会 YSM角色模型",
+    "type": "github"
+  },
+  {
+    "name": "dudu-ke/ysm-share",
+    "desc": "分享YSM模型，模型来自网络，侵删",
+    "type": "github"
+  },
+  {
+    "name": "Elaina69/Yes-Steve-Model-Repo",
+    "desc": "Elaina69收集的YSM模型，免费使用",
+    "type": "github"
+  }
 ]

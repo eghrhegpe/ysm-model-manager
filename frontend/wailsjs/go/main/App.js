@@ -54,6 +54,10 @@ export function DeleteFromRecycle(arg1) {
   return window['go']['main']['App']['DeleteFromRecycle'](arg1);
 }
 
+export function DownloadFromGitHub(arg1, arg2) {
+  return window['go']['main']['App']['DownloadFromGitHub'](arg1, arg2);
+}
+
 export function DownloadUpdate(arg1) {
   return window['go']['main']['App']['DownloadUpdate'](arg1);
 }
@@ -80,6 +84,10 @@ export function ExtractYSMHeader(arg1) {
 
 export function ExtractYsmSummary(arg1) {
   return window['go']['main']['App']['ExtractYsmSummary'](arg1);
+}
+
+export function GenerateRepoIndex(arg1) {
+  return window['go']['main']['App']['GenerateRepoIndex'](arg1);
 }
 
 export function GetGlobalCustomDir(arg1) {

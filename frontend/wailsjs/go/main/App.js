@@ -14,6 +14,10 @@ export function ApplyUpdate(arg1) {
   return window['go']['main']['App']['ApplyUpdate'](arg1);
 }
 
+export function BackupWorkshopCreators() {
+  return window['go']['main']['App']['BackupWorkshopCreators']();
+}
+
 export function CheckFileExists(arg1) {
   return window['go']['main']['App']['CheckFileExists'](arg1);
 }
@@ -58,20 +62,20 @@ export function EmptyRecycleBin(arg1) {
   return window['go']['main']['App']['EmptyRecycleBin'](arg1);
 }
 
-export function ExportWorkshopCreatorsCSV() {
-  return window['go']['main']['App']['ExportWorkshopCreatorsCSV']();
-}
-
-export function ExportWorkshopCreatorsCSVFile() {
-  return window['go']['main']['App']['ExportWorkshopCreatorsCSVFile']();
+export function ExportWorkshopCreatorsJSONFile() {
+  return window['go']['main']['App']['ExportWorkshopCreatorsJSONFile']();
 }
 
 export function ExportWorkshopSitesCSV() {
   return window['go']['main']['App']['ExportWorkshopSitesCSV']();
 }
 
-export function ExportWorkshopSitesCSVFile() {
-  return window['go']['main']['App']['ExportWorkshopSitesCSVFile']();
+export function ExportWorkshopSitesJSONFile() {
+  return window['go']['main']['App']['ExportWorkshopSitesJSONFile']();
+}
+
+export function ExtractYSMHeader(arg1) {
+  return window['go']['main']['App']['ExtractYSMHeader'](arg1);
 }
 
 export function ExtractYsmSummary(arg1) {
@@ -110,20 +114,12 @@ export function ImportModelFile(arg1, arg2) {
   return window['go']['main']['App']['ImportModelFile'](arg1, arg2);
 }
 
-export function ImportWorkshopCreatorsCSV(arg1) {
-  return window['go']['main']['App']['ImportWorkshopCreatorsCSV'](arg1);
-}
-
-export function ImportWorkshopCreatorsCSVFile() {
-  return window['go']['main']['App']['ImportWorkshopCreatorsCSVFile']();
-}
-
 export function ImportWorkshopSitesCSV(arg1) {
   return window['go']['main']['App']['ImportWorkshopSitesCSV'](arg1);
 }
 
-export function ImportWorkshopSitesCSVFile() {
-  return window['go']['main']['App']['ImportWorkshopSitesCSVFile']();
+export function ImportWorkshopSitesJSONFile() {
+  return window['go']['main']['App']['ImportWorkshopSitesJSONFile']();
 }
 
 export function InstallModelFile(arg1, arg2) {
@@ -178,6 +174,10 @@ export function LoadWorkshopSites() {
   return window['go']['main']['App']['LoadWorkshopSites']();
 }
 
+export function MergeWorkshopCreatorsFromJSON(arg1) {
+  return window['go']['main']['App']['MergeWorkshopCreatorsFromJSON'](arg1);
+}
+
 export function MoveModelFile(arg1, arg2) {
   return window['go']['main']['App']['MoveModelFile'](arg1, arg2);
 }
@@ -208,6 +208,10 @@ export function RenameDir(arg1, arg2) {
 
 export function RenameFile(arg1, arg2) {
   return window['go']['main']['App']['RenameFile'](arg1, arg2);
+}
+
+export function ReplaceWorkshopCreatorsFromJSON(arg1) {
+  return window['go']['main']['App']['ReplaceWorkshopCreatorsFromJSON'](arg1);
 }
 
 export function ResetWorkshopConfigs() {

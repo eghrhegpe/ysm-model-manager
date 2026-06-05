@@ -55,6 +55,7 @@
     "RelinkCustomDir",
     "AnalyzeYSMModel",
     "ExtractYsmSummary",
+    "ExtractYSMHeader",
     "LoadWorkshopSites",
     "SaveWorkshopSites",
     "LoadWorkshopCreators",
@@ -68,13 +69,12 @@
     "CheckUpdate",
     "DownloadUpdate",
     "ApplyUpdate",
-    "ExportWorkshopSitesCSV",
-    "ExportWorkshopSitesCSVFile",
-    "ImportWorkshopSitesCSV",
-    "ImportWorkshopSitesCSVFile",
-    "ExportWorkshopCreatorsCSV",
-    "ExportWorkshopCreatorsCSVFile",
-    "ImportWorkshopCreatorsCSV",
-    "ImportWorkshopCreatorsCSVFile"
+    "ExportWorkshopSitesJSONFile",
+    "ImportWorkshopSitesJSONFile",
+    "ExportWorkshopCreatorsJSONFile",
+    "ImportWorkshopCreatorsJSONFile",
+    "BackupWorkshopCreators",
+    "MergeWorkshopCreatorsFromJSON",
+    "ReplaceWorkshopCreatorsFromJSON"
   ]
 }

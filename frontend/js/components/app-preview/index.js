@@ -78,10 +78,13 @@ class AppPreview extends HTMLElement {
   async _showModelDetail(path) {
     this._root.innerHTML = `<div class="content" id="preview-content"><h3>📄 模型信息</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">正在解析模型文件...</div></div></div>`;
     try {
-      const { ExtractYsmSummary } =
+      const { ExtractYsmSummary, ExtractYSMHeader } =
         await import("../../../wailsjs/go/main/App.js");
-      const summary = await ExtractYsmSummary(path);
-      this._root.innerHTML = summaryCardHTML(summary);
+      const [summary, header] = await Promise.all([
+        ExtractYsmSummary(path),
+        ExtractYSMHeader(path),
+      ]);
+      this._root.innerHTML = summaryCardHTML(summary, header);
     } catch (err) {
       this._root.innerHTML = modelDetailHTML({
         hasError: true,

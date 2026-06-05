@@ -15,8 +15,8 @@ export function footerHTML() {
 <div class="footer-stats" id="footer-stats">
   <span class="stat-item" id="stat-ins">📂 整合包: -</span>
   <span class="stat-item" id="stat-pending">🔄 待处理: -</span>
+  <button class="footer-btn" id="btn-mc" style="margin-left:auto;font-size:10px;padding:2px 8px;width:auto;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="点击选择游戏目录">🎮 未设置</button>
 </div>
-<button class="footer-btn" id="btn-mc">🎮 指定游戏路径</button>
 </div>`;
 }
 
@@ -71,7 +71,7 @@ export function rowHTML(
 ) {
   const linkIcon = linkType ? `<span class="link-icon">${linkType}</span>` : "";
   const pathAttr = path ? ` data-path="${esc(path)}"` : "";
-  return `<div class="row ${extraCls}${rowCls}" data-name="${esc(name)}"${pathAttr}><span class="dot" style="background:${dotColor}"></span><span class="rn">${esc(name)}</span>${linkIcon}<span class="sz">${size}</span>${btnHtml}</div>`;
+  return `<div class="row ${extraCls}${rowCls}" data-name="${esc(name)}"${pathAttr}><span class="dot" style="background:${dotColor}"></span><span class="rn">${name}</span>${linkIcon}<span class="sz">${size}</span>${btnHtml}</div>`;
 }
 
 function esc(s) {

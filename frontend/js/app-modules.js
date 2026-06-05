@@ -19,7 +19,6 @@ import "./components/app-toast.js";
 
 // ===== 全局右键菜单映射 =====
 // 将 ctx:show 事件转换为新版组件使用的 menu:show 事件
-import { ToggleModelEnable, AnalyzeYSMModel } from "../wailsjs/go/main/App.js";
 
 bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
   if (type === "instance") {
@@ -69,29 +68,27 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
       y,
       items: [
         {
-          label: banned ? "启用" : "禁用",
-          icon: banned ? "✅" : "⛔",
+          label: "重命名",
+          icon: "✂️",
           onClick: async () => {
             try {
-              await ToggleModelEnable(path);
-              bus.emit("stats:refresh");
+              const { showRenameDialog } = await import("./dialogs/rename.js");
+              const fileName = path.split(/[/\\]/).pop();
+              const newName = await showRenameDialog(path, fileName);
+              if (!newName) return;
+              const { RenameFile } = await import("../wailsjs/go/main/App.js");
+              await RenameFile(path, newName);
               const tree = document.querySelector("app-tree");
               if (tree) {
                 await tree._load();
                 tree._renderTree();
               }
-            } catch (_) {}
-          },
-        },
-        {
-          label: "模型详情",
-          icon: "📄",
-          onClick: async () => {
-            try {
-              const meta = await AnalyzeYSMModel(path);
-              bus.emit("model:select", { path, meta });
-            } catch (_) {
-              bus.emit("model:select", { path });
+            } catch (e) {
+              bus.emit("toast:show", {
+                msg: "❌ 重命名失败: " + String(e),
+                duration: 4000,
+                type: "error",
+              });
             }
           },
         },

@@ -506,7 +506,8 @@ class AppContent extends HTMLElement {
         const appModule = skipCheck
           ? await import("../../../wailsjs/go/main/App.js")
           : await import("../../../wailsjs/go/main/App.js");
-        const { LoadAppConfig, ImportModelFile, ImportModelFileSkipCheck } = appModule;
+        const { LoadAppConfig, ImportModelFile, ImportModelFileSkipCheck } =
+          appModule;
         const cfg = await LoadAppConfig();
         const repoRoot = cfg.repoRoot || "";
         if (!repoRoot) {
@@ -1012,7 +1013,7 @@ class AppContent extends HTMLElement {
           btn.textContent = "⏳";
           try {
             const ctrl = new AbortController();
-            const tmr = setTimeout(() => ctrl.abort(), 6000);
+            const tmr = setTimeout(() => ctrl.abort(), 20000);
             const resp = await fetch(indexURL, { signal: ctrl.signal });
             clearTimeout(tmr);
             if (!resp.ok) throw new Error("HTTP " + resp.status);
@@ -1029,15 +1030,16 @@ class AppContent extends HTMLElement {
             // 切换到模型列表视图
             showRepoModels(repo, models);
           } catch (e) {
-            // 无 index.json → 标记为不可用，同时打开 GitHub 页面让用户手动浏览
-            btn.textContent = "❌ 无索引";
+            const isTimeout = e?.name === "AbortError";
+            btn.textContent = isTimeout ? "⏱️ 超时" : "❌ 无索引";
             btn.style.color = "var(--muted)";
             btn.style.cursor = "default";
-            bus.emit("toast:show", {
-              msg: "📦 " + repo + " 没有 index.json，已在浏览器中打开仓库",
-              duration: 5000,
-              type: "warn",
-            });
+            const msg = isTimeout
+              ? "⏱️ " +
+                repo +
+                " 链接超时（raw.githubusercontent.com 可能被屏蔽），已在浏览器中打开仓库"
+              : "📦 " + repo + " 没有 index.json，已在浏览器中打开仓库";
+            bus.emit("toast:show", { msg, duration: 6000, type: "warn" });
             window.open("https://github.com/" + repo, "_blank");
           }
         });

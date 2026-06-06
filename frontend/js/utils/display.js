@@ -3,12 +3,14 @@
 /**
  * 解析模型文件名 → 结构化字段
  * 支持格式: [作者]【作品】角色变体2023-05.ysm
+ * 也兼容: [作者]《作品》角色变体2023-05.ysm
  */
 export function parseModelName(raw) {
   const name = raw.endsWith(".ban") ? raw.slice(0, -4) : raw;
   const extMatch = name.match(/\.(\w+)$/);
-  const aMatch = name.match(/^\[([^\]]+?)\]/);
-  const wMatch = name.match(/【([^】]+?)】/);
+  const aMatch =
+    name.match(/^\[\[([^\]]+?)\]\]/) || name.match(/^\[([^\]]+?)\]/);
+  const wMatch = name.match(/【([^】]+?)】/) || name.match(/《([^》]+?)》/);
   const dMatch = name.match(/(\d{4})[-_.]?(\d{1,2})?/);
 
   const author = (aMatch ? aMatch[1] : "").trim();
@@ -63,7 +65,9 @@ export function renderDisplayName(raw, opts) {
     )
     .replace(
       "{work}",
-      p.work ? `<span class="tag-work">【${esc(p.work)}】</span>` : "",
+      p.work
+        ? `<span class="tag-work">${raw.includes("《") ? "《" : "【"}${esc(p.work)}${raw.includes("《") ? "》" : "】"}</span>`
+        : "",
     )
     .replace("{chara}", esc(p.chara))
     .replace("{character}", esc(p.character))

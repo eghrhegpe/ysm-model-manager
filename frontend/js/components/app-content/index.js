@@ -12,6 +12,7 @@ import {
 } from "./tpl.js";
 import { registerGlobalHandlers } from "../../core/global-handlers.js";
 import { renderDisplayName, parseModelName } from "../../utils/display.js";
+import { modalConfirm } from "../../dialogs/modal.js";
 
 class AppContent extends HTMLElement {
   constructor() {
@@ -453,6 +454,23 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
       root.getElementById("dl-form").style.display = "flex";
     };
 
+    // 检查文件是否已存在（防抖）
+    let conflictTimer = null;
+    const checkConflictDebounced = (name) => {
+      if (conflictTimer) clearTimeout(conflictTimer);
+      conflictTimer = setTimeout(async () => {
+        try {
+          const { CheckFileExists, LoadAppConfig } =
+            await import("../../../wailsjs/go/main/App.js");
+          const cfg = await LoadAppConfig();
+          const fullPath = (cfg.repoRoot || "") + "\\" + name;
+          const exists = await CheckFileExists(fullPath);
+          const el = root.getElementById("dl-conflict");
+          if (el) el.style.display = exists ? "" : "none";
+        } catch {}
+      }, 400);
+    };
+
     const updatePreview = () => {
       const a = root.getElementById("dl-author").value.trim();
       const w = root.getElementById("dl-work").value.trim();
@@ -471,8 +489,12 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
       parts.push(c || "?");
       if (v) parts.push("-" + v);
       if (d) parts.push("(" + d + ")");
-      root.getElementById("dl-preview").textContent =
-        parts.join(" ") + "." + (currentFileName?.split(".").pop() || "ysm");
+      const ext = currentFileName?.split(".").pop() || "ysm";
+      const preview = parts.join(" ") + "." + ext;
+      root.getElementById("dl-preview").textContent = preview;
+
+      // 检查冲突（防抖）
+      checkConflictDebounced(preview);
     };
 
     ["dl-author", "dl-work", "dl-chara", "dl-variant", "dl-date"].forEach(
@@ -527,7 +549,13 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
     });
 
     // 点击：普通点击选文件，Ctrl+点击选文件夹
+    let clickLocked = false;
     dropZone.addEventListener("click", (e) => {
+      if (clickLocked) return;
+      clickLocked = true;
+      setTimeout(() => {
+        clickLocked = false;
+      }, 500);
       if (e.ctrlKey || e.metaKey) {
         folderInput.click();
       } else {
@@ -579,34 +607,27 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
       const d = root.getElementById("dl-date").value.trim();
       const ext = currentFileName?.split(".").pop() || "ysm";
 
-      if (!a || !w || !c) {
-        bus.emit("toast:show", {
-          msg: "作者、作品品牌、角色名不能为空",
-          duration: 3000,
-          type: "warn",
-        });
-        return;
+      let newName;
+      if (a || w || c) {
+        newName =
+          "[" +
+          a +
+          "]【" +
+          w +
+          "】" +
+          c +
+          (v ? "-" + v : "") +
+          (d ? "(" + d + ")" : "") +
+          "." +
+          ext;
+      } else {
+        // 未填写命名规范 → 使用原文件名
+        newName = currentFileName || "untitled." + ext;
       }
 
-      const newName =
-        "[" +
-        a +
-        "]【" +
-        w +
-        "】" +
-        c +
-        (v ? "-" + v : "") +
-        (d ? "(" + d + ")" : "") +
-        "." +
-        ext;
-
       try {
-        const skipCheck = root.getElementById("dl-skip-check")?.checked;
-        const appModule = skipCheck
-          ? await import("../../../wailsjs/go/main/App.js")
-          : await import("../../../wailsjs/go/main/App.js");
-        const { LoadAppConfig, ImportModelFile, ImportModelFileSkipCheck } =
-          appModule;
+        const { LoadAppConfig, ImportModelFile } =
+          await import("../../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
         const repoRoot = cfg.repoRoot || "";
         if (!repoRoot) {
@@ -617,11 +638,7 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
           });
           return;
         }
-        if (skipCheck) {
-          await ImportModelFileSkipCheck(newName, currentBase64);
-        } else {
-          await ImportModelFile(newName, currentBase64);
-        }
+        await ImportModelFile(newName, currentBase64);
         bus.emit("stats:refresh");
         bus.emit("tree:reload");
         bus.emit("toast:show", {
@@ -635,58 +652,168 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
           name: newName,
           time: new Date().toLocaleTimeString(),
         });
+        // 从队列中移除已导入的文件
+        const importedIdx = fileQueue.findIndex(
+          (fq) => fq.file === currentFile,
+        );
+        if (importedIdx >= 0) fileQueue.splice(importedIdx, 1);
         renderImportedList();
 
-        // 重置表单
+        // 重置表单 → 队列中还有文件则继续
         currentFile = null;
         currentBase64 = null;
         currentFileName = null;
-        root.getElementById("dl-form").style.display = "none";
-        dropZone.style.display = "flex";
+        if (fileQueue.length > 0) {
+          const nextFq = fileQueue[0];
+          showForm(nextFq.file, nextFq.base64);
+        } else {
+          root.getElementById("dl-form").style.display = "none";
+          dropZone.style.display = "flex";
+        }
       } catch (e) {
+        const errMsg = String(e);
+        if (errMsg.includes("FILE_EXISTS") || errMsg.includes("文件已存在")) {
+          const confirmed = await modalConfirm({
+            title: "文件已存在",
+            icon: "📦",
+            message: `"${newName}" 已存在，是否覆盖？`,
+            okText: "覆盖",
+            danger: true,
+          });
+          if (confirmed) {
+            try {
+              const { ImportModelFileOverwrite } =
+                await import("../../../wailsjs/go/main/App.js");
+              await ImportModelFileOverwrite(newName, currentBase64);
+              bus.emit("toast:show", {
+                msg: "✅ 已覆盖: " + newName,
+                duration: 2000,
+                type: "success",
+              });
+              // 继续正常流程
+              imported.unshift({
+                name: newName,
+                time: new Date().toLocaleTimeString(),
+              });
+              const importedIdx = fileQueue.findIndex(
+                (fq) => fq.file === currentFile,
+              );
+              if (importedIdx >= 0) fileQueue.splice(importedIdx, 1);
+              renderImportedList();
+              currentFile = null;
+              currentBase64 = null;
+              currentFileName = null;
+              if (fileQueue.length > 0) {
+                showForm(fileQueue[0].file, fileQueue[0].base64);
+                renderImportedList();
+              } else {
+                root.getElementById("dl-form").style.display = "none";
+                dropZone.style.display = "flex";
+              }
+              return;
+            } catch (e2) {
+              bus.emit("toast:show", {
+                msg: "❌ 覆盖失败: " + String(e2),
+                duration: 4000,
+                type: "error",
+              });
+              return;
+            }
+          }
+        }
         bus.emit("toast:show", {
-          msg: "❌ 导入失败: " + String(e),
+          msg: "❌ 导入失败: " + errMsg,
           duration: 5000,
           type: "error",
         });
       }
     });
 
-    // 添加文件到导入队列
-    const enqueueFile = (file, base64) => {
-      fileQueue.push({ file, base64, name: file.name, size: file.size });
+    // 取消按钮：关闭表单，回到拖拽区，正在编辑的项回到队列
+    root.getElementById("dl-cancel")?.addEventListener("click", () => {
+      currentFile = null;
+      currentBase64 = null;
+      currentFileName = null;
+      root.getElementById("dl-form").style.display = "none";
+      dropZone.style.display = "flex";
       renderImportedList();
+    });
+
+    // 添加文件到导入队列
+    let repoFiles = null; // 仓库文件名缓存
+    const loadRepoFiles = async () => {
+      try {
+        const { ScanModelEntries, LoadAppConfig } =
+          await import("../../../wailsjs/go/main/App.js");
+        const cfg = await LoadAppConfig();
+        if (!cfg.repoRoot) return;
+        const entries = await ScanModelEntries(cfg.repoRoot);
+        repoFiles = new Set(entries.map((e) => e.Name.replace(/\.ban$/i, "")));
+      } catch {
+        repoFiles = new Set();
+      }
+    };
+
+    const enqueueFile = (file, base64) => {
+      // 检查文件名是否已在队列中
+      const dup =
+        fileQueue.some((fq) => fq.name === file.name) ||
+        imported.some(
+          (i) => i.name === file.name || (i.renamed || i.name) === file.name,
+        );
+      if (dup) return;
+      fileQueue.push({ file, base64, name: file.name, size: file.size });
+      if (!currentFile) {
+        showForm(file, base64);
+      }
+      renderImportedList();
+      // 首次添加文件时加载仓库文件列表
+      if (!repoFiles) loadRepoFiles();
     };
 
     // 递归读取文件夹内的模型文件
     const readEntry = (entry, basePath) => {
       return new Promise((resolve) => {
-        if (entry.isFile) {
-          entry.file((file) => {
-            const ext = file.name.split(".").pop().toLowerCase();
-            if (["ysm", "zip", "7z"].includes(ext)) {
-              // 保留父文件夹名作为路径前缀
-              file._relPath = basePath ? basePath + "/" + file.name : file.name;
-              const reader = new FileReader();
-              reader.onload = () => {
-                enqueueFile(file, reader.result.split(",")[1]);
-                resolve();
-              };
-              reader.readAsDataURL(file);
-            } else {
-              resolve();
-            }
-          });
-        } else if (entry.isDirectory) {
-          const dirReader = entry.createReader();
-          dirReader.readEntries((entries) => {
-            const subPath = basePath ? basePath + "/" + entry.name : entry.name;
-            Promise.all(
-              Array.from(entries).map((e) => readEntry(e, subPath)),
-            ).then(() => resolve());
-          });
-        } else {
-          resolve();
+        try {
+          if (entry.isFile) {
+            entry.file(
+              (file) => {
+                const ext = file.name.split(".").pop().toLowerCase();
+                if (["ysm", "zip", "7z"].includes(ext)) {
+                  file._relPath = basePath
+                    ? basePath + "/" + file.name
+                    : file.name;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    enqueueFile(file, reader.result.split(",")[1]);
+                    resolve();
+                  };
+                  reader.onerror = () => resolve();
+                  reader.readAsDataURL(file);
+                } else {
+                  resolve();
+                }
+              },
+              () => resolve(), // entry.file 回调失败（如 .lnk 快捷方式）→ 直接跳过
+            );
+          } else if (entry.isDirectory) {
+            const dirReader = entry.createReader();
+            dirReader.readEntries(
+              (entries) => {
+                const subPath = basePath
+                  ? basePath + "/" + entry.name
+                  : entry.name;
+                Promise.all(
+                  Array.from(entries).map((e) => readEntry(e, subPath)),
+                ).then(() => resolve());
+              },
+              () => resolve(), // readEntries 失败时直接跳过
+            );
+          } else {
+            resolve();
+          }
+        } catch {
+          resolve(); // 任何异常不阻塞整个导入
         }
       });
     };
@@ -729,18 +856,28 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
           "</div>";
       });
       fileQueue.forEach((fq, qi) => {
+        const isEditing = currentFile === fq.file;
         html +=
-          '<div style="display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:3px;font-size:10px;border:1px dashed var(--bd);background:var(--surf)">' +
-          '<span style="color:var(--muted);font-size:9px">⏳</span>' +
+          '<div class="dl-q-item" data-idx="' +
+          qi +
+          '" style="display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:3px;font-size:10px;border:1px ' +
+          (isEditing ? "solid" : "dashed") +
+          " var(--bd);background:" +
+          (isEditing ? "var(--hover)" : "var(--surf)") +
+          ';cursor:pointer">' +
+          '<span style="color:var(--muted);font-size:9px">' +
+          (isEditing
+            ? "✏️"
+            : repoFiles?.has(fq.name.replace(/\.\w+$/, ""))
+              ? "⚠️"
+              : "⏳") +
+          "</span>" +
           '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
           this._esc(fq.name) +
           "</span>" +
-          '<button class="dl-edit-q" data-idx="' +
-          qi +
-          '" style="padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">✏️</button>' +
           '<button class="dl-remove-q" data-idx="' +
           qi +
-          '" style="padding:1px 5px;border-radius:3px;border:1px solid transparent;background:transparent;color:#e5534b;cursor:pointer;font-size:9px">🗑</button>' +
+          '" style="padding:1px 6px;border-radius:3px;border:1px solid #e5534b44;background:transparent;color:#e5534b;cursor:pointer;font-size:9px;flex-shrink:0">移除</button>' +
           "</div>";
       });
       if (!html)
@@ -778,23 +915,38 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
         });
       });
 
-      // 队列编辑（点击后进入表单改名）
-      importedList.querySelectorAll(".dl-edit-q").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const qi = parseInt(btn.dataset.idx, 10);
+      // 队列行点击 → 设置为当前编辑项
+      importedList.querySelectorAll(".dl-q-item").forEach((row) => {
+        row.addEventListener("click", (e) => {
+          if (e.target.closest(".dl-remove-q")) return;
+          const qi = parseInt(row.dataset.idx, 10);
           const fq = fileQueue[qi];
           if (!fq) return;
           showForm(fq.file, fq.base64);
-          fileQueue.splice(qi, 1);
           renderImportedList();
         });
       });
 
       // 队列移除
       importedList.querySelectorAll(".dl-remove-q").forEach((btn) => {
-        btn.addEventListener("click", () => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
           const qi = parseInt(btn.dataset.idx, 10);
           fileQueue.splice(qi, 1);
+          if (fileQueue.length === 0) {
+            // 队列空了 → 回到拖拽区
+            currentFile = null;
+            currentBase64 = null;
+            currentFileName = null;
+            root.getElementById("dl-form").style.display = "none";
+            dropZone.style.display = "flex";
+          } else if (
+            currentFile &&
+            fileQueue.every((fq) => fq.file !== currentFile)
+          ) {
+            // 当前编辑的文件被移除 → 自动切到队列第一个
+            showForm(fileQueue[0].file, fileQueue[0].base64);
+          }
           renderImportedList();
         });
       });
@@ -1492,9 +1644,13 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
               await import("../../../wailsjs/go/main/App.js");
             const exists = await CheckFileExists(localPath);
             if (exists) {
-              const ok = await window.showConfirm?.(
-                fileName + " 已存在，是否覆盖？",
-              );
+              const ok = await modalConfirm({
+                title: "文件已存在",
+                icon: "📦",
+                message: fileName + " 已存在，是否覆盖？",
+                okText: "覆盖",
+                danger: true,
+              });
               if (!ok) {
                 bus.emit("toast:show", {
                   msg: "⏭ 已跳过",
@@ -1539,9 +1695,13 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
       .getElementById("recy-refresh")
       ?.addEventListener("click", () => this._loadRecycleBin());
     root.getElementById("recy-empty")?.addEventListener("click", async () => {
-      const confirmed = await window.showConfirm?.(
-        "确定永久清空回收站所有文件？此操作不可恢复！",
-      );
+      const confirmed = await modalConfirm({
+        title: "清空回收站",
+        icon: "🗑️",
+        message: "确定永久清空回收站所有文件？此操作不可恢复！",
+        okText: "🗑️ 清空",
+        danger: true,
+      });
       if (!confirmed) return;
       try {
         const { LoadAppConfig, EmptyRecycleBin } =
@@ -1648,7 +1808,13 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
       // 删除按钮
       list.querySelectorAll(".recy-del").forEach((btn) => {
         btn.onclick = async () => {
-          const confirmed = await window.showConfirm?.("确定永久删除此文件？");
+          const confirmed = await modalConfirm({
+            title: "删除文件",
+            icon: "🗑️",
+            message: "确定永久删除此文件？",
+            okText: "🗑️ 删除",
+            danger: true,
+          });
           if (!confirmed) return;
           try {
             await DeleteFromRecycle(btn.dataset.path);
@@ -1801,9 +1967,13 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
             type: "success",
           });
           // 询问是否重新链接已有模型
-          const relink = await window.showConfirm?.(
-            "是否将已有模型重新链接为新模式？\n（将删除整合包中已安装的模型副本，用新模式重新安装）",
-          );
+          const relink = await modalConfirm({
+            title: "切换链接模式",
+            icon: "🔗",
+            message:
+              "是否将已有模型重新链接为新模式？\n（将删除整合包中已安装的模型副本，用新模式重新安装）",
+            okText: "重新链接",
+          });
           if (!relink) return;
           try {
             const { LoadAppConfig, ListVersionInstances, RelinkCustomDir } =
@@ -1896,9 +2066,12 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
               });
               return;
             }
-            const confirmed = await window.showConfirm?.(
-              `📦 发现新版本 ${info.latest}（当前 ${info.current}）\n是否下载并更新？\n\n更新内容请在浏览器中查看：\nhttps://github.com/eghrhegpe/ysm-model-manager/releases/tag/${info.latest}`,
-            );
+            const confirmed = await modalConfirm({
+              title: "发现新版本",
+              icon: "📦",
+              message: `发现新版本 ${info.latest}（当前 ${info.current}）\n是否下载并更新？\n\n更新内容请在浏览器中查看：\nhttps://github.com/eghrhegpe/ysm-model-manager/releases/tag/${info.latest}`,
+              okText: "⬇️ 下载更新",
+            });
             if (!confirmed) return;
             btn.textContent = "⬇️ 下载中...";
             const zipPath = await DownloadUpdate(info.url);

@@ -65,6 +65,20 @@ export function settingsHTML() {
   <div id="lm-hint-symlink" style="display:none;padding:2px 0 0 0"><span style="font-size:9px;color:#e5534b">❌ 不推荐：YSM 加载符号链接文件时可能因启动器权限不足（PCL/HMCL 无管理员权限）导致文件被挂起无法禁用，需退出游戏后手动删除</span></div>
 </div>
 
+<div class="section-title" style="margin-bottom:8px;margin-top:16px">⚙️ 网络与下载</div>
+
+<div class="settings-group" style="margin-bottom:12px">
+  <div class="setting-row">
+    <span class="label">🌐 下载镜像源</span>
+    <select id="set-mirror" style="background:var(--bg,#1e1e2e);color:var(--txt,#cdd6f4);border:1px solid var(--bd,#444);border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer">
+      <option value="">🌍 直连（raw.githubusercontent.com）</option>
+      <option value="jsdelivr">⚡ jsDelivr CDN（国内加速）</option>
+      <option value="githubapi">🐙 GitHub API</option>
+    </select>
+  </div>
+  <div style="font-size:9px;color:#6c7086;padding:2px 0 0 0">选择优先使用的下载源，失败自动回退到其他源</div>
+</div>
+
 <div class="section-title" style="margin-bottom:8px;margin-top:16px">⚙️ 界面与体验</div>
 
 <div class="settings-group" style="margin-bottom:12px">

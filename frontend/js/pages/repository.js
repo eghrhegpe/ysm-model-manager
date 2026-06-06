@@ -22,11 +22,8 @@ export function initRepository(root) {
       }
       const path = await GenerateRepoIndex(repoRoot);
       bus.emit("toast:show", {
-        msg:
-          "✅ index.json 已生成: " +
-          path +
-          "，用 GitHub Desktop 提交并推送即可在线浏览",
-        duration: 6000,
+        msg: "✅ index.json + GitHub Action 已生成。\n\n请将您的模型仓库推送到 GitHub，\n\n此管理器可根据你的仓库的 index.json，下载模型。\n\ngenerate-index 文件将自动维护你仓库索引。",
+        duration: 10000,
         type: "success",
       });
       btn.textContent = "✅";

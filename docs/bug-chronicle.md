@@ -259,6 +259,59 @@ function highlightName(name) {
 
 ---
 
+## Debug Path Review
+
+> 记录排查过程中的错误推测路径，防止未来的 AI 重复踩坑。
+> 原则：Round 1-N 是错误猜测，Round N+1 才是真相。
+
+### Issue: 整合包右键"从仓库导入"导入了所有整合包
+
+- **Round 1 (Guess)**: 以为是 Go 端 `sync:download-missing` handler 循环写错了。
+  - _查了 `global-handlers.js` 的 `statusList` 循环，逻辑看起来是对的。_
+- **Round 2 (Guess)**: 以为是 bus 事件发重复了。
+  - _查了 `app-modules.js` 的 `ctx:show` → `menu:show` 映射，只发了一次。_
+- **Round 3 (Truth)**: 事件根本没传 `instanceName`。
+  - _`app-modules.js` 中 `bus.emit("sync:download-missing")` 没带参数。handler 拿不到目标整合包，只能遍历所有。_
+- **Lesson**: 涉及循环/筛选的问题，**先看数据源（Event Payload）**，再看循环体。Event 没传参数，后面全白查。
+
+### Issue: `window.showConfirm` 确认框不弹
+
+- **Round 1 (Guess)**: 以为是 `modal.js` 没加载。
+  - _查了 import 路径，✅ 正确。_
+- **Round 2 (Guess)**: 以为是 Shadow DOM 作用域问题。
+  - _花了 15 分钟查 `app-content` 的 Shadow DOM 隔离。_
+- **Round 3 (Truth)**: `window.showConfirm` **从未被挂载到 window 上**。
+  - _`confirm.js` 定义的是局部 `function showConfirm()`，没有 `window.showConfirm = showConfirm`。所有 `window.showConfirm?.()` 都是静默 `undefined`。_
+- **Lesson**: 全局函数调用不工作 → 先 `console.log(window.showConfirm)` 看是不是 `undefined`，不要猜作用域。
+
+### Issue: 批量重命名对话框复选框不显示
+
+- **Round 1 (Guess)**: 以为是 CSS `display:none` 或 Shadow DOM 样式隔离。
+  - _查了渲染出来的 HTML，发现 `<input type="checkbox">` 标签根本不存在。_
+- **Round 2 (Truth)**: `renderPreview` 的 HTML 模板里没写 checkbox。
+  - _`selected: true` 数据字段和事件委托逻辑都写了，就 HTML 字符串漏了。_
+- **Lesson**: UI 组件不显示 → **先看 DOM 元素是否存在**（DevTools Elements），别先猜样式。
+
+### Issue: JSON 配置读出来全是默认值
+
+- **Round 1 (Guess)**: 以为是 `json.Unmarshal` 字段 tag 写错了。
+  - _结构体和 JSON 字段名仔细对了三遍，没问题。_
+- **Round 2 (Guess)**: 以为是文件路径不对。
+  - _加了日志发现文件能找到。_
+- **Round 3 (Truth)**: PowerShell 写入的 JSON 文件带 UTF-8 BOM（`EF BB BF`）。
+  - _Go 标准库 `json.Unmarshal` 不处理 BOM，解析失败静默返回零值。_
+- **Lesson**: Windows 上 JSON 文件 + PowerShell = BOM 陷阱。所有 JSON 读取加 `bytes.TrimPrefix([]byte{0xEF,0xBB,0xBF})`。
+
+### Issue: `go build` 生成的 exe 白屏
+
+- **Round 1 (Guess)**: 以为是前端构建失败。
+  - _单独跑了 `npx vite build`，dist 目录正常。_
+- **Round 2 (Guess)**: 以为是 Wails 版本问题。
+  - _`wails.json` 版本号是对的。_
+- **Round 3 (Truth)**: Wails 项目必须用 `wails build`。
+  - _普通 `go build` 缺少 Wails build tags，前端资源没有被嵌入二进制。_
+- **Lesson**: 框架项目用框架的构建工具。Wails = `wails build`，不用猜 `go build` 为什么不行。
+
 ## 2026-06-05 新增 bug 记录
 
 ### 10. 窗口尺寸逐次缩小（bug-chronicle #10）

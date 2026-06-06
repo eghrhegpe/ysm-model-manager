@@ -102,6 +102,30 @@ export function bindTreeEvents(container, vm) {
       });
     });
   });
+
+  // 悬停快捷操作：🔍 预览
+  container.querySelectorAll(".ha-preview").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const path = btn.dataset.path;
+      if (path) bus.emit("model:select", { path });
+    });
+  });
+
+  // 悬停快捷操作：📋 复制文件名
+  container.querySelectorAll(".ha-copy").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const path = btn.dataset.path;
+      const name = path?.split(/[/\\]/).pop() || "";
+      navigator.clipboard?.writeText(name).catch(() => {});
+      bus.emit("toast:show", {
+        msg: "📋 已复制: " + name,
+        duration: 1500,
+        type: "info",
+      });
+    });
+  });
 }
 
 // 绑定工具栏事件（index.js 中 _renderLayout 后调用）

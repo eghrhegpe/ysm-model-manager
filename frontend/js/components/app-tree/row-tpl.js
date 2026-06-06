@@ -11,6 +11,10 @@ export function fileRowHTML(e, nmHtml, icon, dateStr, extraCls = "") {
 <span class="ck${checked}" data-path="${p}" data-fullpath="${fp}"></span>
 <span class="ficon">${icon}</span>
 <span class="nm${extraCls}">${nmHtml}</span>
+<span class="hover-actions">
+  <span class="ha-btn ha-preview" data-path="${fp}" title="预览">🔍</span>
+  <span class="ha-btn ha-copy" data-path="${fp}" title="复制文件名">📋</span>
+</span>
 <span class="sz ${sc(e.size)}">${size(e.size)}</span>${dateStr ? `<span class="dt">${dateStr}</span>` : ""}</div>`;
 }
 

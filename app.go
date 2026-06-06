@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -78,9 +79,26 @@ func (a *App) shutdown(ctx context.Context) {
 }
 
 // ========== 配置持久化 ==========
+// findConfigFile 依次尝试给定路径，返回第一个存在的文件
+func findConfigFile(candidates ...string) string {
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	if len(candidates) > 0 {
+		return candidates[0]
+	}
+	return ""
+}
+
 func configPath() string {
 	exe, _ := os.Executable()
-	return filepath.Join(filepath.Dir(exe), "ysm_config.json")
+	return findConfigFile(
+		filepath.Join(filepath.Dir(exe), "ysm_config.json"),
+		filepath.Join(filepath.Dir(exe), "..", "ysm_config.json"),
+		filepath.Join(".", "ysm_config.json"),
+	)
 }
 
 func (a *App) loadAppConfig() {
@@ -130,28 +148,34 @@ func (a *App) restartWatcher(repoRoot, mcRoot string) {
 }
 
 func (a *App) LoadAppConfig() types.AppConfig {
-	data, err := os.ReadFile(configPath())
-	if err != nil {
-		return types.AppConfig{}
-	}
 	var cfg types.AppConfig
-	json.Unmarshal(data, &cfg)
+	readJSONFile(configPath(), &cfg)
 	return cfg
 }
 
 // ========== 创意工坊站点配置 ==========
 func workshopSitesPath() string {
 	exe, _ := os.Executable()
-	return filepath.Join(filepath.Dir(exe), "workshop_sites.json")
+	return findConfigFile(
+		filepath.Join(filepath.Dir(exe), "workshop_sites.json"),
+		filepath.Join(filepath.Dir(exe), "..", "workshop_sites.json"),
+		"workshop_sites.json",
+	)
+}
+
+// readJSONFile 读取 JSON 文件，自动跳过 UTF-8 BOM
+func readJSONFile(path string, v interface{}) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
+	return json.Unmarshal(data, v)
 }
 
 func (a *App) LoadWorkshopSites() []types.WorkshopSite {
-	data, err := os.ReadFile(workshopSitesPath())
-	if err != nil {
-		return defaultWorkshopSites()
-	}
 	var sites []types.WorkshopSite
-	if err := json.Unmarshal(data, &sites); err != nil {
+	if err := readJSONFile(workshopSitesPath(), &sites); err != nil {
 		return defaultWorkshopSites()
 	}
 	return sites
@@ -208,16 +232,16 @@ func defaultWorkshopSites() []types.WorkshopSite {
 // ========== 创意工坊创作者配置（单文件 + 标签）==========
 func workshopCreatorsPath() string {
 	exe, _ := os.Executable()
-	return filepath.Join(filepath.Dir(exe), "workshop_creators.json")
+	return findConfigFile(
+		filepath.Join(filepath.Dir(exe), "workshop_creators.json"),
+		filepath.Join(filepath.Dir(exe), "..", "workshop_creators.json"),
+		"workshop_creators.json",
+	)
 }
 
 func (a *App) LoadWorkshopCreators() []types.WorkshopCreator {
-	data, err := os.ReadFile(workshopCreatorsPath())
-	if err != nil {
-		return nil
-	}
 	var list []types.WorkshopCreator
-	if err := json.Unmarshal(data, &list); err != nil {
+	if err := readJSONFile(workshopCreatorsPath(), &list); err != nil {
 		return nil
 	}
 	return list
@@ -410,12 +434,12 @@ func (a *App) SaveWindowPosition(x, y, width, height int) {
 func (a *App) GetWindowPosition() types.WindowState {
 	exe, _ := os.Executable()
 	path := filepath.Join(filepath.Dir(exe), "window_state.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return types.WindowState{X: 100, Y: 100, Width: 1200, Height: 800}
-	}
 	var state types.WindowState
-	json.Unmarshal(data, &state)
+	state.X = 100
+	state.Y = 100
+	state.Width = 1200
+	state.Height = 800
+	readJSONFile(path, &state)
 	return state
 }
 

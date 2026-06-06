@@ -59,6 +59,11 @@ export const treeCSS = `
 .fl .sz.sz-red { color: #f38ba8; }
 .fl .sz:not(.sz-green):not(.sz-red) { color: var(--muted); }
 .fl .dt { font-size: 9px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+/* 悬停快捷操作 */
+.hover-actions { display: none; gap: 2px; flex-shrink: 0; align-items: center; }
+.fl:hover .hover-actions { display: flex; }
+.ha-btn { font-size: 10px; padding: 1px 3px; border-radius: 3px; cursor: pointer; opacity: .6; transition: all .12s; }
+.ha-btn:hover { opacity: 1; background: var(--hover); }
 .ficon { font-size: 10px; }
 .ftr { padding: 8px 12px; border-top: 1px solid var(--bd); display: flex; gap: 6px; align-items: center; }
 .ftr .stat { font-size: 10px; color: var(--muted); margin-right: auto; }

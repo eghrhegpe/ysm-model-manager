@@ -61,4 +61,13 @@ export const sidebarCSS = `
   text-align: center; transition: background .12s;
 }
 .footer-btn:hover { background: var(--hover); }
+/* 骨架屏 */
+.sk-item { padding: 10px; margin-bottom: 6px; border-radius: 8px; border: 1px solid var(--bd); background: var(--surf); }
+.sk-line { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--bd) 25%, var(--hover) 50%, var(--bd) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s infinite; margin-bottom: 6px; }
+.sk-w80 { width: 80%; }
+.sk-w40 { width: 40%; }
+@keyframes sk-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 `;

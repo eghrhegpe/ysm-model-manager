@@ -20,6 +20,7 @@ export function headerHTML() {
 <option value="date">日期</option>
 </select>
 </div>
+<div class="author-chips" id="author-chips" style="display:none;padding:4px 0;gap:4px;flex-wrap:wrap"></div>
 </div>`;
 }
 

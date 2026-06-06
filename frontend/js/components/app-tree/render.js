@@ -136,11 +136,14 @@ export function updateStat(el, entries) {
   });
   const newText = `共 ${total} 项 (已启用 ${enabled}) · ${fmt(totalSize)}`;
   if (el.textContent !== newText) {
-    el.textContent = newText;
-    el.style.transition = "opacity .15s";
-    el.style.opacity = ".6";
-    setTimeout(() => {
-      el.style.opacity = "";
-    }, 150);
+    // 数字跳动动画（在旧文本上动效，动完才替换完整文本）
+    const oldTotal = parseInt(el.textContent.match(/(\d+)\s*项/)?.[1], 10) || 0;
+    if (oldTotal !== total && total > 0) {
+      animateNumber(el, total, 700);
+      // 动画结束后设置完整新文本
+      setTimeout(() => { el.textContent = newText; }, 700);
+    } else {
+      el.textContent = newText;
+    }
   }
 }

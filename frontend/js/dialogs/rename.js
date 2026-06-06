@@ -7,14 +7,19 @@ export async function showRenameDialog(filePath, currentName) {
     const parsed = parseModelName(currentName);
 
     const overlay = document.createElement("div");
+    overlay.tabIndex = 0;
     overlay.style.cssText =
       "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center";
-    overlay.onclick = (e) => {
-      if (e.target === overlay) {
-        overlay.remove();
-        resolve(null);
-      }
+    const close = (v) => {
+      overlay.remove();
+      resolve(v);
     };
+    overlay.onclick = (e) => {
+      if (e.target === overlay) close(null);
+    };
+    overlay.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") close(null);
+    });
 
     const box = document.createElement("div");
     box.style.cssText =
@@ -37,9 +42,11 @@ export async function showRenameDialog(filePath, currentName) {
         <button id="rn-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消</button>
         <button id="rn-ok" style="padding:5px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px">✂️ 重命名</button>
       </div>
+      <div id="rn-err" style="font-size:10px;color:#f38ba8;min-height:0;transition:min-height .15s;overflow:hidden"></div>
     `;
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+    overlay.focus();
 
     const update = () => {
       const a = box.querySelector("#rn-author").value.trim();
@@ -62,15 +69,17 @@ export async function showRenameDialog(filePath, currentName) {
 
     ["rn-author", "rn-work", "rn-chara", "rn-variant", "rn-date"].forEach(
       (id) => {
-        box.querySelector("#" + id)?.addEventListener("input", update);
+        const el = box.querySelector("#" + id);
+        el?.addEventListener("input", update);
+        el?.addEventListener("input", () => {
+          const errEl = box.querySelector("#rn-err");
+          if (errEl) errEl.textContent = "";
+        });
       },
     );
     update();
 
-    box.querySelector("#rn-cancel").onclick = () => {
-      overlay.remove();
-      resolve(null);
-    };
+    box.querySelector("#rn-cancel").onclick = () => close(null);
     box.querySelector("#rn-ok").onclick = async () => {
       const a = box.querySelector("#rn-author").value.trim();
       const w = box.querySelector("#rn-work").value.trim();
@@ -81,7 +90,13 @@ export async function showRenameDialog(filePath, currentName) {
         ? currentName.split(".").pop()
         : "ysm";
       if (!a || !w || !c) {
-        alert("作者、品牌、角色名不能为空");
+        const errEl = box.querySelector("#rn-err");
+        if (errEl) errEl.textContent = "⚠️ 作者、品牌、角色名不能为空";
+        (
+          box.querySelector(
+            !a ? "#rn-author" : !w ? "#rn-work" : "#rn-chara",
+          ) || ""
+        ).focus?.();
         return;
       }
       const newName =
@@ -95,8 +110,7 @@ export async function showRenameDialog(filePath, currentName) {
         (d ? "(" + d + ")" : "") +
         "." +
         ext;
-      overlay.remove();
-      resolve(newName);
+      close(newName);
     };
   });
 }

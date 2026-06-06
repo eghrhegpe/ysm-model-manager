@@ -14,12 +14,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/logs"
 	"ysm-model-manager/go/recycle"
-	"ysm-model-manager/go/sync"
+	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/updater"
 	"ysm-model-manager/go/version"
@@ -35,12 +36,175 @@ type App struct {
 	LinkMode string
 	logger   *logs.Logger
 	watcher  *watcher.Watcher
+	queue    *DownloadQueue
+}
+
+// DownloadTask 下载队列任务
+type DownloadTask struct {
+	URL     string `json:"url"`
+	SaveDir string `json:"saveDir"`
+	Name    string `json:"name"` // 显示用
+	Size    int64  `json:"size"`
+}
+
+// DownloadQueue 串行下载队列
+type DownloadQueue struct {
+	app     *App
+	tasks   []DownloadTask
+	mu      sync.Mutex
+	running bool
+	cancel  chan struct{}
+}
+
+func NewDownloadQueue(a *App) *DownloadQueue {
+	return &DownloadQueue{app: a, cancel: make(chan struct{})}
+}
+
+// EnqueueDownloads 添加下载任务
+func (a *App) EnqueueDownloads(tasks []DownloadTask) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+	a.queue.mu.Lock()
+	a.queue.tasks = append(a.queue.tasks, tasks...)
+	total := len(a.queue.tasks)
+	a.queue.mu.Unlock()
+	runtime.EventsEmit(a.ctx, "queue:status", "enqueued", total, "")
+	if !a.queue.running {
+		go a.queue.process()
+	}
+	return nil
+}
+
+// CancelQueue 取消队列
+func (a *App) CancelQueue() {
+	a.queue.mu.Lock()
+	defer a.queue.mu.Unlock()
+	if a.queue.running {
+		close(a.queue.cancel)
+		a.queue.cancel = make(chan struct{})
+	}
+	a.queue.tasks = nil
+	a.queue.running = false
+	runtime.EventsEmit(a.ctx, "queue:status", "cancelled", 0, "")
+}
+
+// QueueStatus 当前队列状态
+func (a *App) QueueStatus() (int, bool) {
+	a.queue.mu.Lock()
+	defer a.queue.mu.Unlock()
+	return len(a.queue.tasks), a.queue.running
+}
+
+func (q *DownloadQueue) process() {
+	q.mu.Lock()
+	q.running = true
+	q.mu.Unlock()
+
+	defer func() {
+		q.mu.Lock()
+		q.running = false
+		q.mu.Unlock()
+		runtime.EventsEmit(q.app.ctx, "queue:status", "done", 0, "")
+	}()
+
+	for {
+		q.mu.Lock()
+		if len(q.tasks) == 0 {
+			q.mu.Unlock()
+			return
+		}
+		task := q.tasks[0]
+		q.tasks = q.tasks[1:]
+		remaining := len(q.tasks)
+		q.mu.Unlock()
+
+		runtime.EventsEmit(q.app.ctx, "queue:file-start", task.Name, remaining+1, remaining)
+
+		// 下载
+		_, err := q.app.downloadFileWithQueue(task.URL, task.SaveDir)
+		if err != nil {
+			runtime.EventsEmit(q.app.ctx, "queue:file-done", task.Name, "fail", err.Error())
+		} else {
+			runtime.EventsEmit(q.app.ctx, "queue:file-done", task.Name, "ok", "")
+		}
+
+		select {
+		case <-q.cancel:
+			return
+		default:
+		}
+	}
+}
+
+// downloadFileWithQueue 下载单文件（含镜像回退 + 进度推送）
+func (a *App) downloadFileWithQueue(rawURL, saveDir string) (string, error) {
+	if err := os.MkdirAll(saveDir, 0755); err != nil {
+		return "", err
+	}
+	// 从 raw URL 提取路径和仓库信息
+	relPath := ""
+	repoPath := ""
+	if idx := strings.Index(rawURL, "/main/"); idx > 0 {
+		relPath = rawURL[idx+6:]
+		raw := rawURL
+		if strings.HasPrefix(raw, "https://raw.githubusercontent.com/") {
+			parts := strings.SplitN(raw[len("https://raw.githubusercontent.com/"):], "/", 3)
+			if len(parts) >= 2 {
+				repoPath = parts[0] + "/" + parts[1]
+			}
+		}
+	}
+	if relPath == "" {
+		relPath = filepath.Base(rawURL)
+	}
+	relPath = strings.ReplaceAll(relPath, "/", string(filepath.Separator))
+	savePath := filepath.Join(saveDir, relPath)
+	if err := os.MkdirAll(filepath.Dir(savePath), 0755); err != nil {
+		return "", err
+	}
+
+	// 读镜像配置决定顺序
+	mirror := a.LoadAppConfig().Mirror
+	type src struct {
+		url  string
+		kind string
+	}
+	sources := []src{{rawURL, "raw"}}
+	if repoPath != "" {
+		jsdURL := "https://cdn.jsdelivr.net/gh/" + repoPath + "@main/" + strings.ReplaceAll(relPath, "\\", "/")
+		sources = append(sources, src{jsdURL, "jsd"})
+		apiURL := "https://api.github.com/repos/" + repoPath + "/contents/" + strings.ReplaceAll(relPath, "\\", "/")
+		sources = append(sources, src{apiURL, "api"})
+	}
+	if mirror == "jsdelivr" && len(sources) >= 3 {
+		sources[0], sources[1] = sources[1], sources[0]
+	} else if mirror == "githubapi" && len(sources) >= 3 {
+		sources[0], sources[2] = sources[2], sources[0]
+	}
+
+	var lastErr error
+	for _, s := range sources {
+		var err error
+		if s.kind == "api" {
+			err = a.downloadFromAPI(s.url, savePath)
+		} else {
+			err = a.downloadFile(s.url, savePath)
+		}
+		if err == nil {
+			return savePath, nil
+		}
+		lastErr = err
+	}
+	return "", fmt.Errorf("所有源均失败: %s", lastErr)
 }
 
 func NewApp() *App {
-	return &App{
+	a := &App{
 		logger: logs.NewLogger(),
 	}
+	a.queue = NewDownloadQueue(a)
+	return a
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -124,6 +288,7 @@ func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode, theme string) error {
 		McRoot:   mcRoot,
 		LinkMode: linkMode,
 		Theme:    theme,
+		Mirror:   a.LoadAppConfig().Mirror,
 	}
 	data, _ := json.MarshalIndent(cfg, "", "  ")
 	err := os.WriteFile(configPath(), data, 0644)
@@ -131,6 +296,14 @@ func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode, theme string) error {
 		a.restartWatcher(repoRoot, mcRoot)
 	}
 	return err
+}
+
+// SetDownloadMirror 单独设置下载镜像源
+func (a *App) SetDownloadMirror(mirror string) error {
+	cfg := a.LoadAppConfig()
+	cfg.Mirror = mirror
+	data, _ := json.MarshalIndent(cfg, "", "  ")
+	return os.WriteFile(configPath(), data, 0644)
 }
 
 // restartWatcher 重启文件监听器
@@ -496,6 +669,7 @@ func (a *App) GenerateRepoIndex(repoPath string) (string, error) {
 		Name string `json:"name"`
 		Path string `json:"path"`
 		Size int64  `json:"size"`
+		Hash string `json:"hash,omitempty"`
 	}
 	var list []indexEntry
 	for _, e := range entries {
@@ -509,6 +683,7 @@ func (a *App) GenerateRepoIndex(repoPath string) (string, error) {
 			Name: e.Name,
 			Path: relPath,
 			Size: e.Size,
+			Hash: e.Hash,
 		})
 	}
 	data, err := json.MarshalIndent(list, "", "  ")
@@ -519,46 +694,190 @@ func (a *App) GenerateRepoIndex(repoPath string) (string, error) {
 	if err := os.WriteFile(indexPath, data, 0644); err != nil {
 		return "", err
 	}
+
+	// 同时生成 GitHub Action 工作流
+	workflowDir := filepath.Join(repoPath, ".github", "workflows")
+	if err := os.MkdirAll(workflowDir, 0755); err == nil {
+		workflowPath := filepath.Join(workflowDir, "generate-index.yml")
+		// 检查是否已存在，存在则跳过
+		if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
+			workflowContent := `name: Generate index.json
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.ysm"
+      - "**.zip"
+      - "**.7z"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  generate-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 生成 index.json
+        run: |
+          cat > genindex.go << 'GOEOF'
+          package main
+          import (
+            "crypto/sha256"
+            "encoding/json"
+            "fmt"
+            "io"
+            "os"
+            "path/filepath"
+            "strings"
+          )
+          type entry struct {
+            Name string ` + "`json:\"name\"`" + `
+            Path string ` + "`json:\"path\"`" + `
+            Size int64  ` + "`json:\"size\"`" + `
+            Hash string ` + "`json:\"hash,omitempty\"`" + `
+          }
+          func main() {
+            repoPath := "."
+            var list []entry
+            filepath.WalkDir(repoPath, func(p string, d os.DirEntry, err error) error {
+              if err != nil || d.IsDir() { return nil }
+              ext := strings.ToLower(filepath.Ext(p))
+              if ext != ".ysm" && ext != ".zip" && ext != ".7z" { return nil }
+              if strings.Contains(p, "/.github") { return nil }
+              rel, _ := filepath.Rel(repoPath, p)
+              rel = strings.ReplaceAll(rel, "\\", "/")
+              fi, _ := d.Info()
+              size := int64(0)
+              if fi != nil { size = fi.Size() }
+              hashStr := ""
+              if f, err := os.Open(p); err == nil {
+                h := sha256.New()
+                io.Copy(h, f)
+                hashStr = fmt.Sprintf("%x", h.Sum(nil))
+                f.Close()
+              }
+              list = append(list, entry{Name: d.Name(), Path: rel, Size: size, Hash: hashStr})
+              return nil
+            })
+            data, _ := json.MarshalIndent(list, "", "  ")
+            os.WriteFile("index.json", data, 0644)
+            fmt.Printf("✅ 已生成 index.json，共 %d 个模型\\n", len(list))
+          }
+          GOEOF
+          go run genindex.go
+          rm genindex.go
+      - name: 提交更新
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.json
+          if git diff --cached --quiet; then
+            echo "index.json 无变化，跳过提交"
+          else
+            git commit -m ":arrows_counterclockwise: 自动更新 index.json"
+            git push
+          fi
+`
+			os.WriteFile(workflowPath, []byte(workflowContent), 0644)
+		}
+	}
+
 	return indexPath, nil
 }
 
 // DownloadFromGitHub 从 GitHub Raw 下载文件到本地目录
+// progressReader 包装 io.Reader，下载时通过 Wails EventsEmit 推送进度
+type progressReader struct {
+	reader     io.Reader
+	total      int64
+	downloaded int64
+	lastPct    int
+	onProgress func(downloaded, total int64)
+}
+
+func (pr *progressReader) Read(p []byte) (int, error) {
+	n, err := pr.reader.Read(p)
+	pr.downloaded += int64(n)
+	if pr.total > 0 {
+		pct := int(pr.downloaded * 100 / pr.total)
+		if pct > pr.lastPct {
+			pr.lastPct = pct
+			if pr.onProgress != nil {
+				pr.onProgress(pr.downloaded, pr.total)
+			}
+		}
+	}
+	return n, err
+}
+
 func (a *App) DownloadFromGitHub(rawURL string, saveDir string) (string, error) {
-	if err := os.MkdirAll(saveDir, 0755); err != nil {
-		return "", err
-	}
-	// 从 raw URL 提取相对路径（/main/ 之后的部分）
-	relPath := ""
-	if idx := strings.Index(rawURL, "/main/"); idx > 0 {
-		relPath = rawURL[idx+6:]
-	}
-	if relPath == "" {
-		relPath = filepath.Base(rawURL)
-	}
-	// 确保路径使用系统分隔符
-	relPath = strings.ReplaceAll(relPath, "/", string(filepath.Separator))
-	savePath := filepath.Join(saveDir, relPath)
-	// 创建子目录
-	if err := os.MkdirAll(filepath.Dir(savePath), 0755); err != nil {
-		return "", err
-	}
-	resp, err := http.Get(rawURL)
+	return a.downloadFileWithQueue(rawURL, saveDir)
+}
+
+// downloadFile 从 URL 下载文件到本地
+func (a *App) downloadFile(url, savePath string) error {
+	resp, err := http.Get(url)
 	if err != nil {
-		return "", fmt.Errorf("下载失败: %w", err)
+		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("下载失败，HTTP %d", resp.StatusCode)
+		return fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
 	out, err := os.Create(savePath)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer out.Close()
-	if _, err := io.Copy(out, resp.Body); err != nil {
-		return "", err
+	total := resp.ContentLength
+	pr := &progressReader{
+		reader: resp.Body,
+		total:  total,
+		onProgress: func(dl, total int64) {
+			runtime.EventsEmit(a.ctx, "download:progress", dl, total)
+		},
 	}
-	return savePath, nil
+	if _, err := io.Copy(out, pr); err != nil {
+		return err
+	}
+	runtime.EventsEmit(a.ctx, "download:progress", total, total)
+	return nil
+}
+
+// downloadFromAPI 通过 GitHub API 下载（base64 解码）
+func (a *App) downloadFromAPI(apiURL, savePath string) error {
+	resp, err := http.Get(apiURL)
+	if err != nil {
+		return fmt.Errorf("连接失败: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+	var data struct {
+		Content  string `json:"content"`
+		Encoding string `json:"encoding"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return fmt.Errorf("解析失败: %w", err)
+	}
+	if data.Encoding != "base64" || data.Content == "" {
+		return fmt.Errorf("非 base64 响应")
+	}
+	decoded, err := base64.StdEncoding.DecodeString(data.Content)
+	if err != nil {
+		return fmt.Errorf("base64 解码失败: %w", err)
+	}
+	out, err := os.Create(savePath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	if _, err := out.Write(decoded); err != nil {
+		return err
+	}
+	runtime.EventsEmit(a.ctx, "download:progress", int64(len(decoded)), int64(len(decoded)))
+	return nil
 }
 
 func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
@@ -641,7 +960,7 @@ func (a *App) ListModelAuthors() []string {
 
 // ========== 整合包 ==========
 func (a *App) ListVersionInstances(mcRoot string) []types.VersionInstance {
-	return sync.ListVersions(strings.TrimSpace(mcRoot))
+	return ysmsync.ListVersions(strings.TrimSpace(mcRoot))
 }
 
 func (a *App) GetGlobalCustomDir(mcRoot string) string {
@@ -1140,11 +1459,11 @@ func (a *App) EmptyRecycleBin(repoRoot string) (int, error) {
 
 // ========== 状态同步 ==========
 func (a *App) GetInstanceStatus(mcRoot, repoDir string) []types.InstanceStatus {
-	return sync.GetInstanceStatus(mcRoot, repoDir, a.ScanModelEntries)
+	return ysmsync.GetInstanceStatus(mcRoot, repoDir, a.ScanModelEntries)
 }
 
 func (a *App) SyncModelToggleStatus(instanceCustomDir, repoRoot string) (int, int, error) {
-	return sync.SyncToggleStatus(instanceCustomDir, repoRoot, a.ScanModelEntries)
+	return ysmsync.SyncToggleStatus(instanceCustomDir, repoRoot, a.ScanModelEntries)
 }
 
 // RelinkCustomDir 重新链接整合包 custom 目录下的已有模型（切换链接模式后用）

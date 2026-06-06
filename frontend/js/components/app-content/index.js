@@ -403,6 +403,7 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
     let allCreators = [];
     let repoAuthors = [];
     let wsEditMode = false; // 创意工坊创作者编辑模式（放在外面以持久化）
+    let repoModelCache = {}; // { repoName: { models, source, localMap } } 模型列表缓存
 
     // 分组定义
     const GROUP_LABELS = {
@@ -776,36 +777,179 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
           });
         });
 
-      // 📦 浏览 GitHub 仓库模型
+      // 📦 浏览 GitHub 仓库模型（双回退：raw → API）
       searchResults.querySelectorAll(".ws-browse-repo").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const repo = btn.dataset.repo;
-          const indexURL =
-            "https://raw.githubusercontent.com/" + repo + "/main/index.json";
           btn.textContent = "⏳";
+
+          // 进度条
+          const setProgress = (pct, label) => {
+            searchResults.innerHTML =
+              '<div style="padding:24px 12px;text-align:center">' +
+              "<style>" +
+              "@keyframes ws-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}" +
+              "@keyframes ws-stripes{from{background-position:0 0}to{background-position:14px 100%}}" +
+              "</style>" +
+              '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">' +
+              '<span style="display:inline-block;vertical-align:middle;animation:ws-spin 1.2s linear infinite">⏳</span> ' +
+              '<span style="vertical-align:middle">' +
+              this._esc(label || "") +
+              "</span></div>" +
+              '<div style="width:160px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto;overflow:hidden">' +
+              '<div style="width:' +
+              pct +
+              "%;height:100%;border-radius:2px;transition:width 0.3s" +
+              (pct < 100
+                ? ";background:linear-gradient(90deg,var(--accent) 40%,rgba(137,180,250,.4) 40%,rgba(137,180,250,.4) 60%,var(--accent) 60%);background-size:14px 100%;animation:ws-stripes .4s linear infinite"
+                : ";background:var(--accent)") +
+              '"></div>' +
+              "</div>" +
+              "</div>";
+          };
+
+          let usedSource = "";
+          let countdownTimer = null;
+
+          const startCountdown = (label) => {
+            if (countdownTimer) clearInterval(countdownTimer);
+            let p = 50;
+            setProgress(p, label || "");
+            countdownTimer = setInterval(() => {
+              p = Math.max(10, p - 10);
+              setProgress(p, label || "");
+            }, 1000);
+          };
+
+          const stopCountdown = () => {
+            if (countdownTimer) {
+              clearInterval(countdownTimer);
+              countdownTimer = null;
+            }
+          };
+
+          const tryFetchModels = async (mirror) => {
+            // 定义三个可用的获取方案
+            const attempts = [
+              {
+                name: "raw",
+                url:
+                  "https://raw.githubusercontent.com/" +
+                  repo +
+                  "/main/index.json",
+                label: "⏳ 正在连接 raw.githubusercontent.com…",
+              },
+              {
+                name: "jsd",
+                url: "https://cdn.jsdelivr.net/gh/" + repo + "@main/index.json",
+                label: "⏳ 正在连接 cdn.jsdelivr.net…",
+              },
+              {
+                name: "api",
+                url:
+                  "https://api.github.com/repos/" +
+                  repo +
+                  "/contents/index.json",
+                label: "⏳ 正在连接 api.github.com…",
+              },
+            ];
+
+            // 根据镜像设置排序
+            const sorted =
+              mirror === "jsdelivr"
+                ? [attempts[1], attempts[0], attempts[2]] // jsd → raw → api
+                : mirror === "githubapi"
+                  ? [attempts[2], attempts[0], attempts[1]] // api → raw → jsd
+                  : attempts; // raw → jsd → api（默认）
+
+            for (const attempt of sorted) {
+              const ctrl = new AbortController();
+              const tmr = setTimeout(() => ctrl.abort(), 5000);
+              startCountdown(attempt.label);
+              try {
+                const resp = await fetch(attempt.url, {
+                  signal: ctrl.signal,
+                });
+                clearTimeout(tmr);
+                stopCountdown();
+                if (resp.ok) {
+                  setProgress(70, "⏳ 解析模型列表中…");
+                  let models;
+                  if (attempt.name === "api") {
+                    // API 返回 base64
+                    const data = await resp.json();
+                    if (data.encoding !== "base64" || !data.content) continue;
+                    const binary = atob(data.content.replace(/\n/g, ""));
+                    const bytes = Uint8Array.from(binary, (c) =>
+                      c.charCodeAt(0),
+                    );
+                    const json = new TextDecoder().decode(bytes);
+                    models = JSON.parse(json);
+                  } else {
+                    models = await resp.json();
+                  }
+                  if (models && models.length) {
+                    usedSource = attempt.name;
+                    return models;
+                  }
+                }
+              } catch (_) {
+                clearTimeout(tmr);
+                stopCountdown();
+                // 失败就试下一个
+              }
+            }
+            throw new Error("All sources failed");
+          };
+
+          // 加载镜像配置
+          let mirror = "";
           try {
-            const ctrl = new AbortController();
-            const tmr = setTimeout(() => ctrl.abort(), 20000);
-            const resp = await fetch(indexURL, { signal: ctrl.signal });
-            clearTimeout(tmr);
-            if (!resp.ok) throw new Error("HTTP " + resp.status);
-            const models = await resp.json();
-            if (!models || !models.length) {
-              bus.emit("toast:show", {
-                msg: "📦 仓库为空或暂无 index.json",
-                duration: 3000,
-                type: "warn",
-              });
+            const { LoadAppConfig } =
+              await import("../../../wailsjs/go/main/App.js");
+            const cfg = await LoadAppConfig();
+            mirror = cfg.mirror || "";
+          } catch (_) {}
+
+          setProgress(10, "⏳ 准备中…");
+          try {
+            // 检查缓存
+            if (repoModelCache[repo]) {
+              const cached = repoModelCache[repo];
+              setProgress(100, "✅ 加载完成（缓存）");
+              await new Promise((r) => setTimeout(r, 100));
+              await showRepoModels(repo, cached.models, cached.source);
               btn.textContent = "📦 浏览";
               return;
             }
-            // 切换到模型列表视图
-            showRepoModels(repo, models);
+            stopCountdown();
+            const models = await tryFetchModels(mirror);
+            stopCountdown();
+            // 写入缓存
+            repoModelCache[repo] = { models, source: usedSource };
+            setProgress(100, "✅ 加载完成");
+            await new Promise((r) => setTimeout(r, 200));
+            await showRepoModels(repo, models, usedSource);
           } catch (e) {
             const isTimeout = e?.name === "AbortError";
             btn.textContent = isTimeout ? "⏱️ 超时" : "❌ 无索引";
             btn.style.color = "var(--muted)";
             btn.style.cursor = "default";
+            searchResults.innerHTML =
+              '<div style="padding:12px;text-align:center">' +
+              '<button class="ws-back-repo" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:10px;margin-bottom:12px">← 返回</button>' +
+              '<div style="color:var(--muted);font-size:10px;line-height:1.6">' +
+              (isTimeout
+                ? "⏱️ 连接超时"
+                : "❌ 无 index.json<br>" +
+                  "此仓库尚未建立创意工坊索引，请你使用浏览器下载。<br>" +
+                  '<span style="font-size:9px;opacity:.6">（这个仓库需要有 index.json 文件，才能调用 API 下载文件）</span>') +
+              "</div></div>";
+            searchResults
+              .querySelector(".ws-back-repo")
+              ?.addEventListener("click", () => {
+                if (currentSite) showSiteView(currentSite);
+              });
             const msg = isTimeout
               ? "⏱️ " +
                 repo +
@@ -952,39 +1096,215 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
         });
     };
 
-    // 📦 显示 GitHub 仓库模型列表
-    const showRepoModels = (repo, models) => {
+    // 📦 显示 GitHub 仓库模型列表（比对本地已有文件）
+    const showRepoModels = async (repo, models, source) => {
+      // 加载本地仓库已有文件列表 + 镜像配置
+      let localMap = new Map();
+      let mirror = "";
+      try {
+        const { LoadAppConfig, ScanModelEntries } =
+          await import("../../../wailsjs/go/main/App.js");
+        const cfg = await LoadAppConfig();
+        mirror = cfg.mirror || "";
+        const repoRoot = cfg.repoRoot || "";
+        if (repoRoot) {
+          const entries = await ScanModelEntries(repoRoot);
+          entries.forEach((e) => {
+            let n = e.Name || "";
+            if (n.endsWith(".ban")) n = n.slice(0, -4);
+            localMap.set(n, e.Hash || "");
+          });
+        }
+      } catch (_) {
+        // 加载失败不影响列表显示
+      }
+
+      // 根据镜像源选择下载 URL 前缀
+      // 选 jsDelivr 时下载优先走 CDN；选 GitHub API 时走 raw（Go 端内部会按配置回退）
+      const dlPrefix =
+        mirror === "jsdelivr"
+          ? "https://cdn.jsdelivr.net/gh/" + repo + "@main/"
+          : "https://raw.githubusercontent.com/" + repo + "/main/";
+
+      const sourceLabel =
+        (source === "raw"
+          ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(137,180,250,.15);color:var(--accent)">raw</span>'
+          : source === "jsd"
+            ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(250,179,135,.15);color:#fab387">⚡jsd</span>'
+            : source === "api"
+              ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(166,227,161,.15);color:var(--success,#4caf50)">API</span>'
+              : "") +
+        (mirror === "jsdelivr"
+          ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(250,179,135,.15);color:#fab387;margin-left:2px">⚡CDN</span>'
+          : mirror === "githubapi"
+            ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(166,227,161,.15);color:var(--success,#4caf50);margin-left:2px">🐙API</span>'
+            : "");
+
+      let showAll = false;
+      let selectedSet = new Set(); // 选中下载的模型名
+
+      const isMissing = (m) => {
+        return m.hash
+          ? !(
+              Array.from(localMap.values()).some((h) => h && h === m.hash) ||
+              localMap.has(m.name)
+            )
+          : !localMap.has(m.name);
+      };
+
+      const renderList = (filter = "") => {
+        const q = filter.trim().toLowerCase();
+        let filtered = q
+          ? models.filter((m) => m.name.toLowerCase().includes(q))
+          : models;
+        if (!showAll) {
+          filtered = filtered.filter((m) => isMissing(m));
+        }
+        const frag = document.createDocumentFragment();
+        const esc = (s) => this._esc(s);
+        if (!filtered.length) {
+          const empty = document.createElement("div");
+          empty.style.cssText =
+            "padding:12px;text-align:center;color:var(--muted);font-size:10px";
+          empty.textContent = "🔍 没有匹配的模型";
+          frag.appendChild(empty);
+          return frag;
+        }
+        filtered.forEach((m) => {
+          const exists = !isMissing(m);
+          const row = document.createElement("div");
+          row.className = "model-row";
+          row.dataset.id = String(models.indexOf(m));
+          row.dataset.name = m.name;
+          row.style.cssText =
+            "display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);font-size:11px;margin-bottom:6px;cursor:context-menu;transition:background .15s" +
+            (exists
+              ? ";opacity:.6;background:rgba(166,227,161,.06)"
+              : ";background:rgba(243,139,168,.04)");
+
+          // 复选框（仅未下载的）
+          if (!exists) {
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.className = "ws-sel";
+            cb.dataset.name = m.name;
+            cb.checked = selectedSet.has(m.name);
+            cb.style.cursor = "pointer;flex-shrink:0";
+            row.appendChild(cb);
+          }
+
+          // 信息区（文件名 + 大小）
+          const info = document.createElement("div");
+          info.style.cssText =
+            "flex:1;min-width:0;display:flex;flex-direction:column;gap:1px";
+
+          // 文件名（加粗）
+          const nameSpan = document.createElement("span");
+          nameSpan.style.cssText =
+            "font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);font-size:11px";
+          nameSpan.textContent = m.name;
+          info.appendChild(nameSpan);
+
+          // 大小（灰色小字）
+          const sizeSpan = document.createElement("span");
+          sizeSpan.style.cssText = "font-size:9px;color:var(--muted)";
+          sizeSpan.textContent = m.size
+            ? (m.size / 1024).toFixed(0) + "KB"
+            : "";
+          info.appendChild(sizeSpan);
+
+          row.appendChild(info);
+
+          // 状态按钮
+          if (exists) {
+            const badge = document.createElement("span");
+            badge.style.cssText =
+              "padding:2px 8px;border-radius:4px;font-size:10px;color:var(--success,#4caf50);flex-shrink:0";
+            badge.textContent = "✅ 已有";
+            row.appendChild(badge);
+          } else {
+            const dlBtn = document.createElement("button");
+            dlBtn.className = "ws-dl-model";
+            dlBtn.dataset.url = dlPrefix + m.path.replace(/\\/g, "/");
+            dlBtn.dataset.name = m.name;
+            dlBtn.dataset.size = String(m.size || 0);
+            dlBtn.style.cssText =
+              "padding:3px 10px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;flex-shrink:0;transition:all .15s";
+            dlBtn.textContent = "⬇️";
+            // 悬停时亮起
+            dlBtn.onmouseenter = () => {
+              dlBtn.style.borderColor = "var(--accent)";
+              dlBtn.style.color = "var(--accent)";
+            };
+            dlBtn.onmouseleave = () => {
+              dlBtn.style.borderColor = "var(--bd)";
+              dlBtn.style.color = "var(--muted)";
+            };
+            row.appendChild(dlBtn);
+          }
+
+          // 整行悬停高亮
+          row.onmouseenter = () => {
+            row.style.background = exists
+              ? "rgba(166,227,161,.1)"
+              : "rgba(243,139,168,.08)";
+          };
+          row.onmouseleave = () => {
+            row.style.background = exists
+              ? "rgba(166,227,161,.06)"
+              : "rgba(243,139,168,.04)";
+          };
+
+          frag.appendChild(row);
+        });
+        return frag;
+      };
+
+      const missingCount = models.filter((m) => {
+        const exists = m.hash
+          ? Array.from(localMap.values()).some((h) => h && h === m.hash) ||
+            localMap.has(m.name)
+          : localMap.has(m.name);
+        return !exists;
+      }).length;
+
       searchResults.innerHTML =
         '<div style="flex:1;overflow-y:auto;padding:0 12px">' +
-        '<div style="padding:8px 0 4px;display:flex;align-items:center;gap:4px">' +
+        '<div style="padding:8px 0 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
         '<button class="ws-back-repo" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:10px">← 返回</button>' +
         '<span style="font-size:11px;font-weight:600;color:var(--txt)">📦 ' +
         this._esc(repo) +
         "</span>" +
+        sourceLabel +
         '<span style="font-size:9px;color:var(--muted)">' +
         models.length +
         " 个模型</span>" +
-        '<button class="ws-index-btn" style="margin-left:auto;padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:9px">🔄 索引</button>' +
+        (missingCount > 0
+          ? '<span style="font-size:9px;color:var(--accent);margin-left:auto">⬇️' +
+            missingCount +
+            "</span>" +
+            '<button class="ws-dl-selected" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px;opacity:.4;pointer-events:none">⬇️ 选中 (0)</button>'
+          : "") +
+        '<button class="ws-filter-btn" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:10px">⚙️ 筛选</button>' +
+        '<div class="ws-filter-dropdown" style="display:none;width:100%;padding:4px 0 2px;gap:4px;flex-wrap:wrap">' +
+        (missingCount > 0
+          ? '<button class="ws-dl-all" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">⬇️ 下载全部缺失</button>' +
+            '<button class="ws-select-all" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px">☐ 全选</button>'
+          : "") +
+        '<button class="ws-toggle-all" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:9px">' +
+        (showAll ? "📁 显示全部" : "📁 仅显示缺失") +
+        "</button>" +
         "</div>" +
-        models
-          .map(
-            (m, i) =>
-              '<div style="display:flex;align-items:center;gap:4px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);font-size:10px;margin-bottom:2px">' +
-              '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
-              this._esc(m.name) +
-              "</span>" +
-              '<span style="font-size:9px;color:var(--muted);flex-shrink:0">' +
-              (m.size ? (m.size / 1024).toFixed(0) + "KB" : "") +
-              "</span>" +
-              '<button class="ws-dl-model" data-url="https://raw.githubusercontent.com/' +
-              this._esc(repo) +
-              "/main/" +
-              this._esc(m.path.replace(/\\/g, "/")) +
-              '" style="padding:1px 6px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">⬇️</button>' +
-              "</div>",
-          )
-          .join("") +
+        "</div>" +
+        '<div id="ws-queue-status" style="display:none;padding:4px 12px;background:var(--surf);border-bottom:1px solid var(--bd);font-size:10px;color:var(--txt)"></div>' +
+        '<div style="padding:2px 0 6px">' +
+        '<input id="ws-repo-srch" type="text" placeholder="🔍 搜索模型名称" style="width:100%;box-sizing:border-box;padding:4px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;outline:none">' +
+        "</div>" +
+        '<div id="ws-repo-list"></div>' +
         "</div>";
+      // 用 DOM API 渲染列表，避免字符串拼接的陷阱
+      const listContainer = searchResults.querySelector("#ws-repo-list");
+      if (listContainer) listContainer.appendChild(renderList());
 
       // 返回
       searchResults
@@ -993,53 +1313,320 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
           if (currentSite) showSiteView(currentSite);
         });
 
-      // 更新本地仓库索引
-      searchResults
-        .querySelector(".ws-index-btn")
-        ?.addEventListener("click", async () => {
-          const btn = searchResults.querySelector(".ws-index-btn");
-          btn.textContent = "⏳";
-          try {
-            const { LoadAppConfig, GenerateRepoIndex } =
-              await import("../../../wailsjs/go/main/App.js");
-            const cfg = await LoadAppConfig();
-            const repoRoot = cfg.repoRoot || "";
-            if (!repoRoot) {
-              bus.emit("toast:show", {
-                msg: "请先配置仓库目录",
-                duration: 2000,
-                type: "warn",
-              });
-              btn.textContent = "🔄 索引";
-              return;
-            }
-            const path = await GenerateRepoIndex(repoRoot);
-            bus.emit("toast:show", {
-              msg: "✅ 索引已更新: " + path + "，请提交并推送到 GitHub",
-              duration: 4000,
-              type: "success",
-            });
-            btn.textContent = "✅";
-            setTimeout(() => {
-              btn.textContent = "🔄 索引";
-            }, 3000);
-          } catch (e) {
-            bus.emit("toast:show", {
-              msg: "❌ 索引更新失败: " + String(e),
-              duration: 4000,
-              type: "error",
-            });
-            btn.textContent = "🔄 索引";
+      // 搜索过滤
+      const srch = searchResults.querySelector("#ws-repo-srch");
+      if (srch) {
+        srch.addEventListener("input", () => {
+          const list = searchResults.querySelector("#ws-repo-list");
+          if (list) {
+            list.replaceChildren(renderList(srch.value));
           }
         });
+      }
 
-      // 下载
-      searchResults.querySelectorAll(".ws-dl-model").forEach((btn) => {
-        btn.addEventListener("click", async () => {
+      // 📁 显示全部 切换
+      const toggleBtn = searchResults.querySelector(".ws-toggle-all");
+      if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+          showAll = !showAll;
+          toggleBtn.textContent = showAll ? "📁 显示全部" : "📁 仅显示缺失";
+          toggleBtn.style.borderColor = showAll ? "var(--accent)" : "var(--bd)";
+          toggleBtn.style.color = showAll ? "var(--accent)" : "var(--txt)";
+          const list = searchResults.querySelector("#ws-repo-list");
+          const srch = searchResults.querySelector("#ws-repo-srch");
+          if (list) list.replaceChildren(renderList(srch?.value || ""));
+        });
+      }
+
+      // ⚙️ 筛选下拉展开/收起
+      const filterBtn = searchResults.querySelector(".ws-filter-btn");
+      const filterDropdown = searchResults.querySelector(".ws-filter-dropdown");
+      if (filterBtn && filterDropdown) {
+        filterBtn.addEventListener("click", () => {
+          const isOpen = filterDropdown.style.display === "flex";
+          filterDropdown.style.display = isOpen ? "none" : "flex";
+          filterBtn.textContent = isOpen ? "⚙️ 筛选" : "⚙️ 收起";
+        });
+      }
+
+      // ⬇️ 下载缺失（通过下载队列串行执行）
+      const dlAllBtn = searchResults.querySelector(".ws-dl-all");
+      const queueStatus = searchResults.querySelector("#ws-queue-status");
+      if (dlAllBtn) {
+        dlAllBtn.addEventListener("click", async () => {
+          const missing = models.filter((m) => isMissing(m));
+          if (!missing.length) return;
+          const ok = await modalConfirm({
+            title: "批量下载",
+            icon: "⬇️",
+            message:
+              "将从 0 号模型开始依次下载 " +
+              missing.length +
+              " 个模型，每 10 秒下载一个，是否继续？",
+            okText: "开始下载",
+          });
+          if (!ok) return;
+          dlAllBtn.disabled = true;
+          // 构造队列任务
+          const { LoadAppConfig, EnqueueDownloads, CancelQueue } =
+            await import("../../../wailsjs/go/main/App.js");
+          const cfg = await LoadAppConfig();
+          const repoRoot = cfg.repoRoot || "";
+          if (!repoRoot) {
+            bus.emit("toast:show", {
+              msg: "请先在设置中配置仓库目录",
+              duration: 3000,
+              type: "warn",
+            });
+            dlAllBtn.disabled = false;
+            return;
+          }
+          const tasks = missing.map((m) => ({
+            url: dlPrefix + m.path.replace(/\\/g, "/"),
+            saveDir: repoRoot,
+            name: m.name,
+            size: m.size || 0,
+          }));
+          await EnqueueDownloads(tasks);
+
+          // 监听队列状态
+          const offEvents = () => {
+            if (window.runtime?.EventsOff) {
+              window.runtime.EventsOff("queue:status");
+              window.runtime.EventsOff("queue:file-start");
+              window.runtime.EventsOff("queue:file-done");
+            }
+          };
+          const onQueueStatus = (status, total, currentName) => {
+            if (status === "done" || status === "cancelled") {
+              dlAllBtn.disabled = false;
+              dlAllBtn.textContent =
+                status === "done" ? "✅ 下载完成" : "⏹ 已取消";
+              queueStatus.style.display = "none";
+              offEvents();
+              setTimeout(() => showRepoModels(repo, models, source), 1000);
+            }
+          }; // end onQueueStatus
+          const onFileStart = (name, total, remaining) => {
+            const done = total - remaining;
+            dlAllBtn.textContent = "⬇️ " + done + "/" + total;
+            queueStatus.style.display = "block";
+            queueStatus.innerHTML =
+              '<span style="color:var(--accent)">⬇️</span> ' +
+              this._esc(name) +
+              ' <span style="color:var(--muted)">(' +
+              done +
+              "/" +
+              total +
+              ")</span>" +
+              ' <button class="ws-cancel-queue" style="margin-left:auto;padding:1px 6px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px">✕ 取消</button>';
+            queueStatus
+              .querySelector(".ws-cancel-queue")
+              ?.addEventListener("click", async () => {
+                await CancelQueue();
+              });
+          }; // end onFileStart
+          const onFileDone = (name, status, errMsg) => {
+            if (status === "fail") {
+              queueStatus.innerHTML +=
+                '<div style="color:#f38ba8;font-size:9px">❌ ' +
+                this._esc(name) +
+                ": " +
+                this._esc(errMsg || "") +
+                "</div>";
+            }
+          }; // end onFileDone
+          if (window.runtime?.EventsOn) {
+            window.runtime.EventsOn("queue:status", onQueueStatus);
+            window.runtime.EventsOn("queue:file-start", onFileStart);
+            window.runtime.EventsOn("queue:file-done", onFileDone);
+          }
+        }); // end dlAllBtn.addEventListener
+      } // end if (dlAllBtn)
+
+      // 复选框 → 更新选中计数（数据层 + DOM 同步）
+      const updateSelectedUI = () => {
+        const checked = selectedSet.size;
+        const btn = searchResults.querySelector(".ws-dl-selected");
+        if (btn) {
+          btn.textContent = "⬇️ 下载选中 (" + checked + ")";
+          btn.style.opacity = checked > 0 ? "1" : ".4";
+          btn.style.pointerEvents = checked > 0 ? "auto" : "none";
+        }
+      };
+      const selContainer = searchResults.querySelector("#ws-repo-list");
+      if (selContainer) {
+        selContainer.addEventListener("change", (e) => {
+          if (!e.target.classList.contains("ws-sel")) return;
+          const name = e.target.dataset.name;
+          if (e.target.checked) selectedSet.add(name);
+          else selectedSet.delete(name);
+          updateSelectedUI();
+        });
+      }
+
+      // ⬇️ 下载选中
+      const dlSelBtn = searchResults.querySelector(".ws-dl-selected");
+      if (dlSelBtn) {
+        dlSelBtn.addEventListener("click", async () => {
+          if (!selectedSet.size) return;
+          const tasks = [...selectedSet]
+            .map((name) => models.find((m) => m.name === name))
+            .filter(Boolean)
+            .map((m) => ({
+              url: dlPrefix + m.path.replace(/\\/g, "/"),
+              saveDir: "",
+              name: m.name,
+              size: m.size || 0,
+            }));
+          const { LoadAppConfig, EnqueueDownloads } =
+            await import("../../../wailsjs/go/main/App.js");
+          const cfg = await LoadAppConfig();
+          const repoRoot = cfg.repoRoot || "";
+          if (!repoRoot) {
+            bus.emit("toast:show", {
+              msg: "请先在设置中配置仓库目录",
+              duration: 3000,
+              type: "warn",
+            });
+            return;
+          }
+          tasks.forEach((t) => (t.saveDir = repoRoot));
+          await EnqueueDownloads(tasks);
+          // 监听队列完成
+          const h = async (status) => {
+            if (status === "done" || status === "cancelled") {
+              window.runtime?.EventsOff("queue:status");
+              window.runtime?.EventsOff("queue:file-start");
+              window.runtime?.EventsOff("queue:file-done");
+              selectedSet.clear();
+              const srch = searchResults.querySelector("#ws-repo-srch");
+              const list = searchResults.querySelector("#ws-repo-list");
+              if (list && srch) {
+                const { ScanModelEntries } =
+                  await import("../../../wailsjs/go/main/App.js");
+                const entries = await ScanModelEntries(repoRoot);
+                localMap = new Map();
+                entries.forEach((e) => {
+                  let n = e.Name || "";
+                  if (n.endsWith(".ban")) n = n.slice(0, -4);
+                  localMap.set(n, e.Hash || "");
+                });
+                list.replaceChildren(renderList(srch.value));
+              }
+            }
+          };
+          window.runtime?.EventsOn("queue:status", h);
+          window.runtime?.EventsOn("queue:file-start", (name, total, rem) => {
+            const qs = searchResults.querySelector("#ws-queue-status");
+            if (qs) {
+              qs.style.display = "block";
+              qs.innerHTML =
+                "⬇️ " +
+                this._esc(name) +
+                " (" +
+                (total - rem) +
+                "/" +
+                total +
+                ")";
+            }
+          });
+          window.runtime?.EventsOn("queue:file-done", (name, status) => {
+            if (status === "fail" && selContainer) {
+              // 失败时取消勾选，让用户可重试
+              const cb = selContainer.querySelector(
+                '.ws-sel[data-name="' + this._esc(name) + '"]',
+              );
+              if (cb) cb.checked = false;
+              selectedSet.delete(name);
+              updateSelectedUI();
+            }
+          });
+        });
+      }
+
+      // ☐ 全选 / 取消全选
+      const selAllBtn = searchResults.querySelector(".ws-select-all");
+      if (selAllBtn) {
+        selAllBtn.addEventListener("click", () => {
+          const allChecked =
+            selContainer?.querySelectorAll(".ws-sel:checked").length ===
+            selContainer?.querySelectorAll(".ws-sel").length;
+          selContainer?.querySelectorAll(".ws-sel").forEach((cb) => {
+            cb.checked = !allChecked;
+            if (cb.checked) selectedSet.add(cb.dataset.name);
+            else selectedSet.delete(cb.dataset.name);
+          });
+          selAllBtn.textContent = allChecked ? "☐ 全选" : "☑ 取消全选";
+          updateSelectedUI();
+        });
+      }
+
+      // 右键模型行 → 查看索引信息
+      const listEl = searchResults.querySelector("#ws-repo-list");
+      if (listEl) {
+        listEl.addEventListener("contextmenu", (e) => {
+          const row = e.target.closest("[data-name]");
+          if (!row) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const name = row.dataset.name;
+          const m = models.find((x) => x.name === name);
+          if (!m) return;
+          const sizeStr = m.size ? (m.size / 1024).toFixed(0) + "KB" : "?KB";
+          const items = [
+            { label: "📄 " + this._esc(m.name), onClick: () => {} },
+            { label: "📂 " + this._esc(m.path), onClick: () => {} },
+            {
+              label: "🔐 " + (m.hash ? m.hash : "—"),
+              onClick: () => {},
+            },
+            { label: "📏 " + sizeStr, onClick: () => {} },
+          ];
+          bus.emit("menu:show", { x: e.clientX, y: e.clientY, items });
+        });
+      }
+
+      // 下载（事件委托：⬇️ = 勾选 + 入队）
+      if (listContainer) {
+        listContainer.addEventListener("click", async (e) => {
+          const btn = e.target.closest(".ws-dl-model");
+          if (!btn) return;
+
+          // 同步勾选同行复选框
+          const cb = btn.closest(".model-row")?.querySelector(".ws-sel");
+          const name = btn.dataset.name || "";
+          if (cb && name) {
+            cb.checked = true;
+            selectedSet.add(name);
+            updateSelectedUI();
+          }
+
           const url = btn.dataset.url;
+          const size = parseInt(btn.dataset.size, 10) || 0;
+          const FOUR_MB = 4 * 1024 * 1024;
+          const TEN_MB = 10 * 1024 * 1024;
+          if (size > TEN_MB) {
+            bus.emit("toast:show", {
+              msg: "📏 文件超过 10MB，已拒绝下载",
+              duration: 3000,
+              type: "warn",
+            });
+            return;
+          }
+          if (size > FOUR_MB) {
+            const ok = await modalConfirm({
+              title: "文件较大",
+              icon: "📏",
+              message: (size / 1024 / 1024).toFixed(1) + "MB，确定要下载吗？",
+              okText: "下载",
+            });
+            if (!ok) return;
+          }
+          // 入队单个文件
           btn.textContent = "⏳";
           try {
-            const { LoadAppConfig, DownloadFromGitHub } =
+            const { LoadAppConfig, EnqueueDownloads } =
               await import("../../../wailsjs/go/main/App.js");
             const cfg = await LoadAppConfig();
             const repoRoot = cfg.repoRoot || "";
@@ -1052,56 +1639,22 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
               btn.textContent = "⬇️";
               return;
             }
-            // 计算本地路径
-            const afterMain = url.split("/main/")[1] || url.split("/").pop();
-            const localPath = repoRoot + "\\" + afterMain.replace(/\//g, "\\");
-            const fileName = afterMain.split("/").pop();
-            // 检查是否已存在
-            const { CheckFileExists } =
-              await import("../../../wailsjs/go/main/App.js");
-            const exists = await CheckFileExists(localPath);
-            if (exists) {
-              const ok = await modalConfirm({
-                title: "文件已存在",
-                icon: "📦",
-                message: fileName + " 已存在，是否覆盖？",
-                okText: "覆盖",
-                danger: true,
-              });
-              if (!ok) {
-                bus.emit("toast:show", {
-                  msg: "⏭ 已跳过",
-                  duration: 1500,
-                  type: "info",
-                });
-                btn.textContent = "⬇️";
-                return;
-              }
-              // 删除旧文件
-              try {
-                const fs = await import("../../../wailsjs/go/main/App.js");
-                await fs.MoveToRecycle(localPath);
-              } catch {}
-            }
-            const path = await DownloadFromGitHub(url, repoRoot);
-            bus.emit("stats:refresh");
-            bus.emit("toast:show", {
-              msg: "✅ 已下载: " + fileName,
-              duration: 3000,
-              type: "success",
+            await EnqueueDownloads([{ url, saveDir: repoRoot, name, size }]);
+            // 等待队列完成这个任务
+            await new Promise((resolve) => {
+              const h = (s) => {
+                if (s === "done" || s === "cancelled") {
+                  window.runtime?.EventsOff("queue:status");
+                  resolve();
+                }
+              };
+              window.runtime?.EventsOn("queue:status", h);
             });
-            btn.textContent = "⬇️";
-          } catch (e) {
-            bus.emit("toast:show", {
-              msg: "❌ 下载失败: " + String(e),
-              duration: 4000,
-              type: "error",
-            });
-            btn.textContent = "⬇️";
-          }
-        });
-      });
-    };
+          } catch (_) {}
+          btn.textContent = "⬇️";
+        }); // end listContainer.addEventListener
+      } // end if (listContainer)
+    }; // end showRepoModels
 
     loadSites();
   }
@@ -1145,6 +1698,30 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
       applyTheme(savedTheme);
       const themeSelect = root.getElementById("set-theme");
       if (themeSelect) themeSelect.value = savedTheme;
+
+      // 镜像源
+      const savedMirror = cfg.mirror || "";
+      const mirrorSelect = root.getElementById("set-mirror");
+      if (mirrorSelect) {
+        mirrorSelect.value = savedMirror;
+        mirrorSelect.addEventListener("change", async () => {
+          const val = mirrorSelect.value;
+          const { SetDownloadMirror } =
+            await import("../../../wailsjs/go/main/App.js");
+          await SetDownloadMirror(val);
+          bus.emit("toast:show", {
+            msg:
+              "✅ 下载源已切换为 " +
+              (val === "jsdelivr"
+                ? "jsDelivr CDN"
+                : val === "githubapi"
+                  ? "GitHub API"
+                  : "直连"),
+            duration: 2000,
+            type: "success",
+          });
+        });
+      }
 
       // ===== 事件绑定 =====
 

@@ -6,6 +6,7 @@ type AppConfig struct {
 	McRoot   string `json:"mcRoot"`
 	LinkMode string `json:"linkMode"`
 	Theme    string `json:"theme"`
+	Mirror   string `json:"mirror"`
 }
 
 // WorkshopPresetSearch 预设搜索词

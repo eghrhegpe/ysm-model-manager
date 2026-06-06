@@ -1,3 +1,26 @@
+export namespace main {
+	
+	export class DownloadTask {
+	    url: string;
+	    saveDir: string;
+	    name: string;
+	    size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DownloadTask(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.url = source["url"];
+	        this.saveDir = source["saveDir"];
+	        this.name = source["name"];
+	        this.size = source["size"];
+	    }
+	}
+
+}
+
 export namespace types {
 	
 	export class AppConfig {
@@ -5,6 +28,7 @@ export namespace types {
 	    mcRoot: string;
 	    linkMode: string;
 	    theme: string;
+	    mirror: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppConfig(source);
@@ -16,6 +40,7 @@ export namespace types {
 	        this.mcRoot = source["mcRoot"];
 	        this.linkMode = source["linkMode"];
 	        this.theme = source["theme"];
+	        this.mirror = source["mirror"];
 	    }
 	}
 	export class CustomFileInfo {

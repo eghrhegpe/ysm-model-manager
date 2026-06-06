@@ -648,5 +648,42 @@ YSM 加载模型时文件被进程锁定，`os.Rename` 返回 `ERROR_SHARING_VIO
 
 13. **树中的路径永远是相对的** — `data-dir` 存相对路径，调用 Go 绑定前必须拼接 `repoRoot + "/" + dir`
 14. **.ban 后缀无处不在** — 任何文件名匹配的地方都要考虑 `.ban` 后缀的存在
+
+---
+
+## 2026-06-06 新增 bug 记录
+
+### 24. AI 写的新代码块漏/多花括号（bug-chronicle #24）
+
+#### 症状
+
+- Vite 构建报 `Parse error @:1648:1`，指向文件末尾的类关闭 `}`
+- 编辑器中文件看起来语法正确，但 esbuild 解析失败
+
+#### 根本原因
+
+AI（我）在两次 `replace_string_in_file` 中写错了新代码块的括号结构：
+
+| # | 错误 | 位置 | 表现 |
+|---|------|------|------|
+| 1 | `.map()` 回调丢了 `return` | `renderList` 函数 | esbuild 报 `Unexpected ')'` |
+| 2 | `const` 声明后多了一个 `}` | `showRepoModels` 中的 `dlPrefix` 赋值 | Vite 报 `Parse error` 在文件末尾 |
+
+#### Debug 路径
+
+- **Round 1**: 以为是 esbuild 版本太旧不兼容某些 JS 语法
+  - _试了 acorn 解析、Node.js --check，都报同样的错误_
+- **Round 2**: 以为文件末尾有不可见字符
+  - _hex dump 确认只是纯文本 `}`_
+- **Round 3**: 检查花括号深度
+  - _发现多余的 `}` 在 `dlPrefix` 赋值语句后面_
+  - **真相**: 手写的 `newString` 里多打了一个 `}`
+
+#### Lesson
+
+`replace_string_in_file` 的 `newString` 完全靠手写，没有语法校验。写块状代码（特别是多层嵌套的 if/return/闭包）时，少一个 `{` 或多一个 `}` 都很难发现。应该：
+
+- 每次改完立即跑 `npx vite build` 验证（而不是攒一堆再构建）
+- 用编辑器先写/验证小段代码，再组装到大块替换中
 15. **wails build -o 在 Windows 有 bug** — 用默认输出路径 + Copy-Item 替代
 16. **Windows 文件锁不可绕过** — 游戏运行中不能改文件，检测后跳过，等待下次触发

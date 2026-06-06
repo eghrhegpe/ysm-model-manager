@@ -18,6 +18,10 @@ export function BackupWorkshopCreators() {
   return window['go']['main']['App']['BackupWorkshopCreators']();
 }
 
+export function CancelQueue() {
+  return window['go']['main']['App']['CancelQueue']();
+}
+
 export function CheckFileExists(arg1) {
   return window['go']['main']['App']['CheckFileExists'](arg1);
 }
@@ -64,6 +68,10 @@ export function DownloadUpdate(arg1) {
 
 export function EmptyRecycleBin(arg1) {
   return window['go']['main']['App']['EmptyRecycleBin'](arg1);
+}
+
+export function EnqueueDownloads(arg1) {
+  return window['go']['main']['App']['EnqueueDownloads'](arg1);
 }
 
 export function ExportWorkshopCreatorsJSONFile() {
@@ -210,6 +218,10 @@ export function OpenFolder(arg1) {
   return window['go']['main']['App']['OpenFolder'](arg1);
 }
 
+export function QueueStatus() {
+  return window['go']['main']['App']['QueueStatus']();
+}
+
 export function RelinkCustomDir(arg1, arg2) {
   return window['go']['main']['App']['RelinkCustomDir'](arg1, arg2);
 }
@@ -264,6 +276,10 @@ export function ScanModelEntries(arg1) {
 
 export function SelectDirectory() {
   return window['go']['main']['App']['SelectDirectory']();
+}
+
+export function SetDownloadMirror(arg1) {
+  return window['go']['main']['App']['SetDownloadMirror'](arg1);
 }
 
 export function SetLinkMode(arg1) {

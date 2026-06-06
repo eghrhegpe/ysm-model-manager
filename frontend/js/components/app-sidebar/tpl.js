@@ -21,7 +21,19 @@ export function footerHTML() {
 }
 
 export function listContainerHTML() {
-  return `<div class="list" id="vg"></div>`;
+  return `<div class="list" id="vg">${skeletonHTML()}</div>`;
+}
+
+/** 加载骨架屏 */
+export function skeletonHTML() {
+  let h = "";
+  for (let i = 0; i < 4; i++) {
+    h += `<div class="sk-item">
+<div class="sk-line sk-w80"></div>
+<div class="sk-line sk-w40"></div>
+</div>`;
+  }
+  return h;
 }
 
 /** 单个整合包卡片头部。

@@ -79,7 +79,7 @@ export function settingsHTML() {
   </div>
 </div>
 
-<div class="section-title" style="margin-bottom:8px;margin-top:16px">⚙️ 关于</div>
+<div class="section-title" style="margin-bottom:8px;margin-top:16px">ℹ️ 关于</div>
 
 <div class="settings-group" style="margin-bottom:12px">
   <div class="setting-row">
@@ -87,8 +87,13 @@ export function settingsHTML() {
     <span id="set-version" style="font-size:11px;color:var(--muted)">加载中...</span>
     <button class="btn" id="set-check-update" style="font-size:10px">🔄 检查更新</button>
   </div>
-  <div style="font-size:9px;color:#6c7086;padding:2px 0 0 0">
-    GitHub: <a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a>
+  <div style="font-size:9px;color:var(--muted);padding:4px 12px 0;line-height:1.6">
+    <div>🛠️ <b>YSM 模型管理器</b> — 类似 Mod Organizer 2 的 Minecraft YSM 模型管理工具</div>
+    <div>🧱 <b>技术栈</b>: Go (Wails v2) + 原生 HTML/CSS/JS (Web Components + Shadow DOM)</div>
+    <div>📦 <b>GitHub</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
+    <div>📋 <b>发布</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/releases" target="_blank" style="color:var(--accent)">查看所有版本</a></div>
+    <div>📖 <b>文档</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/tree/main/docs" target="_blank" style="color:var(--accent)">docs/</a></div>
+    <div style="margin-top:4px;color:var(--muted)">💡 灵感来自 LytVPK mod-manager</div>
   </div>
 </div>
 
@@ -107,9 +112,12 @@ export function downloadsHTML() {
 </div>
 <div id="dl-drop" style="flex:1;margin:4px 12px;border:2px dashed var(--bd);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;transition:all .2s;cursor:pointer;min-height:80px">
   <div style="font-size:28px;opacity:.35">📥</div>
-  <div style="font-size:11px;color:var(--muted)">拖拽模型文件 <b>.ysm .zip .7z</b> 到此处</div>
-  <div style="font-size:9px;color:var(--muted)">或点击选择文件</div>
+  <div style="font-size:11px;color:var(--muted)">拖拽模型文件 <b>.ysm .zip .7z</b> 或文件夹到此处，或点击选择文件</div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span style="font-size:9px;color:var(--muted)">📁 拖入整个文件夹即可批量导入</span>
+  </div>
   <input type="file" id="dl-file-input" accept=".ysm,.zip,.7z" style="display:none">
+  <input type="file" id="dl-folder-input" webkitdirectory style="display:none">
 </div>
 <div id="dl-form" style="margin:4px 12px;display:none;flex-direction:column;gap:4px">
   <div style="font-size:11px;display:flex;gap:8px">

@@ -42,7 +42,7 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
         {
           label: "从仓库导入模型",
           icon: "⬇️",
-          onClick: () => bus.emit("sync:download-missing"),
+          onClick: () => bus.emit("sync:download-missing", { instanceName }),
         },
         {
           label: "复制您的模型清单",

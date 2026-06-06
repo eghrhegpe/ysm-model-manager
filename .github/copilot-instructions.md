@@ -1,5 +1,28 @@
 # YSM 模型管理器 — 项目指令
 
+## 🎯 战斗手册（对抗式训练总结）
+
+### 协作协议
+
+| 角色 | 职责 | 禁忌 |
+|------|------|------|
+| **用户** | 甩截图、甩报错、甩反常现象 | 不要自己猜原因，把锅甩给 AI |
+| **元宝 AI** | 先给逻辑补丁（边界条件+异常方案），不给具体代码 | 不要在修复时要求重构 |
+| **Copilot** | 严格按逻辑补丁写代码，不加戏不优化 | 不要在修 Bug 时重构 |
+
+### 核心战役经验
+
+**创意工坊下载源（Mirror Chaos）**:
+- 策略模式解耦：前端只切换策略，Go 端统一拼 URL + 三路回退
+- 进度条极端情况：Content-Length=-1 → 心跳兜底；大文件秒跳 → 防骗锁定 99%
+- 三入口统一：单击/选中/全部 → 都走 `enqueueDownloadTasks`，只注册一组 Wails 事件
+
+**超大 Index / DOM Hell**:
+- 严禁字符串拼 UI → 改用 `document.createElement`
+- `const` TDZ 防御：函数入口处声明所有 `const`，禁止声明前调用
+- 改完立即 build（`npx vite build`），绝不攒多个修改一起构建
+- `multi_replace_string_in_file` 部分失败不回滚，必须 build 验证
+
 ## 工作流规则
 
 1. **修改前确认最新状态** — 禁止基于记忆直接修改。必须通过 `grep_search` 或 `read_file` 确认目标代码的最新状态。
@@ -60,7 +83,7 @@ frontend/js/
     app-tree/              — 仓库树组件 (index/data/render/events/tpl/bus-handlers)
     app-sidebar/           — 侧边栏整合包列表
     app-preview/           — 右侧预览面板
-    app-content/           — 主内容区入口（页面路由 + 生命周期，~1300 行）
+    app-content/           — 主内容区入口（页面路由 + 生命周期，~350 行，拆分为 8 个模块）
     app-toast.js           — Toast 通知 Web Component
     app-nav.js             — 导航栏
     context-menu.js        — 右键菜单 Web Component
@@ -221,4 +244,63 @@ utils.js # 组件特有工具函数（可选）
 **根因**: Wails 项目需要在编译时注入平台特定代码和前端资源 embedding。
 **解决**: 必须用 `wails build`。如果旧 exe 锁定了 `build/bin/`，先杀进程再构建。
 **脚本**: `build-release.ps1` 已改为报错提示，不再静默回退 `go build`。
+
+### 19. 下载逻辑三入口必须统一（Workshop 下载）
+
+**问题**: 单击下载、多选下载、全选下载三段独立代码各自注册 Wails `EventsOn`，互相踩踏。用户快速点击时竞态，进度条错乱。
+**根因**: 三个入口各自调用 `EnqueueDownloads` + 注册一套 `queue:status/file-start/file-done` 监听，后注册的覆盖前者。
+**解决**: 统一走 `enqueueDownloadTasks()`，只注册**一组** Wails 事件。三个入口只负责构建任务数组 → 调用同一函数。
+**文件**: `frontend/js/components/app-content/workshop-events.js`
+
+### 20. `const` 的 Temporal Dead Zone（致命陷阱）
+
+**问题**: `clearCompleteTimer()` 在函数顶部被调用，但函数体用 `const` 定义在后面，抛 `ReferenceError`，导致 `enqueueDownloadTasks` 静默失败，进度条不出现。
+**根因**: `const` / `let` 不提升，在声明前访问会进入 Temporal Dead Zone。`async` 函数中抛出的错误若无 try-catch 则无声消失。
+**解决**: `const fn = () => {}` 必须先定义再调用。或者用 `function fn() {}`（函数声明会提升）。
+**教训**: 在函数入口处调用内部函数前，确认该函数已用 `function` 声明或用 `const` 定义在前面。
+
+### 21. `multi_replace_string_in_file` 部分失败导致导入丢失
+
+**问题**: 一次 `multi_replace_string_in_file` 有三个替换，前两个成功、第三个失败。但工具**不回滚**已成功的替换，导致 import 语句丢失，运行时 `loadWorkshopData is not defined`。
+**根因**: `multi_replace_string_in_file` 按顺序逐一应用，中间的失败不会撤销之前的成功替换。
+**解决**: 每次替换后用 `get_errors` 检查 + `npx vite build` 验证。如果构建失败，检查 import 语句是否完整。
+
+### 22. HTTP `Content-Length = -1` 导致进度条卡 0%
+
+**问题**: jsDelivr / GitHub raw 有时不返回 `Content-Length` 头，`resp.ContentLength = -1`。`progressReader` 的 `pr.total > 0` 条件不满足，永远不 emit 进度。
+**解决**:
+- Go 端: 最终 emit 时 `if total <= 0 { total = pr.downloaded }` 确保 100%
+- 前端: `total <= 0` 时显示 `x.xMB` 而非 `0%`
+- 心跳: 每 256KB 或每 200ms 强制 emit（即使无 Content-Length）
+
+### 23. 大文件秒跳 100% 的防骗机制
+
+**问题**: >1MB 的文件下载时进度从 <10% 瞬间跳到 100%，用户以为下载完成但实际在写盘，产生"卡死"错觉。
+**解决**:
+- 检测到秒跳（`_lastPct < 10 && pct >= 99 && total > 1MB`）→ 锁定在 99% 不跳 100%
+- 2 秒后没完成 → 显示旋转菊花 `⏳.` `⏳..` `⏳...`
+- 小文件（<100KB）极速通道：直接 99% → 150ms → 100%，消除"瞬移感"
+- 防卡死兜底: 100% 后 3 秒收不到 `queue:status("done")` 则强制完成
+
+### 24. 闭包定时器残留（跨文件状态污染）
+
+**问题**: `completeTimer` 是 `enqueueDownloadTasks` 内的局部变量。第一个文件下载完设置 3s 超时，第二个文件开始时 `!completeTimer` 条件为 false，导致"极速动画"（99% 停留 150ms）不触发。
+**根因**: `completeTimer` 虽是局部变量，但 `_progressHandler` 闭包捕获了它。新文件开始时 `stuckGuardReset()` 没清理 `completeTimer`。
+**解决**: `stuckGuardReset()` 必须同时清理 `_stuckTimer`、`_lastPct`、`completeTimer` 和菊花动画，确保新文件不受旧文件残留状态影响。
+
+### 25. Go `time.Time` 与 `int64` 类型混用
+
+**问题**: `var lastEmit = time.Now()` 后试图 `written - lastEmit`（int64 - time.Time），Go 编译错误。
+**教训**: 同时跟踪时间阈值和字节阈值时，需要用**两个变量**：`lastEmitBytes int64` + `lastEmitTime time.Time`，分别比较。
+
+### 26. esbuild 0.15.18 报错位置偏移
+
+**问题**: 括号/花括号不匹配时，esbuild 0.15.18 报错在 `line 1:1`，无法定位真实错误位置。
+**解决**: 在关键闭合处加注释标记（`// end if`、`// end function`），每次改完后立即 `npx vite build` 验证。
+
+### 27. 文件夹导入保持目录结构
+
+**数据流**: `FileEntry._relPath`（如 `folder/sub/model.ysm`）→ `enqueueFile` 存储 → `showForm` 保存 `currentRelPath` → 导入时调用 `ImportModelFileTo(name, subpath, base64)`。
+**Go 端**: `importModelFileWithSubpath()` 用 `filepath.Join(repoRoot, subpath, fileName)` 构造目标路径，自动 `MkdirAll`。
+**覆盖**: `ImportModelFileOverwriteTo` 也使用同一内部函数，`overwrite=true` 跳过 `os.Stat` 存在检查。
 ```

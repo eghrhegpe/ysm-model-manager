@@ -25,11 +25,15 @@
 go/
   installer/    — 模型安装 (复制/硬链接/符号链接)
   recycle/      — 回收站管理
-  sync/         — 整合包同步状态
+  sync/         — 整合包同步状态 + 硬链接检测 + 文件锁检测
   logs/         — 导入日志
   types/        — 共享类型定义
-  ysm/          — YSM 模型解析
-app.go          — Wails Binding 入口 (~680行)
+  ysm/          — YSM 模型解析 + 摘要提取
+  watcher/      — 文件监听器 (fsnotify 实时同步 .ban)
+  updater/      — 自动更新 (GitHub Release 检测/下载)
+  version/      — 版本号 (编译时注入)
+  paths/        — 路径安全校验 (EvalSymlinks + 双重检查)
+app.go          — Wails Binding 入口
 main.go         — 应用入口
 ```
 
@@ -170,3 +174,31 @@ app-xxx/
 
 **问题**: `instance-actions.js` 中调用了不存在的 `DeleteFromDisk`，实际 Go 端函数名为 `MoveToRecycle`。
 **解决**: 确认 Go Binding 函数名与 `app.go` 中的定义一致，用 `grep_search` 先验证。
+
+### 13. 硬链接 + .ban 同步工作流
+
+- 禁用仓库模型 → watcher 自动检测 → `SyncToggleStatus` → 整合包文件也加 `.ban`
+- 匹配策略：哈希优先 → 文件夹限定路径 → 纯文件名回退
+- 硬链接 + 同分区：仓库改名时整合包文件共享同一 inode，`.ban` 同步即时生效
+- 游戏运行时文件被 YSM 锁定 → `isFileLocked(err)` 检测 → 跳过 → 下次 watcher 触发再试
+- 符号链接不推荐：YSM 无法加载 + PCL/HMCL 无管理员权限时文件一直挂起
+
+### 14. JSON 文件 BOM 陷阱
+
+**问题**: PowerShell 写入的 JSON 文件带 UTF-8 BOM (`EF BB BF`)，Go `json.Unmarshal` 解析失败。
+**解决**: 所有 JSON 读取用 `readJSONFile()` (bytes.TrimPrefix BOM)。配置文件路径有回退链：exe 目录 → exe 父目录 → 当前目录。
+
+### 15. .ban 后缀匹配的坑
+
+任何文件名匹配的代码都必须用 `strings.TrimSuffix(name, ".ban")` 去掉后缀再匹配（包括 `ClearCustomDir`、`repoName` 查找等）。
+
+### 16. 仓库树 `data-dir` 存相对路径
+
+右击文件夹的事件传的是相对路径，Go 绑定（`ScanModelEntries`、`RenameDir` 等）需要绝对路径。调用前必须先 `LoadAppConfig` 拿 `repoRoot` 拼接。
+
+### 17. Windows 特定问题
+
+- `wails build -o` 不支持绝对路径 (会把 `C:\` 当子目录名)
+- 硬链接跨分区自动降级为复制
+- `checkHardLink` 用 build tag 分离 Windows/Unix
+- `raw.githubusercontent.com` 国内可能被墙，fetch 超时设 20s

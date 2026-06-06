@@ -211,25 +211,52 @@ class AppContent extends HTMLElement {
       const totalDups = dupHashes.reduce((s, [, v]) => s + v.length - 1, 0);
 
       // 行内展示每组重复文件，让用户选择保留哪个
-      let html = `<div style="padding:8px 12px;font-size:11px;color:var(--txt)">发现 ${dupHashes.length} 组重复文件（共 ${totalDups} 个可清理）</div>`;
-      const keepChoices = {};
+      let html = `<div style="padding:10px 12px;font-size:11px;color:var(--txt);border-bottom:1px solid var(--bd)">
+发现 <strong>${dupHashes.length}</strong> 组重复文件，共 <strong>${totalDups}</strong> 个可清理
+<span style="font-size:9px;color:var(--muted);margin-left:4px">每组选一个保留，其余移入回收站</span>
+</div>`;
       dupHashes.forEach(([, group], gi) => {
-        html += `<div style="margin:4px 12px;border:1px solid var(--bd);border-radius:6px;padding:6px">
-<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">组 ${gi + 1}（${group.length} 个文件）</div>`;
+        // 默认选中最大的文件（最可能保留完整数据）
+        const defaultIdx = group.reduce(
+          (best, e, i, arr) => (e.Size > arr[best].Size ? i : best),
+          0,
+        );
+        html += `<div style="margin:6px 12px;border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:10px;font-weight:600;color:var(--txt);background:var(--surf);border-bottom:1px solid var(--bd)">
+<span>📎 组 ${gi + 1}</span>
+<span style="flex:1"></span>
+<span style="font-size:9px;color:var(--muted);font-weight:400">${group.length} 个文件 · ${group.reduce((s, e) => s + e.Size, 0)} 字节</span>
+</div>`;
         group.forEach((e, fi) => {
-          const checked = fi === 0 ? " checked" : "";
-          html += `<label style="display:flex;align-items:center;gap:4px;padding:2px 0;font-size:10px;cursor:pointer">
-<input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} style="flex-shrink:0">
-<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">${this._esc(e.Name)}</span>
-<span style="color:var(--muted);flex-shrink:0">${(e.Size / 1024).toFixed(0)}KB</span>
+          const checked = fi === defaultIdx ? " checked" : "";
+          const isDefault = fi === defaultIdx;
+          const dateStr = e.ModTime
+            ? new Date(e.ModTime).toLocaleDateString()
+            : "";
+          html += `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background .1s;background:${isDefault ? "var(--hover)" : "transparent"}"
+>
+<input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} style="flex-shrink:0;accent-color:var(--accent)">
+<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)" title="${this._esc(e.Path)}">${this._esc(e.Name)}</span>
+<span style="font-size:9px;color:var(--muted);flex-shrink:0;margin-right:4px">${(e.Size / 1024).toFixed(0)}KB</span>
+${dateStr ? `<span style="font-size:8px;color:var(--muted);flex-shrink:0">${dateStr}</span>` : ""}
+${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;background:#a6e3a122;color:#a6e3a1">推荐</span>' : ""}
 </label>`;
         });
         html += `</div>`;
       });
-      html += `<div style="padding:4px 12px 8px">
-<button id="diag-dedup-exec" style="padding:6px 16px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:11px">🗑️ 删除未选中的重复文件</button>
+      html += `<div style="display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--bd)">
+<button id="diag-dedup-exec" style="flex:1;padding:7px 16px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:11px">🗑️ 删除未选中的重复文件</button>
+<button id="diag-dedup-cancel" style="padding:7px 16px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消</button>
 </div>`;
       list.innerHTML = html;
+
+      // 取消按钮
+      list
+        .querySelector("#diag-dedup-cancel")
+        ?.addEventListener("click", () => {
+          list.innerHTML =
+            '<div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">已取消去重</div>';
+        });
 
       list
         .querySelector("#diag-dedup-exec")
@@ -261,12 +288,7 @@ class AppContent extends HTMLElement {
 ✅ 去重完成：移入回收站 ${del} 个，失败 ${fail} 个</div>`;
         });
 
-      if (del > 0) {
-        bus.emit("stats:refresh");
-        bus.emit("tree:reload");
-      }
-      list.innerHTML = `<div class="stat-row" style="padding:8px 12px;font-size:11px;color:${fail > 0 ? "#f9a826" : "#a6e3a1"}">
-✅ 去重完成：移入回收站 ${del} 个，失败 ${fail} 个</div>`;
+      // 去掉旧实现遗留的死代码
     } catch (err) {
       list.innerHTML = `<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">去重失败: ${this._esc(String(err))}</div>`;
     }
@@ -398,13 +420,15 @@ class AppContent extends HTMLElement {
     const root = this._root;
     const dropZone = root.getElementById("dl-drop");
     const fileInput = root.getElementById("dl-file-input");
+    const folderInput = root.getElementById("dl-folder-input");
     const importedList = root.getElementById("dl-imported-list");
     const dlCount = root.getElementById("dl-count");
     // 存储当前文件信息
     let currentFile = null;
     let currentBase64 = null;
     let currentFileName = null;
-    const imported = []; // { name, time }
+    const imported = []; // { name, base64, renamed, time }
+    const fileQueue = []; // { file, base64, name, size }
 
     const showForm = (file, base64) => {
       currentFile = file;
@@ -471,30 +495,79 @@ class AppContent extends HTMLElement {
     dropZone.addEventListener("drop", (e) => {
       e.preventDefault();
       dropZone.style.borderColor = "";
-      const file = e.dataTransfer.files[0];
-      if (!file) return;
-      const ext = file.name.split(".").pop().toLowerCase();
-      if (!["ysm", "zip", "7z"].includes(ext)) {
-        bus.emit("toast:show", {
-          msg: "仅支持 .ysm / .zip / .7z",
-          duration: 3000,
-          type: "warn",
+      const items = e.dataTransfer.items;
+      if (items?.length) {
+        processDropItems(items);
+      } else {
+        // 回退到 files
+        const files = e.dataTransfer.files;
+        if (!files?.length) return;
+        let ok = 0,
+          skip = 0;
+        Array.from(files).forEach((file) => {
+          const ext = file.name.split(".").pop().toLowerCase();
+          if (!["ysm", "zip", "7z"].includes(ext)) {
+            skip++;
+            return;
+          }
+          ok++;
+          const reader = new FileReader();
+          reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
+          reader.readAsDataURL(file);
         });
-        return;
+        if (ok === 0 && skip > 0) {
+          bus.emit("toast:show", {
+            msg: "⚠️ 仅支持 .ysm / .zip / .7z 格式，或拖入包含这些文件的整个文件夹",
+            duration: 3000,
+            type: "warn",
+          });
+        }
+        updateQueueCount();
       }
-      const reader = new FileReader();
-      reader.onload = () => showForm(file, reader.result.split(",")[1]);
-      reader.readAsDataURL(file);
     });
 
-    // 点击选择文件
-    dropZone.addEventListener("click", () => fileInput.click());
+    // 点击：普通点击选文件，Ctrl+点击选文件夹
+    dropZone.addEventListener("click", (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        folderInput.click();
+      } else {
+        fileInput.click();
+      }
+    });
     fileInput.addEventListener("change", () => {
-      const file = fileInput.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => showForm(file, reader.result.split(",")[1]);
-      reader.readAsDataURL(file);
+      const files = fileInput.files;
+      if (!files.length) return;
+      let ok = 0;
+      Array.from(files).forEach((file) => {
+        ok++;
+        const reader = new FileReader();
+        reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
+        reader.readAsDataURL(file);
+      });
+      updateQueueCount();
+      fileInput.value = "";
+    });
+    folderInput.addEventListener("change", () => {
+      const files = folderInput.files;
+      if (!files.length) return;
+      let ok = 0;
+      Array.from(files).forEach((file) => {
+        const ext = file.name.split(".").pop().toLowerCase();
+        if (!["ysm", "zip", "7z"].includes(ext)) return;
+        ok++;
+        const reader = new FileReader();
+        reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
+        reader.readAsDataURL(file);
+      });
+      updateQueueCount();
+      if (ok > 0) {
+        bus.emit("toast:show", {
+          msg: `📁 已加入队列: ${ok} 个模型文件`,
+          duration: 2000,
+          type: "success",
+        });
+      }
+      folderInput.value = "";
     });
 
     // 导入按钮
@@ -579,32 +652,104 @@ class AppContent extends HTMLElement {
       }
     });
 
-    // 渲染已导入列表
-    const renderImportedList = () => {
-      if (!imported.length) {
-        importedList.innerHTML =
-          '<div style="padding:6px 4px;font-size:10px;color:var(--muted)">暂无导入记录</div>';
-        dlCount.textContent = "0 个文件";
-        return;
-      }
-      dlCount.textContent = imported.length + " 个文件";
-      importedList.innerHTML = imported
-        .map(
-          (item, i) =>
-            '<div style="display:flex;align-items:center;gap:4px;padding:3px 4px;border-radius:4px;font-size:10px">' +
-            '<span style="color:var(--muted);flex-shrink:0">' +
-            item.time +
-            "</span>" +
-            '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
-            this._esc(item.name) +
-            "</span>" +
-            '<button class="dl-reimport" data-name="' +
-            this._esc(item.name) +
-            '" style="padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">✂️ 重命名</button>' +
-            "</div>",
-        )
-        .join("");
+    // 添加文件到导入队列
+    const enqueueFile = (file, base64) => {
+      fileQueue.push({ file, base64, name: file.name, size: file.size });
+      renderImportedList();
+    };
 
+    // 递归读取文件夹内的模型文件
+    const readEntry = (entry, basePath) => {
+      return new Promise((resolve) => {
+        if (entry.isFile) {
+          entry.file((file) => {
+            const ext = file.name.split(".").pop().toLowerCase();
+            if (["ysm", "zip", "7z"].includes(ext)) {
+              // 保留父文件夹名作为路径前缀
+              file._relPath = basePath ? basePath + "/" + file.name : file.name;
+              const reader = new FileReader();
+              reader.onload = () => {
+                enqueueFile(file, reader.result.split(",")[1]);
+                resolve();
+              };
+              reader.readAsDataURL(file);
+            } else {
+              resolve();
+            }
+          });
+        } else if (entry.isDirectory) {
+          const dirReader = entry.createReader();
+          dirReader.readEntries((entries) => {
+            const subPath = basePath ? basePath + "/" + entry.name : entry.name;
+            Promise.all(
+              Array.from(entries).map((e) => readEntry(e, subPath)),
+            ).then(() => resolve());
+          });
+        } else {
+          resolve();
+        }
+      });
+    };
+
+    // 处理拖入的 items（支持文件和文件夹）
+    const processDropItems = (items) => {
+      const entries = [];
+      for (let i = 0; i < items.length; i++) {
+        const entry = items[i].webkitGetAsEntry?.();
+        if (entry) entries.push(entry);
+      }
+      if (!entries.length) return;
+      Promise.all(entries.map((entry) => readEntry(entry, ""))).then(() => {
+        updateQueueCount();
+        if (fileQueue.length > 0) {
+          bus.emit("toast:show", {
+            msg: `📥 已加入队列: ${fileQueue.length} 个文件`,
+            duration: 2000,
+            type: "success",
+          });
+        }
+      });
+    };
+
+    // 渲染已导入列表（含队列）
+    const renderImportedList = () => {
+      let html = "";
+      imported.forEach((item) => {
+        html +=
+          '<div style="display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:3px;font-size:10px;border:1px solid var(--bd)">' +
+          '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
+          this._esc(item.renamed || item.name) +
+          "</span>" +
+          '<span style="font-size:9px;color:var(--muted);flex-shrink:0">' +
+          (item.time || "") +
+          "</span>" +
+          '<button class="dl-reimport" data-name="' +
+          this._esc(item.name) +
+          '" style="padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">✂️</button>' +
+          "</div>";
+      });
+      fileQueue.forEach((fq, qi) => {
+        html +=
+          '<div style="display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:3px;font-size:10px;border:1px dashed var(--bd);background:var(--surf)">' +
+          '<span style="color:var(--muted);font-size:9px">⏳</span>' +
+          '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
+          this._esc(fq.name) +
+          "</span>" +
+          '<button class="dl-edit-q" data-idx="' +
+          qi +
+          '" style="padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">✏️</button>' +
+          '<button class="dl-remove-q" data-idx="' +
+          qi +
+          '" style="padding:1px 5px;border-radius:3px;border:1px solid transparent;background:transparent;color:#e5534b;cursor:pointer;font-size:9px">🗑</button>' +
+          "</div>";
+      });
+      if (!html)
+        html =
+          '<div style="font-size:9px;color:var(--muted);padding:4px">暂无文件</div>';
+      importedList.innerHTML = html;
+      updateQueueCount();
+
+      // 已导入的重命名按钮
       importedList.querySelectorAll(".dl-reimport").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const name = btn.dataset.name;
@@ -613,32 +758,54 @@ class AppContent extends HTMLElement {
             await import("../../../wailsjs/go/main/App.js");
           const cfg = await LoadAppConfig();
           const repoRoot = cfg.repoRoot || "";
-          // 在仓库中查找文件路径
           const fullPath = repoRoot + "\\" + name;
           const newName = await showRenameDialog(fullPath, name);
           if (!newName) return;
           try {
             await RenameFile(fullPath, newName);
-            // 更新列表中的名称
             const idx = imported.findIndex((it) => it.name === name);
             if (idx >= 0) imported[idx].name = newName;
             renderImportedList();
             bus.emit("stats:refresh");
             bus.emit("tree:reload");
-            bus.emit("toast:show", {
-              msg: "✅ 已重命名: " + newName,
-              duration: 3000,
-              type: "success",
-            });
           } catch (e) {
             bus.emit("toast:show", {
-              msg: "❌ 重命名失败: " + String(e),
-              duration: 5000,
+              msg: "❌ " + String(e),
+              duration: 3000,
               type: "error",
             });
           }
         });
       });
+
+      // 队列编辑（点击后进入表单改名）
+      importedList.querySelectorAll(".dl-edit-q").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const qi = parseInt(btn.dataset.idx, 10);
+          const fq = fileQueue[qi];
+          if (!fq) return;
+          showForm(fq.file, fq.base64);
+          fileQueue.splice(qi, 1);
+          renderImportedList();
+        });
+      });
+
+      // 队列移除
+      importedList.querySelectorAll(".dl-remove-q").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const qi = parseInt(btn.dataset.idx, 10);
+          fileQueue.splice(qi, 1);
+          renderImportedList();
+        });
+      });
+    };
+
+    const updateQueueCount = () => {
+      if (dlCount)
+        dlCount.textContent =
+          imported.length +
+          " 个已导入" +
+          (fileQueue.length ? " · " + fileQueue.length + " 个待处理" : "");
     };
 
     // 清空列表
@@ -873,6 +1040,16 @@ class AppContent extends HTMLElement {
       // 筛选当前站点创作者
       const creators = allCreators.filter(
         (cr) => cr.type && cr.type.split(";").includes(site.id),
+      );
+      console.log(
+        "[workshop] showSiteView:",
+        site.id,
+        "allCreators:",
+        allCreators.length,
+        "matched:",
+        creators.length,
+        "wsEditMode:",
+        wsEditMode,
       );
 
       // 按固定顺序构建 HTML
@@ -1720,7 +1897,7 @@ class AppContent extends HTMLElement {
               return;
             }
             const confirmed = await window.showConfirm?.(
-              `发现新版本 ${info.latest}（当前 ${info.current}）\n是否下载并更新？`,
+              `📦 发现新版本 ${info.latest}（当前 ${info.current}）\n是否下载并更新？\n\n更新内容请在浏览器中查看：\nhttps://github.com/eghrhegpe/ysm-model-manager/releases/tag/${info.latest}`,
             );
             if (!confirmed) return;
             btn.textContent = "⬇️ 下载中...";

@@ -120,6 +120,7 @@ export async function initSettings(root) {
       if (repoEl) repoEl.textContent = dir;
       bus.emit("config:updated");
       bus.emit("stats:refresh");
+      bus.emit("tree:reload"); // 仓库路径变了，重新加载树
       bus.emit("toast:show", {
         msg: "✅ 仓库路径已设置",
         duration: 2000,

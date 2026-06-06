@@ -23,6 +23,12 @@
 - 改完立即 build（`npx vite build`），绝不攒多个修改一起构建
 - `multi_replace_string_in_file` 部分失败不回滚，必须 build 验证
 
+**防御性架构（防手滑）**:
+- 独立模块防误删：每个功能放独立文件（如 `authors.js`），编辑 A 文件不会误删 B 的方法
+- `connectedCallback` 包 `try/catch`：任何初始化异常不白屏，显示 ⚠️ 错误
+- 方法调用 `foo?.()` 代替 `foo()`：方法丢失时静默降级而非 TypeError
+- 构造函数初始化所有字段：`this._authors = []` 等确保字段存在，不被 `undefined` 坑
+
 ## 工作流规则
 
 1. **修改前确认最新状态** — 禁止基于记忆直接修改。必须通过 `grep_search` 或 `read_file` 确认目标代码的最新状态。

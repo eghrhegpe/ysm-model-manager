@@ -5,6 +5,7 @@ import { renderTree, updateStat } from "./render.js";
 import { bindTreeEvents, bindToolbarEvents } from "./events.js";
 import { loadEntries } from "./loader.js";
 import { bindBusEvents } from "./bus-handlers.js";
+import { loadAuthors, renderAuthorChips } from "./authors.js";
 class AppTree extends HTMLElement {
   constructor() {
     super();
@@ -16,6 +17,7 @@ class AppTree extends HTMLElement {
     this._sort = "name";
     this._dirOpen = {};
     this._repoRoot = "";
+    this._authors = [];
   }
 
   async connectedCallback() {
@@ -26,12 +28,20 @@ class AppTree extends HTMLElement {
       );
     } catch (_) {}
 
-    this._renderLayout();
-    bindToolbarEvents(this._root, this);
-    this._unsubs = bindBusEvents(this);
+    try {
+      this._renderLayout();
+      bindToolbarEvents(this._root, this);
+      this._unsubs = bindBusEvents(this);
 
-    await this._load();
-    this._renderTree();
+      await this._load();
+      this._authors = await loadAuthors();
+      this._renderTree();
+    } catch (e) {
+      console.error("[Tree Init Error]", e);
+      // 出错时显示空状态，不白屏
+      const tree = this._root?.getElementById("tree");
+      if (tree) tree.innerHTML = '<div class="empty"><div class="big">⚠️</div>加载失败</div>';
+    }
   }
   disconnectedCallback() {
     this._unsubs?.forEach((fn) => fn?.());
@@ -64,7 +74,15 @@ class AppTree extends HTMLElement {
     updateStat(this._root.getElementById("ftr-stat"), this._entries);
     // 仓库路径显示在按钮上
     const repoBtn = this._root.getElementById("btn-repo");
-    if (repoBtn) repoBtn.textContent = this._repoRoot ? `📁 ${this._repoRoot}` : "📁 未设置";
+    if (repoBtn)
+      repoBtn.textContent = this._repoRoot
+        ? `📁 ${this._repoRoot}`
+        : "📁 未设置";
+    renderAuthorChips(
+      this._root.getElementById("author-chips"),
+      this._authors,
+      this._root.getElementById("srch"),
+    );
   }
 }
 

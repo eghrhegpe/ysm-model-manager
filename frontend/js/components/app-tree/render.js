@@ -141,7 +141,9 @@ export function updateStat(el, entries) {
     if (oldTotal !== total && total > 0) {
       animateNumber(el, total, 700);
       // 动画结束后设置完整新文本
-      setTimeout(() => { el.textContent = newText; }, 700);
+      setTimeout(() => {
+        el.textContent = newText;
+      }, 700);
     } else {
       el.textContent = newText;
     }

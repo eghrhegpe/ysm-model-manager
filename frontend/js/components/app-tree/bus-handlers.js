@@ -101,7 +101,14 @@ export function bindBusEvents(vm) {
   // 文件夹操作
   unsubs.push(
     bus.on("dir:rename", async ({ dir }) => {
-      const name = prompt("请输入新文件夹名称：");
+      const { modalPrompt } = await import("../../dialogs/modal.js");
+      const name = await modalPrompt({
+        title: "重命名文件夹",
+        icon: "✂️",
+        value: dir.split("/").pop(),
+        placeholder: "输入新文件夹名称",
+        okText: "✂️ 重命名",
+      });
       if (!name) return;
       try {
         const { LoadAppConfig, RenameDir } =
@@ -124,7 +131,13 @@ export function bindBusEvents(vm) {
 
   unsubs.push(
     bus.on("dir:mkdir", async ({ dir }) => {
-      const name = prompt("请输入新文件夹名称：");
+      const { modalPrompt } = await import("../../dialogs/modal.js");
+      const name = await modalPrompt({
+        title: "新建文件夹",
+        icon: "📁",
+        placeholder: "输入文件夹名称",
+        okText: "📁 创建",
+      });
       if (!name) return;
       try {
         const { LoadAppConfig, CreateDir } =
@@ -148,9 +161,14 @@ export function bindBusEvents(vm) {
 
   unsubs.push(
     bus.on("dir:recycle", async ({ dir }) => {
-      const confirmed = await window.showConfirm?.(
-        `♻️ 确定将文件夹移入回收站？\n${dir}`,
-      );
+      const { modalConfirm } = await import("../../dialogs/modal.js");
+      const confirmed = await modalConfirm({
+        title: "移入回收站",
+        icon: "♻️",
+        message: `确定将文件夹移入回收站？\n${dir}`,
+        okText: "♻️ 移入回收站",
+        danger: true,
+      });
       if (!confirmed) return;
       try {
         // 加载仓库根目录 → 拼接绝对路径
@@ -192,6 +210,54 @@ export function bindBusEvents(vm) {
       } catch (e) {
         bus.emit("toast:show", {
           msg: `❌ 回收失败: ${String(e)}`,
+          duration: 3000,
+          type: "error",
+        });
+      }
+    }),
+  );
+
+  unsubs.push(
+    bus.on("dir:batch-rename", async ({ dir }) => {
+      try {
+        const { LoadAppConfig, ScanModelEntries, RenameFile } =
+          await import("../../../wailsjs/go/main/App.js");
+        const cfg = await LoadAppConfig();
+        const repoRoot = cfg.repoRoot || "";
+        const absDir = repoRoot ? repoRoot + "/" + dir : dir;
+        const entries = await ScanModelEntries(absDir);
+        if (!entries || !entries.length) {
+          bus.emit("toast:show", {
+            msg: "📂 文件夹为空",
+            duration: 2000,
+            type: "warn",
+          });
+          return;
+        }
+        const { showBatchRenameDialog } =
+          await import("../../dialogs/batch-rename.js");
+        await showBatchRenameDialog(absDir, entries, async (renames) => {
+          let ok = 0,
+            fail = 0;
+          for (const r of renames) {
+            try {
+              await RenameFile(r.oldPath, r.newName);
+              ok++;
+            } catch {
+              fail++;
+            }
+          }
+          await reload(vm);
+          bus.emit("stats:refresh");
+          bus.emit("toast:show", {
+            msg: `✅ 批量重命名完成：${ok} 成功${fail ? "，失败 " + fail : ""}`,
+            duration: 3000,
+            type: fail > 0 ? "warn" : "success",
+          });
+        });
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: `❌ 批量重命名失败: ${String(e)}`,
           duration: 3000,
           type: "error",
         });

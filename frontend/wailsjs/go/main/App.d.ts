@@ -64,6 +64,8 @@ export function HasYSMMod(arg1:string):Promise<boolean>;
 
 export function ImportModelFile(arg1:string,arg2:string):Promise<void>;
 
+export function ImportModelFileOverwrite(arg1:string,arg2:string):Promise<void>;
+
 export function ImportModelFileSkipCheck(arg1:string,arg2:string):Promise<void>;
 
 export function ImportWorkshopSitesCSV(arg1:string):Promise<void>;

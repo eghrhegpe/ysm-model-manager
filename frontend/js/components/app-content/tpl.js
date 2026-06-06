@@ -137,12 +137,14 @@ export function downloadsHTML() {
   </div>
   <div style="font-size:11px;padding:4px 6px;border-radius:4px;background:var(--surf)">
     <span style="color:var(--muted)">最终命名：</span><span id="dl-preview" style="font-weight:500">-</span>
+    <span id="dl-conflict" style="display:none;font-size:9px;color:#f9a826;margin-left:4px">⚠️ 已存在</span>
   </div>
   <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
     <button class="btn accent" id="dl-import" style="padding:6px;font-size:12px;flex:1">📥 导入到仓库</button>
-    <label style="display:flex;align-items:center;gap:3px;font-size:9px;color:var(--muted);cursor:pointer;white-space:nowrap">
-      <input type="checkbox" id="dl-skip-check"> ⚠️ 跳过校验
-    </label>
+    <span style="font-size:9px;color:var(--muted)">队列中还有 <span id="dl-queue-count">0</span> 个文件</span>
+  </div>
+  <div style="margin-top:2px">
+    <button class="btn" id="dl-cancel" style="padding:3px 8px;font-size:10px;width:100%">✕ 关闭表单（队列保留）</button>
   </div>
 </div>
 <div style="margin:0 12px 4px;border-top:1px solid var(--bd);padding-top:4px">

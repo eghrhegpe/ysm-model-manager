@@ -228,6 +228,25 @@ export function initImportQueue(app) {
       await ImportModelFile(newName, currentBase64);
       bus.emit("stats:refresh");
       bus.emit("tree:reload");
+
+      // 自动弹出重命名对话框
+      try {
+        const { showRenameDialog } = await import("../dialogs/rename.js");
+        const { RenameFile } = await import("../../wailsjs/go/main/App.js");
+        const renameTo = await showRenameDialog(
+          (cfg.repoRoot || "") + "\\" + newName,
+          newName,
+        );
+        if (renameTo && renameTo !== newName) {
+          await RenameFile((cfg.repoRoot || "") + "\\" + newName, renameTo);
+          newName = renameTo;
+          bus.emit("stats:refresh");
+          bus.emit("tree:reload");
+        }
+      } catch (_) {
+        /* 重命名失败不阻塞流程 */
+      }
+
       bus.emit("toast:show", {
         msg: "✅ 已导入: " + newName,
         duration: 3000,

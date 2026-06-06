@@ -7,9 +7,21 @@
 3. **替换失败的处理** — 如果 `replace_string_in_file` 失败，禁止强行重试，改为报告错误并等待用户处理。
 4. **优先搜索** — 优先使用 `grep_search` 定位，其次 `replace_string_in_file`。
 5. **`read_file` 限制** — 单次读取不超过 200 行，除非用户明确要求全量分析。
-6. **构建命令** — 仅捕获错误: `npx vite build 2>&1 | Select-String 'error'`
-7. **禁止安装软件** — 如果缺少依赖，提示用户手动安装。
-8. **路径格式** — 所有路径使用正斜杠 `/`。
+6. **构建前端**: `npx vite build 2>&1 | Select-String 'error'`
+7. **构建发布（必须用 wails build）**:
+   ```powershell
+   # 1. 杀旧进程
+   Get-Process -Name "YSM-Model-Manager*" -ErrorAction SilentlyContinue | Stop-Process -Force
+   # 2. 构建
+   wails build -clean -ldflags "-X ysm-model-manager/go/version.Version=v1.x.x"
+   # 3. 打包
+   Copy-Item "build\bin\YSM-Model-Manager.exe" "build\release\"
+   Copy-Item "workshop_sites.json", "workshop_creators.json" "build\release\"
+   Compress-Archive -Path "build\release\*" -DestinationPath "build\release\YSM-Model-Manager_windows_amd64.zip" -Force
+   ```
+8. **发布文案归档**: 每次发版在 `docs/release-notes/v{major}.{minor}.{patch}.md` 写文案，更新 `docs/release-notes/README.md` 索引表。
+9. **禁止安装软件** — 如果缺少依赖，提示用户手动安装。
+10. **路径格式** — 所有路径使用正斜杠 `/`。
 
 ## 项目架构
 
@@ -202,4 +214,11 @@ utils.js # 组件特有工具函数（可选）
 - 硬链接跨分区自动降级为复制
 - `checkHardLink` 用 build tag 分离 Windows/Unix
 - `raw.githubusercontent.com` 国内可能被墙，fetch 超时设 20s
+
+### 18. 构建必须用 `wails build`，不能用 `go build`
+
+**问题**: `go build` 缺少 Wails build tags，生成的 exe 无法嵌入前端资源，运行会白屏。
+**根因**: Wails 项目需要在编译时注入平台特定代码和前端资源 embedding。
+**解决**: 必须用 `wails build`。如果旧 exe 锁定了 `build/bin/`，先杀进程再构建。
+**脚本**: `build-release.ps1` 已改为报错提示，不再静默回退 `go build`。
 ```

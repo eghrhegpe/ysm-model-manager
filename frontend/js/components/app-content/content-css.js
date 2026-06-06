@@ -4,7 +4,8 @@ export const contentCSS = `
 .section-title { font-size:14px; font-weight:600; color:var(--txt); padding:16px 16px 8px; }
 .card-row { display:flex; gap:12px; padding:0 16px; }
 .stat-card { flex:1; background:var(--surf); border:1px solid var(--bd); border-radius:10px; padding:14px; }
-.stat-card .num { font-size:24px; font-weight:700; color:var(--accent); }
+.stat-card .num { font-size:24px; font-weight:700; color:var(--accent); transition:transform .2s cubic-bezier(.34,1.56,.64,1); }
+.stat-card .num.bump { transform:scale(1.15); }
 .stat-card .label { font-size:11px; color:var(--muted); margin-top:2px; }
 .stat-card .sub { font-size:10px; color:var(--txt); margin-top:6px; }
 .placeholder-box { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--muted); font-size:12px; gap:8px; }

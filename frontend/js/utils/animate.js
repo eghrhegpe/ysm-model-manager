@@ -20,9 +20,11 @@ export function animateNumber(el, to, duration = 700) {
     // 第 p 位取目标值，右边取目标，左边保留旧值
     let val = "";
     for (let i = 0; i < len; i++) {
-      if (i < p) val += fromStr[i];      // 左边保留旧值
-      else if (i === p) val += numStr[i]; // 当前位取目标
-      else val += numStr[i];              // 右边取目标
+      if (i < p)
+        val += fromStr[i]; // 左边保留旧值
+      else if (i === p)
+        val += numStr[i]; // 当前位取目标
+      else val += numStr[i]; // 右边取目标
     }
     frames.push(parseInt(val, 10));
   }

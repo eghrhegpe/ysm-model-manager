@@ -10,6 +10,7 @@ import {
   renderModelNameWithHighlight,
 } from "../../utils/display.js";
 import { animateNumber } from "../../utils/animate.js";
+import { selectState } from "./data.js";
 
 // 直接导出旧版 buildTree 和 renderTree 逻辑
 // 由旧版 tree.js 移植
@@ -86,7 +87,8 @@ function renderNode(node, dirPath, search, sort, dirOpen) {
         return;
       const nmHtml = hasSearch ? hl(e.name, search) : renderDisplayName(e.name);
       const dateStr = e.modTime ? fmtDate(e.modTime) : "";
-      const extraCls = isYsmName(e.name) ? " ysm" : "";
+      const selCls = selectState.keys.has(full) ? " selected" : "";
+      const extraCls = (isYsmName(e.name) ? " ysm" : "") + selCls;
       h += fileRowHTML(e, nmHtml, fileIcon(e.name), dateStr, extraCls);
     } else {
       const isLocked = k.startsWith("_");

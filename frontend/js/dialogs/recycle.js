@@ -1,3 +1,4 @@
+// @deprecated 源码已内联进 app-legacy-bundle.js，此文件不再加载
 // 回收站对话框
 async function openRecycleDialog() {
   if (!repoRoot) {

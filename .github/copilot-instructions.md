@@ -42,55 +42,55 @@ main.go         — 应用入口
 ```
 frontend/js/
   bus.js                   — 事件总线 (ESM + window.bus 兼容)
-  app-modules.js           — 所有 ES module 组件统一入口
+  app-modules.js           — ES module 组件入口 + 右键菜单映射
+  app-legacy-bundle.js     — 旧版非 module 代码（已冻结，仅后备）
   components/
-    app-tree/              — 仓库树组件 (index/data/render/events/tpl)
+    app-tree/              — 仓库树组件 (index/data/render/events/tpl/bus-handlers)
     app-sidebar/           — 侧边栏整合包列表
     app-preview/           — 右侧预览面板
-    app-content/           — 主内容区
-    app-toast.js           — Toast 通知
+    app-content/           — 主内容区入口（页面路由 + 生命周期，~1300 行）
+    app-toast.js           — Toast 通知 Web Component
     app-nav.js             — 导航栏
-    context-menu.js        — 右键菜单
-    app-header.js          — 头部 (未引用)
+    context-menu.js        — 右键菜单 Web Component
+  features/                — 业务功能模块（从 app-content 抽离）
+    import-queue.js        — 导入队列 + 拖拽 + 重命名流程
+    recycle-bin.js         — 回收站管理
+    version-updater.js     — 版本更新检查
+  pages/                   — 页面级渲染逻辑
+    repository.js          — 仓库页（生成索引等）
+  dialogs/
+    modal.js               — 统一模态弹窗 (modalPrompt / modalConfirm)
+    rename.js              — 单文件重命名对话框
+    batch-rename.js        — 批量重命名对话框
+    creator-manager.js     — @deprecated 创作者管理（未接线）
+  core/
+    buttons.js             — 按钮逻辑
+    global-handlers.js     — 全局事件处理器（常驻）
+    theme.js               — 主题切换
   utils/
+    display.js             — 模型文件名解析 + 美化显示 (parseModelName)
     fmt.js                 — 文件大小/日期格式化
     dom.js                 — HTML 转义/搜索高亮
     icon.js                — 文件图标映射
-  lib/
-    parse.js               — 通用解析工具
-    state.js               — 全局状态
-    tree.js                — 树结构工具
-  core/
-    buttons.js             — 按钮逻辑
-    directories.js         — 目录管理
-    lifecycle.js           — 生命周期
-    theme.js               — 主题切换
+    summarize.js           — 模型摘要渲染
   services/
     registry.js            — 服务注册
-  ui/
-    cm-tree.js             — 树 UI
-    cm-utils.js            — UI 工具
-    cm-version.js          — 版本 UI
-    contextmenu.js         — 上下文菜单
-    drop.js                — 拖拽
-    toggle.js              — 切换
-  versions/
-    ...                    — 整合包版本相关
-```
 
 ### 前端组件拆分规范
 
 每个组件目录遵循：
 
 ```
+
 app-xxx/
-  index.js       # 生命周期编排（constructor → shadow → connected → disconnected）
-  tpl.js         # 布局级 HTML 模板（纯字符串）
-  row-tpl.js     # 节点级 HTML 模板（可选）
-  data.js        # 数据逻辑（纯函数，不碰 DOM）
-  render.js      # 渲染逻辑（输入 → HTML 字符串）
-  events.js      # 事件绑定（addEventListener / bus.on）
-  utils.js       # 组件特有工具函数（可选）
+index.js # 生命周期编排（constructor → shadow → connected → disconnected）
+tpl.js # 布局级 HTML 模板（纯字符串）
+row-tpl.js # 节点级 HTML 模板（可选）
+data.js # 数据逻辑（纯函数，不碰 DOM）
+render.js # 渲染逻辑（输入 → HTML 字符串）
+events.js # 事件绑定（addEventListener / bus.on）
+utils.js # 组件特有工具函数（可选）
+
 ```
 
 ### 关键约束
@@ -202,3 +202,4 @@ app-xxx/
 - 硬链接跨分区自动降级为复制
 - `checkHardLink` 用 build tag 分离 Windows/Unix
 - `raw.githubusercontent.com` 国内可能被墙，fetch 超时设 20s
+```

@@ -32,6 +32,7 @@ function showFolderMenu(ti) {
     },
     {
       label: "📁 新建文件夹",
+      // @deprecated 新版树已用 modalPrompt 替代
       action: async () => {
         const folderName = prompt("输入新文件夹名称：");
         if (!folderName) return;

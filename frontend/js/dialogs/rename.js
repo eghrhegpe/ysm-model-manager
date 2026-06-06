@@ -18,17 +18,17 @@ export async function showRenameDialog(filePath, currentName) {
 
     const box = document.createElement("div");
     box.style.cssText =
-      "background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:14px;width:400px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:6px";
+      "background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:14px;width:640px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:6px";
 
     box.innerHTML = `
       <div style="font-size:13px;font-weight:600;margin-bottom:4px">✂️ 重命名模型</div>
       <div style="font-size:10px;color:var(--muted)">${esc(currentName)}</div>
       <div style="display:flex;gap:4px">
-        <input id="rn-author" placeholder="作者" value="${esc(parsed.author)}" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
-        <input id="rn-work" placeholder="品牌" value="${esc(parsed.work)}" style="width:85px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
-        <input id="rn-chara" placeholder="角色" value="${esc(parsed.chara)}" style="width:75px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
-        <input id="rn-variant" placeholder="变体" style="width:60px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
-        <input id="rn-date" placeholder="年月" value="${esc(parsed.date)}" style="width:64px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
+        <input id="rn-author" placeholder="作者" value="${esc(parsed.author)}" style="flex:2;min-width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
+        <input id="rn-work" placeholder="品牌" value="${esc(parsed.work)}" style="flex:2;min-width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
+        <input id="rn-chara" placeholder="角色" value="${esc(parsed.chara)}" style="flex:2;min-width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
+        <input id="rn-variant" placeholder="变体" style="flex:1;min-width:50px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
+        <input id="rn-date" placeholder="年月" value="${esc(parsed.date)}" style="flex:1;min-width:50px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
       </div>
       <div style="font-size:11px;padding:4px 6px;border-radius:4px;background:var(--bg)">
         <span style="color:var(--muted)">${esc(currentName)}</span> → <span id="rn-preview" style="font-weight:500">-</span>

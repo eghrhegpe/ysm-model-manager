@@ -9,6 +9,7 @@ import {
   renderDisplayName,
   renderModelNameWithHighlight,
 } from "../../utils/display.js";
+import { animateNumber } from "../../utils/animate.js";
 
 // 直接导出旧版 buildTree 和 renderTree 逻辑
 // 由旧版 tree.js 移植
@@ -133,5 +134,13 @@ export function updateStat(el, entries) {
     if (!e.banned) enabled++;
     totalSize += e.size || 0;
   });
-  el.textContent = `共 ${total} 项 (已启用 ${enabled}) · ${fmt(totalSize)}`;
+  const newText = `共 ${total} 项 (已启用 ${enabled}) · ${fmt(totalSize)}`;
+  if (el.textContent !== newText) {
+    el.textContent = newText;
+    el.style.transition = "opacity .15s";
+    el.style.opacity = ".6";
+    setTimeout(() => {
+      el.style.opacity = "";
+    }, 150);
+  }
 }

@@ -78,11 +78,8 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
               if (!newName) return;
               const { RenameFile } = await import("../wailsjs/go/main/App.js");
               await RenameFile(path, newName);
-              const tree = document.querySelector("app-tree");
-              if (tree) {
-                await tree._load();
-                tree._renderTree();
-              }
+              bus.emit("tree:reload");
+              bus.emit("stats:refresh");
             } catch (e) {
               bus.emit("toast:show", {
                 msg: "❌ 重命名失败: " + String(e),
@@ -113,6 +110,11 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
           label: "重命名…",
           icon: "✂️",
           onClick: () => bus.emit("dir:rename", { dir }),
+        },
+        {
+          label: "批量重命名…",
+          icon: "📝",
+          onClick: () => bus.emit("dir:batch-rename", { dir }),
         },
         {
           label: "打开所在文件夹",

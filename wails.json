@@ -35,6 +35,7 @@
     "SetRepoRoot",
     "ImportModelFile",
     "ImportModelFileSkipCheck",
+    "ImportModelFileOverwrite",
     "SaveWindowPosition",
     "MoveToRecycle",
     "ListRecycleBin",

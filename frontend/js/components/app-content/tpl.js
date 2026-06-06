@@ -137,6 +137,7 @@ export function downloadsHTML() {
   <div style="font-size:11px;display:flex;gap:8px">
     <span>文件：</span><span id="dl-fname" style="font-weight:500">-</span>
     <span style="color:var(--muted);font-size:10px" id="dl-fsize"></span>
+    <span id="dl-subpath" style="color:var(--muted);font-size:9px;display:none;padding-left:3em"></span>
   </div>
   <div style="font-size:11px;color:var(--muted)">导入仓库前，先重命名一下吧：</div>
   <div style="display:flex;gap:4px">

@@ -1,6 +1,12 @@
 // ===== 创意工坊模型列表渲染（DOM API，非字符串拼接） =====
 import { bus } from "../../bus.js";
 
+// 共享预览元素单例，防止列表重渲染后僵尸节点堆积
+let _previewEl = null;
+function hideGlobalPreview() {
+  if (_previewEl) { _previewEl.remove(); _previewEl = null; }
+}
+
 /**
  * 判断模型是否缺失（本地不存在）
  */
@@ -120,72 +126,51 @@ export function renderModelList(
     }
 
     // 预览图（文件名映射：.ysm → .png/.jpg/.webp，hover 浮动）
-    let previewEl = null;
-    let previewTryIdx = 0;
+    // 使用模块级共享单例，防止 DOM 节点泄漏
     const PREVIEW_EXTS = ["png", "jpg", "webp"];
-
-    // Windows 安全文件名：替换非法字符为 _
     const safeModelName = m.name.replace(/[<>:"/\\|?*\x00-\x1F]/g, "_");
 
-    // 预加载下一张图（鼠标移到列表时提前触发）
-    let preloadImg = null;
-    const preloadNext = (baseUrl, exts) => {
-      if (preloadImg) { preloadImg.src = ""; }
-      const next = exts.find((e) => {
-        const url = baseUrl + safeModelName.replace(/\.(ysm|zip|7z)$/i, "." + e);
-        return url !== previewEl?.src;
-      });
-      if (next) {
-        preloadImg = new Image();
-        preloadImg.src = baseUrl + safeModelName.replace(/\.(ysm|zip|7z)$/i, "." + next);
-      }
-    };
-
-    const tryPreview = (e) => {
-      if (previewTryIdx >= PREVIEW_EXTS.length) {
-        // 全失败 → 显示 YSM 默认图标占位
-        previewEl = document.createElement("div");
-        previewEl.textContent = "🎨";
-        previewEl.style.cssText =
-          "position:fixed;z-index:9999;width:80px;height:80px;border-radius:8px;border:1px solid var(--bd);background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:32px;pointer-events:none";
-        previewEl.style.left = (e.clientX + 16) + "px";
-        previewEl.style.top = (e.clientY - 100) + "px";
-        document.body.appendChild(previewEl);
-        return;
-      }
-      const ext = PREVIEW_EXTS[previewTryIdx];
-      const imgName = safeModelName.replace(/\.(ysm|zip|7z)$/i, "." + ext);
-      if (imgName === safeModelName) { hidePreview(); return; }
-      previewEl = document.createElement("img");
-      previewEl.src = dlPrefix + imgName;
-      previewEl.style.cssText =
-        "position:fixed;z-index:9999;max-width:240px;max-height:180px;border-radius:6px;border:1px solid var(--bd);box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none;background:var(--bg);object-fit:contain";
-      previewEl.style.left = (e.clientX + 16) + "px";
-      previewEl.style.top = (e.clientY - 90) + "px";
-      previewEl.onerror = () => {
-        previewEl?.remove();
-        previewEl = null;
-        previewTryIdx++;
-        tryPreview(e);
-      };
-      document.body.appendChild(previewEl);
-    };
     const showPreview = (e) => {
-      if (previewEl) return;
-      previewTryIdx = 0;
-      tryPreview(e);
-      // 触发预加载下一行
-      preloadNext(dlPrefix, PREVIEW_EXTS);
+      hideGlobalPreview(); // 清理上一次残留
+      const tryLoad = (idx) => {
+        if (idx >= PREVIEW_EXTS.length) {
+          // 全失败 → 占位图标
+          _previewEl = document.createElement("div");
+          _previewEl.textContent = "🎨";
+          _previewEl.style.cssText = "position:fixed;z-index:9999;width:80px;height:80px;border-radius:8px;border:1px solid var(--bd);background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:32px;pointer-events:none;opacity:0;transform:scale(.9);transition:all .12s ease-out";
+          _previewEl.style.left = e.clientX + 16 + "px";
+          _previewEl.style.top = e.clientY - 100 + "px";
+          document.body.appendChild(_previewEl);
+          _previewEl.getBoundingClientRect();
+          _previewEl.style.opacity = "1";
+          _previewEl.style.transform = "scale(1)";
+          return;
+        }
+        const ext = PREVIEW_EXTS[idx];
+        const imgName = safeModelName.replace(/\.(ysm|zip|7z)$/i, "." + ext);
+        if (imgName === safeModelName) { hideGlobalPreview(); return; }
+        const img = document.createElement("img");
+        img.src = dlPrefix + imgName;
+        img.style.cssText = "position:fixed;z-index:9999;max-width:240px;max-height:180px;border-radius:6px;border:1px solid var(--bd);box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none;background:var(--bg);object-fit:contain;opacity:0;transform:scale(.97);transition:all .12s ease-out";
+        img.style.left = e.clientX + 16 + "px";
+        img.style.top = e.clientY - 90 + "px";
+        img.onerror = () => { img.remove(); tryLoad(idx + 1); };
+        document.body.appendChild(img);
+        // 触发 reflow 后淡入
+        img.getBoundingClientRect();
+        img.style.opacity = "1";
+        img.style.transform = "scale(1)";
+        _previewEl = img;
+      };
+      tryLoad(0);
     };
     const movePreview = (e) => {
-      if (!previewEl) return;
-      previewEl.style.left = (e.clientX + 16) + "px";
-      previewEl.style.top = (e.clientY - 90) + "px";
+      if (_previewEl) {
+        _previewEl.style.left = e.clientX + 16 + "px";
+        _previewEl.style.top = e.clientY - 90 + "px";
+      }
     };
-    const hidePreview = () => {
-      if (previewEl) { previewEl.remove(); previewEl = null; }
-      previewTryIdx = 999;
-    };
+    const hidePreview = () => { hideGlobalPreview(); };
 
     // 整行悬停高亮 + 预览
     row.addEventListener("mouseenter", (e) => {

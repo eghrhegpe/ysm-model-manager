@@ -71,7 +71,11 @@ export function ImportModelFile(arg1:string,arg2:string):Promise<void>;
 
 export function ImportModelFileOverwrite(arg1:string,arg2:string):Promise<void>;
 
+export function ImportModelFileOverwriteTo(arg1:string,arg2:string,arg3:string):Promise<void>;
+
 export function ImportModelFileSkipCheck(arg1:string,arg2:string):Promise<void>;
+
+export function ImportModelFileTo(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function ImportWorkshopSitesCSV(arg1:string):Promise<void>;
 

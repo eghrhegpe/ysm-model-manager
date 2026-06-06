@@ -806,6 +806,13 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 				pr.onProgress(pr.downloaded, pr.total)
 			}
 		}
+	} else if n > 0 && pr.onProgress != nil {
+		// 没有 Content-Length 时每 256KB 汇报一次
+		kb := pr.downloaded / 256 / 1024
+		if kb > int64(pr.lastPct) {
+			pr.lastPct = int(kb)
+			pr.onProgress(pr.downloaded, pr.downloaded)
+		}
 	}
 	return n, err
 }
@@ -814,7 +821,7 @@ func (a *App) DownloadFromGitHub(rawURL string, saveDir string) (string, error) 
 	return a.downloadFileWithQueue(rawURL, saveDir)
 }
 
-// downloadFile 从 URL 下载文件到本地
+// downloadFile 从 URL 下载文件到本地（流式 256KB 分块 + 每块 emit）
 func (a *App) downloadFile(url, savePath string) error {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -829,18 +836,46 @@ func (a *App) downloadFile(url, savePath string) error {
 		return err
 	}
 	defer out.Close()
+
 	total := resp.ContentLength
-	pr := &progressReader{
-		reader: resp.Body,
-		total:  total,
-		onProgress: func(dl, total int64) {
-			runtime.EventsEmit(a.ctx, "download:progress", dl, total)
-		},
+	buf := make([]byte, 256*1024)
+	var written int64
+	var lastEmitBytes int64
+	lastEmitTime := time.Now()
+	tinyFile := total > 0 && total <= 100*1024 // <100KB 极速通道
+
+	for {
+		n, readErr := resp.Body.Read(buf)
+		if n > 0 {
+			if _, writeErr := out.Write(buf[:n]); writeErr != nil {
+				return writeErr
+			}
+			written += int64(n)
+			// 极速通道：小文件每写必发
+			if tinyFile {
+				if total > 0 {
+					runtime.EventsEmit(a.ctx, "download:progress", written, total)
+				}
+			} else if written-lastEmitBytes > 256*1024 || time.Since(lastEmitTime) > 200*time.Millisecond {
+				if total > 0 {
+					runtime.EventsEmit(a.ctx, "download:progress", written, total)
+				} else {
+					runtime.EventsEmit(a.ctx, "download:progress", written, written)
+				}
+				lastEmitBytes = written
+				lastEmitTime = time.Now()
+			}
+		}
+		if readErr != nil {
+			break
+		}
 	}
-	if _, err := io.Copy(out, pr); err != nil {
-		return err
+	// 最终确保 100%
+	if total > 0 {
+		runtime.EventsEmit(a.ctx, "download:progress", total, total)
+	} else {
+		runtime.EventsEmit(a.ctx, "download:progress", written, written)
 	}
-	runtime.EventsEmit(a.ctx, "download:progress", total, total)
 	return nil
 }
 
@@ -873,10 +908,34 @@ func (a *App) downloadFromAPI(apiURL, savePath string) error {
 		return err
 	}
 	defer out.Close()
-	if _, err := out.Write(decoded); err != nil {
-		return err
+
+	total := int64(len(decoded))
+	chunkSize := 256 * 1024
+	var written int64
+	var lastEmitBytes int64
+	lastEmitTime := time.Now()
+	tinyFile := total <= 100*1024 // <100KB 极速通道
+
+	for written < total {
+		end := written + int64(chunkSize)
+		if end > total {
+			end = total
+		}
+		n, err := out.Write(decoded[written:end])
+		if err != nil {
+			return err
+		}
+		written += int64(n)
+		if tinyFile {
+			// 极速通道：小文件每写必发
+			runtime.EventsEmit(a.ctx, "download:progress", written, total)
+		} else if written-lastEmitBytes > 256*1024 || time.Since(lastEmitTime) > 200*time.Millisecond {
+			runtime.EventsEmit(a.ctx, "download:progress", written, total)
+			lastEmitBytes = written
+			lastEmitTime = time.Now()
+		}
 	}
-	runtime.EventsEmit(a.ctx, "download:progress", int64(len(decoded)), int64(len(decoded)))
+	runtime.EventsEmit(a.ctx, "download:progress", total, total)
 	return nil
 }
 
@@ -1323,6 +1382,48 @@ func (a *App) ImportModelFileOverwrite(fileName, base64Data string) error {
 	destPath := filepath.Join(a.RepoRoot, fileName)
 	destDir := filepath.Dir(destPath)
 	os.MkdirAll(destDir, 0755)
+	return os.WriteFile(destPath, data, 0644)
+}
+
+// ImportModelFileTo 导入模型文件到子目录（保持文件夹结构）
+func (a *App) ImportModelFileTo(fileName, subpath, base64Data string) error {
+	return a.importModelFileWithSubpath(fileName, subpath, base64Data, false)
+}
+
+// ImportModelFileOverwriteTo 导入并覆盖子目录下的文件
+func (a *App) ImportModelFileOverwriteTo(fileName, subpath, base64Data string) error {
+	return a.importModelFileWithSubpath(fileName, subpath, base64Data, true)
+}
+
+// importModelFileWithSubpath 导入模型到子目录
+func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, overwrite bool) error {
+	if a.RepoRoot == "" {
+		return fmt.Errorf("请先选择仓库目录")
+	}
+	ext := strings.ToLower(filepath.Ext(fileName))
+	if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
+		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "仅支持 .ysm / .zip / .7z 格式"}
+	}
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return types.AppError{Code: "DECODE_FAILED", Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
+	}
+	if len(data) > 500*1024*1024 {
+		return types.AppError{Code: "FILE_TOO_LARGE", Operation: "导入模型", SourcePath: fileName, Reason: "文件大小超过 500MB 限制", Suggestion: "请压缩文件至 500MB 以内"}
+	}
+	if len(data) == 0 {
+		return types.AppError{Code: "FILE_EMPTY", Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}
+	}
+	destPath := filepath.Join(a.RepoRoot, subpath, fileName)
+	destDir := filepath.Dir(destPath)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return types.AppError{Code: "MKDIR_FAILED", Operation: "导入模型", TargetPath: destDir, Reason: "无法创建目标目录", Suggestion: "请检查磁盘权限或空间"}
+	}
+	if !overwrite {
+		if _, err := os.Stat(destPath); err == nil {
+			return types.AppError{Code: "FILE_EXISTS", Operation: "导入模型", SourcePath: fileName, Reason: "文件已存在", Suggestion: "如需替换请先删除原文件"}
+		}
+	}
 	return os.WriteFile(destPath, data, 0644)
 }
 

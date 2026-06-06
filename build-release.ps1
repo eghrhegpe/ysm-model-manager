@@ -28,9 +28,10 @@ Write-Host "🦫 Wails 编译 v$Version ..." -ForegroundColor Yellow
 Set-Location $ProjectRoot
 wails build -clean -ldflags "-X ysm-model-manager/go/version.Version=$Version" 2>&1
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "⚠️ wails build 失败，回退到 go build..." -ForegroundColor Yellow
-    go build -ldflags "-X ysm-model-manager/go/version.Version=$Version" -o "$OutputDir\$ExeName" .
-    if ($LASTEXITCODE -ne 0) { Write-Host "❌ Go 编译失败" -ForegroundColor Red; exit 1 }
+    Write-Host "❌ wails build 失败 - 常见原因：旧进程锁定了 build/bin/" -ForegroundColor Red
+    Write-Host "   请先运行: Get-Process -Name 'YSM-Model-Manager*' | Stop-Process -Force" -ForegroundColor Yellow
+    Write-Host "   然后重试本脚本。不能用 go build 替代（缺少 Wails build tags）。" -ForegroundColor Yellow
+    exit 1
 } else {
     # wails build 成功，exe 在 build/bin/ 下
     Copy-Item "$ProjectRoot\build\bin\$ExeName" "$OutputDir\$ExeName"

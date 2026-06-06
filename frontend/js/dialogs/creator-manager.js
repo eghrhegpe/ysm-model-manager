@@ -1,5 +1,7 @@
-﻿// ===== 创作者管理对话框 =====
+﻿// @deprecated 已无人 import，功能不可达。如要启用需在 app-modules.js 添加入口
+// ===== 创作者管理对话框 =====
 // 标签系统 + 快速新增 + 🔍查看模型
+import { bus } from "../bus.js";
 
 export async function showCreatorManager(sites) {
   return new Promise((resolve) => {
@@ -7,6 +9,7 @@ export async function showCreatorManager(sites) {
     let tagFilter = "";
 
     const overlay = document.createElement("div");
+    overlay.tabIndex = 0;
     overlay.style.cssText =
       "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center";
     overlay.onclick = (e) => {
@@ -15,6 +18,12 @@ export async function showCreatorManager(sites) {
         resolve(null);
       }
     };
+    overlay.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        overlay.remove();
+        resolve(null);
+      }
+    });
 
     const box = document.createElement("div");
     box.style.cssText =
@@ -245,7 +254,11 @@ export async function showCreatorManager(sites) {
         const name = modal.querySelector("#qa-name").value.trim();
         const type = modal.querySelector("#qa-type").value.trim();
         if (!name) {
-          alert("请输入作者名");
+          bus.emit("toast:show", {
+            msg: "请输入作者名",
+            duration: 2000,
+            type: "error",
+          });
           return;
         }
         data.push({
@@ -276,9 +289,17 @@ export async function showCreatorManager(sites) {
         const { SaveWorkshopCreators, ExportWorkshopCreatorsJSONFile } =
           await import("../../wailsjs/go/main/App.js");
         await SaveWorkshopCreators(data);
-        alert("✅ 已导出到: " + (await ExportWorkshopCreatorsJSONFile()));
+        bus.emit("toast:show", {
+          msg: "✅ 已导出到: " + (await ExportWorkshopCreatorsJSONFile()),
+          duration: 3000,
+          type: "success",
+        });
       } catch (e) {
-        alert("❌ 导出失败: " + e);
+        bus.emit("toast:show", {
+          msg: "❌ 导出失败: " + e,
+          duration: 3000,
+          type: "error",
+        });
       }
     });
 
@@ -294,10 +315,18 @@ export async function showCreatorManager(sites) {
           const { MergeWorkshopCreatorsFromJSON } =
             await import("../../wailsjs/go/main/App.js");
           const r = await MergeWorkshopCreatorsFromJSON(text);
-          alert("✅ 合并完成：新增 " + r[0] + " 个，更新 " + r[1] + " 个");
+          bus.emit("toast:show", {
+            msg: "✅ 合并完成：新增 " + r[0] + " 个，更新 " + r[1] + " 个",
+            duration: 3000,
+            type: "success",
+          });
           await loadData();
         } catch (err) {
-          alert("❌ 导入失败: " + err);
+          bus.emit("toast:show", {
+            msg: "❌ 导入失败: " + err,
+            duration: 3000,
+            type: "error",
+          });
         }
       };
       inp.click();
@@ -325,14 +354,21 @@ export async function showCreatorManager(sites) {
           const text = await file.text();
           const { ReplaceWorkshopCreatorsFromJSON } =
             await import("../../wailsjs/go/main/App.js");
-          alert(
-            "✅ 已导入 " +
+          bus.emit("toast:show", {
+            msg:
+              "✅ 已导入 " +
               (await ReplaceWorkshopCreatorsFromJSON(text)) +
               " 个（备份已创建）",
-          );
+            duration: 3000,
+            type: "success",
+          });
           await loadData();
         } catch (err) {
-          alert("❌ 导入失败: " + err);
+          bus.emit("toast:show", {
+            msg: "❌ 导入失败: " + err,
+            duration: 3000,
+            type: "error",
+          });
         }
       };
       inp.click();
@@ -343,11 +379,19 @@ export async function showCreatorManager(sites) {
         const { SaveWorkshopCreators } =
           await import("../../wailsjs/go/main/App.js");
         await SaveWorkshopCreators(data);
-        alert("✅ 已保存");
+        bus.emit("toast:show", {
+          msg: "✅ 已保存",
+          duration: 2000,
+          type: "success",
+        });
         overlay.remove();
         resolve(true);
       } catch (e) {
-        alert("❌ 保存失败: " + e);
+        bus.emit("toast:show", {
+          msg: "❌ 保存失败: " + e,
+          duration: 3000,
+          type: "error",
+        });
       }
     });
 

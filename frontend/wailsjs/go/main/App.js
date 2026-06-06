@@ -134,8 +134,16 @@ export function ImportModelFileOverwrite(arg1, arg2) {
   return window['go']['main']['App']['ImportModelFileOverwrite'](arg1, arg2);
 }
 
+export function ImportModelFileOverwriteTo(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ImportModelFileOverwriteTo'](arg1, arg2, arg3);
+}
+
 export function ImportModelFileSkipCheck(arg1, arg2) {
   return window['go']['main']['App']['ImportModelFileSkipCheck'](arg1, arg2);
+}
+
+export function ImportModelFileTo(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ImportModelFileTo'](arg1, arg2, arg3);
 }
 
 export function ImportWorkshopSitesCSV(arg1) {

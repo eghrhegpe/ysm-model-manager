@@ -15,6 +15,7 @@ export function initImportQueue(app) {
   let currentFile = null;
   let currentBase64 = null;
   let currentFileName = null;
+  let currentRelPath = ""; // 文件夹导入时的相对路径
   const imported = []; // { name, base64, renamed, time }
   const fileQueue = []; // { file, base64, name, size }
 
@@ -22,6 +23,7 @@ export function initImportQueue(app) {
     currentFile = file;
     currentBase64 = base64;
     currentFileName = file.name;
+    currentRelPath = file._relPath || "";
 
     const parsed = parseModelName(file.name);
     root.getElementById("dl-fname").textContent = file.name;
@@ -29,6 +31,18 @@ export function initImportQueue(app) {
       file.size < 1048576
         ? (file.size / 1024).toFixed(1) + " KB"
         : (file.size / 1048576).toFixed(1) + " MB";
+    // 显示子路径（如有）
+    const subpathEl = root.getElementById("dl-subpath");
+    if (subpathEl) {
+      const relPath = file._relPath || "";
+      const dir = relPath ? relPath.substring(0, relPath.lastIndexOf("/")) : "";
+      if (dir) {
+        subpathEl.textContent = "📂 " + dir + "/";
+        subpathEl.style.display = "inline";
+      } else {
+        subpathEl.style.display = "none";
+      }
+    }
 
     root.getElementById("dl-author").value = parsed.author || "";
     root.getElementById("dl-work").value = parsed.work || "";
@@ -213,7 +227,7 @@ export function initImportQueue(app) {
     }
 
     try {
-      const { LoadAppConfig, ImportModelFile } =
+      const { LoadAppConfig, ImportModelFileTo } =
         await import("../../wailsjs/go/main/App.js");
       const cfg = await LoadAppConfig();
       const repoRoot = cfg.repoRoot || "";
@@ -225,7 +239,11 @@ export function initImportQueue(app) {
         });
         return;
       }
-      await ImportModelFile(newName, currentBase64);
+      // 从 relPath 提取子目录，如 "folder/sub/model.ysm" → "folder/sub"
+      const subpath = currentRelPath
+        ? currentRelPath.substring(0, currentRelPath.lastIndexOf("/"))
+        : "";
+      await ImportModelFileTo(newName, subpath, currentBase64);
       bus.emit("stats:refresh");
       bus.emit("tree:reload");
 
@@ -238,7 +256,12 @@ export function initImportQueue(app) {
           newName,
         );
         if (renameTo && renameTo !== newName) {
-          await RenameFile((cfg.repoRoot || "") + "\\" + newName, renameTo);
+          const fullImportPath =
+            (cfg.repoRoot || "") +
+            "\\" +
+            (currentRelPath ? currentRelPath.replace(/\//g, "\\") + "\\" : "") +
+            newName;
+          await RenameFile(fullImportPath, renameTo);
           newName = renameTo;
           bus.emit("stats:refresh");
           bus.emit("tree:reload");
@@ -267,6 +290,7 @@ export function initImportQueue(app) {
       currentFile = null;
       currentBase64 = null;
       currentFileName = null;
+      currentRelPath = "";
       if (fileQueue.length > 0) {
         const nextFq = fileQueue[0];
         showForm(nextFq.file, nextFq.base64);
@@ -286,9 +310,12 @@ export function initImportQueue(app) {
         });
         if (confirmed) {
           try {
-            const { ImportModelFileOverwrite } =
+            const { ImportModelFileOverwriteTo } =
               await import("../../wailsjs/go/main/App.js");
-            await ImportModelFileOverwrite(newName, currentBase64);
+            const subpath2 = currentRelPath
+              ? currentRelPath.substring(0, currentRelPath.lastIndexOf("/"))
+              : "";
+            await ImportModelFileOverwriteTo(newName, subpath2, currentBase64);
             bus.emit("toast:show", {
               msg: "✅ 已覆盖: " + newName,
               duration: 2000,
@@ -366,7 +393,13 @@ export function initImportQueue(app) {
         (i) => i.name === file.name || (i.renamed || i.name) === file.name,
       );
     if (dup) return;
-    fileQueue.push({ file, base64, name: file.name, size: file.size });
+    fileQueue.push({
+      file,
+      base64,
+      name: file.name,
+      size: file.size,
+      relPath: file._relPath || "",
+    });
     if (!currentFile) {
       showForm(file, base64);
     }

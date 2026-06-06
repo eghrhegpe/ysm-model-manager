@@ -1,6 +1,21 @@
 // ===== 树事件层（只负责绑定事件，不生成 HTML） =====
 import { bus } from "../../bus.js";
 import { flashBtn } from "./utils.js";
+import { selectState, toggleSelect } from "./data.js";
+import { updateStat } from "./render.js";
+
+function updateSelectCount(root) {
+  const stat = root?.getElementById("ftr-stat");
+  if (!stat) return;
+  const n = selectState.keys.size;
+  if (n > 0) {
+    stat.textContent = `已选 ${n} 个文件`;
+    stat.style.color = "var(--accent)";
+  } else {
+    stat.style.color = "";
+    // 让 updateStat 恢复原文
+  }
+}
 import {
   ToggleModelEnable,
   ScanModelEntries,
@@ -8,6 +23,8 @@ import {
   OpenFolder,
   LoadAppConfig,
 } from "../../../wailsjs/go/main/App.js";
+
+const ENABLE_MULTI_SELECT = true; // Feature Flag
 
 // 绑定树节点事件（每次 _renderTree 后调用）
 export function bindTreeEvents(container, vm) {
@@ -73,25 +90,89 @@ export function bindTreeEvents(container, vm) {
     });
   });
 
-  // 左键点击文件 → 显示模型详情
+  // 左键点击文件 → 多选（Ctrl/Shift）或显示模型详情
   container.querySelectorAll(".fl").forEach((el) => {
     el.addEventListener("click", (e) => {
       if (e.target.closest(".ck")) return;
       e.stopPropagation();
       const fullPath = el.dataset.fullpath || el.dataset.path;
+
+      if (ENABLE_MULTI_SELECT) {
+        const isCtrl = e.ctrlKey || e.metaKey;
+        const isShift = e.shiftKey;
+
+        if (isShift && selectState.lastKey) {
+          e.preventDefault();
+          const allPaths = Array.from(container.querySelectorAll(".fl"))
+            .map((el) => el.dataset.fullpath || el.dataset.path)
+            .filter(Boolean);
+          const startIdx = allPaths.indexOf(selectState.lastKey);
+          const endIdx = allPaths.indexOf(fullPath);
+          if (startIdx !== -1 && endIdx !== -1) {
+            const [min, max] = [
+              Math.min(startIdx, endIdx),
+              Math.max(startIdx, endIdx),
+            ];
+            for (let i = min; i <= max; i++) {
+              selectState.keys.add(allPaths[i]);
+            }
+          }
+          selectState.lastKey = fullPath;
+          vm._renderTree();
+          updateSelectCount(vm._root);
+          return;
+        }
+
+        if (isCtrl) {
+          toggleSelect(fullPath, false);
+          vm._renderTree();
+          updateSelectCount(vm._root);
+          return;
+        }
+
+        // 纯单击：有选中时清空并选中当前
+        if (selectState.keys.size > 0) {
+          selectState.keys.clear();
+          selectState.lastKey = null;
+          selectState.keys.add(fullPath);
+          selectState.lastKey = fullPath;
+          vm._renderTree();
+          updateSelectCount(vm._root);
+        }
+      }
+
       bus.emit("model:select", { path: fullPath });
     });
   });
 
-  // 文件右键菜单
+  // 文件右键菜单（支持多选）
   container.querySelectorAll(".fl").forEach((el) => {
     el.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const banned = !el.querySelector(".ck")?.classList.contains("on");
       const fullPath = el.dataset.fullpath || el.dataset.path;
       const nameEl = el.querySelector(".nm");
       const name = nameEl?.textContent?.replace(/^\S+\s/, "") || "";
+
+      // 如果多选中有这个文件，对整个选中集操作
+      if (
+        ENABLE_MULTI_SELECT &&
+        selectState.keys.size > 1 &&
+        selectState.keys.has(fullPath)
+      ) {
+        const count = selectState.keys.size;
+        bus.emit("ctx:show", {
+          x: e.clientX,
+          y: e.clientY,
+          type: "batch",
+          count,
+          paths: Array.from(selectState.keys),
+        });
+        return;
+      }
+
+      // 单个文件菜单
+      const banned = !el.querySelector(".ck")?.classList.contains("on");
       bus.emit("ctx:show", {
         x: e.clientX,
         y: e.clientY,

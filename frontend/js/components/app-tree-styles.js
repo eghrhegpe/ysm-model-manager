@@ -42,6 +42,7 @@ export const treeCSS = `
 .ch { padding-left: 16px; border-left: 1px dashed var(--bd); margin-left: 6px; }
 .fl { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px; font-size: 11px; transition: all .15s; cursor: default; }
 .fl:hover { background: var(--hover); }
+.fl.selected { background: rgba(137,180,250,.15); outline: 1px solid rgba(137,180,250,.3); }
 .fl .ck, .fh .ck { width: 22px; height: 12px; border-radius: 6px; background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background .15s; font-size: 0; line-height: 0; }
 .fl .ck::after, .fh .ck::after { content: ""; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--txt); transition: left .15s; }
 .fl .ck.on, .fh .ck.on { background: #a6e3a1; }

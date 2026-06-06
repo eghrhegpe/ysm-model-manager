@@ -62,6 +62,66 @@ bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name }) => {
     });
     return;
   }
+  if (type === "batch") {
+    bus.emit("menu:show", {
+      x,
+      y,
+      items: [
+        { label: `📦 已选 ${count} 个文件`, onClick: () => {} },
+        { divider: true },
+        {
+          label: "全部启用",
+          icon: "✅",
+          onClick: () => {
+            paths.forEach((p) =>
+              bus.emit("entry:toggle", { path: p, enable: false }),
+            );
+          },
+        },
+        {
+          label: "全部禁用",
+          icon: "⛔",
+          onClick: () => {
+            paths.forEach((p) =>
+              bus.emit("entry:toggle", { path: p, enable: true }),
+            );
+          },
+        },
+        { divider: true },
+        {
+          label: "批量重命名...",
+          icon: "✂️",
+          onClick: () => bus.emit("batch:rename", { paths }),
+        },
+        { divider: true },
+        {
+          label: "移入回收站",
+          icon: "🗑️",
+          danger: true,
+          onClick: async () => {
+            const { modalConfirm } = await import("./dialogs/modal.js");
+            const ok = await modalConfirm({
+              title: "批量删除",
+              icon: "🗑️",
+              message: `确定将选中的 ${count} 个文件移入回收站？`,
+              okText: "删除",
+              danger: true,
+            });
+            if (!ok) return;
+            const { MoveToRecycle } = await import("../wailsjs/go/main/App.js");
+            for (const p of paths) {
+              try {
+                await MoveToRecycle(p);
+              } catch {}
+            }
+            bus.emit("tree:reload");
+            bus.emit("stats:refresh");
+          },
+        },
+      ],
+    });
+    return;
+  }
   if (type === "file") {
     bus.emit("menu:show", {
       x,

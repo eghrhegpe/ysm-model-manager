@@ -6,7 +6,8 @@
  */
 export async function loadAuthors() {
   try {
-    const { ListModelAuthors } = await import("../../../wailsjs/go/main/App.js");
+    const { ListModelAuthors } =
+      await import("../../../wailsjs/go/main/App.js");
     return (await ListModelAuthors()) || [];
   } catch {
     return [];

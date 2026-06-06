@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
 )
 
@@ -14,26 +15,6 @@ import (
 type MoveResult struct {
 	Action string // "recycled" / "deleted_link" / "error"
 	Reason string // 如果是链接文件，说明原因
-}
-
-// ensureInDir 确保 path 在 baseDir 目录下，防止路径遍历
-func ensureInDir(path, baseDir string) error {
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return err
-	}
-	absBase, err := filepath.Abs(baseDir)
-	if err != nil {
-		return err
-	}
-	rel, err := filepath.Rel(absBase, absPath)
-	if err != nil {
-		return err
-	}
-	if strings.HasPrefix(rel, "..") || rel == ".." {
-		return fmt.Errorf("路径越权: %s 不在 %s 目录下", path, baseDir)
-	}
-	return nil
 }
 
 // Move 移动文件到仓库回收站（跨分区兼容）
@@ -57,7 +38,7 @@ func moveEx(src, repoRoot string) (*MoveResult, error) {
 		return nil, fmt.Errorf("仓库根目录未设置")
 	}
 	// 确保 src 在仓库目录内
-	if err := ensureInDir(src, repoRoot); err != nil {
+	if err := paths.IsInside(repoRoot, src); err != nil {
 		return nil, err
 	}
 
@@ -88,7 +69,7 @@ func moveEx(src, repoRoot string) (*MoveResult, error) {
 	}
 	// 防止 rel 包含 .. 路径遍历
 	dst := filepath.Join(recycleDir, rel)
-	if err := ensureInDir(dst, recycleDir); err != nil {
+	if err := paths.IsInside(recycleDir, dst); err != nil {
 		return nil, err
 	}
 
@@ -101,7 +82,7 @@ func moveEx(src, repoRoot string) (*MoveResult, error) {
 		ext := filepath.Ext(rel)
 		name := rel[:len(rel)-len(ext)]
 		dst = filepath.Join(recycleDir, name+"("+strconv.Itoa(i)+")"+ext)
-		if err := ensureInDir(dst, recycleDir); err != nil {
+		if err := paths.IsInside(recycleDir, dst); err != nil {
 			return nil, err
 		}
 	}
@@ -142,7 +123,7 @@ func List(repoRoot string) []types.ModelEntry {
 // Restore 从回收站恢复到原目录（跨分区兼容）
 func Restore(src, repoRoot string) error {
 	recycleDir := filepath.Join(repoRoot, ".recycle")
-	if err := ensureInDir(src, recycleDir); err != nil {
+	if err := paths.IsInside(recycleDir, src); err != nil {
 		return err
 	}
 
@@ -151,7 +132,7 @@ func Restore(src, repoRoot string) error {
 		return err
 	}
 	dst := filepath.Join(repoRoot, rel)
-	if err := ensureInDir(dst, repoRoot); err != nil {
+	if err := paths.IsInside(repoRoot, dst); err != nil {
 		return err
 	}
 
@@ -166,7 +147,7 @@ func Restore(src, repoRoot string) error {
 		ext := filepath.Ext(rel)
 		name := rel[:len(rel)-len(ext)]
 		dst = filepath.Join(repoRoot, name+"("+strconv.Itoa(i)+")"+ext)
-		if err := ensureInDir(dst, repoRoot); err != nil {
+		if err := paths.IsInside(repoRoot, dst); err != nil {
 			return err
 		}
 	}
@@ -179,7 +160,7 @@ func Restore(src, repoRoot string) error {
 // Delete 永久删除回收站中的文件
 func Delete(src, repoRoot string) error {
 	recycleDir := filepath.Join(repoRoot, ".recycle")
-	if err := ensureInDir(src, recycleDir); err != nil {
+	if err := paths.IsInside(recycleDir, src); err != nil {
 		return err
 	}
 	return os.Remove(src)

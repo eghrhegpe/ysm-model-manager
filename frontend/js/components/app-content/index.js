@@ -209,31 +209,57 @@ class AppContent extends HTMLElement {
       }
 
       const totalDups = dupHashes.reduce((s, [, v]) => s + v.length - 1, 0);
-      const confirmed = await window.showConfirm?.(
-        `发现 ${totalDups} 个重复文件（${dupHashes.length} 组），移入回收站？`,
-      );
-      if (!confirmed) {
-        list.innerHTML =
-          '<div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">已取消去重</div>';
-        return;
-      }
 
-      let del = 0,
-        fail = 0;
-      const detailList = [];
-      for (const [, group] of dupHashes) {
-        // 保留第一个，其余移入回收站
-        for (let i = 1; i < group.length; i++) {
-          try {
-            await MoveToRecycle(group[i].Path);
-            del++;
-            detailList.push({ name: group[i].Name, type: "success" });
-          } catch {
-            fail++;
-            detailList.push({ name: group[i].Name, type: "fail" });
+      // 行内展示每组重复文件，让用户选择保留哪个
+      let html = `<div style="padding:8px 12px;font-size:11px;color:var(--txt)">发现 ${dupHashes.length} 组重复文件（共 ${totalDups} 个可清理）</div>`;
+      const keepChoices = {};
+      dupHashes.forEach(([, group], gi) => {
+        html += `<div style="margin:4px 12px;border:1px solid var(--bd);border-radius:6px;padding:6px">
+<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">组 ${gi + 1}（${group.length} 个文件）</div>`;
+        group.forEach((e, fi) => {
+          const checked = fi === 0 ? " checked" : "";
+          html += `<label style="display:flex;align-items:center;gap:4px;padding:2px 0;font-size:10px;cursor:pointer">
+<input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} style="flex-shrink:0">
+<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">${this._esc(e.Name)}</span>
+<span style="color:var(--muted);flex-shrink:0">${(e.Size / 1024).toFixed(0)}KB</span>
+</label>`;
+        });
+        html += `</div>`;
+      });
+      html += `<div style="padding:4px 12px 8px">
+<button id="diag-dedup-exec" style="padding:6px 16px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:11px">🗑️ 删除未选中的重复文件</button>
+</div>`;
+      list.innerHTML = html;
+
+      list
+        .querySelector("#diag-dedup-exec")
+        ?.addEventListener("click", async () => {
+          let del = 0,
+            fail = 0;
+          for (let gi = 0; gi < dupHashes.length; gi++) {
+            const [, group] = dupHashes[gi];
+            const selected = parseInt(
+              list.querySelector(`input[name="dedup-keep-${gi}"]:checked`)
+                ?.value ?? "0",
+              10,
+            );
+            for (let fi = 0; fi < group.length; fi++) {
+              if (fi === selected) continue;
+              try {
+                await MoveToRecycle(group[fi].Path);
+                del++;
+              } catch {
+                fail++;
+              }
+            }
           }
-        }
-      }
+          if (del > 0) {
+            bus.emit("stats:refresh");
+            bus.emit("tree:reload");
+          }
+          list.innerHTML = `<div class="stat-row" style="padding:8px 12px;font-size:11px;color:${fail > 0 ? "#f9a826" : "#a6e3a1"}">
+✅ 去重完成：移入回收站 ${del} 个，失败 ${fail} 个</div>`;
+        });
 
       if (del > 0) {
         bus.emit("stats:refresh");

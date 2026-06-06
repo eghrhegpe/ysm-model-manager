@@ -513,3 +513,87 @@ display.innerHTML = esc(highlightName(name));
 10. **shutdown 必须 recover** — Wails runtime 关闭时可能 nil panic，必须有防御性 recover
 11. **路径格式要面向 URL** — Windows `\` 只在本地文件系统有效，跨网络/跨平台必须用 `/`
 12. **按钮状态要区分「加载中」和「不可用」** — ⏳ 表示还在等，❌ 表示已确认失败，避免用户反复点
+
+---
+
+## 2026-06-06 新增 bug 记录
+
+### 20. 文件夹回收/重命名/新建传递相对路径（bug-chronicle #20）
+
+#### 症状
+
+- 右键文件夹 → 移入回收站 → `回收了 0 个文件`
+- 重命名/新建文件夹也失败
+
+#### 根因
+
+仓库树中的 `data-dir` 存的是**相对路径**（如 `[Almeta_owx]【galgame】`），但 `ScanModelEntries`、`RenameDir`、`CreateDir` 等 Go 绑定需要**绝对路径**。
+
+#### 修复
+
+三个文件夹操作（`dir:recycle`、`dir:rename`、`dir:mkdir`）都在调用 Go 绑定前先加载 `LoadAppConfig` 获取 `repoRoot`，拼接绝对路径。
+
+---
+
+### 21. ClearCustomDir 因 .ban 后缀匹配失败（bug-chronicle #21）
+
+#### 症状
+
+- 右键整合包 → 清空 → `已清空 0 个文件`
+- 仓库中已禁用的模型不会被清理
+
+#### 根因
+
+`ClearCustomDir` 用 `filepath.Base(p)` 作为文件名查仓库映射。如果仓库文件已被禁用（加 `.ban` 后缀），仓库中的文件名是 `file.ysm.ban`，custom 目录中是 `file.ysm`，匹配不上。
+
+#### 修复
+
+`lookupName := strings.TrimSuffix(fileName, ".ban")` 去掉后缀再匹配。
+
+---
+
+### 22. wails build -o 不支持 Windows 绝对路径（bug-chronicle #22）
+
+#### 症状
+
+`mkdir C:\...\build\bin\C:: The filename is incorrect.`
+
+#### 根因
+
+`wails build -o C:\path\to\exe.exe` 中 `-o` 参数在 Windows 上被错误解析——把 `C:\` 当作子目录名。
+
+#### 修复
+
+去掉 `-o` 参数，默认输出到 `build/bin/`，再用 `Copy-Item` 复制到目标目录。
+
+---
+
+### 23. 游戏运行时文件被锁定，同步失败（bug-chronicle #23）
+
+#### 症状
+
+- 禁用模型后，整合包内对应文件未被加 `.ban`
+- 无任何提示
+
+#### 根因
+
+YSM 加载模型时文件被进程锁定，`os.Rename` 返回 `ERROR_SHARING_VIOLATION`。
+
+#### 实际表现（来自测试）
+
+- **正常情况**：YSM 仅在一瞬间读取文件到内存，读取完毕即释放锁。等模型加载完毕即可继续管理。
+- **软链接 + 启动器权限问题**：如果模型是符号链接，且启动器（PCL/HMCL）未以管理员权限运行，YSM 可能无法解析链接目标，导致文件一直被"挂起"无法释放锁。
+- **后果**：同步功能失效，需退出游戏，禁用符号链接模式，改用硬链接或复制。
+
+#### 修复
+
+添加 `isFileLocked(err)` 函数检测共享违例，文件被锁时跳过不报错，下次 watcher 触发再试。但软链接 + 权限问题需要用户退出游戏后手动调整链接模式。
+
+---
+
+## 通用教训（补充）
+
+13. **树中的路径永远是相对的** — `data-dir` 存相对路径，调用 Go 绑定前必须拼接 `repoRoot + "/" + dir`
+14. **.ban 后缀无处不在** — 任何文件名匹配的地方都要考虑 `.ban` 后缀的存在
+15. **wails build -o 在 Windows 有 bug** — 用默认输出路径 + Copy-Item 替代
+16. **Windows 文件锁不可绕过** — 游戏运行中不能改文件，检测后跳过，等待下次触发

@@ -62,7 +62,7 @@ export function settingsHTML() {
   </div>
   <div id="lm-hint-copy" style="font-size:9px;color:#6c7086;padding:2px 0 0 0;display:none">每个整合包独立占用磁盘空间，最兼容</div>
   <div id="lm-hint-hardlink" style="font-size:9px;color:var(--muted,#6c7086);padding:2px 0 0 0;display:none">✅ 推荐：省磁盘空间，支持实时开关模型，YSM 兼容性好<br>📌 需要将模型仓库放在与游戏相同的分区（如 C: 游戏 / C: 模型仓库）</div>
-  <div id="lm-hint-symlink" style="display:none;padding:2px 0 0 0"><span style="font-size:9px;color:#e5534b">❌ 不推荐：符号链接文件 YSM 无法加载，且游戏运行时文件被锁定无法禁用，需手动删除</span></div>
+  <div id="lm-hint-symlink" style="display:none;padding:2px 0 0 0"><span style="font-size:9px;color:#e5534b">❌ 不推荐：YSM 加载符号链接文件时可能因启动器权限不足（PCL/HMCL 无管理员权限）导致文件被挂起无法禁用，需退出游戏后手动删除</span></div>
 </div>
 
 <div class="section-title" style="margin-bottom:8px;margin-top:16px">⚙️ 界面与体验</div>

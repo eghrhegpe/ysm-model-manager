@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +14,7 @@ type entry struct {
 	Name string `json:"name"`
 	Path string `json:"path"`
 	Size int64  `json:"size"`
+	Hash string `json:"hash,omitempty"`
 }
 
 func main() {
@@ -42,10 +45,19 @@ func main() {
 		if fi != nil {
 			size = fi.Size()
 		}
+		// 计算 SHA256
+		hashStr := ""
+		if f, err := os.Open(p); err == nil {
+			h := sha256.New()
+			io.Copy(h, f)
+			hashStr = fmt.Sprintf("%x", h.Sum(nil))
+			f.Close()
+		}
 		list = append(list, entry{
 			Name: d.Name(),
 			Path: rel,
 			Size: size,
+			Hash: hashStr,
 		})
 		return nil
 	})

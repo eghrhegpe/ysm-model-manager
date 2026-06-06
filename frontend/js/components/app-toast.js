@@ -6,7 +6,7 @@ import { bus } from "../bus.js";
 class AppToast extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    this.attachShadow({ mode: "open" });
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -23,7 +23,7 @@ class AppToast extends HTMLElement {
         .toast.error { border-left: 3px solid #f38ba8; }
         .toast.success { border-left: 3px solid #a6e3a1; }
         .toast.info { border-left: 3px solid #89b4fa; }
-        .toast .msg { flex: 1; }
+        .toast .msg { flex: 1; white-space: pre-line; }
         .toast .undo-btn { padding: 4px 10px; border-radius: 5px; border: none; background: #7c83ff33; color: #7c83ff; cursor: pointer; font-size: 11px; font-family: inherit; transition: background .12s; }
         .toast .undo-btn:hover { background: #7c83ff55; }
         .toast .close-btn { background: none; border: none; color: #6c7086; cursor: pointer; font-size: 14px; padding: 0 2px; }
@@ -36,7 +36,7 @@ class AppToast extends HTMLElement {
   }
 
   connectedCallback() {
-    this._unsub = bus.on('toast:show', ({ msg, undo, duration, type }) => {
+    this._unsub = bus.on("toast:show", ({ msg, undo, duration, type }) => {
       this.show(msg, undo, duration, type);
     });
   }
@@ -45,34 +45,34 @@ class AppToast extends HTMLElement {
     if (this._unsub) this._unsub();
   }
 
-  show(msg, undoCallback, duration = 4000, type = '') {
-    const c = this.shadowRoot.getElementById('c');
-    const t = document.createElement('div');
-    t.className = 'toast' + (type ? ' ' + type : '');
-    t.innerHTML = `<span class="msg">${this._esc(msg)}</span>${undoCallback ? '<button class="undo-btn">↩ 撤销</button>' : ''}<button class="close-btn">✕</button>`;
+  show(msg, undoCallback, duration = 4000, type = "") {
+    const c = this.shadowRoot.getElementById("c");
+    const t = document.createElement("div");
+    t.className = "toast" + (type ? " " + type : "");
+    t.innerHTML = `<span class="msg">${this._esc(msg)}</span>${undoCallback ? '<button class="undo-btn">↩ 撤销</button>' : ""}<button class="close-btn">✕</button>`;
     c.appendChild(t);
     if (undoCallback) {
-      t.querySelector('.undo-btn').onclick = () => {
+      t.querySelector(".undo-btn").onclick = () => {
         undoCallback();
         this._remove(t);
-        this.show('✅ 已撤销', null, 2000, 'success');
+        this.show("✅ 已撤销", null, 2000, "success");
       };
     }
-    t.querySelector('.close-btn').onclick = () => this._remove(t);
+    t.querySelector(".close-btn").onclick = () => this._remove(t);
     t._timer = setTimeout(() => this._remove(t), duration);
   }
 
   _remove(t) {
     if (t._timer) clearTimeout(t._timer);
     if (!t.parentNode) return;
-    t.style.animation = 'slideOut .2s ease forwards';
+    t.style.animation = "slideOut .2s ease forwards";
     setTimeout(() => t.remove(), 200);
   }
 
   _esc(s) {
-    const d = document.createElement('div');
+    const d = document.createElement("div");
     d.textContent = s;
     return d.innerHTML;
   }
 }
-customElements.define('app-toast', AppToast);
+customElements.define("app-toast", AppToast);

@@ -127,13 +127,13 @@ export function showPackageDetail(root, pkg) {
     }
   }
 
-  // 三张状态卡片
+  // 三张状态卡片（带数字跳动）
   const syncedNum = root.getElementById("dp-card-synced-num");
   const missingNum = root.getElementById("dp-card-missing-num");
   const extraNum = root.getElementById("dp-card-extra-num");
-  if (syncedNum) syncedNum.textContent = pkg.synced || 0;
-  if (missingNum) missingNum.textContent = pkg.missing || 0;
-  if (extraNum) extraNum.textContent = pkg.extra || 0;
+  animateCount(syncedNum, pkg.synced || 0);
+  animateCount(missingNum, pkg.missing || 0);
+  animateCount(extraNum, pkg.extra || 0);
 
   // 填充三个展开列表（仅显示文件名，完整路径放 title）
   [
@@ -242,4 +242,27 @@ function esc(s) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+// animateCount 数字跳动动画
+function animateCount(el, target) {
+  if (!el) return;
+  const from = parseInt(el.textContent) || 0;
+  if (from === target) {
+    el.textContent = target;
+    return;
+  }
+  const diff = target - from;
+  const steps = Math.min(Math.abs(diff), 20);
+  const interval = Math.max(30, 200 / steps);
+  let i = 0;
+  const timer = setInterval(() => {
+    i++;
+    const current = Math.round(from + (diff * i) / steps);
+    el.textContent = current;
+    if (i >= steps) {
+      el.textContent = target;
+      clearInterval(timer);
+    }
+  }, interval);
 }

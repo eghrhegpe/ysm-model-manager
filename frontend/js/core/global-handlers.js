@@ -8,10 +8,10 @@ import { modalConfirm } from "../dialogs/modal.js";
 export function registerGlobalHandlers() {
   const unsubs = [];
 
-  // 导入仓库模型到所有整合包
+  // 导入仓库模型到整合包（指定 instanceName 则只导入到该包，否则导入到所有）
   unsubs.push(
-    bus.on("sync:download-missing", async () => {
-      console.log("[global] sync:download-missing");
+    bus.on("sync:download-missing", async ({ instanceName } = {}) => {
+      console.log("[global] sync:download-missing", instanceName || "all");
       try {
         const {
           LoadAppConfig,
@@ -32,9 +32,13 @@ export function registerGlobalHandlers() {
         }
         const instances = await ListVersionInstances(mcRoot);
         const statusList = await GetInstanceStatus(mcRoot, repoRoot);
+        // 指定了整合包则只处理该包，否则处理所有
+        const targets = instanceName
+          ? (statusList || []).filter((st) => st.Name === instanceName)
+          : statusList || [];
         let totalOk = 0,
           totalFail = 0;
-        for (const st of statusList || []) {
+        for (const st of targets) {
           for (const srcPath of st.Missing || []) {
             try {
               const ins = instances.find((i) => i.Name === st.Name);
@@ -48,7 +52,9 @@ export function registerGlobalHandlers() {
         }
         bus.emit("stats:refresh");
         bus.emit("toast:show", {
-          msg: `📥 导入完成: ${totalOk} 成功, ${totalFail} 失败`,
+          msg: instanceName
+            ? `📥 ${instanceName}: 导入 ${totalOk} 成功, ${totalFail} 失败`
+            : `📥 全部导入完成: ${totalOk} 成功, ${totalFail} 失败`,
           duration: 4000,
           type: totalFail > 0 ? "warn" : "success",
         });

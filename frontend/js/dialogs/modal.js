@@ -91,6 +91,7 @@ export function modalConfirm(opts) {
   return new Promise((resolve) => {
     const { title, icon, message, okText, danger } = opts;
     const overlay = document.createElement("div");
+    overlay.tabIndex = 0;
     overlay.style.cssText =
       "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center";
     overlay.onclick = (e) => {
@@ -99,6 +100,12 @@ export function modalConfirm(opts) {
         resolve(false);
       }
     };
+    overlay.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        overlay.remove();
+        resolve(false);
+      }
+    });
 
     const box = document.createElement("div");
     box.style.cssText =
@@ -114,6 +121,7 @@ export function modalConfirm(opts) {
     `;
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+    overlay.focus();
 
     const close = (result) => {
       overlay.remove();

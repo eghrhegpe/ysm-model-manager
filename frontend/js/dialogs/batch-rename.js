@@ -31,10 +31,15 @@ export async function showBatchRenameDialog(dir, entries, onApply) {
   };
 
   dialogEl = document.createElement("div");
+  dialogEl.tabIndex = 0;
   dialogEl.style.cssText =
     "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-family:-apple-system,sans-serif";
+  dialogEl.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+  });
   dialogEl.innerHTML = genHTML(dir, items);
   document.body.appendChild(dialogEl);
+  dialogEl.focus();
 
   // 批量修改作者/作品
   const batchAuthor = dialogEl.querySelector("#br-batch-author");

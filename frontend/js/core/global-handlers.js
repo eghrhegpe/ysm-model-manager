@@ -2,6 +2,7 @@
 // app-content/index.js 调用此模块注册所有 handler
 
 import { bus } from "../bus.js";
+import { modalConfirm } from "../dialogs/modal.js";
 
 /** 注册所有全局 handler，返回 unsub 函数数组 */
 export function registerGlobalHandlers() {
@@ -315,9 +316,13 @@ export function registerGlobalHandlers() {
           });
           return;
         }
-        const confirmed = await window.showConfirm?.(
-          `🗑️ 清空 ${insName}\n将删除整合包内已在仓库的模型（仓库保留原件），未入库的文件将被跳过。确定继续吗？`,
-        );
+        const confirmed = await modalConfirm({
+          title: "清空整合包",
+          icon: "🗑️",
+          message: `清空 ${insName}\n将删除整合包内已在仓库的模型（仓库保留原件），未入库的文件将被跳过。确定继续吗？`,
+          okText: "🗑️ 清空",
+          danger: true,
+        });
         if (!confirmed) {
           bus.emit("toast:show", {
             msg: "已取消",

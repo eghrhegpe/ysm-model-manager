@@ -5,7 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-    "ysm-model-manager/go/types" 
+	"ysm-model-manager/go/paths"
+	"ysm-model-manager/go/types"
 )
 
 // Install 安装模型到目标目录（支持链接模式）
@@ -13,7 +14,7 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 	src = strings.TrimSpace(src)
 	customDir = strings.TrimSpace(customDir)
 	if src == "" || customDir == "" {
-		return types.AppError{Code:"INVALID_PARAM", Operation:"安装模型", Reason:"参数为空", Suggestion:"请检查输入"}
+		return types.AppError{Code: "INVALID_PARAM", Operation: "安装模型", Reason: "参数为空", Suggestion: "请检查输入"}
 	}
 
 	// 🔒 路径清理与安全校验
@@ -21,14 +22,14 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 	customClean, _ := filepath.Abs(filepath.Clean(customDir))
 
 	// 验证 customDir 在 .minecraft 内（防路径穿越）
-	if !isInsideMinecraft(customClean) {
-		return types.AppError{Code:"INVALID_PATH", Operation:"安装模型", SourcePath:customDir, Reason:"目标目录不在 .minecraft 路径内", Suggestion:"请确保整合包的 custom 目录位于 .minecraft 内"}
+	if !paths.ContainsMinecraftMarker(customClean) {
+		return types.AppError{Code: "INVALID_PATH", Operation: "安装模型", SourcePath: customDir, Reason: "目标目录不在 .minecraft 路径内", Suggestion: "请确保整合包的 custom 目录位于 .minecraft 内"}
 	}
 
 	// 验证 src 在仓库目录内（防任意文件写入）
 	if repoRoot != "" {
-		if !isInsideRepo(srcClean, repoRoot) {
-			return types.AppError{Code:"INVALID_PATH", Operation:"安装模型", SourcePath:src, Reason:"源文件不在仓库目录内", Suggestion:"请确保模型文件位于已选择的仓库目录中"}
+		if err := paths.IsInside(repoRoot, srcClean); err != nil {
+			return types.AppError{Code: "INVALID_PATH", Operation: "安装模型", SourcePath: src, Reason: "源文件不在仓库目录内", Suggestion: "请确保模型文件位于已选择的仓库目录中"}
 		}
 	}
 
@@ -54,7 +55,7 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 					targetDir = filepath.Join(customDir, relDir)
 					// 再次校验子目录也在 .minecraft 内
 					targetDir, _ = filepath.Abs(filepath.Clean(targetDir))
-					if !isInsideMinecraft(targetDir) {
+					if !paths.ContainsMinecraftMarker(targetDir) {
 						return types.AppError{Code:"INVALID_PATH", Operation:"安装模型", SourcePath:targetDir, Reason:"子目录不在 .minecraft 路径内", Suggestion:"请确保整合包的 custom 目录位于 .minecraft 内"}
 					}
 				}
@@ -72,56 +73,6 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 		return err
 	}
 }
-// 额外校验：src 的真实路径必须在 repoRoot 内
-// isInsideRepo 安全校验：确保 src 真实地位于 repoRoot 目录下
-func isInsideRepo(src, repoRoot string) bool {
-	absSrc, err := filepath.EvalSymlinks(filepath.Clean(src))
-	if err != nil {
-		return false
-	}
-	absRepo, err := filepath.EvalSymlinks(filepath.Clean(repoRoot))
-	if err != nil {
-		return false
-	}
-	absSrc = filepath.Clean(absSrc)
-	absRepo = filepath.Clean(absRepo)
-
-	rel, err := filepath.Rel(absRepo, absSrc)
-	if err != nil {
-		return false
-	}
-	if strings.HasPrefix(rel, "..") {
-		return false
-	}
-	return true
-}
-// isInsideMinecraft 安全校验：确保 path 真实地位于 .minecraft 目录下
-func isInsideMinecraft(path string) bool {
-	cleaned := filepath.Clean(path)
-	abs, err := filepath.EvalSymlinks(cleaned)
-	if err != nil {
-		// EvalSymlinks 失败时，回退到普通 Clean 路径检查
-		abs = cleaned
-	}
-	abs = filepath.Clean(abs)
-
-	lower := strings.ToLower(abs)
-	mcMarker := strings.ToLower(string(filepath.Separator) + ".minecraft" + string(filepath.Separator))
-
-	idx := strings.Index(lower, mcMarker)
-	if idx == -1 {
-		if strings.HasSuffix(lower, strings.ToLower(string(filepath.Separator)+".minecraft")) {
-			return true
-		}
-		return false
-	}
-
-	rest := abs[idx+len(mcMarker)-1:]
-	if strings.Contains(rest, "..") {
-		return false
-	}
-	return true
-}
 
 // InstallToGlobal 安装到全局 custom 目录
 func InstallToGlobal(src, mcRoot string) (string, error) {
@@ -130,7 +81,7 @@ func InstallToGlobal(src, mcRoot string) (string, error) {
 
 	}
 	mcRoot, _ = filepath.Abs(filepath.Clean(mcRoot))
-	if !isInsideMinecraft(mcRoot) {
+	if !paths.ContainsMinecraftMarker(mcRoot) {
 		return "", types.AppError{Code:"INVALID_PATH", Operation:"安装到全局", SourcePath:mcRoot, Reason:"目标不在 .minecraft 路径内", Suggestion:"请确保 .minecraft 目录路径正确"}
 	}
 	src, _ = filepath.Abs(filepath.Clean(src))
@@ -149,7 +100,7 @@ func InstallWithOverlay(src, customDir string) (string, error) {
 	}
 	src, _ = filepath.Abs(filepath.Clean(src))
 	customDir, _ = filepath.Abs(filepath.Clean(customDir))
-	if !isInsideMinecraft(customDir) {
+	if !paths.ContainsMinecraftMarker(customDir) {
 		return "", types.AppError{Code:"INVALID_PATH", Operation:"安装模型（覆盖检查）", SourcePath:customDir, Reason:"目标目录不在 .minecraft 路径内", Suggestion:"请确保整合包的 custom 目录位于 .minecraft 内"}
 
 	}
@@ -289,5 +240,5 @@ func IsValidRepoRoot(path string) bool {
     }
 
     return true
-	
+
 }

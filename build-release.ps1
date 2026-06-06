@@ -23,18 +23,23 @@ Set-Location "$ProjectRoot\frontend"
 npx vite build 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) { Write-Host "❌ 前端构建失败" -ForegroundColor Red; exit 1 }
 
-# 2. 构建 Go (注入版本号)
-Write-Host "🦫 编译 Go (ldflags -X version=$Version)..." -ForegroundColor Yellow
+# 2. Wails 构建（自动嵌入前端资源 + 注入版本号）
+Write-Host "🦫 Wails 编译 v$Version ..." -ForegroundColor Yellow
 Set-Location $ProjectRoot
-go build -ldflags "-X ysm-model-manager/go/version.Version=$Version" -o "$OutputDir\$ExeName" .
-if ($LASTEXITCODE -ne 0) { Write-Host "❌ Go 编译失败" -ForegroundColor Red; exit 1 }
+wails build -clean -ldflags "-X ysm-model-manager/go/version.Version=$Version" 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "⚠️ wails build 失败，回退到 go build..." -ForegroundColor Yellow
+    go build -ldflags "-X ysm-model-manager/go/version.Version=$Version" -o "$OutputDir\$ExeName" .
+    if ($LASTEXITCODE -ne 0) { Write-Host "❌ Go 编译失败" -ForegroundColor Red; exit 1 }
+} else {
+    # wails build 成功，exe 在 build/bin/ 下
+    Copy-Item "$ProjectRoot\build\bin\$ExeName" "$OutputDir\$ExeName"
+}
 
 # 3. 复制配置文件
 Write-Host "📋 复制资源配置..." -ForegroundColor Yellow
 Copy-Item "$ProjectRoot\workshop_sites.json" "$OutputDir\" -ErrorAction SilentlyContinue
-if (Test-Path "$ProjectRoot\workshop_creators") {
-    Copy-Item -Recurse "$ProjectRoot\workshop_creators" "$OutputDir\workshop_creators"
-}
+Copy-Item "$ProjectRoot\workshop_creators.json" "$OutputDir\" -ErrorAction SilentlyContinue
 
 # 4. 打包 zip
 Write-Host "📦 打包 $ZipName ..." -ForegroundColor Yellow

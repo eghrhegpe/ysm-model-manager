@@ -1,0 +1,59 @@
+[
+  { "name": "碎de帆", "desc": "东方project系列", "type": "bilibili;afdian" },
+  { "name": "Almeta_owx", "desc": "原创角色、碧蓝档案", "type": "bilibili" },
+  {
+    "name": "就叫纸板",
+    "desc": "原创、碧蓝航线、碧蓝档案",
+    "type": "bilibili"
+  },
+  { "name": "暖笙小憨猪", "desc": "崩坏星穹铁道", "type": "bilibili" },
+  { "name": "AnluoSakura", "desc": "OC、卡拉比丘", "type": "bilibili" },
+  { "name": "DM朔风", "desc": "鸣潮", "type": "bilibili" },
+  {
+    "name": "你个人妻cc",
+    "desc": "物语系列、魔女审判、光之美少女",
+    "type": "bilibili"
+  },
+  { "name": "墓野奈奈", "desc": "东方project", "type": "bilibili" },
+  { "name": "墨染逝羽", "desc": "MeUmy、原神、魔女审判", "type": "bilibili" },
+  { "name": "提可拉", "desc": "OC、兽耳助手、泰拉瑞亚", "type": "bilibili" },
+  {
+    "name": "星屑海螺",
+    "desc": "原创、碧蓝航线、蔚蓝档案",
+    "type": "bilibili"
+  },
+  {
+    "name": "星海同上",
+    "desc": "假面骑士、奥奇传说、崩坏三、鸣潮",
+    "type": "bilibili"
+  },
+  { "name": "源石姬变体", "desc": "Minecraft、原创", "type": "bilibili" },
+  { "name": "白蛤蜊", "desc": "Alice In Cradle、OC", "type": "bilibili" },
+  { "name": "苏溟0w0", "desc": "VUP、原创、自设", "type": "bilibili" },
+  { "name": "爱吃园田海味", "desc": "东方project", "type": "bilibili" },
+  {
+    "name": "eghrhegpe/YSM-Model-Workshop",
+    "desc": "YSM-Model-Manager 整合仓库，141个模型",
+    "type": "github"
+  },
+  {
+    "name": "HSOS6/YSM-model",
+    "desc": "800+ YSM模型，来源于网络，仅学习使用",
+    "type": "github"
+  },
+  {
+    "name": "OrangeMiracle/winefox-ysm-models",
+    "desc": "工程师酒狐·黄铜工坊修会 YSM角色模型",
+    "type": "github"
+  },
+  {
+    "name": "dudu-ke/ysm-share",
+    "desc": "分享YSM模型，模型来自网络，侵删",
+    "type": "github"
+  },
+  {
+    "name": "Elaina69/Yes-Steve-Model-Repo",
+    "desc": "Elaina69收集的YSM模型，免费使用",
+    "type": "github"
+  }
+]

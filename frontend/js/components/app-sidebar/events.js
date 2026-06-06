@@ -1,5 +1,6 @@
 // ===== sidebar 事件层 =====
 import { bus } from "../../bus.js";
+import { animateNumber } from "../../utils/animate.js";
 import { bindInstanceActions } from "./actions.js";
 
 // 绑定每个卡片展开/折叠
@@ -120,8 +121,19 @@ export function bindFooter(root, instances) {
     for (const ins of instances) {
       totalPending += (ins.missing || 0) + (ins.extra || 0);
     }
-    if (statIns) statIns.textContent = `📂 整合包: ${instances.length}`;
-    if (statPending) statPending.textContent = `🔄 待处理: ${totalPending}`;
+    if (statIns) {
+      const old = parseInt(statIns.textContent.match(/[0-9]+/)?.[0] || "0", 10);
+      statIns.textContent = `📂 整合包: ${instances.length}`;
+      animateNumber(statIns, instances.length);
+    }
+    if (statPending) {
+      const old = parseInt(
+        statPending.textContent.match(/[0-9]+/)?.[0] || "0",
+        10,
+      );
+      statPending.textContent = `🔄 待处理: ${totalPending}`;
+      animateNumber(statPending, totalPending);
+    }
   })();
 }
 

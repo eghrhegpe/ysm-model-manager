@@ -68,8 +68,14 @@ export async function showBatchRenameDialog(dir, entries, onApply) {
     });
     updateCount();
   };
-  batchAuthor?.addEventListener("change", applyBatch);
-  batchWork?.addEventListener("change", applyBatch);
+  // 输入防抖 200ms
+  let brTimer = null;
+  const applyBatchDebounced = () => {
+    if (brTimer) clearTimeout(brTimer);
+    brTimer = setTimeout(applyBatch, 200);
+  };
+  batchAuthor?.addEventListener("input", applyBatchDebounced);
+  batchWork?.addEventListener("input", applyBatchDebounced);
 
   // 复选框事件委托（全选 + 单个）
   previewEl?.addEventListener("change", (e) => {
@@ -82,6 +88,11 @@ export async function showBatchRenameDialog(dir, entries, onApply) {
   });
 
   updateAll();
+  // 预填首文件作者/作品
+  if (items[0]) {
+    batchAuthor.value = items[0].p.author;
+    batchWork.value = items[0].p.work;
+  }
   renderPreview(previewEl, items);
   updateCount();
 
@@ -131,8 +142,8 @@ function genHTML(dir, items) {
 </div>
 <div id="br-preview" style="flex:1;overflow-y:auto;padding:4px 6px;min-height:100px;font-size:10px;color:var(--txt)"></div>
 <div style="padding:8px 12px;border-top:1px solid var(--bd);display:flex;gap:6px;justify-content:flex-end">
-  <button id="br-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消</button>
-  <button id="br-apply" style="padding:5px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px">✅ 应用重命名</button>
+  <button id="br-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消 (Esc)</button>
+  <button id="br-apply" style="padding:5px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px">✅ 应用重命名 (Enter)</button>
 </div>
 </div>`;
 }
@@ -147,6 +158,9 @@ function renderPreview(el, items) {
   <label style="display:flex;align-items:center;gap:3px;cursor:pointer">
     <input type="checkbox" id="br-select-all" checked style="accent-color:var(--accent)"> 全选
   </label>
+  <span style="flex:1;text-align:center">原名</span>
+  <span style="width:16px;text-align:center"></span>
+  <span style="flex:1;text-align:center">新名</span>
 </div>` +
     items
       .map(

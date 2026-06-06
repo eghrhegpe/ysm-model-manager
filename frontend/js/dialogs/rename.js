@@ -39,8 +39,8 @@ export async function showRenameDialog(filePath, currentName) {
         <span style="color:var(--muted)">${esc(currentName)}</span> → <span id="rn-preview" style="font-weight:500">-</span>
       </div>
       <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:2px">
-        <button id="rn-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消</button>
-        <button id="rn-ok" style="padding:5px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px">✂️ 重命名</button>
+        <button id="rn-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消 (Esc)</button>
+        <button id="rn-ok" style="padding:5px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px">✂️ 重命名 (Enter)</button>
       </div>
       <div id="rn-err" style="font-size:10px;color:#f38ba8;min-height:0;transition:min-height .15s;overflow:hidden"></div>
     `;

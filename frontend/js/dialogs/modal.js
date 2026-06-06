@@ -40,9 +40,10 @@ export function modalPrompt(opts) {
     box.innerHTML = `
       <div style="font-size:13px;font-weight:600">${icon || ""} ${esc(title)}</div>
       <input id="mp-input" value="${esc(value || "")}" placeholder="${esc(placeholder || "")}" style="width:100%;padding:6px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:12px;box-sizing:border-box">
+      <div id="mp-err" style="font-size:10px;color:#f38ba8;min-height:0;overflow:hidden;transition:min-height .15s"></div>
       <div style="display:flex;gap:6px;justify-content:flex-end">
-        <button id="mp-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消</button>
-        <button id="mp-ok" style="padding:5px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px">${esc(okText || "确定")}</button>
+        <button id="mp-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消 (Esc)</button>
+        <button id="mp-ok" style="padding:5px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px">${esc(okText || "确定")} (Enter)</button>
       </div>
     `;
     overlay.appendChild(box);
@@ -57,19 +58,28 @@ export function modalPrompt(opts) {
       resolve(result);
     };
 
+    const errEl = box.querySelector("#mp-err");
+
     box.querySelector("#mp-cancel").onclick = () => close(null);
     box.querySelector("#mp-ok").onclick = () => {
       const v = input.value.trim();
       if (!v) {
         input.focus();
+        if (errEl) errEl.textContent = "⚠️ 此项不能为空";
         return;
       }
       close(v);
     };
+    input.addEventListener("input", () => {
+      if (errEl) errEl.textContent = "";
+    });
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         const v = input.value.trim();
-        if (!v) return;
+        if (!v) {
+          if (errEl) errEl.textContent = "⚠️ 此项不能为空";
+          return;
+        }
         close(v);
       }
       if (e.key === "Escape") close(null);
@@ -115,8 +125,8 @@ export function modalConfirm(opts) {
       <div style="font-size:13px;font-weight:600">${icon || ""} ${esc(title)}</div>
       <div style="font-size:11px;color:var(--txt);line-height:1.5;white-space:pre-wrap">${esc(message)}</div>
       <div style="display:flex;gap:6px;justify-content:flex-end">
-        <button id="mc-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消</button>
-        <button id="mc-ok" style="padding:5px 14px;border-radius:5px;border:none;background:${danger ? "#e5534b" : "var(--accent)"};color:#fff;cursor:pointer;font-size:11px">${esc(okText || "确定")}</button>
+        <button id="mc-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消 (Esc)</button>
+        <button id="mc-ok" style="padding:5px 14px;border-radius:5px;border:none;background:${danger ? "#e5534b" : "var(--accent)"};color:#fff;cursor:pointer;font-size:11px">${esc(okText || "确定")} (Enter)</button>
       </div>
     `;
     overlay.appendChild(box);

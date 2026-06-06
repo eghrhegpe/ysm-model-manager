@@ -40,7 +40,9 @@ class AppTree extends HTMLElement {
       console.error("[Tree Init Error]", e);
       // 出错时显示空状态，不白屏
       const tree = this._root?.getElementById("tree");
-      if (tree) tree.innerHTML = '<div class="empty"><div class="big">⚠️</div>加载失败</div>';
+      if (tree)
+        tree.innerHTML =
+          '<div class="empty"><div class="big">⚠️</div>加载失败</div>';
     }
   }
   disconnectedCallback() {

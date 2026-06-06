@@ -128,7 +128,7 @@ export function updateStat(el, entries) {
   let total = 0,
     enabled = 0,
     totalSize = 0;
-  entries.forEach((e) => {
+  (entries || []).forEach((e) => {
     total++;
     if (!e.banned) enabled++;
     totalSize += e.size || 0;

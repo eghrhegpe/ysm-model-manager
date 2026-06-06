@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"syscall"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/ysm"
 )
@@ -120,16 +119,24 @@ func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.Instance
 // SyncToggleStatus 同步启用/禁用状态
 func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int, int, error) {
 	repoEntries := scanFn(repoRoot)
-	// 同时用哈希和文件名匹配（硬链接文件可能无法算哈希）
 	repoHash := make(map[string]bool) // hash → banned
-	repoName := make(map[string]bool) // basename(去.ban) → banned
+	repoName := make(map[string]bool) // relPath(去.ban) → banned，用于同名不同文件夹的文件
+	repoRootClean := strings.ToLower(filepath.Clean(repoRoot)) + string(filepath.Separator)
 	for _, e := range repoEntries {
 		banned := strings.HasSuffix(strings.ToLower(e.Name), ".ban")
-		baseName := strings.TrimSuffix(e.Name, ".ban")
-		repoName[strings.ToLower(baseName)] = banned
-		hash := computeHash(e.Path)
-		if hash != "" {
-			repoHash[hash] = banned
+		// 用路径前缀限定：relPath 带至少一级父文件夹，避免跨文件夹撞名
+		ePath := strings.ToLower(e.Path)
+		if strings.HasPrefix(ePath, repoRootClean) {
+			rel := strings.TrimPrefix(ePath, repoRootClean)
+			rel = strings.TrimSuffix(rel, ".ban")
+			repoName[rel] = banned
+		} else {
+			// fallback：纯文件名（顶层文件）
+			baseName := strings.TrimSuffix(strings.ToLower(e.Name), ".ban")
+			repoName[baseName] = banned
+		}
+		if e.Hash != "" {
+			repoHash[e.Hash] = banned
 		}
 	}
 	if len(repoHash) == 0 && len(repoName) == 0 {
@@ -138,6 +145,7 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 
 	disableCount := 0
 	enableCount := 0
+	customDirClean := strings.ToLower(filepath.Clean(instanceCustomDir)) + string(filepath.Separator)
 	filepath.WalkDir(instanceCustomDir, func(p string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
@@ -155,7 +163,7 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 			return nil
 		}
 
-		// 先试哈希匹配，失败则试文件名匹配
+		// 先试哈希匹配，再用多级路径匹配，最后 fallback 到纯文件名
 		var shouldBeBanned bool
 		var matched bool
 		hash := computeHash(p)
@@ -163,6 +171,16 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 			shouldBeBanned, matched = repoHash[hash]
 		}
 		if !matched {
+			// 用 relative path 匹配（带文件夹限定）
+			pLower := strings.ToLower(p)
+			if strings.HasPrefix(pLower, customDirClean) {
+				rel := strings.TrimPrefix(pLower, customDirClean)
+				rel = strings.TrimSuffix(rel, ".ban")
+				shouldBeBanned, matched = repoName[rel]
+			}
+		}
+		if !matched {
+			// fallback：纯文件名（旧仓库或同名不同路径的特例）
 			baseName := strings.ToLower(filepath.Base(actualPath))
 			shouldBeBanned, matched = repoName[baseName]
 		}
@@ -254,39 +272,6 @@ func getLinkType(path string) types.LinkType {
 	// 在 Windows 上判断硬链接：通过 syscall.GetFileInformationByHandle 获取 nlink
 	// 如果 nlink > 1，说明是硬链接
 	return checkHardLink(path)
-}
-
-// checkHardLink 检查文件是否为硬链接（Windows 上通过 nlink 判断）
-func checkHardLink(path string) types.LinkType {
-	// Windows 上通过 CreateFile + GetFileInformationByHandle 获取文件信息
-	// 使用 golang.org/x/sys/windows 或 syscall
-	pathp, err := syscall.UTF16PtrFromString(path)
-	if err != nil {
-		return types.LinkCopy
-	}
-	handle, err := syscall.CreateFile(pathp,
-		syscall.GENERIC_READ,
-		syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE,
-		nil,
-		syscall.OPEN_EXISTING,
-		syscall.FILE_ATTRIBUTE_NORMAL,
-		0)
-	if err != nil {
-		return types.LinkCopy
-	}
-	defer syscall.CloseHandle(handle)
-
-	var info syscall.ByHandleFileInformation
-	err = syscall.GetFileInformationByHandle(handle, &info)
-	if err != nil {
-		return types.LinkCopy
-	}
-
-	// nlink > 1 表示有多个硬链接
-	if info.NumberOfLinks > 1 {
-		return types.LinkHard
-	}
-	return types.LinkCopy
 }
 
 // isFileLocked 判断错误是否因为文件被其他进程锁定

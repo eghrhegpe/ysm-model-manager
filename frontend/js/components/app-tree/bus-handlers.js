@@ -104,8 +104,12 @@ export function bindBusEvents(vm) {
       const name = prompt("请输入新文件夹名称：");
       if (!name) return;
       try {
-        const { RenameDir } = await import("../../../wailsjs/go/main/App.js");
-        await RenameDir(dir, name.trim());
+        const { LoadAppConfig, RenameDir } =
+          await import("../../../wailsjs/go/main/App.js");
+        const cfg = await LoadAppConfig();
+        const repoRoot = cfg.repoRoot || "";
+        const absDir = repoRoot ? repoRoot + "/" + dir : dir;
+        await RenameDir(absDir, name.trim());
         await reload(vm);
         bus.emit("stats:refresh");
       } catch (e) {
@@ -123,8 +127,14 @@ export function bindBusEvents(vm) {
       const name = prompt("请输入新文件夹名称：");
       if (!name) return;
       try {
-        const { CreateDir } = await import("../../../wailsjs/go/main/App.js");
-        await CreateDir(dir + "/" + name.trim());
+        const { LoadAppConfig, CreateDir } =
+          await import("../../../wailsjs/go/main/App.js");
+        const cfg = await LoadAppConfig();
+        const repoRoot = cfg.repoRoot || "";
+        const absDir = repoRoot
+          ? repoRoot + "/" + dir + "/" + name.trim()
+          : dir + "/" + name.trim();
+        await CreateDir(absDir);
         await reload(vm);
       } catch (e) {
         bus.emit("toast:show", {
@@ -143,16 +153,22 @@ export function bindBusEvents(vm) {
       );
       if (!confirmed) return;
       try {
-        // 遍历文件夹内所有模型文件移入回收站
-        const { ScanModelEntries, MoveToRecycle } =
+        // 加载仓库根目录 → 拼接绝对路径
+        const { LoadAppConfig, ScanModelEntries, MoveToRecycle } =
           await import("../../../wailsjs/go/main/App.js");
-        const entries = await ScanModelEntries(dir);
-        let count = 0;
+        const cfg = await LoadAppConfig();
+        const repoRoot = cfg.repoRoot || "";
+        const absDir = repoRoot ? repoRoot + "/" + dir : dir;
+        const entries = await ScanModelEntries(absDir);
+        let count = 0,
+          errors = [];
         for (const e of entries || []) {
           try {
             await MoveToRecycle(e.Path);
             count++;
-          } catch {}
+          } catch (ex) {
+            errors.push(e.Name + ": " + String(ex));
+          }
         }
         // 尝试删除空文件夹
         try {
@@ -161,8 +177,15 @@ export function bindBusEvents(vm) {
         } catch {}
         await reload(vm);
         bus.emit("stats:refresh");
+        const suffix = errors.length
+          ? "，失败 " +
+            errors.length +
+            " 个（" +
+            errors.slice(0, 3).join("; ") +
+            "）"
+          : "";
         bus.emit("toast:show", {
-          msg: `♻️ 已回收 ${count} 个文件`,
+          msg: `♻️ 已回收 ${count} 个文件` + suffix,
           duration: 3000,
           type: "success",
         });

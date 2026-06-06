@@ -617,35 +617,7 @@ func (a *App) ListModelAuthors() []string {
 
 // ========== 整合包 ==========
 func (a *App) ListVersionInstances(mcRoot string) []types.VersionInstance {
-	mcRoot = strings.TrimSpace(mcRoot)
-	if mcRoot == "" {
-		return []types.VersionInstance{}
-	}
-	versionsDir := filepath.Join(mcRoot, "versions")
-	ents, err := os.ReadDir(versionsDir)
-	if err != nil {
-		return []types.VersionInstance{}
-	}
-	out := []types.VersionInstance{}
-	for _, e := range ents {
-		if !e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		verDir := filepath.Join(versionsDir, name)
-		custom := filepath.Join(verDir, "config", "yes_steve_model", "custom")
-		exists := true
-		if _, st := os.Stat(custom); os.IsNotExist(st) {
-			exists = false
-		}
-		out = append(out, types.VersionInstance{
-			Name:       name,
-			VersionDir: verDir,
-			CustomDir:  custom,
-			Exists:     exists,
-		})
-	}
-	return out
+	return sync.ListVersions(strings.TrimSpace(mcRoot))
 }
 
 func (a *App) GetGlobalCustomDir(mcRoot string) string {
@@ -920,94 +892,57 @@ func (a *App) SyncCustomToRepo(customDir, repoDir string) (int, error) {
 }
 
 func (a *App) ImportModelFile(fileName, base64Data string) error {
-    if a.RepoRoot == "" {
-        return fmt.Errorf("请先选择仓库目录")
-    }
-
-    // 防路径穿越
-    if strings.Contains(fileName, "..") ||
-        strings.ContainsAny(fileName, "\\/") {
-        return types.AppError{Code:"FILENAME_INVALID", Operation:"导入模型", SourcePath:fileName, Reason:"文件名包含非法路径分隔符", Suggestion:"请使用纯文件名，不要包含路径"}
-    }
-
-    // 校验扩展名
-    ext := strings.ToLower(filepath.Ext(fileName))
-    if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
-        return types.AppError{Code:"FILE_TYPE_UNSUPPORTED", Operation:"导入模型", SourcePath:fileName, Reason:"不支持的文件格式", Suggestion:"仅支持 .ysm / .zip / .7z 格式"}
-    }
-
-    data, err := base64.StdEncoding.DecodeString(base64Data)
-    if err != nil {
-        return types.AppError{Code:"DECODE_FAILED", Operation:"导入模型", Reason:"Base64 解码失败", Suggestion:"文件可能已损坏，请重新下载"}
-    }
-
-    // 大小限制：最大 500MB
-    if len(data) > 500 * 1024 * 1024 {
-        return types.AppError{Code:"FILE_TOO_LARGE", Operation:"导入模型", SourcePath:fileName, Reason:"文件大小超过 500MB 限制", Suggestion:"请压缩文件至 500MB 以内"}
-    }
-
-    // 空文件检查
-    if len(data) == 0 {
-        return types.AppError{Code:"FILE_EMPTY", Operation:"导入模型", SourcePath:fileName, Reason:"文件内容为空", Suggestion:"请检查文件是否损坏"}
-    }
-
-    // 校验文件头魔数（ZIP/7z）
-    if len(data) >= 4 {
-        if ext == ".zip" || ext == ".ysm" {
-            // ZIP 魔数: PK\x03\x04
-            if data[0] != 0x50 || data[1] != 0x4B || data[2] != 0x03 || data[3] != 0x04 {
-                return types.AppError{Code:"FILE_HEADER_MISMATCH", Operation:"导入模型", SourcePath:fileName, Reason:"文件头不匹配zip，文件可能已损坏", Suggestion:"请重新下载或检查文件格式"}
-            }
-        } else if ext == ".7z" {
-            // 7z 魔数: 7z\xBC\xAF\x27\x1C
-            if data[0] != 0x37 || data[1] != 0x7A || data[2] != 0xBC || data[3] != 0xAF {
-                return types.AppError{Code:"FILE_HEADER_MISMATCH", Operation:"导入模型", SourcePath:fileName, Reason:"文件头不匹配7z，文件可能已损坏", Suggestion:"请重新下载或检查文件格式"}
-            }
-        }
-    }
-
-    destPath := filepath.Join(a.RepoRoot, fileName)
-    destDir := filepath.Dir(destPath)
-    if err := os.MkdirAll(destDir, 0755); err != nil {
-        return types.AppError{Code:"MKDIR_FAILED", Operation:"导入模型", TargetPath:destDir, Reason:"无法创建目标目录", Suggestion:"请检查磁盘权限或空间"}
-    }
-    if _, err := os.Stat(destPath); err == nil {
-        return types.AppError{Code:"FILE_EXISTS", Operation:"导入模型", SourcePath:fileName, Reason:"文件已存在", Suggestion:"如需替换请先删除原文件"}
-    }
-    return os.WriteFile(destPath, data, 0644)
+	return a.importModelFile(fileName, base64Data, false)
 }
 
 // ImportModelFileSkipCheck 导入模型文件，跳过文件头校验（用于已知安全但头损坏的文件）
 func (a *App) ImportModelFileSkipCheck(fileName, base64Data string) error {
-    if a.RepoRoot == "" {
-        return fmt.Errorf("请先选择仓库目录")
-    }
-    if strings.Contains(fileName, "..") || strings.ContainsAny(fileName, "\\/") {
-        return types.AppError{Code:"FILENAME_INVALID", Operation:"导入模型", SourcePath:fileName, Reason:"文件名包含非法路径分隔符", Suggestion:"请使用纯文件名，不要包含路径"}
-    }
-    ext := strings.ToLower(filepath.Ext(fileName))
-    if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
-        return types.AppError{Code:"FILE_TYPE_UNSUPPORTED", Operation:"导入模型", SourcePath:fileName, Reason:"不支持的文件格式", Suggestion:"仅支持 .ysm / .zip / .7z 格式"}
-    }
-    data, err := base64.StdEncoding.DecodeString(base64Data)
-    if err != nil {
-        return types.AppError{Code:"DECODE_FAILED", Operation:"导入模型", Reason:"Base64 解码失败", Suggestion:"文件可能已损坏，请重新下载"}
-    }
-    if len(data) > 500*1024*1024 {
-        return types.AppError{Code:"FILE_TOO_LARGE", Operation:"导入模型", SourcePath:fileName, Reason:"文件大小超过 500MB 限制", Suggestion:"请压缩文件至 500MB 以内"}
-    }
-    if len(data) == 0 {
-        return types.AppError{Code:"FILE_EMPTY", Operation:"导入模型", SourcePath:fileName, Reason:"文件内容为空", Suggestion:"请检查文件是否损坏"}
-    }
-    destPath := filepath.Join(a.RepoRoot, fileName)
-    destDir := filepath.Dir(destPath)
-    if err := os.MkdirAll(destDir, 0755); err != nil {
-        return types.AppError{Code:"MKDIR_FAILED", Operation:"导入模型", TargetPath:destDir, Reason:"无法创建目标目录", Suggestion:"请检查磁盘权限或空间"}
-    }
-    if _, err := os.Stat(destPath); err == nil {
-        return types.AppError{Code:"FILE_EXISTS", Operation:"导入模型", SourcePath:fileName, Reason:"文件已存在", Suggestion:"如需替换请先删除原文件"}
-    }
-    return os.WriteFile(destPath, data, 0644)
+	return a.importModelFile(fileName, base64Data, true)
+}
+
+// importModelFile 导入模型文件，skipCheck=true 跳过 ZIP/7z 魔数校验
+func (a *App) importModelFile(fileName, base64Data string, skipCheck bool) error {
+	if a.RepoRoot == "" {
+		return fmt.Errorf("请先选择仓库目录")
+	}
+	if strings.Contains(fileName, "..") || strings.ContainsAny(fileName, "\\/") {
+		return types.AppError{Code: "FILENAME_INVALID", Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
+	}
+	ext := strings.ToLower(filepath.Ext(fileName))
+	if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
+		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "仅支持 .ysm / .zip / .7z 格式"}
+	}
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return types.AppError{Code: "DECODE_FAILED", Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
+	}
+	if len(data) > 500*1024*1024 {
+		return types.AppError{Code: "FILE_TOO_LARGE", Operation: "导入模型", SourcePath: fileName, Reason: "文件大小超过 500MB 限制", Suggestion: "请压缩文件至 500MB 以内"}
+	}
+	if len(data) == 0 {
+		return types.AppError{Code: "FILE_EMPTY", Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}
+	}
+	// 校验文件头魔数（ZIP/7z），skipCheck=true 时跳过
+	if !skipCheck && len(data) >= 4 {
+		if ext == ".zip" || ext == ".ysm" {
+			if data[0] != 0x50 || data[1] != 0x4B || data[2] != 0x03 || data[3] != 0x04 {
+				return types.AppError{Code: "FILE_HEADER_MISMATCH", Operation: "导入模型", SourcePath: fileName, Reason: "文件头不匹配zip，文件可能已损坏", Suggestion: "请重新下载或检查文件格式"}
+			}
+		} else if ext == ".7z" {
+			if data[0] != 0x37 || data[1] != 0x7A || data[2] != 0xBC || data[3] != 0xAF {
+				return types.AppError{Code: "FILE_HEADER_MISMATCH", Operation: "导入模型", SourcePath: fileName, Reason: "文件头不匹配7z，文件可能已损坏", Suggestion: "请重新下载或检查文件格式"}
+			}
+		}
+	}
+	destPath := filepath.Join(a.RepoRoot, fileName)
+	destDir := filepath.Dir(destPath)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return types.AppError{Code: "MKDIR_FAILED", Operation: "导入模型", TargetPath: destDir, Reason: "无法创建目标目录", Suggestion: "请检查磁盘权限或空间"}
+	}
+	if _, err := os.Stat(destPath); err == nil {
+		return types.AppError{Code: "FILE_EXISTS", Operation: "导入模型", SourcePath: fileName, Reason: "文件已存在", Suggestion: "如需替换请先删除原文件"}
+	}
+	return os.WriteFile(destPath, data, 0644)
 }
 
 // ========== 回收站 ==========
@@ -1058,9 +993,11 @@ func (a *App) ClearCustomDir(customDir string) (int, error) {
 		}
 
 		fileName := filepath.Base(p)
+		// 去掉 .ban 后缀再匹配
+		lookupName := strings.TrimSuffix(fileName, ".ban")
 
 		// 检查仓库是否有同名或同哈希文件，如果没有则跳过删除（怕误删未上传的模型）
-		_, hasName := repoByName[fileName]
+		_, hasName := repoByName[lookupName]
 		if !hasName {
 			a.logger.Add(fileName, p, customDir, 0, "skipped", "仓库中无此文件，跳过删除（请先上传到仓库）")
 			return nil

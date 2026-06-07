@@ -138,6 +138,10 @@ export function GetPackInfo(arg1) {
   return window['go']['main']['App']['GetPackInfo'](arg1);
 }
 
+export function GetWasmBinary() {
+  return window['go']['main']['App']['GetWasmBinary']();
+}
+
 export function GetWindowPosition() {
   return window['go']['main']['App']['GetWindowPosition']();
 }
@@ -248,6 +252,10 @@ export function OpenFolder(arg1) {
 
 export function QueueStatus() {
   return window['go']['main']['App']['QueueStatus']();
+}
+
+export function ReadFileBytes(arg1) {
+  return window['go']['main']['App']['ReadFileBytes'](arg1);
 }
 
 export function RelinkCustomDir(arg1, arg2) {

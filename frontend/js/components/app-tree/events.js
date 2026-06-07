@@ -28,7 +28,7 @@ const ENABLE_MULTI_SELECT = true; // Feature Flag
 
 // 绑定树节点事件（每次 _renderTree 后调用）
 export function bindTreeEvents(container, vm) {
-  // 文件夹展开/折叠
+  // 文件夹展开/折叠 + 预览整合包信息
   container.querySelectorAll(".fh").forEach((el) => {
     el.addEventListener("click", (e) => {
       // 如果点击目标是开关，不触发展开/折叠
@@ -42,6 +42,8 @@ export function bindTreeEvents(container, vm) {
       ar.textContent = open ? "▸" : "▾";
       vm._dirOpen[el.dataset.dir] = !open;
       localStorage.setItem("at_dirs", JSON.stringify(vm._dirOpen));
+      // 通知预览面板显示整合包信息
+      bus.emit("model:select", { path: el.dataset.dir, isDir: true });
     });
   });
 

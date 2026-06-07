@@ -37,7 +37,17 @@ if ($LASTEXITCODE -ne 0) {
     Copy-Item "$ProjectRoot\build\bin\$ExeName" "$OutputDir\$ExeName"
 }
 
-# 3. 复制配置文件
+# 3. 复制 YSMParser sidecar（-clean 会清掉 build/bin，需从备份恢复或提示用户）
+$ysmParserSrc = "$ProjectRoot\build\bin\YSMParser.exe"
+if (Test-Path $ysmParserSrc) {
+    Copy-Item $ysmParserSrc "$OutputDir\"
+    Write-Host "🔧 YSMParser.exe 已复制" -ForegroundColor Yellow
+} else {
+    Write-Host "⚠️ 未找到 YSMParser.exe - 骨骼预览功能不可用" -ForegroundColor Yellow
+    Write-Host "   下载地址: https://github.com/OpenYSM/YSMParser/releases" -ForegroundColor Yellow
+}
+
+# 4. 复制配置文件
 Write-Host "📋 复制资源配置..." -ForegroundColor Yellow
 Copy-Item "$ProjectRoot\workshop_sites.json" "$OutputDir\" -ErrorAction SilentlyContinue
 Copy-Item "$ProjectRoot\workshop_creators.json" "$OutputDir\" -ErrorAction SilentlyContinue

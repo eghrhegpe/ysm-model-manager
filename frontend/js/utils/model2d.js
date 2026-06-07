@@ -19,7 +19,7 @@ export function renderModel2D(canvas, model, textureImg) {
     minY = Infinity,
     maxY = -Infinity;
   for (const bone of model.bones) {
-    for (const c of bone.cubes) {
+    for (const c of bone.cubes || []) {
       const [ox, oy, oz] = c.origin;
       const [sx, sy, sz] = c.size;
       // 前视图：X 水平，Y 垂直（忽略 Z）
@@ -48,7 +48,7 @@ export function renderModel2D(canvas, model, textureImg) {
 function drawView(ctx, model, view, scale, ox, oy, textureImg) {
   const isFront = view === "front";
   for (const bone of model.bones) {
-    for (const c of bone.cubes) {
+    for (const c of bone.cubes || []) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
       // 投影坐标
@@ -88,7 +88,7 @@ function drawMiniView(ctx, model, view, scale, textureImg) {
     minZ = Infinity,
     maxZ = -Infinity;
   for (const bone of model.bones) {
-    for (const c of bone.cubes) {
+    for (const c of bone.cubes || []) {
       const [ox, oy, oz] = c.origin;
       const [sx, sy, sz] = c.size;
       if (ox < minX) minX = ox;
@@ -104,7 +104,7 @@ function drawMiniView(ctx, model, view, scale, textureImg) {
   const oy2 = my + size / 2 + (minZ + rangeZ / 2) * s;
 
   for (const bone of model.bones) {
-    for (const c of bone.cubes) {
+    for (const c of bone.cubes || []) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
       const drawX = ox2 + x * s;

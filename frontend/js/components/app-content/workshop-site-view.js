@@ -106,11 +106,10 @@ export function renderSiteView(site, ctx) {
       '<div style="padding:6px 12px 4px;display:flex;align-items:center;gap:4px">' +
         '<span style="font-size:10px;font-weight:600;color:var(--txt)">✏️ 编辑创作者</span>' +
         '<span style="flex:1"></span>' +
-        '<button class="ws-cr-export-btn" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:9px">📤</button>' +
-        '<button class="ws-cr-import-btn" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:9px">📥</button>' +
         '<button class="ws-cr-view-btn" style="padding:4px 12px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">✅ 完成</button>' +
         '<button class="ws-cr-save-btn" style="padding:4px 14px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:11px">💾 保存</button>' +
-        "</div>",
+        "</div>" +
+        '<div style="font-size:8px;color:var(--muted);padding:0 12px 4px">📄 数据文件：exe 同目录下的 workshop_creators.json，可直接编辑</div>',
     );
     creators.forEach((cr, idx) => {
       parts.push(

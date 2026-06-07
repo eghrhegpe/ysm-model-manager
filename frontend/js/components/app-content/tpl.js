@@ -109,6 +109,7 @@ export function settingsHTML() {
     <div>📋 <b>发布</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/releases" target="_blank" style="color:var(--accent)">查看所有版本</a></div>
     <div>📖 <b>文档</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/tree/main/docs" target="_blank" style="color:var(--accent)">docs/</a></div>
     <div style="margin-top:4px;color:var(--muted)">💡 灵感来自 LytVPK mod-manager</div>
+    <div style="margin-top:4px;font-size:8px;color:var(--muted)">📄 配置文件：exe 同目录下的 ysm_config.json，可直接编辑</div>
   </div>
 </div>
 
@@ -255,15 +256,14 @@ export function workshopHTML() {
     <div style="padding:10px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:600">🧩 创意工坊</span>
       <span style="flex:1"></span>
-      <button class="btn" id="ws-import-btn" style="font-size:9px;padding:2px 6px">📥</button>
-      <button class="btn" id="ws-export-btn" style="font-size:9px;padding:2px 6px">📤</button>
-      <button class="btn" id="ws-refresh" style="font-size:9px;padding:2px 6px">🔄</button>
+      <button class="btn" id="ws-refresh" style="font-size:9px;padding:2px 6px">🔄 刷新</button>
     </div>
     <div class="ws-grid" id="ws-grid">
       <div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>
     </div>
     <div style="padding:4px 12px 8px;font-size:8px;color:var(--muted)">
       站点：<span id="ws-source-info">-</span>
+      <span style="display:block">📄 站点配置：exe 同目录下的 workshop_sites.json，可直接编辑</span>
     </div>
   </div>
   <!-- 右栏：搜索 + 创作者 -->

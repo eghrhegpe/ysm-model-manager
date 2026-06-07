@@ -266,6 +266,10 @@ export function SaveAppConfig(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['SaveAppConfig'](arg1, arg2, arg3, arg4);
 }
 
+export function SavePreviewTempFile(arg1) {
+  return window['go']['main']['App']['SavePreviewTempFile'](arg1);
+}
+
 export function SaveWindowPosition(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['SaveWindowPosition'](arg1, arg2, arg3, arg4);
 }

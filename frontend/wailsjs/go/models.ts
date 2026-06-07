@@ -147,6 +147,22 @@ export namespace types {
 	        this.ModTime = source["ModTime"];
 	    }
 	}
+	export class PackInfo {
+	    name: string;
+	    description: string;
+	    imageBase64?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PackInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.imageBase64 = source["imageBase64"];
+	    }
+	}
 	export class VersionInstance {
 	    Name: string;
 	    VersionDir: string;

@@ -218,7 +218,6 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 		}
 
 		for _, g := range root.Properties.ExtraAnimClassify {
-			keys := extractKeys(g.ExtraAnimation)
 			name := g.Name
 			// 如果 name 为空，从 properties.extra_animation 中按 #id 查找名称
 			if name == "" && root.Properties.ExtraAnimation != nil {
@@ -228,11 +227,53 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 					}
 				}
 			}
+			// 用 extra_animation 的 value（中文名）替换 raw id
+			var displayItems []string
+			if len(g.ExtraAnimation) > 0 {
+				displayItems = extractDisplayValues(g.ExtraAnimation)
+			}
+			if len(displayItems) == 0 {
+				// 全是内部引用（#开头）时跳过整个组
+				continue
+			}
 			summary.AnimGroups = append(summary.AnimGroups, AnimGroup{
 				ID:    g.ID,
 				Name:  name,
-				Items: keys,
+				Items: displayItems,
 			})
+		}
+
+		// 兜底：extra_animation 中未被分类的直接动画（非 # 开头的值）
+		var classifiedItems map[string]bool
+		if root.Properties.ExtraAnimation != nil {
+			// 收集已被分类的 key
+			classifiedItems = make(map[string]bool)
+			for _, g := range root.Properties.ExtraAnimClassify {
+				if len(g.ExtraAnimation) > 0 {
+					for k := range extractKeySet(g.ExtraAnimation) {
+						classifiedItems[k] = true
+					}
+				}
+			}
+			// 扫描 extra_animation 顶层，找出未分类的直接动画
+			var looseAnims []string
+			for k, v := range root.Properties.ExtraAnimation {
+				if s, ok := v.(string); ok && s != "" && !strings.HasPrefix(s, "#") {
+					if strings.HasPrefix(k, "#") {
+						continue // 组名跳过
+					}
+					if !classifiedItems[k] {
+						looseAnims = append(looseAnims, s)
+					}
+				}
+			}
+			if len(looseAnims) > 0 {
+				summary.AnimGroups = append(summary.AnimGroups, AnimGroup{
+					ID:    "_loose",
+					Name:  "其他动画",
+					Items: looseAnims,
+				})
+			}
 		}
 
 		for _, b := range root.Properties.ExtraAnimButtons {
@@ -331,6 +372,45 @@ func extractKeys(raw json.RawMessage) []string {
 		return keys
 	}
 	return nil
+}
+
+// 从 extra_animation map 提取中文显示名
+// extra_animation 的 value 可能是一个对象或字符串
+func extractDisplayValues(raw json.RawMessage) []string {
+	if raw == nil || len(raw) == 0 {
+		return nil
+	}
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil
+	}
+	var result []string
+	for _, v := range obj {
+		// 尝试直接解析为字符串
+		var s string
+		if err := json.Unmarshal(v, &s); err == nil && s != "" {
+			if strings.HasPrefix(s, "#") {
+				continue // # 开头的是内部引用，跳过
+			}
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+func extractKeySet(raw json.RawMessage) map[string]bool {
+	if raw == nil || len(raw) == 0 {
+		return nil
+	}
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil
+	}
+	set := make(map[string]bool, len(obj))
+	for k := range obj {
+		set[k] = true
+	}
+	return set
 }
 
 // 从 config_forms 提取控件类型摘要

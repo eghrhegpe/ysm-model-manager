@@ -80,11 +80,31 @@ class AppPreview extends HTMLElement {
     try {
       const { ExtractYsmSummary, ExtractYSMHeader } =
         await import("../../../wailsjs/go/main/App.js");
-      const [summary, header] = await Promise.all([
+      const results = await Promise.allSettled([
         ExtractYsmSummary(path),
         ExtractYSMHeader(path),
       ]);
-      this._root.innerHTML = summaryCardHTML(summary, header);
+      const summary =
+        results[0].status === "fulfilled" ? results[0].value : null;
+      const header =
+        results[1].status === "fulfilled" ? results[1].value : null;
+      const basename = path.split("/").pop().split("\\").pop();
+      // 判断 summary 是否真实有效（加密模型返回零值空壳，name/stats/authors 全空）
+      const hasRealSummary =
+        summary &&
+        (summary.name ||
+          summary.stats?.textures > 0 ||
+          summary.stats?.models > 0 ||
+          summary.authors?.length > 0);
+      if (hasRealSummary || header) {
+        this._root.innerHTML = summaryCardHTML(
+          hasRealSummary ? summary : null,
+          header,
+          basename,
+        );
+      } else {
+        throw new Error("无法解析此文件");
+      }
     } catch (err) {
       this._root.innerHTML = modelDetailHTML({
         hasError: true,

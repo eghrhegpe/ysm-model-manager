@@ -1,7 +1,7 @@
 {
   "repoRoot": "C:\\硬链接、软连接测试",
   "mcRoot": "C:\\PCL2\\.minecraft",
-  "linkMode": "copy",
+  "linkMode": "hardlink",
   "theme": "warm",
   "mirror": "githubapi"
 }

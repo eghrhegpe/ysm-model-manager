@@ -106,36 +106,39 @@ class AppPreview extends HTMLElement {
     content.appendChild(container);
 
     try {
-      const { AnalyzeBedrockModel } = await import("../../../wailsjs/go/main/App.js");
+      const { AnalyzeBedrockModel } =
+        await import("../../../wailsjs/go/main/App.js");
       const model = await AnalyzeBedrockModel(modelPath);
 
       if (!model?.bones?.length) {
-        // .ysm 是 YSM 二进制格式，无法直接解析几何体
-        const isYsm = modelPath.toLowerCase().endsWith(".ysm");
-        container.innerHTML = isYsm
-          ? `<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">🏗️ 模型结构</div><div style="font-size:9px;color:#888;padding:8px 0">📦 YSM 二进制格式 · 需解析器解码后方可查看骨骼结构</div>`
-          : `<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">🏗️ 模型结构</div><div style="font-size:9px;color:#888;padding:8px 0">⚠️ 未找到几何数据</div>`;
+        container.innerHTML = `<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">🏗️ 模型结构</div><div style="font-size:9px;color:#888;padding:8px 0">⚠️ 未找到几何数据</div>`;
         return;
       }
 
       container.style.opacity = "1";
       container.innerHTML = "";
       const title = document.createElement("div");
-      title.style.cssText = "font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px";
+      title.style.cssText =
+        "font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px";
       title.textContent = `🏗️ 模型结构（${model.boneCount} 骨骼 · ${model.cubeCount} 立方体）`;
       container.appendChild(title);
 
       const canvas = document.createElement("canvas");
       canvas.width = 180;
       canvas.height = 180;
-      canvas.style.cssText = "width:100%;height:auto;border-radius:6px;background:rgba(0,0,0,.15)";
+      canvas.style.cssText =
+        "width:100%;height:auto;border-radius:6px;background:rgba(0,0,0,.15)";
       container.appendChild(canvas);
 
       const { renderModel2D } = await import("../../utils/model2d.js");
       let textureImg = null;
       if (model.texture) {
         textureImg = new Image();
-        await new Promise((r) => { textureImg.onload = r; textureImg.onerror = r; textureImg.src = model.texture; });
+        await new Promise((r) => {
+          textureImg.onload = r;
+          textureImg.onerror = r;
+          textureImg.src = model.texture;
+        });
       }
       renderModel2D(canvas, model, textureImg);
     } catch (e) {

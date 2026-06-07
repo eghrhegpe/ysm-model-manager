@@ -46,6 +46,27 @@ export function initDiagnostics(root, esc) {
   });
 
   loadDiagnosticsLogs(root, esc);
+
+  // 日志筛选按钮
+  root.querySelectorAll(".diag-log-fbtn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      root
+        .querySelectorAll(".diag-log-fbtn")
+        .forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      loadDiagnosticsLogs(root, esc);
+    });
+  });
+
+  // 日志搜索
+  const logSearch = root.getElementById("diag-log-search");
+  if (logSearch) {
+    let timer;
+    logSearch.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => loadDiagnosticsLogs(root, esc), 300);
+    });
+  }
 }
 
 async function loadDiagnosticsLogs(root, esc) {
@@ -59,16 +80,30 @@ async function loadDiagnosticsLogs(root, esc) {
         '<div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">暂无日志</div>';
       return;
     }
-    list.innerHTML = logs
+    // 读筛选状态
+    const activeBtn = root.querySelector(".diag-log-fbtn.active");
+    const filter = activeBtn ? activeBtn.dataset.status : "all";
+    const search = (root.getElementById("diag-log-search")?.value || "")
+      .trim()
+      .toLowerCase();
+
+    const filtered = logs
       .slice(-500)
       .reverse()
+      .filter((l) => {
+        if (filter !== "all" && l.Status !== filter) return false;
+        if (search && !l.ModelName.toLowerCase().includes(search)) return false;
+        return true;
+      });
+
+    if (!filtered.length) {
+      list.innerHTML =
+        '<div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">无匹配日志</div>';
+      return;
+    }
+
+    list.innerHTML = filtered
       .map((l) => {
-        const status =
-          l.Status === "success"
-            ? "success"
-            : l.Status === "failed"
-              ? "failed"
-              : "skipped";
         const statusLabel =
           l.Status === "success" ? "✅" : l.Status === "failed" ? "❌" : "⏭️";
         const t = l.Timestamp

@@ -100,6 +100,7 @@ export function settingsHTML() {
     <span class="label">📦 当前版本</span>
     <span id="set-version" style="font-size:11px;color:var(--muted)">加载中...</span>
     <button class="btn" id="set-check-update" style="font-size:10px">🔄 检查更新</button>
+    <button class="btn" id="set-releases" style="font-size:10px;margin-left:4px" title="打开 GitHub Releases">📋 发布页</button>
   </div>
   <div style="font-size:9px;color:var(--muted);padding:4px 12px 0;line-height:1.6">
     <div>🛠️ <b>YSM 模型管理器</b> — 类似 Mod Organizer 2 的 Minecraft YSM 模型管理工具</div>
@@ -204,6 +205,13 @@ export function diagnosticsHTML() {
 <div class="diag-panel-header">
 <span>📋 操作日志</span>
 <button class="hdr-btn" id="diag-refresh2" style="display:none">🔄</button>
+</div>
+<div class="diag-log-filter" style="display:flex;gap:4px;padding:3px 0">
+<button class="diag-log-fbtn active" data-status="all" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">全部</button>
+<button class="diag-log-fbtn" data-status="success" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">✅ 成功</button>
+<button class="diag-log-fbtn" data-status="failed" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">❌ 失败</button>
+<button class="diag-log-fbtn" data-status="skipped" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">⏭️ 跳过</button>
+<input id="diag-log-search" placeholder="🔍 搜索模型名..." style="flex:1;font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);min-width:0;margin-left:4px">
 </div>
 <div id="diag-log-list"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">暂无日志</div></div>
 </div>

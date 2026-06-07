@@ -124,6 +124,8 @@ export function downloadsHTML() {
 <span style="font-size:14px;font-weight:600">⬇️ 导入与重命名</span>
 <span style="font-size:10px;color:var(--muted)">拖入 .ysm / .zip / .7z 到下方区域</span>
 </div>
+<div class="repo-layout" style="flex:1">
+<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
 <div style="margin:0 12px 4px;border-top:1px solid var(--bd);padding-top:4px">
   <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--txt);padding:2px 0">
     <span>📋 已导入</span>
@@ -157,18 +159,22 @@ export function downloadsHTML() {
     <label style="display:flex;align-items:center;gap:2px;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap">
       <input type="checkbox" id="dl-date-auto" checked> 当天
     </label>
+    <label style="display:flex;align-items:center;gap:2px;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap">
+      <input type="checkbox" id="dl-from-header"> 读取作者
+    </label>
   </div>
-  <div style="font-size:11px;padding:4px 6px;border-radius:4px;background:var(--surf)">
-    <span style="color:var(--muted)">最终命名：</span><span id="dl-preview" style="font-weight:500">-</span>
-    <span id="dl-conflict" style="display:none;font-size:9px;color:#f9a826;margin-left:4px">⚠️ 已存在</span>
+  <div id="dl-tips" style="display:none;font-size:10px;color:var(--muted);padding:4px 8px;margin:2px 0;border-radius:4px;border-left:3px solid var(--accent);background:var(--surf);line-height:1.5;max-height:60px;overflow-y:auto"></div>
+  <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;background:var(--surf)">
+    <span style="color:var(--muted);font-size:9px;white-space:nowrap">最终命名</span>
+    <span id="dl-preview" style="font-weight:600;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">-</span>
+    <span id="dl-conflict" style="display:none;font-size:9px;color:#f9a826;white-space:nowrap">⚠️</span>
+    <button class="btn accent" id="dl-import" style="padding:3px 10px;font-size:10px;white-space:nowrap">📥 导入</button>
+    <span style="font-size:9px;color:var(--muted);white-space:nowrap">队列 <span id="dl-queue-count">0</span></span>
+    <button class="btn" id="dl-cancel" style="padding:2px 6px;font-size:9px;white-space:nowrap">✕</button>
   </div>
-  <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
-    <button class="btn accent" id="dl-import" style="padding:6px;font-size:12px;flex:1">📥 导入到仓库</button>
-    <span style="font-size:9px;color:var(--muted)">队列中还有 <span id="dl-queue-count">0</span> 个文件</span>
-  </div>
-  <div style="margin-top:2px">
-    <button class="btn" id="dl-cancel" style="padding:3px 8px;font-size:10px;width:100%">✕ 关闭表单（队列保留）</button>
-  </div>
+</div>
+</div>
+<app-preview mode="model"></app-preview>
 </div>
 </div>`;
 }

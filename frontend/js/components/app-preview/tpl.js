@@ -38,7 +38,14 @@ export function statsHTML() {
   </div>
   <hr class="divider">
   <div class="dp-section-title">📋 操作日志 <button class="dp-log-toggle" id="dp-log-toggle">展开 ▸</button></div>
-  <div class="dp-log-list" id="dp-log-list">
+  <div class="dp-log-filter" id="dp-log-filter" style="display:none;gap:4px;padding:2px 0">
+    <button class="dp-log-fbtn active" data-status="all" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">全部</button>
+    <button class="dp-log-fbtn" data-status="success" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">✅ 成功</button>
+    <button class="dp-log-fbtn" data-status="failed" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">❌ 失败</button>
+    <button class="dp-log-fbtn" data-status="skipped" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">⏭️ 跳过</button>
+    <input id="dp-log-search" placeholder="🔍 搜索模型名..." style="flex:1;font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);min-width:0;margin-left:4px">
+  </div>
+  <div class="dp-log-list" id="dp-log-list" style="overflow-y:auto">
     <div class="stat-row" style="font-size:10px;color:#6c7086">暂无日志</div>
   </div>
   <div class="dp-log-footer" id="dp-log-footer" style="display:none">

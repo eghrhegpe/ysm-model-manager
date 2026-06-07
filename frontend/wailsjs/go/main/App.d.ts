@@ -47,11 +47,15 @@ export function ExportWorkshopSitesCSV():Promise<string>;
 
 export function ExportWorkshopSitesJSONFile():Promise<string>;
 
+export function ExtractPreviewTexture(arg1:string):Promise<string>;
+
 export function ExtractYSMHeader(arg1:string):Promise<ysm.YSMHeader>;
 
 export function ExtractYSMHeaderFromBase64(arg1:string):Promise<ysm.YSMHeader>;
 
 export function ExtractYsmSummary(arg1:string):Promise<ysm.YsmSummary>;
+
+export function FindPreviewImage(arg1:string):Promise<string>;
 
 export function GenerateRepoIndex(arg1:string):Promise<string>;
 
@@ -64,6 +68,8 @@ export function GetInstanceStatus(arg1:string,arg2:string):Promise<Array<types.I
 export function GetLinkMode():Promise<string>;
 
 export function GetMinecraftPath():Promise<string>;
+
+export function GetPackInfo(arg1:string):Promise<types.PackInfo>;
 
 export function GetWindowPosition():Promise<types.WindowState>;
 

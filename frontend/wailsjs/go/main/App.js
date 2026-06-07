@@ -86,6 +86,10 @@ export function ExportWorkshopSitesJSONFile() {
   return window['go']['main']['App']['ExportWorkshopSitesJSONFile']();
 }
 
+export function ExtractPreviewTexture(arg1) {
+  return window['go']['main']['App']['ExtractPreviewTexture'](arg1);
+}
+
 export function ExtractYSMHeader(arg1) {
   return window['go']['main']['App']['ExtractYSMHeader'](arg1);
 }
@@ -96,6 +100,10 @@ export function ExtractYSMHeaderFromBase64(arg1) {
 
 export function ExtractYsmSummary(arg1) {
   return window['go']['main']['App']['ExtractYsmSummary'](arg1);
+}
+
+export function FindPreviewImage(arg1) {
+  return window['go']['main']['App']['FindPreviewImage'](arg1);
 }
 
 export function GenerateRepoIndex(arg1) {
@@ -120,6 +128,10 @@ export function GetLinkMode() {
 
 export function GetMinecraftPath() {
   return window['go']['main']['App']['GetMinecraftPath']();
+}
+
+export function GetPackInfo(arg1) {
+  return window['go']['main']['App']['GetPackInfo'](arg1);
 }
 
 export function GetWindowPosition() {

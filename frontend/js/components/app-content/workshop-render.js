@@ -1,10 +1,73 @@
 // ===== 创意工坊模型列表渲染（DOM API，非字符串拼接） =====
 import { bus } from "../../bus.js";
+import { renderDisplayName } from "../../utils/display.js";
 
-// 共享预览元素单例，防止列表重渲染后僵尸节点堆积
-let _previewEl = null;
-function hideGlobalPreview() {
-  if (_previewEl) { _previewEl.remove(); _previewEl = null; }
+// 永久预览元素：只创建一次，永远不销毁，hover 时切换 src/display
+const _previewEl = document.createElement("div");
+_previewEl.id = "ws-preview";
+_previewEl.style.cssText =
+  "position:fixed;z-index:9999;pointer-events:none;display:none";
+document.body.appendChild(_previewEl);
+
+// 最新鼠标坐标（由 mousemove 持续更新，异步 showPreview 用最新值）
+let _lastClientX = 0;
+let _lastClientY = 0;
+
+// 鼠标离开窗口时强制隐藏预览
+document.addEventListener("mouseleave", () => hideGlobalPreview());
+
+// 内部子元素：img（正常）或 div（占位）
+const _previewImg = document.createElement("img");
+_previewImg.style.cssText =
+  "max-width:240px;max-height:180px;border-radius:6px;border:1px solid var(--bd);box-shadow:0 4px 12px rgba(0,0,0,.3);background:var(--bg);object-fit:contain;opacity:0;transform:scale(.97);transition:opacity .12s ease-out,transform .12s ease-out";
+_previewEl.appendChild(_previewImg);
+
+const _previewFallback = document.createElement("div");
+_previewFallback.textContent = "🎨";
+_previewFallback.style.cssText =
+  "width:80px;height:80px;border-radius:8px;border:1px solid var(--bd);background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:32px;display:none";
+_previewEl.appendChild(_previewFallback);
+
+export function hideGlobalPreview() {
+  _previewEl.style.display = "none";
+  _previewImg.style.opacity = "0";
+  _previewImg.style.transform = "scale(.97)";
+  _previewImg.src = "";
+  _previewFallback.style.display = "none";
+}
+
+export function showPreview(anchorX, anchorY, url) {
+  _previewEl.style.display = "block";
+  _previewEl.style.left = anchorX + 16 + "px";
+  _previewEl.style.top = anchorY - 90 + "px";
+
+  _previewFallback.style.display = "none";
+  _previewImg.style.display = "block";
+  _previewImg.style.opacity = "0";
+  _previewImg.style.transform = "scale(.97)";
+  _previewImg.src = url;
+  _previewImg.onload = () => {
+    _previewImg.style.opacity = "1";
+    _previewImg.style.transform = "scale(1)";
+  };
+  _previewImg.onerror = () => {
+    _previewImg.style.display = "none";
+    _previewFallback.style.display = "flex";
+    _previewFallback.style.opacity = "0";
+    _previewFallback.style.transform = "scale(.9)";
+    _previewFallback.getBoundingClientRect();
+    _previewFallback.style.opacity = "1";
+    _previewFallback.style.transform = "scale(1)";
+  };
+}
+
+export function movePreview(e) {
+  _lastClientX = e.clientX;
+  _lastClientY = e.clientY;
+  if (_previewEl.style.display !== "none") {
+    _previewEl.style.left = e.clientX + 16 + "px";
+    _previewEl.style.top = e.clientY - 90 + "px";
+  }
 }
 
 /**
@@ -46,6 +109,9 @@ export function renderModelList(
   selectedSet,
   esc,
 ) {
+  // 🪦 守墓人：列表重绘前清理孤儿预览，无论谁调用的 renderModelList
+  hideGlobalPreview();
+
   const frag = document.createDocumentFragment();
 
   if (!filtered.length) {
@@ -64,10 +130,10 @@ export function renderModelList(
     row.dataset.id = String(allModels.indexOf(m));
     row.dataset.name = m.name;
     row.style.cssText =
-      "display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);font-size:11px;margin-bottom:6px;transition:background .15s" +
+      "display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);font-size:11px;margin-bottom:6px;transition:background .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" +
       (exists
-        ? ";opacity:.6;background:rgba(166,227,161,.06);cursor:context-menu"
-        : ";background:rgba(243,139,168,.04);cursor:pointer");
+        ? ";opacity:.6;background:rgba(166,227,161,.06);cursor:default"
+        : ";background:rgba(243,139,168,.04);cursor:default");
 
     // 复选框（仅未下载的）
     if (!exists) {
@@ -83,8 +149,8 @@ export function renderModelList(
     // 文件名
     const nameSpan = document.createElement("span");
     nameSpan.style.cssText =
-      "flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);font-size:11px;cursor:pointer";
-    nameSpan.textContent = m.name;
+      "flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);font-size:11px";
+    nameSpan.innerHTML = renderDisplayName(m.name);
     row.appendChild(nameSpan);
 
     if (exists) {
@@ -126,65 +192,66 @@ export function renderModelList(
     }
 
     // 预览图（文件名映射：.ysm → .png/.jpg/.webp，hover 浮动）
-    // 使用模块级共享单例，防止 DOM 节点泄漏
     const PREVIEW_EXTS = ["png", "jpg", "webp"];
     const safeModelName = m.name.replace(/[<>:"/\\|?*\x00-\x1F]/g, "_");
 
-    const showPreview = (e) => {
-      hideGlobalPreview(); // 清理上一次残留
-      const tryLoad = (idx) => {
-        if (idx >= PREVIEW_EXTS.length) {
-          // 全失败 → 占位图标
-          _previewEl = document.createElement("div");
-          _previewEl.textContent = "🎨";
-          _previewEl.style.cssText = "position:fixed;z-index:9999;width:80px;height:80px;border-radius:8px;border:1px solid var(--bd);background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:32px;pointer-events:none;opacity:0;transform:scale(.9);transition:all .12s ease-out";
-          _previewEl.style.left = e.clientX + 16 + "px";
-          _previewEl.style.top = e.clientY - 100 + "px";
-          document.body.appendChild(_previewEl);
-          _previewEl.getBoundingClientRect();
-          _previewEl.style.opacity = "1";
-          _previewEl.style.transform = "scale(1)";
-          return;
-        }
-        const ext = PREVIEW_EXTS[idx];
-        const imgName = safeModelName.replace(/\.(ysm|zip|7z)$/i, "." + ext);
-        if (imgName === safeModelName) { hideGlobalPreview(); return; }
-        const img = document.createElement("img");
-        img.src = dlPrefix + imgName;
-        img.style.cssText = "position:fixed;z-index:9999;max-width:240px;max-height:180px;border-radius:6px;border:1px solid var(--bd);box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none;background:var(--bg);object-fit:contain;opacity:0;transform:scale(.97);transition:all .12s ease-out";
-        img.style.left = e.clientX + 16 + "px";
-        img.style.top = e.clientY - 90 + "px";
-        img.onerror = () => { img.remove(); tryLoad(idx + 1); };
-        document.body.appendChild(img);
-        // 触发 reflow 后淡入
-        img.getBoundingClientRect();
-        img.style.opacity = "1";
-        img.style.transform = "scale(1)";
-        _previewEl = img;
-      };
-      tryLoad(0);
-    };
-    const movePreview = (e) => {
-      if (_previewEl) {
-        _previewEl.style.left = e.clientX + 16 + "px";
-        _previewEl.style.top = e.clientY - 90 + "px";
+    // 预览图快速加载：三个后缀并行测试，谁先成功用谁
+    const tryShowPreview = (anchorX, anchorY) => {
+      const urls = PREVIEW_EXTS.map((ext) => {
+        const n = safeModelName.replace(/\.(ysm|zip|7z)$/i, "." + ext);
+        return n !== safeModelName ? dlPrefix + n : null;
+      }).filter(Boolean);
+
+      if (!urls.length) {
+        hideGlobalPreview();
+        return;
       }
+
+      let settled = false;
+      let loaded = 0;
+      urls.forEach((url) => {
+        const img = new Image();
+        img.onload = () => {
+          if (!settled) {
+            settled = true;
+            showPreview(anchorX, anchorY, url);
+          }
+        };
+        img.onerror = () => {
+          loaded++;
+          if (loaded >= urls.length && !settled) {
+            // 全失败 → 占位
+            settled = true;
+            hideGlobalPreview();
+            _previewEl.style.display = "block";
+            _previewEl.style.left = anchorX + 16 + "px";
+            _previewEl.style.top = anchorY - 100 + "px";
+            _previewImg.style.display = "none";
+            _previewFallback.style.display = "flex";
+            _previewFallback.style.opacity = "0";
+            _previewFallback.style.transform = "scale(.9)";
+            _previewFallback.getBoundingClientRect();
+            _previewFallback.style.opacity = "1";
+            _previewFallback.style.transform = "scale(1)";
+          }
+        };
+        img.src = url;
+      });
     };
-    const hidePreview = () => { hideGlobalPreview(); };
 
     // 整行悬停高亮 + 预览
     row.addEventListener("mouseenter", (e) => {
       row.style.background = exists
         ? "rgba(166,227,161,.1)"
         : "rgba(243,139,168,.08)";
-      showPreview(e);
+      tryShowPreview(e.clientX, e.clientY);
     });
     row.addEventListener("mousemove", movePreview);
     row.addEventListener("mouseleave", () => {
       row.style.background = exists
         ? "rgba(166,227,161,.06)"
         : "rgba(243,139,168,.04)";
-      hidePreview();
+      hideGlobalPreview();
     });
 
     frag.appendChild(row);

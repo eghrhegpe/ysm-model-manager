@@ -1,7 +1,12 @@
 // ===== 创意工坊事件绑定（为 showRepoModels 减负） =====
 import { bus } from "../../bus.js";
 import { modalConfirm } from "../../dialogs/modal.js";
-import { renderModelList, isModelMissing } from "./workshop-render.js";
+import { renderDisplayName } from "../../utils/display.js";
+import {
+  renderModelList,
+  isModelMissing,
+  hideGlobalPreview,
+} from "./workshop-render.js";
 
 /**
  * 绑定仓库模型页面的所有事件。
@@ -36,6 +41,7 @@ export function bindRepoEvents(sr, ctx) {
   const isMissing = (m) => isModelMissing(m, localMap);
 
   const renderList = (filter = "") => {
+    hideGlobalPreview(); // 列表重渲染前销毁预览，防止僵尸节点
     const q = filter.trim().toLowerCase();
     let filtered = q
       ? models.filter((m) => m.name.toLowerCase().includes(q))
@@ -186,7 +192,7 @@ export function bindRepoEvents(sr, ctx) {
               .map(
                 (e) =>
                   '<div style="font-size:9px;color:var(--muted);padding:0 4px">❌ ' +
-                  esc(e.name) +
+                  renderDisplayName(e.name) +
                   ": " +
                   esc(e.err) +
                   "</div>",
@@ -228,7 +234,7 @@ export function bindRepoEvents(sr, ctx) {
           '<div style="display:flex;align-items:center;gap:4px">' +
           '<span style="color:var(--accent)">⬇️</span>' +
           '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">' +
-          esc(name) +
+          renderDisplayName(name) +
           "</span>" +
           '<span class="ws-progress-pct" style="font-size:9px;color:var(--muted);flex-shrink:0">⏳</span>' +
           (remain > 1
@@ -236,10 +242,10 @@ export function bindRepoEvents(sr, ctx) {
               remain +
               "</span>"
             : "") +
-          '<button class="ws-cancel-queue" style="padding:1px 6px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px;flex-shrink:0">✕</button>' +
+          '<button class="ws-cancel-queue" style="width:20px;height:20px;border-radius:50%;border:none;background:rgba(128,128,128,.15);color:var(--muted);cursor:pointer;font-size:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .15s" title="取消">✕</button>' +
           "</div>" +
           '<div class="ws-progress-bar" style="margin-top:3px;height:4px;border-radius:2px;background:var(--bd);overflow:hidden">' +
-          '<div class="ws-progress-fill" style="height:100%;width:0%;border-radius:2px;background:var(--accent);transition:width .2s"></div>' +
+          '<div class="ws-progress-fill" style="height:100%;width:0%;border-radius:2px;background:var(--accent);transition:width .2s;box-shadow:0 0 4px var(--accent)"></div>' +
           "</div>";
         queueStatus
           .querySelector(".ws-cancel-queue")
@@ -268,17 +274,17 @@ export function bindRepoEvents(sr, ctx) {
           label = "99%";
           pct = 99;
           if (!_stuckTimer) {
-            // 150ms 后显示真正进度
+            // 300ms 后显示真正进度，进度条半速
             _stuckTimer = setTimeout(() => {
               const pctEl2 = queueStatus?.querySelector(".ws-progress-pct");
               const fillEl2 = queueStatus?.querySelector(".ws-progress-fill");
               if (pctEl2) pctEl2.textContent = "100%";
               if (fillEl2) {
-                fillEl2.style.transition = "width .15s";
+                fillEl2.style.transition = "width .3s";
                 fillEl2.style.width = "100%";
               }
               _stuckTimer = null;
-            }, 150);
+            }, 300);
           }
         }
 
@@ -547,10 +553,10 @@ export function bindRepoEvents(sr, ctx) {
       // 点复选框不触发下载
       if (e.target.classList.contains("ws-sel")) return;
 
-      const row = e.target.closest(".model-row");
-      const btn =
-        e.target.closest(".ws-dl-model") || row?.querySelector(".ws-dl-model");
+      // 仅 ⬇️ 按钮触发下载，整行点击不误触
+      const btn = e.target.closest(".ws-dl-model");
       if (!btn || downloading) return;
+      const row = btn.closest(".model-row");
 
       const cbName = btn.dataset.name || "";
       const url = btn.dataset.url;

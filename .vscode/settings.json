@@ -1,56 +1,44 @@
 {
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
 
-"terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
 
-"terminal.integrated.profiles.windows": {
+      "icon": "terminal-powershell",
 
-"PowerShell": {
+      "args": [
+        "-NoExit",
 
-"source": "PowerShell",
+        "-Command",
 
-"icon": "terminal-powershell",
+        "Set-Location -Path '${workspaceFolder}'; $env:PYTHONIOENCODING='UTF-8'; chcp 65001"
+      ]
+    }
+  },
 
-"args": [
+  "files.exclude": {
+    "**/dist": true,
 
-"-NoExit",
+    "**/node_modules": true,
 
-"-Command",
+    "*/.exe": true,
 
-"Set-Location -Path '${workspaceFolder}'; $env:PYTHONIOENCODING='UTF-8'; chcp 65001"
+    "*/.dll": true,
 
-]
+    "*/.so": true,
 
-}
+    "*/.dylib": true
+  },
 
-},
+  "files.autoSave": "afterDelay",
 
-"files.exclude": {
+  "editor.formatOnSave": true,
 
-"**/dist": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
 
-"**/node_modules": true,
-
-"*/.exe": true,
-
-"*/.dll": true,
-
-"*/.so": true,
-
-"*/.dylib": true
-
-},
-
-"files.autoSave": "afterDelay",
-
-"editor.formatOnSave": true,
-
-"editor.defaultFormatter": "esbenp.prettier-vscode",
-
-"gopls": {
-
-"build.formatting.gofumpt": true
-
-},
-"js/ts.updateImportsOnFileMove.enabled": "always"
-
+  "gopls": {
+    "build.formatting.gofumpt": true
+  },
+  "js/ts.updateImportsOnFileMove.enabled": "always"
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -27,6 +28,7 @@ import (
 	"ysm-model-manager/go/watcher"
 	"ysm-model-manager/go/ysm"
 
+	"github.com/bodgit/sevenzip"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -1158,6 +1160,150 @@ func (a *App) RenameFile(oldPath, newName string) error {
 		return fmt.Errorf("目标文件名已存在")
 	}
 	return os.Rename(oldPath, newPath)
+}
+
+// FindPreviewImage 给定模型文件路径，在同目录查找同名图片（.png/.jpg/.jpeg/.webp/.gif），返回 base64 数据 URI
+func (a *App) FindPreviewImage(modelPath string) string {
+	dir := filepath.Dir(modelPath)
+	base := filepath.Base(modelPath)
+	// 去掉模型后缀
+	for _, ext := range []string{".ysm", ".zip", ".7z", ".YSM", ".ZIP", ".7Z"} {
+		if strings.HasSuffix(base, ext) {
+			base = base[:len(base)-len(ext)]
+			break
+		}
+	}
+	exts := []string{".png", ".jpg", ".jpeg", ".webp", ".gif", ".PNG", ".JPG", ".JPEG", ".WEBP", ".GIF"}
+	for _, ext := range exts {
+		imgPath := filepath.Join(dir, base+ext)
+		data, err := os.ReadFile(imgPath)
+		if err != nil {
+			continue
+		}
+		mime := "image/" + strings.TrimPrefix(strings.ToLower(ext), ".")
+		if strings.HasSuffix(strings.ToLower(ext), "jpg") || strings.HasSuffix(strings.ToLower(ext), "jpeg") {
+			mime = "image/jpeg"
+		}
+		b64 := base64.StdEncoding.EncodeToString(data)
+		return "data:" + mime + ";base64," + b64
+	}
+	return ""
+}
+
+// ExtractPreviewTexture 从 zip/7z 压缩包中提取第一张 .png 纹理，返回 base64 data URI
+func (a *App) ExtractPreviewTexture(modelPath string) string {
+	ext := strings.ToLower(filepath.Ext(modelPath))
+	if ext == ".ysm" {
+		return "" // YSM 格式不解压
+	}
+	data, err := os.ReadFile(modelPath)
+	if err != nil {
+		return ""
+	}
+
+	// 从 zip/7z 中找第一张 png
+	var pngData []byte
+	if ext == ".zip" {
+		pngData = extractPNGFromZip(data, int64(len(data)))
+	} else if ext == ".7z" {
+		pngData = extractPNGFrom7z(data, int64(len(data)))
+	}
+	if len(pngData) == 0 {
+		return ""
+	}
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngData)
+}
+
+// GetPackInfo 读取文件夹中的 ysm-pack.json，找 ysm-pack.png 返回 base64
+func (a *App) GetPackInfo(dirPath string) types.PackInfo {
+	dirPath = strings.TrimSpace(dirPath)
+	// 相对路径 → 拼接仓库根目录（树中文件夹可能是相对路径）
+	if !filepath.IsAbs(dirPath) && a.RepoRoot != "" {
+		dirPath = filepath.Join(a.RepoRoot, dirPath)
+	}
+	absPath, err := filepath.Abs(filepath.FromSlash(dirPath))
+	if err != nil {
+		return types.PackInfo{}
+	}
+	jsonPath := filepath.Join(absPath, "ysm-pack.json")
+	data, err := os.ReadFile(jsonPath)
+	if err != nil {
+		return types.PackInfo{}
+	}
+	// 去掉 UTF-8 BOM
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
+	var raw struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Lang        map[string]struct {
+			Name        string `json:"name"`
+			Description string `json:"description"`
+		} `json:"lang"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return types.PackInfo{}
+	}
+	info := types.PackInfo{
+		Name:        raw.Name,
+		Description: raw.Description,
+	}
+	// 优先中文
+	if l, ok := raw.Lang["zh_cn"]; ok {
+		if l.Name != "" {
+			info.Name = l.Name
+		}
+		if l.Description != "" {
+			info.Description = l.Description
+		}
+	}
+	// 读取 ysm-pack.png
+	imgPath := filepath.Join(absPath, "ysm-pack.png")
+	if imgData, err := os.ReadFile(imgPath); err == nil {
+		info.ImageBase64 = "data:image/png;base64," + base64.StdEncoding.EncodeToString(imgData)
+	}
+	return info
+}
+
+func extractPNGFromZip(data []byte, size int64) []byte {
+	reader, err := zip.NewReader(bytes.NewReader(data), size)
+	if err != nil {
+		return nil
+	}
+	for _, f := range reader.File {
+		if strings.HasSuffix(strings.ToLower(f.Name), ".png") && !f.FileInfo().IsDir() {
+			rc, err := f.Open()
+			if err != nil {
+				continue
+			}
+			buf, err := io.ReadAll(rc)
+			rc.Close()
+			if err == nil && len(buf) > 0 {
+				return buf
+			}
+		}
+	}
+	return nil
+}
+
+func extractPNGFrom7z(data []byte, size int64) []byte {
+	reader, err := sevenzip.NewReader(bytes.NewReader(data), size)
+	if err != nil {
+		return nil
+	}
+	for _, f := range reader.File {
+		if strings.HasSuffix(strings.ToLower(f.Name), ".png") && !f.FileInfo().IsDir() {
+			rc, err := f.Open()
+			if err != nil {
+				continue
+			}
+			buf, err := io.ReadAll(rc)
+			rc.Close()
+			if err == nil && len(buf) > 0 {
+				return buf
+			}
+		}
+	}
+	return nil
 }
 
 // 移动仓库内的模型文件（拖拽移动用）

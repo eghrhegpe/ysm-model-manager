@@ -9,6 +9,13 @@ type AppConfig struct {
 	Mirror   string `json:"mirror"`
 }
 
+// PackInfo 模型整合包信息（ysm-pack.json）
+type PackInfo struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	ImageBase64 string `json:"imageBase64,omitempty"` // ysm-pack.png 的 base64 data URI
+}
+
 // WorkshopPresetSearch 预设搜索词
 type WorkshopPresetSearch struct {
 	Label string `json:"label"`

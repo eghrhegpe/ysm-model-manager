@@ -14,6 +14,9 @@
 2. **`oldString` 必须原文** — 刚读取到的一字不差，失败则报告不重试。
 3. **改完立即 build** — `npx vite build 2>&1 \| Select-String 'error'`，绝不攒多个修改。
 4. **`multi_replace` 不回滚** — build 失败后检查 import 语句是否完整。
+5. **唯一性检查** — 改文件前先 `grep` 确认没有同名文件在 `public/` 下（Vite dev 优先加载 `public/`）。
+6. **日志优先于猜测** — 遇到"逻辑对但没反应"，先加 `console.log` 看实际值，不要猜原因。
+7. **回调式 API 必须 Promise 化** — `entry.file(callback)` → `new Promise(resolve => entry.file(resolve))`，然后用 `await`。
 5. **构建发布（必须 `wails build`）**:
    ```powershell
    Get-Process -Name "YSM-Model-Manager*" -EA SilentlyContinue \| Stop-Process -Force
@@ -26,6 +29,11 @@
 7. **文件名渲染统一** — 所有 UI 文件名必须走 `renderDisplayName()`，禁止 `textContent`/`esc()` 绕过。
 8. **禁止安装软件** — 缺依赖提示用户手动装。
 9. **路径用正斜杠 `/`**。
+10. **WebView2 DnD 特殊性**：
+    - `dragover` 阶段无法读取文件名（`getAsFile()` 返回 null，`webkitGetAsEntry()` 返回 null），只能 `preventDefault()` + 显示遮罩
+    - `drop` 阶段优先用 `dataTransfer.items` + `webkitGetAsEntry()`，兜底用 `dataTransfer.files`
+    - `FileSystemEntry.file(callback)` 是回调，须用 `new Promise` 包装
+    - `DataTransferItem` 没有 `.name` 属性（`File` 才有）
 
 ## 项目结构速查
 
@@ -69,7 +77,7 @@ app-xxx/utils.js     — 组件工具（可选）
 
 ### 约束
 
-- 每文件 ≤ 80 行
+- **按职责切文件**：一个文件放一个可独立工作的功能（如 DnD、同步、上传各一文件），不按行数机械切割。300-700 行的单一职责文件比拆成 5 个 80 行但耦合紧密的小文件更好维护。
 - 新组件放 `components/app-xxx/`，工具函数放 `utils/`
 - ES module → `app-modules.js` 加 import；非 module → `index.html` 加 `<script>`
 - 禁止在 `public/` 放 JS

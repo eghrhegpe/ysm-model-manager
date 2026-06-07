@@ -44,6 +44,7 @@ export const contentCSS = `
 .diag-btn.active { background:#7c83ff22; color:var(--accent); }
 .diag-btn-icon { font-size:14px; width:20px; text-align:center; flex-shrink:0; }
 .diag-btn-action { justify-content:center; padding:6px; font-size:13px; }
+.diag-log-fbtn.active { background:var(--accent) !important; color:#fff !important; border-color:var(--accent) !important; }
 .diag-left-spacer { flex:1; }
 .diag-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .diag-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }

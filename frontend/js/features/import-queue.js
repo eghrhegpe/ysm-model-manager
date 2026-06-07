@@ -38,23 +38,6 @@ export function initImportQueue(app) {
     currentRelPath = file._relPath || "";
 
     const parsed = parseModelName(file.name);
-    root.getElementById("dl-fname").innerHTML = renderDisplayName(file.name);
-    root.getElementById("dl-fsize").textContent =
-      file.size < 1048576
-        ? (file.size / 1024).toFixed(1) + " KB"
-        : (file.size / 1048576).toFixed(1) + " MB";
-    // 显示子路径（如有）
-    const subpathEl = root.getElementById("dl-subpath");
-    if (subpathEl) {
-      const relPath = file._relPath || "";
-      const dir = relPath ? relPath.substring(0, relPath.lastIndexOf("/")) : "";
-      if (dir) {
-        subpathEl.textContent = "📂 " + dir + "/";
-        subpathEl.style.display = "inline";
-      } else {
-        subpathEl.style.display = "none";
-      }
-    }
 
     root.getElementById("dl-author").value = parsed.author || "";
     root.getElementById("dl-work").value = parsed.work || "";
@@ -64,6 +47,18 @@ export function initImportQueue(app) {
     updatePreview();
 
     toggleForm(true);
+
+    // 存临时文件供右侧预览面板读取
+    (async () => {
+      try {
+        const { SavePreviewTempFile } =
+          await import("../../wailsjs/go/main/App.js");
+        const tmpPath = await SavePreviewTempFile(base64);
+        if (tmpPath) {
+          bus.emit("model:select", { path: tmpPath });
+        }
+      } catch (_) {}
+    })();
   };
 
   // 检查文件是否已存在（防抖）
@@ -392,7 +387,7 @@ export function initImportQueue(app) {
               showForm(fileQueue[0].file, fileQueue[0].base64);
               renderImportedList();
             } else {
-              showForm(false);
+              toggleForm(false);
             }
             return;
           } catch (e2) {
@@ -418,7 +413,7 @@ export function initImportQueue(app) {
     currentFile = null;
     currentBase64 = null;
     currentFileName = null;
-    showForm(false);
+    toggleForm(false);
     renderImportedList();
   });
 
@@ -655,4 +650,34 @@ export function initImportQueue(app) {
   });
 
   renderImportedList();
+
+  // 处理待导入文件的通用函数
+  const processPendingImport = () => {
+    const list = window.__pendingImport;
+    if (!list || list.length === 0) return;
+    window.__pendingImport = null;
+    window.__YSMPendingLock = true;
+    let readCount = 0;
+    list.forEach((item) => {
+      if (!item.file) { readCount++; return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(",")[1];
+        if (base64) enqueueFile(item.file, base64);
+        readCount++;
+        if (readCount === list.length) {
+          renderImportedList();
+          setTimeout(() => { window.__YSMPendingLock = false; }, 1000);
+        }
+      };
+      reader.onerror = () => { readCount++; if (readCount === list.length) { renderImportedList(); window.__YSMPendingLock = false; } };
+      reader.readAsDataURL(item.file);
+    });
+  };
+
+  // 已在导入页时处理拖入文件
+  bus.on("import:pending-files", processPendingImport);
+
+  // 首次渲染时检查待导入文件（从其他页面跳转来的）
+  processPendingImport();
 }

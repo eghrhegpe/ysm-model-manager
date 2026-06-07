@@ -157,16 +157,19 @@ export function initImportQueue(app) {
     .getElementById("dl-date-auto")
     ?.addEventListener("change", updatePreview);
 
-  // 拖拽事件
+  // 拖拽事件 — 区域内独立处理，阻止冒泡到全局 handler
   dropZone.addEventListener("dragover", (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dropZone.style.borderColor = "var(--accent)";
   });
-  dropZone.addEventListener("dragleave", () => {
+  dropZone.addEventListener("dragleave", (e) => {
+    e.stopPropagation();
     dropZone.style.borderColor = "";
   });
   dropZone.addEventListener("drop", (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dropZone.style.borderColor = "";
     const items = e.dataTransfer.items;
     if (items?.length) {
@@ -659,7 +662,10 @@ export function initImportQueue(app) {
     window.__YSMPendingLock = true;
     let readCount = 0;
     list.forEach((item) => {
-      if (!item.file) { readCount++; return; }
+      if (!item.file) {
+        readCount++;
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = reader.result.split(",")[1];
@@ -667,10 +673,18 @@ export function initImportQueue(app) {
         readCount++;
         if (readCount === list.length) {
           renderImportedList();
-          setTimeout(() => { window.__YSMPendingLock = false; }, 1000);
+          setTimeout(() => {
+            window.__YSMPendingLock = false;
+          }, 1000);
         }
       };
-      reader.onerror = () => { readCount++; if (readCount === list.length) { renderImportedList(); window.__YSMPendingLock = false; } };
+      reader.onerror = () => {
+        readCount++;
+        if (readCount === list.length) {
+          renderImportedList();
+          window.__YSMPendingLock = false;
+        }
+      };
       reader.readAsDataURL(item.file);
     });
   };

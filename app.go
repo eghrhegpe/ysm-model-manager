@@ -1411,13 +1411,15 @@ func (a *App) SavePreviewTempFile(base64Data string) (string, error) {
 	return tmpFile.Name(), nil
 }
 
-// AnalyzeBedrockModel 打开模型包（zip/7z），解析几何体提取骨骼结构
-// 注意：.ysm 是 YSM 二进制加密格式，不包含明文的 minecraft:geometry
+// AnalyzeBedrockModel 打开模型包（zip/7z/ysm），解析几何体提取骨骼结构
 func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 	ext := strings.ToLower(filepath.Ext(modelPath))
+
+	// .ysm 直接用 YSMParser 解码
 	if ext == ".ysm" {
-		return types.BedrockModel{}
+		return a.runYSMParserOnFile(modelPath)
 	}
+
 	data, err := os.ReadFile(modelPath)
 	if err != nil {
 		return types.BedrockModel{}
@@ -1431,6 +1433,12 @@ func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 		geoJSON, texData = parseBedrockFrom7z(data, int64(len(data)))
 	}
 
+	// zip/7z 内没有 minecraft:geometry → 也可能是 YSM 模型打包成 zip，尝试 YSMParser
+	if geoJSON == nil && (ext == ".zip" || ext == ".7z") {
+		g := a.runYSMParserOnFile(modelPath)
+		geoJSON = &g
+	}
+
 	if geoJSON == nil {
 		return types.BedrockModel{}
 	}
@@ -1438,6 +1446,118 @@ func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 		geoJSON.Texture = "data:image/png;base64," + base64.StdEncoding.EncodeToString(texData)
 	}
 	return *geoJSON
+}
+
+// findYSMParser 查找 YSMParser.exe：exe 同目录 → 工作目录 → PATH
+func findYSMParser() string {
+	if exe, err := os.Executable(); err == nil {
+		if p := filepath.Join(filepath.Dir(exe), "YSMParser.exe"); fileExists(p) {
+			return p
+		}
+	}
+	if wd, err := os.Getwd(); err == nil {
+		if p := filepath.Join(wd, "YSMParser.exe"); fileExists(p) {
+			return p
+		}
+	}
+	if p, err := exec.LookPath("YSMParser.exe"); err == nil {
+		return p
+	}
+	if p, err := exec.LookPath("YSMParser"); err == nil {
+		return p
+	}
+	return ""
+}
+
+func fileExists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
+}
+
+// runYSMParserOnFile 调用 YSMParser CLI 解码 .ysm/.zip 文件并提取几何体
+func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
+	parserPath := findYSMParser()
+	if parserPath == "" {
+		return types.BedrockModel{}
+	}
+
+	tmpDir, err := os.MkdirTemp("", "ysm-parser-*")
+	if err != nil {
+		return types.BedrockModel{}
+	}
+	defer os.RemoveAll(tmpDir)
+
+	inDir := filepath.Join(tmpDir, "input")
+	outDir := filepath.Join(tmpDir, "output")
+	os.MkdirAll(inDir, 0755)
+	os.MkdirAll(outDir, 0755)
+
+	ysmCopy := filepath.Join(inDir, filepath.Base(modelPath))
+	if err := copyFile(modelPath, ysmCopy); err != nil {
+		return types.BedrockModel{}
+	}
+
+	cmd := exec.Command(parserPath, "-i", inDir, "-o", outDir)
+	if err := cmd.Run(); err != nil {
+		return types.BedrockModel{}
+	}
+
+	var best *types.BedrockModel
+	filepath.WalkDir(outDir, func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(strings.ToLower(p), ".json") {
+			return nil
+		}
+		if strings.HasSuffix(p, "ysm.json") {
+			return nil
+		}
+		data, rErr := os.ReadFile(p)
+		if rErr != nil {
+			return nil
+		}
+		if g := parseBedrockGeometry(data); g != nil && (best == nil || g.BoneCount > best.BoneCount) {
+			best = g
+		}
+		return nil
+	})
+
+	if best == nil {
+		return types.BedrockModel{}
+	}
+
+	filepath.WalkDir(outDir, func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || best.Texture != "" {
+			return nil
+		}
+		low := strings.ToLower(p)
+		if strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg") {
+			if data, rErr := os.ReadFile(p); rErr == nil && len(data) > 0 {
+				mime := "image/png"
+				if strings.HasSuffix(low, ".jpg") {
+					mime = "image/jpeg"
+				}
+				best.Texture = "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+			}
+		}
+		return nil
+	})
+
+	return *best
+}
+
+// copyFile 复制文件
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
 }
 
 func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, []byte) {
@@ -1506,17 +1626,17 @@ func parseBedrockGeometry(data []byte) *types.BedrockModel {
 		Geometry      []struct {
 			Description struct {
 				Identifier       string  `json:"identifier"`
-				TextureWidth     int     `json:"texture_width"`
-				TextureHeight    int     `json:"texture_height"`
+				TextureWidth     float64 `json:"texture_width"`
+				TextureHeight    float64 `json:"texture_height"`
 			} `json:"description"`
 			Bones []struct {
 				Name  string `json:"name"`
 				Pivot [3]float64 `json:"pivot"`
 				Cubes []struct {
-					Origin [3]float64 `json:"origin"`
-					Size   [3]float64 `json:"size"`
-					Pivot  [3]float64 `json:"pivot,omitempty"`
-					UV     [3]float64 `json:"uv"`
+					Origin [3]float64     `json:"origin"`
+					Size   [3]float64     `json:"size"`
+					Pivot  [3]float64     `json:"pivot,omitempty"`
+					UV     json.RawMessage `json:"uv,omitempty"`
 				} `json:"cubes"`
 			} `json:"bones"`
 		} `json:"minecraft:geometry"`
@@ -1530,18 +1650,17 @@ func parseBedrockGeometry(data []byte) *types.BedrockModel {
 	g := raw.Geometry[0]
 	model := &types.BedrockModel{
 		Format:    raw.FormatVersion,
-		TexWidth:  g.Description.TextureWidth,
-		TexHeight: g.Description.TextureHeight,
+		TexWidth:  int(g.Description.TextureWidth),
+		TexHeight: int(g.Description.TextureHeight),
 	}
 	var cubeTotal int
 	for _, b := range g.Bones {
-		var cubes []types.Cube2D
+		cubes := make([]types.Cube2D, 0, len(b.Cubes))
 		for _, c := range b.Cubes {
 			cubes = append(cubes, types.Cube2D{
 				Origin: c.Origin,
 				Size:   c.Size,
 				Pivot:  c.Pivot,
-				UV:     [2]float64{c.UV[0], c.UV[1]},
 			})
 		}
 		model.Bones = append(model.Bones, types.Bone2D{

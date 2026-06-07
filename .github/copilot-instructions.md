@@ -13,6 +13,8 @@
 1. **修改前读文件** — 禁止基于记忆修改，必须 `grep_search` / `read_file` 确认最新状态。
 2. **`oldString` 必须原文** — 刚读取到的一字不差，失败则报告不重试。
 3. **改完立即 build** — `npx vite build 2>&1 \| Select-String 'error'`，绝不攒多个修改。
+4. **`wails build -clean` 会清空 `build/bin/`** — 之后必须恢复 YSMParser.exe（从 release 下载或备份）。
+5. **发版时 YSMParser.exe 要一并打包** — 放在 exe 同目录下供 `findYSMParser()` 查找。
 4. **`multi_replace` 不回滚** — build 失败后检查 import 语句是否完整。
 5. **唯一性检查** — 改文件前先 `grep` 确认没有同名文件在 `public/` 下（Vite dev 优先加载 `public/`）。
 6. **日志优先于猜测** — 遇到"逻辑对但没反应"，先加 `console.log` 看实际值，不要猜原因。

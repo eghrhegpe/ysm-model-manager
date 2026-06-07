@@ -114,7 +114,35 @@
 
 ---
 
-## 🏗️ 架构
+## 🔬 技术原理：YSMParser 集成与 .ysm 格式
+
+### .ysm 文件格式
+
+`.ysm` 是 YSM 模组的专有模型格式，**不是标准 zip 压缩包**。其结构为：
+
+```
+┌──────────┬────────┬──────────┬──────────────────────────────┐
+│ YSGP头   │ 版本号 │ MD5校验  │  AES-256 加密的模型数据       │
+│ (4字节)  │ (4字节)│ (16字节) │  (模型JSON + 纹理 + 动画)    │
+└──────────┴────────┴──────────┴──────────────────────────────┘
+```
+
+- 开源模型以标准 `.zip` 格式分发，内含明文 `minecraft:geometry` JSON
+- 加密模型使用 YSGP 二进制格式 + AES 加密，需专用解析器解码
+
+### YSMParser 集成
+
+本工具集成 [YSMParser](https://github.com/OpenYSM/YSMParser) 作为 sidecar 解码加密模型：
+
+- **解码流程**：`AnalyzeBedrockModel()` → 检测 `.ysm` → 调 `YSMParser.exe` 解密 → 读取 `models/*.json` → 解析骨骼 → Canvas 2D 渲染
+- **兼容性**：支持数组 `[u,v]` 和对象 `{face:{uv,uv_size}}` 两种 UV 格式
+- **隐私声明**：解码仅在本地进行，不联网、不存储、不导出模型文件
+
+### 安装 YSMParser
+
+从 [GitHub Releases](https://github.com/OpenYSM/YSMParser/releases) 下载 `YSMParser-x.x.x-windows-x64.zip`，将 `YSMParser.exe` 放到程序同目录即可。程序启动时自动检测。
+
+---
 
 ```
 ysm-model-manager/

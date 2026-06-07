@@ -124,6 +124,14 @@ export function downloadsHTML() {
 <span style="font-size:14px;font-weight:600">⬇️ 导入与重命名</span>
 <span style="font-size:10px;color:var(--muted)">拖入 .ysm / .zip / .7z 到下方区域</span>
 </div>
+<div style="margin:0 12px 4px;border-top:1px solid var(--bd);padding-top:4px">
+  <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--txt);padding:2px 0">
+    <span>📋 已导入</span>
+    <span id="dl-count" style="font-size:10px;color:var(--muted);font-weight:400">0 个文件</span>
+    <button class="btn" id="dl-clear-list" style="font-size:9px;padding:1px 6px;margin-left:auto">🗑️ 清空</button>
+  </div>
+  <div id="dl-imported-list" style="display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto"></div>
+</div>
 <div id="dl-drop" style="flex:1;margin:4px 12px;border:2px dashed var(--bd);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;transition:all .2s;cursor:pointer;min-height:80px">
   <div style="font-size:28px;opacity:.35">📥</div>
   <div style="font-size:11px;color:var(--muted)">拖拽模型文件 <b>.ysm .zip .7z</b> 或文件夹到此处，或点击选择文件</div>
@@ -161,14 +169,6 @@ export function downloadsHTML() {
   <div style="margin-top:2px">
     <button class="btn" id="dl-cancel" style="padding:3px 8px;font-size:10px;width:100%">✕ 关闭表单（队列保留）</button>
   </div>
-</div>
-<div style="margin:0 12px 4px;border-top:1px solid var(--bd);padding-top:4px">
-  <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--txt);padding:2px 0">
-    <span>📋 已导入</span>
-    <span id="dl-count" style="font-size:10px;color:var(--muted);font-weight:400">0 个文件</span>
-    <button class="btn" id="dl-clear-list" style="font-size:9px;padding:1px 6px;margin-left:auto">🗑️ 清空</button>
-  </div>
-  <div id="dl-imported-list" style="display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto"></div>
 </div>
 </div>`;
 }

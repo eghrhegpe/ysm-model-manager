@@ -26,7 +26,10 @@ export async function showRenameDialog(filePath, currentName) {
       "background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:14px;width:640px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:6px";
 
     box.innerHTML = `
-      <div style="font-size:13px;font-weight:600;margin-bottom:4px">✂️ 重命名模型</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+        <span>✂️ 重命名模型</span>
+        <button id="rn-from-header" title="从 YSM 文件头部读取作者/介绍" style="padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px;font-family:inherit">📖 读取头部</button>
+      </div>
       <div style="font-size:10px;color:var(--muted)">${esc(currentName)}</div>
       <div style="display:flex;gap:4px">
         <input id="rn-author" placeholder="作者" value="${esc(parsed.author)}" style="flex:2;min-width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
@@ -35,6 +38,7 @@ export async function showRenameDialog(filePath, currentName) {
         <input id="rn-variant" placeholder="变体" style="flex:1;min-width:50px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
         <input id="rn-date" placeholder="年月" value="${esc(parsed.date)}" style="flex:1;min-width:50px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
       </div>
+      <div id="rn-tips" style="display:none;font-size:10px;color:var(--muted);padding:4px 6px;border-radius:4px;background:var(--bg);line-height:1.5;max-height:80px;overflow-y:auto;white-space:pre-wrap"></div>
       <div style="font-size:11px;padding:4px 6px;border-radius:4px;background:var(--bg)">
         <span style="color:var(--muted)">${esc(currentName)}</span> → <span id="rn-preview" style="font-weight:500">-</span>
       </div>
@@ -47,6 +51,42 @@ export async function showRenameDialog(filePath, currentName) {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     overlay.focus();
+
+    // 从 YSM 文件头部读取元数据（仅填充第一位作者，展示介绍）
+    box.querySelector("#rn-from-header").onclick = async () => {
+      try {
+        const btn = box.querySelector("#rn-from-header");
+        btn.textContent = "⏳ 读取中...";
+        btn.disabled = true;
+        const { ExtractYSMHeader } =
+          await import("../../wailsjs/go/main/App.js");
+        const header = await ExtractYSMHeader(filePath);
+        if (header?.isYsm) {
+          const authorEl = box.querySelector("#rn-author");
+          const tipsEl = box.querySelector("#rn-tips");
+          // 仅当作者为空时自动填入第一位作者
+          if (header.authorName && !authorEl.value.trim()) {
+            authorEl.value = header.authorName;
+          }
+          // 展示介绍（只读参考）
+          if (header.tips) {
+            tipsEl.textContent = "📝 " + header.tips;
+            tipsEl.style.display = "block";
+          } else {
+            tipsEl.style.display = "none";
+          }
+          update();
+        }
+      } catch (_) {
+        // 静默失败
+      } finally {
+        const btn = box.querySelector("#rn-from-header");
+        if (btn) {
+          btn.textContent = "📖 读取头部";
+          btn.disabled = false;
+        }
+      }
+    };
 
     const update = () => {
       const a = box.querySelector("#rn-author").value.trim();

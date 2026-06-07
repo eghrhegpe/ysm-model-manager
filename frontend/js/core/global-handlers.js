@@ -8,6 +8,187 @@ import { modalConfirm } from "../dialogs/modal.js";
 export function registerGlobalHandlers() {
   const unsubs = [];
 
+  // ===== 全局拖拽导入 =====
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const MAX_FILE_COUNT = 50; // 单次最多 50 个文件
+  let dropOverlay = null;
+  let dropLeaveTimer = null;
+
+  const showDropOverlay = (hasModel) => {
+    if (!dropOverlay) {
+      dropOverlay = document.createElement("div");
+      dropOverlay.id = "global-drop-overlay";
+      dropOverlay.textContent = "📥 拖放以上模型文件";
+      Object.assign(dropOverlay.style, {
+        position: "fixed", inset: "0", zIndex: "999999",
+        display: "none", alignItems: "center", justifyContent: "center",
+        background: "color-mix(in srgb, var(--accent,#66d9ef) 8%, transparent)",
+        border: "3px dashed var(--accent,#66d9ef)",
+        fontSize: "18px", fontWeight: "600", color: "var(--accent,#66d9ef)",
+        pointerEvents: "none", transition: "all .15s",
+      });
+      document.body.appendChild(dropOverlay);
+    }
+    // 无模型文件时变红提示
+    if (hasModel === false) {
+      dropOverlay.style.background = "color-mix(in srgb, #f38ba8 10%, transparent)";
+      dropOverlay.style.borderColor = "#f38ba8";
+      dropOverlay.style.color = "#f38ba8";
+      dropOverlay.textContent = "⛔ 未检测到模型文件";
+    } else {
+      dropOverlay.style.background = "color-mix(in srgb, var(--accent,#66d9ef) 8%, transparent)";
+      dropOverlay.style.borderColor = "var(--accent,#66d9ef)";
+      dropOverlay.style.color = "var(--accent,#66d9ef)";
+      dropOverlay.textContent = "📥 拖放以上模型文件";
+    }
+    dropOverlay.style.display = "flex";
+    dropOverlay.style.opacity = "1";
+  };
+  const hideDropOverlay = () => {
+    if (dropLeaveTimer) clearTimeout(dropLeaveTimer);
+    if (dropOverlay) {
+      dropOverlay.style.opacity = "0";
+      setTimeout(() => { if (dropOverlay) dropOverlay.style.display = "none"; }, 150);
+    }
+  };
+
+  const isEditable = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+
+  // 带超时的 FileReader 封装（3 秒熔断）
+  const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    const timer = setTimeout(() => { reader.abort(); reject(new Error("timeout")); }, 3000);
+    reader.onload = () => { clearTimeout(timer); resolve(reader.result.split(",")[1]); };
+    reader.onerror = () => { clearTimeout(timer); reject(reader.error); };
+    reader.readAsDataURL(file);
+  });
+
+  const onDragOver = (e) => {
+    if (!e.dataTransfer?.types?.includes("Files")) return;
+    if (isEditable(e.target)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    // 检查是否有模型文件，决定遮罩颜色
+    const items = Array.from(e.dataTransfer?.items || []);
+    const hasModel = items.some((item) => /\.(ysm|zip|7z)$/i.test(item.name || ""));
+    showDropOverlay(hasModel);
+  };
+  const onDragLeave = (e) => {
+    // 延迟 100ms 再隐藏，防止鼠标短暂离开窗口边缘
+    if (dropLeaveTimer) clearTimeout(dropLeaveTimer);
+    dropLeaveTimer = setTimeout(() => {
+      if (!e.currentTarget.contains(e.relatedTarget)) {
+        hideDropOverlay();
+      }
+    }, 100);
+  };
+  const onDrop = (e) => {
+    hideDropOverlay();
+    e.preventDefault();
+    if (isEditable(e.target)) return;
+    if (window.__YSMPendingLock) return;
+
+    // 收集所有文件（含文件夹递归）
+    const collectFiles = (items, out) => {
+      for (const item of items) {
+        if (item.kind !== "file") continue;
+        const entry = item.webkitGetAsEntry?.();
+        if (entry?.isDirectory) {
+          // 递归读取文件夹
+          const reader = entry.createReader();
+          const readDir = () => {
+            reader.readEntries((entries) => {
+              if (entries.length === 0) return;
+              for (const e of entries) {
+                if (e.isDirectory) {
+                  const subReader = e.createReader();
+                  const readSub = () => {
+                    subReader.readEntries((sub) => {
+                      if (sub.length === 0) return;
+                      for (const s of sub) {
+                        if (s.isFile && /\.(ysm|zip|7z)$/i.test(s.name)) {
+                          collectFiles([s], out);
+                        }
+                      }
+                      readSub();
+                    });
+                  };
+                  readSub();
+                } else if (e.isFile && /\.(ysm|zip|7z)$/i.test(e.name)) {
+                  e.file((f) => out.push(f));
+                }
+              }
+              readDir();
+            });
+          };
+          readDir();
+        } else if (entry?.isFile && /\.(ysm|zip|7z)$/i.test(entry.name)) {
+          entry.file((f) => out.push(f));
+        } else if (item.getAsFile && /\.(ysm|zip|7z)$/i.test(item.name || "")) {
+          const f = item.getAsFile();
+          if (f) out.push(f);
+        }
+      }
+    };
+
+    const allFiles = [];
+    const items = Array.from(e.dataTransfer?.items || []);
+    // 优先从 files 直接取（拖多个文件时更快）
+    const directFiles = Array.from(e.dataTransfer?.files || []);
+    const valid = directFiles.filter((f) => /\.(ysm|zip|7z)$/i.test(f.name));
+    if (valid.length > 0) {
+      allFiles.push(...valid);
+    } else if (items.length > 0) {
+      // files 为空但 items 有内容 → 可能是文件夹拖入
+      collectFiles(items, allFiles);
+    }
+
+    if (allFiles.length === 0) {
+      bus.emit("toast:show", {
+        msg: "📂 未检测到模型文件（.ysm / .zip / .7z）",
+        duration: 3000, type: "info",
+      });
+      return;
+    }
+
+    // 数量熔断
+    if (allFiles.length > MAX_FILE_COUNT) {
+      bus.emit("toast:show", {
+        msg: `⚠️ 单次导入文件过多（${allFiles.length} 个），请分批处理`,
+        duration: 5000, type: "warn",
+      });
+      return;
+    }
+
+    // 大小检查
+    const oversized = allFiles.filter((f) => f.size > MAX_FILE_SIZE);
+    if (oversized.length > 0) {
+      bus.emit("toast:show", {
+        msg: `⚠️ ${oversized[0].name} 超过 10MB，请直接放入仓库文件夹`,
+        duration: 5000, type: "warn",
+      });
+      return;
+    }
+
+    window.__pendingImport = allFiles.map((f) => ({ name: f.name, file: f }));
+    // 已经在导入页则直接处理，否则跳转
+    if (window.__currentPage === "downloads") {
+      bus.emit("import:pending-files");
+    } else {
+      bus.emit("nav:change", { page: "downloads" });
+    }
+  };
+  document.addEventListener("dragover", onDragOver);
+  document.addEventListener("dragleave", onDragLeave);
+  document.addEventListener("drop", onDrop);
+  unsubs.push(() => document.removeEventListener("dragover", onDragOver));
+  unsubs.push(() => document.removeEventListener("dragleave", onDragLeave));
+  unsubs.push(() => document.removeEventListener("drop", onDrop));
+  unsubs.push(() => { if (dropOverlay) { dropOverlay.remove(); dropOverlay = null; } });
+
+  // 跟踪当前页面
+  bus.on("nav:changed", ({ page }) => { window.__currentPage = page; });
+
   // 导入仓库模型到整合包（指定 instanceName 则只导入到该包，否则导入到所有）
   unsubs.push(
     bus.on("sync:download-missing", async ({ instanceName } = {}) => {

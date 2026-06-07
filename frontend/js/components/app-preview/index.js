@@ -55,8 +55,12 @@ class AppPreview extends HTMLElement {
 
     if (this._mode === "model") {
       this._unsubs.push(
-        bus.on("model:select", async ({ path }) => {
-          this._showModelDetail(path);
+        bus.on("model:select", async ({ path, isDir }) => {
+          if (isDir) {
+            this._showPackInfo(path);
+          } else {
+            this._showModelDetail(path);
+          }
         }),
       );
     }
@@ -75,8 +79,28 @@ class AppPreview extends HTMLElement {
     }
   }
 
+  /** 自动匹配缩略图：1. 同目录散图 → 2. zip/7z 解压纹理 */
+  async _loadPreviewImage(modelPath) {
+    try {
+      const { FindPreviewImage, ExtractPreviewTexture } =
+        await import("../../../wailsjs/go/main/App.js");
+      // 先找同目录散图
+      const loose = await FindPreviewImage(modelPath);
+      if (loose) return loose;
+      // 再尝试 zip/7z 解压纹理
+      const tex = await ExtractPreviewTexture(modelPath);
+      return tex || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   async _showModelDetail(path) {
     this._root.innerHTML = `<div class="content" id="preview-content"><h3>📄 模型信息</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">正在解析模型文件...</div></div></div>`;
+
+    // 并行：解析元数据 + 加载缩略图
+    const previewSrc = await this._loadPreviewImage(path);
+
     try {
       const { ExtractYsmSummary, ExtractYSMHeader } =
         await import("../../../wailsjs/go/main/App.js");
@@ -96,8 +120,9 @@ class AppPreview extends HTMLElement {
           summary.stats?.textures > 0 ||
           summary.stats?.models > 0 ||
           summary.authors?.length > 0);
+      let cardHTML = "";
       if (hasRealSummary || header) {
-        this._root.innerHTML = summaryCardHTML(
+        cardHTML = summaryCardHTML(
           hasRealSummary ? summary : null,
           header,
           basename,
@@ -105,11 +130,42 @@ class AppPreview extends HTMLElement {
       } else {
         throw new Error("无法解析此文件");
       }
+      // 在卡片顶部注入缩略图
+      if (previewSrc) {
+        cardHTML = cardHTML.replace(
+          '<div class="content" id="preview-content">',
+          `<div class="content" id="preview-content"><div class="preview-thumb"><img src="${previewSrc}" alt="预览" onerror="this.style.display='none'"></div>`,
+        );
+      }
+      this._root.innerHTML = cardHTML;
     } catch (err) {
       this._root.innerHTML = modelDetailHTML({
         hasError: true,
         errorMsg: String(err),
       });
+    }
+  }
+
+  /** 显示文件夹下的整合包信息（ysm-pack.json + ysm-pack.png） */
+  async _showPackInfo(dirPath) {
+    const esc = (s) => (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    this._root.innerHTML = `<div class="content" id="preview-content"><h3>📦 整合包</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
+    try {
+      const { GetPackInfo } = await import("../../../wailsjs/go/main/App.js");
+      const pack = await GetPackInfo(dirPath);
+      if (!pack || (!pack.name && !pack.description)) {
+        const folderName = dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
+        this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 文件夹</h3><div class="model-detail-title" style="font-size:13px;font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">该文件夹暂无整合包信息</div></div></div>`;
+        return;
+      }
+      this._root.innerHTML = `<div class="content" id="preview-content">
+<h3>📦 整合包</h3>
+${pack.imageBase64 ? `<div class="preview-thumb"><img src="${pack.imageBase64}" alt="封面"></div>` : ""}
+<div class="model-detail-title" style="font-size:14px;font-weight:700">${esc(pack.name)}</div>
+${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px;line-height:1.6">${esc(pack.description)}</div>` : ""}
+</div>`;
+    } catch (err) {
+      this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 文件夹</h3><div class="dp-placeholder"><div class="big-icon">📁</div><div class="dp-hint">无法读取整合包信息</div></div></div>`;
     }
   }
 

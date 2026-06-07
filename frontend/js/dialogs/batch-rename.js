@@ -30,6 +30,24 @@ export async function showBatchRenameDialog(dir, entries, onApply) {
     });
   };
 
+  const applyReplace = (findText, replaceText, isRegex) => {
+    items.forEach((it) => {
+      try {
+        // 分离扩展名，只对文件名主体做替换
+        const extMatch = it.Name.match(/(\.[^.]+)$/);
+        const ext = extMatch ? extMatch[1] : "";
+        const body = extMatch ? it.Name.slice(0, -ext.length) : it.Name;
+        const newBody = isRegex
+          ? body.replace(new RegExp(findText, "g"), replaceText)
+          : body.replaceAll(findText, replaceText);
+        it.newName = (newBody || body) + ext;
+        it.changed = it.newName !== it.Name;
+      } catch {
+        // 正则无效时保持原名
+      }
+    });
+  };
+
   dialogEl = document.createElement("div");
   dialogEl.tabIndex = 0;
   dialogEl.style.cssText =
@@ -96,6 +114,64 @@ export async function showBatchRenameDialog(dir, entries, onApply) {
   renderPreview(previewEl, items);
   updateCount();
 
+  // 模式切换
+  const modeSelect = dialogEl.querySelector("#br-mode");
+  const parseModeEl = dialogEl.querySelector("#br-parse-mode");
+  const replaceModeEl = dialogEl.querySelector("#br-replace-mode");
+  const findInput = dialogEl.querySelector("#br-find");
+  const replaceInput = dialogEl.querySelector("#br-replace");
+  const regexCb = dialogEl.querySelector("#br-regex");
+
+  modeSelect?.addEventListener("change", () => {
+    const isReplace = modeSelect.value === "replace";
+    parseModeEl.style.display = isReplace ? "none" : "flex";
+    replaceModeEl.style.display = isReplace ? "flex" : "none";
+    if (isReplace) {
+      applyReplace(findInput.value, replaceInput.value, regexCb.checked);
+      renderPreview(previewEl, items);
+    } else {
+      // 切回解析模式时重置
+      items.forEach((it) => { it._author = ""; it._work = ""; });
+      updateAll();
+      renderPreview(previewEl, items);
+    }
+    updateCount();
+  });
+
+  // 替换输入防抖
+  let replaceTimer = null;
+  const applyReplaceDebounced = () => {
+    if (replaceTimer) clearTimeout(replaceTimer);
+    replaceTimer = setTimeout(() => {
+      applyReplace(findInput.value, replaceInput.value, regexCb.checked);
+      renderPreview(previewEl, items);
+      updateCount();
+    }, 200);
+  };
+  findInput?.addEventListener("input", applyReplaceDebounced);
+  replaceInput?.addEventListener("input", applyReplaceDebounced);
+  regexCb?.addEventListener("change", applyReplaceDebounced);
+
+  // 预设切换（行内展开/收起）
+  const presetsBtn = dialogEl.querySelector("#br-presets");
+  const presetsMenu = dialogEl.querySelector("#br-presets-menu");
+  presetsBtn?.addEventListener("click", () => {
+    const show = presetsMenu.style.display !== "flex";
+    presetsMenu.style.display = show ? "flex" : "none";
+    presetsBtn.textContent = show ? "📋 收起预设" : "📋 预设";
+  });
+  presetsMenu?.querySelectorAll(".br-preset").forEach((el) => {
+    el.addEventListener("click", () => {
+      findInput.value = el.dataset.find || "";
+      replaceInput.value = el.dataset.replace || "";
+      regexCb.checked = el.dataset.regex === "1";
+      presetsMenu.style.display = "none";
+      applyReplace(findInput.value, replaceInput.value, regexCb.checked);
+      renderPreview(previewEl, items);
+      updateCount();
+    });
+  });
+
   dialogEl.querySelector("#br-cancel")?.addEventListener("click", close);
   dialogEl.addEventListener("click", (e) => {
     if (e.target === dialogEl) close();
@@ -134,11 +210,35 @@ function genHTML(dir, items) {
   <span style="font-size:9px;color:var(--muted)">${items.length} 个文件 · <span id="br-changed">${changed}</span> 个变更</span>
 </div>
 <div style="padding:8px 12px;display:flex;gap:6px;align-items:center;border-bottom:1px solid var(--bd);flex-wrap:wrap;background:var(--bg)">
+  <span style="font-size:10px;color:var(--muted)">模式：</span>
+  <select id="br-mode" style="padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+    <option value="parse">📋 解析格式</option>
+    <option value="replace">🔍 查找替换</option>
+  </select>
+</div>
+<div id="br-parse-mode" style="padding:8px 12px;display:flex;gap:6px;align-items:center;border-bottom:1px solid var(--bd);flex-wrap:wrap;background:var(--bg)">
   <span style="font-size:10px;color:var(--muted)">统一作者：</span>
   <input id="br-batch-author" placeholder="留空不变" style="width:100px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
   <span style="font-size:10px;color:var(--muted)">作品：</span>
   <input id="br-batch-work" placeholder="留空不变" style="width:100px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
   <span style="font-size:9px;color:var(--muted)">回车生效</span>
+</div>
+<div id="br-replace-mode" style="display:none;padding:8px 12px;gap:6px;align-items:center;border-bottom:1px solid var(--bd);flex-wrap:wrap;background:var(--bg)">
+  <span style="font-size:10px;color:var(--muted)">查找：</span>
+  <input id="br-find" placeholder="输入要查找的内容" style="flex:1;min-width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+  <span style="font-size:10px;color:var(--muted)">替换为：</span>
+  <input id="br-replace" placeholder="留空为删除" style="flex:1;min-width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+  <label style="display:flex;align-items:center;gap:3px;font-size:9px;color:var(--muted);cursor:pointer">
+    <input type="checkbox" id="br-regex"> 正则
+  </label>
+  <button id="br-presets" style="padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">📋 预设</button>
+  <div id="br-presets-menu" style="display:none;flex-wrap:wrap;gap:4px;width:100%;padding:4px 0">
+    <div class="br-preset" data-find="\(\d{4}-\d{2}\)" data-replace="" data-regex="1" style="padding:3px 8px;font-size:9px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;background:var(--surf);color:var(--txt)">❌ 去除年份 (2025-08)</div>
+    <div class="br-preset" data-find="-v\d+(?=\.)" data-replace="" data-regex="1" style="padding:3px 8px;font-size:9px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;background:var(--surf);color:var(--txt)">❌ 去除版本 -v2</div>
+    <div class="br-preset" data-find="【(.+?)】" data-replace="[$1]" data-regex="1" style="padding:3px 8px;font-size:9px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;background:var(--surf);color:var(--txt)">【】→ [] 括号</div>
+    <div class="br-preset" data-find="\[(.+?)\]【(.+?)】" data-replace="$1-$2" data-regex="1" style="padding:3px 8px;font-size:9px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;background:var(--surf);color:var(--txt)">📛 拍平为 作者-作品</div>
+    <div class="br-preset" data-find="\s+" data-replace="_" data-regex="1" style="padding:3px 8px;font-size:9px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;background:var(--surf);color:var(--txt)">🔗 空格 → 下划线</div>
+  </div>
 </div>
 <div id="br-preview" style="flex:1;overflow-y:auto;padding:4px 6px;min-height:100px;font-size:10px;color:var(--txt)"></div>
 <div style="padding:8px 12px;border-top:1px solid var(--bd);display:flex;gap:6px;justify-content:flex-end">

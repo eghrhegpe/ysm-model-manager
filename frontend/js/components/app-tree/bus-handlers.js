@@ -265,6 +265,47 @@ export function bindBusEvents(vm) {
     }),
   );
 
+  // Ctrl/Shift 多选 → 批量重命名
+  unsubs.push(
+    bus.on("batch:rename", async ({ paths }) => {
+      if (!paths?.length) return;
+      try {
+        const { RenameFile } = await import("../../../wailsjs/go/main/App.js");
+        const entries = paths.map((p) => ({
+          Name: p.split(/[/\\]/).pop(),
+          Path: p,
+        }));
+        const { showBatchRenameDialog } =
+          await import("../../dialogs/batch-rename.js");
+        await showBatchRenameDialog("批量重命名", entries, async (renames) => {
+          let ok = 0,
+            fail = 0;
+          for (const r of renames) {
+            try {
+              await RenameFile(r.oldPath, r.newName);
+              ok++;
+            } catch {
+              fail++;
+            }
+          }
+          await reload(vm);
+          bus.emit("stats:refresh");
+          bus.emit("toast:show", {
+            msg: `✅ 批量重命名完成：${ok} 成功${fail ? "，失败 " + fail : ""}`,
+            duration: 3000,
+            type: fail > 0 ? "warn" : "success",
+          });
+        });
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: `❌ 批量重命名失败: ${String(e)}`,
+          duration: 3000,
+          type: "error",
+        });
+      }
+    }),
+  );
+
   // 树刷新桥接
   unsubs.push(
     bus.on("tree:reload", async () => {

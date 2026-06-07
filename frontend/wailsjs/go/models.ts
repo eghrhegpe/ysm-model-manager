@@ -43,6 +43,100 @@ export namespace types {
 	        this.mirror = source["mirror"];
 	    }
 	}
+	export class Cube2D {
+	    origin: number[];
+	    size: number[];
+	    pivot?: number[];
+	    uv?: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Cube2D(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.origin = source["origin"];
+	        this.size = source["size"];
+	        this.pivot = source["pivot"];
+	        this.uv = source["uv"];
+	    }
+	}
+	export class Bone2D {
+	    name: string;
+	    cubes: Cube2D[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Bone2D(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.cubes = this.convertValues(source["cubes"], Cube2D);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class BedrockModel {
+	    boneCount: number;
+	    cubeCount: number;
+	    texture?: string;
+	    format?: string;
+	    texWidth?: number;
+	    texHeight?: number;
+	    bones?: Bone2D[];
+	
+	    static createFrom(source: any = {}) {
+	        return new BedrockModel(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.boneCount = source["boneCount"];
+	        this.cubeCount = source["cubeCount"];
+	        this.texture = source["texture"];
+	        this.format = source["format"];
+	        this.texWidth = source["texWidth"];
+	        this.texHeight = source["texHeight"];
+	        this.bones = this.convertValues(source["bones"], Bone2D);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
 	export class CustomFileInfo {
 	    Name: string;
 	    LinkType: string;

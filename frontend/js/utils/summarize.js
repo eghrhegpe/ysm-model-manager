@@ -103,16 +103,38 @@ export function summaryCardHTML(summary, header, basename) {
     authorHtml = parts.join(" / ");
   }
 
-  // 动画分组（带名称翻译）
+// 动画分组（内部标识符只显示计数，有中文名的显示标签）
   let animGroupHtml = "";
+  const isInternalId = (n) => /^[a-z_]+$/.test(n) || /^(range|checkbox|radio|slider|toggle)$/i.test(n);
   if (summary.animGroups && summary.animGroups.length > 0) {
     animGroupHtml = summary.animGroups
       .map((g) => {
         const name = cleanText(g.name || g.id || "");
-        const count = g.items ? g.items.length : 0;
-        return `<div class="md-value" style="line-height:1.6">${esc(name)}（${count}）</div>`;
+        const items = (g.items || []).filter((it) => !isInternalId(it));
+        if (!items.length) return ""; // 全是内部标识符，跳过
+        const displayItems = items.slice(0, 8);
+        const more = items.length > 8 ? ` +${items.length - 8}` : "";
+        const badges = displayItems.map((it) =>
+          `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;background:color-mix(in srgb,var(--accent,#66d9ef) 14%,transparent);color:var(--accent,#66d9ef);margin:2px 3px;font-weight:500;white-space:nowrap">${esc(it)}</span>`
+        ).join("") + more;
+        return `<div style="margin-bottom:4px"><div style="font-size:10px;font-weight:600;color:var(--txt);margin-bottom:2px">🎬 ${esc(name)}</div><div>${badges}</div></div>`;
+      })
+      .filter(Boolean)
+      .join("");
+  }
+
+  // 配置菜单（只显示前5项，纯标识符的不显示）
+  let configHtml = "";
+  if (summary.configMenus && summary.configMenus.length > 0) {
+    configHtml = summary.configMenus
+      .map((m) => {
+        const name = cleanText(m.name || m.id || "");
+        return `<div style="margin-bottom:2px;font-size:9px;color:var(--muted)">⚙️ ${esc(name)}</div>`;
       })
       .join("");
+    if (configHtml) {
+      configHtml = `<div class="md-divider"></div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">配置项</div>${configHtml}`;
+    }
   }
 
   // 免费/付费标记
@@ -137,7 +159,8 @@ ${authorHtml ? `<div class="md-row"><span class="md-label">作者</span><span cl
 
 ${preview.heightScale || preview.widthScale ? `<div class="md-row"><span class="md-label">📐 缩放</span><span class="md-value">${(preview.heightScale || 1).toFixed(2)} × ${(preview.widthScale || 1).toFixed(2)}</span></div>` : ""}
 
-${animGroupHtml ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">🎬 动画组</span><span class="md-value">${animGroupHtml}</span></div>` : ""}
+${animGroupHtml ? `<div class="md-divider"></div>${animGroupHtml}` : ""}
+${configHtml ? configHtml : ""}
 
 ${summary.links?.home ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">🔗 链接</span><span class="md-value"><a href="${esc(summary.links.home)}" target="_blank" style="color:var(--accent);text-decoration:none">主页</a>${summary.links.donate ? ` · <a href="${esc(summary.links.donate)}" target="_blank" style="color:var(--accent);text-decoration:none">赞助</a>` : ""}</span></div>` : ""}
 </div>`;

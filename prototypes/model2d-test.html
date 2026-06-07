@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2D 模型渲染测试</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #1e1e2e;
+        color: #cdd6f4;
+        margin: 20px;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 12px;
+      }
+      .controls {
+        margin-bottom: 16px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .controls label {
+        font-size: 12px;
+        color: #a6adc8;
+      }
+      .controls select,
+      .controls button {
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 4px;
+        border: 1px solid #45475a;
+        background: #313244;
+        color: #cdd6f4;
+        cursor: pointer;
+      }
+      .controls select:hover,
+      .controls button:hover {
+        background: #45475a;
+      }
+      .canvas-wrap {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .canvas-box {
+        background: #181825;
+        border-radius: 8px;
+        padding: 12px;
+      }
+      .canvas-box h3 {
+        font-size: 11px;
+        color: #a6adc8;
+        margin: 0 0 8px;
+        font-weight: 400;
+      }
+      canvas {
+        display: block;
+        border-radius: 4px;
+      }
+      .info {
+        margin-top: 12px;
+        font-size: 11px;
+        color: #6c7086;
+        line-height: 1.6;
+      }
+      .info code {
+        background: #313244;
+        padding: 1px 5px;
+        border-radius: 3px;
+      }
+      .preset-desc {
+        font-size: 11px;
+        color: #a6adc8;
+        padding: 8px;
+        background: #313244;
+        border-radius: 4px;
+        margin-top: 8px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 2D 模型骨骼渲染测试</h1>
+
+    <div class="controls">
+      <label>预设模型：</label>
+      <select id="presetSelect">
+        <option value="steve">Steve（默认 4px 玩家）</option>
+        <option value="slim">Alex（纤细 3px 玩家）</option>
+        <option value="hina">键山雏（复杂模型）</option>
+        <option value="empty">空模型（无骨骼）</option>
+      </select>
+      <button id="renderBtn">🔄 渲染</button>
+    </div>
+
+    <div class="canvas-wrap">
+      <div class="canvas-box">
+        <h3>👤 前视图</h3>
+        <canvas id="frontCanvas" width="200" height="200"></canvas>
+      </div>
+      <div class="canvas-box">
+        <h3>🗺️ 含俯视图小窗</h3>
+        <canvas id="fullCanvas" width="200" height="200"></canvas>
+      </div>
+    </div>
+
+    <div id="stats" class="info"></div>
+    <div id="presetDesc" class="preset-desc"></div>
+
+    <script type="module">
+      import { renderModel2D } from "../frontend/js/utils/model2d.js";
+
+      // ===== 预设模型数据 =====
+      const PRESETS = {
+        steve: {
+          boneCount: 7,
+          cubeCount: 36,
+          texWidth: 64,
+          texHeight: 64,
+          bones: [
+            {
+              name: "head",
+              cubes: [
+                {
+                  origin: [-4, 24, -4],
+                  size: [8, 8, 8],
+                  pivot: [0, 24, 0],
+                  uv: [0, 0],
+                },
+                {
+                  origin: [-4, 24, -4],
+                  size: [8, 8, 8, 0.5],
+                  pivot: [0, 24, 0],
+                  uv: [32, 0],
+                }, // 外层
+              ],
+            },
+            {
+              name: "body",
+              cubes: [
+                {
+                  origin: [-4, 12, -2],
+                  size: [8, 12, 4],
+                  pivot: [0, 12, 0],
+                  uv: [16, 16],
+                },
+                {
+                  origin: [-4, 12, -2],
+                  size: [8, 12, 4, 0.25],
+                  pivot: [0, 12, 0],
+                  uv: [16, 32],
+                },
+              ],
+            },
+            {
+              name: "right_arm",
+              cubes: [
+                {
+                  origin: [4, 12, -2],
+                  size: [4, 12, 4],
+                  pivot: [-6, 12, 0],
+                  uv: [40, 16],
+                },
+                {
+                  origin: [4, 12, -2],
+                  size: [4, 12, 4, 0.25],
+                  pivot: [-6, 12, 0],
+                  uv: [40, 32],
+                },
+              ],
+            },
+            {
+              name: "left_arm",
+              cubes: [
+                {
+                  origin: [-8, 12, -2],
+                  size: [4, 12, 4],
+                  pivot: [6, 12, 0],
+                  uv: [32, 48],
+                },
+                {
+                  origin: [-8, 12, -2],
+                  size: [4, 12, 4, 0.25],
+                  pivot: [6, 12, 0],
+                  uv: [48, 48],
+                },
+              ],
+            },
+            {
+              name: "right_leg",
+              cubes: [
+                {
+                  origin: [-2, 0, -2],
+                  size: [4, 12, 4],
+                  pivot: [0, 0, 0],
+                  uv: [0, 16],
+                },
+                {
+                  origin: [-2, 0, -2],
+                  size: [4, 12, 4, 0.25],
+                  pivot: [0, 0, 0],
+                  uv: [0, 32],
+                },
+              ],
+            },
+            {
+              name: "left_leg",
+              cubes: [
+                {
+                  origin: [-6, 0, -2],
+                  size: [4, 12, 4],
+                  pivot: [0, 0, 0],
+                  uv: [16, 48],
+                },
+                {
+                  origin: [-6, 0, -2],
+                  size: [4, 12, 4, 0.25],
+                  pivot: [0, 0, 0],
+                  uv: [0, 48],
+                },
+              ],
+            },
+            {
+              name: "hat",
+              cubes: [
+                {
+                  origin: [-5, 24, -5],
+                  size: [10, 2, 10],
+                  pivot: [0, 24, 0],
+                  uv: [0, 64],
+                },
+              ],
+            },
+          ],
+        },
+        slim: {
+          boneCount: 6,
+          cubeCount: 24,
+          texWidth: 64,
+          texHeight: 64,
+          bones: [
+            {
+              name: "head",
+              cubes: [
+                {
+                  origin: [-4, 24, -4],
+                  size: [8, 8, 8],
+                  pivot: [0, 24, 0],
+                  uv: [0, 0],
+                },
+              ],
+            },
+            {
+              name: "body",
+              cubes: [
+                {
+                  origin: [-4, 12, -2],
+                  size: [8, 12, 4],
+                  pivot: [0, 12, 0],
+                  uv: [16, 16],
+                },
+              ],
+            },
+            {
+              name: "right_arm",
+              cubes: [
+                {
+                  origin: [4, 12, -2],
+                  size: [3, 12, 4],
+                  pivot: [-5, 12, 0],
+                  uv: [40, 16],
+                },
+              ],
+            },
+            {
+              name: "left_arm",
+              cubes: [
+                {
+                  origin: [-7, 12, -2],
+                  size: [3, 12, 4],
+                  pivot: [5, 12, 0],
+                  uv: [32, 48],
+                },
+              ],
+            },
+            {
+              name: "right_leg",
+              cubes: [
+                {
+                  origin: [-2, 0, -2],
+                  size: [4, 12, 4],
+                  pivot: [0, 0, 0],
+                  uv: [0, 16],
+                },
+              ],
+            },
+            {
+              name: "left_leg",
+              cubes: [
+                {
+                  origin: [-6, 0, -2],
+                  size: [4, 12, 4],
+                  pivot: [0, 0, 0],
+                  uv: [16, 48],
+                },
+              ],
+            },
+          ],
+        },
+        hina: {
+          boneCount: 15,
+          cubeCount: 42,
+          texWidth: 128,
+          texHeight: 128,
+          bones: [
+            {
+              name: "head",
+              cubes: [
+                {
+                  origin: [-5, 28, -5],
+                  size: [10, 10, 10],
+                  pivot: [0, 28, 0],
+                  uv: [0, 0],
+                },
+              ],
+            },
+            {
+              name: "body",
+              cubes: [
+                {
+                  origin: [-6, 14, -4],
+                  size: [12, 14, 8],
+                  pivot: [0, 14, 0],
+                  uv: [0, 18],
+                },
+              ],
+            },
+            {
+              name: "skirt_front",
+              cubes: [
+                {
+                  origin: [-7, 6, -5],
+                  size: [14, 8, 4],
+                  pivot: [0, 10, 0],
+                  uv: [0, 40],
+                },
+              ],
+            },
+            {
+              name: "skirt_back",
+              cubes: [
+                {
+                  origin: [-7, 6, 1],
+                  size: [14, 8, 4],
+                  pivot: [0, 10, 0],
+                  uv: [32, 40],
+                },
+              ],
+            },
+            {
+              name: "skirt_left",
+              cubes: [
+                {
+                  origin: [-7, 6, -5],
+                  size: [4, 8, 10],
+                  pivot: [0, 10, 0],
+                  uv: [0, 52],
+                },
+              ],
+            },
+            {
+              name: "skirt_right",
+              cubes: [
+                {
+                  origin: [3, 6, -5],
+                  size: [4, 8, 10],
+                  pivot: [0, 10, 0],
+                  uv: [28, 52],
+                },
+              ],
+            },
+            {
+              name: "right_arm",
+              cubes: [
+                {
+                  origin: [6, 22, -3],
+                  size: [4, 14, 6],
+                  pivot: [-8, 22, 0],
+                  uv: [40, 16],
+                },
+              ],
+            },
+            {
+              name: "left_arm",
+              cubes: [
+                {
+                  origin: [-10, 22, -3],
+                  size: [4, 14, 6],
+                  pivot: [8, 22, 0],
+                  uv: [54, 16],
+                },
+              ],
+            },
+            {
+              name: "right_sleeve",
+              cubes: [
+                {
+                  origin: [6, 16, -3.5],
+                  size: [5, 8, 7],
+                  pivot: [-8, 16, 0],
+                  uv: [40, 36],
+                },
+              ],
+            },
+            {
+              name: "left_sleeve",
+              cubes: [
+                {
+                  origin: [-11, 16, -3.5],
+                  size: [5, 8, 7],
+                  pivot: [8, 16, 0],
+                  uv: [54, 36],
+                },
+              ],
+            },
+            {
+              name: "right_leg",
+              cubes: [
+                {
+                  origin: [-3, 0, -3],
+                  size: [5, 14, 6],
+                  pivot: [0, 0, 0],
+                  uv: [0, 62],
+                },
+              ],
+            },
+            {
+              name: "left_leg",
+              cubes: [
+                {
+                  origin: [-8, 0, -3],
+                  size: [5, 14, 6],
+                  pivot: [0, 0, 0],
+                  uv: [22, 62],
+                },
+              ],
+            },
+            {
+              name: "ribbon_top",
+              cubes: [
+                {
+                  origin: [-2, 38, -8],
+                  size: [4, 2, 6],
+                  pivot: [0, 38, -4],
+                  uv: [44, 50],
+                },
+              ],
+            },
+            {
+              name: "ribbon_left",
+              cubes: [
+                {
+                  origin: [-10, 34, -6],
+                  size: [6, 4, 4],
+                  pivot: [-6, 34, -4],
+                  uv: [44, 58],
+                },
+              ],
+            },
+            {
+              name: "ribbon_right",
+              cubes: [
+                {
+                  origin: [4, 34, -6],
+                  size: [6, 4, 4],
+                  pivot: [6, 34, -4],
+                  uv: [60, 58],
+                },
+              ],
+            },
+          ],
+        },
+        empty: {
+          boneCount: 0,
+          cubeCount: 0,
+          texWidth: 64,
+          texHeight: 64,
+          bones: [],
+        },
+      };
+
+      const PRESET_DESCS = {
+        steve:
+          "经典 Steve 模型 — 7 骨骼、36 立方体，含双层（外层半透明叠加）。渲染器应画出完整人形（头 ⛑️ 躯干 双臂 双腿）。",
+        slim: "纤细 Alex 模型 — 6 骨骼、24 立方体，手臂宽 3px 而非 4px。用于验证不同骨骼尺寸。",
+        hina: "复杂模型（模拟键山雏）— 15 骨骼、42 立方体，含裙摆四片 + 丝带蝴蝶结 + 袖子。用于验证大量立方体的缩放和布局。",
+        empty: "空模型 — 无骨骼，验证容错：Canvas 应保持空白不报错。",
+      };
+
+      const frontCanvas = document.getElementById("frontCanvas");
+      const fullCanvas = document.getElementById("fullCanvas");
+      const statsDiv = document.getElementById("stats");
+      const descDiv = document.getElementById("presetDesc");
+      const presetSelect = document.getElementById("presetSelect");
+      const renderBtn = document.getElementById("renderBtn");
+
+      function render(name) {
+        const model = PRESETS[name];
+        if (!model) return;
+
+        // 清空
+        [frontCanvas, fullCanvas].forEach((c) => {
+          c.getContext("2d").clearRect(0, 0, c.width, c.height);
+        });
+
+        // 前视图 Canvas（直接渲染）
+        const ctx1 = frontCanvas.getContext("2d");
+        renderModel2D(frontCanvas, { ...model, texture: null }, null);
+
+        // 完整 Canvas（也渲染，保留俯视图小窗）
+        const ctx2 = fullCanvas.getContext("2d");
+        renderModel2D(fullCanvas, { ...model, texture: null }, null);
+
+        // 统计信息
+        statsDiv.innerHTML = `
+    <div>骨骼: <code>${model.bones.length}</code>  ·  立方体: <code>${model.cubeCount}</code>  ·  纹理: <code>${model.texWidth}×${model.texHeight}</code></div>
+    <div style="margin-top:4px">骨骼列表: <code>${model.bones.map((b) => b.name).join(", ") || "（空）"}</code></div>
+  `;
+        descDiv.textContent = PRESET_DESCS[name] || "";
+      }
+
+      presetSelect.addEventListener("change", () => render(presetSelect.value));
+      renderBtn.addEventListener("click", () => render(presetSelect.value));
+
+      // 默认渲染 Steve
+      render("steve");
+    </script>
+  </body>
+</html>

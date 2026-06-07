@@ -157,6 +157,8 @@ export function bindRepoEvents(sr, ctx) {
           queueStatus.style.display = "none";
         }
       }
+      bus.emit("tree:reload");
+      bus.emit("stats:refresh");
     };
 
     const offEvents = () => {

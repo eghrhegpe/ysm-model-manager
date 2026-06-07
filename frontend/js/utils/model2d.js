@@ -71,6 +71,41 @@ function drawView(ctx, model, view, scale, ox, oy, textureImg) {
       ctx.strokeRect(drawX, drawY, drawW, drawH);
     }
   }
+
+  // 骨骼名标注
+  ctx.save();
+  ctx.font = "8px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  for (const bone of model.bones) {
+    const cs = bone.cubes || [];
+    if (!cs.length) continue;
+    let mnX = Infinity,
+      mxX = -Infinity,
+      mnY = Infinity,
+      mxY = -Infinity;
+    for (const c of cs) {
+      const [x, y, z] = c.origin;
+      const [sx, sy, sz] = c.size;
+      const px = x,
+        py = isFront ? y : z;
+      const pw = sx,
+        ph = isFront ? sy : sz;
+      if (px < mnX) mnX = px;
+      if (px + pw > mxX) mxX = px + pw;
+      if (py < mnY) mnY = py;
+      if (py + ph > mxY) mxY = py + ph;
+    }
+    const cx2 = ox + ((mnX + mxX) / 2) * scale;
+    const cy2 = oy - ((mnY + mxY) / 2) * scale;
+    const txt = bone.name;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    const tw = ctx.measureText(txt).width;
+    ctx.fillRect(cx2 - tw / 2 - 2, cy2 - 5, tw + 4, 10);
+    ctx.fillStyle = "rgba(205,214,244,0.9)";
+    ctx.fillText(txt, cx2, cy2);
+  }
+  ctx.restore();
 }
 
 function drawMiniView(ctx, model, view, scale, textureImg) {

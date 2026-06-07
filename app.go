@@ -1198,17 +1198,63 @@ func (a *App) ExtractPreviewTexture(modelPath string) string {
 		return ""
 	}
 
-	// 从 zip/7z/ysm 中找第一张 png
 	var pngData []byte
 	if ext == ".zip" || ext == ".ysm" {
 		pngData = extractPNGFromZip(data, int64(len(data)))
 	} else if ext == ".7z" {
 		pngData = extractPNGFrom7z(data, int64(len(data)))
 	}
+
+	// .ysm 是 YSGP 二进制格式，zip 提取失败时走 YSMParser
+	if len(pngData) == 0 && ext == ".ysm" {
+		pngData = a.extractTextureViaYSM(modelPath)
+	}
+
 	if len(pngData) == 0 {
 		return ""
 	}
 	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngData)
+}
+
+// extractTextureViaYSM 用 YSMParser 解码 .ysm 并提取第一张纹理
+func (a *App) extractTextureViaYSM(modelPath string) []byte {
+	parserPath := findYSMParser()
+	if parserPath == "" {
+		return nil
+	}
+	tmpDir, err := os.MkdirTemp("", "ysm-tex-*")
+	if err != nil {
+		return nil
+	}
+	defer os.RemoveAll(tmpDir)
+
+	inDir := filepath.Join(tmpDir, "input")
+	outDir := filepath.Join(tmpDir, "output")
+	os.MkdirAll(inDir, 0755)
+	os.MkdirAll(outDir, 0755)
+
+	ysmCopy := filepath.Join(inDir, filepath.Base(modelPath))
+	if err := copyFile(modelPath, ysmCopy); err != nil {
+		return nil
+	}
+
+	cmd := exec.Command(parserPath, "-i", inDir, "-o", outDir)
+	if err := cmd.Run(); err != nil {
+		return nil
+	}
+
+	var png []byte
+	filepath.WalkDir(outDir, func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || png != nil {
+			return nil
+		}
+		low := strings.ToLower(p)
+		if strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg") {
+			png, _ = os.ReadFile(p)
+		}
+		return nil
+	})
+	return png
 }
 
 // GetPackInfo 读取文件夹中的 ysm-pack.json，找 ysm-pack.png 返回 base64
@@ -1411,11 +1457,20 @@ func (a *App) SavePreviewTempFile(base64Data string) (string, error) {
 	return tmpFile.Name(), nil
 }
 
+// ReadFileBytes 读取文件返回字节数组（供前端 WASM 解码使用）
+func (a *App) ReadFileBytes(path string) []byte {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	return data
+}
+
 // AnalyzeBedrockModel 打开模型包（zip/7z/ysm），解析几何体提取骨骼结构
 func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 	ext := strings.ToLower(filepath.Ext(modelPath))
 
-	// .ysm 直接用 YSMParser 解码
+	// .ysm 由前端 WASM 解码，Go 端仅保留 CLI fallback
 	if ext == ".ysm" {
 		return a.runYSMParserOnFile(modelPath)
 	}

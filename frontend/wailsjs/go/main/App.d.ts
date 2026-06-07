@@ -73,6 +73,8 @@ export function GetMinecraftPath():Promise<string>;
 
 export function GetPackInfo(arg1:string):Promise<types.PackInfo>;
 
+export function GetWasmBinary():Promise<Array<number>>;
+
 export function GetWindowPosition():Promise<types.WindowState>;
 
 export function HasYSMMod(arg1:string):Promise<boolean>;
@@ -128,6 +130,8 @@ export function MoveToRecycleEx(arg1:string):Promise<string|string>;
 export function OpenFolder(arg1:string):Promise<void>;
 
 export function QueueStatus():Promise<number|boolean>;
+
+export function ReadFileBytes(arg1:string):Promise<Array<number>>;
 
 export function RelinkCustomDir(arg1:string,arg2:string):Promise<number>;
 

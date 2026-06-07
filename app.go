@@ -1248,6 +1248,26 @@ func (a *App) ExtractYSMHeaderFromBase64(base64Data string) ysm.YSMHeader {
 	return ysm.AnalyzeYSMHeaderFromBytes(data)
 }
 
+// SavePreviewTempFile 将 base64 数据保存到临时文件，返回路径（用于导入流程的模型预览）
+func (a *App) SavePreviewTempFile(base64Data string) (string, error) {
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return "", err
+	}
+	tmpDir := filepath.Join(os.TempDir(), "ysm-preview")
+	os.MkdirAll(tmpDir, 0755)
+	tmpFile, err := os.CreateTemp(tmpDir, "preview-*.ysm")
+	if err != nil {
+		return "", err
+	}
+	defer tmpFile.Close()
+	_, err = tmpFile.Write(data)
+	if err != nil {
+		return "", err
+	}
+	return tmpFile.Name(), nil
+}
+
 // ========== 安装 ==========
 func (a *App) InstallModelFile(src, mcRoot string) (string, error) {
 	return installer.InstallToGlobal(src, mcRoot)

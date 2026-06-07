@@ -38,7 +38,7 @@ export function bindActions(root) {
     let logExpanded = false;
     logToggle.onclick = () => {
       logExpanded = !logExpanded;
-      logList.style.maxHeight = logExpanded ? "none" : "72px";
+      logList.style.maxHeight = logExpanded ? "300px" : "72px";
       logFilter.style.display = logExpanded ? "flex" : "none";
       logToggle.textContent = logExpanded ? "收起 ▾" : "展开 ▸";
       if (logExpanded) bus.emit("logs:refresh");

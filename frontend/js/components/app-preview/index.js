@@ -79,15 +79,18 @@ class AppPreview extends HTMLElement {
     }
   }
 
-  /** 自动匹配缩略图：1. 同目录散图 → 2. zip/7z 解压纹理 */
+  /** 自动匹配缩略图：.ysm 走 WASM，其他走 Go 端 */
   async _loadPreviewImage(modelPath) {
+    // .ysm 先试 WASM，失败则走 Go（ExtractPreviewTexture 内置 YSMParser 回退）
+    if (/\.ysm$/i.test(modelPath)) {
+      const decoded = await this._decodeYsmViaWasm(modelPath);
+      if (decoded?.texture) return decoded.texture;
+    }
     try {
       const { FindPreviewImage, ExtractPreviewTexture } =
         await import("../../../wailsjs/go/main/App.js");
-      // 先找同目录散图
       const loose = await FindPreviewImage(modelPath);
       if (loose) return loose;
-      // 再尝试 zip/7z 解压纹理
       const tex = await ExtractPreviewTexture(modelPath);
       return tex || null;
     } catch (_) {
@@ -95,7 +98,7 @@ class AppPreview extends HTMLElement {
     }
   }
 
-  /** 加载 2D 模型骨骼线条图（zip 内含 minecraft:geometry 或 7z） */
+  /** 加载 2D 模型骨骼线条图 */
   async _loadModel2D(modelPath) {
     const content = this._root.getElementById("preview-content");
     if (!content) return;
@@ -106,9 +109,24 @@ class AppPreview extends HTMLElement {
     content.appendChild(container);
 
     try {
-      const { AnalyzeBedrockModel } =
-        await import("../../../wailsjs/go/main/App.js");
-      const model = await AnalyzeBedrockModel(modelPath);
+      let model;
+
+      // .ysm → 前端 WASM 解码（缓存复用，免二次解码）
+      if (/\.ysm$/i.test(modelPath)) {
+        const decoded = await this._decodeYsmViaWasm(modelPath);
+        if (decoded?.geometry) {
+          model = decoded.geometry;
+        } else {
+          this._appendDebug(container, "[YSM] WASM 返回空，回退 Go");
+        }
+      }
+
+      // 非 .ysm 或 WASM 失败 → 走 Go
+      if (!model) {
+        const { AnalyzeBedrockModel } =
+          await import("../../../wailsjs/go/main/App.js");
+        model = await AnalyzeBedrockModel(modelPath);
+      }
 
       if (!model?.bones?.length) {
         container.innerHTML = `<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">🏗️ 模型结构</div><div style="font-size:9px;color:#888;padding:8px 0">⚠️ 未找到几何数据</div>`;
@@ -141,9 +159,91 @@ class AppPreview extends HTMLElement {
         });
       }
       renderModel2D(canvas, model, textureImg);
+
+      // 导出按钮
+      const { addExportButton } = await import("../../utils/canvas-export.js");
+      addExportButton(container, canvas, modelPath.split("/").pop().split("\\").pop());
     } catch (e) {
       container.innerHTML = `<div style="font-size:10px;font-weight:600;color:#ff6b6b;margin-bottom:4px">🏗️ 模型结构</div><div style="font-size:9px;color:#888;padding:8px 0">⚠️ 解析失败: ${e?.message ?? e}</div>`;
     }
+  }
+
+  /** 通过前端 WASM 解码 .ysm，返回 { texture, geometry }（缓存复用） */
+  async _decodeYsmViaWasm(modelPath) {
+    if (this._ysmCache) return this._ysmCache;
+    const content = this._root.getElementById("preview-content");
+    try {
+      this._appendDebug(content, "[YSM] 加载 WASM 模块...");
+      const { initYSMParser, decodeYsmFile } = await import("../../wasm/ysm-parser.js");
+      const ok = await initYSMParser();
+      this._appendDebug(content, `[YSM] WASM init: ${ok ? "✅" : "❌"}`);
+      if (!ok) return null;
+
+      this._appendDebug(content, "[YSM] 读取文件...");
+      const { ReadFileBytes } = await import("../../../wailsjs/go/main/App.js");
+      const bytes = await ReadFileBytes(modelPath);
+      this._appendDebug(content, `[YSM] 读取 ${bytes?.length || 0} bytes`);
+      if (!bytes?.length) return null;
+
+      this._appendDebug(content, "[YSM] WASM 解码...");
+      const files = await decodeYsmFile(bytes);
+      this._appendDebug(content, `[YSM] 输出 ${files?.length || 0} 文件`);
+
+      // 列出文件
+      if (files?.length) {
+        const names = files.map((f) => f.path).join(", ");
+        this._appendDebug(content, `[YSM] 文件: ${names}`);
+      }
+      if (!files?.length) return null;
+
+      // 提取纹理
+      let texture = null;
+      const texFile = files.find((f) => f.path.endsWith(".png") || f.path.endsWith(".jpg"));
+      if (texFile) {
+        const blob = new Blob([texFile.data]);
+        texture = URL.createObjectURL(blob);
+        this._appendDebug(content, `[YSM] 纹理: ${texFile.path}`);
+      }
+
+      // 解析几何体
+      let geometry = null;
+      for (const f of files) {
+        if (!f.path.startsWith("models/") || !f.path.endsWith(".json")) continue;
+        this._appendDebug(content, `[YSM] 解析 ${f.path}...`);
+        try {
+          const jsonStr = new TextDecoder().decode(f.data);
+          const parsed = parseBedrockGeometryFromJSON(jsonStr);
+          if (parsed?.bones?.length) {
+            this._appendDebug(content, `[YSM] ✅ ${f.path}: ${parsed.bones.length}骨 ${parsed.cubeCount}方`);
+            if (!geometry || parsed.bones.length > geometry.bones.length) {
+              geometry = parsed;
+              geometry.texture = texture;
+            }
+          } else {
+            this._appendDebug(content, `[YSM] ⚠️ ${f.path}: 无骨骼`);
+          }
+        } catch (e) {
+          this._appendDebug(content, `[YSM] ❌ ${f.path}: ${e?.message}`);
+        }
+      }
+
+      this._ysmCache = { texture, geometry };
+      return this._ysmCache;
+    } catch (e) {
+      this._appendDebug(content, `[YSM] ❌ ${e?.message || e}`);
+      return null;
+    }
+  }
+
+  /** 在预览区追加调试小字 */
+  _appendDebug(container, msg) {
+    try {
+      const el = container || this._root.getElementById("preview-content") || this._root;
+      const dbg = document.createElement("div");
+      dbg.style.cssText = "font-size:9px;color:#ff6b6b;margin-top:2px;opacity:0.8";
+      dbg.textContent = msg;
+      (el.appendChild ? el : this._root).appendChild(dbg);
+    } catch (_) {}
   }
 
   async _showModelDetail(path) {
@@ -237,3 +337,33 @@ ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px
   }
 }
 customElements.define("app-preview", AppPreview);
+
+// ===== 工具：从 JSON 字符串解析 Bedrock geometry =====
+function parseBedrockGeometryFromJSON(jsonStr) {
+  const raw = JSON.parse(jsonStr);
+  const geo = raw?.["minecraft:geometry"]?.[0];
+  if (!geo?.bones?.length) return null;
+
+  const bones = [];
+  let cubeCount = 0;
+  for (const b of geo.bones) {
+    const cubes = [];
+    for (const c of b.cubes || []) {
+      cubes.push({
+        origin: c.origin || [0, 0, 0],
+        size: c.size || [1, 1, 1],
+        pivot: c.pivot || [0, 0, 0],
+      });
+    }
+    bones.push({ name: b.name, cubes });
+    cubeCount += cubes.length;
+  }
+
+  return {
+    boneCount: bones.length,
+    cubeCount,
+    texWidth: geo.description?.texture_width || 0,
+    texHeight: geo.description?.texture_height || 0,
+    bones,
+  };
+}

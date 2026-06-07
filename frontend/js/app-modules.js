@@ -79,3 +79,13 @@ window
     const theme = localStorage.getItem("theme") || "system";
     if (theme === "system") applyTheme("system");
   });
+
+// ===== F12 / Ctrl+Shift+I 打开 DevTools（生产环境调试用）=====
+document.addEventListener("keydown", (e) => {
+  if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
+    e.preventDefault();
+    try {
+      window.runtime.WindowShowDevtools?.();
+    } catch (_) {}
+  }
+});

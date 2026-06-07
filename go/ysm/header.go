@@ -2,6 +2,7 @@ package ysm
 
 import (
 	"bufio"
+	"bytes"
 	"os"
 	"strings"
 )
@@ -35,34 +36,22 @@ type YSMHeader struct {
 	Tips string `json:"tips,omitempty"`
 }
 
-// AnalyzeYSMHeader 读取 YSM 文件的文本头部，提取元数据
-// 适用于所有 YSM 文件（加密和非加密），不需要解压
-func AnalyzeYSMHeader(path string) YSMHeader {
+// scanHeader 从 bufio.Scanner 读取 YSM 头部，提取元数据
+func scanHeader(scanner *bufio.Scanner) YSMHeader {
 	h := YSMHeader{}
-
-	f, err := os.Open(path)
-	if err != nil {
-		return h
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	// 只读前 200 行（头部信息不会超过这个范围）
 	limit := 0
 	currentSection := ""
 	var tipsLines []string
+	var preambleLines []string
 
 	for scanner.Scan() && limit < 200 {
 		limit++
-		line := scanner.Text()
+		line := strings.TrimLeft(scanner.Text(), "\uFEFF")
 
-		// 检测文件头
 		if line == "YSGP" {
 			h.IsYSM = true
 			continue
 		}
-
-		// 检测分区
 		if strings.HasPrefix(line, "---") && strings.Contains(line, "[") {
 			if strings.Contains(line, "Metadata") {
 				currentSection = "metadata"
@@ -79,18 +68,13 @@ func AnalyzeYSMHeader(path string) YSMHeader {
 			}
 			continue
 		}
-
-		// 遇到分割线停止
 		if strings.HasPrefix(line, "===") {
 			break
 		}
-
-		// 解析 <tag> value
 		if strings.HasPrefix(line, "<") {
 			if idx := strings.Index(line, ">"); idx > 0 {
 				tag := strings.TrimSpace(line[1:idx])
 				value := strings.TrimSpace(line[idx+1:])
-
 				switch currentSection {
 				case "metadata":
 					switch tag {
@@ -101,9 +85,7 @@ func AnalyzeYSMHeader(path string) YSMHeader {
 					case "hash":
 						h.Hash = value
 					case "license":
-						// <license> 可能后面有子标签，取整行
 						if value == "" {
-							// 看下一行是否是子标签
 							continue
 						}
 						h.License = value
@@ -113,10 +95,6 @@ func AnalyzeYSMHeader(path string) YSMHeader {
 						h.LinkUpdate = value
 					}
 				case "export":
-					switch tag {
-					case "time", "rand":
-						// 不需要
-					}
 				case "codec":
 					switch tag {
 					case "format":
@@ -125,27 +103,17 @@ func AnalyzeYSMHeader(path string) YSMHeader {
 						h.Crypto = parseInt(value)
 					}
 				}
-
-				// 处理作者子标签
-				if tag == "name" && currentSection == "" {
-					// 可能是 author 的子标签
-				}
 			}
 			continue
 		}
-
-		// 处理 tips 文本
 		if currentSection == "tips" && strings.TrimSpace(line) != "" {
 			tipsLines = append(tipsLines, strings.TrimSpace(line))
 		}
-
-		// 处理作者子标签：缩进的 <tag> value
 		if strings.HasPrefix(strings.TrimSpace(line), "<") && strings.Contains(line, ">") {
 			trimmed := strings.TrimSpace(line)
 			if idx := strings.Index(trimmed, ">"); idx > 0 {
 				tag := trimmed[1:idx]
 				value := strings.TrimSpace(trimmed[idx+1:])
-				// 这些通常是作者的子标签
 				switch tag {
 				case "name":
 					if h.AuthorName == "" {
@@ -160,13 +128,42 @@ func AnalyzeYSMHeader(path string) YSMHeader {
 				}
 			}
 		}
+		if currentSection == "" && strings.TrimSpace(line) != "" {
+			preambleLines = append(preambleLines, line)
+		}
 	}
 
 	if len(tipsLines) > 0 {
 		h.Tips = strings.Join(tipsLines, "\n")
+	} else if len(preambleLines) > 0 {
+		for i, l := range preambleLines {
+			cleaned := strings.TrimSpace(l)
+			cleaned = strings.TrimPrefix(cleaned, "//")
+			cleaned = strings.TrimPrefix(cleaned, "#")
+			cleaned = strings.TrimPrefix(cleaned, ";")
+			preambleLines[i] = strings.TrimSpace(cleaned)
+		}
+		h.Tips = strings.Join(preambleLines, "\n")
 	}
-
 	return h
+}
+
+// AnalyzeYSMHeader 读取 YSM 文件的文本头部，提取元数据
+func AnalyzeYSMHeader(path string) YSMHeader {
+	f, err := os.Open(path)
+	if err != nil {
+		return YSMHeader{}
+	}
+	defer f.Close()
+	return scanHeader(bufio.NewScanner(f))
+}
+
+// AnalyzeYSMHeaderFromBytes 从字节数据解析 YSM 头部（适用于 base64 导入场景）
+func AnalyzeYSMHeaderFromBytes(data []byte) YSMHeader {
+	if len(data) > 4096 {
+		data = data[:4096]
+	}
+	return scanHeader(bufio.NewScanner(bytes.NewReader(data)))
 }
 
 func parseInt(s string) int {

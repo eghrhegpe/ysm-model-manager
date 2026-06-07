@@ -93,6 +93,8 @@ export function bindTreeEvents(container, vm) {
   // 左键点击文件 → 多选（Ctrl/Shift）或显示模型详情
   container.querySelectorAll(".fl").forEach((el) => {
     el.addEventListener("click", (e) => {
+      // 忽略右键（仅处理左键，防止右键触发清空选中）
+      if (e.button !== 0) return;
       if (e.target.closest(".ck")) return;
       e.stopPropagation();
       const fullPath = el.dataset.fullpath || el.dataset.path;
@@ -101,8 +103,11 @@ export function bindTreeEvents(container, vm) {
         const isCtrl = e.ctrlKey || e.metaKey;
         const isShift = e.shiftKey;
 
-        if (isShift && selectState.lastKey) {
+        if (isShift) {
           e.preventDefault();
+          // Shift 阻止浏览器默认文本选中
+          document.getSelection()?.removeAllRanges();
+          if (!selectState.lastKey) return;
           const allPaths = Array.from(container.querySelectorAll(".fl"))
             .map((el) => el.dataset.fullpath || el.dataset.path)
             .filter(Boolean);
@@ -119,6 +124,11 @@ export function bindTreeEvents(container, vm) {
           }
           selectState.lastKey = fullPath;
           vm._renderTree();
+          const freshTree2 = vm._root?.getElementById("tree");
+          freshTree2?.querySelectorAll(".fl").forEach((el) => {
+            const p = el.dataset.fullpath || el.dataset.path;
+            if (selectState.keys.has(p)) el.classList.add("selected");
+          });
           updateSelectCount(vm._root);
           return;
         }
@@ -126,19 +136,28 @@ export function bindTreeEvents(container, vm) {
         if (isCtrl) {
           toggleSelect(fullPath, false);
           vm._renderTree();
+          // 重新应用高亮：用 vm._root 重新查，避免闭包 container 过时
+          const freshTree = vm._root?.getElementById("tree");
+          freshTree?.querySelectorAll(".fl").forEach((el) => {
+            const p = el.dataset.fullpath || el.dataset.path;
+            if (selectState.keys.has(p)) el.classList.add("selected");
+          });
           updateSelectCount(vm._root);
           return;
         }
 
-        // 纯单击：有选中时清空并选中当前
-        if (selectState.keys.size > 0) {
-          selectState.keys.clear();
-          selectState.lastKey = null;
-          selectState.keys.add(fullPath);
-          selectState.lastKey = fullPath;
-          vm._renderTree();
-          updateSelectCount(vm._root);
-        }
+        // 纯单击：清空旧选中，蓝底高亮当前文件
+        selectState.keys.clear();
+        selectState.lastKey = null;
+        selectState.keys.add(fullPath);
+        selectState.lastKey = fullPath;
+        vm._renderTree();
+        const freshTree3 = vm._root?.getElementById("tree");
+        freshTree3?.querySelectorAll(".fl").forEach((el) => {
+          const p = el.dataset.fullpath || el.dataset.path;
+          if (selectState.keys.has(p)) el.classList.add("selected");
+        });
+        updateSelectCount(vm._root);
       }
 
       bus.emit("model:select", { path: fullPath });
@@ -154,19 +173,31 @@ export function bindTreeEvents(container, vm) {
       const nameEl = el.querySelector(".nm");
       const name = nameEl?.textContent?.replace(/^\S+\s/, "") || "";
 
-      // 如果多选中有这个文件，对整个选中集操作
-      if (
-        ENABLE_MULTI_SELECT &&
-        selectState.keys.size > 1 &&
-        selectState.keys.has(fullPath)
-      ) {
-        const count = selectState.keys.size;
+      // 从 DOM 直接获取选中数量（比 selectState.keys 更可靠）
+      const selectedEls = Array.from(
+        container.querySelectorAll(".fl.selected"),
+      );
+      const selectedPaths = selectedEls
+        .map((el) => el.dataset.fullpath || el.dataset.path)
+        .filter(Boolean);
+
+      // 如果当前文件没被选中但其他文件选中了，把它也加入选中集
+      if (selectedPaths.length > 0 && !selectedPaths.includes(fullPath)) {
+        selectedPaths.push(fullPath);
+        el.classList.add("selected");
+      }
+
+      const multiCount = Math.max(selectedPaths.length, selectState.keys.size);
+      if (ENABLE_MULTI_SELECT && multiCount > 1) {
+        // 同步到 selectState.keys（确保后续操作一致）
+        selectedPaths.forEach((p) => selectState.keys.add(p));
+        selectState.lastKey = fullPath;
         bus.emit("ctx:show", {
           x: e.clientX,
           y: e.clientY,
           type: "batch",
-          count,
-          paths: Array.from(selectState.keys),
+          count: multiCount,
+          paths: selectedPaths,
         });
         return;
       }

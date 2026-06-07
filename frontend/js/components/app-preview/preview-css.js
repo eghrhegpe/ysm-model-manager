@@ -61,4 +61,6 @@ h3 { font-size: 11px; font-weight: 600; color: var(--txt); text-transform: upper
 .md-value { color: var(--txt); font-weight: 500; }
 .md-divider { border: none; border-top: 1px solid var(--bd); margin: 8px 0; }
 .err { font-size: 10px; color: #f38ba8; padding: 4px 0; }
+.preview-thumb { margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: var(--surf); border: 1px solid var(--bd); }
+.preview-thumb img { display: block; width: 100%; height: auto; object-fit: cover; }
 `;

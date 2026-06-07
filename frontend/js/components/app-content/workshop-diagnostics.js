@@ -166,7 +166,7 @@ async function startDedup(root, esc) {
         html += `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background .1s;background:${isDefault ? "var(--hover)" : "transparent"}"
 >
 <input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} style="flex-shrink:0;accent-color:var(--accent)">
-<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)" title="${esc(e.Path)}">${esc(e.Name)}</span>
+<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)" title="${esc(e.Path)}">${renderDisplayName(e.Name)}</span>
 <span style="font-size:9px;color:var(--muted);flex-shrink:0;margin-right:4px">${(e.Size / 1024).toFixed(0)}KB</span>
 ${dateStr ? `<span style="font-size:8px;color:var(--muted);flex-shrink:0">${dateStr}</span>` : ""}
 ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;background:#a6e3a122;color:#a6e3a1">推荐</span>' : ""}
@@ -272,7 +272,7 @@ async function scanConflicts(root, esc) {
     let html = `<div class="stat-row" style="padding:8px 12px;color:#f38ba8;font-size:11px">⚠️ 发现 ${conflicts.length} 个文件存在于多个整合包</div>`;
     conflicts.slice(0, 50).forEach(([name, insNames]) => {
       html += `<div class="conflict-row">
-<span class="conflict-name">${esc(name)}</span>
+<span class="conflict-name">${renderDisplayName(name)}</span>
 <span class="conflict-ver">${insNames.length} 个整合包</span>
 </div>`;
       insNames.forEach((n) => {

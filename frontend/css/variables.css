@@ -17,6 +17,10 @@
   --r: 8px;
   --sidebar-width: 300px;
   --preview-width: 240px;
+  --free: #a6e3a1;
+  --paid: #f38ba8;
+  --sz-green: #a6e3a1;
+  --sz-red: #f38ba8;
 }
 
 /* ===== 温暖木纹（明亮模式） ===== */
@@ -36,6 +40,10 @@
   --meta-date: #a0866a;
   --sidebar-width: 300px;
   --preview-width: 240px;
+  --free: #1971c2;
+  --paid: #c62828;
+  --sz-green: #2e7d32;
+  --sz-red: #c62828;
 }
 
 /* ===== 极简深邃（专业向深色） ===== */
@@ -55,6 +63,10 @@
   --meta-date: #666666;
   --sidebar-width: 300px;
   --preview-width: 240px;
+  --free: #a6e3a1;
+  --paid: #f38ba8;
+  --sz-green: #a6e3a1;
+  --sz-red: #f38ba8;
 }
 
 * {

@@ -228,4 +228,14 @@ export async function initSettings(root) {
 
   // 检查更新
   initVersionUpdater(root);
+
+  // 打开发布页
+  root.getElementById("set-releases")?.addEventListener("click", () => {
+    const { OpenFolder } = window.go?.main?.App || {};
+    // 用系统默认浏览器打开 GitHub Releases
+    window.open(
+      "https://github.com/eghrhegpe/ysm-model-manager/releases",
+      "_blank",
+    );
+  });
 }

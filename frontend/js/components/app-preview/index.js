@@ -148,13 +148,18 @@ class AppPreview extends HTMLElement {
 
   /** 显示文件夹下的整合包信息（ysm-pack.json + ysm-pack.png） */
   async _showPackInfo(dirPath) {
-    const esc = (s) => (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const esc = (s) =>
+      (s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
     this._root.innerHTML = `<div class="content" id="preview-content"><h3>📦 整合包</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
     try {
       const { GetPackInfo } = await import("../../../wailsjs/go/main/App.js");
       const pack = await GetPackInfo(dirPath);
       if (!pack || (!pack.name && !pack.description)) {
-        const folderName = dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
+        const folderName =
+          dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
         this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 文件夹</h3><div class="model-detail-title" style="font-size:13px;font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">该文件夹暂无整合包信息</div></div></div>`;
         return;
       }

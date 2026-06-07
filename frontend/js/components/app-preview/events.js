@@ -33,14 +33,37 @@ export function bindActions(root) {
   // ===== 日志展开/折叠 =====
   const logToggle = root.getElementById("dp-log-toggle");
   const logList = root.getElementById("dp-log-list");
+  const logFilter = root.getElementById("dp-log-filter");
   if (logToggle && logList) {
     let logExpanded = false;
     logToggle.onclick = () => {
       logExpanded = !logExpanded;
       logList.style.maxHeight = logExpanded ? "none" : "72px";
+      logFilter.style.display = logExpanded ? "flex" : "none";
       logToggle.textContent = logExpanded ? "收起 ▾" : "展开 ▸";
       if (logExpanded) bus.emit("logs:refresh");
     };
+  }
+
+  // 日志筛选按钮
+  root.querySelectorAll(".dp-log-fbtn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      root
+        .querySelectorAll(".dp-log-fbtn")
+        .forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      bus.emit("logs:refresh");
+    });
+  });
+
+  // 日志搜索
+  const logSearch = root.getElementById("dp-log-search");
+  if (logSearch) {
+    let searchTimer;
+    logSearch.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => bus.emit("logs:refresh"), 300);
+    });
   }
 
   // 清空日志
@@ -200,7 +223,7 @@ export function bindBusUpdates(root, unsubs) {
   });
 }
 
-/** 加载日志到预览面板 */
+/** 加载日志到预览面板（含筛选和搜索） */
 export function loadLogsPreview(root, logs) {
   const list = root.getElementById("dp-log-list");
   if (!list) return;
@@ -209,9 +232,21 @@ export function loadLogsPreview(root, logs) {
       '<div class="stat-row" style="font-size:10px;color:#6c7086">暂无日志</div>';
     return;
   }
+  // 读取筛选状态
+  const activeBtn = root.querySelector(".dp-log-fbtn.active");
+  const filter = activeBtn ? activeBtn.dataset.status : "all";
+  const search = (root.getElementById("dp-log-search")?.value || "")
+    .trim()
+    .toLowerCase();
+
   const items = logs
-    .slice(-50)
+    .slice(-100)
     .reverse()
+    .filter((l) => {
+      if (filter !== "all" && l.Status !== filter) return false;
+      if (search && !l.ModelName.toLowerCase().includes(search)) return false;
+      return true;
+    })
     .map((l) => {
       const status =
         l.Status === "success" ? "✅" : l.Status === "failed" ? "❌" : "⏭️";
@@ -234,7 +269,9 @@ export function loadLogsPreview(root, logs) {
       return `<div class="log-entry"><span>${status}</span><span class="log-msg">${nameHtml}${errHtml}</span><span class="log-time">${time}</span></div>`;
     })
     .join("");
-  list.innerHTML = items;
+  list.innerHTML =
+    items ||
+    '<div class="stat-row" style="font-size:10px;color:#6c7086">无匹配日志</div>';
 }
 
 function esc(s) {

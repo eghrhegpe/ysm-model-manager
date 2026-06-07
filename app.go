@@ -1423,6 +1423,8 @@ func (a *App) InstallModelTo(src, customDir string) error {
     err := installer.Install(src, customDir, a.RepoRoot, a.LinkMode)
     if err != nil {
         a.logger.Add(filepath.Base(src), src, customDir, 0, "failed", err.Error())
+    } else {
+        a.logger.Add(filepath.Base(src), src, customDir, 0, "success", "")
     }
     return err
 }

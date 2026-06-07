@@ -652,3 +652,340 @@ app-legacy-bundle.js
 ---
 
 _—第二章完—_
+
+### 第三章 · 神笔马良
+
+| 章节                                      | 标题                   | 对应真实事件                               |
+| ----------------------------------------- | ---------------------- | ------------------------------------------ |
+| [第十二回](#第十二回--画皮难画骨)         | 画皮难画骨             | Canvas 2D 渲染颜色太淡不可见               |
+| [第十三回](#第十三回--YSGP-的密室)        | YSGP 的密室            | .ysm 是加密二进制非 zip，需 YSMParser 解码 |
+| [第十四回](#第十四回--花括号疑案)         | 花括号疑案             | `replace_string_in_file` 吃掉方法闭合 `}`  |
+| [第十五回](#第十五回--以子之盾)           | 以子之盾               | 集成 YSMParser 的伦理决策过程              |
+| [后记三](#后记三--技术是为善良的人准备的) | 技术是为善良的人准备的 | v1.0.8 封板                                |
+
+---
+
+_—第三章—_
+
+## 第十二回 · 画皮难画骨
+
+2D 渲染器第一次被召唤出来的时候，整个预览面板都屏住了呼吸。
+
+「🏗️ 模型结构……好了！」不知道谁喊了一声。
+
+可是什么都没有。
+
+Canvas 静静地躺在那里，纯黑背景上什么都没有。不是画坏了，是——根本没人能看见它画了什么。
+
+「这不科学，」`renderModel2D` 委屈地说，「我明明画了 9716 个像素！」
+
+问题出在颜色上。`rgba(124,131,255,0.15)`——15% 的透明度，在深色主题的 UI 上，跟透明没什么区别。就像用白色蜡笔在白纸上画画。
+
+调试员把填充从 0.15 调到了 0.45，把边框从 0.6 调到了 0.85。前视图 + 俯视图小窗，人形骨架终于清晰可见了。
+
+Steve 模型的 36 个立方体全部到齐。
+
+「这不就看见了吗，」Canvas 小声嘀咕，「早该调亮一点。」
+
+---
+
+## 第十三回 · YSGP 的密室
+
+「不行，.ysm 打不开。」
+
+`AnalyzeBedrockModel` 已经试了三次了。每次都用 `zip.NewReader` 去读，每次都被拒之门外。
+
+「这是一个 zip 吧？」它不死心。
+
+不是。`.ysm` 文件从来就不是 zip。
+
+密室的门上刻着四个字节：`59 53 47 50`——那是"YSGP"的 ASCII 码，映素小组的签名。门上挂着 AES 加密锁，核心数据在锁后面安然沉睡。
+
+`parseBedrockFromZip` 在门外转了三圈，什么都没找到，耸耸肩回去了。
+
+「这活我干不了，得找专业的。」
+
+专业的名字叫 YSMParser。它是一个 C++ 写的解析器，能读出 YSGP 头部、验证 MD5、解密 AES 载荷、把模型文件还原成 `minecraft:geometry` 格式。
+
+它被请来的时候，只带了两个文件：`YSMParser.exe` 和 `YSMParserJNI.dll`。
+
+「放我同目录，」它说，「剩下的交给我。」
+
+---
+
+## 第十四回 · 花括号疑案
+
+`app.go` 的编辑室里，一段代码正在被替换。
+
+「把这段旧函数换掉，」调试员操作着 `replace_string_in_file`，「用新逻辑替换。」
+
+旧字符串被精确地匹配了。新字符串被写入。文件保存。
+
+构建。
+
+`vite build` 报错：`Parse error @:1:1`
+
+「怎么回事？」
+
+查了半天——原来替换时，旧字符串包含了 `_loadModel2D` 方法的闭合花括号 `}`，但新字符串**没**把它放回去。就像给病人换心脏，缝好了胸腔才想起来——心跳恢复了，但还没关胸。
+
+`_showModelDetail` 看到的是一段没有结尾的方法定义，语法错误，全线崩溃。
+
+「这种错，」`_loadModel2D` 叹气，「不是第一次了。」
+
+它想起上一次，同样的原因，同样的报错位置。花括号总在字符串替换中迷失自己——被吃掉、被重复、被放在不该放的位置。
+
+从此，每个 `replace_string_in_file` 之后，都会紧跟着一声口令：
+
+「`npx vite build`。」
+
+立即验证，绝不攒多轮。
+
+---
+
+## 第十五回 · 以子之盾
+
+集成的最后一关，不是技术，是人心。
+
+「我们真的要加这个吗？」有人问。
+
+窗外是深夜，屏幕上是 YSMParser 的 README——"全版本加密格式支持"。
+
+这不是普通的库。这是**能打开加密模型**的库。
+
+——做了，意味着你的工具能拆加密。
+——不做，意味着加密模型的用户永远看不到骨骼预览。
+
+会议室沉默了 3.7 秒。
+
+然后理智的声音开口了：「我们不是在破解，我们是在兼容。」
+
+「YSMParser 已经开源了。命令行跑一下就能导出完整模型。不集成，拦不住任何人；集成了，反而让我们用户的管理体验更完整。」
+
+「我们只画线框图。不导出文件、不提取纹理、不生成可重新导入的格式。」
+
+「就像 Steam 的 3D 预览——不会因此就不买了。」
+
+`copilot-instructions.md` 点了点头，记录下这些原则：
+
+- 永远只做 2D 预览/线框图
+- 不导出完整模型
+- 已明确告知用户这是预览用途
+
+决议通过。
+
+YSMParser.exe 被正式迎入 `build/bin/` 目录，和 `YSM-Model-Manager.exe` 并肩而立。
+
+「不是武器，」后者说，「是工具。」
+
+「一样，」前者笑了笑，「工具用对了就是武器，用对了方向就不是。」
+
+---
+
+## 后记三 · 技术是为善良的人准备的
+
+那个加密模型的 187 根骨骼、877 个立方体的线框图，在 Canvas 上舒展开来。
+
+它是一把枪的形状——Eanes，碧蓝档案 X 彩虹六号的原创角色，持盾状态。
+
+每一根骨骼都清清楚楚。头、躯干、四肢、持盾手。这是创作者在 BlockBench 里一 cube 一 cube 堆出来的心血，现在以线框的形式，安静地躺在一个管理器的预览面板里。
+
+没有纹理被提取。没有文件被导出。没有模型被重新打包。
+
+只有线。
+
+白色的线，在深色背景上勾勒出形状。
+
+「够了，」创作者如果看到应该会说，「这就是我想让人看到的——我的模型真的有 187 根骨骼。」
+
+技术是工具。
+
+工具是中性的。
+
+但设计工具的人——可以选择工具的方向。
+
+`model2d.js` 合上文件，进入了下一次的等待。
+
+窗外天快亮了。
+
+---
+
+_—第三章完—_
+
+### 第四章 · 铸剑为犁
+
+| 章节                                  | 标题           | 对应真实事件                                     |
+| ------------------------------------- | -------------- | ------------------------------------------------ |
+| [第十六回](#第十六回--wasm-的诅咒)    | WASM 的诅咒    | WASM 加载失败、胶水脚本路径问题、wasmBinary 注入 |
+| [第十七回](#第十七回--远征emsdk)      | 远征 EMSDK     | 安装 CMake + Ninja，自编译 YSMParser 到 WASM     |
+| [第十八回](#第十八回--同一把剑的两面) | 同一把剑的两面 | WASM 不支持新版格式而 CLI 支持，双路径回退       |
+| [后记四](#后记四--工具之魂)           | 工具之魂       | v1.0.8 封板后感                                  |
+
+---
+
+_—第四章—_
+
+## 第十六回 · WASM 的诅咒
+
+"我们能不能不跑那个 exe 了？"
+
+`app-preview` 看着 `build/bin/` 目录里的 `YSMParser.exe`，越看越不顺眼。一个桌面应用，要调用外部 exe 来解码模型——这感觉就像开着跑车却要下来推。
+
+"我要 WASM。"
+
+`wails dev` 的终端里，一个新计划悄然启动。
+
+第一步是下载官方发布的 WASM 包。`YSMParser.wasm` 只有 1.1 MB，`YSMParser.js` 胶水代码 75 KB。把它们放进 `frontend/public/wasm/`，加一行 `<script src="wasm/YSMParser.js">`。
+
+构建。运行。
+
+`WASM init: ❌`
+
+"工厂函数名叫 `YSMParserModule`，不是 `YSMParser`！"有人发现。
+
+改。构建。运行。
+
+`WASM init: ❌`
+
+"胶水脚本的 `fetch()` 在 Wails 自定义协议下会静默死掉！"——这是 WebView2 的陷阱。本地文件协议下，`fetch()` 返回的 Promise 既不 resolve 也不 reject，就那么挂在那里，像冬天的晾衣绳上的冰凌。
+
+解决方案是把 WASM 二进制直接嵌入 JS。base64 编码，用一个字符串背在肩上。
+
+"好，1.5 MB 的 JS 文件来了。"
+
+构建。运行。
+
+`WASM init: ✅` — 但输出文件数为 0。
+
+"Unsupported file version detected。"
+
+原来官方发布的 WASM 包不支持这个 .ysm 文件的格式版本。但 CLI 版支持。
+
+"那就自己编译 WASM。"
+
+---
+
+## 第十七回 · 远征 EMSDK
+
+源码就在那里——`C:\Users\zhujieling11\YSMParser-main`。C++ 写的，用 CMake 构建，支持全版本格式。
+
+但要编译成 WASM，需要三件神器：
+
+- **Emscripten SDK** — 把 C++ 翻译成 WASM 的魔法师
+- **CMake** — 构建系统的总司令
+- **Ninja** — 最快的构建工具
+
+`emcmake --version` 没找到。`cmake --version` 没找到。`ninja --version` 没找到。
+
+"装。"
+
+`winget install Ninja`——证书错误。
+
+"指定源！"`winget install Ninja --source winget`。
+
+Ninja 安装成功。CMake 已经装过但不在 PATH。Emscripten SDK 静静躺在 `C:\Users\zhujieling11\emsdk` 里，等着被激活。
+
+```powershell
+$env:PATH = "C:\Program Files\CMake\bin;C:\Users\zhujieling11\AppData\Local\Microsoft\WinGet\Links;$env:PATH"
+& "C:\Users\zhujieling11\emsdk\emsdk_env.ps1"
+cd C:\Users\zhujieling11\YSMParser-main
+emcmake cmake -G Ninja -B build-wasm -S . -DYSM_TARGET_WASM=ON -DYSM_WASM_ENV=web
+```
+
+配置通过。编译通过。
+
+`YSMParser.wasm` — 1,135,526 字节。
+
+"成了！"
+
+替换前端文件，重新构建，刷新浏览器。
+
+`WASM init: ✅` — 输出文件数 0。
+
+"Unsupported file version detected。"
+
+同样的源码，同样的版本号，CLI 能解，WASM 不能。
+
+---
+
+## 第十八回 · 同一把剑的两面
+
+调试员和源码面对面坐着。
+
+"为什么？"调试员问。"你和 CLI 版是同一套源码编译的。它能解，你为什么不行？"
+
+WASM 沉默了很久。
+
+"我不知道，"它说。"我的 `zstd` 链接正确。我的 AES 实现和 CLI 版一样。我的 `extractFormatFromHeader` 解析出的版本号和 CLI 版一样。但到了 `deserialize`，`version != m_format`。它说不匹配。"
+
+"可是 CLI 版匹配了。"
+
+"是的。所以 CLI 版走的是另一个分支。`m_format ≤ 15` 或者 `m_format > 15`，同一个文件，两个版本号。我不知道为什么。"
+
+调试员打开 `YSMParserV3.cpp`，盯着第 2133-2134 行：
+
+```cpp
+uint32_t version = reader.readDword();
+if (version != m_format) throw new ParserUnSupportVersionException();
+```
+
+一个 DWORD。4 个字节。从文件数据中读出的内部版本号，和从 XML header 中解析出的 `m_format`，不匹配。
+
+CLI 版能匹配。WASM 不能。
+
+"可能是 Emscripten 的字节序问题？"调试员猜测。"x86 是小端，WASM 也是小端。但 `BufferReader` 的实现……"
+
+不对。`BufferReader` 是跨平台的。
+
+"可能是外部依赖的版本差异？"调试员猜测。"`zstd`、`cityhash`、`xchacha20` 这些库在 WASM 编译时用了不同的编译选项？"
+
+也可能。没有人知道确切答案。但 CLI 能用。
+
+于是世界接受了这个事实：WASM 是第一选择，失败时回退 CLI。
+
+```javascript
+// .ysm → 前端 WASM 解码
+const decoded = await this._decodeYsmViaWasm(modelPath);
+if (decoded?.geometry) {
+  model = decoded.geometry;
+}
+
+// WASM 失败 → 走 Go CLI
+if (!model) {
+  model = await AnalyzeBedrockModel(modelPath);
+}
+```
+
+同一把剑的两面。一面快，一面稳。
+
+足够了。
+
+---
+
+## 后记四 · 工具之魂
+
+那个加密模型的 187 根骨骼、877 个立方体，在 Canvas 上显示出来了。
+
+通过 WASM 加载 YSMParser 模块、初始化 Emscripten 运行时、在虚拟文件系统中写入 .ysm 文件、调用 `callMain` 解码——这一切用了不到一秒。
+
+然后失败。回退。CLI exe 进程启动。temp 目录创建。文件复制。解码。读取输出。解析 JSON。骨骼提取。Canvas 渲染。
+
+这一共用了不到两秒。
+
+用户关掉控制台，看了看骨骼预览，然后打开了下一个模型。
+
+他不知道也不在乎这背后发生了什么——WASM 先尝试，CLI 兜底，两条不同的技术路线在 2 秒内完成接力。他只知道：模型预览出来了。
+
+这就是工具的意义。
+
+不是最快的。不是最优雅的。是**能用的**。
+
+能用，就够了。
+
+---
+
+_—第四章完—_
+
+_全文完，真的完了，这次是真的完了。_
+
+_——不，等下次新功能来的时候再说。_

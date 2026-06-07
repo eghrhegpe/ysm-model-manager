@@ -126,6 +126,33 @@ export function downloadsHTML() {
 </div>
 <div class="repo-layout" style="flex:1">
 <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+<div id="dl-form" style="margin:4px 12px;display:none;flex-direction:column;gap:4px">
+  <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+    <span>导入仓库前，先重命名一下吧：</span>
+    <label style="display:flex;align-items:center;gap:2px;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap">
+      <input type="checkbox" id="dl-from-header"> 读取作者
+    </label>
+    <label style="display:flex;align-items:center;gap:2px;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap">
+      <input type="checkbox" id="dl-date-auto" checked> 当天
+    </label>
+  </div>
+  <div style="display:flex;gap:4px">
+    <input id="dl-author" placeholder="作者" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+    <input id="dl-work" placeholder="作品品牌" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+    <input id="dl-chara" placeholder="角色名" style="width:80px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+    <input id="dl-variant" placeholder="变体" style="width:60px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+    <input id="dl-date" placeholder="年月" style="width:64px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+  </div>
+  <div id="dl-tips" style="display:none;font-size:10px;color:var(--muted);padding:4px 8px;margin:2px 0;border-radius:4px;border-left:3px solid var(--accent);background:var(--surf);line-height:1.5;max-height:60px;overflow-y:auto"></div>
+  <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;background:var(--surf)">
+    <span style="color:var(--muted);font-size:9px;white-space:nowrap">最终命名</span>
+    <span id="dl-preview" style="font-weight:600;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">-</span>
+    <span id="dl-conflict" style="display:none;font-size:9px;color:#f9a826;white-space:nowrap">⚠️</span>
+    <button class="btn accent" id="dl-import" style="padding:3px 10px;font-size:10px;white-space:nowrap">📥 导入</button>
+    <span style="font-size:9px;color:var(--muted);white-space:nowrap">队列 <span id="dl-queue-count">0</span></span>
+    <button class="btn" id="dl-cancel" style="padding:2px 6px;font-size:9px;white-space:nowrap">✕</button>
+  </div>
+</div>
 <div style="margin:0 12px 4px;border-top:1px solid var(--bd);padding-top:4px">
   <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--txt);padding:2px 0">
     <span>📋 已导入</span>
@@ -142,36 +169,6 @@ export function downloadsHTML() {
   </div>
   <input type="file" id="dl-file-input" accept=".ysm,.zip,.7z" style="display:none">
   <input type="file" id="dl-folder-input" webkitdirectory style="display:none">
-</div>
-<div id="dl-form" style="margin:4px 12px;display:none;flex-direction:column;gap:4px">
-  <div style="font-size:11px;display:flex;gap:8px">
-    <span>文件：</span><span id="dl-fname" style="font-weight:500">-</span>
-    <span style="color:var(--muted);font-size:10px" id="dl-fsize"></span>
-    <span id="dl-subpath" style="color:var(--muted);font-size:9px;display:none;padding-left:3em"></span>
-  </div>
-  <div style="font-size:11px;color:var(--muted)">导入仓库前，先重命名一下吧：</div>
-  <div style="display:flex;gap:4px">
-    <input id="dl-author" placeholder="作者" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-    <input id="dl-work" placeholder="作品品牌" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-    <input id="dl-chara" placeholder="角色名" style="width:80px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-    <input id="dl-variant" placeholder="变体" style="width:60px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-    <input id="dl-date" placeholder="年月" style="width:64px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-    <label style="display:flex;align-items:center;gap:2px;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap">
-      <input type="checkbox" id="dl-date-auto" checked> 当天
-    </label>
-    <label style="display:flex;align-items:center;gap:2px;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap">
-      <input type="checkbox" id="dl-from-header"> 读取作者
-    </label>
-  </div>
-  <div id="dl-tips" style="display:none;font-size:10px;color:var(--muted);padding:4px 8px;margin:2px 0;border-radius:4px;border-left:3px solid var(--accent);background:var(--surf);line-height:1.5;max-height:60px;overflow-y:auto"></div>
-  <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;background:var(--surf)">
-    <span style="color:var(--muted);font-size:9px;white-space:nowrap">最终命名</span>
-    <span id="dl-preview" style="font-weight:600;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">-</span>
-    <span id="dl-conflict" style="display:none;font-size:9px;color:#f9a826;white-space:nowrap">⚠️</span>
-    <button class="btn accent" id="dl-import" style="padding:3px 10px;font-size:10px;white-space:nowrap">📥 导入</button>
-    <span style="font-size:9px;color:var(--muted);white-space:nowrap">队列 <span id="dl-queue-count">0</span></span>
-    <button class="btn" id="dl-cancel" style="padding:2px 6px;font-size:9px;white-space:nowrap">✕</button>
-  </div>
 </div>
 </div>
 <app-preview mode="model"></app-preview>

@@ -1,5 +1,10 @@
 export const contentCSS = `
 :host { display:flex; flex-direction:column; flex:1; overflow:hidden; font-family:-apple-system,sans-serif; background:var(--bg); }
+@keyframes dl-slide-up {
+  from { opacity:0; transform:translateY(8px); max-height:0; padding:0 4px }
+  to   { opacity:1; transform:translateY(0); max-height:30px; padding:2px 4px }
+}
+#dl-imported-list > div { animation:dl-slide-up .25s ease-out both; }
 .page { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .section-title { font-size:14px; font-weight:600; color:var(--txt); padding:16px 16px 8px; }
 .card-row { display:flex; gap:12px; padding:0 16px; }
@@ -23,9 +28,10 @@ export const contentCSS = `
 .log-row { padding:3px 16px; display:flex; gap:6px; font-size:11px; align-items:center; border-bottom:1px solid var(--bd); }
 .log-row .log-status { font-size:10px; width:20px; text-align:center; }
 .log-row .log-msg { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt); }
-.log-row .log-msg .tag-author, .recy-item .tag-author { color:var(--meta-author,#66d9ef); }
-.log-row .log-msg .tag-work, .recy-item .tag-work { color:var(--meta-work,#bd93f9); }
-.log-row .log-msg .tag-date, .recy-item .tag-date { color:var(--meta-date,#f1fa8c); font-size:0.9em; }
+.log-row .log-msg .tag-author,.log-row .log-msg .tag-work,.log-row .log-msg .tag-date,.recy-item .tag-author,.recy-item .tag-work,.recy-item .tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
+.log-row .log-msg .tag-author, .recy-item .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
+.log-row .log-msg .tag-work, .recy-item .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
+.log-row .log-msg .tag-date, .recy-item .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
 .log-row .log-time { font-size:9px; color:var(--muted); flex-shrink:0; }
 .conflict-row { padding:3px 16px; display:flex; justify-content:space-between; font-size:11px; color:var(--txt); }
 .conflict-name { color:#f38ba8; }
@@ -64,6 +70,12 @@ export const contentCSS = `
 .ws-url { flex:1; font-size:10px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ws-open-btn { padding:4px 10px; border-radius:4px; border:1px solid var(--bd); background:transparent; color:var(--accent); cursor:pointer; font-size:10px; font-family:inherit; }
 .ws-open-btn:hover { background:var(--hover); }
+
+/* 模型名高亮标签（复用 display.js renderDisplayName） */
+.model-row .tag-author,.model-row .tag-work,.model-row .tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
+.model-row .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
+.model-row .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
+.model-row .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
 
 /* 二级菜单 */
 .ws-popup { position:fixed; z-index:9999; background:var(--surf,#2a2a3c); border:1px solid var(--bd,#444); border-radius:8px; padding:4px; box-shadow:0 8px 24px rgba(0,0,0,.35); min-width:140px; }

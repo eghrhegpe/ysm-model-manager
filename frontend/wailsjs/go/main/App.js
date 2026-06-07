@@ -90,6 +90,10 @@ export function ExtractYSMHeader(arg1) {
   return window['go']['main']['App']['ExtractYSMHeader'](arg1);
 }
 
+export function ExtractYSMHeaderFromBase64(arg1) {
+  return window['go']['main']['App']['ExtractYSMHeaderFromBase64'](arg1);
+}
+
 export function ExtractYsmSummary(arg1) {
   return window['go']['main']['App']['ExtractYsmSummary'](arg1);
 }

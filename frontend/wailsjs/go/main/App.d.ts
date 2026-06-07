@@ -49,6 +49,8 @@ export function ExportWorkshopSitesJSONFile():Promise<string>;
 
 export function ExtractYSMHeader(arg1:string):Promise<ysm.YSMHeader>;
 
+export function ExtractYSMHeaderFromBase64(arg1:string):Promise<ysm.YSMHeader>;
+
 export function ExtractYsmSummary(arg1:string):Promise<ysm.YsmSummary>;
 
 export function GenerateRepoIndex(arg1:string):Promise<string>;

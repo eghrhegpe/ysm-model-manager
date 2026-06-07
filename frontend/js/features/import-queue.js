@@ -1,6 +1,6 @@
 // ===== 导入队列 + 拖拽 + 重命名流程 =====
 import { bus } from "../bus.js";
-import { parseModelName } from "../utils/display.js";
+import { parseModelName, renderDisplayName } from "../utils/display.js";
 import { modalConfirm } from "../dialogs/modal.js";
 
 export function initImportQueue(app) {
@@ -19,6 +19,18 @@ export function initImportQueue(app) {
   const imported = []; // { name, base64, renamed, time }
   const fileQueue = []; // { file, base64, name, size }
 
+  // 切换拖拽区 ↔ 表单（简单 display 切换）
+  const toggleForm = (visible) => {
+    const form = root.getElementById("dl-form");
+    if (visible) {
+      dropZone.style.display = "none";
+      if (form) form.style.display = "flex";
+    } else {
+      dropZone.style.display = "flex";
+      if (form) form.style.display = "none";
+    }
+  };
+
   const showForm = (file, base64) => {
     currentFile = file;
     currentBase64 = base64;
@@ -26,7 +38,7 @@ export function initImportQueue(app) {
     currentRelPath = file._relPath || "";
 
     const parsed = parseModelName(file.name);
-    root.getElementById("dl-fname").textContent = file.name;
+    root.getElementById("dl-fname").innerHTML = renderDisplayName(file.name);
     root.getElementById("dl-fsize").textContent =
       file.size < 1048576
         ? (file.size / 1024).toFixed(1) + " KB"
@@ -51,8 +63,7 @@ export function initImportQueue(app) {
     root.getElementById("dl-date").value = parsed.date || "";
     updatePreview();
 
-    dropZone.style.display = "none";
-    root.getElementById("dl-form").style.display = "flex";
+    toggleForm(true);
   };
 
   // 检查文件是否已存在（防抖）
@@ -97,6 +108,50 @@ export function initImportQueue(app) {
     // 检查冲突（防抖）
     checkConflictDebounced(preview);
   };
+
+  // 从 Go 端解析 base64 头部元数据（复用 header.go 的完整解析逻辑）
+  const loadHeaderFromBase64 = async () => {
+    if (!currentBase64) return;
+    try {
+      const { ExtractYSMHeaderFromBase64 } =
+        await import("../../wailsjs/go/main/App.js");
+      const header = await ExtractYSMHeaderFromBase64(currentBase64);
+      if (header.authorName) {
+        const authorEl = root.getElementById("dl-author");
+        if (!authorEl.value.trim()) {
+          authorEl.value = header.authorName;
+          authorEl.style.background =
+            "color-mix(in srgb,var(--accent) 10%,var(--surf))";
+          authorEl.style.borderColor =
+            "color-mix(in srgb,var(--accent) 30%,var(--bd))";
+        }
+      }
+      if (header.tips) {
+        const tipsEl = root.getElementById("dl-tips");
+        if (tipsEl) {
+          tipsEl.innerHTML =
+            '<div style="font-weight:600;font-size:9px;color:var(--accent);margin-bottom:2px">📝 头部信息</div><div>' +
+            esc(header.tips) +
+            "</div>";
+          tipsEl.style.display = "block";
+        }
+      }
+      updatePreview();
+    } catch (_) {}
+  };
+
+  const fromHeaderChk = root.getElementById("dl-from-header");
+  if (fromHeaderChk) {
+    fromHeaderChk.addEventListener("change", async () => {
+      if (fromHeaderChk.checked) {
+        await loadHeaderFromBase64();
+      } else {
+        // 取消勾选时隐藏 tips，不清空已填入的作者（用户可能想保留）
+        const tipsEl = root.getElementById("dl-tips");
+        if (tipsEl) tipsEl.style.display = "none";
+      }
+    });
+  }
 
   ["dl-author", "dl-work", "dl-chara", "dl-variant", "dl-date"].forEach(
     (id) => {
@@ -295,8 +350,7 @@ export function initImportQueue(app) {
         const nextFq = fileQueue[0];
         showForm(nextFq.file, nextFq.base64);
       } else {
-        root.getElementById("dl-form").style.display = "none";
-        dropZone.style.display = "flex";
+        toggleForm(false);
       }
     } catch (e) {
       const errMsg = String(e);
@@ -338,8 +392,7 @@ export function initImportQueue(app) {
               showForm(fileQueue[0].file, fileQueue[0].base64);
               renderImportedList();
             } else {
-              root.getElementById("dl-form").style.display = "none";
-              dropZone.style.display = "flex";
+              showForm(false);
             }
             return;
           } catch (e2) {
@@ -365,8 +418,7 @@ export function initImportQueue(app) {
     currentFile = null;
     currentBase64 = null;
     currentFileName = null;
-    root.getElementById("dl-form").style.display = "none";
-    dropZone.style.display = "flex";
+    showForm(false);
     renderImportedList();
   });
 
@@ -575,8 +627,7 @@ export function initImportQueue(app) {
           currentFile = null;
           currentBase64 = null;
           currentFileName = null;
-          root.getElementById("dl-form").style.display = "none";
-          dropZone.style.display = "flex";
+          toggleForm(false);
         } else if (
           currentFile &&
           fileQueue.every((fq) => fq.file !== currentFile)

@@ -49,11 +49,12 @@ type DownloadTask struct {
 
 // DownloadQueue 串行下载队列
 type DownloadQueue struct {
-	app     *App
-	tasks   []DownloadTask
-	mu      sync.Mutex
-	running bool
-	cancel  chan struct{}
+	app       *App
+	tasks     []DownloadTask
+	mu        sync.Mutex
+	running   bool
+	cancelled bool
+	cancel    chan struct{}
 }
 
 func NewDownloadQueue(a *App) *DownloadQueue {
@@ -80,6 +81,7 @@ func (a *App) EnqueueDownloads(tasks []DownloadTask) error {
 func (a *App) CancelQueue() {
 	a.queue.mu.Lock()
 	defer a.queue.mu.Unlock()
+	a.queue.cancelled = true
 	if a.queue.running {
 		close(a.queue.cancel)
 		a.queue.cancel = make(chan struct{})
@@ -104,8 +106,11 @@ func (q *DownloadQueue) process() {
 	defer func() {
 		q.mu.Lock()
 		q.running = false
+		cancelled := q.cancelled
 		q.mu.Unlock()
-		runtime.EventsEmit(q.app.ctx, "queue:status", "done", 0, "")
+		if !cancelled {
+			runtime.EventsEmit(q.app.ctx, "queue:status", "done", 0, "")
+		}
 	}()
 
 	for {
@@ -823,7 +828,8 @@ func (a *App) DownloadFromGitHub(rawURL string, saveDir string) (string, error) 
 
 // downloadFile 从 URL 下载文件到本地（流式 256KB 分块 + 每块 emit）
 func (a *App) downloadFile(url, savePath string) error {
-	resp, err := http.Get(url)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}
@@ -881,7 +887,8 @@ func (a *App) downloadFile(url, savePath string) error {
 
 // downloadFromAPI 通过 GitHub API 下载（base64 解码）
 func (a *App) downloadFromAPI(apiURL, savePath string) error {
-	resp, err := http.Get(apiURL)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(apiURL)
 	if err != nil {
 		return fmt.Errorf("连接失败: %w", err)
 	}
@@ -1230,6 +1237,15 @@ func (a *App) ExtractYsmSummary(path string) ysm.YsmSummary {
 // ExtractYSMHeader 读取 YSM 文件的文本头部元数据（适用于加密和非加密模型）
 func (a *App) ExtractYSMHeader(path string) ysm.YSMHeader {
 	return ysm.AnalyzeYSMHeader(path)
+}
+
+// ExtractYSMHeaderFromBase64 从 base64 数据解析 YSM 头部（导入流程使用，文件未保存到磁盘）
+func (a *App) ExtractYSMHeaderFromBase64(base64Data string) ysm.YSMHeader {
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return ysm.YSMHeader{}
+	}
+	return ysm.AnalyzeYSMHeaderFromBytes(data)
 }
 
 // ========== 安装 ==========

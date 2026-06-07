@@ -213,7 +213,7 @@ export function diagnosticsHTML() {
 <button class="diag-log-fbtn" data-status="skipped" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">⏭️ 跳过</button>
 <input id="diag-log-search" placeholder="🔍 搜索模型名..." style="flex:1;font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);min-width:0;margin-left:4px">
 </div>
-<div id="diag-log-list"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">暂无日志</div></div>
+<div id="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">暂无日志</div></div>
 </div>
 <div class="diag-panel" id="diag-dedup" style="display:none">
 <div class="diag-panel-header">

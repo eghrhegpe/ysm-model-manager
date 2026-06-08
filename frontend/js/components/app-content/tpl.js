@@ -2,14 +2,15 @@
 
 export function repositoryHTML() {
   return (
-    '<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">' +
-    '<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
-    '<span style="font-size:12px;font-weight:600">📦 模型仓库</span>' +
-    '<span style="flex:1"></span>' +
-    '<button class="btn" id="repo-genindex" style="font-size:9px;padding:2px 8px" title="扫描本地仓库，生成 GitHub index.json">📇 生成 GitHub 索引</button>' +
+    '<div class="repo-wrap">' +
+    '<div class="repo-toolbar">' +
+    '<span class="repo-title">📦 模型仓库</span>' +
+    '<span class="repo-spacer"></span>' +
+    '<button class="btn repo-btn" id="repo-genindex" title="扫描本地仓库，生成 GitHub index.json">📇 生成 GitHub 索引</button>' +
+    '<button class="btn repo-btn" id="repo-export-bones" title="导出所有模型的骨骼结构">📋 骨骼结构</button>' +
     "</div>" +
-    '<div class="repo-layout" style="flex:1"><app-tree></app-tree><app-preview mode="model"></app-preview></div>' +
-    '<div style="padding:3px 12px;font-size:9px;color:var(--muted);border-top:1px solid var(--bd);flex-shrink:0">' +
+    '<div class="repo-layout repo-layout-wrap"><app-tree></app-tree><app-preview mode="model"></app-preview></div>' +
+    '<div class="repo-footer">' +
     "📇 GitHub 索引：扫描本地仓库文件，生成 index.json，提交并推送到 GitHub 后即可在线浏览模型列表" +
     "</div></div>"
   );
@@ -20,71 +21,73 @@ export function instancesHTML() {
 }
 
 export function settingsHTML() {
-  return `<div style="flex:1;overflow-y:auto;padding:12px">
+  return `<div class="stg-page">
 
-<div class="section-title" style="margin-bottom:8px">⚙️ 核心路径配置</div>
+<div class="section-title stg-title">⚙️ 核心路径配置</div>
 
-<div class="settings-group" style="margin-bottom:12px">
+<div class="settings-group stg-group">
   <div class="setting-row">
     <span class="label">🎮 游戏根目录</span>
-    <span class="value" id="set-mc-path" style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">加载中...</span>
-    <button class="btn" id="set-mc-browse" style="font-size:10px;margin-left:auto">📂 选择目录</button>
-    <button class="btn" id="set-mc-detect" style="font-size:10px">🔍 自动搜索</button>
+    <span class="value stg-val" id="set-mc-path">加载中...</span>
+    <button class="btn stg-btn stg-ml-auto" id="set-mc-browse">📂 选择目录</button>
+    <button class="btn stg-btn" id="set-mc-detect">🔍 自动搜索</button>
   </div>
-  <div style="font-size:9px;color:#6c7086;padding:2px 0 0 0">自动扫描 PCL2、%AppData% 等常见位置。选择目录后自动检测 versions/ 等特征，选错父目录自动补 .minecraft 子目录</div>
+  <div class="stg-hint">自动扫描 PCL2、%AppData% 等常见位置。选择目录后自动检测 versions/ 等特征，选错父目录自动补 .minecraft 子目录</div>
+  <div class="stg-hint" id="set-mc-empty-hint" style="display:none;color:var(--accent)">💡 请点击「选择目录」或「自动搜索」设置 .minecraft 路径</div>
 </div>
 
-<div class="settings-group" style="margin-bottom:12px">
+<div class="settings-group stg-group">
   <div class="setting-row">
     <span class="label">📁 模型仓库路径</span>
-    <span class="value" id="set-repo-path" style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">加载中...</span>
-    <button class="btn" id="set-repo-browse" style="font-size:10px;margin-left:auto">📂 选择目录</button>
+    <span class="value stg-val" id="set-repo-path">加载中...</span>
+    <button class="btn stg-btn stg-ml-auto" id="set-repo-browse">📂 选择目录</button>
   </div>
-  <div style="font-size:9px;color:#6c7086;padding:2px 0 0 0">存放所有下载的 .ysm / .zip / .7z 模型文件</div>
+  <div class="stg-hint">存放所有下载的 .ysm / .zip / .7z 模型文件</div>
+  <div class="stg-hint" id="set-repo-empty-hint" style="display:none;color:var(--accent)">💡 请点击「选择目录」设置模型仓库路径，否则下载的模型将无法归类</div>
 </div>
 
-<div class="section-title" style="margin-bottom:8px;margin-top:16px">⚙️ 存储策略</div>
+<div class="section-title stg-title stg-sub-title">⚙️ 存储策略</div>
 
-<div class="settings-group" style="margin-bottom:12px">
+<div class="settings-group stg-group">
   <div class="setting-row">
     <span class="label">🔗 链接模式</span>
   </div>
-  <div style="display:flex;gap:8px;padding:4px 0">
-    <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer">
+  <div class="stg-radio-row">
+    <label class="stg-label">
       <input type="radio" name="link-mode" value="copy" id="lm-copy"> 📋 复制
     </label>
-    <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer">
+    <label class="stg-label">
       <input type="radio" name="link-mode" value="hardlink" id="lm-hardlink"> 🔗 硬链接 ✅
     </label>
-    <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer">
+    <label class="stg-label">
       <input type="radio" name="link-mode" value="symlink" id="lm-symlink"> 🔗 符号链接
     </label>
   </div>
-  <div id="lm-hint-copy" style="font-size:9px;color:#6c7086;padding:2px 0 0 0;display:none">每个整合包独立占用磁盘空间，最兼容</div>
-  <div id="lm-hint-hardlink" style="font-size:9px;color:var(--muted,#6c7086);padding:2px 0 0 0;display:none">✅ 推荐：省磁盘空间，支持实时开关模型，YSM 兼容性好<br>📌 需要将模型仓库放在与游戏相同的分区（如 C: 游戏 / C: 模型仓库）</div>
-  <div id="lm-hint-symlink" style="display:none;padding:2px 0 0 0"><span style="font-size:9px;color:#e5534b">❌ 不推荐：YSM 加载符号链接文件时可能因启动器权限不足（PCL/HMCL 无管理员权限）导致文件被挂起无法禁用，需退出游戏后手动删除</span></div>
+  <div id="lm-hint-copy" class="stg-hint-hidden">每个整合包独立占用磁盘空间，最兼容</div>
+  <div id="lm-hint-hardlink" class="stg-hint-hidden" style="color:var(--muted,#6c7086)">✅ 推荐：省磁盘空间，支持实时开关模型，YSM 兼容性好<br>📌 需要将模型仓库放在与游戏相同的分区（如 C: 游戏 / C: 模型仓库）</div>
+  <div id="lm-hint-symlink" class="stg-hint-hidden"><span class="stg-hint-warn">❌ 不推荐：YSM 加载符号链接文件时可能因启动器权限不足（PCL/HMCL 无管理员权限）导致文件被挂起无法禁用，需退出游戏后手动删除</span></div>
 </div>
 
-<div class="section-title" style="margin-bottom:8px;margin-top:16px">⚙️ 网络与下载</div>
+<div class="section-title stg-title stg-sub-title">⚙️ 网络与下载</div>
 
 <div class="settings-group" style="margin-bottom:12px">
   <div class="setting-row">
     <span class="label">🌐 下载镜像源</span>
-    <select id="set-mirror" style="background:var(--bg,#1e1e2e);color:var(--txt,#cdd6f4);border:1px solid var(--bd,#444);border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer">
+    <select id="set-mirror" class="stg-select">
       <option value="">🌍 直连（raw.githubusercontent.com）</option>
       <option value="jsdelivr">⚡ jsDelivr CDN（国内加速）</option>
       <option value="githubapi">🐙 GitHub API</option>
     </select>
   </div>
-  <div style="font-size:9px;color:#6c7086;padding:2px 0 0 0">选择优先使用的下载源，失败自动回退到其他源</div>
+  <div class="stg-hint">选择优先使用的下载源，失败自动回退到其他源</div>
 </div>
 
-<div class="section-title" style="margin-bottom:8px;margin-top:16px">⚙️ 界面与体验</div>
+<div class="section-title stg-title stg-sub-title">⚙️ 界面与体验</div>
 
 <div class="settings-group" style="margin-bottom:12px">
   <div class="setting-row">
     <span class="label">🌙 主题模式</span>
-    <select id="set-theme" style="background:var(--bg,#1e1e2e);color:var(--txt,#cdd6f4);border:1px solid var(--bd,#444);border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer">
+    <select id="set-theme" class="stg-select">
       <option value="system">💻 跟随系统</option>
       <option value="cyber">🌙 赛博霓虹</option>
       <option value="warm">☀️ 温暖木纹</option>
@@ -93,13 +96,13 @@ export function settingsHTML() {
   </div>
 </div>
 
-<div class="section-title" style="margin-bottom:8px;margin-top:16px">ℹ️ 关于</div>
+<div class="section-title stg-title stg-sub-title">ℹ️ 关于</div>
 
 <div class="settings-group" style="margin-bottom:12px">
   <div class="setting-row">
     <span class="label">📦 当前版本</span>
     <span id="set-version" style="font-size:11px;color:var(--muted)">加载中...</span>
-    <button class="btn" id="set-check-update" style="font-size:10px">🔄 检查更新</button>
+    <button class="btn stg-btn" id="set-check-update">🔄 检查更新</button>
     <button class="btn" id="set-releases" style="font-size:10px;margin-left:4px" title="打开 GitHub Releases">📋 发布页</button>
   </div>
   <div style="font-size:9px;color:var(--muted);padding:4px 12px 0;line-height:1.6">

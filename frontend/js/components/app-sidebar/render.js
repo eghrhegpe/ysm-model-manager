@@ -11,6 +11,11 @@ function esc(s) {
 // 渲染所有整合包卡片到容器
 export function renderVersionCards(container, instances) {
   container.innerHTML = "";
+  if (!instances.length) {
+    container.innerHTML =
+      '<div class="ws-empty" style="padding:24px">🔍 未找到匹配的整合包</div>';
+    return;
+  }
   instances.forEach((ins, idx) => {
     const vc = document.createElement("div");
     vc.className = "vc";

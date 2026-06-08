@@ -26,7 +26,7 @@ $GitHubRepo = "ysm-model-manager"
 Remove-Item -Recurse -Force "$OutputDir" -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path "$OutputDir" -Force | Out-Null
 
-Write-Host "🔨 构建版本 $Version ..." -ForegroundColor Cyan
+Write-Host "🔨 构建版本 $VerTag ..." -ForegroundColor Cyan
 
 # 1. 构建前端
 Write-Host "📦 构建前端..." -ForegroundColor Yellow
@@ -35,9 +35,9 @@ npx vite build 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) { Write-Host "❌ 前端构建失败" -ForegroundColor Red; exit 1 }
 
 # 2. Wails 构建（自动嵌入前端资源 + 注入版本号）
-Write-Host "🦫 Wails 编译 v$Version ..." -ForegroundColor Yellow
+Write-Host "🦫 Wails 编译 $VerTag ..." -ForegroundColor Yellow
 Set-Location $ProjectRoot
-wails build -clean -ldflags "-X ysm-model-manager/go/version.Version=$Version" 2>&1
+wails build -clean -ldflags "-X ysm-model-manager/go/version.Version=$VerTag" 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ wails build 失败 - 常见原因：旧进程锁定了 build/bin/" -ForegroundColor Red
     Write-Host "   请先运行: Get-Process -Name 'YSM-Model-Manager*' | Stop-Process -Force" -ForegroundColor Yellow
@@ -61,7 +61,7 @@ Compress-Archive -Path "$OutputDir\*" -DestinationPath "$OutputDir\$ZipName" -Fo
 # 5. 输出结果
 $FileSize = (Get-Item "$OutputDir\$ZipName").Length / 1MB
 Write-Host "✅ 构建完成!" -ForegroundColor Green
-Write-Host "   版本: $Version" -ForegroundColor Cyan
+Write-Host "   版本: $VerTag" -ForegroundColor Cyan
 Write-Host "   输出: $OutputDir\$ZipName" -ForegroundColor Cyan
 Write-Host "   大小: $("{0:N1}" -f $FileSize) MB" -ForegroundColor Cyan
 Write-Host ""
@@ -74,14 +74,14 @@ if (-not $SkipUpload) {
     Write-Host "🚀 准备上传到 GitHub Releases..." -ForegroundColor Cyan
 
     # 读取发版说明
-    $ReleaseNotesPath = "$ProjectRoot\docs\release-notes\$Version.md"
+    $ReleaseNotesPath = "$ProjectRoot\docs\release-notes\$VerTag.md"
     $ReleaseBody = ""
     if (Test-Path $ReleaseNotesPath) {
         $ReleaseBody = Get-Content $ReleaseNotesPath -Raw
         Write-Host "   📄 已读取发版说明: $ReleaseNotesPath" -ForegroundColor Gray
     } else {
         Write-Host "   ⚠️ 未找到 $ReleaseNotesPath，将使用默认说明" -ForegroundColor Yellow
-        $ReleaseBody = "YSM Model Manager $Version"
+        $ReleaseBody = "YSM Model Manager $VerTag"
     }
 
     # 优先用 gh CLI
@@ -97,14 +97,18 @@ if (-not $SkipUpload) {
 
     if ($ghAvailable) {
         # ---- 方案 A: gh CLI ----
-        Write-Host "   📤 创建 Release v$Version ..." -ForegroundColor Gray
-        $ghOutput = gh release create "v$Version" `
+        # 发版说明写入临时文件（gh --notes 不支持多行）
+        $notesTmp = [System.IO.Path]::GetTempFileName()
+        $ReleaseBody | Out-File -FilePath $notesTmp -Encoding utf8
+        Write-Host "   📤 创建 Release $VerTag ..." -ForegroundColor Gray
+        $ghOutput = gh release create "$VerTag" `
             --repo "$GitHubOwner/$GitHubRepo" `
-            --title "v$Version" `
-            --notes $ReleaseBody `
+            --title "$VerTag" `
+            --notes-file "$notesTmp" `
             "$ZipPath" 2>&1
+        Remove-Item $notesTmp -Force -ErrorAction SilentlyContinue
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "   ✅ Release 已发布: https://github.com/$GitHubOwner/$GitHubRepo/releases/tag/v$Version" -ForegroundColor Green
+            Write-Host "   ✅ Release 已发布: https://github.com/$GitHubOwner/$GitHubRepo/releases/tag/$VerTag" -ForegroundColor Green
         } else {
             Write-Host "   ❌ gh release create 失败: $ghOutput" -ForegroundColor Red
             Write-Host "   请手动上传 $ZipPath" -ForegroundColor Yellow
@@ -129,13 +133,13 @@ if (-not $SkipUpload) {
             $authHeader = @{ Authorization = "Bearer $token" }
             $repoApi = "$apiBase/repos/$GitHubOwner/$GitHubRepo"
 
-            Write-Host "   📤 创建 Release v$Version ..." -ForegroundColor Gray
+            Write-Host "   📤 创建 Release $VerTag ..." -ForegroundColor Gray
 
             # 创建 release
             $releaseBodyJson = @{
-                tag_name         = "v$Version"
+                tag_name         = "$VerTag"
                 target_commitish = "main"
-                name             = "v$Version"
+                name             = "$VerTag"
                 body             = $ReleaseBody
                 draft            = $false
                 prerelease       = $false

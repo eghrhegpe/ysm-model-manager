@@ -8,7 +8,7 @@
  */
 export function addExportButton(container, canvas, filename) {
   const row = document.createElement("div");
-  row.style.cssText = "display:flex;gap:6px;margin-top:4px;align-items:center";
+  row.className = "ysm-export-row";
 
   const btn = document.createElement("button");
   btn.textContent = "💾 导出 PNG";
@@ -19,7 +19,7 @@ export function addExportButton(container, canvas, filename) {
   btn.onclick = () => exportCanvasPNG(canvas, filename);
 
   const hint = document.createElement("span");
-  hint.style.cssText = "font-size:8px;color:var(--muted)";
+  hint.className = "ysm-hint";
   hint.textContent = "点击下载骨骼预览图";
 
   row.appendChild(btn);

@@ -11,6 +11,10 @@ import {
 } from "./events.js";
 import { summaryCardHTML } from "../../utils/summarize.js";
 import { parseBedrockGeometryFromJSON } from "./utils.js";
+import { cacheGet, cacheSet } from "../../utils/preview-cache.js";
+
+// DEV 环境下才输出调试日志
+const devLog = import.meta.env.DEV ? console.log : () => {};
 
 class AppPreview extends HTMLElement {
   constructor() {
@@ -21,8 +25,6 @@ class AppPreview extends HTMLElement {
     this._unsubs = [];
     this._selectedPkg = null;
     this._mode = "stat";
-    /** @type {Map<string,{texture?:string,geometry?:object}>} */
-    this._previewDataCache = new Map();
   }
 
   static get observedAttributes() {
@@ -94,8 +96,8 @@ class AppPreview extends HTMLElement {
 
   /** 自动匹配缩略图：查缓存 → .ysm 走 WASM → Go 兜底 */
   async _loadPreviewImage(modelPath) {
-    // 查缓存
-    const cached = this._previewDataCache.get(modelPath);
+    // 查缓存（模块级，跨组件生命周期持久）
+    const cached = cacheGet(modelPath);
     if (cached?.texture) return cached.texture;
     if (cached?.geometry?.texture) return cached.geometry.texture;
 
@@ -103,7 +105,7 @@ class AppPreview extends HTMLElement {
     if (/\.ysm$/i.test(modelPath)) {
       const decoded = await this._decodeYsmViaWasm(modelPath);
       if (decoded?.texture) {
-        this._previewDataCache.set(modelPath, { ...decoded, _decodedBy: "🧠 WASM" });
+        cacheSet(modelPath, { ...decoded, _decodedBy: "🧠 WASM" });
         return decoded.texture;
       }
     }
@@ -112,11 +114,11 @@ class AppPreview extends HTMLElement {
         await import("../../../wailsjs/go/main/App.js");
       const loose = await FindPreviewImage(modelPath);
       if (loose) {
-        this._previewDataCache.set(modelPath, { texture: loose, _decodedBy: "" });
+        cacheSet(modelPath, { texture: loose, _decodedBy: "" });
         return loose;
       }
       const tex = await ExtractPreviewTexture(modelPath);
-      if (tex) this._previewDataCache.set(modelPath, { texture: tex, _decodedBy: "" });
+      if (tex) cacheSet(modelPath, { texture: tex, _decodedBy: "" });
       return tex || null;
     } catch (_) {
       return null;
@@ -125,7 +127,8 @@ class AppPreview extends HTMLElement {
 
   /** 加载 2D 模型骨骼线条图 + 统计面板 */
   async _loadModel2D(modelPath, skelContainer) {
-    const content = skelContainer || this._root.getElementById("preview-content");
+    const content =
+      skelContainer || this._root.getElementById("preview-content");
     if (!content) return;
 
     const container = document.createElement("div");
@@ -140,7 +143,7 @@ class AppPreview extends HTMLElement {
       // 查缓存（_loadPreviewImage 可能已经存过）
       let _decodedBy = ""; // "WASM" | "CLI" | ""
 
-      const cached = this._previewDataCache.get(modelPath);
+      const cached = cacheGet(modelPath);
       if (cached?.geometry?.bones?.length) {
         model = cached.geometry;
         _decodedBy = cached._decodedBy || "";
@@ -164,7 +167,7 @@ class AppPreview extends HTMLElement {
         model = await AnalyzeBedrockModel(modelPath);
         // 缓存完整结果，供 _loadPreviewImage 复用
         if (model?.bones?.length) {
-          this._previewDataCache.set(modelPath, {
+          cacheSet(modelPath, {
             texture: model.texture,
             geometry: model,
             _decodedBy: "⚙️ CLI",
@@ -223,7 +226,14 @@ class AppPreview extends HTMLElement {
 
       // ---- 渲染骨骼图 ----
       const { renderModel2D } = await import("../../utils/model2d.js");
-      let _zoom = 1;      let _rotation = 0;      const doRender = () => renderModel2D(canvas, model, textureImg, { showLabels: _labelsOn, zoom: _zoom, rotation: _rotation });
+      let _zoom = 1;
+      let _rotation = 0;
+      const doRender = () =>
+        renderModel2D(canvas, model, textureImg, {
+          showLabels: _labelsOn,
+          zoom: _zoom,
+          rotation: _rotation,
+        });
       doRender();
 
       eyeBtn.onclick = () => {
@@ -237,25 +247,40 @@ class AppPreview extends HTMLElement {
       // ---- 全窗放大 + 滚轮/拖拽旋转 ----
       canvas.classList.add("ysm-grab");
       canvas.title = "左键全窗放大 · 滚轮缩放 · 拖拽旋转";
-      canvas.addEventListener("click", () => openFullPreview(canvas, model, textureImg, _labelsOn));
-      canvas.addEventListener("wheel", (e) => {
-        e.preventDefault();
-        _zoom = Math.max(0.2, Math.min(10, _zoom + (e.deltaY > 0 ? -0.2 : 0.2)));
-        doRender();
-      }, { passive: false });
+      canvas.addEventListener("click", () =>
+        openFullPreview(canvas, model, textureImg, _labelsOn),
+      );
+      canvas.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          _zoom = Math.max(
+            0.2,
+            Math.min(10, _zoom + (e.deltaY > 0 ? -0.2 : 0.2)),
+          );
+          doRender();
+        },
+        { passive: false },
+      );
 
       // 清理上一次的拖拽监听（避免重复注册）
       this._cleanupModelListeners();
 
-      let _dragging = false, _lastX = 0;
-      const _onMouseDown = (e) => { _dragging = true; _lastX = e.clientX; };
+      let _dragging = false,
+        _lastX = 0;
+      const _onMouseDown = (e) => {
+        _dragging = true;
+        _lastX = e.clientX;
+      };
       const _onMouseMove = (e) => {
         if (!_dragging) return;
         _rotation = (_rotation + (e.clientX - _lastX) * 0.5) % 360;
         _lastX = e.clientX;
         doRender();
       };
-      const _onMouseUp = () => { _dragging = false; };
+      const _onMouseUp = () => {
+        _dragging = false;
+      };
       canvas.addEventListener("mousedown", _onMouseDown);
       window.addEventListener("mousemove", _onMouseMove);
       window.addEventListener("mouseup", _onMouseUp);
@@ -290,11 +315,15 @@ class AppPreview extends HTMLElement {
         lines.push("─".repeat(30));
         for (const b of model.bones) {
           const cs = b.cubes || [];
-          lines.push(`${b.name}${cs.length ? ` (${cs.length} 方)` : " (结构骨骼,无方)"}`);
+          lines.push(
+            `${b.name}${cs.length ? ` (${cs.length} 方)` : " (结构骨骼,无方)"}`,
+          );
         }
         const blob = new Blob([lines.join("\n")], { type: "text/plain" });
         const a = document.createElement("a");
-        a.download = (modelPath.split("/").pop().split("\\").pop() || "model") + "_bones.txt";
+        a.download =
+          (modelPath.split("/").pop().split("\\").pop() || "model") +
+          "_bones.txt";
         a.href = URL.createObjectURL(blob);
         document.body.appendChild(a);
         a.click();
@@ -311,16 +340,17 @@ class AppPreview extends HTMLElement {
 
   /** 通过前端 WASM 解码 .ysm，返回 { texture, geometry }（缓存复用） */
   async _decodeYsmViaWasm(modelPath) {
-    if (this._ysmCache) return this._ysmCache;
+    const cached = cacheGet(modelPath);
+    if (cached?.geometry) return cached;
     try {
-      console.log("[YSM] 加载 WASM 模块...");
+      devLog("[YSM] 加载 WASM 模块...");
       const { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } =
         await import("../../wasm/ysm-parser.js");
       const ok = await initYSMParser();
-      console.log(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
+      devLog(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
       if (!ok) return null;
 
-      console.log("[YSM] 读取文件...");
+      devLog("[YSM] 读取文件...");
       const { ReadFileBytes } = await import("../../../wailsjs/go/main/App.js");
       let bytes = await ReadFileBytes(modelPath);
       if (typeof bytes === "string") {
@@ -329,29 +359,29 @@ class AppPreview extends HTMLElement {
       } else if (!(bytes instanceof Uint8Array)) {
         bytes = new Uint8Array(bytes);
       }
-      console.log(`[YSM] 读取 ${bytes?.length || 0} bytes`);
+      devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
       if (!bytes?.length) return null;
 
-      console.log("[YSM] 内存解析...");
+      devLog("[YSM] 内存解析...");
       let files;
       try {
         files = await decodeYsmFileFromMemory(bytes);
         if (files?.length) {
-          console.log(`[YSM] ✅ 内存解析成功: ${files.length} 文件`);
+          devLog(`[YSM] ✅ 内存解析成功: ${files.length} 文件`);
         } else {
-          console.log("[YSM] 内存解析返回空，回退 callMain");
+          devLog("[YSM] 内存解析返回空，回退 callMain");
         }
       } catch (e) {
-        console.log(`[YSM] 内存解析异常: ${e?.message}，回退 callMain`);
+        devLog(`[YSM] 内存解析异常: ${e?.message}，回退 callMain`);
       }
 
       if (!files?.length) {
-        console.log("[YSM] callMain 回退...");
+        devLog("[YSM] callMain 回退...");
         files = await decodeYsmFile(bytes);
       }
-      console.log(`[YSM] 输出 ${files?.length || 0} 文件`);
+      devLog(`[YSM] 输出 ${files?.length || 0} 文件`);
       if (files?.length) {
-        console.log(`[YSM] 文件: ${files.map((f) => f.path).join(", ")}`);
+        devLog(`[YSM] 文件: ${files.map((f) => f.path).join(", ")}`);
       }
       if (!files?.length) return null;
 
@@ -362,19 +392,19 @@ class AppPreview extends HTMLElement {
       if (texFile) {
         const blob = new Blob([texFile.data]);
         texture = URL.createObjectURL(blob);
-        console.log(`[YSM] 纹理: ${texFile.path}`);
+        devLog(`[YSM] 纹理: ${texFile.path}`);
       }
 
       let geometry = null;
       for (const f of files) {
         if (!f.path.startsWith("models/") || !f.path.endsWith(".json"))
           continue;
-        console.log(`[YSM] 解析 ${f.path}...`);
+        devLog(`[YSM] 解析 ${f.path}...`);
         try {
           const jsonStr = new TextDecoder().decode(f.data);
           const parsed = parseBedrockGeometryFromJSON(jsonStr);
           if (parsed?.bones?.length) {
-            console.log(
+            devLog(
               `[YSM] ✅ ${f.path}: ${parsed.bones.length}骨 ${parsed.cubeCount}方`,
             );
             if (!geometry || parsed.bones.length > geometry.bones.length) {
@@ -382,15 +412,15 @@ class AppPreview extends HTMLElement {
               geometry.texture = texture;
             }
           } else {
-            console.log(`[YSM] ⚠️ ${f.path}: 无骨骼`);
+            devLog(`[YSM] ⚠️ ${f.path}: 无骨骼`);
           }
         } catch (e) {
-          console.log(`[YSM] ❌ ${f.path}: ${e?.message}`);
+          devLog(`[YSM] ❌ ${f.path}: ${e?.message}`);
         }
       }
 
-      this._ysmCache = { texture, geometry };
-      return this._ysmCache;
+      cacheSet(modelPath, { texture, geometry });
+      return { texture, geometry };
     } catch (e) {
       this._appendDebug(content, `[YSM] ❌ ${e?.message || e}`);
       return null;

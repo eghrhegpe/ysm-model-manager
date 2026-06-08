@@ -20,9 +20,10 @@ type Bone2D struct {
 
 // Cube2D 立方体信息
 type Cube2D struct {
-	Origin  [3]float64 `json:"origin"`
-	Size    [3]float64 `json:"size"`
-	Pivot   [3]float64 `json:"pivot,omitempty"`
-	UV      [2]float64 `json:"uv,omitempty"`
-	FaceUV  string     `json:"faceUV,omitempty"` // 每面独立 UV（JSON 字符串），格式: {"north":{"uv":[0,0],"uv_size":[1,1]},...}
+	Origin   [3]float64 `json:"origin"`
+	Size     [3]float64 `json:"size"`
+	Pivot    [3]float64 `json:"pivot,omitempty"`
+	UV       [2]float64 `json:"uv,omitempty"`
+	FaceUV   string     `json:"faceUV,omitempty"` // 每面独立 UV（JSON 字符串）
+	Rotation [3]float64 `json:"rotation,omitempty"`
 }

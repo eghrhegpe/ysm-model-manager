@@ -3,24 +3,20 @@
 export function headerHTML() {
   return `<div class="hdr">
 <div class="hdr-row">
-<span class="hdr-label">📦 仓库</span>
-<div class="batch-dropdown" id="batch-dropdown">
-  <button class="hdr-btn" id="btn-batch-trigger">⚡ 批量管理 ▾</button>
-  <div class="batch-menu" id="batch-menu" style="display:none">
-    <button class="hdr-btn batch-item" id="btn-ea">✅ 全部启用</button>
-    <button class="hdr-btn batch-item" id="btn-da">⛔ 全部禁用</button>
-  </div>
+  <span class="hdr-label">📦 模型仓库</span>
+  <span class="hdr-spacer"></span>
+  <button class="repo-bar-btn" id="repo-genindex">📇 索引</button>
+  <button class="repo-bar-btn" id="repo-export-bones">📋 骨骼</button>
 </div>
+<div class="hdr-row">
+  <input class="srch-inp" id="srch" type="text" placeholder="🔍 搜索模型名称..." autocomplete="off">
+  <div class="dd-wrap" id="dd-authors"><button class="hdr-btn" id="btn-authors">🎨 作者 ▾</button><div class="dd-menu" id="menu-authors"></div></div>
+  <div class="dd-wrap" id="dd-tex"><button class="hdr-btn" id="btn-tex">📐 纹理 ▾</button><div class="dd-menu" id="menu-tex"></div></div>
+  <button class="hdr-btn" id="btn-batch">⚡ 批量</button>
+  <button class="hdr-btn" id="btn-filter-toggle">🔍 筛选</button>
+  <select class="sort-sel" id="sort"><option value="name">名称</option><option value="size">大小</option><option value="date">日期</option></select>
 </div>
-<div class="srch-row">
-<input class="srch-inp" id="srch" type="text" placeholder="🔍 搜索模型名称" autocomplete="off">
-<select class="sort-sel" id="sort">
-<option value="name">名称</option>
-<option value="size">大小</option>
-<option value="date">日期</option>
-</select>
-</div>
-<div class="author-chips" id="author-chips" style="display:none;padding:4px 0;gap:4px;flex-wrap:wrap"></div>
+<div id="hdr-container"></div>
 </div>`;
 }
 

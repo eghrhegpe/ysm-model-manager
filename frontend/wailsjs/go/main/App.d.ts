@@ -163,6 +163,8 @@ export function ScanCustomModels(arg1:string):Promise<Array<types.ModelEntry>>;
 
 export function ScanModelEntries(arg1:string):Promise<Array<types.ModelEntry>>;
 
+export function SearchModels(arg1:string,arg2:string,arg3:number,arg4:number,arg5:number,arg6:number,arg7:number,arg8:number):Promise<Array<types.SearchResult>>;
+
 export function SelectDirectory():Promise<string>;
 
 export function SetDownloadMirror(arg1:string):Promise<void>;

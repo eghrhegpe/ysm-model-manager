@@ -19,10 +19,24 @@ export const contentCSS = `
 .repo-layout { flex:1; display:flex; overflow:hidden; height:100%; }
 .repo-layout-wrap { flex:1; }
 .repo-wrap { display:flex;flex-direction:column;flex:1;overflow:hidden; }
-.repo-toolbar { display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--bd);flex-shrink:0; }
-.repo-title { font-size:12px;font-weight:600; }
+.repo-topbar { display:flex;align-items:center;gap:4px;padding:4px 12px;border-bottom:1px solid var(--bd);flex-wrap:nowrap;overflow-x:auto; }
+.repo-title { font-size:12px;font-weight:600;flex-shrink:0; }
+.repo-bar { display:flex;align-items:center;gap:4px;padding:4px 12px;border-bottom:1px solid var(--bd); }
+.repo-bar:empty { padding:0;border-bottom:none; }
+.repo-srch { width:140px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;outline:none; }
+.repo-bar-spacer { flex:1; }
+.repo-bar-btn { padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px; }
+.repo-bar-btn:hover { background:var(--hover);color:var(--txt); }
 .repo-spacer { flex:1; }
 .repo-btn { font-size:9px;padding:2px 8px; }
+
+.repo-srch { width:160px;padding:4px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px;outline:none;flex-shrink:0; }
+.repo-srch:focus { border-color:var(--accent); }
+.repo-sort { padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;cursor:pointer;margin-left:auto; }
+.batch-dropdown { position:relative;display:inline-block; }
+.batch-menu { position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.3);min-width:120px; }
+.hdr-btn { padding:4px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:11px;font-family:inherit; }
+.hdr-btn:hover { background:var(--hover); }
 .repo-footer { padding:3px 12px;font-size:9px;color:var(--muted);border-top:1px solid var(--bd);flex-shrink:0; }
 .stg-page { flex:1;overflow-y:auto;padding:12px; }
 .stg-title { margin-bottom:8px; }

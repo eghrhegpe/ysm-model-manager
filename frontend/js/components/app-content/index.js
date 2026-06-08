@@ -99,7 +99,7 @@ class AppContent extends HTMLElement {
   }
 
   _initRepository() {
-    initRepository(this._root);
+    initRepository();
   }
 
   _initDownloads() {

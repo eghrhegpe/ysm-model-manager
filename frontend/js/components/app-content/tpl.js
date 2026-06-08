@@ -3,16 +3,8 @@
 export function repositoryHTML() {
   return (
     '<div class="repo-wrap">' +
-    '<div class="repo-toolbar">' +
-    '<span class="repo-title">📦 模型仓库</span>' +
-    '<span class="repo-spacer"></span>' +
-    '<button class="btn repo-btn" id="repo-genindex" title="扫描本地仓库，生成 GitHub index.json">📇 生成 GitHub 索引</button>' +
-    '<button class="btn repo-btn" id="repo-export-bones" title="导出所有模型的骨骼结构">📋 骨骼结构</button>' +
-    "</div>" +
     '<div class="repo-layout repo-layout-wrap"><app-tree></app-tree><app-preview mode="model"></app-preview></div>' +
-    '<div class="repo-footer">' +
-    "📇 GitHub 索引：扫描本地仓库文件，生成 index.json，提交并推送到 GitHub 后即可在线浏览模型列表" +
-    "</div></div>"
+    "</div>"
   );
 }
 

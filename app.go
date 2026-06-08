@@ -290,9 +290,18 @@ func (a *App) loadAppConfig() {
 }
 
 func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode, theme string) error {
+	mcValidated := mcRoot
+	// 自动修正 MC 目录
+	if mcRoot != "" {
+		validated, errMsg := a.ValidateMinecraftDir(mcRoot)
+		if errMsg != "" {
+			return fmt.Errorf("%s", errMsg)
+		}
+		mcValidated = validated
+	}
 	cfg := types.AppConfig{
 		RepoRoot: repoRoot,
-		McRoot:   mcRoot,
+		McRoot:   mcValidated,
 		LinkMode: linkMode,
 		Theme:    theme,
 		Mirror:   a.LoadAppConfig().Mirror,
@@ -300,7 +309,7 @@ func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode, theme string) error {
 	data, _ := json.MarshalIndent(cfg, "", "  ")
 	err := os.WriteFile(configPath(), data, 0644)
 	if err == nil {
-		a.restartWatcher(repoRoot, mcRoot)
+		a.restartWatcher(repoRoot, mcValidated)
 	}
 	return err
 }
@@ -631,33 +640,103 @@ func (a *App) SelectDirectory() (string, error) {
 }
 
 // ========== .minecraft 定位 ==========
-func (a *App) GetMinecraftPath() string {
-	if exe, err := os.Executable(); err == nil {
-		for _, c := range []string{
-			filepath.Join(filepath.Dir(exe), ".minecraft"),
-			filepath.Join(filepath.Dir(exe), "..", ".minecraft"),
-		} {
-			abs, _ := filepath.Abs(c)
-if info, err := os.Stat(abs); err == nil && info.IsDir() {
-				return "✅ 游戏路径: " + abs
+
+// isLikelyMinecraftDir 检查目录是否包含 .minecraft 的特征文件和子目录
+func isLikelyMinecraftDir(path string) bool {
+	markers := []string{
+		"versions",
+		"assets",
+		"launcher_profiles.json",
+	}
+	for _, m := range markers {
+		full := filepath.Join(path, m)
+		if info, err := os.Stat(full); err == nil {
+			if m == "launcher_profiles.json" || info.IsDir() {
+				return true
 			}
 		}
 	}
-	if appData, err := os.UserConfigDir(); err == nil {
-		mcPath := filepath.Join(appData, ".minecraft")
-		if info, err := os.Stat(mcPath); err == nil && info.IsDir() {
-			return "✅ 游戏路径: " + mcPath
+	return false
+}
+
+// scanMinecraftDirs 扫描常见位置，返回找到的所有 .minecraft 目录
+func scanMinecraftDirs() []string {
+	var found []string
+	seen := map[string]bool{}
+	add := func(p string) {
+		abs, err := filepath.Abs(p)
+		if err != nil {
+			return
+		}
+		abs = filepath.Clean(abs)
+		if seen[abs] {
+			return
+		}
+		seen[abs] = true
+		if info, err := os.Stat(abs); err == nil && info.IsDir() && isLikelyMinecraftDir(abs) {
+			found = append(found, abs)
 		}
 	}
-	for _, c := range []string{
+
+	// 1. 可执行文件同目录
+	if exe, err := os.Executable(); err == nil {
+		add(filepath.Join(filepath.Dir(exe), ".minecraft"))
+		add(filepath.Join(filepath.Dir(exe), "..", ".minecraft"))
+	}
+
+	// 2. %%APPDATA%%/.minecraft（官方启动器默认位置）
+	if appData, err := os.UserConfigDir(); err == nil {
+		add(filepath.Join(appData, ".minecraft"))
+	}
+
+	// 3. 常见启动器/用户目录
+	commonPaths := []string{
 		filepath.Join("D:", "PCL2", ".minecraft"),
 		filepath.Join("C:", "PCL2", ".minecraft"),
-	} {
-		if info, err := os.Stat(c); err == nil && info.IsDir() {
-			return "✅ 游戏路径: " + c
-		}
+		filepath.Join("E:", "PCL2", ".minecraft"),
+		filepath.Join("D:", "PCL", ".minecraft"),
+		filepath.Join("C:", "PCL", ".minecraft"),
+		filepath.Join("D:", "MC", ".minecraft"),
+		filepath.Join("C:", "MC", ".minecraft"),
+		filepath.Join("D:", "Minecraft", ".minecraft"),
+		filepath.Join("C:", "Minecraft", ".minecraft"),
+		filepath.Join("D:", "Games", "Minecraft", ".minecraft"),
 	}
-	return "⚠️ 未找到 .minecraft 文件夹"
+	for _, c := range commonPaths {
+		add(c)
+	}
+
+	return found
+}
+
+func (a *App) GetMinecraftPaths() []string {
+	return scanMinecraftDirs()
+}
+
+// ValidateMinecraftDir 验证并自动修正 MC 目录
+// 如果用户选了 PCL2 的父目录，自动补全 .minecraft 子目录
+func (a *App) ValidateMinecraftDir(dir string) (string, string) {
+	if dir == "" {
+		return "", "请选择游戏目录"
+	}
+	abs, err := filepath.Abs(filepath.Clean(dir))
+	if err != nil {
+		return "", "路径格式错误"
+	}
+	// 直接检查
+	if isLikelyMinecraftDir(abs) {
+		return abs, ""
+	}
+	// 检查 .minecraft 子目录
+	sub := filepath.Join(abs, ".minecraft")
+	if info, err := os.Stat(sub); err == nil && info.IsDir() && isLikelyMinecraftDir(sub) {
+		return sub, ""
+	}
+	// 检查 versions 子目录（有时 .minecraft 内容直接在启动器目录下）
+	if info, err := os.Stat(filepath.Join(abs, "versions")); err == nil && info.IsDir() {
+		return abs, ""
+	}
+	return "", "未检测到 .minecraft 文件夹。请选择包含 versions/ 等子目录的 .minecraft 文件夹"
 }
 
 // ========== 仓库 ==========

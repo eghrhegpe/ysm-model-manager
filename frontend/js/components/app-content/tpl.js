@@ -31,7 +31,7 @@ export function settingsHTML() {
     <button class="btn" id="set-mc-browse" style="font-size:10px;margin-left:auto">📂 选择目录</button>
     <button class="btn" id="set-mc-detect" style="font-size:10px">🔍 自动搜索</button>
   </div>
-  <div style="font-size:9px;color:#6c7086;padding:2px 0 0 0">自动扫描常见路径如 %AppData%\\.minecraft</div>
+  <div style="font-size:9px;color:#6c7086;padding:2px 0 0 0">自动扫描 PCL2、%AppData% 等常见位置。选择目录后自动检测 versions/ 等特征，选错父目录自动补 .minecraft 子目录</div>
 </div>
 
 <div class="settings-group" style="margin-bottom:12px">

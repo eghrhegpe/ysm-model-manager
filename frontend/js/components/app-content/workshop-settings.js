@@ -12,7 +12,7 @@ export async function initSettings(root) {
     LoadAppConfig,
     SaveAppConfig,
     SelectDirectory,
-    GetMinecraftPath,
+    GetMinecraftPaths,
     SetLinkMode,
   } = await import("../../../wailsjs/go/main/App.js");
   const cfg = await LoadAppConfig();
@@ -84,29 +84,26 @@ export async function initSettings(root) {
 
   // 游戏路径 - 自动搜索
   root.getElementById("set-mc-detect")?.addEventListener("click", async () => {
-    const result = await GetMinecraftPath();
-    const match = result.match(/[✅⚠️]\s*游戏路径[:：]\s*(.+)/);
-    if (match) {
-      const found = match[1].trim();
-      if (found) {
-        const theme1 = localStorage.getItem("theme") || "dark";
-        await SaveAppConfig(repoPath, found, linkMode, theme1);
-        if (mcEl) mcEl.textContent = found;
-        bus.emit("config:updated");
-        bus.emit("stats:refresh");
-        bus.emit("toast:show", {
-          msg: `✅ 已自动检测到: ${found}`,
-          duration: 3000,
-          type: "success",
-        });
-        return;
-      }
+    const paths = await GetMinecraftPaths();
+    if (paths?.length) {
+      const found = paths[0];
+      const theme1 = localStorage.getItem("theme") || "dark";
+      await SaveAppConfig(repoPath, found, linkMode, theme1);
+      if (mcEl) mcEl.textContent = found;
+      bus.emit("config:updated");
+      bus.emit("stats:refresh");
+      bus.emit("toast:show", {
+        msg: `✅ 已自动检测到: ${found}`,
+        duration: 3000,
+        type: "success",
+      });
+    } else {
+      bus.emit("toast:show", {
+        msg: "⚠️ 未找到 .minecraft 文件夹",
+        duration: 3000,
+        type: "warn",
+      });
     }
-    bus.emit("toast:show", {
-      msg: result || "未找到 .minecraft 文件夹",
-      duration: 3000,
-      type: "warn",
-    });
   });
 
   // 仓库路径

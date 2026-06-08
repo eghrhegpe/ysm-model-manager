@@ -128,8 +128,7 @@ class AppContent extends HTMLElement {
 
     // 加载数据
     const loadSites = async () => {
-      grid.innerHTML =
-        '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>';
+      grid.innerHTML = '<div class="ws-loading">⏳ 加载中...</div>';
       try {
         const { sites, creators, authors } = await loadWorkshopData();
         allCreators = creators;
@@ -156,8 +155,7 @@ class AppContent extends HTMLElement {
           });
         });
       } catch (e) {
-        grid.innerHTML =
-          '<div style="padding:24px;text-align:center;color:#f38ba8;font-size:11px">加载失败</div>';
+        grid.innerHTML = '<div class="ws-loading-error">加载失败</div>';
       }
     };
 
@@ -310,16 +308,16 @@ class AppContent extends HTMLElement {
 
       const sourceLabel =
         (source === "raw"
-          ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(137,180,250,.15);color:var(--accent)">raw</span>'
+          ? '<span class="link-badge link-badge-raw">raw</span>'
           : source === "jsd"
-            ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(250,179,135,.15);color:#fab387">⚡jsd</span>'
+            ? '<span class="link-badge link-badge-jsd">⚡jsd</span>'
             : source === "api"
-              ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(166,227,161,.15);color:var(--success,#4caf50)">API</span>'
+              ? '<span class="link-badge link-badge-api">API</span>'
               : "") +
         (mirror === "jsdelivr"
-          ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(250,179,135,.15);color:#fab387;margin-left:2px">⚡CDN</span>'
+          ? '<span class="link-badge link-badge-cdn">⚡CDN</span>'
           : mirror === "githubapi"
-            ? '<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(166,227,161,.15);color:var(--success,#4caf50);margin-left:2px">🐙API</span>'
+            ? '<span class="link-badge link-badge-ghapi">🐙API</span>'
             : "");
 
       const missingCount = countMissing(models, localMap);

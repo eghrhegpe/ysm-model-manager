@@ -69,7 +69,7 @@ export function GetInstanceStatus(arg1:string,arg2:string):Promise<Array<types.I
 
 export function GetLinkMode():Promise<string>;
 
-export function GetMinecraftPath():Promise<string>;
+export function GetMinecraftPaths():Promise<Array<string>>;
 
 export function GetPackInfo(arg1:string):Promise<types.PackInfo>;
 
@@ -178,3 +178,5 @@ export function SyncCustomToRepo(arg1:string,arg2:string):Promise<number>;
 export function SyncModelToggleStatus(arg1:string,arg2:string):Promise<number>;
 
 export function ToggleModelEnable(arg1:string):Promise<boolean>;
+
+export function ValidateMinecraftDir(arg1:string):Promise<string|string>;

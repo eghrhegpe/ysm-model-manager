@@ -103,12 +103,30 @@ export function bindFooter(root, instances) {
     btn.onclick = () => bus.emit("dir:select-mc");
     (async () => {
       try {
-        const { LoadAppConfig } =
+        const { LoadAppConfig, SaveAppConfig, GetMinecraftPaths } =
           await import("../../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
-        btn.textContent = cfg.mcRoot || "" ? `🎮 ${cfg.mcRoot}` : "🎮 未设置";
-      } catch {
+        if (cfg.mcRoot) {
+          btn.textContent = `🎮 ${cfg.mcRoot}`;
+        } else {
+          // 没设置时自动检测：用第一个有效路径
+          const paths = await GetMinecraftPaths();
+          if (paths?.length) {
+            btn.textContent = `🎮 ${paths[0]}`;
+            const theme = localStorage.getItem("theme") || "dark";
+            await SaveAppConfig(
+              cfg.repoRoot || "",
+              paths[0],
+              cfg.linkMode || "copy",
+              theme,
+            );
+          } else {
+            btn.textContent = "🎮 未设置";
+          }
+        }
+      } catch (e) {
         btn.textContent = "🎮 未设置";
+        console.warn("[sidebar] MC detection:", e);
       }
     })();
   }

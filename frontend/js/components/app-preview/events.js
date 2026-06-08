@@ -93,7 +93,7 @@ export function bindActions(root) {
       let open = false;
       c.onclick = () => {
         open = !open;
-        d.style.display = open ? "" : "none";
+        d.classList.toggle("dp-detail-hidden", !open);
       };
     }
   });
@@ -175,7 +175,7 @@ export function showPackageDetail(root, pkg) {
           })
           .join("")
       : `<div class="dp-detail-empty">无</div>`;
-    el.style.display = "none";
+    el.classList.add("dp-detail-hidden");
   });
 
   // 恢复全局按钮状态
@@ -259,7 +259,7 @@ export function loadLogsPreview(root, logs) {
         : "";
       const nameHtml = renderDisplayName(l.ModelName);
       const errHtml = l.ErrorMsg
-        ? '<span style="color:#f38ba8">: ' +
+        ? '<span class="ysm-log-error">: ' +
           esc(l.ErrorMsg).replace(
             /\s+(问题描述|操作|源路径|目标路径|解决建议)[：:]?/g,
             "<br>$1：",

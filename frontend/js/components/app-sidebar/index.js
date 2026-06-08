@@ -38,8 +38,19 @@ class AppSidebar extends HTMLElement {
           if (!dir) return;
           const cfg = await LoadAppConfig();
           const theme = localStorage.getItem("theme") || "dark";
-          await SaveAppConfig(cfg.repoRoot || "", dir, cfg.linkMode || "copy", theme);
-        } catch (_) {}
+          await SaveAppConfig(
+            cfg.repoRoot || "",
+            dir,
+            cfg.linkMode || "copy",
+            theme,
+          );
+        } catch (e) {
+          bus.emit("toast:show", {
+            msg: "⚠️ " + (e?.message || e),
+            duration: 5000,
+            type: "warn",
+          });
+        }
         await this._reload();
       }),
     );

@@ -8,8 +8,7 @@ export async function showRenameDialog(filePath, currentName) {
 
     const overlay = document.createElement("div");
     overlay.tabIndex = 0;
-    overlay.style.cssText =
-      "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center";
+    overlay.className = "dlg-overlay";
     const close = (v) => {
       overlay.remove();
       resolve(v);
@@ -22,31 +21,30 @@ export async function showRenameDialog(filePath, currentName) {
     });
 
     const box = document.createElement("div");
-    box.style.cssText =
-      "background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:14px;width:640px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:6px";
+    box.className = "dlg-box dlg-pad dlg-gap";
 
     box.innerHTML = `
-      <div style="font-size:13px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+      <div class="dlg-title">
         <span>✂️ 重命名模型</span>
-        <button id="rn-from-header" title="从 YSM 文件头部读取作者/介绍" style="padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px;font-family:inherit">📖 读取头部</button>
+        <button id="rn-from-header" class="dlg-btn-sm" title="从 YSM 文件头部读取作者/介绍">📖 读取头部</button>
       </div>
-      <div style="font-size:10px;color:var(--muted)">${esc(currentName)}</div>
-      <div style="display:flex;gap:4px">
-        <input id="rn-author" placeholder="作者" value="${esc(parsed.author)}" style="flex:2;min-width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
-        <input id="rn-work" placeholder="品牌" value="${esc(parsed.work)}" style="flex:2;min-width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
-        <input id="rn-chara" placeholder="角色" value="${esc(parsed.chara)}" style="flex:2;min-width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
-        <input id="rn-variant" placeholder="变体" style="flex:1;min-width:50px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
-        <input id="rn-date" placeholder="年月" value="${esc(parsed.date)}" style="flex:1;min-width:50px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
+      <div class="dlg-sub">${esc(currentName)}</div>
+      <div class="dlg-row">
+        <input id="rn-author" class="dlg-input-bg" style="flex:2" placeholder="作者" value="${esc(parsed.author)}">
+        <input id="rn-work" class="dlg-input-bg" style="flex:2" placeholder="品牌" value="${esc(parsed.work)}">
+        <input id="rn-chara" class="dlg-input-bg" style="flex:2" placeholder="角色" value="${esc(parsed.chara)}">
+        <input id="rn-variant" class="dlg-input-bg" style="flex:1;min-width:50px" placeholder="变体">
+        <input id="rn-date" class="dlg-input-bg" style="flex:1;min-width:50px" placeholder="年月" value="${esc(parsed.date)}">
       </div>
-      <div id="rn-tips" style="display:none;font-size:10px;color:var(--muted);padding:4px 6px;border-radius:4px;background:var(--bg);line-height:1.5;max-height:80px;overflow-y:auto;white-space:pre-wrap"></div>
-      <div style="font-size:11px;padding:4px 6px;border-radius:4px;background:var(--bg)">
-        <span style="color:var(--muted)">${esc(currentName)}</span> → <span id="rn-preview" style="font-weight:500">-</span>
+      <div id="rn-tips" class="dlg-tips"></div>
+      <div class="dlg-preview-box">
+        <span class="dlg-preview-old">${esc(currentName)}</span> → <span id="rn-preview" class="dlg-preview-new">-</span>
       </div>
-      <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:2px">
-        <button id="rn-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消 (Esc)</button>
-        <button id="rn-ok" style="padding:5px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px">✂️ 重命名 (Enter)</button>
+      <div class="dlg-footer" style="margin-top:2px">
+        <button id="rn-cancel" class="dlg-btn">取消 (Esc)</button>
+        <button id="rn-ok" class="dlg-btn dlg-btn-primary">✂️ 重命名 (Enter)</button>
       </div>
-      <div id="rn-err" style="font-size:10px;color:#f38ba8;min-height:0;transition:min-height .15s;overflow:hidden"></div>
+      <div id="rn-err" class="dlg-err"></div>
     `;
     overlay.appendChild(box);
     document.body.appendChild(overlay);

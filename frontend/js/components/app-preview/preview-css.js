@@ -20,7 +20,7 @@ h3 { font-size: 11px; font-weight: 600; color: var(--txt); text-transform: upper
 .dp-name { font-size: 13px; font-weight: 600; color: var(--txt); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dp-status { font-size: 10px; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
 .dp-cards { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-.dp-card { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--bd); transition: background .12s; }
+.dp-card { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--bd); transition: background .12s; cursor:pointer; }
 .dp-card:hover { background: var(--hover); }
 .dp-card.green { border-left: 3px solid #a6e3a1; }
 .dp-card.red { border-left: 3px solid #f38ba8; }
@@ -34,7 +34,8 @@ h3 { font-size: 11px; font-weight: 600; color: var(--txt); text-transform: upper
 .dp-card-action .btn { padding: 3px 6px; font-size: 9px; }
 .dp-expand-icon { font-size: 8px; margin-left: 2px; transition: transform .15s; }
 .dp-expand-icon.open { transform: rotate(90deg); }
-.dp-detail { font-size: 10px; color: var(--txt); padding: 2px 4px; background: var(--surf); border-radius: 4px; flex:1; overflow-y:auto; min-height:0; }
+.dp-detail { font-size: 10px; color: var(--txt); padding: 2px 4px; background: var(--surf); border-radius: 4px; flex:1; overflow-y:auto; min-height:0; margin-bottom:4px; }
+.dp-detail-hidden { display:none; }
 .dp-detail .dp-detail-item { padding: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dp-detail .dp-detail-item .tag-author,.dp-detail .dp-detail-item .tag-work,.dp-detail .dp-detail-item .tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
 .dp-detail .dp-detail-item .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
@@ -63,5 +64,42 @@ h3 { font-size: 11px; font-weight: 600; color: var(--txt); text-transform: upper
 .err { font-size: 10px; color: #f38ba8; padding: 4px 0; }
 .preview-thumb { margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: var(--surf); border: 1px solid var(--bd); }
 .preview-thumb img { display: block; width: 100%; height: auto; object-fit: cover; }
+.dp-log-fbtn { font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer; }
 .dp-log-fbtn.active { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+.dp-log-search { flex:1;font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);min-width:0;margin-left:4px; }
+.dp-log-empty { font-size:10px;color:#6c7086; }
+.ysm-stat-label { display:inline-block;min-width:80px; }
+
+/* === 骨骼预览区 === */
+.ysm-btn { font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;display:flex;align-items:center;gap:3px; }
+.ysm-btn:hover { background:var(--hover); }
+.ysm-hint { font-size:8px;color:var(--muted); }
+.ysm-canvas { width:100%;height:auto;border-radius:8px;background:rgba(0,0,0,.12);margin-bottom:6px; }
+.ysm-grab { cursor:grab; }
+.ysm-card { background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:8px; }
+.ysm-card-title { display:flex;align-items:center;gap:4px;margin-bottom:6px;font-size:10px;font-weight:600;color:var(--txt); }
+.ysm-card-section { padding-left:8px;margin-bottom:5px; }
+.ysm-card-section-label { font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px; }
+.ysm-card-row { font-size:10px;color:var(--txt);line-height:1.6; }
+.ysm-card-val { color:var(--accent);font-weight:600; }
+.ysm-badge { font-size:8px;padding:0 5px;border-radius:3px;background:rgba(124,131,255,0.25);color:var(--txt);margin-left:auto; }
+.ysm-section-blue { border-left:2px solid #7c83ff; }
+.ysm-section-green { border-left:2px solid #a6e3a1; }
+.ysm-section-orange { border-left:2px solid #f9a826; }
+.ysm-tab-row { display:flex;gap:2px;margin-bottom:6px; }
+.ysm-tab { flex:1;font-size:10px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;text-align:center; }
+.ysm-tab-active { background:var(--accent);color:#fff; }
+.ysm-tab-inactive { background:var(--surf);color:var(--txt); }
+.ysm-tab-row { display:flex;gap:2px;margin-bottom:6px; }
+.ysm-export-row { display:flex;gap:6px;margin-top:4px;align-items:center; }
+.ysm-export-btn { font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer; }
+.ysm-export-btn:hover { background:var(--hover); }
+.ysm-toggle-row { display:flex;align-items:center;gap:4px;margin-bottom:6px; }
+.ysm-debug { font-size:9px;color:#ff6b6b;margin-top:2px;opacity:0.8; }
+.ysm-loading-title { font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px; }
+.ysm-loading-bar { height:60px;border-radius:6px;background:rgba(0,0,0,.08); }
+.ysm-error-title { font-size:10px;font-weight:600;margin-bottom:4px; }
+.ysm-error-body { font-size:9px;color:#888;padding:8px 0; }
+.ysm-log-error { color:#f38ba8; }
 `;
+

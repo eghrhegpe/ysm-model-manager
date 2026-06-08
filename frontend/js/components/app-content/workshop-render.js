@@ -5,8 +5,7 @@ import { renderDisplayName } from "../../utils/display.js";
 // 永久预览元素：只创建一次，永远不销毁，hover 时切换 src/display
 const _previewEl = document.createElement("div");
 _previewEl.id = "ws-preview";
-_previewEl.style.cssText =
-  "position:fixed;z-index:9999;pointer-events:none;display:none";
+_previewEl.className = "ws-preview";
 document.body.appendChild(_previewEl);
 
 // 最新鼠标坐标（由 mousemove 持续更新，异步 showPreview 用最新值）
@@ -18,14 +17,12 @@ document.addEventListener("mouseleave", () => hideGlobalPreview());
 
 // 内部子元素：img（正常）或 div（占位）
 const _previewImg = document.createElement("img");
-_previewImg.style.cssText =
-  "max-width:240px;max-height:180px;border-radius:6px;border:1px solid var(--bd);box-shadow:0 4px 12px rgba(0,0,0,.3);background:var(--bg);object-fit:contain;opacity:0;transform:scale(.97);transition:opacity .12s ease-out,transform .12s ease-out";
+_previewImg.className = "ws-preview-img";
 _previewEl.appendChild(_previewImg);
 
 const _previewFallback = document.createElement("div");
 _previewFallback.textContent = "🎨";
-_previewFallback.style.cssText =
-  "width:80px;height:80px;border-radius:8px;border:1px solid var(--bd);background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:32px;display:none";
+_previewFallback.className = "ws-preview-fallback";
 _previewEl.appendChild(_previewFallback);
 
 export function hideGlobalPreview() {
@@ -116,8 +113,7 @@ export function renderModelList(
 
   if (!filtered.length) {
     const empty = document.createElement("div");
-    empty.style.cssText =
-      "padding:12px;text-align:center;color:var(--muted);font-size:10px";
+    empty.className = "ws-empty";
     empty.textContent = "🔍 没有匹配的模型";
     frag.appendChild(empty);
     return frag;
@@ -129,11 +125,7 @@ export function renderModelList(
     row.className = "model-row";
     row.dataset.id = String(allModels.indexOf(m));
     row.dataset.name = m.name;
-    row.style.cssText =
-      "display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);font-size:11px;margin-bottom:6px;transition:background .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" +
-      (exists
-        ? ";opacity:.6;background:rgba(166,227,161,.06);cursor:default"
-        : ";background:rgba(243,139,168,.04);cursor:default");
+    row.className = "ws-row" + (exists ? " ws-row-exists" : " ws-row-missing");
 
     // 复选框（仅未下载的）
     if (!exists) {
@@ -142,31 +134,28 @@ export function renderModelList(
       cb.className = "ws-sel";
       cb.dataset.name = m.name;
       cb.checked = selectedSet.has(m.name);
-      cb.style.cssText = "cursor:pointer;flex-shrink:0";
+      cb.className = "ws-cb";
       row.appendChild(cb);
     }
 
     // 文件名
     const nameSpan = document.createElement("span");
-    nameSpan.style.cssText =
-      "flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);font-size:11px";
+    nameSpan.className = "ws-name";
     nameSpan.innerHTML = renderDisplayName(m.name);
     row.appendChild(nameSpan);
 
     if (exists) {
       const badge = document.createElement("span");
-      badge.style.cssText =
-        "padding:2px 8px;border-radius:4px;font-size:10px;color:var(--success,#4caf50);flex-shrink:0";
+      badge.className = "ws-badge";
       badge.textContent = "✅ 已有";
       row.appendChild(badge);
     } else {
       // 大小 + 下载按钮放在右侧
       const rightGroup = document.createElement("div");
-      rightGroup.style.cssText =
-        "display:flex;align-items:center;gap:6px;flex-shrink:0";
+      rightGroup.className = "ws-right";
 
       const sizeSpan = document.createElement("span");
-      sizeSpan.style.cssText = "font-size:10px;color:var(--muted)";
+      sizeSpan.className = "ws-size";
       sizeSpan.textContent = m.size ? (m.size / 1024).toFixed(0) + "KB" : "";
       rightGroup.appendChild(sizeSpan);
 
@@ -175,17 +164,8 @@ export function renderModelList(
       dlBtn.dataset.url = dlPrefix + m.path.replace(/\\/g, "/");
       dlBtn.dataset.name = m.name;
       dlBtn.dataset.size = String(m.size || 0);
-      dlBtn.style.cssText =
-        "padding:3px 10px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;flex-shrink:0;transition:all .15s";
+      dlBtn.className = "ws-dl-btn";
       dlBtn.textContent = "⬇️";
-      dlBtn.onmouseenter = () => {
-        dlBtn.style.borderColor = "var(--accent)";
-        dlBtn.style.color = "var(--accent)";
-      };
-      dlBtn.onmouseleave = () => {
-        dlBtn.style.borderColor = "var(--bd)";
-        dlBtn.style.color = "var(--muted)";
-      };
       rightGroup.appendChild(dlBtn);
 
       row.appendChild(rightGroup);
@@ -289,7 +269,7 @@ export function renderCardsHTML(sites, esc) {
     if (!groups[g] || !groups[g].length) return;
     const info = GROUP_LABELS[g] || { icon: "🔗", label: g };
     html +=
-      '<div style="font-size:9px;font-weight:600;color:var(--muted);padding:8px 8px 2px">' +
+      '<div class="ws-section-title">' +
       info.icon +
       " " +
       info.label +
@@ -331,34 +311,34 @@ export function renderRepoHeaderHTML({
   missingCount,
 }) {
   return (
-    '<div style="flex:1;overflow-y:auto;padding:0 12px">' +
-    '<div style="padding:8px 0 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
-    '<button class="ws-back-repo" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:10px">← 返回</button>' +
-    '<span style="font-size:11px;font-weight:600;color:var(--txt)">📦 ' +
+    '<div class="ws-header">' +
+    '<div class="ws-header-top">' +
+    '<button class="ws-back-repo ws-btn ws-btn-txt">← 返回</button>' +
+    '<span class="ws-repo-name">📦 ' +
     esc(repo) +
     "</span>" +
     sourceLabel +
-    '<span style="font-size:9px;color:var(--muted)">' +
+    '<span class="ws-model-count">' +
     modelsLength +
     " 个模型</span>" +
     (missingCount > 0
-      ? '<span style="font-size:9px;color:var(--accent);margin-left:auto">⬇️' +
+      ? '<span class="ws-missing-count">⬇️' +
         missingCount +
         "</span>" +
-        '<button class="ws-dl-selected" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px;opacity:.4;pointer-events:none">⬇️ 选中 (0)</button>'
+        '<button class="ws-dl-selected ws-btn-sm ws-btn-muted" disabled>⬇️ 选中 (0)</button>'
       : "") +
-    '<button class="ws-filter-btn" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:10px">⚙️ 筛选</button>' +
-    '<div class="ws-filter-dropdown" style="display:none;width:100%;padding:4px 0 2px;gap:4px;flex-wrap:wrap">' +
+    '<button class="ws-filter-btn ws-btn ws-btn-txt">⚙️ 筛选</button>' +
+    '<div class="ws-filter-dropdown">' +
     (missingCount > 0
-      ? '<button class="ws-dl-all" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">⬇️ 下载全部缺失</button>' +
-        '<button class="ws-select-all" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px">☐ 全选</button>'
+      ? '<button class="ws-dl-all ws-btn-sm ws-btn-accent">⬇️ 下载全部缺失</button>' +
+        '<button class="ws-select-all ws-btn-sm ws-btn-muted">☐ 全选</button>'
       : "") +
-    '<button class="ws-toggle-all" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:9px">📁 仅显示缺失</button>' +
+    '<button class="ws-toggle-all ws-btn-sm ws-btn-txt">📁 仅显示缺失</button>' +
     "</div>" +
     "</div>" +
-    '<div id="ws-queue-status" style="display:none;padding:4px 12px;background:var(--surf);border-bottom:1px solid var(--bd);font-size:10px;color:var(--txt)"></div>' +
+    '<div id="ws-queue-status" class="ws-queue-status"></div>' +
     '<div style="padding:2px 0 6px">' +
-    '<input id="ws-repo-srch" type="text" placeholder="🔍 搜索模型名称" style="width:100%;box-sizing:border-box;padding:4px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;outline:none">' +
+    '<input id="ws-repo-srch" class="ws-search" type="text" placeholder="🔍 搜索模型名称">' +
     "</div>" +
     '<div id="ws-repo-list"></div>' +
     "</div>"

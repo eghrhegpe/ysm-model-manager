@@ -31,7 +31,7 @@ class AppToast extends HTMLElement {
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes slideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(20px); opacity: 0; } }
       </style>
-      <div id="c" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="c" class="toast-container"></div>
     `;
   }
 

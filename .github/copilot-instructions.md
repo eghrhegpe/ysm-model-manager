@@ -13,27 +13,27 @@
 1. **修改前读文件** — 禁止基于记忆修改，必须 `grep_search` / `read_file` 确认最新状态。
 2. **`oldString` 必须原文** — 刚读取到的一字不差，失败则报告不重试。
 3. **改完立即 build** — `npx vite build 2>&1 \| Select-String 'error'`，绝不攒多个修改。
-4. **`wails build -clean` 会清空 `build/bin/`** — 之后必须恢复 YSMParser.exe（从 `build/ysmparser-cache/` 恢复或下载）。
-5. **YSMParser 已内嵌 WASM** — `frontend/public/wasm/YSMParser.{js,wasm}`，前端 WebView2 直接解码 .ysm，无需 exe sidecar。
-6. **发版时 YSMParser.exe 不强制打包** — WASM 已内嵌，exe sidecar 仅作为 Go CLI fallback。
+4. **`wails build -clean` 会清空 `build/bin/`** — YSMParser.exe 不再强制恢复（因 WASM 已内嵌），但调试 CLI fallback 时可以从 `build/ysmparser-cache/` 恢复。
+5. **YSMParser 已内嵌 WASM** — `frontend/js/wasm/ysm-wasm-data.js`（base64 编码），前端 WebView2 直接解码 .ysm，**无需 exe sidecar**。
+6. **发版时不打包 YSMParser.exe** — WASM 已内嵌，exe sidecar 仅作为开发调试的 Go CLI fallback。
 7. **文件日志** — 生产环境无控制台时用 `writeDebug()` 写桌面 `ysm-debug.log`，用完删除。
-4. **`multi_replace` 不回滚** — build 失败后检查 import 语句是否完整。
-5. **唯一性检查** — 改文件前先 `grep` 确认没有同名文件在 `public/` 下（Vite dev 优先加载 `public/`）。
-6. **日志优先于猜测** — 遇到"逻辑对但没反应"，先加 `console.log` 看实际值，不要猜原因。
-7. **回调式 API 必须 Promise 化** — `entry.file(callback)` → `new Promise(resolve => entry.file(resolve))`，然后用 `await`。
-5. **构建发布（必须 `wails build`）**:
-   ```powershell
-   Get-Process -Name "YSM-Model-Manager*" -EA SilentlyContinue \| Stop-Process -Force
-   wails build -clean -ldflags "-X ysm-model-manager/go/version.Version=v1.x.x"
-   Copy-Item "build\bin\YSM-Model-Manager.exe" "build\release\"
-   Copy-Item "workshop_sites.json", "workshop_creators.json" "build\release\"
-   Compress-Archive -Path "build\release\*" -DestinationPath "build\release\YSM-Model-Manager_windows_amd64.zip" -Force
-   ```
-6. **发版归档**: `docs/release-notes/v{major}.{minor}.{patch}.md` + 更新 `README.md` 索引表。
-7. **文件名渲染统一** — 所有 UI 文件名必须走 `renderDisplayName()`，禁止 `textContent`/`esc()` 绕过。
-8. **禁止安装软件** — 缺依赖提示用户手动装。
-9. **路径用正斜杠 `/`**。
-10. **WebView2 DnD 特殊性**：
+8. **`multi_replace` 不回滚** — build 失败后检查 import 语句是否完整。
+9. **唯一性检查** — 改文件前先 `grep` 确认没有同名文件在 `public/` 下（Vite dev 优先加载 `public/`）。
+10. **日志优先于猜测** — 遇到"逻辑对但没反应"，先加 `console.log` 看实际值，不要猜原因。
+11. **回调式 API 必须 Promise 化** — `entry.file(callback)` → `new Promise(resolve => entry.file(resolve))`，然后用 `await`。
+12. **构建发布（必须 `wails build`）**:
+    ```powershell
+    Get-Process -Name "YSM-Model-Manager*" -EA SilentlyContinue \| Stop-Process -Force
+    wails build -clean -ldflags "-X ysm-model-manager/go/version.Version=v1.x.x"
+    Copy-Item "build\bin\YSM-Model-Manager.exe" "build\release\"
+    Copy-Item "workshop_sites.json", "workshop_creators.json" "build\release\"
+    Compress-Archive -Path "build\release\*" -DestinationPath "build\release\YSM-Model-Manager_windows_amd64.zip" -Force
+    ```
+13. **发版归档**: `docs/release-notes/v{major}.{minor}.{patch}.md` + 更新 `README.md` 索引表。
+14. **文件名渲染统一** — 所有 UI 文件名必须走 `renderDisplayName()`，禁止 `textContent`/`esc()` 绕过。
+15. **禁止安装软件** — 缺依赖提示用户手动装。
+16. **路径用正斜杠 `/`**。
+17. **WebView2 DnD 特殊性**：
     - `dragover` 阶段无法读取文件名（`getAsFile()` 返回 null，`webkitGetAsEntry()` 返回 null），只能 `preventDefault()` + 显示遮罩
     - `drop` 阶段优先用 `dataTransfer.items` + `webkitGetAsEntry()`，兜底用 `dataTransfer.files`
     - `FileSystemEntry.file(callback)` 是回调，须用 `new Promise` 包装

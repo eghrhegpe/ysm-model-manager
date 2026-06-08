@@ -93,3 +93,35 @@ function esc(s) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
+
+/** 模型统计卡片 */
+export function statsCardHTML(model, modelPath, decodedBy) {
+  const isYsm = /\.ysm$/i.test(modelPath);
+  const fmt = isYsm ? ".ysm (加密)" : modelPath.endsWith(".zip") ? ".zip" : ".7z";
+  const badge = decodedBy
+    ? `<span style="font-size:8px;padding:0 5px;border-radius:3px;background:rgba(124,131,255,0.25);color:var(--txt)">${decodedBy}</span>`
+    : "";
+  return `
+<div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;font-size:10px;font-weight:600;color:var(--txt)">
+  📊 模型概览${badge}
+</div>
+<div style="border-left:2px solid #7c83ff;padding-left:8px;margin-bottom:5px">
+  <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">🔗 模型结构</div>
+  <div style="font-size:10px;color:var(--txt);line-height:1.6">
+    <span style="display:inline-block;min-width:80px">├─ 骨骼 (Bones)</span><span style="color:var(--accent);font-weight:600">${model.boneCount}</span> 根<br>
+    <span style="display:inline-block;min-width:80px">└─ 立方体 (Cubes)</span><span style="color:var(--accent);font-weight:600">${model.cubeCount}</span> 个
+  </div>
+</div>
+<div style="border-left:2px solid #a6e3a1;padding-left:8px;margin-bottom:5px">
+  <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">🖼️ 纹理尺寸</div>
+  <div style="font-size:10px;color:var(--txt);line-height:1.6">
+    └─ <span style="color:var(--accent);font-weight:600">${model.texWidth || "?"} × ${model.texHeight || "?"}</span> px
+  </div>
+</div>
+<div style="border-left:2px solid #f9a826;padding-left:8px">
+  <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">💾 文件信息</div>
+  <div style="font-size:10px;color:var(--txt);line-height:1.6">
+    └─ ${fmt}
+  </div>
+</div>`;
+}

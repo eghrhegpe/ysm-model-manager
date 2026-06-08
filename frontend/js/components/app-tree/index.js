@@ -5,7 +5,7 @@ import { renderTree, updateStat } from "./render.js";
 import { bindTreeEvents, bindToolbarEvents } from "./events.js";
 import { loadEntries } from "./loader.js";
 import { bindBusEvents } from "./bus-handlers.js";
-import { loadAuthors, renderAuthorChips } from "./authors.js";
+import { loadAuthors } from "./authors.js";
 class AppTree extends HTMLElement {
   constructor() {
     super();
@@ -30,8 +30,9 @@ class AppTree extends HTMLElement {
 
     try {
       this._renderLayout();
+      this._unsubs = [];
       bindToolbarEvents(this._root, this);
-      this._unsubs = bindBusEvents(this);
+      this._unsubs.push(...bindBusEvents(this));
 
       await this._load();
       this._authors = await loadAuthors();
@@ -80,11 +81,8 @@ class AppTree extends HTMLElement {
       repoBtn.textContent = this._repoRoot
         ? `📁 ${this._repoRoot}`
         : "📁 未设置";
-    renderAuthorChips(
-      this._root.getElementById("author-chips"),
-      this._authors,
-      this._root.getElementById("srch"),
-    );
+    // 存全局供筛选栏动态渲染作者标签
+    window._treeAuthors = this._authors;
   }
 }
 

@@ -397,6 +397,58 @@ class AppPreview extends HTMLElement {
         };
       }
 
+      // ---- 3D 预览切换 ----
+      let _model3d = null;
+      const viewRow = document.createElement("div");
+      viewRow.style.cssText =
+        "display:flex;gap:4px;align-items:center;padding:2px 12px";
+      const viewBtn = document.createElement("button");
+      viewBtn.className = "ysm-btn";
+      viewBtn.textContent = "🌐 3D";
+      viewBtn.title = "切换 3D 预览（Three.js）";
+      const viewHint = document.createElement("span");
+      viewHint.className = "ysm-hint";
+      viewHint.textContent = "2D";
+      viewRow.appendChild(viewBtn);
+      viewRow.appendChild(viewHint);
+      container.appendChild(viewRow);
+
+      // 3D 容器
+      const view3d = document.createElement("div");
+      view3d.style.cssText =
+        "width:100%;height:280px;display:none;border-radius:6px;overflow:hidden";
+      view3d.id = "preview-3d";
+      container.appendChild(view3d);
+
+      let _is3D = false;
+      viewBtn.onclick = async () => {
+        _is3D = !_is3D;
+        viewBtn.textContent = _is3D ? "📐 2D" : "🌐 3D";
+        viewHint.textContent = _is3D ? "3D" : "2D";
+
+        if (_is3D) {
+          canvas.style.display = "none";
+          view3d.style.display = "block";
+          if (!_model3d) {
+            try {
+              const texUrl = model.texture || null;
+              const { renderModel3D } = await import("../../utils/model3d.js");
+              _model3d = await renderModel3D(view3d, model, texUrl, _player);
+            } catch (e) {
+              console.error("[3D] 加载失败:", e);
+              view3d.innerHTML = `<div style="padding:20px;color:#ff6b6b">⚠️ 3D 预览加载失败: ${e?.message || e}</div>`;
+            }
+          }
+        } else {
+          canvas.style.display = "block";
+          view3d.style.display = "none";
+          if (_model3d) {
+            _model3d.cleanup();
+            _model3d = null;
+          }
+        }
+      };
+
       // ---- 全窗放大 + 滚轮/拖拽旋转 ----
       canvas.classList.add("ysm-grab");
       canvas.title = "左键全窗放大 · 滚轮缩放 · 拖拽旋转";
@@ -441,6 +493,10 @@ class AppPreview extends HTMLElement {
         canvas.removeEventListener("mousedown", _onMouseDown);
         window.removeEventListener("mousemove", _onMouseMove);
         window.removeEventListener("mouseup", _onMouseUp);
+        if (_model3d) {
+          _model3d.cleanup();
+          _model3d = null;
+        }
       };
 
       // ---- 导出按钮 ----

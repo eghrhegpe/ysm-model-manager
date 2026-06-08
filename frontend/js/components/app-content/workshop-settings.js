@@ -20,11 +20,19 @@ export async function initSettings(root) {
   const repoPath = cfg.repoRoot || "";
   const linkMode = cfg.linkMode || "copy";
 
-  // 显示当前值
+  // 显示当前值 + 空状态提示
   const mcEl = root.getElementById("set-mc-path");
   const repoEl = root.getElementById("set-repo-path");
-  if (mcEl) mcEl.textContent = mcPath || "未设置";
-  if (repoEl) repoEl.textContent = repoPath || "未设置";
+  const mcHint = root.getElementById("set-mc-empty-hint");
+  const repoHint = root.getElementById("set-repo-empty-hint");
+  if (mcEl) {
+    mcEl.textContent = mcPath || "未设置";
+    if (mcHint) mcHint.style.display = mcPath ? "none" : "";
+  }
+  if (repoEl) {
+    repoEl.textContent = repoPath || "未设置";
+    if (repoHint) repoHint.style.display = repoPath ? "none" : "";
+  }
 
   // 链接模式
   const lmRadio = root.querySelector(
@@ -73,6 +81,7 @@ export async function initSettings(root) {
     const theme = localStorage.getItem("theme") || "dark";
     await SaveAppConfig(repoPath, dir, linkMode, theme);
     if (mcEl) mcEl.textContent = dir;
+    if (mcHint) mcHint.style.display = "none";
     bus.emit("config:updated");
     bus.emit("stats:refresh");
     bus.emit("toast:show", {
@@ -90,6 +99,7 @@ export async function initSettings(root) {
       const theme1 = localStorage.getItem("theme") || "dark";
       await SaveAppConfig(repoPath, found, linkMode, theme1);
       if (mcEl) mcEl.textContent = found;
+      if (mcHint) mcHint.style.display = "none";
       bus.emit("config:updated");
       bus.emit("stats:refresh");
       bus.emit("toast:show", {
@@ -115,6 +125,7 @@ export async function initSettings(root) {
       const theme = localStorage.getItem("theme") || "dark";
       await SaveAppConfig(dir, mcPath, linkMode, theme);
       if (repoEl) repoEl.textContent = dir;
+      if (repoHint) repoHint.style.display = "none";
       bus.emit("config:updated");
       bus.emit("stats:refresh");
       bus.emit("tree:reload"); // 仓库路径变了，重新加载树

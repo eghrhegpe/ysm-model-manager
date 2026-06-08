@@ -17,6 +17,26 @@ export const contentCSS = `
 .placeholder-box .big { font-size:48px; }
 .ptag { font-size:9px; background:#f9a82633; color:#f9a826; padding:2px 8px; border-radius:4px; }
 .repo-layout { flex:1; display:flex; overflow:hidden; height:100%; }
+.repo-layout-wrap { flex:1; }
+.repo-wrap { display:flex;flex-direction:column;flex:1;overflow:hidden; }
+.repo-toolbar { display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--bd);flex-shrink:0; }
+.repo-title { font-size:12px;font-weight:600; }
+.repo-spacer { flex:1; }
+.repo-btn { font-size:9px;padding:2px 8px; }
+.repo-footer { padding:3px 12px;font-size:9px;color:var(--muted);border-top:1px solid var(--bd);flex-shrink:0; }
+.stg-page { flex:1;overflow-y:auto;padding:12px; }
+.stg-title { margin-bottom:8px; }
+.stg-sub-title { margin-top:16px; }
+.stg-group { margin-bottom:12px; }
+.stg-val { font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px; }
+.stg-btn { font-size:10px; }
+.stg-hint { font-size:9px;color:#6c7086;padding:2px 0 0 0; }
+.stg-ml-auto { margin-left:auto; }
+.stg-radio-row { display:flex;gap:8px;padding:4px 0; }
+.stg-label { display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer; }
+.stg-hint-hidden { font-size:9px;color:#6c7086;padding:2px 0 0 0;display:none; }
+.stg-hint-warn { font-size:9px;color:#e5534b; }
+.stg-select { background:var(--bg,#1e1e2e);color:var(--txt,#cdd6f4);border:1px solid var(--bd,#444);border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer; }
 .settings-group { padding:0 16px; }
 .setting-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surf); border-radius:6px; margin-bottom:4px; font-size:12px; }
 .setting-row .label { color:var(--txt); }

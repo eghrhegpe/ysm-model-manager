@@ -1,1 +1,7 @@
 frontend/dist
+build/bin/
+build/release/
+*.exe
+node_modules/
+.DS_Store
+*.log

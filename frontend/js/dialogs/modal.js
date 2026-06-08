@@ -24,8 +24,7 @@ export function modalPrompt(opts) {
   return new Promise((resolve) => {
     const { title, icon, value, placeholder, okText } = opts;
     const overlay = document.createElement("div");
-    overlay.style.cssText =
-      "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center";
+    overlay.className = "dlg-overlay";
     overlay.onclick = (e) => {
       if (e.target === overlay) {
         overlay.remove();
@@ -34,16 +33,16 @@ export function modalPrompt(opts) {
     };
 
     const box = document.createElement("div");
-    box.style.cssText =
-      "background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:16px;width:380px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:10px";
+    box.className = "dlg-box dlg-pad";
+    box.style.gap = "10px";
 
     box.innerHTML = `
-      <div style="font-size:13px;font-weight:600">${icon || ""} ${esc(title)}</div>
+      <div class="dlg-title" style="margin:0">${icon || ""} ${esc(title)}</div>
       <input id="mp-input" value="${esc(value || "")}" placeholder="${esc(placeholder || "")}" style="width:100%;padding:6px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:12px;box-sizing:border-box">
-      <div id="mp-err" style="font-size:10px;color:#f38ba8;min-height:0;overflow:hidden;transition:min-height .15s"></div>
-      <div style="display:flex;gap:6px;justify-content:flex-end">
-        <button id="mp-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消 (Esc)</button>
-        <button id="mp-ok" style="padding:5px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px">${esc(okText || "确定")} (Enter)</button>
+      <div id="mp-err" class="dlg-err"></div>
+      <div class="dlg-footer" style="padding:0">
+        <button id="mp-cancel" class="dlg-btn">取消 (Esc)</button>
+        <button id="mp-ok" class="dlg-btn dlg-btn-primary">${esc(okText || "确定")} (Enter)</button>
       </div>
     `;
     overlay.appendChild(box);
@@ -102,8 +101,7 @@ export function modalConfirm(opts) {
     const { title, icon, message, okText, danger } = opts;
     const overlay = document.createElement("div");
     overlay.tabIndex = 0;
-    overlay.style.cssText =
-      "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center";
+    overlay.className = "dlg-overlay";
     overlay.onclick = (e) => {
       if (e.target === overlay) {
         overlay.remove();
@@ -118,15 +116,15 @@ export function modalConfirm(opts) {
     });
 
     const box = document.createElement("div");
-    box.style.cssText =
-      "background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:16px;width:380px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:10px";
+    box.className = "dlg-box dlg-pad";
+    box.style.gap = "10px";
 
     box.innerHTML = `
-      <div style="font-size:13px;font-weight:600">${icon || ""} ${esc(title)}</div>
+      <div class="dlg-title" style="margin:0">${icon || ""} ${esc(title)}</div>
       <div style="font-size:11px;color:var(--txt);line-height:1.5;white-space:pre-wrap">${esc(message)}</div>
-      <div style="display:flex;gap:6px;justify-content:flex-end">
-        <button id="mc-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消 (Esc)</button>
-        <button id="mc-ok" style="padding:5px 14px;border-radius:5px;border:none;background:${danger ? "#e5534b" : "var(--accent)"};color:#fff;cursor:pointer;font-size:11px">${esc(okText || "确定")} (Enter)</button>
+      <div class="dlg-footer" style="padding:0">
+        <button id="mc-cancel" class="dlg-btn">取消 (Esc)</button>
+        <button id="mc-ok" class="dlg-btn" style="border:none;background:${danger ? "#e5534b" : "var(--accent)"};color:#fff">${esc(okText || "确定")} (Enter)</button>
       </div>
     `;
     overlay.appendChild(box);

@@ -48,6 +48,7 @@ export namespace types {
 	    size: number[];
 	    pivot?: number[];
 	    uv?: number[];
+	    faceUV?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Cube2D(source);
@@ -59,6 +60,7 @@ export namespace types {
 	        this.size = source["size"];
 	        this.pivot = source["pivot"];
 	        this.uv = source["uv"];
+	        this.faceUV = source["faceUV"];
 	    }
 	}
 	export class Bone2D {
@@ -97,6 +99,7 @@ export namespace types {
 	    boneCount: number;
 	    cubeCount: number;
 	    texture?: string;
+	    textures?: string[];
 	    format?: string;
 	    texWidth?: number;
 	    texHeight?: number;
@@ -111,6 +114,7 @@ export namespace types {
 	        this.boneCount = source["boneCount"];
 	        this.cubeCount = source["cubeCount"];
 	        this.texture = source["texture"];
+	        this.textures = source["textures"];
 	        this.format = source["format"];
 	        this.texWidth = source["texWidth"];
 	        this.texHeight = source["texHeight"];

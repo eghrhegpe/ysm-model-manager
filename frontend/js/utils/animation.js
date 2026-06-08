@@ -181,9 +181,10 @@ export function evaluateKeyframes(keyframes, t) {
  * @param {AnimationClip} clip
  * @param {number} time - 当前时间（秒）
  * @param {object[]} [boneHierarchy] - 骨骼层级数据 [{name, parent}]
+ * @param {boolean} [localOnly=false] - 只返回局部变换（不传播父级），用于 Three.js
  * @returns {Map<string, {rotation, position, scale}>}
  */
-export function evaluateClip(clip, time, boneHierarchy) {
+export function evaluateClip(clip, time, boneHierarchy, localOnly) {
   const result = new Map();
   if (!clip?.bones) return result;
 
@@ -206,6 +207,9 @@ export function evaluateClip(clip, time, boneHierarchy) {
       local.set(boneName, transform);
     }
   }
+
+  // 如果只需要局部变换，直接返回
+  if (localOnly) return local;
 
   // 2. 构建名称→父级映射
   const parentMap = new Map();

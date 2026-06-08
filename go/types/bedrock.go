@@ -4,7 +4,8 @@ package types
 type BedrockModel struct {
 	BoneCount  int       `json:"boneCount"`
 	CubeCount  int       `json:"cubeCount"`
-	Texture    string    `json:"texture,omitempty"`    // 纹理图 base64 data URI
+	Texture    string    `json:"texture,omitempty"`    // 纹理图 base64 data URI（单纹理兼容）
+	Textures   []string  `json:"textures,omitempty"`   // 多纹理 base64 data URI 数组
 	Format     string    `json:"format,omitempty"`     // "1.12.0" 等
 	TexWidth   int       `json:"texWidth,omitempty"`
 	TexHeight  int       `json:"texHeight,omitempty"`
@@ -23,4 +24,5 @@ type Cube2D struct {
 	Size    [3]float64 `json:"size"`
 	Pivot   [3]float64 `json:"pivot,omitempty"`
 	UV      [2]float64 `json:"uv,omitempty"`
+	FaceUV  string     `json:"faceUV,omitempty"` // 每面独立 UV（JSON 字符串），格式: {"north":{"uv":[0,0],"uv_size":[1,1]},...}
 }

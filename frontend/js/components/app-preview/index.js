@@ -19,6 +19,8 @@ class AppPreview extends HTMLElement {
     this._unsubs = [];
     this._selectedPkg = null;
     this._mode = "stat";
+    /** @type {Map<string,{texture?:string,geometry?:object}>} */
+    this._previewDataCache = new Map();
   }
 
   static get observedAttributes() {
@@ -79,26 +81,38 @@ class AppPreview extends HTMLElement {
     }
   }
 
-  /** 自动匹配缩略图：.ysm 走 WASM，其他走 Go 端 */
+  /** 自动匹配缩略图：查缓存 → .ysm 走 WASM → Go 兜底 */
   async _loadPreviewImage(modelPath) {
-    // .ysm 先试 WASM，失败则走 Go（ExtractPreviewTexture 内置 YSMParser 回退）
+    // 查缓存
+    const cached = this._previewDataCache.get(modelPath);
+    if (cached?.texture) return cached.texture;
+    if (cached?.geometry?.texture) return cached.geometry.texture;
+
+    // .ysm 先试 WASM，失败则走 Go
     if (/\.ysm$/i.test(modelPath)) {
       const decoded = await this._decodeYsmViaWasm(modelPath);
-      if (decoded?.texture) return decoded.texture;
+      if (decoded?.texture) {
+        this._previewDataCache.set(modelPath, { ...decoded, _decodedBy: "🧠 WASM" });
+        return decoded.texture;
+      }
     }
     try {
       const { FindPreviewImage, ExtractPreviewTexture } =
         await import("../../../wailsjs/go/main/App.js");
       const loose = await FindPreviewImage(modelPath);
-      if (loose) return loose;
+      if (loose) {
+        this._previewDataCache.set(modelPath, { texture: loose, _decodedBy: "" });
+        return loose;
+      }
       const tex = await ExtractPreviewTexture(modelPath);
+      if (tex) this._previewDataCache.set(modelPath, { texture: tex, _decodedBy: "" });
       return tex || null;
     } catch (_) {
       return null;
     }
   }
 
-  /** 加载 2D 模型骨骼线条图 */
+  /** 加载 2D 模型骨骼线条图 + 统计面板 */
   async _loadModel2D(modelPath) {
     const content = this._root.getElementById("preview-content");
     if (!content) return;
@@ -110,22 +124,42 @@ class AppPreview extends HTMLElement {
 
     try {
       let model;
+      const isYsm = /\.ysm$/i.test(modelPath);
 
-      // .ysm → 前端 WASM 解码（缓存复用，免二次解码）
-      if (/\.ysm$/i.test(modelPath)) {
+      // 查缓存（_loadPreviewImage 可能已经存过）
+      let _decodedBy = ""; // "WASM" | "CLI" | ""
+
+      const cached = this._previewDataCache.get(modelPath);
+      if (cached?.geometry?.bones?.length) {
+        model = cached.geometry;
+        _decodedBy = cached._decodedBy || "";
+      }
+
+      // .ysm → 前端 WASM 解码
+      if (!model && isYsm) {
         const decoded = await this._decodeYsmViaWasm(modelPath);
         if (decoded?.geometry) {
           model = decoded.geometry;
+          _decodedBy = "🧠 WASM";
         } else {
           this._appendDebug(container, "[YSM] WASM 返回空，回退 Go");
         }
       }
 
-      // 非 .ysm 或 WASM 失败 → 走 Go
+      // 非 .ysm 或 WASM 失败 → 走 Go（一次性拿到 texture + geometry）
       if (!model) {
         const { AnalyzeBedrockModel } =
           await import("../../../wailsjs/go/main/App.js");
         model = await AnalyzeBedrockModel(modelPath);
+        // 缓存完整结果，供 _loadPreviewImage 复用
+        if (model?.bones?.length) {
+          this._previewDataCache.set(modelPath, {
+            texture: model.texture,
+            geometry: model,
+            _decodedBy: "⚙️ CLI",
+          });
+          _decodedBy = "⚙️ CLI";
+        }
       }
 
       if (!model?.bones?.length) {
@@ -137,9 +171,38 @@ class AppPreview extends HTMLElement {
       container.innerHTML = "";
       const title = document.createElement("div");
       title.style.cssText =
-        "font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px";
-      title.textContent = `🏗️ 模型结构（${model.boneCount} 骨骼 · ${model.cubeCount} 立方体）`;
+        "display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px";
+      title.innerHTML = `🏗️ 模型结构（${model.boneCount} 骨骼 · ${model.cubeCount} 立方体）` +
+        (_decodedBy ? `<span style="font-size:8px;padding:0 5px;border-radius:3px;background:rgba(124,131,255,0.25);color:var(--txt,#cdd6f4)">${_decodedBy}</span>` : "");
       container.appendChild(title);
+
+      // ---- 统计面板 ----
+      const statsRow = document.createElement("div");
+      statsRow.style.cssText =
+        "display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px";
+      const fmt = isYsm
+        ? ".ysm (加密)"
+        : modelPath.endsWith(".zip")
+          ? ".zip"
+          : ".7z";
+      const stats = [
+        { label: "🦴 骨骼", val: model.boneCount },
+        { label: "📦 立方体", val: model.cubeCount },
+        {
+          label: "📐 纹理",
+          val: (model.texWidth || "?") + "×" + (model.texHeight || "?"),
+        },
+        { label: "📁 格式", val: fmt },
+      ];
+      for (const s of stats) {
+        const tag = document.createElement("span");
+        tag.style.cssText =
+          "font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd,#45475a);background:var(--bg2,#313244);color:var(--txt,#cdd6f4);white-space:nowrap";
+        tag.textContent = `${s.label} ${s.val}`;
+        statsRow.appendChild(tag);
+      }
+      container.appendChild(statsRow);
+      // -----------------
 
       const canvas = document.createElement("canvas");
       canvas.width = 180;
@@ -162,7 +225,11 @@ class AppPreview extends HTMLElement {
 
       // 导出按钮
       const { addExportButton } = await import("../../utils/canvas-export.js");
-      addExportButton(container, canvas, modelPath.split("/").pop().split("\\").pop());
+      addExportButton(
+        container,
+        canvas,
+        modelPath.split("/").pop().split("\\").pop(),
+      );
     } catch (e) {
       container.innerHTML = `<div style="font-size:10px;font-weight:600;color:#ff6b6b;margin-bottom:4px">🏗️ 模型结构</div><div style="font-size:9px;color:#888;padding:8px 0">⚠️ 解析失败: ${e?.message ?? e}</div>`;
     }
@@ -174,19 +241,49 @@ class AppPreview extends HTMLElement {
     const content = this._root.getElementById("preview-content");
     try {
       this._appendDebug(content, "[YSM] 加载 WASM 模块...");
-      const { initYSMParser, decodeYsmFile } = await import("../../wasm/ysm-parser.js");
+      const { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } =
+        await import("../../wasm/ysm-parser.js");
       const ok = await initYSMParser();
       this._appendDebug(content, `[YSM] WASM init: ${ok ? "✅" : "❌"}`);
       if (!ok) return null;
 
       this._appendDebug(content, "[YSM] 读取文件...");
       const { ReadFileBytes } = await import("../../../wailsjs/go/main/App.js");
-      const bytes = await ReadFileBytes(modelPath);
+      let bytes = await ReadFileBytes(modelPath);
+      // Wails []byte 返回 base64 字符串，解码为 Uint8Array
+      if (typeof bytes === "string") {
+        const binaryStr = atob(bytes);
+        bytes = Uint8Array.from(binaryStr, (c) => c.charCodeAt(0));
+      } else if (!(bytes instanceof Uint8Array)) {
+        bytes = new Uint8Array(bytes);
+      }
       this._appendDebug(content, `[YSM] 读取 ${bytes?.length || 0} bytes`);
       if (!bytes?.length) return null;
 
-      this._appendDebug(content, "[YSM] WASM 解码...");
-      const files = await decodeYsmFile(bytes);
+      // 优先内存解析（无文件 I/O），回退 callMain
+      this._appendDebug(content, "[YSM] 内存解析...");
+      let files;
+      try {
+        files = await decodeYsmFileFromMemory(bytes);
+        if (files?.length) {
+          this._appendDebug(
+            content,
+            `[YSM] ✅ 内存解析成功: ${files.length} 文件`,
+          );
+        } else {
+          this._appendDebug(content, "[YSM] 内存解析返回空，回退 callMain");
+        }
+      } catch (e) {
+        this._appendDebug(
+          content,
+          `[YSM] 内存解析异常: ${e?.message}，回退 callMain`,
+        );
+      }
+
+      if (!files?.length) {
+        this._appendDebug(content, "[YSM] callMain 回退...");
+        files = await decodeYsmFile(bytes);
+      }
       this._appendDebug(content, `[YSM] 输出 ${files?.length || 0} 文件`);
 
       // 列出文件
@@ -198,7 +295,9 @@ class AppPreview extends HTMLElement {
 
       // 提取纹理
       let texture = null;
-      const texFile = files.find((f) => f.path.endsWith(".png") || f.path.endsWith(".jpg"));
+      const texFile = files.find(
+        (f) => f.path.endsWith(".png") || f.path.endsWith(".jpg"),
+      );
       if (texFile) {
         const blob = new Blob([texFile.data]);
         texture = URL.createObjectURL(blob);
@@ -208,13 +307,17 @@ class AppPreview extends HTMLElement {
       // 解析几何体
       let geometry = null;
       for (const f of files) {
-        if (!f.path.startsWith("models/") || !f.path.endsWith(".json")) continue;
+        if (!f.path.startsWith("models/") || !f.path.endsWith(".json"))
+          continue;
         this._appendDebug(content, `[YSM] 解析 ${f.path}...`);
         try {
           const jsonStr = new TextDecoder().decode(f.data);
           const parsed = parseBedrockGeometryFromJSON(jsonStr);
           if (parsed?.bones?.length) {
-            this._appendDebug(content, `[YSM] ✅ ${f.path}: ${parsed.bones.length}骨 ${parsed.cubeCount}方`);
+            this._appendDebug(
+              content,
+              `[YSM] ✅ ${f.path}: ${parsed.bones.length}骨 ${parsed.cubeCount}方`,
+            );
             if (!geometry || parsed.bones.length > geometry.bones.length) {
               geometry = parsed;
               geometry.texture = texture;
@@ -238,9 +341,11 @@ class AppPreview extends HTMLElement {
   /** 在预览区追加调试小字 */
   _appendDebug(container, msg) {
     try {
-      const el = container || this._root.getElementById("preview-content") || this._root;
+      const el =
+        container || this._root.getElementById("preview-content") || this._root;
       const dbg = document.createElement("div");
-      dbg.style.cssText = "font-size:9px;color:#ff6b6b;margin-top:2px;opacity:0.8";
+      dbg.style.cssText =
+        "font-size:9px;color:#ff6b6b;margin-top:2px;opacity:0.8";
       dbg.textContent = msg;
       (el.appendChild ? el : this._root).appendChild(dbg);
     } catch (_) {}

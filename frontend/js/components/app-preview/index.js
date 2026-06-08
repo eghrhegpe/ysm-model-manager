@@ -11,6 +11,7 @@ import {
 } from "./events.js";
 import { summaryCardHTML } from "../../utils/summarize.js";
 import { parseBedrockGeometryFromJSON } from "./utils.js";
+import { parseBedrockAnimationJSON } from "../../utils/animation.js";
 import { cacheGet, cacheSet } from "../../utils/preview-cache.js";
 
 // DEV 环境下才输出调试日志
@@ -228,11 +229,13 @@ class AppPreview extends HTMLElement {
       const { renderModel2D } = await import("../../utils/model2d.js");
       let _zoom = 1;
       let _rotation = 0;
+      let _player = null;
       const doRender = () =>
         renderModel2D(canvas, model, textureImg, {
           showLabels: _labelsOn,
           zoom: _zoom,
           rotation: _rotation,
+          boneTransforms: _player?.getCurrentTransforms() || null,
         });
       doRender();
 
@@ -243,6 +246,156 @@ class AppPreview extends HTMLElement {
         eyeHint.textContent = _labelsOn ? "开启" : "关闭";
         doRender();
       };
+
+      // ---- 动画播放器 ----
+      const cachedAnim = cacheGet(modelPath);
+      const clips = cachedAnim?.animations;
+      if (clips?.length > 0) {
+        const { AnimationPlayer } =
+          await import("../../utils/animation-player.js");
+
+        // 创建设控件容器
+        const animRow = document.createElement("div");
+        animRow.className = "ysm-toggle-row";
+        animRow.style.cssText = "gap:3px;flex-wrap:wrap";
+
+        // 动画选择下拉
+        const sel = document.createElement("select");
+        sel.className = "ysm-btn";
+        sel.style.cssText = "font-size:9px;max-width:120px";
+        clips.forEach((c, i) => {
+          const opt = document.createElement("option");
+          opt.value = i;
+          const label = c.name.replace(/^animation\./, "");
+          opt.textContent =
+            label.length > 20 ? label.slice(0, 20) + "…" : label;
+          sel.appendChild(opt);
+        });
+        animRow.appendChild(sel);
+
+        // 播放/暂停
+        const playBtn = document.createElement("button");
+        playBtn.className = "ysm-btn";
+        playBtn.textContent = "▶️";
+        playBtn.title = "播放/暂停";
+
+        // 停止
+        const stopBtn = document.createElement("button");
+        stopBtn.className = "ysm-btn";
+        stopBtn.textContent = "⏹️";
+        stopBtn.title = "停止";
+
+        // 速度
+        const speedSel = document.createElement("select");
+        speedSel.className = "ysm-btn";
+        speedSel.style.cssText = "font-size:9px;width:48px";
+        [0.25, 0.5, 1, 2, 4].forEach((s) => {
+          const opt = document.createElement("option");
+          opt.value = s;
+          opt.textContent = s + "×";
+          if (s === 1) opt.selected = true;
+          speedSel.appendChild(opt);
+        });
+        animRow.appendChild(playBtn);
+        animRow.appendChild(stopBtn);
+        animRow.appendChild(speedSel);
+
+        // 时间显示
+        const timeLabel = document.createElement("span");
+        timeLabel.className = "ysm-hint";
+        timeLabel.style.cssText = "font-size:9px;min-width:50px";
+        timeLabel.textContent = "0.0s";
+        animRow.appendChild(timeLabel);
+
+        container.appendChild(animRow);
+
+        // 进度条
+        const progRow = document.createElement("div");
+        progRow.style.cssText =
+          "display:flex;align-items:center;gap:4px;padding:0 12px;margin-bottom:4px";
+        const progBar = document.createElement("div");
+        progBar.style.cssText =
+          "flex:1;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;cursor:pointer;position:relative";
+        const progFill = document.createElement("div");
+        progFill.style.cssText =
+          "height:100%;background:rgba(124,131,255,0.7);border-radius:2px;width:0%";
+        progBar.appendChild(progFill);
+        const maxLabel = document.createElement("span");
+        maxLabel.className = "ysm-hint";
+        maxLabel.style.cssText =
+          "font-size:9px;min-width:30px;text-align:right";
+        maxLabel.textContent = "0.0s";
+        progRow.appendChild(timeLabel);
+        progRow.appendChild(progBar);
+        progRow.appendChild(maxLabel);
+        container.appendChild(progRow);
+
+        // 进度条点击跳转
+        progBar.addEventListener("click", (e) => {
+          if (!_player?.currentClip) return;
+          const rect = progBar.getBoundingClientRect();
+          const pct = Math.max(
+            0,
+            Math.min(1, (e.clientX - rect.left) / rect.width),
+          );
+          _player.seek(pct * _player.length);
+        });
+
+        // 初始化播放器
+        const boneHierarchy = model.bones.map((b) => ({
+          name: b.name,
+          parent: b.parent,
+        }));
+        _player = new AnimationPlayer(clips, boneHierarchy);
+
+        _player.onUpdate = (transforms, t) => {
+          timeLabel.textContent = t.toFixed(1) + "s";
+          if (_player.length > 0) {
+            progFill.style.width =
+              ((t / _player.length) * 100).toFixed(1) + "%";
+          }
+          doRender();
+        };
+
+        _player.onStop = () => {
+          playBtn.textContent = "▶️";
+          doRender();
+        };
+
+        sel.onchange = () => {
+          _player.play(parseInt(sel.value));
+          playBtn.textContent = "⏸️";
+          maxLabel.textContent = _player.length.toFixed(1) + "s";
+          progFill.style.width = "0%";
+        };
+
+        playBtn.onclick = () => {
+          if (_player.playing) {
+            _player.pause();
+            playBtn.textContent = "▶️";
+          } else {
+            if (_player.currentIndex < 0 && clips.length > 0) {
+              _player.play(0);
+              sel.value = "0";
+              maxLabel.textContent = _player.length.toFixed(1) + "s";
+              progFill.style.width = "0%";
+            } else {
+              _player.resume();
+            }
+            playBtn.textContent = "⏸️";
+          }
+        };
+
+        stopBtn.onclick = () => {
+          _player.stop();
+          playBtn.textContent = "▶️";
+          doRender();
+        };
+
+        speedSel.onchange = () => {
+          _player.setSpeed(parseFloat(speedSel.value));
+        };
+      }
 
       // ---- 全窗放大 + 滚轮/拖拽旋转 ----
       canvas.classList.add("ysm-grab");
@@ -396,6 +549,8 @@ class AppPreview extends HTMLElement {
       }
 
       let geometry = null;
+      let animations = [];
+
       for (const f of files) {
         if (!f.path.startsWith("models/") || !f.path.endsWith(".json"))
           continue;
@@ -419,10 +574,42 @@ class AppPreview extends HTMLElement {
         }
       }
 
-      cacheSet(modelPath, { texture, geometry });
-      return { texture, geometry };
+      // 解析动画文件
+      for (const f of files) {
+        if (!f.path.startsWith("animations/") || !f.path.endsWith(".json"))
+          continue;
+        devLog(`[YSM] 动画 ${f.path}...`);
+        try {
+          const jsonStr = new TextDecoder().decode(f.data);
+          const { clips, errors } = parseBedrockAnimationJSON(jsonStr);
+          if (clips.length > 0) {
+            devLog(`[YSM] ✅ ${f.path}: ${clips.length} 个动画`);
+            // 打印动画详情
+            for (const c of clips) {
+              devLog(
+                `  - ${c.name} (循环=${c.loop}, 时长=${c.length.toFixed(2)}s, 骨骼=${Object.keys(c.bones).length})`,
+              );
+              for (const [bn, chs] of Object.entries(c.bones)) {
+                const info = Object.entries(chs)
+                  .map(([k, v]) => `${k}:${v.length}帧`)
+                  .join(", ");
+                devLog(`    ${bn}: ${info}`);
+              }
+            }
+            animations.push(...clips);
+          }
+          if (errors.length > 0) {
+            devLog(`[YSM] ⚠️ ${f.path}: ${errors.join("; ")}`);
+          }
+        } catch (e) {
+          devLog(`[YSM] ❌ ${f.path}: ${e?.message}`);
+        }
+      }
+
+      cacheSet(modelPath, { texture, geometry, animations });
+      return { texture, geometry, animations };
     } catch (e) {
-      this._appendDebug(content, `[YSM] ❌ ${e?.message || e}`);
+      devLog(`[YSM] ❌ ${e?.message || e}`);
       return null;
     }
   }

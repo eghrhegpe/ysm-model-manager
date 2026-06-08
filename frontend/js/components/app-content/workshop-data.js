@@ -5,23 +5,17 @@
  */
 export function showProgress(searchResults, pct, label) {
   searchResults.innerHTML =
-    '<div style="padding:24px 12px;text-align:center">' +
-    "<style>" +
-    "@keyframes ws-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}" +
-    "@keyframes ws-stripes{from{background-position:0 0}to{background-position:14px 100%}}" +
-    "</style>" +
-    '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">' +
-    '<span style="display:inline-block;vertical-align:middle;animation:ws-spin 1.2s linear infinite">⏳</span> ' +
-    '<span style="vertical-align:middle">' +
+    '<div class="ws-progress-box">' +
+    '<div class="ws-progress-label">' +
+    '<span class="ws-progress-spin">⏳</span> ' +
+    '<span class="ws-progress-text">' +
     (label || "") +
     "</span></div>" +
-    '<div style="width:160px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto;overflow:hidden">' +
-    '<div style="width:' +
+    '<div class="ws-progress-track">' +
+    '<div class="ws-progress-fill" style="width:' +
     pct +
-    "%;height:100%;border-radius:2px;transition:width 0.3s" +
-    (pct < 100
-      ? ";background:linear-gradient(90deg,var(--accent) 40%,rgba(137,180,250,.4) 40%,rgba(137,180,250,.4) 60%,var(--accent) 60%);background-size:14px 100%;animation:ws-stripes .4s linear infinite"
-      : ";background:var(--accent)") +
+    "%;transition:width 0.3s" +
+    (pct < 100 ? " ws-striped" : "") +
     '"></div>' +
     "</div>" +
     "</div>";

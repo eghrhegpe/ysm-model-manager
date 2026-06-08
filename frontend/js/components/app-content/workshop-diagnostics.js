@@ -77,7 +77,7 @@ async function loadDiagnosticsLogs(root, esc) {
     const logs = await GetImportLogs();
     if (!logs || !logs.length) {
       list.innerHTML =
-        '<div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">暂无日志</div>';
+        '<div class="stat-row diag-stat diag-stat-muted">暂无日志</div>';
       return;
     }
     // 读筛选状态
@@ -98,7 +98,7 @@ async function loadDiagnosticsLogs(root, esc) {
 
     if (!filtered.length) {
       list.innerHTML =
-        '<div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">无匹配日志</div>';
+        '<div class="stat-row diag-stat diag-stat-muted">无匹配日志</div>';
       return;
     }
 
@@ -132,7 +132,7 @@ async function loadDiagnosticsLogs(root, esc) {
       .join("");
   } catch (_) {
     list.innerHTML =
-      '<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">加载日志失败</div>';
+      '<div class="stat-row diag-stat diag-stat-error">加载日志失败</div>';
   }
 }
 
@@ -140,7 +140,7 @@ async function startDedup(root, esc) {
   const list = root.getElementById("diag-dedup-list");
   if (!list) return;
   list.innerHTML =
-    '<div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">⏳ 扫描仓库文件哈希...</div>';
+    '<div class="stat-row diag-stat diag-stat-muted">⏳ 扫描仓库文件哈希...</div>';
   try {
     const { LoadAppConfig, ScanModelEntries, MoveToRecycle } =
       await import("../../../wailsjs/go/main/App.js");

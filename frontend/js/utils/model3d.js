@@ -57,20 +57,23 @@ export async function renderModel3D(container, model, textureUrl, player) {
   const texMap = new Map();
   const urls = model.textures?.length > 1 ? model.textures : [textureUrl];
   if (urls?.length) {
-    const loads = urls.filter(Boolean).map((url) => new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const tex = new THREE.Texture(img);
-        tex.flipY = false;
-        tex.needsUpdate = true;
-        tex.userData.imgWidth = img.naturalWidth;
-        tex.userData.imgHeight = img.naturalHeight;
-        texMap.set(url, tex);
-        resolve();
-      };
-      img.onerror = () => resolve();
-      img.src = url;
-    }));
+    const loads = urls.filter(Boolean).map(
+      (url) =>
+        new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const tex = new THREE.Texture(img);
+            tex.flipY = false;
+            tex.needsUpdate = true;
+            tex.userData.imgWidth = img.naturalWidth;
+            tex.userData.imgHeight = img.naturalHeight;
+            texMap.set(url, tex);
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = url;
+        }),
+    );
     await Promise.all(loads);
     console.log(`[3D] 已加载 ${texMap.size} 张纹理`);
   }
@@ -157,14 +160,22 @@ export async function renderModel3D(container, model, textureUrl, player) {
       }
 
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.scale.set(1, 1, 1);
-      // cube.origin 是世界坐标，直接放 rootGroup
+      // cube 位置相对骨骼 pivot，挂到骨骼 Group 下
+      const bp = bone.pivot || [0, 0, 0];
       mesh.position.set(
-        (ox + sx / 2) * PXL,
-        (oy + sy / 2) * PXL,
-        (oz + sz / 2) * -PXL,
+        (ox + sx / 2 - bp[0]) * PXL,
+        (oy + sy / 2 - bp[1]) * PXL,
+        -(oz + sz / 2 - bp[2]) * PXL,
       );
-      rootGroup.add(mesh);
+      // 应用 cube 初始旋转
+      if (c.rotation) {
+        mesh.rotation.set(
+          (c.rotation[0] * Math.PI) / 180,
+          (c.rotation[1] * Math.PI) / 180,
+          (c.rotation[2] * Math.PI) / 180,
+        );
+      }
+      group.add(mesh);
     }
 
     // 骨骼名标签

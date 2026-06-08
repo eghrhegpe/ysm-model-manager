@@ -1811,15 +1811,32 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 	}
 	var geo *types.BedrockModel
 	var pngs [][]byte
+	var pngNames []string // 跟踪每个 PNG 的文件名
+	var defaultTex string // ysm.json 中的默认纹理名
+
 	for _, f := range reader.File {
 		low := strings.ToLower(f.Name)
-		if strings.HasSuffix(low, ".json") && !strings.Contains(low, "ysm.json") && !strings.Contains(low, "animation") && !strings.Contains(low, "controller") && !f.FileInfo().IsDir() {
+		if strings.HasSuffix(low, ".json") && !strings.Contains(low, "animation") && !strings.Contains(low, "controller") && !f.FileInfo().IsDir() {
 			rc, err := f.Open()
 			if err != nil {
 				continue
 			}
 			buf, _ := io.ReadAll(rc)
 			rc.Close()
+
+			// ysm.json → 提取默认纹理名
+			if strings.Contains(low, "ysm.json") {
+				var ysm struct {
+					Properties struct {
+						DefaultTexture string `json:"default_texture"`
+					} `json:"properties"`
+				}
+				if json.Unmarshal(buf, &ysm) == nil {
+					defaultTex = ysm.Properties.DefaultTexture
+				}
+				continue
+			}
+
 			g := parseBedrockGeometry(buf)
 			if g == nil || g.BoneCount == 0 {
 				continue
@@ -1827,7 +1844,6 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 			if geo == nil {
 				geo = g
 			} else {
-				// 合并骨骼（按名称去重）
 				seen := make(map[string]bool, len(geo.Bones))
 				for _, b := range geo.Bones {
 					seen[b.Name] = true
@@ -1849,7 +1865,23 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 			data, _ := io.ReadAll(rc)
 			rc.Close()
 			if len(data) > 0 {
+				name := f.Name
+				if idx := strings.LastIndex(name, "/"); idx >= 0 { name = name[idx+1:] }
+				if idx := strings.LastIndex(name, "\\"); idx >= 0 { name = name[idx+1:] }
+				name = strings.TrimSuffix(name, ".png")
+				name = strings.TrimSuffix(name, ".jpg")
+				pngNames = append(pngNames, name)
 				pngs = append(pngs, data)
+			}
+		}
+	}
+	// 默认纹理排到第一
+	if defaultTex != "" && len(pngs) > 1 {
+		for i, n := range pngNames {
+			if n == defaultTex && i > 0 {
+				pngs[0], pngs[i] = pngs[i], pngs[0]
+				pngNames[0], pngNames[i] = pngNames[i], pngNames[0]
+				break
 			}
 		}
 	}
@@ -1920,10 +1952,11 @@ func parseBedrockGeometry(data []byte) *types.BedrockModel {
 				Name  string `json:"name"`
 				Pivot [3]float64 `json:"pivot"`
 				Cubes []struct {
-					Origin [3]float64     `json:"origin"`
-					Size   [3]float64     `json:"size"`
-					Pivot  [3]float64     `json:"pivot,omitempty"`
-					UV     json.RawMessage `json:"uv,omitempty"`
+					Origin   [3]float64     `json:"origin"`
+					Size     [3]float64     `json:"size"`
+					Pivot    [3]float64     `json:"pivot,omitempty"`
+					UV       json.RawMessage `json:"uv,omitempty"`
+					Rotation json.RawMessage `json:"rotation,omitempty"`
 				} `json:"cubes"`
 			} `json:"bones"`
 		} `json:"minecraft:geometry"`
@@ -1946,21 +1979,25 @@ func parseBedrockGeometry(data []byte) *types.BedrockModel {
 		for _, c := range b.Cubes {
 			var uv [2]float64
 			var faceUV string
+			var rot [3]float64
 			if len(c.UV) > 0 {
 				uvStr := string(c.UV)
 				if len(uvStr) > 0 && uvStr[0] == '{' {
-					// 每面独立 UV 格式: {"north":{"uv":[...],"uv_size":[...]},...}
 					faceUV = uvStr
 				} else {
 					json.Unmarshal(c.UV, &uv)
 				}
 			}
+			if len(c.Rotation) > 0 {
+				json.Unmarshal(c.Rotation, &rot)
+			}
 			cubes = append(cubes, types.Cube2D{
-				Origin: c.Origin,
-				Size:   c.Size,
-				Pivot:  c.Pivot,
-				UV:     uv,
-				FaceUV: faceUV,
+				Origin:   c.Origin,
+				Size:     c.Size,
+				Pivot:    c.Pivot,
+				UV:       uv,
+				FaceUV:   faceUV,
+				Rotation: rot,
 			})
 		}
 		model.Bones = append(model.Bones, types.Bone2D{

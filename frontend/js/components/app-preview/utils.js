@@ -19,7 +19,12 @@ export function parseBedrockGeometryFromJSON(jsonStr) {
         uv: Array.isArray(c.uv) ? c.uv : [0, 0],
       });
     }
-    bones.push({ name: b.name, cubes });
+    bones.push({
+      name: b.name,
+      parent: b.parent || null,
+      pivot: b.pivot || [0, 0, 0],
+      cubes,
+    });
     cubeCount += cubes.length;
   }
   return {

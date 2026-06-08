@@ -9,6 +9,7 @@
  * @param {boolean} [opts.showLabels=true] - 是否显示骨骼名称
  * @param {number} [opts.zoom=1] - 缩放倍率
  * @param {number} [opts.rotation=0] - 绕 Y 轴旋转角度（度）
+ * @param {Map} [opts.boneTransforms] - 骨骼动画变换，key=骨骼名，val={rotation,position,scale}
  */
 export function renderModel2D(canvas, model, textureImg, opts) {
   if (!canvas || !model?.bones?.length) return;
@@ -17,6 +18,7 @@ export function renderModel2D(canvas, model, textureImg, opts) {
   const angle = ((opts?.rotation || 0) * Math.PI) / 180;
   const cosA = Math.cos(angle);
   const sinA = Math.sin(angle);
+  const boneTransforms = opts?.boneTransforms || null;
   const ctx = canvas.getContext("2d");
   const W = canvas.width;
   const H = canvas.height;
@@ -62,10 +64,31 @@ export function renderModel2D(canvas, model, textureImg, opts) {
   const cy = H / 2 + (minY + rangeY / 2) * scale;
 
   // 计算骨骼屏幕坐标热区，供鼠标拾取
-  const boneHitZones = calcBoneHitZones(model, scale, cx, cy, true, cosA, sinA);
+  const boneHitZones = calcBoneHitZones(
+    model,
+    scale,
+    cx,
+    cy,
+    true,
+    cosA,
+    sinA,
+    boneTransforms,
+  );
 
   // 绘制
-  drawView(ctx, model, scale, cx, cy, textureImg, null, showLabels, cosA, sinA);
+  drawView(
+    ctx,
+    model,
+    scale,
+    cx,
+    cy,
+    textureImg,
+    null,
+    showLabels,
+    cosA,
+    sinA,
+    boneTransforms,
+  );
   drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
 
   // ---- 鼠标交互高亮 ----
@@ -91,6 +114,7 @@ export function renderModel2D(canvas, model, textureImg, opts) {
         showLabels,
         cosA,
         sinA,
+        boneTransforms,
       );
       drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
     }
@@ -110,6 +134,7 @@ export function renderModel2D(canvas, model, textureImg, opts) {
         showLabels,
         cosA,
         sinA,
+        boneTransforms,
       );
       drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
     }
@@ -124,11 +149,21 @@ export function renderModel2D(canvas, model, textureImg, opts) {
   };
 }
 
-function calcBoneHitZones(model, scale, ox, oy, isFront, cosA, sinA) {
+function calcBoneHitZones(
+  model,
+  scale,
+  ox,
+  oy,
+  isFront,
+  cosA,
+  sinA,
+  boneTransforms,
+) {
   const zones = [];
   for (const bone of model.bones) {
     const cs = bone.cubes || [];
     if (!cs.length) continue;
+    const btx = boneTransforms?.get?.(bone.name);
     let mnX = Infinity,
       mxX = -Infinity,
       mnY = Infinity,
@@ -136,14 +171,45 @@ function calcBoneHitZones(model, scale, ox, oy, isFront, cosA, sinA) {
     for (const c of cs) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
-      const rx = x * cosA - z * sinA;
-      const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
-      const px = rx;
-      const py = isFront ? y : z;
-      if (px < mnX) mnX = px;
-      if (px + pw > mxX) mxX = px + pw;
-      if (py < mnY) mnY = py;
-      if (py + sy > mxY) mxY = py + sy;
+      const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
+      for (let dx = 0; dx <= 1; dx++) {
+        for (let dy = 0; dy <= 1; dy++) {
+          for (let dz = 0; dz <= 1; dz++) {
+            let cx = x + dx * sx,
+              cy = y + dy * sy,
+              cz = z + dz * sz;
+            if (btx) {
+              if (btx.position) {
+                cx += btx.position[0] || 0;
+                cy += btx.position[1] || 0;
+                cz += btx.position[2] || 0;
+              }
+              const rz = ((btx.rotation?.[2] || 0) * Math.PI) / 180;
+              if (rz !== 0) {
+                const cRz = Math.cos(rz),
+                  sRz = Math.sin(rz);
+                const dxx = cx - pivot[0],
+                  dyy = cy - pivot[1];
+                cx = pivot[0] + dxx * cRz - dyy * sRz;
+                cy = pivot[1] + dxx * sRz + dyy * cRz;
+              }
+              const rx = ((btx.rotation?.[0] || 0) * Math.PI) / 180;
+              if (rx !== 0) {
+                const dyy = cy - pivot[1];
+                cy = pivot[1] + dyy * Math.cos(rx);
+              }
+            }
+            const rxx = cx * cosA - cz * sinA;
+            const rz2 = cx * sinA + cz * cosA;
+            const px2 = rxx,
+              py2 = isFront ? cy : rz2;
+            if (px2 < mnX) mnX = px2;
+            if (px2 > mxX) mxX = px2;
+            if (py2 < mnY) mnY = py2;
+            if (py2 > mxY) mxY = py2;
+          }
+        }
+      }
     }
     zones.push({
       name: bone.name,
@@ -167,44 +233,110 @@ function drawView(
   showLabels,
   cosA,
   sinA,
+  boneTransforms,
 ) {
   const isFront = true;
+
   for (const bone of model.bones) {
     const isHighlight = bone.name === highlightBone;
+    const btx = boneTransforms?.get?.(bone.name);
+    const hasAnim = btx?.rotation || btx?.position;
+
     for (const c of bone.cubes || []) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
-      // 绕 Y 轴旋转
-      const rx = x * cosA - z * sinA;
-      const rz = x * sinA + z * cosA;
-      const px = rx;
-      const py = isFront ? y : rz;
-      // 旋转后的可视宽度（考虑 depth 投影）
-      const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
-      const ph = isFront ? sy : sz;
-      const drawX = ox + px * scale;
-      const drawY = oy - (py + ph) * scale;
-      const drawW = pw * scale;
-      const drawH = ph * scale;
-      if (drawW < 0.5 || drawH < 0.5) continue;
+      const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
 
-      if (isHighlight) {
-        ctx.fillStyle = "rgba(255,180,50,0.25)";
-        ctx.fillRect(drawX, drawY, drawW, drawH);
-        ctx.strokeStyle = "rgba(255,220,100,1)";
-        ctx.lineWidth = 1.5;
+      if (hasAnim) {
+        // ---- 动画骨骼：使用 Canvas 变换使旋转可见 ----
+        // cube 中心
+        let cx = x + sx / 2;
+        let cy = y + sy / 2;
+        let cz = z + sz / 2;
+
+        // 位置偏移
+        if (btx.position) {
+          cx += btx.position[0] || 0;
+          cy += btx.position[1] || 0;
+          cz += btx.position[2] || 0;
+        }
+
+        // Z 旋转（绕 pivot，屏幕平面内最可见）
+        const rzRad = ((btx.rotation?.[2] || 0) * Math.PI) / 180;
+        if (rzRad !== 0) {
+          const cRz = Math.cos(rzRad),
+            sRz = Math.sin(rzRad);
+          const dxx = cx - pivot[0],
+            dyy = cy - pivot[1];
+          cx = pivot[0] + dxx * cRz - dyy * sRz;
+          cy = pivot[1] + dxx * sRz + dyy * cRz;
+        }
+
+        // X 旋转（Y 方向压缩）
+        const rxRad = ((btx.rotation?.[0] || 0) * Math.PI) / 180;
+        const cosRx = Math.cos(rxRad);
+        if (rxRad !== 0) {
+          const dyy = cy - pivot[1];
+          cy = pivot[1] + dyy * cosRx;
+        }
+
+        // 全局 Y 旋转投影
+        const scrX = cx * cosA - cz * sinA;
+        const scrY = cy;
+        const screenX = ox + scrX * scale;
+        const screenY = oy - scrY * scale;
+
+        // 投影后的宽高（不含 Z 旋转，因为 Z 旋转由 canvas.rotate 负责）
+        const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
+        const ph = sy * Math.abs(cosRx);
+        const drawW = pw * scale;
+        const drawH = ph * scale;
+        if (drawW < 1 || drawH < 1) continue;
+
+        ctx.save();
+        ctx.translate(screenX, screenY);
+        // 屏幕 Y 轴翻转，取反
+        ctx.rotate(-rzRad);
+
+        ctx.fillStyle = isHighlight
+          ? "rgba(255,180,50,0.25)"
+          : "rgba(124,131,255,0.45)";
+        ctx.fillRect(-drawW / 2, -drawH / 2, drawW, drawH);
+        ctx.strokeStyle = isHighlight
+          ? "rgba(255,220,100,1)"
+          : "rgba(205,214,244,0.85)";
+        ctx.lineWidth = isHighlight ? 1.5 : 1;
+        ctx.strokeRect(-drawW / 2, -drawH / 2, drawW, drawH);
+        ctx.restore();
       } else {
-        ctx.fillStyle = "rgba(124,131,255,0.45)";
+        // ---- 静态骨骼：保持原方法（轴对齐，性能更优）----
+        const rx = x * cosA - z * sinA;
+        const rz = x * sinA + z * cosA;
+        const px = rx;
+        const py = isFront ? y : rz;
+        const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
+        const ph = isFront ? sy : sz;
+        const drawX = ox + px * scale;
+        const drawY = oy - (py + ph) * scale;
+        const drawW = pw * scale;
+        const drawH = ph * scale;
+        if (drawW < 0.5 || drawH < 0.5) continue;
+
+        ctx.fillStyle = isHighlight
+          ? "rgba(255,180,50,0.25)"
+          : "rgba(124,131,255,0.45)";
         ctx.fillRect(drawX, drawY, drawW, drawH);
-        ctx.strokeStyle = "rgba(205,214,244,0.85)";
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = isHighlight
+          ? "rgba(255,220,100,1)"
+          : "rgba(205,214,244,0.85)";
+        ctx.lineWidth = isHighlight ? 1.5 : 1;
+        ctx.strokeRect(drawX, drawY, drawW, drawH);
+        ctx.strokeRect(drawX, drawY, drawW, drawH);
       }
-      ctx.strokeRect(drawX, drawY, drawW, drawH);
-      ctx.strokeRect(drawX, drawY, drawW, drawH);
     }
   }
 
-  // 骨骼名标注
+  // 骨骼名标注（跟随动画变换）
   if (showLabels !== false) {
     ctx.save();
     ctx.font = "8px system-ui, sans-serif";
@@ -213,6 +345,7 @@ function drawView(
     for (const bone of model.bones) {
       const cs = bone.cubes || [];
       if (!cs.length) continue;
+      const btx = boneTransforms?.get?.(bone.name);
       let mnX = Infinity,
         mxX = -Infinity,
         mnY = Infinity,
@@ -220,14 +353,46 @@ function drawView(
       for (const c of cs) {
         const [x, y, z] = c.origin;
         const [sx, sy, sz] = c.size;
-        const rx = x * cosA - z * sinA;
-        const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
-        const px = rx,
-          py = isFront ? y : z;
-        if (px < mnX) mnX = px;
-        if (px + pw > mxX) mxX = px + pw;
-        if (py < mnY) mnY = py;
-        if (py + ph > mxY) mxY = py + ph;
+        const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
+        // 8 个角
+        for (let dx = 0; dx <= 1; dx++) {
+          for (let dy = 0; dy <= 1; dy++) {
+            for (let dz = 0; dz <= 1; dz++) {
+              let cx = x + dx * sx,
+                cy = y + dy * sy,
+                cz = z + dz * sz;
+              if (btx) {
+                if (btx.position) {
+                  cx += btx.position[0] || 0;
+                  cy += btx.position[1] || 0;
+                  cz += btx.position[2] || 0;
+                }
+                const rz = ((btx.rotation?.[2] || 0) * Math.PI) / 180;
+                if (rz !== 0) {
+                  const cRz = Math.cos(rz),
+                    sRz = Math.sin(rz);
+                  const dxx = cx - pivot[0],
+                    dyy = cy - pivot[1];
+                  cx = pivot[0] + dxx * cRz - dyy * sRz;
+                  cy = pivot[1] + dxx * sRz + dyy * cRz;
+                }
+                const rx = ((btx.rotation?.[0] || 0) * Math.PI) / 180;
+                if (rx !== 0) {
+                  const dyy = cy - pivot[1];
+                  cy = pivot[1] + dyy * Math.cos(rx);
+                }
+              }
+              const rxx = cx * cosA - cz * sinA;
+              const rzz = cx * sinA + cz * cosA;
+              const px2 = rxx,
+                py2 = isFront ? cy : rzz;
+              if (px2 < mnX) mnX = px2;
+              if (px2 > mxX) mxX = px2;
+              if (py2 < mnY) mnY = py2;
+              if (py2 > mxY) mxY = py2;
+            }
+          }
+        }
       }
       const cx2 = ox + ((mnX + mxX) / 2) * scale;
       const cy2 = oy - ((mnY + mxY) / 2) * scale;

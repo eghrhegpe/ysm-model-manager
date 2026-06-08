@@ -14,12 +14,12 @@ export function addExportButton(container, canvas, filename) {
   btn.textContent = "💾 导出 PNG";
   btn.style.cssText =
     "font-size:9px;padding:2px 8px;border-radius:4px;" +
-    "border:1px solid var(--border,#45475a);background:var(--bg2,#313244);" +
-    "color:var(--txt,#cdd6f4);cursor:pointer";
+    "border:1px solid var(--bd);background:var(--surf);" +
+    "color:var(--txt);cursor:pointer";
   btn.onclick = () => exportCanvasPNG(canvas, filename);
 
   const hint = document.createElement("span");
-  hint.style.cssText = "font-size:8px;color:var(--muted,#6c7086)";
+  hint.style.cssText = "font-size:8px;color:var(--muted)";
   hint.textContent = "点击下载骨骼预览图";
 
   row.appendChild(btn);

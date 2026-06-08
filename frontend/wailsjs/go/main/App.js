@@ -130,8 +130,8 @@ export function GetLinkMode() {
   return window['go']['main']['App']['GetLinkMode']();
 }
 
-export function GetMinecraftPath() {
-  return window['go']['main']['App']['GetMinecraftPath']();
+export function GetMinecraftPaths() {
+  return window['go']['main']['App']['GetMinecraftPaths']();
 }
 
 export function GetPackInfo(arg1) {
@@ -348,4 +348,8 @@ export function SyncModelToggleStatus(arg1, arg2) {
 
 export function ToggleModelEnable(arg1) {
   return window['go']['main']['App']['ToggleModelEnable'](arg1);
+}
+
+export function ValidateMinecraftDir(arg1) {
+  return window['go']['main']['App']['ValidateMinecraftDir'](arg1);
 }

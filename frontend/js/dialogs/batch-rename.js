@@ -50,8 +50,8 @@ export async function showBatchRenameDialog(dir, entries, onApply) {
 
   dialogEl = document.createElement("div");
   dialogEl.tabIndex = 0;
-  dialogEl.style.cssText =
-    "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-family:-apple-system,sans-serif";
+  dialogEl.className = "dlg-overlay";
+  dialogEl.style.background = "rgba(0,0,0,.55)";
   dialogEl.addEventListener("keydown", (e) => {
     if (e.key === "Escape") close();
   });
@@ -203,47 +203,47 @@ export async function showBatchRenameDialog(dir, entries, onApply) {
 
 function genHTML(dir, items) {
   const changed = items.filter((it) => it.changed).length;
-  return `<div style="background:var(--surf);border:1px solid var(--bd);border-radius:10px;width:640px;max-width:92vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,.5)">
-<div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:6px">
-  <span style="font-size:13px;font-weight:600;color:var(--txt)">📝 批量重命名</span>
-  <span style="font-size:10px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(dir)}</span>
-  <span style="font-size:9px;color:var(--muted)">${items.length} 个文件 · <span id="br-changed">${changed}</span> 个变更</span>
+  return `<div class="dlg-box">
+<div class="dlg-header">
+  <span class="dlg-header-title">📝 批量重命名</span>
+  <span class="dlg-header-path">${esc(dir)}</span>
+  <span class="dlg-header-count">${items.length} 个文件 · <span id="br-changed">${changed}</span> 个变更</span>
 </div>
-<div style="padding:8px 12px;display:flex;gap:6px;align-items:center;border-bottom:1px solid var(--bd);flex-wrap:wrap;background:var(--bg)">
-  <span style="font-size:10px;color:var(--muted)">模式：</span>
-  <select id="br-mode" style="padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+<div class="dlg-section">
+  <span class="dlg-section-label">模式：</span>
+  <select id="br-mode" class="dlg-input">
     <option value="parse">📋 解析格式</option>
     <option value="replace">🔍 查找替换</option>
   </select>
 </div>
-<div id="br-parse-mode" style="padding:8px 12px;display:flex;gap:6px;align-items:center;border-bottom:1px solid var(--bd);flex-wrap:wrap;background:var(--bg)">
-  <span style="font-size:10px;color:var(--muted)">统一作者：</span>
-  <input id="br-batch-author" placeholder="留空不变" style="width:100px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-  <span style="font-size:10px;color:var(--muted)">作品：</span>
-  <input id="br-batch-work" placeholder="留空不变" style="width:100px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-  <span style="font-size:9px;color:var(--muted)">回车生效</span>
+<div id="br-parse-mode" class="dlg-section">
+  <span class="dlg-section-label">统一作者：</span>
+  <input id="br-batch-author" class="dlg-input-sm" placeholder="留空不变">
+  <span class="dlg-section-label">作品：</span>
+  <input id="br-batch-work" class="dlg-input-sm" placeholder="留空不变">
+  <span class="dlg-header-count" style="font-size:9px">回车生效</span>
 </div>
-<div id="br-replace-mode" style="display:none;padding:8px 12px;gap:6px;align-items:center;border-bottom:1px solid var(--bd);flex-wrap:wrap;background:var(--bg)">
-  <span style="font-size:10px;color:var(--muted)">查找：</span>
-  <input id="br-find" placeholder="输入要查找的内容" style="flex:1;min-width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-  <span style="font-size:10px;color:var(--muted)">替换为：</span>
-  <input id="br-replace" placeholder="留空为删除" style="flex:1;min-width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-  <label style="display:flex;align-items:center;gap:3px;font-size:9px;color:var(--muted);cursor:pointer">
+<div id="br-replace-mode" class="dlg-section" style="display:none">
+  <span class="dlg-section-label">查找：</span>
+  <input id="br-find" class="dlg-input-flex" placeholder="输入要查找的内容">
+  <span class="dlg-section-label">替换为：</span>
+  <input id="br-replace" class="dlg-input-flex" placeholder="留空为删除">
+  <label class="dlg-label-check">
     <input type="checkbox" id="br-regex"> 正则
   </label>
-  <button id="br-presets" style="padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">📋 预设</button>
-  <div id="br-presets-menu" style="display:none;flex-wrap:wrap;gap:4px;width:100%;padding:4px 0">
-    <div class="br-preset" data-find="\(\d{4}-\d{2}\)" data-replace="" data-regex="1" style="padding:3px 8px;font-size:9px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;background:var(--surf);color:var(--txt)">❌ 去除年份 (2025-08)</div>
-    <div class="br-preset" data-find="-v\d+(?=\.)" data-replace="" data-regex="1" style="padding:3px 8px;font-size:9px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;background:var(--surf);color:var(--txt)">❌ 去除版本 -v2</div>
-    <div class="br-preset" data-find="【(.+?)】" data-replace="[$1]" data-regex="1" style="padding:3px 8px;font-size:9px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;background:var(--surf);color:var(--txt)">【】→ [] 括号</div>
-    <div class="br-preset" data-find="\[(.+?)\]【(.+?)】" data-replace="$1-$2" data-regex="1" style="padding:3px 8px;font-size:9px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;background:var(--surf);color:var(--txt)">📛 拍平为 作者-作品</div>
-    <div class="br-preset" data-find="\s+" data-replace="_" data-regex="1" style="padding:3px 8px;font-size:9px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;background:var(--surf);color:var(--txt)">🔗 空格 → 下划线</div>
+  <button id="br-presets" class="dlg-btn-accent">📋 预设</button>
+  <div id="br-presets-menu" class="dlg-presets-menu">
+    <div class="br-preset dlg-preset-chip" data-find="\(\d{4}-\d{2}\)" data-replace="" data-regex="1">❌ 去除年份 (2025-08)</div>
+    <div class="br-preset dlg-preset-chip" data-find="-v\d+(?=\.)" data-replace="" data-regex="1">❌ 去除版本 -v2</div>
+    <div class="br-preset dlg-preset-chip" data-find="【(.+?)】" data-replace="[$1]" data-regex="1">【】→ [] 括号</div>
+    <div class="br-preset dlg-preset-chip" data-find="\[(.+?)\]【(.+?)】" data-replace="$1-$2" data-regex="1">📛 拍平为 作者-作品</div>
+    <div class="br-preset dlg-preset-chip" data-find="\s+" data-replace="_" data-regex="1">🔗 空格 → 下划线</div>
   </div>
 </div>
-<div id="br-preview" style="flex:1;overflow-y:auto;padding:4px 6px;min-height:100px;font-size:10px;color:var(--txt)"></div>
-<div style="padding:8px 12px;border-top:1px solid var(--bd);display:flex;gap:6px;justify-content:flex-end">
-  <button id="br-cancel" style="padding:5px 14px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消 (Esc)</button>
-  <button id="br-apply" style="padding:5px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px">✅ 应用重命名 (Enter)</button>
+<div id="br-preview" class="dlg-preview"></div>
+<div class="dlg-footer">
+  <button id="br-cancel" class="dlg-btn">取消 (Esc)</button>
+  <button id="br-apply" class="dlg-btn dlg-btn-primary">✅ 应用重命名 (Enter)</button>
 </div>
 </div>`;
 }
@@ -254,25 +254,25 @@ function renderPreview(el, items) {
   const cnt = document.getElementById("br-changed");
   if (cnt) cnt.textContent = changed;
   el.innerHTML =
-    `<div style="display:flex;align-items:center;gap:4px;padding:2px 4px;font-size:9px;color:var(--muted);border-bottom:1px solid var(--bd)">
+    `<div class="br-header">
   <label style="display:flex;align-items:center;gap:3px;cursor:pointer">
-    <input type="checkbox" id="br-select-all" checked style="accent-color:var(--accent)"> 全选
+    <input type="checkbox" id="br-select-all" checked class="br-cb"> 全选
   </label>
   <span style="flex:1;text-align:center">原名</span>
-  <span style="width:16px;text-align:center"></span>
+  <span class="br-spacer"></span>
   <span style="flex:1;text-align:center">新名</span>
 </div>` +
     items
       .map(
         (it, i) =>
-          `<div style="display:flex;align-items:center;gap:4px;padding:2px 4px;font-size:10px;border-bottom:1px solid var(--bd)">
-  <input type="checkbox" class="br-file-cb" data-ci="${i}" ${it.selected ? "checked" : ""} style="accent-color:var(--accent);flex-shrink:0">
+          `<div class="br-row">
+  <input type="checkbox" class="br-file-cb br-cb" data-ci="${i}" ${it.selected ? "checked" : ""}>
   ${
     it.selected && it.changed
-      ? `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="${esc(it.Name)}">${esc(it.Name)}</span>
-  <span style="color:var(--muted);flex-shrink:0">→</span>
-  <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent)" title="${esc(it.newName)}">${esc(it.newName)}</span>`
-      : `<span style="flex:1;color:var(--muted);opacity:${it.selected ? 1 : 0.5}">${esc(it.Name)}</span>`
+      ? `<span class="br-name br-name-old" title="${esc(it.Name)}">${esc(it.Name)}</span>
+  <span class="br-arrow">→</span>
+  <span class="br-name br-name-new" title="${esc(it.newName)}">${esc(it.newName)}</span>`
+      : `<span class="br-name-plain" style="opacity:${it.selected ? 1 : 0.5}">${esc(it.Name)}</span>`
   }
 </div>`,
       )

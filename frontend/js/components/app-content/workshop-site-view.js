@@ -38,18 +38,16 @@ export function renderSiteView(site, ctx) {
 
   // 构建 HTML
   let parts = [];
-  parts.push('<div style="flex:1;overflow-y:auto">');
+  parts.push('<div class="ws-scroll">');
 
   // 预设搜索按钮
   if (site.presetSearches && site.presetSearches.length) {
     parts.push(
-      '<div style="padding:8px 12px 4px;display:flex;gap:4px;flex-wrap:wrap">' +
+      '<div class="ws-preset-area">' +
         site.presetSearches
           .map(
             (ps) =>
               '<button class="ws-preset-btn" data-q="' +
-              esc(ps.q) +
-              '" style="padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--accent);cursor:pointer;font-size:9px">' +
               esc(ps.label) +
               "</button>",
           )
@@ -61,12 +59,12 @@ export function renderSiteView(site, ctx) {
   // 创作者列表
   if (!wsEditModeRef.v && creators.length) {
     parts.push(
-      '<div style="padding:6px 12px 4px;display:flex;align-items:center;gap:4px">' +
-        '<span style="font-size:10px;font-weight:600;color:var(--txt)">🎨 活跃创作者</span>' +
-        '<span style="font-size:9px;color:var(--muted)">(' +
+      '<div class="ws-section">' +
+        '<span class="ws-section-title-lg">🎨 活跃创作者</span>' +
+        '<span class="ws-section-sub">(' +
         creators.length +
         ")</span>" +
-        '<button class="ws-cr-edit-btn" style="margin-left:auto;padding:4px 12px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">✏️ 管理</button>' +
+        '<button class="ws-cr-edit-btn ws-action-btn ws-action-btn-muted" style="margin-left:auto">✏️ 管理</button>' +
         "</div>",
     );
     parts.push(
@@ -91,9 +89,9 @@ export function renderSiteView(site, ctx) {
             "</div>" +
             "</div>" +
             (hasRepo
-              ? '<button class="ws-browse-repo" data-repo="' +
+              ? '<button class="ws-browse-repo ws-action-btn ws-action-btn-accent" data-repo="' +
                 esc(cr.name) +
-                '" style="padding:4px 12px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:11px;flex-shrink:0">📦 浏览</button>'
+                '">📦 浏览</button>'
               : "") +
             '<div class="ws-creator-action">↗</div>' +
             "</div>"
@@ -103,42 +101,42 @@ export function renderSiteView(site, ctx) {
     );
   } else if (wsEditModeRef.v) {
     parts.push(
-      '<div style="padding:6px 12px 4px;display:flex;align-items:center;gap:4px">' +
-        '<span style="font-size:10px;font-weight:600;color:var(--txt)">✏️ 编辑创作者</span>' +
+      '<div class="ws-section">' +
+        '<span class="ws-section-title-lg">✏️ 编辑创作者</span>' +
         '<span style="flex:1"></span>' +
-        '<button class="ws-cr-view-btn" style="padding:4px 12px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">✅ 完成</button>' +
-        '<button class="ws-cr-save-btn" style="padding:4px 14px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:11px">💾 保存</button>' +
+        '<button class="ws-cr-view-btn ws-action-btn ws-action-btn-muted">✅ 完成</button>' +
+        '<button class="ws-cr-save-btn ws-save-btn">💾 保存</button>' +
         "</div>" +
-        '<div style="font-size:8px;color:var(--muted);padding:0 12px 4px">📄 数据文件：exe 同目录下的 workshop_creators.json，可直接编辑</div>',
+        '<div class="ws-hint-text">📄 数据文件：exe 同目录下的 workshop_creators.json，可直接编辑</div>',
     );
     creators.forEach((cr, idx) => {
       parts.push(
-        '<div style="display:flex;align-items:center;gap:3px;padding:4px 6px;border-radius:4px;border:1px solid var(--bd);font-size:10px;margin:1px 12px">' +
+        '<div class="ws-cr-row">' +
           "<span>🎨</span>" +
-          '<input class="ws-cr-ed" data-idx="' +
+          '<input data-idx="' +
           idx +
           '" data-fld="name" value="' +
           esc(cr.name) +
-          '" style="flex:2;min-width:30px;padding:2px 4px;border-radius:3px;border:1px solid transparent;background:transparent;color:var(--txt);font-size:10px">' +
-          '<input class="ws-cr-ed" data-idx="' +
+          '" class="ws-cr-input ws-cr-input-name">' +
+          '<input data-idx="' +
           idx +
           '" data-fld="desc" value="' +
           esc(cr.desc) +
-          '" style="flex:2;min-width:30px;padding:2px 4px;border-radius:3px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:9px">' +
-          '<input class="ws-cr-ed" data-idx="' +
+          '" class="ws-cr-input ws-cr-input-desc">' +
+          '<input data-idx="' +
           idx +
           '" data-fld="type" value="' +
           esc(cr.type) +
-          '" style="flex:1;min-width:30px;padding:2px 4px;border-radius:3px;border:1px solid transparent;background:transparent;color:var(--accent);font-size:9px;text-align:center" placeholder="bilibili">' +
-          '<button class="ws-cr-del" data-idx="' +
+          '" class="ws-cr-input-type" placeholder="bilibili">' +
+          '<button data-idx="' +
           idx +
-          '" style="padding:1px 4px;border-radius:3px;border:1px solid transparent;background:transparent;color:#e5534b;cursor:pointer;font-size:10px">🗑️</button>' +
+          '" class="ws-cr-del">🗑️</button>' +
           "</div>",
       );
     });
     parts.push(
-      '<div style="padding:4px 12px">' +
-        '<button class="ws-cr-add" style="padding:2px 8px;border-radius:4px;border:1px dashed var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:10px;width:100%">➕ 新增</button>' +
+      '<div class="ws-cr-add-area">' +
+        '<button class="ws-cr-add">➕ 新增</button>' +
         "</div>",
     );
   }
@@ -149,11 +147,10 @@ export function renderSiteView(site, ctx) {
 
   if (!site.presetSearches?.length && !creators.length && !wsEditModeRef.v) {
     html =
-      '<div style="flex:1;overflow-y:auto;padding:12px;color:var(--muted);font-size:10px">此站点无可操作内容。<br>点击「浏览器打开」访问：<br><a href="' +
+      '<div class="ws-empty-site">此站点无可操作内容。<br>点击「浏览器打开」访问：<br><a href="' +
       esc(site.url) +
-      '" target="_blank" style="color:var(--accent)">' +
-      esc(site.url) +
-      "</a></div>";
+      '" target="_blank" class="ws-site-link">';
+    esc(site.url) + "</a></div>";
   }
 
   searchResults.innerHTML = html;
@@ -225,14 +222,14 @@ export function renderSiteView(site, ctx) {
         btn.style.color = "var(--muted)";
         btn.style.cursor = "default";
         searchResults.innerHTML =
-          '<div style="padding:12px;text-align:center">' +
-          '<button class="ws-back-repo" style="padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:10px;margin-bottom:12px">← 返回</button>' +
-          '<div style="color:var(--muted);font-size:10px;line-height:1.6">' +
+          '<div class="ws-error-page">' +
+          '<button class="ws-back-repo ws-back-btn" style="margin-bottom:12px">← 返回</button>' +
+          '<div class="ws-error-msg">' +
           (isTimeout
             ? "⏱️ 连接超时"
             : "❌ 无 index.json<br>" +
               "此仓库尚未建立创意工坊索引，请你使用浏览器下载。<br>" +
-              '<span style="font-size:9px;opacity:.6">（这个仓库需要有 index.json 文件，才能调用 API 下载文件）</span>') +
+              '<span class="ws-error-hint">（这个仓库需要有 index.json 文件，才能调用 API 下载文件）</span>') +
           "</div></div>";
         searchResults
           .querySelector(".ws-back-repo")

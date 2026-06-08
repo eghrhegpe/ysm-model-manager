@@ -1,7 +1,7 @@
 {
   "repoRoot": "C:\\Users\\zhujieling11\\ysm-model-manager\\docs",
-  "mcRoot": "",
-  "linkMode": "copy",
+  "mcRoot": "C:\\PCL2\\.minecraft",
+  "linkMode": "hardlink",
   "theme": "warm",
   "mirror": "githubapi"
 }

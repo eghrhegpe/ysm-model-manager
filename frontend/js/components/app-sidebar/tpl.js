@@ -15,7 +15,7 @@ export function footerHTML() {
 <div class="footer-stats" id="footer-stats">
   <span class="stat-item" id="stat-ins">📂 整合包: -</span>
   <span class="stat-item" id="stat-pending">🔄 待处理: -</span>
-  <button class="footer-btn" id="btn-mc" style="margin-left:auto;font-size:10px;padding:2px 8px;width:auto;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="点击选择游戏目录">🎮 未设置</button>
+  <button class="footer-btn btn-mc-dir" id="btn-mc" title="点击选择游戏目录">🎮 未设置</button>
 </div>
 </div>`;
 }
@@ -53,10 +53,10 @@ export function vcHeaderHTML(
   const arrowClass = isOpen ? "arrow open" : "arrow";
   const installBtn =
     missing > 0 && hasYSM
-      ? `<button class="tag red btn-install-missing" data-idx="${idx}" style="cursor:pointer;border:none">⬇️ 安装缺失 (${missing})</button>`
+      ? `<button class="tag red btn-install-missing btn-install" data-idx="${idx}">⬇️ 安装缺失 (${missing})</button>`
       : "";
   const noYsmTag = !hasYSM
-    ? `<span class="tag gray" style="color:var(--muted);font-size:9px">🚫 无YSM</span>`
+    ? `<span class="tag gray tag-no-ysm">🚫 无YSM</span>`
     : "";
   const extraTag =
     extra > 0 ? `<span class="tag orange">📤 ${extra}</span>` : "";

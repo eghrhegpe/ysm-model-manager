@@ -113,8 +113,8 @@ class AppPreview extends HTMLElement {
   }
 
   /** 加载 2D 模型骨骼线条图 + 统计面板 */
-  async _loadModel2D(modelPath) {
-    const content = this._root.getElementById("preview-content");
+  async _loadModel2D(modelPath, skelContainer) {
+    const content = skelContainer || this._root.getElementById("preview-content");
     if (!content) return;
 
     const container = document.createElement("div");
@@ -169,49 +169,16 @@ class AppPreview extends HTMLElement {
 
       container.style.opacity = "1";
       container.innerHTML = "";
-      const title = document.createElement("div");
-      title.style.cssText =
-        "display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px";
-      title.innerHTML = `🏗️ 模型结构（${model.boneCount} 骨骼 · ${model.cubeCount} 立方体）` +
-        (_decodedBy ? `<span style="font-size:8px;padding:0 5px;border-radius:3px;background:rgba(124,131,255,0.25);color:var(--txt,#cdd6f4)">${_decodedBy}</span>` : "");
-      container.appendChild(title);
 
-      // ---- 统计面板 ----
-      const statsRow = document.createElement("div");
-      statsRow.style.cssText =
-        "display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px";
-      const fmt = isYsm
-        ? ".ysm (加密)"
-        : modelPath.endsWith(".zip")
-          ? ".zip"
-          : ".7z";
-      const stats = [
-        { label: "🦴 骨骼", val: model.boneCount },
-        { label: "📦 立方体", val: model.cubeCount },
-        {
-          label: "📐 纹理",
-          val: (model.texWidth || "?") + "×" + (model.texHeight || "?"),
-        },
-        { label: "📁 格式", val: fmt },
-      ];
-      for (const s of stats) {
-        const tag = document.createElement("span");
-        tag.style.cssText =
-          "font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd,#45475a);background:var(--bg2,#313244);color:var(--txt,#cdd6f4);white-space:nowrap";
-        tag.textContent = `${s.label} ${s.val}`;
-        statsRow.appendChild(tag);
-      }
-      container.appendChild(statsRow);
-      // -----------------
-
+      // ---- 模型轨迹图 ----
       const canvas = document.createElement("canvas");
       canvas.width = 180;
       canvas.height = 180;
       canvas.style.cssText =
-        "width:100%;height:auto;border-radius:6px;background:rgba(0,0,0,.15)";
+        "width:100%;height:auto;border-radius:8px;background:rgba(0,0,0,.12);margin-bottom:6px";
       container.appendChild(canvas);
 
-      const { renderModel2D } = await import("../../utils/model2d.js");
+      // ---- 加载纹理（骨骼图用）----
       let textureImg = null;
       if (model.texture) {
         textureImg = new Image();
@@ -221,79 +188,181 @@ class AppPreview extends HTMLElement {
           textureImg.src = model.texture;
         });
       }
-      renderModel2D(canvas, model, textureImg);
 
-      // 导出按钮
+      // ---- 骨骼名开关 ----
+      const toggleRow = document.createElement("div");
+      toggleRow.style.cssText = "display:flex;align-items:center;gap:4px;margin-bottom:6px";
+      const eyeBtn = document.createElement("button");
+      eyeBtn.style.cssText = "font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;display:flex;align-items:center;gap:3px";
+      const savedState = localStorage.getItem("ysm_showBoneLabels") !== "false";
+      let _labelsOn = savedState;
+      eyeBtn.innerHTML = _labelsOn ? "👁 骨骼名" : "👁‍🗨 骨骼名";
+      eyeBtn.title = "切换骨骼名称显示";
+      const eyeHint = document.createElement("span");
+      eyeHint.style.cssText = "font-size:8px;color:var(--muted)";
+      eyeHint.textContent = _labelsOn ? "开启" : "关闭";
+      toggleRow.appendChild(eyeBtn);
+      toggleRow.appendChild(eyeHint);
+      container.appendChild(toggleRow);
+
+      // ---- 统计卡片 ----
+      const card = document.createElement("div");
+      card.style.cssText =
+        "background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:8px";
+      card.innerHTML = this._statsCardHTML(model, modelPath, _decodedBy);
+      container.appendChild(card);
+
+      // ---- 渲染骨骼图 ----
+      const { renderModel2D } = await import("../../utils/model2d.js");
+      let _zoom = 1;
+      const doRender = () => renderModel2D(canvas, model, textureImg, { showLabels: _labelsOn, zoom: _zoom });
+      doRender();
+
+      eyeBtn.onclick = () => {
+        _labelsOn = !_labelsOn;
+        localStorage.setItem("ysm_showBoneLabels", _labelsOn);
+        eyeBtn.innerHTML = _labelsOn ? "👁 骨骼名" : "👁‍🗨 骨骼名";
+        eyeHint.textContent = _labelsOn ? "开启" : "关闭";
+        doRender();
+      };
+
+      // ---- 全窗放大 + 滚轮缩放 ----
+      canvas.style.cursor = "zoom-in";
+      canvas.title = "左键全窗放大 · 滚轮缩放";
+      canvas.addEventListener("click", () => this._openFullPreview(canvas, model, textureImg, _labelsOn));
+      canvas.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        _zoom = Math.max(0.2, Math.min(10, _zoom + (e.deltaY > 0 ? -0.2 : 0.2)));
+        doRender();
+      }, { passive: false });
+
+      // ---- 导出按钮 ----
       const { addExportButton } = await import("../../utils/canvas-export.js");
       addExportButton(
         container,
         canvas,
         modelPath.split("/").pop().split("\\").pop(),
       );
+
+      // 导出骨骼名
+      const boneRow = document.createElement("div");
+      boneRow.style.cssText = "display:flex;gap:6px;margin-top:2px;align-items:center";
+      const boneBtn = document.createElement("button");
+      boneBtn.textContent = "📋 导出骨骼名";
+      boneBtn.style.cssText =
+        "font-size:9px;padding:2px 8px;border-radius:4px;" +
+        "border:1px solid var(--bd);background:var(--surf);" +
+        "color:var(--txt);cursor:pointer";
+      const boneHint = document.createElement("span");
+      boneHint.style.cssText = "font-size:8px;color:var(--muted)";
+      boneHint.textContent = `${model.boneCount} 骨骼`;
+      boneBtn.onclick = () => {
+        const lines = [];
+        lines.push(`骨骼总数: ${model.boneCount}`);
+        lines.push(`立方体总数: ${model.cubeCount}`);
+        lines.push(`纹理: ${model.texWidth || "?"}×${model.texHeight || "?"}`);
+        lines.push("─".repeat(30));
+        for (const b of model.bones) {
+          const cs = b.cubes || [];
+          lines.push(`${b.name}${cs.length ? ` (${cs.length} 方)` : " (结构骨骼,无方)"}`);
+        }
+        const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+        const a = document.createElement("a");
+        a.download = (modelPath.split("/").pop().split("\\").pop() || "model") + "_bones.txt";
+        a.href = URL.createObjectURL(blob);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      };
+      boneRow.appendChild(boneBtn);
+      boneRow.appendChild(boneHint);
+      container.appendChild(boneRow);
     } catch (e) {
       container.innerHTML = `<div style="font-size:10px;font-weight:600;color:#ff6b6b;margin-bottom:4px">🏗️ 模型结构</div><div style="font-size:9px;color:#888;padding:8px 0">⚠️ 解析失败: ${e?.message ?? e}</div>`;
     }
   }
 
+  /** 生成模型统计卡片 HTML */
+  _statsCardHTML(model, modelPath, decodedBy) {
+    const isYsm = /\.ysm$/i.test(modelPath);
+    const fmt = isYsm
+      ? ".ysm (加密)"
+      : modelPath.endsWith(".zip") ? ".zip" : ".7z";
+    const badge = decodedBy
+      ? `<span style="font-size:8px;padding:0 5px;border-radius:3px;background:rgba(124,131,255,0.25);color:var(--txt)">${decodedBy}</span>`
+      : "";
+    return `
+  <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;font-size:10px;font-weight:600;color:var(--txt)">
+    📊 模型概览${badge}
+  </div>
+  <div style="border-left:2px solid #7c83ff;padding-left:8px;margin-bottom:5px">
+    <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">🔗 模型结构</div>
+    <div style="font-size:10px;color:var(--txt);line-height:1.6">
+      <span style="display:inline-block;min-width:80px">├─ 骨骼 (Bones)</span><span style="color:var(--accent);font-weight:600">${model.boneCount}</span> 根<br>
+      <span style="display:inline-block;min-width:80px">└─ 立方体 (Cubes)</span><span style="color:var(--accent);font-weight:600">${model.cubeCount}</span> 个
+    </div>
+  </div>
+  <div style="border-left:2px solid #a6e3a1;padding-left:8px;margin-bottom:5px">
+    <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">🖼️ 纹理尺寸</div>
+    <div style="font-size:10px;color:var(--txt);line-height:1.6">
+      └─ <span style="color:var(--accent);font-weight:600">${model.texWidth || "?"} × ${model.texHeight || "?"}</span> px
+    </div>
+  </div>
+  <div style="border-left:2px solid #f9a826;padding-left:8px">
+    <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">💾 文件信息</div>
+    <div style="font-size:10px;color:var(--txt);line-height:1.6">
+      └─ ${fmt}
+    </div>
+  </div>`;
+  }
+
   /** 通过前端 WASM 解码 .ysm，返回 { texture, geometry }（缓存复用） */
   async _decodeYsmViaWasm(modelPath) {
     if (this._ysmCache) return this._ysmCache;
-    const content = this._root.getElementById("preview-content");
     try {
-      this._appendDebug(content, "[YSM] 加载 WASM 模块...");
+      console.log("[YSM] 加载 WASM 模块...");
       const { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } =
         await import("../../wasm/ysm-parser.js");
       const ok = await initYSMParser();
-      this._appendDebug(content, `[YSM] WASM init: ${ok ? "✅" : "❌"}`);
+      console.log(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
       if (!ok) return null;
 
-      this._appendDebug(content, "[YSM] 读取文件...");
+      console.log("[YSM] 读取文件...");
       const { ReadFileBytes } = await import("../../../wailsjs/go/main/App.js");
       let bytes = await ReadFileBytes(modelPath);
-      // Wails []byte 返回 base64 字符串，解码为 Uint8Array
       if (typeof bytes === "string") {
         const binaryStr = atob(bytes);
         bytes = Uint8Array.from(binaryStr, (c) => c.charCodeAt(0));
       } else if (!(bytes instanceof Uint8Array)) {
         bytes = new Uint8Array(bytes);
       }
-      this._appendDebug(content, `[YSM] 读取 ${bytes?.length || 0} bytes`);
+      console.log(`[YSM] 读取 ${bytes?.length || 0} bytes`);
       if (!bytes?.length) return null;
 
-      // 优先内存解析（无文件 I/O），回退 callMain
-      this._appendDebug(content, "[YSM] 内存解析...");
+      console.log("[YSM] 内存解析...");
       let files;
       try {
         files = await decodeYsmFileFromMemory(bytes);
         if (files?.length) {
-          this._appendDebug(
-            content,
-            `[YSM] ✅ 内存解析成功: ${files.length} 文件`,
-          );
+          console.log(`[YSM] ✅ 内存解析成功: ${files.length} 文件`);
         } else {
-          this._appendDebug(content, "[YSM] 内存解析返回空，回退 callMain");
+          console.log("[YSM] 内存解析返回空，回退 callMain");
         }
       } catch (e) {
-        this._appendDebug(
-          content,
-          `[YSM] 内存解析异常: ${e?.message}，回退 callMain`,
-        );
+        console.log(`[YSM] 内存解析异常: ${e?.message}，回退 callMain`);
       }
 
       if (!files?.length) {
-        this._appendDebug(content, "[YSM] callMain 回退...");
+        console.log("[YSM] callMain 回退...");
         files = await decodeYsmFile(bytes);
       }
-      this._appendDebug(content, `[YSM] 输出 ${files?.length || 0} 文件`);
-
-      // 列出文件
+      console.log(`[YSM] 输出 ${files?.length || 0} 文件`);
       if (files?.length) {
-        const names = files.map((f) => f.path).join(", ");
-        this._appendDebug(content, `[YSM] 文件: ${names}`);
+        console.log(`[YSM] 文件: ${files.map((f) => f.path).join(", ")}`);
       }
       if (!files?.length) return null;
 
-      // 提取纹理
       let texture = null;
       const texFile = files.find(
         (f) => f.path.endsWith(".png") || f.path.endsWith(".jpg"),
@@ -301,21 +370,19 @@ class AppPreview extends HTMLElement {
       if (texFile) {
         const blob = new Blob([texFile.data]);
         texture = URL.createObjectURL(blob);
-        this._appendDebug(content, `[YSM] 纹理: ${texFile.path}`);
+        console.log(`[YSM] 纹理: ${texFile.path}`);
       }
 
-      // 解析几何体
       let geometry = null;
       for (const f of files) {
         if (!f.path.startsWith("models/") || !f.path.endsWith(".json"))
           continue;
-        this._appendDebug(content, `[YSM] 解析 ${f.path}...`);
+        console.log(`[YSM] 解析 ${f.path}...`);
         try {
           const jsonStr = new TextDecoder().decode(f.data);
           const parsed = parseBedrockGeometryFromJSON(jsonStr);
           if (parsed?.bones?.length) {
-            this._appendDebug(
-              content,
+            console.log(
               `[YSM] ✅ ${f.path}: ${parsed.bones.length}骨 ${parsed.cubeCount}方`,
             );
             if (!geometry || parsed.bones.length > geometry.bones.length) {
@@ -323,10 +390,10 @@ class AppPreview extends HTMLElement {
               geometry.texture = texture;
             }
           } else {
-            this._appendDebug(content, `[YSM] ⚠️ ${f.path}: 无骨骼`);
+            console.log(`[YSM] ⚠️ ${f.path}: 无骨骼`);
           }
         } catch (e) {
-          this._appendDebug(content, `[YSM] ❌ ${f.path}: ${e?.message}`);
+          console.log(`[YSM] ❌ ${f.path}: ${e?.message}`);
         }
       }
 
@@ -351,8 +418,75 @@ class AppPreview extends HTMLElement {
     } catch (_) {}
   }
 
+  /** 全窗放大预览 */
+  async _openFullPreview(smallCanvas, model, textureImg, labelsOn) {
+    const { renderModel2D } = await import("../../utils/model2d.js");
+    // 遮罩
+    const overlay = document.createElement("div");
+    overlay.style.cssText =
+      "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;flex-direction:column";
+
+    // 大 Canvas
+    const bigCanvas = document.createElement("canvas");
+    bigCanvas.width = 600;
+    bigCanvas.height = 600;
+    bigCanvas.style.cssText =
+      "max-width:90vw;max-height:80vh;border-radius:8px;background:rgba(0,0,0,.2)";
+    overlay.appendChild(bigCanvas);
+
+    // 提示
+    const hint = document.createElement("div");
+    hint.style.cssText =
+      "font-size:11px;color:var(--muted);margin-top:6px";
+    hint.textContent = "🖱️ 滚轮缩放 · 点击外部或 ESC 关闭";
+    overlay.appendChild(hint);
+
+    let zoom = 1;
+    const doRender = () => renderModel2D(bigCanvas, model, textureImg, { showLabels: labelsOn, zoom });
+    doRender();
+
+    // 滚轮缩放
+    bigCanvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      zoom = Math.max(0.2, Math.min(10, zoom + (e.deltaY > 0 ? -0.3 : 0.3)));
+      doRender();
+    }, { passive: false });
+
+    // 关闭
+    const close = () => { if (overlay.parentNode) document.body.removeChild(overlay); };
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); }, { once: true });
+
+    document.body.appendChild(overlay);
+  }
+
   async _showModelDetail(path) {
-    this._root.innerHTML = `<div class="content" id="preview-content"><h3>📄 模型信息</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">正在解析模型文件...</div></div></div>`;
+    const savedTab = localStorage.getItem("ysm_previewTab") || "detail";
+    this._root.innerHTML = `<div class="content" id="preview-content">
+  <div style="display:flex;gap:2px;margin-bottom:6px">
+    <button class="preview-tab" data-tab="detail" style="flex:1;font-size:10px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:${savedTab === "detail" ? "var(--accent)" : "var(--surf)"};color:${savedTab === "detail" ? "#fff" : "var(--txt)"};cursor:pointer">📄 详情</button>
+    <button class="preview-tab" data-tab="skeleton" style="flex:1;font-size:10px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:${savedTab === "skeleton" ? "var(--accent)" : "var(--surf)"};color:${savedTab === "skeleton" ? "#fff" : "var(--txt)"};cursor:pointer">🏗️ 骨骼</button>
+  </div>
+  <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>📄 模型信息</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">正在解析模型文件...</div></div></div>
+  <div id="preview-skeleton"${savedTab !== "skeleton" ? ' style="display:none"' : ""}></div>
+</div>`;
+
+    // Tab 切换
+    const switchTab = (tab) => {
+      localStorage.setItem("ysm_previewTab", tab);
+      this._root.querySelectorAll(".preview-tab").forEach((btn) => {
+        const isActive = btn.dataset.tab === tab;
+        btn.style.background = isActive ? "var(--accent)" : "var(--surf)";
+        btn.style.color = isActive ? "#fff" : "var(--txt)";
+      });
+      const detail = this._root.getElementById("preview-detail");
+      const skel = this._root.getElementById("preview-skeleton");
+      detail.style.display = tab === "detail" ? "" : "none";
+      skel.style.display = tab === "skeleton" ? "" : "none";
+    };
+    this._root.querySelectorAll(".preview-tab").forEach((btn) => {
+      btn.onclick = () => switchTab(btn.dataset.tab);
+    });
 
     // 并行：解析元数据 + 加载缩略图
     const previewSrc = await this._loadPreviewImage(path);
@@ -369,7 +503,6 @@ class AppPreview extends HTMLElement {
       const header =
         results[1].status === "fulfilled" ? results[1].value : null;
       const basename = path.split("/").pop().split("\\").pop();
-      // 判断 summary 是否真实有效（加密模型返回零值空壳，name/stats/authors 全空）
       const hasRealSummary =
         summary &&
         (summary.name ||
@@ -386,22 +519,26 @@ class AppPreview extends HTMLElement {
       } else {
         throw new Error("无法解析此文件");
       }
-      // 在卡片顶部注入缩略图
+      // 注入纹理缩略图
       if (previewSrc) {
         cardHTML = cardHTML.replace(
           '<div class="content" id="preview-content">',
-          `<div class="content" id="preview-content"><div class="preview-thumb"><img src="${previewSrc}" alt="预览" onerror="this.style.display='none'"></div>`,
+          `<div style="float:right;width:70px;margin:0 0 6px 6px"><img src="${previewSrc}" alt="预览" onerror="this.style.display='none'" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--bd)"></div>`,
         );
       }
-      this._root.innerHTML = cardHTML;
+      const detailDiv = this._root.getElementById("preview-detail");
+      detailDiv.innerHTML = cardHTML;
 
-      // 尝试加载 2D 模型预览（只对 zip/7z 有效）
-      this._loadModel2D(path);
+      // 加载 2D 模型预览（骨架 tab）
+      this._loadModel2D(path, this._root.getElementById("preview-skeleton"));
     } catch (err) {
-      this._root.innerHTML = modelDetailHTML({
-        hasError: true,
-        errorMsg: String(err),
-      });
+      const detailDiv = this._root.getElementById("preview-detail");
+      if (detailDiv) {
+        detailDiv.innerHTML = modelDetailHTML({
+          hasError: true,
+          errorMsg: String(err),
+        });
+      }
     }
   }
 
@@ -458,6 +595,7 @@ function parseBedrockGeometryFromJSON(jsonStr) {
         origin: c.origin || [0, 0, 0],
         size: c.size || [1, 1, 1],
         pivot: c.pivot || [0, 0, 0],
+        uv: Array.isArray(c.uv) ? c.uv : [0, 0],
       });
     }
     bones.push({ name: b.name, cubes });

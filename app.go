@@ -1661,7 +1661,7 @@ func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 		return types.BedrockModel{}
 	}
 	var geoJSON *types.BedrockModel
-	var texData []byte
+	var texData [][]byte
 
 	if ext == ".zip" {
 		geoJSON, texData = parseBedrockFromZip(data, int64(len(data)))
@@ -1678,8 +1678,16 @@ func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 	if geoJSON == nil {
 		return types.BedrockModel{}
 	}
-	if len(texData) > 0 {
-		geoJSON.Texture = "data:image/png;base64," + base64.StdEncoding.EncodeToString(texData)
+	// 收集所有纹理
+	var textures []string
+	for _, td := range texData {
+		if len(td) > 0 {
+			textures = append(textures, "data:image/png;base64,"+base64.StdEncoding.EncodeToString(td))
+		}
+	}
+	if len(textures) > 0 {
+		geoJSON.Texture = textures[0]
+		geoJSON.Textures = textures
 	}
 	return *geoJSON
 }
@@ -1796,13 +1804,13 @@ func copyFile(src, dst string) error {
 	return err
 }
 
-func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, []byte) {
+func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 	reader, err := zip.NewReader(bytes.NewReader(data), size)
 	if err != nil {
 		return nil, nil
 	}
 	var geo *types.BedrockModel
-	var png []byte
+	var pngs [][]byte
 	for _, f := range reader.File {
 		low := strings.ToLower(f.Name)
 		if strings.HasSuffix(low, ".json") && !strings.Contains(low, "ysm.json") && !strings.Contains(low, "animation") && !strings.Contains(low, "controller") && !f.FileInfo().IsDir() {
@@ -1833,25 +1841,28 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, []byte) 
 				}
 			}
 		}
-		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && png == nil && !f.FileInfo().IsDir() {
+		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !f.FileInfo().IsDir() && !strings.Contains(low, "avatar/") {
 			rc, err := f.Open()
 			if err != nil {
 				continue
 			}
-			png, _ = io.ReadAll(rc)
+			data, _ := io.ReadAll(rc)
 			rc.Close()
+			if len(data) > 0 {
+				pngs = append(pngs, data)
+			}
 		}
 	}
-	return geo, png
+	return geo, pngs
 }
 
-func parseBedrockFrom7z(data []byte, size int64) (*types.BedrockModel, []byte) {
+func parseBedrockFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 	reader, err := sevenzip.NewReader(bytes.NewReader(data), size)
 	if err != nil {
 		return nil, nil
 	}
 	var geo *types.BedrockModel
-	var png []byte
+	var pngs [][]byte
 	for _, f := range reader.File {
 		low := strings.ToLower(f.Name)
 		if strings.HasSuffix(low, ".json") && !strings.Contains(low, "ysm.json") && !strings.Contains(low, "animation") && !strings.Contains(low, "controller") && !f.FileInfo().IsDir() {
@@ -1881,16 +1892,19 @@ func parseBedrockFrom7z(data []byte, size int64) (*types.BedrockModel, []byte) {
 				}
 			}
 		}
-		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && png == nil && !f.FileInfo().IsDir() {
+		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !f.FileInfo().IsDir() && !strings.Contains(low, "avatar/") {
 			rc, err := f.Open()
 			if err != nil {
 				continue
 			}
-			png, _ = io.ReadAll(rc)
+			data, _ := io.ReadAll(rc)
 			rc.Close()
+			if len(data) > 0 {
+				pngs = append(pngs, data)
+			}
 		}
 	}
-	return geo, png
+	return geo, pngs
 }
 
 func parseBedrockGeometry(data []byte) *types.BedrockModel {
@@ -1930,10 +1944,23 @@ func parseBedrockGeometry(data []byte) *types.BedrockModel {
 	for _, b := range g.Bones {
 		cubes := make([]types.Cube2D, 0, len(b.Cubes))
 		for _, c := range b.Cubes {
+			var uv [2]float64
+			var faceUV string
+			if len(c.UV) > 0 {
+				uvStr := string(c.UV)
+				if len(uvStr) > 0 && uvStr[0] == '{' {
+					// 每面独立 UV 格式: {"north":{"uv":[...],"uv_size":[...]},...}
+					faceUV = uvStr
+				} else {
+					json.Unmarshal(c.UV, &uv)
+				}
+			}
 			cubes = append(cubes, types.Cube2D{
 				Origin: c.Origin,
 				Size:   c.Size,
 				Pivot:  c.Pivot,
+				UV:     uv,
+				FaceUV: faceUV,
 			})
 		}
 		model.Bones = append(model.Bones, types.Bone2D{

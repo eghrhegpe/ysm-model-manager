@@ -739,7 +739,66 @@ func (a *App) ValidateMinecraftDir(dir string) (string, string) {
 	return "", "未检测到 .minecraft 文件夹。请选择包含 versions/ 等子目录的 .minecraft 文件夹"
 }
 
-// ========== 仓库 ==========
+// ========== 批量导出骨骼结构 ==========
+func (a *App) ExportBoneStructures(repoRoot string) (string, error) {
+	entries := a.ScanModelEntries(repoRoot)
+	if len(entries) == 0 {
+		return "", fmt.Errorf("仓库中没有模型文件")
+	}
+
+	var lines []string
+	lines = append(lines, "YSM Model Manager — 骨骼结构批量导出")
+	lines = append(lines, fmt.Sprintf("仓库: %s", repoRoot))
+	lines = append(lines, fmt.Sprintf("文件总数: %d", len(entries)))
+	lines = append(lines, fmt.Sprintf("导出时间: %s", time.Now().Format("2006-01-02 15:04:05")))
+	lines = append(lines, "")
+	lines = append(lines, "="+strings.Repeat("=", 78))
+	lines = append(lines, "")
+
+	totalBones := 0
+	totalCubes := 0
+	parsedCount := 0
+	failCount := 0
+
+	for i, entry := range entries {
+		model := a.AnalyzeBedrockModel(entry.Path)
+		relPath := entry.Name
+		lines = append(lines, fmt.Sprintf("[%d/%d] %s", i+1, len(entries), relPath))
+
+		if model.BoneCount > 0 {
+			parsedCount++
+			totalBones += model.BoneCount
+			totalCubes += model.CubeCount
+			lines = append(lines, fmt.Sprintf("  🦴 骨骼: %d  |  📦 立方体: %d  |  📐 纹理: %dx%d",
+				model.BoneCount, model.CubeCount, model.TexWidth, model.TexHeight))
+
+			// 骨骼层级
+			for _, b := range model.Bones {
+				cs := len(b.Cubes)
+				if cs > 0 {
+					lines = append(lines, fmt.Sprintf("  ├─ %s (%d 方)", b.Name, cs))
+				} else {
+					lines = append(lines, fmt.Sprintf("  ├─ %s (结构骨骼)", b.Name))
+				}
+			}
+		} else {
+			failCount++
+			lines = append(lines, "  ⚠️ 未解析到骨骼数据")
+		}
+		lines = append(lines, "")
+	}
+
+	lines = append(lines, "="+strings.Repeat("=", 78))
+	lines = append(lines, "")
+	lines = append(lines, fmt.Sprintf("✅ 成功解析: %d / %d", parsedCount, len(entries)))
+	lines = append(lines, fmt.Sprintf("❌ 解析失败: %d", failCount))
+	lines = append(lines, fmt.Sprintf("🦴 骨骼总数: %d", totalBones))
+	lines = append(lines, fmt.Sprintf("📦 立方体总数: %d", totalCubes))
+	lines = append(lines, "")
+	lines = append(lines, "--- 生成完毕 ---")
+
+	return strings.Join(lines, "\n"), nil
+}
 func (a *App) SetRepoRoot(dir string) {
 	if !installer.IsValidRepoRoot(dir) {
 		return // 仓库路径不合法，不做设置

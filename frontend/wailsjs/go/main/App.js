@@ -78,6 +78,10 @@ export function EnqueueDownloads(arg1) {
   return window['go']['main']['App']['EnqueueDownloads'](arg1);
 }
 
+export function ExportBoneStructures(arg1) {
+  return window['go']['main']['App']['ExportBoneStructures'](arg1);
+}
+
 export function ExportWorkshopCreatorsJSONFile() {
   return window['go']['main']['App']['ExportWorkshopCreatorsJSONFile']();
 }

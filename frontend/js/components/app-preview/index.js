@@ -1,14 +1,16 @@
 // ===== <app-preview> 入口 =====
 import { bus } from "../../bus.js";
 import { previewCSS } from "./preview-css.js";
-import { statsHTML, modelDetailHTML } from "./tpl.js";
+import { statsHTML, modelDetailHTML, statsCardHTML } from "./tpl.js";
 import {
   bindActions,
   bindBusUpdates,
   showPackageDetail,
   loadLogsPreview,
+  openFullPreview,
 } from "./events.js";
 import { summaryCardHTML } from "../../utils/summarize.js";
+import { parseBedrockGeometryFromJSON } from "./data.js";
 
 class AppPreview extends HTMLElement {
   constructor() {
@@ -209,13 +211,12 @@ class AppPreview extends HTMLElement {
       const card = document.createElement("div");
       card.style.cssText =
         "background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:8px";
-      card.innerHTML = this._statsCardHTML(model, modelPath, _decodedBy);
+      card.innerHTML = statsCardHTML(model, modelPath, _decodedBy);
       container.appendChild(card);
 
       // ---- 渲染骨骼图 ----
       const { renderModel2D } = await import("../../utils/model2d.js");
-      let _zoom = 1;
-      const doRender = () => renderModel2D(canvas, model, textureImg, { showLabels: _labelsOn, zoom: _zoom });
+      let _zoom = 1;      let _rotation = 0;      const doRender = () => renderModel2D(canvas, model, textureImg, { showLabels: _labelsOn, zoom: _zoom, rotation: _rotation });
       doRender();
 
       eyeBtn.onclick = () => {
@@ -226,15 +227,25 @@ class AppPreview extends HTMLElement {
         doRender();
       };
 
-      // ---- 全窗放大 + 滚轮缩放 ----
-      canvas.style.cursor = "zoom-in";
-      canvas.title = "左键全窗放大 · 滚轮缩放";
-      canvas.addEventListener("click", () => this._openFullPreview(canvas, model, textureImg, _labelsOn));
+      // ---- 全窗放大 + 滚轮/拖拽旋转 ----
+      canvas.style.cursor = "grab";
+      canvas.title = "左键全窗放大 · 滚轮缩放 · 拖拽旋转";
+      canvas.addEventListener("click", () => openFullPreview(canvas, model, textureImg, _labelsOn));
       canvas.addEventListener("wheel", (e) => {
         e.preventDefault();
         _zoom = Math.max(0.2, Math.min(10, _zoom + (e.deltaY > 0 ? -0.2 : 0.2)));
         doRender();
       }, { passive: false });
+      // 拖拽旋转
+      let _dragging = false, _lastX = 0;
+      canvas.addEventListener("mousedown", (e) => { _dragging = true; _lastX = e.clientX; });
+      window.addEventListener("mousemove", (e) => {
+        if (!_dragging) return;
+        _rotation = (_rotation + (e.clientX - _lastX) * 0.5) % 360;
+        _lastX = e.clientX;
+        doRender();
+      });
+      window.addEventListener("mouseup", () => { _dragging = false; });
 
       // ---- 导出按钮 ----
       const { addExportButton } = await import("../../utils/canvas-export.js");
@@ -281,40 +292,6 @@ class AppPreview extends HTMLElement {
     } catch (e) {
       container.innerHTML = `<div style="font-size:10px;font-weight:600;color:#ff6b6b;margin-bottom:4px">🏗️ 模型结构</div><div style="font-size:9px;color:#888;padding:8px 0">⚠️ 解析失败: ${e?.message ?? e}</div>`;
     }
-  }
-
-  /** 生成模型统计卡片 HTML */
-  _statsCardHTML(model, modelPath, decodedBy) {
-    const isYsm = /\.ysm$/i.test(modelPath);
-    const fmt = isYsm
-      ? ".ysm (加密)"
-      : modelPath.endsWith(".zip") ? ".zip" : ".7z";
-    const badge = decodedBy
-      ? `<span style="font-size:8px;padding:0 5px;border-radius:3px;background:rgba(124,131,255,0.25);color:var(--txt)">${decodedBy}</span>`
-      : "";
-    return `
-  <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;font-size:10px;font-weight:600;color:var(--txt)">
-    📊 模型概览${badge}
-  </div>
-  <div style="border-left:2px solid #7c83ff;padding-left:8px;margin-bottom:5px">
-    <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">🔗 模型结构</div>
-    <div style="font-size:10px;color:var(--txt);line-height:1.6">
-      <span style="display:inline-block;min-width:80px">├─ 骨骼 (Bones)</span><span style="color:var(--accent);font-weight:600">${model.boneCount}</span> 根<br>
-      <span style="display:inline-block;min-width:80px">└─ 立方体 (Cubes)</span><span style="color:var(--accent);font-weight:600">${model.cubeCount}</span> 个
-    </div>
-  </div>
-  <div style="border-left:2px solid #a6e3a1;padding-left:8px;margin-bottom:5px">
-    <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">🖼️ 纹理尺寸</div>
-    <div style="font-size:10px;color:var(--txt);line-height:1.6">
-      └─ <span style="color:var(--accent);font-weight:600">${model.texWidth || "?"} × ${model.texHeight || "?"}</span> px
-    </div>
-  </div>
-  <div style="border-left:2px solid #f9a826;padding-left:8px">
-    <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">💾 文件信息</div>
-    <div style="font-size:10px;color:var(--txt);line-height:1.6">
-      └─ ${fmt}
-    </div>
-  </div>`;
   }
 
   /** 通过前端 WASM 解码 .ysm，返回 { texture, geometry }（缓存复用） */
@@ -416,48 +393,6 @@ class AppPreview extends HTMLElement {
       dbg.textContent = msg;
       (el.appendChild ? el : this._root).appendChild(dbg);
     } catch (_) {}
-  }
-
-  /** 全窗放大预览 */
-  async _openFullPreview(smallCanvas, model, textureImg, labelsOn) {
-    const { renderModel2D } = await import("../../utils/model2d.js");
-    // 遮罩
-    const overlay = document.createElement("div");
-    overlay.style.cssText =
-      "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;flex-direction:column";
-
-    // 大 Canvas
-    const bigCanvas = document.createElement("canvas");
-    bigCanvas.width = 600;
-    bigCanvas.height = 600;
-    bigCanvas.style.cssText =
-      "max-width:90vw;max-height:80vh;border-radius:8px;background:rgba(0,0,0,.2)";
-    overlay.appendChild(bigCanvas);
-
-    // 提示
-    const hint = document.createElement("div");
-    hint.style.cssText =
-      "font-size:11px;color:var(--muted);margin-top:6px";
-    hint.textContent = "🖱️ 滚轮缩放 · 点击外部或 ESC 关闭";
-    overlay.appendChild(hint);
-
-    let zoom = 1;
-    const doRender = () => renderModel2D(bigCanvas, model, textureImg, { showLabels: labelsOn, zoom });
-    doRender();
-
-    // 滚轮缩放
-    bigCanvas.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      zoom = Math.max(0.2, Math.min(10, zoom + (e.deltaY > 0 ? -0.3 : 0.3)));
-      doRender();
-    }, { passive: false });
-
-    // 关闭
-    const close = () => { if (overlay.parentNode) document.body.removeChild(overlay); };
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); }, { once: true });
-
-    document.body.appendChild(overlay);
   }
 
   async _showModelDetail(path) {
@@ -580,33 +515,4 @@ ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px
 }
 customElements.define("app-preview", AppPreview);
 
-// ===== 工具：从 JSON 字符串解析 Bedrock geometry =====
-function parseBedrockGeometryFromJSON(jsonStr) {
-  const raw = JSON.parse(jsonStr);
-  const geo = raw?.["minecraft:geometry"]?.[0];
-  if (!geo?.bones?.length) return null;
-
-  const bones = [];
-  let cubeCount = 0;
-  for (const b of geo.bones) {
-    const cubes = [];
-    for (const c of b.cubes || []) {
-      cubes.push({
-        origin: c.origin || [0, 0, 0],
-        size: c.size || [1, 1, 1],
-        pivot: c.pivot || [0, 0, 0],
-        uv: Array.isArray(c.uv) ? c.uv : [0, 0],
-      });
-    }
-    bones.push({ name: b.name, cubes });
-    cubeCount += cubes.length;
-  }
-
-  return {
-    boneCount: bones.length,
-    cubeCount,
-    texWidth: geo.description?.texture_width || 0,
-    texHeight: geo.description?.texture_height || 0,
-    bones,
-  };
-}
+// ===== 工具：从 JSON 字符串解析 Bedrock geometry（已移至 data.js） =====

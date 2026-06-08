@@ -175,7 +175,7 @@ export function bindRepoEvents(sr, ctx) {
     if (queueStatus) {
       queueStatus.style.display = "block";
       queueStatus.innerHTML =
-        '<span style="color:var(--accent)">⬇️</span> 准备下载… 共 ' +
+        '<span class="ws-queue-icon">⬇️</span> 准备下载… 共 ' +
         totalTasks +
         " 个";
     }
@@ -186,14 +186,14 @@ export function bindRepoEvents(sr, ctx) {
         let summary = "";
         if (errorList.length > 0) {
           summary =
-            '<div style="padding:2px 0;font-size:10px;color:#f38ba8">⚠️ ' +
+            '<div class="ws-queue-error">⚠️ ' +
             errorList.length +
             " 个文件下载失败：</div>" +
             errorList
               .slice(0, 5)
               .map(
                 (e) =>
-                  '<div style="font-size:9px;color:var(--muted);padding:0 4px">❌ ' +
+                  '<div class="ws-queue-err-item">❌ ' +
                   renderDisplayName(e.name) +
                   ": " +
                   esc(e.err) +
@@ -201,16 +201,13 @@ export function bindRepoEvents(sr, ctx) {
               )
               .join("") +
             (errorList.length > 5
-              ? '<div style="font-size:9px;color:var(--muted);padding:0 4px">…还有 ' +
+              ? '<div class="ws-queue-ellipsis">…还有 ' +
                 (errorList.length - 5) +
                 " 个</div>"
               : "");
         }
         if (cancelled) {
-          cleanup(
-            summary ||
-              '<span style="color:var(--muted);font-size:10px">⏹ 已取消</span>',
-          );
+          cleanup(summary || '<span class="ws-queue-cancel">⏹ 已取消</span>');
           if (dlAllBtn) dlAllBtn.textContent = "⏹ 已取消";
         } else {
           cleanup(summary || null);
@@ -233,21 +230,19 @@ export function bindRepoEvents(sr, ctx) {
         const remain = total - done;
         // 创建一个固定的进度容器，后续 download:progress 只更新 bar 部分
         queueStatus.innerHTML =
-          '<div style="display:flex;align-items:center;gap:4px">' +
-          '<span style="color:var(--accent)">⬇️</span>' +
-          '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">' +
+          '<div class="ws-progress-row">' +
+          '<span class="ws-queue-icon">⬇️</span>' +
+          '<span class="ws-progress-name">' +
           renderDisplayName(name) +
           "</span>" +
-          '<span class="ws-progress-pct" style="font-size:9px;color:var(--muted);flex-shrink:0">⏳</span>' +
+          '<span class="ws-progress-pct">⏳</span>' +
           (remain > 1
-            ? '<span style="font-size:9px;color:var(--muted);flex-shrink:0">剩余' +
-              remain +
-              "</span>"
+            ? '<span class="ws-progress-remain">剩余' + remain + "</span>"
             : "") +
-          '<button class="ws-cancel-queue" style="width:20px;height:20px;border-radius:50%;border:none;background:rgba(128,128,128,.15);color:var(--muted);cursor:pointer;font-size:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .15s" title="取消">✕</button>' +
+          '<button class="ws-cancel-queue ws-cancel-btn" title="取消">✕</button>' +
           "</div>" +
-          '<div class="ws-progress-bar" style="margin-top:3px;height:4px;border-radius:2px;background:var(--bd);overflow:hidden">' +
-          '<div class="ws-progress-fill" style="height:100%;width:0%;border-radius:2px;background:var(--accent);transition:width .2s;box-shadow:0 0 4px var(--accent)"></div>' +
+          '<div class="ws-progress-bar-wrap">' +
+          '<div class="ws-progress-fill"></div>' +
           "</div>";
         queueStatus
           .querySelector(".ws-cancel-queue")
@@ -349,7 +344,7 @@ export function bindRepoEvents(sr, ctx) {
             let summary = null;
             if (errorList.length > 0) {
               summary =
-                '<div style="padding:2px 0;font-size:10px;color:#f38ba8">⚠️ ' +
+                '<div class="ws-queue-error">⚠️ ' +
                 errorList.length +
                 " 个文件下载失败</div>";
             }

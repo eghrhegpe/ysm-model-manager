@@ -10,7 +10,7 @@ import {
   openFullPreview,
 } from "./events.js";
 import { summaryCardHTML } from "../../utils/summarize.js";
-import { parseBedrockGeometryFromJSON } from "./data.js";
+import { parseBedrockGeometryFromJSON } from "./utils.js";
 
 class AppPreview extends HTMLElement {
   constructor() {
@@ -71,7 +71,16 @@ class AppPreview extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._cleanupModelListeners();
     this._unsubs.forEach((fn) => fn());
+  }
+
+  /** 清理模型拖拽 window 级监听 */
+  _cleanupModelListeners() {
+    if (this._modelCleanup) {
+      this._modelCleanup();
+      this._modelCleanup = null;
+    }
   }
 
   _render() {
@@ -121,7 +130,7 @@ class AppPreview extends HTMLElement {
 
     const container = document.createElement("div");
     container.style.cssText = "margin-bottom:8px;opacity:0.6";
-    container.innerHTML = `<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">🏗️ 模型结构（读取中...）</div><div style="height:60px;border-radius:6px;background:rgba(0,0,0,.08)"></div>`;
+    container.innerHTML = `<div class="ysm-loading-title">🏗️ 模型结构（读取中...）</div><div class="ysm-loading-bar"></div>`;
     content.appendChild(container);
 
     try {
@@ -165,7 +174,7 @@ class AppPreview extends HTMLElement {
       }
 
       if (!model?.bones?.length) {
-        container.innerHTML = `<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">🏗️ 模型结构</div><div style="font-size:9px;color:#888;padding:8px 0">⚠️ 未找到几何数据</div>`;
+        container.innerHTML = `<div class="ysm-error-title">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ 未找到几何数据</div>`;
         return;
       }
 
@@ -176,8 +185,7 @@ class AppPreview extends HTMLElement {
       const canvas = document.createElement("canvas");
       canvas.width = 180;
       canvas.height = 180;
-      canvas.style.cssText =
-        "width:100%;height:auto;border-radius:8px;background:rgba(0,0,0,.12);margin-bottom:6px";
+      canvas.className = "ysm-canvas";
       container.appendChild(canvas);
 
       // ---- 加载纹理（骨骼图用）----
@@ -193,15 +201,15 @@ class AppPreview extends HTMLElement {
 
       // ---- 骨骼名开关 ----
       const toggleRow = document.createElement("div");
-      toggleRow.style.cssText = "display:flex;align-items:center;gap:4px;margin-bottom:6px";
+      toggleRow.className = "ysm-toggle-row";
       const eyeBtn = document.createElement("button");
-      eyeBtn.style.cssText = "font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;display:flex;align-items:center;gap:3px";
+      eyeBtn.className = "ysm-btn";
       const savedState = localStorage.getItem("ysm_showBoneLabels") !== "false";
       let _labelsOn = savedState;
       eyeBtn.innerHTML = _labelsOn ? "👁 骨骼名" : "👁‍🗨 骨骼名";
       eyeBtn.title = "切换骨骼名称显示";
       const eyeHint = document.createElement("span");
-      eyeHint.style.cssText = "font-size:8px;color:var(--muted)";
+      eyeHint.className = "ysm-hint";
       eyeHint.textContent = _labelsOn ? "开启" : "关闭";
       toggleRow.appendChild(eyeBtn);
       toggleRow.appendChild(eyeHint);
@@ -209,8 +217,7 @@ class AppPreview extends HTMLElement {
 
       // ---- 统计卡片 ----
       const card = document.createElement("div");
-      card.style.cssText =
-        "background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:8px";
+      card.className = "ysm-card";
       card.innerHTML = statsCardHTML(model, modelPath, _decodedBy);
       container.appendChild(card);
 
@@ -228,7 +235,7 @@ class AppPreview extends HTMLElement {
       };
 
       // ---- 全窗放大 + 滚轮/拖拽旋转 ----
-      canvas.style.cursor = "grab";
+      canvas.classList.add("ysm-grab");
       canvas.title = "左键全窗放大 · 滚轮缩放 · 拖拽旋转";
       canvas.addEventListener("click", () => openFullPreview(canvas, model, textureImg, _labelsOn));
       canvas.addEventListener("wheel", (e) => {
@@ -236,16 +243,27 @@ class AppPreview extends HTMLElement {
         _zoom = Math.max(0.2, Math.min(10, _zoom + (e.deltaY > 0 ? -0.2 : 0.2)));
         doRender();
       }, { passive: false });
-      // 拖拽旋转
+
+      // 清理上一次的拖拽监听（避免重复注册）
+      this._cleanupModelListeners();
+
       let _dragging = false, _lastX = 0;
-      canvas.addEventListener("mousedown", (e) => { _dragging = true; _lastX = e.clientX; });
-      window.addEventListener("mousemove", (e) => {
+      const _onMouseDown = (e) => { _dragging = true; _lastX = e.clientX; };
+      const _onMouseMove = (e) => {
         if (!_dragging) return;
         _rotation = (_rotation + (e.clientX - _lastX) * 0.5) % 360;
         _lastX = e.clientX;
         doRender();
-      });
-      window.addEventListener("mouseup", () => { _dragging = false; });
+      };
+      const _onMouseUp = () => { _dragging = false; };
+      canvas.addEventListener("mousedown", _onMouseDown);
+      window.addEventListener("mousemove", _onMouseMove);
+      window.addEventListener("mouseup", _onMouseUp);
+      this._modelCleanup = () => {
+        canvas.removeEventListener("mousedown", _onMouseDown);
+        window.removeEventListener("mousemove", _onMouseMove);
+        window.removeEventListener("mouseup", _onMouseUp);
+      };
 
       // ---- 导出按钮 ----
       const { addExportButton } = await import("../../utils/canvas-export.js");
@@ -257,15 +275,12 @@ class AppPreview extends HTMLElement {
 
       // 导出骨骼名
       const boneRow = document.createElement("div");
-      boneRow.style.cssText = "display:flex;gap:6px;margin-top:2px;align-items:center";
+      boneRow.className = "ysm-export-row";
       const boneBtn = document.createElement("button");
       boneBtn.textContent = "📋 导出骨骼名";
-      boneBtn.style.cssText =
-        "font-size:9px;padding:2px 8px;border-radius:4px;" +
-        "border:1px solid var(--bd);background:var(--surf);" +
-        "color:var(--txt);cursor:pointer";
+      boneBtn.className = "ysm-export-btn";
       const boneHint = document.createElement("span");
-      boneHint.style.cssText = "font-size:8px;color:var(--muted)";
+      boneHint.className = "ysm-hint";
       boneHint.textContent = `${model.boneCount} 骨骼`;
       boneBtn.onclick = () => {
         const lines = [];
@@ -290,7 +305,7 @@ class AppPreview extends HTMLElement {
       boneRow.appendChild(boneHint);
       container.appendChild(boneRow);
     } catch (e) {
-      container.innerHTML = `<div style="font-size:10px;font-weight:600;color:#ff6b6b;margin-bottom:4px">🏗️ 模型结构</div><div style="font-size:9px;color:#888;padding:8px 0">⚠️ 解析失败: ${e?.message ?? e}</div>`;
+      container.innerHTML = `<div class="ysm-error-title" style="color:#ff6b6b">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ 解析失败: ${e?.message ?? e}</div>`;
     }
   }
 
@@ -388,8 +403,7 @@ class AppPreview extends HTMLElement {
       const el =
         container || this._root.getElementById("preview-content") || this._root;
       const dbg = document.createElement("div");
-      dbg.style.cssText =
-        "font-size:9px;color:#ff6b6b;margin-top:2px;opacity:0.8";
+      dbg.className = "ysm-debug";
       dbg.textContent = msg;
       (el.appendChild ? el : this._root).appendChild(dbg);
     } catch (_) {}
@@ -398,9 +412,9 @@ class AppPreview extends HTMLElement {
   async _showModelDetail(path) {
     const savedTab = localStorage.getItem("ysm_previewTab") || "detail";
     this._root.innerHTML = `<div class="content" id="preview-content">
-  <div style="display:flex;gap:2px;margin-bottom:6px">
-    <button class="preview-tab" data-tab="detail" style="flex:1;font-size:10px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:${savedTab === "detail" ? "var(--accent)" : "var(--surf)"};color:${savedTab === "detail" ? "#fff" : "var(--txt)"};cursor:pointer">📄 详情</button>
-    <button class="preview-tab" data-tab="skeleton" style="flex:1;font-size:10px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:${savedTab === "skeleton" ? "var(--accent)" : "var(--surf)"};color:${savedTab === "skeleton" ? "#fff" : "var(--txt)"};cursor:pointer">🏗️ 骨骼</button>
+  <div class="ysm-tab-row">
+    <button class="preview-tab ysm-tab ${savedTab === "detail" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="detail">📄 详情</button>
+    <button class="preview-tab ysm-tab ${savedTab === "skeleton" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="skeleton">🏗️ 骨骼</button>
   </div>
   <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>📄 模型信息</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">正在解析模型文件...</div></div></div>
   <div id="preview-skeleton"${savedTab !== "skeleton" ? ' style="display:none"' : ""}></div>
@@ -411,8 +425,8 @@ class AppPreview extends HTMLElement {
       localStorage.setItem("ysm_previewTab", tab);
       this._root.querySelectorAll(".preview-tab").forEach((btn) => {
         const isActive = btn.dataset.tab === tab;
-        btn.style.background = isActive ? "var(--accent)" : "var(--surf)";
-        btn.style.color = isActive ? "#fff" : "var(--txt)";
+        btn.classList.toggle("ysm-tab-active", isActive);
+        btn.classList.toggle("ysm-tab-inactive", !isActive);
       });
       const detail = this._root.getElementById("preview-detail");
       const skel = this._root.getElementById("preview-skeleton");

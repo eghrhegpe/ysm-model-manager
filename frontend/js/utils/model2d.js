@@ -1,24 +1,34 @@
 // ===== 基岩版模型 2D 线条图渲染 =====
 
 /**
- * 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图）
+ * 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转）
  * @param {HTMLCanvasElement} canvas
  * @param {object} model - AnalyzeBedrockModel 返回的 BedrockModel
  * @param {HTMLImageElement} [textureImg] - 纹理图
  * @param {object} [opts] - 选项
  * @param {boolean} [opts.showLabels=true] - 是否显示骨骼名称
- * @param {number} [opts.zoom=1] - 缩放倍率（相对于自动适配的基准）
+ * @param {number} [opts.zoom=1] - 缩放倍率
+ * @param {number} [opts.rotation=0] - 绕 Y 轴旋转角度（度）
  */
 export function renderModel2D(canvas, model, textureImg, opts) {
   if (!canvas || !model?.bones?.length) return;
   const showLabels = opts?.showLabels !== false;
   const zoom = opts?.zoom || 1;
+  const angle = ((opts?.rotation || 0) * Math.PI) / 180;
+  const cosA = Math.cos(angle);
+  const sinA = Math.sin(angle);
   const ctx = canvas.getContext("2d");
   const W = canvas.width;
   const H = canvas.height;
   ctx.clearRect(0, 0, W, H);
 
-  // 计算所有 cube 的 bounding box，居中缩放
+  // 旋转点 [x,y,z] 绕 Y 轴，返回 {x, z}
+  const rot = (x, z) => ({
+    x: x * cosA - z * sinA,
+    z: x * sinA + z * cosA,
+  });
+
+  // 计算旋转后的 bounding box
   let minX = Infinity,
     maxX = -Infinity,
     minY = Infinity,
@@ -27,8 +37,18 @@ export function renderModel2D(canvas, model, textureImg, opts) {
     for (const c of bone.cubes || []) {
       const [ox, oy, oz] = c.origin;
       const [sx, sy, sz] = c.size;
-      if (ox < minX) minX = ox;
-      if (ox + sx > maxX) maxX = ox + sx;
+      // 8 个角中取旋转后 X 最左/最右、Y 最上/最下
+      const corners = [
+        [ox, oz],
+        [ox + sx, oz],
+        [ox, oz + sz],
+        [ox + sx, oz + sz],
+      ];
+      for (const [cx, cz] of corners) {
+        const r = rot(cx, cz);
+        if (r.x < minX) minX = r.x;
+        if (r.x > maxX) maxX = r.x;
+      }
       if (oy < minY) minY = oy;
       if (oy + sy > maxY) maxY = oy + sy;
     }
@@ -42,12 +62,11 @@ export function renderModel2D(canvas, model, textureImg, opts) {
   const cy = H / 2 + (minY + rangeY / 2) * scale;
 
   // 计算骨骼屏幕坐标热区，供鼠标拾取
-  const boneHitZones = calcBoneHitZones(model, scale, cx, cy, true);
-  model._boneHitZones = boneHitZones;
+  const boneHitZones = calcBoneHitZones(model, scale, cx, cy, true, cosA, sinA);
 
-  // 绘制（当前无高亮）
-  drawView(ctx, model, scale, cx, cy, textureImg, null, showLabels);
-  drawMiniView(ctx, model, scale, textureImg);
+  // 绘制
+  drawView(ctx, model, scale, cx, cy, textureImg, null, showLabels, cosA, sinA);
+  drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
 
   // ---- 鼠标交互高亮 ----
   let _highlightBone = null;
@@ -70,16 +89,29 @@ export function renderModel2D(canvas, model, textureImg, opts) {
         textureImg,
         _highlightBone,
         showLabels,
+        cosA,
+        sinA,
       );
-      drawMiniView(ctx, model, scale, textureImg);
+      drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
     }
   };
   const onLeave = () => {
     if (_highlightBone) {
       _highlightBone = null;
       ctx.clearRect(0, 0, W, H);
-      drawView(ctx, model, scale, cx, cy, textureImg, null, showLabels);
-      drawMiniView(ctx, model, scale, textureImg);
+      drawView(
+        ctx,
+        model,
+        scale,
+        cx,
+        cy,
+        textureImg,
+        null,
+        showLabels,
+        cosA,
+        sinA,
+      );
+      drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
     }
   };
   canvas.addEventListener("mousemove", onMove);
@@ -92,7 +124,7 @@ export function renderModel2D(canvas, model, textureImg, opts) {
   };
 }
 
-function calcBoneHitZones(model, scale, ox, oy, isFront) {
+function calcBoneHitZones(model, scale, ox, oy, isFront, cosA, sinA) {
   const zones = [];
   for (const bone of model.bones) {
     const cs = bone.cubes || [];
@@ -104,10 +136,12 @@ function calcBoneHitZones(model, scale, ox, oy, isFront) {
     for (const c of cs) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
-      const px = x;
+      const rx = x * cosA - z * sinA;
+      const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
+      const px = rx;
       const py = isFront ? y : z;
       if (px < mnX) mnX = px;
-      if (px + sx > mxX) mxX = px + sx;
+      if (px + pw > mxX) mxX = px + pw;
       if (py < mnY) mnY = py;
       if (py + sy > mxY) mxY = py + sy;
     }
@@ -131,6 +165,8 @@ function drawView(
   textureImg,
   highlightBone,
   showLabels,
+  cosA,
+  sinA,
 ) {
   const isFront = true;
   for (const bone of model.bones) {
@@ -138,9 +174,13 @@ function drawView(
     for (const c of bone.cubes || []) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
-      const px = x;
-      const py = isFront ? y : z;
-      const pw = sx;
+      // 绕 Y 轴旋转
+      const rx = x * cosA - z * sinA;
+      const rz = x * sinA + z * cosA;
+      const px = rx;
+      const py = isFront ? y : rz;
+      // 旋转后的可视宽度（考虑 depth 投影）
+      const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
       const ph = isFront ? sy : sz;
       const drawX = ox + px * scale;
       const drawY = oy - (py + ph) * scale;
@@ -180,10 +220,10 @@ function drawView(
       for (const c of cs) {
         const [x, y, z] = c.origin;
         const [sx, sy, sz] = c.size;
-        const px = x,
+        const rx = x * cosA - z * sinA;
+        const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
+        const px = rx,
           py = isFront ? y : z;
-        const pw = sx,
-          ph = isFront ? sy : sz;
         if (px < mnX) mnX = px;
         if (px + pw > mxX) mxX = px + pw;
         if (py < mnY) mnY = py;
@@ -203,7 +243,9 @@ function drawView(
   }
 }
 
-function drawMiniView(ctx, model, scale, textureImg) {
+function drawMiniView(ctx, model, scale, textureImg, cosA, sinA) {
+  if (!cosA) cosA = 1;
+  if (!sinA) sinA = 0;
   const size = 60;
   const margin = 8;
   const mx = ctx.canvas.width - size - margin;
@@ -236,8 +278,11 @@ function drawMiniView(ctx, model, scale, textureImg) {
     for (const c of bone.cubes || []) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
-      const drawX = ox2 + x * s;
-      const drawY = oy2 - (z + sz) * s;
+      // 俯视图也用旋转坐标
+      const rx = x * cosA - z * sinA;
+      const rz = x * sinA + z * cosA;
+      const drawX = ox2 + rx * s;
+      const drawY = oy2 - (rz + sz) * s;
       ctx.fillStyle = "rgba(124,131,255,0.45)";
       ctx.fillRect(drawX, drawY, sx * s, sz * s);
       ctx.strokeStyle = "rgba(205,214,244,0.7)";

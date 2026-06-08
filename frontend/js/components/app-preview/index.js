@@ -17,6 +17,9 @@ import { cacheGet, cacheSet } from "../../utils/preview-cache.js";
 // DEV 环境下才输出调试日志
 const devLog = import.meta.env.DEV ? console.log : () => {};
 
+/** 3D 预览偏好（跨模型切换保持） */
+let _prefer3D = false;
+
 class AppPreview extends HTMLElement {
   constructor() {
     super();
@@ -405,49 +408,169 @@ class AppPreview extends HTMLElement {
       const viewBtn = document.createElement("button");
       viewBtn.className = "ysm-btn";
       viewBtn.textContent = "🌐 3D";
-      viewBtn.title = "切换 3D 预览（Three.js）";
+      viewBtn.title = "全屏 3D 预览";
       const viewHint = document.createElement("span");
       viewHint.className = "ysm-hint";
-      viewHint.textContent = "2D";
+      viewHint.textContent = "全屏";
       viewRow.appendChild(viewBtn);
       viewRow.appendChild(viewHint);
       container.appendChild(viewRow);
 
-      // 3D 容器
-      const view3d = document.createElement("div");
-      view3d.style.cssText =
-        "width:100%;height:280px;display:none;border-radius:6px;overflow:hidden";
-      view3d.id = "preview-3d";
-      container.appendChild(view3d);
-
+      // 3D 全屏状态
+      let _overlay3d = null;
       let _is3D = false;
+      if (_prefer3D) requestAnimationFrame(() => viewBtn.click());
+
       viewBtn.onclick = async () => {
         _is3D = !_is3D;
-        viewBtn.textContent = _is3D ? "📐 2D" : "🌐 3D";
-        viewHint.textContent = _is3D ? "3D" : "2D";
+        _prefer3D = _is3D;
 
         if (_is3D) {
-          canvas.style.display = "none";
-          view3d.style.display = "block";
-          if (!_model3d) {
-            try {
-              const texUrl = model.texture || null;
-              const { renderModel3D } = await import("../../utils/model3d.js");
-              _model3d = await renderModel3D(view3d, model, texUrl, _player);
-            } catch (e) {
-              console.error("[3D] 加载失败:", e);
-              view3d.innerHTML = `<div style="padding:20px;color:#ff6b6b">⚠️ 3D 预览加载失败: ${e?.message || e}</div>`;
-            }
+          // 创建全屏遮罩
+          const overlay = document.createElement("div");
+          overlay.style.cssText =
+            "position:fixed;inset:0;z-index:9999;background:#1a1b2e;display:flex;flex-direction:column";
+          _overlay3d = overlay;
+
+          // 顶部栏
+          const topBar = document.createElement("div");
+          topBar.style.cssText =
+            "display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,0.3);z-index:1;flex-shrink:0";
+          const closeBtn = document.createElement("button");
+          closeBtn.className = "ysm-btn";
+          closeBtn.textContent = "✕ 关闭 3D";
+          closeBtn.onclick = close3D;
+          topBar.appendChild(closeBtn);
+
+          // 动画控件
+          if (clips?.length > 0) {
+            const sel = document.createElement("select");
+            sel.className = "ysm-btn";
+            sel.style.cssText = "font-size:11px;max-width:160px";
+            clips.forEach((c, i) => {
+              const opt = document.createElement("option");
+              opt.value = i;
+              opt.textContent = c.name.replace(/^animation\./, "").slice(0, 25);
+              sel.appendChild(opt);
+            });
+            topBar.appendChild(sel);
+
+            const playBtn = document.createElement("button");
+            playBtn.className = "ysm-btn";
+            playBtn.textContent = "▶️";
+            const stopBtn = document.createElement("button");
+            stopBtn.className = "ysm-btn";
+            stopBtn.textContent = "⏹️";
+            const speedSel = document.createElement("select");
+            speedSel.className = "ysm-btn";
+            speedSel.style.cssText = "font-size:11px;width:52px";
+            [0.25, 0.5, 1, 2, 4].forEach((s) => {
+              const opt = document.createElement("option");
+              opt.value = s;
+              opt.textContent = s + "×";
+              if (s === 1) opt.selected = true;
+              speedSel.appendChild(opt);
+            });
+            const timeLabel = document.createElement("span");
+            timeLabel.style.cssText =
+              "font-size:11px;color:rgba(255,255,255,0.6);min-width:60px";
+            timeLabel.textContent = "0.0s / 0.0s";
+            topBar.appendChild(playBtn);
+            topBar.appendChild(stopBtn);
+            topBar.appendChild(speedSel);
+            topBar.appendChild(timeLabel);
           }
-        } else {
-          canvas.style.display = "block";
-          view3d.style.display = "none";
-          if (_model3d) {
-            _model3d.cleanup();
-            _model3d = null;
+          overlay.appendChild(topBar);
+
+          // 3D 渲染容器
+          const viewContainer = document.createElement("div");
+          viewContainer.style.cssText = "flex:1;position:relative";
+          overlay.appendChild(viewContainer);
+          document.body.appendChild(overlay);
+
+          // 加载 3D
+          try {
+            const texUrl = model.texture || null;
+            const { renderModel3D } = await import("../../utils/model3d.js");
+            _model3d = await renderModel3D(
+              viewContainer,
+              model,
+              texUrl,
+              _player,
+            );
+
+            // 绑定控件
+            const sel = topBar.querySelector("select");
+            const playBtn = topBar.querySelector("button:nth-child(3)");
+            const stopBtn = topBar.querySelector("button:nth-child(4)");
+            const speedSel = topBar.querySelector("select:last-of-type");
+            const timeLabel = topBar.querySelector("span");
+
+            const updateTime = () => {
+              const c = _player.currentClip;
+              if (timeLabel)
+                timeLabel.textContent = `${_player.time.toFixed(1)}s / ${(c?.length || 0).toFixed(1)}s`;
+            };
+            if (sel)
+              sel.onchange = () => {
+                _player.play(parseInt(sel.value));
+                playBtn.textContent = "⏸️";
+                updateTime();
+              };
+            if (playBtn)
+              playBtn.onclick = () => {
+                if (_player.playing) {
+                  _player.pause();
+                  playBtn.textContent = "▶️";
+                } else {
+                  if (_player.currentIndex < 0 && clips.length > 0) {
+                    _player.play(0);
+                    if (sel) sel.value = "0";
+                  } else _player.resume();
+                  playBtn.textContent = "⏸️";
+                }
+              };
+            if (stopBtn)
+              stopBtn.onclick = () => {
+                _player.stop();
+                playBtn.textContent = "▶️";
+              };
+            if (speedSel)
+              speedSel.onchange = () =>
+                _player.setSpeed(parseFloat(speedSel.value));
+            if (timeLabel) {
+              const t = setInterval(updateTime, 100);
+              _model3d._timeTimer = t;
+            }
+            // ESC 关闭
+            const onKey = (e) => {
+              if (e.key === "Escape") close3D();
+            };
+            document.addEventListener("keydown", onKey);
+            _model3d._keyHandler = onKey;
+          } catch (e) {
+            console.error("[3D] 加载失败:", e);
+            viewContainer.innerHTML = `<div style="padding:40px;color:#ff6b6b;font-size:14px">⚠️ 3D 预览加载失败: ${e?.message || e}</div>`;
           }
         }
       };
+
+      function close3D() {
+        if (_model3d) {
+          clearInterval(_model3d._timeTimer);
+          if (_model3d._keyHandler)
+            document.removeEventListener("keydown", _model3d._keyHandler);
+          _model3d.cleanup();
+          _model3d = null;
+        }
+        if (_overlay3d?.parentNode)
+          _overlay3d.parentNode.removeChild(_overlay3d);
+        _overlay3d = null;
+        _is3D = false;
+        _prefer3D = false;
+        viewBtn.textContent = "🌐 3D";
+        viewHint.textContent = "全屏";
+      }
 
       // ---- 全窗放大 + 滚轮/拖拽旋转 ----
       canvas.classList.add("ysm-grab");
@@ -494,9 +617,15 @@ class AppPreview extends HTMLElement {
         window.removeEventListener("mousemove", _onMouseMove);
         window.removeEventListener("mouseup", _onMouseUp);
         if (_model3d) {
+          clearInterval(_model3d._timeTimer);
+          if (_model3d._keyHandler)
+            document.removeEventListener("keydown", _model3d._keyHandler);
           _model3d.cleanup();
           _model3d = null;
         }
+        if (_overlay3d?.parentNode)
+          _overlay3d.parentNode.removeChild(_overlay3d);
+        _overlay3d = null;
       };
 
       // ---- 导出按钮 ----
@@ -594,18 +723,49 @@ class AppPreview extends HTMLElement {
       }
       if (!files?.length) return null;
 
-      let texture = null;
-      const texFile = files.find(
-        (f) => f.path.endsWith(".png") || f.path.endsWith(".jpg"),
-      );
-      if (texFile) {
-        const blob = new Blob([texFile.data]);
-        texture = URL.createObjectURL(blob);
-        devLog(`[YSM] 纹理: ${texFile.path}`);
+      // 打印 ysm.json 确认纹理映射
+      let ysmTexOrder = null;
+      const ysmMeta = files.find((f) => f.path.endsWith("ysm.json"));
+      if (ysmMeta) {
+        try {
+          const txt = new TextDecoder().decode(ysmMeta.data);
+          const json = JSON.parse(txt);
+          ysmTexOrder = json?.files?.player?.texture;
+          if (ysmTexOrder) console.log(`[YSM] ysm.json 纹理列表:`, ysmTexOrder.map(t => typeof t === "string" ? t : t?.uv || t?.path).filter(Boolean));
+        } catch (e) { /* ignore */ }
       }
 
+      // 收集所有纹理文件，按 ysm.json 顺序排列
+      const textures = {};
+      const texNameMap = {};
+      for (const f of files) {
+        if (f.path.endsWith(".png") || f.path.endsWith(".jpg")) {
+          const blob = new Blob([f.data]);
+          const key = f.path.split("/").pop().replace(/\.\w+$/, "");
+          textures[key] = URL.createObjectURL(blob);
+          texNameMap[key] = f.path;
+          devLog(`[YSM] 纹理: ${f.path} → key="${key}"`);
+        }
+      }
+      let orderedTexKeys = Object.keys(textures);
+      if (ysmTexOrder) {
+        const ordered = [];
+        for (const t of ysmTexOrder) {
+          const path = typeof t === "string" ? t : t?.uv || t?.path || "";
+          const tn = path.split("/").pop().replace(/\.\w+$/, "");
+          if (tn && textures[tn]) ordered.push(tn);
+        }
+        for (const k of Object.keys(textures)) {
+          if (!ordered.includes(k)) ordered.push(k);
+        }
+        orderedTexKeys = ordered;
+      }
+      console.log(`[YSM] 找到 ${orderedTexKeys.length} 个纹理: ${orderedTexKeys.join(", ")}`);
+
+      // 解析所有模型文件，合并骨骼，标记纹理索引
       let geometry = null;
-      let animations = [];
+      const allBones = [];
+      let modelIdx = 0;
 
       for (const f of files) {
         if (!f.path.startsWith("models/") || !f.path.endsWith(".json"))
@@ -618,9 +778,36 @@ class AppPreview extends HTMLElement {
             devLog(
               `[YSM] ✅ ${f.path}: ${parsed.bones.length}骨 ${parsed.cubeCount}方`,
             );
-            if (!geometry || parsed.bones.length > geometry.bones.length) {
+
+            // 为这个模型寻找匹配纹理
+            const modelName = f.path.split("/").pop().replace(/\.json$/, "");
+            let texIdx = 0;
+            if (ysmTexOrder?.length === 1) {
+              // 仅一张主纹理 → 所有模型都用它（arm.json 也用主纹理）
+              texIdx = 0;
+            } else {
+              // 多纹理：按文件名匹配
+              const matchKey = orderedTexKeys.find(
+                (k) => k.toLowerCase().includes(modelName.toLowerCase()) || modelName.toLowerCase().includes(k.toLowerCase()),
+              );
+              texIdx = matchKey !== undefined ? orderedTexKeys.indexOf(matchKey) : Math.min(modelIdx, orderedTexKeys.length - 1);
+            }
+            const texUrl = orderedTexKeys.length > 0 ? textures[orderedTexKeys[texIdx]] : null;
+
+            // 标记每个骨骼的纹理索引
+            for (const b of parsed.bones) {
+              b._texIdx = texIdx;
+              b._texUrl = texUrl;
+            }
+            allBones.push(...parsed.bones);
+            modelIdx++;
+            console.log(`[YSM] ${f.path.split("/").pop()} → 纹理[${texIdx}]: ${Object.keys(textures)[texIdx] || "无"}`);
+
+            if (!geometry) {
               geometry = parsed;
-              geometry.texture = texture;
+            } else {
+              geometry.boneCount += parsed.boneCount;
+              geometry.cubeCount += parsed.cubeCount;
             }
           } else {
             devLog(`[YSM] ⚠️ ${f.path}: 无骨骼`);
@@ -630,7 +817,15 @@ class AppPreview extends HTMLElement {
         }
       }
 
+      // 合并后的 geometry
+      if (geometry) {
+        geometry.bones = allBones;
+        geometry.textures = orderedTexKeys.map((k) => textures[k]).filter(Boolean);
+        geometry.texture = orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null;
+      }
+
       // 解析动画文件
+      const animations = [];
       for (const f of files) {
         if (!f.path.startsWith("animations/") || !f.path.endsWith(".json"))
           continue;
@@ -639,19 +834,6 @@ class AppPreview extends HTMLElement {
           const jsonStr = new TextDecoder().decode(f.data);
           const { clips, errors } = parseBedrockAnimationJSON(jsonStr);
           if (clips.length > 0) {
-            devLog(`[YSM] ✅ ${f.path}: ${clips.length} 个动画`);
-            // 打印动画详情
-            for (const c of clips) {
-              devLog(
-                `  - ${c.name} (循环=${c.loop}, 时长=${c.length.toFixed(2)}s, 骨骼=${Object.keys(c.bones).length})`,
-              );
-              for (const [bn, chs] of Object.entries(c.bones)) {
-                const info = Object.entries(chs)
-                  .map(([k, v]) => `${k}:${v.length}帧`)
-                  .join(", ");
-                devLog(`    ${bn}: ${info}`);
-              }
-            }
             animations.push(...clips);
           }
           if (errors.length > 0) {
@@ -662,8 +844,9 @@ class AppPreview extends HTMLElement {
         }
       }
 
-      cacheSet(modelPath, { texture, geometry, animations });
-      return { texture, geometry, animations };
+      const texUrl = geometry?.texture || (orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null) || null;
+      cacheSet(modelPath, { texture: texUrl, geometry, animations });
+      return { texture: texUrl, geometry, animations };
     } catch (e) {
       devLog(`[YSM] ❌ ${e?.message || e}`);
       return null;

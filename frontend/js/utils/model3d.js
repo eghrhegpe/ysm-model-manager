@@ -3,14 +3,15 @@
  */
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { evaluateClip } from "./animation.js";
 
 /**
  * 创建 3D 模型预览
  * @param {HTMLElement} container - 挂载容器
- * @param {object} model - BedrockModel（含 bones, cubes, texWidth, texHeight）
+ * @param {object} model - BedrockModel（含 bones, cubes）
  * @param {string} [textureUrl] - 纹理图片 URL（base64 data URI）
- * @param {object} [player] - AnimationPlayer 实例（可选，连接后自动同步动画）
- * @returns {Promise<{cleanup: Function, setPlayer: Function}>}
+ * @param {object} [player] - AnimationPlayer 实例（用于读取当前时间和 clip）
+ * @returns {Promise<{cleanup: Function}>}
  */
 export async function renderModel3D(container, model, textureUrl, player) {
   // ---- 场景 ----
@@ -20,8 +21,8 @@ export async function renderModel3D(container, model, textureUrl, player) {
   // ---- 相机 ----
   const aspect = container.clientWidth / container.clientHeight || 1;
   const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
-  camera.position.set(20, 15, 25);
-  camera.lookAt(0, 10, 0);
+  camera.position.set(0, 80, -120);
+  camera.lookAt(0, 80, 0);
 
   // ---- 渲染器 ----
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -32,50 +33,63 @@ export async function renderModel3D(container, model, textureUrl, player) {
 
   // ---- 轨道控制 ----
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 10, 0);
+  controls.target.set(0, 80, 0);
   controls.update();
 
   // ---- 灯光 ----
-  const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+  const ambient = new THREE.AmbientLight(0xffffff, 1.0);
   scene.add(ambient);
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 2);
   dirLight.position.set(10, 30, 20);
   scene.add(dirLight);
-  const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+  const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
   backLight.position.set(-10, 10, -20);
   scene.add(backLight);
 
-  // ---- 地面网格 ----
-  const grid = new THREE.GridHelper(40, 20, 0x444488, 0x333366);
+  // ---- 地面网格 + 坐标轴 ----
+  const grid = new THREE.GridHelper(400, 20, 0x444488, 0x333366);
   grid.position.y = -1;
   scene.add(grid);
+  const axes = new THREE.AxesHelper(60);
+  scene.add(axes);
 
-  // ---- 加载纹理 ----
-  let texture = null;
-  if (textureUrl) {
-    const loader = new THREE.TextureLoader();
-    texture = loader.load(textureUrl);
+  // ---- 加载所有纹理 ----
+  const texMap = new Map();
+  const urls = model.textures?.length > 1 ? model.textures : [textureUrl];
+  if (urls?.length) {
+    const loads = urls.filter(Boolean).map((url) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const tex = new THREE.Texture(img);
+        tex.flipY = false;
+        tex.needsUpdate = true;
+        tex.userData.imgWidth = img.naturalWidth;
+        tex.userData.imgHeight = img.naturalHeight;
+        texMap.set(url, tex);
+        resolve();
+      };
+      img.onerror = () => resolve();
+      img.src = url;
+    }));
+    await Promise.all(loads);
+    console.log(`[3D] 已加载 ${texMap.size} 张纹理`);
   }
 
-  // ---- 构建骨骼层级 ----
-  // name → THREE.Group 映射
+  // ---- 构建骨骼层级（仅标签+动画用，cube 放世界坐标与 2D 一致） ----
+  const PXL = 1;
   const boneGroupMap = new Map();
-  // 先创建所有骨骼的 Group
-  for (const bone of model.bones) {
-    const g = new THREE.Group();
-    g.name = bone.name;
-    // 存储骨骼级 pivot 和 cubes 数据以便后续动画
-    g.userData = { pivot: bone.pivot || [0, 0, 0] };
-    boneGroupMap.set(bone.name, g);
-  }
-
-  // 按 parent 关系挂载
   const rootGroup = new THREE.Group();
   rootGroup.name = "__root__";
   scene.add(rootGroup);
 
+  // 创建骨骼 Group（放在 pivot 位置，用于标签和后续动画旋转）
   for (const bone of model.bones) {
-    const g = boneGroupMap.get(bone.name);
+    const g = new THREE.Group();
+    g.name = bone.name;
+    g.scale.set(1, 1, 1);
+    const p = bone.pivot || [0, 0, 0];
+    g.position.set(p[0] * PXL, p[1] * PXL, p[2] * -PXL);
+    boneGroupMap.set(bone.name, g);
     if (bone.parent && boneGroupMap.has(bone.parent)) {
       boneGroupMap.get(bone.parent).add(g);
     } else {
@@ -83,78 +97,79 @@ export async function renderModel3D(container, model, textureUrl, player) {
     }
   }
 
-  // ---- 为每个骨骼生成立方体 Mesh ----
-  // 材质：带纹理或纯色
-  const defaultMat = new THREE.MeshStandardMaterial({
-    color: 0x7c83ff,
-    roughness: 0.6,
-    metalness: 0.1,
-    transparent: true,
-    opacity: 0.85,
-  });
+  // ---- 计算模型中心（基于 cube 世界坐标） ----
+  let minY = Infinity,
+    maxY = -Infinity;
+  for (const bone of model.bones) {
+    for (const c of bone.cubes || []) {
+      const y = c.origin[1] + c.size[1] / 2;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  const centerY = ((minY + maxY) / 2) * PXL;
+  const modelHeight = (maxY - minY) * PXL;
+  const camDist = Math.max(modelHeight * 1.5, 60);
+  camera.position.set(camDist * 0.4, centerY, -camDist * 0.8);
+  camera.lookAt(0, centerY, 0);
+  controls.target.set(0, centerY, 0);
+  controls.update();
 
+  // ---- 为每个骨骼生成立方体 Mesh（直接放 rootGroup，cube.origin 是世界坐标） ----
   for (const bone of model.bones) {
     const group = boneGroupMap.get(bone.name);
     if (!group) continue;
-    const bonePivot = bone.pivot || [0, 0, 0];
 
     for (const c of bone.cubes || []) {
       const [ox, oy, oz] = c.origin;
       const [sx, sy, sz] = c.size;
-      const [pvx, pvy, pvz] = c.pivot || [0, 0, 0];
 
-      // BoxGeometry 以中心为原点
-      const geo = new THREE.BoxGeometry(sx, sy, sz);
+      // 选择该骨骼对应的纹理
+      let cubeTex = null;
+      if (texMap.size > 0) {
+        const texArr = [...texMap.values()];
+        cubeTex = texArr[0];
+      }
+
+      const geo = new THREE.BoxGeometry(sx * PXL, sy * PXL, sz * PXL);
+
+      // UV 映射
+      if (cubeTex) {
+        if (c.faceUV) {
+          applyFaceUV(geo, c, cubeTex, model.texWidth, model.texHeight);
+        } else {
+          applyBoxUV(geo, c, cubeTex);
+        }
+      }
 
       let mat;
-      if (texture) {
-        // 基岩版 Box UV 映射（简化：整张纹理贴到每个面）
-        // 更好的 UV 映射需要按面计算 UV 坐标
-        const uvs = geo.attributes.uv;
-        // 一个面一个面的 UV 计算
-        // Box UV: 每个面对应纹理上的一个矩形区域
-        // 此处简化处理，使用纹理整体映射
-        mat = new THREE.MeshStandardMaterial({
-          map: texture,
-          roughness: 0.7,
-          metalness: 0.05,
-          transparent: true,
-          opacity: 0.95,
+      if (cubeTex) {
+        mat = new THREE.MeshBasicMaterial({
+          map: cubeTex,
+          transparent: false,
+          side: THREE.DoubleSide,
         });
-        // 尝试设置更精确的 UV
-        applyBoxUV(geo, c, model.texWidth || 512, model.texHeight || 512);
       } else {
-        mat = defaultMat;
+        mat = new THREE.MeshBasicMaterial({
+          color: 0x44aa88,
+          side: THREE.DoubleSide,
+        });
       }
 
       const mesh = new THREE.Mesh(geo, mat);
-      // cube 原点在底面一角，Three.js Box 以中心为原点
-      mesh.position.set(ox + sx / 2, oy + sy / 2, oz + sz / 2);
-      // pivot 以世界坐标为基准，存下来供动画使用
-      mesh.userData.pivot = [pvx, pvy, pvz];
-      mesh.userData.origin = [ox, oy, oz];
-      mesh.userData.size = [sx, sy, sz];
-
-      // 计算相对于骨骼 pivot 的偏移
-      const relPivot = [
-        pvx - bonePivot[0],
-        pvy - bonePivot[1],
-        pvz - bonePivot[2],
-      ];
-      mesh.userData.relPivot = relPivot;
-      // cube 位置相对于骨骼 pivot
+      mesh.scale.set(1, 1, 1);
+      // cube.origin 是世界坐标，直接放 rootGroup
       mesh.position.set(
-        ox + sx / 2 - bonePivot[0],
-        oy + sy / 2 - bonePivot[1],
-        oz + sz / 2 - bonePivot[2],
+        (ox + sx / 2) * PXL,
+        (oy + sy / 2) * PXL,
+        (oz + sz / 2) * -PXL,
       );
-
-      group.add(mesh);
+      rootGroup.add(mesh);
     }
-  }
 
-  // 调整根骨骼位置（使模型居中）
-  rootGroup.position.set(0, 0, 0);
+    // 骨骼名标签
+    if (bone.cubes?.length > 0) makeBoneLabel(group, bone.name);
+  }
 
   // ---- 窗口大小自适应 ----
   const onResize = () => {
@@ -175,32 +190,21 @@ export async function renderModel3D(container, model, textureUrl, player) {
   function renderLoop() {
     _animFrameId = requestAnimationFrame(renderLoop);
 
-    // 同步动画变换到骨骼 Group
+    // 同步动画变换到骨骼 Group（局部变换，层级由 Three.js 自动传播）
     if (_player) {
-      const transforms = _player.getCurrentTransforms();
-      if (transforms) {
-        for (const [boneName, t] of transforms) {
+      const clip = _player.currentClip;
+      if (clip) {
+        const localTransforms = evaluateClip(clip, _player.time, null, true);
+        for (const [boneName, t] of localTransforms) {
           const g = boneGroupMap.get(boneName);
           if (!g) continue;
-          const pivot = g.userData.pivot || [0, 0, 0];
-
-          // 位移
-          if (t.position) {
-            g.position.set(t.position[0], t.position[1], t.position[2]);
-          }
-          // 旋转（欧拉角 → 弧度）
           if (t.rotation) {
-            // Three.js 使用弧度
             g.rotation.set(
               ((t.rotation[0] || 0) * Math.PI) / 180,
               ((t.rotation[1] || 0) * Math.PI) / 180,
               ((t.rotation[2] || 0) * Math.PI) / 180,
               "XYZ",
             );
-          }
-          // 缩放
-          if (t.scale) {
-            g.scale.set(t.scale[0] || 1, t.scale[1] || 1, t.scale[2] || 1);
           }
         }
       }
@@ -210,12 +214,10 @@ export async function renderModel3D(container, model, textureUrl, player) {
     renderer.render(scene, camera);
   }
   renderLoop();
+  renderer.render(scene, camera);
 
   // ---- 返回控制接口 ----
   return {
-    setPlayer: (p) => {
-      _player = p;
-    },
     cleanup: () => {
       _player = null;
       cancelAnimationFrame(_animFrameId);
@@ -237,55 +239,151 @@ export async function renderModel3D(container, model, textureUrl, player) {
   };
 }
 
+/** 生成骨骼名标签 Sprite */
+function makeBoneLabel(group, name) {
+  if (!name || name.length > 20) return;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 48;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.beginPath();
+  ctx.roundRect(4, 4, 248, 40, 6);
+  ctx.fill();
+  ctx.fillStyle = "rgba(205,214,244,0.85)";
+  ctx.font = "20px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(name, 128, 24);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({
+    map: tex,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+  });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(8, 1.5, 0.5);
+  sprite.position.set(0, 1.5, 0);
+  group.add(sprite);
+}
+
 /**
- * 基岩版 Box UV 映射
- * 根据 cube 位置/大小和纹理尺寸计算每个面的 UV 坐标
+ * 基岩版 Box UV 映射 — 使用纹理图片的实际尺寸
+ * cube.uv = [u_off, v_off] 纹理像素坐标（左上原点）
+ * face 排列匹配 BoxGeometry: +X / -X / +Y / -Y / +Z / -Z
  */
-function applyBoxUV(geo, cube, texW, texH) {
-  const [ox, oy, oz] = cube.origin;
+function applyBoxUV(geo, cube, tex) {
+  const texW = tex.userData.imgWidth;
+  const texH = tex.userData.imgHeight;
+  if (!texW || !texH) return;
+  const [uvx, uvy] = Array.isArray(cube.uv) ? cube.uv : [0, 0];
   const [sx, sy, sz] = cube.size;
-  const [uvx, uvy] = cube.uv || [0, 0];
 
-  // 基岩版 Box UV 面顺序（Three.js 默认顺序）：
-  // 0: right (+x), 1: left (-x), 2: top (+y), 3: bottom (-y), 4: front (+z), 5: back (-z)
-  // 每个面 4 个顶点，共 24 个 UV 坐标 [u, v]
-  const uvs = geo.attributes.uv;
-  const array = uvs.array;
-
-  // 纹理像素 → UV 坐标
   const pu = (v) => v / texW;
-  const pv = (v) => 1 - v / texH; // 纹理 Y 轴翻转
+  const pv = (v) => 1 - v / texH; // 基岩版 Y-down → Three.js Y-up
 
-  // 每个面的 UV 四角
-  // 面顺序: right, left, top, bottom, front, back
-  const faceUVs = [
-    // right (+x): 东面, 宽 sz, 高 sy
-    [pu(uvx + 2 * sz + sx), pv(uvy), pu(uvx + 2 * sz + sx + sz), pv(uvy + sy)],
-    // left (-x): 西面
-    [pu(uvx), pv(uvy), pu(uvx + sz), pv(uvy + sy)],
-    // top (+y): 顶面, 宽 sx, 深 sz
-    [pu(uvx + sz), pv(uvy + sy), pu(uvx + sz + sx), pv(uvy + sy + sz)],
-    // bottom (-y): 底面
-    [pu(uvx + sz + sx), pv(uvy + sy), pu(uvx + 2 * sz + sx), pv(uvy + sy + sz)],
-    // front (+z): 正面（南面）, 宽 sx, 高 sy
-    [pu(uvx + sz), pv(uvy), pu(uvx + sz + sx), pv(uvy + sy)],
-    // back (-z): 背面（北面）
-    [pu(uvx + sz + sx), pv(uvy), pu(uvx + 2 * sz + sx), pv(uvy + sy)],
+  // 6 faces: 每个面在纹理上的矩形区域 (像素坐标)
+  // 标准 Bedrock Box UV 布局（正确版）：
+  // 行1: [left(-x) @ (0,0)] [right(+x) @ (sz,0)] [front(+z) @ (sz,0)] [back(-z) @ (sz+sx,0)]
+  // 行2: [top(+y) @ (sz,sy)] [bottom(-y) @ (sz+sx,sy)]
+  const rects = [
+    { u0: uvx + sz, v0: uvy, w: sz, h: sy }, // 0: +X right
+    { u0: uvx, v0: uvy, w: sz, h: sy }, // 1: -X left
+    { u0: uvx + sz, v0: uvy + sy, w: sx, h: sz }, // 2: +Y top
+    { u0: uvx + sz + sx, v0: uvy + sy, w: sx, h: sz }, // 3: -Y bottom
+    { u0: uvx + sz * 2, v0: uvy, w: sx, h: sy }, // 4: +Z front
+    { u0: uvx + sz * 2 + sx, v0: uvy, w: sx, h: sy }, // 5: -Z back
   ];
 
+  // BoxGeometry → 24 verts → 48 UV floats
+  const uvArr = new Float32Array(48);
   for (let f = 0; f < 6; f++) {
-    const [u0, v0, u1, v1] = faceUVs[f];
-    const idx = f * 8;
-    // 每个面 4 个顶点：用 u0,v0 到 u1,v1 映射
-    array[idx] = u0;
-    array[idx + 1] = v0;
-    array[idx + 2] = u1;
-    array[idx + 3] = v0;
-    array[idx + 4] = u1;
-    array[idx + 5] = v1;
-    array[idx + 6] = u0;
-    array[idx + 7] = v1;
+    const r = rects[f];
+    const u0 = pu(r.u0),
+      v0 = pv(r.v0);
+    const u1 = pu(r.u0 + r.w),
+      v1 = pv(r.v0 + r.h);
+    const i = f * 8;
+    // quad: bottom-left, bottom-right, top-right, top-left
+    uvArr[i] = u0;
+    uvArr[i + 1] = v1;
+    uvArr[i + 2] = u1;
+    uvArr[i + 3] = v1;
+    uvArr[i + 4] = u1;
+    uvArr[i + 5] = v0;
+    uvArr[i + 6] = u0;
+    uvArr[i + 7] = v0;
   }
 
-  uvs.needsUpdate = true;
+  geo.setAttribute("uv", new THREE.BufferAttribute(uvArr, 2));
+}
+
+/**
+ * 每面独立 UV 映射 — 直接使用 faceUV 中各面的 uv/uv_size
+ * faceUV JSON 格式: {"north":{"uv":[x,y],"uv_size":[w,h]}, "east":{...}, ...}
+ * Three.js BoxGeometry face order: +X/-X/+Y/-Y/+Z/-Z
+ * 映射: east→+X, west→-X, up→+Y, down→-Y, south→+Z, north→-Z
+ */
+function applyFaceUV(geo, cube, tex, modelTexW, modelTexH) {
+  const texW = tex.userData.imgWidth;
+  const texH = tex.userData.imgHeight;
+  if (!texW || !texH) return;
+
+  // UV 坐标是模型声明的 texWidth/texHeight 空间，须缩放到实际图片尺寸
+  const scaleX = texW / (modelTexW || texW);
+  const scaleY = texH / (modelTexH || texH);
+
+  let faceData;
+  try {
+    faceData = JSON.parse(cube.faceUV);
+  } catch (e) {
+    console.log("[3D] faceUV 解析失败:", e);
+    return;
+  }
+
+  const faceMap = ["east", "west", "up", "down", "south", "north"];
+  const pu = (v) => (v * scaleX) / texW;
+  const pv = (v) => 1 - (v * scaleY) / texH;
+
+  const uvArr = new Float32Array(48);
+  for (let f = 0; f < 6; f++) {
+    const name = faceMap[f];
+    const fd = faceData[name];
+    if (!fd) continue;
+
+    const [u, v] = fd.uv || [0, 0];
+    let [w, h] = fd.uv_size || [0, 0];
+    let flipped = false;
+    if (h < 0) {
+      h = -h;
+      flipped = true;
+    }
+    const i = f * 8;
+    if (flipped) {
+      // 负高度: v 是底部（uv 起始位置），v-h 是顶部
+      uvArr[i] = pu(u);
+      uvArr[i + 1] = pv(v);
+      uvArr[i + 2] = pu(u + w);
+      uvArr[i + 3] = pv(v);
+      uvArr[i + 4] = pu(u + w);
+      uvArr[i + 5] = pv(v - h);
+      uvArr[i + 6] = pu(u);
+      uvArr[i + 7] = pv(v - h);
+    } else {
+      // 正高度: v 是顶部，v+h 是底部
+      uvArr[i] = pu(u);
+      uvArr[i + 1] = pv(v + h);
+      uvArr[i + 2] = pu(u + w);
+      uvArr[i + 3] = pv(v + h);
+      uvArr[i + 4] = pu(u + w);
+      uvArr[i + 5] = pv(v);
+      uvArr[i + 6] = pu(u);
+      uvArr[i + 7] = pv(v);
+    }
+  }
+
+  geo.setAttribute("uv", new THREE.BufferAttribute(uvArr, 2));
 }

@@ -24,11 +24,16 @@ export async function initYSMParser() {
     //    用 ";updateMemoryViews()" 避免误改函数定义
     glueCode = glueCode.replace(
       ";updateMemoryViews()",
-      ";updateMemoryViews();Module[\"HEAPU8\"]=HEAPU8",
+      ';updateMemoryViews();Module["HEAPU8"]=HEAPU8',
     );
 
-    // 3. 设置 Module.wasmBinary — 胶水代码执行时直接用
-    window.Module = { wasmBinary };
+    // 3. 设置 Module.wasmBinary — 胶水代码执行时直接用，关掉 WASM 的 stdout
+    window.Module = {
+      wasmBinary,
+      print: () => {},
+      printErr: () => {},
+      noInitialRun: true,
+    };
 
     // 3. 内联脚本注入胶水代码（不通过 src，避免 URL 解析问题）
     const s = document.createElement("script");
@@ -121,7 +126,12 @@ export function diagYsmHeader(bytes) {
 
   const ptr = _writeHeap(bytes);
   try {
-    ccall("ysm_diag_header", null, ["number", "number"], [ptr, bytes.byteLength || bytes.length]);
+    ccall(
+      "ysm_diag_header",
+      null,
+      ["number", "number"],
+      [ptr, bytes.byteLength || bytes.length],
+    );
   } finally {
     wasmModule._free(ptr);
   }
@@ -138,7 +148,12 @@ export function detectYsmVersion(bytes) {
 
   const ptr = _writeHeap(bytes);
   try {
-    return ccall("ysm_detect_version", "number", ["number", "number"], [ptr, bytes.byteLength || bytes.length]);
+    return ccall(
+      "ysm_detect_version",
+      "number",
+      ["number", "number"],
+      [ptr, bytes.byteLength || bytes.length],
+    );
   } finally {
     wasmModule._free(ptr);
   }

@@ -22,52 +22,115 @@ export function renderModel2D(canvas, model, textureImg) {
     for (const c of bone.cubes || []) {
       const [ox, oy, oz] = c.origin;
       const [sx, sy, sz] = c.size;
-      // 前视图：X 水平，Y 垂直（忽略 Z）
       if (ox < minX) minX = ox;
       if (ox + sx > maxX) maxX = ox + sx;
       if (oy < minY) minY = oy;
       if (oy + sy > maxY) maxY = oy + sy;
-      // 俯视图：X 水平，Z 垂直
     }
   }
 
-  // 防止除零
   const rangeX = maxX - minX || 1;
   const rangeY = maxY - minY || 1;
   const scale = Math.min((W - 20) / rangeX, (H - 20) / rangeY, 4);
   const cx = W / 2 - (minX + rangeX / 2) * scale;
   const cy = H / 2 + (minY + rangeY / 2) * scale;
 
-  // 前视图（X→右, Y→上, 忽略 Z）
-  drawView(ctx, model, "front", scale, cx, cy, textureImg);
+  // 计算骨骼屏幕坐标热区，供鼠标拾取
+  const boneHitZones = calcBoneHitZones(model, scale, cx, cy, true);
+  model._boneHitZones = boneHitZones;
 
-  // 俯视图小窗（右下角）
-  drawMiniView(ctx, model, "top", scale, textureImg);
+  // 绘制（当前无高亮）
+  drawView(ctx, model, scale, cx, cy, textureImg, null);
+  drawMiniView(ctx, model, scale, textureImg);
+
+  // ---- 鼠标交互高亮 ----
+  let _highlightBone = null;
+  const onMove = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const hit = boneHitZones.find((b) => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h);
+    if (hit?.name !== _highlightBone) {
+      _highlightBone = hit?.name || null;
+      ctx.clearRect(0, 0, W, H);
+      drawView(ctx, model, scale, cx, cy, textureImg, _highlightBone);
+      drawMiniView(ctx, model, scale, textureImg);
+    }
+  };
+  const onLeave = () => {
+    if (_highlightBone) {
+      _highlightBone = null;
+      ctx.clearRect(0, 0, W, H);
+      drawView(ctx, model, scale, cx, cy, textureImg, null);
+      drawMiniView(ctx, model, scale, textureImg);
+    }
+  };
+  canvas.addEventListener("mousemove", onMove);
+  canvas.addEventListener("mouseleave", onLeave);
+  // 清理旧监听（防止重复绑定）
+  canvas._hoverCleanup && canvas._hoverCleanup();
+  canvas._hoverCleanup = () => {
+    canvas.removeEventListener("mousemove", onMove);
+    canvas.removeEventListener("mouseleave", onLeave);
+  };
 }
 
-function drawView(ctx, model, view, scale, ox, oy, textureImg) {
-  const isFront = view === "front";
+function calcBoneHitZones(model, scale, ox, oy, isFront) {
+  const zones = [];
   for (const bone of model.bones) {
+    const cs = bone.cubes || [];
+    if (!cs.length) continue;
+    let mnX = Infinity, mxX = -Infinity, mnY = Infinity, mxY = -Infinity;
+    for (const c of cs) {
+      const [x, y, z] = c.origin;
+      const [sx, sy, sz] = c.size;
+      const px = x;
+      const py = isFront ? y : z;
+      if (px < mnX) mnX = px;
+      if (px + sx > mxX) mxX = px + sx;
+      if (py < mnY) mnY = py;
+      if (py + sy > mxY) mxY = py + sy;
+    }
+    zones.push({
+      name: bone.name,
+      x: ox + mnX * scale,
+      y: oy - (mxY) * scale,
+      w: (mxX - mnX) * scale,
+      h: (mxY - mnY) * scale,
+    });
+  }
+  return zones;
+}
+
+function drawView(ctx, model, scale, ox, oy, textureImg, highlightBone) {
+  const isFront = true;
+  for (const bone of model.bones) {
+    const isHighlight = bone.name === highlightBone;
     for (const c of bone.cubes || []) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
-      // 投影坐标
-      const px = isFront ? x : x; // X
-      const py = isFront ? y : z; // Y（前视图=Y，俯视图=Z）
-      const pw = sx; // 宽
-      const ph = isFront ? sy : sz; // 高
+      const px = x;
+      const py = isFront ? y : z;
+      const pw = sx;
+      const ph = isFront ? sy : sz;
       const drawX = ox + px * scale;
       const drawY = oy - (py + ph) * scale;
       const drawW = pw * scale;
       const drawH = ph * scale;
       if (drawW < 0.5 || drawH < 0.5) continue;
 
-      // 填充半透明方块
-      ctx.fillStyle = "rgba(124,131,255,0.45)";
-      ctx.fillRect(drawX, drawY, drawW, drawH);
-      // 白色边框
-      ctx.strokeStyle = "rgba(205,214,244,0.85)";
-      ctx.lineWidth = 1;
+      if (isHighlight) {
+        // 高亮骨骼：亮橙色填充 + 亮边框
+        ctx.fillStyle = "rgba(255,180,50,0.7)";
+        ctx.fillRect(drawX, drawY, drawW, drawH);
+        ctx.strokeStyle = "rgba(255,220,100,1)";
+        ctx.lineWidth = 1.5;
+      } else {
+        ctx.fillStyle = "rgba(124,131,255,0.45)";
+        ctx.fillRect(drawX, drawY, drawW, drawH);
+        ctx.strokeStyle = "rgba(205,214,244,0.85)";
+        ctx.lineWidth = 1;
+      }
       ctx.strokeRect(drawX, drawY, drawW, drawH);
     }
   }
@@ -80,17 +143,12 @@ function drawView(ctx, model, view, scale, ox, oy, textureImg) {
   for (const bone of model.bones) {
     const cs = bone.cubes || [];
     if (!cs.length) continue;
-    let mnX = Infinity,
-      mxX = -Infinity,
-      mnY = Infinity,
-      mxY = -Infinity;
+    let mnX = Infinity, mxX = -Infinity, mnY = Infinity, mxY = -Infinity;
     for (const c of cs) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
-      const px = x,
-        py = isFront ? y : z;
-      const pw = sx,
-        ph = isFront ? sy : sz;
+      const px = x, py = isFront ? y : z;
+      const pw = sx, ph = isFront ? sy : sz;
       if (px < mnX) mnX = px;
       if (px + pw > mxX) mxX = px + pw;
       if (py < mnY) mnY = py;
@@ -102,13 +160,13 @@ function drawView(ctx, model, view, scale, ox, oy, textureImg) {
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     const tw = ctx.measureText(txt).width;
     ctx.fillRect(cx2 - tw / 2 - 2, cy2 - 5, tw + 4, 10);
-    ctx.fillStyle = "rgba(205,214,244,0.9)";
+    ctx.fillStyle = bone.name === highlightBone ? "#ffd460" : "rgba(205,214,244,0.9)";
     ctx.fillText(txt, cx2, cy2);
   }
   ctx.restore();
 }
 
-function drawMiniView(ctx, model, view, scale, textureImg) {
+function drawMiniView(ctx, model, scale, textureImg) {
   const size = 60;
   const margin = 8;
   const mx = ctx.canvas.width - size - margin;
@@ -117,7 +175,6 @@ function drawMiniView(ctx, model, view, scale, textureImg) {
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.fillRect(mx - 2, my - 2, size + 4, size + 4);
 
-  // 俯视图小窗
   let minX = Infinity,
     maxX = -Infinity,
     minZ = Infinity,

@@ -28,6 +28,17 @@ type VersionInstance struct {
 	Exists     bool   `json:"Exists"`
 }
 
+// SearchResult 模型搜索结果
+type SearchResult struct {
+	Name      string `json:"name"`
+	Path      string `json:"path"`
+	BoneCount int    `json:"boneCount"`
+	CubeCount int    `json:"cubeCount"`
+	TexWidth  int    `json:"texWidth"`
+	TexHeight int    `json:"texHeight"`
+	HasError  bool   `json:"hasError"`
+}
+
 // ImportLog 导入日志
 type ImportLog struct {
 	ModelName  string `json:"ModelName"`

@@ -799,6 +799,49 @@ func (a *App) ExportBoneStructures(repoRoot string) (string, error) {
 
 	return strings.Join(lines, "\n"), nil
 }
+
+// ========== 高级搜索 ==========
+func (a *App) SearchModels(repoRoot string, keyword string, minBones, maxBones, minCubes, maxCubes, minTex, maxTex int) []types.SearchResult {
+	entries := a.ScanModelEntries(repoRoot)
+	if len(entries) == 0 {
+		return nil
+	}
+
+	var results []types.SearchResult
+	kw := strings.ToLower(strings.TrimSpace(keyword))
+
+	for _, entry := range entries {
+		if kw != "" {
+			name := strings.ToLower(entry.Name)
+			if !strings.Contains(name, kw) && !strings.Contains(strings.ToLower(entry.Path), kw) {
+				continue
+			}
+		}
+
+		model := a.AnalyzeBedrockModel(entry.Path)
+		if model.BoneCount == 0 {
+			continue
+		}
+
+		if minBones > 0 && model.BoneCount < minBones { continue }
+		if maxBones > 0 && model.BoneCount > maxBones { continue }
+		if minCubes > 0 && model.CubeCount < minCubes { continue }
+		if maxCubes > 0 && model.CubeCount > maxCubes { continue }
+		if minTex > 0 && (model.TexWidth < minTex || model.TexHeight < minTex) { continue }
+		if maxTex > 0 && (model.TexWidth > maxTex || model.TexHeight > maxTex) { continue }
+
+		results = append(results, types.SearchResult{
+			Name:      entry.Name,
+			Path:      entry.Path,
+			BoneCount: model.BoneCount,
+			CubeCount: model.CubeCount,
+			TexWidth:  model.TexWidth,
+			TexHeight: model.TexHeight,
+		})
+	}
+	return results
+}
+
 func (a *App) SetRepoRoot(dir string) {
 	if !installer.IsValidRepoRoot(dir) {
 		return // 仓库路径不合法，不做设置

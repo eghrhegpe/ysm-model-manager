@@ -257,6 +257,30 @@ export namespace types {
 	        this.imageBase64 = source["imageBase64"];
 	    }
 	}
+	export class SearchResult {
+	    name: string;
+	    path: string;
+	    boneCount: number;
+	    cubeCount: number;
+	    texWidth: number;
+	    texHeight: number;
+	    hasError: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SearchResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.boneCount = source["boneCount"];
+	        this.cubeCount = source["cubeCount"];
+	        this.texWidth = source["texWidth"];
+	        this.texHeight = source["texHeight"];
+	        this.hasError = source["hasError"];
+	    }
+	}
 	export class VersionInstance {
 	    Name: string;
 	    VersionDir: string;

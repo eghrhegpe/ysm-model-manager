@@ -5,9 +5,14 @@
  * @param {HTMLCanvasElement} canvas
  * @param {object} model - AnalyzeBedrockModel 返回的 BedrockModel
  * @param {HTMLImageElement} [textureImg] - 纹理图
+ * @param {object} [opts] - 选项
+ * @param {boolean} [opts.showLabels=true] - 是否显示骨骼名称
+ * @param {number} [opts.zoom=1] - 缩放倍率（相对于自动适配的基准）
  */
-export function renderModel2D(canvas, model, textureImg) {
+export function renderModel2D(canvas, model, textureImg, opts) {
   if (!canvas || !model?.bones?.length) return;
+  const showLabels = opts?.showLabels !== false;
+  const zoom = opts?.zoom || 1;
   const ctx = canvas.getContext("2d");
   const W = canvas.width;
   const H = canvas.height;
@@ -31,7 +36,8 @@ export function renderModel2D(canvas, model, textureImg) {
 
   const rangeX = maxX - minX || 1;
   const rangeY = maxY - minY || 1;
-  const scale = Math.min((W - 20) / rangeX, (H - 20) / rangeY, 4);
+  const baseScale = Math.min((W - 20) / rangeX, (H - 20) / rangeY, 4);
+  const scale = baseScale * zoom;
   const cx = W / 2 - (minX + rangeX / 2) * scale;
   const cy = H / 2 + (minY + rangeY / 2) * scale;
 
@@ -40,7 +46,7 @@ export function renderModel2D(canvas, model, textureImg) {
   model._boneHitZones = boneHitZones;
 
   // 绘制（当前无高亮）
-  drawView(ctx, model, scale, cx, cy, textureImg, null);
+  drawView(ctx, model, scale, cx, cy, textureImg, null, showLabels);
   drawMiniView(ctx, model, scale, textureImg);
 
   // ---- 鼠标交互高亮 ----
@@ -49,11 +55,22 @@ export function renderModel2D(canvas, model, textureImg) {
     const rect = canvas.getBoundingClientRect();
     const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
     const my = (e.clientY - rect.top) * (canvas.height / rect.height);
-    const hit = boneHitZones.find((b) => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h);
+    const hit = boneHitZones.find(
+      (b) => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h,
+    );
     if (hit?.name !== _highlightBone) {
       _highlightBone = hit?.name || null;
       ctx.clearRect(0, 0, W, H);
-      drawView(ctx, model, scale, cx, cy, textureImg, _highlightBone);
+      drawView(
+        ctx,
+        model,
+        scale,
+        cx,
+        cy,
+        textureImg,
+        _highlightBone,
+        showLabels,
+      );
       drawMiniView(ctx, model, scale, textureImg);
     }
   };
@@ -61,7 +78,7 @@ export function renderModel2D(canvas, model, textureImg) {
     if (_highlightBone) {
       _highlightBone = null;
       ctx.clearRect(0, 0, W, H);
-      drawView(ctx, model, scale, cx, cy, textureImg, null);
+      drawView(ctx, model, scale, cx, cy, textureImg, null, showLabels);
       drawMiniView(ctx, model, scale, textureImg);
     }
   };
@@ -80,7 +97,10 @@ function calcBoneHitZones(model, scale, ox, oy, isFront) {
   for (const bone of model.bones) {
     const cs = bone.cubes || [];
     if (!cs.length) continue;
-    let mnX = Infinity, mxX = -Infinity, mnY = Infinity, mxY = -Infinity;
+    let mnX = Infinity,
+      mxX = -Infinity,
+      mnY = Infinity,
+      mxY = -Infinity;
     for (const c of cs) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
@@ -94,7 +114,7 @@ function calcBoneHitZones(model, scale, ox, oy, isFront) {
     zones.push({
       name: bone.name,
       x: ox + mnX * scale,
-      y: oy - (mxY) * scale,
+      y: oy - mxY * scale,
       w: (mxX - mnX) * scale,
       h: (mxY - mnY) * scale,
     });
@@ -102,7 +122,16 @@ function calcBoneHitZones(model, scale, ox, oy, isFront) {
   return zones;
 }
 
-function drawView(ctx, model, scale, ox, oy, textureImg, highlightBone) {
+function drawView(
+  ctx,
+  model,
+  scale,
+  ox,
+  oy,
+  textureImg,
+  highlightBone,
+  showLabels,
+) {
   const isFront = true;
   for (const bone of model.bones) {
     const isHighlight = bone.name === highlightBone;
@@ -120,8 +149,7 @@ function drawView(ctx, model, scale, ox, oy, textureImg, highlightBone) {
       if (drawW < 0.5 || drawH < 0.5) continue;
 
       if (isHighlight) {
-        // 高亮骨骼：亮橙色填充 + 亮边框
-        ctx.fillStyle = "rgba(255,180,50,0.7)";
+        ctx.fillStyle = "rgba(255,180,50,0.25)";
         ctx.fillRect(drawX, drawY, drawW, drawH);
         ctx.strokeStyle = "rgba(255,220,100,1)";
         ctx.lineWidth = 1.5;
@@ -132,38 +160,47 @@ function drawView(ctx, model, scale, ox, oy, textureImg, highlightBone) {
         ctx.lineWidth = 1;
       }
       ctx.strokeRect(drawX, drawY, drawW, drawH);
+      ctx.strokeRect(drawX, drawY, drawW, drawH);
     }
   }
 
   // 骨骼名标注
-  ctx.save();
-  ctx.font = "8px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  for (const bone of model.bones) {
-    const cs = bone.cubes || [];
-    if (!cs.length) continue;
-    let mnX = Infinity, mxX = -Infinity, mnY = Infinity, mxY = -Infinity;
-    for (const c of cs) {
-      const [x, y, z] = c.origin;
-      const [sx, sy, sz] = c.size;
-      const px = x, py = isFront ? y : z;
-      const pw = sx, ph = isFront ? sy : sz;
-      if (px < mnX) mnX = px;
-      if (px + pw > mxX) mxX = px + pw;
-      if (py < mnY) mnY = py;
-      if (py + ph > mxY) mxY = py + ph;
+  if (showLabels !== false) {
+    ctx.save();
+    ctx.font = "8px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const bone of model.bones) {
+      const cs = bone.cubes || [];
+      if (!cs.length) continue;
+      let mnX = Infinity,
+        mxX = -Infinity,
+        mnY = Infinity,
+        mxY = -Infinity;
+      for (const c of cs) {
+        const [x, y, z] = c.origin;
+        const [sx, sy, sz] = c.size;
+        const px = x,
+          py = isFront ? y : z;
+        const pw = sx,
+          ph = isFront ? sy : sz;
+        if (px < mnX) mnX = px;
+        if (px + pw > mxX) mxX = px + pw;
+        if (py < mnY) mnY = py;
+        if (py + ph > mxY) mxY = py + ph;
+      }
+      const cx2 = ox + ((mnX + mxX) / 2) * scale;
+      const cy2 = oy - ((mnY + mxY) / 2) * scale;
+      const txt = bone.name;
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      const tw = ctx.measureText(txt).width;
+      ctx.fillRect(cx2 - tw / 2 - 2, cy2 - 5, tw + 4, 10);
+      ctx.fillStyle =
+        bone.name === highlightBone ? "#ffd460" : "rgba(205,214,244,0.9)";
+      ctx.fillText(txt, cx2, cy2);
     }
-    const cx2 = ox + ((mnX + mxX) / 2) * scale;
-    const cy2 = oy - ((mnY + mxY) / 2) * scale;
-    const txt = bone.name;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    const tw = ctx.measureText(txt).width;
-    ctx.fillRect(cx2 - tw / 2 - 2, cy2 - 5, tw + 4, 10);
-    ctx.fillStyle = bone.name === highlightBone ? "#ffd460" : "rgba(205,214,244,0.9)";
-    ctx.fillText(txt, cx2, cy2);
+    ctx.restore();
   }
-  ctx.restore();
 }
 
 function drawMiniView(ctx, model, scale, textureImg) {

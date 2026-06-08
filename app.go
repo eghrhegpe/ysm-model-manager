@@ -1624,14 +1624,33 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, []byte) 
 	var png []byte
 	for _, f := range reader.File {
 		low := strings.ToLower(f.Name)
-		if strings.HasSuffix(low, ".json") && !strings.Contains(low, "ysm.json") && geo == nil && !f.FileInfo().IsDir() {
+		if strings.HasSuffix(low, ".json") && !strings.Contains(low, "ysm.json") && !strings.Contains(low, "animation") && !strings.Contains(low, "controller") && !f.FileInfo().IsDir() {
 			rc, err := f.Open()
 			if err != nil {
 				continue
 			}
 			buf, _ := io.ReadAll(rc)
 			rc.Close()
-			geo = parseBedrockGeometry(buf)
+			g := parseBedrockGeometry(buf)
+			if g == nil || g.BoneCount == 0 {
+				continue
+			}
+			if geo == nil {
+				geo = g
+			} else {
+				// 合并骨骼（按名称去重）
+				seen := make(map[string]bool, len(geo.Bones))
+				for _, b := range geo.Bones {
+					seen[b.Name] = true
+				}
+				for _, b := range g.Bones {
+					if !seen[b.Name] {
+						geo.Bones = append(geo.Bones, b)
+						geo.BoneCount++
+						geo.CubeCount += len(b.Cubes)
+					}
+				}
+			}
 		}
 		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && png == nil && !f.FileInfo().IsDir() {
 			rc, err := f.Open()
@@ -1654,14 +1673,32 @@ func parseBedrockFrom7z(data []byte, size int64) (*types.BedrockModel, []byte) {
 	var png []byte
 	for _, f := range reader.File {
 		low := strings.ToLower(f.Name)
-		if strings.HasSuffix(low, ".json") && !strings.Contains(low, "ysm.json") && geo == nil && !f.FileInfo().IsDir() {
+		if strings.HasSuffix(low, ".json") && !strings.Contains(low, "ysm.json") && !strings.Contains(low, "animation") && !strings.Contains(low, "controller") && !f.FileInfo().IsDir() {
 			rc, err := f.Open()
 			if err != nil {
 				continue
 			}
 			buf, _ := io.ReadAll(rc)
 			rc.Close()
-			geo = parseBedrockGeometry(buf)
+			g := parseBedrockGeometry(buf)
+			if g == nil || g.BoneCount == 0 {
+				continue
+			}
+			if geo == nil {
+				geo = g
+			} else {
+				seen := make(map[string]bool, len(geo.Bones))
+				for _, b := range geo.Bones {
+					seen[b.Name] = true
+				}
+				for _, b := range g.Bones {
+					if !seen[b.Name] {
+						geo.Bones = append(geo.Bones, b)
+						geo.BoneCount++
+						geo.CubeCount += len(b.Cubes)
+					}
+				}
+			}
 		}
 		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && png == nil && !f.FileInfo().IsDir() {
 			rc, err := f.Open()

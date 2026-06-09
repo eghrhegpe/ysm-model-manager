@@ -67,6 +67,8 @@ export namespace types {
 	}
 	export class Bone2D {
 	    name: string;
+	    parent?: string;
+	    pivot?: number[];
 	    cubes: Cube2D[];
 	
 	    static createFrom(source: any = {}) {
@@ -76,6 +78,8 @@ export namespace types {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
+	        this.parent = source["parent"];
+	        this.pivot = source["pivot"];
 	        this.cubes = this.convertValues(source["cubes"], Cube2D);
 	    }
 	

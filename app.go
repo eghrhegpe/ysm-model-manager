@@ -800,6 +800,49 @@ func (a *App) ExportBoneStructures(repoRoot string) (string, error) {
 	return strings.Join(lines, "\n"), nil
 }
 
+// ExportModelStructureJSON 导出单模型骨骼结构（JSON 格式，含父子关系、坐标、纹理索引）
+func (a *App) ExportModelStructureJSON(modelPath string) string {
+	model := a.AnalyzeBedrockModel(modelPath)
+	if model.BoneCount == 0 {
+		return "{}"
+	}
+	type boneInfo struct {
+		Name     string    `json:"name"`
+		Parent   string    `json:"parent,omitempty"`
+		Pivot    [3]float64 `json:"pivot"`
+		Cubes    int       `json:"cubes"`
+		TexIdx   int       `json:"texIdx"`
+	}
+	type modelInfo struct {
+		File       string     `json:"file"`
+		BoneCount  int        `json:"boneCount"`
+		CubeCount  int        `json:"cubeCount"`
+		TexWidth   int        `json:"texWidth"`
+		TexHeight  int        `json:"texHeight"`
+		TextureCnt int        `json:"textureCount"`
+		Bones      []boneInfo `json:"bones"`
+	}
+	info := modelInfo{
+		File:       filepath.Base(modelPath),
+		BoneCount:  model.BoneCount,
+		CubeCount:  model.CubeCount,
+		TexWidth:   model.TexWidth,
+		TexHeight:  model.TexHeight,
+		TextureCnt: len(model.Textures),
+	}
+	for _, b := range model.Bones {
+		info.Bones = append(info.Bones, boneInfo{
+			Name:   b.Name,
+			Parent: b.Parent,
+			Pivot:  b.Pivot,
+			Cubes:  len(b.Cubes),
+			TexIdx: 0,
+		})
+	}
+	data, _ := json.MarshalIndent(info, "", "  ")
+	return string(data)
+}
+
 // ========== 高级搜索 ==========
 func (a *App) SearchModels(repoRoot string, keyword string, minBones, maxBones, minCubes, maxCubes, minTex, maxTex int) []types.SearchResult {
 	entries := a.ScanModelEntries(repoRoot)
@@ -1961,8 +2004,9 @@ func parseBedrockGeometry(data []byte) *types.BedrockModel {
 				TextureHeight    float64 `json:"texture_height"`
 			} `json:"description"`
 			Bones []struct {
-				Name  string `json:"name"`
-				Pivot [3]float64 `json:"pivot"`
+				Name   string        `json:"name"`
+				Parent string        `json:"parent,omitempty"`
+				Pivot  [3]float64    `json:"pivot"`
 				Cubes []struct {
 					Origin   [3]float64     `json:"origin"`
 					Size     [3]float64     `json:"size"`
@@ -2013,8 +2057,10 @@ func parseBedrockGeometry(data []byte) *types.BedrockModel {
 			})
 		}
 		model.Bones = append(model.Bones, types.Bone2D{
-			Name:  b.Name,
-			Cubes: cubes,
+			Name:   b.Name,
+			Parent: b.Parent,
+			Pivot:  b.Pivot,
+			Cubes:  cubes,
 		})
 		cubeTotal += len(cubes)
 	}

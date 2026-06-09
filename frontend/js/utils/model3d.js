@@ -71,6 +71,8 @@ export async function renderModel3D(
           img.onload = () => {
             const tex = new THREE.Texture(img);
             tex.flipY = false;
+            tex.minFilter = THREE.NearestFilter;
+            tex.magFilter = THREE.NearestFilter;
             tex.needsUpdate = true;
             tex.userData.imgWidth = img.naturalWidth;
             tex.userData.imgHeight = img.naturalHeight;
@@ -216,21 +218,26 @@ export async function renderModel3D(
     // 同步动画变换到骨骼 Group（局部变换，层级由 Three.js 自动传播）
     if (_player) {
       const clip = _player.currentClip;
-      if (clip) {
+      if (!clip || !clip.bones || Object.keys(clip.bones).length === 0) {
+        // 无有效动画 → 复位所有骨骼
+        boneGroupMap.forEach((g) => g.rotation.set(0, 0, 0));
+      } else {
         const localTransforms = evaluateClip(clip, _player.time, null, true);
         for (const [boneName, t] of localTransforms) {
           const g = boneGroupMap.get(boneName);
           if (!g) continue;
-          // 复位到 pivot 位置，防止动画位置数据干扰
-          const bp = pivotMap.get(boneName);
-          if (bp) g.position.set(bp[0] * PXL, bp[1] * PXL, bp[2] * -PXL);
+          // 不应用动画位置，只旋转（保持骨骼在 pivot）
           if (t.rotation) {
-            g.rotation.set(
-              ((t.rotation[0] || 0) * Math.PI) / 180,
-              ((t.rotation[1] || 0) * Math.PI) / 180,
-              ((t.rotation[2] || 0) * Math.PI) / 180,
-              "XYZ",
-            );
+            // YSMViewer 官方验证：X/Y 取反，Z 不动，使用 XYZ 顺序
+            const rx = -(t.rotation[0] || 0) * (Math.PI / 180);
+            const ry = -(t.rotation[1] || 0) * (Math.PI / 180);
+            const rz =  (t.rotation[2] || 0) * (Math.PI / 180);
+            // NaN/Infinity 防御
+            if (!isFinite(rx) || !isFinite(ry) || !isFinite(rz)) {
+              console.warn(`[3D] 骨骼 ${boneName} 旋转值非法，已跳过`);
+              continue;
+            }
+            g.rotation.set(rx, ry, rz, "XYZ");
           }
         }
       }
@@ -261,6 +268,9 @@ export async function renderModel3D(
           }
         }
       });
+      // 显式释放纹理（texMap 中的纹理可能被多个材质共享，仅 dispose 材质不够）
+      texMap.forEach((tex) => tex.dispose());
+      texMap.clear();
     },
   };
 }
@@ -382,33 +392,40 @@ function applyFaceUV(geo, cube, tex, modelTexW, modelTexH) {
 
     const [u, v] = fd.uv || [0, 0];
     let [w, h] = fd.uv_size || [0, 0];
-    let flipped = false;
+    let flipH = false;
+    let flipW = false;
+    if (w < 0) {
+      w = -w;
+      flipW = true;
+    }
     if (h < 0) {
       h = -h;
-      flipped = true;
+      flipH = true;
     }
     const i = f * 8;
-    if (flipped) {
-      // 负高度: v 是底部（uv 起始位置），v-h 是顶部
-      uvArr[i] = pu(u);
-      uvArr[i + 1] = pv(v);
-      uvArr[i + 2] = pu(u + w);
-      uvArr[i + 3] = pv(v);
-      uvArr[i + 4] = pu(u + w);
-      uvArr[i + 5] = pv(v - h);
-      uvArr[i + 6] = pu(u);
-      uvArr[i + 7] = pv(v - h);
-    } else {
-      // 正高度: v 是顶部，v+h 是底部
-      uvArr[i] = pu(u);
-      uvArr[i + 1] = pv(v + h);
-      uvArr[i + 2] = pu(u + w);
-      uvArr[i + 3] = pv(v + h);
-      uvArr[i + 4] = pu(u + w);
-      uvArr[i + 5] = pv(v);
-      uvArr[i + 6] = pu(u);
-      uvArr[i + 7] = pv(v);
+    // 计算四个角 UV（先不考虑翻转）
+    let u0 = pu(u), v0 = pv(v + h); // 左下
+    let u1 = pu(u + w), v1 = pv(v + h); // 右下
+    let u2 = pu(u + w), v2 = pv(v); // 右上
+    let u3 = pu(u), v3 = pv(v); // 左上
+    // 负高度 → 上下翻转
+    if (flipH) {
+      [v0, v2] = [v2, v0];
+      [v1, v3] = [v3, v1];
     }
+    // 负宽度 → 左右翻转
+    if (flipW) {
+      [u0, u1] = [u1, u0];
+      [u3, u2] = [u2, u3];
+    }
+    uvArr[i] = u0;
+    uvArr[i + 1] = v0;
+    uvArr[i + 2] = u1;
+    uvArr[i + 3] = v1;
+    uvArr[i + 4] = u2;
+    uvArr[i + 5] = v2;
+    uvArr[i + 6] = u3;
+    uvArr[i + 7] = v3;
   }
 
   geo.setAttribute("uv", new THREE.BufferAttribute(uvArr, 2));

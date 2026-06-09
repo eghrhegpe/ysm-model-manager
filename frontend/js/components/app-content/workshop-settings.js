@@ -79,16 +79,24 @@ export async function initSettings(root) {
     const dir = await SelectDirectory();
     if (!dir) return;
     const theme = localStorage.getItem("theme") || "dark";
-    await SaveAppConfig(repoPath, dir, linkMode, theme);
-    if (mcEl) mcEl.textContent = dir;
-    if (mcHint) mcHint.style.display = "none";
-    bus.emit("config:updated");
-    bus.emit("stats:refresh");
-    bus.emit("toast:show", {
-      msg: "✅ 游戏路径已设置",
-      duration: 2000,
-      type: "success",
-    });
+    try {
+      await SaveAppConfig(repoPath, dir, linkMode, theme);
+      if (mcEl) mcEl.textContent = dir;
+      if (mcHint) mcHint.style.display = "none";
+      bus.emit("config:updated");
+      bus.emit("stats:refresh");
+      bus.emit("toast:show", {
+        msg: "✅ 游戏路径已设置",
+        duration: 2000,
+        type: "success",
+      });
+    } catch (e) {
+      bus.emit("toast:show", {
+        msg: "⚠️ " + (e?.message || String(e)),
+        duration: 5000,
+        type: "warn",
+      });
+    }
   });
 
   // 游戏路径 - 自动搜索
@@ -97,16 +105,24 @@ export async function initSettings(root) {
     if (paths?.length) {
       const found = paths[0];
       const theme1 = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(repoPath, found, linkMode, theme1);
-      if (mcEl) mcEl.textContent = found;
-      if (mcHint) mcHint.style.display = "none";
-      bus.emit("config:updated");
-      bus.emit("stats:refresh");
-      bus.emit("toast:show", {
-        msg: `✅ 已自动检测到: ${found}`,
-        duration: 3000,
-        type: "success",
-      });
+      try {
+        await SaveAppConfig(repoPath, found, linkMode, theme1);
+        if (mcEl) mcEl.textContent = found;
+        if (mcHint) mcHint.style.display = "none";
+        bus.emit("config:updated");
+        bus.emit("stats:refresh");
+        bus.emit("toast:show", {
+          msg: `✅ 已自动检测到: ${found}`,
+          duration: 3000,
+          type: "success",
+        });
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: "⚠️ " + (e?.message || String(e)),
+          duration: 5000,
+          type: "warn",
+        });
+      }
     } else {
       bus.emit("toast:show", {
         msg: "⚠️ 未找到 .minecraft 文件夹",
@@ -140,7 +156,7 @@ export async function initSettings(root) {
   const updateLinkHint = (mode) => {
     ["copy", "hardlink", "symlink"].forEach((m) => {
       const el = root.getElementById("lm-hint-" + m);
-      if (el) el.style.display = m === mode ? "" : "none";
+      if (el) el.style.display = m === mode ? "block" : "none";
     });
   };
   updateLinkHint(linkMode);

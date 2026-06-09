@@ -18,6 +18,7 @@ type Bone2D struct {
 	Name      string    `json:"name"`
 	Parent    string    `json:"parent,omitempty"`
 	Pivot     [3]float64 `json:"pivot,omitempty"`
+	Rotation  [3]float64 `json:"rotation,omitempty"`
 	Cubes     []Cube2D  `json:"cubes"`
 }
 

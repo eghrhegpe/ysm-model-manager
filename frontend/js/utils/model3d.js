@@ -1,49 +1,21 @@
-/**
- * 3D 模型预览 — 基于 Three.js（通过 importmap 加载 CDN）
- */
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { evaluateClip } from "./animation.js";
+import { GetModel3DSpec } from "../../wailsjs/go/main/App.js";
 
-/**
- * 创建 3D 模型预览
- * @param {HTMLElement} container - 挂载容器
- * @param {object} model - BedrockModel（含 bones, cubes）
- * @param {string} [textureUrl] - 纹理图片 URL（base64 data URI）
- * @param {object} [player] - AnimationPlayer 实例（用于读取当前时间和 clip）
- * @param {number} [texIdx=0] - 使用的纹理索引
- * @returns {Promise<{cleanup: Function}>}
- */
-export async function renderModel3D(
-  container,
-  model,
-  textureUrl,
-  player,
-  texIdx,
-) {
-  // ---- 场景 ----
+export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1b2e);
-
-  // ---- 相机 ----
   const aspect = container.clientWidth / container.clientHeight || 1;
   const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
   camera.position.set(0, 80, -120);
-  camera.lookAt(0, 80, 0);
-
-  // ---- 渲染器 ----
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   container.innerHTML = "";
   container.appendChild(renderer.domElement);
-
-  // ---- 轨道控制 ----
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 80, 0);
   controls.update();
-
-  // ---- 灯光 ----
   const ambient = new THREE.AmbientLight(0xffffff, 1.0);
   scene.add(ambient);
   const dirLight = new THREE.DirectionalLight(0xffffff, 2);
@@ -52,15 +24,11 @@ export async function renderModel3D(
   const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
   backLight.position.set(-10, 10, -20);
   scene.add(backLight);
-
-  // ---- 地面网格 + 坐标轴 ----
   const grid = new THREE.GridHelper(400, 20, 0x444488, 0x333366);
   grid.position.y = -1;
   scene.add(grid);
   const axes = new THREE.AxesHelper(60);
   scene.add(axes);
-
-  // ---- 加载所有纹理 ----
   const texMap = new Map();
   const urls = model.textures?.length > 1 ? model.textures : [textureUrl];
   if (urls?.length) {
@@ -84,349 +52,399 @@ export async function renderModel3D(
         }),
     );
     await Promise.all(loads);
-    console.log(`[3D] 已加载 ${texMap.size} 张纹理`);
   }
-
-  // ---- 构建骨骼层级（仅标签+动画用，cube 放世界坐标与 2D 一致） ----
-  const PXL = 1;
-  const boneGroupMap = new Map();
+  // 从 Go 获取预计算的 Three.js Spec
+  let spec = { models: [] };
+  try {
+    const jsonStr = await GetModel3DSpec(model._modelPath || "");
+    const parsed = JSON.parse(jsonStr);
+    if (parsed.models) spec = parsed;
+  } catch (e) {
+    console.warn("[3D] Fallback to JS geometry:", e);
+  }
+  if (!spec.models?.length && model.bones?.length) {
+    spec = buildSpecFromModel(model);
+  }
   const rootGroup = new THREE.Group();
   rootGroup.name = "__root__";
   scene.add(rootGroup);
-
-  // 创建骨骼 Group（放在 pivot 位置，用于标签和后续动画旋转）
-  for (const bone of model.bones) {
-    const g = new THREE.Group();
-    g.name = bone.name;
-    g.scale.set(1, 1, 1);
-    const p = bone.pivot || [0, 0, 0];
-    g.position.set(p[0] * PXL, p[1] * PXL, p[2] * -PXL);
-    boneGroupMap.set(bone.name, g);
-    if (bone.parent && boneGroupMap.has(bone.parent)) {
-      boneGroupMap.get(bone.parent).add(g);
-    } else {
-      rootGroup.add(g);
-    }
-  }
-
-  // ---- 计算模型中心（基于 cube 世界坐标） ----
-  let minY = Infinity,
-    maxY = -Infinity;
-  for (const bone of model.bones) {
-    for (const c of bone.cubes || []) {
-      const y = c.origin[1] + c.size[1] / 2;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-    }
-  }
-  const centerY = ((minY + maxY) / 2) * PXL;
-  const modelHeight = (maxY - minY) * PXL;
-  const camDist = Math.max(modelHeight * 1.5, 60);
-  camera.position.set(camDist * 0.4, centerY, -camDist * 0.8);
-  camera.lookAt(0, centerY, 0);
-  controls.target.set(0, centerY, 0);
-  controls.update();
-
-  // ---- 为每个骨骼生成立方体 Mesh（直接放 rootGroup，cube.origin 是世界坐标） ----
-  for (const bone of model.bones) {
-    const group = boneGroupMap.get(bone.name);
-    if (!group) continue;
-
-    for (const c of bone.cubes || []) {
-      const [ox, oy, oz] = c.origin;
-      const [sx, sy, sz] = c.size;
-
-      // 选择该骨骼对应的纹理
-      let cubeTex = null;
-      if (texMap.size > 0) {
-        const texArr = [...texMap.values()];
-        cubeTex = texArr[texIdx ?? 0] || texArr[0];
-      }
-
-      const geo = new THREE.BoxGeometry(sx * PXL, sy * PXL, sz * PXL);
-
-      // UV 映射
-      if (cubeTex) {
-        if (c.faceUV) {
-          applyFaceUV(geo, c, cubeTex, model.texWidth, model.texHeight);
-        } else {
-          applyBoxUV(geo, c, cubeTex);
-        }
-      }
-
-      let mat;
-      if (cubeTex) {
-        mat = new THREE.MeshBasicMaterial({
-          map: cubeTex,
-          transparent: false,
-          side: THREE.DoubleSide,
-        });
-      } else {
-        mat = new THREE.MeshBasicMaterial({
-          color: 0x44aa88,
-          side: THREE.DoubleSide,
-        });
-      }
-
-      const mesh = new THREE.Mesh(geo, mat);
-      // cube 位置相对骨骼 pivot，挂到骨骼 Group 下
-      const bp = bone.pivot || [0, 0, 0];
-      mesh.position.set(
-        (ox + sx / 2 - bp[0]) * PXL,
-        (oy + sy / 2 - bp[1]) * PXL,
-        -(oz + sz / 2 - bp[2]) * PXL,
+  const boneGroupMap = new Map();
+  for (const mg of spec.models) {
+    for (const bd of mg.bones || []) {
+      const g = new THREE.Group();
+      g.name = bd.name;
+      g.position.set(
+        bd.localPosition[0],
+        bd.localPosition[1],
+        bd.localPosition[2],
       );
-      // 应用 cube 初始旋转
-      if (c.rotation) {
-        mesh.rotation.set(
-          (c.rotation[0] * Math.PI) / 180,
-          (c.rotation[1] * Math.PI) / 180,
-          (c.rotation[2] * Math.PI) / 180,
+      if (
+        bd.localRotation[3] !== 1 ||
+        bd.localRotation[0] !== 0 ||
+        bd.localRotation[1] !== 0 ||
+        bd.localRotation[2] !== 0
+      ) {
+        g.quaternion.set(
+          bd.localRotation[0],
+          bd.localRotation[1],
+          bd.localRotation[2],
+          bd.localRotation[3],
         );
       }
-      group.add(mesh);
+      boneGroupMap.set(bd.id, g);
     }
-
-    // 骨骼名标签
-    if (bone.cubes?.length > 0) makeBoneLabel(group, bone.name);
+    for (const bd of mg.bones || []) {
+      const g = boneGroupMap.get(bd.id);
+      if (!g) continue;
+      if (bd.parentId && boneGroupMap.has(bd.parentId)) {
+        boneGroupMap.get(bd.parentId).add(g);
+      } else {
+        rootGroup.add(g);
+      }
+    }
+    let minY = Infinity,
+      maxY = -Infinity;
+    for (const b of model.bones || [])
+      for (const c of b.cubes || []) {
+        const y = c.origin[1] + c.size[1] / 2;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    const centerY = (minY + maxY) / 2;
+    const modelHeight = maxY - minY;
+    const camDist = Math.max(modelHeight * 1.5, 60);
+    camera.position.set(camDist * 0.4, centerY, -camDist * 0.8);
+    camera.lookAt(0, centerY, 0);
+    controls.target.set(0, centerY, 0);
+    controls.update();
+    let cubeTex = null;
+    if (texMap.size > 0) {
+      const texArr = [...texMap.values()];
+      cubeTex = texArr[texIdx ?? 0] || texArr[0];
+    }
+    for (const md of mg.meshGroups || []) {
+      const boneGroup = boneGroupMap.get(md.boneId);
+      if (!boneGroup) continue;
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(md.positions, 3),
+      );
+      geo.setAttribute(
+        "normal",
+        new THREE.Float32BufferAttribute(md.normals, 3),
+      );
+      geo.setAttribute("uv", new THREE.Float32BufferAttribute(md.uvs, 2));
+      geo.setIndex(md.indices);
+      const mat = cubeTex
+        ? new THREE.MeshBasicMaterial({
+            map: cubeTex,
+            transparent: true,
+            side: THREE.DoubleSide,
+          })
+        : new THREE.MeshBasicMaterial({
+            color: 0x44aa88,
+            side: THREE.DoubleSide,
+          });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(
+        md.localPosition[0],
+        md.localPosition[1],
+        md.localPosition[2],
+      );
+      if (
+        md.localRotation[3] !== 1 ||
+        md.localRotation[0] !== 0 ||
+        md.localRotation[1] !== 0 ||
+        md.localRotation[2] !== 0
+      ) {
+        mesh.quaternion.set(
+          md.localRotation[0],
+          md.localRotation[1],
+          md.localRotation[2],
+          md.localRotation[3],
+        );
+      }
+      boneGroup.add(mesh);
+    }
   }
-
-  // ---- 窗口大小自适应 ----
-  const onResize = () => {
-    const w = container.clientWidth;
-    const h = container.clientHeight;
+  window.addEventListener("resize", () => {
+    const w = container.clientWidth,
+      h = container.clientHeight;
     if (w > 0 && h > 0) {
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     }
-  };
-  window.addEventListener("resize", onResize);
-
-  // ---- 动画同步 ----
-  let _player = player || null;
-  let _animFrameId = null;
-  // 骨骼 pivot 查询表
-  const pivotMap = new Map();
-  for (const b of model.bones) {
-    if (b.pivot) pivotMap.set(b.name, b.pivot);
-  }
-
+  });
   function renderLoop() {
-    _animFrameId = requestAnimationFrame(renderLoop);
-
-    // 同步动画变换到骨骼 Group（局部变换，层级由 Three.js 自动传播）
-    if (_player) {
-      const clip = _player.currentClip;
-      if (!clip || !clip.bones || Object.keys(clip.bones).length === 0) {
-        // 无有效动画 → 复位所有骨骼
-        boneGroupMap.forEach((g) => g.rotation.set(0, 0, 0));
-      } else {
-        const localTransforms = evaluateClip(clip, _player.time, null, true);
-        for (const [boneName, t] of localTransforms) {
-          const g = boneGroupMap.get(boneName);
-          if (!g) continue;
-          // 不应用动画位置，只旋转（保持骨骼在 pivot）
-          if (t.rotation) {
-            // YSMViewer 官方验证：X/Y 取反，Z 不动，使用 XYZ 顺序
-            const rx = -(t.rotation[0] || 0) * (Math.PI / 180);
-            const ry = -(t.rotation[1] || 0) * (Math.PI / 180);
-            const rz =  (t.rotation[2] || 0) * (Math.PI / 180);
-            // NaN/Infinity 防御
-            if (!isFinite(rx) || !isFinite(ry) || !isFinite(rz)) {
-              console.warn(`[3D] 骨骼 ${boneName} 旋转值非法，已跳过`);
-              continue;
-            }
-            g.rotation.set(rx, ry, rz, "XYZ");
-          }
-        }
-      }
-    }
-
+    requestAnimationFrame(renderLoop);
     controls.update();
     renderer.render(scene, camera);
   }
   renderLoop();
   renderer.render(scene, camera);
-
-  // ---- 返回控制接口 ----
   return {
     cleanup: () => {
-      _player = null;
-      cancelAnimationFrame(_animFrameId);
-      window.removeEventListener("resize", onResize);
       renderer.dispose();
       container.innerHTML = "";
-      // 释放 Three.js 资源
       scene.traverse((child) => {
         if (child.isMesh) {
           child.geometry?.dispose();
-          if (Array.isArray(child.material)) {
+          if (Array.isArray(child.material))
             child.material.forEach((m) => m.dispose());
-          } else {
-            child.material?.dispose();
-          }
+          else child.material?.dispose();
         }
       });
-      // 显式释放纹理（texMap 中的纹理可能被多个材质共享，仅 dispose 材质不够）
       texMap.forEach((tex) => tex.dispose());
       texMap.clear();
     },
   };
 }
 
-/** 生成骨骼名标签 Sprite */
-function makeBoneLabel(group, name) {
-  if (!name || name.length > 20) return;
-
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 48;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
-  ctx.beginPath();
-  ctx.roundRect(4, 4, 248, 40, 6);
-  ctx.fill();
-  ctx.fillStyle = "rgba(205,214,244,0.85)";
-  ctx.font = "20px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(name, 128, 24);
-
-  const tex = new THREE.CanvasTexture(canvas);
-  const mat = new THREE.SpriteMaterial({
-    map: tex,
-    transparent: true,
-    depthWrite: false,
-    depthTest: false,
-  });
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(8, 1.5, 0.5);
-  sprite.position.set(0, 1.5, 0);
-  group.add(sprite);
+// ===== JS 兜底算法（与 Go threejs.Build() 逻辑一致） =====
+function buildSpecFromModel(model) {
+  const texW = model.texWidth || 64;
+  const texH = model.texHeight || 64;
+  const bones = [];
+  const meshes = [];
+  const boneIdx = {};
+  for (const b of model.bones || []) {
+    const bp = b.pivot || [0, 0, 0];
+    let localPos = [-bp[0], bp[1], bp[2]];
+    if (b.parent) {
+      const pp = model.bones.find((x) => x.name === b.parent)?.pivot || [
+        0, 0, 0,
+      ];
+      localPos = [-bp[0] - -pp[0], bp[1] - pp[1], bp[2] - pp[2]];
+    }
+    const entry = {
+      id: b.name,
+      name: b.name,
+      parentId: b.parent || null,
+      localPosition: localPos,
+      localRotation: b.rotation
+        ? eulerToQuaternionJS(
+            -(b.rotation[0] || 0),
+            -(b.rotation[1] || 0),
+            b.rotation[2] || 0,
+          )
+        : [0, 0, 0, 1],
+    };
+    if (boneIdx[b.name] !== undefined) {
+      // 同名骨骼：保留首次层级信息，后面的仅取 cubes
+    } else {
+      boneIdx[b.name] = bones.length;
+      bones.push(entry);
+    }
+    // cubes 全部追加（同名骨骼的也加入）
+    for (let ci = 0; ci < (b.cubes || []).length; ci++) {
+      const c = b.cubes[ci];
+      const md = buildCubeMeshDataJS(c, bp, texW, texH, b.name, ci);
+      if (md) meshes.push(md);
+    }
+  }
+  return {
+    models: [
+      {
+        id: "main",
+        name: "main",
+        defaultVisible: true,
+        textureWidth: texW,
+        textureHeight: texH,
+        bones,
+        meshGroups: meshes,
+      },
+    ],
+  };
 }
 
-/**
- * 基岩版 Box UV 映射 — 使用纹理图片的实际尺寸
- * cube.uv = [u_off, v_off] 纹理像素坐标（左上原点）
- * face 排列匹配 BoxGeometry: +X / -X / +Y / -Y / +Z / -Z
- */
-function applyBoxUV(geo, cube, tex) {
-  const texW = tex.userData.imgWidth;
-  const texH = tex.userData.imgHeight;
-  if (!texW || !texH) return;
-  const [uvx, uvy] = Array.isArray(cube.uv) ? cube.uv : [0, 0];
-  const [sx, sy, sz] = cube.size;
-
-  const pu = (v) => v / texW;
-  const pv = (v) => 1 - v / texH; // 基岩版 Y-down → Three.js Y-up
-
-  // 6 faces: 每个面在纹理上的矩形区域 (像素坐标)
-  // 标准 Bedrock Box UV 布局（正确版）：
-  // 行1: [left(-x) @ (0,0)] [right(+x) @ (sz,0)] [front(+z) @ (sz,0)] [back(-z) @ (sz+sx,0)]
-  // 行2: [top(+y) @ (sz,sy)] [bottom(-y) @ (sz+sx,sy)]
-  const rects = [
-    { u0: uvx + sz, v0: uvy, w: sz, h: sy }, // 0: +X right
-    { u0: uvx, v0: uvy, w: sz, h: sy }, // 1: -X left
-    { u0: uvx + sz, v0: uvy + sy, w: sx, h: sz }, // 2: +Y top
-    { u0: uvx + sz + sx, v0: uvy + sy, w: sx, h: sz }, // 3: -Y bottom
-    { u0: uvx + sz * 2, v0: uvy, w: sx, h: sy }, // 4: +Z front
-    { u0: uvx + sz * 2 + sx, v0: uvy, w: sx, h: sy }, // 5: -Z back
+function buildCubeMeshDataJS(c, bonePivot, texW, texH, boneID, cubeIdx) {
+  const [ox, oy, oz] = c.origin;
+  const [sx, sy, sz] = c.size;
+  if (!sx || !sy || !sz) return null;
+  const cp = c.pivot || [0, 0, 0];
+  const oxN = -ox,
+    cpXN = -cp[0];
+  const fx = oxN - sx,
+    fy = oy,
+    fz = oz;
+  const tx = fx + sx,
+    ty = fy + sy,
+    tz = fz + sz;
+  const cx = (fx + tx) / 2,
+    cy = (fy + ty) / 2,
+    cz = (fz + tz) / 2;
+  const hx2 = (tx - fx) / 2,
+    hy2 = (ty - fy) / 2,
+    hz2 = (tz - fz) / 2;
+  let lx = cx - hx2 - cpXN,
+    ly = cy - hy2 - cp[1],
+    lz = cz - hz2 - cp[2];
+  let hx = cx + hx2 - cpXN,
+    hy = cy + hy2 - cp[1],
+    hz = cz + hz2 - cp[2];
+  if (lx === hx) hx += 0.001;
+  if (ly === hy) hy += 0.001;
+  if (lz === hz) hz += 0.001;
+  const faceUVs = parseUVJS(c, sx, sy, sz, texW, texH);
+  const pos = [],
+    nrm = [],
+    uvs = [],
+    idx = [];
+  const faceDefs = [
+    { v: [hx, hy, hz, hx, hy, lz, hx, ly, hz, hx, ly, lz], n: [1, 0, 0], f: 0 },
+    {
+      v: [lx, hy, lz, lx, hy, hz, lx, ly, lz, lx, ly, hz],
+      n: [-1, 0, 0],
+      f: 1,
+    },
+    { v: [lx, hy, lz, hx, hy, lz, lx, hy, hz, hx, hy, hz], n: [0, 1, 0], f: 2 },
+    {
+      v: [lx, ly, hz, hx, ly, hz, lx, ly, lz, hx, ly, lz],
+      n: [0, -1, 0],
+      f: 3,
+    },
+    { v: [lx, hy, hz, hx, hy, hz, lx, ly, hz, hx, ly, hz], n: [0, 0, 1], f: 4 },
+    {
+      v: [hx, hy, lz, lx, hy, lz, hx, ly, lz, lx, ly, lz],
+      n: [0, 0, -1],
+      f: 5,
+    },
   ];
-
-  // BoxGeometry → 24 verts → 48 UV floats
-  const uvArr = new Float32Array(48);
-  for (let f = 0; f < 6; f++) {
-    const r = rects[f];
-    const u0 = pu(r.u0),
-      v0 = pv(r.v0);
-    const u1 = pu(r.u0 + r.w),
-      v1 = pv(r.v0 + r.h);
-    const i = f * 8;
-    // quad: bottom-left, bottom-right, top-right, top-left
-    uvArr[i] = u0;
-    uvArr[i + 1] = v1;
-    uvArr[i + 2] = u1;
-    uvArr[i + 3] = v1;
-    uvArr[i + 4] = u1;
-    uvArr[i + 5] = v0;
-    uvArr[i + 6] = u0;
-    uvArr[i + 7] = v0;
+  for (const fd of faceDefs) {
+    const bi = pos.length / 3;
+    pos.push(...fd.v);
+    for (let i = 0; i < 4; i++) nrm.push(...fd.n);
+    const uv = faceUVs?.[fd.f];
+    if (uv) {
+      uvs.push(uv[0], uv[1], uv[2], uv[3], uv[4], uv[5], uv[6], uv[7]);
+    } else {
+      for (let i = 0; i < 8; i++) uvs.push(0);
+    }
+    idx.push(bi, bi + 2, bi + 1, bi + 2, bi + 3, bi + 1);
   }
-
-  geo.setAttribute("uv", new THREE.BufferAttribute(uvArr, 2));
+  return {
+    id: boneID + "_" + cubeIdx,
+    boneId: boneID,
+    localPosition: [
+      cpXN - -bonePivot[0],
+      cp[1] - bonePivot[1],
+      cp[2] - bonePivot[2],
+    ],
+    localRotation: eulerToQuaternionJS(
+      -(c.rotation?.[0] || 0),
+      -(c.rotation?.[1] || 0),
+      c.rotation?.[2] || 0,
+    ),
+    positions: pos,
+    normals: nrm,
+    uvs,
+    indices: idx,
+  };
 }
 
-/**
- * 每面独立 UV 映射 — 直接使用 faceUV 中各面的 uv/uv_size
- * faceUV JSON 格式: {"north":{"uv":[x,y],"uv_size":[w,h]}, "east":{...}, ...}
- * Three.js BoxGeometry face order: +X/-X/+Y/-Y/+Z/-Z
- * 映射: east→+X, west→-X, up→+Y, down→-Y, south→+Z, north→-Z
- */
-function applyFaceUV(geo, cube, tex, modelTexW, modelTexH) {
-  const texW = tex.userData.imgWidth;
-  const texH = tex.userData.imgHeight;
-  if (!texW || !texH) return;
-
-  // UV 坐标是模型声明的 texWidth/texHeight 空间，须缩放到实际图片尺寸
-  const scaleX = texW / (modelTexW || texW);
-  const scaleY = texH / (modelTexH || texH);
-
-  let faceData;
-  try {
-    faceData = JSON.parse(cube.faceUV);
-  } catch (e) {
-    console.log("[3D] faceUV 解析失败:", e);
-    return;
+function parseUVJS(c, sx, sy, sz, texW, texH) {
+  if (c.faceUV) {
+    try {
+      const fd = JSON.parse(c.faceUV);
+      const faces = [];
+      const names = ["east", "west", "up", "down", "south", "north"];
+      for (let fi = 0; fi < 6; fi++) {
+        const f = fd[names[fi]];
+        if (!f?.uv) continue;
+        const fu = f.uv[0],
+          fv = f.uv[1];
+        let fw = f.uv_size?.[0] || 0,
+          fh = f.uv_size?.[1] || 0;
+        if (fw < 0) fw = -fw;
+        if (fh < 0) fh = -fh;
+        faces[fi] = [
+          fu / texW,
+          fv / texH,
+          (fu + fw) / texW,
+          fv / texH,
+          fu / texW,
+          (fv + fh) / texH,
+          (fu + fw) / texW,
+          (fv + fh) / texH,
+        ];
+      }
+      return faces;
+    } catch {}
   }
-
-  const faceMap = ["east", "west", "up", "down", "south", "north"];
-  const pu = (v) => (v * scaleX) / texW;
-  const pv = (v) => 1 - (v * scaleY) / texH;
-
-  const uvArr = new Float32Array(48);
-  for (let f = 0; f < 6; f++) {
-    const name = faceMap[f];
-    const fd = faceData[name];
-    if (!fd) continue;
-
-    const [u, v] = fd.uv || [0, 0];
-    let [w, h] = fd.uv_size || [0, 0];
-    let flipH = false;
-    let flipW = false;
-    if (w < 0) {
-      w = -w;
-      flipW = true;
-    }
-    if (h < 0) {
-      h = -h;
-      flipH = true;
-    }
-    const i = f * 8;
-    // 计算四个角 UV（先不考虑翻转）
-    let u0 = pu(u), v0 = pv(v + h); // 左下
-    let u1 = pu(u + w), v1 = pv(v + h); // 右下
-    let u2 = pu(u + w), v2 = pv(v); // 右上
-    let u3 = pu(u), v3 = pv(v); // 左上
-    // 负高度 → 上下翻转
-    if (flipH) {
-      [v0, v2] = [v2, v0];
-      [v1, v3] = [v3, v1];
-    }
-    // 负宽度 → 左右翻转
-    if (flipW) {
-      [u0, u1] = [u1, u0];
-      [u3, u2] = [u2, u3];
-    }
-    uvArr[i] = u0;
-    uvArr[i + 1] = v0;
-    uvArr[i + 2] = u1;
-    uvArr[i + 3] = v1;
-    uvArr[i + 4] = u2;
-    uvArr[i + 5] = v2;
-    uvArr[i + 6] = u3;
-    uvArr[i + 7] = v3;
+  if (c.uv?.length >= 2) {
+    const [u, v] = c.uv;
+    const x = sx,
+      y = sy,
+      z = sz;
+    const uvData = [
+      [u, v + z, z, y],
+      [u + z + x, v + z, z, y],
+      [u + z + x, v + z, -x, -z],
+      [u + z + x + x, v, -x, z],
+      [u + z + z + x, v + z, x, y],
+      [u + z, v + z, x, y],
+    ];
+    return uvData.map(([fu, fv, fw, fh]) => [
+      fu / texW,
+      fv / texH,
+      (fu + fw) / texW,
+      fv / texH,
+      fu / texW,
+      (fv + fh) / texH,
+      (fu + fw) / texW,
+      (fv + fh) / texH,
+    ]);
   }
+  return null;
+}
 
-  geo.setAttribute("uv", new THREE.BufferAttribute(uvArr, 2));
+function eulerToQuaternionJS(rxDeg, ryDeg, rzDeg) {
+  const rx = (rxDeg * Math.PI) / 180,
+    ry = (ryDeg * Math.PI) / 180,
+    rz = (rzDeg * Math.PI) / 180;
+  const cosX = Math.cos(rx),
+    sinX = Math.sin(rx);
+  const cosY = Math.cos(ry),
+    sinY = Math.sin(ry);
+  const cosZ = Math.cos(rz),
+    sinZ = Math.sin(rz);
+  const m00 = cosY * cosZ,
+    m01 = -cosY * sinZ,
+    m02 = sinY;
+  const m10 = cosX * sinZ + sinX * sinY * cosZ,
+    m11 = cosX * cosZ - sinX * sinY * sinZ,
+    m12 = -sinX * cosY;
+  const m20 = sinX * sinZ - cosX * sinY * cosZ,
+    m21 = sinX * cosZ + cosX * sinY * sinZ,
+    m22 = cosX * cosY;
+  const trace = m00 + m11 + m22;
+  let qw, qx, qy, qz;
+  if (trace > 0) {
+    const s = 0.5 / Math.sqrt(trace + 1);
+    qw = 0.25 / s;
+    qx = (m21 - m12) * s;
+    qy = (m02 - m20) * s;
+    qz = (m10 - m01) * s;
+  } else if (m00 > m11 && m00 > m22) {
+    const s = 2 * Math.sqrt(1 + m00 - m11 - m22);
+    qw = (m21 - m12) / s;
+    qx = 0.25 * s;
+    qy = (m01 + m10) / s;
+    qz = (m02 + m20) / s;
+  } else if (m11 > m22) {
+    const s = 2 * Math.sqrt(1 + m11 - m00 - m22);
+    qw = (m02 - m20) / s;
+    qx = (m01 + m10) / s;
+    qy = 0.25 * s;
+    qz = (m12 + m21) / s;
+  } else {
+    const s = 2 * Math.sqrt(1 + m22 - m00 - m11);
+    qw = (m10 - m01) / s;
+    qx = (m02 + m20) / s;
+    qy = (m12 + m21) / s;
+    qz = 0.25 * s;
+  }
+  return [qx, qy, qz, qw];
 }

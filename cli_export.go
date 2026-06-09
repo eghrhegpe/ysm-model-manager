@@ -137,10 +137,8 @@ type Issue struct {
 }
 
 func runDoctor(args []string) {
-	fixMode := false
 	remaining := args
 	if len(args) > 0 && (args[0] == "--fix" || args[0] == "-f") {
-		fixMode = true
 		remaining = args[1:]
 	}
 	if len(remaining) < 1 {

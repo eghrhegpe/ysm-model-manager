@@ -65,6 +65,7 @@ export function bindRepoEvents(sr, ctx) {
     const btn = sr.querySelector(".ws-dl-selected");
     if (btn) {
       btn.textContent = "⬇️ 下载选中 (" + checked + ")";
+      btn.disabled = checked === 0;
       btn.style.opacity = checked > 0 ? "1" : ".4";
       btn.style.pointerEvents = checked > 0 ? "auto" : "none";
     }

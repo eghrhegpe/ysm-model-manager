@@ -38,6 +38,7 @@
     - `drop` 阶段优先用 `dataTransfer.items` + `webkitGetAsEntry()`，兜底用 `dataTransfer.files`
     - `FileSystemEntry.file(callback)` 是回调，须用 `new Promise` 包装
     - `DataTransferItem` 没有 `.name` 属性（`File` 才有）
+18. **调试日志用完即删** — 添加的调试日志（`console.log`/`fmt.Print` 等）在测试完成后，**必须请示用户确认无误后再删除**，不可自行决定删留。
 
 ## 项目结构速查
 
@@ -79,7 +80,37 @@ app-xxx/events.js    — 事件绑定
 app-xxx/utils.js     — 组件工具（可选）
 ```
 
-### 约束
+### 3D 渲染标准（2026-06-09 强制执行）
+
+### UV 映射
+
+- **只用 YSMViewer 、 BlockBench的 `expandBoxUV` + 自定义 `BufferGeometry`**，禁止使用旧版 `applyBoxUV`/`applyFaceUV` + `BoxGeometry`
+- UV 坐标**不翻转 V**（`tex.flipY = false` 时，`v0 = fv / texH` 直接使用，不加 `1 -`）
+- Origin X **不取反**（匹配 YSMViewer `ThreeJsPayloadBuilder.cs` 的 `cube.Origin.X - cube.Size.X`）
+- vertex 顺序: YSMViewer 的 East/West/Up/Down/South/North
+- Mesh 位置 = `cube.pivot`（顶点已相对 pivot 偏移，Group 在原点）
+
+### 材质
+
+- `transparent: true`（纹理带透明通道时），不用 alphaTest
+- `DoubleSide`
+- `NearestFilter` 纹理过滤
+
+### 骨骼层级
+
+- 遵循 YSMViewer 的完整骨骼父子层级（`bone.parent`），不得扁平化
+- 骨骼 Group 位于骨骼的 pivot 点，子骨骼 Group 位于相对父骨骼的本地偏移
+- Cube Mesh 位置 = `cube.pivot - bone.pivot`（相对骨骼 Group 的本地坐标）
+- 不显示骨骼名标签（用户不需要）
+- 不支持动画播放（用户不需要，纯静态渲染）
+
+### 存档
+
+- YSMViewer 版本备份在 `docs/model3d-ysm-attempt.js`
+- 当前稳定版保存在 `docs/model3d.js`
+- 旧版 `applyBoxUV`/`applyFaceUV` + `BoxGeometry` 方案永久废弃，不允许再提及或恢复
+
+## 约束
 
 - **按职责切文件**：一个文件放一个可独立工作的功能（如 DnD、同步、上传各一文件），不按行数机械切割。300-700 行的单一职责文件比拆成 5 个 80 行但耦合紧密的小文件更好维护。
 - 新组件放 `components/app-xxx/`，工具函数放 `utils/`

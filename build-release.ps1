@@ -48,6 +48,16 @@ if ($LASTEXITCODE -ne 0) {
     Copy-Item "$ProjectRoot\build\bin\$ExeName" "$OutputDir\$ExeName"
 }
 
+# 2b. 构建 CLI 工具
+Write-Host "🔧 构建 CLI 工具 ysm-cli.exe ..." -ForegroundColor Yellow
+Set-Location $ProjectRoot
+go build -tags cli -ldflags "-X ysm-model-manager/go/version.Version=$VerTag" -o "$OutputDir\ysm-cli.exe" . 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "⚠️ CLI 构建失败（不影响主程序）" -ForegroundColor Yellow
+} else {
+    Write-Host "   ✅ ysm-cli.exe 已构建" -ForegroundColor Green
+}
+
 # 3. 复制配置文件
 Write-Host "📋 复制资源配置..." -ForegroundColor Yellow
 Copy-Item "$ProjectRoot\workshop_sites.json" "$OutputDir\" -ErrorAction SilentlyContinue

@@ -4,14 +4,26 @@ package threejs
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"ysm-model-manager/go/types"
 )
+
+func itoa(i int) string     { return fmt.Sprint(i) }
+func ftoa(v [3]float64) string { return fmt.Sprintf("[%.4f,%.4f,%.4f]", v[0], v[1], v[2]) }
+func ftoa3(v vec3) string       { return fmt.Sprintf("[%.4f,%.4f,%.4f]", v.x, v.y, v.z) }
+func ptrStr(p *string) string {
+	if p == nil {
+		return "nil"
+	}
+	return *p
+}
 
 // ===== JSON 数据模型 =====
 
 type Model3DSpec struct {
 	Models []ModelGroup `json:"models"`
+	Debug  []string      `json:"_debug,omitempty"`
 }
 
 type ModelGroup struct {
@@ -73,6 +85,8 @@ func Build(model types.BedrockModel) (string, error) {
 	var bones []BoneData
 	var meshes []MeshData
 	boneIdx := make(map[string]int) // name → index in bones[]
+	var debugLog []string
+	debugLog = append(debugLog, "总骨骼数="+itoa(len(model.Bones)))
 
 	for _, b := range model.Bones {
 		bp := pivots[b.Name]
@@ -101,10 +115,18 @@ func Build(model types.BedrockModel) (string, error) {
 
 		// 同名骨骼：保留第一次出现的层级信息，仅追加 cubes
 		if idx, exists := boneIdx[b.Name]; exists {
-			// 不覆盖 bones[idx]，保留首次加载的层级（arm.json 的 parent/pivot 正确）
-			// cubes 在下方统一追加
-			_ = idx
+			debugLog = append(debugLog, "重复="+b.Name+" 现有parent="+ptrStr(bones[idx].ParentID)+" 新parent="+b.Parent)
+			// 如果现有骨骼没有 parent 但当前骨骼有 parent → 补全层级
+			// 多文件合并时，main.json 的扁平骨骼先到，arm.json 的正确层级后到
+			if bones[idx].ParentID == nil && b.Parent != "" {
+				bones[idx].ParentID = &b.Parent
+				bones[idx].LocalPosition = localPos
+				debugLog = append(debugLog, "  补全parent="+b.Parent+" localPos="+ftoa(localPos))
+			} else if b.Parent != "" {
+				debugLog = append(debugLog, "  未更新：现有parent非空或新parent为空")
+			}
 		} else {
+			debugLog = append(debugLog, "新增="+b.Name+" parent="+b.Parent+" pivot="+ftoa3(bp))
 			boneIdx[b.Name] = len(bones)
 			bones = append(bones, BoneData{
 				ID:            b.Name,
@@ -116,12 +138,43 @@ func Build(model types.BedrockModel) (string, error) {
 		}
 
 		// 所有 cube 全部追加（同名骨骼的 cube 也纳入）
-		// 使用当前骨骼自身的 pivot（而非共享 pivots map），避免同名骨骼 pivot 不同导致偏移
-		bpSelf := vec3{-b.Pivot[0], b.Pivot[1], b.Pivot[2]}
+		// 使用统一的 bone pivot（首次出现的 pivot），确保所有 cube 相对于同一根骨骼位置
+		bonePivot, hasPivot := pivots[b.Name]
+		if !hasPivot {
+			bonePivot = vec3{-b.Pivot[0], b.Pivot[1], b.Pivot[2]}
+		}
 		for ci, c := range b.Cubes {
-			meshData := buildCubeMeshData(c, bpSelf, texW, texH, b.Name, ci)
+			meshData := buildCubeMeshData(c, bonePivot, texW, texH, b.Name, ci)
 			if meshData != nil {
 				meshes = append(meshes, *meshData)
+			}
+		}
+	}
+
+	// 后处理：将 RightArm/LeftArm 挂到 Arm 下面（YSMParser 解码 .ysm 后丢失的层级）
+	for i := range bones {
+		if bones[i].Name == "RightArm" && bones[i].ParentID == nil {
+			for j := range bones {
+				if bones[j].Name == "Arm" && bones[j].ParentID != nil {
+					raPivot := pivots["RightArm"]
+					armPivot := pivots["Arm"]
+					bones[i].ParentID = &bones[j].Name
+					bones[i].LocalPosition = [3]float64{raPivot.x - armPivot.x, raPivot.y - armPivot.y, raPivot.z - armPivot.z}
+					debugLog = append(debugLog, "后处理: RightArm->Arm localPos="+ftoa(bones[i].LocalPosition))
+					break
+				}
+			}
+		}
+		if bones[i].Name == "LeftArm" && bones[i].ParentID == nil {
+			for j := range bones {
+				if bones[j].Name == "Arm" && bones[j].ParentID != nil {
+					laPivot := pivots["LeftArm"]
+					armPivot := pivots["Arm"]
+					bones[i].ParentID = &bones[j].Name
+					bones[i].LocalPosition = [3]float64{laPivot.x - armPivot.x, laPivot.y - armPivot.y, laPivot.z - armPivot.z}
+					debugLog = append(debugLog, "后处理: LeftArm->Arm localPos="+ftoa(bones[i].LocalPosition))
+					break
+				}
 			}
 		}
 	}
@@ -144,6 +197,7 @@ func Build(model types.BedrockModel) (string, error) {
 			Bones:          bones,
 			MeshGroups:     meshes,
 		}},
+		Debug: debugLog,
 	}
 
 	data, err := json.Marshal(spec)

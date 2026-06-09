@@ -73,7 +73,9 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   // 从 Go 获取预计算的 Three.js Spec
   let spec = { models: [] };
   const forceJS = window.$forceJSSpec; // 调试用：设 true 强制走 JS 兜底
-  if (!forceJS) {
+  // 多纹理模型 Go spec 没有 per-mesh 纹理索引，强制走 JS 兜底
+  const multiTex = (model.textures?.length > 1) || false;
+  if (!forceJS && !multiTex) {
     try {
       const jsonStr = await GetModel3DSpec(model._modelPath || "");
       const parsed = JSON.parse(jsonStr);
@@ -140,8 +142,8 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     controls.target.set(0, centerY, 0);
     controls.update();
     let cubeTex = null;
-    if (texMap.size > 0) {
-      const texArr = [...texMap.values()];
+    const texArr = texMap.size > 0 ? [...texMap.values()] : [];
+    if (texArr.length > 0) {
       cubeTex = texArr[texIdx ?? 0] || texArr[0];
     }
     for (const md of mg.meshGroups || []) {
@@ -158,9 +160,13 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
       );
       geo.setAttribute("uv", new THREE.Float32BufferAttribute(md.uvs, 2));
       geo.setIndex(md.indices);
-      const mat = cubeTex
+      // 按 mesh 所属骨骼选择对应纹理（md.texIdx 由 buildSpecFromModel 设置）
+      const meshTex = texArr.length > 0
+        ? texArr[md.texIdx ?? (texIdx ?? 0)] || texArr[0]
+        : null;
+      const mat = meshTex
         ? new THREE.MeshBasicMaterial({
-            map: cubeTex,
+            map: meshTex,
             alphaTest: 0.5,
             side: THREE.DoubleSide,
           })
@@ -275,10 +281,17 @@ function buildSpecFromModel(model) {
     // cubes 全部追加（同名骨骼的也加入）
     // 使用统一的 bone pivot（首次出现的 pivot），确保所有 cube 相对于同一根骨骼位置
     const fp = firstPivot[b.name] || bp;
+    // 用骨骼自身所属几何体的纹理尺寸算 UV（YSMViewer 每几何体独立处理）
+    const bTexW = b._texWidth || texW;
+    const bTexH = b._texHeight || texH;
     for (let ci = 0; ci < (b.cubes || []).length; ci++) {
       const c = b.cubes[ci];
-      const md = buildCubeMeshDataJS(c, fp, texW, texH, b.name, ci);
-      if (md) meshes.push(md);
+      const md = buildCubeMeshDataJS(c, fp, bTexW, bTexH, b.name, ci);
+      if (md) {
+        // 标记此 mesh 所属骨骼的纹理索引（多纹理模型用）
+        md.texIdx = b._texIdx ?? 0;
+        meshes.push(md);
+      }
     }
   }
 

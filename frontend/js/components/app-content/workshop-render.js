@@ -152,7 +152,7 @@ export function renderModelList(
     } else {
       // 大小 + 下载按钮放在右侧
       const rightGroup = document.createElement("div");
-      rightGroup.className = "ws-right";
+      rightGroup.className = "ws-row-right";
 
       const sizeSpan = document.createElement("span");
       sizeSpan.className = "ws-size";

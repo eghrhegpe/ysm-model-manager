@@ -227,8 +227,33 @@ func (a *App) startup(ctx context.Context) {
 		runtime.WindowSetPosition(ctx, pos.X, pos.Y)
 	}
 
-	// 通过 runtime.EventsEmit 通知前端配置已加载
+	// 确保配置文件存在（如果被删除则重建）
 	cfg := a.LoadAppConfig()
+	needsWrite := false
+	if _, err := os.Stat(configPath()); os.IsNotExist(err) {
+		// 配置文件不存在 → 创建默认文件
+		needsWrite = true
+	}
+	if cfg.McRoot == "" {
+		paths := scanMinecraftDirs()
+		if len(paths) > 0 {
+			cfg.McRoot = paths[0]
+			needsWrite = true
+		}
+	}
+	if cfg.RepoRoot == "" && a.RepoRoot != "" {
+		cfg.RepoRoot = a.RepoRoot
+		needsWrite = true
+	}
+	if needsWrite {
+		if data, err := json.MarshalIndent(cfg, "", "  "); err == nil {
+			os.WriteFile(configPath(), data, 0644)
+			if cfg.McRoot != "" {
+				println("[startup] 配置文件已创建/更新, mcRoot:", cfg.McRoot)
+			}
+		}
+	}
+
 	runtime.EventsEmit(ctx, "config-loaded", cfg.RepoRoot, cfg.McRoot, cfg.LinkMode)
 
 	// 启动文件监听器（自动同步启用/禁用状态到整合包）
@@ -291,18 +316,11 @@ func (a *App) loadAppConfig() {
 }
 
 func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode, theme string) error {
-	mcValidated := mcRoot
-	// 自动修正 MC 目录
-	if mcRoot != "" {
-		validated, errMsg := a.ValidateMinecraftDir(mcRoot)
-		if errMsg != "" {
-			return fmt.Errorf("%s", errMsg)
-		}
-		mcValidated = validated
-	}
+	// 无论校验是否通过，先保存配置（防止因校验失败导致文件无法创建）
+	// mcRoot 校验放在前端做提示即可，不阻塞保存
 	cfg := types.AppConfig{
 		RepoRoot: repoRoot,
-		McRoot:   mcValidated,
+		McRoot:   mcRoot,
 		LinkMode: linkMode,
 		Theme:    theme,
 		Mirror:   a.LoadAppConfig().Mirror,
@@ -310,7 +328,14 @@ func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode, theme string) error {
 	data, _ := json.MarshalIndent(cfg, "", "  ")
 	err := os.WriteFile(configPath(), data, 0644)
 	if err == nil {
-		a.restartWatcher(repoRoot, mcValidated)
+		// 校验通过才启动 watcher
+		if mcRoot != "" {
+			if validated, errMsg := a.ValidateMinecraftDir(mcRoot); errMsg == "" {
+				a.restartWatcher(repoRoot, validated)
+			}
+		} else {
+			a.restartWatcher(repoRoot, "")
+		}
 	}
 	return err
 }

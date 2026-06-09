@@ -834,36 +834,28 @@ class AppPreview extends HTMLElement {
               `[YSM] ✅ ${f.path}: ${parsed.bones.length}骨 ${parsed.cubeCount}方`,
             );
 
-            // 为这个模型寻找匹配纹理
-            const modelName = f.path
-              .split("/")
-              .pop()
-              .replace(/\.json$/, "");
-            let texIdx = 0;
-            if (ysmTexOrder?.length === 1) {
-              // 仅一张主纹理 → 所有模型都用它（arm.json 也用主纹理）
-              texIdx = 0;
-            } else {
-              // 多纹理：按文件名匹配
-              const matchKey = orderedTexKeys.find(
-                (k) =>
-                  k.toLowerCase().includes(modelName.toLowerCase()) ||
-                  modelName.toLowerCase().includes(k.toLowerCase()),
+            // 为这个模型寻找匹配纹理：按模型文件顺序对应纹理顺序
+            // YSM ysm.json 中纹理列表顺序与模型文件顺序一致
+            const texIdx =
+              ysmTexOrder?.length === 1
+                ? 0 // 仅一张主纹理 → 所有模型都用它
+                : Math.min(modelIdx, orderedTexKeys.length - 1);
+            if (ysmTexOrder?.length > 1) {
+              console.log(
+                `[YSM] ${f.path.split("/").pop()} → 纹理[${texIdx}] (模型顺序分配)`,
               );
-              texIdx =
-                matchKey !== undefined
-                  ? orderedTexKeys.indexOf(matchKey)
-                  : Math.min(modelIdx, orderedTexKeys.length - 1);
             }
             const texUrl =
               orderedTexKeys.length > 0
                 ? textures[orderedTexKeys[texIdx]]
                 : null;
 
-            // 标记每个骨骼的纹理索引
+            // 标记每个骨骼的纹理索引和所属几何体的纹理尺寸
             for (const b of parsed.bones) {
               b._texIdx = texIdx;
               b._texUrl = texUrl;
+              b._texWidth = parsed.texWidth || 64;
+              b._texHeight = parsed.texHeight || 64;
             }
             allBones.push(...parsed.bones);
             modelIdx++;

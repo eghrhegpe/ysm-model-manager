@@ -10,11 +10,6 @@ import {
   bindBusUpdates,
 } from "./events.js";
 import { loadInstances } from "./loader.js";
-import {
-  SelectDirectory,
-  SaveAppConfig,
-  LoadAppConfig,
-} from "../../../wailsjs/go/main/App.js";
 
 class AppSidebar extends HTMLElement {
   constructor() {
@@ -29,31 +24,6 @@ class AppSidebar extends HTMLElement {
 
   async connectedCallback() {
     this._renderLayout();
-
-    // 监听选择游戏目录
-    this._unsubs.push(
-      bus.on("dir:select-mc", async () => {
-        try {
-          const dir = await SelectDirectory();
-          if (!dir) return;
-          const cfg = await LoadAppConfig();
-          const theme = localStorage.getItem("theme") || "dark";
-          await SaveAppConfig(
-            cfg.repoRoot || "",
-            dir,
-            cfg.linkMode || "copy",
-            theme,
-          );
-        } catch (e) {
-          bus.emit("toast:show", {
-            msg: "⚠️ " + (e?.message || e),
-            duration: 5000,
-            type: "warn",
-          });
-        }
-        await this._reload();
-      }),
-    );
 
     // 监听刷新事件
     this._unsubs.push(

@@ -100,7 +100,10 @@ export function bindSearch(root, vm) {
 export function bindFooter(root, instances) {
   const btn = root.getElementById("btn-mc");
   if (btn) {
-    btn.onclick = () => bus.emit("dir:select-mc");
+    // 点击跳转到设置页的游戏根目录配置（合并重复入口）
+    btn.onclick = () => {
+      bus.emit("navigate:settings", { section: "mc" });
+    };
     (async () => {
       try {
         const { LoadAppConfig, SaveAppConfig, GetMinecraftPaths } =

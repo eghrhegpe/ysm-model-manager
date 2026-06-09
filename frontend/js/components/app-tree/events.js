@@ -246,7 +246,13 @@ export function bindTreeEvents(container, vm) {
 export function bindToolbarEvents(root, vm) {
   const $ = (id) => root.getElementById(id);
   const r = () => vm._renderTree();
-  const closeDD = () => { clearTimeout(ddTimer); ddTimer = null; root.querySelectorAll(".dd-menu.show").forEach(m => m.classList.remove("show")); };
+  const closeDD = () => {
+    clearTimeout(ddTimer);
+    ddTimer = null;
+    root
+      .querySelectorAll(".dd-menu.show")
+      .forEach((m) => m.classList.remove("show"));
+  };
 
   // 搜索/排序
   $("srch")?.addEventListener("input", (e) => {
@@ -275,18 +281,31 @@ export function bindToolbarEvents(root, vm) {
     const wrap = menu.parentNode;
     btn.addEventListener("mouseenter", () => {
       clearTimeout(ddTimer);
-      ddTimer = setTimeout(() => { if (!menu.classList.contains("show")) { closeDD(); openFn(menu); menu.classList.add("show"); } }, 330);
+      ddTimer = setTimeout(() => {
+        if (!menu.classList.contains("show")) {
+          closeDD();
+          openFn(menu);
+          menu.classList.add("show");
+        }
+      }, 330);
     });
-    btn.addEventListener("mouseleave", () => { clearTimeout(ddTimer); });
+    btn.addEventListener("mouseleave", () => {
+      clearTimeout(ddTimer);
+    });
     // 外层 wrap 统一处理离开关闭
     wrap.addEventListener("mouseleave", (e) => {
       if (wrap.contains(e.relatedTarget)) return;
       ddTimer = setTimeout(closeDD, 270);
     });
-    wrap.addEventListener("mouseenter", () => { clearTimeout(ddTimer); });
+    wrap.addEventListener("mouseenter", () => {
+      clearTimeout(ddTimer);
+    });
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (menu.classList.contains("show")) { closeDD(); return; }
+      if (menu.classList.contains("show")) {
+        closeDD();
+        return;
+      }
       openFn(menu);
       menu.classList.add("show");
     });
@@ -296,9 +315,15 @@ export function bindToolbarEvents(root, vm) {
   const menuAuthors = $("menu-authors");
   addHoverDD($("btn-authors"), menuAuthors, (menu) => {
     const authors = window._treeAuthors || [];
-    if (!authors.length) { menu.innerHTML = "<div style='padding:8px;font-size:9px;color:var(--muted)'>无作者数据</div>"; return; }
-    menu.innerHTML = authors.map(a => `<button class="dd-item" data-author="${a}">🎨 ${a}</button>`).join("");
-    menu.querySelectorAll(".dd-item").forEach(el => {
+    if (!authors.length) {
+      menu.innerHTML =
+        "<div style='padding:8px;font-size:9px;color:var(--muted)'>无作者数据</div>";
+      return;
+    }
+    menu.innerHTML = authors
+      .map((a) => `<button class="dd-item" data-author="${a}">🎨 ${a}</button>`)
+      .join("");
+    menu.querySelectorAll(".dd-item").forEach((el) => {
       el.addEventListener("click", () => {
         const srch = root.getElementById("srch");
         if (!srch) return;
@@ -311,11 +336,23 @@ export function bindToolbarEvents(root, vm) {
   });
 
   // 纹理下拉
-  const texOpts = [{ label: "任意", val: "" }, { label: "64×64", val: "64" }, { label: "128×128", val: "128" }, { label: "256×256", val: "256" }, { label: "512×512", val: "512" }, { label: "1024×1024", val: "1024" }];
+  const texOpts = [
+    { label: "任意", val: "" },
+    { label: "64×64", val: "64" },
+    { label: "128×128", val: "128" },
+    { label: "256×256", val: "256" },
+    { label: "512×512", val: "512" },
+    { label: "1024×1024", val: "1024" },
+  ];
   const menuTex = $("menu-tex");
   addHoverDD($("btn-tex"), menuTex, (menu) => {
-    menu.innerHTML = texOpts.map(t => `<button class="dd-item" data-val="${t.val}">${t.label}</button>`).join("");
-    menu.querySelectorAll(".dd-item").forEach(el => {
+    menu.innerHTML = texOpts
+      .map(
+        (t) =>
+          `<button class="dd-item" data-val="${t.val}">${t.label}</button>`,
+      )
+      .join("");
+    menu.querySelectorAll(".dd-item").forEach((el) => {
       el.addEventListener("click", () => {
         const val = el.dataset.val;
         $("btn-tex").textContent = val ? `📐 ${val}×${val} ▾` : "📐 纹理 ▾";
@@ -338,13 +375,18 @@ export function bindToolbarEvents(root, vm) {
   batchWrap.appendChild(menuBatch);
   addHoverDD(batchBtn, menuBatch, (menu) => {
     menu.innerHTML = `<button class="dd-item" id="batch-ea-dd">✅ 全部启用</button><button class="dd-item" id="batch-da-dd">⛔ 全部禁用</button>`;
-    menu.querySelector("#batch-ea-dd")?.addEventListener("click", () => { bus.emit("batch:enable-all"); closeDD(); });
-    menu.querySelector("#batch-da-dd")?.addEventListener("click", () => { bus.emit("batch:disable-all"); closeDD(); });
+    menu.querySelector("#batch-ea-dd")?.addEventListener("click", () => {
+      bus.emit("batch:enable-all");
+      closeDD();
+    });
+    menu.querySelector("#batch-da-dd")?.addEventListener("click", () => {
+      bus.emit("batch:disable-all");
+      closeDD();
+    });
   });
 
   // 筛选：动态创建/移除
   $("btn-filter-toggle")?.addEventListener("click", () => {
-
     const c = root.getElementById("hdr-container");
     if (!c) return;
     // 如果批量已展开，先关掉
@@ -363,8 +405,14 @@ export function bindToolbarEvents(root, vm) {
     const inputs = c.querySelectorAll("input, select");
     let ft;
     inputs.forEach((el) => {
-      el.addEventListener("input", () => { clearTimeout(ft); ft = setTimeout(() => runFilter(root), 300); });
-      el.addEventListener("change", () => { clearTimeout(ft); ft = setTimeout(() => runFilter(root), 300); });
+      el.addEventListener("input", () => {
+        clearTimeout(ft);
+        ft = setTimeout(() => runFilter(root), 300);
+      });
+      el.addEventListener("change", () => {
+        clearTimeout(ft);
+        ft = setTimeout(() => runFilter(root), 300);
+      });
     });
     runFilter(root);
   });
@@ -377,18 +425,34 @@ export function bindToolbarEvents(root, vm) {
     const btn = $("repo-genindex");
     btn.textContent = "⏳";
     try {
-      const { LoadAppConfig, GenerateRepoIndex } = await import("../../../wailsjs/go/main/App.js");
+      const { LoadAppConfig, GenerateRepoIndex } =
+        await import("../../../wailsjs/go/main/App.js");
       const cfg = await LoadAppConfig();
       if (!cfg.repoRoot) {
-        bus.emit("toast:show", { msg: "请先在设置中配置仓库目录", duration: 2000, type: "warn" });
-        btn.textContent = "📇 索引"; return;
+        bus.emit("toast:show", {
+          msg: "请先在设置中配置仓库目录",
+          duration: 2000,
+          type: "warn",
+        });
+        btn.textContent = "📇 索引";
+        return;
       }
       await GenerateRepoIndex(cfg.repoRoot);
-      bus.emit("toast:show", { msg: "✅ index.json 已生成", duration: 3000, type: "success" });
+      bus.emit("toast:show", {
+        msg: "✅ index.json 已生成",
+        duration: 3000,
+        type: "success",
+      });
       btn.textContent = "✅";
-      setTimeout(() => { btn.textContent = "📇 索引"; }, 3000);
+      setTimeout(() => {
+        btn.textContent = "📇 索引";
+      }, 3000);
     } catch (e) {
-      bus.emit("toast:show", { msg: "❌ 索引失败: " + String(e), duration: 4000, type: "error" });
+      bus.emit("toast:show", {
+        msg: "❌ 索引失败: " + String(e),
+        duration: 4000,
+        type: "error",
+      });
       btn.textContent = "📇 索引";
     }
   });
@@ -398,28 +462,48 @@ export function bindToolbarEvents(root, vm) {
     const btn = $("repo-export-bones");
     btn.textContent = "⏳";
     try {
-      const { LoadAppConfig, ExportBoneStructures } = await import("../../../wailsjs/go/main/App.js");
+      const { LoadAppConfig, ExportBoneStructures } =
+        await import("../../../wailsjs/go/main/App.js");
       const cfg = await LoadAppConfig();
       if (!cfg.repoRoot) {
-        bus.emit("toast:show", { msg: "请先在设置中配置仓库目录", duration: 2000, type: "warn" });
-        btn.textContent = "📋 骨骼"; return;
+        bus.emit("toast:show", {
+          msg: "请先在设置中配置仓库目录",
+          duration: 2000,
+          type: "warn",
+        });
+        btn.textContent = "📋 骨骼";
+        return;
       }
       const text = await ExportBoneStructures(cfg.repoRoot);
       const a = document.createElement("a");
       a.download = `bone-structures-${new Date().toISOString().slice(0, 10)}.txt`;
-      a.href = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      a.href = URL.createObjectURL(
+        new Blob([text], { type: "text/plain;charset=utf-8" }),
+      );
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(a.href);
-      bus.emit("toast:show", { msg: "✅ 骨骼结构已导出", duration: 3000, type: "success" });
+      bus.emit("toast:show", {
+        msg: "✅ 骨骼结构已导出",
+        duration: 3000,
+        type: "success",
+      });
       btn.textContent = "✅";
-      setTimeout(() => { btn.textContent = "📋 骨骼"; }, 3000);
+      setTimeout(() => {
+        btn.textContent = "📋 骨骼";
+      }, 3000);
     } catch (e) {
-      bus.emit("toast:show", { msg: "❌ 导出失败: " + String(e?.message || e), duration: 4000, type: "error" });
+      bus.emit("toast:show", {
+        msg: "❌ 导出失败: " + String(e?.message || e),
+        duration: 4000,
+        type: "error",
+      });
       btn.textContent = "📋 骨骼";
     }
   });
 
-  $("btn-repo")?.addEventListener("click", () => bus.emit("dir:select-repo"));
+  $("btn-repo")?.addEventListener("click", () => bus.emit("navigate:settings"));
   $("btn-dedup")?.addEventListener("click", () => bus.emit("entries:dedup"));
   $("btn-trash")?.addEventListener("click", () => bus.emit("recycle:open"));
   $("btn-pv")?.addEventListener("click", () => bus.emit("preview:toggle"));
@@ -504,7 +588,8 @@ async function runFilter(root) {
     const maxB = parseInt(root.getElementById("filter-bones-max")?.value) || 0;
     const minC = parseInt(root.getElementById("filter-cubes-min")?.value) || 0;
     const maxC = parseInt(root.getElementById("filter-cubes-max")?.value) || 0;
-    const texVal = root.getElementById("btn-tex")?.textContent?.match(/(\d+)×/)?.[1] || "";
+    const texVal =
+      root.getElementById("btn-tex")?.textContent?.match(/(\d+)×/)?.[1] || "";
     const minT = texVal ? parseInt(texVal) : 0;
     const maxT = texVal ? parseInt(texVal) : 0;
     const countEl = root.getElementById("filter-count");

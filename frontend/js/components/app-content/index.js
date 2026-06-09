@@ -41,8 +41,14 @@ class AppContent extends HTMLElement {
       bus.emit("nav:changed", { page });
       this._render();
     });
+    // 侧栏/仓库头按钮跳转到设置页
+    this._globalUnsubs.push(
+      bus.on("navigate:settings", () => {
+        bus.emit("nav:change", { page: "settings" });
+      }),
+    );
     this._render();
-    this._globalUnsubs = registerGlobalHandlers();
+    this._globalUnsubs.push(...registerGlobalHandlers());
   }
 
   disconnectedCallback() {

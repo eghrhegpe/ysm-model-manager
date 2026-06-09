@@ -45,6 +45,8 @@ export function EnqueueDownloads(arg1:Array<main.DownloadTask>):Promise<void>;
 
 export function ExportBoneStructures(arg1:string):Promise<string>;
 
+export function ExportModelStructureJSON(arg1:string):Promise<string>;
+
 export function ExportWorkshopCreatorsJSONFile():Promise<string>;
 
 export function ExportWorkshopSitesCSV():Promise<string>;

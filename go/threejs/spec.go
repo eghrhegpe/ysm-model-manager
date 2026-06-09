@@ -12,6 +12,7 @@ import (
 func itoa(i int) string     { return fmt.Sprint(i) }
 func ftoa(v [3]float64) string { return fmt.Sprintf("[%.4f,%.4f,%.4f]", v[0], v[1], v[2]) }
 func ftoa3(v vec3) string       { return fmt.Sprintf("[%.4f,%.4f,%.4f]", v.x, v.y, v.z) }
+func ftoaRot(v [4]float64) string { return fmt.Sprintf("[%.4f,%.4f,%.4f,%.4f]", v[0], v[1], v[2], v[3]) }
 func ptrStr(p *string) string {
 	if p == nil {
 		return "nil"
@@ -74,11 +75,16 @@ func Build(model types.BedrockModel) (string, error) {
 		texH = 64
 	}
 
-	// 收集 bone pivots 用于层级计算（同名骨骼保留首次出现的 pivot）
+	// 收集 bone pivots 用于层级计算（同名骨骼优先保留有 parent 的 pivot）
+	// 多文件合并时，main.json 的骨骼有正确层级，应覆盖 arm.json 的扁平版本
 	pivots := make(map[string]vec3)
 	for _, b := range model.Bones {
+		np := vec3{-b.Pivot[0], b.Pivot[1], b.Pivot[2]}
 		if _, exists := pivots[b.Name]; !exists {
-			pivots[b.Name] = vec3{-b.Pivot[0], b.Pivot[1], b.Pivot[2]}
+			pivots[b.Name] = np
+		} else if b.Parent != "" {
+			// 同名骨骼且当前有 parent → 用当前 pivot 覆盖（main.json 的正确层级优先）
+			pivots[b.Name] = np
 		}
 	}
 
@@ -115,13 +121,15 @@ func Build(model types.BedrockModel) (string, error) {
 
 		// 同名骨骼：保留第一次出现的层级信息，仅追加 cubes
 		if idx, exists := boneIdx[b.Name]; exists {
-			debugLog = append(debugLog, "重复="+b.Name+" 现有parent="+ptrStr(bones[idx].ParentID)+" 新parent="+b.Parent)
+			debugLog = append(debugLog, "重复="+b.Name+" 现有parent="+ptrStr(bones[idx].ParentID)+" 新parent="+b.Parent+" rot="+ftoaRot(localRot))
 			// 如果现有骨骼没有 parent 但当前骨骼有 parent → 补全层级
-			// 多文件合并时，main.json 的扁平骨骼先到，arm.json 的正确层级后到
+			// 多文件合并时，arm.json 的扁平骨骼先到，main.json 的正确层级后到
 			if bones[idx].ParentID == nil && b.Parent != "" {
 				bones[idx].ParentID = &b.Parent
 				bones[idx].LocalPosition = localPos
-				debugLog = append(debugLog, "  补全parent="+b.Parent+" localPos="+ftoa(localPos))
+				// 也更新 rotation（有 parent 的骨骼可能有不同的旋转）
+				bones[idx].LocalRotation = localRot
+				debugLog = append(debugLog, "  补全parent="+b.Parent+" localPos="+ftoa(localPos)+" rot="+ftoaRot(localRot))
 			} else if b.Parent != "" {
 				debugLog = append(debugLog, "  未更新：现有parent非空或新parent为空")
 			}

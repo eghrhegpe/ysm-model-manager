@@ -22,6 +22,7 @@ import (
 	"ysm-model-manager/go/logs"
 	"ysm-model-manager/go/recycle"
 	ysmsync "ysm-model-manager/go/sync"
+	"ysm-model-manager/go/threejs"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/updater"
 	"ysm-model-manager/go/version"
@@ -1760,6 +1761,17 @@ func findYSMParser() string {
 	return ""
 }
 
+// GetModel3DSpec 生成 Three.js 可直接消费的 JSON spec（基于 YSMViewer 算法）
+func (a *App) GetModel3DSpec(modelPath string) string {
+	model := a.AnalyzeBedrockModel(modelPath)
+
+	spec, err := threejs.Build(model)
+	if err != nil {
+		return "{}"
+	}
+	return spec
+}
+
 func fileExists(p string) bool {
 	_, err := os.Stat(p)
 	return err == nil
@@ -1769,6 +1781,12 @@ func fileExists(p string) bool {
 func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 	parserPath := findYSMParser()
 	if parserPath == "" {
+		// 尝试 Node.js + WASM 方式解码
+		if data, err := os.ReadFile(modelPath); err == nil {
+			if m := decodeYSMViaNodeJS(data); m != nil {
+				return *m
+			}
+		}
 		return types.BedrockModel{}
 	}
 
@@ -1793,7 +1811,7 @@ func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 		return types.BedrockModel{}
 	}
 
-	var best *types.BedrockModel
+	var merged *types.BedrockModel
 	filepath.WalkDir(outDir, func(p string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(strings.ToLower(p), ".json") {
 			return nil
@@ -1805,18 +1823,25 @@ func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 		if rErr != nil {
 			return nil
 		}
-		if g := parseBedrockGeometry(data); g != nil && (best == nil || g.BoneCount > best.BoneCount) {
-			best = g
+		if g := parseBedrockGeometry(data); g != nil {
+			if merged == nil {
+				merged = g
+			} else {
+				// 合并该 geometry 的 bones 到主模型
+				merged.Bones = append(merged.Bones, g.Bones...)
+				merged.BoneCount += g.BoneCount
+				merged.CubeCount += g.CubeCount
+			}
 		}
 		return nil
 	})
 
-	if best == nil {
+	if merged == nil {
 		return types.BedrockModel{}
 	}
 
 	filepath.WalkDir(outDir, func(p string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() || best.Texture != "" {
+		if err != nil || d.IsDir() || merged.Texture != "" {
 			return nil
 		}
 		low := strings.ToLower(p)
@@ -1826,13 +1851,13 @@ func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 				if strings.HasSuffix(low, ".jpg") {
 					mime = "image/jpeg"
 				}
-				best.Texture = "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+				merged.Texture = "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
 			}
 		}
 		return nil
 	})
 
-	return *best
+	return *merged
 }
 
 // copyFile 复制文件
@@ -1899,17 +1924,10 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 			if geo == nil {
 				geo = g
 			} else {
-				seen := make(map[string]bool, len(geo.Bones))
-				for _, b := range geo.Bones {
-					seen[b.Name] = true
-				}
-				for _, b := range g.Bones {
-					if !seen[b.Name] {
-						geo.Bones = append(geo.Bones, b)
-						geo.BoneCount++
-						geo.CubeCount += len(b.Cubes)
-					}
-				}
+				// 全追加（同名骨骼由 threejs.Build 去重，保留首次层级）
+				geo.Bones = append(geo.Bones, g.Bones...)
+				geo.BoneCount += g.BoneCount
+				geo.CubeCount += g.CubeCount
 			}
 		}
 		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !f.FileInfo().IsDir() && !strings.Contains(low, "avatar/") {
@@ -1952,7 +1970,7 @@ func parseBedrockFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte)
 	var pngs [][]byte
 	for _, f := range reader.File {
 		low := strings.ToLower(f.Name)
-		if strings.HasSuffix(low, ".json") && !strings.Contains(low, "ysm.json") && !strings.Contains(low, "animation") && !strings.Contains(low, "controller") && !f.FileInfo().IsDir() {
+		if strings.HasSuffix(low, ".json") && !strings.Contains(low, "ysm.json") && !f.FileInfo().IsDir() {
 			rc, err := f.Open()
 			if err != nil {
 				continue
@@ -1966,17 +1984,10 @@ func parseBedrockFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte)
 			if geo == nil {
 				geo = g
 			} else {
-				seen := make(map[string]bool, len(geo.Bones))
-				for _, b := range geo.Bones {
-					seen[b.Name] = true
-				}
-				for _, b := range g.Bones {
-					if !seen[b.Name] {
-						geo.Bones = append(geo.Bones, b)
-						geo.BoneCount++
-						geo.CubeCount += len(b.Cubes)
-					}
-				}
+				// 全追加（同名骨骼由 threejs.Build 去重，保留首次层级）
+				geo.Bones = append(geo.Bones, g.Bones...)
+				geo.BoneCount += g.BoneCount
+				geo.CubeCount += g.CubeCount
 			}
 		}
 		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !f.FileInfo().IsDir() && !strings.Contains(low, "avatar/") {
@@ -2007,6 +2018,7 @@ func parseBedrockGeometry(data []byte) *types.BedrockModel {
 				Name   string        `json:"name"`
 				Parent string        `json:"parent,omitempty"`
 				Pivot  [3]float64    `json:"pivot"`
+				Rotation json.RawMessage `json:"rotation,omitempty"`
 				Cubes []struct {
 					Origin   [3]float64     `json:"origin"`
 					Size     [3]float64     `json:"size"`
@@ -2056,10 +2068,15 @@ func parseBedrockGeometry(data []byte) *types.BedrockModel {
 				Rotation: rot,
 			})
 		}
+		var boneRot [3]float64
+		if len(b.Rotation) > 0 {
+			json.Unmarshal(b.Rotation, &boneRot)
+		}
 		model.Bones = append(model.Bones, types.Bone2D{
 			Name:   b.Name,
 			Parent: b.Parent,
 			Pivot:  b.Pivot,
+			Rotation: boneRot,
 			Cubes:  cubes,
 		})
 		cubeTotal += len(cubes)

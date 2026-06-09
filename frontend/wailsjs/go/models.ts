@@ -69,6 +69,7 @@ export namespace types {
 	    name: string;
 	    parent?: string;
 	    pivot?: number[];
+	    rotation?: number[];
 	    cubes: Cube2D[];
 	
 	    static createFrom(source: any = {}) {
@@ -80,6 +81,7 @@ export namespace types {
 	        this.name = source["name"];
 	        this.parent = source["parent"];
 	        this.pivot = source["pivot"];
+	        this.rotation = source["rotation"];
 	        this.cubes = this.convertValues(source["cubes"], Cube2D);
 	    }
 	

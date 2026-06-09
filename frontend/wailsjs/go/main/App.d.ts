@@ -75,6 +75,8 @@ export function GetLinkMode():Promise<string>;
 
 export function GetMinecraftPaths():Promise<Array<string>>;
 
+export function GetModel3DSpec(arg1:string):Promise<string>;
+
 export function GetPackInfo(arg1:string):Promise<types.PackInfo>;
 
 export function GetWasmBinary():Promise<Array<number>>;

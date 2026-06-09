@@ -106,6 +106,7 @@ export namespace types {
 	    texWidth?: number;
 	    texHeight?: number;
 	    bones?: Bone2D[];
+	    animations?: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new BedrockModel(source);
@@ -121,6 +122,7 @@ export namespace types {
 	        this.texWidth = source["texWidth"];
 	        this.texHeight = source["texHeight"];
 	        this.bones = this.convertValues(source["bones"], Bone2D);
+	        this.animations = source["animations"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

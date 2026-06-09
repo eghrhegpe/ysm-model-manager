@@ -11,9 +11,16 @@ import { evaluateClip } from "./animation.js";
  * @param {object} model - BedrockModel（含 bones, cubes）
  * @param {string} [textureUrl] - 纹理图片 URL（base64 data URI）
  * @param {object} [player] - AnimationPlayer 实例（用于读取当前时间和 clip）
+ * @param {number} [texIdx=0] - 使用的纹理索引
  * @returns {Promise<{cleanup: Function}>}
  */
-export async function renderModel3D(container, model, textureUrl, player) {
+export async function renderModel3D(
+  container,
+  model,
+  textureUrl,
+  player,
+  texIdx,
+) {
   // ---- 场景 ----
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1b2e);
@@ -131,7 +138,7 @@ export async function renderModel3D(container, model, textureUrl, player) {
       let cubeTex = null;
       if (texMap.size > 0) {
         const texArr = [...texMap.values()];
-        cubeTex = texArr[0];
+        cubeTex = texArr[texIdx ?? 0] || texArr[0];
       }
 
       const geo = new THREE.BoxGeometry(sx * PXL, sy * PXL, sz * PXL);
@@ -197,6 +204,11 @@ export async function renderModel3D(container, model, textureUrl, player) {
   // ---- 动画同步 ----
   let _player = player || null;
   let _animFrameId = null;
+  // 骨骼 pivot 查询表
+  const pivotMap = new Map();
+  for (const b of model.bones) {
+    if (b.pivot) pivotMap.set(b.name, b.pivot);
+  }
 
   function renderLoop() {
     _animFrameId = requestAnimationFrame(renderLoop);
@@ -209,6 +221,9 @@ export async function renderModel3D(container, model, textureUrl, player) {
         for (const [boneName, t] of localTransforms) {
           const g = boneGroupMap.get(boneName);
           if (!g) continue;
+          // 复位到 pivot 位置，防止动画位置数据干扰
+          const bp = pivotMap.get(boneName);
+          if (bp) g.position.set(bp[0] * PXL, bp[1] * PXL, bp[2] * -PXL);
           if (t.rotation) {
             g.rotation.set(
               ((t.rotation[0] || 0) * Math.PI) / 180,

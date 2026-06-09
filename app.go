@@ -1662,9 +1662,10 @@ func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 	}
 	var geoJSON *types.BedrockModel
 	var texData [][]byte
+	var animJSONs []string
 
 	if ext == ".zip" {
-		geoJSON, texData = parseBedrockFromZip(data, int64(len(data)))
+		geoJSON, texData, animJSONs = parseBedrockFromZip(data, int64(len(data)))
 	} else if ext == ".7z" {
 		geoJSON, texData = parseBedrockFrom7z(data, int64(len(data)))
 	}
@@ -1688,6 +1689,9 @@ func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 	if len(textures) > 0 {
 		geoJSON.Texture = textures[0]
 		geoJSON.Textures = textures
+	}
+	if len(animJSONs) > 0 {
+		geoJSON.Animations = animJSONs
 	}
 	return *geoJSON
 }
@@ -1804,19 +1808,20 @@ func copyFile(src, dst string) error {
 	return err
 }
 
-func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte) {
+func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []string) {
 	reader, err := zip.NewReader(bytes.NewReader(data), size)
 	if err != nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	var geo *types.BedrockModel
 	var pngs [][]byte
-	var pngNames []string // 跟踪每个 PNG 的文件名
-	var defaultTex string // ysm.json 中的默认纹理名
+	var pngNames []string
+	var defaultTex string
+	var animJSONs []string
 
 	for _, f := range reader.File {
 		low := strings.ToLower(f.Name)
-		if strings.HasSuffix(low, ".json") && !strings.Contains(low, "animation") && !strings.Contains(low, "controller") && !f.FileInfo().IsDir() {
+		if strings.HasSuffix(low, ".json") && !f.FileInfo().IsDir() {
 			rc, err := f.Open()
 			if err != nil {
 				continue
@@ -1824,7 +1829,6 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 			buf, _ := io.ReadAll(rc)
 			rc.Close()
 
-			// ysm.json → 提取默认纹理名
 			if strings.Contains(low, "ysm.json") {
 				var ysm struct {
 					Properties struct {
@@ -1833,6 +1837,14 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 				}
 				if json.Unmarshal(buf, &ysm) == nil {
 					defaultTex = ysm.Properties.DefaultTexture
+				}
+				continue
+			}
+
+			// 收集动画 JSON
+			if strings.Contains(low, "animation") || strings.Contains(low, "controller") {
+				if len(buf) > 10 {
+					animJSONs = append(animJSONs, string(buf))
 				}
 				continue
 			}
@@ -1885,7 +1897,7 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 			}
 		}
 	}
-	return geo, pngs
+	return geo, pngs, animJSONs
 }
 
 func parseBedrockFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {

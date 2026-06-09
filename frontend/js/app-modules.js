@@ -1,6 +1,40 @@
 // ===== 所有 ES module 组件的统一入口 =====
 import { bus } from "./bus.js";
 import { register } from "./services/registry.js";
+
+// 调试：控制台调 window.$spec("模型路径") 获取 3D spec
+window.$spec = async (path) => {
+  try {
+    const { GetModel3DSpec } = await import("../wailsjs/go/main/App.js");
+    const s = JSON.parse(await GetModel3DSpec(path || ""));
+    if (s.models?.length) {
+      console.log(
+        "[$spec] Go spec:",
+        s.models[0].bones?.length,
+        "bones,",
+        s.models[0].meshGroups?.length,
+        "meshes",
+        s._debug?.length ? "debug:" + s._debug.length + " entries" : "",
+      );
+      return s;
+    }
+    // Go 为空 → 用 JS 兜底
+    console.warn("[$spec] Go 返回空，尝试 JS 兜底...");
+  } catch (e) {
+    console.warn("[$spec] Go 调用失败:", e);
+  }
+  // JS 兜底：从已加载的 model 数据构建 spec
+    const { buildSpecFromModel } = await import("./utils/model3d.js");
+  // 找当前 3D 预览的 model（window.__last3DModel）
+  const model = window.__last3DModel;
+  if (model?.bones?.length) {
+    const s = buildSpecFromModel(model);
+    console.log("[$spec] JS spec:", s.models[0].bones?.length, "bones");
+    return s;
+  }
+  console.warn("[$spec] 无可用 model 数据，请先打开 3D 预览");
+  return null;
+};
 // 注册全局可替换服务
 import { loadInstances } from "./components/app-sidebar/loader.js";
 import { loadEntries } from "./components/app-tree/loader.js";

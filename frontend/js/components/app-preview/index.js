@@ -180,7 +180,7 @@ class AppPreview extends HTMLElement {
               const { clips } = parseBedrockAnimationJSON(jsonStr);
               for (const clip of clips) {
                 if (clip.hasMolang) {
-                  console.warn(`[预览] ⚠️ 动画 "${clip.name}" 含 Molang 表达式，部分骨骼动画不会播放`);
+                  // Molang 表达式已跳过，静默忽略
                 }
               }
               if (clips.length > 0) goClips.push(...clips);
@@ -200,6 +200,9 @@ class AppPreview extends HTMLElement {
         container.innerHTML = `<div class="ysm-error-title">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ 未找到几何数据</div>`;
         return;
       }
+
+      // 保存模型路径供 3D 渲染使用
+      model._modelPath = modelPath;
 
       container.style.opacity = "1";
       container.innerHTML = "";
@@ -248,14 +251,19 @@ class AppPreview extends HTMLElement {
       const { renderModel2D } = await import("../../utils/model2d.js");
       let _zoom = 1;
       let _rotation = 0;
-      let _player = null;
-      const doRender = () =>
-        renderModel2D(canvas, model, textureImg, {
-          showLabels: _labelsOn,
-          zoom: _zoom,
-          rotation: _rotation,
-          boneTransforms: _player?.getCurrentTransforms() || null,
-        });
+      const _noPlayer = { getCurrentTransforms: () => null };
+      const doRender = () => {
+        try {
+          renderModel2D(canvas, model, textureImg, {
+            showLabels: _labelsOn,
+            zoom: _zoom,
+            rotation: _rotation,
+            boneTransforms: null,
+          });
+        } catch (e) {
+          console.warn("[preview] 2D 渲染跳过:", e);
+        }
+      };
       doRender();
 
       eyeBtn.onclick = () => {
@@ -266,7 +274,8 @@ class AppPreview extends HTMLElement {
         doRender();
       };
 
-      // ---- 动画播放器 ----
+      // ---- 动画播放器（已分离到 model3d-anim.js，暂禁用） ----
+      /* 恢复时取消下方注释
       const cachedAnim = cacheGet(modelPath);
       const clips = cachedAnim?.animations;
       if (clips?.length > 0) {
@@ -318,6 +327,14 @@ class AppPreview extends HTMLElement {
         animRow.appendChild(playBtn);
         animRow.appendChild(stopBtn);
         animRow.appendChild(speedSel);
+
+        // 位置动画开关
+        const posBtn = document.createElement("button");
+        posBtn.className = "ysm-btn";
+        posBtn.textContent = "🚫";
+        posBtn.title = "位置动画：关（点击开）";
+        posBtn.style.cssText = "font-size:9px;opacity:0.5";
+        animRow.appendChild(posBtn);
 
         // 时间显示
         const timeLabel = document.createElement("span");
@@ -414,7 +431,8 @@ class AppPreview extends HTMLElement {
         speedSel.onchange = () => {
           _player.setSpeed(parseFloat(speedSel.value));
         };
-      }
+      } // end if (clips?.length > 0)
+      */ // ← 恢复动画时删掉这行和上面 /*
 
       // ---- 3D 预览切换 ----
       let _model3d = null;
@@ -444,18 +462,33 @@ class AppPreview extends HTMLElement {
         if (_is3D) {
           // 创建全屏遮罩
           const overlay = document.createElement("div");
+          overlay.id = "ysm-overlay-3d";
           overlay.style.cssText =
             "position:fixed;inset:0;z-index:9999;background:#1a1b2e;display:flex;flex-direction:column";
           _overlay3d = overlay;
 
           // 顶部栏
           const topBar = document.createElement("div");
+          topBar.id = "ysm-topbar-3d";
           topBar.style.cssText =
-            "display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,0.3);z-index:1;flex-shrink:0";
+            "display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,0.3);flex-shrink:0;pointer-events:auto;position:relative;z-index:10";
           const closeBtn = document.createElement("button");
           closeBtn.className = "ysm-btn";
+          closeBtn.id = "ysm-close-3d";
           closeBtn.textContent = "✕ 关闭 3D";
-          closeBtn.onclick = close3D;
+          closeBtn.onclick = () => {
+            const ov = document.getElementById("ysm-overlay-3d");
+            if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
+            _overlay3d = null;
+            _is3D = false;
+            _prefer3D = false;
+            viewBtn.textContent = "🌐 3D";
+            viewHint.textContent = "全屏";
+            if (_model3d) {
+              _model3d.cleanup();
+              _model3d = null;
+            }
+          };
           topBar.appendChild(closeBtn);
 
           // 纹理选择器
@@ -478,7 +511,8 @@ class AppPreview extends HTMLElement {
             topBar.appendChild(texSel);
           }
 
-          // 动画控件
+          // 动画控件（暂隐藏，动画已分离）
+          /* 恢复动画时取消注释下方 if 块
           if (clips?.length > 0) {
             const sel = document.createElement("select");
             sel.className = "ysm-btn";
@@ -515,7 +549,7 @@ class AppPreview extends HTMLElement {
             topBar.appendChild(stopBtn);
             topBar.appendChild(speedSel);
             topBar.appendChild(timeLabel);
-          }
+          } */ // 恢复动画时删掉上行
           overlay.appendChild(topBar);
 
           // 3D 渲染容器
@@ -532,59 +566,27 @@ class AppPreview extends HTMLElement {
               viewContainer,
               model,
               texUrl,
-              _player,
               _texIdx,
             );
 
-            // 绑定控件
-            const sel = topBar.querySelector("select");
-            const playBtn = topBar.querySelector("button:nth-child(3)");
-            const stopBtn = topBar.querySelector("button:nth-child(4)");
-            const speedSel = topBar.querySelector("select:last-of-type");
-            const timeLabel = topBar.querySelector("span");
-
-            const updateTime = () => {
-              const c = _player.currentClip;
-              if (timeLabel)
-                timeLabel.textContent = `${_player.time.toFixed(1)}s / ${(c?.length || 0).toFixed(1)}s`;
-            };
-            if (sel)
-              sel.onchange = () => {
-                _player.play(parseInt(sel.value));
-                playBtn.textContent = "⏸️";
-                updateTime();
-              };
-            if (playBtn)
-              playBtn.onclick = () => {
-                if (_player.playing) {
-                  _player.pause();
-                  playBtn.textContent = "▶️";
-                } else {
-                  if (_player.currentIndex < 0 && clips.length > 0) {
-                    _player.play(0);
-                    if (sel) sel.value = "0";
-                  } else _player.resume();
-                  playBtn.textContent = "⏸️";
-                }
-              };
-            if (stopBtn)
-              stopBtn.onclick = () => {
-                _player.stop();
-                playBtn.textContent = "▶️";
-              };
-            if (speedSel)
-              speedSel.onchange = () =>
-                _player.setSpeed(parseFloat(speedSel.value));
-            if (timeLabel) {
-              const t = setInterval(updateTime, 100);
-              _model3d._timeTimer = t;
-            }
             // ESC 关闭
             const onKey = (e) => {
-              if (e.key === "Escape") close3D();
+              if (e.key !== "Escape") return;
+              const ov = document.getElementById("ysm-overlay-3d");
+              if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
+              _overlay3d = null;
+              _is3D = false;
+              _prefer3D = false;
+              viewBtn.textContent = "🌐 3D";
+              viewHint.textContent = "全屏";
+              if (_model3d) {
+                _model3d.cleanup();
+                _model3d = null;
+              }
             };
             document.addEventListener("keydown", onKey);
             _model3d._keyHandler = onKey;
+            // （动画绑定已分离，后续恢复时在这加）
           } catch (e) {
             console.error("[3D] 加载失败:", e);
             viewContainer.innerHTML = `<div style="padding:40px;color:#ff6b6b;font-size:14px">⚠️ 3D 预览加载失败: ${e?.message || e}</div>`;
@@ -904,7 +906,7 @@ class AppPreview extends HTMLElement {
           const { clips, errors } = parseBedrockAnimationJSON(jsonStr);
           for (const clip of clips) {
             if (clip.hasMolang) {
-              devLog(`[YSM] ⚠️ ${f.path}: 动画 "${clip.name}" 含 Molang 表达式`);
+              // Molang 表达式已跳过，静默忽略
             }
           }
           if (clips.length > 0) {

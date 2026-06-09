@@ -23,6 +23,7 @@ export function parseBedrockGeometryFromJSON(jsonStr) {
       name: b.name,
       parent: b.parent || null,
       pivot: b.pivot || [0, 0, 0],
+      rotation: b.rotation || [0, 0, 0],
       cubes,
     });
     cubeCount += cubes.length;

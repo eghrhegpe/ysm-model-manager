@@ -164,7 +164,6 @@ export function renderModelList(
       dlBtn.dataset.url = dlPrefix + m.path.replace(/\\/g, "/");
       dlBtn.dataset.name = m.name;
       dlBtn.dataset.size = String(m.size || 0);
-      dlBtn.className = "ws-dl-btn";
       dlBtn.textContent = "⬇️";
       rightGroup.appendChild(dlBtn);
 

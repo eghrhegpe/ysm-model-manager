@@ -104,13 +104,15 @@ function hasMolangInChannelData(data) {
     // 直接字符串: "q.life_time * 10"
     if (typeof val === "string") return true;
     // 数组: ["q.life_time * 10", 0, 0]
-    if (Array.isArray(val) && val.some((v) => typeof v === "string")) return true;
+    if (Array.isArray(val) && val.some((v) => typeof v === "string"))
+      return true;
     // 对象: { post: [...], pre: [...], lerp_mode: "linear" }
     if (typeof val === "object" && val !== null) {
       for (const key of ["post", "pre"]) {
         const v = val[key];
         if (typeof v === "string") return true;
-        if (Array.isArray(v) && v.some((x) => typeof x === "string")) return true;
+        if (Array.isArray(v) && v.some((x) => typeof x === "string"))
+          return true;
       }
     }
   }
@@ -165,7 +167,6 @@ export function parseBedrockAnimationJSON(jsonStr) {
         for (const ch of ["rotation", "position", "scale"]) {
           if (hasMolangInChannelData(boneData[ch])) {
             clip.hasMolang = true;
-            console.warn(`[动画] ⚠️ 骨骼 ${boneName} 的 ${ch} 含 Molang 表达式，此通道将被跳过`);
             break;
           }
         }
@@ -352,13 +353,7 @@ export function evaluateClip(clip, time, boneHierarchy, localOnly) {
   // Debug: 如果有变换且非零，打印前 5 个
   if (import.meta.env.DEV && result.size > 0) {
     const entries = [...result.entries()].slice(0, 5);
-    for (const [n, t] of entries) {
-      if (t.rotation?.some((v) => Math.abs(v) > 0.1)) {
-        console.warn(
-          `[ANIM] ${n}: rot=${t.rotation.map((v) => v.toFixed(1))} pos=${(t.position || [0, 0, 0]).map((v) => v.toFixed(2))}`,
-        );
-      }
-    }
+    // rot/pos debug removed (noisy)
   }
 
   return result;

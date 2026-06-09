@@ -8,14 +8,55 @@ function isMolang(v) {
   return typeof v === "string" || (typeof v === "number" && isNaN(v));
 }
 
+/**
+ * 常量折叠：尝试从 Molang 字符串中提取纯数字。
+ * 处理 "q.life_time * 0 + 30" → 30, "math.sin(0) * 0 + 45" → 45
+ * 只处理变量乘以 0 后加常数的模式，含真实变量时返回 null。
+ */
+function foldMolangConstant(str) {
+  if (typeof str !== "string") return null;
+  // 尝试直接解析为数字
+  const direct = Number(str);
+  if (!isNaN(direct)) return direct;
+  // 检查是否完全是纯数字（含负号、小数点）
+  if (/^-?\d+(\.\d+)?$/.test(str.trim())) return Number(str.trim());
+  // 模式1: "q.* 0 + NUM" 或 "q.* 0 - NUM"
+  let m = str.match(
+    /^(?:q\.|t\.|query\.|temp\.|math\.)\w+\s*\*\s*0\s*([+-])\s*([+-]?\d+(?:\.\d+)?)$/,
+  );
+  if (m) {
+    const num = Number(m[2]);
+    return m[1] === "-" ? -num : num;
+  }
+  // 模式2: "NUM + q.* 0" 或 "NUM - q.* 0"
+  m = str.match(
+    /^([+-]?\d+(?:\.\d+)?)\s*[+-]\s*(?:q\.|t\.|query\.|temp\.|math\.)\w+\s*\*\s*0$/,
+  );
+  if (m) return Number(m[1]);
+  // 模式3: "q.* 0" → 0
+  if (/^(?:q\.|t\.|query\.|temp\.|math\.)\w+\s*\*\s*0$/.test(str.trim()))
+    return 0;
+  return null;
+}
+
 /** 尝试将关键帧值解析为 [x,y,z] 数字数组 */
 function parseKeyValue(v) {
   if (Array.isArray(v) && v.length === 3) {
-    const nums = v.map(Number);
-    if (nums.some(isNaN)) return null; // 含 Molang
+    const nums = v.map((item) => {
+      if (typeof item === "string") {
+        const folded = foldMolangConstant(item);
+        if (folded !== null) return folded;
+      }
+      return Number(item);
+    });
+    if (nums.some(isNaN)) return null; // 含不可折叠的 Molang
     return nums;
   }
   if (typeof v === "number") return [v, v, v]; // 单一数值（罕见但合法）
+  if (typeof v === "string") {
+    const folded = foldMolangConstant(v);
+    if (folded !== null) return [folded, folded, folded];
+  }
   return null; // Molang 或其他
 }
 
@@ -54,6 +95,26 @@ function parseChannel(channelData) {
       return { time: t, post: kf.post, pre: kf.pre, lerp: kf.lerp };
     })
     .filter(Boolean);
+}
+
+/** 检测 channel 原始数据中是否含 Molang 表达式（字符串值） */
+function hasMolangInChannelData(data) {
+  if (!data || typeof data !== "object") return false;
+  for (const val of Object.values(data)) {
+    // 直接字符串: "q.life_time * 10"
+    if (typeof val === "string") return true;
+    // 数组: ["q.life_time * 10", 0, 0]
+    if (Array.isArray(val) && val.some((v) => typeof v === "string")) return true;
+    // 对象: { post: [...], pre: [...], lerp_mode: "linear" }
+    if (typeof val === "object" && val !== null) {
+      for (const key of ["post", "pre"]) {
+        const v = val[key];
+        if (typeof v === "string") return true;
+        if (Array.isArray(v) && v.some((x) => typeof x === "string")) return true;
+      }
+    }
+  }
+  return false;
 }
 
 /**
@@ -99,13 +160,22 @@ export function parseBedrockAnimationJSON(jsonStr) {
     for (const [boneName, boneData] of Object.entries(bones)) {
       if (!boneData || typeof boneData !== "object") continue;
 
+      // 检测 Molang：原始数据中是否含字符串值（非数字）
+      if (!clip.hasMolang) {
+        for (const ch of ["rotation", "position", "scale"]) {
+          if (hasMolangInChannelData(boneData[ch])) {
+            clip.hasMolang = true;
+            console.warn(`[动画] ⚠️ 骨骼 ${boneName} 的 ${ch} 含 Molang 表达式，此通道将被跳过`);
+            break;
+          }
+        }
+      }
+
       const channels = {};
       for (const ch of ["rotation", "position", "scale"]) {
         const kfs = parseChannel(boneData[ch]);
         if (kfs.length > 0) {
           channels[ch] = kfs;
-          // 检测是否有 Molang——所有 parseChannel 返回的都是纯数值
-          // 如果有 null 说明被跳过，但这里不会出现因为 parseChannel 已经过滤了
         }
       }
 

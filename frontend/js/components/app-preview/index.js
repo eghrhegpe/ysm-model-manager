@@ -178,6 +178,11 @@ class AppPreview extends HTMLElement {
               await import("../../utils/animation.js");
             for (const jsonStr of model.animations) {
               const { clips } = parseBedrockAnimationJSON(jsonStr);
+              for (const clip of clips) {
+                if (clip.hasMolang) {
+                  console.warn(`[预览] ⚠️ 动画 "${clip.name}" 含 Molang 表达式，部分骨骼动画不会播放`);
+                }
+              }
               if (clips.length > 0) goClips.push(...clips);
             }
           }
@@ -897,6 +902,11 @@ class AppPreview extends HTMLElement {
         try {
           const jsonStr = new TextDecoder().decode(f.data);
           const { clips, errors } = parseBedrockAnimationJSON(jsonStr);
+          for (const clip of clips) {
+            if (clip.hasMolang) {
+              devLog(`[YSM] ⚠️ ${f.path}: 动画 "${clip.name}" 含 Molang 表达式`);
+            }
+          }
           if (clips.length > 0) {
             animations.push(...clips);
           }

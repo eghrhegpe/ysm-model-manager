@@ -10,6 +10,7 @@ type BedrockModel struct {
 	TexWidth   int       `json:"texWidth,omitempty"`
 	TexHeight  int       `json:"texHeight,omitempty"`
 	Bones      []Bone2D  `json:"bones,omitempty"`
+	Animations []string  `json:"animations,omitempty"` // 动画 JSON 字符串数组
 }
 
 // Bone2D 骨骼简化信息（只用于 2D 线条图）

@@ -171,9 +171,20 @@ class AppPreview extends HTMLElement {
         model = await AnalyzeBedrockModel(modelPath);
         // 缓存完整结果，供 _loadPreviewImage 复用
         if (model?.bones?.length) {
+          // 解析 Go 端返回的动画 JSON
+          let goClips = [];
+          if (model.animations?.length) {
+            const { parseBedrockAnimationJSON } =
+              await import("../../utils/animation.js");
+            for (const jsonStr of model.animations) {
+              const { clips } = parseBedrockAnimationJSON(jsonStr);
+              if (clips.length > 0) goClips.push(...clips);
+            }
+          }
           cacheSet(modelPath, {
             texture: model.texture,
             geometry: model,
+            animations: goClips.length > 0 ? goClips : undefined,
             _decodedBy: "⚙️ CLI",
           });
           _decodedBy = "⚙️ CLI";
@@ -442,6 +453,26 @@ class AppPreview extends HTMLElement {
           closeBtn.onclick = close3D;
           topBar.appendChild(closeBtn);
 
+          // 纹理选择器
+          let _texIdx = 0;
+          if (model.textures?.length > 1) {
+            const texSel = document.createElement("select");
+            texSel.className = "ysm-btn";
+            texSel.style.cssText = "font-size:11px";
+            model.textures.forEach((_, i) => {
+              const opt = document.createElement("option");
+              opt.value = i;
+              opt.textContent = `纹理 ${i + 1}`;
+              texSel.appendChild(opt);
+            });
+            texSel.onchange = () => {
+              _texIdx = parseInt(texSel.value);
+              close3D();
+              viewBtn.click(); // 重新打开
+            };
+            topBar.appendChild(texSel);
+          }
+
           // 动画控件
           if (clips?.length > 0) {
             const sel = document.createElement("select");
@@ -497,6 +528,7 @@ class AppPreview extends HTMLElement {
               model,
               texUrl,
               _player,
+              _texIdx,
             );
 
             // 绑定控件
@@ -731,8 +763,16 @@ class AppPreview extends HTMLElement {
           const txt = new TextDecoder().decode(ysmMeta.data);
           const json = JSON.parse(txt);
           ysmTexOrder = json?.files?.player?.texture;
-          if (ysmTexOrder) console.log(`[YSM] ysm.json 纹理列表:`, ysmTexOrder.map(t => typeof t === "string" ? t : t?.uv || t?.path).filter(Boolean));
-        } catch (e) { /* ignore */ }
+          if (ysmTexOrder)
+            console.log(
+              `[YSM] ysm.json 纹理列表:`,
+              ysmTexOrder
+                .map((t) => (typeof t === "string" ? t : t?.uv || t?.path))
+                .filter(Boolean),
+            );
+        } catch (e) {
+          /* ignore */
+        }
       }
 
       // 收集所有纹理文件，按 ysm.json 顺序排列
@@ -741,7 +781,10 @@ class AppPreview extends HTMLElement {
       for (const f of files) {
         if (f.path.endsWith(".png") || f.path.endsWith(".jpg")) {
           const blob = new Blob([f.data]);
-          const key = f.path.split("/").pop().replace(/\.\w+$/, "");
+          const key = f.path
+            .split("/")
+            .pop()
+            .replace(/\.\w+$/, "");
           textures[key] = URL.createObjectURL(blob);
           texNameMap[key] = f.path;
           devLog(`[YSM] 纹理: ${f.path} → key="${key}"`);
@@ -752,7 +795,10 @@ class AppPreview extends HTMLElement {
         const ordered = [];
         for (const t of ysmTexOrder) {
           const path = typeof t === "string" ? t : t?.uv || t?.path || "";
-          const tn = path.split("/").pop().replace(/\.\w+$/, "");
+          const tn = path
+            .split("/")
+            .pop()
+            .replace(/\.\w+$/, "");
           if (tn && textures[tn]) ordered.push(tn);
         }
         for (const k of Object.keys(textures)) {
@@ -760,7 +806,9 @@ class AppPreview extends HTMLElement {
         }
         orderedTexKeys = ordered;
       }
-      console.log(`[YSM] 找到 ${orderedTexKeys.length} 个纹理: ${orderedTexKeys.join(", ")}`);
+      console.log(
+        `[YSM] 找到 ${orderedTexKeys.length} 个纹理: ${orderedTexKeys.join(", ")}`,
+      );
 
       // 解析所有模型文件，合并骨骼，标记纹理索引
       let geometry = null;
@@ -780,7 +828,10 @@ class AppPreview extends HTMLElement {
             );
 
             // 为这个模型寻找匹配纹理
-            const modelName = f.path.split("/").pop().replace(/\.json$/, "");
+            const modelName = f.path
+              .split("/")
+              .pop()
+              .replace(/\.json$/, "");
             let texIdx = 0;
             if (ysmTexOrder?.length === 1) {
               // 仅一张主纹理 → 所有模型都用它（arm.json 也用主纹理）
@@ -788,11 +839,19 @@ class AppPreview extends HTMLElement {
             } else {
               // 多纹理：按文件名匹配
               const matchKey = orderedTexKeys.find(
-                (k) => k.toLowerCase().includes(modelName.toLowerCase()) || modelName.toLowerCase().includes(k.toLowerCase()),
+                (k) =>
+                  k.toLowerCase().includes(modelName.toLowerCase()) ||
+                  modelName.toLowerCase().includes(k.toLowerCase()),
               );
-              texIdx = matchKey !== undefined ? orderedTexKeys.indexOf(matchKey) : Math.min(modelIdx, orderedTexKeys.length - 1);
+              texIdx =
+                matchKey !== undefined
+                  ? orderedTexKeys.indexOf(matchKey)
+                  : Math.min(modelIdx, orderedTexKeys.length - 1);
             }
-            const texUrl = orderedTexKeys.length > 0 ? textures[orderedTexKeys[texIdx]] : null;
+            const texUrl =
+              orderedTexKeys.length > 0
+                ? textures[orderedTexKeys[texIdx]]
+                : null;
 
             // 标记每个骨骼的纹理索引
             for (const b of parsed.bones) {
@@ -801,7 +860,9 @@ class AppPreview extends HTMLElement {
             }
             allBones.push(...parsed.bones);
             modelIdx++;
-            console.log(`[YSM] ${f.path.split("/").pop()} → 纹理[${texIdx}]: ${Object.keys(textures)[texIdx] || "无"}`);
+            console.log(
+              `[YSM] ${f.path.split("/").pop()} → 纹理[${texIdx}]: ${Object.keys(textures)[texIdx] || "无"}`,
+            );
 
             if (!geometry) {
               geometry = parsed;
@@ -820,8 +881,11 @@ class AppPreview extends HTMLElement {
       // 合并后的 geometry
       if (geometry) {
         geometry.bones = allBones;
-        geometry.textures = orderedTexKeys.map((k) => textures[k]).filter(Boolean);
-        geometry.texture = orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null;
+        geometry.textures = orderedTexKeys
+          .map((k) => textures[k])
+          .filter(Boolean);
+        geometry.texture =
+          orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null;
       }
 
       // 解析动画文件
@@ -844,7 +908,10 @@ class AppPreview extends HTMLElement {
         }
       }
 
-      const texUrl = geometry?.texture || (orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null) || null;
+      const texUrl =
+        geometry?.texture ||
+        (orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null) ||
+        null;
       cacheSet(modelPath, { texture: texUrl, geometry, animations });
       return { texture: texUrl, geometry, animations };
     } catch (e) {

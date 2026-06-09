@@ -2,6 +2,19 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GetModel3DSpec } from "../../wailsjs/go/main/App.js";
 
+// 调试用：控制台可调 window.debugGetSpec(path) 获取骨骼数据
+window.debugGetSpec = async (path) => {
+  try {
+    const jsonStr = await GetModel3DSpec(path || "");
+    const spec = JSON.parse(jsonStr);
+    console.log("[DEBUG] spec:", spec);
+    return spec;
+  } catch (e) {
+    console.error("[DEBUG]", e);
+    return null;
+  }
+};
+
 export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1b2e);
@@ -65,6 +78,8 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   if (!spec.models?.length && model.bones?.length) {
     spec = buildSpecFromModel(model);
   }
+  // 调试用：暴露最近一次 spec 到全局（在 JS 兜底之后）
+  window.__last3DSpec = spec;
   const rootGroup = new THREE.Group();
   rootGroup.name = "__root__";
   scene.add(rootGroup);
@@ -139,7 +154,7 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
       const mat = cubeTex
         ? new THREE.MeshBasicMaterial({
             map: cubeTex,
-            transparent: true,
+            alphaTest: 0.5,
             side: THREE.DoubleSide,
           })
         : new THREE.MeshBasicMaterial({
@@ -209,6 +224,13 @@ function buildSpecFromModel(model) {
   const bones = [];
   const meshes = [];
   const boneIdx = {};
+  // 首次出现的骨骼 pivot（同名骨骼用首次的）
+  const firstPivot = {};
+  for (const b of model.bones || []) {
+    if (firstPivot[b.name] === undefined) {
+      firstPivot[b.name] = b.pivot || [0, 0, 0];
+    }
+  }
   for (const b of model.bones || []) {
     const bp = b.pivot || [0, 0, 0];
     let localPos = [-bp[0], bp[1], bp[2]];
@@ -232,18 +254,43 @@ function buildSpecFromModel(model) {
         : [0, 0, 0, 1],
     };
     if (boneIdx[b.name] !== undefined) {
-      // 同名骨骼：保留首次层级信息，后面的仅取 cubes
+      const existing = bones[boneIdx[b.name]];
+      // 同名骨骼：如果现有骨骼没有 parent 但当前骨骼有 parent → 补全层级
+      if (!existing.parentId && b.parent) {
+        existing.parentId = b.parent;
+        existing.localPosition = localPos;
+      }
     } else {
       boneIdx[b.name] = bones.length;
       bones.push(entry);
     }
     // cubes 全部追加（同名骨骼的也加入）
+    // 使用统一的 bone pivot（首次出现的 pivot），确保所有 cube 相对于同一根骨骼位置
+    const fp = firstPivot[b.name] || bp;
     for (let ci = 0; ci < (b.cubes || []).length; ci++) {
       const c = b.cubes[ci];
-      const md = buildCubeMeshDataJS(c, bp, texW, texH, b.name, ci);
+      const md = buildCubeMeshDataJS(c, fp, texW, texH, b.name, ci);
       if (md) meshes.push(md);
     }
   }
+
+  // 后处理：将 RightArm/LeftArm 挂到 Arm 下面（YSMParser 解码 .ysm 后丢失的层级）
+  const armBone = bones.find(b => b.name === "Arm" && b.parentId);
+  const rightArmBone = bones.find(b => b.name === "RightArm" && !b.parentId);
+  const leftArmBone = bones.find(b => b.name === "LeftArm" && !b.parentId);
+  if (armBone && rightArmBone) {
+    const armPivot = model.bones.find(b => b.name === "Arm")?.pivot || [0, 0, 0];
+    const raPivot = model.bones.find(b => b.name === "RightArm")?.pivot || [0, 0, 0];
+    rightArmBone.parentId = "Arm";
+    rightArmBone.localPosition = [-raPivot[0] - -armPivot[0], raPivot[1] - armPivot[1], raPivot[2] - armPivot[2]];
+  }
+  if (armBone && leftArmBone) {
+    const armPivot = model.bones.find(b => b.name === "Arm")?.pivot || [0, 0, 0];
+    const laPivot = model.bones.find(b => b.name === "LeftArm")?.pivot || [0, 0, 0];
+    leftArmBone.parentId = "Arm";
+    leftArmBone.localPosition = [-laPivot[0] - -armPivot[0], laPivot[1] - armPivot[1], laPivot[2] - armPivot[2]];
+  }
+
   return {
     models: [
       {

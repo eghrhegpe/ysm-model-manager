@@ -66,14 +66,21 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     );
     await Promise.all(loads);
   }
+  // 调试用：暴露 model 和 buildSpecFromModel 到全局
+  window.__lastModel = model;
+  window.__buildSpecFromModel = buildSpecFromModel;
+
   // 从 Go 获取预计算的 Three.js Spec
   let spec = { models: [] };
-  try {
-    const jsonStr = await GetModel3DSpec(model._modelPath || "");
-    const parsed = JSON.parse(jsonStr);
-    if (parsed.models) spec = parsed;
-  } catch (e) {
-    console.warn("[3D] Fallback to JS geometry:", e);
+  const forceJS = window.$forceJSSpec; // 调试用：设 true 强制走 JS 兜底
+  if (!forceJS) {
+    try {
+      const jsonStr = await GetModel3DSpec(model._modelPath || "");
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.models) spec = parsed;
+    } catch (e) {
+      console.warn("[3D] Fallback to JS geometry:", e);
+    }
   }
   if (!spec.models?.length && model.bones?.length) {
     spec = buildSpecFromModel(model);
@@ -255,10 +262,11 @@ function buildSpecFromModel(model) {
     };
     if (boneIdx[b.name] !== undefined) {
       const existing = bones[boneIdx[b.name]];
-      // 同名骨骼：如果现有骨骼没有 parent 但当前骨骼有 parent → 补全层级
+      // 同名骨骼：如果现有骨骼没有 parent 但当前骨骼有 parent → 补全层级和旋转
       if (!existing.parentId && b.parent) {
         existing.parentId = b.parent;
         existing.localPosition = localPos;
+        existing.localRotation = entry.localRotation;
       }
     } else {
       boneIdx[b.name] = bones.length;

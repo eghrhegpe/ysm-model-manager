@@ -1928,6 +1928,13 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 				geo.Bones = append(geo.Bones, g.Bones...)
 				geo.BoneCount += g.BoneCount
 				geo.CubeCount += g.CubeCount
+				// 保留最大纹理尺寸（部分几何文件声明 32×32，实际纹理大得多）
+				if g.TexWidth > geo.TexWidth {
+					geo.TexWidth = g.TexWidth
+				}
+				if g.TexHeight > geo.TexHeight {
+					geo.TexHeight = g.TexHeight
+				}
 			}
 		}
 		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !f.FileInfo().IsDir() && !strings.Contains(low, "avatar/") {
@@ -1988,6 +1995,13 @@ func parseBedrockFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte)
 				geo.Bones = append(geo.Bones, g.Bones...)
 				geo.BoneCount += g.BoneCount
 				geo.CubeCount += g.CubeCount
+				// 保留最大纹理尺寸（部分几何文件声明 32×32，实际纹理大得多）
+				if g.TexWidth > geo.TexWidth {
+					geo.TexWidth = g.TexWidth
+				}
+				if g.TexHeight > geo.TexHeight {
+					geo.TexHeight = g.TexHeight
+				}
 			}
 		}
 		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !f.FileInfo().IsDir() && !strings.Contains(low, "avatar/") {

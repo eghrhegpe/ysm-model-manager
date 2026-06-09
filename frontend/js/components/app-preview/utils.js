@@ -12,11 +12,22 @@ export function parseBedrockGeometryFromJSON(jsonStr) {
   for (const b of geo.bones) {
     const cubes = [];
     for (const c of b.cubes || []) {
+      let uv = [0, 0];
+      let faceUV = "";
+      if (Array.isArray(c.uv)) {
+        uv = c.uv;
+      } else if (typeof c.uv === "string" && c.uv.startsWith("{")) {
+        faceUV = c.uv;
+      } else if (typeof c.uv === "object" && c.uv !== null) {
+        // 某些模型 UV 是对象格式（如 {uv:[0,0], uv_size:[16,16]}）
+        faceUV = JSON.stringify(c.uv);
+      }
       cubes.push({
         origin: c.origin || [0, 0, 0],
         size: c.size || [1, 1, 1],
         pivot: c.pivot || [0, 0, 0],
-        uv: Array.isArray(c.uv) ? c.uv : [0, 0],
+        uv,
+        faceUV,
       });
     }
     bones.push({

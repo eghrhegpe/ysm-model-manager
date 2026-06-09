@@ -876,6 +876,11 @@ class AppPreview extends HTMLElement {
             } else {
               geometry.boneCount += parsed.boneCount;
               geometry.cubeCount += parsed.cubeCount;
+              // 保留各几何体中最大的纹理尺寸（部分几何文件声明 32×32，实际纹理大得多）
+              if (parsed.texWidth > geometry.texWidth)
+                geometry.texWidth = parsed.texWidth;
+              if (parsed.texHeight > geometry.texHeight)
+                geometry.texHeight = parsed.texHeight;
             }
           } else {
             devLog(`[YSM] ⚠️ ${f.path}: 无骨骼`);

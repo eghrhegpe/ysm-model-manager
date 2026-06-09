@@ -949,3 +949,74 @@ batchWrap.appendChild(menuBatch);
 **Round 3**: 筛选检测 class → 发现 `renderFilterHTML()` 和 toggle handler 用的类名不一致
 
 **Lesson**: 涉及 toggle 开关的 UI，先确认"生产"（HTML 生成）和"消费"（状态检测）用的是同一个 class/id。动态 DOM 操作注意定位父容器。
+
+---
+
+## 2026-06-09 新增 bug 记录
+
+### 27. ZIP 模型手臂竖直朝下 / 位置偏移（bug-chronicle #27）
+
+#### 症状
+
+- `.zip` 模型的 3D 预览中手臂竖直朝下，裙子/帽子等正常
+- `.ysm` 模型（同一作者同模型）渲染正常
+- `GetModel3DSpec` 返回的 spec 骨骼数据与 JS 兜底不一致
+
+#### 根因
+
+ZIP 模型包含多个几何 JSON 文件（`arm.json`、`main.json`），`parseBedrockFromZip` 按字母顺序追加骨骼。`arm.json`（先）和 `main.json`（后）中都有 `RightArm`/`LeftArm`，但：
+
+1. **Bone pivot 用错** — `pivots` map 存储首次出现的 pivot（`arm.json` 的 `[1.9,27.8]`），导致骨骼位置计算用了错误 pivot。应使用**有 parent 的那个 occurrence**（`main.json` 的 `[3.15,27.3]`）。
+2. **Cube pivot 不一致** — bone 和 cube 使用了不同的 pivot（bone 用当前骨骼、cube 用首次出现的），导致 cube 位置偏移。
+3. **Rotation 丢失** — 去重时只更新了 parent 和 position，`main.json` 的骨骼旋转未传递到最终骨骼。
+
+#### 修复
+
+**`go/threejs/spec.go`**:
+
+```go
+// 1. pivots 优先保留有 parent 的骨骼 pivot
+pivots := make(map[string]vec3)
+for _, b := range model.Bones {
+    np := vec3{-b.Pivot[0], b.Pivot[1], b.Pivot[2]}
+    if _, exists := pivots[b.Name]; !exists {
+        pivots[b.Name] = np
+    } else if b.Parent != "" {
+        pivots[b.Name] = np  // 有 parent 的覆盖
+    }
+}
+
+// 2. 去重时同时更新 rotation
+if bones[idx].ParentID == nil && b.Parent != "" {
+    bones[idx].ParentID = &b.Parent
+    bones[idx].LocalPosition = localPos
+    bones[idx].LocalRotation = localRot  // 新加
+}
+```
+
+**`frontend/js/utils/model3d.js`** — 同上 rotation 补全逻辑。
+
+#### 影响文件
+
+- `go/threejs/spec.go`
+- `frontend/js/utils/model3d.js`
+
+#### Debug Path Review
+
+**Round 1 (Parent 补全)**: 发现同名骨骼去重时，`arm.json` 的扁平 RightArm 在 main.json 之前处理，正确层级被丢弃。
+→ 修复: 现有骨骼无 parent 且新骨骼有 parent 时补全 parent + localPosition。
+→ 效果: 骨骼层级正确了（`RightArm → Arm`），但渲染仍有偏移。
+
+**Round 2 (bp vs pivots)**: 对比 Go 和 JS spec 发现 `RightArm` localPosition 不一致（Go: `[1.9,0.5,0]` vs JS: `[3.15,0,0]`）。
+→ 根因: `bp := pivots[b.Name]` 用了首次出现的 pivot，应改为当前骨骼的 pivot。
+→ 修复: `pivots` 优先保留有 parent 的骨骼（`main.json` 的正确 pivot 覆盖 `arm.json` 的扁平版本）。
+→ 效果: Go 和 JS 数据一致了，但渲染仍有偏差。
+
+**Round 3 (Cube pivot 不一致)**: Cube 用首次出现的 pivot 计算相对位置，但 bone 用当前骨骼 pivot，导致 cube 偏移。
+→ 修复: bone 和 cube 统一使用 `pivots[b.Name]`（已优先保留有 parent 的 pivot）。
+
+**Round 4 (Rotation 丢失)**: 去重时只更新 parent/position，`main.json` 的骨骼旋转未传递。
+→ 修复: 去重时同步更新 `LocalRotation`。
+→ 最终效果: ZIP 模型渲染正常 ✅
+
+**Lesson**: 多文件合并时，同名骨骼的**所有属性**（parent、pivot、rotation）都必须统一到有 parent 的那个 occurrence。`pivots` 共享 map 不能简单保留首次出现，要优先保留有层级关系的数据。每次改完用对比诊断（Go spec vs JS spec）验证一致性。命令行 + 生产版 EXE 是两个东西，必须确保测试的是正确版本。

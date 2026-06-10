@@ -62,9 +62,11 @@ type YsmSummary struct {
 }
 
 type Stats struct {
-	Textures  int `json:"textures"`
-	Models    int `json:"models"`
+	Textures   int `json:"textures"`
+	Models     int `json:"models"`
 	Animations int `json:"animations"`
+	TexWidth   int `json:"texWidth"`
+	TexHeight  int `json:"texHeight"`
 }
 
 // ===== 内部解析用的完整 ysm.json 结构 =====
@@ -247,12 +249,6 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 		}
 	}
 
-	// 从 files 字段统计贴图和动画
-	if root.Files != nil {
-		stats := extractFileStats(root.Files)
-		summary.Stats = stats
-	}
-
 	// properties → 动画分组 + 配置菜单
 	if root.Properties != nil {
 		summary.Preview = PreviewInfo{
@@ -328,6 +324,30 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 				Controls: types,
 			})
 		}
+
+		// 从几何体文件提取纹理尺寸
+		stats, geoPaths := extractFileStats(root.Files)
+		for _, geoPath := range geoPaths {
+			for _, f := range r.File {
+				if strings.HasSuffix(strings.ToLower(f.Name), strings.ToLower(geoPath)) {
+					rc, err := f.Open()
+					if err != nil {
+						continue
+					}
+					data, _ := io.ReadAll(rc)
+					rc.Close()
+					if w, h := extractTexSizeFromGeometry(data); w > 0 && h > 0 {
+						stats.TexWidth = w
+						stats.TexHeight = h
+					}
+					break
+				}
+			}
+			if stats.TexWidth > 0 {
+				break
+			}
+		}
+		summary.Stats = stats
 	}
 
 	return summary, nil
@@ -335,24 +355,41 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 
 // ===== 辅助函数 =====
 
-// 从 files.player 统计纹理、模型主体、动画数量
-func extractFileStats(filesRaw json.RawMessage) Stats {
+// 解析 bedrock geometry JSON 的纹理尺寸
+func extractTexSizeFromGeometry(data []byte) (w, h int) {
+	var raw struct {
+		Geometry []struct {
+			Description struct {
+				TextureWidth  float64 `json:"texture_width"`
+				TextureHeight float64 `json:"texture_height"`
+			} `json:"description"`
+		} `json:"minecraft:geometry"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil || len(raw.Geometry) == 0 {
+		return 0, 0
+	}
+	return int(raw.Geometry[0].Description.TextureWidth), int(raw.Geometry[0].Description.TextureHeight)
+}
+
+// 从 files.player 统计纹理、模型主体、动画数量，并收集几何体文件路径
+func extractFileStats(filesRaw json.RawMessage) (Stats, []string) {
 	var stats Stats
+	var geoFiles []string
 
 	// files 可能形如: { "player": { "texture": [...], "animation": {...}, "model": [...] } }
 	var files map[string]json.RawMessage
 	if err := json.Unmarshal(filesRaw, &files); err != nil {
-		return stats
+		return stats, nil
 	}
 
 	playerRaw, ok := files["player"]
 	if !ok {
-		return stats
+		return stats, nil
 	}
 
 	var player map[string]json.RawMessage
 	if err := json.Unmarshal(playerRaw, &player); err != nil {
-		return stats
+		return stats, nil
 	}
 
 	// textures
@@ -376,11 +413,18 @@ func extractFileStats(filesRaw json.RawMessage) Stats {
 		}
 	}
 
-	// model
+	// model — 同时收集路径
 	if modelRaw, ok := player["model"]; ok {
-		var arr []json.RawMessage
-		if err := json.Unmarshal(modelRaw, &arr); err == nil {
-			stats.Models = len(arr)
+		var models []struct {
+			Path string `json:"path"`
+		}
+		if err := json.Unmarshal(modelRaw, &models); err == nil {
+			stats.Models = len(models)
+			for _, m := range models {
+				if m.Path != "" {
+					geoFiles = append(geoFiles, m.Path)
+				}
+			}
 		} else {
 			var obj map[string]json.RawMessage
 			if err := json.Unmarshal(modelRaw, &obj); err == nil {
@@ -389,7 +433,7 @@ func extractFileStats(filesRaw json.RawMessage) Stats {
 		}
 	}
 
-	return stats
+	return stats, geoFiles
 }
 
 // 从 extra_animation 对象中提取键名列表

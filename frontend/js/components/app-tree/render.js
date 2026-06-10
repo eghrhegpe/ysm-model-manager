@@ -14,7 +14,7 @@ import { selectState } from "./data.js";
 
 // 直接导出旧版 buildTree 和 renderTree 逻辑
 // 由旧版 tree.js 移植
-function buildTree(entries, sortMode, search) {
+function buildTree(entries, sortMode, search, filterPaths) {
   const root = {};
   const query = (search || "").trim().toLowerCase();
   const sorted = [...entries].sort((a, b) => {
@@ -35,6 +35,8 @@ function buildTree(entries, sortMode, search) {
     if (!e || !e.path) return;
     const relPath = e.path;
     if (query && !relPath.toLowerCase().includes(query)) return;
+    // 高级筛选：过滤路径
+    if (filterPaths && !filterPaths.has(e.fullPath || e.path)) return;
     const parts = relPath.replace(/\\/g, "/").split("/");
     let node = root;
     for (let i = 0; i < parts.length - 1; i++) {

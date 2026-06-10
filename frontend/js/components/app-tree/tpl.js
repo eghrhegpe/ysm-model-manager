@@ -3,10 +3,7 @@
 export function headerHTML() {
   return `<div class="hdr">
 <div class="hdr-row">
-  <span class="hdr-label">📦 模型仓库</span>
   <span class="hdr-spacer"></span>
-  <button class="repo-bar-btn" id="repo-genindex">📇 索引</button>
-  <button class="repo-bar-btn" id="repo-export-bones">📋 骨骼</button>
 </div>
 <div class="hdr-row">
   <input class="srch-inp" id="srch" type="text" placeholder="🔍 搜索模型名称..." autocomplete="off">
@@ -23,6 +20,7 @@ export function headerHTML() {
 export function footerHTML() {
   return `<div class="ftr">
 <span class="stat" id="ftr-stat">共 0 项</span>
+<button class="repo-bar-btn" id="repo-genindex">📇 索引</button>
 <div style="flex:1"></div>
 <button class="hdr-btn" id="btn-repo" style="font-size:10px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="点击选择仓库目录">📁 未设置</button>
 </div>`;

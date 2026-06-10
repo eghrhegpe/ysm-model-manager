@@ -35,9 +35,7 @@ class AppNav extends HTMLElement {
     const items = [
       { id: "instances", icon: "🎮", label: "整合包管理" },
       { id: "repository", icon: "📦", label: "模型仓库" },
-      { id: "downloads", icon: "⬇️", label: "导入与重命名" },
       { id: "workshop", icon: "🧩", label: "创意工坊" },
-      { id: "recycle", icon: "🗑️", label: "回收站" },
       { id: "diagnostics", icon: "🛠️", label: "诊断与冲突" },
       { id: "settings", icon: "⚙️", label: "设置" },
     ];
@@ -70,7 +68,7 @@ class AppNav extends HTMLElement {
           gap: 8px;
           padding: 8px 10px;
           border-radius: 6px;
-          font-size: 12px;
+          font-size: 13px;
           color: var(--muted);
           cursor: pointer;
           transition: all .12s;
@@ -83,7 +81,7 @@ class AppNav extends HTMLElement {
           border-left: 3px solid var(--menu-indicator, var(--accent));
           padding-left: 7px;
         }
-        .nav-item .icon { font-size: 14px; width: 20px; text-align: center; }
+        .nav-item .icon { font-size: 15px; width: 20px; text-align: center; }
         .nav-item .tag {
           margin-left: auto;
           font-size: 9px;

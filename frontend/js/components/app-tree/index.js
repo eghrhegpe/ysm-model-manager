@@ -18,6 +18,7 @@ class AppTree extends HTMLElement {
     this._dirOpen = {};
     this._repoRoot = "";
     this._authors = [];
+    this._filterPaths = null; // Set 或 null，来自 SearchModels 结果
   }
 
   async connectedCallback() {
@@ -37,6 +38,19 @@ class AppTree extends HTMLElement {
       await this._load();
       this._authors = await loadAuthors();
       this._renderTree();
+
+      // 监听高级筛选结果
+      this._unsubs.push(
+        bus.on("filter:results", (results) => {
+          if (results && results.length) {
+            // 将 SearchModels 返回的路径转为 Set
+            this._filterPaths = new Set(results.map((r) => r.Path));
+          } else {
+            this._filterPaths = null;
+          }
+          this._renderTree();
+        }),
+      );
     } catch (e) {
       console.error("[Tree Init Error]", e);
       // 出错时显示空状态，不白屏
@@ -72,7 +86,14 @@ class AppTree extends HTMLElement {
 
   _renderTree() {
     const c = this._root.getElementById("tree");
-    renderTree(c, this._entries, this._search, this._sort, this._dirOpen);
+    renderTree(
+      c,
+      this._entries,
+      this._search,
+      this._sort,
+      this._dirOpen,
+      this._filterPaths,
+    );
     bindTreeEvents(c, this);
     updateStat(this._root.getElementById("ftr-stat"), this._entries);
     // 仓库路径显示在按钮上

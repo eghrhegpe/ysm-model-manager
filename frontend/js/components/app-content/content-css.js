@@ -8,7 +8,7 @@ export const contentCSS = `
 .page { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .section-title { font-size:14px; font-weight:600; color:var(--txt); padding:16px 16px 8px; }
 .card-row { display:flex; gap:12px; padding:0 16px; }
-.stat-card { flex:1; background:var(--surf); border:1px solid var(--bd); border-radius:10px; padding:14px; }
+.stat-card { flex:1; background:var(--surf); border:1px solid var(--bd); border-radius:12px; padding:16px; }
 .stat-card .num { font-size:24px; font-weight:700; color:var(--accent); transition:transform .2s cubic-bezier(.34,1.56,.64,1); }
 .stat-card .num.bump { transform:scale(1.15); }
 .stat-card .label { font-size:11px; color:var(--muted); margin-top:2px; }

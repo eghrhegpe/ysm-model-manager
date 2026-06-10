@@ -62,6 +62,10 @@ export function DeleteFromRecycle(arg1) {
   return window['go']['main']['App']['DeleteFromRecycle'](arg1);
 }
 
+export function DoUpdate(arg1) {
+  return window['go']['main']['App']['DoUpdate'](arg1);
+}
+
 export function DownloadFromGitHub(arg1, arg2) {
   return window['go']['main']['App']['DownloadFromGitHub'](arg1, arg2);
 }
@@ -292,6 +296,10 @@ export function ReplaceWorkshopCreatorsFromJSON(arg1) {
 
 export function ResetWorkshopConfigs() {
   return window['go']['main']['App']['ResetWorkshopConfigs']();
+}
+
+export function RestartApplication() {
+  return window['go']['main']['App']['RestartApplication']();
 }
 
 export function RestoreFromRecycle(arg1, arg2) {

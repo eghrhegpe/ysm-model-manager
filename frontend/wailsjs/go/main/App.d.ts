@@ -35,6 +35,8 @@ export function DeduplicateCustomDir(arg1:string):Promise<number>;
 
 export function DeleteFromRecycle(arg1:string):Promise<void>;
 
+export function DoUpdate(arg1:string):Promise<string>;
+
 export function DownloadFromGitHub(arg1:string,arg2:string):Promise<string>;
 
 export function DownloadUpdate(arg1:string):Promise<string>;
@@ -150,6 +152,8 @@ export function RenameFile(arg1:string,arg2:string):Promise<void>;
 export function ReplaceWorkshopCreatorsFromJSON(arg1:string):Promise<number>;
 
 export function ResetWorkshopConfigs():Promise<Array<types.WorkshopSite>>;
+
+export function RestartApplication():Promise<void>;
 
 export function RestoreFromRecycle(arg1:string,arg2:string):Promise<void>;
 

@@ -103,6 +103,22 @@ export function statsCardHTML(model, modelPath, decodedBy) {
       ? ".zip"
       : ".7z";
   const badge = decodedBy ? `<span class="ysm-badge">${decodedBy}</span>` : "";
+  // 纹理映射日志（只展示有意义的信息）
+  let texMapHtml = "";
+  const tml = model._texMappingLog;
+  if (tml && tml.length > 1) {
+    texMapHtml = tml
+      .map((m) => {
+        const arrow =
+          m.pngSize !== "—" && m.pngSize !== m.finalSize
+            ? `→ ${m.finalSize}`
+            : "";
+        const uvNote = m.uvSize !== m.finalSize ? ` (UV推断 ${m.uvSize})` : "";
+        return `<div class="ysm-card-row" style="font-size:9px;padding:1px 0">├─ ${m.file} → 纹理[${m.texIdx}]「${m.texKey}」${m.pngSize}${arrow}${uvNote}</div>`;
+      })
+      .join("");
+    texMapHtml = `<div class="ysm-card-section-label" style="margin-top:6px">📎 纹理分配</div>${texMapHtml}`;
+  }
   return `
 <div class="ysm-card-title">📊 模型概览${badge}</div>
 <div class="ysm-card-section ysm-section-blue">
@@ -117,6 +133,7 @@ export function statsCardHTML(model, modelPath, decodedBy) {
   <div class="ysm-card-row">
     └─ <span class="ysm-card-val">${model.texWidth || "?"} × ${model.texHeight || "?"}</span> px
   </div>
+  ${texMapHtml}
 </div>
 <div class="ysm-card-section ysm-section-orange">
   <div class="ysm-card-section-label">💾 文件信息</div>

@@ -98,7 +98,7 @@ export function modalPrompt(opts) {
  */
 export function modalConfirm(opts) {
   return new Promise((resolve) => {
-    const { title, icon, message, okText, danger } = opts;
+    const { title, icon, message, okText, danger, width } = opts;
     const overlay = document.createElement("div");
     overlay.tabIndex = 0;
     overlay.className = "dlg-overlay";
@@ -118,10 +118,11 @@ export function modalConfirm(opts) {
     const box = document.createElement("div");
     box.className = "dlg-box dlg-pad";
     box.style.gap = "10px";
+    if (width) box.style.width = width;
 
     box.innerHTML = `
       <div class="dlg-title" style="margin:0">${icon || ""} ${esc(title)}</div>
-      <div style="font-size:11px;color:var(--txt);line-height:1.5;white-space:pre-wrap">${esc(message)}</div>
+      <div style="font-size:11px;color:var(--txt);line-height:1.5;white-space:pre-wrap;max-height:55vh;overflow-y:auto">${esc(message)}</div>
       <div class="dlg-footer" style="padding:0">
         <button id="mc-cancel" class="dlg-btn">取消 (Esc)</button>
         <button id="mc-ok" class="dlg-btn" style="border:none;background:${danger ? "#e5534b" : "var(--accent)"};color:#fff">${esc(okText || "确定")} (Enter)</button>

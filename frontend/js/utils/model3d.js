@@ -68,6 +68,11 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     );
     await Promise.all(loads);
   }
+  // 按 urls 顺序构建纹理数组（texMap 的插入顺序是图片加载完成顺序，不保证与索引一致）
+  const texArr = urls
+    .filter(Boolean)
+    .map((url) => texMap.get(url))
+    .filter(Boolean);
   // 调试用：暴露 model 和 buildSpecFromModel 到全局
   window.__lastModel = model;
   window.__buildSpecFromModel = buildSpecFromModel;
@@ -147,11 +152,6 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     camera.lookAt(0, centerY * scale, 0);
     controls.target.set(0, centerY * scale, 0);
     controls.update();
-    let cubeTex = null;
-    const texArr = texMap.size > 0 ? [...texMap.values()] : [];
-    if (texArr.length > 0) {
-      cubeTex = texArr[texIdx ?? 0] || texArr[0];
-    }
     for (const md of mg.meshGroups || []) {
       const boneGroup = boneGroupMap.get(md.boneId);
       if (!boneGroup) continue;
@@ -169,15 +169,17 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
       // 按 mesh 所属骨骼选择对应纹理（md.texIdx 由 buildSpecFromModel 设置）
       const meshTexIdx = md.texIdx ?? texIdx ?? 0;
       const meshTex =
-        texArr.length > 0
-          ? texArr[meshTexIdx] || texArr[0]
-          : null;
+        texArr.length > 0 ? texArr[meshTexIdx] || texArr[0] : null;
       // YSMViewer: texture slot > 0 的方块为发光/覆盖层，正面剔除（BackSide）
       const useBackSide = meshTexIdx > 0;
+      // 主纹理（slot 0）用低 alphaTest 仅丢弃完全透明像素，避免 alphaTest 0.5 把纹理
+      // 中半透明区域（如 UV 映射到抗锯齿边缘的方块面）整面丢弃。
+      // 覆盖层（slot > 0）保持 0.5 以干净裁掉透明部分。
       const mat = meshTex
         ? new THREE.MeshBasicMaterial({
             map: meshTex,
-            alphaTest: 0.5,
+            alphaTest: useBackSide ? 0.5 : 0.02,
+            transparent: true,
             side: useBackSide ? THREE.BackSide : THREE.DoubleSide,
           })
         : new THREE.MeshBasicMaterial({
@@ -206,7 +208,8 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
       boneGroup.add(mesh);
     }
   }
-  window.addEventListener("resize", () => {
+  let _rafId = null;
+  const _onResize = () => {
     const w = container.clientWidth,
       h = container.clientHeight;
     if (w > 0 && h > 0) {
@@ -214,16 +217,22 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     }
-  });
+  };
+  window.addEventListener("resize", _onResize);
   function renderLoop() {
-    requestAnimationFrame(renderLoop);
+    _rafId = requestAnimationFrame(renderLoop);
     controls.update();
     renderer.render(scene, camera);
   }
-  renderLoop();
+  _rafId = requestAnimationFrame(renderLoop);
   renderer.render(scene, camera);
   return {
     cleanup: () => {
+      // 停止动画循环（最重要的！否则每次开/关都产生一个僵尸 loop）
+      if (_rafId != null) cancelAnimationFrame(_rafId);
+      _rafId = null;
+      controls.dispose();
+      window.removeEventListener("resize", _onResize);
       renderer.dispose();
       container.innerHTML = "";
       scene.traverse((child) => {
@@ -279,17 +288,20 @@ function buildSpecFromModel(model) {
           )
         : [0, 0, 0, 1],
     };
-    if (boneIdx[b.name] !== undefined) {
+    const isDuplicate = boneIdx[b.name] !== undefined;
+    if (isDuplicate) {
       const existing = bones[boneIdx[b.name]];
       // 同名骨骼去重：优先保留数据更完整的骨骼
       // 规则1: 现有无 parent + 新有 parent → 补全
       // 规则2: 两者都有 parent 但现有无旋转 + 新有旋转 → 更新旋转
       const existingHasParent = !!existing.parentId;
       const newHasParent = !!b.parent;
-      const existingHasRot = existing.localRotation.some(v => v !== 0);
-      const newHasRot = entry.localRotation.some(v => v !== 0);
-      if ((!existingHasParent && newHasParent) ||
-          (existingHasParent && newHasParent && !existingHasRot && newHasRot)) {
+      const existingHasRot = existing.localRotation.some((v) => v !== 0);
+      const newHasRot = entry.localRotation.some((v) => v !== 0);
+      if (
+        (!existingHasParent && newHasParent) ||
+        (existingHasParent && newHasParent && !existingHasRot && newHasRot)
+      ) {
         existing.parentId = b.parent;
         existing.localPosition = localPos;
         existing.localRotation = entry.localRotation;
@@ -298,19 +310,38 @@ function buildSpecFromModel(model) {
       boneIdx[b.name] = bones.length;
       bones.push(entry);
     }
-    // cubes 全部追加（同名骨骼的也加入）
-    // 使用统一的 bone pivot（首次出现的 pivot），确保所有 cube 相对于同一根骨骼位置
-    const fp = firstPivot[b.name] || bp;
-    // 用骨骼自身所属几何体的纹理尺寸算 UV（YSMViewer 每几何体独立处理）
-    const bTexW = b._texWidth || texW;
-    const bTexH = b._texHeight || texH;
-    for (let ci = 0; ci < (b.cubes || []).length; ci++) {
-      const c = b.cubes[ci];
-      const md = buildCubeMeshDataJS(c, fp, bTexW, bTexH, b.name, ci);
-      if (md) {
-        // 优先使用 cube 级纹理槽索引（YSMViewer 用此区分主纹理与 glow/覆盖层）
-        md.texIdx = c.texSlot ?? b._texIdx ?? 0;
-        meshes.push(md);
+    // cubes：同名骨骼时后出现的替换先出现的，避免两个 arm.json 都贡献方导致双倍手臂
+    // 第一次出现时添加 cubes，后续出现时先移除该骨骼之前的 cubes 再添加新 cubes
+    if (!isDuplicate) {
+      // 首次出现：正常添加 cubes
+      const fp = firstPivot[b.name] || bp;
+      const bTexW = b._texWidth || texW;
+      const bTexH = b._texHeight || texH;
+      for (let ci = 0; ci < (b.cubes || []).length; ci++) {
+        const c = b.cubes[ci];
+        const md = buildCubeMeshDataJS(c, fp, bTexW, bTexH, b.name, ci);
+        if (md) {
+          md.texIdx = (c.texSlot > 0 ? c.texSlot : b._texIdx) ?? 0;
+          meshes.push(md);
+        }
+      }
+    } else {
+      // 后续出现：移除该骨骼旧的 cubes，再添加新的（即 arm.json 替换 main.json 的手臂）
+      const prevLen = meshes.length;
+      const keep = meshes.filter((m) => m.boneId !== b.name);
+      const removed = prevLen - keep.length;
+      meshes.length = 0;
+      meshes.push(...keep);
+      const fp = firstPivot[b.name] || bp;
+      const bTexW = b._texWidth || texW;
+      const bTexH = b._texHeight || texH;
+      for (let ci = 0; ci < (b.cubes || []).length; ci++) {
+        const c = b.cubes[ci];
+        const md = buildCubeMeshDataJS(c, fp, bTexW, bTexH, b.name, ci);
+        if (md) {
+          md.texIdx = c.texSlot ?? b._texIdx ?? 0;
+          meshes.push(md);
+        }
       }
     }
   }

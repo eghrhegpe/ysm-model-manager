@@ -38,7 +38,8 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
 
   "gopls": {
-    "build.formatting.gofumpt": true
+    "build.formatting.gofumpt": true,
+    "buildFlags": ["-tags=cli"]
   },
   "js/ts.updateImportsOnFileMove.enabled": "always"
 }

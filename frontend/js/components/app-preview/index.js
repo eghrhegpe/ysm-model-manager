@@ -12,7 +12,25 @@ import {
 import { summaryCardHTML } from "../../utils/summarize.js";
 import { parseBedrockGeometryFromJSON } from "./utils.js";
 import { parseBedrockAnimationJSON } from "../../utils/animation.js";
-import { cacheGet, cacheSet } from "../../utils/preview-cache.js";
+import {
+  cacheGet,
+  cacheSet,
+  cacheSetEvictHandler,
+} from "../../utils/preview-cache.js";
+
+// 注册缓存淘汰回调：释放 blob URL
+cacheSetEvictHandler((key, val) => {
+  if (!val) return;
+  // geometry.textures 数组中的 blob URL
+  const urls = [];
+  if (val.geometry?.textures) urls.push(...val.geometry.textures);
+  if (val.geometry?.texture && !urls.includes(val.geometry.texture))
+    urls.push(val.geometry.texture);
+  if (val.texture && !urls.includes(val.texture)) urls.push(val.texture);
+  for (const u of urls) {
+    if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
+  }
+});
 
 // DEV 环境下才输出调试日志
 const devLog = import.meta.env.DEV ? console.log : () => {};
@@ -37,7 +55,12 @@ function buildStdYsgpFromTextVariant(bytes) {
   if (!bytes || bytes.length < 20) return null;
   // 检测 BOM + YSGP
   if (bytes[0] !== 0xef || bytes[1] !== 0xbb || bytes[2] !== 0xbf) return null;
-  if (bytes[3] !== 0x59 || bytes[4] !== 0x53 || bytes[5] !== 0x47 || bytes[6] !== 0x50) {
+  if (
+    bytes[3] !== 0x59 ||
+    bytes[4] !== 0x53 ||
+    bytes[5] !== 0x47 ||
+    bytes[6] !== 0x50
+  ) {
     return null;
   }
 
@@ -66,7 +89,10 @@ function buildStdYsgpFromTextVariant(bytes) {
   // 兜底：找第一个 null 字节
   if (dataStart < 0) {
     for (let i = 50; i < bytes.length; i++) {
-      if (bytes[i] === 0x00) { dataStart = i; break; }
+      if (bytes[i] === 0x00) {
+        dataStart = i;
+        break;
+      }
     }
   }
   if (dataStart < 0 || dataStart >= bytes.length - 16) return null;
@@ -87,8 +113,24 @@ function buildStdYsgpFromTextVariant(bytes) {
     hashArr = new Uint8Array(16);
   }
 
-  // 拼接：magic + version + hash + encrypted_data
-  const encrypted = bytes.slice(dataStart);
+  // 调试：打印 dataStart 处的字节，确认 hash 位置
+  const debugBytes = Array.from(
+    bytes.slice(
+      Math.max(0, dataStart - 4),
+      Math.min(bytes.length, dataStart + 24),
+    ),
+  )
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join(" ");
+  console.log(
+    `[YSM] dataStart=${dataStart}, 前4字节: ${debugBytes.slice(0, 11)}... 后24字节: ${debugBytes.slice(12)}`,
+  );
+
+  // 原始文件在文本头部后包含 16 字节 hash，然后才是加密数据
+  // 跳过这 16 字节，避免重建时 hash 重复
+  const encryptedStart = dataStart + 16;
+  const encrypted = bytes.slice(encryptedStart);
+  console.log(`[YSM] 跳过 16B hash 后加密数据=${encrypted.length}B`);
   const result = new Uint8Array(4 + 4 + 16 + encrypted.length);
   result.set(magic, 0);
   result.set(version, 4);
@@ -96,7 +138,7 @@ function buildStdYsgpFromTextVariant(bytes) {
   result.set(encrypted, 24);
 
   const strippedLen = dataStart;
-  devLog(
+  console.log(
     `[YSM] 构建标准 YSGP: 剥离 ${strippedLen}B 文本头部, ` +
       `hash=${hashHex || "默认"}, 加密数据=${encrypted.length}B`,
   );
@@ -111,16 +153,26 @@ function stripYsgpTextHeader(bytes) {
   if (!bytes || bytes.length < 10) return bytes;
   // 检测 UTF-8 BOM + YSGP（旧版降级）
   if (bytes[0] !== 0xef || bytes[1] !== 0xbb || bytes[2] !== 0xbf) return bytes;
-  if (bytes[3] !== 0x59 || bytes[4] !== 0x53 || bytes[5] !== 0x47 || bytes[6] !== 0x50) {
+  if (
+    bytes[3] !== 0x59 ||
+    bytes[4] !== 0x53 ||
+    bytes[5] !== 0x47 ||
+    bytes[6] !== 0x50
+  ) {
     return bytes;
   }
   // 找第一个 null 字节
   let firstNull = -1;
   for (let i = 50; i < bytes.length && i < 8000; i++) {
-    if (bytes[i] === 0) { firstNull = i; break; }
+    if (bytes[i] === 0) {
+      firstNull = i;
+      break;
+    }
   }
   if (firstNull > 0) {
-    devLog(`[YSM] 剥离 YSGP 文本头部: ${firstNull}B → ${bytes.length - firstNull}B`);
+    devLog(
+      `[YSM] 剥离 YSGP 文本头部: ${firstNull}B → ${bytes.length - firstNull}B`,
+    );
     return bytes.slice(firstNull);
   }
   return bytes;
@@ -241,6 +293,9 @@ class AppPreview extends HTMLElement {
       skelContainer || this._root.getElementById("preview-content");
     if (!content) return;
 
+    // 清理旧内容（前一次模型切换残留的 canvas、调试日志等）
+    content.innerHTML = "";
+
     const container = document.createElement("div");
     container.style.cssText = "margin-bottom:8px;opacity:0.6";
     container.innerHTML = `<div class="ysm-loading-title">🏗️ 模型结构（读取中...）</div><div class="ysm-loading-bar"></div>`;
@@ -291,6 +346,34 @@ class AppPreview extends HTMLElement {
               }
               if (clips.length > 0) goClips.push(...clips);
             }
+          }
+          // Go CLI 模型简化的纹理映射日志
+          const goTexCount = model.textures?.length || 0;
+          model._texMappingLog = [
+            {
+              file: modelPath.split("/").pop().split("\\").pop(),
+              texKey: goTexCount > 0 ? "texture[0]" : "—",
+              texIdx: 0,
+              pngSize: "—",
+              geoSize: model.texWidth
+                ? `${model.texWidth}×${model.texHeight}`
+                : "—",
+              uvSize: "—",
+              finalSize: model.texWidth
+                ? `${model.texWidth}×${model.texHeight}`
+                : "—",
+            },
+          ];
+          if (goTexCount > 1) {
+            model._texMappingLog.push({
+              file: "(+多纹理)",
+              texKey: `+${goTexCount - 1}`,
+              texIdx: 0,
+              pngSize: "—",
+              geoSize: "—",
+              uvSize: "—",
+              finalSize: "—",
+            });
           }
           cacheSet(modelPath, {
             texture: model.texture,
@@ -827,18 +910,21 @@ class AppPreview extends HTMLElement {
     if (cached?.geometry) return cached;
     try {
       devLog("[YSM] 加载 WASM 模块...");
-      const { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } =
+      const { initYSMParser, decodeYsmFileFromMemory } =
         await import("../../wasm/ysm-parser.js");
       const ok = await initYSMParser();
-      devLog(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
+      console.log(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
       if (!ok) return null;
 
       devLog("[YSM] 读取文件...");
       const { ReadFileBytes } = await import("../../../wailsjs/go/main/App.js");
       let bytes = await ReadFileBytes(modelPath);
       if (typeof bytes === "string") {
-        const binaryStr = atob(bytes);
-        bytes = Uint8Array.from(binaryStr, (c) => c.charCodeAt(0));
+        const raw = atob(bytes);
+        const len = raw.length;
+        const arr = new Uint8Array(len);
+        for (let i = 0; i < len; i++) arr[i] = raw.charCodeAt(i);
+        bytes = arr;
       } else if (!(bytes instanceof Uint8Array)) {
         bytes = new Uint8Array(bytes);
       }
@@ -855,21 +941,19 @@ class AppPreview extends HTMLElement {
         if (files?.length) {
           devLog(`[YSM] ✅ 内存解析成功: ${files.length} 文件`);
         } else {
-          devLog("[YSM] 内存解析返回空，回退 callMain");
+          devLog("[YSM] 内存解析返回空（跳过 callMain 直接回退 Go CLI）");
         }
       } catch (e) {
-        devLog(`[YSM] 内存解析异常: ${e?.message}，回退 callMain`);
+        devLog(`[YSM] 内存解析异常: ${e?.message}，回退 Go CLI`);
       }
-
-      if (!files?.length) {
-        devLog("[YSM] callMain 回退...");
-        files = await decodeYsmFile(bytes);
-      }
-      devLog(`[YSM] 输出 ${files?.length || 0} 文件`);
+      console.log(`[YSM] 输出 ${files?.length || 0} 文件`);
       if (files?.length) {
-        devLog(`[YSM] 文件: ${files.map((f) => f.path).join(", ")}`);
+        console.log(`[YSM] 文件: ${files.map((f) => f.path).join(", ")}`);
       }
-      if (!files?.length) return null;
+      if (!files?.length) {
+        console.log("[YSM] ❌ WASM 解码失败，无输出文件");
+        return null;
+      }
 
       // 打印 ysm.json 确认纹理映射
       let ysmTexOrder = null;
@@ -902,6 +986,8 @@ class AppPreview extends HTMLElement {
       const texNameMap = {};
       /** 小写 key → 实际 key 映射（Windows 大小写不敏感） */
       const texLowerMap = {};
+      /** 每个纹理的实际 PNG 尺寸（key → {w, h}），用于各模型独立计算 UV */
+      const texDimensions = {};
       let maxTexW = 0,
         maxTexH = 0;
       for (const f of files) {
@@ -916,17 +1002,30 @@ class AppPreview extends HTMLElement {
           texLowerMap[key.toLowerCase()] = key;
           // 从 PNG/JPG 文件头读实际尺寸（优先于 geometry metadata）
           const arr = new Uint8Array(f.data);
+          let texW = 0,
+            texH = 0;
           if (arr[0] === 0x89 && arr[1] === 0x50 && arr[2] === 0x4e) {
-            // PNG
-            // PNG IHDR at bytes 16-23: width(4) height(4) big-endian
-            const w =
-              (arr[16] << 24) | (arr[17] << 16) | (arr[18] << 8) | arr[19];
-            const h =
-              (arr[20] << 24) | (arr[21] << 16) | (arr[22] << 8) | arr[23];
-            if (w > maxTexW) maxTexW = w;
-            if (h > maxTexH) maxTexH = h;
+            // PNG: IHDR at bytes 16-23: width(4) height(4) big-endian
+            texW = (arr[16] << 24) | (arr[17] << 16) | (arr[18] << 8) | arr[19];
+            texH = (arr[20] << 24) | (arr[21] << 16) | (arr[22] << 8) | arr[23];
+          } else if (arr[0] === 0xff && arr[1] === 0xd8) {
+            // JPEG: 扫描 SOF marker (FF C0/C1/C2) 获取尺寸
+            for (let i = 2; i < Math.min(arr.length - 8, 4096); i++) {
+              if (arr[i] === 0xff && (arr[i + 1] & 0xf0) === 0xc0) {
+                texH = (arr[i + 5] << 8) | arr[i + 6];
+                texW = (arr[i + 7] << 8) | arr[i + 8];
+                break;
+              }
+            }
           }
-          devLog(`[YSM] 纹理: ${f.path} → key="${key}"`);
+          if (texW > 0 && texH > 0) {
+            texDimensions[key] = { w: texW, h: texH };
+            if (texW > maxTexW) maxTexW = texW;
+            if (texH > maxTexH) maxTexH = texH;
+          }
+          devLog(
+            `[YSM] 纹理: ${f.path} → key="${key}"${texDimensions[key] ? ` (${texDimensions[key].w}×${texDimensions[key].h})` : ""}`,
+          );
         }
       }
       /** 尝试精确匹配，失败则大小写不敏感兜底 */
@@ -976,7 +1075,7 @@ class AppPreview extends HTMLElement {
       if (ysmModelOrder) {
         for (let i = 0; i < ysmModelOrder.length; i++) {
           const mp = ysmModelOrder[i];
-          const mn = typeof mp === "string" ? mp : (mp?.path || mp?.name || "");
+          const mn = typeof mp === "string" ? mp : mp?.path || mp?.name || "";
           const modelName = mn.split("/").pop().split("\\").pop();
           if (modelName) {
             const texIdx = Math.min(i, orderedTexKeys.length - 1);
@@ -989,6 +1088,8 @@ class AppPreview extends HTMLElement {
       let geometry = null;
       const allBones = [];
       const processedModels = new Set();
+      /** 每个模型文件的纹理映射记录（用于 UI 展示） */
+      const texMappingLog = [];
 
       /** 解析一个模型文件并添加到 allBones */
       const processModelFile = (f, forcedTexIdx) => {
@@ -1005,18 +1106,73 @@ class AppPreview extends HTMLElement {
 
           // 纹理索引来自 ysmModelOrder 映射，或默认 0
           const texIdx = forcedTexIdx ?? 0;
-          const texUrl =
+          const texKey =
             orderedTexKeys.length > texIdx
-              ? textures[orderedTexKeys[texIdx]]
+              ? orderedTexKeys[texIdx]
               : orderedTexKeys.length > 0
-                ? textures[orderedTexKeys[0]]
+                ? orderedTexKeys[0]
                 : null;
+          const texUrl = texKey ? textures[texKey] : null;
 
-          // 使用实际 PNG 尺寸（优先于几何体元数据，因元数据可能过小如 32）
-          const boneTexW =
-            (maxTexW > parsed.texWidth ? maxTexW : parsed.texWidth) || 64;
-          const boneTexH =
-            (maxTexH > parsed.texHeight ? maxTexH : parsed.texHeight) || 64;
+          // 从 UV 值推断该几何体实际需要的纹理尺寸（某些模型 UV 像素超出声明的纹理尺寸）
+          // 对 expandBoxUV（uv: [u,v]），max_u = u + 2*(x+z)，max_v = v + y + z
+          // 对 faceUV，取每面 uv + uv_size 的最大值
+          let uvMaxW = 2,
+            uvMaxH = 2;
+          for (const b of parsed.bones) {
+            for (const c of b.cubes || []) {
+              const [sx, sy, sz] = c.size;
+              if (Array.isArray(c.uv) && c.uv.length >= 2) {
+                const [u, v] = c.uv;
+                // expandBoxUV 布局的最大 UV 像素值
+                const maxU = u + 2 * (Math.abs(sx) + Math.abs(sz));
+                const maxV = v + Math.abs(sy) + Math.abs(sz);
+                if (maxU > uvMaxW) uvMaxW = maxU;
+                if (maxV > uvMaxH) uvMaxH = maxV;
+              } else if (c.faceUV) {
+                try {
+                  const fd = JSON.parse(c.faceUV);
+                  for (const fn of [
+                    "east",
+                    "west",
+                    "up",
+                    "down",
+                    "south",
+                    "north",
+                  ]) {
+                    const f = fd[fn];
+                    if (!f?.uv) continue;
+                    const fw = Math.abs(f.uv_size?.[0] || 0);
+                    const fh = Math.abs(f.uv_size?.[1] || 0);
+                    const uEnd = f.uv[0] + fw;
+                    const vEnd = f.uv[1] + fh;
+                    if (uEnd > uvMaxW) uvMaxW = uEnd;
+                    if (vEnd > uvMaxH) uvMaxH = vEnd;
+                  }
+                } catch {}
+              }
+            }
+          }
+
+          // 最终纹理尺寸 = max(PNG 实际尺寸, 几何体声明尺寸, UV 推断尺寸)
+          const texDim = texKey ? texDimensions[texKey] : null;
+          const actualTexW = texDim ? texDim.w : 0;
+          const actualTexH = texDim ? texDim.h : 0;
+          const boneTexW = Math.max(actualTexW, parsed.texWidth, uvMaxW) || 64;
+          const boneTexH = Math.max(actualTexH, parsed.texHeight, uvMaxH) || 64;
+          // 记录纹理映射日志
+          texMappingLog.push({
+            file: f.path.split("/").pop(),
+            texKey: texKey || "—",
+            texIdx,
+            pngSize: texDim ? `${texDim.w}×${texDim.h}` : "—",
+            geoSize:
+              parsed.texWidth > 0
+                ? `${parsed.texWidth}×${parsed.texHeight}`
+                : "—",
+            uvSize: `${uvMaxW}×${uvMaxH}`,
+            finalSize: `${boneTexW}×${boneTexH}`,
+          });
           for (const b of parsed.bones) {
             b._texIdx = texIdx;
             b._texUrl = texUrl;
@@ -1043,24 +1199,53 @@ class AppPreview extends HTMLElement {
       // 第一轮：按 ysmModelOrder 顺序处理模型文件（保证纹理索引正确）
       if (ysmModelOrder) {
         for (const mp of ysmModelOrder) {
-          const mn = typeof mp === "string" ? mp : (mp?.path || mp?.name || "");
+          const mn = typeof mp === "string" ? mp : mp?.path || mp?.name || "";
           const modelName = mn.split("/").pop().split("\\").pop();
           if (!modelName) continue;
           const f = files.find(
             (ff) =>
-              ff.path.endsWith("/" + modelName) || ff.path.endsWith("\\" + modelName) || ff.path === modelName,
+              ff.path.endsWith("/" + modelName) ||
+              ff.path.endsWith("\\" + modelName) ||
+              ff.path === modelName,
           );
           const texIdx = modelTexIdxMap.get(modelName) ?? 0;
           processModelFile(f, texIdx);
         }
       }
 
-      // 第二轮：处理剩余不在 ysmModelOrder 中的模型文件（默认 texIdx=0）
+      // 第二轮：处理剩余不在 ysmModelOrder 中的模型文件
+      // 无 ysm.json 时，按模型文件名匹配纹理：main.json→"main"纹理, arrow.json→"arrow"纹理
+      // 匹配不到的统一用 index 0（主纹理）
+      const texKeyToIdx = {};
+      orderedTexKeys.forEach((k, i) => {
+        texKeyToIdx[k] = i;
+      });
       for (const f of files) {
         if (!f.path.startsWith("models/") || !f.path.endsWith(".json"))
           continue;
         if (!processedModels.has(f.path)) {
-          processModelFile(f, 0);
+          // 从模型文件名推测纹理索引：取 basename 去 .json，在纹理列表中匹配
+          const modelBase = f.path
+            .split("/")
+            .pop()
+            .replace(/\.json$/, "");
+          let matchedKey = matchTexKey(modelBase);
+          // 精确匹配不到时尝试子串匹配：如 arrow.json → "arrow-texture" / "arrow" 纹理
+          if (matchedKey == null) {
+            const lowerBase = modelBase.toLowerCase();
+            for (const k of orderedTexKeys) {
+              if (
+                k.toLowerCase().includes(lowerBase) ||
+                lowerBase.includes(k.toLowerCase())
+              ) {
+                matchedKey = k;
+                break;
+              }
+            }
+          }
+          const texIdx =
+            matchedKey != null ? (texKeyToIdx[matchedKey] ?? 0) : 0;
+          processModelFile(f, texIdx);
         }
       }
       // 合并后的 geometry
@@ -1074,8 +1259,9 @@ class AppPreview extends HTMLElement {
         // 当实际 PNG 尺寸 > 几何体元数据时，用 PNG 实际尺寸覆盖
         // 几何体元数据可能过小（如 32），导致 UV 归一化错误
         if (maxTexW > geometry.texWidth) geometry.texWidth = maxTexW;
-        if (maxTexH > geometry.texHeight)
-          geometry.texHeight = maxTexH;
+        if (maxTexH > geometry.texHeight) geometry.texHeight = maxTexH;
+        // 纹理映射日志（调试用）
+        geometry._texMappingLog = texMappingLog;
       }
 
       // 解析动画文件

@@ -16,8 +16,9 @@ type BedrockGeo struct {
 	FormatVersion string `json:"format_version"`
 	Geometry      []struct {
 		Description struct {
-			Identifier   string  `json:"identifier"`
-			TextureWidth float64 `json:"texture_width"`
+			Identifier    string  `json:"identifier"`
+			TextureWidth  float64 `json:"texture_width"`
+			TextureHeight float64 `json:"texture_height,omitempty"`
 		} `json:"description"`
 		Bones []struct {
 			Name     string         `json:"name"`
@@ -115,7 +116,7 @@ func analyzeJSONBytes(data []byte) {
 			parent = "(root)"
 		}
 		rot := ""
-		if len(b.Rotation) > 0 && string(b.Rotation) != "[0,0,0]" && string(b.Rotation) != "[0,0,0]" {
+		if len(b.Rotation) > 0 && string(b.Rotation) != "[0,0,0]" {
 			rot = fmt.Sprintf(" rot=%s", string(b.Rotation))
 		}
 		cubeN := 0

@@ -394,7 +394,7 @@ func extractFileStats(filesRaw json.RawMessage) Stats {
 
 // 从 extra_animation 对象中提取键名列表
 func extractKeys(raw json.RawMessage) []string {
-	if raw == nil || len(raw) == 0 {
+	if len(raw) == 0 {
 		return nil
 	}
 	// 可能是对象
@@ -421,7 +421,7 @@ func extractKeys(raw json.RawMessage) []string {
 // 从 extra_animation map 提取中文显示名
 // extra_animation 的 value 可能是一个对象或字符串
 func extractDisplayValues(raw json.RawMessage) []string {
-	if raw == nil || len(raw) == 0 {
+	if len(raw) == 0 {
 		return nil
 	}
 	var obj map[string]json.RawMessage
@@ -443,7 +443,7 @@ func extractDisplayValues(raw json.RawMessage) []string {
 }
 
 func extractKeySet(raw json.RawMessage) map[string]bool {
-	if raw == nil || len(raw) == 0 {
+	if len(raw) == 0 {
 		return nil
 	}
 	var obj map[string]json.RawMessage
@@ -459,7 +459,7 @@ func extractKeySet(raw json.RawMessage) map[string]bool {
 
 // 从 config_forms 提取控件类型摘要
 func extractControlTypes(raw json.RawMessage) []string {
-	if raw == nil || len(raw) == 0 {
+	if len(raw) == 0 {
 		return nil
 	}
 	var forms []json.RawMessage

@@ -238,6 +238,10 @@ export function LoadAppConfig() {
   return window['go']['main']['App']['LoadAppConfig']();
 }
 
+export function LoadGitHubRepos() {
+  return window['go']['main']['App']['LoadGitHubRepos']();
+}
+
 export function LoadWorkshopCreators() {
   return window['go']['main']['App']['LoadWorkshopCreators']();
 }

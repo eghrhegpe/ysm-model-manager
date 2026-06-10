@@ -3,6 +3,15 @@
 > 记录每次影响架构的变更，帮助新 AI 快速理解代码库演进。
 > **原则**：不写"优化性能"，写具体的改动内容和影响。
 
+| 日期 | 改动文件 | 架构层级 | 影响范围 | 破坏性? | 描述 |
+| ---- | -------- | -------- | -------- | ------- | ---- |
+| 0611 | `go/ysm/header.go` | Go 后端 | YSM 头部解析 | 是(需重编译) | `scanHeader` 新增 `---` 退出条件；`AnalyzeYSMHeader` 新增 `hasTextHeader` 预检纯二进制文件；`YSMHeader.HasFree` 三态字段 |
+| 0611 | `go/sync/sync.go` | Go 后端 | 同步状态 | 是(需重编译) | `repoByHash` 改为 `map[string][]types.ModelEntry`，修复哈希去重导致文件误标为已同步 |
+| 0611 | `frontend/js/components/app-content/workshop-*.js` | 前端 | 创意工坊 CSS | 是(需清缓存) | 所有 workshop CSS 类从 `components.css` 迁移到 `content-css.js` (Shadow DOM) |
+| 0611 | `frontend/js/components/app-content/tpl.js` | 前端 | 页面模板 | 是(需清缓存) | 仓库页共享 220px 右侧预览面板；删除 githubHTML 重复函数后重建 |
+| 0611 | `frontend/js/components/app-nav.js` | 前端 | 导航 | 否 | 宽度缩减 200→160px；移除诊断 ! 标记；仓库元老晋升主菜单 |
+| 0610 | `creators.json` | 数据 | 创作者 | 否 | workshop_creators.json 重命名为 creators.json，新增 workshop_gitHub.json |
+
 | 日期 | 改动文件                                       | 架构层级 | 影响范围                | 破坏性?      | 描述                                                                               |
 | ---- | ---------------------------------------------- | -------- | ----------------------- | ------------ | ---------------------------------------------------------------------------------- |
 | 0606 | `app-content/index.js` → `features/`, `pages/` | 组件拆分 | 导入/回收站/更新/仓库页 | 否(仅重构)   | 2114 行拆为 5 个模块（主文件 1342 + 4 个业务模块），降低认知负荷                   |

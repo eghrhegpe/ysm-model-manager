@@ -23,7 +23,7 @@ export function registerContextMenus() {
             },
             { divider: true },
             {
-              label: "从仓库导入模型",
+              label: "安装缺失",
               icon: "⬇️",
               onClick: () =>
                 bus.emit("sync:download-missing", { instanceName }),

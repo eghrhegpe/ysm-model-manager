@@ -123,6 +123,8 @@ export function ListVersionInstances(arg1:string):Promise<Array<types.VersionIns
 
 export function LoadAppConfig():Promise<types.AppConfig>;
 
+export function LoadGitHubRepos():Promise<Array<types.WorkshopCreator>>;
+
 export function LoadWorkshopCreators():Promise<Array<types.WorkshopCreator>>;
 
 export function LoadWorkshopSites():Promise<Array<types.WorkshopSite>>;

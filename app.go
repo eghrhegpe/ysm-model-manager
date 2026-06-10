@@ -447,19 +447,19 @@ func defaultWorkshopSites() []types.WorkshopSite {
 	}
 }
 
-// ========== 创意工坊创作者配置（单文件 + 标签）==========
-func workshopCreatorsPath() string {
+// ========== 创意工坊创作者配置 ==========
+func creatorsPath() string {
 	exe, _ := os.Executable()
 	return findConfigFile(
-		filepath.Join(filepath.Dir(exe), "workshop_creators.json"),
-		filepath.Join(filepath.Dir(exe), "..", "workshop_creators.json"),
-		"workshop_creators.json",
+		filepath.Join(filepath.Dir(exe), "creators.json"),
+		filepath.Join(filepath.Dir(exe), "..", "creators.json"),
+		"creators.json",
 	)
 }
 
 func (a *App) LoadWorkshopCreators() []types.WorkshopCreator {
 	var list []types.WorkshopCreator
-	if err := readJSONFile(workshopCreatorsPath(), &list); err != nil {
+	if err := readJSONFile(creatorsPath(), &list); err != nil {
 		return nil
 	}
 	return list
@@ -470,7 +470,25 @@ func (a *App) SaveWorkshopCreators(list []types.WorkshopCreator) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(workshopCreatorsPath(), data, 0644)
+	return os.WriteFile(creatorsPath(), data, 0644)
+}
+
+// ========== GitHub 仓库配置 ==========
+func workshopGitHubPath() string {
+	exe, _ := os.Executable()
+	return findConfigFile(
+		filepath.Join(filepath.Dir(exe), "workshop_gitHub.json"),
+		filepath.Join(filepath.Dir(exe), "..", "workshop_gitHub.json"),
+		"workshop_gitHub.json",
+	)
+}
+
+func (a *App) LoadGitHubRepos() []types.WorkshopCreator {
+	var list []types.WorkshopCreator
+	if err := readJSONFile(workshopGitHubPath(), &list); err != nil {
+		return nil
+	}
+	return list
 }
 
 // ResetWorkshopConfigs 重置创意工坊配置为默认值
@@ -481,7 +499,7 @@ func (a *App) ResetWorkshopConfigs() ([]types.WorkshopSite, error) {
 		return nil, err
 	}
 	// 清空创作者文件夹
-	os.Remove(workshopCreatorsPath())
+	os.Remove(creatorsPath())
 	return sites, nil
 }
 
@@ -564,12 +582,12 @@ func (a *App) ExportWorkshopCreatorsJSONFile() (string, error) {
 	if err := a.SaveWorkshopCreators(a.LoadWorkshopCreators()); err != nil {
 		return "", err
 	}
-	return workshopCreatorsPath(), nil
+	return creatorsPath(), nil
 }
 
 // BackupWorkshopCreators 备份创作者配置
 func (a *App) BackupWorkshopCreators() (string, error) {
-	path := workshopCreatorsPath()
+	path := creatorsPath()
 	bakPath := path + "." + time.Now().Format("20060102-150405") + ".bak"
 	data, err := os.ReadFile(path)
 	if err != nil {

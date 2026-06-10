@@ -107,7 +107,7 @@ export function renderSiteView(site, ctx) {
         '<button class="ws-cr-view-btn ws-action-btn ws-action-btn-muted">✅ 完成</button>' +
         '<button class="ws-cr-save-btn ws-save-btn">💾 保存</button>' +
         "</div>" +
-        '<div class="ws-hint-text">📄 数据文件：exe 同目录下的 workshop_creators.json，可直接编辑</div>',
+        '<div class="ws-hint-text">📄 数据文件：exe 同目录下的 creators.json，可直接编辑</div>',
     );
     creators.forEach((cr, idx) => {
       parts.push(

@@ -7,6 +7,7 @@ import {
   settingsHTML,
   diagnosticsHTML,
   workshopHTML,
+  githubHTML,
 } from "./tpl.js";
 import { registerGlobalHandlers } from "../../core/global-handlers.js";
 import { initDiagnostics } from "./workshop-diagnostics.js";
@@ -27,7 +28,7 @@ class AppContent extends HTMLElement {
     this._root = this.attachShadow({ mode: "open" });
     this._root.adoptedStyleSheets = [new CSSStyleSheet()];
     this._root.adoptedStyleSheets[0].replaceSync(contentCSS);
-    this._current = "instances";
+    this._current = "repository";
     this._globalUnsubs = [];
   }
 
@@ -64,7 +65,11 @@ class AppContent extends HTMLElement {
       case "workshop":
         inner = workshopHTML();
         break;
+      case "github":
+        inner = githubHTML();
+        break;
       case "diagnostics":
+      case "oldest":
         inner = diagnosticsHTML();
         break;
       case "settings":
@@ -77,10 +82,31 @@ class AppContent extends HTMLElement {
 
     if (this._current === "diagnostics") {
       this._initDiagnostics();
+    } else if (this._current === "oldest") {
+      // 仓库元老作为独立页面：直接渲染并显示 oldest 面板
+      this._initDiagnostics();
+      setTimeout(() => {
+        const left = this._root.querySelector(".diag-left");
+        const log = this._root.getElementById("diag-log");
+        const oldest = this._root.getElementById("diag-oldest");
+        if (left) left.style.display = "none";
+        if (log) log.style.display = "none";
+        if (oldest) {
+          oldest.style.display = "";
+          import("./workshop-diagnostics.js").then((m) => {
+            if (m.loadOldestModel)
+              m.loadOldestModel(this._root, (s) => this._esc(s));
+          });
+        }
+      }, 0);
     } else if (this._current === "settings") {
       this._initSettings();
     } else if (this._current === "workshop") {
       this._initWorkshop();
+    } else if (this._current === "github") {
+      this._initGithub();
+    } else if (this._current === "instances") {
+      this._initInstances();
     } else if (this._current === "repository") {
       this._initRepository();
     }
@@ -90,12 +116,131 @@ class AppContent extends HTMLElement {
     initDiagnostics(this._root, (s) => this._esc(s));
   }
 
-  _initRepository() {
-    initRepository();
-    this._bindRepoTabs();
+  _initInstances() {
+    this._bindTabs("ins", ["versions"]);
+    // 只注册一次，避免重复监听
+    if (this._insListenerReg) return;
+    this._insListenerReg = true;
+    this._globalUnsubs.push(
+      bus.on("package:selected", async (pkg) => {
+        const content = this._root.getElementById("ins-content");
+        if (!content) return;
+        const { renderBody } =
+          await import("../../components/app-sidebar/render.js");
+        const synced = pkg.synced || 0;
+        const missing = pkg.missing || 0;
+        const extra = pkg.extra || 0;
+        const filterKey = "ins-filter-" + Date.now();
+        content.innerHTML =
+          '<div class="ins-filter-bar" style="display:flex;gap:12px;padding:8px 8px 0;flex-shrink:0;border-bottom:1px solid var(--bd);padding-bottom:4px" data-key="' +
+          filterKey +
+          '">' +
+          '<div class="ins-filter-card active" style="cursor:pointer;font-size:10px;color:var(--accent);font-weight:600;transition:all .12s;border-bottom:2px solid var(--accent);padding-bottom:2px" data-filter="all" title="显示全部">📊 全部</div>' +
+          '<div class="ins-filter-card" style="cursor:pointer;font-size:10px;color:var(--muted);transition:all .12s" data-filter="synced" title="仅显示已同步">' +
+          '<span style="color:#6bb86b;font-weight:700">' +
+          synced +
+          "</span> 已同步" +
+          "</div>" +
+          '<div class="ins-filter-card" style="cursor:pointer;font-size:10px;color:var(--muted);transition:all .12s" data-filter="missing" title="仅显示待同步">' +
+          '<span style="color:#f38ba8;font-weight:700">' +
+          missing +
+          "</span> 待同步" +
+          "</div>" +
+          '<div class="ins-filter-card" style="cursor:pointer;font-size:10px;color:var(--muted);transition:all .12s" data-filter="extra" title="仅显示可加入">' +
+          '<span style="color:#f9a826;font-weight:700">' +
+          extra +
+          "</span> 可加入" +
+          "</div>" +
+          "</div>" +
+          '<div class="ins-filter-list ins-model-list" style="flex:1;overflow-y:auto;padding:4px 8px" data-key="' +
+          filterKey +
+          '">' +
+          renderBody(pkg) +
+          "</div>";
+        // 绑定卡片点击筛选
+        const bar = content.querySelector(
+          '.ins-filter-bar[data-key="' + filterKey + '"]',
+        );
+        const list = content.querySelector(
+          '.ins-filter-list[data-key="' + filterKey + '"]',
+        );
+        if (bar && list) {
+          bar.addEventListener("click", (e) => {
+            const card = e.target.closest(".ins-filter-card");
+            if (!card) return;
+            bar.querySelectorAll(".ins-filter-card").forEach((c) => {
+              c.style.color = "var(--muted)";
+              c.style.fontWeight = "400";
+              c.style.borderBottom = "2px solid transparent";
+            });
+            card.style.color = "var(--accent)";
+            card.style.fontWeight = "600";
+            card.style.borderBottom = "2px solid var(--accent)";
+            const filter = card.dataset.filter;
+            Array.from(list.children).forEach((sec) => {
+              if (filter === "all") {
+                sec.style.display = "";
+                return;
+              }
+              const cat = sec.dataset?.category || "";
+              sec.style.display = cat === filter ? "" : "none";
+            });
+          });
+        }
+        // 绑定单个安装按钮
+        const { InstallModelTo } =
+          await import("../../../wailsjs/go/main/App.js");
+        content.querySelectorAll(".btn-install-one").forEach((btn) => {
+          btn.onclick = async (e) => {
+            e.stopPropagation();
+            const name = btn.dataset.path;
+            if (!name) return;
+            // 查找所在整合包名（从 pkg 获取）
+            const insName = pkg.name || "";
+            const { LoadAppConfig, ListVersionInstances } =
+              await import("../../../wailsjs/go/main/App.js");
+            const cfg = await LoadAppConfig();
+            const mcRoot = cfg.mcRoot || "";
+            const allIns = mcRoot
+              ? (await ListVersionInstances(mcRoot)) || []
+              : [];
+            const match = allIns.find((i) => i.Name === insName);
+            const targetDir = match ? match.CustomDir : "";
+            if (!targetDir) {
+              bus.emit("toast:show", {
+                msg: "未找到整合包目录",
+                duration: 3000,
+                type: "error",
+              });
+              return;
+            }
+            try {
+              await InstallModelTo(name, targetDir);
+              bus.emit("stats:refresh");
+              bus.emit("toast:show", {
+                msg: `✅ 已安装: ${name}`,
+                duration: 2000,
+                type: "success",
+              });
+            } catch (e) {
+              bus.emit("toast:show", {
+                msg: `❌ 安装失败: ${String(e)}`,
+                duration: 3000,
+                type: "error",
+              });
+            }
+          };
+        });
+      }),
+    );
   }
 
-  _bindRepoTabs() {
+  _initRepository() {
+    initRepository();
+    this._bindTabs("repo", ["tree", "import", "recycle", "dedup"]);
+  }
+
+  _bindTabs(prefix, ids) {
     const tabs = this._root.querySelectorAll(".repo-tab");
     if (!tabs.length) return;
     let inited = {};
@@ -103,24 +248,26 @@ class AppContent extends HTMLElement {
       btn.addEventListener("click", async () => {
         const tab = btn.dataset.tab;
         tabs.forEach((t) => t.classList.toggle("active", t === btn));
-        ["tree", "import", "recycle", "dedup"].forEach((id) => {
-          const el = this._root.getElementById("repo-tab-" + id);
+        ids.forEach((id) => {
+          const el = this._root.getElementById(prefix + "-tab-" + id);
           if (el) el.style.display = id === tab ? "" : "none";
         });
-        // 首次切换到导入/回收站时初始化内容
-        if (!inited[tab] && tab !== "tree") {
+        // 首次切换到非默认 tab 时初始化内容
+        if (!inited[tab] && tab !== ids[0]) {
           inited[tab] = true;
-          const container = this._root.getElementById("repo-tab-" + tab);
+          const container = this._root.getElementById(prefix + "-tab-" + tab);
           if (!container) return;
           if (tab === "import") {
             const { downloadsHTML } = await import("./tpl.js");
             container.innerHTML = downloadsHTML();
-            const { initImportQueue } = await import("../../features/import-queue.js");
+            const { initImportQueue } =
+              await import("../../features/import-queue.js");
             initImportQueue(this);
           } else if (tab === "recycle") {
             const { recycleHTML } = await import("./tpl.js");
             container.innerHTML = recycleHTML();
-            const { initRecycleBin } = await import("../../features/recycle-bin.js");
+            const { initRecycleBin } =
+              await import("../../features/recycle-bin.js");
             initRecycleBin(this);
           } else if (tab === "dedup") {
             const { startDedup } = await import("./workshop-diagnostics.js");
@@ -130,13 +277,16 @@ class AppContent extends HTMLElement {
               '<div style="display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid var(--bd)">' +
               '<span style="flex:1"></span>' +
               '<button class="hdr-btn accent" id="dedup-start-btn">🔗 开始去重</button>' +
-              '</div>' +
+              "</div>" +
               '<div id="dedup-result-list" style="flex:1;overflow-y:auto;padding:8px 0"></div>' +
-              '</div>';
-            container.querySelector("#dedup-start-btn")?.addEventListener("click", async () => {
-              const list = container.querySelector("#dedup-result-list");
-              if (list) await startDedup({ getElementById: () => list }, this._esc);
-            });
+              "</div>";
+            container
+              .querySelector("#dedup-start-btn")
+              ?.addEventListener("click", async () => {
+                const list = container.querySelector("#dedup-result-list");
+                if (list)
+                  await startDedup({ getElementById: () => list }, this._esc);
+              });
           }
         }
       });
@@ -391,6 +541,160 @@ class AppContent extends HTMLElement {
     }; // end showRepoModels
 
     loadSites();
+  }
+
+  _initGithub() {
+    const root = this._root;
+    const grid = root.getElementById("gh-grid");
+    const resultsBody = root.getElementById("gh-results-body");
+    const sourceInfo = root.getElementById("gh-source-info");
+    let repoModelCache = {};
+
+    const loadRepos = async () => {
+      grid.innerHTML =
+        '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>';
+      try {
+        const App = await import("../../../wailsjs/go/main/App.js");
+        const repos = await App.LoadGitHubRepos();
+        const ghCreators = repos || [];
+        sourceInfo.textContent = ghCreators.length + " 仓库 · JSON驱动";
+        if (!ghCreators.length) {
+          grid.innerHTML =
+            '<div style="padding:24px;text-align:center;color:var(--muted);font-size:10px">暂无 GitHub 仓库</div>';
+          return;
+        }
+        grid.innerHTML = ghCreators
+          .map(
+            (cr, idx) =>
+              '<div class="ws-card gh-repo-card" data-index="' +
+              idx +
+              '" data-repo="' +
+              this._esc(cr.name) +
+              '">' +
+              '<div class="ws-card-body">' +
+              '<div class="ws-name" style="font-size:11px">🐙 ' +
+              this._esc(cr.name) +
+              "</div>" +
+              '<div class="ws-desc" style="font-size:9px">' +
+              this._esc(cr.desc) +
+              "</div>" +
+              "</div></div>",
+          )
+          .join("");
+        // 点击仓库
+        grid.querySelectorAll(".gh-repo-card").forEach((card) => {
+          card.addEventListener("click", () => {
+            grid
+              .querySelectorAll(".ws-card")
+              .forEach((c) => c.classList.remove("active"));
+            card.classList.add("active");
+            const repo = card.dataset.repo;
+            showRepo(repo);
+          });
+        });
+      } catch (e) {
+        grid.innerHTML =
+          '<div style="padding:24px;text-align:center;color:var(--muted);font-size:10px">加载失败</div>';
+      }
+    };
+
+    const showRepo = async (repo) => {
+      resultsBody.innerHTML =
+        '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载模型列表中...</div>';
+      // 使用缓存
+      if (repoModelCache[repo]) {
+        const { models, source, localMap } = repoModelCache[repo];
+        renderModels(repo, models, source, localMap);
+        return;
+      }
+      let mirror = "";
+      try {
+        const { LoadAppConfig, ScanModelEntries } =
+          await import("../../../wailsjs/go/main/App.js");
+        const cfg = await LoadAppConfig();
+        mirror = cfg.mirror || "";
+        const repoRoot = cfg.repoRoot || "";
+        // 预先加载本地映射
+        let localMap = new Map();
+        if (repoRoot) {
+          const entries = await ScanModelEntries(repoRoot);
+          entries.forEach((e) => {
+            let n = e.Name || "";
+            if (n.endsWith(".ban")) n = n.slice(0, -4);
+            localMap.set(n, e.Hash || "");
+          });
+        }
+        const { tryFetchModels } = await import("./workshop-data.js");
+        const result = await tryFetchModels(repo, mirror, (pct, label) => {
+          resultsBody.innerHTML =
+            '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +
+            (label || "⏳ 加载中...") +
+            "</div>";
+        });
+        if (result && result.models) {
+          repoModelCache[repo] = {
+            models: result.models,
+            source: result.source,
+            localMap,
+          };
+          renderModels(repo, result.models, result.source, localMap);
+        } else {
+          resultsBody.innerHTML =
+            '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ 未找到模型列表</div>' +
+            '<div style="text-align:center;padding:8px"><button class="ws-btn ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
+        }
+      } catch (e) {
+        resultsBody.innerHTML =
+          '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ 加载失败: ' +
+          this._esc(String(e)) +
+          "</div>" +
+          '<div style="text-align:center;padding:8px"><button class="ws-btn ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
+      }
+      // 绑定打开 GitHub 按钮
+      const openBtn = resultsBody.querySelector("#gh-open-repo");
+      if (openBtn)
+        openBtn.addEventListener("click", () => {
+          window.open("https://github.com/" + repo, "_blank");
+        });
+    };
+
+    const renderModels = (repo, models, source, localMap) => {
+      const dlPrefix =
+        source === "jsd"
+          ? "https://cdn.jsdelivr.net/gh/" + repo + "@main/"
+          : "https://raw.githubusercontent.com/" + repo + "/main/";
+      const sourceLabel =
+        source === "raw"
+          ? '<span class="link-badge link-badge-raw">raw</span>'
+          : source === "jsd"
+            ? '<span class="link-badge link-badge-jsd">⚡jsd</span>'
+            : source === "api"
+              ? '<span class="link-badge link-badge-api">API</span>'
+              : "";
+      const missingCount = countMissing(models, localMap);
+      resultsBody.innerHTML = renderRepoHeaderHTML({
+        esc: (s) => this._esc(s),
+        repo,
+        sourceLabel,
+        modelsLength: models.length,
+        missingCount,
+      });
+      const { renderList } = bindRepoEvents(resultsBody, {
+        esc: (s) => this._esc(s),
+        models,
+        dlPrefix,
+        repo,
+        source,
+        showRepoModels: () => showRepo(repo),
+        backToSite: () => loadRepos(),
+        localMap,
+      });
+      const listContainer = resultsBody.querySelector("#ws-repo-list");
+      if (listContainer) listContainer.appendChild(renderList());
+    };
+
+    root.getElementById("gh-refresh").addEventListener("click", loadRepos);
+    loadRepos();
   }
 
   _initRecycle() {

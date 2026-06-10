@@ -217,12 +217,27 @@ export function bindTreeEvents(container, vm) {
     });
   });
 
-  // 悬停快捷操作：🔍 预览
+  // 悬停快捷操作：🔍 B站搜索作者
   container.querySelectorAll(".ha-preview").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
+    btn.addEventListener("click", async (e) => {
       e.stopPropagation();
       const path = btn.dataset.path;
-      if (path) bus.emit("model:select", { path });
+      const name = path?.split(/[/\\]/).pop() || "";
+      const { parseModelName } = await import("../../utils/display.js");
+      const { author } = parseModelName(name);
+      if (author) {
+        window.open(
+          "https://search.bilibili.com/all?keyword=" +
+            encodeURIComponent(author),
+          "_blank",
+        );
+      } else {
+        bus.emit("toast:show", {
+          msg: "未解析到作者名",
+          duration: 2000,
+          type: "warn",
+        });
+      }
     });
   });
 

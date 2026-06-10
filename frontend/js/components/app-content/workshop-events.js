@@ -2,11 +2,7 @@
 import { bus } from "../../bus.js";
 import { modalConfirm } from "../../dialogs/modal.js";
 import { renderDisplayName } from "../../utils/display.js";
-import {
-  renderModelList,
-  isModelMissing,
-  hideGlobalPreview,
-} from "./workshop-render.js";
+import { renderModelList, isModelMissing } from "./workshop-render.js";
 
 /**
  * 绑定仓库模型页面的所有事件。
@@ -41,7 +37,6 @@ export function bindRepoEvents(sr, ctx) {
   const isMissing = (m) => isModelMissing(m, localMap);
 
   const renderList = (filter = "") => {
-    hideGlobalPreview(); // 列表重渲染前销毁预览，防止僵尸节点
     const q = filter.trim().toLowerCase();
     let filtered = q
       ? models.filter((m) => m.name.toLowerCase().includes(q))

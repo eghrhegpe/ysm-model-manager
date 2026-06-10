@@ -61,7 +61,8 @@ if ($LASTEXITCODE -ne 0) {
 # 3. 复制配置文件
 Write-Host "📋 复制资源配置..." -ForegroundColor Yellow
 Copy-Item "$ProjectRoot\workshop_sites.json" "$OutputDir\" -ErrorAction SilentlyContinue
-Copy-Item "$ProjectRoot\workshop_creators.json" "$OutputDir\" -ErrorAction SilentlyContinue
+Copy-Item "$ProjectRoot\creators.json" "$OutputDir\" -ErrorAction SilentlyContinue
+Copy-Item "$ProjectRoot\workshop_gitHub.json" "$OutputDir\" -ErrorAction SilentlyContinue
 
 # 4. 打包 zip
 Write-Host "📦 打包 $ZipName ..." -ForegroundColor Yellow

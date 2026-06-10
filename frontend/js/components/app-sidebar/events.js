@@ -12,26 +12,17 @@ export function bindCardEvents(root, instances) {
 
   root.querySelectorAll(".vc").forEach((vc) => {
     const hdr = vc.querySelector(".vc-header");
-    const body = vc.nextElementSibling;
-    if (!hdr || !body || !body.classList.contains("vc-body")) return;
+    if (!hdr) return;
 
-    // 点击标题头：展开/折叠 + 发送选中事件到预览栏
+    // 点击标题头：发送选中事件到右侧面板
     hdr.onclick = (e) => {
-      // 如果点击的是按钮，不触发折叠
       if (e.target.closest("button")) return;
-      const arrow = hdr.querySelector(".arrow");
-      const isNowOpen = body.style.display !== "none";
-      body.style.display = isNowOpen ? "none" : "";
-      if (arrow) arrow.classList.toggle("open");
-      // 持久化展开状态
-      const nameEl = hdr.querySelector(".name");
-      const name = nameEl ? nameEl.textContent.replace(/^📦\s*/, "") : "";
-      if (name)
-        try {
-          localStorage.setItem("sb_open_" + name, !isNowOpen);
-        } catch {}
-
-      // 发送选中事件到预览栏
+      // 高亮当前选中的版本
+      root
+        .querySelectorAll(".vc-header")
+        .forEach((h) => h.classList.remove("active"));
+      hdr.classList.add("active");
+      // 发送选中事件
       const idx = parseInt(vc.dataset.idx, 10);
       const pkg = instances[idx];
       if (pkg) {
@@ -74,26 +65,9 @@ function restoreSelectedCard(root, instances) {
     const vc = root.querySelector(`.vc[data-idx="${idx}"]`);
     if (!vc) return;
     const hdr = vc.querySelector(".vc-header");
-    const body = vc.nextElementSibling;
-    if (hdr && body && body.classList.contains("vc-body")) {
-      const arrow = hdr.querySelector(".arrow");
-      body.style.display = "";
-      if (arrow) arrow.classList.add("open");
-    }
+    if (hdr) hdr.classList.add("active");
     bus.emit("package:selected", instances[idx]);
   } catch (_) {}
-}
-
-// 绑定搜索框
-export function bindSearch(root, vm) {
-  const inp = root.getElementById("ver-search");
-  if (inp) {
-    inp.oninput = (e) => {
-      const keyword = e.target.value.toLowerCase().trim();
-      vm._search = keyword;
-      vm._renderCards();
-    };
-  }
 }
 
 // 绑定底部按钮 + 路径显示

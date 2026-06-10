@@ -18,15 +18,6 @@
     "searchUrl": "https://afdian.com/search?q={{q}}"
   },
   {
-    "id": "github",
-    "icon": "🐙",
-    "label": "GitHub",
-    "url": "https://github.com/",
-    "desc": "免费模型仓库",
-    "group": "repo",
-    "searchUrl": "https://github.com/search?q={{q}}"
-  },
-  {
     "id": "mcmod",
     "icon": "📖",
     "label": "MC百科",

@@ -1,9 +1,6 @@
 // ===== 整合包内部操作绑定（< 100 行）=====
 import { bus } from "../../bus.js";
-import {
-  InstallModelTo,
-  SyncCustomToRepo,
-} from "../../../wailsjs/go/main/App.js";
+import { InstallModelTo } from "../../../wailsjs/go/main/App.js";
 
 /** 绑定整合包卡片中的操作按钮和缺失条目点击事件 */
 export function bindInstanceActions(root, instances) {
@@ -49,50 +46,6 @@ export function bindInstanceActions(root, instances) {
         duration: 3000,
         type: fail > 0 ? "warn" : "success",
       });
-    };
-  });
-
-  // 缺失模型条目 → 独立安装按钮点击
-  root.querySelectorAll(".btn-install-one").forEach((btn) => {
-    btn.onclick = async (e) => {
-      e.stopPropagation();
-      const name = btn.dataset.path;
-      if (!name) return;
-      // 查找所在整合包
-      const parentVc = btn.closest(".vc-body")?.previousElementSibling;
-      const insName =
-        parentVc?.querySelector(".name")?.textContent?.replace(/^📦\s*/, "") ||
-        "";
-      const { LoadAppConfig, ListVersionInstances, InstallModelTo } =
-        await import("../../../wailsjs/go/main/App.js");
-      const cfg = await LoadAppConfig();
-      const mcRoot = cfg.mcRoot || "";
-      const allIns = mcRoot ? (await ListVersionInstances(mcRoot)) || [] : [];
-      const match = allIns.find((i) => i.Name === insName);
-      const targetDir = match ? match.CustomDir : "";
-      if (!targetDir) {
-        bus.emit("toast:show", {
-          msg: "未找到整合包目录",
-          duration: 3000,
-          type: "error",
-        });
-        return;
-      }
-      try {
-        await InstallModelTo(name, targetDir);
-        bus.emit("stats:refresh");
-        bus.emit("toast:show", {
-          msg: `✅ 已安装: ${name}`,
-          duration: 2000,
-          type: "success",
-        });
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: `❌ 安装失败: ${String(e)}`,
-          duration: 3000,
-          type: "error",
-        });
-      }
     };
   });
 }

@@ -8,19 +8,41 @@ export function repositoryHTML() {
     '<button class="repo-tab" data-tab="import">📥 导入</button>' +
     '<button class="repo-tab" data-tab="recycle">🗑️ 回收站</button>' +
     '<button class="repo-tab" data-tab="dedup">🔗 去重</button>' +
-    '</div>' +
-    '<div class="repo-tab-body" id="repo-tab-tree">' +
-    '<div class="repo-layout repo-layout-wrap"><app-tree></app-tree><app-preview mode="model"></app-preview></div>' +
-    '</div>' +
-    '<div class="repo-tab-body" id="repo-tab-import" style="display:none"></div>' +
-    '<div class="repo-tab-body" id="repo-tab-recycle" style="display:none"></div>' +
-    '<div class="repo-tab-body" id="repo-tab-dedup" style="display:none;padding:12px;overflow-y:auto"></div>' +
-    '</div>'
+    "</div>" +
+    '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
+    '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;border-right:1px solid var(--bd)">' +
+    '<div class="repo-tab-body" id="repo-tab-tree" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
+    "<app-tree></app-tree>" +
+    "</div>" +
+    '<div class="repo-tab-body" id="repo-tab-import" style="display:none;flex:1;overflow-y:auto"></div>' +
+    '<div class="repo-tab-body" id="repo-tab-recycle" style="display:none;flex:1;overflow-y:auto"></div>' +
+    '<div class="repo-tab-body" id="repo-tab-dedup" style="display:none;flex:1;overflow-y:auto;padding:12px"></div>' +
+    "</div>" +
+    '<app-preview mode="model" style="width:220px;flex-shrink:0;min-width:0"></app-preview>' +
+    "</div>" +
+    "</div>"
   );
 }
 
 export function instancesHTML() {
-  return '<div class="repo-layout"><app-sidebar></app-sidebar><app-preview mode="stat"></app-preview></div>';
+  return (
+    '<div class="repo-wrap">' +
+    '<div class="repo-tabs">' +
+    '<button class="repo-tab active" data-tab="versions">🎮 版本列表</button>' +
+    "</div>" +
+    '<div class="repo-tab-body" id="ins-tab-versions">' +
+    '<div class="repo-layout">' +
+    '<app-sidebar class="ins-sidebar"></app-sidebar>' +
+    '<div class="ins-content" id="ins-content">' +
+    '<div class="dp-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;gap:8px">' +
+    '<div style="font-size:24px">👈</div>' +
+    "<div>点击左侧整合包查看模型</div>" +
+    "</div>" +
+    "</div>" +
+    "</div>" +
+    "</div>" +
+    "</div>"
+  );
 }
 
 export function settingsHTML() {
@@ -136,8 +158,6 @@ export function placeholderHTML(icon, label) {
 
 export function downloadsHTML() {
   return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-<div class="repo-layout" style="flex:1">
-<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
 <div id="dl-form" style="margin:4px 12px;display:none;flex-direction:column;gap:4px">
   <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;flex-wrap:wrap">
     <span>导入仓库前，先重命名一下吧：</span>
@@ -183,8 +203,6 @@ export function downloadsHTML() {
   <input type="file" id="dl-folder-input" webkitdirectory style="display:none">
 </div>
 </div>
-<app-preview mode="model"></app-preview>
-</div>
 </div>`;
 }
 
@@ -195,17 +213,9 @@ export function diagnosticsHTML() {
 <span class="diag-btn-icon">📋</span>
 <span>操作日志</span>
 </button>
-<button class="diag-btn" data-diag="dedup">
-<span class="diag-btn-icon">🔗</span>
-<span>模型去重</span>
-</button>
 <button class="diag-btn" data-diag="conflict">
 <span class="diag-btn-icon">⚡</span>
 <span>冲突检测</span>
-</button>
-<button class="diag-btn" data-diag="oldest">
-<span class="diag-btn-icon">👴</span>
-<span>仓库元老</span>
 </button>
 <div class="diag-left-spacer"></div>
 <button class="diag-btn diag-btn-action" id="diag-refresh">
@@ -229,13 +239,6 @@ export function diagnosticsHTML() {
 <input id="diag-log-search" placeholder="🔍 搜索模型名..." style="flex:1;font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);min-width:0;margin-left:4px">
 </div>
 <div id="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">暂无日志</div></div>
-</div>
-<div class="diag-panel" id="diag-dedup" style="display:none">
-<div class="diag-panel-header">
-<span>🔗 模型去重</span>
-<button class="hdr-btn accent" id="diag-start-dedup">🔗 开始去重</button>
-</div>
-<div id="diag-dedup-list"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">点击「开始去重」扫描仓库中 SHA256 重复的模型文件</div></div>
 </div>
 <div class="diag-panel" id="diag-conflict" style="display:none">
 <div class="diag-panel-header">
@@ -267,14 +270,39 @@ export function recycleHTML() {
 </div>`;
 }
 
-/* ===== 创意工坊页面 ===== */
+/* ===== GitHub 仓库页面 ===== */
+
+export function githubHTML() {
+  return (
+    '<div class="ws-page" id="gh-page">' +
+    '<div class="ws-left" id="gh-left">' +
+    '<div style="padding:10px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
+    '<span style="font-size:13px;font-weight:600">🧩 创意工坊</span>' +
+    '<span style="flex:1"></span>' +
+    '<button class="btn" id="gh-refresh" style="font-size:9px;padding:2px 6px">🔄 刷新</button>' +
+    "</div>" +
+    '<div class="ws-grid" id="gh-grid">' +
+    '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>' +
+    "</div>" +
+    '<div style="padding:4px 12px 8px;font-size:8px;color:var(--muted)">' +
+    '仓库：<span id="gh-source-info">-</span>' +
+    "</div>" +
+    "</div>" +
+    '<div class="ws-right" id="gh-right">' +
+    '<div class="ws-right-inner" id="gh-right-inner">' +
+    '<div id="gh-results" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
+    '<div id="gh-results-body" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +
+    '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">点击左侧仓库查看模型</div>' +
+    "</div></div></div></div></div>"
+  );
+}
 
 export function workshopHTML() {
   return `<div class="ws-page" id="ws-page">
   <!-- 左栏：站点列表 -->
   <div class="ws-left" id="ws-left">
     <div style="padding:10px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-      <span style="font-size:13px;font-weight:600">🧩 创意工坊</span>
+      <span style="font-size:13px;font-weight:600">🎨 创作者频道</span>
       <span style="flex:1"></span>
       <button class="btn" id="ws-refresh" style="font-size:9px;padding:2px 6px">🔄 刷新</button>
     </div>
@@ -299,7 +327,7 @@ export function workshopHTML() {
       <div id="ws-creator-view" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden">
         <div style="padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">
           <span style="font-size:12px;font-weight:600;color:var(--txt)" id="ws-cr-title">🎨 活跃创作者</span>
-          <span style="font-size:9px;color:var(--muted);margin-left:auto">workshop_creators/</span>
+          <span style="font-size:9px;color:var(--muted);margin-left:auto">creators/</span>
         </div>
         <div class="ws-creators-list" id="ws-cr-list"></div>
       </div>

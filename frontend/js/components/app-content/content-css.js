@@ -24,6 +24,21 @@ export const contentCSS = `
 .repo-tab:hover { color:var(--txt);background:var(--hover); }
 .repo-tab.active { color:var(--accent);background:var(--surf);border-color:var(--bd);margin-bottom:-1px; }
 .repo-tab-body { flex:1;display:flex;flex-direction:column;overflow:hidden; }
+.ins-sidebar { width:200px;flex:none; }
+.ins-content { flex:1;display:flex;flex-direction:column;overflow:hidden; }
+.ins-model-list .sec-title { font-size:10px;color:var(--muted);padding:4px 2px 2px;text-transform:uppercase;letter-spacing:.5px;margin-top:4px; }
+.ins-model-list .row { display:flex;align-items:center;gap:6px;padding:2px 6px;border-radius:4px;font-size:12px;transition:background .12s; }
+.ins-model-list .row:hover { background:var(--hover); }
+.ins-model-list .row .dot { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+.ins-model-list .row .rn { flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.ins-model-list .row .rn .tag-author,.ins-model-list .row .rn .tag-work,.ins-model-list .row .rn .tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
+.ins-model-list .row .rn .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
+.ins-model-list .row .rn .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
+.ins-model-list .row .rn .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
+.ins-model-list .row.row-prefix .dot { opacity:0.35; }
+.ins-model-list .row .status-icon { font-size:10px;margin-right:4px;flex-shrink:0; }
+.ins-model-list .row .link-icon { font-size:10px;margin-right:4px;flex-shrink:0; }
+.ins-model-list .row .sz { font-size:11px;color:var(--muted); }
 .repo-topbar { display:flex;align-items:center;gap:4px;padding:4px 12px;border-bottom:1px solid var(--bd);flex-wrap:nowrap;overflow-x:auto; }
 .repo-title { font-size:12px;font-weight:600;flex-shrink:0; }
 .repo-bar { display:flex;align-items:center;gap:4px;padding:4px 12px;border-bottom:1px solid var(--bd); }
@@ -92,8 +107,47 @@ export const contentCSS = `
 .diag-stat { padding:12px; font-size:11px; display:block; text-align:center; }
 .diag-stat-muted { color:#6c7086; }
 
-/* 创意工坊 */
-.ws-page { flex:1; display:flex; overflow:hidden; position:relative; }
+/* 仓库元老页面卡片 */
+@keyframes ring-fill { from { --pct:0; } to { --pct:100; } }
+@property --pct { syntax:'<number>'; inherits:false; initial-value:0; }
+.oldest-card { background:#f5e6c8; border:1px solid #dcc9a6; border-radius:8px; padding:12px; text-align:left; min-width:180px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.oldest-card .name { font-size:11px; font-weight:600; color:#5c4a2e; margin-bottom:2px; word-break:break-all; }
+.oldest-card .path { font-size:9px; color:#8a7a5a; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.oldest-card .path:hover { color:#5c4a2e; text-decoration:underline; }
+.oldest-card .meta { font-size:9px; color:#8a7a5a; margin-top:2px; }
+.oldest-card .actions { display:flex; gap:4px; margin-top:6px; }
+.oldest-card .actions button { font-size:9px; padding:2px 6px; border-radius:4px; border:1px solid #dcc9a6; background:rgba(255,255,255,.4); color:#5c4a2e; cursor:pointer; transition:all .12s; }
+.oldest-card .actions button:hover { background:rgba(255,255,255,.7); }
+.rec-card { background:var(--surf); border:1px solid #b4d0e6; border-radius:10px; padding:14px 16px; text-align:left; min-width:200px; box-shadow:0 2px 8px rgba(0,0,0,.06); cursor:default; transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s; }
+.rec-card:hover { transform:scale(1.02) translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,.12); }
+.rec-card .name { font-size:11px; font-weight:600; color:var(--txt); margin-bottom:2px; }
+.rec-card .hint { font-size:9px; color:var(--muted); margin-top:4px; }
+.rec-card .actions { display:flex; gap:4px; margin-top:6px; }
+.rec-card .actions button { font-size:9px; padding:2px 8px; border-radius:4px; border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; transition:all .12s; }
+.rec-card .actions button:hover { border-color:var(--accent); color:var(--accent); background:var(--hover); }
+.health-ring { width:80px; height:80px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; position:relative; animation:ring-fill .8s ease-out both; }
+.health-ring-inner { position:absolute; inset:6px; border-radius:50%; background:var(--bg); display:flex; align-items:center; justify-content:center; flex-direction:column; }
+.health-tag { display:inline-block; padding:2px 10px; border-radius:10px; font-size:9px; font-weight:600; }
+.health-tag.good { background:#a6e3a122; color:#a6e3a1; }
+.health-tag.ok { background:#f9a82622; color:#f9a826; }
+.health-tag.bad { background:#f38ba822; color:#f38ba8; }
+.stat-pill { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:10px; background:var(--surf); border:1px solid var(--bd); font-size:9px; color:var(--muted); }
+
+/* 热力图 */
+.hm-wrap { padding:4px 0; }
+.hm-month { font-size:7px; color:var(--muted); padding:0 0 2px 0; display:flex; gap:2px; }
+.hm-month span { flex:1; text-align:center; }
+.hm-grid { display:flex; gap:2px; }
+.hm-col { display:flex; flex-direction:column; gap:2px; }
+.hm-cell { width:10px; height:10px; border-radius:2px; background:var(--bd); }
+.hm-cell.l1 { background:#0e4429; }
+.hm-cell.l2 { background:#006d32; }
+.hm-cell.l3 { background:#26a641; }
+.hm-cell.l4 { background:#39d353; }
+.hm-label { font-size:7px; color:var(--muted); padding-top:2px; display:flex; gap:2px; }
+.hm-label span { flex:1; text-align:center; }
+.hm-legend { display:flex; align-items:center; gap:2px; font-size:7px; color:var(--muted); justify-content:flex-end; }
+.ws-page,.gh-page { flex:1; display:flex; overflow:hidden; position:relative; }
 .ws-left { width:200px; flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); overflow:hidden; background:var(--surf); }
 .ws-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .ws-right-inner { flex:1; display:flex; flex-direction:column; overflow:hidden; }

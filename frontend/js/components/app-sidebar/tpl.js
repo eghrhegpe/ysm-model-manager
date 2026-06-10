@@ -1,13 +1,11 @@
 // ===== sidebar HTML 模板 =====
 
 export function headerHTML() {
-  return `<div class="header">
-<div class="header-row">
-<span class="header-label">📂 版本列表</span>
-<span class="header-stat" id="ver-stat">4个整合包</span>
-</div>
-<input class="search-input" id="ver-search" type="text" placeholder="🔍 搜索整合包" autocomplete="off" autocapitalize="off">
-</div>`;
+  return (
+    '<div style="padding:4px 8px;border-bottom:1px solid var(--bd)">' +
+    '<button class="sidebar-import-all" style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--accent);background:#7c83ff22;color:var(--accent);cursor:pointer;font-size:10px;font-family:inherit;text-align:center">⬇️ 一键安装模型</button>' +
+    "</div>"
+  );
 }
 
 export function footerHTML() {
@@ -49,8 +47,6 @@ export function vcHeaderHTML(
   hasYSM = true,
 ) {
   const parts = [];
-  if (synced > 0) parts.push(`<span class="tag green">✅ ${synced}</span>`);
-  const arrowClass = isOpen ? "arrow open" : "arrow";
   const installBtn =
     missing > 0 && hasYSM
       ? `<button class="tag red btn-install-missing btn-install" data-idx="${idx}">⬇️ 安装缺失 (${missing})</button>`
@@ -61,12 +57,8 @@ export function vcHeaderHTML(
   const extraTag =
     extra > 0 ? `<span class="tag orange">📤 ${extra}</span>` : "";
   return `<div class="vc-header">
-<span class="${arrowClass}">▶</span>
-<span class="name">📦 ${esc(name)}</span>
-${parts.join("")}
-${extraTag}
-${noYsmTag}
-${installBtn}
+<div class="vc-hdr-row1"><span class="name">📦 ${esc(name)}</span></div>
+<div class="vc-hdr-row2">${synced > 0 ? `<span class="tag green">✅ ${synced}</span> ` : ""}${extraTag}${noYsmTag}${installBtn}</div>
 </div>`;
 }
 

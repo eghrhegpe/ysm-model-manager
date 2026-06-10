@@ -20,38 +20,30 @@ export function renderVersionCards(container, instances) {
     const vc = document.createElement("div");
     vc.className = "vc";
     vc.dataset.idx = idx;
-    const savedOpen = localStorage.getItem("sb_open_" + ins.name) === "true";
-    const isOpen = savedOpen;
     vc.innerHTML = vcHeaderHTML(
       ins.name,
       ins.synced,
       ins.missing,
       ins.extra,
       ins.status,
-      isOpen,
+      false, // isOpen
       idx,
       ins.hasYSM,
     );
     container.appendChild(vc);
-
-    // body
-    const body = document.createElement("div");
-    body.className = "vc-body";
-    body.style.display = isOpen ? "" : "none";
-    body.innerHTML = renderBody(ins);
-    container.appendChild(body);
   });
 }
 
-function renderBody(ins) {
+export function renderBody(ins) {
   const sortByName = (a, b) =>
     (a.displayName || a.name).localeCompare(b.displayName || b.name);
   let h = "";
   if (ins.items.synced.length) {
+    h += '<div data-category="synced">';
     h += sectionTitleHTML("✅ 已同步", ins.items.synced.length);
     ins.items.synced.sort(sortByName).forEach((it) => {
       h += rowHTML(
-        "#a6e3a1",
+        "#6bb86b",
         renderDisplayName(it.name),
         it.size,
         it.linkType,
@@ -61,8 +53,10 @@ function renderBody(ins) {
         " row-prefix",
       );
     });
+    h += "</div>";
   }
   if (ins.items.missing.length) {
+    h += '<div data-category="missing">';
     h += sectionTitleHTML("⬇️ 缺失", ins.items.missing.length);
     ins.items.missing.sort(sortByName).forEach((it) => {
       const btnHtml = `<button class="btn-install-one" data-path="${esc(it.name)}" style="margin-left:4px;padding:1px 4px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">⬇️ 安装</button>`;
@@ -76,8 +70,10 @@ function renderBody(ins) {
         btnHtml,
       );
     });
+    h += "</div>";
   }
   if (ins.items.disabled && ins.items.disabled.length) {
+    h += '<div data-category="disabled">';
     h += sectionTitleHTML("⚠️ 已禁用", ins.items.disabled.length);
     ins.items.disabled.sort(sortByName).forEach((it) => {
       h += rowHTML(
@@ -92,8 +88,10 @@ function renderBody(ins) {
         " row-prefix",
       );
     });
+    h += "</div>";
   }
   if (ins.items.extra.length) {
+    h += '<div data-category="extra">';
     h += sectionTitleHTML("📤 额外", ins.items.extra.length);
     ins.items.extra.sort(sortByName).forEach((it) => {
       h += rowHTML(
@@ -107,6 +105,7 @@ function renderBody(ins) {
         " row-prefix",
       );
     });
+    h += "</div>";
   }
   return h;
 }

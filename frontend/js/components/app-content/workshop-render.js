@@ -1,71 +1,5 @@
 // ===== 创意工坊模型列表渲染（DOM API，非字符串拼接） =====
-import { bus } from "../../bus.js";
 import { renderDisplayName } from "../../utils/display.js";
-
-// 永久预览元素：只创建一次，永远不销毁，hover 时切换 src/display
-const _previewEl = document.createElement("div");
-_previewEl.id = "ws-preview";
-_previewEl.className = "ws-preview";
-document.body.appendChild(_previewEl);
-
-// 最新鼠标坐标（由 mousemove 持续更新，异步 showPreview 用最新值）
-let _lastClientX = 0;
-let _lastClientY = 0;
-
-// 鼠标离开窗口时强制隐藏预览
-document.addEventListener("mouseleave", () => hideGlobalPreview());
-
-// 内部子元素：img（正常）或 div（占位）
-const _previewImg = document.createElement("img");
-_previewImg.className = "ws-preview-img";
-_previewEl.appendChild(_previewImg);
-
-const _previewFallback = document.createElement("div");
-_previewFallback.textContent = "🎨";
-_previewFallback.className = "ws-preview-fallback";
-_previewEl.appendChild(_previewFallback);
-
-export function hideGlobalPreview() {
-  _previewEl.style.display = "none";
-  _previewImg.style.opacity = "0";
-  _previewImg.style.transform = "scale(.97)";
-  _previewImg.src = "";
-  _previewFallback.style.display = "none";
-}
-
-export function showPreview(anchorX, anchorY, url) {
-  _previewEl.style.display = "block";
-  _previewEl.style.left = anchorX + 16 + "px";
-  _previewEl.style.top = anchorY - 90 + "px";
-
-  _previewFallback.style.display = "none";
-  _previewImg.style.display = "block";
-  _previewImg.style.opacity = "0";
-  _previewImg.style.transform = "scale(.97)";
-  _previewImg.src = url;
-  _previewImg.onload = () => {
-    _previewImg.style.opacity = "1";
-    _previewImg.style.transform = "scale(1)";
-  };
-  _previewImg.onerror = () => {
-    _previewImg.style.display = "none";
-    _previewFallback.style.display = "flex";
-    _previewFallback.style.opacity = "0";
-    _previewFallback.style.transform = "scale(.9)";
-    _previewFallback.getBoundingClientRect();
-    _previewFallback.style.opacity = "1";
-    _previewFallback.style.transform = "scale(1)";
-  };
-}
-
-export function movePreview(e) {
-  _lastClientX = e.clientX;
-  _lastClientY = e.clientY;
-  if (_previewEl.style.display !== "none") {
-    _previewEl.style.left = e.clientX + 16 + "px";
-    _previewEl.style.top = e.clientY - 90 + "px";
-  }
-}
 
 /**
  * 判断模型是否缺失（本地不存在）
@@ -106,9 +40,6 @@ export function renderModelList(
   selectedSet,
   esc,
 ) {
-  // 🪦 守墓人：列表重绘前清理孤儿预览，无论谁调用的 renderModelList
-  hideGlobalPreview();
-
   const frag = document.createDocumentFragment();
 
   if (!filtered.length) {
@@ -144,6 +75,35 @@ export function renderModelList(
     nameSpan.innerHTML = renderDisplayName(m.name);
     row.appendChild(nameSpan);
 
+    // B站搜索按钮
+    const searchBtn = document.createElement("button");
+    searchBtn.className = "ws-search-bili";
+    searchBtn.textContent = "🔍";
+    searchBtn.title = "B站搜索作者";
+    searchBtn.style.cssText =
+      "font-size:9px;padding:1px 5px;border-radius:3px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;flex-shrink:0;transition:all .12s";
+    searchBtn.onmouseenter = () => {
+      searchBtn.style.borderColor = "var(--accent)";
+      searchBtn.style.color = "var(--accent)";
+    };
+    searchBtn.onmouseleave = () => {
+      searchBtn.style.borderColor = "transparent";
+      searchBtn.style.color = "var(--muted)";
+    };
+    searchBtn.onclick = async (e) => {
+      e.stopPropagation();
+      const { parseModelName } = await import("../../utils/display.js");
+      const { author } = parseModelName(m.name);
+      if (author) {
+        window.open(
+          "https://search.bilibili.com/all?keyword=" +
+            encodeURIComponent(author),
+          "_blank",
+        );
+      }
+    };
+    row.appendChild(searchBtn);
+
     if (exists) {
       const badge = document.createElement("span");
       badge.className = "ws-badge";
@@ -170,67 +130,16 @@ export function renderModelList(
       row.appendChild(rightGroup);
     }
 
-    // 预览图（文件名映射：.ysm → .png/.jpg/.webp，hover 浮动）
-    const PREVIEW_EXTS = ["png", "jpg", "webp"];
-    const safeModelName = m.name.replace(/[<>:"/\\|?*\x00-\x1F]/g, "_");
-
-    // 预览图快速加载：三个后缀并行测试，谁先成功用谁
-    const tryShowPreview = (anchorX, anchorY) => {
-      const urls = PREVIEW_EXTS.map((ext) => {
-        const n = safeModelName.replace(/\.(ysm|zip|7z)$/i, "." + ext);
-        return n !== safeModelName ? dlPrefix + n : null;
-      }).filter(Boolean);
-
-      if (!urls.length) {
-        hideGlobalPreview();
-        return;
-      }
-
-      let settled = false;
-      let loaded = 0;
-      urls.forEach((url) => {
-        const img = new Image();
-        img.onload = () => {
-          if (!settled) {
-            settled = true;
-            showPreview(anchorX, anchorY, url);
-          }
-        };
-        img.onerror = () => {
-          loaded++;
-          if (loaded >= urls.length && !settled) {
-            // 全失败 → 占位
-            settled = true;
-            hideGlobalPreview();
-            _previewEl.style.display = "block";
-            _previewEl.style.left = anchorX + 16 + "px";
-            _previewEl.style.top = anchorY - 100 + "px";
-            _previewImg.style.display = "none";
-            _previewFallback.style.display = "flex";
-            _previewFallback.style.opacity = "0";
-            _previewFallback.style.transform = "scale(.9)";
-            _previewFallback.getBoundingClientRect();
-            _previewFallback.style.opacity = "1";
-            _previewFallback.style.transform = "scale(1)";
-          }
-        };
-        img.src = url;
-      });
-    };
-
-    // 整行悬停高亮 + 预览
-    row.addEventListener("mouseenter", (e) => {
+    // 整行悬停高亮
+    row.addEventListener("mouseenter", () => {
       row.style.background = exists
         ? "rgba(166,227,161,.1)"
         : "rgba(243,139,168,.08)";
-      tryShowPreview(e.clientX, e.clientY);
     });
-    row.addEventListener("mousemove", movePreview);
     row.addEventListener("mouseleave", () => {
       row.style.background = exists
         ? "rgba(166,227,161,.06)"
         : "rgba(243,139,168,.04)";
-      hideGlobalPreview();
     });
 
     frag.appendChild(row);

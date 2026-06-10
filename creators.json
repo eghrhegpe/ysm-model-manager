@@ -1,0 +1,442 @@
+[
+  {
+    "name": "碎de帆",
+    "desc": "东方project系列",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "Almeta_owx",
+    "desc": "原创角色、碧蓝档案、千恋万花",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "就叫纸板",
+    "desc": "原创、碧蓝航线、碧蓝档案",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "暖笙小憨猪",
+    "desc": "崩坏星穹铁道、免费YSM（Java/网易）",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "AnluoSakura",
+    "desc": "OC、卡拉比丘",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "DM朔风",
+    "desc": "鸣潮、免费起送YSM",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "你个人妻cc",
+    "desc": "物语系列、魔女审判、光之美少女",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "墓野奈奈",
+    "desc": "东方project 可自定义服饰",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "墨染逝羽",
+    "desc": "MeUmy、原神、魔女审判",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "提可拉",
+    "desc": "OC、兽耳助手、泰拉瑞亚、少女前线",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "星屑海螺",
+    "desc": "原创、碧蓝航线、蔚蓝档案",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "星海同上",
+    "desc": "假面骑士、奥奇传说、崩坏三、鸣潮",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "源石姬变体",
+    "desc": "Minecraft、原创 星喵工艺团队",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "白蛤蜊",
+    "desc": "Alice In Cradle、OC",
+    "type": "bilibili"
+  },
+  {
+    "name": "苏溟0w0",
+    "desc": "VUP、原创、自设",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "爱吃园田海味",
+    "desc": "东方project、LoveLive YSM模型免费开源分享",
+    "type": "bilibili"
+  },
+  {
+    "name": "eghrhegpe/YSM-Model-Workshop",
+    "desc": "YSM-Model-Manager 整合仓库，141个模型",
+    "type": "github"
+  },
+  {
+    "name": "HSOS6/YSM-model",
+    "desc": "800+ YSM模型，来源于网络，仅学习使用",
+    "type": "github"
+  },
+  {
+    "name": "OrangeMiracle/winefox-ysm-models",
+    "desc": "工程师酒狐·黄铜工坊修会 YSM角色模型",
+    "type": "github"
+  },
+  {
+    "name": "dudu-ke/ysm-share",
+    "desc": "分享YSM模型，模型来自网络，侵删",
+    "type": "github"
+  },
+  {
+    "name": "Elaina69/Yes-Steve-Model-Repo",
+    "desc": "Elaina69收集的YSM模型，免费使用",
+    "type": "github"
+  },
+  {
+    "name": "夹心果风",
+    "desc": "YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "普通的木屐的MC工坊",
+    "desc": "YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "烈鸟比百",
+    "desc": "我的世界模型",
+    "type": "afdian"
+  },
+  {
+    "name": "映素作坊",
+    "desc": "萌动世界 YSM",
+    "type": "afdian"
+  },
+  {
+    "name": "艺方像素",
+    "desc": "YSM模型 / 时装工坊模型",
+    "type": "afdian"
+  },
+  {
+    "name": "嗯嗯owo",
+    "desc": "YSM",
+    "type": "afdian"
+  },
+  {
+    "name": "大莫家-小孩大莫",
+    "desc": "我的世界YSM",
+    "type": "afdian"
+  },
+  {
+    "name": "映白",
+    "desc": "我的世界YSM模组",
+    "type": "afdian"
+  },
+  {
+    "name": "科列夫斯基",
+    "desc": "YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "苏依凛",
+    "desc": "YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "shi_gure256",
+    "desc": "TACZ曙光枪械包 YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "云曦",
+    "desc": "YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "julaoye",
+    "desc": "YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "烟雨画桥",
+    "desc": "YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "Maks",
+    "desc": "YSM人模制作",
+    "type": "afdian"
+  },
+  {
+    "name": "Dr-观星",
+    "desc": "游戏同人 YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "kyln默寒寒冰",
+    "desc": "YSM免费模型分享",
+    "type": "bilibili"
+  },
+  {
+    "name": "烛火的次元宇宙",
+    "desc": "YSM免费模型（巧克力与香子兰/明日方舟/碧蓝航线等）",
+    "type": "bilibili"
+  },
+  {
+    "name": "纸盒ALifang",
+    "desc": "免费YSM/付费YSM模型",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "松子Matsuki",
+    "desc": "YSM模型免费分享（边狱巴士/魔女审判）",
+    "type": "bilibili"
+  },
+  {
+    "name": "雨倩先生",
+    "desc": "YSM模型 订阅制",
+    "type": "afdian"
+  },
+  {
+    "name": "史莱姆坍缩",
+    "desc": "免费YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "咕咕叫的小菜鸡",
+    "desc": "YSM模型（明日方舟等）",
+    "type": "bilibili"
+  },
+  {
+    "name": "伊洛是哥斯拉嘛",
+    "desc": "YSM模型免费分享（碧蓝档案/少女前线）映素作坊成员",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "伦理问题",
+    "desc": "YSM模型免费分享（边狱巴士）",
+    "type": "bilibili"
+  },
+  {
+    "name": "落阳不养羊",
+    "desc": "YSM模型免费分享（碧蓝档案）",
+    "type": "bilibili"
+  },
+  {
+    "name": "A_su杏仁",
+    "desc": "YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "祸御神",
+    "desc": "东方YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "狸民limin",
+    "desc": "免费YSM/付费高精度模型",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "泛用型窝窝头",
+    "desc": "YSM模型分享（魔法少女小圆等）",
+    "type": "bilibili"
+  },
+  {
+    "name": "shercoo",
+    "desc": "免费YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "韦懦夫斯菲尔",
+    "desc": "免费YSM/付费改良版模型",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "白洛白awa",
+    "desc": "免费YSM模型（崩铁BOSS/怪猎物）",
+    "type": "bilibili"
+  },
+  {
+    "name": "超级大鸡腿丶",
+    "desc": "免费YSM/付费YSM（碧蓝航线）",
+    "type": "bilibili"
+  },
+  {
+    "name": "赤恒-AzaMire",
+    "desc": "免费YSM模型（爱弥斯/南希露/菊千代）",
+    "type": "bilibili"
+  },
+  {
+    "name": "水神Neruvia",
+    "desc": "三角洲行动YSM模型/TacZ搭配",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "瀛猫",
+    "desc": "与VUP合作YSM模型（梦音茶糯/花火/兰音等）",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "雾雨波波沙",
+    "desc": "车万YSM/暮色森林二创",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "一只霜狐Owo",
+    "desc": "YSM/CSM免费模型（4种服饰）",
+    "type": "bilibili"
+  },
+  {
+    "name": "伊蕾娜教代行教皇",
+    "desc": "魔女之旅YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "聚核重工Minecraft",
+    "desc": "机甲YSM模型（重装号角等）",
+    "type": "afdian"
+  },
+  {
+    "name": "波普Popu",
+    "desc": "Arcaea/舞萌YSM模型",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "Xin_Xr",
+    "desc": "赛马娘YSM/TacZ枪包",
+    "type": "bilibili"
+  },
+  {
+    "name": "TIS团队",
+    "desc": "蔚蓝档案YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "羊毛毛毛猫_Official喵",
+    "desc": "DeepSeek娘YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "KUIL澤白",
+    "desc": "BanG Dream YSM模型免费分享",
+    "type": "bilibili"
+  },
+  {
+    "name": "绫独之落",
+    "desc": "洛天依/世末系列YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "浅陌菌",
+    "desc": "碧蓝航线/鸣潮YSM模型",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "法老号船长-爱德蒙lily",
+    "desc": "早期YSM模型（FGO/魔女）",
+    "type": "bilibili"
+  },
+  {
+    "name": "明石Nyaa",
+    "desc": "碧蓝航线YSM模型（茗）",
+    "type": "bilibili"
+  },
+  {
+    "name": "银河铁道CRH2",
+    "desc": "TacZ歼10机娘YSM模型",
+    "type": "afdian"
+  },
+  {
+    "name": "清晨的一阵风",
+    "desc": "碧蓝档案YSM模型免费分享",
+    "type": "bilibili"
+  },
+  {
+    "name": "猫耳魂魄妖梦",
+    "desc": "明日方舟YSM模型（提丰/纯烬艾雅法拉）",
+    "type": "bilibili"
+  },
+  {
+    "name": "COMPLEX美工组",
+    "desc": "YSM模型（佩丽卡等）",
+    "type": "bilibili"
+  },
+  {
+    "name": "Mirreeel",
+    "desc": "YSM免费/付费模型（万尼亚/夏洛特等）",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "白色北熊",
+    "desc": "绝区零YSM模型（星见雅/橘福福等）",
+    "type": "bilibili"
+  },
+  {
+    "name": "Aaaaaaafeng",
+    "desc": "YSM付费模型",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "壹花1h",
+    "desc": "不知火舞YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "wwww琨",
+    "desc": "舰娘YSM模型（晓/响/雷/电）",
+    "type": "bilibili"
+  },
+  {
+    "name": "叶无道_M",
+    "desc": "Blockbench建模全流程教程/YSM",
+    "type": "bilibili"
+  },
+  {
+    "name": "喵Kuroneko",
+    "desc": "碧蓝航线YSM（岛风/鸭鸭15装备替换）",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "奶油桃NaytoTime",
+    "desc": "碧蓝航线YSM（天城/土佐/花月）",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "霖惜07",
+    "desc": "酒狐宇宙/小鸟游六花YSM",
+    "type": "bilibili"
+  },
+  {
+    "name": "三叶虫trita",
+    "desc": "25时YSM免费开源模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "幻古诗",
+    "desc": "爱蜜莉雅YSM模型",
+    "type": "bilibili;afdian"
+  },
+  {
+    "name": "别吃啊混蛋",
+    "desc": "星见雅YSM模型免费",
+    "type": "bilibili"
+  },
+  {
+    "name": "苏瑞铃_official",
+    "desc": "YSM模型",
+    "type": "bilibili"
+  }
+]

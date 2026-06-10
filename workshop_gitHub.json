@@ -1,0 +1,27 @@
+[
+  {
+    "name": "eghrhegpe/YSM-Model-Workshop",
+    "desc": "YSM-Model-Manager 整合仓库，141个模型",
+    "type": "github"
+  },
+  {
+    "name": "HSOS6/YSM-model",
+    "desc": "800+ YSM模型，来源于网络，仅学习使用",
+    "type": "github"
+  },
+  {
+    "name": "OrangeMiracle/winefox-ysm-models",
+    "desc": "工程师酒狐·黄铜工坊修会 YSM角色模型",
+    "type": "github"
+  },
+  {
+    "name": "dudu-ke/ysm-share",
+    "desc": "分享YSM模型，模型来自网络，侵删",
+    "type": "github"
+  },
+  {
+    "name": "Elaina69/Yes-Steve-Model-Repo",
+    "desc": "Elaina69收集的YSM模型，免费使用",
+    "type": "github"
+  }
+]

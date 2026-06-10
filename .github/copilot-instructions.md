@@ -29,7 +29,7 @@
     Copy-Item "workshop_sites.json", "workshop_creators.json" "build\release\"
     Compress-Archive -Path "build\release\*" -DestinationPath "build\release\YSM-Model-Manager_windows_amd64.zip" -Force
     ```
-13. **发版归档**: `docs/release-notes/v{major}.{minor}.{patch}.md` + 更新 `README.md` 索引表。
+13. **发版归档**: `docs/release-notes/v{major}.{minor}.{patch}.md`（用户版）+ `docs/release-notes/v{major}.{minor}.{patch}-compare.md`（开发者版，含对比表和文件清单） + 更新 `README.md` 索引表。GitHub Release 使用用户版。用户版面向使用者，写功能/改进/修复；`-compare` 版面向开发者，写实现对比和文件变更。
 14. **文件名渲染统一** — 所有 UI 文件名必须走 `renderDisplayName()`，禁止 `textContent`/`esc()` 绕过。
 15. **禁止安装软件** — 缺依赖提示用户手动装。
 16. **路径用正斜杠 `/`**。

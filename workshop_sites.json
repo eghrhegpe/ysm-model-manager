@@ -6,7 +6,8 @@
     "url": "https://www.bilibili.com/",
     "desc": "搜索模型创作者和模型展示视频的主流平台",
     "group": "search",
-    "searchUrl": "https://search.bilibili.com/all?keyword={{q}}"
+    "searchUrl": "https://search.bilibili.com/all?keyword={{q}}",
+    "presetSearches": [{ "label": "YSM免费模型" }, { "label": "YSM模型分享" }]
   },
   {
     "id": "afdian",
@@ -15,7 +16,8 @@
     "url": "https://afdian.com/",
     "desc": "赞助创作者平台",
     "group": "search",
-    "searchUrl": "https://afdian.com/search?q={{q}}"
+    "searchUrl": "https://afdian.com/search?q={{q}}",
+    "presetSearches": [{ "label": "YSM" }]
   },
   {
     "id": "mcmod",

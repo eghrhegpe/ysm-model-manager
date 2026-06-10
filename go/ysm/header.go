@@ -12,7 +12,8 @@ import (
 type YSMHeader struct {
 	// 文件类型
 	IsYSM  bool   `json:"isYsm"`
-	IsFree bool   `json:"isFree"` // <free> true/false
+	IsFree bool   `json:"isFree"`       // <free> true/false
+	HasFree bool  `json:"hasFree"`      // <free> 标签是否存在
 	Hash   string `json:"hash,omitempty"`
 
 	// 基本信息
@@ -72,6 +73,16 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 		if strings.HasPrefix(line, "===") {
 			break
 		}
+		// 连续的 ---（无 [）是段落的结束分隔符，之后是二进制数据
+		if strings.HasPrefix(line, "---") && !strings.Contains(line, "[") && len(line) >= 10 {
+			// 跳过可能存在的空行，然后停止扫描
+			for scanner.Scan() {
+				if strings.TrimSpace(scanner.Text()) != "" {
+					break
+				}
+			}
+			break
+		}
 		if strings.HasPrefix(line, "<") {
 			if idx := strings.Index(line, ">"); idx > 0 {
 				tag := strings.TrimSpace(line[1:idx])
@@ -83,6 +94,7 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 						h.Name = value
 					case "free":
 						h.IsFree = value == "true"
+						h.HasFree = true
 					case "hash":
 						h.Hash = value
 					case "license":
@@ -153,6 +165,52 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 func AnalyzeYSMHeader(path string) YSMHeader {
 	// 先尝试检测 YSGP（V2）二进制头部
 	if h := detectYSGPHeader(path); h != nil {
+		// 检查文件是否包含文本头部（有些纯二进制 YSGP 文件没有文本段）
+		if hasTextHeader(path) {
+			f, err := os.Open(path)
+			if err == nil {
+				rich := scanHeader(bufio.NewScanner(f))
+				f.Close()
+				// 合并
+				if rich.Name != "" {
+					h.Name = rich.Name
+				}
+				if rich.License != "" {
+					h.License = rich.License
+				}
+				if rich.AuthorName != "" {
+					h.AuthorName = rich.AuthorName
+				}
+				if rich.AuthorRole != "" {
+					h.AuthorRole = rich.AuthorRole
+				}
+				if rich.AuthorBilibili != "" {
+					h.AuthorBilibili = rich.AuthorBilibili
+				}
+				if rich.AuthorAfdian != "" {
+					h.AuthorAfdian = rich.AuthorAfdian
+				}
+				if rich.LinkHome != "" {
+					h.LinkHome = rich.LinkHome
+				}
+				if rich.LinkUpdate != "" {
+					h.LinkUpdate = rich.LinkUpdate
+				}
+				if rich.Tips != "" {
+					h.Tips = rich.Tips
+				}
+				if rich.Format > 0 {
+					h.Format = rich.Format
+				}
+				if rich.Crypto > 0 {
+					h.Crypto = rich.Crypto
+				}
+				if rich.HasFree {
+					h.HasFree = true
+					h.IsFree = rich.IsFree
+				}
+			}
+		}
 		return *h
 	}
 
@@ -162,6 +220,36 @@ func AnalyzeYSMHeader(path string) YSMHeader {
 	}
 	defer f.Close()
 	return scanHeader(bufio.NewScanner(f))
+}
+
+// hasTextHeader 检查 YSGP 文件是否包含可读的文本头部
+func hasTextHeader(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	var buf [512]byte
+	n, _ := io.ReadFull(f, buf[:])
+	if n < 16 {
+		return false
+	}
+	data := buf[:n]
+	// 跳过 BOM
+	if n >= 3 && data[0] == 0xef && data[1] == 0xbb && data[2] == 0xbf {
+		data = data[3:]
+	}
+	// 跳过 YSGP 和后续空行
+	start := 0
+	if len(data) >= 4 && string(data[:4]) == "YSGP" {
+		start = 4
+	}
+	// 在剩余数据中查找文本头部特征
+	rest := string(data[start:])
+	return strings.Contains(rest, "--- [") ||
+		strings.Contains(rest, "<name>") ||
+		strings.Contains(rest, "<free>") ||
+		strings.Contains(rest, "Metadata")
 }
 
 // detectYSGPHeader 检测 YSGP（YSM V2）二进制格式并提取基本信息

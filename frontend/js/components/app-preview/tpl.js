@@ -109,15 +109,12 @@ export function statsCardHTML(model, modelPath, decodedBy) {
   if (tml && tml.length > 1) {
     texMapHtml = tml
       .map((m) => {
-        const arrow =
-          m.pngSize !== "—" && m.pngSize !== m.finalSize
-            ? `→ ${m.finalSize}`
-            : "";
-        const uvNote = m.uvSize !== m.finalSize ? ` (UV推断 ${m.uvSize})` : "";
-        return `<div class="ysm-card-row" style="font-size:9px;padding:1px 0">├─ ${m.file} → 纹理[${m.texIdx}]「${m.texKey}」${m.pngSize}${arrow}${uvNote}</div>`;
+        const sizeStr = m.finalSize && m.finalSize !== "—" ? m.finalSize : "";
+        const texName = m.texKey !== "—" ? m.texKey : `纹理${m.texIdx}`;
+        return `<div class="ysm-card-row" style="font-size:9px;padding:1px 0" title="几何体文件 ${m.file} → 使用纹理 ${texName}${sizeStr ? '，' + sizeStr + 'px' : ''}">├─ ${m.file} → ${texName}</div>`;
       })
       .join("");
-    texMapHtml = `<div class="ysm-card-section-label" style="margin-top:6px">📎 纹理分配</div>${texMapHtml}`;
+    texMapHtml = `<div class="ysm-card-section-label" style="margin-top:6px">📎 纹理分配 <span style="font-weight:400;font-size:9px;color:var(--muted)">— 每个几何体对应使用的纹理</span></div>${texMapHtml}`;
   }
   return `
 <div class="ysm-card-title">📊 模型概览${badge}</div>

@@ -23,7 +23,7 @@ function headerOnlyCardHTML(header, basename) {
   const name = p ? "" : cleanText(header.name || "-"); // 用 p 时 name 为空，下面走标签模板
   const tips = cleanTips(header.tips);
   const licenseType = cleanText(header.license);
-  const freeBadge = header.isYsm
+  const freeBadge = header.hasFree
     ? header.isFree
       ? '<span style=\"display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600\">🆓 免费</span>'
       : '<span style=\"display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600\">🔒 付费</span>'
@@ -58,12 +58,15 @@ function headerOnlyCardHTML(header, basename) {
 <div class="model-detail-title">📄 模型详情</div>
 ${titleHtml}
 ${p?.work ? `<div class="md-row"><span class="md-label">作品</span><span class="md-value"><span class="tag-work">${esc(p.work)}</span></span></div>` : ""}
-${tips ? `<div style="font-size:11px;color:var(--txt);margin-bottom:10px;line-height:1.6">${tips}</div>` : ""}
+${tips ? `<div style="font-size:11px;color:var(--txt);margin-bottom:10px;line-height:1.6;padding:6px 10px;background:var(--surf);border-radius:6px;border-left:3px solid var(--accent)">${tips}</div>` : ""}
 <div class="md-row"><span class="md-label">许可</span><span class="md-value">${esc(licenseType) || "未标注"}</span></div>
 ${p?.author ? `<div class="md-row"><span class="md-label">作者</span><span class="md-value"><span class="tag-author">${esc(p.author)}</span></span></div>` : authorHtml ? `<div class="md-row"><span class="md-label">作者</span><span class="md-value">${authorHtml}</span></div>` : ""}
+${header.linkHome ? `<div class="md-row"><span class="md-label">主页</span><span class="md-value"><a href="${esc(header.linkHome)}" target="_blank" style="color:var(--accent);text-decoration:none">${esc(header.linkHome.replace(/^https?:\/\//, "").replace(/\/.*$/, ""))}</a></span></div>` : ""}
+${header.linkUpdate ? `<div class="md-row"><span class="md-label">更新</span><span class="md-value"><a href="${esc(header.linkUpdate)}" target="_blank" style="color:var(--accent);text-decoration:none">查看更新</a></span></div>` : ""}
+${header.hash ? `<div class="md-row" style="font-size:9px;color:var(--muted)"><span class="md-label">指纹</span><span class="md-value" style="font-family:monospace;font-size:8px;word-break:break-all">${esc(header.hash)}</span></div>` : ""}
 <div class="md-divider"></div>
 <div class="md-row" style="color:var(--muted);font-size:10px"><span>🔒 加密模型，资源详情不可用</span></div>
-${header.linkHome ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">🔗 链接</span><span class="md-value"><a href="${esc(header.linkHome)}" target="_blank" style="color:var(--accent);text-decoration:none">主页</a></span></div>` : ""}
+${header.format > 0 || header.crypto > 0 ? `<div style="font-size:8px;color:var(--muted);margin-top:4px;text-align:right">格式 v${header.format} · 加密 v${header.crypto}</div>` : ""}
 </div>`;
 }
 
@@ -103,9 +106,10 @@ export function summaryCardHTML(summary, header, basename) {
     authorHtml = parts.join(" / ");
   }
 
-// 动画分组（内部标识符只显示计数，有中文名的显示标签）
+  // 动画分组（内部标识符只显示计数，有中文名的显示标签）
   let animGroupHtml = "";
-  const isInternalId = (n) => /^[a-z_]+$/.test(n) || /^(range|checkbox|radio|slider|toggle)$/i.test(n);
+  const isInternalId = (n) =>
+    /^[a-z_]+$/.test(n) || /^(range|checkbox|radio|slider|toggle)$/i.test(n);
   if (summary.animGroups && summary.animGroups.length > 0) {
     animGroupHtml = summary.animGroups
       .map((g) => {
@@ -114,9 +118,13 @@ export function summaryCardHTML(summary, header, basename) {
         if (!items.length) return ""; // 全是内部标识符，跳过
         const displayItems = items.slice(0, 8);
         const more = items.length > 8 ? ` +${items.length - 8}` : "";
-        const badges = displayItems.map((it) =>
-          `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;background:color-mix(in srgb,var(--accent,#66d9ef) 14%,transparent);color:var(--accent,#66d9ef);margin:2px 3px;font-weight:500;white-space:nowrap">${esc(it)}</span>`
-        ).join("") + more;
+        const badges =
+          displayItems
+            .map(
+              (it) =>
+                `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;background:color-mix(in srgb,var(--accent,#66d9ef) 14%,transparent);color:var(--accent,#66d9ef);margin:2px 3px;font-weight:500;white-space:nowrap">${esc(it)}</span>`,
+            )
+            .join("") + more;
         return `<div style="margin-bottom:4px"><div style="font-size:10px;font-weight:600;color:var(--txt);margin-bottom:2px">🎬 ${esc(name)}</div><div>${badges}</div></div>`;
       })
       .filter(Boolean)
@@ -138,7 +146,7 @@ export function summaryCardHTML(summary, header, basename) {
   }
 
   // 免费/付费标记
-  const freeBadge = header?.isYsm
+  const freeBadge = header?.hasFree
     ? header.isFree
       ? '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600">🆓 免费</span>'
       : '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">🔒 付费</span>'

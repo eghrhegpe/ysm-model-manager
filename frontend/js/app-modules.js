@@ -24,7 +24,7 @@ window.$spec = async (path) => {
     console.warn("[$spec] Go 调用失败:", e);
   }
   // JS 兜底：从已加载的 model 数据构建 spec
-    const { buildSpecFromModel } = await import("./utils/model3d.js");
+  const { buildSpecFromModel } = await import("./utils/model3d.js");
   // 找当前 3D 预览的 model（window.__last3DModel）
   const model = window.__last3DModel;
   if (model?.bones?.length) {
@@ -87,6 +87,9 @@ window.applyTheme = applyTheme;
     const theme = localStorage.getItem("theme") || THEME_DARK;
     applyTheme(theme);
   }
+  // 启动后静默检查更新（不阻塞界面）
+  const { checkUpdateSilent } = await import("./features/version-updater.js");
+  checkUpdateSilent();
 })();
 
 // ===== 禁用旧版 document 拖拽处理器（新版组件已接管）=====

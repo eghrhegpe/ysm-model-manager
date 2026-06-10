@@ -36,21 +36,32 @@ class AppToast extends HTMLElement {
   }
 
   connectedCallback() {
-    this._unsub = bus.on("toast:show", ({ msg, undo, duration, type }) => {
-      this.show(msg, undo, duration, type);
-    });
+    this._unsub = bus.on(
+      "toast:show",
+      ({ msg, undo, duration, type, click }) => {
+        this.show(msg, undo, duration, type, click);
+      },
+    );
   }
 
   disconnectedCallback() {
     if (this._unsub) this._unsub();
   }
 
-  show(msg, undoCallback, duration = 4000, type = "") {
+  show(msg, undoCallback, duration = 4000, type = "", clickCallback) {
     const c = this.shadowRoot.getElementById("c");
     const t = document.createElement("div");
     t.className = "toast" + (type ? " " + type : "");
+    if (clickCallback) t.style.cursor = "pointer";
     t.innerHTML = `<span class="msg">${this._esc(msg)}</span>${undoCallback ? '<button class="undo-btn">↩ 撤销</button>' : ""}<button class="close-btn">✕</button>`;
     c.appendChild(t);
+    if (clickCallback) {
+      t.querySelector(".msg").onclick = (e) => {
+        e.stopPropagation();
+        clickCallback();
+        this._remove(t);
+      };
+    }
     if (undoCallback) {
       t.querySelector(".undo-btn").onclick = () => {
         undoCallback();
@@ -58,7 +69,10 @@ class AppToast extends HTMLElement {
         this.show("✅ 已撤销", null, 2000, "success");
       };
     }
-    t.querySelector(".close-btn").onclick = () => this._remove(t);
+    t.querySelector(".close-btn").onclick = (e) => {
+      e.stopPropagation();
+      this._remove(t);
+    };
     t._timer = setTimeout(() => this._remove(t), duration);
   }
 

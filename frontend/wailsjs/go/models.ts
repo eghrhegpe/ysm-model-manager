@@ -415,6 +415,7 @@ export namespace updater {
 	    latest: string;
 	    current: string;
 	    url: string;
+	    releaseNotes?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UpdateInfo(source);
@@ -426,6 +427,7 @@ export namespace updater {
 	        this.latest = source["latest"];
 	        this.current = source["current"];
 	        this.url = source["url"];
+	        this.releaseNotes = source["releaseNotes"];
 	    }
 	}
 

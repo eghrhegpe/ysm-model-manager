@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/bodgit/sevenzip v1.6.4
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/tetratelabs/wazero v1.12.0
 	github.com/wailsapp/wails/v2 v2.12.0
 )
 

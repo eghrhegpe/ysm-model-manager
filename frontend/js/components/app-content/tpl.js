@@ -103,7 +103,15 @@ export function settingsHTML() {
     <div>📦 <b>GitHub</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
     <div>📋 <b>发布</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/releases" target="_blank" style="color:var(--accent)">查看所有版本</a></div>
     <div>📖 <b>文档</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/tree/main/docs" target="_blank" style="color:var(--accent)">docs/</a></div>
-    <div style="margin-top:4px;color:var(--muted)">💡 灵感来自 LytVPK mod-manager</div>
+    <div style="margin-top:6px;border-top:1px solid var(--bd);padding-top:4px">
+      <div style="font-size:9px;color:var(--muted)">🎯 <b>灵感来源</b></div>
+      <div style="font-size:9px;color:var(--muted);line-height:1.7">
+        <div>⬇️ 下载与更新：<a href="https://github.com/LaoYutang/lytvpk" target="_blank" style="color:var(--accent)">LaoYutang/lytvpk</a> L4D2 MOD 管理器</div>
+        <div>🎨 3D 渲染：<a href="https://github.com/DrAbcOfficial/YSMViewer" target="_blank" style="color:var(--accent)">DrAbcOfficial/YSMViewer</a> YSM 模型查看器</div>
+        <div>🔐 解析器：YSMParser.Core</div>
+        <div>📦 仓库、硬链接：Mod Organizer 2</div>
+      </div>
+    </div>
     <div style="margin-top:4px;font-size:8px;color:var(--muted)">📄 配置文件：exe 同目录下的 ysm_config.json，可直接编辑</div>
   </div>
 </div>

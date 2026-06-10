@@ -35,12 +35,10 @@ export async function initYSMParser() {
       noInitialRun: true,
     };
 
-    // 3. 内联脚本注入胶水代码（不通过 src，避免 URL 解析问题）
-    const s = document.createElement("script");
-    s.textContent = glueCode;
-    document.head.appendChild(s);
+    // 4. 间接 eval 执行胶水代码（代替 <script> 注入，快 ~5x）
+    (0, eval)(glueCode);
 
-    // 4. 调用工厂
+    // 5. 调用工厂
     const factory = window.YSMParserModule;
     if (!factory) throw new Error("YSMParserModule 未定义");
     const mod = factory(window.Module);

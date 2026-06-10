@@ -217,6 +217,10 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	// 清理上一次更新留下的 .old 备份
+	updater.CleanupOldVersion()
+
 	// 启动时自动加载配置
 	a.loadAppConfig()
 
@@ -316,11 +320,17 @@ func (a *App) loadAppConfig() {
 }
 
 func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode, theme string) error {
-	// 无论校验是否通过，先保存配置（防止因校验失败导致文件无法创建）
-	// mcRoot 校验放在前端做提示即可，不阻塞保存
+	// 先校验，拿到修正后的路径（如 C:\PCL2 → C:\PCL2\.minecraft）
+	validated := mcRoot
+	if mcRoot != "" {
+		if v, errMsg := a.ValidateMinecraftDir(mcRoot); errMsg == "" {
+			validated = v
+		}
+	}
+	// 无论校验是否通过，都保存配置（防止旧版因校验失败导致文件无法创建）
 	cfg := types.AppConfig{
 		RepoRoot: repoRoot,
-		McRoot:   mcRoot,
+		McRoot:   validated,
 		LinkMode: linkMode,
 		Theme:    theme,
 		Mirror:   a.LoadAppConfig().Mirror,
@@ -328,14 +338,7 @@ func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode, theme string) error {
 	data, _ := json.MarshalIndent(cfg, "", "  ")
 	err := os.WriteFile(configPath(), data, 0644)
 	if err == nil {
-		// 校验通过才启动 watcher
-		if mcRoot != "" {
-			if validated, errMsg := a.ValidateMinecraftDir(mcRoot); errMsg == "" {
-				a.restartWatcher(repoRoot, validated)
-			}
-		} else {
-			a.restartWatcher(repoRoot, "")
-		}
+		a.restartWatcher(repoRoot, validated)
 	}
 	return err
 }
@@ -632,9 +635,37 @@ func (a *App) DownloadUpdate(url string) (string, error) {
 	return updater.Download(url)
 }
 
-// ApplyUpdate 应用更新（解压 + 启动 updater.bat + 退出）
+// ApplyUpdate 应用更新（解压 + 替换 exe）
 func (a *App) ApplyUpdate(zipPath string) error {
-	return updater.ApplyUpdate(zipPath)
+	return updater.InstallUpdate(zipPath)
+}
+
+// DoUpdate 一键更新：下载 → 安装，返回 "success" 或错误信息
+func (a *App) DoUpdate(url string) string {
+	zipPath, err := updater.Download(url)
+	if err != nil {
+		return "下载失败: " + err.Error()
+	}
+	defer os.Remove(zipPath)
+
+	if err := updater.InstallUpdate(zipPath); err != nil {
+		return "安装失败: " + err.Error()
+	}
+	return "success"
+}
+
+// RestartApplication 启动新进程后退出
+func (a *App) RestartApplication() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(exe)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	runtime.Quit(a.ctx)
+	return nil
 }
 
 // ========== 窗口状态 ==========

@@ -2,8 +2,6 @@
 
 > 类似 Mod Organizer 2 的 Minecraft [Yes Steve Model](https://www.mcmod.cn/class/8616.html) 模型管理器。
 
-灵感来自 LytVPK mod-manager。
-
 **技术栈**：Go (Wails v2) + 原生 HTML/CSS/JS (Web Components + Shadow DOM)
 
 ---
@@ -237,3 +235,22 @@ wails build
 | [`docs/postmortem-20250605.md`](docs/postmortem-20250605.md)         | 2025-06-05 晚间复盘                       |
 | [`AI_INDEX.md`](AI_INDEX.md)                                         | AI 索引（后端绑定 + 事件总线 + 组件清单） |
 | [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | AI 行为规则 + 痛苦教训                    |
+
+---
+
+## 🎯 灵感来源
+
+本项目的诸多设计借鉴了以下优秀开源项目：
+
+| 项目 | 用途 | 作者 |
+|------|------|------|
+| [LaoYutang/lytvpk](https://github.com/LaoYutang/lytvpk) | L4D2 MOD 管理器 — **下载与更新**、项目结构、Wails 开发范式 | LaoYutang |
+| [DrAbcOfficial/YSMViewer](https://github.com/DrAbcOfficial/YSMViewer) | YSM 模型查看器 — **3D 渲染算法**（YSMViewer 的 faceUV/expandBoxUV、骨骼层级、纹理映射） | DrAbcOfficial |
+| [YSMParser.Core](https://github.com/OpenYSM/YSMParser) | YSMParser — **.ysm 文件解析器** | OpenYSM |
+| Mod Organizer 2 | **仓库 + 硬链接管理模型**的设计理念 | Tannin |
+
+---
+
+## 📄 许可证
+
+本项目基于 [Apache-2.0](LICENSE) 许可证开源。

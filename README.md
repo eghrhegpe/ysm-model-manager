@@ -12,11 +12,11 @@
 
 | 导航            | 功能                                     |
 | --------------- | ---------------------------------------- |
+| 📦 模型仓库     | 树形浏览、启用/禁用、搜索排序、3D 预览   |
 | 🎮 整合包管理   | 版本列表、同步状态、快捷安装             |
-| 📦 模型仓库     | 树形浏览、启用/禁用、搜索排序            |
-| ⬇️ 导入与重命名 | 拖拽导入、自动解析文件名、批量重命名     |
-| 🧩 创意工坊     | 站点浏览、创作者管理、GitHub 在线仓库    |
-| 🗑️ 回收站       | 列出/恢复/删除/清空                      |
+| 🎨 创作者频道   | 站点浏览、创作者管理、预设搜索、内嵌浏览器 |
+| 🧩 创意工坊     | GitHub 在线仓库列表、一键下载            |
+| 👴 仓库元老     | 最早模型列表、批量安装                   |
 | 🛠️ 诊断与冲突   | 操作日志、模型去重（可选保留）、冲突检测 |
 | ⚙️ 设置         | 路径配置、链接模式（含警告）、主题切换   |
 
@@ -60,33 +60,29 @@
 - 硬链接跨分区自动降级为复制
 - 游戏运行时文件被锁定自动跳过，退出后下次触发自动重试
 
-### ⬇️ 导入与重命名
+### 🎨 创作者频道
 
-- 拖拽或点击选择 `.ysm` / `.zip` / `.7z` 文件
-- 自动解析文件名 → 填入作者/作品/角色/日期
-- 自由编辑字段，实时预览最终文件名
-- 可选 **跳过文件头校验**（用于已知安全但魔数不匹配的文件）
-- 已导入文件列表（本次会话历史）
+- **站点浏览**：B站、爱发电等平台的创作者列表浏览
+- **创作者管理**：维护创作者数据库（87+ 位），按平台标签分类（bilibili / afdian / github）
+- **预设搜索**：一键搜索 B站 YSM 免费模型 / YSM 模型分享、爱发电 YSM
+- **内嵌浏览器**：反向代理绕过 X-Frame-Options，在应用内浏览网页
+- **导入/导出**：站点和创作者 JSON 导入导出，支持合并和覆盖模式
 
 ### 🧩 创意工坊
 
-- **站点管理**：B站、爱发电、GitHub、MC百科、CurseForge、Modrinth 等默认站点
-- **创作者管理**：维护创作者列表，按平台标签分类（bilibili / github / afdian）
-- **GitHub 在线浏览**：读取 `index.json` 在线浏览远程仓库模型列表 → ⬇️ 一键下载
-- **内嵌浏览器**：反向代理绕过 X-Frame-Options，在应用内浏览网页
-- **导入/导出**：站点和创作者 JSON 导入导出，支持合并和覆盖模式
+- **GitHub 在线仓库**：读取远程仓库的 `index.json` 在线浏览模型列表
+- **一键下载**：⬇️ 直接从 GitHub 下载模型到本地仓库
+- **仓库管理**：支持添加/删除 GitHub 仓库源
+
+### 👴 仓库元老
+
+- **最早模型**：按文件修改日期排序，列出最古老的模型
+- **批量安装**：一键安装所有元老模型到整合包
 
 ### 🔄 自动更新
 
 - 启动时自动检查 GitHub Releases
 - 检测到新版本提示下载，支持后台下载 + 解压覆盖更新
-
-### 🗑️ 回收站
-
-- 去重文件自动移入 `.recycle`
-- 安全性：符号链接直接删除、硬链接直接删除（nlink>1）、路径遍历防护
-- 恢复 / 永久删除 / 清空（均带确认弹窗）
-- 跨分区兼容（复制后删除）
 
 ### 🛠️ 诊断与冲突
 
@@ -96,10 +92,11 @@
 
 ### ⚙️ 设置
 
-- 🎮 游戏根目录 — 📂 选择 / 🔍 自动搜索 `.minecraft`
+- 🎮 游戏根目录 — 📂 选择 / 🔍 自动搜索 `.minecraft`（检测 versions/assets 等特征）
 - 📁 模型仓库路径 — 📂 选择
 - 🔗 链接模式 — 复制 / 硬链接 ✅（需同分区） / 符号链接 ❌（YSM 不兼容）
 - 🌙 主题模式 — 💻 跟随系统 / 🌙 赛博霓虹 / ☀️ 温暖木纹 / ⚪ 极简深邃
+- 🗑️ 回收站 — 列出/恢复/删除/清空（符号链接直接删、硬链接直接删、普通文件移入 `.recycle`）
 - 导航状态持久化（启动恢复上次页面）
 - 窗口大小/位置记忆（关闭时 Go 端保存）
 
@@ -144,59 +141,67 @@
 
 ```
 ysm-model-manager/
-├── app.go                  ← Wails Binding 入口（全部 35 个函数注册于此）
-├── main.go                 ← Go 入口 + 窗口参数
-├── wails.json              ← Wails 配置（绑定函数列表）
-├── go/                     ← Go 工具包
-│   ├── installer/          —— 模型安装（复制/硬链接/符号链接）
-│   ├── recycle/            —— 回收站
-│   ├── sync/               —— 整合包同步状态
-│   ├── logs/               —— 操作日志
-│   ├── ysm/                —— YSM 模型解析 + 摘要提取
-│   ├── watcher/            —— 文件监听器（fsnotify 实时同步 .ban）
-│   ├── updater/            —— 自动更新（GitHub Release 检测/下载/安装）
-│   ├── version/            —— 版本号（编译时注入）
-│   ├── paths/              —— 路径安全校验（统一防路径穿越）
-│   └── types/              —— 共享类型（AppConfig, ModelEntry, etc）
-├── frontend/               ← 前端源码
+├── app.go                     ← Wails Binding 入口
+├── main.go                    ← Go 入口 + 窗口参数
+├── wails.json                 ← Wails 配置
+├── build-release.ps1          ← 构建+GitHub Release 脚本
+├── go/                        ← Go 工具包
+│   ├── installer/             —— 模型安装（复制/硬链接/符号链接）
+│   ├── recycle/               —— 回收站
+│   ├── sync/                  —— 整合包同步状态
+│   ├── logs/                  —— 操作日志
+│   ├── ysm/                   —— YSM 模型解析 + 摘要提取 + 头部扫描
+│   ├── watcher/               —— 文件监听器（fsnotify 实时同步 .ban）
+│   ├── updater/               —— 自动更新
+│   ├── version/               —— 版本号（编译时注入）
+│   ├── paths/                 —— 路径安全校验
+│   └── types/                 —— 共享类型
+├── frontend/                  ← 前端源码
 │   ├── index.html
 │   ├── css/
-│   │   ├── variables.css   —— CSS 变量（深色/浅色两套主题）
-│   │   ├── components.css
+│   │   ├── variables.css      —— CSS 变量（4 套主题）
 │   │   └── layout.css
 │   └── js/
-│       ├── bus.js           —— 事件总线（ESM + window.bus 兼容）
-│       ├── app-modules.js   —— 全局入口 + 右键菜单 + 窗口状态
-│       ├── utils/           —— fmt.js / dom.js / icon.js
-│       └── components/      —— 7 个 Web Components + 工具
-│           ├── app-nav/     —— 左侧导航菜单
-│           ├── app-content/ —— 主内容区（页面路由 + 全局事件处理）
-│           ├── app-tree/    —— 模型仓库树
-│           ├── app-sidebar/ —— 整合包列表
-│           ├── app-preview/ —— 预览面板 + 模型详情
-│           ├── context-menu.js —— 右键菜单
-│           └── app-toast.js —— Toast 通知
-└── docs/                   ← 文档
-    ├── architecture.md     —— 前端架构规范
-    ├── roadmap.md          —— 路线图
-    ├── bug-chronicle.md    —— 问题排查记录
-    ├── dev-notes.md        —— 开发笔记
-    └── postmortem-20250604.md —— 重构复盘
+│       ├── bus.js              —— 事件总线
+│       ├── app-modules.js      —— 全局入口 + 右键菜单映射
+│       ├── components/         —— Web Components
+│       │   ├── app-nav.js      —— 左侧导航菜单
+│       │   ├── app-content/    —— 主内容区（页面路由 + 全局事件）
+│       │   ├── app-tree/       —— 模型仓库树
+│       │   ├── app-sidebar/    —— 整合包列表
+│       │   ├── app-preview/    —— 预览面板 + 3D 渲染
+│       │   ├── app-toast.js    —— Toast 通知
+│       │   └── context-menu.js —— 右键菜单
+│       ├── features/           —— 业务功能
+│       ├── dialogs/            —— 弹窗（modal/rename/batch-rename）
+│       ├── pages/              —— 页面渲染（repository）
+│       ├── core/               —— 基础设施（buttons/global-handlers/theme）
+│       ├── services/           —— 服务注册
+│       ├── utils/              —— 工具函数（display/fmt/dom/icon/summarize/preview-cache）
+│       └── wasm/               —— WASM 解码
+└── docs/                      ← 文档
+    ├── architecture.md        —— 前端架构规范
+    ├── bug-chronicle.md       —— 问题排查记录
+    ├── release-notes/         —— 版本发版说明
+    └── postmortem-*.md        —— 复盘
 ```
 
 ### 组件规范
 
-每个组件目录遵循 MVC 分离：
+大组件按职责拆分：
 
 ```
 app-xxx/
   index.js       # 生命周期编排
   tpl.js         # HTML 模板
+  row-tpl.js     # 节点级模板（可选）
   data.js        # 数据逻辑（纯函数）
-  render.js      # 渲染逻辑
+  render.js      # 渲染逻辑（输入→HTML）
   events.js      # 事件绑定
-  utils.js       # 工具函数
+  utils.js       # 组件工具（可选）
 ```
+
+小组件（app-nav / app-toast / context-menu）直接单个文件。
 
 ---
 

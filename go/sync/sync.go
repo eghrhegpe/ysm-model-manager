@@ -22,7 +22,7 @@ func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.Instance
 	}
 
 	repoEntries := scanFn(repoDir)
-	repoByHash := make(map[string]types.ModelEntry)
+	repoByHash := make(map[string][]types.ModelEntry)
 	for _, e := range repoEntries {
 		if e.Hash == "" {
 			continue
@@ -31,7 +31,7 @@ func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.Instance
 		if strings.HasSuffix(strings.ToLower(e.Name), ".ban") {
 			continue
 		}
-		repoByHash[e.Hash] = e
+		repoByHash[e.Hash] = append(repoByHash[e.Hash], e)
 	}
 
 	instances := ListVersions(mcRoot)
@@ -55,12 +55,13 @@ func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.Instance
 			HasYSM:    ysm.HasYSMMod(filepath.Join(ins.VersionDir, "mods")),
 		}
 
-				for hash, e := range repoByHash {
-					if !customByHash[hash] {
-						// Missing 存完整路径，供安装时直接使用
-						status.Missing = append(status.Missing, e.Path)
-					}
+		for hash, entries := range repoByHash {
+			if !customByHash[hash] {
+				for _, e := range entries {
+					status.Missing = append(status.Missing, e.Path)
 				}
+			}
+		}
 		// 预构建禁用哈希集合
 		bannedHashes := make(map[string]bool)
 		for _, re := range repoEntries {

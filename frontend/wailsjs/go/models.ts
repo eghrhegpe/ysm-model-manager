@@ -538,6 +538,7 @@ export namespace ysm {
 	export class YSMHeader {
 	    isYsm: boolean;
 	    isFree: boolean;
+	    hasFree: boolean;
 	    hash?: string;
 	    name: string;
 	    license?: string;
@@ -559,6 +560,7 @@ export namespace ysm {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.isYsm = source["isYsm"];
 	        this.isFree = source["isFree"];
+	        this.hasFree = source["hasFree"];
 	        this.hash = source["hash"];
 	        this.name = source["name"];
 	        this.license = source["license"];

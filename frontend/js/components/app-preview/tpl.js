@@ -97,7 +97,11 @@ function esc(s) {
 /** 模型统计卡片 */
 export function statsCardHTML(model, modelPath, decodedBy) {
   const isYsm = /\.ysm$/i.test(modelPath);
-  const fmt = isYsm ? ".ysm (加密)" : modelPath.endsWith(".zip") ? ".zip" : ".7z";
+  const fmt = isYsm
+    ? ".ysm (加密)"
+    : modelPath.endsWith(".zip")
+      ? ".zip"
+      : ".7z";
   const badge = decodedBy ? `<span class="ysm-badge">${decodedBy}</span>` : "";
   return `
 <div class="ysm-card-title">📊 模型概览${badge}</div>

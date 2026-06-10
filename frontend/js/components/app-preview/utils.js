@@ -22,12 +22,15 @@ export function parseBedrockGeometryFromJSON(jsonStr) {
         // 某些模型 UV 是对象格式（如 {uv:[0,0], uv_size:[16,16]}）
         faceUV = JSON.stringify(c.uv);
       }
+      // 每个方块可指定纹理槽索引（YSMViewer 据此区分主纹理与发光/覆盖层）
+      const texSlot = typeof c.texture === "number" ? c.texture : 0;
       cubes.push({
         origin: c.origin || [0, 0, 0],
         size: c.size || [1, 1, 1],
         pivot: c.pivot || [0, 0, 0],
         uv,
         faceUV,
+        texSlot,
       });
     }
     bones.push({

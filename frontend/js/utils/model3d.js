@@ -167,15 +167,18 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
       geo.setAttribute("uv", new THREE.Float32BufferAttribute(md.uvs, 2));
       geo.setIndex(md.indices);
       // 按 mesh 所属骨骼选择对应纹理（md.texIdx 由 buildSpecFromModel 设置）
+      const meshTexIdx = md.texIdx ?? texIdx ?? 0;
       const meshTex =
         texArr.length > 0
-          ? texArr[md.texIdx ?? texIdx ?? 0] || texArr[0]
+          ? texArr[meshTexIdx] || texArr[0]
           : null;
+      // YSMViewer: texture slot > 0 的方块为发光/覆盖层，正面剔除（BackSide）
+      const useBackSide = meshTexIdx > 0;
       const mat = meshTex
         ? new THREE.MeshBasicMaterial({
             map: meshTex,
             alphaTest: 0.5,
-            side: THREE.DoubleSide,
+            side: useBackSide ? THREE.BackSide : THREE.DoubleSide,
           })
         : new THREE.MeshBasicMaterial({
             color: 0x44aa88,
@@ -244,20 +247,23 @@ function buildSpecFromModel(model) {
   const bones = [];
   const meshes = [];
   const boneIdx = {};
-  // 首次出现的骨骼 pivot（同名骨骼用首次的）
+  // 收集 bone pivots（同名骨骼优先保留有 parent 的 pivot，与 Go spec.go 一致）
   const firstPivot = {};
   for (const b of model.bones || []) {
+    const bp = b.pivot || [0, 0, 0];
     if (firstPivot[b.name] === undefined) {
-      firstPivot[b.name] = b.pivot || [0, 0, 0];
+      firstPivot[b.name] = bp;
+    } else if (b.parent) {
+      // 同名骨骼且当前有 parent → 覆盖（main.json 的正确层级优先于 arm.json 扁平版）
+      firstPivot[b.name] = bp;
     }
   }
   for (const b of model.bones || []) {
     const bp = b.pivot || [0, 0, 0];
     let localPos = [-bp[0], bp[1], bp[2]];
     if (b.parent) {
-      const pp = model.bones.find((x) => x.name === b.parent)?.pivot || [
-        0, 0, 0,
-      ];
+      // 从 firstPivot 中取父骨骼 pivot（与 Go spec.go 一致，使用去重后的 pivot）
+      const pp = firstPivot[b.parent] || [0, 0, 0];
       localPos = [-bp[0] - -pp[0], bp[1] - pp[1], bp[2] - pp[2]];
     }
     const entry = {
@@ -275,8 +281,15 @@ function buildSpecFromModel(model) {
     };
     if (boneIdx[b.name] !== undefined) {
       const existing = bones[boneIdx[b.name]];
-      // 同名骨骼：如果现有骨骼没有 parent 但当前骨骼有 parent → 补全层级和旋转
-      if (!existing.parentId && b.parent) {
+      // 同名骨骼去重：优先保留数据更完整的骨骼
+      // 规则1: 现有无 parent + 新有 parent → 补全
+      // 规则2: 两者都有 parent 但现有无旋转 + 新有旋转 → 更新旋转
+      const existingHasParent = !!existing.parentId;
+      const newHasParent = !!b.parent;
+      const existingHasRot = existing.localRotation.some(v => v !== 0);
+      const newHasRot = entry.localRotation.some(v => v !== 0);
+      if ((!existingHasParent && newHasParent) ||
+          (existingHasParent && newHasParent && !existingHasRot && newHasRot)) {
         existing.parentId = b.parent;
         existing.localPosition = localPos;
         existing.localRotation = entry.localRotation;
@@ -295,8 +308,8 @@ function buildSpecFromModel(model) {
       const c = b.cubes[ci];
       const md = buildCubeMeshDataJS(c, fp, bTexW, bTexH, b.name, ci);
       if (md) {
-        // 标记此 mesh 所属骨骼的纹理索引（多纹理模型用）
-        md.texIdx = b._texIdx ?? 0;
+        // 优先使用 cube 级纹理槽索引（YSMViewer 用此区分主纹理与 glow/覆盖层）
+        md.texIdx = c.texSlot ?? b._texIdx ?? 0;
         meshes.push(md);
       }
     }

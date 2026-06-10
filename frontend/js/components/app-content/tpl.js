@@ -3,8 +3,19 @@
 export function repositoryHTML() {
   return (
     '<div class="repo-wrap">' +
+    '<div class="repo-tabs">' +
+    '<button class="repo-tab active" data-tab="tree">📁 文件树</button>' +
+    '<button class="repo-tab" data-tab="import">📥 导入</button>' +
+    '<button class="repo-tab" data-tab="recycle">🗑️ 回收站</button>' +
+    '<button class="repo-tab" data-tab="dedup">🔗 去重</button>' +
+    '</div>' +
+    '<div class="repo-tab-body" id="repo-tab-tree">' +
     '<div class="repo-layout repo-layout-wrap"><app-tree></app-tree><app-preview mode="model"></app-preview></div>' +
-    "</div>"
+    '</div>' +
+    '<div class="repo-tab-body" id="repo-tab-import" style="display:none"></div>' +
+    '<div class="repo-tab-body" id="repo-tab-recycle" style="display:none"></div>' +
+    '<div class="repo-tab-body" id="repo-tab-dedup" style="display:none;padding:12px;overflow-y:auto"></div>' +
+    '</div>'
   );
 }
 
@@ -125,10 +136,6 @@ export function placeholderHTML(icon, label) {
 
 export function downloadsHTML() {
   return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-<div style="padding:12px 12px 4px;display:flex;gap:8px;align-items:center">
-<span style="font-size:14px;font-weight:600">⬇️ 导入与重命名</span>
-<span style="font-size:10px;color:var(--muted)">拖入 .ysm / .zip / .7z 到下方区域</span>
-</div>
 <div class="repo-layout" style="flex:1">
 <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
 <div id="dl-form" style="margin:4px 12px;display:none;flex-direction:column;gap:4px">
@@ -196,6 +203,10 @@ export function diagnosticsHTML() {
 <span class="diag-btn-icon">⚡</span>
 <span>冲突检测</span>
 </button>
+<button class="diag-btn" data-diag="oldest">
+<span class="diag-btn-icon">👴</span>
+<span>仓库元老</span>
+</button>
 <div class="diag-left-spacer"></div>
 <button class="diag-btn diag-btn-action" id="diag-refresh">
 <span>🔄</span>
@@ -233,6 +244,13 @@ export function diagnosticsHTML() {
 </div>
 <div id="diag-conflict-list"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">点击「开始扫描」检测整合包冲突</div></div>
 </div>
+<div class="diag-panel" id="diag-oldest" style="display:none">
+<div class="diag-panel-header">
+<span>👴 仓库元老</span>
+<button class="hdr-btn" id="diag-oldest-refresh">🔄</button>
+</div>
+<div id="diag-oldest-list"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">点击「🔄」刷新</div></div>
+</div>
 </div>
 </div>`;
 }
@@ -240,7 +258,6 @@ export function diagnosticsHTML() {
 export function recycleHTML() {
   return `<div class="recy-page" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px">
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-<span style="font-size:14px;font-weight:600">🗑️ 回收站</span>
 <span id="recy-count" style="font-size:11px;color:#6c7086">加载中...</span>
 <button class="btn" id="recy-refresh" style="margin-left:auto;font-size:10px">🔄 刷新</button>
 <button class="btn danger" id="recy-empty" style="font-size:10px">🗑️ 清空回收站</button>

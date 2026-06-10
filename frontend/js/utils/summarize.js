@@ -156,6 +156,7 @@ ${authorHtml ? `<div class="md-row"><span class="md-label">作者</span><span cl
 <div class="md-divider"></div>
 
 <div class="md-row"><span class="md-label">📦 资源</span><span class="md-value">贴图 ${stats.textures || 0} · 模型 ${stats.models || 0} · 动画 ${stats.animations || 0}</span></div>
+${stats.texWidth ? `<div class="md-row"><span class="md-label">🖼️ 纹理尺寸</span><span class="md-value">${stats.texWidth} × ${stats.texHeight} px</span></div>` : ""}
 
 ${preview.heightScale || preview.widthScale ? `<div class="md-row"><span class="md-label">📐 缩放</span><span class="md-value">${(preview.heightScale || 1).toFixed(2)} × ${(preview.widthScale || 1).toFixed(2)}</span></div>` : ""}
 

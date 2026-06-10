@@ -5,15 +5,11 @@ import {
   repositoryHTML,
   instancesHTML,
   settingsHTML,
-  downloadsHTML,
   diagnosticsHTML,
-  recycleHTML,
   workshopHTML,
 } from "./tpl.js";
 import { registerGlobalHandlers } from "../../core/global-handlers.js";
-import { initImportQueue } from "../../features/import-queue.js";
 import { initDiagnostics } from "./workshop-diagnostics.js";
-import { initRecycleBin } from "../../features/recycle-bin.js";
 import { initRepository } from "../../pages/repository.js";
 import { initSettings } from "./workshop-settings.js";
 import {
@@ -65,14 +61,8 @@ class AppContent extends HTMLElement {
       case "instances":
         inner = instancesHTML();
         break;
-      case "downloads":
-        inner = downloadsHTML();
-        break;
       case "workshop":
         inner = workshopHTML();
-        break;
-      case "recycle":
-        inner = recycleHTML();
         break;
       case "diagnostics":
         inner = diagnosticsHTML();
@@ -87,12 +77,8 @@ class AppContent extends HTMLElement {
 
     if (this._current === "diagnostics") {
       this._initDiagnostics();
-    } else if (this._current === "recycle") {
-      this._initRecycle();
     } else if (this._current === "settings") {
       this._initSettings();
-    } else if (this._current === "downloads") {
-      this._initDownloads();
     } else if (this._current === "workshop") {
       this._initWorkshop();
     } else if (this._current === "repository") {
@@ -106,6 +92,55 @@ class AppContent extends HTMLElement {
 
   _initRepository() {
     initRepository();
+    this._bindRepoTabs();
+  }
+
+  _bindRepoTabs() {
+    const tabs = this._root.querySelectorAll(".repo-tab");
+    if (!tabs.length) return;
+    let inited = {};
+    tabs.forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const tab = btn.dataset.tab;
+        tabs.forEach((t) => t.classList.toggle("active", t === btn));
+        ["tree", "import", "recycle", "dedup"].forEach((id) => {
+          const el = this._root.getElementById("repo-tab-" + id);
+          if (el) el.style.display = id === tab ? "" : "none";
+        });
+        // 首次切换到导入/回收站时初始化内容
+        if (!inited[tab] && tab !== "tree") {
+          inited[tab] = true;
+          const container = this._root.getElementById("repo-tab-" + tab);
+          if (!container) return;
+          if (tab === "import") {
+            const { downloadsHTML } = await import("./tpl.js");
+            container.innerHTML = downloadsHTML();
+            const { initImportQueue } = await import("../../features/import-queue.js");
+            initImportQueue(this);
+          } else if (tab === "recycle") {
+            const { recycleHTML } = await import("./tpl.js");
+            container.innerHTML = recycleHTML();
+            const { initRecycleBin } = await import("../../features/recycle-bin.js");
+            initRecycleBin(this);
+          } else if (tab === "dedup") {
+            const { startDedup } = await import("./workshop-diagnostics.js");
+            // 构建简易的去重面板
+            container.innerHTML =
+              '<div style="display:flex;flex-direction:column;height:100%">' +
+              '<div style="display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid var(--bd)">' +
+              '<span style="flex:1"></span>' +
+              '<button class="hdr-btn accent" id="dedup-start-btn">🔗 开始去重</button>' +
+              '</div>' +
+              '<div id="dedup-result-list" style="flex:1;overflow-y:auto;padding:8px 0"></div>' +
+              '</div>';
+            container.querySelector("#dedup-start-btn")?.addEventListener("click", async () => {
+              const list = container.querySelector("#dedup-result-list");
+              if (list) await startDedup({ getElementById: () => list }, this._esc);
+            });
+          }
+        }
+      });
+    });
   }
 
   _initDownloads() {

@@ -27,6 +27,9 @@ export function initDiagnostics(root, esc) {
   root
     .getElementById("diag-start-dedup")
     ?.addEventListener("click", () => startDedup(root, esc));
+  root
+    .getElementById("diag-oldest-refresh")
+    ?.addEventListener("click", () => loadOldestModel(root, esc));
 
   // 左栏按钮切换（含去重）
   root.querySelectorAll(".diag-btn[data-diag]").forEach((btn) => {
@@ -41,6 +44,9 @@ export function initDiagnostics(root, esc) {
         name === "dedup" ? "" : "none";
       root.getElementById("diag-conflict").style.display =
         name === "conflict" ? "" : "none";
+      root.getElementById("diag-oldest").style.display =
+        name === "oldest" ? "" : "none";
+      if (name === "oldest") loadOldestModel(root, esc);
       if (name === "log") loadDiagnosticsLogs(root, esc);
     });
   });
@@ -136,7 +142,7 @@ async function loadDiagnosticsLogs(root, esc) {
   }
 }
 
-async function startDedup(root, esc) {
+export async function startDedup(root, esc) {
   const list = root.getElementById("diag-dedup-list");
   if (!list) return;
   list.innerHTML =
@@ -178,8 +184,8 @@ async function startDedup(root, esc) {
     const totalDups = dupHashes.reduce((s, [, v]) => s + v.length - 1, 0);
 
     let html = `<div style="padding:10px 12px;font-size:11px;color:var(--txt);border-bottom:1px solid var(--bd)">
-发现 <strong>${dupHashes.length}</strong> 组重复文件，共 <strong>${totalDups}</strong> 个可清理
-<span style="font-size:9px;color:var(--muted);margin-left:4px">每组选一个保留，其余移入回收站</span>
+发现 <strong>${dupHashes.length}</strong> 组重复文件，请选一个保留（每组）
+<span style="display:block;font-size:9px;color:var(--muted);margin-top:2px">未选择的文件将移入回收站</span>
 </div>`;
     dupHashes.forEach(([, group], gi) => {
       const defaultIdx = group.reduce(
@@ -192,16 +198,34 @@ async function startDedup(root, esc) {
 <span style="flex:1"></span>
 <span style="font-size:9px;color:var(--muted);font-weight:400">${group.length} 个文件 · ${group.reduce((s, e) => s + e.Size, 0)} 字节</span>
 </div>`;
+      // 提取相对目录（去掉仓库根目录前缀）
+      const getRelDir = (path) => {
+        // 找到最后一个 / 或 \
+        const lastSep = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+        const dir = lastSep >= 0 ? path.substring(0, lastSep) : "";
+        // 去掉仓库根目录前缀
+        const rootNorm = (repoRoot || "").replace(/[/\\]+/g, "\\");
+        const dirNorm = dir.replace(/[/\\]+/g, "\\");
+        let rel = dirNorm;
+        if (rootNorm && dirNorm.startsWith(rootNorm)) {
+          rel = dirNorm.slice(rootNorm.length).replace(/^[/\\]+/, "");
+        }
+        return rel || "/";
+      };
       group.forEach((e, fi) => {
         const checked = fi === defaultIdx ? " checked" : "";
         const isDefault = fi === defaultIdx;
         const dateStr = e.ModTime
           ? new Date(e.ModTime).toLocaleDateString()
           : "";
+        const relDir = getRelDir(e.Path);
         html += `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background .1s;background:${isDefault ? "var(--hover)" : "transparent"}"
 >
 <input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} style="flex-shrink:0;accent-color:var(--accent)">
-<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)" title="${esc(e.Path)}">${renderDisplayName(e.Name)}</span>
+<span style="flex:1;overflow:hidden;min-width:0">
+<span style="color:var(--txt);font-size:10px" title="${esc(e.Path)}">${renderDisplayName(e.Name)}</span>
+<span style="display:block;font-size:8px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(relDir)}</span>
+</span>
 <span style="font-size:9px;color:var(--muted);flex-shrink:0;margin-right:4px">${(e.Size / 1024).toFixed(0)}KB</span>
 ${dateStr ? `<span style="font-size:8px;color:var(--muted);flex-shrink:0">${dateStr}</span>` : ""}
 ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;background:#a6e3a122;color:#a6e3a1">推荐</span>' : ""}
@@ -320,5 +344,153 @@ async function scanConflicts(root, esc) {
     list.innerHTML = html;
   } catch (err) {
     list.innerHTML = `<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">扫描失败: ${esc(String(err))}</div>`;
+  }
+}
+
+/** 👴 仓库元老 + 📊 健康度 + 🎲 今日推荐 */
+async function loadOldestModel(root, esc) {
+  const list = root.getElementById("diag-oldest-list");
+  if (!list) return;
+  list.innerHTML =
+    '<div class="stat-row diag-stat diag-stat-muted">⏳ 扫描中...</div>';
+  try {
+    const { LoadAppConfig, ScanModelEntries } =
+      await import("../../../wailsjs/go/main/App.js");
+    const cfg = await LoadAppConfig();
+    const repoRoot = cfg.repoRoot || "";
+    if (!repoRoot) {
+      list.innerHTML =
+        '<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">请先设置仓库目录</div>';
+      return;
+    }
+
+    const entries = await ScanModelEntries(repoRoot);
+    if (!entries || !entries.length) {
+      list.innerHTML =
+        '<div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">仓库为空</div>';
+      return;
+    }
+
+    // —— 扫描统计数据 ——
+    let totalSize = 0,
+      banned = 0,
+      oldest = entries[0];
+    const hashMap = {};
+    entries.forEach((e) => {
+      totalSize += e.Size || 0;
+      if (e.ModTime && e.ModTime < oldest.ModTime) oldest = e;
+      if ((e.Name || "").toLowerCase().endsWith(".ban")) banned++;
+      if (e.Hash) {
+        hashMap[e.Hash] = (hashMap[e.Hash] || 0) + 1;
+      }
+    });
+
+    const dupGroups = Object.values(hashMap).filter((c) => c > 1).length;
+    const dupTotal = Object.values(hashMap).reduce(
+      (s, c) => s + (c > 1 ? c - 1 : 0),
+      0,
+    );
+
+    // 健康度评分（0-100）
+    let score = 100;
+    const dedupPenalty = Math.min(dupTotal * 5, 30); // 每个重复扣5分，上限30
+    const bannedPenalty = Math.min(banned * 3, 15); // 每个禁用扣3分，上限15
+    const ageBonus =
+      entries.length > 0
+        ? Math.min(Math.floor(entries.length / 10) * 2, 10)
+        : 0; // 每10个模型加2分，上限10
+    score = Math.min(
+      Math.max(score - dedupPenalty - bannedPenalty + ageBonus, 0),
+      100,
+    );
+
+    const healthIcon = score >= 80 ? "🟢" : score >= 50 ? "🟡" : "🔴";
+    const healthLabel =
+      score >= 80 ? "健康" : score >= 50 ? "亚健康" : "需要整理";
+    const healthMsg =
+      score >= 80
+        ? "你的仓库状态很好！"
+        : score >= 50
+          ? "有一些小问题需要处理"
+          : "重复文件和禁用模型太多了！";
+
+    // —— 仓库元老 ——
+    let oldestHtml = "";
+    if (oldest && oldest.ModTime) {
+      const ageMs = Date.now() - oldest.ModTime;
+      const ageDays = Math.floor(ageMs / 86400000);
+      const ageHours = Math.floor((ageMs % 86400000) / 3600000);
+      const dateStr = new Date(oldest.ModTime).toLocaleDateString("zh-CN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      const sizeStr =
+        oldest.Size > 1048576
+          ? (oldest.Size / 1048576).toFixed(1) + " MB"
+          : oldest.Size > 1024
+            ? (oldest.Size / 1024).toFixed(0) + " KB"
+            : oldest.Size + " B";
+      oldestHtml = `
+<div style="background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:12px;display:inline-block;text-align:left;min-width:200px">
+  <div style="font-size:11px;color:var(--txt);margin-bottom:4px;word-break:break-all">📄 ${renderDisplayName(oldest.Name)}</div>
+  <div style="font-size:9px;color:var(--muted)">📁 ${esc(oldest.Path || oldest.Name)}</div>
+  <div style="font-size:9px;color:var(--muted);margin-top:2px">📏 ${sizeStr} · 📅 ${dateStr}</div>
+</div>`;
+    }
+
+    // —— 今日推荐 ——
+    const pick = entries[Math.floor(Math.random() * entries.length)];
+    const todayPickHtml = pick
+      ? `<div style="background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;display:inline-block;text-align:left;min-width:200px;font-size:10px;color:var(--txt);cursor:default" title="${esc(pick.Path || pick.Name)}">${renderDisplayName(pick.Name)}</div>`
+      : "";
+
+    // —— 总览 ——
+    const totalSizeStr =
+      totalSize > 1073741824
+        ? (totalSize / 1073741824).toFixed(1) + " GB"
+        : totalSize > 1048576
+          ? (totalSize / 1048576).toFixed(1) + " MB"
+          : (totalSize / 1024).toFixed(0) + " KB";
+
+    list.innerHTML = `
+<div style="padding:16px">
+  <!-- 健康度 -->
+  <div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:42px;margin-bottom:4px">${healthIcon}</div>
+    <div style="font-size:14px;font-weight:600;color:var(--txt);margin-bottom:2px">仓库健康度 ${score}/100</div>
+    <div style="font-size:10px;color:var(--muted)">${healthLabel} · ${healthMsg}</div>
+  </div>
+
+  <!-- 数据行 -->
+  <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-bottom:12px">
+    <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:var(--surf);border:1px solid var(--bd)">📦 ${entries.length} 个模型</span>
+    <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:var(--surf);border:1px solid var(--bd)">📏 ${totalSizeStr}</span>
+    <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:var(--surf);border:1px solid var(--bd)">⛔ ${banned} 个禁用</span>
+    <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:var(--surf);border:1px solid var(--bd)">🔗 ${dupGroups} 组重复</span>
+  </div>
+
+  <hr style="border:none;border-top:1px solid var(--bd);margin:12px 0">
+
+  <!-- 仓库元老 -->
+  <div style="text-align:center">
+    <div style="font-size:24px;margin-bottom:4px">👴</div>
+    <div style="font-size:11px;font-weight:600;color:var(--txt);margin-bottom:8px">仓库元老模型</div>
+    ${oldestHtml}
+    <div style="font-size:8px;color:var(--muted);margin-top:8px;opacity:.5">💡 最老的模型</div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid var(--bd);margin:12px 0">
+
+  <!-- 今日推荐 -->
+  <div style="text-align:center">
+    <div style="font-size:20px;margin-bottom:4px">🎲</div>
+    <div style="font-size:11px;font-weight:600;color:var(--txt);margin-bottom:8px">今日推荐</div>
+    ${todayPickHtml}
+    <div style="font-size:8px;color:var(--muted);margin-top:8px;opacity:.5">💡 今天要不试试这个？</div>
+  </div>
+</div>`;
+  } catch (err) {
+    list.innerHTML = `<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">加载失败: ${esc(String(err))}</div>`;
   }
 }

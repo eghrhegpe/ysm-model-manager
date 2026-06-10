@@ -1,0 +1,255 @@
+console.log(JSON.stringify(window.__last3DSpec, null, 2))
+VM262:1 {
+  "models": [
+    {
+      "id": "main",
+      "name": "main",
+      "defaultVisible": true,
+      "textureWidth": 32,
+      "textureHeight": 32,
+      "textureId": "tex_0",
+      "bones": [
+        {
+          "id": "ysmGlowRoot",
+          "name": "ysmGlowRoot",
+          "parentId": null,
+          "localPosition": [
+            -8,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            -0.7071067811865475,
+            0,
+            0.7071067811865476
+          ]
+        },
+        {
+          "id": "XYZ_Root",
+          "name": "XYZ_Root",
+          "parentId": null,
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "Shose_Root",
+          "name": "Shose_Root",
+          "parentId": "XYZ_Root",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "MRoot",
+          "name": "MRoot",
+          "parentId": "Shose_Root",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "Root",
+          "name": "Root",
+          "parentId": "MRoot",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "MAllBody",
+          "name": "MAllBody",
+          "parentId": "Root",
+          "localPosition": [
+            0,
+            25.75,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "AllBody",
+          "name": "AllBody",
+          "parentId": "MAllBody",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "MUpBody",
+          "name": "MUpBody",
+          "parentId": "AllBody",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "UpBody",
+          "name": "UpBody",
+          "parentId": "MUpBody",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "MUpperBody",
+          "name": "MUpperBody",
+          "parentId": "UpBody",
+          "localPosition": [
+            0,
+            6.581501007080078,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "UpperBody",
+          "name": "UpperBody",
+          "parentId": "MUpperBody",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "up_UpperBody",
+          "name": "up_UpperBody",
+          "parentId": "UpperBody",
+          "localPosition": [
+            0,
+            1.6684989929199219,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "Left_Breast_Shier",
+          "name": "Left_Breast_Shier",
+          "parentId": "up_UpperBody",
+          "localPosition": [
+            -1.9283000230789185,
+            5.042041778564453,
+            -1.3551599979400635
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "Right_Breast_Shier",
+          "name": "Right_Breast_Shier",
+          "parentId": "up_UpperBody",
+          "localPosition": [
+            1.9283000230789185,
+            5.042041778564453,
+            -1.3551599979400635
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "up_Body2",
+          "name": "up_Body2",
+          "parentId": "up_UpperBody",
+          "localPosition": [
+            -7.123579978942871,
+            8.253730773925781,
+            -0.32284000515937805
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "Left_Breast_Shier3",
+          "na
+undefined

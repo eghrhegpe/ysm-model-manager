@@ -3,6 +3,7 @@ package ysm
 import (
 	"bufio"
 	"bytes"
+	"io"
 	"os"
 	"strings"
 )
@@ -150,12 +151,78 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 
 // AnalyzeYSMHeader 读取 YSM 文件的文本头部，提取元数据
 func AnalyzeYSMHeader(path string) YSMHeader {
+	// 先尝试检测 YSGP（V2）二进制头部
+	if h := detectYSGPHeader(path); h != nil {
+		return *h
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		return YSMHeader{}
 	}
 	defer f.Close()
 	return scanHeader(bufio.NewScanner(f))
+}
+
+// detectYSGPHeader 检测 YSGP（YSM V2）二进制格式并提取基本信息
+// 支持标准 YSGP 和带 BOM + 文本头部的变体
+func detectYSGPHeader(path string) *YSMHeader {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	// 读取前 100 字节分析头部
+	var header [100]byte
+	n, err := io.ReadFull(f, header[:])
+	if err != nil && n < 4 {
+		return nil
+	}
+	data := header[:n]
+
+	// 跳过可能的 UTF-8 BOM
+	offset := 0
+	if n >= 3 && data[0] == 0xef && data[1] == 0xbb && data[2] == 0xbf {
+		offset = 3
+	}
+
+	// 检查 YSGP 魔数
+	if n < offset+4 || string(data[offset:offset+4]) != "YSGP" {
+		return nil
+	}
+
+	h := &YSMHeader{
+		IsYSM:  true,
+		Format: 2, // YSGP = V2
+	}
+
+	// 尝试从文本头部中提取模型名称
+	// 文本头部格式：<name> 模型名
+	textPortion := string(data)
+	if idx := strings.Index(textPortion, "<name>"); idx >= 0 {
+		rest := textPortion[idx+6:]
+		if nl := strings.IndexAny(rest, "\r\n"); nl > 0 {
+			name := strings.TrimSpace(rest[:nl])
+			// 跳过 <author> 块内的 <name>
+			if !strings.HasPrefix(textPortion[idx:], "<name> ") {
+				// 检查前面有无 <author> 标记
+				before := textPortion[:idx]
+				lastSection := ""
+				if li := strings.LastIndex(before, "--- ["); li >= 0 {
+					lastSection = before[li:]
+				}
+				if !strings.Contains(lastSection, "Author") &&
+					!strings.Contains(lastSection, "author") {
+					h.Name = name
+				}
+			} else if !strings.Contains(textPortion[:idx], "<author>") {
+				h.Name = name
+			}
+		}
+	}
+
+	return h
 }
 
 // AnalyzeYSMHeaderFromBytes 从字节数据解析 YSM 头部（适用于 base64 导入场景）

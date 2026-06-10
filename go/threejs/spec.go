@@ -122,16 +122,21 @@ func Build(model types.BedrockModel) (string, error) {
 		// 同名骨骼：保留第一次出现的层级信息，仅追加 cubes
 		if idx, exists := boneIdx[b.Name]; exists {
 			debugLog = append(debugLog, "重复="+b.Name+" 现有parent="+ptrStr(bones[idx].ParentID)+" 新parent="+b.Parent+" rot="+ftoaRot(localRot))
-			// 如果现有骨骼没有 parent 但当前骨骼有 parent → 补全层级
-			// 多文件合并时，arm.json 的扁平骨骼先到，main.json 的正确层级后到
-			if bones[idx].ParentID == nil && b.Parent != "" {
+			// 去重规则：优先保留数据更完整的骨骼
+			// 1) 现有无 parent + 新有 parent → 补全层级/旋转
+			// 2) 两者都有 parent 但现有无旋转 + 新有旋转 → 更新旋转
+			existingHasParent := bones[idx].ParentID != nil
+			newHasParent := b.Parent != ""
+			existingHasRot := bones[idx].LocalRotation != [4]float64{0,0,0,1}
+			newHasRot := localRot != [4]float64{0,0,0,1}
+			if (!existingHasParent && newHasParent) ||
+				(existingHasParent && newHasParent && !existingHasRot && newHasRot) {
 				bones[idx].ParentID = &b.Parent
 				bones[idx].LocalPosition = localPos
-				// 也更新 rotation（有 parent 的骨骼可能有不同的旋转）
 				bones[idx].LocalRotation = localRot
-				debugLog = append(debugLog, "  补全parent="+b.Parent+" localPos="+ftoa(localPos)+" rot="+ftoaRot(localRot))
-			} else if b.Parent != "" {
-				debugLog = append(debugLog, "  未更新：现有parent非空或新parent为空")
+				debugLog = append(debugLog, "  更新：parent="+b.Parent+" localPos="+ftoa(localPos)+" rot="+ftoaRot(localRot))
+			} else {
+				debugLog = append(debugLog, "  未更新")
 			}
 		} else {
 			debugLog = append(debugLog, "新增="+b.Name+" parent="+b.Parent+" pivot="+ftoa3(bp))

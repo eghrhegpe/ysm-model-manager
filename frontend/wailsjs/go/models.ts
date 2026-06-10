@@ -519,6 +519,8 @@ export namespace ysm {
 	    textures: number;
 	    models: number;
 	    animations: number;
+	    texWidth: number;
+	    texHeight: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Stats(source);
@@ -529,6 +531,8 @@ export namespace ysm {
 	        this.textures = source["textures"];
 	        this.models = source["models"];
 	        this.animations = source["animations"];
+	        this.texWidth = source["texWidth"];
+	        this.texHeight = source["texHeight"];
 	    }
 	}
 	export class YSMHeader {

@@ -457,52 +457,6 @@ export function bindToolbarEvents(root, vm) {
     }
   });
 
-  // 导出骨骼
-  $("repo-export-bones")?.addEventListener("click", async () => {
-    const btn = $("repo-export-bones");
-    btn.textContent = "⏳";
-    try {
-      const { LoadAppConfig, ExportBoneStructures } =
-        await import("../../../wailsjs/go/main/App.js");
-      const cfg = await LoadAppConfig();
-      if (!cfg.repoRoot) {
-        bus.emit("toast:show", {
-          msg: "请先在设置中配置仓库目录",
-          duration: 2000,
-          type: "warn",
-        });
-        btn.textContent = "📋 骨骼";
-        return;
-      }
-      const text = await ExportBoneStructures(cfg.repoRoot);
-      const a = document.createElement("a");
-      a.download = `bone-structures-${new Date().toISOString().slice(0, 10)}.txt`;
-      a.href = URL.createObjectURL(
-        new Blob([text], { type: "text/plain;charset=utf-8" }),
-      );
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(a.href);
-      bus.emit("toast:show", {
-        msg: "✅ 骨骼结构已导出",
-        duration: 3000,
-        type: "success",
-      });
-      btn.textContent = "✅";
-      setTimeout(() => {
-        btn.textContent = "📋 骨骼";
-      }, 3000);
-    } catch (e) {
-      bus.emit("toast:show", {
-        msg: "❌ 导出失败: " + String(e?.message || e),
-        duration: 4000,
-        type: "error",
-      });
-      btn.textContent = "📋 骨骼";
-    }
-  });
-
   $("btn-repo")?.addEventListener("click", () => bus.emit("navigate:settings"));
   $("btn-dedup")?.addEventListener("click", () => bus.emit("entries:dedup"));
   $("btn-trash")?.addEventListener("click", () => bus.emit("recycle:open"));
@@ -625,8 +579,12 @@ async function runFilter(root) {
         ? `✅ ${results.length} 结果`
         : "❌ 无匹配";
 
-    // 通知 tree 刷新显示
+    // 通知 tree 刷新显示（用 fullPath 或 path 匹配 entries）
     bus.emit("filter:results", results || []);
+    // 同时通知搜索框：切换筛选模式后主动关闭筛选面板
+    if (!results || !results.length) {
+      // 无结果时不清除 _filterPaths，保留空结果
+    }
   } catch (e) {
     console.warn("[filter]", e);
     const countEl = root.getElementById("filter-count");

@@ -785,6 +785,7 @@ class AppPreview extends HTMLElement {
       // 收集所有纹理文件，按 ysm.json 顺序排列
       const textures = {};
       const texNameMap = {};
+      let maxTexW = 0, maxTexH = 0;
       for (const f of files) {
         if (f.path.endsWith(".png") || f.path.endsWith(".jpg")) {
           const blob = new Blob([f.data]);
@@ -794,9 +795,20 @@ class AppPreview extends HTMLElement {
             .replace(/\.\w+$/, "");
           textures[key] = URL.createObjectURL(blob);
           texNameMap[key] = f.path;
+          // 从 PNG/JPG 文件头读实际尺寸（优先于 geometry metadata）
+          const arr = new Uint8Array(f.data);
+          if (arr[0] === 0x89 && arr[1] === 0x50 && arr[2] === 0x4E) { // PNG
+            // PNG IHDR at bytes 16-23: width(4) height(4) big-endian
+            const w = (arr[16] << 24) | (arr[17] << 16) | (arr[18] << 8) | arr[19];
+            const h = (arr[20] << 24) | (arr[21] << 16) | (arr[22] << 8) | arr[23];
+            if (w > maxTexW) maxTexW = w;
+            if (h > maxTexH) maxTexH = h;
+          }
           devLog(`[YSM] 纹理: ${f.path} → key="${key}"`);
         }
       }
+      // 用实际纹理尺寸覆盖 geometry metadata（YSMViewer 用 ysm.json 尺寸）
+      let useTexW = maxTexW, useTexH = maxTexH;
       let orderedTexKeys = Object.keys(textures);
       if (ysmTexOrder) {
         const ordered = [];
@@ -890,6 +902,10 @@ class AppPreview extends HTMLElement {
           .filter(Boolean);
         geometry.texture =
           orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null;
+        // 仅更新显示用纹理尺寸，不覆盖 UV 计算（模型按声明尺寸渲染）
+        if (maxTexW > geometry.texWidth) geometry.texWidth = maxTexW;
+        if (maxTexH > geometry.texHeight) geometry.texHeight = maxTexH;
+        // 骨骼的 _texWidth/_texHeight 保持解析出的值，不覆盖
       }
 
       // 解析动画文件

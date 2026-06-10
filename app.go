@@ -1856,6 +1856,12 @@ func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 				merged.Bones = append(merged.Bones, g.Bones...)
 				merged.BoneCount += g.BoneCount
 				merged.CubeCount += g.CubeCount
+				if g.TexWidth > merged.TexWidth {
+					merged.TexWidth = g.TexWidth
+				}
+				if g.TexHeight > merged.TexHeight {
+					merged.TexHeight = g.TexHeight
+				}
 			}
 		}
 		return nil

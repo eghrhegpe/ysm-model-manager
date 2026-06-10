@@ -1346,10 +1346,12 @@ class AppPreview extends HTMLElement {
       const basename = path.split("/").pop().split("\\").pop();
       const hasRealSummary =
         summary &&
-        (summary.name ||
-          summary.stats?.textures > 0 ||
+        (summary.stats?.textures > 0 ||
           summary.stats?.models > 0 ||
-          summary.authors?.length > 0);
+          summary.stats?.animations > 0 ||
+          summary.stats?.texWidth > 0 ||
+          summary.authors?.length > 0 ||
+          summary.license);
       let cardHTML = "";
       if (hasRealSummary || header) {
         cardHTML = summaryCardHTML(

@@ -438,5 +438,40 @@
     "name": "苏瑞铃_official",
     "desc": "YSM模型",
     "type": "bilibili"
+  },
+  {
+    "name": "獒子coco",
+    "desc": "战舰少女RYSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "完全冻结",
+    "desc": "舞萌/原神/Vocaloid YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "汪",
+    "desc": "崩坏星穹铁道YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "星见时璃_Tokiri",
+    "desc": "原创/StellaFantacy YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "宇宙影帝の终焉",
+    "desc": "舰队收藏/少女前线YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "LuXi233",
+    "desc": "赛马娘YSM模型",
+    "type": "bilibili"
+  },
+  {
+    "name": "Ykisan",
+    "desc": "绝区零YSM模型",
+    "type": "bilibili"
   }
 ]

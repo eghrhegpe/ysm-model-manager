@@ -49,6 +49,8 @@ export function renderSiteView(site, ctx) {
             (ps) =>
               '<button class="ws-preset-btn" data-q="' +
               esc(ps.label) +
+              '">' +
+              esc(ps.label) +
               "</button>",
           )
           .join("") +

@@ -2,6 +2,7 @@ package ysm
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -139,6 +140,14 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 		summary.Size = fi.Size()
 	}
 
+	// YSGP（YSM V2）加密二进制格式 — 无法直接读取内容，返回基本摘要
+	if isYSGP(path) {
+		summary.Format = "ysm"
+		summary.Name = strings.TrimSuffix(summary.Source, filepath.Ext(summary.Source))
+		summary.Spec = 2
+		return summary, nil
+	}
+
 	// 打开 ZIP
 	r, err := zip.OpenReader(path)
 	if err != nil {
@@ -146,7 +155,7 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 	}
 	defer r.Close()
 
-	// 查找 ysm.json
+	// 查找 ysm.json / model.json
 	var ysmFile *zip.File
 	for _, f := range r.File {
 		name := strings.ToLower(filepath.Base(f.Name))
@@ -156,7 +165,42 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 		}
 	}
 	if ysmFile == nil {
-		return summary, fmt.Errorf("未找到 ysm.json/model.json")
+		// 无 ysm.json 的 ZIP（如直接在 ZIP 内放 main.json + PNG），降级扫描生成基本摘要
+		summary.Format = "zip"
+		summary.Name = strings.TrimSuffix(summary.Source, filepath.Ext(summary.Source))
+		var modelCount, texCount, animCount int
+		for _, f := range r.File {
+			if f.FileInfo().IsDir() {
+				continue
+			}
+			low := strings.ToLower(f.Name)
+			if strings.HasSuffix(low, ".json") {
+				// 判断是否为几何体 JSON（含 minecraft:geometry）
+				rc, err := f.Open()
+				if err != nil {
+					continue
+				}
+				buf, _ := io.ReadAll(rc)
+				rc.Close()
+				if len(buf) > 0 && (bytes.Contains(buf, []byte(`"minecraft:geometry"`)) || bytes.Contains(buf, []byte(`"minecraft:geometry":`))) {
+					modelCount++
+					continue
+				}
+				// 动画 JSON
+				if strings.Contains(low, "animation") || strings.Contains(low, "controller") {
+					animCount++
+				}
+			}
+			if strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg") || strings.HasSuffix(low, ".jpeg") {
+				texCount++
+			}
+		}
+		summary.Stats = Stats{
+			Models:     modelCount,
+			Textures:   texCount,
+			Animations: animCount,
+		}
+		return summary, nil
 	}
 
 	// 读取并解析
@@ -445,4 +489,25 @@ func truncate(s string, max int) string {
 		return s
 	}
 	return s[:max] + "..."
+}
+
+// isYSGP 检测文件是否是 YSGP（YSM V2）二进制格式（支持带 BOM 的变体）
+func isYSGP(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	var buf [7]byte
+	n, err := io.ReadFull(f, buf[:])
+	if err != nil && n < 4 {
+		return false
+	}
+	data := buf[:n]
+	// 跳过 UTF-8 BOM
+	offset := 0
+	if n >= 3 && data[0] == 0xef && data[1] == 0xbb && data[2] == 0xbf {
+		offset = 3
+	}
+	return n >= offset+4 && string(data[offset:offset+4]) == "YSGP"
 }

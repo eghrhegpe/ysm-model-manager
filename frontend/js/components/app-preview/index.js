@@ -625,9 +625,6 @@ class AppPreview extends HTMLElement {
 
       // ---- 3D 预览切换 ----
       let _model3d = null;
-      const viewRow = document.createElement("div");
-      viewRow.style.cssText =
-        "display:flex;gap:4px;align-items:center;padding:2px 12px";
       const viewBtn = document.createElement("button");
       viewBtn.className = "ysm-btn";
       viewBtn.textContent = "🌐 3D";
@@ -635,9 +632,6 @@ class AppPreview extends HTMLElement {
       const viewHint = document.createElement("span");
       viewHint.className = "ysm-hint";
       viewHint.textContent = "全屏";
-      viewRow.appendChild(viewBtn);
-      viewRow.appendChild(viewHint);
-      container.appendChild(viewRow);
 
       // 3D 全屏状态
       let _overlay3d = null;
@@ -856,15 +850,7 @@ class AppPreview extends HTMLElement {
         _overlay3d = null;
       };
 
-      // ---- 导出按钮 ----
-      const { addExportButton } = await import("../../utils/canvas-export.js");
-      addExportButton(
-        container,
-        canvas,
-        modelPath.split("/").pop().split("\\").pop(),
-      );
-
-      // 导出骨骼名
+      // ---- 导出骨骼名 ----
       const boneRow = document.createElement("div");
       boneRow.className = "ysm-export-row";
       const boneBtn = document.createElement("button");
@@ -896,6 +882,8 @@ class AppPreview extends HTMLElement {
         document.body.removeChild(a);
         URL.revokeObjectURL(a.href);
       };
+      boneRow.appendChild(viewBtn);
+      boneRow.appendChild(viewHint);
       boneRow.appendChild(boneBtn);
       boneRow.appendChild(boneHint);
       container.appendChild(boneRow);

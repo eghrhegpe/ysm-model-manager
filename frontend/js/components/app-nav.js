@@ -22,7 +22,7 @@ class AppNav extends HTMLElement {
     this.render();
     // 恢复上次保存的页面
     const saved = localStorage.getItem("nav_page");
-    if (saved && saved !== "instances") {
+    if (saved && saved !== "repository") {
       setTimeout(() => bus.emit("nav:change", { page: saved }), 50);
     }
   }
@@ -33,9 +33,11 @@ class AppNav extends HTMLElement {
 
   render() {
     const items = [
-      { id: "instances", icon: "🎮", label: "整合包管理" },
       { id: "repository", icon: "📦", label: "模型仓库" },
-      { id: "workshop", icon: "🧩", label: "创意工坊" },
+      { id: "instances", icon: "🎮", label: "整合包管理" },
+      { id: "workshop", icon: "🎨", label: "创作者频道" },
+      { id: "github", icon: "🧩", label: "创意工坊" },
+      { id: "oldest", icon: "👴", label: "仓库元老" },
       { id: "diagnostics", icon: "🛠️", label: "诊断与冲突" },
       { id: "settings", icon: "⚙️", label: "设置" },
     ];
@@ -47,7 +49,7 @@ class AppNav extends HTMLElement {
           flex-direction: column;
           background: var(--bg);
           border-right: 1px solid var(--bd);
-          width: 200px;
+          width: 160px;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
         }
         .logo {
@@ -82,14 +84,6 @@ class AppNav extends HTMLElement {
           padding-left: 7px;
         }
         .nav-item .icon { font-size: 15px; width: 20px; text-align: center; }
-        .nav-item .tag {
-          margin-left: auto;
-          font-size: 9px;
-          background: #f38ba822;
-          color: #f38ba8;
-          padding: 1px 5px;
-          border-radius: 4px;
-        }
         .version {
           padding: 10px 14px;
           border-top: 1px solid var(--bd);
@@ -108,7 +102,6 @@ class AppNav extends HTMLElement {
           <div class="nav-item ${item.id === this._current ? "active" : ""}" data-page="${item.id}">
             <span class="icon">${item.icon}</span>
             <span>${item.label}</span>
-            ${item.id === "diagnostics" ? '<span class="tag">!</span>' : ""}
           </div>
         `,
           )

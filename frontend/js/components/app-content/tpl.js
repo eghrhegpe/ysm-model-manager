@@ -8,6 +8,7 @@ export function repositoryHTML() {
     '<button class="repo-tab" data-tab="import">📥 导入</button>' +
     '<button class="repo-tab" data-tab="recycle">🗑️ 回收站</button>' +
     '<button class="repo-tab" data-tab="dedup">🔗 去重</button>' +
+    '<button class="repo-tab" data-tab="oldest">👴 仓库元老</button>' +
     "</div>" +
     '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
     '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;border-right:1px solid var(--bd)">' +
@@ -17,6 +18,7 @@ export function repositoryHTML() {
     '<div class="repo-tab-body" id="repo-tab-import" style="display:none;flex:1;overflow-y:auto"></div>' +
     '<div class="repo-tab-body" id="repo-tab-recycle" style="display:none;flex:1;overflow-y:auto"></div>' +
     '<div class="repo-tab-body" id="repo-tab-dedup" style="display:none;flex:1;overflow-y:auto;padding:12px"></div>' +
+    '<div class="repo-tab-body" id="repo-tab-oldest" style="display:none;flex:1;overflow-y:auto;overflow-x:hidden"></div>' +
     "</div>" +
     '<app-preview mode="model" style="width:220px;flex-shrink:0;min-width:0"></app-preview>' +
     "</div>" +

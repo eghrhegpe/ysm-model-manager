@@ -3,7 +3,7 @@
 export function headerHTML() {
   return (
     '<div style="padding:4px 8px;border-bottom:1px solid var(--bd)">' +
-    '<button class="sidebar-import-all" style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--accent);background:#7c83ff22;color:var(--accent);cursor:pointer;font-size:10px;font-family:inherit;text-align:center">⬇️ 一键安装模型</button>' +
+    '<button class="sidebar-import-all" style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--accent);background:var(--bg);color:var(--accent);cursor:pointer;font-size:10px;font-family:inherit;text-align:center">⬇️ 一键安装模型</button>' +
     "</div>"
   );
 }

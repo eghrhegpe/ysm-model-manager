@@ -1026,7 +1026,7 @@ class AppPreview extends HTMLElement {
 
       let orderedTexKeys = Object.keys(textures);
       if (ysmTexOrder) {
-        const ordered = [];
+        let ordered = [];
         for (const t of ysmTexOrder) {
           const path = typeof t === "string" ? t : t?.uv || t?.path || "";
           const tn = path

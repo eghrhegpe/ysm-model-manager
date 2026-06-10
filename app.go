@@ -722,6 +722,8 @@ func isLikelyMinecraftDir(path string) bool {
 		"versions",
 		"assets",
 		"launcher_profiles.json",
+		"mods",
+		"config",
 	}
 	for _, m := range markers {
 		full := filepath.Join(path, m)
@@ -764,21 +766,45 @@ func scanMinecraftDirs() []string {
 		add(filepath.Join(appData, ".minecraft"))
 	}
 
-	// 3. 常见启动器/用户目录
+	// 3. 常见启动器/用户目录（用 "X:\\" 确保绝对路径）
 	commonPaths := []string{
-		filepath.Join("D:", "PCL2", ".minecraft"),
-		filepath.Join("C:", "PCL2", ".minecraft"),
-		filepath.Join("E:", "PCL2", ".minecraft"),
-		filepath.Join("D:", "PCL", ".minecraft"),
-		filepath.Join("C:", "PCL", ".minecraft"),
-		filepath.Join("D:", "MC", ".minecraft"),
-		filepath.Join("C:", "MC", ".minecraft"),
-		filepath.Join("D:", "Minecraft", ".minecraft"),
-		filepath.Join("C:", "Minecraft", ".minecraft"),
-		filepath.Join("D:", "Games", "Minecraft", ".minecraft"),
+		"D:\\PCL2\\.minecraft",
+		"C:\\PCL2\\.minecraft",
+		"E:\\PCL2\\.minecraft",
+		"D:\\PCL\\.minecraft",
+		"C:\\PCL\\.minecraft",
+		"D:\\MC\\.minecraft",
+		"C:\\MC\\.minecraft",
+		"D:\\Minecraft\\.minecraft",
+		"C:\\Minecraft\\.minecraft",
+		"D:\\Games\\Minecraft\\.minecraft",
+		"D:\\HMCL\\.minecraft",
+		"C:\\HMCL\\.minecraft",
+		"D:\\BakaXL\\.minecraft",
+		"C:\\BakaXL\\.minecraft",
 	}
 	for _, c := range commonPaths {
 		add(c)
+	}
+
+	// 4. 扫描已知游戏启动器目录下是否有 .minecraft 子文件夹（版本分离场景）
+	launcherDirs := []string{
+		"D:\\PCL2", "C:\\PCL2", "E:\\PCL2",
+		"D:\\PCL", "C:\\PCL",
+		"D:\\HMCL", "C:\\HMCL",
+		"D:\\BakaXL", "C:\\BakaXL",
+		"D:\\MC", "C:\\MC",
+	}
+	for _, dir := range launcherDirs {
+		mcPath := filepath.Join(dir, ".minecraft")
+		if _, err := os.Stat(mcPath); err == nil {
+			abs, _ := filepath.Abs(mcPath)
+			abs = filepath.Clean(abs)
+			if !seen[abs] {
+				seen[abs] = true
+				found = append(found, abs)
+			}
+		}
 	}
 
 	return found

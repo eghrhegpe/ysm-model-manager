@@ -258,7 +258,7 @@ class AppContent extends HTMLElement {
             container.innerHTML =
               '<div style="display:flex;flex-direction:column;height:100%">' +
               '<div style="display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid var(--bd)">' +
-              '<span style="flex:1"></span>' +
+              '<span style="flex:1;font-size:10px;color:var(--muted)">📌 按 SHA256 哈希分组，每组只保留一个，其余移入回收站</span>' +
               '<button class="hdr-btn accent" id="dedup-start-btn">🔗 开始去重</button>' +
               "</div>" +
               '<div id="dedup-result-list" style="flex:1;overflow-y:auto;padding:8px 0"></div>' +
@@ -392,7 +392,7 @@ class AppContent extends HTMLElement {
       .getElementById("ws-open-fallback")
       .addEventListener("click", openCurrent);
 
-    root.getElementById("ws-refresh").addEventListener("click", loadSites);
+    // 刷新按钮已移除
 
     // 站点导出/导入
     root
@@ -680,7 +680,7 @@ class AppContent extends HTMLElement {
       if (listContainer) listContainer.appendChild(renderList());
     };
 
-    root.getElementById("gh-refresh").addEventListener("click", loadRepos);
+    // 刷新按钮已移除
     loadRepos();
   }
 

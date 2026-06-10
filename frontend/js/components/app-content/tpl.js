@@ -268,7 +268,6 @@ export function recycleHTML() {
 <button class="btn danger" id="recy-empty" style="font-size:10px">🗑️ 清空回收站</button>
 </div>
 <div id="recy-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
-<div id="recy-empty-hint" style="flex:1;display:none;align-items:center;justify-content:center;color:#6c7086;font-size:12px">🗑️ 回收站为空</div>
 </div>`;
 }
 
@@ -281,7 +280,6 @@ export function githubHTML() {
     '<div style="padding:10px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
     '<span style="font-size:13px;font-weight:600">🧩 创意工坊</span>' +
     '<span style="flex:1"></span>' +
-    '<button class="btn" id="gh-refresh" style="font-size:9px;padding:2px 6px">🔄 刷新</button>' +
     "</div>" +
     '<div class="ws-grid" id="gh-grid">' +
     '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>' +
@@ -306,7 +304,6 @@ export function workshopHTML() {
     <div style="padding:10px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:600">🎨 创作者频道</span>
       <span style="flex:1"></span>
-      <button class="btn" id="ws-refresh" style="font-size:9px;padding:2px 6px">🔄 刷新</button>
     </div>
     <div class="ws-grid" id="ws-grid">
       <div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>

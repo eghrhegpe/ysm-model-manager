@@ -87,7 +87,8 @@ export async function loadOldestModel(container, esc) {
           const monthLabel = new Date(2026, i, 1).toLocaleDateString("zh-CN", {
             month: "short",
           });
-          return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">' +
+          return (
+            '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">' +
             '<div style="width:100%;height:' +
             ht +
             "px;background:" +
@@ -100,13 +101,16 @@ export async function loadOldestModel(container, esc) {
             ' 个模型"></div>' +
             '<span style="font-size:7px;color:var(--muted);line-height:1">' +
             monthLabel +
-            "</span></div>";
+            "</span></div>"
+          );
         })
         .join("") +
       "</div>";
 
     // 仓库元老卡片 — 取最早 4 个
-    const sorted = [...entries].filter((e) => e.ModTime).sort((a, b) => a.ModTime - b.ModTime);
+    const sorted = [...entries]
+      .filter((e) => e.ModTime)
+      .sort((a, b) => a.ModTime - b.ModTime);
     const oldest4 = sorted.slice(0, 4);
     let oldestHtml = "";
     if (oldest4.length) {
@@ -132,13 +136,13 @@ export async function loadOldestModel(container, esc) {
               renderDisplayName(e.Name) +
               "</div>" +
               '<div style="font-size:9px;color:var(--muted);margin-top:2px;display:flex;gap:6px">' +
-              '<span>📏 ' +
+              "<span>📏 " +
               fmtSize(e.Size) +
               "</span>" +
-              '<span>📅 ' +
+              "<span>📅 " +
               dateStr +
               "</span>" +
-              '<span>🕒 ' +
+              "<span>🕒 " +
               ageDays +
               " 天前</span></div></div>"
             );
@@ -180,17 +184,21 @@ export async function loadOldestModel(container, esc) {
             renderDisplayName(p.Name) +
             "</div>" +
             '<div style="font-size:10px;color:var(--muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">' +
-            '<span>📏 ' +
+            "<span>📏 " +
             sizeStr +
             "</span>" +
-            (dateStr ? '<span>📅 ' + dateStr + "</span>" : "") +
+            (dateStr ? "<span>📅 " + dateStr + "</span>" : "") +
             "</div>" +
             "</div>",
         );
       }
       if (!picks.length)
         return '<div style="color:var(--muted);font-size:11px">暂无推荐</div>';
-      return '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' + picks.join("") + "</div>";
+      return (
+        '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
+        picks.join("") +
+        "</div>"
+      );
     };
 
     // 组装全部内容

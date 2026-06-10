@@ -172,7 +172,7 @@ export async function startDedup(root, esc) {
     const totalDups = dupHashes.reduce((s, [, v]) => s + v.length - 1, 0);
 
     let html = `<div style="padding:10px 12px;font-size:11px;color:var(--txt);border-bottom:1px solid var(--bd)">
-发现 <strong>${dupHashes.length}</strong> 组重复文件，请选一个保留（每组）
+发现 <strong>${dupHashes.length}</strong> 组重复文件（共 <strong>${totalDups}</strong> 个多余副本），每组选一个保留：
 <span style="display:block;font-size:9px;color:var(--muted);margin-top:2px">未选择的文件将移入回收站</span>
 </div>`;
     dupHashes.forEach(([, group], gi) => {
@@ -211,7 +211,7 @@ export async function startDedup(root, esc) {
 >
 <input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} style="flex-shrink:0;accent-color:var(--accent)">
 <span style="flex:1;overflow:hidden;min-width:0">
-<span style="color:var(--txt);font-size:10px" title="${esc(e.Path)}">${renderDisplayName(e.Name)}</span>
+<span style="color:var(--txt);font-size:10px;cursor:pointer" title="点击查看详情: ${esc(e.Path)}" data-path="${esc(e.Path)}">${renderDisplayName(e.Name)}</span>
 <span style="display:block;font-size:8px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(relDir)}</span>
 </span>
 <span style="font-size:9px;color:var(--muted);flex-shrink:0;margin-right:4px">${(e.Size / 1024).toFixed(0)}KB</span>
@@ -258,6 +258,15 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
           bus.emit("stats:refresh");
           bus.emit("tree:reload");
         }
+
+        // dedup 文件名点击 → 模型详情
+        list.querySelectorAll("[data-path]").forEach((el) => {
+          el.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const path = el.dataset.path;
+            if (path) bus.emit("model:select", { path });
+          });
+        });
         list.innerHTML = `<div class="stat-row" style="padding:8px 12px;font-size:11px;color:${fail > 0 ? "#f9a826" : "#a6e3a1"}">
 ✅ 去重完成：移入回收站 ${del} 个，失败 ${fail} 个</div>`;
       });

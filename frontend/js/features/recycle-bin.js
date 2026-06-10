@@ -53,7 +53,6 @@ export function initRecycleBin(app) {
 
   async function loadRecycleBin() {
     const list = root.getElementById("recy-list");
-    const hint = root.getElementById("recy-empty-hint");
     const count = root.getElementById("recy-count");
     if (!list) return;
     try {
@@ -74,11 +73,9 @@ export function initRecycleBin(app) {
       const entries = await ListRecycleBin(repoRoot);
       if (!entries || !entries.length) {
         list.innerHTML = "";
-        if (hint) hint.style.display = "flex";
         if (count) count.textContent = "空";
         return;
       }
-      if (hint) hint.style.display = "none";
       if (count) count.textContent = `${entries.length} 个文件`;
 
       list.innerHTML = entries
@@ -87,7 +84,7 @@ export function initRecycleBin(app) {
           const size = e.Size ? fmtSize(e.Size) : "?";
           return `<div class="recy-item" style="display:flex;flex-direction:column;gap:2px;padding:5px 8px;border-radius:5px;background:var(--bg,#1e1e2e);font-size:11px">
 <div style="display:flex;align-items:center;gap:6px">
-<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt,#cdd6f4)" title="${esc(e.Path)}">${renderDisplayName(name)}</span>
+<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt,#cdd6f4);cursor:pointer" title="点击查看详情: ${esc(e.Path)}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>
 <span style="font-size:9px;color:var(--muted,#6c7086)">${size}</span>
 <button class="recy-restore" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--bd,#444);background:var(--surf,#2a2a42);color:var(--txt,#cdd6f4);cursor:pointer;font-size:9px">↩️ 恢复</button>
 <button class="recy-del" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid #e5534b;background:transparent;color:#e5534b;cursor:pointer;font-size:9px">🗑️ 删除</button>
@@ -147,6 +144,19 @@ export function initRecycleBin(app) {
             });
           }
         };
+      });
+
+      // 文件名点击 → 模型详情
+      list.querySelectorAll("[data-path]").forEach((el) => {
+        if (
+          el.classList.contains("recy-restore") ||
+          el.classList.contains("recy-del")
+        )
+          return;
+        el.addEventListener("click", () => {
+          const path = el.dataset.path;
+          if (path) bus.emit("model:select", { path });
+        });
       });
     } catch (e) {
       list.innerHTML = `<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">❌ 读取回收站失败: ${esc(String(e))}</div>`;

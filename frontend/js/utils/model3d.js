@@ -24,6 +24,7 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
   container.innerHTML = "";
   container.appendChild(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -54,6 +55,7 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
             tex.flipY = false;
             tex.minFilter = THREE.NearestFilter;
             tex.magFilter = THREE.NearestFilter;
+            tex.colorSpace = THREE.SRGBColorSpace;
             tex.needsUpdate = true;
             tex.userData.imgWidth = img.naturalWidth;
             tex.userData.imgHeight = img.naturalHeight;
@@ -74,7 +76,7 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   let spec = { models: [] };
   const forceJS = window.$forceJSSpec; // 调试用：设 true 强制走 JS 兜底
   // 多纹理模型 Go spec 没有 per-mesh 纹理索引，强制走 JS 兜底
-  const multiTex = (model.textures?.length > 1) || false;
+  const multiTex = model.textures?.length > 1 || false;
   if (!forceJS && !multiTex) {
     try {
       const jsonStr = await GetModel3DSpec(model._modelPath || "");
@@ -91,6 +93,8 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   window.__last3DSpec = spec;
   const rootGroup = new THREE.Group();
   rootGroup.name = "__root__";
+  // YSMViewer 使用 ExportScale = 1/16 缩放坐标，提高 Three.js 浮点精度
+  rootGroup.scale.set(1 / 16, 1 / 16, 1 / 16);
   scene.add(rootGroup);
   const boneGroupMap = new Map();
   for (const mg of spec.models) {
@@ -136,10 +140,12 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
       }
     const centerY = (minY + maxY) / 2;
     const modelHeight = maxY - minY;
-    const camDist = Math.max(modelHeight * 1.5, 60);
-    camera.position.set(camDist * 0.4, centerY, -camDist * 0.8);
-    camera.lookAt(0, centerY, 0);
-    controls.target.set(0, centerY, 0);
+    // 模型已 1/16 缩放，相机距离相应调整
+    const scale = 1 / 16;
+    const camDist = Math.max(modelHeight * 1.5 * scale, 60 * scale);
+    camera.position.set(camDist * 0.4, centerY * scale, -camDist * 0.8);
+    camera.lookAt(0, centerY * scale, 0);
+    controls.target.set(0, centerY * scale, 0);
     controls.update();
     let cubeTex = null;
     const texArr = texMap.size > 0 ? [...texMap.values()] : [];
@@ -161,9 +167,10 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
       geo.setAttribute("uv", new THREE.Float32BufferAttribute(md.uvs, 2));
       geo.setIndex(md.indices);
       // 按 mesh 所属骨骼选择对应纹理（md.texIdx 由 buildSpecFromModel 设置）
-      const meshTex = texArr.length > 0
-        ? texArr[md.texIdx ?? (texIdx ?? 0)] || texArr[0]
-        : null;
+      const meshTex =
+        texArr.length > 0
+          ? texArr[md.texIdx ?? texIdx ?? 0] || texArr[0]
+          : null;
       const mat = meshTex
         ? new THREE.MeshBasicMaterial({
             map: meshTex,
@@ -296,20 +303,36 @@ function buildSpecFromModel(model) {
   }
 
   // 后处理：将 RightArm/LeftArm 挂到 Arm 下面（YSMParser 解码 .ysm 后丢失的层级）
-  const armBone = bones.find(b => b.name === "Arm" && b.parentId);
-  const rightArmBone = bones.find(b => b.name === "RightArm" && !b.parentId);
-  const leftArmBone = bones.find(b => b.name === "LeftArm" && !b.parentId);
+  const armBone = bones.find((b) => b.name === "Arm" && b.parentId);
+  const rightArmBone = bones.find((b) => b.name === "RightArm" && !b.parentId);
+  const leftArmBone = bones.find((b) => b.name === "LeftArm" && !b.parentId);
   if (armBone && rightArmBone) {
-    const armPivot = model.bones.find(b => b.name === "Arm")?.pivot || [0, 0, 0];
-    const raPivot = model.bones.find(b => b.name === "RightArm")?.pivot || [0, 0, 0];
+    const armPivot = model.bones.find((b) => b.name === "Arm")?.pivot || [
+      0, 0, 0,
+    ];
+    const raPivot = model.bones.find((b) => b.name === "RightArm")?.pivot || [
+      0, 0, 0,
+    ];
     rightArmBone.parentId = "Arm";
-    rightArmBone.localPosition = [-raPivot[0] - -armPivot[0], raPivot[1] - armPivot[1], raPivot[2] - armPivot[2]];
+    rightArmBone.localPosition = [
+      -raPivot[0] - -armPivot[0],
+      raPivot[1] - armPivot[1],
+      raPivot[2] - armPivot[2],
+    ];
   }
   if (armBone && leftArmBone) {
-    const armPivot = model.bones.find(b => b.name === "Arm")?.pivot || [0, 0, 0];
-    const laPivot = model.bones.find(b => b.name === "LeftArm")?.pivot || [0, 0, 0];
+    const armPivot = model.bones.find((b) => b.name === "Arm")?.pivot || [
+      0, 0, 0,
+    ];
+    const laPivot = model.bones.find((b) => b.name === "LeftArm")?.pivot || [
+      0, 0, 0,
+    ];
     leftArmBone.parentId = "Arm";
-    leftArmBone.localPosition = [-laPivot[0] - -armPivot[0], laPivot[1] - armPivot[1], laPivot[2] - armPivot[2]];
+    leftArmBone.localPosition = [
+      -laPivot[0] - -armPivot[0],
+      laPivot[1] - armPivot[1],
+      laPivot[2] - armPivot[2],
+    ];
   }
 
   return {

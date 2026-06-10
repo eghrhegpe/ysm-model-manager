@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"ysm-model-manager/go/types"
 )
@@ -16,8 +17,47 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(1)
+		// 交互模式：双击 exe 时进入
+		fmt.Println("ysm-cli — YSM 模型管理器命令行工具")
+		fmt.Println(strings.Repeat("─", 50))
+		fmt.Println("选择操作：")
+		fmt.Println("  1. 📋 诊断 + 生成报告 (doctor --report)")
+		fmt.Println("  2. 📊 统计信息 (stats)")
+		fmt.Println("  3. 🌐 生成 HTML 报告 (doctor --html)")
+		fmt.Println("  4. 📄 导出 3D 网格 (export)")
+		fmt.Print("\n请输入编号 (1-4) [默认 1]: ")
+		var choice string
+		fmt.Scanln(&choice)
+		choice = strings.TrimSpace(choice)
+		if choice == "" {
+			choice = "1"
+		}
+
+		fmt.Println("\n📁 请粘贴 .ysm 文件的完整路径（右键文件 → 复制路径，然后粘贴至此）：")
+		fmt.Print("> ")
+		var path string
+		fmt.Scanln(&path)
+		path = strings.TrimSpace(path)
+		path = strings.Trim(path, `"'`)
+		if path == "" {
+			printUsage()
+			pauseExit(0)
+		}
+
+		switch choice {
+		case "2":
+			os.Args = []string{os.Args[0], path}
+			runStats([]string{path})
+		case "3":
+			runDoctor([]string{"--html", path})
+		case "4":
+			runExport([]string{path})
+		default:
+			runDoctor([]string{"--report", path})
+		}
+		fmt.Println("\n✅ 完成。按任意键退出...")
+		fmt.Scanln()
+		os.Exit(0)
 	}
 	cmd := os.Args[1]
 	switch cmd {
@@ -30,24 +70,33 @@ func main() {
 	case "help", "--help", "-h":
 		printUsage()
 	default:
-		// 兼容旧用法: 直接传路径 = export
-		runExport(os.Args[1:])
+		// 拖拽入 exe 时诊断并生成报告
+		runDoctor(append([]string{"--report"}, cmd))
 	}
+}
+
+func pauseExit(code int) {
+	if code != 0 {
+		fmt.Println("\n按任意键退出...")
+		fmt.Scanln()
+	}
+	os.Exit(code)
 }
 
 func printUsage() {
 	fmt.Println(`ysm-cli — YSM 模型管理器命令行工具
 
 用法:
-  ysm-cli export <模型文件>            导出 3D 网格数据 (JSON)
-  ysm-cli doctor [--fix] <路径>        诊断模型问题 (可选 --fix 自动修复)
+  ysm-cli export <模型文件>            导出 3D 网格数据到 .json 文件
+  ysm-cli doctor [--fix] [--report] [--html] <路径>  诊断模型问题
   ysm-cli stats <模型文件/目录>        模型统计信息
 
 示例:
   ysm-cli doctor ./models/
-  ysm-cli doctor --fix ./models/broken.ysm
-  ysm-cli stats neuro.ysm
-  ysm-cli export neuro.ysm > neuro.json`)
+  ysm-cli doctor --report model.ysm    # 生成 .ysm.txt 报告
+  ysm-cli doctor --html model.ysm      # 生成 .html 可视化报告
+  ysm-cli stats model.ysm
+  ysm-cli export model.ysm             # 生成 model.ysm.json`)
 }
 
 // ====== export: 导出 3D 网格数据 ======
@@ -81,14 +130,14 @@ type exportModel struct {
 func runExport(args []string) {
 	if len(args) < 1 {
 		fmt.Fprintln(os.Stderr, "用法: ysm-cli export <模型文件.ysm/.zip/.7z>")
-		os.Exit(1)
+		pauseExit(1)
 	}
 	path := args[0]
 	app := NewApp()
 	model := app.AnalyzeBedrockModel(path)
 	if model.BoneCount == 0 {
 		fmt.Fprintln(os.Stderr, "❌ 未解析到骨骼数据")
-		os.Exit(1)
+		pauseExit(1)
 	}
 	em := exportModel{
 		File:       path,
@@ -124,7 +173,9 @@ func runExport(args []string) {
 		em.Bones = append(em.Bones, eb)
 	}
 	data, _ := json.MarshalIndent(em, "", "  ")
-	fmt.Println(string(data))
+	outPath := path + ".json"
+	os.WriteFile(outPath, data, 0644)
+	fmt.Printf("📄 已导出: %s (%d KB)\n", outPath, len(data)/1024)
 }
 
 // ====== doctor: 诊断与修复 ======
@@ -138,18 +189,32 @@ type Issue struct {
 
 func runDoctor(args []string) {
 	remaining := args
-	if len(args) > 0 && (args[0] == "--fix" || args[0] == "-f") {
-		remaining = args[1:]
+	genReport := false
+	genHTML := false
+	for len(remaining) > 0 {
+		switch remaining[0] {
+		case "--fix", "-f":
+			remaining = remaining[1:]
+		case "--report", "-r":
+			genReport = true
+			remaining = remaining[1:]
+		case "--html":
+			genHTML = true
+			remaining = remaining[1:]
+		default:
+			goto doneParsing
+		}
 	}
+doneParsing:
 	if len(remaining) < 1 {
-		fmt.Fprintln(os.Stderr, "用法: ysm-cli doctor [--fix] <模型文件或目录>")
-		os.Exit(1)
+		fmt.Fprintln(os.Stderr, "用法: ysm-cli doctor [--fix] [--report] <模型文件或目录>")
+		pauseExit(1)
 	}
 	target := remaining[0]
 	info, err := os.Stat(target)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "❌ 无法访问 %s: %v\n", target, err)
-		os.Exit(1)
+		pauseExit(1)
 	}
 
 	var files []string
@@ -170,7 +235,7 @@ func runDoctor(args []string) {
 
 	if len(files) == 0 {
 		fmt.Fprintln(os.Stderr, "⚠️  未找到 .ysm/.zip/.7z 文件")
-		os.Exit(0)
+		pauseExit(0)
 	}
 
 	totalIssues := 0
@@ -181,7 +246,7 @@ func runDoctor(args []string) {
 		issues := diagnoseModel(&model)
 
 		rel, _ := filepath.Rel(target, f)
-		if rel == "" {
+		if rel == "" || rel == "." {
 			rel = filepath.Base(f)
 		}
 
@@ -210,6 +275,14 @@ func runDoctor(args []string) {
 	fmt.Printf("\n====== 诊断完成 ======\n")
 	fmt.Printf("检查文件: %d  发现问题: %d\n", len(files), totalIssues)
 	fmt.Println("💡 使用 --fix 参数可自动修复部分问题 (目前仅诊断, 修复功能开发中)")
+
+	// --report: 在模型同目录生成 .txt 报告
+	if genReport {
+		writeTextReports(files)
+	}
+	if genHTML {
+		writeHTMLReports(files)
+	}
 }
 
 func diagnoseModel(model *types.BedrockModel) []Issue {
@@ -364,13 +437,13 @@ func checkFaceUVs(boneName string, c types.Cube2D, texW, texH int) []Issue {
 func runStats(args []string) {
 	if len(args) < 1 {
 		fmt.Fprintln(os.Stderr, "用法: ysm-cli stats <模型文件或目录>")
-		os.Exit(1)
+		pauseExit(1)
 	}
 	target := args[0]
 	info, err := os.Stat(target)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "❌ 无法访问 %s: %v\n", target, err)
-		os.Exit(1)
+		pauseExit(1)
 	}
 
 	var files []string
@@ -391,7 +464,7 @@ func runStats(args []string) {
 
 	if len(files) == 0 {
 		fmt.Fprintln(os.Stderr, "⚠️  未找到 .ysm/.zip/.7z 文件")
-		os.Exit(0)
+		pauseExit(0)
 	}
 
 	app := NewApp()
@@ -548,6 +621,95 @@ func formatBytes(n int64) string {
 		return fmt.Sprintf("%.1f KB", float64(n)/1_000)
 	default:
 		return fmt.Sprintf("%d B", n)
+	}
+}
+
+// ====== 报告生成 ======
+
+func writeTextReports(files []string) {
+	app := NewApp()
+	for _, f := range files {
+		model := app.AnalyzeBedrockModel(f)
+		issues := diagnoseModel(&model)
+		reportPath := f + ".txt"
+		var sb strings.Builder
+		sb.WriteString("YSM 模型诊断报告\n")
+		sb.WriteString(fmt.Sprintf("文件: %s\n", f))
+		sb.WriteString(fmt.Sprintf("时间: %s\n", time.Now().Format("2006-01-02 15:04:05")))
+		sb.WriteString(fmt.Sprintf("骨骼: %d  立方体: %d\n", model.BoneCount, model.CubeCount))
+		sb.WriteString(fmt.Sprintf("纹理: %dx%d\n", model.TexWidth, model.TexHeight))
+		sb.WriteString(fmt.Sprintf("问题数: %d\n\n", len(issues)))
+		for _, iss := range issues {
+			icon := "⚠️"
+			if iss.Severity == "error" {
+				icon = "❌"
+			} else if iss.Severity == "info" {
+				icon = "ℹ️"
+			}
+			fixTag := ""
+			if iss.AutoFix {
+				fixTag = " [可修复]"
+			}
+			sb.WriteString(fmt.Sprintf("%s [%s] %s%s\n", icon, iss.Category, iss.Message, fixTag))
+		}
+		os.WriteFile(reportPath, []byte(sb.String()), 0644)
+		fmt.Printf("📄 报告已生成: %s\n", reportPath)
+	}
+}
+
+func writeHTMLReports(files []string) {
+	app := NewApp()
+	for _, f := range files {
+		model := app.AnalyzeBedrockModel(f)
+		issues := diagnoseModel(&model)
+		reportPath := f + ".html"
+
+		var sb strings.Builder
+		sb.WriteString(`<!DOCTYPE html><html lang="zh"><head><meta charset="UTF-8">`)
+		sb.WriteString(`<title>YSM 诊断报告</title>`)
+		sb.WriteString(`<style>
+body{font-family:-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;background:#f5f5f7;color:#1d1d1f}
+h1{font-size:24px;font-weight:600}
+.meta{background:#fff;border-radius:12px;padding:16px 20px;margin:16px 0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.meta span{display:inline-block;margin-right:24px;font-size:14px;color:#6e6e73}
+.issue{margin:8px 0;padding:10px 16px;border-radius:8px;font-size:14px;line-height:1.5}
+.issue.error{background:#fef2f2;border-left:3px solid #ef4444}
+.issue.warning{background:#fffbeb;border-left:3px solid #f59e0b}
+.issue.info{background:#f0f9ff;border-left:3px solid #3b82f6}
+.issue .cat{font-weight:500;margin-right:8px}
+.summary{background:#fff;border-radius:12px;padding:16px 20px;margin:16px 0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.summary b{font-size:18px}
+</style></head><body>`)
+		sb.WriteString(fmt.Sprintf("<h1>🔍 YSM 模型诊断</h1>"))
+		sb.WriteString(fmt.Sprintf("<div class=meta><span>📁 %s</span><span>🦴 %d 骨骼</span><span>📦 %d 立方体</span><span>🖼️ %dx%d</span></div>",
+			filepath.Base(f), model.BoneCount, model.CubeCount, model.TexWidth, model.TexHeight))
+		sb.WriteString(fmt.Sprintf("<div class=summary><b>%d</b> 条问题", len(issues)))
+		errs := 0
+		for _, iss := range issues {
+			if iss.Severity == "error" {
+				errs++
+			}
+		}
+		if errs > 0 {
+			sb.WriteString(fmt.Sprintf(" · <b style=color:#ef4444>%d 错误</b>", errs))
+		}
+		sb.WriteString("</div>")
+		for _, iss := range issues {
+			cls := iss.Severity
+			if cls == "" {
+				cls = "info"
+			}
+			icon := "ℹ️"
+			if iss.Severity == "error" {
+				icon = "❌"
+			} else if iss.Severity == "warning" {
+				icon = "⚠️"
+			}
+			sb.WriteString(fmt.Sprintf("<div class=\"issue %s\">%s <span class=cat>[%s]</span>%s</div>", cls, icon, iss.Category, iss.Message))
+		}
+		sb.WriteString("</body></html>")
+		os.WriteFile(reportPath, []byte(sb.String()), 0644)
+		fmt.Printf("📄 HTML 报告已生成: %s\n", reportPath)
 	}
 }
 

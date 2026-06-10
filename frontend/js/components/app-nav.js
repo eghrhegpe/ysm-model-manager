@@ -37,7 +37,6 @@ class AppNav extends HTMLElement {
       { id: "instances", icon: "🎮", label: "整合包管理" },
       { id: "workshop", icon: "🎨", label: "创作者频道" },
       { id: "github", icon: "🧩", label: "创意工坊" },
-      { id: "oldest", icon: "👴", label: "仓库元老" },
       { id: "diagnostics", icon: "🛠️", label: "诊断与冲突" },
       { id: "settings", icon: "⚙️", label: "设置" },
     ];

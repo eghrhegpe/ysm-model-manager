@@ -4,21 +4,34 @@
 
 **技术栈**：Go (Wails v2) + 原生 HTML/CSS/JS (Web Components + Shadow DOM)
 
+**平台支持**：✅ Windows (amd64) · ⚠️ macOS (实验性) · ❓ Linux (待验证)
+
+---
+
+## ⚡ 快速开始
+
+1. **下载**：前往 [GitHub Releases](https://github.com/eghrhegpe/ysm-model-manager/releases) 下载最新的 `YSM-Model-Manager_windows_amd64.zip`
+2. **解压**：解压到任意目录（如 `D:\YSM-Model-Manager\`）
+3. **首次配置**：启动程序 → 设置游戏根目录（`.minecraft` 文件夹）→ 设置模型仓库路径
+4. **开始使用**：把模型文件放入仓库目录，或通过拖拽导入
+
+> 📖 **详细说明见 [用户指南](docs/用户指南.md)**，包含 FAQ、故障排查、链接模式详解等。
+
 ---
 
 ## 🖥️ 界面预览
 
 左侧导航 → 右侧主区域，共 7 个功能模块：
 
-| 导航            | 功能                                     |
-| --------------- | ---------------------------------------- |
-| 📦 模型仓库     | 树形浏览、启用/禁用、搜索排序、3D 预览   |
-| 🎮 整合包管理   | 版本列表、同步状态、快捷安装             |
-| 🎨 创作者频道   | 站点浏览、创作者管理、预设搜索、内嵌浏览器 |
-| 🧩 创意工坊     | GitHub 在线仓库列表、一键下载            |
-| 👴 仓库元老     | 最早模型列表、批量安装                   |
-| 🛠️ 诊断与冲突   | 操作日志、模型去重（可选保留）、冲突检测 |
-| ⚙️ 设置         | 路径配置、链接模式（含警告）、主题切换   |
+| 导航          | 功能                                       |
+| ------------- | ------------------------------------------ |
+| 📦 模型仓库   | 树形浏览、启用/禁用、搜索排序、3D 预览     |
+| 🎮 整合包管理 | 版本列表、同步状态、快捷安装               |
+| 🎨 创作者频道 | 站点浏览、创作者管理、预设搜索、内嵌浏览器 |
+| 🧩 创意工坊   | GitHub 在线仓库列表、一键下载              |
+| 👴 仓库元老   | 最早模型列表、批量安装                     |
+| 🛠️ 诊断与冲突 | 操作日志、模型去重（可选保留）、冲突检测   |
+| ⚙️ 设置       | 路径配置、链接模式（含警告）、主题切换     |
 
 ---
 
@@ -232,6 +245,7 @@ wails build
 
 | 文档                                                                 | 内容                                      |
 | -------------------------------------------------------------------- | ----------------------------------------- |
+| [`docs/用户指南.md`](docs/用户指南.md)                               | **用户手册**：安装、配置、功能详解、FAQ   |
 | [`docs/architecture.md`](docs/architecture.md)                       | 前端架构规范 + 组件拆分指南               |
 | [`docs/roadmap.md`](docs/roadmap.md)                                 | 路线图（P0 ~ P4）                         |
 | [`docs/bug-chronicle.md`](docs/bug-chronicle.md)                     | 23 个详细 Bug 排查记录                    |
@@ -247,12 +261,12 @@ wails build
 
 本项目的诸多设计借鉴了以下优秀开源项目：
 
-| 项目 | 用途 | 作者 |
-|------|------|------|
-| [LaoYutang/lytvpk](https://github.com/LaoYutang/lytvpk) | L4D2 MOD 管理器 — **下载与更新**、项目结构、Wails 开发范式 | LaoYutang |
+| 项目                                                                  | 用途                                                                                    | 作者          |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------- |
+| [LaoYutang/lytvpk](https://github.com/LaoYutang/lytvpk)               | L4D2 MOD 管理器 — **下载与更新**、项目结构、Wails 开发范式                              | LaoYutang     |
 | [DrAbcOfficial/YSMViewer](https://github.com/DrAbcOfficial/YSMViewer) | YSM 模型查看器 — **3D 渲染算法**（YSMViewer 的 faceUV/expandBoxUV、骨骼层级、纹理映射） | DrAbcOfficial |
-| [YSMParser.Core](https://github.com/OpenYSM/YSMParser) | YSMParser — **.ysm 文件解析器** | OpenYSM |
-| Mod Organizer 2 | **仓库 + 硬链接管理模型**的设计理念 | Tannin |
+| [YSMParser.Core](https://github.com/OpenYSM/YSMParser)                | YSMParser — **.ysm 文件解析器**                                                         | OpenYSM       |
+| Mod Organizer 2                                                       | **仓库 + 硬链接管理模型**的设计理念                                                     | Tannin        |
 
 ---
 

@@ -82,23 +82,6 @@ class AppContent extends HTMLElement {
 
     if (this._current === "diagnostics") {
       this._initDiagnostics();
-    } else if (this._current === "oldest") {
-      // 仓库元老作为独立页面：直接渲染并显示 oldest 面板
-      this._initDiagnostics();
-      setTimeout(() => {
-        const left = this._root.querySelector(".diag-left");
-        const log = this._root.getElementById("diag-log");
-        const oldest = this._root.getElementById("diag-oldest");
-        if (left) left.style.display = "none";
-        if (log) log.style.display = "none";
-        if (oldest) {
-          oldest.style.display = "";
-          import("./workshop-diagnostics.js").then((m) => {
-            if (m.loadOldestModel)
-              m.loadOldestModel(this._root, (s) => this._esc(s));
-          });
-        }
-      }, 0);
     } else if (this._current === "settings") {
       this._initSettings();
     } else if (this._current === "workshop") {
@@ -237,7 +220,7 @@ class AppContent extends HTMLElement {
 
   _initRepository() {
     initRepository();
-    this._bindTabs("repo", ["tree", "import", "recycle", "dedup"]);
+    this._bindTabs("repo", ["tree", "import", "recycle", "dedup", "oldest"]);
   }
 
   _bindTabs(prefix, ids) {
@@ -287,6 +270,10 @@ class AppContent extends HTMLElement {
                 if (list)
                   await startDedup({ getElementById: () => list }, this._esc);
               });
+          } else if (tab === "oldest") {
+            const { loadOldestModel } =
+              await import("../../features/oldest-models.js");
+            await loadOldestModel(container, (s) => this._esc(s));
           }
         }
       });

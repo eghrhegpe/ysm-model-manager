@@ -286,12 +286,10 @@ class AppContent extends HTMLElement {
 
   _initWorkshop() {
     const root = this._root;
-    const grid = root.getElementById("ws-grid");
     const browserEl = root.getElementById("ws-browser");
     const iframe = root.getElementById("ws-iframe");
     const urlEl = root.getElementById("ws-url");
     const blockedEl = root.getElementById("ws-blocked");
-    const sourceInfo = root.getElementById("ws-source-info");
     const searchResults = root.getElementById("ws-search-results");
     const creatorView = root.getElementById("ws-creator-view");
     const creatorList = root.getElementById("ws-cr-list");
@@ -302,25 +300,6 @@ class AppContent extends HTMLElement {
     let wsEditMode = false; // 创意工坊创作者编辑模式（放在外面以持久化）
     const wsEditModeRef = { v: false }; // 可共享引用，供 renderSiteView 读写
     let repoModelCache = {}; // { repoName: { models, source, localMap } } 模型列表缓存
-
-    // 加载数据
-    const loadSites = async () => {
-      grid.innerHTML = '<div class="ws-loading">⏳ 加载中...</div>';
-      try {
-        const { sites, creators, authors } = await loadWorkshopData();
-        allCreators = creators;
-        repoAuthors = authors;
-        // 过滤掉 B站和爱发电（它们已作为顶栏 tab）
-        const filteredSites = sites.filter(
-          (s) => s.id !== "bilibili" && s.id !== "afdian",
-        );
-        grid.innerHTML = renderCardsHTML(filteredSites, (s) => this._esc(s));
-        grid._wsSites = filteredSites;
-        sourceInfo.textContent = filteredSites.length + " 站点 · JSON驱动";
-      } catch (e) {
-        grid.innerHTML = '<div class="ws-loading-error">加载失败</div>';
-      }
-    };
 
     // 点击模式切换：外链 / 内嵌
     let embedMode = false;
@@ -335,18 +314,25 @@ class AppContent extends HTMLElement {
     // B站/爱发电 tab 点击 → 在右侧显示对应站点的创作者（不打开网站）
     const showCreatorsBySite = async (siteType) => {
       const { sites, creators } = await loadWorkshopData();
+      allCreators = creators;
       const site = sites.find((s) => s.id === siteType);
       if (!site) return;
       currentSite = site;
       // tab 切换高亮
-      root.querySelectorAll(".repo-tab").forEach((t) => t.classList.remove("active"));
+      root
+        .querySelectorAll(".repo-tab")
+        .forEach((t) => t.classList.remove("active"));
       root.querySelector(`[data-tab="${siteType}"]`)?.classList.add("active");
       showSiteView(currentSite);
     };
     // 默认显示 B站
     setTimeout(() => showCreatorsBySite("bilibili"), 100);
-    root.querySelector('[data-tab="bilibili"]')?.addEventListener("click", () => showCreatorsBySite("bilibili"));
-    root.querySelector('[data-tab="afdian"]')?.addEventListener("click", () => showCreatorsBySite("afdian"));
+    root
+      .querySelector('[data-tab="bilibili"]')
+      ?.addEventListener("click", () => showCreatorsBySite("bilibili"));
+    root
+      .querySelector('[data-tab="afdian"]')
+      ?.addEventListener("click", () => showCreatorsBySite("afdian"));
 
     // 卡片点击 → 正文切换右侧视图，右侧 ↗ 按开关打开
     const openSite = (site, external = false) => {
@@ -357,26 +343,6 @@ class AppContent extends HTMLElement {
         window.open(site.url, "_blank");
       }
     };
-    grid.addEventListener("click", (e) => {
-      const externalBtn = e.target.closest(".gh-card-external");
-      const card = e.target.closest(".gh-card");
-      if (!card) return;
-      const idx = parseInt(card.dataset.index, 10);
-      const sitesData = grid._wsSites;
-      if (!sitesData || !sitesData[idx]) return;
-      currentSite = sitesData[idx];
-      if (externalBtn) {
-        // ↗ 按钮：按开关模式打开
-        openSite(currentSite, false);
-      } else {
-        // 正文：切换右侧视图
-        grid
-          .querySelectorAll(".gh-card")
-          .forEach((c) => c.classList.remove("active"));
-        card.classList.add("active");
-        showSiteView(currentSite);
-      }
-    });
 
     // 内嵌浏览
     const PROXY_PORT = 18080;
@@ -435,7 +401,7 @@ class AppContent extends HTMLElement {
           const { ImportWorkshopSitesJSONFile } =
             await import("../../../wailsjs/go/main/App.js");
           const n = await ImportWorkshopSitesJSONFile();
-          await loadSites();
+          await showCreatorsBySite("bilibili");
           bus.emit("toast:show", {
             msg: "✅ 已导入 " + n + " 个站点",
             duration: 2000,
@@ -549,7 +515,8 @@ class AppContent extends HTMLElement {
       if (listContainer) listContainer.appendChild(renderList());
     }; // end showRepoModels
 
-    loadSites();
+    // 初始加载并默认显示 B站
+    setTimeout(() => showCreatorsBySite("bilibili"), 100);
   }
 
   _initGithub() {

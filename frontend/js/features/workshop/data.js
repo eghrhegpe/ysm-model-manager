@@ -5,17 +5,17 @@
  */
 export function showProgress(searchResults, pct, label) {
   searchResults.innerHTML =
-    '<div class="ws-progress-box">' +
-    '<div class="ws-progress-label">' +
-    '<span class="ws-progress-spin">⏳</span> ' +
-    '<span class="ws-progress-text">' +
+    '<div class="gh-progress-box">' +
+    '<div class="gh-progress-label">' +
+    '<span class="gh-progress-spin">⏳</span> ' +
+    '<span class="gh-progress-text">' +
     (label || "") +
     "</span></div>" +
-    '<div class="ws-progress-track">' +
-    '<div class="ws-progress-fill" style="width:' +
+    '<div class="gh-progress-track">' +
+    '<div class="gh-progress-fill" style="width:' +
     pct +
     "%;transition:width 0.3s" +
-    (pct < 100 ? " ws-striped" : "") +
+    (pct < 100 ? " gh-striped" : "") +
     '"></div>' +
     "</div>" +
     "</div>";

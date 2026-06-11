@@ -152,7 +152,8 @@ export function renderSiteView(site, ctx) {
       '<div class="cr-empty-site">此站点无可操作内容。<br>点击「浏览器打开」访问：<br><a href="' +
       esc(site.url) +
       '" target="_blank" class="cr-site-link">' +
-      esc(site.url) + "</a></div>";
+      esc(site.url) +
+      "</a></div>";
   }
 
   searchResults.innerHTML = html;
@@ -225,8 +226,8 @@ export function renderSiteView(site, ctx) {
         btn.style.cursor = "default";
         searchResults.innerHTML =
           '<div class="cr-error-page">' +
-          '<button class="cr-back-repo cr-back-btn" style="margin-bottom:12px">← 返回</button>'
-          '<div class="cr-error-msg">' +
+          '<button class="cr-back-repo cr-back-btn" style="margin-bottom:12px">← 返回</button>';
+        '<div class="cr-error-msg">' +
           (isTimeout
             ? "⏱️ 连接超时"
             : "❌ 无 index.json<br>" +
@@ -248,19 +249,15 @@ export function renderSiteView(site, ctx) {
   });
 
   // ===== 创作者编辑模式 =====
-  searchResults
-    .querySelector(".cr-edit-btn")
-    ?.addEventListener("click", () => {
-      wsEditModeRef.v = true;
-      refreshView();
-    });
+  searchResults.querySelector(".cr-edit-btn")?.addEventListener("click", () => {
+    wsEditModeRef.v = true;
+    refreshView();
+  });
 
-  searchResults
-    .querySelector(".cr-view-btn")
-    ?.addEventListener("click", () => {
-      wsEditModeRef.v = false;
-      refreshView();
-    });
+  searchResults.querySelector(".cr-view-btn")?.addEventListener("click", () => {
+    wsEditModeRef.v = false;
+    refreshView();
+  });
 
   // 保存
   searchResults

@@ -6,12 +6,12 @@
 
 ## 1. 设计哲学
 
-| 原则 | 说明 |
-|------|------|
-| **信息优先** | 功能 > 装饰。每个像素的存在都应该有理由 |
+| 原则         | 说明                                           |
+| ------------ | ---------------------------------------------- |
+| **信息优先** | 功能 > 装饰。每个像素的存在都应该有理由        |
 | **克制用色** | 彩色只用于表达状态（成功/失败/警告），不做装饰 |
-| **一致性** | 同样的组件在不同页面用同样的间距、圆角、字号 |
-| **可扫描** | 信息层级清晰，用户扫一眼就能找到关键信息 |
+| **一致性**   | 同样的组件在不同页面用同样的间距、圆角、字号   |
+| **可扫描**   | 信息层级清晰，用户扫一眼就能找到关键信息       |
 
 ---
 
@@ -46,7 +46,7 @@
 ```css
 .card {
   background: var(--card);
-  border-radius: 10px;    /* --r 变量 */
+  border-radius: 10px; /* --r 变量 */
   border: 1px solid var(--bd);
   padding: 12px;
 }
@@ -61,37 +61,30 @@
 
 4 套主题，通过 CSS 变量切换，**永不硬编码颜色值**。
 
-| 主题 | 类名 | 基调 | 适用场景 |
-|------|------|------|----------|
-| 赛博霓虹 | `.theme-cyber` | 深色 | 默认（推荐） |
-| 温暖木纹 | `.theme-warm` | 浅色/暖色 | 明亮环境 |
-| 极简深邃 | `.theme-pro` | 深色/高对比 | 专业向 |
-| 原版深色 | `.theme-default-dark` | 深色/中性 | 备选 |
+| 主题     | 类名                  | 基调        | 适用场景     |
+| -------- | --------------------- | ----------- | ------------ |
+| 赛博霓虹 | `.theme-cyber`        | 深色        | 默认（推荐） |
+| 温暖木纹 | `.theme-warm`         | 浅色/暖色   | 明亮环境     |
+| 极简深邃 | `.theme-pro`          | 深色/高对比 | 专业向       |
+| 原版深色 | `.theme-default-dark` | 深色/中性   | 备选         |
 
 ### CSS 变量体系
 
 ```css
---bg:       /* 最底层背景 */
---surf:     /* 表面背景（侧栏、顶栏） */
---card:     /* 卡片背景 */
---hover:    /* hover 状态背景 */
---act:      /* active/选中状态背景 */
---accent:   /* 强调色（链接、选中、关键按钮） */
---txt:      /* 主文字色 */
---muted:    /* 次要文字色 */
---bd:       /* 边框色 */
+--bg:       /* 最底层背景 */ --surf: /* 表面背景（侧栏、顶栏） */
+  --card: /* 卡片背景 */ --hover: /* hover 状态背景 */
+  --act: /* active/选中状态背景 */
+  --accent: /* 强调色（链接、选中、关键按钮） */ --txt: /* 主文字色 */
+  --muted: /* 次要文字色 */ --bd: /* 边框色 */;
 ```
 
 ### 语义色
 
 ```css
---free:     /* 免费/成功/可用 */
---paid:     /* 付费/错误/危险 */
---sz-green: /* 文件大小 <1MB */
---sz-red:   /* 文件大小 >3MB */
---meta-author:  /* 作者姓名 */
---meta-work:    /* 作品相关 */
---meta-date:    /* 日期相关 */
+--free:     /* 免费/成功/可用 */ --paid: /* 付费/错误/危险 */
+  --sz-green: /* 文件大小 <1MB */ --sz-red: /* 文件大小 >3MB */
+  --meta-author: /* 作者姓名 */ --meta-work: /* 作品相关 */
+  --meta-date: /* 日期相关 */;
 ```
 
 **关键规则**：语义色在浅色主题下用深色值，深色主题下用亮色值。永远不做 `color: #cdd6f4` 之类的硬编码。
@@ -100,13 +93,13 @@
 
 ## 4. 字号系统
 
-| 用途 | 像素 | CSS |
-|------|------|-----|
-| 标题/强调 | 14px | `font-size: 14px` |
-| 正文 | 12px | `font-size: 12px` |
-| 辅助信息 | 11px | `font-size: 11px` |
-| 标签/徽章 | 10px | `font-size: 10px` |
-| 极小（仅数字/状态） | 9px | `font-size: 9px` |
+| 用途                | 像素 | CSS               |
+| ------------------- | ---- | ----------------- |
+| 标题/强调           | 14px | `font-size: 14px` |
+| 正文                | 12px | `font-size: 12px` |
+| 辅助信息            | 11px | `font-size: 11px` |
+| 标签/徽章           | 10px | `font-size: 10px` |
+| 极小（仅数字/状态） | 9px  | `font-size: 9px`  |
 
 **字体栈**：`-apple-system, "Microsoft YaHei", "Segoe UI", system-ui, sans-serif`
 
@@ -114,14 +107,14 @@
 
 ## 5. 间距系统
 
-| 层级 | 像素 | 用途 |
-|------|------|------|
-| 0 | 0 | 无间距 |
-| 1 | 4px | 图标与文字之间、按钮内边距 |
-| 2 | 6–8px | 列表项间距、小元素间距 |
-| 3 | 10–12px | 卡片内边距、段落间距 |
-| 4 | 14–16px | 区块间距、大按钮边距 |
-| 5 | 20–24px | 页面主间距 |
+| 层级 | 像素    | 用途                       |
+| ---- | ------- | -------------------------- |
+| 0    | 0       | 无间距                     |
+| 1    | 4px     | 图标与文字之间、按钮内边距 |
+| 2    | 6–8px   | 列表项间距、小元素间距     |
+| 3    | 10–12px | 卡片内边距、段落间距       |
+| 4    | 14–16px | 区块间距、大按钮边距       |
+| 5    | 20–24px | 页面主间距                 |
 
 **规则**：不要使用 3px、7px、9px 等非标准值。要么 4 的倍数，要么用上述层级。
 
@@ -130,10 +123,16 @@
 ## 6. 圆角系统
 
 ```css
---r: 10px;        /* 卡片圆角（全局默认） */
-.btn { border-radius: 6px; }   /* 按钮 */
-.badge { border-radius: 12px; }/* 徽章/标签 */
-.tag { border-radius: 4px; }   /* 状态标签 */
+--r: 10px; /* 卡片圆角（全局默认） */
+.btn {
+  border-radius: 6px;
+} /* 按钮 */
+.badge {
+  border-radius: 12px;
+} /* 徽章/标签 */
+.tag {
+  border-radius: 4px;
+} /* 状态标签 */
 ```
 
 - 卡片：**10px**（`--r` 变量）
@@ -196,6 +195,7 @@ transition: opacity 0.2s;                     /* 淡入淡出 */
 ```
 
 **规则**：
+
 - 按钮 hover 必加 `background: var(--hover)`
 - 禁用状态加 `opacity: 0.4; cursor: not-allowed`
 - 图标+文字按钮的 gap：**4px**
@@ -209,16 +209,16 @@ transition: opacity 0.2s;                     /* 淡入淡出 */
 
 ### CSS 文件分配
 
-| 文件 | 给谁用 |
-|------|--------|
-| `variables.css` | 全局 :root + 4 套主题变量 |
-| `layout.css` | 主 grid 布局、顶栏、侧栏、预览面板 |
-| `components.css` | 跨组件通用类（仅非 Shadow DOM） |
-| `content-css.js` | `app-content` 的所有子组件样式 |
-| `sidebar-css.js` | `app-sidebar` 的所有子组件样式 |
-| `preview-css.js` | `app-preview` 的所有子组件样式 |
-| `nav-css.js` | `app-nav` 样式 |
-| `tree-css.js` | `app-tree` 样式 |
+| 文件             | 给谁用                             |
+| ---------------- | ---------------------------------- |
+| `variables.css`  | 全局 :root + 4 套主题变量          |
+| `layout.css`     | 主 grid 布局、顶栏、侧栏、预览面板 |
+| `components.css` | 跨组件通用类（仅非 Shadow DOM）    |
+| `content-css.js` | `app-content` 的所有子组件样式     |
+| `sidebar-css.js` | `app-sidebar` 的所有子组件样式     |
+| `preview-css.js` | `app-preview` 的所有子组件样式     |
+| `nav-css.js`     | `app-nav` 样式                     |
+| `tree-css.js`    | `app-tree` 样式                    |
 
 ### Shadow DOM 通信原则
 
@@ -231,6 +231,7 @@ transition: opacity 0.2s;                     /* 淡入淡出 */
 ## 10. 色彩使用规则
 
 ### ✅ 必须用 CSS 变量
+
 ```css
 /* ✓ 正确 */
 color: var(--txt);
@@ -239,13 +240,15 @@ border: 1px solid var(--bd);
 ```
 
 ### ❌ 禁止硬编码
+
 ```css
 /* ✗ 错误 */
 color: #cdd6f4;
-background: rgba(0,0,0,0.5);
+background: rgba(0, 0, 0, 0.5);
 ```
 
 ### 例外（允许硬编码的场景）
+
 - 渐变背景（`linear-gradient` 中的色值，须同时适配深浅主题）
 - 临时调试用的 `console.log`（用完即删）
 - `text-shadow` 救急（`rgba(0,0,0,.12)` 等通用值）
@@ -272,3 +275,5 @@ app-xxx/xxx-css.js   — Shadow DOM 样式
 - 现有主题变量: `frontend/css/variables.css`
 - 布局: `frontend/css/layout.css`
 - 项目结构: `docs/architecture.md`
+其他界面只是风格感不足，本身已经有卡片设计了，但这个界面是真的没啥设计感，
+参考🎮整合包管理统一使用tab页当顶栏，然后给活跃创作者部分设计卡片样式？

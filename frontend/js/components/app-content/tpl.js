@@ -181,11 +181,11 @@ export function settingsHTML() {
   <div class="setting-row">
     <span class="label">🃏 创作者名字字体</span>
     <select id="set-display-font" class="stg-select">
-      <option value="kaiti" selected>🖌️ 楷体（默认）</option>
-      <option value="system">📝 系统字体</option>
+      <option value="kaiti" selected>🖌️ 楷体（默认，更文艺）</option>
+      <option value="system">📝 系统字体（更简洁）</option>
     </select>
   </div>
-  <div class="stg-hint">创作者卡片名字使用的艺术字体。</div>
+  <div class="stg-hint">创作者卡片名字使用的艺术字体。楷体更有个性，系统字体更统一。</div>
 </div>
 
 <div class="settings-group" style="margin-bottom:12px">
@@ -196,7 +196,7 @@ export function settingsHTML() {
       <option value="normal">📦 标准（间距舒适）</option>
     </select>
   </div>
-  <div class="stg-hint">调整创作者卡片和各列表的间距密度。</div>
+  <div class="stg-hint">紧凑：卡片内边距 8px，间距 8px；标准：12px+12px。</div>
 </div>
 
 <div class="section-title stg-title stg-sub-title">⚡ 行为与动画</div>
@@ -208,7 +208,7 @@ export function settingsHTML() {
       <input type="checkbox" id="set-animations" checked> 启用过渡动画
     </label>
   </div>
-  <div class="stg-hint">关闭后所有 hover/过渡动画将被禁用，适合低配设备。</div>
+  <div class="stg-hint">关闭后仅保留布局过渡，移除 hover 和淡入淡出动画，适合低配设备。</div>
 </div>
 
 <div class="settings-group" style="margin-bottom:12px">

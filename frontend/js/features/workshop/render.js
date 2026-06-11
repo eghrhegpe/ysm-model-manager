@@ -177,26 +177,26 @@ export function renderCardsHTML(sites, esc) {
     if (!groups[g] || !groups[g].length) return;
     const info = GROUP_LABELS[g] || { icon: "🔗", label: g };
     html +=
-      '<div class="ws-section-title">' +
+      '<div class="gh-section-title">' +
       info.icon +
       " " +
       info.label +
       "</div>";
     groups[g].forEach((s) => {
       html +=
-        '<div class="ws-card" data-index="' +
+        '<div class="gh-card" data-index="' +
         sites.indexOf(s) +
         '" data-group="' +
         g +
         '">' +
-        '<div class="ws-card-icon">' +
+        '<div class="gh-card-icon">' +
         (s.icon || "🔗") +
         "</div>" +
-        '<div class="ws-card-body">' +
-        '<div class="ws-card-label">' +
+        '<div class="gh-card-body">' +
+        '<div class="gh-card-label">' +
         esc(s.label) +
         "</div>" +
-        '<div class="ws-card-desc">' +
+        '<div class="gh-card-desc">' +
         esc(s.desc) +
         "</div>" +
         "</div>" +
@@ -219,34 +219,34 @@ export function renderRepoHeaderHTML({
   missingCount,
 }) {
   return (
-    '<div class="ws-header">' +
-    '<div class="ws-header-top">' +
-    '<button class="ws-back-repo ws-btn ws-btn-txt">← 返回</button>' +
-    '<span class="ws-repo-name">📦 ' +
+    '<div class="gh-header">' +
+    '<div class="gh-header-top">' +
+    '<button class="gh-back-repo gh-btn-txt">← 返回</button>' +
+    '<span class="gh-repo-name">📦 ' +
     esc(repo) +
     "</span>" +
     sourceLabel +
-    '<span class="ws-model-count">' +
+    '<span class="gh-model-count">' +
     modelsLength +
     " 个模型</span>" +
     (missingCount > 0
-      ? '<span class="ws-missing-count">⬇️' +
+      ? '<span class="gh-missing-count">⬇️' +
         missingCount +
         "</span>" +
-        '<button class="ws-dl-selected ws-btn-sm ws-btn-muted" disabled>⬇️ 选中 (0)</button>'
+        '<button class="gh-dl-selected gh-btn-sm gh-btn-muted" disabled>⬇️ 选中 (0)</button>'
       : "") +
-    '<button class="ws-filter-btn ws-btn ws-btn-txt">⚙️ 筛选</button>' +
-    '<div class="ws-filter-dropdown">' +
+    '<button class="gh-filter-btn gh-btn-txt">⚙️ 筛选</button>' +
+    '<div class="gh-filter-dropdown">' +
     (missingCount > 0
-      ? '<button class="ws-dl-all ws-btn-sm ws-btn-accent">⬇️ 下载全部缺失</button>' +
-        '<button class="ws-select-all ws-btn-sm ws-btn-muted">☐ 全选</button>'
+      ? '<button class="gh-dl-all gh-btn-sm gh-btn-accent">⬇️ 下载全部缺失</button>' +
+        '<button class="gh-select-all gh-btn-sm gh-btn-muted">☐ 全选</button>'
       : "") +
-    '<button class="ws-toggle-all ws-btn-sm ws-btn-txt">📁 仅显示缺失</button>' +
+    '<button class="gh-toggle-all gh-btn-sm gh-btn-txt">📁 仅显示缺失</button>' +
     "</div>" +
     "</div>" +
-    '<div id="ws-queue-status" class="ws-queue-status"></div>' +
+    '<div id="gh-queue-status" class="gh-queue-status"></div>' +
     '<div style="padding:2px 0 6px">' +
-    '<input id="ws-repo-srch" class="ws-search" type="text" placeholder="🔍 搜索模型名称">' +
+    '<input id="gh-repo-srch" class="gh-search" type="text" placeholder="🔍 搜索模型名称">' +
     "</div>" +
     '<div id="ws-repo-list"></div>' +
     "</div>"

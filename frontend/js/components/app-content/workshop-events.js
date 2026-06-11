@@ -1,7 +1,6 @@
 // 已迁移至 features/workshop/events.js
 export { bindRepoEvents } from "../../features/workshop/events.js";
 
-
 /**
  * 绑定仓库模型页面的所有事件。
  * 管理 showAll / selectedSet 内部状态。

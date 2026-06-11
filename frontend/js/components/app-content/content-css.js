@@ -248,6 +248,10 @@ export const contentCSS = `
 .cr-edit-btn:hover { background:var(--hover);color:var(--txt); }
 .cr-toggle { font-size:9px;padding:2px 8px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .12s; }
 .cr-toggle:hover { background:var(--accent);color:var(--bg); }
+.cr-mode-switch { display:inline-flex;border:1px solid var(--bd);border-radius:6px;overflow:hidden;cursor:pointer;margin-right:4px;flex-shrink:0; }
+.cr-mode-opt { padding:2px 8px;font-size:9px;font-family:inherit;transition:all .12s;color:var(--muted);background:transparent; }
+.cr-mode-opt.active { color:var(--bg);background:var(--accent); }
+.cr-mode-opt:first-child { border-right:1px solid var(--bd); }
 .cr-browser-bar { display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--surf);border-bottom:1px solid var(--bd);flex-shrink:0; }
 .cr-back { padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:11px;font-family:inherit; }
 .cr-back:hover { background:var(--hover); }

@@ -308,7 +308,7 @@ class AppContent extends HTMLElement {
     if (toggleBtn) {
       toggleBtn.addEventListener("click", () => {
         embedMode = !embedMode;
-        toggleBtn.textContent = embedMode ? "🔍 内嵌" : "↗ 外链";
+        toggleBtn.querySelectorAll(".cr-mode-opt").forEach((el) => el.classList.toggle("active"));
       });
     }
 

@@ -92,7 +92,7 @@
   /* 字体栈 */
   --font-ui:
     -apple-system, "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
-  --font-display: 'STKaiti','KaiTi','楷体',serif;
+  --font-display: "STKaiti", "KaiTi", "楷体", serif;
 }
 
 /* 布局变量 */
@@ -101,10 +101,20 @@
   --card-gap: 6px;
 }
 
-/* 无动画模式 */
-.no-animations, .no-animations * {
+/* 减少动画模式：仅禁用 hover/装饰性动画，保留布局过渡 */
+.no-animations .gh-card,
+.no-animations .model-card,
+.no-animations .model-card-sm,
+.no-animations .rec-card,
+.no-animations .vm-card,
+.no-animations .cr-creator-card,
+.no-animations .repo-tab,
+.no-animations .diag-btn,
+.no-animations .hdr-btn,
+.no-animations .btn,
+.no-animations .tb-btn,
+.no-animations .cr-avatar {
   transition-duration: 0s !important;
-  animation-duration: 0s !important;
 }
 
 * {

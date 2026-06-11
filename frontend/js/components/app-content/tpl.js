@@ -275,10 +275,15 @@ export function recycleHTML() {
 
 export function githubHTML() {
   return (
+    '<div class="repo-wrap">' +
+    '<div class="repo-tabs">' +
+    '<button class="repo-tab active" data-tab="github">🐙 GitHub仓库</button>' +
+    '</div>' +
+    '<div class="repo-tab-body" id="gh-tab-repos">' +
     '<div class="gh-page" id="gh-page">' +
     '<div class="gh-left" id="gh-left">' +
-    '<div style="padding:10px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
-    '<span style="font-size:13px;font-weight:600">🧩 创意工坊</span>' +
+    '<div style="padding:4px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
+    '<span style="font-size:11px;font-weight:600;color:var(--muted)">仓库</span>' +
     '<span style="flex:1"></span>' +
     "</div>" +
     '<div class="gh-grid" id="gh-grid">' +
@@ -293,7 +298,9 @@ export function githubHTML() {
     '<div id="gh-results" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
     '<div id="gh-results-body" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +
     '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">点击左侧仓库查看模型</div>' +
-    "</div></div></div></div></div>"
+    "</div></div></div></div></div>" +
+    "</div>" +
+    "</div>"
   );
 }
 

@@ -439,18 +439,7 @@ func defaultWorkshopSites() []types.WorkshopSite {
 			Desc: "免费模型仓库（前置）", Group: "repo",
 			SearchURL: "https://github.com/search?q={{q}}",
 		},
-		{
-			ID: "mcmod", Icon: "📖", Label: "MC百科", URL: "https://www.mcmod.cn/",
-			Desc: "模组与模型百科", Group: "browse",
-		},
-		{
-			ID: "curseforge", Icon: "🔥", Label: "CurseForge", URL: "https://www.curseforge.com/minecraft",
-			Desc: "全球 MC 资源站（无法下载YSM）", Group: "browse",
-		},
-		{
-			ID: "modrinth", Icon: "💎", Label: "Modrinth", URL: "https://modrinth.com/",
-			Desc: "开源 MC 平台（无法下载YSM）", Group: "browse",
-		},
+
 	}
 }
 

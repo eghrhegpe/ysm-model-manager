@@ -2189,10 +2189,284 @@ YSM 头部解析修复 + 同步状态修复 + 预设搜索。
 
 ——**全文完**（暂时）
 
-_—第八章完—_
+_—第九章完—_
 
-_全文完，这次是真的。_
+---
 
-_——真的？_
+### 第十章 · 秘钥之战
 
-_——真的。至少在今天结束之前是真的。明天又有新 Bug 了呢。_
+| 章节                                    | 标题           | 对应真实事件                                    |
+| --------------------------------------- | -------------- | ----------------------------------------------- |
+| [第四十四回](#第四十四回--双生之影)     | 双生之影       | V2 WASM 解码通但 V3 不通，`detectYsmVersion=3`  |
+| [第四十五回](#第四十五回--偏移之惑)     | 偏移之惑       | try V2/V3 header + offset 0/16/32 全失败        |
+| [第四十六回](#第四十六回--memfs-复活记) | MEMFS 复活记   | 弃用的 `callMain` 路径重新启用，42 文件 1200 骨 |
+| [第四十七回](#第四十七回--无窗之境)     | 无窗之境       | `HideWindow` 防 CLI 弹窗                        |
+| [后记十](#后记十--秘钥之战的尾声)       | 秘钥之战的尾声 | v1.4.6 复盘                                     |
+
+---
+
+_—第十章—_
+
+## 第四十四回 · 双生之影
+
+事情从一个模型说起。
+
+**「[墓野奈奈]【东方project】芙兰朵露Flandre2025-06.ysm」**
+
+910KB，不新不旧——2025 年 6 月的加密模型。用户双击它，预览面板亮起，控制台开始输出日志：
+
+```
+[YSM] 加载 WASM 模块...
+[YSM] WASM init: ✅
+[YSM] 读取文件...
+[YSM] 读取 910016 bytes
+[YSM] ✅ 原始字节解码成功: 5 文件
+[YSM] ⚠️ WASM 解码成功但几何体解析为空，回退 Go CLI
+```
+
+"回退 Go CLI"——这意味着 WASM 解码了 5 个文件出来，但几何体解析失败了。
+
+等等——5 个文件？之前所有测试通过的 V2 文件都是这种格式。也就是 WASM 解码本身是成功的？
+
+我仔细看了文件列表：`arm.json, extra.animation.json, main.animation.json, main.json, texture.png`——全是根目录文件，没有 `models/` 前缀。
+
+问题藏在过滤条件里。第二轮处理非 ysmModelOrder 文件时，有一行代码：
+
+```js
+if (!f.path.startsWith("models/") || !f.path.endsWith(".json")) continue;
+```
+
+`startsWith("models/")`——V1 文件的 JSON 在根目录，没有 `models/` 前缀。这行 `continue` 把它俩全跳过了。
+
+"又是路径问题，"我嘀咕着，"但这次不是文件名，是路径前缀。"
+
+修起来很简单——把 `startsWith("models/")` 去掉，只要不是动画文件、不是 ysm.json、不是 PNG，就走解析流程。
+
+改完构建。用户的反馈来了。
+
+但不是好消息。
+
+```
+[YSM] WASM detectYsmVersion: 3 (0=未知, 1=V1, 2=V2, 3=V3)
+[YSM] ❌ WASM 解码失败，无输出文件
+```
+
+同一天，不同的模型。前一个模型是 "鹦鹉螺"——V2 文本头部变体，WASM 解码成功只是路径过滤问题。这个模型——"芙兰朵露"——是**V3**。
+
+V3。一个我们听说过但从未直面过的版本号。
+
+---
+
+## 第四十五回 · 偏移之惑
+
+"V3 用的是 YSM 魔数，不是 YSGP。"
+
+这个事实是我从 `build/inspect_ysm2.py` 里刨出来的。当初写这些脚本的人留下了注释：
+
+```python
+if magic == b'YSGP':
+    print("This is YSGP format (older YSM V2)")
+elif magic[:3] == b'YSM':
+    print("This is YSM format (V3+)")
+```
+
+V3 的二进制魔数不是 `YSGP`（4 字节），而是 `YSM`（3 字节）。除了魔数，加密算法、数据布局、文件结构……可能全都不同。
+
+我们不可能用 V2 的重建方案去处理 V3。因为 V2 的重建方案是在做这件事：
+
+```
+文本头部 | 16B hash | 加密数据
+         ↓
+YSGP | V2 | hash(key) | 加密数据
+```
+
+把文本头部的加密数据剥出来，前面焊上标准的 `YSGP` 头部。这对 V2 有效——因为 V2 的加密数据本身就是一个 XXTEA 加密流，头部换成标准格式后，C++ 解析器能认。
+
+但对 V3 无效。因为 V3 的加密数据结构和头部校验方式完全不同。
+
+于是我开始了三天的猜谜游戏。
+
+**第一猜：版本号问题。**
+
+`buildStdYsgpFromTextVariant` 读取 `dataStart + 16` 处的 4 字节作为版本号。加密数据里读出来的版本字节是 `07 ae 58 d4`——明显是加密后的数据，不匹配 `00 00 00 03`。于是代码默认成 V2。
+
+修复：加 `forceVer` 参数，V2 不行就试 V3 header。
+
+结果：❌ 失败。
+
+**第二猜：偏移问题。**
+
+我打日志看二进制段头 64 字节，和 `<hash>` 标签值对比：
+
+```
+<hash>=0b6371ff850f3b739a5b6e94f28a9d3d
+
+dataStart+0:  00 03 00 00 00 7a d5 bc c0 3c da 06 d0 b2 9c 67  ← 不匹配
+dataStart+16: 07 ae 58 d4 b1 f4 8c a0 2e 18 dd c7 5b ff 28 c7  ← 不匹配
+dataStart+32: 2a f3 fc 57 bc a8 ba 31 dd b5 53 a8 d9 c4 63 3e  ← 不匹配
+```
+
+三个 16 字节块，没有一个匹配 `0b6371ff...`。
+
+所以 V3 文本头部变体的二进制段里**根本没有独立存储的 16 字节 hash**。hash 只在 `<hash>` 文本标签里，二进制段开头就直接是加密数据，不需要 skip 16 字节。
+
+修复：V3 时 `encryptedStart = dataStart`（不 skip 16），V2 时 `encryptedStart = dataStart + 16`（skip 16B hash）。
+
+结果：❌ 依然是 0 文件。
+
+两种偏移都试了。都不行。
+
+**第三猜：格式完全不同。**
+
+V3 就是 V3。它不是 V2 换了版本号。它的二进制布局、校验方式、加密流程——每一项都可能是新的。我们的文本头部剥离方案从根上就不适用于 V3。
+
+但等等——两个月前的 postmortem 里写着：
+
+> WASM 解码加密 .ysm | ✅ V3 格式，187 骨 877 方（Eanes）
+
+WASM 明明解过 V3！Eanes 模型——187 骨 877 方的加密 .ysm——就是在 WASM 路径下成功的。
+
+同一个 WASM 二进制，能解 Eanes，不能解芙兰朵露？
+
+问题不在 WASM 能不能解 V3。问题是**我们的重建格式不对**。
+
+---
+
+## 第四十六回 · MEMFS 复活记
+
+我重新翻开了 `ysm-parser.js`。这个文件里有两个导出函数：
+
+```js
+export async function decodeYsmFileFromMemory(bytes) { ... }  // 内存解析
+export async function decodeYsmFile(bytes) { ... }             // MEMFS + callMain
+```
+
+`decodeYsmFileFromMemory` 走的是 `YSMParserFactory::Create(cdata, size)`——C++ 的工厂方法，直接吃字节数组。它不处理文件 I/O，不识别文本头部。
+
+`decodeYsmFile` 走的是 `callMain`——把文件写入 Emscripten 的虚拟文件系统（MEMFS），然后调用 YSMParser 的 CLI main 函数。它走的路径和 CLI exe 完全一样——能从文件系统读取、能识别文本头部。
+
+但 `decodeYsmFile` 被弃用了。
+
+故事要回到第五章。那时候有人发现 `callMain` 总返回 "Unsupported file version detected"。排查了八轮，最终根因是——base64 编解码的暗渡陈仓。`ReadFileBytes` 返回 base64 字符串，但代码直接把它当二进制喂给了 WASM。WASM 吃进去的是 `%7u/WVNHUA0K...`，当然认不出 YSGP 头。
+
+从那以后，代码就走 `decodeYsmFileFromMemory` 了，`callMain` 路径被标注为"必然失败"。
+
+但 base64 的 Bug 早就在 v1.0.9 时修复了。当前 `_decodeYsmViaWasm` 第一件事就是：
+
+```js
+let bytes = await ReadFileBytes(modelPath);
+if (typeof bytes === "string") {
+  const raw = atob(bytes);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  bytes = arr;
+}
+```
+
+base64 → atob → Uint8Array，这是正确的解码流程。
+
+所以 `callMain` 的数据链路现在已经干净了。之前卡它的原因已不复存在。
+
+我决定复活它。
+
+```js
+if (fileVersion >= 3) {
+  console.log("[YSM] V3 文件，尝试 MEMFS 文件路径解码...");
+  files = await decodeYsmFile(bytes);
+  if (files?.length) {
+    console.log(`[YSM] ✅ V3 MEMFS 解码成功: ${files.length} 文件`);
+  }
+}
+```
+
+第一次运行——JS 报错了。
+
+`Cannot access 'files' before initialization`
+
+又是 TDZ。`let files;` 被声明在 V3 块之后，V3 块里 `files = await decodeYsmFile(bytes)` 时 `files` 还在 Temporal Dead Zone 里。`let` 的严格死区——定义前引用就报错，不像 `var` 那样静默返回 undefined。
+
+修完之后，构建。测试。控制台亮起了一行让我等了三个小时的日志：
+
+```
+[YSM] V3 文件，尝试 MEMFS 文件路径解码...
+[YSM] ✅ V3 MEMFS 解码成功: 42 文件
+```
+
+42 个文件。1200 根骨骼。4714 个立方体。一个 4.7 MB 的加密 V3 模型，通过 WASM 的 callMain 路径，全部解码成功。
+
+"死去的代码突然复活了。"我盯着控制台，有点恍惚。
+
+被标注为"必然失败"的路径，在三个小时后被证实——它从来就没失败过。它只是需要一个正确解码的 base64。
+
+## 第四十七回 · 无窗之境
+
+V3 的 WASM 路径打通了。但之前的 V3 模型在 WASM 失败后，会回退到 Go 的 `runYSMParserOnFile`。
+
+这个函数调用 `exec.Command(parserPath, "-i", inDir, "-o", outDir)`。`exec.Command` 在 Windows 上默认会弹一个控制台窗口——CMD 黑框，一闪而过。
+
+"那玩意还会弹命令行么？"用户问。
+
+"会的。"
+
+`cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}`——两行代码，两个调用点，Go 编译通过。从此 YSMParser.exe 在后台静默运行，用户什么都看不到。
+
+这是一个很小的改动，但很有象征意义。WASM 路径成功了——没有窗口、没有进程间通信、没有临时文件。CLI 兜底路径也干净了——没有弹窗、没有闪烁。
+
+完整的解码链路终于被打通了：
+
+```
+.ysm 文件
+  │
+  ├─ detectYsmVersion
+  │    ├─ =3 → decodeYsmFile(MEMFS) → 成功
+  │    │                         └─ 失败 → Go CLI (HideWindow)
+  │    │
+  │    ├─ =2 → decodeYsmFileFromMemory → 成功
+  │    │                         └─ 失败 → strip header → 重建 V2 → decodeYsmFileFromMemory
+  │    │
+  │    └─ =0 → 同上 V2 流程
+  │
+  └─ 全部失败 → Go CLI (HideWindow)
+```
+
+三条独立的解码路径，从最快到最慢，从最轻到最重。WASM 内存 < WASM 文件 < 外部 exe。前两条无窗口，最后一条也隐形了。
+
+"这大概就是 V3 解码的最终形态了。"我看着流程图，觉得它终于圆满了。
+
+---
+
+## 后记十 · 秘钥之战的尾声
+
+这次"战役"持续了约两个小时。不长，但在一个晚上完成，从发现 V3 不通到完全打通，中间经历了四次转向。
+
+什么驱动了这些转向？
+
+不是靠猜测——是靠日志。
+
+每一轮 Debug 我都加了一条 `console.log`：第一次看文件列表，第二次看二进制段头 64 字节，第三次看 `<hash>` 对比，第四次看 `detectYsmVersion`。三条日志定了三个不同的调试方向，只有第三次导向了正确答案。
+
+这不就是 bug-chronicle 里反复强调的事吗？
+
+——**看日志，别猜。**
+
+这次的教训写下来是这样的：
+
+1. **V3 的二进制格式与 V2 完全不同**。V2 用 `YSGP` 魔数（4B），V3 用 `YSM` 魔数（3B）。加密布局、校验方式都不同。你不能用 V2 的剥离方案去套 V3。
+
+2. **`detectYsmVersion` 是最好的预检工具**。在解码前先检测版本，V3 走不同路径。只需一次 C 函数调用，换来的是避免三次无意义的 V2 式重建尝试。
+
+3. **没有真正"废弃"的代码路径——只有暂时不可用的代码路径**。`callMain` 被标注为"必然失败"是因为一个已修复的 base64 Bug。当 Bug 修复后，这条路径应该重新评估，而不是继续被标注为弃用。
+
+4. **HW 隔离可以用软件思维解决**。`HideWindow: true` 是 Go 的属性，但问题本质是 UI 隔离——用户不该看到他们不需要看到的窗口。任何弹窗、闪烁、黑框，都是可以被消灭的 UX 瑕疵。
+
+入夜了。风扇还在转，模型还在解码。
+
+42 个文件。1200 根骨骼。4714 个立方体。
+
+控制台安静了。
+
+_—第十章完—_
+
+\_
+
+---

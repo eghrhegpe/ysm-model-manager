@@ -15,7 +15,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
+	"sort"
+"sync"
+	"syscall"
 	"time"
 
 	"ysm-model-manager/go/installer"
@@ -1572,6 +1574,7 @@ func (a *App) extractTextureViaYSM(modelPath string) []byte {
 	}
 
 	cmd := exec.Command(parserPath, "-i", inDir, "-o", outDir)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	if err := cmd.Run(); err != nil {
 		return nil
 	}
@@ -1915,6 +1918,7 @@ func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 	}
 
 	cmd := exec.Command(parserPath, "-i", inDir, "-o", outDir)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	if err := cmd.Run(); err != nil {
 		return types.BedrockModel{}
 	}
@@ -2001,9 +2005,11 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 	var defaultTex string
 	var animJSONs []string
 
+	// 第一遍：读取 ysm.json 获取模型文件顺序
+	var modelOrder []string
 	for _, f := range reader.File {
 		low := strings.ToLower(f.Name)
-		if strings.HasSuffix(low, ".json") && !f.FileInfo().IsDir() {
+		if strings.HasSuffix(low, "ysm.json") && !f.FileInfo().IsDir() {
 			rc, err := f.Open()
 			if err != nil {
 				continue
@@ -2011,45 +2017,56 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 			buf, _ := io.ReadAll(rc)
 			rc.Close()
 
+			var ysm struct {
+				Properties struct {
+					DefaultTexture string `json:"default_texture"`
+				} `json:"properties"`
+				Files struct {
+					Player struct {
+						Model []string `json:"model"`
+					} `json:"player"`
+				} `json:"files"`
+			}
+			if json.Unmarshal(buf, &ysm) == nil {
+				defaultTex = ysm.Properties.DefaultTexture
+				modelOrder = ysm.Files.Player.Model
+			}
+			break
+		}
+	}
+
+	// 收集所有 geometry JSON（非 ysm.json / animation / controller）
+	type geoEntry struct {
+		name string
+		data []byte
+	}
+	var geoFiles []geoEntry
+
+	for _, f := range reader.File {
+		low := strings.ToLower(f.Name)
+		if strings.HasSuffix(low, ".json") && !f.FileInfo().IsDir() {
 			if strings.Contains(low, "ysm.json") {
-				var ysm struct {
-					Properties struct {
-						DefaultTexture string `json:"default_texture"`
-					} `json:"properties"`
-				}
-				if json.Unmarshal(buf, &ysm) == nil {
-					defaultTex = ysm.Properties.DefaultTexture
-				}
 				continue
 			}
-
-			// 收集动画 JSON
 			if strings.Contains(low, "animation") || strings.Contains(low, "controller") {
+				rc, err := f.Open()
+				if err != nil {
+					continue
+				}
+				buf, _ := io.ReadAll(rc)
+				rc.Close()
 				if len(buf) > 10 {
 					animJSONs = append(animJSONs, string(buf))
 				}
 				continue
 			}
-
-			g := parseBedrockGeometry(buf)
-			if g == nil || g.BoneCount == 0 {
+			rc, err := f.Open()
+			if err != nil {
 				continue
 			}
-			if geo == nil {
-				geo = g
-			} else {
-				// 全追加（同名骨骼由 threejs.Build 去重，保留首次层级）
-				geo.Bones = append(geo.Bones, g.Bones...)
-				geo.BoneCount += g.BoneCount
-				geo.CubeCount += g.CubeCount
-				// 保留最大纹理尺寸（部分几何文件声明 32×32，实际纹理大得多）
-				if g.TexWidth > geo.TexWidth {
-					geo.TexWidth = g.TexWidth
-				}
-				if g.TexHeight > geo.TexHeight {
-					geo.TexHeight = g.TexHeight
-				}
-			}
+			buf, _ := io.ReadAll(rc)
+			rc.Close()
+			geoFiles = append(geoFiles, geoEntry{name: f.Name, data: buf})
 		}
 		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !f.FileInfo().IsDir() && !strings.Contains(low, "avatar/") {
 			rc, err := f.Open()
@@ -2069,6 +2086,44 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 			}
 		}
 	}
+
+	// 按 ysm.json 的 files.player.model 顺序排序 geometry JSON
+	if len(modelOrder) > 0 {
+		orderMap := make(map[string]int, len(modelOrder))
+		for i, p := range modelOrder {
+			orderMap[strings.ReplaceAll(p, "\\", "/")] = i
+		}
+		sort.SliceStable(geoFiles, func(i, j int) bool {
+			ai, oki := orderMap[geoFiles[i].name]
+			aj, okj := orderMap[geoFiles[j].name]
+			if oki && okj {
+				return ai < aj
+			}
+			return oki // 在顺序列表中的优先
+		})
+	}
+
+	// 排序后解析
+	for _, gf := range geoFiles {
+		g := parseBedrockGeometry(gf.data)
+		if g == nil || g.BoneCount == 0 {
+			continue
+		}
+		if geo == nil {
+			geo = g
+		} else {
+			geo.Bones = append(geo.Bones, g.Bones...)
+			geo.BoneCount += g.BoneCount
+			geo.CubeCount += g.CubeCount
+			if g.TexWidth > geo.TexWidth {
+				geo.TexWidth = g.TexWidth
+			}
+			if g.TexHeight > geo.TexHeight {
+				geo.TexHeight = g.TexHeight
+			}
+		}
+	}
+
 	// 默认纹理排到第一
 	if defaultTex != "" && len(pngs) > 1 {
 		for i, n := range pngNames {
@@ -2081,6 +2136,7 @@ func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte
 	}
 	return geo, pngs, animJSONs
 }
+
 
 func parseBedrockFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 	reader, err := sevenzip.NewReader(bytes.NewReader(data), size)

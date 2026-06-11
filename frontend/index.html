@@ -59,15 +59,15 @@
     <context-menu></context-menu>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
-        bus.emit("nav:change", { page: "instances" });
+        window.bus?.emit("nav:change", { page: "instances" });
 
         // 加载动画控制
         let loadingCount = 0;
-        bus.on("loading:start", () => {
+        window.bus?.on("loading:start", () => {
           loadingCount++;
           document.getElementById("global-loader").style.display = "block";
         });
-        bus.on("loading:end", () => {
+        window.bus?.on("loading:end", () => {
           loadingCount--;
           if (loadingCount <= 0) {
             loadingCount = 0;
@@ -76,7 +76,7 @@
         });
 
         setTimeout(() => {
-          bus.emit("toast:show", {
+          window.bus?.emit("toast:show", {
             msg: "✅ YSM 管理器 v1.0 预告版",
             duration: 3000,
             type: "success",

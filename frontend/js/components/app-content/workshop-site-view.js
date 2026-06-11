@@ -114,8 +114,8 @@ export function renderSiteView(site, ctx) {
       '<div class="cr-section">' +
         '<span class="cr-section-title-lg">✏️ 编辑创作者</span>' +
         '<span style="flex:1"></span>' +
-        '<button class="cr-view-btn cr-action-btn cr-action-btn-muted">✅ 完成</button>' +
-        '<button class="cr-save-btn cr-action-btn">💾 保存</button>' +
+        '<button class="cr-save-btn cr-action-btn cr-action-btn-accent">💾 保存</button>' +
+        '<button class="cr-cancel-btn cr-action-btn cr-action-btn-muted">取消</button>' +
         "</div>" +
         '<div class="cr-hint-text">📄 数据文件：exe 同目录下的 creators.json，可直接编辑</div>',
     );
@@ -262,7 +262,7 @@ export function renderSiteView(site, ctx) {
     refreshView();
   });
 
-  searchResults.querySelector(".cr-view-btn")?.addEventListener("click", () => {
+  searchResults.querySelector(".cr-cancel-btn")?.addEventListener("click", () => {
     wsEditModeRef.v = false;
     refreshView();
   });

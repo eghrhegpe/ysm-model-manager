@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"ysm-model-manager/go/types"
 )
@@ -101,6 +102,7 @@ main().catch(e=>{console.error(e);process.exit(1)});
 
 	// 执行
 	cmd := exec.Command(nodeJSPath, scriptPath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	cmd.Dir = tmpDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {

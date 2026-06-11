@@ -76,8 +76,8 @@ func Build(model types.BedrockModel) (string, error) {
 	}
 
 	var bones []BoneData
-	var meshes []MeshData
 	boneIdx := make(map[string]int) // name → index in bones[]
+	boneCubes := make(map[string][]types.Cube2D) // name → accumulated cubes
 
 	for _, b := range model.Bones {
 		bp := pivots[b.Name]
@@ -104,21 +104,21 @@ func Build(model types.BedrockModel) (string, error) {
 			parentID = &b.Parent
 		}
 
-		// 同名骨骼：保留第一次出现的层级信息，仅追加 cubes
+		// 同名骨骼：保留第一次出现的层级信息，cube 用 mergeCubes 合并（替换重叠、保留非重叠）
 		if idx, exists := boneIdx[b.Name]; exists {
 			// 去重规则：优先保留数据更完整的骨骼
-			// 1) 现有无 parent + 新有 parent → 补全层级/旋转
-			// 2) 两者都有 parent 但现有无旋转 + 新有旋转 → 更新旋转
 			existingHasParent := bones[idx].ParentID != nil
 			newHasParent := b.Parent != ""
-			existingHasRot := bones[idx].LocalRotation != [4]float64{0,0,0,1}
-			newHasRot := localRot != [4]float64{0,0,0,1}
+			existingHasRot := bones[idx].LocalRotation != [4]float64{0, 0, 0, 1}
+			newHasRot := localRot != [4]float64{0, 0, 0, 1}
 			if (!existingHasParent && newHasParent) ||
 				(existingHasParent && newHasParent && !existingHasRot && newHasRot) {
 				bones[idx].ParentID = &b.Parent
 				bones[idx].LocalPosition = localPos
 				bones[idx].LocalRotation = localRot
 			}
+			// cube 合并：替换空间重叠的 cube，保留不重叠的
+			boneCubes[b.Name] = mergeCubes(boneCubes[b.Name], b.Cubes)
 		} else {
 			boneIdx[b.Name] = len(bones)
 			bones = append(bones, BoneData{
@@ -128,15 +128,27 @@ func Build(model types.BedrockModel) (string, error) {
 				LocalPosition: localPos,
 				LocalRotation: localRot,
 			})
+			boneCubes[b.Name] = append([]types.Cube2D{}, b.Cubes...)
 		}
+	}
 
-		// 所有 cube 全部追加（同名骨骼的 cube 也纳入）
-		// 使用统一的 bone pivot（首次出现的 pivot），确保所有 cube 相对于同一根骨骼位置
+	// 第二遍：将合并后的 cube 转为 mesh 数据
+	var meshes []MeshData
+	for _, b := range model.Bones {
+		if _, exists := boneIdx[b.Name]; !exists {
+			continue // 同名骨骼已合并到第一次出现的条目中
+		}
+		// 只处理第一次出现的骨骼（同名骨骼已在 mergeCubes 中处理）
+		if boneIdx[b.Name] < 0 {
+			continue
+		}
+		boneIdx[b.Name] = -1 // 标记已处理
+
 		bonePivot, hasPivot := pivots[b.Name]
 		if !hasPivot {
 			bonePivot = vec3{-b.Pivot[0], b.Pivot[1], b.Pivot[2]}
 		}
-		for ci, c := range b.Cubes {
+		for ci, c := range boneCubes[b.Name] {
 			meshData := buildCubeMeshData(c, bonePivot, texW, texH, b.Name, ci)
 			if meshData != nil {
 				meshes = append(meshes, *meshData)
@@ -302,6 +314,54 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 		Uvs:           uvs,
 		Indices:       indices,
 	}
+}
+
+// ===== 同名骨骼 cube 合并 =====
+
+const cubeEpsilon = 0.001
+
+// mergeCubes 合并两组 cube：新 cube 中与旧 cube 空间重叠的替换之，不重叠的追加
+func mergeCubes(oldCubes, newCubes []types.Cube2D) []types.Cube2D {
+	result := make([]types.Cube2D, len(oldCubes))
+	copy(result, oldCubes)
+	matched := make([]bool, len(oldCubes)) // 标记旧 cube 是否已被替换
+
+	for _, nc := range newCubes {
+		found := -1
+		for i, oc := range oldCubes {
+			if !matched[i] && cubesOverlap(oc, nc) {
+				found = i
+				break
+			}
+		}
+		if found >= 0 {
+			result[found] = nc
+			matched[found] = true
+		} else {
+			result = append(result, nc)
+		}
+	}
+	return result
+}
+
+// cubesOverlap 判断两个 cube 是否在空间上重叠（origin + size + rotation 均相等）
+func cubesOverlap(a, b types.Cube2D) bool {
+	return floatEqual(a.Origin, b.Origin, cubeEpsilon) &&
+		floatEqual(a.Size, b.Size, cubeEpsilon) &&
+		floatEqual(a.Rotation, b.Rotation, cubeEpsilon)
+}
+
+func floatEqual(a, b [3]float64, eps float64) bool {
+	for i := 0; i < 3; i++ {
+		v := a[i] - b[i]
+		if v < 0 {
+			v = -v
+		}
+		if v > eps {
+			return false
+		}
+	}
+	return true
 }
 
 // ===== UV 解析 =====

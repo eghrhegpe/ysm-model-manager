@@ -2,6 +2,17 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GetModel3DSpec } from "../../wailsjs/go/main/App.js";
 
+// Go spec 缓存（避免重复调用 GetModel3DSpec）
+const specCache = new Map();
+const SPEC_CACHE_MAX = 20;
+function cacheSpec(path, data) {
+  if (specCache.size >= SPEC_CACHE_MAX) {
+    const firstKey = specCache.keys().next().value;
+    specCache.delete(firstKey);
+  }
+  specCache.set(path, data);
+}
+
 // 调试用：控制台可调 window.debugGetSpec(path) 获取骨骼数据
 window.debugGetSpec = async (path) => {
   try {
@@ -77,26 +88,94 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   // 从 Go 获取预计算的 Three.js Spec
   let spec = { models: [] };
   const forceJS = false;
-  // 多纹理模型 Go spec 没有 per-mesh 纹理索引，强制走 JS 兜底
-  const multiTex = model.textures?.length > 1 || false;
-  if (!forceJS && !multiTex) {
+  // 优先走 Go spec（基于 YSMViewer 算法，骨骼/网格数据准确）
+  if (model._modelPath) {
     try {
-      const jsonStr = await GetModel3DSpec(model._modelPath || "");
+      let jsonStr = specCache.get(model._modelPath);
+      if (!jsonStr) {
+        jsonStr = await GetModel3DSpec(model._modelPath);
+        cacheSpec(model._modelPath, jsonStr);
+      }
       const parsed = JSON.parse(jsonStr);
       if (parsed.models) spec = parsed;
     } catch (e) {
       console.warn("[3D] Fallback to JS geometry:", e);
     }
   }
+  
   if (!spec.models?.length && model.bones?.length) {
     spec = buildSpecFromModel(model);
   }
-  // 调试用：暴露最近一次 spec 到全局（在 JS 兜底之后）
-  // window.__last3DSpec = spec; // 调试用
+
+  // 合并同骨骼同纹理的 mesh：将多个小 mesh 的顶点烘焙到 bone 本地坐标后合并
+  for (const mg of spec.models || []) {
+    if (!mg.meshGroups?.length) continue;
+    // 按 (boneId, texIdx) 分组
+    const grouped = new Map();
+    for (const md of mg.meshGroups) {
+      const key = md.boneId + ":" + (md.texIdx ?? 0);
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(md);
+    }
+    const merged = [];
+    for (const [, g] of grouped) {
+      if (g.length === 1) { merged.push(g[0]); continue; }
+      // 合并多个 mesh：仅合并无旋转的 mesh（identity quaternion），有旋转的保留原样
+      let positions = [], normals = [], uvs = [], idx = [], idxOff = 0;
+      const standalone = [];
+      for (const md of g) {
+        const isIdentity = md.localRotation?.[3] === 1 &&
+          md.localRotation?.[0] === 0 &&
+          md.localRotation?.[1] === 0 &&
+          md.localRotation?.[2] === 0;
+        if (!isIdentity) { standalone.push(md); continue; }
+        // 将 localPosition 烘焙到顶点坐标中
+        const dx = md.localPosition?.[0] || 0;
+        const dy = md.localPosition?.[1] || 0;
+        const dz = md.localPosition?.[2] || 0;
+        for (let i = 0; i < (md.positions?.length || 0); i += 3) {
+          positions.push((md.positions[i] || 0) + dx);
+          positions.push((md.positions[i + 1] || 0) + dy);
+          positions.push((md.positions[i + 2] || 0) + dz);
+        }
+        if (md.normals) normals.push(...md.normals);
+        if (md.uvs) uvs.push(...md.uvs);
+        for (let i = 0; i < (md.indices?.length || 0); i++) {
+          idx.push((md.indices[i] || 0) + idxOff);
+        }
+        idxOff += (md.positions?.length || 0) / 3;
+      }
+      if (positions.length) {
+        merged.push({
+          id: g[0].boneId + "_merged",
+          boneId: g[0].boneId,
+          texIdx: g[0].texIdx,
+          localPosition: [0, 0, 0],
+          localRotation: [0, 0, 0, 1],
+          positions, normals, uvs, indices: idx,
+        });
+      }
+      merged.push(...standalone);
+    }
+    mg.meshGroups = merged;
+  }
+
   const rootGroup = new THREE.Group();
   rootGroup.name = "__root__";
-  // YSMViewer 使用 ExportScale = 1/16 缩放坐标，提高 Three.js 浮点精度
-  rootGroup.scale.set(1 / 16, 1 / 16, 1 / 16);
+  // 根据模型实际尺寸动态调整缩放
+  let meshMin = Infinity,
+    meshMax = -Infinity;
+  for (const mg of spec.models || []) {
+    for (const md of mg.meshGroups || []) {
+      for (let i = 0; i < (md.positions?.length || 0); i += 3) {
+        const v = Math.abs(md.positions[i]);
+        if (v > meshMax) meshMax = v;
+        if (v < meshMin) meshMin = v;
+      }
+    }
+  }
+  const modelScale = meshMax > 32 ? 1 / 16 : meshMax > 4 ? 1 / 4 : 1;
+  rootGroup.scale.set(modelScale, modelScale, modelScale);
   scene.add(rootGroup);
   const boneGroupMap = new Map();
   for (const mg of spec.models) {
@@ -142,12 +221,11 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
       }
     const centerY = (minY + maxY) / 2;
     const modelHeight = maxY - minY;
-    // 模型已 1/16 缩放，相机距离相应调整
-    const scale = 1 / 16;
-    const camDist = Math.max(modelHeight * 1.5 * scale, 60 * scale);
-    camera.position.set(camDist * 0.4, centerY * scale, -camDist * 0.8);
-    camera.lookAt(0, centerY * scale, 0);
-    controls.target.set(0, centerY * scale, 0);
+    // 模型缩放后的相机距离
+    const camDist = Math.max(modelHeight * 1.5 * modelScale, 60 * modelScale);
+    camera.position.set(camDist * 0.4, centerY * modelScale, -camDist * 0.8);
+    camera.lookAt(0, centerY * modelScale, 0);
+    controls.target.set(0, centerY * modelScale, 0);
     controls.update();
     for (const md of mg.meshGroups || []) {
       const boneGroup = boneGroupMap.get(md.boneId);
@@ -253,6 +331,7 @@ function buildSpecFromModel(model) {
   const bones = [];
   const meshes = [];
   const boneIdx = {};
+  const boneCubes = {}; // name → cube[] after merge
   // 收集 bone pivots（同名骨骼优先保留有 parent 的 pivot，与 Go spec.go 一致）
   const firstPivot = {};
   for (const b of model.bones || []) {
@@ -307,38 +386,32 @@ function buildSpecFromModel(model) {
       boneIdx[b.name] = bones.length;
       bones.push(entry);
     }
-    // cubes：同名骨骼时后出现的替换先出现的，避免两个 arm.json 都贡献方导致双倍手臂
-    // 第一次出现时添加 cubes，后续出现时先移除该骨骼之前的 cubes 再添加新 cubes
+    // cubes：同名骨骼时合并（替换重叠 cube，保留非重叠 cube）
     if (!isDuplicate) {
-      // 首次出现：正常添加 cubes
-      const fp = firstPivot[b.name] || bp;
-      const bTexW = b._texWidth || texW;
-      const bTexH = b._texHeight || texH;
-      for (let ci = 0; ci < (b.cubes || []).length; ci++) {
-        const c = b.cubes[ci];
-        const md = buildCubeMeshDataJS(c, fp, bTexW, bTexH, b.name, ci);
-        if (md) {
-          md.texIdx = (c.texSlot > 0 ? c.texSlot : b._texIdx) ?? 0;
-          meshes.push(md);
-        }
-      }
+      // 首次出现：保存 cube 到 per-bone 列表
+      boneCubes[b.name] = (b.cubes || []).map((c) => ({ ...c }));
     } else {
-      // 后续出现：移除该骨骼旧的 cubes，再添加新的（即 arm.json 替换 main.json 的手臂）
-      const prevLen = meshes.length;
-      const keep = meshes.filter((m) => m.boneId !== b.name);
-      const removed = prevLen - keep.length;
-      meshes.length = 0;
-      meshes.push(...keep);
-      const fp = firstPivot[b.name] || bp;
-      const bTexW = b._texWidth || texW;
-      const bTexH = b._texHeight || texH;
-      for (let ci = 0; ci < (b.cubes || []).length; ci++) {
-        const c = b.cubes[ci];
-        const md = buildCubeMeshDataJS(c, fp, bTexW, bTexH, b.name, ci);
-        if (md) {
-          md.texIdx = c.texSlot ?? b._texIdx ?? 0;
-          meshes.push(md);
-        }
+      // 后续出现：合并 cube
+      const existing = boneCubes[b.name] || [];
+      const merged = mergeCubesJS(existing, b.cubes || []);
+      boneCubes[b.name] = merged;
+    }
+  }
+
+  // 第二遍：将合并后的 cube 转为 mesh
+  for (const b of model.bones || []) {
+    const entry = bones[boneIdx[b.name]];
+    if (!entry) continue;
+    const fp = firstPivot[b.name] || b.pivot || [0, 0, 0];
+    const bTexW = b._texWidth || texW;
+    const bTexH = b._texHeight || texH;
+    const cubes = boneCubes[b.name] || [];
+    for (let ci = 0; ci < cubes.length; ci++) {
+      const c = cubes[ci];
+      const md = buildCubeMeshDataJS(c, fp, bTexW, bTexH, b.name, ci);
+      if (md) {
+        md.texIdx = (c.texSlot > 0 ? c.texSlot : b._texIdx) ?? 0;
+        meshes.push(md);
       }
     }
   }
@@ -389,6 +462,45 @@ function buildSpecFromModel(model) {
       },
     ],
   };
+}
+
+// ===== cube 合并（与 Go mergeCubes 一致） =====
+
+const CUBE_EPS = 0.001;
+
+function mergeCubesJS(oldCubes, newCubes) {
+  const result = oldCubes.map((c) => ({ ...c }));
+  const matched = new Array(oldCubes.length).fill(false);
+  for (const nc of newCubes) {
+    let found = -1;
+    for (let i = 0; i < oldCubes.length; i++) {
+      if (!matched[i] && cubesOverlapJS(oldCubes[i], nc)) {
+        found = i;
+        break;
+      }
+    }
+    if (found >= 0) {
+      result[found] = { ...nc };
+      matched[found] = true;
+    } else {
+      result.push({ ...nc });
+    }
+  }
+  return result;
+}
+
+function cubesOverlapJS(a, b) {
+  return floatEqualJS(a.origin, b.origin) &&
+    floatEqualJS(a.size, b.size) &&
+    floatEqualJS(a.rotation, b.rotation);
+}
+
+function floatEqualJS(a, b) {
+  if (!a || !b) return false;
+  for (let i = 0; i < 3; i++) {
+    if (Math.abs((a[i] || 0) - (b[i] || 0)) > CUBE_EPS) return false;
+  }
+  return true;
 }
 
 function buildCubeMeshDataJS(c, bonePivot, texW, texH, boneID, cubeIdx) {
@@ -502,7 +614,8 @@ function parseUVJS(c, sx, sy, sz, texW, texH) {
           (fv + fh) / texH,
         ];
       }
-      return faces;
+      const hasFaces = faces.some(Boolean);
+      return hasFaces ? faces : null;
     } catch {}
   }
   if (c.uv?.length >= 2) {

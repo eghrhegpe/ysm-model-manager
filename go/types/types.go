@@ -10,6 +10,12 @@ type WindowState struct {
 	Height int `json:"height"`
 }
 
+// AuthorInfo 作者信息（含模型计数）
+type AuthorInfo struct {
+	Name  string `json:"Name"`
+	Count int    `json:"Count"`
+}
+
 // ModelEntry 模型文件条目
 type ModelEntry struct {
 	Name    string `json:"Name"`

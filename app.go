@@ -1319,14 +1319,13 @@ func (a *App) ScanCustomModels(dir string) []types.ModelEntry {
 	return a.ScanModelEntries(strings.TrimSpace(dir))
 }
 
-// ListModelAuthors 扫描仓库，提取所有唯一作者名
-func (a *App) ListModelAuthors() []string {
+// ListModelAuthors 扫描仓库，提取所有唯一作者名及其模型数量
+func (a *App) ListModelAuthors() []types.AuthorInfo {
 	if a.RepoRoot == "" {
 		return nil
 	}
 	entries := a.ScanModelEntries(a.RepoRoot)
-	seen := map[string]bool{}
-	var result []string
+	counts := map[string]int{}
 	for _, e := range entries {
 		name := e.Name
 		// 移除 .ban 后缀
@@ -1337,12 +1336,15 @@ func (a *App) ListModelAuthors() []string {
 		if strings.HasPrefix(name, "[") {
 			if idx := strings.Index(name, "]"); idx > 0 {
 				author := name[1:idx]
-				if author != "" && !seen[author] {
-					seen[author] = true
-					result = append(result, author)
+				if author != "" {
+					counts[author]++
 				}
 			}
 		}
+	}
+	var result []types.AuthorInfo
+	for name, count := range counts {
+		result = append(result, types.AuthorInfo{Name: name, Count: count})
 	}
 	return result
 }

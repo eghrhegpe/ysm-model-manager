@@ -43,6 +43,20 @@ export namespace types {
 	        this.mirror = source["mirror"];
 	    }
 	}
+	export class AuthorInfo {
+	    Name: string;
+	    Count: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuthorInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Name = source["Name"];
+	        this.Count = source["Count"];
+	    }
+	}
 	export class Cube2D {
 	    origin: number[];
 	    size: number[];

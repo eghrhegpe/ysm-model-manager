@@ -303,7 +303,7 @@ export function workshopHTML() {
   <div class="cr-left" id="ws-left">
     <div style="padding:10px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:600">🎨 创作者频道</span>
-      <span style="flex:1"></span>
+      <button id="cr-mode-toggle" class="cr-toggle" style="margin-left:auto" title="切换点击站点后的打开方式">↗ 外链</button>
     </div>
     <div class="cr-grid" id="ws-grid">
       <div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>
@@ -346,16 +346,5 @@ export function workshopHTML() {
       <button class="btn accent" id="ws-open-fallback" style="font-size:11px">↗ 在系统浏览器中打开</button>
     </div>
   </div>
-  <!-- 二级菜单弹出层 -->
-  <div id="cr-popup" class="cr-popup" style="display:none">
-    <div class="cr-popup-item" data-action="browser">
-      <span class="cr-popup-icon">↗</span>
-      <div><div class="cr-popup-label">浏览器打开</div></div>
-    </div>
-    <div class="cr-popup-item" data-action="embed">
-      <span class="cr-popup-icon">🔍</span>
-      <div><div class="cr-popup-label">内嵌浏览</div></div>
-    </div>
-  </div>
-</div>`;
+`;
 }

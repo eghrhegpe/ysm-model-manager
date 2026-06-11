@@ -322,14 +322,15 @@ export function workshopHTML() {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-tab="creators">🎨 创作者频道</button>' +    '<button class="repo-tab" data-tab="bilibili">📺 B站</button>' +
-    '<button class="repo-tab" data-tab="afdian">❤️ 爱发电</button>' +    "</div>" +
+    '<button id="cr-mode-toggle" class="cr-toggle" style="font-size:9px;padding:2px 8px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;white-space:nowrap;margin-right:4px" title="切换点击站点后的打开方式">↗ 外链</button>' +
+    '<button class="repo-tab active" data-tab="bilibili">📺 B站</button>' +
+    '<button class="repo-tab" data-tab="afdian">❤️ 爱发电</button>' +
+    "</div>" +
     '<div class="repo-tab-body" id="cr-tab-creators">' +
     '<div class="cr-page" id="ws-page">' +
     '<div class="cr-left" id="ws-left">' +
     '<div style="padding:4px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
     '<span style="font-size:11px;font-weight:600;color:var(--muted)">站点</span>' +
-    '<button id="cr-mode-toggle" class="cr-toggle" style="margin-left:auto" title="切换点击站点后的打开方式">↗ 外链</button>' +
     "</div>" +
     '<div class="cr-grid" id="ws-grid">' +
     '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>' +

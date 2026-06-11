@@ -347,14 +347,14 @@ export function workshopHTML() {
     </div>
   </div>
   <!-- 二级菜单弹出层 -->
-  <div id="ws-popup" class="ws-popup" style="display:none">
-    <div class="ws-popup-item" data-action="browser">
-      <span class="ws-popup-icon">↗</span>
-      <div><div class="ws-popup-label">浏览器打开</div></div>
+  <div id="cr-popup" class="cr-popup" style="display:none">
+    <div class="cr-popup-item" data-action="browser">
+      <span class="cr-popup-icon">↗</span>
+      <div><div class="cr-popup-label">浏览器打开</div></div>
     </div>
-    <div class="ws-popup-item" data-action="embed">
-      <span class="ws-popup-icon">🔍</span>
-      <div><div class="ws-popup-label">内嵌浏览</div></div>
+    <div class="cr-popup-item" data-action="embed">
+      <span class="cr-popup-icon">🔍</span>
+      <div><div class="cr-popup-label">内嵌浏览</div></div>
     </div>
   </div>
 </div>`;

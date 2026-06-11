@@ -24,6 +24,7 @@ export function renderSiteView(site, ctx) {
     creatorView,
     allCreators,
     allSites,
+    repoAuthors,
     wsEditModeRef,
     showRepoModels,
     fillSearch,
@@ -38,6 +39,16 @@ export function renderSiteView(site, ctx) {
   const creators = allCreators.filter(
     (cr) => cr.type && cr.type.split(";").includes(site.id),
   );
+
+  // 作者模型计数查找表
+  const authorCountMap = {};
+  if (repoAuthors) {
+    repoAuthors.forEach((a) => {
+      const name = typeof a === 'string' ? a : a.Name;
+      const count = typeof a === 'object' ? a.Count : 0;
+      authorCountMap[name] = count;
+    });
+  }
 
   // 构建 HTML
   let parts = [];
@@ -85,13 +96,17 @@ export function renderSiteView(site, ctx) {
             const isGitHub = cr.type && cr.type.includes("github");
             const repoParts = isGitHub ? cr.name.split("/") : null;
             const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
+            const authorCount = authorCountMap[cr.name] || 0;
+            const avatarCls = authorCount >= 5 ? ' cr-avatar-gold' : authorCount >= 2 ? ' cr-avatar-silver' : '';
             return (
-              '<div class="gh-card" style="width:calc(25% - 5px);box-sizing:border-box;flex:none;cursor:pointer" data-name="' +
+              '<div class="gh-card" style="min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer" data-name="' +
               esc(cr.name) +
               '" title="搜索: ' +
               esc(cr.name) +
               '">' +
-              '<div class="cr-avatar">' +
+              '<div class="cr-avatar' +
+              avatarCls +
+              '">' +
               (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") +
               '</div>' +
               '<div class="gh-card-body">' +
@@ -152,7 +167,7 @@ export function renderSiteView(site, ctx) {
         "</div>" +
         '<div class="cr-hint-text">📄 数据文件：exe 同目录下的 creators.json，可直接编辑</div>',
     );
-    creators.forEach((cr, idx) => {
+  creators.forEach((cr, idx) => {
       parts.push(
         '<div class="cr-row">' +
           "<span>🎨</span>" +

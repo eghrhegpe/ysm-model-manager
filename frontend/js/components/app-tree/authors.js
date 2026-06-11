@@ -2,7 +2,7 @@
 
 /**
  * 从 Go 端加载作者列表
- * @returns {Promise<string[]>}
+ * @returns {Promise<Array<{Name:string, Count:number}>>}
  */
 export async function loadAuthors() {
   try {
@@ -25,18 +25,20 @@ export function renderAuthorChips(chips, authors, srch) {
   chips.innerHTML = "";
   chips.style.display = "flex";
   authors.forEach((author) => {
+    const name = typeof author === 'string' ? author : author.Name;
+    const count = typeof author === 'object' ? author.Count : 0;
     const chip = document.createElement("button");
-    chip.textContent = "🎨 " + author;
+    chip.textContent = "🎨 " + name;
     chip.style.cssText =
       "padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px;transition:all .15s";
-    const isActive = srch?.value === "[" + author + "]";
+    const isActive = srch?.value === "[" + name + "]";
     if (isActive) {
       chip.style.borderColor = "var(--accent)";
       chip.style.color = "var(--accent)";
     }
     chip.addEventListener("click", () => {
       if (!srch) return;
-      srch.value = srch.value === "[" + author + "]" ? "" : "[" + author + "]";
+      srch.value = srch.value === "[" + name + "]" ? "" : "[" + name + "]";
       srch.dispatchEvent(new Event("input"));
     });
     chip.addEventListener("mouseenter", () => {

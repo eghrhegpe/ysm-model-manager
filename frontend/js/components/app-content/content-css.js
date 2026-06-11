@@ -274,7 +274,11 @@ export const contentCSS = `
 .gh-card .name { font-size:12px; font-weight:700; color:var(--txt); font-family:'STKaiti','KaiTi','楷体',serif; overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .gh-card .name + .meta { margin-top:1px; font-size:9px; color:var(--muted); }
 .cr-avatar { width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#8b7355;background:#ede4cf;border:2px solid #d4c5a9;transition:all .25s ease; }
-.gh-card:hover .cr-avatar { transform:rotate(-8deg) scale(1.05);border-color:var(--accent);box-shadow:0 0 8px rgba(139,69,19,.2); }
+.cr-avatar-gold { border-color:#d4a017;box-shadow:0 0 6px rgba(212,160,23,.3); }
+.cr-avatar-silver { border-color:#a8a8a8;box-shadow:0 0 4px rgba(168,168,168,.2); }
+.gh-card:hover .cr-avatar { transform:rotate(-8deg) scale(1.05); }
+.gh-card:hover .cr-avatar-gold { border-color:#f0c030;box-shadow:0 0 12px rgba(212,160,23,.4); }
+.gh-card:hover .cr-avatar-silver { border-color:#c0c0c0;box-shadow:0 0 8px rgba(168,168,168,.3); }
 .gh-card-icon { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
 .gh-card-body { flex:1; min-width:0; }
 .gh-card-label { font-size:11px; font-weight:600; color:var(--txt); }

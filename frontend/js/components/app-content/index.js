@@ -295,6 +295,7 @@ class AppContent extends HTMLElement {
     const creatorList = root.getElementById("ws-cr-list");
     const creatorTitle = root.getElementById("ws-cr-title");
     let currentSite = null;
+    let allSites = [];
     let allCreators = [];
     let repoAuthors = [];
     let wsEditMode = false; // 创意工坊创作者编辑模式（放在外面以持久化）
@@ -314,6 +315,7 @@ class AppContent extends HTMLElement {
     // B站/爱发电 tab 点击 → 在右侧显示对应站点的创作者（不打开网站）
     const showCreatorsBySite = async (siteType) => {
       const { sites, creators } = await loadWorkshopData();
+      allSites = sites;
       allCreators = creators;
       const site = sites.find((s) => s.id === siteType);
       if (!site) return;
@@ -430,6 +432,7 @@ class AppContent extends HTMLElement {
         esc: (s) => this._esc(s),
         searchResults,
         creatorView,
+        allSites,
         allCreators,
         wsEditModeRef,
         showRepoModels,

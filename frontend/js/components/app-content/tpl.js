@@ -50,9 +50,10 @@ export function instancesHTML() {
 export function settingsHTML() {
   return `<div class="repo-wrap">
 <div class="repo-tabs">
-<button class="repo-tab active" data-tab="settings">⚙️ 基础设置</button>
+<button class="repo-tab active" data-tab="basic">⚙️ 基础设置</button>
+<button class="repo-tab" data-tab="ui">⚙️ 界面与体验</button>
 </div>
-<div class="repo-tab-body">
+<div class="repo-tab-body" id="stg-tab-basic">
 <div class="stg-page">
 
 <div class="section-title stg-title">⚙️ 核心路径配置</div>
@@ -78,7 +79,7 @@ export function settingsHTML() {
   <div class="stg-hint" id="set-repo-empty-hint" style="display:none;color:var(--accent)">💡 请点击「选择目录」设置模型仓库路径，否则下载的模型将无法归类</div>
 </div>
 
-<div class="section-title stg-title stg-sub-title">⚙️ 存储策略</div>
+<div class="section-title stg-title stg-sub-title">🔗 存储策略</div>
 
 <div class="settings-group stg-group">
   <div class="setting-row">
@@ -100,7 +101,7 @@ export function settingsHTML() {
   <div id="lm-hint-symlink" class="stg-hint-hidden"><span class="stg-hint-warn">❌ 不推荐：YSM 加载符号链接文件时可能因启动器权限不足（PCL/HMCL 无管理员权限）导致文件被挂起无法禁用，需退出游戏后手动删除</span></div>
 </div>
 
-<div class="section-title stg-title stg-sub-title">⚙️ 网络与下载</div>
+<div class="section-title stg-title stg-sub-title">🌐 网络与下载</div>
 
 <div class="settings-group" style="margin-bottom:12px">
   <div class="setting-row">
@@ -114,7 +115,41 @@ export function settingsHTML() {
   <div class="stg-hint">选择优先使用的下载源，失败自动回退到其他源</div>
 </div>
 
-<div class="section-title stg-title stg-sub-title">⚙️ 界面与体验</div>
+<div class="section-title stg-title stg-sub-title">ℹ️ 关于</div>
+
+<div class="settings-group" style="margin-bottom:12px">
+  <div class="setting-row">
+    <span class="label">📦 当前版本</span>
+    <span id="set-version" style="font-size:var(--fs-sm);color:var(--muted)">加载中...</span>
+    <button class="btn stg-btn" id="set-check-update">🔄 检查更新</button>
+    <button class="btn" id="set-releases" style="font-size:var(--fs-xs);margin-left:4px" title="打开 GitHub Releases">📋 发布页</button>
+  </div>
+  <div style="font-size:var(--fs-xs);color:var(--muted);padding:4px 12px 0;line-height:1.6">
+    <div>🛠️ <b>YSM 模型管理器</b> — 类似 Mod Organizer 2 的 Minecraft YSM 模型管理工具</div>
+    <div>🧱 <b>技术栈</b>: Go (Wails v2) + 原生 HTML/CSS/JS (Web Components + Shadow DOM)</div>
+    <div>📦 <b>GitHub</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
+    <div>📋 <b>发布</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/releases" target="_blank" style="color:var(--accent)">查看所有版本</a></div>
+    <div>📖 <b>文档</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/tree/main/docs" target="_blank" style="color:var(--accent)">docs/</a></div>
+    <div style="margin-top:6px;border-top:1px solid var(--bd);padding-top:4px">
+      <div style="font-size:var(--fs-xs);color:var(--muted)">🎯 <b>灵感来源</b></div>
+      <div style="font-size:var(--fs-xs);color:var(--muted);line-height:1.7">
+        <div>⬇️ 下载与更新：<a href="https://github.com/LaoYutang/lytvpk" target="_blank" style="color:var(--accent)">LaoYutang/lytvpk</a> L4D2 MOD 管理器</div>
+        <div>🎨 3D 渲染：<a href="https://github.com/DrAbcOfficial/YSMViewer" target="_blank" style="color:var(--accent)">DrAbcOfficial/YSMViewer</a> YSM 模型查看器</div>
+        <div>🔐 解析器：YSMParser.Core</div>
+        <div>📦 仓库、硬链接：Mod Organizer 2</div>
+      </div>
+    </div>
+    <div style="margin-top:4px;font-size:7px;color:var(--muted)">📄 配置文件：exe 同目录下的 ysm_config.json，可直接编辑</div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<div class="repo-tab-body" id="stg-tab-ui" style="display:none">
+<div class="stg-page">
+
+<div class="section-title stg-title">🌙 主题与外观</div>
 
 <div class="settings-group" style="margin-bottom:12px">
   <div class="setting-row">
@@ -128,32 +163,64 @@ export function settingsHTML() {
   </div>
 </div>
 
-<div class="section-title stg-title stg-sub-title">ℹ️ 关于</div>
+<div class="section-title stg-title stg-sub-title">📐 字体与布局</div>
 
 <div class="settings-group" style="margin-bottom:12px">
   <div class="setting-row">
-    <span class="label">📦 当前版本</span>
-    <span id="set-version" style="font-size:11px;color:var(--muted)">加载中...</span>
-    <button class="btn stg-btn" id="set-check-update">🔄 检查更新</button>
-    <button class="btn" id="set-releases" style="font-size:10px;margin-left:4px" title="打开 GitHub Releases">📋 发布页</button>
+    <span class="label">📏 基准字号</span>
+    <select id="set-font-size" class="stg-select">
+      <option value="small">🔹 小（9px 基准）</option>
+      <option value="normal" selected>🔸 标准（11px 基准）</option>
+      <option value="large">🔺 大（13px 基准）</option>
+    </select>
   </div>
-  <div style="font-size:9px;color:var(--muted);padding:4px 12px 0;line-height:1.6">
-    <div>🛠️ <b>YSM 模型管理器</b> — 类似 Mod Organizer 2 的 Minecraft YSM 模型管理工具</div>
-    <div>🧱 <b>技术栈</b>: Go (Wails v2) + 原生 HTML/CSS/JS (Web Components + Shadow DOM)</div>
-    <div>📦 <b>GitHub</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
-    <div>📋 <b>发布</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/releases" target="_blank" style="color:var(--accent)">查看所有版本</a></div>
-    <div>📖 <b>文档</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/tree/main/docs" target="_blank" style="color:var(--accent)">docs/</a></div>
-    <div style="margin-top:6px;border-top:1px solid var(--bd);padding-top:4px">
-      <div style="font-size:9px;color:var(--muted)">🎯 <b>灵感来源</b></div>
-      <div style="font-size:9px;color:var(--muted);line-height:1.7">
-        <div>⬇️ 下载与更新：<a href="https://github.com/LaoYutang/lytvpk" target="_blank" style="color:var(--accent)">LaoYutang/lytvpk</a> L4D2 MOD 管理器</div>
-        <div>🎨 3D 渲染：<a href="https://github.com/DrAbcOfficial/YSMViewer" target="_blank" style="color:var(--accent)">DrAbcOfficial/YSMViewer</a> YSM 模型查看器</div>
-        <div>🔐 解析器：YSMParser.Core</div>
-        <div>📦 仓库、硬链接：Mod Organizer 2</div>
-      </div>
-    </div>
-    <div style="margin-top:4px;font-size:8px;color:var(--muted)">📄 配置文件：exe 同目录下的 ysm_config.json，可直接编辑</div>
+  <div class="stg-hint">调整整体界面文字大小。选择后立即生效。</div>
+</div>
+
+<div class="settings-group" style="margin-bottom:12px">
+  <div class="setting-row">
+    <span class="label">🃏 创作者名字字体</span>
+    <select id="set-display-font" class="stg-select">
+      <option value="kaiti" selected>🖌️ 楷体（默认）</option>
+      <option value="system">📝 系统字体</option>
+    </select>
   </div>
+  <div class="stg-hint">创作者卡片名字使用的艺术字体。</div>
+</div>
+
+<div class="settings-group" style="margin-bottom:12px">
+  <div class="setting-row">
+    <span class="label">💳 卡片密度</span>
+    <select id="set-card-density" class="stg-select">
+      <option value="compact" selected>📦 紧凑（信息密集）</option>
+      <option value="normal">📦 标准（间距舒适）</option>
+    </select>
+  </div>
+  <div class="stg-hint">调整创作者卡片和各列表的间距密度。</div>
+</div>
+
+<div class="section-title stg-title stg-sub-title">⚡ 行为与动画</div>
+
+<div class="settings-group" style="margin-bottom:12px">
+  <div class="setting-row">
+    <span class="label">✨ 动画效果</span>
+    <label class="stg-label" style="gap:8px">
+      <input type="checkbox" id="set-animations" checked> 启用过渡动画
+    </label>
+  </div>
+  <div class="stg-hint">关闭后所有 hover/过渡动画将被禁用，适合低配设备。</div>
+</div>
+
+<div class="settings-group" style="margin-bottom:12px">
+  <div class="setting-row">
+    <span class="label">🏠 启动默认页面</span>
+    <select id="set-default-page" class="stg-select">
+      <option value="instances">🎮 整合包管理</option>
+      <option value="workshop">🎨 创作者频道</option>
+      <option value="repository">📦 模型仓库</option>
+    </select>
+  </div>
+  <div class="stg-hint">启动程序时自动打开的页面。</div>
 </div>
 
 </div>
@@ -325,7 +392,7 @@ export function workshopHTML() {
     '<button id="cr-mode-toggle" class="cr-mode-switch">' +
     '<span class="cr-mode-opt cr-mode-ext active">↗ 外链</span>' +
     '<span class="cr-mode-opt cr-mode-emb">🔍 内嵌</span>' +
-    '</button>' +
+    "</button>" +
     '<button class="repo-tab active" data-tab="bilibili">📺 B站</button>' +
     '<button class="repo-tab" data-tab="afdian">❤️ 爱发电</button>' +
     "</div>" +

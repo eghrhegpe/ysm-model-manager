@@ -1,6 +1,8 @@
-// 已迁移至 features/workshop/events.js
-export { bindRepoEvents } from "../../features/workshop/events.js";
-
+// ===== 创意工坊事件绑定（为 showRepoModels 减负） =====
+import { bus } from "../../bus.js";
+import { modalConfirm } from "../../dialogs/modal.js";
+import { renderDisplayName } from "../../utils/display.js";
+import { renderModelList, isModelMissing } from "./render.js";
 
 /**
  * 绑定仓库模型页面的所有事件。

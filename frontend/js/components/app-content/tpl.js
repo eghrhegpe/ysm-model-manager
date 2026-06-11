@@ -48,7 +48,12 @@ export function instancesHTML() {
 }
 
 export function settingsHTML() {
-  return `<div class="stg-page">
+  return `<div class="repo-wrap">
+<div class="repo-tabs">
+<button class="repo-tab active" data-tab="settings">⚙️ 基础设置</button>
+</div>
+<div class="repo-tab-body">
+<div class="stg-page">
 
 <div class="section-title stg-title">⚙️ 核心路径配置</div>
 
@@ -151,6 +156,8 @@ export function settingsHTML() {
   </div>
 </div>
 
+</div>
+</div>
 </div>`;
 }
 
@@ -209,7 +216,12 @@ export function downloadsHTML() {
 }
 
 export function diagnosticsHTML() {
-  return `<div class="diag-wrapper">
+  return `<div class="repo-wrap">
+<div class="repo-tabs">
+<button class="repo-tab active" data-tab="diagnostics">🛠️ 诊断与冲突</button>
+</div>
+<div class="repo-tab-body">
+<div class="diag-wrapper">
 <div class="diag-left">
 <button class="diag-btn active" data-diag="log">
 <span class="diag-btn-icon">📋</span>
@@ -255,6 +267,8 @@ export function diagnosticsHTML() {
 <button class="hdr-btn" id="diag-oldest-refresh">🔄</button>
 </div>
 <div id="diag-oldest-list"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">点击「🔄」刷新</div></div>
+</div>
+</div>
 </div>
 </div>
 </div>`;

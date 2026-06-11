@@ -3,3 +3,28 @@ title: YSM 模型管理器
 description: Minecraft YSM 模型的一站式管理工具 — 仓库管理、整合包同步、3D 预览
 theme: jekyll-theme-cayman
 show_downloads: false
+
+# 排除非公开文档（内部开发文档，含 Liquid 语法，不应作为 Web 页面发布）
+exclude:
+  # 内部文档（含 Liquid 语法，不应发布为 Web 页面）
+  - download-mirror-arch.md
+  - arch-changelog.md
+  - architecture.md
+  - bug-chronicle.md
+  - pending-cleanup.md
+  - plan-p7-multi-resource.md
+  - test-strategy.md
+  - ui-architecture.md
+  - dev-notes2026-06-05.md
+  - Continue-2025-06-03.md
+  - Continue-2025-06-05.md
+  - postmortem-20250604.md
+  - postmortem-20250605.md
+  - postmortem-20250607.md
+  - postmortem-20250608.md
+  - postmortem-20250608-wasm.md
+  - postmortem-20250609.md
+  - postmortem-20250610.md
+  - postmortem-20250611.md
+  - 博丽灵梦ysm.json
+  - 各操作单价（估算）.txt

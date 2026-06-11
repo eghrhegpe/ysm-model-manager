@@ -1,6 +1,6 @@
 // ===== 创意工坊站点视图（为 _initWorkshop 减负） =====
 import { bus } from "../../bus.js";
-import { showProgress, tryFetchModels } from "./workshop-data.js";
+import { showProgress, tryFetchModels } from "../../features/workshop/data.js";
 
 /**
  * 渲染并绑定站点视图（预设搜索 + 创作者列表 + 浏览仓库 + 编辑模式）
@@ -38,16 +38,16 @@ export function renderSiteView(site, ctx) {
 
   // 构建 HTML
   let parts = [];
-  parts.push('<div class="ws-scroll">');
+  parts.push('<div class="cr-scroll">');
 
   // 预设搜索按钮
   if (site.presetSearches && site.presetSearches.length) {
     parts.push(
-      '<div class="ws-preset-area">' +
+      '<div class="cr-preset-area">' +
         site.presetSearches
           .map(
             (ps) =>
-              '<button class="ws-preset-btn" data-q="' +
+              '<button class="cr-preset-btn" data-q="' +
               esc(ps.label) +
               '">' +
               esc(ps.label) +
@@ -61,12 +61,12 @@ export function renderSiteView(site, ctx) {
   // 创作者列表
   if (!wsEditModeRef.v && creators.length) {
     parts.push(
-      '<div class="ws-section">' +
-        '<span class="ws-section-title-lg">🎨 活跃创作者</span>' +
-        '<span class="ws-section-sub">(' +
+      '<div class="cr-section">' +
+        '<span class="cr-section-title-lg">🎨 活跃创作者</span>' +
+        '<span class="cr-section-sub">(' +
         creators.length +
         ")</span>" +
-        '<button class="ws-cr-edit-btn ws-action-btn ws-action-btn-muted" style="margin-left:auto">✏️ 管理</button>' +
+        '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto">✏️ 管理</button>' +
         "</div>",
     );
     parts.push(
@@ -76,26 +76,26 @@ export function renderSiteView(site, ctx) {
           const repoParts = isGitHub ? cr.name.split("/") : null;
           const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
           return (
-            '<div class="ws-creator-card' +
-            (hasRepo ? ' ws-cr-has-repo"' : '"') +
+            '<div class="cr-creator-card' +
+            (hasRepo ? ' cr-has-repo"' : '"') +
             ' data-name="' +
             esc(cr.name) +
             '">' +
-            '<div class="ws-creator-icon">🎨</div>' +
-            '<div class="ws-creator-body">' +
-            '<div class="ws-creator-name">' +
+            '<div class="cr-creator-icon">🎨</div>' +
+            '<div class="cr-creator-body">' +
+            '<div class="cr-creator-name">' +
             esc(cr.name) +
             "</div>" +
-            '<div class="ws-creator-desc">' +
+            '<div class="cr-creator-desc">' +
             esc(cr.desc) +
             "</div>" +
             "</div>" +
             (hasRepo
-              ? '<button class="ws-browse-repo ws-action-btn ws-action-btn-accent" data-repo="' +
+              ? '<button class="cr-browse-repo cr-action-btn cr-action-btn-accent" data-repo="' +
                 esc(cr.name) +
                 '">📦 浏览</button>'
               : "") +
-            '<div class="ws-creator-action">↗</div>' +
+            '<div class="cr-creator-action">↗</div>' +
             "</div>"
           );
         })
@@ -103,42 +103,42 @@ export function renderSiteView(site, ctx) {
     );
   } else if (wsEditModeRef.v) {
     parts.push(
-      '<div class="ws-section">' +
-        '<span class="ws-section-title-lg">✏️ 编辑创作者</span>' +
+      '<div class="cr-section">' +
+        '<span class="cr-section-title-lg">✏️ 编辑创作者</span>' +
         '<span style="flex:1"></span>' +
-        '<button class="ws-cr-view-btn ws-action-btn ws-action-btn-muted">✅ 完成</button>' +
-        '<button class="ws-cr-save-btn ws-save-btn">💾 保存</button>' +
+        '<button class="cr-view-btn cr-action-btn cr-action-btn-muted">✅ 完成</button>' +
+        '<button class="cr-save-btn cr-action-btn">💾 保存</button>' +
         "</div>" +
-        '<div class="ws-hint-text">📄 数据文件：exe 同目录下的 creators.json，可直接编辑</div>',
+        '<div class="cr-hint-text">📄 数据文件：exe 同目录下的 creators.json，可直接编辑</div>',
     );
     creators.forEach((cr, idx) => {
       parts.push(
-        '<div class="ws-cr-row">' +
+        '<div class="cr-row">' +
           "<span>🎨</span>" +
           '<input data-idx="' +
           idx +
           '" data-fld="name" value="' +
           esc(cr.name) +
-          '" class="ws-cr-input ws-cr-input-name">' +
+          '" class="cr-input cr-input-name">' +
           '<input data-idx="' +
           idx +
           '" data-fld="desc" value="' +
           esc(cr.desc) +
-          '" class="ws-cr-input ws-cr-input-desc">' +
+          '" class="cr-input cr-input-desc">' +
           '<input data-idx="' +
           idx +
           '" data-fld="type" value="' +
           esc(cr.type) +
-          '" class="ws-cr-input-type" placeholder="bilibili">' +
+          '" class="cr-input-type" placeholder="bilibili">' +
           '<button data-idx="' +
           idx +
-          '" class="ws-cr-del">🗑️</button>' +
+          '" class="cr-del">🗑️</button>' +
           "</div>",
       );
     });
     parts.push(
-      '<div class="ws-cr-add-area">' +
-        '<button class="ws-cr-add">➕ 新增</button>' +
+      '<div class="cr-add-area">' +
+        '<button class="cr-add">➕ 新增</button>' +
         "</div>",
     );
   }
@@ -149,16 +149,16 @@ export function renderSiteView(site, ctx) {
 
   if (!site.presetSearches?.length && !creators.length && !wsEditModeRef.v) {
     html =
-      '<div class="ws-empty-site">此站点无可操作内容。<br>点击「浏览器打开」访问：<br><a href="' +
+      '<div class="cr-empty-site">此站点无可操作内容。<br>点击「浏览器打开」访问：<br><a href="' +
       esc(site.url) +
-      '" target="_blank" class="ws-site-link">';
-    esc(site.url) + "</a></div>";
+      '" target="_blank" class="cr-site-link">' +
+      esc(site.url) + "</a></div>";
   }
 
   searchResults.innerHTML = html;
 
   // 预设搜索按钮
-  searchResults.querySelectorAll(".ws-preset-btn").forEach((btn) => {
+  searchResults.querySelectorAll(".cr-preset-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (site.searchUrl) {
         window.open(fillSearch(site.searchUrl, btn.dataset.q), "_blank");
@@ -168,10 +168,10 @@ export function renderSiteView(site, ctx) {
 
   // 创作者卡片点击 → 用网站的 searchUrl + 名字搜索
   searchResults
-    .querySelectorAll(".ws-creator-card[data-name]")
+    .querySelectorAll(".cr-creator-card[data-name]")
     .forEach((card) => {
       card.addEventListener("click", (e) => {
-        if (e.target.closest(".ws-browse-repo")) return;
+        if (e.target.closest(".cr-browse-repo")) return;
         const name = card.dataset.name;
         if (site.searchUrl && name) {
           const url = site.searchUrl.replace(
@@ -186,7 +186,7 @@ export function renderSiteView(site, ctx) {
   // 📦 浏览 GitHub 仓库模型
   const refreshView = () => renderSiteView(site, ctx);
 
-  searchResults.querySelectorAll(".ws-browse-repo").forEach((btn) => {
+  searchResults.querySelectorAll(".cr-browse-repo").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const repo = btn.dataset.repo;
       btn.textContent = "⏳";
@@ -224,17 +224,17 @@ export function renderSiteView(site, ctx) {
         btn.style.color = "var(--muted)";
         btn.style.cursor = "default";
         searchResults.innerHTML =
-          '<div class="ws-error-page">' +
-          '<button class="ws-back-repo ws-back-btn" style="margin-bottom:12px">← 返回</button>' +
-          '<div class="ws-error-msg">' +
+          '<div class="cr-error-page">' +
+          '<button class="cr-back-repo cr-back-btn" style="margin-bottom:12px">← 返回</button>'
+          '<div class="cr-error-msg">' +
           (isTimeout
             ? "⏱️ 连接超时"
             : "❌ 无 index.json<br>" +
               "此仓库尚未建立创意工坊索引，请你使用浏览器下载。<br>" +
-              '<span class="ws-error-hint">（这个仓库需要有 index.json 文件，才能调用 API 下载文件）</span>') +
+              '<span class="cr-error-hint">（这个仓库需要有 index.json 文件，才能调用 API 下载文件）</span>') +
           "</div></div>";
         searchResults
-          .querySelector(".ws-back-repo")
+          .querySelector(".cr-back-repo")
           ?.addEventListener("click", backToSite);
         const msg = isTimeout
           ? "⏱️ " +
@@ -249,14 +249,14 @@ export function renderSiteView(site, ctx) {
 
   // ===== 创作者编辑模式 =====
   searchResults
-    .querySelector(".ws-cr-edit-btn")
+    .querySelector(".cr-edit-btn")
     ?.addEventListener("click", () => {
       wsEditModeRef.v = true;
       refreshView();
     });
 
   searchResults
-    .querySelector(".ws-cr-view-btn")
+    .querySelector(".cr-view-btn")
     ?.addEventListener("click", () => {
       wsEditModeRef.v = false;
       refreshView();
@@ -264,7 +264,7 @@ export function renderSiteView(site, ctx) {
 
   // 保存
   searchResults
-    .querySelector(".ws-cr-save-btn")
+    .querySelector(".cr-save-btn")
     ?.addEventListener("click", async () => {
       try {
         const { SaveWorkshopCreators } =
@@ -288,7 +288,7 @@ export function renderSiteView(site, ctx) {
 
   // 创作者导出
   searchResults
-    .querySelector(".ws-cr-export-btn")
+    .querySelector(".cr-export-btn")
     ?.addEventListener("click", async () => {
       try {
         const { SaveWorkshopCreators, ExportWorkshopCreatorsJSONFile } =
@@ -311,7 +311,7 @@ export function renderSiteView(site, ctx) {
 
   // 创作者导入
   searchResults
-    .querySelector(".ws-cr-import-btn")
+    .querySelector(".cr-import-btn")
     ?.addEventListener("click", async () => {
       try {
         const { LoadWorkshopCreators, SaveWorkshopCreators } =
@@ -339,7 +339,7 @@ export function renderSiteView(site, ctx) {
     });
 
   // 行内编辑
-  searchResults.querySelectorAll(".ws-cr-ed").forEach((inp) => {
+  searchResults.querySelectorAll(".cr-ed").forEach((inp) => {
     inp.addEventListener("focus", () => {
       inp.style.borderColor = "var(--bd)";
       inp.style.background = "var(--surf)";
@@ -355,7 +355,7 @@ export function renderSiteView(site, ctx) {
   });
 
   // 删除
-  searchResults.querySelectorAll(".ws-cr-del").forEach((btn) => {
+  searchResults.querySelectorAll(".cr-del").forEach((btn) => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.dataset.idx, 10);
       if (creators[idx]) {
@@ -367,7 +367,7 @@ export function renderSiteView(site, ctx) {
   });
 
   // 新增
-  searchResults.querySelector(".ws-cr-add")?.addEventListener("click", () => {
+  searchResults.querySelector(".cr-add")?.addEventListener("click", () => {
     creators.push({ name: "新作者", desc: "描述", type: site.id });
     allCreators.push(creators[creators.length - 1]);
     refreshView();

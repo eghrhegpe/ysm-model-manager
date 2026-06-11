@@ -16,7 +16,7 @@ export const treeCSS = `
 .repo-bar-btn:hover { background:var(--hover);color:var(--txt); }
 .srch-inp { flex:1;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;outline:none;min-width:0; }
 .sort-sel { padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;cursor:pointer; }
-.hdr-btn { padding:3px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:10px;font-family:inherit; }
+.hdr-btn { padding:3px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 .hdr-btn:hover { background:var(--hover); }
 .hdr-btn.accent { background:#7c83ff33;color:var(--accent);border-color:#7c83ff55; }
 .hdr-btn.accent:hover { background:#7c83ff55; }
@@ -28,12 +28,12 @@ export const treeCSS = `
 .dd-item:hover { background:var(--hover); }
 .batch-dropdown { position: relative; }
 .batch-menu { position: absolute; top: 100%; left: 0; z-index: 100; background: var(--card); border: 1px solid var(--bd); border-radius: 6px; padding: 3px; min-width: 120px; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
-.batch-item { display: block; width: 100%; text-align: left; padding: 4px 10px; border: none; border-radius: 4px; margin-bottom: 1px; font-size: 10px; color: var(--txt); cursor: pointer; background: transparent; font-family: inherit; }
+.batch-item { display: block; width: 100%; text-align: left; padding: 4px 10px; border: none; border-radius: 4px; margin-bottom: 1px; font-size: var(--fs-sm); color: var(--txt); cursor: pointer; background: transparent; font-family: inherit; }
 .batch-item:hover { background: #7c83ff33; color: var(--accent); }
 .srch-row { display: flex; align-items: center; gap: 6px; }
-.srch-inp { flex: 1; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: 11px; outline: none; font-family: inherit; }
+.srch-inp { flex: 1; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: var(--fs-base); outline: none; font-family: inherit; }
 .srch-inp::placeholder { color: var(--muted); }
-.sort-sel { padding: 5px 6px; border-radius: 5px; border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: 10px; outline: none; font-family: inherit; cursor: pointer; }
+.sort-sel { padding: 5px 6px; border-radius: 5px; border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: var(--fs-sm); outline: none; font-family: inherit; cursor: pointer; }
 .tag { font-size: 7px; background: #f9a82633; color: #f9a826; padding: 0 4px; border-radius: 3px; margin-left: 2px; }
 .list { flex: 1; overflow-y: auto; padding: 6px 8px; }
 .empty { text-align: center; padding: 40px 16px; font-size: 12px; color: var(--muted); line-height: 1.8; }

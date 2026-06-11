@@ -114,12 +114,19 @@ function renderNode(node, dirPath, search, sort, dirOpen) {
   return h;
 }
 
-export function renderTree(container, entries, search, sort, dirOpen) {
+export function renderTree(
+  container,
+  entries,
+  search,
+  sort,
+  dirOpen,
+  filterPaths,
+) {
   if (!entries.length) {
     container.innerHTML = emptyHTML("📁", "暂无模型文件");
     return;
   }
-  const root = buildTree(entries, sort, search);
+  const root = buildTree(entries, sort, search, filterPaths);
   const html = renderNode(root, "", search, sort, dirOpen);
   if (!html) {
     container.innerHTML = emptyHTML("🔍", "未找到匹配的文件");

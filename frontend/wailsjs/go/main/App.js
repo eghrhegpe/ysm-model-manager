@@ -150,6 +150,10 @@ export function GetModel3DSpec(arg1) {
   return window['go']['main']['App']['GetModel3DSpec'](arg1);
 }
 
+export function GetModelTexSizes(arg1) {
+  return window['go']['main']['App']['GetModelTexSizes'](arg1);
+}
+
 export function GetPackInfo(arg1) {
   return window['go']['main']['App']['GetPackInfo'](arg1);
 }

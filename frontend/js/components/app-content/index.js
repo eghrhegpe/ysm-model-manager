@@ -328,26 +328,31 @@ class AppContent extends HTMLElement {
       });
     }
 
-    // 卡片点击 → 直接打开（事件委托）
-    const openSite = (site) => {
+    // 卡片点击 → 正文执行主操作，右侧 ↗ 总是外链
+    const openSite = (site, external = false) => {
       if (!site) return;
-      if (embedMode) {
-        openEmbedded(site);
-      } else {
+      if (external || !embedMode) {
         window.open(site.url, "_blank");
+      } else {
+        openEmbedded(site);
       }
     };
     grid.addEventListener("click", (e) => {
+      const externalBtn = e.target.closest(".gh-card-external");
       const card = e.target.closest(".gh-card");
       if (!card) return;
-      grid.querySelectorAll(".gh-card").forEach((c) => c.classList.remove("active"));
-      card.classList.add("active");
+      // 如果点的是外链按钮，不更新选中状态和右侧视图
+      const isExternal = !!externalBtn;
+      if (!isExternal) {
+        grid.querySelectorAll(".gh-card").forEach((c) => c.classList.remove("active"));
+        card.classList.add("active");
+      }
       const idx = parseInt(card.dataset.index, 10);
       const sitesData = grid._wsSites;
       if (sitesData && sitesData[idx]) {
         currentSite = sitesData[idx];
-        showSiteView(currentSite);
-        openSite(currentSite);
+        if (!isExternal) showSiteView(currentSite);
+        openSite(currentSite, isExternal);
       }
     });
 

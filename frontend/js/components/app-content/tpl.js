@@ -322,7 +322,10 @@ export function workshopHTML() {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs">' +
-    '<button id="cr-mode-toggle" class="cr-toggle" style="font-size:9px;padding:2px 8px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;white-space:nowrap;margin-right:4px" title="切换点击站点后的打开方式">↗ 外链</button>' +
+    '<button id="cr-mode-toggle" class="cr-mode-switch">' +
+    '<span class="cr-mode-opt cr-mode-ext active">↗ 外链</span>' +
+    '<span class="cr-mode-opt cr-mode-emb">🔍 内嵌</span>' +
+    '</button>' +
     '<button class="repo-tab active" data-tab="bilibili">📺 B站</button>' +
     '<button class="repo-tab" data-tab="afdian">❤️ 爱发电</button>' +
     "</div>" +

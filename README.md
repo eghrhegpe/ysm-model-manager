@@ -6,6 +6,8 @@
 
 **平台支持**：✅ Windows (amd64) · ⚠️ macOS (实验性) · ❓ Linux (待验证)
 
+> 🌐 **产品主页**: [https://eghrhegpe.github.io/ysm-model-manager/](https://eghrhegpe.github.io/ysm-model-manager/) — 功能介绍、视频演示、截图展示
+
 ---
 
 ## ⚡ 快速开始

@@ -1,0 +1,5 @@
+# YSM 模型管理器 — GitHub Pages 配置
+title: YSM 模型管理器
+description: Minecraft YSM 模型的一站式管理工具 — 仓库管理、整合包同步、3D 预览
+theme: jekyll-theme-cayman
+show_downloads: false

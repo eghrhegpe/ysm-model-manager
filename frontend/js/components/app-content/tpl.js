@@ -169,9 +169,9 @@ export function settingsHTML() {
   <div class="setting-row">
     <span class="label">📏 基准字号</span>
     <select id="set-font-size" class="stg-select">
-      <option value="small">🔹 小（9px 基准）</option>
-      <option value="normal" selected>🔸 标准（11px 基准）</option>
-      <option value="large">🔺 大（13px 基准）</option>
+      <option value="small">🔹 小（11px 基准）</option>
+      <option value="normal" selected>🔸 标准（13px 基准）</option>
+      <option value="large">🔺 大（15px 基准）</option>
     </select>
   </div>
   <div class="stg-hint">调整整体界面文字大小。选择后立即生效。</div>

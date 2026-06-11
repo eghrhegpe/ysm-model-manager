@@ -70,36 +70,36 @@ export function renderSiteView(site, ctx) {
         "</div>",
     );
     parts.push(
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;width:100%">' +
       creators
         .map((cr) => {
           const isGitHub = cr.type && cr.type.includes("github");
           const repoParts = isGitHub ? cr.name.split("/") : null;
           const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
           return (
-            '<div class="cr-creator-card' +
-            (hasRepo ? ' cr-has-repo"' : '"') +
-            ' data-name="' +
+            '<div class="gh-card" style="width:calc(25% - 5px);box-sizing:border-box;flex:none" data-name="' +
             esc(cr.name) +
             '">' +
-            '<div class="cr-creator-icon">🎨</div>' +
-            '<div class="cr-creator-body">' +
-            '<div class="cr-creator-name">' +
+            '<div class="gh-card-icon">🎨</div>' +
+            '<div class="gh-card-body">' +
+            '<div class="gh-card-label">' +
             esc(cr.name) +
             "</div>" +
-            '<div class="cr-creator-desc">' +
+            '<div class="gh-card-desc">' +
             esc(cr.desc) +
             "</div>" +
             "</div>" +
             (hasRepo
-              ? '<button class="cr-browse-repo cr-action-btn cr-action-btn-accent" data-repo="' +
+              ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' +
                 esc(cr.name) +
-                '">📦 浏览</button>'
+                '">📦</button>'
               : "") +
-            '<div class="cr-creator-action">↗</div>' +
+            '<div class="gh-card-external">↗</div>' +
             "</div>"
           );
         })
-        .join(""),
+        .join("") +
+      "</div>",
     );
   } else if (wsEditModeRef.v) {
     parts.push(
@@ -169,10 +169,10 @@ export function renderSiteView(site, ctx) {
 
   // 创作者卡片点击 → 用网站的 searchUrl + 名字搜索
   searchResults
-    .querySelectorAll(".cr-creator-card[data-name]")
+    .querySelectorAll(".gh-card[data-name]")
     .forEach((card) => {
       card.addEventListener("click", (e) => {
-        if (e.target.closest(".cr-browse-repo")) return;
+        if (e.target.closest(".gh-card-external[data-repo]")) return;
         const name = card.dataset.name;
         if (site.searchUrl && name) {
           const url = site.searchUrl.replace(
@@ -187,7 +187,7 @@ export function renderSiteView(site, ctx) {
   // 📦 浏览 GitHub 仓库模型
   const refreshView = () => renderSiteView(site, ctx);
 
-  searchResults.querySelectorAll(".cr-browse-repo").forEach((btn) => {
+  searchResults.querySelectorAll(".gh-card-external[data-repo]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const repo = btn.dataset.repo;
       btn.textContent = "⏳";

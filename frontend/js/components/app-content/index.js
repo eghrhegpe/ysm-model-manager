@@ -310,9 +310,13 @@ class AppContent extends HTMLElement {
         const { sites, creators, authors } = await loadWorkshopData();
         allCreators = creators;
         repoAuthors = authors;
-        grid.innerHTML = renderCardsHTML(sites, (s) => this._esc(s));
-        grid._wsSites = sites;
-        sourceInfo.textContent = sites.length + " 站点 · JSON驱动";
+        // 过滤掉 B站和爱发电（它们已作为顶栏 tab）
+        const filteredSites = sites.filter(
+          (s) => s.id !== "bilibili" && s.id !== "afdian",
+        );
+        grid.innerHTML = renderCardsHTML(filteredSites, (s) => this._esc(s));
+        grid._wsSites = filteredSites;
+        sourceInfo.textContent = filteredSites.length + " 站点 · JSON驱动";
       } catch (e) {
         grid.innerHTML = '<div class="ws-loading-error">加载失败</div>';
       }
@@ -327,6 +331,17 @@ class AppContent extends HTMLElement {
         toggleBtn.textContent = embedMode ? "🔍 内嵌" : "↗ 外链";
       });
     }
+
+    // B站/爱发电 tab 点击 → 打开对应站点
+    const openTabSite = async (siteId) => {
+      const { sites } = await loadWorkshopData();
+      const site = sites.find((s) => s.id === siteId);
+      if (!site) return;
+      currentSite = site;
+      openSite(currentSite, false);
+    };
+    root.querySelector('[data-tab="bilibili"]')?.addEventListener("click", () => openTabSite("bilibili"));
+    root.querySelector('[data-tab="afdian"]')?.addEventListener("click", () => openTabSite("afdian"));
 
     // 卡片点击 → 正文切换右侧视图，右侧 ↗ 按开关打开
     const openSite = (site, external = false) => {
@@ -350,7 +365,9 @@ class AppContent extends HTMLElement {
         openSite(currentSite, false);
       } else {
         // 正文：切换右侧视图
-        grid.querySelectorAll(".gh-card").forEach((c) => c.classList.remove("active"));
+        grid
+          .querySelectorAll(".gh-card")
+          .forEach((c) => c.classList.remove("active"));
         card.classList.add("active");
         showSiteView(currentSite);
       }

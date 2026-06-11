@@ -14,6 +14,7 @@ import { showProgress, tryFetchModels } from "../../features/workshop/data.js";
  * @param {Function} ctx.showRepoModels - 显示仓库模型
  * @param {Function} ctx.fillSearch - 填充搜索模板 (tpl, q) => string
  * @param {Object} ctx.repoModelCache - 模型缓存 {}
+ * @param {Function} ctx.openUrl - 按开关模式打开 URL (url) => void
  * @param {Function} ctx.backToSite - 返回站点视图的回调
  */
 export function renderSiteView(site, ctx) {
@@ -26,6 +27,7 @@ export function renderSiteView(site, ctx) {
     showRepoModels,
     fillSearch,
     repoModelCache,
+    openUrl,
     backToSite,
   } = ctx;
 
@@ -77,10 +79,11 @@ export function renderSiteView(site, ctx) {
           const repoParts = isGitHub ? cr.name.split("/") : null;
           const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
           return (
-            '<div class="gh-card" style="width:calc(25% - 5px);box-sizing:border-box;flex:none" data-name="' +
+            '<div class="gh-card" style="width:calc(25% - 5px);box-sizing:border-box;flex:none;cursor:pointer" data-name="' +
+            esc(cr.name) +
+            '" title="搜索: ' +
             esc(cr.name) +
             '">' +
-            '<div class="gh-card-icon">🎨</div>' +
             '<div class="gh-card-body">' +
             '<div class="gh-card-label">' +
             esc(cr.name) +
@@ -94,7 +97,6 @@ export function renderSiteView(site, ctx) {
                 esc(cr.name) +
                 '">📦</button>'
               : "") +
-            '<div class="gh-card-external">↗</div>' +
             "</div>"
           );
         })
@@ -161,8 +163,8 @@ export function renderSiteView(site, ctx) {
   // 预设搜索按钮
   searchResults.querySelectorAll(".cr-preset-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (site.searchUrl) {
-        window.open(fillSearch(site.searchUrl, btn.dataset.q), "_blank");
+      if (site.searchUrl && openUrl) {
+        openUrl(fillSearch(site.searchUrl, btn.dataset.q));
       }
     });
   });
@@ -174,12 +176,12 @@ export function renderSiteView(site, ctx) {
       card.addEventListener("click", (e) => {
         if (e.target.closest(".gh-card-external[data-repo]")) return;
         const name = card.dataset.name;
-        if (site.searchUrl && name) {
+        if (site.searchUrl && name && openUrl) {
           const url = site.searchUrl.replace(
             /\{\{q\}\}/g,
             encodeURIComponent(name),
           );
-          window.open(url, "_blank");
+          openUrl(url);
         }
       });
     });

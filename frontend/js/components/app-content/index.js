@@ -448,6 +448,14 @@ class AppContent extends HTMLElement {
 
     // ===== 右栏：JSON驱动的站点视图 =====
     const showSiteView = (site) => {
+      const openUrl = (url) => {
+        if (embedMode) {
+          currentSite = { url };
+          openEmbedded(currentSite);
+        } else {
+          window.open(url, "_blank");
+        }
+      };
       renderSiteView(site, {
         esc: (s) => this._esc(s),
         searchResults,
@@ -457,6 +465,7 @@ class AppContent extends HTMLElement {
         showRepoModels,
         fillSearch,
         repoModelCache,
+        openUrl,
         backToSite: () => {
           if (currentSite) showSiteView(currentSite);
         },

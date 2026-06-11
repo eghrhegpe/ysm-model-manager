@@ -9,6 +9,7 @@
 3. **`docs/release-notes/`** — 最新版本的发版说明（看已有的改动）
 4. **`docs/bug-chronicle.md`** — 已知 Bug 和排查路径
 5. **`docs/pending-cleanup.md`** — 待清除清单（调试代码是否还在）
+6. **`docs/Design.md`** — 设计规范（CSS 变量、布局、字号、颜色规则）
 
 ## 第二条：确认当前状态
 

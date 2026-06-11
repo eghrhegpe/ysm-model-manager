@@ -10,7 +10,7 @@ import { renderDisplayName } from "../utils/display.js";
 export async function loadOldestModel(container, esc) {
   if (!container) return;
   container.innerHTML =
-    '<div style="padding:12px;color:#6c7086;font-size:11px">⏳ 扫描中...</div>';
+    '<div style="padding:12px;color:#6c7086;font-size:var(--fs-base)">⏳ 扫描中...</div>';
   try {
     const { LoadAppConfig, ScanModelEntries, OpenFolder } =
       await import("../../wailsjs/go/main/App.js");
@@ -18,14 +18,14 @@ export async function loadOldestModel(container, esc) {
     const repoRoot = cfg.repoRoot || "";
     if (!repoRoot) {
       container.innerHTML =
-        '<div style="padding:12px;color:#f38ba8;font-size:11px">请先设置仓库目录</div>';
+        '<div style="padding:12px;color:#f38ba8;font-size:var(--fs-base)">请先设置仓库目录</div>';
       return;
     }
 
     const entries = await ScanModelEntries(repoRoot);
     if (!entries || !entries.length) {
       container.innerHTML =
-        '<div style="padding:12px;color:#6c7086;font-size:11px">仓库为空</div>';
+        '<div style="padding:12px;color:#6c7086;font-size:var(--fs-base)">仓库为空</div>';
       return;
     }
 
@@ -99,7 +99,7 @@ export async function loadOldestModel(container, esc) {
             ": " +
             c +
             ' 个模型"></div>' +
-            '<span style="font-size:7px;color:var(--muted);line-height:1">' +
+            '<span style="font-size:var(--fs-tiny);color:var(--muted);line-height:1">' +
             monthLabel +
             "</span></div>"
           );
@@ -178,12 +178,12 @@ export async function loadOldestModel(container, esc) {
             '" title="点击查看详情: ' +
             esc(p.Name || "") +
             '">' +
-            '<div class="name" style="font-size:12px" title="' +
+            '<div class="name" style="font-size:var(--fs-md)" title="' +
             esc(p.Name || "") +
             '">' +
             renderDisplayName(p.Name) +
             "</div>" +
-            '<div class="meta" style="font-size:10px;margin-top:4px">' +
+            '<div class="meta" style="font-size:var(--fs-sm);margin-top:4px">' +
             "<span>📏 " +
             sizeStr +
             "</span>" +
@@ -193,7 +193,7 @@ export async function loadOldestModel(container, esc) {
         );
       }
       if (!picks.length)
-        return '<div style="color:var(--muted);font-size:11px">暂无推荐</div>';
+        return '<div style="color:var(--muted);font-size:var(--fs-base)">暂无推荐</div>';
       return (
         '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
         picks.join("") +
@@ -208,7 +208,7 @@ export async function loadOldestModel(container, esc) {
       '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
       // 健康度 — 紧凑徽章
       '<div style="display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:8px 14px;flex-shrink:0;align-self:flex-start">' +
-      '<div style="font-size:9px;color:var(--muted);white-space:nowrap">📊 健康度</div>' +
+      '<div style="font-size:var(--fs-xs);color:var(--muted);white-space:nowrap">📊 健康度</div>' +
       '<div class="health-ring" style="background:conic-gradient(' +
       healthColor +
       " " +
@@ -217,44 +217,44 @@ export async function loadOldestModel(container, esc) {
       score +
       '% 100%);width:28px;height:28px;border-radius:50%;flex-shrink:0">' +
       '<div class="health-ring-inner" style="position:relative;width:22px;height:22px;top:3px;left:3px;background:var(--surf);border-radius:50%;display:flex;align-items:center;justify-content:center">' +
-      '<span style="font-size:9px;font-weight:700;color:var(--txt)">' +
+      '<span style="font-size:var(--fs-xs);font-weight:700;color:var(--txt)">' +
       score +
       "</span></div></div>" +
       '<span class="health-tag ' +
       healthTagClass +
-      '" style="font-size:10px">' +
+      '" style="font-size:var(--fs-sm)">' +
       healthLabel +
       "</span>" +
       "</div>" +
       // 统计标签 — 紧凑徽章跟在健康度后面
       '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
-      '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:10px;color:var(--txt);background:var(--bg);white-space:nowrap">📦 ' +
+      '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:var(--fs-sm);color:var(--txt);background:var(--bg);white-space:nowrap">📦 ' +
       entries.length +
       "</span>" +
-      '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:10px;color:var(--txt);background:var(--bg);white-space:nowrap">📏 ' +
+      '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:var(--fs-sm);color:var(--txt);background:var(--bg);white-space:nowrap">📏 ' +
       fmtSize(totalSize) +
       "</span>" +
-      '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:10px;color:var(--txt);background:var(--bg);white-space:nowrap">⛔ ' +
+      '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:var(--fs-sm);color:var(--txt);background:var(--bg);white-space:nowrap">⛔ ' +
       banned +
       "</span>" +
-      '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:10px;color:var(--txt);background:var(--bg);white-space:nowrap">🔗 ' +
+      '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:var(--fs-sm);color:var(--txt);background:var(--bg);white-space:nowrap">🔗 ' +
       dupGroups +
       "</span>" +
       "</div>" +
       // 资历最深 — 占主要空间
       '<div style="flex:3;min-width:280px;background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:12px 14px">' +
-      '<div style="font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🏆 资历最深</div>' +
+      '<div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🏆 资历最深</div>' +
       '<div style="display:flex;justify-content:center">' +
       oldestHtml +
       "</div></div></div>" +
       // 热力图
       '<div style="background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:8px 12px">' +
-      '<div style="font-size:9px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">📅 月度活动</div>' +
+      '<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">📅 月度活动</div>' +
       heatmapHtml +
       "</div>" +
       // 今日推荐
       '<div style="text-align:center;background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:16px">' +
-      '<div style="font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🎲 今日推荐</div>' +
+      '<div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🎲 今日推荐</div>' +
       '<div style="display:flex;justify-content:center">' +
       renderPicks() +
       "</div></div></div>";
@@ -269,7 +269,7 @@ export async function loadOldestModel(container, esc) {
     });
   } catch (err) {
     container.innerHTML =
-      '<div style="padding:12px;color:#f38ba8;font-size:11px">❌ 加载失败: ' +
+      '<div style="padding:12px;color:#f38ba8;font-size:var(--fs-base)">❌ 加载失败: ' +
       esc(err.message || String(err)) +
       "</div>";
   }

@@ -328,18 +328,7 @@ export function workshopHTML() {
     "</div>" +
     '<div class="repo-tab-body" id="cr-tab-creators">' +
     '<div class="cr-page" id="ws-page">' +
-    '<div class="cr-left" id="ws-left">' +
-    '<div style="padding:4px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
-    '<span style="font-size:11px;font-weight:600;color:var(--muted)">站点</span>' +
-    "</div>" +
-    '<div class="cr-grid" id="ws-grid">' +
-    '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>' +
-    "</div>" +
-    '<div style="padding:4px 12px 8px;font-size:8px;color:var(--muted)">' +
-    '站点：<span id="ws-source-info">-</span>' +
-    "</div>" +
-    "</div>" +
-    '<div class="cr-right" id="ws-right">' +
+    '<div class="cr-right" style="width:100%;flex:1;display:flex;flex-direction:column;overflow:hidden" id="ws-right">' +
     '<div class="cr-right-inner" id="ws-right-inner">' +
     '<div id="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
     '<div id="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +

@@ -1,6 +1,9 @@
-// 已迁移至 features/workshop/data.js
-export { showProgress, tryFetchModels } from "../../features/workshop/data.js";
+// ===== 创意工坊数据加载（tryFetchModels + 进度条） =====
 
+/**
+ * 创建进度条 UI（插入到 searchResults 容器）
+ */
+export function showProgress(searchResults, pct, label) {
   searchResults.innerHTML =
     '<div class="ws-progress-box">' +
     '<div class="ws-progress-label">' +

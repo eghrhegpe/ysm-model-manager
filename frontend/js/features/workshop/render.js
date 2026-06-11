@@ -1,11 +1,10 @@
-// 已迁移至 features/workshop/render.js
-// 保留为重导出以确保向后兼容
-export {
-  isModelMissing,
-  countMissing,
-  renderModelList,
-} from "../../features/workshop/render.js";
+// ===== 创意工坊模型列表渲染（DOM API，非字符串拼接） =====
+import { renderDisplayName } from "../../utils/display.js";
 
+/**
+ * 判断模型是否缺失（本地不存在）
+ */
+export function isModelMissing(m, localMap) {
   if (!m) return true;
   return m.hash
     ? !(

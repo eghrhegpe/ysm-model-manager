@@ -168,14 +168,15 @@ func InstallUpdate(zipPath string) error {
 	defer r.Close()
 
 	var exeInZip *zip.File
+	targetExe := "YSM-Model-Manager.exe"
 	for _, f := range r.File {
-		if strings.HasSuffix(strings.ToLower(f.Name), ".exe") {
+		if strings.EqualFold(f.Name, targetExe) {
 			exeInZip = f
 			break
 		}
 	}
 	if exeInZip == nil {
-		return fmt.Errorf("zip 中未找到 .exe 文件")
+		return fmt.Errorf("zip 中未找到 %s", targetExe)
 	}
 
 	// 2. 解压到 exe.new

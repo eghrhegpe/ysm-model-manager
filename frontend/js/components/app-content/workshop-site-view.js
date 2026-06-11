@@ -127,6 +127,9 @@ export function renderSiteView(site, ctx) {
             '" data-fld="label" value="' +
             esc(ps.label) +
             '" class="cr-input cr-input-name">' +
+            '<button data-idx="' +
+            idx +
+            '" class="cr-del-preset">🗑️</button>' +
             "</div>",
         );
       });
@@ -403,13 +406,23 @@ export function renderSiteView(site, ctx) {
     });
   });
 
-  // 删除
+  // 删除创作者
   searchResults.querySelectorAll(".cr-del").forEach((btn) => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.dataset.idx, 10);
       if (creators[idx]) {
         const realIdx = allCreators.indexOf(creators[idx]);
         if (realIdx >= 0) allCreators.splice(realIdx, 1);
+        refreshView();
+      }
+    });
+  });
+  // 删除搜索词
+  searchResults.querySelectorAll(".cr-del-preset").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      if (site.presetSearches && site.presetSearches[idx]) {
+        site.presetSearches.splice(idx, 1);
         refreshView();
       }
     });

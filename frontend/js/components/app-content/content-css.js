@@ -289,12 +289,13 @@ export const contentCSS = `
 .gh-card.active { border-color:var(--accent); background:var(--accent); color:#fff; box-shadow:var(--card-shadow-hover, none); }
 .gh-card .name { font-size:var(--fs-md); font-weight:var(--fw-bold); color:var(--txt); font-family:var(--font-display); overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .gh-card .name + .meta { margin-top:1px; font-size:var(--fs-xs); color:var(--muted); }
-.cr-avatar { width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#8b7355;background:#ede4cf;border:2px solid #d4c5a9;transition:all .25s ease; }
-.cr-avatar-gold { border-color:#d4a017;box-shadow:0 0 6px rgba(212,160,23,.3); }
-.cr-avatar-silver { border-color:#a8a8a8;box-shadow:0 0 4px rgba(168,168,168,.2); }
+.cr-avatar { width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#8b7355;background:#ede4cf;transition:all .25s ease; }
+.cr-avatar-wrap { display:inline-flex;flex-shrink:0;border-radius:50%;padding:2px;transition:all .25s ease;animation:breathe 3s ease-in-out infinite;will-change:filter; }
+@keyframes breathe { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.18)} }
+@keyframes breathe-subtle { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.1)} }
+.health-ring { animation:breathe-subtle 4s ease-in-out infinite;will-change:filter; }
 .gh-card:hover .cr-avatar { transform:rotate(-8deg) scale(1.05); }
-.gh-card:hover .cr-avatar-gold { border-color:#f0c030;box-shadow:0 0 12px rgba(212,160,23,.4); }
-.gh-card:hover .cr-avatar-silver { border-color:#c0c0c0;box-shadow:0 0 8px rgba(168,168,168,.3); }
+.gh-card:hover .cr-avatar-wrap { transform:rotate(-4deg) scale(1.08); }
 .gh-card-icon { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
 .gh-card-body { flex:1; min-width:0; }
 .gh-card-label { font-size:var(--fs-base); font-weight:600; color:var(--txt); }
@@ -452,7 +453,7 @@ export const contentCSS = `
 .gh-cancel-btn { width:20px; height:20px; border-radius:50%; border:none; background:rgba(128,128,128,.15); color:var(--muted); cursor:pointer; font-size:var(--fs-base); flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:background .15s; }
 .gh-cancel-btn:hover { background:rgba(128,128,128,.3); }
 .gh-progress-bar-wrap { margin-top:3px; height:4px; border-radius:2px; background:var(--bd); overflow:hidden; }
-.gh-progress-fill { height:100%; width:0%; border-radius:2px; background:var(--accent); transition:width .2s; box-shadow:0 0 4px var(--accent); }
+.gh-progress-fill { height:100%; width:0%; border-radius:2px; background:var(--accent); transition:width .2s; box-shadow:0 0 4px var(--accent); animation:breathe-subtle 4s ease-in-out infinite;will-change:filter,box-shadow; }
 .gh-progress-box { padding:24px 12px; text-align:center; }
 .gh-progress-label { font-size:var(--fs-sm); color:var(--muted); margin-bottom:8px; }
 `;

@@ -29,7 +29,8 @@ class ContextMenu extends HTMLElement {
           position: fixed;
           z-index: 99999;
           display: none;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+          font-family: var(--font-ui);
+          font-size: var(--fs-base);
         }
         .menu {
           background: #2a2a42;

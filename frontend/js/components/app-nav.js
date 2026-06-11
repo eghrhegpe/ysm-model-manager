@@ -49,12 +49,13 @@ class AppNav extends HTMLElement {
           background: var(--bg);
           border-right: 1px solid var(--bd);
           width: 160px;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+          font-family: var(--font-ui);
+          font-size: var(--fs-base);
         }
         .logo {
           padding: 16px 14px 12px;
-          font-size: 14px;
-          font-weight: 600;
+          font-size: var(--fs-lg);
+          font-weight: var(--fw-semibold);
           color: var(--txt);
           display: flex;
           align-items: center;
@@ -69,7 +70,7 @@ class AppNav extends HTMLElement {
           gap: 8px;
           padding: 8px 10px;
           border-radius: 6px;
-          font-size: 13px;
+          font-size: var(--fs-md);
           color: var(--muted);
           cursor: pointer;
           transition: all .12s;
@@ -86,7 +87,7 @@ class AppNav extends HTMLElement {
         .version {
           padding: 10px 14px;
           border-top: 1px solid var(--bd);
-          font-size: 10px;
+          font-size: var(--fs-sm);
           color: var(--muted);
         }
       </style>

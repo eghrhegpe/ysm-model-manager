@@ -78,7 +78,18 @@ export const contentCSS = `
 /* 诊断页面：左栏按钮 + 右栏信息 */
 .hdr-btn { padding:4px 8px; border-radius:4px; border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:var(--fs-base); font-family:inherit; }
 .hdr-btn:hover { background:var(--hover); }
-.hdr-btn.accent { background:#7c83ff33; color:var(--accent); border-color:#7c83ff55; }
+/* accent 按钮颜色 —— 不用 var(--accent)，adoptedStyleSheets 不继承文档 CSS 变量 */
+.hdr-btn.accent { background:#7c83ff33; color:#66d9ef; border-color:#7c83ff55; }
+:host-context(.theme-warm) .hdr-btn.accent { color:#8b4513; }
+:host-context(.theme-pro) .hdr-btn.accent { color:#ffffff; }
+.btn { padding:4px 8px; border-radius:4px; border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:var(--fs-base); font-family:inherit; transition:background .12s; }
+.btn:hover { background:var(--hover); }
+.btn.accent { background:#7c83ff33; color:#66d9ef; border-color:#7c83ff55; }
+:host-context(.theme-warm) .btn.accent { color:#8b4513; }
+:host-context(.theme-pro) .btn.accent { color:#ffffff; }
+.btn.accent:hover { background:#7c83ff55; }
+.btn.danger { background:#e5534b22; color:#e5534b; border-color:#e5534b55; }
+.btn.danger:hover { background:#e5534b44; }
 .log-row { padding:3px 16px; display:flex; gap:6px; font-size:var(--fs-base); align-items:center; border-bottom:1px solid var(--bd); }
 .log-row .log-status { font-size:var(--fs-sm); width:20px; text-align:center; }
 .log-row .log-msg { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt); }
@@ -251,16 +262,21 @@ export const contentCSS = `
 .cr-edit-btn:hover { background:var(--hover);color:var(--txt); }
 .cr-toggle { font-size:var(--fs-xs);padding:2px 8px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .12s; }
 .cr-toggle:hover { background:var(--accent);color:var(--bg); }
-.cr-mode-switch { display:inline-flex;border:1px solid var(--bd);border-radius:6px;overflow:hidden;cursor:pointer;margin-right:4px;flex-shrink:0; }
-.cr-mode-opt { padding:2px 8px;font-size:var(--fs-xs);font-family:inherit;transition:all .12s;color:var(--muted);background:transparent; }
-.cr-mode-opt.active { color:var(--bg);background:var(--accent); }
+.cr-mode-switch { display:inline-flex;border:1px solid var(--bd);border-radius:6px 6px 0 0;border-bottom:none;overflow:hidden;cursor:pointer;margin-right:2px;flex-shrink:0;align-self:stretch; }
+.cr-mode-opt { padding:6px 8px;font-size:var(--fs-md);font-family:inherit;transition:all .12s;color:var(--muted);background:var(--bg);cursor:pointer;display:flex;align-items:center; }
+.cr-mode-opt:hover { color:var(--txt);background:var(--hover); }
+.cr-mode-opt.active { color:var(--accent);background:var(--surf);margin-bottom:-1px; }
 .cr-mode-opt:first-child { border-right:1px solid var(--bd); }
 .cr-browser-bar { display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--surf);border-bottom:1px solid var(--bd);flex-shrink:0; }
 .cr-back { padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-base);font-family:inherit; }
 .cr-back:hover { background:var(--hover); }
+.ws-back, .cr-back-btn, .cr-back-repo, .ws-btn, .ws-btn-txt,
+.ws-back-repo { padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-base);font-family:inherit; }
+.ws-back:hover, .cr-back-btn:hover, .cr-back-repo:hover, .ws-btn:hover, .ws-btn-txt:hover,
+.ws-back-repo:hover { background:var(--hover); }
 .cr-url { flex:1;font-size:var(--fs-sm);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-.cr-open-btn { padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
-.cr-open-btn:hover { background:var(--hover); }
+.ws-open-btn, .cr-open-btn { padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
+.ws-open-btn:hover, .cr-open-btn:hover { background:var(--hover); }
 
 /* ===== 创意工坊 GitHub (gh-) ===== */
 .gh-page { flex:1; display:flex; overflow:hidden; position:relative; }

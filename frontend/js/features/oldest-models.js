@@ -208,7 +208,7 @@ export async function loadOldestModel(container, esc) {
       '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
       // 健康度 — 紧凑徽章
       '<div style="display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:8px 14px;flex-shrink:0;align-self:flex-start">' +
-      '<div style="font-size:var(--fs-xs);color:var(--muted);white-space:nowrap">📊 健康度</div>' +
+      '<div style="font-size:var(--fs-sm);color:var(--muted);white-space:nowrap">📊 健康度</div>' +
       '<div class="health-ring" style="background:conic-gradient(' +
       healthColor +
       " " +
@@ -217,7 +217,7 @@ export async function loadOldestModel(container, esc) {
       score +
       '% 100%);width:28px;height:28px;border-radius:50%;flex-shrink:0">' +
       '<div class="health-ring-inner" style="position:relative;width:22px;height:22px;top:3px;left:3px;background:var(--surf);border-radius:50%;display:flex;align-items:center;justify-content:center">' +
-      '<span style="font-size:var(--fs-xs);font-weight:700;color:var(--txt)">' +
+      '<span style="font-size:var(--fs-sm);font-weight:700;color:var(--txt)">' +
       score +
       "</span></div></div>" +
       '<span class="health-tag ' +
@@ -243,18 +243,18 @@ export async function loadOldestModel(container, esc) {
       "</div>" +
       // 资历最深 — 占主要空间
       '<div style="flex:3;min-width:280px;background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:12px 14px">' +
-      '<div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🏆 资历最深</div>' +
+      '<div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🏆 资历最深</div>' +
       '<div style="display:flex;justify-content:center">' +
       oldestHtml +
       "</div></div></div>" +
       // 热力图
       '<div style="background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:8px 12px">' +
-      '<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">📅 月度活动</div>' +
+      '<div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">📅 月度活动</div>' +
       heatmapHtml +
       "</div>" +
       // 今日推荐
       '<div style="text-align:center;background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:16px">' +
-      '<div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🎲 今日推荐</div>' +
+      '<div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🎲 今日推荐</div>' +
       '<div style="display:flex;justify-content:center">' +
       renderPicks() +
       "</div></div></div>";

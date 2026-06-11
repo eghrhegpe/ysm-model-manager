@@ -49,7 +49,7 @@ export function vcHeaderHTML(
   const parts = [];
   const installBtn =
     missing > 0 && hasYSM
-      ? `<button class="tag red btn-install-missing btn-install" data-idx="${idx}">⬇️ 安装缺失 (${missing})</button>`
+      ? `<button class="tag red btn-install-missing btn-install" data-idx="${idx}">安装 (${missing})</button>`
       : "";
   const noYsmTag = !hasYSM
     ? `<span class="tag gray tag-no-ysm">🚫 无YSM</span>`

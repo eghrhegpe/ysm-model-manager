@@ -1,6 +1,5 @@
 // ===== 设置页初始化（为 _initSettings 减负） =====
 import { bus } from "../../bus.js";
-import { modalConfirm } from "../../dialogs/modal.js";
 import { initVersionUpdater } from "../../features/version-updater.js";
 
 /**
@@ -34,12 +33,6 @@ export async function initSettings(root) {
     if (repoHint) repoHint.style.display = repoPath ? "none" : "";
   }
 
-  // 链接模式
-  const lmRadio = root.querySelector(
-    `input[name="link-mode"][value="${linkMode}"]`,
-  );
-  if (lmRadio) lmRadio.checked = true;
-
   // 主题：先读 Go 配置，再回退 localStorage
   let savedTheme = cfg.theme || cfg.Theme || "";
   if (!savedTheme) savedTheme = localStorage.getItem("theme") || "system";
@@ -53,6 +46,12 @@ export async function initSettings(root) {
   const mirrorSelect = root.getElementById("set-mirror");
   if (mirrorSelect) {
     mirrorSelect.value = savedMirror;
+    // 初始化镜像源提示
+    const initMirrorKey = savedMirror || "direct";
+    ["direct", "jsdelivr", "githubapi"].forEach((m) => {
+      const el = root.getElementById("mirror-hint-" + m);
+      if (el) el.style.display = m === initMirrorKey ? "block" : "none";
+    });
     mirrorSelect.addEventListener("change", async () => {
       const val = mirrorSelect.value;
       const { SetDownloadMirror } =
@@ -68,6 +67,11 @@ export async function initSettings(root) {
               : "直连"),
         duration: 2000,
         type: "success",
+      });
+      // 切换镜像源提示
+      ["direct", "jsdelivr", "githubapi"].forEach((m) => {
+        const el = root.getElementById("mirror-hint-" + m);
+        if (el) el.style.display = m === (val || "direct") ? "block" : "none";
       });
     });
   }
@@ -161,58 +165,62 @@ export async function initSettings(root) {
   };
   updateLinkHint(linkMode);
 
-  // 链接模式变更
-  root.querySelectorAll('input[name="link-mode"]').forEach((radio) => {
-    radio.addEventListener("change", async () => {
-      if (!radio.checked) return;
-      updateLinkHint(radio.value);
-      const theme = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(repoPath, mcPath, radio.value, theme);
-      await SetLinkMode(radio.value);
+  // 链接模式变更（下拉菜单）+ 重新应用按钮
+  const doRelink = async () => {
+    try {
+      const { LoadAppConfig, ListVersionInstances, RelinkCustomDir } =
+        await import("../../../wailsjs/go/main/App.js");
+      const cfg = await LoadAppConfig();
+      const mcRoot = cfg.mcRoot || "";
+      const rRoot = cfg.repoRoot || "";
+      if (!mcRoot || !rRoot) return;
+      const instances = await ListVersionInstances(mcRoot);
+      let total = 0;
+      for (const ins of instances) {
+        if (!ins.Exists) continue;
+        try {
+          const n = await RelinkCustomDir(ins.CustomDir, rRoot);
+          total += n;
+        } catch {}
+      }
+      bus.emit("stats:refresh");
       bus.emit("toast:show", {
-        msg: `✅ 链接模式已切换至: ${radio.value}`,
+        msg: `🔄 已重新链接 ${total} 个文件`,
+        duration: 3000,
+        type: "success",
+      });
+    } catch (e) {
+      bus.emit("toast:show", {
+        msg: `❌ 重新链接失败: ${String(e)}`,
+        duration: 5000,
+        type: "error",
+      });
+    }
+  };
+
+  const linkSelect = root.getElementById("set-link-mode");
+  if (linkSelect) {
+    linkSelect.value = linkMode;
+    linkSelect.addEventListener("change", async () => {
+      const val = linkSelect.value;
+      updateLinkHint(val);
+      const theme = localStorage.getItem("theme") || "dark";
+      await SaveAppConfig(repoPath, mcPath, val, theme);
+      await SetLinkMode(val);
+      bus.emit("toast:show", {
+        msg: `✅ 链接模式已切换至: ${val}`,
         duration: 2000,
         type: "success",
       });
-      const relink = await modalConfirm({
-        title: "切换链接模式",
-        icon: "🔗",
-        message:
-          "是否将已有模型重新链接为新模式？\n（将删除整合包中已安装的模型副本，用新模式重新安装）",
-        okText: "重新链接",
-      });
-      if (!relink) return;
-      try {
-        const { LoadAppConfig, ListVersionInstances, RelinkCustomDir } =
-          await import("../../../wailsjs/go/main/App.js");
-        const cfg = await LoadAppConfig();
-        const mcRoot = cfg.mcRoot || "";
-        const rRoot = cfg.repoRoot || "";
-        if (!mcRoot || !rRoot) return;
-        const instances = await ListVersionInstances(mcRoot);
-        let total = 0;
-        for (const ins of instances) {
-          if (!ins.Exists) continue;
-          try {
-            const n = await RelinkCustomDir(ins.CustomDir, rRoot);
-            total += n;
-          } catch {}
-        }
-        bus.emit("stats:refresh");
-        bus.emit("toast:show", {
-          msg: `🔄 已重新链接 ${total} 个文件`,
-          duration: 3000,
-          type: "success",
-        });
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: `❌ 重新链接失败: ${String(e)}`,
-          duration: 5000,
-          type: "error",
-        });
-      }
+      // 自动重新链接
+      await doRelink();
     });
-  });
+  }
+
+  const relinkBtn = root.getElementById("set-relink");
+  if (relinkBtn) {
+    relinkBtn.addEventListener("click", doRelink);
+  }
 
   // 主题切换
   root.getElementById("set-theme")?.addEventListener("change", async (e) => {

@@ -49,7 +49,7 @@ export function statsHTML() {
     <div class="stat-row dp-log-empty">暂无日志</div>
   </div>
   <div class="dp-log-footer" id="dp-log-footer" style="display:none">
-    <button class="btn" style="font-size:10px" id="dp-btn-clear-logs">🗑️ 清空</button>
+    <button class="btn" id="dp-btn-clear-logs">🗑️ 清空</button>
   </div>
 </div>
 </div>`;
@@ -111,7 +111,7 @@ export function statsCardHTML(model, modelPath, decodedBy) {
       .map((m) => {
         const sizeStr = m.finalSize && m.finalSize !== "—" ? m.finalSize : "";
         const texName = m.texKey !== "—" ? m.texKey : `纹理${m.texIdx}`;
-        return `<div class="ysm-card-row" style="font-size:9px;padding:1px 0" title="几何体文件 ${m.file} → 使用纹理 ${texName}${sizeStr ? '，' + sizeStr + 'px' : ''}">├─ ${m.file} → ${texName}</div>`;
+        return `<div class="ysm-card-row" style="font-size:9px;padding:1px 0" title="几何体文件 ${m.file} → 使用纹理 ${texName}${sizeStr ? "，" + sizeStr + "px" : ""}">├─ ${m.file} → ${texName}</div>`;
       })
       .join("");
     texMapHtml = `<div class="ysm-card-section-label" style="margin-top:6px">📎 纹理分配 <span style="font-weight:400;font-size:9px;color:var(--muted)">— 每个几何体对应使用的纹理</span></div>${texMapHtml}`;

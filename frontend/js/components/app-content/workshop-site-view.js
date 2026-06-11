@@ -44,8 +44,8 @@ export function renderSiteView(site, ctx) {
   const authorCountMap = {};
   if (repoAuthors) {
     repoAuthors.forEach((a) => {
-      const name = typeof a === 'string' ? a : a.Name;
-      const count = typeof a === 'object' ? a.Count : 0;
+      const name = typeof a === "string" ? a : a.Name;
+      const count = typeof a === "object" ? a.Count : 0;
       authorCountMap[name] = count;
     });
   }
@@ -97,7 +97,12 @@ export function renderSiteView(site, ctx) {
             const repoParts = isGitHub ? cr.name.split("/") : null;
             const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
             const authorCount = authorCountMap[cr.name] || 0;
-            const avatarCls = authorCount >= 5 ? ' cr-avatar-gold' : authorCount >= 2 ? ' cr-avatar-silver' : '';
+            const avatarCls =
+              authorCount >= 5
+                ? " cr-avatar-gold"
+                : authorCount >= 2
+                  ? " cr-avatar-silver"
+                  : "";
             return (
               '<div class="gh-card" style="min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer" data-name="' +
               esc(cr.name) +
@@ -108,7 +113,7 @@ export function renderSiteView(site, ctx) {
               avatarCls +
               '">' +
               (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") +
-              '</div>' +
+              "</div>" +
               '<div class="gh-card-body">' +
               '<div class="gh-card-label name">' +
               esc(cr.name) +
@@ -167,7 +172,7 @@ export function renderSiteView(site, ctx) {
         "</div>" +
         '<div class="cr-hint-text">📄 数据文件：exe 同目录下的 creators.json，可直接编辑</div>',
     );
-  creators.forEach((cr, idx) => {
+    creators.forEach((cr, idx) => {
       parts.push(
         '<div class="cr-row">' +
           "<span>🎨</span>" +
@@ -310,10 +315,12 @@ export function renderSiteView(site, ctx) {
     refreshView();
   });
 
-  searchResults.querySelector(".cr-cancel-btn")?.addEventListener("click", () => {
-    wsEditModeRef.v = false;
-    refreshView();
-  });
+  searchResults
+    .querySelector(".cr-cancel-btn")
+    ?.addEventListener("click", () => {
+      wsEditModeRef.v = false;
+      refreshView();
+    });
 
   // 保存（创作者 + 搜索词）
   searchResults
@@ -326,10 +333,12 @@ export function renderSiteView(site, ctx) {
             await import("../../../wailsjs/go/main/App.js");
           // 从输入框收集搜索词
           const newPresets = [];
-          searchResults.querySelectorAll(".cr-row input[data-fld='label']").forEach((inp) => {
-            const val = inp.value.trim();
-            if (val) newPresets.push({ label: val });
-          });
+          searchResults
+            .querySelectorAll(".cr-row input[data-fld='label']")
+            .forEach((inp) => {
+              const val = inp.value.trim();
+              if (val) newPresets.push({ label: val });
+            });
           site.presetSearches = newPresets;
           // 更新 allSites 中的对应站点
           const idx = allSites.findIndex((s) => s.id === site.id);
@@ -461,16 +470,20 @@ export function renderSiteView(site, ctx) {
     refreshView();
   });
   // 新增搜索词
-  searchResults.querySelector(".cr-add-preset")?.addEventListener("click", () => {
-    // 先把当前输入框的值同步回数组
-    searchResults.querySelectorAll(".cr-row input[data-fld='label']").forEach((inp) => {
-      const idx = parseInt(inp.dataset.idx, 10);
-      if (!isNaN(idx) && site.presetSearches && site.presetSearches[idx]) {
-        site.presetSearches[idx].label = inp.value;
-      }
+  searchResults
+    .querySelector(".cr-add-preset")
+    ?.addEventListener("click", () => {
+      // 先把当前输入框的值同步回数组
+      searchResults
+        .querySelectorAll(".cr-row input[data-fld='label']")
+        .forEach((inp) => {
+          const idx = parseInt(inp.dataset.idx, 10);
+          if (!isNaN(idx) && site.presetSearches && site.presetSearches[idx]) {
+            site.presetSearches[idx].label = inp.value;
+          }
+        });
+      if (!site.presetSearches) site.presetSearches = [];
+      site.presetSearches.push({ label: "" });
+      refreshView();
     });
-    if (!site.presetSearches) site.presetSearches = [];
-    site.presetSearches.push({ label: "" });
-    refreshView();
-  });
 }

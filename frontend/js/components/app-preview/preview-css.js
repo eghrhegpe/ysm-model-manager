@@ -6,8 +6,8 @@ export const previewCSS = `
   border-left: 1px solid var(--bd);
   width: 200px;
   flex-shrink: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-  font-size: 12px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
 }
 .content { padding: 10px; overflow-y: auto; flex: 1; }
 h3 { font-size: 11px; font-weight: 600; color: var(--txt); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }

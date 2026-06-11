@@ -291,7 +291,6 @@ class AppContent extends HTMLElement {
     const iframe = root.getElementById("ws-iframe");
     const urlEl = root.getElementById("ws-url");
     const blockedEl = root.getElementById("ws-blocked");
-    const popup = root.getElementById("cr-popup");
     const sourceInfo = root.getElementById("ws-source-info");
     const searchResults = root.getElementById("ws-search-results");
     const creatorView = root.getElementById("ws-creator-view");
@@ -314,55 +313,42 @@ class AppContent extends HTMLElement {
         grid.innerHTML = renderCardsHTML(sites, (s) => this._esc(s));
         grid._wsSites = sites;
         sourceInfo.textContent = sites.length + " 站点 · JSON驱动";
-
-        // 卡片点击事件
-        grid.querySelectorAll(".gh-card").forEach((card) => {
-          card.addEventListener("click", () => {
-            grid
-              .querySelectorAll(".gh-card")
-              .forEach((c) => c.classList.remove("active"));
-            card.classList.add("active");
-            const idx = parseInt(card.dataset.index, 10);
-            const sitesData = grid._wsSites;
-            if (sitesData && sitesData[idx]) {
-              currentSite = sitesData[idx];
-              showSiteView(currentSite);
-              const rect = card.getBoundingClientRect();
-              showPopup(rect);
-            }
-          });
-        });
       } catch (e) {
         grid.innerHTML = '<div class="ws-loading-error">加载失败</div>';
       }
     };
 
-    // 二级菜单
-    const showPopup = (rect) => {
-      popup.style.display = "";
-      popup.style.top = rect.bottom + 4 + "px";
-      popup.style.left = Math.max(4, rect.left) + "px";
-    };
-    const hidePopup = () => {
-      popup.style.display = "none";
-    };
-
-    popup.querySelectorAll(".cr-popup-item").forEach((item) => {
-      item.addEventListener("click", () => {
-        if (!currentSite) return;
-        if (item.dataset.action === "browser") {
-          window.open(currentSite.url, "_blank");
-          hidePopup();
-        } else if (item.dataset.action === "embed") {
-          hidePopup();
-          openEmbedded(currentSite);
-        }
+    // 点击模式切换：外链 / 内嵌
+    let embedMode = false;
+    const toggleBtn = root.getElementById("cr-mode-toggle");
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", () => {
+        embedMode = !embedMode;
+        toggleBtn.textContent = embedMode ? "🔍 内嵌" : "↗ 外链";
       });
-    });
+    }
 
-    root.addEventListener("click", (e) => {
-      if (!e.target.closest(".cr-popup") && !e.target.closest(".gh-card"))
-        hidePopup();
+    // 卡片点击 → 直接打开（事件委托）
+    const openSite = (site) => {
+      if (!site) return;
+      if (embedMode) {
+        openEmbedded(site);
+      } else {
+        window.open(site.url, "_blank");
+      }
+    };
+    grid.addEventListener("click", (e) => {
+      const card = e.target.closest(".gh-card");
+      if (!card) return;
+      grid.querySelectorAll(".gh-card").forEach((c) => c.classList.remove("active"));
+      card.classList.add("active");
+      const idx = parseInt(card.dataset.index, 10);
+      const sitesData = grid._wsSites;
+      if (sitesData && sitesData[idx]) {
+        currentSite = sitesData[idx];
+        showSiteView(currentSite);
+        openSite(currentSite);
+      }
     });
 
     // 内嵌浏览

@@ -172,15 +172,14 @@
 
 ### YSMParser 集成
 
-本工具集成 [YSMParser](https://github.com/OpenYSM/YSMParser) 作为 sidecar 解码加密模型：
+本工具集成 [YSMParser](https://github.com/OpenYSM/YSMParser) 用于解码加密 .ysm 模型：
 
-- **解码流程**：`AnalyzeBedrockModel()` → 检测 `.ysm` → 调 `YSMParser.exe` 解密 → 读取 `models/*.json` → 解析骨骼 → Canvas 2D 渲染
+- **解码流程**：优先通过 **内嵌 WASM** 直接在浏览器中解码（`YSMParser.wasm` + 胶水代码），失败时降级调用 CLI `YSMParser.exe` 子进程
+- **WASM 内嵌**：WASM 二进制以 base64 编码打包在 `ysm-wasm-data.js` 中，无需额外下载，启动即加载
 - **兼容性**：支持数组 `[u,v]` 和对象 `{face:{uv,uv_size}}` 两种 UV 格式
 - **隐私声明**：解码仅在本地进行，不联网、不存储、不导出模型文件
 
-### 安装 YSMParser
-
-从 [GitHub Releases](https://github.com/OpenYSM/YSMParser/releases) 下载 `YSMParser-x.x.x-windows-x64.zip`，将 `YSMParser.exe` 放到程序同目录即可。程序启动时自动检测。
+> 💡 v1.0.9+ 已默认内嵌 WASM，无需额外下载 YSMParser.exe。CLI 仅作为开发调试的 fallback，发版包不再包含。
 
 ---
 
@@ -196,6 +195,7 @@ ysm-model-manager/
 │   ├── sync/                  —— 整合包同步状态
 │   ├── logs/                  —— 操作日志
 │   ├── ysm/                   —— YSM 模型解析 + 摘要提取 + 头部扫描
+│   ├── threejs/               —— 3D 骨骼数据构建
 │   ├── watcher/               —— 文件监听器（fsnotify 实时同步 .ban）
 │   ├── updater/               —— 自动更新
 │   ├── version/               —— 版本号（编译时注入）
@@ -204,49 +204,50 @@ ysm-model-manager/
 ├── frontend/                  ← 前端源码
 │   ├── index.html
 │   ├── css/
-│   │   ├── variables.css      —— CSS 变量（4 套主题）
-│   │   └── layout.css
+│   │   ├── variables.css      —— CSS 变量（4 套主题 + 字体系统）
+│   │   ├── layout.css         —— 主布局 + 侧栏
+│   │   └── components.css     —— 全局组件样式（部分已迁移至 Shadow DOM）
 │   └── js/
-│       ├── bus.js              —— 事件总线
+│       ├── bus.js              —— 事件总线（跨 Shadow DOM 通信）
 │       ├── app-modules.js      —— 全局入口 + 右键菜单映射
-│       ├── components/         —— Web Components
+│       ├── components/         —— Web Components（Shadow DOM）
 │       │   ├── app-nav.js      —— 左侧导航菜单
 │       │   ├── app-content/    —— 主内容区（页面路由 + 全局事件）
 │       │   ├── app-tree/       —— 模型仓库树
 │       │   ├── app-sidebar/    —— 整合包列表
-│       │   ├── app-preview/    —— 预览面板 + 3D 渲染
+│       │   ├── app-preview/    —— 预览面板 + 3D/2D 渲染
 │       │   ├── app-toast.js    —— Toast 通知
 │       │   └── context-menu.js —— 右键菜单
-│       ├── features/           —— 业务功能
+│       ├── features/           —— 业务功能（import-queue / recycle-bin / workshop 等）
 │       ├── dialogs/            —— 弹窗（modal/rename/batch-rename）
 │       ├── pages/              —— 页面渲染（repository）
-│       ├── core/               —— 基础设施（buttons/global-handlers/theme）
+│       ├── core/               —— 基础设施（handler-dnd/handler-sync/theme/context-menus）
 │       ├── services/           —— 服务注册
 │       ├── utils/              —— 工具函数（display/fmt/dom/icon/summarize/preview-cache）
-│       └── wasm/               —— WASM 解码
+│       └── wasm/               —— YSMParser WASM 解码（ysm-wasm-data.js）
 └── docs/                      ← 文档
     ├── architecture.md        —— 前端架构规范
+    ├── Design.md              —— UI 设计规范（CSS 变量、布局、字体）
     ├── bug-chronicle.md       —— 问题排查记录
     ├── release-notes/         —— 版本发版说明
-    └── postmortem-*.md        —— 复盘
+    ├── postmortem-*.md        —— 复盘
+    ├── preview/               —— README 截图
+    └── plan-p7-*.md           —— 未来计划
 ```
 
 ### 组件规范
 
-大组件按职责拆分：
+大组件按职责拆分（以 `app-content` 为例）：
 
 ```
-app-xxx/
-  index.js       # 生命周期编排
-  tpl.js         # HTML 模板
-  row-tpl.js     # 节点级模板（可选）
-  data.js        # 数据逻辑（纯函数）
-  render.js      # 渲染逻辑（输入→HTML）
-  events.js      # 事件绑定
-  utils.js       # 组件工具（可选）
+app-content/
+  index.js          # 生命周期编排、页面路由、全局事件
+  tpl.js            # HTML 模板（全部页面）
+  content-css.js    # Shadow DOM 样式表
+  workshop-*.js     # 创作者频道相关子模块
 ```
 
-小组件（app-nav / app-toast / context-menu）直接单个文件。
+小组件（`app-nav` / `app-toast` / `context-menu`）直接单个文件。
 
 ---
 
@@ -262,14 +263,18 @@ wails dev
 # 仅构建前端
 cd frontend && npx vite build
 
-# 编译 Go
-go build .
+# 编译 Go 包
+go build ./go/...
 
-# 完整构建
-wails build
+# 完整构建（生产）
+wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 ```
 
-**注意**：修改 Go 文件后必须 `go build .` 并重启程序。前端修改刷新浏览器即可。
+**注意**：
+
+- 修改 Go 文件后必须 `go build ./go/...` + `wails build` 并重启
+- 前端非 module 脚本需在 `app-modules.js` 中 import，禁止在 `index.html` 加 `<script>`
+- 修改 CSS 变量或全局样式后需刷新（Vite 热重载）
 
 ---
 
@@ -279,9 +284,10 @@ wails build
 | -------------------------------------------------------------------- | ----------------------------------------- |
 | [`docs/用户指南.md`](docs/用户指南.md)                               | **用户手册**：安装、配置、功能详解、FAQ   |
 | [`docs/architecture.md`](docs/architecture.md)                       | 前端架构规范 + 组件拆分指南               |
-| [`docs/roadmap.md`](docs/roadmap.md)                                 | 路线图（P0 ~ P4）                         |
-| [`docs/bug-chronicle.md`](docs/bug-chronicle.md)                     | 23 个详细 Bug 排查记录                    |
-| [`docs/dev-notes.md`](docs/dev-notes.md)                             | 开发笔记 + 已知陷阱                       |
+| [`docs/Design.md`](docs/Design.md)                                   | UI 设计规范（CSS 变量、布局、字体）       |
+| [`docs/bug-chronicle.md`](docs/bug-chronicle.md)                     | Bug 排查记录（含 Debug Path Review）      |
+| [`docs/dev-notes2026-06-05.md`](docs/dev-notes2026-06-05.md)         | 开发笔记 + 已知陷阱                       |
+| [`docs/plan-p7-multi-resource.md`](docs/plan-p7-multi-resource.md)   | P7 计划：多资源类型支持 + 图标库设计      |
 | [`docs/postmortem-20250604.md`](docs/postmortem-20250604.md)         | 2025-06-04 重构复盘                       |
 | [`docs/postmortem-20250605.md`](docs/postmortem-20250605.md)         | 2025-06-05 晚间复盘                       |
 | [`AI_INDEX.md`](AI_INDEX.md)                                         | AI 索引（后端绑定 + 事件总线 + 组件清单） |

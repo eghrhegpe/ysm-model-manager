@@ -12,11 +12,19 @@ import (
 	"ysm-model-manager/go/ysm"
 )
 
-// 鎵弿妯″瀷锛堝嚱鏁扮被鍨嬶紝鐢?app.go 娉ㄥ叆锛?
+// ScanFunc 扫描模型（函数类型，由 app.go 注入）
 type ScanFunc func(dir string) []types.ModelEntry
 
-// GetInstanceStatus 鑾峰彇鏁村悎鍖呯姸鎬?
+// ListVersionsFunc 列出版本实例（函数类型，测试时可注入 mock）
+type ListVersionsFunc func(mcRoot string) []types.VersionInstance
+
+// GetInstanceStatus 获取整合包状态（使用真实 ListVersions）
 func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.InstanceStatus {
+	return GetInstanceStatusWith(mcRoot, repoDir, scanFn, ListVersions)
+}
+
+// GetInstanceStatusWith 可注入的整合包状态获取（测试用）
+func GetInstanceStatusWith(mcRoot, repoDir string, scanFn ScanFunc, listFn ListVersionsFunc) []types.InstanceStatus {
 	if mcRoot == "" || repoDir == "" {
 		return []types.InstanceStatus{}
 	}
@@ -34,7 +42,7 @@ func GetInstanceStatus(mcRoot, repoDir string, scanFn ScanFunc) []types.Instance
 		repoByHash[e.Hash] = append(repoByHash[e.Hash], e)
 	}
 
-	instances := ListVersions(mcRoot)
+	instances := listFn(mcRoot)
 	var results []types.InstanceStatus
 
 	for _, ins := range instances {

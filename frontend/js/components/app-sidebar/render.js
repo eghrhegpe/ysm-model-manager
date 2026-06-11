@@ -98,7 +98,7 @@ export function renderBody(ins) {
         "#f9a826",
         renderDisplayName(it.name),
         it.size,
-        "",
+        it.linkType,
         "",
         "",
         "",

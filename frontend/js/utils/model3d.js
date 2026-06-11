@@ -73,13 +73,10 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     .filter(Boolean)
     .map((url) => texMap.get(url))
     .filter(Boolean);
-  // 调试用：暴露 model 和 buildSpecFromModel 到全局
-  window.__lastModel = model;
-  window.__buildSpecFromModel = buildSpecFromModel;
 
   // 从 Go 获取预计算的 Three.js Spec
   let spec = { models: [] };
-  const forceJS = window.$forceJSSpec; // 调试用：设 true 强制走 JS 兜底
+  const forceJS = false;
   // 多纹理模型 Go spec 没有 per-mesh 纹理索引，强制走 JS 兜底
   const multiTex = model.textures?.length > 1 || false;
   if (!forceJS && !multiTex) {
@@ -95,7 +92,7 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     spec = buildSpecFromModel(model);
   }
   // 调试用：暴露最近一次 spec 到全局（在 JS 兜底之后）
-  window.__last3DSpec = spec;
+  // window.__last3DSpec = spec; // 调试用
   const rootGroup = new THREE.Group();
   rootGroup.name = "__root__";
   // YSMViewer 使用 ExportScale = 1/16 缩放坐标，提高 Three.js 浮点精度

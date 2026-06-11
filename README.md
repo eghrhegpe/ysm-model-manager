@@ -23,6 +23,15 @@
 
 ## 🖥️ 界面预览
 
+<p align="center">
+  <img src="docs/preview/模型仓库.png" width="45%" alt="模型仓库">
+  <img src="docs/preview/整合包管理.png" width="45%" alt="整合包管理">
+</p>
+<p align="center">
+  <img src="docs/preview/创作者频道.png" width="45%" alt="创作者频道">
+  <img src="docs/preview/创意工坊.png" width="45%" alt="创意工坊">
+</p>
+
 左侧导航 → 右侧主区域，共 7 个功能模块：
 
 | 导航          | 功能                                       |

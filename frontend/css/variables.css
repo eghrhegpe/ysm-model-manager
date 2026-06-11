@@ -76,13 +76,13 @@
 /* ===== 字体系统 ===== */
 :root {
   /* 字号 - 按使用频率排序 */
-  --fs-tiny: 7px;    /* 热力图、极小水印、版权信息 */
-  --fs-xs: 9px;      /* 标签、徽章、状态点 */
-  --fs-sm: 10px;     /* 辅助文字、按钮、表格次要列 */
-  --fs-base: 11px;   /* 正文、卡片标题、列表项主要文字 */
-  --fs-md: 12px;     /* 强调正文、区段小标题 */
-  --fs-lg: 14px;     /* 分组标题、侧栏分组名称 */
-  --fs-xl: 24px;     /* 数据统计数字、大号展示 */
+  --fs-tiny: 7px; /* 热力图、极小水印、版权信息 */
+  --fs-xs: 9px; /* 标签、徽章、状态点 */
+  --fs-sm: 10px; /* 辅助文字、按钮、表格次要列 */
+  --fs-base: 11px; /* 正文、卡片标题、列表项主要文字 */
+  --fs-md: 12px; /* 强调正文、区段小标题 */
+  --fs-lg: 14px; /* 分组标题、侧栏分组名称 */
+  --fs-xl: 24px; /* 数据统计数字、大号展示 */
 
   /* 字重 */
   --fw-normal: 400;
@@ -90,8 +90,21 @@
   --fw-bold: 700;
 
   /* 字体栈 */
-  --font-ui: -apple-system, "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
-  --font-display: 'STKaiti', 'KaiTi', '楷体', serif;
+  --font-ui:
+    -apple-system, "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+  --font-display: 'STKaiti','KaiTi','楷体',serif;
+}
+
+/* 布局变量 */
+:root {
+  --card-padding: 6px 10px;
+  --card-gap: 6px;
+}
+
+/* 无动画模式 */
+.no-animations, .no-animations * {
+  transition-duration: 0s !important;
+  animation-duration: 0s !important;
 }
 
 * {

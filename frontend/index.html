@@ -59,7 +59,8 @@
     <context-menu></context-menu>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
-        window.bus?.emit("nav:change", { page: "instances" });
+        const defaultPage = localStorage.getItem("ui-default-page") || "instances";
+        window.bus?.emit("nav:change", { page: defaultPage });
 
         // 加载动画控制
         let loadingCount = 0;

@@ -115,7 +115,7 @@ export function IsSymlink(arg1:string):Promise<boolean>;
 
 export function ListFileNames(arg1:string):Promise<Array<string>>;
 
-export function ListModelAuthors():Promise<Array<string>>;
+export function ListModelAuthors():Promise<Array<types.AuthorInfo>>;
 
 export function ListRecycleBin(arg1:string):Promise<Array<types.ModelEntry>>;
 

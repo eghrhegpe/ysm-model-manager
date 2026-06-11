@@ -314,9 +314,10 @@ class AppContent extends HTMLElement {
 
     // B站/爱发电 tab 点击 → 在右侧显示对应站点的创作者（不打开网站）
     const showCreatorsBySite = async (siteType) => {
-      const { sites, creators } = await loadWorkshopData();
+      const { sites, creators, authors } = await loadWorkshopData();
       allSites = sites;
       allCreators = creators;
+      repoAuthors = authors || [];
       const site = sites.find((s) => s.id === siteType);
       if (!site) return;
       currentSite = site;
@@ -434,6 +435,7 @@ class AppContent extends HTMLElement {
         creatorView,
         allSites,
         allCreators,
+        repoAuthors,
         wsEditModeRef,
         showRepoModels,
         fillSearch,

@@ -328,31 +328,31 @@ class AppContent extends HTMLElement {
       });
     }
 
-    // 卡片点击 → 正文执行主操作，右侧 ↗ 总是外链
+    // 卡片点击 → 正文切换右侧视图，右侧 ↗ 按开关打开
     const openSite = (site, external = false) => {
       if (!site) return;
-      if (external || !embedMode) {
-        window.open(site.url, "_blank");
-      } else {
+      if (embedMode) {
         openEmbedded(site);
+      } else {
+        window.open(site.url, "_blank");
       }
     };
     grid.addEventListener("click", (e) => {
       const externalBtn = e.target.closest(".gh-card-external");
       const card = e.target.closest(".gh-card");
       if (!card) return;
-      // 如果点的是外链按钮，不更新选中状态和右侧视图
-      const isExternal = !!externalBtn;
-      if (!isExternal) {
-        grid.querySelectorAll(".gh-card").forEach((c) => c.classList.remove("active"));
-        card.classList.add("active");
-      }
       const idx = parseInt(card.dataset.index, 10);
       const sitesData = grid._wsSites;
-      if (sitesData && sitesData[idx]) {
-        currentSite = sitesData[idx];
-        if (!isExternal) showSiteView(currentSite);
-        openSite(currentSite, isExternal);
+      if (!sitesData || !sitesData[idx]) return;
+      currentSite = sitesData[idx];
+      if (externalBtn) {
+        // ↗ 按钮：按开关模式打开
+        openSite(currentSite, false);
+      } else {
+        // 正文：切换右侧视图
+        grid.querySelectorAll(".gh-card").forEach((c) => c.classList.remove("active"));
+        card.classList.add("active");
+        showSiteView(currentSite);
       }
     });
 

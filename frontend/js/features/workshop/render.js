@@ -44,7 +44,7 @@ export function renderModelList(
 
   if (!filtered.length) {
     const empty = document.createElement("div");
-    empty.className = "ws-empty";
+    empty.className = "gh-empty";
     empty.textContent = "🔍 没有匹配的模型";
     frag.appendChild(empty);
     return frag;
@@ -56,28 +56,28 @@ export function renderModelList(
     row.className = "model-row";
     row.dataset.id = String(allModels.indexOf(m));
     row.dataset.name = m.name;
-    row.className = "ws-row" + (exists ? " ws-row-exists" : " ws-row-missing");
+    row.className = "gh-row" + (exists ? " gh-row-exists" : " gh-row-missing");
 
     // 复选框（仅未下载的）
     if (!exists) {
       const cb = document.createElement("input");
       cb.type = "checkbox";
-      cb.className = "ws-sel";
+      cb.className = "gh-sel";
       cb.dataset.name = m.name;
       cb.checked = selectedSet.has(m.name);
-      cb.className = "ws-cb";
+      cb.className = "gh-cb";
       row.appendChild(cb);
     }
 
     // 文件名
     const nameSpan = document.createElement("span");
-    nameSpan.className = "ws-name";
+    nameSpan.className = "gh-name";
     nameSpan.innerHTML = renderDisplayName(m.name);
     row.appendChild(nameSpan);
 
     // B站搜索按钮
     const searchBtn = document.createElement("button");
-    searchBtn.className = "ws-search-bili";
+    searchBtn.className = "gh-search-bili";
     searchBtn.textContent = "🔍";
     searchBtn.title = "B站搜索作者";
     searchBtn.style.cssText =
@@ -106,21 +106,21 @@ export function renderModelList(
 
     if (exists) {
       const badge = document.createElement("span");
-      badge.className = "ws-badge";
+      badge.className = "gh-badge";
       badge.textContent = "✅ 已有";
       row.appendChild(badge);
     } else {
       // 大小 + 下载按钮放在右侧
       const rightGroup = document.createElement("div");
-      rightGroup.className = "ws-row-right";
+      rightGroup.className = "gh-row-right";
 
       const sizeSpan = document.createElement("span");
-      sizeSpan.className = "ws-size";
+      sizeSpan.className = "gh-size";
       sizeSpan.textContent = m.size ? (m.size / 1024).toFixed(0) + "KB" : "";
       rightGroup.appendChild(sizeSpan);
 
       const dlBtn = document.createElement("button");
-      dlBtn.className = "ws-dl-model";
+      dlBtn.className = "gh-dl-model";
       dlBtn.dataset.url = dlPrefix + m.path.replace(/\\/g, "/");
       dlBtn.dataset.name = m.name;
       dlBtn.dataset.size = String(m.size || 0);
@@ -248,7 +248,7 @@ export function renderRepoHeaderHTML({
     '<div style="padding:2px 0 6px">' +
     '<input id="gh-repo-srch" class="gh-search" type="text" placeholder="🔍 搜索模型名称">' +
     "</div>" +
-    '<div id="ws-repo-list"></div>' +
+    '<div id="gh-repo-list"></div>' +
     "</div>"
   );
 }

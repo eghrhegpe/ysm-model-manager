@@ -57,7 +57,7 @@ export function bindRepoEvents(sr, ctx) {
 
   const updateSelectedUI = () => {
     const checked = selectedSet.size;
-    const btn = sr.querySelector(".ws-dl-selected");
+    const btn = sr.querySelector(".gh-dl-selected");
     if (btn) {
       btn.textContent = "⬇️ 下载选中 (" + checked + ")";
       btn.disabled = checked === 0;
@@ -98,9 +98,9 @@ export function bindRepoEvents(sr, ctx) {
     tasks.forEach((t) => (t.saveDir = repoRoot));
 
     downloading = true;
-    const dlAllBtn = sr.querySelector(".ws-dl-all");
-    const dlSelBtn = sr.querySelector(".ws-dl-selected");
-    const queueStatus = sr.querySelector("#ws-queue-status");
+    const dlAllBtn = sr.querySelector(".gh-dl-all");
+    const dlSelBtn = sr.querySelector(".gh-dl-selected");
+    const queueStatus = sr.querySelector("#gh-queue-status");
 
     // 禁用按钮
     if (dlAllBtn) dlAllBtn.disabled = true;
@@ -128,7 +128,7 @@ export function bindRepoEvents(sr, ctx) {
         _stuckTimer = null;
       }
       // 清理菊花动画
-      const pctEl2 = queueStatus?.querySelector(".ws-progress-pct");
+      const pctEl2 = queueStatus?.querySelector(".gh-progress-pct");
       if (pctEl2?._dotTimer) {
         clearInterval(pctEl2._dotTimer);
         pctEl2._dotTimer = null;
@@ -171,7 +171,7 @@ export function bindRepoEvents(sr, ctx) {
     if (queueStatus) {
       queueStatus.style.display = "block";
       queueStatus.innerHTML =
-        '<span class="ws-queue-icon">⬇️</span> 准备下载… 共 ' +
+        '<span class="gh-queue-icon">⬇️</span> 准备下载… 共 ' +
         totalTasks +
         " 个";
     }
@@ -182,14 +182,14 @@ export function bindRepoEvents(sr, ctx) {
         let summary = "";
         if (errorList.length > 0) {
           summary =
-            '<div class="ws-queue-error">⚠️ ' +
+            '<div class="gh-queue-error">⚠️ ' +
             errorList.length +
             " 个文件下载失败：</div>" +
             errorList
               .slice(0, 5)
               .map(
                 (e) =>
-                  '<div class="ws-queue-err-item">❌ ' +
+                  '<div class="gh-queue-err-item">❌ ' +
                   renderDisplayName(e.name) +
                   ": " +
                   esc(e.err) +
@@ -197,13 +197,13 @@ export function bindRepoEvents(sr, ctx) {
               )
               .join("") +
             (errorList.length > 5
-              ? '<div class="ws-queue-ellipsis">…还有 ' +
+              ? '<div class="gh-queue-ellipsis">…还有 ' +
                 (errorList.length - 5) +
                 " 个</div>"
               : "");
         }
         if (cancelled) {
-          cleanup(summary || '<span class="ws-queue-cancel">⏹ 已取消</span>');
+          cleanup(summary || '<span class="gh-queue-cancel">⏹ 已取消</span>');
           if (dlAllBtn) dlAllBtn.textContent = "⏹ 已取消";
         } else {
           cleanup(summary || null);
@@ -226,22 +226,22 @@ export function bindRepoEvents(sr, ctx) {
         const remain = total - done;
         // 创建一个固定的进度容器，后续 download:progress 只更新 bar 部分
         queueStatus.innerHTML =
-          '<div class="ws-progress-row">' +
-          '<span class="ws-queue-icon">⬇️</span>' +
-          '<span class="ws-progress-name">' +
+          '<div class="gh-progress-row">' +
+          '<span class="gh-queue-icon">⬇️</span>' +
+          '<span class="gh-progress-name">' +
           renderDisplayName(name) +
           "</span>" +
-          '<span class="ws-progress-pct">⏳</span>' +
+          '<span class="gh-progress-pct">⏳</span>' +
           (remain > 1
-            ? '<span class="ws-progress-remain">剩余' + remain + "</span>"
+            ? '<span class="gh-progress-remain">剩余' + remain + "</span>"
             : "") +
-          '<button class="ws-cancel-queue ws-cancel-btn" title="取消">✕</button>' +
+          '<button class="gh-cancel-queue gh-cancel-btn" title="取消">✕</button>' +
           "</div>" +
-          '<div class="ws-progress-bar-wrap">' +
-          '<div class="ws-progress-fill"></div>' +
+          '<div class="gh-progress-bar-wrap">' +
+          '<div class="gh-progress-fill"></div>' +
           "</div>";
         queueStatus
-          .querySelector(".ws-cancel-queue")
+          .querySelector(".gh-cancel-queue")
           ?.addEventListener("click", async () => {
             await CancelQueue();
           });
@@ -269,8 +269,8 @@ export function bindRepoEvents(sr, ctx) {
           if (!_stuckTimer) {
             // 300ms 后显示真正进度，进度条半速
             _stuckTimer = setTimeout(() => {
-              const pctEl2 = queueStatus?.querySelector(".ws-progress-pct");
-              const fillEl2 = queueStatus?.querySelector(".ws-progress-fill");
+              const pctEl2 = queueStatus?.querySelector(".gh-progress-pct");
+              const fillEl2 = queueStatus?.querySelector(".gh-progress-fill");
               if (pctEl2) pctEl2.textContent = "100%";
               if (fillEl2) {
                 fillEl2.style.transition = "width .3s";
@@ -293,11 +293,11 @@ export function bindRepoEvents(sr, ctx) {
           label = "99%"; // 先显示 99%，不跳 100%
           pct = 99;
           if (!_stuckTimer) {
-            queueStatus.querySelector(".ws-progress-pct").textContent = label;
+            queueStatus.querySelector(".gh-progress-pct").textContent = label;
             // 2 秒后如果还没完成，显示旋转菊花
             _stuckTimer = setTimeout(() => {
-              const pctEl = queueStatus?.querySelector(".ws-progress-pct");
-              const fillEl = queueStatus?.querySelector(".ws-progress-fill");
+              const pctEl = queueStatus?.querySelector(".gh-progress-pct");
+              const fillEl = queueStatus?.querySelector(".gh-progress-fill");
               if (pctEl && pctEl.textContent !== "100%") {
                 pctEl.textContent = "⏳";
                 pctEl.style.fontSize = "9px";
@@ -324,8 +324,8 @@ export function bindRepoEvents(sr, ctx) {
         }
         _lastPct = pct;
 
-        const pctEl = queueStatus.querySelector(".ws-progress-pct");
-        const fillEl = queueStatus.querySelector(".ws-progress-fill");
+        const pctEl = queueStatus.querySelector(".gh-progress-pct");
+        const fillEl = queueStatus.querySelector(".gh-progress-fill");
         if (pctEl && !_stuckTimer) pctEl.textContent = label;
         if (fillEl) {
           fillEl.style.transition = pct === 100 ? "width 0s" : "width .2s";
@@ -340,7 +340,7 @@ export function bindRepoEvents(sr, ctx) {
             let summary = null;
             if (errorList.length > 0) {
               summary =
-                '<div class="ws-queue-error">⚠️ ' +
+                '<div class="gh-queue-error">⚠️ ' +
                 errorList.length +
                 " 个文件下载失败</div>";
             }
@@ -364,8 +364,8 @@ export function bindRepoEvents(sr, ctx) {
       if (status === "fail") {
         errorList.push({ name, err: errMsg || "未知错误" });
         // 进度条显示红色错误
-        const pctEl = queueStatus?.querySelector(".ws-progress-pct");
-        const fillEl = queueStatus?.querySelector(".ws-progress-fill");
+        const pctEl = queueStatus?.querySelector(".gh-progress-pct");
+        const fillEl = queueStatus?.querySelector(".gh-progress-fill");
         if (pctEl) {
           pctEl.textContent = "❌";
           pctEl.style.color = "#f38ba8";
@@ -379,7 +379,7 @@ export function bindRepoEvents(sr, ctx) {
           fillEl.style.background = "#f38ba8";
         }
         // 取消该文件的勾选
-        const cb = sr.querySelector('.ws-sel[data-name="' + esc(name) + '"]');
+        const cb = sr.querySelector('.gh-sel[data-name="' + esc(name) + '"]');
         if (cb) {
           cb.checked = false;
           selectedSet.delete(name);
@@ -402,36 +402,36 @@ export function bindRepoEvents(sr, ctx) {
   // ============================================================
 
   // ==== 返回 ====
-  sr.querySelector(".ws-back-repo")?.addEventListener("click", () => {
+  sr.querySelector(".gh-back-repo")?.addEventListener("click", () => {
     backToSite();
   });
 
   // ==== 搜索过滤 ====
-  const srch = sr.querySelector("#ws-repo-srch");
+  const srch = sr.querySelector("#gh-repo-srch");
   if (srch) {
     srch.addEventListener("input", () => {
-      const list = sr.querySelector("#ws-repo-list");
+      const list = sr.querySelector("#gh-repo-list");
       if (list) list.replaceChildren(renderList(srch.value));
     });
   }
 
   // ==== 📁 显示全部 切换 ====
-  const toggleBtn = sr.querySelector(".ws-toggle-all");
+  const toggleBtn = sr.querySelector(".gh-toggle-all");
   if (toggleBtn) {
     toggleBtn.addEventListener("click", () => {
       showAll = !showAll;
       toggleBtn.textContent = showAll ? "📁 显示全部" : "📁 仅显示缺失";
       toggleBtn.style.borderColor = showAll ? "var(--accent)" : "var(--bd)";
       toggleBtn.style.color = showAll ? "var(--accent)" : "var(--txt)";
-      const list = sr.querySelector("#ws-repo-list");
-      const inp = sr.querySelector("#ws-repo-srch");
+      const list = sr.querySelector("#gh-repo-list");
+      const inp = sr.querySelector("#gh-repo-srch");
       if (list) list.replaceChildren(renderList(inp?.value || ""));
     });
   }
 
   // ==== ⚙️ 筛选下拉展开/收起 ====
-  const filterBtn = sr.querySelector(".ws-filter-btn");
-  const filterDropdown = sr.querySelector(".ws-filter-dropdown");
+  const filterBtn = sr.querySelector(".gh-filter-btn");
+  const filterDropdown = sr.querySelector(".gh-filter-dropdown");
   if (filterBtn && filterDropdown) {
     filterBtn.addEventListener("click", () => {
       const isOpen = filterDropdown.style.display === "flex";
@@ -441,7 +441,7 @@ export function bindRepoEvents(sr, ctx) {
   }
 
   // ==== ⬇️ 下载全部缺失 ====
-  const dlAllBtn = sr.querySelector(".ws-dl-all");
+  const dlAllBtn = sr.querySelector(".gh-dl-all");
   if (dlAllBtn) {
     dlAllBtn.addEventListener("click", async () => {
       if (downloading) return;
@@ -468,10 +468,10 @@ export function bindRepoEvents(sr, ctx) {
   }
 
   // ==== 复选框 → 更新选中计数 ====
-  const selContainer = sr.querySelector("#ws-repo-list");
+  const selContainer = sr.querySelector("#gh-repo-list");
   if (selContainer) {
     selContainer.addEventListener("change", (e) => {
-      if (!e.target.classList.contains("ws-sel")) return;
+      if (!e.target.classList.contains("gh-sel")) return;
       const name = e.target.dataset.name;
       if (e.target.checked) selectedSet.add(name);
       else selectedSet.delete(name);
@@ -480,7 +480,7 @@ export function bindRepoEvents(sr, ctx) {
   }
 
   // ==== ⬇️ 下载选中 ====
-  const dlSelBtn = sr.querySelector(".ws-dl-selected");
+  const dlSelBtn = sr.querySelector(".gh-dl-selected");
   if (dlSelBtn) {
     dlSelBtn.addEventListener("click", async () => {
       if (downloading || !selectedSet.size) return;
@@ -498,13 +498,13 @@ export function bindRepoEvents(sr, ctx) {
   }
 
   // ==== ☐ 全选 / 取消全选 ====
-  const selAllBtn = sr.querySelector(".ws-select-all");
+  const selAllBtn = sr.querySelector(".gh-select-all");
   if (selAllBtn) {
     selAllBtn.addEventListener("click", () => {
       const allChecked =
-        selContainer?.querySelectorAll(".ws-sel:checked").length ===
-        selContainer?.querySelectorAll(".ws-sel").length;
-      selContainer?.querySelectorAll(".ws-sel").forEach((cb) => {
+        selContainer?.querySelectorAll(".gh-sel:checked").length ===
+        selContainer?.querySelectorAll(".gh-sel").length;
+      selContainer?.querySelectorAll(".gh-sel").forEach((cb) => {
         cb.checked = !allChecked;
         if (cb.checked) selectedSet.add(cb.dataset.name);
         else selectedSet.delete(cb.dataset.name);
@@ -515,7 +515,7 @@ export function bindRepoEvents(sr, ctx) {
   }
 
   // ==== 右键模型行 → 查看索引信息 ====
-  const listEl = sr.querySelector("#ws-repo-list");
+  const listEl = sr.querySelector("#gh-repo-list");
   if (listEl) {
     listEl.addEventListener("contextmenu", (e) => {
       const row = e.target.closest("[data-name]");
@@ -540,14 +540,14 @@ export function bindRepoEvents(sr, ctx) {
   }
 
   // ==== ⬇️ 单文件下载（事件委托：按钮 + 整行可点） ====
-  const dlContainer = sr.querySelector("#ws-repo-list");
+  const dlContainer = sr.querySelector("#gh-repo-list");
   if (dlContainer) {
     dlContainer.addEventListener("click", async (e) => {
       // 点复选框不触发下载
-      if (e.target.classList.contains("ws-sel")) return;
+      if (e.target.classList.contains("gh-sel")) return;
 
       // 仅 ⬇️ 按钮触发下载，整行点击不误触
-      const btn = e.target.closest(".ws-dl-model");
+      const btn = e.target.closest(".gh-dl-model");
       if (!btn || downloading) return;
       const row = btn.closest(".model-row");
 
@@ -575,7 +575,7 @@ export function bindRepoEvents(sr, ctx) {
       }
 
       // 同步勾选
-      const cb = row?.querySelector(".ws-sel");
+      const cb = row?.querySelector(".gh-sel");
       if (cb && cbName) {
         cb.checked = true;
         selectedSet.add(cbName);

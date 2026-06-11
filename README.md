@@ -21,16 +21,7 @@
 
 ---
 
-## 🖥️ 界面预览
-
-<p align="center">
-  <img src="docs/preview/模型仓库.png" width="45%" alt="模型仓库">
-  <img src="docs/preview/整合包管理.png" width="45%" alt="整合包管理">
-</p>
-<p align="center">
-  <img src="docs/preview/创作者频道.png" width="45%" alt="创作者频道">
-  <img src="docs/preview/创意工坊.png" width="45%" alt="创意工坊">
-</p>
+## 🖥️ 功能一览
 
 左侧导航 → 右侧主区域，共 7 个功能模块：
 
@@ -50,6 +41,8 @@
 
 ### 📦 模型仓库
 
+<p align="center"><img src="docs/preview/模型仓库.png" width="80%" alt="模型仓库"></p>
+
 - 扫描 `.ysm` / `.zip` / `.7z` 模型文件（按 SHA256 去重）
 - 树形文件夹浏览 + 拖拽移动
 - 搜索高亮 + 多字段排序（名称 / 大小 / 日期）
@@ -61,6 +54,8 @@
 - 📇 **生成 GitHub 索引**：扫描仓库生成 `index.json`，提交后即可在线浏览
 
 ### 🎮 整合包管理
+
+<p align="center"><img src="docs/preview/整合包管理.png" width="80%" alt="整合包管理"></p>
 
 - 自动列出版本实例（`.minecraft/versions/`）
 - 检测 YSM 模组，无 YSM 的整合包显示 🚫 无YSM 但仍可管理
@@ -86,6 +81,8 @@
 
 ### 🎨 创作者频道
 
+<p align="center"><img src="docs/preview/创作者频道.png" width="80%" alt="创作者频道"></p>
+
 - **站点浏览**：B站、爱发电等平台的创作者列表浏览
 - **创作者管理**：维护创作者数据库（87+ 位），按平台标签分类（bilibili / afdian / github）
 - **预设搜索**：一键搜索 B站 YSM 免费模型 / YSM 模型分享、爱发电 YSM
@@ -93,6 +90,8 @@
 - **导入/导出**：站点和创作者 JSON 导入导出，支持合并和覆盖模式
 
 ### 🧩 创意工坊
+
+<p align="center"><img src="docs/preview/创意工坊.png" width="80%" alt="创意工坊"></p>
 
 - **GitHub 在线仓库**：读取远程仓库的 `index.json` 在线浏览模型列表
 - **一键下载**：⬇️ 直接从 GitHub 下载模型到本地仓库

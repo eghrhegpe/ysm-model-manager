@@ -23,6 +23,7 @@ export function renderSiteView(site, ctx) {
     searchResults,
     creatorView,
     allCreators,
+    allSites,
     wsEditModeRef,
     showRepoModels,
     fillSearch,
@@ -110,6 +111,32 @@ export function renderSiteView(site, ctx) {
         "</div>",
     );
   } else if (wsEditModeRef.v) {
+    // 🔍 搜索词编辑
+    if (site.presetSearches) {
+      parts.push(
+        '<div class="cr-section">' +
+          '<span class="cr-section-title-lg">🔍 搜索词</span>' +
+          "</div>",
+      );
+      site.presetSearches.forEach((ps, idx) => {
+        parts.push(
+          '<div class="cr-row">' +
+            "<span>🔍</span>" +
+            '<input data-idx="' +
+            idx +
+            '" data-fld="label" value="' +
+            esc(ps.label) +
+            '" class="cr-input cr-input-name">' +
+            "</div>",
+        );
+      });
+      parts.push(
+        '<div class="cr-add-area">' +
+          '<button class="cr-add-preset">➕ 新增搜索词</button>' +
+          "</div>",
+      );
+    }
+    // ✏️ 创作者编辑
     parts.push(
       '<div class="cr-section">' +
         '<span class="cr-section-title-lg">✏️ 编辑创作者</span>' +
@@ -267,17 +294,34 @@ export function renderSiteView(site, ctx) {
     refreshView();
   });
 
-  // 保存
+  // 保存（创作者 + 搜索词）
   searchResults
     .querySelector(".cr-save-btn")
     ?.addEventListener("click", async () => {
       try {
+        // 保存搜索词
+        if (allSites && site) {
+          const { SaveWorkshopSites } =
+            await import("../../../wailsjs/go/main/App.js");
+          // 从输入框收集搜索词
+          const newPresets = [];
+          searchResults.querySelectorAll(".cr-row input[data-fld='label']").forEach((inp) => {
+            const val = inp.value.trim();
+            if (val) newPresets.push({ label: val });
+          });
+          site.presetSearches = newPresets;
+          // 更新 allSites 中的对应站点
+          const idx = allSites.findIndex((s) => s.id === site.id);
+          if (idx >= 0) allSites[idx] = site;
+          await SaveWorkshopSites(allSites);
+        }
+        // 保存创作者
         const { SaveWorkshopCreators } =
           await import("../../../wailsjs/go/main/App.js");
         await SaveWorkshopCreators(allCreators);
         wsEditModeRef.v = false;
         bus.emit("toast:show", {
-          msg: "✅ 创作者已保存",
+          msg: "✅ 已保存",
           duration: 2000,
           type: "success",
         });
@@ -371,10 +415,16 @@ export function renderSiteView(site, ctx) {
     });
   });
 
-  // 新增
+  // 新增创作者
   searchResults.querySelector(".cr-add")?.addEventListener("click", () => {
     creators.push({ name: "新作者", desc: "描述", type: site.id });
     allCreators.push(creators[creators.length - 1]);
+    refreshView();
+  });
+  // 新增搜索词
+  searchResults.querySelector(".cr-add-preset")?.addEventListener("click", () => {
+    if (!site.presetSearches) site.presetSearches = [];
+    site.presetSearches.push({ label: "" });
     refreshView();
   });
 }

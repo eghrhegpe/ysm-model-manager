@@ -116,7 +116,7 @@ export const contentCSS = `
   background:var(--card);
   border:1px solid var(--bd);
   border-radius:8px;
-  padding:10px 12px;
+  padding:var(--card-padding,10px 12px);
   text-align:left;
   cursor:pointer;
   transition:all .15s ease;
@@ -146,7 +146,7 @@ export const contentCSS = `
 
 /* 紧凑卡片 — 网格布局（2列/3列） */
 .model-card-sm {
-  padding:6px 10px;
+  padding:var(--card-padding,6px 10px);
   border-radius:8px;
   border:1px solid var(--bd);
   background:var(--card);
@@ -268,7 +268,7 @@ export const contentCSS = `
 .gh-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .gh-right-inner { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .gh-grid { flex:1; overflow-y:auto; padding:4px 8px; display:flex; flex-direction:column; gap:4px; }
-.gh-card { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:8px; border:1px solid var(--bd); background:var(--card); cursor:pointer; transition:all .15s ease; box-shadow:var(--card-shadow, none); }
+.gh-card { display:flex; align-items:center; gap:var(--card-gap,8px); padding:var(--card-padding,7px 10px); border-radius:8px; border:1px solid var(--bd); background:var(--card); cursor:pointer; transition:all .15s ease; box-shadow:var(--card-shadow, none); }
 .gh-card:hover { border-color:var(--accent); background:var(--hover); box-shadow:var(--card-shadow-hover, none); transform:translateY(-1px); }
 .gh-card.active { border-color:var(--accent); background:var(--accent); color:#fff; box-shadow:var(--card-shadow-hover, none); }
 .gh-card .name { font-size:var(--fs-md); font-weight:var(--fw-bold); color:var(--txt); font-family:var(--font-display); overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }

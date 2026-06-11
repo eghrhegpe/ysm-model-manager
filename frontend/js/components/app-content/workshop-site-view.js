@@ -91,8 +91,11 @@ export function renderSiteView(site, ctx) {
               '" title="搜索: ' +
               esc(cr.name) +
               '">' +
+              '<div class="cr-avatar">' +
+              (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") +
+              '</div>' +
               '<div class="gh-card-body">' +
-              '<div class="gh-card-label">' +
+              '<div class="gh-card-label name">' +
               esc(cr.name) +
               "</div>" +
               '<div class="gh-card-desc">' +

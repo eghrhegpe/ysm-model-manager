@@ -51,7 +51,7 @@ let _prefer3D = false;
  *   "YSGP" + version(4B大端=2) + hash(16B) + [加密数据]
  * 这里从文本头部提取 hash，拼接成标准格式传给 WASM。
  */
-function buildStdYsgpFromTextVariant(bytes) {
+function buildStdYsgpFromTextVariant(bytes, forceVer) {
   if (!bytes || bytes.length < 20) return null;
   // 检测 BOM + YSGP
   if (bytes[0] !== 0xef || bytes[1] !== 0xbb || bytes[2] !== 0xbf) return null;
@@ -97,16 +97,9 @@ function buildStdYsgpFromTextVariant(bytes) {
   }
   if (dataStart < 0 || dataStart >= bytes.length - 20) return null;
 
-  // 读取实际版本号：在 16B hash 之后的 4 字节
-  const versionBytes = bytes.slice(dataStart + 16, dataStart + 20);
-  // 检查是否是合理的版本号（00 00 00 02 或 00 00 00 03）
-  const verNum =
-    versionBytes[0] === 0 &&
-    versionBytes[1] === 0 &&
-    versionBytes[2] === 0 &&
-    (versionBytes[3] === 2 || versionBytes[3] === 3)
-      ? versionBytes[3]
-      : 2;
+  // 版本号：优先用 forceVer，否则从加密数据中尝试读取
+  // 注意：加密数据中的版本字节是加密的，读取不可靠，V3 默认会错误地变成 V2
+  let verNum = forceVer || 2;
 
   // 构建标准 YSGP 头部（使用实际版本号）
   const magic = new Uint8Array([0x59, 0x53, 0x47, 0x50]); // "YSGP"
@@ -137,11 +130,21 @@ function buildStdYsgpFromTextVariant(bytes) {
     `[YSM] dataStart=${dataStart}, 前4字节: ${debugBytes.slice(0, 11)}... 后24字节: ${debugBytes.slice(12)}`,
   );
 
-  // 原始文件在文本头部后包含 16 字节 hash，然后才是加密数据
-  // 跳过这 16 字节，避免重建时 hash 重复
-  const encryptedStart = dataStart + 16;
+  // 再打印前 64 字节的完整结构
+  const dump64 = Array.from(
+    bytes.slice(dataStart, Math.min(bytes.length, dataStart + 64)),
+  ).map((b) => b.toString(16).padStart(2, "0"));
+  console.log(
+    `[YSM] 二进制段头 64B: ${dump64.slice(0, 16).join(" ")} | ${dump64.slice(16, 32).join(" ")} | ${dump64.slice(32, 48).join(" ")} | ${dump64.slice(48, 64).join(" ")}`,
+  );
+
+  // V2: 二进制段 = 16B hash + 加密数据（hash 与 <hash> 标签值相同）
+  // V3: 二进制段 = 纯加密数据（hash 仅在 <hash> 标签中，二进制段无独立 hash 区域）
+  const encryptedStart = verNum >= 3 ? dataStart : dataStart + 16;
   const encrypted = bytes.slice(encryptedStart);
-  console.log(`[YSM] 跳过 16B hash 后加密数据=${encrypted.length}B`);
+  console.log(
+    `[YSM] V${verNum}: 加密数据偏移=${encryptedStart}, 大小=${encrypted.length}B`,
+  );
   const result = new Uint8Array(4 + 4 + 16 + encrypted.length);
   result.set(magic, 0);
   result.set(version, 4);
@@ -156,9 +159,9 @@ function buildStdYsgpFromTextVariant(bytes) {
   return result;
 }
 
-function stripYsgpTextHeader(bytes) {
+function stripYsgpTextHeader(bytes, forceVer) {
   // 先尝试构建标准 YSGP 二进制
-  const stdYsgp = buildStdYsgpFromTextVariant(bytes);
+  const stdYsgp = buildStdYsgpFromTextVariant(bytes, forceVer);
   if (stdYsgp) return stdYsgp;
 
   if (!bytes || bytes.length < 10) return bytes;
@@ -279,11 +282,11 @@ class AppPreview extends HTMLElement {
       const decoded = await this._decodeYsmViaWasm(modelPath);
       if (decoded?.texture) {
         cacheSet(modelPath, { ...decoded, _decodedBy: "🧠 WASM 内置解码" });
-        // 确认缓存包含 geometry
-        const after = cacheGet(modelPath);
-        console.log(`[YSM] 缓存写入后: geometry=${!!after?.geometry}, bones=${after?.geometry?.bones?.length}`);
         return decoded.texture;
       }
+      // WASM 没返回纹理（geometry 解析失败等），标记已尝试过
+      // 避免 _loadModel2D 再重复调一次 _decodeYsmViaWasm
+      cacheSet(modelPath, { _wasmTried: true });
     }
     try {
       const { FindPreviewImage, ExtractPreviewTexture } =
@@ -327,7 +330,9 @@ class AppPreview extends HTMLElement {
         _decodedBy = cached._decodedBy || "";
         console.log(`[YSM] 缓存命中: _decodedBy=${_decodedBy}`);
       } else {
-        console.log(`[YSM] 缓存未命中: cached=${!!cached}, geometry=${!!cached?.geometry}, bones=${cached?.geometry?.bones?.length}`);
+        console.log(
+          `[YSM] 缓存未命中: cached=${!!cached}, geometry=${!!cached?.geometry}, bones=${cached?.geometry?.bones?.length}`,
+        );
       }
 
       // .ysm → 前端 WASM 解码
@@ -644,20 +649,10 @@ class AppPreview extends HTMLElement {
 
       // ---- 3D 预览切换 ----
       let _model3d = null;
-      const viewBtn = document.createElement("button");
-      viewBtn.className = "ysm-btn";
-      viewBtn.textContent = "🌐 3D";
-      viewBtn.title = "全屏 3D 预览";
-      const viewHint = document.createElement("span");
-      viewHint.className = "ysm-hint";
-      viewHint.textContent = "全屏";
-
-      // 3D 全屏状态
       let _overlay3d = null;
       let _is3D = false;
-      if (_prefer3D) requestAnimationFrame(() => viewBtn.click());
 
-      viewBtn.onclick = async () => {
+      const _toggle3D = async () => {
         _is3D = !_is3D;
         _prefer3D = _is3D;
 
@@ -684,8 +679,6 @@ class AppPreview extends HTMLElement {
             _overlay3d = null;
             _is3D = false;
             _prefer3D = false;
-            viewBtn.textContent = "🌐 3D";
-            viewHint.textContent = "全屏";
             if (_model3d) {
               _model3d.cleanup();
               _model3d = null;
@@ -708,7 +701,7 @@ class AppPreview extends HTMLElement {
             texSel.onchange = () => {
               _texIdx = parseInt(texSel.value);
               close3D();
-              viewBtn.click(); // 重新打开
+              _toggle3D(); // 重新打开
             };
             topBar.appendChild(texSel);
           }
@@ -779,8 +772,6 @@ class AppPreview extends HTMLElement {
               _overlay3d = null;
               _is3D = false;
               _prefer3D = false;
-              viewBtn.textContent = "🌐 3D";
-              viewHint.textContent = "全屏";
               if (_model3d) {
                 _model3d.cleanup();
                 _model3d = null;
@@ -796,6 +787,13 @@ class AppPreview extends HTMLElement {
         }
       };
 
+      // 接线 🎨 3D tab 按钮（尽早绑定，避免被 _showModelDetail 占位 onclick 覆盖）
+      const btn3d = this._root.getElementById("btn-3d-preview");
+      if (btn3d) {
+        btn3d.onclick = _toggle3D;
+      }
+      if (_prefer3D) requestAnimationFrame(() => btn3d?.click());
+
       function close3D() {
         if (_model3d) {
           clearInterval(_model3d._timeTimer);
@@ -809,8 +807,6 @@ class AppPreview extends HTMLElement {
         _overlay3d = null;
         _is3D = false;
         _prefer3D = false;
-        viewBtn.textContent = "🌐 3D";
-        viewHint.textContent = "全屏";
       }
 
       // ---- 全窗放大 + 滚轮/拖拽旋转 ----
@@ -901,8 +897,6 @@ class AppPreview extends HTMLElement {
         document.body.removeChild(a);
         URL.revokeObjectURL(a.href);
       };
-      boneRow.appendChild(viewBtn);
-      boneRow.appendChild(viewHint);
       boneRow.appendChild(boneBtn);
       boneRow.appendChild(boneHint);
       container.appendChild(boneRow);
@@ -917,7 +911,7 @@ class AppPreview extends HTMLElement {
     if (cached?.geometry) return cached;
     try {
       devLog("[YSM] 加载 WASM 模块...");
-      const { initYSMParser, decodeYsmFileFromMemory } =
+      const { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } =
         await import("../../wasm/ysm-parser.js");
       const ok = await initYSMParser();
       console.log(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
@@ -938,7 +932,7 @@ class AppPreview extends HTMLElement {
       devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
       if (!bytes?.length) return null;
 
-      // 先尝试原始字节解码（WASM 可能原生支持带文本头部的格式）
+      // 先快路径：decodeYsmFileFromMemory（对标准 V2/V1 文件秒出）
       let files;
       try {
         files = await decodeYsmFileFromMemory(bytes);
@@ -947,18 +941,36 @@ class AppPreview extends HTMLElement {
         }
       } catch (_) {}
 
-      // 原始解码失败 → 尝试剥离文本头部后重建
+      // 快路径失败 → 尝试 MEMFS（callMain，能处理 V3 文本头部等特殊格式）
       if (!files?.length) {
-        const rebuilt = stripYsgpTextHeader(bytes);
-        if (rebuilt !== bytes) {
-          console.log("[YSM] 原始解码失败，尝试剥离文本头部后重试...");
+        console.log("[YSM] 原始字节解码失败，尝试 MEMFS 文件路径解码...");
+        try {
+          files = await decodeYsmFile(bytes);
+          if (files?.length) {
+            console.log(`[YSM] ✅ MEMFS 解码成功: ${files.length} 文件`);
+          }
+        } catch (e2) {
+          console.log(`[YSM] MEMFS 解码异常: ${e2?.message}`);
+        }
+      }
+
+      // MEMFS 也失败 → 尝试剥离文本头部后重建（嵌入式文本头部变体）
+      if (!files?.length) {
+        for (const tryVer of [null, 3]) {
+          const rebuilt = stripYsgpTextHeader(bytes, tryVer);
+          if (rebuilt === bytes || !rebuilt) continue;
+          const verLabel = tryVer ? `V${tryVer}` : "V2(自动)";
+          console.log(`[YSM] 原始解码失败，尝试剥离文本头部(${verLabel})...`);
           try {
             files = await decodeYsmFileFromMemory(rebuilt);
             if (files?.length) {
-              console.log(`[YSM] ✅ 剥离头部后解码成功: ${files.length} 文件`);
+              console.log(
+                `[YSM] ✅ 剥离头部(${verLabel})后解码成功: ${files.length} 文件`,
+              );
+              break;
             }
-          } catch (e2) {
-            console.log(`[YSM] 剥离后解码异常: ${e2?.message}`);
+          } catch (e3) {
+            console.log(`[YSM] 剥离${verLabel}解码异常: ${e3?.message}`);
           }
         }
       }
@@ -1006,6 +1018,7 @@ class AppPreview extends HTMLElement {
       }
 
       // 收集所有纹理文件，按 ysm.json 顺序排列
+      // 过滤掉 avatar/ 目录下的图片（创作者头像，非模型纹理）
       const textures = {};
       const texNameMap = {};
       /** 小写 key → 实际 key 映射（Windows 大小写不敏感） */
@@ -1015,44 +1028,46 @@ class AppPreview extends HTMLElement {
       let maxTexW = 0,
         maxTexH = 0;
       for (const f of files) {
-        if (f.path.endsWith(".png") || f.path.endsWith(".jpg")) {
-          const blob = new Blob([f.data]);
-          const key = f.path
-            .split("/")
-            .pop()
-            .replace(/\.\w+$/, "");
-          textures[key] = URL.createObjectURL(blob);
-          texNameMap[key] = f.path;
-          texLowerMap[key.toLowerCase()] = key;
-          // 从 PNG/JPG 文件头读实际尺寸（优先于 geometry metadata）
-          const arr = new Uint8Array(f.data);
-          let texW = 0,
-            texH = 0;
-          if (arr[0] === 0x89 && arr[1] === 0x50 && arr[2] === 0x4e) {
-            // PNG: IHDR at bytes 16-23: width(4) height(4) big-endian
-            texW = (arr[16] << 24) | (arr[17] << 16) | (arr[18] << 8) | arr[19];
-            texH = (arr[20] << 24) | (arr[21] << 16) | (arr[22] << 8) | arr[23];
-          } else if (arr[0] === 0xff && arr[1] === 0xd8) {
-            // JPEG: 扫描 SOF marker (FF C0/C1/C2) 获取尺寸
-            for (let i = 2; i < Math.min(arr.length - 8, 4096); i++) {
-              if (arr[i] === 0xff && (arr[i + 1] & 0xf0) === 0xc0) {
-                texH = (arr[i + 5] << 8) | arr[i + 6];
-                texW = (arr[i + 7] << 8) | arr[i + 8];
-                break;
-              }
+        if (!(f.path.endsWith(".png") || f.path.endsWith(".jpg"))) continue;
+        if (f.path.startsWith("avatar/") || f.path.startsWith("avatar\\")) {
+          console.log(`[YSM] 跳过头像: ${f.path}`);
+          continue;
+        }
+        const blob = new Blob([f.data]);
+        const key = f.path
+          .split("/")
+          .pop()
+          .replace(/\.\w+$/, "");
+        textures[key] = URL.createObjectURL(blob);
+        texNameMap[key] = f.path;
+        texLowerMap[key.toLowerCase()] = key;
+        // 从 PNG/JPG 文件头读实际尺寸（优先于 geometry metadata）
+        const arr = new Uint8Array(f.data);
+        let texW = 0,
+          texH = 0;
+        if (arr[0] === 0x89 && arr[1] === 0x50 && arr[2] === 0x4e) {
+          // PNG: IHDR at bytes 16-23: width(4) height(4) big-endian
+          texW = (arr[16] << 24) | (arr[17] << 16) | (arr[18] << 8) | arr[19];
+          texH = (arr[20] << 24) | (arr[21] << 16) | (arr[22] << 8) | arr[23];
+        } else if (arr[0] === 0xff && arr[1] === 0xd8) {
+          // JPEG: 扫描 SOF marker (FF C0/C1/C2) 获取尺寸
+          for (let i = 2; i < Math.min(arr.length - 8, 4096); i++) {
+            if (arr[i] === 0xff && (arr[i + 1] & 0xf0) === 0xc0) {
+              texH = (arr[i + 5] << 8) | arr[i + 6];
+              texW = (arr[i + 7] << 8) | arr[i + 8];
+              break;
             }
           }
-          if (texW > 0 && texH > 0) {
-            texDimensions[key] = { w: texW, h: texH };
-            if (texW > maxTexW) maxTexW = texW;
-            if (texH > maxTexH) maxTexH = texH;
-          }
-          devLog(
-            `[YSM] 纹理: ${f.path} → key="${key}"${texDimensions[key] ? ` (${texDimensions[key].w}×${texDimensions[key].h})` : ""}`,
-          );
         }
+        if (texW > 0 && texH > 0) {
+          texDimensions[key] = { w: texW, h: texH };
+          if (texW > maxTexW) maxTexW = texW;
+          if (texH > maxTexH) maxTexH = texH;
+        }
+        devLog(
+          `[YSM] 纹理: ${f.path} → key="${key}"${texDimensions[key] ? ` (${texDimensions[key].w}×${texDimensions[key].h})` : ""}`,
+        );
       }
-      /** 尝试精确匹配，失败则大小写不敏感兜底 */
       const matchTexKey = (tn) => {
         if (!tn) return null;
         if (textures[tn]) return tn;
@@ -1126,23 +1141,33 @@ class AppPreview extends HTMLElement {
           try {
             const parsedRoot = JSON.parse(jsonStr);
             const rootKeys = Object.keys(parsedRoot);
-            const geoKey = rootKeys.find(k => k.includes("minecraft:geometry") || k.includes("geometry"));
+            const geoKey = rootKeys.find(
+              (k) => k.includes("minecraft:geometry") || k.includes("geometry"),
+            );
             if (geoKey) {
               const geoArr = parsedRoot[geoKey];
               if (Array.isArray(geoArr) && geoArr.length > 0) {
                 const hasBones = !!geoArr[0]?.bones?.length;
-                console.log(`[YSM] JSON 调试: rootKeys=[${rootKeys}], geometryKey="${geoKey}", bones=${geoArr[0]?.bones?.length || 0}`);
+                console.log(
+                  `[YSM] JSON 调试: rootKeys=[${rootKeys}], geometryKey="${geoKey}", bones=${geoArr[0]?.bones?.length || 0}`,
+                );
                 if (!hasBones) {
                   console.log(`[YSM] JSON 前200字符: ${jsonStr.slice(0, 200)}`);
                 }
               } else {
-                console.log(`[YSM] JSON 调试: geometryKey="${geoKey}" 不是数组或为空`);
+                console.log(
+                  `[YSM] JSON 调试: geometryKey="${geoKey}" 不是数组或为空`,
+                );
               }
             } else {
-              console.log(`[YSM] JSON 调试: 无 geometry key, rootKeys=[${rootKeys}], 前100字符: ${jsonStr.slice(0, 100)}`);
+              console.log(
+                `[YSM] JSON 调试: 无 geometry key, rootKeys=[${rootKeys}], 前100字符: ${jsonStr.slice(0, 100)}`,
+              );
             }
           } catch (e) {
-            console.log(`[YSM] JSON 调试: JSON.parse 失败: ${e.message}, 前100字符: ${jsonStr.slice(0, 100)}`);
+            console.log(
+              `[YSM] JSON 调试: JSON.parse 失败: ${e.message}, 前100字符: ${jsonStr.slice(0, 100)}`,
+            );
           }
           const parsed = parseBedrockGeometryFromJSON(jsonStr);
           if (!parsed?.bones?.length) return;
@@ -1225,7 +1250,7 @@ class AppPreview extends HTMLElement {
             b._texWidth = boneTexW;
             b._texHeight = boneTexH;
           }
-          allBones.push(...parsed.bones);
+                    allBones.push(...parsed.bones);
 
           if (!geometry) {
             geometry = parsed;
@@ -1267,8 +1292,10 @@ class AppPreview extends HTMLElement {
         texKeyToIdx[k] = i;
       });
       for (const f of files) {
-        if (!f.path.startsWith("models/") || !f.path.endsWith(".json"))
-          continue;
+        // 接受任意路径下的模型 JSON（V1 模型在根目录，V2 在 models/）
+        if (!f.path.endsWith(".json")) continue;
+        if (f.path.endsWith(".animation.json")) continue;
+        if (f.path.endsWith("ysm.json")) continue;
         if (!processedModels.has(f.path)) {
           // 从模型文件名推测纹理索引：取 basename 去 .json，在纹理列表中匹配
           const modelBase = f.path
@@ -1312,6 +1339,19 @@ class AppPreview extends HTMLElement {
         if (maxTexH > geometry.texHeight) geometry.texHeight = maxTexH;
         // 纹理映射日志（调试用）
         geometry._texMappingLog = texMappingLog;
+
+        // 输出前 10 个立方体的 UV 值（调试用）
+        const sampleCubes = [];
+        for (const b of allBones) {
+          for (const c of b.cubes || []) {
+            if (sampleCubes.length >= 10) break;
+            const entry = { bone: b.name, size: c.size };
+            if (Array.isArray(c.uv)) entry.uv = c.uv;
+            if (c.faceUV) entry.faceUV = c.faceUV;
+            sampleCubes.push(entry);
+          }
+          if (sampleCubes.length >= 10) break;
+        }
       }
 
       // 解析动画文件
@@ -1369,12 +1409,13 @@ class AppPreview extends HTMLElement {
   <div class="ysm-tab-row">
     <button class="preview-tab ysm-tab ${savedTab === "detail" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="detail">📄 详情</button>
     <button class="preview-tab ysm-tab ${savedTab === "skeleton" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="skeleton">🏗️ 骨骼</button>
+    <button class="ysm-tab ysm-tab-inactive" id="btn-3d-preview" title="3D 预览">🎨 3D</button>
   </div>
   <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>📄 模型信息</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">正在解析模型文件...</div></div></div>
   <div id="preview-skeleton"${savedTab !== "skeleton" ? ' style="display:none"' : ""}></div>
 </div>`;
 
-    // Tab 切换
+    // Tab 切换（仅详情和骨骼）
     const switchTab = (tab) => {
       localStorage.setItem("ysm_previewTab", tab);
       this._root.querySelectorAll(".preview-tab").forEach((btn) => {
@@ -1390,6 +1431,8 @@ class AppPreview extends HTMLElement {
     this._root.querySelectorAll(".preview-tab").forEach((btn) => {
       btn.onclick = () => switchTab(btn.dataset.tab);
     });
+
+    // 🎨 3D 按钮由 _loadModel2D 中的 _toggle3D 接线，这里不做占位
 
     // 并行：解析元数据 + 加载缩略图
     const previewSrc = await this._loadPreviewImage(path);

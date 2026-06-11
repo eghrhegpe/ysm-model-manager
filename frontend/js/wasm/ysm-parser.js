@@ -177,6 +177,9 @@ export async function decodeYsmFile(bytes) {
   FS.writeFile("/input/model.ysm", bytes);
 
   const hasCallMain = typeof wasmModule.callMain === "function";
+  if (!hasCallMain) {
+    console.warn("[YSM] WASM 无 callMain，MEMFS 路径不可用");
+  }
 
   try {
     if (hasCallMain) {

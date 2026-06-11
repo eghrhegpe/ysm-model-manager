@@ -177,6 +177,7 @@
 - **解码流程**：优先通过 **内嵌 WASM** 直接在浏览器中解码（`YSMParser.wasm` + 胶水代码），失败时降级调用 CLI `YSMParser.exe` 子进程
 - **WASM 内嵌**：WASM 二进制以 base64 编码打包在 `ysm-wasm-data.js` 中，无需额外下载，启动即加载
 - **兼容性**：支持数组 `[u,v]` 和对象 `{face:{uv,uv_size}}` 两种 UV 格式
+- **已知限制**：少部分 2025 年末的 V3 加密变体（如「芙兰朵露 Flandre 2025-06」）因 WASM 缺少 `callMain` 且未分发 `YSMParser.exe` 发行包而无法解码，这类文件会显示"未找到几何数据"
 - **隐私声明**：解码仅在本地进行，不联网、不存储、不导出模型文件
 
 > 💡 v1.0.9+ 已默认内嵌 WASM，无需额外下载 YSMParser.exe。CLI 仅作为开发调试的 fallback，发版包不再包含。

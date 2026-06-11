@@ -255,11 +255,87 @@ export async function initSettings(root) {
 
   // 打开发布页
   root.getElementById("set-releases")?.addEventListener("click", () => {
-    const { OpenFolder } = window.go?.main?.App || {};
-    // 用系统默认浏览器打开 GitHub Releases
     window.open(
       "https://github.com/eghrhegpe/ysm-model-manager/releases",
       "_blank",
     );
+  });
+
+  // ===== 界面与体验设置 =====
+
+  // 读取/应用 UI 偏好（localStorage）
+  const applyUIPref = () => {
+    const fontSize = localStorage.getItem("ui-font-size") || "normal";
+    const displayFont = localStorage.getItem("ui-display-font") || "kaiti";
+    const density = localStorage.getItem("ui-card-density") || "compact";
+    const anim = localStorage.getItem("ui-animations") !== "off";
+
+    // 基准字号
+    const sizes = { small: "9px", normal: "11px", large: "13px" };
+    document.documentElement.style.setProperty("--fs-base", sizes[fontSize] || "11px");
+    // 调整关联变量（相对值）
+    const ratio = fontSize === "small" ? 0.82 : fontSize === "large" ? 1.18 : 1;
+    document.documentElement.style.setProperty("--fs-xs", Math.round(9 * ratio) + "px");
+    document.documentElement.style.setProperty("--fs-sm", Math.round(10 * ratio) + "px");
+    document.documentElement.style.setProperty("--fs-md", Math.round(12 * ratio) + "px");
+    document.documentElement.style.setProperty("--fs-lg", Math.round(14 * ratio) + "px");
+
+    // 创作者名字字体
+    document.documentElement.style.setProperty(
+      "--font-display",
+      displayFont === "system" ? "var(--font-ui)" : "'STKaiti','KaiTi','楷体',serif",
+    );
+
+    // 卡片密度
+    const padding = density === "compact" ? "6px 10px" : "10px 14px";
+    document.documentElement.style.setProperty("--card-padding", padding);
+    const cardGap = density === "compact" ? "6px" : "10px";
+    document.documentElement.style.setProperty("--card-gap", cardGap);
+
+    // 动画
+    document.documentElement.classList.toggle("no-animations", !anim);
+  };
+
+  // 初始化 UI 控件值
+  root.getElementById("set-font-size") && (root.getElementById("set-font-size").value = localStorage.getItem("ui-font-size") || "normal");
+  root.getElementById("set-display-font") && (root.getElementById("set-display-font").value = localStorage.getItem("ui-display-font") || "kaiti");
+  root.getElementById("set-card-density") && (root.getElementById("set-card-density").value = localStorage.getItem("ui-card-density") || "compact");
+  root.getElementById("set-animations") && (root.getElementById("set-animations").checked = localStorage.getItem("ui-animations") !== "off");
+  root.getElementById("set-default-page") && (root.getElementById("set-default-page").value = localStorage.getItem("ui-default-page") || "instances");
+
+  applyUIPref();
+
+  // 基准字号变更
+  root.getElementById("set-font-size")?.addEventListener("change", (e) => {
+    localStorage.setItem("ui-font-size", e.target.value);
+    applyUIPref();
+    bus.emit("toast:show", { msg: "✅ 字号已更新", duration: 1500, type: "success" });
+  });
+
+  // 创作者字体变更
+  root.getElementById("set-display-font")?.addEventListener("change", (e) => {
+    localStorage.setItem("ui-display-font", e.target.value);
+    applyUIPref();
+    bus.emit("toast:show", { msg: "✅ 字体已更新", duration: 1500, type: "success" });
+  });
+
+  // 卡片密度变更
+  root.getElementById("set-card-density")?.addEventListener("change", (e) => {
+    localStorage.setItem("ui-card-density", e.target.value);
+    applyUIPref();
+    bus.emit("toast:show", { msg: "✅ 卡片密度已更新", duration: 1500, type: "success" });
+  });
+
+  // 动画开关
+  root.getElementById("set-animations")?.addEventListener("change", (e) => {
+    localStorage.setItem("ui-animations", e.target.checked ? "on" : "off");
+    applyUIPref();
+    bus.emit("toast:show", { msg: e.target.checked ? "✅ 动画已开启" : "✅ 动画已关闭", duration: 1500, type: "success" });
+  });
+
+  // 默认页面变更
+  root.getElementById("set-default-page")?.addEventListener("change", (e) => {
+    localStorage.setItem("ui-default-page", e.target.value);
+    bus.emit("toast:show", { msg: "✅ 默认页面已保存", duration: 1500, type: "success" });
   });
 }

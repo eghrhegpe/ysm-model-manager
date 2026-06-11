@@ -332,16 +332,17 @@ class AppContent extends HTMLElement {
       });
     }
 
-    // B站/爱发电 tab 点击 → 打开对应站点
-    const openTabSite = async (siteId) => {
-      const { sites } = await loadWorkshopData();
-      const site = sites.find((s) => s.id === siteId);
+    // B站/爱发电 tab 点击 → 在右侧显示对应站点的创作者（不打开网站）
+    const showCreatorsBySite = async (siteType) => {
+      const { sites, creators } = await loadWorkshopData();
+      const site = sites.find((s) => s.id === siteType);
       if (!site) return;
       currentSite = site;
-      openSite(currentSite, false);
+      // 直接渲染创作者视图，不打开网页
+      showSiteView(currentSite);
     };
-    root.querySelector('[data-tab="bilibili"]')?.addEventListener("click", () => openTabSite("bilibili"));
-    root.querySelector('[data-tab="afdian"]')?.addEventListener("click", () => openTabSite("afdian"));
+    root.querySelector('[data-tab="bilibili"]')?.addEventListener("click", () => showCreatorsBySite("bilibili"));
+    root.querySelector('[data-tab="afdian"]')?.addEventListener("click", () => showCreatorsBySite("afdian"));
 
     // 卡片点击 → 正文切换右侧视图，右侧 ↗ 按开关打开
     const openSite = (site, external = false) => {

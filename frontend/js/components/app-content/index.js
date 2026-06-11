@@ -308,7 +308,9 @@ class AppContent extends HTMLElement {
     if (toggleBtn) {
       toggleBtn.addEventListener("click", () => {
         embedMode = !embedMode;
-        toggleBtn.querySelectorAll(".cr-mode-opt").forEach((el) => el.classList.toggle("active"));
+        toggleBtn
+          .querySelectorAll(".cr-mode-opt")
+          .forEach((el) => el.classList.toggle("active"));
       });
     }
 
@@ -684,6 +686,7 @@ class AppContent extends HTMLElement {
   }
 
   async _initSettings() {
+    this._bindTabs("stg", ["basic", "ui"]);
     try {
       await initSettings(this._root);
     } catch (e) {

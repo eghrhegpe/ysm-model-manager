@@ -1,3 +1,7 @@
+---
+render_with_liquid: false
+---
+
 # 下载镜像架构
 
 > 2026-06-06 定稿。解决国内网络环境下 GitHub raw CDN 不稳定问题。

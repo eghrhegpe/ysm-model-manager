@@ -59,7 +59,7 @@ export function renderBody(ins) {
     h += '<div data-category="missing">';
     h += sectionTitleHTML("⬇️ 缺失", ins.items.missing.length);
     ins.items.missing.sort(sortByName).forEach((it) => {
-      const btnHtml = `<button class="btn-install-one" data-path="${esc(it.name)}" style="margin-left:4px;padding:1px 4px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">⬇️ 安装</button>`;
+      const btnHtml = `<button class="btn-install-one" data-path="${esc(it.name)}" style="margin-left:4px;padding:1px 4px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">安装</button>`;
       h += rowHTML(
         "#f38ba8",
         renderDisplayName(it.displayName || it.name),

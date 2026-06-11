@@ -52,6 +52,7 @@ export function settingsHTML() {
 <div class="repo-tabs">
 <button class="repo-tab active" data-tab="basic">⚙️ 基础设置</button>
 <button class="repo-tab" data-tab="ui">⚙️ 界面与体验</button>
+<button class="repo-tab" data-tab="about">ℹ️ 关于</button>
 </div>
 <div class="repo-tab-body" id="stg-tab-basic">
 <div class="stg-page">
@@ -79,67 +80,36 @@ export function settingsHTML() {
   <div class="stg-hint" id="set-repo-empty-hint" style="display:none;color:var(--accent)">💡 请点击「选择目录」设置模型仓库路径，否则下载的模型将无法归类</div>
 </div>
 
-<div class="section-title stg-title stg-sub-title">🔗 存储策略</div>
+<div class="section-title stg-title stg-sub-title">🔗 存储策略 & 🌐 网络</div>
 
-<div class="settings-group stg-group">
-  <div class="setting-row">
-    <span class="label">🔗 链接模式</span>
+<div style="display:flex;gap:12px">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
+      <span class="label" style="font-size:13px;font-weight:600">🔗 链接模式</span>
+    </div>
+    <select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
+      <option value="copy">📋 复制</option>
+      <option value="hardlink" selected>🔗 硬链接 ✅</option>
+      <option value="symlink">🔗 符号链接</option>
+    </select>
+    <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">每个整合包独立占用磁盘空间，最兼容</div>
+    <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">✅ 推荐：省磁盘空间，支持实时开关模型<br>📌 需与游戏同分区</div>
+    <div id="lm-hint-symlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0"><span style="color:#e5534b">❌ 不推荐：权限不足时文件被挂起</span></div>
+    <button id="set-relink" class="btn" style="margin-top:6px;width:100%;font-size:var(--fs-xs)">🔄 重新应用链接</button>
   </div>
-  <div class="stg-radio-row">
-    <label class="stg-label">
-      <input type="radio" name="link-mode" value="copy" id="lm-copy"> 📋 复制
-    </label>
-    <label class="stg-label">
-      <input type="radio" name="link-mode" value="hardlink" id="lm-hardlink"> 🔗 硬链接 ✅
-    </label>
-    <label class="stg-label">
-      <input type="radio" name="link-mode" value="symlink" id="lm-symlink"> 🔗 符号链接
-    </label>
-  </div>
-  <div id="lm-hint-copy" class="stg-hint-hidden">每个整合包独立占用磁盘空间，最兼容</div>
-  <div id="lm-hint-hardlink" class="stg-hint-hidden" style="color:var(--muted,#6c7086)">✅ 推荐：省磁盘空间，支持实时开关模型，YSM 兼容性好<br>📌 需要将模型仓库放在与游戏相同的分区（如 C: 游戏 / C: 模型仓库）</div>
-  <div id="lm-hint-symlink" class="stg-hint-hidden"><span class="stg-hint-warn">❌ 不推荐：YSM 加载符号链接文件时可能因启动器权限不足（PCL/HMCL 无管理员权限）导致文件被挂起无法禁用，需退出游戏后手动删除</span></div>
-</div>
 
-<div class="section-title stg-title stg-sub-title">🌐 网络与下载</div>
-
-<div class="settings-group" style="margin-bottom:12px">
-  <div class="setting-row">
-    <span class="label">🌐 下载镜像源</span>
-    <select id="set-mirror" class="stg-select">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
+      <span class="label" style="font-size:13px;font-weight:600">🌐 下载镜像源</span>
+    </div>
+    <select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="">🌍 直连（raw.githubusercontent.com）</option>
       <option value="jsdelivr">⚡ jsDelivr CDN（国内加速）</option>
       <option value="githubapi">🐙 GitHub API</option>
     </select>
-  </div>
-  <div class="stg-hint">选择优先使用的下载源，失败自动回退到其他源</div>
-</div>
-
-<div class="section-title stg-title stg-sub-title">ℹ️ 关于</div>
-
-<div class="settings-group" style="margin-bottom:12px">
-  <div class="setting-row">
-    <span class="label">📦 当前版本</span>
-    <span id="set-version" style="font-size:var(--fs-sm);color:var(--muted)">加载中...</span>
-    <button class="btn stg-btn" id="set-check-update">🔄 检查更新</button>
-    <button class="btn" id="set-releases" style="font-size:var(--fs-xs);margin-left:4px" title="打开 GitHub Releases">📋 发布页</button>
-  </div>
-  <div style="font-size:var(--fs-xs);color:var(--muted);padding:4px 12px 0;line-height:1.6">
-    <div>🛠️ <b>YSM 模型管理器</b> — 类似 Mod Organizer 2 的 Minecraft YSM 模型管理工具</div>
-    <div>🧱 <b>技术栈</b>: Go (Wails v2) + 原生 HTML/CSS/JS (Web Components + Shadow DOM)</div>
-    <div>📦 <b>GitHub</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
-    <div>📋 <b>发布</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/releases" target="_blank" style="color:var(--accent)">查看所有版本</a></div>
-    <div>📖 <b>文档</b>: <a href="https://github.com/eghrhegpe/ysm-model-manager/tree/main/docs" target="_blank" style="color:var(--accent)">docs/</a></div>
-    <div style="margin-top:6px;border-top:1px solid var(--bd);padding-top:4px">
-      <div style="font-size:var(--fs-xs);color:var(--muted)">🎯 <b>灵感来源</b></div>
-      <div style="font-size:var(--fs-xs);color:var(--muted);line-height:1.7">
-        <div>⬇️ 下载与更新：<a href="https://github.com/LaoYutang/lytvpk" target="_blank" style="color:var(--accent)">LaoYutang/lytvpk</a> L4D2 MOD 管理器</div>
-        <div>🎨 3D 渲染：<a href="https://github.com/DrAbcOfficial/YSMViewer" target="_blank" style="color:var(--accent)">DrAbcOfficial/YSMViewer</a> YSM 模型查看器</div>
-        <div>🔐 解析器：YSMParser.Core</div>
-        <div>📦 仓库、硬链接：Mod Organizer 2</div>
-      </div>
-    </div>
-    <div style="margin-top:4px;font-size:7px;color:var(--muted)">📄 配置文件：exe 同目录下的 ysm_config.json，可直接编辑</div>
+    <div id="mirror-hint-direct" style="font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">直接从 GitHub 原始服务器下载，确保获取最新版本的文件。<br>⚠️ 国内网络环境下可能速度较慢或连接失败</div>
+    <div id="mirror-hint-jsdelivr" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">通过 jsDelivr 全球加速网络分发，国内下载速度显著提升。<br>📌 缓存 TTL 约 12 小时，新发布的内容可能稍有延迟</div>
+    <div id="mirror-hint-githubapi" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">通过 GitHub REST API 获取下载地址。<br>📌 未认证请求限制 60 次/小时，适合偶尔手动下载</div>
   </div>
 </div>
 
@@ -165,38 +135,40 @@ export function settingsHTML() {
 
 <div class="section-title stg-title stg-sub-title">📐 字体与布局</div>
 
-<div class="settings-group" style="margin-bottom:12px">
-  <div class="setting-row">
-    <span class="label">📏 基准字号</span>
-    <select id="set-font-size" class="stg-select">
+<div style="display:flex;gap:12px">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
+      <span class="label" style="font-size:13px;font-weight:600">📏 基准字号</span>
+    </div>
+    <select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="small">🔹 小（11px 基准）</option>
       <option value="normal" selected>🔸 标准（13px 基准）</option>
       <option value="large">🔺 大（15px 基准）</option>
     </select>
+    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">调整整体界面文字大小，选择后立即生效</div>
   </div>
-  <div class="stg-hint">调整整体界面文字大小。选择后立即生效。</div>
-</div>
 
-<div class="settings-group" style="margin-bottom:12px">
-  <div class="setting-row">
-    <span class="label">🃏 创作者名字字体</span>
-    <select id="set-display-font" class="stg-select">
-      <option value="kaiti" selected>🖌️ 楷体（默认，更文艺）</option>
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
+      <span class="label" style="font-size:13px;font-weight:600">🃏 创作者字体</span>
+    </div>
+    <select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
+      <option value="kaiti" selected>🖌️ 楷体（更文艺）</option>
       <option value="system">📝 系统字体（更简洁）</option>
     </select>
+    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">创作者卡片名字使用的艺术字体</div>
   </div>
-  <div class="stg-hint">创作者卡片名字使用的艺术字体。楷体更有个性，系统字体更统一。</div>
-</div>
 
-<div class="settings-group" style="margin-bottom:12px">
-  <div class="setting-row">
-    <span class="label">💳 卡片密度</span>
-    <select id="set-card-density" class="stg-select">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
+      <span class="label" style="font-size:13px;font-weight:600">💳 卡片密度</span>
+    </div>
+    <select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="compact" selected>📦 紧凑（信息密集）</option>
       <option value="normal">📦 标准（间距舒适）</option>
     </select>
+    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">卡片内边距和间距调整</div>
   </div>
-  <div class="stg-hint">紧凑：卡片内边距 8px，间距 8px；标准：12px+12px。</div>
 </div>
 
 <div class="section-title stg-title stg-sub-title">⚡ 行为与动画</div>
@@ -225,6 +197,108 @@ export function settingsHTML() {
 
 </div>
 </div>
+
+<div class="repo-tab-body" id="stg-tab-about" style="display:none">
+<div class="stg-page">
+
+<div class="section-title stg-title">📦 关于 YSM 模型管理器</div>
+
+<div class="settings-group" style="margin-bottom:12px;padding:0 16px">
+  <div class="setting-row">
+    <span class="label">📦 当前版本</span>
+    <span id="set-version" style="font-size:var(--fs-sm);color:var(--muted)">加载中...</span>
+    <button class="btn stg-btn" id="set-check-update">🔄 检查更新</button>
+    <button class="btn" id="set-releases" style="margin-left:4px" title="打开 GitHub Releases">📋 发布页</button>
+  </div>
+</div>
+
+<div style="display:flex;gap:12px;margin-bottom:12px">
+  <div style="flex:2;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">🛠️ 这是什么？</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
+      <b>YSM 模型管理器</b> 是一款面向 Minecraft YSM 模组的模型管理工具，帮你像 Steam 创意工坊一样管理你的模型收藏。
+      <br><br>
+      ✅ 拖拽导入 .ysm / .zip / .7z 模型文件<br>
+      ✅ 按作者、角色、作品智能归类<br>
+      ✅ 2D/3D 模型预览，不必进游戏确认<br>
+      ✅ 按 SHA256 去重，节省磁盘空间<br>
+      ✅ 硬链接安装，不复制冗余文件<br>
+      ✅ 整合包同步、回收站、批量操作
+    </div>
+  </div>
+
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">🧱 技术栈</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
+      <div>🔹 Go + Wails v2（后端）</div>
+      <div>🔹 原生 HTML/CSS/JS（前端）</div>
+      <div>🔹 Web Components + Shadow DOM</div>
+      <div>🔹 Three.js（3D 预览）</div>
+      <div>🔹 YSMParser WASM（解码）</div>
+      <div>🔹 Vite（构建）</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;gap:12px;margin-bottom:12px">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">📦 资源链接</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.8">
+      <div>🐙 GitHub：<a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
+      <div>📋 发布页：<a href="https://github.com/eghrhegpe/ysm-model-manager/releases" target="_blank" style="color:var(--accent)">查看所有版本</a></div>
+      <div>📖 文档：<a href="https://github.com/eghrhegpe/ysm-model-manager/tree/main/docs" target="_blank" style="color:var(--accent)">docs/ 目录</a></div>
+      <div>📄 配置：exe 同目录 <code>ysm_config.json</code></div>
+    </div>
+  </div>
+
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">💡 快速上手</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
+      <div>1. 设置游戏目录和仓库路径</div>
+      <div>2. 将模型文件拖入「导入」页</div>
+      <div>3. 模型自动归档到仓库</div>
+      <div>4. 在「整合包管理」中安装到整合包</div>
+      <div>5. 在游戏中加载 YSM 资源包即可看到模型</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-title stg-title stg-sub-title">🎯 灵感来源</div>
+
+<div style="display:flex;gap:12px">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">⬇️ 下载与更新</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
+      <a href="https://github.com/LaoYutang/lytvpk" target="_blank" style="color:var(--accent)">LaoYutang/lytvpk</a><br>
+      L4D2 MOD 管理器，启发了下载队列和更新检测的设计
+    </div>
+  </div>
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">🎨 3D 渲染</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
+      <a href="https://github.com/DrAbcOfficial/YSMViewer" target="_blank" style="color:var(--accent)">DrAbcOfficial/YSMViewer</a><br>
+      参考了骨骼层级、UV 映射和 BufferGeometry 构建方式
+    </div>
+  </div>
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">🔐 YSM 解析</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
+      YSMParser.Core<br>
+      跨平台 YSM 二进制格式解码能力（WASM 内嵌）
+    </div>
+  </div>
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">📦 仓库管理</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
+      Mod Organizer 2<br>
+      硬链接安装、回收站、按实例管理的设计理念来源
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+
 </div>`;
 }
 
@@ -252,20 +326,20 @@ export function downloadsHTML() {
     <input id="dl-date" placeholder="年月" style="width:64px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
   </div>
   <div id="dl-tips" style="display:none;font-size:10px;color:var(--muted);padding:4px 8px;margin:2px 0;border-radius:4px;border-left:3px solid var(--accent);background:var(--surf);line-height:1.5;max-height:60px;overflow-y:auto"></div>
-  <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;background:var(--surf)">
+  <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;background:var(--surf);overflow:hidden">
     <span style="color:var(--muted);font-size:9px;white-space:nowrap">最终命名</span>
     <span id="dl-preview" style="font-weight:600;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">-</span>
     <span id="dl-conflict" style="display:none;font-size:9px;color:#f9a826;white-space:nowrap">⚠️</span>
-    <button class="btn accent" id="dl-import" style="padding:3px 10px;font-size:10px;white-space:nowrap">📥 导入</button>
+    <button class="btn accent" id="dl-import" style="padding:3px 10px;white-space:nowrap">📥 导入</button>
     <span style="font-size:9px;color:var(--muted);white-space:nowrap">队列 <span id="dl-queue-count">0</span></span>
-    <button class="btn" id="dl-cancel" style="padding:2px 6px;font-size:9px;white-space:nowrap">✕</button>
+    <button class="btn" id="dl-cancel" style="padding:2px 6px;white-space:nowrap">✕</button>
   </div>
 </div>
 <div style="margin:0 12px 4px;border-top:1px solid var(--bd);padding-top:4px">
-  <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--txt);padding:2px 0">
-    <span>📋 已导入</span>
+  <div style="display:flex;align-items:center;gap:6px;font-weight:600;color:var(--txt);padding:2px 0">
+    <span style="font-size:var(--fs-md)">📋 已导入</span>
     <span id="dl-count" style="font-size:10px;color:var(--muted);font-weight:400">0 个文件</span>
-    <button class="btn" id="dl-clear-list" style="font-size:9px;padding:1px 6px;margin-left:auto">🗑️ 清空</button>
+    <button class="btn" id="dl-clear-list" style="padding:2px 8px;margin-left:auto">🗑️ 清空</button>
   </div>
   <div id="dl-imported-list" style="display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto"></div>
 </div>
@@ -345,8 +419,8 @@ export function recycleHTML() {
   return `<div class="recy-page" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px">
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
 <span id="recy-count" style="font-size:11px;color:#6c7086">加载中...</span>
-<button class="btn" id="recy-refresh" style="margin-left:auto;font-size:10px">🔄 刷新</button>
-<button class="btn danger" id="recy-empty" style="font-size:10px">🗑️ 清空回收站</button>
+<button class="btn" id="recy-refresh" style="margin-left:auto">🔄 刷新</button>
+<button class="btn danger" id="recy-empty">🗑️ 清空回收站</button>
 </div>
 <div id="recy-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
 </div>`;
@@ -389,12 +463,12 @@ export function workshopHTML() {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs">' +
-    '<button id="cr-mode-toggle" class="cr-mode-switch">' +
+    '<button class="repo-tab active" data-tab="bilibili">📺 B站</button>' +
+    '<button class="repo-tab" data-tab="afdian">❤️ 爱发电</button>' +
+    '<button id="cr-mode-toggle" class="cr-mode-switch" style="margin-left:auto">' +
     '<span class="cr-mode-opt cr-mode-ext active">↗ 外链</span>' +
     '<span class="cr-mode-opt cr-mode-emb">🔍 内嵌</span>' +
     "</button>" +
-    '<button class="repo-tab active" data-tab="bilibili">📺 B站</button>' +
-    '<button class="repo-tab" data-tab="afdian">❤️ 爱发电</button>' +
     "</div>" +
     '<div class="repo-tab-body" id="cr-tab-creators">' +
     '<div class="cr-page" id="ws-page">' +
@@ -424,7 +498,7 @@ export function workshopHTML() {
     '<div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:12px">' +
     '<div style="font-size:32px">🚫</div>' +
     "<div>此站点不允许内嵌浏览</div>" +
-    '<button class="btn accent" id="ws-open-fallback" style="font-size:11px">↗ 在系统浏览器中打开</button>' +
+    '<button class="btn accent" id="ws-open-fallback">↗ 在系统浏览器中打开</button>' +
     "</div>" +
     "</div>" +
     "</div>" +

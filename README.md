@@ -1,8 +1,8 @@
 # 🧱 YSM 模型管理器
 
-> 类似 Mod Organizer 2 的 Minecraft [Yes Steve Model](https://www.mcmod.cn/class/8616.html) 模型管理器。
+> 像 Steam 创意工坊一样，管理你的 Minecraft YSM 模型。导入、预览、分类、同步到整合包，一站完成。
 
-**技术栈**：Go (Wails v2) + 原生 HTML/CSS/JS (Web Components + Shadow DOM)
+**技术栈**：Go (Wails v2) + 原生 HTML/CSS/JS (Web Components + Shadow DOM) + Three.js + YSMParser WASM
 
 **平台支持**：✅ Windows (amd64) · ⚠️ macOS (实验性) · ❓ Linux (待验证)
 

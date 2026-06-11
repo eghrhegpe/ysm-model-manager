@@ -18,7 +18,9 @@ export const treeCSS = `
 .sort-sel { padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;cursor:pointer; }
 .hdr-btn { padding:3px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 .hdr-btn:hover { background:var(--hover); }
-.hdr-btn.accent { background:#7c83ff33;color:var(--accent);border-color:#7c83ff55; }
+.hdr-btn.accent { background:#7c83ff33;color:#66d9ef;border-color:#7c83ff55; }
+:host-context(.theme-warm) .hdr-btn.accent { color:#8b4513; }
+:host-context(.theme-pro) .hdr-btn.accent { color:#ffffff; }
 .hdr-btn.accent:hover { background:#7c83ff55; }
 .hdr-btn.flash { background:#a6e3a133;border-color:#a6e3a155; }
 .dd-wrap { position:relative;display:inline-block; }

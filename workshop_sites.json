@@ -7,7 +7,20 @@
     "desc": "展示模型视频的主流平台",
     "group": "search",
     "searchUrl": "https://search.bilibili.com/all?keyword={{q}}",
-    "presetSearches": [{ "label": "YSM免费模型" }, { "label": "YSM模型分享" }]
+    "presetSearches": [
+      {
+        "label": "YSM免费模型",
+        "q": ""
+      },
+      {
+        "label": "YSM模型分享",
+        "q": ""
+      },
+      {
+        "label": "YSM模型展示",
+        "q": ""
+      }
+    ]
   },
   {
     "id": "afdian",
@@ -17,6 +30,11 @@
     "desc": "赞助创作者的平台",
     "group": "search",
     "searchUrl": "https://afdian.com/search?q={{q}}",
-    "presetSearches": [{ "label": "YSM" }]
+    "presetSearches": [
+      {
+        "label": "YSM",
+        "q": ""
+      }
+    ]
   }
 ]

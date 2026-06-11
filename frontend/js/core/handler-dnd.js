@@ -21,7 +21,8 @@ const showDropOverlay = (hasModel) => {
     const inner = dropOverlay.firstElementChild;
     if (inner) {
       inner.style.borderColor = "#f38ba8";
-      inner.style.background = "color-mix(in srgb, #f38ba8 8%, var(--surf,#1a1b2e))";
+      inner.style.background =
+        "color-mix(in srgb, #f38ba8 8%, var(--surf,#1a1b2e))";
       const msg = inner.querySelector("div:nth-child(3)");
       if (msg) msg.textContent = "⛔ 未检测到模型文件";
     }
@@ -37,7 +38,8 @@ const hideDropOverlay = () => {
 };
 
 const isEditable = (el) =>
-  el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+  el &&
+  (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
 
 const onDragOver = (e) => {
   if (!e.dataTransfer?.items?.length) return;
@@ -51,7 +53,10 @@ const onDragOver = (e) => {
 };
 const onDragLeave = (e) => {
   if (dropLeaveTimer) clearTimeout(dropLeaveTimer);
-  if (!e.relatedTarget) { hideDropOverlay(); return; }
+  if (!e.relatedTarget) {
+    hideDropOverlay();
+    return;
+  }
   dropLeaveTimer = setTimeout(() => {
     if (!e.currentTarget.contains(e.relatedTarget)) hideDropOverlay();
   }, 100);
@@ -69,7 +74,9 @@ const onDrop = async (e) => {
   });
 
   const getFileFromEntry = (entry) =>
-    new Promise((resolve, reject) => { entry.file(resolve, reject); });
+    new Promise((resolve, reject) => {
+      entry.file(resolve, reject);
+    });
 
   const collectFiles = async (items, isEntryArray) => {
     const result = [];
@@ -88,7 +95,9 @@ const onDrop = async (e) => {
         result.push(...(await readAll()));
       } else if (entry?.isFile) {
         if (/\.(ysm|zip|7z)$/i.test(entry.name)) {
-          try { result.push(await getFileFromEntry(entry)); } catch (_) {}
+          try {
+            result.push(await getFileFromEntry(entry));
+          } catch (_) {}
         }
       } else {
         const f = item.getAsFile?.();
@@ -105,19 +114,25 @@ const onDrop = async (e) => {
     const direct = Array.from(e.dataTransfer?.files || []);
     allFiles = direct.filter((f) => /\.(ysm|zip|7z)$/i.test(f.name));
   }
-  console.log("[DnD] collected:", allFiles.length, allFiles.map((f) => f.name));
+  console.log(
+    "[DnD] collected:",
+    allFiles.length,
+    allFiles.map((f) => f.name),
+  );
 
   if (allFiles.length === 0) {
     bus.emit("toast:show", {
       msg: "📂 未检测到模型文件（.ysm / .zip / .7z）",
-      duration: 3000, type: "info",
+      duration: 3000,
+      type: "info",
     });
     return;
   }
   if (allFiles.length > MAX_FILE_COUNT) {
     bus.emit("toast:show", {
       msg: `⚠️ 单次导入文件过多（${allFiles.length} 个），请分批处理`,
-      duration: 5000, type: "warn",
+      duration: 5000,
+      type: "warn",
     });
     return;
   }
@@ -125,16 +140,26 @@ const onDrop = async (e) => {
   if (oversized.length > 0) {
     bus.emit("toast:show", {
       msg: `⚠️ ${oversized[0].name} 超过 10MB，请直接放入仓库文件夹`,
-      duration: 5000, type: "warn",
+      duration: 5000,
+      type: "warn",
     });
     return;
   }
 
   window.__pendingImport = allFiles.map((f) => ({ name: f.name, file: f }));
-  if (window.__currentPage === "downloads") {
+  if (window.__currentPage === "repository") {
     bus.emit("import:pending-files");
+    bus.emit("repo:switch-tab", { tab: "import" });
   } else {
-    bus.emit("nav:change", { page: "downloads" });
+    window.__pendingImport = allFiles.map((f) => ({ name: f.name, file: f }));
+    bus.emit("nav:change", { page: "repository" });
+    // 导航完成后切换到导入标签
+    const unsub = bus.on("nav:changed", ({ page }) => {
+      if (page === "repository") {
+        unsub();
+        setTimeout(() => bus.emit("repo:switch-tab", { tab: "import" }), 50);
+      }
+    });
   }
 };
 
@@ -145,8 +170,15 @@ export function registerDnD(unsubs) {
   unsubs.push(() => document.removeEventListener("dragover", onDragOver));
   unsubs.push(() => document.removeEventListener("dragleave", onDragLeave));
   unsubs.push(() => document.removeEventListener("drop", onDrop));
-  unsubs.push(() => { if (dropOverlay) { dropOverlay.remove(); dropOverlay = null; } });
+  unsubs.push(() => {
+    if (dropOverlay) {
+      dropOverlay.remove();
+      dropOverlay = null;
+    }
+  });
 
   // 页面跟踪
-  bus.on("nav:changed", ({ page }) => { window.__currentPage = page; });
+  bus.on("nav:changed", ({ page }) => {
+    window.__currentPage = page;
+  });
 }

@@ -51,7 +51,9 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .divider { border: none; border-top: 1px solid var(--bd); margin: 6px 0; }
 .btn { padding: 5px 0; border-radius: 6px; border: 1px solid var(--bd); background: transparent; color: var(--txt); cursor: pointer; font-size: var(--fs-base); font-family: inherit; transition: background .12s; }
 .btn:hover { background: var(--hover); }
-.btn.accent { background: #7c83ff33; color: var(--accent); border-color: #7c83ff55; }
+.btn.accent { background: #7c83ff33; color: #66d9ef; border-color: #7c83ff55; }
+:host-context(.theme-warm) .btn.accent { color: #8b4513; }
+:host-context(.theme-pro) .btn.accent { color: #ffffff; }
 .btn.accent:hover { background: #7c83ff55; }
 .btn.warn { background: #f9a82622; color: #f9a826; border-color: #f9a82655; }
 .log-entry { padding: 2px 0; font-size: var(--fs-xs); color: var(--txt); display: flex; gap: 4px; white-space: nowrap; }

@@ -229,7 +229,7 @@ export function loadLogsPreview(root, logs) {
   if (!list) return;
   if (!logs || !logs.length) {
     list.innerHTML =
-      '<div class="stat-row" style="font-size:10px;color:#6c7086">暂无日志</div>';
+      '<div class="stat-row" style="color:#6c7086">暂无日志</div>';
     return;
   }
   // 读取筛选状态

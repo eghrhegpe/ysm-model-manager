@@ -6,15 +6,15 @@ import { bus } from "../bus.js";
 class ContextMenu extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    this.attachShadow({ mode: "open" });
   }
 
   connectedCallback() {
-    this._unsub = bus.on('menu:show', ({ x, y, items }) => {
+    this._unsub = bus.on("menu:show", ({ x, y, items }) => {
       this.show(x, y, items);
     });
-    document.addEventListener('click', () => this.hide());
-    document.addEventListener('contextmenu', () => this.hide());
+    document.addEventListener("click", () => this.hide());
+    document.addEventListener("contextmenu", () => this.hide());
     this.render();
   }
 
@@ -67,19 +67,21 @@ class ContextMenu extends HTMLElement {
   }
 
   show(x, y, items) {
-    const menu = this.shadowRoot.getElementById('menu');
-    menu.innerHTML = items.map((item, i) => {
-      if (item.divider) return '<hr class="divider">';
-      return `
-        <div class="item ${item.danger ? 'danger' : ''}" data-idx="${i}">
-          ${item.icon ? `<span class="icon">${item.icon}</span>` : ''}
+    const menu = this.shadowRoot.getElementById("menu");
+    menu.innerHTML = items
+      .map((item, i) => {
+        if (item.divider) return '<hr class="divider">';
+        return `
+        <div class="item ${item.danger ? "danger" : ""}" data-idx="${i}">
+          ${item.icon ? `<span class="icon">${item.icon}</span>` : ""}
           <span>${item.label}</span>
         </div>
       `;
-    }).join('');
+      })
+      .join("");
 
     // 绑定点击
-    menu.querySelectorAll('.item').forEach(el => {
+    menu.querySelectorAll(".item").forEach((el) => {
       el.onclick = (e) => {
         e.stopPropagation();
         const idx = parseInt(el.dataset.idx);
@@ -88,13 +90,13 @@ class ContextMenu extends HTMLElement {
       };
     });
 
-    this.style.display = 'block';
-    this.style.left = x + 'px';
-    this.style.top = y + 'px';
+    this.style.display = "block";
+    this.style.left = x + "px";
+    this.style.top = y + "px";
   }
 
   hide() {
-    this.style.display = 'none';
+    this.style.display = "none";
   }
 }
-customElements.define('context-menu', ContextMenu);
+customElements.define("context-menu", ContextMenu);

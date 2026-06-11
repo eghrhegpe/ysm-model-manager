@@ -338,9 +338,13 @@ class AppContent extends HTMLElement {
       const site = sites.find((s) => s.id === siteType);
       if (!site) return;
       currentSite = site;
-      // 直接渲染创作者视图，不打开网页
+      // tab 切换高亮
+      root.querySelectorAll(".repo-tab").forEach((t) => t.classList.remove("active"));
+      root.querySelector(`[data-tab="${siteType}"]`)?.classList.add("active");
       showSiteView(currentSite);
     };
+    // 默认显示 B站
+    setTimeout(() => showCreatorsBySite("bilibili"), 100);
     root.querySelector('[data-tab="bilibili"]')?.addEventListener("click", () => showCreatorsBySite("bilibili"));
     root.querySelector('[data-tab="afdian"]')?.addEventListener("click", () => showCreatorsBySite("afdian"));
 

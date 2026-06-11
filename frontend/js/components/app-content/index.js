@@ -291,7 +291,7 @@ class AppContent extends HTMLElement {
     const iframe = root.getElementById("ws-iframe");
     const urlEl = root.getElementById("ws-url");
     const blockedEl = root.getElementById("ws-blocked");
-    const popup = root.getElementById("ws-popup");
+    const popup = root.getElementById("cr-popup");
     const sourceInfo = root.getElementById("ws-source-info");
     const searchResults = root.getElementById("ws-search-results");
     const creatorView = root.getElementById("ws-creator-view");
@@ -316,10 +316,10 @@ class AppContent extends HTMLElement {
         sourceInfo.textContent = sites.length + " 站点 · JSON驱动";
 
         // 卡片点击事件
-        grid.querySelectorAll(".ws-card").forEach((card) => {
+        grid.querySelectorAll(".gh-card").forEach((card) => {
           card.addEventListener("click", () => {
             grid
-              .querySelectorAll(".ws-card")
+              .querySelectorAll(".gh-card")
               .forEach((c) => c.classList.remove("active"));
             card.classList.add("active");
             const idx = parseInt(card.dataset.index, 10);
@@ -347,7 +347,7 @@ class AppContent extends HTMLElement {
       popup.style.display = "none";
     };
 
-    popup.querySelectorAll(".ws-popup-item").forEach((item) => {
+    popup.querySelectorAll(".cr-popup-item").forEach((item) => {
       item.addEventListener("click", () => {
         if (!currentSite) return;
         if (item.dataset.action === "browser") {
@@ -361,7 +361,7 @@ class AppContent extends HTMLElement {
     });
 
     root.addEventListener("click", (e) => {
-      if (!e.target.closest(".ws-popup") && !e.target.closest(".ws-card"))
+      if (!e.target.closest(".cr-popup") && !e.target.closest(".gh-card"))
         hidePopup();
     });
 
@@ -553,12 +553,12 @@ class AppContent extends HTMLElement {
         grid.innerHTML = ghCreators
           .map(
             (cr, idx) =>
-              '<div class="ws-card gh-repo-card" data-index="' +
+              '<div class="gh-card gh-repo-card" data-index="' +
               idx +
               '" data-repo="' +
               this._esc(cr.name) +
               '">' +
-              '<div class="ws-card-body">' +
+              '<div class="gh-card-body">' +
               '<div class="ws-name" style="font-size:11px">🐙 ' +
               this._esc(cr.name) +
               "</div>" +
@@ -572,7 +572,7 @@ class AppContent extends HTMLElement {
         grid.querySelectorAll(".gh-repo-card").forEach((card) => {
           card.addEventListener("click", () => {
             grid
-              .querySelectorAll(".ws-card")
+              .querySelectorAll(".gh-card")
               .forEach((c) => c.classList.remove("active"));
             card.classList.add("active");
             const repo = card.dataset.repo;

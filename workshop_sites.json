@@ -4,7 +4,7 @@
     "icon": "📺",
     "label": "B站",
     "url": "https://www.bilibili.com/",
-    "desc": "搜索模型创作者和模型展示视频的主流平台",
+    "desc": "展示模型视频的主流平台",
     "group": "search",
     "searchUrl": "https://search.bilibili.com/all?keyword={{q}}",
     "presetSearches": [{ "label": "YSM免费模型" }, { "label": "YSM模型分享" }]
@@ -14,34 +14,9 @@
     "icon": "❤️",
     "label": "爱发电",
     "url": "https://afdian.com/",
-    "desc": "赞助创作者平台",
+    "desc": "赞助创作者的平台",
     "group": "search",
     "searchUrl": "https://afdian.com/search?q={{q}}",
     "presetSearches": [{ "label": "YSM" }]
-  },
-  {
-    "id": "mcmod",
-    "icon": "📖",
-    "label": "MC百科",
-    "url": "https://www.mcmod.cn/",
-    "desc": "模组与模型百科",
-    "group": "browse",
-    "searchUrl": "https://search.mcmod.cn/s?key={{q}}"
-  },
-  {
-    "id": "curseforge",
-    "icon": "🔥",
-    "label": "CurseForge",
-    "url": "https://www.curseforge.com/minecraft",
-    "desc": "全球 MC 资源站（无法下载YSM）",
-    "group": "browse"
-  },
-  {
-    "id": "modrinth",
-    "icon": "💎",
-    "label": "Modrinth",
-    "url": "https://modrinth.com/",
-    "desc": "开源 MC 平台（无法下载YSM）",
-    "group": "browse"
   }
 ]

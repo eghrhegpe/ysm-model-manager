@@ -125,17 +125,17 @@ export async function loadOldestModel(container, esc) {
               day: "numeric",
             });
             return (
-              '<div style="text-align:left;padding:6px 10px;background:var(--bg);border-radius:6px;border:1px solid var(--bd);width:calc(50% - 3px);box-sizing:border-box;cursor:pointer" data-path="' +
+              '<div class="model-card-sm" style="width:calc(50% - 3px);box-sizing:border-box" data-path="' +
               esc(e.Path || e.Name || "") +
               '" title="点击查看详情: ' +
               esc(e.Name || "") +
               '">' +
-              '<div style="font-size:11px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' +
+              '<div class="name" title="' +
               esc(e.Name || "") +
               '">📄 ' +
               renderDisplayName(e.Name) +
               "</div>" +
-              '<div style="font-size:9px;color:var(--muted);margin-top:2px;display:flex;gap:6px">' +
+              '<div class="meta">' +
               "<span>📏 " +
               fmtSize(e.Size) +
               "</span>" +
@@ -173,17 +173,17 @@ export async function loadOldestModel(container, esc) {
             })
           : "";
         picks.push(
-          '<div style="flex:1;min-width:140px;max-width:200px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;text-align:left;transition:all .12s;cursor:pointer" data-path="' +
+          '<div class="model-card" style="flex:1;min-width:140px;max-width:200px" data-path="' +
             esc(p.Path || p.Name || "") +
             '" title="点击查看详情: ' +
             esc(p.Name || "") +
             '">' +
-            '<div style="font-size:12px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' +
+            '<div class="name" style="font-size:12px" title="' +
             esc(p.Name || "") +
             '">' +
             renderDisplayName(p.Name) +
             "</div>" +
-            '<div style="font-size:10px;color:var(--muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">' +
+            '<div class="meta" style="font-size:10px;margin-top:4px">' +
             "<span>📏 " +
             sizeStr +
             "</span>" +

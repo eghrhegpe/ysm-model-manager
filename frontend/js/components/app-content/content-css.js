@@ -270,6 +270,9 @@ export const contentCSS = `
 .gh-card.active .gh-card-label { color:#fff; }
 .gh-card-desc { font-size:9px; color:var(--muted); margin-top:0; }
 .gh-card.active .gh-card-desc { color:#fffd; }
+.gh-card-external { width:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);cursor:pointer;border-left:1px solid var(--bd);transition:all .12s; }
+.gh-card-external:hover { color:var(--accent);background:var(--hover); }
+.gh-card.active .gh-card-external { border-left-color:var(--accent);color:var(--accent); }
 .gh-section-title { font-size:12px;font-weight:600;color:var(--txt);padding:8px 12px 4px; }
 .gh-header { border-bottom:1px solid var(--bd);flex-shrink:0; }
 .gh-header-top { display:flex;align-items:center;gap:8px;padding:8px 12px;flex-wrap:wrap; }

@@ -200,6 +200,7 @@ export function renderCardsHTML(sites, esc) {
         esc(s.desc) +
         "</div>" +
         "</div>" +
+        '<div class="gh-card-external" title="系统浏览器打开">↗</div>' +
         "</div>";
     });
   });

@@ -417,12 +417,27 @@ export function renderSiteView(site, ctx) {
 
   // 新增创作者
   searchResults.querySelector(".cr-add")?.addEventListener("click", () => {
+    // 先把当前输入框的值同步回数组
+    searchResults.querySelectorAll(".cr-row input[data-idx]").forEach((inp) => {
+      const idx = parseInt(inp.dataset.idx, 10);
+      const fld = inp.dataset.fld;
+      if (!isNaN(idx) && creators[idx] && fld) {
+        creators[idx][fld] = inp.value;
+      }
+    });
     creators.push({ name: "新作者", desc: "描述", type: site.id });
     allCreators.push(creators[creators.length - 1]);
     refreshView();
   });
   // 新增搜索词
   searchResults.querySelector(".cr-add-preset")?.addEventListener("click", () => {
+    // 先把当前输入框的值同步回数组
+    searchResults.querySelectorAll(".cr-row input[data-fld='label']").forEach((inp) => {
+      const idx = parseInt(inp.dataset.idx, 10);
+      if (!isNaN(idx) && site.presetSearches && site.presetSearches[idx]) {
+        site.presetSearches[idx].label = inp.value;
+      }
+    });
     if (!site.presetSearches) site.presetSearches = [];
     site.presetSearches.push({ label: "" });
     refreshView();

@@ -113,18 +113,19 @@ export const contentCSS = `
 
 /* 基础卡片 — 所有卡片的基础 */
 .model-card {
-  background:var(--bg);
+  background:var(--card);
   border:1px solid var(--bd);
   border-radius:8px;
   padding:10px 12px;
   text-align:left;
   cursor:pointer;
   transition:all .15s ease;
+  box-shadow:var(--card-shadow, none);
 }
 .model-card:hover {
   border-color:var(--accent);
   background:var(--hover);
-  box-shadow:0 2px 8px rgba(0,0,0,.08);
+  box-shadow:var(--card-shadow-hover, none);
 }
 .model-card .name {
   font-size:11px;
@@ -146,16 +147,18 @@ export const contentCSS = `
 /* 紧凑卡片 — 网格布局（2列/3列） */
 .model-card-sm {
   padding:6px 10px;
-  border-radius:6px;
+  border-radius:8px;
   border:1px solid var(--bd);
-  background:var(--bg);
+  background:var(--card);
   text-align:left;
   cursor:pointer;
-  transition:all .12s;
+  transition:all .15s ease;
+  box-shadow:var(--card-shadow, none);
 }
 .model-card-sm:hover {
   border-color:var(--accent);
   background:var(--hover);
+  box-shadow:var(--card-shadow-hover, none);
 }
 .model-card-sm .name {
   font-size:11px;
@@ -265,9 +268,11 @@ export const contentCSS = `
 .gh-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .gh-right-inner { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .gh-grid { flex:1; overflow-y:auto; padding:4px 8px; display:flex; flex-direction:column; gap:4px; }
-.gh-card { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; border:1px solid var(--bd); background:var(--bg); cursor:pointer; transition:all .12s; }
-.gh-card:hover { border-color:var(--accent); background:var(--hover); }
-.gh-card.active { border-color:var(--accent); background:var(--accent); color:#fff; }
+.gh-card { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:8px; border:1px solid var(--bd); background:var(--card); cursor:pointer; transition:all .15s ease; box-shadow:var(--card-shadow, none); }
+.gh-card:hover { border-color:var(--accent); background:var(--hover); box-shadow:var(--card-shadow-hover, none); transform:translateY(-1px); }
+.gh-card.active { border-color:var(--accent); background:var(--accent); color:#fff; box-shadow:var(--card-shadow-hover, none); }
+.gh-card .name { font-size:12px; font-weight:700; color:var(--txt); font-family:'STKaiti','KaiTi','楷体',serif; overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.gh-card .name + .meta { margin-top:1px; font-size:9px; color:var(--muted); }
 .gh-card-icon { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
 .gh-card-body { flex:1; min-width:0; }
 .gh-card-label { font-size:11px; font-weight:600; color:var(--txt); }

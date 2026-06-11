@@ -42,10 +42,16 @@ export function renderSiteView(site, ctx) {
   let parts = [];
   parts.push('<div class="cr-scroll">');
 
-  // 预设搜索按钮
+  // 搜索词分区
   if (site.presetSearches && site.presetSearches.length) {
     parts.push(
-      '<div class="cr-preset-area">' +
+      '<div class="cr-section">' +
+        '<span class="cr-section-title-lg">🔍 搜索词</span>' +
+        '<span class="cr-section-sub">(' +
+        site.presetSearches.length +
+        ")</span>" +
+        "</div>" +
+        '<div class="cr-preset-area">' +
         site.presetSearches
           .map(
             (ps) =>
@@ -68,40 +74,40 @@ export function renderSiteView(site, ctx) {
         '<span class="cr-section-sub">(' +
         creators.length +
         ")</span>" +
-        '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto">✏️ 管理</button>' +
+        '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto">✏️ 编辑</button>' +
         "</div>",
     );
     parts.push(
       '<div style="display:flex;flex-wrap:wrap;gap:6px;width:100%">' +
-      creators
-        .map((cr) => {
-          const isGitHub = cr.type && cr.type.includes("github");
-          const repoParts = isGitHub ? cr.name.split("/") : null;
-          const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
-          return (
-            '<div class="gh-card" style="width:calc(25% - 5px);box-sizing:border-box;flex:none;cursor:pointer" data-name="' +
-            esc(cr.name) +
-            '" title="搜索: ' +
-            esc(cr.name) +
-            '">' +
-            '<div class="gh-card-body">' +
-            '<div class="gh-card-label">' +
-            esc(cr.name) +
-            "</div>" +
-            '<div class="gh-card-desc">' +
-            esc(cr.desc) +
-            "</div>" +
-            "</div>" +
-            (hasRepo
-              ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' +
-                esc(cr.name) +
-                '">📦</button>'
-              : "") +
-            "</div>"
-          );
-        })
-        .join("") +
-      "</div>",
+        creators
+          .map((cr) => {
+            const isGitHub = cr.type && cr.type.includes("github");
+            const repoParts = isGitHub ? cr.name.split("/") : null;
+            const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
+            return (
+              '<div class="gh-card" style="width:calc(25% - 5px);box-sizing:border-box;flex:none;cursor:pointer" data-name="' +
+              esc(cr.name) +
+              '" title="搜索: ' +
+              esc(cr.name) +
+              '">' +
+              '<div class="gh-card-body">' +
+              '<div class="gh-card-label">' +
+              esc(cr.name) +
+              "</div>" +
+              '<div class="gh-card-desc">' +
+              esc(cr.desc) +
+              "</div>" +
+              "</div>" +
+              (hasRepo
+                ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' +
+                  esc(cr.name) +
+                  '">📦</button>'
+                : "") +
+              "</div>"
+            );
+          })
+          .join("") +
+        "</div>",
     );
   } else if (wsEditModeRef.v) {
     parts.push(
@@ -170,85 +176,85 @@ export function renderSiteView(site, ctx) {
   });
 
   // 创作者卡片点击 → 用网站的 searchUrl + 名字搜索
-  searchResults
-    .querySelectorAll(".gh-card[data-name]")
-    .forEach((card) => {
-      card.addEventListener("click", (e) => {
-        if (e.target.closest(".gh-card-external[data-repo]")) return;
-        const name = card.dataset.name;
-        if (site.searchUrl && name && openUrl) {
-          const url = site.searchUrl.replace(
-            /\{\{q\}\}/g,
-            encodeURIComponent(name),
-          );
-          openUrl(url);
-        }
-      });
+  searchResults.querySelectorAll(".gh-card[data-name]").forEach((card) => {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".gh-card-external[data-repo]")) return;
+      const name = card.dataset.name;
+      if (site.searchUrl && name && openUrl) {
+        const url = site.searchUrl.replace(
+          /\{\{q\}\}/g,
+          encodeURIComponent(name),
+        );
+        openUrl(url);
+      }
     });
+  });
 
   // 📦 浏览 GitHub 仓库模型
   const refreshView = () => renderSiteView(site, ctx);
 
-  searchResults.querySelectorAll(".gh-card-external[data-repo]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const repo = btn.dataset.repo;
-      btn.textContent = "⏳";
+  searchResults
+    .querySelectorAll(".gh-card-external[data-repo]")
+    .forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const repo = btn.dataset.repo;
+        btn.textContent = "⏳";
 
-      let mirror = "";
-      try {
-        const { LoadAppConfig } =
-          await import("../../../wailsjs/go/main/App.js");
-        const cfg = await LoadAppConfig();
-        mirror = cfg.mirror || "";
-      } catch (_) {}
+        let mirror = "";
+        try {
+          const { LoadAppConfig } =
+            await import("../../../wailsjs/go/main/App.js");
+          const cfg = await LoadAppConfig();
+          mirror = cfg.mirror || "";
+        } catch (_) {}
 
-      showProgress(searchResults, 10, "⏳ 准备中…");
-      try {
-        if (repoModelCache[repo]) {
-          const cached = repoModelCache[repo];
-          showProgress(searchResults, 100, "✅ 加载完成（缓存）");
-          await new Promise((r) => setTimeout(r, 100));
-          await showRepoModels(repo, cached.models, cached.source);
-          btn.textContent = "📦 浏览";
-          return;
+        showProgress(searchResults, 10, "⏳ 准备中…");
+        try {
+          if (repoModelCache[repo]) {
+            const cached = repoModelCache[repo];
+            showProgress(searchResults, 100, "✅ 加载完成（缓存）");
+            await new Promise((r) => setTimeout(r, 100));
+            await showRepoModels(repo, cached.models, cached.source);
+            btn.textContent = "📦 浏览";
+            return;
+          }
+          const { models, source } = await tryFetchModels(
+            repo,
+            mirror,
+            (pct, label) => showProgress(searchResults, pct, label),
+          );
+          repoModelCache[repo] = { models, source };
+          showProgress(searchResults, 100, "✅ 加载完成");
+          await new Promise((r) => setTimeout(r, 200));
+          await showRepoModels(repo, models, source);
+        } catch (e) {
+          const isTimeout = e?.name === "AbortError";
+          btn.textContent = isTimeout ? "⏱️ 超时" : "❌ 无索引";
+          btn.style.color = "var(--muted)";
+          btn.style.cursor = "default";
+          searchResults.innerHTML =
+            '<div class="cr-error-page">' +
+            '<button class="cr-back-repo cr-back-btn" style="margin-bottom:12px">← 返回</button>';
+          '<div class="cr-error-msg">' +
+            (isTimeout
+              ? "⏱️ 连接超时"
+              : "❌ 无 index.json<br>" +
+                "此仓库尚未建立创意工坊索引，请你使用浏览器下载。<br>" +
+                '<span class="cr-error-hint">（这个仓库需要有 index.json 文件，才能调用 API 下载文件）</span>') +
+            "</div></div>";
+          searchResults
+            .querySelector(".cr-back-repo")
+            ?.addEventListener("click", backToSite);
+          const msg = isTimeout
+            ? "⏱️ " +
+              repo +
+              " 链接超时（raw.githubusercontent.com 可能被屏蔽），已在浏览器中打开仓库"
+            : "📦 " + repo + " 没有 index.json，已在浏览器中打开仓库";
+          bus.emit("toast:show", { msg, duration: 6000, type: "warn" });
+          window.open("https://github.com/" + repo, "_blank");
         }
-        const { models, source } = await tryFetchModels(
-          repo,
-          mirror,
-          (pct, label) => showProgress(searchResults, pct, label),
-        );
-        repoModelCache[repo] = { models, source };
-        showProgress(searchResults, 100, "✅ 加载完成");
-        await new Promise((r) => setTimeout(r, 200));
-        await showRepoModels(repo, models, source);
-      } catch (e) {
-        const isTimeout = e?.name === "AbortError";
-        btn.textContent = isTimeout ? "⏱️ 超时" : "❌ 无索引";
-        btn.style.color = "var(--muted)";
-        btn.style.cursor = "default";
-        searchResults.innerHTML =
-          '<div class="cr-error-page">' +
-          '<button class="cr-back-repo cr-back-btn" style="margin-bottom:12px">← 返回</button>';
-        '<div class="cr-error-msg">' +
-          (isTimeout
-            ? "⏱️ 连接超时"
-            : "❌ 无 index.json<br>" +
-              "此仓库尚未建立创意工坊索引，请你使用浏览器下载。<br>" +
-              '<span class="cr-error-hint">（这个仓库需要有 index.json 文件，才能调用 API 下载文件）</span>') +
-          "</div></div>";
-        searchResults
-          .querySelector(".cr-back-repo")
-          ?.addEventListener("click", backToSite);
-        const msg = isTimeout
-          ? "⏱️ " +
-            repo +
-            " 链接超时（raw.githubusercontent.com 可能被屏蔽），已在浏览器中打开仓库"
-          : "📦 " + repo + " 没有 index.json，已在浏览器中打开仓库";
-        bus.emit("toast:show", { msg, duration: 6000, type: "warn" });
-        window.open("https://github.com/" + repo, "_blank");
-      }
+      });
     });
-  });
 
   // ===== 创作者编辑模式 =====
   searchResults.querySelector(".cr-edit-btn")?.addEventListener("click", () => {

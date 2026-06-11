@@ -92,28 +92,41 @@ export function renderSiteView(site, ctx) {
     parts.push(
       '<div style="display:flex;flex-wrap:wrap;gap:6px;width:100%">' +
         creators
-          .map((cr) => {
+          .map((cr, _, arr) => {
             const isGitHub = cr.type && cr.type.includes("github");
             const repoParts = isGitHub ? cr.name.split("/") : null;
             const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
             const authorCount = authorCountMap[cr.name] || 0;
-            const avatarCls =
-              authorCount >= 5
-                ? " cr-avatar-gold"
-                : authorCount >= 2
-                  ? " cr-avatar-silver"
-                  : "";
+            // 渐变边框：饱和度随作品数变化
+            const maxCount = Math.max(
+              1,
+              ...arr.map((c) => authorCountMap[c.name] || 0),
+            );
+            const ratio =
+              maxCount > 0 ? Math.min(authorCount / maxCount, 1) : 0;
+            const lerp = (a, b, t) => Math.round(a + (b - a) * t);
+            const r = lerp(168, 240, ratio); // A8→F0
+            const g = lerp(168, 192, ratio); // A8→C0
+            const b = lerp(168, 48, ratio); // A8→30
+            const borderGrad = `conic-gradient(from 0deg, rgb(${r - 30},${g - 30},${b - 20}), rgb(${r},${g},${b}) 180deg, rgb(${r - 30},${g - 30},${b - 20}))`;
+            const glow =
+              ratio > 0.5
+                ? `0 0 ${6 + ratio * 6}px rgba(${r},${g},${b},${0.2 + ratio * 0.3})`
+                : "none";
             return (
               '<div class="gh-card" style="min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer" data-name="' +
               esc(cr.name) +
               '" title="搜索: ' +
               esc(cr.name) +
               '">' +
-              '<div class="cr-avatar' +
-              avatarCls +
+              '<div class="cr-avatar-wrap" style="background:' +
+              borderGrad +
+              ";border-radius:50%;padding:2px;display:inline-flex;flex-shrink:0;box-shadow:" +
+              glow +
               '">' +
+              '<div class="cr-avatar" style="border:none;box-shadow:none;width:28px;height:28px;font-size:12px">' +
               (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") +
-              "</div>" +
+              "</div></div>" +
               '<div class="gh-card-body">' +
               '<div class="gh-card-label name">' +
               esc(cr.name) +

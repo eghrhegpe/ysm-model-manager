@@ -569,7 +569,7 @@ export function initImportQueue(app) {
     });
     if (!html)
       html =
-        '<div style="font-size:9px;color:var(--muted);padding:4px">暂无文件</div>';
+        '<div style="font-size:var(--fs-sm);color:var(--muted);padding:4px">暂无文件</div>';
     importedList.innerHTML = html;
     updateQueueCount();
 

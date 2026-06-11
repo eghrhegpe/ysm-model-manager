@@ -25,8 +25,8 @@ export function renderAuthorChips(chips, authors, srch) {
   chips.innerHTML = "";
   chips.style.display = "flex";
   authors.forEach((author) => {
-    const name = typeof author === 'string' ? author : author.Name;
-    const count = typeof author === 'object' ? author.Count : 0;
+    const name = typeof author === "string" ? author : author.Name;
+    const count = typeof author === "object" ? author.Count : 0;
     const chip = document.createElement("button");
     chip.textContent = "🎨 " + name;
     chip.style.cssText =

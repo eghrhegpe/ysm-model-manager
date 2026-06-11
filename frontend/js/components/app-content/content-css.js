@@ -107,19 +107,88 @@ export const contentCSS = `
 .diag-stat { padding:12px; font-size:11px; display:block; text-align:center; }
 .diag-stat-muted { color:#6c7086; }
 
-/* 仓库元老页面卡片 */
+/* ===== 通用卡片系统（元老页原型 → 全项目复用） ===== */
 @keyframes ring-fill { from { --pct:0; } to { --pct:100; } }
 @property --pct { syntax:'<number>'; inherits:false; initial-value:0; }
-.oldest-card { background:#f5e6c8; border:1px solid #dcc9a6; border-radius:8px; padding:12px; text-align:left; min-width:180px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
-.oldest-card .name { font-size:11px; font-weight:600; color:#5c4a2e; margin-bottom:2px; word-break:break-all; }
-.oldest-card .path { font-size:9px; color:#8a7a5a; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.oldest-card .path:hover { color:#5c4a2e; text-decoration:underline; }
-.oldest-card .meta { font-size:9px; color:#8a7a5a; margin-top:2px; }
-.oldest-card .actions { display:flex; gap:4px; margin-top:6px; }
-.oldest-card .actions button { font-size:9px; padding:2px 6px; border-radius:4px; border:1px solid #dcc9a6; background:rgba(255,255,255,.4); color:#5c4a2e; cursor:pointer; transition:all .12s; }
-.oldest-card .actions button:hover { background:rgba(255,255,255,.7); }
-.rec-card { background:var(--surf); border:1px solid #b4d0e6; border-radius:10px; padding:14px 16px; text-align:left; min-width:200px; box-shadow:0 2px 8px rgba(0,0,0,.06); cursor:default; transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s; }
-.rec-card:hover { transform:scale(1.02) translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,.12); }
+
+/* 基础卡片 — 所有卡片的基础 */
+.model-card {
+  background:var(--bg);
+  border:1px solid var(--bd);
+  border-radius:8px;
+  padding:10px 12px;
+  text-align:left;
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.model-card:hover {
+  border-color:var(--accent);
+  background:var(--hover);
+  box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+.model-card .name {
+  font-size:11px;
+  font-weight:600;
+  color:var(--txt);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.model-card .meta {
+  font-size:9px;
+  color:var(--muted);
+  margin-top:2px;
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+
+/* 紧凑卡片 — 网格布局（2列/3列） */
+.model-card-sm {
+  padding:6px 10px;
+  border-radius:6px;
+  border:1px solid var(--bd);
+  background:var(--bg);
+  text-align:left;
+  cursor:pointer;
+  transition:all .12s;
+}
+.model-card-sm:hover {
+  border-color:var(--accent);
+  background:var(--hover);
+}
+.model-card-sm .name {
+  font-size:11px;
+  font-weight:600;
+  color:var(--txt);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.model-card-sm .meta {
+  font-size:9px;
+  color:var(--muted);
+  margin-top:2px;
+  display:flex;
+  gap:6px;
+}
+
+/* 推荐卡片 — 带悬浮动效 */
+.rec-card {
+  background:var(--surf);
+  border:1px solid var(--bd);
+  border-radius:10px;
+  padding:14px 16px;
+  text-align:left;
+  min-width:200px;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  cursor:default;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s;
+}
+.rec-card:hover {
+  transform:scale(1.02) translateY(-2px);
+  box-shadow:0 4px 16px rgba(0,0,0,.12);
+}
 .rec-card .name { font-size:11px; font-weight:600; color:var(--txt); margin-bottom:2px; }
 .rec-card .hint { font-size:9px; color:var(--muted); margin-top:4px; }
 .rec-card .actions { display:flex; gap:4px; margin-top:6px; }

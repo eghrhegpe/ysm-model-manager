@@ -338,6 +338,13 @@ func (a *App) SaveAppConfig(repoRoot, mcRoot, linkMode, theme string) error {
 	data, _ := json.MarshalIndent(cfg, "", "  ")
 	err := os.WriteFile(configPath(), data, 0644)
 	if err == nil {
+		// 同步更新内存中的配置，确保后续操作使用新路径
+		if repoRoot != "" {
+			a.RepoRoot = repoRoot
+		}
+		if linkMode != "" {
+			a.LinkMode = linkMode
+		}
 		a.restartWatcher(repoRoot, validated)
 	}
 	return err

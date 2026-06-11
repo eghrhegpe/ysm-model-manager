@@ -86,7 +86,7 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 		if strings.HasPrefix(line, "<") {
 			if idx := strings.Index(line, ">"); idx > 0 {
 				tag := strings.TrimSpace(line[1:idx])
-				value := strings.TrimSpace(line[idx+1:])
+				value := stripClosingTag(strings.TrimSpace(line[idx+1:]))
 				switch currentSection {
 				case "metadata":
 					switch tag {
@@ -117,7 +117,9 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 					}
 				}
 			}
-			continue
+			if currentSection != "" {
+				continue
+			}
 		}
 		if currentSection == "tips" && strings.TrimSpace(line) != "" {
 			tipsLines = append(tipsLines, strings.TrimSpace(line))
@@ -126,7 +128,7 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 			trimmed := strings.TrimSpace(line)
 			if idx := strings.Index(trimmed, ">"); idx > 0 {
 				tag := trimmed[1:idx]
-				value := strings.TrimSpace(trimmed[idx+1:])
+				value := stripClosingTag(strings.TrimSpace(trimmed[idx+1:]))
 				switch tag {
 				case "name":
 					if h.AuthorName == "" {
@@ -322,13 +324,37 @@ func AnalyzeYSMHeaderFromBytes(data []byte) YSMHeader {
 }
 
 func parseInt(s string) int {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0
+	}
+	neg := false
+	start := 0
+	if s[0] == '-' {
+		neg = true
+		start = 1
+	} else if s[0] == '+' {
+		start = 1
+	}
 	n := 0
-	for _, c := range s {
+	for _, c := range s[start:] {
 		if c >= '0' && c <= '9' {
 			n = n*10 + int(c-'0')
 		} else {
-			break
+			return 0
 		}
 	}
+	if neg {
+		n = -n
+	}
 	return n
+}
+
+// stripClosingTag removes the closing XML tag from a value string.
+// e.g. "TestModel</name>" → "TestModel", "abc123</hash>" → "abc123"
+func stripClosingTag(v string) string {
+	if idx := strings.Index(v, "</"); idx >= 0 {
+		return strings.TrimSpace(v[:idx])
+	}
+	return v
 }

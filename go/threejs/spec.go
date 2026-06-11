@@ -4,27 +4,14 @@ package threejs
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 	"ysm-model-manager/go/types"
 )
-
-func itoa(i int) string     { return fmt.Sprint(i) }
-func ftoa(v [3]float64) string { return fmt.Sprintf("[%.4f,%.4f,%.4f]", v[0], v[1], v[2]) }
-func ftoa3(v vec3) string       { return fmt.Sprintf("[%.4f,%.4f,%.4f]", v.x, v.y, v.z) }
-func ftoaRot(v [4]float64) string { return fmt.Sprintf("[%.4f,%.4f,%.4f,%.4f]", v[0], v[1], v[2], v[3]) }
-func ptrStr(p *string) string {
-	if p == nil {
-		return "nil"
-	}
-	return *p
-}
 
 // ===== JSON 数据模型 =====
 
 type Model3DSpec struct {
 	Models []ModelGroup `json:"models"`
-	Debug  []string      `json:"_debug,omitempty"`
 }
 
 type ModelGroup struct {
@@ -91,8 +78,6 @@ func Build(model types.BedrockModel) (string, error) {
 	var bones []BoneData
 	var meshes []MeshData
 	boneIdx := make(map[string]int) // name → index in bones[]
-	var debugLog []string
-	debugLog = append(debugLog, "总骨骼数="+itoa(len(model.Bones)))
 
 	for _, b := range model.Bones {
 		bp := pivots[b.Name]
@@ -121,7 +106,6 @@ func Build(model types.BedrockModel) (string, error) {
 
 		// 同名骨骼：保留第一次出现的层级信息，仅追加 cubes
 		if idx, exists := boneIdx[b.Name]; exists {
-			debugLog = append(debugLog, "重复="+b.Name+" 现有parent="+ptrStr(bones[idx].ParentID)+" 新parent="+b.Parent+" rot="+ftoaRot(localRot))
 			// 去重规则：优先保留数据更完整的骨骼
 			// 1) 现有无 parent + 新有 parent → 补全层级/旋转
 			// 2) 两者都有 parent 但现有无旋转 + 新有旋转 → 更新旋转
@@ -134,12 +118,8 @@ func Build(model types.BedrockModel) (string, error) {
 				bones[idx].ParentID = &b.Parent
 				bones[idx].LocalPosition = localPos
 				bones[idx].LocalRotation = localRot
-				debugLog = append(debugLog, "  更新：parent="+b.Parent+" localPos="+ftoa(localPos)+" rot="+ftoaRot(localRot))
-			} else {
-				debugLog = append(debugLog, "  未更新")
 			}
 		} else {
-			debugLog = append(debugLog, "新增="+b.Name+" parent="+b.Parent+" pivot="+ftoa3(bp))
 			boneIdx[b.Name] = len(bones)
 			bones = append(bones, BoneData{
 				ID:            b.Name,
@@ -173,7 +153,6 @@ func Build(model types.BedrockModel) (string, error) {
 					armPivot := pivots["Arm"]
 					bones[i].ParentID = &bones[j].Name
 					bones[i].LocalPosition = [3]float64{raPivot.x - armPivot.x, raPivot.y - armPivot.y, raPivot.z - armPivot.z}
-					debugLog = append(debugLog, "后处理: RightArm->Arm localPos="+ftoa(bones[i].LocalPosition))
 					break
 				}
 			}
@@ -185,7 +164,6 @@ func Build(model types.BedrockModel) (string, error) {
 					armPivot := pivots["Arm"]
 					bones[i].ParentID = &bones[j].Name
 					bones[i].LocalPosition = [3]float64{laPivot.x - armPivot.x, laPivot.y - armPivot.y, laPivot.z - armPivot.z}
-					debugLog = append(debugLog, "后处理: LeftArm->Arm localPos="+ftoa(bones[i].LocalPosition))
 					break
 				}
 			}
@@ -210,7 +188,6 @@ func Build(model types.BedrockModel) (string, error) {
 			Bones:          bones,
 			MeshGroups:     meshes,
 		}},
-		Debug: debugLog,
 	}
 
 	data, err := json.Marshal(spec)

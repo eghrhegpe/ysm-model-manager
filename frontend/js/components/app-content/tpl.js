@@ -275,21 +275,21 @@ export function recycleHTML() {
 
 export function githubHTML() {
   return (
-    '<div class="ws-page" id="gh-page">' +
-    '<div class="ws-left" id="gh-left">' +
+    '<div class="gh-page" id="gh-page">' +
+    '<div class="gh-left" id="gh-left">' +
     '<div style="padding:10px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
     '<span style="font-size:13px;font-weight:600">🧩 创意工坊</span>' +
     '<span style="flex:1"></span>' +
     "</div>" +
-    '<div class="ws-grid" id="gh-grid">' +
+    '<div class="gh-grid" id="gh-grid">' +
     '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>' +
     "</div>" +
     '<div style="padding:4px 12px 8px;font-size:8px;color:var(--muted)">' +
     '仓库：<span id="gh-source-info">-</span>' +
     "</div>" +
     "</div>" +
-    '<div class="ws-right" id="gh-right">' +
-    '<div class="ws-right-inner" id="gh-right-inner">' +
+    '<div class="gh-right" id="gh-right">' +
+    '<div class="gh-right-inner" id="gh-right-inner">' +
     '<div id="gh-results" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
     '<div id="gh-results-body" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +
     '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">点击左侧仓库查看模型</div>' +
@@ -298,14 +298,14 @@ export function githubHTML() {
 }
 
 export function workshopHTML() {
-  return `<div class="ws-page" id="ws-page">
+  return `<div class="cr-page" id="ws-page">
   <!-- 左栏：站点列表 -->
-  <div class="ws-left" id="ws-left">
+  <div class="cr-left" id="ws-left">
     <div style="padding:10px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:600">🎨 创作者频道</span>
       <span style="flex:1"></span>
     </div>
-    <div class="ws-grid" id="ws-grid">
+    <div class="cr-grid" id="ws-grid">
       <div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>
     </div>
     <div style="padding:4px 12px 8px;font-size:8px;color:var(--muted)">
@@ -314,8 +314,8 @@ export function workshopHTML() {
     </div>
   </div>
   <!-- 右栏：搜索 + 创作者 -->
-  <div class="ws-right" id="ws-right">
-    <div class="ws-right-inner" id="ws-right-inner">
+  <div class="cr-right" id="ws-right">
+    <div class="cr-right-inner" id="ws-right-inner">
       <!-- 默认视图：作者搜索 -->
       <div id="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
         <div id="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">

@@ -17,8 +17,8 @@ import {
   countMissing,
   renderCardsHTML,
   renderRepoHeaderHTML,
-} from "./workshop-render.js";
-import { bindRepoEvents } from "./workshop-events.js";
+} from "../../features/workshop/render.js";
+import { bindRepoEvents } from "../../features/workshop/events.js";
 import { renderSiteView } from "./workshop-site-view.js";
 import { loadWorkshopData, fillSearch } from "./workshop-core.js";
 
@@ -611,7 +611,8 @@ class AppContent extends HTMLElement {
             localMap.set(n, e.Hash || "");
           });
         }
-        const { tryFetchModels } = await import("./workshop-data.js");
+        const { tryFetchModels } =
+          await import("../../features/workshop/data.js");
         const result = await tryFetchModels(repo, mirror, (pct, label) => {
           resultsBody.innerHTML =
             '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +

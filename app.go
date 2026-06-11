@@ -1269,6 +1269,16 @@ func (a *App) downloadFromAPI(apiURL, savePath string) error {
 	return nil
 }
 
+// GetModelTexSizes 扫描仓库文件提取纹理尺寸（轻量级，不解析完整模型）
+func (a *App) GetModelTexSizes(repoRoot string) []ysm.TexInfo {
+	entries := a.ScanModelEntries(repoRoot)
+	var simple []ysm.ModelEntry
+	for _, e := range entries {
+		simple = append(simple, ysm.ModelEntry{Path: e.Path, Name: e.Name})
+	}
+	return ysm.ScanModelTexSizes(simple)
+}
+
 func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {

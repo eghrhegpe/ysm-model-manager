@@ -298,53 +298,56 @@ export function githubHTML() {
 }
 
 export function workshopHTML() {
-  return `<div class="cr-page" id="ws-page">
-  <!-- 左栏：站点列表 -->
-  <div class="cr-left" id="ws-left">
-    <div style="padding:10px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-      <span style="font-size:13px;font-weight:600">🎨 创作者频道</span>
-      <button id="cr-mode-toggle" class="cr-toggle" style="margin-left:auto" title="切换点击站点后的打开方式">↗ 外链</button>
-    </div>
-    <div class="cr-grid" id="ws-grid">
-      <div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>
-    </div>
-    <div style="padding:4px 12px 8px;font-size:8px;color:var(--muted)">
-      站点：<span id="ws-source-info">-</span>
-      <span style="display:block">📄 站点配置：exe 同目录下的 workshop_sites.json，可直接编辑</span>
-    </div>
-  </div>
-  <!-- 右栏：搜索 + 创作者 -->
-  <div class="cr-right" id="ws-right">
-    <div class="cr-right-inner" id="ws-right-inner">
-      <!-- 默认视图：作者搜索 -->
-      <div id="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-        <div id="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">
-          <div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">点击左侧站点查看详情</div>
-        </div>
-      </div>
-      <!-- 创作者视图：选中站点时显示 -->
-      <div id="ws-creator-view" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden">
-        <div style="padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">
-          <span style="font-size:12px;font-weight:600;color:var(--txt)" id="ws-cr-title">🎨 活跃创作者</span>
-          <span style="font-size:9px;color:var(--muted);margin-left:auto">creators/</span>
-        </div>
-        <div class="ws-creators-list" id="ws-cr-list"></div>
-      </div>
-    </div>
-  </div>
-  <!-- 内嵌浏览（全屏覆盖） -->
-  <div id="ws-browser" style="display:none;flex:1;flex-direction:column;overflow:hidden;position:absolute;inset:0;z-index:10;background:var(--bg)">
-    <div class="ws-browser-bar">
-      <button class="ws-back" id="ws-back">← 返回</button>
-      <span class="ws-url" id="ws-url"></span>
-      <button class="ws-open-btn" id="ws-open">↗ 浏览器打开</button>
-    </div>
-    <iframe id="ws-iframe" style="flex:1;border:none;background:#fff" sandbox="allow-scripts allow-forms allow-popups"></iframe>
-    <div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:12px">
-      <div style="font-size:32px">🚫</div>
-      <div>此站点不允许内嵌浏览</div>
-      <button class="btn accent" id="ws-open-fallback" style="font-size:11px">↗ 在系统浏览器中打开</button>
-    </div>
-  </div>
-`;
+  return (
+    '<div class="repo-wrap">' +
+    '<div class="repo-tabs">' +
+    '<button class="repo-tab active" data-tab="creators">🎨 创作者频道</button>' +
+    '</div>' +
+    '<div class="repo-tab-body" id="cr-tab-creators">' +
+    '<div class="cr-page" id="ws-page">' +
+    '<div class="cr-left" id="ws-left">' +
+    '<div style="padding:4px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">' +
+    '<span style="font-size:11px;font-weight:600;color:var(--muted)">站点</span>' +
+    '<button id="cr-mode-toggle" class="cr-toggle" style="margin-left:auto" title="切换点击站点后的打开方式">↗ 外链</button>' +
+    '</div>' +
+    '<div class="cr-grid" id="ws-grid">' +
+    '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>' +
+    '</div>' +
+    '<div style="padding:4px 12px 8px;font-size:8px;color:var(--muted)">' +
+    '站点：<span id="ws-source-info">-</span>' +
+    '</div>' +
+    '</div>' +
+    '<div class="cr-right" id="ws-right">' +
+    '<div class="cr-right-inner" id="ws-right-inner">' +
+    '<div id="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
+    '<div id="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +
+    '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">点击左侧站点查看详情</div>' +
+    '</div>' +
+    '</div>' +
+    '<div id="ws-creator-view" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden">' +
+    '<div style="padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
+    '<span style="font-size:12px;font-weight:600;color:var(--txt)" id="ws-cr-title">🎨 活跃创作者</span>' +
+    '<span style="font-size:9px;color:var(--muted);margin-left:auto">creators/</span>' +
+    '</div>' +
+    '<div class="ws-creators-list" id="ws-cr-list"></div>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '<div id="ws-browser" style="display:none;flex:1;flex-direction:column;overflow:hidden;position:absolute;inset:0;z-index:10;background:var(--bg)">' +
+    '<div class="ws-browser-bar">' +
+    '<button class="ws-back" id="ws-back">← 返回</button>' +
+    '<span class="ws-url" id="ws-url"></span>' +
+    '<button class="ws-open-btn" id="ws-open">↗ 浏览器打开</button>' +
+    '</div>' +
+    '<iframe id="ws-iframe" style="flex:1;border:none;background:#fff" sandbox="allow-scripts allow-forms allow-popups"></iframe>' +
+    '<div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:12px">' +
+    '<div style="font-size:32px">🚫</div>' +
+    '<div>此站点不允许内嵌浏览</div>' +
+    '<button class="btn accent" id="ws-open-fallback" style="font-size:11px">↗ 在系统浏览器中打开</button>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '</div>'
+  );
 }

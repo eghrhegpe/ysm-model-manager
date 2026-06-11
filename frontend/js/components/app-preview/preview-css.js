@@ -64,42 +64,41 @@ h3 { font-size: 11px; font-weight: 600; color: var(--txt); text-transform: upper
 .err { font-size: 10px; color: #f38ba8; padding: 4px 0; }
 .preview-thumb { margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: var(--surf); border: 1px solid var(--bd); }
 .preview-thumb img { display: block; width: 100%; height: auto; object-fit: cover; }
-.dp-log-fbtn { font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer; }
+.dp-log-fbtn { font-size:var(--fs-xs);padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer; }
 .dp-log-fbtn.active { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
-.dp-log-search { flex:1;font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);min-width:0;margin-left:4px; }
-.dp-log-empty { font-size:10px;color:#6c7086; }
+.dp-log-search { flex:1;font-size:var(--fs-xs);padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);min-width:0;margin-left:4px; }
+.dp-log-empty { font-size:var(--fs-sm);color:#6c7086; }
 .ysm-stat-label { display:inline-block;min-width:80px; }
 
 /* === 骨骼预览区 === */
-.ysm-btn { font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;display:flex;align-items:center;gap:3px; }
+.ysm-btn { font-size:var(--fs-xs);padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;display:flex;align-items:center;gap:3px; }
 .ysm-btn:hover { background:var(--hover); }
-.ysm-hint { font-size:8px;color:var(--muted); }
+.ysm-hint { font-size:var(--fs-tiny);color:var(--muted); }
 .ysm-canvas { width:100%;height:auto;border-radius:8px;background:rgba(0,0,0,.12);margin-bottom:6px; }
 .ysm-grab { cursor:grab; }
 .ysm-card { background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:8px; }
-.ysm-card-title { display:flex;align-items:center;gap:4px;margin-bottom:6px;font-size:10px;font-weight:600;color:var(--txt); }
+.ysm-card-title { display:flex;align-items:center;gap:4px;margin-bottom:6px;font-size:var(--fs-sm);font-weight:600;color:var(--txt); }
 .ysm-card-section { padding-left:8px;margin-bottom:5px; }
-.ysm-card-section-label { font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px; }
-.ysm-card-row { font-size:10px;color:var(--txt);line-height:1.6; }
+.ysm-card-section-label { font-size:var(--fs-tiny);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px; }
+.ysm-card-row { font-size:var(--fs-sm);color:var(--txt);line-height:1.6; }
 .ysm-card-val { color:var(--accent);font-weight:600; }
-.ysm-badge { font-size:8px;padding:0 5px;border-radius:3px;background:rgba(124,131,255,0.25);color:var(--txt);margin-left:auto; }
+.ysm-badge { font-size:var(--fs-tiny);padding:0 5px;border-radius:3px;background:rgba(124,131,255,0.25);color:var(--txt);margin-left:auto; }
 .ysm-section-blue { border-left:2px solid #7c83ff; }
 .ysm-section-green { border-left:2px solid #a6e3a1; }
 .ysm-section-orange { border-left:2px solid #f9a826; }
 .ysm-tab-row { display:flex;gap:2px;margin-bottom:6px; }
-.ysm-tab { flex:1;font-size:10px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;text-align:center; }
+.ysm-tab { flex:1;font-size:var(--fs-sm);padding:3px 6px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;text-align:center; }
 .ysm-tab-active { background:var(--accent);color:#fff; }
 .ysm-tab-inactive { background:var(--surf);color:var(--txt); }
 .ysm-tab-row { display:flex;gap:2px;margin-bottom:6px; }
 .ysm-export-row { display:flex;gap:6px;margin-top:4px;align-items:center; }
-.ysm-export-btn { font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer; }
+.ysm-export-btn { font-size:var(--fs-xs);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer; }
 .ysm-export-btn:hover { background:var(--hover); }
 .ysm-toggle-row { display:flex;align-items:center;gap:4px;margin-bottom:6px; }
-.ysm-debug { font-size:9px;color:#ff6b6b;margin-top:2px;opacity:0.8; }
-.ysm-loading-title { font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px; }
+.ysm-debug { font-size:var(--fs-xs);color:#ff6b6b;margin-top:2px;opacity:0.8; }
+.ysm-loading-title { font-size:var(--fs-sm);font-weight:600;color:var(--muted);margin-bottom:4px; }
 .ysm-loading-bar { height:60px;border-radius:6px;background:rgba(0,0,0,.08); }
-.ysm-error-title { font-size:10px;font-weight:600;margin-bottom:4px; }
-.ysm-error-body { font-size:9px;color:#888;padding:8px 0; }
+.ysm-error-title { font-size:var(--fs-sm);font-weight:600;margin-bottom:4px; }
+.ysm-error-body { font-size:var(--fs-xs);color:#888;padding:8px 0; }
 .ysm-log-error { color:#f38ba8; }
 `;
-

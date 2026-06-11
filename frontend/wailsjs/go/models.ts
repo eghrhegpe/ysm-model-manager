@@ -549,6 +549,22 @@ export namespace ysm {
 	        this.texHeight = source["texHeight"];
 	    }
 	}
+	export class TexInfo {
+	    path: string;
+	    texWidth: number;
+	    texHeight: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TexInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.texWidth = source["texWidth"];
+	        this.texHeight = source["texHeight"];
+	    }
+	}
 	export class YSMHeader {
 	    isYsm: boolean;
 	    isFree: boolean;

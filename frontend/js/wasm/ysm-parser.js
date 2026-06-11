@@ -20,9 +20,9 @@ export async function initYSMParser() {
     if (!wasmBinary || !wasmBinary.byteLength) throw new Error("wasmBinary 空");
     if (!glueCode) throw new Error("胶水代码空");
 
-    // 2. 修改胶水代码：在 updateMemoryViews 调用后导出 HEAPU8 到 Module
-    //    用 ";updateMemoryViews()" 避免误改函数定义
-    glueCode = glueCode.replace(
+    // 2. 修改胶水代码：在所有 updateMemoryViews 调用后导出 HEAPU8 到 Module
+    //    用 ";updateMemoryViews()" 避免误改函数定义；replaceAll 确保所有调用点都被 patch
+    glueCode = glueCode.replaceAll(
       ";updateMemoryViews()",
       ';updateMemoryViews();Module["HEAPU8"]=HEAPU8',
     );

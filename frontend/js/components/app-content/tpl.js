@@ -382,32 +382,25 @@ export function diagnosticsHTML() {
 </div>
 <div class="diag-right">
 <div class="diag-panel" id="diag-log">
-<div class="diag-panel-header">
-<span>📋 操作日志</span>
-<button class="hdr-btn" id="diag-refresh2" style="display:none">🔄</button>
+<div class="diag-log-filter" style="display:flex;gap:4px;padding:3px 12px;overflow:hidden">
+<button class="diag-log-fbtn active" data-status="all" style="font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">全部</button>
+<button class="diag-log-fbtn" data-status="success" style="font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">✅ 成功</button>
+<button class="diag-log-fbtn" data-status="failed" style="font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">❌ 失败</button>
+<button class="diag-log-fbtn" data-status="skipped" style="font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">⏭️ 跳过</button>
+<input id="diag-log-search" placeholder="🔍 搜索模型名..." style="width:130px;font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);margin-left:auto">
 </div>
-<div class="diag-log-filter" style="display:flex;gap:4px;padding:3px 0">
-<button class="diag-log-fbtn active" data-status="all" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">全部</button>
-<button class="diag-log-fbtn" data-status="success" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">✅ 成功</button>
-<button class="diag-log-fbtn" data-status="failed" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">❌ 失败</button>
-<button class="diag-log-fbtn" data-status="skipped" style="font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">⏭️ 跳过</button>
-<input id="diag-log-search" placeholder="🔍 搜索模型名..." style="flex:1;font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);min-width:0;margin-left:4px">
-</div>
-<div id="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">暂无日志</div></div>
+<div id="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">暂无日志</div></div>
 </div>
 <div class="diag-panel" id="diag-conflict" style="display:none">
-<div class="diag-panel-header">
-<span>⚡ 冲突检测</span>
-<button class="hdr-btn accent" id="diag-scan-conflict">⚡ 开始扫描</button>
-</div>
-<div id="diag-conflict-list"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">点击「开始扫描」检测整合包冲突</div></div>
-</div>
+<div id="diag-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">点击「开始扫描」检测整合包冲突
+<button class="hdr-btn accent" id="diag-scan-conflict" style="margin-top:4px">⚡ 开始扫描</button>
+</div></div></div>
 <div class="diag-panel" id="diag-oldest" style="display:none">
 <div class="diag-panel-header">
 <span>👴 仓库元老</span>
 <button class="hdr-btn" id="diag-oldest-refresh">🔄</button>
 </div>
-<div id="diag-oldest-list"><div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">点击「🔄」刷新</div></div>
+<div id="diag-oldest-list"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">点击「🔄」刷新</div></div>
 </div>
 </div>
 </div>

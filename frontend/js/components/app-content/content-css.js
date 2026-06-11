@@ -108,7 +108,7 @@ export const contentCSS = `
 .diag-btn:hover { background:var(--hover); color:var(--txt); }
 .diag-btn.active { background:#7c83ff22; color:var(--accent); }
 .diag-btn-icon { font-size:var(--fs-lg); width:20px; text-align:center; flex-shrink:0; }
-.diag-btn-action { justify-content:center; padding:6px; font-size:13px; }
+.diag-btn-action { justify-content:center; padding:6px; font-size:var(--fs-md); }
 .diag-log-fbtn.active { background:var(--accent) !important; color:#fff !important; border-color:var(--accent) !important; }
 .diag-left-spacer { flex:1; }
 .diag-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
@@ -116,7 +116,7 @@ export const contentCSS = `
 .diag-panel-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; font-size:var(--fs-md); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); flex-shrink:0; }
 .stat-row { font-size:var(--fs-md); color:var(--txt); padding:3px 0; display:flex; justify-content:space-between; }
 .diag-stat { padding:12px; font-size:var(--fs-base); display:block; text-align:center; }
-.diag-stat-muted { color:#6c7086; }
+.diag-stat-muted { color:var(--muted); }
 
 /* ===== 通用卡片系统（元老页原型 → 全项目复用） ===== */
 @keyframes ring-fill { from { --pct:0; } to { --pct:100; } }

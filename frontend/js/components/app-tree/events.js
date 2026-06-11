@@ -336,7 +336,12 @@ export function bindToolbarEvents(root, vm) {
       return;
     }
     menu.innerHTML = authors
-      .map((a) => `<button class="dd-item" data-author="${a}">🎨 ${a}</button>`)
+      .map((a) => {
+        const name = typeof a === "string" ? a : a.Name;
+        const countStr =
+          typeof a === "object" && a.Count ? ` (${a.Count})` : "";
+        return `<button class="dd-item" data-author="${name.replace(/"/g, "&quot;")}">🎨 ${name}${countStr}</button>`;
+      })
       .join("");
     menu.querySelectorAll(".dd-item").forEach((el) => {
       el.addEventListener("click", () => {
@@ -570,8 +575,7 @@ async function runFilter(root) {
       return;
     }
 
-    const { LoadAppConfig, SearchModels } =
-      await import("../../../wailsjs/go/main/App.js");
+    const { LoadAppConfig } = await import("../../../wailsjs/go/main/App.js");
     const cfg = await LoadAppConfig();
     if (!cfg.repoRoot) {
       if (countEl) countEl.textContent = "⚠️ 未设置仓库";
@@ -579,6 +583,31 @@ async function runFilter(root) {
     }
 
     if (countEl) countEl.textContent = "⏳";
+
+    // 纯纹理筛选走轻量级 GetModelTexSizes，不碰 YSMParser/WASM
+    if (!kw && !minB && !maxB && !minC && !maxC && texVal) {
+      const { GetModelTexSizes } =
+        await import("../../../wailsjs/go/main/App.js");
+      const texSizes = await GetModelTexSizes(cfg.repoRoot);
+      const filtered = (texSizes || []).filter((t) => {
+        if (!t.texWidth || !t.texHeight) return false;
+        return (
+          t.texWidth >= minT &&
+          t.texWidth <= maxT &&
+          t.texHeight >= minT &&
+          t.texHeight <= maxT
+        );
+      });
+      if (countEl)
+        countEl.textContent = filtered.length
+          ? `✅ ${filtered.length} 结果`
+          : "❌ 无匹配";
+      bus.emit("filter:results", filtered || []);
+      return;
+    }
+
+    // 其他筛选走完整 SearchModels
+    const { SearchModels } = await import("../../../wailsjs/go/main/App.js");
     const results = await SearchModels(
       cfg.repoRoot,
       kw,
@@ -594,12 +623,7 @@ async function runFilter(root) {
         ? `✅ ${results.length} 结果`
         : "❌ 无匹配";
 
-    // 通知 tree 刷新显示（用 fullPath 或 path 匹配 entries）
     bus.emit("filter:results", results || []);
-    // 同时通知搜索框：切换筛选模式后主动关闭筛选面板
-    if (!results || !results.length) {
-      // 无结果时不清除 _filterPaths，保留空结果
-    }
   } catch (e) {
     console.warn("[filter]", e);
     const countEl = root.getElementById("filter-count");

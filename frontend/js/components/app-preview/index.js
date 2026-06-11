@@ -95,11 +95,22 @@ function buildStdYsgpFromTextVariant(bytes) {
       }
     }
   }
-  if (dataStart < 0 || dataStart >= bytes.length - 16) return null;
+  if (dataStart < 0 || dataStart >= bytes.length - 20) return null;
 
-  // 构建标准 YSGP V2 头部
+  // 读取实际版本号：在 16B hash 之后的 4 字节
+  const versionBytes = bytes.slice(dataStart + 16, dataStart + 20);
+  // 检查是否是合理的版本号（00 00 00 02 或 00 00 00 03）
+  const verNum =
+    versionBytes[0] === 0 &&
+    versionBytes[1] === 0 &&
+    versionBytes[2] === 0 &&
+    (versionBytes[3] === 2 || versionBytes[3] === 3)
+      ? versionBytes[3]
+      : 2;
+
+  // 构建标准 YSGP 头部（使用实际版本号）
   const magic = new Uint8Array([0x59, 0x53, 0x47, 0x50]); // "YSGP"
-  const version = new Uint8Array([0x00, 0x00, 0x00, 0x02]); // V2 big-endian
+  const version = new Uint8Array([0x00, 0x00, 0x00, verNum]);
   // hash: 从文本提取的 16 字节，或从原文头部的 hash 区域提取
   let hashArr;
   if (hashHex) {
@@ -267,7 +278,10 @@ class AppPreview extends HTMLElement {
     if (/\.ysm$/i.test(modelPath)) {
       const decoded = await this._decodeYsmViaWasm(modelPath);
       if (decoded?.texture) {
-        cacheSet(modelPath, { ...decoded, _decodedBy: "🧠 WASM" });
+        cacheSet(modelPath, { ...decoded, _decodedBy: "🧠 WASM 内置解码" });
+        // 确认缓存包含 geometry
+        const after = cacheGet(modelPath);
+        console.log(`[YSM] 缓存写入后: geometry=${!!after?.geometry}, bones=${after?.geometry?.bones?.length}`);
         return decoded.texture;
       }
     }
@@ -306,12 +320,14 @@ class AppPreview extends HTMLElement {
       const isYsm = /\.ysm$/i.test(modelPath);
 
       // 查缓存（_loadPreviewImage 可能已经存过）
-      let _decodedBy = ""; // "WASM" | "CLI" | ""
-
+      let _decodedBy = "";
       const cached = cacheGet(modelPath);
       if (cached?.geometry?.bones?.length) {
         model = cached.geometry;
         _decodedBy = cached._decodedBy || "";
+        console.log(`[YSM] 缓存命中: _decodedBy=${_decodedBy}`);
+      } else {
+        console.log(`[YSM] 缓存未命中: cached=${!!cached}, geometry=${!!cached?.geometry}, bones=${cached?.geometry?.bones?.length}`);
       }
 
       // .ysm → 前端 WASM 解码
@@ -319,7 +335,10 @@ class AppPreview extends HTMLElement {
         const decoded = await this._decodeYsmViaWasm(modelPath);
         if (decoded?.geometry) {
           model = decoded.geometry;
-          _decodedBy = "🧠 WASM";
+          _decodedBy = "🧠 WASM 内置解码";
+          // 确保缓存中的 _decodedBy 也被更新
+          const cur = cacheGet(modelPath);
+          if (cur) cacheSet(modelPath, { ...cur, _decodedBy });
         } else {
           this._appendDebug(container, "[YSM] WASM 返回空，回退 Go");
         }
@@ -379,9 +398,9 @@ class AppPreview extends HTMLElement {
             texture: model.texture,
             geometry: model,
             animations: goClips.length > 0 ? goClips : undefined,
-            _decodedBy: "⚙️ CLI",
+            _decodedBy: isYsm ? "⚙️ CLI 外置解码" : "📦 Go 原生解析",
           });
-          _decodedBy = "⚙️ CLI";
+          _decodedBy = isYsm ? "⚙️ CLI 外置解码" : "📦 Go 原生解析";
         }
       }
 
@@ -919,20 +938,33 @@ class AppPreview extends HTMLElement {
       devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
       if (!bytes?.length) return null;
 
-      // 剥离 BOM + YSGP 文本头部（部分早期 YSGP V2 模型在加密数据前有 UTF-8 BOM 和文本元数据）
-      bytes = stripYsgpTextHeader(bytes);
-
-      devLog("[YSM] 内存解析...");
+      // 先尝试原始字节解码（WASM 可能原生支持带文本头部的格式）
       let files;
       try {
         files = await decodeYsmFileFromMemory(bytes);
         if (files?.length) {
-          devLog(`[YSM] ✅ 内存解析成功: ${files.length} 文件`);
-        } else {
-          devLog("[YSM] 内存解析返回空（跳过 callMain 直接回退 Go CLI）");
+          console.log(`[YSM] ✅ 原始字节解码成功: ${files.length} 文件`);
         }
-      } catch (e) {
-        devLog(`[YSM] 内存解析异常: ${e?.message}，回退 Go CLI`);
+      } catch (_) {}
+
+      // 原始解码失败 → 尝试剥离文本头部后重建
+      if (!files?.length) {
+        const rebuilt = stripYsgpTextHeader(bytes);
+        if (rebuilt !== bytes) {
+          console.log("[YSM] 原始解码失败，尝试剥离文本头部后重试...");
+          try {
+            files = await decodeYsmFileFromMemory(rebuilt);
+            if (files?.length) {
+              console.log(`[YSM] ✅ 剥离头部后解码成功: ${files.length} 文件`);
+            }
+          } catch (e2) {
+            console.log(`[YSM] 剥离后解码异常: ${e2?.message}`);
+          }
+        }
+      }
+
+      if (!files?.length) {
+        console.log("[YSM] 内存解析返回空（跳过 callMain 直接回退 Go CLI）");
       }
       console.log(`[YSM] 输出 ${files?.length || 0} 文件`);
       if (files?.length) {
@@ -953,7 +985,11 @@ class AppPreview extends HTMLElement {
           const txt = new TextDecoder().decode(ysmMeta.data);
           const json = JSON.parse(txt);
           ysmTexOrder = json?.files?.player?.texture;
-          ysmModelOrder = json?.files?.player?.model;
+          ysmModelOrder = Array.isArray(json?.files?.player?.model)
+            ? json.files.player.model
+            : json?.files?.player?.model
+              ? [json.files.player.model]
+              : null;
           // 读取默认纹理名（Go 端 parseBedrockFromZip 也读此字段）
           ysmDefaultTex = json?.properties?.default_texture || null;
           if (ysmTexOrder)
@@ -1086,6 +1122,28 @@ class AppPreview extends HTMLElement {
         devLog(`[YSM] 解析 ${f.path}...`);
         try {
           const jsonStr = new TextDecoder().decode(f.data);
+          // 调试：检查 JSON 顶层 key 和前 200 字节
+          try {
+            const parsedRoot = JSON.parse(jsonStr);
+            const rootKeys = Object.keys(parsedRoot);
+            const geoKey = rootKeys.find(k => k.includes("minecraft:geometry") || k.includes("geometry"));
+            if (geoKey) {
+              const geoArr = parsedRoot[geoKey];
+              if (Array.isArray(geoArr) && geoArr.length > 0) {
+                const hasBones = !!geoArr[0]?.bones?.length;
+                console.log(`[YSM] JSON 调试: rootKeys=[${rootKeys}], geometryKey="${geoKey}", bones=${geoArr[0]?.bones?.length || 0}`);
+                if (!hasBones) {
+                  console.log(`[YSM] JSON 前200字符: ${jsonStr.slice(0, 200)}`);
+                }
+              } else {
+                console.log(`[YSM] JSON 调试: geometryKey="${geoKey}" 不是数组或为空`);
+              }
+            } else {
+              console.log(`[YSM] JSON 调试: 无 geometry key, rootKeys=[${rootKeys}], 前100字符: ${jsonStr.slice(0, 100)}`);
+            }
+          } catch (e) {
+            console.log(`[YSM] JSON 调试: JSON.parse 失败: ${e.message}, 前100字符: ${jsonStr.slice(0, 100)}`);
+          }
           const parsed = parseBedrockGeometryFromJSON(jsonStr);
           if (!parsed?.bones?.length) return;
           devLog(
@@ -1237,6 +1295,10 @@ class AppPreview extends HTMLElement {
         }
       }
       // 合并后的 geometry
+      if (!geometry && files?.length > 0) {
+        console.log(`[YSM] ⚠️ WASM 解码成功但几何体解析为空，回退 Go CLI`);
+        return null;
+      }
       if (geometry) {
         geometry.bones = allBones;
         geometry.textures = orderedTexKeys

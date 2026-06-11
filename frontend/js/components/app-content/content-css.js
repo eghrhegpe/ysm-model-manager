@@ -273,6 +273,8 @@ export const contentCSS = `
 .gh-card.active { border-color:var(--accent); background:var(--accent); color:#fff; box-shadow:var(--card-shadow-hover, none); }
 .gh-card .name { font-size:12px; font-weight:700; color:var(--txt); font-family:'STKaiti','KaiTi','楷体',serif; overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .gh-card .name + .meta { margin-top:1px; font-size:9px; color:var(--muted); }
+.cr-avatar { width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#8b7355;background:#ede4cf;border:2px solid #d4c5a9;transition:all .25s ease; }
+.gh-card:hover .cr-avatar { transform:rotate(-8deg) scale(1.05);border-color:var(--accent);box-shadow:0 0 8px rgba(139,69,19,.2); }
 .gh-card-icon { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
 .gh-card-body { flex:1; min-width:0; }
 .gh-card-label { font-size:11px; font-weight:600; color:var(--txt); }

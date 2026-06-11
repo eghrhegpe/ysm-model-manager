@@ -91,17 +91,41 @@
 
 ---
 
-## 4. 字号系统
+## 4. 字体系统
 
-| 用途                | 像素 | CSS               |
-| ------------------- | ---- | ----------------- |
-| 标题/强调           | 14px | `font-size: 14px` |
-| 正文                | 12px | `font-size: 12px` |
-| 辅助信息            | 11px | `font-size: 11px` |
-| 标签/徽章           | 10px | `font-size: 10px` |
-| 极小（仅数字/状态） | 9px  | `font-size: 9px`  |
+### 字号变量（`--fs-*`）
 
-**字体栈**：`-apple-system, "Microsoft YaHei", "Segoe UI", system-ui, sans-serif`
+| 变量 | 值 | 使用场景 |
+|------|-----|----------|
+| `--fs-tiny` | 7px | 热力图、极小水印、版权信息 |
+| `--fs-xs` | 9px | 标签、徽章、状态点 |
+| `--fs-sm` | 10px | 辅助文字、按钮、表格次要列 |
+| `--fs-base` | 11px | 正文、卡片标题、列表项主要文字 |
+| `--fs-md` | 12px | 强调正文、区段小标题 |
+| `--fs-lg` | 14px | 分组标题、侧栏分组名称 |
+| `--fs-xl` | 24px | 数据统计数字、大号展示 |
+
+### 字重变量（`--fw-*`）
+
+| 变量 | 值 | 用途 |
+|------|-----|------|
+| `--fw-normal` | 400 | 正文 |
+| `--fw-semibold` | 600 | 强调文字 |
+| `--fw-bold` | 700 | 标题、统计数字 |
+
+### 字体栈变量（`--font-*`）
+
+| 变量 | 字体栈 | 用途 |
+|------|--------|------|
+| `--font-ui` | `-apple-system, "Microsoft YaHei", "Segoe UI", system-ui, sans-serif` | 所有 UI 文字 |
+| `--font-display` | `'STKaiti','KaiTi','楷体', serif` | 创作者名字等艺术场景 |
+
+### 规则
+
+- **所有 CSS 必须使用变量，禁止硬编码 `font-size: Xpx` 或 `font-family: ...`**
+- 每个 Shadow DOM 组件的 `:host` 必须设置 `font-family: var(--font-ui); font-size: var(--fs-base)`
+- 全局 `*` 选择器已设置默认字体/字号，组件只需覆盖有差异的部分
+- 创作者名字等需要艺术字体的场景，使用类名 + `--font-display`，禁止内联 style
 
 ---
 

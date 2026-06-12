@@ -2,11 +2,16 @@ package types
 
 // AppConfig 应用持久化配置
 type AppConfig struct {
-	RepoRoot string `json:"repoRoot"`
-	McRoot   string `json:"mcRoot"`
-	LinkMode string `json:"linkMode"`
-	Theme    string `json:"theme"`
-	Mirror   string `json:"mirror"`
+	RepoRoot         string `json:"repoRoot"`
+	ResourcepackRoot string `json:"resourcepackRoot"`
+	ShaderpackRoot   string `json:"shaderpackRoot"`
+	SchematicRoot    string `json:"schematicRoot"`
+	MmdRoot          string `json:"mmdRoot"`
+	VrcRoot          string `json:"vrcRoot"`
+	McRoot           string `json:"mcRoot"`
+	LinkMode         string `json:"linkMode"`
+	Theme            string `json:"theme"`
+	Mirror           string `json:"mirror"`
 }
 
 // PackInfo 模型整合包信息（ysm-pack.json）

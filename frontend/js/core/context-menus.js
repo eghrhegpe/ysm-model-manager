@@ -53,25 +53,6 @@ export function registerContextMenus() {
             { label: `📦 已选 ${count} 个文件`, onClick: () => {} },
             { divider: true },
             {
-              label: "全部启用",
-              icon: "✅",
-              onClick: () => {
-                paths.forEach((p) =>
-                  bus.emit("entry:toggle", { path: p, enable: false }),
-                );
-              },
-            },
-            {
-              label: "全部禁用",
-              icon: "⛔",
-              onClick: () => {
-                paths.forEach((p) =>
-                  bus.emit("entry:toggle", { path: p, enable: true }),
-                );
-              },
-            },
-            { divider: true },
-            {
               label: "批量重命名...",
               icon: "✂️",
               onClick: () => bus.emit("batch:rename", { paths }),
@@ -126,15 +107,15 @@ export function registerContextMenus() {
             { divider: true },
             {
               label: "移入回收站",
-              icon: "🗑️",
+              icon: "♻️",
               danger: true,
               onClick: async () => {
                 const { modalConfirm } = await import("../dialogs/modal.js");
                 const ok2 = await modalConfirm({
-                  title: "批量删除",
-                  icon: "🗑️",
+                  title: "批量移入回收站",
+                  icon: "♻️",
                   message: `确定将选中的 ${count} 个文件移入回收站？`,
-                  okText: "删除",
+                  okText: "♻️ 移入",
                   danger: true,
                 });
                 if (!ok2) return;
@@ -225,6 +206,84 @@ export function registerContextMenus() {
               },
             },
             {
+              label: "推送到整合包…",
+              icon: "📦",
+              onClick: async () => {
+                const { LoadAppConfig, ListVersionInstances, InstallModelTo } =
+                  await import("../../wailsjs/go/main/App.js");
+                const cfg = await LoadAppConfig();
+                const mcRoot = cfg.mcRoot || "";
+                if (!mcRoot) {
+                  bus.emit("toast:show", {
+                    msg: "请先设置游戏根目录",
+                    duration: 2000,
+                    type: "warn",
+                  });
+                  return;
+                }
+                const instances = await ListVersionInstances(mcRoot);
+                if (!instances || !instances.length) {
+                  bus.emit("toast:show", {
+                    msg: "未找到任何整合包",
+                    duration: 2000,
+                    type: "warn",
+                  });
+                  return;
+                }
+                const { modalSelect } = await import("../dialogs/modal.js");
+                const names = instances.map((i) => i.Name);
+                const chosen = await modalSelect({
+                  title: "推送到整合包",
+                  icon: "📦",
+                  items: names,
+                  okText: "📦 推送",
+                });
+                if (!chosen) return;
+                const match = instances.find((i) => i.Name === chosen);
+                if (!match) return;
+                const name = path.split(/[/\\]/).pop();
+                try {
+                  await InstallModelTo(name, match.CustomDir);
+                  bus.emit("toast:show", {
+                    msg: `✅ 已推送到 ${chosen}`,
+                    duration: 2000,
+                    type: "success",
+                  });
+                } catch (e) {
+                  bus.emit("toast:show", {
+                    msg: `❌ 推送失败: ${String(e)}`,
+                    duration: 3000,
+                    type: "error",
+                  });
+                }
+              },
+            },
+            { divider: true },
+            {
+              label: "移入回收站",
+              icon: "♻️",
+              danger: true,
+              onClick: async () => {
+                const { modalConfirm } = await import("../dialogs/modal.js");
+                const ok2 = await modalConfirm({
+                  title: "移入回收站",
+                  icon: "♻️",
+                  message: `确定将 ${path.split("/").pop()} 移入回收站？`,
+                  okText: "♻️ 移入",
+                  danger: true,
+                });
+                if (!ok2) return;
+                const { MoveToRecycle } =
+                  await import("../../wailsjs/go/main/App.js");
+                try {
+                  await MoveToRecycle(path);
+                  bus.emit("tree:reload");
+                  bus.emit("stats:refresh");
+                } catch {}
+              },
+            },
+            { divider: true },
+            {
               label: "复制文件路径",
               icon: "📋",
               onClick: async () => {
@@ -235,7 +294,6 @@ export function registerContextMenus() {
                     duration: 2000,
                   });
                 } catch {
-                  // 降级：创建临时 input
                   const ta = document.createElement("textarea");
                   ta.value = path;
                   ta.style.position = "fixed";
@@ -249,14 +307,6 @@ export function registerContextMenus() {
                     duration: 2000,
                   });
                 }
-              },
-            },
-            {
-              label: "打开所在文件夹",
-              icon: "📂",
-              onClick: () => {
-                const dir = path.substring(0, path.lastIndexOf("\\"));
-                window.go.main.App.OpenFolder(dir || path);
               },
             },
           ],
@@ -277,14 +327,6 @@ export function registerContextMenus() {
               label: "批量重命名…",
               icon: "📝",
               onClick: () => bus.emit("dir:batch-rename", { dir }),
-            },
-            {
-              label: "打开所在文件夹",
-              icon: "📂",
-              onClick: () => {
-                const { OpenFolder } = window.go.main.App;
-                OpenFolder?.(dir || "");
-              },
             },
             { divider: true },
             {

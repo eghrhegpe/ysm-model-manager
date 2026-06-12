@@ -49,7 +49,7 @@ export function bindBusEvents(vm) {
         const dir = await SelectDirectory();
         if (!dir) return;
         const theme = localStorage.getItem("theme") || "dark";
-        await SaveAppConfig(dir, "", "copy", theme);
+        await SaveAppConfig(dir, "", "", "copy", theme);
         vm._repoRoot = dir;
         await reload(vm);
         bus.emit("stats:refresh");
@@ -75,7 +75,7 @@ export function bindBusEvents(vm) {
   unsubs.push(
     bus.on("recycle:open", () => {
       bus.emit("toast:show", {
-        msg: "🗑️ 回收站功能开发中",
+        msg: "♻️ 回收站功能开发中",
         duration: 2000,
         type: "info",
       });
@@ -322,7 +322,8 @@ export function bindBusEvents(vm) {
 
 async function reload(vm) {
   try {
-    const r = await loadEntries();
+    const rtype = vm._rootAttr || vm._typeFilter || "";
+    const r = await loadEntries(rtype);
     if (r) {
       vm._repoRoot = r.repoRoot;
       vm._entries = r.entries;

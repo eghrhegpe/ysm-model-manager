@@ -1,11 +1,14 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
 import { treeCSS } from "../app-tree-styles.js";
-import { headerHTML, footerHTML } from "./tpl.js";
+import { headerHTML, footerHTML, spinnerHTML } from "./tpl.js";
 import { renderTree, updateStat } from "./render.js";
-import { bindTreeEvents, bindToolbarEvents } from "./events.js";
+import { bindTreeEvents } from "./events.js";
+import { bindToolbarEvents } from "./toolbar-events.js";
 import { loadEntries } from "./loader.js";
 import { bindBusEvents } from "./bus-handlers.js";
 import { loadAuthors } from "./authors.js";
+import { bus } from "../../bus.js";
+import { selectState } from "./data.js";
 class AppTree extends HTMLElement {
   constructor() {
     super();
@@ -15,6 +18,8 @@ class AppTree extends HTMLElement {
     this._entries = [];
     this._search = "";
     this._sort = "name";
+    this._typeFilter = "";
+    this._rootAttr = ""; // 由 root 属性指定，覆盖 _typeFilter 加载用
     this._dirOpen = {};
     this._repoRoot = "";
     this._authors = [];
@@ -22,6 +27,8 @@ class AppTree extends HTMLElement {
   }
 
   async connectedCallback() {
+    this._rootAttr = this.getAttribute("root") || "";
+
     try {
       Object.assign(
         this._dirOpen,
@@ -36,14 +43,22 @@ class AppTree extends HTMLElement {
       this._unsubs.push(...bindBusEvents(this));
 
       await this._load();
-      this._authors = await loadAuthors();
       this._renderTree();
+
+      // 事件委托绑定（只一次，虚拟滚动换 innerHTML 仍有效）
+      const treeEl = this._root.getElementById("tree");
+      if (treeEl) bindTreeEvents(treeEl, this);
+
+      // 键盘快捷键
+      this._initKeyboardShortcuts();
+
+      // 延迟加载作者列表（不影响树渲染）
+      this._loadAuthorsAsync();
 
       // 监听高级筛选结果
       this._unsubs.push(
         bus.on("filter:results", (results) => {
           if (results && results.length) {
-            // 将 SearchModels 返回的路径转为 Set
             this._filterPaths = new Set(results.map((r) => r.Path));
           } else {
             this._filterPaths = null;
@@ -53,7 +68,6 @@ class AppTree extends HTMLElement {
       );
     } catch (e) {
       console.error("[Tree Init Error]", e);
-      // 出错时显示空状态，不白屏
       const tree = this._root?.getElementById("tree");
       if (tree)
         tree.innerHTML =
@@ -63,9 +77,19 @@ class AppTree extends HTMLElement {
   disconnectedCallback() {
     this._unsubs?.forEach((fn) => fn?.());
   }
+
+  async _loadAuthorsAsync() {
+    try {
+      this._authors = await loadAuthors();
+    } catch {
+      this._authors = [];
+    }
+  }
+
   async _load() {
     try {
-      const r = await loadEntries();
+      const rtype = this._rootAttr || this._typeFilter;
+      const r = await loadEntries(rtype);
       if (r && r.entries) {
         this._repoRoot = r.repoRoot;
         this._entries = r.entries;
@@ -80,22 +104,31 @@ class AppTree extends HTMLElement {
   _renderLayout() {
     this._root.innerHTML =
       headerHTML() +
-      '<div class="list" id="tree"><div class="empty"><div class="big">📁</div>暂无模型文件</div></div>' +
+      '<div class="list" id="tree">' +
+      spinnerHTML() +
+      "</div>" +
       footerHTML();
   }
 
   _renderTree() {
     const c = this._root.getElementById("tree");
+    // 按类型过滤
+    let filtered = Array.isArray(this._entries) ? this._entries : [];
+    if (this._typeFilter) {
+      filtered = filtered.filter((e) => e.type === this._typeFilter);
+    }
     renderTree(
       c,
-      this._entries,
+      filtered,
       this._search,
       this._sort,
       this._dirOpen,
       this._filterPaths,
     );
-    bindTreeEvents(c, this);
-    updateStat(this._root.getElementById("ftr-stat"), this._entries);
+    // 有选中项时不更新 stat（由 updateSelectCount 维护），避免动画覆盖
+    if (!selectState.keys.size) {
+      updateStat(this._root.getElementById("ftr-stat"), filtered);
+    }
     // 仓库路径显示在按钮上
     const repoBtn = this._root.getElementById("btn-repo");
     if (repoBtn)
@@ -104,6 +137,70 @@ class AppTree extends HTMLElement {
         : "📁 未设置";
     // 存全局供筛选栏动态渲染作者标签
     window._treeAuthors = this._authors;
+  }
+
+  // ========== 键盘快捷键 ==========
+  _initKeyboardShortcuts() {
+    const handler = (e) => {
+      // Ctrl+F / Cmd+F → 聚焦搜索框
+      if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+        e.preventDefault();
+        const srch = this._root.getElementById("srch");
+        if (srch) {
+          srch.focus();
+          srch.select();
+        }
+        return;
+      }
+
+      // Delete → 删除选中文件
+      if (e.key === "Delete" || e.key === "Del") {
+        const paths = [...(selectState?.keys || [])];
+        if (!paths.length) {
+          bus.emit("toast:show", {
+            msg: "请先选中要删除的文件",
+            duration: 2000,
+            type: "warn",
+          });
+          return;
+        }
+        e.preventDefault();
+        if (!confirm("确定要删除选中的 " + paths.length + " 个文件吗？"))
+          return;
+        const rtype = this._rootAttr || "ysm";
+        const isDirModel = ["mmd-skin", "vrchat-avatar"].includes(rtype);
+        this._deleteSelected(paths, isDirModel);
+      }
+    };
+    this._root.addEventListener("keydown", handler);
+    // 也监听 shadow host 外层的 keydown（以防焦点不在 shadow 内）
+    // 用 capture 确保捕获到达
+    document.addEventListener("keydown", handler);
+    this._unsubs.push(() => document.removeEventListener("keydown", handler));
+  }
+
+  async _deleteSelected(paths, isDirModel) {
+    let ok = 0,
+      fail = 0;
+    const { DeleteModelDir, DeleteResourcePack } =
+      await import("../../../wailsjs/go/main/App.js");
+    for (const p of paths) {
+      try {
+        if (isDirModel) await DeleteModelDir(p);
+        else await DeleteResourcePack(p);
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    selectState.keys.clear();
+    await this._load();
+    this._renderTree();
+    bus.emit("toast:show", {
+      msg: "✅ 已删除 " + ok + " 个" + (fail ? "，失败 " + fail : ""),
+      duration: 3000,
+      type: "success",
+    });
   }
 }
 

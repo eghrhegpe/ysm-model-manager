@@ -21,13 +21,15 @@ func (e *ErrPathEscalation) Error() string {
 // 使用 filepath.EvalSymlinks 解析符号链接，比 filepath.Abs 更安全。
 // 返回 nil 表示安全，否则返回 ErrPathEscalation。
 func IsInside(baseDir, path string) error {
-	absBase, err := filepath.Abs(filepath.Clean(baseDir))
+	absBase, err := filepath.EvalSymlinks(filepath.Clean(baseDir))
 	if err != nil {
-		return &ErrPathEscalation{Path: path, BaseDir: baseDir, Reason: "无法解析基准路径: " + err.Error()}
+		absBase, err = filepath.Abs(filepath.Clean(baseDir))
+		if err != nil {
+			return &ErrPathEscalation{Path: path, BaseDir: baseDir, Reason: "无法解析基准路径: " + err.Error()}
+		}
 	}
 	absPath, err := filepath.EvalSymlinks(filepath.Clean(path))
 	if err != nil {
-		// EvalSymlinks 失败（如文件不存在），回退到 Abs
 		absPath, err = filepath.Abs(filepath.Clean(path))
 		if err != nil {
 			return &ErrPathEscalation{Path: path, BaseDir: baseDir, Reason: "无法解析目标路径: " + err.Error()}

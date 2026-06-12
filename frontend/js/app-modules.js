@@ -11,12 +11,13 @@ register("loadEntries", loadEntries);
 // 新版 Web Component（通过 ES Module 导入以支持 shadow DOM）
 import "./components/app-tree/index.js";
 import "./components/app-sidebar/index.js";
-import "./components/app-preview/index.js";
 import "./components/app-content/index.js";
+// app-preview 动态加载（含 Three.js 466KB，仅仓库页和资源库模型 tab 需要）
 // 之前通过 <script> 加载的组件，现在统一 ESM import
 import "./components/app-nav.js";
 import "./components/context-menu.js";
 import "./components/app-toast.js";
+import "./components/app-resource-manager/index.js";
 
 // 右键菜单映射
 import { registerContextMenus } from "./core/context-menus.js";
@@ -57,6 +58,52 @@ window.applyTheme = applyTheme;
   // 启动后静默检查更新（不阻塞界面）
   const { checkUpdateSilent } = await import("./features/version-updater.js");
   checkUpdateSilent();
+
+  // 应用 UI 偏好（字号/字体/密度），不依赖设置页打开
+  const applyUIPref = () => {
+    const fontSize = localStorage.getItem("ui-font-size") || "normal";
+    const displayFont = localStorage.getItem("ui-display-font") || "kaiti";
+    const density = localStorage.getItem("ui-card-density") || "compact";
+    const anim = localStorage.getItem("ui-animations") !== "off";
+    const sizes = { small: "11px", normal: "13px", large: "15px" };
+    document.documentElement.style.setProperty(
+      "--fs-base",
+      sizes[fontSize] || "13px",
+    );
+    const ratio = fontSize === "small" ? 0.85 : fontSize === "large" ? 1.15 : 1;
+    document.documentElement.style.setProperty(
+      "--fs-xs",
+      Math.round(9 * ratio) + "px",
+    );
+    document.documentElement.style.setProperty(
+      "--fs-sm",
+      Math.round(10 * ratio) + "px",
+    );
+    document.documentElement.style.setProperty(
+      "--fs-md",
+      Math.round(12 * ratio) + "px",
+    );
+    document.documentElement.style.setProperty(
+      "--fs-lg",
+      Math.round(14 * ratio) + "px",
+    );
+    document.documentElement.style.setProperty(
+      "--font-display",
+      displayFont === "system"
+        ? "var(--font-ui)"
+        : "'STKaiti','KaiTi','楷体',serif",
+    );
+    document.documentElement.style.setProperty(
+      "--card-padding",
+      density === "compact" ? "6px 10px" : "10px 14px",
+    );
+    document.documentElement.style.setProperty(
+      "--card-gap",
+      density === "compact" ? "6px" : "10px",
+    );
+    document.documentElement.classList.toggle("no-animations", !anim);
+  };
+  applyUIPref();
 })();
 
 // ===== 禁用旧版 document 拖拽处理器（新版组件已接管）=====

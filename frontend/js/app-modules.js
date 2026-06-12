@@ -2,6 +2,9 @@
 import { bus } from "./bus.js";
 import { register } from "./services/registry.js";
 
+// 暴露 bus 到 window，供 index.html 内联脚本和旧代码使用
+window.bus = bus;
+
 // 注册全局可替换服务
 import { loadInstances } from "./components/app-sidebar/loader.js";
 import { loadEntries } from "./components/app-tree/loader.js";
@@ -18,6 +21,7 @@ import "./components/app-nav.js";
 import "./components/context-menu.js";
 import "./components/app-toast.js";
 import "./components/app-resource-manager/index.js";
+import "./components/app-sync-manager/index.js";
 
 // 右键菜单映射
 import { registerContextMenus } from "./core/context-menus.js";
@@ -26,7 +30,6 @@ registerContextMenus();
 //  窗口状态已由 Go 端 shutdown 保存，前端不再重复写入
 
 // ===== 全局主题控制 =====
-// 主题: cyber(赛博霓虹) | warm(温暖木纹) | pro(极简深邃) | system(跟随系统)
 const THEME_DARK = "cyber";
 const THEME_LIGHT = "warm";
 
@@ -43,7 +46,8 @@ function applyTheme(mode) {
 }
 window.applyTheme = applyTheme;
 
-(async () => {
+/** 从 Go 配置或 localStorage 加载主题 */
+async function initTheme() {
   try {
     const { LoadAppConfig } = await import("../wailsjs/go/main/App.js");
     const cfg = await LoadAppConfig();
@@ -55,55 +59,60 @@ window.applyTheme = applyTheme;
     const theme = localStorage.getItem("theme") || THEME_DARK;
     applyTheme(theme);
   }
-  // 启动后静默检查更新（不阻塞界面）
+}
+
+/** 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 */
+function applyUIPrefs() {
+  const fontSize = localStorage.getItem("ui-font-size") || "normal";
+  const displayFont = localStorage.getItem("ui-display-font") || "kaiti";
+  const density = localStorage.getItem("ui-card-density") || "compact";
+  const anim = localStorage.getItem("ui-animations") !== "off";
+  const sizes = { small: "11px", normal: "13px", large: "15px" };
+  document.documentElement.style.setProperty(
+    "--fs-base",
+    sizes[fontSize] || "13px",
+  );
+  const ratio = fontSize === "small" ? 0.85 : fontSize === "large" ? 1.15 : 1;
+  document.documentElement.style.setProperty(
+    "--fs-xs",
+    Math.round(9 * ratio) + "px",
+  );
+  document.documentElement.style.setProperty(
+    "--fs-sm",
+    Math.round(10 * ratio) + "px",
+  );
+  document.documentElement.style.setProperty(
+    "--fs-md",
+    Math.round(12 * ratio) + "px",
+  );
+  document.documentElement.style.setProperty(
+    "--fs-lg",
+    Math.round(14 * ratio) + "px",
+  );
+  document.documentElement.style.setProperty(
+    "--font-display",
+    displayFont === "system"
+      ? "var(--font-ui)"
+      : "'STKaiti','KaiTi','楷体',serif",
+  );
+  document.documentElement.style.setProperty(
+    "--card-padding",
+    density === "compact" ? "6px 10px" : "10px 14px",
+  );
+  document.documentElement.style.setProperty(
+    "--card-gap",
+    density === "compact" ? "6px" : "10px",
+  );
+  document.documentElement.classList.toggle("no-animations", !anim);
+}
+
+// 启动初始化
+(async () => {
+  await initTheme();
+  applyUIPrefs();
+  // 静默检查更新（不阻塞界面）
   const { checkUpdateSilent } = await import("./features/version-updater.js");
   checkUpdateSilent();
-
-  // 应用 UI 偏好（字号/字体/密度），不依赖设置页打开
-  const applyUIPref = () => {
-    const fontSize = localStorage.getItem("ui-font-size") || "normal";
-    const displayFont = localStorage.getItem("ui-display-font") || "kaiti";
-    const density = localStorage.getItem("ui-card-density") || "compact";
-    const anim = localStorage.getItem("ui-animations") !== "off";
-    const sizes = { small: "11px", normal: "13px", large: "15px" };
-    document.documentElement.style.setProperty(
-      "--fs-base",
-      sizes[fontSize] || "13px",
-    );
-    const ratio = fontSize === "small" ? 0.85 : fontSize === "large" ? 1.15 : 1;
-    document.documentElement.style.setProperty(
-      "--fs-xs",
-      Math.round(9 * ratio) + "px",
-    );
-    document.documentElement.style.setProperty(
-      "--fs-sm",
-      Math.round(10 * ratio) + "px",
-    );
-    document.documentElement.style.setProperty(
-      "--fs-md",
-      Math.round(12 * ratio) + "px",
-    );
-    document.documentElement.style.setProperty(
-      "--fs-lg",
-      Math.round(14 * ratio) + "px",
-    );
-    document.documentElement.style.setProperty(
-      "--font-display",
-      displayFont === "system"
-        ? "var(--font-ui)"
-        : "'STKaiti','KaiTi','楷体',serif",
-    );
-    document.documentElement.style.setProperty(
-      "--card-padding",
-      density === "compact" ? "6px 10px" : "10px 14px",
-    );
-    document.documentElement.style.setProperty(
-      "--card-gap",
-      density === "compact" ? "6px" : "10px",
-    );
-    document.documentElement.classList.toggle("no-animations", !anim);
-  };
-  applyUIPref();
 })();
 
 // ===== 禁用旧版 document 拖拽处理器（新版组件已接管）=====

@@ -224,11 +224,18 @@ export class AppResourceManager extends HTMLElement {
     const { ScanModelEntries, IsResourcePackEnabled } =
       await import("../../../wailsjs/go/main/App.js");
     const entries = await ScanModelEntries(this._rpRoot);
+    // 从 resource_types.json 获取当前类型的扩展名列表
+    const type = _findType(this._rtype);
+    const exts = (type && type.extensions) || [".zip"];
     const packs = [];
     for (const e of entries || []) {
       const name = e.Name || "";
       const fullPath = e.Path || "";
-      if (!/\.zip$/i.test(name) && !name.endsWith(".zip.disabled")) continue;
+      const lower = name.toLowerCase();
+      // .disabled 后缀处理：去后缀后判断扩展名
+      const baseName = lower.replace(/\.disabled$/, "");
+      const matches = exts.some((ext) => baseName.endsWith(ext));
+      if (!matches) continue;
       if (this._actions.includes("toggle")) {
         const enabled = await IsResourcePackEnabled(fullPath);
         packs.push({

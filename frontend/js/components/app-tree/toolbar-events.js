@@ -40,7 +40,11 @@ async function toggleFolderBatch(fhEl, vm) {
     }
   }
   if (ok > 0) {
-    await vm._load();
+    // 直接更新本地 banned 状态（ScanModelEntries 有 30s 缓存，_load 会拿到旧数据）
+    for (const e of targets) {
+      if (!e.banned && !enable) e.banned = true;
+      else if (e.banned && enable) e.banned = false;
+    }
     vm._renderTree();
     bus.emit("sync:toggle-status");
   }
@@ -242,7 +246,7 @@ export function bindToolbarEvents(root, vm) {
         if (!vm._repoRoot) return;
         const { OpenFolder } = await import("../../../wailsjs/go/main/App.js");
         await OpenFolder(vm._repoRoot);
-      } else if (action === "import") {
+      } else if (action === "import-file") {
         const rtype = vm._rootAttr || "ysm";
         const { SelectImportFile, ImportByType } =
           await import("../../../wailsjs/go/main/App.js");
@@ -270,6 +274,36 @@ export function bindToolbarEvents(root, vm) {
         vm._renderTree();
         bus.emit("toast:show", {
           msg: "✅ 导入成功",
+          duration: 2000,
+          type: "success",
+        });
+      } else if (action === "import-dir") {
+        const rtype = vm._rootAttr || "ysm";
+        const { SelectDirectory, ImportByType } =
+          await import("../../../wailsjs/go/main/App.js");
+        const dirPath = await SelectDirectory();
+        if (!dirPath) return;
+        // 找目录中的模型文件（.pmx / .pmd / .ysm / .vrca）
+        const extMap = {
+          ysm: ".ysm",
+          "mmd-skin": ".pmx",
+          "vrchat-avatar": ".vrca",
+        };
+        const targetExt = extMap[rtype] || ".zip";
+        // 直接导入目录（DirectoryCopyImporter 会按需处理）
+        const errMsg = await ImportByType(rtype, dirPath);
+        if (errMsg) {
+          bus.emit("toast:show", {
+            msg: "❌ 导入失败: " + errMsg,
+            duration: 4000,
+            type: "warn",
+          });
+          return;
+        }
+        await vm._load();
+        vm._renderTree();
+        bus.emit("toast:show", {
+          msg: "✅ 文件夹导入成功",
           duration: 2000,
           type: "success",
         });

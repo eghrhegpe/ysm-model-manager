@@ -11,9 +11,11 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/recycle"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/ysm"
 )
 
 // ========== 安装 ==========
@@ -95,15 +97,42 @@ func (a *App) ImportModelFileSkipCheck(fileName, base64Data string) error {
 }
 
 func (a *App) importModelFile(fileName, base64Data string, skipCheck bool) error {
-	if a.RepoRoot == "" {
-		return fmt.Errorf("请先选择仓库目录")
+	return a.importModelFileWithOptions(fileName, base64Data, importOptions{skipCheck: skipCheck})
+}
+
+func (a *App) ImportModelFileOverwrite(fileName, base64Data string) error {
+	return a.importModelFileWithOptions(fileName, base64Data, importOptions{overwrite: true})
+}
+
+type importOptions struct {
+	skipCheck bool
+	overwrite bool
+}
+
+func (a *App) importModelFileWithOptions(fileName, base64Data string, opts importOptions) error {
+	// 根据扩展名确定目标仓库
+	ext := strings.ToLower(filepath.Ext(fileName))
+	var targetRoot string
+	switch ext {
+	case ".ysm", ".zip", ".7z", ".json":
+		targetRoot = a.RepoRoot
+		if targetRoot == "" {
+			targetRoot = a.GetRepoRoot("ysm")
+		}
+	case ".pmx", ".pmd":
+		targetRoot = a.GetRepoRoot("mmd-skin")
+	case ".vrca", ".vrm":
+		targetRoot = a.GetRepoRoot("vrchat-avatar")
+	case ".nbt", ".schematic":
+		targetRoot = a.GetRepoRoot("create-blueprint")
+	default:
+		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式"}
+	}
+	if targetRoot == "" {
+		return fmt.Errorf("请先设置对应类型的仓库目录")
 	}
 	if strings.Contains(fileName, "..") || strings.ContainsAny(fileName, "\\/") {
 		return types.AppError{Code: "FILENAME_INVALID", Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
-	}
-	ext := strings.ToLower(filepath.Ext(fileName))
-	if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
-		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "仅支持 .ysm / .zip / .7z 格式"}
 	}
 	data, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {
@@ -115,52 +144,27 @@ func (a *App) importModelFile(fileName, base64Data string, skipCheck bool) error
 	if len(data) == 0 {
 		return types.AppError{Code: "FILE_EMPTY", Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}
 	}
-	if !skipCheck && len(data) >= 4 {
+	if !opts.skipCheck && len(data) >= 4 {
 		if ext == ".zip" || ext == ".ysm" {
 			if data[0] != 0x50 || data[1] != 0x4B || data[2] != 0x03 || data[3] != 0x04 {
-				a.logger.Add(fileName, fileName, a.RepoRoot, 0, "warn", "文件头不匹配标准ZIP格式，可能为旧版或非标准YSM文件，已导入")
+				a.logger.Add(fileName, fileName, targetRoot, 0, "warn", "文件头不匹配标准ZIP格式，可能为旧版或非标准YSM文件，已导入")
 			}
 		} else if ext == ".7z" {
 			if data[0] != 0x37 || data[1] != 0x7A || data[2] != 0xBC || data[3] != 0xAF {
-				a.logger.Add(fileName, fileName, a.RepoRoot, 0, "warn", "文件头不匹配标准7z格式，已导入")
+				a.logger.Add(fileName, fileName, targetRoot, 0, "warn", "文件头不匹配标准7z格式，已导入")
 			}
 		}
 	}
-	destPath := filepath.Join(a.RepoRoot, fileName)
+	destPath := filepath.Join(targetRoot, fileName)
 	destDir := filepath.Dir(destPath)
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return types.AppError{Code: "MKDIR_FAILED", Operation: "导入模型", TargetPath: destDir, Reason: "无法创建目标目录", Suggestion: "请检查磁盘权限或空间"}
 	}
-	if _, err := os.Stat(destPath); err == nil {
-		return types.AppError{Code: "FILE_EXISTS", Operation: "导入模型", SourcePath: fileName, Reason: "文件已存在", Suggestion: "如需替换请先删除原文件"}
+	if !opts.overwrite {
+		if _, err := os.Stat(destPath); err == nil {
+			return types.AppError{Code: "FILE_EXISTS", Operation: "导入模型", SourcePath: fileName, Reason: "文件已存在", Suggestion: "如需替换请先删除原文件"}
+		}
 	}
-	return os.WriteFile(destPath, data, 0644)
-}
-
-func (a *App) ImportModelFileOverwrite(fileName, base64Data string) error {
-	if a.RepoRoot == "" {
-		return fmt.Errorf("请先选择仓库目录")
-	}
-	if strings.Contains(fileName, "..") || strings.ContainsAny(fileName, "\\/") {
-		return types.AppError{Code: "FILENAME_INVALID", Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
-	}
-	ext := strings.ToLower(filepath.Ext(fileName))
-	if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
-		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "仅支持 .ysm / .zip / .7z 格式"}
-	}
-	data, err := base64.StdEncoding.DecodeString(base64Data)
-	if err != nil {
-		return types.AppError{Code: "DECODE_FAILED", Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
-	}
-	if len(data) > 500*1024*1024 {
-		return types.AppError{Code: "FILE_TOO_LARGE", Operation: "导入模型", SourcePath: fileName, Reason: "文件大小超过 500MB 限制", Suggestion: "请压缩文件至 500MB 以内"}
-	}
-	if len(data) == 0 {
-		return types.AppError{Code: "FILE_EMPTY", Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}
-	}
-	destPath := filepath.Join(a.RepoRoot, fileName)
-	destDir := filepath.Dir(destPath)
-	os.MkdirAll(destDir, 0755)
 	return os.WriteFile(destPath, data, 0644)
 }
 
@@ -177,8 +181,8 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 		return fmt.Errorf("请先选择仓库目录")
 	}
 	ext := strings.ToLower(filepath.Ext(fileName))
-	if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
-		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "仅支持 .ysm / .zip / .7z 格式"}
+	if ext != ".ysm" && ext != ".zip" && ext != ".7z" && ext != ".json" {
+		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "仅支持 .ysm / .zip / .7z / .json 格式"}
 	}
 	data, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {
@@ -268,6 +272,171 @@ func (a *App) ClearCustomDir(customDir string) (int, error) {
 	return count, nil
 }
 
+// CountInstanceResources 统计指定整合包中可清空的资源文件数
+func (a *App) CountInstanceResources(insName string) (int, error) {
+	insName = strings.TrimSpace(insName)
+	if insName == "" {
+		return 0, fmt.Errorf("整合包名为空")
+	}
+	cfg := a.LoadAppConfig()
+	mcRoot := cfg.McRoot
+	if mcRoot == "" {
+		return 0, fmt.Errorf("游戏根目录未设置")
+	}
+	instances := a.ListVersionInstances(mcRoot)
+	var target *types.VersionInstance
+	for i, ins := range instances {
+		if ins.Name == insName {
+			target = &instances[i]
+			break
+		}
+	}
+	if target == nil {
+		return 0, fmt.Errorf("未找到整合包: %s", insName)
+	}
+	subDirMap := []string{
+		"config/yes_steve_model/custom",
+		"resourcepacks",
+		"shaderpacks",
+		"schematics",
+		"3d-skin/EntityPlayer",
+		"vrchat-avatars",
+	}
+	total := 0
+	for _, subDir := range subDirMap {
+		total += a.countInstanceDir(filepath.Join(target.VersionDir, subDir))
+	}
+	return total, nil
+}
+
+// ClearInstanceResources 清空指定整合包中所有资源类型的已同步文件（走回收站）
+// insName: 整合包名（如 "1.20.1-Forge_47.4.20"）
+// 返回清除的文件数量
+func (a *App) ClearInstanceResources(insName string) (int, error) {
+	insName = strings.TrimSpace(insName)
+	if insName == "" {
+		return 0, fmt.Errorf("整合包名为空")
+	}
+	cfg := a.LoadAppConfig()
+	mcRoot := cfg.McRoot
+	if mcRoot == "" {
+		return 0, fmt.Errorf("游戏根目录未设置")
+	}
+	instances := a.ListVersionInstances(mcRoot)
+	var target *types.VersionInstance
+	for i, ins := range instances {
+		if ins.Name == insName {
+			target = &instances[i]
+			break
+		}
+	}
+	if target == nil {
+		return 0, fmt.Errorf("未找到整合包: %s", insName)
+	}
+
+	// 所有资源类型的子目录映射（与 InstallResourceToInstance 保持一致）
+	subDirMap := map[string]string{
+		"ysm":               "config/yes_steve_model/custom",
+		"resourcepack":      "resourcepacks",
+		"shaderpack":        "shaderpacks",
+		"create-blueprint":  "schematics",
+		"mmd-skin":          "3d-skin/EntityPlayer",
+		"vrchat-avatar":     "vrchat-avatars",
+	}
+
+	total := 0
+	for _, subDir := range subDirMap {
+		dir := filepath.Join(target.VersionDir, subDir)
+		total += a.countInstanceDir(dir)
+	}
+	if total == 0 {
+		return 0, nil
+	}
+	// 实际删除
+	for _, subDir := range subDirMap {
+		dir := filepath.Join(target.VersionDir, subDir)
+		total = a.clearInstanceDir(dir)
+	}
+	return total, nil
+}
+
+// countInstanceDir 递归统计指定目录中可删除的资源文件数
+func (a *App) countInstanceDir(dir string) int {
+	count := 0
+	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(d.Name()))
+		if ext != ".ysm" && ext != ".zip" && ext != ".7z" && ext != ".json" &&
+			ext != ".pmx" && ext != ".pmd" && ext != ".vrca" && ext != ".vrm" &&
+			ext != ".nbt" && ext != ".schematic" {
+			return nil
+		}
+		count++
+		return nil
+	})
+	return count
+}
+
+// isResourcePackFolder 检查目录是否是资源包文件夹（内含 pack.mcmeta）
+func isResourcePackFolder(path string) bool {
+	_, err := os.Stat(filepath.Join(path, "pack.mcmeta"))
+	return err == nil
+}
+
+// clearInstanceDir 递归删除指定目录中的资源文件及空子目录
+func (a *App) clearInstanceDir(dir string) int {
+	count := 0
+	// 先递归收集所有需要删除的文件
+	var targets []string
+	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(d.Name()))
+		if ext != ".ysm" && ext != ".zip" && ext != ".7z" && ext != ".json" &&
+			ext != ".pmx" && ext != ".pmd" && ext != ".vrca" && ext != ".vrm" &&
+			ext != ".nbt" && ext != ".schematic" {
+			return nil
+		}
+		targets = append(targets, p)
+		return nil
+	})
+	// 执行删除
+	for _, p := range targets {
+		if a.RepoRoot != "" && paths.IsInside(a.RepoRoot, p) == nil {
+			if err := recycle.Move(p, a.RepoRoot); err != nil {
+				continue
+			}
+		} else {
+			if err := os.Remove(p); err != nil {
+				continue
+			}
+		}
+		count++
+	}
+	// 清理空目录（从最深到最浅）
+	var dirs []string
+	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if err != nil || !d.IsDir() || p == dir {
+			return nil
+		}
+		dirs = append(dirs, p)
+		return nil
+	})
+	for i := len(dirs) - 1; i >= 0; i-- {
+		os.Remove(dirs[i]) // 只删空目录
+	}
+	return count
+}
+
 func (a *App) DeduplicateCustomDir(customDir string) (int, int, error) {
 	customDir = strings.TrimSpace(customDir)
 	if customDir == "" {
@@ -324,6 +493,110 @@ func (a *App) EmptyRecycleBin(repoRoot string) (int, error) {
 // ========== 状态同步 ==========
 func (a *App) GetInstanceStatus(mcRoot, repoDir string) []types.InstanceStatus {
 	return ysmsync.GetInstanceStatus(mcRoot, repoDir, a.ScanModelEntries)
+}
+
+// GetResourceInstanceStatus 按资源类型获取整合包同步状态
+// repoDir 仅对 YSM 类型生效（其他类型从全局资源目录推导）
+func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.InstanceStatus {
+	if mcRoot == "" || rtype == "" {
+		return []types.InstanceStatus{}
+	}
+	// YSM 走原有逻辑（对比 repo 和 custom 目录）
+	if rtype == "ysm" {
+		if repoDir == "" {
+			repoDir = a.GetRepoRoot("ysm")
+		}
+		if repoDir == "" {
+			return []types.InstanceStatus{}
+		}
+		results := ysmsync.GetInstanceStatus(mcRoot, repoDir, a.ScanModelEntries)
+		// 补充 HasMod：CustomDir = {VersionDir}/config/yes_steve_model/custom → 上3层到 VersionDir
+		for i := range results {
+			modsDir := filepath.Join(results[i].CustomDir, "..", "..", "..", "mods")
+			results[i].HasMod = ysm.HasModInDir(modsDir, rtype)
+		}
+		return results
+	}
+
+	// 其他资源类型：对比全局目录和各整合包子目录
+	globalDir := a.GetRepoRoot(rtype)
+	if globalDir == "" {
+		return []types.InstanceStatus{}
+	}
+	// 扫描全局目录，构建哈希映射
+	globalEntries := a.ScanModelEntries(globalDir)
+	globalByHash := make(map[string][]types.ModelEntry)
+	for _, e := range globalEntries {
+		if e.Hash == "" {
+			continue
+		}
+		globalByHash[e.Hash] = append(globalByHash[e.Hash], e)
+	}
+
+	instances := a.ListVersionInstances(mcRoot)
+	var results []types.InstanceStatus
+
+	// 子目录映射（与 InstallResourceToInstance 保持一致）
+	subDirMap := map[string]string{
+		"resourcepack":      "resourcepacks",
+		"shaderpack":        "shaderpacks",
+		"create-blueprint":  "schematics",
+		"mmd-skin":          "3d-skin/EntityPlayer",
+		"vrchat-avatar":     "vrchat-avatars",
+	}
+	subDir := subDirMap[rtype]
+
+	for _, ins := range instances {
+		instDir := filepath.Join(ins.VersionDir, subDir)
+		instEntries := a.ScanModelEntries(instDir)
+		instByHash := make(map[string]bool)
+		for _, c := range instEntries {
+			if c.Hash != "" {
+				instByHash[c.Hash] = true
+			}
+		}
+
+		status := types.InstanceStatus{
+			Name:      ins.Name,
+			CustomDir: instDir,
+			Missing:   []string{},
+			Extra:     []string{},
+			HasMod:    ysm.HasModInDir(filepath.Join(ins.VersionDir, "mods"), rtype),
+		}
+
+		for hash, entries := range globalByHash {
+			if !instByHash[hash] {
+				for _, e := range entries {
+					status.Missing = append(status.Missing, e.Path)
+				}
+			}
+		}
+		for _, c := range instEntries {
+			if c.Hash == "" {
+				continue
+			}
+			if _, found := globalByHash[c.Hash]; !found {
+				status.Extra = append(status.Extra, c.Path)
+			}
+		}
+		if len(status.Missing) == 0 && len(status.Extra) == 0 {
+			status.Status = "complete"
+		} else if len(status.Extra) > 0 {
+			status.Status = "extra"
+		} else {
+			status.Status = "missing"
+		}
+		// 计算已同步数：整合包中 hash 匹配全局的文件数
+		matchedCount := 0
+		for _, c := range instEntries {
+			if c.Hash != "" && globalByHash[c.Hash] != nil {
+				matchedCount++
+			}
+		}
+		status.Synced = matchedCount
+		results = append(results, status)
+	}
+	return results
 }
 
 func (a *App) SyncModelToggleStatus(instanceCustomDir, repoRoot string) (int, int, error) {
@@ -457,6 +730,52 @@ func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 	// 找出 missing 的文件并复制
 	result := ysmsync.SyncResources(globalDir, targetDir)
 	count := 0
+
+	// YSM(.json) 和 MMD(.pmx/.pmd) 可能位于子目录中，需文件夹推送
+	if rtype == "mmd-skin" || rtype == "ysm" {
+		// 收集已存在的子目录名（所有层级）
+		existing := map[string]bool{}
+		filepath.Walk(targetDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil || !info.IsDir() || path == targetDir {
+				return nil
+			}
+			existing[strings.ToLower(info.Name())] = true
+			return nil // 继续递归，收集所有层级的子目录名
+		})
+		// 扫描全局目录中所有层级缺失的子目录并完整复制
+		filepath.Walk(globalDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil || !info.IsDir() || path == globalDir {
+				return nil
+			}
+			name := strings.ToLower(info.Name())
+			if existing[name] {
+				// 已存在同名目录（任意位置），跳过整个子树
+				return filepath.SkipDir
+			}
+			// 检查目录内是否有支持的模型文件（含 .ban 后缀的禁用文件）
+			hasModel := false
+			entries, _ := os.ReadDir(path)
+			for _, e := range entries {
+				ename := strings.ToLower(e.Name())
+				base := strings.TrimSuffix(ename, ".ban")
+				ext := strings.ToLower(filepath.Ext(base))
+				if ext == ".pmx" || ext == ".pmd" || ext == ".vrca" || ext == ".vrm" || ext == ".ysm" || ext == ".json" || ext == ".zip" {
+					hasModel = true
+					break
+				}
+			}
+			if !hasModel {
+				return nil // 无模型文件，继续递归查找子目录
+			}
+			// 完整复制文件夹（含所有子文件）
+			if err := installer.InstallDir(path, targetDir, globalDir, a.LinkMode, rtype); err == nil {
+				count++
+			}
+			return filepath.SkipDir
+		})
+		return count, nil
+	}
+
 	for _, src := range result.Missing {
 		dstDir := filepath.Dir(strings.Replace(src, globalDir, targetDir, 1))
 		if err := os.MkdirAll(dstDir, 0755); err != nil {
@@ -524,6 +843,252 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 		count++
 	}
 	return count, nil
+}
+
+// PullSingleResourceFromInstance 从整合包拉取单个 extra 文件到全局仓库
+func (a *App) PullSingleResourceFromInstance(rtype, srcPath, instanceName string) error {
+	cfg := a.LoadAppConfig()
+	if cfg.McRoot == "" {
+		return fmt.Errorf("请先设置游戏根目录")
+	}
+	globalDir := a.GetRepoRoot(rtype)
+	if globalDir == "" {
+		return fmt.Errorf("未设置目录")
+	}
+	instances := a.ListVersionInstances(cfg.McRoot)
+	var targetDir string
+	for _, ins := range instances {
+		if ins.Name == instanceName {
+			var subDir string
+			switch rtype {
+			case "resourcepack":
+				subDir = "resourcepacks"
+			case "shaderpack":
+				subDir = "shaderpacks"
+			case "create-blueprint":
+				subDir = "schematics"
+			case "mmd-skin":
+				subDir = "3d-skin/EntityPlayer"
+			case "vrchat-avatar":
+				subDir = "vrchat-avatars"
+			}
+			if subDir != "" {
+				targetDir = filepath.Join(ins.VersionDir, subDir)
+			}
+			break
+		}
+	}
+	if targetDir == "" {
+		return fmt.Errorf("未找到整合包: %s", instanceName)
+	}
+	dstDir := filepath.Dir(strings.Replace(srcPath, targetDir, globalDir, 1))
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
+		return err
+	}
+	return copyFile(srcPath, filepath.Join(dstDir, filepath.Base(srcPath)))
+}
+
+// ========== 整合包全类型同步状态 ==========
+
+// GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表）
+func (a *App) GetInstanceSyncStatus(instanceName string) string {
+	cfg := a.LoadAppConfig()
+	if cfg.McRoot == "" {
+		return "[]"
+	}
+
+	// 加载资源类型注册表
+	var registry struct {
+		ResourceTypes []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+			Icon string `json:"icon"`
+		} `json:"resourceTypes"`
+	}
+	if data, err := os.ReadFile("resource_types.json"); err == nil {
+		json.Unmarshal(data, &registry)
+	}
+
+	// 各资源类型允许的扩展名（防止跨类型混入如 .pmx 出现在 VRC 中）
+	typeExts := map[string][]string{
+		"ysm":              {".ysm", ".zip", ".7z", ".json"},
+		"resourcepack":     {".zip"},
+		"shaderpack":       {".zip"},
+		"create-blueprint": {".nbt", ".schematic"},
+		"mmd-skin":         {".pmx", ".pmd"},
+		"vrchat-avatar":    {".vrca", ".vrm"},
+	}
+	extMatch := func(name, rtype string) bool {
+		exts, ok := typeExts[rtype]
+		if !ok {
+			return true
+		}
+		low := strings.ToLower(name)
+		// 去掉 .disabled/.ban 后缀后再匹配
+		base := strings.TrimSuffix(low, ".disabled")
+		base = strings.TrimSuffix(base, ".ban")
+		// YSM 的 .json 仅允许 ysm.json（其他是动作/动画文件，不应单独展示）
+		if rtype == "ysm" && strings.HasSuffix(base, ".json") && base != "ysm.json" {
+			return false
+		}
+		for _, e := range exts {
+			if strings.HasSuffix(base, e) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// 找整合包目录
+	instances := a.ListVersionInstances(cfg.McRoot)
+	var targetIns *types.VersionInstance
+	for i, ins := range instances {
+		if ins.Name == instanceName {
+			targetIns = &instances[i]
+			break
+		}
+	}
+	if targetIns == nil {
+		return "[]"
+	}
+
+	// 子目录映射
+	subDirMap := map[string]string{
+		"ysm":              filepath.Join("config", "yes_steve_model", "custom"),
+		"resourcepack":     "resourcepacks",
+		"shaderpack":       "shaderpacks",
+		"create-blueprint": "schematics",
+		"mmd-skin":         "3d-skin/EntityPlayer",
+		"vrchat-avatar":    "vrchat-avatars",
+	}
+
+	var items []types.ResourceSyncItem
+
+	for _, rt := range registry.ResourceTypes {
+		subDir, ok := subDirMap[rt.ID]
+		if !ok {
+			continue
+		}
+
+		// 全局目录
+		globalDir := a.GetRepoRoot(rt.ID)
+		if globalDir == "" {
+			continue
+		}
+
+		// 整合包子目录
+		instDir := filepath.Join(targetIns.VersionDir, subDir)
+
+		// 调用 SyncResources 获取对比结果
+		result := ysmsync.SyncResources(globalDir, instDir)
+
+		// 收集大小信息
+		sizeOf := func(path string) int64 {
+			fi, err := os.Stat(path)
+			if err != nil {
+				return 0
+			}
+			return fi.Size()
+		}
+
+		for _, p := range result.Synced {
+			if !extMatch(filepath.Base(p), rt.ID) {
+				continue
+			}
+			// 检测是否有 .disabled/.ban 后缀标记禁用状态
+			lowName := strings.ToLower(filepath.Base(p))
+			isDisabled := strings.HasSuffix(lowName, ".disabled") || strings.HasSuffix(lowName, ".ban")
+			status := types.SyncStatusSynced
+			statusIcon := ""
+			if isDisabled {
+				status = types.SyncStatusDisabled
+				statusIcon = "⛔"
+			}
+			items = append(items, types.ResourceSyncItem{
+				Path:   p,
+				Name:   filepath.Base(p),
+				Status: status,
+				Type:   rt.ID,
+				Icon:   statusIcon,
+				Size:   sizeOf(p),
+			})
+		}
+		for _, p := range result.Missing {
+			if !extMatch(filepath.Base(p), rt.ID) {
+				continue
+			}
+			items = append(items, types.ResourceSyncItem{
+				Path:   p,
+				Name:   filepath.Base(p),
+				Status: types.SyncStatusMissing,
+				Type:   rt.ID,
+				Icon:   rt.Icon,
+				Size:   sizeOf(p),
+			})
+		}
+		for _, p := range result.Extra {
+			if !extMatch(filepath.Base(p), rt.ID) {
+				continue
+			}
+			items = append(items, types.ResourceSyncItem{
+				Path:   p,
+				Name:   filepath.Base(p),
+				Status: types.SyncStatusOptional,
+				Type:   rt.ID,
+				Icon:   rt.Icon,
+				Size:   sizeOf(p),
+			})
+		}
+		// 对于非模型类型（光影包/蓝图/材质包），额外扫描整合包目录中所有未被 SyncResources 覆盖的文件
+		// （SyncResources 的 map 去重会丢失同名文件）
+		if rt.ID == "shaderpack" || rt.ID == "create-blueprint" || rt.ID == "resourcepack" {
+			extraNames := map[string]bool{}
+			for _, p := range result.Extra {
+				extraNames[strings.ToLower(filepath.Base(p))] = true
+			}
+			filepath.Walk(instDir, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return nil
+				}
+				if info.IsDir() {
+					// 资源包文件夹（含 pack.mcmeta）
+					if path != instDir && isResourcePackFolder(path) {
+						low := strings.ToLower(info.Name())
+						if !extraNames[low] {
+							items = append(items, types.ResourceSyncItem{
+								Path:   path,
+								Name:   info.Name(),
+								Status: types.SyncStatusOptional,
+								Type:   rt.ID,
+								Icon:   rt.Icon,
+								Size:   0,
+							})
+						}
+					}
+					return nil
+				}
+				low := strings.ToLower(info.Name())
+				if !strings.HasSuffix(low, ".zip") && !strings.HasSuffix(low, ".nbt") && !strings.HasSuffix(low, ".schematic") {
+					return nil
+				}
+				if extraNames[low] {
+					return nil
+				}
+				items = append(items, types.ResourceSyncItem{
+					Path:   path,
+					Name:   info.Name(),
+					Status: types.SyncStatusOptional,
+					Type:   rt.ID,
+					Icon:   rt.Icon,
+					Size:   info.Size(),
+				})
+				return nil
+			})
+		}
+	}
+
+	data, _ := json.Marshal(items)
+	return string(data)
 }
 
 // ========== YSM 检测 ==========

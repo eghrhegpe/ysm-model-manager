@@ -150,6 +150,65 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 		return summary, nil
 	}
 
+	// 裸 ysm.json（解压后的 YSM 模型文件），直接读取 JSON
+	if strings.HasSuffix(strings.ToLower(path), ".json") {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return summary, fmt.Errorf("无法读取 JSON: %v", err)
+		}
+		summary.Format = "ysm"
+		summary.Spec = 2
+
+		// 尝试解析 ysm.json 完整结构
+		var root ysmRoot
+		if err := json.Unmarshal(data, &root); err == nil && root.Metadata != nil {
+			summary.Name = root.Metadata.Name
+			summary.Tips = root.Metadata.Tips
+			if root.Metadata.License != nil {
+				summary.License = root.Metadata.License.Type
+			}
+			for _, a := range root.Metadata.Authors {
+				author := Author{Name: a.Name, Roles: a.Role}
+				if a.Contact != nil {
+					author.Bilibili = a.Contact.Bilibili
+				}
+				summary.Authors = append(summary.Authors, author)
+			}
+			if root.Metadata.Link != nil {
+				summary.Links = Link{Home: root.Metadata.Link.Home, Donate: root.Metadata.Link.Donate}
+			}
+		}
+		if summary.Name == "" {
+			summary.Name = strings.TrimSuffix(summary.Source, filepath.Ext(summary.Source))
+		}
+		if root.Properties != nil {
+			summary.Preview.DefaultTexture = root.Properties.DefaultTexture
+			summary.Preview.HeightScale = root.Properties.HeightScale
+			summary.Preview.WidthScale = root.Properties.WidthScale
+		}
+		// 统计 files 中的 model/texture 数量
+		if len(root.Files) > 0 {
+			var filesObj map[string]json.RawMessage
+			if json.Unmarshal(root.Files, &filesObj) == nil {
+				for _, v := range filesObj {
+					var player struct {
+						Model   json.RawMessage `json:"model"`
+						Texture json.RawMessage `json:"texture"`
+					}
+					if json.Unmarshal(v, &player) == nil {
+						if len(player.Model) > 0 {
+							summary.Stats.Models++
+						}
+						if len(player.Texture) > 0 {
+							summary.Stats.Textures++
+						}
+					}
+				}
+			}
+		}
+		return summary, nil
+	}
+
 	// 打开 ZIP
 	r, err := zip.OpenReader(path)
 	if err != nil {

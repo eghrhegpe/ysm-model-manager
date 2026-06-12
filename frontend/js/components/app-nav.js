@@ -93,7 +93,7 @@ class AppNav extends HTMLElement {
         }
       </style>
       <div class="logo">
-        <span class="logo-icon">🧱</span>
+        <span class="logo-icon">💎</span>
         <span>YSM 管理器</span>
       </div>
       <div class="menu">

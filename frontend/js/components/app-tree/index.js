@@ -142,7 +142,7 @@ class AppTree extends HTMLElement {
   // ========== 键盘快捷键 ==========
   _initKeyboardShortcuts() {
     const handler = (e) => {
-      // Ctrl+F / Cmd+F → 聚焦搜索框
+      // Ctrl+F / Cmd+F → 聚焦搜索框（允许输入框内响应）
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
         const srch = this._root.getElementById("srch");
@@ -153,8 +153,12 @@ class AppTree extends HTMLElement {
         return;
       }
 
-      // Delete → 删除选中文件
-      if (e.key === "Delete" || e.key === "Del") {
+      // Delete → 删除选中文件（输入框中不触发，避免误删）
+      if (
+        (e.key === "Delete" || e.key === "Del") &&
+        e.target.tagName !== "INPUT" &&
+        e.target.tagName !== "TEXTAREA"
+      ) {
         const paths = [...(selectState?.keys || [])];
         if (!paths.length) {
           bus.emit("toast:show", {

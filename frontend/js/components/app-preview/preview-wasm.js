@@ -39,6 +39,20 @@ export async function decodeYsmViaWasm(modelPath) {
     devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
     if (!bytes?.length) return null;
 
+    // 纯 .json 文件（解压的 ysm.json）直接解析 JSON
+    if (/\.json$/i.test(modelPath)) {
+      const text = new TextDecoder("utf-8").decode(bytes);
+      try {
+        const json = JSON.parse(text);
+        const result = parseYsmJsonDirect(json);
+        if (result) {
+          cacheSet(modelPath, { ...result, _decodedBy: "🧠 JSON 直接解析" });
+          return result;
+        }
+      } catch (_) {}
+      return null;
+    }
+
     // 先快路径：decodeYsmFileFromMemory（对标准 V2/V1 文件秒出）
     let files;
     try {
@@ -429,4 +443,71 @@ export async function decodeYsmViaWasm(modelPath) {
     devLog(`[YSM] ❌ ${e?.message || e}`);
     return null;
   }
+}
+
+/** 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） */
+function parseYsmJsonDirect(json) {
+  // ysm.json 格式（spec/metadata/files）
+  if (json?.spec !== undefined && json?.files) {
+    // 从 files.player.model 提取 geometry 信息
+    const playerFiles = json.files?.player;
+    if (!playerFiles) return null;
+    const modelFiles = Array.isArray(playerFiles.model)
+      ? playerFiles.model
+      : playerFiles.model
+        ? [playerFiles.model]
+        : [];
+    const texFiles = Array.isArray(playerFiles.texture)
+      ? playerFiles.texture
+      : playerFiles.texture
+        ? [playerFiles.texture]
+        : [];
+    // ysm.json 本身不含 geometry 数据（geometry 在 separate model json 中）
+    // 返回一个占位 geometry，让后续的 Go AnalyzeBedrockModel 处理
+    return {
+      texture: null,
+      geometry: {
+        bones: [],
+        texWidth: json.properties?.texture_width || 64,
+        texHeight: json.properties?.texture_height || 64,
+        textures: [],
+        _ysmMeta: {
+          modelFiles,
+          texFiles,
+          defaultTexture: json.properties?.default_texture || null,
+        },
+      },
+      animations: [],
+    };
+  }
+
+  // 标准 Bedrock geometry 格式（minecraft.geometry）
+  const root = json?.minecraft?.geometry?.[0] || json?.geometry?.model || json;
+  const desc = root?.description || {};
+  const texW = desc.texture_width || 64;
+  const texH = desc.texture_height || 64;
+  const bones = (root?.bones || []).map((b) => ({
+    name: b.name,
+    pivot: b.pivot || [0, 0, 0],
+    parent: b.parent || "",
+    cubes: (b.cubes || []).map((c) => ({
+      origin: c.origin || [0, 0, 0],
+      size: c.size || [0, 0, 0],
+      pivot: c.pivot || [0, 0, 0],
+      uv: c.uv || [0, 0],
+      inflate: c.inflate || 0,
+      mirror: !!c.mirror,
+    })),
+  }));
+  if (!bones.length) return null;
+  return {
+    texture: null,
+    geometry: {
+      bones,
+      texWidth: texW,
+      texHeight: texH,
+      textures: [],
+    },
+    animations: [],
+  };
 }

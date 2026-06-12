@@ -3,6 +3,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"ysm-model-manager/go/installer"
@@ -299,11 +301,28 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
+// scanCache 目录扫描结果缓存，2s TTL
+var scanCache sync.Map
+
+type scanCacheEntry struct {
+	entries   []types.ModelEntry
+	expiresAt time.Time
+}
+
+const scanCacheTTL = 2 * time.Second
+
 // ========== 模型扫描 ==========
 func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
 		return []types.ModelEntry{}
+	}
+	// 检查缓存
+	if v, ok := scanCache.Load(dir); ok {
+		entry := v.(scanCacheEntry)
+		if time.Now().Before(entry.expiresAt) {
+			return entry.entries
+		}
 	}
 	entries := []types.ModelEntry{}
 	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
@@ -321,8 +340,16 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 		if strings.HasSuffix(strings.ToLower(p), ".ban") {
 			originalExt = strings.ToLower(filepath.Ext(p[:len(p)-4]))
 		}
-		if originalExt != ".ysm" && originalExt != ".zip" && originalExt != ".7z" && originalExt != ".pmx" && originalExt != ".pmd" && originalExt != ".vrca" {
+		if originalExt != ".ysm" && originalExt != ".zip" && originalExt != ".7z" && originalExt != ".json" && originalExt != ".pmx" && originalExt != ".pmd" && originalExt != ".vrca" && originalExt != ".vrm" {
 			return nil
+		}
+		// .json 只允许 ysm.json（动作/动画文件不应单独扫描推送）
+		if originalExt == ".json" {
+			baseName := strings.ToLower(filepath.Base(p))
+			baseName = strings.TrimSuffix(baseName, ".ban")
+			if baseName != "ysm.json" {
+				return nil
+			}
 		}
 		info, _ := d.Info()
 		e := types.ModelEntry{Name: filepath.Base(p), Path: p, Ext: originalExt}
@@ -330,10 +357,26 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 			e.Size = info.Size()
 			e.ModTime = info.ModTime().UnixMilli()
 		}
+		// 计算 SHA256 供同步系统使用（GetInstanceStatus 依赖哈希匹配）
+		e.Hash = computeFileHash(p)
 		entries = append(entries, e)
 		return nil
 	})
+	// 存入缓存
+	scanCache.Store(dir, scanCacheEntry{entries: entries, expiresAt: time.Now().Add(scanCacheTTL)})
 	return entries
+}
+
+// computeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配）
+func computeFileHash(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	h := sha256.New()
+	io.Copy(h, f)
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 func (a *App) ScanCustomModels(dir string) []types.ModelEntry {

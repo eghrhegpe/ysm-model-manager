@@ -13,7 +13,7 @@ export function repositoryHTML() {
     "</div>" +
     // 第二栏：资源类型（仅在文件树 tab 可见）
     '<div class="repo-subtabs" id="repo-subtabs" style="display:flex;gap:2px;padding:2px 8px;border-bottom:1px solid var(--bd);flex-shrink:0;font-size:10px">' +
-    '<button class="repo-subtab active" data-rtab="ysm" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:var(--surf);color:var(--accent);cursor:pointer;font-family:inherit;font-size:10px">🧱 YSM</button>' +
+    '<button class="repo-subtab active" data-rtab="ysm" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:var(--surf);color:var(--accent);cursor:pointer;font-family:inherit;font-size:10px">💎 YSM</button>' +
     '<button class="repo-subtab" data-rtab="mmd-skin" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">🎭 MMD</button>' +
     '<button class="repo-subtab" data-rtab="vrchat-avatar" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">🥽 VRC</button>' +
     '<span style="padding:3px 4px;color:var(--muted)">│</span>' +
@@ -65,7 +65,7 @@ export function resourceLibraryHTML() {
   return (
     '<div class="repo-wrap" style="display:flex;flex-direction:column">' +
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-rtab="ysm">🧱 YSM</button>' +
+    '<button class="repo-tab active" data-rtab="ysm">💎 YSM</button>' +
     '<button class="repo-tab" data-rtab="mmd-skin">🎭 MMD</button>' +
     '<button class="repo-tab" data-rtab="vrchat-avatar">🥽 VRC</button>' +
     '<span style="padding:4px 8px;color:var(--muted);font-size:var(--fs-xs);align-self:center">│</span>' +
@@ -115,7 +115,7 @@ export function settingsHTML() {
     </div>
     <!-- Row 2 -->
     <div class="stg-card">
-      <div class="stg-card-hdr">🧱 YSM 模型路径</div>
+      <div class="stg-card-hdr">💎 YSM 模型路径</div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-repo-path">加载中...</div>
         <div class="stg-card-hint">默认: {mc}/config/yes_steve_model/custom</div>
@@ -293,7 +293,7 @@ export function settingsHTML() {
   </div>
 
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
-    <div style="font-size:13px;font-weight:600;margin-bottom:6px">🧱 技术栈</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">💎 技术栈</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
       <div>🔹 Go + Wails v2（后端）</div>
       <div>🔹 原生 HTML/CSS/JS（前端）</div>

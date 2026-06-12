@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -38,9 +39,9 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 		ext = strings.ToLower(filepath.Ext(src[:len(src)-4]))
 	}
 	switch ext {
-	case ".ysm", ".zip", ".7z", ".pmx", ".pmd", ".vrca", ".nbt", ".schematic":
+	case ".ysm", ".zip", ".7z", ".json", ".pmx", ".pmd", ".vrca", ".vrm", ".nbt", ".schematic":
 	default:
-		return types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型", SourcePath:src, Reason:"不支持的文件类型", Suggestion:"仅支持 .ysm / .zip / .7z / .pmx / .pmd / .vrca 格式"}
+		return types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型", SourcePath:src, Reason:"不支持的文件类型", Suggestion:"仅支持 .ysm / .zip / .7z / .json / .pmx / .pmd / .vrca 格式"}
 	}
 
 	// 计算相对路径，保持目录结构
@@ -72,6 +73,124 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 		_, err := CopyFile(src, targetDir)
 		return err
 	}
+}
+
+// InstallDir 安装整个目录下的所有文件到目标目录（支持链接模式）
+// 用于 MMD/VRC 模型，.pmx/.pmd 文件所在文件夹包含纹理等配套文件
+// rtype 用于过滤文件类型（如 MMD 排除 .vrm）
+func InstallDir(srcDir, dstDir, repoRoot, linkMode, rtype string) error {
+	srcDir = strings.TrimSpace(srcDir)
+	dstDir = strings.TrimSpace(dstDir)
+	if srcDir == "" || dstDir == "" {
+		return types.AppError{Code: "INVALID_PARAM", Operation: "安装目录", Reason: "参数为空", Suggestion: "请检查输入"}
+	}
+	srcDir, _ = filepath.Abs(filepath.Clean(srcDir))
+	dstDir, _ = filepath.Abs(filepath.Clean(dstDir))
+	fmt.Printf("[InstallDir] srcDir=%s dstDir=%s repoRoot=%s\n", srcDir, dstDir, repoRoot)
+
+	// 验证 dstDir 在 .minecraft 内
+	if !paths.ContainsMinecraftMarker(dstDir) {
+		fmt.Println("[InstallDir] FAIL: dstDir not in .minecraft:", dstDir)
+		return types.AppError{Code: "INVALID_PATH", Operation: "安装目录", SourcePath: dstDir, Reason: "目标目录不在 .minecraft 路径内"}
+	}
+	// 验证 srcDir 在仓库目录内
+	if repoRoot != "" {
+		if err := paths.IsInside(repoRoot, srcDir); err != nil {
+			fmt.Println("[InstallDir] FAIL: srcDir not in repoRoot:", srcDir, "repoRoot:", repoRoot, "err:", err)
+			return types.AppError{Code: "INVALID_PATH", Operation: "安装目录", SourcePath: srcDir, Reason: "源目录不在仓库目录内"}
+		}
+	}
+	fmt.Println("[InstallDir] path checks OK")
+
+	// 目标子目录名 = 源文件夹名
+	targetSubDir := filepath.Base(srcDir)
+	finalDst := filepath.Join(dstDir, targetSubDir)
+	fmt.Printf("[InstallDir] targetSubDir=%s finalDst=%s\n", targetSubDir, finalDst)
+	if err := os.MkdirAll(finalDst, 0755); err != nil {
+		fmt.Println("[InstallDir] FAIL: mkdir:", err)
+		return types.AppError{Code: "IO_ERROR", Operation: "安装目录", TargetPath: finalDst, Reason: "无法创建目标目录"}
+	}
+	// 校验目标也在 .minecraft 内
+	finalDst, _ = filepath.Abs(filepath.Clean(finalDst))
+	if !paths.ContainsMinecraftMarker(finalDst) {
+		fmt.Println("[InstallDir] FAIL: finalDst not in .minecraft:", finalDst)
+		return types.AppError{Code: "INVALID_PATH", Operation: "安装目录", SourcePath: finalDst, Reason: "目标子目录不在 .minecraft 路径内"}
+	}
+
+	entries, err := os.ReadDir(srcDir)
+	if err != nil {
+		fmt.Println("[InstallDir] FAIL: readdir:", err)
+		return err
+	}
+	fmt.Printf("[InstallDir] found %d entries in srcDir\n", len(entries))
+	// 按类型过滤允许的文件扩展名
+	isAllowed := func(name string) bool {
+		low := strings.ToLower(name)
+		switch rtype {
+		case "mmd-skin":
+			// MMD 允许 .pmx/.pmd + 纹理文件，排除 .vrm（自包含格式）
+			ext := filepath.Ext(low)
+			if ext == ".pmx" || ext == ".pmd" || ext == ".png" || ext == ".tga" || ext == ".spa" || ext == ".sph" {
+				return true
+			}
+			return false
+		case "ysm":
+			ext := filepath.Ext(low)
+			return ext == ".json" || ext == ".png" || ext == ".jpg" || ext == ".jpeg"
+		default:
+			return true
+		}
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// 递归复制子目录（MMD 模型的 spa/textures/toon 等子文件夹含材质文件）
+			subSrc := filepath.Join(srcDir, entry.Name())
+			subDst := filepath.Join(finalDst, entry.Name())
+			fmt.Printf("[InstallDir] recurse subdir: %s -> %s\n", subSrc, subDst)
+			if err := os.MkdirAll(subDst, 0755); err != nil {
+				fmt.Printf("[InstallDir] mkdir subdir failed: %v (continue)\n", err)
+				continue
+			}
+			subEntries, _ := os.ReadDir(subSrc)
+			for _, se := range subEntries {
+				if se.IsDir() || !isAllowed(se.Name()) {
+					continue
+				}
+				subFile := filepath.Join(subSrc, se.Name())
+				switch linkMode {
+				case "hardlink":
+					linkOrCopy(subFile, subDst)
+				case "symlink":
+					symlinkOrCopy(subFile, subDst)
+				default:
+					CopyFile(subFile, subDst)
+				}
+			}
+			continue
+		}
+		if !isAllowed(entry.Name()) {
+			continue
+		}
+		srcFile := filepath.Join(srcDir, entry.Name())
+		fmt.Printf("[InstallDir] processing: %s (linkMode=%s)\n", srcFile, linkMode)
+		switch linkMode {
+		case "hardlink":
+			if err := linkOrCopy(srcFile, finalDst); err != nil {
+				fmt.Printf("[InstallDir] linkOrCopy failed: %v (continue)\n", err)
+				continue
+			}
+		case "symlink":
+			if err := symlinkOrCopy(srcFile, finalDst); err != nil {
+				fmt.Printf("[InstallDir] symlinkOrCopy failed: %v (continue)\n", err)
+				continue
+			}
+		default:
+			if _, err := CopyFile(srcFile, finalDst); err != nil {
+				continue
+			}
+		}
+	}
+	return nil
 }
 
 // InstallToGlobal 安装到全局 custom 目录

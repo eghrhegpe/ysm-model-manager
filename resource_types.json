@@ -3,7 +3,7 @@
     {
       "id": "ysm",
       "name": "YSM 模型",
-      "icon": "🧱",
+      "icon": "💎",
       "extensions": [".ysm", ".zip", ".7z"],
       "installDir": "versions/{instance}/ysm/",
       "instanceLevel": true,

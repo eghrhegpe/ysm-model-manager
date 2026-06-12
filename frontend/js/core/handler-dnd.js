@@ -14,7 +14,7 @@ const showDropOverlay = (hasModel) => {
     dropOverlay.style.cssText =
       "position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;pointer-events:none;transition:opacity .12s";
     dropOverlay.innerHTML =
-      '<div style="background:var(--surf,#1a1b2e);border:2px dashed var(--accent,#66d9ef);border-radius:12px;padding:30px 50px;text-align:center"><div style="font-size:30px;margin-bottom:8px">📥</div><div style="font-size:16px;font-weight:600;color:var(--accent,#66d9ef)">放开以导入模型</div><div style="font-size:11px;color:var(--muted,#888);margin-top:4px">支持 .ysm / .zip / .7z 文件</div></div>';
+      '<div style="background:var(--surf,#1a1b2e);border:2px dashed var(--accent,#66d9ef);border-radius:12px;padding:30px 50px;text-align:center"><div style="font-size:30px;margin-bottom:8px">📥</div><div style="font-size:16px;font-weight:600;color:var(--accent,#66d9ef)">放开以导入模型</div><div style="font-size:11px;color:var(--muted,#888);margin-top:4px">支持 .ysm .zip .7z .json .pmx .pmd .vrca .vrm .nbt .schematic 文件</div></div>';
     document.body.appendChild(dropOverlay);
   }
   if (hasModel === false) {
@@ -122,7 +122,9 @@ const onDrop = async (e) => {
 
   if (allFiles.length === 0) {
     bus.emit("toast:show", {
-      msg: "📂 未检测到模型文件（.ysm / .zip / .7z）",
+      msg:
+        "📂 未检测到支持的资源文件" +
+        "（.ysm .zip .7z .json .pmx .pmd .vrca .vrm .nbt .schematic）",
       duration: 3000,
       type: "info",
     });
@@ -151,13 +153,14 @@ const onDrop = async (e) => {
     bus.emit("import:pending-files");
     bus.emit("repo:switch-tab", { tab: "import" });
   } else {
-    window.__pendingImport = allFiles.map((f) => ({ name: f.name, file: f }));
     bus.emit("nav:change", { page: "repository" });
-    // 导航完成后切换到导入标签
+    // 导航完成后切换到导入标签（requestAnimationFrame 确保 DOM 已渲染）
     const unsub = bus.on("nav:changed", ({ page }) => {
       if (page === "repository") {
         unsub();
-        setTimeout(() => bus.emit("repo:switch-tab", { tab: "import" }), 50);
+        requestAnimationFrame(() =>
+          bus.emit("repo:switch-tab", { tab: "import" }),
+        );
       }
     });
   }

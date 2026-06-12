@@ -3,24 +3,38 @@
 export function repositoryHTML() {
   return (
     '<div class="repo-wrap">' +
+    // 第一栏：操作
     '<div class="repo-tabs">' +
     '<button class="repo-tab active" data-tab="tree">📁 文件树</button>' +
     '<button class="repo-tab" data-tab="import">📥 导入</button>' +
-    '<button class="repo-tab" data-tab="recycle">🗑️ 回收站</button>' +
+    '<button class="repo-tab" data-tab="recycle">♻️ 回收站</button>' +
     '<button class="repo-tab" data-tab="dedup">🔗 去重</button>' +
     '<button class="repo-tab" data-tab="oldest">👴 仓库元老</button>' +
+    "</div>" +
+    // 第二栏：资源类型（仅在文件树 tab 可见）
+    '<div class="repo-subtabs" id="repo-subtabs" style="display:flex;gap:2px;padding:2px 8px;border-bottom:1px solid var(--bd);flex-shrink:0;font-size:10px">' +
+    '<button class="repo-subtab active" data-rtab="ysm" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:var(--surf);color:var(--accent);cursor:pointer;font-family:inherit;font-size:10px">🧱 YSM</button>' +
+    '<button class="repo-subtab" data-rtab="mmd-skin" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">🎭 MMD</button>' +
+    '<button class="repo-subtab" data-rtab="vrchat-avatar" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">🥽 VRC</button>' +
+    '<span style="padding:3px 4px;color:var(--muted)">│</span>' +
+    '<button class="repo-subtab" data-rtab="resourcepack" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">🎨 材质包</button>' +
+    '<button class="repo-subtab" data-rtab="shaderpack" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">☀️ 光影包</button>' +
+    '<button class="repo-subtab" data-rtab="create-blueprint" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">⚙️ 蓝图</button>' +
     "</div>" +
     '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
     '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;border-right:1px solid var(--bd)">' +
     '<div class="repo-tab-body" id="repo-tab-tree" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
-    "<app-tree></app-tree>" +
+    // 默认 YSM 文件树 + 预览
+    '<div style="flex:1;display:flex;overflow:hidden">' +
+    '<app-tree root="ysm" style="flex:1;min-width:0"></app-tree>' +
+    '<app-preview mode="model" style="width:220px;flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
+    "</div>" +
     "</div>" +
     '<div class="repo-tab-body" id="repo-tab-import" style="display:none;flex:1;overflow-y:auto"></div>' +
     '<div class="repo-tab-body" id="repo-tab-recycle" style="display:none;flex:1;overflow-y:auto"></div>' +
     '<div class="repo-tab-body" id="repo-tab-dedup" style="display:none;flex:1;overflow-y:auto;padding:12px"></div>' +
     '<div class="repo-tab-body" id="repo-tab-oldest" style="display:none;flex:1;overflow-y:auto;overflow-x:hidden"></div>' +
     "</div>" +
-    '<app-preview mode="model" style="width:220px;flex-shrink:0;min-width:0"></app-preview>' +
     "</div>" +
     "</div>"
   );
@@ -35,7 +49,7 @@ export function instancesHTML() {
     '<div class="repo-tab-body" id="ins-tab-versions">' +
     '<div class="repo-layout">' +
     '<app-sidebar class="ins-sidebar"></app-sidebar>' +
-    '<div class="ins-content" id="ins-content">' +
+    '<div class="ins-content" id="ins-content" style="display:flex;flex-direction:column;overflow:hidden">' +
     '<div class="dp-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;gap:8px">' +
     '<div style="font-size:24px">👈</div>' +
     "<div>点击左侧整合包查看模型</div>" +
@@ -43,6 +57,23 @@ export function instancesHTML() {
     "</div>" +
     "</div>" +
     "</div>" +
+    "</div>"
+  );
+}
+
+export function resourceLibraryHTML() {
+  return (
+    '<div class="repo-wrap" style="display:flex;flex-direction:column">' +
+    '<div class="repo-tabs">' +
+    '<button class="repo-tab active" data-rtab="ysm">🧱 YSM</button>' +
+    '<button class="repo-tab" data-rtab="mmd-skin">🎭 MMD</button>' +
+    '<button class="repo-tab" data-rtab="vrchat-avatar">🥽 VRC</button>' +
+    '<span style="padding:4px 8px;color:var(--muted);font-size:var(--fs-xs);align-self:center">│</span>' +
+    '<button class="repo-tab" data-rtab="resourcepack">🎨 材质包</button>' +
+    '<button class="repo-tab" data-rtab="shaderpack">☀️ 光影包</button>' +
+    '<button class="repo-tab" data-rtab="create-blueprint">⚙️ 蓝图</button>' +
+    "</div>" +
+    '<div id="res-panel" style="flex:1;display:flex;overflow:hidden"></div>' +
     "</div>"
   );
 }
@@ -57,28 +88,62 @@ export function settingsHTML() {
 <div class="repo-tab-body" id="stg-tab-basic">
 <div class="stg-page">
 
-<div class="section-title stg-title">⚙️ 核心路径配置</div>
+<div class="section-title stg-title">⚙️ 仓库路径配置</div>
 
-<div class="settings-group stg-group">
-  <div class="setting-row">
-    <span class="label">🎮 游戏根目录</span>
-    <span class="value stg-val" id="set-mc-path">加载中...</span>
-    <button class="btn stg-btn stg-ml-auto" id="set-mc-browse">📂 选择目录</button>
-    <button class="btn stg-btn" id="set-mc-detect">🔍 自动搜索</button>
+<div class="stg-grid">
+    <!-- Row 1 -->
+    <div class="stg-card">
+      <div class="stg-card-hdr" style="display:flex;align-items:center;gap:6px">🎮 游戏根目录<button class="btn" id="set-mc-detect" style="margin-left:auto;font-size:var(--fs-xs)">🔍 自动搜索</button></div>
+      <div class="stg-card-body">
+        <div class="stg-card-val" id="set-mc-path">加载中...</div>
+        <div class="stg-card-desc">自动扫描 PCL2、%AppData% 等常见位置</div>
+      </div>
+    </div>
+    <div class="stg-card">
+      <div class="stg-card-hdr">🎨 材质包路径</div>
+      <div class="stg-card-body">
+        <div class="stg-card-val" id="set-rp-path">加载中...</div>
+        <div class="stg-card-hint">默认: {mc}/resourcepacks/</div>
+      </div>
+    </div>
+    <div class="stg-card">
+      <div class="stg-card-hdr">☀️ 光影包路径</div>
+      <div class="stg-card-body">
+        <div class="stg-card-val" id="set-sp-path">加载中...</div>
+        <div class="stg-card-hint">默认: {mc}/shaderpacks/</div>
+      </div>
+    </div>
+    <!-- Row 2 -->
+    <div class="stg-card">
+      <div class="stg-card-hdr">🧱 YSM 模型路径</div>
+      <div class="stg-card-body">
+        <div class="stg-card-val" id="set-repo-path">加载中...</div>
+        <div class="stg-card-hint">默认: {mc}/config/yes_steve_model/custom</div>
+      </div>
+    </div>
+    <div class="stg-card">
+      <div class="stg-card-hdr">🎭 MMD 模型路径</div>
+      <div class="stg-card-body">
+        <div class="stg-card-val" id="set-mmd-path">加载中...</div>
+        <div class="stg-card-hint">默认: {mc}/3d-skin/EntityPlayer/</div>
+      </div>
+    </div>
+    <div class="stg-card">
+      <div class="stg-card-hdr">🥽 VRChat 模型路径</div>
+      <div class="stg-card-body">
+        <div class="stg-card-val" id="set-vrc-path">加载中...</div>
+        <div class="stg-card-hint">默认: {mc}/vrchat-avatars/</div>
+      </div>
+    </div>
+    <!-- Row 3: 居中 -->
+    <div class="stg-card" style="grid-column:2">
+      <div class="stg-card-hdr">⚙️ 蓝图路径</div>
+      <div class="stg-card-body">
+        <div class="stg-card-val" id="set-schem-path">加载中...</div>
+        <div class="stg-card-hint">默认: {mc}/schematics/</div>
+      </div>
+    </div>
   </div>
-  <div class="stg-hint">自动扫描 PCL2、%AppData% 等常见位置。选择目录后自动检测 versions/ 等特征，选错父目录自动补 .minecraft 子目录</div>
-  <div class="stg-hint" id="set-mc-empty-hint" style="display:none;color:var(--accent)">💡 请点击「选择目录」或「自动搜索」设置 .minecraft 路径</div>
-</div>
-
-<div class="settings-group stg-group">
-  <div class="setting-row">
-    <span class="label">📁 模型仓库路径</span>
-    <span class="value stg-val" id="set-repo-path">加载中...</span>
-    <button class="btn stg-btn stg-ml-auto" id="set-repo-browse">📂 选择目录</button>
-  </div>
-  <div class="stg-hint">存放所有下载的 .ysm / .zip / .7z 模型文件</div>
-  <div class="stg-hint" id="set-repo-empty-hint" style="display:none;color:var(--accent)">💡 请点击「选择目录」设置模型仓库路径，否则下载的模型将无法归类</div>
-</div>
 
 <div class="section-title stg-title stg-sub-title">🔗 存储策略 & 🌐 网络</div>
 
@@ -413,7 +478,7 @@ export function recycleHTML() {
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
 <span id="recy-count" style="font-size:11px;color:#6c7086">加载中...</span>
 <button class="btn" id="recy-refresh" style="margin-left:auto">🔄 刷新</button>
-<button class="btn danger" id="recy-empty">🗑️ 清空回收站</button>
+<button class="btn danger" id="recy-empty">♻️ 清空回收站</button>
 </div>
 <div id="recy-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
 </div>`;

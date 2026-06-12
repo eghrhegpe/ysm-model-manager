@@ -13,27 +13,210 @@ export async function initSettings(root) {
     SelectDirectory,
     GetMinecraftPaths,
     SetLinkMode,
+    SelectRpDirectory,
   } = await import("../../../wailsjs/go/main/App.js");
   const cfg = await LoadAppConfig();
   const mcPath = cfg.mcRoot || "";
   const repoPath = cfg.repoRoot || "";
+  const rpPath = cfg.resourcepackRoot || "";
   const linkMode = cfg.linkMode || "copy";
 
-  // 显示当前值 + 空状态提示
-  const mcEl = root.getElementById("set-mc-path");
-  const repoEl = root.getElementById("set-repo-path");
-  const mcHint = root.getElementById("set-mc-empty-hint");
-  const repoHint = root.getElementById("set-repo-empty-hint");
-  if (mcEl) {
-    mcEl.textContent = mcPath || "未设置";
-    if (mcHint) mcHint.style.display = mcPath ? "none" : "";
-  }
-  if (repoEl) {
-    repoEl.textContent = repoPath || "未设置";
-    if (repoHint) repoHint.style.display = repoPath ? "none" : "";
+  // 所有路径卡片的刷新函数列表
+  const _cardRefreshers = [];
+
+  // 工具：绑定路径卡片点击
+  // elId: 元素 ID, getPath: 获取当前路径的函数, onSelect: 选择目录后的保存回调
+  function bindPathClick(elId, getPath, onSelect) {
+    const el = root.getElementById(elId);
+    if (!el) return;
+    const refresh = () => {
+      const p = getPath();
+      el.textContent = p || "📂 选择目录";
+      el.style.color = p ? "" : "var(--accent)";
+    };
+    _cardRefreshers.push(refresh);
+    el.addEventListener("click", async () => {
+      const dir = await SelectDirectory();
+      if (!dir) return;
+      await onSelect(dir);
+      refresh();
+      bus.emit("config:updated");
+      bus.emit("stats:refresh");
+      bus.emit("toast:show", {
+        msg: "✅ 路径已更新",
+        duration: 2000,
+        type: "success",
+      });
+    });
+    refresh();
   }
 
-  // 主题：先读 Go 配置，再回退 localStorage
+  // 绑定所有路径卡片
+  bindPathClick(
+    "set-mc-path",
+    () => cfg.mcRoot || "",
+    async (dir) => {
+      const theme = localStorage.getItem("theme") || "dark";
+      await SaveAppConfig(
+        cfg.repoRoot || "",
+        cfg.resourcepackRoot || "",
+        dir,
+        cfg.linkMode || "copy",
+        theme,
+      );
+      cfg.mcRoot = dir;
+    },
+  );
+
+  bindPathClick(
+    "set-repo-path",
+    () =>
+      cfg.repoRoot ||
+      (cfg.mcRoot ? cfg.mcRoot + "/config/yes_steve_model/custom" : ""),
+    async (dir) => {
+      const theme = localStorage.getItem("theme") || "dark";
+      await SaveAppConfig(
+        dir,
+        cfg.resourcepackRoot || "",
+        cfg.mcRoot || "",
+        cfg.linkMode || "copy",
+        theme,
+      );
+      cfg.repoRoot = dir;
+    },
+  );
+
+  bindPathClick(
+    "set-rp-path",
+    () =>
+      cfg.resourcepackRoot || (cfg.mcRoot ? cfg.mcRoot + "/resourcepacks" : ""),
+    async (dir) => {
+      const theme = localStorage.getItem("theme") || "dark";
+      await SaveAppConfig(
+        cfg.repoRoot || "",
+        dir,
+        cfg.mcRoot || "",
+        cfg.linkMode || "copy",
+        theme,
+      );
+      cfg.resourcepackRoot = dir;
+    },
+  );
+
+  // 纯展示路径（由 mcRoot 派生，不可独立设置）
+  // 可点击的派生路径（选目录后用 SetResourceRoot 持久化）
+  const rtypeKeyMap = {
+    shaderpack: "shaderpackRoot",
+    "create-blueprint": "schematicRoot",
+    "mmd-skin": "mmdRoot",
+    "vrchat-avatar": "vrcRoot",
+  };
+  function bindDerived(elId, rtype) {
+    const el = root.getElementById(elId);
+    if (!el) return;
+    const key = rtypeKeyMap[rtype];
+    const refresh = () => {
+      const p = cfg[key] || (cfg.mcRoot ? mcDerivedPath(rtype) : "") || "";
+      el.textContent = p || "待设置 MC 根目录";
+      el.title = p || "";
+    };
+    // 重置按钮
+    const resetBtn = document.createElement("button");
+    resetBtn.className = "btn";
+    resetBtn.textContent = "↩️ 默认";
+    resetBtn.style.cssText =
+      "font-size:var(--fs-xs);padding:2px 6px;margin-left:6px";
+    resetBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      try {
+        const { ResetResourceRoot } =
+          await import("../../../wailsjs/go/main/App.js");
+        await ResetResourceRoot(rtype);
+        cfg[key] = "";
+        refresh();
+        bus.emit("config:updated");
+        bus.emit("toast:show", {
+          msg: "✅ 已恢复默认",
+          duration: 2000,
+          type: "success",
+        });
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: "❌ 重置失败: " + (e.message || String(e)),
+          duration: 4000,
+          type: "error",
+        });
+      }
+    });
+    el.parentNode.appendChild(resetBtn);
+
+    el.classList.add("derived");
+    el.addEventListener("click", async () => {
+      const dir = await SelectDirectory();
+      if (!dir) return;
+      try {
+        const { SetResourceRoot } =
+          await import("../../../wailsjs/go/main/App.js");
+        await SetResourceRoot(rtype, dir);
+        cfg[key] = dir;
+        refresh();
+        bus.emit("config:updated");
+        bus.emit("toast:show", {
+          msg: "✅ 路径已设置",
+          duration: 2000,
+          type: "success",
+        });
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: "❌ 保存失败: " + (e.message || String(e)),
+          duration: 4000,
+          type: "error",
+        });
+      }
+    });
+    _cardRefreshers.push(refresh);
+    refresh();
+  }
+  const mcDerivedPath = (rtype) => {
+    const map = {
+      shaderpack: "shaderpacks",
+      "create-blueprint": "schematics",
+      "mmd-skin": "3d-skin/EntityPlayer",
+      "vrchat-avatar": "vrchat-avatars",
+    };
+    return cfg.mcRoot ? cfg.mcRoot + "/" + map[rtype] : "";
+  };
+  bindDerived("set-sp-path", "shaderpack");
+  bindDerived("set-schem-path", "create-blueprint");
+  bindDerived("set-mmd-path", "mmd-skin");
+  bindDerived("set-vrc-path", "vrchat-avatar");
+
+  // 游戏路径 - 自动搜索
+  root.getElementById("set-mc-detect")?.addEventListener("click", async () => {
+    const paths = await GetMinecraftPaths();
+    if (paths?.length) {
+      const found = paths[0];
+      const theme = localStorage.getItem("theme") || "dark";
+      await SaveAppConfig(
+        cfg.repoRoot || "",
+        cfg.resourcepackRoot || "",
+        found,
+        cfg.linkMode || "copy",
+        theme,
+      );
+      cfg.mcRoot = found;
+      _cardRefreshers.forEach((fn) => fn());
+      bus.emit("config:updated");
+      bus.emit("stats:refresh");
+      bus.emit("toast:show", {
+        msg: `✅ 已自动检测到: ${found}`,
+        duration: 3000,
+        type: "success",
+      });
+    }
+  });
+
+  // 主题
   let savedTheme = cfg.theme || cfg.Theme || "";
   if (!savedTheme) savedTheme = localStorage.getItem("theme") || "system";
   localStorage.setItem("theme", savedTheme);
@@ -46,7 +229,6 @@ export async function initSettings(root) {
   const mirrorSelect = root.getElementById("set-mirror");
   if (mirrorSelect) {
     mirrorSelect.value = savedMirror;
-    // 初始化镜像源提示
     const initMirrorKey = savedMirror || "direct";
     ["direct", "jsdelivr", "githubapi"].forEach((m) => {
       const el = root.getElementById("mirror-hint-" + m);
@@ -68,7 +250,6 @@ export async function initSettings(root) {
         duration: 2000,
         type: "success",
       });
-      // 切换镜像源提示
       ["direct", "jsdelivr", "githubapi"].forEach((m) => {
         const el = root.getElementById("mirror-hint-" + m);
         if (el) el.style.display = m === (val || "direct") ? "block" : "none";
@@ -76,86 +257,7 @@ export async function initSettings(root) {
     });
   }
 
-  // ===== 事件绑定 =====
-
-  // 游戏路径 - 选择目录
-  root.getElementById("set-mc-browse")?.addEventListener("click", async () => {
-    const dir = await SelectDirectory();
-    if (!dir) return;
-    const theme = localStorage.getItem("theme") || "dark";
-    try {
-      await SaveAppConfig(repoPath, dir, linkMode, theme);
-      if (mcEl) mcEl.textContent = dir;
-      if (mcHint) mcHint.style.display = "none";
-      bus.emit("config:updated");
-      bus.emit("stats:refresh");
-      bus.emit("toast:show", {
-        msg: "✅ 游戏路径已设置",
-        duration: 2000,
-        type: "success",
-      });
-    } catch (e) {
-      bus.emit("toast:show", {
-        msg: "⚠️ " + (e?.message || String(e)),
-        duration: 5000,
-        type: "warn",
-      });
-    }
-  });
-
-  // 游戏路径 - 自动搜索
-  root.getElementById("set-mc-detect")?.addEventListener("click", async () => {
-    const paths = await GetMinecraftPaths();
-    if (paths?.length) {
-      const found = paths[0];
-      const theme1 = localStorage.getItem("theme") || "dark";
-      try {
-        await SaveAppConfig(repoPath, found, linkMode, theme1);
-        if (mcEl) mcEl.textContent = found;
-        if (mcHint) mcHint.style.display = "none";
-        bus.emit("config:updated");
-        bus.emit("stats:refresh");
-        bus.emit("toast:show", {
-          msg: `✅ 已自动检测到: ${found}`,
-          duration: 3000,
-          type: "success",
-        });
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: "⚠️ " + (e?.message || String(e)),
-          duration: 5000,
-          type: "warn",
-        });
-      }
-    } else {
-      bus.emit("toast:show", {
-        msg: "⚠️ 未找到 .minecraft 文件夹",
-        duration: 3000,
-        type: "warn",
-      });
-    }
-  });
-
-  // 仓库路径
-  root
-    .getElementById("set-repo-browse")
-    ?.addEventListener("click", async () => {
-      const dir = await SelectDirectory();
-      if (!dir) return;
-      const theme = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(dir, mcPath, linkMode, theme);
-      if (repoEl) repoEl.textContent = dir;
-      if (repoHint) repoHint.style.display = "none";
-      bus.emit("config:updated");
-      bus.emit("stats:refresh");
-      bus.emit("tree:reload"); // 仓库路径变了，重新加载树
-      bus.emit("toast:show", {
-        msg: "✅ 仓库路径已设置",
-        duration: 2000,
-        type: "success",
-      });
-    });
-
+  // ===== 以下代码保持原样（链接模式/主题切换/关于等） =====
   // 链接模式提示切换
   const updateLinkHint = (mode) => {
     ["copy", "hardlink", "symlink"].forEach((m) => {
@@ -205,7 +307,7 @@ export async function initSettings(root) {
       const val = linkSelect.value;
       updateLinkHint(val);
       const theme = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(repoPath, mcPath, val, theme);
+      await SaveAppConfig(repoPath, "", mcPath, val, theme);
       await SetLinkMode(val);
       bus.emit("toast:show", {
         msg: `✅ 链接模式已切换至: ${val}`,
@@ -230,7 +332,7 @@ export async function initSettings(root) {
     try {
       const { SaveAppConfig } = await import("../../../wailsjs/go/main/App.js");
       const theme2 = localStorage.getItem("theme") || mode;
-      await SaveAppConfig(repoPath, mcPath, linkMode, theme2);
+      await SaveAppConfig(repoPath, "", mcPath, linkMode, theme2);
     } catch {}
     const label =
       {

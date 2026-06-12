@@ -96,6 +96,67 @@ export function modalPrompt(opts) {
  * @param {boolean} [opts.danger] 确认按钮是否为危险风格
  * @returns {Promise<boolean>}
  */
+/**
+ * 弹出下拉选择框
+ * @param {object} opts
+ * @param {string} opts.title 标题
+ * @param {string} [opts.icon] 图标
+ * @param {string[]} opts.items 选项列表
+ * @param {string} [opts.placeholder] 占位符
+ * @param {string} [opts.okText] 确认按钮文字
+ * @returns {Promise<string|null>} 选择的项，取消返回 null
+ */
+export function modalSelect(opts) {
+  return new Promise((resolve) => {
+    const { title, icon, items, placeholder, okText } = opts;
+    const overlay = document.createElement("div");
+    overlay.className = "dlg-overlay";
+    overlay.onclick = (e) => {
+      if (e.target === overlay) { overlay.remove(); resolve(null); }
+    };
+
+    const box = document.createElement("div");
+    box.className = "dlg-box dlg-pad";
+    box.style.gap = "10px";
+    box.style.width = "400px";
+
+    box.innerHTML =
+      '<div class="dlg-title" style="margin:0">' +
+      (icon || "") +
+      " " +
+      esc(title) +
+      '</div>' +
+      '<select id="ms-select" style="width:100%;padding:6px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:12px">' +
+      (items || [])
+        .map(
+          (item) =>
+            '<option value="' + esc(item) + '">' + esc(item) + "</option>",
+        )
+        .join("") +
+      '</select>' +
+      '<div class="dlg-footer" style="padding:0">' +
+      '<button id="ms-cancel" class="dlg-btn">取消 (Esc)</button>' +
+      '<button id="ms-ok" class="dlg-btn dlg-btn-primary">' +
+      esc(okText || "确定") +
+      " (Enter)</button>" +
+      "</div>";
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const select = box.querySelector("#ms-select");
+    select.focus();
+
+    const close = (result) => { overlay.remove(); resolve(result); };
+
+    box.querySelector("#ms-cancel").onclick = () => close(null);
+    box.querySelector("#ms-ok").onclick = () => close(select.value);
+    select.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") close(select.value);
+      if (e.key === "Escape") close(null);
+    });
+  });
+}
+
 export function modalConfirm(opts) {
   return new Promise((resolve) => {
     const { title, icon, message, okText, danger, width } = opts;

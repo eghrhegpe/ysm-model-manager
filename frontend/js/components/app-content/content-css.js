@@ -43,7 +43,6 @@ export const contentCSS = `
 .repo-title { font-size:var(--fs-md);font-weight:600;flex-shrink:0; }
 .repo-bar { display:flex;align-items:center;gap:4px;padding:4px 12px;border-bottom:1px solid var(--bd); }
 .repo-bar:empty { padding:0;border-bottom:none; }
-.repo-srch { width:140px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-sm);outline:none; }
 .repo-bar-spacer { flex:1; }
 .repo-bar-btn { padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-xs); }
 .repo-bar-btn:hover { background:var(--hover);color:var(--txt); }
@@ -55,8 +54,6 @@ export const contentCSS = `
 .repo-sort { padding:4px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-sm);cursor:pointer;margin-left:auto; }
 .batch-dropdown { position:relative;display:inline-block; }
 .batch-menu { position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.3);min-width:120px; }
-.hdr-btn { padding:4px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-base);font-family:inherit; }
-.hdr-btn:hover { background:var(--hover); }
 .repo-footer { padding:3px 12px;font-size:var(--fs-xs);color:var(--muted);border-top:1px solid var(--bd);flex-shrink:0; }
 .stg-page { flex:1;overflow-y:auto;padding:12px; }
 .stg-title { margin-bottom:8px; }
@@ -98,6 +95,19 @@ export const contentCSS = `
 .log-row .log-msg .tag-work, .recy-item .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
 .log-row .log-msg .tag-date, .recy-item .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
 .log-row .log-time { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }
+/* 设置页卡片三栏网格 */
+.stg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.stg-card { background:var(--surf); border:1px solid var(--bd); border-radius:8px; overflow:hidden; }
+.stg-card-hdr { padding:8px 12px; font-size:var(--fs-sm); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); background:var(--bg2,transparent); }
+.stg-card-body { padding:8px 12px; }
+.stg-card-val { display:flex; align-items:center; gap:4px; padding:6px 10px; border:1px solid var(--bd); border-radius:6px; cursor:pointer; font-size:var(--fs-sm); color:var(--txt); background:var(--bg); transition:border-color .12s, background .12s; width:100%; box-sizing:border-box; min-height:0; }
+.stg-card-val:hover { border-color:var(--accent); background:var(--hover); }
+.stg-card-val::before { content:"📂 "; flex-shrink:0; }
+.stg-card-val.derived:hover { border-color:var(--accent); background:var(--hover); }
+.stg-card-val.derived::before { content:"📁 "; }
+.stg-card-hint { font-size:var(--fs-xs); color:var(--muted); margin-bottom:6px; }
+.stg-card-acts { display:flex; gap:4px; }
+.stg-card-desc { font-size:var(--fs-xs); color:var(--muted); margin-top:6px; line-height:1.4; }
 .conflict-row { padding:3px 16px; display:flex; justify-content:space-between; font-size:var(--fs-base); color:var(--txt); }
 .conflict-name { color:#f38ba8; }
 .conflict-ver { color:var(--muted); }
@@ -277,6 +287,16 @@ export const contentCSS = `
 .cr-url { flex:1;font-size:var(--fs-sm);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .ws-open-btn, .cr-open-btn { padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 .ws-open-btn:hover, .cr-open-btn:hover { background:var(--hover); }
+/* 工坊仓库页工具按钮 */
+.ws-btn-sm { padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:all .12s;white-space:nowrap; }
+.ws-btn-sm:hover { background:var(--hover); }
+.ws-btn-muted { color:var(--muted); }
+.ws-btn-muted:hover { color:var(--txt); }
+.ws-btn-accent { color:var(--accent);border-color:#7c83ff55;background:#7c83ff22; }
+.ws-btn-accent:hover { background:#7c83ff44; }
+.ws-dl-selected[disabled], .ws-btn-sm[disabled] { opacity:.4;cursor:default; }
+.ws-dl-selected[disabled]:hover, .ws-btn-sm[disabled]:hover { background:transparent; }
+.ws-filter-btn { position:relative; }
 
 /* ===== 创意工坊 GitHub (gh-) ===== */
 .gh-page { flex:1; display:flex; overflow:hidden; position:relative; }

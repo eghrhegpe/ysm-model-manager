@@ -1,0 +1,70 @@
+{
+  "resourceTypes": [
+    {
+      "id": "ysm",
+      "name": "YSM 模型",
+      "icon": "🧱",
+      "extensions": [".ysm", ".zip", ".7z"],
+      "installDir": "versions/{instance}/ysm/",
+      "instanceLevel": true,
+      "preview": "3d",
+      "detector": "ysm",
+      "actions": ["view", "import", "delete"]
+    },
+    {
+      "id": "resourcepack",
+      "name": "材质包",
+      "icon": "🎨",
+      "extensions": [".zip"],
+      "installDir": "resourcepacks/",
+      "instanceLevel": false,
+      "preview": "thumbnail",
+      "detector": "mcmeta",
+      "actions": ["import", "toggle", "delete", "openFolder"]
+    },
+    {
+      "id": "shaderpack",
+      "name": "光影包",
+      "icon": "☀️",
+      "extensions": [".zip"],
+      "installDir": "shaderpacks/",
+      "instanceLevel": false,
+      "preview": "thumbnail",
+      "detector": "shader",
+      "actions": ["import", "toggle", "delete", "openFolder"]
+    },
+    {
+      "id": "create-blueprint",
+      "name": "机械动力蓝图",
+      "icon": "⚙️",
+      "extensions": [".nbt", ".schematic"],
+      "installDir": "schematics/",
+      "instanceLevel": false,
+      "preview": "none",
+      "detector": "extension",
+      "actions": ["import", "delete", "openFolder"]
+    },
+    {
+      "id": "mmd-skin",
+      "name": "MMD 角色模型",
+      "icon": "🎭",
+      "extensions": [".pmx", ".pmd"],
+      "installDir": "3d-skin/EntityPlayer/",
+      "instanceLevel": false,
+      "preview": "none",
+      "detector": "extension",
+      "actions": ["import", "delete", "openFolder"]
+    },
+    {
+      "id": "vrchat-avatar",
+      "name": "VRChat 模型",
+      "icon": "🥽",
+      "extensions": [".vrca"],
+      "installDir": "vrchat-avatars/",
+      "instanceLevel": false,
+      "preview": "none",
+      "detector": "extension",
+      "actions": ["import", "delete", "openFolder"]
+    }
+  ]
+}

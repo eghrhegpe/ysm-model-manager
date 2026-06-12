@@ -1,19 +1,19 @@
-// ===== 树渲染层 =====
-// 直接引用旧版 tree.js 的渲染逻辑
+// ===== 树渲染层（虚拟滚动版）=====
 import { hl } from "../../utils/dom.js";
 import { fmt, fmtDate } from "../../utils/fmt.js";
 import { fileIcon, isYsmName } from "../../utils/icon.js";
 import { emptyHTML } from "./tpl.js";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.js";
-import {
-  renderDisplayName,
-  renderModelNameWithHighlight,
-} from "../../utils/display.js";
+import { renderDisplayName } from "../../utils/display.js";
 import { animateNumber } from "../../utils/animate.js";
 import { selectState } from "./data.js";
+import {
+  ROW_H,
+  calcVisibleRange,
+  installScrollSync,
+} from "./virtual-scroll.js";
 
-// 直接导出旧版 buildTree 和 renderTree 逻辑
-// 由旧版 tree.js 移植
+// ——— 树构建（与原版一致） ———
 function buildTree(entries, sortMode, search, filterPaths) {
   const root = {};
   const query = (search || "").trim().toLowerCase();
@@ -35,7 +35,6 @@ function buildTree(entries, sortMode, search, filterPaths) {
     if (!e || !e.path) return;
     const relPath = e.path;
     if (query && !relPath.toLowerCase().includes(query)) return;
-    // 高级筛选：过滤路径
     if (filterPaths && !filterPaths.has(e.fullPath || e.path)) return;
     const parts = relPath.replace(/\\/g, "/").split("/");
     let node = root;
@@ -50,24 +49,23 @@ function buildTree(entries, sortMode, search, filterPaths) {
   return root;
 }
 
-/** 收集文件夹节点下的所有条目（含嵌套子文件夹） */
-function dirEntries(node, full, dirPath) {
+/** 收集文件夹下所有条目 */
+function dirEntries(node) {
   const all = [];
-  const keys = Object.keys(node);
-  for (const k of keys) {
+  for (const k of Object.keys(node)) {
     const v = node[k];
-    if (v._e) {
-      all.push(v._e);
-    } else {
-      const subFull = dirPath ? dirPath + "/" + k : k;
-      all.push(...dirEntries(v, subFull, dirPath));
-    }
+    if (v._e) all.push(v._e);
+    else all.push(...dirEntries(v));
   }
   return all;
 }
 
-function renderNode(node, dirPath, search, sort, dirOpen) {
+// ——— 扁平化：将嵌套树拍平为一维行数组 ———
+let _rowIdCounter = 0;
+
+function flattenVisible(node, dirPath, search, sort, dirOpen, depth) {
   const hasSearch = !!(search || "").trim();
+  const query = (search || "").toLowerCase();
   const keys = Object.keys(node).sort((a, b) => {
     const aIsDir = !node[a]._e,
       bIsDir = !node[b]._e;
@@ -79,41 +77,99 @@ function renderNode(node, dirPath, search, sort, dirOpen) {
     if (sort === "date") return (eb?.modTime || 0) - (ea?.modTime || 0);
     return a.localeCompare(b);
   });
-  let h = "";
+
+  const rows = [];
+  const indent = depth * 16 + 4;
+
   keys.forEach((k) => {
-    const v = node[k],
-      full = dirPath ? dirPath + "/" + k : k;
+    const v = node[k];
+    const full = dirPath ? dirPath + "/" + k : k;
+
     if (v._e) {
+      // — 文件行 —
       const e = v._e;
-      if (hasSearch && !e.name.toLowerCase().includes(search.toLowerCase()))
-        return;
+      if (hasSearch && !e.name.toLowerCase().includes(query)) return;
       const nmHtml = hasSearch ? hl(e.name, search) : renderDisplayName(e.name);
       const dateStr = e.modTime ? fmtDate(e.modTime) : "";
-      const selCls = selectState.keys.has(full) ? " selected" : "";
-      const extraCls = (isYsmName(e.name) ? " ysm" : "") + selCls;
-      h += fileRowHTML(e, nmHtml, fileIcon(e.name), dateStr, extraCls);
+      // selectState.keys 存的是 data-fullpath（绝对路径），必须用 e.fullPath 匹配
+      const entryKey = e.fullPath || e.path;
+      const selCls = selectState.keys.has(entryKey) ? " selected" : "";
+      const nmCls = isYsmName(e.name) ? " ysm" : "";
+      const html = fileRowHTML(
+        e,
+        nmHtml,
+        fileIcon(e.name),
+        dateStr,
+        nmCls,
+        indent,
+        selCls,
+      );
+      rows.push({
+        id: ++_rowIdCounter,
+        type: "file",
+        key: entryKey,
+        depth,
+        html,
+      });
     } else {
+      // — 文件夹行 —
       const isLocked = k.startsWith("_");
       const shouldOpen = hasSearch || !!dirOpen[full];
-      // 检查子文件启用/禁用状态
-      const subEntries = dirEntries(node[k], full, dirPath);
-      const hasEnabled = subEntries.some((e) => !e.banned);
-      const hasDisabled = subEntries.some((e) => e.banned);
-      h += folderRowHTML(
+      const sub = dirEntries(node[k]);
+      const hasEnabled = sub.some((e) => !e.banned);
+      const hasDisabled = sub.some((e) => e.banned);
+      const html = folderRowHTML(
         k,
         full,
         shouldOpen,
         isLocked,
         hasEnabled,
         hasDisabled,
+        indent,
       );
-      h += renderNode(v, full, search, sort, dirOpen);
-      h += "</div>";
+      rows.push({
+        id: ++_rowIdCounter,
+        type: "folder",
+        key: full,
+        depth,
+        html,
+        isOpen: shouldOpen,
+      });
+      if (shouldOpen) {
+        rows.push(...flattenVisible(v, full, search, sort, dirOpen, depth + 1));
+      }
     }
   });
-  return h;
+  return rows;
 }
 
+// ——— 仅渲染可见行的 HTML，用 padding 撑出滚动高度 ———
+function renderSlice(container, rows) {
+  const total = rows.length;
+  // 首次渲染时容器可能还没布局（clientHeight=0），全量渲染
+  const range =
+    container.clientHeight > 0
+      ? calcVisibleRange(container, total)
+      : { startIdx: 0, endIdx: total };
+  const slice = rows.slice(range.startIdx, range.endIdx);
+
+  let buf = "";
+  for (let i = 0; i < slice.length; i++) {
+    buf += slice[i].html;
+  }
+  const topPad = range.startIdx * ROW_H;
+  const bottomPad = (total - range.endIdx) * ROW_H;
+  container.innerHTML =
+    '<div class="vs-wrap" style="padding-top:' +
+    topPad +
+    "px;padding-bottom:" +
+    bottomPad +
+    'px">' +
+    buf +
+    "</div>";
+}
+
+// ——— 入口：每次数据变化（搜索/排序/展开/折叠）调用 ———
 export function renderTree(
   container,
   entries,
@@ -124,19 +180,43 @@ export function renderTree(
 ) {
   if (!entries.length) {
     container.innerHTML = emptyHTML("📁", "暂无模型文件");
+    container._vsCleanup?.();
+    container._vsCleanup = null;
+    container._vsRows = [];
     return;
   }
   const root = buildTree(entries, sort, search, filterPaths);
-  const html = renderNode(root, "", search, sort, dirOpen);
-  if (!html) {
+  const rows = flattenVisible(root, "", search, sort, dirOpen, 0);
+  if (!rows.length) {
     container.innerHTML = emptyHTML("🔍", "未找到匹配的文件");
+    container._vsCleanup?.();
+    container._vsCleanup = null;
+    container._vsRows = [];
     return;
   }
-  container.innerHTML = html;
+  container._vsRows = rows;
+  renderSlice(container, rows);
+
+  // 首次渲染容器可能还没布局 → 等 layout 后重新计算可见范围
+  if (container.clientHeight === 0) {
+    requestAnimationFrame(() => {
+      if (container._vsRows) renderSlice(container, container._vsRows);
+    });
+  }
+
+  // 安装滚动同步（只装一次）
+  if (!container._vsCleanup) {
+    container._vsCleanup = installScrollSync(container, () => {
+      const r = container._vsRows;
+      if (r && r.length) renderSlice(container, r);
+    });
+  }
 }
 
+// ——— 选中计数用（兼容旧接口） ———
 export function updateStat(el, entries) {
   if (!el) return;
+  if (!Array.isArray(entries)) entries = [];
   let total = 0,
     enabled = 0,
     totalSize = 0;
@@ -145,13 +225,12 @@ export function updateStat(el, entries) {
     if (!e.banned) enabled++;
     totalSize += e.size || 0;
   });
-  const newText = `共 ${total} 项 (已启用 ${enabled}) · ${fmt(totalSize)}`;
+  const newText =
+    "共 " + total + " 项 (已启用 " + enabled + ") · " + fmt(totalSize);
   if (el.textContent !== newText) {
-    // 数字跳动动画（在旧文本上动效，动完才替换完整文本）
     const oldTotal = parseInt(el.textContent.match(/(\d+)\s*项/)?.[1], 10) || 0;
-    if (oldTotal !== total && total > 0) {
+    if (oldTotal > 0 && oldTotal !== total && total > 0) {
       animateNumber(el, total, 700);
-      // 动画结束后设置完整新文本
       setTimeout(() => {
         el.textContent = newText;
       }, 700);

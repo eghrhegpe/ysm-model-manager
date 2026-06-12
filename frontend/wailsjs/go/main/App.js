@@ -42,8 +42,8 @@ export function ClearImportLogs() {
   return window['go']['main']['App']['ClearImportLogs']();
 }
 
-export function CountLinkedModels(arg1) {
-  return window['go']['main']['App']['CountLinkedModels'](arg1);
+export function CountDuplicateFiles(arg1) {
+  return window['go']['main']['App']['CountDuplicateFiles'](arg1);
 }
 
 export function CreateDir(arg1) {
@@ -60,6 +60,18 @@ export function DeduplicateCustomDir(arg1) {
 
 export function DeleteFromRecycle(arg1) {
   return window['go']['main']['App']['DeleteFromRecycle'](arg1);
+}
+
+export function DeleteModelDir(arg1) {
+  return window['go']['main']['App']['DeleteModelDir'](arg1);
+}
+
+export function DeleteResourcePack(arg1) {
+  return window['go']['main']['App']['DeleteResourcePack'](arg1);
+}
+
+export function DetectResourceType(arg1) {
+  return window['go']['main']['App']['DetectResourceType'](arg1);
 }
 
 export function DoUpdate(arg1) {
@@ -118,6 +130,10 @@ export function ExtractYsmSummary(arg1) {
   return window['go']['main']['App']['ExtractYsmSummary'](arg1);
 }
 
+export function FindDuplicateFiles(arg1) {
+  return window['go']['main']['App']['FindDuplicateFiles'](arg1);
+}
+
 export function FindPreviewImage(arg1) {
   return window['go']['main']['App']['FindPreviewImage'](arg1);
 }
@@ -158,6 +174,10 @@ export function GetPackInfo(arg1) {
   return window['go']['main']['App']['GetPackInfo'](arg1);
 }
 
+export function GetRepoRoot(arg1) {
+  return window['go']['main']['App']['GetRepoRoot'](arg1);
+}
+
 export function GetWasmBinary() {
   return window['go']['main']['App']['GetWasmBinary']();
 }
@@ -168,6 +188,10 @@ export function GetWindowPosition() {
 
 export function HasYSMMod(arg1) {
   return window['go']['main']['App']['HasYSMMod'](arg1);
+}
+
+export function ImportByType(arg1, arg2) {
+  return window['go']['main']['App']['ImportByType'](arg1, arg2);
 }
 
 export function ImportModelFile(arg1, arg2) {
@@ -190,6 +214,10 @@ export function ImportModelFileTo(arg1, arg2, arg3) {
   return window['go']['main']['App']['ImportModelFileTo'](arg1, arg2, arg3);
 }
 
+export function ImportResourcePack(arg1, arg2) {
+  return window['go']['main']['App']['ImportResourcePack'](arg1, arg2);
+}
+
 export function ImportWorkshopSitesCSV(arg1) {
   return window['go']['main']['App']['ImportWorkshopSitesCSV'](arg1);
 }
@@ -210,6 +238,10 @@ export function InstallModelWithOverlay(arg1, arg2) {
   return window['go']['main']['App']['InstallModelWithOverlay'](arg1, arg2);
 }
 
+export function InstallResourceToInstance(arg1, arg2, arg3) {
+  return window['go']['main']['App']['InstallResourceToInstance'](arg1, arg2, arg3);
+}
+
 export function IsFileBanned(arg1) {
   return window['go']['main']['App']['IsFileBanned'](arg1);
 }
@@ -218,8 +250,8 @@ export function IsProxyRunning() {
   return window['go']['main']['App']['IsProxyRunning']();
 }
 
-export function IsSymlink(arg1) {
-  return window['go']['main']['App']['IsSymlink'](arg1);
+export function IsResourcePackEnabled(arg1) {
+  return window['go']['main']['App']['IsResourcePackEnabled'](arg1);
 }
 
 export function ListFileNames(arg1) {
@@ -244,6 +276,10 @@ export function LoadAppConfig() {
 
 export function LoadGitHubRepos() {
   return window['go']['main']['App']['LoadGitHubRepos']();
+}
+
+export function LoadResourceTypes() {
+  return window['go']['main']['App']['LoadResourceTypes']();
 }
 
 export function LoadWorkshopCreators() {
@@ -274,12 +310,24 @@ export function OpenFolder(arg1) {
   return window['go']['main']['App']['OpenFolder'](arg1);
 }
 
+export function PullResourceFromInstance(arg1, arg2) {
+  return window['go']['main']['App']['PullResourceFromInstance'](arg1, arg2);
+}
+
+export function PushResourceToInstance(arg1, arg2) {
+  return window['go']['main']['App']['PushResourceToInstance'](arg1, arg2);
+}
+
 export function QueueStatus() {
   return window['go']['main']['App']['QueueStatus']();
 }
 
 export function ReadFileBytes(arg1) {
   return window['go']['main']['App']['ReadFileBytes'](arg1);
+}
+
+export function ReadPackMeta(arg1) {
+  return window['go']['main']['App']['ReadPackMeta'](arg1);
 }
 
 export function RelinkCustomDir(arg1, arg2) {
@@ -302,6 +350,10 @@ export function ReplaceWorkshopCreatorsFromJSON(arg1) {
   return window['go']['main']['App']['ReplaceWorkshopCreatorsFromJSON'](arg1);
 }
 
+export function ResetResourceRoot(arg1) {
+  return window['go']['main']['App']['ResetResourceRoot'](arg1);
+}
+
 export function ResetWorkshopConfigs() {
   return window['go']['main']['App']['ResetWorkshopConfigs']();
 }
@@ -314,8 +366,8 @@ export function RestoreFromRecycle(arg1, arg2) {
   return window['go']['main']['App']['RestoreFromRecycle'](arg1, arg2);
 }
 
-export function SaveAppConfig(arg1, arg2, arg3, arg4) {
-  return window['go']['main']['App']['SaveAppConfig'](arg1, arg2, arg3, arg4);
+export function SaveAppConfig(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['SaveAppConfig'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function SavePreviewTempFile(arg1) {
@@ -350,6 +402,14 @@ export function SelectDirectory() {
   return window['go']['main']['App']['SelectDirectory']();
 }
 
+export function SelectImportFile(arg1, arg2) {
+  return window['go']['main']['App']['SelectImportFile'](arg1, arg2);
+}
+
+export function SelectImportZip() {
+  return window['go']['main']['App']['SelectImportZip']();
+}
+
 export function SetDownloadMirror(arg1) {
   return window['go']['main']['App']['SetDownloadMirror'](arg1);
 }
@@ -360,6 +420,10 @@ export function SetLinkMode(arg1) {
 
 export function SetRepoRoot(arg1) {
   return window['go']['main']['App']['SetRepoRoot'](arg1);
+}
+
+export function SetResourceRoot(arg1, arg2) {
+  return window['go']['main']['App']['SetResourceRoot'](arg1, arg2);
 }
 
 export function StartProxy(arg1) {
@@ -378,8 +442,16 @@ export function SyncModelToggleStatus(arg1, arg2) {
   return window['go']['main']['App']['SyncModelToggleStatus'](arg1, arg2);
 }
 
+export function SyncResources(arg1, arg2) {
+  return window['go']['main']['App']['SyncResources'](arg1, arg2);
+}
+
 export function ToggleModelEnable(arg1) {
   return window['go']['main']['App']['ToggleModelEnable'](arg1);
+}
+
+export function ToggleResourcePack(arg1) {
+  return window['go']['main']['App']['ToggleResourcePack'](arg1);
 }
 
 export function ValidateMinecraftDir(arg1) {

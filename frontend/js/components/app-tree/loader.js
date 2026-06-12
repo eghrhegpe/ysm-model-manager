@@ -16,12 +16,31 @@ export async function loadEntries(rtype) {
     const raw = await ScanModelEntries(repoRoot);
     if (!raw || !raw.length) return { repoRoot, entries: [] };
 
+    // 按类型过滤扩展名（防止共享仓库中混入其他类型的文件）
+    const typeExts = {
+      ysm: [".ysm", ".zip", ".7z", ".json"],
+      "mmd-skin": [".pmx", ".pmd"],
+      "vrchat-avatar": [".vrca", ".vrm"],
+      resourcepack: [".zip"],
+      shaderpack: [".zip"],
+      "create-blueprint": [".nbt", ".schematic"],
+    };
+    const exts = typeExts[rtype] || [];
+    const filtered = exts.length
+      ? raw.filter((e) => {
+          let name = e.Name.toLowerCase();
+          // 去掉 .ban 后缀再判断
+          name = name.replace(/\.ban$/, "");
+          return exts.some((ext) => name.endsWith(ext));
+        })
+      : raw;
+
     // 并发检查禁用状态
     const bannedResults = await Promise.all(
-      raw.map((e) => IsFileBanned(e.Path).catch(() => false)),
+      filtered.map((e) => IsFileBanned(e.Path).catch(() => false)),
     );
 
-    const entries = raw.map((e, i) => {
+    const entries = filtered.map((e, i) => {
       let relPath = e.Path;
       if (repoRoot && e.Path.startsWith(repoRoot)) {
         relPath = e.Path.slice(repoRoot.length).replace(/^[/\\]+/, "");

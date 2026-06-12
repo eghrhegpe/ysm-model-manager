@@ -25,7 +25,11 @@ export function ClearCustomDir(arg1:string):Promise<number>;
 
 export function ClearImportLogs():Promise<void>;
 
+export function ClearInstanceResources(arg1:string):Promise<number>;
+
 export function CountDuplicateFiles(arg1:string):Promise<string>;
+
+export function CountInstanceResources(arg1:string):Promise<number>;
 
 export function CreateDir(arg1:string):Promise<void>;
 
@@ -81,6 +85,8 @@ export function GetImportLogs():Promise<Array<types.ImportLog>>;
 
 export function GetInstanceStatus(arg1:string,arg2:string):Promise<Array<types.InstanceStatus>>;
 
+export function GetInstanceSyncStatus(arg1:string):Promise<string>;
+
 export function GetLinkMode():Promise<string>;
 
 export function GetMinecraftPaths():Promise<Array<string>>;
@@ -92,6 +98,8 @@ export function GetModelTexSizes(arg1:string):Promise<Array<ysm.TexInfo>>;
 export function GetPackInfo(arg1:string):Promise<types.PackInfo>;
 
 export function GetRepoRoot(arg1:string):Promise<string>;
+
+export function GetResourceInstanceStatus(arg1:string,arg2:string,arg3:string):Promise<Array<types.InstanceStatus>>;
 
 export function GetWasmBinary():Promise<Array<number>>;
 
@@ -160,6 +168,8 @@ export function MoveToRecycleEx(arg1:string):Promise<string|string>;
 export function OpenFolder(arg1:string):Promise<void>;
 
 export function PullResourceFromInstance(arg1:string,arg2:string):Promise<number>;
+
+export function PullSingleResourceFromInstance(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function PushResourceToInstance(arg1:string,arg2:string):Promise<number>;
 

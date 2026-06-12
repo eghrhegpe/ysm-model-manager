@@ -99,7 +99,7 @@ func GetInstanceStatusWith(mcRoot, repoDir string, scanFn ScanFunc, listFn ListV
 			}
 		}
 
-				// 收集 custom 目录下每个文件的链接类型
+		// 收集 custom 目录下每个文件的链接类型
 		for _, c := range customEntries {
 			linkType := getLinkType(c.Path)
 			fileName := c.Name
@@ -112,6 +112,7 @@ func GetInstanceStatusWith(mcRoot, repoDir string, scanFn ScanFunc, listFn ListV
 				LinkType: linkType,
 			})
 		}
+		status.Synced = len(status.Files)
 
 		if len(status.Missing) == 0 && len(status.Extra) == 0 {
 			status.Status = "complete"
@@ -263,17 +264,52 @@ func computeHash(path string) string {
 
 // SyncResources 对比两个目录的资源文件差异，按文件名匹配
 // 用于资源库（材质包/光影包等）的全局 ↔ 整合包同步
+// 只统计模型/资源相关扩展名的文件，忽略无关文件
+var syncAllowedExts = []string{".ysm", ".zip", ".7z", ".json", ".pmx", ".pmd", ".vrca", ".vrm", ".nbt", ".schematic"}
+
+func isSyncAllowed(name string) bool {
+	low := strings.ToLower(name)
+	base := strings.TrimSuffix(low, ".disabled")
+	base = strings.TrimSuffix(base, ".ban")
+	// .json 只允许 ysm.json（动作/动画文件不应单独扫描推送）
+	if strings.HasSuffix(base, ".json") {
+		return base == "ysm.json"
+	}
+	for _, ext := range syncAllowedExts {
+		if strings.HasSuffix(base, ext) {
+			return true
+		}
+	}
+	return false
+}
+
+// isResourcePackFolder 检查目录是否是资源包文件夹（内含 pack.mcmeta）
+func isResourcePackFolder(path string) bool {
+	_, err := os.Stat(filepath.Join(path, "pack.mcmeta"))
+	return err == nil
+}
+
 func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 	result := types.ResourceSyncResult{}
 
 	// 扫描全局目录，收集文件名
 	globalFiles := make(map[string]string) // name → path
 	filepath.Walk(globalDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() {
+			// 资源包文件夹：扫描其本身但不递归
+			if path != globalDir && isResourcePackFolder(path) {
+				name := strings.ToLower(info.Name())
+				globalFiles[name] = path
+			}
+			return nil
+		}
+		if !isSyncAllowed(info.Name()) {
 			return nil
 		}
 		name := strings.ToLower(info.Name())
-		// 跳过 .disabled 后缀的状态标记
 		name = strings.TrimSuffix(name, ".disabled")
 		globalFiles[name] = path
 		return nil
@@ -282,7 +318,18 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 	// 扫描整合包目录
 	instanceFiles := make(map[string]string)
 	filepath.Walk(instanceDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() {
+			// 资源包文件夹：扫描其本身但不递归
+			if path != instanceDir && isResourcePackFolder(path) {
+				name := strings.ToLower(info.Name())
+				instanceFiles[name] = path
+			}
+			return nil
+		}
+		if !isSyncAllowed(info.Name()) {
 			return nil
 		}
 		name := strings.ToLower(info.Name())

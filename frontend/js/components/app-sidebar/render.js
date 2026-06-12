@@ -28,7 +28,8 @@ export function renderVersionCards(container, instances) {
       ins.status,
       false, // isOpen
       idx,
-      ins.hasYSM,
+      ins.hasMod,
+      ins.rtype || "ysm",
     );
     container.appendChild(vc);
   });

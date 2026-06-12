@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Handler 资源导入策略接口
@@ -54,28 +55,91 @@ func (s *SimpleCopyImporter) Import(srcPath, dstDir string) string {
 	if dstDir == "" {
 		return "目标目录为空"
 	}
-	// 确保目标目录存在
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		return fmt.Sprintf("创建目标目录失败: %v", err)
 	}
-	// 打开源文件
+
+	// 检查源路径是文件还是目录
+	info, err := os.Stat(srcPath)
+	if err != nil {
+		return fmt.Sprintf("无法访问源路径: %v", err)
+	}
+
+	if info.IsDir() {
+		// 目录导入：复制整个目录树
+		baseName := filepath.Base(srcPath)
+		targetDir := filepath.Join(dstDir, baseName)
+		if err := copyDirRecursive(srcPath, targetDir); err != nil {
+			return fmt.Sprintf("导入目录失败: %v", err)
+		}
+		return ""
+	}
+
+	// 文件导入：单文件复制
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
 		return fmt.Sprintf("打开源文件失败: %v", err)
 	}
 	defer srcFile.Close()
-	// 创建目标文件
+
 	dstPath := filepath.Join(dstDir, filepath.Base(srcPath))
 	dstFile, err := os.Create(dstPath)
 	if err != nil {
 		return fmt.Sprintf("创建目标文件失败: %v", err)
 	}
 	defer dstFile.Close()
-	// 复制内容
+
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
 		return fmt.Sprintf("复制文件失败: %v", err)
 	}
 	return ""
+}
+
+// copyDirRecursive 递归复制目录
+func copyDirRecursive(src, dst string) error {
+	if err := os.MkdirAll(dst, 0755); err != nil {
+		return err
+	}
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+		if entry.IsDir() {
+			if err := copyDirRecursive(srcPath, dstPath); err != nil {
+				return err
+			}
+		} else {
+			if strings.HasPrefix(entry.Name(), ".") {
+				continue
+			}
+			if err := copyFileSimple(srcPath, dstPath); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// copyFileSimple 复制单文件
+func copyFileSimple(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return err
+	}
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
 }
 
 // ===== DirectoryCopyImporter =====

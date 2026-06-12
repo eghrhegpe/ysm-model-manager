@@ -47,14 +47,22 @@ export async function showModelDetail(ctx, path) {
     const summary = results[0].status === "fulfilled" ? results[0].value : null;
     const header = results[1].status === "fulfilled" ? results[1].value : null;
     const basename = path.split("/").pop().split("\\").pop();
-    const hasRealSummary = summary &&
-      (summary.stats?.textures > 0 || summary.stats?.models > 0 ||
-       summary.stats?.animations > 0 || summary.stats?.texWidth > 0 ||
-       summary.authors?.length > 0 || summary.license);
+    const hasRealSummary =
+      summary &&
+      (summary.stats?.textures > 0 ||
+        summary.stats?.models > 0 ||
+        summary.stats?.animations > 0 ||
+        summary.stats?.texWidth > 0 ||
+        summary.authors?.length > 0 ||
+        summary.license);
 
     let cardHTML = "";
     if (hasRealSummary || header) {
-      cardHTML = summaryCardHTML(hasRealSummary ? summary : null, header, basename);
+      cardHTML = summaryCardHTML(
+        hasRealSummary ? summary : null,
+        header,
+        basename,
+      );
     } else {
       throw new Error("无法解析此文件");
     }

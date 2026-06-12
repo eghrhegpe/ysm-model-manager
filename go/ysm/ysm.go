@@ -83,3 +83,35 @@ func HasYSMMod(modsDir string) bool {
 	}
 	return false
 }
+
+// 各资源类型的 mod 文件名关键词
+var ModKeywords = map[string][]string{
+	"ysm":           {"yes_steve_model", "ysm-"},
+	"mmd-skin":      {"mmdskin", "mmd-skin"},
+	"vrchat-avatar": {"vrchat"},
+}
+
+// HasModInDir 检查 mods 目录是否有匹配指定类型关键词的 jar
+func HasModInDir(modsDir, rtype string) bool {
+	keywords, ok := ModKeywords[rtype]
+	if !ok {
+		return true // 非模型类始终返回 true（材质包/光影包/蓝图无需 mod）
+	}
+	files, err := os.ReadDir(modsDir)
+	if err != nil {
+		return false
+	}
+	lower := strings.ToLower
+	for _, f := range files {
+		if f.IsDir() || !strings.HasSuffix(lower(f.Name()), ".jar") {
+			continue
+		}
+		name := lower(f.Name())
+		for _, kw := range keywords {
+			if strings.Contains(name, kw) {
+				return true
+			}
+		}
+	}
+	return false
+}

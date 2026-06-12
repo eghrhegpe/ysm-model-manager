@@ -10,13 +10,15 @@ export function bindCardEvents(root, instances) {
   // 先清掉旧的右键容器（防止重复）
   root.querySelectorAll(".vc-context-menu").forEach((el) => el.remove());
 
-  root.querySelectorAll(".vc").forEach((vc) => {
-    const hdr = vc.querySelector(".vc-header");
-    if (!hdr) return;
-
-    // 点击标题头：发送选中事件到右侧面板
-    hdr.onclick = (e) => {
-      if (e.target.closest("button")) return;
+  // 点击卡片：发送选中事件到右侧面板（事件委托，outerHTML 后仍然有效）
+  const list = root.getElementById("vg");
+  if (list) {
+    list.addEventListener("click", (e) => {
+      if (e.target.closest("button") || e.target.closest(".chk")) return;
+      const vc = e.target.closest(".vc");
+      if (!vc) return;
+      const hdr = vc.querySelector(".vc-header");
+      if (!hdr) return;
       // 高亮当前选中的版本
       root
         .querySelectorAll(".vc-header")
@@ -31,25 +33,29 @@ export function bindCardEvents(root, instances) {
           localStorage.setItem("sb_selectedName", pkg.name);
         } catch (_) {}
       }
-    };
+    });
 
-    // 右键菜单
-    hdr.oncontextmenu = (e) => {
+    // 右键菜单（事件委托在容器上，outerHTML 后仍然有效）
+    list.addEventListener("contextmenu", (e) => {
+      const vc = e.target.closest(".vc");
+      if (!vc) return;
       e.preventDefault();
       e.stopPropagation();
-      const nameEl = hdr.querySelector(".name");
-      const name = nameEl ? nameEl.textContent.replace(/^📦\s*/, "") : "";
       const idx = parseInt(vc.dataset.idx, 10);
       const pkg = instances[idx];
+      if (!pkg) return;
+      const nameEl = vc.querySelector(".name");
+      const name = nameEl ? nameEl.textContent.replace(/^📦\s*/, "") : "";
       bus.emit("ctx:show", {
         x: e.clientX,
         y: e.clientY,
         type: "instance",
         instanceName: name,
         path: pkg?.dir || "",
+        rtype: pkg?.rtype || "ysm",
       });
-    };
-  });
+    });
+  }
 
   // 恢复上次选中的整合包
   restoreSelectedCard(root, instances);
@@ -64,9 +70,13 @@ function restoreSelectedCard(root, instances) {
     if (idx < 0) return;
     const vc = root.querySelector(`.vc[data-idx="${idx}"]`);
     if (!vc) return;
-    const hdr = vc.querySelector(".vc-header");
-    if (hdr) hdr.classList.add("active");
-    bus.emit("package:selected", instances[idx]);
+    // 用 requestAnimationFrame 确保 DOM 渲染完成后再标记高亮
+    requestAnimationFrame(() => {
+      const hdr = vc.querySelector(".vc-header");
+      if (!hdr) return;
+      hdr.classList.add("active");
+      bus.emit("package:selected", instances[idx]);
+    });
   } catch (_) {}
 }
 
@@ -108,36 +118,42 @@ export function bindFooter(root, instances) {
     })();
   }
 
-  const statIns = root.getElementById("stat-ins");
-  const statPending = root.getElementById("stat-pending");
+  const statSync = root.getElementById("stat-sync");
   (async () => {
     if (!instances || !instances.length) return;
-    let totalPending = 0;
-    for (const ins of instances) {
-      totalPending += (ins.missing || 0) + (ins.extra || 0);
-    }
-    if (statIns) {
-      const old = parseInt(statIns.textContent.match(/[0-9]+/)?.[0] || "0", 10);
-      statIns.textContent = `📂 整合包: ${instances.length}`;
-      animateNumber(statIns, instances.length);
-    }
-    if (statPending) {
+    const total = instances.length;
+    const syncedCount = instances.filter(
+      (ins) => (ins.missing || 0) + (ins.extra || 0) === 0,
+    ).length;
+    if (statSync) {
+      const label =
+        syncedCount === total
+          ? `完全同步 ${total}/${total}`
+          : `完全同步 ${syncedCount}/${total}`;
       const old = parseInt(
-        statPending.textContent.match(/[0-9]+/)?.[0] || "0",
+        statSync.textContent.match(/[0-9]+\/[0-9]+/)?.[0]?.split("/")[0] || "0",
         10,
       );
-      statPending.textContent = `🔄 待处理: ${totalPending}`;
-      animateNumber(statPending, totalPending);
+      statSync.textContent = label;
+      animateNumber(statSync, syncedCount);
     }
   })();
 }
 
-// 绑定 bus 事件（实例数更新）
+// 绑定 bus 事件（实例同步状态更新）
 export function bindBusUpdates(root, unsubs) {
   unsubs.push(
     bus.on("versions:updated", ({ instances }) => {
-      const statEl = root.getElementById("ver-stat");
-      if (statEl) statEl.textContent = `${instances.length}个整合包`;
+      const statEl = root.getElementById("stat-sync");
+      if (!statEl || !instances?.length) return;
+      const total = instances.length;
+      const syncedCount = instances.filter(
+        (ins) => (ins.missing || 0) + (ins.extra || 0) === 0,
+      ).length;
+      statEl.textContent =
+        syncedCount === total
+          ? `完全同步 ${total}/${total}`
+          : `完全同步 ${syncedCount}/${total}`;
     }),
   );
 }

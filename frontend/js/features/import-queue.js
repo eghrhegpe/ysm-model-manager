@@ -193,7 +193,8 @@ export function initImportQueue(app) {
       });
       if (ok === 0 && skip > 0) {
         bus.emit("toast:show", {
-          msg: "⚠️ 仅支持 .ysm / .zip / .7z 格式，或拖入包含这些文件的整个文件夹",
+          msg: "⚠️ 不支持的格式，仅支持 .ysm .zip .7z .json .pmx .pmd .vrca .vrm .nbt .schematic",
+          duration: 4000,
           duration: 3000,
           type: "warn",
         });

@@ -16,7 +16,7 @@ export function fileRowHTML(
   const checked = e.banned ? "" : " on";
   const ban = e.banned ? " ban" : "";
   const typeIcon =
-    e.type === "resourcepack" ? "🎨" : e.type === "ysm" ? "🧱" : icon;
+    e.type === "resourcepack" ? "🎨" : e.type === "ysm" ? "💎" : icon;
   const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
   return `<div class="fl${ban}${rowCls}" data-path="${p}" data-fullpath="${fp}"${pad}>
 <span class="ck${checked}" data-path="${p}" data-fullpath="${fp}"></span>

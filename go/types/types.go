@@ -77,10 +77,12 @@ type InstanceStatus struct {
 	Name      string           `json:"Name"`
 	CustomDir string           `json:"CustomDir"`
 	Status    string           `json:"Status"`    // "complete" | "missing" | "extra"
+	Synced    int              `json:"Synced"`    // 已同步文件数（Files 长度，前端排序用）
 	Missing   []string         `json:"Missing"`   // 完整路径
 	Extra     []string         `json:"Extra"`     // 文件名（供展示）
 	Disabled  []string         `json:"Disabled"`
 	HasYSM    bool             `json:"HasYSM"`
+	HasMod    bool             `json:"HasMod"`    // 当前资源类型对应的 mod 是否存在
 	Files     []CustomFileInfo `json:"Files"`     // custom 目录下每个文件的链接类型
 }
 
@@ -110,4 +112,24 @@ type ResourceSyncResult struct {
 	Synced  []string `json:"synced"`
 	Missing []string `json:"missing"` // 全局有但整合包没有（可推送）
 	Extra   []string `json:"extra"`   // 整合包有但全局没有（可拉取）
+}
+
+// SyncStatus 资源文件同步状态
+type SyncStatus string
+
+const (
+	SyncStatusSynced   SyncStatus = "synced"
+	SyncStatusMissing  SyncStatus = "missing"
+	SyncStatusOptional SyncStatus = "optional"
+	SyncStatusDisabled SyncStatus = "disabled"
+)
+
+// ResourceSyncItem 单个资源文件的同步状态
+type ResourceSyncItem struct {
+	Path   string     `json:"path"`
+	Name   string     `json:"name"`
+	Status SyncStatus `json:"status"`
+	Type   string     `json:"type"`
+	Icon   string     `json:"icon"`
+	Size   int64      `json:"size"`
 }

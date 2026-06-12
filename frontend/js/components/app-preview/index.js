@@ -112,23 +112,27 @@ class AppPreview extends HTMLElement {
     }
   }
 
-  /** 自动匹配缩略图：查缓存 → .ysm 走 WASM → Go 兜底 */
+  /** 自动匹配缩略图：查缓存 → .ysm/.json 走 WASM → Go 兜底 */
   async _loadPreviewImage(modelPath) {
     // 查缓存（模块级，跨组件生命周期持久）
     const cached = cacheGet(modelPath);
     if (cached?.texture) return cached.texture;
     if (cached?.geometry?.texture) return cached.geometry.texture;
 
-    // .ysm 先试 WASM，失败则走 Go
-    if (/\.ysm$/i.test(modelPath)) {
+    // .ysm 或 .json（解压的 ysm.json）都走 WASM 解码
+    if (/\.(ysm|json)$/i.test(modelPath)) {
       const decoded = await this._decodeYsmViaWasm(modelPath);
       if (decoded?.texture) {
         cacheSet(modelPath, { ...decoded, _decodedBy: "🧠 WASM 内置解码" });
         return decoded.texture;
       }
-      // WASM 没返回纹理（geometry 解析失败等），标记已尝试过
-      // 避免 _loadModel2D 再重复调一次 _decodeYsmViaWasm
-      cacheSet(modelPath, { _wasmTried: true });
+      if (decoded?.geometry) {
+        // 有 geometry 数据（含 _ysmMeta）但无纹理，缓存以备 _loadModel2D 使用
+        cacheSet(modelPath, { ...decoded, _wasmTried: true });
+      } else {
+        // WASM 完全失败，标记已尝试过
+        cacheSet(modelPath, { _wasmTried: true });
+      }
     }
     try {
       const { FindPreviewImage, ExtractPreviewTexture } =

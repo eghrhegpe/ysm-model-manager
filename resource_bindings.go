@@ -88,6 +88,9 @@ func (a *App) GetRepoRoot(rtype string) string {
 		if cfg.VrcRoot != "" {
 			return cfg.VrcRoot
 		}
+		if cfg.MmdRoot != "" {
+			return cfg.MmdRoot
+		}
 		if cfg.McRoot != "" {
 			return cfg.McRoot + "/vrchat-avatars"
 		}
@@ -314,5 +317,40 @@ func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) err
 
 	// 统一走 installer.Install，复用链接模式支持
 	globalRoot := a.GetRepoRoot(rtype)
+
+	fmt.Printf("[push] InstallResourceToInstance rtype=%s srcPath=%s globalRoot=%s dstDir=%s linkMode=%s\n",
+		rtype, srcPath, globalRoot, dstDir, a.LinkMode)
+
+	// 如果源文件父目录 != 全局根目录，说明在子目录中 → 推送整个文件夹
+	srcParent := filepath.Dir(srcPath)
+	fmt.Printf("[push] srcParent=%s\n", srcParent)
+
+	if globalRoot == "" {
+		fmt.Println("[push] globalRoot is empty, single file fallback")
+		return installer.Install(srcPath, dstDir, globalRoot, a.LinkMode)
+	}
+
+	cleanParent := filepath.Clean(srcParent)
+	cleanRoot := filepath.Clean(globalRoot)
+	fmt.Printf("[push] cleanParent=%s cleanRoot=%s equal=%v\n", cleanParent, cleanRoot, cleanParent == cleanRoot)
+
+	hasPrefix := strings.HasPrefix(strings.ToLower(srcParent), strings.ToLower(globalRoot))
+	fmt.Printf("[push] hasPrefix=%v\n", hasPrefix)
+
+	// YSM(.json) 和 MMD(.pmx/.pmd) 模型可能有子文件夹（含动作/纹理等配套文件）
+	// VRM(.vrm) 是自包含格式，单文件即可
+	needsFolder := rtype == "mmd-skin" || rtype == "ysm"
+
+	if cleanParent != cleanRoot && hasPrefix && needsFolder {
+		fmt.Printf("[push] -> InstallDir(srcParent=%s, dstDir=%s, globalRoot=%s)\n", srcParent, dstDir, globalRoot)
+		if err := installer.InstallDir(srcParent, dstDir, globalRoot, a.LinkMode, rtype); err != nil {
+			fmt.Printf("[push] InstallDir error: %v - fallback to single file\n", err)
+			return installer.Install(srcPath, dstDir, globalRoot, a.LinkMode)
+		}
+		fmt.Println("[push] InstallDir OK")
+		return nil
+	}
+
+	fmt.Println("[push] not in subdir, single file install")
 	return installer.Install(srcPath, dstDir, globalRoot, a.LinkMode)
 }

@@ -11,35 +11,30 @@ import { cacheGet, cacheSet } from "../../utils/preview-cache.js";
 export async function loadModelData(modelPath, ctx) {
   let model;
   let _decodedBy = "";
-  const isYsm = /\.ysm$/i.test(modelPath);
+  const isYsm = /\.(ysm|json)$/i.test(modelPath);
 
   // 查缓存（_loadPreviewImage 可能已经存过）
   const cached = cacheGet(modelPath);
   if (cached?.geometry?.bones?.length) {
     model = cached.geometry;
     _decodedBy = cached._decodedBy || "";
-    console.log(`[YSM] 缓存命中: _decodedBy=${_decodedBy}`);
-  } else {
-    console.log(
-      `[YSM] 缓存未命中: cached=${!!cached}, geometry=${!!cached?.geometry}, bones=${cached?.geometry?.bones?.length}`,
-    );
   }
 
-  // .ysm → 前端 WASM 解码
+  // .ysm/.json → 前端 WASM 解码（含 parseYsmJsonDirect）
   if (!model && isYsm) {
     const decoded = await ctx.decodeYsmViaWasm(modelPath);
-    if (decoded?.geometry) {
+    if (decoded?.geometry?.bones?.length) {
       model = decoded.geometry;
       _decodedBy = "🧠 WASM 内置解码";
       const cur = cacheGet(modelPath);
       if (cur) cacheSet(modelPath, { ...cur, _decodedBy });
     } else {
-      ctx.appendDebug("[YSM] WASM 返回空，回退 Go");
+      ctx.appendDebug("[YSM] WASM 返回空或无骨骼，回退 Go");
     }
   }
 
-  // 非 .ysm 或 WASM 失败 → 走 Go
-  if (!model) {
+  // 非 YSM/JSON 或 WASM 失败/空骨骼 → 走 Go
+  if (!model?.bones?.length) {
     const { AnalyzeBedrockModel } =
       await import("../../../wailsjs/go/main/App.js");
     model = await AnalyzeBedrockModel(modelPath);

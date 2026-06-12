@@ -106,6 +106,41 @@ func (a *App) ExtractPreviewTexture(modelPath string) string {
 		png = extractPNGFrom7z(data, int64(len(data)))
 	} else if ext == ".ysm" {
 		png = a.extractTextureViaYSM(modelPath)
+	} else if ext == ".json" {
+		// 解压后的 YSM 模型：查找 textures/ 子目录中的 PNG
+		dir := filepath.Dir(modelPath)
+		texDir := filepath.Join(dir, "textures")
+		if d, err := os.Stat(texDir); err == nil && d.IsDir() {
+			entries, _ := os.ReadDir(texDir)
+			for _, e := range entries {
+				if e.IsDir() {
+					continue
+				}
+				if strings.HasSuffix(strings.ToLower(e.Name()), ".png") {
+					texPath := filepath.Join(texDir, e.Name())
+					png, _ = os.ReadFile(texPath)
+					if len(png) > 0 {
+						break
+					}
+				}
+			}
+		}
+		// 也搜同目录 PNG
+		if len(png) == 0 {
+			entries, _ := os.ReadDir(dir)
+			for _, e := range entries {
+				if e.IsDir() {
+					continue
+				}
+				if strings.HasSuffix(strings.ToLower(e.Name()), ".png") {
+					texPath := filepath.Join(dir, e.Name())
+					png, _ = os.ReadFile(texPath)
+					if len(png) > 0 {
+						break
+					}
+				}
+			}
+		}
 	}
 
 	if len(png) == 0 {
@@ -263,6 +298,7 @@ func (a *App) ToggleModelEnable(path string) (bool, error) {
 		if err := os.Rename(path, newPath); err != nil {
 			return false, err
 		}
+		scanCache.Delete(filepath.Dir(path))
 		return true, nil // 启用
 	}
 	// 禁用
@@ -273,6 +309,7 @@ func (a *App) ToggleModelEnable(path string) (bool, error) {
 	if err := os.Rename(path, newPath); err != nil {
 		return false, err
 	}
+	scanCache.Delete(filepath.Dir(path))
 	return false, nil // 已禁用
 }
 

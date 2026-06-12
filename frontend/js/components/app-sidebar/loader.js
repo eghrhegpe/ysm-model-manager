@@ -5,33 +5,30 @@ import {
   LoadAppConfig,
   ListVersionInstances,
   GetInstanceStatus,
-  ScanModelEntries,
+  GetResourceInstanceStatus,
 } from "../../../wailsjs/go/main/App.js";
 
 /** 从 Go 加载整合包实例列表，转换为 render 需要的格式 */
-export async function loadInstances() {
+export async function loadInstances(rtype) {
   bus.emit("loading:start");
   try {
     const cfg = await LoadAppConfig();
     const mcRoot = cfg.mcRoot || cfg.McRoot || "";
-    const repoRoot = cfg.repoRoot || cfg.RepoRoot || "";
 
-    if (!mcRoot || !repoRoot) return fallbackInstances();
-
-    // 获取仓库所有文件（用于算已同步数，排除禁用模型）
-    const repoEntries = await ScanModelEntries(repoRoot);
-    const repoSet = new Set();
-    repoEntries.forEach((e) => {
-      if (e.Name.match(/\.ban$/i)) return; // 跳过禁用模型
-      repoSet.add(e.Name.replace(/\.ban$/i, ""));
-    });
+    if (!mcRoot) return fallbackInstances();
 
     // 获取整合包列表
     const rawInstances = await ListVersionInstances(mcRoot);
     if (!rawInstances || !rawInstances.length) return fallbackInstances();
 
-    // 获取整合包状态
-    const statusList = await GetInstanceStatus(mcRoot, repoRoot);
+    // 只按当前资源类型查询同步状态
+    const rtypeActual = rtype || "ysm";
+    const repoRoot = cfg.repoRoot || cfg.RepoRoot || "";
+    const statusList = await GetResourceInstanceStatus(
+      rtypeActual,
+      mcRoot,
+      repoRoot,
+    );
     const statusMap = {};
     (statusList || []).forEach((s) => {
       statusMap[s.Name] = s;
@@ -41,69 +38,39 @@ export async function loadInstances() {
       const st = statusMap[ins.Name] || {};
       const missingList = st.Missing || [];
       const extraList = st.Extra || [];
-      const disabledList = st.Disabled || [];
-      const missingSet = new Set(
-        missingList.map((n) => {
-          const basename = n.split(/[/\\]/).pop() || n;
-          return basename.replace(/\.ban$/i, "");
-        }),
-      );
-      const extraSet = new Set(
-        extraList.map((n) => {
-          const basename = n.split(/[/\\]/).pop() || n;
-          return basename.replace(/\.ban$/i, "");
-        }),
-      );
-      const disabledSet = new Set(
-        disabledList.map((n) => n.replace(/\.ban$/i, "")),
-      );
-
-      // 已同步 = 仓库有但不在 missing、extra、disabled 中
-      const syncedNames = [];
-      repoSet.forEach((name) => {
-        if (
-          !missingSet.has(name) &&
-          !extraSet.has(name) &&
-          !disabledSet.has(name)
-        ) {
-          syncedNames.push(name);
-        }
-      });
+      const syncedTotal = st.Synced || 0;
 
       return {
         name: ins.Name,
-        dir: ins.CustomDir || "",
+        dir: ins.VersionDir || "",
         exists: ins.Exists,
-        hasYSM: st.HasYSM,
-        status: st.Status || "missing",
-        synced: syncedNames.length,
+        hasMod: st.HasMod,
+        status:
+          missingList.length > 0
+            ? "missing"
+            : extraList.length > 0
+              ? "extra"
+              : "complete",
+        synced: syncedTotal,
         missing: missingList.length,
         extra: extraList.length,
-        disabled: disabledList.length,
+        disabled: 0,
+        rtype: rtypeActual,
         items: {
-          synced: syncedNames.map((n) => {
-            const linkType = getLinkType(n, st.Files);
-            return { name: n, size: "", linkType };
-          }),
           missing: missingList.map((fullPath) => {
             const displayName = fullPath.split(/[/\\]/).pop() || fullPath;
-            const linkType = getLinkType(displayName, st.Files);
-            return { name: fullPath, displayName, size: "", linkType };
+            return { name: fullPath, displayName, size: "" };
           }),
           extra: extraList.map((n) => {
-            const linkType = getLinkType(n, st.Files);
-            return { name: n, size: "", linkType };
-          }),
-          disabled: disabledList.map((n) => {
-            return { name: n, size: "", linkType: "" };
+            return { name: n, size: "" };
           }),
         },
       };
     });
 
-    // 排序：有YSM > 无YSM，同组按已同步数量降序
+    // 排序：无 mod 排最后，其次按已同步数降序
     instances.sort((a, b) => {
-      if (a.hasYSM !== b.hasYSM) return a.hasYSM ? -1 : 1;
+      if (a.hasMod !== b.hasMod) return a.hasMod ? -1 : 1;
       return (b.synced || 0) - (a.synced || 0);
     });
 

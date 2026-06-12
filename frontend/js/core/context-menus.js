@@ -2,10 +2,33 @@
 // 将 ctx:show 事件转换为新版组件使用的 menu:show 事件
 import { bus } from "../bus.js";
 
+/** 通知树组件和统计面板刷新 */
+function refreshUI() {
+  bus.emit("tree:reload");
+  bus.emit("stats:refresh");
+}
+
+/** 显示 toast 通知 */
+function toast(msg, duration = 3000, type = "success") {
+  bus.emit("toast:show", { msg, duration, type });
+}
+
 export function registerContextMenus() {
   bus.on(
     "ctx:show",
-    ({ x, y, type, instanceName, path, banned, dir, name, count, paths }) => {
+    ({
+      x,
+      y,
+      type,
+      instanceName,
+      path,
+      banned,
+      dir,
+      name,
+      count,
+      paths,
+      rtype,
+    }) => {
       if (type === "instance") {
         bus.emit("menu:show", {
           x,
@@ -26,7 +49,7 @@ export function registerContextMenus() {
               label: "安装缺失",
               icon: "⬇️",
               onClick: () =>
-                bus.emit("sync:download-missing", { instanceName }),
+                bus.emit("sync:download-missing", { instanceName, rtype }),
             },
             {
               label: "复制您的模型清单",
@@ -93,15 +116,11 @@ export function registerContextMenus() {
                     console.error("移动失败:", p, e);
                   }
                 }
-                bus.emit("toast:show", {
-                  msg:
-                    ok > 0
-                      ? `✅ ${ok} 个文件已移动到 ${folder}`
-                      : "❌ 移动失败",
-                  duration: 4000,
-                });
-                bus.emit("tree:reload");
-                bus.emit("stats:refresh");
+                toast(
+                  ok > 0 ? `✅ ${ok} 个文件已移动到 ${folder}` : "❌ 移动失败",
+                  4000,
+                );
+                refreshUI();
               },
             },
             { divider: true },
@@ -126,8 +145,7 @@ export function registerContextMenus() {
                     await MoveToRecycle(p);
                   } catch {}
                 }
-                bus.emit("tree:reload");
-                bus.emit("stats:refresh");
+                refreshUI();
               },
             },
           ],
@@ -152,14 +170,9 @@ export function registerContextMenus() {
                   const { RenameFile } =
                     await import("../../wailsjs/go/main/App.js");
                   await RenameFile(path, newName);
-                  bus.emit("tree:reload");
-                  bus.emit("stats:refresh");
+                  refreshUI();
                 } catch (e) {
-                  bus.emit("toast:show", {
-                    msg: "❌ 重命名失败: " + String(e),
-                    duration: 4000,
-                    type: "error",
-                  });
+                  toast("❌ 重命名失败: " + String(e), 4000, "error");
                 }
               },
             },
@@ -190,18 +203,10 @@ export function registerContextMenus() {
                 const dstDir = repoRoot + "\\" + folder.replace(/\//g, "\\");
                 try {
                   await MoveModelFile(path, dstDir);
-                  bus.emit("toast:show", {
-                    msg: `✅ 已移动到 ${folder}`,
-                    duration: 3000,
-                  });
-                  bus.emit("tree:reload");
-                  bus.emit("stats:refresh");
+                  toast(`✅ 已移动到 ${folder}`, 3000);
+                  refreshUI();
                 } catch (e) {
-                  bus.emit("toast:show", {
-                    msg: "❌ 移动失败: " + String(e),
-                    duration: 4000,
-                    type: "error",
-                  });
+                  toast("❌ 移动失败: " + String(e), 4000, "error");
                 }
               },
             },
@@ -214,20 +219,12 @@ export function registerContextMenus() {
                 const cfg = await LoadAppConfig();
                 const mcRoot = cfg.mcRoot || "";
                 if (!mcRoot) {
-                  bus.emit("toast:show", {
-                    msg: "请先设置游戏根目录",
-                    duration: 2000,
-                    type: "warn",
-                  });
+                  toast("请先设置游戏根目录", 2000, "warn");
                   return;
                 }
                 const instances = await ListVersionInstances(mcRoot);
                 if (!instances || !instances.length) {
-                  bus.emit("toast:show", {
-                    msg: "未找到任何整合包",
-                    duration: 2000,
-                    type: "warn",
-                  });
+                  toast("未找到任何整合包", 2000, "warn");
                   return;
                 }
                 const { modalSelect } = await import("../dialogs/modal.js");
@@ -244,17 +241,9 @@ export function registerContextMenus() {
                 const name = path.split(/[/\\]/).pop();
                 try {
                   await InstallModelTo(name, match.CustomDir);
-                  bus.emit("toast:show", {
-                    msg: `✅ 已推送到 ${chosen}`,
-                    duration: 2000,
-                    type: "success",
-                  });
+                  toast(`✅ 已推送到 ${chosen}`, 2000);
                 } catch (e) {
-                  bus.emit("toast:show", {
-                    msg: `❌ 推送失败: ${String(e)}`,
-                    duration: 3000,
-                    type: "error",
-                  });
+                  toast(`❌ 推送失败: ${String(e)}`, 3000, "error");
                 }
               },
             },
@@ -277,8 +266,7 @@ export function registerContextMenus() {
                   await import("../../wailsjs/go/main/App.js");
                 try {
                   await MoveToRecycle(path);
-                  bus.emit("tree:reload");
-                  bus.emit("stats:refresh");
+                  refreshUI();
                 } catch {}
               },
             },
@@ -289,10 +277,7 @@ export function registerContextMenus() {
               onClick: async () => {
                 try {
                   await navigator.clipboard.writeText(path);
-                  bus.emit("toast:show", {
-                    msg: "✅ 路径已复制到剪贴板",
-                    duration: 2000,
-                  });
+                  toast("✅ 路径已复制到剪贴板", 2000);
                 } catch {
                   const ta = document.createElement("textarea");
                   ta.value = path;
@@ -302,10 +287,7 @@ export function registerContextMenus() {
                   ta.select();
                   document.execCommand("copy");
                   document.body.removeChild(ta);
-                  bus.emit("toast:show", {
-                    msg: "✅ 路径已复制到剪贴板",
-                    duration: 2000,
-                  });
+                  toast("✅ 路径已复制到剪贴板", 2000);
                 }
               },
             },

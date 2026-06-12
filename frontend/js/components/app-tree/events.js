@@ -59,7 +59,11 @@ async function toggleFolderBatch(fhEl, vm) {
     }
   }
   if (ok > 0) {
-    await vm._load();
+    // 直接更新本地 banned 状态（ScanModelEntries 有 30s 缓存，_load 会拿到旧数据）
+    for (const e of targets) {
+      if (!e.banned && !enable) e.banned = true;
+      else if (e.banned && enable) e.banned = false;
+    }
     vm._renderTree();
     bus.emit("sync:toggle-status");
   }

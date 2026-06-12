@@ -2,8 +2,10 @@
 
 export function headerHTML() {
   return (
-    '<div style="padding:4px 8px;border-bottom:1px solid var(--bd)">' +
-    '<button class="sidebar-import-all" style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--accent);background:var(--bg);color:var(--accent);cursor:pointer;font-size:10px;font-family:inherit;text-align:center">⬇️ 一键安装模型</button>' +
+    '<div style="padding:4px 8px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
+    '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;color:var(--muted);flex:1">' +
+    '<input type="checkbox" id="sb-select-all" style="cursor:pointer"> 全选</label>' +
+    '<button class="sidebar-sync-selected" style="padding:3px 8px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:9px;font-family:inherit">⬇️ 同步所选</button>' +
     "</div>"
   );
 }
@@ -11,8 +13,7 @@ export function headerHTML() {
 export function footerHTML() {
   return `<div class="footer">
 <div class="footer-stats" id="footer-stats">
-  <span class="stat-item" id="stat-ins">📂 整合包: -</span>
-  <span class="stat-item" id="stat-pending">🔄 待处理: -</span>
+  <span class="stat-item" id="stat-sync">完全同步 -/-</span>
   <button class="footer-btn btn-mc-dir" id="btn-mc" title="点击选择游戏目录">🎮 未设置</button>
 </div>
 </div>`;
@@ -44,21 +45,19 @@ export function vcHeaderHTML(
   status,
   isOpen = false,
   idx = -1,
-  hasYSM = true,
+  hasMod = true,
+  rtype = "ysm",
 ) {
-  const parts = [];
-  const installBtn =
-    missing > 0 && hasYSM
-      ? `<button class="tag red btn-install-missing btn-install" data-idx="${idx}">安装 (${missing})</button>`
-      : "";
-  const noYsmTag = !hasYSM
-    ? `<span class="tag gray tag-no-ysm">🚫 无YSM</span>`
-    : "";
-  const extraTag =
-    extra > 0 ? `<span class="tag orange">📤 ${extra}</span>` : "";
+  const chips =
+    (synced > 0 ? `<span class="tag green">${synced}</span> ` : "") +
+    (missing > 0 && hasMod ? `<span class="tag red">${missing}</span> ` : "") +
+    (extra > 0 ? `<span class="tag orange">${extra}</span>` : "") +
+    (!hasMod
+      ? `<span class="tag gray">🚫 无${{ ysm: "YSM", "mmd-skin": "MMD", "vrchat-avatar": "VRC" }[rtype] || rtype}</span>`
+      : "");
   return `<div class="vc-header">
-<div class="vc-hdr-row1"><span class="name">📦 ${esc(name)}</span></div>
-<div class="vc-hdr-row2">${synced > 0 ? `<span class="tag green">✅ ${synced}</span> ` : ""}${extraTag}${noYsmTag}${installBtn}</div>
+<div class="vc-hdr-row1"><span class="name">${esc(name)}</span></div>
+<div class="vc-hdr-row2"><input type="checkbox" class="chk" data-idx="${idx}">📦${chips}</div>
 </div>`;
 }
 

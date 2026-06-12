@@ -42,8 +42,16 @@ export function ClearImportLogs() {
   return window['go']['main']['App']['ClearImportLogs']();
 }
 
+export function ClearInstanceResources(arg1) {
+  return window['go']['main']['App']['ClearInstanceResources'](arg1);
+}
+
 export function CountDuplicateFiles(arg1) {
   return window['go']['main']['App']['CountDuplicateFiles'](arg1);
+}
+
+export function CountInstanceResources(arg1) {
+  return window['go']['main']['App']['CountInstanceResources'](arg1);
 }
 
 export function CreateDir(arg1) {
@@ -154,6 +162,10 @@ export function GetInstanceStatus(arg1, arg2) {
   return window['go']['main']['App']['GetInstanceStatus'](arg1, arg2);
 }
 
+export function GetInstanceSyncStatus(arg1) {
+  return window['go']['main']['App']['GetInstanceSyncStatus'](arg1);
+}
+
 export function GetLinkMode() {
   return window['go']['main']['App']['GetLinkMode']();
 }
@@ -176,6 +188,10 @@ export function GetPackInfo(arg1) {
 
 export function GetRepoRoot(arg1) {
   return window['go']['main']['App']['GetRepoRoot'](arg1);
+}
+
+export function GetResourceInstanceStatus(arg1, arg2, arg3) {
+  return window['go']['main']['App']['GetResourceInstanceStatus'](arg1, arg2, arg3);
 }
 
 export function GetWasmBinary() {
@@ -312,6 +328,10 @@ export function OpenFolder(arg1) {
 
 export function PullResourceFromInstance(arg1, arg2) {
   return window['go']['main']['App']['PullResourceFromInstance'](arg1, arg2);
+}
+
+export function PullSingleResourceFromInstance(arg1, arg2, arg3) {
+  return window['go']['main']['App']['PullSingleResourceFromInstance'](arg1, arg2, arg3);
 }
 
 export function PushResourceToInstance(arg1, arg2) {

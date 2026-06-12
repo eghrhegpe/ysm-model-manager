@@ -217,10 +217,12 @@ export namespace types {
 	    Name: string;
 	    CustomDir: string;
 	    Status: string;
+	    Synced: number;
 	    Missing: string[];
 	    Extra: string[];
 	    Disabled: string[];
 	    HasYSM: boolean;
+	    HasMod: boolean;
 	    Files: CustomFileInfo[];
 	
 	    static createFrom(source: any = {}) {
@@ -232,10 +234,12 @@ export namespace types {
 	        this.Name = source["Name"];
 	        this.CustomDir = source["CustomDir"];
 	        this.Status = source["Status"];
+	        this.Synced = source["Synced"];
 	        this.Missing = source["Missing"];
 	        this.Extra = source["Extra"];
 	        this.Disabled = source["Disabled"];
 	        this.HasYSM = source["HasYSM"];
+	        this.HasMod = source["HasMod"];
 	        this.Files = this.convertValues(source["Files"], CustomFileInfo);
 	    }
 	

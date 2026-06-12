@@ -136,7 +136,7 @@ export async function startDedup(root, esc) {
   list.innerHTML =
     '<div class="stat-row diag-stat diag-stat-muted">⏳ 扫描仓库文件哈希...</div>';
   try {
-    const { LoadAppConfig, ScanModelEntries, MoveToRecycle } =
+    const { LoadAppConfig, FindDuplicateFiles, MoveToRecycle } =
       await import("../../../wailsjs/go/main/App.js");
     const cfg = await LoadAppConfig();
     const repoRoot = cfg.repoRoot || "";
@@ -146,33 +146,18 @@ export async function startDedup(root, esc) {
       return;
     }
 
-    const entries = await ScanModelEntries(repoRoot);
-    if (!entries || entries.length < 2) {
-      list.innerHTML =
-        '<div class="stat-row" style="padding:12px;color:#a6e3a1;font-size:11px">✅ 无需去重（文件不足 2 个）</div>';
-      return;
-    }
-
-    // 按哈希分组
-    const hashGroups = {};
-    entries.forEach((e) => {
-      if (!e.Hash) return;
-      (hashGroups[e.Hash] ||= []).push(e);
-    });
-
-    const dupHashes = Object.entries(hashGroups).filter(
-      ([, v]) => v.length > 1,
-    );
-    if (!dupHashes.length) {
+    const jsonStr = await FindDuplicateFiles(repoRoot);
+    const dupGroups = JSON.parse(jsonStr || "[]");
+    if (!dupGroups.length) {
       list.innerHTML =
         '<div class="stat-row" style="padding:12px;color:#a6e3a1;font-size:11px">✅ 没有重复文件</div>';
       return;
     }
 
-    const totalDups = dupHashes.reduce((s, [, v]) => s + v.length - 1, 0);
+    const totalDups = dupGroups.reduce((s, g) => s + g.files.length - 1, 0);
 
     let html = `<div style="padding:10px 12px;font-size:11px;color:var(--txt);border-bottom:1px solid var(--bd)">
-发现 <strong>${dupHashes.length}</strong> 组重复文件（共 <strong>${totalDups}</strong> 个多余副本），每组选一个保留：
+发现 <strong>${dupGroups.length}</strong> 组重复文件（共 <strong>${totalDups}</strong> 个多余副本），每组选一个保留：
 <span style="display:block;font-size:9px;color:var(--muted);margin-top:2px">未选择的文件将移入回收站</span>
 </div>`;
     dupHashes.forEach(([, group], gi) => {
@@ -237,17 +222,17 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
       ?.addEventListener("click", async () => {
         let del = 0,
           fail = 0;
-        for (let gi = 0; gi < dupHashes.length; gi++) {
-          const [, group] = dupHashes[gi];
+        for (let gi = 0; gi < dupGroups.length; gi++) {
+          const files = dupGroups[gi].files || [];
           const selected = parseInt(
             list.querySelector(`input[name="dedup-keep-${gi}"]:checked`)
               ?.value ?? "0",
             10,
           );
-          for (let fi = 0; fi < group.length; fi++) {
+          for (let fi = 0; fi < files.length; fi++) {
             if (fi === selected) continue;
             try {
-              await MoveToRecycle(group[fi].Path);
+              await MoveToRecycle(files[fi]);
               del++;
             } catch {
               fail++;

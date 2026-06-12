@@ -98,6 +98,8 @@ class AppContent extends HTMLElement {
     } else if (this._current === "instances") {
       this._initInstances();
     } else if (this._current === "repository") {
+      // 按需加载 Three.js 预览组件
+      import("../app-preview/index.js").catch(() => {});
       this._initRepository();
     }
   }
@@ -115,112 +117,163 @@ class AppContent extends HTMLElement {
       bus.on("package:selected", async (pkg) => {
         const content = this._root.getElementById("ins-content");
         if (!content) return;
-        const { renderBody } =
-          await import("../../components/app-sidebar/render.js");
-        const synced = pkg.synced || 0;
-        const missing = pkg.missing || 0;
-        const extra = pkg.extra || 0;
-        const filterKey = "ins-filter-" + Date.now();
+        const insName = pkg.name || "";
+
+        // 统一标签页：模型类型用 app-tree，资源类型用 app-resource-manager
+        const tabs = [
+          { id: "ysm",           icon: "🧱", label: "YSM",       widget: "tree" },
+          { id: "mmd-skin",      icon: "🎭", label: "MMD",       widget: "tree" },
+          { id: "vrchat-avatar", icon: "🥽", label: "VRC",       widget: "tree" },
+          { id: "resourcepack",  icon: "🎨", label: "材质包",    widget: "list" },
+          { id: "shaderpack",    icon: "☀️", label: "光影包",    widget: "list" },
+          { id: "create-blueprint", icon: "⚙️", label: "蓝图",   widget: "list" },
+        ];
+        const escAttr = (s) => String(s).replace(/"/g, "&quot;");
+        const tabHtml = tabs
+          .map(
+            (t, i) =>
+              '<button class="ins-type-tab' +
+              (i === 0 ? " active" : "") +
+              '" data-type="' +
+              t.id +
+              '" data-widget="' +
+              t.widget +
+              '" style="padding:4px 12px;border-radius:4px 4px 0 0;border:none;background:' +
+              (i === 0 ? "var(--surf)" : "transparent") +
+              ";color:" +
+              (i === 0 ? "var(--accent)" : "var(--muted)") +
+              ';cursor:pointer;font-size:10px;font-family:inherit">' +
+              t.icon +
+              " " +
+              t.label +
+              "</button>",
+          )
+          .join("");
+
         content.innerHTML =
-          '<div class="ins-filter-bar" style="display:flex;gap:12px;padding:8px 8px 0;flex-shrink:0;border-bottom:1px solid var(--bd);padding-bottom:4px" data-key="' +
-          filterKey +
-          '">' +
-          '<div class="ins-filter-card active" style="cursor:pointer;font-size:10px;color:var(--accent);font-weight:600;transition:all .12s;border-bottom:2px solid var(--accent);padding-bottom:2px" data-filter="all" title="显示全部">📊 全部</div>' +
-          '<div class="ins-filter-card" style="cursor:pointer;font-size:10px;color:var(--muted);transition:all .12s" data-filter="synced" title="仅显示已同步">' +
-          '<span style="color:#6bb86b;font-weight:700">' +
-          synced +
-          "</span> 已同步" +
+          // 统一类型标签行
+          '<div class="ins-type-bar" style="display:flex;gap:2px;padding:4px 8px 0;flex-shrink:0;border-bottom:1px solid var(--bd)">' +
+          tabHtml +
           "</div>" +
-          '<div class="ins-filter-card" style="cursor:pointer;font-size:10px;color:var(--muted);transition:all .12s" data-filter="missing" title="仅显示待同步">' +
-          '<span style="color:#f38ba8;font-weight:700">' +
-          missing +
-          "</span> 待同步" +
+          // 同步状态条
+          '<div class="ins-sync-bar" style="display:flex;align-items:center;gap:6px;padding:3px 8px;flex-shrink:0;border-bottom:1px solid var(--bd);font-size:9px">' +
+          '<span class="ins-sync-label" style="color:var(--muted)">⏳ 检测同步状态...</span>' +
+          '<button class="ins-push-btn" style="display:none;padding:1px 6px;border-radius:3px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">⬆️ 推送全部</button>' +
+          '<button class="ins-pull-btn" style="display:none;padding:1px 6px;border-radius:3px;border:1px solid #f9a826;background:transparent;color:#f9a826;cursor:pointer;font-size:9px">⬇️ 拉取全部</button>' +
+          '<span style="flex:1"></span>' +
+          '<span class="ins-ysmsync" style="color:var(--muted);font-size:8px">🧱 模型同步: ' +
+          (pkg.synced || 0) +
+          " ✅ " +
+          (pkg.missing || 0) +
+          " ⬆️ " +
+          (pkg.extra || 0) +
+          " ⬇️</span>" +
           "</div>" +
-          '<div class="ins-filter-card" style="cursor:pointer;font-size:10px;color:var(--muted);transition:all .12s" data-filter="extra" title="仅显示可加入">' +
-          '<span style="color:#f9a826;font-weight:700">' +
-          extra +
-          "</span> 可加入" +
-          "</div>" +
-          "</div>" +
-          '<div class="ins-filter-list ins-model-list" style="flex:1;overflow-y:auto;padding:4px 8px" data-key="' +
-          filterKey +
-          '">' +
-          renderBody(pkg) +
+          // 面板容器
+          '<div class="ins-panel" style="flex:1;overflow:hidden;display:flex;flex-direction:column">' +
+          // 默认显示 YSM 树
+          '<app-tree root="ysm" style="display:flex;flex-direction:column;flex:1;overflow:hidden"></app-tree>' +
           "</div>";
-        // 绑定卡片点击筛选
-        const bar = content.querySelector(
-          '.ins-filter-bar[data-key="' + filterKey + '"]',
-        );
-        const list = content.querySelector(
-          '.ins-filter-list[data-key="' + filterKey + '"]',
-        );
-        if (bar && list) {
-          bar.addEventListener("click", (e) => {
-            const card = e.target.closest(".ins-filter-card");
-            if (!card) return;
-            bar.querySelectorAll(".ins-filter-card").forEach((c) => {
-              c.style.color = "var(--muted)";
-              c.style.fontWeight = "400";
-              c.style.borderBottom = "2px solid transparent";
+
+        // 类型标签切换
+        content.querySelectorAll(".ins-type-tab").forEach((tab) => {
+          tab.addEventListener("click", () => {
+            content.querySelectorAll(".ins-type-tab").forEach((t) => {
+              t.style.background = "transparent";
+              t.style.color = "var(--muted)";
             });
-            card.style.color = "var(--accent)";
-            card.style.fontWeight = "600";
-            card.style.borderBottom = "2px solid var(--accent)";
-            const filter = card.dataset.filter;
-            Array.from(list.children).forEach((sec) => {
-              if (filter === "all") {
-                sec.style.display = "";
-                return;
-              }
-              const cat = sec.dataset?.category || "";
-              sec.style.display = cat === filter ? "" : "none";
-            });
+            tab.style.background = "var(--surf)";
+            tab.style.color = "var(--accent)";
+            const type = tab.dataset.type;
+            const widget = tab.dataset.widget;
+            const panel = content.querySelector(".ins-panel");
+            if (!panel) return;
+            if (widget === "tree") {
+              panel.innerHTML =
+                '<app-tree root="' +
+                escAttr(type) +
+                '" style="display:flex;flex-direction:column;flex:1;overflow:hidden"></app-tree>';
+            } else {
+              panel.innerHTML =
+                '<app-resource-manager rtype="' +
+                escAttr(type) +
+                '" instance="' +
+                escAttr(insName) +
+                '" style="display:flex;flex-direction:column;height:100%"></app-resource-manager>';
+            }
           });
-        }
-        // 绑定单个安装按钮
-        const { InstallModelTo } =
-          await import("../../../wailsjs/go/main/App.js");
-        content.querySelectorAll(".btn-install-one").forEach((btn) => {
-          btn.onclick = async (e) => {
-            e.stopPropagation();
-            const name = btn.dataset.path;
-            if (!name) return;
-            // 查找所在整合包名（从 pkg 获取）
-            const insName = pkg.name || "";
-            const { LoadAppConfig, ListVersionInstances } =
-              await import("../../../wailsjs/go/main/App.js");
-            const cfg = await LoadAppConfig();
-            const mcRoot = cfg.mcRoot || "";
-            const allIns = mcRoot
-              ? (await ListVersionInstances(mcRoot)) || []
-              : [];
-            const match = allIns.find((i) => i.Name === insName);
-            const targetDir = match ? match.CustomDir : "";
-            if (!targetDir) {
-              bus.emit("toast:show", {
-                msg: "未找到整合包目录",
-                duration: 3000,
-                type: "error",
-              });
-              return;
-            }
-            try {
-              await InstallModelTo(name, targetDir);
-              bus.emit("stats:refresh");
-              bus.emit("toast:show", {
-                msg: `✅ 已安装: ${name}`,
-                duration: 2000,
-                type: "success",
-              });
-            } catch (e) {
-              bus.emit("toast:show", {
-                msg: `❌ 安装失败: ${String(e)}`,
-                duration: 3000,
-                type: "error",
-              });
-            }
-          };
         });
+
+        // 加载所有类型的同步状态
+        (async () => {
+          const { SyncResources, PushResourceToInstance, PullResourceFromInstance } =
+            await import("../../../wailsjs/go/main/App.js");
+          const rtypes = ["resourcepack","shaderpack","create-blueprint","mmd-skin","vrchat-avatar","ysm"];
+          const label = content.querySelector(".ins-sync-label");
+          const pushBtn = content.querySelector(".ins-push-btn");
+          const pullBtn = content.querySelector(".ins-pull-btn");
+          let totalMissing = 0, totalExtra = 0;
+          for (const rtype of rtypes) {
+            try {
+              const json = await SyncResources(rtype, insName);
+              const result = JSON.parse(json);
+              totalMissing += (result.missing || []).length;
+              totalExtra += (result.extra || []).length;
+            } catch {}
+          }
+          if (label) {
+            if (totalMissing === 0 && totalExtra === 0) {
+              label.textContent = "🔄 全部已同步";
+              label.style.color = "var(--sz-green)";
+            } else {
+              const parts = [];
+              if (totalMissing > 0) parts.push("⬆️ " + totalMissing + " 待推送");
+              if (totalExtra > 0) parts.push("⬇️ " + totalExtra + " 可拉取");
+              label.textContent = parts.join(" · ");
+              label.style.color = "var(--accent)";
+            }
+          }
+          if (pushBtn && totalMissing > 0) {
+            pushBtn.style.display = "inline-block";
+            pushBtn.onclick = async () => {
+              pushBtn.textContent = "⏳";
+              let ok = 0;
+              for (const rtype of rtypes) {
+                try {
+                  const n = await PushResourceToInstance(rtype, insName);
+                  ok += n || 0;
+                } catch {}
+              }
+              bus.emit("toast:show", {
+                msg: "⬆️ 已推送 " + ok + " 个文件到整合包",
+                duration: 3000, type: "success",
+              });
+              if (label) { label.textContent = "🔄 全部已同步"; label.style.color = "var(--sz-green)"; }
+              pushBtn.style.display = "none";
+              if (pullBtn) pullBtn.style.display = "none";
+            };
+          }
+          if (pullBtn && totalExtra > 0) {
+            pullBtn.style.display = "inline-block";
+            pullBtn.onclick = async () => {
+              pullBtn.textContent = "⏳";
+              let ok = 0;
+              for (const rtype of rtypes) {
+                try {
+                  const n = await PullResourceFromInstance(rtype, insName);
+                  ok += n || 0;
+                } catch {}
+              }
+              bus.emit("toast:show", {
+                msg: "⬇️ 已拉取 " + ok + " 个文件到全局",
+                duration: 3000, type: "success",
+              });
+              if (label) { label.textContent = "🔄 全部已同步"; label.style.color = "var(--sz-green)"; }
+              pullBtn.style.display = "none";
+              if (pushBtn) pushBtn.style.display = "none";
+            };
+          }
+        })();
       }),
     );
   }
@@ -228,6 +281,48 @@ class AppContent extends HTMLElement {
   _initRepository() {
     initRepository();
     this._bindTabs("repo", ["tree", "import", "recycle", "dedup", "oldest"]);
+
+    // 资源类型 subtab 切换（文件树 tab 下的第二栏）
+    const root = this._root;
+    const subtabs = root.querySelectorAll(".repo-subtab");
+    const treeBody = root.getElementById("repo-tab-tree");
+    const isModelType = (t) => ["ysm", "mmd-skin", "vrchat-avatar"].includes(t);
+    // 按需加载 Three.js 预览组件
+    import("../app-preview/index.js").catch(() => {});
+    let curRtype = localStorage.getItem("repo_rtype") || "ysm";
+    subtabs.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const rtype = btn.dataset.rtab;
+        curRtype = rtype;
+        try { localStorage.setItem("repo_rtype", rtype); } catch {}
+        subtabs.forEach((t) => {
+          t.style.background = "transparent";
+          t.style.color = "var(--muted)";
+        });
+        btn.style.background = "var(--surf)";
+        btn.style.color = "var(--accent)";
+        if (!treeBody) return;
+        if (isModelType(rtype)) {
+          treeBody.innerHTML =
+            '<div style="flex:1;display:flex;overflow:hidden">' +
+            '<app-tree root="' +
+            rtype +
+            '" style="flex:1;min-width:0"></app-tree>' +
+            '<app-preview mode="model" style="width:220px;flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
+            "</div>";
+        } else {
+          treeBody.innerHTML =
+            '<div style="flex:1;display:flex;overflow:hidden">' +
+            '<app-resource-manager rtype="' +
+            rtype +
+            '" style="flex:1;min-width:0"></app-resource-manager>' +
+            "</div>";
+        }
+      });
+    });
+    // 恢复上次选中的类型
+    const savedTab = root.querySelector('.repo-subtab[data-rtab="' + curRtype + '"]');
+    if (savedTab) savedTab.click();
   }
 
   _bindTabs(prefix, ids) {
@@ -281,6 +376,22 @@ class AppContent extends HTMLElement {
             const { loadOldestModel } =
               await import("../../features/oldest-models.js");
             await loadOldestModel(container, (s) => this._esc(s));
+          } else if (tab === "resourcepacks") {
+            const { initResourcePacks } =
+              await import("../../features/resource-packs.js");
+            await initResourcePacks(container, this);
+          } else if (tab === "shaderpacks") {
+            const { initResourcePacks } =
+              await import("../../features/resource-packs.js");
+            await initResourcePacks(container, this, "shaderpack");
+          } else if (tab === "create-blueprint") {
+            const { initResourcePacks } =
+              await import("../../features/resource-packs.js");
+            await initResourcePacks(container, this, "create-blueprint");
+          } else if (tab === "mmd-skin") {
+            const { initResourcePacks } =
+              await import("../../features/resource-packs.js");
+            await initResourcePacks(container, this, "mmd-skin");
           }
         }
       });

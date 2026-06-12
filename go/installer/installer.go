@@ -38,9 +38,9 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 		ext = strings.ToLower(filepath.Ext(src[:len(src)-4]))
 	}
 	switch ext {
-	case ".ysm", ".zip", ".7z":
+	case ".ysm", ".zip", ".7z", ".pmx", ".pmd", ".vrca", ".nbt", ".schematic":
 	default:
-		return types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型", SourcePath:src, Reason:"不支持的文件类型", Suggestion:"仅支持 .ysm / .zip / .7z 格式"}
+		return types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型", SourcePath:src, Reason:"不支持的文件类型", Suggestion:"仅支持 .ysm / .zip / .7z / .pmx / .pmd / .vrca 格式"}
 	}
 
 	// 计算相对路径，保持目录结构

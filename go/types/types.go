@@ -104,3 +104,10 @@ func (e AppError) Error() string {
     msg += fmt.Sprintf(" 解决建议：%s", e.Suggestion)
     return msg
 }
+
+// ResourceSyncResult 资源同步结果
+type ResourceSyncResult struct {
+	Synced  []string `json:"synced"`
+	Missing []string `json:"missing"` // 全局有但整合包没有（可推送）
+	Extra   []string `json:"extra"`   // 整合包有但全局没有（可拉取）
+}

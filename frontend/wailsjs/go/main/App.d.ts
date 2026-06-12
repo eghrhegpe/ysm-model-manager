@@ -25,7 +25,7 @@ export function ClearCustomDir(arg1:string):Promise<number>;
 
 export function ClearImportLogs():Promise<void>;
 
-export function CountLinkedModels(arg1:string):Promise<number>;
+export function CountDuplicateFiles(arg1:string):Promise<string>;
 
 export function CreateDir(arg1:string):Promise<void>;
 
@@ -34,6 +34,12 @@ export function CurrentVersion():Promise<string>;
 export function DeduplicateCustomDir(arg1:string):Promise<number>;
 
 export function DeleteFromRecycle(arg1:string):Promise<void>;
+
+export function DeleteModelDir(arg1:string):Promise<void>;
+
+export function DeleteResourcePack(arg1:string):Promise<void>;
+
+export function DetectResourceType(arg1:string):Promise<string>;
 
 export function DoUpdate(arg1:string):Promise<string>;
 
@@ -63,6 +69,8 @@ export function ExtractYSMHeaderFromBase64(arg1:string):Promise<ysm.YSMHeader>;
 
 export function ExtractYsmSummary(arg1:string):Promise<ysm.YsmSummary>;
 
+export function FindDuplicateFiles(arg1:string):Promise<string>;
+
 export function FindPreviewImage(arg1:string):Promise<string>;
 
 export function GenerateRepoIndex(arg1:string):Promise<string>;
@@ -83,11 +91,15 @@ export function GetModelTexSizes(arg1:string):Promise<Array<ysm.TexInfo>>;
 
 export function GetPackInfo(arg1:string):Promise<types.PackInfo>;
 
+export function GetRepoRoot(arg1:string):Promise<string>;
+
 export function GetWasmBinary():Promise<Array<number>>;
 
 export function GetWindowPosition():Promise<types.WindowState>;
 
 export function HasYSMMod(arg1:string):Promise<boolean>;
+
+export function ImportByType(arg1:string,arg2:string):Promise<string>;
 
 export function ImportModelFile(arg1:string,arg2:string):Promise<void>;
 
@@ -99,6 +111,8 @@ export function ImportModelFileSkipCheck(arg1:string,arg2:string):Promise<void>;
 
 export function ImportModelFileTo(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function ImportResourcePack(arg1:string,arg2:string):Promise<string>;
+
 export function ImportWorkshopSitesCSV(arg1:string):Promise<void>;
 
 export function ImportWorkshopSitesJSONFile():Promise<number>;
@@ -109,11 +123,13 @@ export function InstallModelTo(arg1:string,arg2:string):Promise<void>;
 
 export function InstallModelWithOverlay(arg1:string,arg2:string):Promise<string>;
 
+export function InstallResourceToInstance(arg1:string,arg2:string,arg3:string):Promise<void>;
+
 export function IsFileBanned(arg1:string):Promise<boolean>;
 
 export function IsProxyRunning():Promise<boolean>;
 
-export function IsSymlink(arg1:string):Promise<boolean>;
+export function IsResourcePackEnabled(arg1:string):Promise<boolean>;
 
 export function ListFileNames(arg1:string):Promise<Array<string>>;
 
@@ -126,6 +142,8 @@ export function ListVersionInstances(arg1:string):Promise<Array<types.VersionIns
 export function LoadAppConfig():Promise<types.AppConfig>;
 
 export function LoadGitHubRepos():Promise<Array<types.WorkshopCreator>>;
+
+export function LoadResourceTypes():Promise<string>;
 
 export function LoadWorkshopCreators():Promise<Array<types.WorkshopCreator>>;
 
@@ -141,9 +159,15 @@ export function MoveToRecycleEx(arg1:string):Promise<string|string>;
 
 export function OpenFolder(arg1:string):Promise<void>;
 
+export function PullResourceFromInstance(arg1:string,arg2:string):Promise<number>;
+
+export function PushResourceToInstance(arg1:string,arg2:string):Promise<number>;
+
 export function QueueStatus():Promise<number|boolean>;
 
 export function ReadFileBytes(arg1:string):Promise<Array<number>>;
+
+export function ReadPackMeta(arg1:string):Promise<string>;
 
 export function RelinkCustomDir(arg1:string,arg2:string):Promise<number>;
 
@@ -155,13 +179,15 @@ export function RenameFile(arg1:string,arg2:string):Promise<void>;
 
 export function ReplaceWorkshopCreatorsFromJSON(arg1:string):Promise<number>;
 
+export function ResetResourceRoot(arg1:string):Promise<void>;
+
 export function ResetWorkshopConfigs():Promise<Array<types.WorkshopSite>>;
 
 export function RestartApplication():Promise<void>;
 
 export function RestoreFromRecycle(arg1:string,arg2:string):Promise<void>;
 
-export function SaveAppConfig(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+export function SaveAppConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<void>;
 
 export function SavePreviewTempFile(arg1:string):Promise<string>;
 
@@ -179,11 +205,17 @@ export function SearchModels(arg1:string,arg2:string,arg3:number,arg4:number,arg
 
 export function SelectDirectory():Promise<string>;
 
+export function SelectImportFile(arg1:string,arg2:string):Promise<string>;
+
+export function SelectImportZip():Promise<string>;
+
 export function SetDownloadMirror(arg1:string):Promise<void>;
 
 export function SetLinkMode(arg1:string):Promise<void>;
 
 export function SetRepoRoot(arg1:string):Promise<void>;
+
+export function SetResourceRoot(arg1:string,arg2:string):Promise<void>;
 
 export function StartProxy(arg1:number):Promise<void>;
 
@@ -193,6 +225,10 @@ export function SyncCustomToRepo(arg1:string,arg2:string):Promise<number>;
 
 export function SyncModelToggleStatus(arg1:string,arg2:string):Promise<number>;
 
+export function SyncResources(arg1:string,arg2:string):Promise<string>;
+
 export function ToggleModelEnable(arg1:string):Promise<boolean>;
+
+export function ToggleResourcePack(arg1:string):Promise<boolean>;
 
 export function ValidateMinecraftDir(arg1:string):Promise<string|string>;

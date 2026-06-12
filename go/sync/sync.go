@@ -261,6 +261,56 @@ func computeHash(path string) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
+// SyncResources 对比两个目录的资源文件差异，按文件名匹配
+// 用于资源库（材质包/光影包等）的全局 ↔ 整合包同步
+func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
+	result := types.ResourceSyncResult{}
+
+	// 扫描全局目录，收集文件名
+	globalFiles := make(map[string]string) // name → path
+	filepath.Walk(globalDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		name := strings.ToLower(info.Name())
+		// 跳过 .disabled 后缀的状态标记
+		name = strings.TrimSuffix(name, ".disabled")
+		globalFiles[name] = path
+		return nil
+	})
+
+	// 扫描整合包目录
+	instanceFiles := make(map[string]string)
+	filepath.Walk(instanceDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		name := strings.ToLower(info.Name())
+		name = strings.TrimSuffix(name, ".disabled")
+		instanceFiles[name] = path
+		return nil
+	})
+
+	// 找出 synced / missing / extra
+	for name, gPath := range globalFiles {
+		if _, exists := instanceFiles[name]; exists {
+			result.Synced = append(result.Synced, gPath)
+		} else {
+			result.Missing = append(result.Missing, gPath)
+		}
+	}
+	for name, iPath := range instanceFiles {
+		if _, exists := globalFiles[name]; !exists {
+			result.Extra = append(result.Extra, iPath)
+		}
+	}
+
+	sort.Strings(result.Synced)
+	sort.Strings(result.Missing)
+	sort.Strings(result.Extra)
+	return result
+}
+
 // SortEntries 鎸夊悕绉版帓搴忔ā鍨嬫潯鐩?
 func SortEntries(entries []types.ModelEntry) {
 	sort.Slice(entries, func(i, j int) bool {

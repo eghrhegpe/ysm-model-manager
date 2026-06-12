@@ -13,9 +13,9 @@ export function initRecycleBin(app) {
   root.getElementById("recy-empty")?.addEventListener("click", async () => {
     const confirmed = await modalConfirm({
       title: "清空回收站",
-      icon: "🗑️",
+      icon: "♻️",
       message: "确定永久清空回收站所有文件？此操作不可恢复！",
-      okText: "🗑️ 清空",
+      okText: "♻️ 清空",
       danger: true,
     });
     if (!confirmed) return;
@@ -34,7 +34,7 @@ export function initRecycleBin(app) {
       }
       const n = await EmptyRecycleBin(repoRoot);
       bus.emit("toast:show", {
-        msg: `🗑️ 已清空 ${n} 个文件`,
+        msg: `♻️ 已清空 ${n} 个文件`,
         duration: 3000,
         type: "success",
       });

@@ -23,6 +23,7 @@ class AppNav extends HTMLElement {
     // 恢复上次保存的页面
     const saved = localStorage.getItem("nav_page");
     if (saved && saved !== "repository") {
+      if (saved === "resources") saved = "repository";
       setTimeout(() => bus.emit("nav:change", { page: saved }), 50);
     }
   }
@@ -33,7 +34,7 @@ class AppNav extends HTMLElement {
 
   render() {
     const items = [
-      { id: "repository", icon: "📦", label: "模型仓库" },
+      { id: "repository", icon: "📚", label: "模型仓库" },
       { id: "instances", icon: "🎮", label: "整合包管理" },
       { id: "workshop", icon: "🎨", label: "创作者频道" },
       { id: "github", icon: "🧩", label: "创意工坊" },
@@ -116,3 +117,4 @@ class AppNav extends HTMLElement {
   }
 }
 customElements.define("app-nav", AppNav);
+

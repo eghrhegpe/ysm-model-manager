@@ -1,16 +1,27 @@
 // ===== 树节点行 HTML 模板 =====
 import { renderDisplayName } from "../../utils/display.js";
 
-/** 文件行 HTML */
-export function fileRowHTML(e, nmHtml, icon, dateStr, extraCls = "") {
+/** 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） */
+export function fileRowHTML(
+  e,
+  nmHtml,
+  icon,
+  dateStr,
+  nmCls = "",
+  indent,
+  rowCls = "",
+) {
   const p = attr(e.path);
   const fp = attr(e.fullPath || e.path);
   const checked = e.banned ? "" : " on";
   const ban = e.banned ? " ban" : "";
-  return `<div class="fl${ban}" data-path="${p}" data-fullpath="${fp}">
+  const typeIcon =
+    e.type === "resourcepack" ? "🎨" : e.type === "ysm" ? "🧱" : icon;
+  const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
+  return `<div class="fl${ban}${rowCls}" data-path="${p}" data-fullpath="${fp}"${pad}>
 <span class="ck${checked}" data-path="${p}" data-fullpath="${fp}"></span>
-<span class="ficon">${icon}</span>
-<span class="nm${extraCls}">${nmHtml}</span>
+<span class="ficon">${typeIcon}</span>
+<span class="nm${nmCls}">${nmHtml}</span>
 <span class="hover-actions">
   <span class="ha-btn ha-preview" data-path="${fp}" title="B站搜索作者">🔍</span>
   <span class="ha-btn ha-copy" data-path="${fp}" title="复制文件名">📋</span>
@@ -18,7 +29,7 @@ export function fileRowHTML(e, nmHtml, icon, dateStr, extraCls = "") {
 <span class="sz ${sc(e.size)}">${size(e.size)}</span>${dateStr ? `<span class="dt">${dateStr}</span>` : ""}</div>`;
 }
 
-/** 文件夹行 HTML（含 .ch 容器开头） */
+/** 文件夹行 HTML（indent = padding-left，扁平化无 .ch 容器） */
 export function folderRowHTML(
   k,
   full,
@@ -26,13 +37,14 @@ export function folderRowHTML(
   isLocked,
   hasEnabled,
   hasDisabled,
+  indent,
 ) {
   const fi = isLocked ? "🔒" : "📁";
   const nc = isLocked ? "var(--muted)" : "var(--txt)";
   const lk = isLocked ? " locked" : "";
   const ar = isOpen ? "▾" : "▸";
   const ac = isOpen ? " open" : "";
-  // 文件夹开关：部分选中用半开，全选中/全禁用跟随状态
+  // 文件夹开关：部分选中用半开
   let ckCls = "";
   if (hasEnabled && hasDisabled) {
     ckCls = " on partial";
@@ -40,11 +52,11 @@ export function folderRowHTML(
     ckCls = " on";
   }
   const dispName = k.startsWith("[") ? renderDisplayName(k) : attr(k);
-  return `<div class="fh${lk}" data-dir="${attr(full)}">
+  const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
+  return `<div class="fh${lk}" data-dir="${attr(full)}"${pad}>
 <span class="ck${ckCls}" data-dir="${attr(full)}"></span>
 <span class="ar${ac}">${ar}</span>
-<span class="nm" style="color:${nc}">${fi} ${dispName}</span></div>
-<div class="ch" style="display:${isOpen ? "block" : "none"}">`;
+<span class="nm" style="color:${nc}">${fi} ${dispName}</span></div>`;
 }
 
 function attr(s) {

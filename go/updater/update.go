@@ -171,9 +171,12 @@ func InstallUpdate(zipPath string) error {
 
 	var exeInZip *zip.File
 	targetExe := "YSM-Model-Manager.exe"
-	// 需要在更新时同步的数据文件（排除用户配置文件 ysm_config.json）
-	dataFiles := map[string]bool{
+	// resource_types.json 必须覆盖更新（注册表，无用户数据）
+	// 其他数据文件仅当不存在时补发（保留用户自定义的工作室/创作者）
+	alwaysOverwrite := map[string]bool{
 		"resource_types.json": true,
+	}
+	createIfMissing := map[string]bool{
 		"workshop_sites.json": true,
 		"workshop_gitHub.json": true,
 		"creators.json":       true,
@@ -185,12 +188,16 @@ func InstallUpdate(zipPath string) error {
 			exeInZip = f
 			continue
 		}
-		// 提取数据文件到 EXE 同目录
-		if dataFiles[name] {
-			dest := filepath.Join(exeDir, name)
+		dest := filepath.Join(exeDir, name)
+		if alwaysOverwrite[name] {
 			if err := extractZipFile(f, dest); err != nil {
-				// 非关键错误，只记录不中断
 				fmt.Printf("警告: 提取 %s 失败: %v\n", name, err)
+			}
+		} else if createIfMissing[name] {
+			if _, err := os.Stat(dest); os.IsNotExist(err) {
+				if err := extractZipFile(f, dest); err != nil {
+					fmt.Printf("警告: 提取 %s 失败: %v\n", name, err)
+				}
 			}
 		}
 	}

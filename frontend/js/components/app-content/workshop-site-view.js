@@ -207,17 +207,17 @@ export function renderSiteView(site, ctx) {
               esc(cr.desc) +
               "</div>" +
               '<div class="hm-label" style="margin-top:1px;display:flex;gap:2px;flex-wrap:wrap">' +
-              cr.type.split(";").map(t => '<span class="cr-platform-badge">' + t + "</span>").join("") +
+              cr.type.split(";").map(t => '<span class="cr-platform-badge" style="display:none">' + t + "</span>").join("") +
               "</div>" +
               (cr.tag
                 ? '<span class="cr-tag cr-tag-' +
                   esc(cr.tag) +
-                  '" style="display:none">' +
+                  '">' +
                   (cr.tag === "vup" ? "🎤" : cr.tag === "oc" ? "🎨" : "🏷️") +
                   " " +
                   esc(cr.tag) +
                   "</span>"
-                : '<span class="cr-tag cr-tag-game" style="display:none">🎮 game</span>') +
+                : '<span class="cr-tag cr-tag-game">🎮 game</span>') +
               "</div>" +
               (hasRepo
                 ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' +

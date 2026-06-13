@@ -314,8 +314,8 @@ export const contentCSS = `
 .gh-card .name + .meta { margin-top:1px; font-size:var(--fs-xs); color:var(--muted); }
 .cr-avatar { width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);background:var(--surf);z-index:1;transition:all .25s ease; }
 .cr-avatar-container { position:relative;display:inline-flex;flex-shrink:0;align-self:flex-start;width:28px;height:28px;margin:6px; }
-.cr-avatar-ring { position:absolute;inset:-2px;border-radius:50%;animation:ring-spin 4s linear infinite;pointer-events:none; }
-.cr-avatar-ring-static { position:absolute;inset:-2px;border-radius:50%;pointer-events:none; }
+.cr-avatar-ring { position:absolute;inset:-2px;border-radius:50%;pointer-events:none;transition:transform .4s ease; }
+.cr-avatar-ring[data-spin]:hover { animation:ring-spin .8s linear infinite; }
 @keyframes ring-spin { to{transform:rotate(360deg)} }
 @keyframes card-in { from{opacity:0;transform:translateY(8px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
 .health-ring { animation:breathe-subtle 4s ease-in-out infinite;will-change:filter; }

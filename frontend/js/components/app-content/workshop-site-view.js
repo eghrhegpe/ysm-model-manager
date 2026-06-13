@@ -107,24 +107,24 @@ export function renderSiteView(site, ctx) {
             const repoParts = isGitHub ? cr.name.split("/") : null;
             const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
             const authorCount = authorCountMap[cr.name] || 0;
-            // 渐变边框：饱和度随作品数变化
-            const maxCount = Math.max(
-              1,
-              ...arr.map((c) => authorCountMap[c.name] || 0),
-            );
-            const ratio =
-              maxCount > 0 ? Math.min(authorCount / maxCount, 1) : 0;
-            const lerp = (a, b, t) => Math.round(a + (b - a) * t);
-            const r = lerp(168, 240, ratio); // A8→F0
-            const g = lerp(168, 192, ratio); // A8→C0
-            const b = lerp(168, 48, ratio); // A8→30
-            const borderGrad = `conic-gradient(from 0deg, rgb(${r - 30},${g - 30},${b - 20}), rgb(${r},${g},${b}) 180deg, rgb(${r - 30},${g - 30},${b - 20}))`;
-            const glow =
-              ratio > 0.5
-                ? `0 0 ${6 + ratio * 6}px rgba(${r},${g},${b},${0.2 + ratio * 0.3})`
-                : "none";
+            // 按模型数排百分比：前15%金、前30%银、前45%铜，其余默认
+            const sorted = [...arr].sort((a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0));
+            const idx = sorted.indexOf(cr);
+            const pct = sorted.length > 1 ? idx / (sorted.length - 1) : 0;
+            const medalColors = [
+              { name: "金", border: "#FFD700", glow: "rgba(255,215,0,0.5)", inside: "#FFF8E1" },  // 前15%
+              { name: "银", border: "#C0C0C0", glow: "rgba(192,192,192,0.4)", inside: "#F5F5F5" }, // 前30%
+              { name: "铜", border: "#CD7F32", glow: "rgba(205,127,50,0.35)", inside: "#FFF0E0" }, // 前45%
+            ];
+            let medal = medalColors[2]; // 默认铜
+            if (pct < 0.15) medal = medalColors[0]; // 金
+            else if (pct < 0.30) medal = medalColors[1]; // 银
+            const borderGrad = `conic-gradient(from var(--grad-rot,0deg), ${medal.border}, #fff 180deg, ${medal.border})`;
+            const glow = `0 0 8px ${medal.glow}`;
             return (
-              '<div class="gh-card" style="min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer" data-name="' +
+              '<div class="gh-card" style="min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer;animation:card-in .3s ease-out both;animation-delay:' +
+              (idx * 0.03) +
+              's" data-name="' +
               esc(cr.name) +
               '" title="搜索: ' +
               esc(cr.name) +

@@ -146,7 +146,7 @@ export async function initSettings(root) {
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: "❌ 重置失败: " + (e.message || String(e)),
+          msg: "❌ " + friendlyError(e.message || e, "重置失败"),
           duration: 4000,
           type: "error",
         });
@@ -182,7 +182,7 @@ export async function initSettings(root) {
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: "❌ 保存失败: " + (e.message || String(e)),
+          msg: "❌ " + friendlyError(e.message || e, "保存失败"),
           duration: 4000,
           type: "error",
         });
@@ -313,7 +313,7 @@ export async function initSettings(root) {
       });
     } catch (e) {
       bus.emit("toast:show", {
-        msg: `❌ 重新链接失败: ${String(e)}`,
+        msg: `❌ ${friendlyError(e)}`,
         duration: 5000,
         type: "error",
       });

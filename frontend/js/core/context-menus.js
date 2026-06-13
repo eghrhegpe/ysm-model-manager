@@ -1,6 +1,7 @@
 // ===== 右键菜单映射 =====
 // 将 ctx:show 事件转换为新版组件使用的 menu:show 事件
 import { bus } from "../bus.js";
+import { friendlyError } from "../utils/errors.js";
 
 /** 通知树组件和统计面板刷新 */
 function refreshUI() {
@@ -166,7 +167,7 @@ export function registerContextMenus() {
                   await RenameFile(path, newName);
                   refreshUI();
                 } catch (e) {
-                  toast("❌ 重命名失败: " + String(e), 4000, "error");
+                  toast("❌ " + friendlyError(e, "重命名失败"), 4000, "error");
                 }
               },
             },
@@ -200,7 +201,7 @@ export function registerContextMenus() {
                   toast(`✅ 已移动到 ${folder}`, 3000);
                   refreshUI();
                 } catch (e) {
-                  toast("❌ 移动失败: " + String(e), 4000, "error");
+                  toast("❌ " + friendlyError(e, "移动失败"), 4000, "error");
                 }
               },
             },
@@ -237,7 +238,7 @@ export function registerContextMenus() {
                   await InstallModelTo(name, match.CustomDir);
                   toast(`✅ 已推送到 ${chosen}`, 2000);
                 } catch (e) {
-                  toast(`❌ 推送失败: ${String(e)}`, 3000, "error");
+                  toast("❌ " + friendlyError(e, "推送失败"), 3000, "error");
                 }
               },
             },

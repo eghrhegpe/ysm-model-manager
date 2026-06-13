@@ -1,4 +1,5 @@
 // ===== 整合包右键操作实现 =====
+import { friendlyError } from "../../utils/errors.js";
 import { bus } from "../../bus.js";
 import {
   SelectDirectory,
@@ -72,7 +73,7 @@ export function initInstanceActions(vm) {
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 安装失败: ${String(e)}`,
+          msg: `❌ ${friendlyError(e)}`,
           duration: 5000,
           type: "error",
         });
@@ -136,7 +137,7 @@ export function initInstanceActions(vm) {
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 同步失败: ${String(e)}`,
+          msg: `❌ ${friendlyError(e)}`,
           duration: 5000,
           type: "error",
         });

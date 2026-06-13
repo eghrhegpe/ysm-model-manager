@@ -1,4 +1,5 @@
 // ===== app-tree bus 事件处理 =====
+import { friendlyError } from "../../utils/errors.js";
 import { bus } from "../../bus.js";
 import {
   ToggleModelEnable,
@@ -121,7 +122,7 @@ export function bindBusEvents(vm) {
         bus.emit("stats:refresh");
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 重命名失败: ${String(e)}`,
+          msg: `❌ ${friendlyError(e)}`,
           duration: 3000,
           type: "error",
         });
@@ -151,7 +152,7 @@ export function bindBusEvents(vm) {
         await reload(vm);
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 创建失败: ${String(e)}`,
+          msg: `❌ ${friendlyError(e)}`,
           duration: 3000,
           type: "error",
         });
@@ -209,7 +210,7 @@ export function bindBusEvents(vm) {
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 回收失败: ${String(e)}`,
+          msg: `❌ ${friendlyError(e)}`,
           duration: 3000,
           type: "error",
         });
@@ -257,7 +258,7 @@ export function bindBusEvents(vm) {
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 批量重命名失败: ${String(e)}`,
+          msg: `❌ ${friendlyError(e)}`,
           duration: 3000,
           type: "error",
         });
@@ -298,7 +299,7 @@ export function bindBusEvents(vm) {
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 批量重命名失败: ${String(e)}`,
+          msg: `❌ ${friendlyError(e)}`,
           duration: 3000,
           type: "error",
         });

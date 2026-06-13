@@ -358,7 +358,10 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 			e.ModTime = info.ModTime().UnixMilli()
 		}
 		// 计算 SHA256 供同步系统使用（GetInstanceStatus 依赖哈希匹配）
-		e.Hash = computeFileHash(p)
+		// 跳过非 YSM 类型的大文件（MMD/VRC 文件可达数十 MB，哈希全量太慢）
+		if originalExt == ".ysm" || originalExt == ".zip" || originalExt == ".7z" || originalExt == ".json" {
+			e.Hash = computeFileHash(p)
+		}
 		entries = append(entries, e)
 		return nil
 	})

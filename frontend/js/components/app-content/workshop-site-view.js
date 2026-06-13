@@ -462,7 +462,7 @@ export function renderSiteView(site, ctx) {
           btn.style.cursor = "default";
           searchResults.innerHTML =
             '<div class="cr-error-page">' +
-            '<button class="cr-back-repo cr-back-btn" style="margin-bottom:12px">← 返回</button>';
+            '<button class="cr-back-repo cr-back-btn" style="margin-bottom:12px">← 返回</button>' +
           '<div class="cr-error-msg">' +
             (isTimeout
               ? "⏱️ 连接超时"

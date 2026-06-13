@@ -15,19 +15,19 @@ class AppToast extends HTMLElement {
         }
         .toast {
           display: flex; align-items: center; gap: 10px; padding: 10px 16px;
-          border-radius: 8px; background: #2a2a42; color: #cdd6f4; font-size: 12px;
+          border-radius: 8px; background: var(--card); color: var(--txt); font-size: var(--fs-base);
           box-shadow: 0 6px 20px rgba(0,0,0,.4); animation: slideUp .25s ease;
-          border: 1px solid rgba(255,255,255,.06); pointer-events: auto;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+          border: 1px solid var(--bd); pointer-events: auto;
+          font-family: var(--font-ui);
         }
-        .toast.error { border-left: 3px solid #f38ba8; }
-        .toast.success { border-left: 3px solid #a6e3a1; }
-        .toast.info { border-left: 3px solid #89b4fa; }
+        .toast.error { border-left: 3px solid var(--paid); }
+        .toast.success { border-left: 3px solid var(--free); }
+        .toast.info { border-left: 3px solid var(--accent); }
         .toast .msg { flex: 1; white-space: pre-line; }
-        .toast .undo-btn { padding: 4px 10px; border-radius: 5px; border: none; background: #7c83ff33; color: #7c83ff; cursor: pointer; font-size: 11px; font-family: inherit; transition: background .12s; }
-        .toast .undo-btn:hover { background: #7c83ff55; }
-        .toast .close-btn { background: none; border: none; color: #6c7086; cursor: pointer; font-size: 14px; padding: 0 2px; }
-        .toast .close-btn:hover { color: #cdd6f4; }
+        .toast .undo-btn { padding: 4px 10px; border-radius: 5px; border: none; background: var(--hover); color: var(--accent); cursor: pointer; font-size: var(--fs-sm); font-family: inherit; transition: background .12s; }
+        .toast .undo-btn:hover { background: var(--act); }
+        .toast .close-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: var(--fs-md); padding: 0 2px; }
+        .toast .close-btn:hover { color: var(--txt); }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes slideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(20px); opacity: 0; } }
       </style>

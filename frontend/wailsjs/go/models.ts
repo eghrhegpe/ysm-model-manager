@@ -34,6 +34,14 @@ export namespace types {
 	    linkMode: string;
 	    theme: string;
 	    mirror: string;
+	    winX: number;
+	    winY: number;
+	    winW: number;
+	    winH: number;
+	    winRelX: number;
+	    winRelY: number;
+	    winScrW: number;
+	    winScrH: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppConfig(source);
@@ -51,6 +59,14 @@ export namespace types {
 	        this.linkMode = source["linkMode"];
 	        this.theme = source["theme"];
 	        this.mirror = source["mirror"];
+	        this.winX = source["winX"];
+	        this.winY = source["winY"];
+	        this.winW = source["winW"];
+	        this.winH = source["winH"];
+	        this.winRelX = source["winRelX"];
+	        this.winRelY = source["winRelY"];
+	        this.winScrW = source["winScrW"];
+	        this.winScrH = source["winScrH"];
 	    }
 	}
 	export class AuthorInfo {

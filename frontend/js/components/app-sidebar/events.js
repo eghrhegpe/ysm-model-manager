@@ -86,7 +86,7 @@ export function bindFooter(root, instances) {
   if (btn) {
     // 点击跳转到设置页的游戏根目录配置（合并重复入口）
     btn.onclick = () => {
-      bus.emit("navigate:settings", { section: "mc" });
+      bus.emit("nav:change", { page: "settings" });
     };
     (async () => {
       try {

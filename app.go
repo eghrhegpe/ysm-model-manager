@@ -41,8 +41,14 @@ func (a *App) startup(ctx context.Context) {
 	// 恢复窗口位置
 	pos := a.GetWindowPosition()
 	if pos.Width > 0 && pos.Height > 0 {
-		runtime.WindowSetSize(ctx, pos.Width, pos.Height)
-		runtime.WindowSetPosition(ctx, pos.X, pos.Y)
+		// 双屏切换后坐标可能落到屏幕外：X/Y 过大或过负时居中
+		if pos.X < -200 || pos.X > 4000 || pos.Y < -200 || pos.Y > 4000 {
+			runtime.WindowSetSize(ctx, pos.Width, pos.Height)
+			runtime.WindowCenter(ctx)
+		} else {
+			runtime.WindowSetSize(ctx, pos.Width, pos.Height)
+			runtime.WindowSetPosition(ctx, pos.X, pos.Y)
+		}
 	}
 
 	// 确保配置文件存在（如果被删除则重建）

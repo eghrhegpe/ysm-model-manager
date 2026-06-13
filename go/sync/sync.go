@@ -265,7 +265,7 @@ func computeHash(path string) string {
 // SyncResources 对比两个目录的资源文件差异，按文件名匹配
 // 用于资源库（材质包/光影包等）的全局 ↔ 整合包同步
 // 只统计模型/资源相关扩展名的文件，忽略无关文件
-var syncAllowedExts = []string{".ysm", ".zip", ".7z", ".json", ".pmx", ".pmd", ".vrca", ".vrm", ".nbt", ".schematic"}
+var syncAllowedExts = types.AllExts
 
 func isSyncAllowed(name string) bool {
 	low := strings.ToLower(name)
@@ -289,6 +289,9 @@ func isResourcePackFolder(path string) bool {
 	return err == nil
 }
 
+// SyncResources 对比两个目录的资源文件差异，按文件名匹配
+// 用于资源库（材质包/光影包等）的全局 ↔ 整合包同步
+// 只统计模型/资源相关扩展名的文件，忽略无关文件
 func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 	result := types.ResourceSyncResult{}
 
@@ -348,6 +351,90 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 	}
 	for name, iPath := range instanceFiles {
 		if _, exists := globalFiles[name]; !exists {
+			result.Extra = append(result.Extra, iPath)
+		}
+	}
+
+	sort.Strings(result.Synced)
+	sort.Strings(result.Missing)
+	sort.Strings(result.Extra)
+	return result
+}
+
+// isDirTypeModelFolder 检查一个子目录是否包含 YSM/MMD 模型文件（即文件夹级资源）
+// 用于 YSM（ysm.json）和 MMD（.pmx/.pmd）类型的文件夹级同步
+func isDirTypeModelFolder(path string, rtype string) bool {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		low := strings.ToLower(e.Name())
+		base := strings.TrimSuffix(low, ".ban")
+		switch rtype {
+		case "ysm":
+			if base == "ysm.json" {
+				return true
+			}
+		case "mmd-skin":
+			ext := filepath.Ext(base)
+			if ext == ".pmx" || ext == ".pmd" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// SyncResourcesDirLevel 按文件夹名对比资源（用于 YSM 的 ysm.json 文件夹和 MMD 的 .pmx/.pmd 文件夹）
+// 以文件夹名为单位，一个文件夹包含模型文件 + 纹理文件 = 一个整体
+// 路径存储：全局侧存全局路径，实例侧存实例路径；missing/extra 都是文件夹路径
+func SyncResourcesDirLevel(globalDir, instanceDir, rtype string) types.ResourceSyncResult {
+	result := types.ResourceSyncResult{}
+
+	// 扫描全局目录，收集所有包含模型文件的文件夹名
+	globalDirs := make(map[string]string) // lowercase folder name → full path
+	filepath.Walk(globalDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || !info.IsDir() || path == globalDir {
+			return nil
+		}
+		if isDirTypeModelFolder(path, rtype) {
+			name := strings.ToLower(info.Name())
+			globalDirs[name] = path
+			return filepath.SkipDir // 不递归子文件夹
+		}
+		return nil
+	})
+
+	// 扫描整合包目录，收集所有包含模型文件的文件夹名
+	instanceDirs := make(map[string]string)
+	filepath.Walk(instanceDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || !info.IsDir() || path == instanceDir {
+			return nil
+		}
+		if isDirTypeModelFolder(path, rtype) {
+			name := strings.ToLower(info.Name())
+			instanceDirs[name] = path
+			return filepath.SkipDir
+		}
+		return nil
+	})
+
+	// 找出 synced / missing / extra
+	seen := make(map[string]bool)
+	for name, gPath := range globalDirs {
+		seen[name] = true
+		if _, exists := instanceDirs[name]; exists {
+			result.Synced = append(result.Synced, gPath)
+		} else {
+			result.Missing = append(result.Missing, gPath)
+		}
+	}
+	for name, iPath := range instanceDirs {
+		if !seen[name] {
 			result.Extra = append(result.Extra, iPath)
 		}
 	}

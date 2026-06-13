@@ -21,7 +21,7 @@ class AppNav extends HTMLElement {
     });
     this.render();
     // 恢复上次保存的页面
-    const saved = localStorage.getItem("nav_page");
+    let saved = localStorage.getItem("nav_page");
     if (saved && saved !== "repository") {
       if (saved === "resources") saved = "repository";
       setTimeout(() => bus.emit("nav:change", { page: saved }), 50);
@@ -64,14 +64,15 @@ class AppNav extends HTMLElement {
           border-bottom: 1px solid var(--bd);
         }
         .logo-icon { font-size: 20px; }
-        .menu { padding: 8px; flex: 1; }
+        .menu { padding: 4px 8px 8px; flex: 1; }
+        .menu-label { font-size: var(--fs-xs); color: var(--muted); padding: 8px 10px 4px; text-transform: uppercase; letter-spacing: .5px; }
         .nav-item {
           display: flex;
           align-items: center;
           gap: 8px;
           padding: 8px 10px;
-          border-radius: 6px;
-          font-size: var(--fs-md);
+          border-radius: 5px;
+          font-size: calc(var(--fs-nav) + 2px);
           color: var(--muted);
           cursor: pointer;
           transition: all .12s;
@@ -97,6 +98,7 @@ class AppNav extends HTMLElement {
         <span>YSM 管理器</span>
       </div>
       <div class="menu">
+        <div class="menu-label">🧭 导航栏</div>
         ${items
           .map(
             (item) => `
@@ -117,4 +119,3 @@ class AppNav extends HTMLElement {
   }
 }
 customElements.define("app-nav", AppNav);
-

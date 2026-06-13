@@ -12,6 +12,15 @@ type AppConfig struct {
 	LinkMode         string `json:"linkMode"`
 	Theme            string `json:"theme"`
 	Mirror           string `json:"mirror"`
+	// 窗口状态（合并到主配置，避免 window_state.json 散落）
+	WinX    int `json:"winX"`
+	WinY    int `json:"winY"`
+	WinW    int `json:"winW"`
+	WinH    int `json:"winH"`
+	WinRelX int `json:"winRelX"`
+	WinRelY int `json:"winRelY"`
+	WinScrW int `json:"winScrW"`
+	WinScrH int `json:"winScrH"`
 }
 
 // PackInfo 模型整合包信息（ysm-pack.json）

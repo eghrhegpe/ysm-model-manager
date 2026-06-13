@@ -38,12 +38,6 @@ class AppContent extends HTMLElement {
       bus.emit("nav:changed", { page });
       this._render();
     });
-    // 侧栏/仓库头按钮跳转到设置页
-    this._globalUnsubs.push(
-      bus.on("navigate:settings", () => {
-        bus.emit("nav:change", { page: "settings" });
-      }),
-    );
     // DnD 导入等请求切换到仓库页的某个标签
     this._globalUnsubs.push(
       bus.on("repo:switch-tab", ({ tab }) => {
@@ -120,7 +114,8 @@ class AppContent extends HTMLElement {
         const insName = pkg.name || "";
         const defaultType = (() => {
           try {
-            return localStorage.getItem("repo_rtype") || "ysm";
+            // 整合包页始终默认 YSM，不跟仓库页的 subtab 记忆走
+            return "ysm";
           } catch {
             return "ysm";
           }
@@ -143,7 +138,6 @@ class AppContent extends HTMLElement {
     const root = this._root;
     const subtabs = root.querySelectorAll(".repo-subtab");
     const treeBody = root.getElementById("repo-tab-tree");
-    const isModelType = (t) => ["ysm", "mmd-skin", "vrchat-avatar"].includes(t);
     // 按需加载 Three.js 预览组件
     import("../app-preview/index.js").catch(() => {});
     let curRtype = localStorage.getItem("repo_rtype") || "ysm";
@@ -161,22 +155,13 @@ class AppContent extends HTMLElement {
         btn.style.background = "var(--surf)";
         btn.style.color = "var(--accent)";
         if (!treeBody) return;
-        if (isModelType(rtype)) {
-          treeBody.innerHTML =
-            '<div style="flex:1;display:flex;overflow:hidden">' +
-            '<app-tree root="' +
-            rtype +
-            '" style="flex:1;min-width:0"></app-tree>' +
-            '<app-preview mode="model" style="width:220px;flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
-            "</div>";
-        } else {
-          treeBody.innerHTML =
-            '<div style="flex:1;display:flex;overflow:hidden">' +
-            '<app-resource-manager rtype="' +
-            rtype +
-            '" style="flex:1;min-width:0"></app-resource-manager>' +
-            "</div>";
-        }
+        treeBody.innerHTML =
+          '<div style="flex:1;display:flex;overflow:hidden">' +
+          '<app-tree root="' +
+          rtype +
+          '" style="flex:1;min-width:0"></app-tree>' +
+          '<app-preview mode="model" style="width:220px;flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
+          "</div>";
       });
     });
     // 恢复上次选中的类型
@@ -253,6 +238,10 @@ class AppContent extends HTMLElement {
             const { initResourcePacks } =
               await import("../../features/resource-packs.js");
             await initResourcePacks(container, this, "mmd-skin");
+          } else if (tab === "vrchat-avatar") {
+            const { initResourcePacks } =
+              await import("../../features/resource-packs.js");
+            await initResourcePacks(container, this, "vrchat-avatar");
           }
         }
       });

@@ -111,9 +111,9 @@ class AppSidebar extends HTMLElement {
               rtype: this._rtype,
             });
             bus.on(
-              "sync:download-complete",
+              "sync:download:done",
               () => {
-                bus.off("sync:download-complete");
+                bus.off("sync:download:done");
                 resolve();
               },
               { once: true },

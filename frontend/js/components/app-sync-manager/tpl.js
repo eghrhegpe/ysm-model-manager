@@ -5,23 +5,13 @@
  */
 export function containerHTML() {
   return (
+    "<style>.sm-item:hover{background:var(--hover)}.sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:4px;background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary)}</style>" +
     '<div class="sm-wrap" style="display:flex;flex-direction:column;height:100%;overflow:hidden">' +
     // 类型标签栏
     '<div class="sm-tabs" style="display:flex;gap:2px;padding:2px 8px 0;flex-shrink:0;border-bottom:1px solid var(--bd);overflow-x:auto"></div>' +
-    // 统计摘要栏
+    '<div class="sm-status-tabs" style="display:flex;gap:2px;padding:3px 8px;flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)"></div>' +
+    // 摘要栏
     '<div class="sm-summary" style="display:flex;align-items:center;gap:8px;padding:2px 8px;flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)"></div>' +
-    // 筛选栏
-    '<div class="sm-filter" style="display:flex;align-items:center;gap:4px;padding:3px 8px;flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)">' +
-    '<input class="sm-search" type="text" placeholder="🔍 搜索文件名..." style="flex:1;min-width:0;padding:2px 6px;font-size:var(--fs-sm);border:1px solid var(--bd);border-radius:3px;background:var(--bg);color:var(--txt);outline:none;font-family:inherit">' +
-    '<select class="sm-status-filter" style="padding:2px 4px;font-size:var(--fs-sm);border:1px solid var(--bd);border-radius:3px;background:var(--bg);color:var(--txt);outline:none;font-family:inherit">' +
-    '<option value="all">全部</option>' +
-    '<option value="synced">✅ 已同步</option>' +
-    '<option value="missing">待推送</option>' +
-    '<option value="optional">可拉取</option>' +
-    "</select>" +
-    '<button class="sm-push-all-btn" style="display:none;padding:1px 6px;border-radius:3px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-xs)">推送全部</button>' +
-    '<button class="sm-pull-all-btn" style="display:none;padding:1px 6px;border-radius:3px;border:1px solid #f9a826;background:transparent;color:#f9a826;cursor:pointer;font-size:var(--fs-xs)">拉取全部</button>' +
-    "</div>" +
     // 列表容器
     '<div class="sm-list" style="flex:1;overflow-y:auto;padding:2px 0"></div>' +
     "</div>"
@@ -43,11 +33,11 @@ export function tabHTML(id, icon, label, count, active) {
     cls +
     '" data-type="' +
     id +
-    '" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:' +
+    '" style="padding:var(--pad-tab) 14px;border-radius:5px 5px 0 0;border:none;background:' +
     (active ? "var(--surf)" : "transparent") +
     ";color:" +
     (active ? "var(--accent)" : "var(--muted)") +
-    ';cursor:pointer;font-family:inherit;font-size:var(--fs-sm);white-space:nowrap">' +
+    ';cursor:pointer;font-family:inherit;font-size:var(--fs-tab);white-space:nowrap">' +
     icon +
     " " +
     label +
@@ -61,28 +51,38 @@ export function tabHTML(id, icon, label, count, active) {
 }
 
 /**
+ * 状态筛选标签 HTML
+ * @param {string} id - 筛选 ID (all/synced/missing/disabled/optional)
+ * @param {string} label - 标签文字
+ * @param {number} count - 数量
+ * @param {boolean} active - 是否选中
+ */
+export function statusTabHTML(id, label, count, active) {
+  const cls = active ? " active" : "";
+  const showCount = count > 0 ? " (" + count + ")" : "";
+  return (
+    '<button class="sm-status-tab' +
+    cls +
+    '" data-status="' +
+    id +
+    '" style="padding:var(--pad-filter) 12px;border-radius:4px;border:1px solid transparent;background:' +
+    (active ? "var(--accent)" : "transparent") +
+    ";color:" +
+    (active ? "#fff" : "var(--muted)") +
+    ';cursor:pointer;font-family:inherit;font-size:var(--fs-filter);white-space:nowrap">' +
+    label +
+    showCount +
+    "</button>"
+  );
+}
+
+/**
  * 统计摘要 HTML
  * @param {{synced:number, missing:number, optional:number}} counts
  */
 export function summaryHTML(counts) {
-  const parts = [];
-  if (counts.synced > 0)
-    parts.push(
-      '<span style="color:var(--sz-green)">✅ ' +
-        counts.synced +
-        " 已同步</span>",
-    );
-  if (counts.missing > 0)
-    parts.push(
-      '<span style="color:var(--accent)">' + counts.missing + " 待推送</span>",
-    );
-  if (counts.optional > 0)
-    parts.push(
-      '<span style="color:#f9a826">' + counts.optional + " 可拉取</span>",
-    );
-  if (parts.length === 0)
-    return '<span style="color:var(--muted)">🔄 全部已同步</span>';
-  return parts.join('<span style="color:var(--bd)"> | </span>');
+  // 状态标签已展示统计，摘要栏留空
+  return "";
 }
 
 /**
@@ -102,8 +102,16 @@ export function itemHTML(item) {
       ? "var(--sz-green)"
       : item.status === "missing"
         ? "var(--accent)"
-        : "#f9a826";
+        : "var(--sm-optional)";
   const sizeStr = item.size > 0 ? formatSize(item.size) : "";
+  let actionBtn = "";
+  if (item.status === "missing") {
+    actionBtn =
+      '<button class="sm-item-btn" data-action="push" style="border:1px solid var(--accent);color:var(--accent)">推送</button>';
+  } else if (item.status === "optional") {
+    actionBtn =
+      '<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--sm-optional);color:var(--sm-optional)">拉取</button>';
+  }
   return (
     '<div class="sm-item" data-path="' +
     esc(item.path) +
@@ -111,13 +119,13 @@ export function itemHTML(item) {
     item.status +
     '" data-type="' +
     item.type +
-    '" style="display:flex;align-items:center;gap:4px;padding:2px 8px;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default">' +
+    '" style="display:flex;align-items:center;gap:4px;padding:4px 10px;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default">' +
     '<span style="flex-shrink:0;width:14px;text-align:center;color:' +
     statusColor +
     '">' +
     statusIcon +
     "</span>" +
-    '<span style="flex-shrink:0;font-size:11px">' +
+    '<span style="flex-shrink:0;font-size:var(--fs-base)">' +
     (item.icon || "📦") +
     "</span>" +
     '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
@@ -128,6 +136,7 @@ export function itemHTML(item) {
         sizeStr +
         "</span>"
       : "") +
+    actionBtn +
     "</div>"
   );
 }
@@ -138,7 +147,7 @@ export function itemHTML(item) {
  */
 export function emptyHTML(msg) {
   return (
-    '<div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:11px">' +
+    '<div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base)">' +
     '<div style="font-size:20px">📭</div>' +
     "<div>" +
     msg +
@@ -151,7 +160,7 @@ export function emptyHTML(msg) {
  * 加载中
  */
 export function loadingHTML() {
-  return '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:10px">⏳ 加载中...</div>';
+  return '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:var(--fs-sm)">⏳ 加载中...</div>';
 }
 
 function formatSize(bytes) {

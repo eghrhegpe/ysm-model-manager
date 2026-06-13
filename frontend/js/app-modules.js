@@ -67,28 +67,25 @@ function applyUIPrefs() {
   const displayFont = localStorage.getItem("ui-display-font") || "kaiti";
   const density = localStorage.getItem("ui-card-density") || "compact";
   const anim = localStorage.getItem("ui-animations") !== "off";
-  const sizes = { small: "11px", normal: "13px", large: "15px" };
-  document.documentElement.style.setProperty(
+
+  // 清除旧版直接设 --fs-* 的内联值（避免覆盖 calc()）
+  [
     "--fs-base",
-    sizes[fontSize] || "13px",
-  );
-  const ratio = fontSize === "small" ? 0.85 : fontSize === "large" ? 1.15 : 1;
-  document.documentElement.style.setProperty(
     "--fs-xs",
-    Math.round(9 * ratio) + "px",
-  );
-  document.documentElement.style.setProperty(
     "--fs-sm",
-    Math.round(10 * ratio) + "px",
-  );
-  document.documentElement.style.setProperty(
     "--fs-md",
-    Math.round(12 * ratio) + "px",
-  );
-  document.documentElement.style.setProperty(
     "--fs-lg",
-    Math.round(14 * ratio) + "px",
+    "--fs-tiny",
+    "--fs-xl",
+  ].forEach((v) => document.documentElement.style.removeProperty(v));
+  // 通过 --fs-scale 控制字号缩放（与设置页 workshop-settings.js 一致）
+  const scaleMap = { small: "-1px", normal: "0px", large: "2px" };
+  document.documentElement.style.setProperty(
+    "--fs-scale",
+    scaleMap[fontSize] || "0px",
   );
+  document.documentElement.style.setProperty("--fs-base-size", "12px");
+
   document.documentElement.style.setProperty(
     "--font-display",
     displayFont === "system"

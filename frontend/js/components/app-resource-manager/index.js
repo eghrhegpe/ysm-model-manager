@@ -288,16 +288,39 @@ export class AppResourceManager extends HTMLElement {
     this._contentEl.innerHTML =
       '<div style="padding:12px;text-align:center;color:var(--muted)">⏳ 加载中...</div>';
     try {
-      const { ReadPackMeta, IsResourcePackEnabled } =
-        await import("../../../wailsjs/go/main/App.js");
-      const jsonStr = await ReadPackMeta(path);
-      const meta = JSON.parse(jsonStr);
+      let meta = { pack_format: "?", description: "", thumbnail: null };
+      let displayName = name;
       let enabled = true;
-      if (this._actions.includes("toggle")) {
-        enabled = await IsResourcePackEnabled(path);
+
+      if (this._rtype === "shaderpack") {
+        // 光影包：从 lang/en_US.lang 提取显示名
+        const { ReadShaderpackLang } =
+          await import("../../../wailsjs/go/main/App.js");
+        const jsonStr = await ReadShaderpackLang(path);
+        const spMeta = JSON.parse(jsonStr);
+        if (spMeta.name) displayName = spMeta.name;
+        const entries = spMeta.entries || {};
+        // 取前几条 option 描述作为简介
+        const descs = Object.entries(entries)
+          .filter(([k]) => k.includes(".comment"))
+          .slice(0, 3)
+          .map(([, v]) => v.replace(/§[0-9a-fklmnor]/g, ""))
+          .filter(Boolean);
+        meta.description = descs.length
+          ? descs.join("\n")
+          : `📦 光影包 (${Object.keys(entries).length} 项配置)`;
+      } else {
+        const { ReadPackMeta, IsResourcePackEnabled } =
+          await import("../../../wailsjs/go/main/App.js");
+        const jsonStr = await ReadPackMeta(path);
+        meta = JSON.parse(jsonStr);
+        if (this._actions.includes("toggle")) {
+          enabled = await IsResourcePackEnabled(path);
+        }
       }
+
       this._contentEl.innerHTML = detailHTML(
-        name,
+        displayName,
         meta,
         enabled,
         path,
@@ -312,9 +335,9 @@ export class AppResourceManager extends HTMLElement {
           delBtn.addEventListener("click", async () => {
             if (!confirm("确定要删除 " + name + " 吗？")) return;
             try {
-              const type = _findType(this._rtype);
-              const exts = (type && type.extensions) || [];
-              const isDirModel = exts.some((e) => e !== ".zip");
+              // mmd-skin 是文件夹型资源（pmx/pmd + 纹理），删文件所在文件夹
+              // 其他类型都是单文件，直接删文件
+              const isDirModel = this._rtype === "mmd-skin";
               const { DeleteResourcePack, DeleteModelDir } =
                 await import("../../../wailsjs/go/main/App.js");
               if (isDirModel) {

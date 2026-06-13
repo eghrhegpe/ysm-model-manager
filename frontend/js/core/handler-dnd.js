@@ -1,10 +1,12 @@
 // ===== 全局拖拽导入 =====
 import { bus } from "../bus.js";
+import { ALL_EXTS } from "../utils/extensions.js";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_COUNT = 50;
 let dropOverlay = null;
 let dropLeaveTimer = null;
+const DROP_EXTS_STR = ALL_EXTS.join(" ");
 
 const showDropOverlay = (hasModel) => {
   if (!dropOverlay || !document.body.contains(dropOverlay)) {
@@ -14,7 +16,9 @@ const showDropOverlay = (hasModel) => {
     dropOverlay.style.cssText =
       "position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;pointer-events:none;transition:opacity .12s";
     dropOverlay.innerHTML =
-      '<div style="background:var(--surf,#1a1b2e);border:2px dashed var(--accent,#66d9ef);border-radius:12px;padding:30px 50px;text-align:center"><div style="font-size:30px;margin-bottom:8px">📥</div><div style="font-size:16px;font-weight:600;color:var(--accent,#66d9ef)">放开以导入模型</div><div style="font-size:11px;color:var(--muted,#888);margin-top:4px">支持 .ysm .zip .7z .json .pmx .pmd .vrca .vrm .nbt .schematic 文件</div></div>';
+      '<div style="background:var(--surf,#1a1b2e);border:2px dashed var(--accent,#66d9ef);border-radius:12px;padding:30px 50px;text-align:center"><div style="font-size:30px;margin-bottom:8px">📥</div><div style="font-size:16px;font-weight:600;color:var(--accent,#66d9ef)">放开以导入模型</div><div style="font-size:11px;color:var(--muted,#888);margin-top:4px">支持 ' +
+      DROP_EXTS_STR +
+      " 文件</div></div>";
     document.body.appendChild(dropOverlay);
   }
   if (hasModel === false) {
@@ -122,9 +126,7 @@ const onDrop = async (e) => {
 
   if (allFiles.length === 0) {
     bus.emit("toast:show", {
-      msg:
-        "📂 未检测到支持的资源文件" +
-        "（.ysm .zip .7z .json .pmx .pmd .vrca .vrm .nbt .schematic）",
+      msg: "📂 未检测到支持的资源文件" + "（" + DROP_EXTS_STR + "）",
       duration: 3000,
       type: "info",
     });
@@ -148,9 +150,10 @@ const onDrop = async (e) => {
     return;
   }
 
-  window.__pendingImport = allFiles.map((f) => ({ name: f.name, file: f }));
+  const pendingFiles = allFiles.map((f) => ({ name: f.name, file: f }));
+  window.__ysmPendingImport = pendingFiles;
   if (window.__currentPage === "repository") {
-    bus.emit("import:pending-files");
+    bus.emit("import:pending-files", pendingFiles);
     bus.emit("repo:switch-tab", { tab: "import" });
   } else {
     bus.emit("nav:change", { page: "repository" });

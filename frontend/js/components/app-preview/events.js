@@ -11,16 +11,14 @@ export function bindBusUpdates(root, unsubs) {
     }),
   );
 
-  [
-    "sync:download-complete",
-    "sync:upload-complete",
-    "sync:toggle-complete",
-  ].forEach((evt) => {
-    unsubs.push(
-      bus.on(evt, () => {
-        console.log("[preview] 收到", evt, "→ resetGlobalButtons");
-        resetGlobalButtons(root);
-      }),
-    );
-  });
+  ["sync:download:done", "sync:upload:done", "sync:toggle:done"].forEach(
+    (evt) => {
+      unsubs.push(
+        bus.on(evt, () => {
+          console.log("[preview] 收到", evt, "→ resetGlobalButtons");
+          resetGlobalButtons(root);
+        }),
+      );
+    },
+  );
 }

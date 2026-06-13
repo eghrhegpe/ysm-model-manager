@@ -3,21 +3,19 @@
 package main
 
 import (
-	"archive/zip"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
 
+	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
-
-	"github.com/bodgit/sevenzip"
+	"ysm-model-manager/go/ysm"
 )
 
 // ========== 目录操作 ==========
@@ -150,7 +148,7 @@ func (a *App) ExtractPreviewTexture(modelPath string) string {
 }
 
 func (a *App) extractTextureViaYSM(modelPath string) []byte {
-	parserPath := findYSMParser()
+	parserPath := ysm.FindCLI()
 	if parserPath == "" {
 		return nil
 	}
@@ -237,45 +235,11 @@ func (a *App) GetPackInfo(dirPath string) types.PackInfo {
 }
 
 func extractPNGFromZip(data []byte, size int64) []byte {
-	reader, err := zip.NewReader(bytes.NewReader(data), size)
-	if err != nil {
-		return nil
-	}
-	for _, f := range reader.File {
-		if strings.HasSuffix(strings.ToLower(f.Name), ".png") && !f.FileInfo().IsDir() {
-			rc, err := f.Open()
-			if err != nil {
-				continue
-			}
-			buf, _ := io.ReadAll(rc)
-			rc.Close()
-			if len(buf) > 0 {
-				return buf
-			}
-		}
-	}
-	return nil
+	return geometry.ExtractFirstPNGFromZip(data, size)
 }
 
 func extractPNGFrom7z(data []byte, size int64) []byte {
-	reader, err := sevenzip.NewReader(bytes.NewReader(data), size)
-	if err != nil {
-		return nil
-	}
-	for _, f := range reader.File {
-		if strings.HasSuffix(strings.ToLower(f.Name), ".png") && !f.FileInfo().IsDir() {
-			rc, err := f.Open()
-			if err != nil {
-				continue
-			}
-			buf, _ := io.ReadAll(rc)
-			rc.Close()
-			if len(buf) > 0 {
-				return buf
-			}
-		}
-	}
-	return nil
+	return geometry.ExtractFirstPNGFrom7z(data, size)
 }
 
 // ========== 模型移动 ==========

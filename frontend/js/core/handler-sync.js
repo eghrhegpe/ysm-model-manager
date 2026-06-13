@@ -70,7 +70,7 @@ export function registerSync(unsubs) {
           type: "error",
         });
       } finally {
-        bus.emit("sync:download-complete");
+        bus.emit("sync:download:done");
         bus.emit("tree:reload");
       }
     }),
@@ -158,7 +158,7 @@ export function registerSync(unsubs) {
           type: "error",
         });
       } finally {
-        bus.emit("sync:toggle-complete");
+        bus.emit("sync:toggle:done");
         bus.emit("tree:reload");
       }
     }),

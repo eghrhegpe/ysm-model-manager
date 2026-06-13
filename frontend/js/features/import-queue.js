@@ -2,6 +2,9 @@
 import { bus } from "../bus.js";
 import { parseModelName, renderDisplayName } from "../utils/display.js";
 import { modalConfirm } from "../dialogs/modal.js";
+import { ALL_EXTS } from "../utils/extensions.js";
+
+const extsStr = ALL_EXTS.join(" ");
 
 export function initImportQueue(app) {
   const root = app._root;
@@ -193,7 +196,7 @@ export function initImportQueue(app) {
       });
       if (ok === 0 && skip > 0) {
         bus.emit("toast:show", {
-          msg: "⚠️ 不支持的格式，仅支持 .ysm .zip .7z .json .pmx .pmd .vrca .vrm .nbt .schematic",
+          msg: "⚠️ 不支持的格式，仅支持 " + extsStr,
           duration: 4000,
           duration: 3000,
           type: "warn",
@@ -656,10 +659,11 @@ export function initImportQueue(app) {
   renderImportedList();
 
   // 处理待导入文件的通用函数
-  const processPendingImport = () => {
-    const list = window.__pendingImport;
+  const processPendingImport = (files) => {
+    // 从事件 payload 或模块级缓存取数据
+    const list = files || window.__ysmPendingImport;
     if (!list || list.length === 0) return;
-    window.__pendingImport = null;
+    window.__ysmPendingImport = null;
     window.__YSMPendingLock = true;
     let readCount = 0;
     list.forEach((item) => {

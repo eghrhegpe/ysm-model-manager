@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/updater"
@@ -74,6 +75,15 @@ func (a *App) SaveAppConfig(repoRoot, rpRoot, mcRoot, linkMode, theme string) er
 		LinkMode:         linkMode,
 		Theme:            theme,
 		Mirror:           oldCfg.Mirror,
+		// 保留窗口状态（SaveWindowPosition 写入的字段）
+		WinX:    oldCfg.WinX,
+		WinY:    oldCfg.WinY,
+		WinW:    oldCfg.WinW,
+		WinH:    oldCfg.WinH,
+		WinRelX: oldCfg.WinRelX,
+		WinRelY: oldCfg.WinRelY,
+		WinScrW: oldCfg.WinScrW,
+		WinScrH: oldCfg.WinScrH,
 	}
 	return a.saveConfig(cfg)
 }
@@ -144,24 +154,85 @@ func (a *App) RestartApplication() error {
 	return nil
 }
 
-// ========== 窗口状态 ==========
+// ========== 窗口状态（合并到 ysm_config.json，双屏安全版） ==========
+
+// getVirtualScreen 获取 Windows 虚拟屏幕边界（所有显示器合起来的矩形）
+func getVirtualScreen() (x, y, w, h int) {
+	user32 := syscall.NewLazyDLL("user32.dll")
+	proc := user32.NewProc("GetSystemMetrics")
+	r, _, _ := proc.Call(76) // SM_XVIRTUALSCREEN
+	x = int(r)
+	r, _, _ = proc.Call(77) // SM_YVIRTUALSCREEN
+	y = int(r)
+	r, _, _ = proc.Call(78) // SM_CXVIRTUALSCREEN
+	w = int(r)
+	r, _, _ = proc.Call(79) // SM_CYVIRTUALSCREEN
+	h = int(r)
+	if w == 0 {
+		r, _, _ = proc.Call(0) // SM_CXSCREEN
+		w = int(r)
+	}
+	if h == 0 {
+		r, _, _ = proc.Call(1) // SM_CYSCREEN
+		h = int(r)
+	}
+	return
+}
+
+func safePct(val, total int) int {
+	if total <= 0 {
+		return 50
+	}
+	p := val * 100 / total
+	if p < 0 {
+		p = 0
+	}
+	if p > 100 {
+		p = 100
+	}
+	return p
+}
+
 func (a *App) SaveWindowPosition(x, y, width, height int) {
-	state := types.WindowState{X: x, Y: y, Width: width, Height: height}
-	exe, _ := os.Executable()
-	path := filepath.Join(filepath.Dir(exe), "window_state.json")
-	data, _ := json.MarshalIndent(state, "", "  ")
-	os.WriteFile(path, data, 0644)
+	vx, vy, vw, vh := getVirtualScreen()
+	cfg := a.LoadAppConfig()
+	cfg.WinX = x
+	cfg.WinY = y
+	cfg.WinW = width
+	cfg.WinH = height
+	cfg.WinRelX = safePct(x-vx, vw)
+	cfg.WinRelY = safePct(y-vy, vh)
+	cfg.WinScrW = vw
+	cfg.WinScrH = vh
+	data, _ := json.MarshalIndent(cfg, "", "  ")
+	os.WriteFile(configPath(), data, 0644)
 }
 
 func (a *App) GetWindowPosition() types.WindowState {
-	exe, _ := os.Executable()
-	path := filepath.Join(filepath.Dir(exe), "window_state.json")
-	var state types.WindowState
-	state.X = 100
-	state.Y = 100
-	state.Width = 1200
-	state.Height = 800
-	readJSONFile(path, &state)
+	cfg := a.LoadAppConfig()
+	state := types.WindowState{
+		X:      cfg.WinX,
+		Y:      cfg.WinY,
+		Width:  cfg.WinW,
+		Height: cfg.WinH,
+	}
+	if state.Width <= 0 {
+		state.Width = 1200
+	}
+	if state.Height <= 0 {
+		state.Height = 800
+	}
+	// 检测屏幕是否变化（双屏切换），用相对坐标重算
+	_, _, vw, vh := getVirtualScreen()
+	if cfg.WinScrW > 0 && cfg.WinScrH > 0 && (cfg.WinScrW != vw || cfg.WinScrH != vh) {
+		_, vx, _, _ := getVirtualScreen()
+		state.X = vx + vw*cfg.WinRelX/100
+		state.Y = vh*cfg.WinRelY/100
+	}
+	if state.X <= 0 && state.Y <= 0 {
+		state.X = 100
+		state.Y = 100
+	}
 	return state
 }
 

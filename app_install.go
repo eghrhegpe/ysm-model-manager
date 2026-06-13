@@ -112,24 +112,20 @@ type importOptions struct {
 func (a *App) importModelFileWithOptions(fileName, base64Data string, opts importOptions) error {
 	// 根据扩展名确定目标仓库
 	ext := strings.ToLower(filepath.Ext(fileName))
-	var targetRoot string
-	switch ext {
-	case ".ysm", ".zip", ".7z", ".json":
-		targetRoot = a.RepoRoot
-		if targetRoot == "" {
-			targetRoot = a.GetRepoRoot("ysm")
-		}
-	case ".pmx", ".pmd":
-		targetRoot = a.GetRepoRoot("mmd-skin")
-	case ".vrca", ".vrm":
-		targetRoot = a.GetRepoRoot("vrchat-avatar")
-	case ".nbt", ".schematic":
-		targetRoot = a.GetRepoRoot("create-blueprint")
-	default:
+	rtypes := types.ExtBelongsTo(ext)
+	if len(rtypes) == 0 {
 		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式"}
 	}
+	targetRoot := a.RepoRoot
+	// 如果是非 YSM 类型，用 GetRepoRoot 查找对应仓库
+	if rtypes[0] != "ysm" {
+		targetRoot = a.GetRepoRoot(rtypes[0])
+		if targetRoot == "" {
+			return fmt.Errorf("请先设置 %s 类型的仓库目录", rtypes[0])
+		}
+	}
 	if targetRoot == "" {
-		return fmt.Errorf("请先设置对应类型的仓库目录")
+		return fmt.Errorf("请先设置仓库目录")
 	}
 	if strings.Contains(fileName, "..") || strings.ContainsAny(fileName, "\\/") {
 		return types.AppError{Code: "FILENAME_INVALID", Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
@@ -181,8 +177,8 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 		return fmt.Errorf("请先选择仓库目录")
 	}
 	ext := strings.ToLower(filepath.Ext(fileName))
-	if ext != ".ysm" && ext != ".zip" && ext != ".7z" && ext != ".json" {
-		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "仅支持 .ysm / .zip / .7z / .json 格式"}
+	if !types.IsSupportedExt(ext) {
+		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "支持格式: " + strings.Join(types.AllExts, " / ")}
 	}
 	data, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {
@@ -294,17 +290,9 @@ func (a *App) CountInstanceResources(insName string) (int, error) {
 	if target == nil {
 		return 0, fmt.Errorf("未找到整合包: %s", insName)
 	}
-	subDirMap := []string{
-		"config/yes_steve_model/custom",
-		"resourcepacks",
-		"shaderpacks",
-		"schematics",
-		"3d-skin/EntityPlayer",
-		"vrchat-avatars",
-	}
 	total := 0
-	for _, subDir := range subDirMap {
-		total += a.countInstanceDir(filepath.Join(target.VersionDir, subDir))
+	for _, d := range types.AllSubDirs() {
+		total += a.countInstanceDir(filepath.Join(target.VersionDir, d.SubDir))
 	}
 	return total, nil
 }
@@ -334,27 +322,18 @@ func (a *App) ClearInstanceResources(insName string) (int, error) {
 		return 0, fmt.Errorf("未找到整合包: %s", insName)
 	}
 
-	// 所有资源类型的子目录映射（与 InstallResourceToInstance 保持一致）
-	subDirMap := map[string]string{
-		"ysm":               "config/yes_steve_model/custom",
-		"resourcepack":      "resourcepacks",
-		"shaderpack":        "shaderpacks",
-		"create-blueprint":  "schematics",
-		"mmd-skin":          "3d-skin/EntityPlayer",
-		"vrchat-avatar":     "vrchat-avatars",
-	}
-
+	// 遍历所有资源类型的子目录统计文件数
 	total := 0
-	for _, subDir := range subDirMap {
-		dir := filepath.Join(target.VersionDir, subDir)
+	for _, d := range types.AllSubDirs() {
+		dir := filepath.Join(target.VersionDir, d.SubDir)
 		total += a.countInstanceDir(dir)
 	}
 	if total == 0 {
 		return 0, nil
 	}
 	// 实际删除
-	for _, subDir := range subDirMap {
-		dir := filepath.Join(target.VersionDir, subDir)
+	for _, d := range types.AllSubDirs() {
+		dir := filepath.Join(target.VersionDir, d.SubDir)
 		total = a.clearInstanceDir(dir)
 	}
 	return total, nil
@@ -371,9 +350,7 @@ func (a *App) countInstanceDir(dir string) int {
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(d.Name()))
-		if ext != ".ysm" && ext != ".zip" && ext != ".7z" && ext != ".json" &&
-			ext != ".pmx" && ext != ".pmd" && ext != ".vrca" && ext != ".vrm" &&
-			ext != ".nbt" && ext != ".schematic" {
+		if !types.IsSupportedExt(ext) {
 			return nil
 		}
 		count++
@@ -401,9 +378,7 @@ func (a *App) clearInstanceDir(dir string) int {
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(d.Name()))
-		if ext != ".ysm" && ext != ".zip" && ext != ".7z" && ext != ".json" &&
-			ext != ".pmx" && ext != ".pmd" && ext != ".vrca" && ext != ".vrm" &&
-			ext != ".nbt" && ext != ".schematic" {
+		if !types.IsSupportedExt(ext) {
 			return nil
 		}
 		targets = append(targets, p)
@@ -536,15 +511,11 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 	instances := a.ListVersionInstances(mcRoot)
 	var results []types.InstanceStatus
 
-	// 子目录映射（与 InstallResourceToInstance 保持一致）
-	subDirMap := map[string]string{
-		"resourcepack":      "resourcepacks",
-		"shaderpack":        "shaderpacks",
-		"create-blueprint":  "schematics",
-		"mmd-skin":          "3d-skin/EntityPlayer",
-		"vrchat-avatar":     "vrchat-avatars",
+	// 子目录映射
+	subDir := types.SubDirMap(rtype)
+	if subDir == "" {
+		return []types.InstanceStatus{}
 	}
-	subDir := subDirMap[rtype]
 
 	for _, ins := range instances {
 		instDir := filepath.Join(ins.VersionDir, subDir)
@@ -603,7 +574,22 @@ func (a *App) SyncModelToggleStatus(instanceCustomDir, repoRoot string) (int, in
 	return ysmsync.SyncToggleStatus(instanceCustomDir, repoRoot, a.ScanModelEntries)
 }
 
+// RelinkCustomDir 重新应用链接模式到指定目录（兼容旧版）
 func (a *App) RelinkCustomDir(customDir, repoRoot string) (int, error) {
+	// 尝试从 repoRoot 推断 rtype
+	rtype := "ysm"
+	for _, d := range types.AllSubDirs() {
+		if strings.Contains(strings.ToLower(customDir), strings.ToLower(d.SubDir)) {
+			rtype = d.RType
+			break
+		}
+	}
+	return a.relinkDir(customDir, repoRoot, rtype)
+}
+
+// relinkDir 重新应用链接模式到单个目录
+// rtype 用于需要文件夹级重新链接的类型（ysm/mmd-skin 等）
+func (a *App) relinkDir(customDir, repoRoot, rtype string) (int, error) {
 	customDir = strings.TrimSpace(customDir)
 	repoRoot = strings.TrimSpace(repoRoot)
 	if customDir == "" || repoRoot == "" {
@@ -626,15 +612,71 @@ func (a *App) RelinkCustomDir(customDir, repoRoot string) (int, error) {
 		if !found {
 			continue
 		}
+		// ysm.json / .pmx / .pmd：使用 InstallDir 重新链接整个文件夹
+		ext := strings.ToLower(filepath.Ext(ce.Path))
+		baseName := strings.ToLower(filepath.Base(ce.Path))
+		baseName = strings.TrimSuffix(baseName, ".ban")
+		isDirType := (baseName == "ysm.json" && rtype == "ysm") ||
+			(ext == ".pmx" || ext == ".pmd")
+		if isDirType {
+			srcDir := filepath.Dir(srcPath)
+			// ce.Path 已在目标子目录内，父层才是 InstallDir 要写入的基础目录
+			dstParent := filepath.Dir(ce.Path)
+			// 但 InstallDir 会自动创建 {targetSubDir}，如果 dstParent 已经是模型目录
+			// 则会二次嵌套。正确的做法：上一层目录作为 dstDir，让 InstallDir 创建子目录
+			dstBase := filepath.Dir(dstParent)
+			if err := os.RemoveAll(dstParent); err != nil {
+				continue
+			}
+			if err := installer.InstallDir(srcDir, dstBase, repoRoot, a.LinkMode, rtype); err != nil {
+				continue
+			}
+			count++
+			continue
+		}
 		if err := os.Remove(ce.Path); err != nil {
 			continue
 		}
-		if err := installer.Install(srcPath, filepath.Dir(ce.Path), repoRoot, a.LinkMode); err != nil {
+		// 传入基础 customDir，让 installer.Install 自行计算相对路径
+		if err := installer.Install(srcPath, customDir, repoRoot, a.LinkMode); err != nil {
 			continue
 		}
 		count++
 	}
 	return count, nil
+}
+
+// RelinkAllInstanceResources 重新应用链接模式到整合包所有资源类型目录
+func (a *App) RelinkAllInstanceResources(instanceName string) (int, error) {
+	cfg := a.LoadAppConfig()
+	if cfg.McRoot == "" {
+		return 0, fmt.Errorf("请先设置游戏根目录")
+	}
+	instances := a.ListVersionInstances(cfg.McRoot)
+	var target *types.VersionInstance
+	for i, ins := range instances {
+		if ins.Name == instanceName {
+			target = &instances[i]
+			break
+		}
+	}
+	if target == nil {
+		return 0, fmt.Errorf("未找到整合包: %s", instanceName)
+	}
+	total := 0
+	for _, d := range types.AllSubDirs() {
+		instanceDir := filepath.Join(target.VersionDir, d.SubDir)
+		if _, err := os.Stat(instanceDir); os.IsNotExist(err) {
+			continue
+		}
+		globalDir := a.GetRepoRoot(d.RType)
+		if globalDir == "" {
+			continue
+		}
+		n, _ := a.relinkDir(instanceDir, globalDir, d.RType)
+		total += n
+	}
+	return total, nil
 }
 
 // ========== 资源同步 ==========
@@ -655,22 +697,7 @@ func (a *App) SyncResources(rtype, instanceName string) string {
 	var targetDir string
 	for _, ins := range instances {
 		if ins.Name == instanceName {
-			// 根据资源类型拼接子目录
-			var subDir string
-			switch rtype {
-			case "resourcepack":
-				subDir = "resourcepacks"
-			case "shaderpack":
-				subDir = "shaderpacks"
-			case "create-blueprint":
-				subDir = "schematics"
-			case "mmd-skin":
-				subDir = "3d-skin/EntityPlayer"
-			case "vrchat-avatar":
-				subDir = "vrchat-avatars"
-			default:
-				subDir = ""
-			}
+			subDir := types.SubDirMap(rtype)
 			if subDir == "" {
 				return `{"synced":[],"missing":[],"extra":[]}`
 			}
@@ -702,24 +729,11 @@ func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 	var targetDir string
 	for _, ins := range instances {
 		if ins.Name == instanceName {
-			var subDir string
-			switch rtype {
-			case "resourcepack":
-				subDir = "resourcepacks"
-			case "shaderpack":
-				subDir = "shaderpacks"
-			case "create-blueprint":
-				subDir = "schematics"
-			case "mmd-skin":
-				subDir = "3d-skin/EntityPlayer"
-			case "vrchat-avatar":
-				subDir = "vrchat-avatars"
-			default:
-				subDir = ""
+			subDir := types.SubDirMap(rtype)
+			if subDir == "" {
+				return 0, fmt.Errorf("未知资源类型: %s", rtype)
 			}
-			if subDir != "" {
-				targetDir = filepath.Join(ins.VersionDir, subDir)
-			}
+			targetDir = filepath.Join(ins.VersionDir, subDir)
 			break
 		}
 	}
@@ -727,64 +741,26 @@ func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 		return 0, fmt.Errorf("未找到整合包: %s", instanceName)
 	}
 
-	// 找出 missing 的文件并复制
-	result := ysmsync.SyncResources(globalDir, targetDir)
 	count := 0
 
-	// YSM(.json) 和 MMD(.pmx/.pmd) 可能位于子目录中，需文件夹推送
+	// YSM(.json) 和 MMD(.pmx/.pmd) 位于子目录中，需文件夹推送
+	// 用文件夹级同步检测 missing，然后完整复制整个文件夹（含纹理等配套文件）
 	if rtype == "mmd-skin" || rtype == "ysm" {
-		// 收集已存在的子目录名（所有层级）
-		existing := map[string]bool{}
-		filepath.Walk(targetDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil || !info.IsDir() || path == targetDir {
-				return nil
-			}
-			existing[strings.ToLower(info.Name())] = true
-			return nil // 继续递归，收集所有层级的子目录名
-		})
-		// 扫描全局目录中所有层级缺失的子目录并完整复制
-		filepath.Walk(globalDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil || !info.IsDir() || path == globalDir {
-				return nil
-			}
-			name := strings.ToLower(info.Name())
-			if existing[name] {
-				// 已存在同名目录（任意位置），跳过整个子树
-				return filepath.SkipDir
-			}
-			// 检查目录内是否有支持的模型文件（含 .ban 后缀的禁用文件）
-			hasModel := false
-			entries, _ := os.ReadDir(path)
-			for _, e := range entries {
-				ename := strings.ToLower(e.Name())
-				base := strings.TrimSuffix(ename, ".ban")
-				ext := strings.ToLower(filepath.Ext(base))
-				if ext == ".pmx" || ext == ".pmd" || ext == ".vrca" || ext == ".vrm" || ext == ".ysm" || ext == ".json" || ext == ".zip" {
-					hasModel = true
-					break
-				}
-			}
-			if !hasModel {
-				return nil // 无模型文件，继续递归查找子目录
-			}
-			// 完整复制文件夹（含所有子文件）
-			if err := installer.InstallDir(path, targetDir, globalDir, a.LinkMode, rtype); err == nil {
+		dirResult := ysmsync.SyncResourcesDirLevel(globalDir, targetDir, rtype)
+		for _, missingDir := range dirResult.Missing {
+			if err := installer.InstallDir(missingDir, targetDir, globalDir, a.LinkMode, rtype); err == nil {
 				count++
 			}
-			return filepath.SkipDir
-		})
+		}
 		return count, nil
 	}
 
+	// 非文件夹级类型：文件级同步
+	result := ysmsync.SyncResources(globalDir, targetDir)
 	for _, src := range result.Missing {
-		dstDir := filepath.Dir(strings.Replace(src, globalDir, targetDir, 1))
-		if err := os.MkdirAll(dstDir, 0755); err != nil {
-			continue
+		if err := installer.Install(src, targetDir, globalDir, a.LinkMode); err == nil {
+			count++
 		}
-		if err := copyFile(src, filepath.Join(dstDir, filepath.Base(src))); err != nil {
-			continue
-		}
-		count++
 	}
 	return count, nil
 }
@@ -804,21 +780,7 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 	var targetDir string
 	for _, ins := range instances {
 		if ins.Name == instanceName {
-			var subDir string
-			switch rtype {
-			case "resourcepack":
-				subDir = "resourcepacks"
-			case "shaderpack":
-				subDir = "shaderpacks"
-			case "create-blueprint":
-				subDir = "schematics"
-			case "mmd-skin":
-				subDir = "3d-skin/EntityPlayer"
-			case "vrchat-avatar":
-				subDir = "vrchat-avatars"
-			default:
-				subDir = ""
-			}
+			subDir := types.SubDirMap(rtype)
 			if subDir != "" {
 				targetDir = filepath.Join(ins.VersionDir, subDir)
 			}
@@ -830,9 +792,36 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 	}
 
 	// 找出 extra 的文件并复制到全局
-	result := ysmsync.SyncResources(globalDir, targetDir)
+	// 对 YSM/MMD 使用文件夹级同步
+	var result types.ResourceSyncResult
+	if rtype == "ysm" || rtype == "mmd-skin" {
+		result = ysmsync.SyncResourcesDirLevel(globalDir, targetDir, rtype)
+	} else {
+		result = ysmsync.SyncResources(globalDir, targetDir)
+	}
 	count := 0
 	for _, src := range result.Extra {
+		// 文件夹级（结果已是文件夹路径），完整复制到全局
+		if rtype == "ysm" || rtype == "mmd-skin" {
+			folderName := filepath.Base(src)
+			dstDir := filepath.Join(globalDir, folderName)
+			if err := os.MkdirAll(dstDir, 0755); err != nil {
+				continue
+			}
+			// 复制文件夹内所有文件
+			entries, _ := os.ReadDir(src)
+			for _, e := range entries {
+				if e.IsDir() {
+					continue
+				}
+				srcFile := filepath.Join(src, e.Name())
+				if err := copyFile(srcFile, filepath.Join(dstDir, e.Name())); err != nil {
+					continue
+				}
+			}
+			count++
+			continue
+		}
 		dstDir := filepath.Dir(strings.Replace(src, targetDir, globalDir, 1))
 		if err := os.MkdirAll(dstDir, 0755); err != nil {
 			continue
@@ -845,7 +834,7 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 	return count, nil
 }
 
-// PullSingleResourceFromInstance 从整合包拉取单个 extra 文件到全局仓库
+// PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库
 func (a *App) PullSingleResourceFromInstance(rtype, srcPath, instanceName string) error {
 	cfg := a.LoadAppConfig()
 	if cfg.McRoot == "" {
@@ -859,19 +848,7 @@ func (a *App) PullSingleResourceFromInstance(rtype, srcPath, instanceName string
 	var targetDir string
 	for _, ins := range instances {
 		if ins.Name == instanceName {
-			var subDir string
-			switch rtype {
-			case "resourcepack":
-				subDir = "resourcepacks"
-			case "shaderpack":
-				subDir = "shaderpacks"
-			case "create-blueprint":
-				subDir = "schematics"
-			case "mmd-skin":
-				subDir = "3d-skin/EntityPlayer"
-			case "vrchat-avatar":
-				subDir = "vrchat-avatars"
-			}
+			subDir := types.SubDirMap(rtype)
 			if subDir != "" {
 				targetDir = filepath.Join(ins.VersionDir, subDir)
 			}
@@ -881,11 +858,64 @@ func (a *App) PullSingleResourceFromInstance(rtype, srcPath, instanceName string
 	if targetDir == "" {
 		return fmt.Errorf("未找到整合包: %s", instanceName)
 	}
+	// 文件夹级拉取：整体复制文件夹到全局
+	fi, stErr := os.Stat(srcPath)
+	if stErr == nil && fi.IsDir() {
+		folderName := filepath.Base(srcPath)
+		dstDir := filepath.Join(globalDir, folderName)
+		if err := os.MkdirAll(dstDir, 0755); err != nil {
+			return err
+		}
+		entries, _ := os.ReadDir(srcPath)
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			srcFile := filepath.Join(srcPath, e.Name())
+			if err := copyFile(srcFile, filepath.Join(dstDir, e.Name())); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 	dstDir := filepath.Dir(strings.Replace(srcPath, targetDir, globalDir, 1))
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		return err
 	}
 	return copyFile(srcPath, filepath.Join(dstDir, filepath.Base(srcPath)))
+}
+
+// PushSingleResourceToInstance 推送单个文件/文件夹到整合包
+func (a *App) PushSingleResourceToInstance(rtype, instanceName, filePath string) error {
+	cfg := a.LoadAppConfig()
+	if cfg.McRoot == "" {
+		return fmt.Errorf("请先设置游戏根目录")
+	}
+	subDir := types.SubDirMap(rtype)
+	if subDir == "" {
+		return fmt.Errorf("未知资源类型: %s", rtype)
+	}
+	instances := a.ListVersionInstances(cfg.McRoot)
+	for _, ins := range instances {
+		if ins.Name == instanceName {
+			globalDir := a.GetRepoRoot(rtype)
+			if globalDir == "" {
+				return fmt.Errorf("未设置 %s 类型的仓库目录", rtype)
+			}
+			customDir := filepath.Join(ins.VersionDir, subDir)
+			// 检查是否是文件夹（YSM json / MMD 的文件夹级资源）
+			fi, stErr := os.Stat(filePath)
+			if stErr == nil && fi.IsDir() {
+				return installer.InstallDir(filePath, customDir, globalDir, a.LinkMode, rtype)
+			}
+			ext := strings.ToLower(filepath.Ext(filePath))
+			if ext == ".json" || ext == ".pmx" || ext == ".pmd" {
+				return installer.InstallDir(filepath.Dir(filePath), customDir, globalDir, a.LinkMode, rtype)
+			}
+			return installer.Install(filePath, customDir, globalDir, a.LinkMode)
+		}
+	}
+	return fmt.Errorf("未找到整合包: %s", instanceName)
 }
 
 // ========== 整合包全类型同步状态 ==========
@@ -910,17 +940,9 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 	}
 
 	// 各资源类型允许的扩展名（防止跨类型混入如 .pmx 出现在 VRC 中）
-	typeExts := map[string][]string{
-		"ysm":              {".ysm", ".zip", ".7z", ".json"},
-		"resourcepack":     {".zip"},
-		"shaderpack":       {".zip"},
-		"create-blueprint": {".nbt", ".schematic"},
-		"mmd-skin":         {".pmx", ".pmd"},
-		"vrchat-avatar":    {".vrca", ".vrm"},
-	}
 	extMatch := func(name, rtype string) bool {
-		exts, ok := typeExts[rtype]
-		if !ok {
+		exts := types.SupportedExtsForType(rtype)
+		if len(exts) == 0 {
 			return true
 		}
 		low := strings.ToLower(name)
@@ -952,21 +974,12 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 		return "[]"
 	}
 
-	// 子目录映射
-	subDirMap := map[string]string{
-		"ysm":              filepath.Join("config", "yes_steve_model", "custom"),
-		"resourcepack":     "resourcepacks",
-		"shaderpack":       "shaderpacks",
-		"create-blueprint": "schematics",
-		"mmd-skin":         "3d-skin/EntityPlayer",
-		"vrchat-avatar":    "vrchat-avatars",
-	}
-
+	// 子目录通过集中定义获取
 	var items []types.ResourceSyncItem
 
 	for _, rt := range registry.ResourceTypes {
-		subDir, ok := subDirMap[rt.ID]
-		if !ok {
+		subDir := types.SubDirMap(rt.ID)
+		if subDir == "" {
 			continue
 		}
 
@@ -979,7 +992,7 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 		// 整合包子目录
 		instDir := filepath.Join(targetIns.VersionDir, subDir)
 
-		// 调用 SyncResources 获取对比结果
+		// 展示用文件级同步（推送时再用文件夹级推送）
 		result := ysmsync.SyncResources(globalDir, instDir)
 
 		// 收集大小信息
@@ -990,7 +1003,6 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 			}
 			return fi.Size()
 		}
-
 		for _, p := range result.Synced {
 			if !extMatch(filepath.Base(p), rt.ID) {
 				continue
@@ -999,7 +1011,7 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 			lowName := strings.ToLower(filepath.Base(p))
 			isDisabled := strings.HasSuffix(lowName, ".disabled") || strings.HasSuffix(lowName, ".ban")
 			status := types.SyncStatusSynced
-			statusIcon := ""
+			statusIcon := rt.Icon
 			if isDisabled {
 				status = types.SyncStatusDisabled
 				statusIcon = "⛔"

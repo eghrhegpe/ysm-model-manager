@@ -7,6 +7,7 @@ import {
   containerHTML,
   summaryHTML,
   itemHTML,
+  statusTabHTML,
   emptyHTML,
   loadingHTML,
 } from "./tpl.js";
@@ -18,26 +19,31 @@ const ESC = (s) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+// 跨实例记住上次选中的类型（整合包间共享）
+let _lastSelectedType = "ysm";
+
 export class AppSyncManager extends HTMLElement {
   static get observedAttributes() {
-    return ["instance"];
+    return ["instance", "default-type"];
   }
 
   constructor() {
     super();
     this._instance = "";
-    this._allItems = []; // 原始数据（全部类型）
-    this._filteredItems = []; // 当前过滤后
-    this._selectedType = "all"; // "all" 或类型 ID
-    this._searchQuery = "";
-    this._statusFilter = "all"; // all / synced / missing / optional
-    this._typeConfig = []; // 类型配置缓存
+    this._defaultType = "ysm";
+    this._allItems = [];
+    this._filteredItems = [];
+    this._selectedType = "ysm";
+    this._statusFilter = "all";
+    this._typeConfig = [];
     this._loading = false;
-    this._pusher = null; // 批量推送/拉取中的 abort 信号
+    this._pusher = null;
   }
 
   connectedCallback() {
     this._instance = this.getAttribute("instance") || "";
+    this._defaultType = this.getAttribute("default-type") || "ysm";
+    this._selectedType = _lastSelectedType;
     if (!this._instance) {
       this.innerHTML =
         '<div style="padding:12px;color:var(--err)">⚠️ 未指定整合包</div>';
@@ -51,6 +57,8 @@ export class AppSyncManager extends HTMLElement {
     if (name === "instance") {
       this._instance = newVal || "";
       if (this._instance) this._init();
+    } else if (name === "default-type") {
+      this._defaultType = newVal || "ysm";
     }
   }
 
@@ -91,10 +99,10 @@ export class AppSyncManager extends HTMLElement {
   }
 
   _render() {
-    // 重建内容
     this.innerHTML = containerHTML();
 
-    // 短标签映射
+    const modelTypes = ["ysm", "mmd-skin", "vrchat-avatar"];
+    const resourceTypes = ["resourcepack", "shaderpack", "create-blueprint"];
     const shortLabel = {
       ysm: "YSM",
       "mmd-skin": "MMD",
@@ -104,21 +112,22 @@ export class AppSyncManager extends HTMLElement {
       "create-blueprint": "蓝图",
     };
 
-    // 构建类型标签（+ "全部" 标签）
     const tabsEl = this.querySelector(".sm-tabs");
+    const statusTabsEl = this.querySelector(".sm-status-tabs");
     const summaryEl = this.querySelector(".sm-summary");
     const listEl = this.querySelector(".sm-list");
-    const searchEl = this.querySelector(".sm-search");
-    const filterEl = this.querySelector(".sm-status-filter");
-    const pushAllBtn = this.querySelector(".sm-push-all-btn");
-    const pullAllBtn = this.querySelector(".sm-pull-all-btn");
-    if (!tabsEl || !summaryEl || !listEl) return;
+    if (!tabsEl || !statusTabsEl || !summaryEl || !listEl) return;
 
-    // — 类型标签（含 "全部"）—
-    // 按类型分组统计
+    // — 类型统计 —
     const typeCounts = {};
     for (const t of this._typeConfig) {
-      typeCounts[t.id] = { synced: 0, missing: 0, optional: 0, total: 0 };
+      typeCounts[t.id] = {
+        synced: 0,
+        missing: 0,
+        disabled: 0,
+        optional: 0,
+        total: 0,
+      };
     }
     for (const item of this._allItems) {
       const c = typeCounts[item.type];
@@ -127,189 +136,173 @@ export class AppSyncManager extends HTMLElement {
         c.total++;
       }
     }
-    // 全局统计
-    const globalCounts = { synced: 0, missing: 0, optional: 0 };
+    const globalCounts = { synced: 0, missing: 0, disabled: 0, optional: 0 };
     for (const item of this._allItems) globalCounts[item.status]++;
 
-    // 渲染标签（使用短标签）
-    const allCount = this._allItems.length;
-    let tabHtml =
-      '<button class="sm-tab' +
-      (this._selectedType === "all" ? " active" : "") +
-      '" data-type="all" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:' +
-      (this._selectedType === "all" ? "var(--surf)" : "transparent") +
-      ";color:" +
-      (this._selectedType === "all" ? "var(--accent)" : "var(--muted)") +
-      ';cursor:pointer;font-family:inherit;font-size:var(--fs-sm);white-space:nowrap">📋 全部 (' +
-      allCount +
-      ")</button>";
-    for (const t of this._typeConfig) {
-      const c = typeCounts[t.id];
-      const count = c ? c.total : 0;
-      const active = this._selectedType === t.id;
-      const label = shortLabel[t.id] || t.name;
-      tabHtml +=
-        '<button class="sm-tab' +
-        (active ? " active" : "") +
-        '" data-type="' +
-        t.id +
-        '" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:' +
-        (active ? "var(--surf)" : "transparent") +
-        ";color:" +
-        (active ? "var(--accent)" : "var(--muted)") +
-        ';cursor:pointer;font-family:inherit;font-size:var(--fs-sm);white-space:nowrap">' +
-        (t.icon || "📦") +
-        " " +
-        label +
-        (count > 0
-          ? ' <span style="font-size:8px;opacity:0.7">(' + count + ")</span>"
-          : "") +
-        "</button>";
-    }
-    tabsEl.innerHTML = tabHtml;
+    // — 类型标签（分组：模型类 | 资源类）—
+    const renderGroup = (types, sep) => {
+      let html = "";
+      for (const id of types) {
+        const t = this._typeConfig.find((c) => c.id === id);
+        if (!t) continue;
+        const c = typeCounts[id];
+        const count = c ? c.total : 0;
+        const active = this._selectedType === id;
+        html +=
+          '<button class="sm-tab' +
+          (active ? " active" : "") +
+          '" data-type="' +
+          id +
+          '" style="padding:var(--pad-tab) 14px;border-radius:5px 5px 0 0;border:none;background:' +
+          (active ? "var(--surf)" : "transparent") +
+          ";color:" +
+          (active ? "var(--accent)" : "var(--muted)") +
+          ';cursor:pointer;font-family:inherit;font-size:var(--fs-tab);white-space:nowrap">' +
+          (t.icon || "📦") +
+          " " +
+          (shortLabel[id] || t.name) +
+          (count > 0
+            ? ' <span style="font-size:var(--fs-xs);opacity:0.7">' +
+              "(" +
+              count +
+              ")</span>"
+            : "") +
+          "</button>";
+      }
+      if (sep) html += '<span style="color:var(--bd);padding:0 2px">│</span>';
+      return html;
+    };
+    tabsEl.innerHTML =
+      renderGroup(modelTypes, true) + renderGroup(resourceTypes, false);
 
-    // — 统计摘要 —
-    const curCounts =
-      this._selectedType === "all"
-        ? globalCounts
-        : typeCounts[this._selectedType] || {
-            synced: 0,
-            missing: 0,
-            optional: 0,
-          };
-    summaryEl.innerHTML = summaryHTML(curCounts);
+    // — 状态筛选标签 —
+    const curCounts = this._selectedType
+      ? typeCounts[this._selectedType] || globalCounts
+      : globalCounts;
+    const statusDefs = [
+      [
+        "all",
+        "📊 全部",
+        this._selectedType ? curCounts.total || 0 : this._allItems.length,
+      ],
+      ["synced", "✅ 已同步", curCounts.synced || 0],
+      ["missing", "⬇️ 待推送", curCounts.missing || 0],
+      ["disabled", "⛔ 已禁用", curCounts.disabled || 0],
+      ["optional", "📤 可拉取", curCounts.optional || 0],
+    ];
+    statusTabsEl.innerHTML = statusDefs
+      .map(([id, label, count]) =>
+        statusTabHTML(id, label, count, this._statusFilter === id),
+      )
+      .join("");
 
-    // — 筛选 —
-    if (searchEl) searchEl.value = this._searchQuery;
-    if (filterEl) filterEl.value = this._statusFilter;
+    // — 摘要 —
+    summaryEl.innerHTML = summaryHTML({
+      synced: curCounts.synced || 0,
+      missing: curCounts.missing || 0,
+      optional: curCounts.optional || 0,
+    });
 
     // — 列表 —
     this._applyFilter();
     this._renderList(listEl);
 
-    // — 批量按钮 —
-    const hasMissing =
-      (this._selectedType === "all" ? globalCounts : curCounts).missing > 0;
-    const hasOptional =
-      (this._selectedType === "all" ? globalCounts : curCounts).optional > 0;
-    if (pushAllBtn)
-      pushAllBtn.style.display = hasMissing ? "inline-block" : "none";
-    if (pullAllBtn)
-      pullAllBtn.style.display = hasOptional ? "inline-block" : "none";
-
-    // 恢复搜索框焦点（如果有搜索内容）
-    if (this._searchQuery && searchEl) {
-      searchEl.focus();
-      searchEl.setSelectionRange(
-        this._searchQuery.length,
-        this._searchQuery.length,
-      );
-    }
-
-    // 绑定事件（每次重建 DOM 后必须重新绑定）
+    // — 事件绑定 —
     this._bindEvents();
   }
 
   _applyFilter() {
     let items = this._allItems;
-
-    // 类型过滤
-    if (this._selectedType !== "all") {
+    if (this._selectedType) {
       items = items.filter((i) => i.type === this._selectedType);
     }
-
-    // 状态过滤
     if (this._statusFilter !== "all") {
       items = items.filter((i) => i.status === this._statusFilter);
     }
-
-    // 搜索
-    if (this._searchQuery) {
-      const q = this._searchQuery.toLowerCase();
-      items = items.filter((i) => i.name.toLowerCase().includes(q));
-    }
-
     this._filteredItems = items;
   }
 
   _renderList(listEl) {
     if (!listEl) return;
     if (this._filteredItems.length === 0) {
-      listEl.innerHTML = emptyHTML(
-        this._searchQuery || this._statusFilter !== "all"
-          ? "未找到匹配的资源文件"
-          : "该整合包暂无资源文件",
-      );
+      const statusLabels = {
+        all: "",
+        synced: "已同步",
+        missing: "待推送",
+        disabled: "已禁用",
+        optional: "可拉取",
+      };
+      const hint =
+        this._statusFilter !== "all"
+          ? "未找到 " + (statusLabels[this._statusFilter] || "") + " 的资源文件"
+          : "该整合包暂无资源文件";
+      listEl.innerHTML = emptyHTML(hint);
       return;
     }
     listEl.innerHTML = this._filteredItems.map((it) => itemHTML(it)).join("");
   }
 
   _bindEvents() {
-    const self = this;
-
     // 类型标签切换
     this.querySelectorAll(".sm-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
         this._selectedType = btn.dataset.type;
+        _lastSelectedType = this._selectedType;
+        this._statusFilter = "all";
         this._render();
       });
     });
 
-    // 搜索
-    const searchEl = this.querySelector(".sm-search");
-    if (searchEl) {
-      searchEl.addEventListener("input", () => {
-        this._searchQuery = searchEl.value;
+    // 状态标签切换
+    this.querySelectorAll(".sm-status-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        this._statusFilter = btn.dataset.status;
         this._applyFilter();
         this._renderList(this.querySelector(".sm-list"));
-        // 同步更新摘要（只变列表，不重建整个视图）
-        this._syncSummaryAndButtons();
+        this._syncStatusTabs();
+        this._syncSummary();
       });
-    }
+    });
 
-    // 状态筛选
-    const filterEl = this.querySelector(".sm-status-filter");
-    if (filterEl) {
-      filterEl.addEventListener("change", () => {
-        this._statusFilter = filterEl.value;
-        this._applyFilter();
-        this._renderList(this.querySelector(".sm-list"));
+    // 单行按钮
+    this.querySelectorAll(".sm-item-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const row = btn.closest("[data-path]");
+        if (!row) return;
+        const path = row.dataset.path;
+        const action = btn.dataset.action;
+        if (action === "push") this._pushSingleFile(path);
+        else if (action === "pull") this._pullSingleFile(path);
       });
-    }
-
-    // 推送全部
-    const pushAllBtn = this.querySelector(".sm-push-all-btn");
-    if (pushAllBtn) {
-      pushAllBtn.addEventListener("click", () => this._batchPush());
-    }
-
-    // 拉取全部
-    const pullAllBtn = this.querySelector(".sm-pull-all-btn");
-    if (pullAllBtn) {
-      pullAllBtn.addEventListener("click", () => this._batchPull());
-    }
+    });
   }
 
-  _syncSummaryAndButtons() {
-    // 搜索/筛选后更新摘要中 visible 的数量
+  _syncStatusTabs() {
+    // 重新高亮当前状态标签
+    this.querySelectorAll(".sm-status-tab").forEach((btn) => {
+      const active = btn.dataset.status === this._statusFilter;
+      btn.style.background = active ? "var(--accent)" : "transparent";
+      btn.style.color = active ? "#fff" : "var(--muted)";
+    });
+  }
+
+  _syncSummary() {
     const summaryEl = this.querySelector(".sm-summary");
-    const pushAllBtn = this.querySelector(".sm-push-all-btn");
-    const pullAllBtn = this.querySelector(".sm-pull-all-btn");
     if (!summaryEl) return;
-
-    // 重新计算当前可见的状态统计
-    const counts = { synced: 0, missing: 0, optional: 0 };
-    for (const item of this._filteredItems) counts[item.status]++;
-
-    summaryEl.innerHTML = summaryHTML(counts);
-
-    if (pushAllBtn) {
-      pushAllBtn.style.display = counts.missing > 0 ? "inline-block" : "none";
+    const typeCounts = {};
+    for (const t of this._typeConfig)
+      typeCounts[t.id] = { synced: 0, missing: 0, optional: 0 };
+    for (const item of this._filteredItems) {
+      const c = typeCounts[item.type];
+      if (c) {
+        c[item.status]++;
+      }
     }
-    if (pullAllBtn) {
-      pullAllBtn.style.display = counts.optional > 0 ? "inline-block" : "none";
-    }
+    const cur = this._selectedType
+      ? typeCounts[this._selectedType] || { synced: 0, missing: 0, optional: 0 }
+      : { synced: 0, missing: 0, optional: 0 };
+    summaryEl.innerHTML = summaryHTML(cur);
   }
 
   async _batchPush() {
@@ -384,6 +377,49 @@ export class AppSyncManager extends HTMLElement {
 
     await this._loadData();
     this._render();
+  }
+
+  async _pushSingleFile(path) {
+    const { PushSingleResourceToInstance } =
+      await import("../../../wailsjs/go/main/App.js");
+    try {
+      await PushSingleResourceToInstance(
+        this._selectedType,
+        this._instance,
+        path,
+      );
+      bus.emit("toast:show", { msg: "✅ 已推送", duration: 2000 });
+      await this._loadData();
+      this._render();
+    } catch (e) {
+      bus.emit("toast:show", {
+        msg: "❌ 推送失败: " + String(e),
+        duration: 3000,
+        type: "error",
+      });
+    }
+  }
+
+  async _pullSingleFile(path) {
+    const rtype = this._selectedType;
+    const { PullSingleResourceFromInstance } =
+      await import("../../../wailsjs/go/main/App.js");
+    try {
+      const result = await PullSingleResourceFromInstance(
+        rtype,
+        path,
+        this._instance,
+      );
+      bus.emit("toast:show", { msg: "✅ 已拉取", duration: 2000 });
+      await this._loadData();
+      this._render();
+    } catch (e) {
+      bus.emit("toast:show", {
+        msg: "❌ 拉取失败: " + String(e),
+        duration: 3000,
+        type: "error",
+      });
+    }
   }
 }
 

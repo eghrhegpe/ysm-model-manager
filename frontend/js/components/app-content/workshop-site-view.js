@@ -608,8 +608,9 @@ export function renderSiteView(site, ctx) {
     let visible = 0;
     cards.forEach((card) => {
       const name = (card.dataset.name || "").toLowerCase();
+      const desc = (card.querySelector(".gh-card-desc")?.textContent || "").toLowerCase();
       const cardTag = (card.dataset.tag || "").toLowerCase();
-      const matchName = !kw || name.includes(kw);
+      const matchName = !kw || name.includes(kw) || desc.includes(kw);
       const matchTag =
         !_activeTag ||
         _activeTag === cardTag ||
@@ -617,12 +618,12 @@ export function renderSiteView(site, ctx) {
       card.style.display = matchName && matchTag ? "" : "none";
       if (matchName && matchTag) visible++;
     });
-    const countEl = searchResults.getElementById("ws-cr-count");
+    const countEl = searchResults.querySelector("#ws-cr-count");
     if (countEl)
       countEl.textContent = "(" + visible + "/" + cards.length + ")";
   };
 
-  const searchInput = searchResults.getElementById("ws-cr-search");
+  const searchInput = searchResults.querySelector("#ws-cr-search");
   if (searchInput) {
     searchInput.addEventListener("input", applyFilters);
   }

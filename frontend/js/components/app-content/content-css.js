@@ -1,7 +1,7 @@
 export const contentCSS = `
 :host { display:flex; flex-direction:column; flex:1; overflow:hidden; font-family:var(--font-ui); font-size:var(--fs-base); line-height:1.4; background:var(--bg); }
 /* ===== CSS 变量（标签/标记色） ===== */
-:host { --tag-game:#4a9eff; --tag-game-bg:rgba(74,158,255,.13); --tag-vup:#ff6bb5; --tag-vup-bg:rgba(255,107,181,.13); --tag-oc:#a78bfa; --tag-oc-bg:rgba(167,139,250,.13); --tag-amber:#f9a826; --tag-amber-bg:rgba(249,168,38,.2); --accent-btn-bg:#7c83ff33; --accent-btn-color:#66d9ef; --accent-btn-border:#7c83ff55; }
+:host { --tag-game:#4a9eff; --tag-game-bg:rgba(74,158,255,.13); --tag-vup:#ff6bb5; --tag-vup-bg:rgba(255,107,181,.13); --tag-oc:#a78bfa; --tag-oc-bg:rgba(167,139,250,.13); --tag-amber:#f9a826; --tag-amber-bg:rgba(249,168,38,.2); --accent-btn-bg:#7c83ff33; --accent-btn-color:#66d9ef; --accent-btn-border:#7c83ff55; --sidebar-w:200px; --diag-left-w:120px; --touch-min:44px; }
 @keyframes dl-slide-up {
   from { opacity:0; transform:translateY(8px); max-height:0; padding:0 4px }
   to   { opacity:1; transform:translateY(0); max-height:30px; padding:2px 4px }
@@ -22,14 +22,14 @@ export const contentCSS = `
 .repo-layout-wrap { flex:1; }
 .repo-wrap { display:flex;flex-direction:column;flex:1;overflow:hidden; }
 .repo-tabs { display:flex;gap:2px;padding:4px 12px 0;border-bottom:1px solid var(--bd);flex-shrink:0;overflow-x:auto;flex-wrap:nowrap; }
-.repo-tab { padding:var(--pad-nav) 14px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:2px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-nav);font-family:inherit;transition:all .15s;white-space:nowrap; }
+.repo-tab { padding:var(--pad-nav) 14px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:2px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-nav);font-family:inherit;transition:all .15s;white-space:nowrap;min-height:var(--touch-min); }
 .repo-tab:hover { color:var(--txt);background:var(--hover); }
 .repo-tab.active { color:var(--accent);background:var(--surf);border-color:var(--bd) var(--bd) var(--accent) var(--bd);border-bottom-color:var(--accent);margin-bottom:-1px;font-weight:600; }
 .repo-subtab { padding:var(--pad-tab) 14px;border-radius:5px 5px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:var(--fs-tab);transition:all .12s; }
 .repo-subtab:hover { color:var(--txt);background:var(--hover); }
 .repo-subtab.active { background:var(--surf);color:var(--accent); }
 .repo-tab-body { flex:1;display:flex;flex-direction:column;overflow:hidden; }
-.ins-sidebar { width:200px;flex:none; }
+.ins-sidebar { width:var(--sidebar-w);flex:none; }
 .ins-content { flex:1;display:flex;flex-direction:column;overflow:hidden; }
 .ins-model-list .sec-title { font-size:var(--fs-sm);color:var(--muted);padding:4px 2px 2px;text-transform:uppercase;letter-spacing:.5px;margin-top:4px; }
 .ins-model-list .row { display:flex;align-items:center;gap:6px;padding:2px 6px;border-radius:4px;font-size:var(--fs-md);transition:background .12s; }
@@ -112,7 +112,7 @@ export const contentCSS = `
 .conflict-ver { color:var(--muted); }
 .conflict-ins { font-size:var(--fs-sm); color:var(--txt); }
 .diag-wrapper { flex:1; display:flex; overflow:hidden; }
-.diag-left { width:120px; flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); padding:8px; gap:4px; background:var(--surf); }
+.diag-left { width:var(--diag-left-w); flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); padding:8px; gap:4px; background:var(--surf); }
 .diag-btn { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:6px; border:none; background:transparent; color:var(--muted); font-size:var(--fs-md); cursor:pointer; font-family:inherit; transition:all .12s; width:100%; text-align:left; }
 .diag-btn:hover { background:var(--hover); color:var(--txt); }
 .diag-btn.active { background:#7c83ff22; color:var(--accent); }
@@ -249,7 +249,7 @@ export const contentCSS = `
 .cr-tag-filter-btn.active { border-color:var(--accent);color:var(--accent);background:var(--accent);color:#fff; }
 /* ===== 创作者频道 (cr-) ===== */
 .cr-page { flex:1; display:flex; overflow:hidden; position:relative; }
-.cr-left { width:200px; flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); overflow:hidden; background:var(--surf); }
+.cr-left { width:var(--sidebar-w); flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); overflow:hidden; background:var(--surf); }
 .cr-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .cr-right-inner { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .cr-grid { flex:1; overflow-y:auto; padding:4px 8px; display:flex; flex-direction:column; gap:4px; }
@@ -295,19 +295,19 @@ export const contentCSS = `
 .ws-open-btn, .cr-open-btn { padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 .ws-open-btn:hover, .cr-open-btn:hover { background:var(--hover); }
 /* 工坊仓库页工具按钮 */
-.ws-btn-sm { padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:all .12s;white-space:nowrap; }
-.ws-btn-sm:hover { background:var(--hover); }
+.btn-sm,.ws-btn-sm,.gh-btn-sm { padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:all .12s;white-space:nowrap; }
+.btn-sm:hover,.ws-btn-sm:hover,.gh-btn-sm:hover { background:var(--hover); }
 .ws-btn-muted { color:var(--muted); }
 .ws-btn-muted:hover { color:var(--txt); }
 .ws-btn-accent { color:var(--accent);border-color:#7c83ff55;background:#7c83ff22; }
 .ws-btn-accent:hover { background:#7c83ff44; }
-.ws-dl-selected[disabled], .ws-btn-sm[disabled] { opacity:.4;cursor:default; }
-.ws-dl-selected[disabled]:hover, .ws-btn-sm[disabled]:hover { background:transparent; }
+.ws-dl-selected[disabled], .ws-btn-sm[disabled], .btn-sm[disabled] { opacity:.4;cursor:default; }
+.ws-dl-selected[disabled]:hover, .ws-btn-sm[disabled]:hover, .btn-sm[disabled]:hover { background:transparent; }
 .ws-filter-btn { position:relative; }
 
 /* ===== 创意工坊 GitHub (gh-) ===== */
 .gh-page { flex:1; display:flex; overflow:hidden; position:relative; }
-.gh-left { width:200px; flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); overflow:hidden; background:var(--surf); }
+.gh-left { width:var(--sidebar-w); flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); overflow:hidden; background:var(--surf); }
 .gh-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .gh-right-inner { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .gh-grid { flex:1; overflow-y:auto; padding:4px 8px; display:flex; flex-direction:column; gap:4px; }
@@ -363,16 +363,13 @@ export const contentCSS = `
 .gh-filter-btn { font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit; }
 .gh-filter-btn:hover { background:var(--hover);color:var(--txt); }
 .gh-filter-dropdown { display:none;position:absolute;top:100%;right:0;z-index:10;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;min-width:100px;box-shadow:0 4px 12px rgba(0,0,0,.3); }
-.gh-btn-sm { font-size:var(--fs-xs);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;cursor:pointer;font-family:inherit;transition:all .12s; }
-.gh-btn-sm:hover { background:var(--hover); }
+/* .gh-btn-sm 已合并到 .btn-sm */
 .gh-btn-muted { color:var(--muted); }
 .gh-btn-muted:disabled { opacity:.4;cursor:not-allowed;pointer-events:none; }
 .gh-dl-selected { color:var(--accent);border-color:var(--accent); }
 .gh-dl-selected:hover { background:var(--accent);color:var(--bg); }
 
-
-
-/* 模型名高亮标签（复用 display.js renderDisplayName） */
+/* ===== 模型名高亮标签（复用 display.js renderDisplayName） */
 /* tag-* 颜色已由通用 .tag-* 规则覆盖 */
 
 /* 二级菜单 */
@@ -464,4 +461,11 @@ export const contentCSS = `
 .gh-progress-fill { height:100%; width:0%; border-radius:2px; background:var(--accent); transition:width .2s; box-shadow:0 0 4px var(--accent); animation:breathe-subtle 4s ease-in-out infinite;will-change:filter,box-shadow; }
 .gh-progress-box { padding:24px 12px; text-align:center; }
 .gh-progress-label { font-size:var(--fs-sm); color:var(--muted); margin-bottom:8px; }
+
+/* ===== 响应式 ===== */
+@media (max-width:768px) {
+  .cr-left,.gh-left,.ins-sidebar { width:100%; height:auto; border-right:none; flex-direction:row; flex-wrap:wrap; }
+  .cr-scroll,.gh-grid,.diag-right { padding:4px 6px; }
+  .diag-left { width:100%; border-right:none; flex-direction:row; flex-wrap:wrap; }
+}
 `;

@@ -473,5 +473,175 @@
     "name": "Ykisan",
     "desc": "绝区零YSM模型",
     "type": "bilibili"
+  },
+  {
+    "name": "明日方舟",
+    "desc": "官方模型（含终末地）工装少女、夏日泳装",
+    "type": "mzhouse"
+  },
+  {
+    "name": "碧蓝航线",
+    "desc": "官方模型：小船水手服、大船礼服",
+    "type": "mzhouse"
+  },
+  {
+    "name": "赛马娘",
+    "desc": "官方模型：学生运动服",
+    "type": "mzhouse"
+  },
+  {
+    "name": "碧蓝档案",
+    "desc": "官方模型：少女可爱、学姐优雅",
+    "type": "mzhouse"
+  },
+  {
+    "name": "FGO",
+    "desc": "官方模型",
+    "type": "mzhouse"
+  },
+  {
+    "name": "东方Project",
+    "desc": "官方模型",
+    "type": "mzhouse"
+  },
+  {
+    "name": "苍蓝誓约",
+    "desc": "官方模型：大船礼服、小船水手服",
+    "type": "mzhouse"
+  },
+  {
+    "name": "兽耳科技",
+    "desc": "官方模型：礼服少女",
+    "type": "mzhouse"
+  },
+  {
+    "name": "崩坏3",
+    "desc": "官方模型：露背礼服",
+    "type": "mzhouse"
+  },
+  {
+    "name": "原神",
+    "desc": "官方模型：古风原型＆现代换装",
+    "type": "mzhouse"
+  },
+  {
+    "name": "崩坏：星穹铁道",
+    "desc": "官方模型：古风礼服＆现代制服",
+    "type": "mzhouse"
+  },
+  {
+    "name": "少女前线",
+    "desc": "官方模型：「经典战术制服」与「都市时尚」的融合",
+    "type": "mzhouse"
+  },
+  {
+    "name": "Nekopara",
+    "desc": "官方模型：巧克力与香子兰",
+    "type": "mzhouse"
+  },
+  {
+    "name": "绝区零",
+    "desc": "官方模型：城市时尚×服务员",
+    "type": "mzhouse"
+  },
+  {
+    "name": "鸣潮",
+    "desc": "官方模型：早期黑色修女服×旗袍，晚期白色休闲裙",
+    "type": "mzhouse"
+  },
+  {
+    "name": "公主连结",
+    "desc": "官方模型：Q版动画生动，建模美术精良",
+    "type": "mzhouse"
+  },
+  {
+    "name": "异环",
+    "desc": "官方模型：城市休闲×夏装",
+    "type": "mzhouse"
+  },
+  {
+    "name": "卡拉彼丘",
+    "desc": "官方模型：第三人称射击，露背礼服居多",
+    "type": "mzhouse"
+  },
+  {
+    "name": "炼金工房",
+    "desc": "官方模型：探索游戏，休闲衣×探险外套",
+    "type": "mzhouse"
+  },
+  {
+    "name": "华硕主板",
+    "desc": "官方模型：运动时尚，短上衣加运动裤",
+    "type": "mzhouse"
+  },
+  {
+    "name": "幻书启世录",
+    "desc": "官方模型：职业×礼服，形象好",
+    "type": "mzhouse"
+  },
+  {
+    "name": "无限大",
+    "desc": "官方模型：城市探险×服务员制服",
+    "type": "mzhouse"
+  },
+  {
+    "name": "机动战队",
+    "desc": "官方模型：外套休闲，内搭探险服，设计时尚",
+    "type": "mzhouse"
+  },
+  {
+    "name": "战双帕弥什",
+    "desc": "官方模型：动作游戏，战斗装帅气，休闲带优雅",
+    "type": "mzhouse"
+  },
+  {
+    "name": "尘白禁区",
+    "desc": "官方模型：建模精美，融入泳装设计",
+    "type": "mzhouse"
+  },
+  {
+    "name": "幻塔",
+    "desc": "官方模型：学姐偏多，质量高",
+    "type": "mzhouse"
+  },
+  {
+    "name": "深空之眼",
+    "desc": "官方模型：飘动服饰为主，科技公司夏活风格",
+    "type": "mzhouse"
+  },
+  {
+    "name": "交错战线",
+    "desc": "官方模型：黑色胶衣作战服",
+    "type": "mzhouse"
+  },
+  {
+    "name": "锚点降临",
+    "desc": "官方模型：露背超短裙",
+    "type": "mzhouse"
+  },
+  {
+    "name": "二重螺旋",
+    "desc": "官方模型：古风服饰，奇幻风配饰",
+    "type": "mzhouse"
+  },
+  {
+    "name": "记忆法则",
+    "desc": "官方模型：泳装设计",
+    "type": "mzhouse"
+  },
+  {
+    "name": "千年之旅",
+    "desc": "官方模型：泳装设计",
+    "type": "mzhouse"
+  },
+  {
+    "name": "依露希尔",
+    "desc": "官方模型：泳装设计",
+    "type": "mzhouse"
+  },
+  {
+    "name": "少女前线2：追放",
+    "desc": "官方模型：近未来战术机能×高定时尚礼服",
+    "type": "mzhouse"
   }
 ]

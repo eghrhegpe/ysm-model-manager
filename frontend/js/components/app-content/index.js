@@ -68,6 +68,11 @@ class AppContent extends HTMLElement {
     if (this._unsub) this._unsub();
     this._globalUnsubs.forEach((fn) => fn());
     this._globalUnsubs = [];
+    // 清理缓存
+    if (this._workshopCache) this._workshopCache.clear();
+    this._workshopCache = null;
+    if (this._githubCache) this._githubCache.clear();
+    this._githubCache = null;
   }
 
   _render() {
@@ -291,7 +296,8 @@ class AppContent extends HTMLElement {
     let repoAuthors = [];
     let wsEditMode = false; // 创意工坊创作者编辑模式（放在外面以持久化）
     const wsEditModeRef = { v: false }; // 可共享引用，供 renderSiteView 读写
-    let repoModelCache = {}; // { repoName: { models, source, localMap } } 模型列表缓存
+    if (!this._workshopCache) this._workshopCache = new Map();
+    const repoModelCache = this._workshopCache;
 
     // 点击模式切换：外链 / 内嵌（委托到 searchResults，按钮在 renderSiteView 中动态渲染）
     let embedMode = false;
@@ -546,7 +552,8 @@ class AppContent extends HTMLElement {
     const grid = root.getElementById("gh-grid");
     const resultsBody = root.getElementById("gh-results-body");
     const sourceInfo = root.getElementById("gh-source-info");
-    let repoModelCache = {};
+    if (!this._githubCache) this._githubCache = new Map();
+    const repoModelCache = this._githubCache;
 
     const loadRepos = async () => {
       grid.innerHTML =
@@ -600,8 +607,8 @@ class AppContent extends HTMLElement {
       resultsBody.innerHTML =
         '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载模型列表中...</div>';
       // 使用缓存
-      if (repoModelCache[repo]) {
-        const { models, source, localMap } = repoModelCache[repo];
+      if (repoModelCache.has(repo)) {
+        const { models, source, localMap } = repoModelCache.get(repo);
         renderModels(repo, models, source, localMap);
         return;
       }
@@ -631,11 +638,11 @@ class AppContent extends HTMLElement {
             "</div>";
         });
         if (result && result.models) {
-          repoModelCache[repo] = {
+          repoModelCache.set(repo, {
             models: result.models,
             source: result.source,
             localMap,
-          };
+          });
           renderModels(repo, result.models, result.source, localMap);
         } else {
           resultsBody.innerHTML =

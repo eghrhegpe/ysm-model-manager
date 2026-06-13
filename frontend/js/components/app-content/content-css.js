@@ -1,5 +1,5 @@
 export const contentCSS = `
-:host { display:flex; flex-direction:column; flex:1; overflow:hidden; font-family:var(--font-ui); font-size:var(--fs-base); background:var(--bg); }
+:host { display:flex; flex-direction:column; flex:1; overflow:hidden; font-family:var(--font-ui); font-size:var(--fs-base); line-height:1.4; background:var(--bg); }
 /* ===== CSS 变量（标签/标记色） ===== */
 :host { --tag-game:#4a9eff; --tag-game-bg:rgba(74,158,255,.13); --tag-vup:#ff6bb5; --tag-vup-bg:rgba(255,107,181,.13); --tag-oc:#a78bfa; --tag-oc-bg:rgba(167,139,250,.13); --tag-amber:#f9a826; --tag-amber-bg:rgba(249,168,38,.2); --accent-btn-bg:#7c83ff33; --accent-btn-color:#66d9ef; --accent-btn-border:#7c83ff55; }
 @keyframes dl-slide-up {
@@ -205,13 +205,11 @@ export const contentCSS = `
   padding:14px 16px;
   text-align:left;
   min-width:200px;
-  box-shadow:0 2px 8px rgba(0,0,0,.06);
   cursor:default;
-  transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1);
 }
 .rec-card:hover {
   transform:scale(1.02) translateY(-2px);
-  box-shadow:0 4px 16px rgba(0,0,0,.12);
 }
 .rec-card .name { font-size:var(--fs-base); font-weight:600; color:var(--txt); margin-bottom:2px; }
 .rec-card .hint { font-size:var(--fs-xs); color:var(--muted); margin-top:4px; }
@@ -396,7 +394,7 @@ export const contentCSS = `
 
 /* ===== 模型列表行 ===== */
 .gh-empty { padding:12px; text-align:center; color:var(--muted); font-size:var(--fs-sm); }
-.gh-row { display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px; border:1px solid var(--bd); font-size:var(--fs-base); margin-bottom:6px; transition:background .15s; box-shadow:0 1px 3px rgba(0,0,0,.06); cursor:default; }
+.gh-row { display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px; border:1px solid var(--bd); font-size:var(--fs-base); margin-bottom:6px; transition:background .15s; cursor:default; }
 .gh-row-exists { opacity:.6; background:rgba(166,227,161,.06); }
 .gh-row-missing { background:rgba(243,139,168,.04); }
 .gh-cb { cursor:pointer; flex-shrink:0; }

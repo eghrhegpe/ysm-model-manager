@@ -111,6 +111,42 @@
         "label": "VRChat 角色",
         "q": "VRChat"
       }
+    ]  },
+  {
+    "id": "nicovideo",
+    "icon": "🎬",
+    "label": "NicoNico",
+    "url": "https://3d.nicovideo.jp/",
+    "desc": "日系 5000+ MMD 模型",
+    "group": "search",
+    "searchUrl": "https://3d.nicovideo.jp/works/search?keyword={{q}}",
+    "presetSearches": [
+      {
+        "label": "热门 MMD 模型",
+        "q": "MMD"
+      },
+      {
+        "label": "VRChat 模型",
+        "q": "VRChat"
+      }
     ]
-  }
+  },
+  {
+    "id": "deviantart",
+    "icon": "🎨",
+    "label": "DeviantArt",
+    "url": "https://www.deviantart.com/",
+    "desc": "海外 FBX/XPS 模型",
+    "group": "search",
+    "searchUrl": "https://www.deviantart.com/search?q={{q}}",
+    "presetSearches": [
+      {
+        "label": "MMD 模型",
+        "q": "MMD model"
+      },
+      {
+        "label": "VRChat 模型",
+        "q": "VRChat avatar"
+      }
+    ]  }
 ]

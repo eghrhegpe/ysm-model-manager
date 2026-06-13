@@ -328,6 +328,23 @@ export const contentCSS = `
 @keyframes ring-spin { to{transform:rotate(360deg)} }
 @keyframes card-in { from{opacity:0;transform:translateY(8px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
 .health-ring { animation:breathe-subtle 4s ease-in-out infinite;will-change:filter; }
+
+/* ===== 创作者详情浮层 (cr-detail) ===== */
+.cr-detail-overlay { position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease; }
+.cr-detail-box { background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:20px;max-width:420px;width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px;animation:detail-in .2s ease; }
+@keyframes detail-in { from{opacity:0;transform:scale(.92) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.cr-detail-header { display:flex;align-items:center;gap:10px; }
+.cr-detail-name { font-size:16px;font-weight:700;color:var(--txt); }
+.cr-detail-desc { font-size:var(--fs-sm);color:var(--muted);line-height:1.5; }
+.cr-detail-row { display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);color:var(--muted); }
+.cr-detail-row .cr-tag { font-size:10px; }
+.cr-detail-actions { display:flex;gap:6px;flex-wrap:wrap;margin-top:4px; }
+.cr-detail-actions button { padding:5px 14px;border-radius:6px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-sm);font-family:inherit;transition:all .12s; }
+.cr-detail-actions button:hover { border-color:var(--accent);background:var(--hover); }
+.cr-detail-actions .primary { background:var(--accent);color:#fff;border-color:var(--accent); }
+.cr-detail-actions .primary:hover { opacity:.85; }
+.cr-model-count { font-size:var(--fs-xs);color:var(--muted);display:inline-flex;align-items:center;gap:2px; }
+.cr-platform-badge { font-size:8px;padding:1px 4px;border-radius:2px;line-height:12px;display:inline-flex;align-items:center;gap:2px;background:var(--surf);color:var(--muted);border:1px solid var(--bd); }
 .gh-card:hover .cr-avatar { transform:rotate(-8deg) scale(1.05); }
 .gh-card-icon { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
 .gh-card-body { flex:1; min-width:0; }

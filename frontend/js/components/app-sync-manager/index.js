@@ -76,10 +76,15 @@ export class AppSyncManager extends HTMLElement {
     const unsub = bus.on("stats:refresh", () => {
       console.log("[sync-manager] stats:refresh 收到");
       this._loadData().then(() => {
-        console.log("[sync-manager] _loadData 完成, items:", this._allItems ? this._allItems.length : 0);
+        console.log(
+          "[sync-manager] _loadData 完成, items:",
+          this._allItems ? this._allItems.length : 0,
+        );
         if (this._allItems && this._allItems.length) {
           const counts = {};
-          this._allItems.forEach(i => { counts[i.status] = (counts[i.status] || 0) + 1; });
+          this._allItems.forEach((i) => {
+            counts[i.status] = (counts[i.status] || 0) + 1;
+          });
           console.log("[sync-manager] 重渲染, 计数:", counts);
           this._render();
         }

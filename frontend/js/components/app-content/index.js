@@ -53,7 +53,9 @@ class AppContent extends HTMLElement {
           repoInput.value = name;
           repoInput.dispatchEvent(new Event("input", { bubbles: true }));
           // 切换到仓库页
-          const repoBtn = this._root?.querySelector(`.repo-tab[data-tab="repository"]`);
+          const repoBtn = this._root?.querySelector(
+            `.repo-tab[data-tab="repository"]`,
+          );
           if (repoBtn) repoBtn.click();
         }
       }),
@@ -65,6 +67,7 @@ class AppContent extends HTMLElement {
   disconnectedCallback() {
     if (this._unsub) this._unsub();
     this._globalUnsubs.forEach((fn) => fn());
+    this._globalUnsubs = [];
   }
 
   _render() {
@@ -295,7 +298,10 @@ class AppContent extends HTMLElement {
     const toggleEmbedMode = () => {
       embedMode = !embedMode;
       const btn = searchResults.querySelector("#cr-mode-toggle");
-      if (btn) btn.querySelectorAll(".cr-mode-opt").forEach((el) => el.classList.toggle("active"));
+      if (btn)
+        btn
+          .querySelectorAll(".cr-mode-opt")
+          .forEach((el) => el.classList.toggle("active"));
     };
 
     // B站/爱发电 tab 点击 → 在右侧显示对应站点的创作者（不打开网站）
@@ -335,7 +341,7 @@ class AppContent extends HTMLElement {
         if (sites[0]) {
           // 恢复上次选中的 tab
           const last = localStorage.getItem("ysm-ws-last-tab") || sites[0].id;
-          const target = sites.find(s => s.id === last) || sites[0];
+          const target = sites.find((s) => s.id === last) || sites[0];
           showCreatorsBySite(target.id);
         }
       }
@@ -454,7 +460,9 @@ class AppContent extends HTMLElement {
       if (toggleBtn) {
         toggleBtn.onclick = () => {
           embedMode = !embedMode;
-          toggleBtn.querySelectorAll(".cr-mode-opt").forEach((el) => el.classList.toggle("active"));
+          toggleBtn
+            .querySelectorAll(".cr-mode-opt")
+            .forEach((el) => el.classList.toggle("active"));
         };
       }
     };
@@ -531,7 +539,6 @@ class AppContent extends HTMLElement {
       const listContainer = searchResults.querySelector("#ws-repo-list");
       if (listContainer) listContainer.appendChild(renderList());
     }; // end showRepoModels
-
   }
 
   _initGithub() {

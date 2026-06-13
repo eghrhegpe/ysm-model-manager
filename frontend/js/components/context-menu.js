@@ -33,8 +33,8 @@ class ContextMenu extends HTMLElement {
           font-size: var(--fs-base);
         }
         .menu {
-          background: #2a2a42;
-          border: 1px solid rgba(255,255,255,.08);
+          background: var(--card);
+          border: 1px solid var(--bd);
           border-radius: 8px;
           padding: 4px;
           min-width: 160px;
@@ -47,17 +47,17 @@ class ContextMenu extends HTMLElement {
           gap: 8px;
           padding: 6px 10px;
           border-radius: 5px;
-          font-size: 11px;
-          color: #cdd6f4;
+          font-size: var(--fs-btn-secondary);
+          color: var(--txt);
           cursor: pointer;
           transition: background .1s;
         }
-        .item:hover { background: #7c83ff33; color: #7c83ff; }
-        .item.danger:hover { background: #f38ba833; color: #f38ba8; }
-        .item .icon { font-size: 12px; width: 16px; text-align: center; }
+        .item:hover { background: #7c83ff33; color: var(--accent); }
+        .item.danger:hover { background: var(--paid); color: #fff; }
+        .item .icon { font-size: var(--fs-base); width: 16px; text-align: center; }
         .divider {
           border: none;
-          border-top: 1px solid rgba(255,255,255,.06);
+          border-top: 1px solid var(--bd);
           margin: 3px 8px;
         }
         @keyframes fadeIn { from { opacity: .5; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }

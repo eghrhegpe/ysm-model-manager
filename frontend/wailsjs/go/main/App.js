@@ -338,6 +338,10 @@ export function PushResourceToInstance(arg1, arg2) {
   return window['go']['main']['App']['PushResourceToInstance'](arg1, arg2);
 }
 
+export function PushSingleResourceToInstance(arg1, arg2, arg3) {
+  return window['go']['main']['App']['PushSingleResourceToInstance'](arg1, arg2, arg3);
+}
+
 export function QueueStatus() {
   return window['go']['main']['App']['QueueStatus']();
 }
@@ -348,6 +352,14 @@ export function ReadFileBytes(arg1) {
 
 export function ReadPackMeta(arg1) {
   return window['go']['main']['App']['ReadPackMeta'](arg1);
+}
+
+export function ReadShaderpackLang(arg1) {
+  return window['go']['main']['App']['ReadShaderpackLang'](arg1);
+}
+
+export function RelinkAllInstanceResources(arg1) {
+  return window['go']['main']['App']['RelinkAllInstanceResources'](arg1);
 }
 
 export function RelinkCustomDir(arg1, arg2) {

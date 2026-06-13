@@ -340,7 +340,7 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 		if strings.HasSuffix(strings.ToLower(p), ".ban") {
 			originalExt = strings.ToLower(filepath.Ext(p[:len(p)-4]))
 		}
-		if originalExt != ".ysm" && originalExt != ".zip" && originalExt != ".7z" && originalExt != ".json" && originalExt != ".pmx" && originalExt != ".pmd" && originalExt != ".vrca" && originalExt != ".vrm" {
+		if originalExt != ".ysm" && originalExt != ".zip" && originalExt != ".7z" && originalExt != ".json" && originalExt != ".pmx" && originalExt != ".pmd" && originalExt != ".vrca" && originalExt != ".vrm" && originalExt != ".nbt" && originalExt != ".schematic" {
 			return nil
 		}
 		// .json 只允许 ysm.json（动作/动画文件不应单独扫描推送）
@@ -447,5 +447,7 @@ func (a *App) CheckFileExists(path string) bool {
 }
 
 func (a *App) OpenFolder(dir string) error {
+	// 统一路径分隔符（Windows explorer 不接受混合斜杠）
+	dir = filepath.Clean(dir)
 	return exec.Command("explorer", dir).Start()
 }

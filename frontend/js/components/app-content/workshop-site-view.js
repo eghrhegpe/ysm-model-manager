@@ -93,7 +93,7 @@ export function renderSiteView(site, ctx) {
         '<div style="padding:0 0 8px;display:flex;gap:6px">' +
         '<input type="text" id="ws-cr-search" placeholder="🔍 搜创作者名..." ' +
         'style="flex:1;padding:5px 10px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-sm);font-family:inherit;outline:none">' +
-        "</div>"
+        "</div>",
     );
     parts.push(
       '<div style="display:flex;flex-wrap:wrap;gap:6px;width:100%">' +
@@ -338,34 +338,52 @@ export function renderSiteView(site, ctx) {
   });
 
   // 🌐 拉取社区索引
-  searchResults.querySelector(".cr-fetch-btn")?.addEventListener("click", async () => {
-    const btn = searchResults.querySelector(".cr-fetch-btn");
-    btn.textContent = "⏳";
-    btn.disabled = true;
-    try {
-      const { fetchCommunityCreators, mergeCommunityCreators, DEFAULT_COMMUNITY_URL } =
-        await import("./workshop-core.js");
-      const community = await fetchCommunityCreators(DEFAULT_COMMUNITY_URL);
-      if (!community.length) {
-        bus.emit("toast:show", { msg: "🌐 社区索引为空或加载失败", duration: 3000, type: "warn" });
-        return;
+  searchResults
+    .querySelector(".cr-fetch-btn")
+    ?.addEventListener("click", async () => {
+      const btn = searchResults.querySelector(".cr-fetch-btn");
+      btn.textContent = "⏳";
+      btn.disabled = true;
+      try {
+        const {
+          fetchCommunityCreators,
+          mergeCommunityCreators,
+          DEFAULT_COMMUNITY_URL,
+        } = await import("./workshop-core.js");
+        const community = await fetchCommunityCreators(DEFAULT_COMMUNITY_URL);
+        if (!community.length) {
+          bus.emit("toast:show", {
+            msg: "🌐 社区索引为空或加载失败",
+            duration: 3000,
+            type: "warn",
+          });
+          return;
+        }
+        const { added, updated } = mergeCommunityCreators(
+          allCreators,
+          community,
+        );
+        // 保存到本地
+        const { SaveWorkshopCreators } =
+          await import("../../../wailsjs/go/main/App.js");
+        await SaveWorkshopCreators(allCreators);
+        bus.emit("toast:show", {
+          msg: `🌐 社区索引合并完成：新增 ${added} 位，补充 ${updated} 位`,
+          duration: 4000,
+          type: "success",
+        });
+        refreshView();
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: "🌐 拉取失败: " + String(e),
+          duration: 3000,
+          type: "error",
+        });
+      } finally {
+        btn.textContent = "🌐 社区";
+        btn.disabled = false;
       }
-      const { added, updated } = mergeCommunityCreators(allCreators, community);
-      // 保存到本地
-      const { SaveWorkshopCreators } = await import("../../../wailsjs/go/main/App.js");
-      await SaveWorkshopCreators(allCreators);
-      bus.emit("toast:show", {
-        msg: `🌐 社区索引合并完成：新增 ${added} 位，补充 ${updated} 位`,
-        duration: 4000, type: "success",
-      });
-      refreshView();
-    } catch (e) {
-      bus.emit("toast:show", { msg: "🌐 拉取失败: " + String(e), duration: 3000, type: "error" });
-    } finally {
-      btn.textContent = "🌐 社区";
-      btn.disabled = false;
-    }
-  });
+    });
 
   searchResults
     .querySelector(".cr-cancel-btn")
@@ -553,7 +571,8 @@ export function renderSiteView(site, ctx) {
         if (match) visible++;
       });
       const countEl = searchResults.getElementById("ws-cr-count");
-      if (countEl) countEl.textContent = "(" + visible + "/" + cards.length + ")";
+      if (countEl)
+        countEl.textContent = "(" + visible + "/" + cards.length + ")";
     });
   }
 }

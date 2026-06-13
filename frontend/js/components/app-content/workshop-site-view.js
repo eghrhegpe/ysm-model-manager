@@ -66,6 +66,10 @@ export function renderSiteView(site, ctx) {
         '<span class="cr-section-sub">(' +
         site.presetSearches.length +
         ")</span>" +
+        '<button id="cr-mode-toggle" class="cr-mode-switch" style="margin-left:auto;font-size:var(--fs-xs);padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit">' +
+        '<span class="cr-mode-opt cr-mode-ext active">↗ 外链</span>' +
+        '<span class="cr-mode-opt cr-mode-emb">🔍 内嵌</span>' +
+        "</button>" +
         "</div>" +
         '<div class="cr-preset-area">' +
         site.presetSearches

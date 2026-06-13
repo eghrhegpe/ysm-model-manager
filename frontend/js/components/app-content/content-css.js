@@ -19,7 +19,7 @@ export const contentCSS = `
 .repo-layout { flex:1; display:flex; overflow:hidden; height:100%; }
 .repo-layout-wrap { flex:1; }
 .repo-wrap { display:flex;flex-direction:column;flex:1;overflow:hidden; }
-.repo-tabs { display:flex;gap:2px;padding:4px 12px 0;border-bottom:1px solid var(--bd);flex-shrink:0; }
+.repo-tabs { display:flex;gap:2px;padding:4px 12px 0;border-bottom:1px solid var(--bd);flex-shrink:0;overflow-x:auto;flex-wrap:nowrap; }
 .repo-tab { padding:var(--pad-nav) 18px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-nav);font-family:inherit;transition:all .12s; }
 .repo-tab:hover { color:var(--txt);background:var(--hover); }
 .repo-tab.active { color:var(--accent);background:var(--surf);border-color:var(--bd);margin-bottom:-1px; }

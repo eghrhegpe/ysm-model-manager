@@ -88,6 +88,10 @@ export function renderSiteView(site, ctx) {
 
   // 创作者列表
   if (!wsEditModeRef.v && creators.length) {
+    // 收集所有标签
+    const tagSet = new Set();
+    creators.forEach((cr) => { if (cr.tag) tagSet.add(cr.tag); });
+    const tags = [...tagSet];
     parts.push(
       '<div class="cr-section">' +
         '<span class="cr-section-title-lg">🎨 活跃创作者</span>' +
@@ -98,10 +102,28 @@ export function renderSiteView(site, ctx) {
         'style="flex:1;max-width:180px;padding:3px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit;outline:none;margin:0 6px">' +
         '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto">✏️ 编辑</button>' +
         '<button class="cr-fetch-btn cr-action-btn" style="margin-left:4px" title="从 GitHub 社区索引拉取最新创作者">🌐 社区</button>' +
-        "</div>",
+        "</div>" +
+        (tags.length
+          ? '<div class="cr-tag-filter-row">' +
+            '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
+            '<button class="cr-tag-filter-btn" data-tag="game">🎮 游戏模型</button>' +
+            tags
+              .map(
+                (t) =>
+                  '<button class="cr-tag-filter-btn" data-tag="' +
+                  esc(t) +
+                  '">' +
+                  (t === "vtuber" ? "🎤" : "🏷️") +
+                  " " +
+                  esc(t) +
+                  "</button>",
+              )
+              .join("") +
+            "</div>"
+          : ""),
     );
     parts.push(
-      '<div style="display:flex;flex-wrap:wrap;gap:6px;width:100%">' +
+      '<div class="cr-creator-grid" style="display:flex;flex-wrap:wrap;gap:6px;width:100%">' +
         creators
           .map((cr, _, arr) => {
             const isGitHub = cr.type && cr.type.includes("github");
@@ -123,6 +145,8 @@ export function renderSiteView(site, ctx) {
               (idx * 0.03) +
               's" data-name="' +
               esc(cr.name) +
+              '" data-tag="' +
+              esc(cr.tag || "") +
               '" title="搜索: ' +
               esc(cr.name) +
               '">' +
@@ -150,6 +174,15 @@ export function renderSiteView(site, ctx) {
               '<div class="gh-card-desc">' +
               esc(cr.desc) +
               "</div>" +
+              (cr.tag
+                ? '<span class="cr-tag cr-tag-' +
+                  esc(cr.tag) +
+                  '">' +
+                  (cr.tag === "vtuber" ? "🎤" : "🏷️") +
+                  " " +
+                  esc(cr.tag) +
+                  "</span>"
+                : "") +
               "</div>" +
               (hasRepo
                 ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' +
@@ -220,6 +253,11 @@ export function renderSiteView(site, ctx) {
           '" data-fld="type" value="' +
           esc(cr.type) +
           '" class="cr-input-type" placeholder="bilibili">' +
+          '<input data-idx="' +
+          idx +
+          '" data-fld="tag" value="' +
+          esc(cr.tag || "") +
+          '" class="cr-input-tag" placeholder="标签: game/vtuber/..." style="width:90px">' +
           '<button data-idx="' +
           idx +
           '" class="cr-del">🗑️</button>' +
@@ -564,22 +602,41 @@ export function renderSiteView(site, ctx) {
       refreshView();
     });
 
-  // 🔍 创作者搜索过滤
+  // 🔍 创作者搜索 + 标签过滤
+  let _activeTag = "";
+  const applyFilters = () => {
+    const kw = (searchInput?.value || "").trim().toLowerCase();
+    const cards = searchResults.querySelectorAll(".gh-card[data-name]");
+    let visible = 0;
+    cards.forEach((card) => {
+      const name = (card.dataset.name || "").toLowerCase();
+      const cardTag = (card.dataset.tag || "").toLowerCase();
+      const matchName = !kw || name.includes(kw);
+      const matchTag =
+        !_activeTag ||
+        _activeTag === cardTag ||
+        (_activeTag === "game" && !cardTag);
+      card.style.display = matchName && matchTag ? "" : "none";
+      if (matchName && matchTag) visible++;
+    });
+    const countEl = searchResults.getElementById("ws-cr-count");
+    if (countEl)
+      countEl.textContent = "(" + visible + "/" + cards.length + ")";
+  };
+
   const searchInput = searchResults.getElementById("ws-cr-search");
   if (searchInput) {
-    searchInput.addEventListener("input", () => {
-      const kw = searchInput.value.trim().toLowerCase();
-      const cards = searchResults.querySelectorAll(".gh-card[data-name]");
-      let visible = 0;
-      cards.forEach((card) => {
-        const name = (card.dataset.name || "").toLowerCase();
-        const match = !kw || name.includes(kw);
-        card.style.display = match ? "" : "none";
-        if (match) visible++;
-      });
-      const countEl = searchResults.getElementById("ws-cr-count");
-      if (countEl)
-        countEl.textContent = "(" + visible + "/" + cards.length + ")";
-    });
+    searchInput.addEventListener("input", applyFilters);
   }
+
+  // 标签筛选按钮
+  searchResults.querySelectorAll(".cr-tag-filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      _activeTag = btn.dataset.tag || "";
+      searchResults
+        .querySelectorAll(".cr-tag-filter-btn")
+        .forEach((b) => b.classList.toggle("active", b === btn));
+      applyFilters();
+    });
+  });
 }

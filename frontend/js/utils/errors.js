@@ -18,7 +18,10 @@ export function friendlyError(err, fallback = "操作失败") {
   const patterns = [
     [/access is denied|permission denied|eacces/i, "权限不足，无法访问文件"],
     [/no such file|not found|cannot find|does not exist/i, "文件或目录不存在"],
-    [/sharing violation|used by another process|is locked|file exists/i, "文件被其他程序占用，请关闭相关程序后重试"],
+    [
+      /sharing violation|used by another process|is locked|file exists/i,
+      "文件被其他程序占用，请关闭相关程序后重试",
+    ],
     [/(?:is )?empty|no files/i, "目录为空，没有可操作的文件"],
     [/timeout|timed out/i, "连接超时，请检查网络"],
     [/refused|connection refused/i, "连接被拒绝，请检查网络或防火墙"],

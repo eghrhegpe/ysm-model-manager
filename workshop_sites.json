@@ -55,5 +55,43 @@
         "q": ""
       }
     ]
+  },
+  {
+    "id": "mzhouse",
+    "icon": "🏠",
+    "label": "模之屋",
+    "url": "https://www.aplaybox.com/",
+    "desc": "MMD/VRC 模型分享平台",
+    "group": "search",
+    "searchUrl": "https://www.aplaybox.com/search?value={{q}}",
+    "presetSearches": [
+      {
+        "label": "热门 MMD 模型",
+        "q": "MMD"
+      },
+      {
+        "label": "VRChat 模型",
+        "q": "VRChat"
+      }
+    ]
+  },
+  {
+    "id": "bowlroll",
+    "icon": "📦",
+    "label": "Bowlroll",
+    "url": "https://bowlroll.net/",
+    "desc": "日系老牌 MMD 模型仓库",
+    "group": "search",
+    "searchUrl": "https://bowlroll.net/file/keyword/{{q}}",
+    "presetSearches": [
+      {
+        "label": "热门日系模型",
+        "q": "MMD"
+      },
+      {
+        "label": "VRChat 模型",
+        "q": "VRChat"
+      }
+    ]
   }
 ]

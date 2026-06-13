@@ -426,7 +426,7 @@ export class AppSyncManager extends HTMLElement {
       this._render();
     } catch (e) {
       bus.emit("toast:show", {
-        msg: "❌ 推送失败: " + String(e),
+        msg: "❌ " + friendlyError(e),
         duration: 3000,
         type: "error",
       });
@@ -448,7 +448,7 @@ export class AppSyncManager extends HTMLElement {
       this._render();
     } catch (e) {
       bus.emit("toast:show", {
-        msg: "❌ 拉取失败: " + String(e),
+        msg: "❌ " + friendlyError(e),
         duration: 3000,
         type: "error",
       });

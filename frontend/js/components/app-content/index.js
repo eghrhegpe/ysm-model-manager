@@ -383,7 +383,7 @@ class AppContent extends HTMLElement {
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ 导出失败: " + String(e),
+            msg: "❌ " + friendlyError(e, "导出失败"),
             duration: 4000,
             type: "error",
           });
@@ -404,7 +404,7 @@ class AppContent extends HTMLElement {
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ 导入失败: " + String(e),
+            msg: "❌ " + friendlyError(e, "导入失败"),
             duration: 4000,
             type: "error",
           });

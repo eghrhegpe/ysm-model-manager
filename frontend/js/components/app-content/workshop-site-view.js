@@ -1,4 +1,5 @@
 // ===== 创意工坊站点视图（为 _initWorkshop 减负） =====
+import { friendlyError } from "../../utils/errors.js";
 import { bus } from "../../bus.js";
 import { showProgress, tryFetchModels } from "../../features/workshop/data.js";
 
@@ -375,7 +376,7 @@ export function renderSiteView(site, ctx) {
         refreshView();
       } catch (e) {
         bus.emit("toast:show", {
-          msg: "🌐 拉取失败: " + String(e),
+          msg: "🌐 " + friendlyError(e, "拉取失败"),
           duration: 3000,
           type: "error",
         });
@@ -428,7 +429,7 @@ export function renderSiteView(site, ctx) {
         refreshView();
       } catch (e) {
         bus.emit("toast:show", {
-          msg: "❌ 保存失败: " + String(e),
+          msg: "❌ " + friendlyError(e, "保存失败"),
           duration: 4000,
           type: "error",
         });
@@ -451,7 +452,7 @@ export function renderSiteView(site, ctx) {
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: "❌ 导出失败: " + String(e),
+          msg: "❌ " + friendlyError(e, "导出失败"),
           duration: 4000,
           type: "error",
         });
@@ -480,7 +481,7 @@ export function renderSiteView(site, ctx) {
         refreshView();
       } catch (e) {
         bus.emit("toast:show", {
-          msg: "❌ 导入失败: " + String(e),
+          msg: "❌ " + friendlyError(e, "导入失败"),
           duration: 4000,
           type: "error",
         });

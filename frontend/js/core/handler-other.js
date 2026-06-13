@@ -87,7 +87,7 @@ export function registerInstanceOps(unsubs) {
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 导出失败: ${String(e)}`,
+          msg: `❌ ${friendlyError(e)}`,
           duration: 5000,
           type: "error",
         });
@@ -158,7 +158,7 @@ export function registerInstanceOps(unsubs) {
         }
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 操作失败: ${String(e)}`,
+          msg: `❌ ${friendlyError(e)}`,
           duration: 5000,
           type: "error",
         });

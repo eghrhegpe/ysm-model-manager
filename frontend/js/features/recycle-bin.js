@@ -33,7 +33,7 @@ export function initRecycleBin(app) {
       bus.emit("tree:reload");
     } catch (e) {
       bus.emit("toast:show", {
-        msg: `❌ 清空失败: ${String(e)}`,
+        msg: `❌ ${friendlyError(e)}`,
         duration: 5000,
         type: "error",
       });
@@ -126,7 +126,7 @@ export function initRecycleBin(app) {
             bus.emit("tree:reload");
           } catch (e) {
             bus.emit("toast:show", {
-              msg: `❌ 恢复失败: ${String(e)}`,
+              msg: `❌ ${friendlyError(e)}`,
               duration: 3000,
               type: "error",
             });
@@ -155,7 +155,7 @@ export function initRecycleBin(app) {
             });
           } catch (e) {
             bus.emit("toast:show", {
-              msg: `❌ 删除失败: ${String(e)}`,
+              msg: `❌ ${friendlyError(e)}`,
               duration: 3000,
               type: "error",
             });
@@ -176,7 +176,7 @@ export function initRecycleBin(app) {
         });
       });
     } catch (e) {
-      list.innerHTML = `<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">❌ 读取回收站失败: ${esc(String(e))}</div>`;
+      list.innerHTML = `<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">❌ ${esc(friendlyError(e, "读取回收站失败"))}</div>`;
       if (count) count.textContent = "加载失败";
     }
   }

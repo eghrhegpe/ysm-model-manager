@@ -1,5 +1,6 @@
 // ===== 工具栏事件 + 筛选逻辑 =====
 // 从 events.js 拆分：工具栏按钮绑定、文件夹批处理、高级筛选
+import { friendlyError } from "../../utils/errors.js";
 import { bus } from "../../bus.js";
 import { flashBtn } from "./utils.js";
 import { spinnerHTML } from "./tpl.js";
@@ -332,7 +333,7 @@ export function bindToolbarEvents(root, vm) {
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ 索引失败: " + String(e),
+            msg: "❌ " + friendlyError(e),
             duration: 4000,
             type: "error",
           });

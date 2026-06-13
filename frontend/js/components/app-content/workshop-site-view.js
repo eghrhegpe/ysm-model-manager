@@ -83,11 +83,16 @@ export function renderSiteView(site, ctx) {
     parts.push(
       '<div class="cr-section">' +
         '<span class="cr-section-title-lg">🎨 活跃创作者</span>' +
-        '<span class="cr-section-sub">(' +
+        '<span class="cr-section-sub" id="ws-cr-count">(' +
         creators.length +
         ")</span>" +
         '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto">✏️ 编辑</button>' +
-        "</div>",
+        "</div>" +
+        // 搜索过滤框
+        '<div style="padding:0 0 8px;display:flex;gap:6px">' +
+        '<input type="text" id="ws-cr-search" placeholder="🔍 搜创作者名..." ' +
+        'style="flex:1;padding:5px 10px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-sm);font-family:inherit;outline:none">' +
+        "</div>"
     );
     parts.push(
       '<div style="display:flex;flex-wrap:wrap;gap:6px;width:100%">' +
@@ -499,4 +504,22 @@ export function renderSiteView(site, ctx) {
       site.presetSearches.push({ label: "" });
       refreshView();
     });
+
+  // 🔍 创作者搜索过滤
+  const searchInput = searchResults.getElementById("ws-cr-search");
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      const kw = searchInput.value.trim().toLowerCase();
+      const cards = searchResults.querySelectorAll(".gh-card[data-name]");
+      let visible = 0;
+      cards.forEach((card) => {
+        const name = (card.dataset.name || "").toLowerCase();
+        const match = !kw || name.includes(kw);
+        card.style.display = match ? "" : "none";
+        if (match) visible++;
+      });
+      const countEl = searchResults.getElementById("ws-cr-count");
+      if (countEl) countEl.textContent = "(" + visible + "/" + cards.length + ")";
+    });
+  }
 }

@@ -94,7 +94,7 @@ export function registerSync(unsubs) {
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 导入失败: ${String(e)}`,
+          msg: `❌ ${friendlyError(e)}`,
           duration: 5000,
           type: "error",
         });

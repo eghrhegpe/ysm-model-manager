@@ -79,6 +79,10 @@ export async function fetchCommunityCreators(url) {
     const data = await resp.json();
     return Array.isArray(data) ? data : [];
   } catch {
+    try {
+      const { bus } = await import("../../bus.js");
+      bus.emit("toast:show", { msg: "🌐 社区索引拉取失败，使用本地缓存", type: "warn", duration: 3000 });
+    } catch {}
     return [];
   } finally {
     clearTimeout(tmr);

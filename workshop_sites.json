@@ -93,5 +93,24 @@
         "q": "VRChat"
       }
     ]
+  },
+  {
+    "id": "vroid",
+    "icon": "🤖",
+    "label": "VRoid",
+    "url": "https://hub.vroid.com/",
+    "desc": "VRM 虚拟形象模型库",
+    "group": "search",
+    "searchUrl": "https://hub.vroid.com/en/search?q={{q}}",
+    "presetSearches": [
+      {
+        "label": "热门 VRM 模型",
+        "q": "VRM"
+      },
+      {
+        "label": "VRChat 可用",
+        "q": "VRChat"
+      }
+    ]
   }
 ]

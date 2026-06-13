@@ -1142,3 +1142,69 @@ btn.addEventListener("click", () => {
 - **Round 2 (Truth)**: debug 日志确认侧栏 `_rtype` 始终为 `"ysm"`。
   - _加 `console.log` 发现 `reload` 从未被触发。反向追踪谁在 emit `repo:rtype-changed` → 只有全局子标签，同步管理器不发射。_
 - **Lesson**: 事件驱动架构中，组件不更新的两个排查方向：**没有 listener** 或 **没有 emitter**。先查 listener 存在，再查 emitter 覆盖了哪些入口。
+
+---
+
+### 35. 发布包遗漏 resource_types.json → EXE 功能缺失
+
+#### 症状
+
+- v1.5.4 EXE 中：同步管理器显示"暂无资源文件"、查重失效、仓库读取不了 MMD/VRC
+- 开发版（wails dev）一切正常
+
+#### 根因
+
+多函数使用 `os.ReadFile("resource_types.json")` 的**相对路径**读取注册表：
+
+- `GetInstanceSyncStatus` — 同步管理器
+- `DetectResourceType` — 仓库文件类型检测
+- `LoadResourceTypes` — 资源类型配置
+
+`configPath()` 查找配置的优先级是：EXE 同目录 → 父目录 → CWD。但 `resource_types.json` 只存在于项目根目录，`build-release.ps1` 未复制到 `build/release/`。EXE 从 `build/release/` 启动时找不到该文件，所有依赖注册表的 Go 函数返回空结果。
+
+#### 修复
+
+1. `build-release.ps1` 添加 `Copy-Item resource_types.json`
+2. 重新构建并上传 GitHub Release
+
+#### Lesson
+
+1. **`os.ReadFile("相对路径")` 在 EXE 运行时不可靠**——工作目录可能不是项目根目录。所有运行时依赖的数据文件必须显式打包到 EXE 同目录。
+2. **发版清单审计**：发版前检查 `build/release/` 下是否有 `resource_types.json`、`workshop_sites.json`、`workshop_gitHub.json`、`creators.json` 四个数据文件。缺少任何一个都可能静默失效。
+3. **开发版 ≠ EXE 的行为**：`wails dev` 的 CWD 是项目根目录，掩盖了相对路径问题。始终用 EXE 做最终验证。
+
+---
+
+### 36. ScanModelEntries 全量哈希拖慢非 YSM 类型
+
+#### 症状
+
+- 仓库页切换到 🎭MMD 子标签时，一直显示"⏳ 扫描中..."
+- YSM 类型正常（.ysm 文件较小）
+- 开发版和 EXE 均受影响
+
+#### 根因
+
+`ScanModelEntries` 对每个匹配扩展名的文件都调用 `computeFileHash(p)`，读取**整个文件**计算 SHA256。MMD 的 `.pmx`/`.pmd` 文件通常 10-50MB，VRC 的 `.vrca` 可达百 MB。扫描 MMD 仓库时对全部文件做全量哈希，导致界面卡死在加载状态。
+
+```go
+// ❌ 旧逻辑：每个文件不论类型都哈希
+e.Hash = computeFileHash(p)
+```
+
+#### 修复
+
+仅对同步系统需要的 YSM 相关文件计算哈希，跳过 MMD/VRC/蓝图/材质包：
+
+```go
+// ✅ 新逻辑：仅 YSM 相关类型需要哈希
+if originalExt == ".ysm" || originalExt == ".zip" || originalExt == ".7z" || originalExt == ".json" {
+    e.Hash = computeFileHash(p)
+}
+```
+
+#### Lesson
+
+1. **重型计算（文件哈希）的触发点要谨慎**。`ScanModelEntries` 是"浏览用"函数，不应承担"同步用"的重计算。浏览功能保持轻量，重型计算按需延迟。
+2. **扫描缓存 2s TTL 不解决问题**——用户首次切换到未缓存目录时仍会触发全量计算。缓存只是治标。
+3. **Go 的 `filepath.WalkDir` 本身是轻量的**，慢的不是遍历文件系统，而是遍历之后对每个文件做的操作。卡住先加日志看哪个操作耗时最久。`computeFileHash` 调 `os.Open + io.Copy` 读全文件是最大的性能拖累。

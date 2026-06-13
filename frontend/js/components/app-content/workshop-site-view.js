@@ -90,13 +90,10 @@ export function renderSiteView(site, ctx) {
         '<span class="cr-section-sub" id="ws-cr-count">(' +
         creators.length +
         ")</span>" +
+        '<input type="text" id="ws-cr-search" placeholder="🔍 搜创作者名..." ' +
+        'style="flex:1;max-width:180px;padding:3px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit;outline:none;margin:0 6px">' +
         '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto">✏️ 编辑</button>' +
         '<button class="cr-fetch-btn cr-action-btn" style="margin-left:4px" title="从 GitHub 社区索引拉取最新创作者">🌐 社区</button>' +
-        "</div>" +
-        // 搜索过滤框
-        '<div style="padding:0 0 8px;display:flex;gap:6px">' +
-        '<input type="text" id="ws-cr-search" placeholder="🔍 搜创作者名..." ' +
-        'style="flex:1;padding:5px 10px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-sm);font-family:inherit;outline:none">' +
         "</div>",
     );
     parts.push(

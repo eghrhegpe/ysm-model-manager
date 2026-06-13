@@ -246,7 +246,8 @@ export const contentCSS = `
 /* ===== 创作者标签 (cr-tag) ===== */
 .cr-tag { display:inline-flex;align-items:center;gap:2px;font-size:9px;padding:0 5px;border-radius:3px;line-height:16px;font-weight:500;flex-shrink:0; }
 .cr-tag-game { background:#4a9eff22;color:#4a9eff; }
-.cr-tag-vtuber { background:#ff6bb522;color:#ff6bb5; }
+.cr-tag-vup { background:#ff6bb522;color:#ff6bb5; }
+.cr-tag-oc { background:#a78bfa22;color:#a78bfa; }
 .cr-tag-filter-row { display:flex;gap:4px;margin:0 0 8px;flex-wrap:wrap;align-items:center; }
 .cr-tag-filter-btn { font-size:var(--fs-xs);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .12s; }
 .cr-tag-filter-btn:hover { border-color:var(--accent);color:var(--txt);background:var(--hover); }

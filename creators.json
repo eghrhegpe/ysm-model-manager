@@ -701,5 +701,13 @@
   {"name":"艾尔莎","desc":"VUP个人势虚拟主播","type":"bilibili","tag":"vup"},
   {"name":"早稻叽","desc":"ChaosLive VUP，白色紧身短衣／潮妹服","type":"bilibili","tag":"vup"},
   {"name":"莓莉可Miko","desc":"妖精管理局VUP，草莓红蛋糕洛丽塔裙","type":"bilibili","tag":"vup"},
-  {"name":"星光Kirarin","desc":"妖精管理局VUP，粉色层叠礼裙","type":"bilibili","tag":"vup"}
+  {"name":"星光Kirarin","desc":"妖精管理局VUP，粉色层叠礼裙","type":"bilibili","tag":"vup"},
+  {"name":"Aika","desc":"OC原创角色","type":"bilibili","tag":"oc"},
+  {"name":"克里斯提亚娜","desc":"OC原创角色，蓝色泳装","type":"bilibili","tag":"oc"},
+  {"name":"刻","desc":"OC原创角色，黑色吊带裙","type":"bilibili","tag":"oc"},
+  {"name":"立花染","desc":"OC原创角色，敞领蓝夹克","type":"bilibili","tag":"oc"},
+  {"name":"星千川","desc":"OC原创角色，蓝发学生妹","type":"bilibili","tag":"oc"},
+  {"name":"星月","desc":"OC原创角色，白色学院服","type":"bilibili","tag":"oc"},
+  {"name":"荀异","desc":"OC原创角色","type":"bilibili","tag":"oc"},
+  {"name":"阎么么","desc":"原创角色模型","type":"bilibili","tag":"oc"}
 ]

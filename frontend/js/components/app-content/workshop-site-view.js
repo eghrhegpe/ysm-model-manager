@@ -21,14 +21,23 @@ import { showProgress, tryFetchModels } from "../../features/workshop/data.js";
 // ===== 收藏工具 =====
 const STORAGE_KEY = "ysm-fav-creators";
 function loadFavs() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  } catch {
+    return [];
+  }
 }
-function saveFavs(names) { localStorage.setItem(STORAGE_KEY, JSON.stringify(names)); }
-function isFaved(name) { return loadFavs().includes(name); }
+function saveFavs(names) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(names));
+}
+function isFaved(name) {
+  return loadFavs().includes(name);
+}
 function toggleFav(name) {
   const favs = loadFavs();
   const idx = favs.indexOf(name);
-  if (idx >= 0) favs.splice(idx, 1); else favs.push(name);
+  if (idx >= 0) favs.splice(idx, 1);
+  else favs.push(name);
   saveFavs(favs);
   return idx < 0; // true=now faved
 }
@@ -67,7 +76,9 @@ export function renderSiteView(site, ctx) {
   }
 
   // 按仓库模型数降序排列（高产创作者优先）
-  creators.sort((a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0));
+  creators.sort(
+    (a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0),
+  );
 
   // 构建 HTML
   let parts = [];
@@ -115,7 +126,9 @@ export function renderSiteView(site, ctx) {
     });
 
     const tagSet = new Set();
-    creators.forEach((cr) => { if (cr.tag) tagSet.add(cr.tag); });
+    creators.forEach((cr) => {
+      if (cr.tag) tagSet.add(cr.tag);
+    });
     const tags = [...tagSet];
     parts.push(
       '<div class="cr-section" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
@@ -130,21 +143,21 @@ export function renderSiteView(site, ctx) {
         '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted">✏️ 编辑</button>' +
         "</div>" +
         '<div class="cr-tag-filter-row">' +
-          '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
-          '<button class="cr-tag-filter-btn" data-tag="game">🎮 游戏模型</button>' +
-          tags
-            .map(
-              (t) =>
-                '<button class="cr-tag-filter-btn" data-tag="' +
-                esc(t) +
-                '">' +
-                (t === "vup" ? "🎤" : t === "oc" ? "🎨" : "🏷️") +
-                " " +
-                esc(t) +
-                "</button>",
-            )
-            .join("") +
-          "</div>",
+        '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
+        '<button class="cr-tag-filter-btn" data-tag="game">🎮 游戏模型</button>' +
+        tags
+          .map(
+            (t) =>
+              '<button class="cr-tag-filter-btn" data-tag="' +
+              esc(t) +
+              '">' +
+              (t === "vup" ? "🎤" : t === "oc" ? "🎨" : "🏷️") +
+              " " +
+              esc(t) +
+              "</button>",
+          )
+          .join("") +
+        "</div>",
     );
     parts.push(
       '<div class="cr-creator-grid" style="display:flex;flex-wrap:wrap;gap:6px;width:100%">' +
@@ -155,18 +168,30 @@ export function renderSiteView(site, ctx) {
             const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
             const authorCount = authorCountMap[cr.name] || 0;
             // 按模型数排百分比：前10%金、前25%银，其余蓝色静态细边
-            const sorted = [...arr].sort((a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0));
+            const sorted = [...arr].sort(
+              (a, b) =>
+                (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0),
+            );
             const idx = sorted.indexOf(cr);
             const pct = sorted.length > 1 ? idx / (sorted.length - 1) : 0;
-            const tier = pct < 0.10
-              ? { border: "#D4A017", glow: "rgba(212,160,23,0.4)", rank: "gold" }
-              : pct < 0.25
-              ? { border: "#9E9E9E", glow: "rgba(158,158,158,0.25)", rank: "silver" }
-              : { border: "#6B9FFF", glow: "transparent", rank: "" };
-            const spinAttr = tier.rank ? ' data-spin="' + tier.rank + '"' : '';
+            const tier =
+              pct < 0.1
+                ? {
+                    border: "#D4A017",
+                    glow: "rgba(212,160,23,0.4)",
+                    rank: "gold",
+                  }
+                : pct < 0.25
+                  ? {
+                      border: "#9E9E9E",
+                      glow: "rgba(158,158,158,0.25)",
+                      rank: "silver",
+                    }
+                  : { border: "#6B9FFF", glow: "transparent", rank: "" };
+            const spinAttr = tier.rank ? ' data-spin="' + tier.rank + '"' : "";
             return (
               '<div class="gh-card" tabindex="0" style="min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer;animation:card-in .3s ease-out both;animation-delay:' +
-              (idx * 0.03) +
+              idx * 0.03 +
               's" data-name="' +
               esc(cr.name) +
               '" data-tag="' +
@@ -179,9 +204,9 @@ export function renderSiteView(site, ctx) {
               spinAttr +
               ' style="background:conic-gradient(from var(--grad-rot,0deg),' +
               tier.border +
-              ',transparent 60%,' +
+              ",transparent 60%," +
               tier.border +
-              ');box-shadow:0 0 6px ' +
+              ");box-shadow:0 0 6px " +
               tier.glow +
               '"></div>' +
               '<div class="cr-avatar" style="width:28px;height:28px;font-size:12px">' +
@@ -196,18 +221,25 @@ export function renderSiteView(site, ctx) {
               '">' +
               (isFaved(cr.name) ? "⭐" : "☆") +
               "</span>" +
-              (cr._fromLocal
-                ? '<span style="font-size:9px;color:var(--muted);margin-left:4px">📁</span>'
-                : "") +
-              (authorCount > 0
-                ? '<span class="cr-model-count">' + authorCount + '📦</span>'
+              (cr._fromLocal && authorCount > 0
+                ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁' + authorCount + "</span>"
+                : cr._fromLocal
+                ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁</span>'
                 : "") +
               "</div>" +
               '<div class="gh-card-desc">' +
               esc(cr.desc) +
               "</div>" +
               '<div class="hm-label" style="margin-top:1px;display:flex;gap:2px;flex-wrap:wrap">' +
-              cr.type.split(";").map(t => '<span class="cr-platform-badge" style="display:none">' + t + "</span>").join("") +
+              cr.type
+                .split(";")
+                .map(
+                  (t) =>
+                    '<span class="cr-platform-badge" style="display:none">' +
+                    t +
+                    "</span>",
+                )
+                .join("") +
               "</div>" +
               (cr.tag
                 ? '<span class="cr-tag cr-tag-' +
@@ -271,7 +303,7 @@ export function renderSiteView(site, ctx) {
     );
     creators.forEach((cr, idx) => {
       parts.push(
-          '<div class="cr-row" style="flex-wrap:wrap">' +
+        '<div class="cr-row" style="flex-wrap:wrap">' +
           "<span>🎨</span>" +
           '<input data-idx="' +
           idx +
@@ -286,7 +318,20 @@ export function renderSiteView(site, ctx) {
           '<select data-idx="' +
           idx +
           '" data-fld="type" class="cr-input-type" multiple style="width:130px;height:60px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit" title="Ctrl+点击多选">' +
-          (allSites || []).map(s => '<option value="' + esc(s.id) + '"' + (cr.type && cr.type.split(";").includes(s.id) ? " selected" : "") + ">" + esc(s.label) + "</option>").join("") +
+          (allSites || [])
+            .map(
+              (s) =>
+                '<option value="' +
+                esc(s.id) +
+                '"' +
+                (cr.type && cr.type.split(";").includes(s.id)
+                  ? " selected"
+                  : "") +
+                ">" +
+                esc(s.label) +
+                "</option>",
+            )
+            .join("") +
           "  </select>" +
           '<input data-idx="' +
           idx +
@@ -341,48 +386,114 @@ export function renderSiteView(site, ctx) {
       if (card) {
         // 重新排序：移除再插入首部/尾部
         const grid = card.closest(".cr-creator-grid");
-        if (now) { grid?.insertBefore(card, grid.firstChild); }
-        else { card.remove(); }
+        if (now) {
+          grid?.insertBefore(card, grid.firstChild);
+        } else {
+          card.remove();
+        }
       }
-      bus.emit("toast:show", { msg: now ? "⭐ 已收藏 " + name : "取消收藏 " + name, duration: 1500, type: "success" });
+      bus.emit("toast:show", {
+        msg: now ? "⭐ 已收藏 " + name : "取消收藏 " + name,
+        duration: 1500,
+        type: "success",
+      });
     });
   });
 
   // 创作者卡片点击 → 弹出详情浮层
   searchResults.querySelectorAll(".gh-card[data-name]").forEach((card) => {
     card.addEventListener("click", (e) => {
-      if (e.target.closest(".gh-card-external[data-repo]") || e.target.closest(".cr-star-btn")) return;
+      if (
+        e.target.closest(".gh-card-external[data-repo]") ||
+        e.target.closest(".cr-star-btn")
+      )
+        return;
       const name = card.dataset.name;
-      const cr = creators.find(c => c.name === name);
+      const cr = creators.find((c) => c.name === name);
       if (!cr) return;
 
       const overlay = document.createElement("div");
       overlay.className = "cr-detail-overlay";
-      overlay.onclick = (ev) => { if (ev.target === overlay) overlay.remove(); };
+      overlay.onclick = (ev) => {
+        if (ev.target === overlay) overlay.remove();
+      };
 
       const tagEmoji = cr.tag === "vup" ? "🎤" : cr.tag === "oc" ? "🎨" : "🎮";
-      const platformIcons = { bilibili:"📺", afdian:"❤️", github:"🐙", mzhouse:"🏠", bowlroll:"🍚", vroid:"🤖", nicovideo:"🧊", deviantart:"🎨" };
-      const platformLinks = { bilibili:"https://search.bilibili.com/all?keyword=", afdian:"https://afdian.com/search?q=", github:"https://github.com/search?q=", nicovideo:"https://3d.nicovideo.jp/works/search?keyword=" };
+      const platformIcons = {
+        bilibili: "📺",
+        afdian: "❤️",
+        github: "🐙",
+        mzhouse: "🏠",
+        bowlroll: "🍚",
+        vroid: "🤖",
+        nicovideo: "🧊",
+        deviantart: "🎨",
+      };
+      const platformLinks = {
+        bilibili: "https://search.bilibili.com/all?keyword=",
+        afdian: "https://afdian.com/search?q=",
+        github: "https://github.com/search?q=",
+        nicovideo: "https://3d.nicovideo.jp/works/search?keyword=",
+      };
 
       const isFav = isFaved(cr.name);
-      overlay.innerHTML = '<div class="cr-detail-box">' +
+      overlay.innerHTML =
+        '<div class="cr-detail-box">' +
         '<div class="cr-detail-header">' +
-          '<div class="cr-avatar-container" style="width:32px;height:32px;margin:0">' +
-            '<div class="cr-avatar" style="width:32px;height:32px;font-size:14px">' + esc(cr.name.charAt(0)).toUpperCase() + "</div>" +
-          "</div>" +
-          '<span class="cr-detail-name">' + esc(cr.name) + "</span>" +
-          (cr.tag ? '<span class="cr-tag cr-tag-' + esc(cr.tag) + '">' + tagEmoji + " " + esc(cr.tag) + "</span>" : '<span class="cr-tag cr-tag-game">🎮 game</span>') +
-          '<span class="cr-star-btn" style="cursor:pointer;font-size:14px;margin-left:auto" data-star="' + esc(cr.name) + '">' + (isFav ? "⭐" : "☆") + "</span>" +
+        '<div class="cr-avatar-container" style="width:32px;height:32px;margin:0">' +
+        '<div class="cr-avatar" style="width:32px;height:32px;font-size:14px">' +
+        esc(cr.name.charAt(0)).toUpperCase() +
         "</div>" +
-        '<div class="cr-detail-desc">' + esc(cr.desc) + "</div>" +
-        '<div class="cr-detail-row">📦 本地模型: <b>' + (authorCountMap[cr.name] || 0) + "</b></div>" +
-        '<div class="cr-detail-row">🔗 平台: ' + cr.type.split(";").map(t => '<span class="cr-platform-badge">' + (platformIcons[t] || "🔗") + " " + esc(t) + "</span>").join(" ") + "</div>" +
+        "</div>" +
+        '<span class="cr-detail-name">' +
+        esc(cr.name) +
+        "</span>" +
+        (cr.tag
+          ? '<span class="cr-tag cr-tag-' +
+            esc(cr.tag) +
+            '">' +
+            tagEmoji +
+            " " +
+            esc(cr.tag) +
+            "</span>"
+          : '<span class="cr-tag cr-tag-game">🎮 game</span>') +
+        '<span class="cr-star-btn" style="cursor:pointer;font-size:14px;margin-left:auto" data-star="' +
+        esc(cr.name) +
+        '">' +
+        (isFav ? "⭐" : "☆") +
+        "</span>" +
+        "</div>" +
+        '<div class="cr-detail-desc">' +
+        esc(cr.desc) +
+        "</div>" +
+        '<div class="cr-detail-row">📦 本地模型: <b>' +
+        (authorCountMap[cr.name] || 0) +
+        "</b></div>" +
+        '<div class="cr-detail-row">🔗 平台: ' +
+        cr.type
+          .split(";")
+          .map(
+            (t) =>
+              '<span class="cr-platform-badge">' +
+              (platformIcons[t] || "🔗") +
+              " " +
+              esc(t) +
+              "</span>",
+          )
+          .join(" ") +
+        "</div>" +
         '<div class="cr-detail-actions">' +
-          (authorCountMap[cr.name] > 0 ? '<button class="primary" data-local>' + authorCountMap[cr.name] + ' 个本地模型</button>' : '') +
-          '<button class="primary" data-search="' + esc(cr.name) + '">🔍 平台搜索</button>' +
-          '<button class="secondary" data-close>关闭</button>' +
+        (authorCountMap[cr.name] > 0
+          ? '<button class="primary" data-local>' +
+            authorCountMap[cr.name] +
+            " 个本地模型</button>"
+          : "") +
+        '<button class="primary" data-search="' +
+        esc(cr.name) +
+        '">🔍 平台搜索</button>' +
+        '<button class="secondary" data-close>关闭</button>' +
         "</div>" +
-      "</div>";
+        "</div>";
 
       document.body.appendChild(overlay);
 
@@ -392,12 +503,20 @@ export function renderSiteView(site, ctx) {
         const now = toggleFav(cr.name);
         ev.target.textContent = now ? "⭐" : "☆";
         // 同时更新卡片
-        const cardStar = searchResults.querySelector('.cr-star-btn[data-star="' + esc(cr.name) + '"]');
+        const cardStar = searchResults.querySelector(
+          '.cr-star-btn[data-star="' + esc(cr.name) + '"]',
+        );
         if (cardStar) cardStar.textContent = now ? "⭐" : "☆";
-        bus.emit("toast:show", { msg: now ? "⭐ 已收藏" : "取消收藏", duration: 1500, type: "success" });
+        bus.emit("toast:show", {
+          msg: now ? "⭐ 已收藏" : "取消收藏",
+          duration: 1500,
+          type: "success",
+        });
       });
 
-      overlay.querySelector("[data-close]")?.addEventListener("click", () => overlay.remove());
+      overlay
+        .querySelector("[data-close]")
+        ?.addEventListener("click", () => overlay.remove());
 
       const searchBtn = overlay.querySelector("[data-search]");
       if (searchBtn) {
@@ -501,7 +620,7 @@ export function renderSiteView(site, ctx) {
           searchResults.innerHTML =
             '<div class="cr-error-page">' +
             '<button class="cr-back-repo cr-back-btn" style="margin-bottom:12px">← 返回</button>' +
-          '<div class="cr-error-msg">' +
+            '<div class="cr-error-msg">' +
             (isTimeout
               ? "⏱️ 连接超时"
               : "❌ 无 index.json<br>" +
@@ -692,7 +811,10 @@ export function renderSiteView(site, ctx) {
       const idx = parseInt(inp.dataset.idx, 10);
       if (creators[idx]) {
         if (inp.tagName === "SELECT") {
-          creators[idx][inp.dataset.fld] = Array.from(inp.selectedOptions).map(o => o.value).filter(Boolean).join(";");
+          creators[idx][inp.dataset.fld] = Array.from(inp.selectedOptions)
+            .map((o) => o.value)
+            .filter(Boolean)
+            .join(";");
         } else {
           creators[idx][inp.dataset.fld] = inp.value.trim();
         }
@@ -762,7 +884,9 @@ export function renderSiteView(site, ctx) {
     let visible = 0;
     cards.forEach((card) => {
       const name = (card.dataset.name || "").toLowerCase();
-      const desc = (card.querySelector(".gh-card-desc")?.textContent || "").toLowerCase();
+      const desc = (
+        card.querySelector(".gh-card-desc")?.textContent || ""
+      ).toLowerCase();
       const cardTag = (card.dataset.tag || "").toLowerCase();
       const matchName = !kw || name.includes(kw) || desc.includes(kw);
       const matchTag =
@@ -773,8 +897,7 @@ export function renderSiteView(site, ctx) {
       if (matchName && matchTag) visible++;
     });
     const countEl = searchResults.querySelector("#ws-cr-count");
-    if (countEl)
-      countEl.textContent = "(" + visible + "/" + cards.length + ")";
+    if (countEl) countEl.textContent = "(" + visible + "/" + cards.length + ")";
   };
 
   const searchInput = searchResults.querySelector("#ws-cr-search");

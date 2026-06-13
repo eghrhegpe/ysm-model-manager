@@ -72,7 +72,9 @@ export async function initSettings(root) {
     "set-repo-path",
     () =>
       cfg.repoRoot ||
-      (cfg.mcRoot ? cfg.mcRoot + "/config/yes_steve_model/custom" : ""),
+      (cfg.mcRoot
+        ? cfg.mcRoot.replace(/\//g, "\\") + "\\config\\yes_steve_model\\custom"
+        : ""),
     async (dir) => {
       const theme = localStorage.getItem("theme") || "dark";
       await SaveAppConfig(
@@ -89,7 +91,8 @@ export async function initSettings(root) {
   bindPathClick(
     "set-rp-path",
     () =>
-      cfg.resourcepackRoot || (cfg.mcRoot ? cfg.mcRoot + "/resourcepacks" : ""),
+      cfg.resourcepackRoot ||
+      (cfg.mcRoot ? cfg.mcRoot.replace(/\//g, "\\") + "\\resourcepacks" : ""),
     async (dir) => {
       const theme = localStorage.getItem("theme") || "dark";
       await SaveAppConfig(
@@ -106,6 +109,7 @@ export async function initSettings(root) {
   // 纯展示路径（由 mcRoot 派生，不可独立设置）
   // 可点击的派生路径（选目录后用 SetResourceRoot 持久化）
   const rtypeKeyMap = {
+    resourcepack: "resourcepackRoot",
     shaderpack: "shaderpackRoot",
     "create-blueprint": "schematicRoot",
     "mmd-skin": "mmdRoot",
@@ -117,15 +121,15 @@ export async function initSettings(root) {
     const key = rtypeKeyMap[rtype];
     const refresh = () => {
       const p = cfg[key] || (cfg.mcRoot ? mcDerivedPath(rtype) : "") || "";
-      el.textContent = p || "待设置 MC 根目录";
-      el.title = p || "";
+      el.textContent = p ? p.replace(/\//g, "\\") : "待设置 MC 根目录";
+      el.title = p.replace(/\//g, "\\") || "";
     };
     // 重置按钮
     const resetBtn = document.createElement("button");
     resetBtn.className = "btn";
     resetBtn.textContent = "↩️ 默认";
     resetBtn.style.cssText =
-      "font-size:var(--fs-xs);padding:2px 6px;margin-left:6px";
+      "font-size:var(--fs-btn-tool);padding:var(--pad-btn-tool) 8px;margin-left:6px";
     resetBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
       try {
@@ -148,7 +152,17 @@ export async function initSettings(root) {
         });
       }
     });
-    el.parentNode.appendChild(resetBtn);
+    // 重置按钮 → 放入卡片标题栏右侧
+    const card = el.closest(".stg-card");
+    if (card) {
+      const hdr = card.querySelector(".stg-card-hdr");
+      if (hdr) {
+        hdr.style.display = "flex";
+        hdr.style.alignItems = "center";
+        hdr.style.justifyContent = "space-between";
+        hdr.appendChild(resetBtn);
+      }
+    }
 
     el.classList.add("derived");
     el.addEventListener("click", async () => {
@@ -179,13 +193,17 @@ export async function initSettings(root) {
   }
   const mcDerivedPath = (rtype) => {
     const map = {
+      resourcepack: "resourcepacks",
       shaderpack: "shaderpacks",
       "create-blueprint": "schematics",
-      "mmd-skin": "3d-skin/EntityPlayer",
+      "mmd-skin": "3d-skin\\EntityPlayer",
       "vrchat-avatar": "vrchat-avatars",
     };
-    return cfg.mcRoot ? cfg.mcRoot + "/" + map[rtype] : "";
+    return cfg.mcRoot
+      ? cfg.mcRoot.replace(/\\/g, "\\") + "\\" + map[rtype]
+      : "";
   };
+  bindDerived("set-rp-path", "resourcepack");
   bindDerived("set-sp-path", "shaderpack");
   bindDerived("set-schem-path", "create-blueprint");
   bindDerived("set-mmd-path", "mmd-skin");
@@ -270,18 +288,20 @@ export async function initSettings(root) {
   // 链接模式变更（下拉菜单）+ 重新应用按钮
   const doRelink = async () => {
     try {
-      const { LoadAppConfig, ListVersionInstances, RelinkCustomDir } =
-        await import("../../../wailsjs/go/main/App.js");
+      const {
+        LoadAppConfig,
+        ListVersionInstances,
+        RelinkAllInstanceResources,
+      } = await import("../../../wailsjs/go/main/App.js");
       const cfg = await LoadAppConfig();
       const mcRoot = cfg.mcRoot || "";
-      const rRoot = cfg.repoRoot || "";
-      if (!mcRoot || !rRoot) return;
+      if (!mcRoot) return;
       const instances = await ListVersionInstances(mcRoot);
       let total = 0;
       for (const ins of instances) {
         if (!ins.Exists) continue;
         try {
-          const n = await RelinkCustomDir(ins.CustomDir, rRoot);
+          const n = await RelinkAllInstanceResources(ins.Name);
           total += n;
         } catch {}
       }
@@ -380,30 +400,25 @@ export async function initSettings(root) {
     const density = localStorage.getItem("ui-card-density") || "compact";
     const anim = localStorage.getItem("ui-animations") !== "off";
 
-    // 基准字号
-    const sizes = { small: "11px", normal: "13px", large: "15px" };
-    document.documentElement.style.setProperty(
+    // 基准字号 — 通过 --fs-scale 控制，CSS 自动缩放所有 --fs-* 和 --space-*
+    // 先清除旧版直接设 --fs-* 的内联值（避免覆盖 calc()）
+    [
       "--fs-base",
-      sizes[fontSize] || "13px",
-    );
-    // 调整关联变量（相对值）
-    const ratio = fontSize === "small" ? 0.85 : fontSize === "large" ? 1.15 : 1;
-    document.documentElement.style.setProperty(
       "--fs-xs",
-      Math.round(9 * ratio) + "px",
-    );
-    document.documentElement.style.setProperty(
       "--fs-sm",
-      Math.round(10 * ratio) + "px",
-    );
-    document.documentElement.style.setProperty(
       "--fs-md",
-      Math.round(12 * ratio) + "px",
-    );
-    document.documentElement.style.setProperty(
       "--fs-lg",
-      Math.round(14 * ratio) + "px",
+      "--fs-tiny",
+      "--fs-xl",
+    ].forEach((v) => document.documentElement.style.removeProperty(v));
+    // 小=-1px, 标准=0px, 大=+2px
+    const scaleMap = { small: "-1px", normal: "0px", large: "2px" };
+    document.documentElement.style.setProperty(
+      "--fs-scale",
+      scaleMap[fontSize] || "0px",
     );
+    // 同步更新 --fs-base-size（保持各字号参考基准一致）
+    document.documentElement.style.setProperty("--fs-base-size", "12px");
 
     // 创作者名字字体
     document.documentElement.style.setProperty(
@@ -421,6 +436,46 @@ export async function initSettings(root) {
 
     // 动画
     document.documentElement.classList.toggle("no-animations", !anim);
+
+    // 更新字号预览值
+    updateSizePreview();
+  };
+
+  /**
+   * 解析 CSS 变量的计算像素值（getComputedStyle 对 calc() 返回原始表达式，
+   * 需要间接通过真实 CSS 属性读取）
+   */
+  const resolvePx = (varName) => {
+    const d = document.body;
+    const orig = d.style.paddingTop;
+    d.style.paddingTop = "var(" + varName + ")";
+    const val = getComputedStyle(d).paddingTop;
+    d.style.paddingTop = orig;
+    return val;
+  };
+
+  /**
+   * 读取当前 --fs-* 和 --space-* 的计算值并显示
+   */
+  const updateSizePreview = () => {
+    const base = resolvePx("--fs-base");
+    const spaceMd = resolvePx("--space-md");
+    const spaceSm = resolvePx("--space-sm");
+    const fsSm = resolvePx("--fs-sm");
+
+    // 按钮高示例：secondary 按钮 = padding-v(space-sm) * 2 + font-size * 1.4
+    const basePx = parseFloat(base);
+    const mdPx = parseFloat(spaceMd);
+    const smPx = parseFloat(spaceSm);
+    const smFontPx = parseFloat(fsSm);
+    const btnH = Math.round(smPx * 2 + smFontPx * 1.4) + "px";
+
+    const szBase = root.querySelector("#sz-base");
+    const szSpace = root.querySelector("#sz-space");
+    const szBtn = root.querySelector("#sz-btn-h");
+    if (szBase) szBase.textContent = basePx ? Math.round(basePx) + "px" : base;
+    if (szSpace) szSpace.textContent = mdPx ? Math.round(mdPx) + "px" : spaceMd;
+    if (szBtn) szBtn.textContent = btnH;
   };
 
   // 初始化 UI 控件值

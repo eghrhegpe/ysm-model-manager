@@ -38,10 +38,8 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 	if strings.HasSuffix(strings.ToLower(src), ".ban") {
 		ext = strings.ToLower(filepath.Ext(src[:len(src)-4]))
 	}
-	switch ext {
-	case ".ysm", ".zip", ".7z", ".json", ".pmx", ".pmd", ".vrca", ".vrm", ".nbt", ".schematic":
-	default:
-		return types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型", SourcePath:src, Reason:"不支持的文件类型", Suggestion:"仅支持 .ysm / .zip / .7z / .json / .pmx / .pmd / .vrca 格式"}
+	if !types.IsSupportedExt(ext) {
+		return types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型", SourcePath:src, Reason:"不支持的文件类型", Suggestion:"支持格式: " + strings.Join(types.AllExts, " / ")}
 	}
 
 	// 计算相对路径，保持目录结构

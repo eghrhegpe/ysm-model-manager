@@ -6,13 +6,22 @@ export function registerUpload(unsubs) {
     bus.on("stats:upload", async () => {
       console.log("[upload] stats:upload");
       try {
-        const { LoadAppConfig, ListVersionInstances, GetInstanceStatus, ScanModelEntries, SyncCustomToRepo } =
-          await import("../../wailsjs/go/main/App.js");
+        const {
+          LoadAppConfig,
+          ListVersionInstances,
+          GetInstanceStatus,
+          ScanModelEntries,
+          SyncCustomToRepo,
+        } = await import("../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
         const repoRoot = cfg.repoRoot || "";
         const mcRoot = cfg.mcRoot || "";
         if (!repoRoot || !mcRoot) {
-          bus.emit("toast:show", { msg: "请先配置目录", duration: 3000, type: "warn" });
+          bus.emit("toast:show", {
+            msg: "请先配置目录",
+            duration: 3000,
+            type: "warn",
+          });
           return;
         }
         const repoEntries = await ScanModelEntries(repoRoot);
@@ -29,28 +38,42 @@ export function registerUpload(unsubs) {
           });
         });
         if (!pendingList.length) {
-          bus.emit("toast:show", { msg: "没有待上传的模型", duration: 2000, type: "info" });
+          bus.emit("toast:show", {
+            msg: "没有待上传的模型",
+            duration: 2000,
+            type: "info",
+          });
           return;
         }
-        let ok = 0, fail = 0;
+        let ok = 0,
+          fail = 0;
         for (const item of pendingList) {
-          if (!item.customDir) { fail++; continue; }
+          if (!item.customDir) {
+            fail++;
+            continue;
+          }
           try {
             const n = await SyncCustomToRepo(item.customDir, repoRoot);
-            if (n > 0) ok++; else fail++;
-          } catch { fail++; }
+            if (n > 0) ok++;
+            else fail++;
+          } catch {
+            fail++;
+          }
         }
         bus.emit("stats:refresh");
         bus.emit("toast:show", {
           msg: `📤 上传完成: ${ok} 成功, ${fail} 失败`,
-          duration: 4000, type: fail > 0 ? "warn" : "success",
+          duration: 4000,
+          type: fail > 0 ? "warn" : "success",
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 上传失败: ${String(e)}`, duration: 5000, type: "error",
+          msg: `❌ 上传失败: ${String(e)}`,
+          duration: 5000,
+          type: "error",
         });
       } finally {
-        bus.emit("sync:upload-complete");
+        bus.emit("sync:upload:done");
         bus.emit("tree:reload");
       }
     }),

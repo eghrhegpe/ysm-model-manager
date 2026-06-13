@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
 )
 
@@ -139,7 +140,7 @@ main().catch(e=>{console.error(e);process.exit(1)});
 		for i, v := range f.Data {
 			data[i] = byte(v)
 		}
-		if g := parseBedrockGeometry(data); g != nil {
+		if g := geometry.ParseBedrockGeometry(data); g != nil {
 			if merged == nil {
 				merged = g
 			} else {

@@ -6,6 +6,7 @@ import {
   LoadAppConfig,
   GetRepoRoot,
 } from "../../../wailsjs/go/main/App.js";
+import { getExts } from "../../utils/extensions.js";
 
 /** 从 Go 后端加载仓库文件列表，返回格式化的 entries */
 export async function loadEntries(rtype) {
@@ -17,15 +18,7 @@ export async function loadEntries(rtype) {
     if (!raw || !raw.length) return { repoRoot, entries: [] };
 
     // 按类型过滤扩展名（防止共享仓库中混入其他类型的文件）
-    const typeExts = {
-      ysm: [".ysm", ".zip", ".7z", ".json"],
-      "mmd-skin": [".pmx", ".pmd"],
-      "vrchat-avatar": [".vrca", ".vrm"],
-      resourcepack: [".zip"],
-      shaderpack: [".zip"],
-      "create-blueprint": [".nbt", ".schematic"],
-    };
-    const exts = typeExts[rtype] || [];
+    const exts = getExts(rtype);
     const filtered = exts.length
       ? raw.filter((e) => {
           let name = e.Name.toLowerCase();
@@ -42,8 +35,10 @@ export async function loadEntries(rtype) {
 
     const entries = filtered.map((e, i) => {
       let relPath = e.Path;
-      if (repoRoot && e.Path.startsWith(repoRoot)) {
-        relPath = e.Path.slice(repoRoot.length).replace(/^[/\\]+/, "");
+      const normRoot = repoRoot ? repoRoot.replace(/\\/g, "/") : "";
+      const normPath = e.Path.replace(/\\/g, "/");
+      if (normRoot && normPath.startsWith(normRoot)) {
+        relPath = normPath.slice(normRoot.length).replace(/^[/\\]+/, "");
       }
       return {
         name: e.Name,

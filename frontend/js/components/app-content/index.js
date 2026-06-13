@@ -45,6 +45,19 @@ class AppContent extends HTMLElement {
         if (btn) btn.click();
       }),
     );
+    // 创作者详情浮层→搜索本地模型
+    this._globalUnsubs.push(
+      bus.on("repo:search-creator", (name) => {
+        const repoInput = this._root?.getElementById("repo-search-input");
+        if (repoInput) {
+          repoInput.value = name;
+          repoInput.dispatchEvent(new Event("input", { bubbles: true }));
+          // 切换到仓库页
+          const repoBtn = this._root?.querySelector(`.repo-tab[data-tab="repository"]`);
+          if (repoBtn) repoBtn.click();
+        }
+      }),
+    );
     this._render();
     this._globalUnsubs.push(...registerGlobalHandlers());
   }
@@ -294,6 +307,7 @@ class AppContent extends HTMLElement {
       const site = sites.find((s) => s.id === siteType);
       if (!site) return;
       currentSite = site;
+      localStorage.setItem("ysm-ws-last-tab", site.id);
       // tab 切换高亮
       root
         .querySelectorAll(".repo-tab")
@@ -318,7 +332,12 @@ class AppContent extends HTMLElement {
           tabsEl.appendChild(btn);
         });
         // 默认显示第一个
-        if (sites[0]) showCreatorsBySite(sites[0].id);
+        if (sites[0]) {
+          // 恢复上次选中的 tab
+          const last = localStorage.getItem("ysm-ws-last-tab") || sites[0].id;
+          const target = sites.find(s => s.id === last) || sites[0];
+          showCreatorsBySite(target.id);
+        }
       }
     }, 100);
 

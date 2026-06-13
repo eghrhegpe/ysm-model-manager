@@ -18,6 +18,21 @@ import { showProgress, tryFetchModels } from "../../features/workshop/data.js";
  * @param {Function} ctx.openUrl - 按开关模式打开 URL (url) => void
  * @param {Function} ctx.backToSite - 返回站点视图的回调
  */
+// ===== 收藏工具 =====
+const STORAGE_KEY = "ysm-fav-creators";
+function loadFavs() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
+}
+function saveFavs(names) { localStorage.setItem(STORAGE_KEY, JSON.stringify(names)); }
+function isFaved(name) { return loadFavs().includes(name); }
+function toggleFav(name) {
+  const favs = loadFavs();
+  const idx = favs.indexOf(name);
+  if (idx >= 0) favs.splice(idx, 1); else favs.push(name);
+  saveFavs(favs);
+  return idx < 0; // true=now faved
+}
+
 export function renderSiteView(site, ctx) {
   const {
     esc,
@@ -89,6 +104,15 @@ export function renderSiteView(site, ctx) {
   // 创作者列表
   if (!wsEditModeRef.v && creators.length) {
     // 收集所有标签
+    // 收藏置顶
+    const faved = loadFavs();
+    creators.sort((a, b) => {
+      const af = faved.includes(a.name) ? 1 : 0;
+      const bf = faved.includes(b.name) ? 1 : 0;
+      if (af !== bf) return bf - af;
+      return (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0);
+    });
+
     const tagSet = new Set();
     creators.forEach((cr) => { if (cr.tag) tagSet.add(cr.tag); });
     const tags = [...tagSet];
@@ -165,6 +189,11 @@ export function renderSiteView(site, ctx) {
               '<div class="gh-card-body">' +
               '<div class="gh-card-label name">' +
               esc(cr.name) +
+              '<span class="cr-star-btn" style="cursor:pointer;font-size:11px;margin-left:auto;flex-shrink:0" data-star="' +
+              esc(cr.name) +
+              '">' +
+              (isFaved(cr.name) ? "⭐" : "☆") +
+              "</span>" +
               (cr._fromLocal
                 ? '<span style="font-size:9px;color:var(--muted);margin-left:4px">📁</span>'
                 : "") +
@@ -299,10 +328,28 @@ export function renderSiteView(site, ctx) {
     });
   });
 
+  // ⭐ 收藏点击（阻止冒泡，不触发详情浮层）
+  searchResults.querySelectorAll(".cr-star-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const name = btn.dataset.star;
+      const now = toggleFav(name);
+      btn.textContent = now ? "⭐" : "☆";
+      const card = btn.closest(".gh-card");
+      if (card) {
+        // 重新排序：移除再插入首部/尾部
+        const grid = card.closest(".cr-creator-grid");
+        if (now) { grid?.insertBefore(card, grid.firstChild); }
+        else { card.remove(); }
+      }
+      bus.emit("toast:show", { msg: now ? "⭐ 已收藏 " + name : "取消收藏 " + name, duration: 1500, type: "success" });
+    });
+  });
+
   // 创作者卡片点击 → 弹出详情浮层
   searchResults.querySelectorAll(".gh-card[data-name]").forEach((card) => {
     card.addEventListener("click", (e) => {
-      if (e.target.closest(".gh-card-external[data-repo]")) return;
+      if (e.target.closest(".gh-card-external[data-repo]") || e.target.closest(".cr-star-btn")) return;
       const name = card.dataset.name;
       const cr = creators.find(c => c.name === name);
       if (!cr) return;
@@ -315,6 +362,7 @@ export function renderSiteView(site, ctx) {
       const platformIcons = { bilibili:"📺", afdian:"❤️", github:"🐙", mzhouse:"🏠", bowlroll:"🍚", vroid:"🤖", nicovideo:"🧊", deviantart:"🎨" };
       const platformLinks = { bilibili:"https://search.bilibili.com/all?keyword=", afdian:"https://afdian.com/search?q=", github:"https://github.com/search?q=", nicovideo:"https://3d.nicovideo.jp/works/search?keyword=" };
 
+      const isFav = isFaved(cr.name);
       overlay.innerHTML = '<div class="cr-detail-box">' +
         '<div class="cr-detail-header">' +
           '<div class="cr-avatar-container" style="width:32px;height:32px;margin:0">' +
@@ -322,17 +370,30 @@ export function renderSiteView(site, ctx) {
           "</div>" +
           '<span class="cr-detail-name">' + esc(cr.name) + "</span>" +
           (cr.tag ? '<span class="cr-tag cr-tag-' + esc(cr.tag) + '">' + tagEmoji + " " + esc(cr.tag) + "</span>" : '<span class="cr-tag cr-tag-game">🎮 game</span>') +
+          '<span class="cr-star-btn" style="cursor:pointer;font-size:14px;margin-left:auto" data-star="' + esc(cr.name) + '">' + (isFav ? "⭐" : "☆") + "</span>" +
         "</div>" +
         '<div class="cr-detail-desc">' + esc(cr.desc) + "</div>" +
         '<div class="cr-detail-row">📦 本地模型: <b>' + (authorCountMap[cr.name] || 0) + "</b></div>" +
         '<div class="cr-detail-row">🔗 平台: ' + cr.type.split(";").map(t => '<span class="cr-platform-badge">' + (platformIcons[t] || "🔗") + " " + esc(t) + "</span>").join(" ") + "</div>" +
         '<div class="cr-detail-actions">' +
-          (cr._fromLocal ? "" : '<button class="primary" data-search="' + esc(cr.name) + '">🔍 搜索模型</button>') +
+          (authorCountMap[cr.name] > 0 ? '<button class="primary" data-local>' + authorCountMap[cr.name] + ' 个本地模型</button>' : '') +
+          '<button class="primary" data-search="' + esc(cr.name) + '">🔍 平台搜索</button>' +
           '<button class="secondary" data-close>关闭</button>' +
         "</div>" +
       "</div>";
 
       document.body.appendChild(overlay);
+
+      // ⭐ 浮层内的收藏
+      overlay.querySelector("[data-star]")?.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const now = toggleFav(cr.name);
+        ev.target.textContent = now ? "⭐" : "☆";
+        // 同时更新卡片
+        const cardStar = searchResults.querySelector('.cr-star-btn[data-star="' + esc(cr.name) + '"]');
+        if (cardStar) cardStar.textContent = now ? "⭐" : "☆";
+        bus.emit("toast:show", { msg: now ? "⭐ 已收藏" : "取消收藏", duration: 1500, type: "success" });
+      });
 
       overlay.querySelector("[data-close]")?.addEventListener("click", () => overlay.remove());
 
@@ -343,6 +404,15 @@ export function renderSiteView(site, ctx) {
           if (site.searchUrl && openUrl) {
             openUrl(fillSearch(site.searchUrl, searchBtn.dataset.search));
           }
+        });
+      }
+
+      // 📦 查看本地模型
+      const localBtn = overlay.querySelector("[data-local]");
+      if (localBtn) {
+        localBtn.addEventListener("click", () => {
+          overlay.remove();
+          bus.emit("repo:search-creator", cr.name);
         });
       }
     });

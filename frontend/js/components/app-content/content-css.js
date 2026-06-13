@@ -243,6 +243,14 @@ export const contentCSS = `
 .hm-label { font-size:7px; color:var(--muted); padding-top:2px; display:flex; gap:2px; }
 .hm-label span { flex:1; text-align:center; }
 .hm-legend { display:flex; align-items:center; gap:2px; font-size:7px; color:var(--muted); justify-content:flex-end; }
+/* ===== 创作者标签 (cr-tag) ===== */
+.cr-tag { display:inline-flex;align-items:center;gap:2px;font-size:9px;padding:0 5px;border-radius:3px;line-height:16px;font-weight:500;flex-shrink:0; }
+.cr-tag-game { background:#4a9eff22;color:#4a9eff; }
+.cr-tag-vtuber { background:#ff6bb522;color:#ff6bb5; }
+.cr-tag-filter-row { display:flex;gap:4px;margin:0 0 8px;flex-wrap:wrap;align-items:center; }
+.cr-tag-filter-btn { font-size:var(--fs-xs);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .12s; }
+.cr-tag-filter-btn:hover { border-color:var(--accent);color:var(--txt);background:var(--hover); }
+.cr-tag-filter-btn.active { border-color:var(--accent);color:var(--accent);background:var(--accent);color:#fff; }
 /* ===== 创作者频道 (cr-) ===== */
 .cr-page { flex:1; display:flex; overflow:hidden; position:relative; }
 .cr-left { width:200px; flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); overflow:hidden; background:var(--surf); }

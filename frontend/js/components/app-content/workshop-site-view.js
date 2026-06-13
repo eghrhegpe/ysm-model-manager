@@ -163,7 +163,7 @@ export function renderSiteView(site, ctx) {
               : { border: "#6B9FFF", glow: "transparent", rank: "" };
             const spinAttr = tier.rank ? ' data-spin="' + tier.rank + '"' : '';
             return (
-              '<div class="gh-card" style="min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer;animation:card-in .3s ease-out both;animation-delay:' +
+              '<div class="gh-card" tabindex="0" style="min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer;animation:card-in .3s ease-out both;animation-delay:' +
               (idx * 0.03) +
               's" data-name="' +
               esc(cr.name) +
@@ -269,23 +269,23 @@ export function renderSiteView(site, ctx) {
     );
     creators.forEach((cr, idx) => {
       parts.push(
-        '<div class="cr-row">' +
+          '<div class="cr-row" style="flex-wrap:wrap">' +
           "<span>🎨</span>" +
           '<input data-idx="' +
           idx +
           '" data-fld="name" value="' +
           esc(cr.name) +
-          '" class="cr-input cr-input-name">' +
+          '" class="cr-input cr-input-name" style="min-width:80px">' +
           '<input data-idx="' +
           idx +
           '" data-fld="desc" value="' +
           esc(cr.desc) +
           '" class="cr-input cr-input-desc">' +
-          '<input data-idx="' +
+          '<select data-idx="' +
           idx +
-          '" data-fld="type" value="' +
-          esc(cr.type) +
-          '" class="cr-input-type" placeholder="bilibili">' +
+          '" data-fld="type" class="cr-input-type" multiple style="width:130px;height:60px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit" title="Ctrl+点击多选">' +
+          (allSites || []).map(s => '<option value="' + esc(s.id) + '"' + (cr.type && cr.type.split(";").includes(s.id) ? " selected" : "") + ">" + esc(s.label) + "</option>").join("") +
+          "  </select>" +
           '<input data-idx="' +
           idx +
           '" data-fld="tag" value="' +
@@ -417,6 +417,42 @@ export function renderSiteView(site, ctx) {
       }
     });
   });
+
+  // 键盘导航 ←↑↓→
+  const crGrid = searchResults.querySelector(".cr-creator-grid");
+  if (crGrid) {
+    crGrid.addEventListener("keydown", (e) => {
+      const cards = [...crGrid.querySelectorAll(".gh-card[tabindex]")];
+      const cur = document.activeElement;
+      const idx = cards.indexOf(cur);
+      if (idx < 0) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        e.preventDefault();
+        const next = cards[idx + 1] || cards[0];
+        next.focus();
+      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        const prev = cards[idx - 1] || cards[cards.length - 1];
+        prev.focus();
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        cur.click();
+      }
+    });
+  }
+
+  // storage 事件：多标签页收藏同步
+  const _storageSync = (e) => {
+    if (e.key === STORAGE_KEY) {
+      // 刷新所有收藏按钮的状态
+      const favs = loadFavs();
+      searchResults.querySelectorAll(".cr-star-btn").forEach((btn) => {
+        btn.textContent = favs.includes(btn.dataset.star) ? "⭐" : "☆";
+      });
+    }
+  };
+  window.addEventListener("storage", _storageSync);
+  // 清理（renderSiteView 每次被调用都会重建，旧的 listener 会被 GC）
 
   // 📦 浏览 GitHub 仓库模型
   const refreshView = () => renderSiteView(site, ctx);
@@ -652,7 +688,13 @@ export function renderSiteView(site, ctx) {
     });
     inp.addEventListener("input", () => {
       const idx = parseInt(inp.dataset.idx, 10);
-      if (creators[idx]) creators[idx][inp.dataset.fld] = inp.value.trim();
+      if (creators[idx]) {
+        if (inp.tagName === "SELECT") {
+          creators[idx][inp.dataset.fld] = Array.from(inp.selectedOptions).map(o => o.value).filter(Boolean).join(";");
+        } else {
+          creators[idx][inp.dataset.fld] = inp.value.trim();
+        }
+      }
     });
   });
 

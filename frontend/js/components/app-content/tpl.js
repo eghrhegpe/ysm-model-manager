@@ -454,10 +454,10 @@ export function diagnosticsHTML() {
 <div class="diag-right">
 <div class="diag-panel" id="diag-log">
 <div class="diag-log-filter" style="display:flex;gap:4px;padding:3px 12px;overflow:hidden">
-<button class="diag-log-fbtn active" data-status="all" style="font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">全部</button>
-<button class="diag-log-fbtn" data-status="success" style="font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">✅ 成功</button>
-<button class="diag-log-fbtn" data-status="failed" style="font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">❌ 失败</button>
-<button class="diag-log-fbtn" data-status="skipped" style="font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer">⏭️ 跳过</button>
+<button class="diag-log-fbtn active" data-status="all">全部</button>
+<button class="diag-log-fbtn" data-status="success">✅ 成功</button>
+<button class="diag-log-fbtn" data-status="failed">❌ 失败</button>
+<button class="diag-log-fbtn" data-status="skipped">⏭️ 跳过</button>
 <input id="diag-log-search" placeholder="🔍 搜索模型名..." style="width:130px;font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);margin-left:auto">
 </div>
 <div id="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">暂无日志</div></div>

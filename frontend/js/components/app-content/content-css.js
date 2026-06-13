@@ -1,7 +1,7 @@
 export const contentCSS = `
 :host { display:flex; flex-direction:column; flex:1; overflow:hidden; font-family:var(--font-ui); font-size:var(--fs-base); background:var(--bg); }
 /* ===== CSS 变量（标签/标记色） ===== */
-:host { --tag-game:#4a9eff; --tag-game-bg:rgba(74,158,255,.13); --tag-vup:#ff6bb5; --tag-vup-bg:rgba(255,107,181,.13); --tag-oc:#a78bfa; --tag-oc-bg:rgba(167,139,250,.13); }
+:host { --tag-game:#4a9eff; --tag-game-bg:rgba(74,158,255,.13); --tag-vup:#ff6bb5; --tag-vup-bg:rgba(255,107,181,.13); --tag-oc:#a78bfa; --tag-oc-bg:rgba(167,139,250,.13); --tag-amber:#f9a826; --tag-amber-bg:rgba(249,168,38,.2); --accent-btn-bg:#7c83ff33; --accent-btn-color:#66d9ef; --accent-btn-border:#7c83ff55; }
 @keyframes dl-slide-up {
   from { opacity:0; transform:translateY(8px); max-height:0; padding:0 4px }
   to   { opacity:1; transform:translateY(0); max-height:30px; padding:2px 4px }
@@ -17,7 +17,7 @@ export const contentCSS = `
 .stat-card .sub { font-size:var(--fs-sm); color:var(--txt); margin-top:6px; }
 .placeholder-box { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--muted); font-size:var(--fs-md); gap:8px; }
 .placeholder-box .big { font-size:48px; }
-.ptag { font-size:var(--fs-xs); background:#f9a82633; color:#f9a826; padding:2px 8px; border-radius:4px; }
+.ptag { font-size:var(--fs-xs); background:var(--tag-amber-bg); color:var(--tag-amber); padding:2px 8px; border-radius:4px; }
 .repo-layout { flex:1; display:flex; overflow:hidden; height:100%; }
 .repo-layout-wrap { flex:1; }
 .repo-wrap { display:flex;flex-direction:column;flex:1;overflow:hidden; }
@@ -80,15 +80,12 @@ export const contentCSS = `
 /* 诊断页面：左栏按钮 + 右栏信息 */
 .hdr-btn { padding:var(--pad-btn-primary) 8px; border-radius:4px; border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:var(--fs-btn-primary); font-family:inherit; }
 .hdr-btn:hover { background:var(--hover); }
-/* accent 按钮颜色 —— 不用 var(--accent)，adoptedStyleSheets 不继承文档 CSS 变量 */
-.hdr-btn.accent { background:#7c83ff33; color:#66d9ef; border-color:#7c83ff55; }
-:host-context(.theme-warm) .hdr-btn.accent { color:#8b4513; }
-:host-context(.theme-pro) .hdr-btn.accent { color:#ffffff; }
+/* accent 按钮颜色 */
+.hdr-btn.accent,.btn.accent { background:var(--accent-btn-bg); color:var(--accent-btn-color); border-color:var(--accent-btn-border); }
+:host-context(.theme-warm) .hdr-btn.accent,:host-context(.theme-warm) .btn.accent { color:#8b4513; }
+:host-context(.theme-pro) .hdr-btn.accent,:host-context(.theme-pro) .btn.accent { color:#ffffff; }
 .btn { padding:var(--pad-btn-primary) 8px; border-radius:4px; border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:var(--fs-btn-primary); font-family:inherit; transition:background .12s; }
 .btn:hover { background:var(--hover); }
-.btn.accent { background:#7c83ff33; color:#66d9ef; border-color:#7c83ff55; }
-:host-context(.theme-warm) .btn.accent { color:#8b4513; }
-:host-context(.theme-pro) .btn.accent { color:#ffffff; }
 .btn.accent:hover { background:#7c83ff55; }
 .btn.danger { background:#e5534b22; color:#e5534b; border-color:#e5534b55; }
 .btn.danger:hover { background:#e5534b44; }
@@ -121,7 +118,9 @@ export const contentCSS = `
 .diag-btn.active { background:#7c83ff22; color:var(--accent); }
 .diag-btn-icon { font-size:var(--fs-lg); width:20px; text-align:center; flex-shrink:0; }
 .diag-btn-action { justify-content:center; padding:6px; font-size:var(--fs-md); }
-.diag-log-fbtn.active { background:var(--accent) !important; color:#fff !important; border-color:var(--accent) !important; }
+.diag-log-fbtn { font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer; }
+.diag-log-fbtn:hover { background:var(--hover);color:var(--txt); }
+.diag-log-fbtn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 .diag-left-spacer { flex:1; }
 .diag-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .diag-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }

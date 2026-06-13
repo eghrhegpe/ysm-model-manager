@@ -53,7 +53,8 @@ async function tryAutoMergeCommunity(creators) {
   const { added } = mergeCommunityCreators(creators, community);
   if (added > 0) {
     try {
-      const { SaveWorkshopCreators } = await import("../../../wailsjs/go/main/App.js");
+      const { SaveWorkshopCreators } =
+        await import("../../../wailsjs/go/main/App.js");
       await SaveWorkshopCreators(creators);
     } catch {}
   }
@@ -78,10 +79,15 @@ export async function fetchCommunityCreators(url) {
     if (!resp.ok) throw new Error("HTTP " + resp.status);
     const data = await resp.json();
     return Array.isArray(data) ? data : [];
-  } catch {
+  } catch (err) {
+    console.warn("[community] fetch failed:", err);
     try {
       const { bus } = await import("../../bus.js");
-      bus.emit("toast:show", { msg: "🌐 社区索引拉取失败，使用本地缓存", type: "warn", duration: 3000 });
+      bus.emit("toast:show", {
+        msg: "🌐 社区索引拉取失败，使用本地缓存",
+        type: "warn",
+        duration: 3000,
+      });
     } catch {}
     return [];
   } finally {

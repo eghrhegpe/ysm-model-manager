@@ -20,14 +20,12 @@ export async function loadWorkshopData() {
   if (localAuthors && localAuthors.length) {
     for (const la of localAuthors) {
       if (existingNames.has(la.name)) {
-        // 已有同名创作者 → 追加类型标签
         const found = merged.find((c) => c.name === la.name);
         if (found && la.type && !found.type?.includes(la.type)) {
           found.type = found.type ? found.type + ";" + la.type : la.type;
         }
         found._fromLocal = true;
       } else {
-        // 新增本地作者
         merged.push({
           name: la.name,
           desc: la.desc || "来自本地仓库",
@@ -38,11 +36,27 @@ export async function loadWorkshopData() {
     }
   }
 
+  // 自动拉取社区索引（静默，后台执行）
+  tryAutoMergeCommunity(merged).catch(() => {});
+
   return {
     sites: sites || [],
     creators: merged,
     authors: authors || [],
   };
+}
+
+/** 后台静默拉取社区索引并合并 */
+async function tryAutoMergeCommunity(creators) {
+  const community = await fetchCommunityCreators(DEFAULT_COMMUNITY_URL);
+  if (!community.length) return;
+  const { added } = mergeCommunityCreators(creators, community);
+  if (added > 0) {
+    try {
+      const { SaveWorkshopCreators } = await import("../../../wailsjs/go/main/App.js");
+      await SaveWorkshopCreators(creators);
+    } catch {}
+  }
 }
 
 /**

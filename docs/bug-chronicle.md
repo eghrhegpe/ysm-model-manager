@@ -1106,10 +1106,10 @@ wails dev
 
 **两套独立的数据源，但缺乏事件桥梁**：
 
-| 组件 | 数据源 | 范围 |
-| --- | --- | --- |
-| 同步管理器类型标签 | `GetInstanceSyncStatus` | 1 个整合包 × 全部类型，统计各类型同步状态 |
-| 侧栏卡片数字 | `GetResourceInstanceStatus` | 全部整合包 × 1 个类型，统计各实例存量 |
+| 组件               | 数据源                      | 范围                                      |
+| ------------------ | --------------------------- | ----------------------------------------- |
+| 同步管理器类型标签 | `GetInstanceSyncStatus`     | 1 个整合包 × 全部类型，统计各类型同步状态 |
+| 侧栏卡片数字       | `GetResourceInstanceStatus` | 全部整合包 × 1 个类型，统计各实例存量     |
 
 同步管理器的类型标签点击只调用了 `this._selectedType = btn.dataset.type` + `this._render()` 来过滤自己的显示列表，**没有通知其他组件**类型已切换。侧栏监听的是 `repo:rtype-changed` 事件（由全局子标签发射），但同步管理器的标签点击从未发射过这个事件。
 
@@ -1122,7 +1122,7 @@ btn.addEventListener("click", () => {
   this._selectedType = btn.dataset.type;
   _lastSelectedType = this._selectedType;
   this._statusFilter = "all";
-  bus.emit("repo:rtype-changed", this._selectedType);  // ← 新增
+  bus.emit("repo:rtype-changed", this._selectedType); // ← 新增
   this._render();
 });
 ```

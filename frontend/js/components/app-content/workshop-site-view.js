@@ -76,12 +76,13 @@ export function renderSiteView(site, ctx) {
   // 搜索词分区
   if (site.presetSearches && site.presetSearches.length) {
     parts.push(
-      '<div class="cr-section">' +
-        '<span class="cr-section-title-lg">🔍 搜索词</span>' +
+      '<div class="cr-section" style="display:flex;align-items:center;gap:6px">' +
+        '<span class="cr-section-title-lg">🔍 网页搜索词</span>' +
         '<span class="cr-section-sub">(' +
         site.presetSearches.length +
         ")</span>" +
-        '<button id="cr-mode-toggle" class="cr-mode-switch" style="margin-left:auto;font-size:var(--fs-xs);padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit">' +
+        '<span style="flex:1"></span>' +
+        '<button id="cr-mode-toggle" class="cr-mode-switch" style="font-size:10px;padding:1px 4px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center">' +
         '<span class="cr-mode-opt cr-mode-ext active">↗ 外链</span>' +
         '<span class="cr-mode-opt cr-mode-emb">🔍 内嵌</span>' +
         "</button>" +
@@ -117,15 +118,16 @@ export function renderSiteView(site, ctx) {
     creators.forEach((cr) => { if (cr.tag) tagSet.add(cr.tag); });
     const tags = [...tagSet];
     parts.push(
-      '<div class="cr-section">' +
+      '<div class="cr-section" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
         '<span class="cr-section-title-lg">🎨 活跃创作者</span>' +
         '<span class="cr-section-sub" id="ws-cr-count">(' +
         creators.length +
         ")</span>" +
-        '<input type="text" id="ws-cr-search" placeholder="🔍 搜创作者名..." ' +
-        'style="flex:1;max-width:180px;padding:3px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit;outline:none;margin:0 6px">' +
-        '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto">✏️ 编辑</button>' +
-        '<button class="cr-fetch-btn cr-action-btn" style="margin-left:4px" title="从 GitHub 社区索引拉取最新创作者">🌐 社区</button>' +
+        '<input type="text" id="ws-cr-search" placeholder="搜创作者名..." ' +
+        'style="flex:1;min-width:120px;max-width:160px;padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit;outline:none">' +
+        '<span style="flex:1"></span>' +
+        '<button class="cr-fetch-btn cr-action-btn" style="margin-left:auto" title="从 GitHub 社区索引拉取最新创作者">🌐 社区</button>' +
+        '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted">✏️ 编辑</button>' +
         "</div>" +
         '<div class="cr-tag-filter-row">' +
           '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
@@ -210,12 +212,12 @@ export function renderSiteView(site, ctx) {
               (cr.tag
                 ? '<span class="cr-tag cr-tag-' +
                   esc(cr.tag) +
-                  '">' +
+                  '" style="display:none">' +
                   (cr.tag === "vup" ? "🎤" : cr.tag === "oc" ? "🎨" : "🏷️") +
                   " " +
                   esc(cr.tag) +
                   "</span>"
-                : '<span class="cr-tag cr-tag-game">🎮 game</span>') +
+                : '<span class="cr-tag cr-tag-game" style="display:none">🎮 game</span>') +
               "</div>" +
               (hasRepo
                 ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' +

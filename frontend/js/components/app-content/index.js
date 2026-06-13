@@ -112,14 +112,7 @@ class AppContent extends HTMLElement {
         const content = this._root.getElementById("ins-content");
         if (!content) return;
         const insName = pkg.name || "";
-        const defaultType = (() => {
-          try {
-            // 整合包页始终默认 YSM，不跟仓库页的 subtab 记忆走
-            return "ysm";
-          } catch {
-            return "ysm";
-          }
-        })();
+        const defaultType = pkg.rtype || "ysm";
         content.innerHTML =
           '<app-sync-manager instance="' +
           String(insName).replace(/"/g, "&quot;") +

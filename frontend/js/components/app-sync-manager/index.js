@@ -43,7 +43,7 @@ export class AppSyncManager extends HTMLElement {
   connectedCallback() {
     this._instance = this.getAttribute("instance") || "";
     this._defaultType = this.getAttribute("default-type") || "ysm";
-    this._selectedType = _lastSelectedType;
+    this._selectedType = _lastSelectedType || this._defaultType;
     if (!this._instance) {
       this.innerHTML =
         '<div style="padding:12px;color:var(--err)">⚠️ 未指定整合包</div>';

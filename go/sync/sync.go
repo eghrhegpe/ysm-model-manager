@@ -101,7 +101,7 @@ func GetInstanceStatusWith(mcRoot, repoDir string, scanFn ScanFunc, listFn ListV
 
 		// 收集 custom 目录下每个文件的链接类型
 		for _, c := range customEntries {
-			linkType := getLinkType(c.Path)
+			linkType := GetLinkType(c.Path)
 			fileName := c.Name
 			// 去掉 .ban 后缀，方便前端匹配
 			if strings.HasSuffix(strings.ToLower(fileName), ".ban") {
@@ -453,7 +453,8 @@ func SortEntries(entries []types.ModelEntry) {
 }
 
 // getLinkType 判断文件的链接类型
-func getLinkType(path string) types.LinkType {
+// GetLinkType 判断文件的链接类型
+func GetLinkType(path string) types.LinkType {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return types.LinkUnknown

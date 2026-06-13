@@ -138,7 +138,11 @@ func TestFindDuplicateFiles_SortedOutput(t *testing.T) {
 		t.Fatalf("期望 1 组重复，得到 %d 组", len(groups))
 	}
 	// 验证按路径排序
-	if !sort.StringsAreSorted(groups[0].Files) {
-		t.Errorf("文件路径未排序: %v", groups[0].Files)
+	paths := make([]string, len(groups[0].Files))
+	for i, f := range groups[0].Files {
+		paths[i] = f.Path
+	}
+	if !sort.StringsAreSorted(paths) {
+		t.Errorf("文件路径未排序: %v", paths)
 	}
 }

@@ -122,6 +122,7 @@ const (
 	SyncStatusMissing  SyncStatus = "missing"
 	SyncStatusOptional SyncStatus = "optional"
 	SyncStatusDisabled SyncStatus = "disabled"
+	SyncStatusLegacy   SyncStatus = "legacy"
 )
 
 // ResourceSyncItem 单个资源文件的同步状态

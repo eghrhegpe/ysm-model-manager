@@ -17,13 +17,14 @@ export function registerSync(unsubs) {
           ListVersionInstances,
           GetResourceInstanceStatus,
           InstallModelTo,
+          InstallResourceToInstance,
+          GetRepoRoot,
         } = await import("../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
-        const repoRoot = cfg.repoRoot || "";
-        if (!mcRoot || !repoRoot) {
+        if (!mcRoot) {
           bus.emit("toast:show", {
-            msg: "请先设置路径",
+            msg: "请先设置游戏路径",
             duration: 3000,
             type: "warn",
           });
@@ -32,29 +33,47 @@ export function registerSync(unsubs) {
         const instances = await ListVersionInstances(mcRoot);
         let totalOk = 0,
           totalFail = 0;
-        // 只安装当前资源类型的缺失文件
+
         const rtypeActual = rtype || "ysm";
+        const repoRoot = rtypeActual === "ysm"
+          ? cfg.repoRoot || ""
+          : await GetRepoRoot(rtypeActual);
+        if (!repoRoot) {
+          bus.emit("toast:show", {
+            msg: "请先设置该资源类型的目录",
+            duration: 3000, type: "warn",
+          });
+          return;
+        }
+
         const targets = instanceName
           ? instances.filter((i) => i.Name === instanceName)
           : instances;
         for (const ins of targets) {
-          if (!ins.CustomDir) continue;
           const statusList = await GetResourceInstanceStatus(
-            rtypeActual,
-            mcRoot,
-            repoRoot,
+            rtypeActual, mcRoot, repoRoot,
           );
           const st = (statusList || []).find((s) => s.Name === ins.Name);
           if (!st?.Missing?.length) continue;
           for (const srcPath of st.Missing) {
             try {
-              await InstallModelTo(srcPath, ins.CustomDir);
+              if (rtypeActual === "ysm") {
+                await InstallModelTo(srcPath, ins.CustomDir);
+              } else {
+                await InstallResourceToInstance(rtypeActual, srcPath, ins.Name);
+              }
               totalOk++;
             } catch {
               totalFail++;
             }
           }
         }
+        // 强制刷新扫描缓存
+        try {
+          const { InvalidateScanCache } = await import("../../wailsjs/go/main/App.js");
+          await InvalidateScanCache();
+        } catch {}
+        console.log("[sync] 同步完成, 发出 stats:refresh, 成功:", totalOk, "失败:", totalFail);
         bus.emit("stats:refresh");
         bus.emit("toast:show", {
           msg: instanceName

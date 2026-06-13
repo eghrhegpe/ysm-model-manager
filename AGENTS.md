@@ -36,14 +36,7 @@ cd frontend ; npx vite build 2>&1 | Select-String error
 
 已在发版说明中记录，但快速提示：
 
-- ✅ ZIP 模型手臂层级/偏移修复
-- ✅ faceUV 丢弃修复
-- ✅ 多纹理渲染（per-mesh 纹理索引）
-- ✅ 纹理按模型顺序分配
-- ✅ 配置文件保存不再因校验失败阻塞
-- ✅ mcRoot/RepoRoot 设置入口合并到设置页
-- ✅ Shadow DOM 样式隔离
 
 ## 第六条：回滚规则
 
-如果 `multi_replace_string_in_file` 后构建失败，**不要回滚**——检查 import 语句是否完整，修复后继续。
+如果 `multi_replace_string_in_file` 后构建失败，检查 import 语句是否完整，修复后继续。

@@ -259,6 +259,11 @@ func (a *App) CountDuplicateFiles(dir string) string {
 	return string(data)
 }
 
+// InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据
+func (a *App) InvalidateScanCache() {
+	InvalidateScanCache()
+}
+
 // InstallResourceToInstance 将资源文件安装到指定整合包
 // rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文件路径，instanceName: 整合包名称
 func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) error {

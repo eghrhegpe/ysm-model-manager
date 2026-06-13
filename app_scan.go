@@ -367,6 +367,14 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 	return entries
 }
 
+// InvalidateScanCache 清空扫描缓存（同步完成后调用，确保下次扫描取最新数据）
+func InvalidateScanCache() {
+	scanCache.Range(func(key, _ interface{}) bool {
+		scanCache.Delete(key)
+		return true
+	})
+}
+
 // computeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配）
 func computeFileHash(path string) string {
 	f, err := os.Open(path)

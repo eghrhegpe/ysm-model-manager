@@ -22,17 +22,7 @@ export function initRecycleBin(app) {
     try {
       const { LoadAppConfig, EmptyRecycleBin } =
         await import("../../wailsjs/go/main/App.js");
-      const cfg = await LoadAppConfig();
-      const repoRoot = cfg.repoRoot || "";
-      if (!repoRoot) {
-        bus.emit("toast:show", {
-          msg: "请先设置仓库目录",
-          duration: 3000,
-          type: "warn",
-        });
-        return;
-      }
-      const n = await EmptyRecycleBin(repoRoot);
+      const n = await EmptyRecycleBin("");
       bus.emit("toast:show", {
         msg: `♻️ 已清空 ${n} 个文件`,
         duration: 3000,
@@ -49,6 +39,23 @@ export function initRecycleBin(app) {
       });
     }
   });
+  // 监听全局类型切换
+  let currentType = localStorage.getItem("repo_rtype") || "ysm";
+  const typeIcons = {
+    ysm: "💎",
+    "mmd-skin": "🎭",
+    "vrchat-avatar": "🥽",
+    resourcepack: "🎨",
+    shaderpack: "☀️",
+    "create-blueprint": "⚙️",
+  };
+  let unsubRtype = bus.on("repo:rtype-changed", (rt) => {
+    if (rt && rt !== currentType) {
+      currentType = rt;
+      loadRecycleBin();
+    }
+  });
+
   loadRecycleBin();
 
   async function loadRecycleBin() {
@@ -57,39 +64,49 @@ export function initRecycleBin(app) {
     if (!list) return;
     try {
       const {
-        LoadAppConfig,
         ListRecycleBin,
         RestoreFromRecycle,
         DeleteFromRecycle,
         EmptyRecycleBin,
+        GetRepoRoot,
       } = await import("../../wailsjs/go/main/App.js");
-      const cfg = await LoadAppConfig();
-      const repoRoot = cfg.repoRoot || "";
-      if (!repoRoot) {
-        if (count) count.textContent = "请先设置仓库目录";
-        return;
-      }
 
-      const entries = await ListRecycleBin(repoRoot);
+      // 获取当前类型的根目录（用于路径过滤）
+      const currentRoot = await GetRepoRoot(currentType);
+      const allEntries = await ListRecycleBin("");
+
+      // 过滤：只显示路径在当前类型根目录下的文件
+      const entries = currentRoot
+        ? allEntries.filter(
+            (e) =>
+              e.Path &&
+              e.Path.replace(/\\/g, "/").startsWith(
+                currentRoot.replace(/\\/g, "/"),
+              ),
+          )
+        : allEntries;
+
       if (!entries || !entries.length) {
-        list.innerHTML = "";
+        list.innerHTML =
+          '<div style="padding:8px 12px;font-size:11px;color:var(--muted)">♻️ 回收站为空</div>';
         if (count) count.textContent = "空";
         return;
       }
-      if (count) count.textContent = `${entries.length} 个文件`;
+      const icon = typeIcons[currentType] || "📦";
+      if (count) count.textContent = icon + " " + entries.length + " 个文件";
 
       list.innerHTML = entries
         .map((e) => {
           const name = e.Name.replace(/\.(ysm|zip|7z)\.ban$/i, ".$1");
           const size = e.Size ? fmtSize(e.Size) : "?";
-          return `<div class="recy-item" style="display:flex;flex-direction:column;gap:2px;padding:5px 8px;border-radius:5px;background:var(--bg,#1e1e2e);font-size:11px">
+          return `<div class="recy-item" style="display:flex;flex-direction:column;gap:2px;padding:5px 8px;border-radius:5px;background:var(--bg);font-size:var(--fs-sm)">
 <div style="display:flex;align-items:center;gap:6px">
-<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt,#cdd6f4);cursor:pointer" title="点击查看详情: ${esc(e.Path)}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>
-<span style="font-size:9px;color:var(--muted,#6c7086)">${size}</span>
-<button class="recy-restore" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--bd,#444);background:var(--surf,#2a2a42);color:var(--txt,#cdd6f4);cursor:pointer;font-size:9px">↩️ 恢复</button>
-<button class="recy-del" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid #e5534b;background:transparent;color:#e5534b;cursor:pointer;font-size:9px">🗑️ 删除</button>
+<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);cursor:pointer" title="点击查看详情: ${esc(e.Path)}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>
+<span style="font-size:var(--fs-xs);color:var(--muted)">${size}</span>
+<button class="recy-restore" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-xs)">↩️ 恢复</button>
+<button class="recy-del" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--err);background:transparent;color:var(--err);cursor:pointer;font-size:var(--fs-xs)">🗑️ 删除</button>
 </div>
-<div style="font-size:9px;color:var(--muted,#6c7086);padding-left:2px;word-break:break-all">📂 ${esc(e.Path)}</div>
+<div style="font-size:var(--fs-xs);color:var(--muted);padding-left:2px;word-break:break-all">📂 ${esc(e.Path)}</div>
 </div>`;
         })
         .join("");
@@ -98,7 +115,7 @@ export function initRecycleBin(app) {
       list.querySelectorAll(".recy-restore").forEach((btn) => {
         btn.onclick = async () => {
           try {
-            await RestoreFromRecycle(btn.dataset.path, repoRoot);
+            await RestoreFromRecycle(btn.dataset.path, "");
             bus.emit("toast:show", {
               msg: "✅ 已恢复",
               duration: 2000,

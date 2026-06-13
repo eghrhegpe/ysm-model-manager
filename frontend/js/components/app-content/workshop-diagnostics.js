@@ -130,82 +130,142 @@ async function loadDiagnosticsLogs(root, esc) {
   }
 }
 
-export async function startDedup(root, esc) {
+export async function startDedup(root, esc, rtype) {
   const list = root.getElementById("diag-dedup-list");
   if (!list) return;
+
+  const rtDefs = [
+    { id: "ysm", icon: "💎", label: "YSM 模型" },
+    { id: "mmd-skin", icon: "🎭", label: "MMD 模型" },
+    { id: "vrchat-avatar", icon: "🥽", label: "VRChat" },
+    { id: "resourcepack", icon: "🎨", label: "材质包" },
+    { id: "shaderpack", icon: "☀️", label: "光影包" },
+    { id: "create-blueprint", icon: "⚙️", label: "蓝图" },
+  ];
+  const typeLabel = rtype
+    ? rtDefs.find((d) => d.id === rtype)?.label || rtype
+    : "所有";
+  const typeIcon = rtype
+    ? rtDefs.find((d) => d.id === rtype)?.icon || "📦"
+    : "📦";
+
   list.innerHTML =
-    '<div class="stat-row diag-stat diag-stat-muted">⏳ 扫描仓库文件哈希...</div>';
+    '<div class="stat-row diag-stat diag-stat-muted">⏳ 扫描 ' +
+    typeIcon +
+    " " +
+    typeLabel +
+    " 目录文件哈希...</div>";
+
   try {
-    const { LoadAppConfig, FindDuplicateFiles, MoveToRecycle } =
+    const { FindDuplicateFiles, GetRepoRoot, MoveToRecycle } =
       await import("../../../wailsjs/go/main/App.js");
-    const cfg = await LoadAppConfig();
-    const repoRoot = cfg.repoRoot || "";
-    if (!repoRoot) {
+
+    // 收集目标目录
+    const targets = [];
+    if (rtype && rtype !== "all") {
+      const dir = await GetRepoRoot(rtype);
+      if (dir)
+        targets.push({ id: rtype, icon: typeIcon, label: typeLabel, dir });
+    } else {
+      for (const rt of rtDefs) {
+        const dir = await GetRepoRoot(rt.id);
+        if (dir) targets.push({ ...rt, dir });
+      }
+    }
+
+    if (!targets.length) {
       list.innerHTML =
-        '<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">请先设置仓库目录</div>';
+        '<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">请先设置资源目录</div>';
       return;
     }
 
-    const jsonStr = await FindDuplicateFiles(repoRoot);
-    const dupGroups = JSON.parse(jsonStr || "[]");
-    if (!dupGroups.length) {
+    // 逐目录扫描
+    const allResults = [];
+    for (let i = 0; i < targets.length; i++) {
+      const t = targets[i];
+      list.innerHTML =
+        '<div class="stat-row diag-stat diag-stat-muted">⏳ 扫描中 ' +
+        (i + 1) +
+        "/" +
+        targets.length +
+        " " +
+        t.icon +
+        " " +
+        t.label +
+        "</div>";
+      await new Promise((r) => setTimeout(r, 10));
+      const jsonStr = await FindDuplicateFiles(t.dir);
+      const groups = JSON.parse(jsonStr || "[]") || [];
+      if (groups.length)
+        allResults.push({ icon: t.icon, label: t.label, groups });
+    }
+
+    const totalGroups = allResults.reduce((s, r) => s + r.groups.length, 0);
+    const totalDups = allResults.reduce(
+      (s, r) => s + r.groups.reduce((s2, g) => s2 + g.files.length - 1, 0),
+      0,
+    );
+
+    if (!totalGroups) {
       list.innerHTML =
         '<div class="stat-row" style="padding:12px;color:#a6e3a1;font-size:11px">✅ 没有重复文件</div>';
       return;
     }
 
-    const totalDups = dupGroups.reduce((s, g) => s + g.files.length - 1, 0);
-
     let html = `<div style="padding:10px 12px;font-size:11px;color:var(--txt);border-bottom:1px solid var(--bd)">
-发现 <strong>${dupGroups.length}</strong> 组重复文件（共 <strong>${totalDups}</strong> 个多余副本），每组选一个保留：
+发现 <strong>${totalGroups}</strong> 组重复文件（共 <strong>${totalDups}</strong> 个多余副本），每组选一个保留：
 <span style="display:block;font-size:9px;color:var(--muted);margin-top:2px">未选择的文件将移入回收站</span>
 </div>`;
-    dupHashes.forEach(([, group], gi) => {
-      const defaultIdx = group.reduce(
-        (best, e, i, arr) => (e.Size > arr[best].Size ? i : best),
-        0,
-      );
-      html += `<div style="margin:6px 12px;border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+
+    let groupIndex = 0;
+    for (const rtResult of allResults) {
+      html += `<div style="display:flex;align-items:center;gap:4px;padding:6px 12px 2px;font-size:10px;font-weight:600;color:var(--txt)">
+${rtResult.icon} ${rtResult.label}
+<span style="flex:1;border-bottom:1px solid var(--bd);margin-left:6px"></span>
+<span style="font-size:9px;color:var(--muted);font-weight:400">${rtResult.groups.reduce((s, g) => s + g.files.length, 0)} 文件</span>
+</div>`;
+
+      for (const group of rtResult.groups) {
+        const files = group.files || [];
+        const defaultIdx = files.reduce(
+          (best, e, i, arr) => (e.size > arr[best].size ? i : best),
+          0,
+        );
+        const totalSize = files.reduce((s, e) => s + e.size, 0);
+        const gi = groupIndex++;
+
+        html += `<div style="margin:4px 12px;border:1px solid var(--bd);border-radius:8px;overflow:hidden">
 <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:10px;font-weight:600;color:var(--txt);background:var(--surf);border-bottom:1px solid var(--bd)">
 <span>📎 组 ${gi + 1}</span>
 <span style="flex:1"></span>
-<span style="font-size:9px;color:var(--muted);font-weight:400">${group.length} 个文件 · ${group.reduce((s, e) => s + e.Size, 0)} 字节</span>
+<span style="font-size:9px;color:var(--muted);font-weight:400">${files.length} 个文件 · ${totalSize} 字节</span>
 </div>`;
-      // 提取相对目录（去掉仓库根目录前缀）
-      const getRelDir = (path) => {
-        // 找到最后一个 / 或 \
-        const lastSep = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-        const dir = lastSep >= 0 ? path.substring(0, lastSep) : "";
-        // 去掉仓库根目录前缀
-        const rootNorm = (repoRoot || "").replace(/[/\\]+/g, "\\");
-        const dirNorm = dir.replace(/[/\\]+/g, "\\");
-        let rel = dirNorm;
-        if (rootNorm && dirNorm.startsWith(rootNorm)) {
-          rel = dirNorm.slice(rootNorm.length).replace(/^[/\\]+/, "");
-        }
-        return rel || "/";
-      };
-      group.forEach((e, fi) => {
-        const checked = fi === defaultIdx ? " checked" : "";
-        const isDefault = fi === defaultIdx;
-        const dateStr = e.ModTime
-          ? new Date(e.ModTime).toLocaleDateString()
-          : "";
-        const relDir = getRelDir(e.Path);
-        html += `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background .1s;background:${isDefault ? "var(--hover)" : "transparent"}"
->
+        files.forEach((e, fi) => {
+          const checked = fi === defaultIdx ? " checked" : "";
+          const isDefault = fi === defaultIdx;
+          const dateStr = e.modTime
+            ? new Date(e.modTime).toLocaleDateString()
+            : "";
+          const lastSep = Math.max(
+            e.path.lastIndexOf("/"),
+            e.path.lastIndexOf("\\"),
+          );
+          const dir = lastSep >= 0 ? e.path.substring(0, lastSep) : "";
+          html += `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background .1s;background:${isDefault ? "var(--hover)" : "transparent"}">
 <input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} style="flex-shrink:0;accent-color:var(--accent)">
 <span style="flex:1;overflow:hidden;min-width:0">
-<span style="color:var(--txt);font-size:10px;cursor:pointer" title="点击查看详情: ${esc(e.Path)}" data-path="${esc(e.Path)}">${renderDisplayName(e.Name)}</span>
-<span style="display:block;font-size:8px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(relDir)}</span>
+<span style="color:var(--txt);font-size:10px;cursor:pointer" title="点击查看详情: ${esc(e.path)}" data-path="${esc(e.path)}">${renderDisplayName(e.name)}</span>
+<span style="display:block;font-size:8px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(dir)}</span>
 </span>
-<span style="font-size:9px;color:var(--muted);flex-shrink:0;margin-right:4px">${(e.Size / 1024).toFixed(0)}KB</span>
-${dateStr ? `<span style="font-size:8px;color:var(--muted);flex-shrink:0">${dateStr}</span>` : ""}
+<span style="font-size:9px;color:var(--muted);flex-shrink:0;margin-right:4px">${(e.size / 1024).toFixed(0)}KB</span>
+${dateStr ? '<span style="font-size:8px;color:var(--muted);flex-shrink:0">' + dateStr + "</span>" : ""}
 ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;background:#a6e3a122;color:#a6e3a1">推荐</span>' : ""}
 </label>`;
-      });
-      html += `</div>`;
-    });
+        });
+        html += `</div>`;
+      }
+    }
+
     html += `<div style="display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--bd)">
 <button id="diag-dedup-exec" style="flex:1;padding:7px 16px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:11px">🗑️ 删除未选中的重复文件</button>
 <button id="diag-dedup-cancel" style="padding:7px 16px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消</button>
@@ -221,30 +281,32 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
       .querySelector("#diag-dedup-exec")
       ?.addEventListener("click", async () => {
         let del = 0,
-          fail = 0;
-        for (let gi = 0; gi < dupGroups.length; gi++) {
-          const files = dupGroups[gi].files || [];
-          const selected = parseInt(
-            list.querySelector(`input[name="dedup-keep-${gi}"]:checked`)
-              ?.value ?? "0",
-            10,
-          );
-          for (let fi = 0; fi < files.length; fi++) {
-            if (fi === selected) continue;
-            try {
-              await MoveToRecycle(files[fi]);
-              del++;
-            } catch {
-              fail++;
+          fail = 0,
+          gi2 = 0;
+        for (const rtResult of allResults) {
+          for (const group of rtResult.groups) {
+            const files = group.files || [];
+            const selected = parseInt(
+              list.querySelector('input[name="dedup-keep-' + gi2 + '"]:checked')
+                ?.value ?? "0",
+              10,
+            );
+            for (let fi = 0; fi < files.length; fi++) {
+              if (fi === selected) continue;
+              try {
+                await MoveToRecycle(files[fi].path);
+                del++;
+              } catch {
+                fail++;
+              }
             }
+            gi2++;
           }
         }
         if (del > 0) {
           bus.emit("stats:refresh");
           bus.emit("tree:reload");
         }
-
-        // dedup 文件名点击 → 模型详情
         list.querySelectorAll("[data-path]").forEach((el) => {
           el.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -252,11 +314,20 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
             if (path) bus.emit("model:select", { path });
           });
         });
-        list.innerHTML = `<div class="stat-row" style="padding:8px 12px;font-size:11px;color:${fail > 0 ? "#f9a826" : "#a6e3a1"}">
-✅ 去重完成：移入回收站 ${del} 个，失败 ${fail} 个</div>`;
+        list.innerHTML =
+          '<div class="stat-row" style="padding:8px 12px;font-size:11px;color:' +
+          (fail > 0 ? "#f9a826" : "#a6e3a1") +
+          '">✅ 去重完成：移入回收站 ' +
+          del +
+          " 个，失败 " +
+          fail +
+          " 个</div>";
       });
   } catch (err) {
-    list.innerHTML = `<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">去重失败: ${esc(String(err))}</div>`;
+    list.innerHTML =
+      '<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">去重失败: ' +
+      esc(String(err)) +
+      "</div>";
   }
 }
 

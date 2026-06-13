@@ -74,6 +74,9 @@ export async function loadInstances(rtype) {
       return (b.synced || 0) - (a.synced || 0);
     });
 
+    console.log("[loader] loadInstances 返回, rtype:", rtypeActual, "实例数:", instances.length,
+      "第一个:", instances[0] ? { name: instances[0].name, synced: instances[0].synced, missing: instances[0].missing } : "无",
+      "statusList 长度:", statusList ? statusList.length : 0);
     return instances;
   } catch {
     return fallbackInstances();

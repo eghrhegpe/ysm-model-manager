@@ -8,3 +8,4 @@ cmd/*/*.exe
 node_modules/
 .DS_Store
 *.log
+_wails_test/

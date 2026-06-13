@@ -5,7 +5,17 @@ export function headerHTML() {
     '<div style="padding:4px 8px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
     '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;color:var(--muted);flex:1">' +
     '<input type="checkbox" id="sb-select-all" style="cursor:pointer"> 全选</label>' +
-    '<button class="sidebar-sync-selected" style="padding:3px 8px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:9px;font-family:inherit">⬇️ 同步所选</button>' +
+    '<div class="dd-wrap" style="position:relative;display:inline-block">' +
+    '<button class="sidebar-sync-selected" style="padding:3px 8px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:9px;font-family:inherit">⬇️ 同步所选 ▾</button>' +
+    '<div class="dd-menu" id="sidebar-sync-menu" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:10px;white-space:nowrap">' +
+    '<div class="dd-item" data-sync-type="all" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">📦 全部类型</div>' +
+    '<div class="dd-item" data-sync-type="ysm" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">💎 YSM</div>' +
+    '<div class="dd-item" data-sync-type="mmd-skin" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">🎭 MMD</div>' +
+    '<div class="dd-item" data-sync-type="vrchat-avatar" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">🥽 VRC</div>' +
+    '<div class="dd-item" data-sync-type="resourcepack" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">🎨 材质包</div>' +
+    '<div class="dd-item" data-sync-type="shaderpack" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">☀️ 光影包</div>' +
+    '<div class="dd-item" data-sync-type="create-blueprint" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">⚙️ 蓝图</div>' +
+    "</div></div>" +
     "</div>"
   );
 }

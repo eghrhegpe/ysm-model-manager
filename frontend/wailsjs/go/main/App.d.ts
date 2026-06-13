@@ -133,6 +133,8 @@ export function InstallModelWithOverlay(arg1:string,arg2:string):Promise<string>
 
 export function InstallResourceToInstance(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function InvalidateScanCache():Promise<void>;
+
 export function IsFileBanned(arg1:string):Promise<boolean>;
 
 export function IsProxyRunning():Promise<boolean>;

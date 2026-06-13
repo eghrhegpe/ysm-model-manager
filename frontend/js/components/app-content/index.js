@@ -134,11 +134,10 @@ class AppContent extends HTMLElement {
     initRepository();
     this._bindTabs("repo", ["tree", "import", "recycle", "dedup", "oldest"]);
 
-    // 资源类型 subtab 切换（文件树 tab 下的第二栏）
+    // 资源类型 subtab 切换（全局生效）
     const root = this._root;
     const subtabs = root.querySelectorAll(".repo-subtab");
     const treeBody = root.getElementById("repo-tab-tree");
-    // 按需加载 Three.js 预览组件
     import("../app-preview/index.js").catch(() => {});
     let curRtype = localStorage.getItem("repo_rtype") || "ysm";
     subtabs.forEach((btn) => {
@@ -149,22 +148,22 @@ class AppContent extends HTMLElement {
           localStorage.setItem("repo_rtype", rtype);
         } catch {}
         subtabs.forEach((t) => {
-          t.style.background = "transparent";
-          t.style.color = "var(--muted)";
+          t.classList.toggle("active", t === btn);
         });
-        btn.style.background = "var(--surf)";
-        btn.style.color = "var(--accent)";
-        if (!treeBody) return;
-        treeBody.innerHTML =
-          '<div style="flex:1;display:flex;overflow:hidden">' +
-          '<app-tree root="' +
-          rtype +
-          '" style="flex:1;min-width:0"></app-tree>' +
-          '<app-preview mode="model" style="width:220px;flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
-          "</div>";
+        // 更新文件树
+        if (treeBody) {
+          treeBody.innerHTML =
+            '<div style="flex:1;display:flex;overflow:hidden">' +
+            '<app-tree root="' +
+            rtype +
+            '" style="flex:1;min-width:0"></app-tree>' +
+            '<app-preview mode="model" style="width:220px;flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
+            "</div>";
+        }
+        // 通知其他 tab
+        bus.emit("repo:rtype-changed", rtype);
       });
     });
-    // 恢复上次选中的类型
     const savedTab = root.querySelector(
       '.repo-subtab[data-rtab="' + curRtype + '"]',
     );
@@ -202,7 +201,7 @@ class AppContent extends HTMLElement {
             initRecycleBin(this);
           } else if (tab === "dedup") {
             const { startDedup } = await import("./workshop-diagnostics.js");
-            // 构建简易的去重面板
+            let dedupType = localStorage.getItem("repo_rtype") || "ysm";
             container.innerHTML =
               '<div style="display:flex;flex-direction:column;height:100%">' +
               '<div style="display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid var(--bd)">' +
@@ -211,13 +210,28 @@ class AppContent extends HTMLElement {
               "</div>" +
               '<div id="dedup-result-list" style="flex:1;overflow-y:auto;padding:8px 0"></div>' +
               "</div>";
+            const doDedup = () => {
+              const list = container.querySelector("#dedup-result-list");
+              if (list)
+                startDedup(
+                  { getElementById: () => list },
+                  this._esc,
+                  dedupType,
+                );
+            };
             container
               .querySelector("#dedup-start-btn")
-              ?.addEventListener("click", async () => {
-                const list = container.querySelector("#dedup-result-list");
-                if (list)
-                  await startDedup({ getElementById: () => list }, this._esc);
-              });
+              ?.addEventListener("click", doDedup);
+            // 全局类型切换时自动重复
+            const _unsub = bus.on("repo:rtype-changed", (rt) => {
+              if (rt !== dedupType) {
+                dedupType = rt;
+                doDedup();
+              }
+            });
+            // 组件卸载时清理
+            this._unsubs = this._unsubs || [];
+            this._unsubs.push(_unsub);
           } else if (tab === "oldest") {
             const { loadOldestModel } =
               await import("../../features/oldest-models.js");

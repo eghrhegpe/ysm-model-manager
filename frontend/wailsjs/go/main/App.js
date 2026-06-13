@@ -258,6 +258,10 @@ export function InstallResourceToInstance(arg1, arg2, arg3) {
   return window['go']['main']['App']['InstallResourceToInstance'](arg1, arg2, arg3);
 }
 
+export function InvalidateScanCache() {
+  return window['go']['main']['App']['InvalidateScanCache']();
+}
+
 export function IsFileBanned(arg1) {
   return window['go']['main']['App']['IsFileBanned'](arg1);
 }

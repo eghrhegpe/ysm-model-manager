@@ -12,6 +12,9 @@ import { bindCardEvents, bindFooter } from "./events.js";
 import { bindInstanceActions } from "./actions.js";
 import { loadInstances } from "./loader.js";
 
+// 持久化勾选状态（跨重新渲染保持）
+const _checkedSet = new Set();
+
 class AppSidebar extends HTMLElement {
   static get observedAttributes() {
     return ["rtype"];
@@ -53,15 +56,20 @@ class AppSidebar extends HTMLElement {
     // 监听刷新事件
     this._unsubs.push(
       bus.on("stats:refresh", async () => {
+        console.log("[sidebar] stats:refresh 收到, 开始 _reload, rtype:", this._rtype);
         await this._reload();
+        console.log("[sidebar] _reload 完成");
       }),
     );
 
-    // 监听 sync-manager 的类型切换（只更新卡片数字，不刷新列表）
+    // 监听全局 subtab 类型切换 → 重新加载该类型的统计
     this._unsubs.push(
-      bus.on("sidebar:rtype-changed", async ({ rtype }) => {
-        this._rtype = rtype || "ysm";
-        await this._updateCardStats(this._rtype);
+      bus.on("repo:rtype-changed", async (rtype) => {
+        if (rtype && rtype !== this._rtype) {
+          console.log("[sidebar] 类型切换:", this._rtype, "→", rtype);
+          this._rtype = rtype;
+          await this._reload();
+        }
       }),
     );
 
@@ -77,14 +85,49 @@ class AppSidebar extends HTMLElement {
     if (!cb) return;
     cb.addEventListener("change", () => {
       const checked = cb.checked;
-      this._root.querySelectorAll(".chk").forEach((c) => (c.checked = checked));
+      this._root.querySelectorAll(".chk").forEach((c) => {
+        c.checked = checked;
+        const idx = parseInt(c.dataset.idx, 10);
+        if (!isNaN(idx) && this._instances[idx]) {
+          if (checked) _checkedSet.add(this._instances[idx].name);
+          else _checkedSet.delete(this._instances[idx].name);
+        }
+      });
+    });
+  }
+
+  // 渲染后恢复勾选 + 监听新 checkbox
+  _restoreCheckboxes() {
+    this._root.querySelectorAll(".chk").forEach((c) => {
+      const idx = parseInt(c.dataset.idx, 10);
+      if (!isNaN(idx) && this._instances[idx]) {
+        c.checked = _checkedSet.has(this._instances[idx].name);
+        c.addEventListener("change", () => {
+          if (c.checked) _checkedSet.add(this._instances[idx].name);
+          else _checkedSet.delete(this._instances[idx].name);
+        });
+      }
     });
   }
 
   _bindSyncSelected() {
     const btn = this._root.querySelector(".sidebar-sync-selected");
-    if (!btn) return;
+    const menu = this._root.getElementById("sidebar-sync-menu");
+    if (!btn || !menu) return;
+
+    // 点击按钮 = 全部类型同步
     btn.addEventListener("click", () => {
+      menu.style.display = menu.style.display === "block" ? "none" : "block";
+    });
+    // 点击其他地方关闭菜单
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".dd-wrap")) menu.style.display = "none";
+    });
+    // 阻止按钮本身的点击冒泡到 document
+    btn.addEventListener("click", (e) => e.stopPropagation());
+
+    // 通用同步函数
+    const doSync = (syncType) => {
       const selected = [];
       this._root.querySelectorAll(".chk:checked").forEach((c) => {
         const idx = parseInt(c.dataset.idx, 10);
@@ -99,32 +142,49 @@ class AppSidebar extends HTMLElement {
         });
         return;
       }
+      menu.style.display = "none";
       btn.textContent = "⏳";
       btn.disabled = true;
       (async () => {
-        let totalOk = 0,
-          totalFail = 0;
+        const types =
+          syncType === "all"
+            ? [
+                "ysm",
+                "mmd-skin",
+                "vrchat-avatar",
+                "resourcepack",
+                "shaderpack",
+                "create-blueprint",
+              ]
+            : [syncType];
         for (const insName of selected) {
-          await new Promise((resolve) => {
-            bus.emit("sync:download-missing", {
-              instanceName: insName,
-              rtype: this._rtype,
+          for (const rt of types) {
+            await new Promise((resolve) => {
+              bus.emit("sync:download-missing", {
+                instanceName: insName,
+                rtype: rt,
+              });
+              bus.on(
+                "sync:download:done",
+                () => {
+                  bus.off("sync:download:done");
+                  resolve();
+                },
+                { once: true },
+              );
+              setTimeout(resolve, 10000);
             });
-            bus.on(
-              "sync:download:done",
-              () => {
-                bus.off("sync:download:done");
-                resolve();
-              },
-              { once: true },
-            );
-            // 超时兜底
-            setTimeout(resolve, 10000);
-          });
+          }
         }
-        btn.textContent = "⬇️ 同步所选";
+        btn.textContent = "⬇️ 同步所选 ▾";
         btn.disabled = false;
       })();
+    };
+
+    // 下拉项点击
+    menu.addEventListener("click", (e) => {
+      const item = e.target.closest(".dd-item");
+      if (item) doSync(item.dataset.syncType || "all");
     });
   }
 
@@ -133,15 +193,18 @@ class AppSidebar extends HTMLElement {
     if (!container) return;
     renderVersionCards(container, this._instances);
     bindCardEvents(this._root, this._instances);
+    this._restoreCheckboxes();
   }
 
   async _reload() {
     try {
       this._instances = await loadInstances(this._rtype);
-    } catch (_) {
+      console.log("[sidebar] _reload 完成, 实例数:", this._instances.length, "rtype:", this._rtype,
+        "首个:", this._instances[0] ? { name: this._instances[0].name, synced: this._instances[0].synced, missing: this._instances[0].missing } : "无");
+    } catch (e) {
+      console.log("[sidebar] _reload 失败:", e);
       this._instances = [];
     }
-
     this._renderCards();
     bindFooter(this._root, this._instances);
   }

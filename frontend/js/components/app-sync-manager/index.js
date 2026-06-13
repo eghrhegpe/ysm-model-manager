@@ -66,13 +66,31 @@ export class AppSyncManager extends HTMLElement {
     this._loading = true;
     this.innerHTML = containerHTML(this._instance) + loadingHTML();
 
-    // 加载类型配置 + 数据
     await this._loadTypeConfig();
     await this._loadData();
 
     this._loading = false;
     this._render();
-    // _render 末尾已调用 _bindEvents()
+
+    // 监听刷新
+    const unsub = bus.on("stats:refresh", () => {
+      console.log("[sync-manager] stats:refresh 收到");
+      this._loadData().then(() => {
+        console.log("[sync-manager] _loadData 完成, items:", this._allItems ? this._allItems.length : 0);
+        if (this._allItems && this._allItems.length) {
+          const counts = {};
+          this._allItems.forEach(i => { counts[i.status] = (counts[i.status] || 0) + 1; });
+          console.log("[sync-manager] 重渲染, 计数:", counts);
+          this._render();
+        }
+      });
+    });
+    this._unsubs = this._unsubs || [];
+    this._unsubs.push(unsub);
+  }
+
+  disconnectedCallback() {
+    if (this._unsubs) this._unsubs.forEach((fn) => fn());
   }
 
   async _loadTypeConfig() {
@@ -126,6 +144,7 @@ export class AppSyncManager extends HTMLElement {
         missing: 0,
         disabled: 0,
         optional: 0,
+        legacy: 0,
         total: 0,
       };
     }
@@ -136,7 +155,13 @@ export class AppSyncManager extends HTMLElement {
         c.total++;
       }
     }
-    const globalCounts = { synced: 0, missing: 0, disabled: 0, optional: 0 };
+    const globalCounts = {
+      synced: 0,
+      missing: 0,
+      disabled: 0,
+      optional: 0,
+      legacy: 0,
+    };
     for (const item of this._allItems) globalCounts[item.status]++;
 
     // — 类型标签（分组：模型类 | 资源类）—
@@ -189,6 +214,7 @@ export class AppSyncManager extends HTMLElement {
       ["missing", "⬇️ 待推送", curCounts.missing || 0],
       ["disabled", "⛔ 已禁用", curCounts.disabled || 0],
       ["optional", "📤 可拉取", curCounts.optional || 0],
+      ["legacy", "🔗 旧仓库遗留", curCounts.legacy || 0],
     ];
     statusTabsEl.innerHTML = statusDefs
       .map(([id, label, count]) =>
@@ -231,6 +257,7 @@ export class AppSyncManager extends HTMLElement {
         missing: "待推送",
         disabled: "已禁用",
         optional: "可拉取",
+        legacy: "旧仓库遗留",
       };
       const hint =
         this._statusFilter !== "all"
@@ -249,6 +276,7 @@ export class AppSyncManager extends HTMLElement {
         this._selectedType = btn.dataset.type;
         _lastSelectedType = this._selectedType;
         this._statusFilter = "all";
+        bus.emit("repo:rtype-changed", this._selectedType);
         this._render();
       });
     });

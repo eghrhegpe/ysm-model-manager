@@ -426,6 +426,10 @@ export function ScanCustomModels(arg1) {
   return window['go']['main']['App']['ScanCustomModels'](arg1);
 }
 
+export function ScanLocalAuthors() {
+  return window['go']['main']['App']['ScanLocalAuthors']();
+}
+
 export function ScanModelEntries(arg1) {
   return window['go']['main']['App']['ScanModelEntries'](arg1);
 }

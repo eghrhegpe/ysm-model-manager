@@ -11,11 +11,19 @@ import (
 	"strings"
 )
 
+// FileEntry 文件条目
+type FileEntry struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Size    int64  `json:"size"`
+	ModTime int64  `json:"modTime"`
+}
+
 // Group 重复文件分组
 type Group struct {
-	Hash  string   `json:"hash"`  // SHA256
-	Size  int64    `json:"size"`  // 单文件大小
-	Files []string `json:"files"` // 文件路径（按路径排序）
+	Hash  string      `json:"hash"`  // SHA256
+	Size  int64       `json:"size"`  // 单文件大小
+	Files []FileEntry `json:"files"` // 文件列表
 }
 
 // FindDuplicateFiles 扫描目录，按 SHA256 哈希分组，返回包含重复的分组
@@ -67,12 +75,22 @@ func FindDuplicateFiles(dir string, skipRecycle bool) ([]Group, error) {
 		hash := fmt.Sprintf("%x", h.Sum(nil))
 
 		if g, ok := hashGroups[hash]; ok {
-			g.Files = append(g.Files, p)
+			g.Files = append(g.Files, FileEntry{
+				Name:    filepath.Base(p),
+				Path:    p,
+				Size:    info.Size(),
+				ModTime: info.ModTime().UnixMilli(),
+			})
 		} else {
 			hashGroups[hash] = &Group{
-				Hash:  hash,
-				Size:  info.Size(),
-				Files: []string{p},
+				Hash: hash,
+				Size: info.Size(),
+				Files: []FileEntry{{
+					Name:    filepath.Base(p),
+					Path:    p,
+					Size:    info.Size(),
+					ModTime: info.ModTime().UnixMilli(),
+				}},
 			}
 			orderedKeys = append(orderedKeys, hash)
 		}
@@ -83,11 +101,13 @@ func FindDuplicateFiles(dir string, skipRecycle bool) ([]Group, error) {
 	}
 
 	// 只保留有重复的分组，按首次出现顺序
-	var result []Group
+	result := []Group{}
 	for _, key := range orderedKeys {
 		g := hashGroups[key]
 		if len(g.Files) > 1 {
-			sort.Strings(g.Files)
+			sort.Slice(g.Files, func(i, j int) bool {
+				return g.Files[i].Path < g.Files[j].Path
+			})
 			result = append(result, *g)
 		}
 	}

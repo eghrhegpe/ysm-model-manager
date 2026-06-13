@@ -7,9 +7,6 @@
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "http://localhost:5173",
 
-  "build": {
-    "dir": "build"
-  },
   "bind": [
     "GetMinecraftPath",
     "SelectDirectory",

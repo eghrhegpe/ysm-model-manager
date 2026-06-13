@@ -1092,3 +1092,53 @@ wails dev
 2. **`go build .` 通过 ≠ wails build 通过**。Wails 的 bindings 生成器使用 `go/parser` 做更严格的 AST 解析，可能会暴露 `go build` 因缓存掩盖的语法问题。始终以 `wails dev` 或 `wails build` 为准。
 3. **"补一个 `}`" 是危险的矫正**——你不确定是少了一个还是多了一个，应该先用括号计数工具确认。
 4. Go 的 `gofmt` 只格式化不检查括号匹配。如遇疑似括号问题，用 `python -c "with open('file.go') as f: depth = sum(l.count('{')-l.count('}') for l in f)"` 快速核对。
+
+---
+
+### 34. 同步管理器类型标签点击不更新侧栏卡片数字
+
+#### 症状
+
+- 同步管理器的类型标签（💎YSM / 🎭MMD / 🥽VRC 等）点击后，过滤了同步列表，但侧栏的 📦 卡片数字（如 `180`）不变化
+- 侧栏始终显示默认类型（YSM）的计数
+
+#### 根因
+
+**两套独立的数据源，但缺乏事件桥梁**：
+
+| 组件 | 数据源 | 范围 |
+| --- | --- | --- |
+| 同步管理器类型标签 | `GetInstanceSyncStatus` | 1 个整合包 × 全部类型，统计各类型同步状态 |
+| 侧栏卡片数字 | `GetResourceInstanceStatus` | 全部整合包 × 1 个类型，统计各实例存量 |
+
+同步管理器的类型标签点击只调用了 `this._selectedType = btn.dataset.type` + `this._render()` 来过滤自己的显示列表，**没有通知其他组件**类型已切换。侧栏监听的是 `repo:rtype-changed` 事件（由全局子标签发射），但同步管理器的标签点击从未发射过这个事件。
+
+#### 修复
+
+在同步管理器 `_bindEvents()` 的类型标签点击 handler 中添加事件发射：
+
+```js
+btn.addEventListener("click", () => {
+  this._selectedType = btn.dataset.type;
+  _lastSelectedType = this._selectedType;
+  this._statusFilter = "all";
+  bus.emit("repo:rtype-changed", this._selectedType);  // ← 新增
+  this._render();
+});
+```
+
+侧栏已监听 `repo:rtype-changed`（由全局子标签的修复添加），收到后调用 `_reload()` 重新查询对应类型的 `GetResourceInstanceStatus`。
+
+#### Lesson
+
+1. **同一概念（"当前选中的资源类型"）被多个组件独立管理时，必须统一到事件总线**。全局子标签和同步管理器各自维护 `_selectedType`，各发各的更新——侧栏只挂了其中一个。
+2. **事件总线的「生产者清单」需要审计**：`scope:action` 事件的所有 `bus.emit` 调用点，确认是否有遗漏的生产者。可以 grep `repo:rtype-changed` 检查谁在 emit、谁在 on。
+3. **UI 组件的"选中状态"有两种受众**：自身显示过滤 + 外部组件联动。前者容易想到，后者容易被遗忘——开发中先想"这个选中变化还需要通知谁"。
+
+#### Debug Path Review
+
+- **Round 1 (Guess)**: 以为侧栏没有监听任何类型切换事件。
+  - _查了 sidebar/index.js → 已有 `repo:rtype-changed` listener（来自之前的全局子标签修复）。_
+- **Round 2 (Truth)**: debug 日志确认侧栏 `_rtype` 始终为 `"ysm"`。
+  - _加 `console.log` 发现 `reload` 从未被触发。反向追踪谁在 emit `repo:rtype-changed` → 只有全局子标签，同步管理器不发射。_
+- **Lesson**: 事件驱动架构中，组件不更新的两个排查方向：**没有 listener** 或 **没有 emitter**。先查 listener 存在，再查 emitter 覆盖了哪些入口。

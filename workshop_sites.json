@@ -19,6 +19,18 @@
       {
         "label": "YSM模型展示",
         "q": ""
+      },
+      {
+        "label": "YSM虚拟主播",
+        "q": ""
+      },
+      {
+        "label": "YSM碧蓝航线",
+        "q": ""
+      },
+      {
+        "label": "YSM明日方舟",
+        "q": ""
       }
     ]
   },
@@ -72,6 +84,22 @@
       {
         "label": "VRChat 模型",
         "q": "VRChat"
+      },
+      {
+        "label": "碧蓝航线",
+        "q": "碧蓝航线"
+      },
+      {
+        "label": "明日方舟",
+        "q": "明日方舟"
+      },
+      {
+        "label": "原神",
+        "q": "原神"
+      },
+      {
+        "label": "少女前线",
+        "q": "少女前线"
       }
     ]
   },
@@ -91,6 +119,14 @@
       {
         "label": "VRChat 模型",
         "q": "VRChat"
+      },
+      {
+        "label": "东方 Project",
+        "q": "東方"
+      },
+      {
+        "label": "VOCALOID",
+        "q": "VOCALOID"
       }
     ]
   },
@@ -171,6 +207,14 @@
       {
         "label": "VRChat 模型",
         "q": "VRChat avatar"
+      },
+      {
+        "label": "动漫角色",
+        "q": "anime character model"
+      },
+      {
+        "label": "原创角色",
+        "q": "original character"
       }
     ]  }
 ]

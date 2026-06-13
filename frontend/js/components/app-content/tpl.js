@@ -529,10 +529,6 @@ export function workshopHTML() {
     '<div class="repo-wrap">' +
     '<div class="repo-tabs" id="ws-tabs">' +
     '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">⏳ 加载中...</span>' +
-    '<button id="cr-mode-toggle" class="cr-mode-switch" style="margin-left:auto">' +
-    '<span class="cr-mode-opt cr-mode-ext active">↗ 外链</span>' +
-    '<span class="cr-mode-opt cr-mode-emb">🔍 内嵌</span>' +
-    "</button>" +
     "</div>" +
     '<div class="repo-tab-body" id="cr-tab-creators">' +
     '<div class="cr-page" id="ws-page">' +

@@ -277,17 +277,13 @@ class AppContent extends HTMLElement {
     const wsEditModeRef = { v: false }; // 可共享引用，供 renderSiteView 读写
     let repoModelCache = {}; // { repoName: { models, source, localMap } } 模型列表缓存
 
-    // 点击模式切换：外链 / 内嵌
+    // 点击模式切换：外链 / 内嵌（委托到 searchResults，按钮在 renderSiteView 中动态渲染）
     let embedMode = false;
-    const toggleBtn = root.getElementById("cr-mode-toggle");
-    if (toggleBtn) {
-      toggleBtn.addEventListener("click", () => {
-        embedMode = !embedMode;
-        toggleBtn
-          .querySelectorAll(".cr-mode-opt")
-          .forEach((el) => el.classList.toggle("active"));
-      });
-    }
+    const toggleEmbedMode = () => {
+      embedMode = !embedMode;
+      const btn = searchResults.querySelector("#cr-mode-toggle");
+      if (btn) btn.querySelectorAll(".cr-mode-opt").forEach((el) => el.classList.toggle("active"));
+    };
 
     // B站/爱发电 tab 点击 → 在右侧显示对应站点的创作者（不打开网站）
     const showCreatorsBySite = async (siteType) => {
@@ -312,8 +308,6 @@ class AppContent extends HTMLElement {
       // 动态生成 Tab
       const tabsEl = root.getElementById("ws-tabs");
       if (tabsEl && sites.length) {
-        // 保留外链/内嵌按钮
-        const modeToggle = tabsEl.querySelector("#cr-mode-toggle");
         tabsEl.innerHTML = "";
         sites.forEach((s, i) => {
           const btn = document.createElement("button");
@@ -323,7 +317,6 @@ class AppContent extends HTMLElement {
           btn.addEventListener("click", () => showCreatorsBySite(s.id));
           tabsEl.appendChild(btn);
         });
-        if (modeToggle) tabsEl.appendChild(modeToggle);
         // 默认显示第一个
         if (sites[0]) showCreatorsBySite(sites[0].id);
       }
@@ -437,6 +430,14 @@ class AppContent extends HTMLElement {
           if (currentSite) showSiteView(currentSite);
         },
       });
+      // 外链/内嵌切换（按钮在 renderSiteView 中动态渲染）
+      const toggleBtn = searchResults.getElementById("cr-mode-toggle");
+      if (toggleBtn) {
+        toggleBtn.onclick = () => {
+          embedMode = !embedMode;
+          toggleBtn.querySelectorAll(".cr-mode-opt").forEach((el) => el.classList.toggle("active"));
+        };
+      }
     };
 
     // 📦 显示 GitHub 仓库模型列表（比对本地已有文件）

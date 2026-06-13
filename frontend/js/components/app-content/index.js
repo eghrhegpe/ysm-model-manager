@@ -532,8 +532,6 @@ class AppContent extends HTMLElement {
       if (listContainer) listContainer.appendChild(renderList());
     }; // end showRepoModels
 
-    // 初始加载并默认显示 B站
-    setTimeout(() => showCreatorsBySite("bilibili"), 100);
   }
 
   _initGithub() {

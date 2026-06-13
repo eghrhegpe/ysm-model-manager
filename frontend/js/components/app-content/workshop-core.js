@@ -79,14 +79,21 @@ export async function fetchCommunityCreators(url) {
  */
 export function mergeCommunityCreators(local, community) {
   const nameMap = new Map(local.map((c) => [c.name, c]));
-  let added = 0, updated = 0;
+  let added = 0,
+    updated = 0;
   for (const cc of community) {
     const existing = nameMap.get(cc.name);
     if (existing) {
       // 补充缺失的字段
       let changed = false;
-      if (cc.desc && !existing.desc) { existing.desc = cc.desc; changed = true; }
-      if (cc.type && !existing.type) { existing.type = cc.type; changed = true; }
+      if (cc.desc && !existing.desc) {
+        existing.desc = cc.desc;
+        changed = true;
+      }
+      if (cc.type && !existing.type) {
+        existing.type = cc.type;
+        changed = true;
+      }
       if (changed) updated++;
     } else {
       local.push({ ...cc, _fromCommunity: true });
@@ -98,10 +105,11 @@ export function mergeCommunityCreators(local, community) {
 }
 
 /**
- * 社区索引的默认 URL（GitHub raw）
+ * 社区索引的默认 URL（可配置为社区维护的独立 creators JSON）
+ * 贡献通道：https://github.com/eghrhegpe/ysm-creator-index
  */
 export const DEFAULT_COMMUNITY_URL =
-  "https://raw.githubusercontent.com/eghrhegpe/ysm-model-manager/main/creators.json";
+  "https://raw.githubusercontent.com/eghrhegpe/ysm-creator-index/main/creators.json";
 
 /**
  * 获取仓库模型列表 + 本地映射

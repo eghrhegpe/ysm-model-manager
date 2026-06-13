@@ -51,6 +51,9 @@ export function renderSiteView(site, ctx) {
     });
   }
 
+  // 按仓库模型数降序排列（高产创作者优先）
+  creators.sort((a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0));
+
   // 构建 HTML
   let parts = [];
   parts.push('<div class="cr-scroll">');

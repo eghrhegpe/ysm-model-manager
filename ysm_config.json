@@ -1,5 +1,5 @@
 {
-  "repoRoot": "C:\\Users\\zhujieling11\\【YSM-1元模型】",
+  "repoRoot": "C:\\Users\\zhujieling11\\【YSM-付费模型】",
   "resourcepackRoot": "",
   "shaderpackRoot": "",
   "schematicRoot": "",
@@ -8,5 +8,13 @@
   "mcRoot": "C:\\PCL2\\.minecraft",
   "linkMode": "hardlink",
   "theme": "warm",
-  "mirror": "githubapi"
+  "mirror": "githubapi",
+  "winX": 0,
+  "winY": 0,
+  "winW": 0,
+  "winH": 0,
+  "winRelX": 0,
+  "winRelY": 0,
+  "winScrW": 0,
+  "winScrH": 0
 }

@@ -99,16 +99,16 @@
     "icon": "🤖",
     "label": "VRoid",
     "url": "https://hub.vroid.com/",
-    "desc": "VRM 虚拟形象模型库",
+    "desc": "VRM 角色模型市场",
     "group": "search",
-    "searchUrl": "https://hub.vroid.com/en/search?q={{q}}",
+    "searchUrl": "https://hub.vroid.com/en/search/{{q}}",
     "presetSearches": [
       {
         "label": "热门 VRM 模型",
         "q": "VRM"
       },
       {
-        "label": "VRChat 可用",
+        "label": "VRChat 角色",
         "q": "VRChat"
       }
     ]

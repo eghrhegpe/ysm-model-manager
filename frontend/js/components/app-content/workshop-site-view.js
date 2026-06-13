@@ -76,7 +76,7 @@ export function renderSiteView(site, ctx) {
           .map(
             (ps) =>
               '<button class="cr-preset-btn" data-q="' +
-              esc(ps.label) +
+              esc(ps.q || ps.label) +
               '">' +
               esc(ps.label) +
               "</button>",

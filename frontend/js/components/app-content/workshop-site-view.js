@@ -103,24 +103,22 @@ export function renderSiteView(site, ctx) {
         '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto">✏️ 编辑</button>' +
         '<button class="cr-fetch-btn cr-action-btn" style="margin-left:4px" title="从 GitHub 社区索引拉取最新创作者">🌐 社区</button>' +
         "</div>" +
-        (tags.length
-          ? '<div class="cr-tag-filter-row">' +
-            '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
-            '<button class="cr-tag-filter-btn" data-tag="game">🎮 游戏模型</button>' +
-            tags
-              .map(
-                (t) =>
-                  '<button class="cr-tag-filter-btn" data-tag="' +
-                  esc(t) +
-                  '">' +
-                  (t === "vtuber" ? "🎤" : "🏷️") +
-                  " " +
-                  esc(t) +
-                  "</button>",
-              )
-              .join("") +
-            "</div>"
-          : ""),
+        '<div class="cr-tag-filter-row">' +
+          '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
+          '<button class="cr-tag-filter-btn" data-tag="game">🎮 游戏模型</button>' +
+          tags
+            .map(
+              (t) =>
+                '<button class="cr-tag-filter-btn" data-tag="' +
+                esc(t) +
+                '">' +
+                (t === "vup" ? "🎤" : t === "oc" ? "🎨" : "🏷️") +
+                " " +
+                esc(t) +
+                "</button>",
+            )
+            .join("") +
+          "</div>",
     );
     parts.push(
       '<div class="cr-creator-grid" style="display:flex;flex-wrap:wrap;gap:6px;width:100%">' +
@@ -146,7 +144,7 @@ export function renderSiteView(site, ctx) {
               's" data-name="' +
               esc(cr.name) +
               '" data-tag="' +
-              esc(cr.tag || "") +
+              esc(cr.tag || "game") +
               '" title="搜索: ' +
               esc(cr.name) +
               '">' +
@@ -178,11 +176,11 @@ export function renderSiteView(site, ctx) {
                 ? '<span class="cr-tag cr-tag-' +
                   esc(cr.tag) +
                   '">' +
-                  (cr.tag === "vtuber" ? "🎤" : "🏷️") +
+                  (cr.tag === "vup" ? "🎤" : cr.tag === "oc" ? "🎨" : "🏷️") +
                   " " +
                   esc(cr.tag) +
                   "</span>"
-                : "") +
+                : '<span class="cr-tag cr-tag-game">🎮 game</span>') +
               "</div>" +
               (hasRepo
                 ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' +

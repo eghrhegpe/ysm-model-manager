@@ -580,7 +580,7 @@ export function renderSiteView(site, ctx) {
         creators[idx][fld] = inp.value;
       }
     });
-    creators.push({ name: "新作者", desc: "描述", type: site.id });
+    creators.push({ name: "新作者", desc: "描述", type: site.id, tag: "" });
     allCreators.push(creators[creators.length - 1]);
     refreshView();
   });

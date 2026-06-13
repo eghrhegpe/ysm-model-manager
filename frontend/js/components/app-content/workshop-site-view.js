@@ -168,9 +168,15 @@ export function renderSiteView(site, ctx) {
               (cr._fromLocal
                 ? '<span style="font-size:9px;color:var(--muted);margin-left:4px">📁</span>'
                 : "") +
+              (authorCount > 0
+                ? '<span class="cr-model-count">' + authorCount + '📦</span>'
+                : "") +
               "</div>" +
               '<div class="gh-card-desc">' +
               esc(cr.desc) +
+              "</div>" +
+              '<div class="hm-label" style="margin-top:1px;display:flex;gap:2px;flex-wrap:wrap">' +
+              cr.type.split(";").map(t => '<span class="cr-platform-badge">' + t + "</span>").join("") +
               "</div>" +
               (cr.tag
                 ? '<span class="cr-tag cr-tag-' +
@@ -293,17 +299,51 @@ export function renderSiteView(site, ctx) {
     });
   });
 
-  // 创作者卡片点击 → 用网站的 searchUrl + 名字搜索
+  // 创作者卡片点击 → 弹出详情浮层
   searchResults.querySelectorAll(".gh-card[data-name]").forEach((card) => {
     card.addEventListener("click", (e) => {
       if (e.target.closest(".gh-card-external[data-repo]")) return;
       const name = card.dataset.name;
-      if (site.searchUrl && name && openUrl) {
-        const url = site.searchUrl.replace(
-          /\{\{q\}\}/g,
-          encodeURIComponent(name),
-        );
-        openUrl(url);
+      const cr = creators.find(c => c.name === name);
+      if (!cr) return;
+
+      const overlay = document.createElement("div");
+      overlay.className = "cr-detail-overlay";
+      overlay.onclick = (ev) => { if (ev.target === overlay) overlay.remove(); };
+
+      const tagEmoji = cr.tag === "vup" ? "🎤" : cr.tag === "oc" ? "🎨" : "🎮";
+      const platformIcons = { bilibili:"📺", afdian:"❤️", github:"🐙", mzhouse:"🏠", bowlroll:"🍚", vroid:"🤖", nicovideo:"🧊", deviantart:"🎨" };
+      const platformLinks = { bilibili:"https://search.bilibili.com/all?keyword=", afdian:"https://afdian.com/search?q=", github:"https://github.com/search?q=", nicovideo:"https://3d.nicovideo.jp/works/search?keyword=" };
+
+      overlay.innerHTML = '<div class="cr-detail-box">' +
+        '<div class="cr-detail-header">' +
+          '<div class="cr-avatar-container" style="width:32px;height:32px;margin:0">' +
+            '<div class="cr-avatar" style="width:32px;height:32px;font-size:14px">' + esc(cr.name.charAt(0)).toUpperCase() + "</div>" +
+          "</div>" +
+          '<span class="cr-detail-name">' + esc(cr.name) + "</span>" +
+          (cr.tag ? '<span class="cr-tag cr-tag-' + esc(cr.tag) + '">' + tagEmoji + " " + esc(cr.tag) + "</span>" : '<span class="cr-tag cr-tag-game">🎮 game</span>') +
+        "</div>" +
+        '<div class="cr-detail-desc">' + esc(cr.desc) + "</div>" +
+        '<div class="cr-detail-row">📦 本地模型: <b>' + (authorCountMap[cr.name] || 0) + "</b></div>" +
+        '<div class="cr-detail-row">🔗 平台: ' + cr.type.split(";").map(t => '<span class="cr-platform-badge">' + (platformIcons[t] || "🔗") + " " + esc(t) + "</span>").join(" ") + "</div>" +
+        '<div class="cr-detail-actions">' +
+          (cr._fromLocal ? "" : '<button class="primary" data-search="' + esc(cr.name) + '">🔍 搜索模型</button>') +
+          '<button class="secondary" data-close>关闭</button>' +
+        "</div>" +
+      "</div>";
+
+      document.body.appendChild(overlay);
+
+      overlay.querySelector("[data-close]")?.addEventListener("click", () => overlay.remove());
+
+      const searchBtn = overlay.querySelector("[data-search]");
+      if (searchBtn) {
+        searchBtn.addEventListener("click", () => {
+          overlay.remove();
+          if (site.searchUrl && openUrl) {
+            openUrl(fillSearch(site.searchUrl, searchBtn.dataset.search));
+          }
+        });
       }
     });
   });

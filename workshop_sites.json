@@ -36,5 +36,24 @@
         "q": ""
       }
     ]
+  },
+  {
+    "id": "github",
+    "icon": "🐙",
+    "label": "GitHub",
+    "url": "https://github.com/",
+    "desc": "浏览创作者仓库模型",
+    "group": "repo",
+    "searchUrl": "https://github.com/search?q={{q}}",
+    "presetSearches": [
+      {
+        "label": "免费 YSM 模型仓库",
+        "q": ""
+      },
+      {
+        "label": "YSM Viewers",
+        "q": ""
+      }
+    ]
   }
 ]

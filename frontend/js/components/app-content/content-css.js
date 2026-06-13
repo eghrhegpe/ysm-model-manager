@@ -36,10 +36,10 @@ export const contentCSS = `
 .ins-model-list .row:hover { background:var(--hover); }
 .ins-model-list .row .dot { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
 .ins-model-list .row .rn { flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.ins-model-list .row .rn .tag-author,.ins-model-list .row .rn .tag-work,.ins-model-list .row .rn .tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
-.ins-model-list .row .rn .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
-.ins-model-list .row .rn .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
-.ins-model-list .row .rn .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
+.tag-author,.tag-work,.tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
+.tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
+.tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
+.tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
 .ins-model-list .row.row-prefix .dot { opacity:0.35; }
 .ins-model-list .row .status-icon { font-size:var(--fs-sm);margin-right:4px;flex-shrink:0; }
 .ins-model-list .row .link-icon { font-size:var(--fs-sm);margin-right:4px;flex-shrink:0; }
@@ -95,10 +95,7 @@ export const contentCSS = `
 .log-row { padding:3px 16px; display:flex; gap:6px; font-size:var(--fs-base); align-items:center; border-bottom:1px solid var(--bd); }
 .log-row .log-status { font-size:var(--fs-sm); width:20px; text-align:center; }
 .log-row .log-msg { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt); }
-.log-row .log-msg .tag-author,.log-row .log-msg .tag-work,.log-row .log-msg .tag-date,.recy-item .tag-author,.recy-item .tag-work,.recy-item .tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
-.log-row .log-msg .tag-author, .recy-item .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
-.log-row .log-msg .tag-work, .recy-item .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
-.log-row .log-msg .tag-date, .recy-item .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
+/* tag-* 颜色已由通用 .tag-* 规则覆盖 */
 .log-row .log-time { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }
 /* 设置页卡片三栏网格 */
 .stg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
@@ -134,8 +131,7 @@ export const contentCSS = `
 .diag-stat-muted { color:var(--muted); }
 
 /* ===== 通用卡片系统（元老页原型 → 全项目复用） ===== */
-@keyframes ring-fill { from { --pct:0; } to { --pct:100; } }
-@property --pct { syntax:'<number>'; inherits:false; initial-value:0; }
+/* ring-fill 动画已废弃，health-ring 改用 breathe-subtle */
 
 /* 基础卡片 — 所有卡片的基础 */
 .model-card {
@@ -377,14 +373,10 @@ export const contentCSS = `
 .gh-dl-selected { color:var(--accent);border-color:var(--accent); }
 .gh-dl-selected:hover { background:var(--accent);color:var(--bg); }
 
-/* 旧名兼容（逐步废弃） */
-.gh-page,.gh-left,.gh-right,.gh-right-inner,.gh-grid { }
+
 
 /* 模型名高亮标签（复用 display.js renderDisplayName） */
-.model-row .tag-author,.model-row .tag-work,.model-row .tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
-.model-row .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
-.model-row .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
-.model-row .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
+/* tag-* 颜色已由通用 .tag-* 规则覆盖 */
 
 /* 二级菜单 */
 .gh-popup { position:fixed; z-index:9999; background:var(--surf,#2a2a3c); border:1px solid var(--bd,#444); border-radius:8px; padding:4px; box-shadow:0 8px 24px rgba(0,0,0,.35); min-width:140px; }

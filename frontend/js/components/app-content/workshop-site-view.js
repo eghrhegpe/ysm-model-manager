@@ -107,18 +107,18 @@ export function renderSiteView(site, ctx) {
             const repoParts = isGitHub ? cr.name.split("/") : null;
             const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
             const authorCount = authorCountMap[cr.name] || 0;
-            // 按模型数排百分比：前15%金、前30%银、前45%铜，其余默认
+            // 按模型数排百分比：前15%金、前30%银、前45%铜，其余蓝色
             const sorted = [...arr].sort((a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0));
             const idx = sorted.indexOf(cr);
             const pct = sorted.length > 1 ? idx / (sorted.length - 1) : 0;
-            const medalColors = [
-              { border: "#D4A017", glow: "rgba(212,160,23,0.4)" },  // 前15% 金（暗金）
-              { border: "#9E9E9E", glow: "rgba(158,158,158,0.3)" }, // 前30% 银
-              { border: "#B87333", glow: "rgba(184,115,51,0.3)" },  // 前45% 铜
+            const tiers = [
+              { border: "#D4A017", glow: "rgba(212,160,23,0.4)", spin: true },  // 前15% 金
+              { border: "#9E9E9E", glow: "rgba(158,158,158,0.3)", spin: true },  // 前30% 银
+              { border: "#B87333", glow: "rgba(184,115,51,0.3)",  spin: true },  // 前45% 铜
+              { border: "#6B9FFF", glow: "rgba(107,159,255,0.2)", spin: false }, // 其余 蓝
             ];
-            let medal = medalColors[2];
-            if (pct < 0.15) medal = medalColors[0];
-            else if (pct < 0.30) medal = medalColors[1];
+            let tier = pct < 0.15 ? tiers[0] : pct < 0.30 ? tiers[1] : pct < 0.45 ? tiers[2] : tiers[3];
+            const ringCls = tier.spin ? ' cr-avatar-ring' : ' cr-avatar-ring-static';
             return (
               '<div class="gh-card" style="min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer;animation:card-in .3s ease-out both;animation-delay:' +
               (idx * 0.03) +
@@ -128,12 +128,14 @@ export function renderSiteView(site, ctx) {
               esc(cr.name) +
               '">' +
               '<div class="cr-avatar-container" style="position:relative;display:inline-flex;flex-shrink:0;align-self:flex-start;margin:6px 0 0 6px">' +
-              '<div class="cr-avatar-ring" style="background:conic-gradient(from var(--grad-rot,0deg),' +
-              medal.border +
+              '<div class="' +
+              ringCls +
+              '" style="background:conic-gradient(from var(--grad-rot,0deg),' +
+              tier.border +
               ',transparent 60%,' +
-              medal.border +
+              tier.border +
               ');box-shadow:0 0 8px ' +
-              medal.glow +
+              tier.glow +
               '"></div>' +
               '<div class="cr-avatar" style="width:28px;height:28px;font-size:12px">' +
               (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") +

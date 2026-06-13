@@ -312,14 +312,29 @@ class AppContent extends HTMLElement {
       root.querySelector(`[data-tab="${siteType}"]`)?.classList.add("active");
       showSiteView(currentSite);
     };
-    // 默认显示 B站
-    setTimeout(() => showCreatorsBySite("bilibili"), 100);
-    root
-      .querySelector('[data-tab="bilibili"]')
-      ?.addEventListener("click", () => showCreatorsBySite("bilibili"));
-    root
-      .querySelector('[data-tab="afdian"]')
-      ?.addEventListener("click", () => showCreatorsBySite("afdian"));
+    // 默认显示第一个站点
+    setTimeout(async () => {
+      const { sites } = await loadWorkshopData();
+      allSites = sites;
+      // 动态生成 Tab
+      const tabsEl = root.getElementById("ws-tabs");
+      if (tabsEl && sites.length) {
+        // 保留外链/内嵌按钮
+        const modeToggle = tabsEl.querySelector("#cr-mode-toggle");
+        tabsEl.innerHTML = "";
+        sites.forEach((s, i) => {
+          const btn = document.createElement("button");
+          btn.className = "repo-tab" + (i === 0 ? " active" : "");
+          btn.dataset.tab = s.id;
+          btn.textContent = s.icon + " " + s.label;
+          btn.addEventListener("click", () => showCreatorsBySite(s.id));
+          tabsEl.appendChild(btn);
+        });
+        if (modeToggle) tabsEl.appendChild(modeToggle);
+        // 默认显示第一个
+        if (sites[0]) showCreatorsBySite(sites[0].id);
+      }
+    }, 100);
 
     // 卡片点击 → 正文切换右侧视图，右侧 ↗ 按开关打开
     const openSite = (site, external = false) => {

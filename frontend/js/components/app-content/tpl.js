@@ -524,11 +524,11 @@ export function githubHTML() {
 }
 
 export function workshopHTML() {
+  // 站点 Tab 由 _initWorkshop 动态生成，此处只放容器
   return (
     '<div class="repo-wrap">' +
-    '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-tab="bilibili">📺 B站</button>' +
-    '<button class="repo-tab" data-tab="afdian">❤️ 爱发电</button>' +
+    '<div class="repo-tabs" id="ws-tabs">' +
+    '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">⏳ 加载中...</span>' +
     '<button id="cr-mode-toggle" class="cr-mode-switch" style="margin-left:auto">' +
     '<span class="cr-mode-opt cr-mode-ext active">↗ 外链</span>' +
     '<span class="cr-mode-opt cr-mode-emb">🔍 内嵌</span>' +
@@ -540,7 +540,7 @@ export function workshopHTML() {
     '<div class="cr-right-inner" id="ws-right-inner">' +
     '<div id="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
     '<div id="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +
-    '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">点击左侧站点查看详情</div>' +
+    '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">加载中...</div>' +
     "</div>" +
     "</div>" +
     '<div id="ws-creator-view" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden">' +

@@ -35,13 +35,15 @@ export function registerSync(unsubs) {
           totalFail = 0;
 
         const rtypeActual = rtype || "ysm";
-        const repoRoot = rtypeActual === "ysm"
-          ? cfg.repoRoot || ""
-          : await GetRepoRoot(rtypeActual);
+        const repoRoot =
+          rtypeActual === "ysm"
+            ? cfg.repoRoot || ""
+            : await GetRepoRoot(rtypeActual);
         if (!repoRoot) {
           bus.emit("toast:show", {
             msg: "请先设置该资源类型的目录",
-            duration: 3000, type: "warn",
+            duration: 3000,
+            type: "warn",
           });
           return;
         }
@@ -51,7 +53,9 @@ export function registerSync(unsubs) {
           : instances;
         for (const ins of targets) {
           const statusList = await GetResourceInstanceStatus(
-            rtypeActual, mcRoot, repoRoot,
+            rtypeActual,
+            mcRoot,
+            repoRoot,
           );
           const st = (statusList || []).find((s) => s.Name === ins.Name);
           if (!st?.Missing?.length) continue;
@@ -70,10 +74,16 @@ export function registerSync(unsubs) {
         }
         // 强制刷新扫描缓存
         try {
-          const { InvalidateScanCache } = await import("../../wailsjs/go/main/App.js");
+          const { InvalidateScanCache } =
+            await import("../../wailsjs/go/main/App.js");
           await InvalidateScanCache();
         } catch {}
-        console.log("[sync] 同步完成, 发出 stats:refresh, 成功:", totalOk, "失败:", totalFail);
+        console.log(
+          "[sync] 同步完成, 发出 stats:refresh, 成功:",
+          totalOk,
+          "失败:",
+          totalFail,
+        );
         bus.emit("stats:refresh");
         bus.emit("toast:show", {
           msg: instanceName

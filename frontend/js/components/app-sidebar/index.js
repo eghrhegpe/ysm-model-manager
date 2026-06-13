@@ -56,7 +56,10 @@ class AppSidebar extends HTMLElement {
     // 监听刷新事件
     this._unsubs.push(
       bus.on("stats:refresh", async () => {
-        console.log("[sidebar] stats:refresh 收到, 开始 _reload, rtype:", this._rtype);
+        console.log(
+          "[sidebar] stats:refresh 收到, 开始 _reload, rtype:",
+          this._rtype,
+        );
         await this._reload();
         console.log("[sidebar] _reload 完成");
       }),
@@ -199,8 +202,20 @@ class AppSidebar extends HTMLElement {
   async _reload() {
     try {
       this._instances = await loadInstances(this._rtype);
-      console.log("[sidebar] _reload 完成, 实例数:", this._instances.length, "rtype:", this._rtype,
-        "首个:", this._instances[0] ? { name: this._instances[0].name, synced: this._instances[0].synced, missing: this._instances[0].missing } : "无");
+      console.log(
+        "[sidebar] _reload 完成, 实例数:",
+        this._instances.length,
+        "rtype:",
+        this._rtype,
+        "首个:",
+        this._instances[0]
+          ? {
+              name: this._instances[0].name,
+              synced: this._instances[0].synced,
+              missing: this._instances[0].missing,
+            }
+          : "无",
+      );
     } catch (e) {
       console.log("[sidebar] _reload 失败:", e);
       this._instances = [];

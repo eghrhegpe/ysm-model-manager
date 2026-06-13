@@ -1,5 +1,6 @@
 // ===== 导入队列 + 拖拽 + 重命名流程 =====
 import { bus } from "../bus.js";
+import { friendlyError } from "../utils/errors.js";
 import { parseModelName, renderDisplayName } from "../utils/display.js";
 import { modalConfirm } from "../dialogs/modal.js";
 import { ALL_EXTS } from "../utils/extensions.js";
@@ -598,7 +599,7 @@ export function initImportQueue(app) {
           bus.emit("tree:reload");
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ " + String(e),
+            msg: "❌ " + friendlyError(e),
             duration: 3000,
             type: "error",
           });

@@ -68,7 +68,7 @@ export function registerUpload(unsubs) {
         });
       } catch (e) {
         bus.emit("toast:show", {
-          msg: `❌ 上传失败: ${String(e)}`,
+          msg: `❌ ${friendlyError(e)}`,
           duration: 5000,
           type: "error",
         });

@@ -312,15 +312,13 @@ export const contentCSS = `
 .gh-card.active { border-color:var(--accent); background:var(--accent); color:#fff; box-shadow:var(--card-shadow-hover, none); }
 .gh-card .name { font-size:var(--fs-md); font-weight:var(--fw-bold); color:var(--txt); font-family:var(--font-display); overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .gh-card .name + .meta { margin-top:1px; font-size:var(--fs-xs); color:var(--muted); }
-.cr-avatar { width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#8b7355;background:#ede4cf;transition:all .25s ease; }
-.cr-avatar-wrap { display:inline-flex;flex-shrink:0;border-radius:50%;padding:2px;transition:all .25s ease;animation:medal-breathe 3s ease-in-out infinite; }
-@keyframes medal-breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
-@keyframes breathe-subtle { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.1)} }
+.cr-avatar { width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);background:var(--surf);z-index:1;transition:all .25s ease; }
+.cr-avatar-container { position:relative;display:inline-flex;flex-shrink:0;align-self:flex-start;width:28px;height:28px;margin:6px; }
+.cr-avatar-ring { position:absolute;inset:-2px;border-radius:50%;animation:ring-spin 4s linear infinite;pointer-events:none; }
+@keyframes ring-spin { to{transform:rotate(360deg)} }
 @keyframes card-in { from{opacity:0;transform:translateY(8px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
 .health-ring { animation:breathe-subtle 4s ease-in-out infinite;will-change:filter; }
 .gh-card:hover .cr-avatar { transform:rotate(-8deg) scale(1.05); }
-.gh-card:hover .cr-avatar-wrap { animation:medal-breathe-hover .8s ease-in-out infinite; }
-@keyframes medal-breathe-hover { 0%,100%{transform:scale(1.06)} 50%{transform:scale(1.1)} }
 .gh-card-icon { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
 .gh-card-body { flex:1; min-width:0; }
 .gh-card-label { font-size:var(--fs-base); font-weight:600; color:var(--txt); }

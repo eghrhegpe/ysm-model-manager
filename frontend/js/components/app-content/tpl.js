@@ -12,14 +12,14 @@ export function repositoryHTML() {
     '<button class="repo-tab" data-tab="oldest">👴 仓库元老</button>' +
     "</div>" +
     // 第二栏：资源类型（仅在文件树 tab 可见）
-    '<div class="repo-subtabs" id="repo-subtabs" style="display:flex;gap:2px;padding:2px 8px;border-bottom:1px solid var(--bd);flex-shrink:0;font-size:10px">' +
-    '<button class="repo-subtab active" data-rtab="ysm" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:var(--surf);color:var(--accent);cursor:pointer;font-family:inherit;font-size:10px">💎 YSM</button>' +
-    '<button class="repo-subtab" data-rtab="mmd-skin" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">🎭 MMD</button>' +
-    '<button class="repo-subtab" data-rtab="vrchat-avatar" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">🥽 VRC</button>' +
+    '<div class="repo-subtabs" id="repo-subtabs" style="display:flex;gap:2px;padding:2px 8px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
+    '<button class="repo-subtab active" data-rtab="ysm">💎 YSM</button>' +
+    '<button class="repo-subtab" data-rtab="mmd-skin">🎭 MMD</button>' +
+    '<button class="repo-subtab" data-rtab="vrchat-avatar">🥽 VRC</button>' +
     '<span style="padding:3px 4px;color:var(--muted)">│</span>' +
-    '<button class="repo-subtab" data-rtab="resourcepack" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">🎨 材质包</button>' +
-    '<button class="repo-subtab" data-rtab="shaderpack" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">☀️ 光影包</button>' +
-    '<button class="repo-subtab" data-rtab="create-blueprint" style="padding:3px 10px;border-radius:3px 3px 0 0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:10px">⚙️ 蓝图</button>' +
+    '<button class="repo-subtab" data-rtab="resourcepack">🎨 材质包</button>' +
+    '<button class="repo-subtab" data-rtab="shaderpack">☀️ 光影包</button>' +
+    '<button class="repo-subtab" data-rtab="create-blueprint">⚙️ 蓝图</button>' +
     "</div>" +
     '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
     '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;border-right:1px solid var(--bd)">' +
@@ -93,7 +93,7 @@ export function settingsHTML() {
 <div class="stg-grid">
     <!-- Row 1 -->
     <div class="stg-card">
-      <div class="stg-card-hdr" style="display:flex;align-items:center;gap:6px">🎮 游戏根目录<button class="btn" id="set-mc-detect" style="margin-left:auto;font-size:var(--fs-xs)">🔍 自动搜索</button></div>
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🎮 游戏根目录<button class="btn" id="set-mc-detect" style="font-size:var(--fs-btn-tool);padding:var(--pad-btn-tool) 8px">🔍 自动搜索</button></div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-mc-path">加载中...</div>
         <div class="stg-card-desc">自动扫描 PCL2、%AppData% 等常见位置</div>
@@ -103,14 +103,14 @@ export function settingsHTML() {
       <div class="stg-card-hdr">🎨 材质包路径</div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-rp-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}/resourcepacks/</div>
+        <div class="stg-card-hint">默认: {mc}\\resourcepacks\\</div>
       </div>
     </div>
     <div class="stg-card">
       <div class="stg-card-hdr">☀️ 光影包路径</div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-sp-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}/shaderpacks/</div>
+        <div class="stg-card-hint">默认: {mc}\\shaderpacks\\</div>
       </div>
     </div>
     <!-- Row 2 -->
@@ -118,21 +118,21 @@ export function settingsHTML() {
       <div class="stg-card-hdr">💎 YSM 模型路径</div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-repo-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}/config/yes_steve_model/custom</div>
+        <div class="stg-card-hint">默认: {mc}\\config\\yes_steve_model\\custom</div>
       </div>
     </div>
     <div class="stg-card">
       <div class="stg-card-hdr">🎭 MMD 模型路径</div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-mmd-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}/3d-skin/EntityPlayer/</div>
+        <div class="stg-card-hint">默认: {mc}\\3d-skin\\EntityPlayer\\</div>
       </div>
     </div>
     <div class="stg-card">
       <div class="stg-card-hdr">🥽 VRChat 模型路径</div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-vrc-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}/vrchat-avatars/</div>
+        <div class="stg-card-hint">默认: {mc}\\vrchat-avatars\\</div>
       </div>
     </div>
     <!-- Row 3: 居中 -->
@@ -140,7 +140,7 @@ export function settingsHTML() {
       <div class="stg-card-hdr">⚙️ 蓝图路径</div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-schem-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}/schematics/</div>
+        <div class="stg-card-hint">默认: {mc}\\schematics\\</div>
       </div>
     </div>
   </div>
@@ -149,8 +149,9 @@ export function settingsHTML() {
 
 <div style="display:flex;gap:12px">
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
-    <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
+    <div class="setting-row" style="margin:0 0 6px;padding:4px 0;display:flex;align-items:center;justify-content:space-between">
       <span class="label" style="font-size:13px;font-weight:600">🔗 链接模式</span>
+      <button id="set-relink" class="btn" style="font-size:var(--fs-btn-tool);padding:var(--pad-btn-tool) 8px">🔄 重新应用链接</button>
     </div>
     <select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="copy">📋 复制</option>
@@ -160,7 +161,6 @@ export function settingsHTML() {
     <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">每个整合包独立占用磁盘空间，最兼容</div>
     <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">✅ 推荐：省磁盘空间，支持实时开关模型<br>📌 需与游戏同分区</div>
     <div id="lm-hint-symlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0"><span style="color:#e5534b">❌ 不推荐：权限不足时文件被挂起</span></div>
-    <button id="set-relink" class="btn" style="margin-top:6px;width:100%;font-size:var(--fs-xs)">🔄 重新应用链接</button>
   </div>
 
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
@@ -205,11 +205,16 @@ export function settingsHTML() {
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
       <span class="label" style="font-size:13px;font-weight:600">📏 基准字号</span>
     </div>
-    <select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:6px">
-      <option value="small">🔹 小（11px 基准）</option>
-      <option value="normal" selected>🔸 标准（13px 基准）</option>
-      <option value="large">🔺 大（15px 基准）</option>
+    <select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
+      <option value="small">🔹 小（−1px）</option>
+      <option value="normal" selected>🔸 标准</option>
+      <option value="large">🔺 大（+2px）</option>
     </select>
+    <div id="set-size-preview" style="display:flex;gap:8px;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">
+      <span>正文 <b id="sz-base" style="color:var(--txt)">12px</b></span>
+      <span>按钮间距 <b id="sz-space" style="color:var(--txt)">5px</b></span>
+      <span>按钮高 <b id="sz-btn-h" style="color:var(--txt)">23px</b></span>
+    </div>
     <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">调整整体界面文字大小，选择后立即生效</div>
   </div>
 
@@ -410,11 +415,12 @@ export function downloadsHTML() {
 </div>
 <div id="dl-drop" style="flex:1;margin:4px 12px;border:2px dashed var(--bd);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;transition:all .2s;cursor:pointer;min-height:80px">
   <div style="font-size:28px;opacity:.35">📥</div>
-  <div style="font-size:11px;color:var(--muted)">拖拽模型文件 <b>.ysm .zip .7z</b> 或文件夹到此处，或点击选择文件</div>
+  <div style="font-size:11px;color:var(--muted)">拖拽模型文件 <b>.ysm .zip .7z .json .pmx .pmd .vrca .vrm .nbt .schematic</b> 或文件夹到此处，或点击选择文件</div>
   <div style="display:flex;gap:8px;align-items:center">
     <span style="font-size:9px;color:var(--muted)">📁 拖入整个文件夹即可批量导入</span>
   </div>
-  <input type="file" id="dl-file-input" accept=".ysm,.zip,.7z" style="display:none">
+  <div style="font-size:10px;color:#bd93f9;margin-top:2px">💡 MMD/基岩版模型建议打包为 .zip 文件管理</div>
+  <input type="file" id="dl-file-input" accept=".ysm,.zip,.7z,.json,.pmx,.pmd,.vrca,.vrm,.nbt,.schematic" style="display:none">
   <input type="file" id="dl-folder-input" webkitdirectory style="display:none">
 </div>
 </div>

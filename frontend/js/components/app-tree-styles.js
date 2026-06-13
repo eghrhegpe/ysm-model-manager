@@ -12,11 +12,11 @@ export const treeCSS = `
 .hdr-row + .hdr-row { margin-top:4px; }
 .hdr-label { font-size:12px;font-weight:600;color:var(--txt);flex-shrink:0; }
 .hdr-spacer { flex:1; }
-.repo-bar-btn { padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:9px; }
+.repo-bar-btn { padding:var(--pad-btn-tool) 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-btn-tool); }
 .repo-bar-btn:hover { background:var(--hover);color:var(--txt); }
 .srch-inp { flex:1;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;outline:none;min-width:0; }
 .sort-sel { padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;cursor:pointer; }
-.hdr-btn { padding:3px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
+.hdr-btn { padding:var(--pad-btn-primary) 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-primary);font-family:inherit; }
 .hdr-btn:hover { background:var(--hover); }
 .hdr-btn.accent { background:#7c83ff33;color:#66d9ef;border-color:#7c83ff55; }
 :host-context(.theme-warm) .hdr-btn.accent { color:#8b4513; }

@@ -39,6 +39,11 @@ func (a *App) ReadPackMeta(path string) string {
 	return string(data)
 }
 
+// ReadShaderpackLang 读取光影包 lang/en_US.lang 提取显示名
+func (a *App) ReadShaderpackLang(path string) string {
+	return packs.ReadShaderpackLang(path)
+}
+
 // DetectResourceType 检测指定文件的资源类型
 func (a *App) DetectResourceType(path string) string {
 	var registry types.ResourceTypeRegistry
@@ -57,7 +62,7 @@ func (a *App) GetRepoRoot(rtype string) string {
 			return cfg.ResourcepackRoot
 		}
 		if cfg.McRoot != "" {
-			return cfg.McRoot + "/resourcepacks"
+			return filepath.Join(cfg.McRoot, "resourcepacks")
 		}
 		return ""
 	case "shaderpack":
@@ -65,7 +70,7 @@ func (a *App) GetRepoRoot(rtype string) string {
 			return cfg.ShaderpackRoot
 		}
 		if cfg.McRoot != "" {
-			return cfg.McRoot + "/shaderpacks"
+			return filepath.Join(cfg.McRoot, "shaderpacks")
 		}
 		return ""
 	case "create-blueprint":
@@ -73,7 +78,7 @@ func (a *App) GetRepoRoot(rtype string) string {
 			return cfg.SchematicRoot
 		}
 		if cfg.McRoot != "" {
-			return cfg.McRoot + "/schematics"
+			return filepath.Join(cfg.McRoot, "schematics")
 		}
 		return ""
 	case "mmd-skin":
@@ -81,7 +86,7 @@ func (a *App) GetRepoRoot(rtype string) string {
 			return cfg.MmdRoot
 		}
 		if cfg.McRoot != "" {
-			return cfg.McRoot + "/3d-skin/EntityPlayer"
+			return filepath.Join(cfg.McRoot, "3d-skin", "EntityPlayer")
 		}
 		return ""
 	case "vrchat-avatar":
@@ -92,7 +97,7 @@ func (a *App) GetRepoRoot(rtype string) string {
 			return cfg.MmdRoot
 		}
 		if cfg.McRoot != "" {
-			return cfg.McRoot + "/vrchat-avatars"
+			return filepath.Join(cfg.McRoot, "vrchat-avatars")
 		}
 		return ""
 	default:
@@ -275,41 +280,10 @@ func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) err
 		return fmt.Errorf("未找到整合包: %s", instanceName)
 	}
 
-	// 根据 rtype 确定安装子目录
-	var subDir string
-	switch rtype {
-	case "resourcepack":
-		subDir = "resourcepacks"
-	case "shaderpack":
-		subDir = "shaderpacks"
-	case "create-blueprint":
-		subDir = "schematics"
-	case "mmd-skin":
-		subDir = "3d-skin/EntityPlayer"
-	case "vrchat-avatar":
-		subDir = "vrchat-avatars"
-	case "ysm":
-		subDir = "config/yes_steve_model/custom"
-	default:
-		// 从 resource_types.json 读取
-		var registry struct {
-			ResourceTypes []struct {
-				ID         string `json:"id"`
-				InstallDir string `json:"installDir"`
-			} `json:"resourceTypes"`
-		}
-		if data, err := os.ReadFile("resource_types.json"); err == nil {
-			json.Unmarshal(data, &registry)
-			for _, rt := range registry.ResourceTypes {
-				if rt.ID == rtype {
-					subDir = rt.InstallDir
-					break
-				}
-			}
-		}
-		if subDir == "" {
-			return fmt.Errorf("未知的资源类型: %s", rtype)
-		}
+	// 根据 rtype 确定安装子目录（集中定义在 go/types/extensions.go）
+	subDir := types.SubDirMap(rtype)
+	if subDir == "" {
+		return fmt.Errorf("未知的资源类型: %s", rtype)
 	}
 
 	// 目标路径 = 整合包版本目录 + 子目录

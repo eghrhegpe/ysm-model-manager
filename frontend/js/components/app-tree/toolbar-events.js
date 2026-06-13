@@ -3,6 +3,7 @@
 import { bus } from "../../bus.js";
 import { flashBtn } from "./utils.js";
 import { spinnerHTML } from "./tpl.js";
+import { getExts } from "../../utils/extensions.js";
 
 /** 递归收集某个目录下的所有条目 */
 function collectDirEntries(entries, prefix) {
@@ -179,7 +180,11 @@ export function bindToolbarEvents(root, vm) {
     });
   });
 
-  $("btn-repo")?.addEventListener("click", () => bus.emit("navigate:settings"));
+  $("btn-repo")?.addEventListener("click", async () => {
+    if (!vm._repoRoot) return;
+    const { OpenFolder } = await import("../../../wailsjs/go/main/App.js");
+    OpenFolder(vm._repoRoot);
+  });
 
   // 搜索框实时过滤
   $("srch")?.addEventListener("input", () => {
@@ -250,12 +255,8 @@ export function bindToolbarEvents(root, vm) {
         const rtype = vm._rootAttr || "ysm";
         const { SelectImportFile, ImportByType } =
           await import("../../../wailsjs/go/main/App.js");
-        const extMap = {
-          ysm: ".ysm",
-          "mmd-skin": ".pmx",
-          "vrchat-avatar": ".vrca",
-        };
-        const ext = extMap[rtype] || ".zip";
+        const exts = getExts(rtype);
+        const ext = exts[0] || ".zip";
         const filePath = await SelectImportFile(
           rtype + " 模型|*" + ext,
           "选择" + rtype + "文件",
@@ -283,13 +284,8 @@ export function bindToolbarEvents(root, vm) {
           await import("../../../wailsjs/go/main/App.js");
         const dirPath = await SelectDirectory();
         if (!dirPath) return;
-        // 找目录中的模型文件（.pmx / .pmd / .ysm / .vrca）
-        const extMap = {
-          ysm: ".ysm",
-          "mmd-skin": ".pmx",
-          "vrchat-avatar": ".vrca",
-        };
-        const targetExt = extMap[rtype] || ".zip";
+        // 找目录中的模型文件
+        const targetExt = getExts(rtype)[0] || ".zip";
         // 直接导入目录（DirectoryCopyImporter 会按需处理）
         const errMsg = await ImportByType(rtype, dirPath);
         if (errMsg) {

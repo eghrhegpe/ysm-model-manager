@@ -1020,3 +1020,75 @@ if bones[idx].ParentID == nil && b.Parent != "" {
 → 最终效果: ZIP 模型渲染正常 ✅
 
 **Lesson**: 多文件合并时，同名骨骼的**所有属性**（parent、pivot、rotation）都必须统一到有 parent 的那个 occurrence。`pivots` 共享 map 不能简单保留首次出现，要优先保留有层级关系的数据。每次改完用对比诊断（Go spec vs JS spec）验证一致性。命令行 + 生产版 EXE 是两个东西，必须确保测试的是正确版本。
+
+---
+
+## 2026-06-13 新增 bug 记录
+
+### 32. workshop-settings.js: g is not defined（正则表达式空格）
+
+#### 症状
+
+```
+ReferenceError: g is not defined
+    at mcDerivedPath (workshop-settings.js:203:35)
+```
+
+#### 根因
+
+`replace` 的正则表达式 `/\\/ / g` 中间多了一个空格，本应是 `/\\/g`。那个空格导致 `g` 被当作独立变量名解析，而 `g` 未定义。
+
+```js
+// ❌ 错误：空格导致 g 被当作变量
+cfg.mcRoot.replace(/\\/ / g, "\\");
+// ✅ 正确
+cfg.mcRoot.replace(/\\/g, "\\");
+```
+
+这个函数 `mcDerivedPath` 用于生成派生路径（如 `{mcRoot}\resourcepacks`），因为多了一个空格而崩溃，导致所有派生路径卡片（光影包、MMD、VRC、蓝图）都显示"加载中..."。
+
+#### Lesson
+
+JS 正则表达式 /flags 之间不能有空格。手写 `/ /g` 这种模式时容易误加空格。写完立即 `npx vite build` 验证。
+
+---
+
+### 33. app_install.go: for 循环括号不匹配（替换残留）
+
+#### 症状
+
+```
+wails dev
+  • Generating bindings:  ERROR
+  .\app_install.go:1107:2: syntax error: non-declaration statement outside function body
+```
+
+`go build .` 和 `go vet ./...` 都通过，但 `wails dev` 和 `wails build -clean` 在 bindings 生成阶段和编译阶段都报错。
+
+### 排查路径
+
+**Round 1 (缓存问题?)**: 怀疑是 Go 编译缓存差异。
+→ 尝试 `go clean -cache && go build .` → 仍通过，wails 仍失败。
+→ 尝试 `go tool compile` 直接编译文件 → 通过。
+→ 尝试 wails `-skipbindings` → 编译阶段仍然失败。
+
+**Round 2 (括号不匹配)**: 猜测 `GetInstanceSyncStatus` 函数体提前关闭。
+→ 逐行数括号：`for _, rt := range` 缺失闭合 `}`。
+→ 错误地添加了一个 `}` → wails 报错移到了第 1106 行。
+
+**Round 3 (真相)**: 第一次 `multi_replace_string_in_file` 替换移除了 `if isDirLevel { ... } else {` 分支，但没清理干净。
+→ 原 `else` 块内的 `for _, p := range result.Extra` 循环中，`items = append(...)` 之后多了一个闭合 `}`（`else` 块层级残留）。
+→ 这个多余的 `}` 导致 `for _, rt := range` 的闭合 `}` 失效，使得 `data, _ := json.Marshal(items)` 跑到了函数体外。
+→ 错误地添加的第二个 `}`（Round 2 的修复）又加了一个问题。
+
+**Round 4 (彻底修复)**: 同时清理两个问题：
+
+1. 删除 `for _, p := range result.Extra` 循环中多余的 `}`（原 else 层级残留）
+2. 删除 Round 2 错误添加的 `}`
+
+### Lesson
+
+1. **`multi_replace_string_in_file` 或 `replace_string_in_file` 替换块状代码时**，移除 `if/else` 分支后必须仔细检查闭合大括号数量。新旧结构的层级数变化会改变括号需求。
+2. **`go build .` 通过 ≠ wails build 通过**。Wails 的 bindings 生成器使用 `go/parser` 做更严格的 AST 解析，可能会暴露 `go build` 因缓存掩盖的语法问题。始终以 `wails dev` 或 `wails build` 为准。
+3. **"补一个 `}`" 是危险的矫正**——你不确定是少了一个还是多了一个，应该先用括号计数工具确认。
+4. Go 的 `gofmt` 只格式化不检查括号匹配。如遇疑似括号问题，用 `python -c "with open('file.go') as f: depth = sum(l.count('{')-l.count('}') for l in f)"` 快速核对。

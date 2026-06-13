@@ -666,7 +666,7 @@
   {"name":"久世天音","desc":"VUP个人势虚拟主播","type":"bilibili","tag":"vup"},
   {"name":"空伶","desc":"VUP个人势，白色红樱桃婚纱","type":"bilibili","tag":"vup"},
   {"name":"括号笑叔","desc":"VUP个人势，橙色荷叶边女仆裙","type":"bilibili","tag":"vup"},
-  {"name":"泠鸢yousa","desc":"VUP个人势，海盐柠檬夏裙","type":"bilibili","tag":"vup"},
+  {"name":"泠鸢yousa","desc":"VUP（临时映画），海盐柠檬夏裙","type":"bilibili","tag":"vup"},
   {"name":"米团团Miho","desc":"VUP个人势，白色水手服","type":"bilibili","tag":"vup"},
   {"name":"名乃_NAN0","desc":"VUP个人势，蓝紫运动连衣裙／泳装","type":"bilibili","tag":"vup"},
   {"name":"穆小泠","desc":"VUP个人势，黑红色露背晚礼裙","type":"bilibili","tag":"vup"},
@@ -692,5 +692,14 @@
   {"name":"猫小鹰","desc":"VUP个人势，深红露腰歌手服","type":"bilibili","tag":"vup"},
   {"name":"七海NANA","desc":"VUP个人势，黑白运动短裙","type":"bilibili","tag":"vup"},
   {"name":"守一Showee","desc":"VUP个人势，黑色运动短裙","type":"bilibili","tag":"vup"},
-  {"name":"乌拉","desc":"VUP个人势，黑色科技潮流运动装","type":"bilibili","tag":"vup"}
+  {"name":"乌拉","desc":"VUP个人势，黑色科技潮流运动装","type":"bilibili","tag":"vup"},
+  {"name":"嘉然","desc":"A-SOUL女团VUP，女团装","type":"bilibili","tag":"vup"},
+  {"name":"psplive","desc":"VUP团体势，服务业职业装","type":"bilibili","tag":"vup"},
+  {"name":"四禧丸子","desc":"VUP团体势，时尚夏装","type":"bilibili","tag":"vup"},
+  {"name":"星律动","desc":"VUP团体势，时尚夏装","type":"bilibili","tag":"vup"},
+  {"name":"兰音","desc":"虚研社VUP，模型精致","type":"bilibili","tag":"vup"},
+  {"name":"艾尔莎","desc":"虚研社VUP，模型精致","type":"bilibili","tag":"vup"},
+  {"name":"早稻叽","desc":"ChaosLive VUP，白色紧身短衣／潮妹服","type":"bilibili","tag":"vup"},
+  {"name":"莓莉可Miko","desc":"妖精管理局VUP，草莓红蛋糕洛丽塔裙","type":"bilibili","tag":"vup"},
+  {"name":"星光Kirarin","desc":"妖精管理局VUP，粉色层叠礼裙","type":"bilibili","tag":"vup"}
 ]

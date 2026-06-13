@@ -3,12 +3,16 @@ import { bus } from "../bus.js";
 import { modalConfirm } from "../dialogs/modal.js";
 
 export function registerInstanceOps(unsubs) {
-  // 导出文件清单到剪贴板
+  // 导出文件清单到剪贴板（支持 rtype 筛选）
   unsubs.push(
-    bus.on("instance:export-list", async ({ name: insName }) => {
+    bus.on("instance:export-list", async ({ name: insName, rtype }) => {
       try {
-        const { LoadAppConfig, ListVersionInstances, ListFileNames } =
-          await import("../../wailsjs/go/main/App.js");
+        const {
+          LoadAppConfig,
+          ListVersionInstances,
+          ListFileNames,
+          GetRepoRoot,
+        } = await import("../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {
@@ -21,7 +25,7 @@ export function registerInstanceOps(unsubs) {
         }
         const instances = await ListVersionInstances(mcRoot);
         const ins = instances.find((i) => i.Name === insName);
-        if (!ins?.CustomDir) {
+        if (!ins?.VersionDir) {
           bus.emit("toast:show", {
             msg: "未找到整合包",
             duration: 3000,
@@ -29,19 +33,55 @@ export function registerInstanceOps(unsubs) {
           });
           return;
         }
-        const files = await ListFileNames(ins.CustomDir);
-        if (!files?.length) {
+
+        // 子目录映射（与 types.SubDirMap 保持一致）
+        const subDirMap = {
+          ysm: "config/yes_steve_model/custom",
+          "mmd-skin": "3d-skin/EntityPlayer",
+          "vrchat-avatar": "vrchat-avatars",
+          resourcepack: "resourcepacks",
+          shaderpack: "shaderpacks",
+          "create-blueprint": "schematics",
+        };
+
+        let dirs = [];
+        let labels = [];
+        if (rtype && subDirMap[rtype]) {
+          dirs = [ins.VersionDir + "/" + subDirMap[rtype]];
+          labels = [rtype];
+        } else {
+          for (const [rt, sub] of Object.entries(subDirMap)) {
+            dirs.push(ins.VersionDir + "/" + sub);
+            labels.push(rt);
+          }
+        }
+
+        let allLines = [`📦 ${insName}`];
+        let totalFiles = 0;
+        for (let i = 0; i < dirs.length; i++) {
+          try {
+            const files = await ListFileNames(dirs[i]);
+            if (files?.length) {
+              allLines.push(`\n── ${labels[i]} (${files.length}) ──`);
+              allLines.push(...files);
+              totalFiles += files.length;
+            }
+          } catch {}
+        }
+
+        if (!totalFiles) {
           bus.emit("toast:show", {
-            msg: "该整合包没有模型文件",
+            msg: "该整合包没有资源文件",
             duration: 2000,
             type: "info",
           });
           return;
         }
-        const text = `📦 ${insName}\n📁 ${ins.CustomDir}\n📄 共 ${files.length} 个文件\n\n${files.join("\n")}`;
+
+        const text = allLines.join("\n");
         await navigator.clipboard.writeText(text);
         bus.emit("toast:show", {
-          msg: `📋 已复制 ${files.length} 个文件清单到剪贴板`,
+          msg: `📋 已复制 ${totalFiles} 个文件清单到剪贴板`,
           duration: 3000,
           type: "success",
         });

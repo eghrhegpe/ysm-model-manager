@@ -46,16 +46,10 @@ export function registerContextMenus() {
             },
             { divider: true },
             {
-              label: "安装缺失",
-              icon: "⬇️",
-              onClick: () =>
-                bus.emit("sync:download-missing", { instanceName, rtype }),
-            },
-            {
-              label: "复制您的模型清单",
+              label: "复制模型清单",
               icon: "📄",
               onClick: () =>
-                bus.emit("instance:export-list", { name: instanceName }),
+                bus.emit("instance:export-list", { name: instanceName, rtype }),
             },
             { divider: true },
             {

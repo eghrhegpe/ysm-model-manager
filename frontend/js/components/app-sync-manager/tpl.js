@@ -78,7 +78,7 @@ export function statusTabHTML(id, label, count, active) {
 
 /**
  * 统计摘要 HTML
- * @param {{synced:number, missing:number, optional:number}} counts
+ * @param {{synced:number, missing:number, optional:number, legacy:number}} counts
  */
 export function summaryHTML(counts) {
   // 状态标签已展示统计，摘要栏留空
@@ -96,13 +96,16 @@ export function itemHTML(item) {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
-  const statusIcon = item.status === "synced" ? "✅" : "·";
+  const statusIcon =
+    item.status === "synced" ? "✅" : item.status === "legacy" ? "🔗" : "·";
   const statusColor =
     item.status === "synced"
       ? "var(--sz-green)"
       : item.status === "missing"
         ? "var(--accent)"
-        : "var(--sm-optional)";
+        : item.status === "legacy"
+          ? "var(--muted)"
+          : "var(--sm-optional)";
   const sizeStr = item.size > 0 ? formatSize(item.size) : "";
   let actionBtn = "";
   if (item.status === "missing") {
@@ -111,6 +114,9 @@ export function itemHTML(item) {
   } else if (item.status === "optional") {
     actionBtn =
       '<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--sm-optional);color:var(--sm-optional)">拉取</button>';
+  } else if (item.status === "legacy") {
+    actionBtn =
+      '<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--muted);color:var(--muted);font-size:var(--fs-tiny)">拉取到此仓库</button>';
   }
   return (
     '<div class="sm-item" data-path="' +

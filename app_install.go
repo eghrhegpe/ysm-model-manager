@@ -205,15 +205,44 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 
 // ========== 回收站 ==========
 func (a *App) MoveToRecycle(src string) error {
-	return recycle.Move(src, a.RepoRoot)
+	// 尝试所有可能的资源根目录，找到包含 src 的那个
+	root := a.findRecycleRoot(src)
+	if root == "" {
+		root = a.RepoRoot
+	}
+	return recycle.Move(src, root)
 }
 
 func (a *App) MoveToRecycleEx(src string) (string, string) {
-	if a.RepoRoot == "" {
-		return "error", "仓库根目录未设置"
+	root := a.findRecycleRoot(src)
+	if root == "" {
+		return "error", "未找到包含此文件的资源目录"
 	}
-	res := recycle.MoveEx(src, a.RepoRoot)
+	res := recycle.MoveEx(src, root)
 	return res.Action, res.Reason
+}
+
+// findRecycleRoot 查找包含 src 路径的资源根目录（用于多类型回收）
+func (a *App) findRecycleRoot(src string) string {
+	cfg := a.LoadAppConfig()
+	roots := []string{
+		a.RepoRoot,
+		cfg.ResourcepackRoot,
+		cfg.ShaderpackRoot,
+		cfg.SchematicRoot,
+		cfg.MmdRoot,
+		cfg.VrcRoot,
+	}
+	for _, r := range roots {
+		if r == "" {
+			continue
+		}
+		rel, err := filepath.Rel(r, src)
+		if err == nil && !strings.HasPrefix(rel, "..") {
+			return r
+		}
+	}
+	return ""
 }
 
 func (a *App) ClearCustomDir(customDir string) (int, error) {
@@ -449,20 +478,80 @@ func (a *App) DeduplicateCustomDir(customDir string) (int, int, error) {
 	return removed, kept, nil
 }
 
-func (a *App) ListRecycleBin(repoRoot string) []types.ModelEntry {
-	return recycle.List(repoRoot)
+func (a *App) ListRecycleBin(_ string) []types.ModelEntry {
+	cfg := a.LoadAppConfig()
+	roots := a.allRecycleRoots(cfg)
+	all := []types.ModelEntry{}
+	seen := map[string]bool{}
+	for _, r := range roots {
+		for _, e := range recycle.List(r) {
+			if seen[e.Path] {
+				continue
+			}
+			seen[e.Path] = true
+			all = append(all, e)
+		}
+	}
+	return all
 }
 
 func (a *App) RestoreFromRecycle(src, repoRoot string) error {
-	return recycle.Restore(src, repoRoot)
+	// 尝试所有根目录恢复
+	cfg := a.LoadAppConfig()
+	for _, r := range a.allRecycleRoots(cfg) {
+		if recycle.New(r).RecycleDir() == "" {
+			continue
+		}
+		if err := recycle.Restore(src, r); err == nil {
+			return nil // 找到正确的根目录并恢复
+		}
+	}
+	return recycle.Restore(src, repoRoot) // fallback
 }
 
 func (a *App) DeleteFromRecycle(src string) error {
+	cfg := a.LoadAppConfig()
+	for _, r := range a.allRecycleRoots(cfg) {
+		if recycle.New(r).RecycleDir() == "" {
+			continue
+		}
+		if err := recycle.Delete(src, r); err == nil {
+			return nil
+		}
+	}
 	return recycle.Delete(src, a.RepoRoot)
 }
 
-func (a *App) EmptyRecycleBin(repoRoot string) (int, error) {
-	return recycle.Empty(repoRoot)
+func (a *App) EmptyRecycleBin(_ string) (int, error) {
+	cfg := a.LoadAppConfig()
+	total := 0
+	for _, r := range a.allRecycleRoots(cfg) {
+		n, err := recycle.Empty(r)
+		if err == nil {
+			total += n
+		}
+	}
+	return total, nil
+}
+
+// allRecycleRoots 返回所有配置了路径的资源根目录
+func (a *App) allRecycleRoots(cfg types.AppConfig) []string {
+	roots := []string{
+		a.RepoRoot,
+		cfg.ResourcepackRoot,
+		cfg.ShaderpackRoot,
+		cfg.SchematicRoot,
+		cfg.MmdRoot,
+		cfg.VrcRoot,
+		cfg.McRoot,
+	}
+	result := []string{}
+	for _, r := range roots {
+		if r != "" {
+			result = append(result, r)
+		}
+	}
+	return result
 }
 
 // ========== 状态同步 ==========
@@ -1042,12 +1131,19 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 			if !extMatch(filepath.Base(p), rt.ID) {
 				continue
 			}
+			// 检测是否为硬链接（来自旧仓库的遗留文件）
+			status := types.SyncStatusOptional
+			icon := rt.Icon
+			if ysmsync.GetLinkType(p) == types.LinkHard {
+				status = types.SyncStatusLegacy
+				icon = "🔗"
+			}
 			items = append(items, types.ResourceSyncItem{
 				Path:   p,
 				Name:   filepath.Base(p),
-				Status: types.SyncStatusOptional,
+				Status: status,
 				Type:   rt.ID,
-				Icon:   rt.Icon,
+				Icon:   icon,
 				Size:   sizeOf(p),
 			})
 		}

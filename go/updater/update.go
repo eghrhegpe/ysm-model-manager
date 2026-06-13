@@ -154,11 +154,13 @@ func CleanupOldVersion() {
 
 // InstallUpdate 从 zip 中提取 exe 并替换当前程序（无 batch 脚本）
 // 策略：exe → exe.old（备份）, exe.new（新文件）→ exe
+// 同时提取 resource_types.json 等数据文件到 EXE 同目录
 func InstallUpdate(zipPath string) error {
 	exe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("获取程序路径失败: %w", err)
 	}
+	exeDir := filepath.Dir(exe)
 
 	// 1. 解压 zip 找 exe
 	r, err := zip.OpenReader(zipPath)
@@ -169,10 +171,27 @@ func InstallUpdate(zipPath string) error {
 
 	var exeInZip *zip.File
 	targetExe := "YSM-Model-Manager.exe"
+	// 需要在更新时同步的数据文件（排除用户配置文件 ysm_config.json）
+	dataFiles := map[string]bool{
+		"resource_types.json": true,
+		"workshop_sites.json": true,
+		"workshop_gitHub.json": true,
+		"creators.json":       true,
+	}
+
 	for _, f := range r.File {
-		if strings.EqualFold(f.Name, targetExe) {
+		name := filepath.Base(f.Name)
+		if strings.EqualFold(name, targetExe) {
 			exeInZip = f
-			break
+			continue
+		}
+		// 提取数据文件到 EXE 同目录
+		if dataFiles[name] {
+			dest := filepath.Join(exeDir, name)
+			if err := extractZipFile(f, dest); err != nil {
+				// 非关键错误，只记录不中断
+				fmt.Printf("警告: 提取 %s 失败: %v\n", name, err)
+			}
 		}
 	}
 	if exeInZip == nil {
@@ -181,20 +200,8 @@ func InstallUpdate(zipPath string) error {
 
 	// 2. 解压到 exe.new
 	newPath := exe + ".new"
-	out, err := os.Create(newPath)
-	if err != nil {
-		return fmt.Errorf("创建临时文件失败: %w", err)
-	}
-	rc, err := exeInZip.Open()
-	if err != nil {
-		out.Close()
-		return fmt.Errorf("读取 zip 中文件失败: %w", err)
-	}
-	_, err = io.Copy(out, rc)
-	rc.Close()
-	out.Close()
-	if err != nil {
-		return fmt.Errorf("解压失败: %w", err)
+	if err := extractZipFile(exeInZip, newPath); err != nil {
+		return fmt.Errorf("解压 exe 失败: %w", err)
 	}
 
 	// 3. 替换逻辑
@@ -216,6 +223,24 @@ func InstallUpdate(zipPath string) error {
 	}
 
 	return nil
+}
+
+// extractZipFile 解压 zip 中的单个文件到目标路径
+func extractZipFile(f *zip.File, dest string) error {
+	rc, err := f.Open()
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+
+	out, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, rc)
+	return err
 }
 
 // ===== semver 比较 =====

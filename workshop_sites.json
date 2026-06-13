@@ -114,10 +114,10 @@
     ]  },
   {
     "id": "nicovideo",
-    "icon": "🎬",
-    "label": "NicoNico",
+    "icon": "🧊",
+    "label": "NicoNico 3D",
     "url": "https://3d.nicovideo.jp/",
-    "desc": "日系 5000+ MMD 模型",
+    "desc": "日系 3D 模型站，5000+ MMD/VRM",
     "group": "search",
     "searchUrl": "https://3d.nicovideo.jp/works/search?keyword={{q}}",
     "presetSearches": [

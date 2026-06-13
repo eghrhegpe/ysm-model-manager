@@ -87,6 +87,7 @@ export function renderSiteView(site, ctx) {
         creators.length +
         ")</span>" +
         '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto">✏️ 编辑</button>' +
+        '<button class="cr-fetch-btn cr-action-btn" style="margin-left:4px" title="从 GitHub 社区索引拉取最新创作者">🌐 社区</button>' +
         "</div>" +
         // 搜索过滤框
         '<div style="padding:0 0 8px;display:flex;gap:6px">' +
@@ -135,6 +136,9 @@ export function renderSiteView(site, ctx) {
               '<div class="gh-card-body">' +
               '<div class="gh-card-label name">' +
               esc(cr.name) +
+              (cr._fromLocal
+                ? '<span style="font-size:9px;color:var(--muted);margin-left:4px">📁</span>'
+                : "") +
               "</div>" +
               '<div class="gh-card-desc">' +
               esc(cr.desc) +
@@ -331,6 +335,36 @@ export function renderSiteView(site, ctx) {
   searchResults.querySelector(".cr-edit-btn")?.addEventListener("click", () => {
     wsEditModeRef.v = true;
     refreshView();
+  });
+
+  // 🌐 拉取社区索引
+  searchResults.querySelector(".cr-fetch-btn")?.addEventListener("click", async () => {
+    const btn = searchResults.querySelector(".cr-fetch-btn");
+    btn.textContent = "⏳";
+    btn.disabled = true;
+    try {
+      const { fetchCommunityCreators, mergeCommunityCreators, DEFAULT_COMMUNITY_URL } =
+        await import("./workshop-core.js");
+      const community = await fetchCommunityCreators(DEFAULT_COMMUNITY_URL);
+      if (!community.length) {
+        bus.emit("toast:show", { msg: "🌐 社区索引为空或加载失败", duration: 3000, type: "warn" });
+        return;
+      }
+      const { added, updated } = mergeCommunityCreators(allCreators, community);
+      // 保存到本地
+      const { SaveWorkshopCreators } = await import("../../../wailsjs/go/main/App.js");
+      await SaveWorkshopCreators(allCreators);
+      bus.emit("toast:show", {
+        msg: `🌐 社区索引合并完成：新增 ${added} 位，补充 ${updated} 位`,
+        duration: 4000, type: "success",
+      });
+      refreshView();
+    } catch (e) {
+      bus.emit("toast:show", { msg: "🌐 拉取失败: " + String(e), duration: 3000, type: "error" });
+    } finally {
+      btn.textContent = "🌐 社区";
+      btn.disabled = false;
+    }
   });
 
   searchResults

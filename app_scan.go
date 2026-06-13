@@ -457,6 +457,79 @@ func (a *App) CheckFileExists(path string) bool {
 	return err == nil
 }
 
+// ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者
+// 返回统一格式的创作者列表（可直接合并到 creators.json）
+func (a *App) ScanLocalAuthors() []types.WorkshopCreator {
+	seen := map[string]bool{}
+	var result []types.WorkshopCreator
+
+	// 定义要扫描的目录和对应的类型标签
+	type scanTarget struct {
+		root string
+		rtype string
+		exts  []string
+	}
+	targets := []scanTarget{
+		{a.GetRepoRoot("ysm"), "ysm", []string{".ysm", ".zip", ".7z", ".json"}},
+		{a.GetRepoRoot("mmd-skin"), "mmd-skin", []string{".pmx", ".pmd"}},
+		{a.GetRepoRoot("vrchat-avatar"), "vrchat-avatar", []string{".vrca", ".vrm"}},
+		{a.GetRepoRoot("resourcepack"), "resourcepack", []string{".zip"}},
+		{a.GetRepoRoot("shaderpack"), "shaderpack", []string{".zip"}},
+		{a.GetRepoRoot("create-blueprint"), "create-blueprint", []string{".nbt", ".schematic"}},
+	}
+
+	for _, t := range targets {
+		if t.root == "" {
+			continue
+		}
+		entries := a.ScanModelEntries(t.root)
+		for _, e := range entries {
+			name := e.Name
+			if strings.HasSuffix(strings.ToLower(name), ".ban") {
+				name = name[:len(name)-4]
+			}
+			// 提取 [作者]
+			if !strings.HasPrefix(name, "[") {
+				continue
+			}
+			idx := strings.Index(name, "]")
+			if idx <= 0 {
+				continue
+			}
+			author := name[1:idx]
+			if author == "" {
+				continue
+			}
+			key := author + "@" + t.rtype
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			// 合并已有的 type 标签
+			existing := -1
+			for i, cr := range result {
+				if cr.Name == author {
+					existing = i
+					break
+				}
+			}
+			if existing >= 0 {
+				// 追加类型标签
+				if !strings.Contains(result[existing].Type, t.rtype) {
+					result[existing].Type += ";" + t.rtype
+				}
+			} else {
+				result = append(result, types.WorkshopCreator{
+					Name: author,
+					Desc: "来自本地仓库",
+					Type: t.rtype,
+				})
+			}
+		}
+	}
+	return result
+}
+
 func (a *App) OpenFolder(dir string) error {
 	// 统一路径分隔符（Windows explorer 不接受混合斜杠）
 	dir = filepath.Clean(dir)

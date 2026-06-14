@@ -345,7 +345,7 @@ export function renderSiteView(site, ctx) {
       );
       (site.presetSearches || []).forEach((ps, idx) => {
         parts.push(
-          '<div class="cr-edit-card" draggable="true" data-edit="preset" data-edit-idx="' +
+          '<div class="cr-edit-card" draggable="false" data-edit="preset" data-edit-idx="' +
             idx +
             '">' +
             '<div class="cr-edit-card-head">' +
@@ -388,7 +388,7 @@ export function renderSiteView(site, ctx) {
     creators.forEach((cr, idx) => {
       const roleEmoji = getTagEmojiFromRole(cr.role);
       parts.push(
-        '<div class="cr-edit-card" draggable="true" data-edit-idx="' +
+        '<div class="cr-edit-card" draggable="false" data-edit-idx="' +
           idx +
           '">' +
           '<div class="cr-edit-card-head">' +
@@ -1017,19 +1017,27 @@ export function renderSiteView(site, ctx) {
     });
   });
 
-  // 创作者拖拽排序
+  // 创作者拖拽排序 — 仅拖拽柄触发
   let dragSrcIdx = -1;
+  let dragState = null; // { card, el, originalLeft, originalTop, rect }
   searchResults.querySelectorAll(".cr-edit-card:not([data-edit='preset'])").forEach((card) => {
+    const handle = card.querySelector(".cr-drag-handle");
+    if (!handle) return;
+    // 点拖拽柄时暂时让卡片可拖拽
+    handle.addEventListener("mousedown", () => { card.draggable = true; });
     card.addEventListener("dragstart", (e) => {
+      card.draggable = false;
       dragSrcIdx = parseInt(card.dataset.editIdx, 10);
       card.style.opacity = "0.4";
       e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", "");
     });
     card.addEventListener("dragend", () => {
       card.style.opacity = "";
+      card.draggable = false;
       searchResults
         .querySelectorAll(".cr-edit-card")
-        .forEach((c) => (c.style.borderColor = ""));
+        .forEach((c) => { c.style.borderColor = ""; c.style.marginTop = ""; c.style.marginBottom = ""; });
     });
     card.addEventListener("dragover", (e) => {
       e.preventDefault();
@@ -1038,9 +1046,16 @@ export function renderSiteView(site, ctx) {
     card.addEventListener("dragenter", (e) => {
       e.preventDefault();
       card.style.borderColor = "var(--accent)";
+      if (dragSrcIdx >= 0) {
+        const tgt = parseInt(card.dataset.editIdx, 10);
+        if (dragSrcIdx < tgt) { card.style.marginTop = "8px"; card.style.transition = "margin-top .15s ease"; }
+        else if (dragSrcIdx > tgt) { card.style.marginBottom = "8px"; card.style.transition = "margin-bottom .15s ease"; }
+      }
     });
     card.addEventListener("dragleave", () => {
       card.style.borderColor = "";
+      card.style.marginTop = "";
+      card.style.marginBottom = "";
     });
     card.addEventListener("drop", (e) => {
       e.preventDefault();
@@ -1057,19 +1072,25 @@ export function renderSiteView(site, ctx) {
     });
   });
 
-  // 搜索词拖拽排序
+  // 搜索词拖拽排序 — 仅拖拽柄触发
   let dragPresetSrcIdx = -1;
   searchResults.querySelectorAll(".cr-edit-card[data-edit='preset']").forEach((card) => {
+    const handle = card.querySelector(".cr-drag-handle");
+    if (!handle) return;
+    handle.addEventListener("mousedown", () => { card.draggable = true; });
     card.addEventListener("dragstart", (e) => {
+      card.draggable = false;
       dragPresetSrcIdx = parseInt(card.dataset.editIdx, 10);
       card.style.opacity = "0.4";
       e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", "");
     });
     card.addEventListener("dragend", () => {
       card.style.opacity = "";
+      card.draggable = false;
       searchResults
         .querySelectorAll(".cr-edit-card")
-        .forEach((c) => (c.style.borderColor = ""));
+        .forEach((c) => { c.style.borderColor = ""; c.style.marginTop = ""; c.style.marginBottom = ""; });
     });
     card.addEventListener("dragover", (e) => {
       e.preventDefault();
@@ -1078,9 +1099,16 @@ export function renderSiteView(site, ctx) {
     card.addEventListener("dragenter", (e) => {
       e.preventDefault();
       card.style.borderColor = "var(--accent)";
+      if (dragPresetSrcIdx >= 0) {
+        const tgt = parseInt(card.dataset.editIdx, 10);
+        if (dragPresetSrcIdx < tgt) { card.style.marginTop = "8px"; card.style.transition = "margin-top .15s ease"; }
+        else if (dragPresetSrcIdx > tgt) { card.style.marginBottom = "8px"; card.style.transition = "margin-bottom .15s ease"; }
+      }
     });
     card.addEventListener("dragleave", () => {
       card.style.borderColor = "";
+      card.style.marginTop = "";
+      card.style.marginBottom = "";
     });
     card.addEventListener("drop", (e) => {
       e.preventDefault();

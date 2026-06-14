@@ -58,7 +58,9 @@
 
 <p align="center"><img src="docs/preview/整合包管理.png" width="80%" alt="整合包管理"></p>
 
-- 自动列出版本实例（`.minecraft/versions/`）
+- 自动列出所有 MC 实例，支持多种启动器布局：
+  - 标准 `.minecraft/versions/`（原版/PCL2/HMCL/BakaXL）
+  - PrismLauncher `instances/{name}/.minecraft/` 或 `minecraft/`
 - 检测 YSM 模组，无 YSM 的整合包显示 🚫 无YSM 但仍可管理
 - 四类同步状态：
   - ✅ **已同步的模型列表** — 仓库有且已安装

@@ -71,14 +71,12 @@ export async function loadInstances(rtype) {
         disabled: 0,
         rtype: rtypeActual,
         variantGroups: isMmd ? variantGroups : null,
+        // 仅存原始路径，展开卡片时按需构建对象
+        _missingPaths: flatMissing,
+        _extraPaths: flatExtra,
         items: {
-          missing: flatMissing.map((fullPath) => {
-            const displayName = fullPath.split(/[/\\]/).pop() || fullPath;
-            return { name: fullPath, displayName, size: "" };
-          }),
-          extra: flatExtra.map((n) => {
-            return { name: n, size: "" };
-          }),
+          synced: [],
+          disabled: [],
         },
       };
     });

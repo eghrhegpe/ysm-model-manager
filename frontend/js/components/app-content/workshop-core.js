@@ -59,9 +59,21 @@ async function tryAutoMergeCommunity(creators) {
   const { added } = mergeCommunityCreators(creators, community);
   if (added > 0) {
     try {
-      const { SaveWorkshopCreators } =
+      const { SaveWorkshopCreatorsBySite, SaveWorkshopCreators } =
         await import("../../../wailsjs/go/main/App.js");
-      await SaveWorkshopCreators(creators);
+      // 按站点分组，逐站点原子保存
+      const siteMap = {};
+      creators.forEach((c) => {
+        const types = (c.type || "").split(";");
+        types.forEach((t) => {
+          if (!t) return;
+          if (!siteMap[t]) siteMap[t] = [];
+          siteMap[t].push(c);
+        });
+      });
+      for (const [siteId, siteCreators] of Object.entries(siteMap)) {
+        await SaveWorkshopCreatorsBySite(siteId, siteCreators);
+      }
     } catch {}
   }
 }

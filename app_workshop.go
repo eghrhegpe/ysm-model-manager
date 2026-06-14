@@ -160,9 +160,11 @@ func (a *App) LoadGitHubRepos() []types.WorkshopCreator {
 }
 
 func (a *App) ResetWorkshopConfigs() ([]types.WorkshopSite, error) {
+	// 备份后再重置
+	a.BackupWorkshopCreators()
 	sites := defaultWorkshopSites()
 	data, _ := json.MarshalIndent(sites, "", "  ")
-	if err := os.WriteFile(workshopSitesPath(), data, 0644); err != nil {
+	if err := atomicWrite(workshopSitesPath(), data); err != nil {
 		return nil, err
 	}
 	os.Remove(creatorsPath())
@@ -189,7 +191,7 @@ func (a *App) ExportWorkshopSitesJSONFile() (string, error) {
 		return "", err
 	}
 	path := workshopSitesPath()
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := atomicWrite(path, data); err != nil {
 		return "", err
 	}
 	return path, nil
@@ -204,6 +206,9 @@ func (a *App) ImportWorkshopSitesJSONFile() (int, error) {
 	var sites []types.WorkshopSite
 	if err := json.Unmarshal(data, &sites); err != nil {
 		return 0, err
+	}
+	if len(sites) < 2 || len(sites) > 100 {
+		return 0, fmt.Errorf("数据异常: %d 个站点 (期望 2-100)", len(sites))
 	}
 	return len(sites), a.SaveWorkshopSites(sites)
 }
@@ -259,6 +264,9 @@ func (a *App) MergeWorkshopCreatorsFromJSON(jsonContent string) (int, int, error
 	if err := json.Unmarshal([]byte(jsonContent), &imported); err != nil {
 		return 0, 0, err
 	}
+	if len(imported) < 20 {
+		return 0, 0, fmt.Errorf("导入数据异常: 仅 %d 条 (期望 >=20)", len(imported))
+	}
 	a.BackupWorkshopCreators()
 	existing := a.LoadWorkshopCreators()
 	existMap := map[string]int{}
@@ -272,6 +280,9 @@ func (a *App) MergeWorkshopCreatorsFromJSON(jsonContent string) (int, int, error
 			if cr.Type != "" {
 				existing[idx].Type = cr.Type
 			}
+			if cr.Role != "" {
+				existing[idx].Role = cr.Role
+			}
 			updated++
 		} else {
 			existing = append(existing, cr)
@@ -279,14 +290,21 @@ func (a *App) MergeWorkshopCreatorsFromJSON(jsonContent string) (int, int, error
 			added++
 		}
 	}
+	// 最终完整性校验
+	if len(existing) < 100 {
+		return 0, 0, fmt.Errorf("合并后数据异常: %d 条, 已回滚", len(existing))
+	}
 	return added, updated, a.SaveWorkshopCreators(existing)
 }
 
 func (a *App) ReplaceWorkshopCreatorsFromJSON(jsonContent string) (int, error) {
-	a.BackupWorkshopCreators()
 	var imported []types.WorkshopCreator
 	if err := json.Unmarshal([]byte(jsonContent), &imported); err != nil {
 		return 0, err
 	}
+	if len(imported) < 100 {
+		return 0, fmt.Errorf("替换数据异常: 仅 %d 条 (期望 >=100)", len(imported))
+	}
+	a.BackupWorkshopCreators()
 	return len(imported), a.SaveWorkshopCreators(imported)
 }

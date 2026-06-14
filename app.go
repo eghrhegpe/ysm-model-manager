@@ -7,6 +7,7 @@ import (
 
 	"ysm-model-manager/go/logs"
 	"ysm-model-manager/go/updater"
+	"ysm-model-manager/go/version"
 	"ysm-model-manager/go/watcher"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -102,5 +103,10 @@ func (a *App) shutdown(ctx context.Context) {
 // OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌）
 func (a *App) OpenInBrowser(url string) {
 	runtime.BrowserOpenURL(a.ctx, url)
+}
+
+// GetAppVersion 返回当前版本号
+func (a *App) GetAppVersion() string {
+	return version.Version
 }
 

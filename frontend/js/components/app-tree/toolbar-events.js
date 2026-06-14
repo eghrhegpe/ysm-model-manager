@@ -70,10 +70,8 @@ export function bindToolbarEvents(root, vm) {
     });
   });
 
-  $("btn-repo")?.addEventListener("click", async () => {
-    if (!vm._repoRoot) return;
-    const { OpenFolder } = await import("../../../wailsjs/go/main/App.js");
-    OpenFolder(vm._repoRoot);
+  $("btn-repo")?.addEventListener("click", () => {
+    bus.emit("nav:change", { page: "settings" });
   });
 
   // 搜索框实时过滤

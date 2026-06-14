@@ -310,7 +310,7 @@ export function renderSiteView(site, ctx) {
         '<input type="text" id="ws-cr-search" placeholder="搜创作者名..." ' +
         'style="flex:1;min-width:120px;max-width:160px;padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit;outline:none">' +
         '<span style="flex:1"></span>' +
-        '<button class="cr-fetch-btn cr-action-btn" style="margin-left:auto" title="从 GitHub 社区索引拉取最新创作者">🌐 社区</button>' +
+        '<button class="cr-fetch-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto" title="从 GitHub 社区索引拉取最新创作者">🌐 社区</button>' +
         '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted">✏️ 编辑</button>' +
         "</div>" +
         '<div class="cr-tag-filter-row">' +

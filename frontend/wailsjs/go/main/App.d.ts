@@ -15,6 +15,10 @@ export function ApplyUpdate(arg1:string):Promise<void>;
 
 export function BackupWorkshopCreators():Promise<string>;
 
+export function BatchExtractCreatorAvatars():Promise<Record<string, string>>;
+
+export function CachedCreatorAvatar(arg1:string):Promise<string>;
+
 export function CancelQueue():Promise<void>;
 
 export function CheckFileExists(arg1:string):Promise<boolean>;

@@ -136,8 +136,8 @@ export function mergeCommunityCreators(local, community) {
         existing.type = cc.type;
         changed = true;
       }
-      if (cc.tag && !existing.tag) {
-        existing.tag = cc.tag;
+      if (cc.role && !existing.role) {
+        existing.role = cc.role;
         changed = true;
       }
       if (changed) updated++;

@@ -118,7 +118,7 @@ export function settingsHTML() {
       <div class="stg-card-hdr">💎 YSM 模型路径</div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-repo-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}\\config\\yes_steve_model\\custom</div>
+        <div class="stg-card-hint">存放 .ysm 模型文件的独立目录（不是游戏目录）</div>
       </div>
     </div>
     <div class="stg-card">
@@ -362,6 +362,18 @@ export function settingsHTML() {
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
       Mod Organizer 2<br>
       硬链接安装、回收站、按实例管理的设计理念来源
+    </div>
+  </div>
+</div>
+
+<div class="section-title stg-title stg-sub-title">🙏 特别鸣谢</div>
+
+<div style="display:flex;gap:12px">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">👤 zuogeren1</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
+      贡献了 PrismLauncher 实例布局支持、大实例数性能优化、社区索引及创意工坊多项修复<br>
+      <a href="https://github.com/zuogeren1" target="_blank" style="color:var(--accent)">@zuogeren1</a>
     </div>
   </div>
 </div>

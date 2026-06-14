@@ -49,15 +49,11 @@ class AppSidebar extends HTMLElement {
   async connectedCallback() {
     this._renderLayout();
 
-    // 监听刷新事件
+    // 监听刷新事件（300ms 防抖，防止短时间内多次重载）
     this._unsubs.push(
-      bus.on("stats:refresh", async () => {
-        console.log(
-          "[sidebar] stats:refresh 收到, 开始 _reload, rtype:",
-          this._rtype,
-        );
-        await this._reload();
-        console.log("[sidebar] _reload 完成");
+      bus.on("stats:refresh", () => {
+        clearTimeout(this._debounceTimer);
+        this._debounceTimer = setTimeout(() => this._reload(), 300);
       }),
     );
 
@@ -65,9 +61,9 @@ class AppSidebar extends HTMLElement {
     this._unsubs.push(
       bus.on("repo:rtype-changed", async (rtype) => {
         if (rtype && rtype !== this._rtype) {
-          console.log("[sidebar] 类型切换:", this._rtype, "→", rtype);
           this._rtype = rtype;
-          await this._reload();
+          clearTimeout(this._debounceTimer);
+          this._debounceTimer = setTimeout(() => this._reload(), 100);
         }
       }),
     );
@@ -76,7 +72,8 @@ class AppSidebar extends HTMLElement {
     this._bindSelectAll();
     this._bindSyncSelected();
 
-    await this._reload();
+    clearTimeout(this._debounceTimer);
+    this._debounceTimer = setTimeout(() => this._reload(), 50);
   }
 
   _bindSelectAll() {
@@ -202,6 +199,8 @@ class AppSidebar extends HTMLElement {
   }
 
   async _reload() {
+    if (this._loading) return;
+    this._loading = true;
     try {
       this._instances = await loadInstances(this._rtype);
       console.log(
@@ -221,6 +220,8 @@ class AppSidebar extends HTMLElement {
     } catch (e) {
       console.log("[sidebar] _reload 失败:", e);
       this._instances = [];
+    } finally {
+      this._loading = false;
     }
     this._renderCards();
     bindFooter(this._root, this._instances);

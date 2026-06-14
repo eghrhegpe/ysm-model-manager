@@ -19,7 +19,7 @@ for e in lost:
     tag = e.get('tag', '')
     types = set(e.get('type', '').split(';'))
     name = e['name']
-    
+
     # 从备份推断 role
     if tag == 'vup':
         e['role'] = 'vup'
@@ -40,7 +40,7 @@ for e in lost:
         e['role'] = 'official'
     else:
         e['role'] = 'creator'
-    
+
     # 清理 desc
     import re
     d = e.get('desc', '')
@@ -61,7 +61,7 @@ for e in lost:
     # Remove old tag
     if 'tag' in e:
         del e['tag']
-    
+
     print(f'  + {e["name"]} type={e["type"]} role={e["role"]}')
 
 # 追加到当前列表

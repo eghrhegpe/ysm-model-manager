@@ -190,8 +190,10 @@ export function bindTreeEvents(container, vm) {
         const { author } = parseModelName(name);
         if (author) {
           import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
-            OpenInBrowser("https://search.bilibili.com/all?keyword=" +
-              encodeURIComponent(author)),
+            OpenInBrowser(
+              "https://search.bilibili.com/all?keyword=" +
+                encodeURIComponent(author),
+            ),
           );
         } else {
           bus.emit("toast:show", {

@@ -993,6 +993,7 @@ export function renderSiteView(site, ctx) {
   // 删除创作者
   searchResults.querySelectorAll(".cr-del").forEach((btn) => {
     btn.addEventListener("click", () => {
+      syncAllEditInputs();
       const idx = parseInt(btn.dataset.idx, 10);
       if (creators[idx]) {
         const realIdx = allCreators.indexOf(creators[idx]);
@@ -1030,7 +1031,7 @@ export function renderSiteView(site, ctx) {
       const targetIdx = parseInt(card.dataset.editIdx, 10);
       if (dragSrcIdx < 0 || dragSrcIdx === targetIdx) return;
       // 同步输入框值到数组再排序
-      syncEditInputsToCreators();
+      syncAllEditInputs();
       // 在 creators 数组中交换
       const [removed] = creators.splice(dragSrcIdx, 1);
       creators.splice(targetIdx, 0, removed);
@@ -1041,8 +1042,9 @@ export function renderSiteView(site, ctx) {
       refreshView();
     });
   });
-  function syncEditInputsToCreators() {
-    searchResults.querySelectorAll("[data-idx][data-fld]").forEach((inp) => {
+  function syncAllEditInputs() {
+    // 同步创作者输入框
+    searchResults.querySelectorAll(".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]").forEach((inp) => {
       const idx = parseInt(inp.dataset.idx, 10);
       if (creators[idx]) {
         if (inp.tagName === "SELECT") {
@@ -1055,10 +1057,18 @@ export function renderSiteView(site, ctx) {
         }
       }
     });
+    // 同步搜索词输入框
+    searchResults.querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']").forEach((inp) => {
+      const idx = parseInt(inp.dataset.idx, 10);
+      if (site.presetSearches && site.presetSearches[idx]) {
+        site.presetSearches[idx].label = inp.value.trim();
+      }
+    });
   }
   // 删除搜索词
   searchResults.querySelectorAll(".cr-del-preset").forEach((btn) => {
     btn.addEventListener("click", () => {
+      syncAllEditInputs();
       const idx = parseInt(btn.dataset.idx, 10);
       if (site.presetSearches && site.presetSearches[idx]) {
         site.presetSearches.splice(idx, 1);
@@ -1069,6 +1079,7 @@ export function renderSiteView(site, ctx) {
   // 搜索词排序
   searchResults.querySelectorAll(".cr-order-up").forEach((btn) => {
     btn.addEventListener("click", () => {
+      syncAllEditInputs();
       const idx = parseInt(btn.dataset.idx, 10);
       if (site.presetSearches && idx > 0) {
         [site.presetSearches[idx - 1], site.presetSearches[idx]] =
@@ -1079,6 +1090,7 @@ export function renderSiteView(site, ctx) {
   });
   searchResults.querySelectorAll(".cr-order-down").forEach((btn) => {
     btn.addEventListener("click", () => {
+      syncAllEditInputs();
       const idx = parseInt(btn.dataset.idx, 10);
       if (site.presetSearches && idx < site.presetSearches.length - 1) {
         [site.presetSearches[idx], site.presetSearches[idx + 1]] =
@@ -1090,14 +1102,7 @@ export function renderSiteView(site, ctx) {
 
   // 新增创作者
   searchResults.querySelector(".cr-add")?.addEventListener("click", () => {
-    // 先把当前输入框的值同步回数组
-    searchResults.querySelectorAll(".cr-edit-card input[data-idx][data-fld]").forEach((inp) => {
-      const idx = parseInt(inp.dataset.idx, 10);
-      const fld = inp.dataset.fld;
-      if (!isNaN(idx) && creators[idx] && fld) {
-        creators[idx][fld] = inp.value;
-      }
-    });
+    syncAllEditInputs();
     creators.push({ name: "新作者", desc: "描述", type: site.id, tag: "" });
     allCreators.push(creators[creators.length - 1]);
     refreshView();
@@ -1106,15 +1111,7 @@ export function renderSiteView(site, ctx) {
   searchResults
     .querySelector(".cr-add-preset")
     ?.addEventListener("click", () => {
-      // 先把当前输入框的值同步回数组
-      searchResults
-        .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
-        .forEach((inp) => {
-          const idx = parseInt(inp.dataset.idx, 10);
-          if (!isNaN(idx) && site.presetSearches && site.presetSearches[idx]) {
-            site.presetSearches[idx].label = inp.value;
-          }
-        });
+      syncAllEditInputs();
       if (!site.presetSearches) site.presetSearches = [];
       site.presetSearches.push({ label: "" });
       refreshView();

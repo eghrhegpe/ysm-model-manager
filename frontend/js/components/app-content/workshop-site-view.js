@@ -427,7 +427,7 @@ export function renderSiteView(site, ctx) {
         st.id = "cr-detail-global-style";
         st.textContent =
           ".cr-detail-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease}" +
-          ".cr-detail-box{background:var(--bg);border:1px solid var(--bd);border-radius:16px;padding:24px;max-width:420px;width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:14px;animation:detail-in .25s cubic-bezier(.34,1.56,.64,1)}" +
+          ".cr-detail-box{background:var(--bg);border:1px solid var(--bd);border-radius:16px;padding:20px 24px;max-width:400px;width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:10px;animation:detail-in .25s cubic-bezier(.34,1.56,.64,1)}" +
           "@keyframes detail-in{from{opacity:0;transform:scale(.88) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}" +
           "@keyframes fade-in{from{opacity:0}to{opacity:1}}" +
           ".cr-detail-header{display:flex;align-items:center;gap:10px}" +
@@ -441,12 +441,14 @@ export function renderSiteView(site, ctx) {
           ".cr-detail-actions .primary:hover{opacity:.85}" +
           ".cr-detail-actions .secondary{border-color:transparent;color:var(--muted)}" +
           ".cr-detail-actions .secondary:hover{border-color:var(--bd);color:var(--txt)}" +
+          ".cr-local-btn{transition:all .12s}" +
+          ".cr-local-btn:hover{background:var(--accent);color:#fff!important}" +
           ".cr-platform-badge{font-size:9px;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:3px;background:var(--surf);color:var(--muted);border:1px solid var(--bd);font-weight:500}" +
           ".cr-tag{font-size:10px;padding:1px 7px;border-radius:4px;line-height:18px;font-weight:600;display:inline-flex;align-items:center}" +
           ".cr-tag-game{background:var(--tag-game-bg);color:var(--tag-game)}" +
           ".cr-tag-vup{background:var(--tag-vup-bg);color:var(--tag-vup)}" +
           ".cr-tag-oc{background:var(--tag-oc-bg);color:var(--tag-oc)}" +
-          ".cr-star-btn{cursor:pointer;font-size:16px;transition:transform .15s}" +
+          ".cr-star-btn{cursor:pointer;font-size:18px;transition:transform .15s;flex-shrink:0}" +
           ".cr-star-btn:hover{transform:scale(1.15)}";
         document.head.appendChild(st);
       }
@@ -470,14 +472,17 @@ export function renderSiteView(site, ctx) {
       };
 
       const isFav = isFaved(cr.name);
+      const localCount = authorCountMap[cr.name] || 0;
       overlay.innerHTML =
         '<div class="cr-detail-box">' +
         '<div class="cr-detail-header">' +
-        '<div class="cr-avatar-container" style="width:32px;height:32px;margin:0">' +
-        '<div class="cr-avatar" style="width:32px;height:32px;font-size:14px">' +
+        '<div class="cr-avatar-container" style="width:36px;height:36px;margin:0">' +
+        '<div class="cr-avatar" style="width:36px;height:36px;font-size:16px">' +
         esc(cr.name.charAt(0)).toUpperCase() +
         "</div>" +
         "</div>" +
+        '<div style="flex:1;min-width:0">' +
+        '<div style="display:flex;align-items:center;gap:6px">' +
         '<span class="cr-detail-name">' +
         esc(cr.name) +
         "</span>" +
@@ -490,7 +495,10 @@ export function renderSiteView(site, ctx) {
             esc(cr.tag) +
             "</span>"
           : '<span class="cr-tag cr-tag-game">🎮 game</span>') +
-        '<span class="cr-star-btn" style="cursor:pointer;font-size:14px;margin-left:auto" data-star="' +
+        "</div>" +
+        '<div style="font-size:10px;color:var(--muted);margin-top:1px">YSM 模型创作者</div>' +
+        "</div>" +
+        '<span class="cr-star-btn" data-star="' +
         esc(cr.name) +
         '">' +
         (isFav ? "⭐" : "☆") +
@@ -499,10 +507,16 @@ export function renderSiteView(site, ctx) {
         '<div class="cr-detail-desc">' +
         esc(cr.desc) +
         "</div>" +
-        '<div class="cr-detail-row">📦 本地模型: <b>' +
-        (authorCountMap[cr.name] || 0) +
-        "</b></div>" +
-        '<div class="cr-detail-row">🔗 平台: ' +
+        (localCount > 0
+          ? '<div class="cr-detail-row" style="background:var(--surf);border-radius:8px;padding:8px 10px;border:1px solid var(--bd)">' +
+            '<span style="font-size:13px">📂</span>' +
+            '<span style="flex:1;font-size:var(--fs-sm);color:var(--txt)">已下载 ' +
+            localCount +
+            " 个模型</span>" +
+            '<button class="cr-local-btn" data-local style="font-size:var(--fs-xs);padding:2px 8px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:inherit">查看 →</button>' +
+            "</div>"
+          : "") +
+        '<div class="cr-detail-row" style="gap:4px;flex-wrap:wrap">' +
         cr.type
           .split(";")
           .map(
@@ -513,17 +527,12 @@ export function renderSiteView(site, ctx) {
               esc(t) +
               "</span>",
           )
-          .join(" ") +
+          .join("") +
         "</div>" +
         '<div class="cr-detail-actions">' +
-        (authorCountMap[cr.name] > 0
-          ? '<button class="primary" data-local>' +
-            authorCountMap[cr.name] +
-            " 个本地模型</button>"
-          : "") +
         '<button class="primary" data-search="' +
         esc(cr.name) +
-        '">🔍 平台搜索</button>' +
+        '">🔍 搜索更多</button>' +
         '<button class="secondary" data-close>关闭</button>' +
         "</div>" +
         "</div>";

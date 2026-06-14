@@ -588,5 +588,13 @@ export function bindRepoEvents(sr, ctx) {
     });
   }
 
-  return { renderList, updateSelectedUI };
+  // 对外暴露的清理函数（供上层在视图销毁时调用）
+  const externalCleanup = () => {
+    if (_offEvents) {
+      _offEvents();
+      _offEvents = null;
+    }
+  };
+
+  return { renderList, updateSelectedUI, cleanup: externalCleanup };
 }

@@ -784,7 +784,9 @@ export function renderSiteView(site, ctx) {
               " 链接超时（raw.githubusercontent.com 可能被屏蔽），已在浏览器中打开仓库"
             : "📦 " + repo + " 没有 index.json，已在浏览器中打开仓库";
           bus.emit("toast:show", { msg, duration: 6000, type: "warn" });
-          window.open("https://github.com/" + repo, "_blank");
+          import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
+            OpenInBrowser("https://github.com/" + repo),
+          );
         }
       });
     });

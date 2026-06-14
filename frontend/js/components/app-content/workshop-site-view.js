@@ -345,14 +345,17 @@ export function renderSiteView(site, ctx) {
       );
       site.presetSearches.forEach((ps, idx) => {
         parts.push(
-          '<div class="cr-edit-card cr-edit-preset" data-edit="preset">' +
-            '<div class="cr-edit-card-head">' +
-            '<span style="font-size:12px;margin-right:4px">🔍</span>' +
-            '<input data-idx="' +
+          '<div class="cr-edit-card" draggable="true" data-edit="preset" data-edit-idx="' +
+          idx +
+          '">' +
+          '<div class="cr-edit-card-head">' +
+          '<span class="cr-drag-handle">⠿</span>' +
+          '<span style="font-size:12px">🔍</span>' +
+          '<input data-idx="' +
             idx +
             '" data-fld="label" value="' +
             esc(ps.label) +
-            '" class="cr-input cr-input-name" style="flex:1;min-width:60px;border:none;background:transparent;color:var(--txt);font-size:var(--fs-sm);font-family:inherit;outline:none" placeholder="搜索词">' +
+            '" class="cr-input cr-input-name" style="flex:1;border:none;background:transparent;color:var(--txt);font-size:var(--fs-sm);font-family:inherit;outline:none" placeholder="搜索关键词">' +
             '<button data-idx="' +
             idx +
             '" class="cr-order-up" title="上移" style="font-size:12px;padding:0 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit">↑</button>' +
@@ -859,7 +862,7 @@ export function renderSiteView(site, ctx) {
           // 从输入框收集搜索词
           const newPresets = [];
           searchResults
-            .querySelectorAll(".cr-row input[data-fld='label']")
+            .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
             .forEach((inp) => {
               const val = inp.value.trim();
               if (val) newPresets.push({ label: val });
@@ -1088,7 +1091,7 @@ export function renderSiteView(site, ctx) {
   // 新增创作者
   searchResults.querySelector(".cr-add")?.addEventListener("click", () => {
     // 先把当前输入框的值同步回数组
-    searchResults.querySelectorAll(".cr-row input[data-idx]").forEach((inp) => {
+    searchResults.querySelectorAll(".cr-edit-card input[data-idx][data-fld]").forEach((inp) => {
       const idx = parseInt(inp.dataset.idx, 10);
       const fld = inp.dataset.fld;
       if (!isNaN(idx) && creators[idx] && fld) {
@@ -1105,7 +1108,7 @@ export function renderSiteView(site, ctx) {
     ?.addEventListener("click", () => {
       // 先把当前输入框的值同步回数组
       searchResults
-        .querySelectorAll(".cr-row input[data-fld='label']")
+        .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
         .forEach((inp) => {
           const idx = parseInt(inp.dataset.idx, 10);
           if (!isNaN(idx) && site.presetSearches && site.presetSearches[idx]) {

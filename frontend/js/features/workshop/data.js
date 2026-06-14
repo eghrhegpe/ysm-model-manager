@@ -98,12 +98,9 @@ export async function tryFetchModels(repo, mirror, onProgress) {
       } else {
         models = await resp.json();
       }
-      if (!Array.isArray(models) || !models.length)
-        throw new Error("empty array");
-      return { models, source: attempt.name };
+      if (Array.isArray(models)) return { models, source: attempt.name };
     } catch (err) {
       clearTimeout(tmr);
-      throw err;
     }
   };
 

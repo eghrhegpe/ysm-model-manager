@@ -215,29 +215,156 @@ export async function initSettings(root) {
   bindDerived("set-vrc-path", "vrchat-avatar");
 
   // 游戏路径 - 自动搜索
-  root.getElementById("set-mc-detect")?.addEventListener("click", async () => {
+  const detectBtn = root.getElementById("set-mc-detect");
+  detectBtn?.addEventListener("click", async () => {
     const paths = await GetMinecraftPaths();
-    if (paths?.length) {
-      const found = paths[0];
-      const theme = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(
-        cfg.repoRoot || "",
-        cfg.resourcepackRoot || "",
-        found,
-        cfg.linkMode || "copy",
-        theme,
-      );
-      cfg.mcRoot = found;
-      _cardRefreshers.forEach((fn) => fn());
-      bus.emit("config:updated");
-      bus.emit("stats:refresh");
+    if (!paths?.length) {
       bus.emit("toast:show", {
-        msg: `✅ 已自动检测到: ${found}`,
+        msg: "未找到已存在的游戏目录，请手动选择",
         duration: 3000,
-        type: "success",
+        type: "warn",
       });
+      return;
+    }
+    // 只有一个直接使用，多个让用户选
+    var selected = paths[0];
+    if (paths.length > 1) {
+      selected = await showPathPicker(root, paths);
+      if (!selected) return; // 用户取消
+    }
+    var theme = localStorage.getItem("theme") || "dark";
+    await SaveAppConfig(
+      cfg.repoRoot || "",
+      cfg.resourcepackRoot || "",
+      selected,
+      cfg.linkMode || "copy",
+      theme,
+    );
+    cfg.mcRoot = selected;
+    _cardRefreshers.forEach(function (fn) {
+      fn();
+    });
+    bus.emit("config:updated");
+    bus.emit("stats:refresh");
+    bus.emit("toast:show", {
+      msg: "✅ 已设置: " + selected,
+      duration: 3000,
+      type: "success",
+    });
+  });
+
+  function showPathPicker(root, paths) {
+    return new Promise(function (resolve) {
+      var overlay = document.createElement("div");
+      overlay.style.cssText =
+        "position:fixed;z-index:100000;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center";
+      var box = document.createElement("div");
+      box.style.cssText =
+        "background:var(--surf,#2a2a3a);border:1px solid var(--bd,#444);border-radius:12px;padding:16px;max-width:500px;width:90%;max-height:70vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.4)";
+      var listHtml = "";
+      for (var i = 0; i < paths.length; i++) {
+        listHtml +=
+          "<div class='mc-pick-item' data-idx='" +
+          i +
+          "' style='padding:8px 10px;border-radius:6px;cursor:pointer;font-size:var(--fs-sm,11px);color:var(--txt,#cdd6f4);display:flex;align-items:center;gap:8px;transition:background .12s' onmouseenter='this.style.background=\"var(--hover,#3a3a4a)\"' onmouseleave='this.style.background=\"\"'>" +
+          "<span style='color:var(--accent,#89b4fa);flex-shrink:0'>📁</span>" +
+          escHtml(paths[i]) +
+          "</div>";
+      }
+      box.innerHTML =
+        "<div style='font-weight:600;font-size:13px;margin-bottom:8px'>🔍 选择游戏目录</div>" +
+        "<div style='font-size:10px;color:var(--muted,#888);margin-bottom:12px'>扫描到多个游戏目录，请选择要使用的：</div>" +
+        listHtml +
+        "<div style='margin-top:12px;text-align:right'>" +
+        "<button class='mc-pick-cancel' style='padding:4px 12px;border-radius:4px;border:1px solid var(--bd,#444);background:transparent;color:var(--txt,#cdd6f4);cursor:pointer;font-size:var(--fs-sm,11px);font-family:inherit'>取消</button>" +
+        "</div>";
+      overlay.appendChild(box);
+      (root.getRootNode() === document
+        ? document.body
+        : root.host?.parentElement || document.body
+      ).appendChild(overlay);
+
+      box.querySelectorAll(".mc-pick-item").forEach(function (el) {
+        el.addEventListener("click", function () {
+          var idx = parseInt(el.dataset.idx, 10);
+          overlay.remove();
+          resolve(paths[idx]);
+        });
+      });
+      box
+        .querySelector(".mc-pick-cancel")
+        .addEventListener("click", function () {
+          overlay.remove();
+          resolve(null);
+        });
+    });
+  }
+  // hover 时预加载并显示扫描到的所有路径 + 搜索范围
+  let _scanTooltip = null;
+  let _scanPaths = null;
+  detectBtn?.addEventListener("mouseenter", async () => {
+    if (_scanTooltip) return;
+    if (!_scanPaths) _scanPaths = await GetMinecraftPaths();
+    _scanTooltip = showScanTooltip(root, detectBtn, _scanPaths || []);
+  });
+  detectBtn?.addEventListener("mouseleave", () => {
+    if (_scanTooltip) {
+      _scanTooltip.remove();
+      _scanTooltip = null;
     }
   });
+
+  function showScanTooltip(root, anchor, paths) {
+    const rect = anchor.getBoundingClientRect();
+    const tip = document.createElement("div");
+    tip.id = "mc-scan-tooltip";
+    tip.style.cssText =
+      "position:fixed;z-index:99999;background:var(--surf,#2a2a3a);border:1px solid var(--bd,#444);border-radius:8px;padding:10px 14px;font-size:var(--fs-sm,11px);color:var(--txt,#cdd6f4);box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:420px;max-height:350px;overflow-y:auto;pointer-events:none;line-height:1.6";
+    tip.style.left = Math.max(4, rect.left) + "px";
+    tip.style.top = rect.bottom + 4 + "px";
+
+    // 搜索范围
+    var html =
+      "<div style='font-weight:600;margin-bottom:4px'>🔍 扫描范围</div>" +
+      "<div style='font-size:10px;color:var(--muted,#888);margin-bottom:8px;padding-left:4px'>" +
+      "C 盘 ~ Z 盘 · 根目录 .minecraft / 各启动器目录<br>" +
+      "ProgramFiles · Games · %APPDATA% · EXE 同目录" +
+      "</div>" +
+      "<div style='border-top:1px solid var(--bd,#444);margin:6px 0'></div>";
+
+    // 搜索结果
+    if (!paths.length) {
+      html +=
+        "<div style='color:var(--muted,#888);padding:4px 0'>未找到已存在的游戏目录</div>" +
+        "<div style='font-size:10px;color:var(--muted,#888);padding-top:2px'>💡 如果装了启动器但没扫到，可能是非常规路径，请手动选择</div>";
+    } else {
+      html +=
+        "<div style='font-weight:600;margin-bottom:4px'>✅ 找到 " +
+        paths.length +
+        " 个</div>";
+      for (var i = 0; i < paths.length; i++) {
+        html +=
+          "<div style='padding:1px 0;display:flex;align-items:center;gap:6px;font-size:10px'>" +
+          "<span style='color:var(--accent,#89b4fa);flex-shrink:0'>📁</span>" +
+          escHtml(paths[i]) +
+          "</div>";
+      }
+    }
+
+    tip.innerHTML = html;
+    (root.getRootNode() === document
+      ? document.body
+      : root.host?.parentElement || document.body
+    ).appendChild(tip);
+    return tip;
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
 
   // 主题
   let savedTheme = cfg.theme || cfg.Theme || "";

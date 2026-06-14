@@ -450,7 +450,7 @@ class AppContent extends HTMLElement {
         } else {
           // 外链模式：走系统浏览器，共享用户登录态
           import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
-            OpenInBrowser(url).catch(() => window.open(url, "_blank")),
+            OpenInBrowser(url),
           );
         }
       };

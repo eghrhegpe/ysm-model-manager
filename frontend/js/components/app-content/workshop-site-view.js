@@ -427,19 +427,27 @@ export function renderSiteView(site, ctx) {
         st.id = "cr-detail-global-style";
         st.textContent =
           ".cr-detail-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease}" +
-          ".cr-detail-box{background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:20px;max-width:420px;width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px;animation:detail-in .2s ease}" +
-          "@keyframes detail-in{from{opacity:0;transform:scale(.92) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}" +
+          ".cr-detail-box{background:var(--bg);border:1px solid var(--bd);border-radius:16px;padding:24px;max-width:420px;width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:14px;animation:detail-in .25s cubic-bezier(.34,1.56,.64,1)}" +
+          "@keyframes detail-in{from{opacity:0;transform:scale(.88) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}" +
           "@keyframes fade-in{from{opacity:0}to{opacity:1}}" +
-          ".cr-detail-header,.cr-detail-name,.cr-detail-desc,.cr-detail-row,.cr-detail-actions,.cr-platform-badge,.cr-star-btn,.cr-tag{font-family:var(--font-ui)}" +
-          ".cr-detail-name{font-size:16px;font-weight:700;color:var(--txt)}" +
-          ".cr-detail-desc{font-size:var(--fs-sm);color:var(--muted);line-height:1.5}" +
-          ".cr-detail-row{font-size:var(--fs-sm);color:var(--muted)}" +
-          ".cr-detail-actions button{padding:5px 14px;border-radius:6px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-sm);font-family:inherit}" +
+          ".cr-detail-header{display:flex;align-items:center;gap:10px}" +
+          ".cr-detail-name{font-size:17px;font-weight:700;color:var(--txt);letter-spacing:.3px}" +
+          ".cr-detail-desc{font-size:var(--fs-sm);color:var(--txt);opacity:.65;line-height:1.5;padding:6px 10px;background:var(--surf);border-radius:8px}" +
+          ".cr-detail-row{font-size:var(--fs-sm);color:var(--muted);display:flex;align-items:center;gap:8px}" +
+          ".cr-detail-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}" +
+          ".cr-detail-actions button{padding:6px 16px;border-radius:8px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-sm);font-family:inherit;transition:all .12s}" +
+          ".cr-detail-actions button:hover{border-color:var(--accent);background:var(--hover)}" +
           ".cr-detail-actions .primary{background:var(--accent);color:#fff;border-color:var(--accent)}" +
-          ".cr-platform-badge{font-size:8px;padding:1px 4px;border-radius:2px;display:inline-flex;align-items:center;gap:2px;background:var(--surf);color:var(--muted);border:1px solid var(--bd)}" +
-          ".cr-tag{font-size:9px;padding:0 5px;border-radius:3px;line-height:16px;font-weight:500;display:inline-flex;align-items:center}" +
+          ".cr-detail-actions .primary:hover{opacity:.85}" +
+          ".cr-detail-actions .secondary{border-color:transparent;color:var(--muted)}" +
+          ".cr-detail-actions .secondary:hover{border-color:var(--bd);color:var(--txt)}" +
+          ".cr-platform-badge{font-size:9px;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:3px;background:var(--surf);color:var(--muted);border:1px solid var(--bd);font-weight:500}" +
+          ".cr-tag{font-size:10px;padding:1px 7px;border-radius:4px;line-height:18px;font-weight:600;display:inline-flex;align-items:center}" +
           ".cr-tag-game{background:var(--tag-game-bg);color:var(--tag-game)}" +
-          ".cr-star-btn{cursor:pointer}";
+          ".cr-tag-vup{background:var(--tag-vup-bg);color:var(--tag-vup)}" +
+          ".cr-tag-oc{background:var(--tag-oc-bg);color:var(--tag-oc)}" +
+          ".cr-star-btn{cursor:pointer;font-size:16px;transition:transform .15s}" +
+          ".cr-star-btn:hover{transform:scale(1.15)}";
         document.head.appendChild(st);
       }
 

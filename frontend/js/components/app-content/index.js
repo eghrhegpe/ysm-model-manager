@@ -359,7 +359,9 @@ class AppContent extends HTMLElement {
       if (embedMode) {
         openEmbedded(site);
       } else {
-        window.open(site.url, "_blank");
+        import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
+          OpenInBrowser(site.url),
+        );
       }
     };
 
@@ -383,7 +385,11 @@ class AppContent extends HTMLElement {
       browserEl.style.display = "none";
     });
     const openCurrent = () => {
-      if (currentSite) window.open(currentSite.url, "_blank");
+      if (currentSite) {
+        import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
+          OpenInBrowser(currentSite.url),
+        );
+      }
     };
     root.getElementById("ws-open").addEventListener("click", openCurrent);
     root
@@ -442,7 +448,10 @@ class AppContent extends HTMLElement {
           currentSite = { url };
           openEmbedded(currentSite);
         } else {
-          window.open(url, "_blank");
+          // 外链模式：走系统浏览器，共享用户登录态
+          import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
+            OpenInBrowser(url).catch(() => window.open(url, "_blank")),
+          );
         }
       };
       renderSiteView(site, {
@@ -660,7 +669,9 @@ class AppContent extends HTMLElement {
       const openBtn = resultsBody.querySelector("#gh-open-repo");
       if (openBtn)
         openBtn.addEventListener("click", () => {
-          window.open("https://github.com/" + repo, "_blank");
+          import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
+            OpenInBrowser("https://github.com/" + repo),
+          );
         });
     };
 

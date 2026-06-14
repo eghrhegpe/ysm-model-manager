@@ -90,6 +90,54 @@ function parseDescTags(desc) {
     .slice(0, 6);
 }
 
+// ===== 创作者卡片工厂 =====
+function createCrCard(cr, ctx) {
+  const { authorCountMap, avatarCache, creators, bus } = ctx;
+  const isGitHub = cr.type && cr.type.includes("github");
+  const repoParts = isGitHub ? cr.name.split("/") : null;
+  const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
+  const authorCount = authorCountMap[cr.name] || 0;
+  const sorted = [...creators].sort((a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0));
+  const idx = sorted.indexOf(cr);
+  const pct = sorted.length > 1 ? idx / (sorted.length - 1) : 0;
+  const tier = pct < 0.1
+    ? { border: "#D4A017", glow: "rgba(212,160,23,0.4)", rank: "gold" }
+    : pct < 0.25
+      ? { border: "#9E9E9E", glow: "rgba(158,158,158,0.25)", rank: "silver" }
+      : { border: "#6B9FFF", glow: "transparent", rank: "" };
+  const hasAvatar = avatarCache && avatarCache[cr.name];
+
+  const card = document.createElement("div");
+  card.className = "gh-card";
+  card.tabIndex = 0;
+  card.style.cssText = "min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer;animation:card-in .3s ease-out both;animation-delay:" + (idx * 0.03) + "s";
+  card.dataset.name = cr.name;
+  card.dataset.tag = getTagFromRole(cr.role);
+  card.title = "搜索: " + cr.name;
+  card.innerHTML =
+    '<div class="cr-avatar-container" style="position:relative;display:inline-flex;flex-shrink:0;align-self:flex-start;margin:6px 0 0 6px">' +
+    '<div class="cr-avatar-ring"' + (tier.rank ? ' data-spin="' + tier.rank + '"' : "") +
+    ' style="background:conic-gradient(from var(--grad-rot,0deg),' + tier.border + ',transparent 60%,' + tier.border + ');box-shadow:0 0 6px ' + tier.glow + '"></div>' +
+    (hasAvatar
+      ? '<img class="cr-avatar" src="' + esc(avatarCache[cr.name]) + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover" data-debug-avatar="' + esc(cr.name) + '">'
+      : '<div class="cr-avatar" style="width:28px;height:28px;font-size:12px">' + (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") + "</div>") +
+    '</div>' +
+    '<div class="gh-card-body">' +
+    '<div class="gh-card-label name" style="display:flex;align-items:center;gap:4px">' +
+    '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(cr.name) + '</span>' +
+    '<span class="cr-star-btn" style="cursor:pointer;font-size:11px;margin-left:auto;flex-shrink:0" data-star="' + esc(cr.name) + '">' + (isFaved(cr.name) ? "⭐" : "☆") + '</span>' +
+    (cr._fromLocal && authorCount > 0 ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁' + authorCount + "</span>" : cr._fromLocal ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁</span>' : "") +
+    '</div>' +
+    '<div class="gh-card-desc">' + esc(cr.desc) + '</div>' +
+    '<div class="hm-label" style="margin-top:1px;display:flex;gap:2px;flex-wrap:wrap">' +
+    cr.type.split(";").map(t => '<span class="cr-platform-badge" style="display:none">' + t + "</span>").join("") +
+    '</div>' +
+    '<span class="cr-tag cr-tag-' + esc(getTagFromRole(cr.role)) + '">' + getTagEmojiFromRole(cr.role) + " " + esc(getTagFromRole(cr.role)) + "</span>" +
+    '</div>' +
+    (hasRepo ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' + esc(cr.name) + '">📦</button>' : "");
+  return card;
+}
+
 function loadFavs() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
@@ -234,113 +282,7 @@ export function renderSiteView(site, ctx) {
         "</div>",
     );
     parts.push(
-      '<div class="cr-creator-grid" style="display:flex;flex-wrap:wrap;gap:6px;width:100%">' +
-        creators
-          .map((cr, _, arr) => {
-            const isGitHub = cr.type && cr.type.includes("github");
-            const repoParts = isGitHub ? cr.name.split("/") : null;
-            const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
-            const authorCount = authorCountMap[cr.name] || 0;
-            // 按模型数排百分比：前10%金、前25%银，其余蓝色静态细边
-            const sorted = [...arr].sort(
-              (a, b) =>
-                (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0),
-            );
-            const idx = sorted.indexOf(cr);
-            const pct = sorted.length > 1 ? idx / (sorted.length - 1) : 0;
-            const tier =
-              pct < 0.1
-                ? {
-                    border: "#D4A017",
-                    glow: "rgba(212,160,23,0.4)",
-                    rank: "gold",
-                  }
-                : pct < 0.25
-                  ? {
-                      border: "#9E9E9E",
-                      glow: "rgba(158,158,158,0.25)",
-                      rank: "silver",
-                    }
-                  : { border: "#6B9FFF", glow: "transparent", rank: "" };
-            const spinAttr = tier.rank ? ' data-spin="' + tier.rank + '"' : "";
-            return (
-              '<div class="gh-card" tabindex="0" style="min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer;animation:card-in .3s ease-out both;animation-delay:' +
-              idx * 0.03 +
-              's" data-name="' +
-              esc(cr.name) +
-              '" data-tag="' +
-              esc(getTagFromRole(cr.role)) +
-              '" title="搜索: ' +
-              esc(cr.name) +
-              '">' +
-              '<div class="cr-avatar-container" style="position:relative;display:inline-flex;flex-shrink:0;align-self:flex-start;margin:6px 0 0 6px">' +
-              '<div class="cr-avatar-ring"' +
-              spinAttr +
-              ' style="background:conic-gradient(from var(--grad-rot,0deg),' +
-              tier.border +
-              ",transparent 60%," +
-              tier.border +
-              ");box-shadow:0 0 6px " +
-              tier.glow +
-              '"></div>' +
-              (avatarCache && avatarCache[cr.name]
-                ? '<img class="cr-avatar" src="' +
-                  esc(avatarCache[cr.name]) +
-                  '" style="width:28px;height:28px;border-radius:50%;object-fit:cover" data-debug-avatar="' +
-                  esc(cr.name) +
-                  '">'
-                : '<div class="cr-avatar" style="width:28px;height:28px;font-size:12px">' +
-                  (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") +
-                  "</div>") +
-              "</div>" +
-              '<div class="gh-card-body">' +
-              '<div class="gh-card-label name">' +
-              esc(cr.name) +
-              '<span class="cr-star-btn" style="cursor:pointer;font-size:11px;margin-left:auto;flex-shrink:0" data-star="' +
-              esc(cr.name) +
-              '">' +
-              (isFaved(cr.name) ? "⭐" : "☆") +
-              "</span>" +
-              (cr._fromLocal && authorCount > 0
-                ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁' +
-                  authorCount +
-                  "</span>"
-                : cr._fromLocal
-                  ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁</span>'
-                  : "") +
-              "</div>" +
-              '<div class="gh-card-desc">' +
-              esc(cr.desc) +
-              "</div>" +
-              '<div class="hm-label" style="margin-top:1px;display:flex;gap:2px;flex-wrap:wrap">' +
-              cr.type
-                .split(";")
-                .map(
-                  (t) =>
-                    '<span class="cr-platform-badge" style="display:none">' +
-                    t +
-                    "</span>",
-                )
-                .join("") +
-              "</div>" +
-              '<span class="cr-tag cr-tag-' +
-              esc(getTagFromRole(cr.role)) +
-              '">' +
-              getTagEmojiFromRole(cr.role) +
-              " " +
-              esc(getTagFromRole(cr.role)) +
-              "</span>" +
-              "</div>" +
-              (hasRepo
-                ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' +
-                  esc(cr.name) +
-                  '">📦</button>'
-                : "") +
-              "</div>"
-            );
-          })
-          .join("") +
-        "</div>",
+      '<div class="cr-creator-grid" id="cr-creator-grid" style="display:flex;flex-wrap:wrap;gap:6px;width:100%"></div>',
     );
   } else if (wsEditModeRef.v) {
     // 🔍 搜索词编辑（即使为空也渲染，让用户能新增）
@@ -485,6 +427,16 @@ export function renderSiteView(site, ctx) {
   }
 
   searchResults.innerHTML = html;
+
+  // 用工厂函数填充创作者网格（替代内联字符串）
+  const grid = searchResults.querySelector("#cr-creator-grid");
+  if (grid && !wsEditModeRef.v && creators.length) {
+    const cardCtx = { authorCountMap, avatarCache, creators, allCreators, site, searchResults, bus };
+    creators.forEach((cr) => {
+      const card = createCrCard(cr, cardCtx);
+      grid.appendChild(card);
+    });
+  }
 
   // 预设搜索按钮
   searchResults.querySelectorAll(".cr-preset-btn").forEach((btn) => {

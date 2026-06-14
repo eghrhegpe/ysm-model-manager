@@ -12,8 +12,9 @@ type WindowState struct {
 
 // AuthorInfo 作者信息（含模型计数）
 type AuthorInfo struct {
-	Name  string `json:"Name"`
-	Count int    `json:"Count"`
+	Name       string `json:"Name"`
+	Count      int    `json:"Count"`
+	SampleFile string `json:"SampleFile,omitempty"` // 该作者第一个模型文件路径（用于提取头像）
 }
 
 // ModelEntry 模型文件条目

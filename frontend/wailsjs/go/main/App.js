@@ -22,6 +22,14 @@ export function BackupWorkshopCreators() {
   return window['go']['main']['App']['BackupWorkshopCreators']();
 }
 
+export function BatchExtractCreatorAvatars() {
+  return window['go']['main']['App']['BatchExtractCreatorAvatars']();
+}
+
+export function CachedCreatorAvatar(arg1) {
+  return window['go']['main']['App']['CachedCreatorAvatar'](arg1);
+}
+
 export function CancelQueue() {
   return window['go']['main']['App']['CancelQueue']();
 }

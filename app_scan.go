@@ -399,7 +399,11 @@ func (a *App) ListModelAuthors() []types.AuthorInfo {
 		return nil
 	}
 	entries := a.ScanModelEntries(a.RepoRoot)
-	counts := map[string]int{}
+	type authorData struct {
+		Count      int
+		SampleFile string
+	}
+	authors := map[string]*authorData{}
 	for _, e := range entries {
 		name := e.Name
 		if strings.HasSuffix(strings.ToLower(name), ".ban") {
@@ -409,14 +413,17 @@ func (a *App) ListModelAuthors() []types.AuthorInfo {
 			if idx := strings.Index(name, "]"); idx > 0 {
 				author := name[1:idx]
 				if author != "" {
-					counts[author]++
+					if _, ok := authors[author]; !ok {
+						authors[author] = &authorData{SampleFile: e.Path}
+					}
+					authors[author].Count++
 				}
 			}
 		}
 	}
 	var result []types.AuthorInfo
-	for name, count := range counts {
-		result = append(result, types.AuthorInfo{Name: name, Count: count})
+	for name, ad := range authors {
+		result = append(result, types.AuthorInfo{Name: name, Count: ad.Count, SampleFile: ad.SampleFile})
 	}
 	sort.Slice(result, func(i, j int) bool { return result[i].Count > result[j].Count })
 	return result

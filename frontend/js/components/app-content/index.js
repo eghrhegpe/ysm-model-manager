@@ -353,6 +353,16 @@ class AppContent extends HTMLElement {
       }
     }, 100);
 
+    // 后台批量提取创作者头像（仅首次）
+    let avatarCache = {};
+    (async () => {
+      try {
+        const { BatchExtractCreatorAvatars } =
+          await import("../../../wailsjs/go/main/App.js");
+        avatarCache = await BatchExtractCreatorAvatars();
+      } catch (_) {}
+    })();
+
     // 卡片点击 → 正文切换右侧视图，右侧 ↗ 按开关打开
     const openSite = (site, external = false) => {
       if (!site) return;
@@ -466,6 +476,7 @@ class AppContent extends HTMLElement {
         fillSearch,
         repoModelCache,
         openUrl,
+        avatarCache,
         backToSite: () => {
           if (currentSite) showSiteView(currentSite);
         },

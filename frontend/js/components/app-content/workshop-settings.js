@@ -385,9 +385,8 @@ export async function initSettings(root) {
 
   // 打开发布页
   root.getElementById("set-releases")?.addEventListener("click", () => {
-    window.open(
-      "https://github.com/eghrhegpe/ysm-model-manager/releases",
-      "_blank",
+    import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
+      OpenInBrowser("https://github.com/eghrhegpe/ysm-model-manager/releases"),
     );
   });
 

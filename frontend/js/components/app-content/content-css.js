@@ -437,7 +437,7 @@ export const contentCSS = `
 .gh-cr-add-area { padding:4px 12px; }
 .gh-cr-add { padding:2px 8px; border-radius:4px; border:1px dashed var(--bd); background:transparent; color:var(--accent); cursor:pointer; font-size:var(--fs-sm); width:100%; }
 /* ===== 创作者编辑卡片 ===== */
-.cr-edit-card { margin:4px 12px; border-radius:8px; border:1px solid var(--bd); background:var(--surf); overflow:hidden; cursor:grab; transition:box-shadow .15s,border-color .15s; }
+.cr-edit-card { margin:4px 12px; border-radius:8px; border:1px solid var(--bd); background:var(--surf); overflow:hidden; cursor:default; transition:box-shadow .15s,border-color .15s,margin-top .15s ease,margin-bottom .15s ease; }
 .cr-edit-card:active { cursor:grabbing; }
 .cr-edit-card-head { display:flex; align-items:center; gap:4px; padding:6px 8px; border-bottom:1px solid var(--bd); background:var(--bg); }
 .cr-drag-handle { font-size:14px; color:var(--muted); cursor:grab; user-select:none; line-height:1; }

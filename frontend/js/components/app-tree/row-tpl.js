@@ -51,7 +51,7 @@ export function folderRowHTML(
   } else if (hasEnabled && !hasDisabled) {
     ckCls = " on";
   }
-  const dispName = k.startsWith("[") ? renderDisplayName(k) : attr(k);
+  const dispName = renderDisplayName(k);
   const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
   return `<div class="fh${lk}" data-dir="${attr(full)}"${pad}>
 <span class="ck${ckCls}" data-dir="${attr(full)}"></span>
@@ -60,16 +60,21 @@ export function folderRowHTML(
 }
 
 function attr(s) {
-  return (s || "").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  return (s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 function size(b) {
-  if (!b && b !== 0) return "";
+  if (b == null) return "";
   if (b < 1024) return b + " B";
   if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
   return (b / 1048576).toFixed(1) + " MB";
 }
 function sc(b) {
-  if (!b && b !== 0) return "";
+  if (b == null) return "";
   if (b < 1048576) return "sz-green";
   if (b < 3145728) return "";
   return "sz-red";

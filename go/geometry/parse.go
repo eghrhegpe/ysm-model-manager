@@ -4,12 +4,21 @@ package geometry
 
 import (
 	"encoding/json"
+	"log"
 
 	"ysm-model-manager/go/types"
 )
 
+// maxParseSize ParseBedrockGeometry 接受的最大输入大小
+const maxParseSize = 100 << 20 // 100MB
+
 // ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式）
+// 注意：data 大小不应超过 maxParseSize（100MB），调用方应自行限制
 func ParseBedrockGeometry(data []byte) *types.BedrockModel {
+	if len(data) > maxParseSize {
+		log.Printf("[geometry] ParseBedrockGeometry 输入过大: %d bytes", len(data))
+		return nil
+	}
 	var raw struct {
 		FormatVersion string `json:"format_version"`
 		Geometry      []struct {
@@ -57,11 +66,15 @@ func ParseBedrockGeometry(data []byte) *types.BedrockModel {
 				if len(uvStr) > 0 && uvStr[0] == '{' {
 					faceUV = uvStr
 				} else {
-					json.Unmarshal(c.UV, &uv)
+					if err := json.Unmarshal(c.UV, &uv); err != nil {
+						log.Printf("[geometry] 解析 cube UV 失败: %v", err)
+					}
 				}
 			}
 			if len(c.Rotation) > 0 {
-				json.Unmarshal(c.Rotation, &rot)
+				if err := json.Unmarshal(c.Rotation, &rot); err != nil {
+					log.Printf("[geometry] 解析 cube rotation 失败: %v", err)
+				}
 			}
 			cubes = append(cubes, types.Cube2D{
 				Origin: c.Origin, Size: c.Size, Pivot: c.Pivot,
@@ -70,7 +83,9 @@ func ParseBedrockGeometry(data []byte) *types.BedrockModel {
 		}
 		var boneRot [3]float64
 		if len(b.Rotation) > 0 {
-			json.Unmarshal(b.Rotation, &boneRot)
+			if err := json.Unmarshal(b.Rotation, &boneRot); err != nil {
+				log.Printf("[geometry] 解析 bone rotation 失败: %v", err)
+			}
 		}
 		model.Bones = append(model.Bones, types.Bone2D{
 			Name: b.Name, Parent: b.Parent, Pivot: b.Pivot,

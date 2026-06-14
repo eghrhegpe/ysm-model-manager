@@ -52,8 +52,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .btn { padding: 5px 0; border-radius: 6px; border: 1px solid var(--bd); background: transparent; color: var(--txt); cursor: pointer; font-size: var(--fs-base); font-family: inherit; transition: background .12s; }
 .btn:hover { background: var(--hover); }
 .btn.accent { background: #7c83ff33; color: #66d9ef; border-color: #7c83ff55; }
-:host-context(.theme-warm) .btn.accent { color: #8b4513; }
-:host-context(.theme-pro) .btn.accent { color: #ffffff; }
+/* 主题色通过 CSS 变量自动适配，无需 :host-context */
 .btn.accent:hover { background: #7c83ff55; }
 .btn.warn { background: #f9a82622; color: #f9a826; border-color: #f9a82655; }
 .log-entry { padding: 2px 0; font-size: var(--fs-xs); color: var(--txt); display: flex; gap: 4px; white-space: nowrap; }
@@ -103,4 +102,25 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .ysm-error-title { font-size:var(--fs-sm);font-weight:600;margin-bottom:4px; }
 .ysm-error-body { font-size:var(--fs-xs);color:#888;padding:8px 0; }
 .ysm-log-error { color:#f38ba8; }
+
+/* === MMD 变体聚合 === */
+.dp-mmd-group { border:1px solid var(--bd);border-radius:6px;margin-bottom:4px;overflow:hidden; }
+.dp-mmd-group-hdr { display:flex;align-items:center;gap:4px;padding:4px 6px;cursor:pointer;font-size:var(--fs-sm);transition:background .12s; }
+.dp-mmd-group-hdr:hover { background:var(--hover); }
+.dp-mmd-fold-icon { font-size:9px;color:var(--muted);transition:transform .2s ease;flex-shrink:0; }
+.dp-mmd-group-hdr .dp-mmd-fold-icon.rotated { transform:rotate(90deg); }
+.dp-mmd-folder-name { flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.dp-mmd-folder-name .tag-author,.dp-mmd-folder-name .tag-work,.dp-mmd-folder-name .tag-date { display:inline-block;padding:0 4px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
+.dp-mmd-folder-name .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
+.dp-mmd-folder-name .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
+.dp-mmd-folder-name .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
+.dp-mmd-variant-count { font-size:var(--fs-tiny);color:var(--muted);flex-shrink:0; }
+.dp-mmd-group-body { padding:2px 6px 6px;border-top:1px solid var(--bd);display:grid;grid-template-rows:0fr;transition:grid-template-rows .25s ease; }
+.dp-mmd-open { grid-template-rows:1fr; }
+.dp-mmd-group-body > * { overflow:hidden;min-height:0; }
+.dp-mmd-group-body.dp-mmd-open > * { overflow:visible; }
+.dp-mmd-group-body .dp-detail-item { font-size:var(--fs-sm); }
+.dp-mmd-sync-btn { width:100%;margin-top:4px;padding:3px 0;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:background .12s; }
+.dp-mmd-sync-btn:hover { background:var(--hover); }
+.dp-mmd-sync-btn:disabled { opacity:.5;cursor:default; }
 `;

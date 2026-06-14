@@ -3,15 +3,34 @@ package installer
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
 )
 
+// installLock 防止安装操作与后台同步并发
+var installLock sync.Mutex
+
+// cleanAbs 封装 filepath.Abs(filepath.Clean(path))
+func cleanAbs(path string) string {
+	p, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		log.Printf("[installer] 解析路径失败 %s: %v", path, err)
+		return path
+	}
+	return p
+}
+
 // Install 安装模型到目标目录（支持链接模式）
 func Install(src, customDir, repoRoot, linkMode string) error {
+	installLock.Lock()
+	defer installLock.Unlock()
+
 	src = strings.TrimSpace(src)
 	customDir = strings.TrimSpace(customDir)
 	if src == "" || customDir == "" {
@@ -19,8 +38,8 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 	}
 
 	// 🔒 路径清理与安全校验
-	srcClean, _ := filepath.Abs(filepath.Clean(src))
-	customClean, _ := filepath.Abs(filepath.Clean(customDir))
+	srcClean := cleanAbs(src)
+	customClean := cleanAbs(customDir)
 
 	// 验证 customDir 在 .minecraft 内（防路径穿越）
 	if !paths.ContainsMinecraftMarker(customClean) {
@@ -45,7 +64,7 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 	// 计算相对路径，保持目录结构
 	targetDir := customDir
 	if repoRoot != "" {
-		absRepo, _ := filepath.Abs(filepath.Clean(repoRoot))
+		absRepo := cleanAbs(repoRoot)
 		if strings.HasPrefix(strings.ToLower(src), strings.ToLower(absRepo)) {
 			rel, err := filepath.Rel(absRepo, src)
 			if err == nil {
@@ -53,7 +72,7 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 				if relDir != "." {
 					targetDir = filepath.Join(customDir, relDir)
 					// 再次校验子目录也在 .minecraft 内
-					targetDir, _ = filepath.Abs(filepath.Clean(targetDir))
+					targetDir = cleanAbs(targetDir)
 					if !paths.ContainsMinecraftMarker(targetDir) {
 						return types.AppError{Code:"INVALID_PATH", Operation:"安装模型", SourcePath:targetDir, Reason:"子目录不在 .minecraft 路径内", Suggestion:"请确保整合包的 custom 目录位于 .minecraft 内"}
 					}
@@ -77,61 +96,50 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 // 用于 MMD/VRC 模型，.pmx/.pmd 文件所在文件夹包含纹理等配套文件
 // rtype 用于过滤文件类型（如 MMD 排除 .vrm）
 func InstallDir(srcDir, dstDir, repoRoot, linkMode, rtype string) error {
+	installLock.Lock()
+	defer installLock.Unlock()
+
 	srcDir = strings.TrimSpace(srcDir)
 	dstDir = strings.TrimSpace(dstDir)
 	if srcDir == "" || dstDir == "" {
 		return types.AppError{Code: "INVALID_PARAM", Operation: "安装目录", Reason: "参数为空", Suggestion: "请检查输入"}
 	}
-	srcDir, _ = filepath.Abs(filepath.Clean(srcDir))
-	dstDir, _ = filepath.Abs(filepath.Clean(dstDir))
-	fmt.Printf("[InstallDir] srcDir=%s dstDir=%s repoRoot=%s\n", srcDir, dstDir, repoRoot)
+	srcDir = cleanAbs(srcDir)
+	dstDir = cleanAbs(dstDir)
 
 	// 验证 dstDir 在 .minecraft 内
 	if !paths.ContainsMinecraftMarker(dstDir) {
-		fmt.Println("[InstallDir] FAIL: dstDir not in .minecraft:", dstDir)
 		return types.AppError{Code: "INVALID_PATH", Operation: "安装目录", SourcePath: dstDir, Reason: "目标目录不在 .minecraft 路径内"}
 	}
 	// 验证 srcDir 在仓库目录内
 	if repoRoot != "" {
 		if err := paths.IsInside(repoRoot, srcDir); err != nil {
-			fmt.Println("[InstallDir] FAIL: srcDir not in repoRoot:", srcDir, "repoRoot:", repoRoot, "err:", err)
 			return types.AppError{Code: "INVALID_PATH", Operation: "安装目录", SourcePath: srcDir, Reason: "源目录不在仓库目录内"}
 		}
 	}
-	fmt.Println("[InstallDir] path checks OK")
 
+	finalDst := filepath.Join(dstDir, filepath.Base(srcDir))
+	return installDirRecursive(srcDir, finalDst, linkMode, rtype)
+}
+
+// installDirRecursive 递归安装目录树
+func installDirRecursive(srcDir, finalDst, linkMode, rtype string) error {
 	// 目标子目录名 = 源文件夹名
-	targetSubDir := filepath.Base(srcDir)
-	finalDst := filepath.Join(dstDir, targetSubDir)
-	fmt.Printf("[InstallDir] targetSubDir=%s finalDst=%s\n", targetSubDir, finalDst)
 	if err := os.MkdirAll(finalDst, 0755); err != nil {
-		fmt.Println("[InstallDir] FAIL: mkdir:", err)
 		return types.AppError{Code: "IO_ERROR", Operation: "安装目录", TargetPath: finalDst, Reason: "无法创建目标目录"}
 	}
 	// 校验目标也在 .minecraft 内
-	finalDst, _ = filepath.Abs(filepath.Clean(finalDst))
+	finalDst = cleanAbs(finalDst)
 	if !paths.ContainsMinecraftMarker(finalDst) {
-		fmt.Println("[InstallDir] FAIL: finalDst not in .minecraft:", finalDst)
 		return types.AppError{Code: "INVALID_PATH", Operation: "安装目录", SourcePath: finalDst, Reason: "目标子目录不在 .minecraft 路径内"}
 	}
 
-	entries, err := os.ReadDir(srcDir)
-	if err != nil {
-		fmt.Println("[InstallDir] FAIL: readdir:", err)
-		return err
-	}
-	fmt.Printf("[InstallDir] found %d entries in srcDir\n", len(entries))
-	// 按类型过滤允许的文件扩展名
 	isAllowed := func(name string) bool {
 		low := strings.ToLower(name)
 		switch rtype {
 		case "mmd-skin":
-			// MMD 允许 .pmx/.pmd + 纹理文件，排除 .vrm（自包含格式）
 			ext := filepath.Ext(low)
-			if ext == ".pmx" || ext == ".pmd" || ext == ".png" || ext == ".tga" || ext == ".spa" || ext == ".sph" {
-				return true
-			}
-			return false
+			return ext == ".pmx" || ext == ".pmd" || ext == ".png" || ext == ".tga" || ext == ".spa" || ext == ".sph"
 		case "ysm":
 			ext := filepath.Ext(low)
 			return ext == ".json" || ext == ".png" || ext == ".jpg" || ext == ".jpeg"
@@ -139,30 +147,21 @@ func InstallDir(srcDir, dstDir, repoRoot, linkMode, rtype string) error {
 			return true
 		}
 	}
+
+	entries, err := os.ReadDir(srcDir)
+	if err != nil {
+		log.Printf("[installer] readdir 失败 %s: %v", srcDir, err)
+		return err
+	}
+	var errs []string
 	for _, entry := range entries {
 		if entry.IsDir() {
-			// 递归复制子目录（MMD 模型的 spa/textures/toon 等子文件夹含材质文件）
+			// 递归处理子目录（MMD 的 spa/textures/toon 等深层子文件夹）
 			subSrc := filepath.Join(srcDir, entry.Name())
 			subDst := filepath.Join(finalDst, entry.Name())
-			fmt.Printf("[InstallDir] recurse subdir: %s -> %s\n", subSrc, subDst)
-			if err := os.MkdirAll(subDst, 0755); err != nil {
-				fmt.Printf("[InstallDir] mkdir subdir failed: %v (continue)\n", err)
-				continue
-			}
-			subEntries, _ := os.ReadDir(subSrc)
-			for _, se := range subEntries {
-				if se.IsDir() || !isAllowed(se.Name()) {
-					continue
-				}
-				subFile := filepath.Join(subSrc, se.Name())
-				switch linkMode {
-				case "hardlink":
-					linkOrCopy(subFile, subDst)
-				case "symlink":
-					symlinkOrCopy(subFile, subDst)
-				default:
-					CopyFile(subFile, subDst)
-				}
+			if err := installDirRecursive(subSrc, subDst, linkMode, rtype); err != nil {
+				log.Printf("[installer] 递归安装 %s 失败: %v (继续)", subSrc, err)
+				errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 			}
 			continue
 		}
@@ -170,67 +169,69 @@ func InstallDir(srcDir, dstDir, repoRoot, linkMode, rtype string) error {
 			continue
 		}
 		srcFile := filepath.Join(srcDir, entry.Name())
-		fmt.Printf("[InstallDir] processing: %s (linkMode=%s)\n", srcFile, linkMode)
 		switch linkMode {
 		case "hardlink":
 			if err := linkOrCopy(srcFile, finalDst); err != nil {
-				fmt.Printf("[InstallDir] linkOrCopy failed: %v (continue)\n", err)
-				continue
+				log.Printf("[installer] linkOrCopy 失败 %s: %v (继续)", srcFile, err)
+				errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 			}
 		case "symlink":
 			if err := symlinkOrCopy(srcFile, finalDst); err != nil {
-				fmt.Printf("[InstallDir] symlinkOrCopy failed: %v (continue)\n", err)
-				continue
+				log.Printf("[installer] symlinkOrCopy 失败 %s: %v (继续)", srcFile, err)
+				errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 			}
 		default:
 			if _, err := CopyFile(srcFile, finalDst); err != nil {
-				continue
+				log.Printf("[installer] CopyFile 失败 %s: %v (继续)", srcFile, err)
+				errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 			}
 		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("安装目录 %s 部分失败: %s", srcDir, strings.Join(errs, "; "))
 	}
 	return nil
 }
 
 // InstallToGlobal 安装到全局 custom 目录
 func InstallToGlobal(src, mcRoot string) (string, error) {
+	installLock.Lock()
+	defer installLock.Unlock()
+
 	if src == "" || mcRoot == "" {
 		return "", types.AppError{Code:"INVALID_PARAM", Operation:"安装到全局", Reason:"参数为空", Suggestion:"请检查输入"}
-
 	}
-	mcRoot, _ = filepath.Abs(filepath.Clean(mcRoot))
+	mcRoot = cleanAbs(mcRoot)
 	if !paths.ContainsMinecraftMarker(mcRoot) {
 		return "", types.AppError{Code:"INVALID_PATH", Operation:"安装到全局", SourcePath:mcRoot, Reason:"目标不在 .minecraft 路径内", Suggestion:"请确保 .minecraft 目录路径正确"}
 	}
-	src, _ = filepath.Abs(filepath.Clean(src))
+	src = cleanAbs(src)
 	customDir := filepath.Join(mcRoot, "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(customDir, 0755); err != nil {
 		return "", types.AppError{Code:"IO_ERROR", Operation:"安装到全局", TargetPath:customDir, Reason:"无法创建安装目录", Suggestion:"请检查磁盘权限或空间"}
-
 	}
 	return CopyFile(src, customDir)
 }
 
 // InstallWithOverlay 带冲突检查的安装
 func InstallWithOverlay(src, customDir string) (string, error) {
+	installLock.Lock()
+	defer installLock.Unlock()
+
 	if src == "" || customDir == "" {
 		return "", types.AppError{Code:"INVALID_PARAM", Operation:"安装模型（覆盖检查）", Reason:"参数为空", Suggestion:"请检查输入"}
 	}
-	src, _ = filepath.Abs(filepath.Clean(src))
-	customDir, _ = filepath.Abs(filepath.Clean(customDir))
+	src = cleanAbs(src)
+	customDir = cleanAbs(customDir)
 	if !paths.ContainsMinecraftMarker(customDir) {
 		return "", types.AppError{Code:"INVALID_PATH", Operation:"安装模型（覆盖检查）", SourcePath:customDir, Reason:"目标目录不在 .minecraft 路径内", Suggestion:"请确保整合包的 custom 目录位于 .minecraft 内"}
-
 	}
 	ext := strings.ToLower(filepath.Ext(src))
-	switch ext {
-	case ".ysm", ".zip", ".7z":
-	default:
-		return "", types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型（覆盖检查）", SourcePath:src, Reason:"不支持的文件格式", Suggestion:"仅支持 .ysm / .zip / .7z 格式"}
-
+	if !types.IsSupportedExt(ext) {
+		return "", types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型（覆盖检查）", SourcePath:src, Reason:"不支持的文件格式", Suggestion:"仅支持 " + strings.Join(types.AllExts, " / ") + " 格式"}
 	}
 	if err := os.MkdirAll(customDir, 0755); err != nil {
 		return "", types.AppError{Code:"IO_ERROR", Operation:"安装模型（覆盖检查）", TargetPath:customDir, Reason:"无法创建目录", Suggestion:"请检查磁盘权限或空间"}
-
 	}
 	dst := filepath.Join(customDir, filepath.Base(src))
 	if _, err := os.Stat(dst); err == nil {
@@ -241,8 +242,8 @@ func InstallWithOverlay(src, customDir string) (string, error) {
 
 // CopyFile 复制文件到目标目录
 func CopyFile(src, dstDir string) (string, error) {
-	src, _ = filepath.Abs(filepath.Clean(src))
-	dstDir, _ = filepath.Abs(filepath.Clean(dstDir))
+	src = cleanAbs(src)
+	dstDir = cleanAbs(dstDir)
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		return "", err
 	}
@@ -264,12 +265,16 @@ func CopyFile(src, dstDir string) (string, error) {
 	if _, err := io.Copy(out, in); err != nil {
 		return "", types.AppError{Code:"IO_ERROR", Operation:"复制文件", TargetPath:dst, Reason:"写入目标文件失败", Suggestion:"请检查磁盘空间或权限"}
 	}
+	// 设置目标文件权限
+	if err := os.Chmod(dst, 0644); err != nil {
+		log.Printf("[installer] 设置权限失败 %s: %v", dst, err)
+	}
 	return dst, nil
 }
 
 func linkOrCopy(src, dstDir string) error {
-	src, _ = filepath.Abs(filepath.Clean(src))
-	dstDir, _ = filepath.Abs(filepath.Clean(dstDir))
+	src = cleanAbs(src)
+	dstDir = cleanAbs(dstDir)
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		return err
 	}
@@ -307,8 +312,8 @@ if err := os.Link(src, dst); err != nil {
 }
 
 func symlinkOrCopy(src, dstDir string) error {
-	src, _ = filepath.Abs(filepath.Clean(src))
-	dstDir, _ = filepath.Abs(filepath.Clean(dstDir))
+	src = cleanAbs(src)
+	dstDir = cleanAbs(dstDir)
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		return err
 	}
@@ -336,26 +341,58 @@ func symlinkOrCopy(src, dstDir string) error {
 	return nil
 }
 // IsValidRepoRoot 禁止选择系统敏感目录作为仓库
+// 跨平台实现：禁止根目录、系统关键目录
 func IsValidRepoRoot(path string) bool {
-    abs, err := filepath.Abs(filepath.Clean(path))
-    if err != nil {
-        return false
-    }
+	abs, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return false
+	}
 
-    // 禁止系统根目录
-    forbidden := []string{
-        "C:\\", "D:\\", "E:\\", "C:/", "D:/", "E:/",
-        "C:\\Windows", "C:/Windows",
-        "C:\\Windows\\System32", "C:/Windows/System32",
-        "C:\\Program Files", "C:/Program Files",
-        "C:\\Program Files (x86)", "C:/Program Files (x86)",
-    }
-    for _, f := range forbidden {
-        if strings.EqualFold(abs, f) || strings.HasPrefix(strings.ToLower(abs)+"\\", strings.ToLower(f)+"\\") {
-            return false
-        }
-    }
+	// 禁止任何盘符根目录（Windows）和根目录 /
+	for _, root := range []string{"/", "\\"} {
+		if abs == root || strings.TrimRight(abs, "\\/") == "" {
+			return false
+		}
+	}
+	// Windows 盘符根目录（C:\ D:\ 等）
+	if len(abs) >= 3 && abs[1] == ':' && (abs[2] == '\\' || abs[2] == '/') && len(abs) == 3 {
+		return false
+	}
 
-    return true
+	// 系统关键目录（按平台）
+	absLower := strings.ToLower(abs) + string(filepath.Separator)
+	var forbidden []string
+	if runtime.GOOS == "windows" {
+		// Windows 系统目录
+		for _, drive := range []string{"c:", "d:", "e:"} {
+			prefix := drive + string(filepath.Separator)
+			forbidden = append(forbidden,
+				prefix+"windows"+string(filepath.Separator),
+				prefix+"program files"+string(filepath.Separator),
+				prefix+"program files (x86)"+string(filepath.Separator),
+			)
+		}
+	} else {
+		// Linux/macOS 系统目录
+		forbidden = []string{
+			"/etc" + string(filepath.Separator),
+			"/usr" + string(filepath.Separator),
+			"/bin" + string(filepath.Separator),
+			"/sbin" + string(filepath.Separator),
+			"/var" + string(filepath.Separator),
+			"/dev" + string(filepath.Separator),
+			"/proc" + string(filepath.Separator),
+			"/sys" + string(filepath.Separator),
+			"/System" + string(filepath.Separator),
+			"/private" + string(filepath.Separator),
+		}
+	}
 
+	for _, f := range forbidden {
+		if strings.HasPrefix(absLower, f) || strings.EqualFold(abs, strings.TrimRight(f, string(filepath.Separator))) {
+			return false
+		}
+	}
+
+	return true
 }

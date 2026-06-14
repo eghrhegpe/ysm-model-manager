@@ -589,11 +589,22 @@ export function bindRepoEvents(sr, ctx) {
   }
 
   // 对外暴露的清理函数（供上层在视图销毁时调用）
-  const externalCleanup = () => {
+  const externalCleanup = async () => {
+    if (downloading) {
+      try {
+        const { CancelQueue } = await import("../../../wailsjs/go/main/App.js");
+        await CancelQueue();
+      } catch (_) {
+        /* 取消失败不影响清理 */
+      }
+    }
     if (_offEvents) {
       _offEvents();
       _offEvents = null;
     }
+    // 重置内部状态
+    downloading = false;
+    selectedSet.clear();
   };
 
   return { renderList, updateSelectedUI, cleanup: externalCleanup };

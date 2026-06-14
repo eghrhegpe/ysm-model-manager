@@ -11,7 +11,7 @@ import {
 } from "./tpl.js";
 import { registerGlobalHandlers } from "../../core/global-handlers.js";
 import { initDiagnostics } from "./workshop-diagnostics.js";
-import { initRepository } from "../../pages/repository.js";
+
 import { initSettings } from "./workshop-settings.js";
 import {
   countMissing,
@@ -31,6 +31,7 @@ class AppContent extends HTMLElement {
     this._root.adoptedStyleSheets[0].replaceSync(contentCSS);
     this._current = "repository";
     this._globalUnsubs = [];
+    this._repoEventsCleanup = null;
   }
 
   connectedCallback() {
@@ -49,16 +50,10 @@ class AppContent extends HTMLElement {
     // 创作者详情浮层→搜索本地模型
     this._globalUnsubs.push(
       bus.on("repo:search-creator", (name) => {
-        const repoInput = this._root?.getElementById("repo-search-input");
-        if (repoInput) {
-          repoInput.value = name;
-          repoInput.dispatchEvent(new Event("input", { bubbles: true }));
-          // 切换到仓库页
-          const repoBtn = this._root?.querySelector(
-            `.repo-tab[data-tab="repository"]`,
-          );
-          if (repoBtn) repoBtn.click();
-        }
+        // 存入搜索词，app-tree 在 _renderTree 时自动检查
+        window._pendingTreeSearch = name;
+        // 先切到仓库页面
+        bus.emit("nav:change", { page: "repository" });
       }),
     );
     this._render();
@@ -76,6 +71,11 @@ class AppContent extends HTMLElement {
       });
     }
     this._unsubs = [];
+    // 清理 repo 视图事件
+    if (this._repoEventsCleanup) {
+      this._repoEventsCleanup().catch(() => {});
+      this._repoEventsCleanup = null;
+    }
     // 清理缓存
     if (this._workshopCache) this._workshopCache.clear();
     this._workshopCache = null;
@@ -121,9 +121,9 @@ class AppContent extends HTMLElement {
     } else if (this._current === "instances") {
       this._initInstances();
     } else if (this._current === "repository") {
+      this._initRepository();
       // 按需加载 Three.js 预览组件
       import("../app-preview/index.js").catch(() => {});
-      this._initRepository();
     }
   }
 
@@ -153,7 +153,6 @@ class AppContent extends HTMLElement {
   }
 
   _initRepository() {
-    initRepository();
     this._bindTabs("repo", ["tree", "import", "recycle", "dedup", "oldest"]);
 
     // 资源类型 subtab 切换（全局生效）
@@ -214,13 +213,17 @@ class AppContent extends HTMLElement {
             container.innerHTML = downloadsHTML();
             const { initImportQueue } =
               await import("../../features/import-queue.js");
-            initImportQueue(this);
+            const importCleanup = initImportQueue(this);
+            this._unsubs = this._unsubs || [];
+            if (importCleanup) this._unsubs.push(importCleanup);
           } else if (tab === "recycle") {
             const { recycleHTML } = await import("./tpl.js");
             container.innerHTML = recycleHTML();
             const { initRecycleBin } =
               await import("../../features/recycle-bin.js");
-            initRecycleBin(this);
+            const recycleCleanup = initRecycleBin(this);
+            this._unsubs = this._unsubs || [];
+            if (recycleCleanup) this._unsubs.push(recycleCleanup);
           } else if (tab === "dedup") {
             const { startDedup } = await import("./workshop-diagnostics.js");
             let dedupType = localStorage.getItem("repo_rtype") || "ysm";
@@ -257,27 +260,57 @@ class AppContent extends HTMLElement {
           } else if (tab === "oldest") {
             const { loadOldestModel } =
               await import("../../features/oldest-models.js");
-            await loadOldestModel(container, (s) => this._esc(s));
+            const oldestCleanup = await loadOldestModel(container, (s) =>
+              this._esc(s),
+            );
+            this._unsubs = this._unsubs || [];
+            if (oldestCleanup) this._unsubs.push(oldestCleanup);
           } else if (tab === "resourcepacks") {
             const { initResourcePacks } =
               await import("../../features/resource-packs.js");
-            await initResourcePacks(container, this);
+            const rpCleanup = await initResourcePacks(container, this);
+            this._unsubs = this._unsubs || [];
+            if (rpCleanup) this._unsubs.push(rpCleanup);
           } else if (tab === "shaderpacks") {
             const { initResourcePacks } =
               await import("../../features/resource-packs.js");
-            await initResourcePacks(container, this, "shaderpack");
+            const spCleanup = await initResourcePacks(
+              container,
+              this,
+              "shaderpack",
+            );
+            this._unsubs = this._unsubs || [];
+            if (spCleanup) this._unsubs.push(spCleanup);
           } else if (tab === "create-blueprint") {
             const { initResourcePacks } =
               await import("../../features/resource-packs.js");
-            await initResourcePacks(container, this, "create-blueprint");
+            const cbCleanup = await initResourcePacks(
+              container,
+              this,
+              "create-blueprint",
+            );
+            this._unsubs = this._unsubs || [];
+            if (cbCleanup) this._unsubs.push(cbCleanup);
           } else if (tab === "mmd-skin") {
             const { initResourcePacks } =
               await import("../../features/resource-packs.js");
-            await initResourcePacks(container, this, "mmd-skin");
+            const msCleanup = await initResourcePacks(
+              container,
+              this,
+              "mmd-skin",
+            );
+            this._unsubs = this._unsubs || [];
+            if (msCleanup) this._unsubs.push(msCleanup);
           } else if (tab === "vrchat-avatar") {
             const { initResourcePacks } =
               await import("../../features/resource-packs.js");
-            await initResourcePacks(container, this, "vrchat-avatar");
+            const vaCleanup = await initResourcePacks(
+              container,
+              this,
+              "vrchat-avatar",
+            );
+            this._unsubs = this._unsubs || [];
+            if (vaCleanup) this._unsubs.push(vaCleanup);
           }
         }
       });
@@ -563,8 +596,11 @@ class AppContent extends HTMLElement {
         missingCount,
       });
 
+      // 清理前一次绑定
+      if (this._repoEventsCleanup) await this._repoEventsCleanup();
+
       // 委托 bindRepoEvents 管理所有事件 + 内部状态 (showAll/selectedSet/renderList)
-      const { renderList } = bindRepoEvents(searchResults, {
+      const { renderList, cleanup } = bindRepoEvents(searchResults, {
         esc: (s) => this._esc(s),
         models,
         dlPrefix,
@@ -576,6 +612,7 @@ class AppContent extends HTMLElement {
         },
         localMap,
       });
+      this._repoEventsCleanup = cleanup;
 
       // 初始渲染
       const listContainer = searchResults.querySelector("#ws-repo-list");
@@ -686,9 +723,17 @@ class AppContent extends HTMLElement {
             '<div style="text-align:center;padding:8px"><button class="ws-btn ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
         }
       } catch (e) {
+        const msg =
+          e.message === "NetworkOffline"
+            ? "🌐 无网络连接，请检查网络后重试"
+            : e.message === "NoIndex"
+              ? "📭 该仓库没有 index.json（尚未建立创意工坊索引）"
+              : e.message === "RateLimited"
+                ? "⏱️ GitHub API 频率限制，请稍后重试或改用浏览器打开"
+                : "❌ 加载失败，请检查网络或稍后重试";
         resultsBody.innerHTML =
-          '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ 加载失败: ' +
-          this._esc(String(e)) +
+          '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ ' +
+          this._esc(msg) +
           "</div>" +
           '<div style="text-align:center;padding:8px"><button class="ws-btn ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
       }
@@ -702,7 +747,7 @@ class AppContent extends HTMLElement {
         });
     };
 
-    const renderModels = (repo, models, source, localMap) => {
+    const renderModels = async (repo, models, source, localMap) => {
       const dlPrefix =
         source === "jsd"
           ? "https://cdn.jsdelivr.net/gh/" + repo + "@main/"
@@ -723,7 +768,9 @@ class AppContent extends HTMLElement {
         modelsLength: models.length,
         missingCount,
       });
-      const { renderList } = bindRepoEvents(resultsBody, {
+      // 清理前一次绑定
+      if (this._repoEventsCleanup) await this._repoEventsCleanup();
+      const { renderList, cleanup } = bindRepoEvents(resultsBody, {
         esc: (s) => this._esc(s),
         models,
         dlPrefix,
@@ -733,6 +780,7 @@ class AppContent extends HTMLElement {
         backToSite: () => loadRepos(),
         localMap,
       });
+      this._repoEventsCleanup = cleanup;
       const listContainer = resultsBody.querySelector("#ws-repo-list");
       if (listContainer) listContainer.appendChild(renderList());
     };

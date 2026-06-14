@@ -20,12 +20,14 @@ class AppNav extends HTMLElement {
       });
     });
     this.render();
-    // 恢复上次保存的页面
+    // 恢复上次保存的页面（首次使用或仓库页也需发射，确保导航栏高亮和 app-content 渲染）
+    // 用 queueMicrotask 确保其他组件的 connectedCallback 先完成注册
     let saved = localStorage.getItem("nav_page");
+    let targetPage = "repository";
     if (saved && saved !== "repository") {
-      if (saved === "resources") saved = "repository";
-      setTimeout(() => bus.emit("nav:change", { page: saved }), 50);
+      targetPage = saved === "resources" ? "repository" : saved;
     }
+    queueMicrotask(() => bus.emit("nav:change", { page: targetPage }));
   }
 
   disconnectedCallback() {
@@ -118,15 +120,17 @@ class AppNav extends HTMLElement {
     });
 
     // 异步加载版本号
-    import("../../wailsjs/go/main/App.js").then(({ GetAppVersion }) =>
-      GetAppVersion().then((v) => {
+    import("../../wailsjs/go/main/App.js")
+      .then(({ GetAppVersion }) =>
+        GetAppVersion().then((v) => {
+          const el = this.shadowRoot.getElementById("nav-version");
+          if (el) el.textContent = (v || "dev") + " \u2022 预告版";
+        }),
+      )
+      .catch(() => {
         const el = this.shadowRoot.getElementById("nav-version");
-        if (el) el.textContent = (v || "dev") + " \u2022 预告版";
-      }),
-    ).catch(() => {
-      const el = this.shadowRoot.getElementById("nav-version");
-      if (el) el.textContent = "v1.0.0 \u2022 预告版";
-    });
+        if (el) el.textContent = "v1.0.0 \u2022 预告版";
+      });
   }
 }
 customElements.define("app-nav", AppNav);

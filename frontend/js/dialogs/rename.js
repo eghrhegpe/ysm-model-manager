@@ -76,7 +76,11 @@ export async function showRenameDialog(filePath, currentName) {
           update();
         }
       } catch (_) {
-        // 静默失败
+        const tipsEl = box.querySelector("#rn-tips");
+        if (tipsEl) {
+          tipsEl.textContent = "⚠️ 读取失败，文件可能不是有效 YSM";
+          tipsEl.style.display = "block";
+        }
       } finally {
         const btn = box.querySelector("#rn-from-header");
         if (btn) {
@@ -137,6 +141,16 @@ export async function showRenameDialog(filePath, currentName) {
         ).focus?.();
         return;
       }
+      // 检查非法字符
+      const illegal = /[<>:"\\|?*\/\u0000-\u001f]/;
+      const allFields = [a, w, c, v, d].filter(Boolean);
+      if (allFields.some((f) => illegal.test(f))) {
+        const errEl = box.querySelector("#rn-err");
+        if (errEl)
+          errEl.textContent = '⚠️ 文件名不能包含 < > : " / \\ | ? * 等字符';
+        return;
+      }
+      // 检查新文件名长度
       const newName =
         "[" +
         a +
@@ -148,6 +162,13 @@ export async function showRenameDialog(filePath, currentName) {
         (d ? "(" + d + ")" : "") +
         "." +
         ext;
+      if (newName.length > 255) {
+        const errEl = box.querySelector("#rn-err");
+        if (errEl)
+          errEl.textContent =
+            "⚠️ 文件名过长（" + newName.length + " 字符），请精简";
+        return;
+      }
       close(newName);
     };
   });

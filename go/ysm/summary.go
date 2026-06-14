@@ -11,8 +11,6 @@ import (
 	"strings"
 )
 
-// ===== 对外暴露的摘要结构 =====
-
 type Author struct {
 	Name    string `json:"name"`
 	Roles   string `json:"roles,omitempty"`
@@ -241,7 +239,7 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 				if err != nil {
 					continue
 				}
-				buf, _ := io.ReadAll(rc)
+				buf, _ := io.ReadAll(io.LimitReader(rc, 5<<20))
 				rc.Close()
 				if len(buf) > 0 && (bytes.Contains(buf, []byte(`"minecraft:geometry"`)) || bytes.Contains(buf, []byte(`"minecraft:geometry":`))) {
 					modelCount++
@@ -271,7 +269,7 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 	}
 	defer rc.Close()
 
-	data, err := io.ReadAll(rc)
+	data, err := io.ReadAll(io.LimitReader(rc, 50<<20))
 	if err != nil {
 		return summary, fmt.Errorf("读取 ysm.json 失败: %v", err)
 	}

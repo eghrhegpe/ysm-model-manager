@@ -1,4 +1,5 @@
 // ===== 资源包管理（薄 wrapper，由 app-resource-manager 组件驱动） =====
+import { bus } from "../bus.js";
 
 /**
  * 初始化资源包 tab
@@ -15,11 +16,18 @@ export async function initResourcePacks(container, host, rtype) {
     (rtype || "resourcepack") +
     '"></app-resource-manager>';
 
-  // 监听 Toast 事件
-  container
-    .querySelector("app-resource-manager")
-    .addEventListener("toast", (e) => {
-      const { type, title, message } = e.detail;
-      host._toast?.(type, title, message);
+  // 监听 Toast 事件，改用事件总线确保 Toast 始终可达
+  const manager = container.querySelector("app-resource-manager");
+  const handler = (e) => {
+    const { type, title, message } = e.detail;
+    bus.emit("toast:show", {
+      msg: title + (message ? ": " + message : ""),
+      type: type || "info",
+      duration: 3000,
     });
+  };
+  manager.addEventListener("toast", handler);
+
+  // 返回清理函数，供上层移除事件监听
+  return () => manager.removeEventListener("toast", handler);
 }

@@ -33,10 +33,14 @@ export function bindBusEvents(vm) {
               if (!ins.Exists) continue;
               try {
                 await SyncModelToggleStatus(ins.CustomDir, repoRoot);
-              } catch {}
+              } catch (e) {
+                console.warn("[bus] SyncModelToggleStatus 失败:", e);
+              }
             }
           }
-        } catch {}
+        } catch (e) {
+          console.warn("[bus] 同步 toggle 状态失败:", e);
+        }
       } catch (_) {}
       await reload(vm);
       bus.emit("stats:refresh");
@@ -54,7 +58,8 @@ export function bindBusEvents(vm) {
         vm._repoRoot = dir;
         await reload(vm);
         bus.emit("stats:refresh");
-      } catch (_) {
+      } catch (err) {
+        console.warn("[bus] dir:select-repo 失败:", err);
         vm._entries = [];
         vm._renderTree();
       }
@@ -331,7 +336,8 @@ async function reload(vm) {
     } else {
       vm._entries = [];
     }
-  } catch (_) {
+  } catch (err) {
+    console.warn("[bus] reload 失败:", err);
     vm._entries = [];
   }
   vm._renderTree();
@@ -349,13 +355,14 @@ async function batchToggle(vm, dir, enable) {
     try {
       await ToggleModelEnable(fullPath);
       ok++;
-    } catch (_) {
+    } catch (err) {
       fail++;
+      console.warn("[bus] batchToggle 失败:", fullPath, err);
     }
   }
   if (ok > 0) {
     await reload(vm);
-    bus.emit("sync:toggle-status");
+    bus.emit("sync:toggle:status");
   }
   bus.emit("toast:show", {
     msg: `批量${enable ? "启用" : "禁用"}: ${ok} 成功, ${fail} 失败`,
@@ -374,13 +381,14 @@ async function batchToggleAll(vm, enable) {
     try {
       await ToggleModelEnable(fullPath);
       ok++;
-    } catch (_) {
+    } catch (err) {
       fail++;
+      console.warn("[bus] batchToggleAll 失败:", fullPath, err);
     }
   }
   if (ok > 0) {
     await reload(vm);
-    bus.emit("sync:toggle-status");
+    bus.emit("sync:toggle:status");
   }
   bus.emit("toast:show", {
     msg: `全部${enable ? "启用" : "禁用"}: ${ok} 成功, ${fail} 失败`,

@@ -97,7 +97,7 @@ func AnalyzeYSMModel(path string) YSMModelMeta {
 	}
 	defer rc.Close()
 
-	data, err := io.ReadAll(rc)
+	data, err := io.ReadAll(io.LimitReader(rc, 5<<20))
 	if err != nil {
 		meta.HasError = true
 		meta.ErrorMsg = fmt.Sprintf("读取 model.json 失败: %v", err)

@@ -53,6 +53,7 @@
       "instanceLevel": false,
       "preview": "none",
       "detector": "extension",
+      "isDir": true,
       "actions": ["import", "delete", "openFolder"]
     },
     {
@@ -64,6 +65,7 @@
       "instanceLevel": false,
       "preview": "none",
       "detector": "extension",
+      "isDir": true,
       "actions": ["import", "delete", "openFolder"]
     }
   ]

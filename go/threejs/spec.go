@@ -4,6 +4,7 @@ package threejs
 
 import (
 	"encoding/json"
+	"log"
 	"math"
 	"ysm-model-manager/go/types"
 )
@@ -76,7 +77,8 @@ func Build(model types.BedrockModel) (string, error) {
 	}
 
 	var bones []BoneData
-	boneIdx := make(map[string]int) // name → index in bones[]
+	boneIdx := make(map[string]int)  // name → index in bones[]
+	boneDone := make(map[string]bool) // name → already processed into mesh
 	boneCubes := make(map[string][]types.Cube2D) // name → accumulated cubes
 
 	for _, b := range model.Bones {
@@ -138,11 +140,10 @@ func Build(model types.BedrockModel) (string, error) {
 		if _, exists := boneIdx[b.Name]; !exists {
 			continue // 同名骨骼已合并到第一次出现的条目中
 		}
-		// 只处理第一次出现的骨骼（同名骨骼已在 mergeCubes 中处理）
-		if boneIdx[b.Name] < 0 {
+		if boneDone[b.Name] {
 			continue
 		}
-		boneIdx[b.Name] = -1 // 标记已处理
+		boneDone[b.Name] = true
 
 		bonePivot, hasPivot := pivots[b.Name]
 		if !hasPivot {
@@ -208,6 +209,9 @@ func Build(model types.BedrockModel) (string, error) {
 
 // ===== 立方体几何构建 =====
 
+// 零厚度面修正值（避免 Three.js 渲染零面积面）
+const thicknessEpsilon = 0.001
+
 func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneID string, cubeIdx int) *MeshData {
 	ox := -c.Origin[0]
 	oy := c.Origin[1]
@@ -248,13 +252,13 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 
 	// 避免零厚度面
 	if lx == hx {
-		hx += 0.001
+		hx += thicknessEpsilon
 	}
 	if ly == hy {
-		hy += 0.001
+		hy += thicknessEpsilon
 	}
 	if lz == hz {
-		hz += 0.001
+		hz += thicknessEpsilon
 	}
 
 	// 解析 UV
@@ -387,14 +391,16 @@ func expandBoxUV(uv [2]float64, sx, sy, sz, texW, texH float64, faces *[6][8]flo
 
 	// faceUVs[4] = {u0,v0, u1,v0, u0,v1, u1,v1} 对应顶点顺序
 	// Face order: East(0), West(1), Up(2), Down(3), South(4), North(5)
+	// fw/fh 取绝对值：负值表示纹理方向翻转已体现在面的顶点排列中，
+	// UV 坐标的宽度/高度必须为正数，否则纹理镜像
 	uvData := []struct {
 		fu, fv, fw, fh float64
 		f              int
 	}{
 		{u, v + z, z, y, 0},               // East
 		{u + z + x, v + z, z, y, 1},        // West
-		{u + z + x, v + z, -x, -z, 2},      // Up
-		{u + z + x + x, v, -x, z, 3},       // Down
+		{u + z + x, v + z, x, z, 2},        // Up（fw/fh 取绝对值）
+		{u + z + x + x, v, x, z, 3},        // Down（fw/fh 取绝对值）
 		{u + z + z + x, v + z, x, y, 4},    // South
 		{u + z, v + z, x, y, 5},            // North
 	}
@@ -403,7 +409,13 @@ func expandBoxUV(uv [2]float64, sx, sy, sz, texW, texH float64, faces *[6][8]flo
 		fu := d.fu
 		fv := d.fv
 		fw := d.fw
+		if fw < 0 {
+			fw = -fw
+		}
 		fh := d.fh
+		if fh < 0 {
+			fh = -fh
+		}
 
 		u0 := fu / texW
 		v0 := fv / texH
@@ -422,6 +434,7 @@ func parseFaceUV(faceUVStr string, faces *[6][8]float64, texW, texH float64) boo
 		UvSize  []float64 `json:"uv_size"`
 	}
 	if err := json.Unmarshal([]byte(faceUVStr), &faceData); err != nil {
+		log.Printf("[threejs] parseFaceUV 失败: %v", err)
 		return false
 	}
 

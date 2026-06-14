@@ -38,7 +38,7 @@ export function modalPrompt(opts) {
 
     box.innerHTML = `
       <div class="dlg-title" style="margin:0">${icon || ""} ${esc(title)}</div>
-      <input id="mp-input" value="${esc(value || "")}" placeholder="${esc(placeholder || "")}" style="width:100%;padding:6px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:12px;box-sizing:border-box">
+      <input id="mp-input" maxlength="255" value="${esc(value || "")}" placeholder="${esc(placeholder || "")}" style="width:100%;padding:6px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:12px;box-sizing:border-box">
       <div id="mp-err" class="dlg-err"></div>
       <div class="dlg-footer" style="padding:0">
         <button id="mp-cancel" class="dlg-btn">取消 (Esc)</button>
@@ -112,7 +112,10 @@ export function modalSelect(opts) {
     const overlay = document.createElement("div");
     overlay.className = "dlg-overlay";
     overlay.onclick = (e) => {
-      if (e.target === overlay) { overlay.remove(); resolve(null); }
+      if (e.target === overlay) {
+        overlay.remove();
+        resolve(null);
+      }
     };
 
     const box = document.createElement("div");
@@ -125,7 +128,7 @@ export function modalSelect(opts) {
       (icon || "") +
       " " +
       esc(title) +
-      '</div>' +
+      "</div>" +
       '<select id="ms-select" style="width:100%;padding:6px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:12px">' +
       (items || [])
         .map(
@@ -133,7 +136,7 @@ export function modalSelect(opts) {
             '<option value="' + esc(item) + '">' + esc(item) + "</option>",
         )
         .join("") +
-      '</select>' +
+      "</select>" +
       '<div class="dlg-footer" style="padding:0">' +
       '<button id="ms-cancel" class="dlg-btn">取消 (Esc)</button>' +
       '<button id="ms-ok" class="dlg-btn dlg-btn-primary">' +
@@ -146,7 +149,10 @@ export function modalSelect(opts) {
     const select = box.querySelector("#ms-select");
     select.focus();
 
-    const close = (result) => { overlay.remove(); resolve(result); };
+    const close = (result) => {
+      overlay.remove();
+      resolve(result);
+    };
 
     box.querySelector("#ms-cancel").onclick = () => close(null);
     box.querySelector("#ms-ok").onclick = () => close(select.value);
@@ -186,7 +192,7 @@ export function modalConfirm(opts) {
       <div style="font-size:11px;color:var(--txt);line-height:1.5;white-space:pre-wrap;max-height:55vh;overflow-y:auto">${esc(message)}</div>
       <div class="dlg-footer" style="padding:0">
         <button id="mc-cancel" class="dlg-btn">取消 (Esc)</button>
-        <button id="mc-ok" class="dlg-btn" style="border:none;background:${danger ? "#e5534b" : "var(--accent)"};color:#fff">${esc(okText || "确定")} (Enter)</button>
+        <button id="mc-ok" class="dlg-btn ${danger ? "dlg-btn-danger" : "dlg-btn-primary"}">${esc(okText || "确定")} (Enter)</button>
       </div>
     `;
     overlay.appendChild(box);

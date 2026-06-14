@@ -340,7 +340,7 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 		if strings.HasSuffix(strings.ToLower(p), ".ban") {
 			originalExt = strings.ToLower(filepath.Ext(p[:len(p)-4]))
 		}
-		if originalExt != ".ysm" && originalExt != ".zip" && originalExt != ".7z" && originalExt != ".json" && originalExt != ".pmx" && originalExt != ".pmd" && originalExt != ".vrca" && originalExt != ".vrm" && originalExt != ".nbt" && originalExt != ".schematic" {
+		if !types.IsSupportedExt(originalExt) {
 			return nil
 		}
 		// .json 只允许 ysm.json（动作/动画文件不应单独扫描推送）
@@ -477,12 +477,12 @@ func (a *App) ScanLocalAuthors() []types.WorkshopCreator {
 		exts  []string
 	}
 	targets := []scanTarget{
-		{a.GetRepoRoot("ysm"), "ysm", []string{".ysm", ".zip", ".7z", ".json"}},
-		{a.GetRepoRoot("mmd-skin"), "mmd-skin", []string{".pmx", ".pmd"}},
-		{a.GetRepoRoot("vrchat-avatar"), "vrchat-avatar", []string{".vrca", ".vrm"}},
-		{a.GetRepoRoot("resourcepack"), "resourcepack", []string{".zip"}},
-		{a.GetRepoRoot("shaderpack"), "shaderpack", []string{".zip"}},
-		{a.GetRepoRoot("create-blueprint"), "create-blueprint", []string{".nbt", ".schematic"}},
+		{a.GetRepoRoot("ysm"), "ysm", types.SupportedExtsForType("ysm")},
+		{a.GetRepoRoot("mmd-skin"), "mmd-skin", types.SupportedExtsForType("mmd-skin")},
+		{a.GetRepoRoot("vrchat-avatar"), "vrchat-avatar", types.SupportedExtsForType("vrchat-avatar")},
+		{a.GetRepoRoot("resourcepack"), "resourcepack", types.SupportedExtsForType("resourcepack")},
+		{a.GetRepoRoot("shaderpack"), "shaderpack", types.SupportedExtsForType("shaderpack")},
+		{a.GetRepoRoot("create-blueprint"), "create-blueprint", types.SupportedExtsForType("create-blueprint")},
 	}
 
 	for _, t := range targets {

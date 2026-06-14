@@ -1,8 +1,0 @@
-fix: Wails binding 注册失败（缺 error 返回值）
-
-Wails 要求 Binding 函数签名必须返回 error 或 (T, error)。
-BatchExtractCreatorAvatars 返回 map[string]string 没有 error，
-CachedCreatorAvatar 返回 string 没有 error，
-导致 Callback 'not registered' 错误。
-
-修复：两个函数签名改为 (map[string]string, error) 和 (string, error)

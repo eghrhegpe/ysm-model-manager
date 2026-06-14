@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -157,7 +158,11 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 	enableCount := 0
 	customDirClean := strings.ToLower(filepath.Clean(instanceCustomDir)) + string(filepath.Separator)
 	filepath.WalkDir(instanceCustomDir, func(p string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
+			log.Printf("[sync] WalkDir 错误 %s: %v", p, err)
+			return nil
+		}
+		if d.IsDir() {
 			return nil
 		}
 		if strings.Contains(strings.ToLower(p), ".recycle") {
@@ -169,7 +174,7 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 			actualPath = p[:len(p)-4]
 		}
 		ext := strings.ToLower(filepath.Ext(actualPath))
-		if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
+		if !types.IsSupportedExt(ext) {
 			return nil
 		}
 
@@ -251,6 +256,8 @@ func ListVersions(mcRoot string) []types.VersionInstance {
 	return out
 }
 
+const maxHashRead = 100 << 20 // 100MB — 超出此大小的文件只哈希前 100MB
+
 func computeHash(path string) string {
 	f, err := os.Open(path)
 	if err != nil {
@@ -258,7 +265,7 @@ func computeHash(path string) string {
 	}
 	defer f.Close()
 	h := sha256.New()
-	io.Copy(h, f)
+	io.Copy(h, io.LimitReader(f, maxHashRead))
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
@@ -271,7 +278,8 @@ func isSyncAllowed(name string) bool {
 	low := strings.ToLower(name)
 	base := strings.TrimSuffix(low, ".disabled")
 	base = strings.TrimSuffix(base, ".ban")
-	// .json 只允许 ysm.json（动作/动画文件不应单独扫描推送）
+	// .json 只允许 ysm.json（syncAllowedExts 不含 .json，故单独处理）
+	// 其他 .json（如动画/控制器/模型引用文件）不应单独推送
 	if strings.HasSuffix(base, ".json") {
 		return base == "ysm.json"
 	}
@@ -299,6 +307,7 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 	globalFiles := make(map[string]string) // name → path
 	filepath.Walk(globalDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
+			log.Printf("[sync] Walk 错误 %s: %v", path, err)
 			return nil
 		}
 		if info.IsDir() {
@@ -322,6 +331,7 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 	instanceFiles := make(map[string]string)
 	filepath.Walk(instanceDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
+			log.Printf("[sync] Walk 错误 %s: %v", path, err)
 			return nil
 		}
 		if info.IsDir() {
@@ -398,7 +408,11 @@ func SyncResourcesDirLevel(globalDir, instanceDir, rtype string) types.ResourceS
 	// 扫描全局目录，收集所有包含模型文件的文件夹名
 	globalDirs := make(map[string]string) // lowercase folder name → full path
 	filepath.Walk(globalDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || !info.IsDir() || path == globalDir {
+		if err != nil {
+			log.Printf("[sync] Walk 错误 %s: %v", path, err)
+			return nil
+		}
+		if !info.IsDir() || path == globalDir {
 			return nil
 		}
 		if isDirTypeModelFolder(path, rtype) {
@@ -412,7 +426,11 @@ func SyncResourcesDirLevel(globalDir, instanceDir, rtype string) types.ResourceS
 	// 扫描整合包目录，收集所有包含模型文件的文件夹名
 	instanceDirs := make(map[string]string)
 	filepath.Walk(instanceDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || !info.IsDir() || path == instanceDir {
+		if err != nil {
+			log.Printf("[sync] Walk 错误 %s: %v", path, err)
+			return nil
+		}
+		if !info.IsDir() || path == instanceDir {
 			return nil
 		}
 		if isDirTypeModelFolder(path, rtype) {
@@ -445,7 +463,7 @@ func SyncResourcesDirLevel(globalDir, instanceDir, rtype string) types.ResourceS
 	return result
 }
 
-// SortEntries 鎸夊悕绉版帓搴忔ā鍨嬫潯鐩?
+// SortEntries 按名称排序模型条目
 func SortEntries(entries []types.ModelEntry) {
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].Name < entries[j].Name
@@ -473,17 +491,25 @@ func isFileLocked(err error) bool {
 	if err == nil {
 		return false
 	}
-	// Windows 共享违例 (ERROR_SHARING_VIOLATION)
-	// 或权限拒绝 (ERROR_ACCESS_DENIED) — 文件被打开时常见
-	if linkErr, ok := err.(*os.LinkError); ok {
-		if linkErr.Err != nil {
-			msg := strings.ToLower(linkErr.Err.Error())
-			if strings.Contains(msg, "sharing") ||
-				strings.Contains(msg, "access") ||
-				strings.Contains(msg, "used by another process") {
-				return true
-			}
+	// 检查多种错误类型：Windows 上 os.Rename 可能返回 *os.LinkError 或 *os.PathError
+	// 统一检查嵌套错误的消息内容
+	getMsg := func(e error) string {
+		if e == nil {
+			return ""
 		}
+		return strings.ToLower(e.Error())
 	}
-	return false
+
+	// 取最内层错误消息（解包 LinkError/PathError）
+	msg := getMsg(err)
+	if linkErr, ok := err.(*os.LinkError); ok {
+		msg = getMsg(linkErr.Err)
+	}
+	if pathErr, ok := err.(*os.PathError); ok {
+		msg = getMsg(pathErr.Err)
+	}
+
+	return strings.Contains(msg, "sharing") ||
+		strings.Contains(msg, "access") ||
+		strings.Contains(msg, "used by another process")
 }

@@ -2,6 +2,7 @@
 import { bus } from "../bus.js";
 import { modalConfirm } from "../dialogs/modal.js";
 import { renderDisplayName } from "../utils/display.js";
+import { friendlyError } from "../utils/errors.js";
 
 export function initRecycleBin(app) {
   const root = app._root;
@@ -49,6 +50,8 @@ export function initRecycleBin(app) {
     shaderpack: "☀️",
     "create-blueprint": "⚙️",
   };
+  let _loadingAbort = null;
+
   let unsubRtype = bus.on("repo:rtype-changed", (rt) => {
     if (rt && rt !== currentType) {
       currentType = rt;
@@ -59,6 +62,13 @@ export function initRecycleBin(app) {
   loadRecycleBin();
 
   async function loadRecycleBin() {
+    // 取消过时的请求
+    if (_loadingAbort) {
+      _loadingAbort();
+      _loadingAbort = null;
+    }
+    const abortCtrl = new AbortController();
+    _loadingAbort = () => abortCtrl.abort();
     const list = root.getElementById("recy-list");
     const count = root.getElementById("recy-count");
     if (!list) return;
@@ -104,7 +114,7 @@ export function initRecycleBin(app) {
 <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);cursor:pointer" title="点击查看详情: ${esc(e.Path)}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>
 <span style="font-size:var(--fs-xs);color:var(--muted)">${size}</span>
 <button class="recy-restore" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-xs)">↩️ 恢复</button>
-<button class="recy-del" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--err);background:transparent;color:var(--err);cursor:pointer;font-size:var(--fs-xs)">🗑️ 删除</button>
+<button class="recy-del" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:3px;border:1px solid var(--paid);background:transparent;color:var(--paid);cursor:pointer;font-size:var(--fs-xs)">🗑️ 删除</button>
 </div>
 <div style="font-size:var(--fs-xs);color:var(--muted);padding-left:2px;word-break:break-all">📂 ${esc(e.Path)}</div>
 </div>`;
@@ -178,6 +188,13 @@ export function initRecycleBin(app) {
     } catch (e) {
       list.innerHTML = `<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">❌ ${esc(friendlyError(e, "读取回收站失败"))}</div>`;
       if (count) count.textContent = "加载失败";
+    } finally {
+      _loadingAbort = null;
     }
   }
+
+  // 返回清理函数，供上层在组件销毁时调用
+  return () => {
+    if (unsubRtype) unsubRtype();
+  };
 }

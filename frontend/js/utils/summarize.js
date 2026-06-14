@@ -10,7 +10,10 @@ function cleanTips(text) {
 /** 清洗纯文本 */
 function cleanText(text) {
   if (typeof text !== "string") return "";
-  return text.replace(/§[0-9a-fk-or]/gi, "").trim();
+  return text
+    .replace(/§[0-9a-fk-or]/gi, "")
+    .replace(/[\x00-\x1f\x7f]/g, "")
+    .trim();
 }
 
 /**

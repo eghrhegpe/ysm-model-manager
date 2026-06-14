@@ -10,14 +10,14 @@ export function fallbackInstances() {
       extra: 2,
       items: {
         synced: [
-          { name: "steve_skin.ysm", size: "1.2 MB" },
-          { name: "alex_deluxe.ysm", size: "2.4 MB" },
-          { name: "neon_sword.ysm", size: "1.5 MB" },
+          { name: "steve_skin.ysm", size: "" },
+          { name: "alex_deluxe.ysm", size: "" },
+          { name: "neon_sword.ysm", size: "" },
         ],
-        missing: [{ name: "dragon_armor.zip", size: "3.8 MB" }],
+        missing: [{ name: "dragon_armor.zip", size: "" }],
         extra: [
-          { name: "custom_hat.ysm", size: "0.8 MB" },
-          { name: "old_hat.ysm", size: "0.3 MB" },
+          { name: "custom_hat.ysm", size: "" },
+          { name: "old_hat.ysm", size: "" },
         ],
       },
     },

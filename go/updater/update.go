@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,6 +20,9 @@ const (
 	repoOwner = "eghrhegpe"
 	repoName  = "ysm-model-manager"
 )
+
+// updateLock 防止并发更新（多次调用 InstallUpdate/Download）
+var updateLock sync.Mutex
 
 // ReleaseAsset GitHub Release 中的文件
 type ReleaseAsset struct {
@@ -64,6 +70,7 @@ func Check(current string) (*UpdateInfo, error) {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "YSM-Model-Manager/"+normalize(current))
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -120,7 +127,16 @@ func Check(current string) (*UpdateInfo, error) {
 
 // Download 下载更新包到临时目录，返回 zip 路径
 func Download(assetURL string) (string, error) {
-	resp, err := http.Get(assetURL)
+	updateLock.Lock()
+	defer updateLock.Unlock()
+
+	req, err := http.NewRequest("GET", assetURL, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "YSM-Model-Manager/")
+	client := &http.Client{Timeout: 5 * time.Minute}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -133,8 +149,10 @@ func Download(assetURL string) (string, error) {
 	}
 	defer f.Close()
 
-	_, err = io.Copy(f, resp.Body)
+	// 限制下载大小（最大 500MB）
+	_, err = io.Copy(f, io.LimitReader(resp.Body, 500<<20))
 	if err != nil {
+		os.Remove(tmp)
 		return "", err
 	}
 	return tmp, nil
@@ -148,7 +166,9 @@ func CleanupOldVersion() {
 	}
 	oldPath := exe + ".old"
 	if _, err := os.Stat(oldPath); err == nil {
-		os.Remove(oldPath)
+		if err := os.Remove(oldPath); err != nil {
+			log.Printf("[updater] 清理旧文件失败 %s: %v", oldPath, err)
+		}
 	}
 }
 
@@ -156,6 +176,9 @@ func CleanupOldVersion() {
 // 策略：exe → exe.old（备份）, exe.new（新文件）→ exe
 // 同时提取 resource_types.json 等数据文件到 EXE 同目录
 func InstallUpdate(zipPath string) error {
+	updateLock.Lock()
+	defer updateLock.Unlock()
+
 	exe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("获取程序路径失败: %w", err)
@@ -189,14 +212,20 @@ func InstallUpdate(zipPath string) error {
 			continue
 		}
 		dest := filepath.Join(exeDir, name)
+		// 路径遍历防护：确保解压路径仍在 exeDir 内
+		cleanDir := filepath.Clean(exeDir) + string(os.PathSeparator)
+		if !strings.HasPrefix(dest, cleanDir) {
+			log.Printf("[updater] 跳过异常路径 %s", f.Name)
+			continue
+		}
 		if alwaysOverwrite[name] {
 			if err := extractZipFile(f, dest); err != nil {
-				fmt.Printf("警告: 提取 %s 失败: %v\n", name, err)
+				log.Printf("[updater] 提取 %s 失败: %v", name, err)
 			}
 		} else if createIfMissing[name] {
 			if _, err := os.Stat(dest); os.IsNotExist(err) {
 				if err := extractZipFile(f, dest); err != nil {
-					fmt.Printf("警告: 提取 %s 失败: %v\n", name, err)
+					log.Printf("[updater] 提取 %s 失败: %v", name, err)
 				}
 			}
 		}
@@ -205,7 +234,7 @@ func InstallUpdate(zipPath string) error {
 		return fmt.Errorf("zip 中未找到 %s", targetExe)
 	}
 
-	// 2. 解压到 exe.new
+	// 2. 解压到 exe.new（限制解压大小 200MB）
 	newPath := exe + ".new"
 	if err := extractZipFile(exeInZip, newPath); err != nil {
 		return fmt.Errorf("解压 exe 失败: %w", err)
@@ -224,15 +253,22 @@ func InstallUpdate(zipPath string) error {
 	// 新文件 → exe
 	if err := os.Rename(newPath, exe); err != nil {
 		// 回滚
-		os.Rename(oldPath, exe)
+		if rerr := os.Rename(oldPath, exe); rerr != nil {
+			log.Printf("[updater] 致命: 回滚也失败 %v (旧文件: %s)", rerr, oldPath)
+		}
 		os.Remove(newPath)
 		return fmt.Errorf("替换文件失败: %w", err)
+	}
+
+	// 清理临时下载文件
+	if err := os.Remove(zipPath); err != nil {
+		log.Printf("[updater] 清理临时文件失败: %v", err)
 	}
 
 	return nil
 }
 
-// extractZipFile 解压 zip 中的单个文件到目标路径
+// extractZipFile 解压 zip 中的单个文件到目标路径（限制解压大小 200MB）
 func extractZipFile(f *zip.File, dest string) error {
 	rc, err := f.Open()
 	if err != nil {
@@ -246,7 +282,7 @@ func extractZipFile(f *zip.File, dest string) error {
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, rc)
+	_, err = io.Copy(out, io.LimitReader(rc, 200<<20))
 	return err
 }
 
@@ -268,10 +304,17 @@ func isNewer(a, b string) bool {
 }
 
 func splitVer(s string) []int {
+	// 去掉预发布后缀（如 v1.2.3-beta → v1.2.3）
+	if idx := strings.IndexAny(s, "-+"); idx >= 0 {
+		s = s[:idx]
+	}
 	parts := strings.SplitN(s, ".", 4)
 	out := make([]int, len(parts))
 	for i, p := range parts {
-		fmt.Sscanf(p, "%d", &out[i])
+		n, err := strconv.Atoi(p)
+		if err == nil {
+			out[i] = n
+		}
 	}
 	return out
 }

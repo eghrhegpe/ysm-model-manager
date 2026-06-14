@@ -2,8 +2,7 @@
 import { bus } from "./bus.js";
 import { register } from "./services/registry.js";
 
-// 暴露 bus 到 window，供 index.html 内联脚本和旧代码使用
-window.bus = bus;
+// bus 已在 bus.js 中挂载 window.bus，此处不再重复赋值
 
 // 注册全局可替换服务
 import { loadInstances } from "./components/app-sidebar/loader.js";
@@ -12,16 +11,18 @@ register("loadInstances", loadInstances);
 register("loadEntries", loadEntries);
 
 // 新版 Web Component（通过 ES Module 导入以支持 shadow DOM）
-import "./components/app-tree/index.js";
-import "./components/app-sidebar/index.js";
-import "./components/app-content/index.js";
-// app-preview 动态加载（含 Three.js 466KB，仅仓库页和资源库模型 tab 需要）
-// 之前通过 <script> 加载的组件，现在统一 ESM import
+// 静态导入（浏览器加载失败时直接报错，不 try/catch 以免静默吞错）
 import "./components/app-nav.js";
 import "./components/context-menu.js";
 import "./components/app-toast.js";
-import "./components/app-resource-manager/index.js";
-import "./components/app-sync-manager/index.js";
+// Web Components 动态导入，单组件失败不影响整体
+const _loadWC = (p) =>
+  import(p).catch((e) => console.warn("[module] 组件加载失败:", p, e));
+_loadWC("./components/app-tree/index.js");
+_loadWC("./components/app-sidebar/index.js");
+_loadWC("./components/app-content/index.js");
+_loadWC("./components/app-resource-manager/index.js");
+_loadWC("./components/app-sync-manager/index.js");
 
 // 右键菜单映射
 import { registerContextMenus } from "./core/context-menus.js";
@@ -34,6 +35,8 @@ const THEME_DARK = "cyber";
 const THEME_LIGHT = "warm";
 
 function applyTheme(mode) {
+  const VALID = ["cyber", "warm", "pro", "system"];
+  if (!VALID.includes(mode)) mode = "system";
   document.body.classList.remove("theme-cyber", "theme-warm", "theme-pro");
   if (mode === "system") {
     const prefersDark = window.matchMedia(
@@ -109,23 +112,27 @@ function applyUIPrefs() {
   applyUIPrefs();
   // 静默检查更新（不阻塞界面）
   const { checkUpdateSilent } = await import("./features/version-updater.js");
-  checkUpdateSilent();
+  checkUpdateSilent().catch((e) => console.warn("[updater] 静默检查失败:", e));
 })();
 
 // ===== 禁用旧版 document 拖拽处理器（新版组件已接管）=====
 document.addEventListener(
   "dragover",
   (e) => {
-    if (e.target?.closest?.("#ws-page, #dl-drop, .ws-page"))
+    if (e.target?.closest?.("#ws-page, #dl-drop, .ws-page")) {
+      e.preventDefault();
       e.stopPropagation();
+    }
   },
   true,
 );
 document.addEventListener(
   "drop",
   (e) => {
-    if (e.target?.closest?.("#ws-page, #dl-drop, .ws-page"))
+    if (e.target?.closest?.("#ws-page, #dl-drop, .ws-page")) {
+      e.preventDefault();
       e.stopPropagation();
+    }
   },
   true,
 );
@@ -137,12 +144,18 @@ window
     if (theme === "system") applyTheme("system");
   });
 
-// ===== F12 / Ctrl+Shift+I 打开 DevTools（生产环境调试用）=====
-document.addEventListener("keydown", (e) => {
-  if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
-    e.preventDefault();
-    try {
-      window.runtime.WindowShowDevtools?.();
-    } catch (_) {}
-  }
-});
+// ===== F12 / Ctrl+Shift+I 打开 DevTools（仅开发/调试环境）=====
+// 通过查询参数 ?dev=1 或 localStorage 标志启用
+const _devMode =
+  new URLSearchParams(window.location.search).has("dev") ||
+  localStorage.getItem("_devtools") === "1";
+if (_devMode) {
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
+      e.preventDefault();
+      try {
+        window.runtime.WindowShowDevtools?.();
+      } catch (_) {}
+    }
+  });
+}

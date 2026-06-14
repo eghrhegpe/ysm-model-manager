@@ -1,10 +1,11 @@
 // ===== 同步相关：导入缺失 / 同步启用状态 =====
 import { bus } from "../bus.js";
+import { friendlyError } from "../utils/errors.js";
 
 export function registerSync(unsubs) {
   // 导入仓库模型到整合包
   unsubs.push(
-    bus.on("sync:download-missing", async ({ instanceName, rtype } = {}) => {
+    bus.on("sync:download:missing", async ({ instanceName, rtype } = {}) => {
       console.log(
         "[sync] download-missing",
         instanceName || "all",
@@ -51,13 +52,14 @@ export function registerSync(unsubs) {
         const targets = instanceName
           ? instances.filter((i) => i.Name === instanceName)
           : instances;
+        // 提前获取一次状态列表（避免循环内重复调用）
+        const allStatuses = await GetResourceInstanceStatus(
+          rtypeActual,
+          mcRoot,
+          repoRoot,
+        );
         for (const ins of targets) {
-          const statusList = await GetResourceInstanceStatus(
-            rtypeActual,
-            mcRoot,
-            repoRoot,
-          );
-          const st = (statusList || []).find((s) => s.Name === ins.Name);
+          const st = (allStatuses || []).find((s) => s.Name === ins.Name);
           if (!st?.Missing?.length) continue;
           for (const srcPath of st.Missing) {
             try {
@@ -107,7 +109,7 @@ export function registerSync(unsubs) {
 
   // 同步启用/禁用状态到所有整合包
   unsubs.push(
-    bus.on("sync:toggle-status", async () => {
+    bus.on("sync:toggle:status", async () => {
       console.log("[sync] toggle-status");
       try {
         const {
@@ -191,5 +193,117 @@ export function registerSync(unsubs) {
         bus.emit("tree:reload");
       }
     }),
+  );
+
+  // MMD 变体同步
+  unsubs.push(
+    bus.on(
+      "mmd:sync-variant-folder",
+      async ({ instanceName, folderPath, rtype }) => {
+        if (!instanceName || !folderPath) return;
+        console.log("[sync] mmd:sync-variant-folder", instanceName, folderPath);
+
+        bus.emit("toast:show", {
+          msg: `⬇️ ${instanceName}: 正在同步变体文件...`,
+          duration: 3000,
+          type: "info",
+        });
+
+        try {
+          const {
+            LoadAppConfig,
+            GetResourceInstanceStatus,
+            InstallResourceToInstance,
+            GetRepoRoot,
+          } = await import("../../wailsjs/go/main/App.js");
+          const cfg = await LoadAppConfig();
+          const mcRoot = cfg.mcRoot || "";
+          const mmdRoot = await GetRepoRoot("mmd-skin");
+          if (!mcRoot) {
+            bus.emit("toast:show", {
+              msg: "请先设置游戏路径",
+              duration: 3000,
+              type: "warn",
+            });
+            return;
+          }
+
+          const statusList = await GetResourceInstanceStatus(
+            rtype,
+            mcRoot,
+            mmdRoot || "",
+          );
+          const st = (statusList || []).find((s) => s.Name === instanceName);
+          if (!st?.Missing?.length) {
+            bus.emit("toast:show", {
+              msg: "没有需要同步的文件",
+              duration: 2000,
+              type: "info",
+            });
+            return;
+          }
+
+          const normFolder = folderPath.replace(/\\/g, "/");
+          const variantFiles = st.Missing.filter((p) =>
+            p.replace(/\\/g, "/").startsWith(normFolder),
+          );
+
+          if (!variantFiles.length) {
+            bus.emit("toast:show", {
+              msg: "该文件夹下没有缺失的文件",
+              duration: 2000,
+              type: "info",
+            });
+            return;
+          }
+
+          bus.emit("toast:show", {
+            msg: `⬇️ ${instanceName}: 同步 ${variantFiles.length} 个变体中...`,
+            duration: 0,
+            type: "info",
+          });
+
+          let ok = 0,
+            fail = 0;
+          const failedFiles = [];
+          for (const srcPath of variantFiles) {
+            try {
+              await InstallResourceToInstance(rtype, srcPath, instanceName);
+              ok++;
+            } catch (e) {
+              fail++;
+              const fname = srcPath.split(/[/\\]/).pop() || srcPath;
+              failedFiles.push(fname);
+            }
+          }
+
+          try {
+            const { InvalidateScanCache } =
+              await import("../../wailsjs/go/main/App.js");
+            await InvalidateScanCache();
+          } catch {}
+
+          bus.emit("stats:refresh");
+          bus.emit("tree:reload");
+
+          const detail = failedFiles.length
+            ? ` (失败: ${failedFiles.slice(0, 3).join(", ")}${failedFiles.length > 3 ? "..." : ""})`
+            : "";
+          bus.emit("toast:show", {
+            msg: `📥 ${instanceName}: 变体同步 ${ok} 成功, ${fail} 失败${detail}`,
+            duration: 5000,
+            type: fail > 0 ? "warn" : "success",
+          });
+        } catch (e) {
+          bus.emit("toast:show", {
+            msg: `❌ 变体同步失败: ${e?.message || e}`,
+            duration: 5000,
+            type: "error",
+          });
+        } finally {
+          bus.emit("sync:download:done");
+        }
+      },
+    ),
   );
 }

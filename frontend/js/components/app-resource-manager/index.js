@@ -3,11 +3,12 @@
 // 使用: <app-resource-manager rtype="resourcepack"></app-resource-manager>
 
 import { sidebarHTML, itemHTML, detailHTML, placeholderHTML } from "./tpl.js";
+import { bus } from "../../bus.js";
 
 const STORE = {}; // 模块级缓存（rtype → config）
 
-async function _loadConfig() {
-  if (STORE._config) return STORE._config;
+async function _loadConfig(forceRefresh) {
+  if (!forceRefresh && STORE._config) return STORE._config;
   const { LoadResourceTypes } = await import("../../../wailsjs/go/main/App.js");
   const raw = await LoadResourceTypes();
   try {
@@ -18,6 +19,15 @@ async function _loadConfig() {
   }
   return STORE._config;
 }
+
+// 监听配置刷新事件（如用户修改了自定义资源类型）
+bus.on("config:resource-types-changed", function () {
+  STORE._config = null;
+  // 通知所有已创建的组件实例重新初始化
+  document.querySelectorAll("app-resource-manager").forEach(function (el) {
+    el._init && el._init();
+  });
+});
 
 function _findType(rtype) {
   return (STORE._config || []).find((t) => t.id === rtype);
@@ -69,7 +79,7 @@ export class AppResourceManager extends HTMLElement {
     const type = _findType(this._rtype);
     if (!type) {
       this.innerHTML =
-        '<div style="padding:12px;color:var(--err)">⚠️ 未知资源类型: ' +
+        '<div style="padding:12px;color:var(--paid)">⚠️ 未知资源类型: ' +
         _esc(this._rtype) +
         "</div>";
       return;
@@ -277,10 +287,19 @@ export class AppResourceManager extends HTMLElement {
   _applyFilter(value) {
     const q = value.toLowerCase().trim();
     this._renderList(q);
-    // 清除详情面板的选中高亮
+    // 清除选中高亮
     this._listEl
       .querySelectorAll(".rm-item")
       .forEach((el) => (el.style.background = ""));
+    // 清除详情面板，避免显示与当前列表不匹配的内容
+    if (this._contentEl) {
+      const typeLabel = this._typeLabel || "";
+      this._contentEl.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;gap:8px;height:100%">' +
+        '<div style="font-size:24px">🔍</div>' +
+        "<div>搜索中...</div>" +
+        "</div>";
+    }
   }
 
   async _showDetail(path, name) {
@@ -335,9 +354,9 @@ export class AppResourceManager extends HTMLElement {
           delBtn.addEventListener("click", async () => {
             if (!confirm("确定要删除 " + name + " 吗？")) return;
             try {
-              // mmd-skin 是文件夹型资源（pmx/pmd + 纹理），删文件所在文件夹
-              // 其他类型都是单文件，直接删文件
-              const isDirModel = this._rtype === "mmd-skin";
+              // 从配置读取 isDir 字段，文件夹型资源（如 mmd-skin/vrchat-avatar）删整个目录
+              const type = _findType(this._rtype);
+              const isDirModel = type && type.isDir;
               const { DeleteResourcePack, DeleteModelDir } =
                 await import("../../../wailsjs/go/main/App.js");
               if (isDirModel) {
@@ -360,7 +379,7 @@ export class AppResourceManager extends HTMLElement {
       }
     } catch (e) {
       this._contentEl.innerHTML =
-        '<div style="padding:12px;color:var(--err)">⚠️ 读取失败: ' +
+        '<div style="padding:12px;color:var(--paid)">⚠️ 读取失败: ' +
         _esc(e.message) +
         "</div>";
     }

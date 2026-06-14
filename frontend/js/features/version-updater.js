@@ -1,6 +1,7 @@
 // ===== 版本更新检查 =====
 import { bus } from "../bus.js";
 import { esc } from "../dialogs/modal.js";
+import { friendlyError } from "../utils/errors.js";
 
 /** 频次限制 key */
 const CHECK_KEY = "ysm_lastUpdateCheck";
@@ -91,7 +92,16 @@ async function promptUpdate(info, statusEl) {
   });
 
   if (!ok) return;
-  await doUpdate(info, statusEl);
+  try {
+    await doUpdate(info, statusEl);
+  } catch (e) {
+    bus.emit("toast:show", {
+      msg: `❌ 更新失败: ${friendlyError(e)}`,
+      duration: 5000,
+      type: "error",
+    });
+    // 不重新抛出（外层 initVersionUpdater 的 finally 会恢复按钮状态）
+  }
 }
 
 /**

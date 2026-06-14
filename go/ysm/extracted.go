@@ -5,6 +5,7 @@ package ysm
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -111,15 +112,24 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 		}
 	}
 
-	// 递归搜索子目录（排除 animations/controller/avatar）
+	// 递归搜索子目录（排除 animations/controller/avatar），限制深度 10 层
 	if geoJSON == nil {
 		excludeDirs := map[string]bool{"animations": true, "controller": true, "avatar": true}
 		filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-			if err != nil || geoJSON != nil {
+			if err != nil {
+				log.Printf("[ysm] WalkDir 错误 (忽略): %v", err)
+				return nil
+			}
+			if geoJSON != nil {
 				return filepath.SkipAll
 			}
 			if d.IsDir() {
 				if excludeDirs[strings.ToLower(d.Name())] {
+					return filepath.SkipDir
+				}
+				// 用 filepath.Rel 计算深度，避免闭包变量递减问题
+				rel, relErr := filepath.Rel(dir, path)
+				if relErr == nil && strings.Count(rel, string(filepath.Separator)) > 10 {
 					return filepath.SkipDir
 				}
 				return nil
@@ -146,23 +156,26 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 		geoJSON = geometry.ParseBedrockGeometry(wrapped)
 	}
 
-	// 搜索纹理
+	// 搜索纹理（递归遍历 textures/ 下所有子目录）
 	var texData [][]byte
 	texDir := filepath.Join(dir, "textures")
 	if d, err := os.Stat(texDir); err == nil && d.IsDir() {
-		entries, _ := os.ReadDir(texDir)
-		for _, e := range entries {
-			if e.IsDir() {
-				continue
+		filepath.WalkDir(texDir, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return nil
 			}
-			ext := strings.ToLower(filepath.Ext(e.Name()))
+			if d.IsDir() {
+				return nil
+			}
+			ext := strings.ToLower(filepath.Ext(d.Name()))
 			if ext == ".png" || ext == ".jpg" || ext == ".tga" {
-				texBytes, readErr := os.ReadFile(filepath.Join(texDir, e.Name()))
+				texBytes, readErr := os.ReadFile(path)
 				if readErr == nil {
 					texData = append(texData, texBytes)
 				}
 			}
-		}
+			return nil
+		})
 	}
 	// 也搜索同目录纹理
 	if len(texData) == 0 {

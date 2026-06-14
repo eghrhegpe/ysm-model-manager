@@ -740,18 +740,20 @@ export function renderSiteView(site, ctx) {
     });
   }
 
-  // storage 事件：多标签页收藏同步
+  // storage 事件：多标签页收藏同步（先清理再注册，防泄漏）
+  if (window.__ysmStorageSync) {
+    window.removeEventListener("storage", window.__ysmStorageSync);
+  }
   const _storageSync = (e) => {
     if (e.key === STORAGE_KEY) {
-      // 刷新所有收藏按钮的状态
       const favs = loadFavs();
       searchResults.querySelectorAll(".cr-star-btn").forEach((btn) => {
         btn.textContent = favs.includes(btn.dataset.star) ? "⭐" : "☆";
       });
     }
   };
+  window.__ysmStorageSync = _storageSync;
   window.addEventListener("storage", _storageSync);
-  // 清理（renderSiteView 每次被调用都会重建，旧的 listener 会被 GC）
 
   // 📦 浏览 GitHub 仓库模型
   const refreshView = () => renderSiteView(site, ctx);

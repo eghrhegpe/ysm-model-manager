@@ -71,7 +71,9 @@ class AppContent extends HTMLElement {
     this._globalUnsubs = [];
     // 清理 _unsubs（dedup 等页面的事件订阅）
     if (this._unsubs && Array.isArray(this._unsubs)) {
-      this._unsubs.forEach((fn) => { if (typeof fn === "function") fn(); });
+      this._unsubs.forEach((fn) => {
+        if (typeof fn === "function") fn();
+      });
     }
     this._unsubs = [];
     // 清理缓存
@@ -280,10 +282,6 @@ class AppContent extends HTMLElement {
         }
       });
     });
-  }
-
-  _initDownloads() {
-    initImportQueue(this);
   }
 
   _initWorkshop() {
@@ -741,10 +739,6 @@ class AppContent extends HTMLElement {
 
     // 刷新按钮已移除
     loadRepos();
-  }
-
-  _initRecycle() {
-    initRecycleBin(this);
   }
 
   async _initSettings() {

@@ -216,7 +216,7 @@ export const contentCSS = `
 .rec-card .actions { display:flex; gap:4px; margin-top:6px; }
 .rec-card .actions button { font-size:var(--fs-xs); padding:2px 8px; border-radius:4px; border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; transition:all .12s; }
 .rec-card .actions button:hover { border-color:var(--accent); color:var(--accent); background:var(--hover); }
-.health-ring { width:80px; height:80px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; position:relative; animation:ring-fill .8s ease-out both; }
+.health-ring { width:80px; height:80px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; position:relative; }
 .health-ring-inner { position:absolute; inset:6px; border-radius:50%; background:var(--bg); display:flex; align-items:center; justify-content:center; flex-direction:column; }
 .health-tag { display:inline-block; padding:2px 10px; border-radius:10px; font-size:var(--fs-xs); font-weight:600; }
 .health-tag.good { background:#a6e3a122; color:#a6e3a1; }

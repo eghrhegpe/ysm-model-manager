@@ -436,6 +436,15 @@ export const contentCSS = `
 .gh-cr-del { padding:1px 4px; border-radius:3px; border:1px solid transparent; background:transparent; color:#e5534b; cursor:pointer; font-size:var(--fs-sm); }
 .gh-cr-add-area { padding:4px 12px; }
 .gh-cr-add { padding:2px 8px; border-radius:4px; border:1px dashed var(--bd); background:transparent; color:var(--accent); cursor:pointer; font-size:var(--fs-sm); width:100%; }
+/* ===== 创作者编辑卡片 ===== */
+.cr-edit-card { margin:4px 12px; border-radius:8px; border:1px solid var(--bd); background:var(--surf); overflow:hidden; cursor:grab; transition:box-shadow .15s,border-color .15s; }
+.cr-edit-card:active { cursor:grabbing; }
+.cr-edit-card-head { display:flex; align-items:center; gap:4px; padding:6px 8px; border-bottom:1px solid var(--bd); background:var(--bg); }
+.cr-drag-handle { font-size:14px; color:var(--muted); cursor:grab; user-select:none; line-height:1; }
+.cr-edit-card-avatar { width:22px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:var(--surf); font-size:11px; flex-shrink:0; }
+.cr-edit-card-body { padding:4px 8px 6px; }
+.cr-edit-card-row { display:flex; align-items:center; gap:4px; margin:2px 0; }
+.cr-edit-card-row select { flex:1; }
 .gh-empty-site { flex:1; overflow-y:auto; padding:12px; color:var(--muted); font-size:var(--fs-sm); }
 .gh-site-link { color:var(--accent); }
 

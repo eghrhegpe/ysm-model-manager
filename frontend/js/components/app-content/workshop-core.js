@@ -81,14 +81,6 @@ export async function fetchCommunityCreators(url) {
     return Array.isArray(data) ? data : [];
   } catch (err) {
     console.warn("[community] fetch failed:", err);
-    try {
-      const { bus } = await import("../../bus.js");
-      bus.emit("toast:show", {
-        msg: "🌐 社区索引拉取失败，使用本地缓存",
-        type: "warn",
-        duration: 3000,
-      });
-    } catch {}
     return [];
   } finally {
     clearTimeout(tmr);

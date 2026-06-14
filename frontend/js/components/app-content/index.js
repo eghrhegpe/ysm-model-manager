@@ -365,6 +365,8 @@ class AppContent extends HTMLElement {
           console.log("[avatar] 提取了 " + keys.length + " 个头像");
           avatarCache = result;
           if (currentSite) showSiteView(currentSite);
+        } else {
+          console.log("[avatar] 无头像可提取（无 .ysm 文件或无 avatar/ 目录）");
         }
       } catch (e) {
         console.debug("[avatar] 提取失败:", e?.message);

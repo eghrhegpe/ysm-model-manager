@@ -357,8 +357,10 @@ class AppContent extends HTMLElement {
     let avatarCache = {};
     (async () => {
       try {
-        const { BatchExtractCreatorAvatars } =
+        const { BatchExtractCreatorAvatars, DebugExtractCreatorAvatar } =
           await import("../../../wailsjs/go/main/App.js");
+        // 暴露给控制台调试
+        window.__debugAvatar = DebugExtractCreatorAvatar;
         const result = await BatchExtractCreatorAvatars();
         const keys = Object.keys(result);
         if (keys.length > 0) {

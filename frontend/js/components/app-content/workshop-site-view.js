@@ -31,19 +31,32 @@ const PLATFORM_ICONS = {
   bowlroll: "🍚", vroid: "🤖", nicovideo: "🧊", deviantart: "🎨",
 };
 function getCreatorIdentity(cr) {
-  const types = (cr.type || "").split(";");
+  const role = cr.role || "";
   const tag = cr.tag || "";
-  const isOfficial = types.includes("mzhouse");
-  const isGithub = types.includes("github");
-  const isVup = tag === "vup";
-  const isOc = tag === "oc";
-  const isMulti = types.length > 1 && !isOfficial && !isGithub;
-  if (isOfficial) return { label: "🏠 官方IP模型库", icon: "🏠" };
-  if (isGithub) return { label: "🐙 社区模型仓库", icon: "🐙" };
-  if (isVup) return { label: "🎤 VTuber 创作者", icon: "🎤" };
-  if (isOc) return { label: "🎨 OC 原创创作者", icon: "🎨" };
-  if (isMulti) return { label: "🎮 YSM 个人创作者", icon: "🎮" };
-  return { label: "🎮 YSM 创作者", icon: "🎮" };
+  switch (role) {
+    case "official": return { label: "🏠 官方IP模型库", icon: "🏠", tag: "official" };
+    case "creator": return { label: "🎮 YSM 创作者", icon: "🎮", tag: "creator" };
+    case "vup": return { label: "🎤 VTuber 创作者", icon: "🎤", tag: "vup" };
+    case "repo": return { label: "📦 社区模型仓库", icon: "📦", tag: "repo" };
+    case "oc": return { label: "🎨 OC 原创角色", icon: "🎨", tag: "oc" };
+  }
+  // fallback: detect from old tag field
+  if (tag === "vup") return { label: "🎤 VTuber 创作者", icon: "🎤", tag: "vup" };
+  if (tag === "oc") return { label: "🎨 OC 原创角色", icon: "🎨", tag: "oc" };
+  return { label: "🎮 YSM 创作者", icon: "🎮", tag: "creator" };
+}
+
+function getTagFromRole(role) {
+  return role || "creator";
+}
+function getTagEmojiFromRole(role) {
+  switch (role) {
+    case "official": return "🏷️";
+    case "vup": return "🎤";
+    case "oc": return "🎨";
+    case "repo": return "📦";
+    default: return "🎮";
+  }
 }
 function parseDescTags(desc) {
   if (!desc) return [];
@@ -157,7 +170,8 @@ export function renderSiteView(site, ctx) {
 
     const tagSet = new Set();
     creators.forEach((cr) => {
-      if (cr.tag) tagSet.add(cr.tag);
+      const t = getTagFromRole(cr.role);
+      if (t) tagSet.add(t);
     });
     const tags = [...tagSet];
     parts.push(
@@ -174,14 +188,16 @@ export function renderSiteView(site, ctx) {
         "</div>" +
         '<div class="cr-tag-filter-row">' +
         '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
-        '<button class="cr-tag-filter-btn" data-tag="game">🎮 游戏模型</button>' +
+        '<button class="cr-tag-filter-btn" data-tag="creator">🎮 模型创作者</button>' +
+        '<button class="cr-tag-filter-btn" data-tag="official">🏠 官方IP</button>' +
         tags
+          .filter(t => t !== "creator" && t !== "official")
           .map(
             (t) =>
               '<button class="cr-tag-filter-btn" data-tag="' +
               esc(t) +
               '">' +
-              (t === "vup" ? "🎤" : t === "oc" ? "🎨" : "🏷️") +
+              getTagEmojiFromRole(t) +
               " " +
               esc(t) +
               "</button>",
@@ -225,7 +241,7 @@ export function renderSiteView(site, ctx) {
               's" data-name="' +
               esc(cr.name) +
               '" data-tag="' +
-              esc(cr.tag || "game") +
+              esc(getTagFromRole(cr.role)) +
               '" title="搜索: ' +
               esc(cr.name) +
               '">' +
@@ -273,15 +289,13 @@ export function renderSiteView(site, ctx) {
                 )
                 .join("") +
               "</div>" +
-              (cr.tag
-                ? '<span class="cr-tag cr-tag-' +
-                  esc(cr.tag) +
-                  '">' +
-                  (cr.tag === "vup" ? "🎤" : cr.tag === "oc" ? "🎨" : "🏷️") +
-                  " " +
-                  esc(cr.tag) +
-                  "</span>"
-                : '<span class="cr-tag cr-tag-game">🎮 game</span>') +
+              '<span class="cr-tag cr-tag-' +
+                esc(getTagFromRole(cr.role)) +
+                '">' +
+                getTagEmojiFromRole(cr.role) +
+                " " +
+                esc(getTagFromRole(cr.role)) +
+                "</span>" +
               "</div>" +
               (hasRepo
                 ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' +
@@ -365,11 +379,25 @@ export function renderSiteView(site, ctx) {
             )
             .join("") +
           "  </select>" +
-          '<input data-idx="' +
+          '<select data-idx="' +
           idx +
-          '" data-fld="tag" value="' +
-          esc(cr.tag || "") +
-          '" class="cr-input-tag" placeholder="标签: game/vtuber/..." style="width:90px">' +
+          '" data-fld="role" class="cr-input-role" style="width:80px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit">' +
+          '<option value="creator"' +
+          (cr.role === "creator" ? " selected" : "") +
+          ">🎮 创作者</option>" +
+          '<option value="official"' +
+          (cr.role === "official" ? " selected" : "") +
+          ">🏠 官方</option>" +
+          '<option value="vup"' +
+          (cr.role === "vup" ? " selected" : "") +
+          ">🎤 VUP</option>" +
+          '<option value="oc"' +
+          (cr.role === "oc" ? " selected" : "") +
+          ">🎨 OC</option>" +
+          '<option value="repo"' +
+          (cr.role === "repo" ? " selected" : "") +
+          ">📦 仓库</option>" +
+          "</select>" +
           '<button data-idx="' +
           idx +
           '" class="cr-del">🗑️</button>' +
@@ -501,13 +529,13 @@ export function renderSiteView(site, ctx) {
         '<span class="cr-detail-name">' +
         esc(cr.name) +
         "</span>" +
-        (cr.tag
+        (cr.role
           ? '<span class="cr-tag cr-tag-' +
-            esc(cr.tag) +
+            esc(getTagFromRole(cr.role)) +
             '">' +
-            (cr.tag === "vup" ? "🎤" : cr.tag === "oc" ? "🎨" : "🏷️") +
+            getTagEmojiFromRole(cr.role) +
             " " +
-            esc(cr.tag) +
+            esc(getTagFromRole(cr.role)) +
             "</span>"
           : "") +
         "</div>" +
@@ -957,9 +985,7 @@ export function renderSiteView(site, ctx) {
       const cardTag = (card.dataset.tag || "").toLowerCase();
       const matchName = !kw || name.includes(kw) || desc.includes(kw);
       const matchTag =
-        !_activeTag ||
-        _activeTag === cardTag ||
-        (_activeTag === "game" && !cardTag);
+        !_activeTag || _activeTag === cardTag;
       card.style.display = matchName && matchTag ? "" : "none";
       if (matchName && matchTag) visible++;
     });

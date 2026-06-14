@@ -1,16 +1,14 @@
-feat: 原子写入+按站点保存双保险
+fix: 全面修复剩余数据风险点
 
-### Go 端
-- 新增 atomicWrite() 函数：写 .tmp → rename，防写入半截崩溃
-- SaveWorkshopSites / SaveWorkshopCreators 改用原子写入
-- 新增 SaveWorkshopCreatorsBySite(siteID, creators)：只替换指定
-  站点的创作者，其他站点数据不动
-- 新增 SaveWorkshopPresetsBySite(siteID, presets)：只替换指定
-  站点的搜索词，其他站点数据不动
-- WorkshopCreator 新增 Role 字段
+### Go 端（app_workshop.go）
+- ExportWorkshopSitesJSONFile: os.WriteFile → atomicWrite
+- ImportWorkshopSitesJSONFile: 新增站点数校验（2-100）
+- ResetWorkshopConfigs: 备份后再重置 + atomicWrite
+- MergeWorkshopCreatorsFromJSON: 新增导入数据校验（>=20条）
+  合并后完整性校验（>=100条，不足则回滚不保存）
+  同时同步 role 字段
+- ReplaceWorkshopCreatorsFromJSON: 先校验（>=100条）再备份写入
 
-### 前端
-- 保存时改为按站点调用 SaveWorkshopCreatorsBySite
-- 只传当前站点的创作者列表，不传全量 allCreators
-- 导出时校验 <100 条拒绝（防止 85 条惨案重演）
-- 导入合并后同样校验 <100 条则回滚
+### 前端（workshop-core.js）
+- tryAutoMergeCommunity: 社区合并后改为按站点逐站保存
+  （SaveWorkshopCreatorsBySite），不再全量覆写

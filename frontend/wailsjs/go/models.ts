@@ -72,6 +72,7 @@ export namespace types {
 	export class AuthorInfo {
 	    Name: string;
 	    Count: number;
+	    SampleFile?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AuthorInfo(source);
@@ -81,6 +82,7 @@ export namespace types {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.Name = source["Name"];
 	        this.Count = source["Count"];
+	        this.SampleFile = source["SampleFile"];
 	    }
 	}
 	export class Cube2D {

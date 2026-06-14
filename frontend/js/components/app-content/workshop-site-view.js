@@ -284,7 +284,9 @@ export function renderSiteView(site, ctx) {
               tier.glow +
               '"></div>' +
               (avatarCache && avatarCache[cr.name]
-                ? '<img class="cr-avatar" src="' + esc(avatarCache[cr.name]) + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover">'
+                ? '<img class="cr-avatar" src="' +
+                  esc(avatarCache[cr.name]) +
+                  '" style="width:28px;height:28px;border-radius:50%;object-fit:cover">'
                 : '<div class="cr-avatar" style="width:28px;height:28px;font-size:12px">' +
                   (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") +
                   "</div>") +
@@ -577,7 +579,9 @@ export function renderSiteView(site, ctx) {
         '<div class="cr-detail-header">' +
         '<div class="cr-avatar-container" style="width:36px;height:36px;margin:0">' +
         (avatarCache && avatarCache[cr.name]
-          ? '<img class="cr-avatar" src="' + esc(avatarCache[cr.name]) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">'
+          ? '<img class="cr-avatar" src="' +
+            esc(avatarCache[cr.name]) +
+            '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">'
           : '<div class="cr-avatar" style="width:36px;height:36px;font-size:16px">' +
             esc(cr.name.charAt(0)).toUpperCase() +
             "</div>") +
@@ -1027,108 +1031,135 @@ export function renderSiteView(site, ctx) {
   // 创作者拖拽排序 — 仅拖拽柄触发
   let dragSrcIdx = -1;
   let dragState = null; // { card, el, originalLeft, originalTop, rect }
-  searchResults.querySelectorAll(".cr-edit-card:not([data-edit='preset'])").forEach((card) => {
-    const handle = card.querySelector(".cr-drag-handle");
-    if (!handle) return;
-    // 点拖拽柄时暂时让卡片可拖拽
-    handle.addEventListener("mousedown", () => { card.draggable = true; });
-    card.addEventListener("dragstart", (e) => {
-      card.draggable = false;
-      dragSrcIdx = parseInt(card.dataset.editIdx, 10);
-      card.style.opacity = "0.4";
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", "");
+  searchResults
+    .querySelectorAll(".cr-edit-card:not([data-edit='preset'])")
+    .forEach((card) => {
+      const handle = card.querySelector(".cr-drag-handle");
+      if (!handle) return;
+      // 点拖拽柄时暂时让卡片可拖拽
+      handle.addEventListener("mousedown", () => {
+        card.draggable = true;
+      });
+      card.addEventListener("dragstart", (e) => {
+        card.draggable = false;
+        dragSrcIdx = parseInt(card.dataset.editIdx, 10);
+        card.style.opacity = "0.4";
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", "");
+      });
+      card.addEventListener("dragend", () => {
+        card.style.opacity = "";
+        card.draggable = false;
+        searchResults.querySelectorAll(".cr-edit-card").forEach((c) => {
+          c.style.borderColor = "";
+          c.style.marginTop = "";
+          c.style.marginBottom = "";
+        });
+      });
+      card.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+      });
+      card.addEventListener("dragenter", (e) => {
+        e.preventDefault();
+        card.style.borderColor = "var(--accent)";
+        if (dragSrcIdx >= 0) {
+          const tgt = parseInt(card.dataset.editIdx, 10);
+          if (dragSrcIdx < tgt) {
+            card.style.marginTop = "8px";
+            card.style.transition = "margin-top .15s ease";
+          } else if (dragSrcIdx > tgt) {
+            card.style.marginBottom = "8px";
+            card.style.transition = "margin-bottom .15s ease";
+          }
+        }
+      });
+      card.addEventListener("dragleave", () => {
+        card.style.borderColor = "";
+        card.style.marginTop = "";
+        card.style.marginBottom = "";
+      });
+      card.addEventListener("drop", (e) => {
+        e.preventDefault();
+        card.style.borderColor = "";
+        const targetIdx = parseInt(card.dataset.editIdx, 10);
+        if (dragSrcIdx < 0 || dragSrcIdx === targetIdx) return;
+        syncAllEditInputs();
+        const [removed] = creators.splice(dragSrcIdx, 1);
+        creators.splice(targetIdx, 0, removed);
+        allCreators.length = 0;
+        allCreators.push(...creators);
+        dragSrcIdx = -1;
+        refreshView();
+      });
     });
-    card.addEventListener("dragend", () => {
-      card.style.opacity = "";
-      card.draggable = false;
-      searchResults
-        .querySelectorAll(".cr-edit-card")
-        .forEach((c) => { c.style.borderColor = ""; c.style.marginTop = ""; c.style.marginBottom = ""; });
-    });
-    card.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-    });
-    card.addEventListener("dragenter", (e) => {
-      e.preventDefault();
-      card.style.borderColor = "var(--accent)";
-      if (dragSrcIdx >= 0) {
-        const tgt = parseInt(card.dataset.editIdx, 10);
-        if (dragSrcIdx < tgt) { card.style.marginTop = "8px"; card.style.transition = "margin-top .15s ease"; }
-        else if (dragSrcIdx > tgt) { card.style.marginBottom = "8px"; card.style.transition = "margin-bottom .15s ease"; }
-      }
-    });
-    card.addEventListener("dragleave", () => {
-      card.style.borderColor = "";
-      card.style.marginTop = "";
-      card.style.marginBottom = "";
-    });
-    card.addEventListener("drop", (e) => {
-      e.preventDefault();
-      card.style.borderColor = "";
-      const targetIdx = parseInt(card.dataset.editIdx, 10);
-      if (dragSrcIdx < 0 || dragSrcIdx === targetIdx) return;
-      syncAllEditInputs();
-      const [removed] = creators.splice(dragSrcIdx, 1);
-      creators.splice(targetIdx, 0, removed);
-      allCreators.length = 0;
-      allCreators.push(...creators);
-      dragSrcIdx = -1;
-      refreshView();
-    });
-  });
 
   // 搜索词拖拽排序 — 仅拖拽柄触发
   let dragPresetSrcIdx = -1;
-  searchResults.querySelectorAll(".cr-edit-card[data-edit='preset']").forEach((card) => {
-    const handle = card.querySelector(".cr-drag-handle");
-    if (!handle) return;
-    handle.addEventListener("mousedown", () => { card.draggable = true; });
-    card.addEventListener("dragstart", (e) => {
-      card.draggable = false;
-      dragPresetSrcIdx = parseInt(card.dataset.editIdx, 10);
-      card.style.opacity = "0.4";
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", "");
+  searchResults
+    .querySelectorAll(".cr-edit-card[data-edit='preset']")
+    .forEach((card) => {
+      const handle = card.querySelector(".cr-drag-handle");
+      if (!handle) return;
+      handle.addEventListener("mousedown", () => {
+        card.draggable = true;
+      });
+      card.addEventListener("dragstart", (e) => {
+        card.draggable = false;
+        dragPresetSrcIdx = parseInt(card.dataset.editIdx, 10);
+        card.style.opacity = "0.4";
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", "");
+      });
+      card.addEventListener("dragend", () => {
+        card.style.opacity = "";
+        card.draggable = false;
+        searchResults.querySelectorAll(".cr-edit-card").forEach((c) => {
+          c.style.borderColor = "";
+          c.style.marginTop = "";
+          c.style.marginBottom = "";
+        });
+      });
+      card.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+      });
+      card.addEventListener("dragenter", (e) => {
+        e.preventDefault();
+        card.style.borderColor = "var(--accent)";
+        if (dragPresetSrcIdx >= 0) {
+          const tgt = parseInt(card.dataset.editIdx, 10);
+          if (dragPresetSrcIdx < tgt) {
+            card.style.marginTop = "8px";
+            card.style.transition = "margin-top .15s ease";
+          } else if (dragPresetSrcIdx > tgt) {
+            card.style.marginBottom = "8px";
+            card.style.transition = "margin-bottom .15s ease";
+          }
+        }
+      });
+      card.addEventListener("dragleave", () => {
+        card.style.borderColor = "";
+        card.style.marginTop = "";
+        card.style.marginBottom = "";
+      });
+      card.addEventListener("drop", (e) => {
+        e.preventDefault();
+        card.style.borderColor = "";
+        const targetIdx = parseInt(card.dataset.editIdx, 10);
+        if (
+          dragPresetSrcIdx < 0 ||
+          dragPresetSrcIdx === targetIdx ||
+          !site.presetSearches
+        )
+          return;
+        syncAllEditInputs();
+        const [removed] = site.presetSearches.splice(dragPresetSrcIdx, 1);
+        site.presetSearches.splice(targetIdx, 0, removed);
+        dragPresetSrcIdx = -1;
+        refreshView();
+      });
     });
-    card.addEventListener("dragend", () => {
-      card.style.opacity = "";
-      card.draggable = false;
-      searchResults
-        .querySelectorAll(".cr-edit-card")
-        .forEach((c) => { c.style.borderColor = ""; c.style.marginTop = ""; c.style.marginBottom = ""; });
-    });
-    card.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-    });
-    card.addEventListener("dragenter", (e) => {
-      e.preventDefault();
-      card.style.borderColor = "var(--accent)";
-      if (dragPresetSrcIdx >= 0) {
-        const tgt = parseInt(card.dataset.editIdx, 10);
-        if (dragPresetSrcIdx < tgt) { card.style.marginTop = "8px"; card.style.transition = "margin-top .15s ease"; }
-        else if (dragPresetSrcIdx > tgt) { card.style.marginBottom = "8px"; card.style.transition = "margin-bottom .15s ease"; }
-      }
-    });
-    card.addEventListener("dragleave", () => {
-      card.style.borderColor = "";
-      card.style.marginTop = "";
-      card.style.marginBottom = "";
-    });
-    card.addEventListener("drop", (e) => {
-      e.preventDefault();
-      card.style.borderColor = "";
-      const targetIdx = parseInt(card.dataset.editIdx, 10);
-      if (dragPresetSrcIdx < 0 || dragPresetSrcIdx === targetIdx || !site.presetSearches) return;
-      syncAllEditInputs();
-      const [removed] = site.presetSearches.splice(dragPresetSrcIdx, 1);
-      site.presetSearches.splice(targetIdx, 0, removed);
-      dragPresetSrcIdx = -1;
-      refreshView();
-    });
-  });
   function syncAllEditInputs() {
     // 同步创作者输入框
     searchResults

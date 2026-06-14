@@ -361,44 +361,8 @@
     "searchUrl": "https://booth.pm/zh-cn/search/{{q}}",
     "presetSearches": [
       {
-        "label": "3D模型",
-        "q": "3Dモデル"
-      },
-      {
-        "label": "MMD 模型",
-        "q": "MMDモデル"
-      },
-      {
-        "label": "VRM 模型",
-        "q": "VRMモデル"
-      },
-      {
-        "label": "VTuber",
-        "q": "VTuber"
-      },
-      {
-        "label": "原创角色",
-        "q": "オリジナル"
-      },
-      {
-        "label": "VRChat",
-        "q": "VRChat"
-      },
-      {
-        "label": "东方 Project",
-        "q": "東方"
-      },
-      {
-        "label": "碧蓝档案",
-        "q": "ブルアカ"
-      },
-      {
-        "label": "原神",
-        "q": "原神"
-      },
-      {
-        "label": "崩坏星穹铁道",
-        "q": "崩壊スターレイル"
+        "label": "３Dモデル",
+        "q": ""
       }
     ]
   }

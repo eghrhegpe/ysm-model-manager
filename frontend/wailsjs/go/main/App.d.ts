@@ -85,6 +85,8 @@ export function FindPreviewImage(arg1:string):Promise<string>;
 
 export function GenerateRepoIndex(arg1:string):Promise<string>;
 
+export function GetAppVersion():Promise<string>;
+
 export function GetGlobalCustomDir(arg1:string):Promise<string>;
 
 export function GetImportLogs():Promise<Array<types.ImportLog>>;

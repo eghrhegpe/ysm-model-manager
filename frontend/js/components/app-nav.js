@@ -110,11 +110,22 @@ class AppNav extends HTMLElement {
           )
           .join("")}
       </div>
-      <div class="version">v1.0.0 \u2022 预告版</div>
+      <div class="version" id="nav-version">加载中…</div>
     `;
 
     this.shadowRoot.querySelectorAll(".nav-item").forEach((el) => {
       el.onclick = () => bus.emit("nav:change", { page: el.dataset.page });
+    });
+
+    // 异步加载版本号
+    import("../../wailsjs/go/main/App.js").then(({ GetAppVersion }) =>
+      GetAppVersion().then((v) => {
+        const el = this.shadowRoot.getElementById("nav-version");
+        if (el) el.textContent = (v || "dev") + " \u2022 预告版";
+      }),
+    ).catch(() => {
+      const el = this.shadowRoot.getElementById("nav-version");
+      if (el) el.textContent = "v1.0.0 \u2022 预告版";
     });
   }
 }

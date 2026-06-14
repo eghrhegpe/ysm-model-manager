@@ -80,10 +80,8 @@ export const contentCSS = `
 /* 诊断页面：左栏按钮 + 右栏信息 */
 .hdr-btn { padding:var(--pad-btn-primary) 8px; border-radius:4px; border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:var(--fs-btn-primary); font-family:inherit; }
 .hdr-btn:hover { background:var(--hover); }
-/* accent 按钮颜色 */
+/* accent 按钮颜色（通过 CSS 变量控制主题，无需 :host-context） */
 .hdr-btn.accent,.btn.accent { background:var(--accent-btn-bg); color:var(--accent-btn-color); border-color:var(--accent-btn-border); }
-:host-context(.theme-warm) .hdr-btn.accent,:host-context(.theme-warm) .btn.accent { color:#8b4513; }
-:host-context(.theme-pro) .hdr-btn.accent,:host-context(.theme-pro) .btn.accent { color:#ffffff; }
 .btn { padding:var(--pad-btn-primary) 8px; border-radius:4px; border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:var(--fs-btn-primary); font-family:inherit; transition:background .12s; }
 .btn:hover { background:var(--hover); }
 .btn.accent:hover { background:#7c83ff55; }

@@ -353,14 +353,22 @@ class AppContent extends HTMLElement {
       }
     }, 100);
 
-    // 后台批量提取创作者头像（仅首次）
+    // 后台批量提取创作者头像（仅首次完成后刷新）
     let avatarCache = {};
     (async () => {
       try {
         const { BatchExtractCreatorAvatars } =
           await import("../../../wailsjs/go/main/App.js");
-        avatarCache = await BatchExtractCreatorAvatars();
-      } catch (_) {}
+        const result = await BatchExtractCreatorAvatars();
+        const keys = Object.keys(result);
+        if (keys.length > 0) {
+          console.log("[avatar] 提取了 " + keys.length + " 个头像");
+          avatarCache = result;
+          if (currentSite) showSiteView(currentSite);
+        }
+      } catch (e) {
+        console.debug("[avatar] 提取失败:", e?.message);
+      }
     })();
 
     // 卡片点击 → 正文切换右侧视图，右侧 ↗ 按开关打开

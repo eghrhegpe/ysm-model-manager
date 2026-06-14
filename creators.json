@@ -1,428 +1,939 @@
 [
   {
+    "name": "eghrhegpe/YSM-Model-Workshop",
+    "desc": "-Model-Manager 整合仓库、141个模型",
+    "type": "github",
+    "role": "repo"
+  },
+  {
+    "name": "HSOS6/YSM-model",
+    "desc": "800+",
+    "type": "github",
+    "role": "repo"
+  },
+  {
+    "name": "OrangeMiracle/winefox-ysm-models",
+    "desc": "工程师酒狐·黄铜工坊修会 角色模型",
+    "type": "github",
+    "role": "repo"
+  },
+  {
+    "name": "dudu-ke/ysm-share",
+    "desc": "分享",
+    "type": "github",
+    "role": "repo"
+  },
+  {
+    "name": "Elaina69/Yes-Steve-Model-Repo",
+    "desc": "Elaina69收集的、使用",
+    "type": "github",
+    "role": "repo"
+  },
+  {
     "name": "原神",
     "desc": "官方模型、古风原型、现代换装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "崩坏：星穹铁道",
     "desc": "官方模型、古风礼服、现代制服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "绝区零",
     "desc": "官方模型、城市时尚、服务员",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "鸣潮",
     "desc": "官方模型、早期修女服、旗袍、晚期休闲裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "少女前线",
     "desc": "官方模型、经典战术制服、都市时尚",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "异环",
     "desc": "官方模型、城市休闲、夏装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "卡拉彼丘",
     "desc": "官方模型、露背礼服、第三人称射击",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "华硕主板",
     "desc": "官方模型、运动时尚、短上衣、运动裤",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "无限大",
     "desc": "官方模型、城市探险、服务员制服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "战双帕弥什",
     "desc": "官方模型、战斗装、休闲装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "尘白禁区",
     "desc": "官方模型、建模精美、泳装设计",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "幻塔",
     "desc": "官方模型、学姐风格",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "深空之眼",
     "desc": "官方模型、飘动服饰、科技公司夏活",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "交错战线",
     "desc": "官方模型、黑色胶衣作战服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "锚点降临",
     "desc": "官方模型、露背超短裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "二重螺旋",
     "desc": "官方模型、古风服饰、奇幻配饰",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "千年之旅",
     "desc": "官方模型、泳装设计",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "依露希尔",
     "desc": "官方模型、泳装设计",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "少女前线2：追放",
     "desc": "官方模型、近未来战术、高定时尚礼服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "冰糖",
     "desc": "VUP个人势虚拟主播",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "東雪蓮",
     "desc": "VUP个人势虚拟主播",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "黎歌Neeko",
     "desc": "VUP个人势虚拟主播",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "五月织姬",
     "desc": "VUP个人势虚拟主播",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "古堡龙姬",
     "desc": "CS：GO国服VUP、金色龙纹包臀短旗袍",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "咩栗",
     "desc": "MeUmy VUP、白色蓝边休闲裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "诗乃鲤",
     "desc": "乐园企划VUP、白色粉边旗袍",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "幽刹",
     "desc": "乐园企划VUP、白色古风休闲裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "Kkazumi虾小雀",
     "desc": "VUP个人势、白色蕾丝花嫁婚纱",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "Perula",
     "desc": "VUP个人势、白色水手服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "sakula小舞",
     "desc": "VUP个人势、白色镭射舞台礼服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "v猫诺v",
     "desc": "VUP个人势、白色露背婚纱、神祇巫女",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "Yuk1雪",
     "desc": "VUP个人势、粉红镭射水手服裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "阿零Amazaki",
     "desc": "VUP个人势虚拟主播",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "安赫尔",
     "desc": "VUP个人势、红色学院服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "岱川Doris",
     "desc": "VUP个人势、淡蓝色洛丽塔裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "憨",
     "desc": "VUP个人势、白色水手服连衣裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "黄尚晁",
     "desc": "VUP个人势、淡黄色汉服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "结城昨日奈",
     "desc": "VUP个人势、淡粉色女仆装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "久世天音",
     "desc": "VUP个人势虚拟主播",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "空伶",
     "desc": "VUP个人势、白色红樱桃婚纱",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "括号笑叔",
     "desc": "VUP个人势、橙色荷叶边女仆裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "泠鸢yousa",
     "desc": "VUP、临时映画、海盐柠檬夏裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "米团团Miho",
     "desc": "VUP个人势、白色水手服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "名乃_NAN0",
     "desc": "VUP个人势、蓝紫运动连衣裙、泳装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "穆小泠",
     "desc": "VUP个人势、黑红色露背晚礼裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "雫るる",
     "desc": "VUP个人势、淡蓝渐变偶像服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "千铃SR",
     "desc": "VUP个人势、白色花饰旗袍",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "青井葵aoi",
     "desc": "VUP个人势、白色洛丽塔裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "秋绘",
     "desc": "VUP个人势、秋叶橙晚礼裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "神咲乃希NOKi",
     "desc": "VUP个人势、运动校服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "希晨Hitchen",
     "desc": "VUP个人势、粉紫色舞台礼服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "夏卜卜",
     "desc": "VUP个人势、白色校服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "夏川玥玥",
     "desc": "VUP个人势、白色兔耳偶像服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "小铃久绘",
     "desc": "VUP个人势、白色露背晚礼裙、黑色镂空公式服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "新月冰冰",
     "desc": "VUP个人势、白色古风礼裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "星宮Chino",
     "desc": "VUP个人势、白色星月礼裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "雪狐桑",
     "desc": "VUP个人势、白色蓝饰休闲裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "稚年SaRo",
     "desc": "VUP个人势、青蓝色唐三彩服饰",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "嗒啦啦",
     "desc": "TapTap VUP个人势、白色短款偶像运动服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "相星澪",
     "desc": "彩星社VUP个人势、白色金饰打歌服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "音爆",
     "desc": "晶核游戏、黑粉小恶魔运动装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "姵儿",
     "desc": "模之屋官方模型、白色短款运动装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "official"
   },
   {
     "name": "一之濑志希",
     "desc": "偶像大师、红色运动偶像服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "creator"
   },
   {
     "name": "胡桃Usa",
     "desc": "VUP个人势、粉色运动外套Gamer装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "猫小鹰",
     "desc": "VUP个人势、深红露腰歌手服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "七海NANA",
     "desc": "VUP个人势、黑白运动短裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "守一Showee",
     "desc": "VUP个人势、黑色运动短裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "乌拉",
     "desc": "VUP个人势、黑色科技潮流运动装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "嘉然",
     "desc": "A-SOUL女团VUP、女团装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "psplive",
     "desc": "VUP团体势、服务业职业装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "四禧丸子",
     "desc": "VUP团体势、时尚夏装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "星律动",
     "desc": "VUP团体势、时尚夏装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "兰音",
     "desc": "虚研社VUP、模型精致",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "艾尔莎",
     "desc": "VUP个人势虚拟主播",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "早稻叽",
     "desc": "ChaosLive VUP、白色紧身短衣、潮妹服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "莓莉可Miko",
     "desc": "妖精管理局VUP、草莓红蛋糕洛丽塔裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "星光Kirarin",
     "desc": "妖精管理局VUP、粉色层叠礼裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "vup"
   },
   {
     "name": "Aika",
     "desc": "OC原创角色",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "oc"
   },
   {
     "name": "克里斯提亚娜",
     "desc": "OC原创角色、蓝色泳装",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "oc"
   },
   {
     "name": "刻",
     "desc": "OC原创角色、黑色吊带裙",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "oc"
   },
   {
     "name": "立花染",
     "desc": "OC原创角色、敞领蓝夹克",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "oc"
   },
   {
     "name": "星千川",
     "desc": "OC原创角色、蓝发学生妹",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "oc"
   },
   {
     "name": "星月",
     "desc": "OC原创角色、白色学院服",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "oc"
   },
   {
     "name": "荀异",
     "desc": "OC原创角色",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "oc"
   },
   {
     "name": "阎么么",
     "desc": "原创角色模型",
-    "type": "mzhouse"
+    "type": "mzhouse",
+    "role": "oc"
+  },
+  {
+    "name": "苏依凛",
+    "desc": "YSM",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "映白",
+    "desc": "我的世界组",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "夹心果风",
+    "desc": "YSM",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "普通的木屐的MC工坊",
+    "desc": "YSM",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "烈鸟比百",
+    "desc": "我的世界模型",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "映素作坊",
+    "desc": "萌动世界",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "艺方像素",
+    "desc": "/ 时装工坊模型",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "嗯嗯owo",
+    "desc": "YSM",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "大莫家-小孩大莫",
+    "desc": "我的世界",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "科列夫斯基",
+    "desc": "YSM",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "shi_gure256",
+    "desc": "TACZ曙光枪械包",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "云曦",
+    "desc": "YSM",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "julaoye",
+    "desc": "YSM",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "烟雨画桥",
+    "desc": "YSM",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "Maks",
+    "desc": "人模制作",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "Dr-观星",
+    "desc": "游戏同人",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "雨倩先生",
+    "desc": "订阅制",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "祸御神",
+    "desc": "东方",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "聚核重工Minecraft",
+    "desc": "机甲、重装号角等",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "TIS团队",
+    "desc": "蔚蓝档案",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "银河铁道CRH2",
+    "desc": "TacZ歼10机娘",
+    "type": "afdian",
+    "role": "creator"
+  },
+  {
+    "name": "雾雨波波沙",
+    "desc": "车万/暮色森林二创",
+    "type": "bilibili;afdian",
+    "role": "creator"
+  },
+  {
+    "name": "獒子coco",
+    "desc": "战舰少女R",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "墨染逝羽",
+    "desc": "MeUmy、原神、魔女审判",
+    "type": "bilibili;afdian",
+    "role": "creator"
+  },
+  {
+    "name": "wwww琨",
+    "desc": "舰娘、晓/响/雷/电",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "完全冻结",
+    "desc": "舞萌/原神/Vocaloid",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "Ykisan",
+    "desc": "绝区零",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "浅陌菌",
+    "desc": "碧蓝航线/鸣潮",
+    "type": "bilibili;afdian",
+    "role": "creator"
+  },
+  {
+    "name": "奶油桃NaytoTime",
+    "desc": "碧蓝航线、天城/土佐/花月",
+    "type": "bilibili;afdian",
+    "role": "creator"
+  },
+  {
+    "name": "白蛤蜊",
+    "desc": "Alice In Cradle、OC",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "爱吃园田海味",
+    "desc": "东方project、LoveLive 开源分享",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "kyln默寒寒冰",
+    "desc": "YSM",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "烛火的次元宇宙",
+    "desc": "巧克力与香子兰/明日方舟/碧蓝航线等",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "松子Matsuki",
+    "desc": "边狱巴士/魔女审判",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "史莱姆坍缩",
+    "desc": "YSM",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "咕咕叫的小菜鸡",
+    "desc": "明日方舟等",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "伦理问题",
+    "desc": "边狱巴士",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "落阳不养羊",
+    "desc": "碧蓝档案",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "A_su杏仁",
+    "desc": "YSM",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "泛用型窝窝头",
+    "desc": "魔法少女小圆等",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "shercoo",
+    "desc": "YSM",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "白洛白awa",
+    "desc": "崩铁BOSS/怪猎物",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "超级大鸡腿丶",
+    "desc": "/付费、碧蓝航线",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "赤恒-AzaMire",
+    "desc": "爱弥斯/南希露/菊千代",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "一只霜狐Owo",
+    "desc": "/CSM、4种服饰",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "伊蕾娜教代行教皇",
+    "desc": "魔女之旅",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "Xin_Xr",
+    "desc": "赛马娘/TacZ枪包",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "羊毛毛毛猫_Official喵",
+    "desc": "DeepSeek娘",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "KUIL澤白",
+    "desc": "BanG Dream",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "绫独之落",
+    "desc": "洛天依/世末系列",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "法老号船长-爱德蒙lily",
+    "desc": "早期、FGO/魔女",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "明石Nyaa",
+    "desc": "碧蓝航线、茗",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "清晨的一阵风",
+    "desc": "碧蓝档案",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "猫耳魂魄妖梦",
+    "desc": "明日方舟、提丰/纯烬艾雅法拉",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "COMPLEX美工组",
+    "desc": "佩丽卡等",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "白色北熊",
+    "desc": "绝区零、星见雅/橘福福等",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "壹花1h",
+    "desc": "不知火舞",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "叶无道_M",
+    "desc": "Blockbench建模全流程教程/",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "霖惜07",
+    "desc": "酒狐宇宙/小鸟游六花",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "三叶虫trita",
+    "desc": "25时开源模型",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "别吃啊混蛋",
+    "desc": "星见雅",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "苏瑞铃_official",
+    "desc": "YSM",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "汪",
+    "desc": "崩坏星穹铁道",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "星见时璃_Tokiri",
+    "desc": "原创/StellaFantacy",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "宇宙影帝の终焉",
+    "desc": "舰队收藏/少女前线",
+    "type": "bilibili",
+    "role": "creator"
+  },
+  {
+    "name": "LuXi233",
+    "desc": "赛马娘",
+    "type": "bilibili",
+    "role": "creator"
   },
   {
     "name": "碎de帆",
@@ -473,12 +984,6 @@
     "role": "creator"
   },
   {
-    "name": "墨染逝羽",
-    "desc": "MeUmy、原神、魔女审判",
-    "type": "bilibili;afdian",
-    "role": "creator"
-  },
-  {
     "name": "提可拉",
     "desc": "OC、兽耳助手、泰拉瑞亚、少女前线",
     "type": "bilibili;afdian",
@@ -503,159 +1008,9 @@
     "role": "creator"
   },
   {
-    "name": "白蛤蜊",
-    "desc": "Alice In Cradle、OC",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
     "name": "苏溟0w0",
     "desc": "VUP、原创、自设",
     "type": "bilibili;afdian",
-    "role": "creator"
-  },
-  {
-    "name": "爱吃园田海味",
-    "desc": "东方project、LoveLive 开源分享",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "eghrhegpe/YSM-Model-Workshop",
-    "desc": "-Model-Manager 整合仓库、141个模型",
-    "type": "github",
-    "role": "repo"
-  },
-  {
-    "name": "HSOS6/YSM-model",
-    "desc": "800+",
-    "type": "github",
-    "role": "repo"
-  },
-  {
-    "name": "OrangeMiracle/winefox-ysm-models",
-    "desc": "工程师酒狐·黄铜工坊修会 角色模型",
-    "type": "github",
-    "role": "repo"
-  },
-  {
-    "name": "dudu-ke/ysm-share",
-    "desc": "分享",
-    "type": "github",
-    "role": "repo"
-  },
-  {
-    "name": "Elaina69/Yes-Steve-Model-Repo",
-    "desc": "Elaina69收集的、使用",
-    "type": "github",
-    "role": "repo"
-  },
-  {
-    "name": "夹心果风",
-    "desc": "YSM",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "普通的木屐的MC工坊",
-    "desc": "YSM",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "烈鸟比百",
-    "desc": "我的世界模型",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "映素作坊",
-    "desc": "萌动世界",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "艺方像素",
-    "desc": "/ 时装工坊模型",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "嗯嗯owo",
-    "desc": "YSM",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "大莫家-小孩大莫",
-    "desc": "我的世界",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "映白",
-    "desc": "我的世界组",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "科列夫斯基",
-    "desc": "YSM",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "苏依凛",
-    "desc": "YSM",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "shi_gure256",
-    "desc": "TACZ曙光枪械包",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "云曦",
-    "desc": "YSM",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "julaoye",
-    "desc": "YSM",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "烟雨画桥",
-    "desc": "YSM",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "Maks",
-    "desc": "人模制作",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "Dr-观星",
-    "desc": "游戏同人",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "kyln默寒寒冰",
-    "desc": "YSM",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "烛火的次元宇宙",
-    "desc": "巧克力与香子兰/明日方舟/碧蓝航线等",
-    "type": "bilibili",
     "role": "creator"
   },
   {
@@ -665,57 +1020,9 @@
     "role": "creator"
   },
   {
-    "name": "松子Matsuki",
-    "desc": "边狱巴士/魔女审判",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "雨倩先生",
-    "desc": "订阅制",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "史莱姆坍缩",
-    "desc": "YSM",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "咕咕叫的小菜鸡",
-    "desc": "明日方舟等",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
     "name": "伊洛是哥斯拉嘛",
     "desc": "碧蓝档案/少女前线映素作坊成员",
     "type": "bilibili;afdian",
-    "role": "creator"
-  },
-  {
-    "name": "伦理问题",
-    "desc": "边狱巴士",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "落阳不养羊",
-    "desc": "碧蓝档案",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "A_su杏仁",
-    "desc": "YSM",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "祸御神",
-    "desc": "东方",
-    "type": "afdian",
     "role": "creator"
   },
   {
@@ -725,39 +1032,9 @@
     "role": "creator"
   },
   {
-    "name": "泛用型窝窝头",
-    "desc": "魔法少女小圆等",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "shercoo",
-    "desc": "YSM",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
     "name": "韦懦夫斯菲尔",
     "desc": "/付费改良版模型",
     "type": "bilibili;afdian",
-    "role": "creator"
-  },
-  {
-    "name": "白洛白awa",
-    "desc": "崩铁BOSS/怪猎物",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "超级大鸡腿丶",
-    "desc": "/付费、碧蓝航线",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "赤恒-AzaMire",
-    "desc": "爱弥斯/南希露/菊千代",
-    "type": "bilibili",
     "role": "creator"
   },
   {
@@ -773,105 +1050,9 @@
     "role": "creator"
   },
   {
-    "name": "雾雨波波沙",
-    "desc": "车万/暮色森林二创",
-    "type": "bilibili;afdian",
-    "role": "creator"
-  },
-  {
-    "name": "一只霜狐Owo",
-    "desc": "/CSM、4种服饰",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "伊蕾娜教代行教皇",
-    "desc": "魔女之旅",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "聚核重工Minecraft",
-    "desc": "机甲、重装号角等",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
     "name": "波普Popu",
     "desc": "Arcaea/舞萌",
     "type": "bilibili;afdian",
-    "role": "creator"
-  },
-  {
-    "name": "Xin_Xr",
-    "desc": "赛马娘/TacZ枪包",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "TIS团队",
-    "desc": "蔚蓝档案",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "羊毛毛毛猫_Official喵",
-    "desc": "DeepSeek娘",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "KUIL澤白",
-    "desc": "BanG Dream",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "绫独之落",
-    "desc": "洛天依/世末系列",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "浅陌菌",
-    "desc": "碧蓝航线/鸣潮",
-    "type": "bilibili;afdian",
-    "role": "creator"
-  },
-  {
-    "name": "法老号船长-爱德蒙lily",
-    "desc": "早期、FGO/魔女",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "明石Nyaa",
-    "desc": "碧蓝航线、茗",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "银河铁道CRH2",
-    "desc": "TacZ歼10机娘",
-    "type": "afdian",
-    "role": "creator"
-  },
-  {
-    "name": "清晨的一阵风",
-    "desc": "碧蓝档案",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "猫耳魂魄妖梦",
-    "desc": "明日方舟、提丰/纯烬艾雅法拉",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "COMPLEX美工组",
-    "desc": "佩丽卡等",
-    "type": "bilibili",
     "role": "creator"
   },
   {
@@ -881,33 +1062,9 @@
     "role": "creator"
   },
   {
-    "name": "白色北熊",
-    "desc": "绝区零、星见雅/橘福福等",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
     "name": "Aaaaaaafeng",
     "desc": "付费模型",
     "type": "bilibili;afdian",
-    "role": "creator"
-  },
-  {
-    "name": "壹花1h",
-    "desc": "不知火舞",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "wwww琨",
-    "desc": "舰娘、晓/响/雷/电",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "叶无道_M",
-    "desc": "Blockbench建模全流程教程/",
-    "type": "bilibili",
     "role": "creator"
   },
   {
@@ -917,172 +1074,28 @@
     "role": "creator"
   },
   {
-    "name": "奶油桃NaytoTime",
-    "desc": "碧蓝航线、天城/土佐/花月",
-    "type": "bilibili;afdian",
-    "role": "creator"
-  },
-  {
-    "name": "霖惜07",
-    "desc": "酒狐宇宙/小鸟游六花",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "三叶虫trita",
-    "desc": "25时开源模型",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
     "name": "幻古诗",
     "desc": "爱蜜莉雅",
     "type": "bilibili;afdian",
     "role": "creator"
   },
   {
-    "name": "别吃啊混蛋",
-    "desc": "星见雅",
-    "type": "bilibili",
+    "name": "leberx44qa(MMD)",
+    "desc": "【Dynasty Warriors】caiwenji【Blank_City】Shizuka",
+    "type": "deviantart",
     "role": "creator"
   },
   {
-    "name": "苏瑞铃_official",
-    "desc": "YSM",
-    "type": "bilibili",
+    "name": "Moyonote(MMD)",
+    "desc": "【心跳文学部】Natsuki(School)、",
+    "type": "deviantart",
     "role": "creator"
   },
   {
-    "name": "獒子coco",
-    "desc": "战舰少女R",
-    "type": "bilibili",
+    "name": "Love-Ru Gravure Chance(MMD)",
+    "desc": "Lala Deviluke",
+    "type": "deviantart",
     "role": "creator"
-  },
-  {
-    "name": "完全冻结",
-    "desc": "舞萌/原神/Vocaloid",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "汪",
-    "desc": "崩坏星穹铁道",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "星见时璃_Tokiri",
-    "desc": "原创/StellaFantacy",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "宇宙影帝の终焉",
-    "desc": "舰队收藏/少女前线",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "LuXi233",
-    "desc": "赛马娘",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "Ykisan",
-    "desc": "绝区零",
-    "type": "bilibili",
-    "role": "creator"
-  },
-  {
-    "name": "明日方舟",
-    "desc": "官方模型、含终末地工装少女、夏日泳装",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "碧蓝航线",
-    "desc": "官方模型：小船水手服、大船礼服",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "赛马娘",
-    "desc": "官方模型：学生运动服",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "碧蓝档案",
-    "desc": "官方模型：少女可爱、学姐优雅",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "FGO",
-    "desc": "官方模型",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "东方Project",
-    "desc": "官方模型",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "苍蓝誓约",
-    "desc": "官方模型：大船礼服、小船水手服",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "兽耳科技",
-    "desc": "官方模型：礼服少女",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "崩坏3",
-    "desc": "官方模型：露背礼服",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "Nekopara",
-    "desc": "官方模型：巧克力与香子兰",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "公主连结",
-    "desc": "官方模型：Q版动画生动、建模美术精良",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "炼金工房",
-    "desc": "官方模型：探索游戏、休闲衣×探险外套",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "幻书启世录",
-    "desc": "官方模型：职业×礼服、形象好",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "机动战队",
-    "desc": "官方模型：外套休闲、内搭探险服、设计时尚",
-    "type": "mzhouse",
-    "role": "official"
-  },
-  {
-    "name": "记忆法则",
-    "desc": "官方模型：泳装设计",
-    "type": "mzhouse",
-    "role": "official"
   },
   {
     "name": "hololive",
@@ -1263,5 +1276,119 @@
     "desc": "ぶいすぽっ！VUP",
     "type": "nicovideo",
     "role": "vup"
+  },
+  {
+    "name": "スク水系vtuber",
+    "desc": "マユラ",
+    "type": "vroid",
+    "role": "creator"
+  },
+  {
+    "name": "毛玉牛乳",
+    "desc": "３Dモデル❤サキュバス ルルム",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "止丸堂",
+    "desc": "3Dモデル「止丸式初音ミクNT」",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "namekuji1337",
+    "desc": "sunyeojin（MMDモデル）",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "WTHN_Ross",
+    "desc": "【FREE】Scarlet 3D Model : for Blender、暁山 瑞希 3Dモデル",
+    "type": "bowlroll;booth",
+    "role": "creator"
+  },
+  {
+    "name": "lovecelebi",
+    "desc": "【MMDモデル】『アル』『聖園ミカ』",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "雨衣 SHOP",
+    "desc": "「雨衣」公式MMDモデル",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "WARPSTORE",
+    "desc": "【オリジナル3Dモデル】早川葵、Ouro Kronii Unofficial MMDmodel",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "【旧】あおぎり高校購買部",
+    "desc": "【無料配布】あおぎり高校ＭＭＤモデル",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "夢天狗・五十鈴社務所",
+    "desc": "VRChat [3Dキャラモデル]鴨目カモメ-ver2021",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "puppet end",
+    "desc": "【puppet end公式オリジナル】ぱペコ【VRoid無料配布】",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "塩タン昆布",
+    "desc": "【VRC想定3Dモデル】エフォール【フェアリーフェンサーエフ】",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "namekuji1337",
+    "desc": "Parfaitty（MMDモデル）",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "なごんなごん工房",
+    "desc": "【メイドプリンセス：クーヘンシア】オリジナル3Dアバター",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "BUSY CREATIONS",
+    "desc": "【MMDモデル】初音ミク if Ver.【無料】",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "バーチャルマーケット公式",
+    "desc": "VRChat 『Vketちゃん1号』VRSNS向",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "塩タン昆布",
+    "desc": "VRChat 【無料】【VRC想定3Dモデル】丹羽灯莉【アサルトリリィ】",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "konounfda konounfda",
+    "desc": "早瀬ユウカ(パジャマ)",
+    "type": "booth",
+    "role": "creator"
+  },
+  {
+    "name": "sunekosurisuri",
+    "desc": "セシリア(Cecilia Immergreen)ファンメイドモデル_MMD",
+    "type": "booth",
+    "role": "creator"
   }
 ]

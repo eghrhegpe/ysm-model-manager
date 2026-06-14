@@ -1,14 +1,8 @@
-fix: 全面修复剩余数据风险点
+fix: Wails binding 注册失败（缺 error 返回值）
 
-### Go 端（app_workshop.go）
-- ExportWorkshopSitesJSONFile: os.WriteFile → atomicWrite
-- ImportWorkshopSitesJSONFile: 新增站点数校验（2-100）
-- ResetWorkshopConfigs: 备份后再重置 + atomicWrite
-- MergeWorkshopCreatorsFromJSON: 新增导入数据校验（>=20条）
-  合并后完整性校验（>=100条，不足则回滚不保存）
-  同时同步 role 字段
-- ReplaceWorkshopCreatorsFromJSON: 先校验（>=100条）再备份写入
+Wails 要求 Binding 函数签名必须返回 error 或 (T, error)。
+BatchExtractCreatorAvatars 返回 map[string]string 没有 error，
+CachedCreatorAvatar 返回 string 没有 error，
+导致 Callback 'not registered' 错误。
 
-### 前端（workshop-core.js）
-- tryAutoMergeCommunity: 社区合并后改为按站点逐站保存
-  （SaveWorkshopCreatorsBySite），不再全量覆写
+修复：两个函数签名改为 (map[string]string, error) 和 (string, error)

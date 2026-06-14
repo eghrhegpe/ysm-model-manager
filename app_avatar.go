@@ -19,23 +19,23 @@ func creatorAvatarCacheDir() string {
 }
 
 // CachedCreatorAvatar 检查缓存中是否有作者头像，返回 data URI
-func (a *App) CachedCreatorAvatar(authorName string) string {
+func (a *App) CachedCreatorAvatar(authorName string) (string, error) {
 	safe := safeFilename(authorName)
 	cachedPath := filepath.Join(creatorAvatarCacheDir(), safe+".png")
 	data, err := os.ReadFile(cachedPath)
 	if err != nil {
-		return ""
+		return "", nil
 	}
-	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
 // BatchExtractCreatorAvatars 批量提取所有有本地模型的创作者头像
 // 已缓存的跳过，只提取新头像
 // 返回 { authorName: dataURI, ... }
-func (a *App) BatchExtractCreatorAvatars() map[string]string {
+func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 	result := map[string]string{}
 	if a.RepoRoot == "" {
-		return result
+		return result, nil
 	}
 
 	cacheDir := creatorAvatarCacheDir()
@@ -84,7 +84,7 @@ func (a *App) BatchExtractCreatorAvatars() map[string]string {
 		}
 	}
 
-	return result
+	return result, nil
 }
 
 // decodeOneAvatar 解码 .ysm 文件并提取 avatar/ 下的头像

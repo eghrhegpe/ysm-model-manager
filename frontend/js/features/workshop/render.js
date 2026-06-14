@@ -96,8 +96,10 @@ export function renderModelList(
       const { author } = parseModelName(m.name);
       if (author) {
         import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
-          OpenInBrowser("https://search.bilibili.com/all?keyword=" +
-            encodeURIComponent(author)),
+          OpenInBrowser(
+            "https://search.bilibili.com/all?keyword=" +
+              encodeURIComponent(author),
+          ),
         );
       }
     };

@@ -100,7 +100,7 @@ func (a *App) shutdown(ctx context.Context) {
 }
 
 // OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌）
-func (a *App) OpenInBrowser(url string) error {
-	return runtime.BrowserOpenURL(a.ctx, url)
+func (a *App) OpenInBrowser(url string) {
+	runtime.BrowserOpenURL(a.ctx, url)
 }
 

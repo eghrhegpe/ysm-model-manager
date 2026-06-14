@@ -169,6 +169,8 @@ export function MoveToRecycleEx(arg1:string):Promise<string|string>;
 
 export function OpenFolder(arg1:string):Promise<void>;
 
+export function OpenInBrowser(arg1:string):Promise<void>;
+
 export function PullResourceFromInstance(arg1:string,arg2:string):Promise<number>;
 
 export function PullSingleResourceFromInstance(arg1:string,arg2:string,arg3:string):Promise<void>;

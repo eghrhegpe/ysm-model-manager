@@ -13,10 +13,6 @@
         "q": ""
       },
       {
-        "label": "YSM模型分享",
-        "q": ""
-      },
-      {
         "label": "YSM模型展示",
         "q": ""
       },
@@ -29,7 +25,39 @@
         "q": ""
       },
       {
-        "label": "YSM明日方舟",
+        "label": "YSM东方",
+        "q": ""
+      },
+      {
+        "label": "YSM鸣潮",
+        "q": ""
+      },
+      {
+        "label": "MMD模型配布",
+        "q": ""
+      },
+      {
+        "label": "MMD模型展示",
+        "q": ""
+      },
+      {
+        "label": "VRC模型配布",
+        "q": ""
+      },
+      {
+        "label": "VRC模型展示",
+        "q": ""
+      },
+      {
+        "label": "潜渊症人物mod",
+        "q": ""
+      },
+      {
+        "label": "求生之路人物mod",
+        "q": ""
+      },
+      {
+        "label": "人物mod",
         "q": ""
       }
     ]
@@ -44,7 +72,43 @@
     "searchUrl": "https://afdian.com/search?q={{q}}",
     "presetSearches": [
       {
+        "label": "我的世界",
+        "q": ""
+      },
+      {
+        "label": "战舰世界",
+        "q": ""
+      },
+      {
         "label": "YSM",
+        "q": ""
+      },
+      {
+        "label": "MMD",
+        "q": ""
+      },
+      {
+        "label": "VRC",
+        "q": ""
+      },
+      {
+        "label": "杀戮尖塔",
+        "q": ""
+      },
+      {
+        "label": "暗黑地牢",
+        "q": ""
+      },
+      {
+        "label": "求生之路",
+        "q": ""
+      },
+      {
+        "label": "怪物猎人",
+        "q": ""
+      },
+      {
+        "label": "文明6",
         "q": ""
       }
     ]
@@ -78,15 +142,11 @@
     "searchUrl": "https://www.aplaybox.com/search?value={{q}}",
     "presetSearches": [
       {
-        "label": "明日方舟",
+        "label": "碧蓝档案",
         "q": ""
       },
       {
-        "label": "赛马娘",
-        "q": ""
-      },
-      {
-        "label": "东方Project",
+        "label": "碧蓝航线",
         "q": ""
       },
       {
@@ -94,19 +154,35 @@
         "q": ""
       },
       {
-        "label": "兽耳科技",
-        "q": ""
-      },
-      {
         "label": "崩坏3",
         "q": ""
       },
       {
-        "label": "Nekopara",
+        "label": "赛马娘",
+        "q": ""
+      },
+      {
+        "label": "明日方舟",
         "q": ""
       },
       {
         "label": "公主连结",
+        "q": ""
+      },
+      {
+        "label": "东方Project",
+        "q": ""
+      },
+      {
+        "label": "兽耳科技",
+        "q": ""
+      },
+      {
+        "label": "FGO",
+        "q": ""
+      },
+      {
+        "label": "Nekopara",
         "q": ""
       },
       {
@@ -164,12 +240,36 @@
     "searchUrl": "https://hub.vroid.com/en/search/{{q}}",
     "presetSearches": [
       {
-        "label": "热门 VRM 模型",
-        "q": "VRM"
+        "label": "BOOTH",
+        "q": ""
       },
       {
-        "label": "VRChat 角色",
-        "q": "VRChat"
+        "label": "spring_outfit",
+        "q": ""
+      },
+      {
+        "label": "VRoidStudio",
+        "q": ""
+      },
+      {
+        "label": "commission",
+        "q": ""
+      },
+      {
+        "label": "VRChat",
+        "q": ""
+      },
+      {
+        "label": "OC",
+        "q": ""
+      },
+      {
+        "label": "MMD",
+        "q": ""
+      },
+      {
+        "label": "VTuber",
+        "q": ""
       }
     ]
   },
@@ -183,36 +283,32 @@
     "searchUrl": "https://3d.nicovideo.jp/works/search?keyword={{q}}",
     "presetSearches": [
       {
-        "label": "VTuber 模型",
-        "q": "Vtuber"
+        "label": "VTuber",
+        "q": ""
       },
       {
-        "label": "热门 MMD 模型",
-        "q": "MMD"
+        "label": "MMD",
+        "q": ""
       },
       {
-        "label": "MMD 舰娘",
-        "q": "MMD艦これ"
+        "label": "VRM",
+        "q": ""
       },
       {
-        "label": "VRChat 模型",
-        "q": "VRChat"
+        "label": "touhon Project",
+        "q": ""
       },
       {
-        "label": "原创角色",
-        "q": "オリジナル"
+        "label": "ウマ娘",
+        "q": ""
       },
       {
-        "label": "东方 Project",
-        "q": "東方"
+        "label": "MMD花騎士",
+        "q": ""
       },
       {
-        "label": "偶像大师",
-        "q": "アイドルマスター"
-      },
-      {
-        "label": "赛马娘",
-        "q": "ウマ娘"
+        "label": "艦これ",
+        "q": ""
       }
     ]
   },
@@ -226,20 +322,83 @@
     "searchUrl": "https://www.deviantart.com/search?q={{q}}",
     "presetSearches": [
       {
+        "label": "MMD",
+        "q": ""
+      },
+      {
+        "label": "fbx",
+        "q": ""
+      },
+      {
+        "label": "xdr",
+        "q": ""
+      },
+      {
+        "label": "Nekopara",
+        "q": ""
+      },
+      {
+        "label": "Dynasty Warriors",
+        "q": ""
+      },
+      {
+        "label": "Love-Ru Gravure Chance",
+        "q": ""
+      },
+      {
+        "label": "Blank_City",
+        "q": ""
+      }
+    ]
+  },
+  {
+    "id": "booth",
+    "icon": "🛒",
+    "label": "BOOTH",
+    "url": "https://booth.pm/zh-cn/browse/3D%20Models",
+    "desc": "同人 3D 模型通贩市场，25万+ 作品",
+    "group": "search",
+    "searchUrl": "https://booth.pm/zh-cn/search/{{q}}",
+    "presetSearches": [
+      {
+        "label": "3D模型",
+        "q": "3Dモデル"
+      },
+      {
         "label": "MMD 模型",
-        "q": "MMD model"
+        "q": "MMDモデル"
       },
       {
-        "label": "VRChat 模型",
-        "q": "VRChat avatar"
+        "label": "VRM 模型",
+        "q": "VRMモデル"
       },
       {
-        "label": "动漫角色",
-        "q": "anime character model"
+        "label": "VTuber",
+        "q": "VTuber"
       },
       {
         "label": "原创角色",
-        "q": "original character"
+        "q": "オリジナル"
+      },
+      {
+        "label": "VRChat",
+        "q": "VRChat"
+      },
+      {
+        "label": "东方 Project",
+        "q": "東方"
+      },
+      {
+        "label": "碧蓝档案",
+        "q": "ブルアカ"
+      },
+      {
+        "label": "原神",
+        "q": "原神"
+      },
+      {
+        "label": "崩坏星穹铁道",
+        "q": "崩壊スターレイル"
       }
     ]
   }

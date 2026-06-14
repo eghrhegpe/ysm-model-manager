@@ -63,6 +63,7 @@ func SupportedExtsForType(rtype string) []string {
 }
 
 // SubDirMap 每种资源类型在整合包实例中的子目录
+// 注意：新增条目时请同步更新 AllSubDirs()
 func SubDirMap(rtype string) string {
 	m := map[string]string{
 		"ysm":              "config/yes_steve_model/custom",
@@ -81,6 +82,8 @@ type SubDirEntry struct {
 	RType  string
 }
 
+// AllSubDirs 返回所有资源类型的子目录信息（遍历用）
+// 注意：新增条目时请同步更新 SubDirMap()
 func AllSubDirs() []SubDirEntry {
 	return []SubDirEntry{
 		{SubDir: "config/yes_steve_model/custom", RType: "ysm"},

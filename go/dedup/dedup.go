@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -40,14 +41,16 @@ func FindDuplicateFiles(dir string, skipRecycle bool) ([]Group, error) {
 
 	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil // 跳过权限错误等
+			log.Printf("[dedup] 访问 %s 失败: %v", p, err)
+			return nil
+		}
+		// 跳过符号链接（去重只处理实际文件）
+		if d.Type()&os.ModeSymlink != 0 {
+			return nil
 		}
 		if d.IsDir() {
-			if skipRecycle {
-				low := strings.ToLower(p)
-				if strings.HasSuffix(low, "\\.recycle") || strings.HasSuffix(low, "/.recycle") {
-					return filepath.SkipDir
-				}
+			if skipRecycle && filepath.Base(p) == ".recycle" {
+				return filepath.SkipDir
 			}
 			return nil
 		}
@@ -58,17 +61,33 @@ func FindDuplicateFiles(dir string, skipRecycle bool) ([]Group, error) {
 			return nil
 		}
 		if info.Size() == 0 {
-			return nil // 跳过空文件
+			// 空文件：用特殊哈希 "empty" 统一标记，参与分组
+			emptyHash := "empty"
+			if g, ok := hashGroups[emptyHash]; ok {
+				g.Files = append(g.Files, FileEntry{
+					Name: filepath.Base(p), Path: p,
+					Size: 0, ModTime: info.ModTime().UnixMilli(),
+				})
+			} else {
+				hashGroups[emptyHash] = &Group{
+					Hash: emptyHash, Size: 0,
+					Files: []FileEntry{{Name: filepath.Base(p), Path: p, Size: 0, ModTime: info.ModTime().UnixMilli()}},
+				}
+				orderedKeys = append(orderedKeys, emptyHash)
+			}
+			return nil
 		}
 
 		// 计算 SHA256
 		f, err := os.Open(p)
 		if err != nil {
+			log.Printf("[dedup] 打开文件失败 %s: %v", p, err)
 			return nil
 		}
 		h := sha256.New()
 		if _, err := io.Copy(h, f); err != nil {
 			f.Close()
+			log.Printf("[dedup] 读取文件失败 %s: %v", p, err)
 			return nil
 		}
 		f.Close()
@@ -122,23 +141,29 @@ func CountDuplicates(dir string, skipRecycle bool) (groups int, extraFiles int, 
 
 	err = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
+			log.Printf("[dedup] 访问 %s 失败: %v", p, err)
+			return nil
+		}
+		if d.Type()&os.ModeSymlink != 0 {
 			return nil
 		}
 		if d.IsDir() {
-			if skipRecycle {
-				low := strings.ToLower(p)
-				if strings.HasSuffix(low, "\\.recycle") || strings.HasSuffix(low, "/.recycle") {
-					return filepath.SkipDir
-				}
+			if skipRecycle && filepath.Base(p) == ".recycle" {
+				return filepath.SkipDir
 			}
 			return nil
 		}
 		info, err := d.Info()
-		if err != nil || info == nil || info.Size() == 0 {
+		if err != nil || info == nil {
+			return nil
+		}
+		if info.Size() == 0 {
+			hashCount["empty"]++
 			return nil
 		}
 		f, err := os.Open(p)
 		if err != nil {
+			log.Printf("[dedup] 打开文件失败 %s: %v", p, err)
 			return nil
 		}
 		h := sha256.New()
@@ -159,4 +184,46 @@ func CountDuplicates(dir string, skipRecycle bool) (groups int, extraFiles int, 
 		}
 	}
 	return groups, extraFiles, nil
+}
+
+// CleanEmptyDirs 递归删除指定目录下的所有空子目录。
+// 返回删除的空目录数。从最深层开始删除，确保祖父目录也能被清理。
+func CleanEmptyDirs(dir string) (int, error) {
+	dir = strings.TrimSpace(dir)
+	if dir == "" {
+		return 0, fmt.Errorf("目录为空")
+	}
+	var removed int
+	removeEmptyDirs(dir, &removed)
+	return removed, nil
+}
+
+// removeEmptyDirs 递归后序遍历删除空目录
+func removeEmptyDirs(dir string, removed *int) int {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			subPath := filepath.Join(dir, e.Name())
+			removeEmptyDirs(subPath, removed)
+		}
+	}
+	// 再次检查是否为空（子目录可能已被删除）
+	if isEmptyDir(dir) {
+		if err := os.Remove(dir); err == nil {
+			(*removed)++
+		}
+	}
+	return *removed
+}
+
+// isEmptyDir 检查目录是否为空（不含任何文件和非空子目录）
+func isEmptyDir(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	return len(entries) == 0
 }

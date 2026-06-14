@@ -1208,3 +1208,82 @@ if originalExt == ".ysm" || originalExt == ".zip" || originalExt == ".7z" || ori
 1. **重型计算（文件哈希）的触发点要谨慎**。`ScanModelEntries` 是"浏览用"函数，不应承担"同步用"的重计算。浏览功能保持轻量，重型计算按需延迟。
 2. **扫描缓存 2s TTL 不解决问题**——用户首次切换到未缓存目录时仍会触发全量计算。缓存只是治标。
 3. **Go 的 `filepath.WalkDir` 本身是轻量的**，慢的不是遍历文件系统，而是遍历之后对每个文件做的操作。卡住先加日志看哪个操作耗时最久。`computeFileHash` 调 `os.Open + io.Copy` 读全文件是最大的性能拖累。
+
+---
+
+## 2026-06-14 新增 bug 记录
+
+### 37. renderDisplayName 着色顺序反转（tag-work 匹配位置错乱）
+
+#### 症状
+
+- 文件名 `【碧蓝航线】安克雷奇-泳装(黑色超短泳装-白衬衣)[hfmc].pmx` 显示为 `[hfmc]安克雷奇-泳装(黑色超短泳装-白衬衣)【碧蓝航线】`
+- `【碧蓝航线】` 被移到了末尾，`[hfmc]` 被移到了开头
+- 只有文件夹行受影响？文件行也受影响，但文件夹名（路径段）更明显
+
+#### 根因
+
+`renderDisplayName` 中用了多个 `name.replace(regex, fn)` 依次执行。第一个正则 `\[([^\]]+?)\]` 匹配到文件名末尾的 `[hfmc]`（`?` 非贪婪，最短匹配），把它替换为第一个 `%%TOKEN%%`。第二个正则 `【([^】]+?)】` 匹配到文件名开头的 `【碧蓝航线】`，替换为第二个 `%%TOKEN%%`。然后 `name.split("%%TOKEN%%")` + 交替拼接时，token[0]（`[hfmc]`）被放在前面，token[1]（`【碧蓝航线】`）在后面——**顺序反了**。
+
+```js
+// ❌ 旧逻辑：多个 replace 依次执行，token 按匹配顺序而非文件位置顺序
+name = name.replace(/\[([^\]]+?)\]/g, (m) => {
+  tokens.push(html);
+  return "%%TOKEN%%";
+});
+name = name.replace(/【([^】]+?)】/g, (m) => {
+  tokens.push(html);
+  return "%%TOKEN%%";
+});
+// → token[0] = [hfmc]（文件末尾），token[1] = 【碧蓝航线】（文件开头）
+// → split/join 后：[hfmc]...【碧蓝航线】← 反了！
+```
+
+#### 修复
+
+先收集所有匹配（含在文件中的 `idx` 位置），按 `idx` 排序，从后往前替换（避免偏移），最后按排序后的顺序依次替换 `%%TOKEN%%`。
+
+```js
+// ✅ 新逻辑：先收集所有匹配位置，按 idx 排序
+var matches = [];
+// 收集 [xxx]、【xxx】、《xxx》的所有匹配
+while ((m = re.exec(name)) !== null) {
+  matches.push({ idx: m.index, html: "...", len: m[0].length });
+}
+matches.sort(function (a, b) {
+  return a.idx - b.idx;
+});
+// 从后往前替换，再按顺序替换 %%TOKEN%%
+```
+
+#### Lesson
+
+1. **多个 `replace(regex, fn)` 依次执行时，`%%TOKEN%%` 在字符串中的位置由匹配顺序决定，而非在原字符串中的位置**。第一个正则匹配到的片段无论在原字符串的什么位置，其 token 都会放在索引 0。
+2. 需要保留原位置顺序时，必须**先收集所有匹配位置，按 `idx` 排序**，再统一替换。
+3. 从后往前替换（`idx` 从大到小）避免因替换改变字符串长度导致的 `idx` 偏移。
+
+---
+
+### 38. 文件夹行 renderDisplayName 条件过滤（`k.startsWith("[")`）
+
+#### 症状
+
+- 文件夹名以 `【` 或 `《` 开头时（如 `【碧蓝档案】优香...`），文件夹名不被着色
+- 只有以 `[` 开头的文件夹名才被着色
+
+#### 根因
+
+`row-tpl.js` 第 52 行：
+
+```js
+const dispName = k.startsWith("[") ? renderDisplayName(k) : attr(k);
+```
+
+只对以 `[` 开头的文件夹名调用 `renderDisplayName`，其他开头的走了 `attr(k)` 分支（纯转义，无着色）。
+
+#### 修复
+
+```js
+const dispName = renderDisplayName(k);
+// 一律走 renderDisplayName，函数内部会处理所有标记类型
+```

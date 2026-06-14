@@ -50,6 +50,14 @@ class AppToast extends HTMLElement {
 
   show(msg, undoCallback, duration = 4000, type = "", clickCallback) {
     const c = this.shadowRoot.getElementById("c");
+    // 限制最多 5 个同时显示，超出直接同步移除最早的（_remove 含动画异步，会死循环）
+    while (c.children.length >= 5) {
+      const oldest = c.children[0];
+      if (oldest) {
+        clearTimeout(oldest._timer);
+        oldest.remove();
+      }
+    }
     const t = document.createElement("div");
     t.className = "toast" + (type ? " " + type : "");
     if (clickCallback) t.style.cursor = "pointer";

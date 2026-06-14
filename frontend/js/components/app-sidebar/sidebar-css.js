@@ -27,23 +27,6 @@ export const sidebarCSS = `
 .vc-header .tag.red { background: #f38ba822; color: #f38ba8; }
 .vc-header .tag.orange { background: #f9a82622; color: #f9a826; }
 .vc-hdr-row1 .chk { flex-shrink:0; margin:0; cursor:pointer; }
-.vc-body { padding: 2px 10px 8px; }
-.vc-body .sec-title { font-size: var(--fs-sm); color: var(--muted); padding: 4px 2px 2px; text-transform: uppercase; letter-spacing: .5px; }
-.vc-body .row {
-  display: flex; align-items: center; gap: 6px; padding: 2px 6px;
-  border-radius: 4px; font-size: var(--fs-md); transition: background .12s;
-}
-.vc-body .row:hover { background: var(--hover); }
-.vc-body .row .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.vc-body .row .rn { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vc-body .row .rn .tag-author,.vc-body .row .rn .tag-work,.vc-body .row .rn .tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
-.vc-body .row .rn .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
-.vc-body .row .rn .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
-.vc-body .row .rn .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
-.vc-body .row.row-prefix .dot { opacity:0.35; }
-.vc-body .row .status-icon { font-size: 10px; margin-right: 4px; flex-shrink: 0; }
-.vc-body .row .link-icon { font-size: 10px; margin-right: 4px; flex-shrink: 0; }
-.vc-body .row .sz { font-size: var(--fs-base); color: var(--muted); }
 .footer { padding: 8px 12px; border-top: 1px solid var(--bd); }
 .footer-stats { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--fs-base) - 2px); color: var(--muted); margin-bottom: 6px; }
 .footer-btn {

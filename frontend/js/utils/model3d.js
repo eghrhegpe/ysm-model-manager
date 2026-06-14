@@ -14,18 +14,23 @@ function cacheSpec(path, data) {
   specCache.set(path, data);
 }
 
-// 调试用：控制台可调 window.debugGetSpec(path) 获取骨骼数据
-window.debugGetSpec = async (path) => {
-  try {
-    const jsonStr = await GetModel3DSpec(path || "");
-    const spec = JSON.parse(jsonStr);
-    console.log("[DEBUG] spec:", spec);
-    return spec;
-  } catch (e) {
-    console.error("[DEBUG]", e);
-    return null;
-  }
-};
+// 调试用：控制台可调 window.debugGetSpec(path) 获取骨骼数据（仅开发模式）
+if (
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+) {
+  window.debugGetSpec = async (path) => {
+    try {
+      const jsonStr = await GetModel3DSpec(path || "");
+      const spec = JSON.parse(jsonStr);
+      console.log("[DEBUG] spec:", spec);
+      return spec;
+    } catch (e) {
+      console.error("[DEBUG]", e);
+      return null;
+    }
+  };
+}
 
 export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   const scene = new THREE.Scene();
@@ -183,7 +188,10 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   for (const mg of spec.models || []) {
     for (const md of mg.meshGroups || []) {
       for (let i = 0; i < (md.positions?.length || 0); i += 3) {
-        const v = Math.abs(md.positions[i]);
+        const vx = Math.abs(md.positions[i]);
+        const vy = Math.abs(md.positions[i + 1] || 0);
+        const vz = Math.abs(md.positions[i + 2] || 0);
+        const v = Math.max(vx, vy, vz);
         if (v > meshMax) meshMax = v;
         if (v < meshMin) meshMin = v;
       }

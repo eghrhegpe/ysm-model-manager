@@ -3,10 +3,13 @@ package recycle
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
@@ -64,10 +67,10 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 		os.Remove(src)
 		return &MoveResult{Action: "deleted_link", Reason: "符号链接，已直接删除"}, nil
 	}
-	stat, ok := info.Sys().(interface{ Nlink() uint64 })
-	if ok && stat.Nlink() > 1 {
+	// 硬链接检测：Unix 通过 Nlink()，Windows 通过 syscall
+	if isHardLink(info, src) {
 		os.Remove(src)
-		return &MoveResult{Action: "deleted_link", Reason: fmt.Sprintf("硬链接(链接数 %d)，已直接删除", stat.Nlink())}, nil
+		return &MoveResult{Action: "deleted_link", Reason: "硬链接，已直接删除"}, nil
 	}
 	os.MkdirAll(tm.recycleDir, 0755)
 	rel, err := filepath.Rel(rootDir, src)
@@ -99,11 +102,48 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 	return &MoveResult{Action: "recycled", Reason: ""}, os.Remove(src)
 }
 
+// isHardLink 跨平台判断文件是否为硬链接（nlink > 1）
+// Unix: 通过 os.FileInfo.Sys().Nlink()
+// Windows: 通过 syscall.GetFileInformationByHandle
+func isHardLink(info os.FileInfo, path string) bool {
+	// Unix/macOS: 通过 Nlink() 接口
+	if stat, ok := info.Sys().(interface{ Nlink() uint64 }); ok && stat.Nlink() > 1 {
+		return true
+	}
+	// Windows: 通过 syscall 获取 NumberOfLinks
+	if runtime.GOOS == "windows" {
+		pathp, err := syscall.UTF16PtrFromString(path)
+		if err != nil {
+			return false
+		}
+		handle, err := syscall.CreateFile(pathp,
+			syscall.GENERIC_READ,
+			syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE,
+			nil,
+			syscall.OPEN_EXISTING,
+			syscall.FILE_ATTRIBUTE_NORMAL,
+			0)
+		if err != nil {
+			return false
+		}
+		defer syscall.CloseHandle(handle)
+		var bhi syscall.ByHandleFileInformation
+		if err := syscall.GetFileInformationByHandle(handle, &bhi); err == nil && bhi.NumberOfLinks > 1 {
+			return true
+		}
+	}
+	return false
+}
+
 // List 列出回收站中的文件
 func (tm *TrashManager) List() []types.ModelEntry {
 	entries := []types.ModelEntry{}
 	filepath.WalkDir(tm.recycleDir, func(p string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
+			log.Printf("[recycle] WalkDir 错误 %s: %v", p, err)
+			return nil
+		}
+		if d.IsDir() {
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(p))
@@ -169,7 +209,8 @@ func (tm *TrashManager) Delete(src string) error {
 	return os.Remove(src)
 }
 
-// Empty 清空回收站（递归删除所有文件和子目录）
+// Empty 清空回收站
+// 采用 RemoveAll 删除整个 .recycle 目录后重建，确保所有子目录和文件均被清理
 func (tm *TrashManager) Empty() (int, error) {
 	if tm.recycleDir == "" {
 		return 0, nil
@@ -177,24 +218,16 @@ func (tm *TrashManager) Empty() (int, error) {
 	if _, err := os.Stat(tm.recycleDir); os.IsNotExist(err) {
 		return 0, nil
 	}
-	count := 0
-	filepath.WalkDir(tm.recycleDir, func(p string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if p == tm.recycleDir {
-			return nil
-		}
-		if d.IsDir() {
-			// 删除空目录
-			os.Remove(p)
-			return filepath.SkipDir
-		}
-		if err := os.Remove(p); err == nil {
-			count++
-		}
-		return nil
-	})
+	// 先统计文件数（最佳努力）
+	count := len(tm.List())
+	// 删除整个回收站目录
+	if err := os.RemoveAll(tm.recycleDir); err != nil {
+		return 0, fmt.Errorf("清空回收站失败: %w", err)
+	}
+	// 重建空目录
+	if err := os.MkdirAll(tm.recycleDir, 0755); err != nil {
+		return 0, fmt.Errorf("重建回收站目录失败: %w", err)
+	}
 	return count, nil
 }
 
@@ -225,6 +258,7 @@ func Empty(repoRoot string) (int, error) {
 }
 
 // copyFile 复制文件（跨分区兼容）
+// 注意：未限制读取大小，但回收站场景目标文件来自用户本地目录，风险可控
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {

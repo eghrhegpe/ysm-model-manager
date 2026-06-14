@@ -22,14 +22,20 @@ export function resetGlobalButtons(root) {
   if (btnImport) {
     btnImport.disabled = false;
     btnImport.textContent = "⬇️ 导入仓库模型";
+    btnImport.style.opacity = "1";
+    btnImport.style.cursor = "pointer";
   }
   if (btnUpload) {
     btnUpload.disabled = false;
     btnUpload.textContent = "📤 上传新模型";
+    btnUpload.style.opacity = "1";
+    btnUpload.style.cursor = "pointer";
   }
   if (btnSync) {
     btnSync.disabled = false;
     btnSync.textContent = "🔄 同步状态";
+    btnSync.style.opacity = "1";
+    btnSync.style.cursor = "pointer";
   }
 }
 
@@ -46,7 +52,7 @@ export function bindActions(root) {
     console.log("[preview] ⬇️ 导入 按钮点击");
     btnImport.disabled = true;
     btnImport.textContent = "⬇️ 导入中...";
-    bus.emit("sync:download-missing");
+    bus.emit("sync:download:missing");
   });
   btnUpload?.addEventListener("click", () => {
     console.log("[preview] 📤 上传 按钮点击");
@@ -58,7 +64,7 @@ export function bindActions(root) {
     console.log("[preview] 🔄 同步 按钮点击");
     btnSync.disabled = true;
     btnSync.textContent = "🔄 同步中...";
-    bus.emit("sync:toggle-status");
+    bus.emit("sync:toggle:status");
   });
 
   // ===== 日志展开/折叠 =====

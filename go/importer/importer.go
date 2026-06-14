@@ -9,6 +9,7 @@ package importer
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,6 +35,20 @@ func Get(rtype string) Handler {
 	return registry[rtype]
 }
 
+// sanitizePath 清理路径，确保不含路径遍历组件（..）
+// 注意：上层调用（installer.Install）已通过 paths.IsInside 做了严格校验，
+// 此处的检查是防御纵深，防止 importer 被独立使用时出现路径遍历。
+func sanitizePath(path, label string) (string, string) {
+	cleaned := filepath.Clean(path)
+	// filepath.Clean 会规范化路径，但若 path 以 .. 开头（如 ../etc），Clean 后可能仍含 ..。
+	// 此处检查清理后的结果是否仍有 .. 前缀或组件。
+	sep := string(filepath.Separator)
+	if cleaned == ".." || strings.HasPrefix(cleaned, ".."+sep) || strings.Contains(cleaned, sep+".."+sep) || strings.HasSuffix(cleaned, sep+"..") {
+		return cleaned, fmt.Sprintf("%s 包含非法路径 '..'", label)
+	}
+	return cleaned, ""
+}
+
 // ===== SimpleCopyImporter =====
 // 适用于材质包/光影包等只需复制文件的资源类型
 
@@ -55,6 +70,18 @@ func (s *SimpleCopyImporter) Import(srcPath, dstDir string) string {
 	if dstDir == "" {
 		return "目标目录为空"
 	}
+
+	// 路径清理与遍历防护
+	var errMsg string
+	srcPath, errMsg = sanitizePath(srcPath, "源路径")
+	if errMsg != "" {
+		return errMsg
+	}
+	dstDir, errMsg = sanitizePath(dstDir, "目标路径")
+	if errMsg != "" {
+		return errMsg
+	}
+
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		return fmt.Sprintf("创建目标目录失败: %v", err)
 	}
@@ -95,11 +122,29 @@ func (s *SimpleCopyImporter) Import(srcPath, dstDir string) string {
 	return ""
 }
 
-// copyDirRecursive 递归复制目录
+// copyDirRecursive 递归复制目录（先复制到临时目录再 rename，保证原子性）
 func copyDirRecursive(src, dst string) error {
-	if err := os.MkdirAll(dst, 0755); err != nil {
+	// 用 MkdirTemp 创建临时目录（自动生成唯一名称，避免并发冲突）
+	tmpDir, err := os.MkdirTemp(filepath.Dir(dst), ".tmp_import_")
+	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(tmpDir) // 失败时清理临时目录
+
+	if err := copyDirContents(src, tmpDir); err != nil {
+		return err
+	}
+
+	// 原子性：先重命名临时目录为目标目录
+	// 若目标已存在，先删除再 rename（os.Rename 在 Windows 上不覆盖已存在的目录）
+	if _, stErr := os.Stat(dst); stErr == nil {
+		os.RemoveAll(dst)
+	}
+	return os.Rename(tmpDir, dst)
+}
+
+// copyDirContents 递归复制目录内容到目标（无原子性保证，供 copyDirRecursive 内部调用）
+func copyDirContents(src, dst string) error {
 	entries, err := os.ReadDir(src)
 	if err != nil {
 		return err
@@ -108,38 +153,30 @@ func copyDirRecursive(src, dst string) error {
 		srcPath := filepath.Join(src, entry.Name())
 		dstPath := filepath.Join(dst, entry.Name())
 		if entry.IsDir() {
-			if err := copyDirRecursive(srcPath, dstPath); err != nil {
+			// 符号链接目录：复制链接本身而非进入
+			if entry.Type()&os.ModeSymlink != 0 {
+				if target, rErr := os.Readlink(srcPath); rErr == nil {
+					os.Symlink(target, dstPath)
+				}
+				continue
+			}
+			if err := copyDirContents(srcPath, dstPath); err != nil {
 				return err
 			}
 		} else {
-			if strings.HasPrefix(entry.Name(), ".") {
+			// 符号链接文件：复制链接本身
+			if entry.Type()&os.ModeSymlink != 0 {
+				if target, rErr := os.Readlink(srcPath); rErr == nil {
+					os.Symlink(target, dstPath)
+				}
 				continue
 			}
-			if err := copyFileSimple(srcPath, dstPath); err != nil {
+			if err := copyFile(srcPath, dstPath); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
-}
-
-// copyFileSimple 复制单文件
-func copyFileSimple(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-		return err
-	}
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	return err
 }
 
 // ===== DirectoryCopyImporter =====
@@ -157,7 +194,8 @@ func NewDirectoryCopy(rtype string) *DirectoryCopyImporter {
 func (d *DirectoryCopyImporter) Type() string { return d.rtype }
 
 // Import 复制源文件夹到目标目录
-// srcPath 是文件夹内任意文件路径，导入时复制整个父文件夹
+// srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身
+// 若 srcPath 是文件则取父目录，若是目录则直接使用
 func (d *DirectoryCopyImporter) Import(srcPath, dstDir string) string {
 	if srcPath == "" {
 		return "源文件路径为空"
@@ -165,7 +203,29 @@ func (d *DirectoryCopyImporter) Import(srcPath, dstDir string) string {
 	if dstDir == "" {
 		return "目标目录为空"
 	}
-	srcDir := filepath.Dir(srcPath)
+
+	// 路径清理与遍历防护
+	var errMsg string
+	srcPath, errMsg = sanitizePath(srcPath, "源路径")
+	if errMsg != "" {
+		return errMsg
+	}
+	dstDir, errMsg = sanitizePath(dstDir, "目标路径")
+	if errMsg != "" {
+		return errMsg
+	}
+
+	// 判断 srcPath 是文件还是目录
+	info, stErr := os.Stat(srcPath)
+	if stErr != nil {
+		return fmt.Sprintf("无法访问源路径: %v", stErr)
+	}
+	var srcDir string
+	if info.IsDir() {
+		srcDir = srcPath
+	} else {
+		srcDir = filepath.Dir(srcPath)
+	}
 	folderName := filepath.Base(srcDir)
 	dstPath := filepath.Join(dstDir, folderName)
 
@@ -181,27 +241,47 @@ func (d *DirectoryCopyImporter) Import(srcPath, dstDir string) string {
 }
 
 func copyDir(src, dst string) error {
-	if err := os.MkdirAll(dst, 0755); err != nil {
+	// 用 MkdirTemp 创建临时目录，避免并发冲突
+	tmpDir, err := os.MkdirTemp(filepath.Dir(dst), ".tmp_import_")
+	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(tmpDir)
+
 	entries, err := os.ReadDir(src)
 	if err != nil {
 		return err
 	}
 	for _, e := range entries {
 		srcPath := filepath.Join(src, e.Name())
-		dstPath := filepath.Join(dst, e.Name())
+		dstPath := filepath.Join(tmpDir, e.Name())
 		if e.IsDir() {
+			if e.Type()&os.ModeSymlink != 0 {
+				if target, rErr := os.Readlink(srcPath); rErr == nil {
+					os.Symlink(target, dstPath)
+				}
+				continue
+			}
 			if err := copyDir(srcPath, dstPath); err != nil {
 				return err
 			}
 		} else {
+			if e.Type()&os.ModeSymlink != 0 {
+				if target, rErr := os.Readlink(srcPath); rErr == nil {
+					os.Symlink(target, dstPath)
+				}
+				continue
+			}
 			if err := copyFile(srcPath, dstPath); err != nil {
 				return err
 			}
 		}
 	}
-	return nil
+
+	if _, stErr := os.Stat(dst); stErr == nil {
+		os.RemoveAll(dst)
+	}
+	return os.Rename(tmpDir, dst)
 }
 
 // copyFile 复制单文件（工具函数）
@@ -220,6 +300,11 @@ func copyFile(src, dst string) error {
 	}
 	defer out.Close()
 	_, err = io.Copy(out, in)
+	if err == nil {
+		if chErr := os.Chmod(dst, 0644); chErr != nil {
+			log.Printf("[importer] 设置权限失败 %s: %v", dst, chErr)
+		}
+	}
 	return err
 }
 

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log"
 	"sort"
 	"strings"
 
@@ -14,6 +15,9 @@ import (
 
 	"github.com/bodgit/sevenzip"
 )
+
+// maxExtractSize 单个文件最大读取大小（ZIP/7z 内文件），防止 ZIP 炸弹
+const maxExtractSize = 50 << 20 // 50MB
 
 // ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览）
 func ExtractFirstPNGFromZip(data []byte, size int64) []byte {
@@ -27,7 +31,7 @@ func ExtractFirstPNGFromZip(data []byte, size int64) []byte {
 			if err != nil {
 				continue
 			}
-			buf, _ := io.ReadAll(rc)
+			buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
 			rc.Close()
 			if len(buf) > 0 {
 				return buf
@@ -49,7 +53,7 @@ func ExtractFirstPNGFrom7z(data []byte, size int64) []byte {
 			if err != nil {
 				continue
 			}
-			buf, _ := io.ReadAll(rc)
+			buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
 			rc.Close()
 			if len(buf) > 0 {
 				return buf
@@ -79,7 +83,7 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 			if err != nil {
 				continue
 			}
-			buf, _ := io.ReadAll(rc)
+			buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
 			rc.Close()
 			var ysm struct {
 				Properties struct {
@@ -91,7 +95,9 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 					} `json:"files"`
 				} `json:"files"`
 			}
-			if json.Unmarshal(buf, &ysm) == nil {
+			if err := json.Unmarshal(buf, &ysm); err != nil {
+				log.Printf("[geometry] 解析 ysm.json 失败: %v", err)
+			} else {
 				defaultTex = ysm.Properties.DefaultTexture
 				modelOrder = ysm.Files.Player.Model
 			}
@@ -116,7 +122,7 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 				if err != nil {
 					continue
 				}
-				buf, _ := io.ReadAll(rc)
+				buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
 				rc.Close()
 				if len(buf) > 10 {
 					animJSONs = append(animJSONs, string(buf))
@@ -127,7 +133,7 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 			if err != nil {
 				continue
 			}
-			buf, _ := io.ReadAll(rc)
+			buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
 			rc.Close()
 			geoFiles = append(geoFiles, geoEntry{name: f.Name, data: buf})
 		}
@@ -136,7 +142,7 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 			if err != nil {
 				continue
 			}
-			pngData, _ := io.ReadAll(rc)
+			pngData, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
 			rc.Close()
 			if len(pngData) > 0 {
 				name := f.Name
@@ -205,6 +211,7 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 	reader, err := sevenzip.NewReader(bytes.NewReader(data), size)
 	if err != nil {
+		log.Printf("[geometry] 打开 7z 失败: %v", err)
 		return nil, nil
 	}
 	var geo *types.BedrockModel
@@ -216,7 +223,7 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 			if err != nil {
 				continue
 			}
-			buf, _ := io.ReadAll(rc)
+			buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
 			rc.Close()
 			g := ParseBedrockGeometry(buf)
 			if g == nil || g.BoneCount == 0 {
@@ -241,7 +248,7 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 			if err != nil {
 				continue
 			}
-			pngData, _ := io.ReadAll(rc)
+			pngData, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
 			rc.Close()
 			if len(pngData) > 0 {
 				pngs = append(pngs, pngData)

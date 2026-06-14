@@ -49,7 +49,10 @@ function parseKeyValue(v) {
       }
       return Number(item);
     });
-    if (nums.some(isNaN)) return null; // 含不可折叠的 Molang
+    if (nums.some(isNaN)) {
+      // 部分轴不可折叠时保留可解析的轴，不可解析的用 0 占位
+      return nums.map((n) => (isNaN(n) ? 0 : n));
+    }
     return nums;
   }
   if (typeof v === "number") return [v, v, v]; // 单一数值（罕见但合法）
@@ -236,14 +239,16 @@ export function evaluateKeyframes(keyframes, t) {
   // step 插值：直接返回当前帧的 post 值
   if (a.lerp === "step") return [...a.post];
 
-  // 线性插值
+  // 线性插值（防御空值）
   const dt = b.time - a.time;
-  if (dt <= 0) return [...b.post];
+  if (dt <= 0) return a.post ? [...a.post] : [0, 0, 0];
   const frac = (t - a.time) / dt;
+  const ap = a.post || [0, 0, 0];
+  const bp = b.post || [0, 0, 0];
   return [
-    a.post[0] + (b.post[0] - a.post[0]) * frac,
-    a.post[1] + (b.post[1] - a.post[1]) * frac,
-    a.post[2] + (b.post[2] - a.post[2]) * frac,
+    ap[0] + (bp[0] - ap[0]) * frac,
+    ap[1] + (bp[1] - ap[1]) * frac,
+    ap[2] + (bp[2] - ap[2]) * frac,
   ];
 }
 

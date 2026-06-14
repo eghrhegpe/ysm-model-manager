@@ -1,7 +1,9 @@
 """从备份恢复 nicovideo + 其他丢失的条目到当前 creators.json"""
 import json
 
-with open('creators.json.bak', encoding='utf-8') as f:
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(script_dir, 'creators.json.bak'), encoding='utf-8') as f:
     bak = json.load(f)
 
 with open('creators.json', encoding='utf-8') as f:

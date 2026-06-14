@@ -26,7 +26,7 @@ func IsYSMJar(jarPath string) bool {
 		if err != nil {
 			continue
 		}
-		data, _ := io.ReadAll(rc)
+		data, _ := io.ReadAll(io.LimitReader(rc, 1<<20))
 		rc.Close()
 
 		content := string(data)
@@ -95,7 +95,8 @@ var ModKeywords = map[string][]string{
 func HasModInDir(modsDir, rtype string) bool {
 	keywords, ok := ModKeywords[rtype]
 	if !ok {
-		return true // 非模型类始终返回 true（材质包/光影包/蓝图无需 mod）
+		// 非模型类（材质包/光影包/蓝图等）默认假设 mod 已安装，由调用方按需处理
+		return true
 	}
 	files, err := os.ReadDir(modsDir)
 	if err != nil {

@@ -199,7 +199,6 @@ export function initImportQueue(app) {
         bus.emit("toast:show", {
           msg: "⚠️ 不支持的格式，仅支持 " + extsStr,
           duration: 4000,
-          duration: 3000,
           type: "warn",
         });
       }
@@ -333,6 +332,10 @@ export function initImportQueue(app) {
         duration: 3000,
         type: "success",
       });
+
+      // 刷新 repo 文件缓存
+      repoFiles = null;
+      loadRepoFiles();
 
       // 加入已导入列表
       imported.unshift({
@@ -537,7 +540,7 @@ export function initImportQueue(app) {
       html +=
         '<div style="display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:3px;font-size:10px;border:1px solid var(--bd)">' +
         '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
-        esc(item.renamed || item.name) +
+        esc(item.name) +
         "</span>" +
         '<span style="font-size:9px;color:var(--muted);flex-shrink:0">' +
         (item.time || "") +
@@ -696,8 +699,16 @@ export function initImportQueue(app) {
   };
 
   // 已在导入页时处理拖入文件
-  bus.on("import:pending-files", processPendingImport);
+  const importPendingUnsub = bus.on(
+    "import:pending-files",
+    processPendingImport,
+  );
 
   // 首次渲染时检查待导入文件（从其他页面跳转来的）
   processPendingImport();
+
+  // 返回清理函数
+  return () => {
+    importPendingUnsub();
+  };
 }

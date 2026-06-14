@@ -54,8 +54,9 @@ async function toggleFolderBatch(fhEl, vm) {
     try {
       await ToggleModelEnable(e.fullPath);
       ok++;
-    } catch (_) {
+    } catch (err) {
       fail++;
+      console.warn("[tree] toggleFolderBatch 失败:", e.fullPath, err);
     }
   }
   if (ok > 0) {
@@ -65,7 +66,7 @@ async function toggleFolderBatch(fhEl, vm) {
       else if (e.banned && enable) e.banned = false;
     }
     vm._renderTree();
-    bus.emit("sync:toggle-status");
+    bus.emit("sync:toggle:status");
   }
   bus.emit("toast:show", {
     msg:
@@ -122,9 +123,52 @@ export function bindTreeEvents(container, vm) {
         .then(async () => {
           await vm._load();
           vm._renderTree();
-          bus.emit("sync:toggle-status");
+          bus.emit("sync:toggle:status");
         })
-        .catch(() => {});
+        .catch((err) =>
+          console.warn("[tree] ToggleModelEnable 失败:", fullPath, err),
+        );
+      return;
+    }
+
+    // 悬停快捷操作（在文件选中前检查，因为它们也在 .fl 内部）
+    const haPreview = e.target.closest(".ha-preview");
+    if (haPreview) {
+      e.stopPropagation();
+      const path = haPreview.dataset.path;
+      const name = path?.split(/[/\\]/).pop() || "";
+      import("../../utils/display.js").then(({ parseModelName }) => {
+        const { author } = parseModelName(name);
+        if (author) {
+          import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
+            OpenInBrowser(
+              "https://search.bilibili.com/all?keyword=" +
+                encodeURIComponent(author),
+            ),
+          );
+        } else {
+          bus.emit("toast:show", {
+            msg: "未解析到作者名",
+            duration: 2000,
+            type: "warn",
+          });
+        }
+      });
+      return;
+    }
+
+    // 悬停快捷操作：📋 复制文件名
+    const haCopy = e.target.closest(".ha-copy");
+    if (haCopy) {
+      e.stopPropagation();
+      const path = haCopy.dataset.path;
+      const name = path?.split(/[/\\]/).pop() || "";
+      navigator.clipboard?.writeText(name).catch(() => {});
+      bus.emit("toast:show", {
+        msg: "📋 已复制: " + name,
+        duration: 1500,
+        type: "info",
+      });
       return;
     }
 
@@ -178,46 +222,6 @@ export function bindTreeEvents(container, vm) {
       updateSelectCount(vm._root);
       bus.emit("model:select", { path: fullPath });
       return;
-    }
-
-    // 悬停快捷操作：🔍 B站搜索
-    const haPreview = e.target.closest(".ha-preview");
-    if (haPreview) {
-      e.stopPropagation();
-      const path = haPreview.dataset.path;
-      const name = path?.split(/[/\\]/).pop() || "";
-      import("../../utils/display.js").then(({ parseModelName }) => {
-        const { author } = parseModelName(name);
-        if (author) {
-          import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
-            OpenInBrowser(
-              "https://search.bilibili.com/all?keyword=" +
-                encodeURIComponent(author),
-            ),
-          );
-        } else {
-          bus.emit("toast:show", {
-            msg: "未解析到作者名",
-            duration: 2000,
-            type: "warn",
-          });
-        }
-      });
-      return;
-    }
-
-    // 悬停快捷操作：📋 复制文件名
-    const haCopy = e.target.closest(".ha-copy");
-    if (haCopy) {
-      e.stopPropagation();
-      const path = haCopy.dataset.path;
-      const name = path?.split(/[/\\]/).pop() || "";
-      navigator.clipboard?.writeText(name).catch(() => {});
-      bus.emit("toast:show", {
-        msg: "📋 已复制: " + name,
-        duration: 1500,
-        type: "info",
-      });
     }
   });
 

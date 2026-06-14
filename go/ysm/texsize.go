@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,7 +71,7 @@ func readTexFromZip(path string) (int, int) {
 		if err != nil {
 			continue
 		}
-		data, err := io.ReadAll(rc)
+		data, err := io.ReadAll(io.LimitReader(rc, 50<<20))
 		rc.Close()
 		if err != nil {
 			continue
@@ -89,7 +90,7 @@ func readTexFromZip(path string) (int, int) {
 		if err != nil {
 			continue
 		}
-		data, err := io.ReadAll(rc)
+		data, err := io.ReadAll(io.LimitReader(rc, 50<<20))
 		rc.Close()
 		if err != nil {
 			continue
@@ -145,7 +146,11 @@ func extractTexSizeFromGeometryBytes(data []byte) (w, h int) {
 func ScanFiles(repoRoot string) []ModelEntry {
 	var entries []ModelEntry
 	filepath.Walk(repoRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+		if err != nil {
+			log.Printf("[ysm] Walk 错误 (忽略): %v", err)
+			return nil
+		}
+		if info.IsDir() {
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(path))

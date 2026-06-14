@@ -31,6 +31,9 @@ export async function showBatchRenameDialog(dir, entries, onApply) {
   };
 
   const applyReplace = (findText, replaceText, isRegex) => {
+    // 重置正则错误标志，允许每次调用都提示
+    const cnt = document.getElementById("br-changed");
+    if (cnt) delete cnt.dataset.regexErr;
     items.forEach((it) => {
       try {
         // 分离扩展名，只对文件名主体做替换
@@ -43,7 +46,16 @@ export async function showBatchRenameDialog(dir, entries, onApply) {
         it.newName = (newBody || body) + ext;
         it.changed = it.newName !== it.Name;
       } catch {
-        // 正则无效时保持原名
+        // 正则无效时保持原名，提示用户
+        const cnt = document.getElementById("br-changed");
+        if (cnt && !cnt.dataset.regexErr) {
+          cnt.dataset.regexErr = "1";
+          bus.emit("toast:show", {
+            msg: "⚠️ 正则表达式无效，已保持原名",
+            duration: 3000,
+            type: "warn",
+          });
+        }
       }
     });
   };
@@ -131,7 +143,10 @@ export async function showBatchRenameDialog(dir, entries, onApply) {
       renderPreview(previewEl, items);
     } else {
       // 切回解析模式时重置
-      items.forEach((it) => { it._author = ""; it._work = ""; });
+      items.forEach((it) => {
+        it._author = "";
+        it._work = "";
+      });
       updateAll();
       renderPreview(previewEl, items);
     }

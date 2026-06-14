@@ -1,132 +1,20 @@
-// ===== 工具栏事件 + 筛选逻辑 =====
-// 从 events.js 拆分：工具栏按钮绑定、文件夹批处理、高级筛选
+// ===== 工具栏事件绑定 =====
 import { friendlyError } from "../../utils/errors.js";
 import { bus } from "../../bus.js";
 import { flashBtn } from "./utils.js";
 import { spinnerHTML } from "./tpl.js";
+import { selectState } from "./data.js";
 import { getExts } from "../../utils/extensions.js";
 
-/** 递归收集某个目录下的所有条目 */
-function collectDirEntries(entries, prefix) {
-  const result = [];
-  for (const e of entries) {
-    if (!e.path) continue;
-    const normalized = e.path.replace(/\\/g, "/");
-    if (normalized === prefix || normalized.startsWith(prefix + "/")) {
-      result.push(e);
-    }
-  }
-  return result;
-}
-
-async function toggleFolderBatch(fhEl, vm) {
-  const ck = fhEl.querySelector(".ck");
-  if (!ck) return;
-  const dirKey = fhEl.dataset.dir;
-  if (!dirKey) return;
-  const prefix = dirKey.replace(/\\/g, "/");
-  const targets = collectDirEntries(vm._entries, prefix);
-  if (!targets.length) return;
-  const allEnabled = targets.every((e) => !e.banned);
-  const enable = allEnabled ? false : true;
-  let ok = 0,
-    fail = 0;
-  const { ToggleModelEnable } = await import("../../../wailsjs/go/main/App.js");
-  for (const e of targets) {
-    if (e.banned === !enable) continue;
-    try {
-      await ToggleModelEnable(e.fullPath);
-      ok++;
-    } catch (_) {
-      fail++;
-    }
-  }
-  if (ok > 0) {
-    // 直接更新本地 banned 状态（ScanModelEntries 有 30s 缓存，_load 会拿到旧数据）
-    for (const e of targets) {
-      if (!e.banned && !enable) e.banned = true;
-      else if (e.banned && enable) e.banned = false;
-    }
-    vm._renderTree();
-    bus.emit("sync:toggle-status");
-  }
-  bus.emit("toast:show", {
-    msg: `文件夹${enable ? "启用" : "禁用"}: ${ok} 成功, ${fail} 失败`,
-    duration: 5000,
-    type: fail > 0 ? "warn" : "success",
-  });
-}
-
-function renderFilterHTML() {
-  return `<div class="filter-bar hdr" style="padding:4px 12px;border-bottom:1px solid var(--bd);display:flex;gap:3px;flex-wrap:wrap;align-items:center">
-    <input id="filter-bones-min" class="srch-inp" type="number" min="0" placeholder="🦴 骨骼≥" style="width:60px;font-size:9px">
-    <input id="filter-bones-max" class="srch-inp" type="number" min="0" placeholder="骨骼≤" style="width:60px;font-size:9px">
-    <input id="filter-cubes-min" class="srch-inp" type="number" min="0" placeholder="📦 立方≥" style="width:60px;font-size:9px">
-    <input id="filter-cubes-max" class="srch-inp" type="number" min="0" placeholder="立方≤" style="width:60px;font-size:9px">
-    <span id="filter-count" style="font-size:9px;color:var(--muted)"></span>
-  </div>`;
-}
-
-async function runFilter(root) {
-  try {
-    const kw = root.getElementById("srch")?.value || "";
-    const minB = parseInt(root.getElementById("filter-bones-min")?.value) || 0;
-    const maxB = parseInt(root.getElementById("filter-bones-max")?.value) || 0;
-    const minC = parseInt(root.getElementById("filter-cubes-min")?.value) || 0;
-    const maxC = parseInt(root.getElementById("filter-cubes-max")?.value) || 0;
-    const texVal =
-      root.getElementById("btn-tex")?.textContent?.match(/(\d+)×/)?.[1] || "";
-    const minT = texVal ? parseInt(texVal) : 0;
-    const maxT = texVal ? parseInt(texVal) : 0;
-    const countEl = root.getElementById("filter-count");
-    if (!kw && !minB && !maxB && !minC && !maxC && !texVal) {
-      if (countEl) countEl.textContent = "";
-      bus.emit("filter:results", null);
-      return;
-    }
-    const { LoadAppConfig } = await import("../../../wailsjs/go/main/App.js");
-    const cfg = await LoadAppConfig();
-    if (!cfg.repoRoot) {
-      if (countEl) countEl.textContent = "⚠️ 未设置仓库";
-      return;
-    }
-    if (countEl) countEl.textContent = "⏳";
-    if (!kw && !minB && !maxB && !minC && !maxC && texVal) {
-      const { GetModelTexSizes } =
-        await import("../../../wailsjs/go/main/App.js");
-      const texSizes = await GetModelTexSizes(cfg.repoRoot);
-      const filtered = (texSizes || []).filter((t) => {
-        if (!t.texWidth || !t.texHeight) return false;
-        return (
-          t.texWidth >= minT &&
-          t.texWidth <= maxT &&
-          t.texHeight >= minT &&
-          t.texHeight <= maxT
-        );
-      });
-      if (countEl)
-        countEl.textContent = `🔍 ${filtered.length} 模型纹理 ${minT}×${maxT}`;
-      bus.emit("filter:results", filtered);
-      return;
-    }
-    const { SearchModels } = await import("../../../wailsjs/go/main/App.js");
-    const results = await SearchModels(
-      cfg.repoRoot,
-      kw,
-      minB,
-      maxB,
-      minC,
-      maxC,
-      minT,
-      maxT,
-    );
-    if (countEl)
-      countEl.textContent = results
-        ? `🔍 ${results.length} 个结果`
-        : "🔍 0 个结果";
-    bus.emit("filter:results", results);
-  } catch (e) {
-    console.warn("[filter] 筛选失败:", e);
+function updateSelectCount(root) {
+  const stat = root?.getElementById("ftr-stat");
+  if (!stat) return;
+  const n = selectState.keys.size;
+  if (n > 0) {
+    stat.textContent = "已选 " + n + " 个文件";
+    stat.style.color = "var(--accent)";
+  } else {
+    stat.style.color = "";
   }
 }
 
@@ -136,24 +24,25 @@ export function bindToolbarEvents(root, vm) {
   const r = () => vm._renderTree();
   let ddTimer;
 
-  // 全选 / 反选
-  $("sel-all")?.addEventListener("click", () => {
-    const { selectState } = vm._data || {};
-    if (!selectState) return;
-    const all = vm._treeData || vm._entries || [];
-    const visible = all.filter((e) => e._visible !== false);
-    const allSelected = visible.every((e) => selectState.keys.has(e.path));
-    visible.forEach((e) => {
-      if (allSelected) selectState.keys.delete(e.path);
-      else selectState.keys.add(e.path);
+  // 全选 / 反选 — 基于当前过滤后可见的行
+  const selAllBtn = $("sel-all");
+  if (selAllBtn) {
+    selAllBtn.addEventListener("click", () => {
+      const rows = vm._root._vsRows || vm._entries || [];
+      const visible = rows.filter((r) => r.type === "file");
+      const keys = visible.map((r) => r.path).filter(Boolean);
+      const allSelected = keys.every((k) => selectState.keys.has(k));
+      keys.forEach((k) => {
+        if (allSelected) selectState.keys.delete(k);
+        else selectState.keys.add(k);
+      });
+      updateSelectCount(root);
+      flashBtn(selAllBtn);
     });
-    updateSelectCount(root);
-    flashBtn($("sel-all"));
-  });
+  }
 
   // 批量导出骨骼名
   $("repo-export")?.addEventListener("click", async () => {
-    const { re } = await import("../../../wailsjs/go/main/App.js");
     const { LoadAppConfig, ExportBoneStructures } =
       await import("../../../wailsjs/go/main/App.js");
     const cfg = await LoadAppConfig();
@@ -312,6 +201,7 @@ export function bindToolbarEvents(root, vm) {
       } else if (action === "genindex") {
         const btn = item;
         btn.textContent = "⏳";
+        btn.disabled = true;
         try {
           const { LoadAppConfig, GenerateRepoIndex } =
             await import("../../../wailsjs/go/main/App.js");
@@ -322,7 +212,6 @@ export function bindToolbarEvents(root, vm) {
               duration: 2000,
               type: "warn",
             });
-            btn.textContent = "📇 生成索引";
             return;
           }
           await GenerateRepoIndex(cfg.repoRoot);
@@ -337,8 +226,10 @@ export function bindToolbarEvents(root, vm) {
             duration: 4000,
             type: "error",
           });
+        } finally {
+          btn.textContent = "📇 生成索引";
+          btn.disabled = false;
         }
-        btn.textContent = "📇 生成索引";
       }
     });
   }

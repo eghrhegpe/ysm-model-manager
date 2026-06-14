@@ -89,7 +89,7 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 				value := stripClosingTag(strings.TrimSpace(line[idx+1:]))
 				switch currentSection {
 				case "metadata":
-					switch tag {
+					switch strings.ToLower(tag) {
 					case "name":
 						h.Name = value
 					case "free":
@@ -127,7 +127,7 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 		if strings.HasPrefix(strings.TrimSpace(line), "<") && strings.Contains(line, ">") {
 			trimmed := strings.TrimSpace(line)
 			if idx := strings.Index(trimmed, ">"); idx > 0 {
-				tag := trimmed[1:idx]
+				tag := strings.ToLower(trimmed[1:idx])
 				value := stripClosingTag(strings.TrimSpace(trimmed[idx+1:]))
 				switch tag {
 				case "name":
@@ -136,9 +136,9 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 					}
 				case "role":
 					h.AuthorRole = value
-				case "contact-Bilibili", "contact_Bilibili", "contactBilibili":
+				case "contact-bilibili", "contact_bilibili", "contactbilibili":
 					h.AuthorBilibili = value
-				case "contact-Afdian", "contact_Afdian", "contactAfdian":
+				case "contact-afdian", "contact_afdian", "contactafdian":
 					h.AuthorAfdian = value
 				}
 			}
@@ -248,10 +248,11 @@ func hasTextHeader(path string) bool {
 	}
 	// 在剩余数据中查找文本头部特征
 	rest := string(data[start:])
+	rest = strings.ToLower(rest)
 	return strings.Contains(rest, "--- [") ||
 		strings.Contains(rest, "<name>") ||
 		strings.Contains(rest, "<free>") ||
-		strings.Contains(rest, "Metadata")
+		strings.Contains(rest, "metadata")
 }
 
 // detectYSGPHeader 检测 YSGP（YSM V2）二进制格式并提取基本信息

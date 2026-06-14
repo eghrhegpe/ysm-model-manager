@@ -3,6 +3,7 @@
 // 使用: <app-sync-manager instance="1.20.1-Fabric"></app-sync-manager>
 
 import { bus } from "../../bus.js";
+import { friendlyError } from "../../utils/errors.js";
 import {
   containerHTML,
   summaryHTML,
@@ -64,13 +65,22 @@ export class AppSyncManager extends HTMLElement {
 
   async _init() {
     this._loading = true;
-    this.innerHTML = containerHTML(this._instance) + loadingHTML();
+    this.innerHTML = containerHTML() + loadingHTML();
 
     await this._loadTypeConfig();
     await this._loadData();
 
     this._loading = false;
-    this._render();
+    try {
+      this._render();
+    } catch (e) {
+      console.error("[sync-manager] _render 出错:", e);
+      // 保留加载界面不消失也至少显示错误提示
+      this.innerHTML +=
+        '<div style="padding:12px;color:var(--err)">渲染失败: ' +
+        ESC(String(e)) +
+        "</div>";
+    }
 
     // 监听刷新
     const unsub = bus.on("stats:refresh", () => {
@@ -122,7 +132,12 @@ export class AppSyncManager extends HTMLElement {
   }
 
   _render() {
-    this.innerHTML = containerHTML();
+    try {
+      this.innerHTML = containerHTML();
+    } catch (e) {
+      console.error("[sync-manager] _render 设置 innerHTML 失败:", e);
+      return;
+    }
 
     const modelTypes = ["ysm", "mmd-skin", "vrchat-avatar"];
     const resourceTypes = ["resourcepack", "shaderpack", "create-blueprint"];
@@ -139,7 +154,10 @@ export class AppSyncManager extends HTMLElement {
     const statusTabsEl = this.querySelector(".sm-status-tabs");
     const summaryEl = this.querySelector(".sm-summary");
     const listEl = this.querySelector(".sm-list");
-    if (!tabsEl || !statusTabsEl || !summaryEl || !listEl) return;
+    if (!tabsEl || !statusTabsEl || !summaryEl || !listEl) {
+      console.warn("[sync-manager] _render DOM 查询失败, 放弃渲染");
+      return;
+    }
 
     // — 类型统计 —
     const typeCounts = {};
@@ -290,10 +308,7 @@ export class AppSyncManager extends HTMLElement {
     this.querySelectorAll(".sm-status-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
         this._statusFilter = btn.dataset.status;
-        this._applyFilter();
-        this._renderList(this.querySelector(".sm-list"));
-        this._syncStatusTabs();
-        this._syncSummary();
+        this._render();
       });
     });
 
@@ -311,107 +326,6 @@ export class AppSyncManager extends HTMLElement {
     });
   }
 
-  _syncStatusTabs() {
-    // 重新高亮当前状态标签
-    this.querySelectorAll(".sm-status-tab").forEach((btn) => {
-      const active = btn.dataset.status === this._statusFilter;
-      btn.style.background = active ? "var(--accent)" : "transparent";
-      btn.style.color = active ? "#fff" : "var(--muted)";
-    });
-  }
-
-  _syncSummary() {
-    const summaryEl = this.querySelector(".sm-summary");
-    if (!summaryEl) return;
-    const typeCounts = {};
-    for (const t of this._typeConfig)
-      typeCounts[t.id] = { synced: 0, missing: 0, optional: 0 };
-    for (const item of this._filteredItems) {
-      const c = typeCounts[item.type];
-      if (c) {
-        c[item.status]++;
-      }
-    }
-    const cur = this._selectedType
-      ? typeCounts[this._selectedType] || { synced: 0, missing: 0, optional: 0 }
-      : { synced: 0, missing: 0, optional: 0 };
-    summaryEl.innerHTML = summaryHTML(cur);
-  }
-
-  async _batchPush() {
-    const btn = this.querySelector(".sm-push-all-btn");
-    if (!btn) return;
-    btn.textContent = "⏳";
-    btn.disabled = true;
-
-    // 收集当前可见的 missing 文件，按类型分组
-    const byType = {};
-    for (const item of this._filteredItems) {
-      if (item.status === "missing") {
-        (byType[item.type] ||= []).push(item.path);
-      }
-    }
-
-    let totalOk = 0;
-    const { PushResourceToInstance } =
-      await import("../../../wailsjs/go/main/App.js");
-
-    for (const [rtype, paths] of Object.entries(byType)) {
-      try {
-        const n = await PushResourceToInstance(rtype, this._instance);
-        totalOk += n || 0;
-      } catch (e) {
-        console.error("[sync-manager] push error", rtype, e);
-      }
-    }
-
-    bus.emit("toast:show", {
-      msg: "已推送 " + totalOk + " 个文件到整合包",
-      duration: 3000,
-      type: "success",
-    });
-
-    // 重新加载数据
-    await this._loadData();
-    this._render();
-  }
-
-  async _batchPull() {
-    const btn = this.querySelector(".sm-pull-all-btn");
-    if (!btn) return;
-    btn.textContent = "⏳";
-    btn.disabled = true;
-
-    const byType = {};
-    for (const item of this._filteredItems) {
-      if (item.status === "optional") {
-        (byType[item.type] ||= []).push(item.path);
-      }
-    }
-
-    let totalOk = 0;
-    const { PullResourceFromInstance } =
-      await import("../../../wailsjs/go/main/App.js");
-
-    for (const [rtype, paths] of Object.entries(byType)) {
-      try {
-        const n = await PullResourceFromInstance(rtype, this._instance);
-        totalOk += n || 0;
-      } catch (e) {
-        console.error("[sync-manager] pull error", rtype, e);
-      }
-    }
-
-    bus.emit("toast:show", {
-      msg: "已拉取 " + totalOk + " 个文件到全局仓库",
-      duration: 3000,
-      type: "success",
-    });
-
-    await this._loadData();
-    this._render();
-  }
-
   async _pushSingleFile(path) {
     const { PushSingleResourceToInstance } =
       await import("../../../wailsjs/go/main/App.js");
@@ -424,6 +338,7 @@ export class AppSyncManager extends HTMLElement {
       bus.emit("toast:show", { msg: "✅ 已推送", duration: 2000 });
       await this._loadData();
       this._render();
+      bus.emit("stats:refresh");
     } catch (e) {
       bus.emit("toast:show", {
         msg: "❌ " + friendlyError(e),
@@ -438,14 +353,11 @@ export class AppSyncManager extends HTMLElement {
     const { PullSingleResourceFromInstance } =
       await import("../../../wailsjs/go/main/App.js");
     try {
-      const result = await PullSingleResourceFromInstance(
-        rtype,
-        path,
-        this._instance,
-      );
+      await PullSingleResourceFromInstance(rtype, path, this._instance);
       bus.emit("toast:show", { msg: "✅ 已拉取", duration: 2000 });
       await this._loadData();
       this._render();
+      bus.emit("stats:refresh");
     } catch (e) {
       bus.emit("toast:show", {
         msg: "❌ " + friendlyError(e),

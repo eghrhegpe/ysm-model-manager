@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 SRC = ROOT / "creators.json"
-BAK = ROOT / "creators.json.bak"
+BAK = ROOT / "scripts" / "creators.json.bak"
 
 # ============================================================
 # 1. 备份

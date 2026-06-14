@@ -1,5 +1,6 @@
 // ===== 上传新模型到仓库 =====
 import { bus } from "../bus.js";
+import { friendlyError } from "../utils/errors.js";
 
 export function registerUpload(unsubs) {
   unsubs.push(

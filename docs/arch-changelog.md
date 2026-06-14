@@ -3,14 +3,23 @@
 > 记录每次影响架构的变更，帮助新 AI 快速理解代码库演进。
 > **原则**：不写"优化性能"，写具体的改动内容和影响。
 
-| 日期 | 改动文件 | 架构层级 | 影响范围 | 破坏性? | 描述 |
-| ---- | -------- | -------- | -------- | ------- | ---- |
-| 0611 | `go/ysm/header.go` | Go 后端 | YSM 头部解析 | 是(需重编译) | `scanHeader` 新增 `---` 退出条件；`AnalyzeYSMHeader` 新增 `hasTextHeader` 预检纯二进制文件；`YSMHeader.HasFree` 三态字段 |
-| 0611 | `go/sync/sync.go` | Go 后端 | 同步状态 | 是(需重编译) | `repoByHash` 改为 `map[string][]types.ModelEntry`，修复哈希去重导致文件误标为已同步 |
-| 0611 | `frontend/js/components/app-content/workshop-*.js` | 前端 | 创意工坊 CSS | 是(需清缓存) | 所有 workshop CSS 类从 `components.css` 迁移到 `content-css.js` (Shadow DOM) |
-| 0611 | `frontend/js/components/app-content/tpl.js` | 前端 | 页面模板 | 是(需清缓存) | 仓库页共享 220px 右侧预览面板；删除 githubHTML 重复函数后重建 |
-| 0611 | `frontend/js/components/app-nav.js` | 前端 | 导航 | 否 | 宽度缩减 200→160px；移除诊断 ! 标记；仓库元老晋升主菜单 |
-| 0610 | `creators.json` | 数据 | 创作者 | 否 | workshop_creators.json 重命名为 creators.json，新增 workshop_gitHub.json |
+| 日期 | 改动文件                                           | 架构层级 | 影响范围       | 破坏性?      | 描述                                                                                                                                                                                                      |
+| ---- | -------------------------------------------------- | -------- | -------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0614 | `app_avatar.go`                                    | Go 后端  | 头像提取       | 是(需重编译) | 新增 `DebugExtractCreatorAvatar` binding，从 .ysm 的 `model/avatar/` 提取创作者头像；批量缓存到文件系统                                                                                                   |
+| 0614 | `app.go`                                           | Go 后端  | 外链/注册      | 是(需重编译) | 新增 `OpenInBrowser` binding 替换所有 `window.open`；Wails 注册 `DebugExtractCreatorAvatar`                                                                                                               |
+| 0614 | `workshop-site-view.js`                            | 前端     | 创作者频道     | 是(需清缓存) | 大幅重构（+966/-238 行）：创作者卡片系统（金银铜牌/旋转动画/平台徽章）、详情浮层（果冻弹入/本地模型关联）、分类标签系统（tag 筛选/type 多选）、社区索引（三路回退）、编辑模式（搜索词排序/拖拽/原子保存） |
+| 0614 | `workshop-core.js`                                 | 前端     | 数据层         | 是(需清缓存) | 从 workshop-site-view.js 拆分，独立数据层：编辑/排序/导入导出管理                                                                                                                                         |
+| 0614 | `workshop-events.js`                               | 前端     | 事件层         | 是(需清缓存) | -588 行，删除重复实现，统一事件入口                                                                                                                                                                       |
+| 0614 | `workshop-data.js`                                 | 前端     | 缓存层         | 否           | 缓存重构；修复 `repoModelCache` 的 `}` 缺失致 esbuild 崩溃                                                                                                                                                |
+| 0614 | `creators.json`                                    | 数据     | 创作者         | 是           | 全面改造：新增 `role`(个人势/社团/官方)、`tag`(game/vup/原创/官方) 字段；`desc` 规范化；120+ 条新增                                                                                                       |
+| 0614 | `workshop_sites.json`                              | 数据     | 站点           | 否           | 新增 NicoNico 立体/DeviantArt/VRoid Hub/模之屋/Bowlroll/BOOTH                                                                                                                                             |
+| 0614 | `.github/workflows/release.yml`                    | CI       | GitHub Actions | 是(删除)     | 持续失败发邮件，删除                                                                                                                                                                                      |
+| 0614 | `content-css.js`                                   | 前端 CSS | 主题           | 是(需清缓存) | 移出 `:host-context`；创作者频道 CSS 变量化+响应式；清理 `!important`/重复类/废弃动画                                                                                                                     |
+| 0611 | `go/sync/sync.go`                                  | Go 后端  | 同步状态       | 是(需重编译) | `repoByHash` 改为 `map[string][]types.ModelEntry`，修复哈希去重导致文件误标为已同步                                                                                                                       |
+| 0611 | `frontend/js/components/app-content/workshop-*.js` | 前端     | 创意工坊 CSS   | 是(需清缓存) | 所有 workshop CSS 类从 `components.css` 迁移到 `content-css.js` (Shadow DOM)                                                                                                                              |
+| 0611 | `frontend/js/components/app-content/tpl.js`        | 前端     | 页面模板       | 是(需清缓存) | 仓库页共享 220px 右侧预览面板；删除 githubHTML 重复函数后重建                                                                                                                                             |
+| 0611 | `frontend/js/components/app-nav.js`                | 前端     | 导航           | 否           | 宽度缩减 200→160px；移除诊断 ! 标记；仓库元老晋升主菜单                                                                                                                                                   |
+| 0610 | `creators.json`                                    | 数据     | 创作者         | 否           | workshop_creators.json 重命名为 creators.json，新增 workshop_gitHub.json                                                                                                                                  |
 
 | 日期 | 改动文件                                       | 架构层级 | 影响范围                | 破坏性?      | 描述                                                                               |
 | ---- | ---------------------------------------------- | -------- | ----------------------- | ------------ | ---------------------------------------------------------------------------------- |

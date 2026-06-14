@@ -1,15 +1,9 @@
 // ===== <app-sidebar> 入口 =====
 import { bus } from "../../bus.js";
 import { sidebarCSS } from "./sidebar-css.js";
-import {
-  headerHTML,
-  footerHTML,
-  listContainerHTML,
-  vcHeaderHTML,
-} from "./tpl.js";
+import { headerHTML, footerHTML, listContainerHTML } from "./tpl.js";
 import { renderVersionCards } from "./render.js";
 import { bindCardEvents, bindFooter } from "./events.js";
-import { bindInstanceActions } from "./actions.js";
 import { loadInstances } from "./loader.js";
 
 // 持久化勾选状态（跨重新渲染保持）
@@ -28,6 +22,8 @@ class AppSidebar extends HTMLElement {
     this._instances = [];
     this._unsubs = [];
     this._rtype = this.getAttribute("rtype") || "ysm";
+    this._cardCleanup = null; // bindCardEvents 清理函数
+    this._docClickHandler = null; // document click 清理
   }
 
   attributeChangedCallback(name, oldVal, newVal) {
@@ -122,10 +118,11 @@ class AppSidebar extends HTMLElement {
     btn.addEventListener("click", () => {
       menu.style.display = menu.style.display === "block" ? "none" : "block";
     });
-    // 点击其他地方关闭菜单
-    document.addEventListener("click", (e) => {
+    // 点击其他地方关闭菜单（存储引用以便清理）
+    this._docClickHandler = (e) => {
       if (!e.target.closest(".dd-wrap")) menu.style.display = "none";
-    });
+    };
+    document.addEventListener("click", this._docClickHandler);
     // 阻止按钮本身的点击冒泡到 document
     btn.addEventListener("click", (e) => e.stopPropagation());
 
@@ -163,7 +160,7 @@ class AppSidebar extends HTMLElement {
         for (const insName of selected) {
           for (const rt of types) {
             await new Promise((resolve) => {
-              bus.emit("sync:download-missing", {
+              bus.emit("sync:download:missing", {
                 instanceName: insName,
                 rtype: rt,
               });
@@ -195,7 +192,12 @@ class AppSidebar extends HTMLElement {
     const container = this._root.getElementById("vg");
     if (!container) return;
     renderVersionCards(container, this._instances);
-    bindCardEvents(this._root, this._instances);
+    // 先清理旧的事件监听，再绑定新的（防止重复累积）
+    if (this._cardCleanup) {
+      this._cardCleanup();
+      this._cardCleanup = null;
+    }
+    this._cardCleanup = bindCardEvents(this._root, this._instances);
     this._restoreCheckboxes();
   }
 
@@ -224,59 +226,17 @@ class AppSidebar extends HTMLElement {
     bindFooter(this._root, this._instances);
   }
 
-  /** 只更新卡片数字和底部统计，不重建列表 */
-  async _updateCardStats(rtype) {
-    const newData = await loadInstances(rtype).catch(() => []);
-    if (!newData.length) return;
-    // 就地更新每张卡片的头部 HTML（用 name 匹配，不依赖索引顺序）
-    const container = this._root.getElementById("vg");
-    if (!container) return;
-    const vcs = container.querySelectorAll(".vc");
-    newData.forEach((ins) => {
-      const vc = Array.from(vcs).find(
-        (v) =>
-          v.querySelector(".name")?.textContent?.replace(/^📦\s*/, "") ===
-          ins.name,
-      );
-      if (!vc) return;
-      const oldHdr = vc.querySelector(".vc-header");
-      if (!oldHdr) return;
-      const idx = parseInt(vc.dataset.idx, 10);
-      const newHdrHTML = vcHeaderHTML(
-        ins.name,
-        ins.synced,
-        ins.missing,
-        ins.extra,
-        ins.status,
-        false,
-        idx,
-        ins.hasMod,
-        ins.rtype || rtype,
-      );
-      oldHdr.outerHTML = newHdrHTML;
-    });
-    // 更新底部统计
-    bindFooter(this._root, newData);
-    // 重新绑定卡片内按钮（outerHTML 后事件丢失）
-    bindInstanceActions(this._root, newData);
-    // 重排卡片顺序匹配 newData 排序
-    const container2 = this._root.getElementById("vg");
-    if (container2) {
-      newData.forEach((ins) => {
-        const vc = Array.from(container2.children).find(
-          (v) =>
-            v.querySelector(".name")?.textContent?.replace(/^📦\s*/, "") ===
-            ins.name,
-        );
-        if (vc) container2.appendChild(vc); // move to end in correct order
-      });
-    }
-    // 更新实例数据引用（供右键菜单等使用）
-    this._instances = newData;
-  }
-
   disconnectedCallback() {
     this._unsubs.forEach((fn) => fn());
+    // 清理 DOM 事件监听
+    if (this._cardCleanup) {
+      this._cardCleanup();
+      this._cardCleanup = null;
+    }
+    if (this._docClickHandler) {
+      document.removeEventListener("click", this._docClickHandler);
+      this._docClickHandler = null;
+    }
   }
 
   _renderLayout() {

@@ -21,6 +21,15 @@ export async function loadOldestModel(container, esc) {
   let currentType = localStorage.getItem("repo_rtype") || "ysm";
   let unsub = null;
 
+  // 命名函数，用于安全地移除/添加 click 监听，避免重复绑定
+  function handleContainerClick(e) {
+    const card = e.target.closest("[data-path]");
+    if (card) {
+      const path = card.dataset.path;
+      if (path) bus.emit("model:select", { path });
+    }
+  }
+
   async function render() {
     container.innerHTML =
       '<div style="padding:12px;color:#6c7086;font-size:var(--fs-base)">⏳ 扫描中...</div>';
@@ -66,7 +75,11 @@ export async function loadOldestModel(container, esc) {
         score = Math.max(0, 100 - banPenalty - dupPenalty);
       }
       const healthColor =
-        score >= 80 ? "#a6e3a1" : score >= 50 ? "#f9a826" : "#f38ba8";
+        score >= 80
+          ? "var(--free)"
+          : score >= 50
+            ? "var(--tag-amber)"
+            : "var(--paid)";
       const healthLabel =
         score >= 80 ? "健康" : score >= 50 ? "亚健康" : "需要整理";
       const healthTagClass = score >= 80 ? "good" : score >= 50 ? "ok" : "bad";
@@ -84,11 +97,12 @@ export async function loadOldestModel(container, esc) {
               c === 0
                 ? "var(--bd)"
                 : pct > 0.66
-                  ? "#a6e3a1"
+                  ? "var(--free)"
                   : pct > 0.33
-                    ? "#f9a826"
-                    : "#f38ba8";
-            const monthLabel = new Date(2026, i, 1).toLocaleDateString(
+                    ? "var(--tag-amber)"
+                    : "var(--paid)";
+            const nowYear = new Date().getFullYear();
+            const monthLabel = new Date(nowYear, i, 1).toLocaleDateString(
               "zh-CN",
               { month: "short" },
             );
@@ -154,16 +168,16 @@ export async function loadOldestModel(container, esc) {
 
       // 今日推荐
       const renderPicks = () => {
+        // Fisher-Yates 洗牌后取前 3 个，避免重复且简洁可靠
+        const shuffled = [...entries];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        const total = Math.min(3, shuffled.length);
         const picks = [];
-        const used = new Set();
-        const total = Math.min(3, entries.length);
         for (let i = 0; i < total; i++) {
-          let idx;
-          do {
-            idx = Math.floor(Math.random() * entries.length);
-          } while (used.has(idx) && used.size < entries.length);
-          used.add(idx);
-          const p = entries[idx];
+          const p = shuffled[i];
           if (!p) continue;
           const sizeStr = fmtSize(p.Size);
           const dateStr = p.ModTime
@@ -252,13 +266,9 @@ export async function loadOldestModel(container, esc) {
         renderPicks() +
         "</div></div></div>";
 
-      container.addEventListener("click", (e) => {
-        const card = e.target.closest("[data-path]");
-        if (card) {
-          const path = card.dataset.path;
-          if (path) bus.emit("model:select", { path });
-        }
-      });
+      // 先移除旧监听再添加，避免重复绑定导致内存泄漏
+      container.removeEventListener("click", handleContainerClick);
+      container.addEventListener("click", handleContainerClick);
     } catch (err) {
       container.innerHTML =
         '<div style="padding:12px;color:#f38ba8;font-size:var(--fs-base)">❌ 加载失败: ' +
@@ -277,6 +287,12 @@ export async function loadOldestModel(container, esc) {
   });
 
   await render();
+
+  // 返回清理函数
+  return () => {
+    container.removeEventListener("click", handleContainerClick);
+    if (unsub) unsub();
+  };
 }
 
 // ====== 工具函数 ======

@@ -53,10 +53,11 @@ export function renderModelList(
   filtered.forEach((m) => {
     const exists = !isModelMissing(m, localMap);
     const row = document.createElement("div");
-    row.className = "model-row";
     row.dataset.id = String(allModels.indexOf(m));
     row.dataset.name = m.name;
-    row.className = "gh-row" + (exists ? " gh-row-exists" : " gh-row-missing");
+    row.classList.add("model-row", "gh-row");
+    if (exists) row.classList.add("gh-row-exists");
+    else row.classList.add("gh-row-missing");
 
     // 复选框（仅未下载的）
     if (!exists) {

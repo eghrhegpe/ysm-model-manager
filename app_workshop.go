@@ -15,6 +15,15 @@ import (
 	"ysm-model-manager/go/types"
 )
 
+// atomicWrite 原子写入：写 tmp → rename，防崩溃半写
+func atomicWrite(path string, data []byte) error {
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
 // ========== 创意工坊站点配置 ==========
 func workshopSitesPath() string {
 	exe, _ := os.Executable()
@@ -47,7 +56,7 @@ func (a *App) SaveWorkshopSites(sites []types.WorkshopSite) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(workshopSitesPath(), data, 0644)
+	return atomicWrite(workshopSitesPath(), data)
 }
 
 func defaultWorkshopSites() []types.WorkshopSite {
@@ -101,7 +110,35 @@ func (a *App) SaveWorkshopCreators(list []types.WorkshopCreator) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(creatorsPath(), data, 0644)
+	return atomicWrite(creatorsPath(), data)
+}
+
+// SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动
+func (a *App) SaveWorkshopCreatorsBySite(siteID string, siteCreators []types.WorkshopCreator) error {
+	all := a.LoadWorkshopCreators()
+	// 移除该站点的旧条目
+	var kept []types.WorkshopCreator
+	for _, c := range all {
+		if c.Type == siteID || strings.Contains(c.Type, siteID+";") || strings.HasSuffix(c.Type, ";"+siteID) {
+			continue
+		}
+		kept = append(kept, c)
+	}
+	// 追加新条目
+	kept = append(kept, siteCreators...)
+	return a.SaveWorkshopCreators(kept)
+}
+
+// SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动
+func (a *App) SaveWorkshopPresetsBySite(siteID string, presets []types.WorkshopPresetSearch) error {
+	sites := a.LoadWorkshopSites()
+	for i, s := range sites {
+		if s.ID == siteID {
+			sites[i].PresetSearches = presets
+			return a.SaveWorkshopSites(sites)
+		}
+	}
+	return nil
 }
 
 // ========== GitHub 仓库配置 ==========

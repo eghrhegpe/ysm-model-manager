@@ -78,28 +78,52 @@
     "searchUrl": "https://www.aplaybox.com/search?value={{q}}",
     "presetSearches": [
       {
-        "label": "热门 MMD 模型",
-        "q": "MMD"
-      },
-      {
-        "label": "VRChat 模型",
-        "q": "VRChat"
-      },
-      {
-        "label": "碧蓝航线",
-        "q": "碧蓝航线"
-      },
-      {
         "label": "明日方舟",
-        "q": "明日方舟"
+        "q": ""
       },
       {
-        "label": "原神",
-        "q": "原神"
+        "label": "赛马娘",
+        "q": ""
       },
       {
-        "label": "少女前线",
-        "q": "少女前线"
+        "label": "东方Project",
+        "q": ""
+      },
+      {
+        "label": "苍蓝誓约",
+        "q": ""
+      },
+      {
+        "label": "兽耳科技",
+        "q": ""
+      },
+      {
+        "label": "崩坏3",
+        "q": ""
+      },
+      {
+        "label": "Nekopara",
+        "q": ""
+      },
+      {
+        "label": "公主连结",
+        "q": ""
+      },
+      {
+        "label": "炼金工房",
+        "q": ""
+      },
+      {
+        "label": "机动战队",
+        "q": ""
+      },
+      {
+        "label": "幻书启世录",
+        "q": ""
+      },
+      {
+        "label": "记忆法则",
+        "q": ""
       }
     ]
   },
@@ -147,7 +171,8 @@
         "label": "VRChat 角色",
         "q": "VRChat"
       }
-    ]  },
+    ]
+  },
   {
     "id": "nicovideo",
     "icon": "🧊",
@@ -216,5 +241,6 @@
         "label": "原创角色",
         "q": "original character"
       }
-    ]  }
+    ]
+  }
 ]

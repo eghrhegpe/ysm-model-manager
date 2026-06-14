@@ -418,6 +418,14 @@ export function SaveWorkshopCreators(arg1) {
   return window['go']['main']['App']['SaveWorkshopCreators'](arg1);
 }
 
+export function SaveWorkshopCreatorsBySite(arg1, arg2) {
+  return window['go']['main']['App']['SaveWorkshopCreatorsBySite'](arg1, arg2);
+}
+
+export function SaveWorkshopPresetsBySite(arg1, arg2) {
+  return window['go']['main']['App']['SaveWorkshopPresetsBySite'](arg1, arg2);
+}
+
 export function SaveWorkshopSites(arg1) {
   return window['go']['main']['App']['SaveWorkshopSites'](arg1);
 }

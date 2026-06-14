@@ -1,0 +1,16 @@
+feat: 原子写入+按站点保存双保险
+
+### Go 端
+- 新增 atomicWrite() 函数：写 .tmp → rename，防写入半截崩溃
+- SaveWorkshopSites / SaveWorkshopCreators 改用原子写入
+- 新增 SaveWorkshopCreatorsBySite(siteID, creators)：只替换指定
+  站点的创作者，其他站点数据不动
+- 新增 SaveWorkshopPresetsBySite(siteID, presets)：只替换指定
+  站点的搜索词，其他站点数据不动
+- WorkshopCreator 新增 Role 字段
+
+### 前端
+- 保存时改为按站点调用 SaveWorkshopCreatorsBySite
+- 只传当前站点的创作者列表，不传全量 allCreators
+- 导出时校验 <100 条拒绝（防止 85 条惨案重演）
+- 导入合并后同样校验 <100 条则回滚

@@ -345,22 +345,24 @@ export function renderSiteView(site, ctx) {
       );
       site.presetSearches.forEach((ps, idx) => {
         parts.push(
-          '<div class="cr-row" data-edit="preset">' +
-            "<span>🔍</span>" +
+          '<div class="cr-edit-card cr-edit-preset" data-edit="preset">' +
+            '<div class="cr-edit-card-head">' +
+            '<span style="font-size:12px;margin-right:4px">🔍</span>' +
             '<input data-idx="' +
             idx +
             '" data-fld="label" value="' +
             esc(ps.label) +
-            '" class="cr-input cr-input-name">' +
+            '" class="cr-input cr-input-name" style="flex:1;min-width:60px;border:none;background:transparent;color:var(--txt);font-size:var(--fs-sm);font-family:inherit;outline:none" placeholder="搜索词">' +
             '<button data-idx="' +
             idx +
-            '" class="cr-order-up" title="上移">↑</button>' +
+            '" class="cr-order-up" title="上移" style="font-size:12px;padding:0 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit">↑</button>' +
             '<button data-idx="' +
             idx +
-            '" class="cr-order-down" title="下移">↓</button>' +
+            '" class="cr-order-down" title="下移" style="font-size:12px;padding:0 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit">↓</button>' +
             '<button data-idx="' +
             idx +
-            '" class="cr-del-preset">🗑️</button>' +
+            '" class="cr-del-preset" title="删除" style="font-size:12px;padding:0 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit">🗑️</button>' +
+            "</div>" +
             "</div>",
         );
       });

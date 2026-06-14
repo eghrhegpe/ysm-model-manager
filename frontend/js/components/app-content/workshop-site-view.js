@@ -346,12 +346,24 @@ export function renderSiteView(site, ctx) {
       site.presetSearches.forEach((ps, idx) => {
         parts.push(
           '<div class="cr-row">' +
+            '<span class="cr-up-btn" data-idx="' +
+            idx +
+            '" style="cursor:pointer;opacity:.5' +
+            (idx === 0 ? "5;visibility:hidden" : ";visibility:visible") +
+            '" title="上移">↑</span>' +
+            '<span class="cr-down-btn" data-idx="' +
+            idx +
+            '" style="cursor:pointer;opacity:.5' +
+            (idx === site.presetSearches.length - 1
+              ? "5;visibility:hidden"
+              : ";visibility:visible") +
+            '" title="下移">↓</span>' +
             "<span>🔍</span>" +
             '<input data-idx="' +
             idx +
             '" data-fld="label" value="' +
             esc(ps.label) +
-            '" class="cr-input cr-input-name">' +
+            '" class="cr-input cr-input-name" style="flex:1">' +
             '<button data-idx="' +
             idx +
             '" class="cr-del-preset">🗑️</button>' +
@@ -981,6 +993,32 @@ export function renderSiteView(site, ctx) {
       const idx = parseInt(btn.dataset.idx, 10);
       if (site.presetSearches && site.presetSearches[idx]) {
         site.presetSearches.splice(idx, 1);
+        refreshView();
+      }
+    });
+  });
+  // 搜索词上移
+  searchResults.querySelectorAll(".cr-up-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      if (site.presetSearches && idx > 0) {
+        [site.presetSearches[idx - 1], site.presetSearches[idx]] = [
+          site.presetSearches[idx],
+          site.presetSearches[idx - 1],
+        ];
+        refreshView();
+      }
+    });
+  });
+  // 搜索词下移
+  searchResults.querySelectorAll(".cr-down-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      if (site.presetSearches && idx < site.presetSearches.length - 1) {
+        [site.presetSearches[idx], site.presetSearches[idx + 1]] = [
+          site.presetSearches[idx + 1],
+          site.presetSearches[idx],
+        ];
         refreshView();
       }
     });

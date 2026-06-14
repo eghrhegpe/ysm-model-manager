@@ -15,14 +15,12 @@ register("loadEntries", loadEntries);
 import "./components/app-nav.js";
 import "./components/context-menu.js";
 import "./components/app-toast.js";
-// Web Components 动态导入，单组件失败不影响整体
-const _loadWC = (p) =>
-  import(p).catch((e) => console.warn("[module] 组件加载失败:", p, e));
-_loadWC("./components/app-tree/index.js");
-_loadWC("./components/app-sidebar/index.js");
-_loadWC("./components/app-content/index.js");
-_loadWC("./components/app-resource-manager/index.js");
-_loadWC("./components/app-sync-manager/index.js");
+// Web Components 动态导入（使用字面量确保 Vite 能在构建时解析路径）
+import("./components/app-tree/index.js").catch((e) => console.warn("[module] 组件加载失败: app-tree", e));
+import("./components/app-sidebar/index.js").catch((e) => console.warn("[module] 组件加载失败: app-sidebar", e));
+import("./components/app-content/index.js").catch((e) => console.warn("[module] 组件加载失败: app-content", e));
+import("./components/app-resource-manager/index.js").catch((e) => console.warn("[module] 组件加载失败: app-resource-manager", e));
+import("./components/app-sync-manager/index.js").catch((e) => console.warn("[module] 组件加载失败: app-sync-manager", e));
 
 // 右键菜单映射
 import { registerContextMenus } from "./core/context-menus.js";

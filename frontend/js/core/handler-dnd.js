@@ -46,6 +46,8 @@ const isEditable = (el) =>
   (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
 
 const onDragOver = (e) => {
+  // 只在仓库页面显示拖拽遮罩
+  if (window.__currentPage !== "repository") return;
   if (!e.dataTransfer?.items?.length) return;
   if (isEditable(e.target)) return;
   e.preventDefault();
@@ -56,6 +58,7 @@ const onDragOver = (e) => {
   showDropOverlay(hasModel);
 };
 const onDragLeave = (e) => {
+  if (window.__currentPage !== "repository") return;
   if (dropLeaveTimer) clearTimeout(dropLeaveTimer);
   if (!e.relatedTarget) {
     hideDropOverlay();
@@ -70,6 +73,9 @@ const onDrop = async (e) => {
   e.preventDefault();
   if (isEditable(e.target)) return;
   if (window.__YSMPendingLock) return;
+
+  // 非仓库页面不处理 DnD
+  if (window.__currentPage !== "repository") return;
 
   console.log("[DnD] drop fired", {
     filesLen: e.dataTransfer?.files?.length || 0,

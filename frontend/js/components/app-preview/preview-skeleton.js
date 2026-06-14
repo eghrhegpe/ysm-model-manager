@@ -268,9 +268,9 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         topBar.style.cssText =
           "display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,0.3);flex-shrink:0;pointer-events:auto;position:relative;z-index:10";
         const closeBtn = document.createElement("button");
-        closeBtn.className = "ysm-btn";
         closeBtn.id = "ysm-close-3d";
         closeBtn.textContent = "✕ 关闭 3D";
+        closeBtn.style.cssText = "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
         closeBtn.onclick = () => {
           const ov = document.getElementById("ysm-overlay-3d");
           if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
@@ -288,8 +288,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         let _texIdx = 0;
         if (model.textures?.length > 1) {
           const texSel = document.createElement("select");
-          texSel.className = "ysm-btn";
-          texSel.style.cssText = "font-size:11px";
+          texSel.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
           model.textures.forEach((_, i) => {
             const opt = document.createElement("option");
             opt.value = i;

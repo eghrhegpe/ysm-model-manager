@@ -45,9 +45,9 @@ export function create3DPreview(model) {
       topBar.style.cssText =
         "display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,0.3);flex-shrink:0;pointer-events:auto;position:relative;z-index:10";
       const closeBtn = document.createElement("button");
-      closeBtn.className = "ysm-btn";
       closeBtn.id = "ysm-close-3d";
       closeBtn.textContent = "✕ 关闭 3D";
+      closeBtn.style.cssText = "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
       closeBtn.onclick = _cleanupOverlay;
       topBar.appendChild(closeBtn);
 
@@ -55,8 +55,7 @@ export function create3DPreview(model) {
       let _texIdx = 0;
       if (model.textures?.length > 1) {
         const texSel = document.createElement("select");
-        texSel.className = "ysm-btn";
-        texSel.style.cssText = "font-size:11px";
+        texSel.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
         model.textures.forEach((_, i) => {
           const opt = document.createElement("option");
           opt.value = i;
@@ -173,7 +172,7 @@ export function create3DPreview(model) {
 
         const tip = document.createElement("div");
         tip.style.cssText = "padding:6px 12px;background:rgba(124,131,255,0.2);color:#fff;font-size:12px;text-align:center;flex-shrink:0;font-weight:500";
-        tip.textContent = "🎮 WASD 移动 | 🖱 拖拽旋转 | 🔍 滚轮缩放 | ESC 关闭";
+        tip.textContent = "🎮 WASD 移动 | 空格/Shift 上下 | 🖱 拖拽旋转 | 🔍 滚轮缩放 | ESC 关闭";
         overlay.insertBefore(tip, overlay.children[1]);
         setTimeout(() => { if (tip.parentNode) tip.remove(); }, 6000);
 

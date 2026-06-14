@@ -346,12 +346,12 @@ export function renderSiteView(site, ctx) {
       (site.presetSearches || []).forEach((ps, idx) => {
         parts.push(
           '<div class="cr-edit-card" draggable="true" data-edit="preset" data-edit-idx="' +
-          idx +
-          '">' +
-          '<div class="cr-edit-card-head">' +
-          '<span class="cr-drag-handle">⠿</span>' +
-          '<span style="font-size:12px">🔍</span>' +
-          '<input data-idx="' +
+            idx +
+            '">' +
+            '<div class="cr-edit-card-head">' +
+            '<span class="cr-drag-handle">⠿</span>' +
+            '<span style="font-size:12px">🔍</span>' +
+            '<input data-idx="' +
             idx +
             '" data-fld="label" value="' +
             esc(ps.label) +
@@ -857,7 +857,11 @@ export function renderSiteView(site, ctx) {
       try {
         // 校验数据完整性
         if (!site || !site.id) {
-          bus.emit("toast:show", { msg: "❌ 站点信息丢失", duration: 3000, type: "error" });
+          bus.emit("toast:show", {
+            msg: "❌ 站点信息丢失",
+            duration: 3000,
+            type: "error",
+          });
           return;
         }
 
@@ -867,7 +871,9 @@ export function renderSiteView(site, ctx) {
             await import("../../../wailsjs/go/main/App.js");
           const newPresets = [];
           searchResults
-            .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
+            .querySelectorAll(
+              ".cr-edit-card[data-edit='preset'] input[data-fld='label']",
+            )
             .forEach((inp) => {
               const val = inp.value.trim();
               if (val) newPresets.push({ label: val });
@@ -947,7 +953,8 @@ export function renderSiteView(site, ctx) {
         });
         if (allCreators.length < 100) {
           bus.emit("toast:show", {
-            msg: "❌ 合并后数据异常（" + allCreators.length + " 条），已取消保存",
+            msg:
+              "❌ 合并后数据异常（" + allCreators.length + " 条），已取消保存",
             duration: 4000,
             type: "error",
           });
@@ -1009,9 +1016,10 @@ export function renderSiteView(site, ctx) {
       }
     });
   });
+
   // 创作者拖拽排序
   let dragSrcIdx = -1;
-  searchResults.querySelectorAll(".cr-edit-card").forEach((card) => {
+  searchResults.querySelectorAll(".cr-edit-card:not([data-edit='preset'])").forEach((card) => {
     card.addEventListener("dragstart", (e) => {
       dragSrcIdx = parseInt(card.dataset.editIdx, 10);
       card.style.opacity = "0.4";
@@ -1019,7 +1027,9 @@ export function renderSiteView(site, ctx) {
     });
     card.addEventListener("dragend", () => {
       card.style.opacity = "";
-      searchResults.querySelectorAll(".cr-edit-card").forEach((c) => c.style.borderColor = "");
+      searchResults
+        .querySelectorAll(".cr-edit-card")
+        .forEach((c) => (c.style.borderColor = ""));
     });
     card.addEventListener("dragover", (e) => {
       e.preventDefault();
@@ -1037,40 +1047,83 @@ export function renderSiteView(site, ctx) {
       card.style.borderColor = "";
       const targetIdx = parseInt(card.dataset.editIdx, 10);
       if (dragSrcIdx < 0 || dragSrcIdx === targetIdx) return;
-      // 同步输入框值到数组再排序
       syncAllEditInputs();
-      // 在 creators 数组中交换
       const [removed] = creators.splice(dragSrcIdx, 1);
       creators.splice(targetIdx, 0, removed);
-      // 同步到 allCreators
       allCreators.length = 0;
       allCreators.push(...creators);
       dragSrcIdx = -1;
       refreshView();
     });
   });
+
+  // 搜索词拖拽排序
+  let dragPresetSrcIdx = -1;
+  searchResults.querySelectorAll(".cr-edit-card[data-edit='preset']").forEach((card) => {
+    card.addEventListener("dragstart", (e) => {
+      dragPresetSrcIdx = parseInt(card.dataset.editIdx, 10);
+      card.style.opacity = "0.4";
+      e.dataTransfer.effectAllowed = "move";
+    });
+    card.addEventListener("dragend", () => {
+      card.style.opacity = "";
+      searchResults
+        .querySelectorAll(".cr-edit-card")
+        .forEach((c) => (c.style.borderColor = ""));
+    });
+    card.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    });
+    card.addEventListener("dragenter", (e) => {
+      e.preventDefault();
+      card.style.borderColor = "var(--accent)";
+    });
+    card.addEventListener("dragleave", () => {
+      card.style.borderColor = "";
+    });
+    card.addEventListener("drop", (e) => {
+      e.preventDefault();
+      card.style.borderColor = "";
+      const targetIdx = parseInt(card.dataset.editIdx, 10);
+      if (dragPresetSrcIdx < 0 || dragPresetSrcIdx === targetIdx || !site.presetSearches) return;
+      syncAllEditInputs();
+      const [removed] = site.presetSearches.splice(dragPresetSrcIdx, 1);
+      site.presetSearches.splice(targetIdx, 0, removed);
+      dragPresetSrcIdx = -1;
+      refreshView();
+    });
+  });
   function syncAllEditInputs() {
     // 同步创作者输入框
-    searchResults.querySelectorAll(".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]").forEach((inp) => {
-      const idx = parseInt(inp.dataset.idx, 10);
-      if (creators[idx]) {
-        if (inp.tagName === "SELECT") {
-          creators[idx][inp.dataset.fld] = Array.from(inp.selectedOptions)
-            .map((o) => o.value)
-            .filter(Boolean)
-            .join(";");
-        } else {
-          creators[idx][inp.dataset.fld] = inp.value.trim();
+    searchResults
+      .querySelectorAll(
+        ".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]",
+      )
+      .forEach((inp) => {
+        const idx = parseInt(inp.dataset.idx, 10);
+        if (creators[idx]) {
+          if (inp.tagName === "SELECT") {
+            creators[idx][inp.dataset.fld] = Array.from(inp.selectedOptions)
+              .map((o) => o.value)
+              .filter(Boolean)
+              .join(";");
+          } else {
+            creators[idx][inp.dataset.fld] = inp.value.trim();
+          }
         }
-      }
-    });
+      });
     // 同步搜索词输入框
-    searchResults.querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']").forEach((inp) => {
-      const idx = parseInt(inp.dataset.idx, 10);
-      if (site.presetSearches && site.presetSearches[idx]) {
-        site.presetSearches[idx].label = inp.value.trim();
-      }
-    });
+    searchResults
+      .querySelectorAll(
+        ".cr-edit-card[data-edit='preset'] input[data-fld='label']",
+      )
+      .forEach((inp) => {
+        const idx = parseInt(inp.dataset.idx, 10);
+        if (site.presetSearches && site.presetSearches[idx]) {
+          site.presetSearches[idx].label = inp.value.trim();
+        }
+      });
   }
   // 删除搜索词
   searchResults.querySelectorAll(".cr-del-preset").forEach((btn) => {
@@ -1089,8 +1142,10 @@ export function renderSiteView(site, ctx) {
       syncAllEditInputs();
       const idx = parseInt(btn.dataset.idx, 10);
       if (site.presetSearches && idx > 0) {
-        [site.presetSearches[idx - 1], site.presetSearches[idx]] =
-          [site.presetSearches[idx], site.presetSearches[idx - 1]];
+        [site.presetSearches[idx - 1], site.presetSearches[idx]] = [
+          site.presetSearches[idx],
+          site.presetSearches[idx - 1],
+        ];
         refreshView();
       }
     });
@@ -1100,8 +1155,10 @@ export function renderSiteView(site, ctx) {
       syncAllEditInputs();
       const idx = parseInt(btn.dataset.idx, 10);
       if (site.presetSearches && idx < site.presetSearches.length - 1) {
-        [site.presetSearches[idx], site.presetSearches[idx + 1]] =
-          [site.presetSearches[idx + 1], site.presetSearches[idx]];
+        [site.presetSearches[idx], site.presetSearches[idx + 1]] = [
+          site.presetSearches[idx + 1],
+          site.presetSearches[idx],
+        ];
         refreshView();
       }
     });

@@ -8,8 +8,7 @@
 export function parseModelName(raw) {
   const name = raw.endsWith(".ban") ? raw.slice(0, -4) : raw;
   const extMatch = name.match(/\.(\w+)$/);
-  const aMatch =
-    name.match(/^\[\[([^\]]+?)\]\]/) || name.match(/^\[([^\]]+?)\]/);
+  const aMatch = name.match(/\[\[([^\]]+?)\]\]/) || name.match(/\[([^\]]+?)\]/);
   const wMatch = name.match(/【([^】]+?)】/) || name.match(/《([^》]+?)》/);
   const dMatch = name.match(/(\d{4})[-_.]?(\d{1,2})?/);
 
@@ -55,30 +54,81 @@ export function renderDisplayName(raw, opts) {
   const p = parseModelName(raw);
   if (p.isBanned) return esc(p.raw);
 
-  // 兼容旧调用: renderDisplayName(raw, "{author}{work}...")
-  const tpl =
-    (typeof opts === "string" ? opts : opts?.tpl) || "{author}{work}{chara}";
-  let html = tpl
-    .replace(
-      "{author}",
-      p.author ? `<span class="tag-author">[${esc(p.author)}]</span>` : "",
-    )
-    .replace(
-      "{work}",
-      p.work
-        ? `<span class="tag-work">${raw.includes("《") ? "《" : "【"}${esc(p.work)}${raw.includes("《") ? "》" : "】"}</span>`
-        : "",
-    )
-    .replace("{chara}", esc(p.chara))
-    .replace("{character}", esc(p.character))
-    .replace(
-      "{date}",
-      p.date ? `<span class="tag-date"> ${esc(p.date)}</span>` : "",
-    );
+  // 在原文件名上着色，保留原有顺序，不重新排列
+  let name = raw.replace(/\.\w+$/, "");
 
-  html = html.replace(/\s{2,}/g, " ").trim();
-  if (!html) html = esc(raw.replace(/\.\w+$/, ""));
+  // 先找到所有匹配位置，按文件中的原始顺序排序
+  const matches = [];
+
+  // 匹配 [xxx]
+  var re1 = /\[([^\]]+?)\]/g;
+  var m1;
+  while ((m1 = re1.exec(name)) !== null) {
+    matches.push({
+      idx: m1.index,
+      html: '<span class="tag-work">' + esc(m1[0]) + "</span>",
+      len: m1[0].length,
+    });
+  }
+
+  // 匹配 【xxx】
+  var re2 = /【([^】]+?)】/g;
+  var m2;
+  while ((m2 = re2.exec(name)) !== null) {
+    matches.push({
+      idx: m2.index,
+      html: '<span class="tag-work">' + esc(m2[0]) + "</span>",
+      len: m2[0].length,
+    });
+  }
+
+  // 匹配 《xxx》
+  var re3 = /《([^》]+?)》/g;
+  var m3;
+  while ((m3 = re3.exec(name)) !== null) {
+    matches.push({
+      idx: m3.index,
+      html: '<span class="tag-work">' + esc(m3[0]) + "</span>",
+      len: m3[0].length,
+    });
+  }
+
+  // 匹配日期
+  if (p.date) {
+    var re4 = new RegExp(escRegex(p.date), "g");
+    var m4;
+    while ((m4 = re4.exec(name)) !== null) {
+      matches.push({
+        idx: m4.index,
+        html: '<span class="tag-date">' + esc(m4[0]) + "</span>",
+        len: m4[0].length,
+      });
+    }
+  }
+
+  // 按文件中出现的顺序排序
+  matches.sort(function (a, b) {
+    return a.idx - b.idx;
+  });
+
+  // 从后往前替换，避免 idx 偏移
+  var html = name;
+  for (var i = matches.length - 1; i >= 0; i--) {
+    var m = matches[i];
+    html = html.slice(0, m.idx) + "%%TOKEN%%" + html.slice(m.idx + m.len);
+  }
+
+  // 替换 %%TOKEN%% 为 HTML
+  for (var i = 0; i < matches.length; i++) {
+    html = html.replace("%%TOKEN%%", matches[i].html);
+  }
+
   return html;
+}
+
+/** 转义正则特殊字符 */
+function escRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /** renderModelName = renderDisplayName 别名，options.showExt 支持 */

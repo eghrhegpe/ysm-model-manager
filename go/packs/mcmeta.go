@@ -2,6 +2,7 @@ package packs
 
 import (
 	"archive/zip"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -46,16 +47,23 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 				if err != nil {
 					continue
 				}
-				data, _ = io.ReadAll(rc)
+				readData, readErr := io.ReadAll(rc)
 				rc.Close()
+				if readErr == nil {
+					data = readData
+				}
 			}
 			if low == "pack.png" {
 				rc, err := f.Open()
 				if err != nil {
 					continue
 				}
-				packPng, _ = io.ReadAll(rc)
+				// 限制 pack.png 大小（最大 10MB）
+				readData, readErr := io.ReadAll(io.LimitReader(rc, 10<<20))
 				rc.Close()
+				if readErr == nil {
+					packPng = readData
+				}
 			}
 		}
 	}
@@ -72,7 +80,7 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 	// base64 缩略图
 	var thumb string
 	if len(packPng) > 0 {
-		thumb = "data:image/png;base64," + base64Encode(packPng)
+		thumb = "data:image/png;base64," + base64.StdEncoding.EncodeToString(packPng)
 	}
 
 	return &meta, thumb, nil
@@ -115,7 +123,9 @@ func hasExt(ext string, exts []string) bool {
 	return false
 }
 
-// isYsmFile 检查 zip/7z 内是否有 ysm.json 或 models/ 目录
+// isYsmFile 检查文件是否为 YSM 模型
+// .ysm → 直接返回 true；.zip → 检查内部是否有 ysm.json 或 models/
+// .7z → zip.OpenReader 会失败，跳过内容检测直接返回 true（靠扩展名兜底）
 func isYsmFile(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))
 	if ext == ".ysm" {
@@ -123,6 +133,10 @@ func isYsmFile(path string) bool {
 	}
 	if ext != ".zip" && ext != ".7z" {
 		return false
+	}
+	// .7z 不是 ZIP 格式，无法用 zip.OpenReader 打开，但注册表已声明为 YSM 扩展名，直接放行
+	if ext == ".7z" {
+		return true
 	}
 	r, err := zip.OpenReader(path)
 	if err != nil {
@@ -177,34 +191,7 @@ func hasShaders(path string) bool {
 	return false
 }
 
-func base64Encode(data []byte) string {
-	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-	var result []byte
-	for i := 0; i < len(data); i += 3 {
-		var b [3]byte
-		var n int
-		for j := 0; j < 3; j++ {
-			if i+j < len(data) {
-				b[j] = data[i+j]
-				n++
-			}
-		}
-		val := int(b[0])<<16 | int(b[1])<<8 | int(b[2])
-		result = append(result, chars[(val>>18)&0x3F])
-		result = append(result, chars[(val>>12)&0x3F])
-		if n > 1 {
-			result = append(result, chars[(val>>6)&0x3F])
-		} else {
-			result = append(result, '=')
-		}
-		if n > 2 {
-			result = append(result, chars[val&0x3F])
-		} else {
-			result = append(result, '=')
-		}
-	}
-	return string(result)
-}
+
 
 // ReadShaderpackLang 从光影包 ZIP 中读取 lang/en_US.lang，尝试提取显示名
 // 返回 {name, entries}，name 为空时前端用文件名兜底

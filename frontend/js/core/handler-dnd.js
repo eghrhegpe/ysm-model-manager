@@ -2,7 +2,7 @@
 import { bus } from "../bus.js";
 import { ALL_EXTS } from "../utils/extensions.js";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
 const MAX_FILE_COUNT = 50;
 let dropOverlay = null;
 let dropLeaveTimer = null;
@@ -95,11 +95,12 @@ const onDrop = async (e) => {
       const entry = item.webkitGetAsEntry?.() || (isEntryArray ? item : null);
       if (entry?.isDirectory) {
         const reader = entry.createReader();
-        const readAll = async () => {
+        const readAll = async (depth = 0) => {
+          if (depth > 10) return []; // 防止深层递归导致卡顿
           const batch = await new Promise((r) => reader.readEntries(r));
           if (!batch.length) return [];
           const deeper = await collectFiles(batch, true);
-          const next = await readAll();
+          const next = await readAll(depth + 1);
           return [...deeper, ...next];
         };
         result.push(...(await readAll()));
@@ -109,8 +110,9 @@ const onDrop = async (e) => {
             result.push(await getFileFromEntry(entry));
           } catch (_) {}
         }
-      } else {
-        const f = item.getAsFile?.();
+      } else if (item.getAsFile) {
+        // fallback: 浏览器不支持 webkitGetAsEntry 时用 getAsFile
+        const f = item.getAsFile();
         if (f && /\.(ysm|zip|7z)$/i.test(f.name)) result.push(f);
       }
     }
@@ -189,8 +191,9 @@ export function registerDnD(unsubs) {
     }
   });
 
-  // 页面跟踪
-  bus.on("nav:changed", ({ page }) => {
+  // 页面跟踪（加入 unsubs 以便清理）
+  const navUnsub = bus.on("nav:changed", ({ page }) => {
     window.__currentPage = page;
   });
+  unsubs.push(navUnsub);
 }

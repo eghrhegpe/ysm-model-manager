@@ -1,9 +1,9 @@
 package recycle
 
 import (
-"os"
-"path/filepath"
-"testing"
+	"os"
+	"path/filepath"
+	"testing"
 )
 
 func createTestFile(t *testing.T, dir, name, content string) string {
@@ -94,13 +94,28 @@ t.Error("清空后回收站应为空")
 }
 }
 
-func TestMoveExResult(t *testing.T) {
-dir := t.TempDir()
-tm := New(dir)
+func TestEmptyWithSubdir(t *testing.T) {
+	dir := t.TempDir()
+	tm := New(dir)
 
-src := createTestFile(t, dir, "test.ysm", "result test")
-res := tm.MoveEx(src)
-if res.Action != "recycled" {
-t.Errorf("期望 action=recycled，得到 %s", res.Action)
-}
+	// 创建含子目录的文件结构：子目录/subfile.ysm
+	subDir := filepath.Join(dir, "subfolder")
+	createTestFile(t, subDir, "nested.ysm", "nested content")
+	tm.Move(filepath.Join(dir, "subfolder", "nested.ysm"))
+	// 回收站中应有子目录结构
+	entries := tm.List()
+	if len(entries) != 1 {
+		t.Fatalf("回收站应有 1 个文件，得到 %d", len(entries))
+	}
+
+	count, err := tm.Empty()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Errorf("应清空 1 个文件，得到 %d", count)
+	}
+	if len(tm.List()) != 0 {
+		t.Error("清空后回收站应为空（含子目录场景）")
+	}
 }

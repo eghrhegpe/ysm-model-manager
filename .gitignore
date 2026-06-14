@@ -9,3 +9,15 @@ node_modules/
 .DS_Store
 *.log
 _wails_test/
+
+scripts/
+
+project_tree.txt
+project_tree_lite.txt
+
+commit_msg.txt
+
+_binding_add.txt
+_fix_decode.js
+
+tool-test.md

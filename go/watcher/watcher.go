@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -16,7 +15,10 @@ import (
 // ScanFunc matches mdsync.ScanFunc
 type ScanFunc = mdsync.ScanFunc
 
-// Watcher 监听仓库目录的 .ban 操作，自动同步到所有整合包
+// debounceDelay 防抖延迟 — 仓库文件变更后等待多久再触发同步（合并批量操作）
+const debounceDelay = 800 * time.Millisecond
+
+// Watcher 监听仓库目录的文件变更，自动同步 .ban 状态到所有整合包
 type Watcher struct {
 	w       *fsnotify.Watcher
 	repoRoot string
@@ -56,17 +58,23 @@ func (w *Watcher) Start() error {
 	// 递归添加子目录
 	filepath.WalkDir(w.repoRoot, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
+			log.Printf("[watcher] WalkDir 跳过 %s: %v", path, err)
 			return nil
 		}
 		if d.IsDir() {
 			// 跳过 .recycle 目录
-			if strings.EqualFold(d.Name(), ".recycle") {
+			if d.Name() == ".recycle" {
 				return filepath.SkipDir
 			}
-			fw.Add(path)
+			if err := fw.Add(path); err != nil {
+				log.Printf("[watcher] 添加监听失败 %s: %v", path, err)
+			}
 		}
 		return nil
 	})
+
+	// 提示：Linux 下 inotify 默认限制 8192 个监听文件。
+	// 若仓库目录结构过深导致 fw.Add 失败，可考虑实现定期全量扫描作为回退。
 
 	go w.loop()
 	log.Printf("[watcher] 已启动: %s", w.repoRoot)
@@ -101,43 +109,14 @@ func (w *Watcher) IsRunning() bool {
 func (w *Watcher) loop() {
 	for {
 		select {
-		case event, ok := <-w.w.Events:
+		case _, ok := <-w.w.Events:
 			if !ok {
 				return
 			}
-			// 只关注 Rename 和 Create（Windows 上重命名会产生 Rename+Create）
-			if event.Op&fsnotify.Rename == 0 && event.Op&fsnotify.Create == 0 {
-				continue
-			}
-			// 检查是否与 .ban 相关
-			name := strings.ToLower(event.Name)
-			if !strings.HasSuffix(name, ".ban") && event.Op&fsnotify.Create != 0 {
-				// Create 事件且不是 .ban → 可能是从 .ban 改回来的
-				// 检查原路径（去掉新后缀看看是否是 .ban 改名回来的）
-				ext := filepath.Ext(name)
-				if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
-					continue
-				}
-			}
-			if event.Op&fsnotify.Rename != 0 && !strings.HasSuffix(name, ".ban") {
-				// Rename 非 .ban 文件 → 可能是从 .ban 改回原名
-				ext := filepath.Ext(name)
-				if ext != ".ysm" && ext != ".zip" && ext != ".7z" {
-					continue
-				}
-			}
-			// 文件名本身含 .ban 后缀 → 直接触发同步
-			if !strings.Contains(name, ".ban") {
-				continue
-			}
-
-			// 去抖：500ms 内批量事件只触发一次
-			w.mu.Lock()
-			if w.debounce != nil {
-				w.debounce.Stop()
-			}
-			w.debounce = time.AfterFunc(800*time.Millisecond, w.syncAll)
-			w.mu.Unlock()
+			// 任何文件系统变化（Create/Rename/Remove/Write）都触发防抖同步
+			// 这同时覆盖了：禁用（创建 .ban）、启用（删除/重命名 .ban）、新增模型等所有场景
+			// 不需要复杂的事件类型/文件名校验，syncAll 内部会扫描实际状态差异
+			w.debounceSync()
 
 		case err, ok := <-w.w.Errors:
 			if !ok {
@@ -149,6 +128,16 @@ func (w *Watcher) loop() {
 			return
 		}
 	}
+}
+
+// debounceSync 防抖触发同步
+func (w *Watcher) debounceSync() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.debounce != nil {
+		w.debounce.Stop()
+	}
+	w.debounce = time.AfterFunc(debounceDelay, w.syncAll)
 }
 
 // syncAll 同步所有整合包的启用/禁用状态

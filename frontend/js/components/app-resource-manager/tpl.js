@@ -121,7 +121,7 @@ export function detailHTML(name, meta, enabled, path, label, actions) {
     "</div>";
   if (actions.includes("delete")) {
     html +=
-      '<button class="rm-del-btn" style="align-self:flex-start;margin-top:8px;font-size:var(--fs-xs);padding:4px 10px;cursor:pointer;border:1px solid var(--err);border-radius:4px;background:transparent;color:var(--err)">🗑️ 删除此' +
+      '<button class="rm-del-btn" style="align-self:flex-start;margin-top:8px;font-size:var(--fs-xs);padding:4px 10px;cursor:pointer;border:1px solid var(--paid);border-radius:4px;background:transparent;color:var(--paid)">🗑️ 删除此' +
       esc(label) +
       "</button>";
   }

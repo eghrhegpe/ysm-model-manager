@@ -34,11 +34,25 @@ export async function loadInstances(rtype) {
       statusMap[s.Name] = s;
     });
 
+    const isMmd = rtypeActual === "mmd-skin";
+
     const instances = rawInstances.map((ins) => {
       const st = statusMap[ins.Name] || {};
       const missingList = st.Missing || [];
       const extraList = st.Extra || [];
       const syncedTotal = st.Synced || 0;
+
+      // MMD 类型：将属于同一父文件夹的 .pmx 变体聚合成 variantGroups
+      let variantGroups = null;
+      let flatMissing = missingList;
+      let flatExtra = extraList;
+
+      if (isMmd) {
+        variantGroups = groupMmdVariants(missingList, extraList);
+        // 用聚合后的组数替代原始条目数（卡片徽章显示组数而非文件数）
+        flatMissing = variantGroups.missingGroups;
+        flatExtra = variantGroups.extraGroups;
+      }
 
       return {
         name: ins.Name,
@@ -46,22 +60,23 @@ export async function loadInstances(rtype) {
         exists: ins.Exists,
         hasMod: st.HasMod,
         status:
-          missingList.length > 0
+          flatMissing.length > 0
             ? "missing"
-            : extraList.length > 0
+            : flatExtra.length > 0
               ? "extra"
               : "complete",
         synced: syncedTotal,
-        missing: missingList.length,
-        extra: extraList.length,
+        missing: flatMissing.length,
+        extra: flatExtra.length,
         disabled: 0,
         rtype: rtypeActual,
+        variantGroups: isMmd ? variantGroups : null,
         items: {
-          missing: missingList.map((fullPath) => {
+          missing: flatMissing.map((fullPath) => {
             const displayName = fullPath.split(/[/\\]/).pop() || fullPath;
             return { name: fullPath, displayName, size: "" };
           }),
-          extra: extraList.map((n) => {
+          extra: flatExtra.map((n) => {
             return { name: n, size: "" };
           }),
         },
@@ -98,18 +113,52 @@ export async function loadInstances(rtype) {
   }
 }
 
-function getLinkType(name, files) {
-  if (!files || !files.length) return "";
-  const found = files.find((f) => f.Name === name);
-  if (!found) return "";
-  if (found.LinkType === "symlink") return "🔗";
-  if (found.LinkType === "hardlink") return "🔗";
-  return "📋";
-}
+/**
+ * 对 MMD 类型，按父文件夹聚合 .pmx 变体文件。
+ * 返回 { missingGroups, extraGroups, variantMap }
+ *   - missingGroups/extraGroups: string[] 聚合后的代表路径（父文件夹路径）
+ *   - variantMap: { [folderPath]: string[] } 文件夹下的变体文件路径列表
+ */
+function groupMmdVariants(missingList, extraList) {
+  const variantMap = {}; // { folderPath: { items: string[], count: number } }
+  const collect = (paths) => {
+    paths.forEach((fp) => {
+      const parts = fp.replace(/\\/g, "/").split("/");
+      if (parts.length < 2) {
+        // 单层路径，无父文件夹
+        const key = fp;
+        if (!variantMap[key]) variantMap[key] = { items: [], count: 0 };
+        variantMap[key].items.push(fp);
+        variantMap[key].count++;
+        return;
+      }
+      // 父文件夹路径（去掉最后一级文件名）
+      const parent = parts.slice(0, -1).join("/");
+      const key = parent;
+      if (!variantMap[key]) variantMap[key] = { items: [], count: 0 };
+      variantMap[key].items.push(fp);
+      variantMap[key].count++;
+    });
+  };
+  collect(missingList);
+  collect(extraList);
 
-function fmtSize(bytes) {
-  if (!bytes && bytes !== 0) return "";
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / 1048576).toFixed(1) + " MB";
+  // 生成聚合后的组列表
+  const missingGroups = [];
+  const extraGroups = [];
+  const seen = {};
+  const assign = (paths, target) => {
+    paths.forEach((fp) => {
+      const parts = fp.replace(/\\/g, "/").split("/");
+      const parent = parts.length >= 2 ? parts.slice(0, -1).join("/") : fp;
+      if (!seen[parent]) {
+        seen[parent] = true;
+        target.push(parent);
+      }
+    });
+  };
+  assign(missingList, missingGroups);
+  assign(extraList, extraGroups);
+
+  return { missingGroups, extraGroups, variantMap };
 }

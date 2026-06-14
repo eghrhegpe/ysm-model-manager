@@ -1,64 +1,94 @@
 // ===== sidebar 事件层 =====
 import { bus } from "../../bus.js";
 import { animateNumber } from "../../utils/animate.js";
-import { bindInstanceActions } from "./actions.js";
 
 // 绑定每个卡片展开/折叠
+// 返回清理函数，组件销毁时移除事件监听
+// 注意：事件委托在 #vg 上，outerHTML 替换子元素不破坏监听
+let _lastList = null;
+let _clickHandler = null;
+let _contextHandler = null;
+
 export function bindCardEvents(root, instances) {
-  // 后续绑定行内按钮
-  bindInstanceActions(root, instances);
   // 先清掉旧的右键容器（防止重复）
   root.querySelectorAll(".vc-context-menu").forEach((el) => el.remove());
 
-  // 点击卡片：发送选中事件到右侧面板（事件委托，outerHTML 后仍然有效）
   const list = root.getElementById("vg");
-  if (list) {
-    list.addEventListener("click", (e) => {
-      if (e.target.closest("button") || e.target.closest(".chk")) return;
-      const vc = e.target.closest(".vc");
-      if (!vc) return;
-      const hdr = vc.querySelector(".vc-header");
-      if (!hdr) return;
-      // 高亮当前选中的版本
-      root
-        .querySelectorAll(".vc-header")
-        .forEach((h) => h.classList.remove("active"));
-      hdr.classList.add("active");
-      // 发送选中事件
-      const idx = parseInt(vc.dataset.idx, 10);
-      const pkg = instances[idx];
-      if (pkg) {
-        bus.emit("package:selected", pkg);
-        try {
-          localStorage.setItem("sb_selectedName", pkg.name);
-        } catch (_) {}
-      }
-    });
+  if (!list) return () => {};
 
-    // 右键菜单（事件委托在容器上，outerHTML 后仍然有效）
-    list.addEventListener("contextmenu", (e) => {
-      const vc = e.target.closest(".vc");
-      if (!vc) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const idx = parseInt(vc.dataset.idx, 10);
-      const pkg = instances[idx];
-      if (!pkg) return;
-      const nameEl = vc.querySelector(".name");
-      const name = nameEl ? nameEl.textContent.replace(/^📦\s*/, "") : "";
-      bus.emit("ctx:show", {
-        x: e.clientX,
-        y: e.clientY,
-        type: "instance",
-        instanceName: name,
-        path: pkg?.dir || "",
-        rtype: pkg?.rtype || "ysm",
-      });
-    });
+  // 如果监听的 list 元素没变，用旧的 handler 引用避免重复绑定
+  if (list === _lastList && _clickHandler) {
+    restoreSelectedCard(root, instances);
+    return () => {};
   }
+
+  // 移除旧的监听（如果 list 被替换了）
+  if (_lastList && _clickHandler) {
+    _lastList.removeEventListener("click", _clickHandler);
+    _lastList.removeEventListener("contextmenu", _contextHandler);
+  }
+
+  const clickHandler = (e) => {
+    if (e.target.closest("button") || e.target.closest(".chk")) return;
+    const vc = e.target.closest(".vc");
+    if (!vc) return;
+    const hdr = vc.querySelector(".vc-header");
+    if (!hdr) return;
+    // 高亮当前选中的版本
+    root
+      .querySelectorAll(".vc-header")
+      .forEach((h) => h.classList.remove("active"));
+    hdr.classList.add("active");
+    // 发送选中事件
+    const idx = parseInt(vc.dataset.idx, 10);
+    const pkg = instances[idx];
+    if (pkg) {
+      bus.emit("package:selected", pkg);
+      try {
+        localStorage.setItem("sb_selectedName", pkg.name);
+      } catch (_) {}
+    }
+  };
+
+  const contextHandler = (e) => {
+    const vc = e.target.closest(".vc");
+    if (!vc) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const idx = parseInt(vc.dataset.idx, 10);
+    const pkg = instances[idx];
+    if (!pkg) return;
+    const nameEl = vc.querySelector(".name");
+    const name = nameEl ? nameEl.textContent.replace(/^📦\s*/, "") : "";
+    bus.emit("ctx:show", {
+      x: e.clientX,
+      y: e.clientY,
+      type: "instance",
+      instanceName: name,
+      path: pkg?.dir || "",
+      rtype: pkg?.rtype || "ysm",
+    });
+  };
+
+  list.addEventListener("click", clickHandler);
+  list.addEventListener("contextmenu", contextHandler);
+
+  _lastList = list;
+  _clickHandler = clickHandler;
+  _contextHandler = contextHandler;
 
   // 恢复上次选中的整合包
   restoreSelectedCard(root, instances);
+
+  return () => {
+    list.removeEventListener("click", clickHandler);
+    list.removeEventListener("contextmenu", contextHandler);
+    if (_lastList === list) {
+      _lastList = null;
+      _clickHandler = null;
+      _contextHandler = null;
+    }
+  };
 }
 
 /** 根据 localStorage 选中最匹配的整合包 */
@@ -103,6 +133,7 @@ export function bindFooter(root, instances) {
             const theme = localStorage.getItem("theme") || "dark";
             await SaveAppConfig(
               cfg.repoRoot || "",
+              cfg.resourcepackRoot || "",
               paths[0],
               cfg.linkMode || "copy",
               theme,
@@ -130,30 +161,8 @@ export function bindFooter(root, instances) {
         syncedCount === total
           ? `完全同步 ${total}/${total}`
           : `完全同步 ${syncedCount}/${total}`;
-      const old = parseInt(
-        statSync.textContent.match(/[0-9]+\/[0-9]+/)?.[0]?.split("/")[0] || "0",
-        10,
-      );
       statSync.textContent = label;
       animateNumber(statSync, syncedCount);
     }
   })();
-}
-
-// 绑定 bus 事件（实例同步状态更新）
-export function bindBusUpdates(root, unsubs) {
-  unsubs.push(
-    bus.on("versions:updated", ({ instances }) => {
-      const statEl = root.getElementById("stat-sync");
-      if (!statEl || !instances?.length) return;
-      const total = instances.length;
-      const syncedCount = instances.filter(
-        (ins) => (ins.missing || 0) + (ins.extra || 0) === 0,
-      ).length;
-      statEl.textContent =
-        syncedCount === total
-          ? `完全同步 ${total}/${total}`
-          : `完全同步 ${syncedCount}/${total}`;
-    }),
-  );
 }

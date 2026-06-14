@@ -26,14 +26,15 @@ func Friendly(err error) error {
 	}{
 		{[]string{"access is denied", "permission denied", "eacces"}, "权限不足，无法访问文件"},
 		{[]string{"no such file", "not found", "cannot find", "does not exist"}, "文件或目录不存在"},
-		{[]string{"sharing violation", "used by another process", "is locked", "file exists"}, "文件被其他程序占用，请关闭相关程序后重试"},
+		{[]string{"sharing violation", "used by another process", "is locked", "file exists"}, "文件被其他程序占用"},
 		{[]string{"empty", "no files"}, "目录为空，没有可操作的文件"},
 		{[]string{"timeout", "timed out"}, "连接超时，请检查网络"},
 		{[]string{"refused", "connection refused"}, "连接被拒绝，请检查网络或防火墙"},
+		{[]string{"connection reset", "broken pipe", "reset by peer"}, "网络连接中断"},
 		{[]string{"network", "proxy"}, "网络连接异常"},
 		{[]string{"invalid argument", "invalid"}, "参数无效"},
 		{[]string{"already exists"}, "文件已存在"},
-		{[]string{"disk full", "no space", "disk quota"}, "磁盘空间不足"},
+		{[]string{"disk full", "no space left", "disk quota"}, "磁盘空间不足，请清理后重试"},
 		{[]string{"unsupported", "not supported"}, "不支持的格式或操作"},
 		{[]string{"too many"}, "操作过于频繁，请稍后重试"},
 		{[]string{"not a directory"}, "路径不是目录"},
@@ -43,7 +44,7 @@ func Friendly(err error) error {
 	for _, m := range mappings {
 		for _, p := range m.patterns {
 			if strings.Contains(strings.ToLower(msg), p) {
-				return fmt.Errorf(m.msg)
+				return fmt.Errorf("%s: %s", m.msg, msg)
 			}
 		}
 	}

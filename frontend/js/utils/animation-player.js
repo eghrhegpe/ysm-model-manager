@@ -146,7 +146,7 @@ export class AnimationPlayer {
   _loop(timestamp) {
     if (!this._playing) return;
 
-    const dt = (timestamp - this._lastTimestamp) / 1000; // 秒
+    const dt = Math.min((timestamp - this._lastTimestamp) / 1000, 0.1); // 秒，上限 100ms 防切回跳变
     this._lastTimestamp = timestamp;
 
     if (this._speed > 0) {

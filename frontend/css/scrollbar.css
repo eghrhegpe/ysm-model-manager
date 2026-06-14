@@ -8,36 +8,48 @@
 #ver-search,
 #sort-select,
 #ver-sort {
-    transition: background .12s, opacity .12s, color .12s;
+  transition:
+    background 0.12s,
+    opacity 0.12s,
+    color 0.12s;
 }
 
 .ch {
-    transition: display .12s;
+  transition: display 0.12s;
 }
 
 /* ===== 滚动条 ===== */
 ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: transparent;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, .12);
-    border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, .2);
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.light ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, .15);
+.theme-warm ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
 }
 
-.light ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, .25);
+.theme-warm ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Firefox 后备 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+.theme-warm {
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 }

@@ -146,10 +146,17 @@
 
 ### 规则
 
-- **所有 CSS 必须使用变量，禁止硬编码 `font-size: Xpx` 或 `font-family: ...`**
+- **所有 CSS 必须使用语义化 `var(--fs-*)` 变量，禁止硬编码 `font-size: Npx`**
+  - 新增组件/元素时，从语义化变量表中选择最匹配的角色字号
+  - 如果找不到匹配项，评估是新增语义变量还是使用基础变量（`--fs-sm`/`--fs-base`/`--fs-md`）
 - 每个 Shadow DOM 组件的 `:host` 必须设置 `font-family: var(--font-ui); font-size: var(--fs-base)`
 - 全局 `*` 选择器已设置默认字体/字号，组件只需覆盖有差异的部分
 - 创作者名字等需要艺术字体的场景，使用类名 + `--font-display`，禁止内联 style
+
+### 未来改进方向
+
+- **`--fs-scale` 支持 `rem`**：当前 `--fs-base-size: 12px` + `--fs-scale: 0px` 使用 `calc(12px + var(--fs-scale))`，所有基础单位是 `px`，不响应浏览器默认字号设置（如用户设为 120%）。未来可改为 `--fs-base-size: 0.75rem`（等价 12px@16px） + `--fs-scale: 0rem`，使整体字号尊重浏览器基础设置。
+- 改 `rem` 前需要全局审计所有 `calc()` 中的 `px` 值并同步迁移，建议在下次主题系统大改时一并完成。
 
 ---
 

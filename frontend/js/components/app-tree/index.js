@@ -66,6 +66,30 @@ class AppTree extends HTMLElement {
           this._renderTree();
         }),
       );
+
+      // 监听创作者详情→搜索本地模型
+      this._unsubs.push(
+        bus.on("tree:set-search", (name) => {
+          const srch = this._root?.getElementById("srch");
+          if (srch) {
+            srch.value = name;
+            srch.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        }),
+      );
+
+      // 检查是否有通过 bus 事件之前发来的待处理搜索
+      // 用 setTimeout 确保在所有异步初始化完成后执行
+      setTimeout(() => {
+        if (window._pendingTreeSearch) {
+          const srch = this._root?.getElementById("srch");
+          if (srch) {
+            srch.value = window._pendingTreeSearch;
+            srch.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+          window._pendingTreeSearch = "";
+        }
+      }, 0);
     } catch (e) {
       console.error("[Tree Init Error]", e);
       const tree = this._root?.getElementById("tree");
@@ -76,6 +100,16 @@ class AppTree extends HTMLElement {
   }
   disconnectedCallback() {
     this._unsubs?.forEach((fn) => fn?.());
+    if (this._keydownHandler) {
+      this._root.removeEventListener("keydown", this._keydownHandler);
+      document.removeEventListener("keydown", this._keydownHandler);
+      this._keydownHandler = null;
+    }
+    const treeEl = this._root.getElementById("tree");
+    if (treeEl && treeEl._vsCleanup) {
+      treeEl._vsCleanup();
+      treeEl._vsCleanup = null;
+    }
   }
 
   async _loadAuthorsAsync() {
@@ -112,6 +146,11 @@ class AppTree extends HTMLElement {
 
   _renderTree() {
     const c = this._root.getElementById("tree");
+    // 清理旧的虚拟滚动监听
+    if (c && c._vsCleanup) {
+      c._vsCleanup();
+      c._vsCleanup = null;
+    }
     // 按类型过滤
     let filtered = Array.isArray(this._entries) ? this._entries : [];
     if (this._typeFilter) {
@@ -135,13 +174,13 @@ class AppTree extends HTMLElement {
       repoBtn.textContent = this._repoRoot
         ? `📁 ${this._repoRoot}`
         : "📁 未设置";
-    // 存全局供筛选栏动态渲染作者标签
-    window._treeAuthors = this._authors;
+    // 存到 root 上供需要时访问
+    this._root._treeAuthors = this._authors;
   }
 
   // ========== 键盘快捷键 ==========
   _initKeyboardShortcuts() {
-    const handler = (e) => {
+    this._keydownHandler = (e) => {
       // Ctrl+F / Cmd+F → 聚焦搜索框（允许输入框内响应）
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
@@ -176,11 +215,8 @@ class AppTree extends HTMLElement {
         this._deleteSelected(paths, isDirModel);
       }
     };
-    this._root.addEventListener("keydown", handler);
-    // 也监听 shadow host 外层的 keydown（以防焦点不在 shadow 内）
-    // 用 capture 确保捕获到达
-    document.addEventListener("keydown", handler);
-    this._unsubs.push(() => document.removeEventListener("keydown", handler));
+    this._root.addEventListener("keydown", this._keydownHandler);
+    document.addEventListener("keydown", this._keydownHandler);
   }
 
   async _deleteSelected(paths, isDirModel) {
@@ -198,6 +234,7 @@ class AppTree extends HTMLElement {
       }
     }
     selectState.keys.clear();
+    selectState.lastKey = null;
     await this._load();
     this._renderTree();
     bus.emit("toast:show", {

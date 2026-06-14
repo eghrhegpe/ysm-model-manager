@@ -4,7 +4,7 @@ import { previewCSS } from "./preview-css.js";
 import { statsHTML, modelDetailHTML, statsCardHTML } from "./tpl.js";
 import { bindBusUpdates } from "./events.js";
 import { bindActions } from "./preview-actions.js";
-import { showPackageDetail } from "./preview-pack.js";
+import { showPackageDetail, registerMmdEvents } from "./preview-pack.js";
 import { loadLogsPreview } from "./preview-logs.js";
 import { openFullPreview } from "./preview-zoom.js";
 import { summaryCardHTML } from "../../utils/summarize.js";
@@ -62,6 +62,9 @@ class AppPreview extends HTMLElement {
 
     if (this._mode === "stat") {
       bindBusUpdates(this._root, this._unsubs);
+
+      // 注册 MMD 变体事件委托（仅一次，模块级标志控制不重复）
+      registerMmdEvents(this._root);
 
       this._loadLogsPreview();
 

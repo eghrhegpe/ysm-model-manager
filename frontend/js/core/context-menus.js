@@ -87,6 +87,15 @@ export function registerContextMenus() {
                   okText: "移动",
                 });
                 if (!folder) return;
+                // 基本路径安全过滤：禁止包含 .. 或绝对路径
+                if (/\.\./.test(folder) || /^[/\\]/.test(folder)) {
+                  bus.emit("toast:show", {
+                    msg: "❌ 文件夹名包含非法字符",
+                    duration: 3000,
+                    type: "error",
+                  });
+                  return;
+                }
                 const { LoadAppConfig, MoveModelFile } =
                   await import("../../wailsjs/go/main/App.js");
                 const cfg = await LoadAppConfig();
@@ -99,7 +108,11 @@ export function registerContextMenus() {
                   });
                   return;
                 }
-                const dstDir = repoRoot + "\\" + folder.replace(/\//g, "\\");
+                const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
+                toast(
+                  `📦 正在移动 ${paths.length} 个文件到 ${folder}...`,
+                  3000,
+                );
                 let ok = 0,
                   fail = 0;
                 for (const p of paths) {
@@ -195,7 +208,7 @@ export function registerContextMenus() {
                   });
                   return;
                 }
-                const dstDir = repoRoot + "\\" + folder.replace(/\//g, "\\");
+                const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
                 try {
                   await MoveModelFile(path, dstDir);
                   toast(`✅ 已移动到 ${folder}`, 3000);

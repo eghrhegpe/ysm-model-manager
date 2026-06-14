@@ -15,8 +15,6 @@
   --meta-work: #bd93f9;
   --meta-date: #f1fa8c;
   --r: 10px;
-  --sidebar-width: 300px;
-  --preview-width: 240px;
   --free: #a6e3a1;
   --paid: #f38ba8;
   --sz-green: #a6e3a1;
@@ -42,8 +40,6 @@
   --meta-author: #8b4513;
   --meta-work: #6a4e3a;
   --meta-date: #a0866a;
-  --sidebar-width: 300px;
-  --preview-width: 240px;
   --free: #1971c2;
   --paid: #c62828;
   --sz-green: #2e7d32;
@@ -57,16 +53,14 @@
   --card: #1a1a1a;
   --hover: #222222;
   --act: #2a2a2a;
-  --accent: #ffffff;
+  --accent: #66d9ef;
   --txt: #e0e0e0;
   --muted: #666666;
   --bd: rgba(255, 255, 255, 0.06);
-  --menu-indicator: #ffffff;
-  --meta-author: #ffffff;
+  --menu-indicator: #66d9ef;
+  --meta-author: #66d9ef;
   --meta-work: #999999;
   --meta-date: #666666;
-  --sidebar-width: 300px;
-  --preview-width: 240px;
   --free: #a6e3a1;
   --paid: #f38ba8;
   --sz-green: #a6e3a1;
@@ -99,8 +93,10 @@
   --font-display: "STKaiti", "KaiTi", "楷体", serif;
 }
 
-/* 布局变量 */
+/* 布局变量 — 共享布局变量提升到 :root */
 :root {
+  --sidebar-width: 300px;
+  --preview-width: 240px;
   --card-padding: 6px 10px;
   --card-gap: 6px;
   --sm-optional: #f9a826;

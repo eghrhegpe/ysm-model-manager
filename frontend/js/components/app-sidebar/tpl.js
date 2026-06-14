@@ -46,14 +46,13 @@ export function skeletonHTML() {
 }
 
 /** 单个整合包卡片头部。
- *  最后一个参数 idx 用于绑定安装缺失按钮的 data-idx */
+ *  idx 用于绑定安装缺失按钮的 data-idx */
 export function vcHeaderHTML(
   name,
   synced,
   missing,
   extra,
   status,
-  isOpen = false,
   idx = -1,
   hasMod = true,
   rtype = "ysm",
@@ -69,27 +68,6 @@ export function vcHeaderHTML(
 <div class="vc-hdr-row1"><span class="name">${esc(name)}</span></div>
 <div class="vc-hdr-row2"><input type="checkbox" class="chk" data-idx="${idx}">📦${chips}</div>
 </div>`;
-}
-
-/** 区块标题（如"✅ 已同步 (3)"） */
-export function sectionTitleHTML(text, count) {
-  return `<div class="sec-title">${text} (${count})</div>`;
-}
-
-/** 单行模型条目 — dotColor: 状态圆点色, name: 文件名, size: 大小, linkType: 链接图标, extraCls: 额外 class, path: 完整路径（可选，存 data-path）, btnHtml: 操作按钮HTML, rowCls: 额外CSS类 */
-export function rowHTML(
-  dotColor,
-  name,
-  size,
-  linkType,
-  extraCls = "",
-  path,
-  btnHtml = "",
-  rowCls = "",
-) {
-  const linkIcon = linkType ? `<span class="link-icon">${linkType}</span>` : "";
-  const pathAttr = path ? ` data-path="${esc(path)}"` : "";
-  return `<div class="row ${extraCls}${rowCls}" data-name="${esc(name)}"${pathAttr}><span class="dot" style="background:${dotColor}"></span><span class="rn">${name}</span>${linkIcon}<span class="sz">${size}</span>${btnHtml}</div>`;
 }
 
 function esc(s) {

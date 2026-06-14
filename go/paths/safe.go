@@ -18,6 +18,8 @@ func (e *ErrPathEscalation) Error() string {
 }
 
 // IsInside 检查 path 是否在 baseDir 下，防止路径遍历。
+// 注意：本函数不追踪符号链接。若 baseDir 或 path 中包含指向外部目录的符号链接，
+// 可能错误地判定为安全。调用方应在必要时先用 filepath.EvalSymlinks 解析。
 func IsInside(baseDir, path string) error {
 	absBase, err := filepath.Abs(filepath.Clean(baseDir))
 	if err != nil {
@@ -44,6 +46,7 @@ func IsInside(baseDir, path string) error {
 }
 
 // ContainsMinecraftMarker 检查路径中是否包含 .minecraft 标记
+// 注意：不解析符号链接，调用方需自行处理
 func ContainsMinecraftMarker(path string) bool {
 	cleaned := filepath.Clean(path)
 	lower := strings.ToLower(cleaned)

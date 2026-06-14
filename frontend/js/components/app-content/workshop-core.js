@@ -96,12 +96,12 @@ export async function fetchCommunityCreators(url, mirror) {
     attempts.push(
       {
         name: "jsd",
-        url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-creator-index@main/creators.json",
+        url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-model-manager@main/creators.json",
         label: "⏳ 社区索引: jsdelivr…",
       },
       {
         name: "api",
-        url: "https://api.github.com/repos/eghrhegpe/ysm-creator-index/contents/creators.json",
+        url: "https://api.github.com/repos/eghrhegpe/ysm-model-manager/contents/creators.json",
         label: "⏳ 社区索引: api…",
       },
     );
@@ -175,11 +175,69 @@ export function mergeCommunityCreators(local, community) {
 }
 
 /**
+ * 从 GitHub 拉取 workshop_sites.json（三路回退）
+ * @param {string} mirror
+ * @returns {Promise<Array>}
+ */
+export async function fetchCommunitySites(mirror) {
+  const attempts = [
+    { name: "raw", url: "https://raw.githubusercontent.com/eghrhegpe/ysm-model-manager/main/workshop_sites.json", label: "⏳ 站点索引: raw…" },
+    { name: "jsd", url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-model-manager@main/workshop_sites.json", label: "⏳ 站点索引: jsdelivr…" },
+    { name: "api", url: "https://api.github.com/repos/eghrhegpe/ysm-model-manager/contents/workshop_sites.json", label: "⏳ 站点索引: api…" },
+  ];
+  const sorted = mirror === "jsdelivr" ? [attempts[1], attempts[0], attempts[2]]
+    : mirror === "githubapi" ? [attempts[2], attempts[0], attempts[1]]
+    : attempts;
+  for (const a of sorted) {
+    const ctrl = new AbortController();
+    const tmr = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const resp = await fetch(a.url, { signal: ctrl.signal });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      let data;
+      if (a.name === "api") {
+        const json = await resp.json();
+        if (!json.content) throw new Error("no content");
+        data = JSON.parse(atob(json.content.replace(/\\s/g, "")));
+      } else {
+        data = await resp.json();
+      }
+      if (Array.isArray(data)) return data;
+    } catch (err) {
+      console.debug("[community] sites " + a.name + " failed:", err?.message);
+    } finally {
+      clearTimeout(tmr);
+    }
+  }
+  return [];
+}
+
+/**
+ * 合并社区站点到本地 workshop_sites.json
+ * @param {Array} local - 本地站点列表
+ * @param {Array} community - 社区站点列表
+ * @returns {{ added: number }}
+ */
+export function mergeCommunitySites(local, community) {
+  const idMap = new Map(local.map((s) => [s.id, s]));
+  let added = 0;
+  for (const cs of community) {
+    if (!cs.id) continue;
+    if (!idMap.has(cs.id)) {
+      local.push(cs);
+      idMap.set(cs.id, cs);
+      added++;
+    }
+  }
+  return { added };
+}
+
+/**
  * 社区索引的默认 URL（可配置为社区维护的独立 creators JSON）
- * 贡献通道：https://github.com/eghrhegpe/ysm-creator-index
+ * 贡献通道：https://github.com/eghrhegpe/ysm-model-manager（仓库根目录 creators.json）
  */
 export const DEFAULT_COMMUNITY_URL =
-  "https://raw.githubusercontent.com/eghrhegpe/ysm-creator-index/main/creators.json";
+  "https://raw.githubusercontent.com/eghrhegpe/ysm-model-manager/main/creators.json";
 
 /**
  * 获取仓库模型列表 + 本地映射

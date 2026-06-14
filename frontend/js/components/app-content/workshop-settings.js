@@ -71,7 +71,11 @@ export async function initSettings(root) {
 
   bindPathClick(
     "set-repo-path",
-    () => cfg.repoRoot || "",
+    () =>
+      cfg.repoRoot ||
+      (cfg.mcRoot
+        ? cfg.mcRoot.replace(/\//g, "\\") + "\\config\\yes_steve_model\\custom"
+        : ""),
     async (dir) => {
       const mc = cfg.mcRoot || "";
       if (mc && dir.toLowerCase().startsWith(mc.toLowerCase())) {

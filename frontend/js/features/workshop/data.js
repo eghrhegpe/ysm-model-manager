@@ -79,25 +79,32 @@ export async function tryFetchModels(repo, mirror, onProgress) {
     const tmr = setTimeout(() => ctrl.abort(), 5000);
     startCountdown(attempt.label);
     try {
-      const resp = await fetch(attempt.url, { signal: ctrl.signal });
+      const resp = await fetch(attempt.url, { signal: ctrl.signal, cache: "no-cache" });
       clearTimeout(tmr);
       stopCountdown();
       if (resp.ok) {
         if (onProgress) onProgress(70, "⏳ 解析模型列表中…");
         let models;
-        if (attempt.name === "api") {
-          const data = await resp.json();
-          if (data.encoding !== "base64" || !data.content) continue;
-          const binary = atob(data.content.replace(/\n/g, ""));
-          const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-          const json = new TextDecoder().decode(bytes);
-          models = JSON.parse(json);
-        } else {
-          models = await resp.json();
+        try {
+          if (attempt.name === "api") {
+            const data = await resp.json();
+            if (data.encoding !== "base64" || !data.content) continue;
+            const binary = atob(data.content.replace(/\n/g, ""));
+            const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+            const json = new TextDecoder().decode(bytes);
+            models = JSON.parse(json);
+          } else {
+            models = await resp.json();
+          }
+        } catch (e) {
+          console.error("[workshop] JSON 解析失败:", attempt.url, e);
+          continue;
         }
-        if (models && models.length) {
+        // 请求成功即停止回退，即使模型列表为空（仓库存在但无 index.json 内容）
+        if (Array.isArray(models)) {
           return { models, source: attempt.name };
         }
+        console.warn("[workshop] 数据格式非数组:", attempt.url, typeof models);
       }
     } catch (_) {
       clearTimeout(tmr);

@@ -48,7 +48,13 @@ export async function loadWorkshopData() {
 
 /** 后台静默拉取社区索引并合并 */
 async function tryAutoMergeCommunity(creators) {
-  const community = await fetchCommunityCreators(DEFAULT_COMMUNITY_URL);
+  let mirror = "";
+  try {
+    const { LoadAppConfig } = await import("../../../wailsjs/go/main/App.js");
+    const cfg = await LoadAppConfig();
+    mirror = cfg.mirror || "";
+  } catch {}
+  const community = await fetchCommunityCreators(DEFAULT_COMMUNITY_URL, mirror);
   if (!community.length) return;
   const { added } = mergeCommunityCreators(creators, community);
   if (added > 0) {
@@ -71,20 +77,40 @@ export const fillSearch = (tpl, q) =>
  * @param {string} url - 社区索引 raw URL
  * @returns {Promise<Array>} 社区创作者列表
  */
-export async function fetchCommunityCreators(url) {
-  const ctrl = new AbortController();
-  const tmr = setTimeout(() => ctrl.abort(), 8000);
-  try {
-    const resp = await fetch(url, { signal: ctrl.signal });
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const data = await resp.json();
-    return Array.isArray(data) ? data : [];
-  } catch (err) {
-    console.debug("[community] fetch failed:", err?.message);
-    return [];
-  } finally {
-    clearTimeout(tmr);
+export async function fetchCommunityCreators(url, mirror) {
+  const attempts = [
+    { name: "raw", url, label: "⏳ 社区索引: raw…" },
+    { name: "jsd", url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-creator-index@main/creators.json", label: "⏳ 社区索引: jsdelivr…" },
+    { name: "api", url: "https://api.github.com/repos/eghrhegpe/ysm-creator-index/contents/creators.json", label: "⏳ 社区索引: api…" },
+  ];
+  const sorted = mirror === "jsdelivr"
+    ? [attempts[1], attempts[0], attempts[2]]
+    : mirror === "githubapi"
+    ? [attempts[2], attempts[0], attempts[1]]
+    : attempts;
+
+  for (const a of sorted) {
+    const ctrl = new AbortController();
+    const tmr = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const resp = await fetch(a.url, { signal: ctrl.signal });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      let data;
+      if (a.name === "api") {
+        const json = await resp.json();
+        if (!json.content) throw new Error("no content");
+        data = JSON.parse(atob(json.content.replace(/\\s/g, "")));
+      } else {
+        data = await resp.json();
+      }
+      if (Array.isArray(data)) return data;
+    } catch (err) {
+      console.debug("[community] " + a.name + " failed:", err?.message);
+    } finally {
+      clearTimeout(tmr);
+    }
   }
+  return [];
 }
 
 /**

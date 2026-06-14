@@ -90,19 +90,22 @@ export const fillSearch = (tpl, q) =>
  * @returns {Promise<Array>} 社区创作者列表
  */
 export async function fetchCommunityCreators(url, mirror) {
-  const attempts = [
-    { name: "raw", url, label: "⏳ 社区索引: raw…" },
-    {
-      name: "jsd",
-      url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-creator-index@main/creators.json",
-      label: "⏳ 社区索引: jsdelivr…",
-    },
-    {
-      name: "api",
-      url: "https://api.github.com/repos/eghrhegpe/ysm-creator-index/contents/creators.json",
-      label: "⏳ 社区索引: api…",
-    },
-  ];
+  const attempts = [{ name: "raw", url, label: "⏳ 社区索引: raw…" }];
+  // 仅在 raw URL 看起来有效时才加兜底
+  if (url && !url.includes("localhost") && !url.includes("127.0.0.1")) {
+    attempts.push(
+      {
+        name: "jsd",
+        url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-creator-index@main/creators.json",
+        label: "⏳ 社区索引: jsdelivr…",
+      },
+      {
+        name: "api",
+        url: "https://api.github.com/repos/eghrhegpe/ysm-creator-index/contents/creators.json",
+        label: "⏳ 社区索引: api…",
+      },
+    );
+  }
   const sorted =
     mirror === "jsdelivr"
       ? [attempts[1], attempts[0], attempts[2]]

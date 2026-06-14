@@ -336,14 +336,14 @@ export function renderSiteView(site, ctx) {
         "</div>",
     );
   } else if (wsEditModeRef.v) {
-    // 🔍 搜索词编辑
-    if (site.presetSearches) {
+    // 🔍 搜索词编辑（即使为空也渲染，让用户能新增）
+    if (site.presetSearches || !site.presetSearches) {
       parts.push(
         '<div class="cr-section">' +
           '<span class="cr-section-title-lg">🔍 搜索词</span>' +
           "</div>",
       );
-      site.presetSearches.forEach((ps, idx) => {
+      (site.presetSearches || []).forEach((ps, idx) => {
         parts.push(
           '<div class="cr-edit-card" draggable="true" data-edit="preset" data-edit-idx="' +
           idx +

@@ -379,6 +379,7 @@ export namespace types {
 	    name: string;
 	    desc: string;
 	    type?: string;
+	    role?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new WorkshopCreator(source);
@@ -389,6 +390,7 @@ export namespace types {
 	        this.name = source["name"];
 	        this.desc = source["desc"];
 	        this.type = source["type"];
+	        this.role = source["role"];
 	    }
 	}
 	export class WorkshopPresetSearch {

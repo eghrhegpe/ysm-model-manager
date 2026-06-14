@@ -54,4 +54,5 @@ type WorkshopCreator struct {
 	Name string `json:"name"`
 	Desc string `json:"desc"`
 	Type string `json:"type,omitempty"`
+	Role string `json:"role,omitempty"`
 }

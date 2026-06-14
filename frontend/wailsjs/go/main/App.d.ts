@@ -213,6 +213,10 @@ export function SaveWindowPosition(arg1:number,arg2:number,arg3:number,arg4:numb
 
 export function SaveWorkshopCreators(arg1:Array<types.WorkshopCreator>):Promise<void>;
 
+export function SaveWorkshopCreatorsBySite(arg1:string,arg2:Array<types.WorkshopCreator>):Promise<void>;
+
+export function SaveWorkshopPresetsBySite(arg1:string,arg2:Array<types.WorkshopPresetSearch>):Promise<void>;
+
 export function SaveWorkshopSites(arg1:Array<types.WorkshopSite>):Promise<void>;
 
 export function ScanCustomModels(arg1:string):Promise<Array<types.ModelEntry>>;

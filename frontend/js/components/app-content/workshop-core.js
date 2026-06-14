@@ -80,7 +80,7 @@ export async function fetchCommunityCreators(url) {
     const data = await resp.json();
     return Array.isArray(data) ? data : [];
   } catch (err) {
-    console.warn("[community] fetch failed:", err);
+    console.debug("[community] fetch failed:", err?.message);
     return [];
   } finally {
     clearTimeout(tmr);
@@ -129,7 +129,7 @@ export function mergeCommunityCreators(local, community) {
  * 贡献通道：https://github.com/eghrhegpe/ysm-creator-index
  */
 export const DEFAULT_COMMUNITY_URL =
-  "https://raw.githubusercontent.com/eghrhegpe/ysm-creator-index/refs/heads/main/creators.json";
+  "https://raw.githubusercontent.com/eghrhegpe/ysm-creator-index/main/creators.json";
 
 /**
  * 获取仓库模型列表 + 本地映射

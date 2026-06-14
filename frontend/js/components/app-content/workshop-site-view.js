@@ -126,6 +126,7 @@ export function renderSiteView(site, ctx) {
     repoModelCache,
     openUrl,
     backToSite,
+    avatarCache,
   } = ctx;
 
   searchResults.innerHTML = "";
@@ -282,9 +283,11 @@ export function renderSiteView(site, ctx) {
               ");box-shadow:0 0 6px " +
               tier.glow +
               '"></div>' +
-              '<div class="cr-avatar" style="width:28px;height:28px;font-size:12px">' +
-              (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") +
-              "</div>" +
+              (avatarCache && avatarCache[cr.name]
+                ? '<img class="cr-avatar" src="' + esc(avatarCache[cr.name]) + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover">'
+                : '<div class="cr-avatar" style="width:28px;height:28px;font-size:12px">' +
+                  (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") +
+                  "</div>") +
               "</div>" +
               '<div class="gh-card-body">' +
               '<div class="gh-card-label name">' +
@@ -573,9 +576,11 @@ export function renderSiteView(site, ctx) {
         '<div class="cr-detail-box">' +
         '<div class="cr-detail-header">' +
         '<div class="cr-avatar-container" style="width:36px;height:36px;margin:0">' +
-        '<div class="cr-avatar" style="width:36px;height:36px;font-size:16px">' +
-        esc(cr.name.charAt(0)).toUpperCase() +
-        "</div>" +
+        (avatarCache && avatarCache[cr.name]
+          ? '<img class="cr-avatar" src="' + esc(avatarCache[cr.name]) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">'
+          : '<div class="cr-avatar" style="width:36px;height:36px;font-size:16px">' +
+            esc(cr.name.charAt(0)).toUpperCase() +
+            "</div>") +
         "</div>" +
         '<div style="flex:1;min-width:0">' +
         '<div style="display:flex;align-items:center;gap:6px">' +

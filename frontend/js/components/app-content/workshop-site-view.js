@@ -286,7 +286,9 @@ export function renderSiteView(site, ctx) {
               (avatarCache && avatarCache[cr.name]
                 ? '<img class="cr-avatar" src="' +
                   esc(avatarCache[cr.name]) +
-                  '" style="width:28px;height:28px;border-radius:50%;object-fit:cover">'
+                  '" style="width:28px;height:28px;border-radius:50%;object-fit:cover" data-debug-avatar="' +
+                  esc(cr.name) +
+                  '">'
                 : '<div class="cr-avatar" style="width:28px;height:28px;font-size:12px">' +
                   (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") +
                   "</div>") +
@@ -515,6 +517,23 @@ export function renderSiteView(site, ctx) {
         duration: 1500,
         type: "success",
       });
+    });
+  });
+
+  // 头像调试点击 → 控制台输出调试信息
+  searchResults.querySelectorAll("[data-debug-avatar]").forEach((img) => {
+    img.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const name = img.dataset.debugAvatar;
+      if (!name) return;
+      try {
+        const { DebugExtractCreatorAvatar } =
+          await import("../../../wailsjs/go/main/App.js");
+        const info = await DebugExtractCreatorAvatar(name);
+        console.log("[avatar-debug] " + name, info);
+      } catch (err) {
+        console.warn("[avatar-debug] 调用失败", err);
+      }
     });
   });
 

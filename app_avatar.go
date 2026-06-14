@@ -87,6 +87,116 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 	return result, nil
 }
 
+// DebugExtractCreatorAvatar 调试版：提取指定作者头像，返回详细步骤信息
+func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
+	info := map[string]string{
+		"author":   authorName,
+		"repoRoot": a.RepoRoot,
+		"step":     "init",
+		"status":   "pending",
+	}
+	if a.RepoRoot == "" {
+		info["status"] = "no_repo_root"
+		info["step"] = "repo_root_empty"
+		return info
+	}
+
+	// 1. 扫描仓库找该作者的模型文件
+	entries := a.ScanModelEntries(a.RepoRoot)
+	var foundPath string
+	for _, e := range entries {
+		name := e.Name
+		if strings.HasSuffix(strings.ToLower(name), ".ban") {
+			name = name[:len(name)-4]
+		}
+		if strings.HasPrefix(name, "[") {
+			if idx := strings.Index(name, "]"); idx > 0 {
+				author := name[1:idx]
+				if author == authorName {
+					ext := strings.ToLower(filepath.Ext(e.Path))
+					if ext == ".ysm" || ext == ".zip" || ext == ".7z" {
+						foundPath = e.Path
+						info["found_path"] = foundPath
+						break
+					}
+				}
+			}
+		}
+	}
+	if foundPath == "" {
+		info["status"] = "no_model_file_found"
+		info["step"] = "scan_failed"
+		return info
+	}
+	info["step"] = "found_model"
+
+	// 2. 读取文件
+	ysmData, err := os.ReadFile(foundPath)
+	if err != nil {
+		info["status"] = "read_file_failed"
+		info["error"] = err.Error()
+		return info
+	}
+	info["file_size"] = fmt.Sprintf("%d", len(ysmData))
+	info["step"] = "file_read"
+
+	// 3. Node.js 路径
+	info["node_path"] = nodeJSPath
+	if nodeJSPath == "" {
+		info["status"] = "no_nodejs"
+		info["step"] = "node_not_found"
+		return info
+	}
+
+	// 4. 解码
+	files := decodeYSMFiles(ysmData)
+	if len(files) == 0 {
+		info["status"] = "decode_failed"
+		info["step"] = "decode_returned_empty"
+		return info
+	}
+	info["file_count"] = fmt.Sprintf("%d", len(files))
+	info["step"] = "decoded"
+
+	// 5. 列出所有文件路径
+	var paths []string
+	var hasAvatar bool
+	for _, f := range files {
+		low := strings.ToLower(f.Path)
+		paths = append(paths, f.Path)
+		if strings.HasPrefix(low, "avatar") {
+			hasAvatar = true
+			info["avatar_path"] = f.Path
+			info["avatar_size"] = fmt.Sprintf("%d", len(f.Data))
+		}
+	}
+	info["all_files"] = strings.Join(paths, " | ")
+	info["has_avatar_dir"] = fmt.Sprintf("%v", hasAvatar)
+
+	if !hasAvatar {
+		info["status"] = "no_avatar_in_ysm"
+		info["step"] = "avatar_dir_missing"
+		return info
+	}
+
+	// 6. 提取成功
+	cacheDir := creatorAvatarCacheDir()
+	os.MkdirAll(cacheDir, 0755)
+	safe := safeFilename(authorName)
+	cachedPath := filepath.Join(cacheDir, safe+".png")
+	dataURI := a.decodeOneAvatar(foundPath, cacheDir, safe)
+	if dataURI == "" {
+		info["status"] = "extract_failed"
+		info["step"] = "decode_one_avatar_failed"
+		return info
+	}
+	info["cached_path"] = cachedPath
+	info["data_uri_len"] = fmt.Sprintf("%d", len(dataURI))
+	info["status"] = "ok"
+	info["step"] = "done"
+	return info
+}
+
 // decodeOneAvatar 解码 .ysm 文件并提取 avatar/ 下的头像
 func (a *App) decodeOneAvatar(ysmPath, cacheDir, safeName string) string {
 	ysmData, err := os.ReadFile(ysmPath)

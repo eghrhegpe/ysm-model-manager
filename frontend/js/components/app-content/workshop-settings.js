@@ -1,6 +1,7 @@
 // ===== 设置页初始化（为 _initSettings 减负） =====
 import { bus } from "../../bus.js";
 import { initVersionUpdater } from "../../features/version-updater.js";
+import { friendlyError } from "../../utils/errors.js";
 
 /**
  * 初始化设置页所有事件绑定

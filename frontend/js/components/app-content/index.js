@@ -21,6 +21,7 @@ import {
 import { bindRepoEvents } from "../../features/workshop/events.js";
 import { renderSiteView } from "./workshop-site-view.js";
 import { loadWorkshopData, fillSearch } from "./workshop-core.js";
+import { friendlyError } from "../../utils/errors.js";
 
 class AppContent extends HTMLElement {
   constructor() {
@@ -68,6 +69,11 @@ class AppContent extends HTMLElement {
     if (this._unsub) this._unsub();
     this._globalUnsubs.forEach((fn) => fn());
     this._globalUnsubs = [];
+    // 清理 _unsubs（dedup 等页面的事件订阅）
+    if (this._unsubs && Array.isArray(this._unsubs)) {
+      this._unsubs.forEach((fn) => { if (typeof fn === "function") fn(); });
+    }
+    this._unsubs = [];
     // 清理缓存
     if (this._workshopCache) this._workshopCache.clear();
     this._workshopCache = null;

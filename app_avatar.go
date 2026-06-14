@@ -164,7 +164,7 @@ func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 	for _, f := range files {
 		low := strings.ToLower(f.Path)
 		paths = append(paths, f.Path)
-		if strings.HasPrefix(low, "avatar") {
+		if strings.HasPrefix(low, "avatar") || strings.Contains(low, "/avatar/") {
 			hasAvatar = true
 			info["avatar_path"] = f.Path
 			info["avatar_size"] = fmt.Sprintf("%d", len(f.Data))
@@ -216,7 +216,7 @@ func (a *App) decodeOneAvatar(ysmPath, cacheDir, safeName string) string {
 		if !strings.HasSuffix(low, ".png") && !strings.HasSuffix(low, ".jpg") {
 			continue
 		}
-		if !strings.HasPrefix(low, "avatar") {
+		if !strings.HasPrefix(low, "avatar") && !strings.Contains(low, "/avatar/") {
 			continue
 		}
 		data := make([]byte, len(f.Data))

@@ -62,10 +62,9 @@ export function renderModelList(
     if (!exists) {
       const cb = document.createElement("input");
       cb.type = "checkbox";
-      cb.className = "gh-sel";
+      cb.className = "gh-sel gh-cb";
       cb.dataset.name = m.name;
       cb.checked = selectedSet.has(m.name);
-      cb.className = "gh-cb";
       row.appendChild(cb);
     }
 

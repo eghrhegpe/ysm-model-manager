@@ -600,7 +600,9 @@ export function renderSiteView(site, ctx) {
         (avatarCache && avatarCache[cr.name]
           ? '<img class="cr-avatar" src="' +
             esc(avatarCache[cr.name]) +
-            '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">'
+            '" style="width:36px;height:36px;border-radius:50%;object-fit:cover" data-debug-avatar="' +
+            esc(cr.name) +
+            '">'
           : '<div class="cr-avatar" style="width:36px;height:36px;font-size:16px">' +
             esc(cr.name.charAt(0)).toUpperCase() +
             "</div>") +

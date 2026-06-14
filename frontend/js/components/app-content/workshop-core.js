@@ -80,14 +80,23 @@ export const fillSearch = (tpl, q) =>
 export async function fetchCommunityCreators(url, mirror) {
   const attempts = [
     { name: "raw", url, label: "⏳ 社区索引: raw…" },
-    { name: "jsd", url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-creator-index@main/creators.json", label: "⏳ 社区索引: jsdelivr…" },
-    { name: "api", url: "https://api.github.com/repos/eghrhegpe/ysm-creator-index/contents/creators.json", label: "⏳ 社区索引: api…" },
+    {
+      name: "jsd",
+      url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-creator-index@main/creators.json",
+      label: "⏳ 社区索引: jsdelivr…",
+    },
+    {
+      name: "api",
+      url: "https://api.github.com/repos/eghrhegpe/ysm-creator-index/contents/creators.json",
+      label: "⏳ 社区索引: api…",
+    },
   ];
-  const sorted = mirror === "jsdelivr"
-    ? [attempts[1], attempts[0], attempts[2]]
-    : mirror === "githubapi"
-    ? [attempts[2], attempts[0], attempts[1]]
-    : attempts;
+  const sorted =
+    mirror === "jsdelivr"
+      ? [attempts[1], attempts[0], attempts[2]]
+      : mirror === "githubapi"
+        ? [attempts[2], attempts[0], attempts[1]]
+        : attempts;
 
   for (const a of sorted) {
     const ctrl = new AbortController();

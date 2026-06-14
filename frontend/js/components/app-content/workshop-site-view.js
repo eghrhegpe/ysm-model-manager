@@ -855,11 +855,16 @@ export function renderSiteView(site, ctx) {
     .querySelector(".cr-save-btn")
     ?.addEventListener("click", async () => {
       try {
-        // 保存搜索词
+        // 校验数据完整性
+        if (!site || !site.id) {
+          bus.emit("toast:show", { msg: "❌ 站点信息丢失", duration: 3000, type: "error" });
+          return;
+        }
+
+        // 保存搜索词 — 按站点原子保存
         if (allSites && site) {
-          const { SaveWorkshopSites } =
+          const { SaveWorkshopPresetsBySite } =
             await import("../../../wailsjs/go/main/App.js");
-          // 从输入框收集搜索词
           const newPresets = [];
           searchResults
             .querySelectorAll(".cr-edit-card[data-edit='preset'] input[data-fld='label']")
@@ -867,36 +872,18 @@ export function renderSiteView(site, ctx) {
               const val = inp.value.trim();
               if (val) newPresets.push({ label: val });
             });
+          await SaveWorkshopPresetsBySite(site.id, newPresets);
           site.presetSearches = newPresets;
-          // 更新 allSites 中的对应站点
-          const idx = allSites.findIndex((s) => s.id === site.id);
-          if (idx >= 0) allSites[idx] = site;
-          await SaveWorkshopSites(allSites);
         }
         // 保存创作者：先收集输入框值
-        searchResults.querySelectorAll("[data-idx][data-fld]:not([data-fld='type'])").forEach((inp) => {
-          const idx = parseInt(inp.dataset.idx, 10);
-          if (creators[idx]) {
-            if (inp.tagName === "SELECT") {
-              creators[idx][inp.dataset.fld] = inp.value;
-            } else {
-              creators[idx][inp.dataset.fld] = inp.value.trim();
-            }
-          }
-        });
-        // 收集 type（多选 select）
-        searchResults.querySelectorAll("[data-idx][data-fld='type']").forEach((sel) => {
-          const idx = parseInt(sel.dataset.idx, 10);
-          if (creators[idx]) {
-            creators[idx].type = Array.from(sel.selectedOptions)
-              .map((o) => o.value)
-              .filter(Boolean)
-              .join(";");
-          }
-        });
-        const { SaveWorkshopCreators } =
+        syncAllEditInputs();
+        // 按站点保存 — 只传当前站点的创作者
+        const siteCreators = creators.filter(
+          (cr) => cr.type && cr.type.split(";").includes(site.id),
+        );
+        const { SaveWorkshopCreatorsBySite } =
           await import("../../../wailsjs/go/main/App.js");
-        await SaveWorkshopCreators(allCreators);
+        await SaveWorkshopCreatorsBySite(site.id, siteCreators);
         wsEditModeRef.v = false;
         bus.emit("toast:show", {
           msg: "✅ 已保存",
@@ -918,6 +905,15 @@ export function renderSiteView(site, ctx) {
     .querySelector(".cr-export-btn")
     ?.addEventListener("click", async () => {
       try {
+        // 导出前全量保存并校验完整性
+        if (allCreators.length < 100) {
+          bus.emit("toast:show", {
+            msg: "❌ 数据异常：仅 " + allCreators.length + " 条，拒绝导出",
+            duration: 4000,
+            type: "error",
+          });
+          return;
+        }
         const { SaveWorkshopCreators, ExportWorkshopCreatorsJSONFile } =
           await import("../../../wailsjs/go/main/App.js");
         await SaveWorkshopCreators(allCreators);
@@ -949,6 +945,17 @@ export function renderSiteView(site, ctx) {
             allCreators.push(cr);
           }
         });
+        if (allCreators.length < 100) {
+          bus.emit("toast:show", {
+            msg: "❌ 合并后数据异常（" + allCreators.length + " 条），已取消保存",
+            duration: 4000,
+            type: "error",
+          });
+          // 从文件重新加载
+          allCreators.length = 0;
+          allCreators.push(...fresh);
+          return;
+        }
         wsEditModeRef.v = false;
         bus.emit("toast:show", {
           msg: "✅ 已合并导入，共 " + allCreators.length + " 位创作者",

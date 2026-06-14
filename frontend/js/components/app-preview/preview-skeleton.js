@@ -304,17 +304,79 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
           topBar.appendChild(texSel);
         }
 
+        const spacer = document.createElement("div");
+        spacer.style.cssText = "flex:1";
+        topBar.appendChild(spacer);
+
+        const rotLabel = document.createElement("span");
+        rotLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
+        rotLabel.textContent = "摄像机旋转:";
+        topBar.appendChild(rotLabel);
+
+        const rotSel = document.createElement("select");
+        rotSel.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit;margin-right:8px";
+        [{ v: true, t: "环绕" }, { v: false, t: "自身" }].forEach((m) => {
+          const opt = document.createElement("option");
+          opt.value = m.v;
+          opt.textContent = m.t;
+          rotSel.appendChild(opt);
+        });
+        topBar.appendChild(rotSel);
+
+        const spdLabel = document.createElement("span");
+        spdLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
+        spdLabel.textContent = "摄像机速度:";
+        topBar.appendChild(spdLabel);
+
+        const spdSlider = document.createElement("input");
+        spdSlider.type = "range";
+        spdSlider.min = "2";
+        spdSlider.max = "200";
+        spdSlider.value = "20";
+        spdSlider.style.cssText = "width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff)";
+        topBar.appendChild(spdSlider);
+
+        const spdVal = document.createElement("span");
+        spdVal.style.cssText = "font-size:11px;color:rgba(255,255,255,0.6);min-width:20px";
+        spdVal.textContent = "20";
+        topBar.appendChild(spdVal);
+
         overlay.appendChild(topBar);
 
         const viewContainer = document.createElement("div");
         viewContainer.style.cssText = "flex:1;position:relative";
+
+        const progStyle = document.createElement("style");
+        progStyle.textContent = "@keyframes ysm-prog{0%{margin-left:-30%}100%{margin-left:130%}}";
+        overlay.appendChild(progStyle);
+
         overlay.appendChild(viewContainer);
         document.body.appendChild(overlay);
+
+        const loadingEl = document.createElement("div");
+        loadingEl.style.cssText = "position:absolute;inset:0;top:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);font-size:14px;gap:12px;z-index:10;background:rgba(26,27,46,0.9)";
+        loadingEl.innerHTML = '<div style="font-size:32px">🧱</div><div>加载模型中...</div><div style="width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden"><div style="height:100%;width:30%;background:var(--accent,#7c83ff);border-radius:2px;animation:ysm-prog 1.5s ease-in-out infinite"></div></div>';
+        overlay.appendChild(loadingEl);
 
         try {
           const texUrl = model.texture || null;
           const { renderModel3D } = await import("../../utils/model3d.js");
           _model3d = await renderModel3D(viewContainer, model, texUrl, _texIdx);
+          loadingEl.remove();
+
+          const tip = document.createElement("div");
+          tip.style.cssText = "padding:6px 12px;background:rgba(124,131,255,0.2);color:#fff;font-size:12px;text-align:center;flex-shrink:0;font-weight:500";
+          tip.textContent = "🎮 WASD 移动 | 空格/Shift 上下 | 🖱 拖拽旋转 | 🔍 滚轮缩放 | ESC 关闭";
+          overlay.insertBefore(tip, overlay.children[1]);
+          setTimeout(() => { if (tip.parentNode) tip.remove(); }, 6000);
+
+          rotSel.onchange = () => {
+            _model3d.setRotationMode(rotSel.value === "true");
+          };
+          spdSlider.oninput = () => {
+            spdVal.textContent = spdSlider.value;
+            _model3d.setSpeed(Number(spdSlider.value));
+          };
 
           const onKey = (e) => {
             if (e.key !== "Escape") return;

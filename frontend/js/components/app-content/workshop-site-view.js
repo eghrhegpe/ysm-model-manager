@@ -345,25 +345,19 @@ export function renderSiteView(site, ctx) {
       );
       site.presetSearches.forEach((ps, idx) => {
         parts.push(
-          '<div class="cr-row">' +
-            '<span class="cr-up-btn" data-idx="' +
-            idx +
-            '" style="cursor:pointer;opacity:.5' +
-            (idx === 0 ? "5;visibility:hidden" : ";visibility:visible") +
-            '" title="上移">↑</span>' +
-            '<span class="cr-down-btn" data-idx="' +
-            idx +
-            '" style="cursor:pointer;opacity:.5' +
-            (idx === site.presetSearches.length - 1
-              ? "5;visibility:hidden"
-              : ";visibility:visible") +
-            '" title="下移">↓</span>' +
+          '<div class="cr-row" data-edit="preset">' +
             "<span>🔍</span>" +
             '<input data-idx="' +
             idx +
             '" data-fld="label" value="' +
             esc(ps.label) +
-            '" class="cr-input cr-input-name" style="flex:1">' +
+            '" class="cr-input cr-input-name">' +
+            '<button data-idx="' +
+            idx +
+            '" class="cr-order-up" title="上移">↑</button>' +
+            '<button data-idx="' +
+            idx +
+            '" class="cr-order-down" title="下移">↓</button>' +
             '<button data-idx="' +
             idx +
             '" class="cr-del-preset">🗑️</button>' +
@@ -387,22 +381,39 @@ export function renderSiteView(site, ctx) {
         '<div class="cr-hint-text">📄 数据文件：exe 同目录下的 creators.json，可直接编辑</div>',
     );
     creators.forEach((cr, idx) => {
+      const roleEmoji = getTagEmojiFromRole(cr.role);
       parts.push(
-        '<div class="cr-row" style="flex-wrap:wrap">' +
-          "<span>🎨</span>" +
+        '<div class="cr-edit-card" draggable="true" data-edit-idx="' +
+          idx +
+          '">' +
+          '<div class="cr-edit-card-head">' +
+          '<span class="cr-drag-handle">⠿</span>' +
+          '<span class="cr-edit-card-avatar">' +
+          roleEmoji +
+          "</span>" +
           '<input data-idx="' +
           idx +
           '" data-fld="name" value="' +
           esc(cr.name) +
-          '" class="cr-input cr-input-name" style="min-width:80px">' +
+          '" class="cr-input cr-input-name" style="flex:1;min-width:60px;border:none;background:transparent;color:var(--txt);font-size:var(--fs-sm);font-family:inherit;outline:none" placeholder="名称">' +
+          '<button data-idx="' +
+          idx +
+          '" class="cr-del" title="删除" style="font-size:12px;padding:0 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit">🗑️</button>' +
+          "</div>" +
+          '<div class="cr-edit-card-body">' +
+          '<div class="cr-edit-card-row">' +
+          '<span style="font-size:10px;color:var(--muted);width:28px;flex-shrink:0">描述</span>' +
           '<input data-idx="' +
           idx +
           '" data-fld="desc" value="' +
           esc(cr.desc) +
-          '" class="cr-input cr-input-desc">' +
+          '" class="cr-input cr-input-desc" style="flex:1;border:none;background:transparent;color:var(--txt);font-size:var(--fs-xs);font-family:inherit;outline:none" placeholder="关键词、顿号分隔">' +
+          "</div>" +
+          '<div class="cr-edit-card-row">' +
+          '<span style="font-size:10px;color:var(--muted);width:28px;flex-shrink:0">平台</span>' +
           '<select data-idx="' +
           idx +
-          '" data-fld="type" class="cr-input-type" multiple style="width:130px;height:60px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit" title="Ctrl+点击多选">' +
+          '" data-fld="type" class="cr-input-type" multiple style="flex:1;height:auto;min-height:50px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit" title="Ctrl+点击多选">' +
           (allSites || [])
             .map(
               (s) =>
@@ -417,10 +428,9 @@ export function renderSiteView(site, ctx) {
                 "</option>",
             )
             .join("") +
-          "  </select>" +
-          '<select data-idx="' +
+          '</select><select data-idx="' +
           idx +
-          '" data-fld="role" class="cr-input-role" style="width:80px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit">' +
+          '" data-fld="role" class="cr-input-role" style="width:auto;min-width:70px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit">' +
           '<option value="creator"' +
           (cr.role === "creator" ? " selected" : "") +
           ">🎮 创作者</option>" +
@@ -437,9 +447,8 @@ export function renderSiteView(site, ctx) {
           (cr.role === "repo" ? " selected" : "") +
           ">📦 仓库</option>" +
           "</select>" +
-          '<button data-idx="' +
-          idx +
-          '" class="cr-del">🗑️</button>' +
+          "</div>" +
+          "</div>" +
           "</div>",
       );
     });
@@ -987,6 +996,61 @@ export function renderSiteView(site, ctx) {
       }
     });
   });
+  // 创作者拖拽排序
+  let dragSrcIdx = -1;
+  searchResults.querySelectorAll(".cr-edit-card").forEach((card) => {
+    card.addEventListener("dragstart", (e) => {
+      dragSrcIdx = parseInt(card.dataset.editIdx, 10);
+      card.style.opacity = "0.4";
+      e.dataTransfer.effectAllowed = "move";
+    });
+    card.addEventListener("dragend", () => {
+      card.style.opacity = "";
+      searchResults.querySelectorAll(".cr-edit-card").forEach((c) => c.style.borderColor = "");
+    });
+    card.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    });
+    card.addEventListener("dragenter", (e) => {
+      e.preventDefault();
+      card.style.borderColor = "var(--accent)";
+    });
+    card.addEventListener("dragleave", () => {
+      card.style.borderColor = "";
+    });
+    card.addEventListener("drop", (e) => {
+      e.preventDefault();
+      card.style.borderColor = "";
+      const targetIdx = parseInt(card.dataset.editIdx, 10);
+      if (dragSrcIdx < 0 || dragSrcIdx === targetIdx) return;
+      // 同步输入框值到数组再排序
+      syncEditInputsToCreators();
+      // 在 creators 数组中交换
+      const [removed] = creators.splice(dragSrcIdx, 1);
+      creators.splice(targetIdx, 0, removed);
+      // 同步到 allCreators
+      allCreators.length = 0;
+      allCreators.push(...creators);
+      dragSrcIdx = -1;
+      refreshView();
+    });
+  });
+  function syncEditInputsToCreators() {
+    searchResults.querySelectorAll("[data-idx][data-fld]").forEach((inp) => {
+      const idx = parseInt(inp.dataset.idx, 10);
+      if (creators[idx]) {
+        if (inp.tagName === "SELECT") {
+          creators[idx][inp.dataset.fld] = Array.from(inp.selectedOptions)
+            .map((o) => o.value)
+            .filter(Boolean)
+            .join(";");
+        } else {
+          creators[idx][inp.dataset.fld] = inp.value.trim();
+        }
+      }
+    });
+  }
   // 删除搜索词
   searchResults.querySelectorAll(".cr-del-preset").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -997,28 +1061,23 @@ export function renderSiteView(site, ctx) {
       }
     });
   });
-  // 搜索词上移
-  searchResults.querySelectorAll(".cr-up-btn").forEach((btn) => {
+  // 搜索词排序
+  searchResults.querySelectorAll(".cr-order-up").forEach((btn) => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.dataset.idx, 10);
       if (site.presetSearches && idx > 0) {
-        [site.presetSearches[idx - 1], site.presetSearches[idx]] = [
-          site.presetSearches[idx],
-          site.presetSearches[idx - 1],
-        ];
+        [site.presetSearches[idx - 1], site.presetSearches[idx]] =
+          [site.presetSearches[idx], site.presetSearches[idx - 1]];
         refreshView();
       }
     });
   });
-  // 搜索词下移
-  searchResults.querySelectorAll(".cr-down-btn").forEach((btn) => {
+  searchResults.querySelectorAll(".cr-order-down").forEach((btn) => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.dataset.idx, 10);
       if (site.presetSearches && idx < site.presetSearches.length - 1) {
-        [site.presetSearches[idx], site.presetSearches[idx + 1]] = [
-          site.presetSearches[idx + 1],
-          site.presetSearches[idx],
-        ];
+        [site.presetSearches[idx], site.presetSearches[idx + 1]] =
+          [site.presetSearches[idx + 1], site.presetSearches[idx]];
         refreshView();
       }
     });

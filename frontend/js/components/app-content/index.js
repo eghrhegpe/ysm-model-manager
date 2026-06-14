@@ -462,7 +462,7 @@ class AppContent extends HTMLElement {
         },
       });
       // 外链/内嵌切换（按钮在 renderSiteView 中动态渲染）
-      const toggleBtn = searchResults.getElementById("cr-mode-toggle");
+      const toggleBtn = searchResults.querySelector("#cr-mode-toggle");
       if (toggleBtn) {
         toggleBtn.onclick = () => {
           embedMode = !embedMode;

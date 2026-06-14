@@ -137,7 +137,7 @@ export function mergeCommunityCreators(local, community) {
  * 贡献通道：https://github.com/eghrhegpe/ysm-creator-index
  */
 export const DEFAULT_COMMUNITY_URL =
-  "https://raw.githubusercontent.com/eghrhegpe/ysm-creator-index/main/creators.json";
+  "https://raw.githubusercontent.com/eghrhegpe/ysm-creator-index/refs/heads/main/creators.json";
 
 /**
  * 获取仓库模型列表 + 本地映射

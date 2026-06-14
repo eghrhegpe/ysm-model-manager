@@ -38,7 +38,7 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   const aspect = container.clientWidth / container.clientHeight || 1;
   const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
   camera.position.set(0, 80, -120);
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -317,18 +317,106 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     }
   };
   window.addEventListener("resize", _onResize);
+
+  const _keys = {};
+  const _onKeyDown = (e) => {
+    _keys[e.key.toLowerCase()] = true;
+    if (["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase())) {
+      e.preventDefault();
+    }
+  };
+  const _onKeyUp = (e) => { _keys[e.key.toLowerCase()] = false; };
+  document.addEventListener("keydown", _onKeyDown);
+  document.addEventListener("keyup", _onKeyUp);
+
+  let _lastTime = performance.now();
+  let _camSpeed = 20;
+  let _orbitMode = true;
+  const _orbitTarget = controls.target.clone();
+  const _euler = new THREE.Euler(0, 0, 0, "YXZ");
+  let _mouseDown = false;
+  let _lastMouse = { x: 0, y: 0 };
+
+  function onMouseDown(e) {
+    if (!_orbitMode && e.button === 0) { _mouseDown = true; _lastMouse.x = e.clientX; _lastMouse.y = e.clientY; }
+  }
+  function onMouseUp() { _mouseDown = false; }
+  function onMouseMove(e) {
+    if (_orbitMode || !_mouseDown) return;
+    const dx = e.clientX - _lastMouse.x;
+    const dy = e.clientY - _lastMouse.y;
+    _lastMouse.x = e.clientX;
+    _lastMouse.y = e.clientY;
+    _euler.setFromQuaternion(camera.quaternion);
+    _euler.y -= dx * 0.003;
+    _euler.x -= dy * 0.003;
+    _euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, _euler.x));
+    camera.quaternion.setFromEuler(_euler);
+  }
+  renderer.domElement.addEventListener("mousedown", onMouseDown);
+  window.addEventListener("mouseup", onMouseUp);
+  window.addEventListener("mousemove", onMouseMove);
+
+  controls.enableRotate = true;
+
   function renderLoop() {
     _rafId = requestAnimationFrame(renderLoop);
-    controls.update();
+    const now = performance.now();
+    const dt = Math.min((now - _lastTime) / 1000, 0.1);
+    _lastTime = now;
+
+    const camDir = new THREE.Vector3();
+    camera.getWorldDirection(camDir);
+    const forward = new THREE.Vector3(camDir.x, 0, camDir.z).normalize();
+    const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+    const move = new THREE.Vector3();
+
+    if (_keys["w"] || _keys["arrowup"])    move.add(forward);
+    if (_keys["s"] || _keys["arrowdown"])  move.sub(forward);
+    if (_keys["a"] || _keys["arrowleft"])  move.sub(right);
+    if (_keys["d"] || _keys["arrowright"]) move.add(right);
+    if (_keys[" "]) move.y += 1;
+    if (_keys["shift"]) move.y -= 1;
+
+    if (move.length() > 0) {
+      move.normalize().multiplyScalar(_camSpeed * dt);
+      camera.position.add(move);
+      _orbitTarget.add(move);
+    }
+
+    if (_orbitMode) {
+      controls.target.copy(_orbitTarget);
+      controls.update();
+      _orbitTarget.copy(controls.target);
+    } else {
+      controls.target.copy(camera.position).addScaledVector(camDir, 10);
+      controls.update();
+    }
+
     renderer.render(scene, camera);
   }
   _rafId = requestAnimationFrame(renderLoop);
   renderer.render(scene, camera);
   return {
+    setSpeed: (v) => { _camSpeed = v; },
+    setRotationMode: (orbit) => {
+      _orbitMode = orbit;
+      if (orbit) {
+        controls.enableRotate = true;
+        _orbitTarget.copy(controls.target);
+      } else {
+        _euler.setFromQuaternion(camera.quaternion);
+        controls.enableRotate = false;
+      }
+    },
     cleanup: () => {
-      // 停止动画循环（最重要的！否则每次开/关都产生一个僵尸 loop）
       if (_rafId != null) cancelAnimationFrame(_rafId);
       _rafId = null;
+      document.removeEventListener("keydown", _onKeyDown);
+      document.removeEventListener("keyup", _onKeyUp);
+      renderer.domElement.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("mousemove", onMouseMove);
       controls.dispose();
       window.removeEventListener("resize", _onResize);
       renderer.dispose();

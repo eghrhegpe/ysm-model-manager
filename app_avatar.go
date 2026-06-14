@@ -57,7 +57,7 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 				}
 				if _, ok := seen[author]; !ok {
 					ext := strings.ToLower(filepath.Ext(e.Path))
-					if ext == ".ysm" || ext == ".zip" || ext == ".7z" {
+					if ext == ".ysm" {
 						seen[author] = e.Path
 					}
 				}
@@ -114,7 +114,7 @@ func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 				author := name[1:idx]
 				if author == authorName {
 					ext := strings.ToLower(filepath.Ext(e.Path))
-					if ext == ".ysm" || ext == ".zip" || ext == ".7z" {
+					if ext == ".ysm" {
 						foundPath = e.Path
 						info["found_path"] = foundPath
 						break

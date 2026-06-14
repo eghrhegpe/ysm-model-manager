@@ -222,10 +222,12 @@ export function renderSiteView(site, ctx) {
               (isFaved(cr.name) ? "⭐" : "☆") +
               "</span>" +
               (cr._fromLocal && authorCount > 0
-                ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁' + authorCount + "</span>"
+                ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁' +
+                  authorCount +
+                  "</span>"
                 : cr._fromLocal
-                ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁</span>'
-                : "") +
+                  ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁</span>'
+                  : "") +
               "</div>" +
               '<div class="gh-card-desc">' +
               esc(cr.desc) +
@@ -384,12 +386,12 @@ export function renderSiteView(site, ctx) {
       btn.textContent = now ? "⭐" : "☆";
       const card = btn.closest(".gh-card");
       if (card) {
-        // 重新排序：移除再插入首部/尾部
+        // 重新排序：收藏→移到首部，取消→移到尾部（不 remove 以免丢失事件）
         const grid = card.closest(".cr-creator-grid");
         if (now) {
           grid?.insertBefore(card, grid.firstChild);
         } else {
-          card.remove();
+          grid?.appendChild(card);
         }
       }
       bus.emit("toast:show", {

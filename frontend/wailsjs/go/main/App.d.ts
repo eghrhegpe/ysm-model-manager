@@ -39,6 +39,8 @@ export function CreateDir(arg1:string):Promise<void>;
 
 export function CurrentVersion():Promise<string>;
 
+export function DebugExtractCreatorAvatar(arg1:string):Promise<Record<string, string>>;
+
 export function DeduplicateCustomDir(arg1:string):Promise<number>;
 
 export function DeleteFromRecycle(arg1:string):Promise<void>;

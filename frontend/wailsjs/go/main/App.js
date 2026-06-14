@@ -162,6 +162,10 @@ export function GenerateRepoIndex(arg1) {
   return window['go']['main']['App']['GenerateRepoIndex'](arg1);
 }
 
+export function GetAppVersion() {
+  return window['go']['main']['App']['GetAppVersion']();
+}
+
 export function GetGlobalCustomDir(arg1) {
   return window['go']['main']['App']['GetGlobalCustomDir'](arg1);
 }

@@ -619,7 +619,7 @@ class AppContent extends HTMLElement {
       this._repoEventsCleanup = cleanup;
 
       // 初始渲染
-      const listContainer = searchResults.querySelector("#ws-repo-list");
+      const listContainer = searchResults.querySelector("#gh-repo-list");
       if (listContainer) listContainer.appendChild(renderList());
     }; // end showRepoModels
   }
@@ -785,7 +785,7 @@ class AppContent extends HTMLElement {
         localMap,
       });
       this._repoEventsCleanup = cleanup;
-      const listContainer = resultsBody.querySelector("#ws-repo-list");
+      const listContainer = resultsBody.querySelector("#gh-repo-list");
       if (listContainer) listContainer.appendChild(renderList());
     };
 

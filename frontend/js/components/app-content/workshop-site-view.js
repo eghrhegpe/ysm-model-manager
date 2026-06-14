@@ -23,25 +23,43 @@ const STORAGE_KEY = "ysm-fav-creators";
 
 // ===== 创作者身份工具 =====
 const PLATFORM_LABELS = {
-  bilibili: "B站", afdian: "爱发电", github: "GitHub", mzhouse: "模之屋",
-  bowlroll: "Bowlroll", vroid: "VRoid", nicovideo: "NicoNico 3D", deviantart: "DeviantArt",
+  bilibili: "B站",
+  afdian: "爱发电",
+  github: "GitHub",
+  mzhouse: "模之屋",
+  bowlroll: "Bowlroll",
+  vroid: "VRoid",
+  nicovideo: "NicoNico 3D",
+  deviantart: "DeviantArt",
 };
 const PLATFORM_ICONS = {
-  bilibili: "📺", afdian: "❤️", github: "🐙", mzhouse: "🏠",
-  bowlroll: "🍚", vroid: "🤖", nicovideo: "🧊", deviantart: "🎨",
+  bilibili: "📺",
+  afdian: "❤️",
+  github: "🐙",
+  mzhouse: "🏠",
+  bowlroll: "🍚",
+  vroid: "🤖",
+  nicovideo: "🧊",
+  deviantart: "🎨",
 };
 function getCreatorIdentity(cr) {
   const role = cr.role || "";
   const tag = cr.tag || "";
   switch (role) {
-    case "official": return { label: "🏠 官方IP模型库", icon: "🏠", tag: "official" };
-    case "creator": return { label: "🎮 YSM 创作者", icon: "🎮", tag: "creator" };
-    case "vup": return { label: "🎤 VTuber 创作者", icon: "🎤", tag: "vup" };
-    case "repo": return { label: "📦 社区模型仓库", icon: "📦", tag: "repo" };
-    case "oc": return { label: "🎨 OC 原创角色", icon: "🎨", tag: "oc" };
+    case "official":
+      return { label: "🏠 官方IP模型库", icon: "🏠", tag: "official" };
+    case "creator":
+      return { label: "🎮 YSM 创作者", icon: "🎮", tag: "creator" };
+    case "vup":
+      return { label: "🎤 VTuber 创作者", icon: "🎤", tag: "vup" };
+    case "repo":
+      return { label: "📦 社区模型仓库", icon: "📦", tag: "repo" };
+    case "oc":
+      return { label: "🎨 OC 原创角色", icon: "🎨", tag: "oc" };
   }
   // fallback: detect from old tag field
-  if (tag === "vup") return { label: "🎤 VTuber 创作者", icon: "🎤", tag: "vup" };
+  if (tag === "vup")
+    return { label: "🎤 VTuber 创作者", icon: "🎤", tag: "vup" };
   if (tag === "oc") return { label: "🎨 OC 原创角色", icon: "🎨", tag: "oc" };
   return { label: "🎮 YSM 创作者", icon: "🎮", tag: "creator" };
 }
@@ -51,16 +69,25 @@ function getTagFromRole(role) {
 }
 function getTagEmojiFromRole(role) {
   switch (role) {
-    case "official": return "🏷️";
-    case "vup": return "🎤";
-    case "oc": return "🎨";
-    case "repo": return "📦";
-    default: return "🎮";
+    case "official":
+      return "🏷️";
+    case "vup":
+      return "🎤";
+    case "oc":
+      return "🎨";
+    case "repo":
+      return "📦";
+    default:
+      return "🎮";
   }
 }
 function parseDescTags(desc) {
   if (!desc) return [];
-  return desc.split(/[、，,]/).map(s => s.trim()).filter(Boolean).slice(0, 6);
+  return desc
+    .split(/[、，,]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 6);
 }
 
 function loadFavs() {
@@ -191,7 +218,7 @@ export function renderSiteView(site, ctx) {
         '<button class="cr-tag-filter-btn" data-tag="creator">🎮 模型创作者</button>' +
         '<button class="cr-tag-filter-btn" data-tag="official">🏠 官方IP</button>' +
         tags
-          .filter(t => t !== "creator" && t !== "official")
+          .filter((t) => t !== "creator" && t !== "official")
           .map(
             (t) =>
               '<button class="cr-tag-filter-btn" data-tag="' +
@@ -290,12 +317,12 @@ export function renderSiteView(site, ctx) {
                 .join("") +
               "</div>" +
               '<span class="cr-tag cr-tag-' +
-                esc(getTagFromRole(cr.role)) +
-                '">' +
-                getTagEmojiFromRole(cr.role) +
-                " " +
-                esc(getTagFromRole(cr.role)) +
-                "</span>" +
+              esc(getTagFromRole(cr.role)) +
+              '">' +
+              getTagEmojiFromRole(cr.role) +
+              " " +
+              esc(getTagFromRole(cr.role)) +
+              "</span>" +
               "</div>" +
               (hasRepo
                 ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' +
@@ -474,7 +501,8 @@ export function renderSiteView(site, ctx) {
 
       const overlay = document.createElement("div");
       overlay.className = "cr-detail-overlay";
-      overlay.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center";
+      overlay.style.cssText =
+        "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center";
       overlay.onclick = (ev) => {
         if (ev.target === overlay) overlay.remove();
       };
@@ -510,7 +538,6 @@ export function renderSiteView(site, ctx) {
           ".cr-star-btn:hover{transform:scale(1.15)}";
         document.head.appendChild(st);
       }
-
 
       const identity = getCreatorIdentity(cr);
       const descTags = parseDescTags(cr.desc);
@@ -820,7 +847,27 @@ export function renderSiteView(site, ctx) {
           if (idx >= 0) allSites[idx] = site;
           await SaveWorkshopSites(allSites);
         }
-        // 保存创作者
+        // 保存创作者：先收集输入框值
+        searchResults.querySelectorAll("[data-idx][data-fld]:not([data-fld='type'])").forEach((inp) => {
+          const idx = parseInt(inp.dataset.idx, 10);
+          if (creators[idx]) {
+            if (inp.tagName === "SELECT") {
+              creators[idx][inp.dataset.fld] = inp.value;
+            } else {
+              creators[idx][inp.dataset.fld] = inp.value.trim();
+            }
+          }
+        });
+        // 收集 type（多选 select）
+        searchResults.querySelectorAll("[data-idx][data-fld='type']").forEach((sel) => {
+          const idx = parseInt(sel.dataset.idx, 10);
+          if (creators[idx]) {
+            creators[idx].type = Array.from(sel.selectedOptions)
+              .map((o) => o.value)
+              .filter(Boolean)
+              .join(";");
+          }
+        });
         const { SaveWorkshopCreators } =
           await import("../../../wailsjs/go/main/App.js");
         await SaveWorkshopCreators(allCreators);
@@ -893,7 +940,7 @@ export function renderSiteView(site, ctx) {
     });
 
   // 行内编辑
-  searchResults.querySelectorAll(".cr-ed").forEach((inp) => {
+  searchResults.querySelectorAll("[data-idx][data-fld]").forEach((inp) => {
     inp.addEventListener("focus", () => {
       inp.style.borderColor = "var(--bd)";
       inp.style.background = "var(--surf)";
@@ -984,8 +1031,7 @@ export function renderSiteView(site, ctx) {
       ).toLowerCase();
       const cardTag = (card.dataset.tag || "").toLowerCase();
       const matchName = !kw || name.includes(kw) || desc.includes(kw);
-      const matchTag =
-        !_activeTag || _activeTag === cardTag;
+      const matchTag = !_activeTag || _activeTag === cardTag;
       card.style.display = matchName && matchTag ? "" : "none";
       if (matchName && matchTag) visible++;
     });

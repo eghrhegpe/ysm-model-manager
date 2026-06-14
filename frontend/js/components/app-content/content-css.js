@@ -99,7 +99,6 @@ export const contentCSS = `
 .stg-card-body { padding:8px 12px; }
 .stg-card-val { display:flex; align-items:center; gap:4px; padding:var(--pad-btn-secondary) 10px; border:1px solid var(--bd); border-radius:6px; cursor:pointer; font-size:var(--fs-sm); color:var(--txt); background:var(--bg); transition:border-color .12s, background .12s; width:100%; box-sizing:border-box; min-height:0; }
 .stg-card-val:hover { border-color:var(--accent); background:var(--hover); }
-.stg-card-val::before { content:"📂 "; flex-shrink:0; }
 .stg-card-val.derived:hover { border-color:var(--accent); background:var(--hover); }
 .stg-card-val.derived::before { content:"📁 "; }
 .stg-card-hint { font-size:var(--fs-xs); color:var(--muted); margin-bottom:6px; }

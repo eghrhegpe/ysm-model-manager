@@ -310,7 +310,7 @@ export function renderSiteView(site, ctx) {
         '<input type="text" id="ws-cr-search" placeholder="搜创作者名..." ' +
         'style="flex:1;min-width:120px;max-width:160px;padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit;outline:none">' +
         '<span style="flex:1"></span>' +
-        '<button class="cr-fetch-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto" title="从 GitHub 社区索引拉取最新创作者">🌐 社区</button>' +
+        '<button class="cr-fetch-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto" title="从 GitHub 拉取最新创作者 + 站点配置">🌐 更新配置</button>' +
         '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted">✏️ 编辑</button>' +
         "</div>" +
         '<div class="cr-tag-filter-row">' +
@@ -865,7 +865,7 @@ export function renderSiteView(site, ctx) {
     refreshView();
   });
 
-  // 🌐 拉取社区索引
+  // 🌐 拉取社区索引（creators + sites）
   searchResults
     .querySelector(".cr-fetch-btn")
     ?.addEventListener("click", async () => {
@@ -876,31 +876,57 @@ export function renderSiteView(site, ctx) {
         const {
           fetchCommunityCreators,
           mergeCommunityCreators,
+          fetchCommunitySites,
+          mergeCommunitySites,
           DEFAULT_COMMUNITY_URL,
         } = await import("./workshop-core.js");
-        const community = await fetchCommunityCreators(DEFAULT_COMMUNITY_URL);
-        if (!community.length) {
+
+        // 并行拉取 creators + sites
+        const [community, sitesData] = await Promise.all([
+          fetchCommunityCreators(DEFAULT_COMMUNITY_URL),
+          fetchCommunitySites(),
+        ]);
+
+        const logs = [];
+        // 合并创作者
+        if (community && community.length) {
+          const { added, updated } = mergeCommunityCreators(allCreators, community);
+          const { SaveWorkshopCreators } =
+            await import("../../../wailsjs/go/main/App.js");
+          await SaveWorkshopCreators(allCreators);
+          if (added || updated) logs.push(`创作者: +${added} 补${updated}`);
+        } else {
+          logs.push("创作者: 无更新");
+        }
+        // 合并站点
+        if (sitesData && sitesData.length) {
+          const { added } = mergeCommunitySites(allSites, sitesData);
+          if (added > 0) {
+            const { SaveWorkshopSites } =
+              await import("../../../wailsjs/go/main/App.js");
+            await SaveWorkshopSites(allSites);
+            logs.push(`站点: +${added}`);
+          } else {
+            logs.push("站点: 无更新");
+          }
+        } else {
+          logs.push("站点: 无更新");
+        }
+
+        if (logs.length) {
+          bus.emit("toast:show", {
+            msg: "🌐 " + logs.join(" · "),
+            duration: 4000,
+            type: "success",
+          });
+          refreshView();
+        } else {
           bus.emit("toast:show", {
             msg: "🌐 社区索引为空或加载失败",
             duration: 3000,
             type: "warn",
           });
-          return;
         }
-        const { added, updated } = mergeCommunityCreators(
-          allCreators,
-          community,
-        );
-        // 保存到本地
-        const { SaveWorkshopCreators } =
-          await import("../../../wailsjs/go/main/App.js");
-        await SaveWorkshopCreators(allCreators);
-        bus.emit("toast:show", {
-          msg: `🌐 社区索引合并完成：新增 ${added} 位，补充 ${updated} 位`,
-          duration: 4000,
-          type: "success",
-        });
-        refreshView();
       } catch (e) {
         bus.emit("toast:show", {
           msg: "🌐 " + friendlyError(e, "拉取失败"),
@@ -908,7 +934,7 @@ export function renderSiteView(site, ctx) {
           type: "error",
         });
       } finally {
-        btn.textContent = "🌐 社区";
+        btn.textContent = "🌐 更新配置";
         btn.disabled = false;
       }
     });

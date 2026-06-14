@@ -70,6 +70,10 @@ export function CurrentVersion() {
   return window['go']['main']['App']['CurrentVersion']();
 }
 
+export function DebugExtractCreatorAvatar(arg1) {
+  return window['go']['main']['App']['DebugExtractCreatorAvatar'](arg1);
+}
+
 export function DeduplicateCustomDir(arg1) {
   return window['go']['main']['App']['DeduplicateCustomDir'](arg1);
 }

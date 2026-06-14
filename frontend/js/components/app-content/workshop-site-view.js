@@ -92,7 +92,7 @@ function parseDescTags(desc) {
 
 // ===== 创作者卡片工厂 =====
 function createCrCard(cr, ctx) {
-  const { authorCountMap, avatarCache, creators, bus } = ctx;
+  const { esc, isFaved, authorCountMap, avatarCache, creators, bus } = ctx;
   const isGitHub = cr.type && cr.type.includes("github");
   const repoParts = isGitHub ? cr.name.split("/") : null;
   const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
@@ -431,7 +431,7 @@ export function renderSiteView(site, ctx) {
   // 用工厂函数填充创作者网格（替代内联字符串）
   const grid = searchResults.querySelector("#cr-creator-grid");
   if (grid && !wsEditModeRef.v && creators.length) {
-    const cardCtx = { authorCountMap, avatarCache, creators, allCreators, site, searchResults, bus };
+    const cardCtx = { esc, isFaved, authorCountMap, avatarCache, creators, allCreators, site, searchResults, bus };
     creators.forEach((cr) => {
       const card = createCrCard(cr, cardCtx);
       grid.appendChild(card);

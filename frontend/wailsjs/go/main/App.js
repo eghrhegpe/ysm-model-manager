@@ -330,6 +330,10 @@ export function OpenFolder(arg1) {
   return window['go']['main']['App']['OpenFolder'](arg1);
 }
 
+export function OpenInBrowser(arg1) {
+  return window['go']['main']['App']['OpenInBrowser'](arg1);
+}
+
 export function PullResourceFromInstance(arg1, arg2) {
   return window['go']['main']['App']['PullResourceFromInstance'](arg1, arg2);
 }

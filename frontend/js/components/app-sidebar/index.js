@@ -53,15 +53,11 @@ class AppSidebar extends HTMLElement {
   async connectedCallback() {
     this._renderLayout();
 
-    // 监听刷新事件
+    // 监听刷新事件（300ms 防抖，防止短时间内多次重载）
     this._unsubs.push(
-      bus.on("stats:refresh", async () => {
-        console.log(
-          "[sidebar] stats:refresh 收到, 开始 _reload, rtype:",
-          this._rtype,
-        );
-        await this._reload();
-        console.log("[sidebar] _reload 完成");
+      bus.on("stats:refresh", () => {
+        clearTimeout(this._debounceTimer);
+        this._debounceTimer = setTimeout(() => this._reload(), 300);
       }),
     );
 
@@ -69,9 +65,9 @@ class AppSidebar extends HTMLElement {
     this._unsubs.push(
       bus.on("repo:rtype-changed", async (rtype) => {
         if (rtype && rtype !== this._rtype) {
-          console.log("[sidebar] 类型切换:", this._rtype, "→", rtype);
           this._rtype = rtype;
-          await this._reload();
+          clearTimeout(this._debounceTimer);
+          this._debounceTimer = setTimeout(() => this._reload(), 100);
         }
       }),
     );
@@ -80,7 +76,8 @@ class AppSidebar extends HTMLElement {
     this._bindSelectAll();
     this._bindSyncSelected();
 
-    await this._reload();
+    clearTimeout(this._debounceTimer);
+    this._debounceTimer = setTimeout(() => this._reload(), 50);
   }
 
   _bindSelectAll() {
@@ -200,6 +197,8 @@ class AppSidebar extends HTMLElement {
   }
 
   async _reload() {
+    if (this._loading) return;
+    this._loading = true;
     try {
       this._instances = await loadInstances(this._rtype);
       console.log(
@@ -219,6 +218,8 @@ class AppSidebar extends HTMLElement {
     } catch (e) {
       console.log("[sidebar] _reload 失败:", e);
       this._instances = [];
+    } finally {
+      this._loading = false;
     }
     this._renderCards();
     bindFooter(this._root, this._instances);
@@ -226,53 +227,59 @@ class AppSidebar extends HTMLElement {
 
   /** 只更新卡片数字和底部统计，不重建列表 */
   async _updateCardStats(rtype) {
-    const newData = await loadInstances(rtype).catch(() => []);
-    if (!newData.length) return;
-    // 就地更新每张卡片的头部 HTML（用 name 匹配，不依赖索引顺序）
-    const container = this._root.getElementById("vg");
-    if (!container) return;
-    const vcs = container.querySelectorAll(".vc");
-    newData.forEach((ins) => {
-      const vc = Array.from(vcs).find(
-        (v) =>
-          v.querySelector(".name")?.textContent?.replace(/^📦\s*/, "") ===
-          ins.name,
-      );
-      if (!vc) return;
-      const oldHdr = vc.querySelector(".vc-header");
-      if (!oldHdr) return;
-      const idx = parseInt(vc.dataset.idx, 10);
-      const newHdrHTML = vcHeaderHTML(
-        ins.name,
-        ins.synced,
-        ins.missing,
-        ins.extra,
-        ins.status,
-        false,
-        idx,
-        ins.hasMod,
-        ins.rtype || rtype,
-      );
-      oldHdr.outerHTML = newHdrHTML;
-    });
-    // 更新底部统计
-    bindFooter(this._root, newData);
-    // 重新绑定卡片内按钮（outerHTML 后事件丢失）
-    bindInstanceActions(this._root, newData);
-    // 重排卡片顺序匹配 newData 排序
-    const container2 = this._root.getElementById("vg");
-    if (container2) {
+    if (this._loading) return;
+    this._loading = true;
+    try {
+      const newData = await loadInstances(rtype).catch(() => []);
+      if (!newData.length) return;
+      // 就地更新每张卡片的头部 HTML（用 name 匹配，不依赖索引顺序）
+      const container = this._root.getElementById("vg");
+      if (!container) return;
+      const vcs = container.querySelectorAll(".vc");
       newData.forEach((ins) => {
-        const vc = Array.from(container2.children).find(
+        const vc = Array.from(vcs).find(
           (v) =>
             v.querySelector(".name")?.textContent?.replace(/^📦\s*/, "") ===
             ins.name,
         );
-        if (vc) container2.appendChild(vc); // move to end in correct order
+        if (!vc) return;
+        const oldHdr = vc.querySelector(".vc-header");
+        if (!oldHdr) return;
+        const idx = parseInt(vc.dataset.idx, 10);
+        const newHdrHTML = vcHeaderHTML(
+          ins.name,
+          ins.synced,
+          ins.missing,
+          ins.extra,
+          ins.status,
+          false,
+          idx,
+          ins.hasMod,
+          ins.rtype || rtype,
+        );
+        oldHdr.outerHTML = newHdrHTML;
       });
+      // 更新底部统计
+      bindFooter(this._root, newData);
+      // 重新绑定卡片内按钮（outerHTML 后事件丢失）
+      bindInstanceActions(this._root, newData);
+      // 重排卡片顺序匹配 newData 排序
+      const container2 = this._root.getElementById("vg");
+      if (container2) {
+        newData.forEach((ins) => {
+          const vc = Array.from(container2.children).find(
+            (v) =>
+              v.querySelector(".name")?.textContent?.replace(/^📦\s*/, "") ===
+              ins.name,
+          );
+          if (vc) container2.appendChild(vc); // move to end in correct order
+        });
+      }
+      // 更新实例数据引用（供右键菜单等使用）
+      this._instances = newData;
+    } finally {
+      this._loading = false;
     }
-    // 更新实例数据引用（供右键菜单等使用）
-    this._instances = newData;
   }
 
   disconnectedCallback() {

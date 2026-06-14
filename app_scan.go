@@ -309,7 +309,7 @@ type scanCacheEntry struct {
 	expiresAt time.Time
 }
 
-const scanCacheTTL = 2 * time.Second
+const scanCacheTTL = 30 * time.Second
 
 // ========== 模型扫描 ==========
 func (a *App) ScanModelEntries(dir string) []types.ModelEntry {

@@ -32,9 +32,9 @@ export function bindInstanceActions(root, instances) {
       }
       let ok = 0,
         fail = 0;
-      for (const item of ins.items.missing) {
+      for (const srcPath of (ins._missingPaths || [])) {
         try {
-          await InstallModelTo(item.name, targetDir);
+          await InstallModelTo(srcPath, targetDir);
           ok++;
         } catch (_) {
           fail++;

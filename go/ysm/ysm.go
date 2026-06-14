@@ -67,7 +67,7 @@ func IsYSMJar(jarPath string) bool {
 	return false
 }
 
-// HasYSMMod 检查 mods 目录是否有 YSM 模组
+// HasYSMMod 检查 mods 目录是否有 YSM 模组（先做文件名过滤避免对每个 JAR 打开 ZIP）
 func HasYSMMod(modsDir string) bool {
 	files, err := os.ReadDir(modsDir)
 	if err != nil {
@@ -75,6 +75,11 @@ func HasYSMMod(modsDir string) bool {
 	}
 	for _, f := range files {
 		if f.IsDir() || !strings.HasSuffix(strings.ToLower(f.Name()), ".jar") {
+			continue
+		}
+		// 文件名快速过滤：只对名称含 yes_steve_model 或 ysm- 的 JAR 打开 ZIP
+		name := strings.ToLower(f.Name())
+		if !strings.Contains(name, "yes_steve_model") && !strings.Contains(name, "ysm-") {
 			continue
 		}
 		if IsYSMJar(filepath.Join(modsDir, f.Name())) {
@@ -106,11 +111,26 @@ func HasModInDir(modsDir, rtype string) bool {
 		if f.IsDir() || !strings.HasSuffix(lower(f.Name()), ".jar") {
 			continue
 		}
+		// 文件名快速过滤
 		name := lower(f.Name())
+		match := false
 		for _, kw := range keywords {
 			if strings.Contains(name, kw) {
+				match = true
+				break
+			}
+		}
+		if !match {
+			continue
+		}
+		// 进一步检查：对于 ysm 类型打开 ZIP 确认 mods.toml
+		if rtype == "ysm" {
+			if IsYSMJar(filepath.Join(modsDir, f.Name())) {
 				return true
 			}
+		} else {
+			// 其他类型仅凭文件名匹配即可
+			return true
 		}
 	}
 	return false

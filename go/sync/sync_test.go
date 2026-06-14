@@ -1,6 +1,9 @@
 package sync
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"ysm-model-manager/go/types"
 )
@@ -147,5 +150,115 @@ func TestGetInstanceStatus_DuplicateHash(t *testing.T) {
 	// hash_a 已存在（无论有几个同 hash 的 repo 文件），hash_b missing
 	if len(ins1.Missing) != 1 {
 		t.Errorf("expected 1 missing (hash_b), got %d: %v", len(ins1.Missing), ins1.Missing)
+	}
+}
+
+// ===== ListVersions 布局检测测试 =====
+
+func TestListVersions_VanillaLayout(t *testing.T) {
+	// 创建临时标准 .minecraft/versions/ 结构
+	tmpDir := t.TempDir()
+	// 无 instances/ 目录 → 应走 vanilla 逻辑
+	versionsDir := filepath.Join(tmpDir, "versions")
+	os.MkdirAll(filepath.Join(versionsDir, "1.20.1", "config", "yes_steve_model", "custom"), 0755)
+	os.MkdirAll(filepath.Join(versionsDir, "1.19.2"), 0755) // 无 YSM custom
+
+	results := ListVersions(tmpDir)
+	if len(results) != 2 {
+		t.Fatalf("expected 2 instances, got %d", len(results))
+	}
+
+	// 1.20.1 有 custom 目录
+	if results[0].Name != "1.19.2" && results[0].Name != "1.20.1" {
+		t.Errorf("unexpected instance name: %s", results[0].Name)
+	}
+	for _, r := range results {
+		if r.Name == "1.20.1" {
+			if !r.Exists {
+				t.Error("1.20.1 should have custom dir")
+			}
+			if !strings.HasSuffix(strings.ReplaceAll(r.VersionDir, "\\", "/"), "/versions/1.20.1") {
+				t.Errorf("unexpected VersionDir: %s", r.VersionDir)
+			}
+		}
+		if r.Name == "1.19.2" {
+			if r.Exists {
+				t.Error("1.19.2 should NOT have custom dir")
+			}
+		}
+	}
+}
+
+func TestListVersions_PrismLayout(t *testing.T) {
+	// 创建临时 PrismLauncher 结构: {root}/instances/{name}/.minecraft/
+	tmpDir := t.TempDir()
+	instancesDir := filepath.Join(tmpDir, "instances")
+	os.MkdirAll(filepath.Join(instancesDir, "MyPack", ".minecraft", "config", "yes_steve_model", "custom"), 0755)
+	os.MkdirAll(filepath.Join(instancesDir, "OldPack", ".minecraft"), 0755) // 无 YSM custom
+
+	results := ListVersions(tmpDir)
+	if len(results) != 2 {
+		t.Fatalf("expected 2 instances, got %d", len(results))
+	}
+
+	for _, r := range results {
+		switch r.Name {
+		case "MyPack":
+			if !r.Exists {
+				t.Error("MyPack should have custom dir")
+			}
+			expectedDir := strings.ReplaceAll(filepath.Join(instancesDir, "MyPack", ".minecraft"), "\\", "/")
+			actualDir := strings.ReplaceAll(r.VersionDir, "\\", "/")
+			if !strings.HasSuffix(actualDir, "/instances/MyPack/.minecraft") {
+				t.Errorf("MyPack VersionDir: expected suffix .../instances/MyPack/.minecraft, got %q\n(expected base: %s)", r.VersionDir, expectedDir)
+			}
+		case "OldPack":
+			if r.Exists {
+				t.Error("OldPack should NOT have custom dir")
+			}
+		default:
+			t.Errorf("unexpected instance name: %s", r.Name)
+		}
+	}
+}
+
+func TestListVersions_PrismLayout_DirectInstances(t *testing.T) {
+	// 用户直接选择了 instances 目录（而非 PrismLauncher 根目录）
+	tmpDir := t.TempDir()
+	// 直接创建 instances 目录结构，把 mcRoot 设为 instances 目录
+	os.MkdirAll(filepath.Join(tmpDir, "MyPack", ".minecraft", "config", "yes_steve_model", "custom"), 0755)
+	os.MkdirAll(filepath.Join(tmpDir, "OldPack", ".minecraft"), 0755)
+
+	// mcRoot 就是 instances 目录自身
+	results := ListVersions(tmpDir)
+	if len(results) != 2 {
+		t.Fatalf("expected 2 instances (direct instances dir), got %d", len(results))
+	}
+
+	for _, r := range results {
+		switch r.Name {
+		case "MyPack":
+			if !r.Exists {
+				t.Error("MyPack should have custom dir")
+			}
+			actualDir := strings.ReplaceAll(r.VersionDir, "\\", "/")
+			if !strings.HasSuffix(actualDir, "/MyPack/.minecraft") {
+				t.Errorf("MyPack VersionDir: expected suffix .../MyPack/.minecraft, got %q", r.VersionDir)
+			}
+		case "OldPack":
+			if r.Exists {
+				t.Error("OldPack should NOT have custom dir")
+			}
+		default:
+			t.Errorf("unexpected instance name: %s", r.Name)
+		}
+	}
+}
+
+func TestListVersions_EmptyDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	results := ListVersions(tmpDir)
+	if len(results) != 0 {
+		t.Errorf("expected 0 instances for empty dir, got %d", len(results))
 	}
 }

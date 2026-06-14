@@ -165,6 +165,8 @@ class AppContent extends HTMLElement {
     subtabs.forEach((btn) => {
       btn.addEventListener("click", () => {
         const rtype = btn.dataset.rtab;
+        if (rtype === curRtype) return;
+        const prevRtype = curRtype;
         curRtype = rtype;
         try {
           localStorage.setItem("repo_rtype", rtype);
@@ -182,8 +184,10 @@ class AppContent extends HTMLElement {
             '<app-preview mode="model" style="width:220px;flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
             "</div>";
         }
-        // 通知其他 tab
-        bus.emit("repo:rtype-changed", rtype);
+        // 通知其他 tab（仅当 rtype 真正变化时）
+        if (rtype !== prevRtype) {
+          bus.emit("repo:rtype-changed", rtype);
+        }
       });
     });
     const savedTab = root.querySelector(

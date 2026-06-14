@@ -35,14 +35,32 @@ export function renderVersionCards(container, instances) {
   });
 }
 
+/** 从路径数组构建条目对象（展开卡片时按需调用） */
+function buildItems(paths) {
+  if (!paths || !paths.length) return [];
+  return paths.map((p) => {
+    const displayName = typeof p === "string" ? (p.split(/[/\\]/).pop() || p) : (p.displayName || p.name || "");
+    const name = typeof p === "string" ? p : (p.name || "");
+    const size = typeof p === "string" ? "" : (p.size || "");
+    return { name, displayName, size };
+  });
+}
+
 export function renderBody(ins) {
   const sortByName = (a, b) =>
     (a.displayName || a.name).localeCompare(b.displayName || b.name);
+
+  // 按需构建
+  const missingItems = buildItems(ins._missingPaths);
+  const extraItems = buildItems(ins._extraPaths);
+  const syncedItems = ins.items.synced || [];
+  const disabledItems = ins.items.disabled || [];
+
   let h = "";
-  if (ins.items.synced.length) {
+  if (syncedItems.length) {
     h += '<div data-category="synced">';
-    h += sectionTitleHTML("✅ 已同步", ins.items.synced.length);
-    ins.items.synced.sort(sortByName).forEach((it) => {
+    h += sectionTitleHTML("✅ 已同步", syncedItems.length);
+    syncedItems.sort(sortByName).forEach((it) => {
       h += rowHTML(
         "#6bb86b",
         renderDisplayName(it.name),
@@ -56,10 +74,10 @@ export function renderBody(ins) {
     });
     h += "</div>";
   }
-  if (ins.items.missing.length) {
+  if (missingItems.length) {
     h += '<div data-category="missing">';
-    h += sectionTitleHTML("⬇️ 缺失", ins.items.missing.length);
-    ins.items.missing.sort(sortByName).forEach((it) => {
+    h += sectionTitleHTML("⬇️ 缺失", missingItems.length);
+    missingItems.sort(sortByName).forEach((it) => {
       const btnHtml = `<button class="btn-install-one" data-path="${esc(it.name)}" style="margin-left:4px;padding:1px 4px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">安装</button>`;
       h += rowHTML(
         "#f38ba8",
@@ -73,10 +91,10 @@ export function renderBody(ins) {
     });
     h += "</div>";
   }
-  if (ins.items.disabled && ins.items.disabled.length) {
+  if (disabledItems.length) {
     h += '<div data-category="disabled">';
-    h += sectionTitleHTML("⚠️ 已禁用", ins.items.disabled.length);
-    ins.items.disabled.sort(sortByName).forEach((it) => {
+    h += sectionTitleHTML("⚠️ 已禁用", disabledItems.length);
+    disabledItems.sort(sortByName).forEach((it) => {
       h += rowHTML(
         "#f9a826",
         renderDisplayName(it.name),
@@ -91,10 +109,10 @@ export function renderBody(ins) {
     });
     h += "</div>";
   }
-  if (ins.items.extra.length) {
+  if (extraItems.length) {
     h += '<div data-category="extra">';
-    h += sectionTitleHTML("📤 额外", ins.items.extra.length);
-    ins.items.extra.sort(sortByName).forEach((it) => {
+    h += sectionTitleHTML("📤 额外", extraItems.length);
+    extraItems.sort(sortByName).forEach((it) => {
       h += rowHTML(
         "#f9a826",
         renderDisplayName(it.name),

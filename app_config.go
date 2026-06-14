@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/updater"
 	"ysm-model-manager/go/version"
@@ -245,7 +246,15 @@ func (a *App) SelectDirectory() (string, error) {
 
 // ========== .minecraft 定位 ==========
 func isLikelyMinecraftDir(path string) bool {
-	markers := []string{"versions", "assets", "launcher_profiles.json", "mods", "config"}
+	// instances 目录（子目录中含 .minecraft/）— 用户直接选择了 PrismLauncher 的 instances 文件夹
+	if sync.HasDotMinecraftSubdirs(path) {
+		return true
+	}
+	// PrismLauncher 根目录：包含 instances/ 子目录
+	if info, err := os.Stat(filepath.Join(path, "instances")); err == nil && info.IsDir() {
+		return true
+	}
+	markers := []string{"versions", "assets", "launcher_profiles.json", "mods", "config", "prismlauncher.cfg"}
 	for _, m := range markers {
 		full := filepath.Join(path, m)
 		if info, err := os.Stat(full); err == nil {
@@ -296,6 +305,25 @@ func scanMinecraftDirs() []string {
 		add(c)
 	}
 
+	// PrismLauncher instances 目录（用户可自定义位置，这里覆盖常见路径）
+	prismInstPaths := []string{
+		"G:\\PrismLauncher\\instances", "D:\\PrismLauncher\\instances",
+		"C:\\PrismLauncher\\instances", "E:\\PrismLauncher\\instances",
+	}
+	for _, p := range prismInstPaths {
+		add(p)
+	}
+	if cfgDir, err := os.UserConfigDir(); err == nil {
+		add(filepath.Join(cfgDir, "PrismLauncher", "instances"))
+	}
+	// 同时保留 PrismLauncher 根目录（ListVersions 会自行定位 instances/）
+	prismRoots := []string{
+		"G:\\PrismLauncher", "D:\\PrismLauncher", "C:\\PrismLauncher", "E:\\PrismLauncher",
+	}
+	for _, p := range prismRoots {
+		add(p)
+	}
+
 	launcherDirs := []string{
 		"D:\\PCL2", "C:\\PCL2", "E:\\PCL2",
 		"D:\\PCL", "C:\\PCL", "D:\\HMCL", "C:\\HMCL",
@@ -335,7 +363,15 @@ func (a *App) ValidateMinecraftDir(dir string) (string, string) {
 	if info, err := os.Stat(filepath.Join(abs, "versions")); err == nil && info.IsDir() {
 		return abs, ""
 	}
-	return "", "未检测到 .minecraft 文件夹。请选择包含 versions/ 等子目录的 .minecraft 文件夹"
+	// PrismLauncher：自身是 instances 目录（子目录中含 .minecraft/）
+	if sync.HasDotMinecraftSubdirs(abs) {
+		return abs, ""
+	}
+	// PrismLauncher 根目录：包含 instances/ 子目录
+	if info, err := os.Stat(filepath.Join(abs, "instances")); err == nil && info.IsDir() {
+		return abs, ""
+	}
+	return "", "未检测到 .minecraft 文件夹。请选择包含 versions/ 或 instances/ 等子目录的游戏目录"
 }
 
 

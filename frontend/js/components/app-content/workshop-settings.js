@@ -71,12 +71,16 @@ export async function initSettings(root) {
 
   bindPathClick(
     "set-repo-path",
-    () =>
-      cfg.repoRoot ||
-      (cfg.mcRoot
-        ? cfg.mcRoot.replace(/\//g, "\\") + "\\config\\yes_steve_model\\custom"
-        : ""),
+    () => cfg.repoRoot || "",
     async (dir) => {
+      const mc = cfg.mcRoot || "";
+      if (mc && dir.toLowerCase().startsWith(mc.toLowerCase())) {
+        bus.emit("toast:show", {
+          msg: '⚠️ "YSM 模型路径"不应在游戏目录内。请选择一个独立的模型存储目录。',
+          duration: 6000,
+          type: "warn",
+        });
+      }
       const theme = localStorage.getItem("theme") || "dark";
       await SaveAppConfig(
         dir,

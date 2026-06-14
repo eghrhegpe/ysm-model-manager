@@ -51,12 +51,12 @@ export function registerSync(unsubs) {
         const targets = instanceName
           ? instances.filter((i) => i.Name === instanceName)
           : instances;
+        const statusList = await GetResourceInstanceStatus(
+          rtypeActual,
+          mcRoot,
+          repoRoot,
+        );
         for (const ins of targets) {
-          const statusList = await GetResourceInstanceStatus(
-            rtypeActual,
-            mcRoot,
-            repoRoot,
-          );
           const st = (statusList || []).find((s) => s.Name === ins.Name);
           if (!st?.Missing?.length) continue;
           for (const srcPath of st.Missing) {

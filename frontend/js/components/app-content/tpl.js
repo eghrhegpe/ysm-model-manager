@@ -118,7 +118,7 @@ export function settingsHTML() {
       <div class="stg-card-hdr">💎 YSM 模型路径</div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-repo-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}\\config\\yes_steve_model\\custom</div>
+        <div class="stg-card-hint">存放 .ysm 模型文件的独立目录（不是游戏目录）</div>
       </div>
     </div>
     <div class="stg-card">

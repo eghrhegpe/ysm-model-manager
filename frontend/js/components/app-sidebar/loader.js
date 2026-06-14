@@ -56,14 +56,12 @@ export async function loadInstances(rtype) {
         extra: extraList.length,
         disabled: 0,
         rtype: rtypeActual,
+        // 仅存原始路径，展开卡片时按需构建对象
+        _missingPaths: missingList,
+        _extraPaths: extraList,
         items: {
-          missing: missingList.map((fullPath) => {
-            const displayName = fullPath.split(/[/\\]/).pop() || fullPath;
-            return { name: fullPath, displayName, size: "" };
-          }),
-          extra: extraList.map((n) => {
-            return { name: n, size: "" };
-          }),
+          synced: [],
+          disabled: [],
         },
       };
     });

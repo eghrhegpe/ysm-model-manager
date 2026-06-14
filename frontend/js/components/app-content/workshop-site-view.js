@@ -20,6 +20,36 @@ import { showProgress, tryFetchModels } from "../../features/workshop/data.js";
  */
 // ===== 收藏工具 =====
 const STORAGE_KEY = "ysm-fav-creators";
+
+// ===== 创作者身份工具 =====
+const PLATFORM_LABELS = {
+  bilibili: "B站", afdian: "爱发电", github: "GitHub", mzhouse: "模之屋",
+  bowlroll: "Bowlroll", vroid: "VRoid", nicovideo: "NicoNico 3D", deviantart: "DeviantArt",
+};
+const PLATFORM_ICONS = {
+  bilibili: "📺", afdian: "❤️", github: "🐙", mzhouse: "🏠",
+  bowlroll: "🍚", vroid: "🤖", nicovideo: "🧊", deviantart: "🎨",
+};
+function getCreatorIdentity(cr) {
+  const types = (cr.type || "").split(";");
+  const tag = cr.tag || "";
+  const isOfficial = types.includes("mzhouse");
+  const isGithub = types.includes("github");
+  const isVup = tag === "vup";
+  const isOc = tag === "oc";
+  const isMulti = types.length > 1 && !isOfficial && !isGithub;
+  if (isOfficial) return { label: "🏠 官方IP模型库", icon: "🏠" };
+  if (isGithub) return { label: "🐙 社区模型仓库", icon: "🐙" };
+  if (isVup) return { label: "🎤 VTuber 创作者", icon: "🎤" };
+  if (isOc) return { label: "🎨 OC 原创创作者", icon: "🎨" };
+  if (isMulti) return { label: "🎮 YSM 个人创作者", icon: "🎮" };
+  return { label: "🎮 YSM 创作者", icon: "🎮" };
+}
+function parseDescTags(desc) {
+  if (!desc) return [];
+  return desc.split(/[、，,]/).map(s => s.trim()).filter(Boolean).slice(0, 6);
+}
+
 function loadFavs() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
@@ -453,24 +483,9 @@ export function renderSiteView(site, ctx) {
         document.head.appendChild(st);
       }
 
-      const tagEmoji = cr.tag === "vup" ? "🎤" : cr.tag === "oc" ? "🎨" : "🎮";
-      const platformIcons = {
-        bilibili: "📺",
-        afdian: "❤️",
-        github: "🐙",
-        mzhouse: "🏠",
-        bowlroll: "🍚",
-        vroid: "🤖",
-        nicovideo: "🧊",
-        deviantart: "🎨",
-      };
-      const platformLinks = {
-        bilibili: "https://search.bilibili.com/all?keyword=",
-        afdian: "https://afdian.com/search?q=",
-        github: "https://github.com/search?q=",
-        nicovideo: "https://3d.nicovideo.jp/works/search?keyword=",
-      };
 
+      const identity = getCreatorIdentity(cr);
+      const descTags = parseDescTags(cr.desc);
       const isFav = isFaved(cr.name);
       const localCount = authorCountMap[cr.name] || 0;
       overlay.innerHTML =
@@ -490,13 +505,15 @@ export function renderSiteView(site, ctx) {
           ? '<span class="cr-tag cr-tag-' +
             esc(cr.tag) +
             '">' +
-            tagEmoji +
+            (cr.tag === "vup" ? "🎤" : cr.tag === "oc" ? "🎨" : "🏷️") +
             " " +
             esc(cr.tag) +
             "</span>"
-          : '<span class="cr-tag cr-tag-game">🎮 game</span>') +
+          : "") +
         "</div>" +
-        '<div style="font-size:10px;color:var(--muted);margin-top:1px">YSM 模型创作者</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:1px">' +
+        esc(identity.label) +
+        "</div>" +
         "</div>" +
         '<span class="cr-star-btn" data-star="' +
         esc(cr.name) +
@@ -504,8 +521,16 @@ export function renderSiteView(site, ctx) {
         (isFav ? "⭐" : "☆") +
         "</span>" +
         "</div>" +
-        '<div class="cr-detail-desc">' +
-        esc(cr.desc) +
+        '<div class="cr-detail-desc" style="display:flex;flex-wrap:wrap;gap:4px;padding:0;background:transparent">' +
+        descTags
+          .map(
+            (t) =>
+              '<span style="font-size:10px;padding:1px 7px;border-radius:4px;line-height:18px;background:var(--surf);color:var(--txt);opacity:.75;border:1px solid var(--bd)">#' +
+              esc(t) +
+              "</span>",
+          )
+          .join("") +
+        (!descTags.length ? esc(cr.desc) : "") +
         "</div>" +
         (localCount > 0
           ? '<div class="cr-detail-row" style="background:var(--surf);border-radius:8px;padding:8px 10px;border:1px solid var(--bd)">' +
@@ -522,7 +547,7 @@ export function renderSiteView(site, ctx) {
           .map(
             (t) =>
               '<span class="cr-platform-badge">' +
-              (platformIcons[t] || "🔗") +
+              (PLATFORM_ICONS[t] || "🔗") +
               " " +
               esc(t) +
               "</span>",

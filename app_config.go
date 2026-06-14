@@ -292,54 +292,70 @@ func scanMinecraftDirs() []string {
 		add(filepath.Join(appData, ".minecraft"))
 	}
 
-	commonPaths := []string{
-		"D:\\PCL2\\.minecraft", "C:\\PCL2\\.minecraft", "E:\\PCL2\\.minecraft",
-		"D:\\PCL\\.minecraft", "C:\\PCL\\.minecraft",
-		"D:\\MC\\.minecraft", "C:\\MC\\.minecraft",
-		"D:\\Minecraft\\.minecraft", "C:\\Minecraft\\.minecraft",
-		"D:\\Games\\Minecraft\\.minecraft",
-		"D:\\HMCL\\.minecraft", "C:\\HMCL\\.minecraft",
-		"D:\\BakaXL\\.minecraft", "C:\\BakaXL\\.minecraft",
-	}
-	for _, c := range commonPaths {
-		add(c)
+	// 收集所有可用磁盘（A-Z）
+	// 用 GetLogicalDrives 比逐个 os.Stat 更高效，且避免外置硬盘超时
+	var drives []string
+	for d := 'C'; d <= 'Z'; d++ {
+		root := string(d) + ":\\"
+		if _, err := os.Stat(root); err == nil {
+			drives = append(drives, root)
+		}
 	}
 
-	// PrismLauncher instances 目录（用户可自定义位置，这里覆盖常见路径）
-	prismInstPaths := []string{
-		"G:\\PrismLauncher\\instances", "D:\\PrismLauncher\\instances",
-		"C:\\PrismLauncher\\instances", "E:\\PrismLauncher\\instances",
+	// 常见启动器目录名（对各磁盘扫描）
+	launcherNames := []string{
+		"PCL2", "PCL",
+		"HMCL",
+		"BakaXL",
+		"MC", "Minecraft", "Games\\Minecraft",
+		"PrismLauncher", "MultiMC", "PolyMC",
 	}
-	for _, p := range prismInstPaths {
-		add(p)
+	for _, root := range drives {
+		for _, name := range launcherNames {
+			// 启动器根目录下的 .minecraft
+			add(filepath.Join(root, name, ".minecraft"))
+			// PrismLauncher/MultiMC/PolyMC：instances 目录或根目录
+			if name == "PrismLauncher" || name == "MultiMC" || name == "PolyMC" {
+				add(filepath.Join(root, name, "instances"))
+				add(filepath.Join(root, name))
+			}
+		}
+		// 各磁盘根目录的直接 .minecraft 文件夹
+		add(filepath.Join(root, ".minecraft"))
 	}
+
+	// 也检查常见用户目录下的 PrismLauncher（不一定在盘符根目录）
 	if cfgDir, err := os.UserConfigDir(); err == nil {
 		add(filepath.Join(cfgDir, "PrismLauncher", "instances"))
 	}
-	// 同时保留 PrismLauncher 根目录（ListVersions 会自行定位 instances/）
-	prismRoots := []string{
-		"G:\\PrismLauncher", "D:\\PrismLauncher", "C:\\PrismLauncher", "E:\\PrismLauncher",
+	if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
+		// PrismLauncher 安装版在 %LOCALAPPDATA%\Programs\PrismLauncher\
+		add(filepath.Join(localAppData, "Programs", "PrismLauncher", "instances"))
+		add(filepath.Join(localAppData, "Programs", "PrismLauncher"))
+		// MultiMC 安装版
+		add(filepath.Join(localAppData, "Programs", "MultiMC", "instances"))
+		add(filepath.Join(localAppData, "Programs", "MultiMC"))
 	}
-	for _, p := range prismRoots {
-		add(p)
+	if progData := os.Getenv("ProgramData"); progData != "" {
+		add(filepath.Join(progData, "PrismLauncher", "instances"))
 	}
 
-	launcherDirs := []string{
-		"D:\\PCL2", "C:\\PCL2", "E:\\PCL2",
-		"D:\\PCL", "C:\\PCL", "D:\\HMCL", "C:\\HMCL",
-		"D:\\BakaXL", "C:\\BakaXL", "D:\\MC", "C:\\MC",
+	// 扫描常见安装路径下的一级子目录（用户可能把启动器放在 D:\Games\Minecraft\PCL2 而非 D:\PCL2）
+	commonBases := []string{
+		filepath.Join(os.Getenv("ProgramFiles"), "Minecraft"),
+		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Minecraft"),
+		"D:\\Games", "D:\\Game", "D:\\Programs",
+		"E:\\Games", "E:\\Game",
 	}
-	for _, dir := range launcherDirs {
-		mcPath := filepath.Join(dir, ".minecraft")
-		if _, err := os.Stat(mcPath); err == nil {
-			abs, _ := filepath.Abs(mcPath)
-			abs = filepath.Clean(abs)
-			if !seen[abs] {
-				seen[abs] = true
-				found = append(found, abs)
-			}
+	for _, base := range commonBases {
+		if _, err := os.Stat(base); err != nil {
+			continue
+		}
+		for _, name := range launcherNames {
+			add(filepath.Join(base, name, ".minecraft"))
 		}
 	}
+
 	return found
 }
 

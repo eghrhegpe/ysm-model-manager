@@ -293,7 +293,7 @@ export const contentCSS = `
 .ws-open-btn, .cr-open-btn { padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 .ws-open-btn:hover, .cr-open-btn:hover { background:var(--hover); }
 /* 工坊仓库页工具按钮 */
-.btn-sm,.ws-btn-sm,.gh-btn-sm { padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:all .12s;white-space:nowrap; }
+.btn-sm,.ws-btn-sm,.gh-btn-sm { padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:all .12s;white-space:nowrap; }
 .btn-sm:hover,.ws-btn-sm:hover,.gh-btn-sm:hover { background:var(--hover); }
 .ws-btn-muted { color:var(--muted); }
 .ws-btn-muted:hover { color:var(--txt); }
@@ -350,7 +350,7 @@ export const contentCSS = `
 .gh-card.active .gh-card-external { border-left-color:var(--accent);color:var(--accent); }
 .gh-section-title { font-size:var(--fs-md);font-weight:600;color:var(--txt);padding:8px 12px 4px; }
 .gh-header { border-bottom:1px solid var(--bd);flex-shrink:0; }
-.gh-header-top { display:flex;align-items:center;gap:8px;padding:8px 12px;flex-wrap:wrap; }
+.gh-header-top { display:flex;align-items:center;gap:8px;padding:8px 12px;flex-wrap:wrap;position:relative; }
 .gh-back-repo { font-size:var(--fs-sm);padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-family:inherit; }
 .gh-back-repo:hover { background:var(--hover); }
 .gh-btn-txt { border-color:transparent; }
@@ -364,6 +364,8 @@ export const contentCSS = `
 /* .gh-btn-sm 已合并到 .btn-sm */
 .gh-btn-muted { color:var(--muted); }
 .gh-btn-muted:disabled { opacity:.4;cursor:not-allowed;pointer-events:none; }
+.gh-btn-accent { color:var(--accent);border-color:var(--accent); }
+.gh-btn-accent:hover { background:var(--accent);color:var(--bg); }
 .gh-dl-selected { color:var(--accent);border-color:var(--accent); }
 .gh-dl-selected:hover { background:var(--accent);color:var(--bg); }
 

@@ -7,11 +7,24 @@ import { ALL_EXTS, extBelongsTo } from "../utils/extensions.js";
 
 const extsStr = ALL_EXTS.join(" ");
 
-const isYsmExt = (name) => {
+/**
+ * 判断文件是否需要进入命名表单（异步）
+ * - .ysm / ysm.json → 始终进表单
+ * - .zip / .7z → 调 Go 端 DetectZipType 检测内容后决定
+ * - 其他已注册扩展名 → 直接导入
+ */
+const shouldEnterForm = async (name, base64) => {
   const ext = "." + (name.split(".").pop() || "").toLowerCase();
-  // 只有 .ysm 和 ysm.json 确定是 YSM；.zip/.7z 交给 Go 端 detectZipType 内容判定
   if (ext === ".ysm") return true;
   if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
+  if (ext === ".zip" || ext === ".7z") {
+    try {
+      const { DetectZipType } = await import("../../wailsjs/go/main/App.js");
+      return (await DetectZipType(base64)) === "ysm";
+    } catch { return false; }
+  }
+  // 其他已注册扩展名（.pmx, .vrca, .nbt 等）直接导入，不进表单
+  if (ALL_EXTS.includes(ext)) return false;
   return false;
 };
 const isSupportedFile = (name) => {
@@ -197,17 +210,17 @@ export function initImportQueue(app) {
       let ok = 0,
         skip = 0;
       Array.from(files).forEach((file) => {
-        if (!isSupportedFile(file.name)) {
-          skip++;
-          return;
-        }
+        if (!isSupportedFile(file.name)) { skip++; return; }
         ok++;
         const reader = new FileReader();
-        if (isYsmExt(file.name)) {
-          reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
-        } else {
-          reader.onload = () => directImport(file, reader.result.split(",")[1]);
-        }
+        reader.onload = async () => {
+          const base64 = reader.result.split(",")[1];
+          if (await shouldEnterForm(file.name, base64)) {
+            enqueueFile(file, base64);
+          } else {
+            await directImport(file, base64);
+          }
+        };
         reader.readAsDataURL(file);
       });
       if (ok === 0 && skip > 0) {
@@ -243,11 +256,14 @@ export function initImportQueue(app) {
       if (!isSupportedFile(file.name)) { skip++; return; }
       ok++;
       const reader = new FileReader();
-      if (isYsmExt(file.name)) {
-        reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
-      } else {
-        reader.onload = () => directImport(file, reader.result.split(",")[1]);
-      }
+      reader.onload = async () => {
+        const base64 = reader.result.split(",")[1];
+        if (await shouldEnterForm(file.name, base64)) {
+          enqueueFile(file, base64);
+        } else {
+          await directImport(file, base64);
+        }
+      };
       reader.readAsDataURL(file);
     });
     updateQueueCount();
@@ -268,11 +284,14 @@ export function initImportQueue(app) {
       if (!isSupportedFile(file.name)) return;
       ok++;
       const reader = new FileReader();
-      if (isYsmExt(file.name)) {
-        reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
-      } else {
-        reader.onload = () => directImport(file, reader.result.split(",")[1]);
-      }
+      reader.onload = async () => {
+        const base64 = reader.result.split(",")[1];
+        if (await shouldEnterForm(file.name, base64)) {
+          enqueueFile(file, base64);
+        } else {
+          await directImport(file, base64);
+        }
+      };
       reader.readAsDataURL(file);
     });
     updateQueueCount();
@@ -503,25 +522,21 @@ export function initImportQueue(app) {
           entry.file(
             (file) => {
               if (!isSupportedFile(file.name)) { resolve(); return; }
-              if (isYsmExt(file.name)) {
-                file._relPath = basePath
-                  ? basePath + "/" + file.name
-                  : file.name;
-                const reader = new FileReader();
-                reader.onload = () => {
-                  enqueueFile(file, reader.result.split(",")[1]);
-                  resolve();
-                };
-                reader.onerror = () => resolve();
-                reader.readAsDataURL(file);
-              } else {
-                const reader = new FileReader();
-                reader.onload = () => {
-                  directImport(file, reader.result.split(",")[1]).then(resolve);
-                };
-                reader.onerror = () => resolve();
-                reader.readAsDataURL(file);
-              }
+              file._relPath = basePath
+                ? basePath + "/" + file.name
+                : file.name;
+              const reader = new FileReader();
+              reader.onload = async () => {
+                const base64 = reader.result.split(",")[1];
+                if (await shouldEnterForm(file.name, base64)) {
+                  enqueueFile(file, base64);
+                } else {
+                  await directImport(file, base64);
+                }
+                resolve();
+              };
+              reader.onerror = () => resolve();
+              reader.readAsDataURL(file);
             },
             () => resolve(), // entry.file 回调失败（如 .lnk 快捷方式）→ 直接跳过
           );
@@ -562,11 +577,14 @@ export function initImportQueue(app) {
         if (!file || !isSupportedFile(file.name)) { skip++; continue; }
         ok++;
         const reader = new FileReader();
-        if (isYsmExt(file.name)) {
-          reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
-        } else {
-          reader.onload = () => directImport(file, reader.result.split(",")[1]);
-        }
+        reader.onload = async () => {
+          const base64 = reader.result.split(",")[1];
+          if (await shouldEnterForm(file.name, base64)) {
+            enqueueFile(file, base64);
+          } else {
+            await directImport(file, base64);
+          }
+        };
         reader.readAsDataURL(file);
       }
       updateQueueCount();

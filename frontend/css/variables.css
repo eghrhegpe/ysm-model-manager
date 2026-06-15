@@ -143,6 +143,21 @@
   transition-duration: 0s !important;
 }
 
+/* ===== 无障碍支持：焦点状态 ===== */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+[tabindex]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+  outline: none; /* 使用 box-shadow 替代 outline，避免与边框冲突 */
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

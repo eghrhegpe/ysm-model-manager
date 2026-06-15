@@ -35,7 +35,10 @@ export function registerContextMenus() {
           x,
           y,
           items: [
-            { label: "📦 " + instanceName + (rtype ? " (" + rtype + ")" : ""), onClick: () => {} },
+            {
+              label: "📦 " + instanceName + (rtype ? " (" + rtype + ")" : ""),
+              onClick: () => {},
+            },
             { divider: true },
             {
               label: "打开文件夹",
@@ -139,6 +142,66 @@ export function registerContextMenus() {
                 refreshUI();
               },
             },
+            {
+              label: "复制到…",
+              icon: "📋",
+              onClick: async () => {
+                const { modalPrompt } = await import("../dialogs/modal.js");
+                const folder = await modalPrompt({
+                  title: "复制到文件夹",
+                  icon: "📋",
+                  placeholder: "输入目标文件夹名，如 [作者名]",
+                  okText: "复制",
+                });
+                if (!folder) return;
+                if (/\.\./.test(folder) || /^[/\\]/.test(folder)) {
+                  bus.emit("toast:show", {
+                    msg: "❌ 文件夹名包含非法字符",
+                    duration: 3000,
+                    type: "error",
+                  });
+                  return;
+                }
+                const { LoadAppConfig, CopyModelFile } =
+                  await import("../../wailsjs/go/main/App.js");
+                const cfg = await LoadAppConfig();
+                const repoRoot = cfg.repoRoot || "";
+                if (!repoRoot) {
+                  bus.emit("toast:show", {
+                    msg: "❌ 请先设置仓库目录",
+                    duration: 3000,
+                    type: "error",
+                  });
+                  return;
+                }
+                const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
+                toast(
+                  `📦 正在复制 ${paths.length} 个文件到 ${folder}...`,
+                  3000,
+                );
+                let ok = 0,
+                  fail = 0;
+                for (const p of paths) {
+                  try {
+                    await CopyModelFile(p, dstDir);
+                    ok++;
+                  } catch (e) {
+                    fail++;
+                    console.error("复制失败:", p, e);
+                  }
+                }
+                if (ok > 0) {
+                  toast(
+                    fail > 0
+                      ? `✅ ${ok} 复制成功 / ❌ ${fail} 失败（可能目标已存在）`
+                      : `✅ ${ok} 个文件已复制到 ${folder}`,
+                    4000,
+                  );
+                } else {
+                  toast("❌ 复制失败（可能目标已存在）", 4000, "error");
+                }
+              },
+            },
             { divider: true },
             {
               label: "移入回收站",
@@ -183,6 +246,27 @@ export function registerContextMenus() {
                   document.body.removeChild(ta);
                   toast(`✅ 已复制 ${paths.length} 个路径`, 2000);
                 }
+              },
+            },
+            {
+              label: "导出文件名清单 (.txt)",
+              icon: "📄",
+              onClick: () => {
+                const names = paths
+                  .map((p) => p.split(/[/\\]/).pop())
+                  .filter(Boolean)
+                  .join("\n");
+                const blob = new Blob([names], {
+                  type: "text/plain;charset=utf-8",
+                });
+                const a = document.createElement("a");
+                a.download = `model-list-${new Date().toISOString().slice(0, 10)}.txt`;
+                a.href = URL.createObjectURL(blob);
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+                toast(`✅ 已导出 ${paths.length} 个文件名`, 2000);
               },
             },
           ],
@@ -244,6 +328,47 @@ export function registerContextMenus() {
                   refreshUI();
                 } catch (e) {
                   toast("❌ " + friendlyError(e, "移动失败"), 4000, "error");
+                }
+              },
+            },
+            {
+              label: "复制到…",
+              icon: "📋",
+              onClick: async () => {
+                const { modalPrompt } = await import("../dialogs/modal.js");
+                const folder = await modalPrompt({
+                  title: "复制到文件夹",
+                  icon: "📋",
+                  placeholder: "输入目标文件夹名，如 [作者名]",
+                  okText: "复制",
+                });
+                if (!folder) return;
+                if (/\.\./.test(folder) || /^[/\\]/.test(folder)) {
+                  bus.emit("toast:show", {
+                    msg: "❌ 文件夹名包含非法字符",
+                    duration: 3000,
+                    type: "error",
+                  });
+                  return;
+                }
+                const { LoadAppConfig, CopyModelFile } =
+                  await import("../../wailsjs/go/main/App.js");
+                const cfg = await LoadAppConfig();
+                const repoRoot = cfg.repoRoot || "";
+                if (!repoRoot) {
+                  bus.emit("toast:show", {
+                    msg: "❌ 请先设置仓库目录",
+                    duration: 3000,
+                    type: "error",
+                  });
+                  return;
+                }
+                const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
+                try {
+                  await CopyModelFile(path, dstDir);
+                  toast(`✅ 已复制到 ${folder}`, 3000);
+                } catch (e) {
+                  toast("❌ " + friendlyError(e, "复制失败"), 4000, "error");
                 }
               },
             },

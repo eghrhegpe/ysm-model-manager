@@ -2,11 +2,11 @@
 
 ## 🎯 战斗手册
 
-| 角色        | 职责                     | 禁忌                 |
-| ----------- | ------------------------ | -------------------- |
-| **用户**    | 甩截图/报错/反常现象     | 不要自己猜原因   |
-| **元宝 AI** | 给灵感       | 锐评代码问题 |
-| **Copilot** | 按逻辑写代码 |  用调试数据测问题  |
+| 角色        | 职责                 | 禁忌             |
+| ----------- | -------------------- | ---------------- |
+| **用户**    | 甩截图/报错/反常现象 | 不要自己猜原因   |
+| **元宝 AI** | 给灵感               | 锐评代码问题     |
+| **Copilot** | 按逻辑写代码         | 用调试数据测问题 |
 
 ## 工作流规则
 
@@ -26,7 +26,7 @@
     Get-Process -Name "YSM-Model-Manager*" -EA SilentlyContinue \| Stop-Process -Force
     wails build -clean -ldflags "-X ysm-model-manager/go/version.Version=v1.x.x"
     Copy-Item "build\bin\YSM-Model-Manager.exe" "build\release\"
-    Copy-Item "workshop_sites.json", "workshop_creators.json" "build\release\"
+    Copy-Item "workshop_sites.json", "creators.json" "build\release\"
     Compress-Archive -Path "build\release\*" -DestinationPath "build\release\YSM-Model-Manager_windows_amd64.zip" -Force
     ```
 13. **发版归档**: `docs/release-notes/v{major}.{minor}.{patch}.md`（用户版）+ `docs/release-notes/v{major}.{minor}.{patch}-compare.md`（开发者版，含对比表和文件清单） + 更新 `README.md` 索引表。GitHub Release 使用用户版。用户版面向使用者，写功能/改进/修复；`-compare` 版面向开发者，写实现对比和文件变更。

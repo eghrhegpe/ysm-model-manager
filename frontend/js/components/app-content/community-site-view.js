@@ -1,7 +1,7 @@
 // ===== 创意工坊站点视图（为 _initWorkshop 减负） =====
 import { friendlyError } from "../../utils/errors.js";
 import { bus } from "../../bus.js";
-import { showProgress, tryFetchModels } from "../../features/workshop/data.js";
+import { showProgress, tryFetchModels } from "../../features/community/data.js";
 
 /**
  * 渲染并绑定站点视图（预设搜索 + 创作者列表 + 浏览仓库 + 编辑模式）
@@ -876,7 +876,7 @@ export function renderSiteView(site, ctx) {
       btn.textContent = "\u23F3";
       btn.disabled = true;
       try {
-        var m = await import("./workshop-core.js");
+        var m = await import("./community-core.js");
         var results = await Promise.all([
           m.fetchCommunityCreators(m.DEFAULT_COMMUNITY_URL),
           m.fetchCommunitySites(),
@@ -934,9 +934,16 @@ export function renderSiteView(site, ctx) {
           });
         }
       } catch (e) {
+        const errMsg = e.message === "NetworkOffline"
+          ? "🌐 无网络连接，请检查网络后重试"
+          : e.message === "NoIndex"
+            ? "📭 社区索引文件不存在"
+            : e.message === "RateLimited"
+              ? "⏱️ GitHub API 频率限制，请稍后重试"
+              : "🌐 " + friendlyError(e, "拉取失败");
         bus.emit("toast:show", {
-          msg: "\uD83C\uDF10 " + friendlyError(e, "\u62C9\u53D6\u5931\u8D25"),
-          duration: 3000,
+          msg: errMsg,
+          duration: 5000,
           type: "error",
         });
       } finally {

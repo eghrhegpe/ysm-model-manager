@@ -381,7 +381,10 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     if (move.length() > 0) {
       move.normalize().multiplyScalar(_camSpeed * dt);
       camera.position.add(move);
-      _orbitTarget.add(move);
+      // 仅在“环绕”模式下同步更新 _orbitTarget
+      if (_orbitMode) {
+        _orbitTarget.add(move);
+      }
     }
 
     if (_orbitMode) {
@@ -402,11 +405,27 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     setRotationMode: (orbit) => {
       _orbitMode = orbit;
       if (orbit) {
+        // 切换到“环绕”模式
         controls.enableRotate = true;
-        _orbitTarget.copy(controls.target);
+        // 恢复之前的环绕目标点（如果存在）
+        if (_orbitTarget) {
+          controls.target.copy(_orbitTarget);
+        }
+        // 重置鼠标拖拽状态
+        _mouseDown = false;
       } else {
+        // 切换到“自身”模式
+        // 保存当前摄像机朝向，用于后续鼠标拖拽旋转
         _euler.setFromQuaternion(camera.quaternion);
+        // 禁用 OrbitControls 的旋转（但不禁用平移和缩放）
         controls.enableRotate = false;
+        // 设置控制目标为摄像机前方，保持视角连续
+        const camDir = new THREE.Vector3();
+        camera.getWorldDirection(camDir);
+        controls.target.copy(camera.position).addScaledVector(camDir, 10);
+        controls.update();
+        // 重置鼠标状态，准备接收拖拽输入
+        _mouseDown = false;
       }
     },
     cleanup: () => {

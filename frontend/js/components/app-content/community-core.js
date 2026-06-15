@@ -5,7 +5,7 @@
  * 自动合并本地仓库提取的作者
  * @returns {{ sites: Array, creators: Array, authors: Array }}
  */
-export async function loadWorkshopData() {
+export async function loadCommunityData() {
   const App = await import("../../../wailsjs/go/main/App.js");
   const [sites, creators, authors, localAuthors] = await Promise.all([
     App.LoadWorkshopSites(),
@@ -252,6 +252,6 @@ export const DEFAULT_COMMUNITY_URL =
  * 获取仓库模型列表 + 本地映射
  */
 export async function getRepoModelsData(repo, mirror) {
-  const { tryFetchModels } = await import("../../features/workshop/data.js");
+  const { tryFetchModels } = await import("../../features/community/data.js");
   return tryFetchModels(repo, mirror);
 }

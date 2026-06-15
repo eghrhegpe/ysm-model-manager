@@ -1,1 +1,1 @@
-//已迁移至 features/workshop/data.js
+//已迁移至 features/community/data.js

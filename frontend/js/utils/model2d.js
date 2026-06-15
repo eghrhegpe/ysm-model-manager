@@ -339,19 +339,29 @@ function drawView(
         // 应用 cube 自身的 rotation（主要是 Z 轴，屏幕平面内最可见）
         const cubeRz = c.rotation?.[2] || 0;
         if (cubeRz !== 0) {
-          // 使用 Canvas 变换应用旋转
+          // 计算 pivot 点的屏幕坐标
+          const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
+          const pivotRx = pivot[0] * cosA - pivot[2] * sinA;
+          const pivotPy = isFront ? pivot[1] : (pivot[0] * sinA + pivot[2] * cosA);
+          const pivotScreenX = ox + pivotRx * scale;
+          const pivotScreenY = oy - pivotPy * scale;
+          
+          // 使用 Canvas 变换应用旋转，围绕 pivot 点
           ctx.save();
-          ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+          ctx.translate(pivotScreenX, pivotScreenY);
           ctx.rotate((-cubeRz * Math.PI) / 180); // 负号因为 Canvas Y 轴向下
+          // 计算相对于 pivot 的偏移
+          const offsetX = drawX - pivotScreenX + drawW / 2;
+          const offsetY = drawY - pivotScreenY + drawH / 2;
           ctx.fillStyle = isHighlight
             ? "rgba(255,180,50,0.25)"
             : "rgba(124,131,255,0.45)";
-          ctx.fillRect(-drawW / 2, -drawH / 2, drawW, drawH);
+          ctx.fillRect(-offsetX, -offsetY, drawW, drawH);
           ctx.strokeStyle = isHighlight
             ? "rgba(255,220,100,1)"
             : "rgba(205,214,244,0.85)";
           ctx.lineWidth = isHighlight ? 1.5 : 1;
-          ctx.strokeRect(-drawW / 2, -drawH / 2, drawW, drawH);
+          ctx.strokeRect(-offsetX, -offsetY, drawW, drawH);
           ctx.restore();
         } else {
           // 无 rotation，使用原有快速路径

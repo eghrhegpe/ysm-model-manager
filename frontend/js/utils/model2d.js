@@ -13,6 +13,20 @@
  */
 export function renderModel2D(canvas, model, textureImg, opts) {
   if (!canvas || !model?.bones?.length) return;
+
+  // 调试：检查是否有 cube rotation
+  const cubesWithRotation = [];
+  for (const bone of model.bones) {
+    for (const c of bone.cubes || []) {
+      if (c.rotation && (c.rotation[0] !== 0 || c.rotation[1] !== 0 || c.rotation[2] !== 0)) {
+        cubesWithRotation.push({ bone: bone.name, origin: c.origin, size: c.size, rotation: c.rotation });
+      }
+    }
+  }
+  if (cubesWithRotation.length > 0) {
+    console.log("[model2d] 发现带 rotation 的 cube:", cubesWithRotation);
+  }
+
   const showLabels = opts?.showLabels !== false;
   const zoom = opts?.zoom || 1;
   const angle = ((opts?.rotation || 0) * Math.PI) / 180;
@@ -322,16 +336,36 @@ function drawView(
         const drawH = ph * scale;
         if (drawW < 0.5 || drawH < 0.5) continue;
 
-        ctx.fillStyle = isHighlight
-          ? "rgba(255,180,50,0.25)"
-          : "rgba(124,131,255,0.45)";
-        ctx.fillRect(drawX, drawY, drawW, drawH);
-        ctx.strokeStyle = isHighlight
-          ? "rgba(255,220,100,1)"
-          : "rgba(205,214,244,0.85)";
-        ctx.lineWidth = isHighlight ? 1.5 : 1;
-        ctx.strokeRect(drawX, drawY, drawW, drawH);
-        ctx.strokeRect(drawX, drawY, drawW, drawH);
+        // 应用 cube 自身的 rotation（主要是 Z 轴，屏幕平面内最可见）
+        const cubeRz = c.rotation?.[2] || 0;
+        if (cubeRz !== 0) {
+          // 使用 Canvas 变换应用旋转
+          ctx.save();
+          ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+          ctx.rotate((-cubeRz * Math.PI) / 180); // 负号因为 Canvas Y 轴向下
+          ctx.fillStyle = isHighlight
+            ? "rgba(255,180,50,0.25)"
+            : "rgba(124,131,255,0.45)";
+          ctx.fillRect(-drawW / 2, -drawH / 2, drawW, drawH);
+          ctx.strokeStyle = isHighlight
+            ? "rgba(255,220,100,1)"
+            : "rgba(205,214,244,0.85)";
+          ctx.lineWidth = isHighlight ? 1.5 : 1;
+          ctx.strokeRect(-drawW / 2, -drawH / 2, drawW, drawH);
+          ctx.restore();
+        } else {
+          // 无 rotation，使用原有快速路径
+          ctx.fillStyle = isHighlight
+            ? "rgba(255,180,50,0.25)"
+            : "rgba(124,131,255,0.45)";
+          ctx.fillRect(drawX, drawY, drawW, drawH);
+          ctx.strokeStyle = isHighlight
+            ? "rgba(255,220,100,1)"
+            : "rgba(205,214,244,0.85)";
+          ctx.lineWidth = isHighlight ? 1.5 : 1;
+          ctx.strokeRect(drawX, drawY, drawW, drawH);
+          ctx.strokeRect(drawX, drawY, drawW, drawH);
+        }
       }
     }
   }

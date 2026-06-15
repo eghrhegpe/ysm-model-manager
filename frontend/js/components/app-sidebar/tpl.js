@@ -57,13 +57,16 @@ export function vcHeaderHTML(
   hasMod = true,
   rtype = "ysm",
 ) {
+  const allZero = synced === 0 && missing === 0 && extra === 0;
   const chips =
     (synced > 0 ? `<span class="tag green">${synced}</span> ` : "") +
     (missing > 0 && hasMod ? `<span class="tag red">${missing}</span> ` : "") +
     (extra > 0 ? `<span class="tag orange">${extra}</span>` : "") +
     (!hasMod
-      ? `<span class="tag gray">🚫 无${{ ysm: "YSM", "mmd-skin": "MMD", "vrchat-avatar": "VRC" }[rtype] || rtype}</span>`
-      : "");
+      ? `<span class="tag gray">🚫 无${{ ysm: "YSM", "mmd-skin": "MMD", "vrchat-avatar": "VRC", resourcepack: "材质包", shaderpack: "光影包", "create-blueprint": "蓝图" }[rtype] || rtype}</span>`
+      : allZero
+        ? `<span class="tag">0</span>`
+        : "");
   return `<div class="vc-header">
 <div class="vc-hdr-row1"><span class="name">${esc(name)}</span></div>
 <div class="vc-hdr-row2"><input type="checkbox" class="chk" data-idx="${idx}">📦${chips}</div>
@@ -74,5 +77,7 @@ function esc(s) {
   return (s || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

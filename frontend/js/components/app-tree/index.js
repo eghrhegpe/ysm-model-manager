@@ -9,6 +9,7 @@ import { bindBusEvents } from "./bus-handlers.js";
 import { loadAuthors } from "./authors.js";
 import { bus } from "../../bus.js";
 import { selectState } from "./data.js";
+import { dbg } from "../../utils/debug.js";
 class AppTree extends HTMLElement {
   constructor() {
     super();
@@ -156,6 +157,18 @@ class AppTree extends HTMLElement {
     if (this._typeFilter) {
       filtered = filtered.filter((e) => e.type === this._typeFilter);
     }
+    // [DBG] 诊断：_renderTree 入参（entries 数 / filterPaths 大小）
+    dbg(
+      "_renderTree",
+      "entries=" +
+        filtered.length +
+        " search=" +
+        JSON.stringify(this._search) +
+        " filterPaths=" +
+        (this._filterPaths ? this._filterPaths.size : "null") +
+        " typeFilter=" +
+        JSON.stringify(this._typeFilter),
+    );
     renderTree(
       c,
       filtered,

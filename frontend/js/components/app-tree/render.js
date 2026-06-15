@@ -6,6 +6,7 @@ import { emptyHTML } from "./tpl.js";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.js";
 import { renderDisplayName } from "../../utils/display.js";
 import { animateNumber } from "../../utils/animate.js";
+import { dbg } from "../../utils/debug.js";
 import { selectState } from "./data.js";
 import {
   ROW_H,
@@ -31,6 +32,27 @@ function buildTree(entries, sortMode, search, filterPaths) {
     }
     return 0;
   });
+  // [DBG] 诊断：打印 filterPaths 状态 + 首条 entry 路径形式（用于排查 Windows 路径分隔符）
+  (() => {
+    const fpSize = filterPaths ? filterPaths.size : 0;
+    const fpSample = filterPaths
+      ? Array.from(filterPaths).slice(0, 2)
+      : [];
+    const eSample = sorted.slice(0, 2).map((e) => ({
+      name: e.name,
+      path: e.path,
+      fullPath: e.fullPath,
+    }));
+    const hit =
+      filterPaths &&
+      sorted[0] &&
+      filterPaths.has(sorted[0].fullPath || sorted[0].path);
+    dbg(
+      "buildTree",
+      "entries=" + sorted.length + " filterPaths=" + fpSize,
+      { fpSample, eSample, firstHit: hit, query },
+    );
+  })();
   sorted.forEach((e) => {
     if (!e || !e.path) return;
     const relPath = e.path;
@@ -170,6 +192,15 @@ function renderSlice(container, rows) {
 }
 
 // ——— 入口：每次数据变化（搜索/排序/展开/折叠）调用 ———
+/** 断开虚拟滚动相关监听 */
+function _cleanupVS(container) {
+  container._vsCleanup?.();
+  container._vsCleanup = null;
+  container._vsResizeObserver?.disconnect();
+  container._vsResizeObserver = null;
+  container._vsRows = [];
+}
+
 export function renderTree(
   container,
   entries,
@@ -180,18 +211,14 @@ export function renderTree(
 ) {
   if (!entries.length) {
     container.innerHTML = emptyHTML("📁", "暂无模型文件");
-    container._vsCleanup?.();
-    container._vsCleanup = null;
-    container._vsRows = [];
+    _cleanupVS(container);
     return;
   }
   const root = buildTree(entries, sort, search, filterPaths);
   const rows = flattenVisible(root, "", search, sort, dirOpen, 0);
   if (!rows.length) {
     container.innerHTML = emptyHTML("🔍", "未找到匹配的文件");
-    container._vsCleanup?.();
-    container._vsCleanup = null;
-    container._vsRows = [];
+    _cleanupVS(container);
     return;
   }
   container._vsRows = rows;
@@ -210,6 +237,15 @@ export function renderTree(
       const r = container._vsRows;
       if (r && r.length) renderSlice(container, r);
     });
+  }
+
+  // 容器尺寸变化时重新计算可见范围（侧边栏折叠/窗口 resize）
+  if (!container._vsResizeObserver) {
+    container._vsResizeObserver = new ResizeObserver(() => {
+      const r = container._vsRows;
+      if (r && r.length) renderSlice(container, r);
+    });
+    container._vsResizeObserver.observe(container);
   }
 }
 

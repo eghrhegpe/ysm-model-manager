@@ -427,13 +427,13 @@
 }
 
 .btn-base.danger {
-  background: color-mix(in srgb, var(--paid, #e5534b) 15%, transparent);
-  color: var(--paid, #e5534b);
-  border-color: color-mix(in srgb, var(--paid, #e5534b) 40%, transparent);
+  background: color-mix(in srgb, var(--status-error, #e5534b) 15%, transparent);
+  color: var(--status-error, #e5534b);
+  border-color: color-mix(in srgb, var(--status-error, #e5534b) 40%, transparent);
 }
 
 .btn-base.danger:hover {
-  background: color-mix(in srgb, var(--paid, #e5534b) 30%, transparent);
+  background: color-mix(in srgb, var(--status-error, #e5534b) 30%, transparent);
 }
 
 .btn-base.accent {

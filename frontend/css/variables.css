@@ -15,10 +15,10 @@
   --meta-work: #bd93f9;
   --meta-date: #f1fa8c;
   --r: 10px;
-  --free: #a6e3a1;
-  --paid: #f38ba8;
-  --sz-green: #a6e3a1;
-  --sz-red: #f38ba8;
+  --status-success: #a6e3a1;  /* 成功/免费状态（原 --free） */
+  --status-error: #f38ba8;    /* 错误/付费状态（原 --paid） */
+  --size-ok: #a6e3a1;         /* 文件大小正常（原 --sz-green） */
+  --size-large: #f38ba8;      /* 文件大小过大（原 --sz-red） */
 }
 
 /* ===== 温暖木纹（明亮模式） ===== */
@@ -40,10 +40,10 @@
   --meta-author: #8b4513;
   --meta-work: #6a4e3a;
   --meta-date: #a0866a;
-  --free: #1971c2;
-  --paid: #c62828;
-  --sz-green: #2e7d32;
-  --sz-red: #c62828;
+  --status-success: #1971c2;  /* 温暖主题使用蓝色表示成功 */
+  --status-error: #c62828;    /* 红色表示错误 */
+  --size-ok: #2e7d32;         /* 绿色表示正常 */
+  --size-large: #c62828;      /* 红色表示过大 */
 }
 
 /* ===== 极简深邃（专业向深色） ===== */
@@ -61,10 +61,10 @@
   --meta-author: #66d9ef;
   --meta-work: #999999;
   --meta-date: #666666;
-  --free: #a6e3a1;
-  --paid: #f38ba8;
-  --sz-green: #a6e3a1;
-  --sz-red: #f38ba8;
+  --status-success: #a6e3a1;
+  --status-error: #f38ba8;
+  --size-ok: #a6e3a1;
+  --size-large: #f38ba8;
 }
 
 /* ===== 字体系统 ===== */
@@ -181,4 +181,12 @@ body {
   background: var(--bg);
   color: var(--txt);
   overflow: hidden;
+}
+
+/* ===== 向后兼容别名（逐步迁移后可删除） ===== */
+:root {
+  --free: var(--status-success);     /* @deprecated 使用 --status-success */
+  --paid: var(--status-error);       /* @deprecated 使用 --status-error */
+  --sz-green: var(--size-ok);        /* @deprecated 使用 --size-ok */
+  --sz-red: var(--size-large);       /* @deprecated 使用 --size-large */
 }

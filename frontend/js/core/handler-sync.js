@@ -32,10 +32,7 @@ export function registerSync(unsubs) {
           totalFail = 0;
 
         const rtypeActual = rtype || "ysm";
-        const repoRoot =
-          rtypeActual === "ysm"
-            ? ((cfg.filesRoot||"")+"\\ysm") || ""
-            : await GetRepoRoot(rtypeActual);
+        const repoRoot = await GetRepoRoot(rtypeActual);
         if (!repoRoot) {
           bus.emit("toast:show", {
             msg: "请先设置该资源类型的目录",
@@ -76,7 +73,13 @@ export function registerSync(unsubs) {
             await import("../../wailsjs/go/main/App.js");
           await InvalidateScanCache();
         } catch {}
-        dbg("sync", "同步完成, 发出 stats:refresh, 成功:", totalOk, "失败:", totalFail);
+        dbg(
+          "sync",
+          "同步完成, 发出 stats:refresh, 成功:",
+          totalOk,
+          "失败:",
+          totalFail,
+        );
         bus.emit("stats:refresh");
         bus.emit("toast:show", {
           msg: instanceName
@@ -108,9 +111,10 @@ export function registerSync(unsubs) {
           ListVersionInstances,
           SyncModelToggleStatus,
           AddImportLog,
+          GetRepoRoot,
         } = await import("../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
-        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+        const repoRoot = await GetRepoRoot("ysm");
         const mcRoot = cfg.mcRoot || "";
         if (!repoRoot || !mcRoot) {
           bus.emit("toast:show", {

@@ -82,14 +82,15 @@ export function settingsHTML() {
 <button class="repo-tab active" data-tab="basic">⚙️ 基础设置</button>
 <button class="repo-tab" data-tab="ui">⚙️ 界面与体验</button>
 <button class="repo-tab" data-tab="about">ℹ️ 关于</button>
+<button class="repo-tab" data-tab="credits">🙏 鸣谢</button>
 </div>
 <div class="repo-tab-body" id="stg-tab-basic">
-<div class="stg-page">
+<div class="stg-page" style="padding:16px 20px;overflow-y:auto">
 
 <div class="section-title stg-title">⚙️ 路径配置</div>
 
 <div class="stg-grid">
-    <!-- Row 1: 游戏根目录 + 文件存储路径 -->
+    <!-- Row 1: 三栏 — 游戏根目录 + 链接模式 + 下载镜像源 -->
     <div class="stg-card">
       <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🎮 游戏根目录<button class="btn-base sm" id="set-mc-detect">🔍 自动搜索</button></div>
       <div class="stg-card-body">
@@ -97,57 +98,57 @@ export function settingsHTML() {
         <div class="stg-card-desc">用于整合包同步，不影响文件存储位置</div>
       </div>
     </div>
-    <div class="stg-card" style="grid-column:2">
-      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">📁 文件存储路径<button class="btn" id="set-advanced-toggle" style="font-size:9px;padding:2px 8px">📂 展开 ▸</button></div>
+    <div class="stg-card">
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">
+        <span class="label" style="font-size:13px;font-weight:600">🔗 链接模式</span>
+        <button id="set-relink" class="btn-base sm">🔄 重新应用</button>
+      </div>
       <div class="stg-card-body">
-        <div class="stg-card-val" id="set-files-root">加载中...</div>
-        <div class="stg-card-desc">所有资源文件统一存放于此，按类型分子目录</div>
-        <div id="set-advanced-panel" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:6px">各类型独立路径（留空则使用统一存储路径）</div>
-          <div class="stg-grid" id="set-advanced-grid"></div>
-        </div>
+        <select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
+          <option value="copy">📋 复制</option>
+          <option value="hardlink" selected>🔗 硬链接 ✅</option>
+          <option value="symlink">🔗 符号链接</option>
+        </select>
+        <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">每个整合包独立占用磁盘空间，最兼容</div>
+        <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">✅ 推荐：省磁盘空间，支持实时开关模型<br>📌 需与游戏同分区</div>
+        <div id="lm-hint-symlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0"><span style="color:#e5534b">❌ 不推荐：权限不足时文件被挂起</span></div>
+      </div>
+    </div>
+    <div class="stg-card">
+      <div class="stg-card-hdr">
+        <span class="label" style="font-size:13px;font-weight:600">🌐 下载镜像源</span>
+      </div>
+      <div class="stg-card-body">
+        <select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
+          <option value="">🌍 直连（raw.githubusercontent.com）</option>
+          <option value="jsdelivr">⚡ jsDelivr CDN（国内加速）</option>
+          <option value="githubapi">🐙 GitHub API</option>
+        </select>
+        <div id="mirror-hint-direct" style="font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">直接从 GitHub 下载，国内网络可能较慢</div>
+        <div id="mirror-hint-jsdelivr" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">国内加速，缓存约 12 小时</div>
+        <div id="mirror-hint-githubapi" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">未认证请求 60 次/小时，适合偶尔下载</div>
       </div>
     </div>
   </div>
 
-<div class="section-title stg-title stg-sub-title">🔗 存储策略 & 🌐 网络</div>
-
-<div style="display:flex;gap:12px">
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
-    <div class="setting-row" style="margin:0 0 6px;padding:4px 0;display:flex;align-items:center;justify-content:space-between">
-      <span class="label" style="font-size:13px;font-weight:600">🔗 链接模式</span>
-      <button id="set-relink" class="btn-base sm">🔄 重新应用链接</button>
+  <!-- Row 2: 文件存储路径（居左，宽度=1fr，展开后占全宽） -->
+  <div class="stg-card" id="stg-files-card" style="margin-top:8px">
+    <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">📁 文件存储路径<button class="btn" id="set-advanced-toggle" style="font-size:9px;padding:2px 8px">📂 展开 ▸</button></div>
+    <div class="stg-card-body">
+      <div class="stg-card-val" id="set-files-root">加载中...</div>
+      <div class="stg-card-desc">所有资源文件统一存放于此，按类型分子目录</div>
+      <div id="set-advanced-panel" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">各类型独立路径（留空则使用统一存储路径）</div>
+        <div class="stg-grid" id="set-advanced-grid"></div>
+      </div>
     </div>
-    <select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
-      <option value="copy">📋 复制</option>
-      <option value="hardlink" selected>🔗 硬链接 ✅</option>
-      <option value="symlink">🔗 符号链接</option>
-    </select>
-    <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">每个整合包独立占用磁盘空间，最兼容</div>
-    <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">✅ 推荐：省磁盘空间，支持实时开关模型<br>📌 需与游戏同分区</div>
-    <div id="lm-hint-symlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0"><span style="color:#e5534b">❌ 不推荐：权限不足时文件被挂起</span></div>
   </div>
-
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
-    <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <span class="label" style="font-size:13px;font-weight:600">🌐 下载镜像源</span>
-    </div>
-    <select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
-      <option value="">🌍 直连（raw.githubusercontent.com）</option>
-      <option value="jsdelivr">⚡ jsDelivr CDN（国内加速）</option>
-      <option value="githubapi">🐙 GitHub API</option>
-    </select>
-    <div id="mirror-hint-direct" style="font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">直接从 GitHub 原始服务器下载，确保获取最新版本的文件。<br>⚠️ 国内网络环境下可能速度较慢或连接失败</div>
-    <div id="mirror-hint-jsdelivr" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">通过 jsDelivr 全球加速网络分发，国内下载速度显著提升。<br>📌 缓存 TTL 约 12 小时，新发布的内容可能稍有延迟</div>
-    <div id="mirror-hint-githubapi" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">通过 GitHub REST API 获取下载地址。<br>📌 未认证请求限制 60 次/小时，适合偶尔手动下载</div>
-  </div>
-</div>
 
 </div>
 </div>
 
 <div class="repo-tab-body" id="stg-tab-ui" style="display:none">
-<div class="stg-page">
+<div class="stg-page" style="padding:16px 20px;overflow-y:auto">
 
 <div class="section-title stg-title">🌙 主题与外观</div>
 
@@ -234,16 +235,20 @@ export function settingsHTML() {
 </div>
 
 <div class="repo-tab-body" id="stg-tab-about" style="display:none">
-<div class="stg-page">
+<div class="stg-page" style="padding:16px 20px;overflow-y:auto">
 
 <div class="section-title stg-title">📦 关于 YSM 模型管理器</div>
 
-<div class="settings-group" style="margin-bottom:12px;padding:0 16px">
-  <div class="setting-row">
-    <span class="label">📦 当前版本</span>
-    <span id="set-version" style="font-size:var(--fs-sm);color:var(--muted)">加载中...</span>
-    <button class="btn-base sm stg-btn" id="set-check-update">🔄 检查更新</button>
-    <button class="btn-base sm" id="set-releases" style="margin-left:4px" title="打开 GitHub Releases">📋 发布页</button>
+<div class="stg-grid" style="margin-bottom:12px">
+  <div class="stg-card">
+    <div class="stg-card-hdr" style="display:flex;align-items:center;gap:8px">
+      <span>📦 当前版本</span>
+      <span id="set-version" style="font-size:var(--fs-lg);font-weight:700;color:var(--accent)">加载中...</span>
+    </div>
+    <div class="stg-card-body" style="display:flex;align-items:center;gap:8px">
+      <button class="btn-base sm stg-btn" id="set-check-update">🔄 检查更新</button>
+      <button class="btn-base sm" id="set-releases" title="打开 GitHub Releases">📋 发布页</button>
+    </div>
   </div>
 </div>
 
@@ -298,7 +303,13 @@ export function settingsHTML() {
   </div>
 </div>
 
-<div class="section-title stg-title stg-sub-title">🎯 灵感来源</div>
+</div>
+</div>
+
+<div class="repo-tab-body" id="stg-tab-credits" style="display:none">
+<div class="stg-page" style="padding:16px 20px;overflow-y:auto">
+
+<div class="section-title stg-title">🎯 灵感来源</div>
 
 <div style="display:flex;gap:12px">
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">

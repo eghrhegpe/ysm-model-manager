@@ -18,10 +18,11 @@ export function fileRowHTML(
   const typeIcon =
     e.type === "resourcepack" ? "🎨" : e.type === "ysm" ? "💎" : icon;
   const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
+  const tagMark = e.HasTags ? '<span class="tag-dot" title="有标签">🏷️</span>' : "";
   return `<div class="fl${ban}${rowCls}" data-path="${p}" data-fullpath="${fp}"${pad}>
 <span class="ck${checked}" data-path="${p}" data-fullpath="${fp}"></span>
 <span class="ficon">${typeIcon}</span>
-<span class="nm${nmCls}">${nmHtml}</span>
+<span class="nm${nmCls}">${tagMark}${nmHtml}</span>
 <span class="hover-actions">
   <span class="ha-btn ha-preview" data-path="${fp}" title="B站搜索作者">🔍</span>
   <span class="ha-btn ha-copy" data-path="${fp}" title="复制文件名">📋</span>

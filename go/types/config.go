@@ -4,6 +4,7 @@ package types
 type AppConfig struct {
 	FilesRoot        string `json:"filesRoot"` // 统一文件存储根目录，各类型默认存 {filesRoot}/{subDir}/
 	YsmRoot          string `json:"ysmRoot"`
+	RepoRoot         string `json:"repoRoot"`   // 旧版字段，v1.6.4+ 不再使用，仅用于 config 迁移
 	ResourcepackRoot string `json:"resourcepackRoot"`
 	ShaderpackRoot   string `json:"shaderpackRoot"`
 	SchematicRoot    string `json:"schematicRoot"`

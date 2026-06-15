@@ -21,7 +21,9 @@ const shouldEnterForm = async (name, base64) => {
     try {
       const { DetectZipType } = await import("../../wailsjs/go/main/App.js");
       return (await DetectZipType(base64)) === "ysm";
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
   // 其他已注册扩展名（.pmx, .vrca, .nbt 等）直接导入，不进表单
   if (ALL_EXTS.includes(ext)) return false;
@@ -96,10 +98,10 @@ export function initImportQueue(app) {
     if (conflictTimer) clearTimeout(conflictTimer);
     conflictTimer = setTimeout(async () => {
       try {
-        const { CheckFileExists, LoadAppConfig } =
+        const { CheckFileExists, LoadAppConfig, GetRepoRoot } =
           await import("../../wailsjs/go/main/App.js");
-        const cfg = await LoadAppConfig();
-        const fullPath = (((cfg.filesRoot||"")+"\\ysm") || "") + "\\" + name;
+        const repoRoot = await GetRepoRoot("ysm");
+        const fullPath = (repoRoot || "") + "\\" + name;
         const exists = await CheckFileExists(fullPath);
         const el = root.getElementById("dl-conflict");
         if (el) el.style.display = exists ? "" : "none";
@@ -210,7 +212,10 @@ export function initImportQueue(app) {
       let ok = 0,
         skip = 0;
       Array.from(files).forEach((file) => {
-        if (!isSupportedFile(file.name)) { skip++; return; }
+        if (!isSupportedFile(file.name)) {
+          skip++;
+          return;
+        }
         ok++;
         const reader = new FileReader();
         reader.onload = async () => {
@@ -251,9 +256,13 @@ export function initImportQueue(app) {
   fileInput.addEventListener("change", () => {
     const files = fileInput.files;
     if (!files.length) return;
-    let ok = 0, skip = 0;
+    let ok = 0,
+      skip = 0;
     Array.from(files).forEach((file) => {
-      if (!isSupportedFile(file.name)) { skip++; return; }
+      if (!isSupportedFile(file.name)) {
+        skip++;
+        return;
+      }
       ok++;
       const reader = new FileReader();
       reader.onload = async () => {
@@ -352,8 +361,10 @@ export function initImportQueue(app) {
       try {
         const { showRenameDialog } = await import("../dialogs/rename.js");
         const { RenameFile } = await import("../../wailsjs/go/main/App.js");
+        const { GetRepoRoot } = await import("../../wailsjs/go/main/App.js");
+        const _ysmRoot = await GetRepoRoot("ysm");
         const renameTo = await showRenameDialog(
-          (((cfg.filesRoot||"")+"\\ysm") || "") + "\\" + newName,
+          (_ysmRoot || "") + "\\" + newName,
           newName,
         );
         if (renameTo && renameTo !== newName) {
@@ -361,7 +372,7 @@ export function initImportQueue(app) {
             ? currentRelPath.substring(0, currentRelPath.lastIndexOf("/"))
             : "";
           const fullImportPath =
-            (((cfg.filesRoot||"")+"\\ysm") || "") +
+            (_ysmRoot || "") +
             "\\" +
             (subpath ? subpath.replace(/\//g, "\\") + "\\" : "") +
             newName;
@@ -480,11 +491,11 @@ export function initImportQueue(app) {
   let repoFiles = null; // 仓库文件名缓存
   const loadRepoFiles = async () => {
     try {
-      const { ScanModelEntries, LoadAppConfig } =
+      const { ScanModelEntries, LoadAppConfig, GetRepoRoot } =
         await import("../../wailsjs/go/main/App.js");
-      const cfg = await LoadAppConfig();
-      if (!((cfg.filesRoot||"")+"\\ysm")) return;
-      const entries = await ScanModelEntries(((cfg.filesRoot||"")+"\\ysm"));
+      const repoRoot = await GetRepoRoot("ysm");
+      if (!repoRoot) return;
+      const entries = await ScanModelEntries(repoRoot);
       repoFiles = new Set(entries.map((e) => e.Name.replace(/\.ban$/i, "")));
     } catch {
       repoFiles = new Set();
@@ -521,10 +532,11 @@ export function initImportQueue(app) {
         if (entry.isFile) {
           entry.file(
             (file) => {
-              if (!isSupportedFile(file.name)) { resolve(); return; }
-              file._relPath = basePath
-                ? basePath + "/" + file.name
-                : file.name;
+              if (!isSupportedFile(file.name)) {
+                resolve();
+                return;
+              }
+              file._relPath = basePath ? basePath + "/" + file.name : file.name;
               const reader = new FileReader();
               reader.onload = async () => {
                 const base64 = reader.result.split(",")[1];
@@ -571,10 +583,14 @@ export function initImportQueue(app) {
     }
     if (!entries.length) {
       // 回退：webkitGetAsEntry 不可用时直接用 getAsFile
-      let ok = 0, skip = 0;
+      let ok = 0,
+        skip = 0;
       for (let i = 0; i < items.length; i++) {
         const file = items[i].getAsFile?.();
-        if (!file || !isSupportedFile(file.name)) { skip++; continue; }
+        if (!file || !isSupportedFile(file.name)) {
+          skip++;
+          continue;
+        }
         ok++;
         const reader = new FileReader();
         reader.onload = async () => {
@@ -691,10 +707,9 @@ export function initImportQueue(app) {
       btn.addEventListener("click", async () => {
         const name = btn.dataset.name;
         const { showRenameDialog } = await import("../dialogs/rename.js");
-        const { RenameFile, LoadAppConfig } =
+        const { RenameFile, LoadAppConfig, GetRepoRoot } =
           await import("../../wailsjs/go/main/App.js");
-        const cfg = await LoadAppConfig();
-        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+        const repoRoot = await GetRepoRoot("ysm");
         const fullPath = repoRoot + "\\" + name;
         const newName = await showRenameDialog(fullPath, name);
         if (!newName) return;

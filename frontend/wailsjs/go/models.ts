@@ -26,6 +26,7 @@ export namespace types {
 	export class AppConfig {
 	    filesRoot: string;
 	    ysmRoot: string;
+	    repoRoot: string;
 	    resourcepackRoot: string;
 	    shaderpackRoot: string;
 	    schematicRoot: string;
@@ -52,6 +53,7 @@ export namespace types {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.filesRoot = source["filesRoot"];
 	        this.ysmRoot = source["ysmRoot"];
+	        this.repoRoot = source["repoRoot"];
 	        this.resourcepackRoot = source["resourcepackRoot"];
 	        this.shaderpackRoot = source["shaderpackRoot"];
 	        this.schematicRoot = source["schematicRoot"];
@@ -288,6 +290,7 @@ export namespace types {
 	    Ext: string;
 	    Hash: string;
 	    ModTime: number;
+	    HasTags: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ModelEntry(source);
@@ -301,6 +304,7 @@ export namespace types {
 	        this.Ext = source["Ext"];
 	        this.Hash = source["Hash"];
 	        this.ModTime = source["ModTime"];
+	        this.HasTags = source["HasTags"];
 	    }
 	}
 	export class PackInfo {

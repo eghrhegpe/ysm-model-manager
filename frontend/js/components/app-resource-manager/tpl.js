@@ -1,5 +1,6 @@
 // ===== 资源管理器布局模板 =====
 import { renderFormattedText } from "../../utils/mc-format.js";
+import { describeVersionRange } from "../../utils/pack-format.js";
 
 /**
  * 侧栏布局（路径 + 操作栏 + 列表）
@@ -101,6 +102,12 @@ export function detailHTML(name, meta, enabled, path, label, actions) {
       '<img src="' +
       esc(meta.thumbnail) +
       '" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">';
+  } else {
+    html +=
+      '<div style="width:128px;height:128px;border-radius:6px;border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--bg)">' +
+      '<div style="font-size:40px;line-height:1">❌</div>' +
+      '<div style="font-size:var(--fs-sm);color:var(--muted)">无pack.png</div>' +
+      '</div>';
   }
   html +=
     '<div style="font-weight:600;font-size:var(--fs-md)">' +
@@ -110,9 +117,11 @@ export function detailHTML(name, meta, enabled, path, label, actions) {
     html +=
       '<div style="color:var(--muted);line-height:1.6">' + desc + "</div>";
   }
+  const versionDesc = describeVersionRange(meta);
   html +=
     '<div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ' +
-    esc(String(meta.pack_format || "?")) +
+    esc(String(meta.pack_format != null ? meta.pack_format : "?")) +
+    (versionDesc ? "（" + esc(versionDesc) + "）" : "") +
     "</div>" +
     '<div style="color:var(--muted);font-size:var(--fs-xs)">状态: ' +
     (enabled ? "✅ 启用" : "⛔ 禁用") +

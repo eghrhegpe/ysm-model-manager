@@ -6,11 +6,22 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB
 const MAX_FILE_COUNT = 50;
 const getExt = (name) => "." + (name.split(".").pop() || "").toLowerCase();
 const isSupportedFile = (name) => ALL_EXTS.includes(getExt(name));
-const isYsmFile = (name) => {
+/**
+ * 判断文件是否需要进入命名表单（异步）
+ * - .ysm / ysm.json → 始终进表单
+ * - .zip / .7z → 调 Go 端 DetectZipType 检测内容后决定
+ * - 其他已注册扩展名 → 直接导入
+ */
+const shouldEnterForm = async (name, base64) => {
   const ext = getExt(name);
-  // 只有 .ysm 和 ysm.json 确定是 YSM；.zip/.7z 交给 Go 端 detectZipType 内容判定
   if (ext === ".ysm") return true;
   if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
+  if (ext === ".zip" || ext === ".7z") {
+    try {
+      const { DetectZipType } = await import("../../wailsjs/go/main/App.js");
+      return (await DetectZipType(base64)) === "ysm";
+    } catch { return false; }
+  }
   return false;
 };
 const readFileAsBase64 = (file) =>
@@ -174,12 +185,24 @@ const onDrop = async (e) => {
     return;
   }
 
-  // 分类：YSM 进命名队列，非 YSM 直接导入
+  // 分类：YSM 进命名队列，非 YSM 直接导入（ZIP 需调 Go 端 DetectZipType 内容判定）
   const ysmFiles = [];
   const nonYsmFiles = [];
   for (const f of allFiles) {
-    if (isYsmFile(f.name)) {
+    const ext = getExt(f.name);
+    if (ext === ".ysm") {
       ysmFiles.push(f);
+    } else if (ext === ".zip" || ext === ".7z") {
+      try {
+        const base64 = await readFileAsBase64(f);
+        if (await shouldEnterForm(f.name, base64)) {
+          ysmFiles.push(f);
+        } else {
+          nonYsmFiles.push(f);
+        }
+      } catch {
+        nonYsmFiles.push(f);
+      }
     } else {
       nonYsmFiles.push(f);
     }

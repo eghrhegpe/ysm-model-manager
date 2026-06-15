@@ -36,7 +36,7 @@ export function create3DPreview(model) {
       const overlay = document.createElement("div");
       overlay.id = "ysm-overlay-3d";
       overlay.style.cssText =
-        "position:fixed;inset:0;z-index:9999;background:#1a1b2e;display:flex;flex-direction:column";
+        "position:fixed;inset:0;z-index:var(--z-fullscreen);background:#1a1b2e;display:flex;flex-direction:column";
       _overlay3d = overlay;
 
       // 顶部栏

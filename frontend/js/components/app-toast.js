@@ -11,7 +11,7 @@ class AppToast extends HTMLElement {
       <style>
         :host {
           position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-          z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+          z-index: var(--z-toast); display: flex; flex-direction: column; gap: 8px; pointer-events: none;
         }
         .toast {
           display: flex; align-items: center; gap: 10px; padding: 10px 16px;

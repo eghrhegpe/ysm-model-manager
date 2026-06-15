@@ -50,7 +50,7 @@ func sanitizePath(path, label string) (string, string) {
 }
 
 // ===== SimpleCopyImporter =====
-// 适用于材质包/光影包等只需复制文件的资源类型
+// 适用于资源包/光影包等只需复制文件的资源类型
 
 type SimpleCopyImporter struct {
 	rtype string

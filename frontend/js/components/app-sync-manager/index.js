@@ -147,7 +147,7 @@ export class AppSyncManager extends HTMLElement {
       ysm: "YSM",
       "mmd-skin": "MMD",
       "vrchat-avatar": "VRC",
-      resourcepack: "材质包",
+      resourcepack: "资源包",
       shaderpack: "光影包",
       "create-blueprint": "蓝图",
     };

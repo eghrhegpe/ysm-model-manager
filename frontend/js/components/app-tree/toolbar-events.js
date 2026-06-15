@@ -5,23 +5,114 @@ import { flashBtn } from "./utils.js";
 import { spinnerHTML } from "./tpl.js";
 import { selectState } from "./data.js";
 import { getExts } from "../../utils/extensions.js";
+import { modalAdvFilter } from "../../dialogs/adv-filter.js";
+import { updateSelectCount } from "./events.js";
 
-function updateSelectCount(root) {
-  const stat = root?.getElementById("ftr-stat");
-  if (!stat) return;
-  const n = selectState.keys.size;
-  if (n > 0) {
-    stat.textContent = "已选 " + n + " 个文件";
-    stat.style.color = "var(--accent)";
-  } else {
-    stat.style.color = "";
+// 打开弹窗版筛选器（应用结果到 inline 面板 + 后端搜索）
+async function openAdvFilterDialog($, vm) {
+  const cur = {
+    keyword: $("srch")?.value || "",
+    minBones: $("af-minBones")?.value || "",
+    maxBones: $("af-maxBones")?.value || "",
+    minCubes: $("af-minCubes")?.value || "",
+    maxCubes: $("af-maxCubes")?.value || "",
+    minTex: $("af-minTex")?.value || "",
+    maxTex: $("af-maxTex")?.value || "",
+  };
+  const result = await modalAdvFilter({ value: cur });
+  if (!result) return;
+
+  // "清除全部"路径：result 是 { cleared: true }，无 minBones 等字段
+  // 统一回填 inline 面板（null/undefined → ""）
+  const setVal = (id, v) => { const el = $(id); if (el) el.value = v == null ? "" : v; };
+  setVal("af-minBones", result.minBones);
+  setVal("af-maxBones", result.maxBones);
+  setVal("af-minCubes", result.minCubes);
+  setVal("af-maxCubes", result.maxCubes);
+  setVal("af-minTex", result.minTex);
+  setVal("af-maxTex", result.maxTex);
+  const srchEl = $("srch");
+  if (srchEl && result.keyword !== undefined) {
+    srchEl.value = result.keyword;
+    vm._search = result.keyword;
   }
+
+  const kw = srchEl?.value || "";
+  // 显式 == null 同时匹配 null 和 undefined（兼容弹窗"清除全部"返回的 {cleared:true}）
+  const isUnset = (v) => v == null || v === "";
+  if (
+    !kw &&
+    isUnset(result.minBones) &&
+    isUnset(result.maxBones) &&
+    isUnset(result.minCubes) &&
+    isUnset(result.maxCubes) &&
+    isUnset(result.minTex) &&
+    isUnset(result.maxTex)
+  ) {
+    vm._filterPaths = null;
+    vm._renderTree();
+    return;
+  }
+  const { LoadAppConfig, SearchModels } =
+    await import("../../../wailsjs/go/main/App.js");
+  const cfg = await LoadAppConfig();
+  if (!cfg.repoRoot) {
+    bus.emit("toast:show", { msg: "请先设置仓库目录", duration: 2000, type: "warn" });
+    return;
+  }
+  // 后端 SearchModels 走 > 0 判定；null 转 0 后不会触发过滤
+  const n = (v) => (v == null ? 0 : parseInt(v, 10) || 0);
+  try {
+    const results = await SearchModels(
+      cfg.repoRoot,
+      kw,
+      n(result.minBones),
+      n(result.maxBones),
+      n(result.minCubes),
+      n(result.maxCubes),
+      n(result.minTex),
+      n(result.maxTex),
+    );
+    vm._filterPaths =
+      results && results.length ? new Set(results.map((r) => r.Path)) : null;
+  } catch (e) {
+    bus.emit("toast:show", { msg: "❌ 搜索失败: " + friendlyError(e), duration: 4000, type: "error" });
+    vm._filterPaths = null;
+  }
+  vm._renderTree();
+}
+
+// 填充作者下拉（hover 或 click 都触发，避免鼠标快速点击时未填充）
+function fillAuthorMenu(menuAuthors, vm, $) {
+  if (menuAuthors.children.length) return; // 已填充
+  const authors = vm._authors || [];
+  if (!authors.length) {
+    menuAuthors.innerHTML =
+      '<div style="padding:4px 10px;font-size:10px;color:var(--muted)">暂无作者</div>';
+    return;
+  }
+  authors.forEach((a) => {
+    const name = typeof a === "string" ? a : a.Name || "";
+    const count = typeof a === "object" ? a.Count || 0 : 0;
+    if (!name) return;
+    const btn = document.createElement("button");
+    btn.className = "dd-item";
+    btn.textContent = name + (count ? ` (${count})` : "");
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const srch = $("srch");
+      if (srch) {
+        srch.value = name;
+        srch.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    });
+    menuAuthors.appendChild(btn);
+  });
 }
 
 // 绑定工具栏事件
 export function bindToolbarEvents(root, vm) {
   const $ = (id) => root.getElementById(id);
-  const r = () => vm._renderTree();
   let ddTimer;
 
   // 全选 / 反选 — 基于当前过滤后可见的行
@@ -36,6 +127,7 @@ export function bindToolbarEvents(root, vm) {
         if (allSelected) selectState.keys.delete(k);
         else selectState.keys.add(k);
       });
+      // 复用 events.js 里的实现（避免重复定义）
       updateSelectCount(root);
       flashBtn(selAllBtn);
     });
@@ -80,87 +172,40 @@ export function bindToolbarEvents(root, vm) {
     vm._renderTree();
   });
 
-  // 高级筛选按钮：展开/收起筛选面板
+  // 高级筛选按钮：触发弹窗版筛选器
   $("btn-adv-filter")?.addEventListener("click", () => {
-    const panel = $("adv-filter");
-    if (!panel) return;
-    panel.style.display = panel.style.display === "none" ? "block" : "none";
+    openAdvFilterDialog($, vm);
   });
 
-  // 高级筛选：应用
-  $("af-apply")?.addEventListener("click", async () => {
-    const kw = $("srch")?.value || "";
-    const minBones = parseInt($("af-minBones")?.value || "0") || 0;
-    const maxBones = parseInt($("af-maxBones")?.value || "0") || 0;
-    const minCubes = parseInt($("af-minCubes")?.value || "0") || 0;
-    const maxCubes = parseInt($("af-maxCubes")?.value || "0") || 0;
-    const minTex = parseInt($("af-minTex")?.value || "0") || 0;
-    const maxTex = parseInt($("af-maxTex")?.value || "0") || 0;
-    if (!kw && !minBones && !maxBones && !minCubes && !maxCubes && !minTex && !maxTex) {
-      vm._filterPaths = null;
-      vm._renderTree();
-      return;
-    }
-    const { LoadAppConfig, SearchModels } = await import("../../../wailsjs/go/main/App.js");
-    const cfg = await LoadAppConfig();
-    if (!cfg.repoRoot) {
-      bus.emit("toast:show", { msg: "请先设置仓库目录", duration: 2000, type: "warn" });
-      return;
-    }
-    try {
-      const results = await SearchModels(cfg.repoRoot, kw, minBones, maxBones, minCubes, maxCubes, minTex, maxTex);
-      if (results && results.length) {
-        vm._filterPaths = new Set(results.map((r) => r.Path));
-      } else {
-        vm._filterPaths = null;
-      }
-    } catch (e) {
-      bus.emit("toast:show", { msg: "❌ 搜索失败: " + friendlyError(e), duration: 4000, type: "error" });
-      vm._filterPaths = null;
-    }
-    vm._renderTree();
-  });
-
-  // 高级筛选：清除
+  // 高级筛选：清除（inline 面板"清除"按钮 — 快速清空所有筛选）
   $("af-clear")?.addEventListener("click", () => {
-    ["af-minBones","af-maxBones","af-minCubes","af-maxCubes","af-minTex","af-maxTex"].forEach((id) => {
-      const el = $(id); if (el) el.value = "";
+    [
+      "af-minBones",
+      "af-maxBones",
+      "af-minCubes",
+      "af-maxCubes",
+      "af-minTex",
+      "af-maxTex",
+    ].forEach((id) => {
+      const el = $(id);
+      if (el) el.value = "";
     });
+    const srchEl = $("srch");
+    if (srchEl) {
+      srchEl.value = "";
+      vm._search = "";
+    }
     vm._filterPaths = null;
     vm._renderTree();
   });
 
-  // 作者下拉菜单 — 鼠标悬停时动态填充
+  // 作者下拉菜单 — hover 或 click 都触发填充（避免快速点击时未填充）
   const menuAuthors = $("menu-authors");
   if (menuAuthors) {
     const ddWrap = menuAuthors.closest(".dd-wrap");
     if (ddWrap) {
-      ddWrap.addEventListener("mouseenter", () => {
-        if (menuAuthors.children.length) return; // 只填充一次
-        const authors = vm._authors || [];
-        if (!authors.length) {
-          menuAuthors.innerHTML =
-            '<div style="padding:4px 10px;font-size:10px;color:var(--muted)">暂无作者</div>';
-          return;
-        }
-        authors.forEach((a) => {
-          const name = typeof a === "string" ? a : a.Name || "";
-          const count = typeof a === "object" ? a.Count || 0 : 0;
-          if (!name) return;
-          const btn = document.createElement("button");
-          btn.className = "dd-item";
-          btn.textContent = name + (count ? ` (${count})` : "");
-          btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const srch = $("srch");
-            if (srch) {
-              srch.value = name;
-              srch.dispatchEvent(new Event("input", { bubbles: true }));
-            }
-          });
-          menuAuthors.appendChild(btn);
-        });
-      });
+      ddWrap.addEventListener("mouseenter", () => fillAuthorMenu(menuAuthors, vm, $));
+      ddWrap.addEventListener("click", () => fillAuthorMenu(menuAuthors, vm, $));
     }
   }
 
@@ -193,10 +238,11 @@ export function bindToolbarEvents(root, vm) {
         const rtype = vm._rootAttr || "ysm";
         const { SelectImportFile, ImportByType } =
           await import("../../../wailsjs/go/main/App.js");
+        // 列出所有支持的扩展名（后端 SelectImportFile 用 | 解析 "显示名|*.ext1;*.ext2"）
         const exts = getExts(rtype);
-        const ext = exts[0] || ".zip";
+        const extFilter = exts.length ? exts.map((e) => "*" + e).join(";") : "*.*";
         const filePath = await SelectImportFile(
-          rtype + " 模型|*" + ext,
+          rtype + " 文件|" + extFilter,
           "选择" + rtype + "文件",
         );
         if (!filePath) return;
@@ -222,9 +268,7 @@ export function bindToolbarEvents(root, vm) {
           await import("../../../wailsjs/go/main/App.js");
         const dirPath = await SelectDirectory();
         if (!dirPath) return;
-        // 找目录中的模型文件
-        const targetExt = getExts(rtype)[0] || ".zip";
-        // 直接导入目录（DirectoryCopyImporter 会按需处理）
+        // 后端 ImportByType → SimpleCopyImporter / DirectoryCopyImporter 都判 info.IsDir()，目录/文件都支持
         const errMsg = await ImportByType(rtype, dirPath);
         if (errMsg) {
           bus.emit("toast:show", {

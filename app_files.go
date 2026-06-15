@@ -257,16 +257,17 @@ func (a *App) MoveModelFile(src, dstDir string) error {
 
 // ========== 模型复制 ==========
 // CopyModelFile 将 src 复制到 dstDir 目录下（保留原文件名）
-// dstDir 必须是 a.RepoRoot 的子目录（防路径遍历）
+// dstDir 必须是 FilesRoot 的子目录（防路径遍历）
 func (a *App) CopyModelFile(src, dstDir string) error {
 	src = strings.TrimSpace(src)
 	dstDir = strings.TrimSpace(dstDir)
 	if src == "" || dstDir == "" {
 		return fmt.Errorf("参数空")
 	}
-	// 路径安全：dstDir 必须落在 RepoRoot 内
-	if a.RepoRoot != "" {
-		absRoot, err := filepath.Abs(a.RepoRoot)
+	// 路径安全：dstDir 必须落在 FilesRoot 内
+	cfg := a.LoadAppConfig()
+	if cfg.FilesRoot != "" {
+		absRoot, err := filepath.Abs(cfg.FilesRoot)
 		if err != nil {
 			return err
 		}

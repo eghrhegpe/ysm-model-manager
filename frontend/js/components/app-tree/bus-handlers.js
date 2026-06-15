@@ -25,7 +25,7 @@ export function bindBusEvents(vm) {
           const { LoadAppConfig, ListVersionInstances, SyncModelToggleStatus } =
             await import("../../../wailsjs/go/main/App.js");
           const cfg = await LoadAppConfig();
-          const repoRoot = cfg.repoRoot || "";
+          const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
           const mcRoot = cfg.mcRoot || "";
           if (repoRoot && mcRoot) {
             const instances = await ListVersionInstances(mcRoot);
@@ -55,7 +55,7 @@ export function bindBusEvents(vm) {
         if (!dir) return;
         const theme = localStorage.getItem("theme") || "dark";
         await SaveAppConfig(dir, "", "", "copy", theme);
-        vm._repoRoot = dir;
+        vm._repoRoot = dir + "\\ysm";
         await reload(vm);
         bus.emit("stats:refresh");
       } catch (err) {
@@ -120,7 +120,7 @@ export function bindBusEvents(vm) {
         const { LoadAppConfig, RenameDir } =
           await import("../../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
-        const repoRoot = cfg.repoRoot || "";
+        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         await RenameDir(absDir, name.trim());
         await reload(vm);
@@ -149,7 +149,7 @@ export function bindBusEvents(vm) {
         const { LoadAppConfig, CreateDir } =
           await import("../../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
-        const repoRoot = cfg.repoRoot || "";
+        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
         const absDir = repoRoot
           ? repoRoot + "/" + dir + "/" + name.trim()
           : dir + "/" + name.trim();
@@ -181,7 +181,7 @@ export function bindBusEvents(vm) {
         const { LoadAppConfig, ListAllFilePaths, MoveToRecycle } =
           await import("../../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
-        const repoRoot = cfg.repoRoot || "";
+        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const allFiles = await ListAllFilePaths(absDir);
         let count = 0,
@@ -229,7 +229,7 @@ export function bindBusEvents(vm) {
         const { LoadAppConfig, ScanModelEntries, RenameFile } =
           await import("../../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
-        const repoRoot = cfg.repoRoot || "";
+        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const entries = await ScanModelEntries(absDir);
         if (!entries || !entries.length) {

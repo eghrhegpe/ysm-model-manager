@@ -34,7 +34,7 @@ export function registerSync(unsubs) {
         const rtypeActual = rtype || "ysm";
         const repoRoot =
           rtypeActual === "ysm"
-            ? cfg.repoRoot || ""
+            ? ((cfg.filesRoot||"")+"\\ysm") || ""
             : await GetRepoRoot(rtypeActual);
         if (!repoRoot) {
           bus.emit("toast:show", {
@@ -110,7 +110,7 @@ export function registerSync(unsubs) {
           AddImportLog,
         } = await import("../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
-        const repoRoot = cfg.repoRoot || "";
+        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
         const mcRoot = cfg.mcRoot || "";
         if (!repoRoot || !mcRoot) {
           bus.emit("toast:show", {

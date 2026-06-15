@@ -49,15 +49,13 @@ func (a *App) loadAppConfig() {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return
 	}
-	if cfg.RepoRoot != "" {
-		a.RepoRoot = cfg.RepoRoot
-	}
+	// repoRoot() 从 FilesRoot 动态推导，无需手动赋值
 	if cfg.LinkMode != "" {
 		a.LinkMode = cfg.LinkMode
 	}
 }
 
-func (a *App) SaveAppConfig(repoRoot, rpRoot, mcRoot, linkMode, theme string) error {
+func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) error {
 	validated := mcRoot
 	if mcRoot != "" {
 		if v, errMsg := a.ValidateMinecraftDir(mcRoot); errMsg == "" {
@@ -66,15 +64,15 @@ func (a *App) SaveAppConfig(repoRoot, rpRoot, mcRoot, linkMode, theme string) er
 	}
 	oldCfg := a.LoadAppConfig()
 	cfg := types.AppConfig{
-		RepoRoot:         repoRoot,
-		ResourcepackRoot: rpRoot,
+		FilesRoot:        orDefault(filesRoot, oldCfg.FilesRoot),
+		ResourcepackRoot: orDefault(rpRoot, oldCfg.ResourcepackRoot),
 		ShaderpackRoot:   oldCfg.ShaderpackRoot,
 		SchematicRoot:    oldCfg.SchematicRoot,
 		MmdRoot:          oldCfg.MmdRoot,
 		VrcRoot:          oldCfg.VrcRoot,
-		McRoot:           validated,
-		LinkMode:         linkMode,
-		Theme:            theme,
+		McRoot:           orDefault(validated, oldCfg.McRoot),
+		LinkMode:         orDefault(linkMode, oldCfg.LinkMode),
+		Theme:            orDefault(theme, oldCfg.Theme),
 		Mirror:           oldCfg.Mirror,
 		// 保留窗口状态（SaveWindowPosition 写入的字段）
 		WinX:    oldCfg.WinX,
@@ -85,10 +83,6 @@ func (a *App) SaveAppConfig(repoRoot, rpRoot, mcRoot, linkMode, theme string) er
 		WinRelY: oldCfg.WinRelY,
 		WinScrW: oldCfg.WinScrW,
 		WinScrH: oldCfg.WinScrH,
-	}
-	// 同步更新内存中的 RepoRoot（回收站等依赖此值）
-	if repoRoot != "" {
-		a.RepoRoot = repoRoot
 	}
 	return a.saveConfig(cfg)
 }
@@ -111,6 +105,13 @@ func (a *App) restartWatcher(repoRoot, mcRoot string) {
 			println("[watcher] 重启失败:", err.Error())
 		}
 	}
+}
+
+func orDefault(val, fallback string) string {
+	if val != "" {
+		return val
+	}
+	return fallback
 }
 
 func (a *App) LoadAppConfig() types.AppConfig {

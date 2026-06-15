@@ -1,10 +1,25 @@
 // ===== 全局拖拽导入 =====
 import { bus } from "../bus.js";
-import { ALL_EXTS } from "../utils/extensions.js";
-import { dbg } from "../utils/debug.js";
+import { ALL_EXTS, extBelongsTo } from "../utils/extensions.js";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
 const MAX_FILE_COUNT = 50;
+const getExt = (name) => "." + (name.split(".").pop() || "").toLowerCase();
+const isSupportedFile = (name) => ALL_EXTS.includes(getExt(name));
+const isYsmFile = (name) => {
+  const ext = getExt(name);
+  // 只有 .ysm 和 ysm.json 确定是 YSM；.zip/.7z 交给 Go 端 detectZipType 内容判定
+  if (ext === ".ysm") return true;
+  if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
+  return false;
+};
+const readFileAsBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 let dropOverlay = null;
 let dropLeaveTimer = null;
 const DROP_EXTS_STR = ALL_EXTS.join(" ");
@@ -78,7 +93,7 @@ const onDrop = async (e) => {
   // 非仓库页面不处理 DnD
   if (window.__currentPage !== "repository") return;
 
-  dbg("DnD", "drop fired", {
+  console.log("[DnD] drop fired", {
     filesLen: e.dataTransfer?.files?.length || 0,
     itemsLen: e.dataTransfer?.items?.length || 0,
     types: e.dataTransfer?.types || [],
@@ -106,7 +121,7 @@ const onDrop = async (e) => {
         };
         result.push(...(await readAll()));
       } else if (entry?.isFile) {
-        if (/\.(ysm|zip|7z)$/i.test(entry.name)) {
+        if (isSupportedFile(entry.name)) {
           try {
             result.push(await getFileFromEntry(entry));
           } catch (_) {}
@@ -114,7 +129,7 @@ const onDrop = async (e) => {
       } else if (item.getAsFile) {
         // fallback: 浏览器不支持 webkitGetAsEntry 时用 getAsFile
         const f = item.getAsFile();
-        if (f && /\.(ysm|zip|7z)$/i.test(f.name)) result.push(f);
+        if (f && isSupportedFile(f.name)) result.push(f);
       }
     }
     return result;
@@ -125,11 +140,10 @@ const onDrop = async (e) => {
   if (items.length > 0) allFiles = await collectFiles(items, false);
   if (allFiles.length === 0) {
     const direct = Array.from(e.dataTransfer?.files || []);
-    allFiles = direct.filter((f) => /\.(ysm|zip|7z)$/i.test(f.name));
+    allFiles = direct.filter((f) => isSupportedFile(f.name));
   }
-  dbg(
-    "DnD",
-    "collected:",
+  console.log(
+    "[DnD] collected:",
     allFiles.length,
     allFiles.map((f) => f.name),
   );
@@ -160,22 +174,63 @@ const onDrop = async (e) => {
     return;
   }
 
-  const pendingFiles = allFiles.map((f) => ({ name: f.name, file: f }));
-  window.__ysmPendingImport = pendingFiles;
-  if (window.__currentPage === "repository") {
-    bus.emit("import:pending-files", pendingFiles);
-    bus.emit("repo:switch-tab", { tab: "import" });
-  } else {
-    bus.emit("nav:change", { page: "repository" });
-    // 导航完成后切换到导入标签（requestAnimationFrame 确保 DOM 已渲染）
-    const unsub = bus.on("nav:changed", ({ page }) => {
-      if (page === "repository") {
-        unsub();
-        requestAnimationFrame(() =>
-          bus.emit("repo:switch-tab", { tab: "import" }),
-        );
+  // 分类：YSM 进命名队列，非 YSM 直接导入
+  const ysmFiles = [];
+  const nonYsmFiles = [];
+  for (const f of allFiles) {
+    if (isYsmFile(f.name)) {
+      ysmFiles.push(f);
+    } else {
+      nonYsmFiles.push(f);
+    }
+  }
+
+  // 非 YSM 文件直接导入（Go 端 ImportModelFile 已内置 ExtBelongsTo 路由）
+  if (nonYsmFiles.length > 0) {
+    const { ImportModelFile } = await import("../../wailsjs/go/main/App.js");
+    let imported = 0;
+    for (const f of nonYsmFiles) {
+      try {
+        const base64 = await readFileAsBase64(f);
+        await ImportModelFile(f.name, base64);
+        imported++;
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: `❌ 导入失败: ${f.name} — ${String(e)}`,
+          duration: 4000,
+          type: "error",
+        });
       }
-    });
+    }
+    if (imported > 0) {
+      bus.emit("stats:refresh");
+      bus.emit("tree:reload");
+      bus.emit("toast:show", {
+        msg: `✅ 已导入 ${imported} 个文件`,
+        duration: 3000,
+        type: "success",
+      });
+    }
+  }
+
+  // YSM 文件走原有命名表单流程
+  if (ysmFiles.length > 0) {
+    const pendingFiles = ysmFiles.map((f) => ({ name: f.name, file: f }));
+    window.__ysmPendingImport = pendingFiles;
+    if (window.__currentPage === "repository") {
+      bus.emit("import:pending-files", pendingFiles);
+      bus.emit("repo:switch-tab", { tab: "import" });
+    } else {
+      bus.emit("nav:change", { page: "repository" });
+      const unsub = bus.on("nav:changed", ({ page }) => {
+        if (page === "repository") {
+          unsub();
+          requestAnimationFrame(() =>
+            bus.emit("repo:switch-tab", { tab: "import" }),
+          );
+        }
+      });
+    }
   }
 };
 

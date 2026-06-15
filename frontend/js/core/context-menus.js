@@ -110,10 +110,9 @@ export function registerContextMenus() {
                 const { LoadAppConfig, MoveModelFile } =
                   await import("../../wailsjs/go/main/App.js");
                 const cfg = await LoadAppConfig();
-                const repoRoot = cfg.repoRoot || "";
-                if (!repoRoot) {
+                if (!cfg.filesRoot) {
                   bus.emit("toast:show", {
-                    msg: "❌ 请先设置仓库目录",
+                    msg: "❌ 请先设置文件存储路径",
                     duration: 3000,
                     type: "error",
                   });
@@ -312,10 +311,9 @@ export function registerContextMenus() {
                 const { LoadAppConfig, MoveModelFile } =
                   await import("../../wailsjs/go/main/App.js");
                 const cfg = await LoadAppConfig();
-                const repoRoot = cfg.repoRoot || "";
-                if (!repoRoot) {
+                if (!cfg.filesRoot) {
                   bus.emit("toast:show", {
-                    msg: "❌ 请先设置仓库目录",
+                    msg: "❌ 请先设置文件存储路径",
                     duration: 3000,
                     type: "error",
                   });

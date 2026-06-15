@@ -255,6 +255,49 @@ func (a *App) MoveModelFile(src, dstDir string) error {
 	return os.Rename(src, filepath.Join(dstDir, filepath.Base(src)))
 }
 
+// ========== 模型复制 ==========
+// CopyModelFile 将 src 复制到 dstDir 目录下（保留原文件名）
+// dstDir 必须是 a.RepoRoot 的子目录（防路径遍历）
+func (a *App) CopyModelFile(src, dstDir string) error {
+	src = strings.TrimSpace(src)
+	dstDir = strings.TrimSpace(dstDir)
+	if src == "" || dstDir == "" {
+		return fmt.Errorf("参数空")
+	}
+	// 路径安全：dstDir 必须落在 RepoRoot 内
+	if a.RepoRoot != "" {
+		absRoot, err := filepath.Abs(a.RepoRoot)
+		if err != nil {
+			return err
+		}
+		absDst, err := filepath.Abs(dstDir)
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(absRoot, absDst)
+		if err != nil || strings.HasPrefix(rel, "..") || rel == ".." {
+			return fmt.Errorf("目标目录必须在仓库内: %s", dstDir)
+		}
+	}
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
+		return err
+	}
+	dst := filepath.Join(dstDir, filepath.Base(src))
+	// 防覆盖：目标已存在时直接报错
+	if _, err := os.Stat(dst); err == nil {
+		return fmt.Errorf("目标已存在: %s", dst)
+	}
+	if err := copyFile(src, dst); err != nil {
+		return err
+	}
+	// 复制 .ban 状态文件（如果存在）
+	banSrc := src + ".ban"
+	if _, err := os.Stat(banSrc); err == nil {
+		_ = copyFile(banSrc, dst+".ban")
+	}
+	return nil
+}
+
 // ========== 启用/禁用 ==========
 func (a *App) ToggleModelEnable(path string) (bool, error) {
 	if strings.HasSuffix(strings.ToLower(path), ".ban") {

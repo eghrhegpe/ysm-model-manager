@@ -19,6 +19,7 @@
     "OpenFolder",
     "CreateDir",
     "MoveModelFile",
+    "CopyModelFile",
     "GetImportLogs",
     "ClearImportLogs",
     "AddImportLog",

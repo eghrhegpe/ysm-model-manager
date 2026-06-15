@@ -79,24 +79,48 @@ export async function initSettings(root) {
   bindPathClick(
     "set-mc-path",
     () => cfg.mcRoot || "",
-    async (dir) => { await saveCfg({ mcRoot: dir }); },
+    async (dir) => {
+      await saveCfg({ mcRoot: dir });
+    },
   );
 
   // 📁 文件存储路径
   bindPathClick(
     "set-files-root",
     () => cfg.filesRoot || "",
-    async (dir) => { await saveCfg({ filesRoot: dir }); },
+    async (dir) => {
+      await saveCfg({ filesRoot: dir });
+    },
   );
 
   // 📂 详细调整面板
   const advancedTypes = [
-    { rtype: "ysm",              icon: "💎", name: "YSM 模型",     cfgKey: "ysmRoot" },
-    { rtype: "resourcepack",     icon: "🎨", name: "资源包",       cfgKey: "resourcepackRoot" },
-    { rtype: "shaderpack",       icon: "☀️", name: "光影包",       cfgKey: "shaderpackRoot" },
-    { rtype: "create-blueprint", icon: "⚙️", name: "蓝图",         cfgKey: "schematicRoot" },
-    { rtype: "mmd-skin",         icon: "🎭", name: "MMD 模型",     cfgKey: "mmdRoot" },
-    { rtype: "vrchat-avatar",    icon: "🥽", name: "VRChat 模型",  cfgKey: "vrcRoot" },
+    { rtype: "ysm", icon: "💎", name: "YSM 模型", cfgKey: "ysmRoot" },
+    {
+      rtype: "resourcepack",
+      icon: "🎨",
+      name: "资源包",
+      cfgKey: "resourcepackRoot",
+    },
+    {
+      rtype: "shaderpack",
+      icon: "☀️",
+      name: "光影包",
+      cfgKey: "shaderpackRoot",
+    },
+    {
+      rtype: "create-blueprint",
+      icon: "⚙️",
+      name: "蓝图",
+      cfgKey: "schematicRoot",
+    },
+    { rtype: "mmd-skin", icon: "🎭", name: "MMD 模型", cfgKey: "mmdRoot" },
+    {
+      rtype: "vrchat-avatar",
+      icon: "🥽",
+      name: "VRChat 模型",
+      cfgKey: "vrcRoot",
+    },
   ];
 
   const refreshAdvanced = async () => {
@@ -105,22 +129,41 @@ export async function initSettings(root) {
     let html = "";
     for (const t of advancedTypes) {
       const canOverride = !!t.cfgKey;
-      const overridePath = canOverride ? (cfg[t.cfgKey] || "") : "";
+      const overridePath = canOverride ? cfg[t.cfgKey] || "" : "";
       const defaultPath = cfg.filesRoot
-        ? (cfg.filesRoot + "\\" + (storageSubDir[t.rtype] || "")).replace(/\//g, "\\")
+        ? (cfg.filesRoot + "\\" + (storageSubDir[t.rtype] || "")).replace(
+            /\//g,
+            "\\",
+          )
         : "未设置文件存储路径";
       const currentPath = overridePath || defaultPath;
       const isOverridden = !!overridePath;
       html +=
-        '<div class="stg-card' + (isOverridden ? '" style="border-color:var(--accent)"' : '"') + '>' +
+        '<div class="stg-card' +
+        (isOverridden ? '" style="border-color:var(--accent)"' : '"') +
+        ">" +
         '<div class="stg-card-hdr" style="display:flex;align-items:center;gap:6px">' +
-        '<span>' + t.icon + '</span><span>' + t.name + '</span>' +
-        (isOverridden ? '<span style="font-size:9px;color:var(--accent)">已自定义</span>' : '') +
-        (isOverridden ? '<button class="btn stg-adv-reset" data-rtype="' + t.rtype + '" style="margin-left:auto;font-size:var(--fs-btn-tool);padding:2px 6px">↩️ 默认</button>' : '') +
-        '</div>' +
+        "<span>" +
+        t.icon +
+        "</span><span>" +
+        t.name +
+        "</span>" +
+        (isOverridden
+          ? '<span style="font-size:9px;color:var(--accent)">已自定义</span>'
+          : "") +
+        (isOverridden
+          ? '<button class="btn stg-adv-reset" data-rtype="' +
+            t.rtype +
+            '" style="margin-left:auto;font-size:var(--fs-btn-tool);padding:2px 6px">↩️ 默认</button>'
+          : "") +
+        "</div>" +
         '<div class="stg-card-body">' +
-        '<div class="stg-card-val stg-adv-set" data-rtype="' + t.rtype + '" style="font-size:10px;cursor:pointer;" title="点击更改路径">' + escHtml(currentPath) + '</div>' +
-        '</div></div>';
+        '<div class="stg-card-val stg-adv-set" data-rtype="' +
+        t.rtype +
+        '" style="font-size:10px;cursor:pointer;" title="点击更改路径">' +
+        escHtml(currentPath) +
+        "</div>" +
+        "</div></div>";
     }
     grid.innerHTML = html;
 
@@ -131,15 +174,24 @@ export async function initSettings(root) {
         const dir = await SelectDirectory();
         if (!dir) return;
         try {
-          const { SetResourceRoot } = await import("../../../wailsjs/go/main/App.js");
+          const { SetResourceRoot } =
+            await import("../../../wailsjs/go/main/App.js");
           await SetResourceRoot(rtype, dir);
           const entry = advancedTypes.find((t) => t.rtype === rtype);
           if (entry) cfg[entry.cfgKey] = dir;
           refreshAdvanced();
           bus.emit("config:updated");
-          bus.emit("toast:show", { msg: "✅ 路径已设置", duration: 2000, type: "success" });
+          bus.emit("toast:show", {
+            msg: "✅ 路径已设置",
+            duration: 2000,
+            type: "success",
+          });
         } catch (e) {
-          bus.emit("toast:show", { msg: "❌ " + friendlyError(e.message || e, "保存失败"), duration: 4000, type: "error" });
+          bus.emit("toast:show", {
+            msg: "❌ " + friendlyError(e.message || e, "保存失败"),
+            duration: 4000,
+            type: "error",
+          });
         }
       });
     });
@@ -149,39 +201,50 @@ export async function initSettings(root) {
         e.stopPropagation();
         const rtype = btn.dataset.rtype;
         try {
-          const { ResetResourceRoot } = await import("../../../wailsjs/go/main/App.js");
+          const { ResetResourceRoot } =
+            await import("../../../wailsjs/go/main/App.js");
           await ResetResourceRoot(rtype);
           const entry = advancedTypes.find((t) => t.rtype === rtype);
           if (entry) cfg[entry.cfgKey] = "";
           refreshAdvanced();
           _cardRefreshers.forEach((fn) => fn());
           bus.emit("config:updated");
-          bus.emit("toast:show", { msg: "↩️ 已恢复默认", duration: 2000, type: "success" });
+          bus.emit("toast:show", {
+            msg: "↩️ 已恢复默认",
+            duration: 2000,
+            type: "success",
+          });
         } catch (e) {
-          bus.emit("toast:show", { msg: "❌ " + friendlyError(e.message || e, "重置失败"), duration: 4000, type: "error" });
+          bus.emit("toast:show", {
+            msg: "❌ " + friendlyError(e.message || e, "重置失败"),
+            duration: 4000,
+            type: "error",
+          });
         }
       });
     });
   };
 
   // 展开/折叠
-  root.getElementById("set-advanced-toggle")?.addEventListener("click", async () => {
-    const panel = root.getElementById("set-advanced-panel");
-    const btn = root.getElementById("set-advanced-toggle");
-    if (!panel || !btn) return;
-    const isOpen = panel.style.display !== "none";
-    const card = panel.closest(".stg-card");
-    if (isOpen) {
-      panel.style.display = "none";
-      btn.textContent = "📂 展开 ▸";
-      if (card) card.style.gridColumn = "";
-    } else {
-      await refreshAdvanced();
-      panel.style.display = "block";
-      btn.textContent = "📂 收起 ▾";
-      if (card) card.style.gridColumn = "1 / -1";
-    }
-  });
+  root
+    .getElementById("set-advanced-toggle")
+    ?.addEventListener("click", async () => {
+      const panel = root.getElementById("set-advanced-panel");
+      const btn = root.getElementById("set-advanced-toggle");
+      const card = root.getElementById("stg-files-card");
+      if (!panel || !btn || !card) return;
+      const isOpen = panel.style.display !== "none";
+      if (isOpen) {
+        panel.style.display = "none";
+        btn.textContent = "📂 展开 ▸";
+        card.style.gridColumn = "";
+      } else {
+        await refreshAdvanced();
+        panel.style.display = "block";
+        btn.textContent = "📂 收起 ▾";
+        card.style.gridColumn = "1 / -1";
+      }
+    });
 
   // 初始刷新
   refreshAdvanced();
@@ -431,7 +494,13 @@ export async function initSettings(root) {
       const val = linkSelect.value;
       updateLinkHint(val);
       const theme = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(cfg.filesRoot || "", cfg.resourcepackRoot || "", cfg.mcRoot || "", val, theme);
+      await SaveAppConfig(
+        cfg.filesRoot || "",
+        cfg.resourcepackRoot || "",
+        cfg.mcRoot || "",
+        val,
+        theme,
+      );
       await SetLinkMode(val);
       bus.emit("toast:show", {
         msg: `✅ 链接模式已切换至: ${val}`,
@@ -456,7 +525,13 @@ export async function initSettings(root) {
     try {
       const { SaveAppConfig } = await import("../../../wailsjs/go/main/App.js");
       const theme2 = localStorage.getItem("theme") || mode;
-      await SaveAppConfig(cfg.filesRoot || "", cfg.resourcepackRoot || "", cfg.mcRoot || "", linkMode, theme2);
+      await SaveAppConfig(
+        cfg.filesRoot || "",
+        cfg.resourcepackRoot || "",
+        cfg.mcRoot || "",
+        linkMode,
+        theme2,
+      );
     } catch {}
     const label =
       {

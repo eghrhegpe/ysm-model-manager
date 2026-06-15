@@ -84,11 +84,10 @@ export function initInstanceActions(vm) {
   unsubs.push(
     bus.on("instance:sync", async ({ name: insName }) => {
       try {
-        const cfg = await (
-          await import("../../../wailsjs/go/main/App.js")
-        ).LoadAppConfig();
+        const AppM = await import("../../../wailsjs/go/main/App.js");
+        const cfg = await AppM.LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
-        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+        const repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot("ysm") : "";
         if (!mcRoot || !repoRoot) {
           bus.emit("toast:show", {
             msg: "请先设置路径",

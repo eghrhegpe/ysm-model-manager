@@ -109,6 +109,7 @@ export const treeCSS = `
 .ha-btn { font-size: var(--fs-sm); padding: 1px 3px; border-radius: 3px; cursor: pointer; opacity: .6; transition: all .12s; }
 .ha-btn:hover { opacity: 1; background: var(--hover); }
 .ficon { font-size: var(--fs-sm); }
+.tag-dot { font-size: 9px; margin-right: 2px; opacity: .7; vertical-align: middle; }
 .ftr { padding: 8px 12px; border-top: 1px solid var(--bd); display: flex; gap: 6px; align-items: center; }
 .ftr .stat { font-size: var(--fs-sm); color: var(--muted); margin-right: auto; }
 .type-bar { padding:2px 12px;gap:4px;display:flex;align-items:center;border-bottom:1px solid var(--bd); }

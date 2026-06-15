@@ -37,10 +37,10 @@ export function createDownloadQueue({
     if (downloading) return;
     if (!tasks.length) return;
 
-    const { LoadAppConfig, EnqueueDownloads, CancelQueue } =
+    const { LoadAppConfig, EnqueueDownloads, CancelQueue, GetRepoRoot } =
       await import("../../../wailsjs/go/main/App.js");
     const cfg = await LoadAppConfig();
-    const repoRoot = cfg.filesRoot ? (cfg.filesRoot + "\\ysm") : "";
+    const repoRoot = await GetRepoRoot("ysm");
     if (!repoRoot) {
       bus.emit("toast:show", {
         msg: "请先在设置中配置仓库目录",
@@ -105,7 +105,9 @@ export function createDownloadQueue({
       try {
         const _cc = window.go.main.App.ClearScanCache;
         if (_cc) _cc();
-      } catch (_) { /* 清除缓存失败不影响清理 */ }
+      } catch (_) {
+        /* 清除缓存失败不影响清理 */
+      }
       bus.emit("tree:reload");
       bus.emit("stats:refresh");
     };
@@ -204,7 +206,7 @@ export function createDownloadQueue({
         if (total <= 0) {
           const mb = (dl / 1024 / 1024).toFixed(1);
           label = mb + "MB";
-          pct = dl > 0 ? 100 : 0;
+          pct = 0;
         } else {
           pct = Math.min(Math.round((dl / total) * 100), 100);
           label = pct + "%";
@@ -339,10 +341,11 @@ export function createDownloadQueue({
   async function cancel() {
     if (!downloading) return;
     try {
-      const { CancelQueue } =
-        await import("../../../wailsjs/go/main/App.js");
+      const { CancelQueue } = await import("../../../wailsjs/go/main/App.js");
       await CancelQueue();
-    } catch (_) { /* 取消失败不影响清理 */ }
+    } catch (_) {
+      /* 取消失败不影响清理 */
+    }
   }
 
   function isDownloading() {

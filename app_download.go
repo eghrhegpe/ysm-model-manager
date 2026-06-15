@@ -216,8 +216,8 @@ func (a *App) downloadFile(url, savePath string) error {
 				return wErr
 			}
 			downloaded += int64(n)
-			if total > 0 && time.Since(lastEmit) > 200*time.Millisecond {
-				runtime.EventsEmit(a.ctx, "download:progress", total, downloaded)
+			if time.Since(lastEmit) > 200*time.Millisecond {
+				runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
 				lastEmit = time.Now()
 			}
 		}
@@ -231,7 +231,7 @@ func (a *App) downloadFile(url, savePath string) error {
 	if total <= 0 {
 		total = downloaded
 	}
-	runtime.EventsEmit(a.ctx, "download:progress", total, downloaded)
+	runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
 	return nil
 }
 
@@ -268,8 +268,8 @@ func (a *App) downloadFromAPI(apiURL, savePath string) error {
 				return wErr
 			}
 			downloaded += int64(n)
-			if total > 0 && time.Since(lastEmit) > 200*time.Millisecond {
-				runtime.EventsEmit(a.ctx, "download:progress", total, downloaded)
+			if time.Since(lastEmit) > 200*time.Millisecond {
+				runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
 				lastEmit = time.Now()
 			}
 		}
@@ -283,7 +283,7 @@ func (a *App) downloadFromAPI(apiURL, savePath string) error {
 	if total <= 0 {
 		total = downloaded
 	}
-	runtime.EventsEmit(a.ctx, "download:progress", total, downloaded)
+	runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
 	return nil
 }
 

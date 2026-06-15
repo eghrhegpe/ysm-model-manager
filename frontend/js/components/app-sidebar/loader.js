@@ -1,12 +1,12 @@
 // ===== sidebar 数据加载层 =====
 import { bus } from "../../bus.js";
 import { dbg } from "../../utils/debug.js";
-import { fallbackInstances } from "./data.js";
 import {
   LoadAppConfig,
   ListVersionInstances,
   GetInstanceStatus,
   GetResourceInstanceStatus,
+  GetRepoRoot,
 } from "../../../wailsjs/go/main/App.js";
 
 /** 从 Go 加载整合包实例列表，转换为 render 需要的格式 */
@@ -16,15 +16,15 @@ export async function loadInstances(rtype) {
     const cfg = await LoadAppConfig();
     const mcRoot = cfg.mcRoot || cfg.McRoot || "";
 
-    if (!mcRoot) return fallbackInstances();
+    if (!mcRoot) return [];
 
     // 获取整合包列表
     const rawInstances = await ListVersionInstances(mcRoot);
-    if (!rawInstances || !rawInstances.length) return fallbackInstances();
+    if (!rawInstances || !rawInstances.length) return [];
 
     // 只按当前资源类型查询同步状态
     const rtypeActual = rtype || "ysm";
-    const repoRoot = ((cfg.filesRoot||"")+"\\ysm") ;
+    const repoRoot = await GetRepoRoot("ysm");
     const statusList = await GetResourceInstanceStatus(
       rtypeActual,
       mcRoot,
@@ -107,7 +107,7 @@ export async function loadInstances(rtype) {
     );
     return instances;
   } catch {
-    return fallbackInstances();
+    return [];
   } finally {
     bus.emit("loading:end");
   }

@@ -14,9 +14,10 @@ export function registerUpload(unsubs) {
           GetInstanceStatus,
           ScanModelEntries,
           SyncCustomToRepo,
+          GetRepoRoot,
         } = await import("../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
-        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+        const repoRoot = await GetRepoRoot("ysm");
         const mcRoot = cfg.mcRoot || "";
         if (!repoRoot || !mcRoot) {
           bus.emit("toast:show", {

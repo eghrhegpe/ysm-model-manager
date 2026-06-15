@@ -558,7 +558,7 @@ class AppContent extends HTMLElement {
         var AppM = await import("../../../wailsjs/go/main/App.js");
         var cfg = await AppM.LoadAppConfig();
         mirror = cfg.mirror || "";
-        var repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+        var repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot("ysm") : "";
         if (repoRoot) {
           // 先清缓存再扫描，确保新下载的文件立即可见
           if (AppM.ClearScanCache) await AppM.ClearScanCache();
@@ -695,11 +695,11 @@ class AppContent extends HTMLElement {
       }
       let mirror = "";
       try {
-        const { LoadAppConfig, ScanModelEntries } =
+        const { LoadAppConfig, ScanModelEntries, GetRepoRoot } =
           await import("../../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
         mirror = cfg.mirror || "";
-        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+        const repoRoot = await GetRepoRoot("ysm");
         // 预先加载本地映射
         let localMap = new Map();
         if (repoRoot) {
@@ -798,7 +798,7 @@ class AppContent extends HTMLElement {
   }
 
   async _initSettings() {
-    this._bindTabs("stg", ["basic", "ui", "about"]);
+    this._bindTabs("stg", ["basic", "ui", "about", "credits"]);
     try {
       await initSettings(this._root);
     } catch (e) {

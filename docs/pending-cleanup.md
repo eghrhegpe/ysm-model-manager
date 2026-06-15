@@ -45,7 +45,40 @@
 
 ---
 
-## v1.7.0 新增待办
+## 未来待办（非调试代码，需单独实施）
+
+### ~~1. 下载哈希校验~~ ✅ v1.6.0 完成
+
+- `build-release.ps1` 生成 `SHA256SUMS`
+- `go/updater/update.go` `Download` 后校验 SHA256
+- 不匹配则删除已下载文件并返回错误
+
+**涉及文件**：`go/updater/update.go`, `build-release.ps1`
+
+### ~~2. Windows 自更新替换策略~~ ✅ v1.6.0 完成
+
+- 新建 `cmd/updater/main.go` 独立 helper
+- 主进程退出后由 helper 替换 EXE 并重启
+
+**涉及文件**：`cmd/updater/main.go`, `go/updater/update.go`, `build-release.ps1`
+
+### ~~3. 导入日志文件位置迁移~~ ✅ v1.6.0 完成
+
+- 日志文件改用 `os.UserConfigDir()` 写入 `%APPDATA%/YSM-Model-Manager/`
+- 前端读取路径已同步更新
+
+**涉及文件**：`go/logs/logs.go`
+
+---
+
+### ~~4. 标签系统数据后端~~ ✅ v1.6.3 完成
+
+- Go 端：`go/tags/tags.go` + `app_tags.go`
+- 前端：`dialogs/tag-editor.js`
+
+---
+
+## 未来待办
 
 ### 1. 标签系统数据后端（中）
 

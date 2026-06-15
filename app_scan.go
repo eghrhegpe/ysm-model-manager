@@ -377,6 +377,14 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 	})
 	// 存入缓存
 	scanCache.Store(dir, scanCacheEntry{entries: entries, expiresAt: time.Now().Add(scanCacheTTL)})
+	// 批量填充 HasTags（利用标签存储的读缓存，不重复读磁盘）
+	if a.tagsStore != nil {
+		for i := range entries {
+			if tags, _ := a.tagsStore.GetTags(entries[i].Path); len(tags) > 0 {
+				entries[i].HasTags = true
+			}
+		}
+	}
 	return entries
 }
 

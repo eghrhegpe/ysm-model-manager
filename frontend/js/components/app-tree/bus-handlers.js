@@ -22,10 +22,13 @@ export function bindBusEvents(vm) {
         await ToggleModelEnable(path);
         // 自动同步禁用/启用状态到所有整合包
         try {
-          const { LoadAppConfig, ListVersionInstances, SyncModelToggleStatus } =
-            await import("../../../wailsjs/go/main/App.js");
-          const cfg = await LoadAppConfig();
-          const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+          const {
+            LoadAppConfig,
+            ListVersionInstances,
+            SyncModelToggleStatus,
+            GetRepoRoot,
+          } = await import("../../../wailsjs/go/main/App.js");
+          const repoRoot = await GetRepoRoot("ysm");
           const mcRoot = cfg.mcRoot || "";
           if (repoRoot && mcRoot) {
             const instances = await ListVersionInstances(mcRoot);
@@ -117,10 +120,9 @@ export function bindBusEvents(vm) {
       });
       if (!name) return;
       try {
-        const { LoadAppConfig, RenameDir } =
+        const { LoadAppConfig, RenameDir, GetRepoRoot } =
           await import("../../../wailsjs/go/main/App.js");
-        const cfg = await LoadAppConfig();
-        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+        const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         await RenameDir(absDir, name.trim());
         await reload(vm);
@@ -146,10 +148,9 @@ export function bindBusEvents(vm) {
       });
       if (!name) return;
       try {
-        const { LoadAppConfig, CreateDir } =
+        const { LoadAppConfig, CreateDir, GetRepoRoot } =
           await import("../../../wailsjs/go/main/App.js");
-        const cfg = await LoadAppConfig();
-        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+        const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot
           ? repoRoot + "/" + dir + "/" + name.trim()
           : dir + "/" + name.trim();
@@ -178,10 +179,9 @@ export function bindBusEvents(vm) {
       if (!confirmed) return;
       try {
         // 加载仓库根目录 → 拼接绝对路径
-        const { LoadAppConfig, ListAllFilePaths, MoveToRecycle } =
+        const { LoadAppConfig, ListAllFilePaths, MoveToRecycle, GetRepoRoot } =
           await import("../../../wailsjs/go/main/App.js");
-        const cfg = await LoadAppConfig();
-        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+        const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const allFiles = await ListAllFilePaths(absDir);
         let count = 0,
@@ -226,10 +226,9 @@ export function bindBusEvents(vm) {
   unsubs.push(
     bus.on("dir:batch-rename", async ({ dir }) => {
       try {
-        const { LoadAppConfig, ScanModelEntries, RenameFile } =
+        const { LoadAppConfig, ScanModelEntries, RenameFile, GetRepoRoot } =
           await import("../../../wailsjs/go/main/App.js");
-        const cfg = await LoadAppConfig();
-        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+        const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const entries = await ScanModelEntries(absDir);
         if (!entries || !entries.length) {

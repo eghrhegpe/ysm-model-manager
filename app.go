@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"ysm-model-manager/go/logs"
+	"ysm-model-manager/go/tags"
 	"ysm-model-manager/go/updater"
 	"ysm-model-manager/go/version"
 	"ysm-model-manager/go/watcher"
@@ -14,12 +15,13 @@ import (
 )
 
 type App struct {
-	ctx      context.Context
-	RepoRoot string
-	LinkMode string
-	logger   *logs.Logger
-	watcher  *watcher.Watcher
-	queue    *DownloadQueue
+	ctx       context.Context
+	RepoRoot  string
+	LinkMode  string
+	logger    *logs.Logger
+	watcher   *watcher.Watcher
+	queue     *DownloadQueue
+	tagsStore *tags.Store
 }
 
 func NewApp() *App {

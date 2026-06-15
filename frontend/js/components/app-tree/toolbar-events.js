@@ -68,8 +68,8 @@ async function openAdvFilterDialog($, vm) {
   const cfg = await LoadAppConfig();
   if (!cfg.repoRoot) {
     bus.emit("toast:show", {
-      msg: "请先设置仓库目录",
-      duration: 2000,
+      msg: "⚠️ 请先在「设置」页面中配置仓库目录",
+      duration: 3000,
       type: "warn",
     });
     return;
@@ -109,10 +109,11 @@ async function openAdvFilterDialog($, vm) {
       sample: Array.from(vm._filterPaths || []).slice(0, 2),
     });
   } catch (e) {
-    dbg("adv-filter", "search:error", { err: String(e) });
+    const reason = friendlyError(e, "高级筛选");
+    dbg("adv-filter", "search:error", { err: String(e), reason });
     bus.emit("toast:show", {
-      msg: "❌ 搜索失败: " + friendlyError(e),
-      duration: 4000,
+      msg: `❌ 高级筛选失败\n${reason}\n请检查仓库目录是否可访问，或尝试重置筛选条件`,
+      duration: 5000,
       type: "error",
     });
     vm._filterPaths = null;
@@ -169,11 +170,12 @@ export function bindToolbarEvents(root, vm) {
   const $ = (id) => root.getElementById(id);
   let ddTimer;
 
-  // 全选 / 反选 — 基于当前过滤后可见的行
+  // 全选 / 反选 — 基于当前过滤后可见的行（_vsRows 存在 #tree 元素上，不在 shadow root）
   const selAllBtn = $("sel-all");
   if (selAllBtn) {
     selAllBtn.addEventListener("click", () => {
-      const rows = vm._root._vsRows || [];
+      const tree = $("tree");
+      const rows = tree?._vsRows || [];
       const visible = rows.filter((r) => r.type === "file");
       const keys = visible.map((r) => r.key).filter(Boolean);
       const allSelected = keys.every((k) => selectState.keys.has(k));
@@ -181,7 +183,6 @@ export function bindToolbarEvents(root, vm) {
         if (allSelected) selectState.keys.delete(k);
         else selectState.keys.add(k);
       });
-      // 复用 events.js 里的实现（避免重复定义）
       updateSelectCount(root);
       flashBtn(selAllBtn);
     });
@@ -189,31 +190,40 @@ export function bindToolbarEvents(root, vm) {
 
   // 批量导出骨骼名
   $("repo-export")?.addEventListener("click", async () => {
-    const { LoadAppConfig, ExportBoneStructures } =
-      await import("../../../wailsjs/go/main/App.js");
-    const cfg = await LoadAppConfig();
-    if (!cfg.repoRoot) {
+    try {
+      const { LoadAppConfig, ExportBoneStructures } =
+        await import("../../../wailsjs/go/main/App.js");
+      const cfg = await LoadAppConfig();
+      if (!cfg.repoRoot) {
+        bus.emit("toast:show", {
+          msg: "⚠️ 请先在「设置」页面中配置仓库目录",
+          duration: 3000,
+          type: "warn",
+        });
+        return;
+      }
+      const text = await ExportBoneStructures(cfg.repoRoot);
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.download = `bone-structures-${new Date().toISOString().slice(0, 10)}.txt`;
+      a.href = URL.createObjectURL(blob);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
       bus.emit("toast:show", {
-        msg: "请先设置仓库目录",
+        msg: "✅ 骨骼结构已导出",
         duration: 2000,
-        type: "warn",
+        type: "success",
       });
-      return;
+    } catch (e) {
+      const reason = friendlyError(e, "骨骼结构导出");
+      bus.emit("toast:show", {
+        msg: `❌ 骨骼结构导出失败\n${reason}\n请确认仓库中存在含骨骼数据的模型文件`,
+        duration: 5000,
+        type: "error",
+      });
     }
-    const text = await ExportBoneStructures(cfg.repoRoot);
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const a = document.createElement("a");
-    a.download = `bone-structures-${new Date().toISOString().slice(0, 10)}.txt`;
-    a.href = URL.createObjectURL(blob);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(a.href);
-    bus.emit("toast:show", {
-      msg: "✅ 骨骼结构已导出",
-      duration: 2000,
-      type: "success",
-    });
   });
 
   $("btn-repo")?.addEventListener("click", () => {
@@ -228,13 +238,7 @@ export function bindToolbarEvents(root, vm) {
 
   // 高级筛选按钮：触发弹窗版筛选器
   const advBtn = $("btn-adv-filter");
-  if (typeof window !== "undefined" && window.console) {
-    // eslint-disable-next-line no-console
-    console.log(
-      "[DBG:toolbar-bind] btn-adv-filter",
-      advBtn ? "found" : "NOT-FOUND",
-    );
-  }
+  dbg("toolbar-bind", "btn-adv-filter", advBtn ? "found" : "NOT-FOUND");
   advBtn?.addEventListener("click", () => {
     dbg("adv-filter", "btn:click");
     openAdvFilterDialog($, vm);
@@ -318,8 +322,8 @@ export function bindToolbarEvents(root, vm) {
         const errMsg = await ImportByType(rtype, filePath);
         if (errMsg) {
           bus.emit("toast:show", {
-            msg: "❌ 导入失败: " + errMsg,
-            duration: 4000,
+            msg: `❌ 文件导入失败\n${errMsg}\n请确认文件格式正确且未被其他程序占用`,
+            duration: 5000,
             type: "warn",
           });
           return;
@@ -341,8 +345,8 @@ export function bindToolbarEvents(root, vm) {
         const errMsg = await ImportByType(rtype, dirPath);
         if (errMsg) {
           bus.emit("toast:show", {
-            msg: "❌ 导入失败: " + errMsg,
-            duration: 4000,
+            msg: `❌ 文件夹导入失败\n${errMsg}\n请确认目录中包含有效的模型文件`,
+            duration: 5000,
             type: "warn",
           });
           return;
@@ -357,6 +361,11 @@ export function bindToolbarEvents(root, vm) {
       } else if (action === "refresh") {
         const tree = $("tree");
         if (tree) tree.innerHTML = spinnerHTML();
+        // 重置筛选/搜索，确保刷新后展示全部数据
+        vm._filterPaths = null;
+        vm._search = "";
+        const srchEl = $("srch");
+        if (srchEl) srchEl.value = "";
         await vm._load();
         vm._renderTree();
       } else if (action === "genindex") {
@@ -369,8 +378,8 @@ export function bindToolbarEvents(root, vm) {
           const cfg = await LoadAppConfig();
           if (!cfg.repoRoot) {
             bus.emit("toast:show", {
-              msg: "请先在设置中配置仓库目录",
-              duration: 2000,
+              msg: "⚠️ 请先在「设置」页面中配置仓库目录",
+              duration: 3000,
               type: "warn",
             });
             return;
@@ -382,9 +391,10 @@ export function bindToolbarEvents(root, vm) {
             type: "success",
           });
         } catch (e) {
+          const reason = friendlyError(e, "索引生成");
           bus.emit("toast:show", {
-            msg: "❌ " + friendlyError(e),
-            duration: 4000,
+            msg: `❌ 索引生成失败\n${reason}\n请确认仓库目录可读写，磁盘空间充足`,
+            duration: 5000,
             type: "error",
           });
         } finally {

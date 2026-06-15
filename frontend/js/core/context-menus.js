@@ -411,6 +411,16 @@ export function registerContextMenus() {
             },
             { divider: true },
             {
+              label: "🏷️ 编辑标签",
+              onClick: async () => {
+                const { modalTagEditor } =
+                  await import("../dialogs/tag-editor.js");
+                const result = await modalTagEditor(path);
+                if (result) toast(`🏷️ 已保存 ${result.length} 个标签`, 2000);
+              },
+            },
+            { divider: true },
+            {
               label: "移入回收站",
               icon: "♻️",
               danger: true,

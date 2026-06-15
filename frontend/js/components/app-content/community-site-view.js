@@ -1,6 +1,7 @@
 // ===== 创意工坊站点视图（为 _initWorkshop 减负） =====
 import { friendlyError } from "../../utils/errors.js";
 import { bus } from "../../bus.js";
+import { dbg } from "../../utils/debug.js";
 import { showProgress, tryFetchModels } from "../../features/community/data.js";
 
 /**
@@ -546,9 +547,9 @@ export function renderSiteView(site, ctx) {
         const { DebugExtractCreatorAvatar } =
           await import("../../../wailsjs/go/main/App.js");
         const info = await DebugExtractCreatorAvatar(name);
-        console.log("[avatar-debug] " + name, info);
+        dbg("avatar-debug", name, info);
       } catch (err) {
-        console.warn("[avatar-debug] 调用失败", err);
+        dbg("avatar-debug", "调用失败", err);
       }
     });
   });

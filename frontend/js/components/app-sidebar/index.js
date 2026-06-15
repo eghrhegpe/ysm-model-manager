@@ -1,5 +1,6 @@
 // ===== <app-sidebar> 入口 =====
 import { bus } from "../../bus.js";
+import { dbg } from "../../utils/debug.js";
 import { sidebarCSS } from "./sidebar-css.js";
 import { headerHTML, footerHTML, listContainerHTML } from "./tpl.js";
 import { renderVersionCards } from "./render.js";
@@ -203,8 +204,9 @@ class AppSidebar extends HTMLElement {
     this._loading = true;
     try {
       this._instances = await loadInstances(this._rtype);
-      console.log(
-        "[sidebar] _reload 完成, 实例数:",
+      dbg(
+        "sidebar",
+        "_reload 完成, 实例数:",
         this._instances.length,
         "rtype:",
         this._rtype,
@@ -218,7 +220,7 @@ class AppSidebar extends HTMLElement {
           : "无",
       );
     } catch (e) {
-      console.log("[sidebar] _reload 失败:", e);
+      dbg("sidebar", "_reload 失败:", e);
       this._instances = [];
     } finally {
       this._loading = false;

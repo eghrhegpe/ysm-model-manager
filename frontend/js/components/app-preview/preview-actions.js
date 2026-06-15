@@ -1,6 +1,7 @@
 // ===== 预览面板操作按钮绑定 =====
 // 从 events.js 拆分：bindActions + 按钮状态管理
 import { bus } from "../../bus.js";
+import { dbg } from "../../utils/debug.js";
 
 /** 设置全局按钮启用/禁用 */
 function setGlobalButtonsEnabled(root, enabled) {
@@ -49,19 +50,19 @@ export function bindActions(root) {
   setGlobalButtonsEnabled(root, false);
 
   btnImport?.addEventListener("click", () => {
-    console.log("[preview] ⬇️ 导入 按钮点击");
+    dbg("preview", "⬇️ 导入 按钮点击");
     btnImport.disabled = true;
     btnImport.textContent = "⬇️ 导入中...";
     bus.emit("sync:download:missing");
   });
   btnUpload?.addEventListener("click", () => {
-    console.log("[preview] 📤 上传 按钮点击");
+    dbg("preview", "📤 上传 按钮点击");
     btnUpload.disabled = true;
     btnUpload.textContent = "📤 上传中...";
     bus.emit("stats:upload");
   });
   btnSync?.addEventListener("click", () => {
-    console.log("[preview] 🔄 同步 按钮点击");
+    dbg("preview", "🔄 同步 按钮点击");
     btnSync.disabled = true;
     btnSync.textContent = "🔄 同步中...";
     bus.emit("sync:toggle:status");

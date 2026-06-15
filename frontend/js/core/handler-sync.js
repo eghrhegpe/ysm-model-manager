@@ -1,17 +1,13 @@
 // ===== 同步相关：导入缺失 / 同步启用状态 =====
 import { bus } from "../bus.js";
 import { friendlyError } from "../utils/errors.js";
+import { dbg } from "../utils/debug.js";
 
 export function registerSync(unsubs) {
   // 导入仓库模型到整合包
   unsubs.push(
     bus.on("sync:download:missing", async ({ instanceName, rtype } = {}) => {
-      console.log(
-        "[sync] download-missing",
-        instanceName || "all",
-        "rtype:",
-        rtype,
-      );
+      dbg("sync", "download-missing", instanceName || "all", "rtype:", rtype);
       try {
         const {
           LoadAppConfig,
@@ -80,12 +76,7 @@ export function registerSync(unsubs) {
             await import("../../wailsjs/go/main/App.js");
           await InvalidateScanCache();
         } catch {}
-        console.log(
-          "[sync] 同步完成, 发出 stats:refresh, 成功:",
-          totalOk,
-          "失败:",
-          totalFail,
-        );
+        dbg("sync", "同步完成, 发出 stats:refresh, 成功:", totalOk, "失败:", totalFail);
         bus.emit("stats:refresh");
         bus.emit("toast:show", {
           msg: instanceName
@@ -110,7 +101,7 @@ export function registerSync(unsubs) {
   // 同步启用/禁用状态到所有整合包
   unsubs.push(
     bus.on("sync:toggle:status", async () => {
-      console.log("[sync] toggle-status");
+      dbg("sync", "toggle-status");
       try {
         const {
           LoadAppConfig,
@@ -201,7 +192,7 @@ export function registerSync(unsubs) {
       "mmd:sync-variant-folder",
       async ({ instanceName, folderPath, rtype }) => {
         if (!instanceName || !folderPath) return;
-        console.log("[sync] mmd:sync-variant-folder", instanceName, folderPath);
+        dbg("sync", "mmd:sync-variant-folder", instanceName, folderPath);
 
         bus.emit("toast:show", {
           msg: `⬇️ ${instanceName}: 正在同步变体文件...`,

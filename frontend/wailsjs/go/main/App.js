@@ -6,6 +6,10 @@ export function AddImportLog(arg1, arg2, arg3, arg4, arg5, arg6) {
   return window['go']['main']['App']['AddImportLog'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
+export function AllTags() {
+  return window['go']['main']['App']['AllTags']();
+}
+
 export function AnalyzeBedrockModel(arg1) {
   return window['go']['main']['App']['AnalyzeBedrockModel'](arg1);
 }
@@ -202,6 +206,10 @@ export function GetModel3DSpec(arg1) {
   return window['go']['main']['App']['GetModel3DSpec'](arg1);
 }
 
+export function GetModelTags(arg1) {
+  return window['go']['main']['App']['GetModelTags'](arg1);
+}
+
 export function GetModelTexSizes(arg1) {
   return window['go']['main']['App']['GetModelTexSizes'](arg1);
 }
@@ -304,6 +312,10 @@ export function IsResourcePackEnabled(arg1) {
 
 export function ListAllFilePaths(arg1) {
   return window['go']['main']['App']['ListAllFilePaths'](arg1);
+}
+
+export function ListByTag(arg1) {
+  return window['go']['main']['App']['ListByTag'](arg1);
 }
 
 export function ListFileNames(arg1) {
@@ -504,6 +516,10 @@ export function SetDownloadMirror(arg1) {
 
 export function SetLinkMode(arg1) {
   return window['go']['main']['App']['SetLinkMode'](arg1);
+}
+
+export function SetModelTags(arg1, arg2) {
+  return window['go']['main']['App']['SetModelTags'](arg1, arg2);
 }
 
 export function SetRepoRoot(arg1) {

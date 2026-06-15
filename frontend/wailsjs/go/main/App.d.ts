@@ -7,6 +7,8 @@ import {main} from '../models';
 
 export function AddImportLog(arg1:string,arg2:string,arg3:string,arg4:number,arg5:string,arg6:string):Promise<void>;
 
+export function AllTags():Promise<Array<string>>;
+
 export function AnalyzeBedrockModel(arg1:string):Promise<types.BedrockModel>;
 
 export function AnalyzeYSMModel(arg1:string):Promise<ysm.YSMModelMeta>;
@@ -105,6 +107,8 @@ export function GetMinecraftPaths():Promise<Array<string>>;
 
 export function GetModel3DSpec(arg1:string):Promise<string>;
 
+export function GetModelTags(arg1:string):Promise<Array<string>>;
+
 export function GetModelTexSizes(arg1:string):Promise<Array<ysm.TexInfo>>;
 
 export function GetPackInfo(arg1:string):Promise<types.PackInfo>;
@@ -156,6 +160,8 @@ export function IsProxyRunning():Promise<boolean>;
 export function IsResourcePackEnabled(arg1:string):Promise<boolean>;
 
 export function ListAllFilePaths(arg1:string):Promise<Array<string>>;
+
+export function ListByTag(arg1:string):Promise<Array<string>>;
 
 export function ListFileNames(arg1:string):Promise<Array<string>>;
 
@@ -256,6 +262,8 @@ export function SelectImportZip():Promise<string>;
 export function SetDownloadMirror(arg1:string):Promise<void>;
 
 export function SetLinkMode(arg1:string):Promise<void>;
+
+export function SetModelTags(arg1:string,arg2:Array<string>):Promise<void>;
 
 export function SetRepoRoot(arg1:string):Promise<void>;
 

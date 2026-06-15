@@ -1,4 +1,5 @@
 // ===== 创意工坊纯数据层 =====
+import { dbg } from "../../utils/debug.js";
 
 /**
  * 加载站点 + 创作者数据（纯数据，不碰 DOM）
@@ -123,7 +124,7 @@ export async function fetchCommunityCreators(url, mirror) {
       }
       if (Array.isArray(data)) return data;
     } catch (err) {
-      console.debug("[community] " + a.name + " failed:", err?.message);
+      dbg("community", a.name + " failed:", err?.message);
     } finally {
       clearTimeout(tmr);
     }
@@ -213,7 +214,7 @@ export async function fetchCommunitySites(mirror) {
       }
       if (Array.isArray(data)) return data;
     } catch (err) {
-      console.debug("[community] sites " + a.name + " failed:", err?.message);
+      dbg("community", "sites " + a.name + " failed:", err?.message);
     } finally {
       clearTimeout(tmr);
     }

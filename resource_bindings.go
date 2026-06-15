@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,13 +30,24 @@ func (a *App) LoadResourceTypes() string {
 func (a *App) ReadPackMeta(path string) string {
 	meta, thumb, err := packs.ReadPackMeta(path)
 	if err != nil {
+		log.Printf("[packs] ReadPackMeta 失败 %s: %v", path, err)
 		return "{}"
 	}
-	data, _ := json.Marshal(map[string]interface{}{
+	result := map[string]interface{}{
 		"pack_format": meta.Pack.PackFormat,
-		"description": meta.Pack.Description,
+		"description": meta.Desc(),
 		"thumbnail":   thumb,
-	})
+	}
+	if meta.Pack.SupportedFormats != nil {
+		result["supported_formats"] = []int{meta.Pack.SupportedFormats.Min, meta.Pack.SupportedFormats.Max}
+	}
+	if meta.Pack.MinFormat != nil {
+		result["min_format"] = []int{meta.Pack.MinFormat.Min, meta.Pack.MinFormat.Max}
+	}
+	if meta.Pack.MaxFormat != nil {
+		result["max_format"] = []int{meta.Pack.MaxFormat.Min, meta.Pack.MaxFormat.Max}
+	}
+	data, _ := json.Marshal(result)
 	return string(data)
 }
 

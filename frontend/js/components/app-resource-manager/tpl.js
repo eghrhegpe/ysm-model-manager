@@ -117,11 +117,11 @@ export function detailHTML(name, meta, enabled, path, label, actions) {
     html +=
       '<div style="color:var(--muted);line-height:1.6">' + desc + "</div>";
   }
-  const versionDesc = describeVersionRange(meta);
+  const rv = describeVersionRange(meta);
   html +=
     '<div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ' +
-    esc(String(meta.pack_format != null ? meta.pack_format : "?")) +
-    (versionDesc ? "（" + esc(versionDesc) + "）" : "") +
+    esc(rv.format) +
+    (rv.version ? "（" + esc(rv.version) + "）" : "") +
     "</div>" +
     '<div style="color:var(--muted);font-size:var(--fs-xs)">状态: ' +
     (enabled ? "✅ 启用" : "⛔ 禁用") +

@@ -112,15 +112,18 @@ export function renderDisplayName(raw, opts) {
   });
 
   // 从后往前替换，避免 idx 偏移
-  var html = name;
+  var marked = name;
   for (var i = matches.length - 1; i >= 0; i--) {
     var m = matches[i];
-    html = html.slice(0, m.idx) + "%%TOKEN%%" + html.slice(m.idx + m.len);
+    marked = marked.slice(0, m.idx) + "%%TOKEN%%" + marked.slice(m.idx + m.len);
   }
 
-  // 替换 %%TOKEN%% 为 HTML
-  for (var i = 0; i < matches.length; i++) {
-    html = html.replace("%%TOKEN%%", matches[i].html);
+  // 拆分后对非 token 部分转义，再拼回 token 的 HTML（token 已在 push 时 esc 过）
+  var parts = marked.split("%%TOKEN%%");
+  var html = "";
+  for (var i = 0; i < parts.length; i++) {
+    html += esc(parts[i]);
+    if (i < matches.length) html += matches[i].html;
   }
 
   return html;
@@ -159,5 +162,7 @@ function esc(s) {
   return (s || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

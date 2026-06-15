@@ -7,9 +7,11 @@ import { selectState } from "./data.js";
 import { getExts } from "../../utils/extensions.js";
 import { modalAdvFilter } from "../../dialogs/adv-filter.js";
 import { updateSelectCount } from "./events.js";
+import { dbg } from "../../utils/debug.js";
 
 // 打开弹窗版筛选器（应用结果到 inline 面板 + 后端搜索）
 async function openAdvFilterDialog($, vm) {
+  dbg("adv-filter", "open:start", { repoRoot: vm._repoRoot });
   const cur = {
     keyword: $("srch")?.value || "",
     minBones: $("af-minBones")?.value || "",
@@ -19,12 +21,20 @@ async function openAdvFilterDialog($, vm) {
     minTex: $("af-minTex")?.value || "",
     maxTex: $("af-maxTex")?.value || "",
   };
+  dbg("adv-filter", "dialog:open", { cur });
   const result = await modalAdvFilter({ value: cur });
-  if (!result) return;
+  dbg("adv-filter", "dialog:return", { result });
+  if (!result) {
+    dbg("adv-filter", "dialog:cancelled-or-null");
+    return;
+  }
 
   // "清除全部"路径：result 是 { cleared: true }，无 minBones 等字段
   // 统一回填 inline 面板（null/undefined → ""）
-  const setVal = (id, v) => { const el = $(id); if (el) el.value = v == null ? "" : v; };
+  const setVal = (id, v) => {
+    const el = $(id);
+    if (el) el.value = v == null ? "" : v;
+  };
   setVal("af-minBones", result.minBones);
   setVal("af-maxBones", result.maxBones);
   setVal("af-minCubes", result.minCubes);
@@ -57,11 +67,27 @@ async function openAdvFilterDialog($, vm) {
     await import("../../../wailsjs/go/main/App.js");
   const cfg = await LoadAppConfig();
   if (!cfg.repoRoot) {
-    bus.emit("toast:show", { msg: "请先设置仓库目录", duration: 2000, type: "warn" });
+    bus.emit("toast:show", {
+      msg: "请先设置仓库目录",
+      duration: 2000,
+      type: "warn",
+    });
     return;
   }
   // 后端 SearchModels 走 > 0 判定；null 转 0 后不会触发过滤
   const n = (v) => (v == null ? 0 : parseInt(v, 10) || 0);
+  const searchArgs = {
+    repoRoot: cfg.repoRoot,
+    kw,
+    minBones: n(result.minBones),
+    maxBones: n(result.maxBones),
+    minCubes: n(result.minCubes),
+    maxCubes: n(result.maxCubes),
+    minTex: n(result.minTex),
+    maxTex: n(result.maxTex),
+  };
+  dbg("adv-filter", "search:call", searchArgs);
+  let resultCount = 0;
   try {
     const results = await SearchModels(
       cfg.repoRoot,
@@ -73,11 +99,39 @@ async function openAdvFilterDialog($, vm) {
       n(result.minTex),
       n(result.maxTex),
     );
-    vm._filterPaths =
-      results && results.length ? new Set(results.map((r) => r.Path)) : null;
+    resultCount = results?.length ?? 0;
+    vm._filterPaths = resultCount
+      ? new Set(results.map((r) => r.Path))
+      : new Set();
+    dbg("adv-filter", "search:done", {
+      resultCount,
+      filterPathsSize: vm._filterPaths?.size,
+      sample: Array.from(vm._filterPaths || []).slice(0, 2),
+    });
   } catch (e) {
-    bus.emit("toast:show", { msg: "❌ 搜索失败: " + friendlyError(e), duration: 4000, type: "error" });
+    dbg("adv-filter", "search:error", { err: String(e) });
+    bus.emit("toast:show", {
+      msg: "❌ 搜索失败: " + friendlyError(e),
+      duration: 4000,
+      type: "error",
+    });
     vm._filterPaths = null;
+  }
+  // 给用户明确反馈：找到 N 个 / 无匹配
+  // 关键：之前 results=[] 时 _filterPaths 被设为 null → 走 buildTree 不进入过滤分支 → UI 完全没变
+  // 现在无匹配时 _filterPaths 是空 Set → 走 buildTree 进入过滤分支 → 显示"未找到匹配的文件"
+  if (vm._filterPaths && vm._filterPaths.size > 0) {
+    bus.emit("toast:show", {
+      msg: `🔍 找到 ${vm._filterPaths.size} 个匹配`,
+      duration: 1500,
+      type: "success",
+    });
+  } else if (vm._filterPaths && vm._filterPaths.size === 0) {
+    bus.emit("toast:show", {
+      msg: "🔍 无匹配模型（已应用筛选）",
+      duration: 2000,
+      type: "warn",
+    });
   }
   vm._renderTree();
 }
@@ -119,9 +173,9 @@ export function bindToolbarEvents(root, vm) {
   const selAllBtn = $("sel-all");
   if (selAllBtn) {
     selAllBtn.addEventListener("click", () => {
-      const rows = vm._root._vsRows || vm._entries || [];
+      const rows = vm._root._vsRows || [];
       const visible = rows.filter((r) => r.type === "file");
-      const keys = visible.map((r) => r.path).filter(Boolean);
+      const keys = visible.map((r) => r.key).filter(Boolean);
       const allSelected = keys.every((k) => selectState.keys.has(k));
       keys.forEach((k) => {
         if (allSelected) selectState.keys.delete(k);
@@ -173,7 +227,16 @@ export function bindToolbarEvents(root, vm) {
   });
 
   // 高级筛选按钮：触发弹窗版筛选器
-  $("btn-adv-filter")?.addEventListener("click", () => {
+  const advBtn = $("btn-adv-filter");
+  if (typeof window !== "undefined" && window.console) {
+    // eslint-disable-next-line no-console
+    console.log(
+      "[DBG:toolbar-bind] btn-adv-filter",
+      advBtn ? "found" : "NOT-FOUND",
+    );
+  }
+  advBtn?.addEventListener("click", () => {
+    dbg("adv-filter", "btn:click");
     openAdvFilterDialog($, vm);
   });
 
@@ -204,8 +267,12 @@ export function bindToolbarEvents(root, vm) {
   if (menuAuthors) {
     const ddWrap = menuAuthors.closest(".dd-wrap");
     if (ddWrap) {
-      ddWrap.addEventListener("mouseenter", () => fillAuthorMenu(menuAuthors, vm, $));
-      ddWrap.addEventListener("click", () => fillAuthorMenu(menuAuthors, vm, $));
+      ddWrap.addEventListener("mouseenter", () =>
+        fillAuthorMenu(menuAuthors, vm, $),
+      );
+      ddWrap.addEventListener("click", () =>
+        fillAuthorMenu(menuAuthors, vm, $),
+      );
     }
   }
 
@@ -240,7 +307,9 @@ export function bindToolbarEvents(root, vm) {
           await import("../../../wailsjs/go/main/App.js");
         // 列出所有支持的扩展名（后端 SelectImportFile 用 | 解析 "显示名|*.ext1;*.ext2"）
         const exts = getExts(rtype);
-        const extFilter = exts.length ? exts.map((e) => "*" + e).join(";") : "*.*";
+        const extFilter = exts.length
+          ? exts.map((e) => "*" + e).join(";")
+          : "*.*";
         const filePath = await SelectImportFile(
           rtype + " 文件|" + extFilter,
           "选择" + rtype + "文件",

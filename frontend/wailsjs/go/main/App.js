@@ -58,6 +58,10 @@ export function ClearScanCache() {
   return window['go']['main']['App']['ClearScanCache']();
 }
 
+export function CopyModelFile(arg1, arg2) {
+  return window['go']['main']['App']['CopyModelFile'](arg1, arg2);
+}
+
 export function CountDuplicateFiles(arg1) {
   return window['go']['main']['App']['CountDuplicateFiles'](arg1);
 }

@@ -33,6 +33,8 @@ export function ClearInstanceResources(arg1:string,arg2:string):Promise<number>;
 
 export function ClearScanCache():Promise<void>;
 
+export function CopyModelFile(arg1:string,arg2:string):Promise<void>;
+
 export function CountDuplicateFiles(arg1:string):Promise<string>;
 
 export function CountInstanceResources(arg1:string,arg2:string):Promise<number>;

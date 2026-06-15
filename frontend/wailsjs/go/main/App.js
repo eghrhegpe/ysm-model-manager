@@ -106,6 +106,10 @@ export function DetectResourceType(arg1) {
   return window['go']['main']['App']['DetectResourceType'](arg1);
 }
 
+export function DetectZipType(arg1) {
+  return window['go']['main']['App']['DetectZipType'](arg1);
+}
+
 export function DoUpdate(arg1, arg2) {
   return window['go']['main']['App']['DoUpdate'](arg1, arg2);
 }

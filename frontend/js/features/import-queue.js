@@ -296,20 +296,16 @@ export function initImportQueue(app) {
     const ext = currentFileName?.split(".").pop() || "ysm";
 
     let newName;
-    if (a || w || c) {
-      newName =
-        "[" +
-        a +
-        "]【" +
-        w +
-        "】" +
-        c +
-        (v ? "-" + v : "") +
-        (d ? "(" + d + ")" : "") +
-        "." +
-        ext;
+    if (c) {
+      const parts = [];
+      if (a) parts.push("[" + a + "]");
+      if (w) parts.push("【" + w + "】");
+      parts.push(c);
+      if (v) parts.push("-" + v);
+      if (d) parts.push("(" + d + ")");
+      newName = parts.join(" ") + "." + ext;
     } else {
-      // 未填写命名规范 → 使用原文件名
+      // 未填写角色名 → 使用原文件名
       newName = currentFileName || "untitled." + ext;
     }
 

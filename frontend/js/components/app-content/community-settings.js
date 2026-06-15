@@ -91,7 +91,7 @@ export async function initSettings(root) {
 
   // 📂 详细调整面板
   const advancedTypes = [
-    { rtype: "ysm",              icon: "💎", name: "YSM 模型",     cfgKey: "" },
+    { rtype: "ysm",              icon: "💎", name: "YSM 模型",     cfgKey: "ysmRoot" },
     { rtype: "resourcepack",     icon: "🎨", name: "资源包",       cfgKey: "resourcepackRoot" },
     { rtype: "shaderpack",       icon: "☀️", name: "光影包",       cfgKey: "shaderpackRoot" },
     { rtype: "create-blueprint", icon: "⚙️", name: "蓝图",         cfgKey: "schematicRoot" },
@@ -116,21 +116,18 @@ export async function initSettings(root) {
         '<div class="stg-card-hdr" style="display:flex;align-items:center;gap:6px">' +
         '<span>' + t.icon + '</span><span>' + t.name + '</span>' +
         (isOverridden ? '<span style="font-size:9px;color:var(--accent)">已自定义</span>' : '') +
-        '<span style="margin-left:auto;display:flex;gap:4px">' +
-        (canOverride ? '<button class="btn stg-adv-set" data-rtype="' + t.rtype + '" style="font-size:var(--fs-btn-tool);padding:2px 6px">📂</button>' : '') +
-        (isOverridden ? '<button class="btn stg-adv-reset" data-rtype="' + t.rtype + '" style="font-size:var(--fs-btn-tool);padding:2px 6px">↩️</button>' : '') +
-        '</span></div>' +
+        (isOverridden ? '<button class="btn stg-adv-reset" data-rtype="' + t.rtype + '" style="margin-left:auto;font-size:var(--fs-btn-tool);padding:2px 6px">↩️ 默认</button>' : '') +
+        '</div>' +
         '<div class="stg-card-body">' +
-        '<div class="stg-card-val" style="font-size:10px">' + escHtml(currentPath) + '</div>' +
+        '<div class="stg-card-val stg-adv-set" data-rtype="' + t.rtype + '" style="font-size:10px;cursor:pointer;" title="点击更改路径">' + escHtml(currentPath) + '</div>' +
         '</div></div>';
     }
     grid.innerHTML = html;
 
-    // 绑定 📂 和 ↩️ 按钮
-    grid.querySelectorAll(".stg-adv-set").forEach((btn) => {
-      btn.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        const rtype = btn.dataset.rtype;
+    // 点击路径文字更改路径
+    grid.querySelectorAll(".stg-adv-set").forEach((el) => {
+      el.addEventListener("click", async () => {
+        const rtype = el.dataset.rtype;
         const dir = await SelectDirectory();
         if (!dir) return;
         try {
@@ -146,6 +143,7 @@ export async function initSettings(root) {
         }
       });
     });
+    // 绑定 ↩️ 按钮
     grid.querySelectorAll(".stg-adv-reset").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
@@ -172,13 +170,16 @@ export async function initSettings(root) {
     const btn = root.getElementById("set-advanced-toggle");
     if (!panel || !btn) return;
     const isOpen = panel.style.display !== "none";
+    const card = panel.closest(".stg-card");
     if (isOpen) {
       panel.style.display = "none";
-      btn.textContent = "📂 详细调整 ▸";
+      btn.textContent = "📂 展开 ▸";
+      if (card) card.style.gridColumn = "";
     } else {
       await refreshAdvanced();
       panel.style.display = "block";
-      btn.textContent = "📂 详细调整 ▾";
+      btn.textContent = "📂 收起 ▾";
+      if (card) card.style.gridColumn = "1 / -1";
     }
   });
 

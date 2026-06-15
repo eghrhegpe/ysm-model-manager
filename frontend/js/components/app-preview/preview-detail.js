@@ -96,15 +96,14 @@ export async function showResourcePack(ctx, path) {
     const basename = path.split("/").pop().split("\\").pop();
     const desc = renderFormattedText(meta.description || "");
     const { describeVersionRange } = await import("../../utils/pack-format.js");
-    const versionDesc = describeVersionRange(meta);
-    const packFormatVal = meta.pack_format != null ? meta.pack_format : "?";
+    const rv = describeVersionRange(meta);
     ctx._root.innerHTML = `<div class="content" id="preview-content">
   <h3>🎨 资源包</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${meta.thumbnail ? `<img src="${meta.thumbnail}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:6px;border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:40px;line-height:1">❌</div><div style="font-size:var(--fs-sm);color:var(--muted)">无pack.png</div></div>`}
     <div><strong>${renderFormattedText(basename)}</strong></div>
     ${desc ? `<div style="color:var(--muted);line-height:1.6">${desc}</div>` : ""}
-    <div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ${packFormatVal}${versionDesc ? "（" + versionDesc + "）" : ""}</div>
+    <div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ${rv.format}${rv.version ? "（" + rv.version + "）" : ""}</div>
   </div>
 </div>`;
   } catch (e) {

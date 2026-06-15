@@ -24,7 +24,7 @@ export async function loadInstances(rtype) {
 
     // 只按当前资源类型查询同步状态
     const rtypeActual = rtype || "ysm";
-    const repoRoot = cfg.repoRoot || cfg.RepoRoot || "";
+    const repoRoot = ((cfg.filesRoot||"")+"\\ysm") ;
     const statusList = await GetResourceInstanceStatus(
       rtypeActual,
       mcRoot,

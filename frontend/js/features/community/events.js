@@ -88,6 +88,361 @@ export function bindRepoEvents(sr, ctx) {
   };
 
   // ============================================================
+  //  🎯 统一下载入口 — 三个入口（全部/选中/单击）都走这里
+  // ============================================================
+  let _offEvents = null; // 取消事件监听的函数
+  let _progressHandler = null; // 当前文件的进度回调
+  let _lastPct = -1; // 上一次进度百分比（用于检测秒跳）
+  let _stuckTimer = null; // "写入中"防骗计时器
+
+  /**
+   * 入队并启动下载，仅注册一组 Wails 事件。
+   * 调用前确保 tasks 已填好 url/saveDir/name/size。
+   */
+  async function enqueueDownloadTasks(tasks, opts = {}) {
+    if (downloading) return;
+    if (!tasks.length) return;
+
+    // 取 repoRoot（所有入口共用）
+    const { LoadAppConfig, EnqueueDownloads, CancelQueue } =
+      await import("../../../wailsjs/go/main/App.js");
+    const cfg = await LoadAppConfig();
+    const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+    if (!repoRoot) {
+      bus.emit("toast:show", {
+        msg: "请先在设置中配置仓库目录",
+        duration: 3000,
+        type: "warn",
+      });
+      return;
+    }
+    tasks.forEach((t) => (t.saveDir = repoRoot));
+
+    downloading = true;
+    const dlAllBtn = sr.querySelector(".gh-dl-all");
+    const dlSelBtn = sr.querySelector(".gh-dl-selected");
+    const queueStatus = sr.querySelector("#gh-queue-status");
+
+    // 禁用按钮
+    if (dlAllBtn) dlAllBtn.disabled = true;
+    if (dlSelBtn) {
+      dlSelBtn.style.opacity = ".4";
+      dlSelBtn.style.pointerEvents = "none";
+    }
+
+    const totalTasks = tasks.length;
+    let errorList = []; // 聚合错误 [{ name, err }]
+    let completeTimer = null; // 100% 后超时自动完成
+
+    const clearCompleteTimer = () => {
+      if (completeTimer) {
+        clearTimeout(completeTimer);
+        completeTimer = null;
+      }
+    };
+
+    const stuckGuardReset = () => {
+      _lastPct = -1;
+      clearCompleteTimer(); // 上一个文件的 3s 超时对新文件无效
+      if (_stuckTimer) {
+        clearTimeout(_stuckTimer);
+        _stuckTimer = null;
+      }
+      // 清理菊花动画
+      const pctEl2 = queueStatus?.querySelector(".gh-progress-pct");
+      if (pctEl2?._dotTimer) {
+        clearInterval(pctEl2._dotTimer);
+        pctEl2._dotTimer = null;
+      }
+    };
+
+    const cleanup = (errorSummary) => {
+      clearCompleteTimer();
+      stuckGuardReset();
+      downloading = false;
+      if (_offEvents) {
+        _offEvents();
+        _offEvents = null;
+      }
+      _progressHandler = null;
+      if (dlAllBtn) dlAllBtn.disabled = false;
+      if (dlSelBtn) updateSelectedUI();
+      if (queueStatus) {
+        if (errorSummary) {
+          queueStatus.innerHTML = errorSummary;
+        } else {
+          queueStatus.style.display = "none";
+        }
+      }
+      // 清除扫描缓存（下载完成后立即可见）
+      try {
+        var _cc = window.go.main.App.ClearScanCache;
+        if (_cc) {
+          _cc();
+        }
+      } catch (_) {}
+      bus.emit("tree:reload");
+      bus.emit("stats:refresh");
+    };
+
+    const offEvents = () => {
+      if (window.runtime?.EventsOff) {
+        window.runtime.EventsOff("queue:status");
+        window.runtime.EventsOff("queue:file-start");
+        window.runtime.EventsOff("queue:file-done");
+        window.runtime.EventsOff("download:progress");
+      }
+    };
+    _offEvents = offEvents;
+
+    // 进度条
+    if (queueStatus) {
+      queueStatus.style.display = "block";
+      queueStatus.innerHTML =
+        '<span class="gh-queue-icon">⬇️</span> 准备下载… 共 ' +
+        totalTasks +
+        " 个";
+    }
+
+    const onQueueStatus = (status) => {
+      if (status === "done" || status === "cancelled") {
+        const cancelled = status === "cancelled";
+        let summary = "";
+        if (errorList.length > 0) {
+          summary =
+            '<div class="gh-queue-error">⚠️ ' +
+            errorList.length +
+            " 个文件下载失败：</div>" +
+            errorList
+              .slice(0, 5)
+              .map(
+                (e) =>
+                  '<div class="gh-queue-err-item">❌ ' +
+                  renderDisplayName(e.name) +
+                  ": " +
+                  esc(e.err) +
+                  "</div>",
+              )
+              .join("") +
+            (errorList.length > 5
+              ? '<div class="gh-queue-ellipsis">…还有 ' +
+                (errorList.length - 5) +
+                " 个</div>"
+              : "");
+        }
+        if (cancelled) {
+          cleanup(summary || '<span class="gh-queue-cancel">⏹ 已取消</span>');
+          if (dlAllBtn) dlAllBtn.textContent = "⏹ 已取消";
+        } else {
+          cleanup(summary || null);
+          if (dlAllBtn)
+            dlAllBtn.textContent =
+              errorList.length > 0
+                ? "⚠️ " + errorList.length + " 失败"
+                : "✅ 下载完成";
+        }
+        selectedSet.clear();
+        setTimeout(function () {
+          showRepoModels();
+        }, 200);
+      }
+    };
+
+    const onFileStart = (name, total, remaining) => {
+      stuckGuardReset(); // 新文件重置防骗状态
+      const done = total - remaining;
+      if (dlAllBtn) dlAllBtn.textContent = "⬇️ " + done + "/" + total;
+      if (queueStatus) {
+        const remain = total - done;
+        // 创建一个固定的进度容器，后续 download:progress 只更新 bar 部分
+        queueStatus.innerHTML =
+          '<div class="gh-progress-row">' +
+          '<span class="gh-queue-icon">⬇️</span>' +
+          '<span class="gh-progress-name">' +
+          renderDisplayName(name) +
+          "</span>" +
+          '<span class="gh-progress-pct">⏳</span>' +
+          (remain > 1
+            ? '<span class="gh-progress-remain">剩余' + remain + "</span>"
+            : "") +
+          '<button class="gh-cancel-queue gh-cancel-btn" title="取消">✕</button>' +
+          "</div>" +
+          '<div class="gh-progress-bar-wrap">' +
+          '<div class="gh-progress-fill"></div>' +
+          "</div>";
+        queueStatus
+          .querySelector(".gh-cancel-queue")
+          ?.addEventListener("click", async () => {
+            await CancelQueue();
+          });
+      }
+
+      // 注册当前文件的字节级进度
+      if (_progressHandler) window.runtime?.EventsOff("download:progress");
+      _progressHandler = (dl, total) => {
+        if (!queueStatus) return;
+        let pct, label;
+        if (total <= 0) {
+          const mb = (dl / 1024 / 1024).toFixed(1);
+          label = mb + "MB";
+          pct = dl > 0 ? 100 : 0;
+        } else {
+          pct = Math.min(Math.round((dl / total) * 100), 100);
+          label = pct + "%";
+        }
+
+        // � 极速动画：小文件（<100KB）秒完成时，先 99% 再 100%
+        const isTiny = total > 0 && total <= 100 * 1024;
+        if (isTiny && _lastPct < 10 && pct >= 99 && !completeTimer) {
+          label = "99%";
+          pct = 99;
+          if (!_stuckTimer) {
+            // 300ms 后显示真正进度，进度条半速
+            _stuckTimer = setTimeout(() => {
+              const pctEl2 = queueStatus?.querySelector(".gh-progress-pct");
+              const fillEl2 = queueStatus?.querySelector(".gh-progress-fill");
+              if (pctEl2) pctEl2.textContent = "100%";
+              if (fillEl2) {
+                fillEl2.style.transition = "width .3s";
+                fillEl2.style.width = "100%";
+              }
+              _stuckTimer = null;
+            }, 300);
+          }
+        }
+
+        // 🛡️ 防骗：检测秒跳 0→100%（有 Content-Length 且 >1MB 时可疑）
+        const hasCL = total > 0 && pct > 0;
+        if (
+          hasCL &&
+          !isTiny &&
+          _lastPct < 10 &&
+          pct >= 99 &&
+          total > 1024 * 1024
+        ) {
+          label = "99%"; // 先显示 99%，不跳 100%
+          pct = 99;
+          if (!_stuckTimer) {
+            queueStatus.querySelector(".gh-progress-pct").textContent = label;
+            // 2 秒后如果还没完成，显示旋转菊花
+            _stuckTimer = setTimeout(() => {
+              const pctEl = queueStatus?.querySelector(".gh-progress-pct");
+              const fillEl = queueStatus?.querySelector(".gh-progress-fill");
+              if (pctEl && pctEl.textContent !== "100%") {
+                pctEl.textContent = "⏳";
+                pctEl.style.fontSize = "9px";
+                pctEl._dots = 0;
+                // 闪烁动画：. → .. → ... → 循环
+                pctEl._dotTimer = setInterval(() => {
+                  if (!pctEl || pctEl.textContent === "100%") {
+                    clearInterval(pctEl._dotTimer);
+                    return;
+                  }
+                  pctEl._dots = (pctEl._dots + 1) % 4;
+                  pctEl.textContent = "⏳" + ".".repeat(pctEl._dots);
+                }, 400);
+              }
+              if (fillEl) fillEl.style.width = "99%";
+            }, 2000);
+          }
+        } else {
+          // 正常进度
+          if (_stuckTimer) {
+            clearTimeout(_stuckTimer);
+            _stuckTimer = null;
+          }
+        }
+        _lastPct = pct;
+
+        const pctEl = queueStatus.querySelector(".gh-progress-pct");
+        const fillEl = queueStatus.querySelector(".gh-progress-fill");
+        if (pctEl && !_stuckTimer) pctEl.textContent = label;
+        if (fillEl) {
+          fillEl.style.transition = pct === 100 ? "width 0s" : "width .2s";
+          fillEl.style.width = pct + "%";
+        }
+
+        // 100% 后 3 秒收不到 done 则强制完成
+        if (pct >= 100) {
+          clearCompleteTimer();
+          completeTimer = setTimeout(() => {
+            if (!downloading) return;
+            let summary = null;
+            if (errorList.length > 0) {
+              summary =
+                '<div class="gh-queue-error">⚠️ ' +
+                errorList.length +
+                " 个文件下载失败</div>";
+            }
+            cleanup(summary);
+            if (dlAllBtn)
+              dlAllBtn.textContent =
+                errorList.length > 0
+                  ? "⚠️ " + errorList.length + " 失败"
+                  : "✅ 下载完成";
+            selectedSet.clear();
+            setTimeout(function () {
+              showRepoModels();
+            }, 200);
+          }, 3000);
+        } else {
+          clearCompleteTimer();
+        }
+      };
+      window.runtime?.EventsOn("download:progress", _progressHandler);
+    };
+
+    const onFileDone = (name, status, errMsg) => {
+      if (status === "ok") {
+        // 下载成功 → 直接加入 localMap，刷新后立即可见
+        if (name) localMap.set(name, "");
+        // 移除勾选
+        var cb2 = sr.querySelector('.gh-sel[data-name="' + esc(name) + '"]');
+        if (cb2) {
+          cb2.checked = false;
+          selectedSet.delete(name);
+          updateSelectedUI();
+        }
+      } else if (status === "fail") {
+        errorList.push({
+          name: name,
+          err: errMsg || "\u672A\u77E5\u9519\u8BEF",
+        });
+        // 进度条显示红色错误
+        var pctEl3 = queueStatus?.querySelector(".gh-progress-pct");
+        var fillEl3 = queueStatus?.querySelector(".gh-progress-fill");
+        if (pctEl3) {
+          pctEl3.textContent = "\u274C";
+          pctEl3.style.color = "#f38ba8";
+          pctEl3.title = errMsg || "\u4E0B\u8F7D\u5931\u8D25";
+          if (pctEl3._dotTimer) {
+            clearInterval(pctEl3._dotTimer);
+            pctEl3._dotTimer = null;
+          }
+        }
+        if (fillEl3) {
+          fillEl3.style.background = "#f38ba8";
+        }
+        // 取消该文件的勾选
+        var cb3 = sr.querySelector('.gh-sel[data-name="' + esc(name) + '"]');
+        if (cb3) {
+          cb3.checked = false;
+          selectedSet.delete(name);
+          updateSelectedUI();
+        }
+      }
+    };
+
+    if (window.runtime?.EventsOn) {
+      window.runtime.EventsOn("queue:status", onQueueStatus);
+      window.runtime.EventsOn("queue:file-start", onFileStart);
+      window.runtime.EventsOn("queue:file-done", onFileDone);
+    }
+
+    await EnqueueDownloads(tasks);
+  }
+
+  // ============================================================
   //  事件绑定
   // ============================================================
 

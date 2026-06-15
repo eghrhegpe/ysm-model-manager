@@ -142,6 +142,8 @@ func (a *App) downloadFileWithQueue(rawURL, saveDir string) (string, error) {
 		relPath = filepath.Base(rawURL)
 	}
 	relPath = strings.ReplaceAll(relPath, "/", string(filepath.Separator))
+	// 过滤工坊仓库中可能被提交的 .recycle 目录
+	relPath = strings.TrimPrefix(relPath, ".recycle"+string(filepath.Separator))
 	savePath := filepath.Join(saveDir, relPath)
 	if err := os.MkdirAll(filepath.Dir(savePath), 0755); err != nil {
 		return "", err

@@ -16,7 +16,7 @@ export function registerUpload(unsubs) {
           SyncCustomToRepo,
         } = await import("../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
-        const repoRoot = cfg.repoRoot || "";
+        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
         const mcRoot = cfg.mcRoot || "";
         if (!repoRoot || !mcRoot) {
           bus.emit("toast:show", {

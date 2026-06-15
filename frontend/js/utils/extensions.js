@@ -9,7 +9,7 @@ export const RESOURCE_EXTS = {
   "vrchat-avatar": [".vrca", ".vrm"],
   resourcepack: [".zip"],
   shaderpack: [".zip"],
-  "create-blueprint": [".nbt", ".schematic"],
+  "create-blueprint": [".nbt", ".schematic", ".litematic"],
 };
 
 /** 所有支持的扩展名列表（去重，用于 UI 提示文案） */

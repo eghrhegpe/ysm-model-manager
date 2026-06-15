@@ -27,7 +27,7 @@ func (a *App) CreateDir(dir string) error {
 	if strings.Contains(dir, "..") || strings.Contains(dir, "~") {
 		return fmt.Errorf("目录名包含非法字符")
 	}
-	fullPath := filepath.Join(a.RepoRoot, dir)
+	fullPath := filepath.Join(a.ysmRoot(), dir)
 	return os.MkdirAll(fullPath, 0755)
 }
 
@@ -191,8 +191,8 @@ func (a *App) extractTextureViaYSM(modelPath string) []byte {
 // ========== 包信息 ==========
 func (a *App) GetPackInfo(dirPath string) types.PackInfo {
 	dirPath = strings.TrimSpace(dirPath)
-	if !filepath.IsAbs(dirPath) && a.RepoRoot != "" {
-		dirPath = filepath.Join(a.RepoRoot, dirPath)
+	if !filepath.IsAbs(dirPath) && a.ysmRoot() != "" {
+		dirPath = filepath.Join(a.ysmRoot(), dirPath)
 	}
 	absPath, err := filepath.Abs(filepath.FromSlash(dirPath))
 	if err != nil {

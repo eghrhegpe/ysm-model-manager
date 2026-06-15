@@ -164,7 +164,7 @@ func (a *App) SetRepoRoot(dir string) {
 	if !installer.IsValidRepoRoot(dir) {
 		return
 	}
-	a.RepoRoot = dir
+	// repoRoot() 动态从 FilesRoot 推导，此方法保留兼容但不再缓存
 }
 
 // GenerateRepoIndex 扫描仓库目录，生成 index.json
@@ -405,10 +405,10 @@ func (a *App) ScanCustomModels(dir string) []types.ModelEntry {
 }
 
 func (a *App) ListModelAuthors() []types.AuthorInfo {
-	if a.RepoRoot == "" {
+	if a.ysmRoot() == "" {
 		return nil
 	}
-	entries := a.ScanModelEntries(a.RepoRoot)
+	entries := a.ScanModelEntries(a.ysmRoot())
 	type authorData struct {
 		Count      int
 		SampleFile string

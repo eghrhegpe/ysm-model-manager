@@ -93,6 +93,15 @@ func (a *App) ImportModelFile(fileName, base64Data string) error {
 	return a.importModelFile(fileName, base64Data, false)
 }
 
+// DetectZipType 通过 ZIP 内容检测资源类型（供前端导入路由使用）
+func (a *App) DetectZipType(base64Data string) string {
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return "unknown"
+	}
+	return detectZipType(data)
+}
+
 func (a *App) ImportModelFileSkipCheck(fileName, base64Data string) error {
 	return a.importModelFile(fileName, base64Data, true)
 }

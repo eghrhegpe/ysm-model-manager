@@ -40,7 +40,7 @@ export function createDownloadQueue({
     const { LoadAppConfig, EnqueueDownloads, CancelQueue } =
       await import("../../../wailsjs/go/main/App.js");
     const cfg = await LoadAppConfig();
-    const repoRoot = cfg.repoRoot || "";
+    const repoRoot = cfg.filesRoot ? (cfg.filesRoot + "\\ysm") : "";
     if (!repoRoot) {
       bus.emit("toast:show", {
         msg: "请先在设置中配置仓库目录",

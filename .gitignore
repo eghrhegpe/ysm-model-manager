@@ -21,3 +21,6 @@ _binding_add.txt
 _fix_decode.js
 
 tool-test.md
+
+CLAUDE.md
+.claude/

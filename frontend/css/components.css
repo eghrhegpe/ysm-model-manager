@@ -378,3 +378,77 @@
   width: 16px;
   text-align: center;
 }
+
+/* ===== 统一按钮系统（可选使用） ===== */
+/* 基类：所有按钮共享的基础样式 */
+.btn-base {
+  padding: var(--btn-padding-md);
+  border-radius: var(--btn-radius);
+  border: 1px solid var(--bd);
+  background: transparent;
+  color: var(--txt);
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+  transition: var(--btn-transition);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-base:hover {
+  background: var(--hover);
+}
+
+.btn-base:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+  outline: none;
+}
+
+/* 尺寸变体 */
+.btn-base.sm {
+  padding: var(--btn-padding-sm);
+  font-size: var(--fs-btn-tool);
+}
+
+.btn-base.lg {
+  padding: var(--btn-padding-lg);
+  font-size: var(--fs-btn-primary);
+}
+
+/* 语义变体 */
+.btn-base.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btn-base.primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, #fff);
+}
+
+.btn-base.danger {
+  background: color-mix(in srgb, var(--paid, #e5534b) 15%, transparent);
+  color: var(--paid, #e5534b);
+  border-color: color-mix(in srgb, var(--paid, #e5534b) 40%, transparent);
+}
+
+.btn-base.danger:hover {
+  background: color-mix(in srgb, var(--paid, #e5534b) 30%, transparent);
+}
+
+.btn-base.accent {
+  background: var(--accent-btn-bg);
+  color: var(--accent-btn-color);
+  border-color: var(--accent-btn-border);
+}
+
+.btn-base.accent:hover {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* 禁用状态 */
+.btn-base:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}

@@ -296,7 +296,7 @@ export async function initSettings(root) {
     return new Promise(function (resolve) {
       var overlay = document.createElement("div");
       overlay.style.cssText =
-        "position:fixed;z-index:100000;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center";
+        "position:fixed;z-index:var(--z-modal);inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center";
       var box = document.createElement("div");
       box.style.cssText =
         "background:var(--surf,#2a2a3a);border:1px solid var(--bd,#444);border-radius:12px;padding:16px;max-width:500px;width:90%;max-height:70vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.4)";
@@ -358,7 +358,7 @@ export async function initSettings(root) {
     const tip = document.createElement("div");
     tip.id = "mc-scan-tooltip";
     tip.style.cssText =
-      "position:fixed;z-index:99999;background:var(--surf,#2a2a3a);border:1px solid var(--bd,#444);border-radius:8px;padding:10px 14px;font-size:var(--fs-sm,11px);color:var(--txt,#cdd6f4);box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:420px;max-height:350px;overflow-y:auto;pointer-events:none;line-height:1.6";
+      "position:fixed;z-index:var(--z-toast);background:var(--surf,#2a2a3a);border:1px solid var(--bd,#444);border-radius:8px;padding:10px 14px;font-size:var(--fs-sm,11px);color:var(--txt,#cdd6f4);box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:420px;max-height:350px;overflow-y:auto;pointer-events:none;line-height:1.6";
     tip.style.left = Math.max(4, rect.left) + "px";
     tip.style.top = rect.bottom + 4 + "px";
 

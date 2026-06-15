@@ -5,7 +5,7 @@ export async function openFullPreview(canvas, model, textureImg, labelsOn) {
   const { renderModel2D } = await import("../../utils/model2d.js");
   const overlay = document.createElement("div");
   overlay.style.cssText =
-    "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;flex-direction:column";
+    "position:fixed;inset:0;z-index:var(--z-fullscreen);background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;flex-direction:column";
   const bigCanvas = document.createElement("canvas");
   bigCanvas.width = 600;
   bigCanvas.height = 600;

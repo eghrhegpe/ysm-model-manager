@@ -14,7 +14,7 @@ const showDropOverlay = (hasModel) => {
     dropOverlay = document.createElement("div");
     dropOverlay.id = "global-drop-overlay";
     dropOverlay.style.cssText =
-      "position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;pointer-events:none;transition:opacity .12s";
+      "position:fixed;inset:0;z-index:var(--z-fullscreen);display:none;align-items:center;justify-content:center;pointer-events:none;transition:opacity .12s";
     dropOverlay.innerHTML =
       '<div style="background:var(--surf,#1a1b2e);border:2px dashed var(--accent,#66d9ef);border-radius:12px;padding:30px 50px;text-align:center"><div style="font-size:30px;margin-bottom:8px">📥</div><div style="font-size:16px;font-weight:600;color:var(--accent,#66d9ef)">放开以导入模型</div><div style="font-size:11px;color:var(--muted,#888);margin-top:4px">支持 ' +
       DROP_EXTS_STR +

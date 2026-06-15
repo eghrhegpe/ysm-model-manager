@@ -568,7 +568,7 @@ export function renderSiteView(site, ctx) {
       const overlay = document.createElement("div");
       overlay.className = "cr-detail-overlay";
       overlay.style.cssText =
-        "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center";
+        "position:fixed;inset:0;z-index:var(--z-modal);background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center";
       overlay.onclick = (ev) => {
         if (ev.target === overlay) overlay.remove();
       };
@@ -578,7 +578,7 @@ export function renderSiteView(site, ctx) {
         const st = document.createElement("style");
         st.id = "cr-detail-global-style";
         st.textContent =
-          ".cr-detail-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease}" +
+          ".cr-detail-overlay{position:fixed;inset:0;z-index:var(--z-modal);background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease}" +
           ".cr-detail-box{background:var(--bg);border:1px solid var(--bd);border-radius:16px;padding:20px 24px;max-width:400px;width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:10px;animation:detail-in .25s cubic-bezier(.34,1.56,.64,1)}" +
           "@keyframes detail-in{from{opacity:0;transform:scale(.88) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}" +
           "@keyframes fade-in{from{opacity:0}to{opacity:1}}" +

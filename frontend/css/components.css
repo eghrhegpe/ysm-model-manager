@@ -4,7 +4,7 @@
 /* ===== 创意工坊预览浮层（document.body 下） ===== */
 .ws-preview {
   position: fixed;
-  z-index: 9999;
+  z-index: var(--z-fullscreen);
   pointer-events: none;
   display: none;
 }
@@ -39,7 +39,7 @@
 .dlg-overlay {
   position: fixed;
   inset: 0;
-  z-index: 99999;
+  z-index: var(--z-modal);
   background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;

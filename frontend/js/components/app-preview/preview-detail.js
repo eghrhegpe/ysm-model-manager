@@ -1,4 +1,4 @@
-// ===== 模型/材质包详情面板 =====
+// ===== 模型/资源包详情面板 =====
 // 从 index.js 拆分：详情面板渲染逻辑
 import { summaryCardHTML } from "../../utils/summarize.js";
 import { renderFormattedText } from "../../utils/mc-format.js";
@@ -87,7 +87,7 @@ export async function showModelDetail(ctx, path) {
   }
 }
 
-/** 显示材质包信息（pack.mcmeta + pack.png） */
+/** 显示资源包信息（pack.mcmeta + pack.png） */
 export async function showResourcePack(ctx, path) {
   try {
     const { ReadPackMeta } = await import("../../../wailsjs/go/main/App.js");
@@ -96,7 +96,7 @@ export async function showResourcePack(ctx, path) {
     const basename = path.split("/").pop().split("\\").pop();
     const desc = renderFormattedText(meta.description || "");
     ctx._root.innerHTML = `<div class="content" id="preview-content">
-  <h3>🎨 材质包</h3>
+  <h3>🎨 资源包</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${meta.thumbnail ? `<img src="${meta.thumbnail}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : ""}
     <div><strong>${esc(basename)}</strong></div>
@@ -105,6 +105,6 @@ export async function showResourcePack(ctx, path) {
   </div>
 </div>`;
   } catch (e) {
-    ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 材质包</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e.message)}</div></div></div>`;
+    ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 资源包</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e.message)}</div></div></div>`;
   }
 }

@@ -38,7 +38,7 @@ class AppSidebar extends HTMLElement {
           ysm: "模型",
           "mmd-skin": "MMD",
           "vrchat-avatar": "VRC",
-          resourcepack: "材质包",
+          resourcepack: "资源包",
           shaderpack: "光影包",
           "create-blueprint": "蓝图",
         };
@@ -108,81 +108,114 @@ class AppSidebar extends HTMLElement {
   }
 
   _bindSyncSelected() {
-    const btn = this._root.querySelector(".sidebar-sync-selected");
-    const menu = this._root.getElementById("sidebar-sync-menu");
-    if (!btn || !menu) return;
+    const pushBtn = this._root.querySelector(".sidebar-push-selected");
+    const pushMenu = this._root.getElementById("sidebar-push-menu");
+    const pullBtn = this._root.querySelector(".sidebar-pull-selected");
+    const pullMenu = this._root.getElementById("sidebar-pull-menu");
+    if (!pushBtn || !pushMenu || !pullBtn || !pullMenu) return;
 
-    // 点击按钮 = 全部类型同步
-    btn.addEventListener("click", () => {
-      menu.style.display = menu.style.display === "block" ? "none" : "block";
-    });
-    // 点击其他地方关闭菜单（存储引用以便清理）
-    this._docClickHandler = (e) => {
-      if (!e.target.closest(".dd-wrap")) menu.style.display = "none";
+    // 关闭所有下拉菜单
+    const closeAllMenus = () => {
+      pushMenu.style.display = "none";
+      pullMenu.style.display = "none";
     };
-    document.addEventListener("click", this._docClickHandler);
-    // 阻止按钮本身的点击冒泡到 document
-    btn.addEventListener("click", (e) => e.stopPropagation());
 
-    // 通用同步函数
-    const doSync = (syncType) => {
-      const selected = [];
+    // 点击按钮切换菜单（stopPropagation 防止冒泡到 document 后被 Shadow DOM 边界改写 e.target）
+    pushBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const wasOpen = pushMenu.style.display === "block";
+      closeAllMenus();
+      if (!wasOpen) pushMenu.style.display = "block";
+    });
+    pullBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const wasOpen = pullMenu.style.display === "block";
+      closeAllMenus();
+      if (!wasOpen) pullMenu.style.display = "block";
+    });
+    // 菜单内点击也阻止冒泡
+    pushMenu.addEventListener("click", (e) => e.stopPropagation());
+    pullMenu.addEventListener("click", (e) => e.stopPropagation());
+    // 点击其他地方关闭
+    this._docClickHandler = () => closeAllMenus();
+    document.addEventListener("click", this._docClickHandler);
+
+    const getSelected = () => {
+      const sel = [];
       this._root.querySelectorAll(".chk:checked").forEach((c) => {
         const idx = parseInt(c.dataset.idx, 10);
         if (!isNaN(idx) && this._instances[idx])
-          selected.push(this._instances[idx].name);
+          sel.push(this._instances[idx].name);
       });
+      return sel;
+    };
+
+    const allTypes = [
+      "ysm", "mmd-skin", "vrchat-avatar",
+      "resourcepack", "shaderpack", "create-blueprint",
+    ];
+    const resolveTypes = (t) => (t === "all" ? allTypes : [t]);
+
+    // 推送：emit sync:download:missing
+    pushMenu.addEventListener("click", (e) => {
+      const item = e.target.closest(".dd-item");
+      if (!item) return;
+      const selected = getSelected();
       if (!selected.length) {
-        bus.emit("toast:show", {
-          msg: "请先勾选要同步的整合包",
-          duration: 2000,
-          type: "info",
-        });
+        bus.emit("toast:show", { msg: "请先勾选要推送的整合包", duration: 2000, type: "info" });
         return;
       }
-      menu.style.display = "none";
-      btn.textContent = "⏳";
-      btn.disabled = true;
+      closeAllMenus();
+      pushBtn.textContent = "⏳";
+      pushBtn.disabled = true;
       (async () => {
-        const types =
-          syncType === "all"
-            ? [
-                "ysm",
-                "mmd-skin",
-                "vrchat-avatar",
-                "resourcepack",
-                "shaderpack",
-                "create-blueprint",
-              ]
-            : [syncType];
         for (const insName of selected) {
-          for (const rt of types) {
+          for (const rt of resolveTypes(item.dataset.syncType)) {
             await new Promise((resolve) => {
-              bus.emit("sync:download:missing", {
-                instanceName: insName,
-                rtype: rt,
-              });
-              bus.on(
-                "sync:download:done",
-                () => {
-                  bus.off("sync:download:done");
-                  resolve();
-                },
-                { once: true },
-              );
+              bus.emit("sync:download:missing", { instanceName: insName, rtype: rt });
+              bus.on("sync:download:done", resolve, { once: true });
               setTimeout(resolve, 10000);
             });
           }
         }
-        btn.textContent = "⬇️ 同步所选 ▾";
-        btn.disabled = false;
+        pushBtn.textContent = "⬆️ 推送所选 ▾";
+        pushBtn.disabled = false;
       })();
-    };
+    });
 
-    // 下拉项点击
-    menu.addEventListener("click", (e) => {
+    // 拉取：调用 PullResourceFromInstance
+    pullMenu.addEventListener("click", async (e) => {
       const item = e.target.closest(".dd-item");
-      if (item) doSync(item.dataset.syncType || "all");
+      if (!item) return;
+      const selected = getSelected();
+      if (!selected.length) {
+        bus.emit("toast:show", { msg: "请先勾选要拉取的整合包", duration: 2000, type: "info" });
+        return;
+      }
+      closeAllMenus();
+      pullBtn.textContent = "⏳";
+      pullBtn.disabled = true;
+      let totalPulled = 0;
+      try {
+        const { PullResourceFromInstance } = await import("../../../wailsjs/go/main/App.js");
+        for (const insName of selected) {
+          for (const rt of resolveTypes(item.dataset.syncType)) {
+            const n = await PullResourceFromInstance(rt, insName);
+            totalPulled += n;
+          }
+        }
+        if (totalPulled > 0) {
+          bus.emit("toast:show", { msg: `✅ 拉取完成，共 ${totalPulled} 个文件`, duration: 2500 });
+        } else {
+          bus.emit("toast:show", { msg: "📭 没有可拉取的文件（实例中无多余资源）", duration: 2500, type: "info" });
+        }
+        bus.emit("stats:refresh");
+        bus.emit("tree:reload");
+      } catch (e) {
+        bus.emit("toast:show", { msg: "❌ 拉取失败: " + (e?.message || e), duration: 3000, type: "error" });
+      }
+      pullBtn.textContent = "⬇️ 拉取所选 ▾";
+      pullBtn.disabled = false;
     });
   }
 

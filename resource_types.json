@@ -13,7 +13,7 @@
     },
     {
       "id": "resourcepack",
-      "name": "材质包",
+      "name": "资源包",
       "icon": "🎨",
       "extensions": [".zip"],
       "installDir": "resourcepacks/",

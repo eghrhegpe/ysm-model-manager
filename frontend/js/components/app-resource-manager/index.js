@@ -1,5 +1,5 @@
 // ===== 资源管理器 Web Component =====
-// 通用资源管理（材质包/光影包/未来类型）
+// 通用资源管理（资源包/光影包/未来类型）
 // 使用: <app-resource-manager rtype="resourcepack"></app-resource-manager>
 
 import { sidebarHTML, itemHTML, detailHTML, placeholderHTML } from "./tpl.js";

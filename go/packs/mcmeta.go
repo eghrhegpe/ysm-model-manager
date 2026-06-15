@@ -13,7 +13,7 @@ import (
 	"ysm-model-manager/go/types"
 )
 
-// ReadPackMeta 从材质包文件（.zip 或目录）中读取 pack.mcmeta，返回名称和 base64 缩略图
+// ReadPackMeta 从资源包文件（.zip 或目录）中读取 pack.mcmeta，返回名称和 base64 缩略图
 func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 	var data []byte
 	var packPng []byte
@@ -24,7 +24,7 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 	}
 
 	if info.IsDir() {
-		// 目录格式材质包
+		// 目录格式资源包
 		metaPath := filepath.Join(path, "pack.mcmeta")
 		if meta, err := os.ReadFile(metaPath); err == nil {
 			data = meta
@@ -34,7 +34,7 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 			packPng = png
 		}
 	} else if strings.HasSuffix(strings.ToLower(path), ".zip") {
-		// ZIP 格式材质包
+		// ZIP 格式资源包
 		r, err := zip.OpenReader(path)
 		if err != nil {
 			return nil, "", err
@@ -152,7 +152,7 @@ func isYsmFile(path string) bool {
 	return false
 }
 
-// hasMcmeta 检查 zip 内是否有 pack.mcmeta（区分 ZIP 材质包/模型）
+// hasMcmeta 检查 zip 内是否有 pack.mcmeta（区分 ZIP 资源包/模型）
 func hasMcmeta(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))
 	if ext != ".zip" {

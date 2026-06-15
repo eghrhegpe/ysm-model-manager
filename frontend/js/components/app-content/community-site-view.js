@@ -593,8 +593,8 @@ export function renderSiteView(site, ctx) {
           ".cr-detail-actions .primary:hover{opacity:.85}" +
           ".cr-detail-actions .secondary{border-color:transparent;color:var(--muted)}" +
           ".cr-detail-actions .secondary:hover{border-color:var(--bd);color:var(--txt)}" +
-          ".cr-local-btn{transition:all .12s}" +
-          ".cr-local-btn:hover{background:var(--accent);color:#fff!important}" +
+          ".cr-local-btn{transition:background-color .12s,color .12s}" +
+          ".cr-local-btn:hover{background:var(--accent);color:#fff}" +
           ".cr-platform-badge{font-size:9px;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:3px;background:var(--surf);color:var(--muted);border:1px solid var(--bd);font-weight:500}" +
           ".cr-tag{font-size:10px;padding:1px 7px;border-radius:4px;line-height:18px;font-weight:600;display:inline-flex;align-items:center}" +
           ".cr-tag-game{background:var(--tag-game-bg);color:var(--tag-game)}" +

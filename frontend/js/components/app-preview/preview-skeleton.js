@@ -118,7 +118,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
       });
     }
 
-    // ---- 骨骼名开关 ----
+    // ---- 骨骼名开关 + 放大按钮 ----
     const toggleRow = document.createElement("div");
     toggleRow.className = "ysm-toggle-row";
     const eyeBtn = document.createElement("button");
@@ -132,6 +132,15 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     eyeHint.textContent = _labelsOn ? "开启" : "关闭";
     toggleRow.appendChild(eyeBtn);
     toggleRow.appendChild(eyeHint);
+
+    // 放大按钮
+    const zoomBtn = document.createElement("button");
+    zoomBtn.className = "ysm-btn";
+    zoomBtn.innerHTML = "🔍 放大";
+    zoomBtn.title = "全窗口查看模型";
+    zoomBtn.onclick = () => openFullPreview(canvas, model, textureImg, _labelsOn);
+    toggleRow.appendChild(zoomBtn);
+
     container.appendChild(toggleRow);
 
     // ---- 统计卡片 ----
@@ -186,7 +195,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
       const dx = e.clientX - _lastX;
       if (Math.abs(dx) > 3) _dragged = true; // 移动超过 3px 判定为拖拽
       _lastX = e.clientX;
-      _rotation = (_rotation + dx * 0.01) % (Math.PI * 2);
+      _rotation = (_rotation + dx * 0.5) % 360;
       doRender();
     });
     window.addEventListener("mouseup", () => {

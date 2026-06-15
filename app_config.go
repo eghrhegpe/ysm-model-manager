@@ -86,6 +86,10 @@ func (a *App) SaveAppConfig(repoRoot, rpRoot, mcRoot, linkMode, theme string) er
 		WinScrW: oldCfg.WinScrW,
 		WinScrH: oldCfg.WinScrH,
 	}
+	// 同步更新内存中的 RepoRoot（回收站等依赖此值）
+	if repoRoot != "" {
+		a.RepoRoot = repoRoot
+	}
 	return a.saveConfig(cfg)
 }
 
@@ -116,6 +120,11 @@ func (a *App) LoadAppConfig() types.AppConfig {
 }
 
 // ========== 自动更新 ==========
+// GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用）
+func (a *App) GetSubDirMap() map[string]string {
+	return types.SubDirAll()
+}
+
 func (a *App) CurrentVersion() string { return version.Version }
 
 func (a *App) CheckUpdate() (*updater.UpdateInfo, error) {

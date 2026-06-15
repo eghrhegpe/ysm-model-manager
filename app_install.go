@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/recycle"
@@ -298,7 +299,9 @@ func (a *App) ClearCustomDir(customDir string) (int, error) {
 }
 
 // CountInstanceResources 统计指定整合包中可清空的资源文件数
-func (a *App) CountInstanceResources(insName string) (int, error) {
+// 只统计仓库中已有的文件（同 clearInstanceDir 逻辑）
+// rtype 为空时统计全部类型，否则只统计指定类型
+func (a *App) CountInstanceResources(insName, rtype string) (int, error) {
 	insName = strings.TrimSpace(insName)
 	if insName == "" {
 		return 0, fmt.Errorf("整合包名为空")
@@ -321,15 +324,23 @@ func (a *App) CountInstanceResources(insName string) (int, error) {
 	}
 	total := 0
 	for _, d := range types.AllSubDirs() {
-		total += a.countInstanceDir(filepath.Join(target.VersionDir, d.SubDir))
+		if rtype != "" && d.RType != rtype {
+			continue
+		}
+		dir := types.FindInstDir(target.VersionDir, d.SubDir, d.RType)
+		repoRoot := a.GetRepoRoot(d.RType)
+		if repoRoot == "" {
+			continue
+		}
+		total += a.countMatchingInDir(dir, repoRoot)
 	}
 	return total, nil
 }
 
-// ClearInstanceResources 清空指定整合包中所有资源类型的已同步文件（走回收站）
-// insName: 整合包名（如 "1.20.1-Forge_47.4.20"）
+// ClearInstanceResources 清空指定整合包中已同步的文件（走回收站）
+// insName: 整合包名, rtype: 资源类型（空=全部, 非空=只清此类型）
 // 返回清除的文件数量
-func (a *App) ClearInstanceResources(insName string) (int, error) {
+func (a *App) ClearInstanceResources(insName, rtype string) (int, error) {
 	insName = strings.TrimSpace(insName)
 	if insName == "" {
 		return 0, fmt.Errorf("整合包名为空")
@@ -351,40 +362,47 @@ func (a *App) ClearInstanceResources(insName string) (int, error) {
 		return 0, fmt.Errorf("未找到整合包: %s", insName)
 	}
 
-	// 遍历所有资源类型的子目录统计文件数
+	// 先统计数量
 	total := 0
 	for _, d := range types.AllSubDirs() {
-		dir := filepath.Join(target.VersionDir, d.SubDir)
+		if rtype != "" && d.RType != rtype {
+			continue
+		}
+		dir := types.FindInstDir(target.VersionDir, d.SubDir, d.RType)
 		total += a.countInstanceDir(dir)
 	}
 	if total == 0 {
 		return 0, nil
 	}
-	// 实际删除
+	// 实际删除——每种类型传入对应的仓库根目录用于比对
 	for _, d := range types.AllSubDirs() {
-		dir := filepath.Join(target.VersionDir, d.SubDir)
-		total = a.clearInstanceDir(dir)
+		if rtype != "" && d.RType != rtype {
+			continue
+		}
+		dir := types.FindInstDir(target.VersionDir, d.SubDir, d.RType)
+		repoRoot := a.GetRepoRoot(d.RType)
+		total = a.clearInstanceDir(dir, d.RType, repoRoot)
 	}
 	return total, nil
 }
 
-// countInstanceDir 递归统计指定目录中可删除的资源文件数
+// countInstanceDir 递归统计指定目录中的文件数（不限扩展名）
 func (a *App) countInstanceDir(dir string) int {
+	return fsutil.CountFiles(dir, true)
+}
+
+// countMatchingInDir 统计实例目录中与仓库同名的文件数（仅用于清空提示）
+func (a *App) countMatchingInDir(instDir, repoRoot string) int {
+	repoFiles := make(map[string]bool)
+	for _, p := range fsutil.WalkAllFiles(repoRoot, true) {
+		repoFiles[strings.ToLower(filepath.Base(p))] = true
+	}
 	count := 0
-	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
+	for _, p := range fsutil.WalkAllFiles(instDir, true) {
+		if repoFiles[strings.ToLower(filepath.Base(p))] {
+			count++
 		}
-		if d.IsDir() {
-			return nil
-		}
-		ext := strings.ToLower(filepath.Ext(d.Name()))
-		if !types.IsSupportedExt(ext) {
-			return nil
-		}
-		count++
-		return nil
-	})
+	}
 	return count
 }
 
@@ -394,27 +412,26 @@ func isResourcePackFolder(path string) bool {
 	return err == nil
 }
 
-// clearInstanceDir 递归删除指定目录中的资源文件及空子目录
-func (a *App) clearInstanceDir(dir string) int {
+// clearInstanceDir 只删除仓库中已有的文件，跳过整合包自带的资源
+// 整合包的 resourcepacks/ 等子目录中可能有用户自己安装的、仓库没有的材质包，保留不动
+func (a *App) clearInstanceDir(dir string, rtype string, repoRoot string) int {
+	targets := fsutil.WalkAllFiles(dir, true)
+	if repoRoot == "" {
+		// 没有仓库根目录时不做处理
+		return 0
+	}
+	// 预加载仓库文件列表（仅文件名，用于判断是否在仓库中）
+	repoFiles := make(map[string]bool)
+	for _, p := range fsutil.WalkAllFiles(repoRoot, true) {
+		repoFiles[strings.ToLower(filepath.Base(p))] = true
+	}
 	count := 0
-	// 先递归收集所有需要删除的文件
-	var targets []string
-	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		ext := strings.ToLower(filepath.Ext(d.Name()))
-		if !types.IsSupportedExt(ext) {
-			return nil
-		}
-		targets = append(targets, p)
-		return nil
-	})
-	// 执行删除
 	for _, p := range targets {
+		name := strings.ToLower(filepath.Base(p))
+		if !repoFiles[name] {
+			// 仓库没有此文件，跳过（整合包自带资源）
+			continue
+		}
 		if a.RepoRoot != "" && paths.IsInside(a.RepoRoot, p) == nil {
 			if err := recycle.Move(p, a.RepoRoot); err != nil {
 				continue
@@ -426,18 +443,8 @@ func (a *App) clearInstanceDir(dir string) int {
 		}
 		count++
 	}
-	// 清理空目录（从最深到最浅）
-	var dirs []string
-	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-		if err != nil || !d.IsDir() || p == dir {
-			return nil
-		}
-		dirs = append(dirs, p)
-		return nil
-	})
-	for i := len(dirs) - 1; i >= 0; i-- {
-		os.Remove(dirs[i]) // 只删空目录
-	}
+	// 清理空目录
+	fsutil.CleanEmptyDirs(dir, true)
 	return count
 }
 
@@ -535,6 +542,7 @@ func (a *App) EmptyRecycleBin(_ string) (int, error) {
 }
 
 // allRecycleRoots 返回所有配置了路径的资源根目录
+// 注意：回收站统一使用 RepoRoot/.recycle，McRoot 等游戏目录不参与回收站管理
 func (a *App) allRecycleRoots(cfg types.AppConfig) []string {
 	roots := []string{
 		a.RepoRoot,
@@ -543,7 +551,6 @@ func (a *App) allRecycleRoots(cfg types.AppConfig) []string {
 		cfg.SchematicRoot,
 		cfg.MmdRoot,
 		cfg.VrcRoot,
-		cfg.McRoot,
 	}
 	result := []string{}
 	for _, r := range roots {
@@ -1078,8 +1085,8 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 			continue
 		}
 
-		// 整合包子目录
-		instDir := filepath.Join(targetIns.VersionDir, subDir)
+		// 整合包子目录——先试标准目录，再兜底扫描
+		instDir := types.FindInstDir(targetIns.VersionDir, subDir, rt.ID)
 
 		// 展示用文件级同步（推送时再用文件夹级推送）
 		result := ysmsync.SyncResources(globalDir, instDir)

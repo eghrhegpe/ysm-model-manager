@@ -310,7 +310,7 @@ export function renderSiteView(site, ctx) {
         '<input type="text" id="ws-cr-search" placeholder="搜创作者名..." ' +
         'style="flex:1;min-width:120px;max-width:160px;padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit;outline:none">' +
         '<span style="flex:1"></span>' +
-        '<button class="cr-fetch-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto" title="从 GitHub 拉取最新创作者 + 站点配置">🌐 更新配置</button>' +
+        '<button class="cr-fetch-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto" title="\u4ECE GitHub \u62C9\u53D6\u6700\u65B0\u521B\u4F5C\u8005 + \u7AD9\u70B9 + GitHub \u4ED3\u5E93 + \u8D44\u6E90\u7C7B\u578B">\uD83C\uDF10 \u66F4\u65B0\u914D\u7F6E</button>' +
         '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted">✏️ 编辑</button>' +
         "</div>" +
         '<div class="cr-tag-filter-row">' +
@@ -504,6 +504,9 @@ export function renderSiteView(site, ctx) {
     btn.addEventListener("click", () => {
       if (site.searchUrl && openUrl) {
         openUrl(fillSearch(site.searchUrl, btn.dataset.q));
+      } else if (openUrl) {
+        // 没有 searchUrl（如分类索引站），直接打开站点首页
+        openUrl(site.url);
       }
     });
   });
@@ -865,76 +868,79 @@ export function renderSiteView(site, ctx) {
     refreshView();
   });
 
-  // 🌐 拉取社区索引（creators + sites）
+  // 拉取社区索引（creators + sites + github 仓库 + 资源类型）
   searchResults
     .querySelector(".cr-fetch-btn")
     ?.addEventListener("click", async () => {
-      const btn = searchResults.querySelector(".cr-fetch-btn");
-      btn.textContent = "⏳";
+      var btn = searchResults.querySelector(".cr-fetch-btn");
+      btn.textContent = "\u23F3";
       btn.disabled = true;
       try {
-        const {
-          fetchCommunityCreators,
-          mergeCommunityCreators,
-          fetchCommunitySites,
-          mergeCommunitySites,
-          DEFAULT_COMMUNITY_URL,
-        } = await import("./workshop-core.js");
-
-        // 并行拉取 creators + sites
-        const [community, sitesData] = await Promise.all([
-          fetchCommunityCreators(DEFAULT_COMMUNITY_URL),
-          fetchCommunitySites(),
+        var m = await import("./workshop-core.js");
+        var results = await Promise.all([
+          m.fetchCommunityCreators(m.DEFAULT_COMMUNITY_URL),
+          m.fetchCommunitySites(),
+          m.fetchCommunityGitHubRepos(),
+          m.fetchCommunityResourceTypes(),
         ]);
+        var community = results[0],
+          sitesData = results[1],
+          gitHubRepos = results[2],
+          resourceTypes = results[3];
+        var logs = [];
+        var changed = false;
 
-        const logs = [];
-        // 合并创作者
         if (community && community.length) {
-          const { added, updated } = mergeCommunityCreators(allCreators, community);
-          const { SaveWorkshopCreators } =
-            await import("../../../wailsjs/go/main/App.js");
-          await SaveWorkshopCreators(allCreators);
-          if (added || updated) logs.push(`创作者: +${added} 补${updated}`);
-        } else {
-          logs.push("创作者: 无更新");
-        }
-        // 合并站点
-        if (sitesData && sitesData.length) {
-          const { added } = mergeCommunitySites(allSites, sitesData);
-          if (added > 0) {
-            const { SaveWorkshopSites } =
-              await import("../../../wailsjs/go/main/App.js");
-            await SaveWorkshopSites(allSites);
-            logs.push(`站点: +${added}`);
-          } else {
-            logs.push("站点: 无更新");
+          var r1 = m.mergeCommunityCreators(allCreators, community);
+          var App = await import("../../../wailsjs/go/main/App.js");
+          await App.SaveWorkshopCreators(allCreators);
+          if (r1.added || r1.updated) {
+            logs.push(
+              "\u521B\u4F5C\u8005: +" + r1.added + " \u8865" + r1.updated,
+            );
+            changed = true;
           }
-        } else {
-          logs.push("站点: 无更新");
+        }
+        if (sitesData && sitesData.length) {
+          var r2 = m.mergeCommunitySites(allSites, sitesData);
+          if (r2.added > 0) {
+            var App2 = await import("../../../wailsjs/go/main/App.js");
+            await App2.SaveWorkshopSites(allSites);
+            logs.push("\u7AD9\u70B9: +" + r2.added);
+            changed = true;
+          }
+        }
+        if (gitHubRepos && gitHubRepos.length) {
+          logs.push("GitHub: " + gitHubRepos.length + " \u4ED3\u5E93");
+          changed = true;
+        }
+        if (resourceTypes && resourceTypes.length) {
+          logs.push("\u7C7B\u578B: " + resourceTypes.length + " \u79CD");
+          changed = true;
         }
 
-        if (logs.length) {
+        if (changed) {
           bus.emit("toast:show", {
-            msg: "🌐 " + logs.join(" · "),
+            msg: "\uD83C\uDF10 " + logs.join(" \u00B7 "),
             duration: 4000,
             type: "success",
           });
           refreshView();
         } else {
           bus.emit("toast:show", {
-            msg: "🌐 社区索引为空或加载失败",
+            msg: "\uD83C\uDF10 \u5DF2\u662F\u6700\u65B0\u914D\u7F6E",
             duration: 3000,
-            type: "warn",
+            type: "success",
           });
         }
       } catch (e) {
         bus.emit("toast:show", {
-          msg: "🌐 " + friendlyError(e, "拉取失败"),
+          msg: "\uD83C\uDF10 " + friendlyError(e, "\u62C9\u53D6\u5931\u8D25"),
           duration: 3000,
           type: "error",
         });
       } finally {
-        btn.textContent = "🌐 更新配置";
+        btn.textContent = "\uD83C\uDF10 \u66F4\u65B0\u914D\u7F6E";
         btn.disabled = false;
       }
     });

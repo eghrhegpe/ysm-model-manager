@@ -35,14 +35,18 @@ export function registerContextMenus() {
           x,
           y,
           items: [
-            { label: "📦 " + instanceName, onClick: () => {} },
+            { label: "📦 " + instanceName + (rtype ? " (" + rtype + ")" : ""), onClick: () => {} },
             { divider: true },
             {
               label: "打开文件夹",
               icon: "📂",
               onClick: () => {
-                const { OpenFolder } = window.go.main.App;
-                OpenFolder?.(path || "");
+                const { OpenInstanceFolder } = window.go.main.App;
+                if (!path) {
+                  toast("❌ 整合包目录未找到", 3000, "error");
+                  return;
+                }
+                OpenInstanceFolder(path, rtype || "");
               },
             },
             { divider: true },
@@ -57,7 +61,11 @@ export function registerContextMenus() {
               label: "清空此整合包的模型",
               icon: "🗑️",
               danger: true,
-              onClick: () => bus.emit("instance:clear", { name: instanceName }),
+              onClick: () =>
+                bus.emit("instance:clear", {
+                  name: instanceName,
+                  rtype: rtype || undefined,
+                }),
             },
           ],
         });

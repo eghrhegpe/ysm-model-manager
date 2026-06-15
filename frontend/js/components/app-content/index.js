@@ -37,6 +37,11 @@ class AppContent extends HTMLElement {
   connectedCallback() {
     this._unsub = bus.on("nav:change", ({ page }) => {
       this._current = page;
+      // 切换页面时清除扫描缓存，确保显示最新数据
+      try {
+        var _cc = window.go.main.App.ClearScanCache;
+        if (_cc) _cc();
+      } catch (_) {}
       bus.emit("nav:changed", { page });
       this._render();
     });
@@ -173,15 +178,12 @@ class AppContent extends HTMLElement {
         subtabs.forEach((t) => {
           t.classList.toggle("active", t === btn);
         });
-        // 更新文件树
+        // 更新文件树（预览已在外层共享，不重复创建）
         if (treeBody) {
           treeBody.innerHTML =
-            '<div style="flex:1;display:flex;overflow:hidden">' +
             '<app-tree root="' +
             rtype +
-            '" style="flex:1;min-width:0"></app-tree>' +
-            '<app-preview mode="model" style="width:220px;flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
-            "</div>";
+            '" style="flex:1;min-width:0"></app-tree>';
         }
         // 通知其他 tab（仅当 rtype 真正变化时）
         if (rtype !== prevRtype) {
@@ -549,18 +551,19 @@ class AppContent extends HTMLElement {
     // 📦 显示 GitHub 仓库模型列表（比对本地已有文件）
     const showRepoModels = async (repo, models, source) => {
       // 加载本地仓库已有文件列表 + 镜像配置
-      let localMap = new Map();
-      let mirror = "";
+      var localMap = new Map();
+      var mirror = "";
       try {
-        const { LoadAppConfig, ScanModelEntries } =
-          await import("../../../wailsjs/go/main/App.js");
-        const cfg = await LoadAppConfig();
+        var AppM = await import("../../../wailsjs/go/main/App.js");
+        var cfg = await AppM.LoadAppConfig();
         mirror = cfg.mirror || "";
-        const repoRoot = cfg.repoRoot || "";
+        var repoRoot = cfg.repoRoot || "";
         if (repoRoot) {
-          const entries = await ScanModelEntries(repoRoot);
-          entries.forEach((e) => {
-            let n = e.Name || "";
+          // 先清缓存再扫描，确保新下载的文件立即可见
+          if (AppM.ClearScanCache) await AppM.ClearScanCache();
+          var entries = await AppM.ScanModelEntries(repoRoot);
+          entries.forEach(function (e) {
+            var n = e.Name || "";
             if (n.endsWith(".ban")) n = n.slice(0, -4);
             localMap.set(n, e.Hash || "");
           });

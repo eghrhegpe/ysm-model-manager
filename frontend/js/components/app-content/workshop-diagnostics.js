@@ -262,6 +262,10 @@ ${dateStr ? '<span style="font-size:8px;color:var(--muted);flex-shrink:0">' + da
 ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;background:#a6e3a122;color:#a6e3a1">推荐</span>' : ""}
 </label>`;
         });
+        html += `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background .1s;border-top:1px solid var(--bd)">
+<input type="radio" name="dedup-keep-${gi}" value="-1" style="flex-shrink:0;accent-color:var(--accent)">
+<span style="color:var(--muted)">🔀 保留全部（不删除）</span>
+</label>`;
         html += `</div>`;
       }
     }
@@ -286,11 +290,15 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
         for (const rtResult of allResults) {
           for (const group of rtResult.groups) {
             const files = group.files || [];
-            const selected = parseInt(
-              list.querySelector('input[name="dedup-keep-' + gi2 + '"]:checked')
-                ?.value ?? "0",
-              10,
+            var selEl = list.querySelector(
+              'input[name="dedup-keep-' + gi2 + '"]:checked',
             );
+            var selected = selEl ? parseInt(selEl.value, 10) : 0;
+            // 选中「保留全部」(-1) 时跳过改组
+            if (selected === -1) {
+              gi2++;
+              continue;
+            }
             for (let fi = 0; fi < files.length; fi++) {
               if (fi === selected) continue;
               try {

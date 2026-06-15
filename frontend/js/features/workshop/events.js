@@ -153,6 +153,13 @@ export function bindRepoEvents(sr, ctx) {
           queueStatus.style.display = "none";
         }
       }
+      // 清除扫描缓存（下载完成后立即可见）
+      try {
+        var _cc = window.go.main.App.ClearScanCache;
+        if (_cc) {
+          _cc();
+        }
+      } catch (_) {}
       bus.emit("tree:reload");
       bus.emit("stats:refresh");
     };
@@ -214,7 +221,9 @@ export function bindRepoEvents(sr, ctx) {
                 : "✅ 下载完成";
         }
         selectedSet.clear();
-        setTimeout(() => showRepoModels(), 1000);
+        setTimeout(function () {
+          showRepoModels();
+        }, 200);
       }
     };
 
@@ -351,7 +360,9 @@ export function bindRepoEvents(sr, ctx) {
                   ? "⚠️ " + errorList.length + " 失败"
                   : "✅ 下载完成";
             selectedSet.clear();
-            setTimeout(() => showRepoModels(), 1000);
+            setTimeout(function () {
+              showRepoModels();
+            }, 200);
           }, 3000);
         } else {
           clearCompleteTimer();
@@ -361,27 +372,40 @@ export function bindRepoEvents(sr, ctx) {
     };
 
     const onFileDone = (name, status, errMsg) => {
-      if (status === "fail") {
-        errorList.push({ name, err: errMsg || "未知错误" });
+      if (status === "ok") {
+        // 下载成功 → 直接加入 localMap，刷新后立即可见
+        if (name) localMap.set(name, "");
+        // 移除勾选
+        var cb2 = sr.querySelector('.gh-sel[data-name="' + esc(name) + '"]');
+        if (cb2) {
+          cb2.checked = false;
+          selectedSet.delete(name);
+          updateSelectedUI();
+        }
+      } else if (status === "fail") {
+        errorList.push({
+          name: name,
+          err: errMsg || "\u672A\u77E5\u9519\u8BEF",
+        });
         // 进度条显示红色错误
-        const pctEl = queueStatus?.querySelector(".gh-progress-pct");
-        const fillEl = queueStatus?.querySelector(".gh-progress-fill");
-        if (pctEl) {
-          pctEl.textContent = "❌";
-          pctEl.style.color = "#f38ba8";
-          pctEl.title = errMsg || "下载失败";
-          if (pctEl._dotTimer) {
-            clearInterval(pctEl._dotTimer);
-            pctEl._dotTimer = null;
+        var pctEl3 = queueStatus?.querySelector(".gh-progress-pct");
+        var fillEl3 = queueStatus?.querySelector(".gh-progress-fill");
+        if (pctEl3) {
+          pctEl3.textContent = "\u274C";
+          pctEl3.style.color = "#f38ba8";
+          pctEl3.title = errMsg || "\u4E0B\u8F7D\u5931\u8D25";
+          if (pctEl3._dotTimer) {
+            clearInterval(pctEl3._dotTimer);
+            pctEl3._dotTimer = null;
           }
         }
-        if (fillEl) {
-          fillEl.style.background = "#f38ba8";
+        if (fillEl3) {
+          fillEl3.style.background = "#f38ba8";
         }
         // 取消该文件的勾选
-        const cb = sr.querySelector('.gh-sel[data-name="' + esc(name) + '"]');
-        if (cb) {
-          cb.checked = false;
+        var cb3 = sr.querySelector('.gh-sel[data-name="' + esc(name) + '"]');
+        if (cb3) {
+          cb3.checked = false;
           selectedSet.delete(name);
           updateSelectedUI();
         }

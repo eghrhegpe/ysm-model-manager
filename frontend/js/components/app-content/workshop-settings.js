@@ -97,6 +97,41 @@ export async function initSettings(root) {
     },
   );
 
+  // ↩️ 默认按钮：恢复 YSM 模型路径为 mcRoot 下的默认位置
+  root
+    .getElementById("set-repo-default")
+    ?.addEventListener("click", async function () {
+      var mcRoot = cfg.mcRoot || "";
+      if (!mcRoot) {
+        bus.emit("toast:show", {
+          msg: "请先设置游戏根目录",
+          duration: 3000,
+          type: "warn",
+        });
+        return;
+      }
+      var defaultPath =
+        mcRoot.replace(/\//g, "\\") + "\\config\\yes_steve_model\\custom";
+      var theme = localStorage.getItem("theme") || "dark";
+      await SaveAppConfig(
+        defaultPath,
+        cfg.resourcepackRoot || "",
+        mcRoot,
+        cfg.linkMode || "copy",
+        theme,
+      );
+      cfg.repoRoot = defaultPath;
+      _cardRefreshers.forEach(function (fn) {
+        fn();
+      });
+      bus.emit("config:updated");
+      bus.emit("toast:show", {
+        msg: "↩️ 已恢复默认路径: " + defaultPath,
+        duration: 3000,
+        type: "success",
+      });
+    });
+
   bindPathClick(
     "set-rp-path",
     () =>

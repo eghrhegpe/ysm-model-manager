@@ -15,6 +15,7 @@
     "InstallModelTo",
     "InstallModelFile",
     "ListFileNames",
+    "ListAllFilePaths",
     "OpenFolder",
     "CreateDir",
     "MoveModelFile",
@@ -76,6 +77,7 @@
     "ImportWorkshopCreatorsJSONFile",
     "BackupWorkshopCreators",
     "MergeWorkshopCreatorsFromJSON",
-    "ReplaceWorkshopCreatorsFromJSON"
+    "ReplaceWorkshopCreatorsFromJSON",
+    "ClearScanCache"
   ]
 }

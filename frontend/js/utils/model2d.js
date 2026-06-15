@@ -1,4 +1,5 @@
 // ===== 基岩版模型 2D 线条图渲染 =====
+import { dbg } from "./debug.js";
 
 /**
  * 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转）
@@ -35,7 +36,7 @@ export function renderModel2D(canvas, model, textureImg, opts) {
   if (cubesWithRotation.length > 0) {
     // 按 Y 坐标排序，只显示最高的 10 个（最可能是头发）
     cubesWithRotation.sort((a, b) => b.y - a.y);
-    console.log("[model2d] 头部带 rotation 的 cube (前10个):", cubesWithRotation.slice(0, 10));
+    dbg("model2d", "头部带 rotation 的 cube (前10个):", cubesWithRotation.slice(0, 10));
 
     // 额外调试：检查第一个 cube 是否有 pivot
     const firstCube = cubesWithRotation[0];
@@ -45,7 +46,7 @@ export function renderModel2D(canvas, model, textureImg, opts) {
       c.origin[1] === firstCube.origin[1] &&
       c.origin[2] === firstCube.origin[2]
     );
-    console.log("[model2d] 第一个 cube 的 pivot:", cube?.pivot || "无显式 pivot，使用默认中心点");
+    dbg("model2d", "第一个 cube 的 pivot:", cube?.pivot || "无显式 pivot，使用默认中心点");
   }
 
   const showLabels = opts?.showLabels !== false;

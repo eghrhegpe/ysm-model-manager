@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GetModel3DSpec } from "../../wailsjs/go/main/App.js";
 import { buildSpecFromModel } from "./model3d-spec.js";
+import { dbg } from "./debug.js";
 
 // Go spec 缓存（避免重复调用 GetModel3DSpec）
 const specCache = new Map();
@@ -23,7 +24,7 @@ if (
     try {
       const jsonStr = await GetModel3DSpec(path || "");
       const spec = JSON.parse(jsonStr);
-      console.log("[DEBUG] spec:", spec);
+      dbg("model3d", "spec:", spec);
       return spec;
     } catch (e) {
       console.error("[DEBUG]", e);

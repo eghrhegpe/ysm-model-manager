@@ -89,7 +89,7 @@ function applyUIPrefs() {
     "--fs-tiny",
     "--fs-xl",
   ].forEach((v) => document.documentElement.style.removeProperty(v));
-  // 通过 --fs-scale 控制字号缩放（与设置页 workshop-settings.js 一致）
+  // 通过 --fs-scale 控制字号缩放（与设置页 community-settings.js 一致）
   const scaleMap = { small: "-1px", normal: "0px", large: "2px" };
   document.documentElement.style.setProperty(
     "--fs-scale",

@@ -10,17 +10,17 @@ import {
   githubHTML,
 } from "./tpl.js";
 import { registerGlobalHandlers } from "../../core/global-handlers.js";
-import { initDiagnostics } from "./workshop-diagnostics.js";
+import { initDiagnostics } from "./community-diagnostics.js";
 
-import { initSettings } from "./workshop-settings.js";
+import { initSettings } from "./community-settings.js";
 import {
   countMissing,
   renderCardsHTML,
   renderRepoHeaderHTML,
-} from "../../features/workshop/render.js";
-import { bindRepoEvents } from "../../features/workshop/events.js";
-import { renderSiteView } from "./workshop-site-view.js";
-import { loadWorkshopData, fillSearch } from "./workshop-core.js";
+} from "../../features/community/render.js";
+import { bindRepoEvents } from "../../features/community/events.js";
+import { renderSiteView } from "./community-site-view.js";
+import { loadCommunityData, fillSearch } from "./community-core.js";
 import { friendlyError } from "../../utils/errors.js";
 
 class AppContent extends HTMLElement {
@@ -231,7 +231,7 @@ class AppContent extends HTMLElement {
             this._unsubs = this._unsubs || [];
             if (recycleCleanup) this._unsubs.push(recycleCleanup);
           } else if (tab === "dedup") {
-            const { startDedup } = await import("./workshop-diagnostics.js");
+            const { startDedup } = await import("./community-diagnostics.js");
             let dedupType = localStorage.getItem("repo_rtype") || "ysm";
             container.innerHTML =
               '<div style="display:flex;flex-direction:column;height:100%">' +
@@ -355,7 +355,7 @@ class AppContent extends HTMLElement {
 
     // B站/爱发电 tab 点击 → 在右侧显示对应站点的创作者（不打开网站）
     const showCreatorsBySite = async (siteType) => {
-      const { sites, creators, authors } = await loadWorkshopData();
+      const { sites, creators, authors } = await loadCommunityData();
       allSites = sites;
       allCreators = creators;
       repoAuthors = authors || [];
@@ -372,7 +372,7 @@ class AppContent extends HTMLElement {
     };
     // 默认显示第一个站点
     setTimeout(async () => {
-      const { sites } = await loadWorkshopData();
+      const { sites } = await loadCommunityData();
       allSites = sites;
       // 动态生成 Tab
       const tabsEl = root.getElementById("ws-tabs");
@@ -710,7 +710,7 @@ class AppContent extends HTMLElement {
           });
         }
         const { tryFetchModels } =
-          await import("../../features/workshop/data.js");
+          await import("../../features/community/data.js");
         const result = await tryFetchModels(repo, mirror, (pct, label) => {
           resultsBody.innerHTML =
             '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +

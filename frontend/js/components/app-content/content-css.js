@@ -60,19 +60,7 @@ export const contentCSS = `
 .batch-dropdown { position:relative;display:inline-block; }
 .batch-menu { position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.3);min-width:120px; }
 .repo-footer { padding:3px 12px;font-size:var(--fs-xs);color:var(--muted);border-top:1px solid var(--bd);flex-shrink:0; }
-.stg-page { flex:1;overflow-y:auto;padding:12px; }
-.stg-title { margin-bottom:8px; }
-.stg-sub-title { margin-top:16px; }
-.stg-group { margin-bottom:12px; }
-.stg-val { font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px; }
-.stg-btn { font-size:var(--fs-sm); }
-.stg-hint { font-size:var(--fs-xs);color:var(--muted,#6c7086);padding:2px 0 0 0; }
-.stg-ml-auto { margin-left:auto; }
-.stg-radio-row { display:flex;gap:8px;padding:4px 0; }
-.stg-label { display:flex;align-items:center;gap:4px;font-size:var(--fs-base);cursor:pointer; }
-.stg-hint-hidden { font-size:var(--fs-xs);color:var(--muted,#6c7086);padding:2px 0 0 0;display:none; }
-.stg-hint-warn { font-size:var(--fs-xs);color:#e5534b; }
-.stg-select { background:var(--bg,#1e1e2e);color:var(--txt,#cdd6f4);border:1px solid var(--bd,#444);border-radius:4px;padding:3px 6px;font-size:var(--fs-base);cursor:pointer; }
+/* 设置页样式已移至 components.css（全局非 Shadow DOM 区域） */
 .settings-group { padding:0 16px; }
 .setting-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surf); border-radius:6px; margin-bottom:4px; font-size:var(--fs-md); }
 .setting-row .label { color:var(--txt); }

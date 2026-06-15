@@ -61,20 +61,7 @@ func FindDuplicateFiles(dir string, skipRecycle bool) ([]Group, error) {
 			return nil
 		}
 		if info.Size() == 0 {
-			// 空文件：用特殊哈希 "empty" 统一标记，参与分组
-			emptyHash := "empty"
-			if g, ok := hashGroups[emptyHash]; ok {
-				g.Files = append(g.Files, FileEntry{
-					Name: filepath.Base(p), Path: p,
-					Size: 0, ModTime: info.ModTime().UnixMilli(),
-				})
-			} else {
-				hashGroups[emptyHash] = &Group{
-					Hash: emptyHash, Size: 0,
-					Files: []FileEntry{{Name: filepath.Base(p), Path: p, Size: 0, ModTime: info.ModTime().UnixMilli()}},
-				}
-				orderedKeys = append(orderedKeys, emptyHash)
-			}
+			// 跳过空文件——不同用途的空文件（占位符、空 .animation 等）不是重复文件
 			return nil
 		}
 
@@ -158,7 +145,7 @@ func CountDuplicates(dir string, skipRecycle bool) (groups int, extraFiles int, 
 			return nil
 		}
 		if info.Size() == 0 {
-			hashCount["empty"]++
+			// 跳过空文件——不同用途的空文件不是重复文件
 			return nil
 		}
 		f, err := os.Open(p)

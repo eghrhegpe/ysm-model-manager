@@ -101,11 +101,17 @@ func (q *DownloadQueue) process() {
 
 		runtime.EventsEmit(q.app.ctx, "queue:file-start", task.Name, remaining+1, remaining)
 
-		_, err := q.app.downloadFileWithQueue(task.URL, task.SaveDir)
+		savePath, err := q.app.downloadFileWithQueue(task.URL, task.SaveDir)
 		if err != nil {
 			runtime.EventsEmit(q.app.ctx, "queue:file-done", task.Name, "fail", err.Error())
 		} else {
 			runtime.EventsEmit(q.app.ctx, "queue:file-done", task.Name, "ok", "")
+			// 写入导入日志
+			var fileSize int64
+			if fi, st := os.Stat(savePath); st == nil {
+				fileSize = fi.Size()
+			}
+			q.app.AddImportLog(task.Name, task.URL, task.SaveDir, fileSize, "success", "")
 		}
 
 		select {

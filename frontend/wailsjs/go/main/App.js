@@ -50,16 +50,20 @@ export function ClearImportLogs() {
   return window['go']['main']['App']['ClearImportLogs']();
 }
 
-export function ClearInstanceResources(arg1) {
-  return window['go']['main']['App']['ClearInstanceResources'](arg1);
+export function ClearInstanceResources(arg1, arg2) {
+  return window['go']['main']['App']['ClearInstanceResources'](arg1, arg2);
+}
+
+export function ClearScanCache() {
+  return window['go']['main']['App']['ClearScanCache']();
 }
 
 export function CountDuplicateFiles(arg1) {
   return window['go']['main']['App']['CountDuplicateFiles'](arg1);
 }
 
-export function CountInstanceResources(arg1) {
-  return window['go']['main']['App']['CountInstanceResources'](arg1);
+export function CountInstanceResources(arg1, arg2) {
+  return window['go']['main']['App']['CountInstanceResources'](arg1, arg2);
 }
 
 export function CreateDir(arg1) {
@@ -210,6 +214,10 @@ export function GetResourceInstanceStatus(arg1, arg2, arg3) {
   return window['go']['main']['App']['GetResourceInstanceStatus'](arg1, arg2, arg3);
 }
 
+export function GetSubDirMap() {
+  return window['go']['main']['App']['GetSubDirMap']();
+}
+
 export function GetWasmBinary() {
   return window['go']['main']['App']['GetWasmBinary']();
 }
@@ -290,6 +298,10 @@ export function IsResourcePackEnabled(arg1) {
   return window['go']['main']['App']['IsResourcePackEnabled'](arg1);
 }
 
+export function ListAllFilePaths(arg1) {
+  return window['go']['main']['App']['ListAllFilePaths'](arg1);
+}
+
 export function ListFileNames(arg1) {
   return window['go']['main']['App']['ListFileNames'](arg1);
 }
@@ -348,6 +360,10 @@ export function OpenFolder(arg1) {
 
 export function OpenInBrowser(arg1) {
   return window['go']['main']['App']['OpenInBrowser'](arg1);
+}
+
+export function OpenInstanceFolder(arg1, arg2) {
+  return window['go']['main']['App']['OpenInstanceFolder'](arg1, arg2);
 }
 
 export function PullResourceFromInstance(arg1, arg2) {

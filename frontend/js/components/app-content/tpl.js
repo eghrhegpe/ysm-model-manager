@@ -22,19 +22,17 @@ export function repositoryHTML() {
     '<button class="repo-subtab" data-rtab="create-blueprint">⚙️ 蓝图</button>' +
     "</div>" +
     '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
-    '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;border-right:1px solid var(--bd)">' +
+    '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;min-width:0">' +
     '<div class="repo-tab-body" id="repo-tab-tree" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
-    // 默认 YSM 文件树 + 预览
-    '<div style="flex:1;display:flex;overflow:hidden">' +
+    // 默认 YSM 文件树（预览在外层共享）
     '<app-tree root="ysm" style="flex:1;min-width:0"></app-tree>' +
-    '<app-preview mode="model" style="width:220px;flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
-    "</div>" +
     "</div>" +
     '<div class="repo-tab-body" id="repo-tab-import" style="display:none;flex:1;overflow-y:auto"></div>' +
     '<div class="repo-tab-body" id="repo-tab-recycle" style="display:none;flex:1;overflow-y:auto"></div>' +
     '<div class="repo-tab-body" id="repo-tab-dedup" style="display:none;flex:1;overflow-y:auto;padding:12px"></div>' +
     '<div class="repo-tab-body" id="repo-tab-oldest" style="display:none;flex:1;overflow-y:auto;overflow-x:hidden"></div>' +
     "</div>" +
+    '<app-preview mode="model" style="width:220px;flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
     "</div>" +
     "</div>"
   );
@@ -115,7 +113,7 @@ export function settingsHTML() {
     </div>
     <!-- Row 2 -->
     <div class="stg-card">
-      <div class="stg-card-hdr">💎 YSM 模型路径</div>
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">💎 YSM 模型路径<button class="btn" id="set-repo-default" style="font-size:var(--fs-btn-tool);padding:var(--pad-btn-tool) 8px">↩️ 默认</button></div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-repo-path">加载中...</div>
         <div class="stg-card-hint">存放 .ysm 模型文件的独立目录（不是游戏目录）</div>

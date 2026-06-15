@@ -45,7 +45,22 @@ export function renderModelList(
   if (!filtered.length) {
     const empty = document.createElement("div");
     empty.className = "gh-empty";
-    empty.textContent = "🔍 没有匹配的模型";
+
+    // 细化空状态提示
+    if (q && !models.some((m) => m.name.toLowerCase().includes(q))) {
+      // 搜索无结果
+      empty.textContent = `🔍 没有找到包含“${esc(q)}”的模型`;
+    } else if (!showAll && models.every((m) => !isModelMissing(m, localMap))) {
+      // 全部已下载
+      empty.textContent = "✅ 所有模型已下载（点击 ⚙️ 筛选查看全部）";
+    } else if (models.length === 0) {
+      // 仓库为空
+      empty.textContent = "📦 该仓库暂无模型数据";
+    } else {
+      // 其他情况（如筛选后为空）
+      empty.textContent = "🔍 没有匹配的模型";
+    }
+
     frag.appendChild(empty);
     return frag;
   }

@@ -48,13 +48,7 @@ export async function loadWorkshopData() {
 
 /** 后台静默拉取社区索引并合并 */
 async function tryAutoMergeCommunity(creators) {
-  let mirror = "";
-  try {
-    const { LoadAppConfig } = await import("../../../wailsjs/go/main/App.js");
-    const cfg = await LoadAppConfig();
-    mirror = cfg.mirror || "";
-  } catch {}
-  const community = await fetchCommunityCreators(DEFAULT_COMMUNITY_URL, mirror);
+  const community = await fetchCommunityCreators(DEFAULT_COMMUNITY_URL);
   if (!community.length) return;
   const { added } = mergeCommunityCreators(creators, community);
   if (added > 0) {
@@ -181,13 +175,28 @@ export function mergeCommunityCreators(local, community) {
  */
 export async function fetchCommunitySites(mirror) {
   const attempts = [
-    { name: "raw", url: "https://raw.githubusercontent.com/eghrhegpe/ysm-model-manager/main/workshop_sites.json", label: "⏳ 站点索引: raw…" },
-    { name: "jsd", url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-model-manager@main/workshop_sites.json", label: "⏳ 站点索引: jsdelivr…" },
-    { name: "api", url: "https://api.github.com/repos/eghrhegpe/ysm-model-manager/contents/workshop_sites.json", label: "⏳ 站点索引: api…" },
+    {
+      name: "raw",
+      url: "https://raw.githubusercontent.com/eghrhegpe/ysm-model-manager/main/workshop_sites.json",
+      label: "⏳ 站点索引: raw…",
+    },
+    {
+      name: "jsd",
+      url: "https://cdn.jsdelivr.net/gh/eghrhegpe/ysm-model-manager@main/workshop_sites.json",
+      label: "⏳ 站点索引: jsdelivr…",
+    },
+    {
+      name: "api",
+      url: "https://api.github.com/repos/eghrhegpe/ysm-model-manager/contents/workshop_sites.json",
+      label: "⏳ 站点索引: api…",
+    },
   ];
-  const sorted = mirror === "jsdelivr" ? [attempts[1], attempts[0], attempts[2]]
-    : mirror === "githubapi" ? [attempts[2], attempts[0], attempts[1]]
-    : attempts;
+  const sorted =
+    mirror === "jsdelivr"
+      ? [attempts[1], attempts[0], attempts[2]]
+      : mirror === "githubapi"
+        ? [attempts[2], attempts[0], attempts[1]]
+        : attempts;
   for (const a of sorted) {
     const ctrl = new AbortController();
     const tmr = setTimeout(() => ctrl.abort(), 8000);

@@ -203,7 +203,7 @@ class AppPreview extends HTMLElement {
         });
       }
 
-      // ---- 骨骼名开关 ----
+      // ---- 骨骼名开关 + 放大按钮 ----
       const toggleRow = document.createElement("div");
       toggleRow.className = "ysm-toggle-row";
       const eyeBtn = document.createElement("button");
@@ -217,6 +217,15 @@ class AppPreview extends HTMLElement {
       eyeHint.textContent = _labelsOn ? "开启" : "关闭";
       toggleRow.appendChild(eyeBtn);
       toggleRow.appendChild(eyeHint);
+
+      // 放大按钮
+      const zoomBtn = document.createElement("button");
+      zoomBtn.className = "ysm-btn";
+      zoomBtn.innerHTML = "🔍 放大";
+      zoomBtn.title = "全窗口查看模型";
+      zoomBtn.onclick = () => openFullPreview(canvas, model, textureImg, _labelsOn);
+      toggleRow.appendChild(zoomBtn);
+
       container.appendChild(toggleRow);
 
       // ---- 统计卡片 ----

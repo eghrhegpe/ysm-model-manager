@@ -101,6 +101,7 @@ export async function tryFetchModels(repo, mirror, onProgress) {
       if (Array.isArray(models)) return { models, source: attempt.name };
     } catch (err) {
       clearTimeout(tmr);
+      throw err;
     }
   };
 

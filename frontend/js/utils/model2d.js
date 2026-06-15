@@ -19,12 +19,33 @@ export function renderModel2D(canvas, model, textureImg, opts) {
   for (const bone of model.bones) {
     for (const c of bone.cubes || []) {
       if (c.rotation && (c.rotation[0] !== 0 || c.rotation[1] !== 0 || c.rotation[2] !== 0)) {
-        cubesWithRotation.push({ bone: bone.name, origin: c.origin, size: c.size, rotation: c.rotation });
+        // 只记录 Y 坐标较高的 cube（可能是头发）
+        if (c.origin[1] > 20) { // Y > 20 的通常是头部/头发
+          cubesWithRotation.push({
+            bone: bone.name,
+            origin: c.origin,
+            size: c.size,
+            rotation: c.rotation,
+            y: c.origin[1]
+          });
+        }
       }
     }
   }
   if (cubesWithRotation.length > 0) {
-    console.log("[model2d] 发现带 rotation 的 cube:", cubesWithRotation);
+    // 按 Y 坐标排序，只显示最高的 10 个（最可能是头发）
+    cubesWithRotation.sort((a, b) => b.y - a.y);
+    console.log("[model2d] 头部带 rotation 的 cube (前10个):", cubesWithRotation.slice(0, 10));
+
+    // 额外调试：检查第一个 cube 是否有 pivot
+    const firstCube = cubesWithRotation[0];
+    const bone = model.bones.find(b => b.name === firstCube.bone);
+    const cube = bone?.cubes?.find(c =>
+      c.origin[0] === firstCube.origin[0] &&
+      c.origin[1] === firstCube.origin[1] &&
+      c.origin[2] === firstCube.origin[2]
+    );
+    console.log("[model2d] 第一个 cube 的 pivot:", cube?.pivot || "无显式 pivot，使用默认中心点");
   }
 
   const showLabels = opts?.showLabels !== false;
@@ -328,27 +349,31 @@ function drawView(
         const hasRotation = cubeRot[0] !== 0 || cubeRot[1] !== 0 || cubeRot[2] !== 0;
 
         if (hasRotation) {
-          // 有 rotation，使用与动画骨骼相同的处理方式
+          // 有 rotation，使用简化方法：先计算旋转后的中心点，然后用 Canvas rotate 绘制
           const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
 
-          // cube 中心点
+          // 获取旋转角度
+          const rxRad = (cubeRot[0] * Math.PI) / 180;
+          const rzRad = (cubeRot[2] * Math.PI) / 180;
+          const cosRx = Math.cos(rxRad);
+          const cRz = Math.cos(rzRad);
+          const sRz = Math.sin(rzRad);
+
+          // cube 原始中心点
           let cx = x + sx / 2;
           let cy = y + sy / 2;
           let cz = z + sz / 2;
 
-          // 应用 X 轴旋转（影响 Y 方向）
-          const rxRad = (cubeRot[0] * Math.PI) / 180;
-          const cosRx = Math.cos(rxRad);
+          // 应用 X 轴旋转（只影响 Y 坐标）
           if (rxRad !== 0) {
             const dyy = cy - pivot[1];
             cy = pivot[1] + dyy * cosRx;
           }
 
-          // 应用 Z 轴旋转（屏幕平面内）
-          const rzRad = (cubeRot[2] * Math.PI) / 180;
+          // 应用 Z 轴旋转（影响 X 和 Y）
           if (rzRad !== 0) {
-            const cRz = Math.cos(rzRad), sRz = Math.sin(rzRad);
-            const dxx = cx - pivot[0], dyy = cy - pivot[1];
+            const dxx = cx - pivot[0];
+            const dyy = cy - pivot[1];
             cx = pivot[0] + dxx * cRz - dyy * sRz;
             cy = pivot[1] + dxx * sRz + dyy * cRz;
           }
@@ -359,11 +384,9 @@ function drawView(
           const screenX = ox + scrX * scale;
           const screenY = oy - scrY * scale;
 
-          // 投影后的宽高
-          const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
-          const ph = sy * Math.abs(cosRx);
-          const drawW = pw * scale;
-          const drawH = ph * scale;
+          // 计算尺寸（考虑 X 轴旋转对高度的影响）
+          const drawW = sx * scale;
+          const drawH = sy * Math.abs(cosRx) * scale;
           if (drawW < 1 || drawH < 1) continue;
 
           ctx.save();

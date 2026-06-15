@@ -164,6 +164,27 @@ export function registerContextMenus() {
                 refreshUI();
               },
             },
+            { divider: true },
+            {
+              label: "复制文件路径列表",
+              icon: "📋",
+              onClick: async () => {
+                try {
+                  await navigator.clipboard.writeText(paths.join("\n"));
+                  toast(`✅ 已复制 ${paths.length} 个路径`, 2000);
+                } catch {
+                  const ta = document.createElement("textarea");
+                  ta.value = paths.join("\n");
+                  ta.style.position = "fixed";
+                  ta.style.opacity = "0";
+                  document.body.appendChild(ta);
+                  ta.select();
+                  document.execCommand("copy");
+                  document.body.removeChild(ta);
+                  toast(`✅ 已复制 ${paths.length} 个路径`, 2000);
+                }
+              },
+            },
           ],
         });
         return;

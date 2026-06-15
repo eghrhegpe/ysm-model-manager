@@ -98,16 +98,16 @@ export function DetectResourceType(arg1) {
   return window['go']['main']['App']['DetectResourceType'](arg1);
 }
 
-export function DoUpdate(arg1) {
-  return window['go']['main']['App']['DoUpdate'](arg1);
+export function DoUpdate(arg1, arg2) {
+  return window['go']['main']['App']['DoUpdate'](arg1, arg2);
 }
 
 export function DownloadFromGitHub(arg1, arg2) {
   return window['go']['main']['App']['DownloadFromGitHub'](arg1, arg2);
 }
 
-export function DownloadUpdate(arg1) {
-  return window['go']['main']['App']['DownloadUpdate'](arg1);
+export function DownloadUpdate(arg1, arg2) {
+  return window['go']['main']['App']['DownloadUpdate'](arg1, arg2);
 }
 
 export function EmptyRecycleBin(arg1) {

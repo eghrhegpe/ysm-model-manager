@@ -80,6 +80,56 @@ export function bindToolbarEvents(root, vm) {
     vm._renderTree();
   });
 
+  // 高级筛选按钮：展开/收起筛选面板
+  $("btn-adv-filter")?.addEventListener("click", () => {
+    const panel = $("adv-filter");
+    if (!panel) return;
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+  });
+
+  // 高级筛选：应用
+  $("af-apply")?.addEventListener("click", async () => {
+    const kw = $("srch")?.value || "";
+    const minBones = parseInt($("af-minBones")?.value || "0") || 0;
+    const maxBones = parseInt($("af-maxBones")?.value || "0") || 0;
+    const minCubes = parseInt($("af-minCubes")?.value || "0") || 0;
+    const maxCubes = parseInt($("af-maxCubes")?.value || "0") || 0;
+    const minTex = parseInt($("af-minTex")?.value || "0") || 0;
+    const maxTex = parseInt($("af-maxTex")?.value || "0") || 0;
+    if (!kw && !minBones && !maxBones && !minCubes && !maxCubes && !minTex && !maxTex) {
+      vm._filterPaths = null;
+      vm._renderTree();
+      return;
+    }
+    const { LoadAppConfig, SearchModels } = await import("../../../wailsjs/go/main/App.js");
+    const cfg = await LoadAppConfig();
+    if (!cfg.repoRoot) {
+      bus.emit("toast:show", { msg: "请先设置仓库目录", duration: 2000, type: "warn" });
+      return;
+    }
+    try {
+      const results = await SearchModels(cfg.repoRoot, kw, minBones, maxBones, minCubes, maxCubes, minTex, maxTex);
+      if (results && results.length) {
+        vm._filterPaths = new Set(results.map((r) => r.Path));
+      } else {
+        vm._filterPaths = null;
+      }
+    } catch (e) {
+      bus.emit("toast:show", { msg: "❌ 搜索失败: " + friendlyError(e), duration: 4000, type: "error" });
+      vm._filterPaths = null;
+    }
+    vm._renderTree();
+  });
+
+  // 高级筛选：清除
+  $("af-clear")?.addEventListener("click", () => {
+    ["af-minBones","af-maxBones","af-minCubes","af-maxCubes","af-minTex","af-maxTex"].forEach((id) => {
+      const el = $(id); if (el) el.value = "";
+    });
+    vm._filterPaths = null;
+    vm._renderTree();
+  });
+
   // 作者下拉菜单 — 鼠标悬停时动态填充
   const menuAuthors = $("menu-authors");
   if (menuAuthors) {

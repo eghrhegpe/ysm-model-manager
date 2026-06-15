@@ -53,11 +53,11 @@ export function DeleteResourcePack(arg1:string):Promise<void>;
 
 export function DetectResourceType(arg1:string):Promise<string>;
 
-export function DoUpdate(arg1:string):Promise<string>;
+export function DoUpdate(arg1:string,arg2:string):Promise<string>;
 
 export function DownloadFromGitHub(arg1:string,arg2:string):Promise<string>;
 
-export function DownloadUpdate(arg1:string):Promise<string>;
+export function DownloadUpdate(arg1:string,arg2:string):Promise<string>;
 
 export function EmptyRecycleBin(arg1:string):Promise<number>;
 

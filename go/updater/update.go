@@ -2,12 +2,16 @@ package updater
 
 import (
 	"archive/zip"
+	"crypto/sha256"
+	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -15,6 +19,9 @@ import (
 	"sync"
 	"time"
 )
+
+//go:embed ysm-updater-helper.exe
+var updaterHelper embed.FS
 
 const (
 	repoOwner = "eghrhegpe"
@@ -41,11 +48,13 @@ type Release struct {
 
 // UpdateInfo 更新信息（序列化给前端）
 type UpdateInfo struct {
-	Available    bool   `json:"available"`
-	Latest       string `json:"latest"`
-	Current      string `json:"current"`
-	URL          string `json:"url"`
-	ReleaseNotes string `json:"releaseNotes,omitempty"`
+	Available     bool   `json:"available"`
+	Latest        string `json:"latest"`
+	Current       string `json:"current"`
+	URL           string `json:"url"`
+	SHA256SUMSURL string `json:"sha256sumsUrl,omitempty"`
+	ExpectedHash  string `json:"expectedHash,omitempty"`
+	ReleaseNotes  string `json:"releaseNotes,omitempty"`
 }
 
 // assetPattern 返回当前系统匹配的 asset 名
@@ -85,6 +94,8 @@ func Check(current string) (*UpdateInfo, error) {
 
 	var latestTag string
 	var latestAssetURL string
+	var latestSHASumsURL string
+	var expectedHash string
 	var notesBuf strings.Builder
 
 	for _, rel := range rels {
@@ -102,7 +113,9 @@ func Check(current string) (*UpdateInfo, error) {
 			for _, a := range rel.Assets {
 				if strings.EqualFold(a.Name, pattern) {
 					latestAssetURL = a.BrowserDownloadURL
-					break
+				}
+				if strings.EqualFold(a.Name, "SHA256SUMS") {
+					latestSHASumsURL = a.BrowserDownloadURL
 				}
 			}
 		}
@@ -116,17 +129,25 @@ func Check(current string) (*UpdateInfo, error) {
 		return &UpdateInfo{Current: current}, nil
 	}
 
+	// 从 SHA256SUMS 中解析对应 zip 的 hash
+	if latestSHASumsURL != "" {
+		expectedHash = fetchExpectedHash(latestSHASumsURL, assetPattern())
+	}
+
 	return &UpdateInfo{
-		Available:    true,
-		Latest:       latestTag,
-		Current:      current,
-		URL:          latestAssetURL,
-		ReleaseNotes: strings.TrimSpace(notesBuf.String()),
+		Available:     true,
+		Latest:        latestTag,
+		Current:       current,
+		URL:           latestAssetURL,
+		SHA256SUMSURL: latestSHASumsURL,
+		ExpectedHash:  expectedHash,
+		ReleaseNotes:  strings.TrimSpace(notesBuf.String()),
 	}, nil
 }
 
-// Download 下载更新包到临时目录，返回 zip 路径
-func Download(assetURL string) (string, error) {
+// Download 下载更新包到临时目录，返回 zip 路径。
+// 若 expectedHash 非空，下载完成后校验 SHA256，不匹配则删除文件并报错。
+func Download(assetURL string, expectedHash string) (string, error) {
 	updateLock.Lock()
 	defer updateLock.Unlock()
 
@@ -147,14 +168,30 @@ func Download(assetURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
 
-	// 限制下载大小（最大 500MB）
-	_, err = io.Copy(f, io.LimitReader(resp.Body, 500<<20))
+	// 限制下载大小（最大 500MB），同时计算 SHA256
+	hasher := sha256.New()
+	limitR := io.LimitReader(resp.Body, 500<<20)
+	_, err = io.Copy(f, io.TeeReader(limitR, hasher))
+	closeErr := f.Close()
 	if err != nil {
 		os.Remove(tmp)
 		return "", err
 	}
+	if closeErr != nil {
+		os.Remove(tmp)
+		return "", closeErr
+	}
+
+	// 校验 SHA256
+	if expectedHash != "" {
+		actual := hex.EncodeToString(hasher.Sum(nil))
+		if !strings.EqualFold(actual, expectedHash) {
+			os.Remove(tmp)
+			return "", fmt.Errorf("SHA256 校验失败：\n期望 %s\n实际 %s\n文件可能被篡改或下载不完整", expectedHash, actual)
+		}
+	}
+
 	return tmp, nil
 }
 
@@ -172,9 +209,8 @@ func CleanupOldVersion() {
 	}
 }
 
-// InstallUpdate 从 zip 中提取 exe 并替换当前程序（无 batch 脚本）
-// 策略：exe → exe.old（备份）, exe.new（新文件）→ exe
-// 同时提取 resource_types.json 等数据文件到 EXE 同目录
+// InstallUpdate 解压更新包并通过 helper 进程替换当前 exe。
+// 流程：解压新 exe → 释放 helper 到临时目录 → 启动 helper → 主进程退出
 func InstallUpdate(zipPath string) error {
 	updateLock.Lock()
 	defer updateLock.Unlock()
@@ -185,7 +221,7 @@ func InstallUpdate(zipPath string) error {
 	}
 	exeDir := filepath.Dir(exe)
 
-	// 1. 解压 zip 找 exe
+	// 1. 解压 zip
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return fmt.Errorf("打开 zip 失败: %w", err)
@@ -194,8 +230,6 @@ func InstallUpdate(zipPath string) error {
 
 	var exeInZip *zip.File
 	targetExe := "YSM-Model-Manager.exe"
-	// resource_types.json 必须覆盖更新（注册表，无用户数据）
-	// 其他数据文件仅当不存在时补发（保留用户自定义的工作室/创作者）
 	alwaysOverwrite := map[string]bool{
 		"resource_types.json": true,
 	}
@@ -212,7 +246,6 @@ func InstallUpdate(zipPath string) error {
 			continue
 		}
 		dest := filepath.Join(exeDir, name)
-		// 路径遍历防护：确保解压路径仍在 exeDir 内
 		cleanDir := filepath.Clean(exeDir) + string(os.PathSeparator)
 		if !strings.HasPrefix(dest, cleanDir) {
 			log.Printf("[updater] 跳过异常路径 %s", f.Name)
@@ -234,37 +267,40 @@ func InstallUpdate(zipPath string) error {
 		return fmt.Errorf("zip 中未找到 %s", targetExe)
 	}
 
-	// 2. 解压到 exe.new（限制解压大小 200MB）
-	newPath := exe + ".new"
+	// 2. 解压新 exe 到临时目录
+	tmpDir, err := os.MkdirTemp("", "ysm-update")
+	if err != nil {
+		return fmt.Errorf("创建临时目录失败: %w", err)
+	}
+	newPath := filepath.Join(tmpDir, targetExe)
 	if err := extractZipFile(exeInZip, newPath); err != nil {
+		os.RemoveAll(tmpDir)
 		return fmt.Errorf("解压 exe 失败: %w", err)
 	}
 
-	// 3. 替换逻辑
-	oldPath := exe + ".old"
-	os.Remove(oldPath) // 清理上一次残留
-
-	// 备份当前 exe → exe.old
-	if err := os.Rename(exe, oldPath); err != nil {
-		os.Remove(newPath)
-		return fmt.Errorf("备份旧文件失败: %w", err)
+	// 3. 释放 helper 到临时目录
+	helperPath := filepath.Join(tmpDir, "ysm-updater-helper.exe")
+	if err := extractEmbeddedHelper(helperPath); err != nil {
+		os.RemoveAll(tmpDir)
+		return fmt.Errorf("释放更新助手失败: %w", err)
 	}
 
-	// 新文件 → exe
-	if err := os.Rename(newPath, exe); err != nil {
-		// 回滚
-		if rerr := os.Rename(oldPath, exe); rerr != nil {
-			log.Printf("[updater] 致命: 回滚也失败 %v (旧文件: %s)", rerr, oldPath)
-		}
-		os.Remove(newPath)
-		return fmt.Errorf("替换文件失败: %w", err)
+	// 4. 启动 helper（传入 新exe路径 目标exe路径 主进程PID）
+	pid := strconv.Itoa(os.Getpid())
+	cmd := exec.Command(helperPath, newPath, exe, pid)
+	cmd.Dir = tmpDir
+	if err := cmd.Start(); err != nil {
+		os.RemoveAll(tmpDir)
+		return fmt.Errorf("启动更新助手失败: %w", err)
 	}
 
-	// 清理临时下载文件
+	// 5. 清理临时下载文件
 	if err := os.Remove(zipPath); err != nil {
 		log.Printf("[updater] 清理临时文件失败: %v", err)
 	}
 
+	// 6. 主进程退出（Wails 前端应在此之前显示提示）
+	os.Exit(0)
 	return nil
 }
 
@@ -317,4 +353,52 @@ func splitVer(s string) []int {
 		}
 	}
 	return out
+}
+
+// extractEmbeddedHelper 将内嵌的 ysm-updater-helper.exe 释放到目标路径
+func extractEmbeddedHelper(dest string) error {
+	data, err := updaterHelper.ReadFile("ysm-updater-helper.exe")
+	if err != nil {
+		return fmt.Errorf("读取内嵌 helper: %w", err)
+	}
+	return os.WriteFile(dest, data, 0755)
+}
+
+// fetchExpectedHash 从 SHA256SUMS 文件中解析指定文件名的 hash
+func fetchExpectedHash(sumsURL string, fileName string) string {
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequest("GET", sumsURL, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("User-Agent", "YSM-Model-Manager/")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10)) // 最多 64KB
+	if err != nil {
+		return ""
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// 格式: <hash>  <filename>  或  <hash> *<filename>
+		parts := strings.Fields(line)
+		if len(parts) < 2 {
+			continue
+		}
+		name := strings.TrimPrefix(parts[1], "*")
+		if strings.EqualFold(name, fileName) {
+			return strings.ToLower(parts[0])
+		}
+	}
+	return ""
 }

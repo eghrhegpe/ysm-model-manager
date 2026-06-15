@@ -14,6 +14,31 @@ export const treeCSS = `
 .hdr-spacer { flex:1; }
 .repo-bar-btn { padding:var(--pad-btn-tool) 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-btn-tool); }
 .repo-bar-btn:hover { background:var(--hover);color:var(--txt); }
+/* 高级筛选面板 */
+.adv-filter { border-top:1px solid var(--bd);padding:6px 8px 4px;background:var(--bg2); }
+.adv-filter-row { display:flex;align-items:center;gap:4px;flex-wrap:wrap; }
+.adv-filter-row label { font-size:10px;color:var(--muted);white-space:nowrap;margin-left:6px; }
+.adv-filter-row label:first-child { margin-left:0; }
+.af-inp { width:56px;padding:2px 4px;font-size:10px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--txt);font-family:inherit; }
+.af-inp::placeholder { color:var(--muted);font-size:9px; }
+.af-sep { font-size:10px;color:var(--muted); }
+/* ===== 统一按钮系统 .btn-base ===== */
+.btn-base { padding:var(--btn-padding-md); border-radius:var(--btn-radius,6px); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:inherit; font-family:inherit; transition:background .12s,color .12s; white-space:nowrap; flex-shrink:0; }
+.btn-base:hover { background:var(--hover); }
+.btn-base:focus-visible { box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); outline:none; }
+.btn-base.sm { padding:var(--btn-padding-sm); font-size:var(--fs-btn-tool); }
+.btn-base.lg { padding:var(--btn-padding-lg); font-size:var(--fs-btn-primary); }
+.btn-base.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+.btn-base.primary:hover { background:color-mix(in srgb, var(--accent) 88%, #fff); }
+.btn-base.accent { background:#7c83ff33;color:#66d9ef;border-color:#7c83ff55; }
+.btn-base.accent:hover { background:#7c83ff55; }
+.btn-base:disabled { opacity:0.5; cursor:not-allowed; pointer-events:none; }
+/* ===== 旧按钮兼容层 ===== */
+.hdr-btn { padding:var(--pad-btn-primary) 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-primary);font-family:inherit; }
+.hdr-btn:hover { background:var(--hover); }
+.hdr-btn.accent { background:#7c83ff33;color:#66d9ef;border-color:#7c83ff55; }
+.hdr-btn.accent:hover { background:#7c83ff55; }
+.hdr-btn.flash { background:#a6e3a133;border-color:#a6e3a155; }
 .srch-inp { flex:1;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;outline:none;min-width:0; }
 .sort-sel { padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;cursor:pointer; }
 .hdr-btn { padding:var(--pad-btn-primary) 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-primary);font-family:inherit; }

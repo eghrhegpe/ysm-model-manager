@@ -24,7 +24,7 @@ export function footerHTML() {
   return `<div class="footer">
 <div class="footer-stats" id="footer-stats">
   <span class="stat-item" id="stat-sync">完全同步 -/-</span>
-  <button class="footer-btn btn-mc-dir" id="btn-mc" title="点击选择游戏目录">🎮 未设置</button>
+  <button class="btn-base footer-btn btn-mc-dir" id="btn-mc" title="点击选择游戏目录">🎮 未设置</button>
 </div>
 </div>`;
 }

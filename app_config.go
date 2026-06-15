@@ -131,16 +131,16 @@ func (a *App) CheckUpdate() (*updater.UpdateInfo, error) {
 	return updater.Check(version.Version)
 }
 
-func (a *App) DownloadUpdate(url string) (string, error) {
-	return updater.Download(url)
+func (a *App) DownloadUpdate(url string, expectedHash string) (string, error) {
+	return updater.Download(url, expectedHash)
 }
 
 func (a *App) ApplyUpdate(zipPath string) error {
 	return updater.InstallUpdate(zipPath)
 }
 
-func (a *App) DoUpdate(url string) string {
-	zipPath, err := updater.Download(url)
+func (a *App) DoUpdate(url string, expectedHash string) string {
+	zipPath, err := updater.Download(url, expectedHash)
 	if err != nil {
 		return "下载失败: " + err.Error()
 	}

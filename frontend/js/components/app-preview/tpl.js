@@ -32,9 +32,9 @@ export function statsHTML() {
   <hr class="divider">
   <div class="dp-global-actions">
     <div class="dp-section-title">⚙️ 全局管理</div>
-    <button class="btn accent" id="dp-btn-import-all">⬇️ 导入仓库模型</button>
-    <button class="btn warn" id="dp-btn-upload-all">📤 上传新模型</button>
-    <button class="btn" id="dp-btn-sync-all">🔄 同步状态</button>
+    <button class="btn-base accent sm" id="dp-btn-import-all">⬇️ 导入仓库模型</button>
+    <button class="btn-base warn sm" id="dp-btn-upload-all">📤 上传新模型</button>
+    <button class="btn-base sm" id="dp-btn-sync-all">🔄 同步状态</button>
   </div>
   <hr class="divider">
   <div class="dp-section-title">📋 操作日志 <button class="dp-log-toggle" id="dp-log-toggle">展开 ▸</button></div>
@@ -49,7 +49,7 @@ export function statsHTML() {
     <div class="stat-row dp-log-empty">暂无日志</div>
   </div>
   <div class="dp-log-footer" id="dp-log-footer" style="display:none">
-    <button class="btn" id="dp-btn-clear-logs">🗑️ 清空</button>
+    <button class="btn-base sm" id="dp-btn-clear-logs">🗑️ 清空</button>
   </div>
 </div>
 </div>`;

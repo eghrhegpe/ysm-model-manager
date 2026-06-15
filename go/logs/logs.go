@@ -18,18 +18,19 @@ type Logger struct {
 }
 
 // NewLogger 创建日志管理器
-// 优先使用可执行文件所在目录存放日志；若两者均失败则用当前目录
+// 使用系统标准的应用配置目录（Windows: %APPDATA%, Linux: ~/.config, macOS: ~/Library/Application Support）
 func NewLogger() *Logger {
-	exe, err := os.Executable()
+	cfgDir, err := os.UserConfigDir()
 	if err != nil {
-		log.Printf("[logs] 获取可执行文件路径失败: %v, 使用当前目录", err)
-		exe, err = os.Getwd()
-		if err != nil {
-			log.Printf("[logs] 获取当前工作目录也失败: %v, 使用 .", err)
-			exe = "."
-		}
+		log.Printf("[logs] 获取用户配置目录失败: %v, 降级使用当前目录", err)
+		cfgDir = "."
 	}
-	path := filepath.Join(filepath.Dir(exe), "ysm-import-logs.json")
+	dir := filepath.Join(cfgDir, "YSM-Model-Manager")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Printf("[logs] 创建配置目录失败: %v, 降级使用当前目录", err)
+		dir = "."
+	}
+	path := filepath.Join(dir, "ysm-import-logs.json")
 	l := &Logger{path: path}
 	l.load()
 	return l

@@ -34,6 +34,16 @@ Set-Location "$ProjectRoot\frontend"
 npx vite build 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) { Write-Host "❌ 前端构建失败" -ForegroundColor Red; exit 1 }
 
+# 1b. 构建更新助手 helper（Wails 构建前必须完成，因为 embed）
+Write-Host "🔧 构建更新助手 ysm-updater-helper.exe ..." -ForegroundColor Yellow
+Set-Location $ProjectRoot
+go build -ldflags "-X ysm-model-manager/go/version.Version=$VerTag" -o "$ProjectRoot\go\updater\ysm-updater-helper.exe" "$ProjectRoot\cmd\updater" 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ helper 构建失败" -ForegroundColor Red
+    exit 1
+}
+Write-Host "   ✅ helper 已编译到 go/updater/" -ForegroundColor Green
+
 # 2. Wails 构建（自动嵌入前端资源 + 注入版本号）
 Write-Host "🦫 Wails 编译 $VerTag ..." -ForegroundColor Yellow
 Set-Location $ProjectRoot
@@ -70,6 +80,13 @@ Write-Host "📦 打包 $ZipName ..." -ForegroundColor Yellow
 Set-Location $OutputDir
 Compress-Archive -Path "$OutputDir\*" -DestinationPath "$OutputDir\$ZipName" -Force
 
+# 4b. 生成 SHA256SUMS（用于下载后校验，防 MITM 攻击）
+Write-Host "🔐 生成 SHA256SUMS ..." -ForegroundColor Yellow
+$ShaSumsPath = "$OutputDir\SHA256SUMS"
+$zipHash = (Get-FileHash -Path "$ZipPath" -Algorithm SHA256).Hash.ToLower()
+"$zipHash  $ZipName" | Out-File -FilePath $ShaSumsPath -Encoding ascii
+Write-Host "   SHA256: $zipHash" -ForegroundColor Gray
+
 # 5. 输出结果
 $FileSize = (Get-Item "$OutputDir\$ZipName").Length / 1MB
 Write-Host "✅ 构建完成!" -ForegroundColor Green
@@ -77,7 +94,7 @@ Write-Host "   版本: $VerTag" -ForegroundColor Cyan
 Write-Host "   输出: $OutputDir\$ZipName" -ForegroundColor Cyan
 Write-Host "   大小: $("{0:N1}" -f $FileSize) MB" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "下一步: 在 GitHub Releases 上传 $ZipName" -ForegroundColor Magenta
+Write-Host "下一步: 在 GitHub Releases 上传 $ZipName 和 SHA256SUMS" -ForegroundColor Magenta
 Write-Host "       或添加 -SkipUpload 参数跳过上传" -ForegroundColor Magenta
 
 # ===== GitHub Release 上传 =====
@@ -117,7 +134,7 @@ if (-not $SkipUpload) {
             --repo "$GitHubOwner/$GitHubRepo" `
             --title "$VerTag" `
             --notes-file "$notesTmp" `
-            "$ZipPath" 2>&1
+            "$ZipPath" "$ShaSumsPath" 2>&1
         Remove-Item $notesTmp -Force -ErrorAction SilentlyContinue
         if ($LASTEXITCODE -eq 0) {
             Write-Host "   ✅ Release 已发布: https://github.com/$GitHubOwner/$GitHubRepo/releases/tag/$VerTag" -ForegroundColor Green
@@ -173,6 +190,14 @@ if (-not $SkipUpload) {
                     -Headers $authHeader `
                     -ContentType "application/octet-stream" `
                     -Body $zipBytes
+
+                # 上传 SHA256SUMS
+                $sumsBytes = [System.IO.File]::ReadAllBytes($ShaSumsPath)
+                $uploadResult2 = Invoke-RestMethod -Uri "$uploadUrl?name=SHA256SUMS" `
+                    -Method Post `
+                    -Headers $authHeader `
+                    -ContentType "application/octet-stream" `
+                    -Body $sumsBytes
                 Write-Host "   ✅ 资产上传完成!" -ForegroundColor Green
                 Write-Host "   🌐 $createResult.html_url" -ForegroundColor Cyan
             } catch {

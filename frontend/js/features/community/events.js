@@ -244,7 +244,7 @@ export function bindRepoEvents(sr, ctx) {
           (remain > 1
             ? '<span class="gh-progress-remain">剩余' + remain + "</span>"
             : "") +
-          '<button class="gh-cancel-queue gh-cancel-btn" title="取消">✕</button>' +
+          '<button class="btn-base sm gh-cancel-queue" title="取消">✕</button>' +
           "</div>" +
           '<div class="gh-progress-bar-wrap">' +
           '<div class="gh-progress-fill"></div>' +

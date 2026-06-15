@@ -1,5 +1,6 @@
 // ===== sidebar 数据加载层 =====
 import { bus } from "../../bus.js";
+import { dbg } from "../../utils/debug.js";
 import { fallbackInstances } from "./data.js";
 import {
   LoadAppConfig,
@@ -87,8 +88,9 @@ export async function loadInstances(rtype) {
       return (b.synced || 0) - (a.synced || 0);
     });
 
-    console.log(
-      "[loader] loadInstances 返回, rtype:",
+    dbg(
+      "loader",
+      "loadInstances 返回, rtype:",
       rtypeActual,
       "实例数:",
       instances.length,

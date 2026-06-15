@@ -1,11 +1,12 @@
 // ===== 上传新模型到仓库 =====
 import { bus } from "../bus.js";
 import { friendlyError } from "../utils/errors.js";
+import { dbg } from "../utils/debug.js";
 
 export function registerUpload(unsubs) {
   unsubs.push(
     bus.on("stats:upload", async () => {
-      console.log("[upload] stats:upload");
+      dbg("upload", "stats:upload");
       try {
         const {
           LoadAppConfig,

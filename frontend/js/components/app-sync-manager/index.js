@@ -3,6 +3,7 @@
 // 使用: <app-sync-manager instance="1.20.1-Fabric"></app-sync-manager>
 
 import { bus } from "../../bus.js";
+import { dbg } from "../../utils/debug.js";
 import { friendlyError } from "../../utils/errors.js";
 import {
   containerHTML,
@@ -84,10 +85,11 @@ export class AppSyncManager extends HTMLElement {
 
     // 监听刷新
     const unsub = bus.on("stats:refresh", () => {
-      console.log("[sync-manager] stats:refresh 收到");
+      dbg("sync-manager", "stats:refresh 收到");
       this._loadData().then(() => {
-        console.log(
-          "[sync-manager] _loadData 完成, items:",
+        dbg(
+          "sync-manager",
+          "_loadData 完成, items:",
           this._allItems ? this._allItems.length : 0,
         );
         if (this._allItems && this._allItems.length) {
@@ -95,7 +97,7 @@ export class AppSyncManager extends HTMLElement {
           this._allItems.forEach((i) => {
             counts[i.status] = (counts[i.status] || 0) + 1;
           });
-          console.log("[sync-manager] 重渲染, 计数:", counts);
+          dbg("sync-manager", "重渲染, 计数:", counts);
           this._render();
         }
       });

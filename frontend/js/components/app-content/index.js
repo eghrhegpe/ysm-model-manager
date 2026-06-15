@@ -1,5 +1,6 @@
 // ===== <app-content> 入口 =====
 import { bus } from "../../bus.js";
+import { dbg } from "../../utils/debug.js";
 import { contentCSS } from "./content-css.js";
 import {
   repositoryHTML,
@@ -407,14 +408,14 @@ class AppContent extends HTMLElement {
         const result = await BatchExtractCreatorAvatars();
         const keys = Object.keys(result);
         if (keys.length > 0) {
-          console.log("[avatar] 提取了 " + keys.length + " 个头像");
+          dbg("avatar", "提取了 " + keys.length + " 个头像");
           avatarCache = result;
           if (currentSite) showSiteView(currentSite);
         } else {
-          console.log("[avatar] 无头像可提取（无 .ysm 文件或无 avatar/ 目录）");
+          dbg("avatar", "无头像可提取（无 .ysm 文件或无 avatar/ 目录）");
         }
       } catch (e) {
-        console.debug("[avatar] 提取失败:", e?.message);
+        dbg("avatar", "提取失败:", e?.message);
       }
     })();
 

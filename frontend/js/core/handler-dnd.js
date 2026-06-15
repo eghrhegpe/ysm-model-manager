@@ -1,6 +1,7 @@
 // ===== 全局拖拽导入 =====
 import { bus } from "../bus.js";
 import { ALL_EXTS } from "../utils/extensions.js";
+import { dbg } from "../utils/debug.js";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
 const MAX_FILE_COUNT = 50;
@@ -77,7 +78,7 @@ const onDrop = async (e) => {
   // 非仓库页面不处理 DnD
   if (window.__currentPage !== "repository") return;
 
-  console.log("[DnD] drop fired", {
+  dbg("DnD", "drop fired", {
     filesLen: e.dataTransfer?.files?.length || 0,
     itemsLen: e.dataTransfer?.items?.length || 0,
     types: e.dataTransfer?.types || [],
@@ -126,8 +127,9 @@ const onDrop = async (e) => {
     const direct = Array.from(e.dataTransfer?.files || []);
     allFiles = direct.filter((f) => /\.(ysm|zip|7z)$/i.test(f.name));
   }
-  console.log(
-    "[DnD] collected:",
+  dbg(
+    "DnD",
+    "collected:",
     allFiles.length,
     allFiles.map((f) => f.name),
   );

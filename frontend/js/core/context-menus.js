@@ -118,6 +118,7 @@ export function registerContextMenus() {
                   });
                   return;
                 }
+                const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
                 const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
                 toast(
                   `📦 正在移动 ${paths.length} 个文件到 ${folder}...`,
@@ -164,7 +165,7 @@ export function registerContextMenus() {
                 const { LoadAppConfig, CopyModelFile } =
                   await import("../../wailsjs/go/main/App.js");
                 const cfg = await LoadAppConfig();
-                const repoRoot = cfg.repoRoot || "";
+                const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
                 if (!repoRoot) {
                   bus.emit("toast:show", {
                     msg: "❌ 请先设置仓库目录",
@@ -319,6 +320,7 @@ export function registerContextMenus() {
                   });
                   return;
                 }
+                const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
                 const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
                 try {
                   await MoveModelFile(path, dstDir);
@@ -352,7 +354,7 @@ export function registerContextMenus() {
                 const { LoadAppConfig, CopyModelFile } =
                   await import("../../wailsjs/go/main/App.js");
                 const cfg = await LoadAppConfig();
-                const repoRoot = cfg.repoRoot || "";
+                const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
                 if (!repoRoot) {
                   bus.emit("toast:show", {
                     msg: "❌ 请先设置仓库目录",

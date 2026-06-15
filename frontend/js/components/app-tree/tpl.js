@@ -15,8 +15,7 @@ export function headerHTML() {
     <label>骨骼数</label><input type="number" id="af-minBones" placeholder="最小" class="af-inp" min="0"><span class="af-sep">—</span><input type="number" id="af-maxBones" placeholder="最大" class="af-inp" min="0">
     <label>立方体</label><input type="number" id="af-minCubes" placeholder="最小" class="af-inp" min="0"><span class="af-sep">—</span><input type="number" id="af-maxCubes" placeholder="最大" class="af-inp" min="0">
     <label>纹理尺寸</label><input type="number" id="af-minTex" placeholder="最小" class="af-inp" min="0"><span class="af-sep">—</span><input type="number" id="af-maxTex" placeholder="最大" class="af-inp" min="0">
-    <button class="btn-base sm accent" id="af-apply">🔍 应用</button>
-    <button class="btn-base sm" id="af-clear">清除</button>
+    <button class="btn-base sm" id="af-clear" title="清空所有筛选条件">清除</button>
   </div>
 </div>
 </div>`;

@@ -12,7 +12,8 @@ import {
 
 const ENABLE_MULTI_SELECT = true;
 
-function updateSelectCount(root) {
+// 更新底部"已选 N 个文件"统计（被工具栏复用，避免重复实现）
+export function updateSelectCount(root) {
   const stat = root?.getElementById("ftr-stat");
   if (!stat) return;
   const n = selectState.keys.size;

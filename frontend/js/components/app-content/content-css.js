@@ -310,7 +310,7 @@ export const contentCSS = `
 .health-ring { animation:breathe-subtle 4s ease-in-out infinite;will-change:filter; }
 
 /* ===== 创作者详情浮层 (cr-detail) ===== */
-.cr-detail-overlay { position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease; }
+.cr-detail-overlay { position:fixed;inset:0;z-index:var(--z-modal);background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease; }
 .cr-detail-box { background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:20px;max-width:420px;width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px;animation:detail-in .2s ease; }
 @keyframes detail-in { from{opacity:0;transform:scale(.92) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
 .cr-detail-header { display:flex;align-items:center;gap:10px; }
@@ -360,7 +360,7 @@ export const contentCSS = `
 /* tag-* 颜色已由通用 .tag-* 规则覆盖 */
 
 /* 二级菜单 */
-.gh-popup { position:fixed; z-index:9999; background:var(--surf,#2a2a3c); border:1px solid var(--bd,#444); border-radius:8px; padding:4px; box-shadow:0 8px 24px rgba(0,0,0,.35); min-width:140px; }
+.gh-popup { position:fixed; z-index:var(--z-popover); background:var(--surf,#2a2a3c); border:1px solid var(--bd,#444); border-radius:8px; padding:4px; box-shadow:0 8px 24px rgba(0,0,0,.35); min-width:140px; }
 .gh-popup-item { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; cursor:pointer; transition:background .1s; }
 .gh-popup-item:hover { background:var(--hover,#ffffff15); }
 .gh-popup-icon { font-size:var(--fs-lg); width:20px; text-align:center; flex-shrink:0; }

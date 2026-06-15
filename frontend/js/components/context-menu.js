@@ -31,7 +31,7 @@ class ContextMenu extends HTMLElement {
       <style>
         :host {
           position: fixed;
-          z-index: 99999;
+          z-index: var(--z-popover);
           display: none;
           font-family: var(--font-ui);
           font-size: var(--fs-base);

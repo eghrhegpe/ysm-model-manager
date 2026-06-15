@@ -66,7 +66,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .preview-thumb { margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: var(--surf); border: 1px solid var(--bd); }
 .preview-thumb img { display: block; width: 100%; height: auto; object-fit: cover; }
 .dp-log-fbtn { font-size:var(--fs-xs);padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer; }
-.dp-log-fbtn.active { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+.dp-log-fbtn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .dp-log-search { flex:1;font-size:var(--fs-xs);padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);min-width:0;margin-left:4px; }
 .dp-log-empty { font-size:var(--fs-sm);color:#6c7086; }
 .ysm-stat-label { display:inline-block;min-width:80px; }

@@ -349,7 +349,7 @@
   #root {
     grid-template-columns: var(--sidebar-width, 300px) 1fr 0;
   }
-  
+
   .preview {
     display: none;
   }
@@ -360,17 +360,17 @@
   #root {
     grid-template-columns: 0 1fr 0;
   }
-  
+
   .sidebar {
     display: none;
   }
-  
+
   /* 调整顶栏按钮间距 */
   .topbar {
     gap: 6px;
     padding: 0 8px;
   }
-  
+
   .tb-btn {
     padding: 3px 8px;
     font-size: var(--fs-xs);

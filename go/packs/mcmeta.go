@@ -2,6 +2,7 @@ package packs
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -73,6 +74,8 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 	}
 
 	var meta types.PackMeta
+	// 去除 UTF-8 BOM（PowerShell 写入的 JSON 可能带 EF BB BF 前缀）
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
 	if err := json.Unmarshal(data, &meta); err != nil {
 		return nil, "", fmt.Errorf("pack.mcmeta 解析失败: %w", err)
 	}

@@ -111,3 +111,16 @@ export async function showResourcePack(ctx, path) {
     ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 资源包</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e.message)}</div></div></div>`;
   }
 }
+
+/** 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 */
+export async function showShaderPack(ctx, path, opts) {
+  const icon = (opts && opts.icon) || "☀️";
+  const label = (opts && opts.label) || "光影包";
+  const basename = path.split("/").pop().split("\\").pop();
+  ctx._root.innerHTML = `<div class="content" id="preview-content">
+  <h3>${icon} ${label}</h3>
+  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+    <div><strong>${renderFormattedText(basename)}</strong></div>
+  </div>
+</div>`;
+}

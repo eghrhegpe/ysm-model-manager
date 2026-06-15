@@ -303,7 +303,7 @@ export function initImportQueue(app) {
       parts.push(c);
       if (v) parts.push("-" + v);
       if (d) parts.push("(" + d + ")");
-      newName = parts.join(" ") + "." + ext;
+      newName = parts.join("") + "." + ext;
     } else {
       // 未填写角色名 → 使用原文件名
       newName = currentFileName || "untitled." + ext;
@@ -338,10 +338,13 @@ export function initImportQueue(app) {
           newName,
         );
         if (renameTo && renameTo !== newName) {
+          const subpath = currentRelPath
+            ? currentRelPath.substring(0, currentRelPath.lastIndexOf("/"))
+            : "";
           const fullImportPath =
             (((cfg.filesRoot||"")+"\\ysm") || "") +
             "\\" +
-            (currentRelPath ? currentRelPath.replace(/\//g, "\\") + "\\" : "") +
+            (subpath ? subpath.replace(/\//g, "\\") + "\\" : "") +
             newName;
           await RenameFile(fullImportPath, renameTo);
           newName = renameTo;

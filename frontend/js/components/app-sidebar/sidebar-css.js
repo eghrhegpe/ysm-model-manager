@@ -29,6 +29,16 @@ export const sidebarCSS = `
 .vc-hdr-row1 .chk { flex-shrink:0; margin:0; cursor:pointer; }
 .footer { padding: 8px 12px; border-top: 1px solid var(--bd); }
 .footer-stats { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--fs-base) - 2px); color: var(--muted); margin-bottom: 6px; }
+/* ===== 统一按钮系统 .btn-base ===== */
+.btn-base { padding:var(--btn-padding-md); border-radius:var(--btn-radius,6px); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:inherit; font-family:inherit; transition:background .12s,color .12s; white-space:nowrap; flex-shrink:0; }
+.btn-base:hover { background:var(--hover); }
+.btn-base:focus-visible { box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); outline:none; }
+.btn-base.sm { padding:var(--btn-padding-sm); font-size:var(--fs-btn-tool); }
+.btn-base.lg { padding:var(--btn-padding-lg); font-size:var(--fs-btn-primary); }
+.btn-base.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+.btn-base.primary:hover { background:color-mix(in srgb, var(--accent) 88%, #fff); }
+.btn-base:disabled { opacity:0.5; cursor:not-allowed; pointer-events:none; }
+
 .footer-btn {
   width: 100%; padding: 5px 8px; border-radius: 6px;
   border: 1px solid var(--bd); background: transparent;

@@ -310,8 +310,8 @@ export function renderSiteView(site, ctx) {
         '<input type="text" id="ws-cr-search" placeholder="搜创作者名..." ' +
         'style="flex:1;min-width:120px;max-width:160px;padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit;outline:none">' +
         '<span style="flex:1"></span>' +
-        '<button class="cr-fetch-btn cr-action-btn cr-action-btn-muted" style="margin-left:auto" title="\u4ECE GitHub \u62C9\u53D6\u6700\u65B0\u521B\u4F5C\u8005 + \u7AD9\u70B9 + GitHub \u4ED3\u5E93 + \u8D44\u6E90\u7C7B\u578B">\uD83C\uDF10 \u66F4\u65B0\u914D\u7F6E</button>' +
-        '<button class="cr-edit-btn cr-action-btn cr-action-btn-muted">✏️ 编辑</button>' +
+        '<button class="btn-base sm cr-fetch-btn" style="margin-left:auto" title="\u4ECE GitHub \u62C9\u53D6\u6700\u65B0\u521B\u4F5C\u8005 + \u7AD9\u70B9 + GitHub \u4ED3\u5E93 + \u8D44\u6E90\u7C7B\u578B">\uD83C\uDF10 \u66F4\u65B0\u914D\u7F6E</button>' +
+        '<button class="btn-base sm cr-edit-btn">✏️ 编辑</button>' +
         "</div>" +
         '<div class="cr-tag-filter-row">' +
         '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
@@ -380,8 +380,8 @@ export function renderSiteView(site, ctx) {
       '<div class="cr-section">' +
         '<span class="cr-section-title-lg">✏️ 编辑创作者</span>' +
         '<span style="flex:1"></span>' +
-        '<button class="cr-save-btn cr-action-btn cr-action-btn-accent">💾 保存</button>' +
-        '<button class="cr-cancel-btn cr-action-btn cr-action-btn-muted">取消</button>' +
+        '<button class="btn-base sm cr-save-btn cr-action-btn-accent">💾 保存</button>' +
+        '<button class="btn-base sm cr-cancel-btn">取消</button>' +
         "</div>" +
         '<div class="cr-hint-text">📄 数据文件：exe 同目录下的 creators.json，可直接编辑</div>',
     );
@@ -842,7 +842,7 @@ export function renderSiteView(site, ctx) {
           btn.style.cursor = "default";
           searchResults.innerHTML =
             '<div class="cr-error-page">' +
-            '<button class="cr-back-repo cr-back-btn" style="margin-bottom:12px">← 返回</button>' +
+            '<button class="btn-base sm cr-back-repo" style="margin-bottom:12px">← 返回</button>' +
             '<div class="cr-error-msg">' +
             errMsg +
             "</div></div>";

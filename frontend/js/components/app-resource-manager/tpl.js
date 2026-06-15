@@ -21,11 +21,11 @@ export function sidebarHTML(repoRoot, actions, label) {
   let btns = "";
   if (actions.includes("import")) {
     btns +=
-      '<button class="rm-import-btn" style="flex:1;font-size:var(--fs-xs);padding:3px 6px;cursor:pointer;border:1px solid var(--bd);border-radius:4px;background:var(--bg2)">📥 导入</button>';
+      '<button class="btn-base sm rm-import-btn" style="flex:1">📥 导入</button>';
   }
   if (actions.includes("openFolder")) {
     btns +=
-      '<button class="rm-open-btn" style="font-size:var(--fs-xs);padding:3px 6px;cursor:pointer;border:1px solid var(--bd);border-radius:4px;background:var(--bg2)">📁</button>';
+      '<button class="btn-base sm rm-open-btn">📁</button>';
   }
   if (btns) {
     html +=
@@ -121,7 +121,7 @@ export function detailHTML(name, meta, enabled, path, label, actions) {
     "</div>";
   if (actions.includes("delete")) {
     html +=
-      '<button class="rm-del-btn" style="align-self:flex-start;margin-top:8px;font-size:var(--fs-xs);padding:4px 10px;cursor:pointer;border:1px solid var(--paid);border-radius:4px;background:transparent;color:var(--paid)">🗑️ 删除此' +
+      '<button class="btn-base danger sm rm-del-btn" style="align-self:flex-start;margin-top:8px">🗑️ 删除此' +
       esc(label) +
       "</button>";
   }

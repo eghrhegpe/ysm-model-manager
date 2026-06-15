@@ -1,13 +1,14 @@
 // ===== YSM 模型摘要工具函数 =====
 import { parseModelName } from "./display.js";
+import { renderFormattedText } from "./mc-format.js";
 
-/** 清洗 MC 格式代码和换行 */
-function cleanTips(text) {
+/** 渲染 MC 格式代码为带颜色的 HTML */
+function renderTips(text) {
   if (!text) return "";
-  return text.replace(/§[0-9a-fk-or]/gi, "").replace(/\n/g, "<br>");
+  return renderFormattedText(text);
 }
 
-/** 清洗纯文本 */
+/** 清洗纯文本（名称/ID 类字段，去除 § 和控制字符） */
 function cleanText(text) {
   if (typeof text !== "string") return "";
   return text
@@ -24,7 +25,7 @@ function headerOnlyCardHTML(header, basename) {
   // 头部无名称时从文件名回退解析
   const p = basename && !header.name ? parseModelName(basename) : null;
   const name = p ? "" : cleanText(header.name || "-"); // 用 p 时 name 为空，下面走标签模板
-  const tips = cleanTips(header.tips);
+  const tips = renderTips(header.tips);
   const licenseType = cleanText(header.license);
   const freeBadge = header.hasFree
     ? header.isFree
@@ -89,7 +90,7 @@ export function summaryCardHTML(summary, header, basename) {
   }
 
   const name = cleanText(summary.name || summary.source || "-");
-  const tips = cleanTips(summary.tips);
+  const tips = renderTips(summary.tips);
   const licenseType = cleanText(summary.license);
   const authors = summary.authors || [];
   const stats = summary.stats || {};

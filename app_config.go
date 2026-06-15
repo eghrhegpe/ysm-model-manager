@@ -49,7 +49,15 @@ func (a *App) loadAppConfig() {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return
 	}
-	// repoRoot() 从 FilesRoot 动态推导，无需手动赋值
+	// 配置迁移：旧 repoRoot → 新 filesRoot + ysm 子目录
+	if cfg.FilesRoot == "" && cfg.RepoRoot != "" {
+		cfg.FilesRoot = cfg.RepoRoot
+		cfg.RepoRoot = ""
+		if data2, err := json.MarshalIndent(cfg, "", "  "); err == nil {
+			os.WriteFile(configPath(), data2, 0644)
+		}
+	}
+	// repoRoot 从 FilesRoot 动态推导，无需手动赋值
 	if cfg.LinkMode != "" {
 		a.LinkMode = cfg.LinkMode
 	}

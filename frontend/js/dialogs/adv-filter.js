@@ -71,6 +71,14 @@ export function modalAdvFilter(opts = {}) {
             <input id="afv-maxTex" type="number" min="0" value="${esc(String(v.maxTex || ""))}" placeholder="最大" class="afv-inp" style="flex:1;width:0;min-width:0">
           </div>
         </div>
+
+        <div>
+          <label style="display:block;color:var(--muted);margin-bottom:3px">🏷️ 标签（留空不限）</label>
+          <div style="display:flex;gap:4px;align-items:center">
+            <input id="afv-tag" maxlength="30" value="${esc(v.tag || "")}" placeholder="输入标签名" class="afv-inp" style="flex:1;width:0;min-width:0">
+            <span id="afv-tag-hint" style="font-size:9px;color:var(--muted);white-space:nowrap"></span>
+          </div>
+        </div>
       </div>
 
       <div id="afv-err" class="dlg-err"></div>
@@ -88,10 +96,22 @@ export function modalAdvFilter(opts = {}) {
     const kwInput = box.querySelector("#afv-kw");
     kwInput.focus();
 
+    const tagInput = box.querySelector("#afv-tag");
+    const tagHint = box.querySelector("#afv-tag-hint");
+
+    // 异步加载已有标签提示
+    (async () => {
+      try {
+        const { AllTags } = window.go.main.App;
+        const all = await AllTags();
+        if (all?.length) {
+          tagHint.textContent = "已有标签: " + all.join(", ");
+        }
+      } catch (_) {}
+    })();
+
     const errEl = box.querySelector("#afv-err");
 
-    // 空值返回 null（不限制）；后端 SearchModels 走 > 0 判定，null 不会触发过滤
-    // 这样未来若后端语义变化（如 0=仅匹配 0 骨骼的模型）也不会被错误触发
     const collect = () => {
       const num = (id) => {
         const raw = box.querySelector(id)?.value.trim();
@@ -107,6 +127,7 @@ export function modalAdvFilter(opts = {}) {
         maxCubes: num("#afv-maxCubes"),
         minTex: num("#afv-minTex"),
         maxTex: num("#afv-maxTex"),
+        tag: tagInput.value.trim(),
       };
     };
 

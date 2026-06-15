@@ -25,6 +25,7 @@ type ModelEntry struct {
 	Ext     string `json:"Ext"`
 	Hash    string `json:"Hash"`    // SHA256
 	ModTime int64  `json:"ModTime"` // Unix 时间戳（毫秒）
+	HasTags bool   `json:"HasTags"` // 是否有标签
 }
 
 // VersionInstance 整合包信息

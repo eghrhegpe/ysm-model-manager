@@ -325,7 +325,7 @@
 .stg-page {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 16px 20px;
 }
 .stg-title {
   margin-bottom: 8px;

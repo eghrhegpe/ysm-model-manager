@@ -48,10 +48,11 @@ async function openAdvFilterDialog($, vm) {
   }
 
   const kw = srchEl?.value || "";
-  // 显式 == null 同时匹配 null 和 undefined（兼容弹窗"清除全部"返回的 {cleared:true}）
+  const hasTag = result.tag && !(result.tag === "");
   const isUnset = (v) => v == null || v === "";
   if (
     !kw &&
+    !hasTag &&
     isUnset(result.minBones) &&
     isUnset(result.maxBones) &&
     isUnset(result.minCubes) &&
@@ -63,67 +64,93 @@ async function openAdvFilterDialog($, vm) {
     vm._renderTree();
     return;
   }
-  const { LoadAppConfig, SearchModels } =
+  const { LoadAppConfig, SearchModels, ListByTag, GetRepoRoot } =
     await import("../../../wailsjs/go/main/App.js");
-  const cfg = await LoadAppConfig();
-  const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
-  if (!repoRoot) {
-    bus.emit("toast:show", { msg: "请先设置仓库目录", duration: 2000, type: "warn" });
-    return;
+
+  // 1. 按标签筛选（如果有）
+  let tagPaths = null;
+  if (hasTag) {
+    try {
+      const paths = await ListByTag(result.tag);
+      tagPaths = new Set(paths || []);
+    } catch (e) {
+      bus.emit("toast:show", {
+        msg: "❌ 标签查询失败: " + friendlyError(e),
+        duration: 4000,
+        type: "error",
+      });
+    }
   }
-  // 后端 SearchModels 走 > 0 判定；null 转 0 后不会触发过滤
-  const n = (v) => (v == null ? 0 : parseInt(v, 10) || 0);
-  const searchArgs = {
-    repoRoot,
-    kw,
-    minBones: n(result.minBones),
-    maxBones: n(result.maxBones),
-    minCubes: n(result.minCubes),
-    maxCubes: n(result.maxCubes),
-    minTex: n(result.minTex),
-    maxTex: n(result.maxTex),
-  };
-  dbg("adv-filter", "search:call", searchArgs);
-  let resultCount = 0;
-  try {
-    const results = await SearchModels(
-      repoRoot,
-      kw,
-      n(result.minBones),
-      n(result.maxBones),
-      n(result.minCubes),
-      n(result.maxCubes),
-      n(result.minTex),
-      n(result.maxTex),
-    );
-    resultCount = results?.length ?? 0;
-    vm._filterPaths = resultCount
-      ? new Set(results.map((r) => r.Path))
-      : new Set();
-    dbg("adv-filter", "search:done", {
-      resultCount,
-      filterPathsSize: vm._filterPaths?.size,
-      sample: Array.from(vm._filterPaths || []).slice(0, 2),
-    });
-  } catch (e) {
-    dbg("adv-filter", "search:error", { err: String(e) });
-    bus.emit("toast:show", {
-      msg: "❌ 搜索失败: " + friendlyError(e),
-      duration: 4000,
-      type: "error",
-    });
+
+  // 2. 按骨骼/纹理等条件搜索（如果有关键词或范围条件）
+  const hasRange =
+    !isUnset(result.minBones) ||
+    !isUnset(result.maxBones) ||
+    !isUnset(result.minCubes) ||
+    !isUnset(result.maxCubes) ||
+    !isUnset(result.minTex) ||
+    !isUnset(result.maxTex) ||
+    kw;
+
+  let modelPaths = null;
+  if (hasRange) {
+    const cfg = await LoadAppConfig();
+    const repoRoot = await GetRepoRoot("ysm");
+    if (!repoRoot) {
+      bus.emit("toast:show", {
+        msg: "请先设置仓库目录",
+        duration: 2000,
+        type: "warn",
+      });
+      return;
+    }
+    const n = (v) => (v == null ? 0 : parseInt(v, 10) || 0);
+    try {
+      const results = await SearchModels(
+        repoRoot,
+        kw,
+        n(result.minBones),
+        n(result.maxBones),
+        n(result.minCubes),
+        n(result.maxCubes),
+        n(result.minTex),
+        n(result.maxTex),
+      );
+      modelPaths = results?.length
+        ? new Set(results.map((r) => r.Path))
+        : new Set();
+    } catch (e) {
+      dbg("adv-filter", "search:error", { err: String(e) });
+      bus.emit("toast:show", {
+        msg: "❌ 高级筛选失败: " + friendlyError(e),
+        duration: 5000,
+        type: "error",
+      });
+      vm._filterPaths = null;
+      vm._renderTree();
+      return;
+    }
+  }
+
+  // 3. 取交集：标签 ∩ 搜索条件（如果两者都有）
+  if (tagPaths && modelPaths) {
+    vm._filterPaths = new Set([...tagPaths].filter((p) => modelPaths.has(p)));
+  } else if (tagPaths) {
+    vm._filterPaths = tagPaths;
+  } else if (modelPaths) {
+    vm._filterPaths = modelPaths;
+  } else {
     vm._filterPaths = null;
   }
-  // 给用户明确反馈：找到 N 个 / 无匹配
-  // 关键：之前 results=[] 时 _filterPaths 被设为 null → 走 buildTree 不进入过滤分支 → UI 完全没变
-  // 现在无匹配时 _filterPaths 是空 Set → 走 buildTree 进入过滤分支 → 显示"未找到匹配的文件"
-  if (vm._filterPaths && vm._filterPaths.size > 0) {
+
+  const size = vm._filterPaths?.size ?? 0;
+  if (size > 0) {
     bus.emit("toast:show", {
-      msg: `🔍 找到 ${vm._filterPaths.size} 个匹配`,
+      msg: `🔍 找到 ${size} 个匹配`,
       duration: 1500,
       type: "success",
     });
-  } else if (vm._filterPaths && vm._filterPaths.size === 0) {
+  } else if (vm._filterPaths && size === 0) {
     bus.emit("toast:show", {
       msg: "🔍 无匹配模型（已应用筛选）",
       duration: 2000,
@@ -186,10 +213,10 @@ export function bindToolbarEvents(root, vm) {
 
   // 批量导出骨骼名
   $("repo-export")?.addEventListener("click", async () => {
-    const { LoadAppConfig, ExportBoneStructures } =
+    const { LoadAppConfig, ExportBoneStructures, GetRepoRoot } =
       await import("../../../wailsjs/go/main/App.js");
-    const cfg = await LoadAppConfig();
-    if (!cfg.filesRoot) {
+    const repoRoot = await GetRepoRoot("ysm");
+    if (!repoRoot) {
       bus.emit("toast:show", {
         msg: "请先设置文件存储路径",
         duration: 2000,
@@ -197,7 +224,7 @@ export function bindToolbarEvents(root, vm) {
       });
       return;
     }
-    const text = await ExportBoneStructures(((cfg.filesRoot||"")+"\\ysm"));
+    const text = await ExportBoneStructures(repoRoot);
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const a = document.createElement("a");
     a.download = `bone-structures-${new Date().toISOString().slice(0, 10)}.txt`;
@@ -361,10 +388,10 @@ export function bindToolbarEvents(root, vm) {
         btn.textContent = "⏳";
         btn.disabled = true;
         try {
-          const { LoadAppConfig, GenerateRepoIndex } =
+          const { GenerateRepoIndex, GetRepoRoot } =
             await import("../../../wailsjs/go/main/App.js");
-          const cfg = await LoadAppConfig();
-          if (!cfg.filesRoot) {
+          const repoRoot = await GetRepoRoot("ysm");
+          if (!repoRoot) {
             bus.emit("toast:show", {
               msg: "请先在设置中配置文件存储路径",
               duration: 2000,
@@ -372,7 +399,7 @@ export function bindToolbarEvents(root, vm) {
             });
             return;
           }
-          await GenerateRepoIndex(((cfg.filesRoot||"")+"\\ysm"));
+          await GenerateRepoIndex(repoRoot);
           bus.emit("toast:show", {
             msg: "✅ index.json 已生成",
             duration: 3000,

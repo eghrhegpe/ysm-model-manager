@@ -1,6 +1,7 @@
 // ===== 模型/材质包详情面板 =====
 // 从 index.js 拆分：详情面板渲染逻辑
 import { summaryCardHTML } from "../../utils/summarize.js";
+import { renderFormattedText } from "../../utils/mc-format.js";
 import { devLog } from "./preview-utils.js";
 
 const esc = (s) =>
@@ -93,13 +94,13 @@ export async function showResourcePack(ctx, path) {
     const jsonStr = await ReadPackMeta(path);
     const meta = JSON.parse(jsonStr);
     const basename = path.split("/").pop().split("\\").pop();
-    const desc = (meta.description || "").replace(/§[0-9a-fklmnor]/g, "");
+    const desc = renderFormattedText(meta.description || "");
     ctx._root.innerHTML = `<div class="content" id="preview-content">
   <h3>🎨 材质包</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${meta.thumbnail ? `<img src="${meta.thumbnail}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : ""}
     <div><strong>${esc(basename)}</strong></div>
-    ${desc ? `<div style="color:var(--muted);line-height:1.6">${esc(desc)}</div>` : ""}
+    ${desc ? `<div style="color:var(--muted);line-height:1.6">${desc}</div>` : ""}
     <div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ${meta.pack_format || "?"}</div>
   </div>
 </div>`;

@@ -2,6 +2,7 @@
 import { bus } from "../bus.js";
 import { friendlyError } from "../utils/errors.js";
 import { parseModelName, renderDisplayName } from "../utils/display.js";
+import { renderFormattedText } from "../utils/mc-format.js";
 import { modalConfirm } from "../dialogs/modal.js";
 import { ALL_EXTS, extBelongsTo } from "../utils/extensions.js";
 
@@ -659,7 +660,7 @@ export function initImportQueue(app) {
       html +=
         '<div style="display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:3px;font-size:10px;border:1px solid var(--bd)">' +
         '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
-        esc(item.name) +
+        renderFormattedText(item.name) +
         "</span>" +
         '<span style="font-size:9px;color:var(--muted);flex-shrink:0">' +
         (item.time || "") +
@@ -689,7 +690,7 @@ export function initImportQueue(app) {
             : "⏳") +
         "</span>" +
         '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
-        esc(fq.name) +
+        renderFormattedText(fq.name) +
         "</span>" +
         '<button class="dl-remove-q" data-idx="' +
         qi +

@@ -1,4 +1,5 @@
 // ===== 资源管理器布局模板 =====
+import { renderFormattedText } from "../../utils/mc-format.js";
 
 /**
  * 侧栏布局（路径 + 操作栏 + 列表）
@@ -92,7 +93,7 @@ export function detailHTML(name, meta, enabled, path, label, actions) {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
-  const desc = (meta.description || "").replace(/§[0-9a-fklmnor]/g, "");
+  const desc = renderFormattedText(meta.description || "");
   let html =
     '<div style="display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm);padding:12px">';
   if (meta.thumbnail) {
@@ -107,7 +108,7 @@ export function detailHTML(name, meta, enabled, path, label, actions) {
     "</div>";
   if (desc) {
     html +=
-      '<div style="color:var(--muted);line-height:1.6">' + esc(desc) + "</div>";
+      '<div style="color:var(--muted);line-height:1.6">' + desc + "</div>";
   }
   html +=
     '<div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ' +

@@ -342,3 +342,37 @@
   color: var(--txt);
   font-weight: 700;
 }
+
+/* ===== 响应式布局 ===== */
+/* 中等屏幕（≤1200px）：隐藏预览面板 */
+@media (max-width: 1200px) {
+  #root {
+    grid-template-columns: var(--sidebar-width, 300px) 1fr 0;
+  }
+  
+  .preview {
+    display: none;
+  }
+}
+
+/* 小屏幕（≤900px）：隐藏侧栏 */
+@media (max-width: 900px) {
+  #root {
+    grid-template-columns: 0 1fr 0;
+  }
+  
+  .sidebar {
+    display: none;
+  }
+  
+  /* 调整顶栏按钮间距 */
+  .topbar {
+    gap: 6px;
+    padding: 0 8px;
+  }
+  
+  .tb-btn {
+    padding: 3px 8px;
+    font-size: var(--fs-xs);
+  }
+}

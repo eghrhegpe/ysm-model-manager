@@ -323,48 +323,78 @@ function drawView(
         ctx.strokeRect(-drawW / 2, -drawH / 2, drawW, drawH);
         ctx.restore();
       } else {
-        // ---- 静态骨骼：保持原方法（轴对齐，性能更优）----
-        const rx = x * cosA - z * sinA;
-        const rz = x * sinA + z * cosA;
-        const px = rx;
-        const py = isFront ? y : rz;
-        const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
-        const ph = isFront ? sy : sz;
-        const drawX = ox + px * scale;
-        const drawY = oy - (py + ph) * scale;
-        const drawW = pw * scale;
-        const drawH = ph * scale;
-        if (drawW < 0.5 || drawH < 0.5) continue;
+        // ---- 静态骨骼：应用 cube rotation ----
+        const cubeRot = c.rotation || [0, 0, 0];
+        const hasRotation = cubeRot[0] !== 0 || cubeRot[1] !== 0 || cubeRot[2] !== 0;
 
-        // 应用 cube 自身的 rotation（主要是 Z 轴，屏幕平面内最可见）
-        const cubeRz = c.rotation?.[2] || 0;
-        if (cubeRz !== 0) {
-          // 计算 pivot 点的屏幕坐标
+        if (hasRotation) {
+          // 有 rotation，使用与动画骨骼相同的处理方式
           const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
-          const pivotRx = pivot[0] * cosA - pivot[2] * sinA;
-          const pivotPy = isFront ? pivot[1] : (pivot[0] * sinA + pivot[2] * cosA);
-          const pivotScreenX = ox + pivotRx * scale;
-          const pivotScreenY = oy - pivotPy * scale;
-          
-          // 使用 Canvas 变换应用旋转，围绕 pivot 点
+
+          // cube 中心点
+          let cx = x + sx / 2;
+          let cy = y + sy / 2;
+          let cz = z + sz / 2;
+
+          // 应用 X 轴旋转（影响 Y 方向）
+          const rxRad = (cubeRot[0] * Math.PI) / 180;
+          const cosRx = Math.cos(rxRad);
+          if (rxRad !== 0) {
+            const dyy = cy - pivot[1];
+            cy = pivot[1] + dyy * cosRx;
+          }
+
+          // 应用 Z 轴旋转（屏幕平面内）
+          const rzRad = (cubeRot[2] * Math.PI) / 180;
+          if (rzRad !== 0) {
+            const cRz = Math.cos(rzRad), sRz = Math.sin(rzRad);
+            const dxx = cx - pivot[0], dyy = cy - pivot[1];
+            cx = pivot[0] + dxx * cRz - dyy * sRz;
+            cy = pivot[1] + dxx * sRz + dyy * cRz;
+          }
+
+          // 全局 Y 轴旋转投影
+          const scrX = cx * cosA - cz * sinA;
+          const scrY = cy;
+          const screenX = ox + scrX * scale;
+          const screenY = oy - scrY * scale;
+
+          // 投影后的宽高
+          const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
+          const ph = sy * Math.abs(cosRx);
+          const drawW = pw * scale;
+          const drawH = ph * scale;
+          if (drawW < 1 || drawH < 1) continue;
+
           ctx.save();
-          ctx.translate(pivotScreenX, pivotScreenY);
-          ctx.rotate((-cubeRz * Math.PI) / 180); // 负号因为 Canvas Y 轴向下
-          // 计算相对于 pivot 的偏移
-          const offsetX = drawX - pivotScreenX + drawW / 2;
-          const offsetY = drawY - pivotScreenY + drawH / 2;
+          ctx.translate(screenX, screenY);
+          // 屏幕 Y 轴翻转，取负
+          ctx.rotate(-rzRad);
+
           ctx.fillStyle = isHighlight
             ? "rgba(255,180,50,0.25)"
             : "rgba(124,131,255,0.45)";
-          ctx.fillRect(-offsetX, -offsetY, drawW, drawH);
+          ctx.fillRect(-drawW / 2, -drawH / 2, drawW, drawH);
           ctx.strokeStyle = isHighlight
             ? "rgba(255,220,100,1)"
             : "rgba(205,214,244,0.85)";
           ctx.lineWidth = isHighlight ? 1.5 : 1;
-          ctx.strokeRect(-offsetX, -offsetY, drawW, drawH);
+          ctx.strokeRect(-drawW / 2, -drawH / 2, drawW, drawH);
           ctx.restore();
         } else {
           // 无 rotation，使用原有快速路径
+          const rx = x * cosA - z * sinA;
+          const rz = x * sinA + z * cosA;
+          const px = rx;
+          const py = isFront ? y : rz;
+          const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
+          const ph = isFront ? sy : sz;
+          const drawX = ox + px * scale;
+          const drawY = oy - (py + ph) * scale;
+          const drawW = pw * scale;
+          const drawH = ph * scale;
+          if (drawW < 0.5 || drawH < 0.5) continue;
+
           ctx.fillStyle = isHighlight
             ? "rgba(255,180,50,0.25)"
             : "rgba(124,131,255,0.45)";

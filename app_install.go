@@ -138,7 +138,7 @@ func (a *App) importModelFileWithOptions(fileName, base64Data string, opts impor
 		return types.AppError{Code: "FILE_EMPTY", Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}
 	}
 
-	// 类型检测：优先内容检测（ZIP 可能为 YSM/材质包/光影包），回退扩展名匹配
+	// 类型检测：优先内容检测（ZIP 可能为 YSM/资源包/光影包），回退扩展名匹配
 	rtype := "ysm"
 	if ext == ".zip" {
 		rtype = detectZipType(data)
@@ -181,7 +181,7 @@ func (a *App) importModelFileWithOptions(fileName, base64Data string, opts impor
 	return os.WriteFile(destPath, data, 0644)
 }
 
-// detectZipType 通过 ZIP 内容检测真实资源类型（材质包/光影包/YSM）
+// detectZipType 通过 ZIP 内容检测真实资源类型（资源包/光影包/YSM）
 func detectZipType(data []byte) string {
 	// 扫描 ZIP local file header 中的文件名
 	idx := 0
@@ -460,7 +460,7 @@ func isResourcePackFolder(path string) bool {
 }
 
 // clearInstanceDir 只删除仓库中已有的文件，跳过整合包自带的资源
-// 整合包的 resourcepacks/ 等子目录中可能有用户自己安装的、仓库没有的材质包，保留不动
+// 整合包的 resourcepacks/ 等子目录中可能有用户自己安装的、仓库没有的资源包，保留不动
 func (a *App) clearInstanceDir(dir string, rtype string, repoRoot string) int {
 	targets := fsutil.WalkAllFiles(dir, true)
 	if repoRoot == "" {
@@ -945,25 +945,32 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 	}
 	count := 0
 	for _, src := range result.Extra {
-		// 文件夹级（结果已是文件夹路径），完整复制到全局
+		fi, stErr := os.Stat(src)
+		isDir := stErr == nil && fi.IsDir()
 		if rtype == "ysm" || rtype == "mmd-skin" {
-			folderName := filepath.Base(src)
-			dstDir := filepath.Join(globalDir, folderName)
-			if err := os.MkdirAll(dstDir, 0755); err != nil {
-				continue
-			}
-			// 复制文件夹内所有文件
-			entries, _ := os.ReadDir(src)
-			for _, e := range entries {
-				if e.IsDir() {
+			if isDir {
+				folderName := filepath.Base(src)
+				dstDir := filepath.Join(globalDir, folderName)
+				if err := os.MkdirAll(dstDir, 0755); err != nil {
 					continue
 				}
-				srcFile := filepath.Join(src, e.Name())
-				if err := copyFile(srcFile, filepath.Join(dstDir, e.Name())); err != nil {
+				entries, _ := os.ReadDir(src)
+				for _, e := range entries {
+					if e.IsDir() {
+						continue
+					}
+					srcFile := filepath.Join(src, e.Name())
+					if err := copyFile(srcFile, filepath.Join(dstDir, e.Name())); err != nil {
+						continue
+					}
+				}
+				count++
+			} else {
+				if err := copyFile(src, filepath.Join(globalDir, filepath.Base(src))); err != nil {
 					continue
 				}
+				count++
 			}
-			count++
 			continue
 		}
 		dstDir := filepath.Dir(strings.Replace(src, targetDir, globalDir, 1))
@@ -1202,12 +1209,19 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 				Size:   sizeOf(p),
 			})
 		}
-		// 对于非模型类型（光影包/蓝图/材质包），额外扫描整合包目录中所有未被 SyncResources 覆盖的文件
+		// 对于非模型类型（光影包/蓝图/资源包），额外扫描整合包目录中所有未被 SyncResources 覆盖的文件
 		// （SyncResources 的 map 去重会丢失同名文件）
 		if rt.ID == "shaderpack" || rt.ID == "create-blueprint" || rt.ID == "resourcepack" {
-			extraNames := map[string]bool{}
+			// 已由 result 覆盖的文件名集合（避免额外扫描重复添加）
+			seenNames := map[string]bool{}
 			for _, p := range result.Extra {
-				extraNames[strings.ToLower(filepath.Base(p))] = true
+				seenNames[strings.ToLower(filepath.Base(p))] = true
+			}
+			for _, p := range result.Synced {
+				seenNames[strings.ToLower(filepath.Base(p))] = true
+			}
+			for _, p := range result.Missing {
+				seenNames[strings.ToLower(filepath.Base(p))] = true
 			}
 			filepath.Walk(instDir, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
@@ -1217,7 +1231,7 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 					// 资源包文件夹（含 pack.mcmeta）
 					if path != instDir && isResourcePackFolder(path) {
 						low := strings.ToLower(info.Name())
-						if !extraNames[low] {
+						if !seenNames[low] {
 							items = append(items, types.ResourceSyncItem{
 								Path:   path,
 								Name:   info.Name(),
@@ -1234,7 +1248,7 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 				if !strings.HasSuffix(low, ".zip") && !strings.HasSuffix(low, ".nbt") && !strings.HasSuffix(low, ".schematic") && !strings.HasSuffix(low, ".litematic") {
 					return nil
 				}
-				if extraNames[low] {
+				if seenNames[low] {
 					return nil
 				}
 				items = append(items, types.ResourceSyncItem{
@@ -1249,6 +1263,7 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 			})
 		}
 	}
+
 
 	data, _ := json.Marshal(items)
 	return string(data)

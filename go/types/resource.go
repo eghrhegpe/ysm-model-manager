@@ -17,7 +17,7 @@ type ResourceType struct {
 	Detector      string   `json:"detector"`   // "ysm" / "mcmeta" / ""
 }
 
-// PackMeta 材质包信息（来自 pack.mcmeta）
+// PackMeta 资源包信息（来自 pack.mcmeta）
 type PackMeta struct {
 	Pack struct {
 		PackFormat  int    `json:"pack_format"`

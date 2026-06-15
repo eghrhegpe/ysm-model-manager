@@ -516,7 +516,7 @@ class AppPreview extends HTMLElement {
     showModelDetail(this, path);
   }
 
-  /** 显示材质包信息（pack.mcmeta + pack.png） */
+  /** 显示资源包信息（pack.mcmeta + pack.png） */
   async _showResourcePack(path) {
     showResourcePack(this, path);
   }

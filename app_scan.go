@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
@@ -183,6 +184,7 @@ func (a *App) GenerateRepoIndex(repoPath string) (string, error) {
 			relPath = strings.TrimPrefix(relPath, "\\")
 			relPath = strings.TrimPrefix(relPath, "/")
 		}
+		// ✅ 修复：将 append 移到循环内部，使用正确的 e 变量
 		list = append(list, indexEntry{Name: e.Name, Path: relPath, Size: e.Size, Hash: e.Hash})
 	}
 	data, err := json.MarshalIndent(list, "", "  ")
@@ -301,7 +303,7 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-// scanCache 目录扫描结果缓存，2s TTL
+// scanCache 目录扫描结果缓存，30s TTL（原注释写2s，实际值是30s）
 var scanCache sync.Map
 
 type scanCacheEntry struct {
@@ -310,6 +312,14 @@ type scanCacheEntry struct {
 }
 
 const scanCacheTTL = 30 * time.Second
+
+// ClearScanCache 清除扫描缓存（下载/导入后调用）
+func (a *App) ClearScanCache() {
+	scanCache.Range(func(key, value interface{}) bool {
+		scanCache.Delete(key)
+		return true
+	})
+}
 
 // ========== 模型扫描 ==========
 func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
@@ -438,25 +448,17 @@ func (a *App) GetGlobalCustomDir(mcRoot string) string {
 }
 
 func (a *App) ListFileNames(dir string) []string {
-	dir = strings.TrimSpace(dir)
-	if dir == "" {
-		return []string{}
+	files := fsutil.WalkAllFiles(dir, true)
+	names := make([]string, len(files))
+	for i, p := range files {
+		names[i] = filepath.Base(p)
 	}
-	var names []string
-	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			if strings.HasSuffix(strings.ToLower(p), "\\.recycle") || strings.HasSuffix(strings.ToLower(p), "/.recycle") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		names = append(names, filepath.Base(p))
-		return nil
-	})
 	return names
+}
+
+// ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名）
+func (a *App) ListAllFilePaths(dir string) []string {
+	return fsutil.WalkAllFiles(dir, true)
 }
 
 func (a *App) CheckFileExists(path string) bool {
@@ -541,4 +543,19 @@ func (a *App) OpenFolder(dir string) error {
 	// 统一路径分隔符（Windows explorer 不接受混合斜杠）
 	dir = filepath.Clean(dir)
 	return exec.Command("explorer", dir).Start()
+}
+
+// OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录
+func (a *App) OpenInstanceFolder(instDir, rtype string) error {
+	subDir := types.SubDirMap(rtype)
+	if subDir == "" {
+		return a.OpenFolder(instDir)
+	}
+	target := types.FindInstDir(instDir, subDir, rtype)
+	// FindInstDir 在找不到时返回 standard 路径（未必存在）
+	// 如果返回的目录也不存在，回退到 instDir
+	if info, err := os.Stat(target); err != nil || !info.IsDir() {
+		target = instDir
+	}
+	return a.OpenFolder(target)
 }

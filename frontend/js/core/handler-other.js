@@ -35,23 +35,17 @@ export function registerInstanceOps(unsubs) {
           return;
         }
 
-        // 子目录映射（与 types.SubDirMap 保持一致）
-        const subDirMap = {
-          ysm: "config/yes_steve_model/custom",
-          "mmd-skin": "3d-skin/EntityPlayer",
-          "vrchat-avatar": "vrchat-avatars",
-          resourcepack: "resourcepacks",
-          shaderpack: "shaderpacks",
-          "create-blueprint": "schematics",
-        };
+        // 子目录映射——从 Go 端统一获取
+        const { GetSubDirMap } = await import("../../wailsjs/go/main/App.js");
+        const subDirAll = await GetSubDirMap();
 
         let dirs = [];
         let labels = [];
-        if (rtype && subDirMap[rtype]) {
-          dirs = [ins.VersionDir + "/" + subDirMap[rtype]];
+        if (rtype && subDirAll[rtype]) {
+          dirs = [ins.VersionDir + "/" + subDirAll[rtype]];
           labels = [rtype];
         } else {
-          for (const [rt, sub] of Object.entries(subDirMap)) {
+          for (const [rt, sub] of Object.entries(subDirAll)) {
             dirs.push(ins.VersionDir + "/" + sub);
             labels.push(rt);
           }
@@ -96,12 +90,15 @@ export function registerInstanceOps(unsubs) {
     }),
   );
 
-  // 清空整合包内所有资源类型的文件（走回收站）
+  // 清空整合包内指定类型的文件；未指定 rtype 时清空全部
   unsubs.push(
-    bus.on("instance:clear", async ({ name: insName }) => {
+    bus.on("instance:clear", async ({ name: insName, rtype }) => {
       try {
-        const { LoadAppConfig, CountInstanceResources } =
-          await import("../../wailsjs/go/main/App.js");
+        const {
+          LoadAppConfig,
+          CountInstanceResources,
+          ClearInstanceResources,
+        } = await import("../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {
@@ -112,10 +109,10 @@ export function registerInstanceOps(unsubs) {
           });
           return;
         }
-        // 先统计数量
+        // 先统计数量——传入 rtype 限定范围
         let totalCount = 0;
         try {
-          totalCount = await CountInstanceResources(insName);
+          totalCount = await CountInstanceResources(insName, rtype || "");
         } catch {}
         if (totalCount === 0) {
           bus.emit("toast:show", {
@@ -125,10 +122,20 @@ export function registerInstanceOps(unsubs) {
           });
           return;
         }
+        const typeLabel = rtype
+          ? {
+              ysm: "YSM",
+              "mmd-skin": "MMD",
+              "vrchat-avatar": "VRC",
+              resourcepack: "材质包",
+              shaderpack: "光影包",
+              "create-blueprint": "蓝图",
+            }[rtype] || rtype
+          : "全部";
         const confirmed = await modalConfirm({
           title: "清空整合包",
           icon: "🗑️",
-          message: `清空 ${insName}\n扫描到 ${totalCount} 个资源文件将被清空（走回收站，可恢复）。\n涉及类型：YSM/MMD/VRC/材质包/光影包/蓝图\n未入库的文件保留不动。确定继续吗？`,
+          message: `清空 ${insName}\n扫描到 ${totalCount} 个资源文件将被清空（走回收站，可恢复）。\n类型：${typeLabel}\n未入库的文件保留不动。确定继续吗？`,
           okText: "🗑️ 清空",
           danger: true,
         });
@@ -141,9 +148,7 @@ export function registerInstanceOps(unsubs) {
           return;
         }
         try {
-          const { ClearInstanceResources } =
-            await import("../../wailsjs/go/main/App.js");
-          const count = await ClearInstanceResources(insName);
+          const count = await ClearInstanceResources(insName, rtype || "");
           bus.emit("stats:refresh");
           bus.emit("toast:show", {
             msg: `🗑️ ${insName}: 已清空 ${count} 个文件（移入回收站）`,

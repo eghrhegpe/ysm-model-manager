@@ -178,20 +178,20 @@ export function bindBusEvents(vm) {
       if (!confirmed) return;
       try {
         // 加载仓库根目录 → 拼接绝对路径
-        const { LoadAppConfig, ScanModelEntries, MoveToRecycle } =
+        const { LoadAppConfig, ListAllFilePaths, MoveToRecycle } =
           await import("../../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
         const repoRoot = cfg.repoRoot || "";
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
-        const entries = await ScanModelEntries(absDir);
+        const allFiles = await ListAllFilePaths(absDir);
         let count = 0,
           errors = [];
-        for (const e of entries || []) {
+        for (const p of allFiles || []) {
           try {
-            await MoveToRecycle(e.Path);
+            await MoveToRecycle(p);
             count++;
           } catch (ex) {
-            errors.push(e.Name + ": " + String(ex));
+            errors.push(p.split(/[/\\]/).pop() + ": " + String(ex));
           }
         }
         // 尝试删除空文件夹
@@ -327,6 +327,11 @@ export function bindBusEvents(vm) {
 // ————————————————————————————
 
 async function reload(vm) {
+  // 清除扫描缓存，确保操作结果立即可见
+  try {
+    var _cc = window.go.main.App.ClearScanCache;
+    if (_cc) await _cc();
+  } catch (_) {}
   try {
     const rtype = vm._rootAttr || vm._typeFilter || "";
     const r = await loadEntries(rtype);

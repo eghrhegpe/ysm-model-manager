@@ -29,11 +29,13 @@ export function ClearCustomDir(arg1:string):Promise<number>;
 
 export function ClearImportLogs():Promise<void>;
 
-export function ClearInstanceResources(arg1:string):Promise<number>;
+export function ClearInstanceResources(arg1:string,arg2:string):Promise<number>;
+
+export function ClearScanCache():Promise<void>;
 
 export function CountDuplicateFiles(arg1:string):Promise<string>;
 
-export function CountInstanceResources(arg1:string):Promise<number>;
+export function CountInstanceResources(arg1:string,arg2:string):Promise<number>;
 
 export function CreateDir(arg1:string):Promise<void>;
 
@@ -109,6 +111,8 @@ export function GetRepoRoot(arg1:string):Promise<string>;
 
 export function GetResourceInstanceStatus(arg1:string,arg2:string,arg3:string):Promise<Array<types.InstanceStatus>>;
 
+export function GetSubDirMap():Promise<Record<string, string>>;
+
 export function GetWasmBinary():Promise<Array<number>>;
 
 export function GetWindowPosition():Promise<types.WindowState>;
@@ -149,6 +153,8 @@ export function IsProxyRunning():Promise<boolean>;
 
 export function IsResourcePackEnabled(arg1:string):Promise<boolean>;
 
+export function ListAllFilePaths(arg1:string):Promise<Array<string>>;
+
 export function ListFileNames(arg1:string):Promise<Array<string>>;
 
 export function ListModelAuthors():Promise<Array<types.AuthorInfo>>;
@@ -178,6 +184,8 @@ export function MoveToRecycleEx(arg1:string):Promise<string|string>;
 export function OpenFolder(arg1:string):Promise<void>;
 
 export function OpenInBrowser(arg1:string):Promise<void>;
+
+export function OpenInstanceFolder(arg1:string,arg2:string):Promise<void>;
 
 export function PullResourceFromInstance(arg1:string,arg2:string):Promise<number>;
 

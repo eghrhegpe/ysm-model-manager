@@ -14,19 +14,25 @@ export async function initSettings(root) {
     SelectDirectory,
     GetMinecraftPaths,
     SetLinkMode,
-    SelectRpDirectory,
   } = await import("../../../wailsjs/go/main/App.js");
   const cfg = await LoadAppConfig();
   const mcPath = cfg.mcRoot || "";
-  const repoPath = cfg.repoRoot || "";
-  const rpPath = cfg.resourcepackRoot || "";
   const linkMode = cfg.linkMode || "copy";
+
+  // 存储子目录映射（与 Go 端 StorageSubDir 保持一致）
+  const storageSubDir = {
+    ysm: "ysm",
+    resourcepack: "resourcepacks",
+    shaderpack: "shaderpacks",
+    "create-blueprint": "schematics",
+    "mmd-skin": "mmd",
+    "vrchat-avatar": "vrchat",
+  };
 
   // 所有路径卡片的刷新函数列表
   const _cardRefreshers = [];
 
   // 工具：绑定路径卡片点击
-  // elId: 元素 ID, getPath: 获取当前路径的函数, onSelect: 选择目录后的保存回调
   function bindPathClick(elId, getPath, onSelect) {
     const el = root.getElementById(elId);
     if (!el) return;
@@ -41,6 +47,7 @@ export async function initSettings(root) {
       if (!dir) return;
       await onSelect(dir);
       refresh();
+      refreshAdvanced();
       bus.emit("config:updated");
       bus.emit("stats:refresh");
       bus.emit("toast:show", {
@@ -52,206 +59,131 @@ export async function initSettings(root) {
     refresh();
   }
 
-  // 绑定所有路径卡片
+  // 保存 cfg 辅助（保留各字段原值）
+  const saveCfg = async (patch) => {
+    const theme = localStorage.getItem("theme") || "dark";
+    await SaveAppConfig(
+      patch.filesRoot !== undefined ? patch.filesRoot : cfg.filesRoot || "",
+      patch.rpRoot !== undefined ? patch.rpRoot : cfg.resourcepackRoot || "",
+      patch.mcRoot !== undefined ? patch.mcRoot : cfg.mcRoot || "",
+      patch.linkMode !== undefined ? patch.linkMode : cfg.linkMode || "copy",
+      theme,
+    );
+    if (patch.filesRoot !== undefined) cfg.filesRoot = patch.filesRoot;
+    if (patch.rpRoot !== undefined) cfg.resourcepackRoot = patch.rpRoot;
+    if (patch.mcRoot !== undefined) cfg.mcRoot = patch.mcRoot;
+    if (patch.linkMode !== undefined) cfg.linkMode = patch.linkMode;
+  };
+
+  // 🎮 游戏根目录
   bindPathClick(
     "set-mc-path",
     () => cfg.mcRoot || "",
-    async (dir) => {
-      const theme = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(
-        cfg.repoRoot || "",
-        cfg.resourcepackRoot || "",
-        dir,
-        cfg.linkMode || "copy",
-        theme,
-      );
-      cfg.mcRoot = dir;
-    },
+    async (dir) => { await saveCfg({ mcRoot: dir }); },
   );
 
+  // 📁 文件存储路径
   bindPathClick(
-    "set-repo-path",
-    () =>
-      cfg.repoRoot ||
-      (cfg.mcRoot
-        ? cfg.mcRoot.replace(/\//g, "\\") + "\\config\\yes_steve_model\\custom"
-        : ""),
-    async (dir) => {
-      const mc = cfg.mcRoot || "";
-      if (mc && dir.toLowerCase().startsWith(mc.toLowerCase())) {
-        bus.emit("toast:show", {
-          msg: '⚠️ "YSM 模型路径"不应在游戏目录内。请选择一个独立的模型存储目录。',
-          duration: 6000,
-          type: "warn",
-        });
-      }
-      const theme = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(
-        dir,
-        cfg.resourcepackRoot || "",
-        cfg.mcRoot || "",
-        cfg.linkMode || "copy",
-        theme,
-      );
-      cfg.repoRoot = dir;
-    },
+    "set-files-root",
+    () => cfg.filesRoot || "",
+    async (dir) => { await saveCfg({ filesRoot: dir }); },
   );
 
-  // ↩️ 默认按钮：恢复 YSM 模型路径为 mcRoot 下的默认位置
-  root
-    .getElementById("set-repo-default")
-    ?.addEventListener("click", async function () {
-      var mcRoot = cfg.mcRoot || "";
-      if (!mcRoot) {
-        bus.emit("toast:show", {
-          msg: "请先设置游戏根目录",
-          duration: 3000,
-          type: "warn",
-        });
-        return;
-      }
-      var defaultPath =
-        mcRoot.replace(/\//g, "\\") + "\\config\\yes_steve_model\\custom";
-      var theme = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(
-        defaultPath,
-        cfg.resourcepackRoot || "",
-        mcRoot,
-        cfg.linkMode || "copy",
-        theme,
-      );
-      cfg.repoRoot = defaultPath;
-      _cardRefreshers.forEach(function (fn) {
-        fn();
-      });
-      bus.emit("config:updated");
-      bus.emit("toast:show", {
-        msg: "↩️ 已恢复默认路径: " + defaultPath,
-        duration: 3000,
-        type: "success",
-      });
-    });
+  // 📂 详细调整面板
+  const advancedTypes = [
+    { rtype: "ysm",              icon: "💎", name: "YSM 模型",     cfgKey: "" },
+    { rtype: "resourcepack",     icon: "🎨", name: "资源包",       cfgKey: "resourcepackRoot" },
+    { rtype: "shaderpack",       icon: "☀️", name: "光影包",       cfgKey: "shaderpackRoot" },
+    { rtype: "create-blueprint", icon: "⚙️", name: "蓝图",         cfgKey: "schematicRoot" },
+    { rtype: "mmd-skin",         icon: "🎭", name: "MMD 模型",     cfgKey: "mmdRoot" },
+    { rtype: "vrchat-avatar",    icon: "🥽", name: "VRChat 模型",  cfgKey: "vrcRoot" },
+  ];
 
-  bindPathClick(
-    "set-rp-path",
-    () =>
-      cfg.resourcepackRoot ||
-      (cfg.mcRoot ? cfg.mcRoot.replace(/\//g, "\\") + "\\resourcepacks" : ""),
-    async (dir) => {
-      const theme = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(
-        cfg.repoRoot || "",
-        dir,
-        cfg.mcRoot || "",
-        cfg.linkMode || "copy",
-        theme,
-      );
-      cfg.resourcepackRoot = dir;
-    },
-  );
-
-  // 纯展示路径（由 mcRoot 派生，不可独立设置）
-  // 可点击的派生路径（选目录后用 SetResourceRoot 持久化）
-  const rtypeKeyMap = {
-    resourcepack: "resourcepackRoot",
-    shaderpack: "shaderpackRoot",
-    "create-blueprint": "schematicRoot",
-    "mmd-skin": "mmdRoot",
-    "vrchat-avatar": "vrcRoot",
-  };
-  function bindDerived(elId, rtype) {
-    const el = root.getElementById(elId);
-    if (!el) return;
-    const key = rtypeKeyMap[rtype];
-    const refresh = () => {
-      const p = cfg[key] || (cfg.mcRoot ? mcDerivedPath(rtype) : "") || "";
-      el.textContent = p ? p.replace(/\//g, "\\") : "待设置 MC 根目录";
-      el.title = p.replace(/\//g, "\\") || "";
-    };
-    // 重置按钮
-    const resetBtn = document.createElement("button");
-    resetBtn.className = "btn";
-    resetBtn.textContent = "↩️ 默认";
-    resetBtn.style.cssText =
-      "font-size:var(--fs-btn-tool);padding:var(--pad-btn-tool) 8px;margin-left:6px";
-    resetBtn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      try {
-        const { ResetResourceRoot } =
-          await import("../../../wailsjs/go/main/App.js");
-        await ResetResourceRoot(rtype);
-        cfg[key] = "";
-        refresh();
-        bus.emit("config:updated");
-        bus.emit("toast:show", {
-          msg: "✅ 已恢复默认",
-          duration: 2000,
-          type: "success",
-        });
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: "❌ " + friendlyError(e.message || e, "重置失败"),
-          duration: 4000,
-          type: "error",
-        });
-      }
-    });
-    // 重置按钮 → 放入卡片标题栏右侧
-    const card = el.closest(".stg-card");
-    if (card) {
-      const hdr = card.querySelector(".stg-card-hdr");
-      if (hdr) {
-        hdr.style.display = "flex";
-        hdr.style.alignItems = "center";
-        hdr.style.justifyContent = "space-between";
-        hdr.appendChild(resetBtn);
-      }
+  const refreshAdvanced = async () => {
+    const grid = root.getElementById("set-advanced-grid");
+    if (!grid) return;
+    let html = "";
+    for (const t of advancedTypes) {
+      const canOverride = !!t.cfgKey;
+      const overridePath = canOverride ? (cfg[t.cfgKey] || "") : "";
+      const defaultPath = cfg.filesRoot
+        ? (cfg.filesRoot + "\\" + (storageSubDir[t.rtype] || "")).replace(/\//g, "\\")
+        : "未设置文件存储路径";
+      const currentPath = overridePath || defaultPath;
+      const isOverridden = !!overridePath;
+      html +=
+        '<div class="stg-card' + (isOverridden ? '" style="border-color:var(--accent)"' : '"') + '>' +
+        '<div class="stg-card-hdr" style="display:flex;align-items:center;gap:6px">' +
+        '<span>' + t.icon + '</span><span>' + t.name + '</span>' +
+        (isOverridden ? '<span style="font-size:9px;color:var(--accent)">已自定义</span>' : '') +
+        '<span style="margin-left:auto;display:flex;gap:4px">' +
+        (canOverride ? '<button class="btn stg-adv-set" data-rtype="' + t.rtype + '" style="font-size:var(--fs-btn-tool);padding:2px 6px">📂</button>' : '') +
+        (isOverridden ? '<button class="btn stg-adv-reset" data-rtype="' + t.rtype + '" style="font-size:var(--fs-btn-tool);padding:2px 6px">↩️</button>' : '') +
+        '</span></div>' +
+        '<div class="stg-card-body">' +
+        '<div class="stg-card-val" style="font-size:10px">' + escHtml(currentPath) + '</div>' +
+        '</div></div>';
     }
+    grid.innerHTML = html;
 
-    el.classList.add("derived");
-    el.addEventListener("click", async () => {
-      const dir = await SelectDirectory();
-      if (!dir) return;
-      try {
-        const { SetResourceRoot } =
-          await import("../../../wailsjs/go/main/App.js");
-        await SetResourceRoot(rtype, dir);
-        cfg[key] = dir;
-        refresh();
-        bus.emit("config:updated");
-        bus.emit("toast:show", {
-          msg: "✅ 路径已设置",
-          duration: 2000,
-          type: "success",
-        });
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: "❌ " + friendlyError(e.message || e, "保存失败"),
-          duration: 4000,
-          type: "error",
-        });
-      }
+    // 绑定 📂 和 ↩️ 按钮
+    grid.querySelectorAll(".stg-adv-set").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const rtype = btn.dataset.rtype;
+        const dir = await SelectDirectory();
+        if (!dir) return;
+        try {
+          const { SetResourceRoot } = await import("../../../wailsjs/go/main/App.js");
+          await SetResourceRoot(rtype, dir);
+          const entry = advancedTypes.find((t) => t.rtype === rtype);
+          if (entry) cfg[entry.cfgKey] = dir;
+          refreshAdvanced();
+          bus.emit("config:updated");
+          bus.emit("toast:show", { msg: "✅ 路径已设置", duration: 2000, type: "success" });
+        } catch (e) {
+          bus.emit("toast:show", { msg: "❌ " + friendlyError(e.message || e, "保存失败"), duration: 4000, type: "error" });
+        }
+      });
     });
-    _cardRefreshers.push(refresh);
-    refresh();
-  }
-  const mcDerivedPath = (rtype) => {
-    const map = {
-      resourcepack: "resourcepacks",
-      shaderpack: "shaderpacks",
-      "create-blueprint": "schematics",
-      "mmd-skin": "3d-skin\\EntityPlayer",
-      "vrchat-avatar": "vrchat-avatars",
-    };
-    return cfg.mcRoot
-      ? cfg.mcRoot.replace(/\\/g, "\\") + "\\" + map[rtype]
-      : "";
+    grid.querySelectorAll(".stg-adv-reset").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const rtype = btn.dataset.rtype;
+        try {
+          const { ResetResourceRoot } = await import("../../../wailsjs/go/main/App.js");
+          await ResetResourceRoot(rtype);
+          const entry = advancedTypes.find((t) => t.rtype === rtype);
+          if (entry) cfg[entry.cfgKey] = "";
+          refreshAdvanced();
+          _cardRefreshers.forEach((fn) => fn());
+          bus.emit("config:updated");
+          bus.emit("toast:show", { msg: "↩️ 已恢复默认", duration: 2000, type: "success" });
+        } catch (e) {
+          bus.emit("toast:show", { msg: "❌ " + friendlyError(e.message || e, "重置失败"), duration: 4000, type: "error" });
+        }
+      });
+    });
   };
-  bindDerived("set-rp-path", "resourcepack");
-  bindDerived("set-sp-path", "shaderpack");
-  bindDerived("set-schem-path", "create-blueprint");
-  bindDerived("set-mmd-path", "mmd-skin");
-  bindDerived("set-vrc-path", "vrchat-avatar");
+
+  // 展开/折叠
+  root.getElementById("set-advanced-toggle")?.addEventListener("click", async () => {
+    const panel = root.getElementById("set-advanced-panel");
+    const btn = root.getElementById("set-advanced-toggle");
+    if (!panel || !btn) return;
+    const isOpen = panel.style.display !== "none";
+    if (isOpen) {
+      panel.style.display = "none";
+      btn.textContent = "📂 详细调整 ▸";
+    } else {
+      await refreshAdvanced();
+      panel.style.display = "block";
+      btn.textContent = "📂 详细调整 ▾";
+    }
+  });
+
+  // 初始刷新
+  refreshAdvanced();
 
   // 游戏路径 - 自动搜索
   const detectBtn = root.getElementById("set-mc-detect");
@@ -273,7 +205,7 @@ export async function initSettings(root) {
     }
     var theme = localStorage.getItem("theme") || "dark";
     await SaveAppConfig(
-      cfg.repoRoot || "",
+      cfg.filesRoot || "",
       cfg.resourcepackRoot || "",
       selected,
       cfg.linkMode || "copy",
@@ -498,7 +430,7 @@ export async function initSettings(root) {
       const val = linkSelect.value;
       updateLinkHint(val);
       const theme = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(repoPath, "", mcPath, val, theme);
+      await SaveAppConfig(cfg.filesRoot || "", cfg.resourcepackRoot || "", cfg.mcRoot || "", val, theme);
       await SetLinkMode(val);
       bus.emit("toast:show", {
         msg: `✅ 链接模式已切换至: ${val}`,
@@ -523,7 +455,7 @@ export async function initSettings(root) {
     try {
       const { SaveAppConfig } = await import("../../../wailsjs/go/main/App.js");
       const theme2 = localStorage.getItem("theme") || mode;
-      await SaveAppConfig(repoPath, "", mcPath, linkMode, theme2);
+      await SaveAppConfig(cfg.filesRoot || "", cfg.resourcepackRoot || "", cfg.mcRoot || "", linkMode, theme2);
     } catch {}
     const label =
       {

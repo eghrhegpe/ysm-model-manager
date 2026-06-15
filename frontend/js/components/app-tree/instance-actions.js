@@ -88,7 +88,7 @@ export function initInstanceActions(vm) {
           await import("../../../wailsjs/go/main/App.js")
         ).LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
-        const repoRoot = cfg.repoRoot || "";
+        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
         if (!mcRoot || !repoRoot) {
           bus.emit("toast:show", {
             msg: "请先设置路径",

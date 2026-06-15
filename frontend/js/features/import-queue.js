@@ -3,9 +3,21 @@ import { bus } from "../bus.js";
 import { friendlyError } from "../utils/errors.js";
 import { parseModelName, renderDisplayName } from "../utils/display.js";
 import { modalConfirm } from "../dialogs/modal.js";
-import { ALL_EXTS } from "../utils/extensions.js";
+import { ALL_EXTS, extBelongsTo } from "../utils/extensions.js";
 
 const extsStr = ALL_EXTS.join(" ");
+
+const isYsmExt = (name) => {
+  const ext = "." + (name.split(".").pop() || "").toLowerCase();
+  // 只有 .ysm 和 ysm.json 确定是 YSM；.zip/.7z 交给 Go 端 detectZipType 内容判定
+  if (ext === ".ysm") return true;
+  if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
+  return false;
+};
+const isSupportedFile = (name) => {
+  const ext = "." + (name.split(".").pop() || "").toLowerCase();
+  return ALL_EXTS.includes(ext);
+};
 
 export function initImportQueue(app) {
   const root = app._root;
@@ -74,7 +86,7 @@ export function initImportQueue(app) {
         const { CheckFileExists, LoadAppConfig } =
           await import("../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
-        const fullPath = (cfg.repoRoot || "") + "\\" + name;
+        const fullPath = (((cfg.filesRoot||"")+"\\ysm") || "") + "\\" + name;
         const exists = await CheckFileExists(fullPath);
         const el = root.getElementById("dl-conflict");
         if (el) el.style.display = exists ? "" : "none";
@@ -185,14 +197,17 @@ export function initImportQueue(app) {
       let ok = 0,
         skip = 0;
       Array.from(files).forEach((file) => {
-        const ext = file.name.split(".").pop().toLowerCase();
-        if (!["ysm", "zip", "7z"].includes(ext)) {
+        if (!isSupportedFile(file.name)) {
           skip++;
           return;
         }
         ok++;
         const reader = new FileReader();
-        reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
+        if (isYsmExt(file.name)) {
+          reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
+        } else {
+          reader.onload = () => directImport(file, reader.result.split(",")[1]);
+        }
         reader.readAsDataURL(file);
       });
       if (ok === 0 && skip > 0) {
@@ -223,14 +238,26 @@ export function initImportQueue(app) {
   fileInput.addEventListener("change", () => {
     const files = fileInput.files;
     if (!files.length) return;
-    let ok = 0;
+    let ok = 0, skip = 0;
     Array.from(files).forEach((file) => {
+      if (!isSupportedFile(file.name)) { skip++; return; }
       ok++;
       const reader = new FileReader();
-      reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
+      if (isYsmExt(file.name)) {
+        reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
+      } else {
+        reader.onload = () => directImport(file, reader.result.split(",")[1]);
+      }
       reader.readAsDataURL(file);
     });
     updateQueueCount();
+    if (ok === 0 && skip > 0) {
+      bus.emit("toast:show", {
+        msg: "⚠️ 不支持的格式，仅支持 " + extsStr,
+        duration: 4000,
+        type: "warn",
+      });
+    }
     fileInput.value = "";
   });
   folderInput.addEventListener("change", () => {
@@ -238,11 +265,14 @@ export function initImportQueue(app) {
     if (!files.length) return;
     let ok = 0;
     Array.from(files).forEach((file) => {
-      const ext = file.name.split(".").pop().toLowerCase();
-      if (!["ysm", "zip", "7z"].includes(ext)) return;
+      if (!isSupportedFile(file.name)) return;
       ok++;
       const reader = new FileReader();
-      reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
+      if (isYsmExt(file.name)) {
+        reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
+      } else {
+        reader.onload = () => directImport(file, reader.result.split(",")[1]);
+      }
       reader.readAsDataURL(file);
     });
     updateQueueCount();
@@ -287,10 +317,9 @@ export function initImportQueue(app) {
       const { LoadAppConfig, ImportModelFileTo } =
         await import("../../wailsjs/go/main/App.js");
       const cfg = await LoadAppConfig();
-      const repoRoot = cfg.repoRoot || "";
-      if (!repoRoot) {
+      if (!cfg.filesRoot) {
         bus.emit("toast:show", {
-          msg: "请先在设置中配置仓库目录",
+          msg: "请先在设置中配置文件存储路径",
           duration: 4000,
           type: "warn",
         });
@@ -309,12 +338,12 @@ export function initImportQueue(app) {
         const { showRenameDialog } = await import("../dialogs/rename.js");
         const { RenameFile } = await import("../../wailsjs/go/main/App.js");
         const renameTo = await showRenameDialog(
-          (cfg.repoRoot || "") + "\\" + newName,
+          (((cfg.filesRoot||"")+"\\ysm") || "") + "\\" + newName,
           newName,
         );
         if (renameTo && renameTo !== newName) {
           const fullImportPath =
-            (cfg.repoRoot || "") +
+            (((cfg.filesRoot||"")+"\\ysm") || "") +
             "\\" +
             (currentRelPath ? currentRelPath.replace(/\//g, "\\") + "\\" : "") +
             newName;
@@ -341,6 +370,7 @@ export function initImportQueue(app) {
       imported.unshift({
         name: newName,
         time: new Date().toLocaleTimeString(),
+        isYsm: true,
       });
       // 从队列中移除已导入的文件
       const importedIdx = fileQueue.findIndex((fq) => fq.file === currentFile);
@@ -435,8 +465,8 @@ export function initImportQueue(app) {
       const { ScanModelEntries, LoadAppConfig } =
         await import("../../wailsjs/go/main/App.js");
       const cfg = await LoadAppConfig();
-      if (!cfg.repoRoot) return;
-      const entries = await ScanModelEntries(cfg.repoRoot);
+      if (!((cfg.filesRoot||"")+"\\ysm")) return;
+      const entries = await ScanModelEntries(((cfg.filesRoot||"")+"\\ysm"));
       repoFiles = new Set(entries.map((e) => e.Name.replace(/\.ban$/i, "")));
     } catch {
       repoFiles = new Set();
@@ -473,8 +503,8 @@ export function initImportQueue(app) {
         if (entry.isFile) {
           entry.file(
             (file) => {
-              const ext = file.name.split(".").pop().toLowerCase();
-              if (["ysm", "zip", "7z"].includes(ext)) {
+              if (!isSupportedFile(file.name)) { resolve(); return; }
+              if (isYsmExt(file.name)) {
                 file._relPath = basePath
                   ? basePath + "/" + file.name
                   : file.name;
@@ -486,7 +516,12 @@ export function initImportQueue(app) {
                 reader.onerror = () => resolve();
                 reader.readAsDataURL(file);
               } else {
-                resolve();
+                const reader = new FileReader();
+                reader.onload = () => {
+                  directImport(file, reader.result.split(",")[1]).then(resolve);
+                };
+                reader.onerror = () => resolve();
+                reader.readAsDataURL(file);
               }
             },
             () => resolve(), // entry.file 回调失败（如 .lnk 快捷方式）→ 直接跳过
@@ -520,7 +555,31 @@ export function initImportQueue(app) {
       const entry = items[i].webkitGetAsEntry?.();
       if (entry) entries.push(entry);
     }
-    if (!entries.length) return;
+    if (!entries.length) {
+      // 回退：webkitGetAsEntry 不可用时直接用 getAsFile
+      let ok = 0, skip = 0;
+      for (let i = 0; i < items.length; i++) {
+        const file = items[i].getAsFile?.();
+        if (!file || !isSupportedFile(file.name)) { skip++; continue; }
+        ok++;
+        const reader = new FileReader();
+        if (isYsmExt(file.name)) {
+          reader.onload = () => enqueueFile(file, reader.result.split(",")[1]);
+        } else {
+          reader.onload = () => directImport(file, reader.result.split(",")[1]);
+        }
+        reader.readAsDataURL(file);
+      }
+      updateQueueCount();
+      if (ok > 0) {
+        bus.emit("toast:show", {
+          msg: `📥 已加入队列: ${ok} 个文件`,
+          duration: 2000,
+          type: "success",
+        });
+      }
+      return;
+    }
     Promise.all(entries.map((entry) => readEntry(entry, ""))).then(() => {
       updateQueueCount();
       if (fileQueue.length > 0) {
@@ -531,6 +590,33 @@ export function initImportQueue(app) {
         });
       }
     });
+  };
+
+  // 非 YSM 文件直接导入（跳过命名表单）
+  const directImport = async (file, base64) => {
+    try {
+      const { ImportModelFile } = await import("../../wailsjs/go/main/App.js");
+      await ImportModelFile(file.name, base64);
+      imported.unshift({
+        name: file.name,
+        time: new Date().toLocaleTimeString(),
+        isYsm: false,
+      });
+      renderImportedList();
+      bus.emit("stats:refresh");
+      bus.emit("tree:reload");
+      bus.emit("toast:show", {
+        msg: "✅ 已导入: " + file.name,
+        duration: 2000,
+        type: "success",
+      });
+    } catch (e) {
+      bus.emit("toast:show", {
+        msg: "❌ 导入失败: " + String(e),
+        duration: 4000,
+        type: "error",
+      });
+    }
   };
 
   // 渲染已导入列表（含队列）
@@ -545,9 +631,11 @@ export function initImportQueue(app) {
         '<span style="font-size:9px;color:var(--muted);flex-shrink:0">' +
         (item.time || "") +
         "</span>" +
-        '<button class="dl-reimport" data-name="' +
-        esc(item.name) +
-        '" style="padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">✂️</button>' +
+        (item.isYsm !== false
+          ? '<button class="dl-reimport" data-name="' +
+            esc(item.name) +
+            '" style="padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:9px">✂️</button>'
+          : "") +
         "</div>";
     });
     fileQueue.forEach((fq, qi) => {
@@ -589,7 +677,7 @@ export function initImportQueue(app) {
         const { RenameFile, LoadAppConfig } =
           await import("../../wailsjs/go/main/App.js");
         const cfg = await LoadAppConfig();
-        const repoRoot = cfg.repoRoot || "";
+        const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
         const fullPath = repoRoot + "\\" + name;
         const newName = await showRenameDialog(fullPath, name);
         if (!newName) return;

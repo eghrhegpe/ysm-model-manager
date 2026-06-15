@@ -138,15 +138,15 @@ export function bindToolbarEvents(root, vm) {
     const { LoadAppConfig, ExportBoneStructures } =
       await import("../../../wailsjs/go/main/App.js");
     const cfg = await LoadAppConfig();
-    if (!cfg.repoRoot) {
+    if (!cfg.filesRoot) {
       bus.emit("toast:show", {
-        msg: "请先设置仓库目录",
+        msg: "请先设置文件存储路径",
         duration: 2000,
         type: "warn",
       });
       return;
     }
-    const text = await ExportBoneStructures(cfg.repoRoot);
+    const text = await ExportBoneStructures(((cfg.filesRoot||"")+"\\ysm"));
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const a = document.createElement("a");
     a.download = `bone-structures-${new Date().toISOString().slice(0, 10)}.txt`;
@@ -298,15 +298,15 @@ export function bindToolbarEvents(root, vm) {
           const { LoadAppConfig, GenerateRepoIndex } =
             await import("../../../wailsjs/go/main/App.js");
           const cfg = await LoadAppConfig();
-          if (!cfg.repoRoot) {
+          if (!cfg.filesRoot) {
             bus.emit("toast:show", {
-              msg: "请先在设置中配置仓库目录",
+              msg: "请先在设置中配置文件存储路径",
               duration: 2000,
               type: "warn",
             });
             return;
           }
-          await GenerateRepoIndex(cfg.repoRoot);
+          await GenerateRepoIndex(((cfg.filesRoot||"")+"\\ysm"));
           bus.emit("toast:show", {
             msg: "✅ index.json 已生成",
             duration: 3000,

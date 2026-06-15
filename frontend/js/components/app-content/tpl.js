@@ -17,7 +17,7 @@ export function repositoryHTML() {
     '<button class="repo-subtab" data-rtab="mmd-skin">🎭 MMD</button>' +
     '<button class="repo-subtab" data-rtab="vrchat-avatar">🥽 VRC</button>' +
     '<span style="padding:3px 4px;color:var(--muted)">│</span>' +
-    '<button class="repo-subtab" data-rtab="resourcepack">🎨 材质包</button>' +
+    '<button class="repo-subtab" data-rtab="resourcepack">🎨 资源包</button>' +
     '<button class="repo-subtab" data-rtab="shaderpack">☀️ 光影包</button>' +
     '<button class="repo-subtab" data-rtab="create-blueprint">⚙️ 蓝图</button>' +
     "</div>" +
@@ -67,7 +67,7 @@ export function resourceLibraryHTML() {
     '<button class="repo-tab" data-rtab="mmd-skin">🎭 MMD</button>' +
     '<button class="repo-tab" data-rtab="vrchat-avatar">🥽 VRC</button>' +
     '<span style="padding:4px 8px;color:var(--muted);font-size:var(--fs-xs);align-self:center">│</span>' +
-    '<button class="repo-tab" data-rtab="resourcepack">🎨 材质包</button>' +
+    '<button class="repo-tab" data-rtab="resourcepack">🎨 资源包</button>' +
     '<button class="repo-tab" data-rtab="shaderpack">☀️ 光影包</button>' +
     '<button class="repo-tab" data-rtab="create-blueprint">⚙️ 蓝图</button>' +
     "</div>" +
@@ -86,60 +86,32 @@ export function settingsHTML() {
 <div class="repo-tab-body" id="stg-tab-basic">
 <div class="stg-page">
 
-<div class="section-title stg-title">⚙️ 仓库路径配置</div>
+<div class="section-title stg-title">⚙️ 路径配置</div>
 
 <div class="stg-grid">
-    <!-- Row 1 -->
+    <!-- Row 1: 游戏根目录 + 文件存储路径 -->
     <div class="stg-card">
       <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🎮 游戏根目录<button class="btn-base sm" id="set-mc-detect">🔍 自动搜索</button></div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-mc-path">加载中...</div>
-        <div class="stg-card-desc">自动扫描 PCL2、%AppData% 等常见位置</div>
+        <div class="stg-card-desc">用于整合包同步，不影响文件存储位置</div>
       </div>
     </div>
-    <div class="stg-card">
-      <div class="stg-card-hdr">🎨 材质包路径</div>
-      <div class="stg-card-body">
-        <div class="stg-card-val" id="set-rp-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}\\resourcepacks\\</div>
-      </div>
-    </div>
-    <div class="stg-card">
-      <div class="stg-card-hdr">☀️ 光影包路径</div>
-      <div class="stg-card-body">
-        <div class="stg-card-val" id="set-sp-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}\\shaderpacks\\</div>
-      </div>
-    </div>
-    <!-- Row 2 -->
-    <div class="stg-card">
-      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">💎 YSM 模型路径<button class="btn-base sm" id="set-repo-default">↩️ 默认</button></div>
-      <div class="stg-card-body">
-        <div class="stg-card-val" id="set-repo-path">加载中...</div>
-        <div class="stg-card-hint">存放 .ysm 模型文件的独立目录（不是游戏目录）</div>
-      </div>
-    </div>
-    <div class="stg-card">
-      <div class="stg-card-hdr">🎭 MMD 模型路径</div>
-      <div class="stg-card-body">
-        <div class="stg-card-val" id="set-mmd-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}\\3d-skin\\EntityPlayer\\</div>
-      </div>
-    </div>
-    <div class="stg-card">
-      <div class="stg-card-hdr">🥽 VRChat 模型路径</div>
-      <div class="stg-card-body">
-        <div class="stg-card-val" id="set-vrc-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}\\vrchat-avatars\\</div>
-      </div>
-    </div>
-    <!-- Row 3: 居中 -->
     <div class="stg-card" style="grid-column:2">
-      <div class="stg-card-hdr">⚙️ 蓝图路径</div>
+      <div class="stg-card-hdr">📁 文件存储路径</div>
       <div class="stg-card-body">
-        <div class="stg-card-val" id="set-schem-path">加载中...</div>
-        <div class="stg-card-hint">默认: {mc}\\schematics\\</div>
+        <div class="stg-card-val" id="set-files-root">加载中...</div>
+        <div class="stg-card-desc">所有资源文件统一存放于此，按类型分子目录</div>
       </div>
+    </div>
+  </div>
+
+  <!-- 详细调整（默认折叠） -->
+  <div style="margin-top:8px">
+    <button class="btn" id="set-advanced-toggle" style="font-size:var(--fs-sm);padding:4px 12px">📂 详细调整 ▸</button>
+    <div id="set-advanced-panel" style="display:none;margin-top:8px">
+      <div class="section-title stg-title stg-sub-title" style="margin-bottom:6px">各类型独立路径（留空则使用统一存储路径）</div>
+      <div class="stg-grid" id="set-advanced-grid"></div>
     </div>
   </div>
 
@@ -430,7 +402,7 @@ export function downloadsHTML() {
     <span style="font-size:9px;color:var(--muted)">📁 拖入整个文件夹即可批量导入</span>
   </div>
   <div style="font-size:10px;color:#bd93f9;margin-top:2px">💡 MMD/基岩版模型建议打包为 .zip 文件管理</div>
-  <input type="file" id="dl-file-input" accept=".ysm,.zip,.7z,.json,.pmx,.pmd,.vrca,.vrm,.nbt,.schematic" style="display:none">
+  <input type="file" id="dl-file-input" accept=".ysm,.zip,.7z,.json,.pmx,.pmd,.vrca,.vrm,.nbt,.schematic,.litematic" style="display:none">
   <input type="file" id="dl-folder-input" webkitdirectory style="display:none">
 </div>
 </div>

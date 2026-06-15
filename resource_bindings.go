@@ -56,53 +56,40 @@ func (a *App) DetectResourceType(path string) string {
 // GetRepoRoot 根据资源类型返回对应的仓库根目录
 func (a *App) GetRepoRoot(rtype string) string {
 	cfg := a.LoadAppConfig()
+	// 1. 类型专属覆写（ysm 除外——统一走 FilesRoot，旧 RepoRoot 仅做兼容回退）
+	if rtype != "ysm" {
+		if root := specificRoot(cfg, rtype); root != "" {
+			return root
+		}
+	}
+	// 2. FilesRoot + 存储子目录
+	if cfg.FilesRoot != "" {
+		subDir := types.StorageSubDir(rtype)
+		if subDir != "" {
+			return filepath.Join(cfg.FilesRoot, subDir)
+		}
+	}
+	return ""
+}
+
+// specificRoot 返回非 ysm 资源类型的专属覆写路径
+func specificRoot(cfg types.AppConfig, rtype string) string {
 	switch rtype {
 	case "resourcepack":
-		if cfg.ResourcepackRoot != "" {
-			return cfg.ResourcepackRoot
-		}
-		if cfg.McRoot != "" {
-			return filepath.Join(cfg.McRoot, "resourcepacks")
-		}
-		return ""
+		return cfg.ResourcepackRoot
 	case "shaderpack":
-		if cfg.ShaderpackRoot != "" {
-			return cfg.ShaderpackRoot
-		}
-		if cfg.McRoot != "" {
-			return filepath.Join(cfg.McRoot, "shaderpacks")
-		}
-		return ""
+		return cfg.ShaderpackRoot
 	case "create-blueprint":
-		if cfg.SchematicRoot != "" {
-			return cfg.SchematicRoot
-		}
-		if cfg.McRoot != "" {
-			return filepath.Join(cfg.McRoot, "schematics")
-		}
-		return ""
+		return cfg.SchematicRoot
 	case "mmd-skin":
-		if cfg.MmdRoot != "" {
-			return cfg.MmdRoot
-		}
-		if cfg.McRoot != "" {
-			return filepath.Join(cfg.McRoot, "3d-skin", "EntityPlayer")
-		}
-		return ""
+		return cfg.MmdRoot
 	case "vrchat-avatar":
 		if cfg.VrcRoot != "" {
 			return cfg.VrcRoot
 		}
-		if cfg.MmdRoot != "" {
-			return cfg.MmdRoot
-		}
-		if cfg.McRoot != "" {
-			return filepath.Join(cfg.McRoot, "vrchat-avatars")
-		}
-		return ""
-	default:
-		return cfg.RepoRoot
+		return cfg.MmdRoot
 	}
+	return ""
 }
 
 // ToggleResourcePack 切换材质包的启用/禁用状态（.zip ↔ .zip.disabled）
@@ -181,10 +168,8 @@ func (a *App) SetResourceRoot(rtype, path string) error {
 		cfg.VrcRoot = path
 	case "resourcepack":
 		cfg.ResourcepackRoot = path
-	case "ysm":
-		cfg.RepoRoot = path
 	default:
-		cfg.RepoRoot = path
+		return fmt.Errorf("不支持单独设置此类型的路径: %s", rtype)
 	}
 	return a.saveConfig(cfg)
 }

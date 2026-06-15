@@ -16,7 +16,7 @@ var ResourceExts = map[string][]string{
 	"vrchat-avatar":    {".vrca", ".vrm"},
 	"resourcepack":     {".zip"},
 	"shaderpack":       {".zip"},
-	"create-blueprint": {".nbt", ".schematic"},
+	"create-blueprint": {".nbt", ".schematic", ".litematic"},
 }
 
 // AllExts 所有支持的扩展名（去重后）
@@ -108,6 +108,26 @@ func FindInstDir(versionDir, subDir, rtype string) string {
 		}
 	}
 	return standard // 没找到，返回标准路径（SyncResources 会找到空目录返回空结果）
+}
+
+// StorageSubDir 每种资源类型在 FilesRoot 下的存储子目录
+func StorageSubDir(rtype string) string {
+	switch rtype {
+	case "ysm":
+		return "ysm"
+	case "resourcepack":
+		return "resourcepacks"
+	case "shaderpack":
+		return "shaderpacks"
+	case "create-blueprint":
+		return "schematics"
+	case "mmd-skin":
+		return "mmd"
+	case "vrchat-avatar":
+		return "vrchat"
+	default:
+		return rtype
+	}
 }
 
 // SubDirMap 每种资源类型在整合包实例中的子目录

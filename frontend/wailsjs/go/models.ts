@@ -24,7 +24,7 @@ export namespace main {
 export namespace types {
 	
 	export class AppConfig {
-	    repoRoot: string;
+	    filesRoot: string;
 	    resourcepackRoot: string;
 	    shaderpackRoot: string;
 	    schematicRoot: string;
@@ -49,7 +49,7 @@ export namespace types {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.repoRoot = source["repoRoot"];
+	        this.filesRoot = source["filesRoot"];
 	        this.resourcepackRoot = source["resourcepackRoot"];
 	        this.shaderpackRoot = source["shaderpackRoot"];
 	        this.schematicRoot = source["schematicRoot"];

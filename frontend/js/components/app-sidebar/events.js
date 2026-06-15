@@ -132,7 +132,7 @@ export function bindFooter(root, instances) {
             btn.textContent = `🎮 ${paths[0]}`;
             const theme = localStorage.getItem("theme") || "dark";
             await SaveAppConfig(
-              cfg.repoRoot || "",
+              cfg.filesRoot || "",
               cfg.resourcepackRoot || "",
               paths[0],
               cfg.linkMode || "copy",

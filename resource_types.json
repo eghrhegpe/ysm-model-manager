@@ -35,9 +35,9 @@
     },
     {
       "id": "create-blueprint",
-      "name": "机械动力蓝图",
+      "name": "蓝图",
       "icon": "⚙️",
-      "extensions": [".nbt", ".schematic"],
+      "extensions": [".nbt", ".schematic", ".litematic"],
       "installDir": "schematics/",
       "instanceLevel": false,
       "preview": "none",

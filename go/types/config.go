@@ -2,7 +2,7 @@ package types
 
 // AppConfig 应用持久化配置
 type AppConfig struct {
-	RepoRoot         string `json:"repoRoot"`
+	FilesRoot        string `json:"filesRoot"` // 统一文件存储根目录，各类型默认存 {filesRoot}/{subDir}/
 	ResourcepackRoot string `json:"resourcepackRoot"`
 	ShaderpackRoot   string `json:"shaderpackRoot"`
 	SchematicRoot    string `json:"schematicRoot"`

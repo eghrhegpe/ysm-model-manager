@@ -34,7 +34,7 @@ func (a *App) CachedCreatorAvatar(authorName string) (string, error) {
 // 返回 { authorName: dataURI, ... }
 func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 	result := map[string]string{}
-	if a.RepoRoot == "" {
+	if a.ysmRoot() == "" {
 		return result, nil
 	}
 
@@ -42,7 +42,7 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 	os.MkdirAll(cacheDir, 0755)
 
 	// 扫描仓库，收集每个作者的一个 .ysm 文件路径
-	entries := a.ScanModelEntries(a.RepoRoot)
+	entries := a.ScanModelEntries(a.ysmRoot())
 	seen := map[string]string{} // author -> ysmPath
 	for _, e := range entries {
 		name := e.Name
@@ -91,18 +91,18 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 	info := map[string]string{
 		"author":   authorName,
-		"repoRoot": a.RepoRoot,
+		"repoRoot": a.ysmRoot(),
 		"step":     "init",
 		"status":   "pending",
 	}
-	if a.RepoRoot == "" {
+	if a.ysmRoot() == "" {
 		info["status"] = "no_repo_root"
 		info["step"] = "repo_root_empty"
 		return info
 	}
 
 	// 1. 扫描仓库找该作者的模型文件
-	entries := a.ScanModelEntries(a.RepoRoot)
+	entries := a.ScanModelEntries(a.ysmRoot())
 	var foundPath string
 	for _, e := range entries {
 		name := e.Name

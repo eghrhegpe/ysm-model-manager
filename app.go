@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"path/filepath"
 
 	"ysm-model-manager/go/logs"
 	"ysm-model-manager/go/tags"
@@ -16,13 +17,15 @@ import (
 
 type App struct {
 	ctx       context.Context
-	RepoRoot  string
 	LinkMode  string
 	logger    *logs.Logger
 	watcher   *watcher.Watcher
 	queue     *DownloadQueue
 	tagsStore *tags.Store
 }
+
+// repoRoot 动态返回 YSM 模型存储根目录（始终从配置推导，无需手动维护缓存）
+func (a *App) ysmRoot() string { return a.GetRepoRoot("ysm") }
 
 func NewApp() *App {
 	a := &App{
@@ -68,10 +71,7 @@ func (a *App) startup(ctx context.Context) {
 			needsWrite = true
 		}
 	}
-	if cfg.RepoRoot == "" && a.RepoRoot != "" {
-		cfg.RepoRoot = a.RepoRoot
-		needsWrite = true
-	}
+	ysmRoot := a.GetRepoRoot("ysm")
 	if needsWrite {
 		if data, err := json.MarshalIndent(cfg, "", "  "); err == nil {
 			os.WriteFile(configPath(), data, 0644)
@@ -81,11 +81,18 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}
 
-	runtime.EventsEmit(ctx, "config-loaded", cfg.RepoRoot, cfg.McRoot, cfg.LinkMode)
+	// 创建所有存储子目录
+	if cfg.FilesRoot != "" {
+		for _, sub := range []string{"ysm", "resourcepacks", "shaderpacks", "schematics", "mmd", "vrchat"} {
+			os.MkdirAll(filepath.Join(cfg.FilesRoot, sub), 0644)
+		}
+	}
+
+	runtime.EventsEmit(ctx, "config-loaded", ysmRoot, cfg.McRoot, cfg.LinkMode)
 
 	// 启动文件监听器（自动同步启用/禁用状态到整合包）
-	if cfg.RepoRoot != "" && cfg.McRoot != "" {
-		a.watcher = watcher.New(cfg.RepoRoot, cfg.McRoot, a.ScanModelEntries)
+	if ysmRoot != "" && cfg.McRoot != "" {
+		a.watcher = watcher.New(ysmRoot, cfg.McRoot, a.ScanModelEntries)
 		if err := a.watcher.Start(); err != nil {
 			println("[startup] 文件监听器启动失败:", err.Error())
 		}

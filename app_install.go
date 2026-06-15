@@ -25,7 +25,7 @@ func (a *App) InstallModelFile(src, mcRoot string) (string, error) {
 }
 
 func (a *App) InstallModelTo(src, customDir string) error {
-	err := installer.Install(src, customDir, a.RepoRoot, a.LinkMode)
+	err := installer.Install(src, customDir, a.ysmRoot(), a.LinkMode)
 	if err != nil {
 		a.logger.Add(filepath.Base(src), src, customDir, 0, "failed", err.Error())
 	} else {
@@ -111,22 +111,9 @@ type importOptions struct {
 }
 
 func (a *App) importModelFileWithOptions(fileName, base64Data string, opts importOptions) error {
-	// 根据扩展名确定目标仓库
 	ext := strings.ToLower(filepath.Ext(fileName))
-	rtypes := types.ExtBelongsTo(ext)
-	if len(rtypes) == 0 {
+	if !types.IsSupportedExt(ext) {
 		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式"}
-	}
-	targetRoot := a.RepoRoot
-	// 如果是非 YSM 类型，用 GetRepoRoot 查找对应仓库
-	if rtypes[0] != "ysm" {
-		targetRoot = a.GetRepoRoot(rtypes[0])
-		if targetRoot == "" {
-			return fmt.Errorf("请先设置 %s 类型的仓库目录", rtypes[0])
-		}
-	}
-	if targetRoot == "" {
-		return fmt.Errorf("请先设置仓库目录")
 	}
 	if strings.Contains(fileName, "..") || strings.ContainsAny(fileName, "\\/") {
 		return types.AppError{Code: "FILENAME_INVALID", Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
@@ -141,6 +128,25 @@ func (a *App) importModelFileWithOptions(fileName, base64Data string, opts impor
 	if len(data) == 0 {
 		return types.AppError{Code: "FILE_EMPTY", Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}
 	}
+
+	// 类型检测：优先内容检测（ZIP 可能为 YSM/材质包/光影包），回退扩展名匹配
+	rtype := "ysm"
+	if ext == ".zip" {
+		rtype = detectZipType(data)
+	}
+	if rtype == "ysm" && ext != ".zip" && ext != ".ysm" && ext != ".7z" && ext != ".json" {
+		rtypes := types.ExtBelongsTo(ext)
+		if len(rtypes) > 0 && rtypes[0] != "ysm" {
+			rtype = rtypes[0]
+		}
+	}
+
+	targetRoot := a.GetRepoRoot(rtype)
+	if targetRoot == "" {
+		return fmt.Errorf("请先设置文件存储路径")
+	}
+
+	// 魔数校验
 	if !opts.skipCheck && len(data) >= 4 {
 		if ext == ".zip" || ext == ".ysm" {
 			if data[0] != 0x50 || data[1] != 0x4B || data[2] != 0x03 || data[3] != 0x04 {
@@ -152,6 +158,7 @@ func (a *App) importModelFileWithOptions(fileName, base64Data string, opts impor
 			}
 		}
 	}
+
 	destPath := filepath.Join(targetRoot, fileName)
 	destDir := filepath.Dir(destPath)
 	if err := os.MkdirAll(destDir, 0755); err != nil {
@@ -165,6 +172,36 @@ func (a *App) importModelFileWithOptions(fileName, base64Data string, opts impor
 	return os.WriteFile(destPath, data, 0644)
 }
 
+// detectZipType 通过 ZIP 内容检测真实资源类型（材质包/光影包/YSM）
+func detectZipType(data []byte) string {
+	// 扫描 ZIP local file header 中的文件名
+	idx := 0
+	for idx+30 <= len(data) {
+		if data[idx] != 0x50 || data[idx+1] != 0x4B || data[idx+2] != 0x03 || data[idx+3] != 0x04 {
+			break
+		}
+		nameLen := int(data[idx+26]) | int(data[idx+27])<<8
+		extraLen := int(data[idx+28]) | int(data[idx+29])<<8
+		if idx+30+nameLen > len(data) {
+			break
+		}
+		name := strings.ToLower(string(data[idx+30 : idx+30+nameLen]))
+		if name == "pack.mcmeta" {
+			return "resourcepack"
+		}
+		if strings.HasPrefix(name, "shaders/") || name == "shaders" {
+			return "shaderpack"
+		}
+		if strings.HasSuffix(name, "ysm.json") || strings.HasPrefix(name, "models/") {
+			return "ysm"
+		}
+		// 跳到下一个 entry（跳过压缩数据）
+		compSize := int(data[idx+18]) | int(data[idx+19])<<8 | int(data[idx+20])<<16 | int(data[idx+21])<<24
+		idx += 30 + nameLen + extraLen + compSize
+	}
+	return "ysm" // 默认 YSM
+}
+
 func (a *App) ImportModelFileTo(fileName, subpath, base64Data string) error {
 	return a.importModelFileWithSubpath(fileName, subpath, base64Data, false)
 }
@@ -174,8 +211,9 @@ func (a *App) ImportModelFileOverwriteTo(fileName, subpath, base64Data string) e
 }
 
 func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, overwrite bool) error {
-	if a.RepoRoot == "" {
-		return fmt.Errorf("请先选择仓库目录")
+	root := a.GetRepoRoot("ysm")
+	if root == "" {
+		return fmt.Errorf("请先设置文件存储路径")
 	}
 	ext := strings.ToLower(filepath.Ext(fileName))
 	if !types.IsSupportedExt(ext) {
@@ -191,7 +229,7 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 	if len(data) == 0 {
 		return types.AppError{Code: "FILE_EMPTY", Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}
 	}
-	destPath := filepath.Join(a.RepoRoot, subpath, fileName)
+	destPath := filepath.Join(root, subpath, fileName)
 	destDir := filepath.Dir(destPath)
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return types.AppError{Code: "MKDIR_FAILED", Operation: "导入模型", TargetPath: destDir, Reason: "无法创建目标目录", Suggestion: "请检查磁盘权限或空间"}
@@ -209,7 +247,7 @@ func (a *App) MoveToRecycle(src string) error {
 	// 尝试所有可能的资源根目录，找到包含 src 的那个
 	root := a.findRecycleRoot(src)
 	if root == "" {
-		root = a.RepoRoot
+		root = a.ysmRoot()
 	}
 	return recycle.Move(src, root)
 }
@@ -227,7 +265,7 @@ func (a *App) MoveToRecycleEx(src string) (string, string) {
 func (a *App) findRecycleRoot(src string) string {
 	cfg := a.LoadAppConfig()
 	roots := []string{
-		a.RepoRoot,
+		a.ysmRoot(),
 		cfg.ResourcepackRoot,
 		cfg.ShaderpackRoot,
 		cfg.SchematicRoot,
@@ -252,7 +290,7 @@ func (a *App) ClearCustomDir(customDir string) (int, error) {
 		return 0, fmt.Errorf("目录为空")
 	}
 
-	repoFiles := a.ScanModelEntries(a.RepoRoot)
+	repoFiles := a.ScanModelEntries(a.ysmRoot())
 	repoByName := map[string]types.ModelEntry{}
 	for _, e := range repoFiles {
 		repoByName[e.Name] = e
@@ -432,8 +470,8 @@ func (a *App) clearInstanceDir(dir string, rtype string, repoRoot string) int {
 			// 仓库没有此文件，跳过（整合包自带资源）
 			continue
 		}
-		if a.RepoRoot != "" && paths.IsInside(a.RepoRoot, p) == nil {
-			if err := recycle.Move(p, a.RepoRoot); err != nil {
+		if a.ysmRoot() != "" && paths.IsInside(a.ysmRoot(), p) == nil {
+			if err := recycle.Move(p, a.ysmRoot()); err != nil {
 				continue
 			}
 		} else {
@@ -474,7 +512,8 @@ func (a *App) DeduplicateCustomDir(customDir string) (int, int, error) {
 		}
 		// 保留第一个，其余移入回收站
 		for _, e := range group[1:] {
-			if err := recycle.Move(e.Path, a.RepoRoot); err != nil {
+			// dedup: 保留第一个，其余移入回收站
+				if err := recycle.Move(e.Path, a.ysmRoot()); err != nil {
 				a.logger.Add(e.Name, e.Path, customDir, 0, "failed", "回收站移动失败: "+err.Error())
 				continue
 			}
@@ -526,7 +565,7 @@ func (a *App) DeleteFromRecycle(src string) error {
 			return nil
 		}
 	}
-	return recycle.Delete(src, a.RepoRoot)
+	return recycle.Delete(src, a.ysmRoot())
 }
 
 func (a *App) EmptyRecycleBin(_ string) (int, error) {
@@ -545,7 +584,7 @@ func (a *App) EmptyRecycleBin(_ string) (int, error) {
 // 注意：回收站统一使用 RepoRoot/.recycle，McRoot 等游戏目录不参与回收站管理
 func (a *App) allRecycleRoots(cfg types.AppConfig) []string {
 	roots := []string{
-		a.RepoRoot,
+		a.ysmRoot(),
 		cfg.ResourcepackRoot,
 		cfg.ShaderpackRoot,
 		cfg.SchematicRoot,
@@ -1183,7 +1222,7 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 					return nil
 				}
 				low := strings.ToLower(info.Name())
-				if !strings.HasSuffix(low, ".zip") && !strings.HasSuffix(low, ".nbt") && !strings.HasSuffix(low, ".schematic") {
+				if !strings.HasSuffix(low, ".zip") && !strings.HasSuffix(low, ".nbt") && !strings.HasSuffix(low, ".schematic") && !strings.HasSuffix(low, ".litematic") {
 					return nil
 				}
 				if extraNames[low] {

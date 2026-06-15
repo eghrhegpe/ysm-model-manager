@@ -252,15 +252,15 @@ func HasDotMinecraftSubdirs(path string) bool {
 		if !e.IsDir() {
 			continue
 		}
-		if findMinecraftDir(filepath.Join(path, e.Name())) != "" {
+		if FindMinecraftDir(filepath.Join(path, e.Name())) != "" {
 			return true
 		}
 	}
 	return false
 }
 
-// findMinecraftDir 在给定目录下查找 .minecraft 或 minecraft 子目录，返回找到的路径
-func findMinecraftDir(parentDir string) string {
+// FindMinecraftDir 在给定目录下查找 .minecraft 或 minecraft 子目录，返回找到的路径
+func FindMinecraftDir(parentDir string) string {
 	for _, sub := range []string{".minecraft", "minecraft"} {
 		p := filepath.Join(parentDir, sub)
 		if info, err := os.Stat(p); err == nil && info.IsDir() {
@@ -312,7 +312,7 @@ func listPrismInstances(instancesDir string) []types.VersionInstance {
 		}
 		name := e.Name()
 		// PrismLauncher 实例目录下可能是 .minecraft 或 minecraft（无点）
-		mcDir := findMinecraftDir(filepath.Join(instancesDir, name))
+		mcDir := FindMinecraftDir(filepath.Join(instancesDir, name))
 		if mcDir == "" {
 			continue
 		}

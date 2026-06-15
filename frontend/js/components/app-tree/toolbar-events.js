@@ -66,18 +66,15 @@ async function openAdvFilterDialog($, vm) {
   const { LoadAppConfig, SearchModels } =
     await import("../../../wailsjs/go/main/App.js");
   const cfg = await LoadAppConfig();
-  if (!cfg.repoRoot) {
-    bus.emit("toast:show", {
-      msg: "请先设置仓库目录",
-      duration: 2000,
-      type: "warn",
-    });
+  const repoRoot = ((cfg.filesRoot||"")+"\\ysm") || "";
+  if (!repoRoot) {
+    bus.emit("toast:show", { msg: "请先设置仓库目录", duration: 2000, type: "warn" });
     return;
   }
   // 后端 SearchModels 走 > 0 判定；null 转 0 后不会触发过滤
   const n = (v) => (v == null ? 0 : parseInt(v, 10) || 0);
   const searchArgs = {
-    repoRoot: cfg.repoRoot,
+    repoRoot,
     kw,
     minBones: n(result.minBones),
     maxBones: n(result.maxBones),
@@ -90,7 +87,7 @@ async function openAdvFilterDialog($, vm) {
   let resultCount = 0;
   try {
     const results = await SearchModels(
-      cfg.repoRoot,
+      repoRoot,
       kw,
       n(result.minBones),
       n(result.maxBones),

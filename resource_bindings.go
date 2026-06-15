@@ -56,11 +56,9 @@ func (a *App) DetectResourceType(path string) string {
 // GetRepoRoot 根据资源类型返回对应的仓库根目录
 func (a *App) GetRepoRoot(rtype string) string {
 	cfg := a.LoadAppConfig()
-	// 1. 类型专属覆写（ysm 除外——统一走 FilesRoot，旧 RepoRoot 仅做兼容回退）
-	if rtype != "ysm" {
-		if root := specificRoot(cfg, rtype); root != "" {
-			return root
-		}
+	// 1. 类型专属覆写
+	if root := specificRoot(cfg, rtype); root != "" {
+		return root
 	}
 	// 2. FilesRoot + 存储子目录
 	if cfg.FilesRoot != "" {
@@ -72,9 +70,11 @@ func (a *App) GetRepoRoot(rtype string) string {
 	return ""
 }
 
-// specificRoot 返回非 ysm 资源类型的专属覆写路径
+// specificRoot 返回资源类型的专属覆写路径
 func specificRoot(cfg types.AppConfig, rtype string) string {
 	switch rtype {
+	case "ysm":
+		return cfg.YsmRoot
 	case "resourcepack":
 		return cfg.ResourcepackRoot
 	case "shaderpack":
@@ -158,6 +158,8 @@ func (a *App) SelectImportFile(filter, title string) string {
 func (a *App) SetResourceRoot(rtype, path string) error {
 	cfg := a.LoadAppConfig()
 	switch rtype {
+	case "ysm":
+		cfg.YsmRoot = path
 	case "shaderpack":
 		cfg.ShaderpackRoot = path
 	case "create-blueprint":

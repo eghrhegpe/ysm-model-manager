@@ -98,20 +98,15 @@ export function settingsHTML() {
       </div>
     </div>
     <div class="stg-card" style="grid-column:2">
-      <div class="stg-card-hdr">📁 文件存储路径</div>
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">📁 文件存储路径<button class="btn" id="set-advanced-toggle" style="font-size:9px;padding:2px 8px">📂 展开 ▸</button></div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-files-root">加载中...</div>
         <div class="stg-card-desc">所有资源文件统一存放于此，按类型分子目录</div>
+        <div id="set-advanced-panel" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px">各类型独立路径（留空则使用统一存储路径）</div>
+          <div class="stg-grid" id="set-advanced-grid"></div>
+        </div>
       </div>
-    </div>
-  </div>
-
-  <!-- 详细调整（默认折叠） -->
-  <div style="margin-top:8px">
-    <button class="btn" id="set-advanced-toggle" style="font-size:var(--fs-sm);padding:4px 12px">📂 详细调整 ▸</button>
-    <div id="set-advanced-panel" style="display:none;margin-top:8px">
-      <div class="section-title stg-title stg-sub-title" style="margin-bottom:6px">各类型独立路径（留空则使用统一存储路径）</div>
-      <div class="stg-grid" id="set-advanced-grid"></div>
     </div>
   </div>
 

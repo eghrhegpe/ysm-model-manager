@@ -5,6 +5,7 @@ import { cacheGet, cacheSet } from "../../utils/preview-cache.js";
 import { parseBedrockGeometryFromJSON } from "./utils.js";
 import { parseBedrockAnimationJSON } from "../../utils/animation.js";
 import { renderModel2D } from "../../utils/model2d.js";
+import { openFullPreview } from "./preview-zoom.js";
 
 /**
  * 加载模型 2D 骨骼线条图 + 统计面板
@@ -177,7 +178,6 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     };
 
     // ---- 全窗放大 + 滚轮/拖拽旋转 ----
-    const { openFullPreview } = await import("./events.js");
     canvas.classList.add("ysm-grab");
     canvas.title = "左键全窗放大 · 滚轮缩放 · 左右拖拽旋转";
 

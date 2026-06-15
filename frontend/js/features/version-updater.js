@@ -25,7 +25,7 @@ async function doUpdate(info, statusEl) {
     statusEl.textContent = "⬇️ 下载+安装中...";
   }
   const { DoUpdate } = await import("../../wailsjs/go/main/App.js");
-  const result = await DoUpdate(info.url);
+  const result = await DoUpdate(info.url, info.expectedHash || "");
   if (result !== "success") {
     throw new Error(result);
   }

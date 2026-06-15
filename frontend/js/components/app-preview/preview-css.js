@@ -12,7 +12,7 @@ export const previewCSS = `
 .content { padding: 10px; overflow-y: auto; flex: 1; }
 h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
 .dp-global-actions { margin-bottom: 4px; }
-.dp-global-actions .btn { width: 100%; text-align: center; margin-bottom: 3px; }
+.dp-global-actions .btn-base { width: 100%; text-align: center; margin-bottom: 3px; }
 .dp-placeholder { text-align: center; padding: 24px 0; color: var(--muted); }
 .dp-placeholder .big-icon { font-size: var(--fs-xl); margin-bottom: 8px; }
 .dp-placeholder .dp-hint { font-size: var(--fs-base); }
@@ -31,7 +31,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .dp-card.orange .dp-card-num { color: #f9a826; }
 .dp-card-label { font-size: var(--fs-sm); color: var(--muted); flex: 1; }
 .dp-card-action { flex-shrink: 0; }
-.dp-card-action .btn { padding: 3px 6px; font-size: var(--fs-xs); }
+.dp-card-action .btn-base { padding: 3px 6px; font-size: var(--fs-xs); }
 .dp-expand-icon { font-size: var(--fs-tiny); margin-left: 2px; transition: transform .15s; }
 .dp-expand-icon.open { transform: rotate(90deg); }
 .dp-detail { font-size: var(--fs-sm); color: var(--txt); padding: 2px 4px; background: var(--surf); border-radius: 4px; flex:1; overflow-y:auto; min-height:0; margin-bottom:4px; }
@@ -49,10 +49,26 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .dp-log-footer { margin-top: 4px; }
 .stat-row { font-size: 12px; color: var(--txt); padding: 3px 0; display: flex; justify-content: space-between; }
 .divider { border: none; border-top: 1px solid var(--bd); margin: 6px 0; }
+/* ===== 统一按钮系统 .btn-base ===== */
+.btn-base { padding:var(--btn-padding-md); border-radius:var(--btn-radius,6px); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:inherit; font-family:inherit; transition:background .12s,color .12s; white-space:nowrap; flex-shrink:0; }
+.btn-base:hover { background:var(--hover); }
+.btn-base:focus-visible { box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); outline:none; }
+.btn-base.sm { padding:var(--btn-padding-sm); font-size:var(--fs-btn-tool); }
+.btn-base.lg { padding:var(--btn-padding-lg); font-size:var(--fs-btn-primary); }
+.btn-base.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+.btn-base.primary:hover { background:color-mix(in srgb, var(--accent) 88%, #fff); }
+.btn-base.danger { background:color-mix(in srgb, var(--status-error, #e5534b) 15%, transparent); color:var(--status-error, #e5534b); border-color:color-mix(in srgb, var(--status-error, #e5534b) 40%, transparent); }
+.btn-base.danger:hover { background:color-mix(in srgb, var(--status-error, #e5534b) 30%, transparent); }
+.btn-base.accent { background:var(--accent-btn-bg, #7c83ff33); color:var(--accent-btn-color, #66d9ef); border-color:var(--accent-btn-border, #7c83ff55); }
+.btn-base.accent:hover { background:color-mix(in srgb, var(--accent) 25%, transparent); }
+.btn-base.warn { background:#f9a82622; color:#f9a826; border-color:#f9a82655; }
+.btn-base.warn:hover { background:#f9a82633; }
+.btn-base:disabled { opacity:0.5; cursor:not-allowed; pointer-events:none; }
+
+/* ===== 旧按钮兼容层（逐步替换后删除） ===== */
 .btn { padding: 5px 0; border-radius: 6px; border: 1px solid var(--bd); background: transparent; color: var(--txt); cursor: pointer; font-size: var(--fs-base); font-family: inherit; transition: background .12s; }
 .btn:hover { background: var(--hover); }
 .btn.accent { background: #7c83ff33; color: #66d9ef; border-color: #7c83ff55; }
-/* 主题色通过 CSS 变量自动适配，无需 :host-context */
 .btn.accent:hover { background: #7c83ff55; }
 .btn.warn { background: #f9a82622; color: #f9a826; border-color: #f9a82655; }
 .log-entry { padding: 2px 0; font-size: var(--fs-xs); color: var(--txt); display: flex; gap: 4px; white-space: nowrap; }

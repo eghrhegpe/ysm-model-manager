@@ -126,45 +126,11 @@
   color: var(--txt);
   font-size: 11px;
 }
-.dlg-btn {
-  padding: 5px 14px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 11px;
-  font-family: inherit;
-  border: 1px solid var(--bd);
-  background: transparent;
-  color: var(--muted);
-}
-.dlg-btn-primary {
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: #fff;
-}
-.dlg-btn-sm {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 9px;
-  cursor: pointer;
-  border: 1px solid var(--bd);
-  background: transparent;
-  color: var(--muted);
-  font-family: inherit;
-}
-.dlg-btn-danger {
-  border: 1px solid var(--paid, #e5534b);
-  background: var(--paid, #e5534b);
-  color: #fff;
-}
-.dlg-btn-accent {
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid var(--bd);
-  background: transparent;
-  color: var(--accent);
-  cursor: pointer;
-  font-size: 9px;
-}
+.dlg-btn { padding:5px 14px; border-radius:5px; cursor:pointer; font-size:11px; font-family:inherit; border:1px solid var(--bd); background:transparent; color:var(--muted); }
+.dlg-btn-primary { border:1px solid var(--accent); background:var(--accent); color:#fff; }
+.dlg-btn-sm { padding:2px 6px; border-radius:4px; font-size:9px; cursor:pointer; border:1px solid var(--bd); background:transparent; color:var(--muted); font-family:inherit; }
+.dlg-btn-danger { border:1px solid var(--paid, #e5534b); background:var(--paid, #e5534b); color:#fff; }
+.dlg-btn-accent { padding:2px 6px; border-radius:4px; border:1px solid var(--bd); background:transparent; color:var(--accent); cursor:pointer; font-size:9px; }
 .dlg-footer {
   padding: 8px 12px;
   border-top: 1px solid var(--bd);

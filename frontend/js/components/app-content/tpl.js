@@ -91,7 +91,7 @@ export function settingsHTML() {
 <div class="stg-grid">
     <!-- Row 1 -->
     <div class="stg-card">
-      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🎮 游戏根目录<button class="btn" id="set-mc-detect" style="font-size:var(--fs-btn-tool);padding:var(--pad-btn-tool) 8px">🔍 自动搜索</button></div>
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🎮 游戏根目录<button class="btn-base sm" id="set-mc-detect">🔍 自动搜索</button></div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-mc-path">加载中...</div>
         <div class="stg-card-desc">自动扫描 PCL2、%AppData% 等常见位置</div>
@@ -113,7 +113,7 @@ export function settingsHTML() {
     </div>
     <!-- Row 2 -->
     <div class="stg-card">
-      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">💎 YSM 模型路径<button class="btn" id="set-repo-default" style="font-size:var(--fs-btn-tool);padding:var(--pad-btn-tool) 8px">↩️ 默认</button></div>
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">💎 YSM 模型路径<button class="btn-base sm" id="set-repo-default">↩️ 默认</button></div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-repo-path">加载中...</div>
         <div class="stg-card-hint">存放 .ysm 模型文件的独立目录（不是游戏目录）</div>
@@ -149,7 +149,7 @@ export function settingsHTML() {
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0;display:flex;align-items:center;justify-content:space-between">
       <span class="label" style="font-size:13px;font-weight:600">🔗 链接模式</span>
-      <button id="set-relink" class="btn" style="font-size:var(--fs-btn-tool);padding:var(--pad-btn-tool) 8px">🔄 重新应用链接</button>
+      <button id="set-relink" class="btn-base sm">🔄 重新应用链接</button>
     </div>
     <select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="copy">📋 复制</option>
@@ -275,8 +275,8 @@ export function settingsHTML() {
   <div class="setting-row">
     <span class="label">📦 当前版本</span>
     <span id="set-version" style="font-size:var(--fs-sm);color:var(--muted)">加载中...</span>
-    <button class="btn stg-btn" id="set-check-update">🔄 检查更新</button>
-    <button class="btn" id="set-releases" style="margin-left:4px" title="打开 GitHub Releases">📋 发布页</button>
+    <button class="btn-base sm stg-btn" id="set-check-update">🔄 检查更新</button>
+    <button class="btn-base sm" id="set-releases" style="margin-left:4px" title="打开 GitHub Releases">📋 发布页</button>
   </div>
 </div>
 
@@ -410,16 +410,16 @@ export function downloadsHTML() {
     <span style="color:var(--muted);font-size:9px;white-space:nowrap">最终命名</span>
     <span id="dl-preview" style="font-weight:600;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">-</span>
     <span id="dl-conflict" style="display:none;font-size:9px;color:#f9a826;white-space:nowrap">⚠️</span>
-    <button class="btn accent" id="dl-import" style="padding:3px 10px;white-space:nowrap">📥 导入</button>
+    <button class="btn-base accent sm" id="dl-import" style="white-space:nowrap">📥 导入</button>
     <span style="font-size:9px;color:var(--muted);white-space:nowrap">队列 <span id="dl-queue-count">0</span></span>
-    <button class="btn" id="dl-cancel" style="padding:2px 6px;white-space:nowrap">✕</button>
+    <button class="btn-base sm" id="dl-cancel" style="white-space:nowrap">✕</button>
   </div>
 </div>
 <div style="margin:0 12px 4px;border-top:1px solid var(--bd);padding-top:4px">
   <div style="display:flex;align-items:center;gap:6px;font-weight:600;color:var(--txt);padding:2px 0">
     <span style="font-size:var(--fs-md)">📋 已导入</span>
     <span id="dl-count" style="font-size:10px;color:var(--muted);font-weight:400">0 个文件</span>
-    <button class="btn" id="dl-clear-list" style="padding:2px 8px;margin-left:auto">🗑️ 清空</button>
+    <button class="btn-base sm" id="dl-clear-list" style="margin-left:auto">🗑️ 清空</button>
   </div>
   <div id="dl-imported-list" style="display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto"></div>
 </div>
@@ -474,12 +474,12 @@ export function diagnosticsHTML() {
 </div>
 <div class="diag-panel" id="diag-conflict" style="display:none">
 <div id="diag-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">点击「开始扫描」检测整合包冲突
-<button class="hdr-btn accent" id="diag-scan-conflict" style="margin-top:4px">⚡ 开始扫描</button>
+<button class="btn-base accent" id="diag-scan-conflict" style="margin-top:4px">⚡ 开始扫描</button>
 </div></div></div>
 <div class="diag-panel" id="diag-oldest" style="display:none">
 <div class="diag-panel-header">
 <span>👴 仓库元老</span>
-<button class="hdr-btn" id="diag-oldest-refresh">🔄</button>
+<button class="btn-base" id="diag-oldest-refresh">🔄</button>
 </div>
 <div id="diag-oldest-list"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">点击「🔄」刷新</div></div>
 </div>
@@ -493,8 +493,8 @@ export function recycleHTML() {
   return `<div class="recy-page" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px">
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
 <span id="recy-count" style="font-size:11px;color:#6c7086">加载中...</span>
-<button class="btn" id="recy-refresh" style="margin-left:auto">🔄 刷新</button>
-<button class="btn danger" id="recy-empty">♻️ 清空回收站</button>
+<button class="btn-base sm" id="recy-refresh" style="margin-left:auto">🔄 刷新</button>
+<button class="btn-base danger sm" id="recy-empty">♻️ 清空回收站</button>
 </div>
 <div id="recy-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
 </div>`;
@@ -560,15 +560,15 @@ export function workshopHTML() {
     "</div>" +
     '<div id="ws-browser" style="display:none;flex:1;flex-direction:column;overflow:hidden;position:absolute;inset:0;z-index:10;background:var(--bg)">' +
     '<div class="ws-browser-bar">' +
-    '<button class="ws-back" id="ws-back">← 返回</button>' +
+    '<button class="btn-base sm ws-back" id="ws-back">← 返回</button>' +
     '<span class="ws-url" id="ws-url"></span>' +
-    '<button class="ws-open-btn" id="ws-open">↗ 浏览器打开</button>' +
+    '<button class="btn-base sm ws-open-btn" id="ws-open">↗ 浏览器打开</button>' +
     "</div>" +
     '<iframe id="ws-iframe" style="flex:1;border:none;background:#fff" sandbox="allow-scripts allow-forms allow-popups"></iframe>' +
     '<div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:12px">' +
     '<div style="font-size:32px">🚫</div>' +
     "<div>此站点不允许内嵌浏览</div>" +
-    '<button class="btn accent" id="ws-open-fallback">↗ 在系统浏览器中打开</button>' +
+    '<button class="btn-base accent" id="ws-open-fallback">↗ 在系统浏览器中打开</button>' +
     "</div>" +
     "</div>" +
     "</div>" +

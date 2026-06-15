@@ -237,7 +237,7 @@ class AppContent extends HTMLElement {
               '<div style="display:flex;flex-direction:column;height:100%">' +
               '<div style="display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid var(--bd)">' +
               '<span style="flex:1;font-size:var(--fs-sm);color:var(--muted)">📌 按 SHA256 哈希分组，每组只保留一个，其余移入回收站</span>' +
-              '<button class="hdr-btn accent" id="dedup-start-btn">🔗 开始去重</button>' +
+              '<button class="btn-base accent" id="dedup-start-btn">🔗 开始去重</button>' +
               "</div>" +
               '<div id="dedup-result-list" style="flex:1;overflow-y:auto;padding:8px 0"></div>' +
               "</div>";
@@ -727,7 +727,7 @@ class AppContent extends HTMLElement {
         } else {
           resultsBody.innerHTML =
             '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ 未找到模型列表</div>' +
-            '<div style="text-align:center;padding:8px"><button class="ws-btn ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
+            '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
         }
       } catch (e) {
         const msg =
@@ -742,7 +742,7 @@ class AppContent extends HTMLElement {
           '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ ' +
           this._esc(msg) +
           "</div>" +
-          '<div style="text-align:center;padding:8px"><button class="ws-btn ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
+          '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
       }
       // 绑定打开 GitHub 按钮
       const openBtn = resultsBody.querySelector("#gh-open-repo");

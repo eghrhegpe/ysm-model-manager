@@ -4,6 +4,7 @@ build/release/
 build/ysmparser-cache/
 cmd/*/genindex.exe
 cmd/*/*.exe
+go/updater/*.exe
 *.exe
 node_modules/
 .DS_Store

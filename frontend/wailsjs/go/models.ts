@@ -463,6 +463,8 @@ export namespace updater {
 	    latest: string;
 	    current: string;
 	    url: string;
+	    sha256sumsUrl?: string;
+	    expectedHash?: string;
 	    releaseNotes?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -475,6 +477,8 @@ export namespace updater {
 	        this.latest = source["latest"];
 	        this.current = source["current"];
 	        this.url = source["url"];
+	        this.sha256sumsUrl = source["sha256sumsUrl"];
+	        this.expectedHash = source["expectedHash"];
 	        this.releaseNotes = source["releaseNotes"];
 	    }
 	}

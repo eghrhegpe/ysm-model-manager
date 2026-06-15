@@ -238,7 +238,7 @@ export function renderRepoHeaderHTML({
   return (
     '<div class="gh-header">' +
     '<div class="gh-header-top">' +
-    '<button class="gh-back-repo gh-btn-txt">← 返回</button>' +
+    '<button class="btn-base sm gh-back-repo">← 返回</button>' +
     '<span class="gh-repo-name">📦 ' +
     esc(repo) +
     "</span>" +
@@ -250,15 +250,15 @@ export function renderRepoHeaderHTML({
       ? '<span class="gh-missing-count">⬇️' +
         missingCount +
         "</span>" +
-        '<button class="gh-dl-selected gh-btn-sm gh-btn-muted" disabled>⬇️ 选中 (0)</button>'
+        '<button class="btn-base sm gh-dl-selected" disabled>⬇️ 选中 (0)</button>'
       : "") +
-    '<button class="gh-filter-btn gh-btn-txt">⚙️ 筛选</button>' +
+    '<button class="btn-base sm gh-filter-btn">⚙️ 筛选</button>' +
     '<div class="gh-filter-dropdown">' +
     (missingCount > 0
-      ? '<button class="gh-dl-all gh-btn-sm gh-btn-accent">⬇️ 下载全部缺失</button>' +
-        '<button class="gh-select-all gh-btn-sm gh-btn-muted">☐ 全选</button>'
+      ? '<button class="btn-base sm gh-dl-all gh-btn-accent">⬇️ 下载全部缺失</button>' +
+        '<button class="btn-base sm gh-select-all">☐ 全选</button>'
       : "") +
-    '<button class="gh-toggle-all gh-btn-sm gh-btn-txt">📁 仅显示缺失</button>' +
+    '<button class="btn-base sm gh-toggle-all">📁 仅显示缺失</button>' +
     "</div>" +
     "</div>" +
     '<div id="gh-queue-status" class="gh-queue-status"></div>' +

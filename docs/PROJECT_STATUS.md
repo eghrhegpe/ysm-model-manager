@@ -1,8 +1,8 @@
 # YSM 模型管理器 — 项目现状汇总
 
-更新时间：2026-06-16  
-当前版本：**v1.8.5**  
-最近提交：`(未打标签) v1.8.5 - 注册表驱动 + 测试覆盖 + 治理收口`
+更新时间：2026-06-17  
+当前版本：**v1.8.8**  
+最近提交：`df994fd v1.8.8 — 3D 渲染文档 + 多模型测试数据 + Go 解码修复`
 
 ---
 
@@ -49,7 +49,9 @@
 | `docs/animations.md` | Gemini | 前端动画系统文档：11 种动画清单 + 无障碍支持 + 性能考量 + 文件索引 |
 | `docs/pack-format-versions.md` | zuogeren (PR #7) | Minecraft `pack_format` 编号 ↔ 游戏版本映射表（88 条） |
 | `docs/3D-RENDERING-PLAN.md` | 多 AI 协作设计 | 3D 骨骼渲染攻关：4 阶段分工流程 + 提示词模板 + 5 个已知陷阱 |
-| `docs/SESSION_HANDOFF.md` | Big Pickle | 会话交接日志：模板 + 3 条初始记录（文档治理、头像刷新、术语梳理） |
+| `docs/3D-RENDERING/3d-rendering-report.md` | DeepSeek V4 Pro / Flash、Qwen3.7 Plus、GLM-5.1 | **3D 渲染引擎开发报告**：14 项修复 + Go/WASM 能力对比 + 排查方法论 |
+| `docs/3D-RENDERING/2026-06-17-summary.md` | DeepSeek V4 Flash | 修复总结：坐标/顶点/合并/纹理/解析 5 类 14 项 |
+| `docs/SESSION_HANDOFF.md` | Big Pickle | 会话交接日志：模板 + 多条记录 |
 
 ---
 
@@ -74,6 +76,9 @@
 | **扫描缓存事件失效** | watcher `syncAll()` 先清缓存再同步，消除 30s TTL 间隙 | v1.8.5 |
 | **Wails 治理收口** | 8 文件 25+ 处裸 import/`window.go.*` → `getApp()` | v1.8.5 |
 | **Go 测试覆盖** | 6→11 包，+33 tests | v1.8.5 |
+| **3D 渲染引擎重构** | 坐标系修正（X 不取反 + fx=ox）、旋转符号三轴取反、多纹理 texIdx、非贴图 PNG 过滤 | v1.8.6 |
+| **Go 路径纹理映射** | archive.go 四种 model 格式、extracted.go projectiles 兼容、TexSlot 透传 | v1.8.7 |
+| **3D 渲染文档 + 测试数据** | `docs/3D-RENDERING/` 开发报告 + 多模型测试数据 | v1.8.8 |
 
 ---
 
@@ -110,11 +115,12 @@
 
 | 问题 | 位置 | 影响 | 优先级 |
 |------|------|------|--------|
-| **3D 骨骼渲染坐标不准** | `go/threejs/spec.go` `model2d.js` | 多文件模型层级错误、手臂偏移、旋转丢失 | **高**（详见 `docs/3D-RENDERING-PLAN.md`） |
+| ~~**3D 骨骼渲染坐标不准**~~ | ~~`go/threejs/spec.go` `model2d.js`~~ | ~~多文件模型层级错误、手臂偏移、旋转丢失~~ | ✅ **已解决** v1.8.6-v1.8.8（详见 `docs/3D-RENDERING/3d-rendering-report.md`） |
 | 创作者详情 Overlay UX | 第三方评审建议 | 视觉锚点、交互细节待打磨 | 低（CSS 不给免费 AI 动） |
 | model2d 预览缓存 | `preview-cache.js` | 社区仓库重复解析浪费 CPU | **中**，但**暂缓**：多模态辅助下 Three.js canvas 序列化/失效复杂，当前瓶颈不在预览 |
 | 列表/网格视图切换 | `app-tree` | 仅卡片视图，缺紧凑列表 | **低**（P3 新功能，动画 P0-P1 做完再考虑） |
 | `ResourceExts` / `SubDirAll` 仍硬编码 | `go/types/extensions.go` | 新类型需改 3 处（已有一致性测试兜底） | **低**（有测试保护） |
+| JS 兜底路径是死代码 | `model3d-spec.js` | Go 不可用时 3D 视图空白 | **低**（Go 路径稳定） |
 
 ---
 
@@ -158,7 +164,45 @@ resource_bindings.go      # saveConfig、GetRepoRoot
 4. **列表/网格视图切换** — 工具栏加 🗂/☰ 切换、紧凑行模板、`localStorage` 持久化
 5. **前端测试覆盖扩展** — 当前 30 个测试（fmt/dom/data），后续覆盖 download-queue / render.js / 事件总线
 6. **ResourceExts / SubDirAll 注册表驱动** — 与已修的 StorageSubDir/specificRoot 同理，消除剩余硬编码 map
-7. **发版** — `wails build -clean`、打 Git tag、写更新报告
+7. **发版说明补写** — v1.8.6 / v1.8.7 / v1.8.8 的发版说明尚未创建
+8. **发版** — `wails build -clean`、打 Git tag、写更新报告
+
+---
+
+## 🎮 3D 渲染引擎开发总结（v1.8.6-v1.8.8）
+
+**参与 AI**：DeepSeek V4 Pro、DeepSeek V4 Flash、Qwen3.7 Plus、GLM-5.1
+
+### 解决的问题（14 项）
+
+| 类别 | 修复数 | 关键修复 |
+|------|--------|----------|
+| 坐标/顶点 | 3 | `fx=ox` 公式修正、旋转符号三轴取反、深度排序 |
+| 多文件合并 | 3 | arm.json cube 残留、嵌入几何体优先级、模型文件合并 |
+| 纹理映射 | 5 | 非贴图 PNG 过滤、纹理顺序、多分辨率 UV、TexSlot 透传 |
+| 解析健壮性 | 3 | projectiles 数组兼容、7z 路径重写、model 四种格式 |
+
+### 关键文件
+
+| 文件 | 改动 |
+|------|------|
+| `go/threejs/spec.go` | 顶点公式、旋转符号、mesh 合并策略、UV 负尺寸 |
+| `go/geometry/archive.go` | ysm.json 纹理排序、7z 路径重写、TexSlot 分配 |
+| `go/ysm/extracted.go` | json.RawMessage 解析、模型文件优先、纹理排序 |
+| `frontend/js/utils/model3d.js` | 移除 transparent、mesh 合并优化 |
+
+### 已知限制
+
+1. JS 兜底路径是死代码（格式不兼容）
+2. 7z 路径纹理排序较弱
+3. Go CLI fallback 不设 TexSlot
+4. 2D 骨骼图旋转后位置偏移（低优先级）
+
+### 详细文档
+
+- 开发报告：`docs/3D-RENDERING/3d-rendering-report.md`
+- 修复总结：`docs/3D-RENDERING/2026-06-17-summary.md`
+- 测试数据：`docs/3D-RENDERING/` 目录下多个模型文件
 
 ---
 

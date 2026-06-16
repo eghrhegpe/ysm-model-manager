@@ -16,9 +16,10 @@
 | 5 | 前端测试扩展 | **低** | 中 | ⬜ 待开始 | 无 |
 | 6 | Go 测试扩展 | **低** | 中 | ⬜ 待开始 | 无 |
 | 7 | 列表/网格视图切换 | **低** | 高 | ⬜ 待开始 | 无 |
-| 8 | **3D 骨骼渲染攻关** | **高** | 高 | ⬜ 待开始 | 无 |
+| 8 | **3D 骨骼渲染攻关** | **高** | 高 | ✅ 完成 | — |
 
 > 📌 任务 #8 详见 [3D-RENDERING-PLAN.md](3D-RENDERING-PLAN.md)：多 AI 分工流程 + 提示词 + 已知陷阱
+> 📌 开发报告：[docs/3D-RENDERING/3d-rendering-report.md](3D-RENDERING/3d-rendering-report.md)
 
 ---
 

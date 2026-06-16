@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"ysm-model-manager/go/logs"
 	"ysm-model-manager/go/tags"
+	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/updater"
 	"ysm-model-manager/go/version"
 	"ysm-model-manager/go/watcher"
@@ -16,12 +17,15 @@ import (
 )
 
 type App struct {
-	ctx       context.Context
-	LinkMode  string
-	logger    *logs.Logger
-	watcher   *watcher.Watcher
-	queue     *DownloadQueue
-	tagsStore *tags.Store
+	ctx        context.Context
+	LinkMode   string
+	logger     *logs.Logger
+	watcher    *watcher.Watcher
+	queue      *DownloadQueue
+	tagsStore  *tags.Store
+	configCache  types.AppConfig
+	configLoaded bool
+	configMu     sync.RWMutex
 }
 
 // repoRoot 动态返回 YSM 模型存储根目录（始终从配置推导，无需手动维护缓存）
@@ -73,11 +77,9 @@ func (a *App) startup(ctx context.Context) {
 	}
 	ysmRoot := a.GetRepoRoot("ysm")
 	if needsWrite {
-		if data, err := json.MarshalIndent(cfg, "", "  "); err == nil {
-			os.WriteFile(configPath(), data, 0644)
-			if cfg.McRoot != "" {
-				println("[startup] 配置文件已创建/更新, mcRoot:", cfg.McRoot)
-			}
+		a.saveConfig(cfg)
+		if cfg.McRoot != "" {
+			println("[startup] 配置文件已创建/更新, mcRoot:", cfg.McRoot)
 		}
 	}
 

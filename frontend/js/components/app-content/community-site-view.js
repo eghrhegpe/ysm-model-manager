@@ -46,9 +46,11 @@ function createCrCard(cr, ctx) {
   card.title = "搜索: " + cr.name;
   if (tierRank) card.dataset.tier = tierRank;
 
+  const fallbackChar = cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?";
+  const fallbackDiv = '<div class="cr-avatar cr-avatar-fallback">' + fallbackChar + "</div>";
   const avatarHtml = hasAvatar
-    ? '<img class="cr-avatar" src="' + esc(avatarCache[cr.name]) + '" data-debug-avatar="' + esc(cr.name) + '">'
-    : '<div class="cr-avatar cr-avatar-fallback">' + (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") + "</div>";
+    ? '<img class="cr-avatar" src="' + esc(avatarCache[cr.name]) + '" data-debug-avatar="' + esc(cr.name) + '" onerror="this.outerHTML=\'' + fallbackDiv + '\'">'
+    : fallbackDiv;
 
   const localBadge = cr._fromLocal && authorCount > 0
     ? '<span class="cr-card-local-count">📁' + authorCount + "</span>"
@@ -455,6 +457,8 @@ export function renderSiteView(site, ctx) {
       const descTags = parseDescTags(cr.desc);
       const isFav = isFaved(cr.name);
       const localCount = authorCountMap[cr.name] || 0;
+      const detailFallbackChar = esc(cr.name.charAt(0)).toUpperCase();
+      const detailFallbackDiv = '<div class="cr-avatar cr-detail-avatar-text">' + detailFallbackChar + "</div>";
       overlay.innerHTML =
         '<div class="cr-detail-box">' +
         '<div class="cr-detail-header">' +
@@ -464,10 +468,8 @@ export function renderSiteView(site, ctx) {
             esc(avatarCache[cr.name]) +
             '" data-debug-avatar="' +
             esc(cr.name) +
-            '">'
-          : '<div class="cr-avatar cr-detail-avatar-text">' +
-            esc(cr.name.charAt(0)).toUpperCase() +
-            "</div>") +
+            '" onerror="this.outerHTML=\'' + detailFallbackDiv + '\'">'
+          : detailFallbackDiv) +
         "</div>" +
         '<div class="cr-detail-fill">' +
         '<div class="cr-detail-name-row">' +

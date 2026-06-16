@@ -589,14 +589,14 @@ ${focusVisibleCSS}
 .gh-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .gh-right-inner { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 #gh-results { flex:1;display:flex;flex-direction:column;overflow:hidden; }
-#gh-results-body { flex:1;overflow-y:auto;padding:0 12px 8px; }
+#gh-results-body { flex:1;overflow-y:auto;padding:0 12px 8px;will-change:scroll-position; }
 .gh-search-wrap { padding:2px 0 6px; }
 .gh-search { width:160px;padding:4px 8px;border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0; }
 .gh-search:focus { border-color:var(--accent); }
 .gh-loading-placeholder { padding:24px;text-align:center;color:var(--muted);font-size:11px; }
 .gh-initial-hint { color:var(--muted);font-size:10px;padding:12px 0;text-align:center; }
-.gh-grid { flex:1; overflow-y:auto; padding:4px 8px; display:flex; flex-direction:column; gap:4px; }
-.gh-card { display:flex; align-items:center; gap:var(--card-gap,8px); padding:var(--card-padding,7px 10px); border-radius:var(--radius-lg); border:1px solid var(--bd); background:var(--card); cursor:pointer; transition:var(--tr-normal), box-shadow var(--tr-normal); box-shadow:var(--card-shadow, none); transform:translateZ(0); contain:layout paint style; animation:fadeSlideUp var(--tr-enter) both; }
+.gh-grid { flex:1; overflow-y:auto; padding:4px 8px; display:flex; flex-direction:column; gap:4px;will-change:scroll-position; }
+.gh-card { display:flex; align-items:center; gap:var(--card-gap,8px); padding:var(--card-padding,7px 10px); border-radius:var(--radius-lg); border:1px solid var(--bd); background:var(--card); cursor:pointer; transition:var(--tr-normal), box-shadow var(--tr-normal); box-shadow:var(--card-shadow, none); transform:translateZ(0); animation:fadeSlideUp var(--tr-enter) both; }
 .gh-card:hover { border-color:var(--accent); background:var(--hover); box-shadow:var(--card-shadow-hover, none); transform:translateY(-1px); }
 .gh-card.active { border-color:var(--accent); background:var(--accent); color:var(--bg); box-shadow:var(--card-shadow-hover, none); }
 .gh-card .name { font-size:var(--fs-md); font-weight:var(--fw-bold); color:var(--txt); font-family:var(--font-display); overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }

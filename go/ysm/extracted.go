@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"ysm-model-manager/go/geometry"
@@ -23,39 +24,85 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 		return nil, nil
 	}
 
-	// 解析 ysm.json 找 model 文件名
+	// 解析 ysm.json 找 model 文件名 + 纹理顺序
 	var ysmRoot struct {
-		Spec  int `json:"spec"`
-		Files map[string]struct {
-			Model   json.RawMessage `json:"model"`
-			Texture json.RawMessage `json:"texture"`
-		} `json:"files"`
+		Spec  int             `json:"spec"`
+		Files json.RawMessage `json:"files"`
 	}
 	var modelNames []string
 	var modelMapOrig map[string]string
+	var texOrderNames []string // ysm.json 规定的纹理顺序（文件名）
 	if err := json.Unmarshal(data, &ysmRoot); err == nil {
-		for _, player := range ysmRoot.Files {
-			if len(player.Model) == 0 {
-				continue
-			}
-			modelRaw := string(player.Model)
-			trimmed := strings.TrimSpace(modelRaw)
-			if strings.HasPrefix(trimmed, `{`) {
-				var mm map[string]string
-				if json.Unmarshal(player.Model, &mm) == nil {
-					modelMapOrig = mm
-					for _, v := range mm {
-						modelNames = append(modelNames, v)
+		var filesObj map[string]json.RawMessage
+		if json.Unmarshal(ysmRoot.Files, &filesObj) == nil {
+			for key, val := range filesObj {
+				if key != "player" {
+					continue
+				}
+				var player struct {
+					Model   json.RawMessage `json:"model"`
+					Texture json.RawMessage `json:"texture"`
+				}
+				if err := json.Unmarshal(val, &player); err != nil {
+					log.Printf("[ysm] 解析 player 失败: %v", err)
+					continue
+				}
+				// 解析 model
+				if len(player.Model) > 0 {
+					modelRaw := string(player.Model)
+					trimmed := strings.TrimSpace(modelRaw)
+					if strings.HasPrefix(trimmed, `{`) {
+						var mm map[string]string
+						if json.Unmarshal(player.Model, &mm) == nil {
+							modelMapOrig = mm
+							for _, v := range mm {
+								modelNames = append(modelNames, v)
+							}
+						}
+					} else if strings.HasPrefix(trimmed, `[`) {
+						var arr []string
+						if json.Unmarshal(player.Model, &arr) == nil {
+							modelNames = arr
+						}
+					} else {
+						name := strings.Trim(trimmed, `"`)
+						modelNames = append(modelNames, name)
 					}
 				}
-			} else if strings.HasPrefix(trimmed, `[`) {
-				var arr []string
-				if json.Unmarshal(player.Model, &arr) == nil {
-					modelNames = arr
+				// 解析 texture 顺序
+				if len(player.Texture) > 0 {
+					texRaw := string(player.Texture)
+					if strings.HasPrefix(strings.TrimSpace(texRaw), `[`) {
+						var arr []json.RawMessage
+						if json.Unmarshal(player.Texture, &arr) == nil {
+							for _, item := range arr {
+								s := strings.TrimSpace(string(item))
+								if strings.HasPrefix(s, `{`) {
+									var obj struct{ Uv string `json:"uv"` }
+									if json.Unmarshal(item, &obj) == nil && obj.Uv != "" {
+										tn := obj.Uv
+										if idx := strings.LastIndex(tn, "/"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
+										if idx := strings.LastIndex(tn, "\\"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
+										texOrderNames = append(texOrderNames, strings.ToLower(tn))
+									}
+								} else {
+									var sval string
+									if json.Unmarshal(item, &sval) == nil && sval != "" {
+										tn := sval
+										if idx := strings.LastIndex(tn, "/"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
+										texOrderNames = append(texOrderNames, strings.ToLower(tn))
+									}
+								}
+							}
+						}
+					}
 				}
-			} else {
-				name := strings.Trim(trimmed, `"`)
-				modelNames = append(modelNames, name)
 			}
 		}
 	}
@@ -63,10 +110,63 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 	var geoJSON *types.BedrockModel
 	dir := filepath.Dir(ysmJsonPath)
 
-	// 尝试解析 ysm.json 自身（可能包含 minecraft.geometry）
-	geoJSON = geometry.ParseBedrockGeometry(data)
+	// 统一加载全部模型文件，main 排首位（texIdx=0）
+	var orderedNames []string
+	if modelMapOrig != nil {
+		if mainPath, ok := modelMapOrig["main"]; ok {
+			orderedNames = append(orderedNames, mainPath)
+		}
+		for k, v := range modelMapOrig {
+			if k != "main" {
+				orderedNames = append(orderedNames, v)
+			}
+		}
+	} else {
+		orderedNames = modelNames
+	}
+	maxTexIdx := len(texOrderNames) - 1
+	if maxTexIdx < 0 {
+		maxTexIdx = 0
+	}
+	for i, mn := range orderedNames {
+		for _, sub := range []string{"", "models/", "models\\"} {
+			candidate := filepath.Join(dir, sub, mn)
+			if _, err := os.Stat(candidate); err == nil {
+				ti := i
+				if ti > maxTexIdx {
+					ti = maxTexIdx
+				}
+				log.Printf("[ysm] 加载模型文件 %q (texIdx=%d)", candidate, ti)
+				geoData, readErr := os.ReadFile(candidate)
+				if readErr == nil {
+					gj := geometry.ParseBedrockGeometry(geoData)
+					if gj != nil {
+						for bi := range gj.Bones {
+							for ci := range gj.Bones[bi].Cubes {
+								gj.Bones[bi].Cubes[ci].TexSlot = ti
+								gj.Bones[bi].Cubes[ci].CubeTexW = gj.TexWidth
+								gj.Bones[bi].Cubes[ci].CubeTexH = gj.TexHeight
+							}
+						}
+						if geoJSON == nil {
+							geoJSON = gj
+						} else {
+							geoJSON.Bones = append(geoJSON.Bones, gj.Bones...)
+							geoJSON.BoneCount += gj.BoneCount
+							geoJSON.CubeCount += gj.CubeCount
+						}
+					}
+				}
+				break
+			}
+		}
+	}
+
+	// 兜底：尝试解析 ysm.json 自身（可能包含 minecraft.geometry）
 	if geoJSON == nil {
-		// 检查 minecraft.geometry[0] 格式
+		geoJSON = geometry.ParseBedrockGeometry(data)
+	}
+	if geoJSON == nil {
 		var root struct {
 			Minecraft struct {
 				Geometry []json.RawMessage `json:"geometry"`
@@ -76,50 +176,6 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 			wrapped := append([]byte(`{"format_version":"1.12.0","minecraft:geometry":[`), root.Minecraft.Geometry[0]...)
 			wrapped = append(wrapped, ']', '}')
 			geoJSON = geometry.ParseBedrockGeometry(wrapped)
-		}
-	}
-
-	// 尝试同目录或子目录 model 文件，优先选 key="main"
-	if geoJSON == nil && modelMapOrig != nil {
-		if mainPath, ok := modelMapOrig["main"]; ok {
-			for _, sub := range []string{"", "models/", "models\\"} {
-				candidate := filepath.Join(dir, sub, mainPath)
-				if _, err := os.Stat(candidate); err == nil {
-					geoData, readErr := os.ReadFile(candidate)
-					if readErr == nil {
-						geoJSON = geometry.ParseBedrockGeometry(geoData)
-					}
-					break
-				}
-			}
-		}
-	}
-	if geoJSON == nil {
-		for i, mn := range modelNames {
-			for _, sub := range []string{"", "models/", "models\\"} {
-				candidate := filepath.Join(dir, sub, mn)
-				if _, err := os.Stat(candidate); err == nil {
-					geoData, readErr := os.ReadFile(candidate)
-					if readErr == nil {
-						gj := geometry.ParseBedrockGeometry(geoData)
-						if gj != nil {
-							for bi := range gj.Bones {
-								for ci := range gj.Bones[bi].Cubes {
-									gj.Bones[bi].Cubes[ci].TexSlot = i
-								}
-							}
-							if i == 0 {
-								geoJSON = gj
-							} else {
-								geoJSON.Bones = append(geoJSON.Bones, gj.Bones...)
-								geoJSON.BoneCount += gj.BoneCount
-								geoJSON.CubeCount += gj.CubeCount
-							}
-						}
-					}
-					break
-				}
-			}
 		}
 	}
 
@@ -152,6 +208,12 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 				geoData, readErr := os.ReadFile(path)
 				if readErr == nil {
 					if gj := geometry.ParseBedrockGeometry(geoData); gj != nil {
+						for bi := range gj.Bones {
+							for ci := range gj.Bones[bi].Cubes {
+								gj.Bones[bi].Cubes[ci].CubeTexW = gj.TexWidth
+								gj.Bones[bi].Cubes[ci].CubeTexH = gj.TexHeight
+							}
+						}
 						geoJSON = gj
 					}
 				}
@@ -170,40 +232,53 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 	// 搜索纹理（递归遍历 textures/ 下所有子目录）
 	var texData [][]byte
 	texDir := filepath.Join(dir, "textures")
+	var texFiles []struct {
+		path string
+		name string
+	}
 	if d, err := os.Stat(texDir); err == nil && d.IsDir() {
 		filepath.WalkDir(texDir, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				return nil
-			}
-			if d.IsDir() {
-				return nil
-			}
+			if err != nil { return nil }
+			if d.IsDir() { return nil }
 			ext := strings.ToLower(filepath.Ext(d.Name()))
 			if ext == ".png" || ext == ".jpg" || ext == ".tga" {
-				texBytes, readErr := os.ReadFile(path)
-				if readErr == nil {
-					texData = append(texData, texBytes)
-				}
+				texFiles = append(texFiles, struct{path string; name string}{path, strings.ToLower(d.Name())})
 			}
 			return nil
 		})
 	}
 	// 也搜索同目录纹理
-	if len(texData) == 0 {
+	if len(texFiles) == 0 {
 		entries, _ := os.ReadDir(dir)
 		for _, e := range entries {
-			if e.IsDir() {
-				continue
-			}
+			if e.IsDir() { continue }
 			ext := strings.ToLower(filepath.Ext(e.Name()))
 			if ext == ".png" || ext == ".jpg" {
-				texBytes, readErr := os.ReadFile(filepath.Join(dir, e.Name()))
-				if readErr == nil {
-					texData = append(texData, texBytes)
-				}
+				texFiles = append(texFiles, struct{path string; name string}{filepath.Join(dir, e.Name()), strings.ToLower(e.Name())})
 			}
 		}
 	}
+	// 按 ysm.json 纹理顺序排序
+	if len(texOrderNames) > 0 {
+		orderMap := make(map[string]int, len(texOrderNames))
+		for i, n := range texOrderNames {
+			orderMap[n] = i
+		}
+		sort.SliceStable(texFiles, func(i, j int) bool {
+			oi, hasI := orderMap[texFiles[i].name]
+			oj, hasJ := orderMap[texFiles[j].name]
+			if hasI && hasJ { return oi < oj }
+			return hasI
+		})
+	}
+	// 读取纹理数据
+	for _, tf := range texFiles {
+		texBytes, readErr := os.ReadFile(tf.path)
+		if readErr == nil && len(texBytes) > 0 {
+			texData = append(texData, texBytes)
+		}
+	}
+	
 
 	return geoJSON, texData
 }

@@ -191,3 +191,85 @@ YSMViewer 的 `CreateBlockbenchQuaternion(Vector3 rotation)` 直接传原始值�
 - Phase 1 取证（DeepSeek V4 Pro / R1）：钉死上方 4 个 ❓ 的根因
 - 取证输入：`spec.go` 全文 + `model3d-spec.js` 全文 + 一个简单 BedrockModel JSON + Blockbench 对比截图
 - 取证完成后再修正 Phase 2 改动范围图
+
+---
+
+### 2026-06-17 — DeepSeek V4 Flash — 纹理映射修复 + extracted.go 模型加载修复 + debug 日志清理
+
+**状态**：✅ 完成
+
+#### 做了什么
+- 修复 `extracted.go`：`projectiles` 为数组时 `map[string]struct{...}` 解析失败，改为 `json.RawMessage` 手动解析
+- 修复 `extracted.go`：嵌入几何体优先级高于模型文件，导致 main.json/arm.json 永远不加载（21_saint 等模型只有 12 骨）
+- 修复 `extracted.go`：model 文件加载后 geoJSON != nil，后续递归搜索被跳过，但之前嵌入几何体先成功也跳过
+- 修复 `archive.go`：model 字段支持 4 种格式（单字符串、数组、对象数组带 path/uv、map）
+- 修复 `archive.go`：7z 路径完整重写，镜像 ZIP 路径的 ysm.json 解析 + TexSlot 分配
+- 修复 `spec.go`：所有 `[spec]` 调试日志删除（6 处）
+- 修复 `model3d.js`：临时 texture debug 日志删除
+
+#### 关键调试路径（排查记录）
+
+**问题**：21_saint 等模型只显示 12 骨（应该是 197 骨）
+
+**Round 1**：以为是纹理索引错误 → 加 `[3dspec]` 日志发现骨骼数=12
+**Round 2**：以为是 merged 计数问题 → 加 `[ysm] 合并后` 日志，发现模型文件压根没加载
+**Round 3**：以为是路径不匹配 → 加 `[ysm] 搜索模型文件` 日志，发现循环没执行
+**Round 4**：以为是 ysm.json 解析失败 → 加 `[ysm] ysmRoot.Files 键` 日志，发现 21_saint 完全没输出
+**Round 5**：对比 20_survivor（成功）和 21_saint（失败）的结构，发现 `projectiles` 字段在 21_saint 中是 **数组**，在 20_survivor 中是 **对象**
+
+```json
+// 20_survivor（解析成功）
+"projectiles": { "minecraft:trident": { "model": "..." } }
+
+// 21_saint（解析失败）
+"projectiles": [ { "minecraft:trident": { "model": "..." } } ]
+```
+
+**真相**：Go 的 `map[string]struct{...}` 要求 JSON 值必须是对象（`{}`），遇到数组（`[]`）会整个 `json.Unmarshal` 失败，导致 `Files` 字段完全读不到，`orderedNames` 为空，模型文件全部跳过。
+
+**Lesson**：ysm.json 的 `files` 字段非标准，非 player 分组可能用数组而非对象。解析必须用 `json.RawMessage` 兜底。
+
+#### 遗留
+- `archive.go` + `extracted.go` 的 `textureOrder` 已声明但未用于排序 PNG
+- Go CLI fallback 路径（`runYSMParserOnFile`）不设 TexSlot
+- `eulerToQuaternion` 旋转顺序待 YSMViewer C# 源码确认
+
+---
+
+### 2026-06-17 — DeepSeek V4 Pro — 全量诊断 + 坐标系修正 + 多纹理方案
+
+**状态**：✅ 诊断完成，坐标修正已施工，修复计划已列
+
+#### 做了三件事
+
+**1. 坐标系修正（已施工，`spec.go` 6 处）**
+
+拉取 YSMViewer C# 源码对比，确认：
+- YSMViewer `CreateBlockbenchQuaternion` 对 bone/cube 旋转**不做任何符号变换**
+- YSMViewer `from = (origin.X - size.X, origin.Y, origin.Z)` 不取反 origin X
+- YSMViewer `min = center - half - cube.Pivot` 不取反 pivot X
+
+修复：移除 `spec.go` 全部 6 处 X 取反和旋转取反，对齐 YSMViewer。
+
+**2. 数据流安全审计**
+
+完整链: `ParseBedrockGeometry → Bone2D/Cube2D → threejs.Build → JSON → Wails binding → JS → Three.js`。结论：
+- Go→JS 序列化无精度丢失（全部 float64/IEEE 754）
+- 四元数顺序 `[x,y,z,w]` 全程一致
+- `ParentID` nil → JSON null → JS 正确判为根骨
+- JS 兜底 `model3d-spec.js` 格式与渲染器不兼容（死代码，非本次引入）
+
+**3. 纹理映射诊断 + 修复计划**
+
+发现两个 bug，均列出具体改动文件清单：
+- **跨文件 model 加载遗漏**（extracted.go "main key 优先"与批量循环互斥，arm.json 不加载）→ 改 extracted.go 一处
+- **多纹理分辨率 UV 错乱**（合并取 max texW，256px 的 UV 被按 1024px 计算）→ 改 5 文件，给 Cube2D 加 CubeTexW/CubeTexH，按 cube 来源文件维度计算 UV
+
+YSMViewer 架构参考：YSMViewer 不做跨文件骨骼父级匹配，arm 骨骼靠绝对 pivot 定位。我们的 `Build()` 合并所有骨骼到单 ModelGroup 效果等价。
+
+#### 关键文档产出
+- `docs/3D-RENDERING/2026-06-16-coordinate-fix.md` — 旧算法记录（6 处代码+数值示例+YSMViewer 对照）
+
+#### 遗留
+- 纹理序解析已加入 archive.go/extracted.go，但未用于重排 pngs 数组
+- YSMViewer 单个 ModelGroup per geometry 文件的架构比我们合并方案更干净，但迁移成本高

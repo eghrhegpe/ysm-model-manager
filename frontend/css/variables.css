@@ -177,17 +177,29 @@
 .no-animations .hdr-btn,
 .no-animations .btn,
 .no-animations .tb-btn,
-.no-animations .cr-avatar {
+.no-animations .cr-avatar,
+.no-animations .vc,
+.no-animations .vc-header,
+.no-animations .logo-icon,
+.no-animations .toast,
+.no-animations .theme-ripple-active {
   transition-duration: 0s !important;
+  animation: none !important;
 }
 
 .no-animations .sm-item,
 .no-animations .sm-item-btn,
 .no-animations .sm-tab,
-.no-animations .sm-status-tab {
+.no-animations .sm-status-tab,
+.no-animations .sm-empty {
   transition-duration: 0s !important;
   animation: none !important;
 }
+
+/* 网格背景和涟漪动画单独处理 */
+.no-animations.theme-cyber #root::before { animation: none !important; }
+.no-animations .menu { animation: none !important; }
+.no-animations .menu .item { animation: none !important; }
 
 /* ===== 无障碍支持：焦点状态 ===== */
 :focus-visible {

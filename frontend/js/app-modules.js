@@ -147,9 +147,16 @@ document.addEventListener(
 
 window
   .matchMedia("(prefers-color-scheme: dark)")
-  .addEventListener("change", () => {
+  .addEventListener("change", (e) => {
     const theme = localStorage.getItem("theme") || "system";
-    if (theme === "system") applyTheme("system");
+    if (theme === "system") {
+      applyTheme("system");
+      bus.emit("toast:show", {
+        msg: `已跟随系统切换至${e.matches ? "深色" : "浅色"}主题`,
+        duration: 2000,
+        type: "info",
+      });
+    }
   });
 
 // ===== F12 / Ctrl+Shift+I 打开 DevTools（仅开发/调试环境）=====

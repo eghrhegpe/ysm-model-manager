@@ -16,7 +16,7 @@ class AppToast extends HTMLElement {
         .toast {
           display: flex; align-items: center; gap: 10px; padding: 10px 16px;
           border-radius: 8px; background: var(--card); color: var(--txt); font-size: var(--fs-base);
-          box-shadow: 0 6px 20px rgba(0,0,0,.4); animation: slideUp .25s ease;
+          box-shadow: 0 6px 20px rgba(0,0,0,.4); animation: toastIn .3s cubic-bezier(.34,1.56,.64,1);
           border: 1px solid var(--bd); pointer-events: auto;
           font-family: var(--font-ui);
         }
@@ -28,7 +28,7 @@ class AppToast extends HTMLElement {
         .toast .undo-btn:hover { background: var(--act); }
         .toast .close-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: var(--fs-md); padding: 0 2px; }
         .toast .close-btn:hover { color: var(--txt); }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes toastIn { 0% { transform: translateY(20px) scale(.95); opacity: 0; } 60% { transform: translateY(-4px) scale(1.02); opacity: 1; } 100% { transform: translateY(0) scale(1); } }
         @keyframes slideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(20px); opacity: 0; } }
       </style>
       <div id="c" class="toast-container"></div>

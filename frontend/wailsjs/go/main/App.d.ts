@@ -233,6 +233,8 @@ export function RestartApplication():Promise<void>;
 
 export function RestoreFromRecycle(arg1:string,arg2:string):Promise<void>;
 
+export function RevealInExplorer(arg1:string):Promise<void>;
+
 export function SaveAppConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<void>;
 
 export function SavePreviewTempFile(arg1:string):Promise<string>;

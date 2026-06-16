@@ -101,6 +101,29 @@ ${btnBaseCSS}
 .conflict-name { color:#f38ba8; }
 .conflict-ver { color:var(--muted); }
 .conflict-ins { font-size:var(--fs-sm); color:var(--txt); }
+/* ===== 诊断页动画 ===== */
+@keyframes logRowIn { from { opacity:0; transform:translateX(-12px); } to { opacity:1; transform:translateX(0); } }
+.log-row { animation: logRowIn .25s ease both; }
+@keyframes conflictRowIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.conflict-row, .conflict-ins { animation: conflictRowIn .3s ease both; }
+@keyframes scanPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.15); } }
+.btn-base.accent.scanning { animation: scanPulse 1s ease-in-out infinite; pointer-events:none; opacity:.7; }
+@keyframes scanRadar {
+  0%   { background: conic-gradient(from 0deg, transparent 0%, var(--accent) 10%, transparent 20%); }
+  100% { background: conic-gradient(from 360deg, transparent 0%, var(--accent) 10%, transparent 20%); }
+}
+.scan-radar-wrap { position:relative; display:flex; align-items:center; justify-content:center; padding:24px; }
+.scan-radar { width:80px; height:80px; border-radius:50%; border:2px solid var(--bd); animation: scanRadar 2s linear infinite; opacity:.5; }
+.scan-radar-dot { position:absolute; width:8px; height:8px; border-radius:50%; background:var(--accent); animation: scanDot 2s linear infinite; }
+@keyframes scanDot {
+  0%   { top:4px; left:50%; transform:translateX(-50%); }
+  25%  { top:50%; left:calc(100% - 4px); transform:translateY(-50%); }
+  50%  { top:calc(100% - 4px); left:50%; transform:translateX(-50%); }
+  75%  { top:50%; left:4px; transform:translateY(-50%); }
+  100% { top:4px; left:50%; transform:translateX(-50%); }
+}
+.no-animations .log-row, .no-animations .conflict-row, .no-animations .conflict-ins { animation: none !important; }
+.no-animations .btn-base.accent.scanning { animation: none !important; }
 .diag-wrapper { flex:1; display:flex; overflow:hidden; }
 .diag-left { width:var(--diag-left-w); flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); padding:8px; gap:4px; background:var(--surf); }
 .diag-btn { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:6px; border:none; background:transparent; color:var(--muted); font-size:var(--fs-md); cursor:pointer; font-family:inherit; transition:all .12s; width:100%; text-align:left; }

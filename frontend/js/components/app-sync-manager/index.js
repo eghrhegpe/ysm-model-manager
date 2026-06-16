@@ -7,19 +7,11 @@ import { dbg } from "../../utils/debug.js";
 import { friendlyError } from "../../utils/errors.js";
 import {
   containerHTML,
-  summaryHTML,
   itemHTML,
   statusTabHTML,
   emptyHTML,
   loadingHTML,
 } from "./tpl.js";
-
-const ESC = (s) =>
-  String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 
 // 跨实例记住上次选中的类型（整合包间共享）
 let _lastSelectedType = "ysm";
@@ -39,7 +31,7 @@ export class AppSyncManager extends HTMLElement {
     this._statusFilter = "all";
     this._typeConfig = [];
     this._loading = false;
-    this._pusher = null;
+
   }
 
   connectedCallback() {
@@ -66,7 +58,9 @@ export class AppSyncManager extends HTMLElement {
 
   async _init() {
     this._loading = true;
-    this.innerHTML = containerHTML() + loadingHTML();
+    this.innerHTML = containerHTML();
+    const listEl = this.querySelector(".sm-list");
+    if (listEl) listEl.innerHTML = loadingHTML();
 
     await this._loadTypeConfig();
     await this._loadData();
@@ -79,12 +73,13 @@ export class AppSyncManager extends HTMLElement {
       // 保留加载界面不消失也至少显示错误提示
       this.innerHTML +=
         '<div style="padding:12px;color:var(--err)">渲染失败: ' +
-        ESC(String(e)) +
+        String(e).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") +
         "</div>";
     }
 
     // 监听刷新
     const unsub = bus.on("stats:refresh", () => {
+      if (!this.isConnected) return;
       dbg("sync-manager", "stats:refresh 收到");
       this._loadData().then(() => {
         dbg(
@@ -246,13 +241,6 @@ export class AppSyncManager extends HTMLElement {
         statusTabHTML(id, label, count, this._statusFilter === id),
       )
       .join("");
-
-    // — 摘要 —
-    summaryEl.innerHTML = summaryHTML({
-      synced: curCounts.synced || 0,
-      missing: curCounts.missing || 0,
-      optional: curCounts.optional || 0,
-    });
 
     // — 列表 —
     this._applyFilter();

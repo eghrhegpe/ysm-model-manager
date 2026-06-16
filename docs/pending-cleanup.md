@@ -19,6 +19,15 @@
 
 - `frontend/js/components/app-preview/preview-wasm.js` 中原有的 `[YSM]` 日志（WASM init/解码流程）是常规调试日志，非本次新增，保留
 
+## 新增清理（v1.7.5）
+
+| #    | 文件                               | 内容                                                            | 说明      |
+| ---- | ---------------------------------- | --------------------------------------------------------------- | --------- |
+| 11   | `frontend/js/core/handler-dnd.js`  | v1.7.4 遗留 `[DnD]` console.log（2 处 drop/collected 日志）     | ✅ 已清理 |
+| 12   | `frontend/.../toolbar-events.js`   | v1.7.4 遗留 `[DBG:toolbar-bind]` console.log                    | ✅ 已清理 |
+| 13   | `frontend/.../preview-utils.js`    | v1.7.4 遗留 `[YSM]` console.log（4 处，绕过 devLog 守卫）       | ✅ 已清理 |
+| 14   | `resource_bindings.go`             | v1.7.4 遗留 `[push]` fmt.Printf（9 处流程追踪）                 | ✅ 已清理 |
+
 ## 未来待办（非调试代码，需单独实施）
 
 ### ~~1. 下载哈希校验~~ ✅ v1.6.0 完成
@@ -78,7 +87,7 @@
 
 **涉及文件**：`frontend/js/utils/preview-cache.js`、`features/community/events.js`
 
-### 3. 系统暗色模式变化自动切换（低）
+### ~~3. 系统暗色模式变化自动切换~~ ✅ v1.7.5 完成
 
 **问题**：系统从浅色切深色时，应用不响应（除 theme === "system"）。
 
@@ -92,7 +101,7 @@
 
 **涉及文件**：`frontend/js/app-modules.js`
 
-### 4. 右键"打开文件位置"（低）
+### ~~4. 右键"打开文件位置"~~ ✅ v1.7.5 完成
 
 **问题**：仓库内文件右键菜单缺少"在资源管理器中显示"动作。
 

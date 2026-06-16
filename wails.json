@@ -50,6 +50,7 @@
     "RenameDir",
     "RenameFile",
     "RemoveDir",
+    "RevealInExplorer",
     "DeduplicateCustomDir",
     "CountLinkedModels",
     "IsSymlink",

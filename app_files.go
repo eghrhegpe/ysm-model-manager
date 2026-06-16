@@ -299,6 +299,17 @@ func (a *App) CopyModelFile(src, dstDir string) error {
 	return nil
 }
 
+// ========== 在资源管理器中显示 ==========
+func (a *App) RevealInExplorer(path string) error {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return fmt.Errorf("路径为空")
+	}
+	cmd := exec.Command("explorer", "/select,", filepath.FromSlash(path))
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	return cmd.Start()
+}
+
 // ========== 启用/禁用 ==========
 func (a *App) ToggleModelEnable(path string) (bool, error) {
 	if strings.HasSuffix(strings.ToLower(path), ".ban") {

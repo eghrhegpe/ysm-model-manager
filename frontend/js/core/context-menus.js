@@ -438,6 +438,19 @@ export function registerContextMenus() {
                 } catch {}
               },
             },
+            {
+              label: "打开文件位置",
+              icon: "📂",
+              onClick: async () => {
+                const { RevealInExplorer } =
+                  await import("../../wailsjs/go/main/App.js");
+                try {
+                  await RevealInExplorer(path);
+                } catch (e) {
+                  toast("❌ " + friendlyError(e, "打开失败"), 3000, "error");
+                }
+              },
+            },
             { divider: true },
             {
               label: "复制文件路径",

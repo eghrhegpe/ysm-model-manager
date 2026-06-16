@@ -4,6 +4,7 @@ import { bus } from "../../bus.js";
 import { modalConfirm } from "../../dialogs/modal.js";
 import { renderModelList, isModelMissing } from "./render.js";
 import { createDownloadQueue } from "./download-queue.js";
+import { ICONS } from "../../components/app-content/workshop-icons.js";
 
 /**
  * 绑定仓库模型页面的所有事件。
@@ -82,8 +83,6 @@ export function bindRepoEvents(sr, ctx) {
     if (btn) {
       btn.textContent = "⬇️ 下载选中 (" + checked + ")";
       btn.disabled = checked === 0;
-      btn.style.opacity = checked > 0 ? "1" : ".4";
-      btn.style.pointerEvents = checked > 0 ? "auto" : "none";
     }
   };
 
@@ -111,8 +110,7 @@ export function bindRepoEvents(sr, ctx) {
     toggleBtn.addEventListener("click", () => {
       showAll = !showAll;
       toggleBtn.textContent = showAll ? "📁 显示全部" : "📁 仅显示缺失";
-      toggleBtn.style.borderColor = showAll ? "var(--accent)" : "var(--bd)";
-      toggleBtn.style.color = showAll ? "var(--accent)" : "var(--txt)";
+      toggleBtn.classList.toggle("active", showAll);
       const list = sr.querySelector("#gh-repo-list");
       const inp = sr.querySelector("#gh-repo-srch");
       if (list) list.replaceChildren(renderList(inp?.value || ""));
@@ -124,9 +122,8 @@ export function bindRepoEvents(sr, ctx) {
   const filterDropdown = sr.querySelector(".gh-filter-dropdown");
   if (filterBtn && filterDropdown) {
     filterBtn.addEventListener("click", () => {
-      const isOpen = filterDropdown.style.display === "flex";
-      filterDropdown.style.display = isOpen ? "none" : "flex";
-      filterBtn.textContent = isOpen ? "⚙️ 筛选" : "⚙️ 收起";
+      const isOpen = filterDropdown.classList.toggle("open");
+      filterBtn.textContent = isOpen ? "⚙️ 收起" : "⚙️ 筛选";
     });
   }
 
@@ -229,16 +226,40 @@ export function bindRepoEvents(sr, ctx) {
     });
   }
 
-  // ==== ⬇️ 单文件下载（事件委托：按钮 + 整行可点） ====
+  // ==== ⬇️ 单文件下载（事件委托） ====
   const dlContainer = sr.querySelector("#gh-repo-list");
   if (dlContainer) {
     dlContainer.addEventListener("click", async (e) => {
       if (e.target.classList.contains("gh-sel")) return;
 
-      const btn = e.target.closest(".gh-dl-model");
-      if (!btn || queue.isDownloading()) return;
-      const row = btn.closest(".model-row");
+      // 下载按钮
+      const dlBtn = e.target.closest('.gh-icon-btn[data-action="download"]');
+      if (dlBtn && !queue.isDownloading()) {
+        const row = dlBtn.closest("[data-name]");
+        await handleSingleDownload(dlBtn, row);
+        return;
+      }
 
+      // B站搜索按钮
+      const searchBtn = e.target.closest('.gh-icon-btn[data-action="search-bili"]');
+      if (searchBtn) {
+        e.stopPropagation();
+        const row = searchBtn.closest("[data-name]");
+        if (row) {
+          const { parseModelName } = await import("../../utils/display.js");
+          const { author } = parseModelName(row.dataset.name);
+          if (author) {
+            const { OpenInBrowser } = await import("../../../wailsjs/go/main/App.js");
+            OpenInBrowser("https://search.bilibili.com/all?keyword=" + encodeURIComponent(author));
+          }
+        }
+        return;
+      }
+    });
+  }
+
+  // 提取单文件下载逻辑
+  async function handleSingleDownload(btn, row) {
       const cbName = btn.dataset.name || "";
       const url = btn.dataset.url;
       const size = parseInt(btn.dataset.size, 10) || 0;
@@ -270,10 +291,9 @@ export function bindRepoEvents(sr, ctx) {
         updateSelectedUI();
       }
 
-      btn.textContent = "⏳";
+      btn.innerHTML = ICONS.HOURGLASS;
       await queue.enqueue([{ url, saveDir: "", name: cbName, size }]);
-      btn.textContent = "⬇️";
-    });
+      btn.innerHTML = ICONS.DOWNLOAD;
   }
 
   // 对外暴露的清理函数（供上层在视图销毁时调用）

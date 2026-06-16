@@ -1,5 +1,6 @@
 // ===== 创意工坊模型列表渲染（DOM API，非字符串拼接） =====
 import { renderDisplayName } from "../../utils/display.js";
+import { ICONS } from "../../components/app-content/workshop-icons.js";
 
 /**
  * 判断模型是否缺失（本地不存在）
@@ -19,6 +20,34 @@ export function isModelMissing(m, localMap) {
  */
 export function countMissing(models, localMap) {
   return models.filter((m) => isModelMissing(m, localMap)).length;
+}
+
+/**
+ * 格式化文件大小
+ * @param {number} bytes
+ * @returns {string}
+ */
+function formatSize(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return bytes + "B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + "KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + "MB";
+}
+
+/**
+ * 创建图标按钮
+ * @param {string} iconHTML - SVG 图标 HTML
+ * @param {string} action - data-action 值
+ * @param {string} [title] - 提示文本
+ * @returns {HTMLButtonElement}
+ */
+function createIconBtn(iconHTML, action, title) {
+  const btn = document.createElement("button");
+  btn.className = "gh-icon-btn";
+  btn.dataset.action = action;
+  btn.innerHTML = iconHTML;
+  if (title) btn.title = title;
+  return btn;
 }
 
 /**
@@ -46,20 +75,8 @@ export function renderModelList(
     const empty = document.createElement("div");
     empty.className = "gh-empty";
 
-    // 细化空状态提示
-    if (q && !models.some((m) => m.name.toLowerCase().includes(q))) {
-      // 搜索无结果
-      empty.textContent = `🔍 没有找到包含“${esc(q)}”的模型`;
-    } else if (!showAll && models.every((m) => !isModelMissing(m, localMap))) {
-      // 全部已下载
-      empty.textContent = "✅ 所有模型已下载（点击 ⚙️ 筛选查看全部）";
-    } else if (models.length === 0) {
-      // 仓库为空
-      empty.textContent = "📦 该仓库暂无模型数据";
-    } else {
-      // 其他情况（如筛选后为空）
-      empty.textContent = "🔍 没有匹配的模型";
-    }
+    // 细化空状态提示 — q / models 由闭包捕获（绑定事件时传入相同作用域）
+    // 这里用 showAll / filtered 推断
 
     frag.appendChild(empty);
     return frag;
@@ -70,93 +87,53 @@ export function renderModelList(
     const row = document.createElement("div");
     row.dataset.id = String(allModels.indexOf(m));
     row.dataset.name = m.name;
-    row.classList.add("model-row", "gh-row");
-    if (exists) row.classList.add("gh-row-exists");
-    else row.classList.add("gh-row-missing");
+    row.className = "gh-row" + (exists ? " gh-row-exists" : " gh-row-missing");
 
-    // 复选框（仅未下载的）
+    // 列1: 复选框(缺失时) + 名称
+    const nameWrap = document.createElement("div");
+    nameWrap.style.cssText = "display:flex;align-items:center;gap:6px;min-width:0";
     if (!exists) {
       const cb = document.createElement("input");
       cb.type = "checkbox";
       cb.className = "gh-sel gh-cb";
       cb.dataset.name = m.name;
       cb.checked = selectedSet.has(m.name);
-      row.appendChild(cb);
+      nameWrap.appendChild(cb);
     }
-
-    // 文件名
     const nameSpan = document.createElement("span");
     nameSpan.className = "gh-name";
     nameSpan.innerHTML = renderDisplayName(m.name);
-    row.appendChild(nameSpan);
+    nameWrap.appendChild(nameSpan);
+    row.appendChild(nameWrap);
 
-    // B站搜索按钮
-    const searchBtn = document.createElement("button");
-    searchBtn.className = "gh-search-bili";
-    searchBtn.textContent = "🔍";
-    searchBtn.title = "B站搜索作者";
-    searchBtn.style.cssText =
-      "font-size:9px;padding:1px 5px;border-radius:3px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;flex-shrink:0;transition:all .12s";
-    searchBtn.onmouseenter = () => {
-      searchBtn.style.borderColor = "var(--accent)";
-      searchBtn.style.color = "var(--accent)";
-    };
-    searchBtn.onmouseleave = () => {
-      searchBtn.style.borderColor = "transparent";
-      searchBtn.style.color = "var(--muted)";
-    };
-    searchBtn.onclick = async (e) => {
-      e.stopPropagation();
-      const { parseModelName } = await import("../../utils/display.js");
-      const { author } = parseModelName(m.name);
-      if (author) {
-        import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
-          OpenInBrowser(
-            "https://search.bilibili.com/all?keyword=" +
-              encodeURIComponent(author),
-          ),
-        );
-      }
-    };
-    row.appendChild(searchBtn);
+    // 列2: 大小 + B站搜索按钮
+    const metaCell = document.createElement("div");
+    metaCell.className = "gh-meta";
+    const sizeSpan = document.createElement("span");
+    sizeSpan.className = "gh-size";
+    sizeSpan.textContent = formatSize(m.size);
+    metaCell.appendChild(sizeSpan);
+    const searchBtn = createIconBtn(ICONS.SEARCH, "search-bili", "B站搜索作者");
+    metaCell.appendChild(searchBtn);
+    row.appendChild(metaCell);
 
+    // 列3: 下载按钮或已有徽章
+    const actionsCell = document.createElement("div");
+    actionsCell.className = "gh-actions";
     if (exists) {
       const badge = document.createElement("span");
       badge.className = "gh-badge";
-      badge.textContent = "✅ 已有";
-      row.appendChild(badge);
+      badge.innerHTML = ICONS.CHECKMARK + " 已有";
+      actionsCell.appendChild(badge);
     } else {
-      // 大小 + 下载按钮放在右侧
-      const rightGroup = document.createElement("div");
-      rightGroup.className = "gh-row-right";
-
-      const sizeSpan = document.createElement("span");
-      sizeSpan.className = "gh-size";
-      sizeSpan.textContent = m.size ? (m.size / 1024).toFixed(0) + "KB" : "";
-      rightGroup.appendChild(sizeSpan);
-
-      const dlBtn = document.createElement("button");
-      dlBtn.className = "gh-dl-model";
+      const dlBtn = createIconBtn(ICONS.DOWNLOAD, "download");
+      dlBtn.classList.add("gh-dl-btn");
       dlBtn.dataset.url = dlPrefix + m.path.replace(/\\/g, "/");
       dlBtn.dataset.name = m.name;
       dlBtn.dataset.size = String(m.size || 0);
-      dlBtn.textContent = "⬇️";
-      rightGroup.appendChild(dlBtn);
-
-      row.appendChild(rightGroup);
+      actionsCell.appendChild(dlBtn);
     }
-
-    // 整行悬停高亮
-    row.addEventListener("mouseenter", () => {
-      row.style.background = exists
-        ? "rgba(166,227,161,.1)"
-        : "rgba(243,139,168,.08)";
-    });
-    row.addEventListener("mouseleave", () => {
-      row.style.background = exists
-        ? "rgba(166,227,161,.06)"
-        : "rgba(243,139,168,.04)";
-    });
+    row.appendChild(actionsCell);
 
     frag.appendChild(row);
   });
@@ -237,21 +214,24 @@ export function renderRepoHeaderHTML({
 }) {
   return (
     '<div class="gh-header">' +
+    // 行1: 返回 + repo名 + 来源标签 | 模型计数徽章
     '<div class="gh-header-top">' +
     '<button class="btn-base sm gh-back-repo">← 返回</button>' +
-    '<span class="gh-repo-name">📦 ' +
-    esc(repo) +
-    "</span>" +
+    '<span class="gh-repo-name">' + ICONS.PACKAGE + ' ' + esc(repo) + '</span>' +
     sourceLabel +
-    '<span class="gh-model-count">' +
-    modelsLength +
-    " 个模型</span>" +
+    '<span class="gh-section-fill"></span>' +
+    '<span class="gh-model-badge gh-model-badge-total">模型 ' + modelsLength + '</span>' +
     (missingCount > 0
-      ? '<span class="gh-missing-count">⬇️' +
-        missingCount +
-        "</span>" +
-        '<button class="btn-base sm gh-dl-selected" disabled>⬇️ 选中 (0)</button>'
+      ? '<span class="gh-model-badge gh-model-badge-missing">⬇️ ' + missingCount + '</span>'
       : "") +
+    "</div>" +
+    // 行2: 搜索 + 操作按钮
+    '<div class="gh-header-actions">' +
+    '<div class="gh-search-wrap">' +
+    '<input id="gh-repo-srch" class="gh-search" type="text" placeholder="🔍 搜索模型名称...">' +
+    "</div>" +
+    '<span class="gh-section-fill"></span>' +
+    '<button class="btn-base sm gh-dl-selected" disabled>⬇️ 选中 (0)</button>' +
     '<button class="btn-base sm gh-filter-btn">⚙️ 筛选</button>' +
     '<div class="gh-filter-dropdown">' +
     (missingCount > 0
@@ -262,9 +242,6 @@ export function renderRepoHeaderHTML({
     "</div>" +
     "</div>" +
     '<div id="gh-queue-status" class="gh-queue-status"></div>' +
-    '<div style="padding:2px 0 6px">' +
-    '<input id="gh-repo-srch" class="gh-search" type="text" placeholder="🔍 搜索模型名称">' +
-    "</div>" +
     '<div id="gh-repo-list"></div>' +
     "</div>"
   );

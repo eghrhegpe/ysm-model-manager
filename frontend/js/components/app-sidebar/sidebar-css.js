@@ -1,4 +1,5 @@
 // ===== sidebar Shadow CSS =====
+import { btnBaseCSS } from "../../css/shared-styles.js";
 export const sidebarCSS = `
 :host {
   display: flex; flex-direction: column;
@@ -18,26 +19,19 @@ export const sidebarCSS = `
   padding: 5px 10px; cursor: pointer; transition: background .12s;
 }
 .vc-header:hover { background: var(--hover); }
-.vc-header.active { background: #7c83ff33; border-left: 3px solid var(--accent); padding-left: 7px; box-shadow: inset 0 0 8px rgba(124,131,255,.08); }
+.vc-header.active { background: color-mix(in srgb, var(--accent) 20%, transparent); border-left: 3px solid var(--accent); padding-left: 7px; box-shadow: inset 0 0 8px color-mix(in srgb, var(--accent) 8%, transparent); }
 .vc-hdr-row1 { display: flex; align-items: center; }
 .vc-hdr-row2 { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 .vc-header .name { flex: 1; font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--txt); white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 .tag { font-size: var(--fs-xs); padding: 1px 4px; border-radius: 3px; min-width:16px;text-align:center; }
-.vc-header .tag.green { background: #6bb86b22; color: #6bb86b; }
-.vc-header .tag.red { background: #f38ba822; color: #f38ba8; }
-.vc-header .tag.orange { background: #f9a82622; color: #f9a826; }
+.vc-header .tag.green { background: color-mix(in srgb, var(--status-success) 13%, transparent); color: var(--status-success); }
+.vc-header .tag.red { background: color-mix(in srgb, var(--status-error) 13%, transparent); color: var(--status-error); }
+.vc-header .tag.orange { background: color-mix(in srgb, var(--sm-optional) 13%, transparent); color: var(--sm-optional); }
 .vc-hdr-row1 .chk { flex-shrink:0; margin:0; cursor:pointer; }
 .footer { padding: 8px 12px; border-top: 1px solid var(--bd); }
 .footer-stats { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--fs-base) - 2px); color: var(--muted); margin-bottom: 6px; }
 /* ===== 统一按钮系统 .btn-base ===== */
-.btn-base { padding:var(--btn-padding-md); border-radius:var(--btn-radius,6px); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:inherit; font-family:inherit; transition:background .12s,color .12s; white-space:nowrap; flex-shrink:0; }
-.btn-base:hover { background:var(--hover); }
-.btn-base:focus-visible { box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); outline:none; }
-.btn-base.sm { padding:var(--btn-padding-sm); font-size:var(--fs-btn-tool); }
-.btn-base.lg { padding:var(--btn-padding-lg); font-size:var(--fs-btn-primary); }
-.btn-base.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
-.btn-base.primary:hover { background:color-mix(in srgb, var(--accent) 88%, #fff); }
-.btn-base:disabled { opacity:0.5; cursor:not-allowed; pointer-events:none; }
+${btnBaseCSS}
 
 .footer-btn {
   width: 100%; padding: 5px 8px; border-radius: 6px;

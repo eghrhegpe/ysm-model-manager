@@ -124,7 +124,9 @@ export async function fetchCommunityCreators(url, mirror) {
       }
       if (Array.isArray(data)) return data;
     } catch (err) {
-      dbg("community", a.name + " failed:", err?.message);
+      if (err?.name !== "AbortError") {
+        dbg("community", a.name + " failed:", err?.message);
+      }
     } finally {
       clearTimeout(tmr);
     }
@@ -214,7 +216,9 @@ export async function fetchCommunitySites(mirror) {
       }
       if (Array.isArray(data)) return data;
     } catch (err) {
-      dbg("community", "sites " + a.name + " failed:", err?.message);
+      if (err?.name !== "AbortError") {
+        dbg("community", "sites " + a.name + " failed:", err?.message);
+      }
     } finally {
       clearTimeout(tmr);
     }

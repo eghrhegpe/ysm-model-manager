@@ -3,6 +3,8 @@ import { friendlyError } from "../../utils/errors.js";
 import { bus } from "../../bus.js";
 import { dbg } from "../../utils/debug.js";
 import { showProgress, tryFetchModels } from "../../features/community/data.js";
+import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.js";
+import { getCreatorIdentity, getTagFromRole, parseDescTags, loadFavs, isFaved, toggleFav } from "./workshop-data.js";
 
 /**
  * 渲染并绑定站点视图（预设搜索 + 创作者列表 + 浏览仓库 + 编辑模式）
@@ -19,81 +21,9 @@ import { showProgress, tryFetchModels } from "../../features/community/data.js";
  * @param {Function} ctx.openUrl - 按开关模式打开 URL (url) => void
  * @param {Function} ctx.backToSite - 返回站点视图的回调
  */
-// ===== 收藏工具 =====
-const STORAGE_KEY = "ysm-fav-creators";
-
-// ===== 创作者身份工具 =====
-const PLATFORM_LABELS = {
-  bilibili: "B站",
-  afdian: "爱发电",
-  github: "GitHub",
-  mzhouse: "模之屋",
-  bowlroll: "Bowlroll",
-  vroid: "VRoid",
-  nicovideo: "NicoNico 3D",
-  deviantart: "DeviantArt",
-};
-const PLATFORM_ICONS = {
-  bilibili: "📺",
-  afdian: "❤️",
-  github: "🐙",
-  mzhouse: "🏠",
-  bowlroll: "🍚",
-  vroid: "🤖",
-  nicovideo: "🧊",
-  deviantart: "🎨",
-};
-function getCreatorIdentity(cr) {
-  const role = cr.role || "";
-  const tag = cr.tag || "";
-  switch (role) {
-    case "official":
-      return { label: "🏠 官方IP模型库", icon: "🏠", tag: "official" };
-    case "creator":
-      return { label: "🎮 YSM 创作者", icon: "🎮", tag: "creator" };
-    case "vup":
-      return { label: "🎤 VTuber 创作者", icon: "🎤", tag: "vup" };
-    case "repo":
-      return { label: "📦 社区模型仓库", icon: "📦", tag: "repo" };
-    case "oc":
-      return { label: "🎨 OC 原创角色", icon: "🎨", tag: "oc" };
-  }
-  // fallback: detect from old tag field
-  if (tag === "vup")
-    return { label: "🎤 VTuber 创作者", icon: "🎤", tag: "vup" };
-  if (tag === "oc") return { label: "🎨 OC 原创角色", icon: "🎨", tag: "oc" };
-  return { label: "🎮 YSM 创作者", icon: "🎮", tag: "creator" };
-}
-
-function getTagFromRole(role) {
-  return role || "creator";
-}
-function getTagEmojiFromRole(role) {
-  switch (role) {
-    case "official":
-      return "🏷️";
-    case "vup":
-      return "🎤";
-    case "oc":
-      return "🎨";
-    case "repo":
-      return "📦";
-    default:
-      return "🎮";
-  }
-}
-function parseDescTags(desc) {
-  if (!desc) return [];
-  return desc
-    .split(/[、，,]/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 6);
-}
-
 // ===== 创作者卡片工厂 =====
 function createCrCard(cr, ctx) {
-  const { esc, isFaved, authorCountMap, avatarCache, creators, bus } = ctx;
+  const { esc, isFaved, authorCountMap, avatarCache, creators } = ctx;
   const isGitHub = cr.type && cr.type.includes("github");
   const repoParts = isGitHub ? cr.name.split("/") : null;
   const hasRepo = isGitHub && repoParts && repoParts.length >= 2;
@@ -103,113 +33,59 @@ function createCrCard(cr, ctx) {
   );
   const idx = sorted.indexOf(cr);
   const pct = sorted.length > 1 ? idx / (sorted.length - 1) : 0;
-  const tier =
-    pct < 0.1
-      ? { border: "#D4A017", glow: "rgba(212,160,23,0.4)", rank: "gold" }
-      : pct < 0.25
-        ? { border: "#9E9E9E", glow: "rgba(158,158,158,0.25)", rank: "silver" }
-        : { border: "#6B9FFF", glow: "transparent", rank: "" };
+  const tierRank =
+    pct < 0.1 ? "gold" : pct < 0.25 ? "silver" : "";
   const hasAvatar = avatarCache && avatarCache[cr.name];
 
   const card = document.createElement("div");
-  card.className = "gh-card";
+  card.className = "gh-card cr-creator-card";
   card.tabIndex = 0;
-  card.style.cssText =
-    "min-width:200px;max-width:280px;flex:1 1 200px;cursor:pointer;animation:card-in .3s ease-out both;animation-delay:" +
-    idx * 0.03 +
-    "s";
+  card.style.animationDelay = idx * 0.03 + "s";
   card.dataset.name = cr.name;
   card.dataset.tag = getTagFromRole(cr.role);
   card.title = "搜索: " + cr.name;
-  card.innerHTML =
-    '<div class="cr-avatar-container" style="position:relative;display:inline-flex;flex-shrink:0;align-self:flex-start;margin:6px 0 0 6px">' +
-    '<div class="cr-avatar-ring"' +
-    (tier.rank ? ' data-spin="' + tier.rank + '"' : "") +
-    ' style="background:conic-gradient(from var(--grad-rot,0deg),' +
-    tier.border +
-    ",transparent 60%," +
-    tier.border +
-    ");box-shadow:0 0 6px " +
-    tier.glow +
-    '"></div>' +
-    (hasAvatar
-      ? '<img class="cr-avatar" src="' +
-        esc(avatarCache[cr.name]) +
-        '" style="width:28px;height:28px;border-radius:50%;object-fit:cover" data-debug-avatar="' +
-        esc(cr.name) +
-        '">'
-      : '<div class="cr-avatar" style="width:28px;height:28px;font-size:12px">' +
-        (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") +
-        "</div>") +
-    "</div>" +
-    '<div class="gh-card-body">' +
-    '<div class="gh-card-label name" style="display:flex;align-items:center;gap:4px">' +
-    '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
-    esc(cr.name) +
-    "</span>" +
-    '<span class="cr-star-btn" style="cursor:pointer;font-size:11px;margin-left:auto;flex-shrink:0" data-star="' +
-    esc(cr.name) +
-    '">' +
-    (isFaved(cr.name) ? "⭐" : "☆") +
-    "</span>" +
-    (cr._fromLocal && authorCount > 0
-      ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁' +
-        authorCount +
-        "</span>"
-      : cr._fromLocal
-        ? '<span style="font-size:9px;color:var(--muted);margin-left:auto">📁</span>'
-        : "") +
-    "</div>" +
-    '<div class="gh-card-desc">' +
-    esc(cr.desc) +
-    "</div>" +
-    '<div class="hm-label" style="margin-top:1px;display:flex;gap:2px;flex-wrap:wrap">' +
-    cr.type
-      .split(";")
-      .map(
-        (t) =>
-          '<span class="cr-platform-badge" style="display:none">' +
-          t +
-          "</span>",
-      )
-      .join("") +
-    "</div>" +
-    '<span class="cr-tag cr-tag-' +
-    esc(getTagFromRole(cr.role)) +
-    '">' +
-    getTagEmojiFromRole(cr.role) +
-    " " +
-    esc(getTagFromRole(cr.role)) +
-    "</span>" +
-    "</div>" +
-    (hasRepo
-      ? '<button class="gh-card-external" style="width:auto;padding:0 6px;border-left:1px solid var(--bd);font-size:9px;color:var(--accent)" data-repo="' +
-        esc(cr.name) +
-        '">📦</button>'
-      : "");
-  return card;
-}
+  if (tierRank) card.dataset.tier = tierRank;
 
-function loadFavs() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-function saveFavs(names) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(names));
-}
-function isFaved(name) {
-  return loadFavs().includes(name);
-}
-function toggleFav(name) {
-  const favs = loadFavs();
-  const idx = favs.indexOf(name);
-  if (idx >= 0) favs.splice(idx, 1);
-  else favs.push(name);
-  saveFavs(favs);
-  return idx < 0; // true=now faved
+  const avatarHtml = hasAvatar
+    ? '<img class="cr-avatar" src="' + esc(avatarCache[cr.name]) + '" data-debug-avatar="' + esc(cr.name) + '">'
+    : '<div class="cr-avatar cr-avatar-fallback">' + (cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?") + "</div>";
+
+  const localBadge = cr._fromLocal && authorCount > 0
+    ? '<span class="cr-card-local-count">📁' + authorCount + "</span>"
+    : cr._fromLocal
+      ? '<span class="cr-card-local-count">📁</span>'
+      : "";
+
+  const platformBadges = cr.type.split(";").map(function(t) {
+    return '<span class="cr-platform-badge">' + t + "</span>";
+  }).join("");
+
+  const repoBtn = hasRepo
+    ? '<button class="cr-card-repo-btn gh-card-external" data-repo="' + esc(cr.name) + '">📦 浏览仓库</button>'
+    : "";
+
+  card.innerHTML =
+    (tierRank ? '<div class="cr-card-tier-bar"></div>' : "") +
+    '<div class="cr-card-header">' +
+    '<div class="cr-avatar-container">' +
+    '<div class="cr-avatar-ring"' + (tierRank ? ' data-spin="' + tierRank + '"' : "") + "></div>" +
+    avatarHtml +
+    "</div>" +
+    '<div class="cr-card-name-row">' +
+    '<span class="cr-card-name">' + esc(cr.name) + "</span>" +
+    '<span class="cr-star-btn" data-star="' + esc(cr.name) + '">' + (isFaved(cr.name) ? "⭐" : "☆") + "</span>" +
+    localBadge +
+    "</div>" +
+    "</div>" +
+    '<div class="cr-card-desc">' + esc(cr.desc) + "</div>" +
+    '<div class="cr-card-footer">' +
+    platformBadges +
+    '<span class="cr-tag cr-tag-' + esc(getTagFromRole(cr.role)) + '">' +
+    getTagIconFromRole(cr.role) + " <span>" + esc(getTagFromRole(cr.role)) + "</span>" +
+    "</span>" +
+    "</div>" +
+    repoBtn;
+  return card;
 }
 
 export function renderSiteView(site, ctx) {
@@ -258,13 +134,13 @@ export function renderSiteView(site, ctx) {
   // 搜索词分区
   if (site.presetSearches && site.presetSearches.length) {
     parts.push(
-      '<div class="cr-section" style="display:flex;align-items:center;gap:6px">' +
+      '<div class="cr-section">' +
         '<span class="cr-section-title-lg">🔍 网页搜索词</span>' +
         '<span class="cr-section-sub">(' +
         site.presetSearches.length +
         ")</span>" +
-        '<span style="flex:1"></span>' +
-        '<button id="cr-mode-toggle" class="cr-mode-switch" style="font-size:10px;padding:1px 4px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center">' +
+        '<span class="cr-section-fill"></span>' +
+        '<button id="cr-mode-toggle" class="cr-mode-switch">' +
         '<span class="cr-mode-opt cr-mode-ext active">↗ 外链</span>' +
         '<span class="cr-mode-opt cr-mode-emb">🔍 内嵌</span>' +
         "</button>" +
@@ -303,16 +179,15 @@ export function renderSiteView(site, ctx) {
     });
     const tags = [...tagSet];
     parts.push(
-      '<div class="cr-section" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
+      '<div class="cr-section" style="flex-wrap:wrap">' +
         '<span class="cr-section-title-lg">🎨 活跃创作者</span>' +
         '<span class="cr-section-sub" id="ws-cr-count">(' +
         creators.length +
         ")</span>" +
-        '<input type="text" id="ws-cr-search" placeholder="搜创作者名..." ' +
-        'style="flex:1;min-width:120px;max-width:160px;padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit;outline:none">' +
-        '<span style="flex:1"></span>' +
-        '<button class="btn-base sm cr-fetch-btn" style="margin-left:auto" title="\u4ECE GitHub \u62C9\u53D6\u6700\u65B0\u521B\u4F5C\u8005 + \u7AD9\u70B9 + GitHub \u4ED3\u5E93 + \u8D44\u6E90\u7C7B\u578B">\uD83C\uDF10 \u66F4\u65B0\u914D\u7F6E</button>' +
-        '<button class="btn-base sm cr-edit-btn">✏️ 编辑</button>' +
+        '<input type="text" id="ws-cr-search" class="cr-search-input" placeholder="搜创作者名...">' +
+        '<span class="cr-section-fill"></span>' +
+        '<button class="cr-fetch-btn" title="\u4ECE GitHub \u62C9\u53D6\u6700\u65B0\u521B\u4F5C\u8005 + \u7AD9\u70B9 + GitHub \u4ED3\u5E93 + \u8D44\u6E90\u7C7B\u578B">\uD83C\uDF10 \u66F4\u65B0\u914D\u7F6E</button>' +
+        '<button class="cr-edit-btn">✏️ 编辑</button>' +
         "</div>" +
         '<div class="cr-tag-filter-row">' +
         '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
@@ -325,16 +200,17 @@ export function renderSiteView(site, ctx) {
               '<button class="cr-tag-filter-btn" data-tag="' +
               esc(t) +
               '">' +
-              getTagEmojiFromRole(t) +
-              " " +
+              getTagIconFromRole(t) +
+              " <span>" +
               esc(t) +
+              "</span>" +
               "</button>",
           )
           .join("") +
         "</div>",
     );
     parts.push(
-      '<div class="cr-creator-grid" id="cr-creator-grid" style="display:flex;flex-wrap:wrap;gap:6px;width:100%"></div>',
+      '<div class="cr-creator-grid" id="cr-creator-grid"></div>',
     );
   } else if (wsEditModeRef.v) {
     // 🔍 搜索词编辑（即使为空也渲染，让用户能新增）
@@ -356,16 +232,16 @@ export function renderSiteView(site, ctx) {
             idx +
             '" data-fld="label" value="' +
             esc(ps.label) +
-            '" class="cr-input cr-input-name" style="flex:1;border:none;background:transparent;color:var(--txt);font-size:var(--fs-sm);font-family:inherit;outline:none" placeholder="搜索关键词">' +
+            '" class="cr-input cr-input-name" placeholder="搜索关键词">' +
             '<button data-idx="' +
             idx +
-            '" class="cr-order-up" title="上移" style="font-size:12px;padding:0 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit">↑</button>' +
+            '" class="cr-btn-icon cr-order-up" title="上移">↑</button>' +
             '<button data-idx="' +
             idx +
-            '" class="cr-order-down" title="下移" style="font-size:12px;padding:0 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit">↓</button>' +
+            '" class="cr-btn-icon cr-order-down" title="下移">↓</button>' +
             '<button data-idx="' +
             idx +
-            '" class="cr-del-preset" title="删除" style="font-size:12px;padding:0 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit">🗑️</button>' +
+            '" class="cr-btn-icon cr-del-preset" title="删除">🗑️</button>' +
             "</div>" +
             "</div>",
         );
@@ -380,14 +256,14 @@ export function renderSiteView(site, ctx) {
     parts.push(
       '<div class="cr-section">' +
         '<span class="cr-section-title-lg">✏️ 编辑创作者</span>' +
-        '<span style="flex:1"></span>' +
-        '<button class="btn-base sm cr-save-btn cr-action-btn-accent">💾 保存</button>' +
-        '<button class="btn-base sm cr-cancel-btn">取消</button>' +
+        '<span class="cr-section-fill"></span>' +
+        '<button class="cr-save-btn cr-action-btn-accent">💾 保存</button>' +
+        '<button class="cr-cancel-btn">取消</button>' +
         "</div>" +
         '<div class="cr-hint-text">📄 数据文件：exe 同目录下的 creators.json，可直接编辑</div>',
     );
     creators.forEach((cr, idx) => {
-      const roleEmoji = getTagEmojiFromRole(cr.role);
+      const roleEmoji = getTagIconFromRole(cr.role);
       parts.push(
         '<div class="cr-edit-card" draggable="false" data-edit-idx="' +
           idx +
@@ -401,25 +277,25 @@ export function renderSiteView(site, ctx) {
           idx +
           '" data-fld="name" value="' +
           esc(cr.name) +
-          '" class="cr-input cr-input-name" style="flex:1;min-width:60px;border:none;background:transparent;color:var(--txt);font-size:var(--fs-sm);font-family:inherit;outline:none" placeholder="名称">' +
+          '" class="cr-input cr-input-name" placeholder="名称">' +
           '<button data-idx="' +
           idx +
-          '" class="cr-del" title="删除" style="font-size:12px;padding:0 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit">🗑️</button>' +
+          '" class="cr-btn-icon cr-del" title="删除">🗑️</button>' +
           "</div>" +
           '<div class="cr-edit-card-body">' +
           '<div class="cr-edit-card-row">' +
-          '<span style="font-size:10px;color:var(--muted);width:28px;flex-shrink:0">描述</span>' +
+          '<span class="cr-edit-label">描述</span>' +
           '<input data-idx="' +
           idx +
           '" data-fld="desc" value="' +
           esc(cr.desc) +
-          '" class="cr-input cr-input-desc" style="flex:1;border:none;background:transparent;color:var(--txt);font-size:var(--fs-xs);font-family:inherit;outline:none" placeholder="关键词、顿号分隔">' +
+          '" class="cr-input cr-input-desc" placeholder="关键词、顿号分隔">' +
           "</div>" +
           '<div class="cr-edit-card-row">' +
-          '<span style="font-size:10px;color:var(--muted);width:28px;flex-shrink:0">平台</span>' +
+          '<span class="cr-edit-label">平台</span>' +
           '<select data-idx="' +
           idx +
-          '" data-fld="type" class="cr-input-type" multiple style="flex:1;height:auto;min-height:50px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit" title="Ctrl+点击多选">' +
+          '" data-fld="type" class="cr-input-type" multiple title="Ctrl+点击多选">' +
           (allSites || [])
             .map(
               (s) =>
@@ -436,22 +312,22 @@ export function renderSiteView(site, ctx) {
             .join("") +
           '</select><select data-idx="' +
           idx +
-          '" data-fld="role" class="cr-input-role" style="width:auto;min-width:70px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit">' +
+          '" data-fld="role" class="cr-input-role">' +
           '<option value="creator"' +
           (cr.role === "creator" ? " selected" : "") +
-          ">🎮 创作者</option>" +
+          ">创作者</option>" +
           '<option value="official"' +
           (cr.role === "official" ? " selected" : "") +
-          ">🏠 官方</option>" +
+          ">官方</option>" +
           '<option value="vup"' +
           (cr.role === "vup" ? " selected" : "") +
-          ">🎤 VUP</option>" +
+          ">VUP</option>" +
           '<option value="oc"' +
           (cr.role === "oc" ? " selected" : "") +
-          ">🎨 OC</option>" +
+          ">OC</option>" +
           '<option value="repo"' +
           (cr.role === "repo" ? " selected" : "") +
-          ">📦 仓库</option>" +
+          ">仓库</option>" +
           "</select>" +
           "</div>" +
           "</div>" +
@@ -568,43 +444,9 @@ export function renderSiteView(site, ctx) {
 
       const overlay = document.createElement("div");
       overlay.className = "cr-detail-overlay";
-      overlay.style.cssText =
-        "position:fixed;inset:0;z-index:var(--z-modal);background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center";
       overlay.onclick = (ev) => {
         if (ev.target === overlay) overlay.remove();
       };
-
-      // 注入全局样式（Shadow DOM 样式不穿透主文档浮层）
-      if (!document.getElementById("cr-detail-global-style")) {
-        const st = document.createElement("style");
-        st.id = "cr-detail-global-style";
-        st.textContent =
-          ".cr-detail-overlay{position:fixed;inset:0;z-index:var(--z-modal);background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease}" +
-          ".cr-detail-box{background:var(--bg);border:1px solid var(--bd);border-radius:16px;padding:20px 24px;max-width:400px;width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:10px;animation:detail-in .25s cubic-bezier(.34,1.56,.64,1)}" +
-          "@keyframes detail-in{from{opacity:0;transform:scale(.88) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}" +
-          "@keyframes fade-in{from{opacity:0}to{opacity:1}}" +
-          ".cr-detail-header{display:flex;align-items:center;gap:10px}" +
-          ".cr-detail-name{font-size:17px;font-weight:700;color:var(--txt);letter-spacing:.3px}" +
-          ".cr-detail-desc{font-size:var(--fs-sm);color:var(--txt);opacity:.65;line-height:1.5;padding:6px 10px;background:var(--surf);border-radius:8px}" +
-          ".cr-detail-row{font-size:var(--fs-sm);color:var(--muted);display:flex;align-items:center;gap:8px}" +
-          ".cr-detail-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}" +
-          ".cr-detail-actions button{padding:6px 16px;border-radius:8px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-sm);font-family:inherit;transition:all .12s}" +
-          ".cr-detail-actions button:hover{border-color:var(--accent);background:var(--hover)}" +
-          ".cr-detail-actions .primary{background:var(--accent);color:#fff;border-color:var(--accent)}" +
-          ".cr-detail-actions .primary:hover{opacity:.85}" +
-          ".cr-detail-actions .secondary{border-color:transparent;color:var(--muted)}" +
-          ".cr-detail-actions .secondary:hover{border-color:var(--bd);color:var(--txt)}" +
-          ".cr-local-btn{transition:background-color .12s,color .12s}" +
-          ".cr-local-btn:hover{background:var(--accent);color:#fff}" +
-          ".cr-platform-badge{font-size:9px;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:3px;background:var(--surf);color:var(--muted);border:1px solid var(--bd);font-weight:500}" +
-          ".cr-tag{font-size:10px;padding:1px 7px;border-radius:4px;line-height:18px;font-weight:600;display:inline-flex;align-items:center}" +
-          ".cr-tag-game{background:var(--tag-game-bg);color:var(--tag-game)}" +
-          ".cr-tag-vup{background:var(--tag-vup-bg);color:var(--tag-vup)}" +
-          ".cr-tag-oc{background:var(--tag-oc-bg);color:var(--tag-oc)}" +
-          ".cr-star-btn{cursor:pointer;font-size:18px;transition:transform .15s;flex-shrink:0}" +
-          ".cr-star-btn:hover{transform:scale(1.15)}";
-        document.head.appendChild(st);
-      }
 
       const identity = getCreatorIdentity(cr);
       const descTags = parseDescTags(cr.desc);
@@ -613,19 +455,19 @@ export function renderSiteView(site, ctx) {
       overlay.innerHTML =
         '<div class="cr-detail-box">' +
         '<div class="cr-detail-header">' +
-        '<div class="cr-avatar-container" style="width:36px;height:36px;margin:0">' +
+        '<div class="cr-avatar-container cr-detail-avatar-container">' +
         (avatarCache && avatarCache[cr.name]
-          ? '<img class="cr-avatar" src="' +
+          ? '<img class="cr-avatar cr-detail-avatar-img" src="' +
             esc(avatarCache[cr.name]) +
-            '" style="width:36px;height:36px;border-radius:50%;object-fit:cover" data-debug-avatar="' +
+            '" data-debug-avatar="' +
             esc(cr.name) +
             '">'
-          : '<div class="cr-avatar" style="width:36px;height:36px;font-size:16px">' +
+          : '<div class="cr-avatar cr-detail-avatar-text">' +
             esc(cr.name.charAt(0)).toUpperCase() +
             "</div>") +
         "</div>" +
-        '<div style="flex:1;min-width:0">' +
-        '<div style="display:flex;align-items:center;gap:6px">' +
+        '<div class="cr-detail-fill">' +
+        '<div class="cr-detail-name-row">' +
         '<span class="cr-detail-name">' +
         esc(cr.name) +
         "</span>" +
@@ -633,14 +475,16 @@ export function renderSiteView(site, ctx) {
           ? '<span class="cr-tag cr-tag-' +
             esc(getTagFromRole(cr.role)) +
             '">' +
-            getTagEmojiFromRole(cr.role) +
-            " " +
+            getTagIconFromRole(cr.role) +
+            " <span>" +
             esc(getTagFromRole(cr.role)) +
+            "</span>" +
             "</span>"
           : "") +
         "</div>" +
-        '<div style="font-size:10px;color:var(--muted);margin-top:1px">' +
-        esc(identity.label) +
+        '<div class="cr-detail-identity">' +
+        identity.icon +
+        '<span>' + esc(identity.label) + "</span>" +
         "</div>" +
         "</div>" +
         '<span class="cr-star-btn" data-star="' +
@@ -649,11 +493,11 @@ export function renderSiteView(site, ctx) {
         (isFav ? "⭐" : "☆") +
         "</span>" +
         "</div>" +
-        '<div class="cr-detail-desc" style="display:flex;flex-wrap:wrap;gap:4px;padding:0;background:transparent">' +
+        '<div class="cr-detail-desc">' +
         descTags
           .map(
             (t) =>
-              '<span style="font-size:10px;padding:1px 7px;border-radius:4px;line-height:18px;background:var(--surf);color:var(--txt);opacity:.75;border:1px solid var(--bd)">#' +
+              '<span class="cr-desc-tag">#' +
               esc(t) +
               "</span>",
           )
@@ -661,22 +505,22 @@ export function renderSiteView(site, ctx) {
         (!descTags.length ? esc(cr.desc) : "") +
         "</div>" +
         (localCount > 0
-          ? '<div class="cr-detail-row" style="background:var(--surf);border-radius:8px;padding:8px 10px;border:1px solid var(--bd)">' +
-            '<span style="font-size:13px">📂</span>' +
-            '<span style="flex:1;font-size:var(--fs-sm);color:var(--txt)">已下载 ' +
+          ? '<div class="cr-detail-row cr-local-card">' +
+            '<span class="cr-local-icon">📂</span>' +
+            '<span class="cr-local-text">已下载 ' +
             localCount +
             " 个模型</span>" +
-            '<button class="cr-local-btn" data-local style="font-size:var(--fs-xs);padding:2px 8px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:inherit">查看 →</button>' +
+            '<button class="cr-local-btn" data-local>查看 →</button>' +
             "</div>"
           : "") +
-        '<div class="cr-detail-row" style="gap:4px;flex-wrap:wrap">' +
+        '<div class="cr-detail-row cr-detail-row-platforms">' +
         cr.type
           .split(";")
           .map(
             (t) =>
               '<span class="cr-platform-badge">' +
-              (PLATFORM_ICONS[t] || "🔗") +
-              " " +
+              getSiteIcon(t) +
+              " <span>" +
               esc(t) +
               "</span>",
           )
@@ -690,7 +534,7 @@ export function renderSiteView(site, ctx) {
         "</div>" +
         "</div>";
 
-      document.body.appendChild(overlay);
+      searchResults.getRootNode().appendChild(overlay);
 
       // ⭐ 浮层内的收藏
       overlay.querySelector("[data-star]")?.addEventListener("click", (ev) => {
@@ -762,7 +606,7 @@ export function renderSiteView(site, ctx) {
     window.removeEventListener("storage", window.__ysmStorageSync);
   }
   const _storageSync = (e) => {
-    if (e.key === STORAGE_KEY) {
+    if (e.key === "ysm-fav-creators") {
       const favs = loadFavs();
       searchResults.querySelectorAll(".cr-star-btn").forEach((btn) => {
         btn.textContent = favs.includes(btn.dataset.star) ? "⭐" : "☆";
@@ -839,8 +683,7 @@ export function renderSiteView(site, ctx) {
             btnLabel = "❌ 失败";
           }
           btn.textContent = btnLabel;
-          btn.style.color = "var(--muted)";
-          btn.style.cursor = "default";
+          btn.classList.add("cr-fetch-failed");
           searchResults.innerHTML =
             '<div class="cr-error-page">' +
             '<button class="btn-base sm cr-back-repo" style="margin-bottom:12px">← 返回</button>' +
@@ -1091,14 +934,6 @@ export function renderSiteView(site, ctx) {
 
   // 行内编辑
   searchResults.querySelectorAll("[data-idx][data-fld]").forEach((inp) => {
-    inp.addEventListener("focus", () => {
-      inp.style.borderColor = "var(--bd)";
-      inp.style.background = "var(--surf)";
-    });
-    inp.addEventListener("blur", () => {
-      inp.style.borderColor = "transparent";
-      inp.style.background = "transparent";
-    });
     inp.addEventListener("input", () => {
       const idx = parseInt(inp.dataset.idx, 10);
       if (creators[idx]) {
@@ -1142,17 +977,15 @@ export function renderSiteView(site, ctx) {
       card.addEventListener("dragstart", (e) => {
         card.draggable = false;
         dragSrcIdx = parseInt(card.dataset.editIdx, 10);
-        card.style.opacity = "0.4";
+        card.classList.add("cr-dragging");
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", "");
       });
       card.addEventListener("dragend", () => {
-        card.style.opacity = "";
+        card.classList.remove("cr-dragging");
         card.draggable = false;
         searchResults.querySelectorAll(".cr-edit-card").forEach((c) => {
-          c.style.borderColor = "";
-          c.style.marginTop = "";
-          c.style.marginBottom = "";
+          c.classList.remove("cr-drag-target","cr-drag-before","cr-drag-after");
         });
       });
       card.addEventListener("dragover", (e) => {
@@ -1161,26 +994,22 @@ export function renderSiteView(site, ctx) {
       });
       card.addEventListener("dragenter", (e) => {
         e.preventDefault();
-        card.style.borderColor = "var(--accent)";
+        card.classList.add("cr-drag-target");
         if (dragSrcIdx >= 0) {
           const tgt = parseInt(card.dataset.editIdx, 10);
           if (dragSrcIdx < tgt) {
-            card.style.marginTop = "8px";
-            card.style.transition = "margin-top .15s ease";
+            card.classList.add("cr-drag-before");
           } else if (dragSrcIdx > tgt) {
-            card.style.marginBottom = "8px";
-            card.style.transition = "margin-bottom .15s ease";
+            card.classList.add("cr-drag-after");
           }
         }
       });
       card.addEventListener("dragleave", () => {
-        card.style.borderColor = "";
-        card.style.marginTop = "";
-        card.style.marginBottom = "";
+        card.classList.remove("cr-drag-target","cr-drag-before","cr-drag-after");
       });
       card.addEventListener("drop", (e) => {
         e.preventDefault();
-        card.style.borderColor = "";
+        card.classList.remove("cr-drag-target");
         const targetIdx = parseInt(card.dataset.editIdx, 10);
         if (dragSrcIdx < 0 || dragSrcIdx === targetIdx) return;
         syncAllEditInputs();
@@ -1206,17 +1035,15 @@ export function renderSiteView(site, ctx) {
       card.addEventListener("dragstart", (e) => {
         card.draggable = false;
         dragPresetSrcIdx = parseInt(card.dataset.editIdx, 10);
-        card.style.opacity = "0.4";
+        card.classList.add("cr-dragging");
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", "");
       });
       card.addEventListener("dragend", () => {
-        card.style.opacity = "";
+        card.classList.remove("cr-dragging");
         card.draggable = false;
         searchResults.querySelectorAll(".cr-edit-card").forEach((c) => {
-          c.style.borderColor = "";
-          c.style.marginTop = "";
-          c.style.marginBottom = "";
+          c.classList.remove("cr-drag-target","cr-drag-before","cr-drag-after");
         });
       });
       card.addEventListener("dragover", (e) => {
@@ -1225,26 +1052,22 @@ export function renderSiteView(site, ctx) {
       });
       card.addEventListener("dragenter", (e) => {
         e.preventDefault();
-        card.style.borderColor = "var(--accent)";
+        card.classList.add("cr-drag-target");
         if (dragPresetSrcIdx >= 0) {
           const tgt = parseInt(card.dataset.editIdx, 10);
           if (dragPresetSrcIdx < tgt) {
-            card.style.marginTop = "8px";
-            card.style.transition = "margin-top .15s ease";
+            card.classList.add("cr-drag-before");
           } else if (dragPresetSrcIdx > tgt) {
-            card.style.marginBottom = "8px";
-            card.style.transition = "margin-bottom .15s ease";
+            card.classList.add("cr-drag-after");
           }
         }
       });
       card.addEventListener("dragleave", () => {
-        card.style.borderColor = "";
-        card.style.marginTop = "";
-        card.style.marginBottom = "";
+        card.classList.remove("cr-drag-target","cr-drag-before","cr-drag-after");
       });
       card.addEventListener("drop", (e) => {
         e.preventDefault();
-        card.style.borderColor = "";
+        card.classList.remove("cr-drag-target");
         const targetIdx = parseInt(card.dataset.editIdx, 10);
         if (
           dragPresetSrcIdx < 0 ||
@@ -1355,7 +1178,7 @@ export function renderSiteView(site, ctx) {
     cards.forEach((card) => {
       const name = (card.dataset.name || "").toLowerCase();
       const desc = (
-        card.querySelector(".gh-card-desc")?.textContent || ""
+        card.querySelector(".cr-card-desc")?.textContent || ""
       ).toLowerCase();
       const cardTag = (card.dataset.tag || "").toLowerCase();
       const matchName = !kw || name.includes(kw) || desc.includes(kw);

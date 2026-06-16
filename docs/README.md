@@ -72,6 +72,17 @@
 
 ---
 
+## 🎮 3D 渲染引擎
+
+| 文档 | 说明 |
+|------|------|
+| [3D-RENDERING/3d-rendering-report.md](3D-RENDERING/3d-rendering-report.md) | **开发报告**：14 项修复 + Go/WASM 能力对比 + 排查方法论（v1.8.6-v1.8.8） |
+| [3D-RENDERING/2026-06-17-summary.md](3D-RENDERING/2026-06-17-summary.md) | 修复总结：坐标/顶点/合并/纹理/解析 5 类 14 项 |
+| [3D-RENDERING/2026-06-16-coordinate-fix.md](3D-RENDERING/2026-06-16-coordinate-fix.md) | 坐标系修正记录 |
+| [3D-RENDERING/](3D-RENDERING/) | 测试数据目录：多模型 JSON/纹理/ysm.json |
+
+---
+
 ## 🗂️ 归档文档
 
 历史文档已移至 [archive/](archive/)：

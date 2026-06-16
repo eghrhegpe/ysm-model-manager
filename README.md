@@ -294,6 +294,7 @@ wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 | [`docs/CLEANUP_RULES.md`](docs/CLEANUP_RULES.md)                     | 治理规则：9 条禁止模式 × severity × 检测方式 |
 | [`docs/TASK_PLAN.md`](docs/TASK_PLAN.md)                             | **AI 任务计划**：可执行任务清单           |
 | [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md)                 | **会话交接日志**：AI 间信息传递记录       |
+| [`docs/3D-RENDERING/3d-rendering-report.md`](docs/3D-RENDERING/3d-rendering-report.md) | **3D 渲染引擎开发报告**：14 项修复 + 排查方法论 |
 | [`docs/pending-cleanup.md`](docs/pending-cleanup.md)                 | 待清理清单：调试代码、临时方案、技术债    |
 | [`docs/release-notes/`](docs/release-notes/)                         | 各版本发版说明                            |
 | [`docs/README.md`](docs/README.md)                                   | **开发者文档总索引**（含归档文档跳转）    |

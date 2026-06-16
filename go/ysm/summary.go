@@ -91,6 +91,7 @@ type ysmLicense struct {
 type ysmAuthor struct {
 	Name    string        `json:"name"`
 	Role    string        `json:"role,omitempty"`
+	Avatar  string        `json:"avatar,omitempty"`
 	Contact *ysmContact   `json:"contact,omitempty"`
 }
 

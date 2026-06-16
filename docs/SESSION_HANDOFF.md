@@ -273,3 +273,37 @@ YSMViewer 架构参考：YSMViewer 不做跨文件骨骼父级匹配，arm 骨�
 #### 遗留
 - 纹理序解析已加入 archive.go/extracted.go，但未用于重排 pngs 数组
 - YSMViewer 单个 ModelGroup per geometry 文件的架构比我们合并方案更干净，但迁移成本高
+
+---
+
+### 2026-06-17 — 3D 渲染开发收口总结
+
+**状态**：✅ 开发结束
+
+#### 参与 AI
+- **DeepSeek V4 Pro**：坐标系修正、数据流审计、纹理映射诊断
+- **DeepSeek V4 Flash**：fx 公式修正、extracted.go/archive.go 修复、debug 日志清理
+- **Qwen3.7 Plus**：代码审查、顶点双重偏移发现
+- **GLM-5.1**：Phase 2 方案设计（部分过时，但提供了排查方向）
+
+#### 完成的工作（v1.8.6-v1.8.8）
+- 坐标系修正：移除 6 处 X 取反，对齐 YSMViewer
+- 旋转符号：三轴均取反（`-rx, -ry, -rz`），顺序 `Rx×Ry×Rz`
+- 纹理映射：TexSlot 透传、ysm.json 纹理排序、非贴图 PNG 过滤
+- 多文件合并：arm.json cube 残留修复、嵌入几何体优先级修正
+- 解析健壮性：projectiles 数组兼容、7z 路径重写、model 四种格式
+
+#### 关键产出
+- `docs/3D-RENDERING/3d-rendering-report.md` — 完整开发报告（178 行）
+- `docs/3D-RENDERING/2026-06-17-summary.md` — 修复总结（96 行）
+- `docs/3D-RENDERING/` — 测试数据目录（多模型 JSON/纹理）
+
+#### 遗留问题（低优先级）
+1. JS 兜底路径是死代码（格式不兼容）
+2. 7z 路径纹理排序较弱
+3. Go CLI fallback 不设 TexSlot
+4. 2D 骨骼图旋转后位置偏移
+
+#### 结论
+3D 渲染引擎从"问题频出"到"功能基本完整"，Go 路径与 WASM 路径能力基本等价。
+详细记录见 `docs/3D-RENDERING/3d-rendering-report.md`。

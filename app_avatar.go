@@ -2,9 +2,12 @@
 package main
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,7 +33,7 @@ func (a *App) CachedCreatorAvatar(authorName string) (string, error) {
 }
 
 // BatchExtractCreatorAvatars 批量提取所有有本地模型的创作者头像
-// 已缓存的跳过，只提取新头像
+// 支持 .ysm / .zip / .7z / 解压目录
 // 返回 { authorName: dataURI, ... }
 func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 	result := map[string]string{}
@@ -41,9 +44,9 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 	cacheDir := creatorAvatarCacheDir()
 	os.MkdirAll(cacheDir, 0755)
 
-	// 扫描仓库，收集每个作者的一个 .ysm 文件路径
+	// 扫描仓库，收集每个作者的一个模型文件路径
 	entries := a.ScanModelEntries(a.ysmRoot())
-	seen := map[string]string{} // author -> ysmPath
+	seen := map[string]string{} // author -> modelPath
 	for _, e := range entries {
 		name := e.Name
 		if strings.HasSuffix(strings.ToLower(name), ".ban") {
@@ -57,7 +60,7 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 				}
 				if _, ok := seen[author]; !ok {
 					ext := strings.ToLower(filepath.Ext(e.Path))
-					if ext == ".ysm" {
+					if ext == ".ysm" || ext == ".zip" || ext == ".7z" || ext == ".json" {
 						seen[author] = e.Path
 					}
 				}
@@ -65,8 +68,7 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 		}
 	}
 
-	for author, ysmPath := range seen {
-		// 检查缓存
+	for author, modelPath := range seen {
 		safe := safeFilename(author)
 		cachedPath := filepath.Join(cacheDir, safe+".png")
 		if _, err := os.Stat(cachedPath); err == nil {
@@ -76,14 +78,11 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 			}
 			continue
 		}
-
-		// 提取头像
-		dataURI := a.decodeOneAvatar(ysmPath, cacheDir, safe)
+		dataURI := a.decodeOneAvatar(modelPath, cacheDir, safe)
 		if dataURI != "" {
 			result[author] = dataURI
 		}
 	}
-
 	return result, nil
 }
 
@@ -97,11 +96,9 @@ func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 	}
 	if a.ysmRoot() == "" {
 		info["status"] = "no_repo_root"
-		info["step"] = "repo_root_empty"
 		return info
 	}
 
-	// 1. 扫描仓库找该作者的模型文件
 	entries := a.ScanModelEntries(a.ysmRoot())
 	var foundPath string
 	for _, e := range entries {
@@ -114,7 +111,7 @@ func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 				author := strings.TrimSpace(name[1:idx])
 				if author == authorName {
 					ext := strings.ToLower(filepath.Ext(e.Path))
-					if ext == ".ysm" {
+					if ext == ".ysm" || ext == ".zip" || ext == ".7z" || ext == ".json" {
 						foundPath = e.Path
 						info["found_path"] = foundPath
 						break
@@ -125,113 +122,196 @@ func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 	}
 	if foundPath == "" {
 		info["status"] = "no_model_file_found"
-		info["step"] = "scan_failed"
 		return info
 	}
 	info["step"] = "found_model"
 
-	// 2. 读取文件
-	ysmData, err := os.ReadFile(foundPath)
-	if err != nil {
-		info["status"] = "read_file_failed"
-		info["error"] = err.Error()
-		return info
-	}
-	info["file_size"] = fmt.Sprintf("%d", len(ysmData))
-	info["step"] = "file_read"
-
-	// 3. Node.js 路径
-	info["node_path"] = nodeJSPath
-	if nodeJSPath == "" {
-		info["status"] = "no_nodejs"
-		info["step"] = "node_not_found"
-		return info
-	}
-
-	// 4. 解码
-	files := decodeYSMFiles(ysmData)
-	if len(files) == 0 {
-		info["status"] = "decode_failed"
-		info["step"] = "decode_returned_empty"
-		return info
-	}
-	info["file_count"] = fmt.Sprintf("%d", len(files))
-	info["step"] = "decoded"
-
-	// 5. 列出所有文件路径
-	var paths []string
-	var hasAvatar bool
-	for _, f := range files {
-		low := strings.ToLower(f.Path)
-		paths = append(paths, f.Path)
-		if strings.HasPrefix(low, "avatar") || strings.Contains(low, "/avatar/") {
-			hasAvatar = true
-			info["avatar_path"] = f.Path
-			info["avatar_size"] = fmt.Sprintf("%d", len(f.Data))
-		}
-	}
-	info["all_files"] = strings.Join(paths, " | ")
-	info["has_avatar_dir"] = fmt.Sprintf("%v", hasAvatar)
-
-	if !hasAvatar {
-		info["status"] = "no_avatar_in_ysm"
-		info["step"] = "avatar_dir_missing"
-		return info
-	}
-
-	// 6. 提取成功
 	cacheDir := creatorAvatarCacheDir()
 	os.MkdirAll(cacheDir, 0755)
 	safe := safeFilename(authorName)
-	cachedPath := filepath.Join(cacheDir, safe+".png")
+	info["step"] = "extracting"
 	dataURI := a.decodeOneAvatar(foundPath, cacheDir, safe)
 	if dataURI == "" {
 		info["status"] = "extract_failed"
-		info["step"] = "decode_one_avatar_failed"
 		return info
 	}
-	info["cached_path"] = cachedPath
+	info["cached_path"] = filepath.Join(cacheDir, safe+".png")
 	info["data_uri_len"] = fmt.Sprintf("%d", len(dataURI))
 	info["status"] = "ok"
-	info["step"] = "done"
 	return info
 }
 
-// decodeOneAvatar 解码 .ysm 文件并提取 avatar/ 下的头像
-func (a *App) decodeOneAvatar(ysmPath, cacheDir, safeName string) string {
-	ysmData, err := os.ReadFile(ysmPath)
-	if err != nil {
-		return ""
-	}
+// decodeOneAvatar 从模型文件中提取指定所有者的头像
+// 支持 .ysm (WASM解码)、.zip/.7z (直接解析)、.json (解压目录)
+func (a *App) decodeOneAvatar(modelPath, cacheDir, safeName string) string {
+	ext := strings.ToLower(filepath.Ext(modelPath))
 
-	// 用 Node.js + WASM 解码
-	files := decodeYSMFiles(ysmData)
-	if len(files) == 0 {
-		return ""
+	// 读取 ysm.json 获取作者→头像路径映射
+	type authorEntry struct {
+		Name    string `json:"name"`
+		Role    string `json:"role,omitempty"`
+		Avatar  string `json:"avatar,omitempty"`
 	}
+	var authors []authorEntry
 
-	// 找 avatar/ 下的第一张图片
-	for _, f := range files {
-		low := strings.ToLower(f.Path)
-		if !strings.HasSuffix(low, ".png") && !strings.HasSuffix(low, ".jpg") {
-			continue
+	switch ext {
+	case ".ysm":
+		ysmData, err := os.ReadFile(modelPath)
+		if err != nil {
+			return ""
 		}
-		if !strings.HasPrefix(low, "avatar") && !strings.Contains(low, "/avatar/") {
-			continue
+		files := decodeYSMFiles(ysmData)
+		if len(files) == 0 {
+			return ""
 		}
-		data := make([]byte, len(f.Data))
-		for i, v := range f.Data {
-			data[i] = byte(v)
+		// 找 ysm.json 解析作者列表
+		for _, f := range files {
+			if strings.HasSuffix(strings.ToLower(f.Path), "ysm.json") {
+				data := make([]byte, len(f.Data))
+				for i, v := range f.Data {
+					data[i] = byte(v)
+				}
+				var root struct {
+					Meta struct {
+						Authors []authorEntry `json:"authors"`
+					} `json:"metadata"`
+				}
+				if json.Unmarshal(data, &root) == nil {
+					authors = root.Meta.Authors
+				}
+				break
+			}
 		}
-		os.WriteFile(filepath.Join(cacheDir, safeName+".png"), data, 0644)
-		mime := "image/png"
-		if strings.HasSuffix(low, ".jpg") {
-			mime = "image/jpeg"
+		if len(authors) == 0 {
+			// 降级：无作者信息时取 avatar/ 目录第一张
+			for _, f := range files {
+				low := strings.ToLower(f.Path)
+				if !strings.HasSuffix(low, ".png") && !strings.HasSuffix(low, ".jpg") {
+					continue
+				}
+				if !strings.HasPrefix(low, "avatar") && !strings.Contains(low, "/avatar/") {
+					continue
+				}
+				data := make([]byte, len(f.Data))
+				for i, v := range f.Data {
+					data[i] = byte(v)
+				}
+				os.WriteFile(filepath.Join(cacheDir, safeName+".png"), data, 0644)
+				mime := "image/png"
+				if strings.HasSuffix(low, ".jpg") {
+					mime = "image/jpeg"
+				}
+				return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+			}
 		}
-		return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+		// 按作者名匹配头像路径
+		for _, f := range files {
+			for _, au := range authors {
+				if safeFilename(au.Name) == safeName && au.Avatar != "" {
+					avatarPath := strings.ToLower(au.Avatar)
+					filePath := strings.ToLower(f.Path)
+					if filePath == avatarPath || strings.HasSuffix(filePath, "/"+avatarPath) || strings.HasSuffix(filePath, "\\"+avatarPath) {
+						data := make([]byte, len(f.Data))
+						for i, v := range f.Data {
+							data[i] = byte(v)
+						}
+						os.WriteFile(filepath.Join(cacheDir, safeName+".png"), data, 0644)
+						mime := "image/png"
+						if strings.HasSuffix(filePath, ".jpg") {
+							mime = "image/jpeg"
+						}
+						return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+					}
+				}
+			}
+		}
+
+	case ".zip":
+		data, err := os.ReadFile(modelPath)
+		if err != nil {
+			return ""
+		}
+		zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+		if err != nil {
+			return ""
+		}
+		// 先读 ysm.json
+		ysmData := readFileFromZip(zr, "ysm.json")
+		if ysmData != nil {
+			var root struct {
+				Meta struct {
+					Authors []authorEntry `json:"authors"`
+				} `json:"metadata"`
+			}
+			if json.Unmarshal(ysmData, &root) == nil {
+				authors = root.Meta.Authors
+			}
+		}
+		// 按作者名匹配头像路径
+		for _, au := range authors {
+			if safeFilename(au.Name) == safeName && au.Avatar != "" {
+				if avatarData := readFileFromZip(zr, au.Avatar); avatarData != nil {
+					os.WriteFile(filepath.Join(cacheDir, safeName+".png"), avatarData, 0644)
+					mime := "image/png"
+					if strings.HasSuffix(strings.ToLower(au.Avatar), ".jpg") {
+						mime = "image/jpeg"
+					}
+					return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(avatarData)
+				}
+			}
+		}
+
+	case ".json":
+		data, err := os.ReadFile(modelPath)
+		if err != nil {
+			return ""
+		}
+		var root struct {
+			Meta struct {
+				Authors []authorEntry `json:"authors"`
+			} `json:"metadata"`
+		}
+		if json.Unmarshal(data, &root) == nil {
+			authors = root.Meta.Authors
+		}
+		dir := filepath.Dir(modelPath)
+		for _, au := range authors {
+			if safeFilename(au.Name) == safeName && au.Avatar != "" {
+				avatarPath := filepath.Join(dir, au.Avatar)
+				if avatarData, err := os.ReadFile(avatarPath); err == nil {
+					os.WriteFile(filepath.Join(cacheDir, safeName+".png"), avatarData, 0644)
+					mime := "image/png"
+					if strings.HasSuffix(strings.ToLower(au.Avatar), ".jpg") {
+						mime = "image/jpeg"
+					}
+					return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(avatarData)
+				}
+			}
+		}
 	}
 
 	return ""
+}
+
+// readFileFromZip 从 ZIP 读取指定路径的文件
+func readFileFromZip(zr *zip.Reader, target string) []byte {
+	target = strings.ReplaceAll(target, "\\", "/")
+	for _, f := range zr.File {
+		p := strings.ReplaceAll(f.Name, "\\", "/")
+		if strings.HasSuffix(strings.ToLower(p), strings.ToLower(target)) {
+			rc, err := f.Open()
+			if err != nil {
+				return nil
+			}
+			defer rc.Close()
+			data, err := io.ReadAll(rc)
+			if err != nil {
+				return nil
+			}
+			return data
+		}
+	}
+	return nil
 }
 
 // safeFilename 安全文件名

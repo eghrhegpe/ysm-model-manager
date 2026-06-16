@@ -31,7 +31,7 @@ Write-Host "🔨 构建版本 $VerTag ..." -ForegroundColor Cyan
 # 1. 构建前端
 Write-Host "📦 构建前端..." -ForegroundColor Yellow
 Set-Location "$ProjectRoot\frontend"
-npx vite build 2>&1 | Out-Null
+npx vite build 2>&1
 if ($LASTEXITCODE -ne 0) { Write-Host "❌ 前端构建失败" -ForegroundColor Red; exit 1 }
 
 # 1b. 构建更新助手 helper（Wails 构建前必须完成，因为 embed）

@@ -102,12 +102,19 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     );
     await Promise.all(loads);
   }
-  // 过滤 <64px 的非贴图（头像/预览图），保留真实模型纹理
   const texArr = urls
     .filter(Boolean)
     .map((url) => texMap.get(url))
-    .filter(Boolean)
-    .filter((t) => (t.image?.naturalWidth || 0) >= 64 && (t.image?.naturalHeight || 0) >= 64);
+    .filter(Boolean);
+  // 排除尺寸明显小于最大纹理的非贴图（头像/预览图可能混入）
+  const maxTexPixels = texArr.reduce((m, t) => Math.max(m, (t.image?.naturalWidth || 0) * (t.image?.naturalHeight || 0)), 0);
+  if (maxTexPixels > 0) {
+    const threshold = Math.max(maxTexPixels / 4, 128 * 128);
+    const filtered = texArr.filter((t) => ((t.image?.naturalWidth || 0) * (t.image?.naturalHeight || 0)) >= threshold);
+    if (filtered.length > 0) {
+      texArr.length = 0; texArr.push(...filtered);
+    }
+  }
   if (texArr.length === 0) console.warn("[3D] 纹理加载失败，模型将显示为 fallback 颜色");
   if (texArr.length > 0) console.log("[3D] 纹理顺序:", urls.map((u,i) => `${i}:${u?.slice?.(0,50)}`));
 

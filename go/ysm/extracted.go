@@ -95,19 +95,30 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 		}
 	}
 	if geoJSON == nil {
-		for _, mn := range modelNames {
+		for i, mn := range modelNames {
 			for _, sub := range []string{"", "models/", "models\\"} {
 				candidate := filepath.Join(dir, sub, mn)
 				if _, err := os.Stat(candidate); err == nil {
 					geoData, readErr := os.ReadFile(candidate)
 					if readErr == nil {
-						geoJSON = geometry.ParseBedrockGeometry(geoData)
+						gj := geometry.ParseBedrockGeometry(geoData)
+						if gj != nil {
+							for bi := range gj.Bones {
+								for ci := range gj.Bones[bi].Cubes {
+									gj.Bones[bi].Cubes[ci].TexSlot = i
+								}
+							}
+							if i == 0 {
+								geoJSON = gj
+							} else {
+								geoJSON.Bones = append(geoJSON.Bones, gj.Bones...)
+								geoJSON.BoneCount += gj.BoneCount
+								geoJSON.CubeCount += gj.CubeCount
+							}
+						}
 					}
 					break
 				}
-			}
-			if geoJSON != nil {
-				break
 			}
 		}
 	}

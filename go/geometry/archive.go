@@ -76,6 +76,7 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 	var animJSONs []string
 
 	var modelOrder []string
+	var textureOrder []string
 	for _, f := range reader.File {
 		low := strings.ToLower(f.Name)
 		if strings.HasSuffix(low, "ysm.json") && !f.FileInfo().IsDir() {
@@ -91,8 +92,9 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 				} `json:"properties"`
 				Files struct {
 					Player struct {
-						Model []string `json:"model"`
-					} `json:"files"`
+						Model   []string `json:"model"`
+						Texture []string `json:"texture"`
+					} `json:"player"`
 				} `json:"files"`
 			}
 			if err := json.Unmarshal(buf, &ysm); err != nil {
@@ -100,6 +102,7 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 			} else {
 				defaultTex = ysm.Properties.DefaultTexture
 				modelOrder = ysm.Files.Player.Model
+				textureOrder = ysm.Files.Player.Texture
 			}
 			break
 		}
@@ -175,10 +178,36 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 		})
 	}
 
+	// 建立模型文件→纹理索引映射
+	texIdxMap := make(map[string]int)
+	if len(modelOrder) > 0 {
+		for i, p := range modelOrder {
+			p = strings.ReplaceAll(p, "\\", "/")
+			if idx := strings.LastIndex(p, "/"); idx >= 0 {
+				p = p[idx+1:]
+			}
+			texIdxMap[strings.TrimSuffix(p, ".json")] = i
+		}
+	}
+
 	for _, gf := range geoFiles {
 		g := ParseBedrockGeometry(gf.data)
 		if g == nil || g.BoneCount == 0 {
 			continue
+		}
+		// 按模型文件位置设置 cube 纹理索引
+		geoName := gf.name
+		if idx := strings.LastIndex(geoName, "/"); idx >= 0 {
+			geoName = geoName[idx+1:]
+		}
+		geoName = strings.TrimSuffix(strings.TrimSuffix(geoName, ".json"), ".geo.json")
+		ti, hasTex := texIdxMap[geoName]
+		if hasTex {
+			for bi := range g.Bones {
+				for ci := range g.Bones[bi].Cubes {
+					g.Bones[bi].Cubes[ci].TexSlot = ti
+				}
+			}
 		}
 		if geo == nil {
 			geo = g

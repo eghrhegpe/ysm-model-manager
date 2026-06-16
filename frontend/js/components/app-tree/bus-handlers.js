@@ -28,6 +28,7 @@ export function bindBusEvents(vm) {
             SyncModelToggleStatus,
             GetRepoRoot,
           } = await import("../../../wailsjs/go/main/App.js");
+          const cfg = await LoadAppConfig();
           const repoRoot = await GetRepoRoot("ysm");
           const mcRoot = cfg.mcRoot || "";
           if (repoRoot && mcRoot) {

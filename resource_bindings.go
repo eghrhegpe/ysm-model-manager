@@ -187,7 +187,19 @@ func (a *App) saveConfig(cfg types.AppConfig) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(configPath(), data, 0644)
+	dest := configPath()
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(dest, data, 0644); err != nil {
+		return err
+	}
+	// update in-memory cache
+	a.configMu.Lock()
+	a.configCache = cfg
+	a.configLoaded = true
+	a.configMu.Unlock()
+	return nil
 }
 
 // ImportResourcePack 使用策略模式导入资源包

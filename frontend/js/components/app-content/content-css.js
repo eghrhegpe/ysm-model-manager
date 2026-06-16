@@ -88,7 +88,7 @@ ${btnBaseCSS}
 /* 设置页卡片三栏网格 */
 .stg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
 .stg-card { background:var(--surf); border:1px solid var(--bd); border-radius:8px; overflow:hidden; }
-.stg-card-hdr { padding:8px 12px; font-size:var(--fs-sm); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); background:var(--bg2,transparent); }
+.stg-card-hdr { display:flex;align-items:center;gap:6px; padding:8px 12px; font-size:var(--fs-sm); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); background:var(--bg2,transparent); }
 .stg-card-body { padding:8px 12px; }
 .stg-card-val { display:flex; align-items:center; gap:4px; padding:var(--pad-btn-secondary) 10px; border:1px solid var(--bd); border-radius:6px; cursor:pointer; font-size:var(--fs-sm); color:var(--txt); background:var(--bg); transition:border-color .12s, background .12s; width:100%; box-sizing:border-box; min-height:0; }
 .stg-card-val:hover { border-color:var(--accent); background:var(--hover); }
@@ -714,6 +714,11 @@ ${btnBaseCSS}
 
 .cr-section-fill { flex:1; }
 
+.cr-section-wrap { flex-wrap:wrap; }
+.cr-preset-icon { font-size:12px; }
+.stg-adv-reset { margin-left:auto; }
+.cr-error-page .cr-back-repo { margin-bottom:12px; }
+
 /* Edit card inputs */
 .cr-input-type { flex:1;height:auto;min-height:50px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit; }
 .cr-input-desc { font-size: var(--fs-xs); }
@@ -765,6 +770,39 @@ ${btnBaseCSS}
 .gh-progress-fill.gh-progress-fill-error { background:#f38ba8; }
 .gh-progress-box { padding:24px 12px; text-align:center; }
 .gh-progress-label { font-size:var(--fs-sm); color:var(--muted); margin-bottom:8px; }
+
+/* ===== 诊断页去重 UI (diag-dedup) ===== */
+.diag-msg { padding:12px;font-size:11px; }
+.diag-msg-error { color:#f38ba8; }
+.diag-msg-success { color:#a6e3a1; }
+.diag-msg-muted { color:#6c7086; }
+.diag-dedup-summary { padding:10px 12px;font-size:11px;color:var(--txt);border-bottom:1px solid var(--bd); }
+.diag-dedup-summary-hint { display:block;font-size:9px;color:var(--muted);margin-top:2px; }
+.diag-dedup-rt { display:flex;align-items:center;gap:4px;padding:6px 12px 2px;font-size:10px;font-weight:600;color:var(--txt); }
+.diag-dedup-rt-sep { flex:1;border-bottom:1px solid var(--bd);margin-left:6px; }
+.diag-dedup-rt-count { font-size:9px;color:var(--muted);font-weight:400; }
+.diag-dedup-group { margin:4px 12px;border:1px solid var(--bd);border-radius:8px;overflow:hidden; }
+.diag-dedup-group-head { display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:10px;font-weight:600;color:var(--txt);background:var(--surf);border-bottom:1px solid var(--bd); }
+.diag-dedup-group-fill { flex:1; }
+.diag-dedup-group-info { font-size:9px;color:var(--muted);font-weight:400; }
+.diag-dedup-file { display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background .1s; }
+.diag-dedup-file-default { background:var(--hover); }
+.diag-dedup-file-name { flex:1;overflow:hidden;min-width:0; }
+.diag-dedup-file-name-text { color:var(--txt);font-size:10px;cursor:pointer; }
+.diag-dedup-file-dir { display:block;font-size:8px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.diag-dedup-file-size { font-size:9px;color:var(--muted);flex-shrink:0;margin-right:4px; }
+.diag-dedup-file-date { font-size:8px;color:var(--muted);flex-shrink:0; }
+.diag-dedup-recommend { font-size:8px;padding:0 4px;border-radius:3px;background:#a6e3a122;color:#a6e3a1; }
+.diag-dedup-radio { flex-shrink:0;accent-color:var(--accent); }
+.diag-dedup-keep-all { display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background .1s;border-top:1px solid var(--bd); }
+.diag-dedup-keep-all-label { color:var(--muted); }
+.diag-dedup-actions { display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--bd); }
+.diag-dedup-exec { flex:1;padding:7px 16px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:11px;font-family:inherit; }
+.diag-dedup-cancel { padding:7px 16px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;font-family:inherit; }
+/* Settings overridden card */
+.stg-card-overridden { border-color:var(--accent); }
+.stg-custom-badge { font-size:9px;color:var(--accent); }
+.stg-path-text { font-size:10px;cursor:pointer; }
 
 /* ===== 响应式 ===== */
 @media (max-width:768px) {

@@ -119,17 +119,21 @@ if (!_registered && typeof window !== "undefined" && window.runtime?.EventsOn) {
 
   window.runtime.EventsOn("queue:status", (status, total, extra) => {
     dbg("event:queue:status", status, total, extra);
-    STATE.status = status;
-    if (status === "enqueued") {
-      // Go 已收到任务但尚未开始处理 → 给 UI 即时反馈
-      STATE.currentFile = "队列排队中…";
-      STATE.progress = { dl: 0, total: 0 };
-    }
+    STATE.total = total ?? STATE.total;
     if (status === "done" || status === "cancelled") {
+      STATE.status = status;
       STATE.currentFile = "";
       STATE.progress = { dl: 0, total: 0 };
+      notify();
+    } else if (status === "enqueued") {
+      STATE.status = "enqueued";
+      // ★ 不改 STATE.currentFile，避免覆盖 file-start 已设的文件名
+      STATE.progress = { dl: 0, total: 0 };
+      notify();
+    } else {
+      STATE.status = status;
+      notify();
     }
-    notify();
   });
 
   window.runtime.EventsOn("queue:file-start", (name, total, remaining) => {
@@ -263,10 +267,10 @@ export function createDownloadQueue({
     const { dl, total } = s.progress;
 
     let pct, label;
-    if (total <= 0) {
+    if (!total || total <= 0) {
       const mb = (dl / 1024 / 1024).toFixed(1);
       label = mb + "MB";
-      pct = 0;
+      pct = dl > 0 ? 100 : 0;
     } else {
       pct = Math.min(Math.round((dl / total) * 100), 100);
       label = pct + "%";
@@ -278,15 +282,14 @@ export function createDownloadQueue({
     if (isTiny && _lastPct < 10 && pct >= 99 && !completeTimer) {
       label = "99%";
       pct = 99;
-      if (!_stuckTimer) {
-        _stuckTimer = setTimeout(() => {
-          const pctEl2 = qs?.querySelector(".gh-progress-pct");
-          const fillEl2 = qs?.querySelector(".gh-progress-fill");
-          if (pctEl2) pctEl2.textContent = "100%";
-          if (fillEl2) { fillEl2.style.transition = "width .3s"; fillEl2.style.width = "100%"; }
-          _stuckTimer = null;
-        }, 300);
-      }
+      if (_stuckTimer) { clearTimeout(_stuckTimer); _stuckTimer = null; }
+      _stuckTimer = setTimeout(() => {
+        const pctEl2 = qs?.querySelector(".gh-progress-pct");
+        const fillEl2 = qs?.querySelector(".gh-progress-fill");
+        if (pctEl2) pctEl2.textContent = "100%";
+        if (fillEl2) { fillEl2.style.transition = "width .3s"; fillEl2.style.width = "100%"; }
+        _stuckTimer = null;
+      }, 300);
     }
 
     // 大文件卡进度防骗（CLIP / VAE / UNET 结尾）
@@ -294,9 +297,9 @@ export function createDownloadQueue({
     if (hasCL && !isTiny && _lastPct < 10 && pct >= 99 && total > 1024 * 1024) {
       label = "99%";
       pct = 99;
-      if (!_stuckTimer) {
-        qs.querySelector(".gh-progress-pct").textContent = label;
-        _stuckTimer = setTimeout(() => {
+      if (_stuckTimer) { clearTimeout(_stuckTimer); _stuckTimer = null; }
+      qs.querySelector(".gh-progress-pct").textContent = label;
+      _stuckTimer = setTimeout(() => {
           const pctEl = qs?.querySelector(".gh-progress-pct");
           const fillEl = qs?.querySelector(".gh-progress-fill");
           if (pctEl && pctEl.textContent !== "100%") {
@@ -311,7 +314,6 @@ export function createDownloadQueue({
           }
           if (fillEl) fillEl.style.width = "99%";
         }, 2000);
-      }
     } else {
       if (_stuckTimer) { clearTimeout(_stuckTimer); _stuckTimer = null; }
     }
@@ -344,6 +346,14 @@ export function createDownloadQueue({
   /** 文件下载完成 → 更新本地缓存 / 清勾选 / 显示错误 */
   function handleFileDone(done) {
     if (done.status === "ok") {
+      // file-done 到达时强制覆盖卡在 99% 的进度条
+      const pctEl = qsEl()?.querySelector(".gh-progress-pct");
+      const fillEl = qsEl()?.querySelector(".gh-progress-fill");
+      if (pctEl && pctEl.textContent === "99%") {
+        pctEl.textContent = "100%";
+        if (pctEl._dotTimer) { clearInterval(pctEl._dotTimer); pctEl._dotTimer = null; }
+        if (fillEl) fillEl.style.width = "100%";
+      }
       if (done.name) getLocalMap().set(done.name, "");
       const cb = sr.querySelector('.gh-sel[data-name="' + esc(done.name) + '"]');
       if (cb) cb.checked = false;

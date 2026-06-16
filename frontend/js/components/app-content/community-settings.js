@@ -140,27 +140,27 @@ export async function initSettings(root) {
       const isOverridden = !!overridePath;
       html +=
         '<div class="stg-card' +
-        (isOverridden ? '" style="border-color:var(--accent)"' : '"') +
-        ">" +
-        '<div class="stg-card-hdr" style="display:flex;align-items:center;gap:6px">' +
+        (isOverridden ? ' stg-card-overridden' : '') +
+        '">' +
+        '<div class="stg-card-hdr">' +
         "<span>" +
         t.icon +
         "</span><span>" +
         t.name +
         "</span>" +
         (isOverridden
-          ? '<span style="font-size:9px;color:var(--accent)">已自定义</span>'
+          ? '<span class="stg-custom-badge">已自定义</span>'
           : "") +
         (isOverridden
           ? '<button class="btn stg-adv-reset" data-rtype="' +
             t.rtype +
-            '" style="margin-left:auto;font-size:var(--fs-btn-tool);padding:2px 6px">↩️ 默认</button>'
+            '" style="font-size:var(--fs-btn-tool);padding:2px 6px">↩️ 默认</button>'
           : "") +
         "</div>" +
         '<div class="stg-card-body">' +
-        '<div class="stg-card-val stg-adv-set" data-rtype="' +
+        '<div class="stg-card-val stg-adv-set stg-path-text" data-rtype="' +
         t.rtype +
-        '" style="font-size:10px;cursor:pointer;" title="点击更改路径">' +
+        '" title="点击更改路径">' +
         escHtml(currentPath) +
         "</div>" +
         "</div></div>";

@@ -175,7 +175,7 @@
 .dlg-btn-primary {
   border: 1px solid var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--bg);
 }
 .dlg-btn-sm {
   padding: 2px 6px;
@@ -190,7 +190,7 @@
 .dlg-btn-danger {
   border: 1px solid var(--paid, #e5534b);
   background: var(--paid, #e5534b);
-  color: #fff;
+  color: var(--bg);
 }
 .dlg-btn-accent {
   padding: 2px 6px;
@@ -251,7 +251,7 @@
 }
 .dlg-err {
   font-size: 10px;
-  color: #f38ba8;
+  color: var(--status-error);
   min-height: 0;
   transition: min-height var(--tr-normal);
   overflow: hidden;
@@ -381,7 +381,7 @@
 }
 .stg-hint {
   font-size: 9px;
-  color: #6c7086;
+  color: var(--muted);
   padding: 2px 0 0 0;
 }
 .stg-sub-title {
@@ -401,13 +401,13 @@
 }
 .stg-hint-hidden {
   font-size: 9px;
-  color: #6c7086;
+  color: var(--muted);
   padding: 2px 0 0 0;
   display: none;
 }
 .stg-hint-warn {
   font-size: 9px;
-  color: #e5534b;
+  color: var(--status-error);
 }
 .stg-select {
   background: var(--bg, #1e1e2e);
@@ -512,7 +512,7 @@
 /* 语义变体 */
 .btn-base.primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--bg);
   border-color: var(--accent);
 }
 

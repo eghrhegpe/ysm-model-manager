@@ -1,6 +1,8 @@
 // ===== 前端扩展名集中定义 =====
-// 与 go/types/extensions.go 和 resource_types.json 保持同步
-// 新增扩展名时需同时更新三处
+// 静态默认值（拖拽等同步场景必须）
+// 事实来源: resource_types.json → Go 后端 types.ResourceExts 一致性测试验证
+// Go 测试 go/types/registry_test.go 自动校验与 JSON 一致
+// 修改扩展名前: 1) 改 resource_types.json 2) 改 Go 侧 ResourceExts 3) 改此处
 
 /** 每种资源类型对应的扩展名 */
 export const RESOURCE_EXTS = {

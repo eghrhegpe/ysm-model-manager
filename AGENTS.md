@@ -13,7 +13,9 @@
 7. **`docs/TERMINOLOGY.md`** — 术语对照表（名词统一、UI 文案规范）
 8. **`docs/CLEANUP_RULES.md`** — 治理规则（9 条禁止模式 × severity × 检测方式）
 9. **`docs/TASK_PLAN.md`** — AI 任务计划（可执行任务清单 + 文件路径 + 验证方式）
-10. **`docs/novel/SKELETON.md`** — 技术工程小说骨架（仅续写小说时必读）
+10. **`docs/SESSION_HANDOFF.md`** — 会话交接日志（上一个 AI 的发现和遗留问题）
+11. **`docs/3D-RENDERING-PLAN.md`** — 3D 骨骼渲染攻关（多 AI 分工 + 提示词 + 已知陷阱，仅参与 3D 开发时必读）
+12. **`docs/novel/SKELETON.md`** — 技术工程小说骨架（仅续写小说时必读）
 
 ## 第二条：确认当前状态
 

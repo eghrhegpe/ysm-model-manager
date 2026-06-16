@@ -1,5 +1,6 @@
 // ===== app-sync-manager 模板 =====
 import { renderFormattedText } from "../../utils/mc-format.js";
+import { stagger } from "../../utils/stagger.js";
 
 /**
  * 容器骨架
@@ -102,8 +103,8 @@ export function itemHTML(item, index) {
     item.status +
     '" data-type="' +
     item.type +
-    '" style="animation:sm-item-in .2s ease both;animation-delay:' +
-    Math.min((index || 0) * 30, 300) +
+    '" style="animation:fadeSlideUp .2s ease both;animation-delay:' +
+    stagger(index || 0, 30, 300) +
     'ms">' +
     '<span style="flex-shrink:0;width:14px;text-align:center;color:' +
     statusColor +

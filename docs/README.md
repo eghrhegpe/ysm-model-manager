@@ -12,6 +12,7 @@
 | [Design.md](Design.md) | UI 设计规范：CSS 变量、4 套主题、布局、字体、颜色规则 |
 | [TERMINOLOGY.md](TERMINOLOGY.md) | 术语对照表：名词统一、UI 文案规范、AI 术语索引 |
 | [PROJECT_STATUS.md](PROJECT_STATUS.md) | **项目当前状态**：已完成功能、遗留问题、下一步方向 |
+| [SESSION_HANDOFF.md](SESSION_HANDOFF.md) | **会话交接日志**：AI 代理间的信息传递记录 |
 
 ---
 
@@ -67,6 +68,7 @@
 | [tactics/vision.md](tactics/vision.md) | 产品愿景与长期方向 |
 | [ANNUAL_ROADMAP.md](ANNUAL_ROADMAP.md) | 年度规划大纲（英文） |
 | [TASK_PLAN.md](TASK_PLAN.md) | **AI 任务计划**：可执行任务清单 + 文件路径 + 验证方式 |
+| [3D-RENDERING-PLAN.md](3D-RENDERING-PLAN.md) | **3D 骨骼渲染攻关**：多 AI 分工流程 + 提示词 + 已知陷阱 |
 
 ---
 
@@ -81,7 +83,7 @@
 - `audit-summary-*.md` / `refactor-report-*.md` — 审计/重构报告
 - `arch-changelog.md` / `event-catalog.md` / `events.md` / `ui-architecture.md` / `test-strategy.md` / `download-mirror-arch.md` / `mmdskin-analysis.md` / `pcl2-comparison.md` / `settings-persistence-postmortem.md`
 - `YSM-UI-Translation-Plan.md` — UI 翻译计划草案（未实施，项目为中文原生）
-- `session-*.md` — 每日会话改动记录
+- `session-*.md` — 每日会话改动记录（活跃记录见 `SESSION_HANDOFF.md`）
 - 测试数据：`博丽灵梦ysm.json`、`各操作单价（估算）.txt`
 
 ---

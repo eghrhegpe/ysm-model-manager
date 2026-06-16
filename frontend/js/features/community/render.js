@@ -1,6 +1,7 @@
 // ===== 创意工坊模型列表渲染（DOM API，非字符串拼接） =====
 import { renderDisplayName } from "../../utils/display.js";
 import { ICONS } from "../../components/app-content/workshop-icons.js";
+import { stagger } from "../../utils/stagger.js";
 
 /**
  * 判断模型是否缺失（本地不存在）
@@ -175,7 +176,7 @@ export function renderCardsHTML(sites, esc) {
       "</div>";
     groups[g].forEach((s) => {
       html +=
-        '<div class="gh-card" style="animation-delay:' + Math.min(cardIdx * 30, 300) + 'ms" data-index="' +
+        '<div class="gh-card" style="animation-delay:' + stagger(cardIdx, 30, 300) + 'ms" data-index="' +
         sites.indexOf(s) +
         '" data-group="' +
         g +

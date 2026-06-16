@@ -30,4 +30,5 @@ type Cube2D struct {
 	UV       [2]float64 `json:"uv,omitempty"`
 	FaceUV   string     `json:"faceUV,omitempty"` // 每面独立 UV（JSON 字符串）
 	Rotation [3]float64 `json:"rotation,omitempty"`
+	TexSlot  int        `json:"texSlot"`          // 纹理槽（从 cube.texture 解析）
 }

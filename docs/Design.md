@@ -338,6 +338,20 @@ style="animation-delay:${stagger(i)}ms"
 - 跨组件通信用 `bus.on` / `bus.emit`
 - 组件内部状态用 `_unsubs` 数组管理事件订阅，`disconnectedCallback` 清理
 
+### Shadow DOM 共享样式
+
+`shared-styles.js` 导出可复用的 CSS 片段，供各 Shadow DOM 组件 import：
+
+```js
+import { btnBaseCSS, focusVisibleCSS } from "../../css/shared-styles.js";
+export const contentCSS = `... ${btnBaseCSS} ${focusVisibleCSS} ...`;
+```
+
+| 导出 | 用途 |
+|------|------|
+| `btnBaseCSS` | 统一按钮系统（`.btn-base` 全套变体） |
+| `focusVisibleCSS` | 通用 `:focus-visible` 焦点环（所有交互元素） |
+
 ---
 
 ## 10. 色彩使用规则

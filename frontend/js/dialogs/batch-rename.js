@@ -1,6 +1,7 @@
 // ===== 批量重命名对话框（复用 parseModelName 解析） =====
 import { bus } from "../bus.js";
 import { parseModelName } from "../utils/display.js";
+import { stagger } from "../utils/stagger.js";
 
 let dialogEl = null;
 
@@ -280,7 +281,7 @@ function renderPreview(el, items) {
     items
       .map(
         (it, i) =>
-          `<div class="br-row" style="animation-delay:${Math.min(i * 15, 300)}ms">
+          `<div class="br-row" style="animation-delay:${stagger(i, 15, 300)}ms">
   <input type="checkbox" class="br-file-cb br-cb" data-ci="${i}" ${it.selected ? "checked" : ""}>
   ${
     it.selected && it.changed

@@ -2,6 +2,7 @@
 import { bus } from "../../bus.js";
 import { initVersionUpdater } from "../../features/version-updater.js";
 import { friendlyError } from "../../utils/errors.js";
+import { loadResourceRegistry } from "../../utils/resource-registry.js";
 
 /**
  * 初始化设置页所有事件绑定
@@ -19,15 +20,8 @@ export async function initSettings(root) {
   const mcPath = cfg.mcRoot || "";
   const linkMode = cfg.linkMode || "copy";
 
-  // 存储子目录映射（与 Go 端 StorageSubDir 保持一致）
-  const storageSubDir = {
-    ysm: "ysm",
-    resourcepack: "resourcepacks",
-    shaderpack: "shaderpacks",
-    "create-blueprint": "schematics",
-    "mmd-skin": "mmd",
-    "vrchat-avatar": "vrchat",
-  };
+  // 从 Go 端 resource_types.json 加载注册表
+  const reg = await loadResourceRegistry();
 
   // 所有路径卡片的刷新函数列表
   const _cardRefreshers = [];
@@ -94,34 +88,15 @@ export async function initSettings(root) {
   );
 
   // 📂 详细调整面板
-  const advancedTypes = [
-    { rtype: "ysm", icon: "💎", name: "YSM 模型", cfgKey: "ysmRoot" },
-    {
-      rtype: "resourcepack",
-      icon: "🎨",
-      name: "资源包",
-      cfgKey: "resourcepackRoot",
-    },
-    {
-      rtype: "shaderpack",
-      icon: "☀️",
-      name: "光影包",
-      cfgKey: "shaderpackRoot",
-    },
-    {
-      rtype: "create-blueprint",
-      icon: "⚙️",
-      name: "蓝图",
-      cfgKey: "schematicRoot",
-    },
-    { rtype: "mmd-skin", icon: "🎭", name: "MMD 模型", cfgKey: "mmdRoot" },
-    {
-      rtype: "vrchat-avatar",
-      icon: "🥽",
-      name: "VRChat 模型",
-      cfgKey: "vrcRoot",
-    },
-  ];
+  // 从注册表构建高级设置条目
+  const advancedTypes = Object.values(reg).map((t) => ({
+    rtype: t.id,
+    icon: t.icon,
+    name: t.name,
+    cfgKey: t.configField
+      ? t.configField.charAt(0).toLowerCase() + t.configField.slice(1)
+      : "",
+  }));
 
   const refreshAdvanced = async () => {
     const grid = root.getElementById("set-advanced-grid");
@@ -131,7 +106,7 @@ export async function initSettings(root) {
       const canOverride = !!t.cfgKey;
       const overridePath = canOverride ? cfg[t.cfgKey] || "" : "";
       const defaultPath = cfg.filesRoot
-        ? (cfg.filesRoot + "\\" + (storageSubDir[t.rtype] || "")).replace(
+        ? (cfg.filesRoot + "\\" + (reg[t.rtype]?.storageSubDir || t.rtype || "")).replace(
             /\//g,
             "\\",
           )

@@ -110,6 +110,7 @@ export namespace types {
 	    uv?: number[];
 	    faceUV?: string;
 	    rotation?: number[];
+	    texSlot: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Cube2D(source);
@@ -123,6 +124,7 @@ export namespace types {
 	        this.uv = source["uv"];
 	        this.faceUV = source["faceUV"];
 	        this.rotation = source["rotation"];
+	        this.texSlot = source["texSlot"];
 	    }
 	}
 	export class Bone2D {

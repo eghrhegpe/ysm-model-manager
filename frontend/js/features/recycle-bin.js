@@ -3,6 +3,7 @@ import { bus } from "../bus.js";
 import { modalConfirm } from "../dialogs/modal.js";
 import { renderDisplayName } from "../utils/display.js";
 import { friendlyError } from "../utils/errors.js";
+import { loadResourceRegistry } from "../utils/resource-registry.js";
 
 export function initRecycleBin(app) {
   const root = app._root;
@@ -42,14 +43,6 @@ export function initRecycleBin(app) {
   });
   // 监听全局类型切换
   let currentType = localStorage.getItem("repo_rtype") || "ysm";
-  const typeIcons = {
-    ysm: "💎",
-    "mmd-skin": "🎭",
-    "vrchat-avatar": "🥽",
-    resourcepack: "🎨",
-    shaderpack: "☀️",
-    "create-blueprint": "⚙️",
-  };
   let _loadingAbort = null;
 
   let unsubRtype = bus.on("repo:rtype-changed", (rt) => {
@@ -101,9 +94,9 @@ export function initRecycleBin(app) {
         if (count) count.textContent = "空";
         return;
       }
-      const icon = typeIcons[currentType] || "📦";
+      const reg = await loadResourceRegistry();
+      const icon = (reg[currentType] && reg[currentType].icon) || "📦";
       if (count) count.textContent = icon + " " + entries.length + " 个文件";
-
       list.innerHTML = entries
         .map((e, i) => {
           const name = e.Name.replace(/\.(ysm|zip|7z)\.ban$/i, ".$1");

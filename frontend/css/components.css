@@ -1,3 +1,29 @@
+/* ===== 全局动画系统（统一 keyframe + stagger） ===== */
+@keyframes fadeSlideUp {
+  from { opacity:0; transform:translateY(6px) }
+  to   { opacity:1; transform:translateY(0) }
+}
+@keyframes fadeSlideLeft {
+  from { opacity:0; transform:translateX(-8px) }
+  to   { opacity:1; transform:translateX(0) }
+}
+@keyframes fadeSlideDown {
+  from { opacity:0; transform:translateY(-4px) }
+  to   { opacity:1; transform:translateY(0) }
+}
+/* 纯净父容器的子元素自动 stagger（父容器加 .stagger-in class） */
+.stagger-in > *:nth-child(1)  { animation-delay:0ms }
+.stagger-in > *:nth-child(2)  { animation-delay:30ms }
+.stagger-in > *:nth-child(3)  { animation-delay:60ms }
+.stagger-in > *:nth-child(4)  { animation-delay:90ms }
+.stagger-in > *:nth-child(5)  { animation-delay:120ms }
+.stagger-in > *:nth-child(6)  { animation-delay:150ms }
+.stagger-in > *:nth-child(7)  { animation-delay:180ms }
+.stagger-in > *:nth-child(8)  { animation-delay:210ms }
+.stagger-in > *:nth-child(9)  { animation-delay:240ms }
+.stagger-in > *:nth-child(10) { animation-delay:270ms }
+.stagger-in > *:nth-child(n+11) { animation-delay:300ms }
+
 /* ===== 全局组件样式（仅非 Shadow DOM 区域：对话框浮层、创意工坊预览） ===== */
 /* 所有 Web Component 的样式已移入各自的 Shadow DOM adoptedStyleSheets */
 
@@ -413,9 +439,8 @@
   padding: 2px 4px;
   font-size: 10px;
   border-bottom: 1px solid var(--bd);
-  animation: brRowIn .15s ease both;
+  animation: fadeSlideUp .15s ease both;
 }
-@keyframes brRowIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
 .br-cb {
   accent-color: var(--accent);
   flex-shrink: 0;

@@ -25,8 +25,7 @@ export const sidebarCSS = `
 .vc-header::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), var(--accent) 0%, transparent 70%); opacity: 0; transition: opacity .4s; pointer-events: none; }
 .vc-header.ripple::after { opacity: 0.12; }
 /* 交错瀑布流入场动画 */
-@keyframes vcCardIn { from { opacity: 0; transform: translateX(-16px) scale(0.97); } to { opacity: 1; transform: translateX(0) scale(1); } }
-.vc { animation: vcCardIn .35s cubic-bezier(.34,1.56,.64,1) both; }
+.vc { animation: fadeSlideLeft .35s cubic-bezier(.34,1.56,.64,1) both; }
 .vc-hdr-row1 { display: flex; align-items: center; }
 .vc-hdr-row2 { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 .vc-header .name { flex: 1; font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--txt); white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }

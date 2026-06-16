@@ -3,6 +3,9 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
+	"sync"
 )
 
 // ResourceTypeRegistry 资源类型注册表
@@ -16,10 +19,55 @@ type ResourceType struct {
 	Name          string   `json:"name"`
 	Icon          string   `json:"icon"`
 	Extensions    []string `json:"extensions"`
+	StorageSubDir string   `json:"storageSubDir"`
 	InstallDir    string   `json:"installDir"`
 	InstanceLevel bool     `json:"instanceLevel"`
 	Preview       string   `json:"preview"`    // "3d" / "thumbnail" / "none"
 	Detector      string   `json:"detector"`   // "ysm" / "mcmeta" / ""
+}
+
+var (
+	registry     *ResourceTypeRegistry
+	registryOnce sync.Once
+	registryPath = "resource_types.json" // 可被 tests 替换
+)
+
+// SetRegistryPath 设置注册表文件路径（仅测试用）
+func SetRegistryPath(path string) {
+	registryPath = path
+	registry = nil
+	registryOnce = sync.Once{}
+}
+
+// LoadRegistry 加载资源类型注册表
+func LoadRegistry() *ResourceTypeRegistry {
+	registryOnce.Do(func() {
+		data, err := os.ReadFile(registryPath)
+		if err != nil {
+			log.Printf("[types] 读取注册表失败 %s: %v", registryPath, err)
+			registry = &ResourceTypeRegistry{}
+			return
+		}
+		var reg ResourceTypeRegistry
+		if err := json.Unmarshal(data, &reg); err != nil {
+			log.Printf("[types] 解析注册表失败: %v", err)
+			registry = &ResourceTypeRegistry{}
+			return
+		}
+		registry = &reg
+	})
+	return registry
+}
+
+// RegistryType 按 id 查找资源类型，不存在时返回 nil
+func RegistryType(id string) *ResourceType {
+	reg := LoadRegistry()
+	for i := range reg.ResourceTypes {
+		if reg.ResourceTypes[i].ID == id {
+			return &reg.ResourceTypes[i]
+		}
+	}
+	return nil
 }
 
 // FormatRange 资源包 supported_formats 范围（可为 int 或 [int,int]）

@@ -7,6 +7,10 @@ import (
 	"testing"
 )
 
+func init() {
+	SetRegistryPath("../../resource_types.json")
+}
+
 // loadRegistry 从 resource_types.json 加载注册表
 func loadRegistry(t *testing.T) *ResourceTypeRegistry {
 	t.Helper()

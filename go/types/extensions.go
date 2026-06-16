@@ -111,23 +111,12 @@ func FindInstDir(versionDir, subDir, rtype string) string {
 }
 
 // StorageSubDir 每种资源类型在 FilesRoot 下的存储子目录
+// 优先从 resource_types.json 注册表读取，无匹配时返回 rtype 自身
 func StorageSubDir(rtype string) string {
-	switch rtype {
-	case "ysm":
-		return "ysm"
-	case "resourcepack":
-		return "resourcepacks"
-	case "shaderpack":
-		return "shaderpacks"
-	case "create-blueprint":
-		return "schematics"
-	case "mmd-skin":
-		return "mmd"
-	case "vrchat-avatar":
-		return "vrchat"
-	default:
-		return rtype
+	if rt := RegistryType(rtype); rt != nil && rt.StorageSubDir != "" {
+		return rt.StorageSubDir
 	}
+	return rtype
 }
 
 // SubDirMap 每种资源类型在整合包实例中的子目录

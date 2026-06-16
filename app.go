@@ -29,7 +29,7 @@ type App struct {
 }
 
 // repoRoot 动态返回 YSM 模型存储根目录（始终从配置推导，无需手动维护缓存）
-func (a *App) ysmRoot() string { return a.GetRepoRoot("ysm") }
+func (a *App) ysmRoot() string { dir, _ := a.GetRepoRoot("ysm"); return dir }
 
 func NewApp() *App {
 	a := &App{
@@ -75,7 +75,7 @@ func (a *App) startup(ctx context.Context) {
 			needsWrite = true
 		}
 	}
-	ysmRoot := a.GetRepoRoot("ysm")
+	ysmRoot, _ := a.GetRepoRoot("ysm")
 	if needsWrite {
 		a.saveConfig(cfg)
 		if cfg.McRoot != "" {

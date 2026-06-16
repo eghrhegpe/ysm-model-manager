@@ -150,7 +150,7 @@ func (a *App) importModelFileWithOptions(fileName, base64Data string, opts impor
 		}
 	}
 
-	targetRoot := a.GetRepoRoot(rtype)
+	targetRoot, _ := a.GetRepoRoot(rtype)
 	if targetRoot == "" {
 		return fmt.Errorf("请先设置文件存储路径")
 	}
@@ -220,7 +220,7 @@ func (a *App) ImportModelFileOverwriteTo(fileName, subpath, base64Data string) e
 }
 
 func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, overwrite bool) error {
-	root := a.GetRepoRoot("ysm")
+	root, _ := a.GetRepoRoot("ysm")
 	if root == "" {
 		return fmt.Errorf("请先设置文件存储路径")
 	}
@@ -375,7 +375,7 @@ func (a *App) CountInstanceResources(insName, rtype string) (int, error) {
 			continue
 		}
 		dir := types.FindInstDir(target.VersionDir, d.SubDir, d.RType)
-		repoRoot := a.GetRepoRoot(d.RType)
+		repoRoot, _ := a.GetRepoRoot(d.RType)
 		if repoRoot == "" {
 			continue
 		}
@@ -427,7 +427,7 @@ func (a *App) ClearInstanceResources(insName, rtype string) (int, error) {
 			continue
 		}
 		dir := types.FindInstDir(target.VersionDir, d.SubDir, d.RType)
-		repoRoot := a.GetRepoRoot(d.RType)
+		repoRoot, _ := a.GetRepoRoot(d.RType)
 		total = a.clearInstanceDir(dir, d.RType, repoRoot)
 	}
 	return total, nil
@@ -623,7 +623,7 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 	// YSM 走原有逻辑（对比 repo 和 custom 目录）
 	if rtype == "ysm" {
 		if repoDir == "" {
-			repoDir = a.GetRepoRoot("ysm")
+			repoDir, _ = a.GetRepoRoot("ysm")
 		}
 		if repoDir == "" {
 			return []types.InstanceStatus{}
@@ -638,7 +638,7 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 	}
 
 	// 其他资源类型：对比全局目录和各整合包子目录
-	globalDir := a.GetRepoRoot(rtype)
+	globalDir, _ := a.GetRepoRoot(rtype)
 	if globalDir == "" {
 		return []types.InstanceStatus{}
 	}
@@ -813,7 +813,7 @@ func (a *App) RelinkAllInstanceResources(instanceName string) (int, error) {
 		if _, err := os.Stat(instanceDir); os.IsNotExist(err) {
 			continue
 		}
-		globalDir := a.GetRepoRoot(d.RType)
+		globalDir, _ := a.GetRepoRoot(d.RType)
 		if globalDir == "" {
 			continue
 		}
@@ -831,7 +831,7 @@ func (a *App) SyncResources(rtype, instanceName string) string {
 	if cfg.McRoot == "" {
 		return `{"synced":[],"missing":[],"extra":[]}`
 	}
-	globalDir := a.GetRepoRoot(rtype)
+	globalDir, _ := a.GetRepoRoot(rtype)
 	if globalDir == "" {
 		return `{"synced":[],"missing":[],"extra":[]}`
 	}
@@ -864,7 +864,7 @@ func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 	if cfg.McRoot == "" {
 		return 0, fmt.Errorf("请先设置游戏根目录")
 	}
-	globalDir := a.GetRepoRoot(rtype)
+	globalDir, _ := a.GetRepoRoot(rtype)
 	if globalDir == "" {
 		return 0, fmt.Errorf("未设置%s目录", rtype)
 	}
@@ -915,7 +915,7 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 	if cfg.McRoot == "" {
 		return 0, fmt.Errorf("请先设置游戏根目录")
 	}
-	globalDir := a.GetRepoRoot(rtype)
+	globalDir, _ := a.GetRepoRoot(rtype)
 	if globalDir == "" {
 		return 0, fmt.Errorf("未设置%s目录", rtype)
 	}
@@ -991,7 +991,7 @@ func (a *App) PullSingleResourceFromInstance(rtype, srcPath, instanceName string
 	if cfg.McRoot == "" {
 		return fmt.Errorf("请先设置游戏根目录")
 	}
-	globalDir := a.GetRepoRoot(rtype)
+	globalDir, _ := a.GetRepoRoot(rtype)
 	if globalDir == "" {
 		return fmt.Errorf("未设置目录")
 	}
@@ -1049,7 +1049,7 @@ func (a *App) PushSingleResourceToInstance(rtype, instanceName, filePath string)
 	instances := a.ListVersionInstances(cfg.McRoot)
 	for _, ins := range instances {
 		if ins.Name == instanceName {
-			globalDir := a.GetRepoRoot(rtype)
+			globalDir, _ := a.GetRepoRoot(rtype)
 			if globalDir == "" {
 				return fmt.Errorf("未设置 %s 类型的仓库目录", rtype)
 			}
@@ -1135,7 +1135,7 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 		}
 
 		// 全局目录
-		globalDir := a.GetRepoRoot(rt.ID)
+		globalDir, _ := a.GetRepoRoot(rt.ID)
 		if globalDir == "" {
 			continue
 		}

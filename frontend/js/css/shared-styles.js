@@ -21,7 +21,7 @@ export const btnBaseCSS = `
 .btn-base.primary:hover { background: color-mix(in srgb, var(--accent) 88%, #fff); }
 .btn-base.danger { background: color-mix(in srgb, var(--status-error, #e5534b) 15%, transparent); color: var(--status-error, #e5534b); border-color: color-mix(in srgb, var(--status-error, #e5534b) 40%, transparent); }
 .btn-base.danger:hover { background: color-mix(in srgb, var(--status-error, #e5534b) 30%, transparent); }
-.btn-base.accent { background: var(--accent-btn-bg, color-mix(in srgb, var(--accent) 20%, transparent)); color: var(--accent-btn-color, var(--accent)); border-color: var(--accent-btn-border, color-mix(in srgb, var(--accent) 33%, transparent)); }
+.btn-base.accent { background: var(--accent-btn-bg); color: var(--accent-btn-color); border-color: var(--accent-btn-border); }
 .btn-base.accent:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
 .btn-base.warn { background: color-mix(in srgb, var(--sm-optional) 13%, transparent); color: var(--sm-optional); border-color: color-mix(in srgb, var(--sm-optional) 33%, transparent); }
 .btn-base.warn:hover { background: color-mix(in srgb, var(--sm-optional) 20%, transparent); }

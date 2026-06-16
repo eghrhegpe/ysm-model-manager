@@ -56,7 +56,7 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
   backLight.position.set(-10, 10, -20);
   scene.add(backLight);
-  const grid = new THREE.GridHelper(400, 20, 0x444488, 0x333366);
+  const grid = new THREE.GridHelper(400, 20, 0x6666aa, 0x444488);
   grid.position.y = -1;
   scene.add(grid);
   const axes = new THREE.AxesHelper(60);
@@ -251,6 +251,9 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     camera.lookAt(0, centerY * modelScale, 0);
     controls.target.set(0, centerY * modelScale, 0);
     controls.update();
+    // 保存初始相机位置用于重置
+    const _initCamPos = camera.position.clone();
+    const _initCamTarget = controls.target.clone();
     for (const md of mg.meshGroups || []) {
       const boneGroup = boneGroupMap.get(md.boneId);
       if (!boneGroup) continue;
@@ -402,6 +405,11 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   _rafId = requestAnimationFrame(renderLoop);
   renderer.render(scene, camera);
   return {
+    resetCamera: () => {
+      camera.position.copy(_initCamPos);
+      controls.target.copy(_initCamTarget);
+      controls.update();
+    },
     setSpeed: (v) => { _camSpeed = v; },
     setRotationMode: (orbit) => {
       _orbitMode = orbit;

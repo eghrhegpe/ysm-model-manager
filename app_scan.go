@@ -486,13 +486,19 @@ func (a *App) ScanLocalAuthors() []types.WorkshopCreator {
 		rtype string
 		exts  []string
 	}
+	ysmRoot, _ := a.GetRepoRoot("ysm")
+	mmdRoot, _ := a.GetRepoRoot("mmd-skin")
+	vrcRoot, _ := a.GetRepoRoot("vrchat-avatar")
+	rpRoot, _ := a.GetRepoRoot("resourcepack")
+	spRoot, _ := a.GetRepoRoot("shaderpack")
+	bpRoot, _ := a.GetRepoRoot("create-blueprint")
 	targets := []scanTarget{
-		{a.GetRepoRoot("ysm"), "ysm", types.SupportedExtsForType("ysm")},
-		{a.GetRepoRoot("mmd-skin"), "mmd-skin", types.SupportedExtsForType("mmd-skin")},
-		{a.GetRepoRoot("vrchat-avatar"), "vrchat-avatar", types.SupportedExtsForType("vrchat-avatar")},
-		{a.GetRepoRoot("resourcepack"), "resourcepack", types.SupportedExtsForType("resourcepack")},
-		{a.GetRepoRoot("shaderpack"), "shaderpack", types.SupportedExtsForType("shaderpack")},
-		{a.GetRepoRoot("create-blueprint"), "create-blueprint", types.SupportedExtsForType("create-blueprint")},
+		{ysmRoot, "ysm", types.SupportedExtsForType("ysm")},
+		{mmdRoot, "mmd-skin", types.SupportedExtsForType("mmd-skin")},
+		{vrcRoot, "vrchat-avatar", types.SupportedExtsForType("vrchat-avatar")},
+		{rpRoot, "resourcepack", types.SupportedExtsForType("resourcepack")},
+		{spRoot, "shaderpack", types.SupportedExtsForType("shaderpack")},
+		{bpRoot, "create-blueprint", types.SupportedExtsForType("create-blueprint")},
 	}
 
 	for _, t := range targets {

@@ -113,6 +113,13 @@ export function create3DPreview(model) {
       spacer.style.cssText = "flex:1";
       topBar.appendChild(spacer);
 
+      // 重置视角按钮
+      const resetBtn = document.createElement("button");
+      resetBtn.textContent = "🔄 重置视角";
+      resetBtn.style.cssText = "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit;margin-right:8px";
+      resetBtn.onclick = () => { if (_model3d) _model3d.resetCamera(); };
+      topBar.appendChild(resetBtn);
+
       const rotLabel = document.createElement("span");
       rotLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
       rotLabel.textContent = "摄像机旋转:";

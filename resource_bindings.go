@@ -66,24 +66,24 @@ func (a *App) DetectResourceType(path string) string {
 }
 
 // GetRepoRoot 根据资源类型返回对应的仓库根目录
-func (a *App) GetRepoRoot(rtype string) string {
+func (a *App) GetRepoRoot(rtype string) (string, error) {
 	cfg := a.LoadAppConfig()
 	// 1. 类型专属覆写
 	if root := specificRoot(cfg, rtype); root != "" {
-		return root
+		return root, nil
 	}
 	// 2. FilesRoot + 存储子目录
 	if cfg.FilesRoot != "" {
 		subDir := types.StorageSubDir(rtype)
 		if subDir != "" {
-			return filepath.Join(cfg.FilesRoot, subDir)
+			return filepath.Join(cfg.FilesRoot, subDir), nil
 		}
 		// 空 rtype 时返回 FilesRoot 根目录，供跨类型搜索使用
 		if rtype == "" {
-			return cfg.FilesRoot
+			return cfg.FilesRoot, nil
 		}
 	}
-	return ""
+	return "", nil
 }
 
 // specificRoot 返回资源类型的专属覆写路径
@@ -220,7 +220,7 @@ func (a *App) saveConfig(cfg types.AppConfig) error {
 
 // ImportResourcePack 使用策略模式导入资源包
 func (a *App) ImportResourcePack(srcPath, rtype string) string {
-	dstDir := a.GetRepoRoot(rtype)
+	dstDir, _ := a.GetRepoRoot(rtype)
 	if dstDir == "" {
 		return "未设置" + rtype + "目录"
 	}
@@ -237,7 +237,7 @@ func (a *App) ImportByType(rtype, srcPath string) string {
 	if h == nil {
 		return fmt.Sprintf("未找到资源类型 %s 的导入策略", rtype)
 	}
-	dstDir := a.GetRepoRoot(rtype)
+	dstDir, _ := a.GetRepoRoot(rtype)
 	if dstDir == "" {
 		return "未设置" + rtype + "目录"
 	}
@@ -310,7 +310,7 @@ func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) err
 	dstDir := filepath.Join(target.VersionDir, subDir)
 
 	// 统一走 installer.Install，复用链接模式支持
-	globalRoot := a.GetRepoRoot(rtype)
+	globalRoot, _ := a.GetRepoRoot(rtype)
 
 	// 如果源文件父目录 != 全局根目录，说明在子目录中 → 推送整个文件夹
 	srcParent := filepath.Dir(srcPath)

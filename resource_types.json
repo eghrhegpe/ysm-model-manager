@@ -1,19 +1,8 @@
 {
   "resourceTypes": [
     {
-      "id": "ysm",
-      "name": "YSM 模型",
-      "icon": "💎",
-      "extensions": [".ysm", ".zip", ".7z", ".json"],
-      "installDir": "versions/{instance}/ysm/",
-      "instanceLevel": true,
-      "preview": "3d",
-      "detector": "ysm",
-      "actions": ["view", "import", "delete"]
-    },
-    {
       "id": "resourcepack",
-      "name": "材质包",
+      "name": "资源包",
       "icon": "🎨",
       "extensions": [".zip"],
       "installDir": "resourcepacks/",
@@ -32,6 +21,17 @@
       "preview": "thumbnail",
       "detector": "shader",
       "actions": ["import", "toggle", "delete", "openFolder"]
+    },
+    {
+      "id": "ysm",
+      "name": "YSM 模型",
+      "icon": "💎",
+      "extensions": [".ysm", ".zip", ".7z", ".json"],
+      "installDir": "versions/{instance}/ysm/",
+      "instanceLevel": true,
+      "preview": "3d",
+      "detector": "ysm",
+      "actions": ["view", "import", "delete"]
     },
     {
       "id": "create-blueprint",

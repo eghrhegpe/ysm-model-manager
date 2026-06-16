@@ -100,7 +100,7 @@ var ModKeywords = map[string][]string{
 func HasModInDir(modsDir, rtype string) bool {
 	keywords, ok := ModKeywords[rtype]
 	if !ok {
-		// 非模型类（材质包/光影包/蓝图等）默认假设 mod 已安装，由调用方按需处理
+		// 非模型类（资源包/光影包/蓝图等）默认假设 mod 已安装，由调用方按需处理
 		return true
 	}
 	files, err := os.ReadDir(modsDir)

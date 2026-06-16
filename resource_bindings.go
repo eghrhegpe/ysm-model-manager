@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,17 +26,28 @@ func (a *App) LoadResourceTypes() string {
 	return string(data)
 }
 
-// ReadPackMeta 读取材质包信息（pack.mcmeta + pack.png）
+// ReadPackMeta 读取资源包信息（pack.mcmeta + pack.png）
 func (a *App) ReadPackMeta(path string) string {
 	meta, thumb, err := packs.ReadPackMeta(path)
 	if err != nil {
+		log.Printf("[packs] ReadPackMeta 失败 %s: %v", path, err)
 		return "{}"
 	}
-	data, _ := json.Marshal(map[string]interface{}{
+	result := map[string]interface{}{
 		"pack_format": meta.Pack.PackFormat,
-		"description": meta.Pack.Description,
+		"description": meta.Desc(),
 		"thumbnail":   thumb,
-	})
+	}
+	if meta.Pack.SupportedFormats != nil {
+		result["supported_formats"] = []int{meta.Pack.SupportedFormats.Min, meta.Pack.SupportedFormats.Max}
+	}
+	if meta.Pack.MinFormat != nil {
+		result["min_format"] = []int{meta.Pack.MinFormat.Min, meta.Pack.MinFormat.Max}
+	}
+	if meta.Pack.MaxFormat != nil {
+		result["max_format"] = []int{meta.Pack.MaxFormat.Min, meta.Pack.MaxFormat.Max}
+	}
+	data, _ := json.Marshal(result)
 	return string(data)
 }
 
@@ -92,7 +104,7 @@ func specificRoot(cfg types.AppConfig, rtype string) string {
 	return ""
 }
 
-// ToggleResourcePack 切换材质包的启用/禁用状态（.zip ↔ .zip.disabled）
+// ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled）
 func (a *App) ToggleResourcePack(path string) bool {
 	disabled := strings.HasSuffix(path, ".disabled")
 	var src, dst string
@@ -109,7 +121,7 @@ func (a *App) ToggleResourcePack(path string) bool {
 	return true
 }
 
-// IsResourcePackEnabled 检查材质包是否启用
+// IsResourcePackEnabled 检查资源包是否启用
 func (a *App) IsResourcePackEnabled(path string) bool {
 	return !strings.HasSuffix(path, ".disabled")
 }

@@ -38,7 +38,7 @@ export async function loadCommunityData() {
   }
 
   // 自动拉取社区索引（静默，后台执行）
-  tryAutoMergeCommunity(merged).catch(() => {});
+  tryAutoMergeCommunity(merged).catch((e) => { dbg("tryAutoMergeCommunity failed", e); });
 
   return {
     sites: sites || [],
@@ -69,7 +69,7 @@ async function tryAutoMergeCommunity(creators) {
       for (const [siteId, siteCreators] of Object.entries(siteMap)) {
         await SaveWorkshopCreatorsBySite(siteId, siteCreators);
       }
-    } catch {}
+    } catch (e) { dbg("SaveWorkshopCreators failed", e); }
   }
 }
 

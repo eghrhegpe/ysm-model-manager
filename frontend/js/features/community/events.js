@@ -68,7 +68,6 @@ export function bindRepoEvents(sr, ctx) {
     }
     return renderModelList(
       filtered,
-      models,
       dlPrefix,
       localMap,
       showAll,
@@ -104,8 +103,8 @@ export function bindRepoEvents(sr, ctx) {
     });
   }
 
-  // ==== 📁 显示全部 切换 ====
-  const toggleBtn = sr.querySelector(".gh-toggle-all");
+  // ==== 📁 仅显示缺失 切换 ====
+  const toggleBtn = sr.querySelector(".gh-toggle-missing");
   if (toggleBtn) {
     toggleBtn.addEventListener("click", () => {
       showAll = !showAll;
@@ -114,43 +113,6 @@ export function bindRepoEvents(sr, ctx) {
       const list = sr.querySelector("#gh-repo-list");
       const inp = sr.querySelector("#gh-repo-srch");
       if (list) list.replaceChildren(renderList(inp?.value || ""));
-    });
-  }
-
-  // ==== ⚙️ 筛选下拉展开/收起 ====
-  const filterBtn = sr.querySelector(".gh-filter-btn");
-  const filterDropdown = sr.querySelector(".gh-filter-dropdown");
-  if (filterBtn && filterDropdown) {
-    filterBtn.addEventListener("click", () => {
-      const isOpen = filterDropdown.classList.toggle("open");
-      filterBtn.textContent = isOpen ? "⚙️ 收起" : "⚙️ 筛选";
-    });
-  }
-
-  // ==== ⬇️ 下载全部缺失 ====
-  const dlAllBtn = sr.querySelector(".gh-dl-all");
-  if (dlAllBtn) {
-    dlAllBtn.addEventListener("click", async () => {
-      if (queue.isDownloading()) return;
-      const missing = models.filter((m) => isMissing(m));
-      if (!missing.length) return;
-      const ok = await modalConfirm({
-        title: "批量下载",
-        icon: "⬇️",
-        message:
-          "将从 0 号模型开始依次下载 " +
-          missing.length +
-          " 个模型，每 10 秒下载一个，是否继续？",
-        okText: "开始下载",
-      });
-      if (!ok) return;
-      const tasks = missing.map((m) => ({
-        url: dlPrefix + m.path.replace(/\\/g, "/"),
-        saveDir: "",
-        name: m.name,
-        size: m.size || 0,
-      }));
-      await queue.enqueue(tasks);
     });
   }
 
@@ -185,18 +147,15 @@ export function bindRepoEvents(sr, ctx) {
   }
 
   // ==== ☐ 全选 / 取消全选 ====
-  const selAllBtn = sr.querySelector(".gh-select-all");
-  if (selAllBtn) {
-    selAllBtn.addEventListener("click", () => {
-      const allChecked =
-        selContainer?.querySelectorAll(".gh-sel:checked").length ===
-        selContainer?.querySelectorAll(".gh-sel").length;
+  const selAllCb = sr.querySelector(".gh-select-all input[type=checkbox]");
+  if (selAllCb) {
+    selAllCb.addEventListener("change", () => {
+      const checked = selAllCb.checked;
       selContainer?.querySelectorAll(".gh-sel").forEach((cb) => {
-        cb.checked = !allChecked;
-        if (cb.checked) selectedSet.add(cb.dataset.name);
+        cb.checked = checked;
+        if (checked) selectedSet.add(cb.dataset.name);
         else selectedSet.delete(cb.dataset.name);
       });
-      selAllBtn.textContent = allChecked ? "☐ 全选" : "☑ 取消全选";
       updateSelectedUI();
     });
   }
@@ -300,6 +259,7 @@ export function bindRepoEvents(sr, ctx) {
   const externalCleanup = async () => {
     await queue.cancel();
     selectedSet.clear();
+    queue.destroy?.();
   };
 
   return { renderList, updateSelectedUI, cleanup: externalCleanup };

@@ -3,6 +3,7 @@ import { friendlyError } from "../../utils/errors.js";
 import { bus } from "../../bus.js";
 import { dbg } from "../../utils/debug.js";
 import { showProgress, tryFetchModels } from "../../features/community/data.js";
+import { stagger } from "../../utils/stagger.js";
 import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.js";
 import { getCreatorIdentity, getTagFromRole, parseDescTags, loadFavs, isFaved, toggleFav } from "./workshop-data.js";
 
@@ -156,7 +157,7 @@ export function renderSiteView(site, ctx) {
         site.presetSearches
           .map(
             (ps, i) =>
-              '<button class="cr-preset-btn" style="animation-delay:' + Math.min(i * 25, 300) + 'ms" data-q="' +
+              '<button class="cr-preset-btn" style="animation-delay:' + stagger(i, 25, 300) + 'ms" data-q="' +
               esc(ps.q || ps.label) +
               '">' +
               esc(ps.label) +
@@ -206,7 +207,7 @@ export function renderSiteView(site, ctx) {
             .filter((t) => t !== "creator" && t !== "official")
             .map(
               (t, i) =>
-                '<button class="cr-tag-filter-btn" style="animation-delay:' + Math.min((i + 3) * 30, 300) + 'ms" data-tag="' +
+                '<button class="cr-tag-filter-btn" style="animation-delay:' + stagger(i + 3, 30, 300) + 'ms" data-tag="' +
                 esc(t) +
                 '">' +
                 getTagIconFromRole(t) +

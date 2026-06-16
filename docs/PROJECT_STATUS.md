@@ -1,8 +1,8 @@
 # YSM 模型管理器 — 项目现状汇总
 
 更新时间：2026-06-16  
-当前版本：**v1.7.8**  
-最近提交：`4abc76e v1.7.8 - 创作者频道头像提取优化 + 动画补齐`
+当前版本：**v1.8.5**  
+最近提交：`(未打标签) v1.8.5 - 注册表驱动 + 测试覆盖 + 治理收口`
 
 ---
 
@@ -48,6 +48,8 @@
 | `docs/animation-roadmap.md` | Gemini | 动画路线图：统一 keyframe、stagger 系统、设计令牌、已完成清单 |
 | `docs/animations.md` | Gemini | 前端动画系统文档：11 种动画清单 + 无障碍支持 + 性能考量 + 文件索引 |
 | `docs/pack-format-versions.md` | zuogeren (PR #7) | Minecraft `pack_format` 编号 ↔ 游戏版本映射表（88 条） |
+| `docs/3D-RENDERING-PLAN.md` | 多 AI 协作设计 | 3D 骨骼渲染攻关：4 阶段分工流程 + 提示词模板 + 5 个已知陷阱 |
+| `docs/SESSION_HANDOFF.md` | Big Pickle | 会话交接日志：模板 + 3 条初始记录（文档治理、头像刷新、术语梳理） |
 
 ---
 
@@ -63,23 +65,44 @@
 | **A 类修复** | `saveConfig` 加 `os.MkdirAll`、avatar `onerror` 兜底防注入 | `resource_bindings.go:185-195` `community-site-view.js:52,471` |
 | **错误处理** | `errors.js` 正则修复 `/network\|proxy\|fetch/i` | `errors.js:28` |
 | **代码审计修复** | 删 O(n²) 死代码、修正误导文案、空 catch 加日志 | `render.js` `events.js` `community-core.js` |
-| **GetRepoRoot 空类型修复** | `rtype == ""` 时返回 `cfg.FilesRoot`，解锁跨类型搜索 | `resource_bindings.go:69-87` ✅ v1.7.7 |
+| **GetRepoRoot error 传播** | `(string)→(string,error)`，配置损坏不再静默 | `resource_bindings.go:69-87` ✅ v1.8.5 |
 | **动画系统** | 对话框、按钮、页面切换、预览面板、设置面板、同步管理器列表、回收站等全量动画 | v1.7.6 / v1.7.7，共 18+ 文件 |
 | **调试代码清理** | v1.7.4 遗留 16 处日志、fmt.Printf 已清 | v1.7.5 |
 | **暗色模式自动切换** | `matchMedia('change')` 监听，跟随 OS 自动切换 | v1.7.5 |
 | **右键打开文件位置** | Go 端新增 `RevealInExplorer` | v1.7.5 |
+| **注册表 v2** | `StorageSubDir`/`specificRoot` 硬编码 switch → 查 `resource_types.json` | v1.8.5 |
+| **扫描缓存事件失效** | watcher `syncAll()` 先清缓存再同步，消除 30s TTL 间隙 | v1.8.5 |
+| **Wails 治理收口** | 8 文件 25+ 处裸 import/`window.go.*` → `getApp()` | v1.8.5 |
+| **Go 测试覆盖** | 6→11 包，+33 tests | v1.8.5 |
 
 ---
 
-## 🔧 本轮新增（v1.7.8）
+## 🔧 本轮新增（v1.8.5）
 
-| 场景 | 触发 | 实现 |
+### 注册表驱动
+| 改动 | 文件 | 效果 |
 |------|------|------|
-| **A：下载完成刷新头像** | `queue:file-done` 解析 `[作者]` → 增量提取 → `bus.emit("avatar:refresh")` | `download-queue.js:157-179` |
-| **B：配置加载后重新提取** | `window.runtime.EventsOn("config-loaded")` → `extractAvatars()` 重跑 | `app-content/index.js:403-432` |
-| **C：单卡片头像定点更新** | `avatar:refresh` 按 `dataset.name` 定位卡片，只替换 `<img>.src` | `app-content/index.js:564-574` ✅ v1.7.7/8 |
-| **防重复注册** | `window.__avatarConfigLoadedRegistered` + `this._avatarRefreshRegistered` | `index.js:426,565,75` |
-| **创作者频道动画补齐** | 列表 stagger 入场、空状态淡入、骨架屏 shimmer、hover 过渡 | `.sm-*` / `.cr-*` class |
+| `StorageSubDir` 硬编码 switch → 查 `resource_types.json` | `go/types/extensions.go` | 新类型只需改 JSON |
+| `specificRoot` 硬编码 switch → 查注册表 `configField` | `resource_bindings.go` | 同上，含 VRC fallback |
+| 前端 3 处硬编码 map/array → `loadResourceRegistry()` | settings/recycle/diagnostics | 与 Go 端共享同一数据源 |
+| 新增 `utils/resource-registry.js` | 前端共享工具 | 缓存 Go 端注册表 |
+
+### 测试覆盖（+33 tests，6包→11包）
+| 包 | 新增 | 累计 |
+|----|------|------|
+| `go/importer` | 8 | 8 |
+| `go/watcher` | 9 | 9 |
+| `go/installer` | 10 | 10 |
+| `go/types` | 6 | 6 |
+| `go/packs` | 9 | 9 |
+
+### 治理收口
+| 文件 | 消除 | 方式 |
+|------|------|------|
+| 5 文件 22 处裸 import / `window.go.main.App` | 治理残留 | 统一 `getApp()` |
+| `GetRepoRoot` 签名 `(string)→(string,error)` | 配置损坏静默 | Wails 自动 reject |
+| watcher → `ClearScanCache()` | 30s TTL 间隙 | 文件变更即时清缓存 |
+| `go/threejs` 2 处遗留编译错 | 构建阻断 | 删除/修复 |
 
 ---
 
@@ -87,10 +110,11 @@
 
 | 问题 | 位置 | 影响 | 优先级 |
 |------|------|------|--------|
+| **3D 骨骼渲染坐标不准** | `go/threejs/spec.go` `model2d.js` | 多文件模型层级错误、手臂偏移、旋转丢失 | **高**（详见 `docs/3D-RENDERING-PLAN.md`） |
 | 创作者详情 Overlay UX | 第三方评审建议 | 视觉锚点、交互细节待打磨 | 低（CSS 不给免费 AI 动） |
-| 术语/文案未统一 | 全项目 | 仓库/整合包/实例/资源类型混用 | **中**（已梳理术语表，待落地 `docs/TERMINOLOGY.md`） |
 | model2d 预览缓存 | `preview-cache.js` | 社区仓库重复解析浪费 CPU | **中**，但**暂缓**：多模态辅助下 Three.js canvas 序列化/失效复杂，当前瓶颈不在预览 |
 | 列表/网格视图切换 | `app-tree` | 仅卡片视图，缺紧凑列表 | **低**（P3 新功能，动画 P0-P1 做完再考虑） |
+| `ResourceExts` / `SubDirAll` 仍硬编码 | `go/types/extensions.go` | 新类型需改 3 处（已有一致性测试兜底） | **低**（有测试保护） |
 
 ---
 
@@ -133,7 +157,7 @@ resource_bindings.go      # saveConfig、GetRepoRoot
 3. **model2d 预览缓存** — 扩展现有 `preview-cache.js`，复用骨骼图避免重复解析
 4. **列表/网格视图切换** — 工具栏加 🗂/☰ 切换、紧凑行模板、`localStorage` 持久化
 5. **前端测试覆盖扩展** — 当前 30 个测试（fmt/dom/data），后续覆盖 download-queue / render.js / 事件总线
-6. **Go 测试覆盖扩展** — 已测 ysm/dedup/fsutil/recycle/sync/tags，`installer/importer/watcher` 待补
+6. **ResourceExts / SubDirAll 注册表驱动** — 与已修的 StorageSubDir/specificRoot 同理，消除剩余硬编码 map
 7. **发版** — `wails build -clean`、打 Git tag、写更新报告
 
 ---

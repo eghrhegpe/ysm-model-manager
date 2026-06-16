@@ -2,6 +2,7 @@
 import { bus } from "../../bus.js";
 import { renderDisplayName } from "../../utils/display.js";
 import { getApp } from "../../wails/app.js";
+import { loadResourceRegistry } from "../../utils/resource-registry.js";
 
 /**
  * 初始化诊断页所有功能
@@ -140,19 +141,12 @@ export async function startDedup(root, esc, rtype) {
   const list = root.getElementById("diag-dedup-list");
   if (!list) return;
 
-  const rtDefs = [
-    { id: "ysm", icon: "💎", label: "YSM 模型" },
-    { id: "mmd-skin", icon: "🎭", label: "MMD 模型" },
-    { id: "vrchat-avatar", icon: "🥽", label: "VRChat" },
-    { id: "resourcepack", icon: "🎨", label: "资源包" },
-    { id: "shaderpack", icon: "☀️", label: "光影包" },
-    { id: "create-blueprint", icon: "⚙️", label: "蓝图" },
-  ];
+  const reg = await loadResourceRegistry();
   const typeLabel = rtype
-    ? rtDefs.find((d) => d.id === rtype)?.label || rtype
+    ? (reg[rtype] && reg[rtype].name) || rtype
     : "所有";
   const typeIcon = rtype
-    ? rtDefs.find((d) => d.id === rtype)?.icon || "📦"
+    ? (reg[rtype] && reg[rtype].icon) || "📦"
     : "📦";
 
   list.innerHTML =
@@ -173,9 +167,9 @@ export async function startDedup(root, esc, rtype) {
       if (dir)
         targets.push({ id: rtype, icon: typeIcon, label: typeLabel, dir });
     } else {
-      for (const rt of rtDefs) {
+      for (const rt of Object.values(reg)) {
         const dir = await GetRepoRoot(rt.id);
-        if (dir) targets.push({ ...rt, dir });
+        if (dir) targets.push({ ...rt, label: rt.name, dir });
       }
     }
 

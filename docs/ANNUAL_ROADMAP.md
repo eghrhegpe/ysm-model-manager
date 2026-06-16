@@ -32,7 +32,7 @@ Last updated: 2026-06-16
 
 | # | Task | Owner | Target | Notes |
 |---|------|-------|--------|-------|
-| 1.1 | Harden `GetRepoRoot` edge cases | Backend | Q3 | Empty `rtype`, missing config, cross-type search |
+| 1.1 | Harden `GetRepoRoot` edge cases | Backend | Q3 | ✅ `(string, error)` signature, corruption surfaced |
 | 1.2 | Unify error handling path | Frontend | Q3 | `friendlyError` + toast prefixes only |
 | 1.3 | Add graceful degradation when Node.js/WASM missing | Backend | Q3 | Clear user messaging, no silent failures |
 | 1.4 | File watcher stress tests | Backend | Q4 | Rapid rename/ban cycles |
@@ -43,7 +43,7 @@ Last updated: 2026-06-16
 |---|------|-------|--------|-------|
 | 2.1 | model2D preview cache | Frontend | Q4 | SHA256 + size key, LRU 50, canvas invalidation |
 | 2.2 | Virtual scroll for app-tree | Frontend | Q4 | Already prototyped in v1.5.x, re-integrate safely |
-| 2.3 | Scan cache invalidation strategy | Backend | Q4 | Avoid full rescans on every tab switch |
+| 2.3 | Scan cache invalidation strategy | Backend | Q4 | ✅ watcher triggers ClearScanCache on file events |
 | 2.4 | Lazy-load non-critical WASM data | Frontend | Q1 | Reduce initial bundle warning |
 
 ### 3.3 User Experience
@@ -60,7 +60,7 @@ Last updated: 2026-06-16
 
 | # | Task | Owner | Target | Notes |
 |---|------|-------|--------|-------|
-| 4.1 | Resource type registry v2 | Backend | Q4 | JSON-driven, user-editable |
+| 4.1 | Resource type registry v2 | Backend | Q4 | ✅ StorageSubDir/specificRoot registry-driven, consistency tests |
 | 4.2 | MMD / VRC first-class support | Both | Q4 | Stable push/pull/install flow |
 | 4.3 | Shader pack & schematic workflows | Both | Q1 | Use registry, no hardcoded types |
 | 4.4 | Plugin API draft | Backend | Q2 | Hook into scan, install, preview pipelines |
@@ -70,7 +70,7 @@ Last updated: 2026-06-16
 | # | Task | Owner | Target | Notes |
 |---|------|-------|--------|-------|
 | 5.1 | Frontend test expansion | Frontend | Q4 | download-queue, render.js, bus events |
-| 5.2 | Go test coverage: installer/importer/watcher | Backend | Q4 | Currently gaps |
+| 5.2 | Go test coverage: installer/importer/watcher/packs | Backend | Q4 | ✅ +33 tests, 6→11 packages covered |
 | 5.3 | Integration test harness | Both | Q1 | Temporary directories, deterministic fixtures |
 | 5.4 | Release checklist automation | DevOps | Q2 | Build + smoke tests + SHA256SUMS |
 

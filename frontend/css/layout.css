@@ -325,7 +325,7 @@
 }
 .preview .bg button {
   padding: 5px 0;
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--bd);
   background: transparent;
   color: var(--txt);
@@ -338,7 +338,7 @@
 }
 .preview .bg button.pri {
   background: var(--accent);
-  color: #fff;
+  color: var(--bg);
   border-color: var(--accent);
 }
 .preview .bg button.pri:hover {
@@ -347,7 +347,7 @@
 }
 .preview .sb {
   background: var(--bg);
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   padding: 6px 8px;
   font-size: var(--fs-btn-tool);
   color: var(--muted);

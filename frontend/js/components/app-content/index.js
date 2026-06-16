@@ -3,6 +3,7 @@ import { bus } from "../../bus.js";
 import { esc } from "../../utils/dom.js";
 import { dbg } from "../../utils/debug.js";
 import { contentCSS } from "./content-css.js";
+import { stagger } from "../../utils/stagger.js";
 import {
   repositoryHTML,
   instancesHTML,
@@ -685,7 +686,7 @@ class AppContent extends HTMLElement {
         grid.innerHTML = ghCreators
           .map(
             (cr, idx) =>
-              '<div class="gh-card gh-repo-card" style="animation-delay:' + Math.min(idx * 30, 300) + 'ms" data-index="' +
+              '<div class="gh-card gh-repo-card" style="animation-delay:' + stagger(idx, 30, 300) + 'ms" data-index="' +
               idx +
               '" data-repo="' +
               this._esc(cr.name) +

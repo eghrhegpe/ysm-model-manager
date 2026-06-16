@@ -204,9 +204,7 @@ export async function decodeYsmViaWasm(modelPath) {
         const matched = matchTexKey(tn);
         if (matched) ordered.push(matched);
       }
-      for (const k of Object.keys(textures)) {
-        if (!ordered.includes(k)) ordered.push(k);
-      }
+      // 仅使用 ysmTexOrder 显式声明的纹理，排除非贴图（头像/预览图）
       if (ysmDefaultTex) {
         const defKey = matchTexKey(
           ysmDefaultTex

@@ -20,23 +20,29 @@ const debounceDelay = 800 * time.Millisecond
 
 // Watcher 监听仓库目录的文件变更，自动同步 .ban 状态到所有整合包
 type Watcher struct {
-	w       *fsnotify.Watcher
-	repoRoot string
-	mcRoot   string
-	scanFn   ScanFunc
-	mu       sync.Mutex
-	debounce *time.Timer
-	done     chan struct{}
-	running  bool
+	w             *fsnotify.Watcher
+	repoRoot      string
+	mcRoot        string
+	scanFn        ScanFunc
+	clearCacheFn  func()       // 扫描缓存失效回调（可选）
+	mu            sync.Mutex
+	debounce      *time.Timer
+	done          chan struct{}
+	running       bool
 }
 
 // New 创建文件监听器
-func New(repoRoot, mcRoot string, scanFn ScanFunc) *Watcher {
+func New(repoRoot, mcRoot string, scanFn ScanFunc, clearCacheFn ...func()) *Watcher {
+	var ccf func()
+	if len(clearCacheFn) > 0 {
+		ccf = clearCacheFn[0]
+	}
 	return &Watcher{
-		repoRoot: repoRoot,
-		mcRoot:   mcRoot,
-		scanFn:   scanFn,
-		done:     make(chan struct{}),
+		repoRoot:     repoRoot,
+		mcRoot:       mcRoot,
+		scanFn:       scanFn,
+		clearCacheFn: ccf,
+		done:         make(chan struct{}),
 	}
 }
 
@@ -142,6 +148,10 @@ func (w *Watcher) debounceSync() {
 
 // syncAll 同步所有整合包的启用/禁用状态
 func (w *Watcher) syncAll() {
+	// 文件变更后先清扫描缓存，确保下次读取最新数据
+	if w.clearCacheFn != nil {
+		w.clearCacheFn()
+	}
 	instances := mdsync.ListVersions(w.mcRoot)
 	if len(instances) == 0 {
 		return

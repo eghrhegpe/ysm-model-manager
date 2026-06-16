@@ -1,5 +1,5 @@
 // ===== preview Shadow CSS =====
-import { btnBaseCSS } from "../../css/shared-styles.js";
+import { btnBaseCSS, focusVisibleCSS } from "../../css/shared-styles.js";
 export const previewCSS = `
 :host {
   display: flex; flex-direction: column;
@@ -24,9 +24,9 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .dp-placeholder .dp-hints span { font-size: var(--fs-xs); padding: 2px 8px; border-radius: var(--radius-sm); background: var(--surf); border: 1px solid var(--bd); color: var(--muted); }
 .dp-header-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 .dp-name { font-size: 13px; font-weight: 600; color: var(--txt); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dp-status { font-size: var(--fs-sm); padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+.dp-status { font-size: var(--fs-sm); padding: 1px 5px; border-radius: var(--radius-xs); flex-shrink: 0; }
 .dp-cards { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-.dp-card { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--bd); transition: background var(--tr-fast); cursor:pointer; }
+.dp-card { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius:var(--radius-md); border: 1px solid var(--bd); transition: background var(--tr-fast); cursor:pointer; }
 .dp-card:hover { background: var(--hover); }
 .dp-card.green { border-left: 3px solid var(--status-success); }
 .dp-card.red { border-left: 3px solid var(--status-error); }
@@ -43,7 +43,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .dp-detail { font-size: var(--fs-sm); color: var(--txt); padding: 2px 4px; background: var(--surf); border-radius: 4px; flex:1; overflow-y:auto; min-height:0; margin-bottom:4px; }
 .dp-detail-hidden { display:none; }
 .dp-detail .dp-detail-item { padding: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dp-detail .dp-detail-item .tag-author,.dp-detail .dp-detail-item .tag-work,.dp-detail .dp-detail-item .tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
+.dp-detail .dp-detail-item .tag-author,.dp-detail .dp-detail-item .tag-work,.dp-detail .dp-detail-item .tag-date { display:inline-block;padding:0 5px;border-radius:var(--radius-xs);font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
 .dp-detail .dp-detail-item .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
 .dp-detail .dp-detail-item .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
 .dp-detail .dp-detail-item .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
@@ -57,9 +57,10 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .divider { border: none; border-top: 1px solid var(--bd); margin: 6px 0; }
 /* ===== 统一按钮系统 .btn-base ===== */
 ${btnBaseCSS}
+${focusVisibleCSS}
 
 /* ===== 旧按钮兼容层（逐步替换后删除） ===== */
-.btn { padding: 5px 0; border-radius: 6px; border: 1px solid var(--bd); background: transparent; color: var(--txt); cursor: pointer; font-size: var(--fs-base); font-family: inherit; transition: background var(--tr-fast); }
+.btn { padding: 5px 0; border-radius:var(--radius-md); border: 1px solid var(--bd); background: transparent; color: var(--txt); cursor: pointer; font-size: var(--fs-base); font-family: inherit; transition: background var(--tr-fast); }
 .btn:hover { background: var(--hover); }
 .btn.accent { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 33%, transparent); }
 .btn.accent:hover { background: color-mix(in srgb, var(--accent) 33%, transparent); }
@@ -72,21 +73,21 @@ ${btnBaseCSS}
 .md-value { color: var(--txt); font-weight: 500; }
 .md-divider { border: none; border-top: 1px solid var(--bd); margin: 8px 0; }
 .err { font-size: var(--fs-sm); color: var(--status-error); padding: 4px 0; }
-.preview-thumb { margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: var(--surf); border: 1px solid var(--bd); }
+.preview-thumb { margin-bottom: 10px; border-radius:var(--radius-lg); overflow: hidden; background: var(--surf); border: 1px solid var(--bd); }
 .preview-thumb img { display: block; width: 100%; height: auto; object-fit: cover; }
-.dp-log-fbtn { font-size:var(--fs-xs);padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer; }
-.dp-log-fbtn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.dp-log-search { flex:1;font-size:var(--fs-xs);padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);min-width:0;margin-left:4px; }
-.dp-log-empty { font-size:var(--fs-sm);color:#6c7086; }
+.dp-log-fbtn { font-size:var(--fs-xs);padding:1px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer; }
+.dp-log-fbtn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.dp-log-search { flex:1;font-size:var(--fs-xs);padding:1px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);min-width:0;margin-left:4px; }
+.dp-log-empty { font-size:var(--fs-sm);color:var(--muted); }
 .ysm-stat-label { display:inline-block;min-width:80px; }
 
 /* === 骨骼预览区 === */
-.ysm-btn { font-size:var(--fs-xs);padding:1px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;display:flex;align-items:center;gap:3px; }
+.ysm-btn { font-size:var(--fs-xs);padding:1px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;display:flex;align-items:center;gap:3px; }
 .ysm-btn:hover { background:var(--hover); }
 .ysm-hint { font-size:var(--fs-tiny);color:var(--muted); }
-.ysm-canvas { width:100%;height:auto;border-radius:8px;background:rgba(0,0,0,.12);margin-bottom:6px; }
+.ysm-canvas { width:100%;height:auto;border-radius:var(--radius-lg);background:rgba(0,0,0,.12);margin-bottom:6px; }
 .ysm-grab { cursor:grab; }
-.ysm-card { background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:8px; }
+.ysm-card { background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:8px 10px;margin-bottom:8px; }
 .ysm-card-title { display:flex;align-items:center;gap:4px;margin-bottom:6px;font-size:var(--fs-sm);font-weight:600;color:var(--txt); }
 .ysm-card-section { padding-left:8px;margin-bottom:5px; }
 .ysm-card-section-label { font-size:var(--fs-tiny);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px; }
@@ -97,33 +98,35 @@ ${btnBaseCSS}
 .ysm-tree-unit { color:var(--muted);font-size:var(--fs-xs);margin-left:2px; }
 .ysm-tree-size { color:var(--muted);font-size:8px;margin-left:auto; }
 .ysm-card-val { color:var(--accent);font-weight:600; }
-.ysm-badge { font-size:var(--fs-tiny);padding:0 5px;border-radius:3px;background:color-mix(in srgb, var(--accent) 25%, transparent);color:var(--txt);margin-left:auto; }
+.ysm-badge { font-size:var(--fs-tiny);padding:0 5px;border-radius:var(--radius-xs);background:color-mix(in srgb, var(--accent) 25%, transparent);color:var(--txt);margin-left:auto; }
 .ysm-section-blue { border-left:2px solid var(--accent); }
 .ysm-section-green { border-left:2px solid var(--status-success); }
 .ysm-section-orange { border-left:2px solid var(--sm-optional); }
 .ysm-tab-row { display:flex;gap:2px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--bd); }
-.ysm-tab { flex:1;font-size:var(--fs-sm);padding:3px 6px;border-radius:4px;border:1px solid var(--bd);cursor:pointer;text-align:center; }
-.ysm-tab-active { background:var(--accent);color:#fff; }
+.ysm-tab { flex:1;font-size:var(--fs-sm);padding:3px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);cursor:pointer;text-align:center;transition:var(--tr-fast); }
+.ysm-tab:hover { border-color:var(--accent); }
+.ysm-tab-active { background:var(--accent);color:var(--bg); }
 .ysm-tab-inactive { background:var(--surf);color:var(--txt); }
 .ysm-export-row { display:flex;gap:6px;margin-top:4px;align-items:center; }
-.ysm-export-btn { font-size:var(--fs-xs);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer; }
+.ysm-export-btn { font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;transition:var(--tr-fast); }
 .ysm-export-btn:hover { background:var(--hover); }
+.ysm-export-btn:focus-visible { box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent);outline:none; }
 .ysm-toggle-row { display:flex;align-items:center;gap:4px;margin-bottom:6px;margin-top:4px;padding:4px 6px;background:var(--surf);border-radius:var(--radius-sm);justify-content:flex-end; }
 .ysm-debug { font-size:var(--fs-xs);color:#ff6b6b;margin-top:2px;opacity:0.8; }
 .ysm-loading-title { font-size:var(--fs-sm);font-weight:600;color:var(--muted);margin-bottom:4px; }
-.ysm-loading-bar { height:60px;border-radius:6px;background:rgba(0,0,0,.08); }
+.ysm-loading-bar { height:60px;border-radius:var(--radius-md);background:rgba(0,0,0,.08); }
 .ysm-error-title { font-size:var(--fs-sm);font-weight:600;margin-bottom:4px; }
-.ysm-error-body { font-size:var(--fs-xs);color:#888;padding:8px 0; }
-.ysm-log-error { color:#f38ba8; }
+.ysm-error-body { font-size:var(--fs-xs);color:var(--muted);padding:8px 0; }
+.ysm-log-error { color:var(--status-error); }
 
 /* === MMD 变体聚合 === */
-.dp-mmd-group { border:1px solid var(--bd);border-radius:6px;margin-bottom:4px;overflow:hidden; }
+.dp-mmd-group { border:1px solid var(--bd);border-radius:var(--radius-md);margin-bottom:4px;overflow:hidden; }
 .dp-mmd-group-hdr { display:flex;align-items:center;gap:4px;padding:4px 6px;cursor:pointer;font-size:var(--fs-sm);transition:background var(--tr-fast); }
 .dp-mmd-group-hdr:hover { background:var(--hover); }
 .dp-mmd-fold-icon { font-size:9px;color:var(--muted);transition:transform .2s ease;flex-shrink:0; }
 .dp-mmd-group-hdr .dp-mmd-fold-icon.rotated { transform:rotate(90deg); }
 .dp-mmd-folder-name { flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.dp-mmd-folder-name .tag-author,.dp-mmd-folder-name .tag-work,.dp-mmd-folder-name .tag-date { display:inline-block;padding:0 4px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
+.dp-mmd-folder-name .tag-author,.dp-mmd-folder-name .tag-work,.dp-mmd-folder-name .tag-date { display:inline-block;padding:0 4px;border-radius:var(--radius-xs);font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
 .dp-mmd-folder-name .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
 .dp-mmd-folder-name .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
 .dp-mmd-folder-name .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
@@ -133,7 +136,7 @@ ${btnBaseCSS}
 .dp-mmd-group-body > * { overflow:hidden;min-height:0; }
 .dp-mmd-group-body.dp-mmd-open > * { overflow:visible; }
 .dp-mmd-group-body .dp-detail-item { font-size:var(--fs-sm); }
-.dp-mmd-sync-btn { width:100%;margin-top:4px;padding:3px 0;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:background var(--tr-fast); }
+.dp-mmd-sync-btn { width:100%;margin-top:4px;padding:3px 0;border-radius:var(--radius-sm);border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:background var(--tr-fast); }
 .dp-mmd-sync-btn:hover { background:var(--hover); }
 .dp-mmd-sync-btn:disabled { opacity:.5;cursor:default; }
 `;

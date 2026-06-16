@@ -289,10 +289,10 @@ wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 | [`docs/architecture.md`](docs/architecture.md)                       | 前端架构规范 + 组件拆分指南               |
 | [`docs/Design.md`](docs/Design.md)                                   | UI 设计规范（CSS 变量、布局、字体）       |
 | [`docs/bug-chronicle.md`](docs/bug-chronicle.md)                     | Bug 排查记录（含 Debug Path Review）      |
-| [`docs/dev-notes2026-06-05.md`](docs/dev-notes2026-06-05.md)         | 开发笔记 + 已知陷阱                       |
-| [`docs/plan-p7-multi-resource.md`](docs/plan-p7-multi-resource.md)   | P7 计划：多资源类型支持 + 图标库设计      |
-| [`docs/postmortem-20250604.md`](docs/postmortem-20250604.md)         | 2025-06-04 重构复盘                       |
-| [`docs/postmortem-20250605.md`](docs/postmortem-20250605.md)         | 2025-06-05 晚间复盘                       |
+| [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)                   | **项目当前状态**：已完成功能、遗留问题、下一步方向 |
+| [`docs/pending-cleanup.md`](docs/pending-cleanup.md)                 | 待清理清单：调试代码、临时方案、技术债    |
+| [`docs/release-notes/`](docs/release-notes/)                         | 各版本发版说明                            |
+| [`docs/README.md`](docs/README.md)                                   | **开发者文档总索引**（含归档文档跳转）    |
 | [`AI_INDEX.md`](AI_INDEX.md)                                         | AI 索引（后端绑定 + 事件总线 + 组件清单） |
 | [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | AI 行为规则 + 痛苦教训                    |
 

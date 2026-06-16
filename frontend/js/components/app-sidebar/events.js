@@ -37,8 +37,13 @@ export function bindCardEvents(root, instances) {
     // 高亮当前选中的版本
     root
       .querySelectorAll(".vc-header")
-      .forEach((h) => h.classList.remove("active"));
-    hdr.classList.add("active");
+      .forEach((h) => h.classList.remove("active", "ripple"));
+    // 涟漪效果：记录点击坐标，触发涟漪动画
+    const rect = hdr.getBoundingClientRect();
+    hdr.style.setProperty("--ripple-x", ((e.clientX - rect.left) / rect.width * 100) + "%");
+    hdr.style.setProperty("--ripple-y", ((e.clientY - rect.top) / rect.height * 100) + "%");
+    hdr.classList.add("active", "ripple");
+    setTimeout(() => hdr.classList.remove("ripple"), 500);
     // 发送选中事件
     const idx = parseInt(vc.dataset.idx, 10);
     const pkg = instances[idx];

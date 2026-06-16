@@ -97,7 +97,7 @@ async function loadDiagnosticsLogs(root, esc) {
     }
 
     list.innerHTML = filtered
-      .map((l) => {
+      .map((l, i) => {
         const statusLabel =
           l.Status === "success" ? "✅" : l.Status === "failed" ? "❌" : "⏭️";
         const t = l.Timestamp
@@ -117,7 +117,7 @@ async function loadDiagnosticsLogs(root, esc) {
                 "<br>$1：",
               )
             : "");
-        return `<div class="log-row">
+        return `<div class="log-row" style="animation-delay:${Math.min(i * 20, 400)}ms">
 <span class="log-status ${status}">${statusLabel}</span>
 <span class="log-msg">${msg}</span>
 <span class="log-time">${t}</span>
@@ -342,8 +342,14 @@ ${isDefault ? '<span class="diag-dedup-recommend">推荐</span>' : ""}
 async function scanConflicts(root, esc) {
   const list = root.getElementById("diag-conflict-list");
   if (!list) return;
+  // 扫描按钮雷达动画
+  const scanBtn = root.getElementById("diag-scan-conflict");
+  if (scanBtn) {
+    scanBtn.classList.add("scanning");
+    scanBtn.textContent = "⏳ 扫描中...";
+  }
   list.innerHTML =
-    '<div class="stat-row diag-msg diag-msg-muted">扫描中...</div>';
+    '<div class="scan-radar-wrap"><div class="scan-radar"></div><div class="scan-radar-dot"></div></div><div class="stat-row diag-msg diag-msg-muted" style="text-align:center">正在扫描整合包冲突...</div>';
   try {
     const { LoadAppConfig, ListVersionInstances, ScanModelEntries } =
       await import("../../../wailsjs/go/main/App.js");

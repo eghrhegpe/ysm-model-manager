@@ -13,6 +13,7 @@ export function renderVersionCards(container, instances) {
     const vc = document.createElement("div");
     vc.className = "vc";
     vc.dataset.idx = idx;
+    vc.style.animationDelay = `${idx * 40}ms`;
     vc.innerHTML = vcHeaderHTML(
       ins.name,
       ins.synced,

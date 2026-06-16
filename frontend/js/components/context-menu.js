@@ -43,7 +43,7 @@ class ContextMenu extends HTMLElement {
           padding: 4px;
           min-width: 160px;
           box-shadow: 0 8px 24px rgba(0,0,0,.5);
-          animation: fadeIn .1s ease;
+          animation: menuPop .2s cubic-bezier(.34,1.56,.64,1);
         }
         .item {
           display: flex;
@@ -64,7 +64,8 @@ class ContextMenu extends HTMLElement {
           border-top: 1px solid var(--bd);
           margin: 3px 8px;
         }
-        @keyframes fadeIn { from { opacity: .5; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes menuPop { 0% { opacity: 0; transform: scale(.85) translateY(-6px); } 60% { opacity: 1; transform: scale(1.02) translateY(0); } 100% { transform: scale(1); } }
+        @keyframes itemSlideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
       </style>
       <div class="menu" id="menu"></div>
     `;
@@ -89,7 +90,7 @@ class ContextMenu extends HTMLElement {
         const icon = item.icon ? this._esc(item.icon) : "";
         const danger = item.danger ? "danger" : "";
         return `
-        <div class="item ${danger}" data-idx="${i}">
+        <div class="item ${danger}" data-idx="${i}" style="animation: itemSlideIn .15s ease ${i * 25}ms both;">
           ${icon ? `<span class="icon">${icon}</span>` : ""}
           <span>${label}</span>
         </div>

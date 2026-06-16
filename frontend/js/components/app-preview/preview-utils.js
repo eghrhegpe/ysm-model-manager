@@ -49,19 +49,6 @@ export function buildStdYsgpFromTextVariant(bytes, forceVer) {
     }
   }
 
-  // 调试输出
-  const debugBytes = Array.from(
-    bytes.slice(dataStart, Math.min(bytes.length, dataStart + 35)),
-  ).map((b) => b.toString(16).padStart(2, "0"));
-  console.log(
-    `[YSM] dataStart=${dataStart}, 前4字节: ${debugBytes.slice(0, 4).join(" ")}... 后24字节: ${debugBytes.slice(11).join(" ")}`,
-  );
-  const dump64 = Array.from(
-    bytes.slice(dataStart, Math.min(bytes.length, dataStart + 64)),
-  ).map((b) => b.toString(16).padStart(2, "0"));
-  console.log(
-    `[YSM] 二进制段头 64B: ${dump64.slice(0, 16).join(" ")} | ${dump64.slice(16, 32).join(" ")} | ${dump64.slice(32, 48).join(" ")} | ${dump64.slice(48, 64).join(" ")}`,
-  );
   if (dataStart < 0 || dataStart >= bytes.length - 20) return null;
 
   let verNum = forceVer || 2;
@@ -70,10 +57,6 @@ export function buildStdYsgpFromTextVariant(bytes, forceVer) {
   // V3: 二进制段 = 纯加密数据（hash 仅在 <hash> 标签中）
   const encryptedStart = verNum >= 3 ? dataStart : dataStart + 16;
   const encrypted = bytes.slice(encryptedStart);
-  console.log(
-    `[YSM] V${verNum}: 加密数据偏移=${encryptedStart}, 大小=${encrypted.length}B`,
-  );
-
   const result = new Uint8Array(4 + 4 + 16 + encrypted.length);
   const magic = new Uint8Array([0x59, 0x53, 0x47, 0x50]); // "YSGP"
   result.set(magic, 0);
@@ -84,9 +67,6 @@ export function buildStdYsgpFromTextVariant(bytes, forceVer) {
     result[8 + i] = parseInt(fileHash.substr(i * 2, 2), 16);
   }
   result.set(encrypted, 24);
-  console.log(
-    `[YSM] 构建标准 YSGP: 剥离 ${dataStart}B 文本头部, hash=${fileHash}, 加密数据=${encrypted.length}B`,
-  );
   return result;
 }
 

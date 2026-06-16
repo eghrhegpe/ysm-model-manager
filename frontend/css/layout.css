@@ -33,6 +33,21 @@
   font-size: var(--fs-lg);
 }
 
+/* 赛博朋克网格背景（仅 cyber 主题） */
+@keyframes gridScroll { to { background-position: 50px 50px; } }
+.theme-cyber #root::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(102,217,239,0.03) 50px),
+    repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(102,217,239,0.03) 50px);
+  animation: gridScroll 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.no-animations .theme-cyber #root::before,
+.no-animations.theme-cyber #root::before { animation: none; }
+
 #st {
   font-size: var(--fs-tab);
   color: var(--muted);

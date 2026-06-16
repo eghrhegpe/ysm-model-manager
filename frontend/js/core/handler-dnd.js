@@ -104,12 +104,6 @@ const onDrop = async (e) => {
   // 非仓库页面不处理 DnD
   if (window.__currentPage !== "repository") return;
 
-  console.log("[DnD] drop fired", {
-    filesLen: e.dataTransfer?.files?.length || 0,
-    itemsLen: e.dataTransfer?.items?.length || 0,
-    types: e.dataTransfer?.types || [],
-  });
-
   const getFileFromEntry = (entry) =>
     new Promise((resolve, reject) => {
       entry.file(resolve, reject);
@@ -153,12 +147,6 @@ const onDrop = async (e) => {
     const direct = Array.from(e.dataTransfer?.files || []);
     allFiles = direct.filter((f) => isSupportedFile(f.name));
   }
-  console.log(
-    "[DnD] collected:",
-    allFiles.length,
-    allFiles.map((f) => f.name),
-  );
-
   if (allFiles.length === 0) {
     bus.emit("toast:show", {
       msg: "📂 未检测到支持的资源文件" + "（" + DROP_EXTS_STR + "）",

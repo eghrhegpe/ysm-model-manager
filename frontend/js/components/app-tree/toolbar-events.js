@@ -252,13 +252,6 @@ export function bindToolbarEvents(root, vm) {
 
   // 高级筛选按钮：触发弹窗版筛选器
   const advBtn = $("btn-adv-filter");
-  if (typeof window !== "undefined" && window.console) {
-    // eslint-disable-next-line no-console
-    console.log(
-      "[DBG:toolbar-bind] btn-adv-filter",
-      advBtn ? "found" : "NOT-FOUND",
-    );
-  }
   advBtn?.addEventListener("click", () => {
     dbg("adv-filter", "btn:click");
     openAdvFilterDialog($, vm);

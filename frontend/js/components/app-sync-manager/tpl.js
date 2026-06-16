@@ -36,38 +36,6 @@ export function containerHTML() {
 }
 
 /**
- * 类型标签 HTML
- * @param {string} id
- * @param {string} icon
- * @param {string} label
- * @param {number} count
- * @param {boolean} active
- */
-export function tabHTML(id, icon, label, count, active) {
-  const cls = active ? " active" : "";
-  return (
-    '<button class="sm-tab' +
-    cls +
-    '" data-type="' +
-    id +
-    '" style="padding:var(--pad-tab) 14px;border-radius:5px 5px 0 0;border:none;background:' +
-    (active ? "var(--surf)" : "transparent") +
-    ";color:" +
-    (active ? "var(--accent)" : "var(--muted)") +
-    ';cursor:pointer;font-family:inherit;font-size:var(--fs-tab);white-space:nowrap">' +
-    icon +
-    " " +
-    label +
-    (count > 0
-      ? ' <span style="font-size:var(--fs-tiny);opacity:0.7">(' +
-        count +
-        ")</span>"
-      : "") +
-    "</button>"
-  );
-}
-
-/**
  * 状态筛选标签 HTML
  * @param {string} id - 筛选 ID (all/synced/missing/disabled/optional)
  * @param {string} label - 标签文字
@@ -91,15 +59,6 @@ export function statusTabHTML(id, label, count, active) {
     showCount +
     "</button>"
   );
-}
-
-/**
- * 统计摘要 HTML
- * @param {{synced:number, missing:number, optional:number, legacy:number}} counts
- */
-export function summaryHTML(counts) {
-  // 状态标签已展示统计，摘要栏留空
-  return "";
 }
 
 /**

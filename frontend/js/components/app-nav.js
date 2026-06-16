@@ -66,6 +66,13 @@ class AppNav extends HTMLElement {
           border-bottom: 1px solid var(--bd);
         }
         .logo-icon { font-size: 20px; }
+        /* Logo 呼吸光晕 */
+        @keyframes logoBreathe {
+          0%, 100% { text-shadow: 0 0 4px color-mix(in srgb, var(--accent) 0%, transparent); }
+          50% { text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent); }
+        }
+        .logo-icon { animation: logoBreathe 3s ease-in-out infinite; }
+        .no-animations .logo-icon { animation: none !important; }
         .menu { padding: 4px 8px 8px; flex: 1; }
         .menu-label { font-size: var(--fs-xs); color: var(--muted); padding: 8px 10px 4px; text-transform: uppercase; letter-spacing: .5px; }
         .nav-item {

@@ -9,6 +9,7 @@ const RT_ICONS = {
   resourcepack: "🎨",
   shaderpack: "☀️",
   "create-blueprint": "⚙️",
+  litematic: "📐",
 };
 
 /**

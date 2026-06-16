@@ -5,7 +5,8 @@ export function fileIcon(name) {
   if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) return "📦";
   if (["pmx", "pmd"].includes(ext)) return "🎭";
   if (["vrca", "vrcw"].includes(ext)) return "🥽";
-  if (["nbt", "schematic", "schem", "litematic"].includes(ext)) return "⚙️";
+  if (["nbt", "schematic", "schem"].includes(ext)) return "⚙️";
+  if (ext === "litematic") return "📐";
   if (["png", "jpg", "jpeg", "gif", "webp", "bmp"].includes(ext)) return "🖼️";
   if (
     ["txt", "md", "json", "xml", "yml", "yaml", "cfg", "conf", "ini"].includes(

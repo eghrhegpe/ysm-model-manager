@@ -11,6 +11,7 @@ import (
 	"ysm-model-manager/go/dedup"
 	"ysm-model-manager/go/importer"
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/litematic"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
 
@@ -51,9 +52,75 @@ func (a *App) ReadPackMeta(path string) string {
 	return string(data)
 }
 
+// marshalVoxelData 调用体素构建函数并序列化为 JSON。
+func marshalVoxelData(tag, fnName, path string, buildFn func(string, int) (*types.LitematicVoxelData, error), maxBlocks int) string {
+	data, err := buildFn(path, maxBlocks)
+	if err != nil {
+		log.Printf("[%s] %s 失败 %s: %v", tag, fnName, path, err)
+		return "{}"
+	}
+	result, _ := json.Marshal(data)
+	return string(result)
+}
+
+// voxelMaxBlocks 从配置读取体素渲染上限，未设置时默认 200000。
+func (a *App) voxelMaxBlocks() int {
+	cfg := a.LoadAppConfig()
+	if cfg.VoxelMaxBlocks > 0 {
+		return cfg.VoxelMaxBlocks
+	}
+	return 200000
+}
+
+// GetNbtVoxelData 读取 .nbt 结构文件体素数据
+func (a *App) GetNbtVoxelData(path string) string {
+	return marshalVoxelData("nbt", "BuildNbtVoxelData", path, litematic.BuildNbtVoxelData, a.voxelMaxBlocks())
+}
+
+// GetSchematicVoxelData 读取 .schematic 文件体素数据
+func (a *App) GetSchematicVoxelData(path string) string {
+	return marshalVoxelData("schematic", "BuildSchematicVoxelData", path, litematic.BuildSchematicVoxelData, a.voxelMaxBlocks())
+}
+
+// ReadSchematic 读取 .schematic 文件基本信息
+func (a *App) ReadSchematic(path string) string {
+	result := litematic.ParseSchematic(path)
+	if result == nil {
+		return "{}"
+	}
+	data, _ := json.Marshal(result)
+	return string(data)
+}
+
+// ReadNbtStructure 读取 .nbt 结构文件基本信息
+func (a *App) ReadNbtStructure(path string) string {
+	result := litematic.ParseNbtStructure(path)
+	if result == nil {
+		return "{}"
+	}
+	data, _ := json.Marshal(result)
+	return string(data)
+}
+
 // ReadShaderpackLang 读取光影包 lang/en_US.lang 提取显示名
 func (a *App) ReadShaderpackLang(path string) string {
 	return packs.ReadShaderpackLang(path)
+}
+
+// ReadLitematicMeta 读取投影文件元数据（作者/时间/版本/方块统计/预览图）
+func (a *App) ReadLitematicMeta(path string) string {
+	meta, err := litematic.ParseMeta(path)
+	if err != nil {
+		log.Printf("[litematic] ParseMeta 失败 %s: %v", path, err)
+		return "{}"
+	}
+	data, _ := json.Marshal(meta)
+	return string(data)
+}
+
+// GetLitematicVoxelData 读取投影文件体素数据（按颜色分组的方块位置）
+func (a *App) GetLitematicVoxelData(path string) string {
+	return marshalVoxelData("litematic", "BuildVoxelData", path, litematic.BuildVoxelData, a.voxelMaxBlocks())
 }
 
 // DetectResourceType 检测指定文件的资源类型
@@ -93,6 +160,8 @@ func specificRoot(cfg types.AppConfig, rtype string) string {
 		return cfg.ShaderpackRoot
 	case "create-blueprint":
 		return cfg.SchematicRoot
+	case "litematic":
+		return cfg.LitematicRoot
 	case "mmd-skin":
 		return cfg.MmdRoot
 	case "vrchat-avatar":
@@ -176,6 +245,8 @@ func (a *App) SetResourceRoot(rtype, path string) error {
 		cfg.ShaderpackRoot = path
 	case "create-blueprint":
 		cfg.SchematicRoot = path
+	case "litematic":
+		cfg.LitematicRoot = path
 	case "mmd-skin":
 		cfg.MmdRoot = path
 	case "vrchat-avatar":
@@ -191,6 +262,13 @@ func (a *App) SetResourceRoot(rtype, path string) error {
 // ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值）
 func (a *App) ResetResourceRoot(rtype string) error {
 	return a.SetResourceRoot(rtype, "")
+}
+
+// SetVoxelMaxBlocks 设置 3D 体素渲染上限，0=恢复默认 200000
+func (a *App) SetVoxelMaxBlocks(limit int) error {
+	cfg := a.LoadAppConfig()
+	cfg.VoxelMaxBlocks = limit
+	return a.saveConfig(cfg)
 }
 
 // saveConfig 写入配置到文件

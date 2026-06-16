@@ -15,6 +15,7 @@ export function headerHTML() {
     '<div class="dd-item" data-sync-type="resourcepack" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">🎨 资源包</div>' +
     '<div class="dd-item" data-sync-type="shaderpack" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">☀️ 光影包</div>' +
     '<div class="dd-item" data-sync-type="create-blueprint" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">⚙️ 蓝图</div>' +
+    '<div class="dd-item" data-sync-type="litematic" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">📐 投影</div>' +
     "</div></div>" +
     '<div class="dd-wrap" style="position:relative;display:inline-block">' +
     '<button class="sidebar-pull-selected" style="padding:3px 8px;border-radius:4px;border:1px solid var(--sm-optional);background:transparent;color:var(--sm-optional);cursor:pointer;font-size:9px;font-family:inherit">⬇️ 拉取所选 ▾</button>' +
@@ -26,6 +27,7 @@ export function headerHTML() {
     '<div class="dd-item" data-sync-type="resourcepack" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">🎨 资源包</div>' +
     '<div class="dd-item" data-sync-type="shaderpack" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">☀️ 光影包</div>' +
     '<div class="dd-item" data-sync-type="create-blueprint" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">⚙️ 蓝图</div>' +
+    '<div class="dd-item" data-sync-type="litematic" style="padding:4px 8px;cursor:pointer;border-radius:4px;color:var(--txt)">📐 投影</div>' +
     "</div></div>" +
     "</div>"
   );
@@ -74,7 +76,7 @@ export function vcHeaderHTML(
     (missing > 0 && hasMod ? `<span class="tag red">${missing}</span> ` : "") +
     (extra > 0 ? `<span class="tag orange">${extra}</span>` : "") +
     (!hasMod
-      ? `<span class="tag gray">🚫 无${{ ysm: "YSM", "mmd-skin": "MMD", "vrchat-avatar": "VRC", resourcepack: "资源包", shaderpack: "光影包", "create-blueprint": "蓝图" }[rtype] || rtype}</span>`
+      ? `<span class="tag gray">🚫 无${{ ysm: "YSM", "mmd-skin": "MMD", "vrchat-avatar": "VRC", resourcepack: "资源包", shaderpack: "光影包", "create-blueprint": "蓝图", litematic: "投影" }[rtype] || rtype}</span>`
       : allZero
         ? `<span class="tag">0</span>`
         : "");

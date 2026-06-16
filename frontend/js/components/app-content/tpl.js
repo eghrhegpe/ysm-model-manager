@@ -20,6 +20,7 @@ export function repositoryHTML() {
     '<button class="repo-subtab" data-rtab="resourcepack">🎨 资源包</button>' +
     '<button class="repo-subtab" data-rtab="shaderpack">☀️ 光影包</button>' +
     '<button class="repo-subtab" data-rtab="create-blueprint">⚙️ 蓝图</button>' +
+    '<button class="repo-subtab" data-rtab="litematic">📐 投影</button>' +
     "</div>" +
     '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
     '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;min-width:0">' +
@@ -70,6 +71,7 @@ export function resourceLibraryHTML() {
     '<button class="repo-tab" data-rtab="resourcepack">🎨 资源包</button>' +
     '<button class="repo-tab" data-rtab="shaderpack">☀️ 光影包</button>' +
     '<button class="repo-tab" data-rtab="create-blueprint">⚙️ 蓝图</button>' +
+    '<button class="repo-tab" data-rtab="litematic">📐 投影</button>' +
     "</div>" +
     '<div id="res-panel" style="flex:1;display:flex;overflow:hidden"></div>' +
     "</div>"
@@ -229,6 +231,16 @@ export function settingsHTML() {
     </select>
   </div>
   <div class="stg-hint">启动程序时自动打开的页面。</div>
+</div>
+
+<div class="section-title stg-title stg-sub-title">🧊 3D 预览</div>
+
+<div class="settings-group" style="margin-bottom:12px">
+  <div class="setting-row">
+    <span class="label">🔢 体素渲染上限</span>
+    <input type="number" id="set-voxel-max-blocks" class="stg-select" style="width:140px" min="50000" max="100000000" step="100000" placeholder="200000">
+  </div>
+  <div class="stg-hint">3D 体素预览中允许的最大方块数量。增大可显示更多内容，但会占用更多内存。默认 200,000。</div>
 </div>
 
 </div>

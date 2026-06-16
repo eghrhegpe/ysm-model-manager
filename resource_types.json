@@ -35,12 +35,23 @@
     },
     {
       "id": "create-blueprint",
-      "name": "蓝图",
+      "name": "蓝图 / 结构",
       "icon": "⚙️",
-      "extensions": [".nbt", ".schematic", ".litematic"],
+      "extensions": [".nbt", ".schematic"],
       "installDir": "schematics/",
       "instanceLevel": false,
       "preview": "none",
+      "detector": "extension",
+      "actions": ["import", "delete", "openFolder"]
+    },
+    {
+      "id": "litematic",
+      "name": "投影文件",
+      "icon": "📐",
+      "extensions": [".litematic"],
+      "installDir": "schematics/",
+      "instanceLevel": false,
+      "preview": "3d",
       "detector": "extension",
       "actions": ["import", "delete", "openFolder"]
     },

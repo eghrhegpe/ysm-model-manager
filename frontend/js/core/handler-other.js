@@ -130,6 +130,7 @@ export function registerInstanceOps(unsubs) {
               resourcepack: "资源包",
               shaderpack: "光影包",
               "create-blueprint": "蓝图",
+              litematic: "投影",
             }[rtype] || rtype
           : "全部";
         const confirmed = await modalConfirm({

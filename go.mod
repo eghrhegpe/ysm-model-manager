@@ -3,6 +3,7 @@ module ysm-model-manager
 go 1.25.0
 
 require (
+	github.com/Tnze/go-mc v1.20.2
 	github.com/bodgit/sevenzip v1.6.4
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/tetratelabs/wazero v1.12.0

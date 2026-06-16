@@ -300,6 +300,16 @@ class AppContent extends HTMLElement {
             );
             this._unsubs = this._unsubs || [];
             if (cbCleanup) this._unsubs.push(cbCleanup);
+          } else if (tab === "litematic") {
+            const { initResourcePacks } =
+              await import("../../features/resource-packs.js");
+            const ltCleanup = await initResourcePacks(
+              container,
+              this,
+              "litematic",
+            );
+            this._unsubs = this._unsubs || [];
+            if (ltCleanup) this._unsubs.push(ltCleanup);
           } else if (tab === "mmd-skin") {
             const { initResourcePacks } =
               await import("../../features/resource-packs.js");

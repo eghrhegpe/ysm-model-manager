@@ -126,3 +126,42 @@ type PackMeta struct {
 func (pm *PackMeta) Desc() string {
 	return descString(pm.Pack.Description)
 }
+
+// ===== Litematica 投影文件类型 =====
+
+// LitematicMeta 投影文件元数据（对应 .litematic 中 Metadata compound）
+type LitematicMeta struct {
+	Name                 string               `json:"name"`
+	Author               string               `json:"author"`
+	Description          string               `json:"description"`
+	TimeCreated          int64                `json:"timeCreated"`          // unix 毫秒
+	TimeModified         int64                `json:"timeModified"`         // unix 毫秒
+	MinecraftDataVersion int                  `json:"minecraftDataVersion"` // MC 数据版本号
+	Version              int                  `json:"version"`              // Litematica 格式版本
+	TotalBlocks          int                  `json:"totalBlocks"`          // 非空气方块总数
+	TotalVolume          int                  `json:"totalVolume"`          // 包围盒总体积（含空气）
+	EnclosingSize        [3]int               `json:"enclosingSize"`        // [x, y, z]
+	RegionCount          int                  `json:"regionCount"`
+	BlockStats           []LitematicBlockStat `json:"blockStats"`   // 按数量降序排列
+	PreviewImage         string               `json:"previewImage"` // "data:image/png;base64,..." 或 ""
+}
+
+// LitematicBlockStat 方块类型统计
+type LitematicBlockStat struct {
+	Name  string `json:"name"` // "minecraft:stone"
+	Count int    `json:"count"`
+}
+
+// LitematicVoxelData 体素渲染数据
+type LitematicVoxelData struct {
+	Size      [3]int       `json:"size"`      // 包围盒尺寸 [x, y, z]
+	Groups    []VoxelGroup `json:"groups"`    // 按颜色分组的方块
+	Truncated bool         `json:"truncated"` // 超过上限被截断
+	MaxBlocks int          `json:"maxBlocks"` // 生效的渲染上限
+}
+
+// VoxelGroup 同一颜色的方块组
+type VoxelGroup struct {
+	Color     string     `json:"color"`     // 十六进制颜色 "#7F7F7F"
+	Positions [][3]int16 `json:"positions"` // [[x,y,z], ...]
+}

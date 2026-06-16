@@ -25,6 +25,7 @@ export async function initSettings(root) {
     resourcepack: "resourcepacks",
     shaderpack: "shaderpacks",
     "create-blueprint": "schematics",
+    litematic: "litematics",
     "mmd-skin": "mmd",
     "vrchat-avatar": "vrchat",
   };
@@ -111,8 +112,14 @@ export async function initSettings(root) {
     {
       rtype: "create-blueprint",
       icon: "⚙️",
-      name: "蓝图",
+      name: "蓝图 / 结构",
       cfgKey: "schematicRoot",
+    },
+    {
+      rtype: "litematic",
+      icon: "📐",
+      name: "投影文件",
+      cfgKey: "litematicRoot",
     },
     { rtype: "mmd-skin", icon: "🎭", name: "MMD 模型", cfgKey: "mmdRoot" },
     {
@@ -728,4 +735,23 @@ export async function initSettings(root) {
       type: "success",
     });
   });
+
+  // 体素渲染上限
+  const voxelInput = root.getElementById("set-voxel-max-blocks");
+  if (voxelInput) {
+    voxelInput.value = cfg.voxelMaxBlocks || 200000;
+    voxelInput.addEventListener("change", async () => {
+      const v = parseInt(voxelInput.value, 10) || 200000;
+      const limit = Math.max(50000, Math.min(100000000, v));
+      voxelInput.value = limit;
+      try {
+        const { SetVoxelMaxBlocks } = await import("../../../wailsjs/go/main/App.js");
+        await SetVoxelMaxBlocks(limit);
+        cfg.voxelMaxBlocks = limit;
+        bus.emit("toast:show", { msg: "✅ 体素上限已设为 " + limit.toLocaleString(), duration: 2000, type: "success" });
+      } catch (e) {
+        bus.emit("toast:show", { msg: "❌ 保存失败: " + (e?.message || e), duration: 3000, type: "error" });
+      }
+    });
+  }
 }

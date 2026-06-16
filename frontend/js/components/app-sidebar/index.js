@@ -41,6 +41,7 @@ class AppSidebar extends HTMLElement {
           resourcepack: "资源包",
           shaderpack: "光影包",
           "create-blueprint": "蓝图",
+          litematic: "投影",
         };
         btn.textContent = "⬇️ 一键安装" + (labels[this._rtype] || "资源");
       }
@@ -152,7 +153,7 @@ class AppSidebar extends HTMLElement {
 
     const allTypes = [
       "ysm", "mmd-skin", "vrchat-avatar",
-      "resourcepack", "shaderpack", "create-blueprint",
+      "resourcepack", "shaderpack", "create-blueprint", "litematic",
     ];
     const resolveTypes = (t) => (t === "all" ? allTypes : [t]);
 

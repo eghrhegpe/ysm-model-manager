@@ -141,6 +141,7 @@ export async function startDedup(root, esc, rtype) {
     { id: "resourcepack", icon: "🎨", label: "资源包" },
     { id: "shaderpack", icon: "☀️", label: "光影包" },
     { id: "create-blueprint", icon: "⚙️", label: "蓝图" },
+    { id: "litematic", icon: "📐", label: "投影" },
   ];
   const typeLabel = rtype
     ? rtDefs.find((d) => d.id === rtype)?.label || rtype

@@ -105,6 +105,8 @@ export function GetInstanceSyncStatus(arg1:string):Promise<string>;
 
 export function GetLinkMode():Promise<string>;
 
+export function GetLitematicVoxelData(arg1:string):Promise<string>;
+
 export function GetMinecraftPaths():Promise<Array<string>>;
 
 export function GetModel3DSpec(arg1:string):Promise<string>;
@@ -113,11 +115,15 @@ export function GetModelTags(arg1:string):Promise<Array<string>>;
 
 export function GetModelTexSizes(arg1:string):Promise<Array<ysm.TexInfo>>;
 
+export function GetNbtVoxelData(arg1:string):Promise<string>;
+
 export function GetPackInfo(arg1:string):Promise<types.PackInfo>;
 
 export function GetRepoRoot(arg1:string):Promise<string>;
 
 export function GetResourceInstanceStatus(arg1:string,arg2:string,arg3:string):Promise<Array<types.InstanceStatus>>;
+
+export function GetSchematicVoxelData(arg1:string):Promise<string>;
 
 export function GetSubDirMap():Promise<Record<string, string>>;
 
@@ -209,7 +215,13 @@ export function QueueStatus():Promise<main.QueueStatusInfo>;
 
 export function ReadFileBytes(arg1:string):Promise<Array<number>>;
 
+export function ReadLitematicMeta(arg1:string):Promise<string>;
+
+export function ReadNbtStructure(arg1:string):Promise<string>;
+
 export function ReadPackMeta(arg1:string):Promise<string>;
+
+export function ReadSchematic(arg1:string):Promise<string>;
 
 export function ReadShaderpackLang(arg1:string):Promise<string>;
 
@@ -270,6 +282,8 @@ export function SetModelTags(arg1:string,arg2:Array<string>):Promise<void>;
 export function SetRepoRoot(arg1:string):Promise<void>;
 
 export function SetResourceRoot(arg1:string,arg2:string):Promise<void>;
+
+export function SetVoxelMaxBlocks(arg1:number):Promise<void>;
 
 export function StartProxy(arg1:number):Promise<void>;
 

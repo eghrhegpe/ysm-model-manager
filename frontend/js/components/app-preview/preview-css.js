@@ -97,6 +97,13 @@ ${btnBaseCSS}
 .ysm-tab-inactive { background:var(--surf);color:var(--txt); }
 .ysm-tab-row { display:flex;gap:2px;margin-bottom:6px; }
 .ysm-export-row { display:flex;gap:6px;margin-top:4px;align-items:center; }
+.lt-meta-row { font-size:var(--fs-sm);color:var(--txt);padding:2px 0;display:flex;justify-content:space-between; }
+.lt-meta-label { color:var(--muted); }
+.lt-block-row { display:flex;align-items:center;gap:6px;padding:1px 0;font-size:var(--fs-sm); }
+.lt-color-swatch { width:10px;height:10px;border-radius:2px;flex-shrink:0;border:1px solid var(--bd); }
+.lt-block-name { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt); }
+.lt-block-count { color:var(--muted);font-size:var(--fs-xs);flex-shrink:0; }
+.lt-material-list { margin-top:4px; }
 .ysm-export-btn { font-size:var(--fs-xs);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer; }
 .ysm-export-btn:hover { background:var(--hover); }
 .ysm-toggle-row { display:flex;align-items:center;gap:4px;margin-bottom:6px; }

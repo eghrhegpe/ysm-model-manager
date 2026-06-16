@@ -16,7 +16,8 @@ var ResourceExts = map[string][]string{
 	"vrchat-avatar":    {".vrca", ".vrm"},
 	"resourcepack":     {".zip"},
 	"shaderpack":       {".zip"},
-	"create-blueprint": {".nbt", ".schematic", ".litematic"},
+	"create-blueprint": {".nbt", ".schematic"},
+	"litematic":        {".litematic"},
 }
 
 // AllExts 所有支持的扩展名（去重后）
@@ -121,6 +122,8 @@ func StorageSubDir(rtype string) string {
 		return "shaderpacks"
 	case "create-blueprint":
 		return "schematics"
+	case "litematic":
+		return "litematics"
 	case "mmd-skin":
 		return "mmd"
 	case "vrchat-avatar":
@@ -145,6 +148,7 @@ func SubDirAll() map[string]string {
 		"resourcepack":     "resourcepacks",
 		"shaderpack":       "shaderpacks",
 		"create-blueprint": "schematics",
+		"litematic":        "schematics",
 		"mmd-skin":         "3d-skin/EntityPlayer",
 		"vrchat-avatar":    "vrchat-avatars",
 	}
@@ -164,6 +168,7 @@ func AllSubDirs() []SubDirEntry {
 		{SubDir: "resourcepacks",                  RType: "resourcepack"},
 		{SubDir: "shaderpacks",                    RType: "shaderpack"},
 		{SubDir: "schematics",                     RType: "create-blueprint"},
+		{SubDir: "schematics",                     RType: "litematic"},
 		{SubDir: "3d-skin/EntityPlayer",           RType: "mmd-skin"},
 		{SubDir: "vrchat-avatars",                 RType: "vrchat-avatar"},
 	}

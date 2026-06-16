@@ -49,6 +49,7 @@ export function initRecycleBin(app) {
     resourcepack: "🎨",
     shaderpack: "☀️",
     "create-blueprint": "⚙️",
+    litematic: "📐",
   };
   let _loadingAbort = null;
 

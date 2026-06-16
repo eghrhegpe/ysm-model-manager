@@ -155,8 +155,8 @@ export function renderSiteView(site, ctx) {
         '<div class="cr-preset-area">' +
         site.presetSearches
           .map(
-            (ps) =>
-              '<button class="cr-preset-btn" data-q="' +
+            (ps, i) =>
+              '<button class="cr-preset-btn" style="animation-delay:' + Math.min(i * 25, 300) + 'ms" data-q="' +
               esc(ps.q || ps.label) +
               '">' +
               esc(ps.label) +
@@ -199,14 +199,14 @@ export function renderSiteView(site, ctx) {
       const tags = [...tagSet];
       parts.push(
         '<div class="cr-tag-filter-row">' +
-          '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
-          '<button class="cr-tag-filter-btn" data-tag="creator">🎮 模型创作者</button>' +
-          '<button class="cr-tag-filter-btn" data-tag="official">🏠 官方IP</button>' +
+          '<button class="cr-tag-filter-btn active" style="animation-delay:0ms" data-tag="">🎯 全部</button>' +
+          '<button class="cr-tag-filter-btn" style="animation-delay:30ms" data-tag="creator">🎮 模型创作者</button>' +
+          '<button class="cr-tag-filter-btn" style="animation-delay:60ms" data-tag="official">🏠 官方IP</button>' +
           tags
             .filter((t) => t !== "creator" && t !== "official")
             .map(
-              (t) =>
-                '<button class="cr-tag-filter-btn" data-tag="' +
+              (t, i) =>
+                '<button class="cr-tag-filter-btn" style="animation-delay:' + Math.min((i + 3) * 30, 300) + 'ms" data-tag="' +
                 esc(t) +
                 '">' +
                 getTagIconFromRole(t) +

@@ -2,12 +2,14 @@
 
 export function headerHTML() {
   return `<div class="hdr">
-<div class="hdr-row">
+<div class="hdr-row hdr-search-row">
   <input class="srch-inp" id="srch" type="text" placeholder="🔍 搜索模型名称..." autocomplete="off">
+</div>
+<div class="hdr-row hdr-btn-row">
   <button class="btn-base sm" id="btn-adv-filter" title="高级筛选（骨骼/立方体/纹理）">⚙️ 筛选</button>
   <div class="dd-wrap" id="dd-authors"><button class="btn-base sm" id="btn-authors">🎨 作者 ▾</button><div class="dd-menu" id="menu-authors"></div></div>
-  <div class="dd-wrap" id="dd-batch"><button class="btn-base sm" id="btn-batch">⚡ 批量 ▾</button><div class="dd-menu" id="menu-batch"><button class="dd-item" data-batch="enable-all">✅ 全部启用</button><button class="dd-item" data-batch="disable-all">⛔ 全部禁用</button></div></div>
-  <div class="dd-wrap" id="dd-more"><button class="btn-base sm" id="btn-more">⋮ 更多 ▾</button><div class="dd-menu" id="menu-more"><button class="dd-item" data-more="import-file">📥 导入文件</button><button class="dd-item" data-more="import-dir">📁 导入文件夹</button><button class="dd-item" data-more="sel-all" id="sel-all">☑️ 全选</button><button class="dd-item" data-more="repo-export" id="repo-export">📋 骨骼结构</button><div style="border-top:1px solid var(--bd);margin:2px 0"></div><button class="dd-item" data-more="open-folder">📂 打开文件夹</button><button class="dd-item" data-more="refresh">🔄 刷新</button><button class="dd-item" data-more="genindex">📇 生成索引</button></div></div>
+  <div class="dd-wrap" id="dd-batch"><button class="btn-base sm" id="btn-batch">⚡ 批量 ▾</button><div class="dd-menu" id="menu-batch"><button class="dd-item" data-batch="enable-all">✅ 全部启用</button><button class="dd-item" data-batch="disable-all"> 全部禁用</button></div></div>
+  <div class="dd-wrap" id="dd-more"><button class="btn-base sm" id="btn-more">⋮ 更多 ▾</button><div class="dd-menu" id="menu-more"><button class="dd-item" data-more="import-file"> 导入文件</button><button class="dd-item" data-more="import-dir">📁 导入文件夹</button><button class="dd-item" data-more="sel-all" id="sel-all">☑️ 全选</button><button class="dd-item" data-more="repo-export" id="repo-export"> 骨骼结构</button><div style="border-top:1px solid var(--bd);margin:2px 0"></div><button class="dd-item" data-more="open-folder">📂 打开文件夹</button><button class="dd-item" data-more="refresh">🔄 刷新</button><button class="dd-item" data-more="genindex">📇 生成索引</button></div></div>
   <select class="sort-sel" id="sort"><option value="name">名称</option><option value="size">大小</option><option value="date">日期</option></select>
 </div>
 <div class="adv-filter" id="adv-filter" style="display:none">

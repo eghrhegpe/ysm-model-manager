@@ -92,7 +92,7 @@ export async function loadOldestModel(container, esc) {
         monthCounts
           .map((c, i) => {
             const pct = c / maxMonth;
-            const ht = 8 + Math.round(pct * 24);
+            const ht = 4 + Math.round(pct * 44);
             const color =
               c === 0
                 ? "var(--bd)"
@@ -107,17 +107,17 @@ export async function loadOldestModel(container, esc) {
               { month: "short" },
             );
             return (
-              '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">' +
-              '<div style="width:100%;height:' +
+              '<div class="heatmap-bar-wrap">' +
+              '<div class="heatmap-bar" style="height:' +
               ht +
               "px;background:" +
               color +
-              ';border-radius:3px;min-height:8px;transition:all .2s" title="' +
+              '" title="' +
               monthLabel +
               ": " +
               c +
               ' 个文件"></div>' +
-              '<span style="font-size:var(--fs-tiny);color:var(--muted);line-height:1">' +
+              '<span class="heatmap-bar-label">' +
               monthLabel +
               "</span></div>"
             );
@@ -133,7 +133,7 @@ export async function loadOldestModel(container, esc) {
       let oldestHtml = "";
       if (oldest4.length) {
         oldestHtml =
-          '<div style="display:flex;flex-wrap:wrap;gap:6px;width:100%">' +
+          '<div class="oldest-cards-row">' +
           oldest4
             .map((e) => {
               const ageDays = Math.floor((Date.now() - e.ModTime) / 86400000);
@@ -148,16 +148,16 @@ export async function loadOldestModel(container, esc) {
                 '" title="点击查看详情: ' +
                 esc(e.Name || "") +
                 '">' +
-                '<div class="name" title="' +
+                '<div class="oldest-card-name" title="' +
                 esc(e.Name || "") +
-                '">📄 ' +
+                '">' +
                 renderDisplayName(e.Name) +
                 "</div>" +
-                '<div class="meta"><span>📏 ' +
+                '<div class="oldest-card-meta"><span>📏 ' +
                 fmtSize(e.Size) +
                 "</span><span>📅 " +
                 dateStr +
-                "</span><span>🕒 " +
+                "</span><span> " +
                 ageDays +
                 " 天前</span></div></div>"
               );
@@ -188,20 +188,20 @@ export async function loadOldestModel(container, esc) {
               })
             : "";
           picks.push(
-            '<div class="model-card" style="flex:1;min-width:140px;max-width:200px" data-path="' +
+            '<div class="pick-card" data-path="' +
               esc(p.Path || p.Name || "") +
               '" title="点击查看详情: ' +
               esc(p.Name || "") +
               '">' +
-              '<div class="name" style="font-size:var(--fs-md)" title="' +
+              '<div class="name" title="' +
               esc(p.Name || "") +
               '">' +
               renderDisplayName(p.Name) +
               "</div>" +
-              '<div class="meta" style="font-size:var(--fs-sm);margin-top:4px"><span>📏 ' +
+              '<div class="meta"><span> ' +
               sizeStr +
               "</span>" +
-              (dateStr ? "<span>📅 " + dateStr + "</span>" : "") +
+              (dateStr ? "<span> " + dateStr + "</span>" : "") +
               "</div></div>",
           );
         }

@@ -24,6 +24,12 @@
 | [CLEANUP_RULES.md](CLEANUP_RULES.md) | 治理规则：9 条禁止模式 × severity × 检测方式 |
 | [DEPRECATED_NAMES.md](DEPRECATED_NAMES.md) | 废弃别名对照：可 grep 批量替换清单 |
 
+## 📊 参考数据
+
+| 文档 | 说明 |
+|------|------|
+| [pack-format-versions.md](pack-format-versions.md) | Minecraft `pack_format` 编号 ↔ 游戏版本映射表（与 `frontend/js/utils/pack-format.js` 同步维护） |
+
 ---
 
 ## 📦 发版记录
@@ -44,7 +50,7 @@
 - `Continue-*.md` / `dev-notes*.md` — 开发笔记
 - `plan-p7-*.md` — P7 计划草案
 - `audit-summary-*.md` / `refactor-report-*.md` — 审计/重构报告
-- `arch-changelog.md` / `event-catalog.md` / `events.md` / `ui-architecture.md` / `test-strategy.md` / `download-mirror-arch.md` / `mmdskin-analysis.md` / `pcl2-comparison.md` / `pack-format-versions.md` / `settings-persistence-postmortem.md`
+- `arch-changelog.md` / `event-catalog.md` / `events.md` / `ui-architecture.md` / `test-strategy.md` / `download-mirror-arch.md` / `mmdskin-analysis.md` / `pcl2-comparison.md` / `settings-persistence-postmortem.md`
 - 测试数据：`博丽灵梦ysm.json`、`各操作单价（估算）.txt`
 
 ---

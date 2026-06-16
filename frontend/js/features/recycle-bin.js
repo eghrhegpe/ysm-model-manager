@@ -98,7 +98,7 @@ export function initRecycleBin(app) {
 
       if (!entries || !entries.length) {
         list.innerHTML =
-          '<div style="padding:8px 12px;font-size:11px;color:var(--muted)">♻️ 回收站为空</div>';
+          '<div style="padding:8px 12px;font-size:11px;color:var(--muted);text-align:center">♻️ 回收站为空</div>';
         if (count) count.textContent = "空";
         return;
       }

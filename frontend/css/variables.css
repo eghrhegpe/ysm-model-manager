@@ -41,6 +41,9 @@
   --status-error: #f38ba8;    /* 错误/付费状态（原 --paid） */
   --size-ok: #a6e3a1;         /* 文件大小正常（原 --sz-green） */
   --size-large: #f38ba8;      /* 文件大小过大（原 --sz-red） */
+  --accent-btn-bg: color-mix(in srgb, var(--accent) 20%, transparent);
+  --accent-btn-color: var(--accent);
+  --accent-btn-border: color-mix(in srgb, var(--accent) 33%, transparent);
 }
 
 /* ===== 温暖木纹（明亮模式） ===== */
@@ -57,13 +60,16 @@
   --card-shadow: var(--shadow-sm);
   --card-shadow-hover: var(--shadow-md);
   --menu-indicator: #8b4513;
-  --meta-author: #8b4513;
-  --meta-work: #6a4e3a;
+  --meta-author: #b5651d;
+  --meta-work: #9b4d2a;
   --meta-date: #a0866a;
   --status-success: #2e7d32;  /* 绿色 — 与深色主题语义一致 */
   --status-error: #c62828;
   --size-ok: #2e7d32;
   --size-large: #c62828;
+  --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);
+  --accent-btn-color: var(--accent);
+  --accent-btn-border: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 /* ===== 极简深邃（专业向深色） ===== */
@@ -85,6 +91,9 @@
   --status-error: #f38ba8;
   --size-ok: #a6e3a1;
   --size-large: #f38ba8;
+  --accent-btn-bg: color-mix(in srgb, var(--accent) 20%, transparent);
+  --accent-btn-color: var(--accent);
+  --accent-btn-border: color-mix(in srgb, var(--accent) 33%, transparent);
 }
 
 /* ===== 字体系统 ===== */
@@ -191,6 +200,7 @@
 .no-animations .vm-card,
 .no-animations .cr-creator-card,
 .no-animations .repo-tab,
+.no-animations .repo-subtab,
 .no-animations .diag-btn,
 .no-animations .hdr-btn,
 .no-animations .btn,

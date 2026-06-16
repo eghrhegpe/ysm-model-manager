@@ -214,7 +214,7 @@ export async function startDedup(root, esc, rtype) {
 
     if (!totalGroups) {
       list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-success">✅ 没有重复文件</div>';
+        '<div class="stat-row diag-msg diag-msg-success" style="justify-content:center">✅ 没有重复文件</div>';
       return;
     }
 

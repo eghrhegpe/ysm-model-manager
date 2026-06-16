@@ -61,8 +61,14 @@ export function modelDetailHTML(meta) {
     return `<div class="content" id="preview-content">
 <h3>📄 模型信息</h3>
 <div class="dp-placeholder">
-  <div class="big-icon">📄</div>
+  <div class="big-icon"></div>
   <div class="dp-hint">点击左侧仓库文件查看详情</div>
+  <div class="dp-hints">
+    <span>💎 YSM 模型</span>
+    <span> MMD 皮肤</span>
+    <span>🥽 VRC 头像</span>
+    <span>🎨 资源包</span>
+  </div>
 </div>
 </div>`;
   }
@@ -111,7 +117,7 @@ export function statsCardHTML(model, modelPath, decodedBy) {
       .map((m) => {
         const sizeStr = m.finalSize && m.finalSize !== "—" ? m.finalSize : "";
         const texName = m.texKey !== "—" ? m.texKey : `纹理${m.texIdx}`;
-        return `<div class="ysm-card-row" style="font-size:9px;padding:1px 0" title="几何体文件 ${m.file} → 使用纹理 ${texName}${sizeStr ? "，" + sizeStr + "px" : ""}">├─ ${m.file} → ${texName}</div>`;
+        return `<div class="ysm-card-row" style="font-size:9px;padding:1px 0" title="几何体文件 ${m.file} → 使用纹理 ${texName}${sizeStr ? "，" + sizeStr + "px" : ""}">${m.file} → ${texName}</div>`;
       })
       .join("");
     texMapHtml = `<div class="ysm-card-section-label" style="margin-top:6px">📎 纹理分配 <span style="font-weight:400;font-size:9px;color:var(--muted)">— 每个几何体对应使用的纹理</span></div>${texMapHtml}`;
@@ -121,19 +127,19 @@ export function statsCardHTML(model, modelPath, decodedBy) {
 <div class="ysm-card-section ysm-section-blue">
   <div class="ysm-card-section-label">🔗 模型结构</div>
   <div class="ysm-card-row">
-    <span class="ysm-stat-label">├─ 骨骼 (Bones)</span><span class="ysm-card-val">${model.boneCount}</span> 根<br>
-    <span class="ysm-stat-label">└─ 立方体 (Cubes)</span><span class="ysm-card-val">${model.cubeCount}</span> 个
+    <span class="ysm-stat-label"> 骨骼 (Bones)</span><span class="ysm-card-val">${model.boneCount}</span> 根<br>
+    <span class="ysm-stat-label"> 立方体 (Cubes)</span><span class="ysm-card-val">${model.cubeCount}</span> 个
   </div>
 </div>
 <div class="ysm-card-section ysm-section-green">
   <div class="ysm-card-section-label">🖼️ 纹理尺寸</div>
   <div class="ysm-card-row">
-    └─ <span class="ysm-card-val">${model.texWidth || "?"} × ${model.texHeight || "?"}</span> px
+     <span class="ysm-card-val">${model.texWidth || "?"} × ${model.texHeight || "?"}</span> px
   </div>
   ${texMapHtml}
 </div>
 <div class="ysm-card-section ysm-section-orange">
   <div class="ysm-card-section-label">💾 文件信息</div>
-  <div class="ysm-card-row">└─ ${fmt}</div>
+  <div class="ysm-card-row">${fmt}</div>
 </div>`;
 }

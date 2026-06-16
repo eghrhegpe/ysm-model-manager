@@ -11,6 +11,9 @@ export const treeCSS = `
 .hdr { padding: 6px 12px; border-bottom: 1px solid var(--bd); }
 .hdr-row { display:flex; align-items:center; gap:4px; }
 .hdr-row + .hdr-row { margin-top:4px; }
+.hdr-search-row { margin-bottom:2px; }
+.hdr-search-row .srch-inp { width:100%; }
+.hdr-btn-row { justify-content:flex-start; flex-wrap:wrap; }
 .hdr-label { font-size:12px;font-weight:600;color:var(--txt);flex-shrink:0; }
 .hdr-spacer { flex:1; }
 .repo-bar-btn { padding:var(--pad-btn-tool) 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-btn-tool); }
@@ -69,7 +72,9 @@ ${btnBaseCSS}
 .fl { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px; font-size: var(--fs-base); transition: all var(--tr-normal); cursor: default; user-select: none; -webkit-user-select: none; }
 .fl:hover { background: var(--hover); }
 .fl.flash { background: #a6e3a122; }
-.fl.selected { background: rgba(137,180,250,.15); outline: 1px solid rgba(137,180,250,.3); }
+.fl.selected { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); padding-left: 2px; }
+.fl.selected:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.fh.selected { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); padding-left: 2px; }
 .fl .ck, .fh .ck { width: 22px; height: 12px; border-radius: 6px; background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background var(--tr-normal); font-size: 0; line-height: 0; }
 .fl .ck::after, .fh .ck::after { content: ""; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--txt); transition: left var(--tr-normal); }
 .fl .ck.on, .fh .ck.on { background: #a6e3a1; }

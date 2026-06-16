@@ -91,14 +91,14 @@ export function settingsHTML() {
 
 <div class="stg-grid">
     <!-- Row 1: 三栏 — 游戏根目录 + 链接模式 + 下载镜像源 -->
-    <div class="stg-card">
+    <div class="stg-card" style="animation-delay:0ms">
       <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🎮 游戏根目录<button class="btn-base sm" id="set-mc-detect">🔍 自动搜索</button></div>
       <div class="stg-card-body">
         <div class="stg-card-val" id="set-mc-path">加载中...</div>
         <div class="stg-card-desc">用于整合包同步，不影响文件存储位置</div>
       </div>
     </div>
-    <div class="stg-card">
+    <div class="stg-card" style="animation-delay:60ms">
       <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">
         <span class="label" style="font-size:13px;font-weight:600">🔗 链接模式</span>
         <button id="set-relink" class="btn-base sm">🔄 重新应用</button>
@@ -114,7 +114,7 @@ export function settingsHTML() {
         <div id="lm-hint-symlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0"><span style="color:#e5534b">❌ 不推荐：权限不足时文件被挂起</span></div>
       </div>
     </div>
-    <div class="stg-card">
+    <div class="stg-card" style="animation-delay:120ms">
       <div class="stg-card-hdr">
         <span class="label" style="font-size:13px;font-weight:600">🌐 下载镜像源</span>
       </div>
@@ -132,7 +132,7 @@ export function settingsHTML() {
   </div>
 
   <!-- Row 2: 文件存储路径（居左，宽度=1fr，展开后占全宽） -->
-  <div class="stg-card" id="stg-files-card" style="margin-top:8px">
+  <div class="stg-card" id="stg-files-card" style="margin-top:8px;animation-delay:180ms">
     <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">📁 文件存储路径<button class="btn" id="set-advanced-toggle" style="font-size:9px;padding:2px 8px">📂 展开 ▸</button></div>
     <div class="stg-card-body">
       <div class="stg-card-val" id="set-files-root">加载中...</div>
@@ -152,7 +152,7 @@ export function settingsHTML() {
 
 <div class="section-title stg-title">🌙 主题与外观</div>
 
-<div class="settings-group" style="margin-bottom:12px">
+<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:0ms">
   <div class="setting-row">
     <span class="label">🌙 主题模式</span>
     <select id="set-theme" class="stg-select">
@@ -167,7 +167,7 @@ export function settingsHTML() {
 <div class="section-title stg-title stg-sub-title">📐 字体与布局</div>
 
 <div style="display:flex;gap:12px">
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
       <span class="label" style="font-size:13px;font-weight:600">📏 基准字号</span>
     </div>
@@ -184,7 +184,7 @@ export function settingsHTML() {
     <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">调整整体界面文字大小，选择后立即生效</div>
   </div>
 
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:90ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
       <span class="label" style="font-size:13px;font-weight:600">🃏 创作者字体</span>
     </div>
@@ -195,7 +195,7 @@ export function settingsHTML() {
     <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">创作者卡片名字使用的艺术字体</div>
   </div>
 
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:120ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
       <span class="label" style="font-size:13px;font-weight:600">💳 卡片密度</span>
     </div>
@@ -209,7 +209,7 @@ export function settingsHTML() {
 
 <div class="section-title stg-title stg-sub-title">⚡ 行为与动画</div>
 
-<div class="settings-group" style="margin-bottom:12px">
+<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:180ms">
   <div class="setting-row">
     <span class="label">✨ 动画效果</span>
     <label class="stg-label" style="gap:8px">
@@ -219,7 +219,7 @@ export function settingsHTML() {
   <div class="stg-hint">关闭后仅保留布局过渡，移除 hover 和淡入淡出动画，适合低配设备。</div>
 </div>
 
-<div class="settings-group" style="margin-bottom:12px">
+<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:210ms">
   <div class="setting-row">
     <span class="label">🏠 启动默认页面</span>
     <select id="set-default-page" class="stg-select">
@@ -253,7 +253,7 @@ export function settingsHTML() {
 </div>
 
 <div style="display:flex;gap:12px;margin-bottom:12px">
-  <div style="flex:2;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+  <div style="flex:2;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
     <div style="font-size:13px;font-weight:600;margin-bottom:6px">🛠️ 这是什么？</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
       <b>YSM 模型管理器</b> 是一款面向 Minecraft YSM 模组的模型管理工具，帮你像 Steam 创意工坊一样管理你的模型收藏。
@@ -267,7 +267,7 @@ export function settingsHTML() {
     </div>
   </div>
 
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:90ms">
     <div style="font-size:13px;font-weight:600;margin-bottom:6px">💎 技术栈</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
       <div>🔹 Go + Wails v2（后端）</div>
@@ -281,7 +281,7 @@ export function settingsHTML() {
 </div>
 
 <div style="display:flex;gap:12px;margin-bottom:12px">
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:120ms">
     <div style="font-size:13px;font-weight:600;margin-bottom:6px">📦 资源链接</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.8">
       <div>🐙 GitHub：<a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
@@ -291,7 +291,7 @@ export function settingsHTML() {
     </div>
   </div>
 
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:150ms">
     <div style="font-size:13px;font-weight:600;margin-bottom:6px">💡 快速上手</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
       <div>1. 设置游戏目录和仓库路径</div>

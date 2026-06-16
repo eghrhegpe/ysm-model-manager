@@ -10,6 +10,7 @@
 4. **`docs/bug-chronicle.md`** — 已知 Bug 和排查路径
 5. **`docs/pending-cleanup.md`** — 待清除清单（调试代码是否还在）
 6. **`docs/Design.md`** — 设计规范（CSS 变量、布局、字号、颜色规则）
+7. **`docs/novel/SKELETON.md`** — 技术工程小说骨架（仅续写小说时必读）
 
 ## 第二条：确认当前状态
 

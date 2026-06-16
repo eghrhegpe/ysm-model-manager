@@ -235,6 +235,8 @@
 .no-animations.theme-cyber #root::before { animation: none !important; }
 .no-animations .menu { animation: none !important; }
 .no-animations .menu .item { animation: none !important; }
+/* 通用 stagger 入场 */
+.no-animations .stagger-in > * { animation: none !important; }
 /* 导入队列项目滑入 */
 .no-animations #dl-imported-list > div { animation: none !important; }
 /* 创作者卡片筛选淡出 */

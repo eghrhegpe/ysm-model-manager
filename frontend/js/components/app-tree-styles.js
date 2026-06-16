@@ -71,7 +71,7 @@ ${btnBaseCSS}
 .fl.flash { background: #a6e3a122; }
 .fl.selected { background: rgba(137,180,250,.15); outline: 1px solid rgba(137,180,250,.3); }
 .fl .ck, .fh .ck { width: 22px; height: 12px; border-radius: 6px; background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background var(--tr-normal); font-size: 0; line-height: 0; }
-.fl .ck::after, .fh .ck::after { content: ""; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--txt); transition: left .15s; }
+.fl .ck::after, .fh .ck::after { content: ""; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--txt); transition: left var(--tr-normal); }
 .fl .ck.on, .fh .ck.on { background: #a6e3a1; }
 .fl .ck.on::after, .fh .ck.on::after { left: 12px; }
 .fh .ck.partial { background: #f9a826; }
@@ -91,7 +91,7 @@ ${btnBaseCSS}
 /* 悬停快捷操作 */
 .hover-actions { display: none; gap: 2px; flex-shrink: 0; align-items: center; }
 .fl:hover .hover-actions { display: flex; }
-.ha-btn { font-size: var(--fs-sm); padding: 1px 3px; border-radius: 3px; cursor: pointer; opacity: .6; transition: all .12s; }
+.ha-btn { font-size: var(--fs-sm); padding: 1px 3px; border-radius: 3px; cursor: pointer; opacity: .6; transition: all var(--tr-fast); }
 .ha-btn:hover { opacity: 1; background: var(--hover); }
 .ficon { font-size: var(--fs-sm); }
 .tag-dot { font-size: 9px; margin-right: 2px; opacity: .7; vertical-align: middle; }

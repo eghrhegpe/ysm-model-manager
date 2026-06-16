@@ -7,12 +7,12 @@ import { renderFormattedText } from "../../utils/mc-format.js";
 export function containerHTML() {
   return (
     "<style>" +
-    ".sm-item{display:flex;align-items:center;gap:4px;padding:4px 10px;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background .12s}" +
+    ".sm-item{display:flex;align-items:center;gap:4px;padding:4px 10px;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background var(--tr-fast)}" +
     ".sm-item:hover{background:var(--hover)}" +
-    ".sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:4px;background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary);transition:background .12s,border-color .12s,color .12s}" +
+    ".sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:var(--radius-sm);background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary);transition:background var(--tr-fast),border-color var(--tr-fast),color var(--tr-fast)}" +
     ".sm-item-btn:hover{background:var(--hover)}" +
-    ".sm-tab{transition:all .12s}" +
-    ".sm-status-tab{transition:background .12s,color .12s,border-color .12s}" +
+    ".sm-tab{transition:var(--tr-fast)}" +
+    ".sm-status-tab{transition:background var(--tr-fast),color var(--tr-fast),border-color var(--tr-fast)}" +
     ".sm-empty{animation:fade-in .2s ease}" +
     ".sm-list{animation:fade-in .15s ease}" +
     ".sm-loading{display:flex;flex-direction:column;gap:8px;padding:12px}" +

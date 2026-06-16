@@ -1,6 +1,7 @@
 // ===== 诊断页初始化（为 _initDiagnostics 减负） =====
 import { bus } from "../../bus.js";
 import { renderDisplayName } from "../../utils/display.js";
+import { getApp } from "../../wails/app.js";
 
 /**
  * 初始化诊断页所有功能
@@ -12,7 +13,7 @@ export function initDiagnostics(root, esc) {
     .getElementById("diag-refresh")
     ?.addEventListener("click", () => loadDiagnosticsLogs(root, esc));
   root.getElementById("diag-clear")?.addEventListener("click", async () => {
-    const { ClearImportLogs } = await import("../../../wailsjs/go/main/App.js");
+    const { ClearImportLogs } = await getApp();
     await ClearImportLogs();
     loadDiagnosticsLogs(root, esc);
     bus.emit("toast:show", {
@@ -72,7 +73,7 @@ async function loadDiagnosticsLogs(root, esc) {
   const list = root.getElementById("diag-log-list");
   if (!list) return;
   try {
-    const { GetImportLogs } = await import("../../../wailsjs/go/main/App.js");
+    const { GetImportLogs } = await getApp();
     const logs = await GetImportLogs();
     if (!logs || !logs.length) {
       list.innerHTML =
@@ -163,7 +164,7 @@ export async function startDedup(root, esc, rtype) {
 
   try {
     const { FindDuplicateFiles, GetRepoRoot, MoveToRecycle } =
-      await import("../../../wailsjs/go/main/App.js");
+      await getApp();
 
     // 收集目标目录
     const targets = [];
@@ -359,7 +360,7 @@ async function scanConflicts(root, esc) {
     '<div class="scan-radar-wrap"><div class="scan-radar"></div><div class="scan-radar-dot"></div></div><div class="stat-row diag-msg diag-msg-muted" style="text-align:center">正在扫描整合包冲突...</div>';
   try {
     const { LoadAppConfig, ListVersionInstances, ScanModelEntries } =
-      await import("../../../wailsjs/go/main/App.js");
+      await getApp();
     const cfg = await LoadAppConfig();
     const mcRoot = cfg.mcRoot || cfg.McRoot || "";
     if (!mcRoot) {

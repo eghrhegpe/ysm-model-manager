@@ -1,6 +1,8 @@
-# YSM 模型管理器 — 项目状态文档
+# YSM 模型管理器 — 项目现状汇总
 
-更新时间：2026-06-16
+更新时间：2026-06-16  
+当前版本：**v1.7.8**  
+最近提交：`4abc76e v1.7.8 - 创作者频道头像提取优化 + 动画补齐`
 
 ---
 
@@ -16,26 +18,34 @@
 | **A 类修复** | `saveConfig` 加 `os.MkdirAll`、avatar `onerror` 兜底防注入 | `resource_bindings.go:185-195` `community-site-view.js:52,471` |
 | **错误处理** | `errors.js` 正则修复 `/network\|proxy\|fetch/i` | `errors.js:28` |
 | **代码审计修复** | 删 O(n²) 死代码、修正误导文案、空 catch 加日志 | `render.js` `events.js` `community-core.js` |
+| **GetRepoRoot 空类型修复** | `rtype == ""` 时返回 `cfg.FilesRoot`，解锁跨类型搜索 | `resource_bindings.go:69-87` ✅ v1.7.7 |
+| **动画系统** | 对话框、按钮、页面切换、预览面板、设置面板、同步管理器列表、回收站等全量动画 | v1.7.6 / v1.7.7，共 18+ 文件 |
+| **调试代码清理** | v1.7.4 遗留 16 处日志、fmt.Printf 已清 | v1.7.5 |
+| **暗色模式自动切换** | `matchMedia('change')` 监听，跟随 OS 自动切换 | v1.7.5 |
+| **右键打开文件位置** | Go 端新增 `RevealInExplorer` | v1.7.5 |
 
 ---
 
-## 🔧 本轮新增（头像增量刷新机制）
+## 🔧 本轮新增（v1.7.8）
 
 | 场景 | 触发 | 实现 |
 |------|------|------|
 | **A：下载完成刷新头像** | `queue:file-done` 解析 `[作者]` → 增量提取 → `bus.emit("avatar:refresh")` | `download-queue.js:157-179` |
-| **B：配置加载后重新提取** | `window.runtime.EventsOn("config-loaded")` → `extractAvatars()` 重跑 | `index.js:403-432` |
+| **B：配置加载后重新提取** | `window.runtime.EventsOn("config-loaded")` → `extractAvatars()` 重跑 | `app-content/index.js:403-432` |
+| **C：单卡片头像定点更新** | `avatar:refresh` 按 `dataset.name` 定位卡片，只替换 `<img>.src` | `app-content/index.js:564-574` ✅ v1.7.7/8 |
 | **防重复注册** | `window.__avatarConfigLoadedRegistered` + `this._avatarRefreshRegistered` | `index.js:426,565,75` |
+| **创作者频道动画补齐** | 列表 stagger 入场、空状态淡入、骨架屏 shimmer、hover 过渡 | `.sm-*` / `.cr-*` class |
 
 ---
 
 ## ⚠️ 已知遗留问题
 
-| 问题 | 位置 | 影响 | 备注 |
-|------|------|------|------|
-| `GetRepoRoot("")` 返回 `""` | `resource_bindings.go:210-220` | 仓库页"全部"标签跨类型搜索失效 | 需在 `default:` 分支后加 `return cfg.FilesRoot` |
-| 创作者详情 Overlay UX | 第三方评审建议 | 视觉锚点、交互细节待打磨 | 低优，CSS 不给免费 AI 动 |
-| 单卡片头像增量更新 | `showSiteView()` 会整页重渲 | 下载完成会有闪烁 | 后续可优化为按 `data-name` 定点替换 `<img>` |
+| 问题 | 位置 | 影响 | 优先级 |
+|------|------|------|--------|
+| 创作者详情 Overlay UX | 第三方评审建议 | 视觉锚点、交互细节待打磨 | 低（CSS 不给免费 AI 动） |
+| 术语/文案未统一 | 全项目 | 仓库/整合包/实例/资源类型混用 | **中**（已梳理术语表，待落地 `docs/TERMINOLOGY.md`） |
+| model2d 预览缓存 | `preview-cache.js` | 社区仓库重复解析浪费 CPU | **中**，但**暂缓**：多模态辅助下 Three.js canvas 序列化/失效复杂，当前瓶颈不在预览 |
+| 列表/网格视图切换 | `app-tree` | 仅卡片视图，缺紧凑列表 | **低**（P3 新功能，动画 P0-P1 做完再考虑） |
 
 ---
 
@@ -66,16 +76,24 @@ app.go                    # 启动、配置缓存、config-loaded emit
 app_config.go             # LoadAppConfig/SaveAppConfig（缓存优先）
 app_download.go           # QueueStatus、context.Context 取消
 app_avatar.go             # BatchExtractCreatorAvatars、CachedCreatorAvatar、DebugExtractCreatorAvatar
-resource_bindings.go      # saveConfig、GetRepoRoot("") bug 点
+resource_bindings.go      # saveConfig、GetRepoRoot
 ```
 
 ---
 
 ## 🎯 下一步可选方向
 
-1. **修 `GetRepoRoot("")`** — 1 行改动，解锁仓库页"全部"标签跨类型搜索
+1. **落地 `docs/TERMINOLOGY.md` 术语表** — 规范团队/AI 协作用词，统一文案
 2. **Overlay UX 微调** — 按第三方评审清单逐项改（需人工把关 CSS）
-3. **单卡片头像更新** — `avatar:refresh` 监听器里按 `data-name` 定点替换，避免整页闪烁
-4. **model2d 预览缓存** — 扩展现有 `preview-cache.js`，社区仓库浏览时复用骨骼图避免重复解析。**暂缓**：没多模态辅助搞 Three.js canvas 序列化/失效太难，且当前瓶颈不在预览
-5. **列表/网格视图切换** — 工具栏加 🗂/☰ 切换、紧凑行模板、`localStorage` 持久化。**低优**：新功能，P3 级别，动画 P0-P1 做完再考虑
-6. **发版** — `wails build -clean`、打 Git tag、写更新报告
+3. **model2d 预览缓存** — 扩展现有 `preview-cache.js`，复用骨骼图避免重复解析
+4. **列表/网格视图切换** — 工具栏加 🗂/☰ 切换、紧凑行模板、`localStorage` 持久化
+5. **前端测试覆盖扩展** — 当前 30 个测试（fmt/dom/data），后续覆盖 download-queue / render.js / 事件总线
+6. **Go 测试覆盖扩展** — 已测 ysm/dedup/fsutil/recycle/sync/tags，`installer/importer/watcher` 待补
+7. **发版** — `wails build -clean`、打 Git tag、写更新报告
+
+---
+
+## 构建状态
+
+- 前端 `npx vite build` 通过，仅剩 YSM WASM 数据文件过大的已有警告
+- Go 构建未报告异常

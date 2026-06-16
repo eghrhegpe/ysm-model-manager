@@ -24,7 +24,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .dp-name { font-size: 13px; font-weight: 600; color: var(--txt); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dp-status { font-size: var(--fs-sm); padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
 .dp-cards { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-.dp-card { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--bd); transition: background .12s; cursor:pointer; }
+.dp-card { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--bd); transition: background var(--tr-fast); cursor:pointer; }
 .dp-card:hover { background: var(--hover); }
 .dp-card.green { border-left: 3px solid var(--status-success); }
 .dp-card.red { border-left: 3px solid var(--status-error); }
@@ -36,7 +36,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .dp-card-label { font-size: var(--fs-sm); color: var(--muted); flex: 1; }
 .dp-card-action { flex-shrink: 0; }
 .dp-card-action .btn-base { padding: 3px 6px; font-size: var(--fs-xs); }
-.dp-expand-icon { font-size: var(--fs-tiny); margin-left: 2px; transition: transform .15s; }
+.dp-expand-icon { font-size: var(--fs-tiny); margin-left: 2px; transition: transform var(--tr-normal); }
 .dp-expand-icon.open { transform: rotate(90deg); }
 .dp-detail { font-size: var(--fs-sm); color: var(--txt); padding: 2px 4px; background: var(--surf); border-radius: 4px; flex:1; overflow-y:auto; min-height:0; margin-bottom:4px; }
 .dp-detail-hidden { display:none; }
@@ -57,7 +57,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 ${btnBaseCSS}
 
 /* ===== 旧按钮兼容层（逐步替换后删除） ===== */
-.btn { padding: 5px 0; border-radius: 6px; border: 1px solid var(--bd); background: transparent; color: var(--txt); cursor: pointer; font-size: var(--fs-base); font-family: inherit; transition: background .12s; }
+.btn { padding: 5px 0; border-radius: 6px; border: 1px solid var(--bd); background: transparent; color: var(--txt); cursor: pointer; font-size: var(--fs-base); font-family: inherit; transition: background var(--tr-fast); }
 .btn:hover { background: var(--hover); }
 .btn.accent { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 33%, transparent); }
 .btn.accent:hover { background: color-mix(in srgb, var(--accent) 33%, transparent); }
@@ -112,7 +112,7 @@ ${btnBaseCSS}
 
 /* === MMD 变体聚合 === */
 .dp-mmd-group { border:1px solid var(--bd);border-radius:6px;margin-bottom:4px;overflow:hidden; }
-.dp-mmd-group-hdr { display:flex;align-items:center;gap:4px;padding:4px 6px;cursor:pointer;font-size:var(--fs-sm);transition:background .12s; }
+.dp-mmd-group-hdr { display:flex;align-items:center;gap:4px;padding:4px 6px;cursor:pointer;font-size:var(--fs-sm);transition:background var(--tr-fast); }
 .dp-mmd-group-hdr:hover { background:var(--hover); }
 .dp-mmd-fold-icon { font-size:9px;color:var(--muted);transition:transform .2s ease;flex-shrink:0; }
 .dp-mmd-group-hdr .dp-mmd-fold-icon.rotated { transform:rotate(90deg); }
@@ -127,7 +127,7 @@ ${btnBaseCSS}
 .dp-mmd-group-body > * { overflow:hidden;min-height:0; }
 .dp-mmd-group-body.dp-mmd-open > * { overflow:visible; }
 .dp-mmd-group-body .dp-detail-item { font-size:var(--fs-sm); }
-.dp-mmd-sync-btn { width:100%;margin-top:4px;padding:3px 0;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:background .12s; }
+.dp-mmd-sync-btn { width:100%;margin-top:4px;padding:3px 0;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:background var(--tr-fast); }
 .dp-mmd-sync-btn:hover { background:var(--hover); }
 .dp-mmd-sync-btn:disabled { opacity:.5;cursor:default; }
 `;

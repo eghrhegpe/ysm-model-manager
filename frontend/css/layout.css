@@ -12,7 +12,7 @@
   right: 0;
   bottom: 0;
   min-height: 0;
-  transition: grid-template-columns 0.18s ease;
+  transition: grid-template-columns var(--tr-normal);
 }
 
 /* ===== 顶栏 ===== */

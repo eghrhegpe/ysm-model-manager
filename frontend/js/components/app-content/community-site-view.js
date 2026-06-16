@@ -730,22 +730,22 @@ export function renderSiteView(site, ctx) {
       btn.disabled = true;
       try {
         var m = await import("./community-core.js");
+        var App = await import("../../../wailsjs/go/main/App.js");
         var results = await Promise.all([
           m.fetchCommunityCreators(m.DEFAULT_COMMUNITY_URL),
           m.fetchCommunitySites(),
-          m.fetchCommunityGitHubRepos(),
-          m.fetchCommunityResourceTypes(),
+          App.LoadGitHubRepos().catch(function() { return []; }),
+          App.LoadResourceTypes().catch(function() { return "{}"; }),
         ]);
         var community = results[0],
           sitesData = results[1],
           gitHubRepos = results[2],
-          resourceTypes = results[3];
+          resourceTypesRaw = results[3];
         var logs = [];
         var changed = false;
 
         if (community && community.length) {
           var r1 = m.mergeCommunityCreators(allCreators, community);
-          var App = await import("../../../wailsjs/go/main/App.js");
           await App.SaveWorkshopCreators(allCreators);
           if (r1.added || r1.updated) {
             logs.push(
@@ -757,8 +757,7 @@ export function renderSiteView(site, ctx) {
         if (sitesData && sitesData.length) {
           var r2 = m.mergeCommunitySites(allSites, sitesData);
           if (r2.added > 0) {
-            var App2 = await import("../../../wailsjs/go/main/App.js");
-            await App2.SaveWorkshopSites(allSites);
+            await App.SaveWorkshopSites(allSites);
             logs.push("\u7AD9\u70B9: +" + r2.added);
             changed = true;
           }
@@ -767,7 +766,13 @@ export function renderSiteView(site, ctx) {
           logs.push("GitHub: " + gitHubRepos.length + " \u4ED3\u5E93");
           changed = true;
         }
-        if (resourceTypes && resourceTypes.length) {
+        // resourceTypesRaw 是 JSON 字符串，解析后取 resourceTypes 数组
+        var resourceTypes = [];
+        try {
+          var parsed = JSON.parse(resourceTypesRaw || "{}");
+          resourceTypes = parsed.resourceTypes || [];
+        } catch (_) {}
+        if (resourceTypes.length) {
           logs.push("\u7C7B\u578B: " + resourceTypes.length + " \u79CD");
           changed = true;
         }

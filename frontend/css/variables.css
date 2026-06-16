@@ -181,6 +181,14 @@
   transition-duration: 0s !important;
 }
 
+.no-animations .sm-item,
+.no-animations .sm-item-btn,
+.no-animations .sm-tab,
+.no-animations .sm-status-tab {
+  transition-duration: 0s !important;
+  animation: none !important;
+}
+
 /* ===== 无障碍支持：焦点状态 ===== */
 :focus-visible {
   outline: 2px solid var(--accent);

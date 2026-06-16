@@ -72,6 +72,7 @@ class AppContent extends HTMLElement {
     if (this._unsub) this._unsub();
     this._globalUnsubs.forEach((fn) => fn());
     this._globalUnsubs = [];
+    this._avatarRefreshRegistered = false;
     // 清理 _unsubs（dedup 等页面的事件订阅）
     if (this._unsubs && Array.isArray(this._unsubs)) {
       this._unsubs.forEach((fn) => {
@@ -401,11 +402,10 @@ class AppContent extends HTMLElement {
 
     // 后台批量提取创作者头像（仅首次完成后刷新）
     let avatarCache = {};
-    (async () => {
+    const extractAvatars = async () => {
       try {
         const { BatchExtractCreatorAvatars, DebugExtractCreatorAvatar } =
           await import("../../../wailsjs/go/main/App.js");
-        // 暴露给控制台调试
         window.__debugAvatar = DebugExtractCreatorAvatar;
         const result = await BatchExtractCreatorAvatars();
         const keys = Object.keys(result);
@@ -419,7 +419,17 @@ class AppContent extends HTMLElement {
       } catch (e) {
         dbg("avatar", "提取失败:", e?.message);
       }
-    })();
+    };
+    extractAvatars();
+
+    // 配置加载完成后重新提取（覆盖用户在创意工坊内改仓库路径的场景）
+    if (!window.__avatarConfigLoadedRegistered) {
+      window.__avatarConfigLoadedRegistered = true;
+      window.runtime.EventsOn("config-loaded", () => {
+        dbg("avatar", "配置已加载，重新提取头像");
+        extractAvatars();
+      });
+    }
 
     // 卡片点击 → 正文切换右侧视图，右侧 ↗ 按开关打开
     const openSite = (site, external = false) => {
@@ -550,6 +560,19 @@ class AppContent extends HTMLElement {
         };
       }
     };
+
+    // 下载完成后增量刷新创作者头像
+    if (!this._avatarRefreshRegistered) {
+      this._avatarRefreshRegistered = true;
+      this._globalUnsubs.push(
+        bus.on("avatar:refresh", ({ author, dataUri }) => {
+          if (avatarCache[author] !== dataUri) {
+            avatarCache[author] = dataUri;
+            if (currentSite) showSiteView(currentSite);
+          }
+        }),
+      );
+    }
 
     // 📦 显示 GitHub 仓库模型列表（比对本地已有文件）
     const showRepoModels = async (repo, models, source) => {

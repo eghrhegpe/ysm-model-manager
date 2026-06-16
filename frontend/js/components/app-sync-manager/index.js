@@ -291,7 +291,7 @@ export class AppSyncManager extends HTMLElement {
       listEl.innerHTML = emptyHTML(hint);
       return;
     }
-    listEl.innerHTML = this._filteredItems.map((it) => itemHTML(it)).join("");
+    listEl.innerHTML = this._filteredItems.map((it, i) => itemHTML(it, i)).join("");
   }
 
   _bindEvents() {

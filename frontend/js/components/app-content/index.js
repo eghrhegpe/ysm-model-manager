@@ -566,10 +566,18 @@ class AppContent extends HTMLElement {
       this._avatarRefreshRegistered = true;
       this._globalUnsubs.push(
         bus.on("avatar:refresh", ({ author, dataUri }) => {
-          if (avatarCache[author] !== dataUri) {
-            avatarCache[author] = dataUri;
-            if (currentSite) showSiteView(currentSite);
-          }
+          if (avatarCache[author] === dataUri) return;
+          avatarCache[author] = dataUri;
+          // 单卡片定点更新，避免整页重渲染
+          let found = false;
+          root.querySelectorAll(".cr-creator-card").forEach((c) => {
+            if (c.dataset.name === author) {
+              const img = c.querySelector(".cr-avatar");
+              if (img && img.tagName === "IMG") img.src = dataUri;
+              found = true;
+            }
+          });
+          if (!found && currentSite) showSiteView(currentSite);
         }),
       );
     }

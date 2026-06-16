@@ -864,6 +864,12 @@ ${btnBaseCSS}
 .recy-item.leaving { opacity:0; transform:translateX(20px); pointer-events:none; }
 @keyframes recyItemIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
 
+/* ===== 资源管理器动画 ===== */
+.rm-item { animation: rmItemIn .2s ease both; }
+@keyframes rmItemIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
+.rm-content { animation: rmContentIn .2s ease; }
+@keyframes rmContentIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
+
 /* ===== 响应式 ===== */
 @media (max-width:768px) {
   .cr-left,.gh-left,.ins-sidebar { width:100%; height:auto; border-right:none; flex-direction:row; flex-wrap:wrap; }

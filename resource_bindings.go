@@ -78,6 +78,10 @@ func (a *App) GetRepoRoot(rtype string) string {
 		if subDir != "" {
 			return filepath.Join(cfg.FilesRoot, subDir)
 		}
+		// 空 rtype 时返回 FilesRoot 根目录，供跨类型搜索使用
+		if rtype == "" {
+			return cfg.FilesRoot
+		}
 	}
 	return ""
 }

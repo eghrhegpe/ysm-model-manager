@@ -10,6 +10,7 @@
 |------|------|
 | [architecture.md](architecture.md) | 前端架构规范：组件拆分、三层解耦、共享工具 |
 | [Design.md](Design.md) | UI 设计规范：CSS 变量、4 套主题、布局、字体、颜色规则 |
+| [TERMINOLOGY.md](TERMINOLOGY.md) | 术语对照表：名词统一、UI 文案规范、AI 术语索引 |
 | [PROJECT_STATUS.md](PROJECT_STATUS.md) | **项目当前状态**：已完成功能、遗留问题、下一步方向 |
 
 ---
@@ -20,6 +21,8 @@
 |------|------|
 | [bug-chronicle.md](bug-chronicle.md) | Bug 排查记录 + Debug Path Review（核心参考） |
 | [pending-cleanup.md](pending-cleanup.md) | 待清理清单：调试代码、临时方案、技术债 |
+| [CLEANUP_RULES.md](CLEANUP_RULES.md) | 治理规则：9 条禁止模式 × severity × 检测方式 |
+| [DEPRECATED_NAMES.md](DEPRECATED_NAMES.md) | 废弃别名对照：可 grep 批量替换清单 |
 
 ---
 

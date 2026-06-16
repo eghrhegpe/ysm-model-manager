@@ -45,17 +45,21 @@ func IsInside(baseDir, path string) error {
 	return nil
 }
 
-// ContainsMinecraftMarker 检查路径中是否包含 .minecraft 标记
+// ContainsMinecraftMarker 检查路径中是否包含 .minecraft 或 minecraft 标记
+// PrismLauncher 实例目录下可能是 minecraft（无点），与 .minecraft 等价
 // 注意：不解析符号链接，调用方需自行处理
 func ContainsMinecraftMarker(path string) bool {
 	cleaned := filepath.Clean(path)
 	lower := strings.ToLower(cleaned)
-	mcMarker := strings.ToLower(string(filepath.Separator) + ".minecraft" + string(filepath.Separator))
-	if strings.Contains(lower, mcMarker) {
-		return true
-	}
-	if strings.HasSuffix(lower, strings.ToLower(string(filepath.Separator)+".minecraft")) {
-		return true
+	sep := strings.ToLower(string(filepath.Separator))
+	for _, marker := range []string{".minecraft", "minecraft"} {
+		mcMarker := sep + marker + sep
+		if strings.Contains(lower, mcMarker) {
+			return true
+		}
+		if strings.HasSuffix(lower, sep+marker) {
+			return true
+		}
 	}
 	return false
 }

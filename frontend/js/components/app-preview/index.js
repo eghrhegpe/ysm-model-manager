@@ -16,7 +16,7 @@ import {
 import { devLog, getPrefer3D, stripYsgpTextHeader } from "./preview-utils.js";
 import { decodeYsmViaWasm } from "./preview-wasm.js";
 import { create3DPreview } from "./preview-3d.js";
-import { showModelDetail, showResourcePack } from "./preview-detail.js";
+import { showModelDetail, showResourcePack, showShaderPack } from "./preview-detail.js";
 import { loadModelData } from "./preview-loader.js";
 import { setupBoneExport } from "./preview-bone-export.js";
 
@@ -81,6 +81,7 @@ class AppPreview extends HTMLElement {
     }
 
     if (this._mode === "model") {
+      this._preloadTypeRegistry();
       this._unsubs.push(
         bus.on("model:select", async ({ path, isDir }) => {
           if (isDir) {
@@ -502,21 +503,45 @@ class AppPreview extends HTMLElement {
     } catch (_) {}
   }
 
-  async _showModelDetail(path) {
-    // 检测文件类型，非 YSM 走通用预览
+  async _preloadTypeRegistry() {
     try {
-      const { DetectResourceType } =
-        await import("../../../wailsjs/go/main/App.js");
-      const rtype = await DetectResourceType(path);
-      if (rtype === "resourcepack") {
-        showResourcePack(this, path);
-        return;
-      }
+      const { LoadResourceTypes } = await import("../../../wailsjs/go/main/App.js");
+      const raw = await LoadResourceTypes();
+      const reg = JSON.parse(raw);
+      this._typeCache = reg.resourceTypes || [];
     } catch (_) {}
-    showModelDetail(this, path);
   }
 
-  /** 显示材质包信息（pack.mcmeta + pack.png） */
+  async _showModelDetail(path) {
+    // 检测文件类型
+    let rtype = "";
+    try {
+      const { DetectResourceType } = await import("../../../wailsjs/go/main/App.js");
+      rtype = await DetectResourceType(path) || "";
+    } catch (_) {}
+    if (rtype === "resourcepack") {
+      showResourcePack(this, path);
+      return;
+    }
+    // ysm 或无检测结果 → YSM 模型解析
+    if (!rtype || rtype === "ysm") {
+      showModelDetail(this, path);
+      return;
+    }
+    // 其他已知类型（shaderpack / create-blueprint / mmd-skin / vrchat-avatar）
+    showShaderPack(this, path, this._typeMeta(rtype));
+  }
+
+  _typeMeta(rtype) {
+    if (!this._typeReg) {
+      this._typeReg = {};
+      for (const t of (this._typeCache || [])) this._typeReg[t.id] = t;
+    }
+    const def = this._typeReg[rtype];
+    return { icon: def?.icon || "📦", label: def?.name || rtype };
+  }
+
+  /** 显示资源包信息（pack.mcmeta + pack.png） */
   async _showResourcePack(path) {
     showResourcePack(this, path);
   }

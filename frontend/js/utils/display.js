@@ -1,4 +1,5 @@
 // ===== 模型文件名解析 + 美化显示管线 =====
+import { renderFormattedText } from "./mc-format.js";
 
 /**
  * 解析模型文件名 → 结构化字段
@@ -119,11 +120,11 @@ export function renderDisplayName(raw, opts) {
     marked = marked.slice(0, m.idx) + "%%TOKEN%%" + marked.slice(m.idx + m.len);
   }
 
-  // 拆分后对非 token 部分转义，再拼回 token 的 HTML（token 已在 push 时 esc 过）
+  // 拆分后对非 token 部分渲染 § 分节符颜色 + 转义，再拼回 token 的 HTML
   var parts = marked.split("%%TOKEN%%");
   var html = "";
   for (var i = 0; i < parts.length; i++) {
-    html += esc(parts[i]);
+    html += renderFormattedText(parts[i]);
     if (i < matches.length) html += matches[i].html;
   }
 

@@ -345,7 +345,7 @@ func computeHash(path string) string {
 }
 
 // SyncResources 对比两个目录的资源文件差异，按文件名匹配
-// 用于资源库（材质包/光影包等）的全局 ↔ 整合包同步
+// 用于资源库（资源包/光影包等）的全局 ↔ 整合包同步
 // 只统计模型/资源相关扩展名的文件，忽略无关文件
 var syncAllowedExts = types.AllExts
 
@@ -373,7 +373,7 @@ func isResourcePackFolder(path string) bool {
 }
 
 // SyncResources 对比两个目录的资源文件差异，按文件名匹配
-// 用于资源库（材质包/光影包等）的全局 ↔ 整合包同步
+// 用于资源库（资源包/光影包等）的全局 ↔ 整合包同步
 // 只统计模型/资源相关扩展名的文件，忽略无关文件
 func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 	result := types.ResourceSyncResult{}
@@ -426,6 +426,7 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 		return nil
 	})
 
+
 	// 找出 synced / missing / extra
 	for name, gPath := range globalFiles {
 		if _, exists := instanceFiles[name]; exists {
@@ -447,7 +448,7 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 }
 
 // isDirTypeModelFolder 检查一个子目录是否包含 YSM/MMD 模型文件（即文件夹级资源）
-// 用于 YSM（ysm.json）和 MMD（.pmx/.pmd）类型的文件夹级同步
+// 用于 YSM（.ysm / ysm.json）和 MMD（.pmx/.pmd）类型的文件夹级同步
 func isDirTypeModelFolder(path string, rtype string) bool {
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -459,62 +460,72 @@ func isDirTypeModelFolder(path string, rtype string) bool {
 		}
 		low := strings.ToLower(e.Name())
 		base := strings.TrimSuffix(low, ".ban")
-		switch rtype {
-		case "ysm":
-			if base == "ysm.json" {
-				return true
-			}
-		case "mmd-skin":
-			ext := filepath.Ext(base)
-			if ext == ".pmx" || ext == ".pmd" {
-				return true
-			}
+		if isModelFile(base, rtype) {
+			return true
 		}
+	}
+	return false
+}
+
+// isModelFile 检查文件名（已 lowercase，去 .ban）是否为对应类型的模型文件
+func isModelFile(base string, rtype string) bool {
+	switch rtype {
+	case "ysm":
+		ext := filepath.Ext(base)
+		return base == "ysm.json" || ext == ".ysm" || ext == ".zip" || ext == ".7z"
+	case "mmd-skin":
+		ext := filepath.Ext(base)
+		return ext == ".pmx" || ext == ".pmd"
 	}
 	return false
 }
 
 // SyncResourcesDirLevel 按文件夹名对比资源（用于 YSM 的 ysm.json 文件夹和 MMD 的 .pmx/.pmd 文件夹）
 // 以文件夹名为单位，一个文件夹包含模型文件 + 纹理文件 = 一个整体
-// 路径存储：全局侧存全局路径，实例侧存实例路径；missing/extra 都是文件夹路径
+// 同时也会收集顶层平铺的模型文件（如 .ysm），以文件名（去扩展名）作为 key
+// 路径存储：全局侧存全局路径，实例侧存实例路径；missing/extra 都是路径
 func SyncResourcesDirLevel(globalDir, instanceDir, rtype string) types.ResourceSyncResult {
 	result := types.ResourceSyncResult{}
 
-	// 扫描全局目录，收集所有包含模型文件的文件夹名
-	globalDirs := make(map[string]string) // lowercase folder name → full path
-	filepath.Walk(globalDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			log.Printf("[sync] Walk 错误 %s: %v", path, err)
+	// 收集一个目录下的资源单元（子文件夹 + 顶层平铺模型文件）
+	collectEntries := func(rootDir string) map[string]string {
+		entries := make(map[string]string)
+		// 先扫描顶层平铺模型文件
+		if topEntries, err := os.ReadDir(rootDir); err == nil {
+			for _, e := range topEntries {
+				if e.IsDir() {
+					continue
+				}
+				low := strings.ToLower(e.Name())
+				base := strings.TrimSuffix(low, ".ban")
+				if isModelFile(base, rtype) {
+					key := strings.TrimSuffix(low, filepath.Ext(low))
+					entries[key] = filepath.Join(rootDir, e.Name())
+				}
+			}
+		}
+		// 再扫描子文件夹
+		filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				log.Printf("[sync] Walk 错误 %s: %v", path, err)
+				return nil
+			}
+			if !info.IsDir() || path == rootDir {
+				return nil
+			}
+			if isDirTypeModelFolder(path, rtype) {
+				name := strings.ToLower(info.Name())
+				// 文件夹优先于平铺文件（同名时覆盖）
+				entries[name] = path
+				return filepath.SkipDir
+			}
 			return nil
-		}
-		if !info.IsDir() || path == globalDir {
-			return nil
-		}
-		if isDirTypeModelFolder(path, rtype) {
-			name := strings.ToLower(info.Name())
-			globalDirs[name] = path
-			return filepath.SkipDir // 不递归子文件夹
-		}
-		return nil
-	})
+		})
+		return entries
+	}
 
-	// 扫描整合包目录，收集所有包含模型文件的文件夹名
-	instanceDirs := make(map[string]string)
-	filepath.Walk(instanceDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			log.Printf("[sync] Walk 错误 %s: %v", path, err)
-			return nil
-		}
-		if !info.IsDir() || path == instanceDir {
-			return nil
-		}
-		if isDirTypeModelFolder(path, rtype) {
-			name := strings.ToLower(info.Name())
-			instanceDirs[name] = path
-			return filepath.SkipDir
-		}
-		return nil
-	})
+	globalDirs := collectEntries(globalDir)
+	instanceDirs := collectEntries(instanceDir)
 
 	// 找出 synced / missing / extra
 	seen := make(map[string]bool)

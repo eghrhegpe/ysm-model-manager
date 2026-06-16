@@ -138,7 +138,7 @@ export async function startDedup(root, esc, rtype) {
     { id: "ysm", icon: "💎", label: "YSM 模型" },
     { id: "mmd-skin", icon: "🎭", label: "MMD 模型" },
     { id: "vrchat-avatar", icon: "🥽", label: "VRChat" },
-    { id: "resourcepack", icon: "🎨", label: "材质包" },
+    { id: "resourcepack", icon: "🎨", label: "资源包" },
     { id: "shaderpack", icon: "☀️", label: "光影包" },
     { id: "create-blueprint", icon: "⚙️", label: "蓝图" },
   ];

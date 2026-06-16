@@ -356,6 +356,7 @@ async function scanConflicts(root, esc) {
     const cfg = await LoadAppConfig();
     const mcRoot = cfg.mcRoot || cfg.McRoot || "";
     if (!mcRoot) {
+      if (scanBtn) { scanBtn.classList.remove("scanning"); scanBtn.textContent = "⚡ 开始扫描"; }
       list.innerHTML =
         '<div class="stat-row diag-msg diag-msg-error">请先设置游戏路径</div>';
       return;
@@ -363,6 +364,7 @@ async function scanConflicts(root, esc) {
 
     const instances = await ListVersionInstances(mcRoot);
     if (!instances || !instances.length) {
+      if (scanBtn) { scanBtn.classList.remove("scanning"); scanBtn.textContent = "⚡ 开始扫描"; }
       list.innerHTML =
         '<div class="stat-row diag-msg diag-msg-muted">没有找到整合包</div>';
       return;
@@ -390,26 +392,30 @@ async function scanConflicts(root, esc) {
       .sort((a, b) => b[1].length - a[1].length);
 
     if (!conflicts.length) {
+      if (scanBtn) { scanBtn.classList.remove("scanning"); scanBtn.textContent = "⚡ 开始扫描"; }
       list.innerHTML =
         '<div class="stat-row diag-msg diag-msg-success">✅ 未检测到文件名冲突</div>';
       return;
     }
 
-    let html = `<div class="stat-row diag-msg diag-msg-error">⚠️ 发现 ${conflicts.length} 个文件存在于多个整合包</div>`;
-    conflicts.slice(0, 50).forEach(([name, insNames]) => {
-      html += `<div class="conflict-row">
+    let html = `<div class="stat-row diag-msg diag-msg-error" style="animation:conflictRowIn .3s ease">⚠️ 发现 ${conflicts.length} 个文件存在于多个整合包</div>`;
+    conflicts.slice(0, 50).forEach(([name, insNames], i) => {
+      const delay = Math.min(i * 30, 600);
+      html += `<div class="conflict-row" style="animation-delay:${delay}ms">
 <span class="conflict-name">${renderDisplayName(name)}</span>
 <span class="conflict-ver">${insNames.length} 个整合包</span>
 </div>`;
-      insNames.forEach((n) => {
-        html += `<div class="conflict-ins">&nbsp;&nbsp;📦 ${esc(n)}</div>`;
+      insNames.forEach((n, j) => {
+        html += `<div class="conflict-ins" style="animation-delay:${delay + (j + 1) * 15}ms">&nbsp;&nbsp;📦 ${esc(n)}</div>`;
       });
     });
     if (conflicts.length > 50) {
       html += `<div class="stat-row diag-msg diag-msg-muted" style="font-size:10px">...还有 ${conflicts.length - 50} 个</div>`;
     }
+    if (scanBtn) { scanBtn.classList.remove("scanning"); scanBtn.textContent = "⚡ 开始扫描"; }
     list.innerHTML = html;
   } catch (err) {
+    if (scanBtn) { scanBtn.classList.remove("scanning"); scanBtn.textContent = "⚡ 开始扫描"; }
     list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">扫描失败: ${esc(String(err))}</div>`;
   }
 }

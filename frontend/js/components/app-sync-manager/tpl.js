@@ -6,7 +6,23 @@ import { renderFormattedText } from "../../utils/mc-format.js";
  */
 export function containerHTML() {
   return (
-    "<style>.sm-item:hover{background:var(--hover)}.sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:4px;background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary)}</style>" +
+    "<style>" +
+    ".sm-item{display:flex;align-items:center;gap:4px;padding:4px 10px;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background .12s}" +
+    ".sm-item:hover{background:var(--hover)}" +
+    ".sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:4px;background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary);transition:background .12s,border-color .12s,color .12s}" +
+    ".sm-item-btn:hover{background:var(--hover)}" +
+    ".sm-tab{transition:all .12s}" +
+    ".sm-status-tab{transition:background .12s,color .12s,border-color .12s}" +
+    ".sm-empty{animation:fade-in .2s ease}" +
+    ".sm-loading{display:flex;flex-direction:column;gap:8px;padding:12px}" +
+    ".sm-shimmer{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--bd) 25%,var(--hover) 50%,var(--bd) 75%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}" +
+    ".sm-shimmer-w80{width:80%}" +
+    ".sm-shimmer-w60{width:60%}" +
+    ".sm-shimmer-w70{width:70%}" +
+    "@keyframes sm-item-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}" +
+    "@keyframes fade-in{from{opacity:0}to{opacity:1}}" +
+    "@keyframes sk-shimmer{from{background-position:-200% 0}to{background-position:200% 0}}" +
+    "</style>" +
     '<div class="sm-wrap" style="display:flex;flex-direction:column;height:100%;overflow:hidden">' +
     // 类型标签栏
     '<div class="sm-tabs" style="display:flex;gap:2px;padding:2px 8px 0;flex-shrink:0;border-bottom:1px solid var(--bd);overflow-x:auto"></div>' +
@@ -90,7 +106,7 @@ export function summaryHTML(counts) {
  * 列表项 HTML
  * @param {{path:string, name:string, status:string, type:string, icon:string, size:number}} item
  */
-export function itemHTML(item) {
+export function itemHTML(item, index) {
   const esc = (s) =>
     String(s)
       .replace(/&/g, "&amp;")
@@ -126,7 +142,9 @@ export function itemHTML(item) {
     item.status +
     '" data-type="' +
     item.type +
-    '" style="display:flex;align-items:center;gap:4px;padding:4px 10px;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default">' +
+    '" style="animation:sm-item-in .2s ease both;animation-delay:' +
+    Math.min((index || 0) * 30, 300) +
+    'ms">' +
     '<span style="flex-shrink:0;width:14px;text-align:center;color:' +
     statusColor +
     '">' +
@@ -154,7 +172,7 @@ export function itemHTML(item) {
  */
 export function emptyHTML(msg) {
   return (
-    '<div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base)">' +
+    '<div class="sm-empty" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base)">' +
     '<div style="font-size:20px">📭</div>' +
     "<div>" +
     msg +
@@ -167,7 +185,13 @@ export function emptyHTML(msg) {
  * 加载中
  */
 export function loadingHTML() {
-  return '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:var(--fs-sm)">⏳ 加载中...</div>';
+  return (
+    '<div class="sm-loading">' +
+    '<div class="sm-shimmer sm-shimmer-w80"></div>' +
+    '<div class="sm-shimmer sm-shimmer-w60"></div>' +
+    '<div class="sm-shimmer sm-shimmer-w70"></div>' +
+    "</div>"
+  );
 }
 
 function formatSize(bytes) {

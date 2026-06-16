@@ -15,7 +15,19 @@ export function friendlyError(err, fallback = "操作失败") {
   if (/[\u4e00-\u9fff]/.test(msg)) return msg;
 
   // 常见错误模式匹配
+  // 优先级：社区抓取常见错误 > 通用文件/网络错误
   const patterns = [
+    // ===== 社区功能高频错误 =====
+    [/rate limit|429|too many requests/i, "GitHub API 访问频率受限，请稍后重试"],
+    [/abort|cancelled/i, "请求已取消"],
+    [/parse error|unexpected token|malformed|syntaxerror/i, "数据格式异常"],
+    [/dns|resolve|getaddrinfo|ENOTFOUND/i, "域名解析失败，请检查网络连接"],
+    [
+      /econnrefused|econnreset|eof|socket|connection refused|refused/i,
+      "连接中断，请检查网络稳定性",
+    ],
+    [/ssl|tls|certificate/i, "SSL/TLS 连接错误，请检查系统时间或网络"],
+    // ===== 通用文件/网络错误 =====
     [/access is denied|permission denied|eacces/i, "权限不足，无法访问文件"],
     [/no such file|not found|cannot find|does not exist/i, "文件或目录不存在"],
     [
@@ -24,7 +36,6 @@ export function friendlyError(err, fallback = "操作失败") {
     ],
     [/(?:is )?empty|no files/i, "目录为空，没有可操作的文件"],
     [/timeout|timed out/i, "连接超时，请检查网络"],
-    [/refused|connection refused/i, "连接被拒绝，请检查网络或防火墙"],
     [/network|proxy|fetch/i, "网络连接异常"],
     [/invalid argument|invalid/i, "参数无效"],
     [/already exists/i, "文件已存在"],

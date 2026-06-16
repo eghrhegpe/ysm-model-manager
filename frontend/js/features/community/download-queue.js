@@ -153,6 +153,30 @@ if (!_registered && typeof window !== "undefined" && window.runtime?.EventsOn) {
     STATE._lastDone = { name, status, errMsg: errMsg || "" };
     STATE._lastDoneSeq++;
     notify();
+
+    // 增量提取创作者头像（仅 .ysm 文件成功时）
+    if (status === "ok" && /\.ysm$/i.test(name)) {
+      const authorMatch = name.match(/^\[(.+?)\]/);
+      if (authorMatch) {
+        const author = authorMatch[1];
+        (async () => {
+          try {
+            const { CachedCreatorAvatar, DebugExtractCreatorAvatar } =
+              await import("../../../wailsjs/go/main/App.js");
+            let dataUri = await CachedCreatorAvatar(author);
+            if (!dataUri) {
+              await DebugExtractCreatorAvatar(author);
+              dataUri = await CachedCreatorAvatar(author);
+            }
+            if (dataUri) {
+              bus.emit("avatar:refresh", { author, dataUri });
+            }
+          } catch (e) {
+            dbg("avatar-refresh", "提取失败:", author, e?.message);
+          }
+        })();
+      }
+    }
   });
 
   window.runtime.EventsOn("download:progress", (dl, total) => {

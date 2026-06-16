@@ -216,19 +216,19 @@ export async function loadOldestModel(container, esc) {
 
       const curIcon = RT_ICONS[currentType] || "📦";
       container.innerHTML =
-        '<div style="display:flex;flex-direction:column;gap:16px;padding:16px;overflow-y:auto;height:100%">' +
-        '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
-        '<div style="display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:8px 14px;flex-shrink:0;align-self:flex-start">' +
-        '<div style="font-size:var(--fs-sm);color:var(--muted);white-space:nowrap">📊 健康度</div>' +
-        '<div class="health-ring" style="background:conic-gradient(' +
+        '<div class="oldest-page">' +
+        '<div class="oldest-stats-bar">' +
+        '<div class="oldest-health-box">' +
+        '<div class="oldest-health-label">📊 健康度</div>' +
+        '<div class="oldest-health-ring" style="background:conic-gradient(' +
         healthColor +
         " " +
         score +
         "%, var(--bd) " +
         score +
-        '% 100%);width:28px;height:28px;border-radius:50%;flex-shrink:0">' +
-        '<div class="health-ring-inner" style="position:relative;width:22px;height:22px;top:3px;left:3px;background:var(--surf);border-radius:50%;display:flex;align-items:center;justify-content:center">' +
-        '<span style="font-size:var(--fs-sm);font-weight:700;color:var(--txt)">' +
+        '% 100%)">' +
+        '<div class="oldest-health-ring-inner">' +
+        '<span class="oldest-health-ring-num">' +
         score +
         "</span></div></div>" +
         '<span class="health-tag ' +
@@ -236,32 +236,33 @@ export async function loadOldestModel(container, esc) {
         '" style="font-size:var(--fs-sm)">' +
         healthLabel +
         "</span></div>" +
-        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
-        '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:var(--fs-sm);color:var(--txt);background:var(--bg);white-space:nowrap">' +
+        '<div class="oldest-stats-divider"></div>' +
+        '<div class="oldest-stats-row">' +
+        '<span class="oldest-stat-pill">' +
         curIcon +
         " " +
         entries.length +
         "</span>" +
-        '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:var(--fs-sm);color:var(--txt);background:var(--bg);white-space:nowrap">📏 ' +
+        '<span class="oldest-stat-pill">📏 ' +
         fmtSize(totalSize) +
         "</span>" +
-        '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:var(--fs-sm);color:var(--txt);background:var(--bg);white-space:nowrap">⛔ ' +
+        '<span class="oldest-stat-pill"> ' +
         banned +
         "</span>" +
-        '<span style="padding:3px 10px;border:1px solid var(--bd);border-radius:12px;font-size:var(--fs-sm);color:var(--txt);background:var(--bg);white-space:nowrap">🔗 ' +
+        '<span class="oldest-stat-pill">🔗 ' +
         dupGroups +
-        "</span></div>" +
-        '<div style="flex:3;min-width:280px;background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:12px 14px">' +
-        '<div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🏆 资历最深</div>' +
+        "</span></div></div>" +
+        '<div class="oldest-section">' +
+        '<div class="oldest-section-title">🏆 资历最深</div>' +
         '<div style="display:flex;justify-content:center">' +
         oldestHtml +
-        "</div></div></div>" +
-        '<div style="background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:8px 12px">' +
-        '<div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">📅 月度活动</div>' +
+        "</div></div>" +
+        '<div class="oldest-section">' +
+        '<div class="oldest-section-title-sm">📅 月度活动</div>' +
         heatmapHtml +
         "</div>" +
-        '<div style="text-align:center;background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:16px">' +
-        '<div style="font-size:var(--fs-base);color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🎲 今日推荐</div>' +
+        '<div class="oldest-section" style="text-align:center">' +
+        '<div class="oldest-section-title">🎲 今日推荐</div>' +
         '<div style="display:flex;justify-content:center">' +
         renderPicks() +
         "</div></div></div>";

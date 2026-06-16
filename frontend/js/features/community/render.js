@@ -163,6 +163,7 @@ export function renderCardsHTML(sites, esc) {
 
   let html = "";
   const order = ["search", "repo", "browse"];
+  let cardIdx = 0;
   order.forEach((g) => {
     if (!groups[g] || !groups[g].length) return;
     const info = GROUP_LABELS[g] || { icon: "🔗", label: g };
@@ -174,7 +175,7 @@ export function renderCardsHTML(sites, esc) {
       "</div>";
     groups[g].forEach((s) => {
       html +=
-        '<div class="gh-card" data-index="' +
+        '<div class="gh-card" style="animation-delay:' + Math.min(cardIdx * 30, 300) + 'ms" data-index="' +
         sites.indexOf(s) +
         '" data-group="' +
         g +
@@ -192,6 +193,7 @@ export function renderCardsHTML(sites, esc) {
         "</div>" +
         '<div class="gh-card-external" title="系统浏览器打开">↗</div>' +
         "</div>";
+      cardIdx++;
     });
   });
   return html;

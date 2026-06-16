@@ -685,7 +685,7 @@ class AppContent extends HTMLElement {
         grid.innerHTML = ghCreators
           .map(
             (cr, idx) =>
-              '<div class="gh-card gh-repo-card" data-index="' +
+              '<div class="gh-card gh-repo-card" style="animation-delay:' + Math.min(idx * 30, 300) + 'ms" data-index="' +
               idx +
               '" data-repo="' +
               this._esc(cr.name) +

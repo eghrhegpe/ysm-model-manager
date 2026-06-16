@@ -2,6 +2,7 @@
 // 读取/写入模型标签，支持输入新标签和选择已有标签
 import { esc } from "../utils/dom.js";
 import { bus } from "../bus.js";
+import { closeDlg } from "./modal.js";
 
 /**
  * 弹出标签编辑弹窗
@@ -141,10 +142,7 @@ export function modalTagEditor(modelPath) {
     });
     box.querySelector("#te-add").onclick = () => addTag(inputEl.value);
 
-    const close = (result) => {
-      overlay.remove();
-      resolve(result);
-    };
+    const close = (result) => closeDlg(overlay, resolve, result);
 
     box.querySelector("#te-cancel").onclick = () => close(null);
     box.querySelector("#te-save").onclick = async () => {

@@ -1,6 +1,7 @@
 // ===== sidebar 数据加载层 =====
 import { bus } from "../../bus.js";
 import { dbg } from "../../utils/debug.js";
+import { RESOURCE_TYPES } from "../../utils/resource-types.js";
 import {
   LoadAppConfig,
   ListVersionInstances,
@@ -23,8 +24,8 @@ export async function loadInstances(rtype) {
     if (!rawInstances || !rawInstances.length) return [];
 
     // 只按当前资源类型查询同步状态
-    const rtypeActual = rtype || "ysm";
-    const repoRoot = await GetRepoRoot("ysm");
+    const rtypeActual = rtype || RESOURCE_TYPES.YSM;
+    const repoRoot = await GetRepoRoot(rtypeActual);
     const statusList = await GetResourceInstanceStatus(
       rtypeActual,
       mcRoot,
@@ -35,7 +36,7 @@ export async function loadInstances(rtype) {
       statusMap[s.Name] = s;
     });
 
-    const isMmd = rtypeActual === "mmd-skin";
+    const isMmd = rtypeActual === RESOURCE_TYPES.MMD;
 
     const instances = rawInstances.map((ins) => {
       const st = statusMap[ins.Name] || {};

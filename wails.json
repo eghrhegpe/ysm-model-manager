@@ -80,6 +80,7 @@
     "BackupWorkshopCreators",
     "MergeWorkshopCreatorsFromJSON",
     "ReplaceWorkshopCreatorsFromJSON",
-    "ClearScanCache"
+    "ClearScanCache",
+    "PullResourceFromInstance"
   ]
 }

@@ -1,6 +1,7 @@
 // ===== 模型重命名对话框 =====
 // 用法: showRenameDialog(filePath, currentName) → 确认后调用 RenameFile
 import { parseModelName } from "../utils/display.js";
+import { closeDlg } from "./modal.js";
 
 export async function showRenameDialog(filePath, currentName) {
   return new Promise((resolve) => {
@@ -9,10 +10,7 @@ export async function showRenameDialog(filePath, currentName) {
     const overlay = document.createElement("div");
     overlay.tabIndex = 0;
     overlay.className = "dlg-overlay";
-    const close = (v) => {
-      overlay.remove();
-      resolve(v);
-    };
+    const close = (v) => closeDlg(overlay, resolve, v);
     overlay.onclick = (e) => {
       if (e.target === overlay) close(null);
     };

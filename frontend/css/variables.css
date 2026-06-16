@@ -182,7 +182,14 @@
 .no-animations .vc-header,
 .no-animations .logo-icon,
 .no-animations .toast,
-.no-animations .theme-ripple-active {
+.no-animations .theme-ripple-active,
+.no-animations .dlg-overlay,
+.no-animations .dlg-box,
+.no-animations .page,
+.no-animations .content > *,
+.no-animations .btn-base,
+.no-animations #set-advanced-panel,
+.no-animations .sm-list {
   transition-duration: 0s !important;
   animation: none !important;
 }
@@ -200,6 +207,13 @@
 .no-animations.theme-cyber #root::before { animation: none !important; }
 .no-animations .menu { animation: none !important; }
 .no-animations .menu .item { animation: none !important; }
+/* 导入队列项目滑入 */
+.no-animations #dl-imported-list > div { animation: none !important; }
+/* 创作者卡片筛选淡出 */
+.no-animations .cr-creator-card.cr-card-hidden { transition: none !important; }
+/* 对话框退场动画 */
+.no-animations .dlg-overlay.dlg-closing { animation: none !important; }
+.no-animations .dlg-overlay.dlg-closing .dlg-box { animation: none !important; }
 
 /* ===== 无障碍支持：焦点状态 ===== */
 :focus-visible {

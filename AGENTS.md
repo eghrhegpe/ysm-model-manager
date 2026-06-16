@@ -36,49 +36,20 @@ cd frontend ; npx vite build 2>&1 | Select-String error
 
 已在发版说明中记录，但快速提示：
 
+- **app-sync-manager 动画补齐**（v1.7.4）：`.sm-item`/`.sm-item-btn`/`.sm-tab`/`.sm-status-tab` 的 hover 过渡 + 列表项 `sm-item-in` stagger 入场 + 空状态淡入 + 骨架屏 shimmer。`.no-animations` 已覆盖全部 5 个 class。注意：骨架屏必须在 `.sm-list` 内渲染（`this.querySelector('.sm-list').innerHTML = loadingHTML()`），放兄弟节点会被 `overflow:hidden` 裁掉。
+
 ## 第六条：回滚规则
 
 如果 `multi_replace_string_in_file` 后构建失败，检查 import 语句是否完整，修复后继续。
 
-## 七、多 AI 角色分工（按前缀命中率）
+## 七、OpenCode 模型索引
 
-关键约束决定了下一步的提议：
+按任务场景选择当前会话使用的模型：
 
-| 约束                               | 影响                           |
-| ---------------------------------- | ------------------------------ |
-| 元宝 / 网页 DeepSeek 无 agent 模式 | 不能改文件，只能审计           |
-| M3 免费但连接慢                    | 适合改小代码（量少等得起）     |
-| OpenCode 快但缓存小                | 适合快速修小 bug，掉记忆无所谓 |
-| CodeBuddy / CodeGeeX 输出效率高    | 适合大段读写、跨文件重构       |
-| CSS 一崩用户失焦                   | **不给免费 AI 碰 CSS**         |
-| 发版没标签没法写更新报告           | 谁发标签？Copilot              |
-
-### 职责分配
-必须相互协作，才能发挥出各自服务商的优势
-
-| 职责                        | 用谁                  | 理由                                 |
-| --------------------------- | --------------------- | ------------------------------------ |
-| **发计划**                  | **Copilot**           | 上下文最长，缓存有记忆，计划不会跑偏 |
-| **审计代码**                | 元宝 / 网页 DeepSeek  | 免费，输出量大，全量读不心疼         |
-| **改小代码**                | OpenCode + M3         | 免费快，掉记忆无所谓                 |
-| **改大代码 / 跨文件重构**   | CodeBuddy / CodeGeeX  | 输出效率高，有 agent 模式            |
-| **CSS**                     | **Copilot 或自己改**  | CSS 崩了用户直接失焦                 |
-| **Go 端 / Vite / 最终验证** | **Copilot 收尾**      | 改错代价高，必须你把关               |
-| **打 Git 标签**             | **Copilot**（发版时） | 只有你知道完整改了什么               |
-
-### 原则
-
-- 频繁修改上免费（OpenCode+M3）：掉记忆就重读一次，不贵
-- 审计让网页端来（元宝/DeepSeek）：免费，全量读，输出量大
-- 修改让 agent 来（CodeBuddy/CodeGeeX）：有 agent 模式，能自动改
-- 计划让 Copilot 来：上下文最长+缓存记忆，计划靠谱
-- Gl/CSS/HTML 模板给免费 AI 碰？**不行**——视觉锚点一丢，开发目标直接跑偏
-- Go Binding 签名、Vite 配置、wails build 链：**不给免费 AI**，改错一次花 10 倍 token 修
-
-## 各工具前缀一致性评级
-
-| 工具                | 评级       | 理由                                        |
-| ------------------- | ---------- | ------------------------------------------- |
-| Aider 🥇            | ⭐⭐⭐⭐⭐ | repo map 内建摘要 + diff 编辑，前缀天然稳定 |
-| Roo Code 🥈         | ⭐⭐⭐     | 需手写摘要锁进 system instructions          |
-| Claude Code 转接 🥉 | ⭐⭐       | cache_control 被静默忽略，前缀基本每轮断    |
+| 角色 | 推荐模型 | 适用场景 |
+|------|----------|----------|
+| 🏆 **主力 Driver** | Big Pickle | 日常增删改查、简单功能迭代、报错解释。响应快，免费额度内反馈最快 |
+| 🧠 **复杂推理** | DeepSeek V4 Flash Free | 架构分析、超长上下文（1M）、绕逻辑死结。免费阵营的定海神针 |
+| 🚀 **极速轻量** | North Mini Code Free | 列目录、代码翻译、简单补全。3B 激活参数，延迟极低，别做多步任务 |
+| 💡 **创意发散** | MiMo V2.5 Free | 多思路 brainstorm、前端 UI/动画效果。卡住时换它头脑风暴 |
+| 📚 **超大仓库** | Nemotron 3 Ultra Free | 一次性喂数百文件梳理项目脉络。1M 上下文，工具调用不太稳，作备用 |

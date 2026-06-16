@@ -1235,7 +1235,7 @@ export function renderSiteView(site, ctx) {
       const cardTag = (card.dataset.tag || "").toLowerCase();
       const matchName = !kw || name.includes(kw) || desc.includes(kw);
       const matchTag = !_activeTag || _activeTag === cardTag;
-      card.style.display = matchName && matchTag ? "" : "none";
+      card.classList.toggle("cr-card-hidden", !(matchName && matchTag));
       if (matchName && matchTag) visible++;
     });
     const countEl = searchResults.querySelector("#ws-cr-count");

@@ -1,6 +1,7 @@
 // ===== sidebar 事件层 =====
 import { bus } from "../../bus.js";
 import { animateNumber } from "../../utils/animate.js";
+import { RESOURCE_TYPES } from "../../utils/resource-types.js";
 
 // 绑定每个卡片展开/折叠
 // 返回清理函数，组件销毁时移除事件监听
@@ -50,7 +51,7 @@ export function bindCardEvents(root, instances) {
     if (pkg) {
       bus.emit("package:selected", pkg);
       try {
-        localStorage.setItem("sb_selectedName", pkg.name);
+        localStorage.setItem("sb_selectedName_" + (pkg.rtype || RESOURCE_TYPES.YSM), pkg.name);
       } catch (_) {}
     }
   };
@@ -71,7 +72,7 @@ export function bindCardEvents(root, instances) {
       type: "instance",
       instanceName: name,
       path: pkg?.dir || "",
-      rtype: pkg?.rtype || "ysm",
+      rtype: pkg?.rtype || RESOURCE_TYPES.YSM,
     });
   };
 
@@ -99,7 +100,8 @@ export function bindCardEvents(root, instances) {
 /** 根据 localStorage 选中最匹配的整合包 */
 function restoreSelectedCard(root, instances) {
   try {
-    const savedName = localStorage.getItem("sb_selectedName");
+    const rtypeKey = instances[0]?.rtype || RESOURCE_TYPES.YSM;
+    const savedName = localStorage.getItem("sb_selectedName_" + rtypeKey);
     if (!savedName) return;
     const idx = instances.findIndex((i) => i.name === savedName);
     if (idx < 0) return;

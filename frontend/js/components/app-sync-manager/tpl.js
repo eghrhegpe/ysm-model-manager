@@ -14,6 +14,7 @@ export function containerHTML() {
     ".sm-tab{transition:all .12s}" +
     ".sm-status-tab{transition:background .12s,color .12s,border-color .12s}" +
     ".sm-empty{animation:fade-in .2s ease}" +
+    ".sm-list{animation:fade-in .15s ease}" +
     ".sm-loading{display:flex;flex-direction:column;gap:8px;padding:12px}" +
     ".sm-shimmer{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--bd) 25%,var(--hover) 50%,var(--bd) 75%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}" +
     ".sm-shimmer-w80{width:80%}" +

@@ -1,6 +1,7 @@
 // ===== <app-sidebar> 入口 =====
 import { bus } from "../../bus.js";
 import { dbg } from "../../utils/debug.js";
+import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS, ALL_RESOURCE_TYPES } from "../../utils/resource-types.js";
 import { sidebarCSS } from "./sidebar-css.js";
 import { headerHTML, footerHTML, listContainerHTML } from "./tpl.js";
 import { renderVersionCards } from "./render.js";
@@ -22,9 +23,10 @@ class AppSidebar extends HTMLElement {
     this._root.adoptedStyleSheets[0].replaceSync(sidebarCSS);
     this._instances = [];
     this._unsubs = [];
-    this._rtype = this.getAttribute("rtype") || "ysm";
+    this._rtype = this.getAttribute("rtype") || RESOURCE_TYPES.YSM;
     this._cardCleanup = null; // bindCardEvents 清理函数
     this._docClickHandler = null; // document click 清理
+    this._syncInProgress = false; // 防止并发推送/拉取
   }
 
   attributeChangedCallback(name, oldVal, newVal) {
@@ -34,15 +36,7 @@ class AppSidebar extends HTMLElement {
       // 更新导入按钮文字
       const btn = this._root.querySelector(".sidebar-import-all");
       if (btn) {
-        const labels = {
-          ysm: "模型",
-          "mmd-skin": "MMD",
-          "vrchat-avatar": "VRC",
-          resourcepack: "资源包",
-          shaderpack: "光影包",
-          "create-blueprint": "蓝图",
-        };
-        btn.textContent = "⬇️ 一键安装" + (labels[this._rtype] || "资源");
+        btn.textContent = "⬇️ 一键安装" + (RESOURCE_TYPE_LABELS[this._rtype] || "资源");
       }
     }
   }
@@ -150,13 +144,9 @@ class AppSidebar extends HTMLElement {
       return sel;
     };
 
-    const allTypes = [
-      "ysm", "mmd-skin", "vrchat-avatar",
-      "resourcepack", "shaderpack", "create-blueprint",
-    ];
-    const resolveTypes = (t) => (t === "all" ? allTypes : [t]);
+    const resolveTypes = (t) => (t === "all" ? ALL_RESOURCE_TYPES : [t]);
 
-    // 推送：emit sync:download:missing
+    // 推送：emit sync:download:missing（带 correlation token 防交叉触发）
     pushMenu.addEventListener("click", (e) => {
       const item = e.target.closest(".dd-item");
       if (!item) return;
@@ -165,21 +155,38 @@ class AppSidebar extends HTMLElement {
         bus.emit("toast:show", { msg: "请先勾选要推送的整合包", duration: 2000, type: "info" });
         return;
       }
+      if (this._syncInProgress) return;
+      this._syncInProgress = true;
       closeAllMenus();
       pushBtn.textContent = "⏳";
       pushBtn.disabled = true;
+      let failed = 0;
       (async () => {
+        const types = resolveTypes(item.dataset.syncType);
         for (const insName of selected) {
-          for (const rt of resolveTypes(item.dataset.syncType)) {
-            await new Promise((resolve) => {
-              bus.emit("sync:download:missing", { instanceName: insName, rtype: rt });
-              bus.on("sync:download:done", resolve, { once: true });
-              setTimeout(resolve, 10000);
-            });
-          }
+          const results = await Promise.allSettled(
+            types.map((rt) => new Promise((resolve, reject) => {
+              const token = `${insName}:${rt}:${Date.now()}`;
+              const onDone = (payload) => {
+                if (payload?.token === token || payload?.instanceName === insName) {
+                  resolve(payload);
+                }
+              };
+              bus.on("sync:download:done", onDone, { once: true });
+              bus.emit("sync:download:missing", { instanceName: insName, rtype: rt, token });
+              setTimeout(() => reject(new Error(`推送超时: ${insName}/${rt}`)), 30000);
+            })),
+          );
+          results.forEach((r) => { if (r.status === "rejected") failed++; });
         }
         pushBtn.textContent = "⬆️ 推送所选 ▾";
         pushBtn.disabled = false;
+        this._syncInProgress = false;
+        if (failed > 0) {
+          bus.emit("toast:show", { msg: `⚠️ 推送完成，${failed} 个操作超时`, duration: 3000, type: "warn" });
+        } else {
+          bus.emit("toast:show", { msg: `✅ 推送完成：${selected.length} 个整合包`, duration: 2500 });
+        }
       })();
     });
 
@@ -192,19 +199,28 @@ class AppSidebar extends HTMLElement {
         bus.emit("toast:show", { msg: "请先勾选要拉取的整合包", duration: 2000, type: "info" });
         return;
       }
+      if (this._syncInProgress) return;
+      this._syncInProgress = true;
       closeAllMenus();
       pullBtn.textContent = "⏳";
       pullBtn.disabled = true;
       let totalPulled = 0;
+      let failed = 0;
       try {
         const { PullResourceFromInstance } = await import("../../../wailsjs/go/main/App.js");
+        const types = resolveTypes(item.dataset.syncType);
         for (const insName of selected) {
-          for (const rt of resolveTypes(item.dataset.syncType)) {
-            const n = await PullResourceFromInstance(rt, insName);
-            totalPulled += n;
+          const results = await Promise.allSettled(
+            types.map((rt) => PullResourceFromInstance(rt, insName)),
+          );
+          for (const r of results) {
+            if (r.status === "fulfilled") totalPulled += r.value;
+            else failed++;
           }
         }
-        if (totalPulled > 0) {
+        if (failed > 0) {
+          bus.emit("toast:show", { msg: `⚠️ 拉取完成: ${totalPulled} 个文件, ${failed} 个失败`, duration: 3000, type: "warn" });
+        } else if (totalPulled > 0) {
           bus.emit("toast:show", { msg: `✅ 拉取完成，共 ${totalPulled} 个文件`, duration: 2500 });
         } else {
           bus.emit("toast:show", { msg: "📭 没有可拉取的文件（实例中无多余资源）", duration: 2500, type: "info" });
@@ -216,6 +232,7 @@ class AppSidebar extends HTMLElement {
       }
       pullBtn.textContent = "⬇️ 拉取所选 ▾";
       pullBtn.disabled = false;
+      this._syncInProgress = false;
     });
   }
 

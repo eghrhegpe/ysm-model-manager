@@ -11,6 +11,23 @@ export function esc(s) {
 }
 
 /**
+ * 带退场动画关闭对话框
+ * @param {HTMLElement} overlay - 对话框 overlay 元素
+ * @param {Function} resolve - Promise resolve 函数
+ * @param {*} value - 要 resolve 的值
+ * @param {number} [delay=120] - 退场动画时长 (ms)
+ */
+export function closeDlg(overlay, resolve, value, delay = 120) {
+  if (!overlay || overlay._closing) return;
+  overlay._closing = true;
+  overlay.classList.add("dlg-closing");
+  setTimeout(() => {
+    overlay.remove();
+    resolve(value);
+  }, delay);
+}
+
+/**
  * 弹出带输入框的模态框，类似 styled prompt()
  * @param {object} opts
  * @param {string} opts.title 标题
@@ -26,10 +43,7 @@ export function modalPrompt(opts) {
     const overlay = document.createElement("div");
     overlay.className = "dlg-overlay";
     overlay.onclick = (e) => {
-      if (e.target === overlay) {
-        overlay.remove();
-        resolve(null);
-      }
+      if (e.target === overlay) closeDlg(overlay, resolve, null);
     };
 
     const box = document.createElement("div");
@@ -52,10 +66,7 @@ export function modalPrompt(opts) {
     input.focus();
     input.select();
 
-    const close = (result) => {
-      overlay.remove();
-      resolve(result);
-    };
+    const close = (result) => closeDlg(overlay, resolve, result);
 
     const errEl = box.querySelector("#mp-err");
 
@@ -87,16 +98,6 @@ export function modalPrompt(opts) {
 }
 
 /**
- * 弹出确认对话框
- * @param {object} opts
- * @param {string} opts.title 标题
- * @param {string} [opts.icon] 图标
- * @param {string} opts.message 消息内容
- * @param {string} [opts.okText] 确认按钮文字，默认 "确定"
- * @param {boolean} [opts.danger] 确认按钮是否为危险风格
- * @returns {Promise<boolean>}
- */
-/**
  * 弹出下拉选择框
  * @param {object} opts
  * @param {string} opts.title 标题
@@ -112,10 +113,7 @@ export function modalSelect(opts) {
     const overlay = document.createElement("div");
     overlay.className = "dlg-overlay";
     overlay.onclick = (e) => {
-      if (e.target === overlay) {
-        overlay.remove();
-        resolve(null);
-      }
+      if (e.target === overlay) closeDlg(overlay, resolve, null);
     };
 
     const box = document.createElement("div");
@@ -149,10 +147,7 @@ export function modalSelect(opts) {
     const select = box.querySelector("#ms-select");
     select.focus();
 
-    const close = (result) => {
-      overlay.remove();
-      resolve(result);
-    };
+    const close = (result) => closeDlg(overlay, resolve, result);
 
     box.querySelector("#ms-cancel").onclick = () => close(null);
     box.querySelector("#ms-ok").onclick = () => close(select.value);
@@ -163,6 +158,16 @@ export function modalSelect(opts) {
   });
 }
 
+/**
+ * 弹出确认对话框
+ * @param {object} opts
+ * @param {string} opts.title 标题
+ * @param {string} [opts.icon] 图标
+ * @param {string} opts.message 消息内容
+ * @param {string} [opts.okText] 确认按钮文字，默认 "确定"
+ * @param {boolean} [opts.danger] 确认按钮是否为危险风格
+ * @returns {Promise<boolean>}
+ */
 export function modalConfirm(opts) {
   return new Promise((resolve) => {
     const { title, icon, message, okText, danger, width } = opts;
@@ -170,16 +175,10 @@ export function modalConfirm(opts) {
     overlay.tabIndex = 0;
     overlay.className = "dlg-overlay";
     overlay.onclick = (e) => {
-      if (e.target === overlay) {
-        overlay.remove();
-        resolve(false);
-      }
+      if (e.target === overlay) closeDlg(overlay, resolve, false);
     };
     overlay.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        overlay.remove();
-        resolve(false);
-      }
+      if (e.key === "Escape") closeDlg(overlay, resolve, false);
     });
 
     const box = document.createElement("div");
@@ -199,10 +198,7 @@ export function modalConfirm(opts) {
     document.body.appendChild(overlay);
     overlay.focus();
 
-    const close = (result) => {
-      overlay.remove();
-      resolve(result);
-    };
+    const close = (result) => closeDlg(overlay, resolve, result);
 
     box.querySelector("#mc-cancel").onclick = () => close(false);
     box.querySelector("#mc-ok").onclick = () => close(true);

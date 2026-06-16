@@ -233,14 +233,21 @@ export async function initSettings(root) {
       const btn = root.getElementById("set-advanced-toggle");
       const card = root.getElementById("stg-files-card");
       if (!panel || !btn || !card) return;
-      const isOpen = panel.style.display !== "none";
+      const isOpen = panel.classList.contains("adv-open");
       if (isOpen) {
-        panel.style.display = "none";
+        panel.classList.remove("adv-open");
+        panel.classList.add("adv-closing");
         btn.textContent = "📂 展开 ▸";
         card.style.gridColumn = "";
+        setTimeout(() => {
+          panel.classList.remove("adv-closing");
+          panel.style.display = "none";
+        }, 200);
       } else {
         await refreshAdvanced();
         panel.style.display = "block";
+        panel.classList.remove("adv-closing");
+        panel.classList.add("adv-open");
         btn.textContent = "📂 收起 ▾";
         card.style.gridColumn = "1 / -1";
       }

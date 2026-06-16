@@ -311,8 +311,10 @@ function renderPreview(el, items) {
 
 function close() {
   if (dialogEl) {
-    dialogEl.remove();
+    dialogEl.classList.add("dlg-closing");
+    const el = dialogEl;
     dialogEl = null;
+    setTimeout(() => el.remove(), 120);
   }
 }
 function esc(s) {

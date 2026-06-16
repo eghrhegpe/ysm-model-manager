@@ -53,14 +53,17 @@ func (a *App) loadAppConfig() {
 	if cfg.FilesRoot == "" && cfg.RepoRoot != "" {
 		cfg.FilesRoot = cfg.RepoRoot
 		cfg.RepoRoot = ""
-		if data2, err := json.MarshalIndent(cfg, "", "  "); err == nil {
-			os.WriteFile(configPath(), data2, 0644)
-		}
+		_ = a.saveConfig(cfg)
 	}
 	// repoRoot 从 FilesRoot 动态推导，无需手动赋值
 	if cfg.LinkMode != "" {
 		a.LinkMode = cfg.LinkMode
 	}
+	// populate config cache
+	a.configMu.Lock()
+	a.configCache = cfg
+	a.configLoaded = true
+	a.configMu.Unlock()
 }
 
 func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) error {
@@ -98,8 +101,7 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) e
 func (a *App) SetDownloadMirror(mirror string) error {
 	cfg := a.LoadAppConfig()
 	cfg.Mirror = mirror
-	data, _ := json.MarshalIndent(cfg, "", "  ")
-	return os.WriteFile(configPath(), data, 0644)
+	return a.saveConfig(cfg)
 }
 
 func (a *App) restartWatcher(repoRoot, mcRoot string) {
@@ -123,9 +125,22 @@ func orDefault(val, fallback string) string {
 }
 
 func (a *App) LoadAppConfig() types.AppConfig {
-	var cfg types.AppConfig
-	readJSONFile(configPath(), &cfg)
-	return cfg
+	a.configMu.RLock()
+	if a.configLoaded {
+		defer a.configMu.RUnlock()
+		return a.configCache
+	}
+	a.configMu.RUnlock()
+
+	a.configMu.Lock()
+	defer a.configMu.Unlock()
+	// double-check after acquiring write lock
+	if a.configLoaded {
+		return a.configCache
+	}
+	readJSONFile(configPath(), &a.configCache)
+	a.configLoaded = true
+	return a.configCache
 }
 
 // ========== 自动更新 ==========
@@ -223,8 +238,7 @@ func (a *App) SaveWindowPosition(x, y, width, height int) {
 	cfg.WinRelY = safePct(y-vy, vh)
 	cfg.WinScrW = vw
 	cfg.WinScrH = vh
-	data, _ := json.MarshalIndent(cfg, "", "  ")
-	os.WriteFile(configPath(), data, 0644)
+	a.saveConfig(cfg)
 }
 
 func (a *App) GetWindowPosition() types.WindowState {

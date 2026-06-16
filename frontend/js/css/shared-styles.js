@@ -8,7 +8,7 @@ export const btnBaseCSS = `
   cursor: pointer;
   font-size: inherit;
   font-family: inherit;
-  transition: background .12s, color .12s, transform .1s;
+  transition: var(--btn-transition);
   white-space: nowrap;
   flex-shrink: 0;
 }

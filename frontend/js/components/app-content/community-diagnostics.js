@@ -281,6 +281,15 @@ ${isDefault ? '<span class="diag-dedup-recommend">推荐</span>' : ""}
 </div>`;
     list.innerHTML = html;
 
+    // 文件名点击预览（渲染后立即绑定，不等到 exec 之后）
+    list.querySelectorAll("[data-path]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const path = el.dataset.path;
+        if (path) bus.emit("model:select", { path });
+      });
+    });
+
     list.querySelector("#diag-dedup-cancel")?.addEventListener("click", () => {
       list.innerHTML =
         '<div class="stat-row diag-msg diag-msg-muted">已取消去重</div>';
@@ -320,13 +329,6 @@ ${isDefault ? '<span class="diag-dedup-recommend">推荐</span>' : ""}
           bus.emit("stats:refresh");
           bus.emit("tree:reload");
         }
-        list.querySelectorAll("[data-path]").forEach((el) => {
-          el.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const path = el.dataset.path;
-            if (path) bus.emit("model:select", { path });
-          });
-        });
         list.innerHTML =
           '<div class="stat-row diag-msg ' +
           (fail > 0 ? "diag-msg-warn" : "diag-msg-success") +

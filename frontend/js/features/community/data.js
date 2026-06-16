@@ -12,10 +12,11 @@ export function showProgress(searchResults, pct, label) {
     (label || "") +
     "</span></div>" +
     '<div class="gh-progress-track">' +
-    '<div class="gh-progress-fill" style="width:' +
+    '<div class="gh-progress-fill' +
+    (pct < 100 ? " gh-striped" : "") +
+    '" style="width:' +
     pct +
     "%;transition:width 0.3s" +
-    (pct < 100 ? " gh-striped" : "") +
     '"></div>' +
     "</div>" +
     "</div>";

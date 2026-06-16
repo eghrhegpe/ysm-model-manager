@@ -9,13 +9,13 @@
 #sort-select,
 #ver-sort {
   transition:
-    background 0.12s,
-    opacity 0.12s,
-    color 0.12s;
+    background var(--tr-fast),
+    opacity var(--tr-fast),
+    color var(--tr-fast);
 }
 
 .ch {
-  transition: display 0.12s;
+  transition: display var(--tr-fast);
 }
 
 /* ===== 滚动条 ===== */

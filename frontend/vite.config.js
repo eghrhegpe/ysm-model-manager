@@ -5,4 +5,8 @@ export default defineConfig({
   build: {
     outDir: "dist",
   },
+  test: {
+    include: ["js/**/*.test.js"],
+    environment: "jsdom",
+  },
 });

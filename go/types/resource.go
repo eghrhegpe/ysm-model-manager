@@ -15,15 +15,17 @@ type ResourceTypeRegistry struct {
 
 // ResourceType 一种受支持的资源类型定义
 type ResourceType struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
-	Icon          string   `json:"icon"`
-	Extensions    []string `json:"extensions"`
-	StorageSubDir string   `json:"storageSubDir"`
-	InstallDir    string   `json:"installDir"`
-	InstanceLevel bool     `json:"instanceLevel"`
-	Preview       string   `json:"preview"`    // "3d" / "thumbnail" / "none"
-	Detector      string   `json:"detector"`   // "ysm" / "mcmeta" / ""
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Icon           string   `json:"icon"`
+	Extensions     []string `json:"extensions"`
+	StorageSubDir  string   `json:"storageSubDir"`
+	InstallDir     string   `json:"installDir"`
+	InstanceLevel  bool     `json:"instanceLevel"`
+	Preview        string   `json:"preview"`        // "3d" / "thumbnail" / "none"
+	Detector       string   `json:"detector"`       // "ysm" / "mcmeta" / ""
+	ConfigField    string   `json:"configField"`    // AppConfig 字段名（如 YsmRoot）
+	ConfigFallback string   `json:"configFallback"` // AppConfig 回退字段名（如 VrcRoot→MmdRoot）
 }
 
 var (

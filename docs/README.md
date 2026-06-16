@@ -24,6 +24,25 @@
 | [CLEANUP_RULES.md](CLEANUP_RULES.md) | 治理规则：9 条禁止模式 × severity × 检测方式 |
 | [DEPRECATED_NAMES.md](DEPRECATED_NAMES.md) | 废弃别名对照：可 grep 批量替换清单 |
 
+---
+
+## 🎬 动画系统
+
+| 文档 | 说明 |
+|------|------|
+| [animation-roadmap.md](animation-roadmap.md) | 动画路线图：统一 keyframe、stagger 系统、设计令牌 |
+| [animations.md](animations.md) | 前端动画系统文档：11 种动画清单 + 无障碍支持 + 性能考量 |
+
+---
+
+## 🎨 UI 改进
+
+| 文档 | 说明 |
+|------|------|
+| [ui-improvement-plan.md](ui-improvement-plan.md) | UI 修改计划：P0-P2 优先级 + 仓库元老页优化 + 执行记录 |
+
+---
+
 ## 📊 参考数据
 
 | 文档 | 说明 |
@@ -36,8 +55,18 @@
 
 | 文档 | 说明 |
 |------|------|
-| [release-notes/](release-notes/) | 各版本发版说明（按版本号文件夹组织） |
+| [release-notes/](release-notes/) | 各版本发版说明（按版本号组织） |
 | [release-notes/README.md](release-notes/README.md) | 发版说明索引表 |
+
+---
+
+## 🎯 战略与任务
+
+| 文档 | 说明 |
+|------|------|
+| [tactics/vision.md](tactics/vision.md) | 产品愿景与长期方向 |
+| [ANNUAL_ROADMAP.md](ANNUAL_ROADMAP.md) | 年度规划大纲（英文） |
+| [TASK_PLAN.md](TASK_PLAN.md) | **AI 任务计划**：可执行任务清单 + 文件路径 + 验证方式 |
 
 ---
 
@@ -51,15 +80,9 @@
 - `plan-p7-*.md` — P7 计划草案
 - `audit-summary-*.md` / `refactor-report-*.md` — 审计/重构报告
 - `arch-changelog.md` / `event-catalog.md` / `events.md` / `ui-architecture.md` / `test-strategy.md` / `download-mirror-arch.md` / `mmdskin-analysis.md` / `pcl2-comparison.md` / `settings-persistence-postmortem.md`
+- `YSM-UI-Translation-Plan.md` — UI 翻译计划草案（未实施，项目为中文原生）
+- `session-*.md` — 每日会话改动记录
 - 测试数据：`博丽灵梦ysm.json`、`各操作单价（估算）.txt`
-
----
-
-## 🎯 战略文档
-
-| 文档 | 说明 |
-|------|------|
-| [tactics/vision.md](tactics/vision.md) | 产品愿景与长期方向 |
 
 ---
 

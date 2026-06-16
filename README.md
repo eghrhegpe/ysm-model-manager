@@ -290,6 +290,9 @@ wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 | [`docs/Design.md`](docs/Design.md)                                   | UI 设计规范（CSS 变量、布局、字体）       |
 | [`docs/bug-chronicle.md`](docs/bug-chronicle.md)                     | Bug 排查记录（含 Debug Path Review）      |
 | [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)                   | **项目当前状态**：已完成功能、遗留问题、下一步方向 |
+| [`docs/TERMINOLOGY.md`](docs/TERMINOLOGY.md)                         | 术语对照表：名词统一、UI 文案规范         |
+| [`docs/CLEANUP_RULES.md`](docs/CLEANUP_RULES.md)                     | 治理规则：9 条禁止模式 × severity × 检测方式 |
+| [`docs/TASK_PLAN.md`](docs/TASK_PLAN.md)                             | **AI 任务计划**：可执行任务清单           |
 | [`docs/pending-cleanup.md`](docs/pending-cleanup.md)                 | 待清理清单：调试代码、临时方案、技术债    |
 | [`docs/release-notes/`](docs/release-notes/)                         | 各版本发版说明                            |
 | [`docs/README.md`](docs/README.md)                                   | **开发者文档总索引**（含归档文档跳转）    |

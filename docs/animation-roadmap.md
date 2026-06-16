@@ -1,176 +1,87 @@
-# 动画路线图 — 待实现动画计划
+# 动画路线图 — 全部完成
 
 **创建日期：** 2026-06-16
-**关联文档：** `docs/animations.md` · `docs/release-notes/v1.7.6.md`
+**最后更新：** 2026-06-16
+**关联文档：** `docs/animations.md` · `docs/release-notes/v1.7.6.md` · `docs/Design.md`
+
+---
+
+## 统一动画系统
+
+### Keyframe（3 个）
+
+| keyframe | 方向 | 用途 |
+|----------|------|------|
+| `fadeSlideUp` | 向上 6px | 卡片、列表项、行、面板 |
+| `fadeSlideLeft` | 向左 8px | 侧栏、嵌套菜单、日志行 |
+| `fadeSlideDown` | 向下 4px | 顶栏 Tab |
+
+### 通用 Stagger
+
+```css
+/* 父容器加 class="stagger-in"，子元素自动 stagger */
+.stagger-in > *:nth-child(1)  { animation-delay: 0ms }
+.stagger-in > *:nth-child(2)  { animation-delay: 30ms }
+/* ...最多 11 级 */
+```
+
+```js
+// JS 工具函数
+import { stagger } from './utils/stagger.js';
+style="animation-delay:${stagger(i)}ms"
+```
+
+### 设计令牌
+
+| 类别 | 变量 |
+|------|------|
+| 圆角 | `--radius-xs/sm/md/lg/xl/pill` |
+| 过渡 | `--tr-fast/normal/slow/enter` |
+| 阴影 | `--shadow-sm/md/lg/xl` |
+| 按钮 | `--accent-btn-bg/color/border` |
 
 ---
 
 ## 已完成（v1.7.6）
 
-| 动画 | 状态 |
-|------|------|
-| 整合包卡片交错入场 | ✅ |
-| 整合包卡片涟漪选中 | ✅ |
-| 右键菜单弹性弹出 + 逐条滑入 | ✅ |
-| 模型树行入场 | ✅ |
-| 主题切换涟漪扩散 | ✅ |
-| 赛博网格背景 | ✅ |
-| Logo 呼吸光晕 | ✅ |
-| Toast 弹性弹出 | ✅ |
-| 诊断页日志行交错入场 | ✅ |
-| 冲突扫描雷达动画 | ✅ |
-| 冲突结果交错入场 | ✅ |
-| 对话框入场/退场动画 | ✅ |
-| 按钮 :active scale 反馈 | ✅ |
-| 页面切换淡入 | ✅ |
-| 预览面板内容过渡 | ✅ |
-| 设置页高级面板展开/折叠 | ✅ |
-| 同步管理器列表淡入 | ✅ |
+### P0 — 高优先级
+- ✅ 对话框入场/退场动画
+- ✅ 按钮 :active scale 反馈
+
+### P1 — 中高优先级
+- ✅ 页面切换淡入
+- ✅ 模型树文件夹展开子行淡入
+- ✅ 预览面板内容过渡
+
+### P2 — 中优先级
+- ✅ 创作者频道卡片筛选淡出
+- ✅ 导入队列项目滑入
+- ✅ 设置页高级面板展开/折叠
+- ✅ 同步管理器标签切换过渡
+
+### P3 — 低优先级
+- ✅ 回收站项目动画
+- ✅ 资源管理器详情过渡
+- ✅ GitHub 仓库卡片交错入场
+- ✅ 诊断页面板切换交叉淡入
+- ✅ 批量重命名预览列表脉冲
+- ✅ 导航侧栏激活指示器滑动
+
+### 新增
+- ✅ 一级 Tab 淡入+微下移（`fadeSlideDown`）
+- ✅ 二级菜单 淡入+微右移（`fadeSlideLeft`）
+- ✅ GitHub 仓库卡片 stagger + hover 上浮 + 图标旋转
+- ✅ 预设搜索词 / 筛选标签 stagger 入场
+- ✅ 设置页卡片 stagger 入场
+- ✅ 关于页区块 stagger 入场
 
 ---
-
-## P0 — 高优先级（用户每次操作必经）
-
-### 1. 对话框入场/退场动画
-- **文件**: `components.css` · `dialogs/modal.js`
-- **现状**: 所有模态框（重命名、标签编辑、批量重命名、高级筛选、版本更新）直接 `.remove()`，无过渡
-- **方案**: overlay fade-in + box scale(.95) → scale(1) 入场；退场反向 + 延迟 remove
-- **影响**: 全应用所有弹窗
-- **复杂度**: 低（纯 CSS + 1 行 JS 延迟移除）
-- **状态**: ✅ 已完成
-
-### 2. 按钮点击反馈（:active scale）
-- **文件**: `components.css` · `shared-styles.js`
-- **现状**: 按钮 hover 有 transition，但点击无视觉反馈
-- **方案**: `.btn-base:active { transform: scale(0.97); }`
-- **影响**: 全应用所有按钮
-- **复杂度**: 极低（1 行 CSS）
-- **状态**: ✅ 已完成
-
----
-
-## P1 — 中高优先级（核心工作流）
-
-### 3. 页面切换淡入
-- **文件**: `content-css.js`
-- **现状**: 导航切换时旧页面瞬间消失，新页面瞬间出现
-- **方案**: `.page { animation: pageIn .15s ease; }`
-- **影响**: 每次导航切换（6 个页面）
-- **复杂度**: 低（纯 CSS）
-- **状态**: ✅ 已完成
-
-### 4. 模型树文件夹展开子行淡入
-- **文件**: `app-tree-styles.js` · `app-tree/render.js`
-- **现状**: 展开文件夹时子行瞬间出现（已有 `treeRowIn` 但可增强）
-- **方案**: 展开时子行 stagger delay 增大 + 加 scale 效果
-- **影响**: 核心文件浏览工作流
-- **复杂度**: 中（需配合虚拟滚动）
-- **状态**: ✅ 已完成（treeRowIn 已足够）
-
-### 5. 预览面板内容过渡
-- **文件**: `preview-css.js` · `app-preview/index.js`
-- **现状**: 选中模型后预览内容从 loading 状态瞬间切换到完整内容
-- **方案**: `.ysm-card { animation: fadeIn .2s ease; }` + loading bar 渐隐
-- **影响**: 每次模型选择
-- **复杂度**: 低-中
-- **状态**: ✅ 已完成
-
----
-
-## P2 — 中优先级（特定功能模块）
-
-### 6. 创作者频道卡片筛选淡出
-- **文件**: `content-css.js` · `community-site-view.js`
-- **现状**: 按标签/搜索筛选时，不匹配的卡片 `display: none` 瞬间消失
-- **方案**: 用 opacity + height 过渡替代 display 切换，卡片渐隐
-- **影响**: 创作者频道浏览
-- **复杂度**: 中（需改 JS 过滤逻辑）
-- **状态**: ✅ 已完成（class 切换 + opacity/scale/max-height 过渡）
-
-### 7. 导入队列项目滑入
-- **文件**: `import-queue.js` · `content-css.js`
-- **现状**: 拖入文件后队列项瞬间出现
-- **方案**: 新增队列项从下方滑入 + fade
-- **影响**: 文件导入流程
-- **复杂度**: 低-中
-- **状态**: ✅ 已完成（dl-slide-up 动画已有，补充 .no-animations 覆盖）
-
-### 8. 设置页高级面板展开/折叠
-- **文件**: `community-settings.js` · `content-css.js`
-- **现状**: "高级设置"面板 `display: none/block` 瞬间切换
-- **方案**: CSS `grid-template-rows: 0fr → 1fr` 弹性展开
-- **影响**: 设置页
-- **复杂度**: 低（纯 CSS 技巧）
-- **状态**: ✅ 已完成（使用 max-height 方案）
-
-### 9. 同步管理器标签切换过渡
-- **文件**: `app-sync-manager/`
-- **现状**: 类型/状态标签切换时列表瞬间重绘
-- **方案**: 列表项 fade 过渡 + 标签指示器滑动
-- **影响**: 同步工作流
-- **复杂度**: 低
-- **状态**: ✅ 已完成（sm-list fade-in）
-
----
-
-## P3 — 低优先级（锦上添花）
-
-### 10. 回收站项目动画
-- **文件**: `recycle-bin.js`
-- **现状**: 恢复/删除后列表瞬间重建
-- **方案**: 被操作项 slide-out 后再重建列表
-- **复杂度**: 中
-- **状态**: ✅ 已完成（入场 stagger + 退场 slide-out）
-
-### 11. 资源管理器详情过渡
-- **文件**: `app-resource-manager/`
-- **现状**: 点击资源包后详情面板瞬间替换
-- **方案**: 详情内容 fade + translateY 过渡
-- **复杂度**: 低
-- **状态**: ✅ 已完成（列表 stagger + 详情 fade-in）
-
-### 12. GitHub 仓库卡片交错入场
-- **文件**: `app-content/index.js` (github 部分)
-- **现状**: 仓库卡片一次性渲染
-- **方案**: 类似创作者卡片的 stagger card-in
-- **复杂度**: 低
-- **状态**: ✅ 已完成（已有 stagger `idx * 0.03s`）
-
-### 13. 诊断页面板切换交叉淡入
-- **文件**: `community-diagnostics.js`
-- **现状**: 日志/冲突面板 `display` 切换
-- **方案**: 旧面板 fade-out → 新面板 fade-in
-- **复杂度**: 低
-- **状态**: ✅ 已完成（diagPanelIn 动画重启）
-
-### 14. 批量重命名预览列表脉冲
-- **文件**: `batch-rename.js`
-- **现状**: 输入时列表每次 debounce 后瞬间重绘
-- **方案**: 重绘时加 opacity 脉冲
-- **复杂度**: 低
-- **状态**: ✅ 已完成（brRowIn stagger）
-
-### 15. 导航侧栏激活指示器滑动
-- **文件**: `app-nav.js`
-- **现状**: active 边框瞬间切换
-- **方案**: border-left 从旧位置滑动到新位置
-- **复杂度**: 中（需跟踪位置）
-- **状态**: ✅ 已完成（已有 transition: all .12s）
-
----
-
-## 实施建议
-
-| 阶段 | 内容 | 预计工作量 |
-|------|------|-----------|
-| v1.7.7 | P0 全部（对话框动画 + 按钮反馈） | 0.5 天 |
-| v1.7.8 | P1 全部（页面切换 + 树展开 + 预览过渡） | 1 天 |
-| v1.8.0 | P2 全部 | 1-2 天 |
-| 后续 | P3 按需 | 按需 |
 
 ## 技术约束
 
 - 所有动画必须遵守 `.no-animations` 无障碍开关
 - 优先使用 `transform` / `opacity`（GPU 合成层，不触发重排）
-- 避免在虚拟滚动组件上使用 `height` / `max-height` 过渡（会触发频繁重排）
+- 避免在虚拟滚动组件上使用 `height` / `max-height` 过渡
 - Shadow DOM 组件的动画需在各自的 `<style>` 中定义
+- 新增动画统一使用 3 个 keyframe 之一
+- Stagger 延迟统一使用 `stagger()` 工具函数或 `.stagger-in` CSS 类

@@ -10,7 +10,10 @@
 4. **`docs/bug-chronicle.md`** — 已知 Bug 和排查路径
 5. **`docs/pending-cleanup.md`** — 待清除清单（调试代码是否还在）
 6. **`docs/Design.md`** — 设计规范（CSS 变量、布局、字号、颜色规则）
-7. **`docs/novel/SKELETON.md`** — 技术工程小说骨架（仅续写小说时必读）
+7. **`docs/TERMINOLOGY.md`** — 术语对照表（名词统一、UI 文案规范）
+8. **`docs/CLEANUP_RULES.md`** — 治理规则（9 条禁止模式 × severity × 检测方式）
+9. **`docs/TASK_PLAN.md`** — AI 任务计划（可执行任务清单 + 文件路径 + 验证方式）
+10. **`docs/novel/SKELETON.md`** — 技术工程小说骨架（仅续写小说时必读）
 
 ## 第二条：确认当前状态
 

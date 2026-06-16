@@ -39,6 +39,8 @@
 | 11 | 照妖镜 | [act-3-cartographer/11-照妖镜.md](act-3-cartographer/11-照妖镜.md) |
 | 12 | 创作者之面 | [act-3-cartographer/12-创作者之面.md](act-3-cartographer/12-创作者之面.md) |
 | 13 | 心跳图谱 | [act-3-cartographer/13-心跳图谱.md](act-3-cartographer/13-心跳图谱.md) |
+| 14 | 正名之书 | [act-3-cartographer/14-正名之书.md](act-3-cartographer/14-正名之书.md) |
+| 15 | 呼吸之灯 | [act-3-cartographer/15-呼吸之灯.md](act-3-cartographer/15-呼吸之灯.md) |
 
 ---
 

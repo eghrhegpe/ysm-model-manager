@@ -229,6 +229,46 @@ transition: opacity var(--tr-slow);           /* 淡入淡出 */
 
 ---
 
+## 7.2 入场动画系统
+
+### Keyframe（3 个统一 keyframe）
+
+```css
+@keyframes fadeSlideUp    { from { opacity:0; transform:translateY(6px) }  to { opacity:1; transform:translateY(0) } }
+@keyframes fadeSlideLeft  { from { opacity:0; transform:translateX(-8px) } to { opacity:1; transform:translateX(0) } }
+@keyframes fadeSlideDown  { from { opacity:0; transform:translateY(-4px) } to { opacity:1; transform:translateY(0) } }
+```
+
+| keyframe | 方向 | 用途 |
+|----------|------|------|
+| `fadeSlideUp` | 向上 6px | 卡片、列表项、行、面板 |
+| `fadeSlideLeft` | 向左 8px | 侧栏、嵌套菜单、日志行 |
+| `fadeSlideDown` | 向下 4px | 顶栏 Tab |
+
+### Stagger 入场
+
+**纯 CSS 方案**（父容器加 `.stagger-in` class）：
+```css
+.stagger-in > *:nth-child(1)  { animation-delay: 0ms }
+.stagger-in > *:nth-child(2)  { animation-delay: 30ms }
+.stagger-in > *:nth-child(n+11) { animation-delay: 300ms }
+```
+
+**JS 方案**（混杂子元素时使用）：
+```js
+import { stagger } from './utils/stagger.js';
+style="animation-delay:${stagger(i)}ms"
+```
+
+### 规则
+
+- 新增动画**必须**使用 3 个统一 keyframe 之一
+- Stagger 延迟**必须**使用 `stagger()` 工具函数或 `.stagger-in` CSS 类
+- 禁止硬编码 `animation-delay: Nms`
+- 禁止新增 `@keyframes`（除非现有 3 个无法满足）
+
+---
+
 ## 8. 按钮规范
 
 ```css

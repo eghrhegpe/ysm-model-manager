@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"ysm-model-manager/go/dedup"
@@ -86,24 +87,20 @@ func (a *App) GetRepoRoot(rtype string) (string, error) {
 	return "", nil
 }
 
-// specificRoot 返回资源类型的专属覆写路径
+// specificRoot 返回资源类型的专属覆写路径，从 resource_types.json 注册表驱动
 func specificRoot(cfg types.AppConfig, rtype string) string {
-	switch rtype {
-	case "ysm":
-		return cfg.YsmRoot
-	case "resourcepack":
-		return cfg.ResourcepackRoot
-	case "shaderpack":
-		return cfg.ShaderpackRoot
-	case "create-blueprint":
-		return cfg.SchematicRoot
-	case "mmd-skin":
-		return cfg.MmdRoot
-	case "vrchat-avatar":
-		if cfg.VrcRoot != "" {
-			return cfg.VrcRoot
+	rt := types.RegistryType(rtype)
+	if rt == nil || rt.ConfigField == "" {
+		return ""
+	}
+	v := reflect.ValueOf(cfg)
+	if f := v.FieldByName(rt.ConfigField); f.IsValid() && f.String() != "" {
+		return f.String()
+	}
+	if rt.ConfigFallback != "" {
+		if f := v.FieldByName(rt.ConfigFallback); f.IsValid() {
+			return f.String()
 		}
-		return cfg.MmdRoot
 	}
 	return ""
 }

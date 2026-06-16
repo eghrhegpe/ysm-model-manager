@@ -21,7 +21,7 @@ const shouldEnterForm = async (name, base64) => {
   if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
   if (ext === ".zip" || ext === ".7z") {
     try {
-      const { DetectZipType } = await import("../../wailsjs/go/main/App.js");
+      const { DetectZipType } = await getApp();
       return (await DetectZipType(base64)) === "ysm";
     } catch { return false; }
   }
@@ -201,7 +201,7 @@ const onDrop = async (e) => {
 
   // 非 YSM 文件直接导入（Go 端 ImportModelFile 已内置 ExtBelongsTo 路由）
   if (nonYsmFiles.length > 0) {
-    const { ImportModelFile } = await import("../../wailsjs/go/main/App.js");
+    const { ImportModelFile } = await getApp();
     let imported = 0;
     for (const f of nonYsmFiles) {
       try {

@@ -6,6 +6,8 @@ import { showProgress, tryFetchModels } from "../../features/community/data.js";
 import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.js";
 import { getCreatorIdentity, getTagFromRole, parseDescTags, loadFavs, isFaved, toggleFav } from "./workshop-data.js";
 
+import { getApp } from "../../wails/app.js";
+
 /** @type {Function|null} 当前注册的 storage 监听器（模块私有，防泄漏） */
 let _storageSyncFn = null;
 
@@ -435,7 +437,7 @@ export function renderSiteView(site, ctx) {
       if (!name) return;
       try {
         const { DebugExtractCreatorAvatar } =
-          await import("../../../wailsjs/go/main/App.js");
+          await getApp();
         const info = await DebugExtractCreatorAvatar(name);
         dbg("avatar-debug", name, info);
       } catch (err) {
@@ -640,7 +642,7 @@ export function renderSiteView(site, ctx) {
         let mirror = "";
         try {
           const { LoadAppConfig } =
-            await import("../../../wailsjs/go/main/App.js");
+            await getApp();
           const cfg = await LoadAppConfig();
           mirror = cfg.mirror || "";
         } catch (_) {}
@@ -710,7 +712,7 @@ export function renderSiteView(site, ctx) {
               " 链接超时（raw.githubusercontent.com 可能被屏蔽），已在浏览器中打开仓库"
             : "📦 " + repo + " 没有 index.json，已在浏览器中打开仓库";
           bus.emit("toast:show", { msg, duration: 6000, type: "warn" });
-          import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
+          getApp().then(({ OpenInBrowser }) =>
             OpenInBrowser("https://github.com/" + repo),
           );
         }
@@ -732,7 +734,7 @@ export function renderSiteView(site, ctx) {
       btn.disabled = true;
       try {
         var m = await import("./community-core.js");
-        var App = await import("../../../wailsjs/go/main/App.js");
+        var App = await getApp();
         var results = await Promise.all([
           m.fetchCommunityCreators(m.DEFAULT_COMMUNITY_URL),
           m.fetchCommunitySites(),
@@ -837,7 +839,7 @@ export function renderSiteView(site, ctx) {
         // 保存搜索词 — 按站点原子保存
         if (allSites && site) {
           const { SaveWorkshopPresetsBySite } =
-            await import("../../../wailsjs/go/main/App.js");
+            await getApp();
           const newPresets = [];
           searchResults
             .querySelectorAll(
@@ -857,7 +859,7 @@ export function renderSiteView(site, ctx) {
           (cr) => cr.type && cr.type.split(";").includes(site.id),
         );
         const { SaveWorkshopCreatorsBySite } =
-          await import("../../../wailsjs/go/main/App.js");
+          await getApp();
         await SaveWorkshopCreatorsBySite(site.id, siteCreators);
         wsEditModeRef.v = false;
         bus.emit("toast:show", {
@@ -925,7 +927,7 @@ export function renderSiteView(site, ctx) {
           // 创作者 JSON → Go 端 MergeWorkshopCreatorsFromJSON
           dropZone.textContent = "⏳ 正在合并创作者…";
           const { MergeWorkshopCreatorsFromJSON, LoadWorkshopCreators } =
-            await import("../../../wailsjs/go/main/App.js");
+            await getApp();
           const result = await MergeWorkshopCreatorsFromJSON(text);
           let added, updated;
           if (Array.isArray(result)) {
@@ -946,7 +948,7 @@ export function renderSiteView(site, ctx) {
           // 站点 JSON → 前端合并后调用 SaveWorkshopSites
           dropZone.textContent = "⏳ 正在合并站点…";
           const { SaveWorkshopSites } =
-            await import("../../../wailsjs/go/main/App.js");
+            await getApp();
           const existMap = new Map(allSites.map((s) => [s.id, s]));
           let added = 0, updated = 0;
           data.forEach((s) => {

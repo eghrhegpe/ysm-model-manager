@@ -4,12 +4,13 @@
 
 import { sidebarHTML, itemHTML, detailHTML, placeholderHTML } from "./tpl.js";
 import { bus } from "../../bus.js";
+import { getApp } from "../../wails/app.js";
 
 const STORE = {}; // 模块级缓存（rtype → config）
 
 async function _loadConfig(forceRefresh) {
   if (!forceRefresh && STORE._config) return STORE._config;
-  const { LoadResourceTypes } = await import("../../../wailsjs/go/main/App.js");
+  const { LoadResourceTypes } = await getApp();
   const raw = await LoadResourceTypes();
   try {
     const parsed = JSON.parse(raw);
@@ -104,13 +105,13 @@ export class AppResourceManager extends HTMLElement {
       ImportByType,
       DeleteResourcePack,
       OpenFolder,
-    } = await import("../../../wailsjs/go/main/App.js");
+    } = await getApp();
 
     // 实例隔离路径：当 instance 属性存在时，从 mcRoot + installDir 推导
     // 注意：整合包传的是版本目录名（如 "1.20.1-Fabric"），用 ListVersionInstances 查实际路径
     if (this._instance && type.installDir) {
       const { LoadAppConfig, ListVersionInstances } =
-        await import("../../../wailsjs/go/main/App.js");
+        await getApp();
       const cfg = await LoadAppConfig();
       const mcRoot = cfg.mcRoot || "";
       if (mcRoot) {
@@ -232,7 +233,7 @@ export class AppResourceManager extends HTMLElement {
   async _loadList() {
     if (!this._listEl) return;
     const { ScanModelEntries, IsResourcePackEnabled } =
-      await import("../../../wailsjs/go/main/App.js");
+      await getApp();
     const entries = await ScanModelEntries(this._rpRoot);
     // 从 resource_types.json 获取当前类型的扩展名列表
     const type = _findType(this._rtype);
@@ -318,7 +319,7 @@ export class AppResourceManager extends HTMLElement {
       if (this._rtype === "shaderpack") {
         // 光影包：从 lang/en_US.lang 提取显示名
         const { ReadShaderpackLang } =
-          await import("../../../wailsjs/go/main/App.js");
+          await getApp();
         const jsonStr = await ReadShaderpackLang(path);
         const spMeta = JSON.parse(jsonStr);
         if (spMeta.name) displayName = spMeta.name;
@@ -334,7 +335,7 @@ export class AppResourceManager extends HTMLElement {
           : `📦 光影包 (${Object.keys(entries).length} 项配置)`;
       } else {
         const { ReadPackMeta, IsResourcePackEnabled } =
-          await import("../../../wailsjs/go/main/App.js");
+          await getApp();
         const jsonStr = await ReadPackMeta(path);
         meta = JSON.parse(jsonStr);
         if (this._actions.includes("toggle")) {
@@ -362,7 +363,7 @@ export class AppResourceManager extends HTMLElement {
               const type = _findType(this._rtype);
               const isDirModel = type && type.isDir;
               const { DeleteResourcePack, DeleteModelDir } =
-                await import("../../../wailsjs/go/main/App.js");
+                await getApp();
               if (isDirModel) {
                 await DeleteModelDir(path);
               } else {

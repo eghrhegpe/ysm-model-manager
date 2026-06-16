@@ -53,10 +53,10 @@ ${btnBaseCSS}
 .vs-wrap { box-sizing: border-box; }
 .empty { text-align: center; padding: 40px 16px; font-size: 12px; color: var(--muted); line-height: 1.8; }
 .empty .big { font-size: 36px; margin-bottom: 8px; }
-.fh { display: flex; align-items: center; gap: 4px; padding: 3px 4px; border-radius: 0; cursor: pointer; font-size: var(--fs-base); transition: background .12s; border-left: 2px solid transparent; }
+.fh { display: flex; align-items: center; gap: 4px; padding: 3px 4px; border-radius: 0; cursor: pointer; font-size: var(--fs-base); transition: background var(--tr-fast); border-left: 2px solid transparent; }
 .fh:hover { background: var(--hover); }
 .fh.has-items { border-left-color: #a6e3a166; }
-.fh .ar { font-size: var(--fs-sm); color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; transition: transform .12s; }
+.fh .ar { font-size: var(--fs-sm); color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; transition: transform var(--tr-fast); }
 .fh .ar.open { transform: rotate(90deg); }
 .fh .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
 .fh .nm .tag-author,.fh .nm .tag-work,.fh .nm .tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
@@ -66,11 +66,11 @@ ${btnBaseCSS}
 .fh .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: 2px; padding: 0 2px; }
 .fh.locked { opacity: .5; }
 .fh.locked .nm { color: var(--muted); }
-.fl { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px; font-size: var(--fs-base); transition: all .15s; cursor: default; user-select: none; -webkit-user-select: none; }
+.fl { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px; font-size: var(--fs-base); transition: all var(--tr-normal); cursor: default; user-select: none; -webkit-user-select: none; }
 .fl:hover { background: var(--hover); }
 .fl.flash { background: #a6e3a122; }
 .fl.selected { background: rgba(137,180,250,.15); outline: 1px solid rgba(137,180,250,.3); }
-.fl .ck, .fh .ck { width: 22px; height: 12px; border-radius: 6px; background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background .15s; font-size: 0; line-height: 0; }
+.fl .ck, .fh .ck { width: 22px; height: 12px; border-radius: 6px; background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background var(--tr-normal); font-size: 0; line-height: 0; }
 .fl .ck::after, .fh .ck::after { content: ""; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--txt); transition: left .15s; }
 .fl .ck.on, .fh .ck.on { background: #a6e3a1; }
 .fl .ck.on::after, .fh .ck.on::after { left: 12px; }

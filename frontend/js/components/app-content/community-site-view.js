@@ -260,7 +260,10 @@ export function renderSiteView(site, ctx) {
         '<button class="cr-save-btn cr-action-btn-accent">💾 保存</button>' +
         '<button class="cr-cancel-btn">取消</button>' +
         "</div>" +
-        '<div class="cr-hint-text">📄 数据文件：exe 同目录下的 creators.json，可直接编辑</div>',
+        '<div class="cr-drop-zone" id="cr-drop-zone">' +
+          '<span class="cr-drop-icon">📥</span>' +
+          '<span class="cr-drop-text">拖拽 JSON 文件到此处，导入创作者/站点配置</span>' +
+        "</div>",
     );
     creators.forEach((cr, idx) => {
       const roleEmoji = getTagIconFromRole(cr.role);
@@ -859,78 +862,116 @@ export function renderSiteView(site, ctx) {
       }
     });
 
-  // 创作者导出
-  searchResults
-    .querySelector(".cr-export-btn")
-    ?.addEventListener("click", async () => {
-      try {
-        // 导出前全量保存并校验完整性
-        if (allCreators.length < 100) {
-          bus.emit("toast:show", {
-            msg: "❌ 数据异常：仅 " + allCreators.length + " 条，拒绝导出",
-            duration: 4000,
-            type: "error",
-          });
-          return;
-        }
-        const { SaveWorkshopCreators, ExportWorkshopCreatorsJSONFile } =
-          await import("../../../wailsjs/go/main/App.js");
-        await SaveWorkshopCreators(allCreators);
-        const path = await ExportWorkshopCreatorsJSONFile();
+  // ===== 拖拽 JSON 导入创作者/站点配置 =====
+  const dropZone = searchResults.querySelector("#cr-drop-zone");
+  if (dropZone) {
+    let _dragCounter = 0;
+
+    const onDragEnter = (e) => {
+      e.preventDefault();
+      _dragCounter++;
+      dropZone.classList.add("cr-drop-zone-active");
+    };
+    const onDragLeave = () => {
+      _dragCounter--;
+      if (_dragCounter <= 0) {
+        _dragCounter = 0;
+        dropZone.classList.remove("cr-drop-zone-active");
+      }
+    };
+    const onDrop = async (e) => {
+      e.preventDefault();
+      _dragCounter = 0;
+      dropZone.classList.remove("cr-drop-zone-active");
+
+      const file = e.dataTransfer?.files?.[0];
+      if (!file || !file.name.endsWith(".json")) {
         bus.emit("toast:show", {
-          msg: "📤 已导出: " + path,
-          duration: 2000,
-          type: "success",
-        });
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: "❌ " + friendlyError(e, "导出失败"),
-          duration: 4000,
+          msg: "❌ 请拖拽 .json 文件",
+          duration: 3000,
           type: "error",
         });
+        return;
       }
-    });
 
-  // 创作者导入
-  searchResults
-    .querySelector(".cr-import-btn")
-    ?.addEventListener("click", async () => {
+      const resetLabel = () => {
+        dropZone.innerHTML =
+          '<span class="cr-drop-icon">📥</span>' +
+          '<span class="cr-drop-text">拖拽 JSON 文件到此处，导入创作者/站点配置</span>';
+      };
+
       try {
-        const { LoadWorkshopCreators, SaveWorkshopCreators } =
-          await import("../../../wailsjs/go/main/App.js");
-        const fresh = await LoadWorkshopCreators();
-        fresh.forEach((cr) => {
-          if (!allCreators.find((c) => c.name === cr.name)) {
-            allCreators.push(cr);
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!Array.isArray(data) || !data.length) {
+          throw new Error("JSON 必须是对象数组");
+        }
+
+        const first = data[0];
+        if (first && typeof first.name === "string") {
+          // 创作者 JSON → Go 端 MergeWorkshopCreatorsFromJSON
+          dropZone.textContent = "⏳ 正在合并创作者…";
+          const { MergeWorkshopCreatorsFromJSON, LoadWorkshopCreators } =
+            await import("../../../wailsjs/go/main/App.js");
+          const result = await MergeWorkshopCreatorsFromJSON(text);
+          let added, updated;
+          if (Array.isArray(result)) {
+            added = result[0]; updated = result[1];
+          } else {
+            added = result; updated = 0;
           }
-        });
-        if (allCreators.length < 100) {
-          bus.emit("toast:show", {
-            msg:
-              "❌ 合并后数据异常（" + allCreators.length + " 条），已取消保存",
-            duration: 4000,
-            type: "error",
-          });
-          // 从文件重新加载
+          // 刷新内存中的 allCreators
+          const fresh = await LoadWorkshopCreators();
           allCreators.length = 0;
           allCreators.push(...fresh);
-          return;
+          bus.emit("toast:show", {
+            msg: "✅ 创作者: 新增 " + added + "，更新 " + updated,
+            duration: 3000,
+            type: "success",
+          });
+        } else if (first && typeof first.id === "string" && typeof first.label === "string") {
+          // 站点 JSON → 前端合并后调用 SaveWorkshopSites
+          dropZone.textContent = "⏳ 正在合并站点…";
+          const { SaveWorkshopSites } =
+            await import("../../../wailsjs/go/main/App.js");
+          const existMap = new Map(allSites.map((s) => [s.id, s]));
+          let added = 0, updated = 0;
+          data.forEach((s) => {
+            if (existMap.has(s.id)) {
+              Object.assign(existMap.get(s.id), s);
+              updated++;
+            } else {
+              existMap.set(s.id, s);
+              allSites.push(s);
+              added++;
+            }
+          });
+          await SaveWorkshopSites(allSites);
+          bus.emit("toast:show", {
+            msg: "✅ 站点: 新增 " + added + "，更新 " + updated,
+            duration: 3000,
+            type: "success",
+          });
+        } else {
+          throw new Error("JSON 格式无法识别（需含 name 字段或 id+label 字段）");
         }
-        wsEditModeRef.v = false;
-        bus.emit("toast:show", {
-          msg: "✅ 已合并导入，共 " + allCreators.length + " 位创作者",
-          duration: 2000,
-          type: "success",
-        });
-        refreshView();
       } catch (e) {
         bus.emit("toast:show", {
           msg: "❌ " + friendlyError(e, "导入失败"),
           duration: 4000,
           type: "error",
         });
+      } finally {
+        resetLabel();
+        refreshView();
       }
-    });
+    };
+
+    dropZone.addEventListener("dragenter", onDragEnter);
+    dropZone.addEventListener("dragover", (e) => e.preventDefault());
+    dropZone.addEventListener("dragleave", onDragLeave);
+    dropZone.addEventListener("drop", onDrop);
+  }
 
   // 行内编辑
   searchResults.querySelectorAll("[data-idx][data-fld]").forEach((inp) => {

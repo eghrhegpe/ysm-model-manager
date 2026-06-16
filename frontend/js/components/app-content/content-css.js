@@ -492,9 +492,18 @@ ${btnBaseCSS}
 }
 .cr-tag-filter-btn:hover { border-color:var(--accent);color:var(--accent); }
 .cr-tag-filter-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
-.cr-hint-text {
-  font-size:var(--fs-xs);color:var(--muted);padding:2px 0 6px;
+.cr-drop-zone {
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 16px;margin:4px 0 8px;
+  border:2px dashed var(--bd);border-radius:8px;
+  color:var(--muted);font-size:var(--fs-xs);
+  cursor:pointer;transition:all .2s;user-select:none;
 }
+.cr-drop-zone-active {
+  border-color:var(--accent);color:var(--accent);background:var(--hover);
+}
+.cr-drop-icon { font-size:18px; }
+.cr-drop-text { font-size:var(--fs-xs); }
 .cr-fetch-btn, .cr-edit-btn, .cr-save-btn, .cr-cancel-btn {
   padding:2px 8px;border-radius:4px;border:1px solid var(--bd);
   background:transparent;color:var(--txt);cursor:pointer;

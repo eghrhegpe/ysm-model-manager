@@ -1,6 +1,7 @@
 // ===== <app-nav> — 左侧导航菜单 =====
 // 事件：nav:change — 切换页面
 import { bus } from "../bus.js";
+import { getApp } from "../wails/app.js";
 
 class AppNav extends HTMLElement {
   constructor() {
@@ -84,7 +85,7 @@ class AppNav extends HTMLElement {
           font-size: calc(var(--fs-nav) + 2px);
           color: var(--muted);
           cursor: pointer;
-          transition: all .12s;
+          transition: var(--tr-fast);
           margin-bottom: 2px;
         }
         .nav-item:hover { background: var(--hover); color: var(--txt); }
@@ -127,9 +128,9 @@ class AppNav extends HTMLElement {
     });
 
     // 异步加载版本号
-    import("../../wailsjs/go/main/App.js")
-      .then(({ GetAppVersion }) =>
-        GetAppVersion().then((v) => {
+    getApp()
+      .then((App) =>
+        App.GetAppVersion().then((v) => {
           const el = this.shadowRoot.getElementById("nav-version");
           if (el) el.textContent = (v || "dev") + " \u2022 预告版";
         }),

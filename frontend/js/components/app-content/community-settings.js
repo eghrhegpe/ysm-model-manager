@@ -308,7 +308,7 @@ export async function initSettings(root) {
         listHtml +=
           "<div class='mc-pick-item' data-idx='" +
           i +
-          "' style='padding:8px 10px;border-radius:6px;cursor:pointer;font-size:var(--fs-sm,11px);color:var(--txt,#cdd6f4);display:flex;align-items:center;gap:8px;transition:background .12s' onmouseenter='this.style.background=\"var(--hover,#3a3a4a)\"' onmouseleave='this.style.background=\"\"'>" +
+          "' style='padding:8px 10px;border-radius:6px;cursor:pointer;font-size:var(--fs-sm,11px);color:var(--txt,#cdd6f4);display:flex;align-items:center;gap:8px;transition:background var(--tr-fast)' onmouseenter='this.style.background=\"var(--hover,#3a3a4a)\"' onmouseleave='this.style.background=\"\"'>" +
           "<span style='color:var(--accent,#89b4fa);flex-shrink:0'>📁</span>" +
           escHtml(paths[i]) +
           "</div>";

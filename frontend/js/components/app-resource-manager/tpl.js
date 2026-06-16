@@ -62,7 +62,7 @@ export function itemHTML(path, name, enabled, icon, idx) {
     esc(path) +
     '" data-name="' +
     esc(name) +
-    '" style="animation-delay:' + Math.min((idx || 0) * 20, 400) + 'ms;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:var(--fs-sm);transition:background .12s;display:flex;align-items:center;gap:6px;opacity:' +
+    '" style="animation-delay:' + Math.min((idx || 0) * 20, 400) + 'ms;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:var(--fs-sm);transition:background var(--tr-fast);display:flex;align-items:center;gap:6px;opacity:' +
     (enabled ? 1 : 0.5) +
     '">' +
     '<span class="rm-toggle" style="cursor:pointer;font-size:12px;flex-shrink:0">' +

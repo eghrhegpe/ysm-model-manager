@@ -16,7 +16,7 @@ export const sidebarCSS = `
   border-radius: 6px; margin-bottom: 4px; overflow: hidden;
 }
 .vc-header {
-  padding: 5px 10px; cursor: pointer; transition: background .12s;
+  padding: 5px 10px; cursor: pointer; transition: background var(--tr-fast);
 }
 .vc-header:hover { background: var(--hover); }
 .vc-header.active { background: color-mix(in srgb, var(--accent) 20%, transparent); border-left: 3px solid var(--accent); padding-left: 7px; box-shadow: inset 0 0 8px color-mix(in srgb, var(--accent) 8%, transparent); }
@@ -44,7 +44,7 @@ ${btnBaseCSS}
   width: 100%; padding: 5px 8px; border-radius: 6px;
   border: 1px solid var(--bd); background: transparent;
   color: var(--txt); cursor: pointer; font-size: calc(var(--fs-base) - 2px); font-family: var(--font-ui);
-  text-align: center; transition: background .12s;
+  text-align: center; transition: background var(--tr-fast);
 }
 .footer-btn:hover { background: var(--hover); }
 /* 骨架屏 */

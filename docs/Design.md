@@ -178,37 +178,54 @@
 ## 6. 圆角系统
 
 ```css
---r: 10px; /* 卡片圆角（全局默认） */
-.btn {
-  border-radius: 6px;
-} /* 按钮 */
-.badge {
-  border-radius: 12px;
-} /* 徽章/标签 */
-.tag {
-  border-radius: 4px;
-} /* 状态标签 */
+--radius-xs: 3px;    /* 标签内小元素、进度条 */
+--radius-sm: 4px;    /* 按钮、输入框、筛选标签 */
+--radius-md: 6px;    /* 卡片、对话框、按钮组 */
+--radius-lg: 8px;    /* 大卡片、弹出面板 */
+--radius-xl: 10px;   /* 全局卡片默认（--r） */
+--radius-pill: 20px; /* 药丸形徽章 */
 ```
 
-- 卡片：**10px**（`--r` 变量）
-- 按钮：**6px**
-- 标签/徽章：**4–12px**（取决于高度）
-- 输入框：**6px**
-- 搜索栏：**6px**
+- 所有 `border-radius` 必须使用 `--radius-*` 变量
+- 禁止硬编码 `border-radius: Npx`
 
 ---
 
 ## 7. 动画/过渡
 
-```
-transition: background 0.15s, color 0.15s;   /* 按钮 hover */
-transition: grid-template-columns 0.18s ease; /* 布局变化 */
-transition: opacity 0.2s;                     /* 淡入淡出 */
+```css
+--tr-fast: 0.12s ease;      /* 按钮 hover、微交互 */
+--tr-normal: 0.15s ease;    /* 面板展开、卡片过渡 */
+--tr-slow: 0.2s ease;       /* 页面切换、内容淡入 */
+--tr-enter: 0.25s ease-out; /* 入场动画 */
 ```
 
-- 所有 interactive 元素必须有 hover 过渡（0.15s）
+```css
+transition: background var(--tr-fast);        /* 按钮 hover */
+transition: grid-template-columns var(--tr-normal); /* 布局变化 */
+transition: opacity var(--tr-slow);           /* 淡入淡出 */
+```
+
+- 所有 `transition` 时长必须使用 `--tr-*` 变量
+- 禁止硬编码 `transition: ... 0.15s`
+
+- 所有 interactive 元素必须有 hover 过渡
 - 不要用闪烁动画（除了加载骨架屏）
 - 进度条用线性过渡
+
+---
+
+## 7.1 阴影系统
+
+```css
+--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);    /* 轻微抬升 */
+--shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);      /* 卡片默认 */
+--shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);    /* 下拉菜单、弹出面板 */
+--shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.25);    /* 模态对话框 */
+```
+
+- 所有 `box-shadow` 必须使用 `--shadow-*` 变量
+- 禁止硬编码 `box-shadow: 0 Npx ... rgba(0,0,0,...)`
 
 ---
 

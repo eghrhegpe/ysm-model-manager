@@ -3,6 +3,7 @@
 import { esc } from "../utils/dom.js";
 import { bus } from "../bus.js";
 import { closeDlg } from "./modal.js";
+import { getApp } from "../wails/app.js";
 
 /**
  * 弹出标签编辑弹窗
@@ -62,10 +63,10 @@ export function modalTagEditor(modelPath) {
     // === 加载 ===
     (async () => {
       try {
-        const { GetModelTags, AllTags } = window.go.main.App;
-        tags = await GetModelTags(modelPath);
+        const App = await getApp();
+        tags = await App.GetModelTags(modelPath);
         renderTags();
-        const allTags = await AllTags();
+        const allTags = await App.AllTags();
         renderSuggestions(allTags);
       } catch (e) {
         errEl.textContent = "⚠️ 加载标签失败: " + e.message;
@@ -147,8 +148,8 @@ export function modalTagEditor(modelPath) {
     box.querySelector("#te-cancel").onclick = () => close(null);
     box.querySelector("#te-save").onclick = async () => {
       try {
-        const { SetModelTags } = window.go.main.App;
-        await SetModelTags(modelPath, tags);
+        const App = await getApp();
+        await App.SetModelTags(modelPath, tags);
         close(tags);
       } catch (e) {
         errEl.textContent = "⚠️ 保存失败: " + e.message;

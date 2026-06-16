@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -47,6 +48,7 @@ func (a *App) EnqueueDownloads(tasks []DownloadTask) error {
 	a.queue.tasks = append(a.queue.tasks, tasks...)
 	total := len(a.queue.tasks)
 	a.queue.mu.Unlock()
+	log.Printf("[queue] emit queue:status enqueued total=%d", total)
 	runtime.EventsEmit(a.ctx, "queue:status", "enqueued", total, "")
 	if !a.queue.running {
 		go a.queue.process()
@@ -64,6 +66,7 @@ func (a *App) CancelQueue() {
 	}
 	a.queue.tasks = nil
 	a.queue.running = false
+	log.Printf("[queue] emit queue:status cancelled")
 	runtime.EventsEmit(a.ctx, "queue:status", "cancelled", 0, "")
 }
 
@@ -84,6 +87,7 @@ func (q *DownloadQueue) process() {
 		cancelled := q.cancelled
 		q.mu.Unlock()
 		if !cancelled {
+			log.Printf("[queue] emit queue:status done")
 			runtime.EventsEmit(q.app.ctx, "queue:status", "done", 0, "")
 		}
 	}()
@@ -99,12 +103,15 @@ func (q *DownloadQueue) process() {
 		remaining := len(q.tasks)
 		q.mu.Unlock()
 
+		log.Printf("[queue] emit queue:file-start name=%s pos=%d left=%d", task.Name, remaining+1, remaining)
 		runtime.EventsEmit(q.app.ctx, "queue:file-start", task.Name, remaining+1, remaining)
 
 		savePath, err := q.app.downloadFileWithQueue(task.URL, task.SaveDir)
 		if err != nil {
+			log.Printf("[queue] emit queue:file-done name=%s status=fail err=%v", task.Name, err)
 			runtime.EventsEmit(q.app.ctx, "queue:file-done", task.Name, "fail", err.Error())
 		} else {
+			log.Printf("[queue] emit queue:file-done name=%s status=ok", task.Name)
 			runtime.EventsEmit(q.app.ctx, "queue:file-done", task.Name, "ok", "")
 			// 写入导入日志
 			var fileSize int64
@@ -217,6 +224,7 @@ func (a *App) downloadFile(url, savePath string) error {
 			}
 			downloaded += int64(n)
 			if time.Since(lastEmit) > 200*time.Millisecond {
+				log.Printf("[queue] emit download:progress dl=%d total=%d", downloaded, total)
 				runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
 				lastEmit = time.Now()
 			}
@@ -231,6 +239,7 @@ func (a *App) downloadFile(url, savePath string) error {
 	if total <= 0 {
 		total = downloaded
 	}
+	log.Printf("[queue] emit download:progress dl=%d total=%d (final)", downloaded, total)
 	runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
 	return nil
 }
@@ -269,6 +278,7 @@ func (a *App) downloadFromAPI(apiURL, savePath string) error {
 			}
 			downloaded += int64(n)
 			if time.Since(lastEmit) > 200*time.Millisecond {
+				log.Printf("[queue] emit download:progress dl=%d total=%d", downloaded, total)
 				runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
 				lastEmit = time.Now()
 			}
@@ -283,6 +293,7 @@ func (a *App) downloadFromAPI(apiURL, savePath string) error {
 	if total <= 0 {
 		total = downloaded
 	}
+	log.Printf("[queue] emit download:progress dl=%d total=%d (final)", downloaded, total)
 	runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
 	return nil
 }

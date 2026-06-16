@@ -36,6 +36,10 @@
 }
 
 /* ===== 对话框 ===== */
+@keyframes dlgFadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes dlgFadeOut { from { opacity: 1 } to { opacity: 0 } }
+@keyframes dlgBoxIn { from { opacity: 0; transform: scale(.95) translateY(8px) } to { opacity: 1; transform: scale(1) translateY(0) } }
+@keyframes dlgBoxOut { from { opacity: 1; transform: scale(1) translateY(0) } to { opacity: 0; transform: scale(.95) translateY(8px) } }
 .dlg-overlay {
   position: fixed;
   inset: 0;
@@ -44,7 +48,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: dlgFadeIn .15s ease;
 }
+.dlg-overlay.dlg-closing { animation: dlgFadeOut .12s ease forwards; }
 .dlg-box {
   background: var(--surf);
   border: 1px solid var(--bd);
@@ -55,7 +61,11 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
+  animation: dlgBoxIn .2s cubic-bezier(.34,1.56,.64,1);
 }
+.dlg-overlay.dlg-closing .dlg-box { animation: dlgBoxOut .12s ease forwards; }
+.no-animations .dlg-overlay, .no-animations .dlg-overlay.dlg-closing { animation: none !important; }
+.no-animations .dlg-box, .no-animations .dlg-overlay.dlg-closing .dlg-box { animation: none !important; }
 .dlg-pad {
   padding: 14px;
 }
@@ -450,6 +460,10 @@
 
 .btn-base:hover {
   background: var(--hover);
+}
+
+.btn-base:active {
+  transform: scale(0.97);
 }
 
 .btn-base:focus-visible {

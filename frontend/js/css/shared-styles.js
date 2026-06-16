@@ -8,11 +8,12 @@ export const btnBaseCSS = `
   cursor: pointer;
   font-size: inherit;
   font-family: inherit;
-  transition: background .12s, color .12s;
+  transition: background .12s, color .12s, transform .1s;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .btn-base:hover { background: var(--hover); }
+.btn-base:active { transform: scale(0.97); }
 .btn-base:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); outline: none; }
 .btn-base.sm { padding: var(--btn-padding-sm); font-size: var(--fs-btn-tool); }
 .btn-base.lg { padding: var(--btn-padding-lg); font-size: var(--fs-btn-primary); }

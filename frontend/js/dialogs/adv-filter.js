@@ -4,7 +4,7 @@
 // 样式：.afv-inp 已提取到 frontend/css/components.css（避免重复注入 <style>）
 // 后端约束：当前 Go SearchModels 只支持 (minBones, maxBones, minCubes, maxCubes, minTex, maxTex) 6 个范围 + 1 个关键字；
 //   不支持文件大小、排序（避免展示无效控件）
-import { esc } from "./modal.js";
+import { esc, closeDlg } from "./modal.js";
 
 /**
  * 弹出高级筛选弹窗
@@ -18,16 +18,10 @@ export function modalAdvFilter(opts = {}) {
     const overlay = document.createElement("div");
     overlay.className = "dlg-overlay";
     overlay.onclick = (e) => {
-      if (e.target === overlay) {
-        overlay.remove();
-        resolve(null);
-      }
+      if (e.target === overlay) closeDlg(overlay, resolve, null);
     };
     overlay.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        overlay.remove();
-        resolve(null);
-      }
+      if (e.key === "Escape") closeDlg(overlay, resolve, null);
     });
 
     const box = document.createElement("div");
@@ -131,10 +125,7 @@ export function modalAdvFilter(opts = {}) {
       };
     };
 
-    const close = (result) => {
-      overlay.remove();
-      resolve(result);
-    };
+    const close = (result) => closeDlg(overlay, resolve, result);
 
     const validate = (data) => {
       // 只在两端都填了数字时才校验（null 表示不限制）
@@ -151,10 +142,7 @@ export function modalAdvFilter(opts = {}) {
     };
 
     box.querySelector("#afv-cancel").onclick = () => close(null);
-    box.querySelector("#afv-clear").onclick = () => {
-      overlay.remove();
-      resolve({ cleared: true });
-    };
+    box.querySelector("#afv-clear").onclick = () => closeDlg(overlay, resolve, { cleared: true });
     box.querySelector("#afv-ok").onclick = () => {
       const data = collect();
       const err = validate(data);

@@ -8,7 +8,9 @@ export const contentCSS = `
   to   { opacity:1; transform:translateY(0); max-height:30px; padding:2px 4px }
 }
 #dl-imported-list > div { animation:dl-slide-up .25s ease-out both; }
-.page { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+@keyframes pageIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
+.page { flex:1; display:flex; flex-direction:column; overflow:hidden; animation: pageIn .2s ease; }
+.no-animations .page { animation: none !important; }
 .section-title { font-size:var(--fs-lg); font-weight:600; color:var(--txt); padding:16px 16px 8px; }
 .card-row { display:flex; gap:12px; padding:0 16px; }
 .stat-card { flex:1; background:var(--surf); border:1px solid var(--bd); border-radius:12px; padding:16px; }
@@ -354,6 +356,20 @@ ${btnBaseCSS}
 }
 .cr-creator-card:hover .cr-card-tier-bar { opacity:1; }
 .cr-creator-card:hover .cr-avatar { transform:rotate(-8deg) scale(1.05); }
+/* 筛选隐藏态：淡出 + 折叠 */
+.cr-creator-card.cr-card-hidden {
+  opacity:0;
+  transform:scale(.95);
+  max-height:0;
+  min-height:0;
+  padding:0 14px;
+  margin:0;
+  border-width:0;
+  overflow:hidden;
+  pointer-events:none;
+  animation:none !important;
+  transition:opacity .2s ease, transform .2s ease, max-height .2s ease, min-height .2s ease, padding .2s ease, margin .2s ease, border-width .2s ease;
+}
 /* tier 色条 */
 .cr-card-tier-bar {
   position:absolute;top:0;left:0;right:0;height:2px;opacity:.6;transition:opacity .15s;
@@ -747,6 +763,13 @@ ${btnBaseCSS}
 .cr-section-wrap { flex-wrap:wrap; }
 .cr-preset-icon { font-size:12px; }
 .stg-adv-reset { margin-left:auto; }
+/* 设置面板展开/折叠动画 */
+@keyframes advPanelIn { from { opacity:0; max-height:0; } to { opacity:1; max-height:600px; } }
+@keyframes advPanelOut { from { opacity:1; max-height:600px; } to { opacity:0; max-height:0; } }
+#set-advanced-panel { overflow:hidden; }
+#set-advanced-panel.adv-open { animation: advPanelIn .25s ease forwards; }
+#set-advanced-panel.adv-closing { animation: advPanelOut .2s ease forwards; }
+.no-animations #set-advanced-panel { animation: none !important; }
 .cr-error-page .cr-back-repo { margin-bottom:12px; }
 
 /* Edit card inputs */

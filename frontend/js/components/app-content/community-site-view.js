@@ -162,24 +162,8 @@ export function renderSiteView(site, ctx) {
     );
   }
 
-  // 创作者列表
-  if (!wsEditModeRef.v && creators.length) {
-    // 收集所有标签
-    // 收藏置顶
-    const faved = loadFavs();
-    creators.sort((a, b) => {
-      const af = faved.includes(a.name) ? 1 : 0;
-      const bf = faved.includes(b.name) ? 1 : 0;
-      if (af !== bf) return bf - af;
-      return (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0);
-    });
-
-    const tagSet = new Set();
-    creators.forEach((cr) => {
-      const t = getTagFromRole(cr.role);
-      if (t) tagSet.add(t);
-    });
-    const tags = [...tagSet];
+  // 创作者列表 — 标题栏始终显示，确保「更新配置」按钮可点击
+  if (!wsEditModeRef.v) {
     parts.push(
       '<div class="cr-section cr-section-wrap">' +
         '<span class="cr-section-title-lg">🎨 活跃创作者</span>' +
@@ -190,30 +174,54 @@ export function renderSiteView(site, ctx) {
         '<span class="cr-section-fill"></span>' +
         '<button class="cr-fetch-btn" title="\u4ECE GitHub \u62C9\u53D6\u6700\u65B0\u521B\u4F5C\u8005 + \u7AD9\u70B9 + GitHub \u4ED3\u5E93 + \u8D44\u6E90\u7C7B\u578B">\uD83C\uDF10 \u66F4\u65B0\u914D\u7F6E</button>' +
         '<button class="cr-edit-btn">✏️ 编辑</button>' +
-        "</div>" +
-        '<div class="cr-tag-filter-row">' +
-        '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
-        '<button class="cr-tag-filter-btn" data-tag="creator">🎮 模型创作者</button>' +
-        '<button class="cr-tag-filter-btn" data-tag="official">🏠 官方IP</button>' +
-        tags
-          .filter((t) => t !== "creator" && t !== "official")
-          .map(
-            (t) =>
-              '<button class="cr-tag-filter-btn" data-tag="' +
-              esc(t) +
-              '">' +
-              getTagIconFromRole(t) +
-              " <span>" +
-              esc(t) +
-              "</span>" +
-              "</button>",
-          )
-          .join("") +
         "</div>",
     );
-    parts.push(
-      '<div class="cr-creator-grid" id="cr-creator-grid"></div>',
-    );
+    if (creators.length) {
+      // 收藏置顶
+      const faved = loadFavs();
+      creators.sort((a, b) => {
+        const af = faved.includes(a.name) ? 1 : 0;
+        const bf = faved.includes(b.name) ? 1 : 0;
+        if (af !== bf) return bf - af;
+        return (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0);
+      });
+      // 收集所有标签
+      const tagSet = new Set();
+      creators.forEach((cr) => {
+        const t = getTagFromRole(cr.role);
+        if (t) tagSet.add(t);
+      });
+      const tags = [...tagSet];
+      parts.push(
+        '<div class="cr-tag-filter-row">' +
+          '<button class="cr-tag-filter-btn active" data-tag="">🎯 全部</button>' +
+          '<button class="cr-tag-filter-btn" data-tag="creator">🎮 模型创作者</button>' +
+          '<button class="cr-tag-filter-btn" data-tag="official">🏠 官方IP</button>' +
+          tags
+            .filter((t) => t !== "creator" && t !== "official")
+            .map(
+              (t) =>
+                '<button class="cr-tag-filter-btn" data-tag="' +
+                esc(t) +
+                '">' +
+                getTagIconFromRole(t) +
+                " <span>" +
+                esc(t) +
+                "</span>" +
+                "</button>",
+            )
+            .join("") +
+          "</div>",
+      );
+      parts.push(
+        '<div class="cr-creator-grid" id="cr-creator-grid"></div>',
+      );
+    } else {
+      parts.push(
+        '<div class="cr-empty-site">暂无创作者数据。<br>点击上方「🌐 更新配置」从 GitHub 拉取最新创作者列表。' +
+        '<br><br><button class="cr-local-btn" data-local-empty>📂 浏览本地模型</button></div>',
+      );
+    }
   } else if (wsEditModeRef.v) {
     // 🔍 搜索词编辑（即使为空也渲染，让用户能新增）
     if (site.presetSearches || !site.presetSearches) {
@@ -349,17 +357,15 @@ export function renderSiteView(site, ctx) {
   parts.push("</div>");
 
   let html = parts.join("");
-
-  if (!site.presetSearches?.length && !creators.length && !wsEditModeRef.v) {
-    html =
-      '<div class="cr-empty-site">此站点无可操作内容。<br>点击「浏览器打开」访问：<br><a href="' +
-      esc(site.url) +
-      '" target="_blank" class="cr-site-link">' +
-      esc(site.url) +
-      "</a></div>";
-  }
-
   searchResults.innerHTML = html;
+
+  // 无创作者时「浏览本地模型」按钮
+  const emptyLocalBtn = searchResults.querySelector("[data-local-empty]");
+  if (emptyLocalBtn) {
+    emptyLocalBtn.addEventListener("click", () => {
+      bus.emit("nav:change", { page: "repository" });
+    });
+  }
 
   // 用工厂函数填充创作者网格（替代内联字符串）
   const grid = searchResults.querySelector("#cr-creator-grid");

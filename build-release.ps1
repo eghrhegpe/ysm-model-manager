@@ -44,7 +44,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "   ✅ helper 已编译到 go/updater/" -ForegroundColor Green
 
-# 2. Wails 构建（自动嵌入前端资源 + 注入版本号）
+# 2. 运行代码生成（litematic block_ids 等）
+Write-Host "🧬 代码生成..." -ForegroundColor Yellow
+Set-Location $ProjectRoot
+go generate ./go/... 2>&1
+if ($LASTEXITCODE -ne 0) { Write-Host "⚠️ 代码生成有警告（可能已有生成文件）" -ForegroundColor Yellow }
+
+# 3. Wails 构建（自动嵌入前端资源 + 注入版本号）
 Write-Host "🦫 Wails 编译 $VerTag ..." -ForegroundColor Yellow
 Set-Location $ProjectRoot
 wails build -clean -ldflags "-X ysm-model-manager/go/version.Version=$VerTag" 2>&1

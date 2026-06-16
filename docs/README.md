@@ -59,6 +59,13 @@
 | [release-notes/](release-notes/) | 各版本发版说明（按版本号组织） |
 | [release-notes/README.md](release-notes/README.md) | 发版说明索引表 |
 
+### 构建发布流程
+
+1. `go generate ./go/...` — 代码生成（litematic block_ids 等，源 JSON → Go map 字面量）
+2. `npx vite build`（`frontend/`）— 前端构建
+3. `wails build -clean -ldflags "-X ysm-model-manager/go/version.Version=vX.Y.Z"` — 编译 exe
+4. `build-release.ps1 vX.Y.Z` — 一键执行 1-3 + 打包 ZIP + 生成 SHA256SUMS + 上传 GitHub Release
+
 ---
 
 ## 🎯 战略与任务

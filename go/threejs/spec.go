@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"math"
-	"strings"
+
 	"ysm-model-manager/go/types"
 )
 
@@ -116,24 +116,14 @@ func Build(model types.BedrockModel) (string, error) {
 			existingHasRot := bones[idx].LocalRotation != [4]float64{0, 0, 0, 1}
 			newHasRot := localRot != [4]float64{0, 0, 0, 1}
 			
-			// 调试：打印同名骨骼合并决策
-			if b.Name == "Head" || b.Name == "head" || b.Name == "Body" || b.Name == "body" {
-				log.Printf("[spec] 同名骨骼 %q: existingHasParent=%v newHasParent=%v existingHasRot=%v newHasRot=%v", 
-					b.Name, existingHasParent, newHasParent, existingHasRot, newHasRot)
-				log.Printf("[spec]   existing parentID=%v localPos=%v", bones[idx].ParentID, bones[idx].LocalPosition)
-				log.Printf("[spec]   new parentID=%v localPos=%v", parentID, localPos)
-			}
-			
 			overwrite := (!existingHasParent && newHasParent) ||
 				(existingHasParent && newHasParent && !existingHasRot && newHasRot)
 			if overwrite {
 				bones[idx].ParentID = &b.Parent
 				bones[idx].LocalPosition = localPos
 				bones[idx].LocalRotation = localRot
-				// 骨骼被主骨架覆盖时，cube 也替换而非合并（多文件同名骨 cube 位置不同）
 				boneCubes[b.Name] = append([]types.Cube2D{}, b.Cubes...)
 			} else {
-				// cube 合并：替换空间重叠的 cube，保留不重叠的
 				boneCubes[b.Name] = mergeCubes(boneCubes[b.Name], b.Cubes)
 			}
 		} else {
@@ -146,40 +136,6 @@ func Build(model types.BedrockModel) (string, error) {
 				LocalRotation: localRot,
 			})
 			boneCubes[b.Name] = append([]types.Cube2D{}, b.Cubes...)
-			
-			// 调试：打印首次出现的骨骼信息
-			if b.Name == "Head" || b.Name == "head" || b.Name == "Body" || b.Name == "body" {
-				log.Printf("[spec] 首次骨骼 %q: parent=%q localPos=%v pivot=%v", 
-					b.Name, b.Parent, localPos, bp)
-			}
-		}
-	}
-
-	// 调试：计算并打印手部骨骼的 worldPos（从根累积）
-	bl := make(map[string]*BoneData)
-	for i := range bones { bl[bones[i].Name] = &bones[i] }
-	worldPos := func(name string) [3]float64 {
-		p := [3]float64{0,0,0}
-		for cur := name; cur != ""; {
-			bd, ok := bl[cur]
-			if !ok { break }
-			p[0] += bd.LocalPosition[0]; p[1] += bd.LocalPosition[1]; p[2] += bd.LocalPosition[2]
-			if bd.ParentID == nil { break }
-			cur = *bd.ParentID
-		}
-		return p
-	}
-	for _, name := range []string{"LeftArm","LeftForeArm","LeftHand","RightArm","RightForeArm","RightHand"} {
-		if bd, ok := bl[name]; ok {
-			wp := worldPos(name)
-			pid := "<root>"
-			if bd.ParentID != nil { pid = *bd.ParentID }
-			isId := bd.LocalRotation[3] == 1 && bd.LocalRotation[0] == 0 && bd.LocalRotation[1] == 0 && bd.LocalRotation[2] == 0
-			if isId {
-				log.Printf("[spec] %s: parent=%s local=(%.2f %.2f %.2f) world=(%.2f %.2f %.2f) rot=identity", name, pid, bd.LocalPosition[0], bd.LocalPosition[1], bd.LocalPosition[2], wp[0], wp[1], wp[2])
-			} else {
-				log.Printf("[spec] %s: parent=%s local=(%.2f %.2f %.2f) world=(%.2f %.2f %.2f) rot=(%.4f %.4f %.4f %.4f)", name, pid, bd.LocalPosition[0], bd.LocalPosition[1], bd.LocalPosition[2], wp[0], wp[1], wp[2], bd.LocalRotation[0], bd.LocalRotation[1], bd.LocalRotation[2], bd.LocalRotation[3])
-			}
 		}
 	}
 
@@ -199,31 +155,10 @@ func Build(model types.BedrockModel) (string, error) {
 		if !hasPivot {
 			bonePivot = vec3{b.Pivot[0], b.Pivot[1], b.Pivot[2]}
 		}
-		if strings.HasPrefix(b.Name, "RightHand") || strings.HasPrefix(b.Name, "LeftHand") || strings.HasPrefix(b.Name, "RightFore") || strings.HasPrefix(b.Name, "LeftFore") {
-			log.Printf("[spec] %s: bonePivot=(%.2f %.2f %.2f) cubes=%d", b.Name, bonePivot.x, bonePivot.y, bonePivot.z, len(boneCubes[b.Name]))
-			for ci, c := range boneCubes[b.Name] {
-				log.Printf("[spec]   cube[%d]: origin=%v size=%v rot=%v", ci, c.Origin, c.Size, c.Rotation)
-				meshData := buildCubeMeshData(c, bonePivot, texW, texH, b.Name, ci)
-				if meshData != nil {
-					px := meshData.Positions; n := len(px)/3
-					log.Printf("[spec]   mesh localPos=(%.2f %.2f %.2f) boneId=%s vertices=%d", meshData.LocalPosition[0], meshData.LocalPosition[1], meshData.LocalPosition[2], meshData.BoneID, n)
-					meshes = append(meshes, *meshData)
-				}
-			}
-		} else if strings.HasPrefix(b.Name, "RightArm") || strings.HasPrefix(b.Name, "LeftArm") {
-			log.Printf("[spec] %s: bonePivot=(%.2f %.2f %.2f) cubes=%d", b.Name, bonePivot.x, bonePivot.y, bonePivot.z, len(boneCubes[b.Name]))
-			for ci, c := range boneCubes[b.Name] {
-				meshData := buildCubeMeshData(c, bonePivot, texW, texH, b.Name, ci)
-				if meshData != nil {
-					meshes = append(meshes, *meshData)
-				}
-			}
-		} else {
-			for ci, c := range boneCubes[b.Name] {
-				meshData := buildCubeMeshData(c, bonePivot, texW, texH, b.Name, ci)
-				if meshData != nil {
-					meshes = append(meshes, *meshData)
-				}
+		for ci, c := range boneCubes[b.Name] {
+			meshData := buildCubeMeshData(c, bonePivot, texW, texH, b.Name, ci)
+			if meshData != nil {
+				meshes = append(meshes, *meshData)
 			}
 		}
 	}
@@ -286,50 +221,7 @@ func Build(model types.BedrockModel) (string, error) {
 		}
 	}
 	
-	// 调试：打印 Head 骨骼的 cube 信息
-	for _, b := range model.Bones {
-		if b.Name == "Head" {
-			log.Printf("[spec] Head 骨骼: pivot=%v cubes=%d", b.Pivot, len(b.Cubes))
-			for i, c := range b.Cubes {
-				log.Printf("[spec]   cube[%d]: origin=%v size=%v pivot=%v", i, c.Origin, c.Size, c.Pivot)
-			}
-			break
-		}
-	}
-	
-	// 调试：打印所有根节点（无 parent 的骨骼）
-	log.Printf("[spec] === 根节点骨骼 ===")
-	for _, b := range bones {
-		if b.ParentID == nil {
-			log.Printf("[spec]   根节点: %q localPos=%v", b.Name, b.LocalPosition)
-		}
-	}
-	
-	// 调试：打印完整骨骼层级链（从 Root 到所有叶子）
-	boneMap := make(map[string]*BoneData)
-	for i := range bones {
-		boneMap[bones[i].Name] = &bones[i]
-	}
-	log.Printf("[spec] === 关键骨骼父链检查 ===")
-	checkBones := []string{"Head", "MHead", "AllHead", "UpperBody", "LowerBody", "Body", "Root", "RightArm", "LeftArm", "RightLeg", "LeftLeg", "Arm", "Leg"}
-	for _, name := range checkBones {
-		if b, ok := boneMap[name]; ok {
-			parentStr := "<root>"
-			if b.ParentID != nil {
-				parentStr = *b.ParentID
-				if _, exists := boneMap[*b.ParentID]; !exists {
-					parentStr += " ️不在bones列表"
-				}
-			}
-			log.Printf("[spec]   %s: parent=%s localPos=%v", name, parentStr, b.LocalPosition)
-		} else {
-			log.Printf("[spec]   %s: ⚠️不在bones列表", name)
-		}
-	}
-
 	// 后处理：修复断裂的父子链
-	// 沿着父链向上找，跳过所有 pivot 不存在或不在 bones 列表中的祖先
-	// 直到找到一个有 pivot 的祖先，用它来计算 localPos
 	boneNameSet := make(map[string]bool)
 	for _, b := range bones {
 		boneNameSet[b.Name] = true
@@ -367,16 +259,9 @@ func Build(model types.BedrockModel) (string, error) {
 			ancPivot := pivots[ancestor]
 			bones[i].ParentID = &ancestor
 			bones[i].LocalPosition = [3]float64{bp.x - ancPivot.x, bp.y - ancPivot.y, bp.z - ancPivot.z}
-			// 只打印关键骨骼的修复日志
-			if bones[i].Name == "Head" || bones[i].Name == "Body" || bones[i].Name == "Root" || bones[i].Name == "RightArm" || bones[i].Name == "LeftArm" || bones[i].Name == "RightLeg" || bones[i].Name == "LeftLeg" || bones[i].Name == "Arm" || bones[i].Name == "Leg" {
-				log.Printf("[spec] 修复链: %q 跳过中间节点 → parent=%q localPos=%v", 
-					bones[i].Name, ancestor, bones[i].LocalPosition)
-			}
 		} else {
 			bones[i].ParentID = nil
 			bones[i].LocalPosition = [3]float64{bp.x, bp.y, bp.z}
-			log.Printf("[spec] 修复链: %q 整条链无pivot → 挂root localPos=%v", 
-				bones[i].Name, bones[i].LocalPosition)
 		}
 	}
 
@@ -443,6 +328,13 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 	sy := c.Size[1]
 	sz := c.Size[2]
 	cp := [3]float64{c.Pivot[0], c.Pivot[1], c.Pivot[2]}
+	// 优先用 cube 自身 tex 维度
+	if c.CubeTexW > 0 {
+		texW = float64(c.CubeTexW)
+	}
+	if c.CubeTexH > 0 {
+		texH = float64(c.CubeTexH)
+	}
 
 	if sx == 0 || sy == 0 || sz == 0 {
 		return nil

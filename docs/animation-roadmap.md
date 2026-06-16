@@ -50,7 +50,7 @@ style="animation-delay:${stagger(i)}ms"
 
 ### P1 — 中高优先级
 - ✅ 页面切换淡入
-- ✅ 模型树文件夹展开子行淡入
+- ⚠️ 模型树文件夹展开子行淡入 — **已禁用**（`animation-fill-mode: both` + 虚拟滚动 `innerHTML` 替换 = 滚动闪烁，见 `bug-chronicle.md`）
 - ✅ 预览面板内容过渡
 
 ### P2 — 中优先级

@@ -171,6 +171,12 @@ func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 			return nil
 		}
 		if g := parseBedrockGeometry(data); g != nil {
+			for bi := range g.Bones {
+				for ci := range g.Bones[bi].Cubes {
+					g.Bones[bi].Cubes[ci].CubeTexW = g.TexWidth
+					g.Bones[bi].Cubes[ci].CubeTexH = g.TexHeight
+				}
+			}
 			if merged == nil {
 				merged = g
 			} else {

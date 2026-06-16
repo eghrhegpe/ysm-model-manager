@@ -116,7 +116,6 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     }
   }
   if (texArr.length === 0) console.warn("[3D] 纹理加载失败，模型将显示为 fallback 颜色");
-  if (texArr.length > 0) console.log("[3D] 纹理顺序:", urls.map((u,i) => `${i}:${u?.slice?.(0,50)}`));
 
   // 从 Go 获取预计算的 Three.js Spec
   let spec = { models: [] };
@@ -252,15 +251,6 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
         );
       }
       boneGroupMap.set(bd.id, g);
-      if (bd.name === "RightArm" || bd.name === "LeftArm" || bd.name === "RightForeArm" || bd.name === "LeftForeArm" || bd.name === "RightHand" || bd.name === "LeftHand") {
-        let wx = bd.localPosition[0], wy = bd.localPosition[1], wz = bd.localPosition[2];
-        let cur = bd.parentId ? mg.bones.find(b => b.id === bd.parentId) : null;
-        while (cur) {
-          wx += cur.localPosition[0]; wy += cur.localPosition[1]; wz += cur.localPosition[2];
-          cur = cur.parentId ? mg.bones.find(b => b.id === cur.parentId) : null;
-        }
-        dbg("model3d", bd.name + " world pos:", wx.toFixed(2), wy.toFixed(2), wz.toFixed(2));
-      }
     }
     for (const bd of mg.bones || []) {
       const g = boneGroupMap.get(bd.id);
@@ -287,24 +277,6 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     camera.lookAt(0, centerY * modelScale, 0);
     controls.target.set(0, centerY * modelScale, 0);
     controls.update();
-  // 调试：在手部骨骼位置画小球（注释掉以关闭）
-  // const debugBones = ["LeftArm","LeftForeArm","LeftHand","RightArm","RightForeArm","RightHand"];
-  // const dbgColors = [0xff0000, 0x00ff00, 0x0000ff, 0xff8800, 0x88ff00, 0x0088ff];
-  // setTimeout(() => {
-  //   for (let bi = 0; bi < debugBones.length; bi++) {
-  //     const g = boneGroupMap.get(debugBones[bi]);
-  //     if (!g) continue;
-  //     const wp = new THREE.Vector3();
-  //     g.getWorldPosition(wp);
-  //     const mat = new THREE.MeshBasicMaterial({ color: dbgColors[bi], depthTest: false, transparent: true, opacity: 0.35 });
-  //     const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 12), mat);
-  //     sphere.position.copy(wp);
-  //     sphere.renderOrder = 999;
-  //     scene.add(sphere);
-  //     dbg("model3d", debugBones[bi] + " world:", wp.x.toFixed(2), wp.y.toFixed(2), wp.z.toFixed(2));
-  //   }
-  // }, 100);
-
   // 保存初始相机位置用于重置
   const _initCamPos = camera.position.clone();
   const _initCamTarget = controls.target.clone();
@@ -324,10 +296,6 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
       geo.setIndex(md.indices);
       // 按 mesh 所属骨骼选择对应纹理（md.texIdx 由 buildSpecFromModel 设置）
       const meshTexIdx = md.texIdx ?? texIdx ?? 0;
-      if (md.boneId === "Body" || md.boneId === "Head" || md.boneId === "UpperBody") {
-        const texInfo = texArr.map((t,i) => `${i}:${t.image?.naturalWidth||'?'}x${t.image?.naturalHeight||'?'}`).join(" ");
-        console.log(`[3D] ${md.boneId} texIdx=${meshTexIdx} | 纹理: ${texInfo}`);
-      }
       const meshTex =
         texArr.length > 0 ? texArr[meshTexIdx] || texArr[0] : null;
       // YSMViewer: texture slot > 0 的方块为发光/覆盖层，正面剔除（BackSide）

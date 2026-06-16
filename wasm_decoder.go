@@ -141,6 +141,12 @@ main().catch(e=>{console.error(e);process.exit(1)});
 			data[i] = byte(v)
 		}
 		if g := geometry.ParseBedrockGeometry(data); g != nil {
+			for bi := range g.Bones {
+				for ci := range g.Bones[bi].Cubes {
+					g.Bones[bi].Cubes[ci].CubeTexW = g.TexWidth
+					g.Bones[bi].Cubes[ci].CubeTexH = g.TexHeight
+				}
+			}
 			if merged == nil {
 				merged = g
 			} else {

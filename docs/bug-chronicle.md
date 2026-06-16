@@ -1287,3 +1287,47 @@ const dispName = k.startsWith("[") ? renderDisplayName(k) : attr(k);
 const dispName = renderDisplayName(k);
 // 一律走 renderDisplayName，函数内部会处理所有标记类型
 ```
+
+---
+
+## 虚拟列表滚动闪烁 — `treeRowIn` 动画不兼容 `innerHTML` 替换
+
+### 症状
+
+- 模型树（整合包管理页面）用鼠标滚轮滚动时，列表内容闪烁
+- 停下来后内容正常显示
+
+### 根因
+
+`app-tree-styles.js` 中 `.fl,.fh` 有 `animation: treeRowIn .2s ease both`：
+
+```css
+@keyframes treeRowIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+.fl,.fh { animation: treeRowIn .2s ease both; }
+```
+
+虚拟滚动（`renderSlice`）每次滚动都用 `container.innerHTML` 替换可见行。`animation-fill-mode: both` 中的 `backwards` 会让新元素在动画开始前显示 `opacity:0`，导致短暂闪烁。
+
+### 为什么 `forwards` 也不行
+
+改为 `forwards` 后问题依旧 — 因为虚拟滚动每次 `innerHTML` 替换都会重新触发动画，元素仍然会经历 `opacity:0 → 1` 的过程。
+
+### 结论
+
+**`animation-fill-mode: both/backwards` + 虚拟滚动 `innerHTML` 替换 = 闪烁**。这类动画不适合用在频繁重建 DOM 的虚拟列表上。
+
+### 修复
+
+移除 `.fl,.fh` 的 `treeRowIn` 动画：
+
+```css
+/* 暂时移除，排查滚动闪烁 */
+/* @keyframes treeRowIn { ... } */
+/* .fl,.fh { animation: treeRowIn .2s ease forwards; } */
+```
+
+### 教训
+
+- 虚拟滚动列表**不要**用 CSS `animation` 做入场动画
+- 如需入场动画，应在**首次渲染**时通过 JS 一次性添加，而非通过 CSS class 常驻
+- `animation-fill-mode: both` 在频繁重建 DOM 的场景下会引入闪烁

@@ -103,8 +103,8 @@ ${btnBaseCSS}
 .ftr { padding: 8px 12px; border-top: 1px solid var(--bd); display: flex; gap: 6px; align-items: center; }
 .ftr .stat { font-size: var(--fs-sm); color: var(--muted); margin-right: auto; }
 .type-bar { padding:2px 12px;gap:4px;display:flex;align-items:center;border-bottom:1px solid var(--bd); }
-/* 行入场动画 */
-@keyframes treeRowIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
-.fl,.fh { animation: treeRowIn .2s ease both; }
+/* 行入场动画 — 暂时移除，排查滚动闪烁 */
+/* @keyframes treeRowIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } } */
+/* .fl,.fh { animation: treeRowIn .2s ease forwards; } */
 .no-animations .fl,.no-animations .fh { animation: none !important; }
 `;

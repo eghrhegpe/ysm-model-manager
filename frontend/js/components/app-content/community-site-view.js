@@ -179,7 +179,7 @@ export function renderSiteView(site, ctx) {
     });
     const tags = [...tagSet];
     parts.push(
-      '<div class="cr-section" style="flex-wrap:wrap">' +
+      '<div class="cr-section cr-section-wrap">' +
         '<span class="cr-section-title-lg">🎨 活跃创作者</span>' +
         '<span class="cr-section-sub" id="ws-cr-count">(' +
         creators.length +
@@ -227,7 +227,7 @@ export function renderSiteView(site, ctx) {
             '">' +
             '<div class="cr-edit-card-head">' +
             '<span class="cr-drag-handle">⠿</span>' +
-            '<span style="font-size:12px">🔍</span>' +
+            '<span class="cr-preset-icon">🔍</span>' +
             '<input data-idx="' +
             idx +
             '" data-fld="label" value="' +
@@ -689,7 +689,7 @@ export function renderSiteView(site, ctx) {
           btn.classList.add("cr-fetch-failed");
           searchResults.innerHTML =
             '<div class="cr-error-page">' +
-            '<button class="btn-base sm cr-back-repo" style="margin-bottom:12px">← 返回</button>' +
+            '<button class="btn-base sm cr-back-repo">← 返回</button>' +
             '<div class="cr-error-msg">' +
             errMsg +
             "</div></div>";

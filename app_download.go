@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -17,6 +18,12 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+// QueueStatusInfo 队列状态（替代多返回值，Wails 自动映射为 JS object）
+type QueueStatusInfo struct {
+	Remaining int  `json:"remaining"`
+	Running   bool `json:"running"`
+}
 
 // DownloadTask 下载队列任务
 type DownloadTask struct {
@@ -33,11 +40,13 @@ type DownloadQueue struct {
 	mu        sync.Mutex
 	running   bool
 	cancelled bool
-	cancel    chan struct{}
+	ctx       context.Context
+	cancelFn  context.CancelFunc
 }
 
 func NewDownloadQueue(a *App) *DownloadQueue {
-	return &DownloadQueue{app: a, cancel: make(chan struct{})}
+	ctx, cancel := context.WithCancel(context.Background())
+	return &DownloadQueue{app: a, ctx: ctx, cancelFn: cancel}
 }
 
 func (a *App) EnqueueDownloads(tasks []DownloadTask) error {
@@ -48,11 +57,11 @@ func (a *App) EnqueueDownloads(tasks []DownloadTask) error {
 	a.queue.tasks = append(a.queue.tasks, tasks...)
 	total := len(a.queue.tasks)
 	a.queue.mu.Unlock()
-	log.Printf("[queue] emit queue:status enqueued total=%d", total)
-	runtime.EventsEmit(a.ctx, "queue:status", "enqueued", total, "")
 	if !a.queue.running {
 		go a.queue.process()
 	}
+	log.Printf("[queue] emit queue:status enqueued total=%d", total)
+	runtime.EventsEmit(a.ctx, "queue:status", "enqueued", total, "")
 	return nil
 }
 
@@ -61,8 +70,8 @@ func (a *App) CancelQueue() {
 	defer a.queue.mu.Unlock()
 	a.queue.cancelled = true
 	if a.queue.running {
-		close(a.queue.cancel)
-		a.queue.cancel = make(chan struct{})
+		a.queue.cancelFn()
+		a.queue.ctx, a.queue.cancelFn = context.WithCancel(context.Background())
 	}
 	a.queue.tasks = nil
 	a.queue.running = false
@@ -70,10 +79,10 @@ func (a *App) CancelQueue() {
 	runtime.EventsEmit(a.ctx, "queue:status", "cancelled", 0, "")
 }
 
-func (a *App) QueueStatus() (int, bool) {
+func (a *App) QueueStatus() QueueStatusInfo {
 	a.queue.mu.Lock()
 	defer a.queue.mu.Unlock()
-	return len(a.queue.tasks), a.queue.running
+	return QueueStatusInfo{Remaining: len(a.queue.tasks), Running: a.queue.running}
 }
 
 func (q *DownloadQueue) process() {
@@ -122,7 +131,7 @@ func (q *DownloadQueue) process() {
 		}
 
 		select {
-		case <-q.cancel:
+		case <-q.ctx.Done():
 			return
 		default:
 		}

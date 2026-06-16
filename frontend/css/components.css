@@ -509,3 +509,47 @@
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* ===== 设置页路径选择器浮层（document.body 下） ===== */
+.mc-pick-overlay {
+  position:fixed;z-index:var(--z-modal);inset:0;
+  background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;
+}
+.mc-pick-box {
+  background:var(--surf);border:1px solid var(--bd);border-radius:12px;padding:16px;
+  max-width:500px;width:90%;max-height:70vh;overflow-y:auto;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+}
+.mc-pick-title { font-weight:600;font-size:13px;margin-bottom:8px; }
+.mc-pick-desc { font-size:10px;color:var(--muted);margin-bottom:12px; }
+.mc-pick-item {
+  padding:8px 10px;border-radius:6px;cursor:pointer;
+  font-size:11px;color:var(--txt);display:flex;align-items:center;gap:8px;
+  transition:background .12s;
+}
+.mc-pick-item:hover { background:var(--hover); }
+.mc-pick-item-icon { color:var(--accent);flex-shrink:0; }
+.mc-pick-actions { margin-top:12px;text-align:right; }
+.mc-pick-cancel {
+  padding:4px 12px;border-radius:4px;border:1px solid var(--bd);
+  background:transparent;color:var(--txt);cursor:pointer;
+  font-size:11px;font-family:inherit;
+}
+
+/* ===== 设置页扫描提示浮层（document.body 下） ===== */
+.mc-scan-tooltip {
+  position:fixed;z-index:var(--z-toast);
+  background:var(--surf);border:1px solid var(--bd);border-radius:8px;
+  padding:10px 14px;font-size:11px;color:var(--txt);
+  box-shadow:0 4px 16px rgba(0,0,0,.3);
+  max-width:420px;max-height:350px;overflow-y:auto;
+  pointer-events:none;line-height:1.6;
+}
+.mc-scan-title { font-weight:600;margin-bottom:4px; }
+.mc-scan-range { font-size:10px;color:var(--muted);margin-bottom:8px;padding-left:4px; }
+.mc-scan-divider { border-top:1px solid var(--bd);margin:6px 0; }
+.mc-scan-empty { color:var(--muted);padding:4px 0; }
+.mc-scan-tip { font-size:10px;color:var(--muted);padding-top:2px; }
+.mc-scan-result-title { font-weight:600;margin-bottom:4px; }
+.mc-scan-path { padding:1px 0;display:flex;align-items:center;gap:6px;font-size:10px; }
+.mc-scan-path-icon { color:var(--accent);flex-shrink:0; }

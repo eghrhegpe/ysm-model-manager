@@ -205,7 +205,7 @@ export function PushResourceToInstance(arg1:string,arg2:string):Promise<number>;
 
 export function PushSingleResourceToInstance(arg1:string,arg2:string,arg3:string):Promise<void>;
 
-export function QueueStatus():Promise<number|boolean>;
+export function QueueStatus():Promise<main.QueueStatusInfo>;
 
 export function ReadFileBytes(arg1:string):Promise<Array<number>>;
 

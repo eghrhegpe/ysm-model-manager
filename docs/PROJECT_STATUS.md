@@ -76,4 +76,6 @@ resource_bindings.go      # saveConfig、GetRepoRoot("") bug 点
 1. **修 `GetRepoRoot("")`** — 1 行改动，解锁仓库页"全部"标签跨类型搜索
 2. **Overlay UX 微调** — 按第三方评审清单逐项改（需人工把关 CSS）
 3. **单卡片头像更新** — `avatar:refresh` 监听器里按 `data-name` 定点替换，避免整页闪烁
-4. **发版** — `wails build -clean`、打 Git tag、写更新报告
+4. **model2d 预览缓存** — 扩展现有 `preview-cache.js`，社区仓库浏览时复用骨骼图避免重复解析。**暂缓**：没多模态辅助搞 Three.js canvas 序列化/失效太难，且当前瓶颈不在预览
+5. **列表/网格视图切换** — 工具栏加 🗂/☰ 切换、紧凑行模板、`localStorage` 持久化。**低优**：新功能，P3 级别，动画 P0-P1 做完再考虑
+6. **发版** — `wails build -clean`、打 Git tag、写更新报告

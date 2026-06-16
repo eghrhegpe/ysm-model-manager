@@ -36,7 +36,7 @@
   --meta-author: #66d9ef;
   --meta-work: #bd93f9;
   --meta-date: #f1fa8c;
-  --r: 10px;
+  --r: var(--radius-xl);
   --status-success: #a6e3a1;  /* 成功/免费状态（原 --free） */
   --status-error: #f38ba8;    /* 错误/付费状态（原 --paid） */
   --size-ok: #a6e3a1;         /* 文件大小正常（原 --sz-green） */
@@ -62,10 +62,10 @@
   --meta-author: #8b4513;
   --meta-work: #6a4e3a;
   --meta-date: #a0866a;
-  --status-success: #1971c2;  /* 温暖主题使用蓝色表示成功 */
-  --status-error: #c62828;    /* 红色表示错误 */
-  --size-ok: #2e7d32;         /* 绿色表示正常 */
-  --size-large: #c62828;      /* 红色表示过大 */
+  --status-success: #2e7d32;  /* 绿色 — 与深色主题语义一致 */
+  --status-error: #c62828;
+  --size-ok: #2e7d32;
+  --size-large: #c62828;
 }
 
 /* ===== 极简深邃（专业向深色） ===== */
@@ -153,7 +153,27 @@
   --btn-padding-sm: var(--pad-btn-tool) 6px;    /* 工具栏小按钮 */
   --btn-padding-md: var(--pad-btn-secondary) 8px; /* 次要按钮 */
   --btn-padding-lg: var(--pad-btn-primary) 12px;  /* 主要按钮 */
-  --btn-transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  --btn-transition: background-color var(--tr-normal), border-color var(--tr-normal), color var(--tr-normal), box-shadow var(--tr-normal);
+
+  /* ===== 过渡时长系统 ===== */
+  --tr-fast: 0.12s ease;      /* 按钮 hover、微交互 */
+  --tr-normal: 0.15s ease;    /* 面板展开、卡片过渡 */
+  --tr-slow: 0.2s ease;       /* 页面切换、内容淡入 */
+  --tr-enter: 0.25s ease-out; /* 入场动画 */
+
+  /* ===== 阴影层级系统 ===== */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.25);
+
+  /* ===== 圆角系统 ===== */
+  --radius-xs: 3px;   /* 标签内小元素、进度条 */
+  --radius-sm: 4px;   /* 按钮、输入框、筛选标签 */
+  --radius-md: 6px;   /* 卡片、对话框、按钮组 */
+  --radius-lg: 8px;   /* 大卡片、弹出面板 */
+  --radius-xl: 10px;  /* 全局卡片默认（--r） */
+  --radius-pill: 20px; /* 药丸形徽章 */
 
   /* ===== Z-Index 层级系统 ===== */
   --z-dropdown: 100;        /* 下拉菜单、弹出框 */

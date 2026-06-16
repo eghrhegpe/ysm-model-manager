@@ -11,9 +11,9 @@
 .ws-preview-img {
   max-width: 240px;
   max-height: 180px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--bd);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg);
   background: var(--bg);
   object-fit: contain;
   opacity: 0;
@@ -25,7 +25,7 @@
 .ws-preview-fallback {
   width: 80px;
   height: 80px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--bd);
   background: var(--surf);
   display: flex;
@@ -54,11 +54,11 @@
 .dlg-box {
   background: var(--surf);
   border: 1px solid var(--bd);
-  border-radius: 10px;
+  border-radius: var(--radius-xl);
   width: 640px;
   max-width: 92vw;
   max-height: 85vh;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   animation: dlgBoxIn .2s cubic-bezier(.34,1.56,.64,1);
@@ -103,7 +103,7 @@
 }
 .dlg-input {
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
   background: var(--surf);
   color: var(--txt);
@@ -111,7 +111,7 @@
 }
 .dlg-input-bg {
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
   background: var(--bg);
   color: var(--txt);
@@ -121,7 +121,7 @@
   flex: 1;
   min-width: 60px;
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
   background: var(--surf);
   color: var(--txt);
@@ -130,7 +130,7 @@
 .dlg-input-sm {
   width: 100px;
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
   background: var(--surf);
   color: var(--txt);
@@ -153,7 +153,7 @@
 }
 .dlg-btn-sm {
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 9px;
   cursor: pointer;
   border: 1px solid var(--bd);
@@ -168,7 +168,7 @@
 }
 .dlg-btn-accent {
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
   background: transparent;
   color: var(--accent);
@@ -193,7 +193,7 @@
 .dlg-preset-chip {
   padding: 3px 8px;
   font-size: 9px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
   cursor: pointer;
   background: var(--surf);
@@ -204,7 +204,7 @@
   font-size: 10px;
   color: var(--muted);
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   line-height: 1.5;
   max-height: 80px;
@@ -214,7 +214,7 @@
 .dlg-preview-box {
   font-size: 11px;
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
 }
 .dlg-preview-old {
@@ -252,7 +252,7 @@
   gap: 3px;
   padding: 2px 7px;
   font-size: 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--accent);
   color: var(--bg);
   line-height: 1.4;
@@ -273,7 +273,7 @@
 .te-sug-btn {
   padding: 2px 6px;
   font-size: 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 1px dashed var(--bd);
   cursor: pointer;
   background: transparent;
@@ -387,7 +387,7 @@
   background: var(--bg, #1e1e2e);
   color: var(--txt, #cdd6f4);
   border: 1px solid var(--bd, #444);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 3px 6px;
   font-size: 11px;
   cursor: pointer;
@@ -534,7 +534,7 @@
 .mc-pick-box {
   background:var(--surf);border:1px solid var(--bd);border-radius:12px;padding:16px;
   max-width:500px;width:90%;max-height:70vh;overflow-y:auto;
-  box-shadow:0 8px 32px rgba(0,0,0,.4);
+  box-shadow:var(--shadow-xl);
 }
 .mc-pick-title { font-weight:600;font-size:13px;margin-bottom:8px; }
 .mc-pick-desc { font-size:10px;color:var(--muted);margin-bottom:12px; }
@@ -557,7 +557,7 @@
   position:fixed;z-index:var(--z-toast);
   background:var(--surf);border:1px solid var(--bd);border-radius:8px;
   padding:10px 14px;font-size:11px;color:var(--txt);
-  box-shadow:0 4px 16px rgba(0,0,0,.3);
+  box-shadow:var(--shadow-lg);
   max-width:420px;max-height:350px;overflow-y:auto;
   pointer-events:none;line-height:1.6;
 }

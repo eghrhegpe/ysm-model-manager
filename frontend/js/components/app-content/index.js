@@ -410,7 +410,7 @@ class AppContent extends HTMLElement {
         const result = await BatchExtractCreatorAvatars();
         const keys = Object.keys(result);
         if (keys.length > 0) {
-          dbg("avatar", "提取了 " + keys.length + " 个头像");
+          dbg("avatar", "提取了 " + keys.length + " 个头像: " + keys.join(", "));
           avatarCache = result;
           if (currentSite) showSiteView(currentSite);
         } else {

@@ -544,6 +544,7 @@ ${btnBaseCSS}
 .cr-detail-box { background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:20px;max-width:420px;width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px;animation:detail-in .2s ease; }
 @keyframes detail-in { from{opacity:0;transform:scale(.92) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
 @keyframes fade-in { from{opacity:0} to{opacity:1} }
+.cr-detail-box { position:relative; }
 .cr-detail-header { display:flex;align-items:center;gap:10px; }
 .cr-detail-name { font-size:16px;font-weight:700;color:var(--txt); }
 .cr-detail-desc { font-size:var(--fs-sm);color:var(--muted);line-height:1.5;display:flex;flex-wrap:wrap;gap:4px;padding:0;background:transparent; }
@@ -572,15 +573,21 @@ ${btnBaseCSS}
 
 /* Platform row */
 .cr-detail-row-platforms { gap:4px;flex-wrap:wrap; }
+.cr-detail-platforms { display:flex;gap:4px;flex-wrap:wrap;margin-top:3px; }
+.cr-detail-platforms .cr-platform-badge { background:var(--surf);color:var(--muted);border:none;padding:1px 8px;border-radius:4px;font-size:10px; }
+.cr-detail-platforms .cr-platform-badge .ws-icon { width:10px;height:10px; }
 .cr-detail-actions button:hover { border-color:var(--accent);background:var(--hover); }
 .cr-detail-actions .primary { background:var(--accent);color:#fff;border-color:var(--accent); }
 .cr-detail-actions .primary:hover { opacity:.85; }
+.cr-detail-actions .secondary { background:transparent;color:var(--muted);border-color:transparent; }
+.cr-detail-actions .secondary:hover { background:var(--hover);color:var(--txt); }
 .cr-model-count { font-size:var(--fs-xs);color:var(--muted);display:inline-flex;align-items:center;gap:2px; }
 .cr-star-btn { cursor:pointer;font-size:11px;transition:transform .15s;flex-shrink:0; }
 .cr-star-btn:hover { transform:scale(1.15); }
-.cr-detail-box .cr-star-btn { font-size:18px; }
+.cr-detail-box .cr-star-btn { position:absolute;top:16px;right:16px;font-size:18px; }
 .cr-local-btn { padding:2px 8px;border-radius:4px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:background-color .12s,color .12s; }
 .cr-local-btn:hover { background:var(--accent);color:#fff; }
+.cr-local-count { font-size:var(--fs-xs);color:var(--muted);align-self:center; }
 .cr-platform-badge { font-size:8px;padding:1px 4px;border-radius:2px;line-height:12px;display:inline-flex;align-items:center;gap:2px;background:var(--surf);color:var(--muted);border:1px solid var(--bd); }
 .gh-card:hover .cr-avatar { transform:rotate(-8deg) scale(1.05); }
 .gh-card-icon { font-size:16px; width:24px; text-align:center; flex-shrink:0; }

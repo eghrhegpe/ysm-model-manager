@@ -585,8 +585,9 @@ ${btnBaseCSS}
 .gh-card.active .gh-card-external { border-left-color:var(--accent);color:var(--accent); }
 .gh-section-title { font-size:var(--fs-md);font-weight:600;color:var(--txt);padding:8px 12px 4px; }
 .gh-header { border-bottom:1px solid var(--bd);flex-shrink:0; }
-.gh-header-top { display:flex;align-items:center;gap:8px;padding:8px 12px;flex-wrap:wrap; }
-.gh-header-actions { display:flex;align-items:center;gap:8px;padding:0 12px 8px; }
+.gh-header-top { display:flex;align-items:center;gap:8px;padding:8px 12px; }
+.gh-header-repo { display:flex;align-items:center;gap:8px;padding:0 12px 8px; }
+.gh-header-actions { display:flex;align-items:center;gap:8px;padding:0 12px 8px;position:relative; }
 .gh-section-fill { flex:1; }
 .gh-back-repo { font-size:var(--fs-sm);padding:2px 6px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-family:inherit; }
 .gh-back-repo:hover { background:var(--hover); }
@@ -596,12 +597,8 @@ ${btnBaseCSS}
 .gh-model-badge-total { background: var(--surf); color: var(--txt); }
 .gh-model-badge-missing { background: rgba(243,139,168,.12); color: var(--status-error); }
 .gh-empty { padding:24px;text-align:center;color:var(--muted);font-size:var(--fs-base); }
-.gh-filter-btn { font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit; }
-.gh-filter-btn:hover { background:var(--hover);color:var(--txt); }
-.gh-filter-dropdown { display:none;position:absolute;top:100%;right:0;z-index:10;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;min-width:100px;box-shadow:0 4px 12px rgba(0,0,0,.3); }
-.gh-filter-dropdown.open { display:flex; }
-/* toggle-all 激活态 */
-.gh-toggle-all.active { border-color:var(--accent);color:var(--accent); }
+/* toggle-missing 激活态 */
+.gh-toggle-missing.active { border-color:var(--accent);color:var(--accent); }
 /* .gh-btn-sm 已合并到 .btn-sm */
 .gh-btn-muted { color:var(--muted); }
 .gh-btn-muted:disabled { opacity:.4;cursor:not-allowed;pointer-events:none; }

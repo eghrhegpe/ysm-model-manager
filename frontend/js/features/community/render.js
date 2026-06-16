@@ -53,7 +53,6 @@ function createIconBtn(iconHTML, action, title) {
 /**
  * 渲染模型列表（DocumentFragment）
  * @param {Array} filtered - 已筛选的模型数组
- * @param {Array} allModels - 全部模型（用于 data-id）
  * @param {string} dlPrefix - 下载 URL 前缀
  * @param {Map} localMap - 本地文件映射
  * @param {boolean} showAll - 是否显示全部
@@ -62,7 +61,6 @@ function createIconBtn(iconHTML, action, title) {
  */
 export function renderModelList(
   filtered,
-  allModels,
   dlPrefix,
   localMap,
   showAll,
@@ -85,7 +83,6 @@ export function renderModelList(
   filtered.forEach((m) => {
     const exists = !isModelMissing(m, localMap);
     const row = document.createElement("div");
-    row.dataset.id = String(allModels.indexOf(m));
     row.dataset.name = m.name;
     row.className = "gh-row" + (exists ? " gh-row-exists" : " gh-row-missing");
 
@@ -214,32 +211,30 @@ export function renderRepoHeaderHTML({
 }) {
   return (
     '<div class="gh-header">' +
-    // 行1: 返回 + repo名 + 来源标签 | 模型计数徽章
+    // 行1: 返回 | 模型计数徽章
     '<div class="gh-header-top">' +
     '<button class="btn-base sm gh-back-repo">← 返回</button>' +
-    '<span class="gh-repo-name">' + ICONS.PACKAGE + ' ' + esc(repo) + '</span>' +
-    sourceLabel +
     '<span class="gh-section-fill"></span>' +
     '<span class="gh-model-badge gh-model-badge-total">模型 ' + modelsLength + '</span>' +
     (missingCount > 0
       ? '<span class="gh-model-badge gh-model-badge-missing">⬇️ ' + missingCount + '</span>'
       : "") +
     "</div>" +
-    // 行2: 搜索 + 操作按钮
-    '<div class="gh-header-actions">' +
+    // 行2: 仓库名（独占）+ 来源
+    '<div class="gh-header-repo">' +
+    '<span class="gh-repo-name">' + ICONS.PACKAGE + ' ' + esc(repo) + '</span>' +
+    sourceLabel +
+    "</div>" +
+    // 行3: 搜索
     '<div class="gh-search-wrap">' +
     '<input id="gh-repo-srch" class="gh-search" type="text" placeholder="🔍 搜索模型名称...">' +
     "</div>" +
+    // 行4: 操作按钮
+    '<div class="gh-header-actions">' +
+    '<label class="btn-base sm gh-select-all"><input type="checkbox"> ☐ 全选</label>' +
+    '<button class="btn-base sm gh-toggle-missing">📁 仅显示缺失</button>' +
     '<span class="gh-section-fill"></span>' +
     '<button class="btn-base sm gh-dl-selected" disabled>⬇️ 选中 (0)</button>' +
-    '<button class="btn-base sm gh-filter-btn">⚙️ 筛选</button>' +
-    '<div class="gh-filter-dropdown">' +
-    (missingCount > 0
-      ? '<button class="btn-base sm gh-dl-all gh-btn-accent">⬇️ 下载全部缺失</button>' +
-        '<button class="btn-base sm gh-select-all">☐ 全选</button>'
-      : "") +
-    '<button class="btn-base sm gh-toggle-all">📁 仅显示缺失</button>' +
-    "</div>" +
     "</div>" +
     '<div id="gh-queue-status" class="gh-queue-status"></div>' +
     '<div id="gh-repo-list"></div>' +

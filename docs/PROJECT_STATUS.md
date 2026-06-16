@@ -6,6 +6,51 @@
 
 ---
 
+## 📝 今日工作记录（2026-06-16）
+
+### 代码改动
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| 头像增量刷新 - 场景 A | `download-queue.js:157-179` | `queue:file-done` 解析 `[作者]` → `CachedCreatorAvatar` → miss 则 `DebugExtractCreatorAvatar` → `bus.emit("avatar:refresh")` |
+| 头像增量刷新 - 场景 B | `app-content/index.js:403-432` | 提取 `extractAvatars()` 函数 + `window.runtime.EventsOn("config-loaded")` 监听 |
+| 头像定点更新 | `app-content/index.js:564-574` | `bus.on("avatar:refresh")` 按 `dataset.name` 定位卡片，只替换 `<img>.src` |
+| 防重复注册 | `app-content/index.js:426,565,75` | `window.__avatarConfigLoadedRegistered` + `this._avatarRefreshRegistered` |
+
+### 文档整理
+| 任务 | 说明 |
+|------|------|
+| 创建 `docs/README.md` | 开发者文档索引，分类列出核心架构、问题排查、发版记录、参考数据等 |
+| 归档旧文档 | 将 postmortem、Continue、dev-notes、plan、audit、refactor 等历史文档移至 `docs/archive/` |
+| 创建 `docs/ANNUAL_ROADMAP.md` | 年度规划大纲（英文，德系简约风） |
+| 修正 `docs/architecture.md` | 修复行数统计错误（原声称 31,127 行，实际 817 行），补充 v1.7.x 架构变动 |
+| 恢复 `docs/pack-format-versions.md` | 从 archive 移回根目录（活跃维护文档） |
+| 归档 `YSM-UI-Translation-Plan.md` | 修正错误描述后归档（项目为中文原生，非英文） |
+
+### 术语梳理
+- 识别核心名词混用：仓库/整合包/实例/资源类型/创作者/作者
+- 识别过长/歧义文案：toast 消息、按钮标签、占位符
+- 建议创建 `docs/TERMINOLOGY.md`（用户可能已创建）
+
+### 其他
+- 解答 OpenCode + Oh My OpenCode 概念
+- 审查 pack_format 版本映射文档归档问题
+
+---
+
+### 其他 AI 协作产出
+
+| 文档 | 产出者 | 内容 |
+|------|--------|------|
+| `docs/TERMINOLOGY.md` | Big Pickle / DeepSeek | 术语对照表：核心名词、UI 文案修剪、语感统一、AI 缩写版 |
+| `docs/CLEANUP_RULES.md` | Big Pickle | 治理规则清单：9 条规则 × severity × 检测方式 + 检测命令速查 |
+| `docs/DEPRECATED_NAMES.md` | Big Pickle | 废弃别名对照表 + PowerShell 批量替换脚本 |
+| `docs/ui-improvement-plan.md` | Gemini | UI 修改计划：P0-P2 优先级 + 仓库元老页优化 + 执行记录 |
+| `docs/animation-roadmap.md` | Gemini | 动画路线图：统一 keyframe、stagger 系统、设计令牌、已完成清单 |
+| `docs/animations.md` | Gemini | 前端动画系统文档：11 种动画清单 + 无障碍支持 + 性能考量 + 文件索引 |
+| `docs/pack-format-versions.md` | zuogeren (PR #7) | Minecraft `pack_format` 编号 ↔ 游戏版本映射表（88 条） |
+
+---
+
 ## ✅ 已完成的核心改动（v1.3.0+）
 
 | 模块 | 改动 | 关键文件 |

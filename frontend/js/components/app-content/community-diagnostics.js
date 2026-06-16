@@ -175,7 +175,7 @@ export async function startDedup(root, esc, rtype) {
 
     if (!targets.length) {
       list.innerHTML =
-        '<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">请先设置资源目录</div>';
+        '<div class="stat-row diag-msg diag-msg-error">请先设置资源目录</div>';
       return;
     }
 
@@ -208,21 +208,21 @@ export async function startDedup(root, esc, rtype) {
 
     if (!totalGroups) {
       list.innerHTML =
-        '<div class="stat-row" style="padding:12px;color:#a6e3a1;font-size:11px">✅ 没有重复文件</div>';
+        '<div class="stat-row diag-msg diag-msg-success">✅ 没有重复文件</div>';
       return;
     }
 
-    let html = `<div style="padding:10px 12px;font-size:11px;color:var(--txt);border-bottom:1px solid var(--bd)">
+    let html = `<div class="diag-dedup-summary">
 发现 <strong>${totalGroups}</strong> 组重复文件（共 <strong>${totalDups}</strong> 个多余副本），每组选一个保留：
-<span style="display:block;font-size:9px;color:var(--muted);margin-top:2px">未选择的文件将移入回收站</span>
+<span class="diag-dedup-summary-hint">未选择的文件将移入回收站</span>
 </div>`;
 
     let groupIndex = 0;
     for (const rtResult of allResults) {
-      html += `<div style="display:flex;align-items:center;gap:4px;padding:6px 12px 2px;font-size:10px;font-weight:600;color:var(--txt)">
+      html += `<div class="diag-dedup-rt">
 ${rtResult.icon} ${rtResult.label}
-<span style="flex:1;border-bottom:1px solid var(--bd);margin-left:6px"></span>
-<span style="font-size:9px;color:var(--muted);font-weight:400">${rtResult.groups.reduce((s, g) => s + g.files.length, 0)} 文件</span>
+<span class="diag-dedup-rt-sep"></span>
+<span class="diag-dedup-rt-count">${rtResult.groups.reduce((s, g) => s + g.files.length, 0)} 文件</span>
 </div>`;
 
       for (const group of rtResult.groups) {
@@ -234,11 +234,11 @@ ${rtResult.icon} ${rtResult.label}
         const totalSize = files.reduce((s, e) => s + e.size, 0);
         const gi = groupIndex++;
 
-        html += `<div style="margin:4px 12px;border:1px solid var(--bd);border-radius:8px;overflow:hidden">
-<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:10px;font-weight:600;color:var(--txt);background:var(--surf);border-bottom:1px solid var(--bd)">
+        html += `<div class="diag-dedup-group">
+<div class="diag-dedup-group-head">
 <span>📎 组 ${gi + 1}</span>
-<span style="flex:1"></span>
-<span style="font-size:9px;color:var(--muted);font-weight:400">${files.length} 个文件 · ${totalSize} 字节</span>
+<span class="diag-dedup-group-fill"></span>
+<span class="diag-dedup-group-info">${files.length} 个文件 · ${totalSize} 字节</span>
 </div>`;
         files.forEach((e, fi) => {
           const checked = fi === defaultIdx ? " checked" : "";
@@ -251,34 +251,34 @@ ${rtResult.icon} ${rtResult.label}
             e.path.lastIndexOf("\\"),
           );
           const dir = lastSep >= 0 ? e.path.substring(0, lastSep) : "";
-          html += `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background .1s;background:${isDefault ? "var(--hover)" : "transparent"}">
-<input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} style="flex-shrink:0;accent-color:var(--accent)">
-<span style="flex:1;overflow:hidden;min-width:0">
-<span style="color:var(--txt);font-size:10px;cursor:pointer" title="点击查看详情: ${esc(e.path)}" data-path="${esc(e.path)}">${renderDisplayName(e.name)}</span>
-<span style="display:block;font-size:8px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(dir)}</span>
+          html += `<label class="diag-dedup-file${isDefault ? " diag-dedup-file-default" : ""}">
+<input type="radio" name="dedup-keep-${gi}" value="${fi}"${checked} class="diag-dedup-radio">
+<span class="diag-dedup-file-name">
+<span class="diag-dedup-file-name-text" title="点击查看详情: ${esc(e.path)}" data-path="${esc(e.path)}">${renderDisplayName(e.name)}</span>
+<span class="diag-dedup-file-dir">📁 ${esc(dir)}</span>
 </span>
-<span style="font-size:9px;color:var(--muted);flex-shrink:0;margin-right:4px">${(e.size / 1024).toFixed(0)}KB</span>
-${dateStr ? '<span style="font-size:8px;color:var(--muted);flex-shrink:0">' + dateStr + "</span>" : ""}
-${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;background:#a6e3a122;color:#a6e3a1">推荐</span>' : ""}
+<span class="diag-dedup-file-size">${(e.size / 1024).toFixed(0)}KB</span>
+${dateStr ? '<span class="diag-dedup-file-date">' + dateStr + "</span>" : ""}
+${isDefault ? '<span class="diag-dedup-recommend">推荐</span>' : ""}
 </label>`;
         });
-        html += `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background .1s;border-top:1px solid var(--bd)">
-<input type="radio" name="dedup-keep-${gi}" value="-1" style="flex-shrink:0;accent-color:var(--accent)">
-<span style="color:var(--muted)">🔀 保留全部（不删除）</span>
+        html += `<label class="diag-dedup-keep-all">
+<input type="radio" name="dedup-keep-${gi}" value="-1" class="diag-dedup-radio">
+<span class="diag-dedup-keep-all-label">🔀 保留全部（不删除）</span>
 </label>`;
         html += `</div>`;
       }
     }
 
-    html += `<div style="display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--bd)">
-<button id="diag-dedup-exec" style="flex:1;padding:7px 16px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:11px">🗑️ 删除未选中的重复文件</button>
-<button id="diag-dedup-cancel" style="padding:7px 16px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">取消</button>
+    html += `<div class="diag-dedup-actions">
+<button id="diag-dedup-exec" class="diag-dedup-exec">🗑️ 删除未选中的重复文件</button>
+<button id="diag-dedup-cancel" class="diag-dedup-cancel">取消</button>
 </div>`;
     list.innerHTML = html;
 
     list.querySelector("#diag-dedup-cancel")?.addEventListener("click", () => {
       list.innerHTML =
-        '<div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">已取消去重</div>';
+        '<div class="stat-row diag-msg diag-msg-muted">已取消去重</div>';
     });
 
     list
@@ -323,8 +323,8 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
           });
         });
         list.innerHTML =
-          '<div class="stat-row" style="padding:8px 12px;font-size:11px;color:' +
-          (fail > 0 ? "#f9a826" : "#a6e3a1") +
+          '<div class="stat-row diag-msg ' +
+          (fail > 0 ? "diag-msg-warn" : "diag-msg-success") +
           '">✅ 去重完成：移入回收站 ' +
           del +
           " 个，失败 " +
@@ -333,7 +333,7 @@ ${isDefault ? '<span style="font-size:8px;padding:0 4px;border-radius:3px;backgr
       });
   } catch (err) {
     list.innerHTML =
-      '<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">去重失败: ' +
+      '<div class="stat-row diag-msg diag-msg-error">去重失败: ' +
       esc(String(err)) +
       "</div>";
   }
@@ -343,7 +343,7 @@ async function scanConflicts(root, esc) {
   const list = root.getElementById("diag-conflict-list");
   if (!list) return;
   list.innerHTML =
-    '<div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">扫描中...</div>';
+    '<div class="stat-row diag-msg diag-msg-muted">扫描中...</div>';
   try {
     const { LoadAppConfig, ListVersionInstances, ScanModelEntries } =
       await import("../../../wailsjs/go/main/App.js");
@@ -351,14 +351,14 @@ async function scanConflicts(root, esc) {
     const mcRoot = cfg.mcRoot || cfg.McRoot || "";
     if (!mcRoot) {
       list.innerHTML =
-        '<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">请先设置游戏路径</div>';
+        '<div class="stat-row diag-msg diag-msg-error">请先设置游戏路径</div>';
       return;
     }
 
     const instances = await ListVersionInstances(mcRoot);
     if (!instances || !instances.length) {
       list.innerHTML =
-        '<div class="stat-row" style="padding:12px;color:#6c7086;font-size:11px">没有找到整合包</div>';
+        '<div class="stat-row diag-msg diag-msg-muted">没有找到整合包</div>';
       return;
     }
 
@@ -385,11 +385,11 @@ async function scanConflicts(root, esc) {
 
     if (!conflicts.length) {
       list.innerHTML =
-        '<div class="stat-row" style="padding:12px;color:#a6e3a1;font-size:11px">✅ 未检测到文件名冲突</div>';
+        '<div class="stat-row diag-msg diag-msg-success">✅ 未检测到文件名冲突</div>';
       return;
     }
 
-    let html = `<div class="stat-row" style="padding:8px 12px;color:#f38ba8;font-size:11px">⚠️ 发现 ${conflicts.length} 个文件存在于多个整合包</div>`;
+    let html = `<div class="stat-row diag-msg diag-msg-error">⚠️ 发现 ${conflicts.length} 个文件存在于多个整合包</div>`;
     conflicts.slice(0, 50).forEach(([name, insNames]) => {
       html += `<div class="conflict-row">
 <span class="conflict-name">${renderDisplayName(name)}</span>
@@ -400,11 +400,11 @@ async function scanConflicts(root, esc) {
       });
     });
     if (conflicts.length > 50) {
-      html += `<div class="stat-row" style="padding:8px 12px;color:#6c7086;font-size:10px">...还有 ${conflicts.length - 50} 个</div>`;
+      html += `<div class="stat-row diag-msg diag-msg-muted" style="font-size:10px">...还有 ${conflicts.length - 50} 个</div>`;
     }
     list.innerHTML = html;
   } catch (err) {
-    list.innerHTML = `<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">扫描失败: ${esc(String(err))}</div>`;
+    list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">扫描失败: ${esc(String(err))}</div>`;
   }
 }
 

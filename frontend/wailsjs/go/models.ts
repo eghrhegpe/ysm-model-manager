@@ -18,6 +18,20 @@ export namespace main {
 	        this.size = source["size"];
 	    }
 	}
+	export class QueueStatusInfo {
+	    remaining: number;
+	    running: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new QueueStatusInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.remaining = source["remaining"];
+	        this.running = source["running"];
+	    }
+	}
 
 }
 

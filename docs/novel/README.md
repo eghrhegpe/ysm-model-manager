@@ -38,6 +38,7 @@
 | 10 | 铁律成典 | [act-3-cartographer/10-铁律成典.md](act-3-cartographer/10-铁律成典.md) |
 | 11 | 照妖镜 | [act-3-cartographer/11-照妖镜.md](act-3-cartographer/11-照妖镜.md) |
 | 12 | 创作者之面 | [act-3-cartographer/12-创作者之面.md](act-3-cartographer/12-创作者之面.md) |
+| 13 | 心跳图谱 | [act-3-cartographer/13-心跳图谱.md](act-3-cartographer/13-心跳图谱.md) |
 
 ---
 

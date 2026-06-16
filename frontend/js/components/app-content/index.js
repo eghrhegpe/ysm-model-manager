@@ -1,5 +1,6 @@
 // ===== <app-content> 入口 =====
 import { bus } from "../../bus.js";
+import { esc } from "../../utils/dom.js";
 import { dbg } from "../../utils/debug.js";
 import { contentCSS } from "./content-css.js";
 import {
@@ -21,6 +22,7 @@ import {
 } from "../../features/community/render.js";
 import { bindRepoEvents } from "../../features/community/events.js";
 import { renderSiteView } from "./community-site-view.js";
+import { getSiteIcon } from "./workshop-icons.js";
 import { loadCommunityData, fillSearch } from "./community-core.js";
 import { friendlyError } from "../../utils/errors.js";
 
@@ -383,7 +385,7 @@ class AppContent extends HTMLElement {
           const btn = document.createElement("button");
           btn.className = "repo-tab" + (i === 0 ? " active" : "");
           btn.dataset.tab = s.id;
-          btn.textContent = s.icon + " " + s.label;
+          btn.innerHTML = getSiteIcon(s.id) + " " + esc(s.label);
           btn.addEventListener("click", () => showCreatorsBySite(s.id));
           tabsEl.appendChild(btn);
         });

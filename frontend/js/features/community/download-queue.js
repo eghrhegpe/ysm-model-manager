@@ -57,8 +57,7 @@ export function createDownloadQueue({
     const queueStatus = sr.querySelector("#gh-queue-status");
     if (dlAllBtn) dlAllBtn.disabled = true;
     if (dlSelBtn) {
-      dlSelBtn.style.opacity = ".4";
-      dlSelBtn.style.pointerEvents = "none";
+      dlSelBtn.disabled = true;
     }
 
     const totalTasks = tasks.length;
@@ -99,7 +98,7 @@ export function createDownloadQueue({
         if (errorSummary) {
           queueStatus.innerHTML = errorSummary;
         } else {
-          queueStatus.style.display = "none";
+          queueStatus.classList.remove("show");
         }
       }
       try {
@@ -123,7 +122,7 @@ export function createDownloadQueue({
     _offEvents = offEvents;
 
     if (queueStatus) {
-      queueStatus.style.display = "block";
+      queueStatus.classList.add("show");
       queueStatus.innerHTML =
         '<span class="gh-queue-icon">⬇️</span> 准备下载… 共 ' +
         totalTasks +
@@ -315,14 +314,14 @@ export function createDownloadQueue({
         const fillEl = queueStatus?.querySelector(".gh-progress-fill");
         if (pctEl) {
           pctEl.textContent = "❌";
-          pctEl.style.color = "#f38ba8";
+          pctEl.classList.add("gh-progress-error");
           pctEl.title = errMsg || "下载失败";
           if (pctEl._dotTimer) {
             clearInterval(pctEl._dotTimer);
             pctEl._dotTimer = null;
           }
         }
-        if (fillEl) fillEl.style.background = "#f38ba8";
+        if (fillEl) fillEl.classList.add("gh-progress-fill-error");
         const cb = sr.querySelector('.gh-sel[data-name="' + esc(name) + '"]');
         if (cb) cb.checked = false;
         if (onFileSuccess) onFileSuccess(name);

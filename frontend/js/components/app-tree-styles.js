@@ -1,4 +1,5 @@
 // ===== app-tree 样式（独立文件，避免 JS 热更新时重编译 CSS） =====
+import { btnBaseCSS } from "../css/shared-styles.js";
 export const treeCSS = `
 :host {
   display: flex;
@@ -23,31 +24,15 @@ export const treeCSS = `
 .af-inp::placeholder { color:var(--muted);font-size:9px; }
 .af-sep { font-size:10px;color:var(--muted); }
 /* ===== 统一按钮系统 .btn-base ===== */
-.btn-base { padding:var(--btn-padding-md); border-radius:var(--btn-radius,6px); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:inherit; font-family:inherit; transition:background .12s,color .12s; white-space:nowrap; flex-shrink:0; }
-.btn-base:hover { background:var(--hover); }
-.btn-base:focus-visible { box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); outline:none; }
-.btn-base.sm { padding:var(--btn-padding-sm); font-size:var(--fs-btn-tool); }
-.btn-base.lg { padding:var(--btn-padding-lg); font-size:var(--fs-btn-primary); }
-.btn-base.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
-.btn-base.primary:hover { background:color-mix(in srgb, var(--accent) 88%, #fff); }
-.btn-base.accent { background:#7c83ff33;color:#66d9ef;border-color:#7c83ff55; }
-.btn-base.accent:hover { background:#7c83ff55; }
-.btn-base:disabled { opacity:0.5; cursor:not-allowed; pointer-events:none; }
+${btnBaseCSS}
 /* ===== 旧按钮兼容层 ===== */
 .hdr-btn { padding:var(--pad-btn-primary) 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-primary);font-family:inherit; }
 .hdr-btn:hover { background:var(--hover); }
-.hdr-btn.accent { background:#7c83ff33;color:#66d9ef;border-color:#7c83ff55; }
-.hdr-btn.accent:hover { background:#7c83ff55; }
-.hdr-btn.flash { background:#a6e3a133;border-color:#a6e3a155; }
-.srch-inp { flex:1;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;outline:none;min-width:0; }
-.sort-sel { padding:3px 6px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:10px;cursor:pointer; }
-.hdr-btn { padding:var(--pad-btn-primary) 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-primary);font-family:inherit; }
-.hdr-btn:hover { background:var(--hover); }
-.hdr-btn.accent { background:#7c83ff33;color:#66d9ef;border-color:#7c83ff55; }
+.hdr-btn.accent { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 33%, transparent); }
 :host-context(.theme-warm) .hdr-btn.accent { color:#8b4513; }
 :host-context(.theme-pro) .hdr-btn.accent { color:#ffffff; }
-.hdr-btn.accent:hover { background:#7c83ff55; }
-.hdr-btn.flash { background:#a6e3a133;border-color:#a6e3a155; }
+.hdr-btn.accent:hover { background: color-mix(in srgb, var(--accent) 33%, transparent); }
+.hdr-btn.flash { background: color-mix(in srgb, var(--status-success) 20%, transparent); border-color: color-mix(in srgb, var(--status-success) 33%, transparent); }
 .dd-wrap { position:relative;display:inline-block; }
 .dd-wrap:hover .dd-menu { display:block; }
 .dd-menu { position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.3);display:none;min-width:130px;max-height:220px;overflow-y:auto; }
@@ -57,12 +42,12 @@ export const treeCSS = `
 .batch-dropdown { position: relative; }
 .batch-menu { position: absolute; top: 100%; left: 0; z-index: 100; background: var(--card); border: 1px solid var(--bd); border-radius: 6px; padding: 3px; min-width: 120px; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
 .batch-item { display: block; width: 100%; text-align: left; padding: 4px 10px; border: none; border-radius: 4px; margin-bottom: 1px; font-size: var(--fs-sm); color: var(--txt); cursor: pointer; background: transparent; font-family: inherit; }
-.batch-item:hover { background: #7c83ff33; color: var(--accent); }
+.batch-item:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
 .srch-row { display: flex; align-items: center; gap: 6px; }
 .srch-inp { flex: 1; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: var(--fs-base); outline: none; font-family: inherit; }
 .srch-inp::placeholder { color: var(--muted); }
 .sort-sel { padding: 5px 6px; border-radius: 5px; border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: var(--fs-sm); outline: none; font-family: inherit; cursor: pointer; }
-.tag { font-size: var(--fs-tiny); background: #f9a82633; color: #f9a826; padding: 0 4px; border-radius: 3px; margin-left: 2px; }
+.tag { font-size: var(--fs-tiny); background: color-mix(in srgb, var(--sm-optional) 20%, transparent); color: var(--sm-optional); padding: 0 4px; border-radius: 3px; margin-left: 2px; }
 .list { flex: 1; overflow-y: auto; padding: 6px 0; }
 /* 虚拟滚动外层容器 */
 .vs-wrap { box-sizing: border-box; }
@@ -78,7 +63,7 @@ export const treeCSS = `
 .fh .nm .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
 .fh .nm .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
 .fh .nm .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
-.fh .nm mark { background: #f9a82644; color: #f9a826; border-radius: 2px; padding: 0 2px; }
+.fh .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: 2px; padding: 0 2px; }
 .fh.locked { opacity: .5; }
 .fh.locked .nm { color: var(--muted); }
 .fl { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px; font-size: var(--fs-base); transition: all .15s; cursor: default; user-select: none; -webkit-user-select: none; }

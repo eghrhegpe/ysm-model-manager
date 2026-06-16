@@ -49,7 +49,7 @@ function createCrCard(cr, ctx) {
   const fallbackChar = cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?";
   const fallbackDiv = '<div class="cr-avatar cr-avatar-fallback">' + fallbackChar + "</div>";
   const avatarHtml = hasAvatar
-    ? '<img class="cr-avatar" src="' + esc(avatarCache[cr.name]) + '" data-debug-avatar="' + esc(cr.name) + '" onerror="this.outerHTML=\'' + fallbackDiv + '\'">'
+    ? '<img class="cr-avatar" src="' + esc(avatarCache[cr.name]) + '" data-debug-avatar="' + esc(cr.name) + '" onerror="this.outerHTML=\'' + fallbackDiv.replace(/"/g, '&quot;') + '\'">'
     : fallbackDiv;
 
   const localBadge = cr._fromLocal && authorCount > 0
@@ -468,7 +468,7 @@ export function renderSiteView(site, ctx) {
             esc(avatarCache[cr.name]) +
             '" data-debug-avatar="' +
             esc(cr.name) +
-            '" onerror="this.outerHTML=\'' + detailFallbackDiv + '\'">'
+            '" onerror="this.outerHTML=\'' + detailFallbackDiv.replace(/"/g, '&quot;') + '\'">'
           : detailFallbackDiv) +
         "</div>" +
         '<div class="cr-detail-fill">' +
@@ -487,6 +487,21 @@ export function renderSiteView(site, ctx) {
             "</span>"
           : "") +
         "</div>" +
+        (cr.type
+          ? '<div class="cr-detail-platforms">' +
+            cr.type
+              .split(";")
+              .map(
+                (t) =>
+                  '<span class="cr-platform-badge">' +
+                  getSiteIcon(t) +
+                  " <span>" +
+                  esc(t) +
+                  "</span>",
+              )
+              .join("") +
+            "</div>"
+          : "") +
         '<div class="cr-detail-identity">' +
         identity.icon +
         '<span>' + esc(identity.label) + "</span>" +
@@ -509,32 +524,15 @@ export function renderSiteView(site, ctx) {
           .join("") +
         (!descTags.length ? esc(cr.desc) : "") +
         "</div>" +
-        (localCount > 0
-          ? '<div class="cr-detail-row cr-local-card">' +
-            '<span class="cr-local-icon">📂</span>' +
-            '<span class="cr-local-text">已下载 ' +
-            localCount +
-            " 个模型</span>" +
-            '<button class="cr-local-btn" data-local>查看 →</button>' +
-            "</div>"
-          : "") +
-        '<div class="cr-detail-row cr-detail-row-platforms">' +
-        cr.type
-          .split(";")
-          .map(
-            (t) =>
-              '<span class="cr-platform-badge">' +
-              getSiteIcon(t) +
-              " <span>" +
-              esc(t) +
-              "</span>",
-          )
-          .join("") +
+        '<div class="cr-detail-row cr-local-card">' +
+        '<span class="cr-local-icon">📂</span>' +
+        '<span class="cr-local-text">已下载 ' + localCount + ' 个模型</span>' +
+        '<button class="cr-local-btn" data-local>查看 →</button>' +
         "</div>" +
         '<div class="cr-detail-actions">' +
-        '<button class="primary" data-search="' +
+        '<button class="secondary" data-search="' +
         esc(cr.name) +
-        '">🔍 搜索更多</button>' +
+        '">🔍 搜索更多模型</button>' +
         '<button class="secondary" data-close>关闭</button>' +
         "</div>" +
         "</div>";

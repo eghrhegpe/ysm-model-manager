@@ -51,7 +51,7 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 		}
 		if strings.HasPrefix(name, "[") {
 			if idx := strings.Index(name, "]"); idx > 0 {
-				author := name[1:idx]
+				author := strings.TrimSpace(name[1:idx])
 				if author == "" {
 					continue
 				}
@@ -111,7 +111,7 @@ func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 		}
 		if strings.HasPrefix(name, "[") {
 			if idx := strings.Index(name, "]"); idx > 0 {
-				author := name[1:idx]
+				author := strings.TrimSpace(name[1:idx])
 				if author == authorName {
 					ext := strings.ToLower(filepath.Ext(e.Path))
 					if ext == ".ysm" {

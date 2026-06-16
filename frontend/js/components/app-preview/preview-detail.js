@@ -1,6 +1,7 @@
-// ===== 模型/材质包详情面板 =====
+// ===== 模型/资源包详情面板 =====
 // 从 index.js 拆分：详情面板渲染逻辑
 import { summaryCardHTML } from "../../utils/summarize.js";
+import { renderFormattedText } from "../../utils/mc-format.js";
 import { devLog } from "./preview-utils.js";
 
 const esc = (s) =>
@@ -86,24 +87,39 @@ export async function showModelDetail(ctx, path) {
   }
 }
 
-/** 显示材质包信息（pack.mcmeta + pack.png） */
+/** 显示资源包信息（pack.mcmeta + pack.png） */
 export async function showResourcePack(ctx, path) {
   try {
     const { ReadPackMeta } = await import("../../../wailsjs/go/main/App.js");
     const jsonStr = await ReadPackMeta(path);
     const meta = JSON.parse(jsonStr);
     const basename = path.split("/").pop().split("\\").pop();
-    const desc = (meta.description || "").replace(/§[0-9a-fklmnor]/g, "");
+    const desc = renderFormattedText(meta.description || "");
+    const { describeVersionRange } = await import("../../utils/pack-format.js");
+    const rv = describeVersionRange(meta);
     ctx._root.innerHTML = `<div class="content" id="preview-content">
-  <h3>🎨 材质包</h3>
+  <h3>🎨 资源包</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    ${meta.thumbnail ? `<img src="${meta.thumbnail}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : ""}
-    <div><strong>${esc(basename)}</strong></div>
-    ${desc ? `<div style="color:var(--muted);line-height:1.6">${esc(desc)}</div>` : ""}
-    <div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ${meta.pack_format || "?"}</div>
+    ${meta.thumbnail ? `<img src="${meta.thumbnail}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:6px;border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:40px;line-height:1">❌</div><div style="font-size:var(--fs-sm);color:var(--muted)">无pack.png</div></div>`}
+    <div><strong>${renderFormattedText(basename)}</strong></div>
+    ${desc ? `<div style="color:var(--muted);line-height:1.6">${desc}</div>` : ""}
+    <div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ${rv.format}${rv.version ? "（" + rv.version + "）" : ""}</div>
   </div>
 </div>`;
   } catch (e) {
-    ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 材质包</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e.message)}</div></div></div>`;
+    ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 资源包</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e.message)}</div></div></div>`;
   }
+}
+
+/** 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 */
+export async function showShaderPack(ctx, path, opts) {
+  const icon = (opts && opts.icon) || "☀️";
+  const label = (opts && opts.label) || "光影包";
+  const basename = path.split("/").pop().split("\\").pop();
+  ctx._root.innerHTML = `<div class="content" id="preview-content">
+  <h3>${icon} ${label}</h3>
+  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+    <div><strong>${renderFormattedText(basename)}</strong></div>
+  </div>
+</div>`;
 }

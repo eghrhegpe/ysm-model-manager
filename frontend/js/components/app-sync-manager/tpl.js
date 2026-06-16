@@ -1,4 +1,5 @@
 // ===== app-sync-manager 模板 =====
+import { renderFormattedText } from "../../utils/mc-format.js";
 
 /**
  * 容器骨架
@@ -135,7 +136,7 @@ export function itemHTML(item) {
     (item.icon || "📦") +
     "</span>" +
     '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
-    esc(item.name) +
+    renderFormattedText(item.name) +
     "</span>" +
     (sizeStr
       ? '<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-tiny)">' +

@@ -131,6 +131,8 @@ ${btnBaseCSS}
 .diag-btn { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:6px; border:none; background:transparent; color:var(--muted); font-size:var(--fs-md); cursor:pointer; font-family:inherit; transition:all .12s; width:100%; text-align:left; }
 .diag-btn:hover { background:var(--hover); color:var(--txt); }
 .diag-btn.active { background: color-mix(in srgb, var(--accent) 13%, transparent); color: var(--accent); }
+.diag-panel { animation: diagPanelIn .2s ease; }
+@keyframes diagPanelIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
 .diag-btn-icon { font-size:var(--fs-lg); width:20px; text-align:center; flex-shrink:0; }
 .diag-btn-action { justify-content:center; padding:6px; font-size:var(--fs-md); }
 .diag-log-fbtn { font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer; }
@@ -856,6 +858,11 @@ ${btnBaseCSS}
 .stg-card-overridden { border-color:var(--accent); }
 .stg-custom-badge { font-size:9px;color:var(--accent); }
 .stg-path-text { font-size:10px;cursor:pointer; }
+
+/* ===== 回收站动画 ===== */
+.recy-item { animation: recyItemIn .2s ease both; transition:opacity .15s, transform .15s; }
+.recy-item.leaving { opacity:0; transform:translateX(20px); pointer-events:none; }
+@keyframes recyItemIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
 
 /* ===== 响应式 ===== */
 @media (max-width:768px) {

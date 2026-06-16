@@ -211,6 +211,16 @@
 .no-animations #dl-imported-list > div { animation: none !important; }
 /* 创作者卡片筛选淡出 */
 .no-animations .cr-creator-card.cr-card-hidden { transition: none !important; }
+/* 批量重命名行入场 */
+.no-animations .br-row { animation: none !important; }
+/* 诊断面板切换 */
+.no-animations .diag-panel { animation: none !important; }
+/* 回收站项目 */
+.no-animations .recy-item { animation: none !important; }
+.no-animations .recy-item.leaving { transition: none !important; }
+/* 资源管理器 */
+.no-animations .rm-item { animation: none !important; }
+.no-animations .rm-content { animation: none !important; }
 /* 对话框退场动画 */
 .no-animations .dlg-overlay.dlg-closing { animation: none !important; }
 .no-animations .dlg-overlay.dlg-closing .dlg-box { animation: none !important; }

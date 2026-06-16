@@ -4,6 +4,9 @@ import { friendlyError } from "../utils/errors.js";
 import { parseModelName, renderDisplayName } from "../utils/display.js";
 import { renderFormattedText } from "../utils/mc-format.js";
 import { modalConfirm } from "../dialogs/modal.js";
+import { DnDLock, PendingImport } from "./dnd-state.js";
+import { getApp } from "../wails/app.js";
+
 import { ALL_EXTS, extBelongsTo } from "../utils/extensions.js";
 
 const extsStr = ALL_EXTS.join(" ");
@@ -20,7 +23,7 @@ const shouldEnterForm = async (name, base64) => {
   if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
   if (ext === ".zip" || ext === ".7z") {
     try {
-      const { DetectZipType } = await import("../../wailsjs/go/main/App.js");
+      const { DetectZipType } = await getApp();
       return (await DetectZipType(base64)) === "ysm";
     } catch {
       return false;
@@ -84,7 +87,7 @@ export function initImportQueue(app) {
     (async () => {
       try {
         const { SavePreviewTempFile } =
-          await import("../../wailsjs/go/main/App.js");
+          await getApp();
         const tmpPath = await SavePreviewTempFile(base64);
         if (tmpPath) {
           bus.emit("model:select", { path: tmpPath });
@@ -100,7 +103,7 @@ export function initImportQueue(app) {
     conflictTimer = setTimeout(async () => {
       try {
         const { CheckFileExists, LoadAppConfig, GetRepoRoot } =
-          await import("../../wailsjs/go/main/App.js");
+          await getApp();
         const repoRoot = await GetRepoRoot("ysm");
         const fullPath = (repoRoot || "") + "\\" + name;
         const exists = await CheckFileExists(fullPath);
@@ -141,7 +144,7 @@ export function initImportQueue(app) {
     if (!currentBase64) return;
     try {
       const { ExtractYSMHeaderFromBase64 } =
-        await import("../../wailsjs/go/main/App.js");
+        await getApp();
       const header = await ExtractYSMHeaderFromBase64(currentBase64);
       if (header.authorName) {
         const authorEl = root.getElementById("dl-author");
@@ -340,7 +343,7 @@ export function initImportQueue(app) {
 
     try {
       const { LoadAppConfig, ImportModelFileTo } =
-        await import("../../wailsjs/go/main/App.js");
+        await getApp();
       const cfg = await LoadAppConfig();
       if (!cfg.filesRoot) {
         bus.emit("toast:show", {
@@ -361,8 +364,8 @@ export function initImportQueue(app) {
       // 自动弹出重命名对话框
       try {
         const { showRenameDialog } = await import("../dialogs/rename.js");
-        const { RenameFile } = await import("../../wailsjs/go/main/App.js");
-        const { GetRepoRoot } = await import("../../wailsjs/go/main/App.js");
+        const { RenameFile } = await getApp();
+        const { GetRepoRoot } = await getApp();
         const _ysmRoot = await GetRepoRoot("ysm");
         const renameTo = await showRenameDialog(
           (_ysmRoot || "") + "\\" + newName,
@@ -431,7 +434,7 @@ export function initImportQueue(app) {
         if (confirmed) {
           try {
             const { ImportModelFileOverwriteTo } =
-              await import("../../wailsjs/go/main/App.js");
+              await getApp();
             const subpath2 = currentRelPath
               ? currentRelPath.substring(0, currentRelPath.lastIndexOf("/"))
               : "";
@@ -493,7 +496,7 @@ export function initImportQueue(app) {
   const loadRepoFiles = async () => {
     try {
       const { ScanModelEntries, LoadAppConfig, GetRepoRoot } =
-        await import("../../wailsjs/go/main/App.js");
+        await getApp();
       const repoRoot = await GetRepoRoot("ysm");
       if (!repoRoot) return;
       const entries = await ScanModelEntries(repoRoot);
@@ -629,7 +632,7 @@ export function initImportQueue(app) {
   // 非 YSM 文件直接导入（跳过命名表单）
   const directImport = async (file, base64) => {
     try {
-      const { ImportModelFile } = await import("../../wailsjs/go/main/App.js");
+      const { ImportModelFile } = await getApp();
       await ImportModelFile(file.name, base64);
       imported.unshift({
         name: file.name,
@@ -709,7 +712,7 @@ export function initImportQueue(app) {
         const name = btn.dataset.name;
         const { showRenameDialog } = await import("../dialogs/rename.js");
         const { RenameFile, LoadAppConfig, GetRepoRoot } =
-          await import("../../wailsjs/go/main/App.js");
+          await getApp();
         const repoRoot = await GetRepoRoot("ysm");
         const fullPath = repoRoot + "\\" + name;
         const newName = await showRenameDialog(fullPath, name);
@@ -785,11 +788,10 @@ export function initImportQueue(app) {
 
   // 处理待导入文件的通用函数
   const processPendingImport = (files) => {
-    // 从事件 payload 或模块级缓存取数据
-    const list = files || window.__ysmPendingImport;
+    const list = files || PendingImport.queue;
     if (!list || list.length === 0) return;
-    window.__ysmPendingImport = null;
-    window.__YSMPendingLock = true;
+    PendingImport.clear();
+    if (!DnDLock.acquire()) return;
     let readCount = 0;
     list.forEach((item) => {
       if (!item.file) {
@@ -803,16 +805,14 @@ export function initImportQueue(app) {
         readCount++;
         if (readCount === list.length) {
           renderImportedList();
-          setTimeout(() => {
-            window.__YSMPendingLock = false;
-          }, 1000);
+          setTimeout(() => DnDLock.release(), 1000);
         }
       };
       reader.onerror = () => {
         readCount++;
         if (readCount === list.length) {
           renderImportedList();
-          window.__YSMPendingLock = false;
+          DnDLock.release();
         }
       };
       reader.readAsDataURL(item.file);

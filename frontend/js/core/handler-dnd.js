@@ -1,5 +1,8 @@
 // ===== 全局拖拽导入 =====
 import { bus } from "../bus.js";
+import { PageStore } from "./page-store.js";
+import { DnDLock, PendingImport } from "../features/dnd-state.js";
+import { getApp } from "../wails/app.js";
 import { ALL_EXTS, extBelongsTo } from "../utils/extensions.js";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
@@ -74,7 +77,7 @@ const isEditable = (el) =>
 
 const onDragOver = (e) => {
   // 只在仓库页面显示拖拽遮罩
-  if (window.__currentPage !== "repository") return;
+  if (PageStore.currentPage !== "repository") return;
   if (!e.dataTransfer?.items?.length) return;
   if (isEditable(e.target)) return;
   e.preventDefault();
@@ -85,7 +88,7 @@ const onDragOver = (e) => {
   showDropOverlay(hasModel);
 };
 const onDragLeave = (e) => {
-  if (window.__currentPage !== "repository") return;
+  if (PageStore.currentPage !== "repository") return;
   if (dropLeaveTimer) clearTimeout(dropLeaveTimer);
   if (!e.relatedTarget) {
     hideDropOverlay();
@@ -99,10 +102,10 @@ const onDrop = async (e) => {
   hideDropOverlay();
   e.preventDefault();
   if (isEditable(e.target)) return;
-  if (window.__YSMPendingLock) return;
+  if (DnDLock.locked) return;
 
   // 非仓库页面不处理 DnD
-  if (window.__currentPage !== "repository") return;
+  if (PageStore.currentPage !== "repository") return;
 
   const getFileFromEntry = (entry) =>
     new Promise((resolve, reject) => {
@@ -227,8 +230,8 @@ const onDrop = async (e) => {
   // YSM 文件走原有命名表单流程
   if (ysmFiles.length > 0) {
     const pendingFiles = ysmFiles.map((f) => ({ name: f.name, file: f }));
-    window.__ysmPendingImport = pendingFiles;
-    if (window.__currentPage === "repository") {
+    PendingImport.setQueue(pendingFiles);
+    if (PageStore.currentPage === "repository") {
       bus.emit("import:pending-files", pendingFiles);
       bus.emit("repo:switch-tab", { tab: "import" });
     } else {
@@ -258,10 +261,4 @@ export function registerDnD(unsubs) {
       dropOverlay = null;
     }
   });
-
-  // 页面跟踪（加入 unsubs 以便清理）
-  const navUnsub = bus.on("nav:changed", ({ page }) => {
-    window.__currentPage = page;
-  });
-  unsubs.push(navUnsub);
 }

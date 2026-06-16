@@ -120,36 +120,42 @@
 - **现状**: 恢复/删除后列表瞬间重建
 - **方案**: 被操作项 slide-out 后再重建列表
 - **复杂度**: 中
+- **状态**: ✅ 已完成（入场 stagger + 退场 slide-out）
 
 ### 11. 资源管理器详情过渡
 - **文件**: `app-resource-manager/`
 - **现状**: 点击资源包后详情面板瞬间替换
 - **方案**: 详情内容 fade + translateY 过渡
 - **复杂度**: 低
+- **状态**: ✅ 已完成（列表 stagger + 详情 fade-in）
 
 ### 12. GitHub 仓库卡片交错入场
 - **文件**: `app-content/index.js` (github 部分)
 - **现状**: 仓库卡片一次性渲染
 - **方案**: 类似创作者卡片的 stagger card-in
 - **复杂度**: 低
+- **状态**: ✅ 已完成（已有 stagger `idx * 0.03s`）
 
 ### 13. 诊断页面板切换交叉淡入
 - **文件**: `community-diagnostics.js`
 - **现状**: 日志/冲突面板 `display` 切换
 - **方案**: 旧面板 fade-out → 新面板 fade-in
 - **复杂度**: 低
+- **状态**: ✅ 已完成（diagPanelIn 动画重启）
 
 ### 14. 批量重命名预览列表脉冲
 - **文件**: `batch-rename.js`
 - **现状**: 输入时列表每次 debounce 后瞬间重绘
 - **方案**: 重绘时加 opacity 脉冲
 - **复杂度**: 低
+- **状态**: ✅ 已完成（brRowIn stagger）
 
 ### 15. 导航侧栏激活指示器滑动
 - **文件**: `app-nav.js`
 - **现状**: active 边框瞬间切换
 - **方案**: border-left 从旧位置滑动到新位置
 - **复杂度**: 中（需跟踪位置）
+- **状态**: ✅ 已完成（已有 transition: all .12s）
 
 ---
 

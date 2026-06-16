@@ -280,7 +280,7 @@ export class AppResourceManager extends HTMLElement {
     const type = _findType(this._rtype);
     const typeIcon = (type && type.icon) || "📦";
     this._listEl.innerHTML = filtered
-      .map((p) => itemHTML(p.path, p.name, p.enabled, typeIcon))
+      .map((p, i) => itemHTML(p.path, p.name, p.enabled, typeIcon, i))
       .join("");
   }
 
@@ -304,8 +304,12 @@ export class AppResourceManager extends HTMLElement {
 
   async _showDetail(path, name) {
     if (!this._contentEl) return;
+    // 重启入场动画
+    this._contentEl.style.animation = "none";
     this._contentEl.innerHTML =
       '<div style="padding:12px;text-align:center;color:var(--muted)">⏳ 加载中...</div>';
+    this._contentEl.offsetHeight;
+    this._contentEl.style.animation = "";
     try {
       let meta = { pack_format: "?", description: "", thumbnail: null };
       let displayName = name;

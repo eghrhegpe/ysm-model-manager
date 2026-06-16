@@ -122,14 +122,14 @@ export async function tryFetchModels(repo, mirror, onProgress) {
     p3Ready = true;
   }, 4000);
 
-  const waitForReady = function (flagRef) {
+  const waitForReady = function (getReady) {
     return new Promise(function (resolve) {
       var check = function () {
         if (_earlyExitReason) {
           resolve({ _earlyExit: true });
           return;
         }
-        if (flagRef) {
+        if (getReady()) {
           resolve({ _earlyExit: false });
           return;
         }
@@ -139,13 +139,13 @@ export async function tryFetchModels(repo, mirror, onProgress) {
     });
   };
 
-  const p2 = waitForReady(p2Ready).then(function (r) {
+  const p2 = waitForReady(() => p2Ready).then(function (r) {
     if (r._earlyExit) throw new Error(_earlyExitReason);
     if (onProgress) onProgress(30, "⏳ 发出第二个请求…");
     return fetchOne(sorted[1]);
   });
 
-  const p3 = waitForReady(p3Ready).then(function (r) {
+  const p3 = waitForReady(() => p3Ready).then(function (r) {
     if (r._earlyExit) throw new Error(_earlyExitReason);
     if (onProgress) onProgress(50, "⏳ 发出第三个请求…");
     return fetchOne(sorted[2]);

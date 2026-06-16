@@ -2,6 +2,7 @@
 import { bus } from "../bus.js";
 import { friendlyError } from "../utils/errors.js";
 import { modalConfirm } from "../dialogs/modal.js";
+import { getApp } from "../wails/app.js";
 
 export function registerInstanceOps(unsubs) {
   // 导出文件清单到剪贴板（支持 rtype 筛选）
@@ -13,7 +14,7 @@ export function registerInstanceOps(unsubs) {
           ListVersionInstances,
           ListFileNames,
           GetRepoRoot,
-        } = await import("../../wailsjs/go/main/App.js");
+        } = await getApp();
         const cfg = await LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {
@@ -36,7 +37,7 @@ export function registerInstanceOps(unsubs) {
         }
 
         // 子目录映射——从 Go 端统一获取
-        const { GetSubDirMap } = await import("../../wailsjs/go/main/App.js");
+        const { GetSubDirMap } = await getApp();
         const subDirAll = await GetSubDirMap();
 
         let dirs = [];
@@ -98,7 +99,7 @@ export function registerInstanceOps(unsubs) {
           LoadAppConfig,
           CountInstanceResources,
           ClearInstanceResources,
-        } = await import("../../wailsjs/go/main/App.js");
+        } = await getApp();
         const cfg = await LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {

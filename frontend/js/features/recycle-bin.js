@@ -106,10 +106,10 @@ export function initRecycleBin(app) {
       if (count) count.textContent = icon + " " + entries.length + " 个文件";
 
       list.innerHTML = entries
-        .map((e) => {
+        .map((e, i) => {
           const name = e.Name.replace(/\.(ysm|zip|7z)\.ban$/i, ".$1");
           const size = e.Size ? fmtSize(e.Size) : "?";
-          return `<div class="recy-item" style="display:flex;flex-direction:column;gap:2px;padding:5px 8px;border-radius:5px;background:var(--bg);font-size:var(--fs-sm)">
+          return `<div class="recy-item" style="animation-delay:${Math.min(i * 25, 400)}ms;display:flex;flex-direction:column;gap:2px;padding:5px 8px;border-radius:5px;background:var(--bg);font-size:var(--fs-sm)">
 <div style="display:flex;align-items:center;gap:6px">
 <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);cursor:pointer" title="点击查看详情: ${esc(e.Path)}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>
 <span style="font-size:var(--fs-xs);color:var(--muted)">${size}</span>
@@ -124,6 +124,11 @@ export function initRecycleBin(app) {
       // 恢复按钮
       list.querySelectorAll(".recy-restore").forEach((btn) => {
         btn.onclick = async () => {
+          const item = btn.closest(".recy-item");
+          if (item) {
+            item.classList.add("leaving");
+            await new Promise((r) => setTimeout(r, 150));
+          }
           try {
             await RestoreFromRecycle(btn.dataset.path, "");
             bus.emit("toast:show", {
@@ -135,6 +140,7 @@ export function initRecycleBin(app) {
             bus.emit("stats:refresh");
             bus.emit("tree:reload");
           } catch (e) {
+            if (item) item.classList.remove("leaving");
             bus.emit("toast:show", {
               msg: `❌ ${friendlyError(e)}`,
               duration: 3000,
@@ -155,6 +161,11 @@ export function initRecycleBin(app) {
             danger: true,
           });
           if (!confirmed) return;
+          const item = btn.closest(".recy-item");
+          if (item) {
+            item.classList.add("leaving");
+            await new Promise((r) => setTimeout(r, 150));
+          }
           try {
             await DeleteFromRecycle(btn.dataset.path);
             loadRecycleBin();
@@ -164,6 +175,7 @@ export function initRecycleBin(app) {
               type: "success",
             });
           } catch (e) {
+            if (item) item.classList.remove("leaving");
             bus.emit("toast:show", {
               msg: `❌ ${friendlyError(e)}`,
               duration: 3000,

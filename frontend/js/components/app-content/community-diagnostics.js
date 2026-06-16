@@ -31,10 +31,15 @@ export function initDiagnostics(root, esc) {
       root
         .querySelectorAll(".diag-btn[data-diag]")
         .forEach((b) => b.classList.toggle("active", b === btn));
-      root.getElementById("diag-log").style.display =
-        name === "log" ? "" : "none";
-      root.getElementById("diag-conflict").style.display =
-        name === "conflict" ? "" : "none";
+      const logPanel = root.getElementById("diag-log");
+      const conflictPanel = root.getElementById("diag-conflict");
+      logPanel.style.display = name === "log" ? "" : "none";
+      conflictPanel.style.display = name === "conflict" ? "" : "none";
+      // 重启入场动画
+      const activePanel = name === "log" ? logPanel : conflictPanel;
+      activePanel.style.animation = "none";
+      activePanel.offsetHeight;
+      activePanel.style.animation = "";
       if (name === "log") loadDiagnosticsLogs(root, esc);
     });
   });

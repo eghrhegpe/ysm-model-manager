@@ -6,6 +6,9 @@ import { showProgress, tryFetchModels } from "../../features/community/data.js";
 import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.js";
 import { getCreatorIdentity, getTagFromRole, parseDescTags, loadFavs, isFaved, toggleFav } from "./workshop-data.js";
 
+/** @type {Function|null} 当前注册的 storage 监听器（模块私有，防泄漏） */
+let _storageSyncFn = null;
+
 /**
  * 渲染并绑定站点视图（预设搜索 + 创作者列表 + 浏览仓库 + 编辑模式）
  * @param {Object} site - 站点配置
@@ -610,11 +613,11 @@ export function renderSiteView(site, ctx) {
     });
   }
 
-  // storage 事件：多标签页收藏同步（先清理再注册，防泄漏）
-  if (window.__ysmStorageSync) {
-    window.removeEventListener("storage", window.__ysmStorageSync);
+  // storage 事件：多标签页收藏同步（模块私有变量，不挂 window）
+  if (_storageSyncFn) {
+    window.removeEventListener("storage", _storageSyncFn);
   }
-  const _storageSync = (e) => {
+  _storageSyncFn = (e) => {
     if (e.key === "ysm-fav-creators") {
       const favs = loadFavs();
       searchResults.querySelectorAll(".cr-star-btn").forEach((btn) => {
@@ -622,8 +625,7 @@ export function renderSiteView(site, ctx) {
       });
     }
   };
-  window.__ysmStorageSync = _storageSync;
-  window.addEventListener("storage", _storageSync);
+  window.addEventListener("storage", _storageSyncFn);
 
   // 📦 浏览 GitHub 仓库模型
   const refreshView = () => renderSiteView(site, ctx);
@@ -1017,6 +1019,15 @@ export function renderSiteView(site, ctx) {
   // 创作者拖拽排序 — 仅拖拽柄触发
   let dragSrcIdx = -1;
   let dragState = null; // { card, el, originalLeft, originalTop, rect }
+  // 拖拽状态清理：防止 JS 异常后 class 卡死在 DOM 上
+  const clearDragState = () => {
+    dragSrcIdx = -1;
+    dragPresetSrcIdx = -1;
+    searchResults.querySelectorAll(".cr-edit-card").forEach((c) => {
+      c.classList.remove("cr-dragging", "cr-drag-target", "cr-drag-before", "cr-drag-after");
+    });
+  };
+
   searchResults
     .querySelectorAll(".cr-edit-card:not([data-edit='preset'])")
     .forEach((card) => {
@@ -1034,11 +1045,8 @@ export function renderSiteView(site, ctx) {
         e.dataTransfer.setData("text/plain", "");
       });
       card.addEventListener("dragend", () => {
-        card.classList.remove("cr-dragging");
         card.draggable = false;
-        searchResults.querySelectorAll(".cr-edit-card").forEach((c) => {
-          c.classList.remove("cr-drag-target","cr-drag-before","cr-drag-after");
-        });
+        clearDragState();
       });
       card.addEventListener("dragover", (e) => {
         e.preventDefault();
@@ -1092,11 +1100,8 @@ export function renderSiteView(site, ctx) {
         e.dataTransfer.setData("text/plain", "");
       });
       card.addEventListener("dragend", () => {
-        card.classList.remove("cr-dragging");
         card.draggable = false;
-        searchResults.querySelectorAll(".cr-edit-card").forEach((c) => {
-          c.classList.remove("cr-drag-target","cr-drag-before","cr-drag-after");
-        });
+        clearDragState();
       });
       card.addEventListener("dragover", (e) => {
         e.preventDefault();

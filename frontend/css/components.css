@@ -19,8 +19,8 @@
   opacity: 0;
   transform: scale(0.97);
   transition:
-    opacity 0.12s ease-out,
-    transform 0.12s ease-out;
+    opacity var(--tr-fast),
+    transform var(--tr-fast);
 }
 .ws-preview-fallback {
   width: 80px;

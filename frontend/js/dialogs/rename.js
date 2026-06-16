@@ -2,6 +2,7 @@
 // 用法: showRenameDialog(filePath, currentName) → 确认后调用 RenameFile
 import { parseModelName } from "../utils/display.js";
 import { closeDlg } from "./modal.js";
+import { getApp } from "../wails/app.js";
 
 export async function showRenameDialog(filePath, currentName) {
   return new Promise((resolve) => {
@@ -54,9 +55,8 @@ export async function showRenameDialog(filePath, currentName) {
         const btn = box.querySelector("#rn-from-header");
         btn.textContent = "⏳ 读取中...";
         btn.disabled = true;
-        const { ExtractYSMHeader } =
-          await import("../../wailsjs/go/main/App.js");
-        const header = await ExtractYSMHeader(filePath);
+        const App = await getApp();
+        const header = await App.ExtractYSMHeader(filePath);
         if (header?.isYsm) {
           const authorEl = box.querySelector("#rn-author");
           const tipsEl = box.querySelector("#rn-tips");

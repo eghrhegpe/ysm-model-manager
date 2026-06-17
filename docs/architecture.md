@@ -85,7 +85,7 @@ app-sidebar/
 └── tpl.js         # HTML 模板 (88 行)
 ```
 
-#### `<app-preview>` (~2,691 行)
+#### `<app-preview>` (~2,504 行)
 ```
 app-preview/
 ├── index.js              # 生命周期编排 (521 行)
@@ -94,19 +94,19 @@ app-preview/
 ├── render.js             # 渲染逻辑 (10 行)
 ├── tpl.js                # HTML 模板 (141 行)
 ├── preview-css.js        # 样式 (136 行)
-├── preview-3d.js         # 3D 渲染 (187 行)
 ├── preview-actions.js    # 预览操作 (128 行)
 ├── preview-bone-export.js # 骨骼导出 (43 行)
 ├── preview-detail.js     # 详情面板 (116 行)
 ├── preview-loader.js     # 加载逻辑 (89 行)
 ├── preview-logs.js       # 日志预览 (54 行)
 ├── preview-pack.js       # 包预览 (201 行)
-├── preview-skeleton.js   # 骨架屏 (391 行)
+├── preview-skeleton.js   # 骨架屏 + 3D 调用 (391 行)
 ├── preview-utils.js      # 工具函数 (73 行)
 ├── preview-wasm.js       # WASM 解码 (488 行)
 ├── preview-zoom.js       # 缩放预览 (66 行)
 └── utils.js              # 工具函数 (67 行)
 ```
+> 注：`preview-3d.js` 已删除（死代码，零引用），3D 功能由 `preview-skeleton.js` 调用 `utils/model3d-loader.js` 实现
 
 #### `<app-content>` (~4,923 行)
 ```
@@ -141,30 +141,32 @@ app-resource-manager/
 ## 共享工具
 
 ```
-js/utils/ (~3,238 行)
-├── display.js          # 文件名渲染 (151 行)
-├── fmt.js              # 文件大小格式化 (28 行)
-├── dom.js              # HTML 转义/搜索高亮 (21 行)
-├── icon.js             # 文件图标映射 (23 行)
-├── summarize.js        # 模型摘要卡片 HTML (167 行)
-├── preview-cache.js    # 预览缓存 FIFO (75 行)
-├── debug.js            # 调试工具 (56 行)
-├── errors.js           # 错误处理 (49 行)
-├── mc-format.js        # MC 格式化 (91 行)
-├── pack-format.js      # 包格式化 (134 行)
-├── model2d.js          # 2D 模型处理 (519 行)
-├── model3d.js          # 3D 模型处理 (447 行)
-├── model3d-spec.js     # 3D 模型规范 (240 行)
-├── constants.js        # 常量 (25 行)
-├── extensions.js       # 扩展 (43 行)
-├── animation.js        # 动画 (326 行)
-├── animation-player.js # 动画播放 (165 行)
-├── animate.js          # 动画工具 (46 行)
-├── canvas-export.js    # 画布导出 (36 行)
-├── stagger.js          # 交错动画 (11 行)
-├── resource-types.js   # 资源类型 (17 行)
-├── fmt.test.js         # fmt 测试 (36 行)
-└── dom.test.js         # dom 测试 (28 行)
+js/utils/ (~3,428 行)
+├── display.js            # 文件名渲染 (151 行)
+├── fmt.js                # 文件大小格式化 (28 行)
+├── dom.js                # HTML 转义/搜索高亮 (21 行)
+├── icon.js               # 文件图标映射 (23 行)
+├── summarize.js          # 模型摘要卡片 HTML (167 行)
+├── preview-cache.js      # 预览缓存 FIFO (75 行)
+├── debug.js              # 调试工具 + debugGetSpec (56 行)
+├── errors.js             # 错误处理 (49 行)
+├── mc-format.js          # MC 格式化 (91 行)
+├── pack-format.js        # 包格式化 (134 行)
+├── model2d.js            # 2D 模型处理 (519 行)
+├── model3d.js            # 3D 实时渲染 + buildSceneMesh 导出 (~300 行)
+├── model3d-loader.js     # 纹理加载 + spec 调用 + preloadModel (~90 行)
+├── screenshot-renderer.js # 无头截图 + 批量截图 (~100 行)
+├── model3d-spec.js       # 3D 模型规范 (240 行)
+├── constants.js          # 常量 (25 行)
+├── extensions.js         # 扩展 (43 行)
+├── animation.js          # 动画 (326 行)
+├── animation-player.js   # 动画播放 (165 行)
+├── animate.js            # 动画工具 (46 行)
+├── canvas-export.js      # 画布导出 (36 行)
+├── stagger.js            # 交错动画 (11 行)
+├── resource-types.js     # 资源类型 (17 行)
+├── fmt.test.js           # fmt 测试 (36 行)
+└── dom.test.js           # dom 测试 (28 行)
 ```
 
 ---

@@ -5,9 +5,10 @@ const TLABEL = {
   pro: "⚪ 极简深邃",
   sakura: "🌸 樱花物语",
   ocean: "🌊 深海探秘",
+  mint: "🍃 薄荷物语",
   system: "💻 跟随系统",
 };
-const TMODES = ["cyber", "warm", "pro", "sakura", "ocean", "system"];
+const TMODES = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "system"];
 const DEFAULT_THEME = "system";
 
 // 注入涟漪动画样式

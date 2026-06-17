@@ -243,7 +243,7 @@ ${focusVisibleCSS}
 .health-tag.bad { background:#f38ba822; color:var(--status-error); }
 .stat-pill { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:var(--radius-xl); background:var(--surf); border:1px solid var(--bd); font-size:var(--fs-xs); color:var(--muted); }
 
-/* ===== 仓库元老页专用样式 ===== */
+/* ===== 资历最深页专用样式 ===== */
 .oldest-page { display:flex; flex-direction:column; gap:16px; padding:16px; overflow-y:auto; height:100%; }
 .oldest-stats-bar { display:inline-flex; align-items:center; gap:12px; background:var(--surf); border:1px solid var(--bd); border-radius:8px; padding:8px 14px; flex-wrap:wrap; align-self:flex-start; }
 .oldest-health-box { display:flex; align-items:center; gap:8px; }
@@ -899,6 +899,15 @@ ${focusVisibleCSS}
 @keyframes rmItemIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
 .rm-content { animation: fadeSlideUp .2s ease; }
 @keyframes rmContentIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
+
+/* ===== 预览面板拖拽调整宽度 ===== */
+.preview-resize-handle:hover { background:var(--accent) !important; }
+
+/* ===== 主题选择器 ===== */
+.theme-picker { display:flex;gap:8px;flex-wrap:wrap; }
+.theme-card { display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;border-radius:var(--radius-md);cursor:pointer;transition:var(--tr-fast);min-width:80px; }
+.theme-card:hover { border-color:var(--accent) !important;transform:translateY(-2px);box-shadow:var(--shadow-md); }
+.theme-card.active { border-color:var(--accent) !important;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent); }
 
 /* ===== 响应式 ===== */
 @media (max-width:768px) {

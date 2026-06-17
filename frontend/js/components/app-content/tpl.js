@@ -9,7 +9,7 @@ export function repositoryHTML() {
     '<button class="repo-tab" data-tab="import">📥 导入</button>' +
     '<button class="repo-tab" data-tab="recycle">♻️ 回收站</button>' +
     '<button class="repo-tab" data-tab="dedup">🔗 去重</button>' +
-    '<button class="repo-tab" data-tab="oldest">👴 仓库元老</button>' +
+    '<button class="repo-tab" data-tab="oldest">👴 资历最深</button>' +
     "</div>" +
     // 第二栏：资源类型（仅在文件树 tab 可见）
     '<div class="repo-subtabs" id="repo-subtabs" style="display:flex;gap:2px;padding:2px 8px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
@@ -32,7 +32,8 @@ export function repositoryHTML() {
     '<div class="repo-tab-body" id="repo-tab-dedup" style="display:none;flex:1;overflow-y:auto;padding:12px"></div>' +
     '<div class="repo-tab-body" id="repo-tab-oldest" style="display:none;flex:1;overflow-y:auto;overflow-x:hidden"></div>' +
     "</div>" +
-    '<app-preview mode="model" style="width:220px;flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
+    '<div class="preview-resize-handle" id="preview-resize-handle" style="width:4px;cursor:col-resize;background:transparent;transition:background var(--tr-fast);flex-shrink:0"></div>' +
+    '<app-preview mode="model" id="app-preview" style="width:var(--preview-width,220px);flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
     "</div>" +
     "</div>"
   );
@@ -153,14 +154,54 @@ export function settingsHTML() {
 <div class="section-title stg-title">🌙 主题与外观</div>
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:0ms">
-  <div class="setting-row">
+  <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
     <span class="label">🌙 主题模式</span>
-    <select id="set-theme" class="stg-select">
-      <option value="system">💻 跟随系统</option>
-      <option value="cyber">🌙 赛博霓虹</option>
-      <option value="warm">☀️ 温暖木纹</option>
-      <option value="pro">⚪ 极简深邃</option>
-    </select>
+    <div class="theme-picker" id="theme-picker">
+      <div class="theme-card" data-theme="system" style="background:linear-gradient(135deg,#11111b 50%,#f5f0e1 50%);border:2px solid var(--bd)">
+        <span style="font-size:16px">💻</span>
+        <span style="font-size:10px;font-weight:600">跟随系统</span>
+      </div>
+      <div class="theme-card" data-theme="cyber" style="background:#11111b;border:2px solid var(--bd)">
+        <div style="display:flex;gap:2px;margin-bottom:2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#bd93f9"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#f1fa8c"></span>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:#cdd6f4">赛博霓虹</span>
+      </div>
+      <div class="theme-card" data-theme="warm" style="background:#f5f0e1;border:2px solid var(--bd)">
+        <div style="display:flex;gap:2px;margin-bottom:2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#8b4513"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#6a4e3a"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#a0866a"></span>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:#3e2723">温暖木纹</span>
+      </div>
+      <div class="theme-card" data-theme="pro" style="background:#0a0a0a;border:2px solid var(--bd)">
+        <div style="display:flex;gap:2px;margin-bottom:2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#999"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#666"></span>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:#e0e0e0">极简深邃</span>
+      </div>
+      <div class="theme-card" data-theme="sakura" style="background:#fef7f9;border:2px solid var(--bd)">
+        <div style="display:flex;gap:2px;margin-bottom:2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#e91e63"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#9c27b0"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#ff8a65"></span>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:#37474f">樱花物语</span>
+      </div>
+      <div class="theme-card" data-theme="ocean" style="background:#0a1628;border:2px solid var(--bd)">
+        <div style="display:flex;gap:2px;margin-bottom:2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#4fc3f7"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#7c4dff"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#ffab40"></span>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:#b0bec5">深海探秘</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -456,7 +497,7 @@ export function diagnosticsHTML() {
 </div></div></div>
 <div class="diag-panel" id="diag-oldest" style="display:none">
 <div class="diag-panel-header">
-<span>👴 仓库元老</span>
+<span>👴 资历最深</span>
 <button class="btn-base" id="diag-oldest-refresh">🔄</button>
 </div>
 <div id="diag-oldest-list"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">点击「🔄」刷新</div></div>

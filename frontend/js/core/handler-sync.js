@@ -21,7 +21,7 @@ export function registerSync(unsubs) {
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {
           bus.emit("toast:show", {
-            msg: "请先设置游戏路径",
+            msg: "请先配置游戏目录",
             duration: 3000,
             type: "warn",
           });
@@ -35,7 +35,7 @@ export function registerSync(unsubs) {
         const repoRoot = await GetRepoRoot(rtypeActual);
         if (!repoRoot) {
           bus.emit("toast:show", {
-            msg: "请先设置该资源类型的目录",
+            msg: "请先配置该资源类型目录",
             duration: 3000,
             type: "warn",
           });
@@ -216,7 +216,7 @@ export function registerSync(unsubs) {
           const mmdRoot = await GetRepoRoot("mmd-skin");
           if (!mcRoot) {
             bus.emit("toast:show", {
-              msg: "请先设置游戏路径",
+              msg: "请先配置游戏目录",
               duration: 3000,
               type: "warn",
             });

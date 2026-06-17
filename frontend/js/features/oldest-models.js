@@ -1,18 +1,11 @@
-// ===== 仓库元老 + 健康度 + 今日推荐（响应全局类型切换） =====
+// ===== 资历最深 + 仓库评分 + 每日推荐（响应全局类型切换） =====
 import { bus } from "../bus.js";
 import { renderDisplayName } from "../utils/display.js";
-
-const RT_ICONS = {
-  ysm: "💎",
-  "mmd-skin": "🎭",
-  "vrchat-avatar": "🥽",
-  resourcepack: "🎨",
-  shaderpack: "☀️",
-  "create-blueprint": "⚙️",
-};
+import { loadResourceRegistry } from "../utils/resource-registry.js";
+import { getApp } from "../wails/app.js";
 
 /**
- * 加载仓库元老、健康度、热力图和今日推荐
+ * 加载资历最深、仓库评分、热力图和每日推荐
  * @param {HTMLElement} container - 渲染容器
  * @param {Function} esc - HTML 转义函数
  */
@@ -34,12 +27,11 @@ export async function loadOldestModel(container, esc) {
     container.innerHTML =
       '<div style="padding:12px;color:#6c7086;font-size:var(--fs-base)">⏳ 扫描中...</div>';
     try {
-      const { ScanModelEntries, GetRepoRoot } =
-        await import("../../wailsjs/go/main/App.js");
+      const { ScanModelEntries, GetRepoRoot } = await getApp();
       const repoRoot = await GetRepoRoot(currentType);
       if (!repoRoot) {
         container.innerHTML =
-          '<div style="padding:12px;color:#f38ba8;font-size:var(--fs-base)">请先设置该资源类型的目录</div>';
+          '<div style="padding:12px;color:#f38ba8;font-size:var(--fs-base)">请先配置该资源类型目录</div>';
         return;
       }
 
@@ -67,7 +59,7 @@ export async function loadOldestModel(container, esc) {
         0,
       );
 
-      // 健康度评分
+      // 仓库评分评分
       let score = 100;
       if (entries.length > 0) {
         const banPenalty = Math.round((banned / entries.length) * 40);
@@ -125,7 +117,7 @@ export async function loadOldestModel(container, esc) {
           .join("") +
         "</div>";
 
-      // 仓库元老
+      // 资历最深
       const sorted = [...entries]
         .filter((e) => e.ModTime)
         .sort((a, b) => a.ModTime - b.ModTime);
@@ -166,7 +158,7 @@ export async function loadOldestModel(container, esc) {
           "</div>";
       }
 
-      // 今日推荐
+      // 每日推荐
       const renderPicks = () => {
         // Fisher-Yates 洗牌后取前 3 个，避免重复且简洁可靠
         const shuffled = [...entries];
@@ -214,12 +206,13 @@ export async function loadOldestModel(container, esc) {
         );
       };
 
-      const curIcon = RT_ICONS[currentType] || "📦";
+      const reg = await loadResourceRegistry();
+      const curIcon = (reg[currentType] && reg[currentType].icon) || "📦";
       container.innerHTML =
         '<div class="oldest-page">' +
         '<div class="oldest-stats-bar">' +
         '<div class="oldest-health-box">' +
-        '<div class="oldest-health-label">📊 健康度</div>' +
+        '<div class="oldest-health-label">📊 仓库评分</div>' +
         '<div class="oldest-health-ring" style="background:conic-gradient(' +
         healthColor +
         " " +
@@ -262,7 +255,7 @@ export async function loadOldestModel(container, esc) {
         heatmapHtml +
         "</div>" +
         '<div class="oldest-section" style="text-align:center">' +
-        '<div class="oldest-section-title">🎲 今日推荐</div>' +
+        '<div class="oldest-section-title">🎲 每日推荐</div>' +
         '<div style="display:flex;justify-content:center">' +
         renderPicks() +
         "</div></div></div>";

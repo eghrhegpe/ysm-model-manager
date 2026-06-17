@@ -22,24 +22,25 @@
 
 ## UI 文案修剪
 
-### Toast 统一
+### Toast 统一 ✅ 已落地 v1.8.5
 
 | 位置（行号） | 旧文案 | 新文案 |
 |-------------|--------|--------|
-| `handler-sync.js:24,38,219` `handler-other.js:22,107` `instance-actions.js:36` `community-diagnostics.js:366` | "请先设置游戏路径" | "请先配置游戏目录" |
-| `handler-sync.js:38` `oldest-models.js:42` | "请先设置该资源类型的目录" | "请先配置 {类型} 目录" |
+| 全项目 24+ 处 | "请先设置…" | "请先配置…" |
+| `handler-sync.js:24,219` `handler-other.js:22,107` `instance-actions.js:36` `community-diagnostics.js:363` | "请先设置游戏路径" | "请先配置游戏目录" |
+| `handler-sync.js:38` `oldest-models.js:42` | "请先设置该资源类型的目录" | "请先配置该资源类型目录" |
 | `context-menus.js:380` | "请先设置游戏根目录" | "请先配置游戏目录" |
 | `download-queue.js:485` | "请先在设置中配置仓库目录" | "请先配置仓库目录" |
 | `toolbar-events.js:389` `import-queue.js:350` | "请先在设置中配置文件存储路径" | "请先配置存储路径" |
 
-### 按钮 / tooltip 缩短
+### 按钮 / tooltip 缩短 ✅ 已落地 v1.8.5
 
 | 位置（行号） | 旧 | 新 |
 |-------------|-----|-----|
-| `app-tree/tpl.js:7` | `title="高级筛选（骨骼/立方体/纹理）"` | `title="高级筛选"` |
-| `app-tree/tpl.js:28` | `title="点击选择仓库目录"` | `title="配置仓库目录"` |
+| `app-tree/tpl.js:9` | `title="高级筛选（骨骼/立方体/纹理）"` | `title="高级筛选"` |
+| `app-tree/tpl.js:30` | `title="点击选择仓库目录"` | `title="配置仓库目录"` |
 | `app-sidebar/tpl.js:38` | `title="点击选择游戏目录"` | `title="配置游戏目录"` |
-| `batch-rename.js:251` | 预设芯片 "去除年份 (2025-08)" | "去除年份" |
+| `batch-rename.js:252` | 预设芯片 "去除年份 (2025-08)" | "去除年份" |
 
 ---
 

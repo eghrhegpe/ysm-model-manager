@@ -98,7 +98,7 @@ async function openAdvFilterDialog($, vm) {
     const repoRoot = await GetRepoRoot("ysm");
     if (!repoRoot) {
       bus.emit("toast:show", {
-        msg: "请先设置仓库目录",
+        msg: "请先配置仓库目录",
         duration: 2000,
         type: "warn",
       });
@@ -218,7 +218,7 @@ export function bindToolbarEvents(root, vm) {
     const repoRoot = await GetRepoRoot("ysm");
     if (!repoRoot) {
       bus.emit("toast:show", {
-        msg: "请先设置文件存储路径",
+        msg: "请先配置存储路径",
         duration: 2000,
         type: "warn",
       });
@@ -386,7 +386,7 @@ export function bindToolbarEvents(root, vm) {
           const repoRoot = await GetRepoRoot("ysm");
           if (!repoRoot) {
             bus.emit("toast:show", {
-              msg: "请先在设置中配置文件存储路径",
+              msg: "请先配置存储路径",
               duration: 2000,
               type: "warn",
             });

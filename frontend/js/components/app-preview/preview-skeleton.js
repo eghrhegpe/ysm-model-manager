@@ -281,6 +281,8 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         closeBtn.textContent = "✕ 关闭 3D";
         closeBtn.style.cssText = "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
         closeBtn.onclick = () => {
+          document.removeEventListener("mousemove", onResizeMove);
+          document.removeEventListener("mouseup", onResizeUp);
           const ov = document.getElementById("ysm-overlay-3d");
           if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
           _overlay3d = null;
@@ -369,6 +371,12 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         shotWrap.appendChild(shotMenu);
         topBar.appendChild(shotWrap);
 
+        // 模型选择下拉（多 section 时显示）
+        const modelSel = document.createElement("select");
+        modelSel.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit;margin-right:4px";
+        modelSel.style.display = "none";
+        topBar.appendChild(modelSel);
+
         const rotLabel = document.createElement("span");
         rotLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
         rotLabel.textContent = "摄像机旋转:";
@@ -404,14 +412,49 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
 
         overlay.appendChild(topBar);
 
+        // 主体：左 3D 视图 + 右信息面板
+        const body = document.createElement("div");
+        body.style.cssText = "flex:1;display:flex;overflow:hidden;position:relative";
         const viewContainer = document.createElement("div");
-        viewContainer.style.cssText = "flex:1;position:relative";
+        viewContainer.style.cssText = "flex:1;position:relative;overflow:hidden";
+        body.appendChild(viewContainer);
+
+        const panel = document.createElement("div");
+        panel.id = "ysm-3d-panel";
+        panel.style.cssText = "width:260px;background:rgba(0,0,0,0.4);border-left:1px solid rgba(255,255,255,0.1);overflow-y:auto;padding:10px 12px;flex-shrink:0;font-size:11px;color:rgba(255,255,255,0.75);position:relative";
+
+        // 面板宽度拖拽柄
+        const resizeHandle = document.createElement("div");
+        resizeHandle.style.cssText = "position:absolute;top:0;left:0;width:4px;height:100%;cursor:col-resize;z-index:5";
+        let _resizing = false;
+        const onResizeMove = (e) => {
+          if (!_resizing) return;
+          const rect = body.getBoundingClientRect();
+          panel.style.width = Math.max(160, Math.min(500, rect.right - e.clientX)) + "px";
+        };
+        const onResizeUp = () => { _resizing = false; };
+        resizeHandle.addEventListener("mousedown", (e) => { _resizing = true; e.preventDefault(); });
+        document.addEventListener("mousemove", onResizeMove);
+        document.addEventListener("mouseup", onResizeUp);
+
+        // 辅助函数
+        const sec = (text) => { const d = document.createElement("div"); d.style.cssText = "margin-top:12px;margin-bottom:4px;font-weight:600;color:rgba(255,255,255,0.9);font-size:12px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:3px"; d.textContent = text; return d; };
+        const iRow = (l, v) => { const d = document.createElement("div"); d.style.cssText = "display:flex;justify-content:space-between;padding:2px 0"; d.innerHTML = `<span style="color:rgba(255,255,255,0.5)">${l}</span><span>${v}</span>`; return d; };
+
+        // 折叠按钮
+        const panelToggle = document.createElement("button");
+        panelToggle.textContent = "📋";
+        panelToggle.style.cssText = "font-size:13px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
+        let _panelVisible = true;
+        panelToggle.onclick = () => { _panelVisible = !_panelVisible; panel.style.display = _panelVisible ? "" : "none"; panelToggle.textContent = _panelVisible ? "📋" : "📋◀"; };
+        topBar.insertBefore(panelToggle, topBar.children[1]);
 
         const progStyle = document.createElement("style");
         progStyle.textContent = "@keyframes ysm-prog{0%{margin-left:-30%}100%{margin-left:130%}}";
         overlay.appendChild(progStyle);
 
-        overlay.appendChild(viewContainer);
+        body.appendChild(panel);
+        overlay.appendChild(body);
         document.body.appendChild(overlay);
 
         const loadingEl = document.createElement("div");
@@ -425,6 +468,117 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
           const { texArr, spec } = await preloadModel(model);
           _model3d = await renderModel3D(viewContainer, texArr, spec, _texIdx);
           loadingEl.remove();
+
+          // 填充面板
+          const mg = spec.models[0];
+          let totalCubes = 0;
+          for (const b of mg?.bones || []) totalCubes += b._cubeCount || 0;
+          panel.appendChild(sec("📐 模型统计"));
+          panel.appendChild(iRow("骨骼", (mg?.bones?.length || 0) + " 根"));
+          panel.appendChild(iRow("立方体", totalCubes + " 个"));
+          panel.appendChild(iRow("纹理尺寸", (mg?.textureWidth || "?") + "×" + (mg?.textureHeight || "?")));
+
+          // 纹理列表 + 缩略图
+          if (texArr.length > 0) {
+            panel.appendChild(sec("🎨 纹理 (" + texArr.length + ")"));
+            for (let i = 0; i < texArr.length; i++) {
+              const t = texArr[i];
+              const w = t?.userData?.imgWidth || t?.image?.naturalWidth || 0;
+              const h = t?.userData?.imgHeight || t?.image?.naturalHeight || 0;
+              const url = (model.textures?.[i] || "");
+              const name = url.split("/").pop().split("\\").pop().replace(/\.[^.]+$/, "") || ("纹理 " + (i + 1));
+              const d = document.createElement("div");
+              d.style.cssText = "display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer";
+              const img = document.createElement("canvas");
+              img.width = 16; img.height = 16;
+              img.style.cssText = "width:16px;height:16px;border-radius:2px;flex-shrink:0;border:1px solid rgba(255,255,255,0.1)";
+              const ctx = img.getContext("2d");
+              if (t?.image) ctx.drawImage(t.image, 0, 0, 16, 16);
+              d.appendChild(img);
+              d.innerHTML += '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">' + name + '</span><span style="color:rgba(255,255,255,0.4);font-size:10px;flex-shrink:0">' + w + "×" + h + '</span>';
+              panel.appendChild(d);
+            }
+          }
+
+          // 模型选择器
+          const mgCount = _model3d.getModelGroupCount();
+          if (mgCount > 1) {
+            modelSel.style.display = "";
+            for (let i = 0; i < mgCount; i++) {
+              const mg = spec.models[i];
+              const opt = document.createElement("option");
+              opt.value = i;
+              opt.textContent = (mg.name || mg.id || "model") + " (" + (mg.bones?.length || 0) + ")";
+              if (i === 0) opt.selected = true;
+              modelSel.appendChild(opt);
+            }
+            modelSel.onchange = () => { _model3d.showModelGroup(parseInt(modelSel.value)); };
+          }
+
+          // 骨骼：搜索 + 全显/全隐 + 缩进列表
+          const boneList = _model3d.getBoneList();
+          if (boneList.length > 0) {
+            const secHdr = document.createElement("div");
+            secHdr.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-top:12px;margin-bottom:4px";
+            secHdr.innerHTML = '<span style="font-weight:600;color:rgba(255,255,255,0.9);font-size:12px">🦴 骨骼 (' + boneList.length + ')</span>';
+            const btnGroup = document.createElement("div");
+            btnGroup.style.cssText = "display:flex;gap:4px";
+            [["👁", true], ["⊘", false]].forEach(([t, v]) => {
+              const btn = document.createElement("button");
+              btn.textContent = t;
+              btn.style.cssText = "font-size:10px;padding:1px 4px;border-radius:3px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.6);cursor:pointer;line-height:1";
+              btn.onclick = () => { boneList.forEach(b => { _model3d.setBoneVisible(b.id, v); }); document.querySelectorAll("#ysm-3d-panel input[type=checkbox]").forEach(c => c.checked = v); };
+              btnGroup.appendChild(btn);
+            });
+            secHdr.appendChild(btnGroup);
+            panel.appendChild(secHdr);
+
+            // 搜索框
+            const searchInput = document.createElement("input");
+            searchInput.type = "text";
+            searchInput.placeholder = "🔍 过滤骨骼…";
+            searchInput.style.cssText = "width:100%;padding:3px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);font-size:11px;font-family:inherit;box-sizing:border-box;margin-bottom:4px;outline:none";
+
+            // 构建层级深度映射
+            const depthMap = {};
+            const calcDepth = (name) => {
+              if (depthMap[name] !== undefined) return depthMap[name];
+              const b = boneList.find(x => x.id === name);
+              if (!b || !b.parentId) { depthMap[name] = 0; return 0; }
+              depthMap[name] = calcDepth(b.parentId) + 1;
+              return depthMap[name];
+            };
+            boneList.forEach(b => calcDepth(b.id));
+
+            const boneContainer = document.createElement("div");
+            boneContainer.style.cssText = "max-height:300px;overflow-y:auto";
+
+            const renderBones = (filter) => {
+              boneContainer.innerHTML = "";
+              for (const b of boneList) {
+                if (filter && !b.name.toLowerCase().includes(filter.toLowerCase())) continue;
+                const depth = depthMap[b.id] || 0;
+                const label = document.createElement("label");
+                label.style.cssText = "display:flex;align-items:center;gap:6px;padding:2px 0;cursor:pointer;font-size:11px";
+                const cb = document.createElement("input");
+                cb.type = "checkbox"; cb.checked = true;
+                cb.style.cssText = "accent-color:var(--accent,#7c83ff);width:12px;height:12px;flex-shrink:0";
+                cb.dataset.boneId = b.id;
+                cb.onchange = () => _model3d.setBoneVisible(b.id, cb.checked);
+                label.appendChild(cb);
+                const span = document.createElement("span");
+                span.textContent = b.name;
+                span.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+                span.style.marginLeft = (depth * 12) + "px";
+                label.appendChild(span);
+                boneContainer.appendChild(label);
+              }
+            };
+            searchInput.oninput = () => renderBones(searchInput.value);
+            panel.appendChild(searchInput);
+            panel.appendChild(boneContainer);
+            renderBones("");
+          }
 
           const tip = document.createElement("div");
           tip.style.cssText = "padding:6px 12px;background:rgba(124,131,255,0.2);color:#fff;font-size:12px;text-align:center;flex-shrink:0;font-weight:500";
@@ -442,6 +596,8 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
 
           const onKey = (e) => {
             if (e.key !== "Escape") return;
+            document.removeEventListener("mousemove", onResizeMove);
+            document.removeEventListener("mouseup", onResizeUp);
             const ov = document.getElementById("ysm-overlay-3d");
             if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
             _overlay3d = null;
@@ -463,6 +619,8 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     };
 
     function close3D() {
+      document.removeEventListener("mousemove", onResizeMove);
+      document.removeEventListener("mouseup", onResizeUp);
       if (_model3d) {
         clearInterval(_model3d._timeTimer);
         if (_model3d._keyHandler)

@@ -482,7 +482,7 @@ export function createDownloadQueue({
     const repoRoot = await GetRepoRoot("ysm");
     if (!repoRoot) {
       bus.emit("toast:show", {
-        msg: "请先在设置中配置仓库目录",
+        msg: "请先配置仓库目录",
         duration: 3000,
         type: "warn",
       });

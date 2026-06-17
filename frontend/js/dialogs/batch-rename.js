@@ -249,7 +249,7 @@ function genHTML(dir, items) {
   </label>
   <button id="br-presets" class="dlg-btn-accent">📋 预设</button>
   <div id="br-presets-menu" class="dlg-presets-menu">
-    <div class="br-preset dlg-preset-chip" data-find="\(\d{4}-\d{2}\)" data-replace="" data-regex="1">❌ 去除年份 (2025-08)</div>
+    <div class="br-preset dlg-preset-chip" data-find="\(\d{4}-\d{2}\)" data-replace="" data-regex="1">❌ 去除年份</div>
     <div class="br-preset dlg-preset-chip" data-find="-v\d+(?=\.)" data-replace="" data-regex="1">❌ 去除版本 -v2</div>
     <div class="br-preset dlg-preset-chip" data-find="【(.+?)】" data-replace="[$1]" data-regex="1">【】→ [] 括号</div>
     <div class="br-preset dlg-preset-chip" data-find="\[(.+?)\]【(.+?)】" data-replace="$1-$2" data-regex="1">📛 拍平为 作者-作品</div>

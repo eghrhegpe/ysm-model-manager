@@ -19,7 +19,7 @@ export function registerInstanceOps(unsubs) {
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {
           bus.emit("toast:show", {
-            msg: "请先设置游戏路径",
+            msg: "请先配置游戏目录",
             duration: 3000,
             type: "warn",
           });
@@ -104,7 +104,7 @@ export function registerInstanceOps(unsubs) {
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {
           bus.emit("toast:show", {
-            msg: "请先设置游戏路径",
+            msg: "请先配置游戏目录",
             duration: 3000,
             type: "warn",
           });

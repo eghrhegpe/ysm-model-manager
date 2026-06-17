@@ -48,7 +48,10 @@ Write-Host "   ✅ helper 已编译到 go/updater/" -ForegroundColor Green
 Write-Host "🧬 代码生成..." -ForegroundColor Yellow
 Set-Location $ProjectRoot
 go generate ./go/... 2>&1
-if ($LASTEXITCODE -ne 0) { Write-Host "⚠️ 代码生成有警告（可能已有生成文件）" -ForegroundColor Yellow }
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ 代码生成失败，构建中止" -ForegroundColor Red
+    exit 1
+}
 
 # 3. Wails 构建（自动嵌入前端资源 + 注入版本号）
 Write-Host "🦫 Wails 编译 $VerTag ..." -ForegroundColor Yellow
@@ -60,8 +63,21 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "   然后重试本脚本。不能用 go build 替代（缺少 Wails build tags）。" -ForegroundColor Yellow
     exit 1
 } else {
-    # wails build 成功，exe 在 build/bin/ 下
-    Copy-Item "$ProjectRoot\build\bin\$ExeName" "$OutputDir\$ExeName"
+    # wails build 成功，exe 在 build/bin/ 下，等文件解锁后复制
+    $binExe = "$ProjectRoot\build\bin\$ExeName"
+    for ($i = 0; $i -lt 10; $i++) {
+        try {
+            Copy-Item $binExe "$OutputDir\$ExeName" -ErrorAction Stop
+            break
+        } catch {
+            Write-Host "   等待 exe 解锁 ($($i+1)/10)..." -ForegroundColor Gray
+            Start-Sleep -Seconds 1
+        }
+    }
+    if (!(Test-Path "$OutputDir\$ExeName")) {
+        Write-Host "❌ 无法复制主 exe，可能被防病毒锁住。请手动复制后重试" -ForegroundColor Red
+        exit 1
+    }
 }
 
 # 2b. 构建 CLI 工具
@@ -83,8 +99,16 @@ Copy-Item "$ProjectRoot\resource_types.json" "$OutputDir\" -ErrorAction Silently
 
 # 4. 打包 zip
 Write-Host "📦 打包 $ZipName ..." -ForegroundColor Yellow
+if (!(Test-Path "$OutputDir\$ExeName")) {
+    Write-Host "❌ 缺少主 exe，无法打包" -ForegroundColor Red
+    exit 1
+}
 Set-Location $OutputDir
 Compress-Archive -Path "$OutputDir\*" -DestinationPath "$OutputDir\$ZipName" -Force
+if (!(Test-Path "$ZipPath")) {
+    Write-Host "❌ ZIP 打包失败" -ForegroundColor Red
+    exit 1
+}
 
 # 4b. 生成 SHA256SUMS（用于下载后校验，防 MITM 攻击）
 Write-Host "🔐 生成 SHA256SUMS ..." -ForegroundColor Yellow

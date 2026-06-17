@@ -3,9 +3,11 @@ const TLABEL = {
   cyber: "🌙 赛博霓虹",
   warm: "☀️ 温暖木纹",
   pro: "⚪ 极简深邃",
+  sakura: "🌸 樱花物语",
+  ocean: "🌊 深海探秘",
   system: "💻 跟随系统",
 };
-const TMODES = ["cyber", "warm", "pro", "system"];
+const TMODES = ["cyber", "warm", "pro", "sakura", "ocean", "system"];
 const DEFAULT_THEME = "system";
 
 // 注入涟漪动画样式

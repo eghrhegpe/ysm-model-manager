@@ -43,9 +43,9 @@ const THEME_DARK = "cyber";
 const THEME_LIGHT = "warm";
 
 function applyTheme(mode) {
-  const VALID = ["cyber", "warm", "pro", "system"];
+  const VALID = ["cyber", "warm", "pro", "sakura", "ocean", "system"];
   if (!VALID.includes(mode)) mode = "system";
-  document.body.classList.remove("theme-cyber", "theme-warm", "theme-pro");
+  document.body.classList.remove("theme-cyber", "theme-warm", "theme-pro", "theme-sakura", "theme-ocean");
   if (mode === "system") {
     const prefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)",
@@ -56,6 +56,13 @@ function applyTheme(mode) {
   }
 }
 window.applyTheme = applyTheme;
+
+// 实时监听系统主题变化（仅在 system 模式下生效）
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if ((localStorage.getItem("theme") || "system") === "system") {
+    applyTheme("system");
+  }
+});
 
 /** 从 Go 配置或 localStorage 加载主题 */
 async function initTheme() {

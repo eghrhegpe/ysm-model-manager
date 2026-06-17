@@ -148,6 +148,9 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
   let _rafId = null;
   const _onResize = () => { const w = container.clientWidth, h = container.clientHeight; if (w > 0 && h > 0) { camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h); } };
   window.addEventListener("resize", _onResize);
+  const _onFSChange = () => setTimeout(_onResize, 50);
+  document.addEventListener("fullscreenchange", _onFSChange);
+  document.addEventListener("webkitfullscreenchange", _onFSChange);
   const _keys = {};
   const _onKeyDown = (e) => { _keys[e.key.toLowerCase()] = true; if (["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase())) e.preventDefault(); };
   const _onKeyUp = (e) => { _keys[e.key.toLowerCase()] = false; };
@@ -211,12 +214,31 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
       if (orbit) { controls.enableRotate = true; if (_orbitTarget) controls.target.copy(_orbitTarget); _mouseDown = false; }
       else { _euler.setFromQuaternion(camera.quaternion); controls.enableRotate = false; const d = new THREE.Vector3(); camera.getWorldDirection(d); controls.target.copy(camera.position).addScaledVector(d,10); controls.update(); _mouseDown = false; }
     },
+    setBoneVisible: (name, visible) => {
+      const g = boneGroupMap.get(name);
+      if (g) g.traverse(c => { c.visible = visible; });
+    },
+    getBoneList: () => spec.models[0]?.bones?.map(b => ({ id: b.id, name: b.name, parentId: b.parentId })) || [],
+    toggleBone: (name) => {
+      const g = boneGroupMap.get(name);
+      if (g) g.traverse(c => { c.visible = !c.visible; });
+    },
+    showModelGroup: (idx) => {
+      spec.models.forEach((mg, i) => {
+        const vis = i === idx;
+        for (const bd of mg.bones || [])
+          setBoneVisible(bd.id, vis);
+      });
+    },
+    getModelGroupCount: () => spec.models?.length || 0,
     cleanup: () => {
       if (_rafId != null) cancelAnimationFrame(_rafId);
       document.removeEventListener("keydown", _onKeyDown); document.removeEventListener("keyup", _onKeyUp);
       renderer.domElement.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mouseup", onMouseUp); window.removeEventListener("mousemove", onMouseMove);
       controls.dispose(); window.removeEventListener("resize", _onResize);
+      document.removeEventListener("fullscreenchange", _onFSChange);
+      document.removeEventListener("webkitfullscreenchange", _onFSChange);
       renderer.dispose(); container.innerHTML = "";
       scene.traverse((c) => { if (c.isMesh) { c.geometry?.dispose(); if (Array.isArray(c.material)) c.material.forEach(m => m.dispose()); else c.material?.dispose(); } });
     },

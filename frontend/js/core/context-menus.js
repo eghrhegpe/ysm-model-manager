@@ -112,7 +112,7 @@ export function registerContextMenus() {
                 const repoRoot = await GetRepoRoot("ysm");
                 if (!repoRoot) {
                   bus.emit("toast:show", {
-                    msg: "❌ 请先设置文件存储路径",
+                    msg: "❌ 请先配置存储路径",
                     duration: 3000,
                     type: "error",
                   });
@@ -166,7 +166,7 @@ export function registerContextMenus() {
                 const repoRoot = await GetRepoRoot("ysm");
                 if (!repoRoot) {
                   bus.emit("toast:show", {
-                    msg: "❌ 请先设置仓库目录",
+                    msg: "❌ 请先配置仓库目录",
                     duration: 3000,
                     type: "error",
                   });
@@ -312,7 +312,7 @@ export function registerContextMenus() {
                 const repoRoot = await GetRepoRoot("ysm");
                 if (!repoRoot) {
                   bus.emit("toast:show", {
-                    msg: "❌ 请先设置文件存储路径",
+                    msg: "❌ 请先配置存储路径",
                     duration: 3000,
                     type: "error",
                   });
@@ -353,7 +353,7 @@ export function registerContextMenus() {
                 const repoRoot = await GetRepoRoot("ysm");
                 if (!repoRoot) {
                   bus.emit("toast:show", {
-                    msg: "❌ 请先设置仓库目录",
+                    msg: "❌ 请先配置仓库目录",
                     duration: 3000,
                     type: "error",
                   });
@@ -377,7 +377,7 @@ export function registerContextMenus() {
                 const cfg = await LoadAppConfig();
                 const mcRoot = cfg.mcRoot || "";
                 if (!mcRoot) {
-                  toast("请先设置游戏根目录", 2000, "warn");
+                  toast("请先配置游戏目录", 2000, "warn");
                   return;
                 }
                 const instances = await ListVersionInstances(mcRoot);

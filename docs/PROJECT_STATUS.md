@@ -104,10 +104,21 @@
 ### 治理收口
 | 文件 | 消除 | 方式 |
 |------|------|------|
-| 5 文件 22 处裸 import / `window.go.main.App` | 治理残留 | 统一 `getApp()` |
+| 6 文件 23 处裸 import / `window.go.main.App` | 治理残留 | 统一 `getApp()` |
 | `GetRepoRoot` 签名 `(string)→(string,error)` | 配置损坏静默 | Wails 自动 reject |
 | watcher → `ClearScanCache()` | 30s TTL 间隙 | 文件变更即时清缓存 |
-| `go/threejs` 2 处遗留编译错 | 构建阻断 | 删除/修复 |
+
+### 文案统一（术语表落地）
+| 范围 | 旧 → 新 | 数量 |
+|------|---------|------|
+| 全项目 toast | `请先设置…` → `请先配置…` | 24 处 |
+| sidebar/tree tooltip | `点击选择…` → `配置…` | 3 处 |
+| 批量重命名预设 | `去除年份 (2025-08)` → `去除年份` | 1 处 |
+
+### 蓝图同步计数修复
+| 问题 | 根因 | 修复 |
+|------|------|------|
+| 蓝图卡片显示 `tag 0` | `app_scan.go` 只对 `.ysm/.zip/.7z/.json` 算 hash，蓝图 `.nbt/.schematic/.litematic` 无 Hash → 哈希对比跳过所有条目 | 加入蓝图扩展名到 `computeFileHash` |
 
 ---
 
@@ -119,6 +130,7 @@
 | 创作者详情 Overlay UX | 第三方评审建议 | 视觉锚点、交互细节待打磨 | 低（CSS 不给免费 AI 动） |
 | model2d 预览缓存 | `preview-cache.js` | 社区仓库重复解析浪费 CPU | **中**，但**暂缓**：多模态辅助下 Three.js canvas 序列化/失效复杂，当前瓶颈不在预览 |
 | 列表/网格视图切换 | `app-tree` | 仅卡片视图，缺紧凑列表 | **低**（P3 新功能，动画 P0-P1 做完再考虑） |
+| updater 无自动测试 | `go/updater/` `cmd/updater/` | `CheckUpdate`/下载/替换/重启全链路无回归保护 | **中**（手动端到端可测，自动测试需模拟 GitHub API + 文件锁） |
 | `ResourceExts` / `SubDirAll` 仍硬编码 | `go/types/extensions.go` | 新类型需改 3 处（已有一致性测试兜底） | **低**（有测试保护） |
 | JS 兜底路径是死代码 | `model3d-spec.js` | Go 不可用时 3D 视图空白 | **低**（Go 路径稳定） |
 
@@ -158,14 +170,12 @@ resource_bindings.go      # saveConfig、GetRepoRoot
 
 ## 🎯 下一步可选方向
 
-1. **落地 `docs/TERMINOLOGY.md` 术语表** — 规范团队/AI 协作用词，统一文案
-2. **Overlay UX 微调** — 按第三方评审清单逐项改（需人工把关 CSS）
-3. **model2d 预览缓存** — 扩展现有 `preview-cache.js`，复用骨骼图避免重复解析
-4. **列表/网格视图切换** — 工具栏加 🗂/☰ 切换、紧凑行模板、`localStorage` 持久化
-5. **前端测试覆盖扩展** — 当前 30 个测试（fmt/dom/data），后续覆盖 download-queue / render.js / 事件总线
+1. **Overlay UX 微调** — 按第三方评审清单逐项改（需人工把关 CSS）
+2. **model2d 预览缓存** — 扩展现有 `preview-cache.js`，复用骨骼图避免重复解析
+3. **列表/网格视图切换** — 工具栏加 🗂/☰ 切换、紧凑行模板、`localStorage` 持久化
+4. **前端测试覆盖扩展** — 当前 30 个测试（fmt/dom/data），后续覆盖 download-queue / render.js / 事件总线
+5. **updater 测试** — `go/updater/` 补单元测试（mock GitHub API + 文件替换逻辑）
 6. **ResourceExts / SubDirAll 注册表驱动** — 与已修的 StorageSubDir/specificRoot 同理，消除剩余硬编码 map
-7. **发版说明补写** — v1.8.6 / v1.8.7 / v1.8.8 的发版说明尚未创建
-8. **发版** — `wails build -clean`、打 Git tag、写更新报告
 
 ---
 

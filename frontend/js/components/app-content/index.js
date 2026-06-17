@@ -120,6 +120,9 @@ class AppContent extends HTMLElement {
     }
     this._root.innerHTML = `<div class="page">${inner}</div>`;
 
+    // 初始化预览面板拖拽调整宽度
+    this._initPreviewResize();
+
     if (this._current === "diagnostics") {
       this._initDiagnostics();
     } else if (this._current === "settings") {
@@ -135,6 +138,43 @@ class AppContent extends HTMLElement {
       // 按需加载 Three.js 预览组件
       import("../app-preview/index.js").catch(() => {});
     }
+  }
+
+  _initPreviewResize() {
+    const handle = this._root.getElementById("preview-resize-handle");
+    const preview = this._root.getElementById("app-preview");
+    if (!handle || !preview) return;
+
+    // 从 localStorage 恢复宽度
+    const savedWidth = localStorage.getItem("preview-width");
+    if (savedWidth) {
+      const w = Math.max(160, Math.min(500, parseInt(savedWidth, 10)));
+      preview.style.width = w + "px";
+    }
+
+    let resizing = false;
+    handle.addEventListener("mousedown", (e) => {
+      resizing = true;
+      e.preventDefault();
+      handle.style.background = "var(--accent)";
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    });
+    document.addEventListener("mousemove", (e) => {
+      if (!resizing) return;
+      const rect = preview.getBoundingClientRect();
+      const newW = Math.max(160, Math.min(500, rect.right - e.clientX));
+      preview.style.width = newW + "px";
+    });
+    document.addEventListener("mouseup", () => {
+      if (!resizing) return;
+      resizing = false;
+      handle.style.background = "transparent";
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      // 保存宽度到 localStorage
+      localStorage.setItem("preview-width", preview.style.width);
+    });
   }
 
   _initDiagnostics() {

@@ -369,7 +369,9 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 		}
 		// 计算 SHA256 供同步系统使用（GetInstanceStatus 依赖哈希匹配）
 		// 跳过非 YSM 类型的大文件（MMD/VRC 文件可达数十 MB，哈希全量太慢）
-		if originalExt == ".ysm" || originalExt == ".zip" || originalExt == ".7z" || originalExt == ".json" {
+		// 蓝图文件（.nbt/.schematic/.litematic）通常较小，计入哈希以支持同步对比
+		if originalExt == ".ysm" || originalExt == ".zip" || originalExt == ".7z" || originalExt == ".json" ||
+			originalExt == ".nbt" || originalExt == ".schematic" || originalExt == ".litematic" {
 			e.Hash = computeFileHash(p)
 		}
 		entries = append(entries, e)

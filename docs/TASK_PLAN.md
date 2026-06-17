@@ -12,11 +12,12 @@
 | 1 | 术语表落地 — Toast/按钮/tooltip 文案统一 | **高** | 中 | ⬜ 待开始 | 无 |
 | 2 | 术语表落地 — UI 专有名词替换 | **高** | 低 | ⬜ 待开始 | #1 |
 | 3 | Overlay UX 微调 | **中** | 中 | ⬜ 待开始 | 无 |
-| 4 | 发版 v1.8.0 | **中** | 低 | ⬜ 待开始 | #1, #2 |
+| 4 | ~~发版 v1.8.0~~ | — | — | ✅ 完成（v1.8.9/v1.8.10 已发） | — |
 | 5 | 前端测试扩展 | **低** | 中 | ⬜ 待开始 | 无 |
-| 6 | Go 测试扩展 | **低** | 中 | ⬜ 待开始 | 无 |
+| 6 | Go 测试扩展 | **低** | 中 | 🔄 进行中（11/12 包） | — |
 | 7 | 列表/网格视图切换 | **低** | 高 | ⬜ 待开始 | 无 |
 | 8 | **3D 骨骼渲染攻关** | **高** | 高 | ✅ 完成 | — |
+| 9 | **3D 模块重构** | **中** | 中 | ✅ 完成 | — |
 
 > 📌 任务 #8 详见 [3D-RENDERING-PLAN.md](3D-RENDERING-PLAN.md)：多 AI 分工流程 + 提示词 + 已知陷阱
 > 📌 开发报告：[docs/3D-RENDERING/3d-rendering-report.md](3D-RENDERING/3d-rendering-report.md)
@@ -127,22 +128,10 @@ cd frontend ; npx vite build 2>&1 | Select-String error
 
 ---
 
-## 任务 4：发版 v1.8.0
+## ~~任务 4：发版 v1.8.0~~ ✅ 已完成
 
-**前置条件**：任务 #1, #2 完成
-
-### 步骤
-
-1. 更新 `go/version/version.go` 版本号为 `v1.8.0`
-2. 更新 `docs/release-notes/` 新增 `v1.8.0.md`
-3. 执行构建：
-   ```powershell
-   go build ./go/... 2>&1 | Select-String error
-   cd frontend ; npx vite build 2>&1 | Select-String error
-   wails build -clean
-   ```
-4. 打 Git tag：`git tag v1.8.0`
-5. 推送 tag 触发 CI 自动发版
+> 已发版 v1.8.9（2026-06-17）和 v1.8.10（2026-06-17）。
+> 发版流程参见 `docs/release-notes/README.md`。
 
 ---
 
@@ -165,16 +154,16 @@ cd frontend ; npx vite build 2>&1 | Select-String error
 
 ## 任务 6：Go 测试扩展
 
-**当前状态**：已测 ysm/dedup/fsutil/recycle/sync/tags
+**当前状态**：11 包已测（dedup/fsutil/importer/installer/packs/recycle/sync/tags/types/watcher/ysm）
 
 ### 待补模块
 
-| 模块 | 路径 | 测试重点 |
-|------|------|----------|
-| installer | `go/installer/` | 复制/硬链接/符号链接/跨分区降级 |
-| importer | `go/importer/` | 文件导入校验、路径安全 |
-| watcher | `go/watcher/` | fsnotify 事件处理 |
-| updater | `go/updater/` | SHA256 校验、版本比较 |
+| 模块 | 路径 | 测试重点 | 状态 |
+|------|------|----------|------|
+| ~~installer~~ | `go/installer/` | ~~复制/硬链接/符号链接/跨分区降级~~ | ✅ 已完成 |
+| ~~importer~~ | `go/importer/` | ~~文件导入校验、路径安全~~ | ✅ 已完成 |
+| ~~watcher~~ | `go/watcher/` | ~~fsnotify 事件处理~~ | ✅ 已完成 |
+| updater | `go/updater/` | SHA256 校验、版本比较 | ⬜ 待补 |
 
 ---
 
@@ -193,6 +182,21 @@ cd frontend ; npx vite build 2>&1 | Select-String error
 
 - 虚拟滚动（`virtual-scroll.js`）需兼容两种模式
 - 选中状态在两种视图间保持一致
+
+---
+
+## ~~任务 8：3D 骨骼渲染攻关~~ ✅ 已完成
+
+> v1.8.6-v1.8.8 完成。详见 [3D-RENDERING-PLAN.md](3D-RENDERING-PLAN.md) 和 [3D-RENDERING/3d-rendering-report.md](3D-RENDERING/3d-rendering-report.md)。
+
+---
+
+## ~~任务 9：3D 模块重构~~ ✅ 已完成
+
+> v1.8.10 完成。改动：
+> - `model3d.js` 拆分为 `model3d.js` + `model3d-loader.js` + `screenshot-renderer.js`
+> - 删除 `preview-3d.js`（死代码，零引用）
+> - `preview-skeleton.js` 改用 `preloadModel` + `renderModel3D` 调用链
 
 ---
 

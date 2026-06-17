@@ -316,6 +316,59 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         spacer.style.cssText = "flex:1";
         topBar.appendChild(spacer);
 
+        const shotWrap = document.createElement("div");
+        shotWrap.style.cssText = "position:relative;display:inline-block;margin-right:8px";
+        const shotBtn = document.createElement("button");
+        shotBtn.textContent = "📷 截图 ▾";
+        shotBtn.style.cssText = "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
+        const shotMenu = document.createElement("div");
+        shotMenu.style.cssText = "display:none;position:absolute;top:100%;left:0;z-index:100;background:#2a2b3e;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:4px 0;min-width:120px;box-shadow:0 4px 16px rgba(0,0,0,0.4)";
+        const items = [
+          { label: "📷 当前视角", key: "current" },
+          { label: "👤 正面", key: "front" },
+          { label: "↗ 45°", key: "45" },
+          { label: "👉 侧面", key: "side" },
+          { label: "↘ 后45°", key: "back45" },
+          { label: "📸 全套", key: "all" },
+        ];
+        const saveShot = async (key) => {
+          const { SaveScreenshotFile } = await import("../../../wailsjs/go/main/App.js");
+          const p = (model._modelPath || "screenshot").replace(/\\/g, "/");
+          const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ".";
+          const base = p.split("/").pop().replace(/\.\w+$/, "");
+          if (key === "current") {
+            const b64 = window.__screenshotPreview?.();
+            if (!b64) { shotBtn.textContent = "❌"; return; }
+            const ts = new Date().toISOString().replace(/[:.]/g, "-");
+            await SaveScreenshotFile(dir + "/" + base + "_" + ts + ".png", b64);
+          } else if (key === "all") {
+            for (const k of ["front","45","side","back45"]) await saveShot(k);
+          } else {
+            const { renderMultiAngle } = await import("../../utils/screenshot-renderer.js");
+            const texUrls = model.textures?.length > 1 ? model.textures : [model.texture];
+            const results = await renderMultiAngle(model._modelPath, texUrls, { size: 512 });
+            if (!results) return;
+            const hit = results.find(r => r.name === key);
+            if (hit) await SaveScreenshotFile(dir + "/" + base + "_" + key + ".png", hit.base64);
+          }
+          shotBtn.textContent = "✅";
+          setTimeout(() => { shotBtn.textContent = "📷 截图 ▾"; }, 2000);
+        };
+        items.forEach((item) => {
+          const el = document.createElement("div");
+          el.textContent = item.label;
+          el.style.cssText = "padding:4px 12px;font-size:11px;color:rgba(255,255,255,0.85);cursor:pointer;white-space:nowrap";
+          el.addEventListener("mouseenter", () => { el.style.background = "rgba(124,131,255,0.3)"; });
+          el.addEventListener("mouseleave", () => { el.style.background = "transparent"; });
+          el.onclick = () => { shotMenu.style.display = "none"; saveShot(item.key); };
+          shotMenu.appendChild(el);
+        });
+        shotBtn.addEventListener("mouseenter", () => { shotMenu.style.display = "block"; });
+        shotWrap.addEventListener("mouseleave", () => { shotMenu.style.display = "none"; });
+        shotWrap.appendChild(shotBtn);
+        shotWrap.appendChild(shotMenu);
+        topBar.appendChild(shotWrap);
+
         const rotLabel = document.createElement("span");
         rotLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
         rotLabel.textContent = "摄像机旋转:";
@@ -367,9 +420,10 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         overlay.appendChild(loadingEl);
 
         try {
-          const texUrl = model.texture || null;
+          const { preloadModel } = await import("../../utils/model3d-loader.js");
           const { renderModel3D } = await import("../../utils/model3d.js");
-          _model3d = await renderModel3D(viewContainer, model, texUrl, _texIdx);
+          const { texArr, spec } = await preloadModel(model);
+          _model3d = await renderModel3D(viewContainer, texArr, spec, _texIdx);
           loadingEl.remove();
 
           const tip = document.createElement("div");

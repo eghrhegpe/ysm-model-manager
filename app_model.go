@@ -125,6 +125,15 @@ func (a *App) GetModel3DSpec(modelPath string) string {
 	return spec
 }
 
+// SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用）
+func (a *App) SaveScreenshotFile(filename string, base64Data string) error {
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filename, data, 0644)
+}
+
 func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 	parserPath := ysm.FindCLI()
 	if parserPath == "" {

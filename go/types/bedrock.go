@@ -15,11 +15,12 @@ type BedrockModel struct {
 
 // Bone2D 骨骼简化信息（只用于 2D 线条图）
 type Bone2D struct {
-	Name      string    `json:"name"`
-	Parent    string    `json:"parent,omitempty"`
-	Pivot     [3]float64 `json:"pivot,omitempty"`
-	Rotation  [3]float64 `json:"rotation,omitempty"`
-	Cubes     []Cube2D  `json:"cubes"`
+	Name     string    `json:"name"`
+	Parent   string    `json:"parent,omitempty"`
+	Pivot    [3]float64 `json:"pivot,omitempty"`
+	Rotation [3]float64 `json:"rotation,omitempty"`
+	Cubes    []Cube2D  `json:"cubes"`
+	GroupID  string    `json:"groupId,omitempty"` // "player" / "projectile" / "vehicle"
 }
 
 // Cube2D 立方体信息

@@ -133,6 +133,7 @@ export namespace types {
 	    pivot?: number[];
 	    rotation?: number[];
 	    cubes: Cube2D[];
+	    groupId?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Bone2D(source);
@@ -145,6 +146,7 @@ export namespace types {
 	        this.pivot = source["pivot"];
 	        this.rotation = source["rotation"];
 	        this.cubes = this.convertValues(source["cubes"], Cube2D);
+	        this.groupId = source["groupId"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

@@ -33,7 +33,7 @@ export function initInstanceActions(vm) {
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {
           bus.emit("toast:show", {
-            msg: "请先设置游戏路径",
+            msg: "请先配置游戏目录",
             duration: 3000,
             type: "warn",
           });
@@ -90,7 +90,7 @@ export function initInstanceActions(vm) {
         const repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot("ysm") : "";
         if (!mcRoot || !repoRoot) {
           bus.emit("toast:show", {
-            msg: "请先设置路径",
+            msg: "请先配置路径",
             duration: 3000,
             type: "warn",
           });

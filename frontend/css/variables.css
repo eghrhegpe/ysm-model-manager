@@ -96,6 +96,54 @@
   --accent-btn-border: color-mix(in srgb, var(--accent) 33%, transparent);
 }
 
+/* ===== 樱花物语（亮色/粉色系） ===== */
+.theme-sakura {
+  --bg: #fef7f9;
+  --surf: #fdf0f4;
+  --card: #fff5f8;
+  --hover: #fce4ec;
+  --act: #f8bbd0;
+  --accent: #e91e63;
+  --txt: #37474f;
+  --muted: #90a4ae;
+  --bd: rgba(233, 30, 99, 0.1);
+  --menu-indicator: #e91e63;
+  --meta-author: #e91e63;
+  --meta-work: #9c27b0;
+  --meta-date: #ff8a65;
+  --status-success: #4caf50;
+  --status-error: #e53935;
+  --size-ok: #4caf50;
+  --size-large: #e53935;
+  --accent-btn-bg: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-btn-color: var(--accent);
+  --accent-btn-border: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* ===== 深海探秘（暗色/蓝色系） ===== */
+.theme-ocean {
+  --bg: #0a1628;
+  --surf: #0f1f3d;
+  --card: #152744;
+  --hover: #1a3050;
+  --act: #1e3a5f;
+  --accent: #4fc3f7;
+  --txt: #b0bec5;
+  --muted: #546e7a;
+  --bd: rgba(79, 195, 247, 0.1);
+  --menu-indicator: #4fc3f7;
+  --meta-author: #4fc3f7;
+  --meta-work: #7c4dff;
+  --meta-date: #ffab40;
+  --status-success: #69f0ae;
+  --status-error: #ff5252;
+  --size-ok: #69f0ae;
+  --size-large: #ff5252;
+  --accent-btn-bg: color-mix(in srgb, var(--accent) 18%, transparent);
+  --accent-btn-color: var(--accent);
+  --accent-btn-border: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
 /* ===== 字体系统 ===== */
 :root {
   /* 基准大小 + 缩放量（由设置页控制，默认 0px = 12px 基准） */

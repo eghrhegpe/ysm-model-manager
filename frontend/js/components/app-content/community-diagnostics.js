@@ -175,7 +175,7 @@ export async function startDedup(root, esc, rtype) {
 
     if (!targets.length) {
       list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error">请先设置资源目录</div>';
+        '<div class="stat-row diag-msg diag-msg-error">请先配置资源目录</div>';
       return;
     }
 
@@ -360,7 +360,7 @@ async function scanConflicts(root, esc) {
     if (!mcRoot) {
       if (scanBtn) { scanBtn.classList.remove("scanning"); scanBtn.textContent = "⚡ 开始扫描"; }
       list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error">请先设置游戏路径</div>';
+        '<div class="stat-row diag-msg diag-msg-error">请先配置游戏目录</div>';
       return;
     }
 
@@ -422,7 +422,7 @@ async function scanConflicts(root, esc) {
   }
 }
 
-/** 👴 仓库元老 + 📊 健康度 + 🎲 今日推荐 */
+/** 👴 资历最深 + 📊 仓库评分 + 🎲 每日推荐 */
 /** 构建年度热力图数据 */
 function buildHeatmap(entries) {
   // 按天统计活动次数
@@ -467,7 +467,7 @@ function buildHeatmap(entries) {
   return { weeks, monthLabels };
 }
 
-/** 👴 仓库元老 + 📊 健康度 + 🎲 今日推荐 + 热力图 */
+/** 👴 资历最深 + 📊 仓库评分 + 🎲 每日推荐 + 热力图 */
 function fmtSize(bytes) {
   if (!bytes) return "";
   if (bytes < 1024) return bytes + " B";

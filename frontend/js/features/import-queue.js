@@ -347,7 +347,7 @@ export function initImportQueue(app) {
       const cfg = await LoadAppConfig();
       if (!cfg.filesRoot) {
         bus.emit("toast:show", {
-          msg: "请先在设置中配置文件存储路径",
+          msg: "请先配置存储路径",
           duration: 4000,
           type: "warn",
         });

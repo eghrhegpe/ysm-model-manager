@@ -388,8 +388,13 @@ export async function initSettings(root) {
   if (!savedTheme) savedTheme = localStorage.getItem("theme") || "system";
   localStorage.setItem("theme", savedTheme);
   window.applyTheme(savedTheme);
-  const themeSelect = root.getElementById("set-theme");
-  if (themeSelect) themeSelect.value = savedTheme;
+  // 高亮当前主题卡片
+  const themePicker = root.getElementById("theme-picker");
+  if (themePicker) {
+    themePicker.querySelectorAll(".theme-card").forEach((card) => {
+      card.classList.toggle("active", card.dataset.theme === savedTheme);
+    });
+  }
 
   // 镜像源
   const savedMirror = cfg.mirror || "";
@@ -500,10 +505,15 @@ export async function initSettings(root) {
   }
 
   // 主题切换
-  root.getElementById("set-theme")?.addEventListener("change", async (e) => {
-    const mode = e.target.value;
+  root.getElementById("theme-picker")?.addEventListener("click", async (e) => {
+    const card = e.target.closest(".theme-card");
+    if (!card) return;
+    const mode = card.dataset.theme;
     window.applyTheme(mode);
     localStorage.setItem("theme", mode);
+    // 更新选中状态
+    root.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
+    card.classList.add("active");
     try {
       const { SaveAppConfig } = await import("../../../wailsjs/go/main/App.js");
       const theme2 = localStorage.getItem("theme") || mode;

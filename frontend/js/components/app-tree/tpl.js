@@ -6,7 +6,7 @@ export function headerHTML() {
   <input class="srch-inp" id="srch" type="text" placeholder="🔍 搜索模型名称..." autocomplete="off">
 </div>
 <div class="hdr-row hdr-btn-row">
-  <button class="btn-base sm" id="btn-adv-filter" title="高级筛选（骨骼/立方体/纹理）">⚙️ 筛选</button>
+  <button class="btn-base sm" id="btn-adv-filter" title="高级筛选">⚙️ 筛选</button>
   <div class="dd-wrap" id="dd-authors"><button class="btn-base sm" id="btn-authors">🎨 作者 ▾</button><div class="dd-menu" id="menu-authors"></div></div>
   <div class="dd-wrap" id="dd-batch"><button class="btn-base sm" id="btn-batch">⚡ 批量 ▾</button><div class="dd-menu" id="menu-batch"><button class="dd-item" data-batch="enable-all">✅ 全部启用</button><button class="dd-item" data-batch="disable-all"> 全部禁用</button></div></div>
   <div class="dd-wrap" id="dd-more"><button class="btn-base sm" id="btn-more">⋮ 更多 ▾</button><div class="dd-menu" id="menu-more"><button class="dd-item" data-more="import-file"> 导入文件</button><button class="dd-item" data-more="import-dir">📁 导入文件夹</button><button class="dd-item" data-more="sel-all" id="sel-all">☑️ 全选</button><button class="dd-item" data-more="repo-export" id="repo-export"> 骨骼结构</button><div style="border-top:1px solid var(--bd);margin:2px 0"></div><button class="dd-item" data-more="open-folder">📂 打开文件夹</button><button class="dd-item" data-more="refresh">🔄 刷新</button><button class="dd-item" data-more="genindex">📇 生成索引</button></div></div>
@@ -27,7 +27,7 @@ export function footerHTML() {
   return `<div class="ftr">
 <span class="stat" id="ftr-stat">共 0 项</span>
 <div style="flex:1"></div>
-<button class="btn-base sm" id="btn-repo" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="点击选择仓库目录">📁 未设置</button>
+<button class="btn-base sm" id="btn-repo" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="配置仓库目录">📁 未设置</button>
 </div>`;
 }
 

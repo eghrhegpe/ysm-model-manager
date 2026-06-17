@@ -98,26 +98,26 @@
 
 /* ===== 樱花物语（亮色/粉色系） ===== */
 .theme-sakura {
-  --bg: #fef7f9;
-  --surf: #fdf0f4;
-  --card: #fff5f8;
-  --hover: #fce4ec;
-  --act: #f8bbd0;
-  --accent: #e91e63;
+  --bg: #fdf2f5;
+  --surf: #fbe8ee;
+  --card: #fff0f4;
+  --hover: #fce0e8;
+  --act: #f48fb1;
+  --accent: #d81b60;
   --txt: #37474f;
-  --muted: #90a4ae;
-  --bd: rgba(233, 30, 99, 0.1);
-  --menu-indicator: #e91e63;
-  --meta-author: #e91e63;
-  --meta-work: #9c27b0;
-  --meta-date: #ff8a65;
-  --status-success: #4caf50;
-  --status-error: #e53935;
-  --size-ok: #4caf50;
-  --size-large: #e53935;
-  --accent-btn-bg: color-mix(in srgb, var(--accent) 12%, transparent);
+  --muted: #78909c;
+  --bd: rgba(216, 27, 96, 0.12);
+  --menu-indicator: #d81b60;
+  --meta-author: #d81b60;
+  --meta-work: #7b1fa2;
+  --meta-date: #ef6c00;
+  --status-success: #2e7d32;
+  --status-error: #c62828;
+  --size-ok: #2e7d32;
+  --size-large: #c62828;
+  --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);
   --accent-btn-color: var(--accent);
-  --accent-btn-border: color-mix(in srgb, var(--accent) 25%, transparent);
+  --accent-btn-border: color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 /* ===== 深海探秘（暗色/蓝色系） ===== */
@@ -142,6 +142,30 @@
   --accent-btn-bg: color-mix(in srgb, var(--accent) 18%, transparent);
   --accent-btn-color: var(--accent);
   --accent-btn-border: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* ===== 薄荷物语（亮色/绿色系） ===== */
+.theme-mint {
+  --bg: #f0faf5;
+  --surf: #e6f5ec;
+  --card: #f5fdf9;
+  --hover: #dceede;
+  --act: #a5d6a7;
+  --accent: #00897b;
+  --txt: #263238;
+  --muted: #78909c;
+  --bd: rgba(0, 137, 123, 0.12);
+  --menu-indicator: #00897b;
+  --meta-author: #00897b;
+  --meta-work: #5c6bc0;
+  --meta-date: #f57c00;
+  --status-success: #2e7d32;
+  --status-error: #c62828;
+  --size-ok: #2e7d32;
+  --size-large: #c62828;
+  --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);
+  --accent-btn-color: var(--accent);
+  --accent-btn-border: color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 /* ===== 字体系统 ===== */

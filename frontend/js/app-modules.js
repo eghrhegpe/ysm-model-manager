@@ -43,9 +43,9 @@ const THEME_DARK = "cyber";
 const THEME_LIGHT = "warm";
 
 function applyTheme(mode) {
-  const VALID = ["cyber", "warm", "pro", "sakura", "ocean", "system"];
+  const VALID = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "system"];
   if (!VALID.includes(mode)) mode = "system";
-  document.body.classList.remove("theme-cyber", "theme-warm", "theme-pro", "theme-sakura", "theme-ocean");
+  document.body.classList.remove("theme-cyber", "theme-warm", "theme-pro", "theme-sakura", "theme-ocean", "theme-mint");
   if (mode === "system") {
     const prefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)",

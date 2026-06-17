@@ -383,17 +383,62 @@ export async function initSettings(root) {
       .replace(/>/g, "&gt;");
   }
 
-  // 主题
-  let savedTheme = cfg.theme || cfg.Theme || "";
-  if (!savedTheme) savedTheme = localStorage.getItem("theme") || "system";
-  localStorage.setItem("theme", savedTheme);
-  window.applyTheme(savedTheme);
-  // 高亮当前主题卡片
+  // 主题卡片：直接点击切换
+  const savedTheme = localStorage.getItem("theme") || "cyber";
   const themePicker = root.getElementById("theme-picker");
   if (themePicker) {
     themePicker.querySelectorAll(".theme-card").forEach((card) => {
       card.classList.toggle("active", card.dataset.theme === savedTheme);
+      card.addEventListener("click", () => {
+        themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
+        card.classList.add("active");
+        window.applyTheme(card.dataset.theme);
+        localStorage.setItem("theme", card.dataset.theme);
+        // 关闭自动切换
+        const autoSelect = root.getElementById("theme-auto");
+        if (autoSelect) autoSelect.value = "off";
+        localStorage.setItem("theme-auto", "off");
+      });
     });
+  }
+
+  // 自动切换下拉框
+  const savedAuto = localStorage.getItem("theme-auto") || "off";
+  const autoSelect = root.getElementById("theme-auto");
+  if (autoSelect) {
+    autoSelect.value = savedAuto;
+    autoSelect.addEventListener("change", () => {
+      const mode = autoSelect.value;
+      localStorage.setItem("theme-auto", mode);
+      if (mode === "system") {
+        window.applyTheme("system");
+        localStorage.setItem("theme", "system");
+        // 更新卡片选中态
+        if (themePicker) themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
+      } else if (mode === "time") {
+        applyTimeTheme();
+        localStorage.setItem("theme", "time");
+        if (themePicker) themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
+      }
+      // "off" 时不改变当前主题，等用户手动点卡片
+    });
+    // 初始化：如果 savedAuto 是 system/time，应用对应主题
+    if (savedAuto === "system") {
+      window.applyTheme("system");
+    } else if (savedAuto === "time") {
+      applyTimeTheme();
+    } else {
+      window.applyTheme(savedTheme);
+    }
+  } else {
+    window.applyTheme(savedTheme);
+  }
+
+  // 时间段主题切换
+  function applyTimeTheme() {
+    const hour = new Date().getHours();
+    const isDay = hour >= 6 && hour < 18;
+    window.applyTheme(isDay ? "warm" : "cyber");
   }
 
   // 镜像源
@@ -503,41 +548,6 @@ export async function initSettings(root) {
   if (relinkBtn) {
     relinkBtn.addEventListener("click", doRelink);
   }
-
-  // 主题切换
-  root.getElementById("theme-picker")?.addEventListener("click", async (e) => {
-    const card = e.target.closest(".theme-card");
-    if (!card) return;
-    const mode = card.dataset.theme;
-    window.applyTheme(mode);
-    localStorage.setItem("theme", mode);
-    // 更新选中状态
-    root.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
-    card.classList.add("active");
-    try {
-      const { SaveAppConfig } = await import("../../../wailsjs/go/main/App.js");
-      const theme2 = localStorage.getItem("theme") || mode;
-      await SaveAppConfig(
-        cfg.filesRoot || "",
-        cfg.resourcepackRoot || "",
-        cfg.mcRoot || "",
-        linkMode,
-        theme2,
-      );
-    } catch {}
-    const label =
-      {
-        cyber: "赛博霓虹",
-        warm: "温暖木纹",
-        pro: "极简深邃",
-        system: "跟随系统",
-      }[mode] || mode;
-    bus.emit("toast:show", {
-      msg: `✅ 主题已切换为: ${label}`,
-      duration: 2000,
-      type: "success",
-    });
-  });
 
   // 显示版本号
   const showVersion = async () => {

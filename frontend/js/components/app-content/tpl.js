@@ -153,55 +153,72 @@ export function settingsHTML() {
 
 <div class="section-title stg-title">🌙 主题与外观</div>
 
+<!-- 主题卡片：直接展示 -->
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:0ms">
   <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
-    <span class="label">🌙 主题模式</span>
+    <span class="label">🎨 选择主题</span>
     <div class="theme-picker" id="theme-picker">
-      <div class="theme-card" data-theme="system" style="background:linear-gradient(135deg,#11111b 50%,#f5f0e1 50%);border:2px solid var(--bd)">
-        <span style="font-size:16px">💻</span>
-        <span style="font-size:10px;font-weight:600">跟随系统</span>
-      </div>
-      <div class="theme-card" data-theme="cyber" style="background:#11111b;border:2px solid var(--bd)">
-        <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#bd93f9"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#f1fa8c"></span>
-        </div>
-        <span style="font-size:10px;font-weight:600;color:#cdd6f4">赛博霓虹</span>
-      </div>
-      <div class="theme-card" data-theme="warm" style="background:#f5f0e1;border:2px solid var(--bd)">
+      <div class="theme-card" data-theme="warm">
         <div style="display:flex;gap:2px;margin-bottom:2px">
           <span style="width:8px;height:8px;border-radius:50%;background:#8b4513"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#6a4e3a"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#a0866a"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#3e2723">温暖木纹</span>
+        <span style="font-size:10px;font-weight:600;color:#3e2723">☀️ 温暖木纹</span>
       </div>
-      <div class="theme-card" data-theme="pro" style="background:#0a0a0a;border:2px solid var(--bd)">
+      <div class="theme-card" data-theme="sakura">
+        <div style="display:flex;gap:2px;margin-bottom:2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#d81b60"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#7b1fa2"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#ef6c00"></span>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:#37474f">🌸 樱花物语</span>
+      </div>
+      <div class="theme-card" data-theme="mint">
+        <div style="display:flex;gap:2px;margin-bottom:2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#00897b"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#5c6bc0"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#f57c00"></span>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:#263238">🍃 薄荷物语</span>
+      </div>
+      <div class="theme-card" data-theme="cyber">
         <div style="display:flex;gap:2px;margin-bottom:2px">
           <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#999"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#666"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#bd93f9"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#f1fa8c"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#e0e0e0">极简深邃</span>
+        <span style="font-size:10px;font-weight:600;color:#cdd6f4">🌙 赛博霓虹</span>
       </div>
-      <div class="theme-card" data-theme="sakura" style="background:#fef7f9;border:2px solid var(--bd)">
-        <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#e91e63"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#9c27b0"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#ff8a65"></span>
-        </div>
-        <span style="font-size:10px;font-weight:600;color:#37474f">樱花物语</span>
-      </div>
-      <div class="theme-card" data-theme="ocean" style="background:#0a1628;border:2px solid var(--bd)">
+      <div class="theme-card" data-theme="ocean">
         <div style="display:flex;gap:2px;margin-bottom:2px">
           <span style="width:8px;height:8px;border-radius:50%;background:#4fc3f7"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#7c4dff"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#ffab40"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#b0bec5">深海探秘</span>
+        <span style="font-size:10px;font-weight:600;color:#b0bec5">🌊 深海探秘</span>
+      </div>
+      <div class="theme-card" data-theme="pro">
+        <div style="display:flex;gap:2px;margin-bottom:2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#999"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#666"></span>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:#e0e0e0">⚪ 极简深邃</span>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 自动切换：独立一栏 -->
+<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
+  <div class="setting-row">
+    <span class="label">🕐 自动切换</span>
+    <select id="theme-auto" class="stg-select" style="width:auto">
+      <option value="off">关闭</option>
+      <option value="system">跟随系统亮暗</option>
+      <option value="time">按时间段（白天暖色/夜晚冷色）</option>
+    </select>
   </div>
 </div>
 

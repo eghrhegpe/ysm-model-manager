@@ -13,9 +13,8 @@ import {
   cacheSet,
   cacheSetEvictHandler,
 } from "../../utils/preview-cache.js";
-import { devLog, getPrefer3D, stripYsgpTextHeader } from "./preview-utils.js";
+import { devLog, stripYsgpTextHeader } from "./preview-utils.js";
 import { decodeYsmViaWasm } from "./preview-wasm.js";
-import { create3DPreview } from "./preview-3d.js";
 import { showModelDetail, showResourcePack, showShaderPack } from "./preview-detail.js";
 import { loadModelData } from "./preview-loader.js";
 import { setupBoneExport } from "./preview-bone-export.js";
@@ -421,16 +420,6 @@ class AppPreview extends HTMLElement {
         };
       } // end if (clips?.length > 0)
       */ // ← 恢复动画时删掉这行和上面 /*
-
-      // ---- 3D 预览切换 ----
-      const _3dCtrl = create3DPreview(model);
-
-      // 接线 🎨 3D tab 按钮（尽早绑定，避免被 _showModelDetail 占位 onclick 覆盖）
-      const btn3d = this._root.getElementById("btn-3d-preview");
-      if (btn3d) {
-        btn3d.onclick = _3dCtrl.toggle3D;
-      }
-      if (getPrefer3D()) requestAnimationFrame(() => btn3d?.click());
 
       // ---- 全窗放大 + 滚轮/拖拽旋转 ----
       canvas.classList.add("ysm-grab");

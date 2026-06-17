@@ -239,6 +239,8 @@ export function SaveAppConfig(arg1:string,arg2:string,arg3:string,arg4:string,ar
 
 export function SavePreviewTempFile(arg1:string):Promise<string>;
 
+export function SaveScreenshotFile(arg1:string,arg2:string):Promise<void>;
+
 export function SaveWindowPosition(arg1:number,arg2:number,arg3:number,arg4:number):Promise<void>;
 
 export function SaveWorkshopCreators(arg1:Array<types.WorkshopCreator>):Promise<void>;

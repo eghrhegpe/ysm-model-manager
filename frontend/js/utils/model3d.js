@@ -1,61 +1,68 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { GetModel3DSpec } from "../../wailsjs/go/main/App.js";
-import { buildSpecFromModel } from "./model3d-spec.js";
-import { dbg } from "./debug.js";
 
-// Go spec 缓存（避免重复调用 GetModel3DSpec）
-const specCache = new Map();
-const SPEC_CACHE_MAX = 20;
-function cacheSpec(path, data) {
-  if (specCache.size >= SPEC_CACHE_MAX) {
-    const firstKey = specCache.keys().next().value;
-    specCache.delete(firstKey);
-  }
-  specCache.set(path, data);
+window.__dumpScene = () => {
+  const root = window.__rootGroup3d;
+  if (!root) { console.warn("无 scene，先渲染模型"); return; }
+  const wv = new THREE.Vector3();
+  const stats = { bones: 0, meshes: 0, vertices: 0, indices: 0 };
+  const bones = [];
+  root.traverse((c) => {
+    if (c.isGroup && c.name) {
+      stats.bones++;
+      c.getWorldPosition(wv);
+      const p = c.position.toArray().map(v => +v.toFixed(2));
+      const w = wv.toArray().map(v => +v.toFixed(2));
+      bones.push({ name: c.name, pos: `(${p[0]},${p[1]},${p[2]})`, world: `(${w[0]},${w[1]},${w[2]})` });
+    }
+    if (c.isMesh) { stats.meshes++; stats.vertices += c.geometry?.attributes?.position?.count || 0; stats.indices += c.geometry?.index?.count || 0; }
+  });
+  console.table(bones);
+  console.log("统计:", stats);
+  return { bones, stats };
+};
+
+export function buildSceneMesh(spec) {
+  let meshMax = 0;
+  for (const mg of spec.models || [])
+    for (const md of mg.meshGroups || [])
+      for (let i = 0; i < (md.positions?.length || 0); i += 3) {
+        const v = Math.max(Math.abs(md.positions[i]), Math.abs(md.positions[i+1]||0), Math.abs(md.positions[i+2]||0));
+        if (v > meshMax) meshMax = v;
+      }
+  const modelScale = meshMax > 32 ? 1 / 16 : meshMax > 4 ? 1 / 4 : 1;
+  const rootGroup = new THREE.Group();
+  rootGroup.scale.set(modelScale, modelScale, modelScale);
+  const boneGroupMap = new Map();
+  for (const mg of spec.models)
+    for (const bd of mg.bones || []) {
+      const g = new THREE.Group();
+      g.name = bd.name;
+      g.position.set(bd.localPosition[0], bd.localPosition[1], bd.localPosition[2]);
+      if (bd.localRotation[3] !== 1 || bd.localRotation[0] !== 0 || bd.localRotation[1] !== 0 || bd.localRotation[2] !== 0)
+        g.quaternion.set(bd.localRotation[0], bd.localRotation[1], bd.localRotation[2], bd.localRotation[3]);
+      boneGroupMap.set(bd.id, g);
+    }
+  for (const mg of spec.models)
+    for (const bd of mg.bones || []) {
+      const g = boneGroupMap.get(bd.id);
+      if (!g) continue;
+      if (bd.parentId && boneGroupMap.has(bd.parentId)) boneGroupMap.get(bd.parentId).add(g);
+      else rootGroup.add(g);
+    }
+  return { boneGroupMap, rootGroup, modelScale, meshMax };
 }
 
-// 调试用：控制台可调 window.debugGetSpec(path) 获取骨骼数据
-  window.debugGetSpec = async (path) => {
-    try {
-      const jsonStr = await GetModel3DSpec(path || "");
-      const spec = JSON.parse(jsonStr);
-      dbg("model3d", "spec:", spec);
-      return spec;
-    } catch (e) {
-      console.error("[DEBUG]", e);
-      return null;
-    }
-  };
-  window.__dumpScene = () => {
-    const root = window.__rootGroup3d;
-    if (!root) { console.warn("无 scene，先渲染模型"); return; }
-    const wv = new THREE.Vector3();
-    const stats = { bones: 0, meshes: 0, vertices: 0, indices: 0 };
-    const bones = [];
-    root.traverse((c) => {
-      if (c.isGroup && c.name) {
-        stats.bones++;
-        c.getWorldPosition(wv);
-        const p = c.position.toArray().map(v => +v.toFixed(2));
-        const w = wv.toArray().map(v => +v.toFixed(2));
-        bones.push({ name: c.name, pos: `(${p[0]},${p[1]},${p[2]})`, world: `(${w[0]},${w[1]},${w[2]})` });
-      }
-      if (c.isMesh) { stats.meshes++; stats.vertices += c.geometry?.attributes?.position?.count || 0; stats.indices += c.geometry?.index?.count || 0; }
-    });
-    console.table(bones);
-    console.log("统计:", stats);
-    return { bones, stats };
-  };
-
-export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
+export async function renderModel3D(container, texArr, spec, texIdx = 0) {
   const scene = new THREE.Scene();
   window.__scene3d = scene;
   scene.background = new THREE.Color(0x1a1b2e);
   const aspect = container.clientWidth / container.clientHeight || 1;
   const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+  window.__camera3d = camera;
   camera.position.set(0, 80, -120);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: true });
+  window.__renderer3d = renderer;
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -64,85 +71,21 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 80, 0);
   controls.update();
-  const ambient = new THREE.AmbientLight(0xffffff, 1.0);
-  scene.add(ambient);
-  const dirLight = new THREE.DirectionalLight(0xffffff, 2);
-  dirLight.position.set(10, 30, 20);
-  scene.add(dirLight);
+  scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+  const dl = new THREE.DirectionalLight(0xffffff, 2);
+  dl.position.set(10, 30, 20); scene.add(dl);
   const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  backLight.position.set(-10, 10, -20);
-  scene.add(backLight);
+  backLight.position.set(-10, 10, -20); scene.add(backLight);
   const grid = new THREE.GridHelper(400, 20, 0x6666aa, 0x444488);
-  grid.position.y = -1;
-  scene.add(grid);
-  const axes = new THREE.AxesHelper(60);
-  scene.add(axes);
-  const texMap = new Map();
-  const urls = model.textures?.length > 1 ? model.textures : [textureUrl];
-  if (urls?.length) {
-    const loads = urls.filter(Boolean).map(
-      (url) =>
-        new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            const tex = new THREE.Texture(img);
-            tex.flipY = false;
-            tex.minFilter = THREE.NearestFilter;
-            tex.magFilter = THREE.NearestFilter;
-            tex.colorSpace = THREE.SRGBColorSpace;
-            tex.needsUpdate = true;
-            tex.userData.imgWidth = img.naturalWidth;
-            tex.userData.imgHeight = img.naturalHeight;
-            texMap.set(url, tex);
-            resolve();
-          };
-          img.onerror = () => resolve();
-          img.src = url;
-        }),
-    );
-    await Promise.all(loads);
-  }
-  const texArr = urls
-    .filter(Boolean)
-    .map((url) => texMap.get(url))
-    .filter(Boolean);
-  // 排除尺寸明显小于最大纹理的非贴图（头像/预览图可能混入）
-  const maxTexPixels = texArr.reduce((m, t) => Math.max(m, (t.image?.naturalWidth || 0) * (t.image?.naturalHeight || 0)), 0);
-  if (maxTexPixels > 0) {
-    const threshold = Math.max(maxTexPixels / 4, 128 * 128);
-    const filtered = texArr.filter((t) => ((t.image?.naturalWidth || 0) * (t.image?.naturalHeight || 0)) >= threshold);
-    if (filtered.length > 0) {
-      texArr.length = 0; texArr.push(...filtered);
-    }
-  }
-  if (texArr.length === 0) console.warn("[3D] 纹理加载失败，模型将显示为 fallback 颜色");
+  grid.position.y = -1; scene.add(grid);
+  scene.add(new THREE.AxesHelper(60));
 
-  // 从 Go 获取预计算的 Three.js Spec
-  let spec = { models: [] };
-  const forceJS = false;
-  // 优先走 Go spec（基于 YSMViewer 算法，骨骼/网格数据准确）
-  if (model._modelPath) {
-    try {
-      let jsonStr = specCache.get(model._modelPath);
-      if (!jsonStr) {
-        jsonStr = await GetModel3DSpec(model._modelPath);
-        cacheSpec(model._modelPath, jsonStr);
-      }
-      const parsed = JSON.parse(jsonStr);
-      if (parsed.models) spec = parsed;
-    } catch (e) {
-      console.warn("[3D] Fallback to JS geometry:", e);
-    }
-  }
+  const { boneGroupMap, rootGroup, modelScale, meshMax } = buildSceneMesh(spec);
+  window.__rootGroup3d = rootGroup;
+  scene.add(rootGroup);
 
-  if (!spec.models?.length && model.bones?.length) {
-    spec = buildSpecFromModel(model);
-  }
-
-  // 合并同骨骼同纹理的 mesh：将多个小 mesh 的顶点烘焙到 bone 本地坐标后合并
   for (const mg of spec.models || []) {
     if (!mg.meshGroups?.length) continue;
-    // 按 (boneId, texIdx) 分组
     const grouped = new Map();
     for (const md of mg.meshGroups) {
       const key = md.boneId + ":" + (md.texIdx ?? 0);
@@ -151,339 +94,143 @@ export async function renderModel3D(container, model, textureUrl, texIdx = 0) {
     }
     const merged = [];
     for (const [, g] of grouped) {
-      if (g.length === 1) {
-        merged.push(g[0]);
-        continue;
-      }
-      // 合并多个 mesh：仅合并无旋转的 mesh（identity quaternion），有旋转的保留原样
-      let positions = [],
-        normals = [],
-        uvs = [],
-        idx = [],
-        idxOff = 0;
+      if (g.length === 1) { merged.push(g[0]); continue; }
+      let positions = [], normals = [], uvs = [], idx = [], idxOff = 0;
       const standalone = [];
       for (const md of g) {
-        const isIdentity =
-          md.localRotation?.[3] === 1 &&
-          md.localRotation?.[0] === 0 &&
-          md.localRotation?.[1] === 0 &&
-          md.localRotation?.[2] === 0;
-        if (!isIdentity) {
-          standalone.push(md);
-          continue;
-        }
-        // 将 localPosition 烘焙到顶点坐标中
-        const dx = md.localPosition?.[0] || 0;
-        const dy = md.localPosition?.[1] || 0;
-        const dz = md.localPosition?.[2] || 0;
-        for (let i = 0; i < (md.positions?.length || 0); i += 3) {
-          positions.push((md.positions[i] || 0) + dx);
-          positions.push((md.positions[i + 1] || 0) + dy);
-          positions.push((md.positions[i + 2] || 0) + dz);
-        }
+        const isId = md.localRotation?.[3] === 1 && md.localRotation?.[0] === 0 && md.localRotation?.[1] === 0 && md.localRotation?.[2] === 0;
+        if (!isId) { standalone.push(md); continue; }
+        const dx = md.localPosition?.[0] || 0, dy = md.localPosition?.[1] || 0, dz = md.localPosition?.[2] || 0;
+        for (let i = 0; i < (md.positions?.length || 0); i += 3) { positions.push((md.positions[i]||0)+dx); positions.push((md.positions[i+1]||0)+dy); positions.push((md.positions[i+2]||0)+dz); }
         if (md.normals) normals.push(...md.normals);
         if (md.uvs) uvs.push(...md.uvs);
-        for (let i = 0; i < (md.indices?.length || 0); i++) {
-          idx.push((md.indices[i] || 0) + idxOff);
-        }
-        idxOff += (md.positions?.length || 0) / 3;
+        for (let i = 0; i < (md.indices?.length || 0); i++) idx.push((md.indices[i]||0)+idxOff);
+        idxOff += (md.positions?.length||0)/3;
       }
-      if (positions.length) {
-        merged.push({
-          id: g[0].boneId + "_merged",
-          boneId: g[0].boneId,
-          texIdx: g[0].texIdx,
-          localPosition: [0, 0, 0],
-          localRotation: [0, 0, 0, 1],
-          positions,
-          normals,
-          uvs,
-          indices: idx,
-        });
-      }
+      if (positions.length) merged.push({ id: g[0].boneId+"_merged", boneId: g[0].boneId, texIdx: g[0].texIdx, localPosition: [0,0,0], localRotation: [0,0,0,1], positions, normals, uvs, indices: idx });
       merged.push(...standalone);
     }
     mg.meshGroups = merged;
-  }
-
-  const rootGroup = new THREE.Group();
-  window.__rootGroup3d = rootGroup;
-  rootGroup.name = "__root__";
-  // 根据模型实际尺寸动态调整缩放
-  let meshMin = Infinity,
-    meshMax = -Infinity;
-  for (const mg of spec.models || []) {
-    for (const md of mg.meshGroups || []) {
-      for (let i = 0; i < (md.positions?.length || 0); i += 3) {
-        const vx = Math.abs(md.positions[i]);
-        const vy = Math.abs(md.positions[i + 1] || 0);
-        const vz = Math.abs(md.positions[i + 2] || 0);
-        const v = Math.max(vx, vy, vz);
-        if (v > meshMax) meshMax = v;
-        if (v < meshMin) meshMin = v;
-      }
-    }
-  }
-  const modelScale = meshMax > 32 ? 1 / 16 : meshMax > 4 ? 1 / 4 : 1;
-  rootGroup.scale.set(modelScale, modelScale, modelScale);
-  scene.add(rootGroup);
-  const boneGroupMap = new Map();
-  for (const mg of spec.models) {
-    for (const bd of mg.bones || []) {
-      const g = new THREE.Group();
-      g.name = bd.name;
-      g.position.set(
-        bd.localPosition[0],
-        bd.localPosition[1],
-        bd.localPosition[2],
-      );
-      if (
-        bd.localRotation[3] !== 1 ||
-        bd.localRotation[0] !== 0 ||
-        bd.localRotation[1] !== 0 ||
-        bd.localRotation[2] !== 0
-      ) {
-        g.quaternion.set(
-          bd.localRotation[0],
-          bd.localRotation[1],
-          bd.localRotation[2],
-          bd.localRotation[3],
-        );
-      }
-      boneGroupMap.set(bd.id, g);
-    }
-    for (const bd of mg.bones || []) {
-      const g = boneGroupMap.get(bd.id);
-      if (!g) continue;
-      if (bd.parentId && boneGroupMap.has(bd.parentId)) {
-        boneGroupMap.get(bd.parentId).add(g);
-      } else {
-        rootGroup.add(g);
-      }
-    }
-    let minY = Infinity,
-      maxY = -Infinity;
-    for (const b of model.bones || [])
-      for (const c of b.cubes || []) {
-        const y = c.origin[1] + c.size[1] / 2;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-    const centerY = (minY + maxY) / 2;
-    const modelHeight = maxY - minY;
-    // 模型缩放后的相机距离
-    const camDist = Math.max(modelHeight * 1.5 * modelScale, 60 * modelScale);
-    camera.position.set(camDist * 0.4, centerY * modelScale, -camDist * 0.8);
-    camera.lookAt(0, centerY * modelScale, 0);
-    controls.target.set(0, centerY * modelScale, 0);
-    controls.update();
-  // 保存初始相机位置用于重置
-  const _initCamPos = camera.position.clone();
-  const _initCamTarget = controls.target.clone();
-    for (const md of mg.meshGroups || []) {
-      const boneGroup = boneGroupMap.get(md.boneId);
-      if (!boneGroup) continue;
+    for (const md of mg.meshGroups) {
+      const bg = boneGroupMap.get(md.boneId);
+      if (!bg) continue;
       const geo = new THREE.BufferGeometry();
-      geo.setAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(md.positions, 3),
-      );
-      geo.setAttribute(
-        "normal",
-        new THREE.Float32BufferAttribute(md.normals, 3),
-      );
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(md.positions, 3));
+      geo.setAttribute("normal", new THREE.Float32BufferAttribute(md.normals, 3));
       geo.setAttribute("uv", new THREE.Float32BufferAttribute(md.uvs, 2));
       geo.setIndex(md.indices);
-      // 按 mesh 所属骨骼选择对应纹理（md.texIdx 由 buildSpecFromModel 设置）
-      const meshTexIdx = md.texIdx ?? texIdx ?? 0;
-      const meshTex =
-        texArr.length > 0 ? texArr[meshTexIdx] || texArr[0] : null;
-      // YSMViewer: texture slot > 0 的方块为发光/覆盖层，正面剔除（BackSide）
-      const useBackSide = meshTexIdx > 0;
-      // 主纹理（slot 0）用低 alphaTest 仅丢弃完全透明像素，避免 alphaTest 0.5 把纹理
-      // 中半透明区域（如 UV 映射到抗锯齿边缘的方块面）整面丢弃。
-      // 覆盖层（slot > 0）保持 0.5 以干净裁掉透明部分。
-      const mat = meshTex
-        ? new THREE.MeshBasicMaterial({
-            map: meshTex,
-            alphaTest: useBackSide ? 0.5 : 0.02,
-            side: useBackSide ? THREE.BackSide : THREE.DoubleSide,
-          })
-        : new THREE.MeshBasicMaterial({
-            color: 0x44aa88,
-            side: THREE.DoubleSide,
-          });
+      const mti = md.texIdx ?? texIdx ?? 0;
+      const mt = texArr.length > 0 ? texArr[mti] || texArr[0] : null;
+      const mat = mt
+        ? new THREE.MeshBasicMaterial({ map: mt, alphaTest: mti > 0 ? 0.5 : 0.02, side: mti > 0 ? THREE.BackSide : THREE.DoubleSide })
+        : new THREE.MeshBasicMaterial({ color: 0x44aa88, side: THREE.DoubleSide });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(
-        md.localPosition[0],
-        md.localPosition[1],
-        md.localPosition[2],
-      );
-      if (
-        md.localRotation[3] !== 1 ||
-        md.localRotation[0] !== 0 ||
-        md.localRotation[1] !== 0 ||
-        md.localRotation[2] !== 0
-      ) {
-        mesh.quaternion.set(
-          md.localRotation[0],
-          md.localRotation[1],
-          md.localRotation[2],
-          md.localRotation[3],
-        );
-      }
-      boneGroup.add(mesh);
+      mesh.position.set(md.localPosition[0], md.localPosition[1], md.localPosition[2]);
+      if (md.localRotation[3] !== 1 || md.localRotation[0] !== 0 || md.localRotation[1] !== 0 || md.localRotation[2] !== 0)
+        mesh.quaternion.set(md.localRotation[0], md.localRotation[1], md.localRotation[2], md.localRotation[3]);
+      bg.add(mesh);
     }
   }
-  let _rafId = null;
-  const _onResize = () => {
-    const w = container.clientWidth,
-      h = container.clientHeight;
-    if (w > 0 && h > 0) {
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    }
-  };
-  window.addEventListener("resize", _onResize);
 
+  // AABB 计算世界空间中心 Y（已含 modelScale）
+  scene.updateMatrixWorld();
+  const box = new THREE.Box3().setFromObject(rootGroup);
+  const centerY = box.isEmpty() ? 0 : box.getCenter(new THREE.Vector3()).y;
+
+  const camDist = Math.max(meshMax * 1.5 * modelScale, 60 * modelScale);
+  camera.position.set(camDist * 0.4, centerY, -camDist * 0.8);
+  camera.lookAt(0, centerY, 0);
+  controls.target.set(0, centerY, 0);
+  controls.update();
+  const _initCamPos = camera.position.clone();
+  const _initCamTarget = controls.target.clone();
+
+  let _rafId = null;
+  const _onResize = () => { const w = container.clientWidth, h = container.clientHeight; if (w > 0 && h > 0) { camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h); } };
+  window.addEventListener("resize", _onResize);
   const _keys = {};
-  const _onKeyDown = (e) => {
-    _keys[e.key.toLowerCase()] = true;
-    if (["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase())) {
-      e.preventDefault();
-    }
-  };
+  const _onKeyDown = (e) => { _keys[e.key.toLowerCase()] = true; if (["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase())) e.preventDefault(); };
   const _onKeyUp = (e) => { _keys[e.key.toLowerCase()] = false; };
   document.addEventListener("keydown", _onKeyDown);
   document.addEventListener("keyup", _onKeyUp);
-
   let _lastTime = performance.now();
   let _camSpeed = 20;
   let _orbitMode = true;
   const _orbitTarget = controls.target.clone();
   const _euler = new THREE.Euler(0, 0, 0, "YXZ");
-  let _mouseDown = false;
-  let _lastMouse = { x: 0, y: 0 };
-
-  function onMouseDown(e) {
-    if (!_orbitMode && e.button === 0) { _mouseDown = true; _lastMouse.x = e.clientX; _lastMouse.y = e.clientY; }
-  }
-  function onMouseUp() { _mouseDown = false; }
-  function onMouseMove(e) {
+  let _mouseDown = false, _lastMouse = { x: 0, y: 0 };
+  const onMouseDown = (e) => { if (!_orbitMode && e.button === 0) { _mouseDown = true; _lastMouse = { x: e.clientX, y: e.clientY }; } };
+  const onMouseUp = () => { _mouseDown = false; };
+  const onMouseMove = (e) => {
     if (_orbitMode || !_mouseDown) return;
-    const dx = e.clientX - _lastMouse.x;
-    const dy = e.clientY - _lastMouse.y;
-    _lastMouse.x = e.clientX;
-    _lastMouse.y = e.clientY;
     _euler.setFromQuaternion(camera.quaternion);
-    _euler.y -= dx * 0.003;
-    _euler.x -= dy * 0.003;
-    _euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, _euler.x));
-    camera.quaternion.setFromEuler(_euler);
-  }
+    _euler.y -= (e.clientX-_lastMouse.x)*0.003; _euler.x -= (e.clientY-_lastMouse.y)*0.003;
+    _euler.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, _euler.x));
+    camera.quaternion.setFromEuler(_euler); _lastMouse = { x: e.clientX, y: e.clientY };
+  };
   renderer.domElement.addEventListener("mousedown", onMouseDown);
   window.addEventListener("mouseup", onMouseUp);
   window.addEventListener("mousemove", onMouseMove);
-
   controls.enableRotate = true;
-
-  function renderLoop() {
-    _rafId = requestAnimationFrame(renderLoop);
-    const now = performance.now();
-    const dt = Math.min((now - _lastTime) / 1000, 0.1);
-    _lastTime = now;
-
-    const camDir = new THREE.Vector3();
-    camera.getWorldDirection(camDir);
-    const forward = new THREE.Vector3(camDir.x, 0, camDir.z).normalize();
-    const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
-    const move = new THREE.Vector3();
-
-    if (_keys["w"] || _keys["arrowup"])    move.add(forward);
-    if (_keys["s"] || _keys["arrowdown"])  move.sub(forward);
-    if (_keys["a"] || _keys["arrowleft"])  move.sub(right);
-    if (_keys["d"] || _keys["arrowright"]) move.add(right);
-    if (_keys[" "]) move.y += 1;
-    if (_keys["shift"]) move.y -= 1;
-
-    if (move.length() > 0) {
-      move.normalize().multiplyScalar(_camSpeed * dt);
-      camera.position.add(move);
-      // 仅在“环绕”模式下同步更新 _orbitTarget
-      if (_orbitMode) {
-        _orbitTarget.add(move);
-      }
-    }
-
-    if (_orbitMode) {
-      controls.target.copy(_orbitTarget);
-      controls.update();
-      _orbitTarget.copy(controls.target);
-    } else {
-      controls.target.copy(camera.position).addScaledVector(camDir, 10);
-      controls.update();
-    }
-
+  const loop = () => {
+    _rafId = requestAnimationFrame(loop);
+    const dt = Math.min((performance.now()-_lastTime)/1000, 0.1); _lastTime = performance.now();
+    const cd = new THREE.Vector3(); camera.getWorldDirection(cd);
+    const fwd = new THREE.Vector3(cd.x, 0, cd.z).normalize();
+    const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0,1,0)).normalize();
+    const mv = new THREE.Vector3();
+    if (_keys["w"]||_keys["arrowup"]) mv.add(fwd);
+    if (_keys["s"]||_keys["arrowdown"]) mv.sub(fwd);
+    if (_keys["a"]||_keys["arrowleft"]) mv.sub(right);
+    if (_keys["d"]||_keys["arrowright"]) mv.add(right);
+    if (_keys[" "]) mv.y += 1; if (_keys["shift"]) mv.y -= 1;
+    if (mv.length() > 0) { mv.normalize().multiplyScalar(_camSpeed*dt); camera.position.add(mv); if (_orbitMode) _orbitTarget.add(mv); }
+    if (_orbitMode) { controls.target.copy(_orbitTarget); controls.update(); _orbitTarget.copy(controls.target); }
+    else { controls.target.copy(camera.position).addScaledVector(cd, 10); controls.update(); }
     renderer.render(scene, camera);
-  }
-  _rafId = requestAnimationFrame(renderLoop);
+  };
+  _rafId = requestAnimationFrame(loop);
   renderer.render(scene, camera);
   return {
     resetCamera: () => {
       camera.position.copy(_initCamPos);
       controls.target.copy(_initCamTarget);
+      _orbitTarget.copy(_initCamTarget);
+      if (_orbitMode) controls.enableRotate = true;
+      else { controls.enableRotate = false; const d = new THREE.Vector3(); camera.getWorldDirection(d); controls.target.copy(camera.position).addScaledVector(d, 10); }
+      camera.quaternion.set(0, 0, 0, 1);
+      _euler.set(0, 0, 0);
+      _camSpeed = 20;
+      _mouseDown = false;
+      Object.keys(_keys).forEach(k => _keys[k] = false);
       controls.update();
     },
     setSpeed: (v) => { _camSpeed = v; },
     setRotationMode: (orbit) => {
       _orbitMode = orbit;
-      if (orbit) {
-        // 切换到“环绕”模式
-        controls.enableRotate = true;
-        // 恢复之前的环绕目标点（如果存在）
-        if (_orbitTarget) {
-          controls.target.copy(_orbitTarget);
-        }
-        // 重置鼠标拖拽状态
-        _mouseDown = false;
-      } else {
-        // 切换到“自身”模式
-        // 保存当前摄像机朝向，用于后续鼠标拖拽旋转
-        _euler.setFromQuaternion(camera.quaternion);
-        // 禁用 OrbitControls 的旋转（但不禁用平移和缩放）
-        controls.enableRotate = false;
-        // 设置控制目标为摄像机前方，保持视角连续
-        const camDir = new THREE.Vector3();
-        camera.getWorldDirection(camDir);
-        controls.target.copy(camera.position).addScaledVector(camDir, 10);
-        controls.update();
-        // 重置鼠标状态，准备接收拖拽输入
-        _mouseDown = false;
-      }
+      if (orbit) { controls.enableRotate = true; if (_orbitTarget) controls.target.copy(_orbitTarget); _mouseDown = false; }
+      else { _euler.setFromQuaternion(camera.quaternion); controls.enableRotate = false; const d = new THREE.Vector3(); camera.getWorldDirection(d); controls.target.copy(camera.position).addScaledVector(d,10); controls.update(); _mouseDown = false; }
     },
     cleanup: () => {
       if (_rafId != null) cancelAnimationFrame(_rafId);
-      _rafId = null;
-      document.removeEventListener("keydown", _onKeyDown);
-      document.removeEventListener("keyup", _onKeyUp);
+      document.removeEventListener("keydown", _onKeyDown); document.removeEventListener("keyup", _onKeyUp);
       renderer.domElement.removeEventListener("mousedown", onMouseDown);
-      window.removeEventListener("mouseup", onMouseUp);
-      window.removeEventListener("mousemove", onMouseMove);
-      controls.dispose();
-      window.removeEventListener("resize", _onResize);
-      renderer.dispose();
-      container.innerHTML = "";
-      scene.traverse((child) => {
-        if (child.isMesh) {
-          child.geometry?.dispose();
-          if (Array.isArray(child.material))
-            child.material.forEach((m) => m.dispose());
-          else child.material?.dispose();
-        }
-      });
-      texMap.forEach((tex) => tex.dispose());
-      texMap.clear();
+      window.removeEventListener("mouseup", onMouseUp); window.removeEventListener("mousemove", onMouseMove);
+      controls.dispose(); window.removeEventListener("resize", _onResize);
+      renderer.dispose(); container.innerHTML = "";
+      scene.traverse((c) => { if (c.isMesh) { c.geometry?.dispose(); if (Array.isArray(c.material)) c.material.forEach(m => m.dispose()); else c.material?.dispose(); } });
     },
   };
 }
+
+window.__screenshotPreview = () => {
+  const r = window.__renderer3d, s = window.__scene3d, c = window.__camera3d;
+  if (!r || !s || !c) { console.warn("[screenshot] 无 3D 渲染器"); return null; }
+  r.render(s, c); return r.domElement.toDataURL("image/png").split(",")[1];
+};
+
+// 延迟加载批量截图
+window.__batchRepoScreenshots = async (repoRoot) => {
+  const mod = await import("./screenshot-renderer.js");
+  return mod.batchRepoScreenshots(repoRoot);
+};

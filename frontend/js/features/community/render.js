@@ -1,6 +1,6 @@
 // ===== 创意工坊模型列表渲染（DOM API，非字符串拼接） =====
 import { renderDisplayName } from "../../utils/display.js";
-import { ICONS } from "../../components/app-content/workshop-icons.js";
+import { ICONS } from "../../components/app-content/community/workshop-icons.js";
 import { stagger } from "../../utils/stagger.js";
 
 /**

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -164,6 +165,7 @@ func (a *App) decodeOneAvatar(modelPath, cacheDir, safeName string) string {
 		if len(files) == 0 {
 			return ""
 		}
+		log.Printf("[avatar] ysm 解码文件数=%d", len(files))
 		// 找 ysm.json 解析作者列表
 		for _, f := range files {
 			if strings.HasSuffix(strings.ToLower(f.Path), "ysm.json") {
@@ -178,8 +180,19 @@ func (a *App) decodeOneAvatar(modelPath, cacheDir, safeName string) string {
 				}
 				if json.Unmarshal(data, &root) == nil {
 					authors = root.Meta.Authors
+					log.Printf("[avatar] ysm.json 作者数=%d", len(authors))
+					for _, au := range authors {
+						log.Printf("[avatar]   作者=%s avatar=%s", au.Name, au.Avatar)
+					}
 				}
 				break
+			}
+		}
+		// 列出所有文件找 avatar/ 目录的
+		for _, f := range files {
+			low := strings.ToLower(f.Path)
+			if strings.HasPrefix(low, "avatar") || strings.Contains(low, "/avatar/") {
+				log.Printf("[avatar] 找到头像文件: %s (%d bytes)", f.Path, len(f.Data))
 			}
 		}
 		if len(authors) == 0 {
@@ -196,7 +209,7 @@ func (a *App) decodeOneAvatar(modelPath, cacheDir, safeName string) string {
 				for i, v := range f.Data {
 					data[i] = byte(v)
 				}
-				os.WriteFile(filepath.Join(cacheDir, safeName+".png"), data, 0644)
+				log.Printf("[avatar] 保存: %s (%d bytes)", filepath.Join(cacheDir, safeName+".png"), len(data)); log.Printf("[avatar] 保存: %s (%d bytes)", filepath.Join(cacheDir, safeName+".png"), len(data)); os.WriteFile(filepath.Join(cacheDir, safeName+".png"), data, 0644)
 				mime := "image/png"
 				if strings.HasSuffix(low, ".jpg") {
 					mime = "image/jpeg"
@@ -204,20 +217,24 @@ func (a *App) decodeOneAvatar(modelPath, cacheDir, safeName string) string {
 				return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
 			}
 		}
-		// 按作者名匹配头像路径
-		for _, f := range files {
-			for _, au := range authors {
-				if safeFilename(au.Name) == safeName && au.Avatar != "" {
-					avatarPath := strings.ToLower(au.Avatar)
-					filePath := strings.ToLower(f.Path)
-					if filePath == avatarPath || strings.HasSuffix(filePath, "/"+avatarPath) || strings.HasSuffix(filePath, "\\"+avatarPath) {
+	// 按作者名匹配头像路径
+	for _, f := range files {
+		for _, au := range authors {
+			if safeFilename(au.Name) == safeName && au.Avatar != "" {
+				ap := strings.ToLower(au.Avatar)
+				// 只接受 avatar/ 目录下的文件，拒绝 textures/ 等
+				if !strings.HasPrefix(ap, "avatar") && !strings.Contains(ap, "/avatar/") {
+					continue
+				}
+				fp := strings.ToLower(f.Path)
+				if fp == ap || strings.HasSuffix(fp, "/"+ap) || strings.HasSuffix(fp, "\\"+ap) {
 						data := make([]byte, len(f.Data))
 						for i, v := range f.Data {
 							data[i] = byte(v)
 						}
 						os.WriteFile(filepath.Join(cacheDir, safeName+".png"), data, 0644)
 						mime := "image/png"
-						if strings.HasSuffix(filePath, ".jpg") {
+						if strings.HasSuffix(fp, ".jpg") {
 							mime = "image/jpeg"
 						}
 						return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
@@ -247,11 +264,19 @@ func (a *App) decodeOneAvatar(modelPath, cacheDir, safeName string) string {
 				authors = root.Meta.Authors
 			}
 		}
+		log.Printf("[avatar] zip 路径: ysm.json 作者数=%d", len(authors))
+		for _, au := range authors {
+			log.Printf("[avatar]   作者=%q avatar=%q", au.Name, au.Avatar)
+		}
 		// 按作者名匹配头像路径
 		for _, au := range authors {
 			if safeFilename(au.Name) == safeName && au.Avatar != "" {
+				ap := strings.ToLower(au.Avatar)
+				if !strings.HasPrefix(ap, "avatar") && !strings.Contains(ap, "/avatar/") {
+					continue
+				}
 				if avatarData := readFileFromZip(zr, au.Avatar); avatarData != nil {
-					os.WriteFile(filepath.Join(cacheDir, safeName+".png"), avatarData, 0644)
+					log.Printf("[avatar] 保存: %s (%d bytes)", filepath.Join(cacheDir, safeName+".png"), len(avatarData)); log.Printf("[avatar] 保存: %s (%d bytes)", filepath.Join(cacheDir, safeName+".png"), len(avatarData)); os.WriteFile(filepath.Join(cacheDir, safeName+".png"), avatarData, 0644)
 					mime := "image/png"
 					if strings.HasSuffix(strings.ToLower(au.Avatar), ".jpg") {
 						mime = "image/jpeg"
@@ -274,12 +299,20 @@ func (a *App) decodeOneAvatar(modelPath, cacheDir, safeName string) string {
 		if json.Unmarshal(data, &root) == nil {
 			authors = root.Meta.Authors
 		}
+		log.Printf("[avatar] json 路径: 作者数=%d safeName=%s", len(authors), safeName)
+		for _, au := range authors {
+			log.Printf("[avatar]   作者=%q avatar=%q safeAuthor=%q", au.Name, au.Avatar, safeFilename(au.Name))
+		}
 		dir := filepath.Dir(modelPath)
 		for _, au := range authors {
 			if safeFilename(au.Name) == safeName && au.Avatar != "" {
+				ap := strings.ToLower(au.Avatar)
+				if !strings.HasPrefix(ap, "avatar") && !strings.Contains(ap, "/avatar/") {
+					continue
+				}
 				avatarPath := filepath.Join(dir, au.Avatar)
 				if avatarData, err := os.ReadFile(avatarPath); err == nil {
-					os.WriteFile(filepath.Join(cacheDir, safeName+".png"), avatarData, 0644)
+					log.Printf("[avatar] 保存: %s (%d bytes)", filepath.Join(cacheDir, safeName+".png"), len(avatarData)); log.Printf("[avatar] 保存: %s (%d bytes)", filepath.Join(cacheDir, safeName+".png"), len(avatarData)); os.WriteFile(filepath.Join(cacheDir, safeName+".png"), avatarData, 0644)
 					mime := "image/png"
 					if strings.HasSuffix(strings.ToLower(au.Avatar), ".jpg") {
 						mime = "image/jpeg"
@@ -312,6 +345,50 @@ func readFileFromZip(zr *zip.Reader, target string) []byte {
 		}
 	}
 	return nil
+}
+
+// CacheModelAvatars 从解压目录的 ysm.json 读取所有作者头像，缓存到 creators_cache/
+// 供创作者界面使用，不返回数据
+func (a *App) CacheModelAvatars(modelPath string) {
+	if !strings.HasSuffix(strings.ToLower(modelPath), ".json") {
+		return
+	}
+	data, err := os.ReadFile(modelPath)
+	if err != nil {
+		return
+	}
+	var root struct {
+		Meta struct {
+			Authors []struct {
+				Name   string `json:"name"`
+				Avatar string `json:"avatar"`
+			} `json:"authors"`
+		} `json:"metadata"`
+	}
+	if json.Unmarshal(data, &root) != nil {
+		return
+	}
+	dir := filepath.Dir(modelPath)
+	cacheDir := creatorAvatarCacheDir()
+	os.MkdirAll(cacheDir, 0755)
+	for _, au := range root.Meta.Authors {
+		if au.Name == "" || au.Avatar == "" {
+			continue
+		}
+		safe := safeFilename(au.Name)
+		cachedPath := filepath.Join(cacheDir, safe+".png")
+		if _, err := os.Stat(cachedPath); err == nil {
+			continue // 已有缓存
+		}
+		ap := au.Avatar
+		if !strings.HasPrefix(ap, "avatar") && !strings.Contains(ap, "/avatar") {
+			ap = "avatar/" + ap
+		}
+		avatarPath := filepath.Join(dir, ap)
+		if avatarData, err := os.ReadFile(avatarPath); err == nil {
+			os.WriteFile(cachedPath, avatarData, 0644)
+		}
+	}
 }
 
 // safeFilename 安全文件名

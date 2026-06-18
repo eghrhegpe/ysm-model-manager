@@ -1,8 +1,8 @@
 // ===== 设置页初始化（为 _initSettings 减负） =====
-import { bus } from "../../bus.js";
-import { initVersionUpdater } from "../../features/version-updater.js";
-import { friendlyError } from "../../utils/errors.js";
-import { loadResourceRegistry } from "../../utils/resource-registry.js";
+import { bus } from "../../../bus.js";
+import { initVersionUpdater } from "../../../features/version-updater.js";
+import { friendlyError } from "../../../utils/errors.js";
+import { loadResourceRegistry } from "../../../utils/resource-registry.js";
 
 /**
  * 初始化设置页所有事件绑定
@@ -15,7 +15,7 @@ export async function initSettings(root) {
     SelectDirectory,
     GetMinecraftPaths,
     SetLinkMode,
-  } = await import("../../../wailsjs/go/main/App.js");
+  } = await import("../../../../wailsjs/go/main/App.js");
   const cfg = await LoadAppConfig();
   const mcPath = cfg.mcRoot || "";
   const linkMode = cfg.linkMode || "copy";
@@ -150,7 +150,7 @@ export async function initSettings(root) {
         if (!dir) return;
         try {
           const { SetResourceRoot } =
-            await import("../../../wailsjs/go/main/App.js");
+            await import("../../../../wailsjs/go/main/App.js");
           await SetResourceRoot(rtype, dir);
           const entry = advancedTypes.find((t) => t.rtype === rtype);
           if (entry) cfg[entry.cfgKey] = dir;
@@ -177,7 +177,7 @@ export async function initSettings(root) {
         const rtype = btn.dataset.rtype;
         try {
           const { ResetResourceRoot } =
-            await import("../../../wailsjs/go/main/App.js");
+            await import("../../../../wailsjs/go/main/App.js");
           await ResetResourceRoot(rtype);
           const entry = advancedTypes.find((t) => t.rtype === rtype);
           if (entry) cfg[entry.cfgKey] = "";
@@ -454,7 +454,7 @@ export async function initSettings(root) {
     mirrorSelect.addEventListener("change", async () => {
       const val = mirrorSelect.value;
       const { SetDownloadMirror } =
-        await import("../../../wailsjs/go/main/App.js");
+        await import("../../../../wailsjs/go/main/App.js");
       await SetDownloadMirror(val);
       bus.emit("toast:show", {
         msg:
@@ -491,7 +491,7 @@ export async function initSettings(root) {
         LoadAppConfig,
         ListVersionInstances,
         RelinkAllInstanceResources,
-      } = await import("../../../wailsjs/go/main/App.js");
+} = await import("../../../../wailsjs/go/main/App.js");
       const cfg = await LoadAppConfig();
       const mcRoot = cfg.mcRoot || "";
       if (!mcRoot) return;
@@ -553,7 +553,7 @@ export async function initSettings(root) {
   const showVersion = async () => {
     try {
       const { CurrentVersion } =
-        await import("../../../wailsjs/go/main/App.js");
+        await import("../../../../wailsjs/go/main/App.js");
       const ver = await CurrentVersion();
       const el = root.getElementById("set-version");
       if (el) el.textContent = ver;
@@ -566,7 +566,7 @@ export async function initSettings(root) {
 
   // 打开发布页
   root.getElementById("set-releases")?.addEventListener("click", () => {
-    import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
+    import("../../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
       OpenInBrowser("https://github.com/eghrhegpe/ysm-model-manager/releases"),
     );
   });

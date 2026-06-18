@@ -1,7 +1,7 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
 import { treeCSS } from "../app-tree-styles.js";
 import { headerHTML, footerHTML, spinnerHTML } from "./tpl.js";
-import { renderTree, updateStat } from "./render.js";
+import { renderTree, updateStat, getRenderMode, setRenderMode } from "./render.js";
 import { bindTreeEvents } from "./events.js";
 import { bindToolbarEvents } from "./toolbar-events.js";
 import { loadEntries } from "./loader.js";
@@ -25,6 +25,7 @@ class AppTree extends HTMLElement {
     this._repoRoot = "";
     this._authors = [];
     this._filterPaths = null; // Set 或 null，来自 SearchModels 结果
+    this._renderMode = getRenderMode(); // 'grid' | 'list'
   }
 
   async connectedCallback() {
@@ -176,6 +177,7 @@ class AppTree extends HTMLElement {
       this._sort,
       this._dirOpen,
       this._filterPaths,
+      this._renderMode,
     );
     // 有选中项时不更新 stat（由 updateSelectCount 维护），避免动画覆盖
     if (!selectState.keys.size) {

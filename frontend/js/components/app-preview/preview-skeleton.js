@@ -1,9 +1,7 @@
-// ===== 2D 骨骼加载层 =====
-// 从 index.js 拆分：模型骨骼数据加载 + 2D 渲染编排
-import { devLog, getPrefer3D, setPrefer3D } from "./preview-utils.js";
-import { cacheGet, cacheSet } from "../../utils/preview-cache.js";
-import { parseBedrockGeometryFromJSON } from "./utils.js";
-import { parseBedrockAnimationJSON } from "../../utils/animation.js";
+// ===== 2D 骨骼渲染层 =====
+// 加载统一走 loadModelData，本文件只做 2D 骨骼渲染编排
+import { getPrefer3D, setPrefer3D } from "./preview-utils.js";
+import { loadModelData } from "./preview-loader.js";
 import { renderModel2D } from "../../utils/model2d.js";
 import { openFullPreview } from "./preview-zoom.js";
 
@@ -24,80 +22,21 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
 
   try {
     let model;
-    const isYsm = /\.ysm$/i.test(modelPath);
+    let _decodedBy;
 
-    let _decodedBy = "";
-    const cached = cacheGet(modelPath);
-    if (cached?.geometry?.bones?.length) {
-      model = cached.geometry;
-      _decodedBy = cached._decodedBy || "";
-    }
-
-    // .ysm → 前端 WASM 解码
-    if (!model && isYsm) {
-      const decoded = await ctx._decodeYsmViaWasm(modelPath);
-      if (decoded?.geometry) {
-        model = decoded.geometry;
-        _decodedBy = "🧠 WASM 内置解码";
-        const cur = cacheGet(modelPath);
-        if (cur) cacheSet(modelPath, { ...cur, _decodedBy });
-      } else {
-        ctx._appendDebug(container, "[YSM] WASM 返回空，回退 Go");
-      }
-    }
-
-    // 非 .ysm 或 WASM 失败 → 走 Go
-    if (!model) {
-      const { AnalyzeBedrockModel } =
-        await import("../../../wailsjs/go/main/App.js");
-      model = await AnalyzeBedrockModel(modelPath);
-      if (model?.bones?.length) {
-        let goClips = [];
-        if (model.animations?.length) {
-          const { parseBedrockAnimationJSON } =
-            await import("../../utils/animation.js");
-          for (const jsonStr of model.animations) {
-            const { clips } = parseBedrockAnimationJSON(jsonStr);
-            for (const clip of clips) {
-              if (clip.hasMolang) {
-                /* skip */
-              }
-            }
-            if (clips.length > 0) goClips.push(...clips);
-          }
-        }
-        const goTexCount = model.textures?.length || 0;
-        model._texMappingLog = [
-          {
-            file: modelPath.split("/").pop().split("\\").pop(),
-            texKey: goTexCount > 0 ? "texture[0]" : "—",
-            texIdx: 0,
-            pngSize: "—",
-            geoSize: model.texWidth
-              ? `${model.texWidth}×${model.texHeight}`
-              : "—",
-            uvSize: "—",
-            finalSize: model.texWidth
-              ? `${model.texWidth}×${model.texHeight}`
-              : "—",
-          },
-        ];
-        cacheSet(modelPath, {
-          texture: model.texture,
-          geometry: model,
-          animations: goClips.length > 0 ? goClips : undefined,
-          _decodedBy: isYsm ? "⚙️ CLI 外置解码" : "📦 Go 原生解析",
-        });
-        _decodedBy = isYsm ? "⚙️ CLI 外置解码" : "📦 Go 原生解析";
-      }
-    }
+    // 统一加载：缓存 → WASM → Go 兜底
+    const loaded = await loadModelData(modelPath, {
+      decodeYsmViaWasm: (p) => ctx._decodeYsmViaWasm(p),
+      appendDebug: (msg) => ctx._appendDebug(container, msg),
+    });
+    model = loaded.model;
+    _decodedBy = loaded.decodedBy;
 
     if (!model?.bones?.length) {
       container.innerHTML = `<div class="ysm-error-title">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ 未找到几何数据</div>`;
       return;
     }
 
-    model._modelPath = modelPath;
     container.style.opacity = "1";
     container.innerHTML = "";
 
@@ -149,6 +88,22 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     const card = document.createElement("div");
     card.className = "ysm-card";
     card.innerHTML = statsCardHTML(model, modelPath, _decodedBy);
+    // 作者列表（从 ysm.json 解析）
+    const authors = model._authors || [];
+    if (authors.length > 0) {
+      const authorHtml = '<div class="ysm-card-section-label" style="margin-top:6px">👥 作者</div>' +
+        authors.map(au => `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+          ${au.avatarUrl ? `<img src="${au.avatarUrl}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1px solid var(--bd)" onerror="this.style.display='none'">` : '<span style="width:20px;height:20px;border-radius:50%;background:var(--hover);display:inline-block"></span>'}
+          <span style="font-size:11px;color:var(--txt)">${au.name}</span>
+          ${au.role ? `<span style="font-size:9px;color:var(--muted)">(${au.role})</span>` : ''}
+        </div>`).join('');
+      card.innerHTML += authorHtml;
+      // 同步填充详情页的作者头像区
+      const avatarContainer = document.getElementById("ysm-author-avatars");
+      if (avatarContainer) {
+        avatarContainer.innerHTML = authors.map(au => `<img src="${au.avatarUrl || ''}" title="${au.name}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--bd);margin:0 2px" onerror="this.style.display='none'">`).join('');
+      }
+    }
     container.appendChild(card);
 
     // ---- 渲染骨骼图 ----

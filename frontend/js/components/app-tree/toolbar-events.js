@@ -8,6 +8,7 @@ import { getExts } from "../../utils/extensions.js";
 import { modalAdvFilter } from "../../dialogs/adv-filter.js";
 import { updateSelectCount } from "./events.js";
 import { dbg } from "../../utils/debug.js";
+import { setRenderMode } from "./render.js";
 
 // 打开弹窗版筛选器（应用结果到 inline 面板 + 后端搜索）
 async function openAdvFilterDialog($, vm) {
@@ -249,6 +250,20 @@ export function bindToolbarEvents(root, vm) {
     vm._search = $("srch")?.value || "";
     vm._renderTree();
   });
+
+  // 视图模式切换（grid ⇄ list）
+  const viewModeBtn = $("btn-view-mode");
+  if (viewModeBtn) {
+    // 初始按钮图标：当前模式对应的「切换目标」图标
+    viewModeBtn.textContent = vm._renderMode === "list" ? "▦" : "☰";
+    viewModeBtn.addEventListener("click", () => {
+      vm._renderMode = vm._renderMode === "list" ? "grid" : "list";
+      setRenderMode(vm._renderMode);
+      viewModeBtn.textContent = vm._renderMode === "list" ? "▦" : "☰";
+      vm._renderTree();
+      flashBtn(viewModeBtn);
+    });
+  }
 
   // 高级筛选按钮：触发弹窗版筛选器
   const advBtn = $("btn-adv-filter");

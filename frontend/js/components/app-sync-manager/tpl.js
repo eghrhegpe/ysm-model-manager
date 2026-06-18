@@ -52,10 +52,12 @@ export function statusTabHTML(id, label, count, active) {
     cls +
     '" data-status="' +
     id +
-    '" style="padding:var(--pad-filter) 12px;border-radius:4px;border:1px solid transparent;background:' +
+    '" style="padding:var(--pad-filter) 12px;border-radius:4px;border:1px solid ' +
     (active ? "var(--accent)" : "transparent") +
+    ";background:" +
+    (active ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "transparent") +
     ";color:" +
-    (active ? "#fff" : "var(--muted)") +
+    (active ? "var(--accent)" : "var(--muted)") +
     ';cursor:pointer;font-family:inherit;font-size:var(--fs-filter);white-space:nowrap">' +
     label +
     showCount +

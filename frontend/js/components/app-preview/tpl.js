@@ -103,24 +103,20 @@ function esc(s) {
 /** 模型统计卡片 */
 export function statsCardHTML(model, modelPath, decodedBy) {
   const isYsm = /\.ysm$/i.test(modelPath);
+  const isJson = /\.json$/i.test(modelPath);
   const fmt = isYsm
-    ? ".ysm (加密)"
-    : modelPath.endsWith(".zip")
-      ? ".zip"
-      : ".7z";
+    ? ".ysm"
+    : isJson
+      ? ".json (解压目录)"
+      : modelPath.endsWith(".zip")
+        ? ".zip"
+        : ".7z";
   const badge = decodedBy ? `<span class="ysm-badge">${decodedBy}</span>` : "";
-  // 纹理映射日志（只展示有意义的信息）
+  // 多纹理概要（仅当存在额外纹理时）
   let texMapHtml = "";
-  const tml = model._texMappingLog;
-  if (tml && tml.length > 1) {
-    texMapHtml = tml
-      .map((m) => {
-        const sizeStr = m.finalSize && m.finalSize !== "—" ? m.finalSize : "";
-        const texName = m.texKey !== "—" ? m.texKey : `纹理${m.texIdx}`;
-        return `<div class="ysm-card-row" style="font-size:9px;padding:1px 0" title="几何体文件 ${m.file} → 使用纹理 ${texName}${sizeStr ? "，" + sizeStr + "px" : ""}">${m.file} → ${texName}</div>`;
-      })
-      .join("");
-    texMapHtml = `<div class="ysm-card-section-label" style="margin-top:6px">📎 纹理分配 <span style="font-weight:400;font-size:9px;color:var(--muted)">— 每个几何体对应使用的纹理</span></div>${texMapHtml}`;
+  const extraCount = model.textures?.length > 0 ? model.textures.length - 1 : 0;
+  if (extraCount > 0) {
+    texMapHtml = `<div class="ysm-card-row" style="font-size:9px;color:var(--muted);padding:1px 0">📎 含 ${extraCount} 张额外纹理（共 ${model.textures.length} 张）</div>`;
   }
   return `
 <div class="ysm-card-title">📊 模型概览${badge}</div>

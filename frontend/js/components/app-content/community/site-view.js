@@ -1,13 +1,13 @@
 // ===== 创意工坊站点视图（为 _initWorkshop 减负） =====
-import { friendlyError } from "../../utils/errors.js";
-import { bus } from "../../bus.js";
-import { dbg } from "../../utils/debug.js";
-import { showProgress, tryFetchModels } from "../../features/community/data.js";
-import { stagger } from "../../utils/stagger.js";
+import { friendlyError } from "../../../utils/errors.js";
+import { bus } from "../../../bus.js";
+import { dbg } from "../../../utils/debug.js";
+import { showProgress, tryFetchModels } from "../../../features/community/data.js";
+import { stagger } from "../../../utils/stagger.js";
 import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.js";
 import { getCreatorIdentity, getTagFromRole, parseDescTags, loadFavs, isFaved, toggleFav } from "./workshop-data.js";
 
-import { getApp } from "../../wails/app.js";
+import { getApp } from "../../../wails/app.js";
 
 /** @type {Function|null} 当前注册的 storage 监听器（模块私有，防泄漏） */
 let _storageSyncFn = null;
@@ -734,7 +734,7 @@ export function renderSiteView(site, ctx) {
       btn.textContent = "\u23F3";
       btn.disabled = true;
       try {
-        var m = await import("./community-core.js");
+        var m = await import("./core.js");
         var App = await getApp();
         var results = await Promise.all([
           m.fetchCommunityCreators(m.DEFAULT_COMMUNITY_URL),

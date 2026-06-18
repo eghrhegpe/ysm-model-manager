@@ -226,7 +226,7 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 	}
 	ext := strings.ToLower(filepath.Ext(fileName))
 	if !types.IsSupportedExt(ext) {
-		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "支持格式: " + strings.Join(types.AllExts, " / ")}
+		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "支持格式: " + strings.Join(types.AllExts(), " / ")}
 	}
 	data, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {

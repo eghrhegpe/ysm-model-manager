@@ -4,15 +4,37 @@ import { fmt, fmtDate } from "../../utils/fmt.js";
 import { fileIcon, isYsmName } from "../../utils/icon.js";
 import { emptyHTML } from "./tpl.js";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.js";
+import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.js";
 import { renderDisplayName } from "../../utils/display.js";
 import { animateNumber } from "../../utils/animate.js";
 import { dbg } from "../../utils/debug.js";
 import { selectState } from "./data.js";
 import {
-  ROW_H,
+  ROW_H_GRID,
+  ROW_H_LIST,
   calcVisibleRange,
   installScrollSync,
 } from "./virtual-scroll.js";
+
+// localStorage key for render mode
+const RENDER_MODE_KEY = "ysm-render-mode";
+
+/** Get render mode from localStorage, default to 'grid' */
+export function getRenderMode() {
+  try {
+    const mode = localStorage.getItem(RENDER_MODE_KEY);
+    return mode === "list" ? "list" : "grid";
+  } catch {
+    return "grid";
+  }
+}
+
+/** Set render mode to localStorage */
+export function setRenderMode(mode) {
+  try {
+    localStorage.setItem(RENDER_MODE_KEY, mode);
+  } catch {}
+}
 
 // ——— 树构建（与原版一致） ———
 function buildTree(entries, sortMode, search, filterPaths) {
@@ -85,7 +107,7 @@ function dirEntries(node) {
 // ——— 扁平化：将嵌套树拍平为一维行数组 ———
 let _rowIdCounter = 0;
 
-function flattenVisible(node, dirPath, search, sort, dirOpen, depth) {
+function flattenVisible(node, dirPath, search, sort, dirOpen, depth, mode) {
   const hasSearch = !!(search || "").trim();
   const query = (search || "").toLowerCase();
   const keys = Object.keys(node).sort((a, b) => {
@@ -117,15 +139,19 @@ function flattenVisible(node, dirPath, search, sort, dirOpen, depth) {
       const entryKey = e.fullPath || e.path;
       const selCls = selectState.keys.has(entryKey) ? " selected" : "";
       const nmCls = isYsmName(e.name) ? " ysm" : "";
-      const html = fileRowHTML(
-        e,
-        nmHtml,
-        fileIcon(e.name),
-        dateStr,
-        nmCls,
-        indent,
-        selCls,
-      );
+      // 根据模式选择模板
+      const html =
+        mode === "list"
+          ? listFileRowHTML(e, nmHtml, fileIcon(e.name), nmCls, indent, selCls)
+          : fileRowHTML(
+              e,
+              nmHtml,
+              fileIcon(e.name),
+              dateStr,
+              nmCls,
+              indent,
+              selCls,
+            );
       rows.push({
         id: ++_rowIdCounter,
         type: "file",
@@ -140,15 +166,27 @@ function flattenVisible(node, dirPath, search, sort, dirOpen, depth) {
       const sub = dirEntries(node[k]);
       const hasEnabled = sub.some((e) => !e.banned);
       const hasDisabled = sub.some((e) => e.banned);
-      const html = folderRowHTML(
-        k,
-        full,
-        shouldOpen,
-        isLocked,
-        hasEnabled,
-        hasDisabled,
-        indent,
-      );
+      // 根据模式选择模板
+      const html =
+        mode === "list"
+          ? listFolderRowHTML(
+              k,
+              full,
+              shouldOpen,
+              isLocked,
+              hasEnabled,
+              hasDisabled,
+              indent,
+            )
+          : folderRowHTML(
+              k,
+              full,
+              shouldOpen,
+              isLocked,
+              hasEnabled,
+              hasDisabled,
+              indent,
+            );
       rows.push({
         id: ++_rowIdCounter,
         type: "folder",
@@ -158,7 +196,9 @@ function flattenVisible(node, dirPath, search, sort, dirOpen, depth) {
         isOpen: shouldOpen,
       });
       if (shouldOpen) {
-        rows.push(...flattenVisible(v, full, search, sort, dirOpen, depth + 1));
+        rows.push(
+          ...flattenVisible(v, full, search, sort, dirOpen, depth + 1, mode),
+        );
       }
     }
   });
@@ -166,12 +206,12 @@ function flattenVisible(node, dirPath, search, sort, dirOpen, depth) {
 }
 
 // ——— 仅渲染可见行的 HTML，用 padding 撑出滚动高度 ———
-function renderSlice(container, rows) {
+function renderSlice(container, rows, rowH) {
   const total = rows.length;
   // 首次渲染时容器可能还没布局（clientHeight=0），全量渲染
   const range =
     container.clientHeight > 0
-      ? calcVisibleRange(container, total)
+      ? calcVisibleRange(container, total, rowH)
       : { startIdx: 0, endIdx: total };
   const slice = rows.slice(range.startIdx, range.endIdx);
 
@@ -179,8 +219,8 @@ function renderSlice(container, rows) {
   for (let i = 0; i < slice.length; i++) {
     buf += slice[i].html;
   }
-  const topPad = range.startIdx * ROW_H;
-  const bottomPad = (total - range.endIdx) * ROW_H;
+  const topPad = range.startIdx * rowH;
+  const bottomPad = (total - range.endIdx) * rowH;
   container.innerHTML =
     '<div class="vs-wrap" style="padding-top:' +
     topPad +
@@ -199,6 +239,7 @@ function _cleanupVS(container) {
   container._vsResizeObserver?.disconnect();
   container._vsResizeObserver = null;
   container._vsRows = [];
+  container._vsMode = null;
 }
 
 export function renderTree(
@@ -208,6 +249,7 @@ export function renderTree(
   sort,
   dirOpen,
   filterPaths,
+  mode = "grid",
 ) {
   if (!entries.length) {
     container.innerHTML = emptyHTML("📁", "暂无模型文件");
@@ -215,19 +257,25 @@ export function renderTree(
     return;
   }
   const root = buildTree(entries, sort, search, filterPaths);
-  const rows = flattenVisible(root, "", search, sort, dirOpen, 0);
+  const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode);
   if (!rows.length) {
     container.innerHTML = emptyHTML("🔍", "未找到匹配的文件");
     _cleanupVS(container);
     return;
   }
   container._vsRows = rows;
-  renderSlice(container, rows);
+  container._vsMode = mode;
+  const rowH = mode === "list" ? ROW_H_LIST : ROW_H_GRID;
+  renderSlice(container, rows, rowH);
 
   // 首次渲染容器可能还没布局 → 等 layout 后重新计算可见范围
   if (container.clientHeight === 0) {
     requestAnimationFrame(() => {
-      if (container._vsRows) renderSlice(container, container._vsRows);
+      if (container._vsRows && container._vsMode) {
+        const m = container._vsMode;
+        const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
+        renderSlice(container, container._vsRows, rh);
+      }
     });
   }
 
@@ -235,7 +283,11 @@ export function renderTree(
   if (!container._vsCleanup) {
     container._vsCleanup = installScrollSync(container, () => {
       const r = container._vsRows;
-      if (r && r.length) renderSlice(container, r);
+      const m = container._vsMode;
+      if (r && r.length) {
+        const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
+        renderSlice(container, r, rh);
+      }
     });
   }
 
@@ -243,7 +295,11 @@ export function renderTree(
   if (!container._vsResizeObserver) {
     container._vsResizeObserver = new ResizeObserver(() => {
       const r = container._vsRows;
-      if (r && r.length) renderSlice(container, r);
+      const m = container._vsMode;
+      if (r && r.length) {
+        const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
+        renderSlice(container, r, rh);
+      }
     });
     container._vsResizeObserver.observe(container);
   }

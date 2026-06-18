@@ -268,7 +268,7 @@ YSMViewer 的 `CreateBlockbenchQuaternion(Vector3 rotation)` 直接传原始值�
 YSMViewer 架构参考：YSMViewer 不做跨文件骨骼父级匹配，arm 骨骼靠绝对 pivot 定位。我们的 `Build()` 合并所有骨骼到单 ModelGroup 效果等价。
 
 #### 关键文档产出
-- `docs/3D-RENDERING/2026-06-16-coordinate-fix.md` — 旧算法记录（6 处代码+数值示例+YSMViewer 对照）
+- `docs/3D/2026-06-16-coordinate-fix.md` — 旧算法记录（6 处代码+数值示例+YSMViewer 对照，未实际创建）
 
 #### 遗留
 - 纹理序解析已加入 archive.go/extracted.go，但未用于重排 pngs 数组
@@ -294,9 +294,9 @@ YSMViewer 架构参考：YSMViewer 不做跨文件骨骼父级匹配，arm 骨�
 - 解析健壮性：projectiles 数组兼容、7z 路径重写、model 四种格式
 
 #### 关键产出
-- `docs/3D-RENDERING/3d-rendering-report.md` — 完整开发报告（178 行）
-- `docs/3D-RENDERING/2026-06-17-summary.md` — 修复总结（96 行）
-- `docs/3D-RENDERING/` — 测试数据目录（多模型 JSON/纹理）
+- `docs/3D/3d-rendering-report.md` — 完整开发报告（178 行）
+- `docs/3D/2026-06-17-summary.md` — 修复总结（96 行）
+- `docs/3D/` — 测试数据目录（多模型 JSON/纹理）
 
 #### 遗留问题（低优先级）
 1. JS 兜底路径是死代码（格式不兼容）
@@ -306,4 +306,37 @@ YSMViewer 架构参考：YSMViewer 不做跨文件骨骼父级匹配，arm 骨�
 
 #### 结论
 3D 渲染引擎从"问题频出"到"功能基本完整"，Go 路径与 WASM 路径能力基本等价。
-详细记录见 `docs/3D-RENDERING/3d-rendering-report.md`。
+详细记录见 `docs/3D/3d-rendering-report.md`。
+
+---
+
+## 2026-06-17 — DeepSeek V4 Flash — 加载路径大统一 + 作者头像修复
+
+**状态**：✅ 完成
+
+### 做了什么
+- 统一 4 条加载路径为 `preview-skeleton.js → loadModelData` 单入口
+- 删除 `index.js:_loadModel2D`（~320 行死代码）
+- `preview-skeleton.js` 删加载段，委托 `loadModelData`
+- 修复 `.json` 作者头像/列表显示
+- 修复加密 `.ysm` 作者全丢（变量遮蔽）
+- 修复 WASM 对 `.json` 也初始化（移到类型判断后）
+- 修复 WASM 重复解码（`_wasmFailed` 缓存标记）
+- 修复头像文件路径双倍
+- 无 `ysm.json` 旧格式包自动回退 Go
+- 新增 `CacheModelAvatars` Go 绑定
+- `isYsm` 修正 `/\.ysm$/i`，Go 路径统一标 `📦 Go 原生解析`
+- `📎 纹理分配` 改为用户友好格式
+
+### 关键发现
+- `loadModelData` 和 `_loadModel2D` 都是死代码，从未被调用
+- `preview-skeleton.js` 有自己完整的 cache→WASM→Go 实现，与 `preview-loader.js` 重复
+- `decodeYsmViaWasm` WASM init 发生在文件类型判断之前，纯浪费
+
+### 遗留问题
+- `.zip`/`.7z` 的头像缓存走 `CacheModelAvatars` 吗？当前只对 `.json` 路径触发
+- 一些 `.ysm` 包无 `ysm.json` 时需依赖 Go 启发式纹理匹配
+
+### 涉及文件
+- `preview-loader.js`、`preview-skeleton.js`、`preview-wasm.js`、`index.js`、`tpl.js`、`app_avatar.go`
+- 新增 `docs/release-notes/v1.8.11.md`

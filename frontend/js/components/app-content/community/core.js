@@ -1,5 +1,5 @@
 // ===== 创意工坊纯数据层 =====
-import { dbg } from "../../utils/debug.js";
+import { dbg } from "../../../utils/debug.js";
 
 /**
  * 加载站点 + 创作者数据（纯数据，不碰 DOM）
@@ -7,7 +7,7 @@ import { dbg } from "../../utils/debug.js";
  * @returns {{ sites: Array, creators: Array, authors: Array }}
  */
 export async function loadCommunityData() {
-  const App = await import("../../../wailsjs/go/main/App.js");
+  const App = await import("../../../../wailsjs/go/main/App.js");
   const [sites, creators, authors, localAuthors] = await Promise.all([
     App.LoadWorkshopSites(),
     App.LoadWorkshopCreators(),
@@ -55,7 +55,7 @@ async function tryAutoMergeCommunity(creators) {
   if (added > 0) {
     try {
       const { SaveWorkshopCreatorsBySite, SaveWorkshopCreators } =
-        await import("../../../wailsjs/go/main/App.js");
+        await import("../../../../wailsjs/go/main/App.js");
       // 按站点分组，逐站点原子保存
       const siteMap = {};
       creators.forEach((c) => {
@@ -257,6 +257,6 @@ export const DEFAULT_COMMUNITY_URL =
  * 获取仓库模型列表 + 本地映射
  */
 export async function getRepoModelsData(repo, mirror) {
-  const { tryFetchModels } = await import("../../features/community/data.js");
+  const { tryFetchModels } = await import("../../../features/community/data.js");
   return tryFetchModels(repo, mirror);
 }

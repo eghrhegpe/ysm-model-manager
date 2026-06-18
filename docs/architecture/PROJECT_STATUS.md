@@ -1,8 +1,8 @@
 # YSM 模型管理器 — 项目现状汇总
 
 更新时间：2026-06-17  
-当前版本：**v1.8.8**  
-最近提交：`df994fd v1.8.8 — 3D 渲染文档 + 多模型测试数据 + Go 解码修复`
+当前版本：**v1.8.11**  
+最近提交：`15dd106 feat: 主题系统增强 — 薄荷物语主题 + 自动切换 + UI 重构`
 
 ---
 
@@ -48,9 +48,9 @@
 | `docs/animation-roadmap.md` | Gemini | 动画路线图：统一 keyframe、stagger 系统、设计令牌、已完成清单 |
 | `docs/animations.md` | Gemini | 前端动画系统文档：11 种动画清单 + 无障碍支持 + 性能考量 + 文件索引 |
 | `docs/pack-format-versions.md` | zuogeren (PR #7) | Minecraft `pack_format` 编号 ↔ 游戏版本映射表（88 条） |
-| `docs/3D-RENDERING-PLAN.md` | 多 AI 协作设计 | 3D 骨骼渲染攻关：4 阶段分工流程 + 提示词模板 + 5 个已知陷阱 |
-| `docs/3D-RENDERING/3d-rendering-report.md` | DeepSeek V4 Pro / Flash、Qwen3.7 Plus、GLM-5.1 | **3D 渲染引擎开发报告**：14 项修复 + Go/WASM 能力对比 + 排查方法论 |
-| `docs/3D-RENDERING/2026-06-17-summary.md` | DeepSeek V4 Flash | 修复总结：坐标/顶点/合并/纹理/解析 5 类 14 项 |
+| `docs/3D/3D-RENDERING-PLAN.md` | 多 AI 协作设计 | 3D 骨骼渲染攻关：4 阶段分工流程 + 提示词模板 + 5 个已知陷阱 |
+| `docs/3D/3d-rendering-report.md` | DeepSeek V4 Pro / Flash、Qwen3.7 Plus、GLM-5.1 | **3D 渲染引擎开发报告**：14 项修复 + Go/WASM 能力对比 + 排查方法论 |
+| `docs/3D/2026-06-17-summary.md` | DeepSeek V4 Flash | 修复总结：坐标/顶点/合并/纹理/解析 5 类 14 项 |
 | `docs/SESSION_HANDOFF.md` | Big Pickle | 会话交接日志：模板 + 多条记录 |
 
 ---
@@ -78,7 +78,12 @@
 | **Go 测试覆盖** | 6→11 包，+33 tests | v1.8.5 |
 | **3D 渲染引擎重构** | 坐标系修正（X 不取反 + fx=ox）、旋转符号三轴取反、多纹理 texIdx、非贴图 PNG 过滤 | v1.8.6 |
 | **Go 路径纹理映射** | archive.go 四种 model 格式、extracted.go projectiles 兼容、TexSlot 透传 | v1.8.7 |
-| **3D 渲染文档 + 测试数据** | `docs/3D-RENDERING/` 开发报告 + 多模型测试数据 | v1.8.8 |
+| **3D 渲染文档 + 测试数据** | `docs/3D/` 开发报告 + 多模型测试数据 | v1.8.8 |
+| **3D 渲染引擎重构** | 注册表驱动纹理映射、继承层级修复、JS 兜底路径统一 | v1.8.9 |
+| **构建流程修复** | 累积修复、测试框架补全（+33 tests→11 包覆盖） | v1.8.10 |
+| **术语表落地** | Toast/按钮/tooltip 文案统一 + UI 专有名词替换 | v1.8.10 |
+| **主题系统增强** | 新增薄荷物语主题（mint）、自动切换（system/time）、UI 重构 | v1.8.11 |
+| **加载路径大统一** | Go/JS 路径规范对齐，消除 3D 预览空白 | v1.8.11 |
 
 ---
 
@@ -126,8 +131,8 @@
 
 | 问题 | 位置 | 影响 | 优先级 |
 |------|------|------|--------|
-| ~~**3D 骨骼渲染坐标不准**~~ | ~~`go/threejs/spec.go` `model2d.js`~~ | ~~多文件模型层级错误、手臂偏移、旋转丢失~~ | ✅ **已解决** v1.8.6-v1.8.8（详见 `docs/3D-RENDERING/3d-rendering-report.md`） |
-| 创作者详情 Overlay UX | 第三方评审建议 | 视觉锚点、交互细节待打磨 | 低（CSS 不给免费 AI 动） |
+| ~~**3D 骨骼渲染坐标不准**~~ | ~~`go/threejs/spec.go` `model2d.js`~~ | ~~多文件模型层级错误、手臂偏移、旋转丢失~~ | ✅ **已解决** v1.8.6-v1.8.8（详见 `docs/3D/3d-rendering-report.md`） |
+| ~~创作者详情 Overlay UX~~ | ~~第三方评审建议~~ | ~~视觉锚点、交互细节待打磨~~ | ✅ **已解决**（P2-8/P2-9 代码已存在） |
 | model2d 预览缓存 | `preview-cache.js` | 社区仓库重复解析浪费 CPU | **中**，但**暂缓**：多模态辅助下 Three.js canvas 序列化/失效复杂，当前瓶颈不在预览 |
 | 列表/网格视图切换 | `app-tree` | 仅卡片视图，缺紧凑列表 | **低**（P3 新功能，动画 P0-P1 做完再考虑） |
 | updater 无自动测试 | `go/updater/` `cmd/updater/` | `CheckUpdate`/下载/替换/重启全链路无回归保护 | **中**（手动端到端可测，自动测试需模拟 GitHub API + 文件锁） |
@@ -170,7 +175,7 @@ resource_bindings.go      # saveConfig、GetRepoRoot
 
 ## 🎯 下一步可选方向
 
-1. **Overlay UX 微调** — 按第三方评审清单逐项改（需人工把关 CSS）
+1. ~~**Overlay UX 微调**~~ — ~~按第三方评审清单逐项改~~（✅ 已完成，P2-8/P2-9 已实现）
 2. **model2d 预览缓存** — 扩展现有 `preview-cache.js`，复用骨骼图避免重复解析
 3. **列表/网格视图切换** — 工具栏加 🗂/☰ 切换、紧凑行模板、`localStorage` 持久化
 4. **前端测试覆盖扩展** — 当前 30 个测试（fmt/dom/data），后续覆盖 download-queue / render.js / 事件总线
@@ -210,9 +215,9 @@ resource_bindings.go      # saveConfig、GetRepoRoot
 
 ### 详细文档
 
-- 开发报告：`docs/3D-RENDERING/3d-rendering-report.md`
-- 修复总结：`docs/3D-RENDERING/2026-06-17-summary.md`
-- 测试数据：`docs/3D-RENDERING/` 目录下多个模型文件
+- 开发报告：`docs/3D/3d-rendering-report.md`
+- 修复总结：`docs/3D/2026-06-17-summary.md`
+- 测试数据：`docs/3D/` 目录下多个模型文件
 
 ---
 

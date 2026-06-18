@@ -1,8 +1,8 @@
 // ===== 诊断页初始化（为 _initDiagnostics 减负） =====
-import { bus } from "../../bus.js";
-import { renderDisplayName } from "../../utils/display.js";
-import { getApp } from "../../wails/app.js";
-import { loadResourceRegistry } from "../../utils/resource-registry.js";
+import { bus } from "../../../bus.js";
+import { renderDisplayName } from "../../../utils/display.js";
+import { getApp } from "../../../wails/app.js";
+import { loadResourceRegistry } from "../../../utils/resource-registry.js";
 
 /**
  * 初始化诊断页所有功能

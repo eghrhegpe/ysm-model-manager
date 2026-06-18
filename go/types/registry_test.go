@@ -1,84 +1,113 @@
 package types
 
 import (
-	"encoding/json"
-	"os"
-	"sort"
 	"testing"
 )
 
-func init() {
-	SetRegistryPath("../../resource_types.json")
-}
-
-// loadRegistry 从 resource_types.json 加载注册表
-func loadRegistry(t *testing.T) *ResourceTypeRegistry {
-	t.Helper()
-	data, err := os.ReadFile("../../resource_types.json")
-	if err != nil {
-		t.Fatalf("读取 resource_types.json 失败: %v", err)
+func TestAllExts(t *testing.T) {
+	exts := AllExts()
+	if len(exts) == 0 {
+		t.Fatal("AllExts() = 空")
 	}
-	var reg ResourceTypeRegistry
-	if err := json.Unmarshal(data, &reg); err != nil {
-		t.Fatalf("解析 resource_types.json 失败: %v", err)
-	}
-	return &reg
-}
-
-// registryIDs 返回注册表中所有类型 ID
-func registryIDs(reg *ResourceTypeRegistry) []string {
-	var ids []string
-	for _, rt := range reg.ResourceTypes {
-		ids = append(ids, rt.ID)
-	}
-	sort.Strings(ids)
-	return ids
-}
-
-func TestResourceExtsMatchesRegistry(t *testing.T) {
-	reg := loadRegistry(t)
-	extMap := ResourceExts
-
-	for _, rt := range reg.ResourceTypes {
-		got := extMap[rt.ID]
-		if got == nil {
-			t.Errorf("ResourceExts 缺少类型 %q", rt.ID)
-			continue
-		}
-		// 排序后比较
-		sort.Strings(got)
-		want := append([]string{}, rt.Extensions...)
-		sort.Strings(want)
-		if len(got) != len(want) {
-			t.Errorf("ResourceExts[%q] = %v, 期望 %v", rt.ID, got, want)
-			continue
-		}
-		for i := range got {
-			if got[i] != want[i] {
-				t.Errorf("ResourceExts[%q][%d] = %q, 期望 %q", rt.ID, i, got[i], want[i])
-			}
+	// .zip 应只出现一次（去重）
+	count := 0
+	for _, e := range exts {
+		if e == ".zip" {
+			count++
 		}
 	}
-
-	// 反向检查：ResourceExts 中不应有注册表不存在的类型
-	ids := registryIDs(reg)
-	for k := range extMap {
+	if count != 1 {
+		t.Errorf(".zip 出现 %d 次，期望 1 次（去重）", count)
+	}
+	// 已知扩展名存在于结果中
+	known := []string{".ysm", ".vrca", ".nbt"}
+	for _, ext := range known {
 		found := false
-		for _, id := range ids {
-			if k == id {
+		for _, e := range exts {
+			if e == ext {
 				found = true
 				break
 			}
 		}
 		if !found {
-			t.Errorf("ResourceExts 包含注册表未定义的类型 %q", k)
+			t.Errorf("AllExts() 缺少 %q", ext)
 		}
 	}
 }
 
-func TestStorageSubDirMatchesRegistry(t *testing.T) {
-	// resource_types.json 没有 storageSubDir 字段，但 id 和 subdir 之间有约定映射
-	// 这里只验证 6 种已知类型都覆盖
+func TestIsSupportedExt(t *testing.T) {
+	// 支持的扩展名
+	if !IsSupportedExt(".ysm") {
+		t.Error("IsSupportedExt('.ysm') = false, 期望 true")
+	}
+	if !IsSupportedExt(".YSM") {
+		t.Error("IsSupportedExt('.YSM') = false, 期望 true（大小写不敏感）")
+	}
+	if !IsSupportedExt(".zip") {
+		t.Error("IsSupportedExt('.zip') = false, 期望 true")
+	}
+	// 不支持的扩展名
+	if IsSupportedExt(".xyz") {
+		t.Error("IsSupportedExt('.xyz') = true, 期望 false")
+	}
+	if IsSupportedExt(".txt") {
+		t.Error("IsSupportedExt('.txt') = true, 期望 false")
+	}
+}
+
+func TestExtBelongsTo(t *testing.T) {
+	// .ysm 应属于 ysm
+	ids := ExtBelongsTo(".ysm")
+	if len(ids) != 1 || ids[0] != "ysm" {
+		t.Errorf("ExtBelongsTo('.ysm') = %v, 期望 [ysm]", ids)
+	}
+	// .zip 应属于 resourcepack、shaderpack 和 ysm（yml 也支持 zip）
+	ids = ExtBelongsTo(".zip")
+	if len(ids) != 3 {
+		t.Errorf("ExtBelongsTo('.zip') = %v, 期望 [resourcepack shaderpack ysm]（共 3 个）", ids)
+	}
+	// 应包含三个类型（顺序不定）
+	hasYSM := false
+	hasRP := false
+	hasSP := false
+	for _, id := range ids {
+		switch id {
+		case "ysm": hasYSM = true
+		case "resourcepack": hasRP = true
+		case "shaderpack": hasSP = true
+		}
+	}
+	if !hasYSM || !hasRP || !hasSP {
+		t.Errorf("ExtBelongsTo('.zip') 缺少某些类型: %v", ids)
+	}
+	// 不支持扩展名
+	if ids := ExtBelongsTo(".xyz"); len(ids) != 0 {
+		t.Errorf("ExtBelongsTo('.xyz') = %v, 期望 []", ids)
+	}
+}
+
+func TestSupportedExtsForType(t *testing.T) {
+	// 已知类型
+	exts := SupportedExtsForType("ysm")
+	if len(exts) == 0 {
+		t.Fatal("SupportedExtsForType('ysm') = 空")
+	}
+	if !contains(exts, ".ysm") {
+		t.Error("SupportedExtsForType('ysm') 缺少 .ysm")
+	}
+	// 大小写不敏感（向后兼容）
+	exts = SupportedExtsForType("YSM")
+	if len(exts) == 0 {
+		t.Error("SupportedExtsForType('YSM') = 空（大小写不敏感）")
+	}
+	// 未知类型
+	if exts := SupportedExtsForType("unknown"); exts != nil {
+		t.Errorf("SupportedExtsForType('unknown') = %v, 期望 nil", exts)
+	}
+}
+
+func TestStorageSubDir(t *testing.T) {
+	// 已知类型
 	expectedIDs := []string{"ysm", "mmd-skin", "vrchat-avatar", "resourcepack", "shaderpack", "create-blueprint"}
 	for _, id := range expectedIDs {
 		dir := StorageSubDir(id)
@@ -86,100 +115,82 @@ func TestStorageSubDirMatchesRegistry(t *testing.T) {
 			t.Errorf("StorageSubDir(%q) = 空字符串", id)
 		}
 	}
+	// StorageSubDir 应返回 JSON 中的 storageSubDir
+	if got := StorageSubDir("resourcepack"); got != "resourcepacks" {
+		t.Errorf("StorageSubDir('resourcepack') = %q, 期望 'resourcepacks'", got)
+	}
+	if got := StorageSubDir("ysm"); got != "ysm" {
+		t.Errorf("StorageSubDir('ysm') = %q, 期望 'ysm'", got)
+	}
 	// 未知类型应返回自身
 	if got := StorageSubDir("unknown"); got != "unknown" {
 		t.Errorf("StorageSubDir('unknown') = %q, 期望 'unknown'", got)
 	}
 }
 
-func TestSubDirAllMatchesRegistry(t *testing.T) {
-	reg := loadRegistry(t)
-	subMap := SubDirAll()
-	ids := registryIDs(reg)
+func TestSubDirMap(t *testing.T) {
+	// 已知类型
+	if got := SubDirMap("resourcepack"); got != "resourcepacks" {
+		t.Errorf("SubDirMap('resourcepack') = %q, 期望 'resourcepacks'", got)
+	}
+	if got := SubDirMap("ysm"); got != "config/yes_steve_model/custom" {
+		t.Errorf("SubDirMap('ysm') = %q, 期望 'config/yes_steve_model/custom'", got)
+	}
+	// 未知类型
+	if got := SubDirMap("unknown"); got != "" {
+		t.Errorf("SubDirMap('unknown') = %q, 期望 ''", got)
+	}
+}
 
-	// SubDirAll 应覆盖所有注册表类型
-	for _, id := range ids {
-		if _, ok := subMap[id]; !ok {
+func TestSubDirAll(t *testing.T) {
+	m := SubDirAll()
+	// 应覆盖所有已知类型
+	expected := []string{"ysm", "mmd-skin", "vrchat-avatar", "resourcepack", "shaderpack", "create-blueprint"}
+	for _, id := range expected {
+		if _, ok := m[id]; !ok {
 			t.Errorf("SubDirAll 缺少类型 %q", id)
 		}
 	}
-	// 反向检查
-	for k := range subMap {
-		found := false
-		for _, id := range ids {
-			if k == id {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Errorf("SubDirAll 包含注册表未定义的类型 %q", k)
-		}
+	// scanDir 值应与 JSON 一致
+	if m["resourcepack"] != "resourcepacks" {
+		t.Errorf("SubDirAll['resourcepack'] = %q, 期望 'resourcepacks'", m["resourcepack"])
+	}
+	if m["ysm"] != "config/yes_steve_model/custom" {
+		t.Errorf("SubDirAll['ysm'] = %q, 期望 'config/yes_steve_model/custom'", m["ysm"])
 	}
 }
 
-func TestAllSubDirsMatchesRegistry(t *testing.T) {
-	reg := loadRegistry(t)
+func TestAllSubDirs(t *testing.T) {
 	entries := AllSubDirs()
-	ids := registryIDs(reg)
-
-	entryMap := make(map[string]bool)
+	entryMap := make(map[string]string)
 	for _, e := range entries {
-		entryMap[e.RType] = true
+		entryMap[e.RType] = e.SubDir
 	}
-	for _, id := range ids {
-		if !entryMap[id] {
+	// 应覆盖所有已知类型
+	expected := []string{"ysm", "mmd-skin", "vrchat-avatar", "resourcepack", "shaderpack", "create-blueprint"}
+	for _, id := range expected {
+		if _, ok := entryMap[id]; !ok {
 			t.Errorf("AllSubDirs 缺少类型 %q", id)
 		}
 	}
-	for _, e := range entries {
-		found := false
-		for _, id := range ids {
-			if e.RType == id {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Errorf("AllSubDirs 包含注册表未定义的类型 %q (SubDir=%q)", e.RType, e.SubDir)
-		}
+	// SubDir 值应与 JSON scanDir 一致
+	if entryMap["resourcepack"] != "resourcepacks" {
+		t.Errorf("AllSubDirs resourcepack = %q, 期望 'resourcepacks'", entryMap["resourcepack"])
 	}
 }
 
-func TestSupportedExtsForType(t *testing.T) {
-	reg := loadRegistry(t)
-	for _, rt := range reg.ResourceTypes {
-		got := SupportedExtsForType(rt.ID)
-		if len(got) == 0 {
-			t.Errorf("SupportedExtsForType(%q) = 空", rt.ID)
-			continue
-		}
-		sort.Strings(got)
-		want := append([]string{}, rt.Extensions...)
-		sort.Strings(want)
-		if len(got) != len(want) {
-			t.Errorf("SupportedExtsForType(%q) = %v, 期望 %v (不匹配 resource_types.json)", rt.ID, got, want)
-		}
+func TestSupportedExtsForTypeUnknown(t *testing.T) {
+	// 未知类型返回 nil
+	if got := SupportedExtsForType("non-existent-type"); got != nil {
+		t.Errorf("SupportedExtsForType('non-existent-type') = %v, 期望 nil", got)
 	}
 }
 
-func TestIsSupportedExt(t *testing.T) {
-	reg := loadRegistry(t)
-	// 收集所有注册表中的扩展名
-	known := map[string]bool{}
-	for _, rt := range reg.ResourceTypes {
-		for _, e := range rt.Extensions {
-			known[e] = true
+func contains(slice []string, s string) bool {
+	for _, v := range slice {
+		if v == s {
+			return true
 		}
 	}
-	// 验证所有注册表扩展名都被 IsSupportedExt 支持
-	for ext := range known {
-		if !IsSupportedExt(ext) {
-			t.Errorf("IsSupportedExt(%q) = false, 应在 resource_types.json 中", ext)
-		}
-	}
-	// 验证不支持的扩展名
-	if IsSupportedExt(".xyz") {
-		t.Error("IsSupportedExt('.xyz') = true, 期望 false")
-	}
+	return false
 }

@@ -347,7 +347,6 @@ func computeHash(path string) string {
 // SyncResources 对比两个目录的资源文件差异，按文件名匹配
 // 用于资源库（资源包/光影包等）的全局 ↔ 整合包同步
 // 只统计模型/资源相关扩展名的文件，忽略无关文件
-var syncAllowedExts = types.AllExts
 
 func isSyncAllowed(name string) bool {
 	low := strings.ToLower(name)
@@ -358,7 +357,7 @@ func isSyncAllowed(name string) bool {
 	if strings.HasSuffix(base, ".json") {
 		return base == "ysm.json"
 	}
-	for _, ext := range syncAllowedExts {
+	for _, ext := range types.AllExts() {
 		if strings.HasSuffix(base, ext) {
 			return true
 		}

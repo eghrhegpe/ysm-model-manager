@@ -13,18 +13,18 @@ import {
   githubHTML,
 } from "./tpl.js";
 import { registerGlobalHandlers } from "../../core/global-handlers.js";
-import { initDiagnostics } from "./community-diagnostics.js";
+import { initDiagnostics } from "./community/diagnostics.js";
 
-import { initSettings } from "./community-settings.js";
+import { initSettings } from "./community/settings.js";
 import {
   countMissing,
   renderCardsHTML,
   renderRepoHeaderHTML,
 } from "../../features/community/render.js";
 import { bindRepoEvents } from "../../features/community/events.js";
-import { renderSiteView } from "./community-site-view.js";
-import { getSiteIcon } from "./workshop-icons.js";
-import { loadCommunityData, fillSearch } from "./community-core.js";
+import { renderSiteView } from "./community/site-view.js";
+import { getSiteIcon } from "./community/workshop-icons.js";
+import { loadCommunityData, fillSearch } from "./community/core.js";
 import { friendlyError } from "../../utils/errors.js";
 
 class AppContent extends HTMLElement {
@@ -276,7 +276,7 @@ class AppContent extends HTMLElement {
             this._unsubs = this._unsubs || [];
             if (recycleCleanup) this._unsubs.push(recycleCleanup);
           } else if (tab === "dedup") {
-            const { startDedup } = await import("./community-diagnostics.js");
+            const { startDedup } = await import("./community/diagnostics.js");
             let dedupType = localStorage.getItem("repo_rtype") || "ysm";
             container.innerHTML =
               '<div style="display:flex;flex-direction:column;height:100%">' +

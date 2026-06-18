@@ -255,3 +255,7 @@ app-xxx/xxx-css.js   — Shadow DOM 样式
 - **调试日志用完即删**：`console.log` / `fmt.Print` 测试完后**必须请示用户确认**再删，不可自行决定
 - **禁止安装软件**：缺依赖提示用户手动装
 - **发版**：用 `wails build -clean`，流程见 `docs/release-notes/README.md`
+
+## Notes
+
+- C:\Users\zhujieling11\ysm-model-manager\AGENTS.md

@@ -256,3 +256,52 @@ func TestListVersions_EmptyDir(t *testing.T) {
 		t.Errorf("expected 0 instances for empty dir, got %d", len(results))
 	}
 }
+
+func TestCompareGlobalInstanceHashes(t *testing.T) {
+	global := []types.ModelEntry{
+		{Name: "a.ysm", Path: "/global/a.ysm", Hash: "hash_a"},
+		{Name: "b.ysm", Path: "/global/b.ysm", Hash: "hash_b"},
+	}
+	instEntries := []types.ModelEntry{
+		{Name: "a.ysm", Path: "/inst/a.ysm", Hash: "hash_a"},
+		{Name: "c.ysm", Path: "/inst/c.ysm", Hash: "hash_c"},
+	}
+	// Use temp dir pattern like existing mockScanDir
+	globalDir := t.TempDir()
+	instDir := t.TempDir()
+
+	scanFn := func(dir string) []types.ModelEntry {
+		if dir == globalDir {
+			return global
+		}
+		return instEntries
+	}
+	listFn := func(mcRoot string) []types.VersionInstance {
+		return []types.VersionInstance{
+			{Name: "test", VersionDir: instDir},
+		}
+	}
+
+	results := CompareGlobalInstanceHashes("mcRoot", globalDir, ".", "resourcepack",
+		scanFn, listFn, nil)
+	if len(results) != 1 {
+		t.Fatalf("expected 1 instance, got %d", len(results))
+	}
+	r := results[0]
+	if len(r.Missing) != 1 || r.Missing[0] != "/global/b.ysm" {
+		t.Errorf("expected Missing=[b.ysm], got %v", r.Missing)
+	}
+	if len(r.Extra) != 1 || r.Extra[0] != "/inst/c.ysm" {
+		t.Errorf("expected Extra=[c.ysm], got %v", r.Extra)
+	}
+	if r.Synced != 1 {
+		t.Errorf("expected Synced=1, got %d", r.Synced)
+	}
+}
+
+func TestCompareGlobalInstanceHashes_Empty(t *testing.T) {
+	results := CompareGlobalInstanceHashes("", "/global", "subdir", "resourcepack", nil, nil, nil)
+	if len(results) != 0 {
+		t.Errorf("expected 0 for empty mcRoot, got %d", len(results))
+	}
+}

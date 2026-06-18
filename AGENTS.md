@@ -10,7 +10,14 @@
 - 只读 AGENTS.md §一「文档地图」列出的文件
 - 禁止 ls / glob / 目录枚举
 - 禁止启动子代理（task / explore / research）
+- 预定义的 subagent skill 不受此限（说 skill 名即可调起）：
+  release-notes-gen / review / doctor / ultrawork /
+  comment-checker / event-audit / bug-search /
+  link-checker / type-consistency / binding-check / deep-init
 - 先输出修改计划或替换表 → 我确认 → 再 apply
+- 必须通过 `tests/python/` 下所有测试（禁止修改测试文件）
+- 优先运行命令而非读取文件全文（运行 `go build`/`python3 tests/` 看结果，别把源码塞进上下文）
+- 失败熔断：同一命令连续失败 2 次 → 停止并进 Plan 模式分析原因，禁止无脑重试
 ```
 
 ---
@@ -53,7 +60,7 @@
 ```
 docs/
 ├── core/               # ✅ 核心规范（术语、治理规则、命名规范）
-├── architecture/       # 🏗️ 架构 + 项目元信息（架构、现状、路线图、Bug 记录）
+├── architecture/       # 🏗️ 架构 + 项目元信息（架构、现状、路线图、Bug 记录、逻辑下沉）
 ├── frontend/           # 🎨 前端专属（设计规范、动画、待清理、废弃名）
 ├── tasks/              # 📋 任务管理（任务清单、会话交接、每日计划）
 ├── 3D/                 # 🎮 3D 渲染（攻关计划、开发报告）
@@ -64,6 +71,28 @@ docs/
 │   └── old/            #    早期规划、QA 清单、接口设计草案
 └── preview/            # 🖼️ UI 截图
 ```
+tests/python/           # 🔒 契约测试 — 禁止修改，必须通过
+├── test_resource_schema.py    — resource_types.json 格式校验
+├── test_workshop_schema.py    — workshop_sites.json 结构校验
+├── test_creators_schema.py    — creators.json 必填字段校验
+├── test_config_defaults.py    — AppConfig 字段类型/值域校验
+├── test_config_syntax.py      — wails.json + go.mod + reasonix.toml 语法校验
+└── test_html_integrity.py     — frontend/index.html 引用完整性校验
+scripts/  （Python 工具脚本，被 .agents/skills/ 调用）
+├── review.py / doctor.py / line-counter.py / ultrawork.py   — 治理/诊断用
+├── funcmap.py / link-checker.py / type-consistency.py       — 一致性/映射
+├── comment-checker.py / event-audit.py / bug-search.py      — QA 检查
+├── release-notes-gen.py / binding-check.py / inspect_ysm.py — 工具
+├── (其余一次性脚本: check_*.py, fix_*.py, inspect_ysm*.py)
+
+.agents/skills/  （Reasonix Skill 定义）
+├── review / doctor / ultrawork                    — 诊断 skill（runAs: subagent）
+├── release-notes-gen / comment-checker            — 生成/QA skill（runAs: subagent）
+├── event-audit / bug-search                       — 审计 skill（runAs: subagent）
+├── link-checker / type-consistency / binding-check — 一致性 skill（runAs: subagent）
+├── deep-init                                       — 项目初始化（runAs: subagent）
+├── line-counter / funcmap                         — 统计/映射 skill（普通调用）
+├── build / release / 3d-debug                     — 工作流 skill
 
 ### 1.2 关键文件速查
 
@@ -84,9 +113,18 @@ docs/
 | **查版本兼容性** | `docs/architecture/pack-format-versions.md` |
 | **续写小说** | `docs/novel/SKELETON.md` |
 | **查项目意义（给用户看）** | `docs/architecture/用户指南.md` + `项目意义.md` |
+| **查函数签名 / 全量映射** | `python3 scripts/funcmap.py -o funcmap.md` |
+| **查逻辑下沉方案** | `docs/architecture/logic-sinking.md` |
+| **查所有脚本用法** | `scripts/脚本体系全景.md` |
+| **写发版说明** | 说 "release-notes-gen" 派子代理自动生成 |
+| **查断链** | 说 "link-checker" 扫描所有 md 链接 |
+| **查资源类型一致性** | 说 "type-consistency" 比对 JSON ↔ Go ↔ JS |
+| **查事件注册位置** | 说 "event-audit" 扫描 EventsOn/bus.on |
+| **搜历史 bug** | 说 "bug-search <关键词>" 查 bug-chronicle |
+| **跑契约测试** | `for f in tests/python/*.py; do python3 "$f"; done` |
 
 > `docs/archive/` 是历史归档，**默认不读**，除非明确需要追溯旧设计。
-> `docs/architecture/bug-chronicle.md` 很大（1369 行），**禁止全量读取**，先用 grep 搜索相关关键词再读匹配段落。
+> `docs/architecture/bug-chronicle.md` 很大（1369 行），**禁止全量读取**，先用 grep 搜索相关关键词再读匹配段落。仅用于查证已知问题，修复新 Bug 时不要通读全文，以免被旧思维带偏。
 
 ---
 
@@ -105,12 +143,15 @@ git log --oneline -5
 - `read_file` — 读文件内容
 - `grep` — 搜索关键词
 - `code_index` — 查符号定义
+- `python3 scripts/funcmap.py` — 生成全项目函数映射表（含注释摘要）
 
 **灵活处理**：
 - 小文件 / 近期刚看过 → 直接改
 - 不确定是否变更 → 先用 `read_file` 确认
 - 搜索没找到 → 不报错，先尝试修改看构建结果
 - **核心原则**：保持进度，不过度谨慎
+- **逻辑下沉优先**：能放 `go/` 包不放 `app_*.go`。改逻辑时先改 `go/xxx/xxx.go`（可 `go test`），再改 `app_xxx.go`（薄壳绑定层）
+- `ultrawork.py` 默认只显示最后 10 行错误。若 `tail=10` 未包含明确错误类型（如 `undefined` / `import cycle`），可扩大读取范围至 50 行
 
 ### 2.3 改完立即构建
 

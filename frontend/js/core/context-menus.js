@@ -2,6 +2,7 @@
 // 将 ctx:show 事件转换为新版组件使用的 menu:show 事件
 import { bus } from "../bus.js";
 import { friendlyError } from "../utils/errors.js";
+import { getApp } from "../wails/app.js";
 
 /** 通知树组件和统计面板刷新 */
 function refreshUI() {
@@ -44,12 +45,11 @@ export function registerContextMenus() {
               label: "打开文件夹",
               icon: "📂",
               onClick: () => {
-                const { OpenInstanceFolder } = window.go.main.App;
                 if (!path) {
                   toast("❌ 整合包目录未找到", 3000, "error");
                   return;
                 }
-                OpenInstanceFolder(path, rtype || "");
+                getApp().then(App => App.OpenInstanceFolder(path, rtype || "")).catch(() => {});
               },
             },
             { divider: true },

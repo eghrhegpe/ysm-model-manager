@@ -629,7 +629,6 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 			return []types.InstanceStatus{}
 		}
 		results := ysmsync.GetInstanceStatus(mcRoot, repoDir, a.ScanModelEntries)
-		// 补充 HasMod：CustomDir = {VersionDir}/config/yes_steve_model/custom → 上3层到 VersionDir
 		for i := range results {
 			modsDir := filepath.Join(results[i].CustomDir, "..", "..", "..", "mods")
 			results[i].HasMod = ysm.HasModInDir(modsDir, rtype)
@@ -637,81 +636,18 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 		return results
 	}
 
-	// 其他资源类型：对比全局目录和各整合包子目录
+	// 其他资源类型：使用下沉的哈希对比逻辑
 	globalDir, _ := a.GetRepoRoot(rtype)
 	if globalDir == "" {
 		return []types.InstanceStatus{}
 	}
-	// 扫描全局目录，构建哈希映射
-	globalEntries := a.ScanModelEntries(globalDir)
-	globalByHash := make(map[string][]types.ModelEntry)
-	for _, e := range globalEntries {
-		if e.Hash == "" {
-			continue
-		}
-		globalByHash[e.Hash] = append(globalByHash[e.Hash], e)
-	}
-
-	instances := a.ListVersionInstances(mcRoot)
-	var results []types.InstanceStatus
-
-	// 子目录映射
 	subDir := types.SubDirMap(rtype)
 	if subDir == "" {
 		return []types.InstanceStatus{}
 	}
-
-	for _, ins := range instances {
-		instDir := filepath.Join(ins.VersionDir, subDir)
-		instEntries := a.ScanModelEntries(instDir)
-		instByHash := make(map[string]bool)
-		for _, c := range instEntries {
-			if c.Hash != "" {
-				instByHash[c.Hash] = true
-			}
-		}
-
-		status := types.InstanceStatus{
-			Name:      ins.Name,
-			CustomDir: instDir,
-			Missing:   []string{},
-			Extra:     []string{},
-			HasMod:    ysm.HasModInDir(filepath.Join(ins.VersionDir, "mods"), rtype),
-		}
-
-		for hash, entries := range globalByHash {
-			if !instByHash[hash] {
-				for _, e := range entries {
-					status.Missing = append(status.Missing, e.Path)
-				}
-			}
-		}
-		for _, c := range instEntries {
-			if c.Hash == "" {
-				continue
-			}
-			if _, found := globalByHash[c.Hash]; !found {
-				status.Extra = append(status.Extra, c.Path)
-			}
-		}
-		if len(status.Missing) == 0 && len(status.Extra) == 0 {
-			status.Status = "complete"
-		} else if len(status.Extra) > 0 {
-			status.Status = "extra"
-		} else {
-			status.Status = "missing"
-		}
-		// 计算已同步数：整合包中 hash 匹配全局的文件数
-		matchedCount := 0
-		for _, c := range instEntries {
-			if c.Hash != "" && globalByHash[c.Hash] != nil {
-				matchedCount++
-			}
-		}
-		status.Synced = matchedCount
-		results = append(results, status)
-	}
-	return results
+	return ysmsync.CompareGlobalInstanceHashes(mcRoot, globalDir, subDir, rtype,
+		a.ScanModelEntries, ysmsync.ListVersions,
+		func(modsDir string) bool { return ysm.HasModInDir(modsDir, rtype) })
 }
 
 func (a *App) SyncModelToggleStatus(instanceCustomDir, repoRoot string) (int, int, error) {

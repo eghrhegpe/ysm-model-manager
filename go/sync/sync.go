@@ -598,3 +598,82 @@ func isFileLocked(err error) bool {
 		strings.Contains(msg, "access") ||
 		strings.Contains(msg, "used by another process")
 }
+
+// HasModInDirFn 判断 mods 目录是否含有指定类型 mod 的函数类型。
+type HasModInDirFn func(modsDir string) bool
+
+// CompareGlobalInstanceHashes 对比全局目录和整合包实例子目录的哈希，
+// 返回每个实例的 Missing / Extra / Synced 状态。
+// subDir 是实例版本目录下的子目录名（如 "resourcepacks"）。
+func CompareGlobalInstanceHashes(mcRoot, globalDir, subDir, rtype string,
+	scanFn ScanFunc, listFn ListVersionsFunc, hasModFn HasModInDirFn,
+) []types.InstanceStatus {
+	if mcRoot == "" || globalDir == "" || subDir == "" {
+		return []types.InstanceStatus{}
+	}
+
+	globalEntries := scanFn(globalDir)
+	globalByHash := make(map[string][]types.ModelEntry)
+	for _, e := range globalEntries {
+		if e.Hash == "" {
+			continue
+		}
+		globalByHash[e.Hash] = append(globalByHash[e.Hash], e)
+	}
+
+	instances := listFn(mcRoot)
+	var results []types.InstanceStatus
+
+	for _, ins := range instances {
+		instDir := filepath.Join(ins.VersionDir, subDir)
+		instEntries := scanFn(instDir)
+		instByHash := make(map[string]bool)
+		for _, c := range instEntries {
+			if c.Hash != "" {
+				instByHash[c.Hash] = true
+			}
+		}
+
+		status := types.InstanceStatus{
+			Name:      ins.Name,
+			CustomDir: instDir,
+			Missing:   []string{},
+			Extra:     []string{},
+		}
+		if hasModFn != nil {
+			status.HasMod = hasModFn(filepath.Join(ins.VersionDir, "mods"))
+		}
+
+		for hash, entries := range globalByHash {
+			if !instByHash[hash] {
+				for _, e := range entries {
+					status.Missing = append(status.Missing, e.Path)
+				}
+			}
+		}
+		for _, c := range instEntries {
+			if c.Hash == "" {
+				continue
+			}
+			if _, found := globalByHash[c.Hash]; !found {
+				status.Extra = append(status.Extra, c.Path)
+			}
+		}
+		if len(status.Missing) == 0 && len(status.Extra) == 0 {
+			status.Status = "complete"
+		} else if len(status.Extra) > 0 {
+			status.Status = "extra"
+		} else {
+			status.Status = "missing"
+		}
+		matchedCount := 0
+		for _, c := range instEntries {
+			if c.Hash != "" && globalByHash[c.Hash] != nil {
+				matchedCount++
+			}
+		}
+		status.Synced = matchedCount
+		results = append(results, status)
+	}
+	return results
+}

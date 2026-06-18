@@ -8,6 +8,7 @@ import {
 } from "../../../wailsjs/go/main/App.js";
 import { loadEntries } from "./loader.js";
 import { initInstanceActions } from "./instance-actions.js";
+import { getApp } from "../../wails/app.js";
 
 export function bindBusEvents(vm) {
   const unsubs = [];
@@ -329,8 +330,8 @@ export function bindBusEvents(vm) {
 async function reload(vm) {
   // 清除扫描缓存，确保操作结果立即可见
   try {
-    var _cc = window.go.main.App.ClearScanCache;
-    if (_cc) await _cc();
+    const App = await getApp();
+    if (App.ClearScanCache) await App.ClearScanCache();
   } catch (_) {}
   try {
     const rtype = vm._rootAttr || vm._typeFilter || "";

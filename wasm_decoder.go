@@ -10,12 +10,17 @@ import (
 	"strings"
 	"syscall"
 
+	"ysm-model-manager/go/avatar"
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
 )
 
 // nodeJSPath 查找 node.js 可执行文件
 var nodeJSPath = findNodeJS()
+
+func init() {
+	avatar.SetNodeJS(nodeJSPath, getGlueCode, getWasmBinary)
+}
 
 func findNodeJS() string {
 	// 已知路径（emsdk 自带）

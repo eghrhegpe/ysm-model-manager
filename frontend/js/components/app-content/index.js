@@ -4,6 +4,7 @@ import { esc } from "../../utils/dom.js";
 import { dbg } from "../../utils/debug.js";
 import { contentCSS } from "./content-css.js";
 import { stagger } from "../../utils/stagger.js";
+import { getApp } from "../../wails/app.js";
 import {
   repositoryHTML,
   instancesHTML,
@@ -12,6 +13,9 @@ import {
   workshopHTML,
   githubHTML,
 } from "./tpl.js";
+
+/** 防止 avatar:config-loaded 事件重复注册 */
+let _avatarConfigLoadedRegistered = false;
 import { registerGlobalHandlers } from "../../core/global-handlers.js";
 import { initDiagnostics } from "./community/diagnostics.js";
 
@@ -43,8 +47,7 @@ class AppContent extends HTMLElement {
       this._current = page;
       // 切换页面时清除扫描缓存，确保显示最新数据
       try {
-        var _cc = window.go.main.App.ClearScanCache;
-        if (_cc) _cc();
+        getApp().then(App => { if (App.ClearScanCache) App.ClearScanCache(); }).catch(() => {});
       } catch (_) {}
       bus.emit("nav:changed", { page });
       this._render();
@@ -445,9 +448,8 @@ class AppContent extends HTMLElement {
     let avatarCache = {};
     const extractAvatars = async () => {
       try {
-        const { BatchExtractCreatorAvatars, DebugExtractCreatorAvatar } =
+        const { BatchExtractCreatorAvatars } =
           await import("../../../wailsjs/go/main/App.js");
-        window.__debugAvatar = DebugExtractCreatorAvatar;
         const result = await BatchExtractCreatorAvatars();
         const keys = Object.keys(result);
         if (keys.length > 0) {
@@ -464,8 +466,8 @@ class AppContent extends HTMLElement {
     extractAvatars();
 
     // 配置加载完成后重新提取（覆盖用户在创意工坊内改仓库路径的场景）
-    if (!window.__avatarConfigLoadedRegistered) {
-      window.__avatarConfigLoadedRegistered = true;
+    if (!_avatarConfigLoadedRegistered) {
+      _avatarConfigLoadedRegistered = true;
       window.runtime.EventsOn("config-loaded", () => {
         dbg("avatar", "配置已加载，重新提取头像");
         extractAvatars();
@@ -758,12 +760,17 @@ class AppContent extends HTMLElement {
       }
     };
 
+    // _currentRepo 用于检测过时的异步响应（竞态防护）
+    let _currentRepo = "";
+
     const showRepo = async (repo) => {
+      _currentRepo = repo;
       resultsBody.innerHTML =
         '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载模型列表中...</div>';
       // 使用缓存
       if (repoModelCache.has(repo)) {
         const { models, source, localMap } = repoModelCache.get(repo);
+        if (_currentRepo !== repo) return; // 已切换，丢弃
         renderModels(repo, models, source, localMap);
         return;
       }
@@ -786,25 +793,31 @@ class AppContent extends HTMLElement {
         }
         const { tryFetchModels } =
           await import("../../features/community/data.js");
+        let fetchDone = false;
         const result = await tryFetchModels(repo, mirror, (pct, label) => {
+          if (fetchDone || _currentRepo !== repo) return;
           resultsBody.innerHTML =
             '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +
             (label || "⏳ 加载中...") +
             "</div>";
         });
+        fetchDone = true;
         if (result && result.models) {
           repoModelCache.set(repo, {
             models: result.models,
             source: result.source,
             localMap,
           });
+          if (_currentRepo !== repo) return;
           renderModels(repo, result.models, result.source, localMap);
         } else {
+          if (_currentRepo !== repo) return;
           resultsBody.innerHTML =
             '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ 未找到模型列表</div>' +
             '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
         }
       } catch (e) {
+        if (_currentRepo !== repo) return;
         const msg =
           e.message === "NetworkOffline"
             ? "🌐 无网络连接，请检查网络后重试"

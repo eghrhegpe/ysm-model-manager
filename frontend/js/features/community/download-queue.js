@@ -3,6 +3,7 @@
 import { bus } from "../../bus.js";
 import { renderDisplayName } from "../../utils/display.js";
 import { dbg } from "../../utils/debug.js";
+import { getApp } from "../../wails/app.js";
 
 // ============================================================
 //  模块顶层 — 持久状态与事件注册（脚本加载时执行一次）
@@ -253,8 +254,7 @@ export function createDownloadQueue({
       }
     }
     try {
-      const _cc = window.go?.main?.App?.ClearScanCache;
-      if (_cc) _cc();
+      getApp().then(App => { if (App.ClearScanCache) App.ClearScanCache(); }).catch(() => {});
     } catch (_) { /* 清除缓存失败不影响清理 */ }
     bus.emit("tree:reload");
     bus.emit("stats:refresh");

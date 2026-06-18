@@ -9,31 +9,31 @@ description: 构建与调试流程。Go 后端编译、前端 Vite 构建、完�
 
 ### Go 后端
 
-```powershell
-go build ./go/... 2>&1 | Select-String error
+```bash
+go build ./go/... 2>&1
 ```
 
 ### 仅前端
 
-```powershell
-cd frontend ; npx vite build 2>&1 | Select-String error
+```bash
+(cd frontend && npx vite build 2>&1)
 ```
 
 ### 完整构建（生产）
 
-```powershell
+```bash
 wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 ```
 
 ### 开发模式（前端热重载）
 
-```powershell
+```bash
 wails dev
 ```
 
 ## 测试
 
-```powershell
+```bash
 # Go 全部测试
 go test ./go/... -count=1
 
@@ -43,8 +43,8 @@ go test ./go/paths/... -count=1 -v
 
 ## 发版构建
 
-```powershell
-.\build-release.ps1 vX.X.X
+```bash
+pwsh ./build-release.ps1 vX.X.X
 ```
 
 > 前置条件：`docs/release-notes/vX.X.X.md` 必须已存在。

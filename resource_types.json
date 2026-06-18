@@ -4,7 +4,9 @@
       "id": "resourcepack",
       "name": "资源包",
       "icon": "🎨",
-      "extensions": [".zip"],
+      "extensions": [
+        ".zip"
+      ],
       "storageSubDir": "resourcepacks",
       "configField": "ResourcepackRoot",
       "installDir": "resourcepacks/",
@@ -12,13 +14,20 @@
       "instanceLevel": false,
       "preview": "thumbnail",
       "detector": "mcmeta",
-      "actions": ["import", "toggle", "delete", "openFolder"]
+      "actions": [
+        "import",
+        "toggle",
+        "delete",
+        "openFolder"
+      ]
     },
     {
       "id": "shaderpack",
       "name": "光影包",
       "icon": "☀️",
-      "extensions": [".zip"],
+      "extensions": [
+        ".zip"
+      ],
       "storageSubDir": "shaderpacks",
       "configField": "ShaderpackRoot",
       "installDir": "shaderpacks/",
@@ -26,13 +35,23 @@
       "instanceLevel": false,
       "preview": "thumbnail",
       "detector": "shader",
-      "actions": ["import", "toggle", "delete", "openFolder"]
+      "actions": [
+        "import",
+        "toggle",
+        "delete",
+        "openFolder"
+      ]
     },
     {
       "id": "ysm",
       "name": "YSM 模型",
       "icon": "💎",
-      "extensions": [".ysm", ".zip", ".7z", ".json"],
+      "extensions": [
+        ".ysm",
+        ".zip",
+        ".7z",
+        ".json"
+      ],
       "storageSubDir": "ysm",
       "configField": "YsmRoot",
       "installDir": "versions/{instance}/ysm/",
@@ -40,13 +59,20 @@
       "instanceLevel": true,
       "preview": "3d",
       "detector": "ysm",
-      "actions": ["view", "import", "delete"]
+      "actions": [
+        "view",
+        "import",
+        "delete"
+      ]
     },
     {
       "id": "create-blueprint",
       "name": "蓝图 / 结构",
       "icon": "⚙️",
-      "extensions": [".nbt", ".schematic"],
+      "extensions": [
+        ".nbt",
+        ".schematic"
+      ],
       "storageSubDir": "schematics",
       "configField": "SchematicRoot",
       "installDir": "schematics/",
@@ -54,13 +80,19 @@
       "instanceLevel": false,
       "preview": "none",
       "detector": "extension",
-      "actions": ["import", "delete", "openFolder"]
+      "actions": [
+        "import",
+        "delete",
+        "openFolder"
+      ]
     },
     {
       "id": "litematic",
       "name": "投影文件",
       "icon": "📐",
-      "extensions": [".litematic"],
+      "extensions": [
+        ".litematic"
+      ],
       "storageSubDir": "litematics",
       "configField": "LitematicRoot",
       "installDir": "schematics/",
@@ -68,13 +100,20 @@
       "instanceLevel": false,
       "preview": "3d",
       "detector": "extension",
-      "actions": ["import", "delete", "openFolder"]
+      "actions": [
+        "import",
+        "delete",
+        "openFolder"
+      ]
     },
     {
       "id": "mmd-skin",
       "name": "MMD 角色模型",
       "icon": "🎭",
-      "extensions": [".pmx", ".pmd"],
+      "extensions": [
+        ".pmx",
+        ".pmd"
+      ],
       "storageSubDir": "mmd",
       "configField": "MmdRoot",
       "installDir": "3d-skin/EntityPlayer/",
@@ -83,13 +122,20 @@
       "preview": "none",
       "detector": "extension",
       "isDir": true,
-      "actions": ["import", "delete", "openFolder"]
+      "actions": [
+        "import",
+        "delete",
+        "openFolder"
+      ]
     },
     {
       "id": "vrchat-avatar",
       "name": "VRChat 模型",
       "icon": "🥽",
-      "extensions": [".vrca", ".vrm"],
+      "extensions": [
+        ".vrca",
+        ".vrm"
+      ],
       "storageSubDir": "vrchat",
       "configField": "VrcRoot",
       "configFallback": "MmdRoot",
@@ -99,7 +145,11 @@
       "preview": "none",
       "detector": "extension",
       "isDir": true,
-      "actions": ["import", "delete", "openFolder"]
+      "actions": [
+        "import",
+        "delete",
+        "openFolder"
+      ]
     }
   ]
 }

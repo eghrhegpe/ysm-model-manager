@@ -340,3 +340,90 @@ YSMViewer 架构参考：YSMViewer 不做跨文件骨骼父级匹配，arm 骨�
 ### 涉及文件
 - `preview-loader.js`、`preview-skeleton.js`、`preview-wasm.js`、`index.js`、`tpl.js`、`app_avatar.go`
 - 新增 `docs/release-notes/v1.8.11.md`
+
+---
+
+## 2026-06-18 — Reasonix — 文档宪法 + PR #8 合并 + Skill Python 化 + 构建修复
+
+**状态**：✅ 完成
+
+### 做了什么
+
+#### 文档体系重构
+- **AGENTS.md 重写**：66→215 行，新增 §〇「索引即契约」（5 条硬约束 + 跨目录引用自检）、完整文档地图、致命陷阱表、治理红线、项目速查
+- **archive 冷冻**：30+ 平铺文件归入 5 个子目录（postmortem/sessions/design/reference/old）
+- **NAMING_GUIDELINES.md** 新建（`docs/core/`）
+- **全局断链修复**：7 个文件 20+ 处 Markdown 链接修复（architecture/README.md、TASK_PLAN.md、SESSION_HANDOFF.md 等）
+- **reasonix.toml 配置优化**：auto_plan on、compact_ratio 0.5、子代理禁
+
+#### PR #8 蓝图预览合并
+- 迁入 PR #8（@zuogeren1）：`.litematic` / `.nbt` / `.schematic` 3D 体素渲染
+- 新增 `go/litematic/`（6 Go 文件 + 2 JSON 源数据 + gen/main.go）
+- 新增 `preview-litematic-3d.js` / `preview-litematic-meta.js`
+- 资源类型独立（📐 litematic 从 create-blueprint 拆分）
+- 前端构建修复：events.js + core.js 4 处 import 路径
+
+#### Skill Python 化（4 个）
+| Skill | 改前 | 改后 |
+|-------|------|------|
+| `line-counter` | 7 段 bash find/wc | `python3 scripts/line-counter.py` |
+| `doctor` | 6 段 bash grep | `python3 scripts/doctor.py` |
+| `review` | 9 条 rg 命令 | `python3 scripts/review.py` |
+| `ultrawork` | 5 段 bash 内联 | `python3 scripts/ultrawork.py` |
+- 修复 release skill 路径 + go generate 步骤
+
+#### 发版
+- v1.9.0：文档宪法 + 路径大统一 + 主题增强 + 构建修复
+- v1.9.1：蓝图预览 — 3D 体素渲染（by @zuogeren1）
+
+#### 逻辑下沉（Logic Sinking）
+| 模块 | 原文件 | 下沉到 | 测试数 |
+|------|--------|-------|--------|
+| 下载器 | app_download.go 318 → 待瘦身 | `go/download/downloader.go` | 6 |
+| 头像提取 | app_avatar.go 488 → 88 行 | `go/avatar/avatar.go` | 8 |
+| 哈希对比 | app_install.go 96 → 3 行 | `go/sync/CompareGlobalInstanceHashes` | 2 |
+| JS 测试 | ❌ 无 | `display/icon/extensions/stagger.test.js` | 79 |
+
+#### 竞态 Bug 修复
+- 创意工坊仓库列表：`tryFetchModels` 的 p2/p3 延时进度回调覆盖已渲染内容
+- 修复：`fetchDone` + `_currentRepo` 双重保护，4 处保护点
+- review.py 新增 W5 规则：扫描异步回调中的 `innerHTML` 赋值
+
+#### 架构文档
+- `docs/architecture/logic-sinking.md` — 逻辑下沉方案与优先级
+- `tests/python/` 新增至 6 个契约测试（config_syntax + html_integrity）
+- 10 个新增/升级的子代理 skill
+
+### 会话统计
+
+| 指标 | 值 |
+|------|-----|
+| 耗时 | 94 分 44 秒 |
+| 请求数 | 944 |
+| 总 tokens | 274,077,509 |
+| 缓存命中率 | **99.98%** |
+| 会话费用 | **¥10.00** |
+| 主模型 | ¥9.55（896 次调用） |
+| 规划器 | ¥0.43（44 次） |
+| 子代理 | ¥0.02（4 次） |
+| 上下文 | 409k / 1000k（41%，压缩 50%） |
+| 上下文状态 | 文件较多 |
+
+### 关键发现
+- **Python GBK 编码**：Windows 终端下 subprocess 读取二进制文件会触发 GBK 异常。修复方案：capture_output=True + 手动 decode("utf-8", errors="replace")
+- **agent skill 定义**：SKILL.md 只需写"什么时候用 + 怎么调"，复杂逻辑放 scripts/ 下的 Python 脚本
+- **异步竞态模式**：Promise.any + 延时定时器的回调即使在 Promise 已 resolve 后仍会触发。修复方案：fetchDone 标记
+- **Wails 无法 headless 测试**：逻辑必须下沉到 go/xxx/ 包才能 go test
+- **99.98% 缓存命中**：说明 AGENTS.md 的索引即契约策略和 compact_ratio 0.5 配置有效
+
+### 遗留问题
+- npx vite build 在 Python subprocess 中找不到 npx（PATH 问题），在 Wails 终端直接跑正常
+- frontend/js/utils/model3d.js 仍有 window.__ 调试挂载（10 处）
+- window.go.main.App 直接调用 3 处残留（ClearScanCache x2、OpenInstanceFolder x1）
+- app_install.go 仍有 1251 行（GetInstanceSyncStatus 198 行厚函数已标记但未抽）
+
+### 下一步
+- 清理 window.__ 和 window.go.main.App 治理残留
+- 添加 app_install.go 中 GetInstanceSyncStatus 的逻辑下沉
+- 将 review 检查结果纳入 CI
+

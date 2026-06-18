@@ -54,7 +54,7 @@ enabled = true   # language server tools; servers launch lazily when used
 # Rules are "Tool" or "Tool(specifier)"; e.g. Bash(go test:*), Edit(src/**).
 mode  = "ask"
 # deny = ["Bash(rm -rf*)", "Bash(git push*)"]   # hard-blocked in every mode
-allow = ["Edit", "Bash(mkdir -p:*)", "Bash(git log --oneline -5 && echo \"---\" && git status --short)", "Bash(git tag --list \"v*\" --sort=-version:refname | head -5)", "Bash(git log --oneline --all | head -3)", "Bash(git diff --stat v1.8.9..HEAD | tail -1)", "Bash(git diff --stat HEAD | tail -1)", "Bash(echo \"=== 新文件 ===\" && ls docs/release-notes/v1.9.0.md docs/release-notes/README.md)"]
+allow = ["Edit", "Bash(mkdir -p:*)", "Bash(git log --oneline -5 && echo \"---\" && git status --short)", "Bash(git tag --list \"v*\" --sort=-version:refname | head -5)", "Bash(git log --oneline --all | head -3)", "Bash(git diff --stat v1.8.9..HEAD | tail -1)", "Bash(git diff --stat HEAD | tail -1)", "Bash(echo \"=== 新文件 ===\" && ls docs/release-notes/v1.9.0.md docs/release-notes/README.md)", "Bash(git log --oneline --all | head -3 && echo \"---\" && git branch -a)", "Bash(git log --oneline origin/main -5 && echo \"===HEAD===\" && git log --oneline HEAD -5)"]
 # ask = ["Edit(src/**)"]   # force a prompt even if otherwise allowed
 
 [sandbox]
@@ -82,3 +82,9 @@ network = true
 # type    = "http"
 # url     = "https://mcp.stripe.com"
 # headers = { Authorization = "Bearer ${STRIPE_KEY}" }
+
+[[plugins]]
+name    = "github"
+command = "npx"
+args    = ["-y", "@modelcontextprotocol/server-github"]
+env     = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }

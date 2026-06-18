@@ -11,6 +11,7 @@ export function headerHTML() {
   <div class="dd-wrap" id="dd-batch"><button class="btn-base sm" id="btn-batch">⚡ 批量 ▾</button><div class="dd-menu" id="menu-batch"><button class="dd-item" data-batch="enable-all">✅ 全部启用</button><button class="dd-item" data-batch="disable-all"> 全部禁用</button></div></div>
   <div class="dd-wrap" id="dd-more"><button class="btn-base sm" id="btn-more">⋮ 更多 ▾</button><div class="dd-menu" id="menu-more"><button class="dd-item" data-more="import-file"> 导入文件</button><button class="dd-item" data-more="import-dir">📁 导入文件夹</button><button class="dd-item" data-more="sel-all" id="sel-all">☑️ 全选</button><button class="dd-item" data-more="repo-export" id="repo-export"> 骨骼结构</button><div style="border-top:1px solid var(--bd);margin:2px 0"></div><button class="dd-item" data-more="open-folder">📂 打开文件夹</button><button class="dd-item" data-more="refresh">🔄 刷新</button><button class="dd-item" data-more="genindex">📇 生成索引</button></div></div>
   <select class="sort-sel" id="sort"><option value="name">名称</option><option value="size">大小</option><option value="date">日期</option></select>
+  <button class="btn-base sm" id="btn-view-mode" title="切换视图">☰</button>
 </div>
 <div class="adv-filter" id="adv-filter" style="display:none">
   <div class="adv-filter-row">

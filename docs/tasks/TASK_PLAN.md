@@ -11,16 +11,17 @@
 |---|------|--------|------|------|------|
 | 1 | ~~术语表落地 — Toast/按钮/tooltip 文案统一~~ | — | — | ✅ 完成 (2026-06-17) | — |
 | 2 | ~~术语表落地 — UI 专有名词替换~~ | — | — | ✅ 完成 (2026-06-17) | — |
-| 3 | Overlay UX 微调 | **中** | 中 | ⬜ 待开始 | 无 |
+| 3 | Overlay UX 微调 | **中** | 中 | ✅ 已完成（P2-8/P2-9 代码已存在） | 无 |
 | 4 | ~~发版 v1.8.0~~ | — | — | ✅ 完成（v1.8.9/v1.8.10 已发） | — |
 | 5 | 前端测试扩展 | **低** | 中 | ⬜ 待开始 | 无 |
-| 6 | Go 测试扩展 | **低** | 中 | 🔄 进行中（11/12 包） | — |
-| 7 | 列表/网格视图切换 | **低** | 高 | ⬜ 待开始 | 无 |
+| 6 | Go 测试扩展 | **低** | 中 | ✅ 完成 (v1.9.0) | — |
+| 7 | 列表/网格视图切换 | **低** | 高 | ✅ 完成 (v1.9.0) | 无 |
 | 8 | **3D 骨骼渲染攻关** | **高** | 高 | ✅ 完成 | — |
 | 9 | **3D 模块重构** | **中** | 中 | ✅ 完成 | — |
+| 10 | **加载路径大统一** | **高** | 高 | ✅ 完成 (v1.8.11, 2026-06-17) | 无 |
 
-> 📌 任务 #8 详见 [3D-RENDERING-PLAN.md](3D-RENDERING-PLAN.md)：多 AI 分工流程 + 提示词 + 已知陷阱
-> 📌 开发报告：[docs/3D-RENDERING/3d-rendering-report.md](3D-RENDERING/3d-rendering-report.md)
+> 📌 任务 #8 详见 [3D-RENDERING-PLAN.md](../3D/3D-RENDERING-PLAN.md)：多 AI 分工流程 + 提示词 + 已知陷阱
+> 📌 开发报告：[3d-rendering-report.md](../3D/3d-rendering-report.md)
 
 ---
 
@@ -111,8 +112,8 @@ cd frontend ; npx vite build 2>&1 | Select-String error
 
 | # | 项目 | 状态 | 文件 |
 |---|------|------|------|
-| P2-8 | 预览面板宽度可调 | ⬜ | `css/variables.css:119`、`css/layout.css:4-7` |
-| P2-9 | 文件树标签日期着色 | ⬜ | `utils/display.js` |
+| P2-8 | 预览面板宽度可调 | ✅ 完成（已存在 `_initPreviewResize()` + localStorage 持久化） | `app-content/index.js:143-178` |
+| P2-9 | 文件树标签日期着色 | ✅ 完成（已在 app-tree-styles.js/preview-css.js/content-css.js 中着色） | `display.js:99-109` |
 
 ### 注意事项
 
@@ -187,7 +188,7 @@ cd frontend ; npx vite build 2>&1 | Select-String error
 
 ## ~~任务 8：3D 骨骼渲染攻关~~ ✅ 已完成
 
-> v1.8.6-v1.8.8 完成。详见 [3D-RENDERING-PLAN.md](3D-RENDERING-PLAN.md) 和 [3D-RENDERING/3d-rendering-report.md](3D-RENDERING/3d-rendering-report.md)。
+> v1.8.6-v1.8.8 完成。详见 [3D-RENDERING-PLAN.md](../3D/3D-RENDERING-PLAN.md) 和 [3d-rendering-report.md](../3D/3d-rendering-report.md)。
 
 ---
 

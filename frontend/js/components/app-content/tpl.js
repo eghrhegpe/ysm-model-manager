@@ -161,50 +161,50 @@ export function settingsHTML() {
       <div class="theme-card" data-theme="warm">
         <div style="display:flex;gap:2px;margin-bottom:2px">
           <span style="width:8px;height:8px;border-radius:50%;background:#8b4513"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#6a4e3a"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#a0866a"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#d4a574"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#3e2723">☀️ 温暖木纹</span>
+        <span style="font-size:10px;font-weight:600;color:#5d4037">☀️ 温暖木纹</span>
       </div>
       <div class="theme-card" data-theme="sakura">
         <div style="display:flex;gap:2px;margin-bottom:2px">
           <span style="width:8px;height:8px;border-radius:50%;background:#d81b60"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#7b1fa2"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#ef6c00"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#f48fb1"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#fce4ec"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#37474f">🌸 樱花物语</span>
+        <span style="font-size:10px;font-weight:600;color:#5d4037">🌸 樱花物语</span>
       </div>
       <div class="theme-card" data-theme="mint">
         <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#00897b"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#5c6bc0"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#f57c00"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#D5F5E3"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#A2D9CE"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#76D7C4"></span>
         </div>
-        <span style="font-size:10px;font-weight:600;color:#263238">🍃 薄荷物语</span>
-      </div>
-      <div class="theme-card" data-theme="cyber">
-        <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#bd93f9"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#f1fa8c"></span>
-        </div>
-        <span style="font-size:10px;font-weight:600;color:#cdd6f4">🌙 赛博霓虹</span>
-      </div>
-      <div class="theme-card" data-theme="ocean">
-        <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#4fc3f7"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#7c4dff"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#ffab40"></span>
-        </div>
-        <span style="font-size:10px;font-weight:600;color:#b0bec5">🌊 深海探秘</span>
+        <span style="font-size:10px;font-weight:600;color:#2c3e3a">🍃 薄荷物语</span>
       </div>
       <div class="theme-card" data-theme="pro">
         <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#999"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#666"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#ff8a65"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#b0bec5"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#757575"></span>
         </div>
         <span style="font-size:10px;font-weight:600;color:#e0e0e0">⚪ 极简深邃</span>
+      </div>
+      <div class="theme-card" data-theme="cyber">
+        <div style="display:flex;gap:2px;margin-bottom:2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#9575cd"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#f1fa8c"></span>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:#e0d5f5">🌙 赛博霓虹</span>
+      </div>
+      <div class="theme-card" data-theme="ocean">
+        <div style="display:flex;gap:2px;margin-bottom:2px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#5c6bc0"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#7986cb"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:#9fa8da"></span>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:#c5d8e8">🌊 深海探秘</span>
       </div>
     </div>
   </div>
@@ -600,7 +600,7 @@ export function workshopHTML() {
     '<span class="ws-url" id="ws-url"></span>' +
     '<button class="btn-base sm ws-open-btn" id="ws-open">↗ 浏览器打开</button>' +
     "</div>" +
-    '<iframe id="ws-iframe" style="flex:1;border:none;background:#fff" sandbox="allow-scripts allow-forms allow-popups"></iframe>' +
+    '<iframe id="ws-iframe" style="flex:1;border:none;background:var(--bg)" sandbox="allow-scripts allow-forms allow-popups"></iframe>' +
     '<div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:12px">' +
     '<div style="font-size:32px">🚫</div>' +
     "<div>此站点不允许内嵌浏览</div>" +

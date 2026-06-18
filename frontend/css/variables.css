@@ -20,7 +20,7 @@
  * - 新增变量时在对应主题中同步定义
  */
 
-/* ===== 主题系统：赛博霓虹（默认深色） ===== */
+/* ===== 赛博霓虹（默认深色） ===== */
 :root,
 .theme-cyber {
   --bg: #11111b;
@@ -28,22 +28,18 @@
   --card: #24243e;
   --hover: #2a2a42;
   --act: #313145;
-  --accent: #66d9ef;
-  --txt: #cdd6f4;
-  --muted: #6c7086;
-  --bd: rgba(255, 255, 255, 0.08);
-  --menu-indicator: #66d9ef;
+  --accent: #9575cd;
+  --txt: #e0d5f5;
+  --muted: #8b7fad;
+  --bd: rgba(149, 117, 205, 0.1);
+  --menu-indicator: #9575cd;
   --meta-author: #66d9ef;
   --meta-work: #bd93f9;
   --meta-date: #f1fa8c;
-  --r: var(--radius-xl);
-  --status-success: #a6e3a1;  /* 成功/免费状态（原 --free） */
-  --status-error: #f38ba8;    /* 错误/付费状态（原 --paid） */
-  --size-ok: #a6e3a1;         /* 文件大小正常（原 --sz-green） */
-  --size-large: #f38ba8;      /* 文件大小过大（原 --sz-red） */
-  --accent-btn-bg: color-mix(in srgb, var(--accent) 20%, transparent);
-  --accent-btn-color: var(--accent);
-  --accent-btn-border: color-mix(in srgb, var(--accent) 33%, transparent);
+  --status-success: #a6e3a1;
+  --status-error: #f38ba8;
+  --size-ok: #a6e3a1;
+  --size-large: #f38ba8;
 }
 
 /* ===== 温暖木纹（明亮模式） ===== */
@@ -72,25 +68,25 @@
   --accent-btn-border: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-/* ===== 极简深邃（专业向深色） ===== */
+/* ===== 极简深邃（专业向深色/暖灰） ===== */
 .theme-pro {
-  --bg: #0a0a0a;
-  --surf: #121212;
-  --card: #1a1a1a;
-  --hover: #222222;
-  --act: #2a2a2a;
-  --accent: #66d9ef;
-  --txt: #e0e0e0;
-  --muted: #666666;
-  --bd: rgba(255, 255, 255, 0.06);
-  --menu-indicator: #66d9ef;
-  --meta-author: #66d9ef;
-  --meta-work: #999999;
-  --meta-date: #666666;
-  --status-success: #a6e3a1;
-  --status-error: #f38ba8;
-  --size-ok: #a6e3a1;
-  --size-large: #f38ba8;
+  --bg: #0f0f0f;
+  --surf: #1a1a1a;
+  --card: #222222;
+  --hover: #2a2a2a;
+  --act: #333333;
+  --accent: #ff8a65;
+  --txt: #f0e6e0;
+  --muted: #a09080;
+  --bd: rgba(255, 138, 101, 0.1);
+  --menu-indicator: #ff8a65;
+  --meta-author: #ff8a65;
+  --meta-work: #b0bec5;
+  --meta-date: #90a4ae;
+  --status-success: #a5d6a7;
+  --status-error: #ef9a9a;
+  --size-ok: #a5d6a7;
+  --size-large: #ef9a9a;
   --accent-btn-bg: color-mix(in srgb, var(--accent) 20%, transparent);
   --accent-btn-color: var(--accent);
   --accent-btn-border: color-mix(in srgb, var(--accent) 33%, transparent);
@@ -122,23 +118,23 @@
 
 /* ===== 深海探秘（暗色/蓝色系） ===== */
 .theme-ocean {
-  --bg: #0a1628;
-  --surf: #0f1f3d;
-  --card: #152744;
-  --hover: #1a3050;
-  --act: #1e3a5f;
-  --accent: #4fc3f7;
-  --txt: #b0bec5;
-  --muted: #546e7a;
-  --bd: rgba(79, 195, 247, 0.1);
-  --menu-indicator: #4fc3f7;
-  --meta-author: #4fc3f7;
-  --meta-work: #7c4dff;
-  --meta-date: #ffab40;
-  --status-success: #69f0ae;
-  --status-error: #ff5252;
-  --size-ok: #69f0ae;
-  --size-large: #ff5252;
+  --bg: #0a1e2d;
+  --surf: #0f2a3d;
+  --card: #15334a;
+  --hover: #1a3d55;
+  --act: #1f4a65;
+  --accent: #5c6bc0;
+  --txt: #c5d8e8;
+  --muted: #5f8a87;
+  --bd: rgba(92, 107, 192, 0.12);
+  --menu-indicator: #5c6bc0;
+  --meta-author: #42a5f5;
+  --meta-work: #7e57c2;
+  --meta-date: #ffb74d;
+  --status-success: #81c784;
+  --status-error: #e57373;
+  --size-ok: #81c784;
+  --size-large: #e57373;
   --accent-btn-bg: color-mix(in srgb, var(--accent) 18%, transparent);
   --accent-btn-color: var(--accent);
   --accent-btn-border: color-mix(in srgb, var(--accent) 30%, transparent);
@@ -151,14 +147,14 @@
   --card: #f5fdf9;
   --hover: #dceede;
   --act: #a5d6a7;
-  --accent: #00897b;
-  --txt: #263238;
-  --muted: #78909c;
-  --bd: rgba(0, 137, 123, 0.12);
-  --menu-indicator: #00897b;
-  --meta-author: #00897b;
-  --meta-work: #5c6bc0;
-  --meta-date: #f57c00;
+  --accent: #4db6ac;
+  --txt: #2c3e3a;
+  --muted: #6d8a7e;
+  --bd: rgba(77, 182, 172, 0.12);
+  --menu-indicator: #4db6ac;
+  --meta-author: #4db6ac;
+  --meta-work: #7986cb;
+  --meta-date: #ffb74d;
   --status-success: #2e7d32;
   --status-error: #c62828;
   --size-ok: #2e7d32;

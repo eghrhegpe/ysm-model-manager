@@ -1,32 +1,118 @@
 # YSM 模型管理器 — AI 代理入职指南
 
-## 第一条：先读文档
+> **你是 AI 代理。本文件是项目的「文档宪法」——它定义你能读什么、不能读什么。**
+> **读完本文件即可开始工作。需要深水区信息时，按「文档地图」定向跳转，禁止自由探索。**
 
-在开始任何修改前，**必须依次阅读**：
+## 启动约束（复制粘贴到会话开头）
 
-1. **`.github/copilot-instructions.md`** — 战斗手册（致命陷阱、工作流、约定）
-2. **`docs/architecture.md`** — 项目架构
-3. **`docs/release-notes/`** — 最新版本的发版说明（看已有的改动）
-4. **`docs/bug-chronicle.md`** — 已知 Bug 和排查路径
-5. **`docs/pending-cleanup.md`** — 待清除清单（调试代码是否还在）
-6. **`docs/Design.md`** — 设计规范（CSS 变量、布局、字号、颜色规则）
-7. **`docs/TERMINOLOGY.md`** — 术语对照表（名词统一、UI 文案规范）
-8. **`docs/CLEANUP_RULES.md`** — 治理规则（9 条禁止模式 × severity × 检测方式）
-9. **`docs/TASK_PLAN.md`** — AI 任务计划（可执行任务清单 + 文件路径 + 验证方式）
-10. **`docs/SESSION_HANDOFF.md`** — 会话交接日志（上一个 AI 的发现和遗留问题）
-11. **`docs/3D-RENDERING-PLAN.md`** — 3D 骨骼渲染攻关（多 AI 分工 + 提示词 + 已知陷阱，仅参与 3D 开发时必读）
-12. **`docs/novel/SKELETON.md`** — 技术工程小说骨架（仅续写小说时必读）
+```
+本次任务硬约束：
+- 只读 AGENTS.md §一「文档地图」列出的文件
+- 禁止 ls / glob / 目录枚举
+- 禁止启动子代理（task / explore / research）
+- 先输出修改计划或替换表 → 我确认 → 再 apply
+```
 
-## 第二条：确认当前状态
+---
 
-- 检查 `git log --oneline -5` 看最近提交
-- `build/bin/` 下的 YSMParser.exe 仅作为 Go CLI fallback，`wails build -clean` 会清掉，但 WASM 内嵌解码不受影响
+## 〇、索引即契约
 
-## 第三条：改前读文件
+**本节的每一条都是硬约束。违反 = 浪费时间 + 浪费 token。**
 
-禁止基于记忆修改。每次改文件前先 `grep_search` / `read_file` 确认最新状态。啊
+### 禁止操作
 
-## 第四条：改完立即构建
+| # | 禁止 | 原因 | 正确做法 |
+|---|------|------|----------|
+| 1 | **禁止递归扫描 `docs/`** | 30+ 个归档文件污染上下文 | 只读「文档地图」列出的文件 |
+| 2 | **禁止读取 `docs/archive/` 下任何文件** | 历史文档，对当前任务零价值 | 除非用户明确说「查 archive」 |
+| 3 | **禁止用 `ls` 探索未知目录** | Token 黑洞，一次 ls = 几十行输出 | 查 AGENTS.md 文档地图，没有的目录不存在 |
+| 4 | **禁止全量读取大文件** | bug-chronicle.md 1369 行 | 一律先 `grep` 关键词，再读匹配段落 |
+| 5 | **禁止创建不在文档地图中的新 md 文件** | 文档膨胀失控 | 先在 `docs/core/NAMING_GUIDELINES.md` 确认命名，再确认归属目录 |
+
+### 跨目录引用自检
+
+**任何 Markdown 链接写完后，必须确认目标文件存在。** 断链 = 任务失败，因为下一个 AI 会被误导。
+
+```
+# ✅ 正确：目标存在
+[设计规范](../frontend/Design.md)
+
+# ❌ 错误：目标不存在（目录已改名/文件已移动）
+[3D 报告](3D-RENDERING/3d-rendering-report.md)
+```
+
+> 完整命名规范见 `docs/core/NAMING_GUIDELINES.md`
+
+---
+
+
+## 一、文档地图
+
+### 1.1 目录用途
+
+```
+docs/
+├── core/               # ✅ 核心规范（术语、治理规则、命名规范）
+├── architecture/       # 🏗️ 架构 + 项目元信息（架构、现状、路线图、Bug 记录）
+├── frontend/           # 🎨 前端专属（设计规范、动画、待清理、废弃名）
+├── tasks/              # 📋 任务管理（任务清单、会话交接、每日计划）
+├── 3D/                 # 🎮 3D 渲染（攻关计划、开发报告）
+├── release-notes/      # 📦 版本发布说明（按 vX.Y.Z.md 命名）
+├── tactics/            # 🎯 产品愿景
+├── novel/              # 📖 衍生小说（与项目开发无关）
+├── archive/            # 🧊 冻结区 — 禁止读取、禁止扫描、禁止引用
+│   └── old/            #    早期规划、QA 清单、接口设计草案
+└── preview/            # 🖼️ UI 截图
+```
+
+### 1.2 关键文件速查
+
+| 场景 | 读哪些文件 |
+|------|-----------|
+| **每次会话起步** | 本文件 + `.github/copilot-instructions.md`（致命陷阱） |
+| **新建文档 / 命名** | `docs/core/NAMING_GUIDELINES.md` |
+| **写 UI 文案 / 变量名** | `docs/core/TERMINOLOGY.md`（末尾有 AI 缩写版） |
+| **改 Go 逻辑** | `docs/architecture/architecture.md` + `bug-chronicle.md`（先 grep 再读，1369 行禁止全量） |
+| **改前端 / CSS** | `docs/frontend/Design.md` + `pending-cleanup.md` + `animations.md` |
+| **接新任务** | `docs/tasks/TASK_PLAN.md` + `SESSION_HANDOFF.md` + `DAILY_PLAN.md` |
+| **3D 渲染开发** | `docs/3D/3D-RENDERING-PLAN.md` + `3d-rendering-report.md` |
+| **发版 / 总结** | `docs/release-notes/README.md` → 最新版本 .md |
+| **选 AI 模型干活** | `docs/architecture/AI-MODEL-MATRIX.md` |
+| **了解项目全貌** | `docs/architecture/PROJECT_STATUS.md` |
+| **查产品方向** | `docs/tactics/vision.md` + `docs/architecture/ANNUAL_ROADMAP.md` |
+| **查找废弃命名** | `docs/frontend/DEPRECATED_NAMES.md` |
+| **查版本兼容性** | `docs/architecture/pack-format-versions.md` |
+| **续写小说** | `docs/novel/SKELETON.md` |
+| **查项目意义（给用户看）** | `docs/architecture/用户指南.md` + `项目意义.md` |
+
+> `docs/archive/` 是历史归档，**默认不读**，除非明确需要追溯旧设计。
+> `docs/architecture/bug-chronicle.md` 很大（1369 行），**禁止全量读取**，先用 grep 搜索相关关键词再读匹配段落。
+
+---
+
+## 二、工作流规则
+
+### 2.1 确认当前状态
+
+```bash
+git log --oneline -5
+```
+
+### 2.2 改前读文件
+
+**禁止基于记忆修改。** 每次改前先确认最新状态：
+
+- `read_file` — 读文件内容
+- `grep` — 搜索关键词
+- `code_index` — 查符号定义
+
+**灵活处理**：
+- 小文件 / 近期刚看过 → 直接改
+- 不确定是否变更 → 先用 `read_file` 确认
+- 搜索没找到 → 不报错，先尝试修改看构建结果
+- **核心原则**：保持进度，不过度谨慎
+
+### 2.3 改完立即构建
 
 ```powershell
 # Go 改了
@@ -36,26 +122,136 @@ go build ./go/... 2>&1 | Select-String error
 cd frontend ; npx vite build 2>&1 | Select-String error
 ```
 
-不攒多个修改。
+不攒多个修改。一个改一个 build。
 
-## 第五条：已知已完成的改动（v1.3.0+）
+### 2.4 构建失败处理
 
-已在发版说明中记录，但快速提示：
+1. **立即回滚** → 用 `/undo` 撤销修改
+2. **诊断原因** → 读完整错误信息：
+   - import 路径/语法错误
+   - 类型不匹配（Go）
+   - 未定义变量/import 缺失（JS）
+   - 依赖缺失
+3. **修复后重试** → 小步修改，每次构建验证
 
-- **app-sync-manager 动画补齐**（v1.7.4）：`.sm-item`/`.sm-item-btn`/`.sm-tab`/`.sm-status-tab` 的 hover 过渡 + 列表项 `sm-item-in` stagger 入场 + 空状态淡入 + 骨架屏 shimmer。`.no-animations` 已覆盖全部 5 个 class。注意：骨架屏必须在 `.sm-list` 内渲染（`this.querySelector('.sm-list').innerHTML = loadingHTML()`），放兄弟节点会被 `overflow:hidden` 裁掉。
+---
 
-## 第六条：回滚规则
+## 三、致命陷阱
 
-如果 `multi_replace_string_in_file` 后构建失败，检查 import 语句是否完整，修复后继续。
+| # | 陷阱 | 表现 | 规则 |
+|---|------|------|------|
+| 1 | Go 改后未重建 | 前端调用没反应 | 改 Go 文件必须 `wails build` 或 `go build .` + 重启 |
+| 2 | 全局事件放错组件 | 切页后 handler 消失 | 全局 handler 必须放 `app-content/index.js` 的 `_registerGlobalHandlers()` |
+| 3 | 按钮异步后卡死 | 操作失败后按钮灰掉 | `finally` 里 emit 完成事件，不放 try 末尾 |
+| 4 | `const` TDZ | 静默失败 | `const fn = () => {}` 不提升，先定义再调用 |
+| 5 | Go Binding 函数名写错 | 前端调用 undefined | 先用 grep 在 `app.go` 确认函数名 |
+| 6 | 下载进度 99% 卡死 | Content-Length=-1 | 锁定 99%，2s 后转菊花；`stuckGuardReset()` 清全部状态 |
+| 7 | 三入口各自注册 | 事件重复/遗漏 | 单击/多选/全选都走 `enqueueDownloadTasks()`，只注册一组 Wails EventsOn |
+| 8 | 回收站误删 | 硬链接数据丢失 | 符号链接→直接删，硬链接(nlink>1)→直接删，普通→移 `.recycle`，跨分区→复制后删 |
+| 9 | `public/` 下放 JS | Vite dev 优先加载 | 新 JS 放 `frontend/js/`，ES module → `app-modules.js` 加 import |
+| 10 | 回调 API 未 Promise 化 | DnD 数据读不到 | `entry.file(callback)` → `new Promise(resolve => entry.file(resolve))` |
 
-## 七、OpenCode 模型索引
+> 完整版见 `.github/copilot-instructions.md`（18 条）。
 
-按任务场景选择当前会话使用的模型：
+---
 
-| 角色 | 推荐模型 | 适用场景 |
-|------|----------|----------|
-| 🏆 **主力 Driver** | Big Pickle | 日常增删改查、简单功能迭代、报错解释。响应快，免费额度内反馈最快 |
-| 🧠 **复杂推理** | DeepSeek V4 Flash Free | 架构分析、超长上下文（1M）、绕逻辑死结。免费阵营的定海神针 |
-| 🚀 **极速轻量** | North Mini Code Free | 列目录、代码翻译、简单补全。3B 激活参数，延迟极低，别做多步任务 |
-| 💡 **创意发散** | MiMo V2.5 Free | 多思路 brainstorm、前端 UI/动画效果。卡住时换它头脑风暴 |
-| 📚 **超大仓库** | Nemotron 3 Ultra Free | 一次性喂数百文件梳理项目脉络。1M 上下文，工具调用不太稳，作备用 |
+## 四、三条治理红线
+
+### 4.1 零 `window.__*` 全局变量
+
+| ❌ 禁止 | ✅ 替代 |
+|---------|--------|
+| `window.__currentPage` | `PageStore.currentPage` (`core/page-store.js`) |
+| `window.go.main.App.*` | `getApp()` (`wails/app.js`) |
+
+### 4.2 Wails 调用统一走 `getApp()`
+
+```js
+// ✅ 正确
+import { getApp } from "../wails/app.js";
+const App = await getApp();
+const result = await App.SomeBinding();
+
+// ❌ 禁止
+const { SomeBinding } = window.go.main.App;
+```
+
+### 4.3 UI 安全
+
+- 所有 `innerHTML` 拼接必须用 `esc()` 转义
+- 所有 CSS 值走 CSS 变量（`var(--txt)`, `var(--bg)`），无硬编码颜色
+- 禁止 `display: none/block` 做动画切换，用 `opacity` / `transform`
+- 所有异常路径必须有 toast 反馈
+- 所有 UI 文件名必须走 `renderDisplayName()`
+
+> 完整 9 条规则 + 自动检测命令见 `docs/core/CLEANUP_RULES.md`。
+
+---
+
+## 五、项目速查
+
+### 5.1 Go 端
+
+```
+go/installer/  — 模型安装       go/sync/     — 整合包同步
+go/recycle/    — 回收站管理     go/ysm/      — YSM 解析+摘要
+go/watcher/    — 文件监听       go/updater/  — 自动更新
+go/paths/      — 路径安全       go/types/    — 共享类型+注册表
+go/logs/       — 导入日志       go/version/  — 版本号
+go/threejs/    — 3D 骨骼计算    go/importer/ — 导入策略
+app.go         — Wails Binding 入口
+resource_bindings.go — 核心 Binding 注册
+```
+
+### 5.2 前端
+
+```
+frontend/js/
+  bus.js                 — 事件总线
+  app-modules.js         — 组件入口 + 右键菜单映射
+  components/            — Web Components (app-tree/sidebar/preview/content/nav)
+  features/              — 业务功能 (import-queue/recycle-bin/version-updater/community)
+  dialogs/               — 弹窗 (modal/rename/batch-rename/tag-editor)
+  pages/                 — 页面渲染 (repository)
+  core/                  — 基础设施 (buttons/global-handlers/theme/context-menus)
+  utils/                 — 工具函数 (display/fmt/dom/icon/summarize/model3d)
+  services/registry.js   — 服务注册
+  wails/                 — Wails 桥接 (app.js + runtime.js)
+```
+
+### 5.3 组件拆分规范
+
+```
+app-xxx/index.js     — 生命周期编排
+app-xxx/tpl.js       — 布局 HTML 模板
+app-xxx/row-tpl.js   — 节点级模板（可选）
+app-xxx/data.js      — 数据逻辑（纯函数）
+app-xxx/render.js    — 渲染逻辑（输入→HTML）
+app-xxx/events.js    — 事件绑定
+app-xxx/utils.js     — 组件工具（可选）
+app-xxx/xxx-css.js   — Shadow DOM 样式
+```
+
+### 5.4 注册表优先
+
+所有资源类型定义以 `resource_types.json` 为单一事实来源。**不要在 Go/Frontend 中手写 `StorageSubDir` / `specificRoot` / `ResourceExts` 的新条目**。先在 `resource_types.json` 加，一致性测试会自动校验。
+
+---
+
+## 六、沟通风格
+
+- 简洁：能用 1 句话不说 2 句
+- 精确：给行号、文件路径、函数名
+- 结构化：表格 > 段落
+- 不废话：不做无谓的「总的来说」「总结一下」
+- 不改不拆：发现不够改的问题先问「要修吗」
+
+---
+
+## 七、环境提示
+
+- **Shell**：优先用 pwsh（PowerShell），不是 cmd
+- **路径分隔符**：统一正斜杠 `/`
+- **调试日志用完即删**：`console.log` / `fmt.Print` 测试完后**必须请示用户确认**再删，不可自行决定
+- **禁止安装软件**：缺依赖提示用户手动装
+- **发版**：用 `wails build -clean`，流程见 `docs/release-notes/README.md`

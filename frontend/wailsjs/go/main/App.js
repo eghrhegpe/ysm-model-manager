@@ -30,6 +30,10 @@ export function BatchExtractCreatorAvatars() {
   return window['go']['main']['App']['BatchExtractCreatorAvatars']();
 }
 
+export function CacheModelAvatars(arg1) {
+  return window['go']['main']['App']['CacheModelAvatars'](arg1);
+}
+
 export function CachedCreatorAvatar(arg1) {
   return window['go']['main']['App']['CachedCreatorAvatar'](arg1);
 }

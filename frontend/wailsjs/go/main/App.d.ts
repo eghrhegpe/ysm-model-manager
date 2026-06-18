@@ -19,6 +19,8 @@ export function BackupWorkshopCreators():Promise<string>;
 
 export function BatchExtractCreatorAvatars():Promise<Record<string, string>>;
 
+export function CacheModelAvatars(arg1:string):Promise<void>;
+
 export function CachedCreatorAvatar(arg1:string):Promise<string>;
 
 export function CancelQueue():Promise<void>;

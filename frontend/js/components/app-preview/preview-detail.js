@@ -70,9 +70,13 @@ export async function showModelDetail(ctx, path) {
     if (previewSrc) {
       cardHTML = cardHTML.replace(
         '<div class="content" id="preview-content">',
-        `<div style="float:right;width:70px;margin:0 0 6px 6px"><img src="${previewSrc}" alt="预览" onerror="this.style.display='none'" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--bd)"></div>`,
+        '<div class="content" id="preview-content">',
       );
     }
+    cardHTML = cardHTML.replace(
+      '<div class="content" id="preview-content">',
+      '<div class="content" id="preview-content"><div id="ysm-author-avatars"></div>',
+    );
     const detailDiv = ctx._root.getElementById("preview-detail");
     detailDiv.innerHTML = cardHTML;
 

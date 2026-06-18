@@ -15,18 +15,14 @@ import { parseBedrockAnimationJSON } from "../../utils/animation.js";
  */
 export async function decodeYsmViaWasm(modelPath) {
   const cached = cacheGet(modelPath);
-  if (cached?.geometry) return cached;
-  try {
-    devLog("[YSM] 加载 WASM 模块...");
-    const { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } =
-      await import("../../wasm/ysm-parser.js");
-    const ok = await initYSMParser();
-    console.log(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
-    if (!ok) return null;
+  if (cached?.geometry?.bones?.length) return cached;
+  if (cached?._wasmFailed) return null;
 
-    devLog("[YSM] 读取文件...");
+  // 读文件（WASM 和 JSON 都需要，提升到外层作用域供两个 try 块共用）
+  let bytes;
+  try {
     const { ReadFileBytes } = await import("../../../wailsjs/go/main/App.js");
-    let bytes = await ReadFileBytes(modelPath);
+    bytes = await ReadFileBytes(modelPath);
     if (typeof bytes === "string") {
       const raw = atob(bytes);
       const len = raw.length;
@@ -37,19 +33,65 @@ export async function decodeYsmViaWasm(modelPath) {
       bytes = new Uint8Array(bytes);
     }
     devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
-    if (!bytes?.length) return null;
+    if (!bytes?.length) {
+      cacheSet(modelPath, { _wasmFailed: true });
+      return null;
+    }
 
-    // 纯 .json 文件（解压的 ysm.json）直接解析 JSON
+    // .json 文件直接解析，不需要 WASM
     if (/\.json$/i.test(modelPath)) {
       const text = new TextDecoder("utf-8").decode(bytes);
-      try {
-        const json = JSON.parse(text);
-        const result = parseYsmJsonDirect(json);
-        if (result) {
-          cacheSet(modelPath, { ...result, _decodedBy: "🧠 JSON 直接解析" });
-          return result;
+      const json = JSON.parse(text);
+      const result = parseYsmJsonDirect(json);
+      if (result) {
+        if (result.authors?.length) {
+          const dir = modelPath.replace(/\\/g, "/");
+          const baseDir = dir.includes("/") ? dir.substring(0, dir.lastIndexOf("/")) : ".";
+          for (const au of result.authors) {
+            if (!au.avatarPath) continue;
+            try {
+              const avatarRel = au.avatarPath.startsWith("avatar/") || au.avatarPath.startsWith("avatar\\") ? au.avatarPath : "avatar/" + au.avatarPath;
+              let avatarBytes = await ReadFileBytes(baseDir + "/" + avatarRel);
+              if (typeof avatarBytes === "string") {
+                const raw = atob(avatarBytes);
+                const len = raw.length;
+                const arr = new Uint8Array(len);
+                for (let i = 0; i < len; i++) arr[i] = raw.charCodeAt(i);
+                avatarBytes = arr;
+              } else if (!(avatarBytes instanceof Uint8Array)) {
+                avatarBytes = new Uint8Array(avatarBytes);
+              }
+              if (avatarBytes?.length) {
+                const blob = new Blob([avatarBytes]);
+                au.avatarUrl = URL.createObjectURL(blob);
+              }
+            } catch (_e) {}
+          }
         }
-      } catch (_) {}
+        cacheSet(modelPath, { ...result, _decodedBy: "🧠 JSON 直接解析" });
+        // 异步缓存头像到 creators_cache/ 供创作者界面使用
+        import("../../../wailsjs/go/main/App.js").then(({ CacheModelAvatars }) =>
+          CacheModelAvatars(modelPath)
+        ).catch(() => {});
+        return result;
+      }
+      return null;
+    }
+  } catch (e) {
+    devLog(`[YSM] ❌ ${e?.message || e}`);
+    cacheSet(modelPath, { _wasmFailed: true });
+    return null;
+  }
+
+  // .ysm 文件 → 初始化 WASM 解码
+  try {
+    devLog("[YSM] 加载 WASM 模块...");
+    const { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } =
+      await import("../../wasm/ysm-parser.js");
+    const ok = await initYSMParser();
+    console.log(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
+    if (!ok) {
+      cacheSet(modelPath, { _wasmFailed: true });
       return null;
     }
 
@@ -105,6 +147,7 @@ export async function decodeYsmViaWasm(modelPath) {
     }
     if (!files?.length) {
       console.log("[YSM] ❌ WASM 解码失败，无输出文件");
+      cacheSet(modelPath, { _wasmFailed: true });
       return null;
     }
 
@@ -112,6 +155,7 @@ export async function decodeYsmViaWasm(modelPath) {
     let ysmTexOrder = null;
     let ysmModelOrder = null;
     let ysmDefaultTex = null;
+    let ysmAuthors = [];
     const ysmMeta = files.find((f) => f.path.endsWith("ysm.json"));
     if (ysmMeta) {
       try {
@@ -124,6 +168,20 @@ export async function decodeYsmViaWasm(modelPath) {
             ? [json.files.player.model]
             : null;
         ysmDefaultTex = json?.properties?.default_texture || null;
+        // 解析作者信息（ysmAuhors 已在外部声明）
+        if (json?.metadata?.authors) {
+          for (const au of json.metadata.authors) {
+            if (!au.name) continue;
+            const avatarPath = au.avatar || "";
+            const avatarKey = avatarPath.split("/").pop().split("\\").pop().replace(/\.\w+$/, "");
+            ysmAuthors.push({
+              name: au.name,
+              role: au.role || "",
+              avatarUrl: avatars[avatarKey] || null,
+              avatarPath: avatarPath,
+            });
+          }
+        }
         if (ysmTexOrder)
           console.log(
             `[YSM] ysm.json 纹理列表:`,
@@ -137,17 +195,20 @@ export async function decodeYsmViaWasm(modelPath) {
       }
     }
 
-    // 收集所有纹理文件（跳过 avatar/ 目录）
+    // 收集所有纹理文件（同时收集头像）
     const textures = {};
     const texNameMap = {};
     const texLowerMap = {};
     const texDimensions = {};
     let maxTexW = 0,
       maxTexH = 0;
+    const avatars = {};
     for (const f of files) {
       if (!(f.path.endsWith(".png") || f.path.endsWith(".jpg"))) continue;
       if (f.path.startsWith("avatar/") || f.path.startsWith("avatar\\")) {
-        console.log(`[YSM] 跳过头像: ${f.path}`);
+        const blob = new Blob([f.data]);
+        const name = f.path.split("/").pop().split("\\").pop().replace(/\.\w+$/, "");
+        avatars[name] = URL.createObjectURL(blob);
         continue;
       }
       const blob = new Blob([f.data]);
@@ -386,7 +447,7 @@ export async function decodeYsmViaWasm(modelPath) {
         if (f) processModelFile(f, texIdx);
       }
     }
-    // 第二轮：处理未匹配的模型文件
+    // 第二轮：处理 models/ 目录下的未匹配模型文件
     for (const f of files) {
       if (!f.path.startsWith("models/")) continue;
       const modelName = f.path.split("/").pop();
@@ -399,8 +460,16 @@ export async function decodeYsmViaWasm(modelPath) {
       if (!matched) processModelFile(f, 0);
     }
 
+    // 无 ysm.json → WASM 无法确定纹理映射，交 Go 处理（有启发式匹配）
+    if (!geometry && !ysmMeta) {
+      console.log("[YSM] 无 ysm.json 引导，移交 Go 确保纹理正确映射");
+      cacheSet(modelPath, { _wasmFailed: true });
+      return null;
+    }
+
     if (!geometry && files?.length > 0) {
       console.log(`[YSM] ⚠️ WASM 解码成功但几何体解析为空，回退 Go CLI`);
+      cacheSet(modelPath, { _wasmFailed: true });
       return null;
     }
 
@@ -435,8 +504,8 @@ export async function decodeYsmViaWasm(modelPath) {
       geometry?.texture ||
       (orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null) ||
       null;
-    cacheSet(modelPath, { texture: texUrl, geometry, animations });
-    return { texture: texUrl, geometry, animations };
+    cacheSet(modelPath, { texture: texUrl, geometry, animations, avatars, authors: ysmAuthors });
+    return { texture: texUrl, geometry, animations, avatars, authors: ysmAuthors };
   } catch (e) {
     devLog(`[YSM] ❌ ${e?.message || e}`);
     return null;
@@ -462,6 +531,13 @@ function parseYsmJsonDirect(json) {
         : [];
     // ysm.json 本身不含 geometry 数据（geometry 在 separate model json 中）
     // 返回一个占位 geometry，让后续的 Go AnalyzeBedrockModel 处理
+    // 解析作者信息（用于头像显示）
+    const authors = (json?.metadata?.authors || []).filter(a => a.name).map(a => ({
+      name: a.name,
+      role: a.role || "",
+      avatarUrl: null,
+      avatarPath: a.avatar || "",
+    }));
     return {
       texture: null,
       geometry: {
@@ -476,6 +552,7 @@ function parseYsmJsonDirect(json) {
         },
       },
       animations: [],
+      authors,
     };
   }
 

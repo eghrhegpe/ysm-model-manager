@@ -75,6 +75,30 @@ ${btnBaseCSS}
 .fl.selected { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); padding-left: 2px; }
 .fl.selected:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
 .fh.selected { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); padding-left: 2px; }
+/* 紧凑列表模式（24px 行高） */
+.fl-list { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 4px; border-radius: 4px; font-size: var(--fs-sm); cursor: default; user-select: none; -webkit-user-select: none; transition: background var(--tr-fast); }
+.fl-list:hover { background: var(--hover); }
+.fl-list.selected { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); padding-left: 2px; }
+.fl-list.ban { opacity: .55; }
+.fh-list { display: flex; align-items: center; gap: 4px; height: 24px; padding: 0 4px; border-radius: 0; cursor: pointer; font-size: var(--fs-sm); transition: background var(--tr-fast); border-left: 2px solid transparent; }
+.fh-list:hover { background: var(--hover); }
+.fh-list.locked { opacity: .5; }
+.fl-list .ck, .fh-list .ck { width: 22px; height: 12px; border-radius: 6px; background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background var(--tr-normal); font-size: 0; line-height: 0; }
+.fl-list .ck::after, .fh-list .ck::after { content: ""; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--txt); transition: left var(--tr-normal); }
+.fl-list .ck.on, .fh-list .ck.on { background: #a6e3a1; }
+.fl-list .ck.on::after, .fh-list .ck.on::after { left: 12px; }
+.fh-list .ck.partial { background: #f9a826; }
+.fh-list .ck.partial::after { left: 7px; }
+.fl-list .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fh-list .ar { font-size: var(--fs-sm); color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; transition: transform var(--tr-fast); }
+.fh-list .ar.open { transform: rotate(90deg); }
+.fh-list .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
+.fh-list .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: 2px; padding: 0 2px; }
+.fl-list .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; }
+.fl-list .sz.sz-green { color: var(--sz-green,#a6e3a1); }
+.fl-list .sz.sz-red { color: var(--sz-red,#f38ba8); }
+.fl-list .sz:not(.sz-green):not(.sz-red) { color: var(--muted); }
+.fl-list .ficon { font-size: var(--fs-sm); flex-shrink: 0; }
 .fl .ck, .fh .ck { width: 22px; height: 12px; border-radius: 6px; background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background var(--tr-normal); font-size: 0; line-height: 0; }
 .fl .ck::after, .fh .ck::after { content: ""; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--txt); transition: left var(--tr-normal); }
 .fl .ck.on, .fh .ck.on { background: #a6e3a1; }

@@ -238,9 +238,9 @@ ${focusVisibleCSS}
 .health-ring { width:80px; height:80px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; position:relative; }
 .health-ring-inner { position:absolute; inset:6px; border-radius:50%; background:var(--bg); display:flex; align-items:center; justify-content:center; flex-direction:column; }
 .health-tag { display:inline-block; padding:2px 10px; border-radius:var(--radius-xl); font-size:var(--fs-xs); font-weight:600; }
-.health-tag.good { background:#a6e3a122; color:var(--status-success); }
-.health-tag.ok { background:#f9a82622; color:var(--sm-optional); }
-.health-tag.bad { background:#f38ba822; color:var(--status-error); }
+.health-tag.good { background:color-mix(in srgb, var(--status-success) 12%, transparent); color:var(--status-success); }
+.health-tag.ok { background:color-mix(in srgb, var(--sm-optional) 12%, transparent); color:var(--sm-optional); }
+.health-tag.bad { background:color-mix(in srgb, var(--status-error) 12%, transparent); color:var(--status-error); }
 .stat-pill { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:var(--radius-xl); background:var(--surf); border:1px solid var(--bd); font-size:var(--fs-xs); color:var(--muted); }
 
 /* ===== 资历最深页专用样式 ===== */
@@ -290,7 +290,7 @@ ${focusVisibleCSS}
 .cr-tag-filter-row { display:flex;gap:4px;margin:0 0 8px;flex-wrap:wrap;align-items:center; }
 .cr-tag-filter-btn { font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;transition:var(--tr-fast);animation:fadeSlideUp var(--tr-enter) both; }
 .cr-tag-filter-btn:hover { border-color:var(--accent);color:var(--txt);background:var(--hover); }
-.cr-tag-filter-btn.active { border-color:var(--accent);color:var(--accent);background:var(--accent);color:var(--bg); }
+.cr-tag-filter-btn.active { border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent); }
 /* ===== 创作者频道 (cr-) ===== */
 .cr-page { flex:1; display:flex; overflow:hidden; position:relative; }
 .cr-left { width:var(--sidebar-w); flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); overflow:hidden; background:var(--surf); }
@@ -343,8 +343,8 @@ ${focusVisibleCSS}
 .btn-sm:hover,.ws-btn-sm:hover,.gh-btn-sm:hover { background:var(--hover); }
 .ws-btn-muted { color:var(--muted); }
 .ws-btn-muted:hover { color:var(--txt); }
-.ws-btn-accent { color:var(--accent);border-color:#7c83ff55;background:#7c83ff22; }
-.ws-btn-accent:hover { background:#7c83ff44; }
+.ws-btn-accent { color:var(--accent);border-color:color-mix(in srgb, var(--accent) 33%, transparent);background:color-mix(in srgb, var(--accent) 13%, transparent); }
+.ws-btn-accent:hover { background:color-mix(in srgb, var(--accent) 25%, transparent); }
 .ws-dl-selected[disabled], .ws-btn-sm[disabled], .btn-sm[disabled] { opacity:.4;cursor:default; }
 .ws-dl-selected[disabled]:hover, .ws-btn-sm[disabled]:hover, .btn-sm[disabled]:hover { background:transparent; }
 .ws-filter-btn { position:relative; }
@@ -403,8 +403,8 @@ ${focusVisibleCSS}
 .cr-card-tier-bar {
   position:absolute;top:0;left:0;right:0;height:2px;opacity:.6;transition:opacity var(--tr-normal);
 }
-.cr-creator-card[data-tier="gold"] .cr-card-tier-bar { background:#D4A017; }
-.cr-creator-card[data-tier="silver"] .cr-card-tier-bar { background:#9E9E9E; }
+.cr-creator-card[data-tier="gold"] .cr-card-tier-bar { background:var(--sm-optional); }
+.cr-creator-card[data-tier="silver"] .cr-card-tier-bar { background:var(--muted); }
 .cr-creator-card[data-tier="gold"] .cr-avatar-ring {
   background:conic-gradient(from var(--grad-rot,0deg),#D4A017,transparent 60%,#D4A017);
   box-shadow:0 0 6px rgba(212,160,23,.4);
@@ -561,7 +561,7 @@ ${focusVisibleCSS}
   animation:fadeSlideUp var(--tr-enter) both;
 }
 .cr-tag-filter-btn:hover { border-color:var(--accent);color:var(--accent); }
-.cr-tag-filter-btn.active { background:var(--accent);color:var(--bg);border-color:var(--accent); }
+.cr-tag-filter-btn.active { background:color-mix(in srgb, var(--accent) 18%, transparent);color:var(--accent);border-color:var(--accent); }
 .cr-drop-zone {
   display:flex;align-items:center;justify-content:center;gap:8px;
   padding:12px 16px;margin:4px 0 8px;
@@ -877,7 +877,7 @@ ${focusVisibleCSS}
 .diag-dedup-file-dir { display:block;font-size:8px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .diag-dedup-file-size { font-size:9px;color:var(--muted);flex-shrink:0;margin-right:4px; }
 .diag-dedup-file-date { font-size:8px;color:var(--muted);flex-shrink:0; }
-.diag-dedup-recommend { font-size:8px;padding:0 4px;border-radius:var(--radius-xs);background:#a6e3a122;color:var(--status-success); }
+.diag-dedup-recommend { font-size:8px;padding:0 4px;border-radius:var(--radius-xs);background:color-mix(in srgb, var(--status-success) 12%, transparent);color:var(--status-success); }
 .diag-dedup-radio { flex-shrink:0;accent-color:var(--accent); }
 .diag-dedup-keep-all { display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:10px;cursor:pointer;transition:background var(--tr-fast);border-top:1px solid var(--bd); }
 .diag-dedup-keep-all-label { color:var(--muted); }

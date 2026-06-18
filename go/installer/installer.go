@@ -58,7 +58,7 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 		ext = strings.ToLower(filepath.Ext(src[:len(src)-4]))
 	}
 	if !types.IsSupportedExt(ext) {
-		return types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型", SourcePath:src, Reason:"不支持的文件类型", Suggestion:"支持格式: " + strings.Join(types.AllExts, " / ")}
+		return types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型", SourcePath:src, Reason:"不支持的文件类型", Suggestion:"支持格式: " + strings.Join(types.AllExts(), " / ")}
 	}
 
 	// 计算相对路径，保持目录结构
@@ -228,7 +228,7 @@ func InstallWithOverlay(src, customDir string) (string, error) {
 	}
 	ext := strings.ToLower(filepath.Ext(src))
 	if !types.IsSupportedExt(ext) {
-		return "", types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型（覆盖检查）", SourcePath:src, Reason:"不支持的文件格式", Suggestion:"仅支持 " + strings.Join(types.AllExts, " / ") + " 格式"}
+		return "", types.AppError{Code:"UNSUPPORTED_FORMAT", Operation:"安装模型（覆盖检查）", SourcePath:src, Reason:"不支持的文件格式", Suggestion:"仅支持 " + strings.Join(types.AllExts(), " / ") + " 格式"}
 	}
 	if err := os.MkdirAll(customDir, 0755); err != nil {
 		return "", types.AppError{Code:"IO_ERROR", Operation:"安装模型（覆盖检查）", TargetPath:customDir, Reason:"无法创建目录", Suggestion:"请检查磁盘权限或空间"}

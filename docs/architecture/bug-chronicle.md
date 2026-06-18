@@ -1331,3 +1331,39 @@ const dispName = renderDisplayName(k);
 - 虚拟滚动列表**不要**用 CSS `animation` 做入场动画
 - 如需入场动画，应在**首次渲染**时通过 JS 一次性添加，而非通过 CSS class 常驻
 - `animation-fill-mode: both` 在频繁重建 DOM 的场景下会引入闪烁
+
+---
+
+## 16. 加载路径重复：4 条独立路径各维护 cache→WASM→Go
+
+### 症状
+
+- `.json` 模型作者列表不显示、头像不显示
+- 同一文件 WASM 解码两次（`_loadPreviewImage` + `loadModelData`）
+- 加密 `.ysm` 作者信息全丢
+
+### 根因
+
+**架构问题**：`index.js:_loadModel2D`（死代码）、`preview-skeleton.js:loadModel2D`（在用）、`preview-loader.js:loadModelData`（死代码）、`_loadPreviewImage` 四条路径重复实现加载逻辑。
+
+### 具体 Bug
+
+1. **`preview-wasm.js:153` `const ysmAuthors` 遮蔽外层 `let`**
+   - 加密 `.ysm` 的 `metadata.authors` 解析到内层变量，外层 `ysmAuthors`（被 return）始终 `[]`
+   - 修复：删内层声明
+
+2. **`decodeYsmViaWasm:18` 缓存判断过松**
+   - `cached?.geometry` 含空骨骼 `bones: []` 也视为命中，阻止 WASM 重试
+   - 修复：改为 `cached?.geometry?.bones?.length`
+
+3. **WASM init 在文件类型判断之前**
+   - `.json` 文件先加载 300KB WASM 模块，走到第 43 行才发现是 JSON
+   - 修复：文件读取 + JSON 类型判断提到 WASM init 之前
+
+4. **`parseYsmJsonDirect` 不加载头像文件**
+   - 对 `.json` 解压目录总返回 `avatarUrl: null`
+   - 修复：在 `decodeYsmViaWasm` 中用 `ReadFileBytes` 加载并创建 blob URL
+
+### 修复方案
+
+统一为 `preview-skeleton.js → loadModelData` 单路径，删除 320 行死代码。详见 `docs/release-notes/v1.8.11.md`。

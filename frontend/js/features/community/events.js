@@ -4,7 +4,7 @@ import { bus } from "../../bus.js";
 import { modalConfirm } from "../../dialogs/modal.js";
 import { renderModelList, isModelMissing } from "./render.js";
 import { createDownloadQueue } from "./download-queue.js";
-import { ICONS } from "../../components/app-content/workshop-icons.js";
+import { ICONS } from "../../components/app-content/community/workshop-icons.js";
 
 /**
  * 绑定仓库模型页面的所有事件。

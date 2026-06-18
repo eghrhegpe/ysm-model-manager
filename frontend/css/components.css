@@ -410,14 +410,19 @@
   color: var(--status-error);
 }
 .stg-select {
-  background: var(--bg, #1e1e2e);
-  color: var(--txt, #cdd6f4);
-  border: 1px solid var(--bd, #444);
-  border-radius: var(--radius-sm);
-  padding: 3px 6px;
-  font-size: 11px;
+  padding: var(--btn-padding-sm);
+  border-radius: var(--btn-radius, 6px);
+  border: 1px solid var(--bd);
+  background: transparent;
+  color: var(--txt);
   cursor: pointer;
+  font-size: var(--fs-btn-tool);
+  font-family: inherit;
+  transition: var(--btn-transition);
+  white-space: nowrap;
 }
+.stg-select:hover { background: var(--hover); }
+.stg-select:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 .stg-ml-auto {
   margin-left: auto;
 }

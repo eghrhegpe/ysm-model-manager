@@ -21,6 +21,7 @@ type ResourceType struct {
 	Extensions     []string `json:"extensions"`
 	StorageSubDir  string   `json:"storageSubDir"`
 	InstallDir     string   `json:"installDir"`
+	ScanDir        string   `json:"scanDir"`
 	InstanceLevel  bool     `json:"instanceLevel"`
 	Preview        string   `json:"preview"`        // "3d" / "thumbnail" / "none"
 	Detector       string   `json:"detector"`       // "ysm" / "mcmeta" / ""
@@ -42,13 +43,14 @@ func SetRegistryPath(path string) {
 }
 
 // LoadRegistry 加载资源类型注册表
+// 优先读取外部 JSON 文件（可通过 SetRegistryPath 自定义路径），
+// 文件不存在或读取失败时回退到编译时嵌入的默认数据。
 func LoadRegistry() *ResourceTypeRegistry {
 	registryOnce.Do(func() {
 		data, err := os.ReadFile(registryPath)
 		if err != nil {
-			log.Printf("[types] 读取注册表失败 %s: %v", registryPath, err)
-			registry = &ResourceTypeRegistry{}
-			return
+			// 文件不存在或路径不可达时，使用编译时嵌入的数据
+			data = embeddedRegistryJSON
 		}
 		var reg ResourceTypeRegistry
 		if err := json.Unmarshal(data, &reg); err != nil {

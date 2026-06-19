@@ -69,7 +69,7 @@ func Build(model types.BedrockModel) (string, error) {
 	// 多文件合并时，main.json 的骨骼有正确层级，应覆盖 arm.json 的扁平版本
 	pivots := make(map[string]vec3)
 	for _, b := range model.Bones {
-		np := vec3{b.Pivot[0], b.Pivot[1], b.Pivot[2]}
+		np := vec3{-b.Pivot[0], b.Pivot[1], b.Pivot[2]}
 		if _, exists := pivots[b.Name]; !exists {
 			pivots[b.Name] = np
 		} else if b.Parent != "" {
@@ -101,7 +101,7 @@ func Build(model types.BedrockModel) (string, error) {
 		var localRot [4]float64 = [4]float64{0, 0, 0, 1}
 		// 解析骨骼旋转（Blockbench 欧拉角 → 四元数）
 		if b.Rotation[0] != 0 || b.Rotation[1] != 0 || b.Rotation[2] != 0 {
-			localRot = eulerToQuaternion(b.Rotation[0], b.Rotation[1], b.Rotation[2])
+			localRot = eulerToQuaternion(-b.Rotation[0], -b.Rotation[1], b.Rotation[2])
 		}
 		var parentID *string
 		if b.Parent != "" {
@@ -153,7 +153,7 @@ func Build(model types.BedrockModel) (string, error) {
 
 		bonePivot, hasPivot := pivots[b.Name]
 		if !hasPivot {
-			bonePivot = vec3{b.Pivot[0], b.Pivot[1], b.Pivot[2]}
+			bonePivot = vec3{-b.Pivot[0], b.Pivot[1], b.Pivot[2]}
 		}
 		for ci, c := range boneCubes[b.Name] {
 			meshData := buildCubeMeshData(c, bonePivot, texW, texH, b.Name, ci)
@@ -322,6 +322,7 @@ const thicknessEpsilon = 0.001
 
 func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneID string, cubeIdx int) *MeshData {
 	ox := c.Origin[0]
+	ox = -ox // 对齐 ysmview：Blockbench 坐标系 X 取反
 	oy := c.Origin[1]
 	oz := c.Origin[2]
 	sx := c.Size[0]
@@ -420,7 +421,7 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 	localPos := [3]float64{cp[0] - bonePivot.x, cp[1] - bonePivot.y, cp[2] - bonePivot.z}
 
 	// Cube rotation → quaternion (CreateBlockbenchQuaternion)
-	localRot := eulerToQuaternion(c.Rotation[0], c.Rotation[1], c.Rotation[2])
+	localRot := eulerToQuaternion(-c.Rotation[0], -c.Rotation[1], c.Rotation[2])
 
 	return &MeshData{
 		ID:            meshID,

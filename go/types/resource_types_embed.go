@@ -58,7 +58,7 @@ var embeddedRegistryJSON = []byte(`{
       "installDir": "schematics/",
       "scanDir": "schematics",
       "instanceLevel": false,
-      "preview": "none",
+      "preview": "3d",
       "detector": "extension",
       "actions": ["import", "delete", "openFolder"]
     },

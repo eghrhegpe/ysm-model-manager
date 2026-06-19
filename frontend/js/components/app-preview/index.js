@@ -200,11 +200,11 @@ class AppPreview extends HTMLElement {
       showModelDetail(this, path);
       return;
     }
-    if (rtype === "litematic") {
+    if (rtype === "litematic" || rtype === "create-blueprint") {
       showLitematic(this, path);
       return;
     }
-    // 其他已知类型（shaderpack / create-blueprint / mmd-skin / vrchat-avatar）
+    // 其他已知类型（shaderpack / mmd-skin / vrchat-avatar）
     showShaderPack(this, path, this._typeMeta(rtype));
   }
 

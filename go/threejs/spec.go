@@ -328,7 +328,7 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 	sx := c.Size[0]
 	sy := c.Size[1]
 	sz := c.Size[2]
-	cp := [3]float64{c.Pivot[0], c.Pivot[1], c.Pivot[2]}
+	cp := [3]float64{-c.Pivot[0], c.Pivot[1], c.Pivot[2]}
 	// 优先用 cube 自身 tex 维度
 	if c.CubeTexW > 0 {
 		texW = float64(c.CubeTexW)

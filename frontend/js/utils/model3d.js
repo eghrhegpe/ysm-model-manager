@@ -121,9 +121,10 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
       geo.setIndex(md.indices);
       const mti = md.texIdx ?? texIdx ?? 0;
       const mt = texArr.length > 0 ? texArr[mti] || texArr[0] : null;
+      // ysmview 风格材质：统一 FrontSide + transparent，无 slot/alphaTest 判断
       const mat = mt
-        ? new THREE.MeshBasicMaterial({ map: mt, alphaTest: mti > 0 ? 0.5 : 0.02, side: mti > 0 ? THREE.BackSide : THREE.DoubleSide })
-        : new THREE.MeshBasicMaterial({ color: 0x44aa88, side: THREE.DoubleSide });
+        ? new THREE.MeshBasicMaterial({ map: mt, side: THREE.FrontSide, transparent: true })
+        : new THREE.MeshBasicMaterial({ color: 0xcccccc, side: THREE.FrontSide });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(md.localPosition[0], md.localPosition[1], md.localPosition[2]);
       if (md.localRotation[3] !== 1 || md.localRotation[0] !== 0 || md.localRotation[1] !== 0 || md.localRotation[2] !== 0)
@@ -132,15 +133,25 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
     }
   }
 
-  // AABB 计算世界空间中心 Y（已含 modelScale）
+  // ysmview 风格相机定位：从 mesh 包围盒计算
   scene.updateMatrixWorld();
-  const box = new THREE.Box3().setFromObject(rootGroup);
-  const centerY = box.isEmpty() ? 0 : box.getCenter(new THREE.Vector3()).y;
-
-  const camDist = Math.max(meshMax * 1.5 * modelScale, 60 * modelScale);
-  camera.position.set(camDist * 0.4, centerY, -camDist * 0.8);
-  camera.lookAt(0, centerY, 0);
-  controls.target.set(0, centerY, 0);
+  const box = new THREE.Box3();
+  scene.traverse((child) => { if (child.isMesh) box.expandByObject(child); });
+  let centerY = 0;
+  if (!box.isEmpty()) {
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    centerY = center.y;
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const dist = Math.max(size.x, size.y, size.z) * 1.5 + 2;
+    camera.position.set(center.x, center.y, center.z + dist);
+    camera.lookAt(center);
+    controls.target.copy(center);
+  } else {
+    camera.position.set(0, 80, -120);
+    controls.target.set(0, 80, 0);
+  }
   controls.update();
   const _initCamPos = camera.position.clone();
   const _initCamTarget = controls.target.clone();

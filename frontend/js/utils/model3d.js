@@ -263,10 +263,8 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
     }
   };
 
-    const onPointerClick = (e) => {
+  const onPointerClick = (e) => {
     if (!_hoveredBone) return;
-    const path = getBonePath(_hoveredBone);
-    navigator.clipboard.writeText(path).catch(function() {});
     if (window._3dOnBoneSelect) {
       var bg = boneGroupMap.get(_hoveredBone);
       var wp = new THREE.Vector3();
@@ -277,7 +275,7 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
       if (lq.x !== 0 || lq.y !== 0 || lq.z !== 0 || lq.w !== 1) lr = [lq.x, lq.y, lq.z, lq.w];
       window._3dOnBoneSelect({
         name: _boneNameMap.get(_hoveredBone) || _hoveredBone,
-        path: path,
+        path: getBonePath(_hoveredBone),
         parent: _boneParentMap.get(_hoveredBone),
         children: _boneChildrenMap.get(_hoveredBone) || [],
         meshCount: (function() { var bg2 = boneGroupMap.get(_hoveredBone); var mc = 0; if (bg2) bg2.traverse(function(c) { if (c.isMesh) mc++; }); return mc; })(),

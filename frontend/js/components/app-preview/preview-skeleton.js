@@ -436,7 +436,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
                 txt += "\nlocalRot: (" + info.localRot.map(function(v) { return v.toFixed(4); }).join(", ") + ")";
               }
               window._3dDetailEl.textContent = txt;
-              window._3dDetailEl.style.display = "block";
+              if (window._3dDetailEl.parentNode) window._3dDetailEl.parentNode.style.display = "block";
             }
           };
           loadingEl.remove();
@@ -554,10 +554,23 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
 
           // 骨骼详情框（3D 视图点击更新）
           const boneDetail = document.createElement("div");
-          boneDetail.style.cssText = "margin-top:6px;padding:4px 6px;background:rgba(255,255,255,0.05);border-radius:3px;font-size:10px;color:rgba(255,255,255,0.7);line-height:1.5;white-space:pre;display:none;max-height:120px;overflow-y:auto";
+          boneDetail.style.cssText = "margin-top:6px;border-radius:3px;font-size:10px;color:rgba(255,255,255,0.7);line-height:1.5;display:none;font-family:inherit";
+          const boneDetailText = document.createElement("div");
+          boneDetailText.style.cssText = "padding:4px 6px;background:rgba(255,255,255,0.05);border-radius:3px 3px 0 0;white-space:pre;max-height:100px;overflow-y:auto";
+          const boneDetailCopy = document.createElement("button");
+          boneDetailCopy.textContent = "📋 复制";
+          boneDetailCopy.style.cssText = "font-size:10px;padding:1px 6px;border:none;background:rgba(124,131,255,0.3);color:#fff;cursor:pointer;border-radius:0 0 3px 3px;width:100%;font-family:inherit";
+          boneDetailCopy.onclick = function() {
+            var txt = boneDetailText.textContent;
+            navigator.clipboard.writeText(txt).catch(function() {});
+            boneDetailCopy.textContent = "✅ 已复制";
+            setTimeout(function() { boneDetailCopy.textContent = "📋 复制"; }, 1500);
+          };
+          boneDetail.appendChild(boneDetailText);
+          boneDetail.appendChild(boneDetailCopy);
           panel.appendChild(boneDetail);
-          window._3dDetailEl = boneDetail;
-          _model3d._boneDetailEl = boneDetail;
+          window._3dDetailEl = boneDetailText;
+          _model3d._boneDetailEl = boneDetailText;
 
           const tip = document.createElement("div");
           tip.style.cssText = "padding:6px 12px;background:rgba(124,131,255,0.2);color:#fff;font-size:12px;text-align:center;flex-shrink:0;font-weight:500";

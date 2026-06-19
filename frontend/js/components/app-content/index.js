@@ -365,6 +365,16 @@ class AppContent extends HTMLElement {
             );
             this._unsubs = this._unsubs || [];
             if (vaCleanup) this._unsubs.push(vaCleanup);
+          } else if (tab === "litematic") {
+            const { initResourcePacks } =
+              await import("../../features/resource-packs.js");
+            const lmCleanup = await initResourcePacks(
+              container,
+              this,
+              "litematic",
+            );
+            this._unsubs = this._unsubs || [];
+            if (lmCleanup) this._unsubs.push(lmCleanup);
           }
         }
       });

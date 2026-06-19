@@ -152,7 +152,7 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
   document.addEventListener("fullscreenchange", _onFSChange);
   document.addEventListener("webkitfullscreenchange", _onFSChange);
   const _keys = {};
-  const _onKeyDown = (e) => { _keys[e.key.toLowerCase()] = true; if (["w","a","s","arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase())) e.preventDefault(); if (e.key.toLowerCase() === "d") { const modes = ["normal", "pivot", "bone"]; const next = (modes.indexOf(_debugMode) + 1) % modes.length; _debugMode = modes[next]; rebuildDebug(); } };
+  const _onKeyDown = (e) => { _keys[e.key.toLowerCase()] = true; if (["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase())) e.preventDefault(); if (e.key.toLowerCase() === "f") { const modes = ["normal", "pivot", "bone"]; const next = (modes.indexOf(_debugMode) + 1) % modes.length; _debugMode = modes[next]; rebuildDebug(); } };
   const _onKeyUp = (e) => { _keys[e.key.toLowerCase()] = false; };
   document.addEventListener("keydown", _onKeyDown);
   document.addEventListener("keyup", _onKeyUp);

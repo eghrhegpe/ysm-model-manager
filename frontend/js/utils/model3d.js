@@ -335,15 +335,15 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
         const lineGeo = new THREE.BufferGeometry().setFromPoints([data.pos, top]);
         const line = new THREE.Line(
           lineGeo,
-          new THREE.LineBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.5 }),
+          new THREE.LineBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.25 }),
         );
         _debugGroup.add(line);
         // 骨骼名标签（固定像素大小，不影响缩放）
-        const tex = makeTextTexture(data.name, "#00ff88");
+        const tex = makeTextTexture(data.name, "#88ffaa");
         const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false });
         const label = new THREE.Sprite(mat);
         label.position.copy(top);
-        label.scale.set(200, 40, 1);
+        label.scale.set(120, 24, 1);
         _debugGroup.add(label);
       }
     } else if (_debugMode === "bone") {

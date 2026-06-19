@@ -328,6 +328,19 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
         tooltip.textContent = r2.join("\n");
       }
     }, 2000);
+
+    // 触发外部回调
+    if (window._3dOnBoneSelect) {
+      window._3dOnBoneSelect({
+        name: _boneNameMap.get(_hoveredBone) || _hoveredBone,
+        path: path,
+        parent: _boneParentMap.get(_hoveredBone),
+        children: _boneChildrenMap.get(_hoveredBone) || [],
+        meshCount: (function() { var bg3 = boneGroupMap.get(_hoveredBone); var mc3 = 0; if (bg3) bg3.traverse(function(c) { if (c.isMesh) mc3++; }); return mc3; })(),
+        localPos: (function() { var bg4 = boneGroupMap.get(_hoveredBone); return bg4 ? [bg4.position.x, bg4.position.y, bg4.position.z] : [0,0,0]; })(),
+        worldPos: (function() { var bg5 = boneGroupMap.get(_hoveredBone); var wp5 = new THREE.Vector3(); if (bg5) bg5.getWorldPosition(wp5); return [wp5.x, wp5.y, wp5.z]; })(),
+      });
+    }
   };
 
   renderer.domElement.addEventListener("pointermove", onPointerMove);
@@ -445,6 +458,7 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
       });
     },
     getModelGroupCount: () => spec.models?.length || 0,
+    onBoneSelect: null, // 外部设置的回调: (boneInfo) => void
     setDebugMode: (mode) => {
       _debugMode = mode;
       rebuildDebug();

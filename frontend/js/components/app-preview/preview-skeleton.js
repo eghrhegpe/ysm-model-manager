@@ -425,14 +425,18 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
           // 3D 骨骼点击回调 → 详情框
           window._3dOnBoneSelect = function(info) {
             if (window._3dDetailEl) {
-              window._3dDetailEl.style.display = "block";
-              window._3dDetailEl.textContent = "🦴 " + info.name + "\n" +
+              var txt = "🦴 " + info.name + "\n" +
                 "路径: " + info.path + "\n" +
                 "父骨骼: " + (info.parent || "(无)") + "\n" +
                 "子骨骼: " + info.children.length + " 个\n" +
                 "Mesh: " + info.meshCount + "\n" +
                 "localPos: (" + info.localPos.map(function(v) { return v.toFixed(3); }).join(", ") + ")\n" +
                 "世界坐标: (" + info.worldPos.map(function(v) { return v.toFixed(2); }).join(", ") + ")";
+              if (info.localRot) {
+                txt += "\nlocalRot: (" + info.localRot.map(function(v) { return v.toFixed(4); }).join(", ") + ")";
+              }
+              window._3dDetailEl.textContent = txt;
+              window._3dDetailEl.style.display = "block";
             }
           };
           loadingEl.remove();

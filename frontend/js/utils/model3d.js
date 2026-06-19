@@ -122,7 +122,7 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
       const mti = md.texIdx ?? texIdx ?? 0;
       const mt = texArr.length > 0 ? texArr[mti] || texArr[0] : null;
       const mat = mt
-        ? new THREE.MeshBasicMaterial({ map: mt, alphaTest: 0.02, side: THREE.DoubleSide })
+        ? new THREE.MeshBasicMaterial({ map: mt, alphaTest: mti > 0 ? 0.5 : 0.02, side: mti > 0 ? THREE.BackSide : THREE.DoubleSide })
         : new THREE.MeshBasicMaterial({ color: 0x44aa88, side: THREE.DoubleSide });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(md.localPosition[0], md.localPosition[1], md.localPosition[2]);

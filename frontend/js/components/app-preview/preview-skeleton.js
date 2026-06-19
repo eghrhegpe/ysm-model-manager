@@ -435,6 +435,12 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
               if (info.localRot) {
                 txt += "\nlocalRot: (" + info.localRot.map(function(v) { return v.toFixed(4); }).join(", ") + ")";
               }
+              if (info.cubeRot) {
+                txt += "\ncubeRot: (" + info.cubeRot.map(function(v) { return v.toFixed(4); }).join(", ") + ")";
+              }
+              if (info.cubePos) {
+                txt += "\ncubePos: (" + info.cubePos.map(function(v) { return v.toFixed(3); }).join(", ") + ")";
+              }
               window._3dDetailEl.textContent = txt;
               if (window._3dDetailEl.parentNode) window._3dDetailEl.parentNode.style.display = "block";
             }

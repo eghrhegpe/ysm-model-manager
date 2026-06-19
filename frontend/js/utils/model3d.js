@@ -367,12 +367,18 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
     canvas.width = 256;
     canvas.height = 64;
     const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, 256, 64);
+    // 显式设为透明黑色背景
+    ctx.fillStyle = "rgba(0,0,0,0)";
+    ctx.fillRect(0, 0, 256, 64);
     ctx.fillStyle = color || "#ffffff";
     ctx.font = "24px sans-serif";
-    ctx.fillText(text, 4, 40);
+    ctx.textBaseline = "bottom";
+    ctx.shadowColor = "rgba(0,0,0,0.8)";
+    ctx.shadowBlur = 3;
+    ctx.fillText(text, 4, 58);
     const tex = new THREE.CanvasTexture(canvas);
     tex.minFilter = THREE.LinearFilter;
+    tex.premultiplyAlpha = true;
     return tex;
   }
   return {

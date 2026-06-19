@@ -295,6 +295,82 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
 
   renderer.domElement.addEventListener("pointermove", onPointerMove);
   renderer.domElement.addEventListener("click", onPointerClick);
+
+  // ===== 可视化模式切换 =====
+  let _debugMode = "normal"; // "normal" | "pivot" | "bone"
+  let _debugGroup = null;
+
+  const rebuildDebug = () => {
+    if (_debugGroup) {
+      scene.remove(_debugGroup);
+      _debugGroup = null;
+    }
+    if (_debugMode === "normal") return;
+    _debugGroup = new THREE.Group();
+    scene.add(_debugGroup);
+
+    // 获取骨骼世界坐标
+    rootGroup.updateMatrixWorld(true);
+    const boneWorldPositions = new Map();
+    for (const mg of spec.models || []) {
+      for (const bd of mg.bones || []) {
+        const bg = boneGroupMap.get(bd.id);
+        if (!bg) continue;
+        const wp = new THREE.Vector3();
+        bg.getWorldPosition(wp);
+        boneWorldPositions.set(bd.id, { pos: wp, name: bd.name, parentId: bd.parentId });
+      }
+    }
+
+    if (_debugMode === "pivot") {
+      for (const [, data] of boneWorldPositions) {
+        const sphere = new THREE.Mesh(
+          new THREE.SphereGeometry(2, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0x00ff88 }),
+        );
+        sphere.position.copy(data.pos);
+        _debugGroup.add(sphere);
+        // 标签
+        const label = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: makeTextTexture(data.name, "#00ff88"),
+            depthTest: false,
+          }),
+        );
+        label.position.copy(data.pos);
+        label.position.y += 3;
+        label.scale.set(8, 4, 1);
+        _debugGroup.add(label);
+      }
+    } else if (_debugMode === "bone") {
+      for (const [, data] of boneWorldPositions) {
+        const parentPos = data.parentId ? boneWorldPositions.get(data.parentId)?.pos : null;
+        if (!parentPos) continue;
+        const points = [data.pos.clone(), parentPos.clone()];
+        const geo = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(
+          geo,
+          new THREE.LineBasicMaterial({ color: 0x44aaff }),
+        );
+        _debugGroup.add(line);
+      }
+    }
+  };
+
+  // 文字纹理生成
+  function makeTextTexture(text, color) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, 256, 64);
+    ctx.fillStyle = color || "#ffffff";
+    ctx.font = "24px sans-serif";
+    ctx.fillText(text, 4, 40);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    return tex;
+  }
   return {
     resetCamera: () => {
       camera.position.copy(_initCamPos);
@@ -332,6 +408,10 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
       });
     },
     getModelGroupCount: () => spec.models?.length || 0,
+    setDebugMode: (mode) => {
+      _debugMode = mode;
+      rebuildDebug();
+    },
     cleanup: () => {
       if (_rafId != null) cancelAnimationFrame(_rafId);
       document.removeEventListener("keydown", _onKeyDown); document.removeEventListener("keyup", _onKeyUp);
@@ -340,6 +420,7 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
       renderer.domElement.removeEventListener("click", onPointerClick);
       if (_copyTimer) clearTimeout(_copyTimer);
+      if (_debugGroup) scene.remove(_debugGroup);
       controls.dispose(); window.removeEventListener("resize", _onResize);
       document.removeEventListener("fullscreenchange", _onFSChange);
       document.removeEventListener("webkitfullscreenchange", _onFSChange);

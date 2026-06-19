@@ -435,7 +435,6 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
                 "世界坐标: (" + info.worldPos.map(function(v) { return v.toFixed(2); }).join(", ") + ")";
             }
           };
-          window._3dDetailEl = boneDetail;
           loadingEl.remove();
 
           // 填充面板

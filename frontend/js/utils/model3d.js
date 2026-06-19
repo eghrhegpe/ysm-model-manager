@@ -194,6 +194,107 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
   };
   _rafId = requestAnimationFrame(loop);
   renderer.render(scene, camera);
+
+  // ===== 鼠标悬停骨骼名 + 点击复制层级 =====
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  let _hoveredBone = null;
+
+  // 构建骨骼层级路径映射
+  const _boneParentMap = new Map();
+  const _boneNameMap = new Map();
+  const _boneChildrenMap = new Map();
+  for (const mg of spec.models || []) {
+    for (const bd of mg.bones || []) {
+      _boneNameMap.set(bd.id, bd.name);
+      _boneParentMap.set(bd.id, bd.parentId || null);
+      if (!_boneChildrenMap.has(bd.parentId || "__root__")) {
+        _boneChildrenMap.set(bd.parentId || "__root__", []);
+      }
+      _boneChildrenMap.get(bd.parentId || "__root__").push(bd.id);
+    }
+  }
+
+  // 工具：骨骼名 → 全路径
+  const getBonePath = (boneId) => {
+    const parts = [];
+    let current = boneId;
+    while (current && _boneNameMap.has(current)) {
+      parts.unshift(_boneNameMap.get(current));
+      current = _boneParentMap.get(current);
+    }
+    return parts.join(" / ");
+  };
+
+  // 工具：骨骼名 → 第一个子骨骼名（用于区分同层骨骼）
+  const tooltip = document.createElement("div");
+  tooltip.style.cssText =
+    "position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:4px 10px;border-radius:4px;font-size:12px;pointer-events:none;z-index:100;white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis;display:none;font-family:inherit";
+  tooltip.textContent = "";
+  container.appendChild(tooltip);
+  // 点击提示
+  const clickHint = document.createElement("div");
+  clickHint.style.cssText =
+    "position:absolute;bottom:32px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.4);font-size:10px;pointer-events:none;z-index:100;display:none;font-family:inherit";
+  clickHint.textContent = "点击复制骨骼路径";
+  container.appendChild(clickHint);
+  let _copyTimer = null;
+
+  const getMeshBoneId = (mesh) => {
+    // mesh 属于一个 boneGroup，boneGroup 的 parent 链指向根
+    let obj = mesh;
+    while (obj) {
+      if (obj.isGroup && obj.name && _boneNameMap.has(obj.name)) {
+        return obj.name;
+      }
+      obj = obj.parent;
+    }
+    return null;
+  };
+
+  const onPointerMove = (e) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    let foundBone = null;
+    for (const hit of intersects) {
+      const boneId = getMeshBoneId(hit.object);
+      if (boneId) {
+        foundBone = boneId;
+        break;
+      }
+    }
+    if (foundBone !== _hoveredBone) {
+      _hoveredBone = foundBone;
+      if (foundBone) {
+        tooltip.textContent = _boneNameMap.get(foundBone) || foundBone;
+        tooltip.style.display = "block";
+        clickHint.style.display = "block";
+        renderer.domElement.style.cursor = "pointer";
+      } else {
+        tooltip.style.display = "none";
+        clickHint.style.display = "none";
+        renderer.domElement.style.cursor = "default";
+      }
+    }
+  };
+
+  const onPointerClick = (e) => {
+    if (!_hoveredBone) return;
+    const path = getBonePath(_hoveredBone);
+    navigator.clipboard.writeText(path).catch(() => {});
+    // 视觉反馈
+    tooltip.textContent = "✅ " + path;
+    if (_copyTimer) clearTimeout(_copyTimer);
+    _copyTimer = setTimeout(() => {
+      tooltip.textContent = _boneNameMap.get(_hoveredBone) || _hoveredBone;
+    }, 1500);
+  };
+
+  renderer.domElement.addEventListener("pointermove", onPointerMove);
+  renderer.domElement.addEventListener("click", onPointerClick);
   return {
     resetCamera: () => {
       camera.position.copy(_initCamPos);
@@ -236,6 +337,9 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
       document.removeEventListener("keydown", _onKeyDown); document.removeEventListener("keyup", _onKeyUp);
       renderer.domElement.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mouseup", onMouseUp); window.removeEventListener("mousemove", onMouseMove);
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("click", onPointerClick);
+      if (_copyTimer) clearTimeout(_copyTimer);
       controls.dispose(); window.removeEventListener("resize", _onResize);
       document.removeEventListener("fullscreenchange", _onFSChange);
       document.removeEventListener("webkitfullscreenchange", _onFSChange);

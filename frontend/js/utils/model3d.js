@@ -340,7 +340,7 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
         _debugGroup.add(line);
         // 骨骼名标签（固定像素大小，不影响缩放）
         const tex = makeTextTexture(data.name, "#88ffaa");
-        const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false });
+        const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false, transparent: true });
         const label = new THREE.Sprite(mat);
         label.position.copy(top);
         label.scale.set(120, 24, 1);

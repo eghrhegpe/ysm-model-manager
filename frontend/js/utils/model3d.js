@@ -199,6 +199,7 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   let _hoveredBone = null;
+  let _hoveredMesh = null;
 
   // 构建骨骼层级路径映射
   const _boneParentMap = new Map();
@@ -246,15 +247,18 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
     raycaster.setFromCamera(pointer, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
     let foundBone = null;
+    let foundMesh = null;
     for (const hit of intersects) {
       const boneId = getMeshBoneId(hit.object);
       if (boneId) {
         foundBone = boneId;
+        foundMesh = hit.object;
         break;
       }
     }
     if (foundBone !== _hoveredBone) {
       _hoveredBone = foundBone;
+      _hoveredMesh = foundMesh;
       if (foundBone) {
         renderer.domElement.style.cursor = "pointer";
       } else {
@@ -273,6 +277,13 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
       var lq = bg ? bg.quaternion : new THREE.Quaternion();
       var lr = null;
       if (lq.x !== 0 || lq.y !== 0 || lq.z !== 0 || lq.w !== 1) lr = [lq.x, lq.y, lq.z, lq.w];
+      // Cube（mesh）级数据
+      var cq = null;
+      var cp = null;
+      if (_hoveredMesh && _hoveredMesh.isMesh) {
+        cq = [_hoveredMesh.quaternion.x, _hoveredMesh.quaternion.y, _hoveredMesh.quaternion.z, _hoveredMesh.quaternion.w];
+        cp = [_hoveredMesh.position.x, _hoveredMesh.position.y, _hoveredMesh.position.z];
+      }
       window._3dOnBoneSelect({
         name: _boneNameMap.get(_hoveredBone) || _hoveredBone,
         path: getBonePath(_hoveredBone),
@@ -282,6 +293,8 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
         localPos: [lp.x, lp.y, lp.z],
         worldPos: [wp.x, wp.y, wp.z],
         localRot: lr,
+        cubeRot: cq,
+        cubePos: cp,
       });
     }
   };

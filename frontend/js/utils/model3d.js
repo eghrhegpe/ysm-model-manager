@@ -145,7 +145,7 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
     const size = new THREE.Vector3();
     box.getSize(size);
     const dist = Math.max(size.x, size.y, size.z) * 1.5 + 2;
-    camera.position.set(center.x, center.y, center.z + dist);
+    camera.position.set(center.x, center.y, center.z - dist);
     camera.lookAt(center);
     controls.target.copy(center);
   } else {

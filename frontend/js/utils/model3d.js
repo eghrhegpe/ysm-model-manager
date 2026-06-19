@@ -229,15 +229,9 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
   // 工具：骨骼名 → 第一个子骨骼名（用于区分同层骨骼）
   const tooltip = document.createElement("div");
   tooltip.style.cssText =
-    "position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:4px 10px;border-radius:4px;font-size:12px;pointer-events:none;z-index:100;white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis;display:none;font-family:inherit";
+    "position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:6px 12px;border-radius:4px;font-size:11px;pointer-events:none;z-index:100;white-space:pre;max-width:90vw;font-family:inherit;line-height:1.6";
   tooltip.textContent = "";
   container.appendChild(tooltip);
-  // 点击提示
-  const clickHint = document.createElement("div");
-  clickHint.style.cssText =
-    "position:absolute;bottom:32px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.4);font-size:10px;pointer-events:none;z-index:100;display:none;font-family:inherit";
-  clickHint.textContent = "点击复制骨骼路径";
-  container.appendChild(clickHint);
   let _copyTimer = null;
 
   const getMeshBoneId = (mesh) => {
@@ -269,13 +263,32 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
     if (foundBone !== _hoveredBone) {
       _hoveredBone = foundBone;
       if (foundBone) {
-        tooltip.textContent = _boneNameMap.get(foundBone) || foundBone;
+        const bg = boneGroupMap.get(foundBone);
+        const wp = new THREE.Vector3();
+        if (bg) bg.getWorldPosition(wp);
+        const lp = bg ? bg.position : new THREE.Vector3();
+        const lq = bg ? bg.quaternion : new THREE.Quaternion();
+        const pName = _boneParentMap.get(foundBone);
+        const pLabel = pName && _boneNameMap.has(pName) ? _boneNameMap.get(pName) : "(无)";
+        const children = _boneChildrenMap.get(foundBone) || [];
+        let meshCount = 0;
+        if (bg) bg.traverse((c) => { if (c.isMesh) meshCount++; });
+        const lines = [
+          "🦴 " + (_boneNameMap.get(foundBone) || foundBone),
+          "  父骨骼: " + pLabel,
+          "  子骨骼: " + children.length + " 个",
+          "  Mesh: " + meshCount,
+          "  localPos: (" + lp.x.toFixed(3) + ", " + lp.y.toFixed(3) + ", " + lp.z.toFixed(3) + ")",
+          "  世界坐标: (" + wp.x.toFixed(2) + ", " + wp.y.toFixed(2) + ", " + wp.z.toFixed(2) + ")",
+        ];
+        if (lq.x !== 0 || lq.y !== 0 || lq.z !== 0 || lq.w !== 1) {
+          lines.push("  localRot: (" + lq.x.toFixed(4) + ", " + lq.y.toFixed(4) + ", " + lq.z.toFixed(4) + ", " + lq.w.toFixed(4) + ")");
+        }
+        tooltip.textContent = lines.join("\n");
         tooltip.style.display = "block";
-        clickHint.style.display = "block";
         renderer.domElement.style.cursor = "pointer";
       } else {
         tooltip.style.display = "none";
-        clickHint.style.display = "none";
         renderer.domElement.style.cursor = "default";
       }
     }
@@ -285,12 +298,36 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
     if (!_hoveredBone) return;
     const path = getBonePath(_hoveredBone);
     navigator.clipboard.writeText(path).catch(() => {});
-    // 视觉反馈
-    tooltip.textContent = "✅ " + path;
+    const lines = tooltip.textContent.split("\n").filter(function(l) { return !l.startsWith("✅"); });
+    lines.push("✅ 路径已复制: " + path);
+    tooltip.textContent = lines.join("\n");
     if (_copyTimer) clearTimeout(_copyTimer);
-    _copyTimer = setTimeout(() => {
-      tooltip.textContent = _boneNameMap.get(_hoveredBone) || _hoveredBone;
-    }, 1500);
+    _copyTimer = setTimeout(function() {
+      if (_hoveredBone) {
+        var bg2 = boneGroupMap.get(_hoveredBone);
+        var wp2 = new THREE.Vector3();
+        if (bg2) bg2.getWorldPosition(wp2);
+        var lp2 = bg2 ? bg2.position : new THREE.Vector3();
+        var lq2 = bg2 ? bg2.quaternion : new THREE.Quaternion();
+        var pN2 = _boneParentMap.get(_hoveredBone);
+        var pL2 = pN2 && _boneNameMap.has(pN2) ? _boneNameMap.get(pN2) : "(无)";
+        var ch2 = _boneChildrenMap.get(_hoveredBone) || [];
+        var mc2 = 0;
+        if (bg2) bg2.traverse(function(c) { if (c.isMesh) mc2++; });
+        var r2 = [
+          "🦴 " + (_boneNameMap.get(_hoveredBone) || _hoveredBone),
+          "  父骨骼: " + pL2,
+          "  子骨骼: " + ch2.length + " 个",
+          "  Mesh: " + mc2,
+          "  localPos: (" + lp2.x.toFixed(3) + ", " + lp2.y.toFixed(3) + ", " + lp2.z.toFixed(3) + ")",
+          "  世界坐标: (" + wp2.x.toFixed(2) + ", " + wp2.y.toFixed(2) + ", " + wp2.z.toFixed(2) + ")",
+        ];
+        if (lq2.x !== 0 || lq2.y !== 0 || lq2.z !== 0 || lq2.w !== 1) {
+          r2.push("  localRot: (" + lq2.x.toFixed(4) + ", " + lq2.y.toFixed(4) + ", " + lq2.z.toFixed(4) + ", " + lq2.w.toFixed(4) + ")");
+        }
+        tooltip.textContent = r2.join("\n");
+      }
+    }, 2000);
   };
 
   renderer.domElement.addEventListener("pointermove", onPointerMove);

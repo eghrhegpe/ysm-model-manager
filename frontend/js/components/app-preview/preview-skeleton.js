@@ -552,6 +552,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
           const boneDetail = document.createElement("div");
           boneDetail.style.cssText = "margin-top:6px;padding:4px 6px;background:rgba(255,255,255,0.05);border-radius:3px;font-size:10px;color:rgba(255,255,255,0.7);line-height:1.5;white-space:pre;display:none;max-height:120px;overflow-y:auto";
           panel.appendChild(boneDetail);
+          window._3dDetailEl = boneDetail;
           _model3d._boneDetailEl = boneDetail;
 
           const tip = document.createElement("div");

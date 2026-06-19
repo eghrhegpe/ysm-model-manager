@@ -73,7 +73,7 @@
         ".nbt",
         ".schematic"
       ],
-      "storageSubDir": "schematics",
+      "storageSubDir": "create-blueprint",
       "configField": "SchematicRoot",
       "installDir": "schematics/",
       "scanDir": "schematics",

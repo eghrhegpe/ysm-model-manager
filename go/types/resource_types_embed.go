@@ -53,7 +53,7 @@ var embeddedRegistryJSON = []byte(`{
       "name": "蓝图",
       "icon": "⚙️",
       "extensions": [".nbt", ".schematic", ".litematic"],
-      "storageSubDir": "schematics",
+      "storageSubDir": "create-blueprint",
       "configField": "SchematicRoot",
       "installDir": "schematics/",
       "scanDir": "schematics",

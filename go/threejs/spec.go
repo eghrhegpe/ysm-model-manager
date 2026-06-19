@@ -341,8 +341,8 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 		return nil
 	}
 
-	// 最小/最大顶点（不取反）
-	fx := ox
+	// 最小/最大顶点（对齐 ysmview：from.x = origin.x - size.x）
+	fx := ox - sx
 	fy := oy
 	fz := oz
 	tx := ox + sx

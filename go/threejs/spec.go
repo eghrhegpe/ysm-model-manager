@@ -101,7 +101,7 @@ func Build(model types.BedrockModel) (string, error) {
 		var localRot [4]float64 = [4]float64{0, 0, 0, 1}
 		// 解析骨骼旋转（Blockbench 欧拉角 → 四元数）
 		if b.Rotation[0] != 0 || b.Rotation[1] != 0 || b.Rotation[2] != 0 {
-			localRot = eulerToQuaternion(-b.Rotation[0], -b.Rotation[1], b.Rotation[2])
+			localRot = eulerToQuaternion(b.Rotation[0], b.Rotation[1], b.Rotation[2])
 		}
 		var parentID *string
 		if b.Parent != "" {
@@ -420,7 +420,7 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 	localPos := [3]float64{cp[0] - bonePivot.x, cp[1] - bonePivot.y, cp[2] - bonePivot.z}
 
 	// Cube rotation → quaternion (CreateBlockbenchQuaternion)
-	localRot := eulerToQuaternion(-c.Rotation[0], -c.Rotation[1], c.Rotation[2])
+	localRot := eulerToQuaternion(c.Rotation[0], c.Rotation[1], c.Rotation[2])
 
 	return &MeshData{
 		ID:            meshID,

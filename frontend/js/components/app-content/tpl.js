@@ -20,6 +20,7 @@ export function repositoryHTML() {
     '<button class="repo-subtab" data-rtab="resourcepack">🎨 资源包</button>' +
     '<button class="repo-subtab" data-rtab="shaderpack">☀️ 光影包</button>' +
     '<button class="repo-subtab" data-rtab="create-blueprint">⚙️ 蓝图</button>' +
+    '<button class="repo-subtab" data-rtab="litematic">📐 投影</button>' +
     "</div>" +
     '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
     '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;min-width:0">' +
@@ -71,6 +72,7 @@ export function resourceLibraryHTML() {
     '<button class="repo-tab" data-rtab="resourcepack">🎨 资源包</button>' +
     '<button class="repo-tab" data-rtab="shaderpack">☀️ 光影包</button>' +
     '<button class="repo-tab" data-rtab="create-blueprint">⚙️ 蓝图</button>' +
+    '<button class="repo-tab" data-rtab="litematic">📐 投影</button>' +
     "</div>" +
     '<div id="res-panel" style="flex:1;display:flex;overflow:hidden"></div>' +
     "</div>"
@@ -461,7 +463,7 @@ export function downloadsHTML() {
 </div>
 <div id="dl-drop" style="flex:1;margin:4px 12px;border:2px dashed var(--bd);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;transition:all .2s;cursor:pointer;min-height:80px">
   <div style="font-size:28px;opacity:.35">📥</div>
-  <div style="font-size:11px;color:var(--muted)">拖拽模型文件 <b>.ysm .zip .7z .json .pmx .pmd .vrca .vrm .nbt .schematic</b> 或文件夹到此处，或点击选择文件</div>
+  <div style="font-size:11px;color:var(--muted)">拖拽模型文件 <b>.ysm .zip .7z .json .pmx .pmd .vrca .vrm .nbt .schematic .litematic</b> 或文件夹到此处，或点击选择文件</div>
   <div style="display:flex;gap:8px;align-items:center">
     <span style="font-size:9px;color:var(--muted)">📁 拖入整个文件夹即可批量导入</span>
   </div>

@@ -5,6 +5,7 @@ export const RESOURCE_TYPES = {
   PACK: "resourcepack",
   SHADER: "shaderpack",
   BLUEPRINT: "create-blueprint",
+  LITEMATIC: "litematic",
 };
 
 export const RESOURCE_TYPE_LABELS = {
@@ -14,6 +15,7 @@ export const RESOURCE_TYPE_LABELS = {
   resourcepack: "资源包",
   shaderpack: "光影包",
   "create-blueprint": "蓝图",
+  litematic: "投影",
 };
 
 export const ALL_RESOURCE_TYPES = Object.values(RESOURCE_TYPES);

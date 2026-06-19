@@ -16,6 +16,7 @@ import {
 import { devLog, stripYsgpTextHeader } from "./preview-utils.js";
 import { decodeYsmViaWasm } from "./preview-wasm.js";
 import { showModelDetail, showResourcePack, showShaderPack } from "./preview-detail.js";
+import { showLitematic } from "./preview-litematic-meta.js";
 // loadModelData 由 preview-skeleton.js 统一引入
 import { setupBoneExport } from "./preview-bone-export.js";
 
@@ -197,6 +198,10 @@ class AppPreview extends HTMLElement {
     // ysm 或无检测结果 → YSM 模型解析
     if (!rtype || rtype === "ysm") {
       showModelDetail(this, path);
+      return;
+    }
+    if (rtype === "litematic") {
+      showLitematic(this, path);
       return;
     }
     // 其他已知类型（shaderpack / create-blueprint / mmd-skin / vrchat-avatar）

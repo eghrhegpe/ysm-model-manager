@@ -137,7 +137,7 @@ export class AppSyncManager extends HTMLElement {
     }
 
     const modelTypes = ["ysm", "mmd-skin", "vrchat-avatar"];
-    const resourceTypes = ["resourcepack", "shaderpack", "create-blueprint"];
+    const resourceTypes = ["resourcepack", "shaderpack", "create-blueprint", "litematic"];
     const shortLabel = {
       ysm: "YSM",
       "mmd-skin": "MMD",
@@ -145,6 +145,7 @@ export class AppSyncManager extends HTMLElement {
       resourcepack: "资源包",
       shaderpack: "光影包",
       "create-blueprint": "蓝图",
+      litematic: "投影",
     };
 
     const tabsEl = this.querySelector(".sm-tabs");

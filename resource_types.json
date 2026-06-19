@@ -88,7 +88,7 @@
     },
     {
       "id": "litematic",
-      "name": "投影文件",
+      "name": "投影",
       "icon": "📐",
       "extensions": [
         ".litematic"

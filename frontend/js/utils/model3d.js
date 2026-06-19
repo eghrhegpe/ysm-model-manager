@@ -190,6 +190,15 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
     if (mv.length() > 0) { mv.normalize().multiplyScalar(_camSpeed*dt); camera.position.add(mv); if (_orbitMode) _orbitTarget.add(mv); }
     if (_orbitMode) { controls.target.copy(_orbitTarget); controls.update(); _orbitTarget.copy(controls.target); }
     else { controls.target.copy(camera.position).addScaledVector(cd, 10); controls.update(); }
+    // 调试标签自适应缩放
+    if (_debugLabels) {
+      for (var i = 0; i < _debugLabels.length; i++) {
+        var dl = _debugLabels[i];
+        var dist = dl.camera.position.distanceTo(dl.label.position);
+        var s = dl.label.userData.baseScale * dist;
+        dl.label.scale.set(s * 256, s * 64, 1);
+      }
+    }
     renderer.render(scene, camera);
   };
   _rafId = requestAnimationFrame(loop);
@@ -305,12 +314,14 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
   // ===== 可视化模式切换 =====
   let _debugMode = "normal"; // "normal" | "pivot" | "bone"
   let _debugGroup = null;
+  let _debugLabels = null;
 
   const rebuildDebug = () => {
     if (_debugGroup) {
       scene.remove(_debugGroup);
       _debugGroup = null;
     }
+    _debugLabels = null;
     if (_debugMode === "normal") return;
     _debugGroup = new THREE.Group();
     scene.add(_debugGroup);
@@ -330,23 +341,26 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
 
     if (_debugMode === "pivot") {
       for (const [, data] of boneWorldPositions) {
-        const sphere = new THREE.Mesh(
-          new THREE.SphereGeometry(2, 8, 8),
-          new THREE.MeshBasicMaterial({ color: 0x00ff88 }),
+        const top = data.pos.clone();
+        top.y += 4; // 名称在骨骼上方 4 单位
+        // 绿线：从骨骼位置到名称位置
+        const lineGeo = new THREE.BufferGeometry().setFromPoints([data.pos, top]);
+        const line = new THREE.Line(
+          lineGeo,
+          new THREE.LineBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.6 }),
         );
-        sphere.position.copy(data.pos);
-        _debugGroup.add(sphere);
-        // 标签
-        const label = new THREE.Sprite(
-          new THREE.SpriteMaterial({
-            map: makeTextTexture(data.name, "#00ff88"),
-            depthTest: false,
-          }),
-        );
-        label.position.copy(data.pos);
-        label.position.y += 3;
-        label.scale.set(8, 4, 1);
+        _debugGroup.add(line);
+        // 骨骼名标签（使用 Sprite，在 render loop 中调整大小）
+        const tex = makeTextTexture(data.name, "#00ff88");
+        const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false });
+        const label = new THREE.Sprite(mat);
+        label.position.copy(top);
+        label.userData.baseScale = 0.04; // 基础缩放，渲染循环会调整
+        label.scale.set(0.04 * 256, 0.04 * 64, 1);
         _debugGroup.add(label);
+        // 存储 label 以便在 render loop 中更新缩放
+        if (!_debugLabels) _debugLabels = [];
+        _debugLabels.push({ label, camera });
       }
     } else if (_debugMode === "bone") {
       for (const [, data] of boneWorldPositions) {

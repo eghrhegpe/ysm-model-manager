@@ -102,9 +102,9 @@ export async function showRenameDialog(filePath, currentName) {
       if (w) parts.push("【" + w + "】");
       parts.push(c || "?");
       if (v) parts.push("-" + v);
-      if (d) parts.push("(" + d + ")");
+      if (d) parts.push(" (" + d + ")");
       box.querySelector("#rn-preview").textContent =
-        parts.join(" ") + "." + ext;
+        parts.join("") + "." + ext;
     };
 
     ["rn-author", "rn-work", "rn-chara", "rn-variant", "rn-date"].forEach(
@@ -157,7 +157,7 @@ export async function showRenameDialog(filePath, currentName) {
         "】" +
         c +
         (v ? "-" + v : "") +
-        (d ? "(" + d + ")" : "") +
+        (d ? " (" + d + ")" : "") +
         "." +
         ext;
       if (newName.length > 255) {

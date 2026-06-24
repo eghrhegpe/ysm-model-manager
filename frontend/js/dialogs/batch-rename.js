@@ -25,7 +25,7 @@ export async function showBatchRenameDialog(dir, entries, onApply) {
       if (a) parts.push("[" + a + "]");
       if (w) parts.push("【" + w + "】");
       parts.push(c);
-      if (d) parts.push("(" + d + ")");
+      if (d) parts.push(" (" + d + ")");
       it.newName = parts.join("") + "." + ext;
       it.changed = it.newName !== it.Name;
     });

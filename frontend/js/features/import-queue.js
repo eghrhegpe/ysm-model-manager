@@ -130,9 +130,9 @@ export function initImportQueue(app) {
     if (w) parts.push("【" + w + "】");
     parts.push(c || "?");
     if (v) parts.push("-" + v);
-    if (d) parts.push("(" + d + ")");
+    if (d) parts.push(" (" + d + ")");
     const ext = currentFileName?.split(".").pop() || "ysm";
-    const preview = parts.join(" ") + "." + ext;
+    const preview = parts.join("") + "." + ext;
     root.getElementById("dl-preview").textContent = preview;
 
     // 检查冲突（防抖）
@@ -334,7 +334,7 @@ export function initImportQueue(app) {
       if (w) parts.push("【" + w + "】");
       parts.push(c);
       if (v) parts.push("-" + v);
-      if (d) parts.push("(" + d + ")");
+      if (d) parts.push(" (" + d + ")");
       newName = parts.join("") + "." + ext;
     } else {
       // 未填写角色名 → 使用原文件名

@@ -78,7 +78,8 @@ const isEditable = (el) =>
 const onDragOver = (e) => {
   // 只在仓库页面显示拖拽遮罩
   if (PageStore.currentPage !== "repository") return;
-  if (!e.dataTransfer?.items?.length) return;
+  // 检测是否拖拽的是文件（items 在 dragover 阶段可能为空，用 types 更可靠）
+  if (!e.dataTransfer?.types?.includes("Files")) return;
   if (isEditable(e.target)) return;
   e.preventDefault();
   e.dataTransfer.dropEffect = "copy";
@@ -90,13 +91,8 @@ const onDragOver = (e) => {
 const onDragLeave = (e) => {
   if (PageStore.currentPage !== "repository") return;
   if (dropLeaveTimer) clearTimeout(dropLeaveTimer);
-  if (!e.relatedTarget) {
-    hideDropOverlay();
-    return;
-  }
-  dropLeaveTimer = setTimeout(() => {
-    if (!e.currentTarget.contains(e.relatedTarget)) hideDropOverlay();
-  }, 100);
+  // 防抖：50ms 后隐藏遮罩，若期间 dragover 重新触发则取消
+  dropLeaveTimer = setTimeout(hideDropOverlay, 50);
 };
 const onDrop = async (e) => {
   hideDropOverlay();
@@ -252,9 +248,12 @@ export function registerDnD(unsubs) {
   document.addEventListener("dragover", onDragOver);
   document.addEventListener("dragleave", onDragLeave);
   document.addEventListener("drop", onDrop);
+  // 兜底：某些场景下 dragleave/drop 不会触发时隐藏遮罩
+  document.addEventListener("dragend", hideDropOverlay);
   unsubs.push(() => document.removeEventListener("dragover", onDragOver));
   unsubs.push(() => document.removeEventListener("dragleave", onDragLeave));
   unsubs.push(() => document.removeEventListener("drop", onDrop));
+  unsubs.push(() => document.removeEventListener("dragend", hideDropOverlay));
   unsubs.push(() => {
     if (dropOverlay) {
       dropOverlay.remove();

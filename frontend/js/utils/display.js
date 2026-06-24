@@ -28,7 +28,7 @@ export function parseModelName(raw) {
     if (wi >= 0) rest = rest.slice(0, wi) + rest.slice(wi + wMatch[0].length);
   }
   rest = rest.replace(/^\[\]/, "").replace(/^【】/, "").replace(/^\s+/, "");
-  rest = rest.replace(/\d{4}[-_.]?\d{0,2}/g, "");
+  rest = rest.replace(/\d{4}[-_.]?\d{0,2}/g, "").replace(/[\(（]\s*[\)）]/g, "");
   const chara = rest
     .replace(/[-_]{2,}/g, " ")
     .replace(/^[-_\s]+|[-_\s]+$/g, "")

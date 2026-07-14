@@ -1,0 +1,48 @@
+# Wails 3 开发配置（联邦标准摆法）
+# `wails3 dev` 读取 ./build/config.yml，仅使用 `dev_mode` 段落来驱动
+# 热重载引擎 (github.com/atterpac/refresh)。`executes` 中的命令统一委托给
+# `wails3 task`（Task 编排器，内置 POSIX shell），不再手写裸 cmd /C，
+# 路径分隔符、环境变量、跨平台差异均由 Task 体系统一处理。
+version: '3'
+
+info:
+  companyName: "YSM"
+  productName: "YSM 模型管理器"
+  productIdentifier: "com.ysm.modelmanager"
+  description: "YSM 模型管理器"
+  copyright: "(c) 2025, YSM"
+  comments: "Wails 3 dev config"
+  version: "1.9.3"
+
+# Dev mode configuration
+dev_mode:
+  root_path: .
+  log_level: warn
+  debounce: 1000
+  ignore:
+    dir:
+      - .git
+      - node_modules
+      - frontend
+      - bin
+    file:
+      - .DS_Store
+      - .gitignore
+      - .gitkeep
+      - "*_test.go"
+    watched_extension:
+      - "*.go"
+    git_ignore: true
+  executes:
+    # 1) 编译 Go 二进制（blocking，每次 *.go 变更后由 watcher 重编）
+    #    走 wails3 task windows:build:dev：不携带 -tags production，
+    #    故启用 !production 构建分支，asset server 代理到 vite dev server。
+    - cmd: wails3 task windows:build:dev
+      type: blocking
+    # 2) vite 开发服务器（background，热重载期间常驻）
+    #    端口取 wails3 dev 注入的 WAILS_VITE_PORT（默认 9245）。
+    - cmd: wails3 task common:dev:frontend
+      type: background
+    # 3) 运行应用（primary，*.go 变更时由 watcher 先杀后启）
+    - cmd: wails3 task run
+      type: primary

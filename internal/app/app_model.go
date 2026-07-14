@@ -1,6 +1,6 @@
 // ========== YSM 模型解析 ==========
 // 从 app.go 拆分：模型文件分析、几何体解析、CLI fallback
-package main
+package app
 
 import (
 	"encoding/base64"

@@ -7,7 +7,7 @@ import { dbg } from "../../../utils/debug.js";
  * @returns {{ sites: Array, creators: Array, authors: Array }}
  */
 export async function loadCommunityData() {
-  const App = await import("../../../../bindings/ysm-model-manager/app.js");
+  const App = await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
   const [sites, creators, authors, localAuthors] = await Promise.all([
     App.LoadWorkshopSites(),
     App.LoadWorkshopCreators(),
@@ -55,7 +55,7 @@ async function tryAutoMergeCommunity(creators) {
   if (added > 0) {
     try {
       const { SaveWorkshopCreatorsBySite, SaveWorkshopCreators } =
-        await import("../../../../bindings/ysm-model-manager/app.js");
+        await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
       // 按站点分组，逐站点原子保存
       const siteMap = {};
       creators.forEach((c) => {

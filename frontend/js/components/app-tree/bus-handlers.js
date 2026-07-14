@@ -5,7 +5,7 @@ import {
   ToggleModelEnable,
   SelectDirectory,
   SaveAppConfig,
-} from "../../../bindings/ysm-model-manager/app.js";
+} from "../../../bindings/ysm-model-manager/internal/app/app.js";
 import { loadEntries } from "./loader.js";
 import { initInstanceActions } from "./instance-actions.js";
 import { getApp } from "../../wails/app.js";
@@ -28,7 +28,7 @@ export function bindBusEvents(vm) {
             ListVersionInstances,
             SyncModelToggleStatus,
             GetRepoRoot,
-          } = await import("../../../bindings/ysm-model-manager/app.js");
+          } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
           const cfg = await LoadAppConfig();
           const repoRoot = await GetRepoRoot("ysm");
           const mcRoot = cfg.mcRoot || "";
@@ -123,7 +123,7 @@ export function bindBusEvents(vm) {
       if (!name) return;
       try {
         const { LoadAppConfig, RenameDir, GetRepoRoot } =
-          await import("../../../bindings/ysm-model-manager/app.js");
+          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         await RenameDir(absDir, name.trim());
@@ -151,7 +151,7 @@ export function bindBusEvents(vm) {
       if (!name) return;
       try {
         const { LoadAppConfig, CreateDir, GetRepoRoot } =
-          await import("../../../bindings/ysm-model-manager/app.js");
+          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot
           ? repoRoot + "/" + dir + "/" + name.trim()
@@ -182,7 +182,7 @@ export function bindBusEvents(vm) {
       try {
         // 加载仓库根目录 → 拼接绝对路径
         const { LoadAppConfig, ListAllFilePaths, MoveToRecycle, GetRepoRoot } =
-          await import("../../../bindings/ysm-model-manager/app.js");
+          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const allFiles = await ListAllFilePaths(absDir);
@@ -198,7 +198,7 @@ export function bindBusEvents(vm) {
         }
         // 尝试删除空文件夹
         try {
-          const { RemoveDir } = await import("../../../bindings/ysm-model-manager/app.js");
+          const { RemoveDir } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
           await RemoveDir(dir);
         } catch {}
         await reload(vm);
@@ -229,7 +229,7 @@ export function bindBusEvents(vm) {
     bus.on("dir:batch-rename", async ({ dir }) => {
       try {
         const { LoadAppConfig, ScanModelEntries, RenameFile, GetRepoRoot } =
-          await import("../../../bindings/ysm-model-manager/app.js");
+          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const entries = await ScanModelEntries(absDir);
@@ -277,7 +277,7 @@ export function bindBusEvents(vm) {
     bus.on("batch:rename", async ({ paths }) => {
       if (!paths?.length) return;
       try {
-        const { RenameFile } = await import("../../../bindings/ysm-model-manager/app.js");
+        const { RenameFile } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const entries = paths.map((p) => ({
           Name: p.split(/[/\\]/).pop(),
           Path: p,

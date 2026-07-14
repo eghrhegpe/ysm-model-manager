@@ -1,6 +1,6 @@
 // ========== 创意工坊配置（站点 + 创作者） ==========
 // 从 app.go 拆分：工坊站点和创作者的 CRUD + 导入导出
-package main
+package app
 
 import (
 	"bytes"
@@ -30,7 +30,6 @@ func workshopSitesPath() string {
 	return findConfigFile(
 		filepath.Join(filepath.Dir(exe), "workshop_sites.json"),
 		filepath.Join(filepath.Dir(exe), "..", "workshop_sites.json"),
-		"workshop_sites.json",
 	)
 }
 
@@ -43,9 +42,20 @@ func readJSONFile(path string, v interface{}) error {
 	return json.Unmarshal(data, v)
 }
 
+// loadBundledJSON 从随附数据（exe 同级 / 嵌入基线）读取并解析 JSON，
+// 不依赖当前工作目录，等价于 readJSONFile(loadBundledData(name))。
+func loadBundledJSON(name string, v interface{}) error {
+	data, err := loadBundledData(name)
+	if err != nil {
+		return err
+	}
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
+	return json.Unmarshal(data, v)
+}
+
 func (a *App) LoadWorkshopSites() []types.WorkshopSite {
 	var sites []types.WorkshopSite
-	if err := readJSONFile(workshopSitesPath(), &sites); err != nil {
+	if err := loadBundledJSON("workshop_sites.json", &sites); err != nil {
 		return defaultWorkshopSites()
 	}
 	return sites
@@ -93,13 +103,12 @@ func creatorsPath() string {
 	return findConfigFile(
 		filepath.Join(filepath.Dir(exe), "creators.json"),
 		filepath.Join(filepath.Dir(exe), "..", "creators.json"),
-		"creators.json",
 	)
 }
 
 func (a *App) LoadWorkshopCreators() []types.WorkshopCreator {
 	var list []types.WorkshopCreator
-	if err := readJSONFile(creatorsPath(), &list); err != nil {
+	if err := loadBundledJSON("creators.json", &list); err != nil {
 		return nil
 	}
 	return list
@@ -147,13 +156,12 @@ func workshopGitHubPath() string {
 	return findConfigFile(
 		filepath.Join(filepath.Dir(exe), "workshop_gitHub.json"),
 		filepath.Join(filepath.Dir(exe), "..", "workshop_gitHub.json"),
-		"workshop_gitHub.json",
 	)
 }
 
 func (a *App) LoadGitHubRepos() []types.WorkshopCreator {
 	var list []types.WorkshopCreator
-	if err := readJSONFile(workshopGitHubPath(), &list); err != nil {
+	if err := loadBundledJSON("workshop_gitHub.json", &list); err != nil {
 		return nil
 	}
 	return list

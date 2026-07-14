@@ -1,6 +1,6 @@
 // ===== 整合包内部操作绑定（< 100 行）=====
 import { bus } from "../../bus.js";
-import { InstallModelTo } from "../../../bindings/ysm-model-manager/app.js";
+import { InstallModelTo } from "../../../bindings/ysm-model-manager/internal/app/app.js";
 
 /** 绑定整合包卡片中的操作按钮和缺失条目点击事件 */
 export function bindInstanceActions(root, instances) {
@@ -16,7 +16,7 @@ export function bindInstanceActions(root, instances) {
         type: "info",
       });
       const { LoadAppConfig, ListVersionInstances } =
-        await import("../../../bindings/ysm-model-manager/app.js");
+        await import("../../../bindings/ysm-model-manager/internal/app/app.js");
       const cfg = await LoadAppConfig();
       const mcRoot = cfg.mcRoot || "";
       const allIns = mcRoot ? (await ListVersionInstances(mcRoot)) || [] : [];

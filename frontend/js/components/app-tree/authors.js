@@ -7,7 +7,7 @@
 export async function loadAuthors() {
   try {
     const { ListModelAuthors } =
-      await import("../../../bindings/ysm-model-manager/app.js");
+      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     return (await ListModelAuthors()) || [];
   } catch {
     return [];

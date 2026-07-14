@@ -40,7 +40,7 @@ export async function showModelDetail(ctx, path) {
 
   try {
     const { ExtractYsmSummary, ExtractYSMHeader } =
-      await import("../../../bindings/ysm-model-manager/app.js");
+      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     const results = await Promise.allSettled([
       ExtractYsmSummary(path),
       ExtractYSMHeader(path),
@@ -94,7 +94,7 @@ export async function showModelDetail(ctx, path) {
 /** 显示资源包信息（pack.mcmeta + pack.png） */
 export async function showResourcePack(ctx, path) {
   try {
-    const { ReadPackMeta } = await import("../../../bindings/ysm-model-manager/app.js");
+    const { ReadPackMeta } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     const jsonStr = await ReadPackMeta(path);
     const meta = JSON.parse(jsonStr);
     const basename = path.split("/").pop().split("\\").pop();

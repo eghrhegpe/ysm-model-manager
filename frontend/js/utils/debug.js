@@ -62,7 +62,7 @@ function safeStr(v) {
 // 调试：控制台可调 window.debugGetSpec(path) 获取 Go spec 骨骼数据
 window.debugGetSpec = async (path) => {
   try {
-    const { GetModel3DSpec } = await import("../../bindings/ysm-model-manager/app.js");
+    const { GetModel3DSpec } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
     const jsonStr = await GetModel3DSpec(path || "");
     const spec = JSON.parse(jsonStr);
     dbg("model3d", "spec:", spec);

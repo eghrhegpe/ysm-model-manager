@@ -1,6 +1,6 @@
 // ========== 文件操作 + 预览提取 + 包信息 ==========
 // 从 app.go 拆分：文件 CRUD、预览图、纹理提取、包信息、启用/禁用
-package main
+package app
 
 import (
 	"bytes"

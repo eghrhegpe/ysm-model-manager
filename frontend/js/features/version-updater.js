@@ -24,13 +24,13 @@ async function doUpdate(info, statusEl) {
   if (statusEl) {
     statusEl.textContent = "⬇️ 下载+安装中...";
   }
-  const { DoUpdate } = await import("../../bindings/ysm-model-manager/app.js");
+  const { DoUpdate } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
   const result = await DoUpdate(info.url, info.expectedHash || "");
   if (result !== "success") {
     throw new Error(result);
   }
   // 启动新进程后退出
-  const { RestartApplication } = await import("../../bindings/ysm-model-manager/app.js");
+  const { RestartApplication } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
   await RestartApplication();
 }
 
@@ -112,7 +112,7 @@ export async function checkUpdateSilent() {
   if (!canCheck()) return;
   markChecked();
   try {
-    const { CheckUpdate } = await import("../../bindings/ysm-model-manager/app.js");
+    const { CheckUpdate } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
     const info = await CheckUpdate();
     if (info?.available) {
       bus.emit("toast:show", {
@@ -138,7 +138,7 @@ export function initVersionUpdater(root) {
       btn.textContent = "⏳ 检查中...";
       btn.disabled = true;
       try {
-        const { CheckUpdate } = await import("../../bindings/ysm-model-manager/app.js");
+        const { CheckUpdate } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
         const info = await CheckUpdate();
         markChecked();
         if (!info.available) {

@@ -1,5 +1,5 @@
 // ========== 模型标签系统：Binding 入口 ==========
-package main
+package app
 
 import (
 	"os"

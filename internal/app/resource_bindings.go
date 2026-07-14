@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/json"
@@ -19,7 +19,7 @@ import (
 
 // LoadResourceTypes 加载资源类型注册表
 func (a *App) LoadResourceTypes() string {
-	data, err := os.ReadFile("resource_types.json")
+	data, err := loadBundledData("resource_types.json")
 	if err != nil {
 		return "{}"
 	}
@@ -134,7 +134,7 @@ func (a *App) SetVoxelMaxBlocks(limit int) error {
 // DetectResourceType 检测指定文件的资源类型
 func (a *App) DetectResourceType(path string) string {
 	var registry types.ResourceTypeRegistry
-	if data, err := os.ReadFile("resource_types.json"); err == nil {
+	if data, err := loadBundledData("resource_types.json"); err == nil {
 		json.Unmarshal(data, &registry)
 	}
 	return packs.DetectResourceType(path, &registry)

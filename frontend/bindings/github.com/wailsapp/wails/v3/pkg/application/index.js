@@ -15,5 +15,6 @@ export {
     MenuManager,
     ScreenManager,
     SystemTrayManager,
+    WebviewWindow,
     WindowManager
 } from "./models.js";

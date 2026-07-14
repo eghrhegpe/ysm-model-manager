@@ -68,7 +68,7 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 /** 从 Go 配置或 localStorage 加载主题 */
 async function initTheme() {
   try {
-    const { LoadAppConfig } = await import("../bindings/ysm-model-manager/app.js");
+    const { LoadAppConfig } = await import("../bindings/ysm-model-manager/internal/app/app.js");
     const cfg = await LoadAppConfig();
     const theme =
       localStorage.getItem("theme") || cfg.theme || cfg.Theme || THEME_DARK;

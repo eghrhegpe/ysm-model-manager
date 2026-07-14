@@ -128,7 +128,7 @@ export function bindFooter(root, instances) {
     (async () => {
       try {
         const { LoadAppConfig, SaveAppConfig, GetMinecraftPaths } =
-          await import("../../../bindings/ysm-model-manager/app.js");
+          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const cfg = await LoadAppConfig();
         if (cfg.mcRoot) {
           btn.textContent = `🎮 ${cfg.mcRoot}`;

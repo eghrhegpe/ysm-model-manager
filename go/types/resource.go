@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -47,11 +48,7 @@ func SetRegistryPath(path string) {
 // 文件不存在或读取失败时回退到编译时嵌入的默认数据。
 func LoadRegistry() *ResourceTypeRegistry {
 	registryOnce.Do(func() {
-		data, err := os.ReadFile(registryPath)
-		if err != nil {
-			// 文件不存在或路径不可达时，使用编译时嵌入的数据
-			data = embeddedRegistryJSON
-		}
+		data := loadRegistryBytes()
 		var reg ResourceTypeRegistry
 		if err := json.Unmarshal(data, &reg); err != nil {
 			log.Printf("[types] 解析注册表失败: %v", err)
@@ -61,6 +58,31 @@ func LoadRegistry() *ResourceTypeRegistry {
 		registry = &reg
 	})
 	return registry
+}
+
+// loadRegistryBytes 按优先级解析注册表字节：
+//  1. 显式路径（SetRegistryPath 设置的测试/自定义绝对路径）；
+//  2. exe 同级 / 上级目录（部署 / updater 热更位），彻底摆脱对 cwd 的依赖；
+//  3. 编译期嵌入的基线 embeddedRegistryJSON。
+// 默认 registryPath 为相对名 "resource_types.json" 时视为未显式设置，跳过 cwd 裸读。
+func loadRegistryBytes() []byte {
+	if registryPath != "" && registryPath != "resource_types.json" {
+		if b, err := os.ReadFile(registryPath); err == nil {
+			return b
+		}
+	}
+	if exe, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exe)
+		for _, cand := range []string{
+			filepath.Join(exeDir, "resource_types.json"),
+			filepath.Join(exeDir, "..", "resource_types.json"),
+		} {
+			if b, err := os.ReadFile(cand); err == nil {
+				return b
+			}
+		}
+	}
+	return embeddedRegistryJSON
 }
 
 // RegistryType 按 id 查找资源类型，不存在时返回 nil

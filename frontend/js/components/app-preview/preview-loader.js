@@ -43,7 +43,7 @@ export async function loadModelData(modelPath, ctx) {
   // 非 YSM/JSON 或 WASM 失败/空骨骼 → 走 Go
   if (!model?.bones?.length) {
     const { AnalyzeBedrockModel } =
-      await import("../../../bindings/ysm-model-manager/app.js");
+      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     model = await AnalyzeBedrockModel(modelPath);
 
     // .json 解压目录：用 WASM 解析出的 authors 填补（Go 不返回此字段）

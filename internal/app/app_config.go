@@ -1,6 +1,6 @@
 // ========== 配置 + 自动更新 + 窗口 + 目录选择 + .minecraft 定位 ==========
 // 从 app.go 拆分：配置持久化、自动更新、窗口状态、目录选择、MC 检测
-package main
+package app
 
 import (
 	"encoding/json"
@@ -29,16 +29,51 @@ func findConfigFile(candidates ...string) string {
 	return ""
 }
 
+func configDir() string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		dir = "." // 兜底：仅当系统 API 异常，避免崩溃
+	}
+	// 与 go/logs 的子目录保持一致（YSM-Model-Manager），用户目录下统一管理
+	return filepath.Join(dir, "YSM-Model-Manager")
+}
+
 func configPath() string {
+	return filepath.Join(configDir(), "ysm_config.json")
+}
+
+// migrateLegacyConfig 将旧版落在 exe 相对路径（含仓库根）的 ysm_config.json
+// 迁移到用户配置目录。仅当新位置不存在、且旧候选之一存在时执行；
+// 复制成功后才删除旧文件，失败时保留旧文件不丢数据。
+func migrateLegacyConfig() {
+	newPath := configPath()
+	if _, err := os.Stat(newPath); err == nil {
+		return // 已迁移，跳过
+	}
 	exe, _ := os.Executable()
-	return findConfigFile(
+	candidates := []string{
 		filepath.Join(filepath.Dir(exe), "ysm_config.json"),
 		filepath.Join(filepath.Dir(exe), "..", "ysm_config.json"),
 		filepath.Join(".", "ysm_config.json"),
-	)
+	}
+	for _, p := range candidates {
+		data, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
+			return
+		}
+		if err := os.WriteFile(newPath, data, 0o644); err != nil {
+			return
+		}
+		_ = os.Remove(p) // 迁移成功，清理旧文件
+		return
+	}
 }
 
 func (a *App) loadAppConfig() {
+	migrateLegacyConfig() // 启动期先将旧位置配置迁到用户目录
 	data, err := os.ReadFile(configPath())
 	if err != nil {
 		return

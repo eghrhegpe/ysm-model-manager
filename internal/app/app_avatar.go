@@ -1,6 +1,6 @@
 // ========== 创作者头像提取（薄壳） ==========
 // 纯逻辑已下沉到 go/avatar/，此处仅做 Wails 绑定适配。
-package main
+package app
 
 import (
 	"encoding/base64"

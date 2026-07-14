@@ -107,7 +107,7 @@ export class AppSyncManager extends HTMLElement {
 
   async _loadTypeConfig() {
     const { LoadResourceTypes } =
-      await import("../../../wailsjs/go/main/App.js");
+      await import("../../../bindings/ysm-model-manager/app.js");
     try {
       const raw = await LoadResourceTypes();
       const parsed = JSON.parse(raw);
@@ -119,7 +119,7 @@ export class AppSyncManager extends HTMLElement {
 
   async _loadData() {
     const { GetInstanceSyncStatus } =
-      await import("../../../wailsjs/go/main/App.js");
+      await import("../../../bindings/ysm-model-manager/app.js");
     try {
       const json = await GetInstanceSyncStatus(this._instance);
       this._allItems = JSON.parse(json) || [];
@@ -319,7 +319,7 @@ export class AppSyncManager extends HTMLElement {
 
   async _pushSingleFile(path) {
     const { PushSingleResourceToInstance } =
-      await import("../../../wailsjs/go/main/App.js");
+      await import("../../../bindings/ysm-model-manager/app.js");
     try {
       await PushSingleResourceToInstance(
         this._selectedType,
@@ -342,7 +342,7 @@ export class AppSyncManager extends HTMLElement {
   async _pullSingleFile(path) {
     const rtype = this._selectedType;
     const { PullSingleResourceFromInstance } =
-      await import("../../../wailsjs/go/main/App.js");
+      await import("../../../bindings/ysm-model-manager/app.js");
     try {
       await PullSingleResourceFromInstance(rtype, path, this._instance);
       bus.emit("toast:show", { msg: "✅ 已拉取", duration: 2000 });

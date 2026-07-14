@@ -1,6 +1,7 @@
 // ===== 所有 ES module 组件的统一入口 =====
 import { bus } from "./bus.js";
 import { register } from "./services/registry.js";
+import { Window } from "@wailsio/runtime";
 
 // bus 已在 bus.js 中挂载 window.bus，此处不再重复赋值
 
@@ -67,7 +68,7 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 /** 从 Go 配置或 localStorage 加载主题 */
 async function initTheme() {
   try {
-    const { LoadAppConfig } = await import("../wailsjs/go/main/App.js");
+    const { LoadAppConfig } = await import("../bindings/ysm-model-manager/app.js");
     const cfg = await LoadAppConfig();
     const theme =
       localStorage.getItem("theme") || cfg.theme || cfg.Theme || THEME_DARK;
@@ -176,7 +177,7 @@ if (_devMode) {
     if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
       e.preventDefault();
       try {
-        window.runtime.WindowShowDevtools?.();
+        Window.OpenDevTools();
       } catch (_) {}
     }
   });

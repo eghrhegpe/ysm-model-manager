@@ -109,7 +109,7 @@ export function bindActions(root) {
     .getElementById("dp-btn-clear-logs")
     ?.addEventListener("click", async () => {
       const { ClearImportLogs } =
-        await import("../../../wailsjs/go/main/App.js");
+        await import("../../../bindings/ysm-model-manager/app.js");
       await ClearImportLogs();
       bus.emit("logs:refresh");
       bus.emit("toast:show", {

@@ -140,7 +140,7 @@ class AppPreview extends HTMLElement {
     }
     try {
       const { FindPreviewImage, ExtractPreviewTexture } =
-        await import("../../../wailsjs/go/main/App.js");
+        await import("../../../bindings/ysm-model-manager/app.js");
       const loose = await FindPreviewImage(modelPath);
       if (loose) {
         cacheSet(modelPath, { texture: loose, _decodedBy: "" });
@@ -177,7 +177,7 @@ class AppPreview extends HTMLElement {
 
   async _preloadTypeRegistry() {
     try {
-      const { LoadResourceTypes } = await import("../../../wailsjs/go/main/App.js");
+      const { LoadResourceTypes } = await import("../../../bindings/ysm-model-manager/app.js");
       const raw = await LoadResourceTypes();
       const reg = JSON.parse(raw);
       this._typeCache = reg.resourceTypes || [];
@@ -188,7 +188,7 @@ class AppPreview extends HTMLElement {
     // 检测文件类型
     let rtype = "";
     try {
-      const { DetectResourceType } = await import("../../../wailsjs/go/main/App.js");
+      const { DetectResourceType } = await import("../../../bindings/ysm-model-manager/app.js");
       rtype = await DetectResourceType(path) || "";
     } catch (_) {}
     if (rtype === "resourcepack") {
@@ -229,7 +229,7 @@ class AppPreview extends HTMLElement {
         .replace(/>/g, "&gt;");
     this._root.innerHTML = `<div class="content" id="preview-content"><h3>📦 整合包</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
     try {
-      const { GetPackInfo } = await import("../../../wailsjs/go/main/App.js");
+      const { GetPackInfo } = await import("../../../bindings/ysm-model-manager/app.js");
       const pack = await GetPackInfo(dirPath);
       if (!pack || (!pack.name && !pack.description)) {
         const folderName =
@@ -250,7 +250,7 @@ ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px
 
   async _loadLogsPreview() {
     try {
-      const { GetImportLogs } = await import("../../../wailsjs/go/main/App.js");
+      const { GetImportLogs } = await import("../../../bindings/ysm-model-manager/app.js");
       const logs = await GetImportLogs();
       loadLogsPreview(this._root, logs);
     } catch (_) {}

@@ -7,7 +7,7 @@
 export async function loadAuthors() {
   try {
     const { ListModelAuthors } =
-      await import("../../../wailsjs/go/main/App.js");
+      await import("../../../bindings/ysm-model-manager/app.js");
     return (await ListModelAuthors()) || [];
   } catch {
     return [];

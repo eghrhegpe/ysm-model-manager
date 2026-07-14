@@ -15,8 +15,6 @@ import (
 	"time"
 
 	"ysm-model-manager/go/ysm"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // QueueStatusInfo 队列状态（替代多返回值，Wails 自动映射为 JS object）
@@ -61,7 +59,7 @@ func (a *App) EnqueueDownloads(tasks []DownloadTask) error {
 		go a.queue.process()
 	}
 	log.Printf("[queue] emit queue:status enqueued total=%d", total)
-	runtime.EventsEmit(a.ctx, "queue:status", "enqueued", total, "")
+	a.app.Event.Emit("queue:status", "enqueued", total, "")
 	return nil
 }
 
@@ -76,7 +74,7 @@ func (a *App) CancelQueue() {
 	a.queue.tasks = nil
 	a.queue.running = false
 	log.Printf("[queue] emit queue:status cancelled")
-	runtime.EventsEmit(a.ctx, "queue:status", "cancelled", 0, "")
+	a.app.Event.Emit("queue:status", "cancelled", 0, "")
 }
 
 func (a *App) QueueStatus() QueueStatusInfo {
@@ -97,7 +95,7 @@ func (q *DownloadQueue) process() {
 		q.mu.Unlock()
 		if !cancelled {
 			log.Printf("[queue] emit queue:status done")
-			runtime.EventsEmit(q.app.ctx, "queue:status", "done", 0, "")
+			q.app.app.Event.Emit("queue:status", "done", 0, "")
 		}
 	}()
 
@@ -113,15 +111,15 @@ func (q *DownloadQueue) process() {
 		q.mu.Unlock()
 
 		log.Printf("[queue] emit queue:file-start name=%s pos=%d left=%d", task.Name, remaining+1, remaining)
-		runtime.EventsEmit(q.app.ctx, "queue:file-start", task.Name, remaining+1, remaining)
+		q.app.app.Event.Emit("queue:file-start", task.Name, remaining+1, remaining)
 
 		savePath, err := q.app.downloadFileWithQueue(task.URL, task.SaveDir)
 		if err != nil {
 			log.Printf("[queue] emit queue:file-done name=%s status=fail err=%v", task.Name, err)
-			runtime.EventsEmit(q.app.ctx, "queue:file-done", task.Name, "fail", err.Error())
+			q.app.app.Event.Emit("queue:file-done", task.Name, "fail", err.Error())
 		} else {
 			log.Printf("[queue] emit queue:file-done name=%s status=ok", task.Name)
-			runtime.EventsEmit(q.app.ctx, "queue:file-done", task.Name, "ok", "")
+			q.app.app.Event.Emit("queue:file-done", task.Name, "ok", "")
 			// 写入导入日志
 			var fileSize int64
 			if fi, st := os.Stat(savePath); st == nil {
@@ -234,7 +232,7 @@ func (a *App) downloadFile(url, savePath string) error {
 			downloaded += int64(n)
 			if time.Since(lastEmit) > 200*time.Millisecond {
 				log.Printf("[queue] emit download:progress dl=%d total=%d", downloaded, total)
-				runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
+				a.app.Event.Emit("download:progress", downloaded, total)
 				lastEmit = time.Now()
 			}
 		}
@@ -249,7 +247,7 @@ func (a *App) downloadFile(url, savePath string) error {
 		total = downloaded
 	}
 	log.Printf("[queue] emit download:progress dl=%d total=%d (final)", downloaded, total)
-	runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
+	a.app.Event.Emit("download:progress", downloaded, total)
 	return nil
 }
 
@@ -288,7 +286,7 @@ func (a *App) downloadFromAPI(apiURL, savePath string) error {
 			downloaded += int64(n)
 			if time.Since(lastEmit) > 200*time.Millisecond {
 				log.Printf("[queue] emit download:progress dl=%d total=%d", downloaded, total)
-				runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
+				a.app.Event.Emit("download:progress", downloaded, total)
 				lastEmit = time.Now()
 			}
 		}
@@ -303,7 +301,7 @@ func (a *App) downloadFromAPI(apiURL, savePath string) error {
 		total = downloaded
 	}
 	log.Printf("[queue] emit download:progress dl=%d total=%d (final)", downloaded, total)
-	runtime.EventsEmit(a.ctx, "download:progress", downloaded, total)
+	a.app.Event.Emit("download:progress", downloaded, total)
 	return nil
 }
 

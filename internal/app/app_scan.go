@@ -1,6 +1,6 @@
 // ========== 批量导出 + 高级搜索 + 模型扫描 ==========
 // 从 app.go 拆分：骨骼导出、搜索、模型扫描、仓库索引
-package main
+package app
 
 import (
 	"crypto/sha256"

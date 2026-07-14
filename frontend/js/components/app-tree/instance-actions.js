@@ -7,10 +7,10 @@ import {
   InstallModelFile,
   ListVersionInstances,
   SyncCustomToRepo,
-} from "../../../bindings/ysm-model-manager/app.js";
+} from "../../../bindings/ysm-model-manager/internal/app/app.js";
 
 function addImportLog(type, name, path, size, status, msg) {
-  import("../../../bindings/ysm-model-manager/app.js")
+  import("../../../bindings/ysm-model-manager/internal/app/app.js")
     .then((mod) => {
       mod.AddImportLog?.(type, name, path, size, status, msg);
     })
@@ -28,7 +28,7 @@ export function initInstanceActions(vm) {
         if (!filePaths) return;
         // 获取整合包目录
         const cfg = await (
-          await import("../../../bindings/ysm-model-manager/app.js")
+          await import("../../../bindings/ysm-model-manager/internal/app/app.js")
         ).LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {
@@ -51,7 +51,7 @@ export function initInstanceActions(vm) {
         }
         // 选择一个 .ysm 文件导入
         const { InstallModelWithOverlay } =
-          await import("../../../bindings/ysm-model-manager/app.js");
+          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const result = await InstallModelWithOverlay(
           filePaths,
           ins.CustomDir,
@@ -84,7 +84,7 @@ export function initInstanceActions(vm) {
   unsubs.push(
     bus.on("instance:sync", async ({ name: insName }) => {
       try {
-        const AppM = await import("../../../bindings/ysm-model-manager/app.js");
+        const AppM = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const cfg = await AppM.LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
         const repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot("ysm") : "";
@@ -107,7 +107,7 @@ export function initInstanceActions(vm) {
           return;
         }
         const { SyncCustomToRepo } =
-          await import("../../../bindings/ysm-model-manager/app.js");
+          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const repoEntries = await ScanModelEntries(repoRoot);
         const repoNames = new Set(
           (repoEntries || []).map((e) => e.Name.replace(/\.ban$/i, "")),

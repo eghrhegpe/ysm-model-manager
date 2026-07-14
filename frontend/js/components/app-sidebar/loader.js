@@ -8,7 +8,7 @@ import {
   GetInstanceStatus,
   GetResourceInstanceStatus,
   GetRepoRoot,
-} from "../../../bindings/ysm-model-manager/app.js";
+} from "../../../bindings/ysm-model-manager/internal/app/app.js";
 
 /** 从 Go 加载整合包实例列表，转换为 render 需要的格式 */
 export async function loadInstances(rtype) {

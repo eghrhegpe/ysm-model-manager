@@ -15,7 +15,7 @@ export function registerUpload(unsubs) {
           ScanModelEntries,
           SyncCustomToRepo,
           GetRepoRoot,
-        } = await import("../../bindings/ysm-model-manager/app.js");
+        } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
         const cfg = await LoadAppConfig();
         const repoRoot = await GetRepoRoot("ysm");
         const mcRoot = cfg.mcRoot || "";

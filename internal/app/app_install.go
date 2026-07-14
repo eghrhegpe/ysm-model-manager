@@ -1,6 +1,6 @@
 // ========== 安装 + 回收站 ==========
 // 从 app.go 拆分：模型安装/导入/回收站/去重
-package main
+package app
 
 import (
 	"encoding/base64"
@@ -1022,7 +1022,7 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 			Icon string `json:"icon"`
 		} `json:"resourceTypes"`
 	}
-	if data, err := os.ReadFile("resource_types.json"); err == nil {
+	if data, err := loadBundledData("resource_types.json"); err == nil {
 		json.Unmarshal(data, &registry)
 	}
 

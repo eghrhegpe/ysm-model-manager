@@ -208,7 +208,7 @@ export function bindRepoEvents(sr, ctx) {
           const { parseModelName } = await import("../../utils/display.js");
           const { author } = parseModelName(row.dataset.name);
           if (author) {
-            const { OpenInBrowser } = await import("../../../bindings/ysm-model-manager/app.js");
+            const { OpenInBrowser } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
             OpenInBrowser("https://search.bilibili.com/all?keyword=" + encodeURIComponent(author));
           }
         }

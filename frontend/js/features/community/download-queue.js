@@ -52,7 +52,7 @@ export function getState() {
 export async function resume() {
   try {
     dbg("resume:start");
-    const { QueueStatus } = await import("../../../bindings/ysm-model-manager/app.js");
+    const { QueueStatus } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     const result = await QueueStatus();
     dbg("resume:result", result);
     // Wails v2 多返回值映射：数组/对象/单值 三种格式都要兜底
@@ -98,7 +98,7 @@ export async function enqueueDownloads(tasks) {
   STATE._lastDoneSeq = 0;
   notify();
 
-  const { EnqueueDownloads } = await import("../../../bindings/ysm-model-manager/app.js");
+  const { EnqueueDownloads } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
   await EnqueueDownloads(tasks);
   dbg("enqueue:done", STATE.status);
 }
@@ -109,7 +109,7 @@ export async function enqueueDownloads(tasks) {
 export async function cancelDownloads() {
   if (STATE.status !== "downloading") return;
   try {
-    const { CancelQueue } = await import("../../../bindings/ysm-model-manager/app.js");
+    const { CancelQueue } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     await CancelQueue();
   } catch (_) { /* 取消失败不影响状态 */ }
 }
@@ -168,7 +168,7 @@ if (!_registered) {
         (async () => {
           try {
             const { CachedCreatorAvatar, DebugExtractCreatorAvatar } =
-              await import("../../../bindings/ysm-model-manager/app.js");
+              await import("../../../bindings/ysm-model-manager/internal/app/app.js");
             let dataUri = await CachedCreatorAvatar(author);
             if (!dataUri) {
               await DebugExtractCreatorAvatar(author);
@@ -483,7 +483,7 @@ export function createDownloadQueue({
     if (!tasks.length) return;
 
     const { LoadAppConfig, GetRepoRoot } =
-      await import("../../../bindings/ysm-model-manager/app.js");
+      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     const cfg = await LoadAppConfig();
     const repoRoot = await GetRepoRoot("ysm");
     if (!repoRoot) {

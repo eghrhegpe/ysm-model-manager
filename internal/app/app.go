@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -26,6 +26,7 @@ type App struct {
 	configLoaded bool
 	configMu     sync.RWMutex
 	app        *application.App
+	mainWindow *application.WebviewWindow
 }
 
 // repoRoot 动态返回 YSM 模型存储根目录（始终从配置推导，无需手动维护缓存）
@@ -42,6 +43,11 @@ func NewApp() *App {
 // SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器
 func (a *App) SetApp(app *application.App) { a.app = app }
 
+// SetMainWindow 注入主窗口实例，避免依赖 Window.Current()。
+// 注意：ServiceStartup 在 app.Run() 早期被调用，此时窗口尚未成为 Current，
+// Window.Current() 会返回 nil 导致空指针；故改用直接持有的窗口引用。
+func (a *App) SetMainWindow(w *application.WebviewWindow) { a.mainWindow = w }
+
 // ServiceStartup 对应 v2 的 startup，在 app.Run() 期间由框架调用
 func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	// 清理上一次更新留下的 .old 备份
@@ -52,14 +58,14 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 
 	// 恢复窗口位置
 	pos := a.GetWindowPosition()
-	if pos.Width > 0 && pos.Height > 0 {
+	if a.mainWindow != nil && pos.Width > 0 && pos.Height > 0 {
 		// 双屏切换后坐标可能落到屏幕外：X/Y 过大或过负时居中
 		if pos.X < -200 || pos.X > 4000 || pos.Y < -200 || pos.Y > 4000 {
-			a.app.Window.Current().SetSize(pos.Width, pos.Height)
-			a.app.Window.Current().Center()
+			a.mainWindow.SetSize(pos.Width, pos.Height)
+			a.mainWindow.Center()
 		} else {
-			a.app.Window.Current().SetSize(pos.Width, pos.Height)
-			a.app.Window.Current().SetPosition(pos.X, pos.Y)
+			a.mainWindow.SetSize(pos.Width, pos.Height)
+			a.mainWindow.SetPosition(pos.X, pos.Y)
 		}
 	}
 
@@ -110,9 +116,11 @@ func (a *App) ServiceShutdown() error {
 	if a.watcher != nil {
 		a.watcher.Stop()
 	}
-	x, y := a.app.Window.Current().Position()
-	w, h := a.app.Window.Current().Size()
-	a.SaveWindowPosition(x, y, w, h)
+	if a.mainWindow != nil {
+		x, y := a.mainWindow.Position()
+		w, h := a.mainWindow.Size()
+		a.SaveWindowPosition(x, y, w, h)
+	}
 	return nil
 }
 

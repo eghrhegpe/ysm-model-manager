@@ -8,16 +8,16 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as application$0 from "../github.com/wailsapp/wails/v3/pkg/application/models.js";
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as types$0 from "./go/types/models.js";
+import * as types$0 from "../../go/types/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as updater$0 from "./go/updater/models.js";
+import * as updater$0 from "../../go/updater/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as ysm$0 from "./go/ysm/models.js";
+import * as ysm$0 from "../../go/ysm/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -34,7 +34,7 @@ import * as $models from "./models.js";
  * @returns {$CancellablePromise<void>}
  */
 export function AddImportLog(modelName, sourcePath, targetDir, fileSize, status, errMsg) {
-    return $Call.ByID(1969397565, modelName, sourcePath, targetDir, fileSize, status, errMsg);
+    return $Call.ByID(3744622591, modelName, sourcePath, targetDir, fileSize, status, errMsg);
 }
 
 /**
@@ -42,7 +42,7 @@ export function AddImportLog(modelName, sourcePath, targetDir, fileSize, status,
  * @returns {$CancellablePromise<string[]>}
  */
 export function AllTags() {
-    return $Call.ByID(1468578277).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(1246240395).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType0($result);
     }));
 }
@@ -52,7 +52,7 @@ export function AllTags() {
  * @returns {$CancellablePromise<types$0.BedrockModel>}
  */
 export function AnalyzeBedrockModel(modelPath) {
-    return $Call.ByID(3876018712, modelPath).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2221616526, modelPath).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType1($result);
     }));
 }
@@ -62,7 +62,7 @@ export function AnalyzeBedrockModel(modelPath) {
  * @returns {$CancellablePromise<ysm$0.YSMModelMeta>}
  */
 export function AnalyzeYSMModel(path) {
-    return $Call.ByID(1713415427, path).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(87919393, path).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType2($result);
     }));
 }
@@ -72,14 +72,14 @@ export function AnalyzeYSMModel(path) {
  * @returns {$CancellablePromise<void>}
  */
 export function ApplyUpdate(zipPath) {
-    return $Call.ByID(4175318290, zipPath);
+    return $Call.ByID(3688265704, zipPath);
 }
 
 /**
  * @returns {$CancellablePromise<string>}
  */
 export function BackupWorkshopCreators() {
-    return $Call.ByID(2523901403);
+    return $Call.ByID(3964989829);
 }
 
 /**
@@ -87,7 +87,7 @@ export function BackupWorkshopCreators() {
  * @returns {$CancellablePromise<{ [_ in string]?: string }>}
  */
 export function BatchExtractCreatorAvatars() {
-    return $Call.ByID(332626750).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2317353684).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType3($result);
     }));
 }
@@ -98,7 +98,7 @@ export function BatchExtractCreatorAvatars() {
  * @returns {$CancellablePromise<void>}
  */
 export function CacheModelAvatars(modelPath) {
-    return $Call.ByID(1121327680, modelPath);
+    return $Call.ByID(3423756102, modelPath);
 }
 
 /**
@@ -107,14 +107,14 @@ export function CacheModelAvatars(modelPath) {
  * @returns {$CancellablePromise<string>}
  */
 export function CachedCreatorAvatar(authorName) {
-    return $Call.ByID(178075536, authorName);
+    return $Call.ByID(224206566, authorName);
 }
 
 /**
  * @returns {$CancellablePromise<void>}
  */
 export function CancelQueue() {
-    return $Call.ByID(3632256226);
+    return $Call.ByID(1786226156);
 }
 
 /**
@@ -122,14 +122,14 @@ export function CancelQueue() {
  * @returns {$CancellablePromise<boolean>}
  */
 export function CheckFileExists(path) {
-    return $Call.ByID(261175961, path);
+    return $Call.ByID(467508719, path);
 }
 
 /**
  * @returns {$CancellablePromise<updater$0.UpdateInfo | null>}
  */
 export function CheckUpdate() {
-    return $Call.ByID(586574094).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(651964520).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType5($result);
     }));
 }
@@ -139,14 +139,14 @@ export function CheckUpdate() {
  * @returns {$CancellablePromise<number>}
  */
 export function ClearCustomDir(customDir) {
-    return $Call.ByID(3294319072, customDir);
+    return $Call.ByID(2697468754, customDir);
 }
 
 /**
  * @returns {$CancellablePromise<void>}
  */
 export function ClearImportLogs() {
-    return $Call.ByID(2517816876);
+    return $Call.ByID(3815103174);
 }
 
 /**
@@ -158,7 +158,7 @@ export function ClearImportLogs() {
  * @returns {$CancellablePromise<number>}
  */
 export function ClearInstanceResources(insName, rtype) {
-    return $Call.ByID(2503043010, insName, rtype);
+    return $Call.ByID(310409492, insName, rtype);
 }
 
 /**
@@ -166,7 +166,7 @@ export function ClearInstanceResources(insName, rtype) {
  * @returns {$CancellablePromise<void>}
  */
 export function ClearScanCache() {
-    return $Call.ByID(3935795315);
+    return $Call.ByID(3066626705);
 }
 
 /**
@@ -178,7 +178,7 @@ export function ClearScanCache() {
  * @returns {$CancellablePromise<void>}
  */
 export function CopyModelFile(src, dstDir) {
-    return $Call.ByID(2972803935, src, dstDir);
+    return $Call.ByID(2849400957, src, dstDir);
 }
 
 /**
@@ -187,7 +187,7 @@ export function CopyModelFile(src, dstDir) {
  * @returns {$CancellablePromise<string>}
  */
 export function CountDuplicateFiles(dir) {
-    return $Call.ByID(4113215608, dir);
+    return $Call.ByID(2412651574, dir);
 }
 
 /**
@@ -199,7 +199,7 @@ export function CountDuplicateFiles(dir) {
  * @returns {$CancellablePromise<number>}
  */
 export function CountInstanceResources(insName, rtype) {
-    return $Call.ByID(1912154256, insName, rtype);
+    return $Call.ByID(136508414, insName, rtype);
 }
 
 /**
@@ -208,14 +208,14 @@ export function CountInstanceResources(insName, rtype) {
  * @returns {$CancellablePromise<void>}
  */
 export function CreateDir(dir) {
-    return $Call.ByID(632035444, dir);
+    return $Call.ByID(14567662, dir);
 }
 
 /**
  * @returns {$CancellablePromise<string>}
  */
 export function CurrentVersion() {
-    return $Call.ByID(4144127150);
+    return $Call.ByID(2861439428);
 }
 
 /**
@@ -224,7 +224,7 @@ export function CurrentVersion() {
  * @returns {$CancellablePromise<{ [_ in string]?: string }>}
  */
 export function DebugExtractCreatorAvatar(authorName) {
-    return $Call.ByID(4092274906, authorName).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(1802835376, authorName).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType3($result);
     }));
 }
@@ -234,7 +234,7 @@ export function DebugExtractCreatorAvatar(authorName) {
  * @returns {$CancellablePromise<[number, number]>}
  */
 export function DeduplicateCustomDir(customDir) {
-    return $Call.ByID(2740248431, customDir);
+    return $Call.ByID(2166378965, customDir);
 }
 
 /**
@@ -242,7 +242,7 @@ export function DeduplicateCustomDir(customDir) {
  * @returns {$CancellablePromise<void>}
  */
 export function DeleteFromRecycle(src) {
-    return $Call.ByID(1467099731, src);
+    return $Call.ByID(2594824985, src);
 }
 
 /**
@@ -251,7 +251,7 @@ export function DeleteFromRecycle(src) {
  * @returns {$CancellablePromise<void>}
  */
 export function DeleteModelDir(path) {
-    return $Call.ByID(1381557310, path);
+    return $Call.ByID(2959912528, path);
 }
 
 /**
@@ -260,7 +260,7 @@ export function DeleteModelDir(path) {
  * @returns {$CancellablePromise<void>}
  */
 export function DeleteResourcePack(path) {
-    return $Call.ByID(521742211, path);
+    return $Call.ByID(395621705, path);
 }
 
 /**
@@ -269,7 +269,7 @@ export function DeleteResourcePack(path) {
  * @returns {$CancellablePromise<string>}
  */
 export function DetectResourceType(path) {
-    return $Call.ByID(2940366370, path);
+    return $Call.ByID(2113518140, path);
 }
 
 /**
@@ -278,7 +278,7 @@ export function DetectResourceType(path) {
  * @returns {$CancellablePromise<string>}
  */
 export function DetectZipType(base64Data) {
-    return $Call.ByID(771598473, base64Data);
+    return $Call.ByID(747133431, base64Data);
 }
 
 /**
@@ -287,7 +287,7 @@ export function DetectZipType(base64Data) {
  * @returns {$CancellablePromise<string>}
  */
 export function DoUpdate(url, expectedHash) {
-    return $Call.ByID(3621571661, url, expectedHash);
+    return $Call.ByID(985752667, url, expectedHash);
 }
 
 /**
@@ -296,7 +296,7 @@ export function DoUpdate(url, expectedHash) {
  * @returns {$CancellablePromise<string>}
  */
 export function DownloadFromGitHub(rawURL, saveDir) {
-    return $Call.ByID(3473659374, rawURL, saveDir);
+    return $Call.ByID(960385788, rawURL, saveDir);
 }
 
 /**
@@ -305,7 +305,7 @@ export function DownloadFromGitHub(rawURL, saveDir) {
  * @returns {$CancellablePromise<string>}
  */
 export function DownloadUpdate(url, expectedHash) {
-    return $Call.ByID(115027584, url, expectedHash);
+    return $Call.ByID(2886098546, url, expectedHash);
 }
 
 /**
@@ -313,7 +313,7 @@ export function DownloadUpdate(url, expectedHash) {
  * @returns {$CancellablePromise<number>}
  */
 export function EmptyRecycleBin($0) {
-    return $Call.ByID(4176312624, $0);
+    return $Call.ByID(4211256250, $0);
 }
 
 /**
@@ -321,7 +321,7 @@ export function EmptyRecycleBin($0) {
  * @returns {$CancellablePromise<void>}
  */
 export function EnqueueDownloads(tasks) {
-    return $Call.ByID(2072376062, tasks);
+    return $Call.ByID(552244624, tasks);
 }
 
 /**
@@ -330,7 +330,7 @@ export function EnqueueDownloads(tasks) {
  * @returns {$CancellablePromise<string>}
  */
 export function ExportBoneStructures(repoRoot) {
-    return $Call.ByID(2389274587, repoRoot);
+    return $Call.ByID(2854573701, repoRoot);
 }
 
 /**
@@ -339,14 +339,14 @@ export function ExportBoneStructures(repoRoot) {
  * @returns {$CancellablePromise<string>}
  */
 export function ExportModelStructureJSON(modelPath) {
-    return $Call.ByID(3207663227, modelPath);
+    return $Call.ByID(2285469521, modelPath);
 }
 
 /**
  * @returns {$CancellablePromise<string>}
  */
 export function ExportWorkshopCreatorsJSONFile() {
-    return $Call.ByID(3927068715);
+    return $Call.ByID(3313564853);
 }
 
 /**
@@ -354,14 +354,14 @@ export function ExportWorkshopCreatorsJSONFile() {
  * @returns {$CancellablePromise<string>}
  */
 export function ExportWorkshopSitesCSV() {
-    return $Call.ByID(2371521742);
+    return $Call.ByID(2284407588);
 }
 
 /**
  * @returns {$CancellablePromise<string>}
  */
 export function ExportWorkshopSitesJSONFile() {
-    return $Call.ByID(3586958830);
+    return $Call.ByID(3241109304);
 }
 
 /**
@@ -369,7 +369,7 @@ export function ExportWorkshopSitesJSONFile() {
  * @returns {$CancellablePromise<string>}
  */
 export function ExtractPreviewTexture(modelPath) {
-    return $Call.ByID(3589355821, modelPath);
+    return $Call.ByID(4136663739, modelPath);
 }
 
 /**
@@ -377,7 +377,7 @@ export function ExtractPreviewTexture(modelPath) {
  * @returns {$CancellablePromise<ysm$0.YSMHeader>}
  */
 export function ExtractYSMHeader(path) {
-    return $Call.ByID(3320631472, path).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(3464271858, path).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType6($result);
     }));
 }
@@ -387,7 +387,7 @@ export function ExtractYSMHeader(path) {
  * @returns {$CancellablePromise<ysm$0.YSMHeader>}
  */
 export function ExtractYSMHeaderFromBase64(base64Data) {
-    return $Call.ByID(761989927, base64Data).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(547420281, base64Data).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType6($result);
     }));
 }
@@ -397,7 +397,7 @@ export function ExtractYSMHeaderFromBase64(base64Data) {
  * @returns {$CancellablePromise<ysm$0.YsmSummary>}
  */
 export function ExtractYsmSummary(path) {
-    return $Call.ByID(1409186083, path).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(847066301, path).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType7($result);
     }));
 }
@@ -408,7 +408,7 @@ export function ExtractYsmSummary(path) {
  * @returns {$CancellablePromise<string>}
  */
 export function FindDuplicateFiles(dir) {
-    return $Call.ByID(2826205946, dir);
+    return $Call.ByID(1295941240, dir);
 }
 
 /**
@@ -417,7 +417,7 @@ export function FindDuplicateFiles(dir) {
  * @returns {$CancellablePromise<string>}
  */
 export function FindPreviewImage(modelPath) {
-    return $Call.ByID(2618826419, modelPath);
+    return $Call.ByID(528549045, modelPath);
 }
 
 /**
@@ -426,7 +426,7 @@ export function FindPreviewImage(modelPath) {
  * @returns {$CancellablePromise<string>}
  */
 export function GenerateRepoIndex(repoPath) {
-    return $Call.ByID(341684738, repoPath);
+    return $Call.ByID(1563740856, repoPath);
 }
 
 /**
@@ -434,7 +434,7 @@ export function GenerateRepoIndex(repoPath) {
  * @returns {$CancellablePromise<string>}
  */
 export function GetAppVersion() {
-    return $Call.ByID(1780012486);
+    return $Call.ByID(115297084);
 }
 
 /**
@@ -442,14 +442,14 @@ export function GetAppVersion() {
  * @returns {$CancellablePromise<string>}
  */
 export function GetGlobalCustomDir(mcRoot) {
-    return $Call.ByID(3574997774, mcRoot);
+    return $Call.ByID(4119708496, mcRoot);
 }
 
 /**
  * @returns {$CancellablePromise<types$0.ImportLog[]>}
  */
 export function GetImportLogs() {
-    return $Call.ByID(3002521637).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(1065567147).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType9($result);
     }));
 }
@@ -461,7 +461,7 @@ export function GetImportLogs() {
  * @returns {$CancellablePromise<types$0.InstanceStatus[]>}
  */
 export function GetInstanceStatus(mcRoot, repoDir) {
-    return $Call.ByID(1602397366, mcRoot, repoDir).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(4224028016, mcRoot, repoDir).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType11($result);
     }));
 }
@@ -472,14 +472,14 @@ export function GetInstanceStatus(mcRoot, repoDir) {
  * @returns {$CancellablePromise<string>}
  */
 export function GetInstanceSyncStatus(instanceName) {
-    return $Call.ByID(896297593, instanceName);
+    return $Call.ByID(839308247, instanceName);
 }
 
 /**
  * @returns {$CancellablePromise<string>}
  */
 export function GetLinkMode() {
-    return $Call.ByID(3786786252);
+    return $Call.ByID(736604018);
 }
 
 /**
@@ -488,14 +488,14 @@ export function GetLinkMode() {
  * @returns {$CancellablePromise<string>}
  */
 export function GetLitematicVoxelData(path) {
-    return $Call.ByID(2228970873, path);
+    return $Call.ByID(2172897631, path);
 }
 
 /**
  * @returns {$CancellablePromise<string[]>}
  */
 export function GetMinecraftPaths() {
-    return $Call.ByID(752305282).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2122198272).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType0($result);
     }));
 }
@@ -505,7 +505,7 @@ export function GetMinecraftPaths() {
  * @returns {$CancellablePromise<string>}
  */
 export function GetModel3DSpec(modelPath) {
-    return $Call.ByID(2290047324, modelPath);
+    return $Call.ByID(2923299250, modelPath);
 }
 
 /**
@@ -514,7 +514,7 @@ export function GetModel3DSpec(modelPath) {
  * @returns {$CancellablePromise<string[]>}
  */
 export function GetModelTags(modelPath) {
-    return $Call.ByID(2327245941, modelPath).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(234236959, modelPath).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType0($result);
     }));
 }
@@ -525,7 +525,7 @@ export function GetModelTags(modelPath) {
  * @returns {$CancellablePromise<ysm$0.TexInfo[]>}
  */
 export function GetModelTexSizes(repoRoot) {
-    return $Call.ByID(1192879493, repoRoot).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(1273620259, repoRoot).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType13($result);
     }));
 }
@@ -536,7 +536,7 @@ export function GetModelTexSizes(repoRoot) {
  * @returns {$CancellablePromise<string>}
  */
 export function GetNbtVoxelData(path) {
-    return $Call.ByID(1639202639, path);
+    return $Call.ByID(2164005593, path);
 }
 
 /**
@@ -545,7 +545,7 @@ export function GetNbtVoxelData(path) {
  * @returns {$CancellablePromise<types$0.PackInfo>}
  */
 export function GetPackInfo(dirPath) {
-    return $Call.ByID(1413401170, dirPath).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2243407216, dirPath).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType14($result);
     }));
 }
@@ -556,7 +556,7 @@ export function GetPackInfo(dirPath) {
  * @returns {$CancellablePromise<string>}
  */
 export function GetRepoRoot(rtype) {
-    return $Call.ByID(3237754523, rtype);
+    return $Call.ByID(4011191521, rtype);
 }
 
 /**
@@ -568,7 +568,7 @@ export function GetRepoRoot(rtype) {
  * @returns {$CancellablePromise<types$0.InstanceStatus[]>}
  */
 export function GetResourceInstanceStatus(rtype, mcRoot, repoDir) {
-    return $Call.ByID(3052333178, rtype, mcRoot, repoDir).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(779607888, rtype, mcRoot, repoDir).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType11($result);
     }));
 }
@@ -579,7 +579,7 @@ export function GetResourceInstanceStatus(rtype, mcRoot, repoDir) {
  * @returns {$CancellablePromise<string>}
  */
 export function GetSchematicVoxelData(path) {
-    return $Call.ByID(2238475648, path);
+    return $Call.ByID(199377974, path);
 }
 
 /**
@@ -588,17 +588,18 @@ export function GetSchematicVoxelData(path) {
  * @returns {$CancellablePromise<{ [_ in string]?: string }>}
  */
 export function GetSubDirMap() {
-    return $Call.ByID(4024641580).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2085433910).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType3($result);
     }));
 }
 
 /**
- * GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）
+ * GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。
+ * wasmBinary 由根包 main 的 init() 经 SetEmbedded 注入。
  * @returns {$CancellablePromise<string>}
  */
 export function GetWasmBinary() {
-    return $Call.ByID(504286898).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2670724632).then(/** @type {($result: any) => any} */(($result) => {
         return $Create.ByteSlice($result);
     }));
 }
@@ -607,7 +608,7 @@ export function GetWasmBinary() {
  * @returns {$CancellablePromise<types$0.WindowState>}
  */
 export function GetWindowPosition() {
-    return $Call.ByID(1683686380).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(3862857718).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType15($result);
     }));
 }
@@ -618,7 +619,7 @@ export function GetWindowPosition() {
  * @returns {$CancellablePromise<boolean>}
  */
 export function HasYSMMod(modsDir) {
-    return $Call.ByID(2322195658, modsDir);
+    return $Call.ByID(1327539980, modsDir);
 }
 
 /**
@@ -628,7 +629,7 @@ export function HasYSMMod(modsDir) {
  * @returns {$CancellablePromise<string>}
  */
 export function ImportByType(rtype, srcPath) {
-    return $Call.ByID(2357620033, rtype, srcPath);
+    return $Call.ByID(1466768695, rtype, srcPath);
 }
 
 /**
@@ -637,7 +638,7 @@ export function ImportByType(rtype, srcPath) {
  * @returns {$CancellablePromise<void>}
  */
 export function ImportModelFile(fileName, base64Data) {
-    return $Call.ByID(2258892031, fileName, base64Data);
+    return $Call.ByID(2135926573, fileName, base64Data);
 }
 
 /**
@@ -646,7 +647,7 @@ export function ImportModelFile(fileName, base64Data) {
  * @returns {$CancellablePromise<void>}
  */
 export function ImportModelFileOverwrite(fileName, base64Data) {
-    return $Call.ByID(1928923644, fileName, base64Data);
+    return $Call.ByID(2920266218, fileName, base64Data);
 }
 
 /**
@@ -656,7 +657,7 @@ export function ImportModelFileOverwrite(fileName, base64Data) {
  * @returns {$CancellablePromise<void>}
  */
 export function ImportModelFileOverwriteTo(fileName, subpath, base64Data) {
-    return $Call.ByID(2030988597, fileName, subpath, base64Data);
+    return $Call.ByID(3849603631, fileName, subpath, base64Data);
 }
 
 /**
@@ -665,7 +666,7 @@ export function ImportModelFileOverwriteTo(fileName, subpath, base64Data) {
  * @returns {$CancellablePromise<void>}
  */
 export function ImportModelFileSkipCheck(fileName, base64Data) {
-    return $Call.ByID(3028082124, fileName, base64Data);
+    return $Call.ByID(334185050, fileName, base64Data);
 }
 
 /**
@@ -675,7 +676,7 @@ export function ImportModelFileSkipCheck(fileName, base64Data) {
  * @returns {$CancellablePromise<void>}
  */
 export function ImportModelFileTo(fileName, subpath, base64Data) {
-    return $Call.ByID(3559857914, fileName, subpath, base64Data);
+    return $Call.ByID(191674492, fileName, subpath, base64Data);
 }
 
 /**
@@ -685,7 +686,7 @@ export function ImportModelFileTo(fileName, subpath, base64Data) {
  * @returns {$CancellablePromise<string>}
  */
 export function ImportResourcePack(srcPath, rtype) {
-    return $Call.ByID(2555922305, srcPath, rtype);
+    return $Call.ByID(2578913479, srcPath, rtype);
 }
 
 /**
@@ -693,14 +694,14 @@ export function ImportResourcePack(srcPath, rtype) {
  * @returns {$CancellablePromise<void>}
  */
 export function ImportWorkshopSitesCSV(csvContent) {
-    return $Call.ByID(3560440449, csvContent);
+    return $Call.ByID(1342547047, csvContent);
 }
 
 /**
  * @returns {$CancellablePromise<number>}
  */
 export function ImportWorkshopSitesJSONFile() {
-    return $Call.ByID(1408293715);
+    return $Call.ByID(1933238405);
 }
 
 /**
@@ -710,7 +711,7 @@ export function ImportWorkshopSitesJSONFile() {
  * @returns {$CancellablePromise<string>}
  */
 export function InstallModelFile(src, mcRoot) {
-    return $Call.ByID(3457331203, src, mcRoot);
+    return $Call.ByID(2558470757, src, mcRoot);
 }
 
 /**
@@ -719,7 +720,7 @@ export function InstallModelFile(src, mcRoot) {
  * @returns {$CancellablePromise<void>}
  */
 export function InstallModelTo(src, customDir) {
-    return $Call.ByID(798356708, src, customDir);
+    return $Call.ByID(547256422, src, customDir);
 }
 
 /**
@@ -728,7 +729,7 @@ export function InstallModelTo(src, customDir) {
  * @returns {$CancellablePromise<string>}
  */
 export function InstallModelWithOverlay(src, customDir) {
-    return $Call.ByID(3556686143, src, customDir);
+    return $Call.ByID(4168467473, src, customDir);
 }
 
 /**
@@ -740,7 +741,7 @@ export function InstallModelWithOverlay(src, customDir) {
  * @returns {$CancellablePromise<void>}
  */
 export function InstallResourceToInstance(rtype, srcPath, instanceName) {
-    return $Call.ByID(2805252450, rtype, srcPath, instanceName);
+    return $Call.ByID(215553224, rtype, srcPath, instanceName);
 }
 
 /**
@@ -748,7 +749,7 @@ export function InstallResourceToInstance(rtype, srcPath, instanceName) {
  * @returns {$CancellablePromise<void>}
  */
 export function InvalidateScanCache() {
-    return $Call.ByID(2190059665);
+    return $Call.ByID(2605564787);
 }
 
 /**
@@ -756,7 +757,7 @@ export function InvalidateScanCache() {
  * @returns {$CancellablePromise<boolean>}
  */
 export function IsFileBanned(path) {
-    return $Call.ByID(4266561259, path);
+    return $Call.ByID(3330292233, path);
 }
 
 /**
@@ -764,7 +765,7 @@ export function IsFileBanned(path) {
  * @returns {$CancellablePromise<boolean>}
  */
 export function IsProxyRunning() {
-    return $Call.ByID(3611198898);
+    return $Call.ByID(3002035324);
 }
 
 /**
@@ -773,7 +774,7 @@ export function IsProxyRunning() {
  * @returns {$CancellablePromise<boolean>}
  */
 export function IsResourcePackEnabled(path) {
-    return $Call.ByID(3450849289, path);
+    return $Call.ByID(2413288079, path);
 }
 
 /**
@@ -782,7 +783,7 @@ export function IsResourcePackEnabled(path) {
  * @returns {$CancellablePromise<string[]>}
  */
 export function ListAllFilePaths(dir) {
-    return $Call.ByID(1212565466, dir).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(504456952, dir).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType0($result);
     }));
 }
@@ -793,7 +794,7 @@ export function ListAllFilePaths(dir) {
  * @returns {$CancellablePromise<string[]>}
  */
 export function ListByTag(tag) {
-    return $Call.ByID(655370248, tag).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(543634162, tag).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType0($result);
     }));
 }
@@ -803,7 +804,7 @@ export function ListByTag(tag) {
  * @returns {$CancellablePromise<string[]>}
  */
 export function ListFileNames(dir) {
-    return $Call.ByID(2206463789, dir).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(223101035, dir).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType0($result);
     }));
 }
@@ -812,7 +813,7 @@ export function ListFileNames(dir) {
  * @returns {$CancellablePromise<types$0.AuthorInfo[]>}
  */
 export function ListModelAuthors() {
-    return $Call.ByID(1876735502).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2783678748).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType17($result);
     }));
 }
@@ -822,7 +823,7 @@ export function ListModelAuthors() {
  * @returns {$CancellablePromise<types$0.ModelEntry[]>}
  */
 export function ListRecycleBin($0) {
-    return $Call.ByID(2771095439, $0).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(3420025601, $0).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType19($result);
     }));
 }
@@ -832,7 +833,7 @@ export function ListRecycleBin($0) {
  * @returns {$CancellablePromise<types$0.VersionInstance[]>}
  */
 export function ListVersionInstances(mcRoot) {
-    return $Call.ByID(3401789017, mcRoot).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2348617735, mcRoot).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType21($result);
     }));
 }
@@ -841,7 +842,7 @@ export function ListVersionInstances(mcRoot) {
  * @returns {$CancellablePromise<types$0.AppConfig>}
  */
 export function LoadAppConfig() {
-    return $Call.ByID(3426604350).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(4081731812).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType22($result);
     }));
 }
@@ -850,7 +851,7 @@ export function LoadAppConfig() {
  * @returns {$CancellablePromise<types$0.WorkshopCreator[]>}
  */
 export function LoadGitHubRepos() {
-    return $Call.ByID(591488683).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(555735249).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType24($result);
     }));
 }
@@ -860,14 +861,14 @@ export function LoadGitHubRepos() {
  * @returns {$CancellablePromise<string>}
  */
 export function LoadResourceTypes() {
-    return $Call.ByID(886467742);
+    return $Call.ByID(3636552016);
 }
 
 /**
  * @returns {$CancellablePromise<types$0.WorkshopCreator[]>}
  */
 export function LoadWorkshopCreators() {
-    return $Call.ByID(2909744841).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(3429491443).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType24($result);
     }));
 }
@@ -876,7 +877,7 @@ export function LoadWorkshopCreators() {
  * @returns {$CancellablePromise<types$0.WorkshopSite[]>}
  */
 export function LoadWorkshopSites() {
-    return $Call.ByID(3659421944).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(1402443890).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType26($result);
     }));
 }
@@ -886,7 +887,7 @@ export function LoadWorkshopSites() {
  * @returns {$CancellablePromise<[number, number]>}
  */
 export function MergeWorkshopCreatorsFromJSON(jsonContent) {
-    return $Call.ByID(405249149, jsonContent);
+    return $Call.ByID(2866539347, jsonContent);
 }
 
 /**
@@ -896,7 +897,7 @@ export function MergeWorkshopCreatorsFromJSON(jsonContent) {
  * @returns {$CancellablePromise<void>}
  */
 export function MoveModelFile(src, dstDir) {
-    return $Call.ByID(2835545135, src, dstDir);
+    return $Call.ByID(1018628389, src, dstDir);
 }
 
 /**
@@ -905,7 +906,7 @@ export function MoveModelFile(src, dstDir) {
  * @returns {$CancellablePromise<void>}
  */
 export function MoveToRecycle(src) {
-    return $Call.ByID(3853571198, src);
+    return $Call.ByID(1383304780, src);
 }
 
 /**
@@ -913,7 +914,7 @@ export function MoveToRecycle(src) {
  * @returns {$CancellablePromise<[string, string]>}
  */
 export function MoveToRecycleEx(src) {
-    return $Call.ByID(2636167387, src);
+    return $Call.ByID(2099759785, src);
 }
 
 /**
@@ -921,7 +922,7 @@ export function MoveToRecycleEx(src) {
  * @returns {$CancellablePromise<void>}
  */
 export function OpenFolder(dir) {
-    return $Call.ByID(3894305329, dir);
+    return $Call.ByID(4260431887, dir);
 }
 
 /**
@@ -930,7 +931,7 @@ export function OpenFolder(dir) {
  * @returns {$CancellablePromise<void>}
  */
 export function OpenInBrowser(url) {
-    return $Call.ByID(2149156246, url);
+    return $Call.ByID(3205913216, url);
 }
 
 /**
@@ -940,7 +941,7 @@ export function OpenInBrowser(url) {
  * @returns {$CancellablePromise<void>}
  */
 export function OpenInstanceFolder(instDir, rtype) {
-    return $Call.ByID(3281464542, instDir, rtype);
+    return $Call.ByID(2384592956, instDir, rtype);
 }
 
 /**
@@ -950,7 +951,7 @@ export function OpenInstanceFolder(instDir, rtype) {
  * @returns {$CancellablePromise<number>}
  */
 export function PullResourceFromInstance(rtype, instanceName) {
-    return $Call.ByID(1861712581, rtype, instanceName);
+    return $Call.ByID(3336031775, rtype, instanceName);
 }
 
 /**
@@ -961,7 +962,7 @@ export function PullResourceFromInstance(rtype, instanceName) {
  * @returns {$CancellablePromise<void>}
  */
 export function PullSingleResourceFromInstance(rtype, srcPath, instanceName) {
-    return $Call.ByID(363068877, rtype, srcPath, instanceName);
+    return $Call.ByID(2266526243, rtype, srcPath, instanceName);
 }
 
 /**
@@ -971,7 +972,7 @@ export function PullSingleResourceFromInstance(rtype, srcPath, instanceName) {
  * @returns {$CancellablePromise<number>}
  */
 export function PushResourceToInstance(rtype, instanceName) {
-    return $Call.ByID(571990399, rtype, instanceName);
+    return $Call.ByID(3583202917, rtype, instanceName);
 }
 
 /**
@@ -982,14 +983,14 @@ export function PushResourceToInstance(rtype, instanceName) {
  * @returns {$CancellablePromise<void>}
  */
 export function PushSingleResourceToInstance(rtype, instanceName, filePath) {
-    return $Call.ByID(1526542371, rtype, instanceName, filePath);
+    return $Call.ByID(3553253805, rtype, instanceName, filePath);
 }
 
 /**
  * @returns {$CancellablePromise<$models.QueueStatusInfo>}
  */
 export function QueueStatus() {
-    return $Call.ByID(181648594).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(1350901616).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType27($result);
     }));
 }
@@ -999,7 +1000,7 @@ export function QueueStatus() {
  * @returns {$CancellablePromise<string>}
  */
 export function ReadFileBytes(path) {
-    return $Call.ByID(3252049854, path).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2124137540, path).then(/** @type {($result: any) => any} */(($result) => {
         return $Create.ByteSlice($result);
     }));
 }
@@ -1010,7 +1011,7 @@ export function ReadFileBytes(path) {
  * @returns {$CancellablePromise<string>}
  */
 export function ReadLitematicMeta(path) {
-    return $Call.ByID(860739884, path);
+    return $Call.ByID(3216421386, path);
 }
 
 /**
@@ -1019,7 +1020,7 @@ export function ReadLitematicMeta(path) {
  * @returns {$CancellablePromise<string>}
  */
 export function ReadNbtStructure(path) {
-    return $Call.ByID(1467485732, path);
+    return $Call.ByID(304829738, path);
 }
 
 /**
@@ -1028,7 +1029,7 @@ export function ReadNbtStructure(path) {
  * @returns {$CancellablePromise<string>}
  */
 export function ReadPackMeta(path) {
-    return $Call.ByID(3376489581, path);
+    return $Call.ByID(1762327275, path);
 }
 
 /**
@@ -1037,7 +1038,7 @@ export function ReadPackMeta(path) {
  * @returns {$CancellablePromise<string>}
  */
 export function ReadSchematic(path) {
-    return $Call.ByID(174004194, path);
+    return $Call.ByID(2285677248, path);
 }
 
 /**
@@ -1046,7 +1047,7 @@ export function ReadSchematic(path) {
  * @returns {$CancellablePromise<string>}
  */
 export function ReadShaderpackLang(path) {
-    return $Call.ByID(157811337, path);
+    return $Call.ByID(3411986111, path);
 }
 
 /**
@@ -1055,7 +1056,7 @@ export function ReadShaderpackLang(path) {
  * @returns {$CancellablePromise<number>}
  */
 export function RelinkAllInstanceResources(instanceName) {
-    return $Call.ByID(2465189661, instanceName);
+    return $Call.ByID(3612469403, instanceName);
 }
 
 /**
@@ -1065,7 +1066,7 @@ export function RelinkAllInstanceResources(instanceName) {
  * @returns {$CancellablePromise<number>}
  */
 export function RelinkCustomDir(customDir, repoRoot) {
-    return $Call.ByID(1324724738, customDir, repoRoot);
+    return $Call.ByID(3736551740, customDir, repoRoot);
 }
 
 /**
@@ -1073,7 +1074,7 @@ export function RelinkCustomDir(customDir, repoRoot) {
  * @returns {$CancellablePromise<void>}
  */
 export function RemoveDir(dir) {
-    return $Call.ByID(453073780, dir);
+    return $Call.ByID(2521913290, dir);
 }
 
 /**
@@ -1082,7 +1083,7 @@ export function RemoveDir(dir) {
  * @returns {$CancellablePromise<void>}
  */
 export function RenameDir(oldPath, newName) {
-    return $Call.ByID(507676538, oldPath, newName);
+    return $Call.ByID(1511264492, oldPath, newName);
 }
 
 /**
@@ -1091,7 +1092,7 @@ export function RenameDir(oldPath, newName) {
  * @returns {$CancellablePromise<void>}
  */
 export function RenameFile(oldPath, newName) {
-    return $Call.ByID(1151698069, oldPath, newName);
+    return $Call.ByID(1176761595, oldPath, newName);
 }
 
 /**
@@ -1099,7 +1100,7 @@ export function RenameFile(oldPath, newName) {
  * @returns {$CancellablePromise<number>}
  */
 export function ReplaceWorkshopCreatorsFromJSON(jsonContent) {
-    return $Call.ByID(2659807009, jsonContent);
+    return $Call.ByID(1355854287, jsonContent);
 }
 
 /**
@@ -1108,14 +1109,14 @@ export function ReplaceWorkshopCreatorsFromJSON(jsonContent) {
  * @returns {$CancellablePromise<void>}
  */
 export function ResetResourceRoot(rtype) {
-    return $Call.ByID(1925050892, rtype);
+    return $Call.ByID(3252835018, rtype);
 }
 
 /**
  * @returns {$CancellablePromise<types$0.WorkshopSite[]>}
  */
 export function ResetWorkshopConfigs() {
-    return $Call.ByID(861488856).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2959472146).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType26($result);
     }));
 }
@@ -1124,7 +1125,7 @@ export function ResetWorkshopConfigs() {
  * @returns {$CancellablePromise<void>}
  */
 export function RestartApplication() {
-    return $Call.ByID(3005384330);
+    return $Call.ByID(143393668);
 }
 
 /**
@@ -1133,7 +1134,7 @@ export function RestartApplication() {
  * @returns {$CancellablePromise<void>}
  */
 export function RestoreFromRecycle(src, repoRoot) {
-    return $Call.ByID(2072672682, src, repoRoot);
+    return $Call.ByID(983517996, src, repoRoot);
 }
 
 /**
@@ -1142,7 +1143,7 @@ export function RestoreFromRecycle(src, repoRoot) {
  * @returns {$CancellablePromise<void>}
  */
 export function RevealInExplorer(path) {
-    return $Call.ByID(4223801352, path);
+    return $Call.ByID(3185410442, path);
 }
 
 /**
@@ -1154,7 +1155,7 @@ export function RevealInExplorer(path) {
  * @returns {$CancellablePromise<void>}
  */
 export function SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme) {
-    return $Call.ByID(1942219977, filesRoot, rpRoot, mcRoot, linkMode, theme);
+    return $Call.ByID(3201182099, filesRoot, rpRoot, mcRoot, linkMode, theme);
 }
 
 /**
@@ -1162,7 +1163,7 @@ export function SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme) {
  * @returns {$CancellablePromise<string>}
  */
 export function SavePreviewTempFile(base64Data) {
-    return $Call.ByID(2304686900, base64Data);
+    return $Call.ByID(3917626618, base64Data);
 }
 
 /**
@@ -1172,7 +1173,7 @@ export function SavePreviewTempFile(base64Data) {
  * @returns {$CancellablePromise<void>}
  */
 export function SaveScreenshotFile(filename, base64Data) {
-    return $Call.ByID(1136303842, filename, base64Data);
+    return $Call.ByID(1822573792, filename, base64Data);
 }
 
 /**
@@ -1183,7 +1184,7 @@ export function SaveScreenshotFile(filename, base64Data) {
  * @returns {$CancellablePromise<void>}
  */
 export function SaveWindowPosition(x, y, width, height) {
-    return $Call.ByID(3693895983, x, y, width, height);
+    return $Call.ByID(469886297, x, y, width, height);
 }
 
 /**
@@ -1191,7 +1192,7 @@ export function SaveWindowPosition(x, y, width, height) {
  * @returns {$CancellablePromise<void>}
  */
 export function SaveWorkshopCreators(list) {
-    return $Call.ByID(486472960, list);
+    return $Call.ByID(2516832214, list);
 }
 
 /**
@@ -1201,7 +1202,7 @@ export function SaveWorkshopCreators(list) {
  * @returns {$CancellablePromise<void>}
  */
 export function SaveWorkshopCreatorsBySite(siteID, siteCreators) {
-    return $Call.ByID(1892436134, siteID, siteCreators);
+    return $Call.ByID(3867129300, siteID, siteCreators);
 }
 
 /**
@@ -1211,7 +1212,7 @@ export function SaveWorkshopCreatorsBySite(siteID, siteCreators) {
  * @returns {$CancellablePromise<void>}
  */
 export function SaveWorkshopPresetsBySite(siteID, presets) {
-    return $Call.ByID(3251352573, siteID, presets);
+    return $Call.ByID(4066089783, siteID, presets);
 }
 
 /**
@@ -1219,7 +1220,7 @@ export function SaveWorkshopPresetsBySite(siteID, presets) {
  * @returns {$CancellablePromise<void>}
  */
 export function SaveWorkshopSites(sites) {
-    return $Call.ByID(2173427243, sites);
+    return $Call.ByID(2656683497, sites);
 }
 
 /**
@@ -1227,7 +1228,7 @@ export function SaveWorkshopSites(sites) {
  * @returns {$CancellablePromise<types$0.ModelEntry[]>}
  */
 export function ScanCustomModels(dir) {
-    return $Call.ByID(1718333265, dir).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2414288603, dir).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType19($result);
     }));
 }
@@ -1238,7 +1239,7 @@ export function ScanCustomModels(dir) {
  * @returns {$CancellablePromise<types$0.WorkshopCreator[]>}
  */
 export function ScanLocalAuthors() {
-    return $Call.ByID(142256565).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(3176279871).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType24($result);
     }));
 }
@@ -1249,7 +1250,7 @@ export function ScanLocalAuthors() {
  * @returns {$CancellablePromise<types$0.ModelEntry[]>}
  */
 export function ScanModelEntries(dir) {
-    return $Call.ByID(2940222731, dir).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(963930825, dir).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType19($result);
     }));
 }
@@ -1267,7 +1268,7 @@ export function ScanModelEntries(dir) {
  * @returns {$CancellablePromise<types$0.SearchResult[]>}
  */
 export function SearchModels(repoRoot, keyword, minBones, maxBones, minCubes, maxCubes, minTex, maxTex) {
-    return $Call.ByID(198891967, repoRoot, keyword, minBones, maxBones, minCubes, maxCubes, minTex, maxTex).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(652244789, repoRoot, keyword, minBones, maxBones, minCubes, maxCubes, minTex, maxTex).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType29($result);
     }));
 }
@@ -1277,7 +1278,7 @@ export function SearchModels(repoRoot, keyword, minBones, maxBones, minCubes, ma
  * @returns {$CancellablePromise<string>}
  */
 export function SelectDirectory() {
-    return $Call.ByID(1735672136);
+    return $Call.ByID(2136780286);
 }
 
 /**
@@ -1288,7 +1289,7 @@ export function SelectDirectory() {
  * @returns {$CancellablePromise<string>}
  */
 export function SelectImportFile(filter, title) {
-    return $Call.ByID(1895191106, filter, title);
+    return $Call.ByID(3917673792, filter, title);
 }
 
 /**
@@ -1296,7 +1297,7 @@ export function SelectImportFile(filter, title) {
  * @returns {$CancellablePromise<string>}
  */
 export function SelectImportZip() {
-    return $Call.ByID(4231451979);
+    return $Call.ByID(3551213909);
 }
 
 /**
@@ -1305,7 +1306,7 @@ export function SelectImportZip() {
  * @returns {$CancellablePromise<void>}
  */
 export function SetApp(app) {
-    return $Call.ByID(4256893662, app);
+    return $Call.ByID(2864115508, app);
 }
 
 /**
@@ -1313,7 +1314,7 @@ export function SetApp(app) {
  * @returns {$CancellablePromise<void>}
  */
 export function SetDownloadMirror(mirror) {
-    return $Call.ByID(2740407436, mirror);
+    return $Call.ByID(1760896254, mirror);
 }
 
 /**
@@ -1322,7 +1323,18 @@ export function SetDownloadMirror(mirror) {
  * @returns {$CancellablePromise<void>}
  */
 export function SetLinkMode(mode) {
-    return $Call.ByID(2632541816, mode);
+    return $Call.ByID(2002865150, mode);
+}
+
+/**
+ * SetMainWindow 注入主窗口实例，避免依赖 Window.Current()。
+ * 注意：ServiceStartup 在 app.Run() 早期被调用，此时窗口尚未成为 Current，
+ * Window.Current() 会返回 nil 导致空指针；故改用直接持有的窗口引用。
+ * @param {application$0.WebviewWindow | null} w
+ * @returns {$CancellablePromise<void>}
+ */
+export function SetMainWindow(w) {
+    return $Call.ByID(734441964, w);
 }
 
 /**
@@ -1332,7 +1344,7 @@ export function SetLinkMode(mode) {
  * @returns {$CancellablePromise<void>}
  */
 export function SetModelTags(modelPath, tags) {
-    return $Call.ByID(667166817, modelPath, tags);
+    return $Call.ByID(4009573307, modelPath, tags);
 }
 
 /**
@@ -1340,7 +1352,7 @@ export function SetModelTags(modelPath, tags) {
  * @returns {$CancellablePromise<void>}
  */
 export function SetRepoRoot(dir) {
-    return $Call.ByID(3484387951, dir);
+    return $Call.ByID(1007646501, dir);
 }
 
 /**
@@ -1350,7 +1362,7 @@ export function SetRepoRoot(dir) {
  * @returns {$CancellablePromise<void>}
  */
 export function SetResourceRoot(rtype, path) {
-    return $Call.ByID(1575231643, rtype, path);
+    return $Call.ByID(3405438717, rtype, path);
 }
 
 /**
@@ -1359,7 +1371,7 @@ export function SetResourceRoot(rtype, path) {
  * @returns {$CancellablePromise<void>}
  */
 export function SetVoxelMaxBlocks(limit) {
-    return $Call.ByID(3039565915, limit);
+    return $Call.ByID(1029825393, limit);
 }
 
 /**
@@ -1368,7 +1380,7 @@ export function SetVoxelMaxBlocks(limit) {
  * @returns {$CancellablePromise<void>}
  */
 export function StartProxy(port) {
-    return $Call.ByID(2835838209, port);
+    return $Call.ByID(3346937763, port);
 }
 
 /**
@@ -1376,7 +1388,7 @@ export function StartProxy(port) {
  * @returns {$CancellablePromise<void>}
  */
 export function StopProxy() {
-    return $Call.ByID(3345047379);
+    return $Call.ByID(3863670921);
 }
 
 /**
@@ -1385,7 +1397,7 @@ export function StopProxy() {
  * @returns {$CancellablePromise<number>}
  */
 export function SyncCustomToRepo(customDir, repoDir) {
-    return $Call.ByID(1021217988, customDir, repoDir);
+    return $Call.ByID(1317956650, customDir, repoDir);
 }
 
 /**
@@ -1394,7 +1406,7 @@ export function SyncCustomToRepo(customDir, repoDir) {
  * @returns {$CancellablePromise<[number, number]>}
  */
 export function SyncModelToggleStatus(instanceCustomDir, repoRoot) {
-    return $Call.ByID(3123454853, instanceCustomDir, repoRoot);
+    return $Call.ByID(933155543, instanceCustomDir, repoRoot);
 }
 
 /**
@@ -1404,7 +1416,7 @@ export function SyncModelToggleStatus(instanceCustomDir, repoRoot) {
  * @returns {$CancellablePromise<string>}
  */
 export function SyncResources(rtype, instanceName) {
-    return $Call.ByID(2703846875, rtype, instanceName);
+    return $Call.ByID(2551449925, rtype, instanceName);
 }
 
 /**
@@ -1413,7 +1425,7 @@ export function SyncResources(rtype, instanceName) {
  * @returns {$CancellablePromise<boolean>}
  */
 export function ToggleModelEnable(path) {
-    return $Call.ByID(3022804465, path);
+    return $Call.ByID(3300558263, path);
 }
 
 /**
@@ -1422,7 +1434,7 @@ export function ToggleModelEnable(path) {
  * @returns {$CancellablePromise<boolean>}
  */
 export function ToggleResourcePack(path) {
-    return $Call.ByID(2119805400, path);
+    return $Call.ByID(3911031138, path);
 }
 
 /**
@@ -1430,7 +1442,7 @@ export function ToggleResourcePack(path) {
  * @returns {$CancellablePromise<[string, string]>}
  */
 export function ValidateMinecraftDir(dir) {
-    return $Call.ByID(3551461161, dir);
+    return $Call.ByID(2967962547, dir);
 }
 
 // Private type creation functions

@@ -1,6 +1,6 @@
 // ========== 下载队列 ==========
 // 从 app.go 拆分：串行下载队列、文件下载、镜像回退
-package main
+package app
 
 import (
 	"context"

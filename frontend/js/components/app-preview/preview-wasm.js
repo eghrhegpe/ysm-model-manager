@@ -21,7 +21,7 @@ export async function decodeYsmViaWasm(modelPath) {
   // 读文件（WASM 和 JSON 都需要，提升到外层作用域供两个 try 块共用）
   let bytes;
   try {
-    const { ReadFileBytes } = await import("../../../bindings/ysm-model-manager/app.js");
+    const { ReadFileBytes } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     bytes = await ReadFileBytes(modelPath);
     if (typeof bytes === "string") {
       const raw = atob(bytes);
@@ -70,7 +70,7 @@ export async function decodeYsmViaWasm(modelPath) {
         }
         cacheSet(modelPath, { ...result, _decodedBy: "🧠 JSON 直接解析" });
         // 异步缓存头像到 creators_cache/ 供创作者界面使用
-        import("../../../bindings/ysm-model-manager/app.js").then(({ CacheModelAvatars }) =>
+        import("../../../bindings/ysm-model-manager/internal/app/app.js").then(({ CacheModelAvatars }) =>
           CacheModelAvatars(modelPath)
         ).catch(() => {});
         return result;

@@ -95,7 +95,7 @@ export async function showLitematic(ctx, path) {
   const label = isSch ? "schematic" : isNbt ? "nbt" : "litematic";
 
   try {
-    const { ReadLitematicMeta, ReadNbtStructure, ReadSchematic } = await import("../../../bindings/ysm-model-manager/app.js");
+    const { ReadLitematicMeta, ReadNbtStructure, ReadSchematic } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     let meta;
     if (isNbt) {
       meta = JSON.parse(await ReadNbtStructure(path) || "{}");

@@ -16,7 +16,7 @@ export function registerSync(unsubs) {
           InstallModelTo,
           InstallResourceToInstance,
           GetRepoRoot,
-        } = await import("../../bindings/ysm-model-manager/app.js");
+        } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
         const cfg = await LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {
@@ -70,7 +70,7 @@ export function registerSync(unsubs) {
         // 强制刷新扫描缓存
         try {
           const { InvalidateScanCache } =
-            await import("../../bindings/ysm-model-manager/app.js");
+            await import("../../bindings/ysm-model-manager/internal/app/app.js");
           await InvalidateScanCache();
         } catch {}
         dbg(
@@ -112,7 +112,7 @@ export function registerSync(unsubs) {
           SyncModelToggleStatus,
           AddImportLog,
           GetRepoRoot,
-        } = await import("../../bindings/ysm-model-manager/app.js");
+        } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
         const cfg = await LoadAppConfig();
         const repoRoot = await GetRepoRoot("ysm");
         const mcRoot = cfg.mcRoot || "";
@@ -169,7 +169,7 @@ export function registerSync(unsubs) {
         bus.emit("stats:refresh");
         bus.emit("logs:refresh");
       } catch (err) {
-        const { AddImportLog } = await import("../../bindings/ysm-model-manager/app.js");
+        const { AddImportLog } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
         await AddImportLog(
           "sync-status",
           "同步失败",
@@ -210,7 +210,7 @@ export function registerSync(unsubs) {
             GetResourceInstanceStatus,
             InstallResourceToInstance,
             GetRepoRoot,
-          } = await import("../../bindings/ysm-model-manager/app.js");
+          } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
           const cfg = await LoadAppConfig();
           const mcRoot = cfg.mcRoot || "";
           const mmdRoot = await GetRepoRoot("mmd-skin");
@@ -274,7 +274,7 @@ export function registerSync(unsubs) {
 
           try {
             const { InvalidateScanCache } =
-              await import("../../bindings/ysm-model-manager/app.js");
+              await import("../../bindings/ysm-model-manager/internal/app/app.js");
             await InvalidateScanCache();
           } catch {}
 

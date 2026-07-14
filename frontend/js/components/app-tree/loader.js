@@ -5,7 +5,7 @@ import {
   IsFileBanned,
   LoadAppConfig,
   GetRepoRoot,
-} from "../../../bindings/ysm-model-manager/app.js";
+} from "../../../bindings/ysm-model-manager/internal/app/app.js";
 import { getExts } from "../../utils/extensions.js";
 
 /** 从 Go 后端加载仓库文件列表，返回格式化的 entries */

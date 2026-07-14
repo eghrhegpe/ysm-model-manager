@@ -207,7 +207,7 @@ class AppSidebar extends HTMLElement {
       let totalPulled = 0;
       let failed = 0;
       try {
-        const { PullResourceFromInstance } = await import("../../../bindings/ysm-model-manager/app.js");
+        const { PullResourceFromInstance } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const types = resolveTypes(item.dataset.syncType);
         for (const insName of selected) {
           const results = await Promise.allSettled(

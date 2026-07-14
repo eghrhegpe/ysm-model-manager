@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GetModel3DSpec } from "../../wailsjs/go/main/App.js";
+import { GetModel3DSpec } from "../../bindings/ysm-model-manager/app.js";
 import { buildSpecFromModel } from "./model3d-spec.js";
 
 const specCache = new Map();

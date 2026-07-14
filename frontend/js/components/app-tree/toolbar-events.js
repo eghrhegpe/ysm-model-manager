@@ -66,7 +66,7 @@ async function openAdvFilterDialog($, vm) {
     return;
   }
   const { LoadAppConfig, SearchModels, ListByTag, GetRepoRoot } =
-    await import("../../../wailsjs/go/main/App.js");
+    await import("../../../bindings/ysm-model-manager/app.js");
 
   // 1. 按标签筛选（如果有）
   let tagPaths = null;
@@ -215,7 +215,7 @@ export function bindToolbarEvents(root, vm) {
   // 批量导出骨骼名
   $("repo-export")?.addEventListener("click", async () => {
     const { LoadAppConfig, ExportBoneStructures, GetRepoRoot } =
-      await import("../../../wailsjs/go/main/App.js");
+      await import("../../../bindings/ysm-model-manager/app.js");
     const repoRoot = await GetRepoRoot("ysm");
     if (!repoRoot) {
       bus.emit("toast:show", {
@@ -331,12 +331,12 @@ export function bindToolbarEvents(root, vm) {
       const action = item.dataset.more;
       if (action === "open-folder") {
         if (!vm._repoRoot) return;
-        const { OpenFolder } = await import("../../../wailsjs/go/main/App.js");
+        const { OpenFolder } = await import("../../../bindings/ysm-model-manager/app.js");
         await OpenFolder(vm._repoRoot);
       } else if (action === "import-file") {
         const rtype = vm._rootAttr || "ysm";
         const { SelectImportFile, ImportByType } =
-          await import("../../../wailsjs/go/main/App.js");
+          await import("../../../bindings/ysm-model-manager/app.js");
         // 列出所有支持的扩展名（后端 SelectImportFile 用 | 解析 "显示名|*.ext1;*.ext2"）
         const exts = getExts(rtype);
         const extFilter = exts.length
@@ -366,7 +366,7 @@ export function bindToolbarEvents(root, vm) {
       } else if (action === "import-dir") {
         const rtype = vm._rootAttr || "ysm";
         const { SelectDirectory, ImportByType } =
-          await import("../../../wailsjs/go/main/App.js");
+          await import("../../../bindings/ysm-model-manager/app.js");
         const dirPath = await SelectDirectory();
         if (!dirPath) return;
         // 后端 ImportByType → SimpleCopyImporter / DirectoryCopyImporter 都判 info.IsDir()，目录/文件都支持
@@ -397,7 +397,7 @@ export function bindToolbarEvents(root, vm) {
         btn.disabled = true;
         try {
           const { GenerateRepoIndex, GetRepoRoot } =
-            await import("../../../wailsjs/go/main/App.js");
+            await import("../../../bindings/ysm-model-manager/app.js");
           const repoRoot = await GetRepoRoot("ysm");
           if (!repoRoot) {
             bus.emit("toast:show", {

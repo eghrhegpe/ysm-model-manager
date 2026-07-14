@@ -14,8 +14,6 @@ import (
 	"ysm-model-manager/go/updater"
 	"ysm-model-manager/go/version"
 	"ysm-model-manager/go/watcher"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // ========== 配置持久化 ==========
@@ -184,7 +182,7 @@ func (a *App) RestartApplication() error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	runtime.Quit(a.ctx)
+	a.app.Quit()
 	return nil
 }
 
@@ -271,9 +269,10 @@ func (a *App) GetWindowPosition() types.WindowState {
 
 // ========== 目录选择 ==========
 func (a *App) SelectDirectory() (string, error) {
-	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "选择目录",
-	})
+	return a.app.Dialog.OpenFile().
+		CanChooseDirectories(true).
+		SetTitle("选择目录").
+		PromptForSingleSelection()
 }
 
 // ========== .minecraft 定位 ==========

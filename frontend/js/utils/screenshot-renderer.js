@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GetModel3DSpec, SaveScreenshotFile } from "../../wailsjs/go/main/App.js";
+import { GetModel3DSpec, SaveScreenshotFile } from "../../bindings/ysm-model-manager/app.js";
 import { loadTextures } from "./model3d-loader.js";
 import { buildSceneMesh } from "./model3d.js";
 
@@ -78,10 +78,10 @@ export async function renderMultiAngle(modelPath, texUrls, opts = {}) {
 // batchRepoScreenshots 批量截图仓库所有模型，4 角度，透明背景
 // repoRoot: 仓库根目录（传空则尝试从 App config 读取）
 export async function batchRepoScreenshots(repoRoot, outputDir) {
-  const { ScanModelEntries, SaveScreenshotFile } = await import("../../wailsjs/go/main/App.js");
+  const { ScanModelEntries, SaveScreenshotFile } = await import("../../bindings/ysm-model-manager/app.js");
   if (!repoRoot) {
     try {
-      const { LoadAppConfig } = await import("../../wailsjs/go/main/App.js");
+      const { LoadAppConfig } = await import("../../bindings/ysm-model-manager/app.js");
       const cfg = await LoadAppConfig();
       repoRoot = cfg?.ysmRoot || cfg?.YsmRoot || cfg?.filesRoot || cfg?.FilesRoot || "";
     } catch (e) {
@@ -104,7 +104,7 @@ export async function batchRepoScreenshots(repoRoot, outputDir) {
     const base = normalized.split("/").pop().replace(/\.\w+$/, "");
     console.log("[batch] 截图:", base);
     try {
-      const { AnalyzeBedrockModel } = await import("../../wailsjs/go/main/App.js");
+      const { AnalyzeBedrockModel } = await import("../../bindings/ysm-model-manager/app.js");
       let texUrls = [];
       try {
         const modelData = await AnalyzeBedrockModel(fullPath);

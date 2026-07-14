@@ -238,7 +238,7 @@ class AppTree extends HTMLElement {
     let ok = 0,
       fail = 0;
     const { DeleteModelDir, DeleteResourcePack } =
-      await import("../../../wailsjs/go/main/App.js");
+      await import("../../../bindings/ysm-model-manager/app.js");
     for (const p of paths) {
       try {
         if (isDirModel) await DeleteModelDir(p);

@@ -108,7 +108,7 @@ export function registerContextMenus() {
                   return;
                 }
                 const { LoadAppConfig, MoveModelFile, GetRepoRoot } =
-                  await import("../../wailsjs/go/main/App.js");
+                  await import("../../bindings/ysm-model-manager/app.js");
                 const repoRoot = await GetRepoRoot("ysm");
                 if (!repoRoot) {
                   bus.emit("toast:show", {
@@ -162,7 +162,7 @@ export function registerContextMenus() {
                   return;
                 }
                 const { LoadAppConfig, CopyModelFile, GetRepoRoot } =
-                  await import("../../wailsjs/go/main/App.js");
+                  await import("../../bindings/ysm-model-manager/app.js");
                 const repoRoot = await GetRepoRoot("ysm");
                 if (!repoRoot) {
                   bus.emit("toast:show", {
@@ -216,7 +216,7 @@ export function registerContextMenus() {
                 });
                 if (!ok2) return;
                 const { MoveToRecycle } =
-                  await import("../../wailsjs/go/main/App.js");
+                  await import("../../bindings/ysm-model-manager/app.js");
                 for (const p of paths) {
                   try {
                     await MoveToRecycle(p);
@@ -287,7 +287,7 @@ export function registerContextMenus() {
                   const newName = await showRenameDialog(path, fileName);
                   if (!newName) return;
                   const { RenameFile } =
-                    await import("../../wailsjs/go/main/App.js");
+                    await import("../../bindings/ysm-model-manager/app.js");
                   await RenameFile(path, newName);
                   refreshUI();
                 } catch (e) {
@@ -308,7 +308,7 @@ export function registerContextMenus() {
                 });
                 if (!folder) return;
                 const { LoadAppConfig, MoveModelFile, GetRepoRoot } =
-                  await import("../../wailsjs/go/main/App.js");
+                  await import("../../bindings/ysm-model-manager/app.js");
                 const repoRoot = await GetRepoRoot("ysm");
                 if (!repoRoot) {
                   bus.emit("toast:show", {
@@ -349,7 +349,7 @@ export function registerContextMenus() {
                   return;
                 }
                 const { LoadAppConfig, CopyModelFile, GetRepoRoot } =
-                  await import("../../wailsjs/go/main/App.js");
+                  await import("../../bindings/ysm-model-manager/app.js");
                 const repoRoot = await GetRepoRoot("ysm");
                 if (!repoRoot) {
                   bus.emit("toast:show", {
@@ -373,7 +373,7 @@ export function registerContextMenus() {
               icon: "📦",
               onClick: async () => {
                 const { LoadAppConfig, ListVersionInstances, InstallModelTo } =
-                  await import("../../wailsjs/go/main/App.js");
+                  await import("../../bindings/ysm-model-manager/app.js");
                 const cfg = await LoadAppConfig();
                 const mcRoot = cfg.mcRoot || "";
                 if (!mcRoot) {
@@ -431,7 +431,7 @@ export function registerContextMenus() {
                 });
                 if (!ok2) return;
                 const { MoveToRecycle } =
-                  await import("../../wailsjs/go/main/App.js");
+                  await import("../../bindings/ysm-model-manager/app.js");
                 try {
                   await MoveToRecycle(path);
                   refreshUI();
@@ -443,7 +443,7 @@ export function registerContextMenus() {
               icon: "📂",
               onClick: async () => {
                 const { RevealInExplorer } =
-                  await import("../../wailsjs/go/main/App.js");
+                  await import("../../bindings/ysm-model-manager/app.js");
                 try {
                   await RevealInExplorer(path);
                 } catch (e) {

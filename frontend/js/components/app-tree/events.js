@@ -8,7 +8,7 @@ import {
   IsFileBanned,
   OpenFolder,
   LoadAppConfig,
-} from "../../../wailsjs/go/main/App.js";
+} from "../../../bindings/ysm-model-manager/app.js";
 
 const ENABLE_MULTI_SELECT = true;
 
@@ -141,7 +141,7 @@ export function bindTreeEvents(container, vm) {
       import("../../utils/display.js").then(({ parseModelName }) => {
         const { author } = parseModelName(name);
         if (author) {
-          import("../../../wailsjs/go/main/App.js").then(({ OpenInBrowser }) =>
+          import("../../../bindings/ysm-model-manager/app.js").then(({ OpenInBrowser }) =>
             OpenInBrowser(
               "https://search.bilibili.com/all?keyword=" +
                 encodeURIComponent(author),

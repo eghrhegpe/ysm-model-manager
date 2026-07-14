@@ -114,7 +114,7 @@ export async function createLitematic3D(path, voxelFn) {
   });
 
   try {
-    const App = await import("../../../wailsjs/go/main/App.js");
+    const App = await import("../../../bindings/ysm-model-manager/app.js");
     const fn = App[voxelFn || "GetLitematicVoxelData"];
     const jsonStr = await fn(path);
     const data = JSON.parse(jsonStr);

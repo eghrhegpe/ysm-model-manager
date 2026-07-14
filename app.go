@@ -13,11 +13,10 @@ import (
 	"ysm-model-manager/go/version"
 	"ysm-model-manager/go/watcher"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type App struct {
-	ctx        context.Context
 	LinkMode   string
 	logger     *logs.Logger
 	watcher    *watcher.Watcher
@@ -26,6 +25,7 @@ type App struct {
 	configCache  types.AppConfig
 	configLoaded bool
 	configMu     sync.RWMutex
+	app        *application.App
 }
 
 // repoRoot 动态返回 YSM 模型存储根目录（始终从配置推导，无需手动维护缓存）
@@ -39,9 +39,11 @@ func NewApp() *App {
 	return a
 }
 
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
+// SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器
+func (a *App) SetApp(app *application.App) { a.app = app }
 
+// ServiceStartup 对应 v2 的 startup，在 app.Run() 期间由框架调用
+func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	// 清理上一次更新留下的 .old 备份
 	updater.CleanupOldVersion()
 
@@ -53,11 +55,11 @@ func (a *App) startup(ctx context.Context) {
 	if pos.Width > 0 && pos.Height > 0 {
 		// 双屏切换后坐标可能落到屏幕外：X/Y 过大或过负时居中
 		if pos.X < -200 || pos.X > 4000 || pos.Y < -200 || pos.Y > 4000 {
-			runtime.WindowSetSize(ctx, pos.Width, pos.Height)
-			runtime.WindowCenter(ctx)
+			a.app.Window.Current().SetSize(pos.Width, pos.Height)
+			a.app.Window.Current().Center()
 		} else {
-			runtime.WindowSetSize(ctx, pos.Width, pos.Height)
-			runtime.WindowSetPosition(ctx, pos.X, pos.Y)
+			a.app.Window.Current().SetSize(pos.Width, pos.Height)
+			a.app.Window.Current().SetPosition(pos.X, pos.Y)
 		}
 	}
 
@@ -90,7 +92,7 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}
 
-	runtime.EventsEmit(ctx, "config-loaded", ysmRoot, cfg.McRoot, cfg.LinkMode)
+	a.app.Event.Emit("config-loaded", ysmRoot, cfg.McRoot, cfg.LinkMode)
 
 	// 启动文件监听器（自动同步启用/禁用状态到整合包）
 	if ysmRoot != "" && cfg.McRoot != "" {
@@ -99,25 +101,27 @@ func (a *App) startup(ctx context.Context) {
 			println("[startup] 文件监听器启动失败:", err.Error())
 		}
 	}
+	return nil
 }
 
-func (a *App) shutdown(ctx context.Context) {
+// ServiceShutdown 对应 v2 的 shutdown，在应用退出前由框架调用
+func (a *App) ServiceShutdown() error {
 	defer func() { recover() }() // 关闭时可能取不到窗口尺寸
 	if a.watcher != nil {
 		a.watcher.Stop()
 	}
-	x, y := runtime.WindowGetPosition(ctx)
-	w, h := runtime.WindowGetSize(ctx)
+	x, y := a.app.Window.Current().Position()
+	w, h := a.app.Window.Current().Size()
 	a.SaveWindowPosition(x, y, w, h)
+	return nil
 }
 
 // OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌）
 func (a *App) OpenInBrowser(url string) {
-	runtime.BrowserOpenURL(a.ctx, url)
+	_ = a.app.Browser.OpenURL(url)
 }
 
 // GetAppVersion 返回当前版本号
 func (a *App) GetAppVersion() string {
 	return version.Version
 }
-

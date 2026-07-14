@@ -28,6 +28,17 @@ New-Item -ItemType Directory -Path "$OutputDir" -Force | Out-Null
 
 Write-Host "🔨 构建版本 $VerTag ..." -ForegroundColor Cyan
 
+# 0. 生成 Wails 3 绑定（前端源，必须在 vite build 之前生成）
+#    注：wails3 generate bindings 产出 frontend/bindings/ysm-model-manager/app.js，
+#        前端模块通过该路径调用 Go service 方法。
+Write-Host "🧬 生成 Wails 3 绑定..." -ForegroundColor Yellow
+Set-Location $ProjectRoot
+wails3 generate bindings 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ 绑定生成失败（请确认 wails3 CLI 已安装且在 PATH 中）" -ForegroundColor Red
+    exit 1
+}
+
 # 1. 构建前端
 Write-Host "📦 构建前端..." -ForegroundColor Yellow
 Set-Location "$ProjectRoot\frontend"
@@ -53,32 +64,22 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# 3. Wails 构建（自动嵌入前端资源 + 注入版本号）
-Write-Host "🦫 Wails 编译 $VerTag ..." -ForegroundColor Yellow
+# 3. 主程序编译（Wails 3 下用 go build 直接注入版本号并嵌入前端资源）
+#    说明：wails3 build 不支持 -ldflags，故版本注入改走 go build -ldflags。
+#          vite build 已在步骤 1 完成，main.go 通过 //go:embed all:frontend/dist
+#          将前端资源打包进单文件 exe；更新助手 ysm-updater-helper.exe 已在步骤 1b 构建。
+Write-Host "🦫 编译主程序 $VerTag ..." -ForegroundColor Yellow
 Set-Location $ProjectRoot
-wails build -clean -ldflags "-X ysm-model-manager/go/version.Version=$VerTag" 2>&1
+go build -ldflags "-X ysm-model-manager/go/version.Version=$VerTag" -o "$OutputDir\$ExeName" . 2>&1
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ wails build 失败 - 常见原因：旧进程锁定了 build/bin/" -ForegroundColor Red
-    Write-Host "   请先运行: Get-Process -Name 'YSM-Model-Manager*' | Stop-Process -Force" -ForegroundColor Yellow
-    Write-Host "   然后重试本脚本。不能用 go build 替代（缺少 Wails build tags）。" -ForegroundColor Yellow
+    Write-Host "❌ go build 失败" -ForegroundColor Red
     exit 1
-} else {
-    # wails build 成功，exe 在 build/bin/ 下，等文件解锁后复制
-    $binExe = "$ProjectRoot\build\bin\$ExeName"
-    for ($i = 0; $i -lt 10; $i++) {
-        try {
-            Copy-Item $binExe "$OutputDir\$ExeName" -ErrorAction Stop
-            break
-        } catch {
-            Write-Host "   等待 exe 解锁 ($($i+1)/10)..." -ForegroundColor Gray
-            Start-Sleep -Seconds 1
-        }
-    }
-    if (!(Test-Path "$OutputDir\$ExeName")) {
-        Write-Host "❌ 无法复制主 exe，可能被防病毒锁住。请手动复制后重试" -ForegroundColor Red
-        exit 1
-    }
 }
+if (!(Test-Path "$OutputDir\$ExeName")) {
+    Write-Host "❌ 主 exe 未生成: $OutputDir\$ExeName" -ForegroundColor Red
+    exit 1
+}
+Write-Host "   ✅ 主程序已编译到 $OutputDir\$ExeName" -ForegroundColor Green
 
 # 2b. 构建 CLI 工具
 Write-Host "🔧 构建 CLI 工具 ysm-cli.exe ..." -ForegroundColor Yellow

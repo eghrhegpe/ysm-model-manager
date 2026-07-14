@@ -23,7 +23,7 @@ export function initRecycleBin(app) {
     if (!confirmed) return;
     try {
       const { LoadAppConfig, EmptyRecycleBin } =
-        await import("../../wailsjs/go/main/App.js");
+        await import("../../bindings/ysm-model-manager/app.js");
       const n = await EmptyRecycleBin("");
       bus.emit("toast:show", {
         msg: `♻️ 已清空 ${n} 个文件`,
@@ -72,7 +72,7 @@ export function initRecycleBin(app) {
         DeleteFromRecycle,
         EmptyRecycleBin,
         GetRepoRoot,
-      } = await import("../../wailsjs/go/main/App.js");
+      } = await import("../../bindings/ysm-model-manager/app.js");
 
       // 获取当前类型的根目录（用于路径过滤）
       const currentRoot = await GetRepoRoot(currentType);

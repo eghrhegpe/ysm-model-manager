@@ -15,7 +15,7 @@ export function registerUpload(unsubs) {
           ScanModelEntries,
           SyncCustomToRepo,
           GetRepoRoot,
-        } = await import("../../wailsjs/go/main/App.js");
+        } = await import("../../bindings/ysm-model-manager/app.js");
         const cfg = await LoadAppConfig();
         const repoRoot = await GetRepoRoot("ysm");
         const mcRoot = cfg.mcRoot || "";

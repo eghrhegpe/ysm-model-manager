@@ -289,7 +289,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
           { label: "📸 全套", key: "all" },
         ];
         const saveShot = async (key) => {
-          const { SaveScreenshotFile } = await import("../../../wailsjs/go/main/App.js");
+          const { SaveScreenshotFile } = await import("../../../bindings/ysm-model-manager/app.js");
           const p = (model._modelPath || "screenshot").replace(/\\/g, "/");
           const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ".";
           const base = p.split("/").pop().replace(/\.\w+$/, "");

@@ -15,8 +15,6 @@ import (
 	"ysm-model-manager/go/litematic"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // LoadResourceTypes 加载资源类型注册表
@@ -205,12 +203,10 @@ func (a *App) IsResourcePackEnabled(path string) bool {
 
 // SelectImportZip 打开文件选择器选取 .zip 文件
 func (a *App) SelectImportZip() string {
-	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "选择资源包文件",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "ZIP 资源包", Pattern: "*.zip"},
-		},
-	})
+	path, err := a.app.Dialog.OpenFile().
+		SetTitle("选择资源包文件").
+		AddFilter("ZIP 资源包", "*.zip").
+		PromptForSingleSelection()
 	if err != nil {
 		return ""
 	}
@@ -220,23 +216,18 @@ func (a *App) SelectImportZip() string {
 // SelectImportFile 打开文件选择器，按给定扩展名过滤
 // filter 格式: "显示名|*.ext1;*.ext2"
 func (a *App) SelectImportFile(filter, title string) string {
-	var filters []runtime.FileFilter
-	if filter != "" {
-		parts := strings.SplitN(filter, "|", 2)
-		if len(parts) == 2 {
-			filters = append(filters, runtime.FileFilter{
-				DisplayName: parts[0],
-				Pattern:     parts[1],
-			})
-		}
-	}
+	dialog := a.app.Dialog.OpenFile()
 	if title == "" {
 		title = "选择文件"
 	}
-	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:   title,
-		Filters: filters,
-	})
+	dialog = dialog.SetTitle(title)
+	if filter != "" {
+		parts := strings.SplitN(filter, "|", 2)
+		if len(parts) == 2 {
+			dialog = dialog.AddFilter(parts[0], parts[1])
+		}
+	}
+	path, err := dialog.PromptForSingleSelection()
 	if err != nil {
 		return ""
 	}

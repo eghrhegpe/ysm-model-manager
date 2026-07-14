@@ -4,6 +4,7 @@ import { bus } from "../../bus.js";
 import { renderDisplayName } from "../../utils/display.js";
 import { dbg } from "../../utils/debug.js";
 import { getApp } from "../../wails/app.js";
+import { Events } from "@wailsio/runtime";
 
 // ============================================================
 //  模块顶层 — 持久状态与事件注册（脚本加载时执行一次）
@@ -51,7 +52,7 @@ export function getState() {
 export async function resume() {
   try {
     dbg("resume:start");
-    const { QueueStatus } = await import("../../../wailsjs/go/main/App.js");
+    const { QueueStatus } = await import("../../../bindings/ysm-model-manager/app.js");
     const result = await QueueStatus();
     dbg("resume:result", result);
     // Wails v2 多返回值映射：数组/对象/单值 三种格式都要兜底
@@ -97,7 +98,7 @@ export async function enqueueDownloads(tasks) {
   STATE._lastDoneSeq = 0;
   notify();
 
-  const { EnqueueDownloads } = await import("../../../wailsjs/go/main/App.js");
+  const { EnqueueDownloads } = await import("../../../bindings/ysm-model-manager/app.js");
   await EnqueueDownloads(tasks);
   dbg("enqueue:done", STATE.status);
 }
@@ -108,17 +109,19 @@ export async function enqueueDownloads(tasks) {
 export async function cancelDownloads() {
   if (STATE.status !== "downloading") return;
   try {
-    const { CancelQueue } = await import("../../../wailsjs/go/main/App.js");
+    const { CancelQueue } = await import("../../../bindings/ysm-model-manager/app.js");
     await CancelQueue();
   } catch (_) { /* 取消失败不影响状态 */ }
 }
 
 // ── 一次性注册全部后端事件 ──
 // Wails 脚本加载时执行一次，页面切换不受影响
-if (!_registered && typeof window !== "undefined" && window.runtime?.EventsOn) {
+// v3: 事件 payload 为单对象，多参经 Go Emit 打包为数组，此处按 e.data 解构
+if (!_registered) {
   _registered = true;
 
-  window.runtime.EventsOn("queue:status", (status, total, extra) => {
+  Events.On("queue:status", (e) => {
+    const [status, total, extra] = e.data;
     dbg("event:queue:status", status, total, extra);
     STATE.total = total ?? STATE.total;
     if (status === "done" || status === "cancelled") {
@@ -137,7 +140,8 @@ if (!_registered && typeof window !== "undefined" && window.runtime?.EventsOn) {
     }
   });
 
-  window.runtime.EventsOn("queue:file-start", (name, total, remaining) => {
+  Events.On("queue:file-start", (e) => {
+    const [name, total, remaining] = e.data;
     dbg("event:queue:file-start", name, total, remaining);
     STATE.currentFile = name;
     STATE.total = total;
@@ -146,7 +150,8 @@ if (!_registered && typeof window !== "undefined" && window.runtime?.EventsOn) {
     notify();
   });
 
-  window.runtime.EventsOn("queue:file-done", (name, status, errMsg) => {
+  Events.On("queue:file-done", (e) => {
+    const [name, status, errMsg] = e.data;
     dbg("event:queue:file-done", name, status, errMsg);
     if (status === "fail") {
       STATE.errorList.push({ name, err: errMsg || "未知错误" });
@@ -163,7 +168,7 @@ if (!_registered && typeof window !== "undefined" && window.runtime?.EventsOn) {
         (async () => {
           try {
             const { CachedCreatorAvatar, DebugExtractCreatorAvatar } =
-              await import("../../../wailsjs/go/main/App.js");
+              await import("../../../bindings/ysm-model-manager/app.js");
             let dataUri = await CachedCreatorAvatar(author);
             if (!dataUri) {
               await DebugExtractCreatorAvatar(author);
@@ -180,7 +185,8 @@ if (!_registered && typeof window !== "undefined" && window.runtime?.EventsOn) {
     }
   });
 
-  window.runtime.EventsOn("download:progress", (dl, total) => {
+  Events.On("download:progress", (e) => {
+    const [dl, total] = e.data;
     dbg("event:download:progress", dl, total, typeof dl, typeof total);
     STATE.progress = { dl, total };
     notify();
@@ -477,7 +483,7 @@ export function createDownloadQueue({
     if (!tasks.length) return;
 
     const { LoadAppConfig, GetRepoRoot } =
-      await import("../../../wailsjs/go/main/App.js");
+      await import("../../../bindings/ysm-model-manager/app.js");
     const cfg = await LoadAppConfig();
     const repoRoot = await GetRepoRoot("ysm");
     if (!repoRoot) {

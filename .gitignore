@@ -1,5 +1,6 @@
 frontend/dist
 build/bin/
+bin/
 build/release/
 build/ysmparser-cache/
 cmd/*/genindex.exe
@@ -24,3 +25,13 @@ tool-test.md
 
 CLAUDE.md
 .claude/
+
+# 个人 AI 工具配置（非项目配置，不入库）
+opencode.json
+reasonix.toml
+
+# Wails 3 task 引擎运行时缓存（wails3 task / wails3 dev 生成）
+.task/
+
+# 应用运行时配置已迁移到用户目录 %APPDATA%/YSM-Model-Manager/，不再入仓
+/ysm_config.json

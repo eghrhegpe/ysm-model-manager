@@ -12,7 +12,13 @@ param(
 $VerTag = if ($Version -match '^v') { $Version } else { "v$Version" }
 $VerNum = $VerTag -replace '^v', ''
 
-$ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+# 脚本已迁入 cmd/，故 $MyInvocation 路径为 cmd/ 而非仓库根。
+# 通过 git 解析仓库根，确保 $ProjectRoot 始终指向仓库根
+# （JSON / 前端 / go 子包均相对仓库根）。无 git 时退回 cmd/ 的上级目录。
+$ProjectRoot = (git rev-parse --show-toplevel 2>$null).Trim()
+if (-not $ProjectRoot) {
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+}
 $OutputDir = "$ProjectRoot\build\release"
 $ExeName = "YSM-Model-Manager.exe"
 $ZipName = "YSM-Model-Manager_windows_amd64.zip"
@@ -29,7 +35,7 @@ New-Item -ItemType Directory -Path "$OutputDir" -Force | Out-Null
 Write-Host "🔨 构建版本 $VerTag ..." -ForegroundColor Cyan
 
 # 0. 生成 Wails 3 绑定（前端源，必须在 vite build 之前生成）
-#    注：wails3 generate bindings 产出 frontend/bindings/ysm-model-manager/app.js，
+#    注：wails3 generate bindings 产出 frontend/bindings/ysm-model-manager/internal/app/app.js，
 #        前端模块通过该路径调用 Go service 方法。
 Write-Host "🧬 生成 Wails 3 绑定..." -ForegroundColor Yellow
 Set-Location $ProjectRoot

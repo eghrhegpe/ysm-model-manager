@@ -134,7 +134,7 @@ export function initImportQueue(app) {
     const d = manualDate || (autoOn ? autoDate : "");
     const parts = [];
     if (a) parts.push("[" + a + "]");
-    if (w) parts.push("【" + w + "】");
+    parts.push("【" + (w || "未知") + "】");
     parts.push(c || "?");
     if (v) parts.push("-" + v);
     if (d) parts.push(" (" + d + ")");
@@ -338,7 +338,7 @@ export function initImportQueue(app) {
     if (c) {
       const parts = [];
       if (a) parts.push("[" + a + "]");
-      if (w) parts.push("【" + w + "】");
+      parts.push("【" + (w || "未知") + "】");
       parts.push(c);
       if (v) parts.push("-" + v);
       if (d) parts.push(" (" + d + ")");

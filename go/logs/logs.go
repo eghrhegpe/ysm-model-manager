@@ -74,8 +74,17 @@ func (l *Logger) save() {
 	}
 }
 
-// Add 添加一条日志
+// Add 添加一条导入日志（兼容旧调用）
 func (l *Logger) Add(modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {
+	l.addOp("import", modelName, sourcePath, targetDir, fileSize, status, errMsg)
+}
+
+// AddOp 添加一条指定操作类型的日志
+func (l *Logger) AddOp(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {
+	l.addOp(op, modelName, sourcePath, targetDir, fileSize, status, errMsg)
+}
+
+func (l *Logger) addOp(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.logs = append(l.logs, types.ImportLog{
@@ -86,6 +95,7 @@ func (l *Logger) Add(modelName, sourcePath, targetDir string, fileSize int64, st
 		Status:     status,
 		ErrorMsg:   errMsg,
 		Timestamp:  time.Now().UnixMilli(),
+		Operation:  op,
 	})
 	if len(l.logs) > 500 {
 		l.logs = l.logs[len(l.logs)-500:]

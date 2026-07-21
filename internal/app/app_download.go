@@ -117,6 +117,7 @@ func (q *DownloadQueue) process() {
 		if err != nil {
 			log.Printf("[queue] emit queue:file-done name=%s status=fail err=%v", task.Name, err)
 			q.app.app.Event.Emit("queue:file-done", task.Name, "fail", err.Error())
+			q.app.AddOpLog("download", task.Name, task.URL, task.SaveDir, 0, "failed", err.Error())
 		} else {
 			log.Printf("[queue] emit queue:file-done name=%s status=ok", task.Name)
 			q.app.app.Event.Emit("queue:file-done", task.Name, "ok", "")
@@ -125,7 +126,7 @@ func (q *DownloadQueue) process() {
 			if fi, st := os.Stat(savePath); st == nil {
 				fileSize = fi.Size()
 			}
-			q.app.AddImportLog(task.Name, task.URL, task.SaveDir, fileSize, "success", "")
+			q.app.AddOpLog("download", task.Name, task.URL, task.SaveDir, fileSize, "success", "")
 		}
 
 		select {

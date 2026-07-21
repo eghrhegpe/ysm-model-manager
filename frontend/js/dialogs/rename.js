@@ -51,6 +51,11 @@ export async function showRenameDialog(filePath, currentName) {
 
     // 从 YSM 文件头部读取元数据（仅填充第一位作者，展示介绍）
     box.querySelector("#rn-from-header").onclick = async () => {
+      if (!filePath) {
+        box.querySelector("#rn-tips").textContent = "⚠️ 文件尚未导入，无法读取头部";
+        box.querySelector("#rn-tips").style.display = "block";
+        return;
+      }
       try {
         const btn = box.querySelector("#rn-from-header");
         btn.textContent = "⏳ 读取中...";

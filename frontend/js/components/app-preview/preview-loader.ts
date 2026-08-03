@@ -62,11 +62,6 @@ export async function loadModelData(
           await import("../../utils/animation.ts");
         for (const jsonStr of model.animations as string[]) {
           const { clips } = parseBedrockAnimationJSON(jsonStr);
-          for (const clip of clips) {
-            if (clip.hasMolang) {
-              /* skip */
-            }
-          }
           if (clips.length > 0) goClips.push(...clips);
         }
       }

@@ -118,13 +118,13 @@ export async function loadModel2D(
             (au) => `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
           ${
             au.avatarUrl
-              ? `<img src="${au.avatarUrl}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1px solid var(--bd)" onerror="this.style.display='none'">`
+              ? `<img src="${esc(au.avatarUrl)}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1px solid var(--bd)" onerror="this.style.display='none'">`
               : '<span style="width:20px;height:20px;border-radius:50%;background:var(--hover);display:inline-block"></span>'
           }
-          <span style="font-size:11px;color:var(--txt)">${au.name}</span>
+          <span style="font-size:11px;color:var(--txt)">${esc(au.name || "")}</span>
           ${
             au.role
-              ? `<span style="font-size:9px;color:var(--muted)">(${au.role})</span>`
+              ? `<span style="font-size:9px;color:var(--muted)">(${esc(au.role)})</span>`
               : ""
           }
         </div>`,
@@ -137,7 +137,7 @@ export async function loadModel2D(
         avatarContainer.innerHTML = authors
           .map(
             (au) =>
-              `<img src="${au.avatarUrl || ""}" title="${au.name}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--bd);margin:0 2px" onerror="this.style.display='none'">`,
+              `<img src="${esc(au.avatarUrl || "")}" title="${esc(au.name || "")}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--bd);margin:0 2px" onerror="this.style.display='none'">`,
           )
           .join("");
       }
@@ -609,7 +609,7 @@ export async function loadModel2D(
               d.appendChild(img);
               d.innerHTML +=
                 '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">' +
-                name +
+                esc(name) +
                 '</span><span style="color:rgba(255,255,255,0.4);font-size:10px;flex-shrink:0">' +
                 w +
                 "×" +

@@ -109,15 +109,23 @@ export function bindActions(root: ShadowRoot): void {
   root
     .getElementById("dp-btn-clear-logs")
     ?.addEventListener("click", async () => {
-      const { ClearImportLogs } =
-        await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-      await ClearImportLogs();
-      bus.emit("logs:refresh");
-      bus.emit("toast:show", {
-        msg: "🗑️ 日志已清空",
-        duration: 2000,
-        type: "info",
-      });
+      try {
+        const { ClearImportLogs } =
+          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        await ClearImportLogs();
+        bus.emit("logs:refresh");
+        bus.emit("toast:show", {
+          msg: "🗑️ 日志已清空",
+          duration: 2000,
+          type: "info",
+        });
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: `清空日志失败: ${e instanceof Error ? e.message : String(e)}`,
+          duration: 3000,
+          type: "error",
+        });
+      }
     });
 
   // ===== 三张状态卡片点击展开详情列表 =====

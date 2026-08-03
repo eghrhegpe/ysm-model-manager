@@ -2,14 +2,8 @@
 // 从 index.ts 拆分：详情面板渲染逻辑
 import { summaryCardHTML } from "../../utils/summarize.ts";
 import { renderFormattedText } from "../../utils/mc-format.ts";
-import { devLog, type PreviewCtx } from "./preview-utils.ts";
-
-const esc = (s: unknown): string =>
-  (s || "")
-    .toString()
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+import { esc } from "../../utils/dom.ts";
+import type { PreviewCtx } from "./preview-utils.ts";
 
 /** 显示模型详情（YSM 模型） */
 export async function showModelDetail(
@@ -43,7 +37,8 @@ export async function showModelDetail(
     (btn as HTMLElement).onclick = (): void => switchTab((btn as HTMLElement).dataset.tab || "");
   });
 
-  const previewSrc = await ctx._loadPreviewImage(path);
+  // 预热缩略图缓存（loadModel2D / 列表视图复用）
+  await ctx._loadPreviewImage(path);
 
   try {
     const { ExtractYsmSummary, ExtractYSMHeader } =
@@ -74,12 +69,6 @@ export async function showModelDetail(
     } else {
       throw new Error("无法解析此文件");
     }
-    if (previewSrc) {
-      cardHTML = cardHTML.replace(
-        '<div class="content" id="preview-content">',
-        '<div class="content" id="preview-content">',
-      );
-    }
     cardHTML = cardHTML.replace(
       '<div class="content" id="preview-content">',
       '<div class="content" id="preview-content"><div id="ysm-author-avatars"></div>',
@@ -87,9 +76,11 @@ export async function showModelDetail(
     const detailDiv = ctx._root.getElementById("preview-detail");
     if (detailDiv) detailDiv.innerHTML = cardHTML;
 
-    // 加载 2D 模型预览（骨架 tab）
+    // 加载 2D 模型预览（骨架 tab）；loadModel2D 内部已兜底渲染错误，此处仅防未处理拒绝
     const { loadModel2D } = await import("./preview-skeleton.js");
-    loadModel2D(ctx, path, ctx._root.getElementById("preview-skeleton"));
+    loadModel2D(ctx, path, ctx._root.getElementById("preview-skeleton")).catch(
+      (e) => console.warn("[preview] loadModel2D:", e),
+    );
   } catch (err) {
     const detailDiv = ctx._root.getElementById("preview-detail");
     if (detailDiv) {
@@ -121,14 +112,14 @@ export async function showResourcePack(
     ctx._root.innerHTML = `<div class="content" id="preview-content">
   <h3>🎨 资源包</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    ${meta.thumbnail ? `<img src="${meta.thumbnail}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:6px;border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:40px;line-height:1">❌</div><div style="font-size:var(--fs-sm);color:var(--muted)">无pack.png</div></div>`}
+    ${meta.thumbnail ? `<img src="${esc(meta.thumbnail)}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:6px;border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:40px;line-height:1">❌</div><div style="font-size:var(--fs-sm);color:var(--muted)">无pack.png</div></div>`}
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     ${desc ? `<div style="color:var(--muted);line-height:1.6">${desc}</div>` : ""}
     <div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ${rv.format}${rv.version ? "（" + rv.version + "）" : ""}</div>
   </div>
 </div>`;
   } catch (e) {
-    ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 资源包</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e instanceof Error ? e.message : e)}</div></div></div>`;
+    ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 资源包</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e instanceof Error ? e.message : String(e))}</div></div></div>`;
   }
 }
 

@@ -1,12 +1,6 @@
 import { renderFormattedText } from "../../utils/mc-format.ts";
+import { esc } from "../../utils/dom.ts";
 import type { PreviewCtx } from "./preview-utils.ts";
-
-const esc = (s: unknown): string =>
-  (s || "")
-    .toString()
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 
 function fmtTime(ms: number): string {
   if (!ms || ms <= 0) return "未知";
@@ -153,7 +147,7 @@ export async function showLitematic(
     const blockStats = meta.blockStats || meta.paletteStats;
 
     const previewImgHTML = meta.previewImage
-      ? `<img src="${meta.previewImage}" alt="preview" style="width:140px;height:140px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
+      ? `<img src="${esc(meta.previewImage)}" alt="preview" style="width:140px;height:140px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
       : "";
 
     function field(label: string, value: unknown): string {
@@ -210,7 +204,7 @@ export async function showLitematic(
   } catch (e) {
     const detailDiv = ctx._root.getElementById("preview-detail");
     if (detailDiv) {
-      detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e instanceof Error ? e.message : e)}</div></div>`;
+      detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e instanceof Error ? e.message : String(e))}</div></div>`;
     }
   }
 }

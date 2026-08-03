@@ -1,4 +1,5 @@
 // ===== preview HTML 模板 =====
+import { esc } from "../../utils/dom.ts";
 
 /** 整合包详情面板（stat mode） */
 export function statsHTML(): string {
@@ -105,13 +106,6 @@ export function modelDetailHTML(meta: ModelDetailMeta | null): string {
 <div class="md-row"><span class="md-label">🔺 顶点</span><span class="md-value">${(meta.vertices || 0).toLocaleString()}</span></div>
 <div class="md-row"><span class="md-label">◻️ 面</span><span class="md-value">${(meta.faces || 0).toLocaleString()}</span></div>
 </div>`;
-}
-
-function esc(s: string): string {
-  return (s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }
 
 /** 模型统计卡片（statsCardHTML 入参的几何视图） */

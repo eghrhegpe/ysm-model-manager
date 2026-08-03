@@ -49,27 +49,32 @@ export async function openFullPreview(
     dragging = true;
     lastX = e.clientX;
   });
-  window.addEventListener("mousemove", (e) => {
+  const onWindowMove = (e: MouseEvent): void => {
     if (!dragging) return;
     rotation = (rotation + (e.clientX - lastX) * 0.5) % 360;
     lastX = e.clientX;
     doRender();
-  });
-  window.addEventListener("mouseup", () => {
+  };
+  const onWindowUp = (): void => {
     dragging = false;
-  });
+  };
+  const onKey = (e: KeyboardEvent): void => {
+    if (e.key === "Escape") close();
+  };
+  window.addEventListener("mousemove", onWindowMove);
+  window.addEventListener("mouseup", onWindowUp);
+  let closed = false;
   const close = (): void => {
+    if (closed) return;
+    closed = true;
+    window.removeEventListener("mousemove", onWindowMove);
+    window.removeEventListener("mouseup", onWindowUp);
+    document.removeEventListener("keydown", onKey);
     if (overlay.parentNode) document.body.removeChild(overlay);
   };
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();
   });
-  document.addEventListener(
-    "keydown",
-    (e) => {
-      if (e.key === "Escape") close();
-    },
-    { once: true },
-  );
+  document.addEventListener("keydown", onKey);
   document.body.appendChild(overlay);
 }

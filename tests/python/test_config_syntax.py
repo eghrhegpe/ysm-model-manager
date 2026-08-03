@@ -21,18 +21,29 @@ def check_wails():
         errors.append(f"SYNTAX: wails.json 解析失败: {e}")
         return errors
 
+    # Wails 3 契约：v2 平铺结构（outputfilename / frontend:* / bind）已弃用。
+    # 迁移依据见 docs/architecture/adr/ADR-0001-wails3-migration.md §3。
     if not data.get("name"):
         errors.append("'name' must be non-empty")
-    if not data.get("outputfilename"):
-        errors.append("'outputfilename' must be non-empty")
-    if not data.get("frontend:install"):
-        errors.append("'frontend:install' must be non-empty")
-    if not data.get("frontend:build"):
-        errors.append("'frontend:build' must be non-empty")
 
-    bind = data.get("bind", [])
-    if not isinstance(bind, list) or len(bind) == 0:
-        errors.append("'bind' must be non-empty array")
+    schema = data.get("$schema", "")
+    if "v3.wails.io" not in schema:
+        errors.append("'$schema' 必须指向 v3.wails.io（v2 配置不应残留）")
+
+    frontend = data.get("frontend")
+    if not isinstance(frontend, dict):
+        errors.append("'frontend' 必须是对象")
+    else:
+        if not frontend.get("dir"):
+            errors.append("'frontend.dir' must be non-empty")
+        if not frontend.get("install"):
+            errors.append("'frontend.install' must be non-empty")
+        if not frontend.get("build"):
+            errors.append("'frontend.build' must be non-empty")
+
+    # v2 残留守卫：v3 已弃用顶层 bind 字段（service 自动发现替代）
+    if "bind" in data:
+        errors.append("'bind' 字段在 v3 已弃用（v2 残留，应移除）")
     return errors
 
 

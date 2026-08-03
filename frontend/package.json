@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/three": "^0.185.3",
     "jscpd": "^5.0.14",
     "jsdom": "^29.1.1",
     "knip": "^6.31.0",

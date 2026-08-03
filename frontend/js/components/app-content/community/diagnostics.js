@@ -2,7 +2,7 @@
 import { bus } from "../../../bus.ts";
 import { renderDisplayName } from "../../../utils/display.ts";
 import { getApp } from "../../../wails/app.ts";
-import { loadResourceRegistry } from "../../../utils/resource-registry.js";
+import { loadResourceRegistry } from "../../../utils/resource-registry.ts";
 
 /**
  * 初始化诊断页所有功能

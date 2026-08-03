@@ -2,7 +2,7 @@
 import { bus } from "../../../bus.ts";
 import { initVersionUpdater } from "../../../features/version-updater.js";
 import { friendlyError } from "../../../utils/errors.ts";
-import { loadResourceRegistry } from "../../../utils/resource-registry.js";
+import { loadResourceRegistry } from "../../../utils/resource-registry.ts";
 
 /**
  * 初始化设置页所有事件绑定

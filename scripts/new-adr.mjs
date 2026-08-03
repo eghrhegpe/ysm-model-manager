@@ -185,6 +185,43 @@ function annotateSuperseded(targetRefs, supersedingNum) {
   return ok;
 }
 
+// ── wx 原子占位锁（硬兜底：防多会话并行撞号）───────────
+// 锁文件用 fs.openSync('wx') 原子创建：已存在即 EEXIST（冲突）。
+// 锁内完成「读最大号 → 写文件 → 写登记表」整段，杜绝两个进程同时占同一号。
+// 陈旧锁（mtime 超过 LOCK_STALE_MS）视为崩溃残留，删除后重试一次。
+
+const LOCK_FILE = path.join(ADR_DIR, '.new-adr.lock');
+const LOCK_STALE_MS = 10 * 60 * 1000; // 10 分钟
+
+function acquireLock() {
+  try {
+    const fd = fs.openSync(LOCK_FILE, 'wx');
+    fs.writeSync(fd, `${process.pid} ${new Date().toISOString()}`);
+    fs.closeSync(fd);
+    return true;
+  } catch (e) {
+    if (e.code !== 'EEXIST') throw e;
+    try {
+      const st = fs.statSync(LOCK_FILE);
+      if (Date.now() - st.mtimeMs > LOCK_STALE_MS) {
+        fs.unlinkSync(LOCK_FILE);
+        return acquireLock();
+      }
+    } catch {
+      /* stat/unlink 失败按冲突处理 */
+    }
+    return false;
+  }
+}
+
+function releaseLock() {
+  try {
+    fs.unlinkSync(LOCK_FILE);
+  } catch {
+    /* 锁文件已不存在则忽略 */
+  }
+}
+
 // ── 主流程 ──────────────────────────────────────────────
 
 function main() {
@@ -200,63 +237,81 @@ function main() {
     return 1;
   }
 
-  const maxNum = Math.max(maxFromFiles(), maxFromRegistry());
-  const num = maxNum + 1;
-  const n = pad(num);
-  const filename = `ADR-${n}-${slug}.md`;
-  const filePath = path.join(ADR_DIR, filename);
-
-  console.log(`[占号] 最大编号 ${pad(maxNum)} → 新编号 ADR-${n}（文件 ${filename}）`);
+  // dry-run：只算号不落盘，无需加锁
+  const maxNumPre = Math.max(maxFromFiles(), maxFromRegistry());
   if (args.dryRun) {
+    const nPre = pad(maxNumPre + 1);
+    console.log(`[占号] 最大编号 ${pad(maxNumPre)} → 新编号 ADR-${nPre}（文件 ADR-${nPre}-${slug}.md）`);
     console.log('[dry-run] 未写入任何文件');
     return 0;
   }
 
-  if (fs.existsSync(filePath)) {
-    // 撞号：其他并发 AI 已抢到该号。重新扫描当前实际最大号并亮出，
-    // 让调用方感知「已排到哪、该从哪起」——比单纯失败退出更利于协调。
+  // 获取 wx 原子锁（硬兜底）。冲突时亮出当前最大号，便于并发 AI 协调。
+  if (!acquireLock()) {
     const curMax = Math.max(maxFromFiles(), maxFromRegistry());
-    console.error(`[撞号] ${filename} 已存在，放弃写入`);
-    console.error(`[协调] 当前实际最大编号为 ADR-${pad(curMax)}；请从 ADR-${pad(curMax + 1)} 起重新占号，或先跑 --dry-run 确认最新编号`);
+    console.error('[锁冲突] 另一并发占号进行中（.new-adr.lock 已存在）');
+    console.error(`[协调] 当前实际最大编号为 ADR-${pad(curMax)}；请稍后重试，或先跑 --dry-run 确认最新编号`);
     return 1;
   }
 
-  // 1. 生成模板文件
-  fs.writeFileSync(filePath, buildTemplate(num, args.title, slug, args.related), 'utf8');
-  console.log(`[OK] 已生成 ${path.relative(ROOT, filePath)}`);
+  try {
+    // 锁内读最大号（拿锁后重新读，保证拿到最新值）
+    const maxNum = Math.max(maxFromFiles(), maxFromRegistry());
+    const num = maxNum + 1;
+    const n = pad(num);
+    const filename = `ADR-${n}-${slug}.md`;
+    const filePath = path.join(ADR_DIR, filename);
 
-  // 2. 登记表占号
-  const regText = fs.readFileSync(REG_FILE, 'utf8');
-  const next = registerLine(regText, num, args.title);
-  if (next === null) {
-    console.error('[FAIL] 登记表未找到 ADR 表格行（格式异常），请人工在「## 登记表」末尾补一行');
-    return 1;
-  }
-  fs.writeFileSync(REG_FILE, next, 'utf8');
-  console.log('[OK] 已登记占号 adr/README.md');
+    console.log(`[占号] 最大编号 ${pad(maxNum)} → 新编号 ADR-${n}（文件 ${filename}）`);
 
-  // 2.5 被取代标注
-  if (args.supersedes.length) {
-    if (!annotateSuperseded(args.supersedes, num)) {
-      console.error('[FAIL] 被取代标注处理失败，请检查 --supersedes 参数');
+    if (fs.existsSync(filePath)) {
+      // 撞号：理论上锁已防并发，此处为第二道防线（如人工/脚本直接放了同号文件）。
+      // 重新扫描当前实际最大号并亮出，让调用方感知「已排到哪、该从哪起」。
+      const curMax = Math.max(maxFromFiles(), maxFromRegistry());
+      console.error(`[撞号] ${filename} 已存在，放弃写入`);
+      console.error(`[协调] 当前实际最大编号为 ADR-${pad(curMax)}；请从 ADR-${pad(curMax + 1)} 起重新占号，或先跑 --dry-run 确认最新编号`);
       return 1;
     }
-    console.log('[提示] 被取代的 ADR 状态如需同步为「❌ 已取代」，请编辑对应文件首部后跑 gen-docs-index.mjs');
-  }
 
-  // 3. 自动对账
-  const res = spawnSync(process.execPath, [path.join('scripts', 'adr-check.mjs')], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  });
-  process.stdout.write(res.stdout || '');
-  process.stderr.write(res.stderr || '');
-  if (res.status !== 0) {
-    console.error('[FAIL] adr-check 对账未通过，请检查编号或登记表');
-    return 1;
+    // 1. 生成模板文件
+    fs.writeFileSync(filePath, buildTemplate(num, args.title, slug, args.related), 'utf8');
+    console.log(`[OK] 已生成 ${path.relative(ROOT, filePath)}`);
+
+    // 2. 登记表占号
+    const regText = fs.readFileSync(REG_FILE, 'utf8');
+    const next = registerLine(regText, num, args.title);
+    if (next === null) {
+      console.error('[FAIL] 登记表未找到 ADR 表格行（格式异常），请人工在「## 登记表」末尾补一行');
+      return 1;
+    }
+    fs.writeFileSync(REG_FILE, next, 'utf8');
+    console.log('[OK] 已登记占号 adr/README.md');
+
+    // 2.5 被取代标注
+    if (args.supersedes.length) {
+      if (!annotateSuperseded(args.supersedes, num)) {
+        console.error('[FAIL] 被取代标注处理失败，请检查 --supersedes 参数');
+        return 1;
+      }
+      console.log('[提示] 被取代的 ADR 状态如需同步为「❌ 已取代」，请编辑对应文件首部后跑 gen-docs-index.mjs');
+    }
+
+    // 3. 自动对账
+    const res = spawnSync(process.execPath, [path.join('scripts', 'adr-check.mjs')], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    });
+    process.stdout.write(res.stdout || '');
+    process.stderr.write(res.stderr || '');
+    if (res.status !== 0) {
+      console.error('[FAIL] adr-check 对账未通过，请检查编号或登记表');
+      return 1;
+    }
+    console.log('[OK] 新 ADR 占号闭环完成。请编辑文件：状态 / 决策人 / 相关 / 正文。');
+    return 0;
+  } finally {
+    releaseLock();
   }
-  console.log('[OK] 新 ADR 占号闭环完成。请编辑文件：状态 / 决策人 / 相关 / 正文。');
-  return 0;
 }
 
 process.exit(main());

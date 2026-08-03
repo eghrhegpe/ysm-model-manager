@@ -151,6 +151,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     } else {
       toast("❌ 复制失败（可能目标已存在）", 4000, "error");
     }
+    refreshUI();
   },
   "batch.recycle": async (ctx) => {
     const { modalConfirm } = await import("../dialogs/modal.ts");
@@ -280,6 +281,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
     try {
       await CopyModelFile(ctx.path || "", dstDir);
+      refreshUI();
       toast(`✅ 已复制到 ${folder}`, 3000);
     } catch (e) {
       toast("❌ " + friendlyError(e, "复制失败"), 4000, "error");

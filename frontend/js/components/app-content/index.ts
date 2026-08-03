@@ -50,6 +50,8 @@ class AppContent extends HTMLElement {
   _repoEventsCleanup: (() => Promise<void>) | null;
   _unsub: (() => void) | null = null;
   _unsubs: Array<() => void> = [];
+  _resizeMove: ((e: MouseEvent) => void) | null = null;
+  _resizeUp: (() => void) | null = null;
   _insListenerReg = false;
   _avatarRefreshRegistered = false;
   _workshopCache: Map<string, RepoCacheEntry> | null = null;
@@ -101,6 +103,10 @@ class AppContent extends HTMLElement {
     if (this._unsub) this._unsub();
     this._globalUnsubs.forEach((fn) => fn());
     this._globalUnsubs = [];
+    if (this._resizeMove) document.removeEventListener("mousemove", this._resizeMove);
+    if (this._resizeUp) document.removeEventListener("mouseup", this._resizeUp);
+    this._resizeMove = null;
+    this._resizeUp = null;
     this._avatarRefreshRegistered = false;
     // 清理 _unsubs（dedup 等页面的事件订阅）
     if (this._unsubs && Array.isArray(this._unsubs)) {
@@ -180,6 +186,10 @@ class AppContent extends HTMLElement {
       preview.style.width = w + "px";
     }
 
+    // 先移除上一轮 _render 遗留的 document 监听器，防止切页累积泄漏
+    if (this._resizeMove) document.removeEventListener("mousemove", this._resizeMove);
+    if (this._resizeUp) document.removeEventListener("mouseup", this._resizeUp);
+
     let resizing = false;
     handle.addEventListener("mousedown", (e) => {
       resizing = true;
@@ -188,13 +198,13 @@ class AppContent extends HTMLElement {
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     });
-    document.addEventListener("mousemove", (e) => {
+    const onMove = (e: MouseEvent): void => {
       if (!resizing) return;
       const rect = preview.getBoundingClientRect();
       const newW = Math.max(160, Math.min(500, rect.right - e.clientX));
       preview.style.width = newW + "px";
-    });
-    document.addEventListener("mouseup", () => {
+    };
+    const onUp = (): void => {
       if (!resizing) return;
       resizing = false;
       handle.style.background = "transparent";
@@ -202,7 +212,11 @@ class AppContent extends HTMLElement {
       document.body.style.userSelect = "";
       // 保存宽度到 localStorage
       localStorage.setItem("preview-width", preview.style.width);
-    });
+    };
+    this._resizeMove = onMove;
+    this._resizeUp = onUp;
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
   }
 
   _initDiagnostics(): void {

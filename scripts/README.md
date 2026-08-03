@@ -31,6 +31,8 @@
 | `codemod.mjs` | `node scripts/codemod.mjs help` / `rename-function` / `move-function` / `add-param` | AST 感知重构（ts-morph）：批量重命名 / 移函数（自动迁 import）/ 加参数；move 不重写外部引用方，改后跑 tsc |
 | `inspect_ysm.mjs` | `node scripts/inspect_ysm.mjs <文件>` / `--json` | YSM 文件格式诊断（合并 v1-v5 的统一版） |
 | `test-coverage-report.mjs` | `node scripts/test-coverage-report.mjs` / `--json` / `--top N` | 读 vitest v8 coverage 产物输出未覆盖清单（文件+行+函数，升序），供补测决策；需先跑 `npm run test:coverage` |
+| `line-counter.mjs` | `node scripts/line-counter.mjs` | 代码行数统计与文件健康度分析（由 line-counter.py 迁移，含 package_lines 按文件计数行为） |
+| `pre-push-gate.mjs` | `node scripts/pre-push-gate.mjs <remote> <url>`（.githooks/pre-push 调度器）/ `--dry-run` | 本地质量门禁：按变更域（Go/前端/数据/文档）只跑相关检查；gofmt 自动修复并 amend，构建/断链/契约失败阻断推送 |
 
 ### 治理检查（check-* 系列；唯一登记处，AGENTS.md §1.2 仅作指针）
 
@@ -62,6 +64,7 @@
 | `new-adr.mjs` | 新 ADR 脚手架：双源占号 + 四段模板 + 登记表登记 + 自动 adr-check |
 | `gen-docs-index.mjs` | 分区索引：adr 登记表/状态统计 + **adr 规范索引页 `docs/adr/index.md`（状态分组 + 锚点 + 相对链接，整文件重写）** + releases 最近版本/版本全览（GEN 标记区），knowledge 委托校验 |
 | `gen-project-map.mjs` | 项目结构地图生成（`docs/project-map.md`）：扫描磁盘目录 + 合并基线 `scripts/baseline/project-dirs.json` 用途说明，4 个 GEN 标记区；`--check` 已挂 doctor 防漂移；未登记基线的新目录 WARN 提醒 |
+| `gen-guide-gap.mjs` | 指南覆盖缺口扫描：提取 app-modules.ts 组件/服务功能面，与 docs/guide 对照列出缺口（WARN 不阻断；`--strict` 缺口时退出码 1） |
 
 ### 生成器维护约定（2026-08-03 新增）
 
@@ -152,4 +155,25 @@
 | `_lib/frontmatter.mjs` | frontmatter 解析 | 读取 md 文档 frontmatter |
 
 违规形态：内联 `function walk(...)`、内联 `rg(...)`、内联 `path.resolve(path.dirname(fileURLToPath(import.meta.url)))`。doctor/静态检查不会自动拦截（脚本是自由 Node），靠 code review 约定 + `comment-checker` 抽查。
+
+---
+
+## AI 工具链配置（opencode / reasonix）
+
+### opencode（编辑器 Agent）
+
+| 文件 | 层级 | 内容 |
+|------|------|------|
+| `opencode.json` | 项目级（入库） | 启用的插件：`opencode-vibeguard`、`@tarquinen/opencode-dcp`（动态上下文裁剪） |
+| `~/.config/opencode/opencode.jsonc`（或 `%APPDATA%/opencode/`） | 用户级（不入库） | 默认模型 `opencode-go/deepseek-v4-flash`；agent 分模型：plan=`deepseek-v4-pro`，explore/build=`deepseek-v4-flash` |
+
+### reasonix（CLI Agent）
+
+`reasonix.toml` 为本地 AI 终端配置（**不入库不校验**，AGENTS.md 约定）：
+
+- `subagent_model`：默认 `deepseek-v4-flash`
+- `subagent_models`：per-skill 覆盖，如 `review = "deepseek-v4-pro"`
+- `subagent_efforts`：per-tool/skill 覆盖，如 `deep-init / doctor / ultrawork = "high"`
+
+> 插件/模型变更同步更新本表；配置细节以 opencode 官方 schema 与 reasonix 内置默认为准。
 

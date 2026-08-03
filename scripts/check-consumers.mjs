@@ -52,20 +52,47 @@ function extractExports(file, text) {
   return out;
 }
 
+// 动态导入：await import("...") 的两种命名解构形式
+const DYN_DESTRUCT_RE = /(?:const|let|var)\s*\{\s*([^}]*?)\s*\}\s*=\s*await\s+import\(\s*['"]([^'"]+)['"]\s*\)/g;
+const THEN_DESTRUCT_RE = /import\(\s*['"]([^'"]+)['"]\s*\)\.then\(\s*\(\s*\{\s*([^}]*?)\s*\}\s*\)/g;
+
+/**
+ * 解析动态导入规格（同 resolveImport，多一次 .js → .ts 回退）。
+ * TS 源文件常被 `import("./x.js")` 引用（binding 的 .js 风格），磁盘是 .ts。
+ */
+function resolveDynImport(file, spec, moduleSet) {
+  let target = resolveImport(file, spec, moduleSet);
+  if (!target && spec.endsWith('.js')) {
+    target = resolveImport(file, spec.slice(0, -3) + '.ts', moduleSet);
+  }
+  return target;
+}
+
 /** 提取模块消费的符号（跨文件，返回 [目标模块, 符号名] 列表）。 */
 function extractImports(file, text, moduleSet) {
   const out = [];
+  const pushNamed = (target, rawList) => {
+    for (const raw of rawList.split(',')) {
+      const sym = raw.trim().match(/^([A-Za-z_$][\w$]*)/);
+      if (sym) out.push([target, sym[1]]);
+    }
+  };
   for (const m of text.matchAll(IMPORT_RE)) {
     const target = resolveImport(file, m[3], moduleSet);
     if (!target || target === file) continue;
-    if (m[2]) {
-      for (const raw of m[2].split(',')) {
-        const spec = raw.trim();
-        if (!spec) continue;
-        const sym = spec.match(/^([A-Za-z_$][\w$]*)/);
-        if (sym) out.push([target, sym[1]]);
-      }
-    }
+    if (m[2]) pushNamed(target, m[2]);
+  }
+  // 动态导入：const { a, b } = await import("spec")
+  for (const m of text.matchAll(DYN_DESTRUCT_RE)) {
+    const target = resolveDynImport(file, m[2], moduleSet);
+    if (!target || target === file) continue;
+    pushNamed(target, m[1]);
+  }
+  // 动态导入：import("spec").then(({ a, b }) => ...)
+  for (const m of text.matchAll(THEN_DESTRUCT_RE)) {
+    const target = resolveDynImport(file, m[1], moduleSet);
+    if (!target || target === file) continue;
+    pushNamed(target, m[2]);
   }
   // 命名空间导入 import * as ns：扫描 ns.<symbol> 用法对齐具体符号
   for (const m of text.matchAll(/\bimport\s*\*\s*as\s+([A-Za-z_$][\w$]*)\s*from\s*['"]([^'"]+)['"]/g)) {

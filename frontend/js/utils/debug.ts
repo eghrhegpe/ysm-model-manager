@@ -4,7 +4,7 @@
 //   - 默认 console.log 输出，附带 [DBG:tag] 前缀
 //   - 可通过 URL ?nodebug=1 关闭（默认开启）
 //   - 可通过 window._DBG_RING 取最近 200 条（用于复盘）
-//   - 写完调试后请删除调用（按 .github/copilot-instructions.md 规则 18 须请示用户）
+//   - 写完调试后请删除调用（按 .github/copilot-instructions.md 规则 17 须请示用户）
 
 interface RingEntry {
   t: string;

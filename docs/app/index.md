@@ -29,5 +29,5 @@ description: Web 版入口占位，当前以桌面应用为主
 ## 现在想用？
 
 - 📥 **下载桌面版**：[GitHub Releases](https://github.com/eghrhegpe/ysm-model-manager/releases)
-- 📚 **查看文档**：[文档中心](../docs/index.md)
+- 📚 **查看文档**：[文档中心](../index.md)
 - 🏠 **返回主站**：[主站介绍](../index.md)

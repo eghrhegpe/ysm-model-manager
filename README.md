@@ -18,7 +18,7 @@
 4. **开始使用**：把模型文件放入仓库目录，或通过拖拽导入
 
 > 📖 **详细说明见 [用户指南](docs/guide/index.md)**，包含 FAQ、故障排查、链接模式详解等。
-> 🎨 **设计规范见 [Design.md](docs/frontend/Design.md)**，AI 开发时的 UI 约束指南。
+> 🎨 **设计规范见 [Design.md](docs/Design.md)**，AI 开发时的 UI 约束指南。
 > 🧭 **主站介绍见 [docs/index.md](docs/index.md)**，AI 协作规则见 [AGENTS.md](AGENTS.md)。
 
 ---
@@ -288,15 +288,12 @@ wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 | -------------------------------------------------------------------- | ----------------------------------------- |
 | [`docs/guide/用户指南.md`](docs/guide/用户指南.md)                   | **用户手册**：安装、配置、功能详解、FAQ   |
 | [`docs/archive/architecture.md`](docs/archive/architecture.md) | 前端架构规范 + 组件拆分指南（已归档） |
-| [`docs/frontend/Design.md`](docs/frontend/Design.md)                 | UI 设计规范（CSS 变量、布局、字体）       |
+| [`docs/Design.md`](docs/Design.md)                 | UI 设计规范（CSS 变量、布局、字体）       |
 | [`docs/archive/bug-chronicle.md`](docs/archive/bug-chronicle.md) | Bug 排查记录（含 Debug Path Review，已归档） |
 | [`docs/archive/PROJECT_STATUS.md`](docs/archive/PROJECT_STATUS.md) | **项目当前状态**（已归档）          |
-| [`docs/core/TERMINOLOGY.md`](docs/core/TERMINOLOGY.md)               | 术语对照表：名词统一、UI 文案规范         |
-| [`docs/core/CLEANUP_RULES.md`](docs/core/CLEANUP_RULES.md)           | 治理规则：9 条禁止模式 × severity × 检测方式 |
 | [`docs/archive/TASK_PLAN.md`](docs/archive/TASK_PLAN.md)                 | **AI 任务计划**（已归档）           |
 | [`docs/archive/SESSION_HANDOFF.md`](docs/archive/SESSION_HANDOFF.md)     | **会话交接日志**（已归档）       |
 | [`docs/archive/3D/3d-rendering-report.md`](docs/archive/3D/3d-rendering-report.md)   | **3D 渲染引擎开发报告**（已归档） |
-| [`docs/frontend/pending-cleanup.md`](docs/frontend/pending-cleanup.md) | 待清理清单：调试代码、临时方案、技术债  |
 | [`docs/releases/`](docs/releases/)                         | 各版本发版说明（索引见 releases/README.md） |
 | [`docs/index.md`](docs/index.md)         | **主站介绍**（功能一览 + 站点地图 + 界面预览）    |
 | [`docs/knowledge/index.md`](docs/knowledge/index.md)                 | AI 知识卡索引（后端绑定 + 事件总线 + 组件清单，自动生成） |

@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03（初定，决策时间线 v1.7.6）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/`（动画相关 Web Components）/ `docs/Design.md` §3 主题系统 / `docs/animations.md` / 前身 `docs/frontend/animation-roadmap.md`
+- **相关**：`frontend/js/`（动画相关 Web Components）/ `docs/Design.md` §3 主题系统
 
 ---
 
@@ -18,7 +18,7 @@ v1.7.6 之前，前端交互动画由各组件各自实现，缺乏统一设计�
 
 本项目已有 4 套主题通过 CSS 变量切换（`Design.md` §3），动画系统必须复用同一套设计令牌，避免硬编码颜色/圆角/过渡导致主题失效。
 
-本文档将原有的「动画路线图」（`docs/frontend/animation-roadmap.md`）升级为正式决策记录：路线图记录的是**已落地的实现清单**，其背后真正应被长期遵守的**约束与令牌定义**才是决策真相，故以 ADR 形式固化，原文件降级为重定向 stub 以避免真相源分裂。
+本文档将原有的「动画路线图」（`docs/frontend/animation-roadmap.md`，已于 2026-08-03 删除）升级为正式决策记录：路线图记录的是**已落地的实现清单**，其背后真正应被长期遵守的**约束与令牌定义**才是决策真相，故以 ADR 形式固化，原文件内容已全部并入本 ADR 以避免真相源分裂。
 
 ---
 
@@ -128,12 +128,11 @@ el.style.animationDelay = `${stagger(i)}ms`;
 
 | 来源 | 结果 |
 |------|------|
-| `docs/frontend/animation-roadmap.md`（前身） | 原路线图全部内容已迁入本 ADR，原文件改为重定向 stub |
+| `docs/frontend/animation-roadmap.md`（前身，已删除） | 原路线图全部内容已迁入本 ADR，原文件于 2026-08-03 删除 |
 | `docs/Design.md` | §3 主题系统，4 套主题 CSS 变量定义 |
 | `docs/architecture/bug-chronicle.md` | 虚拟滚动 + 动画闪烁事故记录，支撑约束 3 |
-| `docs/animations.md` | 动画实现细节补充 |
 | ADR-005 | display 切换 / 硬编码颜色治理红线 |
 
 ---
 
-*原路线图：`docs/frontend/animation-roadmap.md`，已升级为决策记录并保留重定向 stub。*
+*原路线图：`docs/frontend/animation-roadmap.md`，已升级为决策记录，原文件已于 2026-08-03 删除。*

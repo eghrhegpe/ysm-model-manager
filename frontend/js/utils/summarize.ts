@@ -1,6 +1,7 @@
 // ===== YSM 模型摘要工具函数（类型化版 — ADR-014 P2）=====
 import { parseModelName } from "./display.ts";
 import { renderFormattedText } from "./mc-format.ts";
+import { esc } from "./dom.ts";
 
 // ── Go 结构体轻量类型（覆盖用到的字段，事实来源 go/ysm + go/types）──
 
@@ -80,11 +81,9 @@ function cleanText(text: unknown): string {
     .trim();
 }
 
-function esc(s: string): string {
-  return (s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+/** 安全链接：仅放行 http/https，其余 scheme（javascript:/data: 等）替换为占位符 */
+function safeUrl(url: string): string {
+  return /^https?:\/\//i.test((url || "").trim()) ? url : "#";
 }
 
 // ── 卡片渲染 ───────────────────────────────────────
@@ -115,7 +114,7 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   } else {
     if (header.authorName) {
       const bili = header.authorBilibili
-        ? `<a href="${esc(header.authorBilibili)}" target="_blank" style="color:var(--accent);text-decoration:none" title="${esc(header.authorBilibili)}">📺</a>`
+        ? `<a href="${esc(safeUrl(header.authorBilibili))}" target="_blank" style="color:var(--accent);text-decoration:none" title="${esc(header.authorBilibili)}">📺</a>`
         : "";
       const role = header.authorRole ? cleanText(header.authorRole) : "";
       authorHtml = `${esc(cleanText(header.authorName))}${bili}${role ? `（${esc(role)}）` : ""}`;
@@ -134,8 +133,8 @@ ${p?.work ? `<div class="md-row"><span class="md-label">作品</span><span class
 ${tips ? `<div style="font-size:11px;color:var(--txt);margin-bottom:10px;line-height:1.6;padding:6px 10px;background:var(--surf);border-radius:6px;border-left:3px solid var(--accent)">${tips}</div>` : ""}
 <div class="md-row"><span class="md-label">许可</span><span class="md-value">${esc(licenseType) || "未标注"}</span></div>
 ${p?.author ? `<div class="md-row"><span class="md-label">作者</span><span class="md-value"><span class="tag-author">${esc(p.author)}</span></span></div>` : authorHtml ? `<div class="md-row"><span class="md-label">作者</span><span class="md-value">${authorHtml}</span></div>` : ""}
-${header.linkHome ? `<div class="md-row"><span class="md-label">主页</span><span class="md-value"><a href="${esc(header.linkHome)}" target="_blank" style="color:var(--accent);text-decoration:none">${esc(header.linkHome.replace(/^https?:\/\//, "").replace(/\/.*$/, ""))}</a></span></div>` : ""}
-${header.linkUpdate ? `<div class="md-row"><span class="md-label">更新</span><span class="md-value"><a href="${esc(header.linkUpdate)}" target="_blank" style="color:var(--accent);text-decoration:none">查看更新</a></span></div>` : ""}
+${header.linkHome ? `<div class="md-row"><span class="md-label">主页</span><span class="md-value"><a href="${esc(safeUrl(header.linkHome))}" target="_blank" style="color:var(--accent);text-decoration:none">${esc(header.linkHome.replace(/^https?:\/\//, "").replace(/\/.*$/, ""))}</a></span></div>` : ""}
+${header.linkUpdate ? `<div class="md-row"><span class="md-label">更新</span><span class="md-value"><a href="${esc(safeUrl(header.linkUpdate))}" target="_blank" style="color:var(--accent);text-decoration:none">查看更新</a></span></div>` : ""}
 ${header.hash ? `<div class="md-row" style="font-size:9px;color:var(--muted)"><span class="md-label">指纹</span><span class="md-value" style="font-family:monospace;font-size:8px;word-break:break-all">${esc(header.hash)}</span></div>` : ""}
 <div class="md-divider"></div>
 <div class="md-row" style="color:var(--muted);font-size:10px"><span>🔒 加密模型，资源详情不可用</span></div>
@@ -181,7 +180,7 @@ export function summaryCardHTML(
     const parts = authors.map((a) => {
       const name = esc(cleanText(a.name || ""));
       const bili = a.bilibili
-        ? `<a href="${esc(a.bilibili)}" target="_blank" style="color:var(--accent);text-decoration:none" title="${esc(a.bilibili)}">📺</a>`
+        ? `<a href="${esc(safeUrl(a.bilibili))}" target="_blank" style="color:var(--accent);text-decoration:none" title="${esc(a.bilibili)}">📺</a>`
         : "";
       const role = a.roles ? cleanText(a.roles) : "";
       return `${name}${bili}${role ? `（${esc(role)}）` : ""}`;
@@ -254,6 +253,6 @@ ${preview.heightScale || preview.widthScale ? `<div class="md-row"><span class="
 ${animGroupHtml ? `<div class="md-divider"></div>${animGroupHtml}` : ""}
 ${configHtml ? configHtml : ""}
 
-${summary?.links?.home ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">🔗 链接</span><span class="md-value"><a href="${esc(summary.links.home)}" target="_blank" style="color:var(--accent);text-decoration:none">主页</a>${summary.links.donate ? ` · <a href="${esc(summary.links.donate)}" target="_blank" style="color:var(--accent);text-decoration:none">赞助</a>` : ""}</span></div>` : ""}
+${summary?.links?.home ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">🔗 链接</span><span class="md-value"><a href="${esc(safeUrl(summary.links.home))}" target="_blank" style="color:var(--accent);text-decoration:none">主页</a>${summary.links.donate ? ` · <a href="${esc(safeUrl(summary.links.donate))}" target="_blank" style="color:var(--accent);text-decoration:none">赞助</a>` : ""}</span></div>` : ""}
 </div>`;
 }

@@ -178,14 +178,18 @@ class AppSidebar extends HTMLElement {
           const results = await Promise.allSettled(
             types.map((rt) => new Promise<unknown>((resolve, reject) => {
               const token = `${insName}:${rt}:${Date.now()}`;
-              const onDone = (payload: { token?: string; instanceName?: string } | undefined): void => {
+              const unsub = bus.on("sync:download:done", (payload) => {
                 if (payload?.token === token || payload?.instanceName === insName) {
+                  unsub();
+                  clearTimeout(timer);
                   resolve(payload);
                 }
-              };
-              bus.once("sync:download:done", onDone as never);
+              });
+              const timer = setTimeout(() => {
+                unsub();
+                reject(new Error(`推送超时: ${insName}/${rt}`));
+              }, 30000);
               bus.emit("sync:download:missing", { instanceName: insName, rtype: rt, token });
-              setTimeout(() => reject(new Error(`推送超时: ${insName}/${rt}`)), 30000);
             })),
           );
           results.forEach((r) => { if (r.status === "rejected") failed++; });

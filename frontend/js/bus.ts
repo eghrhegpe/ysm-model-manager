@@ -76,7 +76,7 @@ export interface BusEvents {
   "sync:toggle:status": void;
   "sync:toggle:done": void;
   "sync:download:missing": { instanceName?: string; rtype?: string; token?: string };
-  "sync:download:done": void;
+  "sync:download:done": { token?: string; instanceName?: string };
   "sync:upload:done": void;
   // 实例 / 导入
   "instance:export-list": { name: string; rtype?: string };
@@ -150,8 +150,8 @@ function createBus(): Bus {
     },
     once(event, fn) {
       const wrapper = (data: unknown) => {
+        this.off(event, wrapper as never);
         fn(data as never);
-        this.off(event, fn);
       };
       this.on(event, wrapper as never);
     },

@@ -10,7 +10,7 @@ export function registerSync(unsubs: Array<() => void>): void {
   unsubs.push(
     bus.on(
       "sync:download:missing",
-      async ({ instanceName, rtype }) => {
+      async ({ instanceName, rtype, token }) => {
         dbg("sync", "download-missing", instanceName || "all", "rtype:", rtype);
         try {
           const {
@@ -106,7 +106,7 @@ export function registerSync(unsubs: Array<() => void>): void {
             type: "error",
           });
         } finally {
-          bus.emit("sync:download:done");
+          bus.emit("sync:download:done", { token, instanceName });
           bus.emit("tree:reload");
         }
       },
@@ -317,7 +317,7 @@ export function registerSync(unsubs: Array<() => void>): void {
             type: "error",
           });
         } finally {
-          bus.emit("sync:download:done");
+          bus.emit("sync:download:done", { instanceName });
         }
       },
     ),

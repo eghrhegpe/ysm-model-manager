@@ -48,6 +48,13 @@ use_when:
 `model3d-spec.ts`：
 - `buildSpecFromModel(model: SpecModelInput): SpecBuildResult` — JS 兜底算法，与 Go `threejs.Build()` 一致：同名骨骼去重（首次无 parent、后续带 parent → cube 整体替换；否则 mergeCubes 重叠替换/非重叠保留）、cube 坐标转骨骼局部系、box UV / faceUV JSON 解析
 
+## 渲染循环与交互
+
+- **渲染循环**：`requestAnimationFrame(loop)` 启动（`_rafId` 保存，cleanup 时 `cancelAnimationFrame`），每帧 `renderer.render(scene, camera)`；默认 OrbitControls 轨道模式，`setRotationMode(false)` 切自由相机（WASD 平移 + 空格/Shift 升降，`_keys` 按键状态机驱动，`_camSpeed` 可调）
+- **骨骼拾取**：`Raycaster.setFromCamera(pointer, camera)` + `intersectObjects(scene.children, true)` 反投影；pointermove 更新 `_hoveredBone`/`_hoveredMesh` 与 cursor（命中 pointer / 未命中 default）；click 命中时经 `_boneNameMap`/`_boneParentMap`/`_boneChildrenMap` 组装 `BoneSelectInfo`（name/path/parent/children/meshCount/localPos/worldPos/cube 四元数）调 `handle.onBoneSelect`——boneId 先局部收窄再传参（TS 对闭包捕获变量不做控制流收窄）
+- **调试模式**：`setDebugMode("normal"|"pivot"|"bone")` 循环切换，`rebuildDebug()` 重建叠加层（pivot 标记 / 骨骼线框）
+- **mesh 合并**：同一骨骼下按 `boneId + ":" + texIdx` 分组，同组多个 MeshGroup 合并顶点/法线/UV/索引，减少 draw call；`thicknessEpsilon` 避免零厚度面
+
 ## 与其他子系统关系
 
 - 消费方：`app-preview/preview-skeleton.ts`（动态 import renderModel3D / preloadModel / screenshotPreview）、`utils/screenshot-renderer.ts`（复用 buildSceneMesh + loadTextures 做离屏多角度截图）

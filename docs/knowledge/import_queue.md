@@ -39,6 +39,14 @@ use_when:
 - getApp() 调用：`DetectZipType`、`SavePreviewTempFile`、`ExtractYSMHeader`、`LoadAppConfig`、`ImportModelFileTo`、`ImportModelFileOverwriteTo`、`ImportModelFile`、`ScanModelEntries`、`GetRepoRoot`、`RenameFile`
 - 依赖弹窗：`showRenameDialog`（dialogs/rename.ts）、`modalConfirm`（dialogs/modal.ts）
 
+## 关键机制
+
+- **队列顺序流转**：`showForm` 只处理 `fileQueue[0]`；表单确认落盘后 `fileQueue.shift()` + `currentFile = null`，若仍有剩余自动进入下一个（`showForm(fileQueue[0])`），形成「逐个编辑 → 落盘 → 下一个」流水线
+- **命名解析**：`parseModelName` 按 `[作者]作品-角色` 命名模式预填 author/work/chara 字段（来自 utils/display.ts），表单确认时若用户未改则沿用解析结果
+- **冲突防抖**：`conflictTimer`（500ms）防抖调 Go 检查仓库已有同名文件，命中则在队列行显示 ⚠️ 重名预警
+- **pending 消费计数**：`processPendingImport` 用 `readCount` 计数 FileReader 完成数（onload/onerror 都递增），全部读完后才 `renderImportedList()` + `DnDLock.release()`（成功路径 `setTimeout` 1s 延迟释放，给 UI 渲染缓冲）
+- **导入反馈**：成功后 `stats:refresh` + `tree:reload` 双事件联动；失败统一 `toast:show`（error 类型 4s）
+
 ## 与其他子系统关系
 
 - 由 [app_content](./app_content.md) 懒加载初始化；清理函数收进组件 `_unsubs` 统一在 `disconnectedCallback` 释放

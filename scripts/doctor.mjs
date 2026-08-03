@@ -104,7 +104,7 @@ function checkKeyFiles() {
     'main.go', 'wails.json',
     'internal/app/app.go', 'internal/app/resource_bindings.go',
     'resource_types.json', 'go.mod', 'reasonix.toml', 'AGENTS.md',
-    'frontend/index.html', 'frontend/js/bus.ts', 'frontend/js/app-modules.js',
+    'frontend/index.html', 'frontend/js/bus.ts', 'frontend/js/app-modules.ts',
   ];
   for (const f of files) {
     const p = path.join(ROOT, f);

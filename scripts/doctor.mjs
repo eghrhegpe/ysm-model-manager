@@ -184,13 +184,17 @@ const STATIC_TOOLS = [
   'check-circular.mjs',
   'check-consumers.mjs',
   'check-deadcode-baseline.mjs',
+  // auto-import 默认只提示（rc=0），加 --strict 让缺失 import 成为真检查项
+  { tool: 'auto-import.mjs', args: ['--strict'] },
 ];
 
 function checkStaticAnalysis() {
-  console.log('\n=== Static Analysis (6 tools) ===');
+  console.log('\n=== Static Analysis (7 tools) ===');
   let failed = 0;
-  for (const tool of STATIC_TOOLS) {
-    const { rc } = run(['node', path.join('scripts', tool), '--json']);
+  for (const entry of STATIC_TOOLS) {
+    const tool = typeof entry === 'string' ? entry : entry.tool;
+    const extraArgs = typeof entry === 'string' ? [] : entry.args || [];
+    const { rc } = run(['node', path.join('scripts', tool), '--json', ...extraArgs]);
     if (rc === 0) console.log(`  ${PASS} ${tool}`);
     else {
       failed += 1;

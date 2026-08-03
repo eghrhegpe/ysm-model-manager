@@ -24,6 +24,13 @@ use_when:
 - 去重事件（批量操作只触发一次）
 - 通知前端资源树更新
 
+## 对外 API / 入口
+
+- `New` — 创建 `Watcher`
+- `Start` / `Stop` — 启动/停止文件监听（`loop` 轮询 + `debounceSync` 防抖合并）
+- `IsRunning` — 当前是否运行中
+- `syncAll` — 全量同步入口（内部供 loop 调用）
+
 ## 与其他子系统关系
 
 - 通过 Wails EventsOn 将变化事件通知前端

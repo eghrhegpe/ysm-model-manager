@@ -22,6 +22,12 @@ use_when:
 - 基于文件哈希/元数据检测重复
 - 返回重复匹配信息
 
+## 对外 API / 入口
+
+- `FindDuplicateFiles` — 扫描目录，按文件哈希/元数据分组，返回重复文件组（`FileEntry`/`Group`）
+- `CountDuplicates` — 统计重复文件总数
+- `CleanEmptyDirs` — 清理空目录（内部 `removeEmptyDirs`/`isEmptyDir` 递归实现）
+
 ## 与其他子系统关系
 
 - `go/importer/`: 导入前去重

@@ -24,6 +24,13 @@ use_when:
 - 处理存储路径映射（不同资源类型对应不同子目录）
 - 安装结果通知前端
 
+## 对外 API / 入口
+
+- `Install` / `InstallDir` — 安装单个模型 / 目录（`installDirRecursive` 递归）
+- `InstallToGlobal` / `InstallWithOverlay` — 全局安装 / 覆盖式安装
+- `CopyFile` / `linkOrCopy` / `symlinkOrCopy` — 落地策略：复制优先，硬链接/符号链接兜底
+- `IsValidRepoRoot` — 仓库根目录合法性校验
+
 ## 与其他子系统关系
 
 - `go/download/`: 下载完成后回调

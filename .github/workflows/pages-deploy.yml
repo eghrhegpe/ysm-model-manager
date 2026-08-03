@@ -23,6 +23,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: 安装 ripgrep（契约测试依赖 rg 二进制；ubuntu-latest 默认未预装）
+        run: sudo apt-get update -y && sudo apt-get install -y ripgrep
+
       - name: 契约测试（站点内容基线，失败不部署）
         shell: bash
         run: |

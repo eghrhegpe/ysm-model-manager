@@ -365,7 +365,7 @@ export function initImportQueue(app) {
         ? currentRelPath.substring(0, currentRelPath.lastIndexOf("/"))
         : "";
       // 先弹出重命名确认对话框，确认后再导入
-      const { showRenameDialog } = await import("../dialogs/rename.js");
+      const { showRenameDialog } = await import("../dialogs/rename.ts");
       const renameTo = await showRenameDialog(null, newName);
       if (!renameTo) {
         bus.emit("toast:show", { msg: "已取消导入", duration: 2000, type: "info" });
@@ -697,7 +697,7 @@ export function initImportQueue(app) {
     importedList.querySelectorAll(".dl-reimport").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const name = btn.dataset.name;
-        const { showRenameDialog } = await import("../dialogs/rename.js");
+        const { showRenameDialog } = await import("../dialogs/rename.ts");
         const { RenameFile, LoadAppConfig, GetRepoRoot } =
           await getApp();
         const repoRoot = await GetRepoRoot("ysm");

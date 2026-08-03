@@ -11,7 +11,7 @@
 > 编号只允许给 ADR、novel 写。
 > 信任本机改动，提交代码：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。会有 GitHub PR review 审核，别怕错误。
 > 放弃低效的 `git stash` / `git stash push` / `git stash pop` 指令。
-> 改完即验：Go → `go build ./go/...`；前端 → `npx vite build`；文档 → `node scripts/link-checker.mjs`；ADR → `node scripts/adr-check.mjs`。
+> 改完即验：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）；文档 → `node scripts/link-checker.mjs`；ADR → `node scripts/adr-check.mjs`。
 > 必须通过 `tests/` 下所有契约测试（测试文件是宪法基石，禁止修改）。
 > 失败熔断：同一命令连续失败 2 次 → 停手进 Plan 分析原因，不无脑重试。
 > 只读 §一 文档地图列出的文件；地图没有的目录 = 不存在（`docs/archive/` 为冻结区，需追溯旧设计时才读）。

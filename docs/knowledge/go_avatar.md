@@ -5,6 +5,7 @@ tier: architecture
 category: go
 source_files:
   - go/avatar/avatar.go
+  - go/avatar/
 use_when:
   - 头像
   - 作者

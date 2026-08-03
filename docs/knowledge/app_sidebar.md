@@ -10,7 +10,6 @@ source_files:
   - frontend/js/components/app-sidebar/loader.ts
   - frontend/js/components/app-sidebar/render.ts
   - frontend/js/components/app-sidebar/events.ts
-  - frontend/js/components/app-sidebar/actions.ts
   - frontend/js/components/app-sidebar/sidebar-css.ts
 use_when:
   - 侧边栏

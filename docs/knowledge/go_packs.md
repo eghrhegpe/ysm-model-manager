@@ -5,6 +5,7 @@ tier: architecture
 category: go
 source_files:
   - go/packs/mcmeta.go
+  - go/packs/
 use_when:
   - 资源包
   - 光影包

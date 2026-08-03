@@ -9,6 +9,7 @@ source_files:
   - go/types/resource.go
   - go/types/extensions.go
   - go/types/bedrock.go
+  - go/types/
   - go/types/resource_types_embed.go
 use_when:
   - 共享类型

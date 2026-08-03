@@ -5,6 +5,7 @@ tier: architecture
 category: go
 source_files:
   - go/threejs/spec.go
+  - go/threejs/
 use_when:
   - 3D 预览
   - 骨骼

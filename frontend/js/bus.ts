@@ -11,6 +11,8 @@ export interface ToastPayload {
   type?: "info" | "success" | "error" | "warn";
   /** 点击 toast 时的回调（app-toast.js 支持，version-updater 用） */
   click?: () => void;
+  /** 撤销按钮回调（app-toast.js 支持） */
+  undo?: () => void;
 }
 
 export interface MenuItem {

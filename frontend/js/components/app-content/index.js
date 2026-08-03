@@ -28,7 +28,7 @@ import {
 } from "../../features/community/render.ts";
 import { bindRepoEvents } from "../../features/community/events.ts";
 import { renderSiteView } from "./community/site-view.js";
-import { getSiteIcon } from "./community/workshop-icons.js";
+import { getSiteIcon } from "./community/workshop-icons.ts";
 import { loadCommunityData, fillSearch } from "./community/core.js";
 import { friendlyError } from "../../utils/errors.ts";
 

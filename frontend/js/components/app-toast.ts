@@ -1,13 +1,19 @@
-// ===== <app-toast> — Toast 通知系统 =====
+// ===== <app-toast> — Toast 通知系统（类型化版 — ADR-014 P3 components）=====
 // 用法：bus.emit('toast:show', { msg, undo?, duration?, type? })
-//       type: 'success' | 'error' | 'info'
 import { bus } from "../bus.ts";
 
+/** toast 元素（含关闭定时器） */
+type ToastEl = HTMLElement & {
+  _timer?: ReturnType<typeof setTimeout>;
+};
+
 class AppToast extends HTMLElement {
+  _unsub: (() => void) | undefined;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this.shadowRoot.innerHTML = `
+    this.shadowRoot!.innerHTML = `
       <style>
         :host {
           position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -35,63 +41,66 @@ class AppToast extends HTMLElement {
     `;
   }
 
-  connectedCallback() {
-    this._unsub = bus.on(
-      "toast:show",
-      ({ msg, undo, duration, type, click }) => {
-        this.show(msg, undo, duration, type, click);
-      },
-    );
+  connectedCallback(): void {
+    this._unsub = bus.on("toast:show", ({ msg, undo, duration, type, click }) => {
+      this.show(msg, undo || null, duration, type, click);
+    });
   }
 
-  disconnectedCallback() {
+  disconnectedCallback(): void {
     if (this._unsub) this._unsub();
   }
 
-  show(msg, undoCallback, duration = 4000, type = "", clickCallback) {
-    const c = this.shadowRoot.getElementById("c");
+  show(
+    msg: string,
+    undoCallback: (() => void) | null,
+    duration = 4000,
+    type = "",
+    clickCallback?: () => void,
+  ): void {
+    const c = this.shadowRoot!.getElementById("c") as HTMLElement;
     // 限制最多 5 个同时显示，超出直接同步移除最早的（_remove 含动画异步，会死循环）
     while (c.children.length >= 5) {
-      const oldest = c.children[0];
+      const oldest = c.children[0] as ToastEl;
       if (oldest) {
-        clearTimeout(oldest._timer);
+        if (oldest._timer) clearTimeout(oldest._timer);
         oldest.remove();
       }
     }
-    const t = document.createElement("div");
+    const t = document.createElement("div") as ToastEl;
     t.className = "toast" + (type ? " " + type : "");
     if (clickCallback) t.style.cursor = "pointer";
     t.innerHTML = `<span class="msg">${this._esc(msg)}</span>${undoCallback ? '<button class="undo-btn">↩ 撤销</button>' : ""}<button class="close-btn">✕</button>`;
     c.appendChild(t);
     if (clickCallback) {
-      t.querySelector(".msg").onclick = (e) => {
+      (t.querySelector(".msg") as HTMLElement).onclick = (e: MouseEvent) => {
         e.stopPropagation();
         clickCallback();
         this._remove(t);
       };
     }
     if (undoCallback) {
-      t.querySelector(".undo-btn").onclick = () => {
+      (t.querySelector(".undo-btn") as HTMLElement).onclick = () => {
         undoCallback();
         this._remove(t);
         this.show("✅ 已撤销", null, 2000, "success");
       };
     }
-    t.querySelector(".close-btn").onclick = (e) => {
+    (t.querySelector(".close-btn") as HTMLElement).onclick = (e: MouseEvent) => {
       e.stopPropagation();
       this._remove(t);
     };
     t._timer = setTimeout(() => this._remove(t), duration);
   }
 
-  _remove(t) {
+  _remove(t: ToastEl): void {
     if (t._timer) clearTimeout(t._timer);
     if (!t.parentNode) return;
     t.style.animation = "slideOut .2s ease forwards";
     setTimeout(() => t.remove(), 200);
   }
 
-  _esc(s) {
+  _esc(s: string): string {
     const d = document.createElement("div");
     d.textContent = s;
     return d.innerHTML;

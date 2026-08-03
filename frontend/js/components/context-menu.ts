@@ -1,17 +1,21 @@
-// ===== <context-menu> — 右键菜单 =====
+// ===== <context-menu> — 右键菜单（类型化版 — ADR-014 P3 components）=====
 // 事件：menu:show, menu:hide
 // 监听：menu:show({ x, y, items: [{label, icon?, onClick}] })
-import { bus } from "../bus.ts";
+import { bus, type MenuItem } from "../bus.ts";
 
 class ContextMenu extends HTMLElement {
+  _unsub: (() => void) | undefined;
+  _docClick: () => void;
+  _docCtx: () => void;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._docClick = () => this.hide();
-    this._docCtx = () => this.hide();
+    this._docClick = (): void => this.hide();
+    this._docCtx = (): void => this.hide();
   }
 
-  connectedCallback() {
+  connectedCallback(): void {
     this._unsub = bus.on("menu:show", ({ x, y, items }) => {
       this.show(x, y, items);
     });
@@ -20,14 +24,14 @@ class ContextMenu extends HTMLElement {
     this.render();
   }
 
-  disconnectedCallback() {
+  disconnectedCallback(): void {
     if (this._unsub) this._unsub();
     document.removeEventListener("click", this._docClick);
     document.removeEventListener("contextmenu", this._docCtx);
   }
 
-  render() {
-    this.shadowRoot.innerHTML = `
+  render(): void {
+    this.shadowRoot!.innerHTML = `
       <style>
         :host {
           position: fixed;
@@ -71,7 +75,7 @@ class ContextMenu extends HTMLElement {
     `;
   }
 
-  _esc(s) {
+  _esc(s: unknown): string {
     if (s == null) return "";
     return String(s)
       .replace(/&/g, "&amp;")
@@ -81,12 +85,12 @@ class ContextMenu extends HTMLElement {
       .replace(/'/g, "&#39;");
   }
 
-  show(x, y, items) {
-    const menu = this.shadowRoot.getElementById("menu");
+  show(x: number, y: number, items: MenuItem[]): void {
+    const menu = this.shadowRoot!.getElementById("menu") as HTMLElement;
     menu.innerHTML = items
       .map((item, i) => {
         if (item.divider) return '<hr class="divider">';
-        const label = this._esc(item.label);
+        const label = this._esc(item.label || "");
         const icon = item.icon ? this._esc(item.icon) : "";
         const danger = item.danger ? "danger" : "";
         return `
@@ -100,9 +104,9 @@ class ContextMenu extends HTMLElement {
 
     // 绑定点击
     menu.querySelectorAll(".item").forEach((el) => {
-      el.onclick = (e) => {
+      (el as HTMLElement).onclick = (e: MouseEvent) => {
         e.stopPropagation();
-        const idx = parseInt(el.dataset.idx);
+        const idx = parseInt((el as HTMLElement).dataset.idx || "", 10);
         if (items[idx] && items[idx].onClick) items[idx].onClick();
         this.hide();
       };
@@ -127,7 +131,7 @@ class ContextMenu extends HTMLElement {
     });
   }
 
-  hide() {
+  hide(): void {
     this.style.display = "none";
   }
 }

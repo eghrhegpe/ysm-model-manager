@@ -6,7 +6,7 @@
  * 只重写各文件 `<!-- GEN: xxx -->` 标记区，人工段落原样保留：
  *   - adr      → docs/adr/README.md 的 adr-registry（登记表）+ adr-stats（状态统计）
  *   - adr      → docs/adr/index.md 的规范索引（状态分组 + 锚点跳转 + 相对链接，整文件重写）
- *   - releases → docs/release-notes/README.md 的 releases-index（最近版本 + 版本全览）
+ *   - releases → docs/releases/README.md 的 releases-index（最近版本 + 版本全览）
  *   - knowledge→ 委托 gen-knowledge-index.mjs --check（不重写，避免双生成器打架）
  * 单一事实来源 = ADR 文件首部；状态映射与 gen-status-index.mjs 保持一致。
  *
@@ -26,7 +26,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ADR_DIR = path.join(ROOT, 'docs', 'adr');
 const ADR_REG_FILE = path.join(ADR_DIR, 'README.md');
 const ADR_INDEX_FILE = path.join(ADR_DIR, 'index.md');
-const RELEASE_DIR = path.join(ROOT, 'docs', 'release-notes');
+const RELEASE_DIR = path.join(ROOT, 'docs', 'releases');
 const RELEASE_FILE = path.join(RELEASE_DIR, 'README.md');
 
 const args = process.argv.slice(2);

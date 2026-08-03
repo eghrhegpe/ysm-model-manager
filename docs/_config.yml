@@ -4,13 +4,11 @@ description: Minecraft YSM 模型的一站式管理工具 — 仓库管理、整
 theme: jekyll-theme-cayman
 show_downloads: false
 
-# 排除非公开文档（内部开发文档，含 Liquid 语法，不应作为 Web 页面发布）
+# 排除非公开文档（内部开发文档，不应作为 Web 页面发布）
 exclude:
   # 冻结区整目录（历史归档，含全部 postmortem/sessions/design/reference 与 .txt）
   - archive/
   # 生成产物
   - funcmap.md
-  # 内部开发文档（仍活跃，不发布为 Web 页面）
-  - architecture/architecture.md
-  - architecture/bug-chronicle.md
+  # 内部待清理清单（仍在治理中，不发布）
   - frontend/pending-cleanup.md

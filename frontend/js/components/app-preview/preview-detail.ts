@@ -93,7 +93,7 @@ export async function showModelDetail(
   } catch (err) {
     const detailDiv = ctx._root.getElementById("preview-detail");
     if (detailDiv) {
-      detailDiv.innerHTML = `未知错误解析失败: ${err instanceof Error ? err.message : String(err)}`;
+      detailDiv.innerHTML = `未知错误解析失败: ${esc(err instanceof Error ? err.message : String(err))}`;
     }
   }
 }

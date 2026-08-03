@@ -6,6 +6,7 @@ import { renderModel2D } from "../../utils/model2d.ts";
 import { openFullPreview } from "./preview-zoom.ts";
 import type { BedrockGeometry } from "./utils.ts";
 import type { BoneSelectInfo } from "../../utils/model3d.ts";
+import { esc } from "../../utils/dom.ts";
 
 // 2D 拖拽的 window 监听器槽位：loadModel2D 每次渲染模型都会绑定，
 // 先移除上一轮处理器再绑定，防止 window 级监听器累积泄漏
@@ -254,13 +255,16 @@ export async function loadModel2D(
     let _overlay3d: HTMLDivElement | null = null;
     let _is3D = false;
     let _prefer3D = getPrefer3D();
+    let _loading3D = false; // 3D 加载中标记：忽略重复触发（防双击竞态）
 
     const _toggle3D = async (): Promise<void> => {
+      if (_loading3D) return;
       _is3D = !_is3D;
       _prefer3D = _is3D;
       setPrefer3D(_prefer3D);
 
       if (_is3D) {
+        _loading3D = true;
         const overlay = document.createElement("div");
         overlay.id = "ysm-overlay-3d";
         overlay.style.cssText =
@@ -317,7 +321,18 @@ export async function loadModel2D(
           { label: "↘ 后45°", key: "back45" },
           { label: "📸 全套", key: "all" },
         ];
+        // 截图入口带守卫：连点/多菜单触发时忽略并发（防重复保存文件）
+        let _saving = false;
         const saveShot = async (key: string): Promise<void> => {
+          if (_saving) return;
+          _saving = true;
+          try {
+            await saveShotInner(key);
+          } finally {
+            _saving = false;
+          }
+        };
+        const saveShotInner = async (key: string): Promise<void> => {
           const { SaveScreenshotFile } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
           const p = (model._modelPath || "screenshot").replace(/\\/g, "/");
           const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ".";
@@ -332,7 +347,7 @@ export async function loadModel2D(
             const ts = new Date().toISOString().replace(/[:.]/g, "-");
             await SaveScreenshotFile(dir + "/" + base + "_" + ts + ".png", b64);
           } else if (key === "all") {
-            for (const k of ["front", "45", "side", "back45"]) await saveShot(k);
+            for (const k of ["front", "45", "side", "back45"]) await saveShotInner(k);
           } else {
             const { renderMultiAngle } = await import("../../utils/screenshot-renderer.ts");
             const texUrls =
@@ -760,10 +775,11 @@ export async function loadModel2D(
           if (_model3d) _model3d._keyHandler = onKey;
         } catch (e) {
           console.error("[3D] 加载失败:", e);
-          viewContainer.innerHTML = `<div style="padding:40px;color:#ff6b6b;font-size:14px">⚠️ 3D 预览加载失败: ${
-            e instanceof Error ? e.message : String(e)
-          }</div>`;
+          viewContainer.innerHTML = `<div style="padding:40px;color:#ff6b6b;font-size:14px">⚠️ 3D 预览加载失败: ${esc(
+            e instanceof Error ? e.message : String(e),
+          )}</div>`;
         }
+        _loading3D = false;
       }
     };
 
@@ -774,8 +790,8 @@ export async function loadModel2D(
     };
     if (_prefer3D) requestAnimationFrame(() => btn3d?.click());
   } catch (e) {
-    container.innerHTML = `<div class="ysm-error-title" style="color:#ff6b6b">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ 解析失败: ${
-      e instanceof Error ? e.message : String(e)
-    }</div>`;
+    container.innerHTML = `<div class="ysm-error-title" style="color:#ff6b6b">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ 解析失败: ${esc(
+      e instanceof Error ? e.message : String(e),
+    )}</div>`;
   }
 }

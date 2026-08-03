@@ -1,5 +1,7 @@
 // ===== Litematic 体素 3D 预览 =====
 
+import { esc } from "../../utils/dom.ts";
+
 /** 体素数据（GetLitematicVoxelData 等返回 JSON） */
 interface VoxelData {
   groups: Array<{ positions: number[][]; color?: string }>;
@@ -552,6 +554,6 @@ export async function createLitematic3D(
     _voxel3d = { cleanup: fullCleanup };
   } catch (e) {
     console.error("[litematic 3D] 加载失败:", e);
-    loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>加载失败: ${e instanceof Error ? e.message : String(e)}</div>`;
+    loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>加载失败: ${esc(e instanceof Error ? e.message : String(e))}</div>`;
   }
 }

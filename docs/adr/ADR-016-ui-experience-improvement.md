@@ -5,6 +5,8 @@
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/js/`（app-preview / app-tree / utils）/ `docs/Design.md`
 
+> **6 条体验原则已并入 `docs/Design.md` §13 UI 体验原则**，改 UI 先查 Design.md；本 ADR 仅保留决策依据与实施台账。
+
 ---
 
 ## 1. 背景（Context）

@@ -76,7 +76,7 @@
 ## 关系
 
 - 前置：`ADR-015`（统一动画系统）、`ADR-016`（UI 体验优化）
-- 关联：`docs/core/CLEANUP_RULES.md`（清理红线）
+- 关联：`docs/governance-rules.md`（治理规则条文；原 `docs/core/CLEANUP_RULES.md` 已删除）
 - 被引用：前端改动涉及「列表/网格」「预览缓存」时，以本 ADR 的 E-1 / E-2 为实施依据
 
 ## 数据溯源

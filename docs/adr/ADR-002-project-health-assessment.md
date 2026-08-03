@@ -147,4 +147,4 @@ Go 端有 17 个 `_test.go`，但核心业务包（`avatar` / `download` / `sync
 | 前端构建 | `cd frontend; npx vite build` | 干净，零 error |
 | 契约测试 | `python3 tests/python/*.py` | 6/6 全绿 |
 | 架构 | `docs/architecture/architecture.md` + `logic-sinking.md` | ADR 文档 + 源码验证 |
-| 脚本 | `docs/scripts/脚本体系全景.md` + 目录扫描 | 38 个，分类如 §2 表 |
+| 脚本 | `scripts/README.md` + 目录扫描 | 38 个，分类如 §2 表 |

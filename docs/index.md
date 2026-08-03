@@ -17,7 +17,7 @@ description: Minecraft YSM 模型的一站式管理工具 — 仓库管理、整
 
 | 入口 | 说明 |
 |------|------|
-| 📚 [用户指南](./guide/index.md) | 按功能讲解入口路径与操作步骤，共 16 篇 |
+| 📚 [用户指南](./guide/index.md) | 按功能讲解入口路径与操作步骤（清单与篇数见索引页，自动生成） |
 | 📐 [架构决策（ADR）](./adr/index.md) | 决策真相源，按状态分组可锚点跳转 |
 | 🧠 [知识卡](./knowledge/index.md) | 面向 AI 与开发者的模块知识卡索引 |
 | 📦 [发版记录](./releases/README.md) | 各版本发布说明 |
@@ -74,3 +74,9 @@ description: Minecraft YSM 模型的一站式管理工具 — 仓库管理、整
 | 架构决策记录（ADR） | [决策记录（ADR）](./adr/index.md) |
 | 知识卡索引 | [知识卡索引](./knowledge/index.md) |
 | 发版记录 | [版本发布说明](./releases/README.md) |
+| 工具脚本与检查命令全表 | [脚本体系全景](../scripts/README.md) |
+| 前端治理规则手册 | [docs/governance-rules.md](./governance-rules.md) — 9 条规则条文唯一事实来源 |
+| 致命陷阱手册 | [docs/pitfalls.md](./pitfalls.md) — 11 条事故教训全量版 |
+| 契约测试 | `tests/` — 禁止修改，必须通过（`doctor.mjs` 自动遍历运行） |
+| 历史归档（冻结区） | `docs/archive/` — 需追溯旧设计时才读 |
+| UI 截图 | `docs/preview/` |

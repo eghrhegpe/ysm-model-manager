@@ -5,6 +5,8 @@
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/js/`（动画相关 Web Components）/ `docs/Design.md` §3 主题系统
 
+> **规范条文已并入 `docs/Design.md` §7.2**（统一 keyframe / stagger / 设计令牌 / 技术约束），写动画先查 Design.md；本 ADR 仅保留决策依据与实施历史。
+
 ---
 
 ## 1. 背景（Context）
@@ -12,8 +14,8 @@
 v1.7.6 之前，前端交互动画由各组件各自实现，缺乏统一设计令牌与受限的 keyframe 集合，导致以下可维护性与运行时问题：
 
 - 各组件重复定义 `transform` / `opacity` 动画，位移像素、时长、缓动不统一，体验割裂；
-- 部分组件用 `display: none/block` 做切换，破坏 CSS transition，导致跳帧（该问题已在 ADR-005 §2.4 固化为治理红线）；
-- 虚拟滚动组件（模型树）上叠加 `animation-fill-mode: both` + `innerHTML` 替换，触发滚动闪烁（见 `docs/architecture/bug-chronicle.md`）；
+- 部分组件用 `display: none/block` 做切换，破坏 CSS transition，导致跳帧（该问题已固化为治理规则，见 `docs/governance-rules.md` R4）；
+- 虚拟滚动组件（模型树）上叠加 `animation-fill-mode: both` + `innerHTML` 替换，触发滚动闪烁（见 `docs/archive/bug-chronicle.md`）；
 - 无障碍诉求：需要一个统一的 `.no-animations` 开关，供偏好减少动态效果的用户关闭全部动画。
 
 本项目已有 4 套主题通过 CSS 变量切换（`Design.md` §3），动画系统必须复用同一套设计令牌，避免硬编码颜色/圆角/过渡导致主题失效。
@@ -121,8 +123,8 @@ el.style.animationDelay = `${stagger(i)}ms`;
 
 | 文档 | 关系 |
 |------|------|
-| ADR-005 §2.4 | 本 ADR 的「禁止 `display` 切换」约束与之同源，本 ADR 将其在动画域具体化 |
-| ADR-005 §2.5 | 本 ADR §2.3 设计令牌复用同一主题变量体系 |
+| ADR-005 / `docs/governance-rules.md` R4 | 本 ADR 的「禁止 `display` 切换」约束与之同源，本 ADR 将其在动画域具体化 |
+| ADR-005 / `docs/governance-rules.md` R5 | 本 ADR §2.3 设计令牌复用同一主题变量体系（禁止硬编码颜色） |
 
 ## 5. 数据溯源
 
@@ -130,7 +132,7 @@ el.style.animationDelay = `${stagger(i)}ms`;
 |------|------|
 | `docs/frontend/animation-roadmap.md`（前身，已删除） | 原路线图全部内容已迁入本 ADR，原文件于 2026-08-03 删除 |
 | `docs/Design.md` | §3 主题系统，4 套主题 CSS 变量定义 |
-| `docs/architecture/bug-chronicle.md` | 虚拟滚动 + 动画闪烁事故记录，支撑约束 3 |
+| `docs/archive/bug-chronicle.md` | 虚拟滚动 + 动画闪烁事故记录，支撑约束 3 |
 | ADR-005 | display 切换 / 硬编码颜色治理红线 |
 
 ---

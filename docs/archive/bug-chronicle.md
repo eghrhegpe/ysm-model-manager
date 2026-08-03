@@ -1471,3 +1471,31 @@ const dispName = renderDisplayName(k);
 - async 函数无顶层 await = 返回立即兑现的 Promise；「调用方 await」的语义需要契约测试或 lint 盯防
 - esc 收敛又进一步：`_esc`/rename 私有版已归一到 `utils/dom.ts`，剩余散落实现（settings.ts escHtml 等）按 review-report 系统性建议继续收敛
 - 任何「异步结果回写共享 DOM」的路径都必须带 generation/过期标志，与 P1 体素预览 aborted 标志同一范式
+
+## 2026-08-04 新增 bug 记录（L2 审计 P2 第三批：app-preview stat 死代码链整段移除 + #sort 死控件激活）
+
+> 来源：`docs/review-report.md` L2 审计 P2「stat 模式整条链路为死代码」与 P3「两处死注册」，全部通过 typecheck + vite build + 契约测试 + deadcode 基线守卫。
+
+### 症状
+
+1. app-preview 的 stat 模式整链不可达却常驻 bundle：全前端唯一实例被 app-content/tpl.ts 硬编码 `mode="model"` 挂载，stat 分支永无入口（整合包详情早已由 `app-sync-manager` 承接）
+2. 死链带出两处死注册：`handler-upload.ts` 的 `stats:upload` 与 `handler-sync.ts` 的 `mmd:sync-variant-folder` 唯一发射器都在 stat 链内，handler 活着但永不触发
+3. app-tree 工具栏排序下拉 `#sort` 是死控件：模板正常渲染、`renderTree` 完整支持 sortMode，但选择排序无任何反应
+
+### 根因
+
+1. 功能交接（app-sync-manager 承接整合包详情）后旧入口链未移除：index.ts stat 分支、events.ts / preview-actions.ts / preview-logs.ts / preview-pack.ts 的 showPackageDetail 系、tpl.ts statsHTML、配套 CSS 与 5 条 bus 事件全部遗留
+2. 死注册是死链的下游：发射器随 stat 链一起不可达，但 handler 仍被 global-handlers/handler-sync 无条件注册
+3. `bindToolbarEvents` 漏接 `#sort` 的 change 事件——「生产」（模板渲染控件）与「消费」（事件绑定）脱节，与筛选 toggle class 不一致同款陷阱
+
+### 修复
+
+1. 整链移除：index.ts 删 stat 分支 + `_mode`/`observedAttributes`/`attributeChangedCallback`/`_loadLogsPreview`；删 5 文件（events.ts、preview-actions.ts、preview-logs.ts、preview-pack.ts、handler-upload.ts）；tpl.ts 删 statsHTML；bus.ts 删 5 条事件（stats:upload / logs:refresh / sync:toggle:done / sync:upload:done / mmd:sync-variant-folder）；handler-sync.ts 删 mmd handler 与两个孤儿 emit；global-handlers.ts 删 registerUpload；preview-css.ts 删 stat 专属样式；app-content/tpl.ts 去 `mode="model"`；刷新 deadcode-baseline 与 funcmap
+2. 两处死注册随链删除（handler-upload 整文件、handler-sync mmd 分支）
+3. toolbar-events.ts 补 `#sort` change 绑定：写入 `vm._sort` 后 `vm._renderTree()`，激活 name/size/date 排序
+
+### 教训
+
+- 功能被新模块承接后，旧入口链必须**整链移除**（组件分支 + handler + 事件类型 + CSS），死代码常驻 bundle 只会持续误导审计与维护者
+- 删死代码前先证明「永久不可达」：唯一实例硬编码 `mode="model"`、全仓无动态 setter，才可整段删；删后跑 `check-consumers --strict` + deadcode 基线双重守卫
+- 控件「渲染出来」≠「可用」：模板新增控件必须在同一提交内补事件绑定，死控件靠人工审核发现成本太高

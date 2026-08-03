@@ -8,13 +8,15 @@
     "build:dev": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "codemod": "node ../scripts/codemod.mjs"
   },
   "devDependencies": {
     "@types/three": "^0.185.3",
     "jscpd": "^5.0.14",
     "jsdom": "^29.1.1",
     "knip": "^6.31.0",
+    "ts-morph": "^28.0.0",
     "typescript": "^7.0.2",
     "vite": "^3.0.7",
     "vitest": "^0.34.6"

@@ -1,5 +1,5 @@
 // ===== 导入队列 + 拖拽 + 重命名流程 =====
-import { bus } from "../bus.js";
+import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.js";
 import { parseModelName, renderDisplayName } from "../utils/display.js";
 import { renderFormattedText } from "../utils/mc-format.js";

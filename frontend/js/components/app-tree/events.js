@@ -1,5 +1,5 @@
 // ===== 树事件层（事件委托版，兼容虚拟滚动） =====
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 import { selectState, toggleSelect } from "./data.js";
 import { updateStat } from "./render.js";
 import {

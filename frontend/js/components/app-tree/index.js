@@ -7,7 +7,7 @@ import { bindToolbarEvents } from "./toolbar-events.js";
 import { loadEntries } from "./loader.js";
 import { bindBusEvents } from "./bus-handlers.js";
 import { loadAuthors } from "./authors.js";
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 import { selectState } from "./data.js";
 import { dbg } from "../../utils/debug.js";
 class AppTree extends HTMLElement {

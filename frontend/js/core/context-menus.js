@@ -1,6 +1,6 @@
 // ===== 右键菜单映射 =====
 // 将 ctx:show 事件转换为新版组件使用的 menu:show 事件
-import { bus } from "../bus.js";
+import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.js";
 import { getApp } from "../wails/app.js";
 

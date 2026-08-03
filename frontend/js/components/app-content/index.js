@@ -1,5 +1,5 @@
 // ===== <app-content> 入口 =====
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 import { esc } from "../../utils/dom.js";
 import { dbg } from "../../utils/debug.js";
 import { contentCSS } from "./content-css.js";

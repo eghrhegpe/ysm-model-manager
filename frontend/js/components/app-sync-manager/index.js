@@ -2,7 +2,7 @@
 // 展示整合包内所有资源类型的同步状态（扁平列表，一次加载，前端过滤）
 // 使用: <app-sync-manager instance="1.20.1-Fabric"></app-sync-manager>
 
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 import { dbg } from "../../utils/debug.js";
 import { friendlyError } from "../../utils/errors.js";
 import {

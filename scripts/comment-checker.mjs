@@ -4,33 +4,14 @@
  * 由 scripts/comment-checker.py 迁移（2026-08-03），规则与输出逻辑逐点保真。
  */
 import { rg } from './_lib/ripgrep.mjs';
-
-function parseLine(line) {
-  const parts = line.split(':');
-  if (parts.length >= 3) {
-    let ps, rest;
-    if (parts[0].length === 1 && /[a-zA-Z]/.test(parts[0]) && parts[1].startsWith('/')) {
-      ps = parts[0] + ':' + parts[1];
-      rest = parts.slice(2).join(':');
-    } else {
-      ps = parts[0];
-      rest = parts.slice(1).join(':');
-    }
-    const rp = rest.split(':');
-    const first = rp[0];
-    if (/^\d+$/.test(first)) {
-      return [String(ps), parseInt(first, 10), rp.slice(1).join(':').trim() || ''];
-    }
-  }
-  return [String(line), 0, ''];
-}
+import { parseRgLine } from './_lib/rg-line.mjs';
 
 function scanAiFluff() {
   /** 检测 AI 废话注释：用于/这是/检查.*是否 */
   const results = [];
   for (const src of ['go', 'frontend/js']) {
     for (const line of rg(/^\s*\/\/.*\u7528\u4e8e|^\s*\/\/.*\u8fd9\u662f|^\s*\/\/.*\u68c0\u67e5.*\u662f\u5426/.source, src, ['*.go', '*.js', '*.ts'])) {
-      const [f, ln, txt] = parseLine(line);
+      const [f, ln, txt] = parseRgLine(line);
       results.push({ file: f, line: ln, snippet: txt, type: 'AI_fluff' });
     }
   }
@@ -41,7 +22,7 @@ function scanEmptyJsdoc() {
   /** 检测空 JSDoc：@param @returns 无实质描述 */
   const results = [];
   for (const line of rg(/@param\s+\{[^}]*\}\s+\w+\s*-?\s*$|@returns\s*\{[^}]*\}\s*$/.source, 'frontend/js', ['*.js', '*.ts'])) {
-    const [f, ln, txt] = parseLine(line);
+    const [f, ln, txt] = parseRgLine(line);
     results.push({ file: f, line: ln, snippet: txt, type: 'empty_jsdoc' });
   }
   return results;
@@ -51,7 +32,7 @@ function scanCommentedCode() {
   /** 检测注释掉的代码行 */
   const results = [];
   for (const line of rg(/^\s*\/\/\s+(var |let |const |function |if |for |return |import |export )/.source, 'frontend/js', ['*.js', '*.ts'])) {
-    const [f, ln, txt] = parseLine(line);
+    const [f, ln, txt] = parseRgLine(line);
     results.push({ file: f, line: ln, snippet: txt, type: 'commented_code' });
   }
   return results;
@@ -66,7 +47,7 @@ function scanTodoNoTicket() {
       if (line.includes('#') || line.includes('// nolint')) continue;
       // 过滤 /go/ embedded JSON 和 vendor
       if (line.includes('blocks_1_12.json') || line.includes('zh_cn.json')) continue;
-      const [f, ln, txt] = parseLine(line);
+      const [f, ln, txt] = parseRgLine(line);
       // 超长行跳过：数据文件（如 wasm base64）含 XXX 子串会被误命中，注释不可能 >500 字符
       if (txt.length > 500) continue;
       results.push({ file: f, line: ln, snippet: txt, type: 'todo_no_ticket' });
@@ -79,7 +60,7 @@ function scanDebugLog() {
   /** 检测 console.log / console.debug（可能有调试残留） */
   const results = [];
   for (const line of rg('console\\.log|console\\.debug', 'frontend/js', ['*.js', '*.ts'])) {
-    const [f, ln, txt] = parseLine(line);
+    const [f, ln, txt] = parseRgLine(line);
     // 排除业务日志
     if (txt.includes('[YSM]') || txt.includes('[3dspec]') || txt.includes('[Toast]') || txt.includes('[sync]')) continue;
     results.push({ file: f, line: ln, snippet: txt, type: 'debug_log' });

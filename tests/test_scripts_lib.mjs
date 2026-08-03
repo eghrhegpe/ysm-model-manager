@@ -17,6 +17,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { walk, resolveImport, toPosix, relPosix, readText, ROOT } from '../scripts/_lib/scan-files.mjs';
 import { rg } from '../scripts/_lib/ripgrep.mjs';
+import { parseRgLine } from '../scripts/_lib/rg-line.mjs';
 
 const errors = [];
 
@@ -136,6 +137,36 @@ assert(relPosix(path.join(ROOT, 'scripts', 'x.mjs')) === 'scripts/x.mjs', `relPo
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+}
+
+// ── 6. parseRgLine：rg 输出行解析边界 ────────────────
+{
+  // Windows 盘符路径：C:/... → 盘符与路径合并为文件部分
+  const [f1, l1, c1] = parseRgLine('C:/foo/bar.js:12:content');
+  assert(f1 === 'C:/foo/bar.js', `Windows 盘符应合并（got: ${f1}）`);
+  assert(l1 === 12, `行号应为 12（got: ${l1}）`);
+  assert(c1 === 'content', `内容应为 content（got: ${c1}）`);
+
+  // 内容含冒号（URL/对象字面量）：从右侧定位行号，内容完整保留
+  const [f2, l2, c2] = parseRgLine('C:/a.js:7:const url = "http://x:8080/p"');
+  assert(f2 === 'C:/a.js' && l2 === 7, `盘符+行号应正确（got: ${f2}:${l2}）`);
+  assert(c2 === 'const url = "http://x:8080/p"', `内容含冒号应完整保留（got: ${c2}）`);
+
+  // 相对路径（非盘符）
+  const [f3, l3, c3] = parseRgLine('frontend/js/bus.ts:165:setBus');
+  assert(f3 === 'frontend/js/bus.ts' && l3 === 165 && c3 === 'setBus', `相对路径解析失败（got: ${f3}:${l3} ${c3}）`);
+
+  // 无行号/非标准行 → 降级返回 [原行, 0, '']
+  const [f4, l4, c4] = parseRgLine('some random output line');
+  assert(f4 === 'some random output line' && l4 === 0 && c4 === '', `非标准行应降级（got: ${f4}:${l4} ${c4}）`);
+
+  // 内容为空：a.js:5: → 内容 ''
+  const [f5, l5, c5] = parseRgLine('a.js:5:');
+  assert(f5 === 'a.js' && l5 === 5 && c5 === '', `空内容应解析（got: ${f5}:${l5} ${c5}）`);
+
+  // 内容有首尾空白：应 trim
+  const [f6, , c6] = parseRgLine('a.js:9:  indented  ');
+  assert(c6 === 'indented', `内容应 trim（got: ${c6}）`);
 }
 
 // ── 输出 ─────────────────────────────────────────────

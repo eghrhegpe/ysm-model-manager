@@ -5,26 +5,7 @@
  * 由 scripts/review.py 迁移（2026-08-03），规则与输出逻辑逐点保真。
  */
 import { rg } from './_lib/ripgrep.mjs';
-
-function parseRgLine(line) {
-  const parts = line.split(':');
-  if (parts.length >= 3) {
-    let filePart, rest;
-    if (parts[0].length === 1 && /[a-zA-Z]/.test(parts[0]) && parts[1].startsWith('/')) {
-      filePart = parts[0] + ':' + parts[1];
-      rest = parts.slice(2).join(':');
-    } else {
-      filePart = parts[0];
-      rest = parts.slice(1).join(':');
-    }
-    const restParts = rest.split(':');
-    const first = restParts[0];
-    if (/^\d+$/.test(first)) {
-      return [filePart, parseInt(first, 10), restParts.slice(1).join(':') || ''];
-    }
-  }
-  return [line, 0, ''];
-}
+import { parseRgLine } from './_lib/rg-line.mjs';
 
 function runChecks() {
   const results = [];

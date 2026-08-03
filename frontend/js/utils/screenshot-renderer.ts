@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { GetModel3DSpec } from "../../bindings/ysm-model-manager/internal/app/app.js";
 import { loadTextures } from "./model3d-loader.ts";
-import { buildSceneMesh } from "./model3d.js";
+import { buildSceneMesh, type Spec3D } from "./model3d.ts";
 
 export interface AngleShot {
   name: string;
@@ -15,23 +15,6 @@ export interface BatchResult {
   total: number;
 }
 
-interface SpecModelGroup {
-  meshGroups?: Array<{
-    boneId?: string;
-    positions?: number[];
-    normals?: number[];
-    uvs?: number[];
-    indices?: number[];
-    texIdx?: number;
-    localPosition?: number[];
-    localRotation?: number[];
-  }>;
-}
-
-interface SpecData {
-  models?: SpecModelGroup[];
-}
-
 // renderMultiAngle 透明背景多角度截图
 export async function renderMultiAngle(
   modelPath: string,
@@ -39,7 +22,7 @@ export async function renderMultiAngle(
   opts: { size?: number } = {},
 ): Promise<AngleShot[] | null> {
   const size = opts.size || 512;
-  const spec = JSON.parse(await GetModel3DSpec(modelPath)) as SpecData;
+  const spec = JSON.parse(await GetModel3DSpec(modelPath)) as Spec3D;
   if (!spec.models?.length) return null;
   const texArr = await loadTextures(texUrls);
 

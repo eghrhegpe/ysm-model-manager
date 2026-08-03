@@ -1,6 +1,6 @@
 // ===== 模型数据加载（唯一入口）=====
 // 供给 preview-skeleton.js 和 screenshot-renderer.js 使用
-import { cacheGet, cacheSet } from "../../utils/preview-cache.js";
+import { cacheGet, cacheSet } from "../../utils/preview-cache.ts";
 
 /**
  * 加载模型几何数据 + 纹理 + 作者信息

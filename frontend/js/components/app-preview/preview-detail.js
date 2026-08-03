@@ -1,7 +1,7 @@
 // ===== 模型/资源包详情面板 =====
 // 从 index.js 拆分：详情面板渲染逻辑
-import { summaryCardHTML } from "../../utils/summarize.js";
-import { renderFormattedText } from "../../utils/mc-format.js";
+import { summaryCardHTML } from "../../utils/summarize.ts";
+import { renderFormattedText } from "../../utils/mc-format.ts";
 import { devLog } from "./preview-utils.js";
 
 const esc = (s) =>
@@ -99,7 +99,7 @@ export async function showResourcePack(ctx, path) {
     const meta = JSON.parse(jsonStr);
     const basename = path.split("/").pop().split("\\").pop();
     const desc = renderFormattedText(meta.description || "");
-    const { describeVersionRange } = await import("../../utils/pack-format.js");
+    const { describeVersionRange } = await import("../../utils/pack-format.ts");
     const rv = describeVersionRange(meta);
     ctx._root.innerHTML = `<div class="content" id="preview-content">
   <h3>🎨 资源包</h3>

@@ -1,4 +1,4 @@
-import { renderFormattedText } from "../../utils/mc-format.js";
+import { renderFormattedText } from "../../utils/mc-format.ts";
 
 const esc = (s) =>
   (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

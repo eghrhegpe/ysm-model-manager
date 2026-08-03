@@ -1,6 +1,6 @@
 // ===== 资源管理器布局模板 =====
-import { renderFormattedText } from "../../utils/mc-format.js";
-import { describeVersionRange } from "../../utils/pack-format.js";
+import { renderFormattedText } from "../../utils/mc-format.ts";
+import { describeVersionRange } from "../../utils/pack-format.ts";
 
 /**
  * 侧栏布局（路径 + 操作栏 + 列表）

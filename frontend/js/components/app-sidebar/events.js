@@ -1,7 +1,7 @@
 // ===== sidebar 事件层 =====
 import { bus } from "../../bus.ts";
 import { animateNumber } from "../../utils/animate.ts";
-import { RESOURCE_TYPES } from "../../utils/resource-types.js";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 
 // 绑定每个卡片展开/折叠
 // 返回清理函数，组件销毁时移除事件监听

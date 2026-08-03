@@ -1,5 +1,5 @@
 // ===== app-sync-manager 模板 =====
-import { renderFormattedText } from "../../utils/mc-format.js";
+import { renderFormattedText } from "../../utils/mc-format.ts";
 import { stagger } from "../../utils/stagger.ts";
 
 /**

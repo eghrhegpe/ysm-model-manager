@@ -2,7 +2,7 @@
 import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { parseModelName, renderDisplayName } from "../utils/display.ts";
-import { renderFormattedText } from "../utils/mc-format.js";
+import { renderFormattedText } from "../utils/mc-format.ts";
 import { modalConfirm } from "../dialogs/modal.js";
 import { DnDLock, PendingImport } from "./dnd-state.js";
 import { getApp } from "../wails/app.ts";

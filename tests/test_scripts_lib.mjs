@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { walk, resolveImport, toPosix, relPosix, readText, ROOT } from '../scripts/_lib/scan-files.mjs';
+import { rg } from '../scripts/_lib/ripgrep.mjs';
 
 const errors = [];
 
@@ -107,6 +108,33 @@ assert(relPosix(path.join(ROOT, 'scripts', 'x.mjs')) === 'scripts/x.mjs', `relPo
     assert(readText(plain) === 'const a = 1;\n', 'readText 对纯 LF 文件应原样返回');
   } finally {
     fs.rmSync(tmp2, { recursive: true, force: true });
+  }
+}
+
+// ── 5. ripgrep 共享层（rg）：临时目录 fixture ─────────
+{
+  // rg() 的 paths 按设计相对 ROOT（ripgrep.mjs 内部 path.join(ROOT, p)），
+  // 故 fixture 建在 ROOT 下临时目录，测完清理。
+  const tmpDir = path.join(ROOT, '.rg-test-tmp');
+  fs.mkdirSync(tmpDir, { recursive: true });
+  try {
+    fs.writeFileSync(path.join(tmpDir, 'a.js'), 'window.__foo = 1;\n');
+    fs.writeFileSync(path.join(tmpDir, 'b.ts'), 'const bar = 2;\n');
+
+    const hits = rg('window\\.__', '.rg-test-tmp');
+    assert(hits.some((l) => l.includes('a.js')), `rg 应命中 a.js（got: ${hits.slice(0, 2).join(' | ')}）`);
+    assert(!hits.some((l) => l.includes('b.ts')), 'rg 不应误命中 b.ts');
+
+    const tsOnly = rg('const bar', '.rg-test-tmp', ['*.ts']);
+    assert(tsOnly.length === 1 && tsOnly[0].includes('b.ts'), `glob *.ts 应只命中 b.ts（got: ${tsOnly.join(' | ')}）`);
+
+    const none = rg('zzz_no_such_pattern_xyz', '.rg-test-tmp');
+    assert(none.length === 0, '无匹配应返回 []');
+
+    const multi = rg('bar', ['.rg-test-tmp', '.rg-test-tmp']);
+    assert(multi.length >= 1, 'paths 数组应被支持');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 }
 

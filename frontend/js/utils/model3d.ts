@@ -316,7 +316,12 @@ export async function renderModel3D(
   document.addEventListener("webkitfullscreenchange", _onFSChange);
   const _keys: Record<string, boolean> = {};
   let _debugMode: "normal" | "pivot" | "bone" = "normal";
+  const _isEditable = (el: EventTarget | null): boolean => {
+    const node = el as HTMLElement | null;
+    return !!node && (node.tagName === "INPUT" || node.tagName === "TEXTAREA" || node.isContentEditable);
+  };
   const _onKeyDown = (e: KeyboardEvent): void => {
+    if (_isEditable(e.target)) return; // 弹窗输入框打字时不吞键
     _keys[e.key.toLowerCase()] = true;
     if (
       ["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(

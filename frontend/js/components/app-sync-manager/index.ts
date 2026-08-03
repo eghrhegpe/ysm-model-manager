@@ -93,7 +93,11 @@ export class AppSyncManager extends HTMLElement {
         "</div>";
     }
 
-    // 监听刷新
+    // 监听刷新：_init 可能因属性变更多次执行，先清旧订阅防止 handler 翻倍
+    if (this._unsubs) {
+      this._unsubs.forEach((fn) => fn());
+      this._unsubs = [];
+    }
     const unsub = bus.on("stats:refresh", () => {
       if (!this.isConnected) return;
       dbg("sync-manager", "stats:refresh 收到");

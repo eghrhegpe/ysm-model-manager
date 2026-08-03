@@ -31,8 +31,8 @@ const shouldEnterForm = async (name: string, base64: string): Promise<boolean> =
   if (ext === ".ysm") return true;
   if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
   if (ext === ".zip" || ext === ".7z") {
-    try {
-      const { DetectZipType } = await getApp();
+      try {
+        const { DetectZipType } = await getApp();
       return (await DetectZipType(base64)) === RESOURCE_TYPES.YSM;
     } catch {
       return false;
@@ -380,6 +380,8 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       newName = currentFileName || "untitled." + ext;
     }
 
+    // 覆盖分支（catch 内）也要用 finalName，提升到 try 外声明
+    let finalName = "";
     try {
       const { LoadAppConfig, ImportModelFileTo } = await getApp();
       const cfg = await LoadAppConfig();
@@ -406,7 +408,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         });
         return;
       }
-      const finalName = renameTo;
+      finalName = renameTo;
 
       await ImportModelFileTo(finalName, subpath, currentBase64 || "");
       bus.emit("stats:refresh");
@@ -449,7 +451,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         const confirmed = await modalConfirm({
           title: "文件已存在",
           icon: "📦",
-          message: `"${newName}" 已存在，是否覆盖？`,
+          message: `"${finalName}" 已存在，是否覆盖？`,
           okText: "覆盖",
           danger: true,
         });
@@ -459,16 +461,22 @@ export function initImportQueue(app: ImportQueueHost): () => void {
             const subpath2 = currentRelPath
               ? currentRelPath.substring(0, currentRelPath.lastIndexOf("/"))
               : "";
-            await ImportModelFileOverwriteTo(newName, subpath2, currentBase64 || "");
+            await ImportModelFileOverwriteTo(finalName, subpath2, currentBase64 || "");
+            bus.emit("stats:refresh");
+            bus.emit("tree:reload");
             bus.emit("toast:show", {
-              msg: "✅ 已覆盖: " + newName,
+              msg: "✅ 已覆盖: " + finalName,
               duration: 2000,
               type: "success",
             });
+            // 刷新 repo 文件缓存
+            repoFiles = null;
+            loadRepoFiles();
             // 继续正常流程
             imported.unshift({
-              name: newName,
+              name: finalName,
               time: new Date().toLocaleTimeString(),
+              isYsm: true,
             });
             const importedIdx = fileQueue.findIndex(
               (fq) => fq.file === currentFile,
@@ -478,6 +486,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
             currentFile = null;
             currentBase64 = null;
             currentFileName = null;
+            currentRelPath = "";
             if (fileQueue.length > 0) {
               showForm(fileQueue[0].file, fileQueue[0].base64);
               renderImportedList();
@@ -581,17 +590,25 @@ export function initImportQueue(app: ImportQueueHost): () => void {
           );
         } else if (entry.isDirectory) {
           const dirReader = (entry as FileSystemDirectoryEntry).createReader();
-          dirReader.readEntries(
-            (entries) => {
-              const subPath = basePath
-                ? basePath + "/" + entry.name
-                : entry.name;
-              Promise.all(
-                Array.from(entries || []).map((e) => readEntry(e, subPath)),
-              ).then(() => resolve());
-            },
-            () => resolve(), // readEntries 失败时直接跳过
-          );
+          const subPath = basePath
+            ? basePath + "/" + entry.name
+            : entry.name;
+          // readEntries 单次最多返回 100 条（浏览器 API 契约），循环读取直到返回空数组
+          const readAll = (): void => {
+            dirReader.readEntries(
+              (entries) => {
+                if (!entries || !entries.length) {
+                  resolve();
+                  return;
+                }
+                Promise.all(
+                  Array.from(entries).map((e) => readEntry(e, subPath)),
+                ).then(() => readAll());
+              },
+              () => resolve(), // readEntries 失败时直接跳过
+            );
+          };
+          readAll();
         } else {
           resolve();
         }

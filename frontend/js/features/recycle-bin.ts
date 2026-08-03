@@ -53,7 +53,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
   });
   // 监听全局类型切换
   let currentType = localStorage.getItem("repo_rtype") || "ysm";
-  let _loadingAbort: (() => void) | null = null;
+  let _loadGen = 0;
 
   const unsubRtype = bus.on("repo:rtype-changed", (rt) => {
     if (rt && rt !== currentType) {
@@ -65,13 +65,8 @@ export function initRecycleBin(app: RecycleHost): () => void {
   loadRecycleBin();
 
   async function loadRecycleBin(): Promise<void> {
-    // 取消过时的请求
-    if (_loadingAbort) {
-      _loadingAbort();
-      _loadingAbort = null;
-    }
-    const abortCtrl = new AbortController();
-    _loadingAbort = () => abortCtrl.abort();
+    // generation 守卫：每次加载自增，await 后比对，旧请求结果不再覆盖新列表
+    const gen = ++_loadGen;
     const list = root.getElementById("recy-list");
     const count = root.getElementById("recy-count");
     if (!list) return;
@@ -89,6 +84,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
       // 获取当前类型的根目录（用于路径过滤）
       const currentRoot = await GetRepoRoot(currentType);
       const allEntries = (await ListRecycleBin("")) || [];
+      if (gen !== _loadGen) return; // 已有更新的加载，丢弃过期结果
 
       // 过滤：只显示路径在当前类型根目录下的文件
       const entries = currentRoot
@@ -107,6 +103,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
         return;
       }
       const reg = await loadResourceRegistry();
+      if (gen !== _loadGen) return;
       const icon = (reg[currentType] && reg[currentType].icon) || "📦";
       if (count) count.textContent = icon + " " + entries.length + " 个文件";
       list.innerHTML = entries
@@ -204,10 +201,9 @@ export function initRecycleBin(app: RecycleHost): () => void {
         });
       });
     } catch (e) {
+      if (gen !== _loadGen) return;
       list.innerHTML = `<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">❌ ${esc(friendlyError(e, "读取回收站失败"))}</div>`;
       if (count) count.textContent = "加载失败";
-    } finally {
-      _loadingAbort = null;
     }
   }
 

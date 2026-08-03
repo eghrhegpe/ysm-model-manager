@@ -140,7 +140,6 @@ export class AppTree extends HTMLElement {
   disconnectedCallback(): void {
     this._unsubs?.forEach((fn) => fn?.());
     if (this._keydownHandler) {
-      this._root.removeEventListener("keydown", this._keydownHandler);
       document.removeEventListener("keydown", this._keydownHandler);
       this._keydownHandler = null;
     }
@@ -269,7 +268,7 @@ export class AppTree extends HTMLElement {
         this._deleteSelected(paths, isDirModel);
       }
     }) as EventListener;
-    this._root.addEventListener("keydown", this._keydownHandler);
+    // 只注册 document 级：shadow 内组合键事件会 composed 冒泡，双注册会导致 Delete 双触发
     document.addEventListener("keydown", this._keydownHandler);
   }
 

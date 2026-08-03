@@ -199,9 +199,9 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
             errors.push(p.split(/[/\\]/).pop() + ": " + String(ex));
           }
         }
-        // 尝试删除空文件夹
+        // 尝试删除空文件夹（必须传绝对路径，相对路径会按进程 CWD 解析）
         try {
-          await RemoveDir(dir);
+          await RemoveDir(absDir);
         } catch {}
         await reload(vm);
         bus.emit("stats:refresh");

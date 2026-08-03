@@ -37,7 +37,7 @@ export function registerSync(unsubs: Array<() => void>): void {
           let totalOk = 0;
           let totalFail = 0;
 
-          const rtypeActual = rtype || "ysm";
+          const rtypeActual = rtype || RESOURCE_TYPES.YSM;
           const repoRoot = await GetRepoRoot(rtypeActual);
           if (!repoRoot) {
             bus.emit("toast:show", {

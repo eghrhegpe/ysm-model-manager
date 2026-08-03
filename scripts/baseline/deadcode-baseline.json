@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-03T12:44:40.129Z",
+  "generated": "2026-08-03T13:22:40.465Z",
   "knip": [
     "js/bus.ts|exports|default",
     "js/bus.ts|exports|setBus",
@@ -25,8 +25,6 @@
     "js/components/app-sidebar/actions.ts|file|js/components/app-sidebar/actions.ts",
     "js/components/app-sidebar/data.ts|exports|fallbackInstances",
     "js/components/app-sidebar/loader.ts|types|MmdVariantGroups",
-    "js/components/app-sidebar/tpl.ts|exports|skeletonHTML",
-    "js/components/app-tree/virtual-scroll.ts|exports|BUFFER",
     "js/core/theme.ts|file|js/core/theme.ts",
     "js/features/community/download-queue.ts|exports|cancelDownloads",
     "js/features/community/download-queue.ts|exports|enqueueDownloads",
@@ -78,8 +76,6 @@
     "js/utils/summarize.ts|types|SummaryAuthor",
     "js/utils/summarize.ts|types|SummaryConfigMenu",
     "js/wails/app.ts|exports|resetAppCache",
-    "js/wasm/ysm-parser.ts|exports|detectYsmVersion",
-    "js/wasm/ysm-parser.ts|exports|diagYsmHeader",
     "package.json|devDependencies|jscpd"
   ],
   "jscpd": [

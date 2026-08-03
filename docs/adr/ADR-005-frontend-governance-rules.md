@@ -17,7 +17,7 @@
 - copilot 加固阶段排除了 XSS 风险（`innerHTML` 拼接）
 - 动画路线图阶段确定了"禁止 display 切换"规范
 
-原文档见 `docs/core/CLEANUP_RULES.md`。
+原文档见 `docs/core/CLEANUP_RULES.md`（已于 2026-08-03 删除，9 条规则全文并入本 ADR §2.1–§2.9，检测命令速查随文件移除）。
 
 ---
 

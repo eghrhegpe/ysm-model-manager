@@ -24,5 +24,10 @@
   "dependencies": {
     "@wailsio/runtime": "^3.0.0-alpha.97",
     "three": "^0.160.0"
+  },
+  "knip": {
+    "ignoreDependencies": [
+      "ts-morph"
+    ]
   }
 }

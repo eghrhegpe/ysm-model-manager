@@ -9,6 +9,8 @@ export interface ToastPayload {
   duration?: number;
   /** 直接拼入 toast className（app-toast.js），合法值以 CSS class 为准：warn/success/error/info */
   type?: "info" | "success" | "error" | "warn";
+  /** 点击 toast 时的回调（app-toast.js 支持，version-updater 用） */
+  click?: () => void;
 }
 
 export interface MenuItem {

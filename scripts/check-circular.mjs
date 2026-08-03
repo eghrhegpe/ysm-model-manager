@@ -4,10 +4,10 @@
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
  *
- * 扫描 frontend/js/ 下所有 .js，解析相对路径 import/export-from 语句，
- * 构建模块依赖图，DFS 三色标记找环，输出完整环链 + 涉及文件数。
+ * 扫描 frontend/js/ 下所有 .js/.ts（ADR-014 后 TS 与 JS 并存），解析相对路径
+ * import/export-from 语句，构建模块依赖图，DFS 三色标记找环，输出完整环链 + 涉及文件数。
  *
- * 非相对导入（node_modules 包）跳过；.js 扩展名自动补全（含 index.js）。
+ * 非相对导入（node_modules 包）跳过；扩展名自动补全（.ts/.js/index.ts/index.js）。
  *
  * 用法：
  *   node scripts/check-circular.mjs            # 文本报告
@@ -16,47 +16,11 @@
  * 退出码：发现环 → 1；否则 0。
  */
 import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
-const SRC_DIR = path.join(ROOT, 'frontend/js');
+import { ROOT, SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.mjs';
 
 const JSON_OUT = process.argv.includes('--json');
 
-// ── 收集模块 ──────────────────────────────────────────
-
-function walk(dir, out = []) {
-  for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (d.name.startsWith('.') || d.name === 'node_modules') continue;
-    const p = path.join(dir, d.name);
-    if (d.isDirectory()) {
-      if (d.name === 'css') continue;
-      walk(p, out);
-    } else if (d.name.endsWith('.js')) {
-      out.push(p);
-    }
-  }
-  return out;
-}
-
 const IMPORT_RE = /(?:^|\n)\s*(?:import[\s\S]*?\sfrom\s+|import\s+|export\s*\{[^}]*\}\s*from\s+|export\s+\*\s+from\s+)['"]([^'"]+)['"]/g;
-
-/** 解析相对导入目标（自动补 .js / index.js）。 */
-function resolveImport(fromFile, spec, moduleSet) {
-  if (!spec.startsWith('./') && !spec.startsWith('../')) return null; // 包导入跳过
-  const base = path.dirname(fromFile);
-  const candidates = [path.join(base, spec)];
-  if (!path.extname(spec)) {
-    candidates.push(path.join(base, `${spec}.js`), path.join(base, spec, 'index.js'));
-  }
-  for (const c of candidates) {
-    const resolved = path.resolve(c);
-    if (moduleSet.has(resolved)) return resolved;
-  }
-  return null;
-}
 
 // ── 环检测（DFS 三色）─────────────────────────────────
 
@@ -118,7 +82,7 @@ function main() {
     graph.set(f, [...deps]);
   }
 
-  const cycles = findCycles(graph).map((cyc) => cyc.map((p) => path.relative(ROOT, p).replace(/\\/g, '/')));
+  const cycles = findCycles(graph).map((cyc) => cyc.map((p) => relPosix(p)));
 
   if (JSON_OUT) {
     console.log(JSON.stringify({ modules: files.length, cycles }, null, 2));

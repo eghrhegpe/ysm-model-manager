@@ -127,7 +127,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 
 | 检查项 | 说明 | 示例（好） | 示例（差） |
 |--------|------|-----------|-----------|
-| **状态来源唯一** | 同一状态不应从多处读写 | `PageStore` / `registry.js` 是唯一来源 | 模块级变量 + localStorage 双源 |
+| **状态来源唯一** | 同一状态不应从多处读写 | `PageStore` / `registry.ts` 是唯一来源 | 模块级变量 + localStorage 双源 |
 | **副作用可追踪** | 函数不应隐式修改外部状态 | 通过参数显式传递 | 模块级变量被多处直接写入 |
 | **并发安全** | 异步操作有去重/锁 | `_registered` 守卫防重复注册 | 多次触发重复加载/重复订阅 |
 | **错误边界** | 异常不吞没、不扩散 | `try/catch` + toast 反馈 | 静默 `catch {}` 或 Promise 无 `.catch` |
@@ -281,14 +281,14 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 
 | ❌ 禁止 | ✅ 替代 |
 |---------|--------|
-| `window.__currentPage` | `PageStore.currentPage` (`core/page-store.js`) |
-| `window.go.main.App.*` | `getApp()` (`wails/app.js`) |
+| `window.__currentPage` | `PageStore.currentPage` (`core/page-store.ts`) |
+| `window.go.main.App.*` | `getApp()` (`wails/app.ts`) |
 
 ### 3.2 Wails 调用统一走 `getApp()`
 
 ```js
 // ✅ 正确
-import { getApp } from "../wails/app.js";
+import { getApp } from "../wails/app.ts";
 const App = await getApp();
 const result = await App.SomeBinding();
 
@@ -327,7 +327,7 @@ main.go        — 程序入口（薄壳）
 
 ```
 frontend/js/
-  bus.js                 — 事件总线
+  bus.ts                 — 事件总线
   app-modules.js         — 组件入口 + 右键菜单映射
   components/            — Web Components (app-tree/sidebar/preview/content/nav)
   features/              — 业务功能 (import-queue/recycle-bin/version-updater/community)
@@ -335,8 +335,8 @@ frontend/js/
   pages/                 — 页面渲染 (repository)
   core/                  — 基础设施 (buttons/global-handlers/theme/context-menus)
   utils/                 — 工具函数 (display/fmt/dom/icon/summarize/model3d)
-  services/registry.js   — 服务注册
-  wails/                 — Wails 桥接 (app.js + runtime.js)
+  services/registry.ts   — 服务注册
+  wails/                 — Wails 桥接 (app.ts)
 ```
 
 ### 4.3 组件拆分规范

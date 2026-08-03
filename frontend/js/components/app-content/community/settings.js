@@ -1,6 +1,6 @@
 // ===== 设置页初始化（为 _initSettings 减负） =====
 import { bus } from "../../../bus.ts";
-import { initVersionUpdater } from "../../../features/version-updater.js";
+import { initVersionUpdater } from "../../../features/version-updater.ts";
 import { friendlyError } from "../../../utils/errors.ts";
 import { loadResourceRegistry } from "../../../utils/resource-registry.ts";
 

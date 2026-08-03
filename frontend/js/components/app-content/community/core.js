@@ -257,6 +257,6 @@ export const DEFAULT_COMMUNITY_URL =
  * 获取仓库模型列表 + 本地映射
  */
 export async function getRepoModelsData(repo, mirror) {
-  const { tryFetchModels } = await import("../../../features/community/data.js");
+  const { tryFetchModels } = await import("../../../features/community/data.ts");
   return tryFetchModels(repo, mirror);
 }

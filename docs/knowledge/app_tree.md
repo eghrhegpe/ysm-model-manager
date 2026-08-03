@@ -28,6 +28,13 @@ use_when:
 - 右键菜单触发
 - 拖拽排序支持
 
+## 对外 API / 入口
+
+- `AppTree` 生命周期：`connectedCallback`（绑定事件 + `_unsubs` 收集订阅）→ `disconnectedCallback`（清理订阅 / keydown / 虚拟滚动）
+- `_load` — 加载条目数据；`_renderTree` — 渲染树（grid/list 双模式）
+- `_initKeyboardShortcuts` / `_deleteSelected` — 键盘快捷键 / 批量删除
+- 子模块：`bus-handlers.ts`（事件处理）/ `events.ts`（委托）/ `virtual-scroll.ts`（虚拟滚动）
+
 ## 与其他子系统关系
 
 - `app-content/`: 选中节点内容在 content 区域渲染

@@ -24,6 +24,13 @@ use_when:
 - 导入来源验证
 - 资源重复检测
 
+## 对外 API / 入口
+
+- `Register` / `Get` — 导入策略注册表（`Handler` 接口，按资源类型取策略）
+- `NewSimpleCopy` — 简单复制策略（`SimpleCopyImporter`：resourcepack/shaderpack/vrchat-avatar 等）
+- `NewDirectoryCopy` — 目录复制策略（`DirectoryCopyImporter`：mmd-skin 等按文件夹为单位）
+- `Import` — 执行导入（`sanitizePath` 路径清理 / `copyDirRecursive` 递归复制）
+
 ## 与其他子系统关系
 
 - `go/dedup/`: 导入前去重

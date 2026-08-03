@@ -6,13 +6,15 @@
  * 只重写各文件 `<!-- GEN: xxx -->` 标记区，人工段落原样保留：
  *   - adr      → docs/adr/README.md 的 adr-registry（登记表）+ adr-stats（状态统计）
  *   - adr      → docs/adr/index.md 的规范索引（状态分组 + 锚点跳转 + 相对链接，整文件重写）
+ *   - guide    → docs/guide/index.md 的 guide-index（用户指南表格，从各篇 frontmatter 生成）
  *   - releases → docs/releases/README.md 的 releases-index（最近版本 + 版本全览）
  *   - knowledge→ 委托 gen-knowledge-index.mjs --check（不重写，避免双生成器打架）
- * 单一事实来源 = ADR 文件首部；状态映射与 gen-status-index.mjs 保持一致。
+ * 单一事实来源 = ADR 文件首部 / guide 各篇 frontmatter；状态映射与 gen-status-index.mjs 保持一致。
  *
  * 用法：
  *   node scripts/gen-docs-index.mjs                # 全分区写入
  *   node scripts/gen-docs-index.mjs --adr          # 只跑 adr
+ *   node scripts/gen-docs-index.mjs --guide        # 只跑 guide
  *   node scripts/gen-docs-index.mjs --releases     # 只跑 releases
  *   node scripts/gen-docs-index.mjs --knowledge    # 只校验 knowledge 漂移
  *   node scripts/gen-docs-index.mjs --check        # 全分区只校验不写入
@@ -28,14 +30,17 @@ const ADR_REG_FILE = path.join(ADR_DIR, 'README.md');
 const ADR_INDEX_FILE = path.join(ADR_DIR, 'index.md');
 const RELEASE_DIR = path.join(ROOT, 'docs', 'releases');
 const RELEASE_FILE = path.join(RELEASE_DIR, 'README.md');
+const GUIDE_DIR = path.join(ROOT, 'docs', 'guide');
+const GUIDE_FILE = path.join(GUIDE_DIR, 'index.md');
 
 const args = process.argv.slice(2);
 const CHECK = args.includes('--check');
 const want = (flag) => args.includes(`--${flag}`);
-const ONLY = args.some((a) => a.startsWith('--') && ['--adr', '--releases', '--knowledge'].includes(a));
+const ONLY = args.some((a) => a.startsWith('--') && ['--adr', '--releases', '--knowledge', '--guide'].includes(a));
 const RUN_ADR = !ONLY || want('adr');
 const RUN_RELEASES = !ONLY || want('releases');
 const RUN_KNOWLEDGE = !ONLY || want('knowledge');
+const RUN_GUIDE = !ONLY || want('guide');
 
 // ── 共享工具 ────────────────────────────────────────────
 
@@ -236,6 +241,54 @@ function buildAdrIndex(list) {
 
 // ── releases 分区：最近版本 + 版本全览 ─────────────────
 
+// ── guide 分区：用户指南表格（docs/guide/index.md，GEN 区）──
+
+/** 非功能指南页（不进表格）。 */
+const GUIDE_SKIP = new Set(['index.md', '用户指南.md', '项目意义.md']);
+/** 语义顺序（与 guide/index.md 现有表格一致）；未列出的按字母序追加。 */
+const GUIDE_ORDER = [
+  'install.md', 'first-setup.md', 'repository.md', 'import-model.md',
+  '3d-preview.md', 'pack-sync.md', 'resource-packs.md', 'creators.md',
+  'workshop.md', 'oldest-models.md', 'recycle-bin.md', 'diagnostics.md',
+  'themes.md', 'settings.md', 'update.md', 'faq.md',
+];
+
+function parseGuidePages() {
+  if (!fs.existsSync(GUIDE_DIR)) return [];
+  const pages = [];
+  for (const f of fs.readdirSync(GUIDE_DIR)) {
+    if (!f.endsWith('.md') || GUIDE_SKIP.has(f)) continue;
+    const text = fs.readFileSync(path.join(GUIDE_DIR, f), 'utf8');
+    const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    const get = (key) => {
+      if (!fm) return '';
+      const m = fm[1].match(new RegExp('^' + key + '\\s*:\\s*(.+)$', 'm'));
+      return m ? m[1].trim().replace(/\s*#.*$/, '').trim() : '';
+    };
+    pages.push({ file: f, title: get('title') || f.replace(/\.md$/, ''), desc: get('description') || '' });
+  }
+  pages.sort((a, b) => {
+    const ia = GUIDE_ORDER.indexOf(a.file);
+    const ib = GUIDE_ORDER.indexOf(b.file);
+    if (ia === -1 && ib === -1) return a.file.localeCompare(b.file);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+  return pages;
+}
+
+function buildGuideIndex() {
+  const pages = parseGuidePages();
+  let out = `> 按功能讲解入口路径与操作步骤，共 **${pages.length}** 篇。新功能持续建档；索引由 gen-docs-index.mjs 自动生成，断链由 link-checker 兜底。\n\n`;
+  out += '| 指南页 | 说明 |\n';
+  out += '|--------|------|\n';
+  for (const p of pages) {
+    out += `| [${escCell(p.title)}](./${p.file}) | ${escCell(p.desc)} |\n`;
+  }
+  return out;
+}
+
 function parseVersions() {
   const vers = [];
   if (!fs.existsSync(RELEASE_DIR)) return vers;
@@ -324,6 +377,12 @@ function main() {
   if (RUN_RELEASES) {
     const r = applyRegion(RELEASE_FILE, 'releases-index', buildReleasesIndex());
     if (r.changed && r.ok) console.log(`[OK] 已更新 ${path.relative(ROOT, RELEASE_FILE)} 的 releases-index 区`);
+    if (!r.ok) failed = true;
+  }
+
+  if (RUN_GUIDE) {
+    const r = applyRegion(GUIDE_FILE, 'guide-index', buildGuideIndex());
+    if (r.changed && r.ok) console.log(`[OK] 已更新 docs/guide/index.md 的 guide-index 区`);
     if (!r.ok) failed = true;
   }
 

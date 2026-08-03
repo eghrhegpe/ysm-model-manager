@@ -163,7 +163,7 @@
 |------|------|
 | `docs/core/CLEANUP_RULES.md` | 9 条规则全文，含检测命令 |
 | `copilot-instructions.md` | 致命陷阱 #11（回调 Promise 化）、XSS 加固 |
-| `animation-roadmap.md` | display 切换 → opacity/transform 替代方案 |
+| `ADR-015`（统一动画系统） | display 切换 → opacity/transform 替代方案 |
 | `Design.md` | CSS 变量主题系统，4 套主题定义 |
 
 ---

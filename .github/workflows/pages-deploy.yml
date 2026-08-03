@@ -1,0 +1,52 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Pages 部署权限：只读仓库内容，写入 Pages，签发 OIDC token
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 并发：同一时刻只允许一个 Pages 部署在跑，新推送取消旧的
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 构建站点（Jekyll · docs/）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 契约测试（站点内容基线，失败不部署）
+        shell: bash
+        run: |
+          for f in tests/*.mjs; do node "$f"; done
+          node scripts/link-checker.mjs
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+
+      - name: Jekyll 构建（source = docs/，_config.yml 所在目录）
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+
+      - name: 上传产物
+        uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    name: 发布
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

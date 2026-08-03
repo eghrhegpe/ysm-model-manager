@@ -3,7 +3,7 @@
 // 使用: <app-resource-manager rtype="resourcepack"></app-resource-manager>
 
 import { sidebarHTML, itemHTML, detailHTML, placeholderHTML } from "./tpl.js";
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 import { getApp } from "../../wails/app.js";
 
 const STORE = {}; // 模块级缓存（rtype → config）

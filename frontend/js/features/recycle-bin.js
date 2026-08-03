@@ -1,5 +1,5 @@
 // ===== 回收站管理 =====
-import { bus } from "../bus.js";
+import { bus } from "../bus.ts";
 import { modalConfirm } from "../dialogs/modal.js";
 import { renderDisplayName } from "../utils/display.js";
 import { friendlyError } from "../utils/errors.js";

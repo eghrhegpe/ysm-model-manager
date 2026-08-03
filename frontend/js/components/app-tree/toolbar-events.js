@@ -1,6 +1,6 @@
 // ===== 工具栏事件绑定 =====
 import { friendlyError } from "../../utils/errors.js";
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 import { flashBtn } from "./utils.js";
 import { spinnerHTML } from "./tpl.js";
 import { selectState } from "./data.js";

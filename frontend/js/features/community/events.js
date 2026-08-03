@@ -1,6 +1,6 @@
 // ===== 创意工坊事件绑定（搜索 / 多选 / 筛选 / 下载） =====
 // 下载队列逻辑已拆到 download-queue.js，本文件只做事件绑定 + 协调。
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 import { modalConfirm } from "../../dialogs/modal.js";
 import { renderModelList, isModelMissing } from "./render.js";
 import { createDownloadQueue } from "./download-queue.js";

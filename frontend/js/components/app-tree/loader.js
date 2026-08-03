@@ -1,5 +1,5 @@
 // ===== Go 数据加载层 =====
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 import {
   ScanModelEntries,
   IsFileBanned,

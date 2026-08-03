@@ -1,5 +1,5 @@
 // ===== 版本更新检查 =====
-import { bus } from "../bus.js";
+import { bus } from "../bus.ts";
 import { esc } from "../dialogs/modal.js";
 import { friendlyError } from "../utils/errors.js";
 

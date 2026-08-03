@@ -1,5 +1,5 @@
 // ===== 资历最深 + 仓库评分 + 每日推荐（响应全局类型切换） =====
-import { bus } from "../bus.js";
+import { bus } from "../bus.ts";
 import { renderDisplayName } from "../utils/display.js";
 import { loadResourceRegistry } from "../utils/resource-registry.js";
 import { getApp } from "../wails/app.js";

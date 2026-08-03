@@ -1,4 +1,4 @@
-import { bus } from "../bus.js";
+import { bus } from "../bus.ts";
 
 let _currentPage = "repository";
 

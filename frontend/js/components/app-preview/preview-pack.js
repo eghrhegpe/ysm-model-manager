@@ -1,7 +1,7 @@
 // ===== 整合包详情显示 =====
 // 从 events.js 拆分：showPackageDetail + 数字跳动动画
 import { renderDisplayName } from "../../utils/display.js";
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 
 const esc = (s) =>
   (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

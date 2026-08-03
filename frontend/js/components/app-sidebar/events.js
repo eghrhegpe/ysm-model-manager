@@ -1,5 +1,5 @@
 // ===== sidebar 事件层 =====
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 import { animateNumber } from "../../utils/animate.js";
 import { RESOURCE_TYPES } from "../../utils/resource-types.js";
 

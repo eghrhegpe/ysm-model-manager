@@ -1,5 +1,5 @@
 // ===== 资源包管理（薄 wrapper，由 app-resource-manager 组件驱动） =====
-import { bus } from "../bus.js";
+import { bus } from "../bus.ts";
 
 /**
  * 初始化资源包 tab

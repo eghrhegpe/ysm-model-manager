@@ -1,5 +1,5 @@
 // ===== 全局拖拽导入 =====
-import { bus } from "../bus.js";
+import { bus } from "../bus.ts";
 import { PageStore } from "./page-store.js";
 import { DnDLock, PendingImport } from "../features/dnd-state.js";
 import { getApp } from "../wails/app.js";

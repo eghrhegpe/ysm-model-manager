@@ -1,7 +1,7 @@
 // ===== 模型标签编辑弹窗 =====
 // 读取/写入模型标签，支持输入新标签和选择已有标签
 import { esc } from "../utils/dom.js";
-import { bus } from "../bus.js";
+import { bus } from "../bus.ts";
 import { closeDlg } from "./modal.js";
 import { getApp } from "../wails/app.js";
 

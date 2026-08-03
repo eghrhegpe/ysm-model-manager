@@ -1,5 +1,5 @@
 // ===== <app-preview> 入口 =====
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 import { previewCSS } from "./preview-css.js";
 import { statsHTML, modelDetailHTML, statsCardHTML } from "./tpl.js";
 import { bindBusUpdates } from "./events.js";

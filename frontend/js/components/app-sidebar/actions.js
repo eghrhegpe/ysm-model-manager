@@ -1,5 +1,5 @@
 // ===== 整合包内部操作绑定（< 100 行）=====
-import { bus } from "../../bus.js";
+import { bus } from "../../bus.ts";
 import { InstallModelTo } from "../../../bindings/ysm-model-manager/internal/app/app.js";
 
 /** 绑定整合包卡片中的操作按钮和缺失条目点击事件 */

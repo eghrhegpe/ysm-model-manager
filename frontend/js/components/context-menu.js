@@ -1,7 +1,7 @@
 // ===== <context-menu> — 右键菜单 =====
 // 事件：menu:show, menu:hide
 // 监听：menu:show({ x, y, items: [{label, icon?, onClick}] })
-import { bus } from "../bus.js";
+import { bus } from "../bus.ts";
 
 class ContextMenu extends HTMLElement {
   constructor() {

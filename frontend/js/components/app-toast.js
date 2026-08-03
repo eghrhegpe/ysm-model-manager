@@ -1,7 +1,7 @@
 // ===== <app-toast> — Toast 通知系统 =====
 // 用法：bus.emit('toast:show', { msg, undo?, duration?, type? })
 //       type: 'success' | 'error' | 'info'
-import { bus } from "../bus.js";
+import { bus } from "../bus.ts";
 
 class AppToast extends HTMLElement {
   constructor() {

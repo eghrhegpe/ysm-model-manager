@@ -315,4 +315,6 @@ func init() {
 	Register(NewSimpleCopy("create-blueprint"))
 	Register(NewDirectoryCopy("mmd-skin"))
 	Register(NewSimpleCopy("vrchat-avatar"))
+	Register(NewSimpleCopy("ysm"))
+	Register(NewSimpleCopy("litematic"))
 }

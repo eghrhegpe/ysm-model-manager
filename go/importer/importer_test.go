@@ -22,6 +22,12 @@ func TestRegistry(t *testing.T) {
 	if got := Get("vrchat-avatar"); got == nil {
 		t.Fatal("Get('vrchat-avatar') = nil, want handler")
 	}
+	if got := Get("ysm"); got == nil {
+		t.Fatal("Get('ysm') = nil, want handler")
+	}
+	if got := Get("litematic"); got == nil {
+		t.Fatal("Get('litematic') = nil, want handler")
+	}
 	if got := Get("nonexistent"); got != nil {
 		t.Fatalf("Get('nonexistent') = %v, want nil", got)
 	}

@@ -10,7 +10,9 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "jscpd": "^5.0.14",
     "jsdom": "^29.1.1",
+    "knip": "^6.31.0",
     "vite": "^3.0.7",
     "vitest": "^0.34.6"
   },

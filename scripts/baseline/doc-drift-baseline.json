@@ -1,0 +1,29 @@
+{
+  "generated": "2026-08-03T10:07:32.287Z",
+  "unregistered": [
+    "frontend/js/core",
+    "frontend/js/dialogs",
+    "frontend/js/features",
+    "frontend/js/services",
+    "frontend/js/wails",
+    "frontend/js/wasm",
+    "go/avatar",
+    "go/dedup",
+    "go/download",
+    "go/errors",
+    "go/fsutil",
+    "go/importer",
+    "go/installer",
+    "go/litematic",
+    "go/logs",
+    "go/packs",
+    "go/paths",
+    "go/recycle",
+    "go/tags",
+    "go/updater",
+    "go/version",
+    "go/watcher",
+    "internal/app",
+    "internal/embedded"
+  ]
+}

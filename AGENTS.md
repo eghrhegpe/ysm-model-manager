@@ -215,7 +215,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | `docs/archive/` | 🧊 冻结区（历史归档，需追溯旧设计时才读） |
 | `docs/preview/` | 🖼️ UI 截图 |
 | `tests/` | 🔒 契约测试（Node .mjs）— 禁止修改，必须通过 |
-| `scripts/` | Node 工具脚本（治理/生成器），被 `.agents/skills/` 调用 |
+| `scripts/` | Node 工具脚本（治理/静态分析/生成器），含 `scripts/baseline/` 基线文件（`check-deadcode-baseline` / `check-doc-drift` 使用），被 `.agents/skills/` 调用 |
 | `.agents/skills/` | Reasonix Skill 定义 |
 
 契约测试明细（`tests/`，Node 零依赖）：
@@ -243,9 +243,15 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 注释质量 | `node scripts/comment-checker.mjs` | AI 废话/TODO 无编号/调试残留 |
 | 绑定一致性 | `node scripts/binding-check.mjs` | Go 导出函数 ↔ wailsjs |
 | 函数映射 | `node scripts/funcmap.mjs -o funcmap.md` | 注释 → 函数表（改签名后重跑） |
+| 文档三一致 | `node scripts/check-doc-drift.mjs` | ADR 登记 + 知识卡 + 架构树引用（ERROR 阻断；`--fix` 刷新架构树基线） |
+| ADR 健康 | `node scripts/check-adr-health.mjs` | ADR 状态机值域 / 登记表同步 / 技术债清单（`--debt`） |
+| 死代码基线 | `node scripts/check-deadcode-baseline.mjs` | knip+jscpd 与基线对比，新增项阻断（`--update-baseline` 刷新） |
+| 符号消费者 | `node scripts/check-consumers.mjs` | 孤儿导出审计（`--strict` 阻断 / `--min-consumers N` 过滤） |
+| 循环依赖 | `node scripts/check-circular.mjs` | frontend/js ESM import 图找环（ERROR 阻断） |
+| 布尔命名 | `node scripts/check-boolean-naming.mjs` | 布尔变量命名规范（`--strict` 阻断） |
 | 全量自检 | `node scripts/doctor.mjs` | 编译 + 构建 + 文件 + 红线 + Git 状态 |
 
-> **检查优先级**：改文档 → `link-checker`；改 ADR → `adr-check`；改资源类型 → `type-consistency`；改前端 → `review` + `comment-checker`；提交前 → `doctor`。
+> **检查优先级**：改文档 → `link-checker`；改 ADR → `adr-check` + `check-adr-health`；改前端源码 → `check-circular` + `check-consumers` + `check-deadcode-baseline`；改资源类型 → `type-consistency`；改前端 → `review` + `comment-checker`；提交前 → `doctor`。
 
 ---
 

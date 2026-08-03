@@ -3,6 +3,7 @@
 import { bus } from "../bus.ts";
 import { parseModelName, type ParsedModelName } from "../utils/display.ts";
 import { stagger } from "../utils/stagger.ts";
+import { registerDlg } from "./modal.ts";
 
 /** 批量条目（ModelEntry 子集） */
 interface BatchEntry {
@@ -31,19 +32,25 @@ interface BatchItem {
 }
 
 let dialogEl: HTMLElement | null = null;
+let _pendingResolve: (() => void) | null = null;
 
 /**
  * 弹出批量重命名对话框
  * @param dir 所在目录
  * @param entries 文件条目
  * @param onApply 应用回调（收到变更列表）
+ * @returns Promise，对话框真正关闭（应用完成/取消/Esc）后才 resolve；
+ *          重复打开时先结算上一个 Promise，调用方 await 不会永远悬挂
  */
-export async function showBatchRenameDialog(
+export function showBatchRenameDialog(
   dir: string,
   entries: BatchEntry[],
   onApply: (changes: BatchRenameChange[]) => Promise<void>,
 ): Promise<void> {
-  if (dialogEl) dialogEl.remove();
+  if (dialogEl) close();
+  let resolvePending!: () => void;
+  const pending = new Promise<void>((r) => (resolvePending = r));
+  _pendingResolve = resolvePending;
 
   // 解析每个文件的 [作者]【作品】角色(日期)
   const items: BatchItem[] = entries.map((e) => {
@@ -114,6 +121,7 @@ export async function showBatchRenameDialog(
   });
   dialogEl.innerHTML = genHTML(dir, items);
   document.body.appendChild(dialogEl);
+  registerDlg(dialogEl, () => close());
   dialogEl.focus();
 
   // 批量修改作者/作品
@@ -260,6 +268,8 @@ export async function showBatchRenameDialog(
     );
     close();
   });
+
+  return pending;
 }
 
 function genHTML(dir: string, items: BatchItem[]): string {
@@ -360,6 +370,9 @@ function close(): void {
     dialogEl.classList.add("dlg-closing");
     const el = dialogEl;
     dialogEl = null;
+    const res = _pendingResolve;
+    _pendingResolve = null;
+    if (res) res(); // 结算调用方 await：对话框已关闭
     setTimeout(() => el.remove(), 120);
   }
 }

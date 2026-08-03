@@ -991,10 +991,8 @@ class AppContent extends HTMLElement {
   }
 
   _esc(s: unknown): string {
-    return String(s || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+    // 委托规范 esc（含引号转义）：_esc 被 site-view 等用于 data-* 属性插值
+    return escUtil(String(s || ""));
   }
 }
 

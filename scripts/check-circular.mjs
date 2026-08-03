@@ -76,6 +76,9 @@ function main() {
     const text = fs.readFileSync(f, 'utf-8');
     const deps = new Set();
     for (const m of text.matchAll(IMPORT_RE)) {
+      // type-only import（`import type {...} from`）编译期擦除，不构成运行时依赖——
+      // 计入会产生假阳性环（如 app-tree/events.ts `import type { AppTree }`）
+      if (/^\s*import\s+type\b/.test(m[0])) continue;
       const target = resolveImport(f, m[1], moduleSet);
       if (target && target !== f) deps.add(target);
     }

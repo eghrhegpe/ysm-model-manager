@@ -11,7 +11,7 @@
 | 项 | 状态 |
 |----|------|
 | ADR 体系 | 12 篇（ADR-001 ~ ADR-013），索引见 [`adr/README.md`](adr/README.md) |
-| 契约测试 | 6 个（`tests/python/`），已接入 CI（`.github/workflows/release.yml`） |
+| 契约测试 | 6 个（`tests/`，Node .mjs），已接入 CI（`.github/workflows/release.yml`） |
 | 技术栈 | **Wails v3**（ADR-001 已采纳；根 README 已同步） |
 | 提交纪律 | Conventional Commits + scope（`docs(adr)` / `chore(build)` / `refactor(app)` / `feat`） |
 | 文档漂移治理 | 断链已修复（AI_INDEX → knowledge/index；release-notes/README 已创建）；`link-checker` 可复扫 |

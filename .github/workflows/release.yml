@@ -22,11 +22,11 @@ jobs:
         with:
           node-version: "22"
 
-      - name: 契约测试（tests/python/，禁止修改测试文件）
+      - name: 契约测试（tests/，Node .mjs，禁止修改测试文件）
         shell: pwsh
         run: |
-          $files = Get-ChildItem tests/python/*.py
-          foreach ($f in $files) { python $f.FullName }
+          $files = Get-ChildItem tests/*.mjs
+          foreach ($f in $files) { node $f.FullName }
 
       - name: Go vet
         shell: pwsh

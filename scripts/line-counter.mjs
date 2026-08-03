@@ -1,0 +1,139 @@
+#!/usr/bin/env node
+/**
+ * 代码行数统计与文件健康度分析。
+ * 由 scripts/line-counter.py 迁移（2026-08-03），逻辑逐点保真（含原 package_lines 按文件计数行为）。
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+function walkFiles(dir, pattern, skip = () => false) {
+  const out = [];
+  if (!fs.existsSync(dir)) return out;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...walkFiles(full, pattern, skip));
+    } else if (entry.isFile()) {
+      if (skip(full)) continue;
+      const rel = path.relative(ROOT, full).replace(/\\/g, '/');
+      if (new RegExp(pattern.replace(/\*/g, '.*') + '$').test(rel) || rel.endsWith(pattern.replace('*', ''))) {
+        out.push(full);
+      }
+    }
+  }
+  return out;
+}
+
+function pyLineCount(text) {
+  // Python 等价行计数：换行数 + (非空且不以换行结尾 ? 1 : 0)
+  const nl = (text.match(/\n/g) || []).length;
+  return nl + (text.length > 0 && !text.endsWith('\n') ? 1 : 0);
+}
+
+function countLines(paths) {
+  /** 统计匹配的文件总行数。 */
+  let total = 0;
+  for (const p of paths) {
+    for (const f of p) {
+      const st = fs.statSync(f);
+      if (st.size > 0) {
+        total += pyLineCount(fs.readFileSync(f, 'utf-8'));
+      }
+    }
+  }
+  return total;
+}
+
+function oversizedFiles(paths, threshold = 700) {
+  /** 找出超过 threshold 行的文件。 */
+  const result = [];
+  for (const p of paths) {
+    for (const f of p) {
+      const name = path.basename(f);
+      const parts = f.split(path.sep);
+      if (name.endsWith('.min.js') || parts.includes('node_modules')) continue;
+      try {
+        const lines = pyLineCount(fs.readFileSync(f, 'utf-8'));
+        if (lines > threshold) result.push([lines, f, lines > 1000]);
+      } catch { /* ignore */ }
+    }
+  }
+  return result.sort((a, b) => b[0] - a[0]);
+}
+
+function packageLines(base, pattern) {
+  /** 统计每个子目录的文件数（保持原 py 行为：count files）。 */
+  const stats = [];
+  if (!fs.existsSync(base)) return stats;
+  for (const d of fs.readdirSync(base, { withFileTypes: true })) {
+    if (d.isDirectory()) {
+      const full = path.join(base, d.name);
+      const files = walkFiles(full, pattern);
+      const lines = files.filter((f) => fs.statSync(f).size > 0).length;
+      if (lines > 0) stats.push([d.name, lines]);
+    }
+  }
+  return stats;
+}
+
+function main() {
+  const goDirs = [path.join(ROOT, 'go')];
+  const jsDir = path.join(ROOT, 'frontend', 'js');
+  const cssDir = path.join(ROOT, 'frontend', 'css');
+
+  // === 项目总览 ===
+  console.log('=== 项目代码统计 ===');
+  let goLines = countLines(goDirs.map((d) => walkFiles(d, '*.go')));
+  // 根目录 Go
+  for (const fn of ['app.go', 'main.go', 'resource_bindings.go']) {
+    const f = path.join(ROOT, fn);
+    if (fs.existsSync(f)) {
+      goLines += pyLineCount(fs.readFileSync(f, 'utf-8'));
+    }
+  }
+  console.log(`Go:         ${goLines} 行`);
+
+  const jsLines = countLines([walkFiles(jsDir, '*.js')]);
+  console.log(`Frontend JS: ${jsLines} 行`);
+
+  const cssLines = countLines([walkFiles(cssDir, '*.css')]);
+  console.log(`Frontend CSS: ${cssLines} 行`);
+
+  const htmlLines = countLines([walkFiles(path.join(ROOT, 'frontend'), '*.html')]);
+  console.log(`Frontend HTML: ${htmlLines} 行`);
+
+  console.log('---');
+  console.log(`总计:       ${goLines + jsLines + cssLines + htmlLines} 行`);
+
+  // === Go 包分布 ===
+  console.log('\n=== Go 包行数 ===');
+  for (const [name, lines] of packageLines(path.join(ROOT, 'go'), '*.go')) {
+    console.log(`  ${name}: ${lines} 行`);
+  }
+
+  // === 前端组件分布 ===
+  console.log('\n=== 前端组件行数 ===');
+  for (const [name, lines] of packageLines(path.join(ROOT, 'frontend', 'js', 'components'), '*.js')) {
+    console.log(`  ${name}: ${lines} 行`);
+  }
+
+  // === 功能模块分布 ===
+  console.log('\n=== 功能模块行数 ===');
+  for (const [name, lines] of packageLines(path.join(ROOT, 'frontend', 'js', 'features'), '*.js')) {
+    console.log(`  ${name}: ${lines} 行`);
+  }
+
+  // === 大文件预警 ===
+  console.log('\n=== 大文件预警 (>700行) ===');
+  const oversized = oversizedFiles(goDirs.map((d) => walkFiles(d, '*.go'))).concat(oversizedFiles([walkFiles(jsDir, '*.js')]));
+  for (const [lines, fpath, isRed] of oversized) {
+    const tag = isRed ? 'RED' : 'YELLOW';
+    const rel = path.relative(ROOT, fpath);
+    console.log(`  [${tag}] ${rel}: ${lines} 行`);
+  }
+}
+
+main();

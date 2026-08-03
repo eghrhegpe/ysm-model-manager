@@ -58,6 +58,59 @@ function checkGoTest() {
   }
 }
 
+function buildUpdaterHelper() {
+  // go/updater/update.go 通过 //go:embed 内嵌 ysm-updater-helper.exe，
+  // 该文件由 cmd/updater/main.go 编译生成（见 cmd/build-release.ps1 步骤 1b），
+  // 且被 .gitignore(*.exe) 忽略、不入库。CI / 干净 checkout 缺此文件会导致
+  // go vet / go build / go test 因 embed 找不到文件而失败。
+  // 因此任何 Go 检查前必须先构建它（与 release.yml CI、windows Taskfile 一致）。
+  console.log('=== Build Updater Helper ===');
+  const { rc, out } = run(['go', 'build', '-o', 'go/updater/ysm-updater-helper.exe', './cmd/updater']);
+  if (rc === 0) {
+    console.log(`  ${PASS} updater helper built -> go/updater/ysm-updater-helper.exe`);
+  } else {
+    console.log(`  ${FAIL} updater helper build failed (go vet/build/test 将因此失败)`);
+    for (const line of out.trim().split('\n').slice(-5)) console.log(`    ${line}`);
+  }
+}
+
+function checkGoVet() {
+  console.log('\n=== Go Vet ===');
+  const { rc, out } = run(['go', 'vet', './go/...']);
+  if (rc === 0) {
+    console.log(`  ${PASS} go vet passed`);
+  } else {
+    console.log(`  ${FAIL} go vet failed`);
+    for (const line of out.trim().split('\n').slice(-5)) console.log(`    ${line}`);
+  }
+}
+
+function checkContractTests() {
+  // 契约测试为宪法基石，禁止修改（AGENTS.md 红线）。失败即阻断。
+  console.log('\n=== Contract Tests (tests/*.mjs) ===');
+  const dir = path.join(ROOT, 'tests');
+  if (!fs.existsSync(dir)) {
+    console.log(`  ${WARN} tests/ not found — skip`);
+    return;
+  }
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.mjs'));
+  if (files.length === 0) {
+    console.log(`  ${WARN} no .mjs contract tests`);
+    return;
+  }
+  let failed = 0;
+  for (const f of files) {
+    const { rc } = run(['node', path.join('tests', f)]);
+    if (rc === 0) console.log(`  ${PASS} ${f}`);
+    else {
+      failed += 1;
+      console.log(`  ${FAIL} ${f}`);
+    }
+  }
+  if (failed === 0) console.log(`  ${PASS} all contract tests passed`);
+  else console.log(`  ${FAIL} ${failed} contract test(s) failed`);
+}
+
 function checkFrontendBuild() {
   console.log('\n=== Frontend Build ===');
   // 先检查 npx 是否可用
@@ -208,8 +261,11 @@ function checkStaticAnalysis() {
 }
 
 console.log('========== YSM Doctor ==========');
+buildUpdaterHelper();
 checkGoBuild();
+checkGoVet();
 checkGoTest();
+checkContractTests();
 checkFrontendBuild();
 checkTypeScript();
 checkKeyFiles();

@@ -1,0 +1,117 @@
+// ===== YSM 摘要卡片 HTML 测试（ADR-021 扩展）=====
+// summaryCardHTML：占位 / 加密头部卡片 / 完整摘要 / 转义 / 徽章。
+import { describe, it, expect } from "vitest";
+import { summaryCardHTML } from "./summarize.ts";
+
+describe("summaryCardHTML 占位与兜底", () => {
+  it("summary 与 header 都为空 → 占位卡片", () => {
+    const html = summaryCardHTML(null, null);
+    expect(html).toContain("点击左侧仓库文件查看详情");
+    expect(html).toContain("dp-placeholder");
+  });
+
+  it("无 summary 有 header.isYsm → 加密模型简约卡片", () => {
+    const html = summaryCardHTML(null, { isYsm: true, name: "加密模型A" });
+    expect(html).toContain("加密模型，资源详情不可用");
+    expect(html).toContain("加密模型A");
+  });
+
+  it("无 summary 且 header 非 isYsm → 走完整卡片路径（名称回退 -）", () => {
+    const html = summaryCardHTML(null, { name: "x" });
+    expect(html).not.toContain("dp-placeholder");
+    expect(html).toContain("model-detail-title");
+    expect(html).toContain(">-</h3>");
+  });
+});
+
+describe("summaryCardHTML 完整摘要", () => {
+  const full = {
+    name: "测试角色",
+    source: "src",
+    license: "免费可商用",
+    tips: "§a使用说明",
+    authors: [{ name: "作者A", bilibili: "https://b23.tv/x", roles: "建模" }],
+    stats: { textures: 4, models: 2, animations: 6, texWidth: 128, texHeight: 256 },
+    animGroups: [
+      { name: "表情", items: ["开心", "range", "checkbox"] },
+      { name: "纯内部", items: ["range", "slider"] },
+    ],
+    configMenus: [{ name: "菜单1" }, { name: "menu_main" }],
+    links: { home: "https://example.com" },
+  };
+
+  it("渲染名称 / 作者（含 bilibili 链接与角色）/ 许可", () => {
+    const html = summaryCardHTML(full, {});
+    expect(html).toContain("测试角色");
+    expect(html).toContain("作者A");
+    expect(html).toContain("https://b23.tv/x");
+    expect(html).toContain("建模");
+    expect(html).toContain("免费可商用");
+  });
+
+  it("渲染资源统计与纹理尺寸", () => {
+    const html = summaryCardHTML(full, {});
+    expect(html).toContain("贴图 4 · 模型 2 · 动画 6");
+    expect(html).toContain("128 × 256 px");
+  });
+
+  it("动画分组过滤内部标识符（range/checkbox 等）", () => {
+    const html = summaryCardHTML(full, {});
+    expect(html).toContain("表情");
+    expect(html).toContain("开心");
+    expect(html).not.toContain("range");
+    // 纯内部标识符的分组整体跳过
+    expect(html).not.toContain("纯内部");
+  });
+
+  it("配置菜单渲染名称，纯标识符也渲染（与动画分组不同）", () => {
+    const html = summaryCardHTML(full, {});
+    expect(html).toContain("菜单1");
+    expect(html).toContain("menu_main");
+  });
+
+  it("渲染主页链接并省略协议前缀", () => {
+    const html = summaryCardHTML(full, {});
+    expect(html).toContain("example.com");
+  });
+
+  it("缺少许可显示未标注", () => {
+    const html = summaryCardHTML({ name: "x" }, {});
+    expect(html).toContain("未标注");
+  });
+
+  it("缩放值格式化为两位小数", () => {
+    const html = summaryCardHTML(
+      { name: "x", preview: { heightScale: 1.5, widthScale: 2 } },
+      {},
+    );
+    expect(html).toContain("1.50 × 2.00");
+  });
+});
+
+describe("summaryCardHTML 徽章与转义", () => {
+  it("hasFree+isFree → 🆓 免费徽章", () => {
+    const html = summaryCardHTML({ name: "x" }, { hasFree: true, isFree: true });
+    expect(html).toContain("🆓 免费");
+    expect(html).not.toContain("🔒");
+  });
+
+  it("hasFree+非 isFree → 🔒 付费徽章", () => {
+    const html = summaryCardHTML({ name: "x" }, { hasFree: true, isFree: false });
+    expect(html).toContain("🔒 付费");
+  });
+
+  it("名称含 HTML 字符被转义（防 XSS）", () => {
+    const html = summaryCardHTML({ name: '<img src=x onerror=alert(1)>' }, {});
+    expect(html).not.toContain("<img");
+    expect(html).toContain("&lt;img");
+  });
+
+  it("作者名含 HTML 字符被转义", () => {
+    const html = summaryCardHTML(
+      { name: "x", authors: [{ name: "<script>alert(1)</script>" }] },
+      {},
+    );
+    expect(html).not.toContain("<script>");
+  });
+});

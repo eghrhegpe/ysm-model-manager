@@ -118,7 +118,7 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
         ? `<a href="${esc(header.authorBilibili)}" target="_blank" style="color:var(--accent);text-decoration:none" title="${esc(header.authorBilibili)}">📺</a>`
         : "";
       const role = header.authorRole ? cleanText(header.authorRole) : "";
-      authorHtml = `${cleanText(header.authorName)}${bili}${role ? `（${esc(role)}）` : ""}`;
+      authorHtml = `${esc(cleanText(header.authorName))}${bili}${role ? `（${esc(role)}）` : ""}`;
     }
   }
 
@@ -179,7 +179,7 @@ export function summaryCardHTML(
   let authorHtml = "";
   if (authors.length > 0) {
     const parts = authors.map((a) => {
-      const name = cleanText(a.name || "");
+      const name = esc(cleanText(a.name || ""));
       const bili = a.bilibili
         ? `<a href="${esc(a.bilibili)}" target="_blank" style="color:var(--accent);text-decoration:none" title="${esc(a.bilibili)}">📺</a>`
         : "";

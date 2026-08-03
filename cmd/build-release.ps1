@@ -140,7 +140,7 @@ if (-not $SkipUpload) {
     Write-Host "🚀 准备上传到 GitHub Releases..." -ForegroundColor Cyan
 
     # 读取发版说明
-    $ReleaseNotesPath = "$ProjectRoot\docs\release-notes\$VerTag.md"
+    $ReleaseNotesPath = "$ProjectRoot\docs\releases\$VerTag.md"
     $ReleaseBody = ""
     if (Test-Path $ReleaseNotesPath) {
         $ReleaseBody = Get-Content $ReleaseNotesPath -Raw

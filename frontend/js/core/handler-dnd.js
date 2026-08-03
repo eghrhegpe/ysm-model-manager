@@ -1,7 +1,7 @@
 // ===== 全局拖拽导入 =====
 import { bus } from "../bus.ts";
-import { PageStore } from "./page-store.js";
-import { DnDLock, PendingImport } from "../features/dnd-state.js";
+import { PageStore } from "./page-store.ts";
+import { DnDLock, PendingImport } from "../features/dnd-state.ts";
 import { getApp } from "../wails/app.ts";
 import { ALL_EXTS, extBelongsTo } from "../utils/extensions.ts";
 

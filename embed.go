@@ -6,7 +6,7 @@ import (
 	"ysm-model-manager/internal/app"
 )
 
-//go:embed creators.json resource_types.json workshop_gitHub.json workshop_sites.json
+//go:embed creators.json resource_types.json workshop-github.json workshop_sites.json
 var bundledResourceFS embed.FS
 
 //go:embed frontend/dist/wasm/YSMParser.wasm

@@ -154,14 +154,14 @@ func (a *App) SaveWorkshopPresetsBySite(siteID string, presets []types.WorkshopP
 func workshopGitHubPath() string {
 	exe, _ := os.Executable()
 	return findConfigFile(
-		filepath.Join(filepath.Dir(exe), "workshop_gitHub.json"),
-		filepath.Join(filepath.Dir(exe), "..", "workshop_gitHub.json"),
+		filepath.Join(filepath.Dir(exe), "workshop-github.json"),
+		filepath.Join(filepath.Dir(exe), "..", "workshop-github.json"),
 	)
 }
 
 func (a *App) LoadGitHubRepos() []types.WorkshopCreator {
 	var list []types.WorkshopCreator
-	if err := loadBundledJSON("workshop_gitHub.json", &list); err != nil {
+	if err := loadBundledJSON("workshop-github.json", &list); err != nil {
 		return nil
 	}
 	return list

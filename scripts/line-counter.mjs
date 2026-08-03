@@ -9,17 +9,18 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function walkFiles(dir, pattern, skip = () => false) {
+function walkFiles(dir, patterns, skip = () => false) {
+  const list = Array.isArray(patterns) ? patterns : [patterns];
   const out = [];
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      out.push(...walkFiles(full, pattern, skip));
+      out.push(...walkFiles(full, list, skip));
     } else if (entry.isFile()) {
       if (skip(full)) continue;
       const rel = path.relative(ROOT, full).replace(/\\/g, '/');
-      if (new RegExp(pattern.replace(/\*/g, '.*') + '$').test(rel) || rel.endsWith(pattern.replace('*', ''))) {
+      if (list.some((p) => new RegExp(p.replace(/\*/g, '.*') + '$').test(rel) || rel.endsWith(p.replace('*', '')))) {
         out.push(full);
       }
     }
@@ -96,8 +97,8 @@ function main() {
   }
   console.log(`Go:         ${goLines} 行`);
 
-  const jsLines = countLines([walkFiles(jsDir, '*.js')]);
-  console.log(`Frontend JS: ${jsLines} 行`);
+  const jsLines = countLines([walkFiles(jsDir, ['*.js', '*.ts'])]);
+  console.log(`Frontend JS/TS: ${jsLines} 行`);
 
   const cssLines = countLines([walkFiles(cssDir, '*.css')]);
   console.log(`Frontend CSS: ${cssLines} 行`);
@@ -116,19 +117,19 @@ function main() {
 
   // === 前端组件分布 ===
   console.log('\n=== 前端组件行数 ===');
-  for (const [name, lines] of packageLines(path.join(ROOT, 'frontend', 'js', 'components'), '*.js')) {
+  for (const [name, lines] of packageLines(path.join(ROOT, 'frontend', 'js', 'components'), ['*.js', '*.ts'])) {
     console.log(`  ${name}: ${lines} 行`);
   }
 
   // === 功能模块分布 ===
   console.log('\n=== 功能模块行数 ===');
-  for (const [name, lines] of packageLines(path.join(ROOT, 'frontend', 'js', 'features'), '*.js')) {
+  for (const [name, lines] of packageLines(path.join(ROOT, 'frontend', 'js', 'features'), ['*.js', '*.ts'])) {
     console.log(`  ${name}: ${lines} 行`);
   }
 
   // === 大文件预警 ===
   console.log('\n=== 大文件预警 (>700行) ===');
-  const oversized = oversizedFiles(goDirs.map((d) => walkFiles(d, '*.go'))).concat(oversizedFiles([walkFiles(jsDir, '*.js')]));
+  const oversized = oversizedFiles(goDirs.map((d) => walkFiles(d, '*.go'))).concat(oversizedFiles([walkFiles(jsDir, ['*.js', '*.ts'])]));
   for (const [lines, fpath, isRed] of oversized) {
     const tag = isRed ? 'RED' : 'YELLOW';
     const rel = path.relative(ROOT, fpath);

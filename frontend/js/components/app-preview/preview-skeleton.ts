@@ -7,6 +7,11 @@ import { openFullPreview } from "./preview-zoom.ts";
 import type { BedrockGeometry } from "./utils.ts";
 import type { BoneSelectInfo } from "../../utils/model3d.ts";
 
+// 2D 拖拽的 window 监听器槽位：loadModel2D 每次渲染模型都会绑定，
+// 先移除上一轮处理器再绑定，防止 window 级监听器累积泄漏
+let _prevWindowMove: ((e: MouseEvent) => void) | null = null;
+let _prevWindowUp: (() => void) | null = null;
+
 /** RenderModel3DHandle 运行时扩展（_keyHandler/_timeTimer/_boneDetailEl 为 JS 时代附加字段） */
 type Model3DHandleX = import("../../utils/model3d.ts").RenderModel3DHandle & {
   _keyHandler?: ((e: KeyboardEvent) => void) | null;
@@ -177,17 +182,24 @@ export async function loadModel2D(
       _dragged = false;
       _lastX = e.clientX;
     });
-    window.addEventListener("mousemove", (e) => {
+    // 幂等绑定：先移除上一轮处理器（每次 loadModel2D 都执行，防 window 监听器累积）
+    if (_prevWindowMove) window.removeEventListener("mousemove", _prevWindowMove);
+    if (_prevWindowUp) window.removeEventListener("mouseup", _prevWindowUp);
+    const onWindowMove = (e: MouseEvent): void => {
       if (!_dragging) return;
       const dx = e.clientX - _lastX;
       if (Math.abs(dx) > 3) _dragged = true; // 移动超过 3px 判定为拖拽
       _lastX = e.clientX;
       _rotation = (_rotation + dx * 0.5) % 360;
       doRender();
-    });
-    window.addEventListener("mouseup", () => {
+    };
+    const onWindowUp = (): void => {
       _dragging = false;
-    });
+    };
+    _prevWindowMove = onWindowMove;
+    _prevWindowUp = onWindowUp;
+    window.addEventListener("mousemove", onWindowMove);
+    window.addEventListener("mouseup", onWindowUp);
     canvas.addEventListener("click", (e) => {
       if (_dragged) {
         e.stopPropagation();
@@ -264,18 +276,7 @@ export async function loadModel2D(
         closeBtn.textContent = "✕ 关闭 3D";
         closeBtn.style.cssText = "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
         closeBtn.onclick = (): void => {
-          document.removeEventListener("mousemove", onResizeMove);
-          document.removeEventListener("mouseup", onResizeUp);
-          const ov = document.getElementById("ysm-overlay-3d");
-          if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
-          _overlay3d = null;
-          _is3D = false;
-          _prefer3D = false;
-          setPrefer3D(false);
-          if (_model3d) {
-            _model3d.cleanup();
-            _model3d = null;
-          }
+          close3D();
         };
         topBar.appendChild(closeBtn);
 
@@ -450,6 +451,24 @@ export async function loadModel2D(
         });
         document.addEventListener("mousemove", onResizeMove);
         document.addEventListener("mouseup", onResizeUp);
+
+        // 统一关闭 3D：移除 resize/keydown 监听器 + 清理渲染资源（关闭按钮/ESC/切换纹理三条路径共用）
+        const close3D = (): void => {
+          document.removeEventListener("mousemove", onResizeMove);
+          document.removeEventListener("mouseup", onResizeUp);
+          if (_model3d) {
+            if (_model3d._timeTimer) clearInterval(_model3d._timeTimer);
+            if (_model3d._keyHandler)
+              document.removeEventListener("keydown", _model3d._keyHandler);
+            _model3d.cleanup();
+            _model3d = null;
+          }
+          if (_overlay3d?.parentNode) _overlay3d.parentNode.removeChild(_overlay3d);
+          _overlay3d = null;
+          _is3D = false;
+          _prefer3D = false;
+          setPrefer3D(false);
+        };
 
         // 辅助函数
         const sec = (text: string): HTMLDivElement => {
@@ -735,18 +754,7 @@ export async function loadModel2D(
 
           const onKey = (e: KeyboardEvent): void => {
             if (e.key !== "Escape") return;
-            document.removeEventListener("mousemove", onResizeMove);
-            document.removeEventListener("mouseup", onResizeUp);
-            const ov = document.getElementById("ysm-overlay-3d");
-            if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
-            _overlay3d = null;
-            _is3D = false;
-            _prefer3D = false;
-            setPrefer3D(false);
-            if (_model3d) {
-              _model3d.cleanup();
-              _model3d = null;
-            }
+            close3D();
           };
           document.addEventListener("keydown", onKey);
           if (_model3d) _model3d._keyHandler = onKey;
@@ -758,23 +766,6 @@ export async function loadModel2D(
         }
       }
     };
-
-    function close3D(): void {
-      // 原 JS 在此引用 _toggle3D 内的 onResizeMove/onResizeUp（局部变量）→ ReferenceError
-      // 使 close3D 整体抛错、3D 资源泄漏；TS 编译期暴露，删除死引用（泄漏随之修复）
-      if (_model3d) {
-        if (_model3d._timeTimer) clearInterval(_model3d._timeTimer);
-        if (_model3d._keyHandler)
-          document.removeEventListener("keydown", _model3d._keyHandler);
-        _model3d.cleanup();
-        _model3d = null;
-      }
-      if (_overlay3d?.parentNode) _overlay3d.parentNode.removeChild(_overlay3d);
-      _overlay3d = null;
-      _is3D = false;
-      _prefer3D = false;
-      setPrefer3D(false);
-    }
 
     // 接线 🎨 3D tab 按钮
     const btn3d = ctx._root.getElementById("btn-3d-preview");

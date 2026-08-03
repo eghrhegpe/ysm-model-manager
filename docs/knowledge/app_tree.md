@@ -5,6 +5,7 @@ tier: architecture
 category: ui
 source_files:
   - frontend/js/components/app-tree/index.ts
+  - frontend/js/components/app-tree/
 use_when:
   - 树形
   - 资源列表

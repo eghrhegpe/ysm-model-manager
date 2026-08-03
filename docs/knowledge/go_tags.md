@@ -5,6 +5,7 @@ tier: architecture
 category: go
 source_files:
   - go/tags/tags.go
+  - go/tags/
 use_when:
   - 标签
   - tag

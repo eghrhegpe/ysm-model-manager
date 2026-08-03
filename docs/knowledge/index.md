@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 43 张知识卡
+> 总计: 65 张知识卡
 
 ## config（1 张）
 
@@ -12,24 +12,29 @@
 |------|------|------|
 | 🏗 resource_registry | 资源注册表 registry | architecture |
 
-## core（3 张）
+## core（5 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
 | 标识 | 名称 | tier |
 |------|------|------|
 | 🏗 event_bus | 事件总线 bus.ts | architecture |
+| 🏗 global_handlers | 全局事件处理 global-handlers | architecture |
 | 🏗 page_store | 页面状态管理 page-store.ts | architecture |
+| 🍃 theme | 主题系统 theme | leaf |
 | 🏗 wails_bridge | Wails 桥接 app.ts | architecture |
 
-## feature（3 张）
+## feature（6 张）
 
 *业务功能（导入队列、同步、社区）*
 
 | 标识 | 名称 | tier |
 |------|------|------|
+| 🏗 community_feature | 社区下载 community | architecture |
 | 🏗 import_queue | 导入队列 import-queue | architecture |
+| 🍃 oldest_models | 资历最深模型 oldest-models | leaf |
 | 🏗 recycle_bin | 回收站界面 recycle-bin | architecture |
+| 🏗 resource_packs | 资源包功能 resource-packs | architecture |
 | 🏗 version_updater | 版本更新 version-updater | architecture |
 
 ## go（22 张）
@@ -61,7 +66,7 @@
 | 🏗 go_ysm_parser | YSM 解析 go/ysm | architecture |
 | 🏗 wails_bindings | Wails Binding API 总览 internal/app | architecture |
 
-## ui（10 张）
+## ui（16 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -77,17 +82,34 @@
 | 🍃 app_toast | Toast 通知 app-toast | leaf |
 | 🏗 app_tree | 资源树 app-tree | architecture |
 | 🏗 context_menu | 右键菜单系统 | architecture |
+| 🍃 dialog_adv_filter | 高级筛选 adv-filter | leaf |
+| 🏗 dialog_batch_rename | 批量重命名 batch-rename | architecture |
+| 🏗 dialog_modal | 弹窗基座 modal | architecture |
+| 🍃 dialog_rename | 重命名弹窗 rename | leaf |
+| 🏗 dialog_tag_editor | 标签编辑器 tag-editor | architecture |
+| 🍃 shared_styles | 共享样式 shared-styles | leaf |
 
-## utils（4 张）
+## utils（15 张）
 
 *工具函数（display、fmt、dom、animation）*
 
 | 标识 | 名称 | tier |
 |------|------|------|
+| 🏗 animation_system | 动画系统 animation | architecture |
+| 🏗 model2d | 2D 预览渲染 model2d | architecture |
+| 🏗 model3d | 3D 预览渲染 model3d | architecture |
 | 🍃 utils_display | 文件名显示 display | leaf |
 | 🍃 utils_dom | DOM 工具 dom | leaf |
+| 🍃 utils_errors | 错误处理 errors | leaf |
+| 🏗 utils_export | 截图与导出 export | architecture |
+| 🍃 utils_extensions | 扩展名映射 extensions | leaf |
 | 🍃 utils_fmt | 格式化工具 fmt | leaf |
 | 🍃 utils_icon | 图标映射 icon | leaf |
+| 🍃 utils_mc_format | MC 格式判定 mc-format | leaf |
+| 🍃 utils_misc | 常量与调试 constants/debug | leaf |
+| 🍃 utils_resource_types | 资源类型工具 resource-types | leaf |
+| 🍃 utils_summarize | 摘要生成 summarize | leaf |
+| 🏗 ysm_wasm | WASM 解析器 ysm-parser | architecture |
 
 ---
 

@@ -5,6 +5,7 @@ tier: leaf
 category: go
 source_files:
   - go/fsutil/walk.go
+  - go/fsutil/
 use_when:
   - 遍历
   - 目录

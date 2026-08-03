@@ -7,6 +7,7 @@ source_files:
   - go/litematic/parser.go
   - go/litematic/nbt.go
   - go/litematic/voxel.go
+  - go/litematic/
 use_when:
   - 投影
   - litematic

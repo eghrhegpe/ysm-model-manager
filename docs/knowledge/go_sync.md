@@ -7,6 +7,7 @@ source_files:
   - go/sync/sync.go
   - go/sync/link_windows.go
   - go/sync/link_unix.go
+  - go/sync/
 use_when:
   - 整合包
   - 同步

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { fmt, sizeColor, fmtDate } from "./fmt.ts";
 
 describe("fmt", () => {
@@ -18,20 +18,24 @@ describe("sizeColor", () => {
 });
 
 describe("fmtDate", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("returns today as time", () => {
-    const d = new Date();
-    const result = fmtDate(d.getTime());
-    expect(result).toMatch(/\d{2}:\d{2}/);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 3, 14, 30));
+    const result = fmtDate(new Date(2026, 7, 3, 10, 15).getTime());
+    expect(result).toMatch(/\d{1,2}:\d{2}/);
+    expect(result).not.toContain("月");
   });
   it("returns month-day for this year", () => {
-    const d = new Date();
-    d.setMonth(5);
-    d.setDate(15);
-    d.setFullYear(d.getFullYear());
-    const result = fmtDate(d.getTime());
-    expect(result).toMatch(/月/);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 3));
+    const result = fmtDate(new Date(2026, 5, 15).getTime());
+    expect(result).toBe("6月15日");
   });
   it("returns YYYY/M/D for other year", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 3));
     const result = fmtDate(new Date(2023, 0, 1).getTime());
     expect(result).toBe("2023/1/1");
   });

@@ -29,16 +29,16 @@ type ModelGroup struct {
 }
 
 type BoneData struct {
-	ID            string    `json:"id"`
-	Name          string    `json:"name"`
-	ParentID      *string   `json:"parentId"`
+	ID            string     `json:"id"`
+	Name          string     `json:"name"`
+	ParentID      *string    `json:"parentId"`
 	LocalPosition [3]float64 `json:"localPosition"`
 	LocalRotation [4]float64 `json:"localRotation"` // quaternion [x,y,z,w]
 }
 
 type MeshData struct {
-	ID            string    `json:"id"`
-	BoneID        string    `json:"boneId"`
+	ID            string     `json:"id"`
+	BoneID        string     `json:"boneId"`
 	LocalPosition [3]float64 `json:"localPosition"`
 	LocalRotation [4]float64 `json:"localRotation"` // quaternion [x,y,z,w]
 	Positions     []float64  `json:"positions"`
@@ -80,8 +80,8 @@ func Build(model types.BedrockModel) (string, error) {
 	}
 
 	var bones []BoneData
-	boneIdx := make(map[string]int)  // name → index in bones[]
-	boneDone := make(map[string]bool) // name → already processed into mesh
+	boneIdx := make(map[string]int)              // name → index in bones[]
+	boneDone := make(map[string]bool)            // name → already processed into mesh
 	boneCubes := make(map[string][]types.Cube2D) // name → accumulated cubes
 
 	for _, b := range model.Bones {
@@ -116,7 +116,7 @@ func Build(model types.BedrockModel) (string, error) {
 			newHasParent := b.Parent != ""
 			existingHasRot := bones[idx].LocalRotation != [4]float64{0, 0, 0, 1}
 			newHasRot := localRot != [4]float64{0, 0, 0, 1}
-			
+
 			overwrite := (!existingHasParent && newHasParent) ||
 				(existingHasParent && newHasParent && !existingHasRot && newHasRot)
 			if overwrite {
@@ -221,7 +221,7 @@ func Build(model types.BedrockModel) (string, error) {
 			})
 		}
 	}
-	
+
 	// 后处理：修复断裂的父子链
 	boneNameSet := make(map[string]bool)
 	for _, b := range bones {
@@ -391,12 +391,12 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 		n [3]float64  // normal
 		f int         // face index
 	}{
-		{[12]float64{hx, hy, hz, hx, hy, lz, hx, ly, hz, hx, ly, lz}, [3]float64{1, 0, 0}, 0}, // East
+		{[12]float64{hx, hy, hz, hx, hy, lz, hx, ly, hz, hx, ly, lz}, [3]float64{1, 0, 0}, 0},  // East
 		{[12]float64{lx, hy, lz, lx, hy, hz, lx, ly, lz, lx, ly, hz}, [3]float64{-1, 0, 0}, 1}, // West
-		{[12]float64{lx, hy, lz, hx, hy, lz, lx, hy, hz, hx, hy, hz}, [3]float64{0, 1, 0}, 2},   // Up
-		{[12]float64{lx, ly, hz, hx, ly, hz, lx, ly, lz, hx, ly, lz}, [3]float64{0, -1, 0}, 3},  // Down
-		{[12]float64{lx, hy, hz, hx, hy, hz, lx, ly, hz, hx, ly, hz}, [3]float64{0, 0, 1}, 4},   // South
-		{[12]float64{hx, hy, lz, lx, hy, lz, hx, ly, lz, lx, ly, lz}, [3]float64{0, 0, -1}, 5},  // North
+		{[12]float64{lx, hy, lz, hx, hy, lz, lx, hy, hz, hx, hy, hz}, [3]float64{0, 1, 0}, 2},  // Up
+		{[12]float64{lx, ly, hz, hx, ly, hz, lx, ly, lz, hx, ly, lz}, [3]float64{0, -1, 0}, 3}, // Down
+		{[12]float64{lx, hy, hz, hx, hy, hz, lx, ly, hz, hx, ly, hz}, [3]float64{0, 0, 1}, 4},  // South
+		{[12]float64{hx, hy, lz, lx, hy, lz, hx, ly, lz, lx, ly, lz}, [3]float64{0, 0, -1}, 5}, // North
 	}
 
 	for _, fd := range faceDefs {
@@ -513,12 +513,12 @@ func expandBoxUV(uv [2]float64, sx, sy, sz, texW, texH float64, faces *[6][8]flo
 		fu, fv, fw, fh float64
 		f              int
 	}{
-		{u, v + z, z, y, 0},               // East
-		{u + z + x, v + z, z, y, 1},        // West
-		{u + z + x, v + z, -x, -z, 2},       // Up
-		{u + z + x + x, v, -x, z, 3},        // Down
-		{u + z + z + x, v + z, x, y, 4},    // South
-		{u + z, v + z, x, y, 5},            // North
+		{u, v + z, z, y, 0},             // East
+		{u + z + x, v + z, z, y, 1},     // West
+		{u + z + x, v + z, -x, -z, 2},   // Up
+		{u + z + x + x, v, -x, z, 3},    // Down
+		{u + z + z + x, v + z, x, y, 4}, // South
+		{u + z, v + z, x, y, 5},         // North
 	}
 
 	for _, d := range uvData {
@@ -540,8 +540,8 @@ func expandBoxUV(uv [2]float64, sx, sy, sz, texW, texH float64, faces *[6][8]flo
 // parseFaceUV 对应 YSMViewer GetFaceUV() — 每面独立 UV
 func parseFaceUV(faceUVStr string, faces *[6][8]float64, texW, texH float64) bool {
 	var faceData map[string]struct {
-		Uv      []float64 `json:"uv"`
-		UvSize  []float64 `json:"uv_size"`
+		Uv     []float64 `json:"uv"`
+		UvSize []float64 `json:"uv_size"`
 	}
 	if err := json.Unmarshal([]byte(faceUVStr), &faceData); err != nil {
 		log.Printf("[threejs] parseFaceUV 失败: %v", err)

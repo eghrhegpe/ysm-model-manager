@@ -47,7 +47,7 @@ describe("parseModelName", () => {
   it("works without brackets", () => {
     const r = parseModelName("单纯文件名.7z");
     expect(r.author).toBe("");
-    expect(r.chara).toMatch(/单纯/);
+    expect(r.chara).toBe("单纯文件名");
     expect(r.ext).toBe("7z");
   });
 

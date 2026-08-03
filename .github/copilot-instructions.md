@@ -31,14 +31,13 @@
     ```
 13. **发版归档**: `docs/releases/v{major}.{minor}.{patch}.md`（用户版）+ `docs/releases/v{major}.{minor}.{patch}-compare.md`（开发者版，含对比表和文件清单） + 更新 `README.md` 索引表。GitHub Release 使用用户版。用户版面向使用者，写功能/改进/修复；`-compare` 版面向开发者，写实现对比和文件变更。
 14. **文件名渲染统一** — 所有 UI 文件名必须走 `renderDisplayName()`，禁止 `textContent`/`esc()` 绕过。
-15. **禁止安装软件** — 缺依赖提示用户手动装。
-16. **路径用正斜杠 `/`**。
-17. **WebView2 DnD 特殊性**：
+15. **路径用正斜杠 `/`**。
+16. **WebView2 DnD 特殊性**：
     - `dragover` 阶段无法读取文件名（`getAsFile()` 返回 null，`webkitGetAsEntry()` 返回 null），只能 `preventDefault()` + 显示遮罩
     - `drop` 阶段优先用 `dataTransfer.items` + `webkitGetAsEntry()`，兜底用 `dataTransfer.files`
     - `FileSystemEntry.file(callback)` 是回调，须用 `new Promise` 包装
     - `DataTransferItem` 没有 `.name` 属性（`File` 才有）
-18. **调试日志用完即删** — 添加的调试日志（`console.log`/`fmt.Print` 等）在测试完成后，**必须请示用户确认无误后再删除**，不可自行决定删留。
+17. **调试日志用完即删** — 添加的调试日志（`console.log`/`fmt.Print` 等）在测试完成后，**必须请示用户确认无误后再删除**，不可自行决定删留。
 
 ## 项目结构速查
 

@@ -1,6 +1,6 @@
 ---
 title: 致命陷阱手册
-description: 项目历史事故浓缩的 11 条避坑教训 — 现象 × 根因 × 规则
+description: 项目历史事故浓缩的 12 条避坑教训 — 现象 × 根因 × 规则
 ---
 
 # 致命陷阱手册（Pitfalls）
@@ -65,6 +65,11 @@ description: 项目历史事故浓缩的 11 条避坑教训 — 现象 × 根因
 
 - **现象**：「对齐 ysmview cube pivot」连续 5 次 fix；实证 model3d.ts 9 次 fix 全项目第一。
 - **规则**：改 model2d/model3d/spec.go 坐标前先 grep `bug-chronicle` + 对齐 ysmview 口径（pivot X 取反、`from.x = origin.x - size.x`）；改完用自由相机近距验证。坐标系问题见 ADR-004。
+
+## 12. CLI 未知 flag 被当标题/位置参数
+
+- **现象**：`new-adr.mjs --help` 被当成标题，误占号生成 `ADR-027-help.md`；`new-knowledge-card.mjs --help` 被当成 kind，生成 `help.md` 知识卡（2026-08-04 并行 AI 实证）。
+- **规则**：凡有 positional 参数的 CLI（title/kind/file 等），未知 `--flag` 必须显式白名单拦截，**绝不落入位置参数位**——`--help`/`-h` 输出用法退出 0，未知 flag 报错退出 1；主流程统一 `process.exit(main())` 让退出码真实生效（否则 `return 1` 恒为 0）。已修复：`new-adr.mjs`（parseArgs 白名单）、`new-knowledge-card.mjs`（positional 过滤 flag）。
 
 ---
 

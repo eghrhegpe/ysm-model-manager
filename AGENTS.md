@@ -237,7 +237,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 文档断链 | `node scripts/link-checker.mjs` | 所有 md 内部链接（改文档后必跑） |
 | ADR 登记一致性 | `node scripts/adr-check.mjs` | adr/README.md 登记表 vs 磁盘文件（防撞号/漏登/幽灵） |
 | 知识卡漂移 | `node scripts/check-knowledge-drift.mjs` | knowledge/ 卡与源码一致性 |
-| 红线审查 | `node scripts/review.mjs` | 13 条治理红线（R1-R9 + W1-W5） |
+| 红线审查 | `node scripts/review.mjs` / `--audit` | 13 条治理红线（R1-R9 + W1-W5）；`--audit` 出设计审查 checklist |
 | 类型一致性 | `node scripts/type-consistency.mjs` | resource_types.json ↔ extensions.js |
 | 事件审计 | `node scripts/event-audit.mjs` | EventsOn/bus.on 注册位置 |
 | 注释质量 | `node scripts/comment-checker.mjs` | AI 废话/TODO 无编号/调试残留 |

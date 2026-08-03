@@ -17,7 +17,7 @@
 3. **首次配置**：启动程序 → 设置游戏根目录（`.minecraft` 文件夹）→ 设置模型仓库路径
 4. **开始使用**：把模型文件放入仓库目录，或通过拖拽导入
 
-> 📖 **详细说明见 [用户指南](docs/architecture/用户指南.md)**，包含 FAQ、故障排查、链接模式详解等。
+> 📖 **详细说明见 [用户指南](docs/guide/用户指南.md)**，包含 FAQ、故障排查、链接模式详解等。
 > 🎨 **设计规范见 [Design.md](docs/frontend/Design.md)**，AI 开发时的 UI 约束指南。
 > 🧭 **开发者入口见 [docs/architecture/README.md](docs/architecture/README.md)**，AI 协作规则见 [AGENTS.md](AGENTS.md)。
 
@@ -286,7 +286,7 @@ wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 
 | 文档                                                                 | 内容                                      |
 | -------------------------------------------------------------------- | ----------------------------------------- |
-| [`docs/architecture/用户指南.md`](docs/architecture/用户指南.md)     | **用户手册**：安装、配置、功能详解、FAQ   |
+| [`docs/guide/用户指南.md`](docs/guide/用户指南.md)                   | **用户手册**：安装、配置、功能详解、FAQ   |
 | [`docs/architecture/architecture.md`](docs/architecture/architecture.md) | 前端架构规范 + 组件拆分指南            |
 | [`docs/frontend/Design.md`](docs/frontend/Design.md)                 | UI 设计规范（CSS 变量、布局、字体）       |
 | [`docs/architecture/bug-chronicle.md`](docs/architecture/bug-chronicle.md) | Bug 排查记录（含 Debug Path Review）  |

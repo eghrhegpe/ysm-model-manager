@@ -261,7 +261,7 @@ Minecraft YSM 模型的一站式管理工具<br>
 3. 在设置页面配置 **游戏根目录** 和 **仓库目录**
 4. 将模型文件放入仓库目录，开始管理！
 
-> 📖 详细教程请参阅 [用户指南](用户指南.md)
+> 📖 详细教程请参阅 [用户指南](../guide/用户指南.md)
 
 ---
 
@@ -280,10 +280,10 @@ YSM 模型管理器基于 **Wails v3** 构建，Go 后端负责文件系统操�
 
 ## 📄 文档
 
-- [用户指南](用户指南.md) — 完整的使用教程
+- [用户指南](../guide/用户指南.md) — 完整的使用教程
 - [架构说明](architecture.md) — 项目架构与技术设计
 - [发版说明](../release-notes/) — 各版本更新详情
-- [项目意义](项目意义.md) — 开发背后的故事
+- [项目意义](../guide/项目意义.md) — 开发背后的故事
 
 ---
 
@@ -291,7 +291,7 @@ YSM 模型管理器基于 **Wails v3** 构建，Go 后端负责文件系统操�
 
 <a class="btn-secondary" href="https://github.com/eghrhegpe/ysm-model-manager/releases" target="_blank">⬇️ 下载</a>
 <a class="btn-secondary" href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank">💻 源码</a>
-<a class="btn-secondary" href="用户指南.md">📖 指南</a>
+<a class="btn-secondary" href="../guide/用户指南.md">📖 指南</a>
 <a class="btn-secondary" href="https://www.bilibili.com/video/BV1vWEK6dEav/" target="_blank">▶️ 视频</a>
 
 </div>

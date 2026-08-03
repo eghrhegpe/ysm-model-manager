@@ -234,9 +234,9 @@ func InstallUpdate(zipPath string) error {
 		"resource_types.json": true,
 	}
 	createIfMissing := map[string]bool{
-		"workshop_sites.json": true,
-		"workshop_gitHub.json": true,
-		"creators.json":       true,
+		"workshop_sites.json":  true,
+		"workshop-github.json": true,
+		"creators.json":        true,
 	}
 
 	for _, f := range r.File {

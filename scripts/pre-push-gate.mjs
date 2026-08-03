@@ -274,6 +274,15 @@ function main() {
     if (ac.rc !== 0) blocked = true;
   }
 
+  /* --- 生成器守护：索引产物是否过期（docs 或 adr 变更时） --- */
+  if (plan.docs || plan.adr) {
+    const t0 = Date.now();
+    const gd = sh('node scripts/gen-docs-index.mjs --check');
+    results.push({ label: 'gen-docs-index', ok: gd.rc === 0, time: Date.now() - t0,
+      tail: gd.rc ? gd.out.trim().split('\n').slice(-4).join('\n') : '' });
+    if (gd.rc !== 0) blocked = true;
+  }
+
   /* --- 契约测试 --- */
   if (plan.contractTests) {
     const t0 = Date.now();

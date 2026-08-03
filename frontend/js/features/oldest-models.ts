@@ -287,8 +287,7 @@ export async function loadOldestModel(
     }
   }
 
-  // 监听全局类型切换
-  if (unsub) unsub();
+  // 监听全局类型切换（unsub 为局部变量，此处恒 null——死代码已随迁移清除）
   unsub = bus.on("repo:rtype-changed", (rtype) => {
     if (rtype && rtype !== currentType) {
       currentType = rtype;

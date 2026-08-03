@@ -3,7 +3,7 @@ import { bus } from "../bus.ts";
 import { modalConfirm } from "../dialogs/modal.js";
 import { renderDisplayName } from "../utils/display.ts";
 import { friendlyError } from "../utils/errors.ts";
-import { loadResourceRegistry } from "../utils/resource-registry.js";
+import { loadResourceRegistry } from "../utils/resource-registry.ts";
 
 export function initRecycleBin(app) {
   const root = app._root;

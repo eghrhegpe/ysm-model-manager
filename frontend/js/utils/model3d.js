@@ -459,6 +459,6 @@ window.__screenshotPreview = () => {
 
 // 延迟加载批量截图
 window.__batchRepoScreenshots = async (repoRoot) => {
-  const mod = await import("./screenshot-renderer.js");
+  const mod = await import("./screenshot-renderer.ts");
   return mod.batchRepoScreenshots(repoRoot);
 };

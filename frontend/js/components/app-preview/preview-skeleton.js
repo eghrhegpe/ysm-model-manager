@@ -301,7 +301,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
           } else if (key === "all") {
             for (const k of ["front","45","side","back45"]) await saveShot(k);
           } else {
-            const { renderMultiAngle } = await import("../../utils/screenshot-renderer.js");
+            const { renderMultiAngle } = await import("../../utils/screenshot-renderer.ts");
             const texUrls = model.textures?.length > 1 ? model.textures : [model.texture];
             const results = await renderMultiAngle(model._modelPath, texUrls, { size: 512 });
             if (!results) return;
@@ -418,7 +418,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         overlay.appendChild(loadingEl);
 
         try {
-          const { preloadModel } = await import("../../utils/model3d-loader.js");
+          const { preloadModel } = await import("../../utils/model3d-loader.ts");
           const { renderModel3D } = await import("../../utils/model3d.js");
           const { texArr, spec } = await preloadModel(model);
           _model3d = await renderModel3D(viewContainer, texArr, spec, _texIdx);

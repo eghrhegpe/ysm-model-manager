@@ -69,12 +69,162 @@
 
 ## app-content — 审核结果
 
-（审计进行中）
+**总体结论：有条件通过**（页面路由与全局事件骨架健全，handler 层 finally 纪律好；但 document 监听器累积泄漏、转义不彻底、两处死注册需与 app-preview 死代码链联动清理）
+
+**审计范围**：`frontend/js/components/app-content/index.ts`（990 行）+ `core/handler-sync.ts` / `handler-upload.ts` / `handler-other.ts` + `app-content/community/` 4 文件（site-view / settings / diagnostics / core，子代理协审）
+
+**亮点：**
+
+- handler-sync 全部异步链 try/catch/finally，done 事件在 `finally` 中 emit，按钮不会卡死（陷阱 #3 达标）—— [handler-sync.ts#L108](../frontend/js/core/handler-sync.ts#L108)、[L202](../frontend/js/core/handler-sync.ts#L202)、[L319](../frontend/js/core/handler-sync.ts#L319)
+- `_initGithub` 用 `_currentRepo` 做异步防过期守卫，是全项目可复制的范本 —— [index.ts#L820-L834](../frontend/js/components/app-content/index.ts#L820-L834)
+- 实例清空走 `modalConfirm` 二次确认防呆（handler-other.ts），符合破坏性操作规范
+- `_insListenerReg` 幂等注册意图明确，避免 tab 重复绑定 —— [index.ts#L215-L216](../frontend/js/components/app-content/index.ts#L215-L216)
+
+**风险：**
+
+| 级别 | 文件 | 观察 | 建议 |
+|------|------|------|------|
+| 🟠 高 P2 | [index.ts#L171-L206](../frontend/js/components/app-content/index.ts#L171-L206) | **`_initPreviewResize` 每次 `_render()` 都向 document 追加 2 个匿名监听器（mousemove/mouseup）且永不清理**：`_render()` 用 innerHTML 重建页面（[L149-L152](../frontend/js/components/app-content/index.ts#L149-L152)），旧 handle/preview 元素已 detach，但 document 级监听器持续累积，每个闭包还引用当轮的 `preview`/`handle` → detached DOM 无法 GC；用户在 repository 页与其他页间切换 N 次即泄漏 N 组 | 监听器存入实例字段并在重建前 remove；或沿用 preview-skeleton 的模块槽位幂等绑定模式（`_prevDocMove`/`_prevDocUp`） |
+| 🟠 高 P2 | [handler-sync.ts#L40](../frontend/js/core/handler-sync.ts#L40) | `const rtypeActual = rtype \|\| "ysm"` 硬编码字面量兜底，违 ADR-010 注册表优先（resource_types.json 单一事实来源）；上游漏传 rtype 时静默降级为 ysm 而非报错 | 缺省即抛错/toast（参数契约错误应显式失败），或从 `RESOURCE_TYPES` 常量取值并注释决策 |
+| 🟠 高 P2 | [site-view.ts#L101-L126](../frontend/js/components/app-content/community/site-view.ts#L101-L126) | **community 转义防线不全**：`platformBadges` 拼接自 `cr.type`（注册表数据）未转义即入 innerHTML；且本模块 `esc` 不转义引号（`"` `'`），凡 `data-name="…"` 属性拼接处均可被引号逃逸（creators/workshop 数据为远端 JSON，属系统边界输入） | `esc` 补 `&quot;`/`&#39;` 两条替换（全项目多处同构 esc 一并统一，见 P3）；platformBadges 走 `esc()` |
+| 🟡 中 P3 | [index.ts#L979-L984](../frontend/js/components/app-content/index.ts#L979-L984) | `_esc` 重复实现且不转义引号；全项目至少 4 处同构 esc（app-content `_esc`、app-sidebar `escH`、context-menu `_esc`、community 各模块），行为不一致是转义漏洞温床 | 统一收敛到 `utils/display.ts` 导出单一 `esc()`，各处 import 复用 |
+| 🟡 中 P3 | [index.ts#L507](../frontend/js/components/app-content/index.ts#L507) | `Events.On("config-loaded")` 靠模块级 flag 防重复注册，但被拦截的后续注册其闭包永远引用**首次**渲染时的 `_root` 上下文；组件若被销毁重建，flag 不会复位 → 新实例收不到事件 | flag 复位移入 `disconnectedCallback`；或改 bus 订阅进 `_unsubs` 随组件清理 |
+| 🟡 中 P3 | [handler-upload.ts#L10](../frontend/js/core/handler-upload.ts#L10)、[handler-sync.ts#L212](../frontend/js/core/handler-sync.ts#L212) | **两处死注册**：`stats:upload` 唯一发射器在 preview-actions.ts（app-preview stat 死代码链）；`mmd:sync-variant-folder` 唯一发射器在 preview-pack.ts `registerMmdEvents`（同属 stat 死代码链，[preview-pack.ts#L242](../frontend/js/components/app-preview/preview-pack.ts#L242)）——handler 活着但永不触发 | 与 app-preview P2 死代码清理联动：删 stat 链时同步删除这两个 handler（`handler-sync` 的 mmd 分支 + `handler-upload` 整文件视剩余内容） |
+| 🟡 中 P3 | [site-view.ts#L668](../frontend/js/components/app-content/community/site-view.ts#L668) | `window.addEventListener("storage", _storageSyncFn)` 跨窗口同步监听，视图卸载路径未见配对 `removeEventListener`（子代理审计结论），切页后 handler 滞留 window | 卸载/切页清理链补 remove；或模块槽位幂等绑定 |
+| 🟡 中 P3 | community/settings.ts、community/diagnostics.ts、community/core.ts（子代理审计） | settings：registry 远端数据渲染未全量转义、detectBtn overlay 无单例守卫（连点叠多层）、多处异步缺 try/catch；diagnostics：执行按钮无 disabled 去重；core：后台自动合并与手动保存互不互斥，并发写同一数据 | settings 渲染统一走 esc + overlay 加 `_detecting` 守卫；diagnostics 执行期间 disabled；core 合并/保存加互斥锁或版本号 |
+| 🟢 低 P4 | [index.ts#L53](../frontend/js/components/app-content/index.ts#L53) | `_insListenerReg` 置 true 后不在 `disconnectedCallback` 复位（组件实例级 flag），组件重建后实例页监听永不注册 | `disconnectedCallback` 复位为 false |
+
+**心理模拟记录（4 模型）：**
+
+1. **契约检查**：handler 三件套对 bus 事件的 payload 契约与 bus.ts 类型表一致；但 `rtype` 兜底破坏了调用契约的显式性（P2）。
+2. **状态机模拟**：页面切换 `_render()` 全量重建 DOM，状态存 `_current` + PageStore，无残留 ✅；但 `_initPreviewResize` 的监听器不随重建回收（P2）。连点场景：community 保存/检测按钮无守卫（P3）。
+3. **异常模拟**：handler-sync 异常全走 toast + finally emit ✅；community settings/diagnostics 部分异步路径静默失败（P3）。
+4. **引用计数**：组件内 `bus.on` 进 `_unsubs` ✅；document/window 级监听是主要缺口（resize 监听 ×N、storage 监听）。
 
 ## import-queue + 下载链 — 审核结果
 
-（待审计）
+**总体结论：有条件通过**（download-queue 是本次审计质量最高的模块，陷阱 #3/#6/#7 全部达标；但 import-queue 覆盖导入路径有 2 处确定逻辑 bug + 1 处静默截断）
+
+**审计范围**：`frontend/js/features/import-queue.ts`（861 行）+ `features/community/download-queue.ts`（664 行）+ `features/community/events.ts`（300 行）
+
+**亮点：**
+
+- **陷阱 #7 满分达标**：Wails `Events.On` 仅在模块级注册一组，`_registered` 守卫防重复；单击/多选/全选三入口统一走 `queue.enqueue` —— [download-queue.ts#L58](../frontend/js/features/community/download-queue.ts#L58)、[L164-L165](../frontend/js/features/community/download-queue.ts#L164-L165)、[events.ts#L161](../frontend/js/features/community/events.ts#L161)、[L288](../frontend/js/features/community/events.ts#L288)
+- **陷阱 #6 达标**：`stuckGuardReset()` 一处清全部 timer，`cleanupProgressUI()` 统一恢复按钮——99% 卡死有兜底 —— [download-queue.ts#L296](../frontend/js/features/community/download-queue.ts#L296)、[L310-L312](../frontend/js/features/community/download-queue.ts#L310-L312)
+- **陷阱 #3 达标**：所有下载结束路径（成功/失败/取消）都过 `cleanupProgressUI`，按钮不卡死 —— [download-queue.ts#L463](../frontend/js/features/community/download-queue.ts#L463)、[L544-L546](../frontend/js/features/community/download-queue.ts#L544-L546)
+- STATE 单一事实来源 + subscribe/notify，`enqueue` 同步置 status 防竞态；`destroy = unsub` 与 events.ts 的 `externalCleanup`（cancel + destroy）完整配对 —— [download-queue.ts#L662](../frontend/js/features/community/download-queue.ts#L662)、[events.ts#L293-L297](../frontend/js/features/community/events.ts#L293-L297)
+- `isDownloading()` 并发守卫覆盖三个下载入口 —— [events.ts#L149](../frontend/js/features/community/events.ts#L149)、[L218](../frontend/js/features/community/events.ts#L218)
+- 单文件下载 4MB 确认 / 10MB 拒绝的尺寸守卫 —— [events.ts#L259-L277](../frontend/js/features/community/events.ts#L259-L277)
+- import-queue 先拿 DnDLock 再清 pending 队列，锁被占用时不丢文件；回调 API 全部 Promise 化且 onerror 分支齐全（陷阱 #10 达标）—— [import-queue.ts#L818-L820](../frontend/js/features/import-queue.ts#L818-L820)、[L554-L602](../frontend/js/features/import-queue.ts#L554-L602)
+- `initImportQueue` 返回清理函数，由 app-content `_cleanupImportQueue` 在切页时调用，配对成立 —— [import-queue.ts#L857-L861](../frontend/js/features/import-queue.ts#L857-L861)
+
+**风险：**
+
+| 级别 | 文件 | 观察 | 建议 |
+|------|------|------|------|
+| 🟠 高 P2 | [import-queue.ts#L446-L462](../frontend/js/features/import-queue.ts#L446-L462) | **覆盖导入用错文件名**：导入用 `finalName`（重命名对话框结果）触发 FILE_EXISTS，但覆盖确认框文案与 `ImportModelFileOverwriteTo(newName, …)` 都用 `newName`（对话框打开前的名字）。用户改过名时：确认框报的名字是错的，覆盖目标也是错的（newName 可能根本不存在），真正冲突的 finalName 原封不动 | 覆盖路径统一用 `finalName`（确认文案与 API 参数同改） |
+| 🟠 高 P2 | [import-queue.ts#L456-L496](../frontend/js/features/import-queue.ts#L456-L496) | **覆盖成功路径缺刷新事件**：对比正常导入路径（[L412-L422](../frontend/js/features/import-queue.ts#L412-L422)），覆盖分支不发 `stats:refresh` / `tree:reload`、不失效 `repoFiles` 缓存 → 覆盖导入完成后树视图/统计不更新，队列冲突标记（⚠️）也不消除 | 覆盖成功块补三行：两个 emit + `repoFiles = null; loadRepoFiles()` |
+| 🟠 高 P2 | [import-queue.ts#L583-L594](../frontend/js/features/import-queue.ts#L583-L594) | **文件夹拖入 >100 文件静默截断**：`dirReader.readEntries` 单次最多返回 100 条（浏览器 API 契约），当前只调用一次；拖入含 >100 个模型的文件夹时多余文件无声丢失，无任何提示 | 循环调用 `readEntries` 直到返回空数组再 resolve（MDN 标准做法） |
+| 🟡 中 P3 | [import-queue.ts#L361](../frontend/js/features/import-queue.ts#L361)、[L734](../frontend/js/features/import-queue.ts#L734) | `dl-import` / `dl-reimport` 按钮无 `_importing` 并发守卫，连点弹出多个重命名对话框（后果取决于 modal 单例行为） | 入口加 `_importing` 标志，finally 复位（同 preview-skeleton `_saving` 模式） |
+| 🟡 中 P3 | [import-queue.ts#L113-L121](../frontend/js/features/import-queue.ts#L113-L121) | `showForm` 为临时文件 emit `model:select`——与 app-preview 的 P2（无过期守卫）是同一竞态的上游触发点：快速切换队列文件时旧请求摘要会写进新面板 | 与 app-preview P2 修复合并：preview-detail 加 generation counter 后此处自然安全 |
+| 🟡 中 P3 | [events.ts#L198-L199](../frontend/js/features/community/events.ts#L198-L199) | **右键菜单 label 双重转义**：调用侧已 `esc(m.name)`，而 context-menu 组件渲染时再 `_esc(item.label)`（[context-menu.ts#L93](../frontend/js/components/context-menu.ts#L93)）→ 文件名含 `&`/`'`/`"` 时菜单显示乱码（`&amp;amp;`） | menu:show 契约传原文、转义职责归组件侧：events.ts 去掉 esc |
+| 🟢 低 P4 | [events.ts#L150-L162](../frontend/js/features/community/events.ts#L150-L162) | 批量下载（选中/全选）不做尺寸守卫，与单文件的 4MB/10MB 守卫行为不一致（超大文件入队后由后端拒绝，用户体验割裂） | 批量入口同样过滤 >10MB 并 toast 告知跳过数量 |
+| 🟢 低 P4 | [import-queue.ts#L532-L536](../frontend/js/features/import-queue.ts#L532-L536) | `enqueueFile` 去重仅按文件名：文件夹导入时不同子目录的同名文件被误判重复而跳过 | 去重键改为 `relPath \|\| name` |
+| 🟢 低 P4 | [import-queue.ts#L478-L480](../frontend/js/features/import-queue.ts#L478-L480) | 覆盖路径重置 `currentFile/currentBase64/currentFileName` 但漏 `currentRelPath`（正常路径 [L439](../frontend/js/features/import-queue.ts#L439) 有重置），下一文件可能继承上一文件的子目录 | 补 `currentRelPath = ""` |
+| 🟢 低 P4 | [import-queue.ts#L834](../frontend/js/features/import-queue.ts#L834) | DnDLock 成功分支延迟 1s 释放、onerror 分支立即释放，时序不对称（无功能影响） | 统一释放时机或注释说明 1s 意图 |
+| 🟢 低 P4 | [events.ts#L67](../frontend/js/features/community/events.ts#L67) | `onAllDone` 里 200ms `setTimeout` 刷新列表，视图已销毁时定时器仍会跑（操作 detached DOM，无害） | 定时器纳入 destroy 清理或回调内校验 `sr.isConnected` |
+
+**心理模拟记录（4 模型）：**
+
+1. **契约检查**：DownloadTask/RepoEventsContext 接口清晰；但 FILE_EXISTS 覆盖路径内部 `finalName`/`newName` 契约自相矛盾（P2）。
+2. **状态机模拟**：下载中三入口全被 `isDownloading()` 拦截 ✅；enqueue 同步置 status 杜绝插队 ✅；但导入按钮连点无拦截（P3）；拖入 >100 文件文件夹 = 静默数据丢失（P2）。
+3. **异常模拟**：directImport/导入主流程 catch 全有 toast ✅；覆盖失败有 toast ✅；readEntry 任何异常 resolve 不阻塞批量导入 ✅。
+4. **引用计数**：import-queue 唯一 bus 订阅有 unsub 且被 app-content 调用 ✅；download-queue 模块级 Wails 订阅一次注册、destroy 退订 ✅；events.ts 监听全绑在 sr 容器上随视图销毁 ✅。
 
 ## 其余组件 → utils/services — 审核结果
 
-（待审计）
+**总体结论：有条件通过**（资源配对质量全项目最高的一批——app-toast/context-menu/model3d cleanup/handler-dnd 均为正面样板；但新增 1 个 P1 XSS 面，且 esc 碎片化、弹窗无单例是两大系统性病灶）
+
+**审计范围**：app-tree / app-sidebar / app-nav + app-resource-manager / app-sync-manager + dialogs（modal/rename/batch-rename/tag-editor/adv-filter）+ core（global-handlers/handler-dnd/theme/menu-defs/context-menus/page-store）+ app-toast + context-menu + utils 全部 + services/registry.ts + bus.ts + features（recycle-bin/version-updater/dnd-state），共 33 文件（子代理协审 + 主审抽验）
+
+**亮点：**
+
+- model3d `cleanup()` 是全项目资源释放模板：12 个 listener 逐一 remove、RAF 取消、controls/renderer dispose、geometry/material 遍历释放 —— [model3d.ts#L695-L724](../frontend/js/utils/model3d.ts#L695-L724)
+- app-tree 的 bus 订阅由 `bindBusEvents` 收集 unsub 统一进 `_unsubs`，disconnectedCallback 一次清完 —— [index.ts#L80-L118](../frontend/js/components/app-tree/index.ts#L80-L118)、[L141](../frontend/js/components/app-tree/index.ts#L141)
+- app-toast 并发心理模拟通过：最多 5 条堆叠、移除最旧先 clearTimeout、`_remove` 幂等 —— [app-toast.ts#L62-L69](../frontend/js/components/app-toast.ts#L62-L69)
+- handler-dnd 拖拽边界防呆齐全：目录深度上限 10 / 文件数上限 50 / 大小上限 + DnDLock 拦截 —— [handler-dnd.ts#L141](../frontend/js/core/handler-dnd.ts#L141)、[L181-L189](../frontend/js/core/handler-dnd.ts#L181-L189)
+- recycle-bin 破坏性操作防呆到位（陷阱 #8）：清空回收站 danger 确认、单项永久删除确认 —— [recycle-bin.ts#L24-L30](../frontend/js/features/recycle-bin.ts#L24-L30)、[L162-L168](../frontend/js/features/recycle-bin.ts#L162-L168)
+- batch-rename 的模块槽位 `if (dialogEl) dialogEl.remove()` 是全 dialogs 唯一正确的防叠加实现 —— [batch-rename.ts#L33](../frontend/js/dialogs/batch-rename.ts#L33)、[L46](../frontend/js/dialogs/batch-rename.ts#L46)
+- dialogs 的 ESC/keydown 全部绑在 overlay 元素自身，随 `remove()` 回收，无一处 document 级泄漏
+
+**风险：**
+
+| 级别 | 文件 | 观察 | 建议 |
+|------|------|------|------|
+| 🔴 极高 P1 | [summarize.ts#L83-L88](../frontend/js/utils/summarize.ts#L83-L88)、[L118](../frontend/js/utils/summarize.ts#L118) 等 | **摘要卡 XSS**：私有 `esc` 不转义引号，却被用于 `href="…"`/`title="…"` 属性插值（已实证 L118 `authorBilibili`）；数据源是 .ysm 模型元数据——攻击者可分发恶意模型，`bilibili='…" onclick="…'` 即属性逃逸注入事件属性；且链接无 scheme 校验（`javascript:` 点击即执行） | 改 import `utils/dom.ts` 的完整 esc；链接渲染前校验 `https?:` scheme 白名单 |
+| 🔴 极高 P1 | [bus.ts#L151-L157](../frontend/js/bus.ts#L151-L157) | **`once()` 实现错误**：注册的是 `wrapper`，`off` 却找 `fn`（永远找不到）→ once 监听器永不移除、每次 emit 都触发。实证消费者 [app-sidebar/index.ts#L186](../frontend/js/components/app-sidebar/index.ts#L186)：叠加另一问题——`sync:download:done` 类型契约为 `void`，handler emit 不带 payload，而 `onDone` 用 `as never` 强转后要求 `token` 匹配 → **每次推送必然 30s 超时误报"操作超时"**，且每次推送泄漏 N 个僵尸监听器 | 一行修复 `this.off(event, wrapper)`；`sync:download:done` 类型补 `{token?, instanceName?}` 并在 emit 端带上 payload |
+| 🟠 高 P2 | [app-tree/index.ts#L272-L273](../frontend/js/components/app-tree/index.ts#L272-L273) | 同一 `_keydownHandler` 同时注册到 `_root` 与 `document`：shadow 内组合键事件 composed 冒泡 → 焦点在工具栏按钮（不被 INPUT 守卫拦截）按 Delete → 确认弹两次、删除执行两次 | 只保留 document 级注册，删 L272 |
+| 🟠 高 P2 | [app-tree/bus-handlers.ts#L190-L205](../frontend/js/components/app-tree/bus-handlers.ts#L190-L205) | `dir:recycle` 中 L190 已算出 `absDir`，L204 却 `RemoveDir(dir)` 传**相对路径** → 按进程 CWD 解析，空文件夹删不掉被 `catch {}` 吞掉，理论上还有误删 CWD 相对目录风险 | 改 `await RemoveDir(absDir)` |
+| 🟠 高 P2 | app-tree/tpl.ts `#sort` + [index.ts#L50](../frontend/js/components/app-tree/index.ts#L50) | `#sort` 下拉框渲染了但全项目无任何 change 监听（grep 证实），`vm._sort` 初始化后从未写入 → 用户切排序无反应 | 补 change 绑定写 `vm._sort` 后重渲染，或移除控件 |
+| 🟠 高 P2 | [modal.ts#L56](../frontend/js/dialogs/modal.ts#L56) 等 | **modal 家族无单例**（batch-rename 除外）：modalPrompt/modalSelect/modalConfirm/showRenameDialog/modalTagEditor 每次调用都新建 overlay 叠加；连点无守卫的按钮（实证 import-queue `dl-reimport`）→ 双弹窗叠放、双 Promise 各自结算触发两次业务操作 | modal.ts 加模块级活动弹窗槽位，新开前先结算旧弹窗（长治久安方案，优于逐个调用方打补丁） |
+| 🟠 高 P2 | [rename.ts#L7-L12](../frontend/js/dialogs/rename.ts#L7-L12) | 本地 `esc` 不转义双引号，却用于 `value="…"` 属性插值 → 文件名含 `"` 可逃逸属性（与 summarize 同类，数据源为本地文件名） | 删本地 esc，import modal.ts/dom.ts 的完整版 |
+| 🟠 高 P2 | [batch-rename.ts#L41-L45](../frontend/js/dialogs/batch-rename.ts#L41-L45) | 返回的 Promise 在**弹窗打开瞬间** resolve，调用方 `await showBatchRenameDialog(...)` 形同虚设，"应用"后的错误无法被调用方捕获 | Promise 延迟到 `close()` 时结算（内部保留 resolve 引用） |
+| 🟠 高 P2 | [app-sync-manager/index.ts#L97-L117](../frontend/js/components/app-sync-manager/index.ts#L97-L117) | `_init` 每次调用追加 `bus.on("stats:refresh")` 进 `_unsubs` 但从不清理上一轮 → `instance` 属性二次变更后同一事件双份 handler，一次刷新双倍 `_loadData`，叠加自触发 emit 放大 | `_init` 开头先清旧 `_unsubs` 再注册 |
+| 🟠 高 P2 | [context-menus.ts#L281-L287](../frontend/js/core/context-menus.ts#L281-L287) | `file.copy` 成功后**缺 `refreshUI()`**（对比 batch.copy [L172](../frontend/js/core/context-menus.ts#L172) 与全部 move 分支都有）→ 单文件复制后树视图不更新，用户以为复制失败 | 成功分支补 `refreshUI()` |
+| 🟠 高 P2 | [recycle-bin.ts#L67-L74](../frontend/js/features/recycle-bin.ts#L67-L74)、[L210](../frontend/js/features/recycle-bin.ts#L210) | `_loadingAbort` 是假守卫：AbortController.signal 从未传给任何请求；先完成者的 `finally { _loadingAbort = null }` 清掉后者句柄；快速切资源类型时**慢的旧请求可覆盖新列表** | 用 generation 计数器：渲染前比对序号再写 DOM |
+| 🟠 高 P2 | [model3d.ts#L318-L337](../frontend/js/utils/model3d.ts#L318-L337) | document 级 keydown 对 WASD/方向键/空格 `preventDefault()` 且**无输入框守卫** → 3D 预览挂载期间打开重命名等弹窗无法打字，按 F 误切调试模式 | 先判 `e.target` 是否 INPUT/TEXTAREA/contentEditable（复用 handler-dnd 的 isEditable） |
+| 🟡 中 P3 | [theme.ts](../frontend/js/core/theme.ts) 全文件 | **生产死模块**：全仓仅 theme.test.js 引用，真实主题逻辑在 app-modules.ts；若误 import，`bindThemeBtn` 因 `#btn-theme` 不存在会陷入每 100ms 一次的无限 setTimeout | 删除模块 + 测试，或让 app-modules 复用（顺带合并 app-modules 重复注册的 `prefers-color-scheme` 监听） |
+| 🟡 中 P3 | esc 碎片化（系统性） | 全项目 **14+ 处重复 esc**，行为分三档：完整版（dom.ts/display.ts 私有/context-menu/app-sidebar tpl）、缺单引号（modal.ts/batch-rename）、不转义引号（mc-format/summarize/rename/app-content `_esc`）——P1/P2 多处 XSS 面均源于此 | 收敛到 `utils/dom.ts` 的 `esc` 单点导出，逐文件替换（可 codemod 批量） |
+| 🟡 中 P3 | [app-sidebar/index.ts#L175-L201](../frontend/js/components/app-sidebar/index.ts#L175-L201) | 推送流 IIFE 无 try/finally：按钮恢复与 `_syncInProgress` 复位不在 finally 路径，意外 throw → 按钮永久 ⏳ 且推送/拉取全锁死（陷阱 #3 同款） | IIFE 包 try/finally |
+| 🟡 中 P3 | [app-tree/bus-handlers.ts#L65](../frontend/js/components/app-tree/bus-handlers.ts#L65) | `SaveAppConfig(dir, "", "", "copy", theme)` 硬编码 linkMode="copy" → 会把用户已保存的硬链接模式冲掉（对比 sidebar events.ts 保留旧值的正确写法） | 先 LoadAppConfig 透传 `cfg.linkMode` |
+| 🟡 中 P3 | [app-tree/bus-handlers.ts#L356-L412](../frontend/js/components/app-tree/bus-handlers.ts#L356-L412) | `batchToggle`/`batchToggleAll`/`toggleFolderBatch` 无并发守卫，连点菜单 → 重叠循环二次 Toggle 把状态打回原形但 toast 仍报成功 | vm 加 `_batchBusy` 标志 |
+| 🟡 中 P3 | [resource-registry.ts#L29-L31](../frontend/js/utils/resource-registry.ts#L29-L31) | 注册表加载失败被缓存为 `{}` 且永不重试 → Go 桥瞬断后整个会话 `getStorageSubDir` 全部降级 | 失败不缓存（保持 null），下次调用重试 |
+| 🟡 中 P3 | [app-resource-manager/index.ts#L91-L102](../frontend/js/components/app-resource-manager/index.ts#L91-L102) | `_init` 无 generation 守卫：rtype/instance 属性连变或配置事件并发时，后发先至把旧类型列表写进新 DOM | 入口记 generation，await 返回后校验 |
+| 🟡 中 P3 | [context-menus.ts#L167-L171](../frontend/js/core/context-menus.ts#L167-L171)、[L338-L341](../frontend/js/core/context-menus.ts#L338-L341) | `MoveToRecycle` 失败 `catch {}` 静默吞错，违「异常路径必须 toast」红线 | catch 补 toast |
+| 🟡 中 P3 | [handler-dnd.ts#L9](../frontend/js/core/handler-dnd.ts#L9)、[L189-L192](../frontend/js/core/handler-dnd.ts#L189-L192) | `MAX_FILE_SIZE` 为 100MB，toast 文案却写「超过 10MB」误导用户 | 文案改 100MB 或抽常量复用 |
+| 🟡 中 P3 | [debug.ts#L28](../frontend/js/utils/debug.ts#L28)、[L86-L97](../frontend/js/utils/debug.ts#L86-L97) | `window._DBG_RING` / `window.debugGetSpec`（直接暴露 Go 绑定）常驻 window，调试残留违背「零隐式全局」精神 | `import.meta.env.DEV` 守卫或生产剥离 |
+| 🟢 低 P4（择要） | 多处 | app-nav 高亮色硬编码 + 版本降级写死 "v1.0.0"；app-tree render.ts `updateStat` 700ms 定时器未跟踪；app-sidebar `_checkedSet` 跨 rtype 串味、`.sidebar-import-all` 死引用；tag-editor overlay 无 focus（ESC 需先点进弹窗）、保存按钮无 disable；app-toast 缺 `.warn` 样式但 bus 契约含 warn；display.ts 占位符 `%%TOKEN%%` 与真实文件名可碰撞；version-updater 静默检查发请求前 markChecked（断网也耗 6h 配额）；dnd-state `release()` 无持有者校验 | 见各子报告，均为点状小修 |
+
+**心理模拟记录（4 模型）：**
+
+1. **契约检查**：`showBatchRenameDialog` 的 Promise 结算时机与调用方 `await` 预期不符（P2）；`modalSelect` 的 `placeholder` 参数被 `void` 丢弃；`sync:download:done` 类型契约 void 与实际 payload 需求矛盾（P1 链）。
+2. **状态机模拟**：连点场景是最大缺口——modal 无单例 × 调用方无守卫 = 双弹窗双执行（P2）；batchToggle 无守卫状态打回（P3）；recycle-bin 恢复按钮无忙碌守卫（P3）。
+3. **异常模拟**：app-tree toolbar 4 个分支无 try/catch；sidebar 推送流无 finally；resource-manager 导入按钮无 try/catch——均属陷阱 #3 变体。
+4. **引用计数**：app-toast/context-menu/app-nav/handler-dnd 配对满分；缺口在 app-sidebar `_debounceTimer` 不随销毁清理、app-tree `_vsResizeObserver` 不 disconnect、theme.ts 死模块的无限定时器隐患。
+
+---
+
+## 全局风险汇总与闭环建议
+
+### P1（3 项，立即修复 + 补录 bug-chronicle）
+
+| # | 位置 | 一句话 | 修复量 |
+|---|------|--------|--------|
+| P1-1 | [preview-litematic-3d.ts#L160-L176](../frontend/js/components/app-preview/preview-litematic-3d.ts#L160-L176) | 加载期 ESC 泄漏整个 Three.js 场景 + rAF + 6 组监听 | 加 `aborted` 标志，await 后检查 |
+| P1-2 | [bus.ts#L151-L157](../frontend/js/bus.ts#L151-L157) + [app-sidebar/index.ts#L160-L202](../frontend/js/components/app-sidebar/index.ts#L160-L202) | `once` off 错对象 + done 事件无 payload → 推送必然 30s 超时误报 + 僵尸监听器无限累积 | 一行修 once；类型表补 payload 字段并在 emit 端带上 |
+| P1-3 | [summarize.ts#L83-L88](../frontend/js/utils/summarize.ts#L83-L88) | 摘要卡 href/title 属性注入 + 无 URL scheme 校验，恶意 .ysm 可 XSS | 换 dom.ts esc + scheme 白名单 |
+
+### P2（17 项，按模块分批修复）
+
+- **app-preview**：model:select 过期守卫（generation counter）；stat 模式死代码链整段移除（联动 handler-upload/handler-sync 两处死注册）
+- **app-content**：`_initPreviewResize` document 监听累积；handler-sync `"ysm"` 字面量违 ADR-010；community esc 引号逃逸
+- **import-queue**：覆盖路径 `newName`/`finalName` 错位；覆盖成功缺 `stats:refresh`/`tree:reload`；`readEntries` >100 静默截断
+- **app-tree**：Delete 键双触发；`RemoveDir` 相对路径；`#sort` 死控件
+- **dialogs**：modal 家族无单例（活动弹窗槽位统一治理）；rename.ts esc 缺引号；batch-rename Promise 开弹即结算
+- **其他**：app-sync-manager 订阅累积；context-menus file.copy 缺 refreshUI；recycle-bin 假 abort 守卫；model3d keydown 吞输入框按键
+
+### 系统性治理建议（长治久安，均非推倒重来）
+
+1. **esc 收敛**：14+ 处重复实现收敛到 `utils/dom.ts` 单点（P1-3、rename P2、community P2 同根），可走 codemod.mjs 批量替换
+2. **弹窗单例槽位**：modal.ts 加活动弹窗登记，一次修复全项目连点叠加问题（优于逐个按钮加守卫）
+3. **防过期守卫模式推广**：app-content `_currentRepo` 是现成范本，preview-detail / resource-manager `_init` / recycle-bin 照抄 generation counter 变体
+4. **bus.once 修复后**复查全项目 once 消费者语义（当前仅 sidebar 一处）
+5. 死代码联动清理：app-preview stat 链 + core/theme.ts + sidebar 死引用 + app-tree 死 handler，删除前跑 `check-consumers --strict`
+
+### L1 工具反哺（见基线节）
+
+doctor.mjs 三处缺陷（Go Test 误报 / grep 依赖 / wails.json 解析）建议在标准环境复跑确认后修复。
+
+---
+
+*报告生成：2026-08-03 · 审计单元 1-4 全部完成 · 后续单元审计结果追加于本文件*

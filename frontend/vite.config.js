@@ -30,9 +30,15 @@ export default defineConfig({
     environment: "jsdom",
     coverage: {
       provider: "v8",
-      reporter: ["text", "html"],
+      reporter: ["text", "html", "json"],
       include: ["js/**/*.ts", "js/**/*.js"],
       exclude: ["js/**/*.test.js", "js/wasm/**"],
+      thresholds: {
+        statements: 85,
+        branches: 70,
+        functions: 82,
+        lines: 85,
+      },
     },
   },
 });

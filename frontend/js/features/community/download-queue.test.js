@@ -2,7 +2,7 @@
 // 模块级 STATE：getState/subscribe/enqueue/cancel/resume + 后端事件处理。
 // 每个用例通过 vi.resetModules() + 动态 import 获得全新模块实例，
 // 彻底隔离模块级 STATE（含 errorList），避免跨用例状态泄漏。
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // 捕获模块顶层 Events.On 注册的 handler（import 时即执行）
 const { onMock, eventHandlers } = vi.hoisted(() => {
@@ -14,10 +14,22 @@ const { onMock, eventHandlers } = vi.hoisted(() => {
     eventHandlers: handlers,
   };
 });
-const { enqueueMock, statusMock, cancelMock } = vi.hoisted(() => ({
+const {
+  enqueueMock,
+  statusMock,
+  cancelMock,
+  cachedAvatarMock,
+  extractAvatarMock,
+  loadConfigMock,
+  repoRootMock,
+} = vi.hoisted(() => ({
   enqueueMock: vi.fn(),
   statusMock: vi.fn(),
   cancelMock: vi.fn(),
+  cachedAvatarMock: vi.fn(),
+  extractAvatarMock: vi.fn(),
+  loadConfigMock: vi.fn(),
+  repoRootMock: vi.fn(),
 }));
 
 vi.mock("@wailsio/runtime", () => ({ Events: { On: onMock } }));
@@ -25,9 +37,14 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   EnqueueDownloads: enqueueMock,
   QueueStatus: statusMock,
   CancelQueue: cancelMock,
+  CachedCreatorAvatar: cachedAvatarMock,
+  DebugExtractCreatorAvatar: extractAvatarMock,
+  LoadAppConfig: loadConfigMock,
+  GetRepoRoot: repoRootMock,
 }));
 
-let getState, subscribe, enqueueDownloads, cancelDownloads, resume;
+let bus;
+let getState, subscribe, enqueueDownloads, cancelDownloads, resume, createDownloadQueue;
 
 // 每个用例重置模块注册表并重新 import，拿到干净的模块级 STATE
 beforeEach(async () => {
@@ -35,12 +52,19 @@ beforeEach(async () => {
   enqueueMock.mockClear();
   statusMock.mockClear();
   cancelMock.mockClear();
+  cachedAvatarMock.mockReset();
+  extractAvatarMock.mockReset();
+  loadConfigMock.mockReset();
+  repoRootMock.mockReset();
   const mod = await import("./download-queue.ts");
   getState = mod.getState;
   subscribe = mod.subscribe;
   enqueueDownloads = mod.enqueueDownloads;
   cancelDownloads = mod.cancelDownloads;
   resume = mod.resume;
+  createDownloadQueue = mod.createDownloadQueue;
+  // 与重新 import 的 download-queue 共用同一 bus 实例
+  bus = (await import("../../bus.ts")).bus;
 });
 
 /** 触发后端事件（payload 为 { data: [...] } 格式） */
@@ -163,5 +187,198 @@ describe("resume", () => {
   it("QueueStatus 抛错安全忽略", async () => {
     statusMock.mockRejectedValue(new Error("boom"));
     await expect(resume()).resolves.toBeUndefined();
+  });
+});
+
+describe("queue:status 分支补充", () => {
+  it("enqueued 不改 currentFile，重置进度", () => {
+    emit("queue:file-start", ["f.ysm", 3, 2]);
+    emit("queue:status", ["enqueued", 5, undefined]);
+    const s = getState();
+    expect(s.status).toBe("enqueued");
+    expect(s.currentFile).toBe("f.ysm"); // ★ 不覆盖 file-start 文件名
+    expect(s.progress).toEqual({ dl: 0, total: 0 });
+  });
+
+  it("未知状态走 else 分支仅更新 status", () => {
+    emit("queue:status", ["downloading", 2, undefined]);
+    expect(getState().status).toBe("downloading");
+  });
+});
+
+describe("queue:file-done 头像增量提取", () => {
+  it(".ysm 成功且带 [作者] → 命中缓存发 avatar:refresh", async () => {
+    cachedAvatarMock.mockResolvedValue("data:avatar");
+    const events = [];
+    const off = bus.on("avatar:refresh", (p) => events.push(p));
+    emit("queue:file-done", ["[作者A] 角色.ysm", "ok", ""]);
+    await vi.waitFor(() => expect(events.length).toBe(1));
+    expect(events[0]).toEqual({ author: "作者A", dataUri: "data:avatar" });
+    expect(cachedAvatarMock).toHaveBeenCalledWith("作者A");
+    expect(extractAvatarMock).not.toHaveBeenCalled();
+    off();
+  });
+
+  it("缓存未命中 → 先 DebugExtract 再取缓存", async () => {
+    cachedAvatarMock.mockResolvedValueOnce("").mockResolvedValue("data:late");
+    const events = [];
+    const off = bus.on("avatar:refresh", (p) => events.push(p));
+    emit("queue:file-done", ["[作者B] 角色.ysm", "ok", ""]);
+    await vi.waitFor(() => expect(events.length).toBe(1));
+    expect(extractAvatarMock).toHaveBeenCalledWith("作者B");
+    expect(events[0]).toEqual({ author: "作者B", dataUri: "data:late" });
+    off();
+  });
+
+  it("非 .ysm 文件不触发提取", async () => {
+    cachedAvatarMock.mockResolvedValue("data:x");
+    emit("queue:file-done", ["[作者C] 角色.zip", "ok", ""]);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(cachedAvatarMock).not.toHaveBeenCalled();
+  });
+
+  it("无 [作者] 前缀不触发提取", async () => {
+    cachedAvatarMock.mockResolvedValue("data:x");
+    emit("queue:file-done", ["普通文件.ysm", "ok", ""]);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(cachedAvatarMock).not.toHaveBeenCalled();
+  });
+
+  it("提取抛错安全吞掉", async () => {
+    cachedAvatarMock.mockRejectedValue(new Error("boom"));
+    emit("queue:file-done", ["[作者D] 角色.ysm", "ok", ""]);
+    await vi.waitFor(() => expect(cachedAvatarMock).toHaveBeenCalled());
+  });
+});
+
+describe("createDownloadQueue UI 层", () => {
+  function createCtrl(overrides = {}) {
+    const sr = document.createElement("div");
+    sr.innerHTML =
+      '<div id="gh-queue-status"></div><button class="gh-dl-selected">下载</button>';
+    document.body.appendChild(sr);
+    const localMap = new Map();
+    const onFileSuccess = vi.fn();
+    const onAllDone = vi.fn();
+    statusMock.mockResolvedValue(0); // resume 保持 idle
+    const ctrl = createDownloadQueue({
+      sr,
+      esc: (s) => String(s),
+      getLocalMap: () => localMap,
+      onFileSuccess,
+      onAllDone,
+      ...overrides,
+    });
+    return { sr, localMap, onFileSuccess, onAllDone, ctrl };
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("返回控制器四件套且初始非下载中", () => {
+    const { ctrl } = createCtrl();
+    expect(typeof ctrl.enqueue).toBe("function");
+    expect(typeof ctrl.cancel).toBe("function");
+    expect(typeof ctrl.destroy).toBe("function");
+    expect(ctrl.isDownloading()).toBe(false);
+    ctrl.destroy();
+  });
+
+  it("file-start 渲染进度行与取消按钮", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    emit("queue:file-start", ["[作者] 角色.ysm", 3, 2]);
+    const qs = sr.querySelector("#gh-queue-status");
+    expect(qs.querySelector(".gh-progress-row")).toBeTruthy();
+    expect(qs.querySelector(".gh-progress-name")).toBeTruthy();
+    expect(qs.querySelector(".gh-cancel-queue")).toBeTruthy();
+    expect(qs.querySelector(".gh-progress-remain")).toBeTruthy(); // remain=3-1=2>1
+    ctrl.destroy();
+  });
+
+  it("download:progress 更新进度条宽度与百分比", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    emit("queue:file-start", ["f.ysm", 1, 1]);
+    emit("download:progress", [50, 100]);
+    expect(sr.querySelector(".gh-progress-fill").style.width).toBe("50%");
+    expect(sr.querySelector(".gh-progress-pct").textContent).toBe("50%");
+    ctrl.destroy();
+  });
+
+  it("queue:status done → 清理 UI + tree:reload + onAllDone", async () => {
+    const { sr, onAllDone, ctrl } = createCtrl();
+    await Promise.resolve();
+    const reloads = [];
+    const off = bus.on("tree:reload", () => reloads.push(1));
+    sr.querySelector("#gh-queue-status").classList.add("show");
+    emit("queue:status", ["done", 1, undefined]);
+    const btn = sr.querySelector(".gh-dl-selected");
+    expect(btn.disabled).toBe(false);
+    expect(sr.querySelector("#gh-queue-status").classList.contains("show")).toBe(false);
+    expect(onAllDone).toHaveBeenCalledWith({ cancelled: false, errorList: [] });
+    await vi.waitFor(() => expect(reloads.length).toBe(1));
+    off();
+    ctrl.destroy();
+  });
+
+  it("queue:status cancelled → 显示已取消摘要", async () => {
+    const { sr, onAllDone, ctrl } = createCtrl();
+    await Promise.resolve();
+    emit("queue:status", ["cancelled", 0, undefined]);
+    expect(sr.querySelector("#gh-queue-status").innerHTML).toContain("已取消");
+    expect(onAllDone).toHaveBeenCalledWith({ cancelled: true, errorList: [] });
+    ctrl.destroy();
+  });
+
+  it("file-done ok → 写入本地缓存 + 回调 onFileSuccess", async () => {
+    const { localMap, onFileSuccess, ctrl } = createCtrl();
+    await Promise.resolve();
+    emit("queue:file-start", ["f.ysm", 1, 1]);
+    emit("queue:file-done", ["f.ysm", "ok", ""]);
+    expect(localMap.get("f.ysm")).toBe("");
+    expect(onFileSuccess).toHaveBeenCalledWith("f.ysm");
+    ctrl.destroy();
+  });
+
+  it("enqueue 有仓库根 → 设置 saveDir 并入队", async () => {
+    loadConfigMock.mockResolvedValue({});
+    repoRootMock.mockResolvedValue("/repo");
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    const tasks = [{ url: "u", saveDir: "", name: "a.ysm", size: 1 }];
+    await ctrl.enqueue(tasks);
+    expect(repoRootMock).toHaveBeenCalled();
+    expect(enqueueMock).toHaveBeenCalledTimes(1);
+    expect(enqueueMock.mock.calls[0][0][0].saveDir).toBe("/repo");
+    expect(sr.querySelector(".gh-dl-selected").disabled).toBe(true);
+    expect(sr.querySelector("#gh-queue-status").innerHTML).toContain("准备下载");
+    expect(ctrl.isDownloading()).toBe(true);
+    ctrl.destroy();
+  });
+
+  it("enqueue 无仓库根 → warn toast 且不入队", async () => {
+    loadConfigMock.mockResolvedValue({});
+    repoRootMock.mockResolvedValue("");
+    const { ctrl } = createCtrl();
+    await Promise.resolve();
+    const toasts = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p));
+    await ctrl.enqueue([{ url: "u", saveDir: "", name: "a.ysm", size: 1 }]);
+    expect(enqueueMock).not.toHaveBeenCalled();
+    expect(toasts.some((t) => t.type === "warn")).toBe(true);
+    off();
+    ctrl.destroy();
+  });
+
+  it("destroy 后不再响应状态变更", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    ctrl.destroy();
+    emit("queue:file-start", ["f.ysm", 1, 1]);
+    expect(sr.querySelector("#gh-queue-status").innerHTML).toBe("");
   });
 });

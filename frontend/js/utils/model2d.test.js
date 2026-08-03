@@ -1,7 +1,9 @@
 // ===== model2d 命中区域坐标测试（ADR-021 扩展，防坐标回归）=====
 // calcBoneHitZones：2D 正交投影热区计算（scale/偏移/骨骼位移/绕 pivot 旋转/前后视图）。
-import { describe, it, expect } from "vitest";
-import { calcBoneHitZones } from "./model2d.ts";
+import { describe, it, expect, vi } from "vitest";
+import { calcBoneHitZones, renderModel2D } from "./model2d.ts";
+
+vi.mock("./debug.ts", () => ({ dbg: vi.fn(), dbgWarn: vi.fn() }));
 
 /** 便捷构造：单骨骼单 cube 模型 */
 function cubeModel(bone, cube) {
@@ -99,5 +101,154 @@ describe("calcBoneHitZones 后视图", () => {
     expect(zones[0].w).toBe(2);
     expect(zones[0].y).toBe(-6); // maxY = 6（z 轴）
     expect(zones[0].h).toBe(6);
+  });
+});
+
+describe("calcBoneHitZones 补充分支", () => {
+  it("骨骼 X 轴旋转 90°：Y 方向按 cos(rx) 压缩为 0", () => {
+    const transforms = new Map([
+      ["bone", { position: undefined, rotation: [90, 0, 0] }],
+    ]);
+    const zones = calcBoneHitZones(
+      cubeModel("bone", SIMPLE_CUBE),
+      1, 0, 0, true, 1, 0, transforms,
+    );
+    // cos(90°)=0 → 所有角点 cy 压到 pivot.y=2，高度归零
+    expect(zones[0].h).toBeCloseTo(0, 5);
+    expect(zones[0].y).toBeCloseTo(-2, 5);
+    expect(zones[0].w).toBe(2); // X 旋转不影响 x 范围
+  });
+
+  it("cube 显式 pivot 覆盖默认中心（Z 旋转绕自定义 pivot）", () => {
+    const cube = { origin: [0, 0, 0], size: [2, 4, 6], pivot: [0, 0, 0] };
+    const transforms = new Map([
+      ["bone", { position: undefined, rotation: [0, 0, 90] }],
+    ]);
+    const zones = calcBoneHitZones(
+      cubeModel("bone", cube),
+      1, 0, 0, true, 1, 0, transforms,
+    );
+    // pivot=[0,0,0]，Z 旋转 90°：角点 (x,y) → (-y,x)
+    // x∈[0,2],y∈[0,4] → x'∈[-4,0], y'∈[0,2]
+    expect(zones[0].x).toBeCloseTo(-4, 5);
+    expect(zones[0].w).toBeCloseTo(4, 5);
+    expect(zones[0].y).toBeCloseTo(-2, 5);
+    expect(zones[0].h).toBeCloseTo(2, 5);
+  });
+
+  it("position + rotation 同时作用", () => {
+    const transforms = new Map([
+      ["bone", { position: [5, 0, 0], rotation: [0, 0, 0] }],
+    ]);
+    const zones = calcBoneHitZones(
+      cubeModel("bone", SIMPLE_CUBE),
+      1, 0, 0, true, 1, 0, transforms,
+    );
+    expect(zones[0].x).toBe(5); // 仅 x 平移
+    expect(zones[0].w).toBe(2);
+  });
+});
+
+// ── renderModel2D 冒烟测试 ──
+// canvas 2D 在 jsdom 不可用（getContext 返回 null），用 Proxy mock ctx：
+// 任意方法返回 vi.fn()，measureText 特判返回 {width}，ctx.canvas 提供宽高。
+function makeMockCtx(w = 180, h = 180) {
+  const target = { canvas: { width: w, height: h } };
+  return new Proxy(target, {
+    get(t, prop) {
+      if (prop === "measureText") return () => ({ width: 20 });
+      if (prop in t) return t[prop];
+      t[prop] = vi.fn();
+      return t[prop];
+    },
+    set(t, prop, value) {
+      t[prop] = value;
+      return true;
+    },
+  });
+}
+
+function makeMockCanvas(w = 180, h = 180) {
+  const ctx = makeMockCtx(w, h);
+  return {
+    width: w,
+    height: h,
+    getContext: () => ctx,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: w, height: h }),
+    _ctx: ctx,
+  };
+}
+
+describe("renderModel2D 冒烟（canvas 2D mock）", () => {
+  const SIMPLE_MODEL = {
+    bones: [{ name: "body", cubes: [{ origin: [0, 0, 0], size: [4, 8, 4] }] }],
+  };
+
+  it("空 canvas 或空模型 → 提前返回不抛错、不绘制", () => {
+    expect(() => renderModel2D(null, SIMPLE_MODEL, null)).not.toThrow();
+    const canvas = makeMockCanvas();
+    expect(() => renderModel2D(canvas, { bones: [] }, null)).not.toThrow();
+    expect(() => renderModel2D(canvas, {}, null)).not.toThrow();
+    expect(canvas._ctx.clearRect).not.toHaveBeenCalled();
+  });
+
+  it("静态模型渲染 → clearRect/fillRect 被调用 + 绑定鼠标监听", () => {
+    const canvas = makeMockCanvas();
+    renderModel2D(canvas, SIMPLE_MODEL, null, {});
+    expect(canvas._ctx.clearRect).toHaveBeenCalled();
+    expect(canvas._ctx.fillRect).toHaveBeenCalled();
+    expect(canvas.addEventListener).toHaveBeenCalledWith("mousemove", expect.any(Function));
+    expect(canvas.addEventListener).toHaveBeenCalledWith("mouseleave", expect.any(Function));
+  });
+
+  it("showLabels 默认开启 → fillText 绘制骨骼名", () => {
+    const canvas = makeMockCanvas();
+    renderModel2D(canvas, SIMPLE_MODEL, null, {});
+    expect(canvas._ctx.fillText).toHaveBeenCalled();
+  });
+
+  it("showLabels=false → 不绘制标签", () => {
+    const canvas = makeMockCanvas();
+    renderModel2D(canvas, SIMPLE_MODEL, null, { showLabels: false });
+    expect(canvas._ctx.fillText).not.toHaveBeenCalled();
+  });
+
+  it("动画骨骼（boneTransforms）渲染不抛错", () => {
+    const canvas = makeMockCanvas();
+    const transforms = new Map([
+      ["body", { position: [0, 1, 0], rotation: [0, 0, 30] }],
+    ]);
+    expect(() =>
+      renderModel2D(canvas, SIMPLE_MODEL, null, { boneTransforms: transforms }),
+    ).not.toThrow();
+    expect(canvas._ctx.fillRect).toHaveBeenCalled();
+  });
+
+  it("带 rotation 的头部 cube 渲染不抛错", () => {
+    const canvas = makeMockCanvas();
+    const model = {
+      bones: [
+        { name: "head", cubes: [{ origin: [0, 24, 0], size: [4, 4, 4], rotation: [0, 45, 0] }] },
+      ],
+    };
+    expect(() => renderModel2D(canvas, model, null, {})).not.toThrow();
+  });
+
+  it("二次渲染触发 _hoverCleanup 清理旧监听", () => {
+    const canvas = makeMockCanvas();
+    renderModel2D(canvas, SIMPLE_MODEL, null, {});
+    renderModel2D(canvas, SIMPLE_MODEL, null, {});
+    expect(canvas.removeEventListener).toHaveBeenCalledWith("mousemove", expect.any(Function));
+  });
+
+  it("mousemove 触发重绘（命中或离开均重绘一次）", () => {
+    const canvas = makeMockCanvas();
+    renderModel2D(canvas, SIMPLE_MODEL, null, {});
+    const onMove = canvas.addEventListener.mock.calls.find((c) => c[0] === "mousemove")[1];
+    const before = canvas._ctx.clearRect.mock.calls.length;
+    onMove({ clientX: 90, clientY: 90 });
+    expect(canvas._ctx.clearRect.mock.calls.length).toBeGreaterThan(before);
   });
 });

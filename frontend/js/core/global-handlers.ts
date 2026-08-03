@@ -4,7 +4,6 @@
 
 import { registerDnD } from "./handler-dnd.ts";
 import { registerSync } from "./handler-sync.ts";
-import { registerUpload } from "./handler-upload.ts";
 import { registerInstanceOps } from "./handler-other.ts";
 
 /** 注册所有全局 handler，返回 unsub 函数数组 */
@@ -12,7 +11,6 @@ export function registerGlobalHandlers(): Array<() => void> {
   const unsubs: Array<() => void> = [];
   registerDnD(unsubs);
   registerSync(unsubs);
-  registerUpload(unsubs);
   registerInstanceOps(unsubs);
   return unsubs;
 }

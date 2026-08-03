@@ -267,6 +267,12 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
     vm._renderTree();
   });
 
+  // 排序下拉（name/size/date，renderTree 已支持，此前缺绑定导致控件无效）
+  $("sort")?.addEventListener("change", () => {
+    vm._sort = ($("sort") as HTMLSelectElement | null)?.value || "name";
+    vm._renderTree();
+  });
+
   // 视图模式切换（grid ⇄ list）
   const viewModeBtn = $("btn-view-mode");
   if (viewModeBtn) {

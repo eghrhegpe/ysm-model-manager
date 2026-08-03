@@ -35,7 +35,7 @@ export function repositoryHTML(): string {
     '<div class="repo-tab-body" id="repo-tab-oldest" style="display:none;flex:1;overflow-y:auto;overflow-x:hidden"></div>' +
     "</div>" +
     '<div class="preview-resize-handle" id="preview-resize-handle" style="width:4px;cursor:col-resize;background:transparent;transition:background var(--tr-fast);flex-shrink:0"></div>' +
-    '<app-preview mode="model" id="app-preview" style="width:var(--preview-width,220px);flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
+    '<app-preview id="app-preview" style="width:var(--preview-width,220px);flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
     "</div>" +
     "</div>"
   );
@@ -331,7 +331,7 @@ export function settingsHTML(): string {
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:90ms">
     <div style="font-size:13px;font-weight:600;margin-bottom:6px">💎 技术栈</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
-      <div>🔹 Go + Wails v2（后端）</div>
+      <div>🔹 Go + Wails v3（后端）</div>
       <div>🔹 原生 HTML/CSS/JS（前端）</div>
       <div>🔹 Web Components + Shadow DOM</div>
       <div>🔹 Three.js（3D 预览）</div>
@@ -348,7 +348,7 @@ export function settingsHTML(): string {
       <div>🐙 GitHub：<a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
       <div>📋 发布页：<a href="https://github.com/eghrhegpe/ysm-model-manager/releases" target="_blank" style="color:var(--accent)">查看所有版本</a></div>
       <div>📖 文档：<a href="https://github.com/eghrhegpe/ysm-model-manager/tree/main/docs" target="_blank" style="color:var(--accent)">docs/ 目录</a></div>
-      <div>📄 配置：exe 同目录 <code>ysm_config.json</code></div>
+      <div>📄 配置：<code>%APPDATA%\YSM-Model-Manager\ysm_config.json</code></div>
     </div>
   </div>
 

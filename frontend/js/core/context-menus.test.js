@@ -14,6 +14,58 @@ vi.mock("../wails/app.ts", () => ({
   getApp: () => Promise.resolve({ OpenInstanceFolder: openFolderMock }),
 }));
 
+// 异步 handler 依赖：dialogs + bindings 均为动态 import，用 mock 拦截
+const {
+  modalPromptMock,
+  modalConfirmMock,
+  modalSelectMock,
+  showRenameDialogMock,
+  modalTagEditorMock,
+  GetRepoRootMock,
+  MoveModelFileMock,
+  CopyModelFileMock,
+  RenameFileMock,
+  MoveToRecycleMock,
+  LoadAppConfigMock,
+  ListVersionInstancesMock,
+  InstallModelToMock,
+  RevealInExplorerMock,
+} = vi.hoisted(() => ({
+  modalPromptMock: vi.fn(),
+  modalConfirmMock: vi.fn(),
+  modalSelectMock: vi.fn(),
+  showRenameDialogMock: vi.fn(),
+  modalTagEditorMock: vi.fn(),
+  GetRepoRootMock: vi.fn(),
+  MoveModelFileMock: vi.fn(),
+  CopyModelFileMock: vi.fn(),
+  RenameFileMock: vi.fn(),
+  MoveToRecycleMock: vi.fn(),
+  LoadAppConfigMock: vi.fn(),
+  ListVersionInstancesMock: vi.fn(),
+  InstallModelToMock: vi.fn(),
+  RevealInExplorerMock: vi.fn(),
+}));
+
+vi.mock("../dialogs/modal.ts", () => ({
+  modalPrompt: modalPromptMock,
+  modalConfirm: modalConfirmMock,
+  modalSelect: modalSelectMock,
+}));
+vi.mock("../dialogs/rename.ts", () => ({ showRenameDialog: showRenameDialogMock }));
+vi.mock("../dialogs/tag-editor.ts", () => ({ modalTagEditor: modalTagEditorMock }));
+vi.mock("../../bindings/ysm-model-manager/internal/app/app.js", () => ({
+  GetRepoRoot: GetRepoRootMock,
+  MoveModelFile: MoveModelFileMock,
+  CopyModelFile: CopyModelFileMock,
+  RenameFile: RenameFileMock,
+  MoveToRecycle: MoveToRecycleMock,
+  LoadAppConfig: LoadAppConfigMock,
+  ListVersionInstances: ListVersionInstancesMock,
+  InstallModelTo: InstallModelToMock,
+  RevealInExplorer: RevealInExplorerMock,
+}));
+
 // 收集 menu:show 与 handler 发出的业务事件
 const menuShows = [];
 const emitted = [];
@@ -26,6 +78,8 @@ const TRACKED = [
   "dir:mkdir",
   "dir:recycle",
   "toast:show",
+  "tree:reload",
+  "stats:refresh",
 ];
 
 beforeAll(() => {
@@ -158,5 +212,266 @@ describe("菜单项点击行为", () => {
     const item = clickItem("dir", "移入回收站", { dir: "/packs/x" });
     expect(item.danger).toBe(true);
     expect(emitted).toContainEqual({ e: "dir:recycle", p: { dir: "/packs/x" } });
+  });
+});
+
+describe("异步 handler（batch / file 动态 import 分支）", () => {
+  const DIALOG_MOCKS = [
+    modalPromptMock,
+    modalConfirmMock,
+    modalSelectMock,
+    showRenameDialogMock,
+    modalTagEditorMock,
+  ];
+  const BINDING_MOCKS = [
+    GetRepoRootMock,
+    MoveModelFileMock,
+    CopyModelFileMock,
+    RenameFileMock,
+    MoveToRecycleMock,
+    LoadAppConfigMock,
+    ListVersionInstancesMock,
+    InstallModelToMock,
+    RevealInExplorerMock,
+  ];
+
+  beforeEach(() => {
+    [...DIALOG_MOCKS, ...BINDING_MOCKS].forEach((m) => m.mockReset());
+  });
+
+  /** 触发菜单并 await 指定 label 的 onClick（异步 handler） */
+  async function clickAsync(type, labelText, overrides = {}) {
+    const payload = showMenu(type, { ...payloadCtx(type), ...overrides });
+    const item = payload.items.find((i) => i.label === labelText);
+    expect(item, `找不到菜单项: ${labelText}`).toBeTruthy();
+    await item.onClick();
+    return item;
+  }
+
+  function toasts() {
+    return emitted.filter((e) => e.e === "toast:show").map((e) => e.p);
+  }
+  function reloaded() {
+    return emitted.some((e) => e.e === "tree:reload");
+  }
+  function stubClipboard(impl) {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn(impl) },
+      configurable: true,
+    });
+  }
+
+  // ── batch.move ──
+  it("batch.move 成功 → MoveModelFile 逐个 + toast + 刷新", async () => {
+    modalPromptMock.mockResolvedValue("作者A");
+    GetRepoRootMock.mockResolvedValue("/repo/models");
+    MoveModelFileMock.mockResolvedValue(undefined);
+    await clickAsync("batch", "移动到…", { paths: ["/a.ysm", "/b.ysm"] });
+    expect(MoveModelFileMock).toHaveBeenCalledTimes(2);
+    expect(MoveModelFileMock).toHaveBeenCalledWith("/a.ysm", "/repo/models/作者A");
+    expect(toasts().some((t) => t.msg.includes("已移动"))).toBe(true);
+    expect(reloaded()).toBe(true);
+  });
+
+  it("batch.move 非法文件夹名（含 ..）→ error toast 且不调后端", async () => {
+    modalPromptMock.mockResolvedValue("../evil");
+    await clickAsync("batch", "移动到…", { paths: ["/a.ysm"] });
+    expect(GetRepoRootMock).not.toHaveBeenCalled();
+    expect(toasts().some((t) => t.type === "error" && t.msg.includes("非法字符"))).toBe(true);
+  });
+
+  it("batch.move 未配置存储路径 → error toast", async () => {
+    modalPromptMock.mockResolvedValue("作者A");
+    GetRepoRootMock.mockResolvedValue("");
+    await clickAsync("batch", "移动到…", { paths: ["/a.ysm"] });
+    expect(MoveModelFileMock).not.toHaveBeenCalled();
+    expect(toasts().some((t) => t.type === "error" && t.msg.includes("请先配置存储路径"))).toBe(true);
+  });
+
+  it("batch.move 取消输入 → 不执行", async () => {
+    modalPromptMock.mockResolvedValue("");
+    await clickAsync("batch", "移动到…", { paths: ["/a.ysm"] });
+    expect(GetRepoRootMock).not.toHaveBeenCalled();
+    expect(MoveModelFileMock).not.toHaveBeenCalled();
+  });
+
+  // ── batch.copy ──
+  it("batch.copy 部分失败 → 汇总 toast（成功+失败）", async () => {
+    modalPromptMock.mockResolvedValue("备份");
+    GetRepoRootMock.mockResolvedValue("/repo/models");
+    CopyModelFileMock.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("exists"));
+    await clickAsync("batch", "复制到…", { paths: ["/a.ysm", "/b.ysm"] });
+    expect(CopyModelFileMock).toHaveBeenCalledTimes(2);
+    expect(toasts().some((t) => t.msg.includes("复制成功") && t.msg.includes("失败"))).toBe(true);
+  });
+
+  it("batch.copy 取消输入 → 不执行", async () => {
+    modalPromptMock.mockResolvedValue("");
+    await clickAsync("batch", "复制到…", { paths: ["/a.ysm"] });
+    expect(CopyModelFileMock).not.toHaveBeenCalled();
+  });
+
+  // ── batch.recycle ──
+  it("batch.recycle 确认 → MoveToRecycle 逐个 + 刷新", async () => {
+    modalConfirmMock.mockResolvedValue(true);
+    MoveToRecycleMock.mockResolvedValue(undefined);
+    await clickAsync("batch", "移入回收站", { paths: ["/a.ysm", "/b.ysm"], count: 2 });
+    expect(MoveToRecycleMock).toHaveBeenCalledTimes(2);
+    expect(reloaded()).toBe(true);
+  });
+
+  it("batch.recycle 取消 → 不调后端", async () => {
+    modalConfirmMock.mockResolvedValue(false);
+    await clickAsync("batch", "移入回收站", { paths: ["/a.ysm"] });
+    expect(MoveToRecycleMock).not.toHaveBeenCalled();
+  });
+
+  // ── batch.copy-paths ──
+  it("batch.copy-paths 剪贴板成功 → toast", async () => {
+    stubClipboard(() => Promise.resolve());
+    await clickAsync("batch", "复制文件路径列表", { paths: ["/a.ysm", "/b.ysm"] });
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("/a.ysm\n/b.ysm");
+    expect(toasts().some((t) => t.msg.includes("已复制"))).toBe(true);
+  });
+
+  // ── batch.export-list ──
+  it("batch.export-list → 生成 Blob 下载 + toast", async () => {
+    const createObjectURL = vi.fn(() => "blob:mock");
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { ...URL, createObjectURL, revokeObjectURL });
+    await clickAsync("batch", "导出文件名清单 (.txt)", { paths: ["/x/a.ysm", "/y/b.ysm"] });
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock");
+    expect(toasts().some((t) => t.msg.includes("已导出"))).toBe(true);
+    vi.unstubAllGlobals();
+  });
+
+  // ── file.rename ──
+  it("file.rename 成功 → RenameFile + 刷新", async () => {
+    showRenameDialogMock.mockResolvedValue("新名字.ysm");
+    RenameFileMock.mockResolvedValue(undefined);
+    await clickAsync("file", "重命名", { path: "/dir/旧.ysm" });
+    expect(showRenameDialogMock).toHaveBeenCalledWith("/dir/旧.ysm", "旧.ysm");
+    expect(RenameFileMock).toHaveBeenCalledWith("/dir/旧.ysm", "新名字.ysm");
+    expect(reloaded()).toBe(true);
+  });
+
+  it("file.rename 取消 → 不调后端", async () => {
+    showRenameDialogMock.mockResolvedValue("");
+    await clickAsync("file", "重命名", { path: "/dir/旧.ysm" });
+    expect(RenameFileMock).not.toHaveBeenCalled();
+  });
+
+  it("file.rename 后端报错 → friendlyError toast", async () => {
+    showRenameDialogMock.mockResolvedValue("新.ysm");
+    RenameFileMock.mockRejectedValue(new Error("EACCES: permission denied"));
+    await clickAsync("file", "重命名", { path: "/dir/旧.ysm" });
+    expect(toasts().some((t) => t.type === "error" && t.msg.includes("权限不足"))).toBe(true);
+  });
+
+  // ── file.move ──
+  it("file.move 成功 → MoveModelFile + toast + 刷新", async () => {
+    modalPromptMock.mockResolvedValue("作者B");
+    GetRepoRootMock.mockResolvedValue("/repo/models");
+    MoveModelFileMock.mockResolvedValue(undefined);
+    await clickAsync("file", "移动到…", { path: "/a.ysm" });
+    expect(MoveModelFileMock).toHaveBeenCalledWith("/a.ysm", "/repo/models/作者B");
+    expect(toasts().some((t) => t.msg.includes("已移动到 作者B"))).toBe(true);
+    expect(reloaded()).toBe(true);
+  });
+
+  it("file.move 未配置存储路径 → error toast", async () => {
+    modalPromptMock.mockResolvedValue("作者B");
+    GetRepoRootMock.mockResolvedValue("");
+    await clickAsync("file", "移动到…", { path: "/a.ysm" });
+    expect(MoveModelFileMock).not.toHaveBeenCalled();
+    expect(toasts().some((t) => t.type === "error")).toBe(true);
+  });
+
+  // ── file.copy ──
+  it("file.copy 成功 → CopyModelFile + toast", async () => {
+    modalPromptMock.mockResolvedValue("备份");
+    GetRepoRootMock.mockResolvedValue("/repo/models");
+    CopyModelFileMock.mockResolvedValue(undefined);
+    await clickAsync("file", "复制到…", { path: "/a.ysm" });
+    expect(CopyModelFileMock).toHaveBeenCalledWith("/a.ysm", "/repo/models/备份");
+    expect(toasts().some((t) => t.msg.includes("已复制"))).toBe(true);
+  });
+
+  it("file.copy 非法文件夹名 → error toast 且不调后端", async () => {
+    modalPromptMock.mockResolvedValue("/abs");
+    await clickAsync("file", "复制到…", { path: "/a.ysm" });
+    expect(GetRepoRootMock).not.toHaveBeenCalled();
+    expect(toasts().some((t) => t.type === "error")).toBe(true);
+  });
+
+  // ── file.push-to-pack ──
+  it("file.push-to-pack 未配置游戏目录 → warn toast", async () => {
+    LoadAppConfigMock.mockResolvedValue({ mcRoot: "" });
+    await clickAsync("file", "推送到整合包…", { path: "/a.ysm" });
+    expect(toasts().some((t) => t.type === "warn" && t.msg.includes("请先配置游戏目录"))).toBe(true);
+  });
+
+  it("file.push-to-pack 无整合包 → warn toast", async () => {
+    LoadAppConfigMock.mockResolvedValue({ mcRoot: "/mc" });
+    ListVersionInstancesMock.mockResolvedValue([]);
+    await clickAsync("file", "推送到整合包…", { path: "/a.ysm" });
+    expect(toasts().some((t) => t.type === "warn" && t.msg.includes("未找到任何整合包"))).toBe(true);
+  });
+
+  it("file.push-to-pack 成功 → InstallModelTo + toast", async () => {
+    LoadAppConfigMock.mockResolvedValue({ mcRoot: "/mc" });
+    ListVersionInstancesMock.mockResolvedValue([
+      { Name: "包A", CustomDir: "/mc/versions/包A" },
+    ]);
+    modalSelectMock.mockResolvedValue("包A");
+    InstallModelToMock.mockResolvedValue(undefined);
+    await clickAsync("file", "推送到整合包…", { path: "/dir/a.ysm" });
+    expect(InstallModelToMock).toHaveBeenCalledWith("a.ysm", "/mc/versions/包A");
+    expect(toasts().some((t) => t.msg.includes("已推送"))).toBe(true);
+  });
+
+  // ── file.edit-tags ──
+  it("file.edit-tags 保存 → toast 显示标签数", async () => {
+    modalTagEditorMock.mockResolvedValue(["tag1", "tag2"]);
+    await clickAsync("file", "🏷️ 编辑标签", { path: "/a.ysm" });
+    expect(modalTagEditorMock).toHaveBeenCalledWith("/a.ysm");
+    expect(toasts().some((t) => t.msg.includes("已保存 2 个标签"))).toBe(true);
+  });
+
+  // ── file.recycle ──
+  it("file.recycle 确认 → MoveToRecycle + 刷新", async () => {
+    modalConfirmMock.mockResolvedValue(true);
+    MoveToRecycleMock.mockResolvedValue(undefined);
+    await clickAsync("file", "移入回收站", { path: "/a.ysm" });
+    expect(MoveToRecycleMock).toHaveBeenCalledWith("/a.ysm");
+    expect(reloaded()).toBe(true);
+  });
+
+  it("file.recycle 取消 → 不调后端", async () => {
+    modalConfirmMock.mockResolvedValue(false);
+    await clickAsync("file", "移入回收站", { path: "/a.ysm" });
+    expect(MoveToRecycleMock).not.toHaveBeenCalled();
+  });
+
+  // ── file.reveal ──
+  it("file.reveal 成功 → RevealInExplorer", async () => {
+    RevealInExplorerMock.mockResolvedValue(undefined);
+    await clickAsync("file", "打开文件位置", { path: "/a.ysm" });
+    expect(RevealInExplorerMock).toHaveBeenCalledWith("/a.ysm");
+  });
+
+  it("file.reveal 后端报错 → friendlyError toast", async () => {
+    RevealInExplorerMock.mockRejectedValue(new Error("ENOENT: no such file"));
+    await clickAsync("file", "打开文件位置", { path: "/a.ysm" });
+    expect(toasts().some((t) => t.type === "error" && t.msg.includes("文件或目录不存在"))).toBe(true);
+  });
+
+  // ── file.copy-path ──
+  it("file.copy-path 剪贴板成功 → toast", async () => {
+    stubClipboard(() => Promise.resolve());
+    await clickAsync("file", "复制文件路径", { path: "/a.ysm" });
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("/a.ysm");
+    expect(toasts().some((t) => t.msg.includes("路径已复制"))).toBe(true);
   });
 });

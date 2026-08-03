@@ -181,7 +181,6 @@ export function registerSync(unsubs: Array<() => void>): void {
               : "warn",
         });
         bus.emit("stats:refresh");
-        bus.emit("logs:refresh");
       } catch (err) {
         const { AddImportLog } = await import(
           "../../bindings/ysm-model-manager/internal/app/app.js"
@@ -200,126 +199,9 @@ export function registerSync(unsubs: Array<() => void>): void {
           type: "error",
         });
       } finally {
-        bus.emit("sync:toggle:done");
         bus.emit("tree:reload");
       }
     }),
   );
 
-  // MMD 变体同步
-  unsubs.push(
-    bus.on(
-      "mmd:sync-variant-folder",
-      async ({ instanceName, folderPath, rtype }) => {
-        if (!instanceName || !folderPath) return;
-        dbg("sync", "mmd:sync-variant-folder", instanceName, folderPath);
-
-        bus.emit("toast:show", {
-          msg: `⬇️ ${instanceName}: 正在同步变体文件...`,
-          duration: 3000,
-          type: "info",
-        });
-
-        try {
-          const {
-            LoadAppConfig,
-            GetResourceInstanceStatus,
-            InstallResourceToInstance,
-            GetRepoRoot,
-          } = await import(
-            "../../bindings/ysm-model-manager/internal/app/app.js"
-          );
-          const cfg = await LoadAppConfig();
-          const mcRoot = cfg.mcRoot || "";
-          const mmdRoot = await GetRepoRoot(RESOURCE_TYPES.MMD);
-          if (!mcRoot) {
-            bus.emit("toast:show", {
-              msg: "请先配置游戏目录",
-              duration: 3000,
-              type: "warn",
-            });
-            return;
-          }
-
-          const statusList = await GetResourceInstanceStatus(
-            rtype,
-            mcRoot,
-            mmdRoot || "",
-          );
-          const st = (statusList || []).find(
-            (s) => s.Name === instanceName,
-          );
-          if (!st?.Missing?.length) {
-            bus.emit("toast:show", {
-              msg: "没有需要同步的文件",
-              duration: 2000,
-              type: "info",
-            });
-            return;
-          }
-
-          const normFolder = folderPath.replace(/\\/g, "/");
-          const variantFiles = st.Missing.filter((p) =>
-            p.replace(/\\/g, "/").startsWith(normFolder),
-          );
-
-          if (!variantFiles.length) {
-            bus.emit("toast:show", {
-              msg: "该文件夹下没有缺失的文件",
-              duration: 2000,
-              type: "info",
-            });
-            return;
-          }
-
-          bus.emit("toast:show", {
-            msg: `⬇️ ${instanceName}: 同步 ${variantFiles.length} 个变体中...`,
-            duration: 0,
-            type: "info",
-          });
-
-          let ok = 0;
-          let fail = 0;
-          const failedFiles: string[] = [];
-          for (const srcPath of variantFiles) {
-            try {
-              await InstallResourceToInstance(rtype, srcPath, instanceName);
-              ok++;
-            } catch (e) {
-              fail++;
-              const fname = srcPath.split(/[/\\]/).pop() || srcPath;
-              failedFiles.push(fname);
-            }
-          }
-
-          try {
-            const { InvalidateScanCache } = await import(
-              "../../bindings/ysm-model-manager/internal/app/app.js"
-            );
-            await InvalidateScanCache();
-          } catch {}
-
-          bus.emit("stats:refresh");
-          bus.emit("tree:reload");
-
-          const detail = failedFiles.length
-            ? ` (失败: ${failedFiles.slice(0, 3).join(", ")}${failedFiles.length > 3 ? "..." : ""})`
-            : "";
-          bus.emit("toast:show", {
-            msg: `📥 ${instanceName}: 变体同步 ${ok} 成功, ${fail} 失败${detail}`,
-            duration: 5000,
-            type: fail > 0 ? "warn" : "success",
-          });
-        } catch (e) {
-          bus.emit("toast:show", {
-            msg: `❌ 变体同步失败: ${(e as Error)?.message || e}`,
-            duration: 5000,
-            type: "error",
-          });
-        } finally {
-          bus.emit("sync:download:done", { instanceName });
-        }
-      },
-    ),
-  );
 }

@@ -1499,3 +1499,44 @@ const dispName = renderDisplayName(k);
 - 功能被新模块承接后，旧入口链必须**整链移除**（组件分支 + handler + 事件类型 + CSS），死代码常驻 bundle 只会持续误导审计与维护者
 - 删死代码前先证明「永久不可达」：唯一实例硬编码 `mode="model"`、全仓无动态 setter，才可整段删；删后跑 `check-consumers --strict` + deadcode 基线双重守卫
 - 控件「渲染出来」≠「可用」：模板新增控件必须在同一提交内补事件绑定，死控件靠人工审核发现成本太高
+
+## 2026-08-04 新增 bug 记录（L2 审计 P3 第一批：点状修复七项）
+
+> 来源：`docs/review-report.md` L2 审计 P3 清单第一批，全部通过 typecheck + vite build + 契约测试。
+
+### 症状
+
+1. app-preview `_modelCleanup` 字段从未赋值，`_cleanupModelListeners()` 恒为空操作
+2. 预览缓存流转 50 条后，作者头像 blob URL 持续累积不回收（evict 只释放纹理链）
+3. app-content 组件销毁重建后，新实例收不到 `config-loaded` 事件（模块级 flag 不复位，旧闭包引用首次渲染上下文）
+4. community 仓库模型右键菜单，文件名含 `&`/引号时显示 `&amp;amp;` 乱码（双重转义）
+5. 选择新仓库目录会把用户已保存的硬链接模式（linkMode）冲回 copy
+6. 移入回收站失败静默吞错（单文件 + 批量两处 `catch {}`），用户不知操作失败
+7. 资源类型注册表加载失败被缓存为 `{}` 且永不重试，Go 桥瞬断后整个会话 `getStorageSubDir` 全部降级
+
+### 根因
+
+1. 预留字段未接线：window 级监听实际由 preview-skeleton 模块槽位兜底，字段沦为死代码
+2. `preview-wasm.ts` 为作者头像 `createObjectURL`（authors[].avatarUrl 与 avatars 记录），evict 回调只扫 `geometry.textures` / `texture`
+3. 模块级 flag 不随组件生命周期复位；`Events.On` 返回的解绑函数未捕获
+4. 调用侧先 `esc()`，context-menu 组件渲染时再 `_esc()`——转义职责契约不明确
+5. `SaveAppConfig(dir, "", "", "copy", theme)` 硬编码字面量，不读 `cfg.linkMode`（sidebar 已有正确写法可参照）
+6. 空 catch 块违背「异常路径必须 toast」红线
+7. catch 分支写 `_registry = {}`，后续调用命中缓存短路，永不再请求 Go 桥
+
+### 修复
+
+1. 删字段 + 空方法，`disconnectedCallback` 只清 `_unsubs`
+2. evict 补扫 `authors[].avatarUrl`（typeof 收窄，数组元素可能是字符串）与 `avatars` 记录值，与纹理 URL 合并去重后 revoke
+3. `Events.On` 返回的解绑函数存模块槽位 `_avatarConfigLoadedUnsub`；`disconnectedCallback` 调用回收并复位 flag
+4. `menu:show` 契约改传原文，转义职责归 context-menu 组件（其 `_esc` 为含引号完整版）
+5. 先 `LoadAppConfig()`（失败降级 null），`SaveAppConfig` 传 `cfg?.linkMode || "copy"`
+6. 批量移回收站计数失败并汇总 toast；单文件 catch 补 `friendlyError` toast
+7. catch 分支直接 `return {}` 不写 `_registry`，下次调用重新请求 Go 桥
+
+### 教训
+
+- 「声明了但从未赋值」的字段是与未使用函数同类的死代码，审核时以赋值点为锚点排查
+- `URL.createObjectURL` 的生命周期必须跟随其宿主缓存条目的 evict；新增 createObjectURL 时同步检查 evict 回调覆盖面
+- 模块级 flag 与组件生命周期绑定时，必须在 `disconnectedCallback` 复位；Wails `Events.On` 返回解绑函数，捕获它是强制项
+- 转义契约必须是「生产方传原文、消费方负责转义」——双重转义（乱码）与漏转义（XSS）是同一职责不明的两面；handler-dnd 的 100MB 文案问题核实已由并行提交修复，无需重复动手

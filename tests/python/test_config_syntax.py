@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""契约测试：wails.json + go.mod + reasonix.toml 语法与结构校验。"""
+"""契约测试：wails.json + go.mod 语法与结构校验（reasonix.toml 为本地 AI 终端配置，不入库不校验）。"""
 import json
 import re
 import sys
@@ -22,7 +22,7 @@ def check_wails():
         return errors
 
     # Wails 3 契约：v2 平铺结构（outputfilename / frontend:* / bind）已弃用。
-    # 迁移依据见 docs/architecture/adr/ADR-0001-wails3-migration.md §3。
+    # 迁移依据见 docs/architecture/adr/ADR-001-wails3-migration.md §3。
     if not data.get("name"):
         errors.append("'name' must be non-empty")
 
@@ -92,33 +92,10 @@ def check_gomod():
     return errors
 
 
-def check_reasonix():
-    errors = []
-    fp = ROOT / "reasonix.toml"
-    if not fp.exists():
-        errors.append("MISSING: reasonix.toml")
-        return errors
-
-    text = fp.read_text("utf-8", errors="replace")
-
-    if "config_version" not in text:
-        errors.append("missing 'config_version'")
-    if "default_model" not in text:
-        errors.append("missing 'default_model'")
-    if "[agent]" not in text:
-        errors.append("missing [agent] section")
-    if "[permissions]" not in text:
-        errors.append("missing [permissions] section")
-    if "[sandbox]" not in text:
-        errors.append("missing [sandbox] section")
-    return errors
-
-
 def main():
     errors = []
     errors += [("wails.json", e) for e in check_wails()]
     errors += [("go.mod", e) for e in check_gomod()]
-    errors += [("reasonix.toml", e) for e in check_reasonix()]
 
     if errors:
         sys.stdout.buffer.write(f"FAILED: {len(errors)} issue(s)\n\n".encode("utf-8"))
@@ -126,7 +103,7 @@ def main():
             sys.stdout.buffer.write(f"  [{src}] {e}\n".encode("utf-8"))
         sys.exit(1)
     else:
-        sys.stdout.buffer.write(b"OK: wails.json + go.mod + reasonix.toml syntax checks passed\n")
+        sys.stdout.buffer.write(b"OK: wails.json + go.mod syntax checks passed\n")
 
 
 if __name__ == "__main__":

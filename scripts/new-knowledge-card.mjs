@@ -69,12 +69,27 @@ function toSnakeCase(text) {
 
 function main() {
   const args = process.argv.slice(2);
-  if (args.length < 4) {
+
+  // --help / -h：输出用法退出，绝不创建卡片（防 --help 被当 kind）
+  if (args.includes('--help') || args.includes('-h')) {
+    console.error('用法: node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]');
+    return 0;
+  }
+  // 未知 flag：拒绝而非当 kind（防 --foo 类误用，与 new-adr.mjs 同款防护）
+  const unknownFlags = args.filter((a) => a.startsWith('--') && a !== '--leaf');
+  if (unknownFlags.length) {
+    console.error(`[FAIL] 未知参数: ${unknownFlags.join(', ')}（--help 查看用法）`);
+    console.error('用法: node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]');
+    return 1;
+  }
+
+  const positional = args.filter((a) => !a.startsWith('--'));
+  if (positional.length < 4) {
     console.error('用法: node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]');
     process.exit(1);
   }
 
-  const [kindRaw, name, categoryRaw, source] = args;
+  const [kindRaw, name, categoryRaw, source] = positional;
   const isLeaf = args.includes('--leaf');
   const kind = toSnakeCase(kindRaw);
   const category = KNOWN_CATEGORIES.includes(categoryRaw) ? categoryRaw : null;
@@ -104,4 +119,4 @@ function main() {
   console.log(`[OK] 已创建 ${fullPath}`);
 }
 
-main();
+process.exit(main());

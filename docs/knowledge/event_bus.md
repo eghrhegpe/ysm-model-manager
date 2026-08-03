@@ -1,6 +1,6 @@
 ---
 kind: event_bus
-name: 事件总线 bus.js
+name: 事件总线 bus.ts
 tier: architecture
 category: core
 source_files:
@@ -14,22 +14,22 @@ use_when:
   - bus
 ---
 
-# 事件总线 bus.js
+# 事件总线 bus.ts
 
 ## 概览
 
-`bus.js` 是 YSM 前端的唯一事件中枢，基于发布/订阅模式。所有跨组件、跨页面的异步通信都经过此总线，避免组件间直接耦合。
+`bus.ts` 是 YSM 前端的唯一事件中枢，基于发布/订阅模式。所有跨组件、跨页面的异步通信都经过此总线，避免组件间直接耦合。
 
 ## 核心职责
 
 - **统一通信通道**: 所有组件通过 `bus.emit()` 发送事件，`bus.on()` / `bus.off()` 监听
 - **事件命名规范**: 小写蛇形命名，如 `model-selected`, `download-started`
-- **全局事件注册**: 全局事件必须注册在 `app-content/index.js` 的 `_registerGlobalHandlers()` 中
+- **全局事件注册**: 全局事件必须注册在 `app-content/index.ts` 的 `_registerGlobalHandlers()` 中
 
 ## 与其他子系统关系
 
-- `app-modules.js`: 各子模块入口，负责模块内部事件分发
-- `core/global-handlers.js`: 全局事件处理器集合
+- `app-modules.ts`: 各子模块入口，负责模块内部事件分发
+- `core/global-handlers.ts`: 全局事件处理器集合
 - Wails EventsOn: Go 后端 → 前端的 Bridge 事件也通过 bus 转发
 
 ## 不变量
@@ -41,4 +41,4 @@ use_when:
 ## 相关
 
 - `frontend/js/core/global-handlers.ts` — 全局事件处理
-- `frontend/js/app-modules.js` — 子模块事件路由
+- `frontend/js/app-modules.ts` — 子模块事件路由

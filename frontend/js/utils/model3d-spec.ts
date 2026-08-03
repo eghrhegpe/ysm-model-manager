@@ -83,7 +83,11 @@ export function buildSpecFromModel(model: SpecModelInput): SpecBuildResult {
     }
   }
 
-  // Phase 2: 每组同名骨骼收集所有 cube，merge 后保留一个
+  // Phase 2: 每组同名骨骼收集所有 cube
+  // 对齐 Go threejs.Build() 去重规则：同名骨骼首次无 parent、后续带 parent →
+  // cube 整体替换（overwrite）；否则 mergeCubes（替换重叠、保留非重叠）。
+  // （Go 端另有「双 parent 时按 rotation 完整性 overwrite」规则，SpecBone 无 rotation 字段，JS 不适用）
+  const boneHasParent: Record<string, boolean> = {};
   for (const b of model.bones || []) {
     const cubes: SpecCube[] = (b.cubes || []).map((c) => {
       const origin = c.origin || [0, 0, 0];
@@ -94,6 +98,10 @@ export function buildSpecFromModel(model: SpecModelInput): SpecBuildResult {
     });
     if (!boneCubes[b.name]) {
       boneCubes[b.name] = cubes;
+      boneHasParent[b.name] = !!b.parent;
+    } else if (!boneHasParent[b.name] && b.parent) {
+      boneCubes[b.name] = cubes;
+      boneHasParent[b.name] = true;
     } else {
       boneCubes[b.name] = mergeCubesJS(boneCubes[b.name], cubes);
     }

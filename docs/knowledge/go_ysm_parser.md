@@ -37,4 +37,4 @@ use_when:
 
 ## 相关
 
-- `frontend/js/wasm/ysm-parser.js` — Wasm 端解析器
+- `frontend/js/wasm/ysm-parser.ts` — Wasm 端解析器

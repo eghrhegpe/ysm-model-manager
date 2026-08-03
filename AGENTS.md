@@ -35,7 +35,7 @@
 | 改前端子模块 | `docs/Design.md`（唯一设计规范；动画系统 §7.2 / UI 体验原则 §13 已收编）；增强待办台账查 ADR-017 |
 | 改 Go 后端 | `internal/app/`（Wails Binding 入口）+ `docs/archive/architecture.md`（逻辑下沉优先 `go/` 包） |
 | 修 Bug 查历史 | 说 "bug-search <关键词>" 查 `docs/archive/bug-chronicle.md` |
-| 查资源类型一致性 | 说 "type-consistency"（resource_types.json ↔ extensions.js） |
+| 查资源类型一致性 | 说 "type-consistency"（resource_types.json ↔ extensions.ts） |
 | 查事件注册位置 | 说 "event-audit"（EventsOn/bus.on） |
 | 查函数签名 | `node scripts/funcmap.mjs` 或 grep |
 | 写大语言模型小说 | `docs/novel/SKELETON.md` + `development-saga.md` |
@@ -161,10 +161,10 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 
 | 级别 | 文件 | 观察 | 建议 |
 |------|------|------|------|
-| 🔴 极高 P1 | xxx.js:123 | 具体问题描述 | 改进建议 |
-| 🟠 高 P2 | xxx.js:123 | 具体问题描述 | 改进建议 |
-| 🟡 中 P3 | xxx.js:123 | 具体问题描述 | 改进建议 |
-| 🟢 低 P4 | xxx.js:123 | 具体问题描述 | 改进建议 |
+| 🔴 极高 P1 | xxx.ts:123 | 具体问题描述 | 改进建议 |
+| 🟠 高 P2 | xxx.ts:123 | 具体问题描述 | 改进建议 |
+| 🟡 中 P3 | xxx.ts:123 | 具体问题描述 | 改进建议 |
+| 🟢 低 P4 | xxx.ts:123 | 具体问题描述 | 改进建议 |
 ```
 
 ## 审核执行流程（必须严格按此顺序）
@@ -191,7 +191,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | **操作反馈（异步）** | 查找 `async` 操作前后是否更新 UI 状态 | 按钮 loading → 完成 → 恢复 | 点击后无任何视觉反馈，用户重复点击触发竞态 |
 | **破坏性操作防呆** | 查找 `remove` / `delete` / `reset` 是否前置确认 | 二次确认后才执行 | 直接执行删除，无确认或撤销途径（回收站是兜底但不应依赖） |
 | **错误消息可理解性** | 查找 `catch` 块中抛给用户的文本 | toast 含具体文件名/原因 | 抛技术栈或「出错了」无细节 |
-| **交互一致性** | 同类操作是否复用相同 UI 组件 | 所有弹窗走 `modal.js`，所有按钮走 `.btn-base` | 每处自定义一套，行为/样式不一致 |
+| **交互一致性** | 同类操作是否复用相同 UI 组件 | 所有弹窗走 `modal.ts`，所有按钮走 `.btn-base` | 每处自定义一套，行为/样式不一致 |
 | **空状态与引导** | 首次打开无数据时，界面是否提供行动入口 | 空列表显示「暂无模型，拖拽导入」+ 引导 | 空白界面无任何提示，用户不知道下一步该做什么 |
 | **操作结果可撤销** | 破坏性操作后是否有撤销或「恢复」路径 | 删除进回收站可恢复；重命名可撤销 | 操作一次性完成，无任何回退机制 |
 
@@ -227,16 +227,16 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | # | 陷阱 | 表现 | 规则 |
 |---|------|------|------|
 | 1 | Go 改后未重建 | 前端调用没反应 | 改 Go 文件必须 `wails build` 或 `go build .` + 重启 |
-| 2 | 全局事件放错组件 | 切页后 handler 消失 | 全局 handler 必须放 `app-content/index.js` 的 `_registerGlobalHandlers()` |
+| 2 | 全局事件放错组件 | 切页后 handler 消失 | 全局 handler 必须放 `app-content/index.ts` 的 `_registerGlobalHandlers()` |
 | 3 | 按钮异步后卡死 | 操作失败后按钮灰掉 | `finally` 里 emit 完成事件，不放 try 末尾 |
 | 4 | `const` TDZ | 静默失败 | `const fn = () => {}` 不提升，先定义再调用 |
 | 5 | Go Binding 函数名写错 | 前端调用 undefined | 先用 grep 在 `internal/app/` 确认函数名 |
 | 6 | 下载进度 99% 卡死 | Content-Length=-1 | 锁定 99%，2s 后转菊花；`stuckGuardReset()` 清全部状态 |
 | 7 | 三入口各自注册 | 事件重复/遗漏 | 单击/多选/全选都走 `enqueueDownloadTasks()`，只注册一组 Wails EventsOn |
 | 8 | 回收站误删 | 硬链接数据丢失 | 符号链接→直接删，硬链接(nlink>1)→直接删，普通→移 `.recycle`，跨分区→复制后删 |
-| 9 | `public/` 下放 JS | Vite dev 优先加载 | 新 JS 放 `frontend/js/`，ES module → `app-modules.js` 加 import |
+| 9 | `public/` 下放 JS | Vite dev 优先加载 | 新 JS 放 `frontend/js/`，ES module → `app-modules.ts` 加 import |
 | 10 | 回调 API 未 Promise 化 | DnD 数据读不到 | `entry.file(callback)` → `new Promise(resolve => entry.file(resolve))` |
-| 11 | 3D 坐标变换反复修（实证：model3d.js 9 次 fix 全项目第一） | "对齐 ysmview cube pivot" 连续 5 次 fix | 改 model2d/model3d/spec.go 坐标前先 grep `bug-chronicle` + 对齐 ysmview 口径（pivot X 取反、`from.x = origin.x - size.x`）；改完用自由相机近距验证 |
+| 11 | 3D 坐标变换反复修（实证：model3d.ts 9 次 fix 全项目第一） | "对齐 ysmview cube pivot" 连续 5 次 fix | 改 model2d/model3d/spec.go 坐标前先 grep `bug-chronicle` + 对齐 ysmview 口径（pivot X 取反、`from.x = origin.x - size.x`）；改完用自由相机近距验证 |
 
 > 完整版见 `docs/pitfalls.md`。
 
@@ -309,14 +309,14 @@ frontend/js/
 ### 4.3 组件拆分规范
 
 ```
-app-xxx/index.js     — 生命周期编排
-app-xxx/tpl.js       — 布局 HTML 模板
-app-xxx/row-tpl.js   — 节点级模板（可选）
-app-xxx/data.js      — 数据逻辑（纯函数）
-app-xxx/render.js    — 渲染逻辑（输入→HTML）
-app-xxx/events.js    — 事件绑定
-app-xxx/utils.js     — 组件工具（可选）
-app-xxx/xxx-css.js   — Shadow DOM 样式
+app-xxx/index.ts     — 生命周期编排
+app-xxx/tpl.ts       — 布局 HTML 模板
+app-xxx/row-tpl.ts   — 节点级模板（可选）
+app-xxx/data.ts      — 数据逻辑（纯函数）
+app-xxx/render.ts    — 渲染逻辑（输入→HTML）
+app-xxx/events.ts    — 事件绑定
+app-xxx/utils.ts     — 组件工具（可选）
+app-xxx/xxx-css.ts   — Shadow DOM 样式
 ```
 
 ### 4.4 注册表优先

@@ -253,8 +253,8 @@ index.ts（编排：constructor → shadow → connected→disconnected）
 
 - **3D 预览**：`app-preview/preview-skeleton.ts` 调用 `utils/model3d-loader.ts` → `GetModel3DSpec`（Go）→ `model3d.ts` 构建 Three.js `BufferGeometry`（见 §4 标准）。`preview-litematic-3d.ts` 处理 voxel 预览。
 - **2D 预览**：`utils/model2d.ts`（~19.4KB）处理平铺/网格 2D 缩略图。
-- **缓存**：`utils/preview-cache.js` 预览缓存 FIFO（75 行）；`model3d-loader.ts` LRU 20 条 spec 缓存。
-- **截图**：`utils/screenshot-renderer.js` 无头截图 + 批量截图（~100 行）；Go 端 `app_files.go:ExtractPreviewTexture` 提取预览纹理。
+- **缓存**：`utils/preview-cache.ts` 预览缓存 FIFO（75 行）；`model3d-loader.ts` LRU 20 条 spec 缓存。
+- **截图**：`utils/screenshot-renderer.ts` 无头截图 + 批量截图（~100 行）；Go 端 `app_files.go:ExtractPreviewTexture` 提取预览纹理。
 
 ---
 
@@ -263,8 +263,8 @@ index.ts（编排：constructor → shadow → connected→disconnected）
 | 能力 | 前端 | Go 绑定 | 业务包 |
 |------|------|---------|--------|
 | 拖拽导入 | `core/handler-dnd.ts`、`features/import-queue.ts`（30.8KB） | `ImportModelFile*`（app_install.go） | `go/importer`（策略接口）、`go/installer` |
-| 安装/同步 | `core/handler-sync.ts`、`handler-upload.ts` | `SyncResources`、`Push/PullResourceFromInstance`（app_install.go） | `go/sync`（硬/软链接）、`go/installer` |
-| 回收站 | `features/recycle-bin.js` | `MoveToRecycle*`/`RestoreFromRecycle`（app_install.go） | `go/recycle` |
+| 安装/同步 | `core/handler-sync.ts` | `SyncResources`、`Push/PullResourceFromInstance`（app_install.go） | `go/sync`（硬/软链接）、`go/installer` |
+| 回收站 | `features/recycle-bin.ts` | `MoveToRecycle*`/`RestoreFromRecycle`（app_install.go） | `go/recycle` |
 | 去重 | — | — | `go/dedup` |
 | 启用开关 | — | `ToggleModelEnable`（app_files.go，`.ban` 后缀） | — |
 
@@ -277,7 +277,7 @@ index.ts（编排：constructor → shadow → connected→disconnected）
 - **数据加载**：`app-content/community/core.ts:35-36` 调 `LoadWorkshopSites()` + `LoadWorkshopCreators()`（Go `app_workshop.go:56,109` → `loadBundledJSON` → 三级路径解析）；`LoadGitHubRepos()` 读 `workshop-github.json`。
 - **下载流**：用户选中 → `features/community/download-queue.ts:139-142` `EnqueueDownloads(tasks)` → Go `app_download.go:50-64` 入队并 `Event.Emit("queue:status")` → 串行 `process()` → `DownloadFromGitHub`（镜像回退）→ 前端 `Events.On("queue:status"/"queue:file-start"/"queue:file-done"/"download:progress")`（:167-234）更新 UI。
 - **配置写回**：`atomicWrite`（tmp + rename，`app_workshop.go:19`）防中断损坏。
-- 创作者头像增量刷新：`download-queue.js` 解析 `queue:file-done` → `bus.emit("avatar:refresh")` → `app-content` 按 `dataset.name` 定点更新卡片（v1.7.7+）。
+- 创作者头像增量刷新：`download-queue.ts` 解析 `queue:file-done` → `bus.emit("avatar:refresh")` → `app-content` 按 `dataset.name` 定点更新卡片（v1.7.7+）。
 
 ---
 
@@ -426,11 +426,11 @@ app-content/community/core.ts:35-36
 | 2026-08-03 | 契约测试 Python → `.mjs` 迁移 | `tests/python/` 仅剩 `__pycache__` |
 | 2026-08-03 | 前端文档/架构归位（本文扩充） | 渲染片段从 copilot-instructions 迁移；前端路线图/计划类文档收归架构与设计规范体系 |
 | 2026-07 | 文档宪法 + 路径大统一 + 主题增强（v1.9.0） | `c381329` |
-| 2026-06-16 | v1.7.8 头像增量刷新 | `download-queue.js` 解析 `queue:file-done` + `bus.emit("avatar:refresh")`；`app-content` 定点更新卡片 |
+| 2026-06-16 | v1.7.8 头像增量刷新 | `download-queue.ts` 解析 `queue:file-done` + `bus.emit("avatar:refresh")`；`app-content` 定点更新卡片 |
 | 2026-06-16 | v1.7.6/7 动画系统 | 统一 3 keyframe / stagger / 设计令牌（前端标准见 `docs/Design.md` §7 动画系统） |
 | 2026-06-16 | v1.7.5 暗色自动切换 + 右键打开位置 | `matchMedia('change')` + `RevealInExplorer` binding |
 | 2026-06-15 | v1.7.4 社区站点视图迁移至 Go 后端 | 前端硬编码数据移除，改 Go binding 读 JSON |
-| 2026-06-11 | 👴 仓库元老降级为仓库页 Tab | 新建 `features/oldest-models.js` |
+| 2026-06-11 | 👴 仓库元老降级为仓库页 Tab | 新建 `features/oldest-models.ts` |
 | 2026-06-11 | 🧪 Go 测试框架 + CI | `go/*_test.go`；`.github/workflows/release.yml` |
 
 ---

@@ -195,8 +195,9 @@ export function bindRepoEvents(
         x: e.clientX,
         y: e.clientY,
         items: [
-          { label: "📄 " + esc(m.name), onClick: () => {} },
-          { label: "📂 " + esc(m.path), onClick: () => {} },
+          // menu:show 契约传原文：转义职责归 context-menu 组件（此处再 esc 会双重转义出 &amp;）
+          { label: "📄 " + m.name, onClick: () => {} },
+          { label: "📂 " + m.path, onClick: () => {} },
           { label: "🔐 " + (m.hash ? m.hash : "—"), onClick: () => {} },
           { label: "📏 " + sizeStr, onClick: () => {} },
         ],

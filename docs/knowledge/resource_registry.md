@@ -25,7 +25,7 @@ use_when:
 ## 核心职责
 
 - 定义资源类型及其 `StorageSubDir`、`specificRoot`、`ResourceExts`
-- 前端 `services/registry.js` 加载并缓存类型定义
+- 前端 `services/registry.ts` 加载并缓存类型定义
 - Go 端 `go/types/` 包同步读取同一份定义
 
 ## 与其他子系统关系

@@ -17,8 +17,9 @@ import {
   githubHTML,
 } from "./tpl.ts";
 
-/** 防止 avatar:config-loaded 事件重复注册 */
+/** 防止 avatar:config-loaded 事件重复注册（unsub 随组件销毁回收并复位 flag） */
 let _avatarConfigLoadedRegistered = false;
+let _avatarConfigLoadedUnsub: (() => void) | null = null;
 import { registerGlobalHandlers } from "../../core/global-handlers.ts";
 import { initDiagnostics } from "./community/diagnostics.ts";
 
@@ -108,6 +109,12 @@ class AppContent extends HTMLElement {
     this._resizeMove = null;
     this._resizeUp = null;
     this._avatarRefreshRegistered = false;
+    // config-loaded Wails 订阅回收 + flag 复位（组件重建后新实例可重新注册）
+    if (_avatarConfigLoadedUnsub) {
+      _avatarConfigLoadedUnsub();
+      _avatarConfigLoadedUnsub = null;
+    }
+    _avatarConfigLoadedRegistered = false;
     // 清理 _unsubs（dedup 等页面的事件订阅）
     if (this._unsubs && Array.isArray(this._unsubs)) {
       this._unsubs.forEach((fn) => {
@@ -518,7 +525,7 @@ class AppContent extends HTMLElement {
     // 配置加载完成后重新提取（覆盖用户在创意工坊内改仓库路径的场景）
     if (!_avatarConfigLoadedRegistered) {
       _avatarConfigLoadedRegistered = true;
-      Events.On("config-loaded", () => {
+      _avatarConfigLoadedUnsub = Events.On("config-loaded", () => {
         dbg("avatar", "配置已加载，重新提取头像");
         extractAvatars();
       });

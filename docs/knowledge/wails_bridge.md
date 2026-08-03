@@ -1,6 +1,6 @@
 ---
 kind: wails_bridge
-name: Wails 桥接 app.js
+name: Wails 桥接 app.ts
 tier: architecture
 category: core
 source_files:
@@ -14,11 +14,11 @@ use_when:
   - window.go.main.App
 ---
 
-# Wails 桥接 app.js
+# Wails 桥接 app.ts
 
 ## 概览
 
-`wails/app.js` 是前端调用 Go Binding 的唯一入口。所有 Go 端方法通过 `getApp()` 获取，禁止直接通过 `window.go.main.App` 访问。
+`wails/app.ts` 是前端调用 Go Binding 的唯一入口。所有 Go 端方法通过 `getApp()` 获取，禁止直接通过 `window.go.main.App` 访问。
 
 ## 核心职责
 
@@ -29,7 +29,7 @@ use_when:
 ## 使用方式
 
 ```js
-import { getApp } from "../wails/app.js";
+import { getApp } from "../wails/app.ts";
 const App = await getApp();
 const result = await App.SomeBinding();
 ```

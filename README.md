@@ -212,16 +212,16 @@ ysm-model-manager/
 │   │   ├── layout.css         —— 主布局 + 侧栏
 │   │   └── components.css     —— 全局组件样式（部分已迁移至 Shadow DOM）
 │   └── js/
-│       ├── bus.js              —— 事件总线（跨 Shadow DOM 通信）
-│       ├── app-modules.js      —— 全局入口 + 右键菜单映射
+│       ├── bus.ts              —— 事件总线（跨 Shadow DOM 通信）
+│       ├── app-modules.ts      —— 全局入口 + 右键菜单映射
 │       ├── components/         —— Web Components（Shadow DOM）
-│       │   ├── app-nav.js      —— 左侧导航菜单
+│       │   ├── app-nav.ts      —— 左侧导航菜单
 │       │   ├── app-content/    —— 主内容区（页面路由 + 全局事件）
 │       │   ├── app-tree/       —— 模型仓库树
 │       │   ├── app-sidebar/    —— 整合包列表
 │       │   ├── app-preview/    —— 预览面板 + 3D/2D 渲染
-│       │   ├── app-toast.js    —— Toast 通知
-│       │   └── context-menu.js —— 右键菜单
+│       │   ├── app-toast.ts    —— Toast 通知
+│       │   └── context-menu.ts —— 右键菜单
 │       ├── features/           —— 业务功能（import-queue / recycle-bin / workshop 等）
 │       ├── dialogs/            —— 弹窗（modal/rename/batch-rename）
 │       ├── pages/              —— 页面渲染（repository）
@@ -249,10 +249,12 @@ ysm-model-manager/
 
 ```
 app-content/
-  index.js          # 生命周期编排、页面路由、全局事件
-  tpl.js            # HTML 模板（全部页面）
-  content-css.js    # Shadow DOM 样式表
-  workshop-*.js     # 创作者频道相关子模块
+  index.ts          # 生命周期编排、页面路由、全局事件
+  tpl.ts            # HTML 模板（全部页面）
+  content-css.ts    # Shadow DOM 样式表
+  community/        # 创作者频道相关子模块
+  diagnostics/      # 诊断页
+  settings/         # 设置页
 ```
 
 小组件（`app-nav` / `app-toast` / `context-menu`）直接单个文件。
@@ -281,7 +283,7 @@ wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 **注意**：
 
 - 修改 Go 文件后必须 `go build ./go/...` + `wails build` 并重启
-- 前端非 module 脚本需在 `app-modules.js` 中 import，禁止在 `index.html` 加 `<script>`
+- 前端非 module 脚本需在 `app-modules.ts` 中 import，禁止在 `index.html` 加 `<script>`
 - 修改 CSS 变量或全局样式后需刷新（Vite 热重载）
 
 ---

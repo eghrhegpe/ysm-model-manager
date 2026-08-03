@@ -17,7 +17,7 @@ docs/knowledge/
 ```yaml
 ---
 kind: event_bus              # snake_case 标识符，也是文件名
-name: 事件总线 bus.js         # 人类可读名称
+name: 事件总线 bus.ts         # 人类可读名称
 tier: architecture | leaf    # architecture=核心架构, leaf=叶子节点
 category: core               # core|go|ui|feature|utils|config
 source_files:                # 必须真实存在于磁盘

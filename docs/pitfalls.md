@@ -19,7 +19,7 @@ description: 项目历史事故浓缩的 11 条避坑教训 — 现象 × 根因
 ## 2. 全局事件放错组件
 
 - **现象**：切页后 handler 消失，事件石沉大海。
-- **规则**：`sync:download-missing` 等全局 handler 必须放常驻组件 `app-content/index.js` 的 `_registerGlobalHandlers()`，放 `app-tree` 等页面组件会随页面切换销毁。
+- **规则**：`sync:download-missing` 等全局 handler 必须放常驻组件 `app-content/index.ts` 的 `_registerGlobalHandlers()`，放 `app-tree` 等页面组件会随页面切换销毁。
 
 ## 3. 按钮异步后卡死
 
@@ -63,7 +63,7 @@ description: 项目历史事故浓缩的 11 条避坑教训 — 现象 × 根因
 
 ## 11. 3D 坐标变换反复修
 
-- **现象**：「对齐 ysmview cube pivot」连续 5 次 fix；实证 model3d.js 9 次 fix 全项目第一。
+- **现象**：「对齐 ysmview cube pivot」连续 5 次 fix；实证 model3d.ts 9 次 fix 全项目第一。
 - **规则**：改 model2d/model3d/spec.go 坐标前先 grep `bug-chronicle` + 对齐 ysmview 口径（pivot X 取反、`from.x = origin.x - size.x`）；改完用自由相机近距验证。坐标系问题见 ADR-004。
 
 ---

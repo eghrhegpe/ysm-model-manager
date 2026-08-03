@@ -4,7 +4,7 @@ name: 资源树 app-tree
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/components/app-tree/index.js
+  - frontend/js/components/app-tree/index.ts
 use_when:
   - 树形
   - 资源列表
@@ -31,7 +31,7 @@ use_when:
 
 - `app-content/`: 选中节点内容在 content 区域渲染
 - `app-sidebar/`: 侧栏面板状态联动
-- `context-menu.js`: 右键菜单事件路由
+- `context-menu.ts`: 右键菜单事件路由
 - 通过 bus 发出节点选择事件
 
 ## 不变量
@@ -42,5 +42,5 @@ use_when:
 
 ## 相关
 
-- `frontend/js/utils/display.js` — 文件名渲染
+- `frontend/js/utils/display.ts` — 文件名渲染
 - `frontend/js/components/app-tree/` — 组件目录

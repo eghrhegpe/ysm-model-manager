@@ -56,7 +56,7 @@ export async function loadModelData(modelPath, ctx) {
       let goClips = [];
       if (model.animations?.length) {
         const { parseBedrockAnimationJSON } =
-          await import("../../utils/animation.js");
+          await import("../../utils/animation.ts");
         for (const jsonStr of model.animations) {
           const { clips } = parseBedrockAnimationJSON(jsonStr);
           for (const clip of clips) {

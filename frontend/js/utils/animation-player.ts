@@ -1,27 +1,11 @@
 // ===== 动画播放器（类型化版 — ADR-014 P2）=====
 // RAF 循环 + 时间管理，与 animation.js 的 evaluateClip 配合使用
-import { evaluateClip } from "./animation.js";
-
-/** 动画剪辑（轻量接口，与 animation.js 结构对应） */
-export interface AnimationClip {
-  name: string;
-  loop: boolean;
-  length: number;
-  // 其余字段随 animation.js 演进
-  [key: string]: unknown;
-}
+import { evaluateClip, type AnimationClip, type BoneTransform } from "./animation.ts";
 
 /** 骨骼层级节点（用于层级变换传播） */
 export interface BoneNode {
   name: string;
   parent?: string | null;
-}
-
-/** 单帧骨骼变换 */
-export interface BoneTransform {
-  rotation: unknown;
-  position: unknown;
-  scale: unknown;
 }
 
 export class AnimationPlayer {

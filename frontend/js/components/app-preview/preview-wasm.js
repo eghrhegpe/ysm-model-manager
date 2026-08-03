@@ -7,7 +7,7 @@ import {
 } from "./preview-utils.js";
 import { cacheGet, cacheSet } from "../../utils/preview-cache.ts";
 import { parseBedrockGeometryFromJSON } from "./utils.js";
-import { parseBedrockAnimationJSON } from "../../utils/animation.js";
+import { parseBedrockAnimationJSON } from "../../utils/animation.ts";
 
 /**
  * 通过前端 WASM 解码 .ysm，返回 { texture, geometry, animations }

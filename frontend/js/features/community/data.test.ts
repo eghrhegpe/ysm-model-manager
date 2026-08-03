@@ -12,7 +12,7 @@ describe("showProgress", () => {
     const el = document.createElement("div");
     showProgress(el, 30, "⏳ 加载中…");
     expect(el.querySelector(".gh-progress-box")).toBeTruthy();
-    expect(el.querySelector(".gh-progress-text").textContent).toBe(
+    expect(el.querySelector(".gh-progress-text")!.textContent).toBe(
       "⏳ 加载中…",
     );
   });
@@ -20,15 +20,15 @@ describe("showProgress", () => {
   it("sets progress width", () => {
     const el = document.createElement("div");
     showProgress(el, 50, "test");
-    const fill = el.querySelector(".gh-progress-fill");
-    expect(fill.style.width).toBe("50%");
+    const fill = el.querySelector(".gh-progress-fill") as HTMLElement | null;
+    expect(fill!.style.width).toBe("50%");
   });
 
   it("adds striped class when < 100", () => {
     const el = document.createElement("div");
     showProgress(el, 50, "test");
     expect(
-      el.querySelector(".gh-progress-fill").classList.contains("gh-striped"),
+      el.querySelector(".gh-progress-fill")!.classList.contains("gh-striped"),
     ).toBe(true);
   });
 
@@ -36,15 +36,18 @@ describe("showProgress", () => {
     const el = document.createElement("div");
     showProgress(el, 100, "done");
     expect(
-      el.querySelector(".gh-progress-fill").classList.contains("gh-striped"),
+      el.querySelector(".gh-progress-fill")!.classList.contains("gh-striped"),
     ).toBe(false);
   });
 });
 
-const okJson = (data) => ({ ok: true, status: 200, json: async () => data });
-const errResp = (status) => ({ ok: false, status, json: async () => ({}) });
+type FetchResp = { ok: boolean; status: number; json: () => Promise<unknown> };
+type FetchImpl = (url: string) => Promise<FetchResp>;
 
-function mockFetch(impl) {
+const okJson = (data: unknown): FetchResp => ({ ok: true, status: 200, json: async () => data });
+const errResp = (status: number): FetchResp => ({ ok: false, status, json: async () => ({}) });
+
+function mockFetch(impl: FetchImpl) {
   const fn = vi.fn(impl);
   vi.stubGlobal("fetch", fn);
   return fn;
@@ -83,7 +86,7 @@ describe("tryFetchModels 成功路径（并发竞速取最快）", () => {
   it("mirror='githubapi'：api 源 base64 内容被解码", async () => {
     vi.useFakeTimers();
     // jsdom 的 atob 对合法 base64 抛错，用 Buffer 实现替代以驱动源码解码路径
-    vi.stubGlobal("atob", (b64) => Buffer.from(b64, "base64").toString("binary"));
+    vi.stubGlobal("atob", (b64: string) => Buffer.from(b64, "base64").toString("binary"));
     const models = [{ name: "api-model" }];
     const b64 = Buffer.from(JSON.stringify(models), "utf-8").toString("base64");
     const fetchMock = mockFetch(() =>

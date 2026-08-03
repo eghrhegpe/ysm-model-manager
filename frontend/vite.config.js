@@ -26,13 +26,13 @@ export default defineConfig({
   },
   plugins: [wailsBindingsResolve],
   test: {
-    include: ["js/**/*.test.js"],
+    include: ["js/**/*.test.{js,ts}"],
     environment: "jsdom",
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "json"],
       include: ["js/**/*.ts", "js/**/*.js"],
-      exclude: ["js/**/*.test.js", "js/wasm/**"],
+      exclude: ["js/**/*.test.{js,ts}", "js/wasm/**"],
       thresholds: {
         statements: 85,
         branches: 70,

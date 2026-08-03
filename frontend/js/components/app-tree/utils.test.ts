@@ -13,14 +13,14 @@ describe("flashBtn", () => {
   });
 
   it("添加 flash class", () => {
-    const el = { classList: { add: vi.fn(), remove: vi.fn() } };
+    const el = { classList: { add: vi.fn(), remove: vi.fn() } } as unknown as HTMLElement;
     flashBtn(el);
     expect(el.classList.add).toHaveBeenCalledWith("flash");
   });
 
   it("400ms 后移除 flash class", () => {
     vi.useFakeTimers();
-    const el = { classList: { add: vi.fn(), remove: vi.fn() } };
+    const el = { classList: { add: vi.fn(), remove: vi.fn() } } as unknown as HTMLElement;
     flashBtn(el);
     vi.advanceTimersByTime(399);
     expect(el.classList.remove).not.toHaveBeenCalled();

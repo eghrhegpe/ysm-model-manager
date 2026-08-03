@@ -3,12 +3,19 @@
 // 每个用例通过 vi.resetModules() + 动态 import 获得全新模块实例，
 // 彻底隔离模块级 STATE（含 errorList），避免跨用例状态泄漏。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { type Bus, type ToastPayload } from "../../bus.ts";
+import {
+  type DownloadState,
+  type DownloadTask,
+  type QueueController,
+  type QueueControllerOptions,
+} from "./download-queue.ts";
 
 // 捕获模块顶层 Events.On 注册的 handler（import 时即执行）
 const { onMock, eventHandlers } = vi.hoisted(() => {
-  const handlers = {};
+  const handlers = {} as Record<string, (data: unknown) => void>;
   return {
-    onMock: vi.fn((name, fn) => {
+    onMock: vi.fn((name: string, fn: (data: unknown) => void) => {
       handlers[name] = fn;
     }),
     eventHandlers: handlers,
@@ -43,8 +50,13 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   GetRepoRoot: repoRootMock,
 }));
 
-let bus;
-let getState, subscribe, enqueueDownloads, cancelDownloads, resume, createDownloadQueue;
+let bus!: Bus;
+let getState!: () => DownloadState;
+let subscribe!: (fn: (s: DownloadState) => void) => () => void;
+let enqueueDownloads!: (tasks: DownloadTask[]) => Promise<void>;
+let cancelDownloads!: () => Promise<void>;
+let resume!: () => Promise<void>;
+let createDownloadQueue!: (options: QueueControllerOptions) => QueueController;
 
 // 每个用例重置模块注册表并重新 import，拿到干净的模块级 STATE
 beforeEach(async () => {
@@ -68,9 +80,10 @@ beforeEach(async () => {
 });
 
 /** 触发后端事件（payload 为 { data: [...] } 格式） */
-function emit(name, data) {
-  expect(eventHandlers[name], `未注册事件: ${name}`).toBeTruthy();
-  eventHandlers[name]({ data });
+function emit(name: string, data: unknown) {
+  const handler = eventHandlers[name];
+  expect(handler, `未注册事件: ${name}`).toBeTruthy();
+  handler!({ data });
 }
 
 describe("下载队列初始状态", () => {
@@ -209,7 +222,7 @@ describe("queue:status 分支补充", () => {
 describe("queue:file-done 头像增量提取", () => {
   it(".ysm 成功且带 [作者] → 命中缓存发 avatar:refresh", async () => {
     cachedAvatarMock.mockResolvedValue("data:avatar");
-    const events = [];
+    const events: Array<{ author: string; dataUri: string }> = [];
     const off = bus.on("avatar:refresh", (p) => events.push(p));
     emit("queue:file-done", ["[作者A] 角色.ysm", "ok", ""]);
     await vi.waitFor(() => expect(events.length).toBe(1));
@@ -221,7 +234,7 @@ describe("queue:file-done 头像增量提取", () => {
 
   it("缓存未命中 → 先 DebugExtract 再取缓存", async () => {
     cachedAvatarMock.mockResolvedValueOnce("").mockResolvedValue("data:late");
-    const events = [];
+    const events: Array<{ author: string; dataUri: string }> = [];
     const off = bus.on("avatar:refresh", (p) => events.push(p));
     emit("queue:file-done", ["[作者B] 角色.ysm", "ok", ""]);
     await vi.waitFor(() => expect(events.length).toBe(1));
@@ -254,7 +267,7 @@ describe("queue:file-done 头像增量提取", () => {
 });
 
 describe("createDownloadQueue UI 层", () => {
-  function createCtrl(overrides = {}) {
+  function createCtrl(overrides: Partial<QueueControllerOptions> = {}) {
     const sr = document.createElement("div");
     sr.innerHTML =
       '<div id="gh-queue-status"></div><button class="gh-dl-selected">下载</button>';
@@ -265,7 +278,7 @@ describe("createDownloadQueue UI 层", () => {
     statusMock.mockResolvedValue(0); // resume 保持 idle
     const ctrl = createDownloadQueue({
       sr,
-      esc: (s) => String(s),
+      esc: (s: string) => String(s),
       getLocalMap: () => localMap,
       onFileSuccess,
       onAllDone,
@@ -291,7 +304,7 @@ describe("createDownloadQueue UI 层", () => {
     const { sr, ctrl } = createCtrl();
     await Promise.resolve();
     emit("queue:file-start", ["[作者] 角色.ysm", 3, 2]);
-    const qs = sr.querySelector("#gh-queue-status");
+    const qs = sr.querySelector("#gh-queue-status")!;
     expect(qs.querySelector(".gh-progress-row")).toBeTruthy();
     expect(qs.querySelector(".gh-progress-name")).toBeTruthy();
     expect(qs.querySelector(".gh-cancel-queue")).toBeTruthy();
@@ -304,21 +317,21 @@ describe("createDownloadQueue UI 层", () => {
     await Promise.resolve();
     emit("queue:file-start", ["f.ysm", 1, 1]);
     emit("download:progress", [50, 100]);
-    expect(sr.querySelector(".gh-progress-fill").style.width).toBe("50%");
-    expect(sr.querySelector(".gh-progress-pct").textContent).toBe("50%");
+    expect((sr.querySelector(".gh-progress-fill") as HTMLElement).style.width).toBe("50%");
+    expect(sr.querySelector(".gh-progress-pct")!.textContent).toBe("50%");
     ctrl.destroy();
   });
 
   it("queue:status done → 清理 UI + tree:reload + onAllDone", async () => {
     const { sr, onAllDone, ctrl } = createCtrl();
     await Promise.resolve();
-    const reloads = [];
+    const reloads: number[] = [];
     const off = bus.on("tree:reload", () => reloads.push(1));
-    sr.querySelector("#gh-queue-status").classList.add("show");
+    sr.querySelector("#gh-queue-status")!.classList.add("show");
     emit("queue:status", ["done", 1, undefined]);
-    const btn = sr.querySelector(".gh-dl-selected");
+    const btn = sr.querySelector(".gh-dl-selected") as HTMLButtonElement;
     expect(btn.disabled).toBe(false);
-    expect(sr.querySelector("#gh-queue-status").classList.contains("show")).toBe(false);
+    expect(sr.querySelector("#gh-queue-status")!.classList.contains("show")).toBe(false);
     expect(onAllDone).toHaveBeenCalledWith({ cancelled: false, errorList: [] });
     await vi.waitFor(() => expect(reloads.length).toBe(1));
     off();
@@ -329,7 +342,7 @@ describe("createDownloadQueue UI 层", () => {
     const { sr, onAllDone, ctrl } = createCtrl();
     await Promise.resolve();
     emit("queue:status", ["cancelled", 0, undefined]);
-    expect(sr.querySelector("#gh-queue-status").innerHTML).toContain("已取消");
+    expect(sr.querySelector("#gh-queue-status")!.innerHTML).toContain("已取消");
     expect(onAllDone).toHaveBeenCalledWith({ cancelled: true, errorList: [] });
     ctrl.destroy();
   });
@@ -354,8 +367,8 @@ describe("createDownloadQueue UI 层", () => {
     expect(repoRootMock).toHaveBeenCalled();
     expect(enqueueMock).toHaveBeenCalledTimes(1);
     expect(enqueueMock.mock.calls[0][0][0].saveDir).toBe("/repo");
-    expect(sr.querySelector(".gh-dl-selected").disabled).toBe(true);
-    expect(sr.querySelector("#gh-queue-status").innerHTML).toContain("准备下载");
+    expect((sr.querySelector(".gh-dl-selected") as HTMLButtonElement).disabled).toBe(true);
+    expect(sr.querySelector("#gh-queue-status")!.innerHTML).toContain("准备下载");
     expect(ctrl.isDownloading()).toBe(true);
     ctrl.destroy();
   });
@@ -365,7 +378,7 @@ describe("createDownloadQueue UI 层", () => {
     repoRootMock.mockResolvedValue("");
     const { ctrl } = createCtrl();
     await Promise.resolve();
-    const toasts = [];
+    const toasts: ToastPayload[] = [];
     const off = bus.on("toast:show", (p) => toasts.push(p));
     await ctrl.enqueue([{ url: "u", saveDir: "", name: "a.ysm", size: 1 }]);
     expect(enqueueMock).not.toHaveBeenCalled();
@@ -379,6 +392,6 @@ describe("createDownloadQueue UI 层", () => {
     await Promise.resolve();
     ctrl.destroy();
     emit("queue:file-start", ["f.ysm", 1, 1]);
-    expect(sr.querySelector("#gh-queue-status").innerHTML).toBe("");
+    expect(sr.querySelector("#gh-queue-status")!.innerHTML).toBe("");
   });
 });

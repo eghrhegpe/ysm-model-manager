@@ -6,11 +6,12 @@ import {
   parseBedrockAnimationJSON,
   evaluateClip,
 } from "./animation.ts";
+import type { Keyframe, AnimationClip } from "./animation.ts";
 
-const KFS = [
-  { time: 0, post: [0, 0, 0], lerp: "linear" },
-  { time: 1, post: [10, 20, 30], lerp: "linear" },
-  { time: 2, post: [20, 20, 30], lerp: "linear" },
+const KFS: Keyframe[] = [
+  { time: 0, post: [0, 0, 0], pre: [0, 0, 0], lerp: "linear" },
+  { time: 1, post: [10, 20, 30], pre: [10, 20, 30], lerp: "linear" },
+  { time: 2, post: [20, 20, 30], pre: [20, 20, 30], lerp: "linear" },
 ];
 
 describe("evaluateKeyframes 插值", () => {
@@ -35,17 +36,17 @@ describe("evaluateKeyframes 插值", () => {
   });
 
   it("step 插值：直接返回当前帧 post 不插值", () => {
-    const stepKfs = [
-      { time: 0, post: [1, 1, 1], lerp: "step" },
-      { time: 1, post: [9, 9, 9], lerp: "step" },
+    const stepKfs: Keyframe[] = [
+      { time: 0, post: [1, 1, 1], pre: [1, 1, 1], lerp: "step" },
+      { time: 1, post: [9, 9, 9], pre: [9, 9, 9], lerp: "step" },
     ];
     expect(evaluateKeyframes(stepKfs, 0.5)).toEqual([1, 1, 1]);
   });
 
   it("t 恰为帧时间返回对应帧 post（重复时间帧取首帧）", () => {
-    const dup = [
-      { time: 0, post: [3, 3, 3], lerp: "linear" },
-      { time: 0, post: [5, 5, 5], lerp: "linear" },
+    const dup: Keyframe[] = [
+      { time: 0, post: [3, 3, 3], pre: [3, 3, 3], lerp: "linear" },
+      { time: 0, post: [5, 5, 5], pre: [5, 5, 5], lerp: "linear" },
     ];
     expect(evaluateKeyframes(dup, 0)).toEqual([3, 3, 3]);
   });
@@ -132,7 +133,7 @@ describe("evaluateClip 变换传播", () => {
   });
 
   it("循环动画按 length 取模", () => {
-    const clip = {
+    const clip: AnimationClip = {
       name: "x",
       loop: true,
       length: 2,
@@ -140,35 +141,35 @@ describe("evaluateClip 变换传播", () => {
     };
     // t=3 → 3%2=1 → 帧值 [10,20,30]
     const r = evaluateClip(clip, 3);
-    expect(r.get("b").rotation).toEqual([10, 20, 30]);
+    expect(r.get("b")!.rotation).toEqual([10, 20, 30]);
   });
 
   it("非循环动画 t 超长钳制到末帧", () => {
-    const clip = {
+    const clip: AnimationClip = {
       name: "x",
       loop: false,
       length: 2,
       bones: { b: { position: KFS } },
     };
     const r = evaluateClip(clip, 100);
-    expect(r.get("b").position).toEqual([20, 20, 30]);
+    expect(r.get("b")!.position).toEqual([20, 20, 30]);
   });
 
   it("父级变换传播到子级（旋转相加 / 位置相加 / 缩放相乘）", () => {
-    const clip = {
+    const clip: AnimationClip = {
       name: "x",
       loop: false,
       length: 1,
       bones: {
         root: {
           rotation: KFS, // t=0 → [0,0,0]
-          position: [{ time: 0, post: [1, 2, 3], lerp: "linear" }],
-          scale: [{ time: 0, post: [2, 2, 2], lerp: "linear" }],
+          position: [{ time: 0, post: [1, 2, 3], pre: [1, 2, 3], lerp: "linear" }],
+          scale: [{ time: 0, post: [2, 2, 2], pre: [2, 2, 2], lerp: "linear" }],
         },
         child: {
-          rotation: [{ time: 0, post: [10, 0, 0], lerp: "linear" }],
-          position: [{ time: 0, post: [5, 0, 0], lerp: "linear" }],
-          scale: [{ time: 0, post: [3, 1, 1], lerp: "linear" }],
+          rotation: [{ time: 0, post: [10, 0, 0], pre: [10, 0, 0], lerp: "linear" }],
+          position: [{ time: 0, post: [5, 0, 0], pre: [5, 0, 0], lerp: "linear" }],
+          scale: [{ time: 0, post: [3, 1, 1], pre: [3, 1, 1], lerp: "linear" }],
         },
       },
     };
@@ -177,20 +178,20 @@ describe("evaluateClip 变换传播", () => {
       { name: "child", parent: "root" },
     ];
     const r = evaluateClip(clip, 0, hierarchy);
-    expect(r.get("root").rotation).toEqual([0, 0, 0]);
-    expect(r.get("child").rotation).toEqual([10, 0, 0]); // 父 + 子
-    expect(r.get("child").position).toEqual([6, 2, 3]); // 1+5, 2+0, 3+0
-    expect(r.get("child").scale).toEqual([6, 2, 2]); // 2*3, 2*1, 2*1
+    expect(r.get("root")!.rotation).toEqual([0, 0, 0]);
+    expect(r.get("child")!.rotation).toEqual([10, 0, 0]); // 父 + 子
+    expect(r.get("child")!.position).toEqual([6, 2, 3]); // 1+5, 2+0, 3+0
+    expect(r.get("child")!.scale).toEqual([6, 2, 2]); // 2*3, 2*1, 2*1
   });
 
   it("localOnly 只返回局部变换，不传播父级", () => {
-    const clip = {
+    const clip: AnimationClip = {
       name: "x",
       loop: false,
       length: 1,
       bones: {
-        root: { position: [{ time: 0, post: [1, 0, 0], lerp: "linear" }] },
-        child: { position: [{ time: 0, post: [5, 0, 0], lerp: "linear" }] },
+        root: { position: [{ time: 0, post: [1, 0, 0], pre: [1, 0, 0], lerp: "linear" }] },
+        child: { position: [{ time: 0, post: [5, 0, 0], pre: [5, 0, 0], lerp: "linear" }] },
       },
     };
     const hierarchy = [
@@ -198,6 +199,6 @@ describe("evaluateClip 变换传播", () => {
       { name: "child", parent: "root" },
     ];
     const r = evaluateClip(clip, 0, hierarchy, true);
-    expect(r.get("child").position).toEqual([5, 0, 0]); // 不叠加父级
+    expect(r.get("child")!.position).toEqual([5, 0, 0]); // 不叠加父级
   });
 });

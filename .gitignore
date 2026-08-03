@@ -8,6 +8,8 @@ cmd/*/*.exe
 node_modules/
 .DS_Store
 *.log
+*.tmp
+*.bak
 _wails_test/
 
 project_tree.txt
@@ -41,3 +43,7 @@ tests/python/__pycache__/
 
 # 构建产物
 build/
+
+# 签名密钥（机密，永不入库；未来移动端签名用）
+*.keystore
+*.jks

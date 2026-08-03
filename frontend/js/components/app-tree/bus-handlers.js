@@ -8,7 +8,7 @@ import {
 } from "../../../bindings/ysm-model-manager/internal/app/app.js";
 import { loadEntries } from "./loader.js";
 import { initInstanceActions } from "./instance-actions.js";
-import { getApp } from "../../wails/app.js";
+import { getApp } from "../../wails/app.ts";
 
 export function bindBusEvents(vm) {
   const unsubs = [];

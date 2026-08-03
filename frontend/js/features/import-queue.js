@@ -5,7 +5,7 @@ import { parseModelName, renderDisplayName } from "../utils/display.js";
 import { renderFormattedText } from "../utils/mc-format.js";
 import { modalConfirm } from "../dialogs/modal.js";
 import { DnDLock, PendingImport } from "./dnd-state.js";
-import { getApp } from "../wails/app.js";
+import { getApp } from "../wails/app.ts";
 
 import { ALL_EXTS, extBelongsTo } from "../utils/extensions.js";
 

@@ -1,7 +1,7 @@
 // ===== 创意工坊模型列表渲染（DOM API，非字符串拼接） =====
 import { renderDisplayName } from "../../utils/display.js";
 import { ICONS } from "../../components/app-content/community/workshop-icons.js";
-import { stagger } from "../../utils/stagger.js";
+import { stagger } from "../../utils/stagger.ts";
 
 /**
  * 判断模型是否缺失（本地不存在）

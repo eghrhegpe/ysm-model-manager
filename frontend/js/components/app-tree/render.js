@@ -1,7 +1,7 @@
 // ===== 树渲染层（虚拟滚动版）=====
-import { hl } from "../../utils/dom.js";
-import { fmt, fmtDate } from "../../utils/fmt.js";
-import { fileIcon, isYsmName } from "../../utils/icon.js";
+import { hl } from "../../utils/dom.ts";
+import { fmt, fmtDate } from "../../utils/fmt.ts";
+import { fileIcon, isYsmName } from "../../utils/icon.ts";
 import { emptyHTML } from "./tpl.js";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.js";
 import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.js";

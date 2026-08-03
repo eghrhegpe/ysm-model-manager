@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fileIcon, isYsmName } from "./icon.js";
+import { fileIcon, isYsmName } from "./icon.ts";
 
 describe("fileIcon", () => {
   it("ysm file returns 💎", () => expect(fileIcon("model.ysm")).toBe("💎"));

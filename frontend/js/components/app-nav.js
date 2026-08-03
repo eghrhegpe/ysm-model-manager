@@ -1,7 +1,7 @@
 // ===== <app-nav> — 左侧导航菜单 =====
 // 事件：nav:change — 切换页面
 import { bus } from "../bus.ts";
-import { getApp } from "../wails/app.js";
+import { getApp } from "../wails/app.ts";
 
 class AppNav extends HTMLElement {
   constructor() {

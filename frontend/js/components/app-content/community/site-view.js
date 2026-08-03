@@ -3,11 +3,11 @@ import { friendlyError } from "../../../utils/errors.js";
 import { bus } from "../../../bus.ts";
 import { dbg } from "../../../utils/debug.js";
 import { showProgress, tryFetchModels } from "../../../features/community/data.js";
-import { stagger } from "../../../utils/stagger.js";
+import { stagger } from "../../../utils/stagger.ts";
 import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.js";
 import { getCreatorIdentity, getTagFromRole, parseDescTags, loadFavs, isFaved, toggleFav } from "./workshop-data.js";
 
-import { getApp } from "../../../wails/app.js";
+import { getApp } from "../../../wails/app.ts";
 
 /** @type {Function|null} 当前注册的 storage 监听器（模块私有，防泄漏） */
 let _storageSyncFn = null;

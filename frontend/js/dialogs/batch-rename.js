@@ -1,7 +1,7 @@
 // ===== 批量重命名对话框（复用 parseModelName 解析） =====
 import { bus } from "../bus.ts";
 import { parseModelName } from "../utils/display.js";
-import { stagger } from "../utils/stagger.js";
+import { stagger } from "../utils/stagger.ts";
 
 let dialogEl = null;
 

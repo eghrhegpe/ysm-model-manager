@@ -1,5 +1,5 @@
 // ===== 资源类型注册表（从 Go 端 resource_types.json 加载） =====
-import { getApp } from "../wails/app.js";
+import { getApp } from "../wails/app.ts";
 
 let _registry = null;
 

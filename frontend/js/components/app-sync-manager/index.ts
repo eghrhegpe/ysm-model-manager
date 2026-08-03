@@ -11,30 +11,45 @@ import {
   statusTabHTML,
   emptyHTML,
   loadingHTML,
-} from "./tpl.js";
+  type SyncItem,
+} from "./tpl.ts";
+
+/** 类型统计计数 */
+interface TypeCounts {
+  synced: number;
+  missing: number;
+  disabled: number;
+  optional: number;
+  legacy: number;
+  total: number;
+}
+
+/** 资源类型配置（LoadResourceTypes 条目） */
+interface RTypeConfig {
+  id: string;
+  name?: string;
+  icon?: string;
+}
 
 // 跨实例记住上次选中的类型（整合包间共享）
 let _lastSelectedType = "ysm";
 
 export class AppSyncManager extends HTMLElement {
-  static get observedAttributes() {
+  static get observedAttributes(): string[] {
     return ["instance", "default-type"];
   }
 
-  constructor() {
-    super();
-    this._instance = "";
-    this._defaultType = "ysm";
-    this._allItems = [];
-    this._filteredItems = [];
-    this._selectedType = "ysm";
-    this._statusFilter = "all";
-    this._typeConfig = [];
-    this._loading = false;
+  private _instance = "";
+  private _defaultType = "ysm";
+  private _allItems: SyncItem[] = [];
+  private _filteredItems: SyncItem[] = [];
+  private _selectedType: string = "ysm";
+  private _statusFilter: string = "all";
+  private _typeConfig: RTypeConfig[] = [];
+  private _loading = false;
+  private _unsubs: Array<() => void> = [];
 
-  }
-
-  connectedCallback() {
+  connectedCallback(): void {
     this._instance = this.getAttribute("instance") || "";
     this._defaultType = this.getAttribute("default-type") || "ysm";
     this._selectedType = _lastSelectedType || this._defaultType;
@@ -46,7 +61,7 @@ export class AppSyncManager extends HTMLElement {
     this._init();
   }
 
-  attributeChangedCallback(name, oldVal, newVal) {
+  attributeChangedCallback(name: string, oldVal: string | null, newVal: string | null): void {
     if (oldVal === newVal || !this.isConnected) return;
     if (name === "instance") {
       this._instance = newVal || "";
@@ -56,7 +71,7 @@ export class AppSyncManager extends HTMLElement {
     }
   }
 
-  async _init() {
+  async _init(): Promise<void> {
     this._loading = true;
     this.innerHTML = containerHTML();
     const listEl = this.querySelector(".sm-list");
@@ -88,7 +103,7 @@ export class AppSyncManager extends HTMLElement {
           this._allItems ? this._allItems.length : 0,
         );
         if (this._allItems && this._allItems.length) {
-          const counts = {};
+          const counts: Record<string, number> = {};
           this._allItems.forEach((i) => {
             counts[i.status] = (counts[i.status] || 0) + 1;
           });
@@ -101,34 +116,34 @@ export class AppSyncManager extends HTMLElement {
     this._unsubs.push(unsub);
   }
 
-  disconnectedCallback() {
+  disconnectedCallback(): void {
     if (this._unsubs) this._unsubs.forEach((fn) => fn());
   }
 
-  async _loadTypeConfig() {
+  async _loadTypeConfig(): Promise<void> {
     const { LoadResourceTypes } =
       await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     try {
       const raw = await LoadResourceTypes();
-      const parsed = JSON.parse(raw);
+      const parsed = JSON.parse(raw) as { resourceTypes?: RTypeConfig[] };
       this._typeConfig = parsed.resourceTypes || [];
     } catch {
       this._typeConfig = [];
     }
   }
 
-  async _loadData() {
+  async _loadData(): Promise<void> {
     const { GetInstanceSyncStatus } =
       await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     try {
       const json = await GetInstanceSyncStatus(this._instance);
-      this._allItems = JSON.parse(json) || [];
+      this._allItems = (JSON.parse(json) as SyncItem[]) || [];
     } catch {
       this._allItems = [];
     }
   }
 
-  _render() {
+  _render(): void {
     try {
       this.innerHTML = containerHTML();
     } catch (e) {
@@ -138,7 +153,7 @@ export class AppSyncManager extends HTMLElement {
 
     const modelTypes = ["ysm", "mmd-skin", "vrchat-avatar"];
     const resourceTypes = ["resourcepack", "shaderpack", "create-blueprint", "litematic"];
-    const shortLabel = {
+    const shortLabel: Record<string, string> = {
       ysm: "YSM",
       "mmd-skin": "MMD",
       "vrchat-avatar": "VRC",
@@ -158,7 +173,7 @@ export class AppSyncManager extends HTMLElement {
     }
 
     // — 类型统计 —
-    const typeCounts = {};
+    const typeCounts: Record<string, TypeCounts> = {};
     for (const t of this._typeConfig) {
       typeCounts[t.id] = {
         synced: 0,
@@ -172,21 +187,24 @@ export class AppSyncManager extends HTMLElement {
     for (const item of this._allItems) {
       const c = typeCounts[item.type];
       if (c) {
-        c[item.status]++;
+        (c as unknown as Record<string, number>)[item.status]++;
         c.total++;
       }
     }
-    const globalCounts = {
+    const globalCounts: TypeCounts = {
       synced: 0,
       missing: 0,
       disabled: 0,
       optional: 0,
       legacy: 0,
+      total: 0,
     };
-    for (const item of this._allItems) globalCounts[item.status]++;
+    for (const item of this._allItems) {
+      (globalCounts as unknown as Record<string, number>)[item.status]++;
+    }
 
     // — 类型标签（分组：模型类 | 资源类）—
-    const renderGroup = (types, sep) => {
+    const renderGroup = (types: string[], sep: boolean): string => {
       let html = "";
       for (const id of types) {
         const t = this._typeConfig.find((c) => c.id === id);
@@ -222,10 +240,10 @@ export class AppSyncManager extends HTMLElement {
       renderGroup(modelTypes, true) + renderGroup(resourceTypes, false);
 
     // — 状态筛选标签 —
-    const curCounts = this._selectedType
+    const curCounts: TypeCounts = this._selectedType
       ? typeCounts[this._selectedType] || globalCounts
       : globalCounts;
-    const statusDefs = [
+    const statusDefs: Array<[string, string, number]> = [
       [
         "all",
         "📊 全部",
@@ -245,13 +263,13 @@ export class AppSyncManager extends HTMLElement {
 
     // — 列表 —
     this._applyFilter();
-    this._renderList(listEl);
+    this._renderList(listEl as HTMLElement);
 
     // — 事件绑定 —
     this._bindEvents();
   }
 
-  _applyFilter() {
+  _applyFilter(): void {
     let items = this._allItems;
     if (this._selectedType) {
       items = items.filter((i) => i.type === this._selectedType);
@@ -262,10 +280,10 @@ export class AppSyncManager extends HTMLElement {
     this._filteredItems = items;
   }
 
-  _renderList(listEl) {
+  _renderList(listEl: HTMLElement): void {
     if (!listEl) return;
     if (this._filteredItems.length === 0) {
-      const statusLabels = {
+      const statusLabels: Record<string, string> = {
         all: "",
         synced: "已同步",
         missing: "待推送",
@@ -283,11 +301,11 @@ export class AppSyncManager extends HTMLElement {
     listEl.innerHTML = this._filteredItems.map((it, i) => itemHTML(it, i)).join("");
   }
 
-  _bindEvents() {
+  _bindEvents(): void {
     // 类型标签切换
     this.querySelectorAll(".sm-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
-        this._selectedType = btn.dataset.type;
+        this._selectedType = (btn as HTMLElement).dataset.type || "";
         _lastSelectedType = this._selectedType;
         this._statusFilter = "all";
         bus.emit("repo:rtype-changed", this._selectedType);
@@ -298,7 +316,7 @@ export class AppSyncManager extends HTMLElement {
     // 状态标签切换
     this.querySelectorAll(".sm-status-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
-        this._statusFilter = btn.dataset.status;
+        this._statusFilter = (btn as HTMLElement).dataset.status || "all";
         this._render();
       });
     });
@@ -307,17 +325,17 @@ export class AppSyncManager extends HTMLElement {
     this.querySelectorAll(".sm-item-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const row = btn.closest("[data-path]");
+        const row = (e.currentTarget as HTMLElement).closest("[data-path]");
         if (!row) return;
-        const path = row.dataset.path;
-        const action = btn.dataset.action;
+        const path = (row as HTMLElement).dataset.path || "";
+        const action = (btn as HTMLElement).dataset.action;
         if (action === "push") this._pushSingleFile(path);
         else if (action === "pull") this._pullSingleFile(path);
       });
     });
   }
 
-  async _pushSingleFile(path) {
+  async _pushSingleFile(path: string): Promise<void> {
     const { PushSingleResourceToInstance } =
       await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     try {
@@ -339,7 +357,7 @@ export class AppSyncManager extends HTMLElement {
     }
   }
 
-  async _pullSingleFile(path) {
+  async _pullSingleFile(path: string): Promise<void> {
     const rtype = this._selectedType;
     const { PullSingleResourceFromInstance } =
       await import("../../../bindings/ysm-model-manager/internal/app/app.js");

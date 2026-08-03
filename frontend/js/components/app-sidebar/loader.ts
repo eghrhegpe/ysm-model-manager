@@ -2,20 +2,38 @@
 import { bus } from "../../bus.ts";
 import { dbg } from "../../utils/debug.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
+import type { SidebarInstance } from "./data.ts";
 import {
   LoadAppConfig,
   ListVersionInstances,
-  GetInstanceStatus,
   GetResourceInstanceStatus,
   GetRepoRoot,
 } from "../../../bindings/ysm-model-manager/internal/app/app.js";
 
+/** Go 端实例同步状态（绑定类型局部视图，字段以 Go struct 为准） */
+interface InstanceStatusView {
+  Name?: string;
+  Missing?: string[];
+  Extra?: string[];
+  Synced?: number;
+  HasMod?: boolean;
+}
+
+/** MMD 变体聚合结果 */
+export interface MmdVariantGroups {
+  missingGroups: string[];
+  extraGroups: string[];
+  variantMap: Record<string, { items: string[]; count: number }>;
+}
+
 /** 从 Go 加载整合包实例列表，转换为 render 需要的格式 */
-export async function loadInstances(rtype) {
+export async function loadInstances(
+  rtype: string,
+): Promise<SidebarInstance[]> {
   bus.emit("loading:start");
   try {
     const cfg = await LoadAppConfig();
-    const mcRoot = cfg.mcRoot || cfg.McRoot || "";
+    const mcRoot = cfg.mcRoot || "";
 
     if (!mcRoot) return [];
 
@@ -31,21 +49,21 @@ export async function loadInstances(rtype) {
       mcRoot,
       repoRoot,
     );
-    const statusMap = {};
+    const statusMap: Record<string, InstanceStatusView> = {};
     (statusList || []).forEach((s) => {
-      statusMap[s.Name] = s;
+      statusMap[s.Name] = s as InstanceStatusView;
     });
 
     const isMmd = rtypeActual === RESOURCE_TYPES.MMD;
 
-    const instances = rawInstances.map((ins) => {
-      const st = statusMap[ins.Name] || {};
+    const instances: SidebarInstance[] = rawInstances.map((ins) => {
+      const st: InstanceStatusView = statusMap[ins.Name] || {};
       const missingList = st.Missing || [];
       const extraList = st.Extra || [];
       const syncedTotal = st.Synced || 0;
 
       // MMD 类型：将属于同一父文件夹的 .pmx 变体聚合成 variantGroups
-      let variantGroups = null;
+      let variantGroups: MmdVariantGroups | null = null;
       let flatMissing = missingList;
       let flatExtra = extraList;
 
@@ -60,7 +78,7 @@ export async function loadInstances(rtype) {
         name: ins.Name,
         dir: ins.VersionDir || "",
         exists: ins.Exists,
-        hasMod: st.HasMod,
+        hasMod: Boolean(st.HasMod),
         status:
           flatMissing.length > 0
             ? "missing"
@@ -120,9 +138,12 @@ export async function loadInstances(rtype) {
  *   - missingGroups/extraGroups: string[] 聚合后的代表路径（父文件夹路径）
  *   - variantMap: { [folderPath]: string[] } 文件夹下的变体文件路径列表
  */
-function groupMmdVariants(missingList, extraList) {
-  const variantMap = {}; // { folderPath: { items: string[], count: number } }
-  const collect = (paths) => {
+function groupMmdVariants(
+  missingList: string[],
+  extraList: string[],
+): MmdVariantGroups {
+  const variantMap: Record<string, { items: string[]; count: number }> = {};
+  const collect = (paths: string[]): void => {
     paths.forEach((fp) => {
       const parts = fp.replace(/\\/g, "/").split("/");
       if (parts.length < 2) {
@@ -145,10 +166,10 @@ function groupMmdVariants(missingList, extraList) {
   collect(extraList);
 
   // 生成聚合后的组列表
-  const missingGroups = [];
-  const extraGroups = [];
-  const seen = {};
-  const assign = (paths, target) => {
+  const missingGroups: string[] = [];
+  const extraGroups: string[] = [];
+  const seen: Record<string, boolean> = {};
+  const assign = (paths: string[], target: string[]): void => {
     paths.forEach((fp) => {
       const parts = fp.replace(/\\/g, "/").split("/");
       const parent = parts.length >= 2 ? parts.slice(0, -1).join("/") : fp;

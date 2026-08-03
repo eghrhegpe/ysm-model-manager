@@ -2,10 +2,20 @@
 import { renderFormattedText } from "../../utils/mc-format.ts";
 import { stagger } from "../../utils/stagger.ts";
 
+/** 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） */
+export interface SyncItem {
+  path: string;
+  name: string;
+  status: "synced" | "missing" | "disabled" | "optional" | "legacy" | string;
+  type: string;
+  icon?: string;
+  size: number;
+}
+
 /**
  * 容器骨架
  */
-export function containerHTML() {
+export function containerHTML(): string {
   return (
     "<style>" +
     ".sm-item{display:flex;align-items:center;gap:4px;padding:4px 10px;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background var(--tr-fast)}" +
@@ -39,12 +49,17 @@ export function containerHTML() {
 
 /**
  * 状态筛选标签 HTML
- * @param {string} id - 筛选 ID (all/synced/missing/disabled/optional)
- * @param {string} label - 标签文字
- * @param {number} count - 数量
- * @param {boolean} active - 是否选中
+ * @param id - 筛选 ID (all/synced/missing/disabled/optional)
+ * @param label - 标签文字
+ * @param count - 数量
+ * @param active - 是否选中
  */
-export function statusTabHTML(id, label, count, active) {
+export function statusTabHTML(
+  id: string,
+  label: string,
+  count: number,
+  active: boolean,
+): string {
   const cls = active ? " active" : "";
   const showCount = count > 0 ? " (" + count + ")" : "";
   return (
@@ -67,10 +82,9 @@ export function statusTabHTML(id, label, count, active) {
 
 /**
  * 列表项 HTML
- * @param {{path:string, name:string, status:string, type:string, icon:string, size:number}} item
  */
-export function itemHTML(item, index) {
-  const esc = (s) =>
+export function itemHTML(item: SyncItem, index: number): string {
+  const esc = (s: string): string =>
     String(s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -131,9 +145,9 @@ export function itemHTML(item, index) {
 
 /**
  * 空状态 HTML
- * @param {string} msg
+ * @param msg 提示文案
  */
-export function emptyHTML(msg) {
+export function emptyHTML(msg: string): string {
   return (
     '<div class="sm-empty" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base)">' +
     '<div style="font-size:20px">📭</div>' +
@@ -147,7 +161,7 @@ export function emptyHTML(msg) {
 /**
  * 加载中
  */
-export function loadingHTML() {
+export function loadingHTML(): string {
   return (
     '<div class="sm-loading">' +
     '<div class="sm-shimmer sm-shimmer-w80"></div>' +
@@ -157,7 +171,7 @@ export function loadingHTML() {
   );
 }
 
-function formatSize(bytes) {
+function formatSize(bytes: number): string {
   if (bytes < 1024) return bytes + "B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + "KB";
   return (bytes / (1024 * 1024)).toFixed(1) + "MB";

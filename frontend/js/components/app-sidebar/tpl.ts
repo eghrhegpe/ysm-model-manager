@@ -1,6 +1,17 @@
 // ===== sidebar HTML 模板 =====
 
-export function headerHTML() {
+/** rtype 短标签映射（vcHeaderHTML 徽章） */
+const RTYPE_LABELS: Record<string, string> = {
+  ysm: "YSM",
+  "mmd-skin": "MMD",
+  "vrchat-avatar": "VRC",
+  resourcepack: "资源包",
+  shaderpack: "光影包",
+  "create-blueprint": "蓝图",
+  litematic: "投影文件",
+};
+
+export function headerHTML(): string {
   return (
     '<div style="padding:4px 8px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
     '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;color:var(--muted);flex:1">' +
@@ -33,7 +44,7 @@ export function headerHTML() {
   );
 }
 
-export function footerHTML() {
+export function footerHTML(): string {
   return `<div class="footer">
 <div class="footer-stats" id="footer-stats">
   <span class="stat-item" id="stat-sync">完全同步 -/-</span>
@@ -42,12 +53,12 @@ export function footerHTML() {
 </div>`;
 }
 
-export function listContainerHTML() {
+export function listContainerHTML(): string {
   return `<div class="list" id="vg">${skeletonHTML()}</div>`;
 }
 
 /** 加载骨架屏 */
-export function skeletonHTML() {
+export function skeletonHTML(): string {
   let h = "";
   for (let i = 0; i < 4; i++) {
     h += `<div class="sk-item">
@@ -61,22 +72,22 @@ export function skeletonHTML() {
 /** 单个整合包卡片头部。
  *  idx 用于绑定安装缺失按钮的 data-idx */
 export function vcHeaderHTML(
-  name,
-  synced,
-  missing,
-  extra,
-  status,
+  name: string,
+  synced: number,
+  missing: number,
+  extra: number,
+  status: string,
   idx = -1,
   hasMod = true,
   rtype = "ysm",
-) {
+): string {
   const allZero = synced === 0 && missing === 0 && extra === 0;
   const chips =
     (synced > 0 ? `<span class="tag green">${synced}</span> ` : "") +
     (missing > 0 && hasMod ? `<span class="tag red">${missing}</span> ` : "") +
     (extra > 0 ? `<span class="tag orange">${extra}</span>` : "") +
     (!hasMod
-      ? `<span class="tag gray">🚫 无${{ ysm: "YSM", "mmd-skin": "MMD", "vrchat-avatar": "VRC", resourcepack: "资源包", shaderpack: "光影包", "create-blueprint": "蓝图", litematic: "投影文件" }[rtype] || rtype}</span>`
+      ? `<span class="tag gray">🚫 无${RTYPE_LABELS[rtype] || rtype}</span>`
       : allZero
         ? `<span class="tag">0</span>`
         : "");
@@ -86,7 +97,7 @@ export function vcHeaderHTML(
 </div>`;
 }
 
-function esc(s) {
+function esc(s: string): string {
   return (s || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

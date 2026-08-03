@@ -1,14 +1,19 @@
 // ===== 整合包内部操作绑定（< 100 行）=====
 import { bus } from "../../bus.ts";
+import type { SidebarInstance } from "./data.ts";
 import { InstallModelTo } from "../../../bindings/ysm-model-manager/internal/app/app.js";
 
 /** 绑定整合包卡片中的操作按钮和缺失条目点击事件 */
-export function bindInstanceActions(root, instances) {
+export function bindInstanceActions(
+  root: ShadowRoot,
+  instances: SidebarInstance[],
+): void {
   // 安装缺失按钮（render.js 生成的按钮 class 为 btn-install-one）
-  root.querySelectorAll(".btn-install-one").forEach((btn) => {
+  root.querySelectorAll(".btn-install-one").forEach((btnEl) => {
+    const btn = btnEl as HTMLElement;
     btn.onclick = async () => {
       const idx = btn.dataset.idx;
-      const ins = instances[idx];
+      const ins = instances[Number(idx)];
       if (!ins) return;
       bus.emit("toast:show", {
         msg: `⬇️ 正在安装 ${ins.name} 的缺失模型...`,

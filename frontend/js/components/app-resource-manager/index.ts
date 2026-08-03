@@ -2,18 +2,38 @@
 // 通用资源管理（资源包/光影包/未来类型）
 // 使用: <app-resource-manager rtype="resourcepack"></app-resource-manager>
 
-import { sidebarHTML, itemHTML, detailHTML, placeholderHTML } from "./tpl.js";
+import { sidebarHTML, itemHTML, detailHTML, placeholderHTML, type PackMetaDetail } from "./tpl.ts";
 import { bus } from "../../bus.ts";
 import { getApp } from "../../wails/app.ts";
 
-const STORE = {}; // 模块级缓存（rtype → config）
+/** 资源类型配置（resource_types.json 条目视图） */
+interface ResourceTypeConfig {
+  id: string;
+  name?: string;
+  icon?: string;
+  actions?: string[];
+  extensions?: string[];
+  installDir?: string;
+  isDir?: boolean;
+}
 
-async function _loadConfig(forceRefresh) {
+/** 资源列表项 */
+interface PackEntry {
+  name: string;
+  path: string;
+  enabled: boolean;
+}
+
+const STORE: { _config: ResourceTypeConfig[] | null } = {
+  _config: null,
+}; // 模块级缓存（rtype → config）
+
+async function _loadConfig(forceRefresh?: boolean): Promise<ResourceTypeConfig[]> {
   if (!forceRefresh && STORE._config) return STORE._config;
   const { LoadResourceTypes } = await getApp();
   const raw = await LoadResourceTypes();
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as { resourceTypes?: ResourceTypeConfig[] };
     STORE._config = parsed.resourceTypes || [];
   } catch {
     STORE._config = [];
@@ -22,19 +42,19 @@ async function _loadConfig(forceRefresh) {
 }
 
 // 监听配置刷新事件（如用户修改了自定义资源类型）
-bus.on("config:resource-types-changed", function () {
+bus.on("config:resource-types-changed", () => {
   STORE._config = null;
   // 通知所有已创建的组件实例重新初始化
-  document.querySelectorAll("app-resource-manager").forEach(function (el) {
-    el._init && el._init();
+  document.querySelectorAll("app-resource-manager").forEach((el) => {
+    (el as AppResourceManager)._init && (el as AppResourceManager)._init();
   });
 });
 
-function _findType(rtype) {
+function _findType(rtype: string): ResourceTypeConfig | undefined {
   return (STORE._config || []).find((t) => t.id === rtype);
 }
 
-function _esc(s) {
+function _esc(s: unknown): string {
   return String(s)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -43,28 +63,31 @@ function _esc(s) {
 }
 
 export class AppResourceManager extends HTMLElement {
-  static get observedAttributes() {
+  static get observedAttributes(): string[] {
     return ["rtype", "instance"];
   }
+
+  private _rtype: string;
+  private _instance: string;
+  private _typeLabel = "";
+  private _typeIcon = "";
+  private _actions: string[] = [];
+  private _rpRoot = "";
+  private _listEl: HTMLElement | null = null;
+  private _contentEl: HTMLElement | null = null;
+  private _packsCache: PackEntry[] = []; // 完整列表缓存（供搜索过滤）
 
   constructor() {
     super();
     this._rtype = this.getAttribute("rtype") || "resourcepack";
     this._instance = this.getAttribute("instance") || "";
-    this._typeLabel = "";
-    this._typeIcon = "";
-    this._actions = [];
-    this._rpRoot = "";
-    this._listEl = null;
-    this._contentEl = null;
-    this._packsCache = []; // 完整列表缓存（供搜索过滤）
   }
 
-  async connectedCallback() {
+  async connectedCallback(): Promise<void> {
     await this._init();
   }
 
-  attributeChangedCallback(name, oldVal, newVal) {
+  attributeChangedCallback(name: string, oldVal: string | null, newVal: string | null): void {
     if (oldVal === newVal || !this.isConnected) return;
     if (name === "rtype") {
       this._rtype = newVal || "resourcepack";
@@ -75,7 +98,7 @@ export class AppResourceManager extends HTMLElement {
     }
   }
 
-  async _init() {
+  async _init(): Promise<void> {
     await _loadConfig();
     const type = _findType(this._rtype);
     if (!type) {
@@ -167,12 +190,12 @@ export class AppResourceManager extends HTMLElement {
           const type = _findType(this._rtype);
           const exts = (type && type.extensions) || [".zip"];
           const isZip = exts.every((e) => e === ".zip");
-          let filePath;
+          let filePath: string;
           if (isZip) {
             filePath = await SelectImportZip();
           } else {
-            const filter = type.name + "|" + exts.map((e) => "*" + e).join(";");
-            filePath = await SelectImportFile(filter, "选择" + type.name);
+            const filter = (type ? type.name : "") + "|" + exts.map((e) => "*" + e).join(";");
+            filePath = await SelectImportFile(filter, "选择" + (type ? type.name : ""));
           }
           if (!filePath) return;
           const errMsg = await ImportByType(this._rtype, filePath);
@@ -200,27 +223,31 @@ export class AppResourceManager extends HTMLElement {
     }
 
     // 列表点击
-    this._listEl.addEventListener("click", async (e) => {
-      const item = e.target.closest(".rm-item");
+    this._listEl?.addEventListener("click", async (e) => {
+      const target = e.target as HTMLElement | null;
+      const item = target ? target.closest(".rm-item") : null;
       if (!item) return;
 
       // 切换
-      if (this._actions.includes("toggle") && e.target.closest(".rm-toggle")) {
-        await ToggleResourcePack(item.dataset.path);
+      if (this._actions.includes("toggle") && target && target.closest(".rm-toggle")) {
+        await ToggleResourcePack((item as HTMLElement).dataset.path || "");
         await this._loadList();
         return;
       }
 
       // 选中
       this._listEl
-        .querySelectorAll(".rm-item")
-        .forEach((el) => (el.style.background = ""));
-      item.style.background = "var(--hover)";
-      await this._showDetail(item.dataset.path, item.dataset.name);
+        ?.querySelectorAll(".rm-item")
+        .forEach((el) => (el as HTMLElement).style.background = "");
+      (item as HTMLElement).style.background = "var(--hover)";
+      await this._showDetail(
+        (item as HTMLElement).dataset.path || "",
+        (item as HTMLElement).dataset.name || "",
+      );
     });
 
     // 搜索过滤
-    const searchInput = this.querySelector(".rm-search");
+    const searchInput = this.querySelector(".rm-search") as HTMLInputElement | null;
     if (searchInput) {
       searchInput.addEventListener("input", () => {
         this._applyFilter(searchInput.value);
@@ -230,7 +257,7 @@ export class AppResourceManager extends HTMLElement {
     await this._loadList();
   }
 
-  async _loadList() {
+  async _loadList(): Promise<void> {
     if (!this._listEl) return;
     const { ScanModelEntries, IsResourcePackEnabled } =
       await getApp();
@@ -238,7 +265,7 @@ export class AppResourceManager extends HTMLElement {
     // 从 resource_types.json 获取当前类型的扩展名列表
     const type = _findType(this._rtype);
     const exts = (type && type.extensions) || [".zip"];
-    const packs = [];
+    const packs: PackEntry[] = [];
     for (const e of entries || []) {
       const name = e.Name || "";
       const fullPath = e.Path || "";
@@ -268,12 +295,12 @@ export class AppResourceManager extends HTMLElement {
     }
     this._packsCache = packs;
     // 如果有搜索关键字，应用过滤
-    const searchInput = this.querySelector(".rm-search");
+    const searchInput = this.querySelector(".rm-search") as HTMLInputElement | null;
     const q = searchInput ? searchInput.value.toLowerCase().trim() : "";
     this._renderList(q);
   }
 
-  _renderList(query) {
+  _renderList(query: string): void {
     if (!this._listEl) return;
     const filtered = query
       ? this._packsCache.filter((p) => p.name.toLowerCase().includes(query))
@@ -285,13 +312,13 @@ export class AppResourceManager extends HTMLElement {
       .join("");
   }
 
-  _applyFilter(value) {
+  _applyFilter(value: string): void {
     const q = value.toLowerCase().trim();
     this._renderList(q);
     // 清除选中高亮
     this._listEl
-      .querySelectorAll(".rm-item")
-      .forEach((el) => (el.style.background = ""));
+      ?.querySelectorAll(".rm-item")
+      .forEach((el) => (el as HTMLElement).style.background = "");
     // 清除详情面板，避免显示与当前列表不匹配的内容
     if (this._contentEl) {
       const typeLabel = this._typeLabel || "";
@@ -303,7 +330,7 @@ export class AppResourceManager extends HTMLElement {
     }
   }
 
-  async _showDetail(path, name) {
+  async _showDetail(path: string, name: string): Promise<void> {
     if (!this._contentEl) return;
     // 重启入场动画
     this._contentEl.style.animation = "none";
@@ -312,7 +339,8 @@ export class AppResourceManager extends HTMLElement {
     this._contentEl.offsetHeight;
     this._contentEl.style.animation = "";
     try {
-      let meta = { pack_format: "?", description: "", thumbnail: null };
+      // pack_format 不设（shaderpack 无此概念）；describeVersionRange 对 undefined 兜底输出 "?"
+      let meta: PackMetaDetail = { description: "", thumbnail: null };
       let displayName = name;
       let enabled = true;
 
@@ -321,7 +349,7 @@ export class AppResourceManager extends HTMLElement {
         const { ReadShaderpackLang } =
           await getApp();
         const jsonStr = await ReadShaderpackLang(path);
-        const spMeta = JSON.parse(jsonStr);
+        const spMeta = JSON.parse(jsonStr) as { name?: string; entries?: Record<string, string> };
         if (spMeta.name) displayName = spMeta.name;
         const entries = spMeta.entries || {};
         // 取前几条 option 描述作为简介
@@ -337,7 +365,7 @@ export class AppResourceManager extends HTMLElement {
         const { ReadPackMeta, IsResourcePackEnabled } =
           await getApp();
         const jsonStr = await ReadPackMeta(path);
-        meta = JSON.parse(jsonStr);
+        meta = JSON.parse(jsonStr) as PackMetaDetail;
         if (this._actions.includes("toggle")) {
           enabled = await IsResourcePackEnabled(path);
         }
@@ -354,7 +382,7 @@ export class AppResourceManager extends HTMLElement {
 
       // 删除
       if (this._actions.includes("delete")) {
-        const delBtn = this._contentEl.querySelector(".rm-del-btn");
+        const delBtn = this._contentEl.querySelector(".rm-del-btn") as HTMLElement | null;
         if (delBtn) {
           delBtn.addEventListener("click", async () => {
             if (!confirm("确定要删除 " + name + " 吗？")) return;
@@ -370,27 +398,31 @@ export class AppResourceManager extends HTMLElement {
                 await DeleteResourcePack(path);
               }
               await this._loadList();
-              this._contentEl.innerHTML =
-                '<div class="dp-placeholder" style="display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;gap:8px;height:100%">' +
-                '<div style="font-size:24px">📦</div>' +
-                "<div>已删除</div>" +
-                "</div>";
+              if (this._contentEl) {
+                this._contentEl.innerHTML =
+                  '<div class="dp-placeholder" style="display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;gap:8px;height:100%">' +
+                  '<div style="font-size:24px">📦</div>' +
+                  "<div>已删除</div>" +
+                  "</div>";
+              }
               this._toast("ok", "已删除");
             } catch (delErr) {
-              this._toast("error", "删除失败", delErr.message);
+              this._toast("error", "删除失败", delErr instanceof Error ? delErr.message : String(delErr));
             }
           });
         }
       }
     } catch (e) {
-      this._contentEl.innerHTML =
-        '<div style="padding:12px;color:var(--paid)">⚠️ 读取失败: ' +
-        _esc(e.message) +
-        "</div>";
+      if (this._contentEl) {
+        this._contentEl.innerHTML =
+          '<div style="padding:12px;color:var(--paid)">⚠️ 读取失败: ' +
+          _esc(e instanceof Error ? e.message : e) +
+          "</div>";
+      }
     }
   }
 
-  _toast(type, title, msg) {
+  private _toast(type: string, title: string, msg?: string): void {
     const ev = new CustomEvent("toast", {
       bubbles: true,
       composed: true,

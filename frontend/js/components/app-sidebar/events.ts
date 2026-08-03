@@ -2,15 +2,19 @@
 import { bus } from "../../bus.ts";
 import { animateNumber } from "../../utils/animate.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
+import type { SidebarInstance } from "./data.ts";
 
 // 绑定每个卡片展开/折叠
 // 返回清理函数，组件销毁时移除事件监听
 // 注意：事件委托在 #vg 上，outerHTML 替换子元素不破坏监听
-let _lastList = null;
-let _clickHandler = null;
-let _contextHandler = null;
+let _lastList: HTMLElement | null = null;
+let _clickHandler: ((e: MouseEvent) => void) | null = null;
+let _contextHandler: ((e: MouseEvent) => void) | null = null;
 
-export function bindCardEvents(root, instances) {
+export function bindCardEvents(
+  root: ShadowRoot,
+  instances: SidebarInstance[],
+): () => void {
   // 先清掉旧的右键容器（防止重复）
   root.querySelectorAll(".vc-context-menu").forEach((el) => el.remove());
 
@@ -24,16 +28,21 @@ export function bindCardEvents(root, instances) {
   }
 
   // 移除旧的监听（如果 list 被替换了）
-  if (_lastList && _clickHandler) {
-    _lastList.removeEventListener("click", _clickHandler);
-    _lastList.removeEventListener("contextmenu", _contextHandler);
+  const prevList = _lastList;
+  const prevClick = _clickHandler;
+  const prevCtx = _contextHandler;
+  if (prevList && prevClick && prevCtx) {
+    prevList.removeEventListener("click", prevClick);
+    prevList.removeEventListener("contextmenu", prevCtx);
   }
 
-  const clickHandler = (e) => {
-    if (e.target.closest("button") || e.target.closest(".chk")) return;
-    const vc = e.target.closest(".vc");
+  const clickHandler = (e: MouseEvent): void => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest("button") || target.closest(".chk")) return;
+    const vc = target.closest(".vc") as HTMLElement | null;
     if (!vc) return;
-    const hdr = vc.querySelector(".vc-header");
+    const hdr = vc.querySelector(".vc-header") as HTMLElement | null;
     if (!hdr) return;
     // 高亮当前选中的版本
     root
@@ -46,7 +55,7 @@ export function bindCardEvents(root, instances) {
     hdr.classList.add("active", "ripple");
     setTimeout(() => hdr.classList.remove("ripple"), 500);
     // 发送选中事件
-    const idx = parseInt(vc.dataset.idx, 10);
+    const idx = parseInt(vc.dataset.idx || "", 10);
     const pkg = instances[idx];
     if (pkg) {
       bus.emit("package:selected", pkg);
@@ -56,12 +65,14 @@ export function bindCardEvents(root, instances) {
     }
   };
 
-  const contextHandler = (e) => {
-    const vc = e.target.closest(".vc");
+  const contextHandler = (e: MouseEvent): void => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    const vc = target.closest(".vc") as HTMLElement | null;
     if (!vc) return;
     e.preventDefault();
     e.stopPropagation();
-    const idx = parseInt(vc.dataset.idx, 10);
+    const idx = parseInt(vc.dataset.idx || "", 10);
     const pkg = instances[idx];
     if (!pkg) return;
     const nameEl = vc.querySelector(".name");
@@ -98,7 +109,10 @@ export function bindCardEvents(root, instances) {
 }
 
 /** 根据 localStorage 选中最匹配的整合包 */
-function restoreSelectedCard(root, instances) {
+function restoreSelectedCard(
+  root: ShadowRoot,
+  instances: SidebarInstance[],
+): void {
   try {
     const rtypeKey = instances[0]?.rtype || RESOURCE_TYPES.YSM;
     const savedName = localStorage.getItem("sb_selectedName_" + rtypeKey);
@@ -118,7 +132,10 @@ function restoreSelectedCard(root, instances) {
 }
 
 // 绑定底部按钮 + 路径显示
-export function bindFooter(root, instances) {
+export function bindFooter(
+  root: ShadowRoot,
+  instances: SidebarInstance[],
+): void {
   const btn = root.getElementById("btn-mc");
   if (btn) {
     // 点击跳转到设置页的游戏根目录配置（合并重复入口）

@@ -6,7 +6,7 @@ import { Window } from "@wailsio/runtime";
 // bus 已在 bus.ts 中挂载 window.bus，此处不再重复赋值
 
 // 注册全局可替换服务
-import { loadInstances } from "./components/app-sidebar/loader.js";
+import { loadInstances } from "./components/app-sidebar/loader.ts";
 import { loadEntries } from "./components/app-tree/loader.js";
 register("loadInstances", loadInstances);
 register("loadEntries", loadEntries);
@@ -20,16 +20,16 @@ import "./components/app-toast.ts";
 import("./components/app-tree/index.js").catch((e) =>
   console.warn("[module] 组件加载失败: app-tree", e),
 );
-import("./components/app-sidebar/index.js").catch((e) =>
+import("./components/app-sidebar/index.ts").catch((e) =>
   console.warn("[module] 组件加载失败: app-sidebar", e),
 );
 import("./components/app-content/index.js").catch((e) =>
   console.warn("[module] 组件加载失败: app-content", e),
 );
-import("./components/app-resource-manager/index.js").catch((e) =>
+import("./components/app-resource-manager/index.ts").catch((e) =>
   console.warn("[module] 组件加载失败: app-resource-manager", e),
 );
-import("./components/app-sync-manager/index.js").catch((e) =>
+import("./components/app-sync-manager/index.ts").catch((e) =>
   console.warn("[module] 组件加载失败: app-sync-manager", e),
 );
 

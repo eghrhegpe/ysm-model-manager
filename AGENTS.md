@@ -28,6 +28,7 @@
 | 查/更新项目状态 | `docs/architecture/PROJECT_STATUS.md`（含治理速览 + 进行中 ADR 清单） |
 | 查某模块「现在长啥样、去哪找」 | `docs/knowledge/`（先读 `routes.md` 路由表 + `index.md` 索引，grep 卡正文锁定符号，按 `source_files` 跳源码） |
 | 查/更新函数索引 | `node scripts/funcmap.mjs -o funcmap.md`（符号带 文件:行） |
+| 批量重构代码（重命名/移函数/加参数） | `node scripts/codemod.mjs help`（AST 感知，ts-morph；move-function 不重写外部引用方，改后跑 tsc） |
 | 校验文档漂移 | `node scripts/link-checker.mjs`（断链）+ `check-knowledge-drift.mjs`（知识卡）+ `adr-check.mjs`（ADR 登记） |
 | 查项目技术 | `docs/architecture/architecture.md` |
 | 写 UI 文案 / 变量名 | `docs/core/TERMINOLOGY.md`（末尾有 AI 缩写版） |

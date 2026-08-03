@@ -103,6 +103,14 @@ export function bindTreeEvents(container, vm) {
       if (!dir) return;
       const isOpen = vm._dirOpen[dir];
       vm._dirOpen[dir] = !isOpen;
+      // 折叠父文件夹时递归清除所有子文件夹的展开状态
+      if (isOpen) {
+        const prefix = (dir + "/").replace(/\\/g, "/");
+        for (const key of Object.keys(vm._dirOpen)) {
+          const nk = key.replace(/\\/g, "/");
+          if (nk !== dir && nk.startsWith(prefix)) delete vm._dirOpen[key];
+        }
+      }
       localStorage.setItem("at_dirs", JSON.stringify(vm._dirOpen));
       vm._renderTree();
       // 折叠时通知预览清空；展开时通知预览显示整合包

@@ -21,6 +21,7 @@ export function loadLogsPreview(root, logs) {
     .trim()
     .toLowerCase();
 
+  const opLabels = { import: "📥", download: "⬇️", scan: "🔍", sync: "🔄", rename: "✏️", delete: "🗑️" };
   const items = logs
     .slice(-100)
     .reverse()
@@ -39,7 +40,10 @@ export function loadLogsPreview(root, logs) {
             second: "2-digit",
           })
         : "";
-      const nameHtml = renderDisplayName(l.ModelName);
+      const opIcon = opLabels[l.Operation] || "📋";
+      const nameHtml = l.ModelName
+        ? renderDisplayName(l.ModelName)
+        : esc(l.SourcePath || l.TargetDir || "-");
       const errHtml = l.ErrorMsg
         ? '<span class="ysm-log-error">: ' +
           esc(l.ErrorMsg).replace(
@@ -48,7 +52,7 @@ export function loadLogsPreview(root, logs) {
           ) +
           "</span>"
         : "";
-      return `<div class="log-entry"><span>${status}</span><span class="log-msg">${nameHtml}${errHtml}</span><span class="log-time">${time}</span></div>`;
+      return `<div class="log-entry"><span>${opIcon}${status}</span><span class="log-msg">${nameHtml}${errHtml}</span><span class="log-time">${time}</span></div>`;
     })
     .join("");
   list.innerHTML =

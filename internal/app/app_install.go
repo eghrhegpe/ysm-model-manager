@@ -1242,6 +1242,10 @@ func (a *App) AddImportLog(modelName, sourcePath, targetDir string, fileSize int
 	a.logger.Add(modelName, sourcePath, targetDir, fileSize, status, errMsg)
 }
 
+func (a *App) AddOpLog(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {
+	a.logger.AddOp(op, modelName, sourcePath, targetDir, fileSize, status, errMsg)
+}
+
 func (a *App) GetImportLogs() []types.ImportLog {
 	return a.logger.GetAll()
 }

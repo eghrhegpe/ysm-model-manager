@@ -47,7 +47,7 @@ type SearchResult struct {
 	HasError  bool   `json:"hasError"`
 }
 
-// ImportLog 导入日志
+// ImportLog 应用操作日志（导入、扫描、下载、同步等）
 type ImportLog struct {
 	ModelName  string `json:"ModelName"`
 	SourcePath string `json:"SourcePath"`
@@ -56,6 +56,7 @@ type ImportLog struct {
 	Status     string `json:"Status"`
 	ErrorMsg   string `json:"ErrorMsg,omitempty"`
 	Timestamp  int64  `json:"Timestamp"`
+	Operation  string `json:"Operation,omitempty"` // import / scan / download / sync / rename / delete
 }
 
 // LinkType 链接类型

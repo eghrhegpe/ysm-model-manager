@@ -387,6 +387,7 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 			}
 		}
 	}
+	a.AddOpLog("scan", fmt.Sprintf("扫描 %d 个文件", len(entries)), dir, "", int64(len(entries)), "success", "")
 	return entries
 }
 

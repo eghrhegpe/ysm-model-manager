@@ -30,7 +30,7 @@ export async function showRenameDialog(filePath, currentName) {
       <div class="dlg-sub">${esc(currentName)}</div>
       <div class="dlg-row">
         <input id="rn-author" class="dlg-input-bg" style="flex:2" placeholder="作者" value="${esc(parsed.author)}">
-        <input id="rn-work" class="dlg-input-bg" style="flex:2" placeholder="品牌" value="${esc(parsed.work)}">
+        <input id="rn-work" class="dlg-input-bg" style="flex:2" placeholder="品牌" value="${esc(parsed.work === "未知" ? "" : parsed.work)}">
         <input id="rn-chara" class="dlg-input-bg" style="flex:2" placeholder="角色" value="${esc(parsed.chara)}">
         <input id="rn-variant" class="dlg-input-bg" style="flex:1;min-width:50px" placeholder="变体">
         <input id="rn-date" class="dlg-input-bg" style="flex:1;min-width:50px" placeholder="年月" value="${esc(parsed.date)}">
@@ -51,6 +51,11 @@ export async function showRenameDialog(filePath, currentName) {
 
     // 从 YSM 文件头部读取元数据（仅填充第一位作者，展示介绍）
     box.querySelector("#rn-from-header").onclick = async () => {
+      if (!filePath) {
+        box.querySelector("#rn-tips").textContent = "⚠️ 文件尚未导入，无法读取头部";
+        box.querySelector("#rn-tips").style.display = "block";
+        return;
+      }
       try {
         const btn = box.querySelector("#rn-from-header");
         btn.textContent = "⏳ 读取中...";
@@ -99,7 +104,7 @@ export async function showRenameDialog(filePath, currentName) {
         : "ysm";
       const parts = [];
       if (a) parts.push("[" + a + "]");
-      if (w) parts.push("【" + w + "】");
+      parts.push("【" + (w || "未知") + "】");
       parts.push(c || "?");
       if (v) parts.push("-" + v);
       if (d) parts.push(" (" + d + ")");
@@ -129,12 +134,12 @@ export async function showRenameDialog(filePath, currentName) {
       const ext = currentName.includes(".")
         ? currentName.split(".").pop()
         : "ysm";
-      if (!a || !w || !c) {
+      if (!a || !c) {
         const errEl = box.querySelector("#rn-err");
-        if (errEl) errEl.textContent = "⚠️ 作者、品牌、角色名不能为空";
+        if (errEl) errEl.textContent = "⚠️ 作者、角色名不能为空";
         (
           box.querySelector(
-            !a ? "#rn-author" : !w ? "#rn-work" : "#rn-chara",
+            !a ? "#rn-author" : "#rn-chara",
           ) || ""
         ).focus?.();
         return;
@@ -153,7 +158,7 @@ export async function showRenameDialog(filePath, currentName) {
         "[" +
         a +
         "]【" +
-        w +
+        (w || "未知") +
         "】" +
         c +
         (v ? "-" + v : "") +

@@ -25,8 +25,8 @@ import {
   countMissing,
   renderCardsHTML,
   renderRepoHeaderHTML,
-} from "../../features/community/render.js";
-import { bindRepoEvents } from "../../features/community/events.js";
+} from "../../features/community/render.ts";
+import { bindRepoEvents } from "../../features/community/events.ts";
 import { renderSiteView } from "./community/site-view.js";
 import { getSiteIcon } from "./community/workshop-icons.js";
 import { loadCommunityData, fillSearch } from "./community/core.js";

@@ -1,6 +1,6 @@
 // ===== HTML 模板（页面布局级，不含节点行） =====
 
-export function headerHTML() {
+export function headerHTML(): string {
   return `<div class="hdr">
 <div class="hdr-row hdr-search-row">
   <input class="srch-inp" id="srch" type="text" placeholder="🔍 搜索模型名称..." autocomplete="off">
@@ -24,7 +24,7 @@ export function headerHTML() {
 </div>`;
 }
 
-export function footerHTML() {
+export function footerHTML(): string {
   return `<div class="ftr">
 <span class="stat" id="ftr-stat">共 0 项</span>
 <div style="flex:1"></div>
@@ -32,10 +32,10 @@ export function footerHTML() {
 </div>`;
 }
 
-export function emptyHTML(icon, msg) {
+export function emptyHTML(icon: string, msg: string): string {
   return `<div class="empty"><div class="big">${icon}</div>${msg}</div>`;
 }
 
-export function spinnerHTML() {
+export function spinnerHTML(): string {
   return `<div class="empty"><div class="big">⏳</div><div>扫描中...</div></div>`;
 }

@@ -1,15 +1,28 @@
 // ===== Go 数据加载层 =====
-import { bus } from "../../bus.ts";
 import {
   ScanModelEntries,
   IsFileBanned,
-  LoadAppConfig,
   GetRepoRoot,
 } from "../../../bindings/ysm-model-manager/internal/app/app.js";
 import { getExts } from "../../utils/extensions.ts";
 
+/** 树条目（loader 转换后的渲染格式） */
+export interface TreeEntry {
+  name: string;
+  path: string;
+  fullPath: string;
+  size: number;
+  modTime: number;
+  banned: boolean;
+  type: string;
+  /** 标签标记（row-tpl 用到，Go 端可选） */
+  HasTags?: boolean;
+}
+
 /** 从 Go 后端加载仓库文件列表，返回格式化的 entries */
-export async function loadEntries(rtype) {
+export async function loadEntries(
+  rtype: string,
+): Promise<{ repoRoot: string; entries: TreeEntry[] }> {
   try {
     const repoRoot = await GetRepoRoot(rtype || "");
     if (!repoRoot) return { repoRoot: "", entries: [] };
@@ -33,7 +46,7 @@ export async function loadEntries(rtype) {
       filtered.map((e) => IsFileBanned(e.Path).catch(() => false)),
     );
 
-    const entries = filtered.map((e, i) => {
+    const entries: TreeEntry[] = filtered.map((e, i) => {
       let relPath = e.Path;
       const normRoot = repoRoot ? repoRoot.replace(/\\/g, "/") : "";
       const normPath = e.Path.replace(/\\/g, "/");

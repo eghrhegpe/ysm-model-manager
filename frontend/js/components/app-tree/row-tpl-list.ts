@@ -1,8 +1,16 @@
 // ===== 紧凑列表行 HTML 模板（24px 高度）=====
 import { renderDisplayName } from "../../utils/display.ts";
+import type { TreeEntry } from "./loader.ts";
 
 /** 文件行 HTML（紧凑列表模式：icon + name + size，无 hover actions、无 date、无 tag dot） */
-export function listFileRowHTML(e, nmHtml, icon, nmCls = "", indent, rowCls = "") {
+export function listFileRowHTML(
+  e: TreeEntry,
+  nmHtml: string,
+  icon: string,
+  nmCls = "",
+  indent: number | null | undefined,
+  rowCls = "",
+): string {
   const p = attr(e.path);
   const fp = attr(e.fullPath || e.path);
   const checked = e.banned ? "" : " on";
@@ -19,14 +27,14 @@ export function listFileRowHTML(e, nmHtml, icon, nmCls = "", indent, rowCls = ""
 
 /** 文件夹行 HTML（紧凑列表模式：arrow + folder icon + name） */
 export function listFolderRowHTML(
-  k,
-  full,
-  isOpen,
-  isLocked,
-  hasEnabled,
-  hasDisabled,
-  indent,
-) {
+  k: string,
+  full: string,
+  isOpen: boolean,
+  isLocked: boolean,
+  hasEnabled: boolean,
+  hasDisabled: boolean,
+  indent: number | null | undefined,
+): string {
   const fi = isLocked ? "🔒" : "📁";
   const nc = isLocked ? "var(--muted)" : "var(--txt)";
   const lk = isLocked ? " locked" : "";
@@ -47,7 +55,7 @@ export function listFolderRowHTML(
 <span class="nm" style="color:${nc}">${fi} ${dispName}</span></div>`;
 }
 
-function attr(s) {
+function attr(s: string): string {
   return (s || "")
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
@@ -55,13 +63,13 @@ function attr(s) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
-function size(b) {
+function size(b: number | null | undefined): string {
   if (b == null) return "";
   if (b < 1024) return b + " B";
   if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
   return (b / 1048576).toFixed(1) + " MB";
 }
-function sc(b) {
+function sc(b: number | null | undefined): string {
   if (b == null) return "";
   if (b < 1048576) return "sz-green";
   if (b < 3145728) return "";

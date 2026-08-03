@@ -1,15 +1,22 @@
 // ===== 整合包右键操作实现 =====
 import { friendlyError } from "../../utils/errors.ts";
 import { bus } from "../../bus.ts";
+import type { AppTree } from "./index.ts";
 import {
   SelectDirectory,
   ScanModelEntries,
-  InstallModelFile,
   ListVersionInstances,
   SyncCustomToRepo,
 } from "../../../bindings/ysm-model-manager/internal/app/app.js";
 
-function addImportLog(type, name, path, size, status, msg) {
+function addImportLog(
+  type: string,
+  name: string,
+  path: string,
+  size: number,
+  status: string,
+  msg: string,
+): void {
   import("../../../bindings/ysm-model-manager/internal/app/app.js")
     .then((mod) => {
       mod.AddImportLog?.(type, name, path, size, status, msg);
@@ -18,8 +25,8 @@ function addImportLog(type, name, path, size, status, msg) {
 }
 
 // 安装模型到整合包：打开文件选择器 -> 导入
-export function initInstanceActions(vm) {
-  const unsubs = [];
+export function initInstanceActions(vm: AppTree): Array<() => void> {
+  const unsubs: Array<() => void> = [];
 
   unsubs.push(
     bus.on("instance:install", async ({ name: insName }) => {
@@ -39,7 +46,7 @@ export function initInstanceActions(vm) {
           });
           return;
         }
-        const instances = await ListVersionInstances(mcRoot);
+        const instances = (await ListVersionInstances(mcRoot)) || [];
         const ins = instances.find((i) => i.Name === insName);
         if (!ins || !ins.CustomDir) {
           bus.emit("toast:show", {
@@ -52,10 +59,10 @@ export function initInstanceActions(vm) {
         // 选择一个 .ysm 文件导入
         const { InstallModelWithOverlay } =
           await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        // 绑定签名仅 2 参（overlay 布尔已移除，原 JS 第三参 false 被忽略）
         const result = await InstallModelWithOverlay(
           filePaths,
           ins.CustomDir,
-          false,
         );
         addImportLog(
           "install",
@@ -96,7 +103,7 @@ export function initInstanceActions(vm) {
           });
           return;
         }
-        const instances = await ListVersionInstances(mcRoot);
+        const instances = (await ListVersionInstances(mcRoot)) || [];
         const ins = instances.find((i) => i.Name === insName);
         if (!ins || !ins.CustomDir) {
           bus.emit("toast:show", {

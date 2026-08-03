@@ -5,13 +5,15 @@ import {
   ToggleModelEnable,
   SelectDirectory,
   SaveAppConfig,
+  RenameFile,
 } from "../../../bindings/ysm-model-manager/internal/app/app.js";
-import { loadEntries } from "./loader.js";
-import { initInstanceActions } from "./instance-actions.js";
+import { loadEntries } from "./loader.ts";
+import { initInstanceActions } from "./instance-actions.ts";
 import { getApp } from "../../wails/app.ts";
+import type { AppTree } from "./index.ts";
 
-export function bindBusEvents(vm) {
-  const unsubs = [];
+export function bindBusEvents(vm: AppTree): Array<() => void> {
+  const unsubs: Array<() => void> = [];
 
   // 整合包右键操作
   unsubs.push(...initInstanceActions(vm));
@@ -33,7 +35,7 @@ export function bindBusEvents(vm) {
           const repoRoot = await GetRepoRoot("ysm");
           const mcRoot = cfg.mcRoot || "";
           if (repoRoot && mcRoot) {
-            const instances = await ListVersionInstances(mcRoot);
+            const instances = (await ListVersionInstances(mcRoot)) || [];
             for (const ins of instances) {
               if (!ins.Exists) continue;
               try {
@@ -122,7 +124,7 @@ export function bindBusEvents(vm) {
       });
       if (!name) return;
       try {
-        const { LoadAppConfig, RenameDir, GetRepoRoot } =
+        const { RenameDir, GetRepoRoot } =
           await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
@@ -150,7 +152,7 @@ export function bindBusEvents(vm) {
       });
       if (!name) return;
       try {
-        const { LoadAppConfig, CreateDir, GetRepoRoot } =
+        const { CreateDir, GetRepoRoot } =
           await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot
@@ -181,13 +183,13 @@ export function bindBusEvents(vm) {
       if (!confirmed) return;
       try {
         // 加载仓库根目录 → 拼接绝对路径
-        const { LoadAppConfig, ListAllFilePaths, MoveToRecycle, GetRepoRoot } =
+        const { ListAllFilePaths, MoveToRecycle, RemoveDir, GetRepoRoot } =
           await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const allFiles = await ListAllFilePaths(absDir);
-        let count = 0,
-          errors = [];
+        let count = 0;
+        const errors: string[] = [];
         for (const p of allFiles || []) {
           try {
             await MoveToRecycle(p);
@@ -198,7 +200,6 @@ export function bindBusEvents(vm) {
         }
         // 尝试删除空文件夹
         try {
-          const { RemoveDir } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
           await RemoveDir(dir);
         } catch {}
         await reload(vm);
@@ -228,11 +229,11 @@ export function bindBusEvents(vm) {
   unsubs.push(
     bus.on("dir:batch-rename", async ({ dir }) => {
       try {
-        const { LoadAppConfig, ScanModelEntries, RenameFile, GetRepoRoot } =
+        const { ScanModelEntries, GetRepoRoot } =
           await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const repoRoot = await GetRepoRoot("ysm");
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
-        const entries = await ScanModelEntries(absDir);
+        const entries = (await ScanModelEntries(absDir)) || [];
         if (!entries || !entries.length) {
           bus.emit("toast:show", {
             msg: "📂 文件夹为空",
@@ -243,12 +244,15 @@ export function bindBusEvents(vm) {
         }
         const { showBatchRenameDialog } =
           await import("../../dialogs/batch-rename.ts");
-        await showBatchRenameDialog(absDir, entries, async (renames) => {
+        await showBatchRenameDialog(
+          absDir,
+          entries.map((e) => ({ Name: e.Name, Path: e.Path })),
+          async (renames) => {
           let ok = 0,
             fail = 0;
           for (const r of renames) {
             try {
-              await RenameFile(r.oldPath, r.newName);
+              await RenameFile(r.oldPath || "", r.newName);
               ok++;
             } catch {
               fail++;
@@ -277,9 +281,8 @@ export function bindBusEvents(vm) {
     bus.on("batch:rename", async ({ paths }) => {
       if (!paths?.length) return;
       try {
-        const { RenameFile } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const entries = paths.map((p) => ({
-          Name: p.split(/[/\\]/).pop(),
+          Name: p.split(/[/\\]/).pop() || "",
           Path: p,
         }));
         const { showBatchRenameDialog } =
@@ -289,7 +292,7 @@ export function bindBusEvents(vm) {
             fail = 0;
           for (const r of renames) {
             try {
-              await RenameFile(r.oldPath, r.newName);
+              await RenameFile(r.oldPath || "", r.newName);
               ok++;
             } catch {
               fail++;
@@ -327,7 +330,7 @@ export function bindBusEvents(vm) {
 // 辅助函数
 // ————————————————————————————
 
-async function reload(vm) {
+async function reload(vm: AppTree): Promise<void> {
   // 清除扫描缓存，确保操作结果立即可见
   try {
     const App = await getApp();
@@ -349,7 +352,11 @@ async function reload(vm) {
   vm._renderTree();
 }
 
-async function batchToggle(vm, dir, enable) {
+async function batchToggle(
+  vm: AppTree,
+  dir: string,
+  enable: boolean,
+): Promise<void> {
   const prefix = dir.replace(/\\/g, "/");
   const snapshot = vm._entries
     .filter((e) => e.path && e.path.startsWith(prefix) && e.banned === enable)
@@ -377,7 +384,7 @@ async function batchToggle(vm, dir, enable) {
   });
 }
 
-async function batchToggleAll(vm, enable) {
+async function batchToggleAll(vm: AppTree, enable: boolean): Promise<void> {
   let ok = 0,
     fail = 0;
   const snapshot = vm._entries

@@ -351,6 +351,8 @@ func splitVer(s string) []int {
 		if err == nil {
 			out[i] = n
 		}
+		// Atoi 失败（脏 tag 如 vv1.1.0 normalize 后首段 "v1"）→ 保持 0，
+		// 使该版本恒小于正常版本，绝不误触发更新（防御行为，update_test.go 锁定）
 	}
 	return out
 }

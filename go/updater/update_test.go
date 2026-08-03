@@ -48,6 +48,11 @@ func TestIsNewer(t *testing.T) {
 		{"1.10.0", "1.9.0", true},
 		{"1.2.10", "1.2.9", true},
 		{"1.2.0", "1.2.0", false},
+		// 脏 tag 防御：vv1.1.0 normalize 后首段 "v1" 非数字 → splitVer 按 0 处理，
+		// 恒小于正常版本，绝不误触发更新
+		{"v1.1.0", "1.9.3", false},
+		{"v1.1.0", "1.0.0", false},
+		{"v1.1.0", "v1.1.0", false},
 	}
 
 	for _, tt := range tests {
@@ -74,6 +79,10 @@ func TestSplitVer(t *testing.T) {
 		{"1.2.3.4", []int{1, 2, 3, 4}},
 		{"", []int{0}},
 		{"x.y.z", []int{0, 0, 0}},
+		// 脏 tag 防御：normalize 只去一个 v（vv1.1.0 → "v1.1.0"）；splitVer 直接处理
+		// "vv1.1.0" 时首段 "vv1" Atoi 失败按 0 → [0,1,0]
+		{"v1.1.0", []int{0, 1, 0}},
+		{"vv1.1.0", []int{0, 1, 0}},
 	}
 
 	for _, tt := range tests {

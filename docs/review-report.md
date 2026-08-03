@@ -170,7 +170,7 @@
 | 🟠 高 P2 | [rename.ts#L7-L12](../frontend/js/dialogs/rename.ts#L7-L12) | 本地 `esc` 不转义双引号，却用于 `value="…"` 属性插值 → 文件名含 `"` 可逃逸属性（与 summarize 同类，数据源为本地文件名） | 删本地 esc，import modal.ts/dom.ts 的完整版 |
 | 🟠 高 P2 | [batch-rename.ts#L41-L45](../frontend/js/dialogs/batch-rename.ts#L41-L45) | 返回的 Promise 在**弹窗打开瞬间** resolve，调用方 `await showBatchRenameDialog(...)` 形同虚设，"应用"后的错误无法被调用方捕获 | Promise 延迟到 `close()` 时结算（内部保留 resolve 引用） |
 | 🟠 高 P2 | [app-sync-manager/index.ts#L97-L117](../frontend/js/components/app-sync-manager/index.ts#L97-L117) | `_init` 每次调用追加 `bus.on("stats:refresh")` 进 `_unsubs` 但从不清理上一轮 → `instance` 属性二次变更后同一事件双份 handler，一次刷新双倍 `_loadData`，叠加自触发 emit 放大 | `_init` 开头先清旧 `_unsubs` 再注册 |
-| 🟠 高 P2 | [context-menus.ts#L281-L287](../frontend/js/core/context-menus.ts#L281-L287) | `file.copy` 成功后**缺 `refreshUI()`**（对比 batch.copy [L172](../frontend/js/core/context-menus.ts#L172) 与全部 move 分支都有）→ 单文件复制后树视图不更新，用户以为复制失败 | 成功分支补 `refreshUI()` |
+| 🟠 高 P2 | [context-menus.ts#L281-L287](../frontend/js/core/context-menus.ts#L281-L287) | `file.copy` 与 `batch.copy` 成功后**均缺 `refreshUI()`**（全部 move 分支都有；初版报告误判 batch.copy 已有，复核更正）→ 复制后树视图不更新，用户以为复制失败 | 两处成功分支均补 `refreshUI()` |
 | 🟠 高 P2 | [recycle-bin.ts#L67-L74](../frontend/js/features/recycle-bin.ts#L67-L74)、[L210](../frontend/js/features/recycle-bin.ts#L210) | `_loadingAbort` 是假守卫：AbortController.signal 从未传给任何请求；先完成者的 `finally { _loadingAbort = null }` 清掉后者句柄；快速切资源类型时**慢的旧请求可覆盖新列表** | 用 generation 计数器：渲染前比对序号再写 DOM |
 | 🟠 高 P2 | [model3d.ts#L318-L337](../frontend/js/utils/model3d.ts#L318-L337) | document 级 keydown 对 WASD/方向键/空格 `preventDefault()` 且**无输入框守卫** → 3D 预览挂载期间打开重命名等弹窗无法打字，按 F 误切调试模式 | 先判 `e.target` 是否 INPUT/TEXTAREA/contentEditable（复用 handler-dnd 的 isEditable） |
 | 🟡 中 P3 | [theme.ts](../frontend/js/core/theme.ts) 全文件 | **生产死模块**：全仓仅 theme.test.js 引用，真实主题逻辑在 app-modules.ts；若误 import，`bindThemeBtn` 因 `#btn-theme` 不存在会陷入每 100ms 一次的无限 setTimeout | 删除模块 + 测试，或让 app-modules 复用（顺带合并 app-modules 重复注册的 `prefers-color-scheme` 监听） |
@@ -211,7 +211,7 @@
 - **import-queue**：覆盖路径 `newName`/`finalName` 错位；覆盖成功缺 `stats:refresh`/`tree:reload`；`readEntries` >100 静默截断
 - **app-tree**：Delete 键双触发；`RemoveDir` 相对路径；`#sort` 死控件
 - **dialogs**：modal 家族无单例（活动弹窗槽位统一治理）；rename.ts esc 缺引号；batch-rename Promise 开弹即结算
-- **其他**：app-sync-manager 订阅累积；context-menus file.copy 缺 refreshUI；recycle-bin 假 abort 守卫；model3d keydown 吞输入框按键
+- **其他**：app-sync-manager 订阅累积；context-menus file.copy/batch.copy 缺 refreshUI；recycle-bin 假 abort 守卫；model3d keydown 吞输入框按键
 
 ### 系统性治理建议（长治久安，均非推倒重来）
 

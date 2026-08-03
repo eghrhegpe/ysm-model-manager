@@ -5,11 +5,15 @@ import { renderFormattedText } from "../../utils/mc-format.ts";
 import { esc } from "../../utils/dom.ts";
 import type { PreviewCtx } from "./preview-utils.ts";
 
+/** 详情面板 generation：每次展示新预览自增，慢请求返回后比对，过期结果不回写 DOM */
+let _detailGen = 0;
+
 /** 显示模型详情（YSM 模型） */
 export async function showModelDetail(
   ctx: PreviewCtx,
   path: string,
 ): Promise<void> {
+  const gen = ++_detailGen;
   const savedTab = localStorage.getItem("ysm_previewTab") || "detail";
   ctx._root.innerHTML = `<div class="content" id="preview-content">
   <div class="ysm-tab-row">
@@ -39,6 +43,7 @@ export async function showModelDetail(
 
   // 预热缩略图缓存（loadModel2D / 列表视图复用）
   await ctx._loadPreviewImage(path);
+  if (gen !== _detailGen) return; // 用户已切换到其他预览
 
   try {
     const { ExtractYsmSummary, ExtractYSMHeader } =
@@ -47,6 +52,7 @@ export async function showModelDetail(
       ExtractYsmSummary(path),
       ExtractYSMHeader(path),
     ]);
+    if (gen !== _detailGen) return; // 解析期间用户已切换
     const summary = results[0].status === "fulfilled" ? results[0].value : null;
     const header = results[1].status === "fulfilled" ? results[1].value : null;
     const basename = path.split(/[/\\]/).pop() || "";
@@ -82,6 +88,7 @@ export async function showModelDetail(
       (e) => console.warn("[preview] loadModel2D:", e),
     );
   } catch (err) {
+    if (gen !== _detailGen) return;
     const detailDiv = ctx._root.getElementById("preview-detail");
     if (detailDiv) {
       detailDiv.innerHTML = `未知错误解析失败: ${esc(err instanceof Error ? err.message : String(err))}`;
@@ -94,9 +101,11 @@ export async function showResourcePack(
   ctx: PreviewCtx,
   path: string,
 ): Promise<void> {
+  const gen = ++_detailGen;
   try {
     const { ReadPackMeta } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     const jsonStr = await ReadPackMeta(path);
+    if (gen !== _detailGen) return;
     const meta = JSON.parse(jsonStr) as {
       description?: string;
       thumbnail?: string;
@@ -108,6 +117,7 @@ export async function showResourcePack(
     const basename = path.split(/[/\\]/).pop() || "";
     const desc = renderFormattedText(meta.description || "");
     const { describeVersionRange } = await import("../../utils/pack-format.ts");
+    if (gen !== _detailGen) return;
     const rv = describeVersionRange(meta);
     ctx._root.innerHTML = `<div class="content" id="preview-content">
   <h3>🎨 资源包</h3>
@@ -119,6 +129,7 @@ export async function showResourcePack(
   </div>
 </div>`;
   } catch (e) {
+    if (gen !== _detailGen) return;
     ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 资源包</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e instanceof Error ? e.message : String(e))}</div></div></div>`;
   }
 }
@@ -129,6 +140,7 @@ export async function showShaderPack(
   path: string,
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
+  ++_detailGen; // 无 await 也要作废在途的慢请求回写
   const icon = (opts && opts.icon) || "☀️";
   const label = (opts && opts.label) || "光影包";
   const basename = path.split(/[/\\]/).pop() || "";

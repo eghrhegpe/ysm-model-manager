@@ -1396,3 +1396,78 @@ const dispName = renderDisplayName(k);
 - 事件类型表（bus.ts BusEvents）声明 `void` 时用 `as never` 绕过 = 放弃编译期保护，payload 需求应在类型表登记
 - esc 只能有一份实现（`utils/dom.ts`）；凡用于属性插值的转义必须含引号（全项目 14+ 处重复实现待收敛，见 review-report 系统性建议）
 - 「overlay 关闭」与「异步加载完成」是两个并发状态机，任何 await 后重建 DOM/注册监听前必须检查中止标志
+
+## 2026-08-04 新增 bug 记录（L2 审计 P2 第一批：点状修复八项）
+
+> 来源：`docs/review-report.md` L2 审计 P2 清单第一批（commit 01aae6a），全部通过 typecheck + vite build + 契约测试。
+
+### 症状
+
+1. 导入覆盖确认「重命名并覆盖」走错名字：覆盖分支引用 try 块内的 `finalName`，且覆盖成功后不刷新统计/树
+2. 拖入含 >100 个条目的目录，部分文件静默丢失
+3. 树视图按 Delete 删一次弹两个确认框；「删除文件夹」对相对路径执行失败
+4. 单文件/批量复制成功后树视图不更新，用户以为复制失败
+5. 3D 预览挂载期间，重命名弹窗里打 WASD/方向键会移动相机、按 F 误切调试模式
+6. 回收站快速切资源类型时，慢的旧请求回写覆盖新列表
+7. app-content 预览分栏拖拽监听重复叠加（重绑不先清旧）
+8. 同步推送 `rtype` 为空时落进 undefined 分支；app-sync-manager 二次初始化双份 `stats:refresh` handler
+
+### 根因
+
+1. `import-queue.ts` 覆盖分支在 catch/后续块引用 try 内 `const finalName`（作用域外）；覆盖成功后漏 emit `stats:refresh`/`tree:reload`
+2. `readEntries` 规范只保证每次回调返回**一批**（≤100）条目，只调一次必然截断
+3. app-tree 在 shadow root 与 document 双层注册 keydown，composed 冒泡双触发；`RemoveDir` 误传相对路径
+4. context-menus `file.copy`/`batch.copy` 成功分支缺 `refreshUI()`（move 分支都有；初版报告误判 batch.copy 已有，复核更正）
+5. `model3d.ts` document 级 keydown 无输入框守卫即 `preventDefault()`
+6. `recycle-bin.ts` `_loadingAbort` 是假守卫：signal 从未传给请求，先完成者的 finally 清掉后者句柄
+7. `_initPreviewResize` 每次调用直接 bind 匿名函数，旧监听永不释放
+8. handler-sync 未对空 `rtype` 兜底；`_init` 只追加不清理 `_unsubs`
+
+### 修复
+
+1. `finalName` 提升为 try 外 `let`；覆盖分支全套用并补 stats/tree 刷新、重置 `currentRelPath`
+2. `readEntries` 改循环调用直到空批次
+3. 删 shadow root 级 keydown（保留 document 级）；`RemoveDir` 改传绝对路径
+4. 两处 copy 成功分支补 `refreshUI()`
+5. keydown 先判 `e.target` 是否 INPUT/TEXTAREA/contentEditable
+6. 改 generation 计数器：`++_loadGen` 后每处异步落点比对序号再写 DOM
+7. resize 监听存字段、先 remove 再 bind，disconnectedCallback 清理
+8. `rtype || RESOURCE_TYPES.YSM` 兜底；`_init` 开头清旧 `_unsubs` 再注册
+
+### 教训
+
+- `readEntries` 是 Web 平台著名陷阱（批量回调），任何目录遍历必须循环到空批次
+- 「AbortController 字段存在」≠「请求可中止」，signal 必须真正传入 fetch/绑定层；纯 Wails 调用场景改用 generation 计数器更简单可靠
+- 事件监听「先 remove 再 bind」槽位复用应成为组件默认写法，匿名函数 bind 等于放弃清理能力
+
+## 2026-08-04 新增 bug 记录（L2 审计 P2 第二批：弹窗家族系统性治理）
+
+> 来源：`docs/review-report.md` L2 审计 P2 清单第二批，全部通过 typecheck + vite build + 契约测试。
+
+### 症状
+
+1. 连点两个入口（或弹窗打开期间触发另一弹窗）→ 多层 overlay 叠加，Esc 只关最上层，底层残留；确认类弹窗可能双执行
+2. `showBatchRenameDialog` 的 Promise 在弹窗**打开瞬间** resolve，调用方 await 形同虚设
+3. community 创作者卡片的平台徽章、`data-*` 属性可被 creators.json/用户编辑数据注入 HTML
+4. 预览面板快速切换文件时，慢解析（摘要提取/资源包读取）返回后把**旧文件**结果写进新文件面板
+
+### 根因
+
+1. modal 家族（modalPrompt/Select/Confirm/rename/tag-editor/adv-filter/batch-rename）各自 appendChild，无活动弹窗单例概念
+2. batch-rename 是 async 函数但函数体无顶层 await，返回的 Promise 立即兑现
+3. `site-view.ts` platformBadges 拼接未转义；`app-content` `_esc` 只转 3 字符却被用于 `data-*` 属性插值
+4. `preview-detail.ts` 三个 show* 函数对 `ctx._root` 的写入无过期判断
+
+### 修复
+
+1. `modal.ts` 新增活动弹窗单例槽位 `registerDlg(overlay, cancelClose)`：新开弹窗前先按取消值结算旧弹窗；`closeDlg` 动画完成后清槽位；六个弹窗全部登记。`rename.ts` 私有 esc（缺引号）改委托 `utils/dom.ts`
+2. batch-rename 改普通函数：模块级 `_pendingResolve`，Promise 延迟到 `close()`（应用完成/取消/Esc）才结算；重开时先 `close()` 结算旧 Promise
+3. platformBadges 补 `esc(t)`；`_esc` 委托规范 `escUtil`（含引号转义），消除第二份 3 字符实现
+4. `preview-detail.ts` 加模块级 `_detailGen` generation：三个 show* 入口自增，每处 await 后比对过期即 return
+
+### 教训
+
+- 弹窗是天然的单例资源：「活动弹窗槽位 + 打开前结算旧的」一次治理覆盖全部弹窗，胜过逐个弹窗打补丁
+- async 函数无顶层 await = 返回立即兑现的 Promise；「调用方 await」的语义需要契约测试或 lint 盯防
+- esc 收敛又进一步：`_esc`/rename 私有版已归一到 `utils/dom.ts`，剩余散落实现（settings.ts escHtml 等）按 review-report 系统性建议继续收敛
+- 任何「异步结果回写共享 DOM」的路径都必须带 generation/过期标志，与 P1 体素预览 aborted 标志同一范式

@@ -35,8 +35,23 @@ export function closeDlg<T>(
   overlay.classList.add("dlg-closing");
   setTimeout(() => {
     overlay.remove();
+    if (_activeOverlay === overlay) {
+      _activeOverlay = null;
+      _closeActive = null;
+    }
     resolve(value);
   }, delay);
+}
+
+/** 活动弹窗单例槽位：新开弹窗前先按取消值结算旧弹窗，防连点叠加/双执行 */
+let _activeOverlay: HTMLElement | null = null;
+let _closeActive: (() => void) | null = null;
+
+/** 弹窗 append 到 body 后调用，登记为当前活动弹窗 */
+export function registerDlg(overlay: HTMLElement, cancelClose: () => void): void {
+  if (_activeOverlay && _closeActive) _closeActive();
+  _activeOverlay = overlay;
+  _closeActive = cancelClose;
 }
 
 /** modalPrompt 选项 */
@@ -77,6 +92,7 @@ export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
     `;
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+    registerDlg(overlay, () => closeDlg(overlay, resolve, null));
 
     const input = box.querySelector("#mp-input") as HTMLInputElement;
     input.focus();
@@ -165,6 +181,7 @@ export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
       "</div>";
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+    registerDlg(overlay, () => closeDlg(overlay, resolve, null));
 
     const select = box.querySelector("#ms-select") as HTMLSelectElement;
     select.focus();
@@ -227,6 +244,7 @@ export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
     `;
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+    registerDlg(overlay, () => closeDlg(overlay, resolve, false));
     overlay.focus();
 
     const close = (result: boolean): void =>

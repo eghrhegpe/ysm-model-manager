@@ -101,7 +101,7 @@ function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement {
   const platformBadges = (cr.type || "")
     .split(";")
     .filter(Boolean)
-    .map((t: string) => '<span class="cr-platform-badge">' + t + "</span>")
+    .map((t: string) => '<span class="cr-platform-badge">' + esc(t) + "</span>")
     .join("");
 
   const repoBtn = hasRepo

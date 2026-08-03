@@ -1,15 +1,8 @@
 // ===== 模型重命名对话框（类型化版 — ADR-014 P3 dialogs）=====
 // 用法: showRenameDialog(filePath, currentName) → 确认后调用 RenameFile
 import { parseModelName } from "../utils/display.ts";
-import { closeDlg } from "./modal.ts";
+import { closeDlg, registerDlg, esc } from "./modal.ts";
 import { getApp } from "../wails/app.ts";
-
-function esc(s: string): string {
-  return (s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
 
 /**
  * 弹出重命名对话框
@@ -63,6 +56,7 @@ export async function showRenameDialog(
     `;
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+    registerDlg(overlay, () => closeDlg(overlay, resolve, null));
     overlay.focus();
 
     // 从 YSM 文件头部读取元数据（仅填充第一位作者，展示介绍）

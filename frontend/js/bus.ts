@@ -14,8 +14,10 @@ export interface ToastPayload {
 export interface MenuItem {
   label?: string;
   divider?: boolean;
+  icon?: string;
+  danger?: boolean;
   onClick?: () => void;
-  // TODO: icon / disabled / submenu 等字段待补
+  // TODO: disabled / submenu 等字段待补
 }
 
 export interface NavPagePayload {
@@ -30,7 +32,15 @@ export interface ModelSelectPayload {
 export interface CtxShowPayload {
   x: number;
   y: number;
-  // TODO: items / target 等字段待补（context-menus.js）
+  type: "instance" | "batch" | "file" | "dir";
+  instanceName?: string;
+  path?: string;
+  banned?: boolean;
+  dir?: string;
+  name?: string;
+  count?: number;
+  paths?: string[];
+  rtype?: string;
 }
 
 // ── 事件名 → payload 类型映射 ──────────────────────
@@ -65,7 +75,7 @@ export interface BusEvents {
   "sync:download:done": void;
   "sync:upload:done": void;
   // 实例 / 导入
-  "instance:export-list": { name: string; rtype: string };
+  "instance:export-list": { name: string; rtype?: string };
   "instance:clear": { name: string; rtype?: string };
   "instance:install": void;
   "instance:sync": void;
@@ -76,16 +86,16 @@ export interface BusEvents {
   "config:updated": void;
   "config:resource-types-changed": void;
   // 批量操作
-  "batch:rename": void;
+  "batch:rename": { paths: string[] };
   "batch:enable-all": void;
   "batch:disable-all": void;
   "batch:enable": void;
   "batch:disable": void;
   // 目录
-  "dir:rename": void;
-  "dir:recycle": void;
-  "dir:mkdir": void;
-  "dir:batch-rename": void;
+  "dir:rename": { dir: string };
+  "dir:recycle": { dir: string };
+  "dir:mkdir": { dir: string };
+  "dir:batch-rename": { dir: string };
   "dir:select-repo": void;
   // 其他
   "loading:start": void;

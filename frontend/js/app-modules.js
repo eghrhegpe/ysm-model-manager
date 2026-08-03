@@ -34,7 +34,7 @@ import("./components/app-sync-manager/index.js").catch((e) =>
 );
 
 // 右键菜单映射
-import { registerContextMenus } from "./core/context-menus.js";
+import { registerContextMenus } from "./core/context-menus.ts";
 registerContextMenus();
 
 //  窗口状态已由 Go 端 shutdown 保存，前端不再重复写入

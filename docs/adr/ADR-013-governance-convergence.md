@@ -29,7 +29,7 @@
 ### 1.2 亮点（保留不动）
 
 - ✅ `tests/python/` 6 个契约测试与 AGENTS.md 描述**完全一致**，宪法断言属实
-- ✅ `.agents/skills/` 16 个 skill + `scripts/` 35 个脚本真实存在，工具链不虚
+- ✅ `.agents/skills/` 16 个 skill + `scripts/` 35 个脚本真实存在，工具链不虚（注：`.agents/skills/` 后于 `7f1d7cd` 删除，能力由 `scripts/*.mjs` 承接，2026-08-03 补注）
 - ✅ 提交纪律已联邦化：`docs(adr)` / `chore(build)` / `refactor(app)` / `feat`（Conventional Commits + scope）
 - ✅ 已吸收联邦实践：Taskfile 脚手架、`internal/app` 拆分（对应 ADR-102 精神）、Wails 3 迁移
 - ✅ `bug-chronicle.md` 确实 1369 行，AGENTS.md「先 grep 再读」的约束有据
@@ -117,6 +117,6 @@
 | `.github/workflows/` | 空目录，CI 声明与实现脱节 |
 | `git log` | 3cae9cb 提交写「ADR-0001」；提交风格已 Conventional Commits + scope |
 | `tests/python/` | 6 个契约测试与 AGENTS.md 描述完全一致（✅ 亮点） |
-| `.agents/skills/` | 16 个 SKILL.md 全存在（✅ 亮点）；review 格式无 P1–P4 分级 |
+| `.agents/skills/` | 16 个 SKILL.md 全存在（✅ 亮点）；review 格式无 P1–P4 分级（该目录后已删除，见上方亮点节补注） |
 | `docs/release-notes/` | 110 文件，v1.6.4+ 双文件模式混杂（仅 compare / 仅主文件并存） |
 | 联邦基线（USER.md / 会话记录） | ADR 编号唯一取最大+1、审核四件套、tsc 零错误、契约测试 13/13、CI 线上回归 |

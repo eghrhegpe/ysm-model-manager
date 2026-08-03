@@ -16,7 +16,7 @@
 > 失败熔断：同一命令连续失败 2 次 → 停手进 Plan 分析原因，不无脑重试。
 > 只读 §一 文档地图列出的文件；地图没有的目录 = 不存在（`docs/archive/` 为冻结区，需追溯旧设计时才读）。
 > 新文档先过命名约束检查（`docs/Design.md` §11 + ADR-006），再确认归属目录（见 §一 文档地图）。
-> 预定义 subagent skill 可直接调起（说 skill 名即可）：`release-notes-gen` / `review` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check` / `deep-init`。
+> 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `review` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check`。
 
 ## 去哪里查
 
@@ -215,8 +215,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | `docs/archive/` | 🧊 冻结区（历史归档：architecture / bug-chronicle / PROJECT_STATUS / 3D / tasks / sessions…，需追溯旧设计时才读） |
 | `docs/preview/` | 🖼️ UI 截图 |
 | `tests/` | 🔒 契约测试（Node .mjs）— 禁止修改，必须通过 |
-| `scripts/` | Node 工具脚本（治理/静态分析/生成器），含 `scripts/baseline/` 基线文件（`check-deadcode-baseline` / `check-doc-drift` 使用），被 `.agents/skills/` 调用 |
-| `.agents/skills/` | Reasonix Skill 定义 |
+| `scripts/` | Node 工具脚本（治理/静态分析/生成器），含 `scripts/baseline/` 基线文件（`check-deadcode-baseline` / `check-doc-drift` 使用），由 `doctor.mjs` / CI / 手动命令调用 |
 
 契约测试明细（`tests/`，Node 零依赖）：
 
@@ -273,7 +272,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 10 | 回调 API 未 Promise 化 | DnD 数据读不到 | `entry.file(callback)` → `new Promise(resolve => entry.file(resolve))` |
 | 11 | 3D 坐标变换反复修（实证：model3d.js 9 次 fix 全项目第一） | "对齐 ysmview cube pivot" 连续 5 次 fix | 改 model2d/model3d/spec.go 坐标前先 grep `bug-chronicle` + 对齐 ysmview 口径（pivot X 取反、`from.x = origin.x - size.x`）；改完用自由相机近距验证 |
 
-> 完整版见 `.github/copilot-instructions.md`（18 条）。
+> 完整版见 `.github/copilot-instructions.md`（17 条）。
 
 ---
 
@@ -365,5 +364,4 @@ app-xxx/xxx-css.js   — Shadow DOM 样式
 - **Shell**：优先用 pwsh（PowerShell），不是 cmd
 - **路径分隔符**：统一正斜杠 `/`
 - **调试日志用完即删**：`console.log` / `fmt.Print` 测试完后**必须请示用户确认**再删，不可自行决定
-- **禁止安装软件**：缺依赖提示用户手动装
 - **发版**：用 `wails build -clean`，流程见 `docs/releases/README.md`

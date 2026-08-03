@@ -353,8 +353,8 @@ function collectParams(stripped, startRe) {
   return names;
 }
 
-// 对象/类方法定义：`{ | } | , | ; | 换行` 后跟 名字(，且配对右括号后是 `{` 或 `:`。
-const METHOD_START_RE = /(?:\{|\}|,|;|\n)\s*([A-Za-z_$][\w$]*)\s*\(/g;
+// 对象/类方法定义：`{ | } | , | ; | 换行` 后跟（可选 async）名字(，且配对右括号后是 `{` 或 `:`。
+const METHOD_START_RE = /(?:\{|\}|,|;|\n)\s*(?:async\s+)?([A-Za-z_$][\w$]*)\s*\(/g;
 
 /** 收集对象字面量/类体中的方法定义名（`foo(): void {` 形式）。 */
 function collectMethods(stripped) {
@@ -465,6 +465,14 @@ function checkFile(file, symbolMap) {
   const imported = extractImported(stripped);
   const selfExports = new Set(extractExports(stripped).map((e) => e.name));
 
+  // re-export 语句 `export { a, b } from "./x"`：花括号内符号是转发名非引用。
+  const reExportRanges = [];
+  for (const m of stripped.matchAll(/export\s+(?:type\s+)?\{[^}]*\}\s*from/g)) {
+    const brace = stripped.indexOf('{', m.index);
+    const close = stripped.indexOf('}', brace);
+    if (close > brace) reExportRanges.push([brace, close]);
+  }
+
   const seen = new Set(); // 去重（同一符号只报一次，行号取首次出现）
   const out = [];
 
@@ -472,10 +480,20 @@ function checkFile(file, symbolMap) {
     const { name, start, line } = t;
     if (KEYWORDS.has(name) || GLOBALS.has(name)) continue;
     if (defined.has(name) || imported.has(name) || selfExports.has(name)) continue;
+    // re-export 花括号区间内的符号：跳过
+    if (reExportRanges.some(([a, b]) => start > a && start < b)) continue;
     // 属性访问 obj.prop 的 prop：前一个非空白字符是 `.`
     let j = start - 1;
     while (j >= 0 && /\s/.test(text[j])) j--;
     if (j >= 0 && text[j] === '.') continue;
+    // 对象字面量 key `{ bus: 1 }` / `type X = { bus: string }`：key 非引用。
+    // 前一个非空白是 `{`/`,` 且后一个非空白是 `:` 才判定为 key；
+    // `{ bus }` 简写属性与 `[bus, fmt]` 数组元素不满足 `:` 条件，仍按引用处理。
+    if (j >= 0 && (text[j] === '{' || text[j] === ',')) {
+      let k = start + name.length;
+      while (k < text.length && /\s/.test(text[k])) k++;
+      if (text[k] === ':') continue;
+    }
     if (seen.has(name)) continue;
 
     const cands = symbolMap.get(name);
@@ -578,6 +596,8 @@ function applyFixes(suggestions) {
       if (g.types.size) newLines.push(`import type { ${[...g.types].sort().join(', ')} } from "${p}"`);
     }
     // 定位插入点：跳过文件头注释块（// 或 /* 开头的行）与空行
+    const raw = fs.readFileSync(s.file, 'utf-8');
+    const eol = raw.includes('\r\n') ? '\r\n' : '\n'; // 保留原行尾风格（CRLF 文件不被改写为 LF）
     const text = readText(s.file);
     const fileLines = text.split('\n');
     let insertAt = 0;
@@ -596,7 +616,7 @@ function applyFixes(suggestions) {
       tail.pop();
     }
     fileLines.splice(insertAt, 0, ...tail);
-    fs.writeFileSync(s.file, fileLines.join('\n'));
+    fs.writeFileSync(s.file, fileLines.join(eol));
     fixed += newLines.length;
     skipped += fileSkipped;
   }

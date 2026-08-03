@@ -266,10 +266,12 @@ const STATIC_TOOLS = [
   { tool: 'gen-docs-index.mjs', args: ['--check'] },
   // 项目结构地图：目录结构 vs 磁盘扫描（AGENTS.md §4.1 指针指向 docs/project-map.md）
   { tool: 'gen-project-map.mjs', args: ['--check'] },
+  // 脚本卫生：退出码失效 / 共享层内联 / --json 契约（WARN 不阻断，默认 rc=0）
+  'check-script-hygiene.mjs',
 ];
 
 function checkStaticAnalysis() {
-  console.log('\n=== Static Analysis (7 tools) ===');
+  console.log(`\n=== Static Analysis (${STATIC_TOOLS.length} tools) ===`);
   let failed = 0;
   for (const entry of STATIC_TOOLS) {
     const tool = typeof entry === 'string' ? entry : entry.tool;

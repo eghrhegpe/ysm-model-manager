@@ -29,11 +29,12 @@ const REG_FILE = path.join(ADR_DIR, 'README.md');
 // ── 参数解析 ────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const args = { title: null, slug: null, related: null, supersedes: [], dryRun: false };
+  const args = { title: null, slug: null, related: null, supersedes: [], dryRun: false, help: false, unknown: [] };
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry-run') args.dryRun = true;
+    else if (a === '--help' || a === '-h') args.help = true;
     else if (a === '--slug') args.slug = argv[++i] ?? null;
     else if (a === '--related') args.related = argv[++i] ?? null;
     else if (a === '--supersedes') {
@@ -42,6 +43,9 @@ function parseArgs(argv) {
         .split(/[，,]/)
         .map((s) => s.trim())
         .filter(Boolean);
+    } else if (a.startsWith('--') && a !== '--') {
+      // 未知 flag：不当作标题（避免 --help 类误用被推进 positional 占号）
+      args.unknown.push(a);
     } else positional.push(a);
   }
   args.title = positional[0] ?? null;
@@ -226,6 +230,19 @@ function releaseLock() {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+
+  // --help / -h：输出用法退出，绝不占号（修复 --help 被当标题的误用）
+  if (args.help) {
+    usage();
+    return 0;
+  }
+  // 未知 flag：拒绝而非当标题占号（防 --foo 类误用）
+  if (args.unknown.length) {
+    console.error(`[FAIL] 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+    usage();
+    return 1;
+  }
+
   if (!args.title) {
     usage();
     return 1;

@@ -54,8 +54,8 @@
 ## 📝 更新详情
 
 完整的提交记录和技术文档请查看：
-- [v1.6.0.md](docs/release-notes/v1.6.0.md) - 详细技术说明
-- [PUBLISH_GUIDE.md](PUBLISH_GUIDE.md) - 发布指南
+- [v1.6.0.md](v1.6.0.md) - 详细技术说明
+- [PUBLISH_GUIDE.md](../archive/PUBLISH_GUIDE.md) - 发布指南（已归档）
 
 ### 主要提交
 ```

@@ -1,7 +1,7 @@
 // ===== 3D 模型加载器（类型化版 — ADR-014 P2）=====
 import * as THREE from "three";
 import { GetModel3DSpec } from "../../bindings/ysm-model-manager/internal/app/app.js";
-import { buildSpecFromModel } from "./model3d-spec.js";
+import { buildSpecFromModel } from "./model3d-spec.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */
 export interface ModelLike {
@@ -98,7 +98,7 @@ export async function fetchSpec(model: ModelLike): Promise<ModelSpec> {
     }
   }
   if (!spec.models?.length && model.bones?.length) {
-    spec = buildSpecFromModel(model);
+    spec = buildSpecFromModel(model as Parameters<typeof buildSpecFromModel>[0]) as unknown as ModelSpec;
   }
   return spec;
 }

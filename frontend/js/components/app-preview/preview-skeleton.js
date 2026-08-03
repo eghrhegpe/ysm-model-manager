@@ -419,7 +419,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
 
         try {
           const { preloadModel } = await import("../../utils/model3d-loader.ts");
-          const { renderModel3D } = await import("../../utils/model3d.js");
+          const { renderModel3D } = await import("../../utils/model3d.ts");
           const { texArr, spec } = await preloadModel(model);
           _model3d = await renderModel3D(viewContainer, texArr, spec, _texIdx);
           // 3D 骨骼点击回调 → 详情框

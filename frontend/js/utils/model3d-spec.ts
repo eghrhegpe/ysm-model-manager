@@ -1,17 +1,73 @@
-// ===== JS 兜底 Spec 构建 =====
+// ===== JS 兜底 Spec 构建（类型化版 — ADR-014 P2 大件收尾）=====
 // 从 model3d.js 拆分：Go spec 不可用时 JS 端兜底算法
 // 算法逻辑与 Go threejs.Build() 一致
 
 const CUBE_EPS = 0.001;
 
+// ── 结构接口 ────────────────────────────────────────
+
+/** 立方体（骨骼上的 box 元素） */
+export interface SpecCube {
+  origin?: number[];
+  size?: number[];
+  pivot?: number[];
+  rotation?: number[];
+  uv?: number[];
+  faceUV?: string;
+}
+
+/** 骨骼 */
+export interface SpecBone {
+  name: string;
+  parent?: string;
+  pivot?: number[];
+  cubes?: SpecCube[];
+}
+
+/** 模型输入（buildSpecFromModel 参数） */
+export interface SpecModelInput {
+  bones?: SpecBone[];
+  texWidth?: number;
+  texHeight?: number;
+}
+
+/** 构建产物：mesh data + bones */
+export interface SpecBuildResult {
+  bones: SpecBone[];
+  meshes: SpecMeshData[];
+  texWidth: number;
+  texHeight: number;
+}
+
+/** 单 mesh 数据（Go spec meshGroups 结构近似） */
+export interface SpecMeshData {
+  boneID: string;
+  origin: number[];
+  size: number[];
+  pivot: number[];
+  rotation: number[];
+  uv: number[][][];
+  faceUV: boolean;
+  texIdx: number;
+  cubeIdx: number;
+}
+
+/** UV 解析结果 */
+interface UVData {
+  uv: number[][][];
+  texIdx: number;
+}
+
+// ── 主流程 ──────────────────────────────────────────
+
 /** 构建 Three.js 可消费的 spec 结构 { bones[], meshes[] } */
-export function buildSpecFromModel(model) {
+export function buildSpecFromModel(model: SpecModelInput): SpecBuildResult {
   const texW = model.texWidth || 64;
   const texH = model.texHeight || 64;
-  const meshes = [];
-  const boneIdx = {};
-  const boneCubes = {}; // name → cube[] after merge
-  const firstPivot = {};
+  const meshes: SpecMeshData[] = [];
+  const boneIdx: Record<string, boolean> = {};
+  const boneCubes: Record<string, SpecCube[]> = {}; // name → cube[] after merge
+  const firstPivot: Record<string, number[]> = {};
 
   // Phase 1: 收集每个 bone 的 first pivot
   for (const b of model.bones || []) {
@@ -29,7 +85,7 @@ export function buildSpecFromModel(model) {
 
   // Phase 2: 每组同名骨骼收集所有 cube，merge 后保留一个
   for (const b of model.bones || []) {
-    const cubes = (b.cubes || []).map((c) => {
+    const cubes: SpecCube[] = (b.cubes || []).map((c) => {
       const origin = c.origin || [0, 0, 0];
       const size = c.size || [1, 1, 1];
       const pivot = c.pivot || [0, 0, 0];
@@ -68,8 +124,10 @@ export function buildSpecFromModel(model) {
   return { bones: model.bones || [], meshes, texWidth: texW, texHeight: texH };
 }
 
-function mergeCubesJS(oldCubes, newCubes) {
-  const result = [];
+// ── 工具函数 ────────────────────────────────────────
+
+function mergeCubesJS(oldCubes: SpecCube[], newCubes: SpecCube[]): SpecCube[] {
+  const result: SpecCube[] = [];
   for (const nc of newCubes) {
     let replaced = false;
     for (let i = 0; i < oldCubes.length; i++) {
@@ -89,7 +147,7 @@ function mergeCubesJS(oldCubes, newCubes) {
   return [...oldCubes, ...result];
 }
 
-function cubesOverlapJS(a, b) {
+function cubesOverlapJS(a?: number[], b?: number[]): boolean {
   if (!a || !b) return false;
   for (let i = 0; i < 3; i++) {
     if (!floatEqualJS(a[i] || 0, b[i] || 0)) return false;
@@ -97,11 +155,18 @@ function cubesOverlapJS(a, b) {
   return true;
 }
 
-function floatEqualJS(a, b) {
+function floatEqualJS(a: number, b: number): boolean {
   return Math.abs(a - b) < CUBE_EPS;
 }
 
-function buildCubeMeshDataJS(c, bonePivot, texW, texH, boneID, cubeIdx) {
+function buildCubeMeshDataJS(
+  c: SpecCube,
+  bonePivot: number[],
+  texW: number,
+  texH: number,
+  boneID: string,
+  cubeIdx: number,
+): SpecMeshData {
   const origin = c.origin || [0, 0, 0];
   const size = c.size || [1, 1, 1];
   const pivot = c.pivot || [0, 0, 0];
@@ -135,7 +200,14 @@ function buildCubeMeshDataJS(c, bonePivot, texW, texH, boneID, cubeIdx) {
   };
 }
 
-function parseUVJS(c, sx, sy, sz, texW, texH) {
+function parseUVJS(
+  c: SpecCube,
+  sx: number,
+  sy: number,
+  sz: number,
+  texW: number,
+  texH: number,
+): UVData {
   const uv = c.uv || [0, 0];
   const [u, v] = uv;
   // 标准 box UV 映射
@@ -203,14 +275,37 @@ function parseUVJS(c, sx, sy, sz, texW, texH) {
   };
 }
 
-function parseUVFromObject(jsonStr, sx, sy, sz, texW, texH) {
+interface FaceUVEntry {
+  uv?: number[];
+  uv_size?: number[];
+  texture?: number;
+}
+
+interface FaceUVData {
+  east?: FaceUVEntry;
+  west?: FaceUVEntry;
+  up?: FaceUVEntry;
+  down?: FaceUVEntry;
+  south?: FaceUVEntry;
+  north?: FaceUVEntry;
+}
+
+function parseUVFromObject(
+  jsonStr: string,
+  sx: number,
+  sy: number,
+  sz: number,
+  texW: number,
+  texH: number,
+): UVData {
   try {
-    const faceData = JSON.parse(jsonStr);
-    const faces = ["east", "west", "up", "down", "south", "north"];
-    const uv = [];
+    const faceData = JSON.parse(jsonStr) as FaceUVData;
+    const faces = ["east", "west", "up", "down", "south", "north"] as const;
+    const uv: number[][][] = [];
     let texIdx = 0;
     for (const face of faces) {
-      const fd = faceData[face] || faceData[face.toUpperCase()];
+      const fd =
+        faceData[face] || faceData[face.toUpperCase() as keyof FaceUVData];
       if (fd?.uv && fd?.uv_size) {
         const [fu, fv] = fd.uv;
         const [fw, fh] = fd.uv_size;
@@ -236,7 +331,12 @@ function parseUVFromObject(jsonStr, sx, sy, sz, texW, texH) {
   }
 }
 
-function eulerToQuaternionJS(rxDeg, ryDeg, rzDeg) {
+/** 欧拉角（度）→ 四元数（保留：历史工具函数，当前无引用） */
+export function eulerToQuaternionJS(
+  rxDeg: number,
+  ryDeg: number,
+  rzDeg: number,
+): { x: number; y: number; z: number; w: number } {
   const rx = (rxDeg * Math.PI) / 180;
   const ry = (ryDeg * Math.PI) / 180;
   const rz = (rzDeg * Math.PI) / 180;

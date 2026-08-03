@@ -1,0 +1,782 @@
+// ===== 3D 模型渲染器（类型化版 — ADR-014 P2 大件收尾）=====
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+// ── Spec 结构（Go 返回的 models 结构）────────────────
+
+export interface SpecBone3D {
+  id: string;
+  name: string;
+  parentId?: string;
+  localPosition: number[];
+  localRotation: number[];
+}
+
+export interface SpecMeshGroup3D {
+  id?: string;
+  boneId: string;
+  positions: number[];
+  normals: number[];
+  uvs: number[];
+  indices: number[];
+  texIdx?: number;
+  localPosition?: number[];
+  localRotation?: number[];
+}
+
+export interface SpecModelGroup3D {
+  bones?: SpecBone3D[];
+  meshGroups?: SpecMeshGroup3D[];
+}
+
+export interface Spec3D {
+  models?: SpecModelGroup3D[];
+}
+
+/** 骨骼选中信息（window._3dOnBoneSelect 回调参数） */
+export interface BoneSelectInfo {
+  name: string;
+  path: string;
+  parent: string | null;
+  children: string[];
+  meshCount: number;
+  localPos: number[];
+  worldPos: number[];
+  localRot: number[] | null;
+  cubeRot: number[] | null;
+  cubePos: number[] | null;
+}
+
+/** renderModel3D 返回的渲染句柄 */
+export interface RenderModel3DHandle {
+  resetCamera: () => void;
+  setSpeed: (v: number) => void;
+  setRotationMode: (orbit: boolean) => void;
+  setBoneVisible: (name: string, visible: boolean) => void;
+  getBoneList: () => Array<{ id: string; name: string; parentId?: string }>;
+  toggleBone: (name: string) => void;
+  showModelGroup: (idx: number) => void;
+  getModelGroupCount: () => number;
+  onBoneSelect: ((info: BoneSelectInfo) => void) | null;
+  setDebugMode: (mode: "normal" | "pivot" | "bone") => void;
+  cleanup: () => void;
+}
+
+declare global {
+  interface Window {
+    __dumpScene: () => { bones: unknown[]; stats: { bones: number; meshes: number; vertices: number; indices: number } } | undefined;
+    __scene3d?: THREE.Scene;
+    __camera3d?: THREE.PerspectiveCamera;
+    __renderer3d?: THREE.WebGLRenderer;
+    __rootGroup3d?: THREE.Group;
+    _3dOnBoneSelect?: (info: BoneSelectInfo) => void;
+    __screenshotPreview: () => string | null;
+    __batchRepoScreenshots: (repoRoot?: string) => Promise<unknown>;
+  }
+}
+
+window.__dumpScene = () => {
+  const root = window.__rootGroup3d;
+  if (!root) {
+    console.warn("无 scene，先渲染模型");
+    return;
+  }
+  const wv = new THREE.Vector3();
+  const stats = { bones: 0, meshes: 0, vertices: 0, indices: 0 };
+  const bones: Array<{ name: string; pos: string; world: string }> = [];
+  root.traverse((c) => {
+    const group = c as THREE.Group;
+    const mesh = c as THREE.Mesh;
+    if (group.isGroup && group.name) {
+      stats.bones++;
+      group.getWorldPosition(wv);
+      const p = group.position.toArray().map((v) => +v.toFixed(2));
+      const w = wv.toArray().map((v) => +v.toFixed(2));
+      bones.push({
+        name: group.name,
+        pos: `(${p[0]},${p[1]},${p[2]})`,
+        world: `(${w[0]},${w[1]},${w[2]})`,
+      });
+    }
+    if (mesh.isMesh) {
+      stats.meshes++;
+      stats.vertices += mesh.geometry?.attributes?.position?.count || 0;
+      stats.indices += mesh.geometry?.index?.count || 0;
+    }
+  });
+  console.table(bones);
+  console.log("统计:", stats);
+  return { bones, stats };
+};
+
+/** 构建骨骼层级场景（bone group 树），返回组映射与根节点 */
+export function buildSceneMesh(spec: Spec3D): {
+  boneGroupMap: Map<string, THREE.Group>;
+  rootGroup: THREE.Group;
+  modelScale: number;
+  meshMax: number;
+} {
+  let meshMax = 0;
+  for (const mg of spec.models || [])
+    for (const md of mg.meshGroups || [])
+      for (let i = 0; i < (md.positions?.length || 0); i += 3) {
+        const v = Math.max(
+          Math.abs(md.positions[i]),
+          Math.abs(md.positions[i + 1] || 0),
+          Math.abs(md.positions[i + 2] || 0),
+        );
+        if (v > meshMax) meshMax = v;
+      }
+  const modelScale = meshMax > 32 ? 1 / 16 : meshMax > 4 ? 1 / 4 : 1;
+  const rootGroup = new THREE.Group();
+  rootGroup.scale.set(modelScale, modelScale, modelScale);
+  const boneGroupMap = new Map<string, THREE.Group>();
+  for (const mg of spec.models || [])
+    for (const bd of mg.bones || []) {
+      const g = new THREE.Group();
+      g.name = bd.name;
+      g.position.set(
+        bd.localPosition[0],
+        bd.localPosition[1],
+        bd.localPosition[2],
+      );
+      if (
+        bd.localRotation[3] !== 1 ||
+        bd.localRotation[0] !== 0 ||
+        bd.localRotation[1] !== 0 ||
+        bd.localRotation[2] !== 0
+      )
+        g.quaternion.set(
+          bd.localRotation[0],
+          bd.localRotation[1],
+          bd.localRotation[2],
+          bd.localRotation[3],
+        );
+      boneGroupMap.set(bd.id, g);
+    }
+  for (const mg of spec.models || [])
+    for (const bd of mg.bones || []) {
+      const g = boneGroupMap.get(bd.id);
+      if (!g) continue;
+      if (bd.parentId && boneGroupMap.has(bd.parentId))
+        boneGroupMap.get(bd.parentId)!.add(g);
+      else rootGroup.add(g);
+    }
+  return { boneGroupMap, rootGroup, modelScale, meshMax };
+}
+
+/** 渲染 3D 模型到容器，返回控制句柄 */
+export async function renderModel3D(
+  container: HTMLElement,
+  texArr: THREE.Texture[],
+  spec: Spec3D,
+  texIdx = 0,
+): Promise<RenderModel3DHandle> {
+  const scene = new THREE.Scene();
+  window.__scene3d = scene;
+  scene.background = new THREE.Color(0x1a1b2e);
+  const aspect = container.clientWidth / container.clientHeight || 1;
+  const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+  window.__camera3d = camera;
+  camera.position.set(0, 80, -120);
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    powerPreference: "high-performance",
+    preserveDrawingBuffer: true,
+  });
+  window.__renderer3d = renderer;
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  container.innerHTML = "";
+  container.appendChild(renderer.domElement);
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 80, 0);
+  controls.update();
+  scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+  const dl = new THREE.DirectionalLight(0xffffff, 2);
+  dl.position.set(10, 30, 20);
+  scene.add(dl);
+  const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  backLight.position.set(-10, 10, -20);
+  scene.add(backLight);
+  const grid = new THREE.GridHelper(400, 20, 0x6666aa, 0x444488);
+  grid.position.y = -1;
+  scene.add(grid);
+  scene.add(new THREE.AxesHelper(60));
+
+  const { boneGroupMap, rootGroup } = buildSceneMesh(spec);
+  window.__rootGroup3d = rootGroup;
+  scene.add(rootGroup);
+
+  for (const mg of spec.models || []) {
+    if (!mg.meshGroups?.length) continue;
+    const grouped = new Map<string, SpecMeshGroup3D[]>();
+    for (const md of mg.meshGroups) {
+      const key = md.boneId + ":" + (md.texIdx ?? 0);
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(md);
+    }
+    const merged: SpecMeshGroup3D[] = [];
+    for (const [, g] of grouped) {
+      if (g.length === 1) {
+        merged.push(g[0]);
+        continue;
+      }
+      let positions: number[] = [];
+      let normals: number[] = [];
+      let uvs: number[] = [];
+      let idx: number[] = [];
+      let idxOff = 0;
+      const standalone: SpecMeshGroup3D[] = [];
+      for (const md of g) {
+        const isId =
+          md.localRotation?.[3] === 1 &&
+          md.localRotation?.[0] === 0 &&
+          md.localRotation?.[1] === 0 &&
+          md.localRotation?.[2] === 0;
+        if (!isId) {
+          standalone.push(md);
+          continue;
+        }
+        const dx = md.localPosition?.[0] || 0;
+        const dy = md.localPosition?.[1] || 0;
+        const dz = md.localPosition?.[2] || 0;
+        for (let i = 0; i < (md.positions?.length || 0); i += 3) {
+          positions.push((md.positions[i] || 0) + dx);
+          positions.push((md.positions[i + 1] || 0) + dy);
+          positions.push((md.positions[i + 2] || 0) + dz);
+        }
+        if (md.normals) normals.push(...md.normals);
+        if (md.uvs) uvs.push(...md.uvs);
+        for (let i = 0; i < (md.indices?.length || 0); i++)
+          idx.push((md.indices[i] || 0) + idxOff);
+        idxOff += (md.positions?.length || 0) / 3;
+      }
+      if (positions.length)
+        merged.push({
+          id: g[0].boneId + "_merged",
+          boneId: g[0].boneId,
+          texIdx: g[0].texIdx,
+          localPosition: [0, 0, 0],
+          localRotation: [0, 0, 0, 1],
+          positions,
+          normals,
+          uvs,
+          indices: idx,
+        });
+      merged.push(...standalone);
+    }
+    mg.meshGroups = merged;
+    for (const md of mg.meshGroups) {
+      const bg = boneGroupMap.get(md.boneId);
+      if (!bg) continue;
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(md.positions, 3),
+      );
+      geo.setAttribute(
+        "normal",
+        new THREE.Float32BufferAttribute(md.normals, 3),
+      );
+      geo.setAttribute("uv", new THREE.Float32BufferAttribute(md.uvs, 2));
+      geo.setIndex(md.indices);
+      const mti = md.texIdx ?? texIdx ?? 0;
+      const mt = texArr.length > 0 ? texArr[mti] || texArr[0] : null;
+      // ysmview 风格材质：统一 FrontSide + transparent，无 slot/alphaTest 判断
+      const mat = mt
+        ? new THREE.MeshBasicMaterial({
+            map: mt,
+            side: THREE.FrontSide,
+            transparent: true,
+          })
+        : new THREE.MeshBasicMaterial({ color: 0xcccccc, side: THREE.FrontSide });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(
+        md.localPosition?.[0] ?? 0,
+        md.localPosition?.[1] ?? 0,
+        md.localPosition?.[2] ?? 0,
+      );
+      if (
+        md.localRotation?.[3] !== 1 ||
+        md.localRotation?.[0] !== 0 ||
+        md.localRotation?.[1] !== 0 ||
+        md.localRotation?.[2] !== 0
+      )
+        mesh.quaternion.set(
+          md.localRotation?.[0] ?? 0,
+          md.localRotation?.[1] ?? 0,
+          md.localRotation?.[2] ?? 0,
+          md.localRotation?.[3] ?? 1,
+        );
+      bg.add(mesh);
+    }
+  }
+
+  // ysmview 风格相机定位：从 mesh 包围盒计算
+  scene.updateMatrixWorld();
+  const box = new THREE.Box3();
+  scene.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) box.expandByObject(child);
+  });
+  let centerY = 0;
+  if (!box.isEmpty()) {
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    centerY = center.y;
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const dist = Math.max(size.x, size.y, size.z) * 1.5 + 2;
+    camera.position.set(center.x, center.y, center.z + dist);
+    camera.lookAt(center);
+    controls.target.copy(center);
+  } else {
+    camera.position.set(0, 80, -120);
+    controls.target.set(0, 80, 0);
+  }
+  controls.update();
+  const _initCamPos = camera.position.clone();
+  const _initCamTarget = controls.target.clone();
+
+  let _rafId: number | null = null;
+  const _onResize = (): void => {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    if (w > 0 && h > 0) {
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+  };
+  window.addEventListener("resize", _onResize);
+  const _onFSChange = (): void => {
+    setTimeout(_onResize, 50);
+  };
+  document.addEventListener("fullscreenchange", _onFSChange);
+  document.addEventListener("webkitfullscreenchange", _onFSChange);
+  const _keys: Record<string, boolean> = {};
+  let _debugMode: "normal" | "pivot" | "bone" = "normal";
+  const _onKeyDown = (e: KeyboardEvent): void => {
+    _keys[e.key.toLowerCase()] = true;
+    if (
+      ["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(
+        e.key.toLowerCase(),
+      )
+    )
+      e.preventDefault();
+    if (e.key.toLowerCase() === "f") {
+      const modes: Array<"normal" | "pivot" | "bone"> = ["normal", "pivot", "bone"];
+      const next = (modes.indexOf(_debugMode) + 1) % modes.length;
+      _debugMode = modes[next];
+      rebuildDebug();
+    }
+  };
+  const _onKeyUp = (e: KeyboardEvent): void => {
+    _keys[e.key.toLowerCase()] = false;
+  };
+  document.addEventListener("keydown", _onKeyDown);
+  document.addEventListener("keyup", _onKeyUp);
+  let _lastTime = performance.now();
+  let _camSpeed = 20;
+  let _orbitMode = true;
+  const _orbitTarget = controls.target.clone();
+  const _euler = new THREE.Euler(0, 0, 0, "YXZ");
+  let _mouseDown = false;
+  let _lastMouse = { x: 0, y: 0 };
+  const onMouseDown = (e: MouseEvent): void => {
+    if (!_orbitMode && e.button === 0) {
+      _mouseDown = true;
+      _lastMouse = { x: e.clientX, y: e.clientY };
+    }
+  };
+  const onMouseUp = (): void => {
+    _mouseDown = false;
+  };
+  const onMouseMove = (e: MouseEvent): void => {
+    if (_orbitMode || !_mouseDown) return;
+    _euler.setFromQuaternion(camera.quaternion);
+    _euler.y -= (e.clientX - _lastMouse.x) * 0.003;
+    _euler.x -= (e.clientY - _lastMouse.y) * 0.003;
+    _euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, _euler.x));
+    camera.quaternion.setFromEuler(_euler);
+    _lastMouse = { x: e.clientX, y: e.clientY };
+  };
+  renderer.domElement.addEventListener("mousedown", onMouseDown);
+  window.addEventListener("mouseup", onMouseUp);
+  window.addEventListener("mousemove", onMouseMove);
+  controls.enableRotate = true;
+  const loop = (): void => {
+    _rafId = requestAnimationFrame(loop);
+    const dt = Math.min((performance.now() - _lastTime) / 1000, 0.1);
+    _lastTime = performance.now();
+    const cd = new THREE.Vector3();
+    camera.getWorldDirection(cd);
+    const fwd = new THREE.Vector3(cd.x, 0, cd.z).normalize();
+    const right = new THREE.Vector3()
+      .crossVectors(fwd, new THREE.Vector3(0, 1, 0))
+      .normalize();
+    const mv = new THREE.Vector3();
+    if (_keys["w"] || _keys["arrowup"]) mv.add(fwd);
+    if (_keys["s"] || _keys["arrowdown"]) mv.sub(fwd);
+    if (_keys["a"] || _keys["arrowleft"]) mv.sub(right);
+    if (_keys["d"] || _keys["arrowright"]) mv.add(right);
+    if (_keys[" "]) mv.y += 1;
+    if (_keys["shift"]) mv.y -= 1;
+    if (mv.length() > 0) {
+      mv.normalize().multiplyScalar(_camSpeed * dt);
+      camera.position.add(mv);
+      if (_orbitMode) _orbitTarget.add(mv);
+    }
+    if (_orbitMode) {
+      controls.target.copy(_orbitTarget);
+      controls.update();
+      _orbitTarget.copy(controls.target);
+    } else {
+      controls.target.copy(camera.position).addScaledVector(cd, 10);
+      controls.update();
+    }
+    renderer.render(scene, camera);
+  };
+  _rafId = requestAnimationFrame(loop);
+  renderer.render(scene, camera);
+
+  // ===== 鼠标悬停骨骼名 + 点击复制层级 =====
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  let _hoveredBone: string | null = null;
+  let _hoveredMesh: THREE.Object3D | null = null;
+
+  // 构建骨骼层级路径映射
+  const _boneParentMap = new Map<string, string | null>();
+  const _boneNameMap = new Map<string, string>();
+  const _boneChildrenMap = new Map<string, string[]>();
+  for (const mg of spec.models || []) {
+    for (const bd of mg.bones || []) {
+      _boneNameMap.set(bd.id, bd.name);
+      _boneParentMap.set(bd.id, bd.parentId || null);
+      if (!_boneChildrenMap.has(bd.parentId || "__root__")) {
+        _boneChildrenMap.set(bd.parentId || "__root__", []);
+      }
+      _boneChildrenMap.get(bd.parentId || "__root__")!.push(bd.id);
+    }
+  }
+
+  // 工具：骨骼名 → 全路径
+  const getBonePath = (boneId: string): string => {
+    const parts: string[] = [];
+    let current: string | null | undefined = boneId;
+    while (current && _boneNameMap.has(current)) {
+      parts.unshift(_boneNameMap.get(current)!);
+      current = _boneParentMap.get(current);
+    }
+    return parts.join(" / ");
+  };
+
+  // 工具：骨骼名 → 第一个子骨骼名（用于区分同层骨骼）
+  const getMeshBoneId = (mesh: THREE.Object3D): string | null => {
+    // mesh 属于一个 boneGroup，boneGroup 的 parent 链指向根
+    let obj: THREE.Object3D | null = mesh;
+    while (obj) {
+      if ((obj as THREE.Group).isGroup && obj.name && _boneNameMap.has(obj.name)) {
+        return obj.name;
+      }
+      obj = obj.parent;
+    }
+    return null;
+  };
+
+  const onPointerMove = (e: PointerEvent): void => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    let foundBone: string | null = null;
+    let foundMesh: THREE.Object3D | null = null;
+    for (const hit of intersects) {
+      const boneId = getMeshBoneId(hit.object);
+      if (boneId) {
+        foundBone = boneId;
+        foundMesh = hit.object;
+        break;
+      }
+    }
+    if (foundBone !== _hoveredBone) {
+      _hoveredBone = foundBone;
+      _hoveredMesh = foundMesh;
+      if (foundBone) {
+        renderer.domElement.style.cursor = "pointer";
+      } else {
+        renderer.domElement.style.cursor = "default";
+      }
+    }
+  };
+
+  const onPointerClick = (e: MouseEvent): void => {
+    if (!_hoveredBone) return;
+    const boneId = _hoveredBone; // 局部收窄（闭包捕获变量 TS 不做控制流收窄）
+    if (window._3dOnBoneSelect) {
+      const bg = boneGroupMap.get(boneId);
+      const wp = new THREE.Vector3();
+      if (bg) bg.getWorldPosition(wp);
+      const lp = bg ? bg.position : new THREE.Vector3();
+      const lq = bg ? bg.quaternion : new THREE.Quaternion();
+      let lr: number[] | null = null;
+      if (lq.x !== 0 || lq.y !== 0 || lq.z !== 0 || lq.w !== 1)
+        lr = [lq.x, lq.y, lq.z, lq.w];
+      // Cube（mesh）级数据
+      let cq: number[] | null = null;
+      let cp: number[] | null = null;
+      if (_hoveredMesh && (_hoveredMesh as THREE.Mesh).isMesh) {
+        cq = [
+          _hoveredMesh.quaternion.x,
+          _hoveredMesh.quaternion.y,
+          _hoveredMesh.quaternion.z,
+          _hoveredMesh.quaternion.w,
+        ];
+        cp = [
+          _hoveredMesh.position.x,
+          _hoveredMesh.position.y,
+          _hoveredMesh.position.z,
+        ];
+      }
+      window._3dOnBoneSelect({
+        name: _boneNameMap.get(boneId) || boneId,
+        path: getBonePath(boneId),
+        parent: _boneParentMap.get(boneId) ?? null,
+        children: _boneChildrenMap.get(boneId) || [],
+        meshCount: (function () {
+          const bg2 = boneGroupMap.get(boneId);
+          let mc = 0;
+          if (bg2)
+            bg2.traverse(function (c) {
+              if ((c as THREE.Mesh).isMesh) mc++;
+            });
+          return mc;
+        })(),
+        localPos: [lp.x, lp.y, lp.z],
+        worldPos: [wp.x, wp.y, wp.z],
+        localRot: lr,
+        cubeRot: cq,
+        cubePos: cp,
+      });
+    }
+  };
+
+  renderer.domElement.addEventListener("pointermove", onPointerMove);
+  renderer.domElement.addEventListener("click", onPointerClick);
+
+  // ===== 可视化模式切换 =====
+  let _debugGroup: THREE.Group | null = null;
+
+  const rebuildDebug = (): void => {
+    if (_debugGroup) {
+      scene.remove(_debugGroup);
+      _debugGroup = null;
+    }
+    if (_debugMode === "normal") return;
+    _debugGroup = new THREE.Group();
+    scene.add(_debugGroup);
+
+    // 获取骨骼世界坐标
+    rootGroup.updateMatrixWorld(true);
+    const boneWorldPositions = new Map<
+      string,
+      { pos: THREE.Vector3; name: string; parentId?: string }
+    >();
+    for (const mg of spec.models || []) {
+      for (const bd of mg.bones || []) {
+        const bg = boneGroupMap.get(bd.id);
+        if (!bg) continue;
+        const wp = new THREE.Vector3();
+        bg.getWorldPosition(wp);
+        boneWorldPositions.set(bd.id, {
+          pos: wp,
+          name: bd.name,
+          parentId: bd.parentId,
+        });
+      }
+    }
+
+    if (_debugMode === "pivot") {
+      for (const [, data] of boneWorldPositions) {
+        const top = data.pos.clone();
+        top.y += 4;
+        const lineGeo = new THREE.BufferGeometry().setFromPoints([
+          data.pos,
+          top,
+        ]);
+        const line = new THREE.Line(
+          lineGeo,
+          new THREE.LineBasicMaterial({
+            color: 0x00ff88,
+            transparent: true,
+            opacity: 0.25,
+          }),
+        );
+        _debugGroup.add(line);
+        // 骨骼名标签（固定像素大小，不影响缩放）
+        const tex = makeTextTexture(data.name, "#88ffaa");
+        const mat = new THREE.SpriteMaterial({
+          map: tex,
+          depthTest: false,
+          sizeAttenuation: false,
+          transparent: true,
+        });
+        const label = new THREE.Sprite(mat);
+        label.position.copy(top);
+        label.scale.set(120, 24, 1);
+        _debugGroup.add(label);
+      }
+    } else if (_debugMode === "bone") {
+      for (const [, data] of boneWorldPositions) {
+        const parentPos = data.parentId
+          ? boneWorldPositions.get(data.parentId)?.pos
+          : null;
+        if (!parentPos) continue;
+        const points = [data.pos.clone(), parentPos.clone()];
+        const geo = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(
+          geo,
+          new THREE.LineBasicMaterial({ color: 0x44aaff }),
+        );
+        _debugGroup.add(line);
+      }
+    }
+  };
+
+  // 文字纹理生成
+  function makeTextTexture(text: string, color?: string): THREE.CanvasTexture {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext("2d");
+    // 显式设为透明黑色背景
+    if (ctx) {
+      ctx.fillStyle = "rgba(0,0,0,0)";
+      ctx.fillRect(0, 0, 256, 64);
+      ctx.fillStyle = color || "#ffffff";
+      ctx.font = "24px sans-serif";
+      ctx.textBaseline = "bottom";
+      ctx.shadowColor = "rgba(0,0,0,0.8)";
+      ctx.shadowBlur = 3;
+      ctx.fillText(text, 4, 58);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    tex.premultiplyAlpha = true;
+    return tex;
+  }
+
+  const handle: RenderModel3DHandle = {
+    resetCamera: () => {
+      camera.position.copy(_initCamPos);
+      controls.target.copy(_initCamTarget);
+      _orbitTarget.copy(_initCamTarget);
+      if (_orbitMode) controls.enableRotate = true;
+      else {
+        controls.enableRotate = false;
+        const d = new THREE.Vector3();
+        camera.getWorldDirection(d);
+        controls.target.copy(camera.position).addScaledVector(d, 10);
+      }
+      camera.quaternion.set(0, 0, 0, 1);
+      _euler.set(0, 0, 0);
+      _camSpeed = 20;
+      _mouseDown = false;
+      Object.keys(_keys).forEach((k) => (_keys[k] = false));
+      controls.update();
+    },
+    setSpeed: (v: number) => {
+      _camSpeed = v;
+    },
+    setRotationMode: (orbit: boolean) => {
+      _orbitMode = orbit;
+      if (orbit) {
+        controls.enableRotate = true;
+        if (_orbitTarget) controls.target.copy(_orbitTarget);
+        _mouseDown = false;
+      } else {
+        _euler.setFromQuaternion(camera.quaternion);
+        controls.enableRotate = false;
+        const d = new THREE.Vector3();
+        camera.getWorldDirection(d);
+        controls.target.copy(camera.position).addScaledVector(d, 10);
+        controls.update();
+        _mouseDown = false;
+      }
+    },
+    setBoneVisible: (name: string, visible: boolean) => {
+      const g = boneGroupMap.get(name);
+      if (g) g.traverse((c) => (c.visible = visible));
+    },
+    getBoneList: () =>
+      spec.models?.[0]?.bones?.map((b) => ({
+        id: b.id,
+        name: b.name,
+        parentId: b.parentId,
+      })) || [],
+    toggleBone: (name: string) => {
+      const g = boneGroupMap.get(name);
+      if (g) g.traverse((c) => (c.visible = !c.visible));
+    },
+    showModelGroup: (idx: number) => {
+      (spec.models || []).forEach((mg, i) => {
+        const vis = i === idx;
+        for (const bd of mg.bones || []) handle.setBoneVisible(bd.id, vis);
+      });
+    },
+    getModelGroupCount: () => spec.models?.length || 0,
+    onBoneSelect: null, // 外部设置的回调: (boneInfo) => void
+    setDebugMode: (mode: "normal" | "pivot" | "bone") => {
+      _debugMode = mode;
+      rebuildDebug();
+    },
+    cleanup: () => {
+      if (_rafId != null) cancelAnimationFrame(_rafId);
+      document.removeEventListener("keydown", _onKeyDown);
+      document.removeEventListener("keyup", _onKeyUp);
+      renderer.domElement.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("mousemove", onMouseMove);
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("click", onPointerClick);
+      if (_debugGroup) scene.remove(_debugGroup);
+      controls.dispose();
+      window.removeEventListener("resize", _onResize);
+      document.removeEventListener("fullscreenchange", _onFSChange);
+      document.removeEventListener("webkitfullscreenchange", _onFSChange);
+      renderer.dispose();
+      container.innerHTML = "";
+      scene.traverse((c) => {
+        const mesh = c as THREE.Mesh;
+        if (mesh.isMesh) {
+          mesh.geometry?.dispose();
+          if (Array.isArray(mesh.material))
+            mesh.material.forEach((m) => m.dispose());
+          else mesh.material?.dispose();
+        }
+      });
+    },
+  };
+  return handle;
+}
+
+window.__screenshotPreview = () => {
+  const r = window.__renderer3d;
+  const s = window.__scene3d;
+  const c = window.__camera3d;
+  if (!r || !s || !c) {
+    console.warn("[screenshot] 无 3D 渲染器");
+    return null;
+  }
+  r.render(s, c);
+  return r.domElement.toDataURL("image/png").split(",")[1];
+};
+
+// 延迟加载批量截图
+window.__batchRepoScreenshots = async (repoRoot?: string) => {
+  const mod = await import("./screenshot-renderer.ts");
+  return mod.batchRepoScreenshots(repoRoot);
+};

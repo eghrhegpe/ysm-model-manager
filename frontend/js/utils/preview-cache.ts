@@ -8,10 +8,13 @@
 
 /** 缓存条目值 */
 export interface CacheValue {
-  texture?: string;
-  geometry?: object;
+  texture?: string | null;
+  geometry?: object | null;
   animations?: unknown[];
-  authors?: string[];
+  authors?: Array<
+    | string
+    | { name?: string; role?: string; avatarUrl?: string | null; avatarPath?: string }
+  >;
   avatars?: Record<string, string>;
   _decodedBy?: string;
   [key: string]: unknown;

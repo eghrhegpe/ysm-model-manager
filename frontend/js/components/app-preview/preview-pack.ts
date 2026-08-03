@@ -56,7 +56,7 @@ function animateCount(el: HTMLElement, target: number): void {
 export function showPackageDetail(
   root: ShadowRoot,
   pkg: PackagePayload | null,
-  resetButtons: ((root: ShadowRoot) => void) | undefined,
+  resetButtons?: (root: ShadowRoot) => void,
 ): void {
   const body = root.getElementById("dp-body");
   const placeholder = root.getElementById("dp-placeholder");

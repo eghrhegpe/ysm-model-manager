@@ -10,12 +10,12 @@ import type { BedrockGeometry } from "./utils.ts";
  */
 export async function loadModelData(
   modelPath: string,
-  ctx: Pick<PreviewCtx, "decodeYsmViaWasm" | "appendDebug">,
+  ctx: Pick<PreviewCtx, "decodeYsmViaWasm" | "_appendDebug">,
 ): Promise<{ model: BedrockGeometry | null; decodedBy: string }> {
   let model: BedrockGeometry | null = null;
   let _decodedBy = "";
   const isYsm = /\.ysm$/i.test(modelPath);
-  let _wasmAuthors: string[] = [];
+  let _wasmAuthors: BedrockGeometry["_authors"] = [];
   let _wasmAvatars: Record<string, string> = {};
 
   // 查缓存
@@ -39,7 +39,7 @@ export async function loadModelData(
       const cur = cacheGet(modelPath);
       if (cur) cacheSet(modelPath, { ...cur, _decodedBy });
     } else {
-      ctx.appendDebug("[YSM] WASM 返回空或无骨骼，回退 Go");
+      ctx._appendDebug(null, "[YSM] WASM 返回空或无骨骼，回退 Go");
     }
   }
 
@@ -111,7 +111,10 @@ export async function loadModelData(
   if (model && !model._authors) {
     const cur = cacheGet(modelPath);
     if (cur?.authors?.length) {
-      model._authors = cur.authors as string[];
+      model._authors = cur.authors.filter(
+        (a): a is NonNullable<BedrockGeometry["_authors"]>[number] =>
+          typeof a === "object" && a !== null,
+      ) as BedrockGeometry["_authors"];
       model._avatars = cur.avatars || {};
     }
   }

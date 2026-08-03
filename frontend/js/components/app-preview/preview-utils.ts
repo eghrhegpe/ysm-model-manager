@@ -7,18 +7,28 @@ export const devLog: (...args: unknown[]) => void = import.meta.env.DEV
   ? console.log
   : () => {};
 
+/** WASM 解码结果（decodeYsmViaWasm 返回） */
+export interface DecodedYsm {
+  texture?: string | null;
+  geometry?: BedrockGeometry | null;
+  animations?: unknown[];
+  avatars?: Record<string, string>;
+  authors?: Array<{
+    name: string;
+    role?: string;
+    avatarUrl?: string | null;
+    avatarPath?: string;
+  }>;
+  _wasmTried?: boolean;
+}
+
 /** 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） */
 export interface PreviewCtx {
   _root: ShadowRoot;
   _loadPreviewImage(path: string): Promise<string | null>;
-  decodeYsmViaWasm(
-    path: string,
-  ): Promise<{
-    geometry?: BedrockGeometry;
-    authors?: string[];
-    avatars?: Record<string, string>;
-  } | null>;
-  appendDebug(msg: string): void;
+  decodeYsmViaWasm(path: string): Promise<DecodedYsm | null>;
+  _decodeYsmViaWasm(path: string): Promise<DecodedYsm | null>;
+  _appendDebug(container: HTMLElement | null, msg: string): void;
 }
 
 /** 3D 偏好状态（跨模型切换保留） */

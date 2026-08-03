@@ -1,16 +1,39 @@
 // ===== 2D 骨骼渲染层 =====
 // 加载统一走 loadModelData，本文件只做 2D 骨骼渲染编排
-import { getPrefer3D, setPrefer3D } from "./preview-utils.ts";
+import { getPrefer3D, setPrefer3D, type PreviewCtx } from "./preview-utils.ts";
 import { loadModelData } from "./preview-loader.ts";
 import { renderModel2D } from "../../utils/model2d.ts";
 import { openFullPreview } from "./preview-zoom.ts";
+import type { BedrockGeometry } from "./utils.ts";
+import type { BoneSelectInfo } from "../../utils/model3d.ts";
+
+// —— 3D overlay 全局扩展 ——
+// _3dOnBoneSelect / __screenshotPreview 已由 model3d.ts declare global 声明，此处仅补
+// _3dDetailEl（同名 interface 声明自动合并）
+declare global {
+  interface Window {
+    _3dDetailEl?: HTMLElement | null;
+  }
+}
+
+/** RenderModel3DHandle 运行时扩展（_keyHandler/_timeTimer/_boneDetailEl 为 JS 时代附加字段） */
+type Model3DHandleX = import("../../utils/model3d.ts").RenderModel3DHandle & {
+  _keyHandler?: ((e: KeyboardEvent) => void) | null;
+  _timeTimer?: ReturnType<typeof setInterval>;
+  _boneDetailEl?: HTMLElement | null;
+};
 
 /**
  * 加载模型 2D 骨骼线条图 + 统计面板
  * ctx = 组件实例（提供 this._root, this._appendDebug 等）
  */
-export async function loadModel2D(ctx, modelPath, skelContainer) {
-  const content = skelContainer || ctx._root.getElementById("preview-content");
+export async function loadModel2D(
+  ctx: PreviewCtx,
+  modelPath: string,
+  skelContainer: HTMLElement | null,
+): Promise<void> {
+  const content =
+    skelContainer || ctx._root.getElementById("preview-content");
   if (!content) return;
 
   content.innerHTML = "";
@@ -21,16 +44,13 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
   content.appendChild(container);
 
   try {
-    let model;
-    let _decodedBy;
-
     // 统一加载：缓存 → WASM → Go 兜底
     const loaded = await loadModelData(modelPath, {
       decodeYsmViaWasm: (p) => ctx._decodeYsmViaWasm(p),
-      appendDebug: (msg) => ctx._appendDebug(container, msg),
+      _appendDebug: (_container, msg) => ctx._appendDebug(container, msg),
     });
-    model = loaded.model;
-    _decodedBy = loaded.decodedBy;
+    const model = loaded.model;
+    const _decodedBy = loaded.decodedBy;
 
     if (!model?.bones?.length) {
       container.innerHTML = `<div class="ysm-error-title">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ 未找到几何数据</div>`;
@@ -48,13 +68,13 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     container.appendChild(canvas);
 
     // ---- 加载纹理（骨骼图用）----
-    let textureImg = null;
+    let textureImg: HTMLImageElement | null = null;
     if (model.texture) {
       textureImg = new Image();
       await new Promise((r) => {
-        textureImg.onload = r;
-        textureImg.onerror = r;
-        textureImg.src = model.texture;
+        textureImg!.onload = r;
+        textureImg!.onerror = r;
+        textureImg!.src = model.texture as string;
       });
     }
 
@@ -78,7 +98,9 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     zoomBtn.className = "ysm-btn";
     zoomBtn.innerHTML = "🔍 放大";
     zoomBtn.title = "全窗口查看模型";
-    zoomBtn.onclick = () => openFullPreview(canvas, model, textureImg, _labelsOn);
+    zoomBtn.onclick = (): void => {
+      openFullPreview(canvas, model, textureImg, _labelsOn);
+    };
     toggleRow.appendChild(zoomBtn);
 
     container.appendChild(toggleRow);
@@ -89,19 +111,38 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     card.className = "ysm-card";
     card.innerHTML = statsCardHTML(model, modelPath, _decodedBy);
     // 作者列表（从 ysm.json 解析）
-    const authors = model._authors || [];
+    const authors: Array<{ avatarUrl?: string | null; name?: string; role?: string }> =
+      model._authors || [];
     if (authors.length > 0) {
-      const authorHtml = '<div class="ysm-card-section-label" style="margin-top:6px">👥 作者</div>' +
-        authors.map(au => `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
-          ${au.avatarUrl ? `<img src="${au.avatarUrl}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1px solid var(--bd)" onerror="this.style.display='none'">` : '<span style="width:20px;height:20px;border-radius:50%;background:var(--hover);display:inline-block"></span>'}
+      const authorHtml =
+        '<div class="ysm-card-section-label" style="margin-top:6px">👥 作者</div>' +
+        authors
+          .map(
+            (au) => `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+          ${
+            au.avatarUrl
+              ? `<img src="${au.avatarUrl}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1px solid var(--bd)" onerror="this.style.display='none'">`
+              : '<span style="width:20px;height:20px;border-radius:50%;background:var(--hover);display:inline-block"></span>'
+          }
           <span style="font-size:11px;color:var(--txt)">${au.name}</span>
-          ${au.role ? `<span style="font-size:9px;color:var(--muted)">(${au.role})</span>` : ''}
-        </div>`).join('');
+          ${
+            au.role
+              ? `<span style="font-size:9px;color:var(--muted)">(${au.role})</span>`
+              : ""
+          }
+        </div>`,
+          )
+          .join("");
       card.innerHTML += authorHtml;
       // 同步填充详情页的作者头像区
       const avatarContainer = document.getElementById("ysm-author-avatars");
       if (avatarContainer) {
-        avatarContainer.innerHTML = authors.map(au => `<img src="${au.avatarUrl || ''}" title="${au.name}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--bd);margin:0 2px" onerror="this.style.display='none'">`).join('');
+        avatarContainer.innerHTML = authors
+          .map(
+            (au) =>
+              `<img src="${au.avatarUrl || ""}" title="${au.name}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--bd);margin:0 2px" onerror="this.style.display='none'">`,
+          )
+          .join("");
       }
     }
     container.appendChild(card);
@@ -109,14 +150,14 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     // ---- 渲染骨骼图 ----
     let _zoom = 1;
     let _rotation = 0;
-    const _noPlayer = { getCurrentTransforms: () => null };
-    const doRender = () => {
+    // BedrockGeometry.uv 含 string 形态（对象序列化），model2d 的 BedrockCube.uv 仅 number[]——cast 兼容
+    const model2d = model as Parameters<typeof renderModel2D>[1];
+    const doRender = (): void => {
       try {
-        renderModel2D(canvas, model, textureImg, {
+        renderModel2D(canvas, model2d, textureImg, {
           showLabels: _labelsOn,
           zoom: _zoom,
           rotation: _rotation,
-          boneTransforms: null,
         });
       } catch (e) {
         console.warn("[preview] 2D 渲染跳过:", e);
@@ -124,9 +165,9 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     };
     doRender();
 
-    eyeBtn.onclick = () => {
+    eyeBtn.onclick = (): void => {
       _labelsOn = !_labelsOn;
-      localStorage.setItem("ysm_showBoneLabels", _labelsOn);
+      localStorage.setItem("ysm_showBoneLabels", String(_labelsOn));
       eyeBtn.innerHTML = _labelsOn ? "👁 骨骼名" : "👁‍🗨 骨骼名";
       eyeHint.textContent = _labelsOn ? "开启" : "关闭";
       doRender();
@@ -167,10 +208,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
       "wheel",
       (e) => {
         e.preventDefault();
-        _zoom = Math.max(
-          0.2,
-          Math.min(10, _zoom + (e.deltaY > 0 ? -0.2 : 0.2)),
-        );
+        _zoom = Math.max(0.2, Math.min(10, _zoom + (e.deltaY > 0 ? -0.2 : 0.2)));
         doRender();
       },
       { passive: false },
@@ -186,8 +224,8 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     const boneHint = document.createElement("span");
     boneHint.className = "ysm-hint";
     boneHint.textContent = `${model.boneCount} 骨骼`;
-    boneBtn.onclick = () => {
-      const lines = [`模型: ${modelPath}`, `骨骼总数: ${model.boneCount}`];
+    boneBtn.onclick = (): void => {
+      const lines: string[] = [`模型: ${modelPath}`, `骨骼总数: ${model.boneCount}`];
       for (const b of model.bones || []) {
         const cs = b.cubes || [];
         lines.push(
@@ -197,8 +235,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
       const blob = new Blob([lines.join("\n")], { type: "text/plain" });
       const a = document.createElement("a");
       a.download =
-        (modelPath.split("/").pop().split("\\").pop() || "model") +
-        "_bones.txt";
+        (modelPath.split(/[/\\]/).pop() || "model") + "_bones.txt";
       a.href = URL.createObjectURL(blob);
       document.body.appendChild(a);
       a.click();
@@ -210,12 +247,12 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     container.appendChild(boneRow);
 
     // ---- 3D 预览切换 ----
-    let _model3d = null;
-    let _overlay3d = null;
+    let _model3d: Model3DHandleX | null = null;
+    let _overlay3d: HTMLDivElement | null = null;
     let _is3D = false;
     let _prefer3D = getPrefer3D();
 
-    const _toggle3D = async () => {
+    const _toggle3D = async (): Promise<void> => {
       _is3D = !_is3D;
       _prefer3D = _is3D;
       setPrefer3D(_prefer3D);
@@ -235,7 +272,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         closeBtn.id = "ysm-close-3d";
         closeBtn.textContent = "✕ 关闭 3D";
         closeBtn.style.cssText = "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
-        closeBtn.onclick = () => {
+        closeBtn.onclick = (): void => {
           document.removeEventListener("mousemove", onResizeMove);
           document.removeEventListener("mouseup", onResizeUp);
           const ov = document.getElementById("ysm-overlay-3d");
@@ -252,17 +289,17 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         topBar.appendChild(closeBtn);
 
         let _texIdx = 0;
-        if (model.textures?.length > 1) {
+        if ((model.textures?.length ?? 0) > 1) {
           const texSel = document.createElement("select");
           texSel.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
-          model.textures.forEach((_, i) => {
+          model.textures!.forEach((_, i) => {
             const opt = document.createElement("option");
-            opt.value = i;
+            opt.value = String(i);
             opt.textContent = `纹理 ${i + 1}`;
             texSel.appendChild(opt);
           });
-          texSel.onchange = () => {
-            _texIdx = parseInt(texSel.value);
+          texSel.onchange = (): void => {
+            _texIdx = parseInt(texSel.value, 10);
             close3D();
             _toggle3D();
           };
@@ -288,40 +325,65 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
           { label: "↘ 后45°", key: "back45" },
           { label: "📸 全套", key: "all" },
         ];
-        const saveShot = async (key) => {
+        const saveShot = async (key: string): Promise<void> => {
           const { SaveScreenshotFile } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
           const p = (model._modelPath || "screenshot").replace(/\\/g, "/");
           const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ".";
-          const base = p.split("/").pop().replace(/\.\w+$/, "");
+          const base = p.split("/").pop()?.replace(/\.\w+$/, "") || "";
           if (key === "current") {
             const b64 = window.__screenshotPreview?.();
-            if (!b64) { shotBtn.textContent = "❌"; return; }
+            if (!b64) {
+              shotBtn.textContent = "❌";
+              return;
+            }
             const ts = new Date().toISOString().replace(/[:.]/g, "-");
             await SaveScreenshotFile(dir + "/" + base + "_" + ts + ".png", b64);
           } else if (key === "all") {
-            for (const k of ["front","45","side","back45"]) await saveShot(k);
+            for (const k of ["front", "45", "side", "back45"]) await saveShot(k);
           } else {
             const { renderMultiAngle } = await import("../../utils/screenshot-renderer.ts");
-            const texUrls = model.textures?.length > 1 ? model.textures : [model.texture];
-            const results = await renderMultiAngle(model._modelPath, texUrls, { size: 512 });
+            const texUrls =
+              model.textures && model.textures.length > 1
+                ? model.textures
+                : [model.texture || ""];
+            const results = await renderMultiAngle(model._modelPath || "", texUrls, {
+              size: 512,
+            });
             if (!results) return;
-            const hit = results.find(r => r.name === key);
-            if (hit) await SaveScreenshotFile(dir + "/" + base + "_" + key + ".png", hit.base64);
+            const hit = results.find((r) => r.name === key);
+            if (hit)
+              await SaveScreenshotFile(
+                dir + "/" + base + "_" + key + ".png",
+                hit.base64,
+              );
           }
           shotBtn.textContent = "✅";
-          setTimeout(() => { shotBtn.textContent = "📷 截图 ▾"; }, 2000);
+          setTimeout(() => {
+            shotBtn.textContent = "📷 截图 ▾";
+          }, 2000);
         };
         items.forEach((item) => {
           const el = document.createElement("div");
           el.textContent = item.label;
           el.style.cssText = "padding:4px 12px;font-size:11px;color:rgba(255,255,255,0.85);cursor:pointer;white-space:nowrap";
-          el.addEventListener("mouseenter", () => { el.style.background = "rgba(124,131,255,0.3)"; });
-          el.addEventListener("mouseleave", () => { el.style.background = "transparent"; });
-          el.onclick = () => { shotMenu.style.display = "none"; saveShot(item.key); };
+          el.addEventListener("mouseenter", () => {
+            el.style.background = "rgba(124,131,255,0.3)";
+          });
+          el.addEventListener("mouseleave", () => {
+            el.style.background = "transparent";
+          });
+          el.onclick = (): void => {
+            shotMenu.style.display = "none";
+            saveShot(item.key);
+          };
           shotMenu.appendChild(el);
         });
-        shotBtn.addEventListener("mouseenter", () => { shotMenu.style.display = "block"; });
-        shotWrap.addEventListener("mouseleave", () => { shotMenu.style.display = "none"; });
+        shotBtn.addEventListener("mouseenter", () => {
+          shotMenu.style.display = "block";
+        });
+        shotWrap.addEventListener("mouseleave", () => {
+          shotMenu.style.display = "none";
+        });
         shotWrap.appendChild(shotBtn);
         shotWrap.appendChild(shotMenu);
         topBar.appendChild(shotWrap);
@@ -341,7 +403,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         rotSel.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit;margin-right:8px";
         [{ v: true, t: "环绕" }, { v: false, t: "自身" }].forEach((m) => {
           const opt = document.createElement("option");
-          opt.value = m.v;
+          opt.value = String(m.v);
           opt.textContent = m.t;
           rotSel.appendChild(opt);
         });
@@ -382,26 +444,46 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         const resizeHandle = document.createElement("div");
         resizeHandle.style.cssText = "position:absolute;top:0;left:0;width:4px;height:100%;cursor:col-resize;z-index:5";
         let _resizing = false;
-        const onResizeMove = (e) => {
+        const onResizeMove = (e: MouseEvent): void => {
           if (!_resizing) return;
           const rect = body.getBoundingClientRect();
           panel.style.width = Math.max(160, Math.min(500, rect.right - e.clientX)) + "px";
         };
-        const onResizeUp = () => { _resizing = false; };
-        resizeHandle.addEventListener("mousedown", (e) => { _resizing = true; e.preventDefault(); });
+        const onResizeUp = (): void => {
+          _resizing = false;
+        };
+        resizeHandle.addEventListener("mousedown", (e) => {
+          _resizing = true;
+          e.preventDefault();
+        });
         document.addEventListener("mousemove", onResizeMove);
         document.addEventListener("mouseup", onResizeUp);
 
         // 辅助函数
-        const sec = (text) => { const d = document.createElement("div"); d.style.cssText = "margin-top:12px;margin-bottom:4px;font-weight:600;color:rgba(255,255,255,0.9);font-size:12px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:3px"; d.textContent = text; return d; };
-        const iRow = (l, v) => { const d = document.createElement("div"); d.style.cssText = "display:flex;justify-content:space-between;padding:2px 0"; d.innerHTML = `<span style="color:rgba(255,255,255,0.5)">${l}</span><span>${v}</span>`; return d; };
+        const sec = (text: string): HTMLDivElement => {
+          const d = document.createElement("div");
+          d.style.cssText =
+            "margin-top:12px;margin-bottom:4px;font-weight:600;color:rgba(255,255,255,0.9);font-size:12px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:3px";
+          d.textContent = text;
+          return d;
+        };
+        const iRow = (l: string, v: string): HTMLDivElement => {
+          const d = document.createElement("div");
+          d.style.cssText = "display:flex;justify-content:space-between;padding:2px 0";
+          d.innerHTML = `<span style="color:rgba(255,255,255,0.5)">${l}</span><span>${v}</span>`;
+          return d;
+        };
 
         // 折叠按钮
         const panelToggle = document.createElement("button");
         panelToggle.textContent = "📋";
         panelToggle.style.cssText = "font-size:13px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
         let _panelVisible = true;
-        panelToggle.onclick = () => { _panelVisible = !_panelVisible; panel.style.display = _panelVisible ? "" : "none"; panelToggle.textContent = _panelVisible ? "📋" : "📋◀"; };
+        panelToggle.onclick = (): void => {
+          _panelVisible = !_panelVisible;
+          panel.style.display = _panelVisible ? "" : "none";
+          panelToggle.textContent = _panelVisible ? "📋" : "📋◀";
+        };
         topBar.insertBefore(panelToggle, topBar.children[1]);
 
         const progStyle = document.createElement("style");
@@ -413,67 +495,99 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
         document.body.appendChild(overlay);
 
         const loadingEl = document.createElement("div");
-        loadingEl.style.cssText = "position:absolute;inset:0;top:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);font-size:14px;gap:12px;z-index:10;background:rgba(26,27,46,0.9)";
-        loadingEl.innerHTML = '<div style="font-size:32px">🧱</div><div>加载模型中...</div><div style="width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden"><div style="height:100%;width:30%;background:var(--accent,#7c83ff);border-radius:2px;animation:ysm-prog 1.5s ease-in-out infinite"></div></div>';
+        loadingEl.style.cssText =
+          "position:absolute;inset:0;top:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);font-size:14px;gap:12px;z-index:10;background:rgba(26,27,46,0.9)";
+        loadingEl.innerHTML =
+          '<div style="font-size:32px">🧱</div><div>加载模型中...</div><div style="width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden"><div style="height:100%;width:30%;background:var(--accent,#7c83ff);border-radius:2px;animation:ysm-prog 1.5s ease-in-out infinite"></div></div>';
         overlay.appendChild(loadingEl);
 
         try {
           const { preloadModel } = await import("../../utils/model3d-loader.ts");
           const { renderModel3D } = await import("../../utils/model3d.ts");
-          const { texArr, spec } = await preloadModel(model);
-          _model3d = await renderModel3D(viewContainer, texArr, spec, _texIdx);
+          const { texArr, spec } = await preloadModel(
+            model as import("../../utils/model3d-loader.ts").ModelLike,
+          );
+          _model3d = (await renderModel3D(
+            viewContainer,
+            texArr,
+            spec as import("../../utils/model3d.ts").Spec3D,
+            _texIdx,
+          )) as Model3DHandleX;
           // 3D 骨骼点击回调 → 详情框
-          window._3dOnBoneSelect = function(info) {
+          window._3dOnBoneSelect = function (info: BoneSelectInfo) {
             if (window._3dDetailEl) {
-              var txt = "🦴 " + info.name + "\n" +
+              let txt =
+                "🦴 " + info.name + "\n" +
                 "路径: " + info.path + "\n" +
                 "父骨骼: " + (info.parent || "(无)") + "\n" +
                 "子骨骼: " + info.children.length + " 个\n" +
                 "Mesh: " + info.meshCount + "\n" +
-                "localPos: (" + info.localPos.map(function(v) { return v.toFixed(3); }).join(", ") + ")\n" +
-                "世界坐标: (" + info.worldPos.map(function(v) { return v.toFixed(2); }).join(", ") + ")";
+                "localPos: (" + info.localPos.map(function (v) { return v.toFixed(3); }).join(", ") + ")\n" +
+                "世界坐标: (" + info.worldPos.map(function (v) { return v.toFixed(2); }).join(", ") + ")";
               if (info.localRot) {
-                txt += "\nlocalRot: (" + info.localRot.map(function(v) { return v.toFixed(4); }).join(", ") + ")";
+                txt += "\nlocalRot: (" + info.localRot.map(function (v) { return v.toFixed(4); }).join(", ") + ")";
               }
               if (info.cubeRot) {
-                txt += "\ncubeRot: (" + info.cubeRot.map(function(v) { return v.toFixed(4); }).join(", ") + ")";
+                txt += "\ncubeRot: (" + info.cubeRot.map(function (v) { return v.toFixed(4); }).join(", ") + ")";
               }
               if (info.cubePos) {
-                txt += "\ncubePos: (" + info.cubePos.map(function(v) { return v.toFixed(3); }).join(", ") + ")";
+                txt += "\ncubePos: (" + info.cubePos.map(function (v) { return v.toFixed(3); }).join(", ") + ")";
               }
               window._3dDetailEl.textContent = txt;
-              if (window._3dDetailEl.parentNode) window._3dDetailEl.parentNode.style.display = "block";
+              if (window._3dDetailEl.parentNode)
+                (window._3dDetailEl.parentNode as HTMLElement).style.display = "block";
             }
           };
           loadingEl.remove();
 
           // 填充面板
-          const mg = spec.models?.[0];
+          const mg = spec.models?.[0] as
+            | {
+                bones?: Array<{ _cubeCount?: number }>;
+                textureWidth?: number;
+                textureHeight?: number;
+                name?: string;
+                id?: string;
+              }
+            | undefined;
           let totalCubes = 0;
           for (const b of mg?.bones || []) totalCubes += b._cubeCount || 0;
           panel.appendChild(sec("📐 模型统计"));
           panel.appendChild(iRow("骨骼", (mg?.bones?.length || 0) + " 根"));
           panel.appendChild(iRow("立方体", totalCubes + " 个"));
-          panel.appendChild(iRow("纹理尺寸", (mg?.textureWidth || "?") + "×" + (mg?.textureHeight || "?")));
+          panel.appendChild(
+            iRow("纹理尺寸", (mg?.textureWidth || "?") + "×" + (mg?.textureHeight || "?")),
+          );
 
           // 纹理列表 + 缩略图
           if (texArr.length > 0) {
             panel.appendChild(sec("🎨 纹理 (" + texArr.length + ")"));
             for (let i = 0; i < texArr.length; i++) {
               const t = texArr[i];
-              const w = t?.userData?.imgWidth || t?.image?.naturalWidth || 0;
-              const h = t?.userData?.imgHeight || t?.image?.naturalHeight || 0;
-              const url = (model.textures?.[i] || "");
-              const name = url.split("/").pop().split("\\").pop().replace(/\.[^.]+$/, "") || ("纹理 " + (i + 1));
+              const w =
+                t?.userData?.imgWidth || (t?.image as HTMLImageElement | undefined)?.naturalWidth || 0;
+              const h =
+                t?.userData?.imgHeight || (t?.image as HTMLImageElement | undefined)?.naturalHeight || 0;
+              const url = model.textures?.[i] || "";
+              const name =
+                url.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || "纹理 " + (i + 1);
               const d = document.createElement("div");
               d.style.cssText = "display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer";
               const img = document.createElement("canvas");
-              img.width = 16; img.height = 16;
+              img.width = 16;
+              img.height = 16;
               img.style.cssText = "width:16px;height:16px;border-radius:2px;flex-shrink:0;border:1px solid rgba(255,255,255,0.1)";
               const ctx = img.getContext("2d");
-              if (t?.image) ctx.drawImage(t.image, 0, 0, 16, 16);
+              if (t?.image) ctx!.drawImage(t.image as HTMLImageElement, 0, 0, 16, 16);
               d.appendChild(img);
-              d.innerHTML += '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">' + name + '</span><span style="color:rgba(255,255,255,0.4);font-size:10px;flex-shrink:0">' + w + "×" + h + '</span>';
+              d.innerHTML +=
+                '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">' +
+                name +
+                '</span><span style="color:rgba(255,255,255,0.4);font-size:10px;flex-shrink:0">' +
+                w +
+                "×" +
+                h +
+                "</span>";
               panel.appendChild(d);
             }
           }
@@ -483,29 +597,48 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
           if (mgCount > 1) {
             modelSel.style.display = "";
             for (let i = 0; i < mgCount; i++) {
-              const mg = spec.models[i];
+              const mg = (spec.models || [])[i] as { name?: string; id?: string; bones?: unknown[] };
               const opt = document.createElement("option");
-              opt.value = i;
+              opt.value = String(i);
               opt.textContent = (mg.name || mg.id || "model") + " (" + (mg.bones?.length || 0) + ")";
               if (i === 0) opt.selected = true;
               modelSel.appendChild(opt);
             }
-            modelSel.onchange = () => { _model3d.showModelGroup(parseInt(modelSel.value)); };
+            modelSel.onchange = (): void => {
+              _model3d?.showModelGroup(parseInt(modelSel.value, 10));
+            };
           }
 
           // 骨骼：搜索 + 全显/全隐 + 缩进列表
           const boneList = _model3d.getBoneList();
           if (boneList.length > 0) {
             const secHdr = document.createElement("div");
-            secHdr.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-top:12px;margin-bottom:4px";
-            secHdr.innerHTML = '<span style="font-weight:600;color:rgba(255,255,255,0.9);font-size:12px">🦴 骨骼 (' + boneList.length + ')</span>';
+            secHdr.style.cssText =
+              "display:flex;align-items:center;justify-content:space-between;margin-top:12px;margin-bottom:4px";
+            secHdr.innerHTML =
+              '<span style="font-weight:600;color:rgba(255,255,255,0.9);font-size:12px">🦴 骨骼 (' +
+              boneList.length +
+              ")</span>";
             const btnGroup = document.createElement("div");
             btnGroup.style.cssText = "display:flex;gap:4px";
-            [["👁", true], ["⊘", false]].forEach(([t, v]) => {
+            (
+              [
+                ["👁", true],
+                ["⊘", false],
+              ] as Array<[string, boolean]>
+            ).forEach(([t, v]) => {
               const btn = document.createElement("button");
               btn.textContent = t;
-              btn.style.cssText = "font-size:10px;padding:1px 4px;border-radius:3px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.6);cursor:pointer;line-height:1";
-              btn.onclick = () => { boneList.forEach(b => { _model3d.setBoneVisible(b.id, v); }); document.querySelectorAll("#ysm-3d-panel input[type=checkbox]").forEach(c => c.checked = v); };
+              btn.style.cssText =
+                "font-size:10px;padding:1px 4px;border-radius:3px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.6);cursor:pointer;line-height:1";
+              btn.onclick = (): void => {
+                boneList.forEach((b) => {
+                  _model3d?.setBoneVisible(b.id, v);
+                });
+                document
+                  .querySelectorAll("#ysm-3d-panel input[type=checkbox]")
+                  .forEach((c) => ((c as HTMLInputElement).checked = v));
+              };
               btnGroup.appendChild(btn);
             });
             secHdr.appendChild(btnGroup);
@@ -515,44 +648,52 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
             const searchInput = document.createElement("input");
             searchInput.type = "text";
             searchInput.placeholder = "🔍 过滤骨骼…";
-            searchInput.style.cssText = "width:100%;padding:3px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);font-size:11px;font-family:inherit;box-sizing:border-box;margin-bottom:4px;outline:none";
+            searchInput.style.cssText =
+              "width:100%;padding:3px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);font-size:11px;font-family:inherit;box-sizing:border-box;margin-bottom:4px;outline:none";
 
             // 构建层级深度映射
-            const depthMap = {};
-            const calcDepth = (name) => {
+            const depthMap: Record<string, number> = {};
+            const calcDepth = (name: string): number => {
               if (depthMap[name] !== undefined) return depthMap[name];
-              const b = boneList.find(x => x.id === name);
-              if (!b || !b.parentId) { depthMap[name] = 0; return 0; }
+              const b = boneList.find((x) => x.id === name);
+              if (!b || !b.parentId) {
+                depthMap[name] = 0;
+                return 0;
+              }
               depthMap[name] = calcDepth(b.parentId) + 1;
               return depthMap[name];
             };
-            boneList.forEach(b => calcDepth(b.id));
+            boneList.forEach((b) => calcDepth(b.id));
 
             const boneContainer = document.createElement("div");
             boneContainer.style.cssText = "max-height:300px;overflow-y:auto";
 
-            const renderBones = (filter) => {
+            const renderBones = (filter: string): void => {
               boneContainer.innerHTML = "";
               for (const b of boneList) {
                 if (filter && !b.name.toLowerCase().includes(filter.toLowerCase())) continue;
                 const depth = depthMap[b.id] || 0;
                 const label = document.createElement("label");
-                label.style.cssText = "display:flex;align-items:center;gap:6px;padding:2px 0;cursor:pointer;font-size:11px";
+                label.style.cssText =
+                  "display:flex;align-items:center;gap:6px;padding:2px 0;cursor:pointer;font-size:11px";
                 const cb = document.createElement("input");
-                cb.type = "checkbox"; cb.checked = true;
+                cb.type = "checkbox";
+                cb.checked = true;
                 cb.style.cssText = "accent-color:var(--accent,#7c83ff);width:12px;height:12px;flex-shrink:0";
                 cb.dataset.boneId = b.id;
-                cb.onchange = () => _model3d.setBoneVisible(b.id, cb.checked);
+                cb.onchange = (): void => {
+                  _model3d?.setBoneVisible(b.id, cb.checked);
+                };
                 label.appendChild(cb);
                 const span = document.createElement("span");
                 span.textContent = b.name;
                 span.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
-                span.style.marginLeft = (depth * 12) + "px";
+                span.style.marginLeft = depth * 12 + "px";
                 label.appendChild(span);
                 boneContainer.appendChild(label);
               }
             };
-            searchInput.oninput = () => renderBones(searchInput.value);
+            searchInput.oninput = (): void => renderBones(searchInput.value);
             panel.appendChild(searchInput);
             panel.appendChild(boneContainer);
             renderBones("");
@@ -560,17 +701,22 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
 
           // 骨骼详情框（3D 视图点击更新）
           const boneDetail = document.createElement("div");
-          boneDetail.style.cssText = "margin-top:6px;border-radius:3px;font-size:10px;color:rgba(255,255,255,0.7);line-height:1.5;display:none;font-family:inherit";
+          boneDetail.style.cssText =
+            "margin-top:6px;border-radius:3px;font-size:10px;color:rgba(255,255,255,0.7);line-height:1.5;display:none;font-family:inherit";
           const boneDetailText = document.createElement("div");
-          boneDetailText.style.cssText = "padding:4px 6px;background:rgba(255,255,255,0.05);border-radius:3px 3px 0 0;white-space:pre;max-height:100px;overflow-y:auto";
+          boneDetailText.style.cssText =
+            "padding:4px 6px;background:rgba(255,255,255,0.05);border-radius:3px 3px 0 0;white-space:pre;max-height:100px;overflow-y:auto";
           const boneDetailCopy = document.createElement("button");
           boneDetailCopy.textContent = "📋 复制";
-          boneDetailCopy.style.cssText = "font-size:10px;padding:1px 6px;border:none;background:rgba(124,131,255,0.3);color:#fff;cursor:pointer;border-radius:0 0 3px 3px;width:100%;font-family:inherit";
-          boneDetailCopy.onclick = function() {
-            var txt = boneDetailText.textContent;
-            navigator.clipboard.writeText(txt).catch(function() {});
+          boneDetailCopy.style.cssText =
+            "font-size:10px;padding:1px 6px;border:none;background:rgba(124,131,255,0.3);color:#fff;cursor:pointer;border-radius:0 0 3px 3px;width:100%;font-family:inherit";
+          boneDetailCopy.onclick = function (): void {
+            const txt = boneDetailText.textContent || "";
+            navigator.clipboard.writeText(txt).catch(function () {});
             boneDetailCopy.textContent = "✅ 已复制";
-            setTimeout(function() { boneDetailCopy.textContent = "📋 复制"; }, 1500);
+            setTimeout(function () {
+              boneDetailCopy.textContent = "📋 复制";
+            }, 1500);
           };
           boneDetail.appendChild(boneDetailText);
           boneDetail.appendChild(boneDetailCopy);
@@ -579,20 +725,23 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
           _model3d._boneDetailEl = boneDetailText;
 
           const tip = document.createElement("div");
-          tip.style.cssText = "padding:6px 12px;background:rgba(124,131,255,0.2);color:#fff;font-size:12px;text-align:center;flex-shrink:0;font-weight:500";
+          tip.style.cssText =
+            "padding:6px 12px;background:rgba(124,131,255,0.2);color:#fff;font-size:12px;text-align:center;flex-shrink:0;font-weight:500";
           tip.textContent = "🎮 WASD 移动 | 空格/Shift 上下 | 🖱 拖拽旋转 | 🔍 滚轮缩放 | ESC 关闭";
           overlay.insertBefore(tip, overlay.children[1]);
-          setTimeout(() => { if (tip.parentNode) tip.remove(); }, 6000);
+          setTimeout(() => {
+            if (tip.parentNode) tip.remove();
+          }, 6000);
 
-          rotSel.onchange = () => {
-            _model3d.setRotationMode(rotSel.value === "true");
+          rotSel.onchange = (): void => {
+            _model3d?.setRotationMode(rotSel.value === "true");
           };
-          spdSlider.oninput = () => {
+          spdSlider.oninput = (): void => {
             spdVal.textContent = spdSlider.value;
-            _model3d.setSpeed(Number(spdSlider.value));
+            _model3d?.setSpeed(Number(spdSlider.value));
           };
 
-          const onKey = (e) => {
+          const onKey = (e: KeyboardEvent): void => {
             if (e.key !== "Escape") return;
             document.removeEventListener("mousemove", onResizeMove);
             document.removeEventListener("mouseup", onResizeUp);
@@ -608,19 +757,21 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
             }
           };
           document.addEventListener("keydown", onKey);
-          _model3d._keyHandler = onKey;
+          if (_model3d) _model3d._keyHandler = onKey;
         } catch (e) {
           console.error("[3D] 加载失败:", e);
-          viewContainer.innerHTML = `<div style="padding:40px;color:#ff6b6b;font-size:14px">⚠️ 3D 预览加载失败: ${e?.message || e}</div>`;
+          viewContainer.innerHTML = `<div style="padding:40px;color:#ff6b6b;font-size:14px">⚠️ 3D 预览加载失败: ${
+            e instanceof Error ? e.message : String(e)
+          }</div>`;
         }
       }
     };
 
-    function close3D() {
-      document.removeEventListener("mousemove", onResizeMove);
-      document.removeEventListener("mouseup", onResizeUp);
+    function close3D(): void {
+      // 原 JS 在此引用 _toggle3D 内的 onResizeMove/onResizeUp（局部变量）→ ReferenceError
+      // 使 close3D 整体抛错、3D 资源泄漏；TS 编译期暴露，删除死引用（泄漏随之修复）
       if (_model3d) {
-        clearInterval(_model3d._timeTimer);
+        if (_model3d._timeTimer) clearInterval(_model3d._timeTimer);
         if (_model3d._keyHandler)
           document.removeEventListener("keydown", _model3d._keyHandler);
         _model3d.cleanup();
@@ -635,9 +786,13 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
 
     // 接线 🎨 3D tab 按钮
     const btn3d = ctx._root.getElementById("btn-3d-preview");
-    if (btn3d) btn3d.onclick = _toggle3D;
+    if (btn3d) btn3d.onclick = (): void => {
+      _toggle3D();
+    };
     if (_prefer3D) requestAnimationFrame(() => btn3d?.click());
   } catch (e) {
-    container.innerHTML = `<div class="ysm-error-title" style="color:#ff6b6b">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ 解析失败: ${e?.message ?? e}</div>`;
+    container.innerHTML = `<div class="ysm-error-title" style="color:#ff6b6b">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ 解析失败: ${
+      e instanceof Error ? e.message : String(e)
+    }</div>`;
   }
 }

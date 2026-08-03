@@ -1,36 +1,50 @@
 // ===== WASM 解码层 =====
-// 从 index.js 拆分：.ysm 文件的前端 WASM 解码逻辑
+// 从 index.ts 拆分：.ysm 文件的前端 WASM 解码逻辑
 import { devLog } from "./preview-utils.ts";
-import {
-  buildStdYsgpFromTextVariant,
-  stripYsgpTextHeader,
-} from "./preview-utils.ts";
+import { stripYsgpTextHeader, type DecodedYsm } from "./preview-utils.ts";
 import { cacheGet, cacheSet } from "../../utils/preview-cache.ts";
-import { parseBedrockGeometryFromJSON } from "./utils.ts";
+import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "./utils.ts";
 import { parseBedrockAnimationJSON } from "../../utils/animation.ts";
+
+/** WASM 解码输出文件 */
+interface DecodedFile {
+  path: string;
+  data: Uint8Array;
+}
+
+/** 纹理尺寸 */
+interface TexDim {
+  w: number;
+  h: number;
+}
 
 /**
  * 通过前端 WASM 解码 .ysm，返回 { texture, geometry, animations }
  * 不依赖组件实例（无 this 引用），可独立调用
  */
-export async function decodeYsmViaWasm(modelPath) {
+export async function decodeYsmViaWasm(
+  modelPath: string,
+): Promise<DecodedYsm | null> {
   const cached = cacheGet(modelPath);
-  if (cached?.geometry?.bones?.length) return cached;
+  const cachedGeo = cached?.geometry as BedrockGeometry | undefined;
+  if (cachedGeo?.bones?.length) return cached as DecodedYsm;
   if (cached?._wasmFailed) return null;
 
   // 读文件（WASM 和 JSON 都需要，提升到外层作用域供两个 try 块共用）
-  let bytes;
+  let bytes: Uint8Array | null = null;
   try {
     const { ReadFileBytes } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-    bytes = await ReadFileBytes(modelPath);
-    if (typeof bytes === "string") {
-      const raw = atob(bytes);
-      const len = raw.length;
+    // ReadFileBytes 绑定返回 base64 string | null（非 Uint8Array——原 JS 的
+    // instanceof Uint8Array 分支是死代码，已清理）
+    const raw = await ReadFileBytes(modelPath);
+    if (raw) {
+      const rawStr = atob(raw);
+      const len = rawStr.length;
       const arr = new Uint8Array(len);
-      for (let i = 0; i < len; i++) arr[i] = raw.charCodeAt(i);
+      for (let i = 0; i < len; i++) arr[i] = rawStr.charCodeAt(i);
       bytes = arr;
-    } else if (!(bytes instanceof Uint8Array)) {
-      bytes = new Uint8Array(bytes);
+    } else {
+      bytes = new Uint8Array(0);
     }
     devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
     if (!bytes?.length) {
@@ -50,19 +64,21 @@ export async function decodeYsmViaWasm(modelPath) {
           for (const au of result.authors) {
             if (!au.avatarPath) continue;
             try {
-              const avatarRel = au.avatarPath.startsWith("avatar/") || au.avatarPath.startsWith("avatar\\") ? au.avatarPath : "avatar/" + au.avatarPath;
-              let avatarBytes = await ReadFileBytes(baseDir + "/" + avatarRel);
-              if (typeof avatarBytes === "string") {
-                const raw = atob(avatarBytes);
-                const len = raw.length;
+              const avatarRel =
+                au.avatarPath.startsWith("avatar/") || au.avatarPath.startsWith("avatar\\")
+                  ? au.avatarPath
+                  : "avatar/" + au.avatarPath;
+              let avatarBytes: Uint8Array | null = null;
+              const rawAvatar = await ReadFileBytes(baseDir + "/" + avatarRel);
+              if (rawAvatar) {
+                const rawStr = atob(rawAvatar);
+                const len = rawStr.length;
                 const arr = new Uint8Array(len);
-                for (let i = 0; i < len; i++) arr[i] = raw.charCodeAt(i);
+                for (let i = 0; i < len; i++) arr[i] = rawStr.charCodeAt(i);
                 avatarBytes = arr;
-              } else if (!(avatarBytes instanceof Uint8Array)) {
-                avatarBytes = new Uint8Array(avatarBytes);
               }
               if (avatarBytes?.length) {
-                const blob = new Blob([avatarBytes]);
+                const blob = new Blob([avatarBytes.buffer as ArrayBuffer]);
                 au.avatarUrl = URL.createObjectURL(blob);
               }
             } catch (_e) {}
@@ -70,18 +86,20 @@ export async function decodeYsmViaWasm(modelPath) {
         }
         cacheSet(modelPath, { ...result, _decodedBy: "🧠 JSON 直接解析" });
         // 异步缓存头像到 creators_cache/ 供创作者界面使用
-        import("../../../bindings/ysm-model-manager/internal/app/app.js").then(({ CacheModelAvatars }) =>
-          CacheModelAvatars(modelPath)
-        ).catch(() => {});
+        import("../../../bindings/ysm-model-manager/internal/app/app.js")
+          .then(({ CacheModelAvatars }) => CacheModelAvatars(modelPath))
+          .catch(() => {});
         return result;
       }
       return null;
     }
   } catch (e) {
-    devLog(`[YSM] ❌ ${e?.message || e}`);
+    devLog(`[YSM] ❌ ${e instanceof Error ? e.message : String(e)}`);
     cacheSet(modelPath, { _wasmFailed: true });
     return null;
   }
+
+  if (!bytes) return null;
 
   // .ysm 文件 → 初始化 WASM 解码
   try {
@@ -96,9 +114,9 @@ export async function decodeYsmViaWasm(modelPath) {
     }
 
     // 先快路径：decodeYsmFileFromMemory（对标准 V2/V1 文件秒出）
-    let files;
+    let files: DecodedFile[] = [];
     try {
-      files = await decodeYsmFileFromMemory(bytes);
+      files = (await decodeYsmFileFromMemory(bytes)) || [];
       if (files?.length) {
         console.log(`[YSM] ✅ 原始字节解码成功: ${files.length} 文件`);
       }
@@ -108,24 +126,24 @@ export async function decodeYsmViaWasm(modelPath) {
     if (!files?.length) {
       console.log("[YSM] 原始字节解码失败，尝试 MEMFS 文件路径解码...");
       try {
-        files = await decodeYsmFile(bytes);
+        files = (await decodeYsmFile(bytes)) || [];
         if (files?.length) {
           console.log(`[YSM] ✅ MEMFS 解码成功: ${files.length} 文件`);
         }
       } catch (e2) {
-        console.log(`[YSM] MEMFS 解码异常: ${e2?.message}`);
+        console.log(`[YSM] MEMFS 解码异常: ${e2 instanceof Error ? e2.message : String(e2)}`);
       }
     }
 
     // MEMFS 也失败 → 尝试剥离文本头部后重建
     if (!files?.length) {
       for (const tryVer of [null, 3]) {
-        const rebuilt = stripYsgpTextHeader(bytes, tryVer);
+        const rebuilt = stripYsgpTextHeader(bytes, tryVer ?? undefined);
         if (rebuilt === bytes || !rebuilt) continue;
         const verLabel = tryVer ? `V${tryVer}` : "V2(自动)";
         console.log(`[YSM] 原始解码失败，尝试剥离文本头部(${verLabel})...`);
         try {
-          files = await decodeYsmFileFromMemory(rebuilt);
+          files = (await decodeYsmFileFromMemory(rebuilt)) || [];
           if (files?.length) {
             console.log(
               `[YSM] ✅ 剥离头部(${verLabel})后解码成功: ${files.length} 文件`,
@@ -133,7 +151,7 @@ export async function decodeYsmViaWasm(modelPath) {
             break;
           }
         } catch (e3) {
-          console.log(`[YSM] 剥离${verLabel}解码异常: ${e3?.message}`);
+          console.log(`[YSM] 剥离${verLabel}解码异常: ${e3 instanceof Error ? e3.message : String(e3)}`);
         }
       }
     }
@@ -152,28 +170,44 @@ export async function decodeYsmViaWasm(modelPath) {
     }
 
     // 读取 ysm.json 获取纹理顺序和模型顺序
-    let ysmTexOrder = null;
-    let ysmModelOrder = null;
-    let ysmDefaultTex = null;
-    let ysmAuthors = [];
+    let ysmTexOrder: unknown[] | null = null;
+    let ysmModelOrder: unknown[] | null = null;
+    let ysmDefaultTex: string | null = null;
+    const ysmAuthors: Array<{
+      name: string;
+      role: string;
+      avatarUrl: string | null;
+      avatarPath: string;
+    }> = [];
+    // avatars 声明提前（原 JS 在 ysmMeta 块之后声明 → TDZ ReferenceError 被 catch 吞，
+    // 导致 WASM 路径作者信息恒为空——顺带修复）
+    const avatars: Record<string, string> = {};
     const ysmMeta = files.find((f) => f.path.endsWith("ysm.json"));
     if (ysmMeta) {
       try {
         const txt = new TextDecoder().decode(ysmMeta.data);
-        const json = JSON.parse(txt);
-        ysmTexOrder = json?.files?.player?.texture;
+        const json = JSON.parse(txt) as {
+          files?: { player?: { texture?: unknown; model?: unknown } };
+          properties?: { default_texture?: string | null };
+          metadata?: { authors?: Array<{ name?: string; role?: string; avatar?: string }> };
+        };
+        ysmTexOrder = json?.files?.player?.texture
+          ? Array.isArray(json.files.player.texture)
+            ? json.files.player.texture
+            : [json.files.player.texture]
+          : null;
         ysmModelOrder = Array.isArray(json?.files?.player?.model)
           ? json.files.player.model
           : json?.files?.player?.model
             ? [json.files.player.model]
             : null;
         ysmDefaultTex = json?.properties?.default_texture || null;
-        // 解析作者信息（ysmAuhors 已在外部声明）
+        // 解析作者信息
         if (json?.metadata?.authors) {
           for (const au of json.metadata.authors) {
             if (!au.name) continue;
             const avatarPath = au.avatar || "";
-            const avatarKey = avatarPath.split("/").pop().split("\\").pop().replace(/\.\w+$/, "");
+            const avatarKey = avatarPath.split(/[/\\]/).pop()?.replace(/\.\w+$/, "") || "";
             ysmAuthors.push({
               name: au.name,
               role: au.role || "",
@@ -185,7 +219,7 @@ export async function decodeYsmViaWasm(modelPath) {
         if (ysmTexOrder)
           console.log(
             `[YSM] ysm.json 纹理列表:`,
-            ysmTexOrder
+            (ysmTexOrder as Array<{ uv?: string; path?: string } | string>)
               .map((t) => (typeof t === "string" ? t : t?.uv || t?.path))
               .filter(Boolean),
             `默认纹理: ${ysmDefaultTex || "无"}`,
@@ -196,28 +230,22 @@ export async function decodeYsmViaWasm(modelPath) {
     }
 
     // 收集所有纹理文件（同时收集头像）
-    const textures = {};
-    const texNameMap = {};
-    const texLowerMap = {};
-    const texDimensions = {};
+    const textures: Record<string, string> = {};
+    const texNameMap: Record<string, string> = {};
+    const texLowerMap: Record<string, string> = {};
+    const texDimensions: Record<string, TexDim> = {};
     let maxTexW = 0,
       maxTexH = 0;
-    const avatars = {};
     for (const f of files) {
       if (!(f.path.endsWith(".png") || f.path.endsWith(".jpg"))) continue;
       if (f.path.startsWith("avatar/") || f.path.startsWith("avatar\\")) {
-        const blob = new Blob([f.data]);
-        const name = f.path.split("/").pop().split("\\").pop().replace(/\.\w+$/, "");
+        const blob = new Blob([f.data.buffer as ArrayBuffer]);
+        const name = f.path.split(/[/\\]/).pop()?.replace(/\.\w+$/, "") || "";
         avatars[name] = URL.createObjectURL(blob);
         continue;
       }
-      const blob = new Blob([f.data]);
-      const key = f.path
-        .split("/")
-        .pop()
-        .split("\\")
-        .pop()
-        .replace(/\.\w+$/, "");
+      const blob = new Blob([f.data.buffer as ArrayBuffer]);
+      const key = f.path.split(/[/\\]/).pop()?.replace(/\.\w+$/, "") || "";
       textures[key] = URL.createObjectURL(blob);
       texNameMap[key] = f.path;
       texLowerMap[key.toLowerCase()] = key;
@@ -241,12 +269,15 @@ export async function decodeYsmViaWasm(modelPath) {
         if (texW > maxTexW) maxTexW = texW;
         if (texH > maxTexH) maxTexH = texH;
       }
+      const td = texDimensions[key];
       devLog(
-        `[YSM] 纹理: ${f.path} → key="${key}"${texDimensions[key] ? ` (${texDimensions[key].w}×${texDimensions[key].h})` : ""}`,
+        `[YSM] 纹理: ${f.path} → key="${key}"${
+          td ? ` (${td.w}×${td.h})` : ""
+        }`,
       );
     }
 
-    const matchTexKey = (tn) => {
+    const matchTexKey = (tn: string): string | null => {
       if (!tn) return null;
       if (textures[tn]) return tn;
       const lower = tn.toLowerCase();
@@ -255,24 +286,17 @@ export async function decodeYsmViaWasm(modelPath) {
 
     let orderedTexKeys = Object.keys(textures);
     if (ysmTexOrder) {
-      let ordered = [];
+      let ordered: string[] = [];
       for (const t of ysmTexOrder) {
-        const path = typeof t === "string" ? t : t?.uv || t?.path || "";
-        const tn = path
-          .split("/")
-          .pop()
-          .replace(/\.\w+$/, "");
+        const path =
+          typeof t === "string" ? t : (t as { uv?: string; path?: string })?.uv || (t as { path?: string })?.path || "";
+        const tn = path.split("/").pop()?.replace(/\.\w+$/, "") || "";
         const matched = matchTexKey(tn);
         if (matched) ordered.push(matched);
       }
       // 仅使用 ysmTexOrder 显式声明的纹理，排除非贴图（头像/预览图）
       if (ysmDefaultTex) {
-        const defKey = matchTexKey(
-          ysmDefaultTex
-            .split("/")
-            .pop()
-            .replace(/\.\w+$/, ""),
-        );
+        const defKey = matchTexKey(ysmDefaultTex.split("/").pop()?.replace(/\.\w+$/, "") || "");
         if (defKey && ordered.includes(defKey) && ordered[0] !== defKey) {
           ordered = [defKey, ...ordered.filter((k) => k !== defKey)];
         }
@@ -281,15 +305,20 @@ export async function decodeYsmViaWasm(modelPath) {
     }
 
     // 构建模型文件→纹理索引映射
-    const modelTexIdxMap = new Map();
+    const modelTexIdxMap = new Map<string, number>();
     if (ysmModelOrder) {
       for (let i = 0; i < ysmModelOrder.length; i++) {
         const mp = ysmModelOrder[i];
-        const mn = (typeof mp === "string" ? mp : mp?.path || mp?.name || "")
-          .split("/")
-          .pop()
-          .split("\\")
-          .pop();
+        const mn =
+          (
+            typeof mp === "string"
+              ? mp
+              : (mp as { path?: string; name?: string })?.path ||
+                (mp as { name?: string })?.name ||
+                ""
+          )
+            .split(/[/\\]/)
+            .pop() || "";
         if (mn) {
           modelTexIdxMap.set(mn, Math.min(i, orderedTexKeys.length - 1));
         }
@@ -297,18 +326,18 @@ export async function decodeYsmViaWasm(modelPath) {
     }
 
     // 解析模型文件，合并骨骼
-    let geometry = null;
-    const allBones = [];
-    const processedModels = new Set();
-    const texMappingLog = [];
+    let geometry: BedrockGeometry | null = null;
+    const allBones: BedrockGeometry["bones"] = [];
+    const processedModels = new Set<string>();
+    const texMappingLog: Array<Record<string, string | number>> = [];
 
-    const processModelFile = (f, forcedTexIdx) => {
+    const processModelFile = (f: DecodedFile, forcedTexIdx?: number): void => {
       if (!f || processedModels.has(f.path)) return;
       processedModels.add(f.path);
       devLog(`[YSM] 解析 ${f.path}...`);
       try {
         const jsonStr = new TextDecoder().decode(f.data);
-        const parsedRoot = JSON.parse(jsonStr);
+        const parsedRoot = JSON.parse(jsonStr) as Record<string, unknown>;
         const rootKeys = Object.keys(parsedRoot);
         const geoKey = rootKeys.find(
           (k) => k.includes("minecraft:geometry") || k.includes("geometry"),
@@ -316,25 +345,22 @@ export async function decodeYsmViaWasm(modelPath) {
         if (geoKey) {
           const geoArr = parsedRoot[geoKey];
           if (Array.isArray(geoArr) && geoArr.length > 0) {
-            const hasBones = !!geoArr[0]?.bones?.length;
+            const hasBones = !!(geoArr[0] as { bones?: unknown[] })?.bones?.length;
             console.log(
-              `[YSM] JSON 调试: rootKeys=[${rootKeys}], geometryKey="${geoKey}", bones=${geoArr[0]?.bones?.length || 0}`,
+              `[YSM] JSON 调试: rootKeys=[${rootKeys}], geometryKey="${geoKey}", bones=${
+                (geoArr[0] as { bones?: unknown[] })?.bones?.length || 0
+              }`,
             );
-            if (!hasBones)
-              console.log(`[YSM] JSON 前200字符: ${jsonStr.slice(0, 200)}`);
+            if (!hasBones) console.log(`[YSM] JSON 前200字符: ${jsonStr.slice(0, 200)}`);
           }
         }
         const parsed = parseBedrockGeometryFromJSON(jsonStr);
         if (!parsed?.bones?.length) return;
-        devLog(
-          `[YSM] ✅ ${f.path}: ${parsed.bones.length}骨 ${parsed.cubeCount}方`,
-        );
+        devLog(`[YSM] ✅ ${f.path}: ${parsed.bones.length}骨 ${parsed.cubeCount}方`);
 
         const texIdx = forcedTexIdx ?? 0;
         const texKey =
-          orderedTexKeys.length > texIdx
-            ? orderedTexKeys[texIdx]
-            : orderedTexKeys[0] || null;
+          orderedTexKeys.length > texIdx ? orderedTexKeys[texIdx] : orderedTexKeys[0] || null;
         const texUrl = texKey ? textures[texKey] : null;
 
         let uvMaxW = 2,
@@ -350,15 +376,11 @@ export async function decodeYsmViaWasm(modelPath) {
               if (maxV > uvMaxH) uvMaxH = maxV;
             } else if (c.faceUV) {
               try {
-                const fd = JSON.parse(c.faceUV);
-                for (const fn of [
-                  "east",
-                  "west",
-                  "up",
-                  "down",
-                  "south",
-                  "north",
-                ]) {
+                const fd = JSON.parse(c.faceUV) as Record<
+                  string,
+                  { uv?: number[]; uv_size?: number[] }
+                >;
+                for (const fn of ["east", "west", "up", "down", "south", "north"]) {
                   const f = fd[fn];
                   if (!f?.uv) continue;
                   const fw = Math.abs(f.uv_size?.[0] || 0);
@@ -380,14 +402,11 @@ export async function decodeYsmViaWasm(modelPath) {
         const boneTexH = Math.max(actualTexH, parsed.texHeight, uvMaxH) || 64;
 
         texMappingLog.push({
-          file: f.path.split("/").pop().split("\\").pop(),
+          file: f.path.split(/[/\\]/).pop() || "",
           texKey: texKey || "—",
           texIdx,
           pngSize: actualTexW > 0 ? `${actualTexW}×${actualTexH}` : "—",
-          geoSize:
-            parsed.texWidth > 0
-              ? `${parsed.texWidth}×${parsed.texHeight}`
-              : "—",
+          geoSize: parsed.texWidth > 0 ? `${parsed.texWidth}×${parsed.texHeight}` : "—",
           uvSize: `${uvMaxW}×${uvMaxH}`,
           finalSize: `${boneTexW}×${boneTexH}`,
         });
@@ -403,46 +422,43 @@ export async function decodeYsmViaWasm(modelPath) {
         } else {
           geometry.boneCount += parsed.boneCount;
           geometry.cubeCount += parsed.cubeCount;
-          if (parsed.texWidth > geometry.texWidth)
-            geometry.texWidth = parsed.texWidth;
-          if (parsed.texHeight > geometry.texHeight)
-            geometry.texHeight = parsed.texHeight;
+          if (parsed.texWidth > geometry.texWidth) geometry.texWidth = parsed.texWidth;
+          if (parsed.texHeight > geometry.texHeight) geometry.texHeight = parsed.texHeight;
         }
       } catch (e) {
-        devLog(`[YSM] ❌ ${f.path}: ${e?.message}`);
+        devLog(`[YSM] ❌ ${f.path}: ${e instanceof Error ? e.message : String(e)}`);
       }
     };
 
     // 第一轮：按 ysmModelOrder 顺序处理
     if (ysmModelOrder) {
-      const texKeyToIdx = {};
+      const texKeyToIdx: Record<string, number> = {};
       orderedTexKeys.forEach((k, i) => {
         texKeyToIdx[k] = i;
       });
       for (const mp of ysmModelOrder) {
-        const mn = (typeof mp === "string" ? mp : mp?.path || mp?.name || "")
-          .split("/")
-          .pop()
-          .split("\\")
-          .pop();
+        const mn =
+          (
+            typeof mp === "string"
+              ? mp
+              : (mp as { path?: string; name?: string })?.path ||
+                (mp as { name?: string })?.name ||
+                ""
+          )
+            .split(/[/\\]/)
+            .pop() || "";
         if (!mn) continue;
         const lowerBase = mn.replace(/\.json$/i, "").toLowerCase();
-        let matchedKey = null;
+        let matchedKey: string | null = null;
         for (const k of Object.keys(texKeyToIdx)) {
-          if (
-            k.toLowerCase().includes(lowerBase) ||
-            lowerBase.includes(k.toLowerCase())
-          ) {
+          if (k.toLowerCase().includes(lowerBase) || lowerBase.includes(k.toLowerCase())) {
             matchedKey = k;
             break;
           }
         }
         const texIdx = matchedKey != null ? (texKeyToIdx[matchedKey] ?? 0) : 0;
         const f = files.find(
-          (ff) =>
-            ff.path.endsWith("/" + mn) ||
-            ff.path.endsWith("\\" + mn) ||
-            ff.path === mn,
+          (ff) => ff.path.endsWith("/" + mn) || ff.path.endsWith("\\" + mn) || ff.path === mn,
         );
         if (f) processModelFile(f, texIdx);
       }
@@ -452,7 +468,11 @@ export async function decodeYsmViaWasm(modelPath) {
       if (!f.path.startsWith("models/")) continue;
       const modelName = f.path.split("/").pop();
       const matched = ysmModelOrder?.some((mp) => {
-        const mn = (typeof mp === "string" ? mp : mp?.path || mp?.name || "")
+        const mn = (
+          typeof mp === "string"
+            ? mp
+            : (mp as { path?: string; name?: string })?.path || (mp as { name?: string })?.name || ""
+        )
           .split("/")
           .pop();
         return mn === modelName;
@@ -473,51 +493,65 @@ export async function decodeYsmViaWasm(modelPath) {
       return null;
     }
 
-    if (geometry) {
-      geometry.bones = allBones;
-      geometry.textures = orderedTexKeys
-        .map((k) => textures[k])
-        .filter(Boolean);
-      geometry.texture =
-        orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null;
-      if (maxTexW > geometry.texWidth) geometry.texWidth = maxTexW;
-      if (maxTexH > geometry.texHeight) geometry.texHeight = maxTexH;
-      geometry._texMappingLog = texMappingLog;
+    // TS 不追踪 processModelFile 闭包内的赋值，geometry 在 if 处被收窄为 never——
+    // 用局部变量绕过（运行时语义不变）
+    const geo = geometry as BedrockGeometry | null;
+    if (geo) {
+      geo.bones = allBones;
+      geo.textures = orderedTexKeys.map((k) => textures[k]).filter(Boolean);
+      geo.texture = orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null;
+      if (maxTexW > geo.texWidth) geo.texWidth = maxTexW;
+      if (maxTexH > geo.texHeight) geo.texHeight = maxTexH;
+      geo._texMappingLog = texMappingLog;
     }
 
     // 解析动画
-    const animations = [];
+    const animations: unknown[] = [];
     for (const f of files) {
-      if (!f.path.startsWith("animations/") || !f.path.endsWith(".json"))
-        continue;
+      if (!f.path.startsWith("animations/") || !f.path.endsWith(".json")) continue;
       devLog(`[YSM] 动画 ${f.path}...`);
       try {
         const jsonStr = new TextDecoder().decode(f.data);
         const { clips } = parseBedrockAnimationJSON(jsonStr);
         if (clips.length > 0) animations.push(...clips);
       } catch (e) {
-        devLog(`[YSM] ❌ ${f.path}: ${e?.message}`);
+        devLog(`[YSM] ❌ ${f.path}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
     const texUrl =
-      geometry?.texture ||
+      (geometry as BedrockGeometry | null)?.texture ||
       (orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null) ||
       null;
-    cacheSet(modelPath, { texture: texUrl, geometry, animations, avatars, authors: ysmAuthors });
-    return { texture: texUrl, geometry, animations, avatars, authors: ysmAuthors };
+    const result: DecodedYsm = {
+      texture: texUrl,
+      geometry,
+      animations,
+      avatars,
+      authors: ysmAuthors,
+    };
+    cacheSet(modelPath, { ...result, _decodedBy: "🧠 WASM 内置解码" });
+    return result;
   } catch (e) {
-    devLog(`[YSM] ❌ ${e?.message || e}`);
+    devLog(`[YSM] ❌ ${e instanceof Error ? e.message : String(e)}`);
     return null;
   }
 }
 
 /** 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） */
-function parseYsmJsonDirect(json) {
+function parseYsmJsonDirect(json: unknown): DecodedYsm | null {
+  const obj = json as {
+    spec?: unknown;
+    files?: { player?: { model?: unknown; texture?: unknown } };
+    metadata?: { authors?: Array<{ name?: string; role?: string; avatar?: string }> };
+    properties?: { texture_width?: number; texture_height?: number; default_texture?: string | null };
+    minecraft?: { geometry?: unknown[] };
+    geometry?: { model?: unknown };
+  };
   // ysm.json 格式（spec/metadata/files）
-  if (json?.spec !== undefined && json?.files) {
+  if (obj?.spec !== undefined && obj?.files) {
     // 从 files.player.model 提取 geometry 信息
-    const playerFiles = json.files?.player;
+    const playerFiles = obj.files?.player;
     if (!playerFiles) return null;
     const modelFiles = Array.isArray(playerFiles.model)
       ? playerFiles.model
@@ -532,23 +566,27 @@ function parseYsmJsonDirect(json) {
     // ysm.json 本身不含 geometry 数据（geometry 在 separate model json 中）
     // 返回一个占位 geometry，让后续的 Go AnalyzeBedrockModel 处理
     // 解析作者信息（用于头像显示）
-    const authors = (json?.metadata?.authors || []).filter(a => a.name).map(a => ({
-      name: a.name,
-      role: a.role || "",
-      avatarUrl: null,
-      avatarPath: a.avatar || "",
-    }));
+    const authors = (obj?.metadata?.authors || [])
+      .filter((a) => a.name)
+      .map((a) => ({
+        name: a.name as string,
+        role: a.role || "",
+        avatarUrl: null,
+        avatarPath: a.avatar || "",
+      }));
     return {
       texture: null,
       geometry: {
         bones: [],
-        texWidth: json.properties?.texture_width || 64,
-        texHeight: json.properties?.texture_height || 64,
+        boneCount: 0,
+        cubeCount: 0,
+        texWidth: obj.properties?.texture_width || 64,
+        texHeight: obj.properties?.texture_height || 64,
         textures: [],
         _ysmMeta: {
           modelFiles,
           texFiles,
-          defaultTexture: json.properties?.default_texture || null,
+          defaultTexture: obj.properties?.default_texture || null,
         },
       },
       animations: [],
@@ -557,19 +595,40 @@ function parseYsmJsonDirect(json) {
   }
 
   // 标准 Bedrock geometry 格式（minecraft.geometry）
-  const root = json?.minecraft?.geometry?.[0] || json?.geometry?.model || json;
+  const root = (obj?.minecraft?.geometry?.[0] || obj?.geometry?.model || obj) as {
+    description?: { texture_width?: number; texture_height?: number };
+    bones?: Array<{
+      name?: string;
+      pivot?: number[];
+      parent?: string;
+      rotation?: number[];
+      cubes?: Array<{
+        origin?: number[];
+        size?: number[];
+        pivot?: number[];
+        rotation?: number[];
+        uv?: number[];
+        inflate?: number;
+        mirror?: boolean;
+      }>;
+    }>;
+  };
   const desc = root?.description || {};
   const texW = desc.texture_width || 64;
   const texH = desc.texture_height || 64;
   const bones = (root?.bones || []).map((b) => ({
-    name: b.name,
+    name: b.name || "",
     pivot: b.pivot || [0, 0, 0],
     parent: b.parent || "",
+    rotation: b.rotation || [0, 0, 0],
     cubes: (b.cubes || []).map((c) => ({
       origin: c.origin || [0, 0, 0],
       size: c.size || [0, 0, 0],
       pivot: c.pivot || [0, 0, 0],
+      rotation: c.rotation || [0, 0, 0],
       uv: c.uv || [0, 0],
+      faceUV: "",
+      texSlot: 0,
       inflate: c.inflate || 0,
       mirror: !!c.mirror,
     })),
@@ -579,6 +638,8 @@ function parseYsmJsonDirect(json) {
     texture: null,
     geometry: {
       bones,
+      boneCount: bones.length,
+      cubeCount: 0,
       texWidth: texW,
       texHeight: texH,
       textures: [],

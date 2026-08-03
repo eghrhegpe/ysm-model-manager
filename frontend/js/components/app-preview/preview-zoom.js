@@ -2,7 +2,7 @@
 // 从 events.js 拆分：openFullPreview
 /** 全窗放大预览（独立函数，不依赖组件实例） */
 export async function openFullPreview(canvas, model, textureImg, labelsOn) {
-  const { renderModel2D } = await import("../../utils/model2d.js");
+  const { renderModel2D } = await import("../../utils/model2d.ts");
   const overlay = document.createElement("div");
   overlay.style.cssText =
     "position:fixed;inset:0;z-index:var(--z-fullscreen);background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;flex-direction:column";

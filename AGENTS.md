@@ -24,6 +24,7 @@
 |----------|--------|
 | 查当前决策 + 坑点 | `grep docs/adr/` + `bug-chronicle.md`（先 grep 再读，1369 行禁止全量）；按状态浏览用 `docs/adr/index.md`（规范索引，自动生成） |
 | 查 ADR 登记一致性 / 占号 | `node scripts/adr-check.mjs`（撞号/漏登/幽灵/跳号） |
+| 查 AI 高频犯错区（反哺陷阱清单） | `node scripts/ai-mistake-tracker.mjs`（fix 分类统计 / 连续修复链 / 文件热力图 / 规则违反扫描） |
 | 查/更新项目状态 | `docs/architecture/PROJECT_STATUS.md`（含治理速览 + 进行中 ADR 清单） |
 | 查某模块「现在长啥样、去哪找」 | `docs/knowledge/`（先读 `routes.md` 路由表 + `index.md` 索引，grep 卡正文锁定符号，按 `source_files` 跳源码） |
 | 查/更新函数索引 | `node scripts/funcmap.mjs -o funcmap.md`（符号带 文件:行） |

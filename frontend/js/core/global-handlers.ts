@@ -4,8 +4,8 @@
 
 import { registerDnD } from "./handler-dnd.js";
 import { registerSync } from "./handler-sync.js";
-import { registerUpload } from "./handler-upload.js";
-import { registerInstanceOps } from "./handler-other.js";
+import { registerUpload } from "./handler-upload.ts";
+import { registerInstanceOps } from "./handler-other.ts";
 
 /** 注册所有全局 handler，返回 unsub 函数数组 */
 export function registerGlobalHandlers(): Array<() => void> {

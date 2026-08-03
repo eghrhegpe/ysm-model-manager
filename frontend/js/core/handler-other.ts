@@ -1,10 +1,11 @@
-// ===== 整合包操作：导出清单 / 清空目录 =====
+// ===== 整合包操作：导出清单 / 清空目录（类型化版 — ADR-014 P3）=====
 import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { modalConfirm } from "../dialogs/modal.js";
 import { getApp } from "../wails/app.ts";
 
-export function registerInstanceOps(unsubs) {
+/** 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs */
+export function registerInstanceOps(unsubs: Array<() => void>): void {
   // 导出文件清单到剪贴板（支持 rtype 筛选）
   unsubs.push(
     bus.on("instance:export-list", async ({ name: insName, rtype }) => {
@@ -25,7 +26,7 @@ export function registerInstanceOps(unsubs) {
           });
           return;
         }
-        const instances = await ListVersionInstances(mcRoot);
+        const instances = (await ListVersionInstances(mcRoot)) ?? [];
         const ins = instances.find((i) => i.Name === insName);
         if (!ins?.VersionDir) {
           bus.emit("toast:show", {
@@ -38,10 +39,10 @@ export function registerInstanceOps(unsubs) {
 
         // 子目录映射——从 Go 端统一获取
         const { GetSubDirMap } = await getApp();
-        const subDirAll = await GetSubDirMap();
+        const subDirAll = (await GetSubDirMap()) ?? {};
 
-        let dirs = [];
-        let labels = [];
+        let dirs: string[] = [];
+        let labels: string[] = [];
         if (rtype && subDirAll[rtype]) {
           dirs = [ins.VersionDir + "/" + subDirAll[rtype]];
           labels = [rtype];
@@ -52,7 +53,7 @@ export function registerInstanceOps(unsubs) {
           }
         }
 
-        let allLines = [`📦 ${insName}`];
+        let allLines: string[] = [`📦 ${insName}`];
         let totalFiles = 0;
         for (let i = 0; i < dirs.length; i++) {
           try {
@@ -124,7 +125,7 @@ export function registerInstanceOps(unsubs) {
           return;
         }
         const typeLabel = rtype
-          ? {
+          ? ({
               ysm: "YSM",
               "mmd-skin": "MMD",
               "vrchat-avatar": "VRC",
@@ -132,7 +133,7 @@ export function registerInstanceOps(unsubs) {
               shaderpack: "光影包",
               "create-blueprint": "蓝图",
               litematic: "投影",
-            }[rtype] || rtype
+            } as Record<string, string>)[rtype] || rtype
           : "全部";
         const confirmed = await modalConfirm({
           title: "清空整合包",

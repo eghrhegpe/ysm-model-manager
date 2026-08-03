@@ -7,7 +7,8 @@
 export interface ToastPayload {
   msg: string;
   duration?: number;
-  type?: "info" | "success" | "error" | "warning";
+  /** 直接拼入 toast className（app-toast.js），合法值以 CSS class 为准：warn/success/error/info */
+  type?: "info" | "success" | "error" | "warn";
 }
 
 export interface MenuItem {
@@ -65,7 +66,7 @@ export interface BusEvents {
   "sync:upload:done": void;
   // 实例 / 导入
   "instance:export-list": { name: string; rtype: string };
-  "instance:clear": void;
+  "instance:clear": { name: string; rtype?: string };
   "instance:install": void;
   "instance:sync": void;
   "import:pending-changed": { count: number };

@@ -168,49 +168,6 @@ export async function decodeYsmFileFromMemory(
 }
 
 /**
- * 诊断：打印 .ysm 文件头信息到控制台
- */
-export function diagYsmHeader(bytes: Uint8Array): void {
-  if (!wasmModule) throw new Error("YSMParser WASM 未就绪");
-  const ccall = wasmModule.ccall;
-  if (!ccall) return;
-
-  const ptr = _writeHeap(bytes);
-  try {
-    ccall(
-      "ysm_diag_header",
-      null,
-      ["number", "number"],
-      [ptr, bytes.byteLength || bytes.length],
-    );
-  } finally {
-    wasmModule!._free(ptr);
-  }
-}
-
-/**
- * 检测 .ysm 文件版本（不解析，仅检查文件头）
- * 返回: 0=未知, 1=V1, 2=V2, 3=V3
- */
-export function detectYsmVersion(bytes: Uint8Array): number {
-  if (!wasmModule) throw new Error("YSMParser WASM 未就绪");
-  const ccall = wasmModule.ccall;
-  if (!ccall) return -1;
-
-  const ptr = _writeHeap(bytes);
-  try {
-    return (ccall(
-      "ysm_detect_version",
-      "number",
-      ["number", "number"],
-      [ptr, bytes.byteLength || bytes.length],
-    ) as number) || 0;
-  } finally {
-    wasmModule!._free(ptr);
-  }
-}
-
-/**
  * 通过 callMain + MEMFS 解码 .ysm（回退路径）
  * 保留以兼容旧的 WASM 编译
  */

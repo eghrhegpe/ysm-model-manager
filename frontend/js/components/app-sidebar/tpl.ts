@@ -58,7 +58,8 @@ export function listContainerHTML(): string {
 }
 
 /** 加载骨架屏 */
-export function skeletonHTML(): string {
+/** 加载骨架屏（内部被 listContainerHTML 引用，无需导出） */
+function skeletonHTML(): string {
   let h = "";
   for (let i = 0; i < 4; i++) {
     h += `<div class="sk-item">

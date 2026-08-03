@@ -1,21 +1,26 @@
 import { renderFormattedText } from "../../utils/mc-format.ts";
+import type { PreviewCtx } from "./preview-utils.ts";
 
-const esc = (s) =>
-  (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s: unknown): string =>
+  (s || "")
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
-function fmtTime(ms) {
+function fmtTime(ms: number): string {
   if (!ms || ms <= 0) return "未知";
   const d = new Date(ms);
-  const pad = (n) => String(n).padStart(2, "0");
+  const pad = (n: number): string => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function shortName(name) {
+function shortName(name: string): string {
   return (name || "").replace(/^minecraft:/, "");
 }
 
-function blockColorHTML(name) {
-  const map = {
+function blockColorHTML(name: string): string {
+  const map: Record<string, string> = {
     stone: "#7F7F7F", dirt: "#9B6B3D", grass_block: "#7C9E4C", sand: "#DFD3A8",
     gravel: "#807F7D", cobblestone: "#6F6F6F", sandstone: "#D8CCA5",
     oak_planks: "#BA8E4A", spruce_planks: "#735C3C", birch_planks: "#D9CB9E",
@@ -43,20 +48,55 @@ function blockColorHTML(name) {
   return `hsl(${Math.abs(h) % 360}, 50%, 60%)`;
 }
 
-function renderBlockList(stats) {
+/** 方块统计条目 */
+interface BlockStat {
+  name: string;
+  count: number;
+}
+
+function renderBlockList(stats: BlockStat[] | undefined): string {
   if (!stats || !stats.length) return '<div style="color:var(--muted);font-size:var(--fs-sm)">无方块数据</div>';
   let total = 0;
   for (const s of stats) total += s.count;
-  const rows = stats.map((s) => {
-    const color = blockColorHTML(shortName(s.name));
-    return `<div class="lt-block-row"><span class="lt-color-swatch" style="background:${color}"></span><span class="lt-block-name">${esc(shortName(s.name))}</span><span class="lt-block-count">${s.count} 个</span></div>`;
-  }).join("");
+  const rows = stats
+    .map((s) => {
+      const color = blockColorHTML(shortName(s.name));
+      return `<div class="lt-block-row"><span class="lt-color-swatch" style="background:${color}"></span><span class="lt-block-name">${esc(shortName(s.name))}</span><span class="lt-block-count">${s.count} 个</span></div>`;
+    })
+    .join("");
   return `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:var(--fs-xs);color:var(--muted)"><span>共 ${stats.length} 种方块</span><span>合计 ${total.toLocaleString()} 个</span></div><div class="lt-material-list">${rows}</div>`;
 }
 
+/** 投影元数据（ReadLitematicMeta/ReadNbtStructure/ReadSchematic 返回 JSON 的兼容视图） */
+interface LitematicMeta {
+  name?: string;
+  author?: string;
+  version?: number;
+  minecraftDataVersion?: number;
+  description?: string;
+  timeCreated?: number;
+  timeModified?: number;
+  totalBlocks?: number;
+  blockCount?: number;
+  totalVolume?: number;
+  regionCount?: number;
+  entityCount?: number;
+  tileEntityCount?: number;
+  enclosingSize?: number[];
+  size?: number[];
+  blockStats?: BlockStat[];
+  paletteStats?: BlockStat[];
+  previewImage?: string;
+  dataVersion?: number;
+  [key: string]: unknown;
+}
+
 /** 显示投影文件详情面板（tab 布局） */
-export async function showLitematic(ctx, path) {
-  const basename = path.split("/").pop().split("\\").pop();
+export async function showLitematic(
+  ctx: PreviewCtx,
+  path: string,
+): Promise<void> {
+  const basename = path.split(/[/\\]/).pop() || "";
   const savedTab = localStorage.getItem("lt_previewTab") || "detail";
 
   ctx._root.innerHTML = `<div class="content" id="preview-content">
@@ -72,10 +112,10 @@ export async function showLitematic(ctx, path) {
 </div>`;
 
   // Tab 切换
-  const switchTab = (tab) => {
+  const switchTab = (tab: string): void => {
     localStorage.setItem("lt_previewTab", tab);
     ctx._root.querySelectorAll(".preview-tab").forEach((btn) => {
-      const isActive = btn.dataset.tab === tab;
+      const isActive = (btn as HTMLElement).dataset.tab === tab;
       btn.classList.toggle("ysm-tab-active", isActive);
       btn.classList.toggle("ysm-tab-inactive", !isActive);
     });
@@ -85,26 +125,26 @@ export async function showLitematic(ctx, path) {
     if (material) material.style.display = tab === "material" ? "" : "none";
   };
   ctx._root.querySelectorAll(".preview-tab").forEach((btn) => {
-    btn.onclick = () => switchTab(btn.dataset.tab);
+    (btn as HTMLElement).onclick = (): void => switchTab((btn as HTMLElement).dataset.tab || "");
   });
 
   // 3D tab 按钮
-  const btn3dTab = ctx._root.getElementById("btn-lt-3d-tab");
+  const btn3dTab = ctx._root.getElementById("btn-lt-3d-tab") as HTMLButtonElement | null;
   const isNbt = /\.nbt$/i.test(path);
   const isSch = /\.schematic$/i.test(path);
   const label = isSch ? "schematic" : isNbt ? "nbt" : "litematic";
 
   try {
     const { ReadLitematicMeta, ReadNbtStructure, ReadSchematic } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-    let meta;
+    let meta: LitematicMeta;
     if (isNbt) {
-      meta = JSON.parse(await ReadNbtStructure(path) || "{}");
+      meta = JSON.parse((await ReadNbtStructure(path)) || "{}") as LitematicMeta;
       if (!meta || (!meta.size && !meta.blockCount)) throw new Error("无法解析");
     } else if (isSch) {
-      meta = JSON.parse(await ReadSchematic(path) || "{}");
+      meta = JSON.parse((await ReadSchematic(path)) || "{}") as LitematicMeta;
       if (!meta || (!meta.size && !meta.blockCount)) throw new Error("无法解析");
     } else {
-      meta = JSON.parse(await ReadLitematicMeta(path) || "{}");
+      meta = JSON.parse((await ReadLitematicMeta(path)) || "{}") as LitematicMeta;
       if (!meta || (!meta.name && !meta.author && meta.totalBlocks === undefined)) throw new Error("无法解析");
     }
 
@@ -116,8 +156,10 @@ export async function showLitematic(ctx, path) {
       ? `<img src="${meta.previewImage}" alt="preview" style="width:140px;height:140px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
       : "";
 
-    function field(label, value) {
-      return value ? `<div class="lt-meta-row"><span class="lt-meta-label">${label}</span><span>${esc(String(value))}</span></div>` : "";
+    function field(label: string, value: unknown): string {
+      return value
+        ? `<div class="lt-meta-row"><span class="lt-meta-label">${label}</span><span>${esc(String(value))}</span></div>`
+        : "";
     }
 
     const detailDiv = ctx._root.getElementById("preview-detail");
@@ -131,7 +173,7 @@ export async function showLitematic(ctx, path) {
       detailDiv.innerHTML = `<h3>📋 蓝图详情</h3>
     <div style="padding:12px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm)">
       ${previewImgHTML}
-      <div><strong>${renderFormattedText(basename)}</strong></div>
+      <div><strong>${renderFormattedText(basename || "")}</strong></div>
       ${extra}
       <div style="margin:4px 0;border-top:1px solid var(--bd)"></div>
       <div class="lt-meta-row"><span class="lt-meta-label">非空气方块</span><span>${(meta.totalBlocks || meta.blockCount || 0).toLocaleString()} 个</span></div>
@@ -153,7 +195,7 @@ export async function showLitematic(ctx, path) {
 
     if (btn3dTab) {
       const voxelFn = isNbt ? "GetNbtVoxelData" : isSch ? "GetSchematicVoxelData" : "GetLitematicVoxelData";
-      btn3dTab.onclick = async () => {
+      btn3dTab.onclick = async (): Promise<void> => {
         btn3dTab.textContent = "⏳";
         btn3dTab.disabled = true;
         try {
@@ -168,7 +210,7 @@ export async function showLitematic(ctx, path) {
   } catch (e) {
     const detailDiv = ctx._root.getElementById("preview-detail");
     if (detailDiv) {
-      detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e.message)}</div></div>`;
+      detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e instanceof Error ? e.message : e)}</div></div>`;
     }
   }
 }

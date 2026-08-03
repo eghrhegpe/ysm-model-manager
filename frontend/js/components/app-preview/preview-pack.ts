@@ -1,16 +1,40 @@
 // ===== 整合包详情显示 =====
-// 从 events.js 拆分：showPackageDetail + 数字跳动动画
+// 从 events.ts 拆分：showPackageDetail + 数字跳动动画
 import { renderDisplayName } from "../../utils/display.ts";
 import { bus } from "../../bus.ts";
 
-const esc = (s) =>
-  (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/** 整合包条目（package:selected payload 视图） */
+export interface PackagePayload {
+  name: string;
+  status: string;
+  rtype: string;
+  synced: number;
+  missing: number;
+  extra: number;
+  variantGroups: {
+    missingGroups: string[];
+    extraGroups: string[];
+    variantMap: Record<string, { items: string[]; count: number }>;
+  } | null;
+  items: {
+    synced?: Array<{ name?: string; displayName?: string }>;
+    missing?: Array<{ name?: string; displayName?: string }>;
+    extra?: Array<{ name?: string; displayName?: string }>;
+  };
+}
 
-function animateCount(el, target) {
+const esc = (s: unknown): string =>
+  (s || "")
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+function animateCount(el: HTMLElement, target: number): void {
   if (!el) return;
-  const from = parseInt(el.textContent) || 0;
+  const from = parseInt(el.textContent || "", 10) || 0;
   if (from === target) {
-    el.textContent = target;
+    el.textContent = String(target);
     return;
   }
   const diff = target - from;
@@ -20,16 +44,20 @@ function animateCount(el, target) {
   const timer = setInterval(() => {
     i++;
     const current = Math.round(from + (diff * i) / steps);
-    el.textContent = current;
+    el.textContent = String(current);
     if (i >= steps) {
       clearInterval(timer);
-      el.textContent = target;
+      el.textContent = String(target);
     }
   }, interval);
 }
 
 /** 更新预览面板显示整合包详情 */
-export function showPackageDetail(root, pkg, resetButtons) {
+export function showPackageDetail(
+  root: ShadowRoot,
+  pkg: PackagePayload | null,
+  resetButtons: ((root: ShadowRoot) => void) | undefined,
+): void {
   const body = root.getElementById("dp-body");
   const placeholder = root.getElementById("dp-placeholder");
   if (!body || !placeholder) return;
@@ -71,9 +99,9 @@ export function showPackageDetail(root, pkg, resetButtons) {
   const syncedNum = root.getElementById("dp-card-synced-num");
   const missingNum = root.getElementById("dp-card-missing-num");
   const extraNum = root.getElementById("dp-card-extra-num");
-  animateCount(syncedNum, pkg.synced || 0);
-  animateCount(missingNum, pkg.missing || 0);
-  animateCount(extraNum, pkg.extra || 0);
+  animateCount(syncedNum as HTMLElement, pkg.synced || 0);
+  animateCount(missingNum as HTMLElement, pkg.missing || 0);
+  animateCount(extraNum as HTMLElement, pkg.extra || 0);
 
   // MMD 类型：变体聚合显示
   const isMmd = pkg.rtype === "mmd-skin";
@@ -92,7 +120,7 @@ export function showPackageDetail(root, pkg, resetButtons) {
 }
 
 /** 渲染普通的扁平列表（非 MMD 类型） */
-function renderFlatLists(root, pkg) {
+function renderFlatLists(root: ShadowRoot, pkg: PackagePayload): void {
   [
     { id: "dp-detail-synced", items: pkg.items?.synced || [], icon: "✅" },
     { id: "dp-detail-missing", items: pkg.items?.missing || [], icon: "⬇️" },
@@ -117,7 +145,11 @@ function renderFlatLists(root, pkg) {
  * 渲染 MMD 类型的变体聚合列表。
  * 每组的元素显示为可折叠卡片："文件夹名（x 个变体）+ 同步全部按钮"
  */
-function renderMmdVariantLists(root, pkg, variantGroups) {
+function renderMmdVariantLists(
+  root: ShadowRoot,
+  pkg: PackagePayload,
+  variantGroups: NonNullable<PackagePayload["variantGroups"]>,
+): void {
   // 已同步列表保持扁平的逐文件显示（不聚合）
   const syncedEl = root.getElementById("dp-detail-synced");
   if (syncedEl) {
@@ -126,7 +158,7 @@ function renderMmdVariantLists(root, pkg, variantGroups) {
       ? syncedItems
           .map((it) => {
             const display = renderDisplayName(it.displayName || it.name || "");
-            return `<div class="dp-detail-item" title="${esc(it.name)}">✅ ${display}</div>`;
+            return `<div class="dp-detail-item" title="${esc(it.name || "")}">✅ ${display}</div>`;
           })
           .join("")
       : `<div class="dp-detail-empty">无</div>`;
@@ -155,7 +187,7 @@ function renderMmdVariantLists(root, pkg, variantGroups) {
     let html = "";
     groups.forEach((folderPath) => {
       const folderName = folderPath.split(/[/\\]/).pop() || folderPath;
-      const variants = variantGroups.variantMap[folderPath] || [];
+      const variants = variantGroups.variantMap[folderPath]?.items || [];
       const displayFolder = renderDisplayName(folderName);
       html += `<div class="dp-mmd-group" data-folder="${esc(folderPath)}">`;
       html += `<div class="dp-mmd-group-hdr">
@@ -186,14 +218,16 @@ let _mmdEventsRegistered = false;
  * 在 connectedCallback 中调用一次，之后通过事件委托处理所有动态生成的 DOM。
  * 注意：el 是 Shadow DOM 内的容器，通过 root.getElementById 获取。
  */
-export function registerMmdEvents(root) {
+export function registerMmdEvents(root: ShadowRoot): void {
   if (_mmdEventsRegistered) return;
   _mmdEventsRegistered = true;
 
   // 直接监听 root，不依赖子容器是否存在（可能在 connectedCallback 时尚未渲染）
   root.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
     // 折叠头事件
-    const hdr = e.target.closest(".dp-mmd-group-hdr");
+    const hdr = target.closest(".dp-mmd-group-hdr");
     if (hdr) {
       const body = hdr.nextElementSibling;
       if (body) {
@@ -204,7 +238,7 @@ export function registerMmdEvents(root) {
       return;
     }
     // 同步按钮事件
-    const btn = e.target.closest(".dp-mmd-sync-btn");
+    const btn = target.closest(".dp-mmd-sync-btn") as HTMLButtonElement | null;
     if (!btn) return;
     const folderPath = btn.dataset.folder;
     const pkgName = btn.dataset.pkgName;
@@ -212,7 +246,7 @@ export function registerMmdEvents(root) {
     btn.textContent = "⏳ 同步中...";
     btn.disabled = true;
     bus.emit("mmd:sync-variant-folder", {
-      instanceName: pkgName,
+      instanceName: pkgName || "",
       folderPath: folderPath,
       rtype: "mmd-skin",
     });

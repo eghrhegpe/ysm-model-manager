@@ -1,14 +1,21 @@
 // ===== 模型/资源包详情面板 =====
-// 从 index.js 拆分：详情面板渲染逻辑
+// 从 index.ts 拆分：详情面板渲染逻辑
 import { summaryCardHTML } from "../../utils/summarize.ts";
 import { renderFormattedText } from "../../utils/mc-format.ts";
-import { devLog } from "./preview-utils.js";
+import { devLog, type PreviewCtx } from "./preview-utils.ts";
 
-const esc = (s) =>
-  (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s: unknown): string =>
+  (s || "")
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
 /** 显示模型详情（YSM 模型） */
-export async function showModelDetail(ctx, path) {
+export async function showModelDetail(
+  ctx: PreviewCtx,
+  path: string,
+): Promise<void> {
   const savedTab = localStorage.getItem("ysm_previewTab") || "detail";
   ctx._root.innerHTML = `<div class="content" id="preview-content">
   <div class="ysm-tab-row">
@@ -20,20 +27,20 @@ export async function showModelDetail(ctx, path) {
   <div id="preview-skeleton"${savedTab !== "skeleton" ? ' style="display:none"' : ""}></div>
 </div>`;
 
-  const switchTab = (tab) => {
+  const switchTab = (tab: string): void => {
     localStorage.setItem("ysm_previewTab", tab);
     ctx._root.querySelectorAll(".preview-tab").forEach((btn) => {
-      const isActive = btn.dataset.tab === tab;
+      const isActive = (btn as HTMLElement).dataset.tab === tab;
       btn.classList.toggle("ysm-tab-active", isActive);
       btn.classList.toggle("ysm-tab-inactive", !isActive);
     });
     const detail = ctx._root.getElementById("preview-detail");
     const skel = ctx._root.getElementById("preview-skeleton");
-    detail.style.display = tab === "detail" ? "" : "none";
-    skel.style.display = tab === "skeleton" ? "" : "none";
+    if (detail) detail.style.display = tab === "detail" ? "" : "none";
+    if (skel) skel.style.display = tab === "skeleton" ? "" : "none";
   };
   ctx._root.querySelectorAll(".preview-tab").forEach((btn) => {
-    btn.onclick = () => switchTab(btn.dataset.tab);
+    (btn as HTMLElement).onclick = (): void => switchTab((btn as HTMLElement).dataset.tab || "");
   });
 
   const previewSrc = await ctx._loadPreviewImage(path);
@@ -47,22 +54,22 @@ export async function showModelDetail(ctx, path) {
     ]);
     const summary = results[0].status === "fulfilled" ? results[0].value : null;
     const header = results[1].status === "fulfilled" ? results[1].value : null;
-    const basename = path.split("/").pop().split("\\").pop();
+    const basename = path.split(/[/\\]/).pop() || "";
     const hasRealSummary =
-      summary &&
-      (summary.stats?.textures > 0 ||
-        summary.stats?.models > 0 ||
-        summary.stats?.animations > 0 ||
-        summary.stats?.texWidth > 0 ||
-        summary.authors?.length > 0 ||
-        summary.license);
+      !!summary &&
+      ((summary.stats?.textures ?? 0) > 0 ||
+        (summary.stats?.models ?? 0) > 0 ||
+        (summary.stats?.animations ?? 0) > 0 ||
+        (summary.stats?.texWidth ?? 0) > 0 ||
+        (summary.authors?.length ?? 0) > 0 ||
+        !!summary.license);
 
     let cardHTML = "";
     if (hasRealSummary || header) {
       cardHTML = summaryCardHTML(
         hasRealSummary ? summary : null,
         header,
-        basename,
+        basename || "",
       );
     } else {
       throw new Error("无法解析此文件");
@@ -78,7 +85,7 @@ export async function showModelDetail(ctx, path) {
       '<div class="content" id="preview-content"><div id="ysm-author-avatars"></div>',
     );
     const detailDiv = ctx._root.getElementById("preview-detail");
-    detailDiv.innerHTML = cardHTML;
+    if (detailDiv) detailDiv.innerHTML = cardHTML;
 
     // 加载 2D 模型预览（骨架 tab）
     const { loadModel2D } = await import("./preview-skeleton.js");
@@ -86,18 +93,28 @@ export async function showModelDetail(ctx, path) {
   } catch (err) {
     const detailDiv = ctx._root.getElementById("preview-detail");
     if (detailDiv) {
-      detailDiv.innerHTML = `未知错误解析失败: ${err?.message || err}`;
+      detailDiv.innerHTML = `未知错误解析失败: ${err instanceof Error ? err.message : String(err)}`;
     }
   }
 }
 
 /** 显示资源包信息（pack.mcmeta + pack.png） */
-export async function showResourcePack(ctx, path) {
+export async function showResourcePack(
+  ctx: PreviewCtx,
+  path: string,
+): Promise<void> {
   try {
     const { ReadPackMeta } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     const jsonStr = await ReadPackMeta(path);
-    const meta = JSON.parse(jsonStr);
-    const basename = path.split("/").pop().split("\\").pop();
+    const meta = JSON.parse(jsonStr) as {
+      description?: string;
+      thumbnail?: string;
+      pack_format?: number;
+      supported_formats?: number[];
+      min_format?: number | number[];
+      max_format?: number | number[];
+    };
+    const basename = path.split(/[/\\]/).pop() || "";
     const desc = renderFormattedText(meta.description || "");
     const { describeVersionRange } = await import("../../utils/pack-format.ts");
     const rv = describeVersionRange(meta);
@@ -105,25 +122,29 @@ export async function showResourcePack(ctx, path) {
   <h3>🎨 资源包</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${meta.thumbnail ? `<img src="${meta.thumbnail}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:6px;border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:40px;line-height:1">❌</div><div style="font-size:var(--fs-sm);color:var(--muted)">无pack.png</div></div>`}
-    <div><strong>${renderFormattedText(basename)}</strong></div>
+    <div><strong>${renderFormattedText(basename || "")}</strong></div>
     ${desc ? `<div style="color:var(--muted);line-height:1.6">${desc}</div>` : ""}
     <div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ${rv.format}${rv.version ? "（" + rv.version + "）" : ""}</div>
   </div>
 </div>`;
   } catch (e) {
-    ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 资源包</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e.message)}</div></div></div>`;
+    ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 资源包</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e instanceof Error ? e.message : e)}</div></div></div>`;
   }
 }
 
 /** 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 */
-export async function showShaderPack(ctx, path, opts) {
+export async function showShaderPack(
+  ctx: PreviewCtx,
+  path: string,
+  opts?: { icon?: string; label?: string },
+): Promise<void> {
   const icon = (opts && opts.icon) || "☀️";
   const label = (opts && opts.label) || "光影包";
-  const basename = path.split("/").pop().split("\\").pop();
+  const basename = path.split(/[/\\]/).pop() || "";
   ctx._root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    <div><strong>${renderFormattedText(basename)}</strong></div>
+    <div><strong>${renderFormattedText(basename || "")}</strong></div>
   </div>
 </div>`;
 }

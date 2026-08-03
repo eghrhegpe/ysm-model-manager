@@ -1,9 +1,9 @@
 // ===== 2D 骨骼渲染层 =====
 // 加载统一走 loadModelData，本文件只做 2D 骨骼渲染编排
-import { getPrefer3D, setPrefer3D } from "./preview-utils.js";
-import { loadModelData } from "./preview-loader.js";
+import { getPrefer3D, setPrefer3D } from "./preview-utils.ts";
+import { loadModelData } from "./preview-loader.ts";
 import { renderModel2D } from "../../utils/model2d.ts";
-import { openFullPreview } from "./preview-zoom.js";
+import { openFullPreview } from "./preview-zoom.ts";
 
 /**
  * 加载模型 2D 骨骼线条图 + 统计面板
@@ -84,7 +84,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
     container.appendChild(toggleRow);
 
     // ---- 统计卡片 ----
-    const { statsCardHTML } = await import("./tpl.js");
+    const { statsCardHTML } = await import("./tpl.ts");
     const card = document.createElement("div");
     card.className = "ysm-card";
     card.innerHTML = statsCardHTML(model, modelPath, _decodedBy);

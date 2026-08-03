@@ -15,32 +15,32 @@
 > 必须通过 `tests/` 下所有契约测试（测试文件是宪法基石，禁止修改）。
 > 失败熔断：同一命令连续失败 2 次 → 停手进 Plan 分析原因，不无脑重试。
 > 只读 §一 文档地图列出的文件；地图没有的目录 = 不存在（`docs/archive/` 为冻结区，需追溯旧设计时才读）。
-> 新文档先过 `docs/core/NAMING_GUIDELINES.md` 命名检查，再确认归属目录。
+> 新文档先过命名约束检查（`docs/Design.md` §11 + ADR-006），再确认归属目录（见 §一 文档地图）。
 > 预定义 subagent skill 可直接调起（说 skill 名即可）：`release-notes-gen` / `review` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check` / `deep-init`。
 
 ## 去哪里查
 
 | 要做什么 | 去哪里 |
 |----------|--------|
-| 查当前决策 + 坑点 | `grep docs/adr/` + `bug-chronicle.md`（先 grep 再读，1369 行禁止全量）；按状态浏览用 `docs/adr/index.md`（规范索引，自动生成） |
+| 查当前决策 + 坑点 | `grep docs/adr/` + `docs/archive/bug-chronicle.md`（先 grep 再读，禁止全量）；按状态浏览用 `docs/adr/index.md`（规范索引，自动生成） |
 | 查 ADR 登记一致性 / 占号 | `node scripts/adr-check.mjs`（撞号/漏登/幽灵/跳号） |
 | 查 AI 高频犯错区（反哺陷阱清单） | `node scripts/ai-mistake-tracker.mjs`（fix 分类统计 / 连续修复链 / 文件热力图 / 规则违反扫描） |
-| 查/更新项目状态 | `docs/architecture/PROJECT_STATUS.md`（含治理速览 + 进行中 ADR 清单） |
+| 查项目状态（历史） | `docs/archive/PROJECT_STATUS.md`（已冻结只读；实时状态以 ADR 登记表 + git 为准） |
 | 查某模块「现在长啥样、去哪找」 | `docs/knowledge/`（先读 `routes.md` 路由表 + `index.md` 索引，grep 卡正文锁定符号，按 `source_files` 跳源码） |
 | 查/更新函数索引 | `node scripts/funcmap.mjs -o funcmap.md`（符号带 文件:行） |
 | 批量重构代码（重命名/移函数/加参数） | `node scripts/codemod.mjs help`（AST 感知，ts-morph；move-function 不重写外部引用方，改后跑 tsc） |
 | 校验文档漂移 | `node scripts/link-checker.mjs`（断链）+ `check-knowledge-drift.mjs`（知识卡）+ `adr-check.mjs`（ADR 登记） |
-| 查项目技术 | `docs/architecture/architecture.md` |
-| 写 UI 文案 / 变量名 | `docs/core/TERMINOLOGY.md`（末尾有 AI 缩写版） |
-| 加菜单 / 按钮 / 组件 | `frontend/js/app-modules.js`（组件入口）+ `docs/Design.md`（唯一设计规范） |
+| 查项目技术（历史） | `docs/archive/architecture.md`（已冻结；当前架构以 ADR + 源码为准） |
+| 写 UI 文案 / 变量名 | `docs/Design.md`（设计规范；UI 文案与代码字段保持一致） |
+| 加菜单 / 按钮 / 组件 | `frontend/js/app-modules.ts`（组件入口）+ `docs/Design.md`（唯一设计规范） |
 | 改前端子模块 | `docs/Design.md`（设计规范）+ ADR-015（动画系统）/ ADR-016（UI 体验）/ ADR-017（增强待办） |
-| 改 Go 后端 | `internal/app/`（Wails Binding 入口）+ `docs/architecture/architecture.md`（逻辑下沉优先 `go/` 包） |
-| 修 Bug 查历史 | 说 "bug-search <关键词>" 查 `bug-chronicle.md` |
+| 改 Go 后端 | `internal/app/`（Wails Binding 入口）+ `docs/archive/architecture.md`（逻辑下沉优先 `go/` 包） |
+| 修 Bug 查历史 | 说 "bug-search <关键词>" 查 `docs/archive/bug-chronicle.md` |
 | 查资源类型一致性 | 说 "type-consistency"（resource_types.json ↔ extensions.js） |
 | 查事件注册位置 | 说 "event-audit"（EventsOn/bus.on） |
 | 查函数签名 | `node scripts/funcmap.mjs` 或 grep |
 | 写大语言模型小说 | `docs/novel/SKELETON.md` + `development-saga.md` |
-| 完整发版、更新流程 | `docs/release-notes/README.md` + `cmd/build-release.ps1` |
+| 完整发版、更新流程 | `docs/releases/README.md` + `cmd/build-release.ps1` |
 | 跑全部检查 | §二 检查指令速查 或 `node scripts/doctor.mjs` |
 
 ## 知识库检索协议
@@ -50,19 +50,19 @@
 1. 先判断用户意图与所属模块；可先查 `docs/knowledge/routes.md`。
 2. 阅读 `docs/knowledge/index.md` 枢纽索引，定位相关知识卡，再按卡片的 `source_files` 跳转源码。
 3. 用 `docs/adr/README.md` 登记表 + `docs/adr/index.md` 规范索引（状态分组，自动生成）+ `grep docs/adr/` 查找相关决策、状态和历史坑点；ADR 是决策真相源。
-4. **修 bug 或排查问题时**：先 `grep` `docs/architecture/bug-chronicle.md` 关键词，再读匹配段落（1369 行，禁止全量）。
+4. **修 bug 或排查问题时**：先 `grep` `docs/archive/bug-chronicle.md` 关键词，再读匹配段落（禁止全量）。
 5. 以当前源码为最终事实来源，核对知识卡中的 API、依赖、不变量和资源生命周期。
 6. 修改后运行最小相关检查（契约测试 / link-checker / type-consistency 按域选择）。
 7. 文档变更后运行 `node scripts/link-checker.mjs`；ADR 变更后运行 `node scripts/adr-check.mjs`；函数签名变化后重跑 `funcmap.mjs`。
 
-知识来源优先级：当前源码 > `docs/adr/` > `docs/knowledge/` > `docs/architecture/architecture.md`。
+知识来源优先级：当前源码 > `docs/adr/` > `docs/knowledge/` > `docs/archive/architecture.md`（历史）。
 若知识卡与源码不一致，报告文档漂移并以源码为准，不得静默假定卡片正确。
 
 ## ADR 规则
 
 > 编号取 `docs/adr/` 最大号 +1（三位，如 ADR-014），文件名 `ADR-NNN-kebab-case.md`。
 > **写文件前先在 `adr/README.md` 登记表占号**（防多会话并行撞号——2026-08-03 曾 009/010/012 三次撞号）。
-> 状态值：`✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代`；状态变更同步更新登记表 + PROJECT_STATUS。
+> 状态值：`✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代`；状态变更同步更新登记表。
 > 新 ADR 落地时检查是否触及既有 ADR 决策；触及就在对方首部标注「被 [ADR-NNN] 取代」。
 
 ## 技术栈
@@ -205,17 +205,14 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 
 | 目录 | 用途 |
 |------|------|
-| `docs/core/` | ✅ 核心规范（术语、治理规则、命名规范） |
-| `docs/adr/` | 📐 架构决策记录（ADR-001~014，决策真相源，写前先占号；登记表 `adr/README.md` + 规范索引 `adr/index.md` 自动生成） |
-| `docs/architecture/` | 🏗️ 架构 + 项目元信息（架构、现状、路线图、Bug 记录、逻辑下沉） |
-| `docs/guide/` | 📖 用户向文档（用户指南、项目意义，网站化储备） |
+| `docs/` | 🏠 主站入口 `index.md`（功能一览 + 站点地图）+ 设计规范 `Design.md`（唯一设计规范）+ 函数索引 `funcmap.md`（自动生成） |
+| `docs/adr/` | 📐 架构决策记录（ADR-001~017，决策真相源，写前先占号；登记表 `adr/README.md` + 规范索引 `adr/index.md` 自动生成） |
+| `docs/guide/` | 📖 用户向文档（19 篇：安装/配置/仓库/导入/同步/FAQ/备份迁移/下载队列/快捷键…，网站化储备） |
 | `docs/knowledge/` | 🧠 模块知识卡（bus / Wails 桥接 / Go 包）— 索引自动生成于 `knowledge/index.md` |
-| `docs/tasks/` | 📋 任务管理（任务清单、会话交接、每日计划） |
-| `docs/3D/` | 🎮 3D 渲染（攻关计划、开发报告） |
-| `docs/release-notes/` | 📦 版本发布说明（按 vX.Y.Z.md 命名，索引见 `release-notes/README.md`） |
-| `docs/tactics/` | 🎯 产品愿景 |
+| `docs/releases/` | 📦 版本发布说明（按 vX.Y.Z.md 命名，索引见 `releases/README.md`） |
+| `docs/app/` | 🖥️ 网页版入口占位（未来 Web 版） |
 | `docs/novel/` | 📖 衍生小说（与项目开发无关） |
-| `docs/archive/` | 🧊 冻结区（历史归档，需追溯旧设计时才读） |
+| `docs/archive/` | 🧊 冻结区（历史归档：architecture / bug-chronicle / PROJECT_STATUS / 3D / tasks / sessions…，需追溯旧设计时才读） |
 | `docs/preview/` | 🖼️ UI 截图 |
 | `tests/` | 🔒 契约测试（Node .mjs）— 禁止修改，必须通过 |
 | `scripts/` | Node 工具脚本（治理/静态分析/生成器），含 `scripts/baseline/` 基线文件（`check-deadcode-baseline` / `check-doc-drift` 使用），被 `.agents/skills/` 调用 |
@@ -309,7 +306,7 @@ const { SomeBinding } = window.go.main.App;
 - 所有异常路径必须有 toast 反馈
 - 所有 UI 文件名必须走 `renderDisplayName()`
 
-> 完整 9 条规则 + 自动检测命令见 `docs/core/CLEANUP_RULES.md`。
+> 完整 9 条规则 + 决策理由见 `docs/adr/ADR-005-frontend-governance-rules.md`（原 `docs/core/CLEANUP_RULES.md` 已并入 ADR-005，2026-08-03 删除）。
 
 ---
 
@@ -333,15 +330,15 @@ main.go        — 程序入口（薄壳）
 ```
 frontend/js/
   bus.ts                 — 事件总线
-  app-modules.js         — 组件入口 + 右键菜单映射
-  components/            — Web Components (app-tree/sidebar/preview/content/nav)
+  app-modules.ts         — 组件入口 + 右键菜单映射
+  components/            — Web Components（app-content[含 community/diagnostics/settings]/app-preview/app-tree/app-sidebar/app-resource-manager/app-sync-manager/app-nav/app-toast/context-menu）
   features/              — 业务功能 (import-queue/recycle-bin/version-updater/community)
   dialogs/               — 弹窗 (modal/rename/batch-rename/tag-editor)
-  pages/                 — 页面渲染 (repository)
   core/                  — 基础设施 (buttons/global-handlers/theme/context-menus)
   utils/                 — 工具函数 (display/fmt/dom/icon/summarize/model3d)
   services/registry.ts   — 服务注册
   wails/                 — Wails 桥接 (app.ts)
+  wasm/                  — WASM 生成数据（base64 豁免文件）
 ```
 
 ### 4.3 组件拆分规范
@@ -369,4 +366,4 @@ app-xxx/xxx-css.js   — Shadow DOM 样式
 - **路径分隔符**：统一正斜杠 `/`
 - **调试日志用完即删**：`console.log` / `fmt.Print` 测试完后**必须请示用户确认**再删，不可自行决定
 - **禁止安装软件**：缺依赖提示用户手动装
-- **发版**：用 `wails build -clean`，流程见 `docs/release-notes/README.md`
+- **发版**：用 `wails build -clean`，流程见 `docs/releases/README.md`

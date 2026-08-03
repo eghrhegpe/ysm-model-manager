@@ -63,7 +63,7 @@ YSM 文件 → [解码层] → BedrockModel JSON → [Go spec 层] → Three.js 
 **问题**：ZIP 中的头像/预览小图（32×32 arrow.png）被当作 `texArr[0]`，身体渲染为马赛克。
 
 **修复**：
-- `preview-wasm.js`：仅使用 `ysmTexOrder` 显式声明的纹理（移除了 `Object.keys(textures)` 追加逻辑）
+- `preview-wasm.ts`：仅使用 `ysmTexOrder` 显式声明的纹理（移除了 `Object.keys(textures)` 追加逻辑）
 - `archive.go`：跳过 `avatar/` 目录下的 PNG
 
 ### 2.5 透明度遮挡（bug #15）
@@ -121,7 +121,7 @@ YSM 文件 → [解码层] → BedrockModel JSON → [Go spec 层] → Three.js 
 | `frontend/js/utils/model3d.ts` | Three.js 3D 渲染（场景/相机/光照/网格） | ~464 |
 | `frontend/js/utils/model3d-spec.ts` | JS 兜底 Spec 构建（死代码，格式不兼容） | ~255 |
 | `frontend/js/utils/model2d.ts` | Canvas 2D 骨骼线条图 | ~556 |
-| `frontend/js/components/app-preview/preview-wasm.js` | WASM 解码 + ysm.json 解析 + 纹理排序 | ~513 |
+| `frontend/js/components/app-preview/preview-wasm.ts` | WASM 解码 + ysm.json 解析 + 纹理排序 | ~513 |
 | `app_model.go` | Wails Binding 入口 + CLI fallback | ~237 |
 
 ---

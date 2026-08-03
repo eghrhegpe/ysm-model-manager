@@ -9,7 +9,7 @@
  *                 撞号 / 漏登 / 幽灵文件 / 编号跳号（ERROR 阻断）
  *   [知识卡维度]  docs/knowledge/ 卡 frontmatter / source_files / 索引断链
  *                 必填字段缺失 / 占位符 / 引用不存在（ERROR 阻断）
- *   [架构树维度]  docs/architecture/architecture.md 反引号代码路径引用
+ *   [架构树维度]  docs/archive/architecture.md 反引号代码路径引用
  *                 指向磁盘不存在的文件（ERROR 阻断）
  *                 实际源码树（frontend/js/ + go/ + internal/）中未在
  *                 architecture.md 登记的子模块（INFO 基线管理，--fix 刷新）
@@ -30,7 +30,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const ADR_DIR = path.join(ROOT, 'docs/adr');
 const KC_DIR = path.join(ROOT, 'docs/knowledge');
-const ARCH_DOCS = ['docs/architecture/architecture.md', 'docs/3D/3D-RENDERING-PLAN.md', 'docs/3D/3d-rendering-report.md'];
+const ARCH_DOCS = ['docs/archive/architecture.md', 'docs/archive/3D/3D-RENDERING-PLAN.md', 'docs/archive/3D/3d-rendering-report.md'];
 const BASELINE_FILE = path.join(ROOT, 'scripts/baseline/doc-drift-baseline.json');
 
 const JSON_OUT = process.argv.includes('--json');

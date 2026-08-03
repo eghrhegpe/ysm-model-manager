@@ -82,7 +82,7 @@
 | `test_workshop_schema.py` | workshop_sites.json 结构校验 |
 | `test_creators_schema.py` | creators.json 必填字段校验 |
 | `test_config_defaults.py` | AppConfig 字段类型/值域校验 |
-| `test_config_syntax.py` | wails.json + go.mod + reasonix.toml 语法校验 |
+| `test_config_syntax.py` | wails.json + go.mod 语法校验（reasonix.toml 为本地 AI 终端配置，不入库不校验） |
 | `test_html_integrity.py` | frontend/index.html 引用完整性校验 |
 
 脚本分组（`scripts/`）：

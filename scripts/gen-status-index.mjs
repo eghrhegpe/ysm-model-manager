@@ -15,7 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ADR_DIR = path.join(ROOT, 'docs', 'architecture', 'adr');
+const ADR_DIR = path.join(ROOT, 'docs', 'adr');
 const STATUS_FILE = path.join(ROOT, 'docs', 'architecture', 'PROJECT_STATUS.md');
 const GEN_NAME = 'active-adr';
 const CHECK = process.argv.includes('--check');
@@ -116,7 +116,7 @@ function replaceGenRegion(text, name, content) {
 
 function main() {
   if (!fs.existsSync(ADR_DIR)) {
-    console.error('[FAIL] docs/architecture/adr/ 目录不存在');
+    console.error('[FAIL] docs/adr/ 目录不存在');
     return 1;
   }
   const list = parseAdrs();

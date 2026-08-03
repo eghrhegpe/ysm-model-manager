@@ -1,4 +1,4 @@
-> **重定向**：治理规则的决策理由已提炼至 **[ADR-005: 前端治理规则体系](../architecture/adr/ADR-005-frontend-governance-rules.md)**。
+> **重定向**：治理规则的决策理由已提炼至 **[ADR-005: 前端治理规则体系](../adr/ADR-005-frontend-governance-rules.md)**。
 > 本文档保留检测命令速查表，供 CI 配置和手动检查使用。
 
 # 治理规则清单

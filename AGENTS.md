@@ -7,7 +7,7 @@
 
 > 500 行文件先 grep 定位再读。
 > 按需读取 `docs/knowledge/routes.md`（AI 路由表）+ `docs/knowledge/index.md`（枢纽索引，自动生成）+ grep 卡正文定位功能作用，充实上下文。
-> Grep `docs/architecture/adr/` 状态（`adr-check.mjs` 校验登记一致性），看是否已有类似实现；**写新 ADR 前先占号**（`docs/architecture/adr/README.md` 登记表）。
+> Grep `docs/adr/` 状态（`adr-check.mjs` 校验登记一致性），看是否已有类似实现；**写新 ADR 前先占号**（`docs/adr/README.md` 登记表）。
 > 编号只允许给 ADR、novel 写。
 > 信任本机改动，提交代码：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。会有 GitHub PR review 审核，别怕错误。
 > 放弃低效的 `git stash` / `git stash push` / `git stash pop` 指令。
@@ -22,7 +22,7 @@
 
 | 要做什么 | 去哪里 |
 |----------|--------|
-| 查当前决策 + 坑点 | `grep docs/architecture/adr/` + `bug-chronicle.md`（先 grep 再读，1369 行禁止全量） |
+| 查当前决策 + 坑点 | `grep docs/adr/` + `bug-chronicle.md`（先 grep 再读，1369 行禁止全量） |
 | 查 ADR 登记一致性 / 占号 | `node scripts/adr-check.mjs`（撞号/漏登/幽灵/跳号） |
 | 查/更新项目状态 | `docs/architecture/PROJECT_STATUS.md`（含治理速览 + 进行中 ADR 清单） |
 | 查某模块「现在长啥样、去哪找」 | `docs/knowledge/`（先读 `routes.md` 路由表 + `index.md` 索引，grep 卡正文锁定符号，按 `source_files` 跳源码） |
@@ -47,18 +47,18 @@
 
 1. 先判断用户意图与所属模块；可先查 `docs/knowledge/routes.md`。
 2. 阅读 `docs/knowledge/index.md` 枢纽索引，定位相关知识卡，再按卡片的 `source_files` 跳转源码。
-3. 用 `docs/architecture/adr/README.md` 登记表 + `grep docs/architecture/adr/` 查找相关决策、状态和历史坑点；ADR 是决策真相源。
+3. 用 `docs/adr/README.md` 登记表 + `grep docs/adr/` 查找相关决策、状态和历史坑点；ADR 是决策真相源。
 4. **修 bug 或排查问题时**：先 `grep` `docs/architecture/bug-chronicle.md` 关键词，再读匹配段落（1369 行，禁止全量）。
 5. 以当前源码为最终事实来源，核对知识卡中的 API、依赖、不变量和资源生命周期。
 6. 修改后运行最小相关检查（契约测试 / link-checker / type-consistency 按域选择）。
 7. 文档变更后运行 `node scripts/link-checker.mjs`；ADR 变更后运行 `node scripts/adr-check.mjs`；函数签名变化后重跑 `funcmap.mjs`。
 
-知识来源优先级：当前源码 > `docs/architecture/adr/` > `docs/knowledge/` > `docs/architecture/architecture.md`。
+知识来源优先级：当前源码 > `docs/adr/` > `docs/knowledge/` > `docs/architecture/architecture.md`。
 若知识卡与源码不一致，报告文档漂移并以源码为准，不得静默假定卡片正确。
 
 ## ADR 规则
 
-> 编号取 `docs/architecture/adr/` 最大号 +1（三位，如 ADR-014），文件名 `ADR-NNN-kebab-case.md`。
+> 编号取 `docs/adr/` 最大号 +1（三位，如 ADR-014），文件名 `ADR-NNN-kebab-case.md`。
 > **写文件前先在 `adr/README.md` 登记表占号**（防多会话并行撞号——2026-08-03 曾 009/010/012 三次撞号）。
 > 状态值：`✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代`；状态变更同步更新登记表 + PROJECT_STATUS。
 > 新 ADR 落地时检查是否触及既有 ADR 决策；触及就在对方首部标注「被 [ADR-NNN] 取代」。
@@ -243,7 +243,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 注释质量 | `node scripts/comment-checker.mjs` | AI 废话/TODO 无编号/调试残留 |
 | 绑定一致性 | `node scripts/binding-check.mjs` | Go 导出函数 ↔ wailsjs |
 | 函数映射 | `node scripts/funcmap.mjs -o funcmap.md` | 注释 → 函数表（改签名后重跑） |
-| 文档三一致 | `node scripts/check-doc-drift.mjs` | ADR 登记 + 知识卡 + 架构树引用（ERROR 阻断；`--fix` 刷新架构树基线） |
+| 文档三一致 | `node scripts/check-doc-drift.mjs` | ADR 登记 + 知识卡 + 架构树引用 + AGENTS.md §4.2 树 vs 磁盘（ERROR 阻断；`--fix` 刷新架构树基线） |
 | ADR 健康 | `node scripts/check-adr-health.mjs` | ADR 状态机值域 / 登记表同步 / 技术债清单（`--debt`） |
 | 死代码基线 | `node scripts/check-deadcode-baseline.mjs` | knip+jscpd 与基线对比，新增项阻断（`--update-baseline` 刷新） |
 | 符号消费者 | `node scripts/check-consumers.mjs` | 孤儿导出审计（`--strict` 阻断 / `--min-consumers N` 过滤） |

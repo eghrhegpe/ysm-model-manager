@@ -4,7 +4,7 @@
  *
  * 零依赖（仅 node:fs / node:path / node:url / node:child_process）。
  * 只重写各文件 `<!-- GEN: xxx -->` 标记区，人工段落原样保留：
- *   - adr      → docs/architecture/adr/README.md 的 adr-registry（登记表）+ adr-stats（状态统计）
+ *   - adr      → docs/adr/README.md 的 adr-registry（登记表）+ adr-stats（状态统计）
  *   - releases → docs/release-notes/README.md 的 releases-index（最近版本 + 版本全览）
  *   - knowledge→ 委托 gen-knowledge-index.mjs --check（不重写，避免双生成器打架）
  * 单一事实来源 = ADR 文件首部；状态映射与 gen-status-index.mjs 保持一致。
@@ -22,7 +22,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ADR_DIR = path.join(ROOT, 'docs', 'architecture', 'adr');
+const ADR_DIR = path.join(ROOT, 'docs', 'adr');
 const ADR_REG_FILE = path.join(ADR_DIR, 'README.md');
 const RELEASE_DIR = path.join(ROOT, 'docs', 'release-notes');
 const RELEASE_FILE = path.join(RELEASE_DIR, 'README.md');
@@ -218,7 +218,7 @@ function main() {
 
   if (RUN_ADR) {
     if (!fs.existsSync(ADR_DIR)) {
-      console.error('[FAIL] docs/architecture/adr/ 目录不存在');
+      console.error('[FAIL] docs/adr/ 目录不存在');
       failed = true;
     } else {
       const list = parseAdrs();

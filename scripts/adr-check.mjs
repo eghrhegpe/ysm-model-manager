@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ADR 登记一致性检查（占号防撞机制落地）。
- * 校验 docs/architecture/adr/ 目录文件 vs adr/README.md 登记表：
+ * 校验 docs/adr/ 目录文件 vs adr/README.md 登记表：
  *   - 文件编号唯一（无撞号）
  *   - 登记表覆盖全部文件（无漏登）
  *   - 文件都在登记表（无幽灵文件）
@@ -13,7 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ADR_DIR = path.join(ROOT, 'docs/architecture/adr');
+const ADR_DIR = path.join(ROOT, 'docs/adr');
 const REG_FILE = path.join(ADR_DIR, 'README.md');
 
 const args = process.argv.slice(2);
@@ -23,7 +23,7 @@ const errors = [];
 
 // 1. 扫描目录文件
 if (!fs.existsSync(ADR_DIR)) {
-  errors.push('MISSING: docs/architecture/adr/ 目录不存在');
+  errors.push('MISSING: docs/adr/ 目录不存在');
   finish();
 }
 

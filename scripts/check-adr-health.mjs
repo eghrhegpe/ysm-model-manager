@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const ADR_DIR = path.join(ROOT, 'docs/architecture/adr');
+const ADR_DIR = path.join(ROOT, 'docs/adr');
 const REG_FILE = path.join(ADR_DIR, 'README.md');
 
 const ARGS = new Set(process.argv.slice(2));
@@ -86,7 +86,7 @@ function extractDebt(adr, title, raw) {
 
 function checkStatus() {
   if (!fs.existsSync(ADR_DIR)) {
-    errors.push('[状态机] docs/architecture/adr/ 目录不存在');
+    errors.push('[状态机] docs/adr/ 目录不存在');
     return [];
   }
   const files = fs.readdirSync(ADR_DIR).filter((f) => /^ADR-\d{3}-.*\.md$/.test(f)).sort();

@@ -107,6 +107,6 @@
 
 - 根目录：[AGENTS.md](../../AGENTS.md) — AI 协作规则 + 痛苦教训
 - 知识卡索引：[knowledge/index.md](../knowledge/index.md) — AI 索引（后端绑定 + 事件总线 + 组件清单，自动生成）
-- ADR 索引：[adr/README.md](adr/README.md) — 架构决策记录登记表（写 ADR 前先占号）
+- ADR 索引：[adr/README.md](../adr/README.md) — 架构决策记录登记表（写 ADR 前先占号）
 - 前端入口：[frontend/js/app-modules.js](../../frontend/js/app-modules.js)
 - Go 入口：[internal/app/](../../internal/app/) — Wails Binding 目录（app.go 已下沉于此）

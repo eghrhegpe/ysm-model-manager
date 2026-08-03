@@ -10,8 +10,11 @@
  *   4. 自动运行 adr-check 验证对账
  *
  * 用法：
- *   node scripts/new-adr.mjs "标题" [--slug kebab-name] [--related 关联内容]
+ *   node scripts/new-adr.mjs "标题" [--slug kebab-name] [--related 关联内容] [--supersedes ADR-0XX,...]
  *   node scripts/new-adr.mjs "标题" --dry-run        # 只算号不写文件
+ *
+ * --supersedes：新 ADR 取代既有 ADR 时，自动在对方首部加「被 [ADR-NNN] 取代」标注
+ *               （呼应 AGENTS.md ADR 规则「触及就在对方首部标注」）。
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,14 +28,20 @@ const REG_FILE = path.join(ADR_DIR, 'README.md');
 // ── 参数解析 ────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const args = { title: null, slug: null, related: null, dryRun: false };
+  const args = { title: null, slug: null, related: null, supersedes: [], dryRun: false };
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry-run') args.dryRun = true;
     else if (a === '--slug') args.slug = argv[++i] ?? null;
     else if (a === '--related') args.related = argv[++i] ?? null;
-    else positional.push(a);
+    else if (a === '--supersedes') {
+      const v = argv[++i] ?? '';
+      args.supersedes = v
+        .split(/[，,]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else positional.push(a);
   }
   args.title = positional[0] ?? null;
   return args;
@@ -40,10 +49,11 @@ function parseArgs(argv) {
 
 function usage() {
   console.error(
-    '用法: node scripts/new-adr.mjs "标题" [--slug kebab-name] [--related 关联内容] [--dry-run]\n' +
-      '  --slug     文件名 kebab-case（缺省从标题提取 ASCII，无 ASCII 则必填）\n' +
-      '  --related  相关文档/代码位置（写入模板「相关」行）\n' +
-      '  --dry-run  只计算并打印新编号，不写任何文件'
+    '用法: node scripts/new-adr.mjs "标题" [--slug kebab-name] [--related 关联内容] [--supersedes ADR-0XX,...] [--dry-run]\n' +
+      '  --slug        文件名 kebab-case（缺省从标题提取 ASCII，无 ASCII 则必填）\n' +
+      '  --related     相关文档/代码位置（写入模板「相关」行）\n' +
+      '  --supersedes  被本 ADR 取代的既有 ADR（逗号分隔，自动在对方首部加「被 [ADR-NNN] 取代」标注）\n' +
+      '  --dry-run     只计算并打印新编号，不写任何文件'
   );
 }
 
@@ -91,7 +101,7 @@ function today() {
 
 function buildTemplate(num, title, slug, related) {
   const n = pad(num);
-  const rel = related ? `**相关**：\`${related}\`` : '**相关**：待补（`docs/architecture/adr/` / 关联代码路径）';
+  const rel = related ? `**相关**：\`${related}\`` : '**相关**：待补（`docs/adr/` / 关联代码路径）';
   return `# ADR-${n}：${title}
 
 - **状态**：已采纳（Accepted）
@@ -132,6 +142,46 @@ function registerLine(regText, num, title) {
   const last = matches[matches.length - 1];
   const idx = last.index + last[0].length;
   return regText.slice(0, idx) + '\n' + newLine + regText.slice(idx);
+}
+
+// ── 被取代标注（AGENTS.md ADR 规则）───────────────────
+// 新 ADR（supersedingNum）取代既有 ADR：在对方首部状态行下加「被 [ADR-NNN] 取代」。
+// 幂等：对方已有「被取代」标注则跳过。
+
+function annotateSuperseded(targetRefs, supersedingNum) {
+  let ok = true;
+  for (const ref of targetRefs) {
+    const m = String(ref).match(/(\d{1,3})/);
+    if (!m) {
+      console.error(`[FAIL] --supersedes 无法解析「${ref}」，需形如 ADR-012 或 012`);
+      ok = false;
+      continue;
+    }
+    const tNum = parseInt(m[1], 10);
+    const fname = fs.readdirSync(ADR_DIR).find((f) => new RegExp(`^ADR-${pad(tNum)}-`).test(f));
+    if (!fname) {
+      console.error(`[FAIL] 未找到 ADR-${pad(tNum)} 文件`);
+      ok = false;
+      continue;
+    }
+    const fp = path.join(ADR_DIR, fname);
+    let text = fs.readFileSync(fp, 'utf8');
+    if (/^-\s*\*\*被取代\*\*/m.test(text)) {
+      console.log(`[SKIP] ADR-${pad(tNum)} 已有「被取代」标注`);
+      continue;
+    }
+    const statusM = text.match(/^(-\s*\*\*状态\*\*[：:][^\n]*)$/m);
+    if (!statusM) {
+      console.error(`[FAIL] ADR-${pad(tNum)} 缺少状态行，无法插入标注`);
+      ok = false;
+      continue;
+    }
+    const idx = statusM.index + statusM[0].length;
+    text = text.slice(0, idx) + `\n- **被取代**：[ADR-${pad(supersedingNum)}] 取代` + text.slice(idx);
+    fs.writeFileSync(fp, text, 'utf8');
+    console.log(`[OK] ADR-${pad(tNum)} 首部已标注「被 [ADR-${pad(supersedingNum)}] 取代」`);
+  }
+  return ok;
 }
 
 // ── 主流程 ──────────────────────────────────────────────
@@ -179,6 +229,15 @@ function main() {
   }
   fs.writeFileSync(REG_FILE, next, 'utf8');
   console.log('[OK] 已登记占号 adr/README.md');
+
+  // 2.5 被取代标注
+  if (args.supersedes.length) {
+    if (!annotateSuperseded(args.supersedes, num)) {
+      console.error('[FAIL] 被取代标注处理失败，请检查 --supersedes 参数');
+      return 1;
+    }
+    console.log('[提示] 被取代的 ADR 状态如需同步为「❌ 已取代」，请编辑对应文件首部后跑 gen-docs-index.mjs');
+  }
 
   // 3. 自动对账
   const res = spawnSync(process.execPath, [path.join('scripts', 'adr-check.mjs')], {

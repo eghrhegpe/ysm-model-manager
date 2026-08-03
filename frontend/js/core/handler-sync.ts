@@ -1,104 +1,115 @@
-// ===== 同步相关：导入缺失 / 同步启用状态 =====
+// ===== 同步相关：导入缺失 / 同步启用状态（类型化版 — ADR-014 P3）=====
 import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { dbg } from "../utils/debug.ts";
 
-export function registerSync(unsubs) {
+/** 注册同步 handler，push 返回的取消订阅函数到 unsubs */
+export function registerSync(unsubs: Array<() => void>): void {
   // 导入仓库模型到整合包
   unsubs.push(
-    bus.on("sync:download:missing", async ({ instanceName, rtype } = {}) => {
-      dbg("sync", "download-missing", instanceName || "all", "rtype:", rtype);
-      try {
-        const {
-          LoadAppConfig,
-          ListVersionInstances,
-          GetResourceInstanceStatus,
-          InstallModelTo,
-          InstallResourceToInstance,
-          GetRepoRoot,
-        } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
-        const cfg = await LoadAppConfig();
-        const mcRoot = cfg.mcRoot || "";
-        if (!mcRoot) {
-          bus.emit("toast:show", {
-            msg: "请先配置游戏目录",
-            duration: 3000,
-            type: "warn",
-          });
-          return;
-        }
-        const instances = await ListVersionInstances(mcRoot);
-        let totalOk = 0,
-          totalFail = 0;
+    bus.on(
+      "sync:download:missing",
+      async ({ instanceName, rtype }) => {
+        dbg("sync", "download-missing", instanceName || "all", "rtype:", rtype);
+        try {
+          const {
+            LoadAppConfig,
+            ListVersionInstances,
+            GetResourceInstanceStatus,
+            InstallModelTo,
+            InstallResourceToInstance,
+            GetRepoRoot,
+          } = await import(
+            "../../bindings/ysm-model-manager/internal/app/app.js"
+          );
+          const cfg = await LoadAppConfig();
+          const mcRoot = cfg.mcRoot || "";
+          if (!mcRoot) {
+            bus.emit("toast:show", {
+              msg: "请先配置游戏目录",
+              duration: 3000,
+              type: "warn",
+            });
+            return;
+          }
+          const instances = (await ListVersionInstances(mcRoot)) ?? [];
+          let totalOk = 0;
+          let totalFail = 0;
 
-        const rtypeActual = rtype || "ysm";
-        const repoRoot = await GetRepoRoot(rtypeActual);
-        if (!repoRoot) {
-          bus.emit("toast:show", {
-            msg: "请先配置该资源类型目录",
-            duration: 3000,
-            type: "warn",
-          });
-          return;
-        }
+          const rtypeActual = rtype || "ysm";
+          const repoRoot = await GetRepoRoot(rtypeActual);
+          if (!repoRoot) {
+            bus.emit("toast:show", {
+              msg: "请先配置该资源类型目录",
+              duration: 3000,
+              type: "warn",
+            });
+            return;
+          }
 
-        const targets = instanceName
-          ? instances.filter((i) => i.Name === instanceName)
-          : instances;
-        // 提前获取一次状态列表（避免循环内重复调用）
-        const allStatuses = await GetResourceInstanceStatus(
-          rtypeActual,
-          mcRoot,
-          repoRoot,
-        );
-        for (const ins of targets) {
-          const st = (allStatuses || []).find((s) => s.Name === ins.Name);
-          if (!st?.Missing?.length) continue;
-          for (const srcPath of st.Missing) {
-            try {
-              if (rtypeActual === "ysm") {
-                await InstallModelTo(srcPath, ins.CustomDir);
-              } else {
-                await InstallResourceToInstance(rtypeActual, srcPath, ins.Name);
+          const targets = instanceName
+            ? instances.filter((i) => i.Name === instanceName)
+            : instances;
+          // 提前获取一次状态列表（避免循环内重复调用）
+          const allStatuses = await GetResourceInstanceStatus(
+            rtypeActual,
+            mcRoot,
+            repoRoot,
+          );
+          for (const ins of targets) {
+            const st = (allStatuses || []).find((s) => s.Name === ins.Name);
+            if (!st?.Missing?.length) continue;
+            for (const srcPath of st.Missing) {
+              try {
+                if (rtypeActual === "ysm") {
+                  await InstallModelTo(srcPath, ins.CustomDir);
+                } else {
+                  await InstallResourceToInstance(
+                    rtypeActual,
+                    srcPath,
+                    ins.Name,
+                  );
+                }
+                totalOk++;
+              } catch {
+                totalFail++;
               }
-              totalOk++;
-            } catch {
-              totalFail++;
             }
           }
+          // 强制刷新扫描缓存
+          try {
+            const { InvalidateScanCache } = await import(
+              "../../bindings/ysm-model-manager/internal/app/app.js"
+            );
+            await InvalidateScanCache();
+          } catch {}
+          dbg(
+            "sync",
+            "同步完成, 发出 stats:refresh, 成功:",
+            totalOk,
+            "失败:",
+            totalFail,
+          );
+          bus.emit("stats:refresh");
+          bus.emit("toast:show", {
+            msg: instanceName
+              ? `📥 ${instanceName}: 导入 ${totalOk} 成功, ${totalFail} 失败`
+              : `📥 全部导入完成: ${totalOk} 成功, ${totalFail} 失败`,
+            duration: 4000,
+            type: totalFail > 0 ? "warn" : "success",
+          });
+        } catch (e) {
+          bus.emit("toast:show", {
+            msg: `❌ ${friendlyError(e)}`,
+            duration: 5000,
+            type: "error",
+          });
+        } finally {
+          bus.emit("sync:download:done");
+          bus.emit("tree:reload");
         }
-        // 强制刷新扫描缓存
-        try {
-          const { InvalidateScanCache } =
-            await import("../../bindings/ysm-model-manager/internal/app/app.js");
-          await InvalidateScanCache();
-        } catch {}
-        dbg(
-          "sync",
-          "同步完成, 发出 stats:refresh, 成功:",
-          totalOk,
-          "失败:",
-          totalFail,
-        );
-        bus.emit("stats:refresh");
-        bus.emit("toast:show", {
-          msg: instanceName
-            ? `📥 ${instanceName}: 导入 ${totalOk} 成功, ${totalFail} 失败`
-            : `📥 全部导入完成: ${totalOk} 成功, ${totalFail} 失败`,
-          duration: 4000,
-          type: totalFail > 0 ? "warn" : "success",
-        });
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: `❌ ${friendlyError(e)}`,
-          duration: 5000,
-          type: "error",
-        });
-      } finally {
-        bus.emit("sync:download:done");
-        bus.emit("tree:reload");
-      }
-    }),
+      },
+    ),
   );
 
   // 同步启用/禁用状态到所有整合包
@@ -112,7 +123,9 @@ export function registerSync(unsubs) {
           SyncModelToggleStatus,
           AddImportLog,
           GetRepoRoot,
-        } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
+        } = await import(
+          "../../bindings/ysm-model-manager/internal/app/app.js"
+        );
         const cfg = await LoadAppConfig();
         const repoRoot = await GetRepoRoot("ysm");
         const mcRoot = cfg.mcRoot || "";
@@ -124,7 +137,7 @@ export function registerSync(unsubs) {
           });
           return;
         }
-        const instances = await ListVersionInstances(mcRoot);
+        const instances = (await ListVersionInstances(mcRoot)) ?? [];
         if (!instances?.length) {
           bus.emit("toast:show", {
             msg: "没有找到整合包",
@@ -133,15 +146,15 @@ export function registerSync(unsubs) {
           });
           return;
         }
-        let totalDisable = 0,
-          totalEnable = 0,
-          errors = [];
+        let totalDisable = 0;
+        let totalEnable = 0;
+        const errors: string[] = [];
         for (const ins of instances) {
           if (!ins.Exists) continue;
           try {
             const res = await SyncModelToggleStatus(ins.CustomDir, repoRoot);
-            totalDisable += res?.r0 || res?.[0] || 0;
-            totalEnable += res?.r1 || res?.[1] || 0;
+            totalDisable += res?.[0] || 0;
+            totalEnable += res?.[1] || 0;
           } catch (e) {
             errors.push(`${ins.Name}: ${String(e)}`);
           }
@@ -154,7 +167,7 @@ export function registerSync(unsubs) {
           errors.length ? "failed" : "success",
           `禁用 ${totalDisable} 启用 ${totalEnable}${errors.length ? ` | 错误: ${errors.join("; ")}` : ""}`,
         );
-        const parts = [];
+        const parts: string[] = [];
         if (totalDisable > 0) parts.push(`禁用 ${totalDisable} 项`);
         if (totalEnable > 0) parts.push(`启用 ${totalEnable} 项`);
         if (!parts.length) parts.push("状态已一致，无需更改");
@@ -169,7 +182,9 @@ export function registerSync(unsubs) {
         bus.emit("stats:refresh");
         bus.emit("logs:refresh");
       } catch (err) {
-        const { AddImportLog } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
+        const { AddImportLog } = await import(
+          "../../bindings/ysm-model-manager/internal/app/app.js"
+        );
         await AddImportLog(
           "sync-status",
           "同步失败",
@@ -210,7 +225,9 @@ export function registerSync(unsubs) {
             GetResourceInstanceStatus,
             InstallResourceToInstance,
             GetRepoRoot,
-          } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
+          } = await import(
+            "../../bindings/ysm-model-manager/internal/app/app.js"
+          );
           const cfg = await LoadAppConfig();
           const mcRoot = cfg.mcRoot || "";
           const mmdRoot = await GetRepoRoot("mmd-skin");
@@ -228,7 +245,9 @@ export function registerSync(unsubs) {
             mcRoot,
             mmdRoot || "",
           );
-          const st = (statusList || []).find((s) => s.Name === instanceName);
+          const st = (statusList || []).find(
+            (s) => s.Name === instanceName,
+          );
           if (!st?.Missing?.length) {
             bus.emit("toast:show", {
               msg: "没有需要同步的文件",
@@ -258,9 +277,9 @@ export function registerSync(unsubs) {
             type: "info",
           });
 
-          let ok = 0,
-            fail = 0;
-          const failedFiles = [];
+          let ok = 0;
+          let fail = 0;
+          const failedFiles: string[] = [];
           for (const srcPath of variantFiles) {
             try {
               await InstallResourceToInstance(rtype, srcPath, instanceName);
@@ -273,8 +292,9 @@ export function registerSync(unsubs) {
           }
 
           try {
-            const { InvalidateScanCache } =
-              await import("../../bindings/ysm-model-manager/internal/app/app.js");
+            const { InvalidateScanCache } = await import(
+              "../../bindings/ysm-model-manager/internal/app/app.js"
+            );
             await InvalidateScanCache();
           } catch {}
 
@@ -291,7 +311,7 @@ export function registerSync(unsubs) {
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: `❌ 变体同步失败: ${e?.message || e}`,
+            msg: `❌ 变体同步失败: ${(e as Error)?.message || e}`,
             duration: 5000,
             type: "error",
           });

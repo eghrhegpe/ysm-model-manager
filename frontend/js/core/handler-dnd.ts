@@ -1,21 +1,24 @@
-// ===== 全局拖拽导入 =====
+// ===== 全局拖拽导入（类型化版 — ADR-014 P3）=====
 import { bus } from "../bus.ts";
 import { PageStore } from "./page-store.ts";
 import { DnDLock, PendingImport } from "../features/dnd-state.ts";
 import { getApp } from "../wails/app.ts";
-import { ALL_EXTS, extBelongsTo } from "../utils/extensions.ts";
+import { ALL_EXTS } from "../utils/extensions.ts";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
 const MAX_FILE_COUNT = 50;
-const getExt = (name) => "." + (name.split(".").pop() || "").toLowerCase();
-const isSupportedFile = (name) => ALL_EXTS.includes(getExt(name));
+const getExt = (name: string): string =>
+  "." + (name.split(".").pop() || "").toLowerCase();
+const isSupportedFile = (name: string): boolean =>
+  ALL_EXTS.includes(getExt(name));
+
 /**
  * 判断文件是否需要进入命名表单（异步）
  * - .ysm / ysm.json → 始终进表单
  * - .zip / .7z → 调 Go 端 DetectZipType 检测内容后决定
  * - 其他已注册扩展名 → 直接导入
  */
-const shouldEnterForm = async (name, base64) => {
+const shouldEnterForm = async (name: string, base64: string): Promise<boolean> => {
   const ext = getExt(name);
   if (ext === ".ysm") return true;
   if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
@@ -23,22 +26,26 @@ const shouldEnterForm = async (name, base64) => {
     try {
       const { DetectZipType } = await getApp();
       return (await DetectZipType(base64)) === "ysm";
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
   return false;
 };
-const readFileAsBase64 = (file) =>
+
+const readFileAsBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-let dropOverlay = null;
-let dropLeaveTimer = null;
+
+let dropOverlay: HTMLElement | null = null;
+let dropLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 const DROP_EXTS_STR = ALL_EXTS.join(" ");
 
-const showDropOverlay = (hasModel) => {
+const showDropOverlay = (hasModel?: boolean): void => {
   if (!dropOverlay || !document.body.contains(dropOverlay)) {
     if (dropOverlay) dropOverlay.remove();
     dropOverlay = document.createElement("div");
@@ -52,7 +59,7 @@ const showDropOverlay = (hasModel) => {
     document.body.appendChild(dropOverlay);
   }
   if (hasModel === false) {
-    const inner = dropOverlay.firstElementChild;
+    const inner = dropOverlay.firstElementChild as HTMLElement | null;
     if (inner) {
       inner.style.borderColor = "#f38ba8";
       inner.style.background =
@@ -64,18 +71,25 @@ const showDropOverlay = (hasModel) => {
   dropOverlay.style.display = "flex";
   dropOverlay.style.opacity = "1";
 };
-const hideDropOverlay = () => {
+
+const hideDropOverlay = (): void => {
   if (dropLeaveTimer) clearTimeout(dropLeaveTimer);
   if (!dropOverlay) return;
   dropOverlay.style.display = "none";
   dropOverlay.style.opacity = "0";
 };
 
-const isEditable = (el) =>
-  el &&
-  (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+const isEditable = (el: EventTarget | null): boolean => {
+  const node = el as HTMLElement | null;
+  return Boolean(
+    node &&
+      (node.tagName === "INPUT" ||
+        node.tagName === "TEXTAREA" ||
+        node.isContentEditable),
+  );
+};
 
-const onDragOver = (e) => {
+const onDragOver = (e: DragEvent): void => {
   // 只在仓库页面显示拖拽遮罩
   if (PageStore.currentPage !== "repository") return;
   // 检测是否拖拽的是文件（items 在 dragover 阶段可能为空，用 types 更可靠）
@@ -88,13 +102,15 @@ const onDragOver = (e) => {
   );
   showDropOverlay(hasModel);
 };
-const onDragLeave = (e) => {
+
+const onDragLeave = (e: DragEvent): void => {
   if (PageStore.currentPage !== "repository") return;
   if (dropLeaveTimer) clearTimeout(dropLeaveTimer);
   // 防抖：50ms 后隐藏遮罩，若期间 dragover 重新触发则取消
   dropLeaveTimer = setTimeout(hideDropOverlay, 50);
 };
-const onDrop = async (e) => {
+
+const onDrop = async (e: DragEvent): Promise<void> => {
   hideDropOverlay();
   e.preventDefault();
   if (isEditable(e.target)) return;
@@ -103,21 +119,28 @@ const onDrop = async (e) => {
   // 非仓库页面不处理 DnD
   if (PageStore.currentPage !== "repository") return;
 
-  const getFileFromEntry = (entry) =>
+  const getFileFromEntry = (entry: FileSystemFileEntry): Promise<File> =>
     new Promise((resolve, reject) => {
       entry.file(resolve, reject);
     });
 
-  const collectFiles = async (items, isEntryArray) => {
-    const result = [];
+  const collectFiles = async (
+    items: DataTransferItem[] | FileSystemEntry[],
+    isEntryArray: boolean,
+  ): Promise<File[]> => {
+    const result: File[] = [];
     for (const item of items) {
-      if (!isEntryArray && item.kind !== "file") continue;
-      const entry = item.webkitGetAsEntry?.() || (isEntryArray ? item : null);
+      if (!isEntryArray && (item as DataTransferItem).kind !== "file") continue;
+      const entry =
+        (item as DataTransferItem).webkitGetAsEntry?.() ||
+        (isEntryArray ? (item as FileSystemEntry) : null);
       if (entry?.isDirectory) {
-        const reader = entry.createReader();
-        const readAll = async (depth = 0) => {
+        const reader = (entry as FileSystemDirectoryEntry).createReader();
+        const readAll = async (depth = 0): Promise<File[]> => {
           if (depth > 10) return []; // 防止深层递归导致卡顿
-          const batch = await new Promise((r) => reader.readEntries(r));
+          const batch = await new Promise<FileSystemEntry[]>((r) =>
+            reader.readEntries(r),
+          );
           if (!batch.length) return [];
           const deeper = await collectFiles(batch, true);
           const next = await readAll(depth + 1);
@@ -125,21 +148,21 @@ const onDrop = async (e) => {
         };
         result.push(...(await readAll()));
       } else if (entry?.isFile) {
-        if (isSupportedFile(entry.name)) {
+        if (isSupportedFile((entry as FileSystemFileEntry).name)) {
           try {
-            result.push(await getFileFromEntry(entry));
+            result.push(await getFileFromEntry(entry as FileSystemFileEntry));
           } catch (_) {}
         }
-      } else if (item.getAsFile) {
+      } else if ((item as DataTransferItem).getAsFile) {
         // fallback: 浏览器不支持 webkitGetAsEntry 时用 getAsFile
-        const f = item.getAsFile();
+        const f = (item as DataTransferItem).getAsFile();
         if (f && isSupportedFile(f.name)) result.push(f);
       }
     }
     return result;
   };
 
-  let allFiles = [];
+  let allFiles: File[] = [];
   const items = Array.from(e.dataTransfer?.items || []);
   if (items.length > 0) allFiles = await collectFiles(items, false);
   if (allFiles.length === 0) {
@@ -173,8 +196,8 @@ const onDrop = async (e) => {
   }
 
   // 分类：YSM 进命名队列，非 YSM 直接导入（ZIP 需调 Go 端 DetectZipType 内容判定）
-  const ysmFiles = [];
-  const nonYsmFiles = [];
+  const ysmFiles: File[] = [];
+  const nonYsmFiles: File[] = [];
   for (const f of allFiles) {
     const ext = getExt(f.name);
     if (ext === ".ysm") {
@@ -244,7 +267,8 @@ const onDrop = async (e) => {
   }
 };
 
-export function registerDnD(unsubs) {
+/** 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs */
+export function registerDnD(unsubs: Array<() => void>): void {
   document.addEventListener("dragover", onDragOver);
   document.addEventListener("dragleave", onDragLeave);
   document.addEventListener("drop", onDrop);

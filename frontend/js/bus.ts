@@ -61,7 +61,7 @@ export interface BusEvents {
   "repo:search-creator": string;
   "sync:toggle:status": void;
   "sync:toggle:done": void;
-  "sync:download:missing": void;
+  "sync:download:missing": { instanceName?: string; rtype?: string; token?: string };
   "sync:download:done": void;
   "sync:upload:done": void;
   // 实例 / 导入
@@ -70,7 +70,7 @@ export interface BusEvents {
   "instance:install": void;
   "instance:sync": void;
   "import:pending-changed": { count: number };
-  "import:pending-files": void;
+  "import:pending-files": Array<{ name: string; file: File }>;
   "dnd:lock-changed": { locked: boolean };
   // 配置
   "config:updated": void;
@@ -91,7 +91,7 @@ export interface BusEvents {
   "loading:start": void;
   "loading:end": void;
   "recycle:open": void;
-  "mmd:sync-variant-folder": void;
+  "mmd:sync-variant-folder": { instanceName: string; folderPath: string; rtype: string };
   "filter:results": void;
   "entry:toggle": void;
   "entries:dedup": void;

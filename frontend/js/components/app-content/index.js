@@ -267,7 +267,7 @@ class AppContent extends HTMLElement {
             const { downloadsHTML } = await import("./tpl.js");
             container.innerHTML = downloadsHTML();
             const { initImportQueue } =
-              await import("../../features/import-queue.js");
+              await import("../../features/import-queue.ts");
             const importCleanup = initImportQueue(this);
             this._unsubs = this._unsubs || [];
             if (importCleanup) this._unsubs.push(importCleanup);

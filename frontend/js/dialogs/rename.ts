@@ -18,7 +18,7 @@ function esc(s: string): string {
  * @returns 新文件名，取消返回 null
  */
 export async function showRenameDialog(
-  filePath: string,
+  filePath: string | null,
   currentName: string,
 ): Promise<string | null> {
   return new Promise((resolve) => {

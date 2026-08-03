@@ -238,6 +238,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 9 | `public/` 下放 JS | Vite dev 优先加载 | 新 JS 放 `frontend/js/`，ES module → `app-modules.ts` 加 import |
 | 10 | 回调 API 未 Promise 化 | DnD 数据读不到 | `entry.file(callback)` → `new Promise(resolve => entry.file(resolve))` |
 | 11 | 3D 坐标变换反复修（实证：model3d.ts 9 次 fix 全项目第一） | "对齐 ysmview cube pivot" 连续 5 次 fix | 改 model2d/model3d/spec.go 坐标前先 grep `bug-chronicle` + 对齐 ysmview 口径（pivot X 取反、`from.x = origin.x - size.x`）；改完用自由相机近距验证 |
+| 12 | CLI 未知 flag 被当标题/位置参数（实证：`--help` 误占 ADR-027-help.md / 生成 help.md 卡） | `new-adr.mjs --help` 占号；`new-knowledge-card.mjs --help` 当 kind | 有 positional 参数的 CLI：未知 `--flag` 显式白名单拦截，绝不落入位置参数位；`--help` 退 0 / 未知 flag 退 1；主流程 `process.exit(main())` 让退出码生效 |
 
 > 完整版见 `docs/pitfalls.md`。
 

@@ -10,5 +10,3 @@ exclude:
   - archive/
   # 生成产物
   - funcmap.md
-  # 内部待清理清单（仍在治理中，不发布）
-  - frontend/pending-cleanup.md

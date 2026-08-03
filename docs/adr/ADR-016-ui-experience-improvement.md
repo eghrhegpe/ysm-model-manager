@@ -3,7 +3,7 @@
 - **状态**：🔄 部分采纳（P0/P1 已完成，P2 待实施）
 - **日期**：2026-08-03（初定，决策时间线 2026-06-16）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/`（app-preview / app-tree / utils）/ `docs/Design.md` / 前身 `docs/frontend/ui-improvement-plan.md`
+- **相关**：`frontend/js/`（app-preview / app-tree / utils）/ `docs/Design.md`
 
 ---
 
@@ -19,7 +19,7 @@ v1.7.6 前后，前端界面存在若干可量化的体验短板，散落在多�
 - 工具栏搜索框与筛选按钮挤在一行，操作拥挤；
 - 3D 预览缺少重置视角按钮，网格线对比度低。
 
-这些短板虽各自独立，但共同指向「视觉反馈强度 / 信息层级 / 主题一致性」三类系统性问题。原 `docs/frontend/ui-improvement-plan.md` 以任务清单形式记录，本 ADR 将其升级为正式决策：清单是**已采纳方案的落地范围**，其背后应被长期遵守的**体验原则**才是决策真相。
+这些短板虽各自独立，但共同指向「视觉反馈强度 / 信息层级 / 主题一致性」三类系统性问题。原 `docs/frontend/ui-improvement-plan.md`（已于 2026-08-03 删除）以任务清单形式记录，本 ADR 将其升级为正式决策：清单是**已采纳方案的落地范围**，其背后应被长期遵守的**体验原则**才是决策真相。
 
 ---
 
@@ -112,10 +112,10 @@ v1.7.6 前后，前端界面存在若干可量化的体验短板，散落在多�
 
 | 来源 | 结果 |
 |------|------|
-| `docs/frontend/ui-improvement-plan.md`（前身） | 原改进计划全部内容已迁入本 ADR，原文件改为重定向 stub |
+| `docs/frontend/ui-improvement-plan.md`（前身，已删除） | 原改进计划全部内容已迁入本 ADR，原文件于 2026-08-03 删除 |
 | `docs/Design.md` | 设计令牌、主题系统、UI 文案规范 |
 | `frontend/js/app-preview/*` / `app-tree/*` / `utils/*` | 各优化项的具体源文件落点 |
 
 ---
 
-*原改进计划：`docs/frontend/ui-improvement-plan.md`，已升级为决策记录并保留重定向 stub。*
+*原改进计划：`docs/frontend/ui-improvement-plan.md`，已升级为决策记录，原文件已于 2026-08-03 删除。*

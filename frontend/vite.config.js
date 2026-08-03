@@ -28,5 +28,11 @@ export default defineConfig({
   test: {
     include: ["js/**/*.test.js"],
     environment: "jsdom",
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      include: ["js/**/*.ts", "js/**/*.js"],
+      exclude: ["js/**/*.test.js", "js/wasm/**"],
+    },
   },
 });

@@ -233,6 +233,67 @@ function checkAgentsNoHandcraftedIndex() {
   }
 }
 
+// ── 检查 5：代码→卡片覆盖盲区（WARN，不阻断）──
+// 适配自 MikuMikuAR check-doc-drift.mjs checkKnowledgeCoverage（INFO 级）。
+// 从「代码现实」出发：扫描源码目录下每个文件，确认至少 1 张知识卡的
+// source_files 引用了它（目录条目按前缀匹配，文件条目按精确匹配）。
+// 未覆盖 = 代码有模块、知识库无卡片 → WARN 提醒补登，不阻断 CI。
+
+const SOURCE_ROOTS = ['frontend/js', 'go'];
+const WALK_EXCLUDE_RE = /(node_modules|\/dist\/|\/bindings\/|\/test\/|\.test\.|\.spec\.)/;
+
+function walkSources(dir, out = []) {
+  if (!fs.existsSync(dir)) return out;
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (WALK_EXCLUDE_RE.test(p)) continue;
+    if (e.isDirectory()) walkSources(p, out);
+    else if (e.isFile() && /\.(ts|js|go)$/.test(e.name)) out.push(p);
+  }
+  return out;
+}
+
+/** 某卡 source_files 条目是否覆盖源文件 rel：文件精确匹配 / 目录前缀匹配。 */
+function covers(rel, entry) {
+  const e = entry.replace(/\/+$/, '');
+  return rel === e || rel.startsWith(e + '/');
+}
+
+function checkKnowledgeCoverage() {
+  if (!fs.existsSync(KC_DIR)) return;
+  // 收集所有卡的 source_files（去尾斜杠）
+  const referenced = new Set();
+  for (const cf of fs.readdirSync(KC_DIR)) {
+    if (!cf.endsWith('.md') || /^(readme|agents)\.md$/i.test(cf)) continue;
+    const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf8');
+    const fm = parseFrontmatter(text);
+    if (!fm) continue;
+    for (const src of parseSourceFiles(fm)) {
+      if (/\.(ts|js|go)$/.test(src) || src.endsWith('/')) referenced.add(src.replace(/\/+$/, ''));
+    }
+  }
+  // 扫描源码文件，未覆盖的按顶层目录分组
+  const byDir = new Map();
+  let total = 0;
+  for (const root of SOURCE_ROOTS) {
+    for (const f of walkSources(path.join(ROOT, root))) {
+      const rel = path.relative(ROOT, f).replace(/\\/g, '/');
+      const hit = [...referenced].some((entry) => covers(rel, entry));
+      if (hit) continue;
+      total++;
+      const top = rel.split('/').slice(0, 2).join('/');
+      byDir.set(top, (byDir.get(top) || 0) + 1);
+    }
+  }
+  if (total === 0) return;
+  const topSummary = [...byDir.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([d, n]) => `${d}×${n}`)
+    .join('  ');
+  warns.push(`代码→卡片覆盖盲区：${total} 个源码文件未被任何知识卡引用（TOP: ${topSummary}）。非阻断提醒，建议补登知识卡。`);
+}
+
 // ── 主流程 ────────────────────────────────────────────
 
 function main() {
@@ -240,6 +301,7 @@ function main() {
   checkKnowledgeSources();
   checkIndexLinks();
   checkAgentsNoHandcraftedIndex();
+  checkKnowledgeCoverage();
 
   const result = { _summary: { errors: errors.length, warns: warns.length }, errors, warns };
 

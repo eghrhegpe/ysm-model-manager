@@ -131,6 +131,26 @@ function checkFrontendBuild() {
   }
 }
 
+function checkFrontendTest() {
+  // ADR-023 P3：L3 Vitest 前端单测并入全量自检（写了要跑、坏了要红）
+  console.log('\n=== Frontend Test (Vitest) ===');
+  const which = run(['which', 'npx']);
+  if (which.rc !== 0) {
+    console.log(`  ${WARN} npx not found in PATH — skip vitest`);
+    console.log('        run manually: cd frontend && npx vitest run');
+    return;
+  }
+  const { rc, out } = run(['npx', 'vitest', 'run'], path.join(ROOT, 'frontend'), { shell: true });
+  if (rc === 0) {
+    console.log(`  ${PASS} vitest run passed`);
+  } else {
+    console.log(`  ${FAIL} vitest run failed`);
+    for (const line of out.trim().split('\n').slice(-5)) {
+      console.log(`    ${line}`);
+    }
+  }
+}
+
 function checkTypeScript() {
   console.log('\n=== TypeScript Check ===');
   // ADR-014：前端 .ts 类型检查（tsc --noEmit，见 frontend/package.json typecheck）
@@ -270,6 +290,7 @@ checkGoVet();
 checkGoTest();
 checkContractTests();
 checkFrontendBuild();
+checkFrontendTest();
 checkTypeScript();
 checkKeyFiles();
 checkGovernance();

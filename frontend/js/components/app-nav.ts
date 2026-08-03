@@ -1,29 +1,32 @@
-// ===== <app-nav> — 左侧导航菜单 =====
+// ===== <app-nav> — 左侧导航菜单（类型化版 — ADR-014 P3 components）=====
 // 事件：nav:change — 切换页面
 import { bus } from "../bus.ts";
 import { getApp } from "../wails/app.ts";
 
 class AppNav extends HTMLElement {
+  _current: string;
+  _unsub: (() => void) | undefined;
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
     this._current = "dashboard";
   }
 
-  connectedCallback() {
+  connectedCallback(): void {
     this._unsub = bus.on("nav:changed", ({ page }) => {
       this._current = page;
       try {
         localStorage.setItem("nav_page", page);
       } catch {}
-      this.shadowRoot.querySelectorAll(".nav-item").forEach((el) => {
-        el.classList.toggle("active", el.dataset.page === page);
+      this.shadowRoot!.querySelectorAll(".nav-item").forEach((el) => {
+        el.classList.toggle("active", (el as HTMLElement).dataset.page === page);
       });
     });
     this.render();
     // 恢复上次保存的页面（首次使用或仓库页也需发射，确保导航栏高亮和 app-content 渲染）
     // 用 queueMicrotask 确保其他组件的 connectedCallback 先完成注册
-    let saved = localStorage.getItem("nav_page");
+    const saved = localStorage.getItem("nav_page");
     let targetPage = "repository";
     if (saved && saved !== "repository") {
       targetPage = saved === "resources" ? "repository" : saved;
@@ -31,11 +34,11 @@ class AppNav extends HTMLElement {
     queueMicrotask(() => bus.emit("nav:change", { page: targetPage }));
   }
 
-  disconnectedCallback() {
+  disconnectedCallback(): void {
     if (this._unsub) this._unsub();
   }
 
-  render() {
+  render(): void {
     const items = [
       { id: "repository", icon: "📚", label: "模型仓库" },
       { id: "instances", icon: "🎮", label: "整合包管理" },
@@ -45,7 +48,7 @@ class AppNav extends HTMLElement {
       { id: "settings", icon: "⚙️", label: "设置" },
     ];
 
-    this.shadowRoot.innerHTML = `
+    this.shadowRoot!.innerHTML = `
       <style>
         :host {
           display: flex;
@@ -123,20 +126,20 @@ class AppNav extends HTMLElement {
       <div class="version" id="nav-version">加载中…</div>
     `;
 
-    this.shadowRoot.querySelectorAll(".nav-item").forEach((el) => {
-      el.onclick = () => bus.emit("nav:change", { page: el.dataset.page });
+    this.shadowRoot!.querySelectorAll(".nav-item").forEach((el) => {
+      (el as HTMLElement).onclick = () => bus.emit("nav:change", { page: (el as HTMLElement).dataset.page || "" });
     });
 
     // 异步加载版本号
     getApp()
       .then((App) =>
         App.GetAppVersion().then((v) => {
-          const el = this.shadowRoot.getElementById("nav-version");
+          const el = this.shadowRoot!.getElementById("nav-version");
           if (el) el.textContent = (v || "dev") + " \u2022 预告版";
         }),
       )
       .catch(() => {
-        const el = this.shadowRoot.getElementById("nav-version");
+        const el = this.shadowRoot!.getElementById("nav-version");
         if (el) el.textContent = "v1.0.0 \u2022 预告版";
       });
   }

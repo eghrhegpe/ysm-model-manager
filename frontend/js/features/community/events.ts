@@ -4,7 +4,7 @@ import { bus } from "../../bus.ts";
 import { modalConfirm } from "../../dialogs/modal.ts";
 import { renderModelList, isModelMissing, type WorkshopModel } from "./render.ts";
 import { createDownloadQueue, type DownloadTask } from "./download-queue.ts";
-import { ICONS } from "../../components/app-content/community/workshop-icons.js";
+import { ICONS } from "../../components/app-content/community/workshop-icons.ts";
 
 /** bindRepoEvents 上下文 */
 export interface RepoEventsContext {

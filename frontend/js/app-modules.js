@@ -13,9 +13,9 @@ register("loadEntries", loadEntries);
 
 // 新版 Web Component（通过 ES Module 导入以支持 shadow DOM）
 // 静态导入（浏览器加载失败时直接报错，不 try/catch 以免静默吞错）
-import "./components/app-nav.js";
-import "./components/context-menu.js";
-import "./components/app-toast.js";
+import "./components/app-nav.ts";
+import "./components/context-menu.ts";
+import "./components/app-toast.ts";
 // Web Components 动态导入（使用字面量确保 Vite 能在构建时解析路径）
 import("./components/app-tree/index.js").catch((e) =>
   console.warn("[module] 组件加载失败: app-tree", e),

@@ -1,5 +1,5 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
-import { treeCSS } from "../app-tree-styles.js";
+import { treeCSS } from "../app-tree-styles.ts";
 import { headerHTML, footerHTML, spinnerHTML } from "./tpl.js";
 import { renderTree, updateStat, getRenderMode, setRenderMode } from "./render.js";
 import { bindTreeEvents } from "./events.js";

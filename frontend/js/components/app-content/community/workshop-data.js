@@ -1,6 +1,6 @@
 // ===== 创意工坊数据/配置/工具 =====
 // 依赖 workshop-icons.js 的 SVG 图标
-import { ICONS } from "./workshop-icons.js";
+import { ICONS } from "./workshop-icons.ts";
 
 const STORAGE_KEY = "ysm-fav-creators";
 

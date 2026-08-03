@@ -4,7 +4,7 @@ import { bus } from "../../../bus.ts";
 import { dbg } from "../../../utils/debug.ts";
 import { showProgress, tryFetchModels } from "../../../features/community/data.ts";
 import { stagger } from "../../../utils/stagger.ts";
-import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.js";
+import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.ts";
 import { getCreatorIdentity, getTagFromRole, parseDescTags, loadFavs, isFaved, toggleFav } from "./workshop-data.js";
 
 import { getApp } from "../../../wails/app.ts";

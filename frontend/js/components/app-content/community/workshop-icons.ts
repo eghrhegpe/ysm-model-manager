@@ -1,6 +1,6 @@
 // ===== 创意工坊 SVG 图标 =====
 // 统一管理所有角色和平台的矢量图标
-export const ICONS = {
+export const ICONS: Record<string, string> = {
   // --- 角色 (Roles) ---
   CREATOR: '<svg class="ws-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
   OFFICIAL: '<svg class="ws-icon" viewBox="0 0 24 24"><path d="M12 2l1.8 5.5h5.7l-4.6 3.3 1.8 5.5-4.7-3.4-4.7 3.4 1.8-5.5-4.6-3.3h5.7z"/></svg>',
@@ -32,7 +32,7 @@ export const ICONS = {
   STOP: '<svg class="ws-icon" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
 };
 
-const SITE_ICON_MAP = {
+const SITE_ICON_MAP: Record<string, string> = {
   bilibili: ICONS.BILIBILI,
   afdian: ICONS.AFDIAN,
   github: ICONS.GITHUB,
@@ -43,11 +43,11 @@ const SITE_ICON_MAP = {
   deviantart: ICONS.DEVIANTART,
 };
 
-export function getSiteIcon(siteId) {
+export function getSiteIcon(siteId: string): string {
   return SITE_ICON_MAP[siteId] || ICONS.CREATOR;
 }
 
-export function getTagIconFromRole(role) {
+export function getTagIconFromRole(role: string): string {
   switch (role) {
     case "official": return ICONS.OFFICIAL;
     case "vup":     return ICONS.VUP;

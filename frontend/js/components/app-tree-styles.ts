@@ -1,6 +1,6 @@
 // ===== app-tree 样式（独立文件，避免 JS 热更新时重编译 CSS） =====
 import { btnBaseCSS } from "../css/shared-styles.js";
-export const treeCSS = `
+export const treeCSS: string = `
 :host {
   display: flex;
   flex-direction: column;

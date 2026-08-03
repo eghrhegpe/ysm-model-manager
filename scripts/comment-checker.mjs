@@ -3,23 +3,7 @@
  * 注释质量检查。检测 AI 废话注释、JSDoc 模板残留、TODO 无编号等。
  * 由 scripts/comment-checker.py 迁移（2026-08-03），规则与输出逻辑逐点保真。
  */
-import { execFileSync } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-
-function rg(pattern, paths, globs = null) {
-  const cmd = ['--no-heading', '-n', '--path-separator', '/', pattern];
-  for (const g of (globs || [])) cmd.push('-g', g);
-  const targets = Array.isArray(paths) ? paths : [paths];
-  for (const p of targets) cmd.push(path.join(ROOT, p));
-  try {
-    const out = execFileSync('rg', cmd, { encoding: 'utf-8', timeout: 30000, maxBuffer: 64 * 1024 * 1024 });
-    if (out.trim()) return out.trim().split('\n').filter((l) => l.trim());
-  } catch { /* no match or error */ }
-  return [];
-}
+import { rg } from './_lib/ripgrep.mjs';
 
 function parseLine(line) {
   const parts = line.split(':');

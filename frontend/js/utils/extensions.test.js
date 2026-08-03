@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { RESOURCE_EXTS, ALL_EXTS, getExts, isSupportedExt, extBelongsTo } from "./extensions.js";
+import { RESOURCE_EXTS, ALL_EXTS, getExts, isSupportedExt, extBelongsTo } from "./extensions.ts";
 
 describe("RESOURCE_EXTS", () => {
   it("has known type ysm", () => expect(RESOURCE_EXTS.ysm).toContain(".ysm"));

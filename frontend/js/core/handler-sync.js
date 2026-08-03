@@ -1,7 +1,7 @@
 // ===== 同步相关：导入缺失 / 同步启用状态 =====
 import { bus } from "../bus.ts";
-import { friendlyError } from "../utils/errors.js";
-import { dbg } from "../utils/debug.js";
+import { friendlyError } from "../utils/errors.ts";
+import { dbg } from "../utils/debug.ts";
 
 export function registerSync(unsubs) {
   // 导入仓库模型到整合包

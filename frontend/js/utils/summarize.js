@@ -1,5 +1,5 @@
 // ===== YSM 模型摘要工具函数 =====
-import { parseModelName } from "./display.js";
+import { parseModelName } from "./display.ts";
 import { renderFormattedText } from "./mc-format.js";
 
 /** 渲染 MC 格式代码为带颜色的 HTML */

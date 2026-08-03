@@ -9,7 +9,7 @@ import { bindBusEvents } from "./bus-handlers.js";
 import { loadAuthors } from "./authors.js";
 import { bus } from "../../bus.ts";
 import { selectState } from "./data.js";
-import { dbg } from "../../utils/debug.js";
+import { dbg } from "../../utils/debug.ts";
 class AppTree extends HTMLElement {
   constructor() {
     super();

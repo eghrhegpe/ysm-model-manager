@@ -1,6 +1,6 @@
 // ===== sidebar 事件层 =====
 import { bus } from "../../bus.ts";
-import { animateNumber } from "../../utils/animate.js";
+import { animateNumber } from "../../utils/animate.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.js";
 
 // 绑定每个卡片展开/折叠

@@ -1,7 +1,7 @@
 // ===== preview 事件总线绑定 =====
 // 精简后仅保留 bindBusUpdates，其他已拆分到独立模块
 import { bus } from "../../bus.ts";
-import { dbg } from "../../utils/debug.js";
+import { dbg } from "../../utils/debug.ts";
 import { showPackageDetail } from "./preview-pack.js";
 import { resetGlobalButtons } from "./preview-actions.js";
 

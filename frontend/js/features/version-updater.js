@@ -1,7 +1,7 @@
 // ===== 版本更新检查 =====
 import { bus } from "../bus.ts";
 import { esc } from "../dialogs/modal.js";
-import { friendlyError } from "../utils/errors.js";
+import { friendlyError } from "../utils/errors.ts";
 
 /** 频次限制 key */
 const CHECK_KEY = "ysm_lastUpdateCheck";

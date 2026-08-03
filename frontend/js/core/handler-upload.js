@@ -1,7 +1,7 @@
 // ===== 上传新模型到仓库 =====
 import { bus } from "../bus.ts";
-import { friendlyError } from "../utils/errors.js";
-import { dbg } from "../utils/debug.js";
+import { friendlyError } from "../utils/errors.ts";
+import { dbg } from "../utils/debug.ts";
 
 export function registerUpload(unsubs) {
   unsubs.push(

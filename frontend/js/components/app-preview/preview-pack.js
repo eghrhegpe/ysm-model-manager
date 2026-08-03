@@ -1,6 +1,6 @@
 // ===== 整合包详情显示 =====
 // 从 events.js 拆分：showPackageDetail + 数字跳动动画
-import { renderDisplayName } from "../../utils/display.js";
+import { renderDisplayName } from "../../utils/display.ts";
 import { bus } from "../../bus.ts";
 
 const esc = (s) =>

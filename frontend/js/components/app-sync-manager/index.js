@@ -3,8 +3,8 @@
 // 使用: <app-sync-manager instance="1.20.1-Fabric"></app-sync-manager>
 
 import { bus } from "../../bus.ts";
-import { dbg } from "../../utils/debug.js";
-import { friendlyError } from "../../utils/errors.js";
+import { dbg } from "../../utils/debug.ts";
+import { friendlyError } from "../../utils/errors.ts";
 import {
   containerHTML,
   itemHTML,

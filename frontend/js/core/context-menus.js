@@ -1,8 +1,8 @@
 // ===== 右键菜单映射 =====
 // 将 ctx:show 事件转换为新版组件使用的 menu:show 事件
 import { bus } from "../bus.ts";
-import { friendlyError } from "../utils/errors.js";
-import { getApp } from "../wails/app.js";
+import { friendlyError } from "../utils/errors.ts";
+import { getApp } from "../wails/app.ts";
 
 /** 通知树组件和统计面板刷新 */
 function refreshUI() {

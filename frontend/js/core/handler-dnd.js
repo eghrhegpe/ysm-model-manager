@@ -2,8 +2,8 @@
 import { bus } from "../bus.ts";
 import { PageStore } from "./page-store.js";
 import { DnDLock, PendingImport } from "../features/dnd-state.js";
-import { getApp } from "../wails/app.js";
-import { ALL_EXTS, extBelongsTo } from "../utils/extensions.js";
+import { getApp } from "../wails/app.ts";
+import { ALL_EXTS, extBelongsTo } from "../utils/extensions.ts";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
 const MAX_FILE_COUNT = 50;

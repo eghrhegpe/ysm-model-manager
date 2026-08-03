@@ -1,5 +1,5 @@
 // ===== 紧凑列表行 HTML 模板（24px 高度）=====
-import { renderDisplayName } from "../../utils/display.js";
+import { renderDisplayName } from "../../utils/display.ts";
 
 /** 文件行 HTML（紧凑列表模式：icon + name + size，无 hover actions、无 date、无 tag dot） */
 export function listFileRowHTML(e, nmHtml, icon, nmCls = "", indent, rowCls = "") {

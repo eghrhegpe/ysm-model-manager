@@ -1,5 +1,5 @@
 // ===== 树节点行 HTML 模板 =====
-import { renderDisplayName } from "../../utils/display.js";
+import { renderDisplayName } from "../../utils/display.ts";
 
 /** 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） */
 export function fileRowHTML(

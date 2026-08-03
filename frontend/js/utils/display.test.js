@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseModelName } from "./display.js";
+import { parseModelName } from "./display.ts";
 
 describe("parseModelName", () => {
   it("parses [author]name.ysm", () => {

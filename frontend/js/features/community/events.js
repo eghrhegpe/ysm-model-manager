@@ -205,7 +205,7 @@ export function bindRepoEvents(sr, ctx) {
         e.stopPropagation();
         const row = searchBtn.closest("[data-name]");
         if (row) {
-          const { parseModelName } = await import("../../utils/display.js");
+          const { parseModelName } = await import("../../utils/display.ts");
           const { author } = parseModelName(row.dataset.name);
           if (author) {
             const { OpenInBrowser } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");

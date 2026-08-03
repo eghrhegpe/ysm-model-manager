@@ -1,6 +1,7 @@
 // ===== 导入日志渲染 =====
 // 从 events.ts 拆分：loadLogsPreview
 import { renderDisplayName } from "../../utils/display.ts";
+import { esc } from "../../utils/dom.ts";
 
 /** 导入日志条目（Go ImportLog 字段） */
 interface ImportLogEntry {
@@ -13,20 +14,13 @@ interface ImportLogEntry {
   ErrorMsg?: string;
 }
 
-const esc = (s: unknown): string =>
-  (s || "")
-    .toString()
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
 /** 加载日志到预览面板（含筛选和搜索） */
 export function loadLogsPreview(root: ShadowRoot, logs: ImportLogEntry[] | null): void {
   const list = root.getElementById("dp-log-list");
   if (!list) return;
   if (!logs || !logs.length) {
     list.innerHTML =
-      '<div class="stat-row" style="color:#6c7086">暂无日志</div>';
+      '<div class="stat-row" style="color:var(--muted)">暂无日志</div>';
     return;
   }
   // 读取筛选状态
@@ -79,5 +73,5 @@ export function loadLogsPreview(root: ShadowRoot, logs: ImportLogEntry[] | null)
     .join("");
   list.innerHTML =
     items ||
-    '<div class="stat-row" style="font-size:10px;color:#6c7086">无匹配日志</div>';
+    '<div class="stat-row" style="font-size:10px;color:var(--muted)">无匹配日志</div>';
 }

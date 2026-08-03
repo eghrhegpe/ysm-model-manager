@@ -3,6 +3,7 @@
 import { renderDisplayName } from "../../utils/display.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { bus } from "../../bus.ts";
+import { esc } from "../../utils/dom.ts";
 
 /** 整合包条目（package:selected payload 视图） */
 export interface PackagePayload {
@@ -23,13 +24,6 @@ export interface PackagePayload {
     extra?: Array<{ name?: string; displayName?: string }>;
   };
 }
-
-const esc = (s: unknown): string =>
-  (s || "")
-    .toString()
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 
 function animateCount(el: HTMLElement, target: number): void {
   if (!el) return;
@@ -79,18 +73,17 @@ export function showPackageDetail(
   const statusEl = root.getElementById("dp-status");
   if (nameEl) nameEl.textContent = `📦 ${pkg.name}`;
   if (statusEl) {
+    const dotBase =
+      "width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block;vertical-align:middle;background:";
     if (pkg.status === "complete") {
       statusEl.textContent = "";
-      statusEl.style.cssText =
-        "width:8px;height:8px;border-radius:50%;background:#a6e3a1;flex-shrink:0;display:inline-block;vertical-align:middle";
+      statusEl.style.cssText = dotBase + "var(--status-success)";
     } else if (pkg.status === "missing") {
       statusEl.textContent = "";
-      statusEl.style.cssText =
-        "width:8px;height:8px;border-radius:50%;background:#f38ba8;flex-shrink:0;display:inline-block;vertical-align:middle";
+      statusEl.style.cssText = dotBase + "var(--status-error)";
     } else if (pkg.status === "extra") {
       statusEl.textContent = "";
-      statusEl.style.cssText =
-        "width:8px;height:8px;border-radius:50%;background:#f9a826;flex-shrink:0;display:inline-block;vertical-align:middle";
+      statusEl.style.cssText = dotBase + "var(--sm-optional)";
     } else {
       statusEl.style.cssText = "display:none";
     }
@@ -211,8 +204,8 @@ function renderMmdVariantLists(
   });
 }
 
-// 模块级标志：仅注册一次 MMD 事件委托
-let _mmdEventsRegistered = false;
+// 已注册 MMD 事件委托的 root 集合（按实例守卫：组件重建后新 ShadowRoot 仍能注册）
+const _mmdRegisteredRoots = new WeakSet<ShadowRoot>();
 
 /**
  * 注册 MMD 变体的事件委托（折叠头 + 同步按钮）。
@@ -220,8 +213,8 @@ let _mmdEventsRegistered = false;
  * 注意：el 是 Shadow DOM 内的容器，通过 root.getElementById 获取。
  */
 export function registerMmdEvents(root: ShadowRoot): void {
-  if (_mmdEventsRegistered) return;
-  _mmdEventsRegistered = true;
+  if (_mmdRegisteredRoots.has(root)) return;
+  _mmdRegisteredRoots.add(root);
 
   // 直接监听 root，不依赖子容器是否存在（可能在 connectedCallback 时尚未渲染）
   root.addEventListener("click", (e) => {

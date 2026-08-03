@@ -5,19 +5,18 @@ import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { statsHTML, modelDetailHTML } from "./tpl.ts";
 import { bindBusUpdates } from "./events.ts";
 import { bindActions } from "./preview-actions.ts";
-import { showPackageDetail, registerMmdEvents } from "./preview-pack.ts";
+import { registerMmdEvents } from "./preview-pack.ts";
 import { loadLogsPreview } from "./preview-logs.ts";
-import { summaryCardHTML } from "../../utils/summarize.ts";
 import {
   cacheGet,
   cacheSet,
   cacheSetEvictHandler,
 } from "../../utils/preview-cache.ts";
-import { devLog, stripYsgpTextHeader, type PreviewCtx, type DecodedYsm } from "./preview-utils.ts";
+import { type PreviewCtx, type DecodedYsm } from "./preview-utils.ts";
 import { decodeYsmViaWasm } from "./preview-wasm.ts";
 import { showModelDetail, showResourcePack, showShaderPack } from "./preview-detail.ts";
 import { showLitematic } from "./preview-litematic-meta.ts";
-import { setupBoneExport } from "./preview-bone-export.ts";
+import { esc } from "../../utils/dom.ts";
 import type { BedrockGeometry } from "./utils.ts";
 
 // 注册缓存淘汰回调：释放 blob URL
@@ -37,7 +36,6 @@ cacheSetEvictHandler((key, val) => {
 class AppPreview extends HTMLElement implements PreviewCtx {
   _root: ShadowRoot;
   _unsubs: Array<() => void> = [];
-  _selectedPkg: unknown = null;
   _mode: "stat" | "model" = "stat";
   private _modelCleanup: (() => void) | null = null;
   private _typeCache: Array<{ id: string; name?: string; icon?: string }> = [];
@@ -72,13 +70,6 @@ class AppPreview extends HTMLElement implements PreviewCtx {
       registerMmdEvents(this._root);
 
       this._loadLogsPreview();
-
-      this._unsubs.push(
-        bus.on("package:selected", (pkg) => {
-          this._selectedPkg = pkg;
-          showPackageDetail(this._root, pkg as never);
-        }),
-      );
 
       this._unsubs.push(bus.on("logs:refresh", () => this._loadLogsPreview()));
 
@@ -230,12 +221,6 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   }
 
   private async _showPackInfo(dirPath: string): Promise<void> {
-    const esc = (s: unknown): string =>
-      (s || "")
-        .toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
     this._root.innerHTML = `<div class="content" id="preview-content"><h3>📦 整合包</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
     try {
       const { GetPackInfo } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
@@ -247,8 +232,8 @@ class AppPreview extends HTMLElement implements PreviewCtx {
       }
       this._root.innerHTML = `<div class="content" id="preview-content">
 <h3>📦 整合包</h3>
-${pack.imageBase64 ? `<div class="preview-thumb"><img src="${pack.imageBase64}" alt="封面"></div>` : ""}
-<div class="model-detail-title" style="font-size:14px;font-weight:700">${esc(pack.name)}</div>
+${pack.imageBase64 ? `<div class="preview-thumb"><img src="${esc(pack.imageBase64)}" alt="封面"></div>` : ""}
+<div class="model-detail-title" style="font-size:14px;font-weight:700">${esc(pack.name || "")}</div>
 ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px;line-height:1.6">${esc(pack.description)}</div>` : ""}
 </div>`;
     } catch (err) {

@@ -1,22 +1,5 @@
 // ===== preview 工具函数（纯函数，无组件依赖） =====
 
-/** 预览统计（render.updateDisplay 消费） */
-export interface PreviewStats {
-  repo: number;
-  ver: number;
-  ok: number;
-  tot: number;
-  pending: number;
-}
-
-export const DEFAULT_STATS: PreviewStats = {
-  repo: 0,
-  ver: 0,
-  ok: 0,
-  tot: 0,
-  pending: 0,
-};
-
 /** Bedrock 方块 */
 export interface BedrockCube {
   origin: number[];

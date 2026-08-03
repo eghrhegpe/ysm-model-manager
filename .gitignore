@@ -34,9 +34,6 @@ reasonix.toml
 /ysm_config.json
 tests/python/__pycache__/
 
-# 脚本目录（本地工具，不入库）
-scripts/
-
 # IDE / AI 工具缓存
 .reasonix/
 .qoder/
@@ -44,6 +41,3 @@ scripts/
 
 # 构建产物
 build/
-
-# CI 配置（本地分支，未定稿）
-.github/workflows/

@@ -7,12 +7,14 @@
     "build": "vite build",
     "build:dev": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "jscpd": "^5.0.14",
     "jsdom": "^29.1.1",
     "knip": "^6.31.0",
+    "typescript": "^7.0.2",
     "vite": "^3.0.7",
     "vitest": "^0.34.6"
   },

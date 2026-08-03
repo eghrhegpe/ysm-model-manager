@@ -1,0 +1,36 @@
+---
+kind: go_dedup
+name: 去重 go/dedup
+tier: architecture
+category: go
+source_files:
+  - go/dedup/
+use_when:
+  - 去重
+  - 重复检测
+  - dedup
+---
+
+# 去重 go/dedup
+
+## 概览
+
+`go/dedup/` 包提供资源去重检测，避免重复导入相同资源。
+
+## 核心职责
+
+- 基于文件哈希/元数据检测重复
+- 返回重复匹配信息
+
+## 与其他子系统关系
+
+- `go/importer/`: 导入前去重
+- `go/ysm/`: 解析元数据用于比对
+
+## 不变量
+
+- 重复检测不影响已安装资源
+
+## 相关
+
+- `go/importer/`

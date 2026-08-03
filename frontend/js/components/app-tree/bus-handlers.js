@@ -112,7 +112,7 @@ export function bindBusEvents(vm) {
   // 文件夹操作
   unsubs.push(
     bus.on("dir:rename", async ({ dir }) => {
-      const { modalPrompt } = await import("../../dialogs/modal.js");
+      const { modalPrompt } = await import("../../dialogs/modal.ts");
       const name = await modalPrompt({
         title: "重命名文件夹",
         icon: "✂️",
@@ -141,7 +141,7 @@ export function bindBusEvents(vm) {
 
   unsubs.push(
     bus.on("dir:mkdir", async ({ dir }) => {
-      const { modalPrompt } = await import("../../dialogs/modal.js");
+      const { modalPrompt } = await import("../../dialogs/modal.ts");
       const name = await modalPrompt({
         title: "新建文件夹",
         icon: "📁",
@@ -170,7 +170,7 @@ export function bindBusEvents(vm) {
 
   unsubs.push(
     bus.on("dir:recycle", async ({ dir }) => {
-      const { modalConfirm } = await import("../../dialogs/modal.js");
+      const { modalConfirm } = await import("../../dialogs/modal.ts");
       const confirmed = await modalConfirm({
         title: "移入回收站",
         icon: "♻️",

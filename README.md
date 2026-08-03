@@ -302,7 +302,10 @@ wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 | [`docs/index.md`](docs/index.md)         | **主站介绍**（功能一览 + 站点地图 + 界面预览）    |
 | [`docs/knowledge/index.md`](docs/knowledge/index.md)                 | AI 知识卡索引（后端绑定 + 事件总线 + 组件清单，自动生成） |
 | [`docs/adr/README.md`](docs/adr/README.md) | **ADR 决策记录登记表**（架构决策追踪）    |
-| [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | AI 行为规则 + 痛苦教训                    |
+| [`docs/governance-rules.md`](docs/governance-rules.md) | 前端治理规则手册（9 条规则 × 严重度 × 检测工具） |
+| [`docs/pitfalls.md`](docs/pitfalls.md) | 致命陷阱手册（11 条事故教训全量版）          |
+| [`frontend/AGENTS.md`](frontend/AGENTS.md) | 前端专属 AI 行为手册（DnD/调试/组件约束） |
+| [`docs/architecture.md`](docs/architecture.md) | 架构（3D 渲染标准 + YSMParser WASM 内嵌） |
 
 ---
 

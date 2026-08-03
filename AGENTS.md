@@ -7,15 +7,13 @@
 
 > 500 行文件先 grep 定位再读。
 > 按需读取 `docs/knowledge/routes.md`（AI 路由表）+ `docs/knowledge/index.md`（枢纽索引，自动生成）+ grep 卡正文定位功能作用，充实上下文。
-> Grep `docs/adr/` 状态（`adr-check.mjs` 校验登记一致性），看是否已有类似实现；**写新 ADR 前先占号**（`docs/adr/README.md` 登记表）。
+> 涉及 ADR：先 grep `docs/adr/` 看是否已有类似实现；写新 ADR 走叫号脚本（命令与流程见下方「ADR 规则」，禁止手写编号）。
 > 编号只允许给 ADR、novel 写。
 > 信任本机改动，提交代码：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。会有 GitHub PR review 审核，别怕错误。
 > 放弃低效的 `git stash` / `git stash push` / `git stash pop` 指令。
-> 改完即验：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）；文档 → `node scripts/link-checker.mjs`；ADR → `node scripts/adr-check.mjs`。
-> 必须通过 `tests/` 下所有契约测试（测试文件是宪法基石，禁止修改）。
-> 失败熔断：同一命令连续失败 2 次 → 停手进 Plan 分析原因，不无脑重试。
+> 改完即验（构建/跑得起来）：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）。文档/ADR/资源等治理检查见「§1.2 检查指令」，提交前一键跑 `node scripts/doctor.mjs`。
 > 文档地图优先，但允许探索：地图没有的目录 ≠ 不存在，发现地图过期时报告漂移、以源码为准（`docs/archive/` 为冻结区，需追溯旧设计时才读）。
-> 新文档先过命名约束检查（`docs/Design.md` §11 + ADR-006），再确认归属目录（见 §一 文档地图）。
+> 新文档先过命名约束检查（`docs/Design.md` §12 文档命名与归属规范），命名、frontmatter 与归属目录一并确认。
 > 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `review` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check`。
 
 ## 去哪里查
@@ -25,15 +23,16 @@
 | 查当前决策 + 坑点 | `grep docs/adr/` + `docs/archive/bug-chronicle.md`（先 grep 再读，禁止全量）；按状态浏览用 `docs/adr/index.md`（规范索引，自动生成） |
 | 查 ADR 登记一致性 / 占号 | `node scripts/adr-check.mjs`（撞号/漏登/幽灵/跳号） |
 | 查 AI 高频犯错区（反哺陷阱清单） | `node scripts/ai-mistake-tracker.mjs`（fix 分类统计 / 连续修复链 / 文件热力图 / 规则违反扫描） |
+|发版流程 | 见 `docs/releases/README.md`|
 | 查项目状态（历史） | `docs/archive/PROJECT_STATUS.md`（已冻结只读；实时状态以 ADR 登记表 + git 为准） |
 | 查某模块「现在长啥样、去哪找」 | `docs/knowledge/`（先读 `routes.md` 路由表 + `index.md` 索引，grep 卡正文锁定符号，按 `source_files` 跳源码） |
-| 查/更新函数索引 | `node scripts/funcmap.mjs -o funcmap.md`（符号带 文件:行） |
+| 查/更新函数索引 | `node scripts/funcmap.mjs -o funcmap.md`（按模块分组的 Go/JS/TS 导出符号表，符号带 文件:行） |
 | 批量重构代码（重命名/移函数/加参数） | `node scripts/codemod.mjs help`（AST 感知，ts-morph；move-function 不重写外部引用方，改后跑 tsc） |
 | 校验文档漂移 | `node scripts/link-checker.mjs`（断链）+ `check-knowledge-drift.mjs`（知识卡）+ `adr-check.mjs`（ADR 登记） |
 | 查项目技术（历史） | `docs/archive/architecture.md`（已冻结；当前架构以 ADR + 源码为准） |
 | 写 UI 文案 / 变量名 | `docs/Design.md`（设计规范；UI 文案与代码字段保持一致） |
 | 加菜单 / 按钮 / 组件 | `frontend/js/app-modules.ts`（组件入口）+ `docs/Design.md`（唯一设计规范） |
-| 改前端子模块 | `docs/Design.md`（设计规范）+ ADR-015（动画系统）/ ADR-016（UI 体验）/ ADR-017（增强待办） |
+| 改前端子模块 | `docs/Design.md`（唯一设计规范；动画系统 §7.2 / UI 体验原则 §13 已收编）；增强待办台账查 ADR-017 |
 | 改 Go 后端 | `internal/app/`（Wails Binding 入口）+ `docs/archive/architecture.md`（逻辑下沉优先 `go/` 包） |
 | 修 Bug 查历史 | 说 "bug-search <关键词>" 查 `docs/archive/bug-chronicle.md` |
 | 查资源类型一致性 | 说 "type-consistency"（resource_types.json ↔ extensions.js） |
@@ -41,7 +40,7 @@
 | 查函数签名 | `node scripts/funcmap.mjs` 或 grep |
 | 写大语言模型小说 | `docs/novel/SKELETON.md` + `development-saga.md` |
 | 完整发版、更新流程 | `docs/releases/README.md` + `cmd/build-release.ps1` |
-| 跑全部检查 | §二 检查指令速查 或 `node scripts/doctor.mjs` |
+| 跑全部检查 | `scripts/README.md`（检查命令全表）或 `node scripts/doctor.mjs` |
 
 ## 知识库检索协议
 
@@ -53,15 +52,14 @@
 4. **修 bug 或排查问题时**：先 `grep` `docs/archive/bug-chronicle.md` 关键词，再读匹配段落（禁止全量）。
 5. 以当前源码为最终事实来源，核对知识卡中的 API、依赖、不变量和资源生命周期。
 6. 修改后运行最小相关检查（契约测试 / link-checker / type-consistency 按域选择）。
-7. 文档变更后运行 `node scripts/link-checker.mjs`；ADR 变更后运行 `node scripts/adr-check.mjs`；函数签名变化后重跑 `funcmap.mjs`。
+7. 文档 / ADR / 函数签名变更后，按「改完即验」清单运行对应检查。
 
 知识来源优先级：当前源码 > `docs/adr/` > `docs/knowledge/` > `docs/archive/architecture.md`（历史）。
 若知识卡与源码不一致，报告文档漂移并以源码为准，不得静默假定卡片正确。
 
 ## ADR 规则
 
-> 编号取 `docs/adr/` 最大号 +1（三位，如 ADR-014），文件名 `ADR-NNN-kebab-case.md`。
-> **写文件前先在 `adr/README.md` 登记表占号**（防多会话并行撞号——2026-08-03 曾 009/010/012 三次撞号）。
+> 新 ADR 一律走叫号脚本：`node scripts/new-adr.mjs "标题" [--slug x]`（双源取号 + 登记表占号 + 四段模板 + 自动 adr-check，带原子锁防多会话并行撞号；`--dry-run` 只算号不落盘），禁止手写编号。
 > 状态值：`✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代`；状态变更同步更新登记表。
 > 新 ADR 落地时检查是否触及既有 ADR 决策；触及就在对方首部标注「被 [ADR-NNN] 取代」。
 
@@ -75,7 +73,7 @@
 | 数据 | resource_types.json 单一事实来源 + creators.json / workshop_sites.json / workshop-github.json |
 | 脚本 | Node（.mjs，零依赖工具链） |
 | 测试 | Go 单测 + Node 契约测试（tests/*.mjs） |
-| 命令行 | pwsh + GitHub cli |
+| 命令行 | pwsh / bash + GitHub cli |
 
 ## 构建
 
@@ -90,7 +88,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 |------|------|
 | commit 信息格式 | `<type>: <描述>`，type 同 conventional commits（feat/fix/docs/chore/refactor/test） |
 | 提交范围 | 按功能 `git add <通过测试的路径>`；多会话共享工作区时勿用 `git add .`（会混入并行特性），单会话开发不受此限 |
-| 禁止 | `git stash` / `git stash push` / `git stash pop` |
+| 禁 stash 状态变更 | 仅禁 `git stash push`/`git stash pop`/`git stash apply` 等会改动工作区的操作；只读的 `git stash list`、`git stash show` 不受限 |
 
 ---
 
@@ -203,56 +201,24 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 
 ### 1.1 目录用途
 
+> 完整目录索引见 `docs/index.md`（站点地图 + 开发者入口）。此处仅列与 AI 硬约束相关的目录。
+
 | 目录 | 用途 |
 |------|------|
-| `docs/` | 🏠 主站入口 `index.md`（功能一览 + 站点地图）+ 设计规范 `Design.md`（唯一设计规范）+ 函数索引 `funcmap.md`（自动生成） |
-| `docs/adr/` | 📐 架构决策记录（ADR-001~017，决策真相源，写前先占号；登记表 `adr/README.md` + 规范索引 `adr/index.md` 自动生成） |
-| `docs/guide/` | 📖 用户向文档（19 篇：安装/配置/仓库/导入/同步/FAQ/备份迁移/下载队列/快捷键…，网站化储备） |
-| `docs/knowledge/` | 🧠 模块知识卡（bus / Wails 桥接 / Go 包）— 索引自动生成于 `knowledge/index.md` |
-| `docs/releases/` | 📦 版本发布说明（按 vX.Y.Z.md 命名，索引见 `releases/README.md`） |
-| `docs/app/` | 🖥️ 网页版入口占位（未来 Web 版） |
-| `docs/novel/` | 📖 衍生小说（与项目开发无关） |
 | `docs/archive/` | 🧊 冻结区（历史归档：architecture / bug-chronicle / PROJECT_STATUS / 3D / tasks / sessions…，需追溯旧设计时才读） |
-| `docs/preview/` | 🖼️ UI 截图 |
-| `tests/` | 🔒 契约测试（Node .mjs）— 禁止修改，必须通过 |
-| `scripts/` | Node 工具脚本（治理/静态分析/生成器），含 `scripts/baseline/` 基线文件（`check-deadcode-baseline` / `check-doc-drift` 使用），由 `doctor.mjs` / CI / 手动命令调用 |
+| `tests/` | 🔒 契约测试（Node .mjs）— 禁止修改，必须通过，逐项守护 JSON/配置/HTML 引用完整性；清单以 `tests/` 目录为唯一事实来源，`doctor.mjs` 自动遍历运行 |
+| `scripts/` | Node 工具脚本（治理/静态分析/生成器），含 `scripts/baseline/` 基线文件；脚本与检查命令全表见 `scripts/README.md`（唯一登记处） |
 
-契约测试明细（`tests/`，Node 零依赖）：
+### 1.2 检查指令（改完验证流程：按改动类型选检查）
 
-| 测试文件 | 校验内容 |
-|---------|---------|
-| `test_resource_schema.mjs` | resource_types.json 格式校验 |
-| `test_workshop_schema.mjs` | workshop_sites.json 结构校验 |
-| `test_creators_schema.mjs` | creators.json 必填字段校验 |
-| `test_config_defaults.mjs` | AppConfig 字段类型/值域校验 |
-| `test_config_syntax.mjs` | wails.json + go.mod 语法校验（reasonix.toml 为本地 AI 终端配置，不入库不校验） |
-| `test_html_integrity.mjs` | frontend/index.html 引用完整性校验 |
+> 检查命令全表（调用方式 / 覆盖范围 / 标志位）以 `scripts/README.md` 为唯一事实来源；全量自检用 `node scripts/doctor.mjs`。
 
-### 1.2 检查指令速查（文档与检查成对，改完对应文档/体系必跑）
+> **改完即验映射表（改哪类 → 跑哪类，唯一权威）**：
+> 改文档 → `link-checker` + `check-knowledge-drift`；改 ADR → `adr-check` + `check-adr-health`；
+> 改前端源码 → `check-circular` + `check-consumers` + `check-deadcode-baseline`；
+> 改资源类型 → `type-consistency`；改前端 UI/文案 → `review` + `comment-checker`；提交前 → `doctor`。
 
-| 检查 | 命令 | 覆盖 |
-|------|------|------|
-| 契约测试 | `for f in tests/*.mjs; do node "$f"; done` | JSON/配置/HTML 引用完整性（CI 已接） |
-| 文档断链 | `node scripts/link-checker.mjs` | 所有 md 内部链接（改文档后必跑） |
-| ADR 登记一致性 | `node scripts/adr-check.mjs` | adr/README.md 登记表 vs 磁盘文件（防撞号/漏登/幽灵） |
-| 生成器守护 | `node scripts/gen-docs-index.mjs --check` | adr 登记表/规范索引 + releases 索引 + knowledge 委托（已挂 doctor + pre-push，防生成产物静默过期） |
-| 知识卡漂移 | `node scripts/check-knowledge-drift.mjs` | knowledge/ 卡与源码一致性 |
-| 红线审查 | `node scripts/review.mjs` / `--audit` | 12 条治理红线（R1-R9 + W1/W2/W5，W3/W4 已移交 comment-checker）；`--audit` 出设计审查 checklist |
-| 类型一致性 | `node scripts/type-consistency.mjs` | resource_types.json ↔ extensions.js |
-| 事件审计 | `node scripts/event-audit.mjs` | EventsOn/bus.on 注册位置 |
-| 注释质量 | `node scripts/comment-checker.mjs` | AI 废话/TODO 无编号/调试残留 |
-| 绑定一致性 | `node scripts/binding-check.mjs` | Go 导出函数 ↔ wailsjs |
-| 函数映射 | `node scripts/funcmap.mjs -o funcmap.md` | 注释 → 函数表（改签名后重跑） |
-| 文档三一致 | `node scripts/check-doc-drift.mjs` | ADR 登记 + 知识卡 + 架构树引用 + AGENTS.md §4.2 树 vs 磁盘（ERROR 阻断；`--fix` 刷新架构树基线） |
-| ADR 健康 | `node scripts/check-adr-health.mjs` | ADR 状态机值域 / 登记表同步 / 技术债清单（`--debt`） |
-| 死代码基线 | `node scripts/check-deadcode-baseline.mjs` | knip+jscpd 与基线对比，新增项阻断（`--update-baseline` 刷新） |
-| 符号消费者 | `node scripts/check-consumers.mjs` | 孤儿导出审计（`--strict` 阻断 / `--min-consumers N` 过滤） |
-| 循环依赖 | `node scripts/check-circular.mjs` | frontend/js ESM import 图找环（ERROR 阻断） |
-| 布尔命名 | `node scripts/check-boolean-naming.mjs` | 布尔变量命名规范（`--strict` 阻断） |
-| 自动补 import | `node scripts/auto-import.mjs` | TS/JS 缺失 import 检测 + 建议（`--fix` 自动写入，歧义跳过；`--watch` 监听） |
-| 全量自检 | `node scripts/doctor.mjs` | 编译 + 构建 + 文件 + 红线 + Git 状态 |
-
-> **检查优先级**：改文档 → `link-checker`；改 ADR → `adr-check` + `check-adr-health`；改前端源码 → `check-circular` + `check-consumers` + `check-deadcode-baseline`；改资源类型 → `type-consistency`；改前端 → `review` + `comment-checker`；提交前 → `doctor`。
+> 注：L14「硬约束」的构建命令（`go build` / `vite build` / `typecheck`）负责「跑得起来」，本节负责「符合仓库治理」，两者互补不重复。
 
 ---
 
@@ -272,7 +238,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 10 | 回调 API 未 Promise 化 | DnD 数据读不到 | `entry.file(callback)` → `new Promise(resolve => entry.file(resolve))` |
 | 11 | 3D 坐标变换反复修（实证：model3d.js 9 次 fix 全项目第一） | "对齐 ysmview cube pivot" 连续 5 次 fix | 改 model2d/model3d/spec.go 坐标前先 grep `bug-chronicle` + 对齐 ysmview 口径（pivot X 取反、`from.x = origin.x - size.x`）；改完用自由相机近距验证 |
 
-> 完整版见 `.github/copilot-instructions.md`（17 条）。
+> 完整版见 `docs/pitfalls.md`。
 
 ---
 
@@ -305,7 +271,7 @@ const { SomeBinding } = window.go.main.App;
 - 所有异常路径必须有 toast 反馈
 - 所有 UI 文件名必须走 `renderDisplayName()`
 
-> 完整 9 条规则 + 决策理由见 `docs/adr/ADR-005-frontend-governance-rules.md`（原 `docs/core/CLEANUP_RULES.md` 已并入 ADR-005，2026-08-03 删除）。
+> 完整 9 条规则 + 检测工具见 `docs/governance-rules.md`（规则条文唯一事实来源）；决策理由见 `docs/adr/ADR-005-frontend-governance-rules.md`。
 
 ---
 
@@ -357,11 +323,3 @@ app-xxx/xxx-css.js   — Shadow DOM 样式
 
 所有资源类型定义以 `resource_types.json` 为单一事实来源。**不要在 Go/Frontend 中手写 `StorageSubDir` / `specificRoot` / `ResourceExts` 的新条目**。先在 `resource_types.json` 加，一致性测试会自动校验。
 
----
-
-## 五、环境提示
-
-- **Shell**：优先用 pwsh（PowerShell），不是 cmd
-- **路径分隔符**：统一正斜杠 `/`
-- **调试日志用完即删**：`console.log` / `fmt.Print` 测试完后**必须请示用户确认**再删，不可自行决定
-- **发版**：用 `wails build -clean`，流程见 `docs/releases/README.md`

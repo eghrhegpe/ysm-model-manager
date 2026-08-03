@@ -25,6 +25,11 @@ use_when:
 - 提供 `get` / `set` 接口，支持响应式更新
 - 作为页面组件挂载/卸载的协调者
 
+## 对外 API / 入口
+
+- `currentPage` — 当前页只读值（`PageName` 联合类型，替代 `window.__currentPage` 红线）
+- `setCurrentPage(page)` — 切换当前页，同步导航状态
+
 ## 与其他子系统关系
 
 - `app-content/`: 根据 `currentPage` 切换内容渲染

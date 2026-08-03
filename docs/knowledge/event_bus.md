@@ -26,6 +26,12 @@ use_when:
 - **事件命名规范**: 小写蛇形命名，如 `model-selected`, `download-started`
 - **全局事件注册**: 全局事件必须注册在 `app-content/index.ts` 的 `_registerGlobalHandlers()` 中
 
+## 对外 API / 入口
+
+- `createBus` — 创建事件总线实例
+- `on` / `off` / `once` / `emit` — 订阅 / 退订 / 一次性 / 发布（`Bus` 接口）
+- `BusEvents` — 事件名 → payload 类型映射（类型化总线，`BusEventName` 联合类型）；`on` 返回取消订阅函数供 `_unsubs` 收集
+
 ## 与其他子系统关系
 
 - `app-modules.ts`: 各子模块入口，负责模块内部事件分发

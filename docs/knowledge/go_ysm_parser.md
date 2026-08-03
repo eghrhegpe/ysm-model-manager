@@ -25,6 +25,12 @@ use_when:
 - 提取模型属性（尺寸、材质、骨骼信息）
 - 生成前端可用的摘要结构
 
+## 对外 API / 入口
+
+- `IsYSMJar` — 判断文件是否为 YSM jar 包（zip 内结构探测）
+- `HasYSMMod` / `HasModInDir` — 检测目录内是否含 YSM mod
+- 解析链路文件：`parse.go`（模型解析）/ `summary.go`（摘要）/ `header.go`（头部读取）/ `texsize.go`（纹理尺寸）
+
 ## 与其他子系统关系
 
 - `go/types/`: 共享类型定义

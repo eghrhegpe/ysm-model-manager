@@ -28,6 +28,12 @@ use_when:
 - 前端 `services/registry.ts` 加载并缓存类型定义
 - Go 端 `go/types/` 包同步读取同一份定义
 
+## 对外 API / 入口
+
+- `register(name, service)` — 注册服务（`RegistrySchema` 约束）
+- `get(name)` / `has(name)` — 获取 / 检查服务是否存在
+- `unregister(name)` / `clear()` — 注销单个 / 清空全部
+
 ## 与其他子系统关系
 
 - `go/types/`: Go 端注册表加载

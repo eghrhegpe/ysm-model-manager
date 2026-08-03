@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"math"
+	"strconv"
 
 	"ysm-model-manager/go/types"
 )
@@ -416,7 +417,7 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 	}
 
 	// Mesh local position = cubePivot - bonePivot（顶点已相对 cubePivot）
-	meshID := boneID + "_" + string(rune('0'+cubeIdx))
+	meshID := boneID + "_" + strconv.Itoa(cubeIdx)
 	localPos := [3]float64{cp[0] - bonePivot.x, cp[1] - bonePivot.y, cp[2] - bonePivot.z}
 
 	// Cube rotation → quaternion (CreateBlockbenchQuaternion)

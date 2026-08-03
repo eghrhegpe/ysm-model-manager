@@ -448,7 +448,7 @@ export async function loadModel2D(ctx, modelPath, skelContainer) {
           loadingEl.remove();
 
           // 填充面板
-          const mg = spec.models[0];
+          const mg = spec.models?.[0];
           let totalCubes = 0;
           for (const b of mg?.bones || []) totalCubes += b._cubeCount || 0;
           panel.appendChild(sec("📐 模型统计"));

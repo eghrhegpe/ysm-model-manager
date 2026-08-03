@@ -94,6 +94,13 @@ export function initImportQueue(app) {
         }
       } catch (_) {}
     })();
+
+    // "读取作者"已勾选时，自动为新文件读取 YSM 头部
+    setTimeout(async () => {
+      if (root.getElementById("dl-from-header")?.checked) {
+        await loadHeaderFromBase64();
+      }
+    }, 0);
   };
 
   // 检查文件是否已存在（防抖）
@@ -127,7 +134,7 @@ export function initImportQueue(app) {
     const d = manualDate || (autoOn ? autoDate : "");
     const parts = [];
     if (a) parts.push("[" + a + "]");
-    if (w) parts.push("【" + w + "】");
+    parts.push("【" + (w || "未知") + "】");
     parts.push(c || "?");
     if (v) parts.push("-" + v);
     if (d) parts.push(" (" + d + ")");
@@ -331,7 +338,7 @@ export function initImportQueue(app) {
     if (c) {
       const parts = [];
       if (a) parts.push("[" + a + "]");
-      if (w) parts.push("【" + w + "】");
+      parts.push("【" + (w || "未知") + "】");
       parts.push(c);
       if (v) parts.push("-" + v);
       if (d) parts.push(" (" + d + ")");
@@ -357,51 +364,31 @@ export function initImportQueue(app) {
       const subpath = currentRelPath
         ? currentRelPath.substring(0, currentRelPath.lastIndexOf("/"))
         : "";
-      await ImportModelFileTo(newName, subpath, currentBase64);
+      // 先弹出重命名确认对话框，确认后再导入
+      const { showRenameDialog } = await import("../dialogs/rename.js");
+      const renameTo = await showRenameDialog(null, newName);
+      if (!renameTo) {
+        bus.emit("toast:show", { msg: "已取消导入", duration: 2000, type: "info" });
+        return;
+      }
+      const finalName = renameTo;
+
+      await ImportModelFileTo(finalName, subpath, currentBase64);
       bus.emit("stats:refresh");
       bus.emit("tree:reload");
 
-      // 自动弹出重命名对话框
-      try {
-        const { showRenameDialog } = await import("../dialogs/rename.js");
-        const { RenameFile } = await getApp();
-        const { GetRepoRoot } = await getApp();
-        const _ysmRoot = await GetRepoRoot("ysm");
-        const renameTo = await showRenameDialog(
-          (_ysmRoot || "") + "\\" + newName,
-          newName,
-        );
-        if (renameTo && renameTo !== newName) {
-          const subpath = currentRelPath
-            ? currentRelPath.substring(0, currentRelPath.lastIndexOf("/"))
-            : "";
-          const fullImportPath =
-            (_ysmRoot || "") +
-            "\\" +
-            (subpath ? subpath.replace(/\//g, "\\") + "\\" : "") +
-            newName;
-          await RenameFile(fullImportPath, renameTo);
-          newName = renameTo;
-          bus.emit("stats:refresh");
-          bus.emit("tree:reload");
-        }
-      } catch (_) {
-        /* 重命名失败不阻塞流程 */
-      }
-
       bus.emit("toast:show", {
-        msg: "✅ 已导入: " + newName,
+        msg: "✅ 已导入: " + finalName,
         duration: 3000,
         type: "success",
       });
-
       // 刷新 repo 文件缓存
       repoFiles = null;
       loadRepoFiles();
 
       // 加入已导入列表
       imported.unshift({
-        name: newName,
+        name: finalName,
         time: new Date().toLocaleTimeString(),
         isYsm: true,
       });

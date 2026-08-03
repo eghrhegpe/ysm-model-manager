@@ -34,7 +34,7 @@ export function buildSceneMesh(spec) {
   const rootGroup = new THREE.Group();
   rootGroup.scale.set(modelScale, modelScale, modelScale);
   const boneGroupMap = new Map();
-  for (const mg of spec.models)
+  for (const mg of spec.models || [])
     for (const bd of mg.bones || []) {
       const g = new THREE.Group();
       g.name = bd.name;
@@ -43,7 +43,7 @@ export function buildSceneMesh(spec) {
         g.quaternion.set(bd.localRotation[0], bd.localRotation[1], bd.localRotation[2], bd.localRotation[3]);
       boneGroupMap.set(bd.id, g);
     }
-  for (const mg of spec.models)
+  for (const mg of spec.models || [])
     for (const bd of mg.bones || []) {
       const g = boneGroupMap.get(bd.id);
       if (!g) continue;
@@ -422,7 +422,7 @@ export async function renderModel3D(container, texArr, spec, texIdx = 0) {
       if (g) g.traverse(c => { c.visible = !c.visible; });
     },
     showModelGroup: (idx) => {
-      spec.models.forEach((mg, i) => {
+      (spec.models || []).forEach((mg, i) => {
         const vis = i === idx;
         for (const bd of mg.bones || [])
           setBoneVisible(bd.id, vis);

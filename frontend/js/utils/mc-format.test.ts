@@ -10,8 +10,8 @@ describe("renderFormattedText 基础", () => {
 
   it("空字符串/非字符串 → 空串", () => {
     expect(renderFormattedText("")).toBe("");
-    expect(renderFormattedText(null)).toBe("");
-    expect(renderFormattedText(undefined)).toBe("");
+    expect(renderFormattedText(null as unknown as string)).toBe("");
+    expect(renderFormattedText(undefined as unknown as string)).toBe("");
   });
 
   it("HTML 特殊字符被转义（防 XSS）", () => {

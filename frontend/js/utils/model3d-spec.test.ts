@@ -3,9 +3,10 @@
 // 任一侧口径漂移都会使 Go/JS 其中一套测试失败，双边锁定。
 import { describe, it, expect } from "vitest";
 import { buildSpecFromModel } from "./model3d-spec.ts";
+import type { SpecCube } from "./model3d-spec.ts";
 
 /** 便捷构造：单骨骼模型 */
-function singleBoneModel(cube) {
+function singleBoneModel(cube: SpecCube) {
   return {
     texWidth: 64,
     texHeight: 64,

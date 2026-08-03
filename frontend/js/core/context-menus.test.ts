@@ -3,6 +3,7 @@
 // 点击 item → 断言 handler 发出正确的 bus 事件 / getApp 调用。
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { bus } from "../bus.ts";
+import type { MenuItem, CtxShowPayload, ToastPayload } from "../bus";
 import { registerContextMenus } from "./context-menus.ts";
 import { MENU_DEFS, getMenuDef } from "./menu-defs.ts";
 
@@ -67,8 +68,8 @@ vi.mock("../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 }));
 
 // 收集 menu:show 与 handler 发出的业务事件
-const menuShows = [];
-const emitted = [];
+const menuShows: Array<{ x: number; y: number; items: MenuItem[] }> = [];
+const emitted: Array<{ e: string; p: unknown }> = [];
 const TRACKED = [
   "instance:export-list",
   "instance:clear",
@@ -80,7 +81,7 @@ const TRACKED = [
   "toast:show",
   "tree:reload",
   "stats:refresh",
-];
+] as const;
 
 beforeAll(() => {
   bus.on("menu:show", (p) => menuShows.push(p));
@@ -95,15 +96,20 @@ beforeEach(() => {
 });
 
 /** 触发一次 ctx:show，返回对应的 menu:show 载荷 */
-function showMenu(type, overrides = {}) {
+function showMenu(type: CtxShowPayload["type"], overrides: Partial<CtxShowPayload> = {}) {
   bus.emit("ctx:show", { x: 10, y: 20, type, paths: ["/a.ysm"], ...overrides });
   expect(menuShows).toHaveLength(1);
   return menuShows[0];
 }
 
 /** 断言 items 载荷与声明逐条一致（结构 + label 求值） */
-function expectItemsMatchDef(payload, type) {
+function expectItemsMatchDef(
+  payload: { x: number; y: number; items: MenuItem[] },
+  type: CtxShowPayload["type"],
+) {
   const def = getMenuDef(type);
+  expect(def).toBeTruthy();
+  if (!def) throw new Error(`missing menu def: ${type}`);
   expect(payload.x).toBe(10);
   expect(payload.y).toBe(20);
   expect(payload.items).toHaveLength(def.items.length);
@@ -121,8 +127,8 @@ function expectItemsMatchDef(payload, type) {
 }
 
 /** 构造与声明 label 函数匹配的 ctx 上下文 */
-function payloadCtx(type) {
-  const base = { paths: ["/a.ysm"] };
+function payloadCtx(type: CtxShowPayload["type"]): CtxShowPayload {
+  const base: CtxShowPayload = { x: 10, y: 20, type, paths: ["/a.ysm"] };
   if (type === "instance") return { ...base, instanceName: "测试整合包", rtype: "ysm" };
   if (type === "batch") return { ...base, count: 3 };
   return base;
@@ -157,12 +163,16 @@ describe("registerContextMenus 四类菜单声明", () => {
 
 describe("菜单项点击行为", () => {
   /** 取某类菜单中 label 匹配的 item，触发 onClick */
-  function clickItem(type, labelText, overrides = {}) {
+  function clickItem(
+    type: CtxShowPayload["type"],
+    labelText: string,
+    overrides: Partial<CtxShowPayload> = {},
+  ): MenuItem {
     const payload = showMenu(type, { ...payloadCtx(type), ...overrides });
     const item = payload.items.find((i) => i.label === labelText);
     expect(item, `找不到菜单项: ${labelText}`).toBeTruthy();
-    item.onClick();
-    return item;
+    item!.onClick!();
+    return item!;
   }
 
   it("instance 复制模型清单 → instance:export-list", () => {
@@ -185,7 +195,7 @@ describe("菜单项点击行为", () => {
   it("instance 打开文件夹 → getApp().OpenInstanceFolder", async () => {
     const payload = showMenu("instance", { ...payloadCtx("instance"), path: "/packs/x" });
     const item = payload.items.find((i) => i.label === "打开文件夹");
-    item.onClick();
+    item!.onClick!();
     await vi.waitFor(() => expect(openFolderMock).toHaveBeenCalled());
     expect(openFolderMock).toHaveBeenCalledWith("/packs/x", "ysm");
   });
@@ -240,21 +250,27 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
   });
 
   /** 触发菜单并 await 指定 label 的 onClick（异步 handler） */
-  async function clickAsync(type, labelText, overrides = {}) {
+  async function clickAsync(
+    type: CtxShowPayload["type"],
+    labelText: string,
+    overrides: Partial<CtxShowPayload> = {},
+  ): Promise<MenuItem> {
     const payload = showMenu(type, { ...payloadCtx(type), ...overrides });
     const item = payload.items.find((i) => i.label === labelText);
     expect(item, `找不到菜单项: ${labelText}`).toBeTruthy();
-    await item.onClick();
-    return item;
+    await item!.onClick!();
+    return item!;
   }
 
-  function toasts() {
-    return emitted.filter((e) => e.e === "toast:show").map((e) => e.p);
+  function toasts(): ToastPayload[] {
+    return emitted
+      .filter((e) => e.e === "toast:show")
+      .map((e) => e.p as ToastPayload);
   }
   function reloaded() {
     return emitted.some((e) => e.e === "tree:reload");
   }
-  function stubClipboard(impl) {
+  function stubClipboard(impl: () => Promise<void>) {
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText: vi.fn(impl) },
       configurable: true,

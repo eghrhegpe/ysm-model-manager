@@ -7,8 +7,8 @@ describe("esc", () => {
   it("escapes >", () => expect(esc("a>b")).toBe("a&gt;b"));
   it("escapes double quote", () => expect(esc('a"b')).toBe("a&quot;b"));
   it("escapes single quote", () => expect(esc("a'b")).toBe("a&#39;b"));
-  it("returns empty for null", () => expect(esc(null)).toBe(""));
-  it("returns empty for undefined", () => expect(esc(undefined)).toBe(""));
+  it("returns empty for null", () => expect(esc(null as unknown as string)).toBe(""));
+  it("returns empty for undefined", () => expect(esc(undefined as unknown as string)).toBe(""));
 });
 
 describe("hl", () => {

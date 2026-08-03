@@ -140,7 +140,7 @@ class AppContent extends HTMLElement {
     } else if (this._current === "repository") {
       this._initRepository();
       // 按需加载 Three.js 预览组件
-      import("../app-preview/index.js").catch(() => {});
+      import("../app-preview/index.ts").catch(() => {});
     }
   }
 
@@ -213,7 +213,7 @@ class AppContent extends HTMLElement {
     const root = this._root;
     const subtabs = root.querySelectorAll(".repo-subtab");
     const treeBody = root.getElementById("repo-tab-tree");
-    import("../app-preview/index.js").catch(() => {});
+    import("../app-preview/index.ts").catch(() => {});
     let curRtype = localStorage.getItem("repo_rtype") || "ysm";
     subtabs.forEach((btn) => {
       btn.addEventListener("click", () => {

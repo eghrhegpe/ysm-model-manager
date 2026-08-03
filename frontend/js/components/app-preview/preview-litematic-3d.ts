@@ -1,7 +1,27 @@
-let _voxel3d = null;
+// ===== Litematic 体素 3D 预览 =====
 
-export async function createLitematic3D(path, voxelFn) {
-  if (_voxel3d) { _voxel3d.cleanup(); _voxel3d = null; }
+/** 体素数据（GetLitematicVoxelData 等返回 JSON） */
+interface VoxelData {
+  groups: Array<{ positions: number[][]; color?: string }>;
+  size: number[];
+  truncated?: boolean;
+  maxBlocks?: number;
+}
+
+interface Voxel3DHandle {
+  cleanup: () => void;
+}
+
+let _voxel3d: Voxel3DHandle | null = null;
+
+export async function createLitematic3D(
+  path: string,
+  voxelFn: string,
+): Promise<void> {
+  if (_voxel3d) {
+    _voxel3d.cleanup();
+    _voxel3d = null;
+  }
 
   const overlay = document.createElement("div");
   overlay.style.cssText =
@@ -31,7 +51,8 @@ export async function createLitematic3D(path, voxelFn) {
   rotSel.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit;margin-right:8px";
   [{ v: true, t: "环绕" }, { v: false, t: "自身" }].forEach((m) => {
     const opt = document.createElement("option");
-    opt.value = m.v; opt.textContent = m.t;
+    opt.value = String(m.v);
+    opt.textContent = m.t;
     rotSel.appendChild(opt);
   });
   topBar.appendChild(rotSel);
@@ -42,7 +63,10 @@ export async function createLitematic3D(path, voxelFn) {
   topBar.appendChild(spdLabel);
 
   const spdSlider = document.createElement("input");
-  spdSlider.type = "range"; spdSlider.min = "2"; spdSlider.max = "200"; spdSlider.value = "20";
+  spdSlider.type = "range";
+  spdSlider.min = "2";
+  spdSlider.max = "200";
+  spdSlider.value = "20";
   spdSlider.style.cssText = "width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff)";
   topBar.appendChild(spdSlider);
 
@@ -63,31 +87,53 @@ export async function createLitematic3D(path, voxelFn) {
 
   const axisSel = document.createElement("select");
   axisSel.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
-  ["Y","X","Z"].forEach((a) => { const o = document.createElement("option"); o.value = a; o.textContent = a; axisSel.appendChild(o); });
+  ["Y", "X", "Z"].forEach((a) => {
+    const o = document.createElement("option");
+    o.value = a;
+    o.textContent = a;
+    axisSel.appendChild(o);
+  });
   topBar.appendChild(axisSel);
 
   const layerMode = document.createElement("select");
   layerMode.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
-  [{ v: "all", t: "全部" }, { v: "single", t: "单层" }, { v: "range", t: "范围" }].forEach((m) => { const o = document.createElement("option"); o.value = m.v; o.textContent = m.t; layerMode.appendChild(o); });
+  [{ v: "all", t: "全部" }, { v: "single", t: "单层" }, { v: "range", t: "范围" }].forEach((m) => {
+    const o = document.createElement("option");
+    o.value = m.v;
+    o.textContent = m.t;
+    layerMode.appendChild(o);
+  });
   topBar.appendChild(layerMode);
 
   const layerSlider = document.createElement("input");
-  layerSlider.type = "range"; layerSlider.min = "1"; layerSlider.max = "100"; layerSlider.value = "100";
+  layerSlider.type = "range";
+  layerSlider.min = "1";
+  layerSlider.max = "100";
+  layerSlider.value = "100";
   layerSlider.style.cssText = "width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff);display:none";
   topBar.appendChild(layerSlider);
 
   const layerInput = document.createElement("input");
-  layerInput.type = "number"; layerInput.min = "1"; layerInput.max = "100"; layerInput.value = "100";
+  layerInput.type = "number";
+  layerInput.min = "1";
+  layerInput.max = "100";
+  layerInput.value = "100";
   layerInput.style.cssText = "width:42px;font-size:11px;padding:1px 3px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);font-family:inherit;text-align:center;display:none";
   topBar.appendChild(layerInput);
 
   const layerSlider2 = document.createElement("input");
-  layerSlider2.type = "range"; layerSlider2.min = "1"; layerSlider2.max = "100"; layerSlider2.value = "100";
+  layerSlider2.type = "range";
+  layerSlider2.min = "1";
+  layerSlider2.max = "100";
+  layerSlider2.value = "100";
   layerSlider2.style.cssText = "width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff);display:none";
   topBar.appendChild(layerSlider2);
 
   const layerInput2 = document.createElement("input");
-  layerInput2.type = "number"; layerInput2.min = "1"; layerInput2.max = "100"; layerInput2.value = "100";
+  layerInput2.type = "number";
+  layerInput2.min = "1";
+  layerInput2.max = "100";
+  layerInput2.value = "100";
   layerInput2.style.cssText = "width:42px;font-size:11px;padding:1px 3px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);font-family:inherit;text-align:center;display:none";
   topBar.appendChild(layerInput2);
 
@@ -104,20 +150,23 @@ export async function createLitematic3D(path, voxelFn) {
     '<div style="font-size:32px">🧊</div><div>加载体素数据...</div><div style="width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden"><div style="height:100%;width:30%;background:var(--accent,#7c83ff);border-radius:2px;animation:ysm-prog 1.5s ease-in-out infinite"></div></div>';
   viewContainer.appendChild(loadingEl);
 
-  function closeOverlay() {
+  function closeOverlay(): void {
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
     _voxel3d = null;
   }
   closeBtn.onclick = closeOverlay;
   document.addEventListener("keydown", function escH(e) {
-    if (e.key === "Escape") { document.removeEventListener("keydown", escH); closeOverlay(); }
+    if (e.key === "Escape") {
+      document.removeEventListener("keydown", escH);
+      closeOverlay();
+    }
   });
 
   try {
     const App = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-    const fn = App[voxelFn || "GetLitematicVoxelData"];
+    const fn = (App as unknown as Record<string, (p: string) => Promise<string>>)[voxelFn || "GetLitematicVoxelData"];
     const jsonStr = await fn(path);
-    const data = JSON.parse(jsonStr);
+    const data = JSON.parse(jsonStr) as VoxelData;
 
     if (!data || !data.groups || !data.groups.length) {
       loadingEl.innerHTML = '<div style="font-size:32px">⚠️</div><div>体素数据为空</div>';
@@ -135,9 +184,15 @@ export async function createLitematic3D(path, voxelFn) {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color("#1a1b2e");
 
-    const camera = new THREE.PerspectiveCamera(50,
-      viewContainer.clientWidth / Math.max(viewContainer.clientHeight, 1), 0.5, 2000);
-    const centerX = sizeX / 2, centerY = sizeY / 2, centerZ = sizeZ / 2;
+    const camera = new THREE.PerspectiveCamera(
+      50,
+      viewContainer.clientWidth / Math.max(viewContainer.clientHeight, 1),
+      0.5,
+      2000,
+    );
+    const centerX = sizeX / 2,
+      centerY = sizeY / 2,
+      centerZ = sizeZ / 2;
     const maxDim = Math.max(sizeX, sizeY, sizeZ, 10);
     camera.position.set(centerX + maxDim * 1.5, centerY + maxDim, centerZ + maxDim * 1.5);
     camera.lookAt(centerX, centerY, centerZ);
@@ -157,13 +212,16 @@ export async function createLitematic3D(path, voxelFn) {
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
     const dl1 = new THREE.DirectionalLight(0xffffff, 0.5);
-    dl1.position.set(sizeX, sizeY * 2, sizeZ); scene.add(dl1);
+    dl1.position.set(sizeX, sizeY * 2, sizeZ);
+    scene.add(dl1);
     const dl2 = new THREE.DirectionalLight(0xffffff, 0.3);
-    dl2.position.set(-sizeX, sizeY, -sizeZ); scene.add(dl2);
+    dl2.position.set(-sizeX, sizeY, -sizeZ);
+    scene.add(dl2);
 
     const gridSize = Math.ceil(maxDim / 10) * 10;
     const grid = new THREE.GridHelper(gridSize, Math.min(gridSize, 50), 0x444466, 0x222244);
-    grid.position.set(centerX, 0, centerZ); scene.add(grid);
+    grid.position.set(centerX, 0, centerZ);
+    scene.add(grid);
 
     const CHUNK = 32;
     const xChunks = Math.ceil(sizeX / CHUNK);
@@ -171,12 +229,12 @@ export async function createLitematic3D(path, voxelFn) {
     const zChunks = Math.ceil(sizeZ / CHUNK);
 
     const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-    const instancedMeshes = [];
-    const materials = [];
+    const instancedMeshes: Array<import("three").InstancedMesh> = [];
+    const materials: Array<import("three").MeshLambertMaterial> = [];
     for (const group of data.groups) {
       if (!group.positions || !group.positions.length) continue;
       // 按空间分块：同色方块分散到各 chunk，每个 chunk 独立 InstancedMesh
-      const chunkMap = new Map();
+      const chunkMap = new Map<number, number[][]>();
       for (let i = 0; i < group.positions.length; i++) {
         const p = group.positions[i];
         const cx = Math.floor((p[0] || 0) / CHUNK);
@@ -184,7 +242,10 @@ export async function createLitematic3D(path, voxelFn) {
         const cz = Math.floor((p[2] || 0) / CHUNK);
         const ck = cx + cy * xChunks + cz * xChunks * yChunks;
         let arr = chunkMap.get(ck);
-        if (!arr) { arr = []; chunkMap.set(ck, arr); }
+        if (!arr) {
+          arr = [];
+          chunkMap.set(ck, arr);
+        }
         arr.push(p);
       }
       const mat = new THREE.MeshLambertMaterial({ color: group.color || "#7F7F7F" });
@@ -211,13 +272,15 @@ export async function createLitematic3D(path, voxelFn) {
     let layerVal = layerMax;
     let layerVal2 = layerMax;
 
-    function setupRange() {
+    function setupRange(): void {
       layerMax = [sizeX, sizeY, sizeZ][layerAxis];
-      layerSlider.max = layerMax; layerInput.max = layerMax;
-      layerSlider2.max = layerMax; layerInput2.max = layerMax;
+      layerSlider.max = String(layerMax);
+      layerInput.max = String(layerMax);
+      layerSlider2.max = String(layerMax);
+      layerInput2.max = String(layerMax);
     }
 
-    function updateLayerUI() {
+    function updateLayerUI(): void {
       const m = layerMode.value;
       layerSlider.style.display = m === "all" ? "none" : "";
       layerInput.style.display = m === "all" ? "none" : "";
@@ -226,29 +289,48 @@ export async function createLitematic3D(path, voxelFn) {
       applyLayer();
     }
 
-    layerMode.onchange = () => { updateLayerUI(); };
+    layerMode.onchange = (): void => {
+      updateLayerUI();
+    };
 
-    axisSel.onchange = () => {
-      layerAxis = { X: 0, Y: 1, Z: 2 }[axisSel.value];
+    axisSel.onchange = (): void => {
+      layerAxis = { X: 0, Y: 1, Z: 2 }[axisSel.value] ?? 1;
       setupRange();
-      layerSlider.value = layerMax; layerInput.value = layerMax;
-      layerSlider2.value = layerMax; layerInput2.value = layerMax;
-      layerVal = layerMax; layerVal2 = layerMax;
+      layerSlider.value = String(layerMax);
+      layerInput.value = String(layerMax);
+      layerSlider2.value = String(layerMax);
+      layerInput2.value = String(layerMax);
+      layerVal = layerMax;
+      layerVal2 = layerMax;
       applyLayer();
     };
 
-    layerSlider.oninput = () => { layerInput.value = layerSlider.value; layerVal = Number(layerSlider.value); applyLayer(); };
-    layerInput.onchange = () => {
-      let v = Math.max(1, Math.min(layerMax, Number(layerInput.value) || layerMax));
-      layerInput.value = v; layerSlider.value = v; layerVal = v; applyLayer();
+    layerSlider.oninput = (): void => {
+      layerInput.value = layerSlider.value;
+      layerVal = Number(layerSlider.value);
+      applyLayer();
     };
-    layerSlider2.oninput = () => { layerInput2.value = layerSlider2.value; layerVal2 = Number(layerSlider2.value); applyLayer(); };
-    layerInput2.onchange = () => {
-      let v = Math.max(1, Math.min(layerMax, Number(layerInput2.value) || layerMax));
-      layerInput2.value = v; layerSlider2.value = v; layerVal2 = v; applyLayer();
+    layerInput.onchange = (): void => {
+      const v = Math.max(1, Math.min(layerMax, Number(layerInput.value) || layerMax));
+      layerInput.value = String(v);
+      layerSlider.value = String(v);
+      layerVal = v;
+      applyLayer();
+    };
+    layerSlider2.oninput = (): void => {
+      layerInput2.value = layerSlider2.value;
+      layerVal2 = Number(layerSlider2.value);
+      applyLayer();
+    };
+    layerInput2.onchange = (): void => {
+      const v = Math.max(1, Math.min(layerMax, Number(layerInput2.value) || layerMax));
+      layerInput2.value = String(v);
+      layerSlider2.value = String(v);
+      layerVal2 = v;
+      applyLayer();
     };
 
-    function applyLayer() {
+    function applyLayer(): void {
       const dummy = new THREE.Object3D();
       const m = layerMode.value;
       for (let g = 0; g < rawGroups.length; g++) {
@@ -293,8 +375,10 @@ export async function createLitematic3D(path, voxelFn) {
     }
 
     setupRange();
-    layerSlider.value = layerMax; layerInput.value = layerMax;
-    layerSlider2.value = layerMax; layerInput2.value = layerMax;
+    layerSlider.value = String(layerMax);
+    layerInput.value = String(layerMax);
+    layerSlider2.value = String(layerMax);
+    layerInput2.value = String(layerMax);
 
     if (data.truncated) {
       const w = document.createElement("div");
@@ -308,34 +392,54 @@ export async function createLitematic3D(path, voxelFn) {
     tip.style.cssText = "padding:6px 12px;background:rgba(124,131,255,0.2);color:#fff;font-size:12px;text-align:center;flex-shrink:0;font-weight:500";
     tip.textContent = "🎮 WASD 移动 | 空格/Shift 上下 | 🖱 拖拽旋转 | 🔍 滚轮缩放 | ESC 关闭";
     overlay.insertBefore(tip, overlay.children[1]);
-    setTimeout(() => { if (tip.parentNode) tip.remove(); }, 6000);
+    setTimeout(() => {
+      if (tip.parentNode) tip.remove();
+    }, 6000);
 
     const isDisposed = { v: false };
-    const keys = {};
+    const keys: Record<string, boolean> = {};
     let camSpeed = 20;
     let orbitMode = true;
     const orbitTarget = controls.target.clone();
     const euler = new THREE.Euler(0, 0, 0, "YXZ");
-    let mouseDown = false, lastMouse = { x: 0, y: 0 };
+    let mouseDown = false,
+      lastMouse = { x: 0, y: 0 };
 
-    function onKeyDown(e) {
+    function onKeyDown(e: KeyboardEvent): void {
       keys[e.key.toLowerCase()] = true;
-      if (["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase())) {
+      if (
+        ["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(
+          e.key.toLowerCase(),
+        )
+      ) {
         e.preventDefault();
       }
     }
-    function onKeyUp(e) { keys[e.key.toLowerCase()] = false; }
+    function onKeyUp(e: KeyboardEvent): void {
+      keys[e.key.toLowerCase()] = false;
+    }
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
 
-    function onMouseDown(e) { if (!orbitMode && e.button === 0) { mouseDown = true; lastMouse.x = e.clientX; lastMouse.y = e.clientY; } }
-    function onMouseUp() { mouseDown = false; }
-    function onMouseMove(e) {
+    function onMouseDown(e: MouseEvent): void {
+      if (!orbitMode && e.button === 0) {
+        mouseDown = true;
+        lastMouse.x = e.clientX;
+        lastMouse.y = e.clientY;
+      }
+    }
+    function onMouseUp(): void {
+      mouseDown = false;
+    }
+    function onMouseMove(e: MouseEvent): void {
       if (orbitMode || !mouseDown) return;
-      const dx = e.clientX - lastMouse.x, dy = e.clientY - lastMouse.y;
-      lastMouse.x = e.clientX; lastMouse.y = e.clientY;
+      const dx = e.clientX - lastMouse.x,
+        dy = e.clientY - lastMouse.y;
+      lastMouse.x = e.clientX;
+      lastMouse.y = e.clientY;
       euler.setFromQuaternion(camera.quaternion);
-      euler.y -= dx * 0.003; euler.x -= dy * 0.003;
+      euler.y -= dx * 0.003;
+      euler.x -= dy * 0.003;
       euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
       camera.quaternion.setFromEuler(euler);
     }
@@ -345,7 +449,7 @@ export async function createLitematic3D(path, voxelFn) {
 
     controls.enableRotate = true;
 
-    rotSel.onchange = () => {
+    rotSel.onchange = (): void => {
       orbitMode = rotSel.value === "true";
       controls.enableRotate = orbitMode;
       if (orbitMode) {
@@ -355,9 +459,12 @@ export async function createLitematic3D(path, voxelFn) {
       }
       mouseDown = false;
     };
-    spdSlider.oninput = () => { camSpeed = Number(spdSlider.value); spdVal.textContent = spdSlider.value; };
+    spdSlider.oninput = (): void => {
+      camSpeed = Number(spdSlider.value);
+      spdVal.textContent = spdSlider.value;
+    };
 
-    function onResize() {
+    function onResize(): void {
       if (isDisposed.v) return;
       camera.aspect = viewContainer.clientWidth / Math.max(viewContainer.clientHeight, 1);
       camera.updateProjectionMatrix();
@@ -367,7 +474,7 @@ export async function createLitematic3D(path, voxelFn) {
 
     let lastTime = performance.now();
     let animId = 0;
-    function animate() {
+    function animate(): void {
       if (isDisposed.v) return;
       animId = requestAnimationFrame(animate);
       const now = performance.now();
@@ -377,15 +484,17 @@ export async function createLitematic3D(path, voxelFn) {
       const camDir = new THREE.Vector3();
       camera.getWorldDirection(camDir);
       const forward = new THREE.Vector3(camDir.x, 0, camDir.z).normalize();
-      const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+      const right = new THREE.Vector3()
+        .crossVectors(forward, new THREE.Vector3(0, 1, 0))
+        .normalize();
       const move = new THREE.Vector3();
 
-      if (keys["w"] || keys["arrowup"])    move.add(forward);
-      if (keys["s"] || keys["arrowdown"])  move.sub(forward);
-      if (keys["a"] || keys["arrowleft"])  move.sub(right);
+      if (keys["w"] || keys["arrowup"]) move.add(forward);
+      if (keys["s"] || keys["arrowdown"]) move.sub(forward);
+      if (keys["a"] || keys["arrowleft"]) move.sub(right);
       if (keys["d"] || keys["arrowright"]) move.add(right);
-      if (keys[" "])                       move.y += 1;
-      if (keys["shift"])                   move.y -= 1;
+      if (keys[" "]) move.y += 1;
+      if (keys["shift"]) move.y -= 1;
 
       if (move.length() > 0) {
         move.normalize().multiplyScalar(camSpeed * dt);
@@ -408,13 +517,22 @@ export async function createLitematic3D(path, voxelFn) {
     }
     animate();
 
-    function fullCleanup() {
-      if (isDisposed.v) return; isDisposed.v = true;
+    function fullCleanup(): void {
+      if (isDisposed.v) return;
+      isDisposed.v = true;
       cancelAnimationFrame(animId);
       renderer.dispose();
       controls.dispose();
-      instancedMeshes.forEach((m) => { try { m.dispose(); } catch (_) {} });
-      materials.forEach((m) => { try { m.dispose(); } catch (_) {} });
+      instancedMeshes.forEach((m) => {
+        try {
+          m.dispose();
+        } catch (_) {}
+      });
+      materials.forEach((m) => {
+        try {
+          m.dispose();
+        } catch (_) {}
+      });
       boxGeo.dispose();
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("keyup", onKeyUp);
@@ -426,13 +544,14 @@ export async function createLitematic3D(path, voxelFn) {
       _voxel3d = null;
     }
 
-    function escHandler(e) { if (e.key === "Escape") fullCleanup(); }
+    function escHandler(e: KeyboardEvent): void {
+      if (e.key === "Escape") fullCleanup();
+    }
     document.addEventListener("keydown", escHandler);
     closeBtn.onclick = fullCleanup;
     _voxel3d = { cleanup: fullCleanup };
-
   } catch (e) {
     console.error("[litematic 3D] 加载失败:", e);
-    loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>加载失败: ${e?.message || e}</div>`;
+    loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>加载失败: ${e instanceof Error ? e.message : String(e)}</div>`;
   }
 }

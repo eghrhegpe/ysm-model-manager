@@ -5,7 +5,7 @@ import { renderDisplayName } from "../../utils/display.ts";
 /** 导入日志条目（Go ImportLog 字段） */
 interface ImportLogEntry {
   Status?: string;
-  Timestamp?: string;
+  Timestamp?: string | number;
   Operation?: string;
   ModelName?: string;
   SourcePath?: string;
@@ -21,7 +21,7 @@ const esc = (s: unknown): string =>
     .replace(/>/g, "&gt;");
 
 /** 加载日志到预览面板（含筛选和搜索） */
-export function loadLogsPreview(root: ShadowRoot, logs: ImportLogEntry[]): void {
+export function loadLogsPreview(root: ShadowRoot, logs: ImportLogEntry[] | null): void {
   const list = root.getElementById("dp-log-list");
   if (!list) return;
   if (!logs || !logs.length) {

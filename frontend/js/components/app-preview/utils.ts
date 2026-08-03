@@ -35,6 +35,12 @@ export interface BedrockBone {
   pivot: number[];
   rotation: number[];
   cubes: BedrockCube[];
+  /** WASM 解析附加字段（_texIdx/_texUrl/_texWidth/_texHeight 等） */
+  _texIdx?: number;
+  _texUrl?: string | null;
+  _texWidth?: number;
+  _texHeight?: number;
+  [key: string]: unknown;
 }
 
 /** 解析后的 Bedrock geometry */
@@ -45,13 +51,18 @@ export interface BedrockGeometry {
   texHeight: number;
   bones: BedrockBone[];
   /** WASM/Go 附加字段（作者/头像/路径/纹理映射日志等） */
-  _authors?: string[];
+  _authors?: Array<{
+    name?: string;
+    role?: string;
+    avatarUrl?: string | null;
+    avatarPath?: string;
+  }>;
   _avatars?: Record<string, string>;
   _modelPath?: string;
   _texMappingLog?: unknown[];
   animations?: unknown[];
-  textures?: unknown[];
-  texture?: unknown;
+  textures?: string[];
+  texture?: string | null;
   [key: string]: unknown;
 }
 

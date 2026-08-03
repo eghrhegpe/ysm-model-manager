@@ -1,62 +1,66 @@
 // ===== <app-preview> 入口 =====
 import { bus } from "../../bus.ts";
 import { previewCSS } from "./preview-css.ts";
-import { statsHTML, modelDetailHTML, statsCardHTML } from "./tpl.ts";
+import { statsHTML, modelDetailHTML } from "./tpl.ts";
 import { bindBusUpdates } from "./events.ts";
 import { bindActions } from "./preview-actions.ts";
 import { showPackageDetail, registerMmdEvents } from "./preview-pack.ts";
 import { loadLogsPreview } from "./preview-logs.ts";
-import { openFullPreview } from "./preview-zoom.ts";
 import { summaryCardHTML } from "../../utils/summarize.ts";
 import {
   cacheGet,
   cacheSet,
   cacheSetEvictHandler,
 } from "../../utils/preview-cache.ts";
-import { devLog, stripYsgpTextHeader } from "./preview-utils.ts";
-import { decodeYsmViaWasm } from "./preview-wasm.js";
+import { devLog, stripYsgpTextHeader, type PreviewCtx, type DecodedYsm } from "./preview-utils.ts";
+import { decodeYsmViaWasm } from "./preview-wasm.ts";
 import { showModelDetail, showResourcePack, showShaderPack } from "./preview-detail.ts";
 import { showLitematic } from "./preview-litematic-meta.ts";
-// loadModelData 由 preview-skeleton.js 统一引入
 import { setupBoneExport } from "./preview-bone-export.ts";
+import type { BedrockGeometry } from "./utils.ts";
 
 // 注册缓存淘汰回调：释放 blob URL
 cacheSetEvictHandler((key, val) => {
   if (!val) return;
   // geometry.textures 数组中的 blob URL
-  const urls = [];
-  if (val.geometry?.textures) urls.push(...val.geometry.textures);
-  if (val.geometry?.texture && !urls.includes(val.geometry.texture))
-    urls.push(val.geometry.texture);
+  const urls: string[] = [];
+  const geo = val.geometry as BedrockGeometry | undefined;
+  if (geo?.textures) urls.push(...geo.textures);
+  if (geo?.texture && !urls.includes(geo.texture)) urls.push(geo.texture);
   if (val.texture && !urls.includes(val.texture)) urls.push(val.texture);
   for (const u of urls) {
     if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
   }
 });
 
-class AppPreview extends HTMLElement {
+class AppPreview extends HTMLElement implements PreviewCtx {
+  _root: ShadowRoot;
+  _unsubs: Array<() => void> = [];
+  _selectedPkg: unknown = null;
+  _mode: "stat" | "model" = "stat";
+  private _modelCleanup: (() => void) | null = null;
+  private _typeCache: Array<{ id: string; name?: string; icon?: string }> = [];
+  private _typeReg: Record<string, { id: string; name?: string; icon?: string }> | null = null;
+
   constructor() {
     super();
     this._root = this.attachShadow({ mode: "open" });
     this._root.adoptedStyleSheets = [new CSSStyleSheet()];
     this._root.adoptedStyleSheets[0].replaceSync(previewCSS);
-    this._unsubs = [];
-    this._selectedPkg = null;
-    this._mode = "stat";
   }
 
-  static get observedAttributes() {
+  static get observedAttributes(): string[] {
     return ["mode"];
   }
 
-  attributeChangedCallback(name, _, newVal) {
+  attributeChangedCallback(name: string, _old: string | null, newVal: string | null): void {
     if (name === "mode") {
       this._mode = newVal === "model" ? "model" : "stat";
       if (this._root.isConnected) this._render();
     }
   }
 
-  connectedCallback() {
+  connectedCallback(): void {
     this._mode = this.getAttribute("mode") === "model" ? "model" : "stat";
     this._render();
 
@@ -71,7 +75,7 @@ class AppPreview extends HTMLElement {
       this._unsubs.push(
         bus.on("package:selected", (pkg) => {
           this._selectedPkg = pkg;
-          showPackageDetail(this._root, pkg);
+          showPackageDetail(this._root, pkg as never);
         }),
       );
 
@@ -94,20 +98,20 @@ class AppPreview extends HTMLElement {
     }
   }
 
-  disconnectedCallback() {
+  disconnectedCallback(): void {
     this._cleanupModelListeners();
     this._unsubs.forEach((fn) => fn());
   }
 
   /** 清理模型拖拽 window 级监听 */
-  _cleanupModelListeners() {
+  private _cleanupModelListeners(): void {
     if (this._modelCleanup) {
       this._modelCleanup();
       this._modelCleanup = null;
     }
   }
 
-  _render() {
+  private _render(): void {
     if (this._mode === "stat") {
       this._root.innerHTML = statsHTML();
       bindActions(this._root);
@@ -117,11 +121,12 @@ class AppPreview extends HTMLElement {
   }
 
   /** 自动匹配缩略图：查缓存 → .ysm/.json 走 WASM → Go 兜底 */
-  async _loadPreviewImage(modelPath) {
+  async _loadPreviewImage(modelPath: string): Promise<string | null> {
     // 查缓存（模块级，跨组件生命周期持久）
     const cached = cacheGet(modelPath);
     if (cached?.texture) return cached.texture;
-    if (cached?.geometry?.texture) return cached.geometry.texture;
+    const cachedGeo = cached?.geometry as BedrockGeometry | undefined;
+    if (cachedGeo?.texture) return cachedGeo.texture;
 
     // .ysm 或 .json（解压的 ysm.json）都走 WASM 解码
     if (/\.(ysm|json)$/i.test(modelPath)) {
@@ -154,42 +159,43 @@ class AppPreview extends HTMLElement {
     }
   }
 
-  /** @deprecated 由 preview-skeleton.js:loadModel2D 替代 */
-  /* eslint-disable-next-line no-unused-private-class-members */
-  async _loadModel2D(_modelPath, _skelContainer) { /* 死代码 */ }
-
   /** 通过前端 WASM 解码 .ysm，返回 { texture, geometry }（缓存复用） */
-  async _decodeYsmViaWasm(modelPath) {
+  async _decodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null> {
+    return decodeYsmViaWasm(modelPath);
+  }
+
+  /** 通过前端 WASM 解码（PreviewCtx 别名，preview-loader 用） */
+  async decodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null> {
     return decodeYsmViaWasm(modelPath);
   }
 
   /** 在预览区追加调试小字 */
-  _appendDebug(container, msg) {
+  _appendDebug(container: HTMLElement | null, msg: string): void {
     try {
       const el =
         container || this._root.getElementById("preview-content") || this._root;
       const dbg = document.createElement("div");
       dbg.className = "ysm-debug";
       dbg.textContent = msg;
-      (el.appendChild ? el : this._root).appendChild(dbg);
+      el.appendChild(dbg);
     } catch (_) {}
   }
 
-  async _preloadTypeRegistry() {
+  private async _preloadTypeRegistry(): Promise<void> {
     try {
       const { LoadResourceTypes } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
       const raw = await LoadResourceTypes();
-      const reg = JSON.parse(raw);
+      const reg = JSON.parse(raw) as { resourceTypes?: Array<{ id: string; name?: string; icon?: string }> };
       this._typeCache = reg.resourceTypes || [];
     } catch (_) {}
   }
 
-  async _showModelDetail(path) {
+  private async _showModelDetail(path: string): Promise<void> {
     // 检测文件类型
     let rtype = "";
     try {
       const { DetectResourceType } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-      rtype = await DetectResourceType(path) || "";
+      rtype = (await DetectResourceType(path)) || "";
     } catch (_) {}
     if (rtype === "resourcepack") {
       showResourcePack(this, path);
@@ -208,22 +214,24 @@ class AppPreview extends HTMLElement {
     showShaderPack(this, path, this._typeMeta(rtype));
   }
 
-  _typeMeta(rtype) {
+  private _typeMeta(rtype: string): { icon: string; label: string } {
     if (!this._typeReg) {
       this._typeReg = {};
-      for (const t of (this._typeCache || [])) this._typeReg[t.id] = t;
+      for (const t of this._typeCache || []) this._typeReg[t.id] = t;
     }
     const def = this._typeReg[rtype];
     return { icon: def?.icon || "📦", label: def?.name || rtype };
   }
 
   /** 显示资源包信息（pack.mcmeta + pack.png） */
-  async _showResourcePack(path) {
+  private async _showResourcePack(path: string): Promise<void> {
     showResourcePack(this, path);
   }
-  async _showPackInfo(dirPath) {
-    const esc = (s) =>
+
+  private async _showPackInfo(dirPath: string): Promise<void> {
+    const esc = (s: unknown): string =>
       (s || "")
+        .toString()
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
@@ -232,8 +240,7 @@ class AppPreview extends HTMLElement {
       const { GetPackInfo } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
       const pack = await GetPackInfo(dirPath);
       if (!pack || (!pack.name && !pack.description)) {
-        const folderName =
-          dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
+        const folderName = dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
         this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 文件夹</h3><div class="model-detail-title" style="font-size:13px;font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">该文件夹暂无整合包信息</div></div></div>`;
         return;
       }
@@ -248,7 +255,7 @@ ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px
     }
   }
 
-  async _loadLogsPreview() {
+  private async _loadLogsPreview(): Promise<void> {
     try {
       const { GetImportLogs } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
       const logs = await GetImportLogs();
@@ -257,5 +264,3 @@ ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px
   }
 }
 customElements.define("app-preview", AppPreview);
-
-// ===== 工具：从 JSON 字符串解析 Bedrock geometry（已移至 data.js） =====

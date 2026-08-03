@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`scripts/`（约 40 个 .mjs）/ `scripts/_lib/scan-files.mjs` / `scripts/脚本体系全景.md` / `tests/*.mjs` / ADR-013 / ADR-014 / 联邦 MikuMikuAR（工具链适配来源）
+- **相关**：`scripts/`（约 40 个 .mjs）/ `scripts/_lib/scan-files.mjs` / `scripts/README.md` / `tests/*.mjs` / ADR-013 / ADR-014 / 联邦 MikuMikuAR（工具链适配来源）
 
 ---
 
@@ -13,7 +13,7 @@
 
 | # | 痛点 | 表现 | 后果 |
 |---|------|------|------|
-| 1 | **Python/Node 双运行时分裂** | `check_*.py` / `fix_*.py` / `validate_data.py` 与 `*.mjs` 并存，跨语言调用需切换解释器 | 新人/AI 无法统一入口；`docs/scripts/脚本体系全景.md` 分类表被撕裂 |
+| 1 | **Python/Node 双运行时分裂** | `check_*.py` / `fix_*.py` / `validate_data.py` 与 `*.mjs` 并存，跨语言调用需切换解释器 | 新人/AI 无法统一入口；`scripts/README.md` 分类表被撕裂 |
 | 2 | **一次性脚本堆积** | `compare-*.py`、`restore_nico.py`、`transform_creators.py` 等历史使命完成后滞留 | 死代码基线噪音；无法判断哪些可删、哪些仍被 CI/文档引用 |
 | 3 | **无共享层** | 每个脚本内联自己的 `walk()` / `resolveImport()` / ROOT 样板 | 同一逻辑在多个脚本重复实现，修一处漏多处；Windows 反斜杠/CRLF 处理不一致 |
 | 4 | **无 `--json` 契约** | 工具输出格式随意，AI 子代理无法稳定消费 | 治理脚本无法接入 CI/自动化；doctor 等聚合器难解析 |
@@ -46,7 +46,7 @@
 
 - 脚本入库（取消 `scripts/` 全局忽略，提交 54d3063）；
 - 死代码基线 `check-deadcode-baseline.mjs`（knip+jscpd）监管新增；一次性命中历史使命后标记删除；
-- `脚本体系全景.md` 作为脚本索引（分档：生产级/实用级/治理检查/生成器）。
+- `README.md` 作为脚本索引（分档：生产级/实用级/治理检查/生成器）。
 
 ## 3. 后果（Consequences）
 
@@ -62,7 +62,7 @@
 
 - 纯 Node 正则级分析，无法达到 TS AST 级精度（已知，ADR-014 P5 再升级）；
 - 零依赖约束限制了解析能力（如无 `typescript` 包时无法做完整类型分析）；
-- 迁移初期存量 Python 脚本需人工确认废弃（`脚本体系全景.md` 已列已删除清单）。
+- 迁移初期存量 Python 脚本需人工确认废弃（`README.md` 已列已删除清单）。
 
 ### 已知遗留
 
@@ -75,7 +75,7 @@
 |------|------|
 | `scripts/` 目录扫描 | 约 40 个 .mjs，覆盖检查/生成/脚手架三类 |
 | `scripts/_lib/scan-files.mjs` | 共享层：walk / resolveImport / toPosix / readText / SRC_DIR |
-| `scripts/脚本体系全景.md` | 分档索引 + 「已删除（2026-08-03 Python 迁移）」清单 |
+| `scripts/README.md` | 分档索引 + 「已删除（2026-08-03 Python 迁移）」清单 |
 | `tests/*.mjs` | 契约测试 Node 化（test_config / test_schema / test_scripts_lib 等） |
 | ADR-013 | 治理收敛 Phase 1：文档宪法对账 + 联邦基线对齐 |
 | ADR-014 | P5 预告「工具链质变（独立 ADR）」——本 ADR 承接执行层 |

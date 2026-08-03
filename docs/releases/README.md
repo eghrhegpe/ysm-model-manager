@@ -36,7 +36,7 @@
 
 ## 流程
 
-发版见 `scripts/release-notes-gen.py`（发版说明生成）与根 `Taskfile.yml`（`task package` 打包）。
+发版见 `scripts/release-notes-gen.mjs`（发版说明生成）与根 `Taskfile.yml`（`task package` 打包）。
 
 ---
 

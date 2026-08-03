@@ -1,8 +1,16 @@
 # YSM 模型管理器 — GitHub Pages 配置
 title: YSM 模型管理器
 description: Minecraft YSM 模型的一站式管理工具 — 仓库管理、整合包同步、3D 预览
-theme: jekyll-theme-cayman
-show_downloads: false
+
+# just-the-docs 主题：原生侧边栏 + 站内搜索（解决文档难以到达问题）
+remote_theme: just-the-docs/just-the-docs
+
+# 项目站点子路径（GitHub Pages 项目页必须；否则 /assets/* 资源 404）
+baseurl: /ysm-model-manager
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
 
 # 排除非公开文档（内部开发文档，不应作为 Web 页面发布）
 exclude:

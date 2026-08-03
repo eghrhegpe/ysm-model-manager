@@ -31,8 +31,8 @@
 | 校验文档漂移 | `node scripts/link-checker.mjs`（断链）+ `check-knowledge-drift.mjs`（知识卡）+ `adr-check.mjs`（ADR 登记） |
 | 查项目技术 | `docs/architecture/architecture.md` |
 | 写 UI 文案 / 变量名 | `docs/core/TERMINOLOGY.md`（末尾有 AI 缩写版） |
-| 加菜单 / 按钮 / 组件 | `frontend/js/app-modules.js`（组件入口）+ `docs/frontend/Design.md`（唯一设计规范） |
-| 改前端子模块 | `docs/frontend/Design.md` + `pending-cleanup.md` + `animations.md` |
+| 加菜单 / 按钮 / 组件 | `frontend/js/app-modules.js`（组件入口）+ `docs/Design.md`（唯一设计规范） |
+| 改前端子模块 | `docs/Design.md`（设计规范）+ ADR-015（动画系统）/ ADR-016（UI 体验）/ ADR-017（增强待办） |
 | 改 Go 后端 | `internal/app/`（Wails Binding 入口）+ `docs/architecture/architecture.md`（逻辑下沉优先 `go/` 包） |
 | 修 Bug 查历史 | 说 "bug-search <关键词>" 查 `bug-chronicle.md` |
 | 查资源类型一致性 | 说 "type-consistency"（resource_types.json ↔ extensions.js） |
@@ -207,7 +207,6 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | `docs/core/` | ✅ 核心规范（术语、治理规则、命名规范） |
 | `docs/adr/` | 📐 架构决策记录（ADR-001~014，决策真相源，写前先占号；登记表 `adr/README.md` + 规范索引 `adr/index.md` 自动生成） |
 | `docs/architecture/` | 🏗️ 架构 + 项目元信息（架构、现状、路线图、Bug 记录、逻辑下沉） |
-| `docs/frontend/` | 🎨 前端专属（设计规范、动画、待清理、废弃名） |
 | `docs/guide/` | 📖 用户向文档（用户指南、项目意义，网站化储备） |
 | `docs/knowledge/` | 🧠 模块知识卡（bus / Wails 桥接 / Go 包）— 索引自动生成于 `knowledge/index.md` |
 | `docs/tasks/` | 📋 任务管理（任务清单、会话交接、每日计划） |
@@ -274,6 +273,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 8 | 回收站误删 | 硬链接数据丢失 | 符号链接→直接删，硬链接(nlink>1)→直接删，普通→移 `.recycle`，跨分区→复制后删 |
 | 9 | `public/` 下放 JS | Vite dev 优先加载 | 新 JS 放 `frontend/js/`，ES module → `app-modules.js` 加 import |
 | 10 | 回调 API 未 Promise 化 | DnD 数据读不到 | `entry.file(callback)` → `new Promise(resolve => entry.file(resolve))` |
+| 11 | 3D 坐标变换反复修（实证：model3d.js 9 次 fix 全项目第一） | "对齐 ysmview cube pivot" 连续 5 次 fix | 改 model2d/model3d/spec.go 坐标前先 grep `bug-chronicle` + 对齐 ysmview 口径（pivot X 取反、`from.x = origin.x - size.x`）；改完用自由相机近距验证 |
 
 > 完整版见 `.github/copilot-instructions.md`（18 条）。
 

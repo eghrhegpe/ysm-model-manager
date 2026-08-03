@@ -5,7 +5,7 @@ import {
   buildStdYsgpFromTextVariant,
   stripYsgpTextHeader,
 } from "./preview-utils.js";
-import { cacheGet, cacheSet } from "../../utils/preview-cache.js";
+import { cacheGet, cacheSet } from "../../utils/preview-cache.ts";
 import { parseBedrockGeometryFromJSON } from "./utils.js";
 import { parseBedrockAnimationJSON } from "../../utils/animation.js";
 

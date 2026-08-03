@@ -7,12 +7,12 @@ import { bindActions } from "./preview-actions.js";
 import { showPackageDetail, registerMmdEvents } from "./preview-pack.js";
 import { loadLogsPreview } from "./preview-logs.js";
 import { openFullPreview } from "./preview-zoom.js";
-import { summaryCardHTML } from "../../utils/summarize.js";
+import { summaryCardHTML } from "../../utils/summarize.ts";
 import {
   cacheGet,
   cacheSet,
   cacheSetEvictHandler,
-} from "../../utils/preview-cache.js";
+} from "../../utils/preview-cache.ts";
 import { devLog, stripYsgpTextHeader } from "./preview-utils.js";
 import { decodeYsmViaWasm } from "./preview-wasm.js";
 import { showModelDetail, showResourcePack, showShaderPack } from "./preview-detail.js";

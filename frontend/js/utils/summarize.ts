@@ -1,15 +1,78 @@
-// ===== YSM 模型摘要工具函数 =====
+// ===== YSM 模型摘要工具函数（类型化版 — ADR-014 P2）=====
 import { parseModelName } from "./display.ts";
-import { renderFormattedText } from "./mc-format.js";
+import { renderFormattedText } from "./mc-format.ts";
+
+// ── Go 结构体轻量类型（覆盖用到的字段，事实来源 go/ysm + go/types）──
+
+export interface SummaryAuthor {
+  name?: string;
+  bilibili?: string;
+  roles?: string;
+}
+
+export interface SummaryAnimGroup {
+  name?: string;
+  id?: string;
+  items?: string[];
+}
+
+export interface SummaryConfigMenu {
+  name?: string;
+  id?: string;
+}
+
+export interface YsmSummary {
+  name?: string;
+  source?: string;
+  tips?: string;
+  license?: string;
+  authors?: SummaryAuthor[];
+  stats?: {
+    textures?: number;
+    models?: number;
+    animations?: number;
+    texWidth?: number;
+    texHeight?: number;
+  };
+  preview?: {
+    heightScale?: number;
+    widthScale?: number;
+  };
+  animGroups?: SummaryAnimGroup[];
+  configMenus?: SummaryConfigMenu[];
+  links?: {
+    home?: string;
+    donate?: string;
+  };
+}
+
+export interface YSMHeader {
+  isYsm?: boolean;
+  name?: string;
+  tips?: string;
+  license?: string;
+  hasFree?: boolean;
+  isFree?: boolean;
+  authorName?: string;
+  authorBilibili?: string;
+  authorRole?: string;
+  linkHome?: string;
+  linkUpdate?: string;
+  hash?: string;
+  format?: number;
+  crypto?: number;
+}
+
+// ── 渲染工具 ───────────────────────────────────────
 
 /** 渲染 MC 格式代码为带颜色的 HTML */
-function renderTips(text) {
+function renderTips(text?: string): string {
   if (!text) return "";
   return renderFormattedText(text);
 }
 
 /** 清洗纯文本（名称/ID 类字段，去除 § 和控制字符） */
-function cleanText(text) {
+function cleanText(text: unknown): string {
   if (typeof text !== "string") return "";
   return text
     .replace(/§[0-9a-fk-or]/gi, "")
@@ -17,11 +80,17 @@ function cleanText(text) {
     .trim();
 }
 
-/**
- * 从 YsmSummary + YSMHeader 渲染为精简摘要卡片
- */
+function esc(s: string): string {
+  return (s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// ── 卡片渲染 ───────────────────────────────────────
+
 /** 仅基于头部信息渲染的简约卡片（加密/闭源模型） */
-function headerOnlyCardHTML(header, basename) {
+function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   // 头部无名称时从文件名回退解析
   const p = basename && !header.name ? parseModelName(basename) : null;
   const name = p ? "" : cleanText(header.name || "-"); // 用 p 时 name 为空，下面走标签模板
@@ -29,8 +98,8 @@ function headerOnlyCardHTML(header, basename) {
   const licenseType = cleanText(header.license);
   const freeBadge = header.hasFree
     ? header.isFree
-      ? '<span style=\"display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600\">🆓 免费</span>'
-      : '<span style=\"display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600\">🔒 付费</span>'
+      ? '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600">🆓 免费</span>'
+      : '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">🔒 付费</span>'
     : "";
   let authorHtml = "";
   if (p) {
@@ -70,11 +139,21 @@ ${header.linkUpdate ? `<div class="md-row"><span class="md-label">更新</span><
 ${header.hash ? `<div class="md-row" style="font-size:9px;color:var(--muted)"><span class="md-label">指纹</span><span class="md-value" style="font-family:monospace;font-size:8px;word-break:break-all">${esc(header.hash)}</span></div>` : ""}
 <div class="md-divider"></div>
 <div class="md-row" style="color:var(--muted);font-size:10px"><span>🔒 加密模型，资源详情不可用</span></div>
-${header.format > 0 || header.crypto > 0 ? `<div style="font-size:8px;color:var(--muted);margin-top:4px;text-align:right">格式 v${header.format} · 加密 v${header.crypto}</div>` : ""}
+${(header.format ?? 0) > 0 || (header.crypto ?? 0) > 0 ? `<div style="font-size:8px;color:var(--muted);margin-top:4px;text-align:right">格式 v${header.format} · 加密 v${header.crypto}</div>` : ""}
 </div>`;
 }
 
-export function summaryCardHTML(summary, header, basename) {
+/**
+ * 从 YsmSummary + YSMHeader 渲染为精简摘要卡片
+ * @param summary 模型摘要（可为 null/undefined）
+ * @param header 模型头部（可为 null/undefined）
+ * @param basename 原始文件名（加密模型回退解析用）
+ */
+export function summaryCardHTML(
+  summary: YsmSummary | null | undefined,
+  header: YSMHeader | null | undefined,
+  basename?: string,
+): string {
   if (!summary && !header) {
     return `<div class="content" id="preview-content">
 <h3>📄 模型信息</h3>
@@ -89,12 +168,12 @@ export function summaryCardHTML(summary, header, basename) {
     return headerOnlyCardHTML(header, basename);
   }
 
-  const name = cleanText(summary.name || summary.source || "-");
-  const tips = renderTips(summary.tips);
-  const licenseType = cleanText(summary.license);
-  const authors = summary.authors || [];
-  const stats = summary.stats || {};
-  const preview = summary.preview || {};
+  const name = cleanText(summary?.name || summary?.source || "-");
+  const tips = renderTips(summary?.tips);
+  const licenseType = cleanText(summary?.license);
+  const authors = summary?.authors || [];
+  const stats = summary?.stats || {};
+  const preview = summary?.preview || {};
 
   // 作者行
   let authorHtml = "";
@@ -112,9 +191,9 @@ export function summaryCardHTML(summary, header, basename) {
 
   // 动画分组（内部标识符只显示计数，有中文名的显示标签）
   let animGroupHtml = "";
-  const isInternalId = (n) =>
+  const isInternalId = (n: string): boolean =>
     /^[a-z_]+$/.test(n) || /^(range|checkbox|radio|slider|toggle)$/i.test(n);
-  if (summary.animGroups && summary.animGroups.length > 0) {
+  if (summary?.animGroups && summary.animGroups.length > 0) {
     animGroupHtml = summary.animGroups
       .map((g) => {
         const name = cleanText(g.name || g.id || "");
@@ -137,7 +216,7 @@ export function summaryCardHTML(summary, header, basename) {
 
   // 配置菜单（只显示前5项，纯标识符的不显示）
   let configHtml = "";
-  if (summary.configMenus && summary.configMenus.length > 0) {
+  if (summary?.configMenus && summary.configMenus.length > 0) {
     configHtml = summary.configMenus
       .map((m) => {
         const name = cleanText(m.name || m.id || "");
@@ -175,13 +254,6 @@ ${preview.heightScale || preview.widthScale ? `<div class="md-row"><span class="
 ${animGroupHtml ? `<div class="md-divider"></div>${animGroupHtml}` : ""}
 ${configHtml ? configHtml : ""}
 
-${summary.links?.home ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">🔗 链接</span><span class="md-value"><a href="${esc(summary.links.home)}" target="_blank" style="color:var(--accent);text-decoration:none">主页</a>${summary.links.donate ? ` · <a href="${esc(summary.links.donate)}" target="_blank" style="color:var(--accent);text-decoration:none">赞助</a>` : ""}</span></div>` : ""}
+${summary?.links?.home ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">🔗 链接</span><span class="md-value"><a href="${esc(summary.links.home)}" target="_blank" style="color:var(--accent);text-decoration:none">主页</a>${summary.links.donate ? ` · <a href="${esc(summary.links.donate)}" target="_blank" style="color:var(--accent);text-decoration:none">赞助</a>` : ""}</span></div>` : ""}
 </div>`;
-}
-
-function esc(s) {
-  return (s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }

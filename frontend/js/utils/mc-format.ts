@@ -1,6 +1,6 @@
-// ===== Minecraft 分节符颜色渲染 =====
+// ===== Minecraft 分节符颜色渲染（类型化版 — ADR-014 P2）=====
 
-const MC_COLORS = {
+const MC_COLORS: Record<string, string> = {
   "0": "#000000",
   "1": "#0000AA",
   "2": "#00AA00",
@@ -20,14 +20,19 @@ const MC_COLORS = {
 };
 
 // 格式码：§l 粗体 §o 斜体 §n 下划线 §m 删除线
-const FORMAT_TAGS = {
+interface FormatTag {
+  open: string;
+  close: string;
+}
+
+const FORMAT_TAGS: Record<string, FormatTag> = {
   l: { open: "<b>", close: "</b>" },
   o: { open: "<i>", close: "</i>" },
   n: { open: '<u style="text-decoration:underline">', close: "</u>" },
   m: { open: '<span style="text-decoration:line-through">', close: "</span>" },
 };
 
-function esc(s) {
+function esc(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -40,14 +45,15 @@ function esc(s) {
  * 格式码（§l/§o/§n/§m）叠加在当前颜色之上；
  * §r 重置所有格式。
  * §k（乱码）直接忽略，不渲染。
- * @param {string} text 原始文本
- * @returns {string} HTML 字符串
+ * @param text 原始文本
+ * @returns HTML 字符串
  */
-export function renderFormattedText(text) {
+export function renderFormattedText(text: string): string {
   if (!text || typeof text !== "string") return "";
 
   return text
-    .replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
     .split("\n")
     .map((line) => {
       if (!line) return "";
@@ -55,17 +61,17 @@ export function renderFormattedText(text) {
       if (parts.length === 1) return esc(parts[0]);
 
       let html = esc(parts[0]);
-      let currentColor = null;
-      const openFormats = [];
+      let currentColor: string | null = null;
+      const openFormats: FormatTag[] = [];
 
-      const closeColor = () => {
+      const closeColor = (): void => {
         if (currentColor) {
           html += "</span>";
           currentColor = null;
         }
       };
-      const closeFormats = () => {
-        while (openFormats.length) html += openFormats.pop().close;
+      const closeFormats = (): void => {
+        while (openFormats.length) html += openFormats.pop()!.close;
       };
 
       for (let i = 1; i < parts.length; i++) {

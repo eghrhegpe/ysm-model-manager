@@ -1,6 +1,6 @@
-// ===== pack_format → Minecraft 版本号映射 =====
+// ===== pack_format → Minecraft 版本号映射（类型化版 — ADR-014 P2）=====
 
-const FORMAT_VERSION_MAP = {
+const FORMAT_VERSION_MAP: Record<string, string> = {
   1: "1.6.1 ~ 1.8.9",
   2: "1.9 ~ 1.10.2",
   3: "1.11 ~ 1.12.2",
@@ -62,50 +62,92 @@ const FORMAT_VERSION_MAP = {
   62: "1.21.6",
   63: "1.21.7",
   64: "1.21.8",
-  65: "1.21.9", "65.0": "1.21.9", "65.1": "1.21.9", "65.2": "1.21.9",
-  66: "1.21.9", "66.0": "1.21.9",
-  67: "1.21.9", "67.0": "1.21.9",
-  68: "1.21.9", "68.0": "1.21.9",
-  69: "1.21.10", "69.0": "1.21.10",
-  70: "1.21.11", "70.0": "1.21.11", "70.1": "1.21.11",
-  71: "1.21.11", "71.0": "1.21.11",
-  72: "1.21.11", "72.0": "1.21.11",
-  73: "1.21.11", "73.0": "1.21.11",
-  74: "1.21.11", "74.0": "1.21.11",
-  75: "1.21.11", "75.0": "1.21.11",
-  76: "26.1", "76.0": "26.1",
-  77: "26.1", "77.0": "26.1",
-  78: "26.1", "78.0": "26.1", "78.1": "26.1",
-  79: "26.1", "79.0": "26.1",
-  80: "26.1", "80.0": "26.1",
-  81: "26.1", "81.0": "26.1", "81.1": "26.1",
-  82: "26.1", "82.0": "26.1",
-  83: "26.1", "83.0": "26.1",
-  84: "26.1.2", "84.0": "26.1.2",
-  85: "26.2", "85.0": "26.2",
-  86: "26.2", "86.0": "26.2", "86.1": "26.2", "86.2": "26.2",
-  87: "26.2", "87.0": "26.2",
-  88: "26.2", "88.0": "26.2",
+  65: "1.21.9",
+  "65.0": "1.21.9",
+  "65.1": "1.21.9",
+  "65.2": "1.21.9",
+  66: "1.21.9",
+  "66.0": "1.21.9",
+  67: "1.21.9",
+  "67.0": "1.21.9",
+  68: "1.21.9",
+  "68.0": "1.21.9",
+  69: "1.21.10",
+  "69.0": "1.21.10",
+  70: "1.21.11",
+  "70.0": "1.21.11",
+  "70.1": "1.21.11",
+  71: "1.21.11",
+  "71.0": "1.21.11",
+  72: "1.21.11",
+  "72.0": "1.21.11",
+  73: "1.21.11",
+  "73.0": "1.21.11",
+  74: "1.21.11",
+  "74.0": "1.21.11",
+  75: "1.21.11",
+  "75.0": "1.21.11",
+  76: "26.1",
+  "76.0": "26.1",
+  77: "26.1",
+  "77.0": "26.1",
+  78: "26.1",
+  "78.0": "26.1",
+  "78.1": "26.1",
+  79: "26.1",
+  "79.0": "26.1",
+  80: "26.1",
+  "80.0": "26.1",
+  81: "26.1",
+  "81.0": "26.1",
+  "81.1": "26.1",
+  82: "26.1",
+  "82.0": "26.1",
+  83: "26.1",
+  "83.0": "26.1",
+  84: "26.1.2",
+  "84.0": "26.1.2",
+  85: "26.2",
+  "85.0": "26.2",
+  86: "26.2",
+  "86.0": "26.2",
+  "86.1": "26.2",
+  "86.2": "26.2",
+  87: "26.2",
+  "87.0": "26.2",
+  88: "26.2",
+  "88.0": "26.2",
 };
+
+/** ReadPackMeta 返回的 JSON 对象（仅覆盖用到的字段） */
+export interface PackMeta {
+  supported_formats?: number[];
+  min_format?: number | number[];
+  max_format?: number | number[];
+  pack_format?: number;
+}
 
 /**
  * 根据 pack_format 数值获取可读 Minecraft 版本描述
- * @param {number} packFormat
- * @returns {string|null}
+ * @param packFormat 格式号
  */
-export function formatVersion(packFormat) {
+export function formatVersion(packFormat: number): string | null {
   return FORMAT_VERSION_MAP[packFormat] || null;
 }
 
 /**
  * 根据 meta 对象生成格式号 + 版本号描述
- * @param {object} meta - ReadPackMeta 返回的 JSON 对象
- * @returns {{format:string, version:string}}
+ * @param meta ReadPackMeta 返回的 JSON 对象
  */
-export function describeVersionRange(meta) {
-  const fmtVer = (n) => FORMAT_VERSION_MAP[n] || (n > 88 ? "最新版本" : String(n));
+export function describeVersionRange(meta: PackMeta): { format: string; version: string } {
+  const fmtVer = (n: number): string =>
+    FORMAT_VERSION_MAP[n] || (n > 88 ? "最新版本" : String(n));
   // 1. supported_formats 优先
-  if (meta.supported_formats && Array.isArray(meta.supported_formats) && meta.supported_formats.length === 2) {
+  if (
+    meta.supported_formats &&
+    Array.isArray(meta.supported_formats) &&
+    meta.supported_formats.length === 2
+  ) {
     const min = meta.supported_formats[0];
     const max = meta.supported_formats[1];
     const minVer = fmtVer(min);
@@ -117,15 +159,22 @@ export function describeVersionRange(meta) {
   }
   // 2. min_format / max_format（可能是 int 或 [min,max] 数组）
   if (meta.min_format != null && meta.max_format != null) {
-    const minRaw = Array.isArray(meta.min_format) ? meta.min_format[0] : meta.min_format;
-    const maxRaw = Array.isArray(meta.max_format) ? meta.max_format[0] : meta.max_format;
+    const minRaw = Array.isArray(meta.min_format)
+      ? meta.min_format[0]
+      : meta.min_format;
+    const maxRaw = Array.isArray(meta.max_format)
+      ? meta.max_format[0]
+      : meta.max_format;
     const minVer = fmtVer(minRaw);
     const maxVer = fmtVer(maxRaw);
     if (maxRaw >= 9999) {
       return { format: "≥ " + minRaw, version: "≥ " + minVer };
     }
     if (minRaw !== maxRaw) {
-      return { format: minRaw + " ~ " + maxRaw, version: minVer + " ~ " + maxVer };
+      return {
+        format: minRaw + " ~ " + maxRaw,
+        version: minVer + " ~ " + maxVer,
+      };
     }
   }
   // 3. 单体 pack_format 兜底

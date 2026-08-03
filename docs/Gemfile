@@ -1,0 +1,10 @@
+source "https://rubygems.org"
+
+# 与 GitHub Pages 生产环境保持一致（pin Jekyll 版本与白名单插件）
+gem "github-pages", group: :jekyll_plugins
+
+# 通过 remote_theme 拉取 just-the-docs（生产环境已白名单）
+gem "jekyll-remote-theme"
+
+# Jekyll 3.x 本地 serve 依赖
+gem "webrick"

@@ -61,8 +61,13 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       try {
         const dir = await SelectDirectory();
         if (!dir) return;
+        // 透传用户已保存的 linkMode，避免硬编码 "copy" 冲掉硬链接模式
+        const { LoadAppConfig } = await import(
+          "../../../bindings/ysm-model-manager/internal/app/app.js"
+        );
+        const cfg = await LoadAppConfig().catch(() => null);
         const theme = localStorage.getItem("theme") || "dark";
-        await SaveAppConfig(dir, "", "", "copy", theme);
+        await SaveAppConfig(dir, "", "", cfg?.linkMode || "copy", theme);
         vm._repoRoot = dir + "\\ysm";
         await reload(vm);
         bus.emit("stats:refresh");

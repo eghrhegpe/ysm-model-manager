@@ -24,6 +24,16 @@ cacheSetEvictHandler((key, val) => {
   if (geo?.textures) urls.push(...geo.textures);
   if (geo?.texture && !urls.includes(geo.texture)) urls.push(geo.texture);
   if (val.texture && !urls.includes(val.texture)) urls.push(val.texture);
+  // 作者头像 blob URL（preview-wasm 为头像 createObjectURL）：
+  // authors[].avatarUrl 与 avatars 记录可能指向同一 URL，去重后 revoke
+  for (const au of val.authors || []) {
+    if (typeof au === "object" && au.avatarUrl && !urls.includes(au.avatarUrl)) {
+      urls.push(au.avatarUrl);
+    }
+  }
+  for (const u of Object.values(val.avatars || {})) {
+    if (u && !urls.includes(u)) urls.push(u);
+  }
   for (const u of urls) {
     if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
   }
@@ -32,7 +42,6 @@ cacheSetEvictHandler((key, val) => {
 class AppPreview extends HTMLElement implements PreviewCtx {
   _root: ShadowRoot;
   _unsubs: Array<() => void> = [];
-  private _modelCleanup: (() => void) | null = null;
   private _typeCache: Array<{ id: string; name?: string; icon?: string }> = [];
   private _typeReg: Record<string, { id: string; name?: string; icon?: string }> | null = null;
 
@@ -59,16 +68,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   }
 
   disconnectedCallback(): void {
-    this._cleanupModelListeners();
     this._unsubs.forEach((fn) => fn());
-  }
-
-  /** 清理模型拖拽 window 级监听 */
-  private _cleanupModelListeners(): void {
-    if (this._modelCleanup) {
-      this._modelCleanup();
-      this._modelCleanup = null;
-    }
   }
 
   private _render(): void {

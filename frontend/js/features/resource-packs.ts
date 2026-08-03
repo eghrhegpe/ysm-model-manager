@@ -1,6 +1,5 @@
 // ===== 资源包管理（类型化版 — ADR-014 P3 组件层）=====
 // 薄 wrapper，由 app-resource-manager 组件驱动
-import { bus } from "../bus.ts";
 import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 
 /**
@@ -23,22 +22,8 @@ export async function initResourcePacks(
     (rtype || RESOURCE_TYPES.PACK) +
     '"></app-resource-manager>';
 
-  // 监听 Toast 事件，改用事件总线确保 Toast 始终可达
-  const manager = container.querySelector("app-resource-manager");
-  const handler = (e: Event): void => {
-    const { type, title, message } = (e as CustomEvent).detail as {
-      type?: string;
-      title: string;
-      message?: string;
-    };
-    bus.emit("toast:show", {
-      msg: title + (message ? ": " + message : ""),
-      type: (type || "info") as "info" | "success" | "error" | "warn",
-      duration: 3000,
-    });
-  };
-  manager?.addEventListener("toast", handler as EventListener);
-
-  // 返回清理函数，供上层移除事件监听
-  return () => manager?.removeEventListener("toast", handler as EventListener);
+  // Toast 由 app-resource-manager 内部直接 bus.emit("toast:show") 发出，
+  // 此处不再桥接游离 DOM 事件（Design.md §14.6 D3）。
+  // 保留清理函数返回值以兼容上层调用契约。
+  return () => {};
 }

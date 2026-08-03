@@ -1,6 +1,6 @@
 ---
 kind: page_store
-name: 页面状态管理 page-store.js
+name: 页面状态管理 page-store.ts
 tier: architecture
 category: core
 source_files:
@@ -13,11 +13,11 @@ use_when:
   - currentPage
 ---
 
-# 页面状态管理 page-store.js
+# 页面状态管理 page-store.ts
 
 ## 概览
 
-`page-store.js` 管理 YSM 的前端页面导航状态，是 `PageStore.currentPage` 的唯一数据源，替代了旧版 `window.__currentPage`。
+`page-store.ts` 管理 YSM 的前端页面导航状态，是 `PageStore.currentPage` 的唯一数据源，替代了旧版 `window.__currentPage`。
 
 ## 核心职责
 

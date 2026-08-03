@@ -423,13 +423,13 @@ export class AppResourceManager extends HTMLElement {
     }
   }
 
+  /** 统一反馈出口：直接走类型化事件总线（不再派发游离 DOM `toast` 事件） */
   private _toast(type: string, title: string, msg?: string): void {
-    const ev = new CustomEvent("toast", {
-      bubbles: true,
-      composed: true,
-      detail: { type, title, message: msg },
+    bus.emit("toast:show", {
+      msg: title + (msg ? ": " + msg : ""),
+      type: (type || "info") as "info" | "success" | "error" | "warn",
+      duration: 3000,
     });
-    this.dispatchEvent(ev);
   }
 }
 

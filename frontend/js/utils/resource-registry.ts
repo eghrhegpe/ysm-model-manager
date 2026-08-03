@@ -15,7 +15,7 @@ type ResourceRegistry = Record<string, ResourceTypeEntry>;
 
 let _registry: ResourceRegistry | null = null;
 
-/** 加载资源类型注册表 */
+/** 加载资源类型注册表（失败不缓存：Go 桥瞬断后下次调用重试，避免整会话降级） */
 export async function loadResourceRegistry(): Promise<ResourceRegistry> {
   if (_registry) return _registry;
   try {
@@ -26,10 +26,10 @@ export async function loadResourceRegistry(): Promise<ResourceRegistry> {
       map[t.id] = t;
       return map;
     }, {});
+    return _registry;
   } catch {
-    _registry = {};
+    return {};
   }
-  return _registry;
 }
 
 /** 获取某资源类型的注册表条目 */

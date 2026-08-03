@@ -581,9 +581,9 @@ disconnectedCallback() {
 | # | 漂移点 | 现状 | 处置 |
 |---|--------|------|------|
 | D1 | **主题数过期** | Design.md 旧版列 4 主题（含不存在的 `.theme-default-dark`）；实装 6 主题 + `system`（app-modules.ts:47） | 本文 §3 已修正；删除 `--theme-default-dark` 引用 |
-| D2 | **`app-preview` 残留 `mode` 属性** | `app-content/tpl.ts:38` 仍生成 `<app-preview mode="model">`，但 `app-preview` 已无 `observedAttributes`，`mode` 为 no-op | 清理 tpl.ts 或恢复 mode 支持 |
-| D3 | **`app-resource-manager` 走 DOM 事件而非 bus** | `index.ts:427-432` 派发 `CustomEvent("toast",{bubbles,composed})`，与全局 `<app-toast>`（`toast:show`）体系并行，且无人订阅该 DOM 事件 | 迁移为 `bus.emit("toast:show", ...)` |
-| D4 | **`app-tree` 的 `root` 非响应式** | `root` 在 `connectedCallback` 命令式 `getAttribute("root")` 读取（`index.ts:69`），无 `attributeChangedCallback`，挂载后改 `root` 不更新 | 改为 `observedAttributes:["root"]` 或明确文档为"挂载期只读" |
+| D2 | ~~**`app-preview` 残留 `mode` 属性**~~ | ✅ **不成立（已核销）**：全库 grep `mode="model"` 零匹配，`app-content/tpl.ts` 现已只生成 `<app-preview id="app-preview" style="...">`。原登记基于过期快照 | 无需处置 |
+| D3 | ~~**`app-resource-manager` 走 DOM 事件而非 bus**~~ | ✅ **已修复**：`app-resource-manager/index.ts` 的 `_toast()` 改为直接 `bus.emit("toast:show", {msg,type,duration})`；同步删除 `features/resource-packs.ts` 中的 DOM 事件桥接（原 :26-43），`initResourcePacks` 保留空清理函数以兼容调用契约 | 已闭环 |
+| D4 | ~~**`app-tree` 的 `root` 非响应式**~~ | ✅ **已修复**：新增 `static observedAttributes = ["root"]` 与 `attributeChangedCallback`，变更后 `_load()` + `_renderTree()`；以 `_ready` 标志位隔离首次挂载，避免与 `connectedCallback` 重复加载 | 已闭环 |
 | D5 | **AGENTS.md 目录规范偏差** | 扩展名 `.js`→`.ts`；`tree-styles.ts` 位置；`app-content/community/` 子目录未记载 | 以本文 §11 / §14.2 为准 |
 | D6 | **部分 bus 事件仅订阅无发射** | `tree:set-search` / `filter:results` / `entry:toggle` / `entries:dedup` 在 `BusEvents` 中有定义、有订阅方，但未定位到发射方 | 补全发射或移出契约 |
 
@@ -602,7 +602,7 @@ disconnectedCallback() {
 | `<app-sidebar>` | `components/app-sidebar/index.ts` | 实例整合包侧栏 | `rtype` | 订阅 `stats:refresh`/`repo:rtype-changed`；发射 `sync:download:missing`/`toast:show`/`tree:reload` |
 | `<app-tree>` | `components/app-tree/index.ts` | 资源/文件树 | 无（`root` 命令式读） | 订阅 `filter:results`/`tree:set-search`/`bus-handlers` 多事件；发射 `model:select`/`ctx:show`/`stats:refresh` |
 | `<app-preview>` | `components/app-preview/index.ts` | 模型/资源预览详情 | 无 | 仅订阅 `model:select` |
-| `<app-resource-manager>` | `components/app-resource-manager/index.ts` | 资源类型/包管理列表 | `rtype`,`instance` | 仅订阅 `config:resource-types-changed`；发 DOM `toast` 事件（见 D3） |
+| `<app-resource-manager>` | `components/app-resource-manager/index.ts` | 资源类型/包管理列表 | `rtype`,`instance` | 订阅 `config:resource-types-changed`；反馈走 `bus.emit("toast:show")` |
 | `<app-sync-manager>` | `components/app-sync-manager/index.ts` | 单实例同步管理 | `instance`,`default-type` | 订阅 `stats:refresh`；发射 `repo:rtype-changed`/`toast:show` |
 | `<app-toast>` | `components/app-toast.ts` | 全局通知条 | 无 | 仅订阅 `toast:show` |
 | `<context-menu>` | `components/context-menu.ts` | 右键/弹出菜单层 | 无 | 仅订阅 `menu:show` |
@@ -625,7 +625,7 @@ disconnectedCallback() {
 - **bus**：
   - 订阅 `nav:change`（:71 → 同步 `nav:changed` + 重渲染）、`repo:switch-tab`（:84）、`repo:search-creator`（:91）、`package:selected`（:232）、`avatar:refresh`（:666）。
   - 发射 `nav:changed`（:79）、`nav:change`（:95）、`repo:rtype-changed`（:277）、`toast:show`（:581/587/602/608）。
-- **子组件**：`<app-tree root="...">`（:271/tpl.ts:30）、`<app-preview>`（tpl.ts:38，⚠️ `mode` 残留 no-op，见 D2）、`<app-sidebar class="ins-sidebar">`（tpl.ts:52）、`<app-sync-manager instance="...">`（:238-242，动态 import 懒加载）。
+- **子组件**：`<app-tree root="...">`（:271/tpl.ts:30）、`<app-preview>`（tpl.ts:38）、`<app-sidebar class="ins-sidebar">`（tpl.ts:52）、`<app-sync-manager instance="...">`（:238-242，动态 import 懒加载）。
 - **DOM 事件**：无。**插槽/部件**：无。
 
 ### 15.3 `<app-sidebar>`
@@ -643,7 +643,7 @@ disconnectedCallback() {
 ### 15.4 `<app-tree>`
 
 - **角色**：资源/文件树；支持多选、搜索、类型过滤、右键菜单、实例操作。
-- **observedAttributes**：**无**。`root` 通过 `getAttribute("root")` 在 `connectedCallback` 命令式读取（`index.ts:69`），**非响应式**（见 D4）。
+- **observedAttributes**：**`root`**（资源类型根）。首次挂载由 `connectedCallback` 读取；挂载后变更走 `attributeChangedCallback` → `_load()` + `_renderTree()`，以 `_ready` 标志避免重复加载（D4 已闭环）。
 - **公共属性**：`root`（消费属性，非 observed）。
 - **公共方法（模块级导出，跨组件契约）**：`setPendingTreeSearch(name)`（:17）、`takePendingTreeSearch()`（:20）—— app-content 写入、app-tree 挂载消费。
 - **bus**：
@@ -654,7 +654,7 @@ disconnectedCallback() {
 ### 15.5 `<app-preview>`
 
 - **角色**：模型/资源预览详情区；订阅 `model:select` 渲染 YSM 模型 / 资源包 / Litematic / ShaderPack / 整合包目录详情。
-- **observedAttributes**：**无**（原 `mode` 已移除，见 D2）。
+- **observedAttributes**：**无**（历史 `mode` 属性已移除，调用方亦已清理）。
 - **公共方法（实现 `PreviewCtx`）**：`decodeYsmViaWasm(modelPath)`（:123）、`_loadPreviewImage`（:79）。其余为私有。
 - **bus**：仅订阅 `model:select`（:51），payload `{path, isDir?}`。
 - **DOM 事件**：无。**插槽/部件**：无。详情渲染委托 `preview-detail.ts` 等模块函数操作 `this._root`。
@@ -666,7 +666,7 @@ disconnectedCallback() {
 - **公共属性**：`rtype`、`instance`（反射属性）。
 - **公共方法**：无对外。
 - **bus**：仅订阅 `config:resource-types-changed`（:46，模块级）→ 重置并重新初始化。**不发射 bus 事件**。
-- **DOM 事件**：**`toast`** — `index.ts:427-432` 派发 `CustomEvent("toast",{bubbles:true,composed:true,detail:{type,title,message}})`。⚠️ 与全局 `toast:show` 体系并行且无人订阅（见 D3，待迁移）。
+- **DOM 事件**：**无**。内部 `_toast()` 统一 `bus.emit("toast:show", {msg,type,duration})`（D3 已闭环，不再派发游离 DOM 事件）。
 - **插槽/部件**：无。
 
 ### 15.7 `<app-sync-manager>`
@@ -815,7 +815,7 @@ disconnectedCallback() {
 ### 18.2 属性（attributes）
 
 - kebab-case；仅"需要由 HTML / 外部反射控制"的属性进 `observedAttributes`。
-- **命令式 `getAttribute` 仅用于挂载期只读参数**（如 `app-tree` 的 `root`）；若需运行时响应变化，必须进 `observedAttributes` + `attributeChangedCallback`（避免 D4 重演）。
+- **命令式 `getAttribute` 仅用于挂载期只读参数**；若需运行时响应变化，必须进 `observedAttributes` + `attributeChangedCallback`（`app-tree` 的 `root` 即为范例）。
 - 禁止裸 `data-*` 传递结构化数据；结构化数据走属性解析或 `bus`/`property`。
 
 ### 18.3 属性名 vs 内部状态
@@ -831,7 +831,7 @@ disconnectedCallback() {
 ### 18.5 事件
 
 - **bus 事件**：kebab-case + 域名前缀，语义分组（`nav:` / `repo:` / `sync:` / `tree:` / `batch:` / `dir:` / `config:` / `instance:` / `import:`）。新增事件先在 `bus.ts` 的 `BusEvents` 登记类型（§16.1）。
-- **DOM `CustomEvent`**：默认走 bus；仅当事件确需穿透 Shadow DOM 边界且局部消费时才用 `CustomEvent({bubbles:true, composed:true})`。⚠️ `app-resource-manager` 的 `toast` DOM 事件属反面教材（D3），新代码勿效仿——统一用 `bus.emit("toast:show")`。
+- **DOM `CustomEvent`**：默认走 bus；仅当事件确需穿透 Shadow DOM 边界且局部消费时才用 `CustomEvent({bubbles:true, composed:true})`。⚠️ 历史上 `app-resource-manager` 曾派发游离 `toast` DOM 事件（D3，已修复）——反馈一律用 `bus.emit("toast:show")`。
 - **禁止** `window.__*` 全局隐式状态 / 事件（AGENTS.md 红线）。
 
 ### 18.6 目录结构（修正 AGENTS.md）

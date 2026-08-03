@@ -20,7 +20,7 @@ use_when:
 
 ## 概览
 
-`go/threejs/` 包根据 YSMViewer 的 `ThreeJsPayloadBuilder.cs` 移植，把已解析的 `types.BedrockModel` 转换为 Three.js 可直接消费的 JSON spec：顶点、法线、UV、骨骼层级与旋转四元数全部在 Go 端预计算，前端 `model3d.js` 只负责渲染，不做几何计算。
+`go/threejs/` 包根据 YSMViewer 的 `ThreeJsPayloadBuilder.cs` 移植，把已解析的 `types.BedrockModel` 转换为 Three.js 可直接消费的 JSON spec：顶点、法线、UV、骨骼层级与旋转四元数全部在 Go 端预计算，前端 `model3d.ts` 只负责渲染，不做几何计算。
 
 ## 核心职责
 
@@ -35,14 +35,14 @@ use_when:
 
 - 被 `internal/app/app_model.go` 调用（`threejs.Build` 生成 spec → Wails binding 下发前端）
 - 上游输入来自 [go_geometry](./go_geometry.md) / [go_ysm_parser](./go_ysm_parser.md) 解析出的 `types.BedrockModel`
-- 前端消费方：`frontend/js/utils/model3d.js`（Three.js 渲染）
+- 前端消费方：`frontend/js/utils/model3d.ts`（Three.js 渲染）
 
 ## 不变量
 
 - 骨骼局部坐标 = `bone.pivot - parent.pivot`；Blockbench 欧拉角取反后转四元数（`eulerToQuaternion(-rx, -ry, -rz)`），口径对齐 YSMViewer
 - 纹理尺寸为 0 时兜底 64×64
 - 同名骨骼合并：优先保留有 parent/有旋转的完整层级（main.json 覆盖 arm.json 的扁平版），cube 用 `mergeCubes` 重叠替换、非重叠保留
-- 坐标变换是高危区：前端 model3d.js 历史 fix 次数全项目第一（致命陷阱 #11），改本包坐标/UV 前先 grep `bug-chronicle`，改完用自由相机近距验证
+- 坐标变换是高危区：前端 model3d.ts 历史 fix 次数全项目第一（致命陷阱 #11），改本包坐标/UV 前先 grep `bug-chronicle`，改完用自由相机近距验证
 
 ## 相关
 

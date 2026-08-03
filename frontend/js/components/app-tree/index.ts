@@ -57,6 +57,13 @@ export class AppTree extends HTMLElement {
   _renderMode: RenderMode = getRenderMode(); // 'grid' | 'list'
   _unsubs: Array<() => void> = [];
   private _keydownHandler: EventListener | null = null;
+  /** 已完成 connectedCallback 初始化（用于区分首次挂载与后续属性变更） */
+  private _ready = false;
+
+  /** 响应式属性：root（资源类型根，Design.md §15 契约） */
+  static get observedAttributes(): string[] {
+    return ["root"];
+  }
 
   constructor() {
     super();
@@ -135,7 +142,24 @@ export class AppTree extends HTMLElement {
       if (tree)
         tree.innerHTML =
           '<div class="empty"><div class="big">⚠️</div>加载失败</div>';
+    } finally {
+      this._ready = true;
     }
+  }
+
+  /** root 属性变更 → 重新加载并渲染（首次挂载由 connectedCallback 负责，避免重复加载） */
+  attributeChangedCallback(name: string, oldVal: string | null, newVal: string | null): void {
+    if (name !== "root" || oldVal === newVal) return;
+    this._rootAttr = newVal || "";
+    if (!this._ready || !this.isConnected) return;
+    void (async () => {
+      try {
+        await this._load();
+        this._renderTree();
+      } catch (e) {
+        console.error("[Tree root change Error]", e);
+      }
+    })();
   }
   disconnectedCallback(): void {
     this._unsubs?.forEach((fn) => fn?.());

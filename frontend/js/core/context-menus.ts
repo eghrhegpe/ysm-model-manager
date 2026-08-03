@@ -25,6 +25,48 @@ function isUnsafeFolderName(folder: string): boolean {
   return /\.\./.test(folder) || /^[/\\]/.test(folder);
 }
 
+/**
+ * 解析「移动/复制到文件夹」的目标路径（batch.move / batch.copy / file.move / file.copy 共用）：
+ * 弹窗输入 → 安全检查 → 取仓库根 → 拼目标目录。
+ * 用户取消或校验失败时返回 null（已 toast 告知）。
+ */
+async function resolveDstDir(opts: {
+  title: string;
+  icon: string;
+  okText: string;
+  emptyMsg: string;
+}): Promise<{ folder: string; dstDir: string } | null> {
+  const { modalPrompt } = await import("../dialogs/modal.ts");
+  const folder = await modalPrompt({
+    title: opts.title,
+    icon: opts.icon,
+    placeholder: "输入目标文件夹名，如 [作者名]",
+    okText: opts.okText,
+  });
+  if (!folder) return null;
+  if (isUnsafeFolderName(folder)) {
+    bus.emit("toast:show", {
+      msg: "❌ 文件夹名包含非法字符",
+      duration: 3000,
+      type: "error",
+    });
+    return null;
+  }
+  const { GetRepoRoot } = await import(
+    "../../bindings/ysm-model-manager/internal/app/app.js"
+  );
+  const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
+  if (!repoRoot) {
+    bus.emit("toast:show", {
+      msg: opts.emptyMsg,
+      duration: 3000,
+      type: "error",
+    });
+    return null;
+  }
+  return { folder, dstDir: repoRoot + "/" + folder.replace(/\\/g, "/") };
+}
+
 // ── 行为 handler 表：action id → (ctx) => void ──────────
 // 与 menu-defs.ts 的 MenuItemDef.action 一一对应；测试遍历声明断言完整性。
 // MenuCtx 保证 paths 已归一化为数组（buildMenuItems 兜底）。
@@ -57,34 +99,17 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   // ── batch ──
   "batch.rename": (ctx) => bus.emit("batch:rename", { paths: ctx.paths }),
   "batch.move": async (ctx) => {
-    const { modalPrompt } = await import("../dialogs/modal.ts");
-    const folder = await modalPrompt({
+    const resolved = await resolveDstDir({
       title: "移动到文件夹",
       icon: "📂",
-      placeholder: "输入目标文件夹名，如 [作者名]",
       okText: "移动",
+      emptyMsg: "❌ 请先配置存储路径",
     });
-    if (!folder) return;
-    if (isUnsafeFolderName(folder)) {
-      bus.emit("toast:show", {
-        msg: "❌ 文件夹名包含非法字符",
-        duration: 3000,
-        type: "error",
-      });
-      return;
-    }
-    const { LoadAppConfig, MoveModelFile, GetRepoRoot } =
-      await import("../../bindings/ysm-model-manager/internal/app/app.js");
-    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-    if (!repoRoot) {
-      bus.emit("toast:show", {
-        msg: "❌ 请先配置存储路径",
-        duration: 3000,
-        type: "error",
-      });
-      return;
-    }
-    const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
+    if (!resolved) return;
+    const { folder, dstDir } = resolved;
+    const { MoveModelFile } = await import(
+      "../../bindings/ysm-model-manager/internal/app/app.js"
+    );
     toast(`📦 正在移动 ${ctx.paths.length} 个文件到 ${folder}...`, 3000);
     let ok = 0;
     let fail = 0;
@@ -101,34 +126,17 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     refreshUI();
   },
   "batch.copy": async (ctx) => {
-    const { modalPrompt } = await import("../dialogs/modal.ts");
-    const folder = await modalPrompt({
+    const resolved = await resolveDstDir({
       title: "复制到文件夹",
       icon: "📋",
-      placeholder: "输入目标文件夹名，如 [作者名]",
       okText: "复制",
+      emptyMsg: "❌ 请先配置仓库目录",
     });
-    if (!folder) return;
-    if (isUnsafeFolderName(folder)) {
-      bus.emit("toast:show", {
-        msg: "❌ 文件夹名包含非法字符",
-        duration: 3000,
-        type: "error",
-      });
-      return;
-    }
-    const { LoadAppConfig, CopyModelFile, GetRepoRoot } =
-      await import("../../bindings/ysm-model-manager/internal/app/app.js");
-    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-    if (!repoRoot) {
-      bus.emit("toast:show", {
-        msg: "❌ 请先配置仓库目录",
-        duration: 3000,
-        type: "error",
-      });
-      return;
-    }
-    const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
+    if (!resolved) return;
+    const { folder, dstDir } = resolved;
+    const { CopyModelFile } = await import(
+      "../../bindings/ysm-model-manager/internal/app/app.js"
+    );
     toast(`📦 正在复制 ${ctx.paths.length} 个文件到 ${folder}...`, 3000);
     let ok = 0;
     let fail = 0;
@@ -165,10 +173,18 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     if (!ok2) return;
     const { MoveToRecycle } =
       await import("../../bindings/ysm-model-manager/internal/app/app.js");
+    let fail = 0;
+    let lastErr: unknown = null;
     for (const p of ctx.paths) {
       try {
         await MoveToRecycle(p);
-      } catch {}
+      } catch (e) {
+        fail++;
+        lastErr = e;
+      }
+    }
+    if (fail > 0) {
+      toast(`❌ ${fail} 个文件移入回收站失败：${friendlyError(lastErr, "移动失败")}`, 5000, "error");
     }
     refreshUI();
   },
@@ -222,26 +238,17 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
   },
   "file.move": async (ctx) => {
-    const { modalPrompt } = await import("../dialogs/modal.ts");
-    const folder = await modalPrompt({
+    const resolved = await resolveDstDir({
       title: "移动到文件夹",
       icon: "📂",
-      placeholder: "输入目标文件夹名，如 [作者名]",
       okText: "移动",
+      emptyMsg: "❌ 请先配置存储路径",
     });
-    if (!folder) return;
-    const { LoadAppConfig, MoveModelFile, GetRepoRoot } =
-      await import("../../bindings/ysm-model-manager/internal/app/app.js");
-    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-    if (!repoRoot) {
-      bus.emit("toast:show", {
-        msg: "❌ 请先配置存储路径",
-        duration: 3000,
-        type: "error",
-      });
-      return;
-    }
-    const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
+    if (!resolved) return;
+    const { folder, dstDir } = resolved;
+    const { MoveModelFile } = await import(
+      "../../bindings/ysm-model-manager/internal/app/app.js"
+    );
     try {
       await MoveModelFile(ctx.path || "", dstDir);
       toast(`✅ 已移动到 ${folder}`, 3000);
@@ -251,34 +258,17 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
   },
   "file.copy": async (ctx) => {
-    const { modalPrompt } = await import("../dialogs/modal.ts");
-    const folder = await modalPrompt({
+    const resolved = await resolveDstDir({
       title: "复制到文件夹",
       icon: "📋",
-      placeholder: "输入目标文件夹名，如 [作者名]",
       okText: "复制",
+      emptyMsg: "❌ 请先配置仓库目录",
     });
-    if (!folder) return;
-    if (isUnsafeFolderName(folder)) {
-      bus.emit("toast:show", {
-        msg: "❌ 文件夹名包含非法字符",
-        duration: 3000,
-        type: "error",
-      });
-      return;
-    }
-    const { LoadAppConfig, CopyModelFile, GetRepoRoot } =
-      await import("../../bindings/ysm-model-manager/internal/app/app.js");
-    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-    if (!repoRoot) {
-      bus.emit("toast:show", {
-        msg: "❌ 请先配置仓库目录",
-        duration: 3000,
-        type: "error",
-      });
-      return;
-    }
-    const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
+    if (!resolved) return;
+    const { folder, dstDir } = resolved;
+    const { CopyModelFile } = await import(
+      "../../bindings/ysm-model-manager/internal/app/app.js"
+    );
     try {
       await CopyModelFile(ctx.path || "", dstDir);
       refreshUI();
@@ -340,7 +330,9 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     try {
       await MoveToRecycle(ctx.path || "");
       refreshUI();
-    } catch {}
+    } catch (e) {
+      toast("❌ " + friendlyError(e, "移入回收站失败"), 3000, "error");
+    }
   },
   "file.reveal": async (ctx) => {
     const { RevealInExplorer } =

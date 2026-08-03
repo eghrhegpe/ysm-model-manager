@@ -27,7 +27,7 @@ use_when:
 ## 与其他子系统关系
 
 - `go/dedup/`: 导入前去重
-- `frontend/js/features/import-queue.js`: 前端导入队列 UI
+- `frontend/js/features/import-queue.ts`: 前端导入队列 UI
 
 ## 不变量
 
@@ -35,4 +35,4 @@ use_when:
 
 ## 相关
 
-- `frontend/js/features/import-queue.js`
+- `frontend/js/features/import-queue.ts`

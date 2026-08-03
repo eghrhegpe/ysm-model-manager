@@ -41,4 +41,24 @@ use_when:
 - `RegistryType(id string) *ResourceType` — 按 id 查类型，无匹配返回 nil
 - `SetRegistryPath(path string)` — 仅测试用，重置单例
 - 扩展名/目录查询：`AllExts()`、`IsSupportedExt(ext)`、`ExtBelongsTo(ext)`、`SupportedExtsForType(rtype)`、`StorageSubDir(rtype)`、`SubDirMap(rtype)`、`SubDirAll()`、`AllSubDirs()`、`FindInstDir(versionDir, subDir, rtype)`（标准子目录不存在时按扩展名兜底扫描）
-- `(pm *PackMeta) Desc() string` — description 可读文本（兼容 string
+- `(pm *PackMeta) Desc() string` — description 可读文本（兼容 string / JSON text component 对象 / 数组）
+- 关键常量：`LinkCopy` / `LinkHard` / `LinkSym` / `LinkUnknown`（LinkType）；`SyncStatusSynced/Missing/Optional/Disabled/Legacy`
+
+## 与其他子系统关系
+
+- 被几乎所有 `go/` 包与 `internal/app/` 引用（数据交换的公共语言）
+- 注册表数据源是仓库根 `resource_types.json`（见 [resource_registry](./resource_registry.md)）；`extensions.go` 的查询被 [go_sync](./go_sync.md) / [go_importer](./go_importer.md) 等消费
+- BedrockModel 由 [go_geometry](./go_geometry.md) 产出、[go_threejs](./go_threejs.md) 消费
+
+## 不变量
+
+- 注册表加载是 `sync.Once` 单例；默认**不读 cwd 裸文件名**，避免部署时工作目录漂移读到旧 JSON
+- `RepoRoot` 为旧版字段（v1.6.4+ 弃用），仅用于配置迁移，新功能不得使用
+- `resource_types_embed.go` 由脚本从 `resource_types.json` 生成（头部有 DO NOT EDIT 标记），手改会被覆盖
+- 新增资源类型只改 `resource_types.json`，Go 端不手写 StorageSubDir/扩展名条目（治理红线：注册表优先）
+
+## 相关
+
+- [resource_registry](./resource_registry.md) — resource_types.json 单一事实源（互补卡）
+- [go_sync](./go_sync.md) — InstanceStatus/LinkType 的主要消费方
+- [go_geometry](./go_geometry.md) / [go_threejs](./go_threejs.md) — BedrockModel 生产/消费链

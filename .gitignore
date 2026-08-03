@@ -1,7 +1,6 @@
 frontend/dist
 build/bin/
 bin/
-build/release/
 build/ysmparser-cache/
 cmd/*/genindex.exe
 cmd/*/*.exe
@@ -34,3 +33,17 @@ reasonix.toml
 # 应用运行时配置已迁移到用户目录 %APPDATA%/YSM-Model-Manager/，不再入仓
 /ysm_config.json
 tests/python/__pycache__/
+
+# 脚本目录（本地工具，不入库）
+scripts/
+
+# IDE / AI 工具缓存
+.reasonix/
+.qoder/
+.workbuddy/
+
+# 构建产物
+build/
+
+# CI 配置（本地分支，未定稿）
+.github/workflows/

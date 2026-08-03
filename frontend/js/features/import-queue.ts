@@ -56,6 +56,9 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   const folderInput = root.getElementById("dl-folder-input") as HTMLInputElement;
   const importedList = root.getElementById("dl-imported-list") as HTMLElement;
   const dlCount = root.getElementById("dl-count") as HTMLElement | null;
+  const dlQueueCount = root.getElementById(
+    "dl-queue-count",
+  ) as HTMLElement | null;
   // 存储当前文件信息
   let currentFile: ImportFile | null = null;
   let currentBase64: string | null = null;
@@ -813,6 +816,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   };
 
   const updateQueueCount = (): void => {
+    if (dlQueueCount) dlQueueCount.textContent = String(fileQueue.length);
     if (dlCount)
       dlCount.textContent =
         imported.length +

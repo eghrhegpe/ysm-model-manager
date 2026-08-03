@@ -82,6 +82,8 @@ describe("tryFetchModels 成功路径（并发竞速取最快）", () => {
 
   it("mirror='githubapi'：api 源 base64 内容被解码", async () => {
     vi.useFakeTimers();
+    // jsdom 的 atob 对合法 base64 抛错，用 Buffer 实现替代以驱动源码解码路径
+    vi.stubGlobal("atob", (b64) => Buffer.from(b64, "base64").toString("binary"));
     const models = [{ name: "api-model" }];
     const b64 = Buffer.from(JSON.stringify(models), "utf-8").toString("base64");
     const fetchMock = mockFetch(() =>

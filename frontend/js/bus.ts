@@ -58,8 +58,6 @@ export interface BusEvents {
   "toast:show": ToastPayload;
   // 数据刷新
   "stats:refresh": void;
-  "stats:upload": void;
-  "logs:refresh": void;
   "tree:reload": void;
   "tree:set-search": string; // tree 搜索关键字（app-tree 实证：srch.value = name）
   "avatar:refresh": { author: string; dataUri: string };
@@ -74,10 +72,8 @@ export interface BusEvents {
   "repo:rtype-changed": string;
   "repo:search-creator": string;
   "sync:toggle:status": void;
-  "sync:toggle:done": void;
   "sync:download:missing": { instanceName?: string; rtype?: string; token?: string };
   "sync:download:done": { token?: string; instanceName?: string };
-  "sync:upload:done": void;
   // 实例 / 导入
   "instance:export-list": { name: string; rtype?: string };
   "instance:clear": { name: string; rtype?: string };
@@ -105,7 +101,6 @@ export interface BusEvents {
   "loading:start": void;
   "loading:end": void;
   "recycle:open": void;
-  "mmd:sync-variant-folder": { instanceName: string; folderPath: string; rtype: string };
   "filter:results": Array<{ path: string }>;
   "entry:toggle": { path: string };
   "entries:dedup": void;

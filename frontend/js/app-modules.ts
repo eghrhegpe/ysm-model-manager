@@ -40,6 +40,12 @@ registerContextMenus();
 //  窗口状态已由 Go 端 shutdown 保存，前端不再重复写入
 
 // ===== 全局主题控制 =====
+declare global {
+  interface Window {
+    applyTheme?: (mode: string) => void;
+  }
+}
+
 const THEME_DARK = "cyber";
 const THEME_LIGHT = "warm";
 

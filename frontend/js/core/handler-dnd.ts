@@ -189,7 +189,7 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   const oversized = allFiles.filter((f) => f.size > MAX_FILE_SIZE);
   if (oversized.length > 0) {
     bus.emit("toast:show", {
-      msg: `⚠️ ${oversized[0].name} 超过 10MB，请直接放入仓库文件夹`,
+      msg: `⚠️ ${oversized[0].name} 超过 100MB，请直接放入仓库文件夹`,
       duration: 5000,
       type: "warn",
     });

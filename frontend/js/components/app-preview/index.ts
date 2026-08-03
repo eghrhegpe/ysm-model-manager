@@ -2,11 +2,7 @@
 import { bus } from "../../bus.ts";
 import { previewCSS } from "./preview-css.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
-import { statsHTML, modelDetailHTML } from "./tpl.ts";
-import { bindBusUpdates } from "./events.ts";
-import { bindActions } from "./preview-actions.ts";
-import { registerMmdEvents } from "./preview-pack.ts";
-import { loadLogsPreview } from "./preview-logs.ts";
+import { modelDetailHTML } from "./tpl.ts";
 import {
   cacheGet,
   cacheSet,
@@ -36,7 +32,6 @@ cacheSetEvictHandler((key, val) => {
 class AppPreview extends HTMLElement implements PreviewCtx {
   _root: ShadowRoot;
   _unsubs: Array<() => void> = [];
-  _mode: "stat" | "model" = "stat";
   private _modelCleanup: (() => void) | null = null;
   private _typeCache: Array<{ id: string; name?: string; icon?: string }> = [];
   private _typeReg: Record<string, { id: string; name?: string; icon?: string }> | null = null;
@@ -48,46 +43,19 @@ class AppPreview extends HTMLElement implements PreviewCtx {
     this._root.adoptedStyleSheets[0].replaceSync(previewCSS);
   }
 
-  static get observedAttributes(): string[] {
-    return ["mode"];
-  }
-
-  attributeChangedCallback(name: string, _old: string | null, newVal: string | null): void {
-    if (name === "mode") {
-      this._mode = newVal === "model" ? "model" : "stat";
-      if (this._root.isConnected) this._render();
-    }
-  }
-
   connectedCallback(): void {
-    this._mode = this.getAttribute("mode") === "model" ? "model" : "stat";
     this._render();
 
-    if (this._mode === "stat") {
-      bindBusUpdates(this._root, this._unsubs);
-
-      // 注册 MMD 变体事件委托（仅一次，模块级标志控制不重复）
-      registerMmdEvents(this._root);
-
-      this._loadLogsPreview();
-
-      this._unsubs.push(bus.on("logs:refresh", () => this._loadLogsPreview()));
-
-      this._unsubs.push(bus.on("stats:refresh", () => this._loadLogsPreview()));
-    }
-
-    if (this._mode === "model") {
-      this._preloadTypeRegistry();
-      this._unsubs.push(
-        bus.on("model:select", async ({ path, isDir }) => {
-          if (isDir) {
-            this._showPackInfo(path);
-          } else {
-            this._showModelDetail(path);
-          }
-        }),
-      );
-    }
+    this._preloadTypeRegistry();
+    this._unsubs.push(
+      bus.on("model:select", async ({ path, isDir }) => {
+        if (isDir) {
+          this._showPackInfo(path);
+        } else {
+          this._showModelDetail(path);
+        }
+      }),
+    );
   }
 
   disconnectedCallback(): void {
@@ -104,12 +72,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   }
 
   private _render(): void {
-    if (this._mode === "stat") {
-      this._root.innerHTML = statsHTML();
-      bindActions(this._root);
-    } else {
-      this._root.innerHTML = modelDetailHTML(null);
-    }
+    this._root.innerHTML = modelDetailHTML(null);
   }
 
   /** 自动匹配缩略图：查缓存 → .ysm/.json 走 WASM → Go 兜底 */
@@ -241,12 +204,5 @@ ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px
     }
   }
 
-  private async _loadLogsPreview(): Promise<void> {
-    try {
-      const { GetImportLogs } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-      const logs = await GetImportLogs();
-      loadLogsPreview(this._root, logs);
-    } catch (_) {}
-  }
 }
 customElements.define("app-preview", AppPreview);

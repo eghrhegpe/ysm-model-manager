@@ -1,61 +1,6 @@
 // ===== preview HTML 模板 =====
 import { esc } from "../../utils/dom.ts";
 
-/** 整合包详情面板（stat mode） */
-export function statsHTML(): string {
-  return `<div class="content" id="detail-panel">
-<div class="dp-placeholder" id="dp-placeholder">
-  <div class="big-icon">👈</div>
-  <div class="dp-hint">点击左侧整合包查看详情</div>
-</div>
-<div class="dp-body" id="dp-body" style="display:none">
-  <div class="dp-header-row">
-    <span class="dp-name" id="dp-name">📦 -</span>
-    <span class="dp-status" id="dp-status"></span>
-  </div>
-  <div class="dp-cards" id="dp-cards">
-    <div class="dp-card green" id="dp-card-synced">
-      <div class="dp-card-num" id="dp-card-synced-num">0</div>
-      <div class="dp-card-label">已同步的模型列表</div>
-    </div>
-    <div class="dp-card red" id="dp-card-missing">
-      <div class="dp-card-num" id="dp-card-missing-num">0</div>
-      <div class="dp-card-label">待同步的模型列表</div>
-    </div>
-    <div class="dp-card orange" id="dp-card-extra">
-      <div class="dp-card-num" id="dp-card-extra-num">0</div>
-      <div class="dp-card-label">可加入仓库的模型列表</div>
-    </div>
-  </div>
-  <div class="dp-detail dp-detail-hidden" id="dp-detail-synced"></div>
-  <div class="dp-detail dp-detail-hidden" id="dp-detail-missing"></div>
-  <div class="dp-detail dp-detail-hidden" id="dp-detail-extra"></div>
-  <hr class="divider">
-  <div class="dp-global-actions">
-    <div class="dp-section-title">⚙️ 全局管理</div>
-    <button class="btn-base accent sm" id="dp-btn-import-all">⬇️ 导入仓库模型</button>
-    <button class="btn-base warn sm" id="dp-btn-upload-all">📤 上传新模型</button>
-    <button class="btn-base sm" id="dp-btn-sync-all">🔄 同步状态</button>
-  </div>
-  <hr class="divider">
-  <div class="dp-section-title">📋 操作日志 <button class="dp-log-toggle" id="dp-log-toggle">展开 ▸</button></div>
-  <div class="dp-log-filter" id="dp-log-filter" style="display:none;gap:4px;padding:2px 0">
-    <button class="dp-log-fbtn active" data-status="all">全部</button>
-    <button class="dp-log-fbtn" data-status="success">✅ 成功</button>
-    <button class="dp-log-fbtn" data-status="failed">❌ 失败</button>
-    <button class="dp-log-fbtn" data-status="skipped">⏭️ 跳过</button>
-    <input class="dp-log-search" id="dp-log-search" placeholder="🔍 搜索模型名...">
-  </div>
-  <div class="dp-log-list" id="dp-log-list">
-    <div class="stat-row dp-log-empty">暂无日志</div>
-  </div>
-  <div class="dp-log-footer" id="dp-log-footer" style="display:none">
-    <button class="btn-base sm" id="dp-btn-clear-logs">🗑️ 清空</button>
-  </div>
-</div>
-</div>`;
-}
-
 /** 模型统计元数据（modelDetailHTML 入参） */
 export interface ModelDetailMeta {
   name?: string;

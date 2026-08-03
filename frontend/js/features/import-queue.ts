@@ -64,6 +64,8 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   let currentBase64: string | null = null;
   let currentFileName: string | null = null;
   let currentRelPath = ""; // 文件夹导入时的相对路径
+  // 并发守卫：导入/重命名在途时拦截连点（同 preview-skeleton _saving 模式）
+  let _importing = false;
   const imported: Array<{
     name: string;
     base64?: string;
@@ -362,6 +364,9 @@ export function initImportQueue(app: ImportQueueHost): () => void {
 
   // 导入按钮
   root.getElementById("dl-import")?.addEventListener("click", async () => {
+    if (_importing) return; // 并发守卫：防连点弹出多个重命名对话框/重复导入
+    _importing = true;
+    try {
     const a = (root.getElementById("dl-author") as HTMLInputElement).value.trim();
     const w = (root.getElementById("dl-work") as HTMLInputElement).value.trim();
     const c = (root.getElementById("dl-chara") as HTMLInputElement).value.trim();
@@ -512,6 +517,9 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         duration: 5000,
         type: "error",
       });
+    }
+    } finally {
+      _importing = false;
     }
   });
 
@@ -752,6 +760,9 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     // 已导入的重命名按钮
     importedList.querySelectorAll(".dl-reimport").forEach((btn) => {
       btn.addEventListener("click", async () => {
+        if (_importing) return; // 并发守卫：与 dl-import 共用槽位
+        _importing = true;
+        try {
         const name = (btn as HTMLElement).dataset.name || "";
         const { showRenameDialog } = await import("../dialogs/rename.ts");
         const { RenameFile, LoadAppConfig, GetRepoRoot } = await getApp();
@@ -773,6 +784,9 @@ export function initImportQueue(app: ImportQueueHost): () => void {
             duration: 3000,
             type: "error",
           });
+        }
+        } finally {
+          _importing = false;
         }
       });
     });

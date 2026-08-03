@@ -77,6 +77,7 @@ export class AppResourceManager extends HTMLElement {
   private _listEl: HTMLElement | null = null;
   private _contentEl: HTMLElement | null = null;
   private _packsCache: PackEntry[] = []; // 完整列表缓存（供搜索过滤）
+  private _initGen = 0; // generation 守卫：rtype/instance 连变时作废在途 _init 的回写
 
   constructor() {
     super();
@@ -100,7 +101,9 @@ export class AppResourceManager extends HTMLElement {
   }
 
   async _init(): Promise<void> {
+    const gen = ++this._initGen;
     await _loadConfig();
+    if (gen !== this._initGen) return; // 过期：已有更新的 _init 发起
     const type = _findType(this._rtype);
     if (!type) {
       this.innerHTML =
@@ -130,6 +133,7 @@ export class AppResourceManager extends HTMLElement {
       DeleteResourcePack,
       OpenFolder,
     } = await getApp();
+    if (gen !== this._initGen) return;
 
     // 实例隔离路径：当 instance 属性存在时，从 mcRoot + installDir 推导
     // 注意：整合包传的是版本目录名（如 "1.20.1-Fabric"），用 ListVersionInstances 查实际路径
@@ -158,6 +162,7 @@ export class AppResourceManager extends HTMLElement {
     } else {
       this._rpRoot = await GetRepoRoot(this._rtype);
     }
+    if (gen !== this._initGen) return;
     if (!this._rpRoot) {
       this.innerHTML =
         '<div class="dp-placeholder" style="display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;gap:8px;height:100%">' +
@@ -255,7 +260,7 @@ export class AppResourceManager extends HTMLElement {
       });
     }
 
-    await this._loadList();
+    if (gen === this._initGen) await this._loadList();
   }
 
   async _loadList(): Promise<void> {

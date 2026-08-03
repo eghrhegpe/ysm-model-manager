@@ -45,7 +45,7 @@ export function setPrefer3D(v: boolean): void {
  * V2: 加密数据前有 16B 独立 hash 区
  * V3: 纯加密数据，无独立 hash 区
  */
-export function buildStdYsgpFromTextVariant(
+function buildStdYsgpFromTextVariant(
   bytes: Uint8Array,
   forceVer?: number,
 ): Uint8Array | null {

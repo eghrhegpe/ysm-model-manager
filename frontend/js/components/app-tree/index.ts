@@ -17,7 +17,7 @@ let _pendingTreeSearch = "";
 export function setPendingTreeSearch(name: string): void {
   _pendingTreeSearch = name;
 }
-export function takePendingTreeSearch(): string {
+function takePendingTreeSearch(): string {
   const v = _pendingTreeSearch;
   _pendingTreeSearch = "";
   return v;
@@ -56,6 +56,8 @@ export class AppTree extends HTMLElement {
   _filterPaths: Set<string> | null = null; // Set 或 null，来自 SearchModels 结果
   _renderMode: RenderMode = getRenderMode(); // 'grid' | 'list'
   _unsubs: Array<() => void> = [];
+  /** 批量启用/禁用进行中（防连点菜单重叠循环二次 Toggle 把状态打回原形） */
+  _batchBusy = false;
   private _keydownHandler: EventListener | null = null;
   /** 已完成 connectedCallback 初始化（用于区分首次挂载与后续属性变更） */
   private _ready = false;

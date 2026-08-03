@@ -82,7 +82,7 @@ export async function loadTextures(urls?: string[]): Promise<THREE.Texture[]> {
 }
 
 /** 获取模型 spec（Go 绑定优先，JS 几何兜底） */
-export async function fetchSpec(model: ModelLike): Promise<ModelSpec> {
+async function fetchSpec(model: ModelLike): Promise<ModelSpec> {
   let spec: ModelSpec = { models: [] };
   if (model._modelPath) {
     try {

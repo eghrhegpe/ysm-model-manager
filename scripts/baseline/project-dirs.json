@@ -1,0 +1,55 @@
+{
+  "go": {
+    "avatar": "创作者头像提取与缓存",
+    "dedup": "文件去重检测（纯函数，不绑回收站/UI）",
+    "download": "纯下载逻辑（不依赖 Wails runtime）",
+    "errors": "用户友好的中文错误信息",
+    "fsutil": "目录遍历工具（WalkDir 集中管理）",
+    "geometry": "Bedrock Geometry JSON 解析（ZIP/7z 提取，防炸弹限制）",
+    "importer": "资源导入策略接口与内置实现",
+    "installer": "模型安装",
+    "litematic": "Litematica 投影文件 (.litematic) 解析与预览数据",
+    "logs": "导入日志",
+    "packs": "资源包元数据读取（pack.mcmeta / 光影包 lang / 资源类型检测）",
+    "paths": "路径安全",
+    "recycle": "回收站管理",
+    "sync": "整合包同步",
+    "tags": "模型标签持久化存储",
+    "threejs": "3D 骨骼计算（对齐 YSMViewer 口径）",
+    "types": "共享类型 + 注册表",
+    "updater": "自动更新",
+    "version": "版本号",
+    "watcher": "文件监听",
+    "ysm": "YSM 解析 + 摘要"
+  },
+  "internal": {
+    "app": "Wails Binding 入口（app.go / resource_bindings.go）",
+    "embedded": "内嵌资源（updater helper 等）"
+  },
+  "frontend": {
+    "bus.ts": "事件总线",
+    "app-modules.ts": "组件入口 + 右键菜单映射",
+    "components": "Web Components（app-content / app-preview / app-tree / app-sidebar / app-resource-manager / app-sync-manager / app-nav / app-toast / context-menu）",
+    "core": "基础设施（buttons / global-handlers / theme / context-menus）",
+    "dialogs": "弹窗（modal / rename / batch-rename / tag-editor）",
+    "features": "业务功能（import-queue / recycle-bin / version-updater / community）",
+    "services": "服务注册（registry.ts）",
+    "utils": "工具函数（display / fmt / dom / icon / summarize / model3d）",
+    "wails": "Wails 桥接（app.ts）",
+    "wasm": "WASM 生成数据（base64 豁免文件）",
+    "css": "共享样式（shared-styles）"
+  },
+  "root": {
+    "main.go": "程序入口（薄壳，GUI 构建）",
+    "cli_export.go": "CLI 模式构建入口（build tag: cli）",
+    "embed.go": "内嵌资源声明（embed 文件系统）",
+    "resource_types.json": "资源类型单一事实来源（注册表优先）",
+    "creators.json": "创作者数据",
+    "workshop_sites.json": "工坊站点配置",
+    "workshop-github.json": "工坊 GitHub 关联",
+    "AGENTS.md": "AI 入口手册（硬约束 + 导航）",
+    "README.md": "项目说明（面向用户）",
+    "wails.json": "Wails 配置",
+    "opencode.json": "opencode 配置"
+  }
+}

@@ -1,5 +1,5 @@
 // ===== 全局事件总线（类型化版 — ADR-014 P1 渐进迁移）=====
-// 组件 `import { bus }` 使用，入口层可用 `setBus(mockBus)` 替换。
+// 组件 `import { bus }` 使用。
 // 类型契约：事件名拼错 / payload 形状错 → 编译期报错（.ts 调用方受益，.js 存量不受影响）。
 
 // ── 事件 payload 类型 ───────────────────────────────
@@ -155,11 +155,6 @@ function createBus(): Bus {
 
 /** 默认实例（组件直接使用） */
 const bus: Bus = _busInstance || (_busInstance = createBus());
-
-/** 替换 bus 实例（入口层 / 测试用） */
-export function setBus(newBus: Bus): void {
-  _busInstance = newBus;
-}
 
 export { bus };
 export default bus;

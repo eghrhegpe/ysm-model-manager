@@ -264,6 +264,8 @@ const STATIC_TOOLS = [
   { tool: 'auto-import.mjs', args: ['--strict'] },
   // 生成器守护：adr 登记表/规范索引 + releases 索引 + knowledge 委托校验，防生成产物静默过期
   { tool: 'gen-docs-index.mjs', args: ['--check'] },
+  // 项目结构地图：目录结构 vs 磁盘扫描（AGENTS.md §4.1 指针指向 docs/project-map.md）
+  { tool: 'gen-project-map.mjs', args: ['--check'] },
 ];
 
 function checkStaticAnalysis() {

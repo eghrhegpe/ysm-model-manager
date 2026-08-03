@@ -39,6 +39,9 @@ function collectDirEntries(
 }
 
 async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> {
+  if (vm._batchBusy) return; // 并发守卫：与 batchToggle/All 共用槽位，防重叠循环
+  vm._batchBusy = true;
+  try {
   const ck = fhEl.querySelector(".ck");
   if (!ck) return;
   const dirKey = fhEl.dataset.dir;
@@ -81,6 +84,9 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     duration: 5000,
     type: fail > 0 ? "warn" : "success",
   });
+  } finally {
+    vm._batchBusy = false;
+  }
 }
 
 // ——— 事件委托：一次性绑定，虚拟滚动替换 innerHTML 后仍然有效 ———

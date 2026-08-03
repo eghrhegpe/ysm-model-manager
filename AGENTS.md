@@ -138,6 +138,26 @@ Skill 分组（`.agents/skills/`）：
 | **搜历史 bug** | 说 "bug-search <关键词>" 查 bug-chronicle |
 | **跑契约测试** | `for f in tests/*.mjs; do node "$f"; done` |
 
+### 1.3 检查指令速查（文档与检查成对，改完对应文档/体系必跑）
+
+> 联邦式收口：每个文档体系配一条检查命令，防文档漂移与静默腐烂。
+
+| 检查 | 命令 | 覆盖 |
+|------|------|------|
+| 契约测试 | `for f in tests/*.mjs; do node "$f"; done` | JSON/配置/HTML 引用完整性（CI 已接） |
+| 文档断链 | `node scripts/link-checker.mjs` | 所有 md 内部链接（改文档后必跑） |
+| ADR 登记一致性 | `node scripts/adr-check.mjs` | adr/README.md 登记表 vs 磁盘文件（防撞号/漏登/幽灵） |
+| 知识卡漂移 | `node scripts/check-knowledge-drift.mjs` | knowledge/ 卡与源码一致性 |
+| 红线审查 | `node scripts/review.mjs` | 13 条治理红线（R1-R9 + W1-W5） |
+| 类型一致性 | `node scripts/type-consistency.mjs` | resource_types.json ↔ extensions.js |
+| 事件审计 | `node scripts/event-audit.mjs` | EventsOn/bus.on 注册位置 |
+| 注释质量 | `node scripts/comment-checker.mjs` | AI 废话/TODO 无编号/调试残留 |
+| 绑定一致性 | `node scripts/binding-check.mjs` | Go 导出函数 ↔ wailsjs |
+| 函数映射 | `node scripts/funcmap.mjs -o funcmap.md` | 注释 → 函数表（改签名后重跑） |
+| 全量自检 | `node scripts/doctor.mjs` | 编译 + 构建 + 文件 + 红线 + Git 状态 |
+
+> **检查优先级**：改文档 → `link-checker`；改 ADR → `adr-check`；改资源类型 → `type-consistency`；改前端 → `review` + `comment-checker`；提交前 → `doctor`。
+
 > `docs/archive/` 是历史归档，**默认不读**，除非明确需要追溯旧设计。
 > `docs/architecture/bug-chronicle.md` 很大（1369 行），**禁止全量读取**，先用 grep 搜索相关关键词再读匹配段落。仅用于查证已知问题，修复新 Bug 时不要通读全文，以免被旧思维带偏。
 

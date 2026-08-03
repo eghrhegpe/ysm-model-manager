@@ -1,6 +1,6 @@
 // ===== sidebar Shadow CSS =====
 import { btnBaseCSS } from "../../css/shared-styles.js";
-export const sidebarCSS = `
+export const sidebarCSS: string = `
 :host {
   display: flex; flex-direction: column;
   background: var(--surf);

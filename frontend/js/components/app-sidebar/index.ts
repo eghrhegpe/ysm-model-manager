@@ -2,34 +2,40 @@
 import { bus } from "../../bus.ts";
 import { dbg } from "../../utils/debug.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS, ALL_RESOURCE_TYPES } from "../../utils/resource-types.ts";
-import { sidebarCSS } from "./sidebar-css.js";
-import { headerHTML, footerHTML, listContainerHTML } from "./tpl.js";
-import { renderVersionCards } from "./render.js";
-import { bindCardEvents, bindFooter } from "./events.js";
-import { loadInstances } from "./loader.js";
+import { sidebarCSS } from "./sidebar-css.ts";
+import { headerHTML, footerHTML, listContainerHTML } from "./tpl.ts";
+import { renderVersionCards } from "./render.ts";
+import { bindCardEvents, bindFooter } from "./events.ts";
+import { loadInstances } from "./loader.ts";
+import type { SidebarInstance } from "./data.ts";
 
 // 持久化勾选状态（跨重新渲染保持）
-const _checkedSet = new Set();
+const _checkedSet = new Set<string>();
 
 class AppSidebar extends HTMLElement {
-  static get observedAttributes() {
+  static get observedAttributes(): string[] {
     return ["rtype"];
   }
+
+  private _root: ShadowRoot;
+  private _instances: SidebarInstance[] = [];
+  private _unsubs: Array<() => void> = [];
+  private _rtype: string;
+  private _cardCleanup: (() => void) | null = null;
+  private _docClickHandler: (() => void) | null = null;
+  private _syncInProgress = false; // 防止并发推送/拉取
+  private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private _loading = false;
 
   constructor() {
     super();
     this._root = this.attachShadow({ mode: "open" });
     this._root.adoptedStyleSheets = [new CSSStyleSheet()];
     this._root.adoptedStyleSheets[0].replaceSync(sidebarCSS);
-    this._instances = [];
-    this._unsubs = [];
     this._rtype = this.getAttribute("rtype") || RESOURCE_TYPES.YSM;
-    this._cardCleanup = null; // bindCardEvents 清理函数
-    this._docClickHandler = null; // document click 清理
-    this._syncInProgress = false; // 防止并发推送/拉取
   }
 
-  attributeChangedCallback(name, oldVal, newVal) {
+  attributeChangedCallback(name: string, oldVal: string | null, newVal: string | null): void {
     if (name === "rtype" && oldVal !== newVal && newVal) {
       this._rtype = newVal;
       this._reload();
@@ -41,13 +47,13 @@ class AppSidebar extends HTMLElement {
     }
   }
 
-  async connectedCallback() {
+  async connectedCallback(): Promise<void> {
     this._renderLayout();
 
     // 监听刷新事件（300ms 防抖，防止短时间内多次重载）
     this._unsubs.push(
       bus.on("stats:refresh", () => {
-        clearTimeout(this._debounceTimer);
+        clearTimeout(this._debounceTimer ?? undefined);
         this._debounceTimer = setTimeout(() => this._reload(), 300);
       }),
     );
@@ -57,7 +63,7 @@ class AppSidebar extends HTMLElement {
       bus.on("repo:rtype-changed", async (rtype) => {
         if (rtype && rtype !== this._rtype) {
           this._rtype = rtype;
-          clearTimeout(this._debounceTimer);
+          clearTimeout(this._debounceTimer ?? undefined);
           this._debounceTimer = setTimeout(() => this._reload(), 100);
         }
       }),
@@ -67,18 +73,19 @@ class AppSidebar extends HTMLElement {
     this._bindSelectAll();
     this._bindSyncSelected();
 
-    clearTimeout(this._debounceTimer);
+    clearTimeout(this._debounceTimer ?? undefined);
     this._debounceTimer = setTimeout(() => this._reload(), 50);
   }
 
-  _bindSelectAll() {
-    const cb = this._root.getElementById("sb-select-all");
+  private _bindSelectAll(): void {
+    const cb = this._root.getElementById("sb-select-all") as HTMLInputElement | null;
     if (!cb) return;
     cb.addEventListener("change", () => {
       const checked = cb.checked;
       this._root.querySelectorAll(".chk").forEach((c) => {
-        c.checked = checked;
-        const idx = parseInt(c.dataset.idx, 10);
+        const input = c as HTMLInputElement;
+        input.checked = checked;
+        const idx = parseInt(input.dataset.idx || "", 10);
         if (!isNaN(idx) && this._instances[idx]) {
           if (checked) _checkedSet.add(this._instances[idx].name);
           else _checkedSet.delete(this._instances[idx].name);
@@ -88,28 +95,29 @@ class AppSidebar extends HTMLElement {
   }
 
   // 渲染后恢复勾选 + 监听新 checkbox
-  _restoreCheckboxes() {
+  private _restoreCheckboxes(): void {
     this._root.querySelectorAll(".chk").forEach((c) => {
-      const idx = parseInt(c.dataset.idx, 10);
+      const input = c as HTMLInputElement;
+      const idx = parseInt(input.dataset.idx || "", 10);
       if (!isNaN(idx) && this._instances[idx]) {
-        c.checked = _checkedSet.has(this._instances[idx].name);
-        c.addEventListener("change", () => {
-          if (c.checked) _checkedSet.add(this._instances[idx].name);
+        input.checked = _checkedSet.has(this._instances[idx].name);
+        input.addEventListener("change", () => {
+          if (input.checked) _checkedSet.add(this._instances[idx].name);
           else _checkedSet.delete(this._instances[idx].name);
         });
       }
     });
   }
 
-  _bindSyncSelected() {
-    const pushBtn = this._root.querySelector(".sidebar-push-selected");
-    const pushMenu = this._root.getElementById("sidebar-push-menu");
-    const pullBtn = this._root.querySelector(".sidebar-pull-selected");
-    const pullMenu = this._root.getElementById("sidebar-pull-menu");
+  private _bindSyncSelected(): void {
+    const pushBtn = this._root.querySelector(".sidebar-push-selected") as HTMLButtonElement | null;
+    const pushMenu = this._root.getElementById("sidebar-push-menu") as HTMLElement | null;
+    const pullBtn = this._root.querySelector(".sidebar-pull-selected") as HTMLButtonElement | null;
+    const pullMenu = this._root.getElementById("sidebar-pull-menu") as HTMLElement | null;
     if (!pushBtn || !pushMenu || !pullBtn || !pullMenu) return;
 
     // 关闭所有下拉菜单
-    const closeAllMenus = () => {
+    const closeAllMenus = (): void => {
       pushMenu.style.display = "none";
       pullMenu.style.display = "none";
     };
@@ -134,21 +142,24 @@ class AppSidebar extends HTMLElement {
     this._docClickHandler = () => closeAllMenus();
     document.addEventListener("click", this._docClickHandler);
 
-    const getSelected = () => {
-      const sel = [];
+    const getSelected = (): string[] => {
+      const sel: string[] = [];
       this._root.querySelectorAll(".chk:checked").forEach((c) => {
-        const idx = parseInt(c.dataset.idx, 10);
+        const input = c as HTMLInputElement;
+        const idx = parseInt(input.dataset.idx || "", 10);
         if (!isNaN(idx) && this._instances[idx])
           sel.push(this._instances[idx].name);
       });
       return sel;
     };
 
-    const resolveTypes = (t) => (t === "all" ? ALL_RESOURCE_TYPES : [t]);
+    const resolveTypes = (t: string): string[] =>
+      t === "all" ? ALL_RESOURCE_TYPES : [t];
 
     // 推送：emit sync:download:missing（带 correlation token 防交叉触发）
     pushMenu.addEventListener("click", (e) => {
-      const item = e.target.closest(".dd-item");
+      const target = e.target as HTMLElement | null;
+      const item = target ? target.closest(".dd-item") : null;
       if (!item) return;
       const selected = getSelected();
       if (!selected.length) {
@@ -162,17 +173,17 @@ class AppSidebar extends HTMLElement {
       pushBtn.disabled = true;
       let failed = 0;
       (async () => {
-        const types = resolveTypes(item.dataset.syncType);
+        const types = resolveTypes((item as HTMLElement).dataset.syncType || "all");
         for (const insName of selected) {
           const results = await Promise.allSettled(
-            types.map((rt) => new Promise((resolve, reject) => {
+            types.map((rt) => new Promise<unknown>((resolve, reject) => {
               const token = `${insName}:${rt}:${Date.now()}`;
-              const onDone = (payload) => {
+              const onDone = (payload: { token?: string; instanceName?: string } | undefined): void => {
                 if (payload?.token === token || payload?.instanceName === insName) {
                   resolve(payload);
                 }
               };
-              bus.on("sync:download:done", onDone, { once: true });
+              bus.once("sync:download:done", onDone as never);
               bus.emit("sync:download:missing", { instanceName: insName, rtype: rt, token });
               setTimeout(() => reject(new Error(`推送超时: ${insName}/${rt}`)), 30000);
             })),
@@ -192,7 +203,8 @@ class AppSidebar extends HTMLElement {
 
     // 拉取：调用 PullResourceFromInstance
     pullMenu.addEventListener("click", async (e) => {
-      const item = e.target.closest(".dd-item");
+      const target = e.target as HTMLElement | null;
+      const item = target ? target.closest(".dd-item") : null;
       if (!item) return;
       const selected = getSelected();
       if (!selected.length) {
@@ -208,7 +220,7 @@ class AppSidebar extends HTMLElement {
       let failed = 0;
       try {
         const { PullResourceFromInstance } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-        const types = resolveTypes(item.dataset.syncType);
+        const types = resolveTypes((item as HTMLElement).dataset.syncType || "all");
         for (const insName of selected) {
           const results = await Promise.allSettled(
             types.map((rt) => PullResourceFromInstance(rt, insName)),
@@ -227,8 +239,8 @@ class AppSidebar extends HTMLElement {
         }
         bus.emit("stats:refresh");
         bus.emit("tree:reload");
-      } catch (e) {
-        bus.emit("toast:show", { msg: "❌ 拉取失败: " + (e?.message || e), duration: 3000, type: "error" });
+      } catch (err) {
+        bus.emit("toast:show", { msg: "❌ 拉取失败: " + (err instanceof Error ? err.message : String(err)), duration: 3000, type: "error" });
       }
       pullBtn.textContent = "⬇️ 拉取所选 ▾";
       pullBtn.disabled = false;
@@ -236,7 +248,7 @@ class AppSidebar extends HTMLElement {
     });
   }
 
-  _renderCards() {
+  private _renderCards(): void {
     const container = this._root.getElementById("vg");
     if (!container) return;
     renderVersionCards(container, this._instances);
@@ -249,7 +261,7 @@ class AppSidebar extends HTMLElement {
     this._restoreCheckboxes();
   }
 
-  async _reload() {
+  private async _reload(): Promise<void> {
     if (this._loading) return;
     this._loading = true;
     try {
@@ -279,7 +291,7 @@ class AppSidebar extends HTMLElement {
     bindFooter(this._root, this._instances);
   }
 
-  disconnectedCallback() {
+  disconnectedCallback(): void {
     this._unsubs.forEach((fn) => fn());
     // 清理 DOM 事件监听
     if (this._cardCleanup) {
@@ -292,7 +304,7 @@ class AppSidebar extends HTMLElement {
     }
   }
 
-  _renderLayout() {
+  private _renderLayout(): void {
     this._root.innerHTML = headerHTML() + listContainerHTML() + footerHTML();
   }
 }

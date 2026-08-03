@@ -1,8 +1,12 @@
 // ===== sidebar 渲染层 =====
-import { vcHeaderHTML } from "./tpl.js";
+import { vcHeaderHTML } from "./tpl.ts";
+import type { SidebarInstance } from "./data.ts";
 
 // 渲染所有整合包卡片到容器
-export function renderVersionCards(container, instances) {
+export function renderVersionCards(
+  container: HTMLElement,
+  instances: SidebarInstance[],
+): void {
   container.innerHTML = "";
   if (!instances.length) {
     container.innerHTML =
@@ -12,7 +16,7 @@ export function renderVersionCards(container, instances) {
   instances.forEach((ins, idx) => {
     const vc = document.createElement("div");
     vc.className = "vc";
-    vc.dataset.idx = idx;
+    vc.dataset.idx = String(idx);
     vc.style.animationDelay = `${idx * 40}ms`;
     vc.innerHTML = vcHeaderHTML(
       ins.name,

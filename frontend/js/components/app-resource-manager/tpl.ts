@@ -1,15 +1,27 @@
 // ===== 资源管理器布局模板 =====
 import { renderFormattedText } from "../../utils/mc-format.ts";
-import { describeVersionRange } from "../../utils/pack-format.ts";
+import { describeVersionRange, type PackMeta } from "../../utils/pack-format.ts";
+
+/** 详情面板元数据（ReadPackMeta / ReadShaderpackLang 返回 JSON 的兼容视图） */
+export interface PackMetaDetail extends PackMeta {
+  description?: string;
+  thumbnail?: string | null;
+  name?: string;
+  entries?: Record<string, string>;
+}
 
 /**
  * 侧栏布局（路径 + 操作栏 + 列表）
- * @param {string} repoRoot - 资源包目录路径
- * @param {Array} actions - 可用操作列表
- * @param {string} label - 资源类型名称
+ * @param repoRoot - 资源包目录路径
+ * @param actions - 可用操作列表
+ * @param label - 资源类型名称
  */
-export function sidebarHTML(repoRoot, actions, label) {
-  const esc = (s) =>
+export function sidebarHTML(
+  repoRoot: string,
+  actions: string[],
+  label: string,
+): string {
+  const esc = (s: string): string =>
     String(s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -46,12 +58,18 @@ export function sidebarHTML(repoRoot, actions, label) {
 
 /**
  * 列表项 HTML
- * @param {string} path - 完整路径
- * @param {string} name - 显示名称
- * @param {boolean} enabled - 是否启用
+ * @param path - 完整路径
+ * @param name - 显示名称
+ * @param enabled - 是否启用
  */
-export function itemHTML(path, name, enabled, icon, idx) {
-  const esc = (s) =>
+export function itemHTML(
+  path: string,
+  name: string,
+  enabled: boolean,
+  icon: string,
+  idx: number,
+): string {
+  const esc = (s: string): string =>
     String(s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -80,15 +98,22 @@ export function itemHTML(path, name, enabled, icon, idx) {
 
 /**
  * 详情面板 HTML
- * @param {string} name - 包名
- * @param {object} meta - 元数据 {description, pack_format, thumbnail?}
- * @param {boolean} enabled - 是否启用
- * @param {string} path - 完整路径
- * @param {string} label - 资源类型名称
- * @param {Array} actions - 可用操作
+ * @param name - 包名
+ * @param meta - 元数据 {description, pack_format, thumbnail?}
+ * @param enabled - 是否启用
+ * @param path - 完整路径
+ * @param label - 资源类型名称
+ * @param actions - 可用操作
  */
-export function detailHTML(name, meta, enabled, path, label, actions) {
-  const esc = (s) =>
+export function detailHTML(
+  name: string,
+  meta: PackMetaDetail,
+  enabled: boolean,
+  path: string,
+  label: string,
+  actions: string[],
+): string {
+  const esc = (s: string): string =>
     String(s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -141,10 +166,10 @@ export function detailHTML(name, meta, enabled, path, label, actions) {
 
 /**
  * 空状态占位
- * @param {string} label - 资源类型名称
+ * @param label - 资源类型名称
  */
-export function placeholderHTML(label) {
-  const esc = (s) =>
+export function placeholderHTML(label: string): string {
+  const esc = (s: string): string =>
     String(s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")

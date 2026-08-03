@@ -11,8 +11,6 @@ node_modules/
 *.log
 _wails_test/
 
-scripts/
-
 project_tree.txt
 project_tree_lite.txt
 
@@ -35,3 +33,4 @@ reasonix.toml
 
 # 应用运行时配置已迁移到用户目录 %APPDATA%/YSM-Model-Manager/，不再入仓
 /ysm_config.json
+tests/python/__pycache__/

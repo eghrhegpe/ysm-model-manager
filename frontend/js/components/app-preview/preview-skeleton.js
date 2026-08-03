@@ -2,7 +2,7 @@
 // 加载统一走 loadModelData，本文件只做 2D 骨骼渲染编排
 import { getPrefer3D, setPrefer3D } from "./preview-utils.js";
 import { loadModelData } from "./preview-loader.js";
-import { renderModel2D } from "../../utils/model2d.js";
+import { renderModel2D } from "../../utils/model2d.ts";
 import { openFullPreview } from "./preview-zoom.js";
 
 /**

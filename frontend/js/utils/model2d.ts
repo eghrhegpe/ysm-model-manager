@@ -1,33 +1,92 @@
-// ===== 基岩版模型 2D 线条图渲染 =====
+// ===== 基岩版模型 2D 线条图渲染（类型化版 — ADR-014 P2 大件收尾）=====
 import { dbg } from "./debug.ts";
+import type { BoneTransform } from "./animation.ts";
+
+// ── 结构接口 ────────────────────────────────────────
+
+/** Bedrock cube（AnalyzeBedrockModel 结构） */
+export interface BedrockCube {
+  origin: number[];
+  size: number[];
+  pivot?: number[];
+  rotation?: number[];
+  uv?: number[];
+  faceUV?: string;
+}
+
+/** Bedrock bone */
+export interface BedrockBone {
+  name: string;
+  cubes?: BedrockCube[];
+}
+
+/** BedrockModel（AnalyzeBedrockModel 返回） */
+export interface BedrockModel {
+  bones?: BedrockBone[];
+}
+
+/** renderModel2D 选项 */
+export interface Model2DOptions {
+  showLabels?: boolean;
+  zoom?: number;
+  rotation?: number;
+  boneTransforms?: Map<string, BoneTransform>;
+}
+
+/** 骨骼屏幕热区（鼠标拾取） */
+interface HitZone {
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+declare global {
+  interface HTMLCanvasElement {
+    /** 悬停事件清理函数（renderModel2D 绑定，防止重复监听） */
+    _hoverCleanup?: () => void;
+  }
+}
 
 /**
  * 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转）
- * @param {HTMLCanvasElement} canvas
- * @param {object} model - AnalyzeBedrockModel 返回的 BedrockModel
- * @param {HTMLImageElement} [textureImg] - 纹理图
- * @param {object} [opts] - 选项
- * @param {boolean} [opts.showLabels=true] - 是否显示骨骼名称
- * @param {number} [opts.zoom=1] - 缩放倍率
- * @param {number} [opts.rotation=0] - 绕 Y 轴旋转角度（度）
- * @param {Map} [opts.boneTransforms] - 骨骼动画变换，key=骨骼名，val={rotation,position,scale}
+ * @param canvas 目标 canvas
+ * @param model AnalyzeBedrockModel 返回的 BedrockModel
+ * @param textureImg 纹理图（可选）
+ * @param opts 选项
  */
-export function renderModel2D(canvas, model, textureImg, opts) {
+export function renderModel2D(
+  canvas: HTMLCanvasElement,
+  model: BedrockModel,
+  textureImg: HTMLImageElement | null,
+  opts: Model2DOptions = {},
+): void {
   if (!canvas || !model?.bones?.length) return;
 
   // 调试：检查是否有 cube rotation
-  const cubesWithRotation = [];
+  const cubesWithRotation: Array<{
+    bone: string;
+    origin: number[];
+    size: number[];
+    rotation: number[];
+    y: number;
+  }> = [];
   for (const bone of model.bones) {
     for (const c of bone.cubes || []) {
-      if (c.rotation && (c.rotation[0] !== 0 || c.rotation[1] !== 0 || c.rotation[2] !== 0)) {
+      if (
+        c.rotation &&
+        (c.rotation[0] !== 0 || c.rotation[1] !== 0 || c.rotation[2] !== 0)
+      ) {
         // 只记录 Y 坐标较高的 cube（可能是头发）
-        if (c.origin[1] > 20) { // Y > 20 的通常是头部/头发
+        if (c.origin[1] > 20) {
+          // Y > 20 的通常是头部/头发
           cubesWithRotation.push({
             bone: bone.name,
             origin: c.origin,
             size: c.size,
             rotation: c.rotation,
-            y: c.origin[1]
+            y: c.origin[1],
           });
         }
       }
@@ -40,11 +99,12 @@ export function renderModel2D(canvas, model, textureImg, opts) {
 
     // 额外调试：检查第一个 cube 是否有 pivot
     const firstCube = cubesWithRotation[0];
-    const bone = model.bones.find(b => b.name === firstCube.bone);
-    const cube = bone?.cubes?.find(c =>
-      c.origin[0] === firstCube.origin[0] &&
-      c.origin[1] === firstCube.origin[1] &&
-      c.origin[2] === firstCube.origin[2]
+    const bone = model.bones?.find((b) => b.name === firstCube.bone);
+    const cube = bone?.cubes?.find(
+      (c) =>
+        c.origin[0] === firstCube.origin[0] &&
+        c.origin[1] === firstCube.origin[1] &&
+        c.origin[2] === firstCube.origin[2],
     );
     dbg("model2d", "第一个 cube 的 pivot:", cube?.pivot || "无显式 pivot，使用默认中心点");
   }
@@ -55,28 +115,28 @@ export function renderModel2D(canvas, model, textureImg, opts) {
   const cosA = Math.cos(angle);
   const sinA = Math.sin(angle);
   const boneTransforms = opts?.boneTransforms || null;
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d")!;
   const W = canvas.width;
   const H = canvas.height;
   ctx.clearRect(0, 0, W, H);
 
   // 旋转点 [x,y,z] 绕 Y 轴，返回 {x, z}
-  const rot = (x, z) => ({
+  const rot = (x: number, z: number): { x: number; z: number } => ({
     x: x * cosA - z * sinA,
     z: x * sinA + z * cosA,
   });
 
   // 计算旋转后的 bounding box
-  let minX = Infinity,
-    maxX = -Infinity,
-    minY = Infinity,
-    maxY = -Infinity;
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
   for (const bone of model.bones) {
     for (const c of bone.cubes || []) {
       const [ox, oy, oz] = c.origin;
       const [sx, sy, sz] = c.size;
       // 8 个角中取旋转后 X 最左/最右、Y 最上/最下
-      const corners = [
+      const corners: Array<[number, number]> = [
         [ox, oz],
         [ox + sx, oz],
         [ox, oz + sz],
@@ -128,8 +188,8 @@ export function renderModel2D(canvas, model, textureImg, opts) {
   drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
 
   // ---- 鼠标交互高亮 ----
-  let _highlightBone = null;
-  const onMove = (e) => {
+  let _highlightBone: string | null = null;
+  const onMove = (e: MouseEvent): void => {
     const rect = canvas.getBoundingClientRect();
     const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
     const my = (e.clientY - rect.top) * (canvas.height / rect.height);
@@ -155,7 +215,7 @@ export function renderModel2D(canvas, model, textureImg, opts) {
       drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
     }
   };
-  const onLeave = () => {
+  const onLeave = (): void => {
     if (_highlightBone) {
       _highlightBone = null;
       ctx.clearRect(0, 0, W, H);
@@ -178,32 +238,32 @@ export function renderModel2D(canvas, model, textureImg, opts) {
   canvas.addEventListener("mousemove", onMove);
   canvas.addEventListener("mouseleave", onLeave);
   // 清理旧监听（防止重复绑定）
-  canvas._hoverCleanup && canvas._hoverCleanup();
-  canvas._hoverCleanup = () => {
+  canvas._hoverCleanup?.();
+  canvas._hoverCleanup = (): void => {
     canvas.removeEventListener("mousemove", onMove);
     canvas.removeEventListener("mouseleave", onLeave);
   };
 }
 
 function calcBoneHitZones(
-  model,
-  scale,
-  ox,
-  oy,
-  isFront,
-  cosA,
-  sinA,
-  boneTransforms,
-) {
-  const zones = [];
-  for (const bone of model.bones) {
+  model: BedrockModel,
+  scale: number,
+  ox: number,
+  oy: number,
+  isFront: boolean,
+  cosA: number,
+  sinA: number,
+  boneTransforms: Map<string, BoneTransform> | null,
+): HitZone[] {
+  const zones: HitZone[] = [];
+  for (const bone of model.bones || []) {
     const cs = bone.cubes || [];
     if (!cs.length) continue;
-    const btx = boneTransforms?.get?.(bone.name);
-    let mnX = Infinity,
-      mxX = -Infinity,
-      mnY = Infinity,
-      mxY = -Infinity;
+    const btx = boneTransforms?.get(bone.name);
+    let mnX = Infinity;
+    let mxX = -Infinity;
+    let mnY = Infinity;
+    let mxY = -Infinity;
     for (const c of cs) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
@@ -211,9 +271,9 @@ function calcBoneHitZones(
       for (let dx = 0; dx <= 1; dx++) {
         for (let dy = 0; dy <= 1; dy++) {
           for (let dz = 0; dz <= 1; dz++) {
-            let cx = x + dx * sx,
-              cy = y + dy * sy,
-              cz = z + dz * sz;
+            let cx = x + dx * sx;
+            let cy = y + dy * sy;
+            let cz = z + dz * sz;
             if (btx) {
               if (btx.position) {
                 cx += btx.position[0] || 0;
@@ -222,10 +282,10 @@ function calcBoneHitZones(
               }
               const rz = ((btx.rotation?.[2] || 0) * Math.PI) / 180;
               if (rz !== 0) {
-                const cRz = Math.cos(rz),
-                  sRz = Math.sin(rz);
-                const dxx = cx - pivot[0],
-                  dyy = cy - pivot[1];
+                const cRz = Math.cos(rz);
+                const sRz = Math.sin(rz);
+                const dxx = cx - pivot[0];
+                const dyy = cy - pivot[1];
                 cx = pivot[0] + dxx * cRz - dyy * sRz;
                 cy = pivot[1] + dxx * sRz + dyy * cRz;
               }
@@ -237,8 +297,8 @@ function calcBoneHitZones(
             }
             const rxx = cx * cosA - cz * sinA;
             const rz2 = cx * sinA + cz * cosA;
-            const px2 = rxx,
-              py2 = isFront ? cy : rz2;
+            const px2 = rxx;
+            const py2 = isFront ? cy : rz2;
             if (px2 < mnX) mnX = px2;
             if (px2 > mxX) mxX = px2;
             if (py2 < mnY) mnY = py2;
@@ -259,23 +319,23 @@ function calcBoneHitZones(
 }
 
 function drawView(
-  ctx,
-  model,
-  scale,
-  ox,
-  oy,
-  textureImg,
-  highlightBone,
-  showLabels,
-  cosA,
-  sinA,
-  boneTransforms,
-) {
+  ctx: CanvasRenderingContext2D,
+  model: BedrockModel,
+  scale: number,
+  ox: number,
+  oy: number,
+  textureImg: HTMLImageElement | null,
+  highlightBone: string | null,
+  showLabels: boolean,
+  cosA: number,
+  sinA: number,
+  boneTransforms: Map<string, BoneTransform> | null,
+): void {
   const isFront = true;
 
-  for (const bone of model.bones) {
+  for (const bone of model.bones || []) {
     const isHighlight = bone.name === highlightBone;
-    const btx = boneTransforms?.get?.(bone.name);
+    const btx = boneTransforms?.get(bone.name);
     const hasAnim = btx?.rotation || btx?.position;
 
     for (const c of bone.cubes || []) {
@@ -291,25 +351,25 @@ function drawView(
         let cz = z + sz / 2;
 
         // 位置偏移
-        if (btx.position) {
+        if (btx?.position) {
           cx += btx.position[0] || 0;
           cy += btx.position[1] || 0;
           cz += btx.position[2] || 0;
         }
 
         // Z 旋转（绕 pivot，屏幕平面内最可见）
-        const rzRad = ((btx.rotation?.[2] || 0) * Math.PI) / 180;
+        const rzRad = ((btx?.rotation?.[2] || 0) * Math.PI) / 180;
         if (rzRad !== 0) {
-          const cRz = Math.cos(rzRad),
-            sRz = Math.sin(rzRad);
-          const dxx = cx - pivot[0],
-            dyy = cy - pivot[1];
+          const cRz = Math.cos(rzRad);
+          const sRz = Math.sin(rzRad);
+          const dxx = cx - pivot[0];
+          const dyy = cy - pivot[1];
           cx = pivot[0] + dxx * cRz - dyy * sRz;
           cy = pivot[1] + dxx * sRz + dyy * cRz;
         }
 
         // X 旋转（Y 方向压缩）
-        const rxRad = ((btx.rotation?.[0] || 0) * Math.PI) / 180;
+        const rxRad = ((btx?.rotation?.[0] || 0) * Math.PI) / 180;
         const cosRx = Math.cos(rxRad);
         if (rxRad !== 0) {
           const dyy = cy - pivot[1];
@@ -347,11 +407,12 @@ function drawView(
       } else {
         // ---- 静态骨骼：应用 cube rotation ----
         const cubeRot = c.rotation || [0, 0, 0];
-        const hasRotation = cubeRot[0] !== 0 || cubeRot[1] !== 0 || cubeRot[2] !== 0;
+        const hasRotation =
+          cubeRot[0] !== 0 || cubeRot[1] !== 0 || cubeRot[2] !== 0;
 
         if (hasRotation) {
           // 有 rotation，使用简化方法：先计算旋转后的中心点，然后用 Canvas rotate 绘制
-          const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
+          const pivot2 = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
 
           // 获取旋转角度
           const rxRad = (cubeRot[0] * Math.PI) / 180;
@@ -367,16 +428,16 @@ function drawView(
 
           // 应用 X 轴旋转（只影响 Y 坐标）
           if (rxRad !== 0) {
-            const dyy = cy - pivot[1];
-            cy = pivot[1] + dyy * cosRx;
+            const dyy = cy - pivot2[1];
+            cy = pivot2[1] + dyy * cosRx;
           }
 
           // 应用 Z 轴旋转（影响 X 和 Y）
           if (rzRad !== 0) {
-            const dxx = cx - pivot[0];
-            const dyy = cy - pivot[1];
-            cx = pivot[0] + dxx * cRz - dyy * sRz;
-            cy = pivot[1] + dxx * sRz + dyy * cRz;
+            const dxx = cx - pivot2[0];
+            const dyy = cy - pivot2[1];
+            cx = pivot2[0] + dxx * cRz - dyy * sRz;
+            cy = pivot2[1] + dxx * sRz + dyy * cRz;
           }
 
           // 全局 Y 轴旋转投影
@@ -440,14 +501,14 @@ function drawView(
     ctx.font = "8px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    for (const bone of model.bones) {
+    for (const bone of model.bones || []) {
       const cs = bone.cubes || [];
       if (!cs.length) continue;
-      const btx = boneTransforms?.get?.(bone.name);
-      let mnX = Infinity,
-        mxX = -Infinity,
-        mnY = Infinity,
-        mxY = -Infinity;
+      const btx = boneTransforms?.get(bone.name);
+      let mnX = Infinity;
+      let mxX = -Infinity;
+      let mnY = Infinity;
+      let mxY = -Infinity;
       for (const c of cs) {
         const [x, y, z] = c.origin;
         const [sx, sy, sz] = c.size;
@@ -456,9 +517,9 @@ function drawView(
         for (let dx = 0; dx <= 1; dx++) {
           for (let dy = 0; dy <= 1; dy++) {
             for (let dz = 0; dz <= 1; dz++) {
-              let cx = x + dx * sx,
-                cy = y + dy * sy,
-                cz = z + dz * sz;
+              let cx = x + dx * sx;
+              let cy = y + dy * sy;
+              let cz = z + dz * sz;
               if (btx) {
                 if (btx.position) {
                   cx += btx.position[0] || 0;
@@ -467,10 +528,10 @@ function drawView(
                 }
                 const rz = ((btx.rotation?.[2] || 0) * Math.PI) / 180;
                 if (rz !== 0) {
-                  const cRz = Math.cos(rz),
-                    sRz = Math.sin(rz);
-                  const dxx = cx - pivot[0],
-                    dyy = cy - pivot[1];
+                  const cRz = Math.cos(rz);
+                  const sRz = Math.sin(rz);
+                  const dxx = cx - pivot[0];
+                  const dyy = cy - pivot[1];
                   cx = pivot[0] + dxx * cRz - dyy * sRz;
                   cy = pivot[1] + dxx * sRz + dyy * cRz;
                 }
@@ -482,8 +543,8 @@ function drawView(
               }
               const rxx = cx * cosA - cz * sinA;
               const rzz = cx * sinA + cz * cosA;
-              const px2 = rxx,
-                py2 = isFront ? cy : rzz;
+              const px2 = rxx;
+              const py2 = isFront ? cy : rzz;
               if (px2 < mnX) mnX = px2;
               if (px2 > mxX) mxX = px2;
               if (py2 < mnY) mnY = py2;
@@ -506,7 +567,14 @@ function drawView(
   }
 }
 
-function drawMiniView(ctx, model, scale, textureImg, cosA, sinA) {
+function drawMiniView(
+  ctx: CanvasRenderingContext2D,
+  model: BedrockModel,
+  scale: number,
+  textureImg: HTMLImageElement | null,
+  cosA: number,
+  sinA: number,
+): void {
   if (!cosA) cosA = 1;
   if (!sinA) sinA = 0;
   const size = 60;
@@ -517,11 +585,11 @@ function drawMiniView(ctx, model, scale, textureImg, cosA, sinA) {
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.fillRect(mx - 2, my - 2, size + 4, size + 4);
 
-  let minX = Infinity,
-    maxX = -Infinity,
-    minZ = Infinity,
-    maxZ = -Infinity;
-  for (const bone of model.bones) {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (const bone of model.bones || []) {
     for (const c of bone.cubes || []) {
       const [ox, oy, oz] = c.origin;
       const [sx, sy, sz] = c.size;
@@ -537,7 +605,7 @@ function drawMiniView(ctx, model, scale, textureImg, cosA, sinA) {
   const ox2 = mx + size / 2 - (minX + rangeX / 2) * s;
   const oy2 = my + size / 2 + (minZ + rangeZ / 2) * s;
 
-  for (const bone of model.bones) {
+  for (const bone of model.bones || []) {
     for (const c of bone.cubes || []) {
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;

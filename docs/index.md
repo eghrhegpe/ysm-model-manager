@@ -17,7 +17,10 @@ description: Minecraft YSM 模型的一站式管理工具 — 仓库管理、整
 
 | 入口 | 说明 |
 |------|------|
-| 📚 [文档中心](./docs/index.md) | 用户指南 · 架构决策 · 知识卡 · 发版记录 |
+| 📚 [用户指南](./guide/index.md) | 按功能讲解入口路径与操作步骤，共 16 篇 |
+| 📐 [架构决策（ADR）](./adr/index.md) | 决策真相源，按状态分组可锚点跳转 |
+| 🧠 [知识卡](./knowledge/index.md) | 面向 AI 与开发者的模块知识卡索引 |
+| 📦 [发版记录](./releases/README.md) | 各版本发布说明 |
 | 🖥️ [网页版（预留）](./app/index.md) | 未来 Web 版入口占位，当前以桌面应用为主 |
 
 > 📥 **下载**：[GitHub Releases](https://github.com/eghrhegpe/ysm-model-manager/releases) · 📖 **源码**：[GitHub 仓库](https://github.com/eghrhegpe/ysm-model-manager)
@@ -59,7 +62,7 @@ description: Minecraft YSM 模型的一站式管理工具 — 仓库管理、整
 3. **首次配置**：启动程序 → 设置游戏根目录（`.minecraft` 文件夹）→ 设置模型仓库路径
 4. **开始使用**：把模型文件放入仓库目录，或通过拖拽导入
 
-> 📖 详细操作见 [文档中心 · 用户指南](./docs/index.md)
+> 📖 详细操作见 [用户指南](./guide/index.md)
 
 ---
 

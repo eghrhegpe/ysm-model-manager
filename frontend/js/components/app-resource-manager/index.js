@@ -4,7 +4,7 @@
 
 import { sidebarHTML, itemHTML, detailHTML, placeholderHTML } from "./tpl.js";
 import { bus } from "../../bus.ts";
-import { getApp } from "../../wails/app.js";
+import { getApp } from "../../wails/app.ts";
 
 const STORE = {}; // 模块级缓存（rtype → config）
 

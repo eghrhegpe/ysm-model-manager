@@ -1,10 +1,10 @@
 // ===== <app-content> 入口 =====
 import { bus } from "../../bus.ts";
-import { esc } from "../../utils/dom.js";
+import { esc } from "../../utils/dom.ts";
 import { dbg } from "../../utils/debug.js";
 import { contentCSS } from "./content-css.js";
-import { stagger } from "../../utils/stagger.js";
-import { getApp } from "../../wails/app.js";
+import { stagger } from "../../utils/stagger.ts";
+import { getApp } from "../../wails/app.ts";
 import { Events } from "@wailsio/runtime";
 import {
   repositoryHTML,

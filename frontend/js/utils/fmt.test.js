@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fmt, sizeColor, fmtDate } from "./fmt.js";
+import { fmt, sizeColor, fmtDate } from "./fmt.ts";
 
 describe("fmt", () => {
   it("formats bytes", () => expect(fmt(0)).toBe("0 B"));

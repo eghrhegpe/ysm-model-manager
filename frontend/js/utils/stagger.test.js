@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { stagger } from "./stagger.js";
+import { stagger } from "./stagger.ts";
 
 describe("stagger", () => {
   it("index 0 returns 0", () => expect(stagger(0)).toBe(0));

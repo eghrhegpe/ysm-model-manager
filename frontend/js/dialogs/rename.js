@@ -2,7 +2,7 @@
 // 用法: showRenameDialog(filePath, currentName) → 确认后调用 RenameFile
 import { parseModelName } from "../utils/display.js";
 import { closeDlg } from "./modal.js";
-import { getApp } from "../wails/app.js";
+import { getApp } from "../wails/app.ts";
 
 export async function showRenameDialog(filePath, currentName) {
   return new Promise((resolve) => {

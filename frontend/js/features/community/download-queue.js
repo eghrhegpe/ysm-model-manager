@@ -3,7 +3,7 @@
 import { bus } from "../../bus.ts";
 import { renderDisplayName } from "../../utils/display.js";
 import { dbg } from "../../utils/debug.js";
-import { getApp } from "../../wails/app.js";
+import { getApp } from "../../wails/app.ts";
 import { Events } from "@wailsio/runtime";
 
 // ============================================================

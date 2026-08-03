@@ -2,7 +2,7 @@
 import { bus } from "../bus.ts";
 import { renderDisplayName } from "../utils/display.js";
 import { loadResourceRegistry } from "../utils/resource-registry.js";
-import { getApp } from "../wails/app.js";
+import { getApp } from "../wails/app.ts";
 
 /**
  * 加载资历最深、仓库评分、热力图和每日推荐

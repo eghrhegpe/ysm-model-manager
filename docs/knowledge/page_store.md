@@ -22,7 +22,7 @@ use_when:
 ## 核心职责
 
 - 维护当前激活页面标识
-- 提供 `get` / `set` 接口，支持响应式更新
+- `setCurrentPage(page)` 变更时 `bus.emit("nav:changed")` 驱动导航联动（无响应式订阅机制）
 - 作为页面组件挂载/卸载的协调者
 
 ## 对外 API / 入口

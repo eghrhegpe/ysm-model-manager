@@ -251,7 +251,7 @@ function main() {
   checkAgentsTree();
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ errors, warns, infos, summary: { adrFiles: adr?.files, adrRegistered: adr?.registered, knowledgeCards: kc } }, null, 2));
+    console.log(JSON.stringify({ _summary: { errors: errors.length, warns: warns.length, infos: infos.length, adrFiles: adr?.files, adrRegistered: adr?.registered, knowledgeCards: kc }, errors, warns, infos, summary: { adrFiles: adr?.files, adrRegistered: adr?.registered, knowledgeCards: kc } }, null, 2));
     process.exit(errors.length ? 1 : 0);
     return;
   }

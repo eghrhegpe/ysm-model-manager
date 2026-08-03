@@ -145,7 +145,7 @@ function main() {
   if (!ONLY || ONLY === '--health') checkRegistry(statusRowsMap);
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ errors, warns, debts, statusRows: rows.map((r) => ({ adr: `ADR-${String(r.num).padStart(3, '0')}`, status: r.raw, state: r.key })) }, null, 2));
+    console.log(JSON.stringify({ _summary: { errors: errors.length, warns: warns.length, debts: debts.length }, errors, warns, debts, statusRows: rows.map((r) => ({ adr: `ADR-${String(r.num).padStart(3, '0')}`, status: r.raw, state: r.key })) }, null, 2));
     process.exit(errors.length ? 1 : 0);
     return;
   }

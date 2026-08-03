@@ -241,7 +241,7 @@ function main() {
   checkIndexLinks();
   checkAgentsNoHandcraftedIndex();
 
-  const result = { errors, warns };
+  const result = { _summary: { errors: errors.length, warns: warns.length }, errors, warns };
 
   if (JSON_OUT) {
     console.log(JSON.stringify(result, null, 2));

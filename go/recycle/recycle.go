@@ -96,6 +96,14 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 			return nil, fmt.Errorf("路径越权: %s 不在回收站目录下", dst)
 		}
 	}
+	// 优先瞬时移动（同分区原子操作，避免大模型文件全量复制）；
+	// 跨设备（EXDEV）或文件占用时回退复制后删，语义不变
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return nil, err
+	}
+	if err := os.Rename(src, dst); err == nil {
+		return &MoveResult{Action: "recycled", Reason: ""}, nil
+	}
 	if err := copyFile(src, dst); err != nil {
 		return nil, err
 	}

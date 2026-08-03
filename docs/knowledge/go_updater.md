@@ -24,6 +24,13 @@ use_when:
 - 下载更新包
 - 应用更新
 
+## 对外 API / 入口
+
+- `Check` — 查询 GitHub Releases 检查新版本（`Release`/`ReleaseAsset`/`UpdateInfo`）
+- `Download` — 下载更新包
+- `CleanupOldVersion` — 清理旧版本残留
+- `InstallUpdate` — 应用更新（含 `fetchExpectedHash` 哈希校验；`assetPattern` 匹配安装包）
+
 ## 与其他子系统关系
 
 - `go/version/`: 版本信息管理

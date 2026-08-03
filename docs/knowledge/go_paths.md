@@ -24,6 +24,11 @@ use_when:
 - 防止路径穿越
 - 统一路径处理
 
+## 对外 API / 入口
+
+- `IsInside(root, path)` — 路径越权检查，越权返回 `ErrPathEscalation`
+- `ContainsMinecraftMarker` — 检测路径是否含 Minecraft 标记
+
 ## 与其他子系统关系
 
 - 所有文件操作包均依赖此包

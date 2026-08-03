@@ -25,6 +25,13 @@ use_when:
 - 实时上报下载进度到前端
 - 下载完成后回调 installer
 
+## 对外 API / 入口
+
+- `New` / `NewWithClient` — 创建 `Downloader`（可注入 http client）
+- `File` — 单文件下载，支持 `ProgressFn` 进度回调
+- `FromGitHubAPI` — 从 GitHub API 拉取下载（release asset）
+- `ResolveSavePath` — 解析保存路径（防冲突命名）
+
 ## 与其他子系统关系
 
 - `go/installer/`: 下载完成后的安装触发

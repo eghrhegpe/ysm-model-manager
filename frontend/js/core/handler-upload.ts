@@ -1,9 +1,10 @@
-// ===== 上传新模型到仓库 =====
+// ===== 上传新模型到仓库（类型化版 — ADR-014 P3）=====
 import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { dbg } from "../utils/debug.ts";
 
-export function registerUpload(unsubs) {
+/** 注册上传 handler，push 返回的取消订阅函数到 unsubs */
+export function registerUpload(unsubs: Array<() => void>): void {
   unsubs.push(
     bus.on("stats:upload", async () => {
       dbg("upload", "stats:upload");
@@ -29,11 +30,11 @@ export function registerUpload(unsubs) {
         }
         const repoEntries = await ScanModelEntries(repoRoot);
         const repoNames = new Set((repoEntries || []).map((e) => e.Name));
-        const allInstances = await ListVersionInstances(mcRoot);
+        const allInstances = (await ListVersionInstances(mcRoot)) ?? [];
         const statusList = await GetInstanceStatus(mcRoot, repoRoot);
-        const pendingList = [];
+        const pendingList: Array<{ name: string; customDir: string }> = [];
         (statusList || []).forEach((s) => {
-          (s.Extra || []).forEach((name) => {
+          (s.Extra || []).forEach((name: string) => {
             if (!repoNames.has(name)) {
               const ins = allInstances.find((x) => x.Name === s.Name);
               pendingList.push({ name, customDir: ins ? ins.CustomDir : "" });
@@ -48,8 +49,8 @@ export function registerUpload(unsubs) {
           });
           return;
         }
-        let ok = 0,
-          fail = 0;
+        let ok = 0;
+        let fail = 0;
         for (const item of pendingList) {
           if (!item.customDir) {
             fail++;

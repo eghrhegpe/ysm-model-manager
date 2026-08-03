@@ -32,7 +32,7 @@ export async function initResourcePacks(
     };
     bus.emit("toast:show", {
       msg: title + (message ? ": " + message : ""),
-      type: (type || "info") as "info" | "success" | "error" | "warning",
+      type: (type || "info") as "info" | "success" | "error" | "warn",
       duration: 3000,
     });
   };

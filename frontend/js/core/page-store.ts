@@ -1,13 +1,18 @@
+// ===== 页面导航状态（类型化版 — ADR-014 P3 组件层）=====
+// 治理红线：页面状态唯一来源是 PageStore（AGENTS.md 4.1）
 import { bus } from "../bus.ts";
 
 let _currentPage = "repository";
 
+/** 页面名（宽松字符串，核心页见 AGENTS.md TERMINOLOGY） */
+export type PageName = string;
+
 export const PageStore = {
-  get currentPage() {
+  get currentPage(): PageName {
     return _currentPage;
   },
 
-  setCurrentPage(page) {
+  setCurrentPage(page: PageName): void {
     if (_currentPage === page) return;
     _currentPage = page;
     bus.emit("nav:changed", { page });

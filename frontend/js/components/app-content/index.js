@@ -17,7 +17,7 @@ import {
 
 /** 防止 avatar:config-loaded 事件重复注册 */
 let _avatarConfigLoadedRegistered = false;
-import { registerGlobalHandlers } from "../../core/global-handlers.js";
+import { registerGlobalHandlers } from "../../core/global-handlers.ts";
 import { initDiagnostics } from "./community/diagnostics.js";
 
 import { initSettings } from "./community/settings.js";
@@ -322,13 +322,13 @@ class AppContent extends HTMLElement {
             if (oldestCleanup) this._unsubs.push(oldestCleanup);
           } else if (tab === "resourcepacks") {
             const { initResourcePacks } =
-              await import("../../features/resource-packs.js");
+              await import("../../features/resource-packs.ts");
             const rpCleanup = await initResourcePacks(container, this);
             this._unsubs = this._unsubs || [];
             if (rpCleanup) this._unsubs.push(rpCleanup);
           } else if (tab === "shaderpacks") {
             const { initResourcePacks } =
-              await import("../../features/resource-packs.js");
+              await import("../../features/resource-packs.ts");
             const spCleanup = await initResourcePacks(
               container,
               this,
@@ -338,7 +338,7 @@ class AppContent extends HTMLElement {
             if (spCleanup) this._unsubs.push(spCleanup);
           } else if (tab === "create-blueprint") {
             const { initResourcePacks } =
-              await import("../../features/resource-packs.js");
+              await import("../../features/resource-packs.ts");
             const cbCleanup = await initResourcePacks(
               container,
               this,
@@ -348,7 +348,7 @@ class AppContent extends HTMLElement {
             if (cbCleanup) this._unsubs.push(cbCleanup);
           } else if (tab === "mmd-skin") {
             const { initResourcePacks } =
-              await import("../../features/resource-packs.js");
+              await import("../../features/resource-packs.ts");
             const msCleanup = await initResourcePacks(
               container,
               this,
@@ -358,7 +358,7 @@ class AppContent extends HTMLElement {
             if (msCleanup) this._unsubs.push(msCleanup);
           } else if (tab === "vrchat-avatar") {
             const { initResourcePacks } =
-              await import("../../features/resource-packs.js");
+              await import("../../features/resource-packs.ts");
             const vaCleanup = await initResourcePacks(
               container,
               this,
@@ -368,7 +368,7 @@ class AppContent extends HTMLElement {
             if (vaCleanup) this._unsubs.push(vaCleanup);
           } else if (tab === "litematic") {
             const { initResourcePacks } =
-              await import("../../features/resource-packs.js");
+              await import("../../features/resource-packs.ts");
             const lmCleanup = await initResourcePacks(
               container,
               this,

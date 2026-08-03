@@ -1,5 +1,5 @@
 // ===== preview Shadow CSS =====
-import { btnBaseCSS, focusVisibleCSS } from "../../css/shared-styles.js";
+import { btnBaseCSS, focusVisibleCSS } from "../../css/shared-styles.ts";
 export const previewCSS: string = `
 :host {
   display: flex; flex-direction: column;

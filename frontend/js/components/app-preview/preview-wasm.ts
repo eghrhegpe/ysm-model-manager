@@ -105,7 +105,7 @@ export async function decodeYsmViaWasm(
   try {
     devLog("[YSM] 加载 WASM 模块...");
     const { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } =
-      await import("../../wasm/ysm-parser.js");
+      await import("../../wasm/ysm-parser.ts");
     const ok = await initYSMParser();
     console.log(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
     if (!ok) {

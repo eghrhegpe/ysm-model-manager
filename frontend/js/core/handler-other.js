@@ -1,8 +1,8 @@
 // ===== 整合包操作：导出清单 / 清空目录 =====
 import { bus } from "../bus.ts";
-import { friendlyError } from "../utils/errors.js";
+import { friendlyError } from "../utils/errors.ts";
 import { modalConfirm } from "../dialogs/modal.js";
-import { getApp } from "../wails/app.js";
+import { getApp } from "../wails/app.ts";
 
 export function registerInstanceOps(unsubs) {
   // 导出文件清单到剪贴板（支持 rtype 筛选）

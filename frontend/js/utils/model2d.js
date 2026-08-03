@@ -1,5 +1,5 @@
 // ===== 基岩版模型 2D 线条图渲染 =====
-import { dbg } from "./debug.js";
+import { dbg } from "./debug.ts";
 
 /**
  * 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转）

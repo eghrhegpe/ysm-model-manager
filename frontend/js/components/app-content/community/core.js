@@ -1,5 +1,5 @@
 // ===== 创意工坊纯数据层 =====
-import { dbg } from "../../../utils/debug.js";
+import { dbg } from "../../../utils/debug.ts";
 
 /**
  * 加载站点 + 创作者数据（纯数据，不碰 DOM）

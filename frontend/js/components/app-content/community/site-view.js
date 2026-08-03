@@ -1,7 +1,7 @@
 // ===== 创意工坊站点视图（为 _initWorkshop 减负） =====
-import { friendlyError } from "../../../utils/errors.js";
+import { friendlyError } from "../../../utils/errors.ts";
 import { bus } from "../../../bus.ts";
-import { dbg } from "../../../utils/debug.js";
+import { dbg } from "../../../utils/debug.ts";
 import { showProgress, tryFetchModels } from "../../../features/community/data.js";
 import { stagger } from "../../../utils/stagger.ts";
 import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.js";

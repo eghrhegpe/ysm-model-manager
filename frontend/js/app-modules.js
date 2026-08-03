@@ -1,6 +1,6 @@
 // ===== 所有 ES module 组件的统一入口 =====
 import { bus } from "./bus.ts";
-import { register } from "./services/registry.js";
+import { register } from "./services/registry.ts";
 import { Window } from "@wailsio/runtime";
 
 // bus 已在 bus.ts 中挂载 window.bus，此处不再重复赋值

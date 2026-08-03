@@ -1,6 +1,6 @@
 // ===== 导入日志渲染 =====
 // 从 events.js 拆分：loadLogsPreview
-import { renderDisplayName } from "../../utils/display.js";
+import { renderDisplayName } from "../../utils/display.ts";
 
 const esc = (s) =>
   (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

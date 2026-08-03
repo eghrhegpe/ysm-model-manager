@@ -1,12 +1,30 @@
-// ===== 模型文件名解析 + 美化显示管线 =====
+// ===== 模型文件名解析 + 美化显示管线（类型化版 — ADR-014 P2）=====
 import { renderFormattedText } from "./mc-format.js";
+
+/** 解析后的模型文件名字段 */
+export interface ParsedModelName {
+  raw: string;
+  isBanned: boolean;
+  author: string;
+  work: string;
+  chara: string;
+  character: string;
+  date: string;
+  ext: string;
+}
+
+interface NameMark {
+  idx: number;
+  html: string;
+  len: number;
+}
 
 /**
  * 解析模型文件名 → 结构化字段
  * 支持格式: [作者]【作品】角色变体2023-05.ysm
  * 也兼容: [作者]《作品》角色变体2023-05.ysm
  */
-export function parseModelName(raw) {
+export function parseModelName(raw: string): ParsedModelName {
   const name = raw.endsWith(".ban") ? raw.slice(0, -4) : raw;
   const extMatch = name.match(/\.(\w+)$/);
   const aMatch = name.match(/\[\[([^\]]+?)\]\]/) || name.match(/\[([^\]]+?)\]/);
@@ -46,13 +64,27 @@ export function parseModelName(raw) {
   };
 }
 
+/** 转义正则特殊字符 */
+function escRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function esc(s: string): string {
+  return (s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /**
  * 渲染美化文件名 HTML（通用接口）
  * 应用 CSS 变量: --meta-author, --meta-work, --meta-date
- * @param {string} raw 原始文件名
- * @param {object|string} opts 选项对象或模板字符串（兼容旧调用）
+ * @param raw 原始文件名
+ * @param opts 选项对象或模板字符串（兼容旧调用，当前未使用）
  */
-export function renderDisplayName(raw, opts) {
+export function renderDisplayName(raw: string, opts?: unknown): string {
   const p = parseModelName(raw);
   if (p.isBanned) return esc(p.raw);
 
@@ -60,11 +92,11 @@ export function renderDisplayName(raw, opts) {
   let name = raw.replace(/\.\w+$/, "");
 
   // 先找到所有匹配位置，按文件中的原始顺序排序
-  const matches = [];
+  const matches: NameMark[] = [];
 
   // 匹配 [xxx]
-  var re1 = /\[([^\]]+?)\]/g;
-  var m1;
+  const re1 = /\[([^\]]+?)\]/g;
+  let m1: RegExpExecArray | null;
   while ((m1 = re1.exec(name)) !== null) {
     matches.push({
       idx: m1.index,
@@ -74,8 +106,8 @@ export function renderDisplayName(raw, opts) {
   }
 
   // 匹配 【xxx】
-  var re2 = /【([^】]+?)】/g;
-  var m2;
+  const re2 = /【([^】]+?)】/g;
+  let m2: RegExpExecArray | null;
   while ((m2 = re2.exec(name)) !== null) {
     matches.push({
       idx: m2.index,
@@ -85,8 +117,8 @@ export function renderDisplayName(raw, opts) {
   }
 
   // 匹配 《xxx》
-  var re3 = /《([^》]+?)》/g;
-  var m3;
+  const re3 = /《([^》]+?)》/g;
+  let m3: RegExpExecArray | null;
   while ((m3 = re3.exec(name)) !== null) {
     matches.push({
       idx: m3.index,
@@ -97,8 +129,8 @@ export function renderDisplayName(raw, opts) {
 
   // 匹配日期
   if (p.date) {
-    var re4 = new RegExp(escRegex(p.date), "g");
-    var m4;
+    const re4 = new RegExp(escRegex(p.date), "g");
+    let m4: RegExpExecArray | null;
     while ((m4 = re4.exec(name)) !== null) {
       matches.push({
         idx: m4.index,
@@ -109,21 +141,19 @@ export function renderDisplayName(raw, opts) {
   }
 
   // 按文件中出现的顺序排序
-  matches.sort(function (a, b) {
-    return a.idx - b.idx;
-  });
+  matches.sort((a, b) => a.idx - b.idx);
 
   // 从后往前替换，避免 idx 偏移
-  var marked = name;
-  for (var i = matches.length - 1; i >= 0; i--) {
-    var m = matches[i];
+  let marked = name;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
     marked = marked.slice(0, m.idx) + "%%TOKEN%%" + marked.slice(m.idx + m.len);
   }
 
   // 拆分后对非 token 部分渲染 § 分节符颜色 + 转义，再拼回 token 的 HTML
-  var parts = marked.split("%%TOKEN%%");
-  var html = "";
-  for (var i = 0; i < parts.length; i++) {
+  const parts = marked.split("%%TOKEN%%");
+  let html = "";
+  for (let i = 0; i < parts.length; i++) {
     html += renderFormattedText(parts[i]);
     if (i < matches.length) html += matches[i].html;
   }
@@ -131,40 +161,21 @@ export function renderDisplayName(raw, opts) {
   return html;
 }
 
-/** 转义正则特殊字符 */
-function escRegex(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 /** renderModelName = renderDisplayName 别名，options.showExt 支持 */
-export function renderModelName(raw, options = {}) {
+export function renderModelName(raw: string, options: { tpl?: unknown; showExt?: boolean } = {}): string {
   const p = parseModelName(raw);
   return (
     renderDisplayName(raw, options.tpl) +
-    (options.showExt && p.ext
-      ? `<span class="tag-ext">.${esc(p.ext)}</span>`
-      : "")
+    (options.showExt && p.ext ? `<span class="tag-ext">.${esc(p.ext)}</span>` : "")
   );
 }
 
 /** 搜索高亮版 */
-export function renderModelNameWithHighlight(raw, keyword, options = {}) {
+export function renderModelNameWithHighlight(raw: string, keyword?: string, options: { tpl?: unknown; showExt?: boolean } = {}): string {
   let html = renderDisplayName(raw, options);
   if (keyword) {
-    const re = new RegExp(
-      `(${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-      "gi",
-    );
+    const re = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
     html = html.replace(re, "<mark>$1</mark>");
   }
   return html;
-}
-
-function esc(s) {
-  return (s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }

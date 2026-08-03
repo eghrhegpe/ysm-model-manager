@@ -1,7 +1,7 @@
 // ===== <app-content> 入口 =====
 import { bus } from "../../bus.ts";
 import { esc } from "../../utils/dom.ts";
-import { dbg } from "../../utils/debug.js";
+import { dbg } from "../../utils/debug.ts";
 import { contentCSS } from "./content-css.js";
 import { stagger } from "../../utils/stagger.ts";
 import { getApp } from "../../wails/app.ts";
@@ -30,7 +30,7 @@ import { bindRepoEvents } from "../../features/community/events.js";
 import { renderSiteView } from "./community/site-view.js";
 import { getSiteIcon } from "./community/workshop-icons.js";
 import { loadCommunityData, fillSearch } from "./community/core.js";
-import { friendlyError } from "../../utils/errors.js";
+import { friendlyError } from "../../utils/errors.ts";
 
 class AppContent extends HTMLElement {
   constructor() {

@@ -1,13 +1,13 @@
 // ===== 工具栏事件绑定 =====
-import { friendlyError } from "../../utils/errors.js";
+import { friendlyError } from "../../utils/errors.ts";
 import { bus } from "../../bus.ts";
 import { flashBtn } from "./utils.js";
 import { spinnerHTML } from "./tpl.js";
 import { selectState } from "./data.js";
-import { getExts } from "../../utils/extensions.js";
+import { getExts } from "../../utils/extensions.ts";
 import { modalAdvFilter } from "../../dialogs/adv-filter.js";
 import { updateSelectCount } from "./events.js";
-import { dbg } from "../../utils/debug.js";
+import { dbg } from "../../utils/debug.ts";
 import { setRenderMode } from "./render.js";
 
 // 打开弹窗版筛选器（应用结果到 inline 面板 + 后端搜索）

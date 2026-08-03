@@ -1,5 +1,5 @@
 // ===== app-tree bus 事件处理 =====
-import { friendlyError } from "../../utils/errors.js";
+import { friendlyError } from "../../utils/errors.ts";
 import { bus } from "../../bus.ts";
 import {
   ToggleModelEnable,

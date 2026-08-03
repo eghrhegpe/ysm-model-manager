@@ -5,9 +5,9 @@ import { fileIcon, isYsmName } from "../../utils/icon.ts";
 import { emptyHTML } from "./tpl.js";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.js";
 import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.js";
-import { renderDisplayName } from "../../utils/display.js";
-import { animateNumber } from "../../utils/animate.js";
-import { dbg } from "../../utils/debug.js";
+import { renderDisplayName } from "../../utils/display.ts";
+import { animateNumber } from "../../utils/animate.ts";
+import { dbg } from "../../utils/debug.ts";
 import { selectState } from "./data.js";
 import {
   ROW_H_GRID,

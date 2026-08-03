@@ -1,6 +1,6 @@
 // ===== 模型重命名对话框 =====
 // 用法: showRenameDialog(filePath, currentName) → 确认后调用 RenameFile
-import { parseModelName } from "../utils/display.js";
+import { parseModelName } from "../utils/display.ts";
 import { closeDlg } from "./modal.js";
 import { getApp } from "../wails/app.ts";
 

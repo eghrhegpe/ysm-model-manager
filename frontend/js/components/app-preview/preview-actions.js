@@ -1,7 +1,7 @@
 // ===== 预览面板操作按钮绑定 =====
 // 从 events.js 拆分：bindActions + 按钮状态管理
 import { bus } from "../../bus.ts";
-import { dbg } from "../../utils/debug.js";
+import { dbg } from "../../utils/debug.ts";
 
 /** 设置全局按钮启用/禁用 */
 function setGlobalButtonsEnabled(root, enabled) {

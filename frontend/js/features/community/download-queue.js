@@ -1,8 +1,8 @@
 // ===== 创意工坊 — 批量下载队列（防骗 / 进度 / 取消） =====
 // v2: 模块级持久层 — EventsOn 在脚本加载时注册一次，页面切换不丢失事件
 import { bus } from "../../bus.ts";
-import { renderDisplayName } from "../../utils/display.js";
-import { dbg } from "../../utils/debug.js";
+import { renderDisplayName } from "../../utils/display.ts";
+import { dbg } from "../../utils/debug.ts";
 import { getApp } from "../../wails/app.ts";
 import { Events } from "@wailsio/runtime";
 

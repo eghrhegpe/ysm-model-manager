@@ -1,13 +1,13 @@
 // ===== 导入队列 + 拖拽 + 重命名流程 =====
 import { bus } from "../bus.ts";
-import { friendlyError } from "../utils/errors.js";
-import { parseModelName, renderDisplayName } from "../utils/display.js";
+import { friendlyError } from "../utils/errors.ts";
+import { parseModelName, renderDisplayName } from "../utils/display.ts";
 import { renderFormattedText } from "../utils/mc-format.js";
 import { modalConfirm } from "../dialogs/modal.js";
 import { DnDLock, PendingImport } from "./dnd-state.js";
 import { getApp } from "../wails/app.ts";
 
-import { ALL_EXTS, extBelongsTo } from "../utils/extensions.js";
+import { ALL_EXTS, extBelongsTo } from "../utils/extensions.ts";
 
 const extsStr = ALL_EXTS.join(" ");
 

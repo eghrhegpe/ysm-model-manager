@@ -1,6 +1,6 @@
 // ===== sidebar 数据加载层 =====
 import { bus } from "../../bus.ts";
-import { dbg } from "../../utils/debug.js";
+import { dbg } from "../../utils/debug.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.js";
 import {
   LoadAppConfig,

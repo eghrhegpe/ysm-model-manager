@@ -146,7 +146,7 @@ export function bindTreeEvents(container, vm) {
       e.stopPropagation();
       const path = haPreview.dataset.path;
       const name = path?.split(/[/\\]/).pop() || "";
-      import("../../utils/display.js").then(({ parseModelName }) => {
+      import("../../utils/display.ts").then(({ parseModelName }) => {
         const { author } = parseModelName(name);
         if (author) {
           import("../../../bindings/ysm-model-manager/internal/app/app.js").then(({ OpenInBrowser }) =>

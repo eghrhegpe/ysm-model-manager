@@ -1,10 +1,17 @@
-// ===== 里程表滚动进位动画 =====
+// ===== 里程表滚动进位动画（类型化版 — ADR-014 P2）=====
 // 数字像老式汽车里程表：个位先转→十位→百位
 // 用法: animateNumber(el, targetValue, duration)
 
-export function animateNumber(el, to, duration = 700) {
+/**
+ * 里程表滚动进位动画
+ * @param el 目标元素（textContent 中的数字将被替换）
+ * @param to 目标数值
+ * @param duration 总时长 ms（默认 700）
+ */
+export function animateNumber(el: HTMLElement, to: number, duration = 700): void {
   if (!el) return;
-  const match = el.textContent.match(/([0-9]+)/);
+  const text = el.textContent || "";
+  const match = text.match(/([0-9]+)/);
   if (!match) return;
   const from = parseInt(match[1], 10);
   if (from === to) return;
@@ -15,15 +22,13 @@ export function animateNumber(el, to, duration = 700) {
 
   // 从右到左逐位进位：个位先转→十位→百位
   // 例: from=0, to=141 → [1, 41, 141]（个位→十位→百位）
-  const frames = [];
+  const frames: number[] = [];
   for (let p = len - 1; p >= 0; p--) {
     // 第 p 位取目标值，右边取目标，左边保留旧值
     let val = "";
     for (let i = 0; i < len; i++) {
-      if (i < p)
-        val += fromStr[i]; // 左边保留旧值
-      else if (i === p)
-        val += numStr[i]; // 当前位取目标
+      if (i < p) val += fromStr[i]; // 左边保留旧值
+      else if (i === p) val += numStr[i]; // 当前位取目标
       else val += numStr[i]; // 右边取目标
     }
     frames.push(parseInt(val, 10));
@@ -33,14 +38,14 @@ export function animateNumber(el, to, duration = 700) {
 
   // 帧数量不足时直接跳转，防止卡顿
   if (unique.length <= 1) {
-    el.textContent = el.textContent.replace(/[0-9]+/, String(to));
+    el.textContent = text.replace(/[0-9]+/, String(to));
     return;
   }
   // 逐帧播放（从右到左逐位进位）
   const stepDuration = duration / unique.length;
   let idx = 0;
-  const play = () => {
-    el.textContent = el.textContent.replace(/[0-9]+/, String(unique[idx]));
+  const play = (): void => {
+    el.textContent = (el.textContent || "").replace(/[0-9]+/, String(unique[idx]));
     idx++;
     if (idx < unique.length) {
       setTimeout(play, stepDuration);

@@ -1,22 +1,24 @@
-// ===== 错误信息友好化 =====
+// ===== 错误信息友好化（类型化版 — ADR-014 P2）=====
 // Go 返回的原始错误 → 用户能看懂的中文提示
 
 /**
  * 将 Go 错误转换为中文友好提示
- * @param {*} err - 错误对象或字符串
- * @param {string} fallback - 未匹配时的前缀，默认 "操作失败"
- * @returns {string}
+ * @param err - 错误对象或字符串
+ * @param fallback - 未匹配时的前缀，默认 "操作失败"
  */
-export function friendlyError(err, fallback = "操作失败") {
+export function friendlyError(err: unknown, fallback = "操作失败"): string {
   if (!err) return "未知错误";
-  const msg = typeof err === "string" ? err : String(err.message || err);
+  const msg =
+    typeof err === "string"
+      ? err
+      : String((err as { message?: unknown }).message || err);
 
   // 已经包含汉字 → 直接使用（Go 端已有友好提示或已翻译）
   if (/[\u4e00-\u9fff]/.test(msg)) return msg;
 
   // 常见错误模式匹配
   // 优先级：社区抓取常见错误 > 通用文件/网络错误
-  const patterns = [
+  const patterns: Array<[RegExp, string]> = [
     // ===== 社区功能高频错误 =====
     [/rate limit|429|too many requests/i, "GitHub API 访问频率受限，请稍后重试"],
     [/abort|cancelled/i, "请求已取消"],

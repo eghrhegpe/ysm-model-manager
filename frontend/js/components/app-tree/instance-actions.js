@@ -1,5 +1,5 @@
 // ===== 整合包右键操作实现 =====
-import { friendlyError } from "../../utils/errors.js";
+import { friendlyError } from "../../utils/errors.ts";
 import { bus } from "../../bus.ts";
 import {
   SelectDirectory,

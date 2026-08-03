@@ -167,45 +167,48 @@ function checkKeyFiles() {
 
 function checkGovernance() {
   console.log('\n=== Governance Rules ===');
-  let issues = 0;
+  let errors = 0;
 
-  // 规则 1: window.__* 全局变量
+  // 规则 1: window.__* 全局变量（ERROR 硬门槛，doctor 退出码 1 阻断提交）
   const r1 = run(['grep', '-rn', 'window\\.__', path.join(ROOT, 'frontend/js/'), '--include=*.js', '--include=*.ts', '-l']).out.trim();
   if (r1) {
-    issues += 1;
-    console.log(`  ${WARN} [rule1] window.__ global vars:`);
+    errors += 1;
+    console.log(`  ${FAIL} [rule1] window.__ global vars:`);
     for (const f of r1.split('\n')) console.log(`    ${f}`);
   }
 
-  // 规则 5: 硬编码颜色
+  // 规则 8 动态拼接: innerHTML 含表达式插值（非纯标识符，如 ${e.message}）必须 esc()（ERROR 硬门槛）
+  // 纯标识符插值（${inner} 等受信 HTML 片段）放行；命中行含 esc( 视为已转义
+  const r8dyn = run(['grep', '-rnE', 'innerHTML\\s*=[^;]*\\$\\{[^}]*[^A-Za-z0-9_$}][^}]*\\}', path.join(ROOT, 'frontend/js/'), '--include=*.js', '--include=*.ts']).out.trim();
+  if (r8dyn) {
+    const unescaped = r8dyn.split('\n').filter((l) => !/esc\(/.test(l));
+    if (unescaped.length) {
+      errors += 1;
+      console.log(`  ${FAIL} [rule8] innerHTML 表达式插值未 esc()`);
+      for (const line of unescaped) console.log(`    ${line}`);
+    }
+  }
+
+  // 规则 5: 硬编码颜色（WARN 级，存量允许）
   const r5 = run(['grep', '-rn', '#[0-9a-f]\\{6\\}\\b', path.join(ROOT, 'frontend/'), '--include=*.js', '--include=*.ts', '--include=*.css']).out.trim();
   if (r5) {
-    issues += 1;
     const lines = r5.split('\n');
     console.log(`  ${WARN} [rule5] hardcoded colors (${lines.length} hits, top 10):`);
     for (const line of lines.slice(0, 10)) console.log(`    ${line}`);
   }
 
-  // 规则 8: innerHTML 拼接
-  const r8 = run(['grep', '-rn', 'innerHTML\\s*=', path.join(ROOT, 'frontend/js/'), '--include=*.js', '--include=*.ts']).out.trim();
-  if (r8) {
-    issues += 1;
-    console.log(`  ${WARN} [rule8] innerHTML concat:`);
-    for (const line of r8.split('\n')) console.log(`    ${line}`);
-  }
-
-  // Wails 调用检查
+  // Wails 调用检查（WARN 级，注释误报已知）
   const w = run(['grep', '-rn', 'window\\.go\\.main\\.App', path.join(ROOT, 'frontend/js/'), '--include=*.js', '--include=*.ts']).out.trim();
   if (w) {
-    issues += 1;
     console.log(`  ${WARN} [Wails] direct window.go calls:`);
     for (const line of w.split('\n')) console.log(`    ${line}`);
   }
 
-  if (issues === 0) {
+  if (errors === 0) {
     console.log(`  ${PASS} all rules passed`);
   } else {
-    console.log(`  ${WARN} ${issues} issue(s) found`);
+    console.log(`  ${FAIL} ${errors} ERROR rule(s) found`);
+    process.exitCode = 1;
   }
 }
 

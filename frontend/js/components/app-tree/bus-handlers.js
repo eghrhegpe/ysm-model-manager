@@ -242,7 +242,7 @@ export function bindBusEvents(vm) {
           return;
         }
         const { showBatchRenameDialog } =
-          await import("../../dialogs/batch-rename.js");
+          await import("../../dialogs/batch-rename.ts");
         await showBatchRenameDialog(absDir, entries, async (renames) => {
           let ok = 0,
             fail = 0;
@@ -283,7 +283,7 @@ export function bindBusEvents(vm) {
           Path: p,
         }));
         const { showBatchRenameDialog } =
-          await import("../../dialogs/batch-rename.js");
+          await import("../../dialogs/batch-rename.ts");
         await showBatchRenameDialog("批量重命名", entries, async (renames) => {
           let ok = 0,
             fail = 0;

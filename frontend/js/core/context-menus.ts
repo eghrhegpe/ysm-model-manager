@@ -263,7 +263,7 @@ export function registerContextMenus(): void {
             icon: "✂️",
             onClick: async () => {
               try {
-                const { showRenameDialog } = await import("../dialogs/rename.js");
+                const { showRenameDialog } = await import("../dialogs/rename.ts");
                 const fileName = (path || "").split(/[/\\]/).pop() || "";
                 const newName = await showRenameDialog(path || "", fileName);
                 if (!newName) return;

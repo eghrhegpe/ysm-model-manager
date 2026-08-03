@@ -47,7 +47,7 @@ export function getSiteIcon(siteId: string): string {
   return SITE_ICON_MAP[siteId] || ICONS.CREATOR;
 }
 
-export function getTagIconFromRole(role: string): string {
+export function getTagIconFromRole(role?: string): string {
   switch (role) {
     case "official": return ICONS.OFFICIAL;
     case "vup":     return ICONS.VUP;

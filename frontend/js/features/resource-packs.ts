@@ -12,7 +12,7 @@ import { bus } from "../bus.ts";
 export async function initResourcePacks(
   container: HTMLElement,
   host: object,
-  rtype: string,
+  rtype?: string,
 ): Promise<() => void> {
   // 导入组件（确保已注册）
   await import("../components/app-resource-manager/index.js");

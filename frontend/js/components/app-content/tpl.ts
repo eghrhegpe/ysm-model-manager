@@ -1,6 +1,6 @@
 // ===== app-content 页面模板 =====
 
-export function repositoryHTML() {
+export function repositoryHTML(): string {
   return (
     '<div class="repo-wrap">' +
     // 第一栏：操作
@@ -40,7 +40,7 @@ export function repositoryHTML() {
   );
 }
 
-export function instancesHTML() {
+export function instancesHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs">' +
@@ -61,7 +61,7 @@ export function instancesHTML() {
   );
 }
 
-export function resourceLibraryHTML() {
+export function resourceLibraryHTML(): string {
   return (
     '<div class="repo-wrap" style="display:flex;flex-direction:column">' +
     '<div class="repo-tabs">' +
@@ -79,7 +79,7 @@ export function resourceLibraryHTML() {
   );
 }
 
-export function settingsHTML() {
+export function settingsHTML(): string {
   return `<div class="repo-wrap">
 <div class="repo-tabs">
 <button class="repo-tab active" data-tab="basic">⚙️ 基础设置</button>
@@ -420,11 +420,11 @@ export function settingsHTML() {
 </div>`;
 }
 
-export function placeholderHTML(icon, label) {
+export function placeholderHTML(icon: string, label: string): string {
   return `<div class="placeholder-box"><div class="big">${icon}</div><div>${label}</div><span class="ptag">预告</span></div>`;
 }
 
-export function downloadsHTML() {
+export function downloadsHTML(): string {
   return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
 <div id="dl-form" style="margin:4px 12px;display:none;flex-direction:column;gap:4px">
   <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;flex-wrap:wrap">
@@ -475,7 +475,7 @@ export function downloadsHTML() {
 </div>`;
 }
 
-export function diagnosticsHTML() {
+export function diagnosticsHTML(): string {
   return `<div class="repo-wrap">
 <div class="repo-tabs">
 <button class="repo-tab active" data-tab="diagnostics">🛠️ 诊断与冲突</button>
@@ -527,7 +527,7 @@ export function diagnosticsHTML() {
 </div>`;
 }
 
-export function recycleHTML() {
+export function recycleHTML(): string {
   return `<div class="recy-page" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px">
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
 <span id="recy-count" style="font-size:11px;color:#6c7086">加载中...</span>
@@ -540,7 +540,7 @@ export function recycleHTML() {
 
 /* ===== GitHub 仓库页面 ===== */
 
-export function githubHTML() {
+export function githubHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs">' +
@@ -571,7 +571,7 @@ export function githubHTML() {
   );
 }
 
-export function workshopHTML() {
+export function workshopHTML(): string {
   // 站点 Tab 由 _initWorkshop 动态生成，此处只放容器
   return (
     '<div class="repo-wrap">' +

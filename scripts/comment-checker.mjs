@@ -67,6 +67,8 @@ function scanTodoNoTicket() {
       // 过滤 /go/ embedded JSON 和 vendor
       if (line.includes('blocks_1_12.json') || line.includes('zh_cn.json')) continue;
       const [f, ln, txt] = parseLine(line);
+      // 超长行跳过：数据文件（如 wasm base64）含 XXX 子串会被误命中，注释不可能 >500 字符
+      if (txt.length > 500) continue;
       results.push({ file: f, line: ln, snippet: txt, type: 'todo_no_ticket' });
     }
   }
@@ -97,12 +99,24 @@ function runAll() {
 
 const args = process.argv.slice(2);
 const jsonMode = args.includes('--json');
+const FULL = args.includes('--full'); // 全量输出（默认 JSON 模式每类截断 50 条防超大输出）
 
 const results = runAll();
 const total = Object.values(results).reduce((s, v) => s + v.length, 0);
 
 if (jsonMode) {
-  results._summary = { total };
+  // _summary 含分类计数 + 截断标记（子代理消费：先看计数，需明细再 --full）
+  const counts = {};
+  let truncated = false;
+  const LIMIT = 50;
+  for (const [cat, items] of Object.entries(results)) {
+    counts[cat] = items.length;
+    if (!FULL && items.length > LIMIT) {
+      results[cat] = items.slice(0, LIMIT);
+      truncated = true;
+    }
+  }
+  results._summary = { total, ...counts, truncated };
   process.stdout.write(JSON.stringify(results, null, 2) + '\n');
 } else {
   console.log('========== Comment Checker ==========\n');

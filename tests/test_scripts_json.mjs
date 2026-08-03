@@ -74,6 +74,32 @@ for (const [name, flag] of JSON_SCRIPTS) {
   }
 }
 
+// ── comment-checker 专项：_summary 含分类计数 + 截断标记 ─
+{
+  const r = spawnSync(NODE, [path.join(SCRIPTS, 'comment-checker.mjs'), '--json'], { encoding: 'utf-8', timeout: 60000, maxBuffer: 32 * 1024 * 1024 });
+  const data = JSON.parse((r.stdout || '').trim());
+  const CATS = ['AI_fluff', 'empty_jsdoc', 'commented_code', 'todo_no_ticket', 'debug_log'];
+  for (const cat of CATS) {
+    assert(
+      typeof data._summary?.[cat] === 'number',
+      `[comment-checker] _summary 缺分类计数 ${cat}（keys=${Object.keys(data._summary || {}).join(',')}）`
+    );
+    assert(
+      typeof data[cat] === 'undefined' || Array.isArray(data[cat]),
+      `[comment-checker] 顶层 ${cat} 应为数组`
+    );
+    if (Array.isArray(data[cat])) {
+      // 默认截断：分类计数 = 全量，顶层数组 ≤ 50（--full 才全量）
+      assert(data[cat].length <= data._summary[cat], `[comment-checker] ${cat} 数组不应超过计数`);
+      assert(data[cat].length <= 50, `[comment-checker] ${cat} 默认应截断至 ≤50 条（got ${data[cat].length}）`);
+    }
+  }
+  assert(
+    typeof data._summary?.total === 'number',
+    `[comment-checker] _summary 缺 total 计数`
+  );
+}
+
 // ── 输出 ─────────────────────────────────────────────
 if (errors.length) {
   console.log(`FAILED: ${errors.length} issue(s)`);

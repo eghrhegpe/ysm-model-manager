@@ -6,7 +6,7 @@
  * 本测试只验证结构契约，不依赖退出码：
  *   1. --json 输出必须是合法 JSON
  *   2. 顶层必须有 _summary 对象，且含至少一个计数键
- *   3. 有 _summary 的脚本清单 = 脚本体系全景.md「生产级 --json」档
+ *   3. 有 _summary 的脚本清单 = README.md「生产级 --json」档
  *
  * 排除：依赖外部工具/参数的脚本（check-deadcode-baseline 跑 knip+jscpd 过慢、
  * doctor 全量过慢、bug-search/inspect_ysm 需参数、auto-import 由其他 AI 维护）。

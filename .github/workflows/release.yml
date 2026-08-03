@@ -54,6 +54,11 @@ jobs:
         shell: pwsh
         run: npm run typecheck | Out-String -Width 200
 
+      - name: 前端单测（ADR-023 P3，L3 Vitest 回归）
+        working-directory: frontend
+        shell: pwsh
+        run: npx vitest run | Out-String -Width 200
+
       - name: 前端构建
         working-directory: frontend
         shell: pwsh

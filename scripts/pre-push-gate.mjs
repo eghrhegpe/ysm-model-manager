@@ -239,6 +239,13 @@ function main() {
     results.push({ label: 'vite build', ok: fb.rc === 0, time: Date.now() - t0,
       tail: fb.rc ? fb.out.trim().split('\n').slice(-4).join('\n') : '' });
     if (fb.rc !== 0) blocked = true;
+
+    // ADR-023 P3：L3 Vitest 随前端域变更回归（写了要跑、坏了要红）
+    const t1 = Date.now();
+    const ft = sh('npx vitest run', { cwd: path.join(ROOT, 'frontend') });
+    results.push({ label: 'vitest run', ok: ft.rc === 0, time: Date.now() - t1,
+      tail: ft.rc ? ft.out.trim().split('\n').slice(-4).join('\n') : '' });
+    if (ft.rc !== 0) blocked = true;
   }
 
   /* --- 数据域 --- */

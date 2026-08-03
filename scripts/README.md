@@ -21,8 +21,8 @@
 
 | 脚本 | 调用方式 | 说明 |
 |------|---------|------|
-| `funcmap.mjs` | `node scripts/funcmap.mjs -o funcmap.md` | 提取 Go/JS 函数注释映射表 |
-| `doctor.mjs` | `node scripts/doctor.mjs` | Go 编译 + 单测 + 前端构建 + tsc + 文件 + 红线 + 静态分析 + Git（原 ultrawork 一键三连已并入，ultrawork.mjs 删除） |
+| `funcmap.mjs` | `node scripts/funcmap.mjs -o funcmap.md` | 提取 Go/JS/TS 导出符号映射表（按模块分组，参考 MikuMikuAR 风格） |
+| `doctor.mjs` | `node scripts/doctor.mjs` | Go 编译 + 单测 + 前端构建 + **前端单测（vitest，ADR-023 P3）** + tsc + 文件 + 红线 + 静态分析 + Git（原 ultrawork 一键三连已并入，ultrawork.mjs 删除） |
 | `comment-checker.mjs` | `node scripts/comment-checker.mjs` / `--json` / `--full` | 注释质量（废话/JSDoc/TODO/调试日志）；`--json` 默认每类截断 50 条 + `_summary` 分类计数，`--full` 全量（防 wasm base64 超长行误报/爆炸） |
 | `event-audit.mjs` | `node scripts/event-audit.mjs` / `--json` | EventsOn/bus.on 注册位置检查 |
 | `binding-check.mjs` | `node scripts/binding-check.mjs` | Go 导出函数 vs wailsjs 绑定一致性 |
@@ -30,8 +30,9 @@
 | `ai-mistake-tracker.mjs` | `node scripts/ai-mistake-tracker.mjs` / `--limit N` / `--json` | 分析 git 历史找 AI 高频犯错区（fix 分类统计 / 连续修复链 / 文件热力图 / 规则违反扫描），反哺 AGENTS.md 陷阱清单 |
 | `codemod.mjs` | `node scripts/codemod.mjs help` / `rename-function` / `move-function` / `add-param` | AST 感知重构（ts-morph）：批量重命名 / 移函数（自动迁 import）/ 加参数；move 不重写外部引用方，改后跑 tsc |
 | `inspect_ysm.mjs` | `node scripts/inspect_ysm.mjs <文件>` / `--json` | YSM 文件格式诊断（合并 v1-v5 的统一版） |
+| `test-coverage-report.mjs` | `node scripts/test-coverage-report.mjs` / `--json` / `--top N` | 读 vitest v8 coverage 产物输出未覆盖清单（文件+行+函数，升序），供补测决策；需先跑 `npm run test:coverage` |
 
-### 治理检查（check-* 系列，AGENTS.md §1.2 配对）
+### 治理检查（check-* 系列；唯一登记处，AGENTS.md §1.2 仅作指针）
 
 | 脚本 | 调用方式 | 说明 |
 |------|---------|------|
@@ -96,6 +97,8 @@
 | 二进制熵检测（判断是否加密） | ✅ |
 
 ### 治理红线
+
+> 规则条文与严重度分级以 `docs/governance-rules.md` 为唯一事实来源；下表仅为红线→检测工具映射。
 
 | 红线 | 工具 |
 |------|------|

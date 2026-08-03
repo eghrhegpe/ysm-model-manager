@@ -30,7 +30,7 @@ const CATEGORIES = [
 
 // 规则违反检测关键词（ysmc 宪法信号，扫描 commit message）
 const RULE_VIOLATIONS = {
-  git_add_all: /git add \./,          // 宪法禁止 git add .（并行特性混入）
+  git_add_all: /git add \./,          // 多会话并行时 git add . 会混入他人特性（单会话不受限，此处仅统计信号）
   stash: /git stash/,                 // 宪法禁止 git stash
   full_read_large: /read.*(\.ts|\.js|\.go).*limit\s*=\s*\d{4,}/, // 读大文件没加 limit
   merge_conflict: /conflict|冲突|合并冲突/,

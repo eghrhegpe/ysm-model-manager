@@ -21,7 +21,7 @@ export interface MenuItem {
   icon?: string;
   danger?: boolean;
   onClick?: () => void;
-  // TODO: disabled / submenu 等字段待补
+  // disabled / submenu 字段暂无调用方，按需再补
 }
 
 export interface NavPagePayload {
@@ -61,7 +61,7 @@ export interface BusEvents {
   "stats:upload": void;
   "logs:refresh": void;
   "tree:reload": void;
-  "tree:set-search": string; // TODO: 确认 payload（tree 搜索关键字）
+  "tree:set-search": string; // tree 搜索关键字（app-tree 实证：srch.value = name）
   "avatar:refresh": { author: string; dataUri: string };
   // 模型 / 选择
   "model:select": ModelSelectPayload;

@@ -1,0 +1,1413 @@
+{
+  "duplicates": [
+    {
+      "firstFile": {
+        "end": 113,
+        "endLoc": {
+          "column": 4,
+          "line": 113,
+          "position": 4374
+        },
+        "name": "js\\app-modules.ts",
+        "start": 84,
+        "startLoc": {
+          "column": 24,
+          "line": 84,
+          "position": 3283
+        }
+      },
+      "format": "typescript",
+      "fragment": "function applyUIPrefs() {\n  const fontSize = localStorage.getItem(\"ui-font-size\") || \"normal\";\n  const displayFont = localStorage.getItem(\"ui-display-font\") || \"kaiti\";\n  const density = localStorage.getItem(\"ui-card-density\") || \"compact\";\n  const anim = localStorage.getItem(\"ui-animations\") !== \"off\";\n\n  // 清除旧版直接设 --fs-* 的内联值（避免覆盖 calc()）\n  [\n    \"--fs-base\",\n    \"--fs-xs\",\n    \"--fs-sm\",\n    \"--fs-md\",\n    \"--fs-lg\",\n    \"--fs-tiny\",\n    \"--fs-xl\",\n  ].forEach((v) => document.documentElement.style.removeProperty(v));\n  // 通过 --fs-scale 控制字号缩放（与设置页 community-settings.js 一致）\n  const scaleMap: Record<string, string> = { small: \"-1px\", normal: \"0px\", large: \"2px\" };\n  document.documentElement.style.setProperty(\n    \"--fs-scale\",\n    scaleMap[fontSize] || \"0px\",\n  );\n  document.documentElement.style.setProperty(\"--fs-base-size\", \"12px\");\n\n  document.documentElement.style.setProperty(\n    \"--font-display\",\n    displayFont === \"system\"\n      ? \"var(--font-ui)\"\n      : \"'STKaiti','KaiTi','楷体',serif\",\n  );",
+      "lines": 30,
+      "secondFile": {
+        "end": 637,
+        "endLoc": {
+          "column": 6,
+          "line": 637,
+          "position": 23700
+        },
+        "name": "js\\components\\app-content\\community\\settings.ts",
+        "start": 605,
+        "startLoc": {
+          "column": 34,
+          "line": 605,
+          "position": 22404
+        }
+      },
+      "tokens": 160
+    },
+    {
+      "firstFile": {
+        "end": 153,
+        "endLoc": {
+          "column": 45,
+          "line": 153,
+          "position": 5290
+        },
+        "name": "js\\components\\app-content\\community\\core.ts",
+        "start": 132,
+        "startLoc": {
+          "column": 2,
+          "line": 132,
+          "position": 4475
+        }
+      },
+      "format": "typescript",
+      "fragment": "  const sorted =\n    mirror === \"jsdelivr\"\n      ? [attempts[1], attempts[0], attempts[2]]\n      : mirror === \"githubapi\"\n        ? [attempts[2], attempts[0], attempts[1]]\n        : attempts;\n\n  for (const a of sorted) {\n    const ctrl = new AbortController();\n    const tmr = setTimeout(() => ctrl.abort(), 8000);\n    try {\n      const resp = await fetch(a.url, { signal: ctrl.signal });\n      if (!resp.ok) throw new Error(\"HTTP \" + resp.status);\n      let data: unknown;\n      if (a.name === \"api\") {\n        const json = (await resp.json()) as { content?: string };\n        if (!json.content) throw new Error(\"no content\");\n        data = JSON.parse(atob(json.content.replace(/\\s/g, \"\")));\n      } else {\n        data = await resp.json();\n      }\n      if (Array.isArray(data)) return data as WorkshopCreator[];",
+      "lines": 22,
+      "secondFile": {
+        "end": 244,
+        "endLoc": {
+          "column": 45,
+          "line": 244,
+          "position": 8288
+        },
+        "name": "js\\components\\app-content\\community\\core.ts",
+        "start": 224,
+        "startLoc": {
+          "column": 2,
+          "line": 224,
+          "position": 7475
+        }
+      },
+      "tokens": 212
+    },
+    {
+      "firstFile": {
+        "end": 1054,
+        "endLoc": {
+          "column": 7,
+          "line": 1054,
+          "position": 39091
+        },
+        "name": "js\\components\\app-content\\community\\site-view.ts",
+        "start": 1041,
+        "startLoc": {
+          "column": 35,
+          "line": 1041,
+          "position": 38587
+        }
+      },
+      "format": "typescript",
+      "fragment": "    inp.addEventListener(\"input\", () => {\n      const idx = parseInt((inp as HTMLElement).dataset.idx || \"-1\", 10);\n      const fld = (inp as HTMLElement).dataset.fld || \"\";\n      if (creators[idx]) {\n        if (inp.tagName === \"SELECT\") {\n          creators[idx][fld] = Array.from((inp as HTMLSelectElement).selectedOptions)\n            .map((o) => o.value)\n            .filter(Boolean)\n            .join(\";\");\n        } else {\n          creators[idx][fld] = (inp as HTMLInputElement).value.trim();\n        }\n      }\n    });",
+      "lines": 14,
+      "secondFile": {
+        "end": 1213,
+        "endLoc": {
+          "column": 9,
+          "line": 1213,
+          "position": 45203
+        },
+        "name": "js\\components\\app-content\\community\\site-view.ts",
+        "start": 1200,
+        "startLoc": {
+          "column": 19,
+          "line": 1200,
+          "position": 44673
+        }
+      },
+      "tokens": 125
+    },
+    {
+      "firstFile": {
+        "end": 1092,
+        "endLoc": {
+          "column": 48,
+          "line": 1092,
+          "position": 40453
+        },
+        "name": "js\\components\\app-content\\community\\site-view.ts",
+        "start": 1082,
+        "startLoc": {
+          "column": 63,
+          "line": 1082,
+          "position": 40031
+        }
+      },
+      "format": "typescript",
+      "fragment": "    .querySelectorAll(\".cr-edit-card:not([data-edit='preset'])\")\n    .forEach((card) => {\n      const handle = card.querySelector(\".cr-drag-handle\");\n      if (!handle) return;\n      // 点拖拽柄时暂时让卡片可拖拽\n      handle.addEventListener(\"mousedown\", () => {\n        (card as HTMLElement).draggable = true;\n      });\n      card.addEventListener(\"dragstart\", (e: Event) => {\n        const de = e as DragEvent;\n        (card as HTMLElement).draggable = false;",
+      "lines": 11,
+      "secondFile": {
+        "end": 1148,
+        "endLoc": {
+          "column": 48,
+          "line": 1148,
+          "position": 42680
+        },
+        "name": "js\\components\\app-content\\community\\site-view.ts",
+        "start": 1139,
+        "startLoc": {
+          "column": 57,
+          "line": 1139,
+          "position": 42308
+        }
+      },
+      "tokens": 79
+    },
+    {
+      "firstFile": {
+        "end": 1109,
+        "endLoc": {
+          "column": 12,
+          "line": 1109,
+          "position": 41129
+        },
+        "name": "js\\components\\app-content\\community\\site-view.ts",
+        "start": 1093,
+        "startLoc": {
+          "column": 19,
+          "line": 1093,
+          "position": 40474
+        }
+      },
+      "format": "typescript",
+      "fragment": "        dragSrcIdx = parseInt((card as HTMLElement).dataset.editIdx || \"-1\", 10);\n        card.classList.add(\"cr-dragging\");\n        de.dataTransfer!.effectAllowed = \"move\";\n        de.dataTransfer!.setData(\"text/plain\", \"\");\n      });\n      card.addEventListener(\"dragend\", () => {\n        (card as HTMLElement).draggable = false;\n        clearDragState();\n      });\n      card.addEventListener(\"dragover\", (e: Event) => {\n        e.preventDefault();\n        (e as DragEvent).dataTransfer!.dropEffect = \"move\";\n      });\n      card.addEventListener(\"dragenter\", (e) => {\n        e.preventDefault();\n        card.classList.add(\"cr-drag-target\");\n        if (dragSrcIdx >= 0) {",
+      "lines": 17,
+      "secondFile": {
+        "end": 1165,
+        "endLoc": {
+          "column": 12,
+          "line": 1165,
+          "position": 43362
+        },
+        "name": "js\\components\\app-content\\community\\site-view.ts",
+        "start": 1149,
+        "startLoc": {
+          "column": 25,
+          "line": 1149,
+          "position": 42707
+        }
+      },
+      "tokens": 141
+    },
+    {
+      "firstFile": {
+        "end": 1125,
+        "endLoc": {
+          "column": 12,
+          "line": 1125,
+          "position": 41817
+        },
+        "name": "js\\components\\app-content\\community\\site-view.ts",
+        "start": 1113,
+        "startLoc": {
+          "column": 32,
+          "line": 1113,
+          "position": 41351
+        }
+      },
+      "format": "typescript",
+      "fragment": "          } else if (dragSrcIdx > tgt) {\n            card.classList.add(\"cr-drag-after\");\n          }\n        }\n      });\n      card.addEventListener(\"dragleave\", () => {\n        card.classList.remove(\"cr-drag-target\", \"cr-drag-before\", \"cr-drag-after\");\n      });\n      card.addEventListener(\"drop\", (e) => {\n        e.preventDefault();\n        card.classList.remove(\"cr-drag-target\");\n        const targetIdx = parseInt((card as HTMLElement).dataset.editIdx || \"-1\", 10);\n        if (dragSrcIdx < 0 || dragSrcIdx === targetIdx) return;",
+      "lines": 13,
+      "secondFile": {
+        "end": 1181,
+        "endLoc": {
+          "column": 12,
+          "line": 1181,
+          "position": 44068
+        },
+        "name": "js\\components\\app-content\\community\\site-view.ts",
+        "start": 1169,
+        "startLoc": {
+          "column": 38,
+          "line": 1169,
+          "position": 43602
+        }
+      },
+      "tokens": 92
+    },
+    {
+      "firstFile": {
+        "end": 78,
+        "endLoc": {
+          "column": 29,
+          "line": 78,
+          "position": 2974
+        },
+        "name": "js\\components\\app-preview\\preview-litematic-3d.ts",
+        "start": 45,
+        "startLoc": {
+          "column": 27,
+          "line": 45,
+          "position": 1527
+        }
+      },
+      "format": "typescript",
+      "fragment": "  topBar.appendChild(spacer);\n\n  const rotLabel = document.createElement(\"span\");\n  rotLabel.style.cssText = \"font-size:11px;color:rgba(255,255,255,0.5)\";\n  rotLabel.textContent = \"摄像机旋转:\";\n  topBar.appendChild(rotLabel);\n\n  const rotSel = document.createElement(\"select\");\n  rotSel.style.cssText = \"font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit;margin-right:8px\";\n  [{ v: true, t: \"环绕\" }, { v: false, t: \"自身\" }].forEach((m) => {\n    const opt = document.createElement(\"option\");\n    opt.value = String(m.v);\n    opt.textContent = m.t;\n    rotSel.appendChild(opt);\n  });\n  topBar.appendChild(rotSel);\n\n  const spdLabel = document.createElement(\"span\");\n  spdLabel.style.cssText = \"font-size:11px;color:rgba(255,255,255,0.5)\";\n  spdLabel.textContent = \"摄像机速度:\";\n  topBar.appendChild(spdLabel);\n\n  const spdSlider = document.createElement(\"input\");\n  spdSlider.type = \"range\";\n  spdSlider.min = \"2\";\n  spdSlider.max = \"200\";\n  spdSlider.value = \"20\";\n  spdSlider.style.cssText = \"width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff)\";\n  topBar.appendChild(spdSlider);\n\n  const spdVal = document.createElement(\"span\");\n  spdVal.style.cssText = \"font-size:11px;color:rgba(255,255,255,0.6);min-width:20px\";\n  spdVal.textContent = \"20\";\n  topBar.appendChild(spdVal);",
+      "lines": 34,
+      "secondFile": {
+        "end": 436,
+        "endLoc": {
+          "column": 35,
+          "line": 436,
+          "position": 18840
+        },
+        "name": "js\\components\\app-preview\\preview-skeleton.ts",
+        "start": 403,
+        "startLoc": {
+          "column": 35,
+          "line": 403,
+          "position": 17225
+        }
+      },
+      "tokens": 237
+    },
+    {
+      "firstFile": {
+        "end": 311,
+        "endLoc": {
+          "column": 12,
+          "line": 311,
+          "position": 11907
+        },
+        "name": "js\\components\\app-preview\\preview-wasm.ts",
+        "start": 301,
+        "startLoc": {
+          "column": 8,
+          "line": 301,
+          "position": 11616
+        }
+      },
+      "format": "typescript",
+      "fragment": "        const mn =\n          (\n            typeof mp === \"string\"\n              ? mp\n              : (mp as { path?: string; name?: string })?.path ||\n                (mp as { name?: string })?.name ||\n                \"\"\n          )\n            .split(/[/\\\\]/)\n            .pop() || \"\";\n        if (mn) {",
+      "lines": 11,
+      "secondFile": {
+        "end": 422,
+        "endLoc": {
+          "column": 12,
+          "line": 422,
+          "position": 16195
+        },
+        "name": "js\\components\\app-preview\\preview-wasm.ts",
+        "start": 412,
+        "startLoc": {
+          "column": 8,
+          "line": 412,
+          "position": 15904
+        }
+      },
+      "tokens": 58
+    },
+    {
+      "firstFile": {
+        "end": 73,
+        "endLoc": {
+          "column": 6,
+          "line": 73,
+          "position": 1987
+        },
+        "name": "js\\components\\app-sidebar\\data.ts",
+        "start": 61,
+        "startLoc": {
+          "column": 16,
+          "line": 61,
+          "position": 1703
+        }
+      },
+      "format": "typescript",
+      "fragment": "      missing: 2,\n      extra: 0,\n      status: \"missing\",\n      exists: true,\n      hasMod: true,\n      disabled: 0,\n      rtype: RESOURCE_TYPES.YSM,\n      variantGroups: null,\n      _missingPaths: [],\n      _extraPaths: [],\n      dir: \"\",\n      items: { synced: [], missing: [], extra: [] },\n    },",
+      "lines": 13,
+      "secondFile": {
+        "end": 105,
+        "endLoc": {
+          "column": 6,
+          "line": 105,
+          "position": 2690
+        },
+        "name": "js\\components\\app-sidebar\\data.ts",
+        "start": 93,
+        "startLoc": {
+          "column": 16,
+          "line": 93,
+          "position": 2406
+        }
+      },
+      "tokens": 66
+    },
+    {
+      "firstFile": {
+        "end": 75,
+        "endLoc": {
+          "column": 11,
+          "line": 75,
+          "position": 2005
+        },
+        "name": "js\\components\\app-sidebar\\data.ts",
+        "start": 63,
+        "startLoc": {
+          "column": 23,
+          "line": 63,
+          "position": 1744
+        }
+      },
+      "format": "typescript",
+      "fragment": "      status: \"missing\",\n      exists: true,\n      hasMod: true,\n      disabled: 0,\n      rtype: RESOURCE_TYPES.YSM,\n      variantGroups: null,\n      _missingPaths: [],\n      _extraPaths: [],\n      dir: \"\",\n      items: { synced: [], missing: [], extra: [] },\n    },\n    {\n      name: \"空岛生存\",",
+      "lines": 13,
+      "secondFile": {
+        "end": 91,
+        "endLoc": {
+          "column": 11,
+          "line": 91,
+          "position": 2358
+        },
+        "name": "js\\components\\app-sidebar\\data.ts",
+        "start": 79,
+        "startLoc": {
+          "column": 24,
+          "line": 79,
+          "position": 2097
+        }
+      },
+      "tokens": 61
+    },
+    {
+      "firstFile": {
+        "end": 109,
+        "endLoc": {
+          "column": 1,
+          "line": 109,
+          "position": 5542
+        },
+        "name": "js\\components\\app-sidebar\\tpl.ts",
+        "start": 99,
+        "startLoc": {
+          "column": 7,
+          "line": 99,
+          "position": 5333
+        }
+      },
+      "format": "typescript",
+      "fragment": "</div>`;\n}\n\nfunction esc(s: string): string {\n  return (s || \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#39;\");\n}",
+      "lines": 11,
+      "secondFile": {
+        "end": 79,
+        "endLoc": {
+          "column": 1,
+          "line": 79,
+          "position": 2230
+        },
+        "name": "js\\utils\\display.ts",
+        "start": 69,
+        "startLoc": {
+          "column": 49,
+          "line": 69,
+          "position": 2031
+        }
+      },
+      "tokens": 55
+    },
+    {
+      "firstFile": {
+        "end": 359,
+        "endLoc": {
+          "column": 3,
+          "line": 359,
+          "position": 11360
+        },
+        "name": "js\\components\\app-sync-manager\\index.ts",
+        "start": 348,
+        "startLoc": {
+          "column": 51,
+          "line": 348,
+          "position": 11099
+        }
+      },
+      "format": "typescript",
+      "fragment": "      bus.emit(\"toast:show\", { msg: \"✅ 已推送\", duration: 2000 });\n      await this._loadData();\n      this._render();\n      bus.emit(\"stats:refresh\");\n    } catch (e) {\n      bus.emit(\"toast:show\", {\n        msg: \"❌ \" + friendlyError(e),\n        duration: 3000,\n        type: \"error\",\n      });\n    }\n  }",
+      "lines": 12,
+      "secondFile": {
+        "end": 378,
+        "endLoc": {
+          "column": 3,
+          "line": 378,
+          "position": 11976
+        },
+        "name": "js\\components\\app-sync-manager\\index.ts",
+        "start": 367,
+        "startLoc": {
+          "column": 51,
+          "line": 367,
+          "position": 11715
+        }
+      },
+      "tokens": 62
+    },
+    {
+      "firstFile": {
+        "end": 231,
+        "endLoc": {
+          "column": 11,
+          "line": 231,
+          "position": 7223
+        },
+        "name": "js\\components\\app-tree\\bus-handlers.ts",
+        "start": 219,
+        "startLoc": {
+          "column": 8,
+          "line": 219,
+          "position": 7001
+        }
+      },
+      "format": "typescript",
+      "fragment": "        });\n      } catch (e) {\n        bus.emit(\"toast:show\", {\n          msg: `❌ ${friendlyError(e)}`,\n          duration: 3000,\n          type: \"error\",\n        });\n      }\n    }),\n  );\n\n  unsubs.push(\n    bus.on(\"dir:batch-rename\", async ({ dir }) => {",
+      "lines": 13,
+      "secondFile": {
+        "end": 282,
+        "endLoc": {
+          "column": 11,
+          "line": 282,
+          "position": 8910
+        },
+        "name": "js\\components\\app-tree\\bus-handlers.ts",
+        "start": 269,
+        "startLoc": {
+          "column": 8,
+          "line": 269,
+          "position": 8644
+        }
+      },
+      "tokens": 50
+    },
+    {
+      "firstFile": {
+        "end": 282,
+        "endLoc": {
+          "column": 11,
+          "line": 282,
+          "position": 8910
+        },
+        "name": "js\\components\\app-tree\\bus-handlers.ts",
+        "start": 250,
+        "startLoc": {
+          "column": 62,
+          "line": 250,
+          "position": 8049
+        }
+      },
+      "format": "typescript",
+      "fragment": "          entries.map((e) => ({ Name: e.Name, Path: e.Path })),\n          async (renames) => {\n          let ok = 0,\n            fail = 0;\n          for (const r of renames) {\n            try {\n              await RenameFile(r.oldPath || \"\", r.newName);\n              ok++;\n            } catch {\n              fail++;\n            }\n          }\n          await reload(vm);\n          bus.emit(\"stats:refresh\");\n          bus.emit(\"toast:show\", {\n            msg: `✅ 批量重命名完成：${ok} 成功${fail ? \"，失败 \" + fail : \"\"}`,\n            duration: 3000,\n            type: fail > 0 ? \"warn\" : \"success\",\n          });\n        });\n      } catch (e) {\n        bus.emit(\"toast:show\", {\n          msg: `❌ ${friendlyError(e)}`,\n          duration: 3000,\n          type: \"error\",\n        });\n      }\n    }),\n  );\n\n  // Ctrl/Shift 多选 → 批量重命名\n  unsubs.push(\n    bus.on(\"batch:rename\", async ({ paths }) => {",
+      "lines": 33,
+      "secondFile": {
+        "end": 322,
+        "endLoc": {
+          "column": 11,
+          "line": 322,
+          "position": 10115
+        },
+        "name": "js\\components\\app-tree\\bus-handlers.ts",
+        "start": 291,
+        "startLoc": {
+          "column": 62,
+          "line": 291,
+          "position": 9287
+        }
+      },
+      "tokens": 152
+    },
+    {
+      "firstFile": {
+        "end": 50,
+        "endLoc": {
+          "column": 62,
+          "line": 50,
+          "position": 1579
+        },
+        "name": "js\\components\\app-tree\\instance-actions.ts",
+        "start": 40,
+        "startLoc": {
+          "column": 10,
+          "line": 40,
+          "position": 1250
+        }
+      },
+      "format": "typescript",
+      "fragment": "        ).LoadAppConfig();\n        const mcRoot = cfg.mcRoot || \"\";\n        if (!mcRoot) {\n          bus.emit(\"toast:show\", {\n            msg: \"请先配置游戏目录\",\n            duration: 3000,\n            type: \"warn\",\n          });\n          return;\n        }\n        const instances = (await ListVersionInstances(mcRoot)) || [];",
+      "lines": 11,
+      "secondFile": {
+        "end": 29,
+        "endLoc": {
+          "column": 62,
+          "line": 29,
+          "position": 1081
+        },
+        "name": "js\\core\\handler-other.ts",
+        "start": 19,
+        "startLoc": {
+          "column": 26,
+          "line": 19,
+          "position": 762
+        }
+      },
+      "tokens": 54
+    },
+    {
+      "firstFile": {
+        "end": 54,
+        "endLoc": {
+          "column": 16,
+          "line": 54,
+          "position": 1743
+        },
+        "name": "js\\components\\app-tree\\instance-actions.ts",
+        "start": 44,
+        "startLoc": {
+          "column": 43,
+          "line": 44,
+          "position": 1413
+        }
+      },
+      "format": "typescript",
+      "fragment": "            msg: \"请先配置游戏目录\",\n            duration: 3000,\n            type: \"warn\",\n          });\n          return;\n        }\n        const instances = (await ListVersionInstances(mcRoot)) || [];\n        const ins = instances.find((i) => i.Name === insName);\n        if (!ins || !ins.CustomDir) {\n          bus.emit(\"toast:show\", {\n            msg: \"未找到整合包目录\",",
+      "lines": 11,
+      "secondFile": {
+        "end": 111,
+        "endLoc": {
+          "column": 16,
+          "line": 111,
+          "position": 3710
+        },
+        "name": "js\\components\\app-tree\\instance-actions.ts",
+        "start": 101,
+        "startLoc": {
+          "column": 37,
+          "line": 101,
+          "position": 3380
+        }
+      },
+      "tokens": 67
+    },
+    {
+      "firstFile": {
+        "end": 93,
+        "endLoc": {
+          "column": 11,
+          "line": 93,
+          "position": 2928
+        },
+        "name": "js\\components\\app-tree\\instance-actions.ts",
+        "start": 80,
+        "startLoc": {
+          "column": 43,
+          "line": 80,
+          "position": 2695
+        }
+      },
+      "format": "typescript",
+      "fragment": "          type: result ? \"success\" : \"info\",\n        });\n      } catch (e) {\n        bus.emit(\"toast:show\", {\n          msg: `❌ ${friendlyError(e)}`,\n          duration: 5000,\n          type: \"error\",\n        });\n      }\n    }),\n  );\n\n  unsubs.push(\n    bus.on(\"instance:sync\", async ({ name: insName }) => {",
+      "lines": 14,
+      "secondFile": {
+        "end": 97,
+        "endLoc": {
+          "column": 11,
+          "line": 97,
+          "position": 3099
+        },
+        "name": "js\\core\\handler-other.ts",
+        "start": 83,
+        "startLoc": {
+          "column": 25,
+          "line": 83,
+          "position": 2800
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 153,
+        "endLoc": {
+          "column": 4,
+          "line": 153,
+          "position": 5221
+        },
+        "name": "js\\components\\app-tree\\instance-actions.ts",
+        "start": 141,
+        "startLoc": {
+          "column": 83,
+          "line": 141,
+          "position": 4964
+        }
+      },
+      "format": "typescript",
+      "fragment": "          msg: `🔄 ${insName} 同步完成 | 📤 ${uploaded} 📥 ${downloaded}`,\n          duration: 3000,\n          type: \"success\",\n        });\n      } catch (e) {\n        bus.emit(\"toast:show\", {\n          msg: `❌ ${friendlyError(e)}`,\n          duration: 5000,\n          type: \"error\",\n        });\n      }\n    }),\n  );",
+      "lines": 13,
+      "secondFile": {
+        "end": 93,
+        "endLoc": {
+          "column": 4,
+          "line": 93,
+          "position": 2992
+        },
+        "name": "js\\core\\handler-other.ts",
+        "start": 81,
+        "startLoc": {
+          "column": 73,
+          "line": 81,
+          "position": 2747
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 21,
+        "endLoc": {
+          "column": 77,
+          "line": 21,
+          "position": 838
+        },
+        "name": "js\\components\\app-tree\\row-tpl-list.ts",
+        "start": 10,
+        "startLoc": {
+          "column": 6,
+          "line": 10,
+          "position": 415
+        }
+      },
+      "format": "typescript",
+      "fragment": "  icon: string,\n  nmCls = \"\",\n  indent: number | null | undefined,\n  rowCls = \"\",\n): string {\n  const p = attr(e.path);\n  const fp = attr(e.fullPath || e.path);\n  const checked = e.banned ? \"\" : \" on\";\n  const ban = e.banned ? \" ban\" : \"\";\n  const typeIcon =\n    e.type === RESOURCE_TYPES.PACK ? \"🎨\" : e.type === RESOURCE_TYPES.YSM ? \"💎\" : icon;\n  const pad = indent != null ? ' style=\"padding-left:' + indent + 'px\"' : \"\";",
+      "lines": 12,
+      "secondFile": {
+        "end": 22,
+        "endLoc": {
+          "column": 77,
+          "line": 22,
+          "position": 811
+        },
+        "name": "js\\components\\app-tree\\row-tpl.ts",
+        "start": 11,
+        "startLoc": {
+          "column": 9,
+          "line": 11,
+          "position": 388
+        }
+      },
+      "tokens": 109
+    },
+    {
+      "firstFile": {
+        "end": 53,
+        "endLoc": {
+          "column": 8,
+          "line": 53,
+          "position": 1956
+        },
+        "name": "js\\components\\app-tree\\row-tpl-list.ts",
+        "start": 30,
+        "startLoc": {
+          "column": 33,
+          "line": 30,
+          "position": 1262
+        }
+      },
+      "format": "typescript",
+      "fragment": "export function listFolderRowHTML(\n  k: string,\n  full: string,\n  isOpen: boolean,\n  isLocked: boolean,\n  hasEnabled: boolean,\n  hasDisabled: boolean,\n  indent: number | null | undefined,\n): string {\n  const fi = isLocked ? \"🔒\" : \"📁\";\n  const nc = isLocked ? \"var(--muted)\" : \"var(--txt)\";\n  const lk = isLocked ? \" locked\" : \"\";\n  const ar = isOpen ? \"▾\" : \"▸\";\n  const ac = isOpen ? \" open\" : \"\";\n  // 文件夹开关：部分选中用半开\n  let ckCls = \"\";\n  if (hasEnabled && hasDisabled) {\n    ckCls = \" on partial\";\n  } else if (hasEnabled && !hasDisabled) {\n    ckCls = \" on\";\n  }\n  const dispName = renderDisplayName(k);\n  const pad = indent != null ? ' style=\"padding-left:' + indent + 'px\"' : \"\";\n  return `<div class=\"fh-list${lk}\" data-dir=\"${attr(full)}\"${pad}>",
+      "lines": 24,
+      "secondFile": {
+        "end": 59,
+        "endLoc": {
+          "column": 8,
+          "line": 59,
+          "position": 2288
+        },
+        "name": "js\\components\\app-tree\\row-tpl.ts",
+        "start": 36,
+        "startLoc": {
+          "column": 29,
+          "line": 36,
+          "position": 1594
+        }
+      },
+      "tokens": 137
+    },
+    {
+      "firstFile": {
+        "end": 78,
+        "endLoc": {
+          "column": 1,
+          "line": 78,
+          "position": 2763
+        },
+        "name": "js\\components\\app-tree\\row-tpl-list.ts",
+        "start": 53,
+        "startLoc": {
+          "column": 31,
+          "line": 53,
+          "position": 1979
+        }
+      },
+      "format": "typescript",
+      "fragment": "  return `<div class=\"fh-list${lk}\" data-dir=\"${attr(full)}\"${pad}>\n<span class=\"ck${ckCls}\" data-dir=\"${attr(full)}\"></span>\n<span class=\"ar${ac}\">${ar}</span>\n<span class=\"nm\" style=\"color:${nc}\">${fi} ${dispName}</span></div>`;\n}\n\nfunction attr(s: string): string {\n  return (s || \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#39;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\");\n}\nfunction size(b: number | null | undefined): string {\n  if (b == null) return \"\";\n  if (b < 1024) return b + \" B\";\n  if (b < 1048576) return (b / 1024).toFixed(1) + \" KB\";\n  return (b / 1048576).toFixed(1) + \" MB\";\n}\nfunction sc(b: number | null | undefined): string {\n  if (b == null) return \"\";\n  if (b < 1048576) return \"sz-green\";\n  if (b < 3145728) return \"\";\n  return \"sz-red\";\n}",
+      "lines": 26,
+      "secondFile": {
+        "end": 84,
+        "endLoc": {
+          "column": 1,
+          "line": 84,
+          "position": 3090
+        },
+        "name": "js\\components\\app-tree\\row-tpl.ts",
+        "start": 59,
+        "startLoc": {
+          "column": 26,
+          "line": 59,
+          "position": 2306
+        }
+      },
+      "tokens": 195
+    },
+    {
+      "firstFile": {
+        "end": 243,
+        "endLoc": {
+          "column": 5,
+          "line": 243,
+          "position": 8313
+        },
+        "name": "js\\components\\app-tree\\toolbar-events.ts",
+        "start": 233,
+        "startLoc": {
+          "column": 32,
+          "line": 233,
+          "position": 7978
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const { ExportBoneStructures, GetRepoRoot } =\n      await import(\"../../../bindings/ysm-model-manager/internal/app/app.js\");\n    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);\n    if (!repoRoot) {\n      bus.emit(\"toast:show\", {\n        msg: \"请先配置存储路径\",\n        duration: 2000,\n        type: \"warn\",\n      });\n      return;\n    }",
+      "lines": 11,
+      "secondFile": {
+        "end": 426,
+        "endLoc": {
+          "column": 11,
+          "line": 426,
+          "position": 14860
+        },
+        "name": "js\\components\\app-tree\\toolbar-events.ts",
+        "start": 416,
+        "startLoc": {
+          "column": 35,
+          "line": 416,
+          "position": 14465
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 379,
+        "endLoc": {
+          "column": 14,
+          "line": 379,
+          "position": 13089
+        },
+        "name": "js\\components\\app-tree\\toolbar-events.ts",
+        "start": 367,
+        "startLoc": {
+          "column": 57,
+          "line": 367,
+          "position": 12774
+        }
+      },
+      "format": "typescript",
+      "fragment": "        const errMsg = await ImportByType(rtype, filePath);\n        if (errMsg) {\n          bus.emit(\"toast:show\", {\n            msg: \"❌ 导入失败: \" + errMsg,\n            duration: 4000,\n            type: \"warn\",\n          });\n          return;\n        }\n        await vm._load();\n        vm._renderTree();\n        bus.emit(\"toast:show\", {\n          msg: \"✅ 导入成功\",",
+      "lines": 13,
+      "secondFile": {
+        "end": 402,
+        "endLoc": {
+          "column": 14,
+          "line": 402,
+          "position": 13981
+        },
+        "name": "js\\components\\app-tree\\toolbar-events.ts",
+        "start": 390,
+        "startLoc": {
+          "column": 56,
+          "line": 390,
+          "position": 13666
+        }
+      },
+      "tokens": 56
+    },
+    {
+      "firstFile": {
+        "end": 87,
+        "endLoc": {
+          "column": 63,
+          "line": 87,
+          "position": 3088
+        },
+        "name": "js\\core\\context-menus.ts",
+        "start": 76,
+        "startLoc": {
+          "column": 4,
+          "line": 76,
+          "position": 2661
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const { LoadAppConfig, MoveModelFile, GetRepoRoot } =\n      await import(\"../../bindings/ysm-model-manager/internal/app/app.js\");\n    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);\n    if (!repoRoot) {\n      bus.emit(\"toast:show\", {\n        msg: \"❌ 请先配置存储路径\",\n        duration: 3000,\n        type: \"error\",\n      });\n      return;\n    }\n    const dstDir = repoRoot + \"/\" + folder.replace(/\\\\/g, \"/\");",
+      "lines": 12,
+      "secondFile": {
+        "end": 243,
+        "endLoc": {
+          "column": 63,
+          "line": 243,
+          "position": 8142
+        },
+        "name": "js\\core\\context-menus.ts",
+        "start": 232,
+        "startLoc": {
+          "column": 4,
+          "line": 232,
+          "position": 7715
+        }
+      },
+      "tokens": 73
+    },
+    {
+      "firstFile": {
+        "end": 131,
+        "endLoc": {
+          "column": 63,
+          "line": 131,
+          "position": 4458
+        },
+        "name": "js\\core\\context-menus.ts",
+        "start": 103,
+        "startLoc": {
+          "column": 14,
+          "line": 103,
+          "position": 3530
+        }
+      },
+      "format": "typescript",
+      "fragment": "  \"batch.copy\": async (ctx) => {\n    const { modalPrompt } = await import(\"../dialogs/modal.ts\");\n    const folder = await modalPrompt({\n      title: \"复制到文件夹\",\n      icon: \"📋\",\n      placeholder: \"输入目标文件夹名，如 [作者名]\",\n      okText: \"复制\",\n    });\n    if (!folder) return;\n    if (isUnsafeFolderName(folder)) {\n      bus.emit(\"toast:show\", {\n        msg: \"❌ 文件夹名包含非法字符\",\n        duration: 3000,\n        type: \"error\",\n      });\n      return;\n    }\n    const { LoadAppConfig, CopyModelFile, GetRepoRoot } =\n      await import(\"../../bindings/ysm-model-manager/internal/app/app.js\");\n    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);\n    if (!repoRoot) {\n      bus.emit(\"toast:show\", {\n        msg: \"❌ 请先配置仓库目录\",\n        duration: 3000,\n        type: \"error\",\n      });\n      return;\n    }\n    const dstDir = repoRoot + \"/\" + folder.replace(/\\\\/g, \"/\");",
+      "lines": 29,
+      "secondFile": {
+        "end": 280,
+        "endLoc": {
+          "column": 63,
+          "line": 280,
+          "position": 9313
+        },
+        "name": "js\\core\\context-menus.ts",
+        "start": 252,
+        "startLoc": {
+          "column": 13,
+          "line": 252,
+          "position": 8385
+        }
+      },
+      "tokens": 157
+    },
+    {
+      "firstFile": {
+        "end": 37,
+        "endLoc": {
+          "column": 5,
+          "line": 37,
+          "position": 1370
+        },
+        "name": "js\\core\\handler-dnd.ts",
+        "start": 23,
+        "startLoc": {
+          "column": 25,
+          "line": 23,
+          "position": 1010
+        }
+      },
+      "format": "typescript",
+      "fragment": "  const ext = getExt(name);\n  if (ext === \".ysm\") return true;\n  if (ext === \".json\" && name.toLowerCase() === \"ysm.json\") return true;\n  if (ext === \".zip\" || ext === \".7z\") {\n    try {\n      const { DetectZipType } = await getApp();\n      return (await DetectZipType(base64)) === RESOURCE_TYPES.YSM;\n    } catch {\n      return false;\n    }\n  }\n  return false;\n};\n\nconst readFileAsBase64 = (file: File): Promise<string> =>",
+      "lines": 15,
+      "secondFile": {
+        "end": 45,
+        "endLoc": {
+          "column": 5,
+          "line": 45,
+          "position": 1741
+        },
+        "name": "js\\features\\import-queue.ts",
+        "start": 30,
+        "startLoc": {
+          "column": 62,
+          "line": 30,
+          "position": 1296
+        }
+      },
+      "tokens": 78
+    },
+    {
+      "firstFile": {
+        "end": 28,
+        "endLoc": {
+          "column": 9,
+          "line": 28,
+          "position": 1018
+        },
+        "name": "js\\core\\handler-other.ts",
+        "start": 17,
+        "startLoc": {
+          "column": 21,
+          "line": 17,
+          "position": 706
+        }
+      },
+      "format": "typescript",
+      "fragment": "          GetRepoRoot,\n        } = await getApp();\n        const cfg = await LoadAppConfig();\n        const mcRoot = cfg.mcRoot || \"\";\n        if (!mcRoot) {\n          bus.emit(\"toast:show\", {\n            msg: \"请先配置游戏目录\",\n            duration: 3000,\n            type: \"warn\",\n          });\n          return;\n        }",
+      "lines": 12,
+      "secondFile": {
+        "end": 113,
+        "endLoc": {
+          "column": 9,
+          "line": 113,
+          "position": 3586
+        },
+        "name": "js\\core\\handler-other.ts",
+        "start": 102,
+        "startLoc": {
+          "column": 32,
+          "line": 102,
+          "position": 3274
+        }
+      },
+      "tokens": 56
+    },
+    {
+      "firstFile": {
+        "end": 29,
+        "endLoc": {
+          "column": 69,
+          "line": 29,
+          "position": 1088
+        },
+        "name": "js\\core\\handler-other.ts",
+        "start": 18,
+        "startLoc": {
+          "column": 25,
+          "line": 18,
+          "position": 733
+        }
+      },
+      "format": "typescript",
+      "fragment": "        } = await getApp();\n        const cfg = await LoadAppConfig();\n        const mcRoot = cfg.mcRoot || \"\";\n        if (!mcRoot) {\n          bus.emit(\"toast:show\", {\n            msg: \"请先配置游戏目录\",\n            duration: 3000,\n            type: \"warn\",\n          });\n          return;\n        }\n        const instances = (await ListVersionInstances(mcRoot)) ?? [];",
+      "lines": 12,
+      "secondFile": {
+        "end": 36,
+        "endLoc": {
+          "column": 71,
+          "line": 36,
+          "position": 1379
+        },
+        "name": "js\\core\\handler-sync.ts",
+        "start": 25,
+        "startLoc": {
+          "column": 10,
+          "line": 25,
+          "position": 991
+        }
+      },
+      "tokens": 64
+    },
+    {
+      "firstFile": {
+        "end": 30,
+        "endLoc": {
+          "column": 13,
+          "line": 30,
+          "position": 1102
+        },
+        "name": "js\\core\\handler-other.ts",
+        "start": 20,
+        "startLoc": {
+          "column": 14,
+          "line": 20,
+          "position": 793
+        }
+      },
+      "format": "typescript",
+      "fragment": "        const mcRoot = cfg.mcRoot || \"\";\n        if (!mcRoot) {\n          bus.emit(\"toast:show\", {\n            msg: \"请先配置游戏目录\",\n            duration: 3000,\n            type: \"warn\",\n          });\n          return;\n        }\n        const instances = (await ListVersionInstances(mcRoot)) ?? [];\n        const ins = instances.find((i) => i.Name === insName);",
+      "lines": 11,
+      "secondFile": {
+        "end": 37,
+        "endLoc": {
+          "column": 13,
+          "line": 37,
+          "position": 1394
+        },
+        "name": "js\\core\\handler-sync.ts",
+        "start": 27,
+        "startLoc": {
+          "column": 16,
+          "line": 27,
+          "position": 1057
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 141,
+        "endLoc": {
+          "column": 13,
+          "line": 141,
+          "position": 4783
+        },
+        "name": "js\\core\\handler-sync.ts",
+        "start": 125,
+        "startLoc": {
+          "column": 22,
+          "line": 125,
+          "position": 4273
+        }
+      },
+      "format": "typescript",
+      "fragment": "          AddImportLog,\n          GetRepoRoot,\n        } = await import(\n          \"../../bindings/ysm-model-manager/internal/app/app.js\"\n        );\n        const cfg = await LoadAppConfig();\n        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);\n        const mcRoot = cfg.mcRoot || \"\";\n        if (!repoRoot || !mcRoot) {\n          bus.emit(\"toast:show\", {\n            msg: \"请先配置目录\",\n            duration: 3000,\n            type: \"warn\",\n          });\n          return;\n        }\n        const instances = (await ListVersionInstances(mcRoot)) ?? [];",
+      "lines": 17,
+      "secondFile": {
+        "end": 32,
+        "endLoc": {
+          "column": 13,
+          "line": 32,
+          "position": 1164
+        },
+        "name": "js\\core\\handler-upload.ts",
+        "start": 18,
+        "startLoc": {
+          "column": 26,
+          "line": 18,
+          "position": 676
+        }
+      },
+      "tokens": 74
+    },
+    {
+      "firstFile": {
+        "end": 69,
+        "endLoc": {
+          "column": 8,
+          "line": 69,
+          "position": 1859
+        },
+        "name": "js\\dialogs\\modal.ts",
+        "start": 58,
+        "startLoc": {
+          "column": 30,
+          "line": 58,
+          "position": 1491
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const { title, icon, value, placeholder, okText } = opts;\n    const overlay = document.createElement(\"div\");\n    overlay.className = \"dlg-overlay\";\n    overlay.onclick = (e: MouseEvent): void => {\n      if (e.target === overlay) closeDlg(overlay, resolve, null);\n    };\n\n    const box = document.createElement(\"div\");\n    box.className = \"dlg-box dlg-pad\";\n    box.style.gap = \"10px\";\n\n    box.innerHTML = `",
+      "lines": 12,
+      "secondFile": {
+        "end": 144,
+        "endLoc": {
+          "column": 8,
+          "line": 144,
+          "position": 4424
+        },
+        "name": "js\\dialogs\\modal.ts",
+        "start": 134,
+        "startLoc": {
+          "column": 30,
+          "line": 134,
+          "position": 4057
+        }
+      },
+      "tokens": 82
+    },
+    {
+      "firstFile": {
+        "end": 273,
+        "endLoc": {
+          "column": 9,
+          "line": 273,
+          "position": 10167
+        },
+        "name": "js\\features\\import-queue.ts",
+        "start": 254,
+        "startLoc": {
+          "column": 18,
+          "line": 254,
+          "position": 9570
+        }
+      },
+      "format": "typescript",
+      "fragment": "      if (!files?.length) return;\n      let ok = 0;\n      let skip = 0;\n      Array.from(files).forEach((file) => {\n        if (!isSupportedFile(file.name)) {\n          skip++;\n          return;\n        }\n        ok++;\n        const reader = new FileReader();\n        reader.onload = async () => {\n          const base64 = String(reader.result).split(\",\")[1] || \"\";\n          if (await shouldEnterForm(file.name, base64)) {\n            enqueueFile(file, base64);\n          } else {\n            await directImport(file, base64);\n          }\n        };\n        reader.readAsDataURL(file);\n      });",
+      "lines": 20,
+      "secondFile": {
+        "end": 320,
+        "endLoc": {
+          "column": 7,
+          "line": 320,
+          "position": 11479
+        },
+        "name": "js\\features\\import-queue.ts",
+        "start": 301,
+        "startLoc": {
+          "column": 25,
+          "line": 301,
+          "position": 10920
+        }
+      },
+      "tokens": 129
+    },
+    {
+      "firstFile": {
+        "end": 273,
+        "endLoc": {
+          "column": 7,
+          "line": 273,
+          "position": 10165
+        },
+        "name": "js\\features\\import-queue.ts",
+        "start": 260,
+        "startLoc": {
+          "column": 16,
+          "line": 260,
+          "position": 9751
+        }
+      },
+      "format": "typescript",
+      "fragment": "          return;\n        }\n        ok++;\n        const reader = new FileReader();\n        reader.onload = async () => {\n          const base64 = String(reader.result).split(\",\")[1] || \"\";\n          if (await shouldEnterForm(file.name, base64)) {\n            enqueueFile(file, base64);\n          } else {\n            await directImport(file, base64);\n          }\n        };\n        reader.readAsDataURL(file);\n      });",
+      "lines": 14,
+      "secondFile": {
+        "end": 632,
+        "endLoc": {
+          "column": 7,
+          "line": 632,
+          "position": 22133
+        },
+        "name": "js\\features\\import-queue.ts",
+        "start": 619,
+        "startLoc": {
+          "column": 18,
+          "line": 619,
+          "position": 21719
+        }
+      },
+      "tokens": 84
+    },
+    {
+      "firstFile": {
+        "end": 274,
+        "endLoc": {
+          "column": 26,
+          "line": 274,
+          "position": 10195
+        },
+        "name": "js\\features\\import-queue.ts",
+        "start": 262,
+        "startLoc": {
+          "column": 8,
+          "line": 262,
+          "position": 9773
+        }
+      },
+      "format": "typescript",
+      "fragment": "        ok++;\n        const reader = new FileReader();\n        reader.onload = async () => {\n          const base64 = String(reader.result).split(\",\")[1] || \"\";\n          if (await shouldEnterForm(file.name, base64)) {\n            enqueueFile(file, base64);\n          } else {\n            await directImport(file, base64);\n          }\n        };\n        reader.readAsDataURL(file);\n      });\n      if (ok === 0 && skip > 0) {",
+      "lines": 13,
+      "secondFile": {
+        "end": 350,
+        "endLoc": {
+          "column": 10,
+          "line": 350,
+          "position": 12390
+        },
+        "name": "js\\features\\import-queue.ts",
+        "start": 337,
+        "startLoc": {
+          "column": 6,
+          "line": 337,
+          "position": 11981
+        }
+      },
+      "tokens": 91
+    },
+    {
+      "firstFile": {
+        "end": 159,
+        "endLoc": {
+          "column": 28,
+          "line": 159,
+          "position": 6161
+        },
+        "name": "js\\features\\recycle-bin.ts",
+        "start": 146,
+        "startLoc": {
+          "column": 34,
+          "line": 146,
+          "position": 5823
+        }
+      },
+      "format": "typescript",
+      "fragment": "            bus.emit(\"tree:reload\");\n          } catch (e) {\n            if (item) item.classList.remove(\"leaving\");\n            bus.emit(\"toast:show\", {\n              msg: `❌ ${friendlyError(e)}`,\n              duration: 3000,\n              type: \"error\",\n            });\n          }\n        };\n      });\n\n      // 删除按钮\n      list.querySelectorAll(\".recy-del\").forEach((btnEl) => {",
+      "lines": 14,
+      "secondFile": {
+        "end": 195,
+        "endLoc": {
+          "column": 28,
+          "line": 195,
+          "position": 7388
+        },
+        "name": "js\\features\\recycle-bin.ts",
+        "start": 182,
+        "startLoc": {
+          "column": 13,
+          "line": 182,
+          "position": 7030
+        }
+      },
+      "tokens": 58
+    },
+    {
+      "firstFile": {
+        "end": 87,
+        "endLoc": {
+          "column": 33,
+          "line": 87,
+          "position": 2498
+        },
+        "name": "js\\utils\\display.ts",
+        "start": 72,
+        "startLoc": {
+          "column": 14,
+          "line": 72,
+          "position": 2050
+        }
+      },
+      "format": "typescript",
+      "fragment": "function esc(s: string): string {\n  return (s || \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#39;\");\n}\n\n/**\n * 渲染美化文件名 HTML（通用接口）\n * 应用 CSS 变量: --meta-author, --meta-work, --meta-date\n * @param raw 原始文件名\n * @param opts 选项对象或模板字符串（兼容旧调用，当前未使用）\n */\nexport function renderDisplayName(raw: string, opts?: unknown): string {",
+      "lines": 16,
+      "secondFile": {
+        "end": 16,
+        "endLoc": {
+          "column": 18,
+          "line": 16,
+          "position": 484
+        },
+        "name": "js\\utils\\dom.ts",
+        "start": 4,
+        "startLoc": {
+          "column": 21,
+          "line": 4,
+          "position": 172
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 300,
+        "endLoc": {
+          "column": 17,
+          "line": 300,
+          "position": 8582
+        },
+        "name": "js\\utils\\model2d.ts",
+        "start": 259,
+        "startLoc": {
+          "column": 29,
+          "line": 259,
+          "position": 7049
+        }
+      },
+      "format": "typescript",
+      "fragment": "  const zones: HitZone[] = [];\n  for (const bone of model.bones || []) {\n    const cs = bone.cubes || [];\n    if (!cs.length) continue;\n    const btx = boneTransforms?.get(bone.name);\n    let mnX = Infinity;\n    let mxX = -Infinity;\n    let mnY = Infinity;\n    let mxY = -Infinity;\n    for (const c of cs) {\n      const [x, y, z] = c.origin;\n      const [sx, sy, sz] = c.size;\n      const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];\n      for (let dx = 0; dx <= 1; dx++) {\n        for (let dy = 0; dy <= 1; dy++) {\n          for (let dz = 0; dz <= 1; dz++) {\n            let cx = x + dx * sx;\n            let cy = y + dy * sy;\n            let cz = z + dz * sz;\n            if (btx) {\n              if (btx.position) {\n                cx += btx.position[0] || 0;\n                cy += btx.position[1] || 0;\n                cz += btx.position[2] || 0;\n              }\n              const rz = ((btx.rotation?.[2] || 0) * Math.PI) / 180;\n              if (rz !== 0) {\n                const cRz = Math.cos(rz);\n                const sRz = Math.sin(rz);\n                const dxx = cx - pivot[0];\n                const dyy = cy - pivot[1];\n                cx = pivot[0] + dxx * cRz - dyy * sRz;\n                cy = pivot[1] + dxx * sRz + dyy * cRz;\n              }\n              const rx = ((btx.rotation?.[0] || 0) * Math.PI) / 180;\n              if (rx !== 0) {\n                const dyy = cy - pivot[1];\n                cy = pivot[1] + dyy * Math.cos(rx);\n              }\n            }\n            const rxx = cx * cosA - cz * sinA;\n            const rz2 = cx * sinA + cz * cosA;",
+      "lines": 42,
+      "secondFile": {
+        "end": 546,
+        "endLoc": {
+          "column": 19,
+          "line": 546,
+          "position": 16961
+        },
+        "name": "js\\utils\\model2d.ts",
+        "start": 504,
+        "startLoc": {
+          "column": 31,
+          "line": 504,
+          "position": 15326
+        }
+      },
+      "tokens": 417
+    },
+    {
+      "firstFile": {
+        "end": 410,
+        "endLoc": {
+          "column": 13,
+          "line": 410,
+          "position": 11952
+        },
+        "name": "js\\utils\\model2d.ts",
+        "start": 390,
+        "startLoc": {
+          "column": 25,
+          "line": 390,
+          "position": 11270
+        }
+      },
+      "format": "typescript",
+      "fragment": "        const drawH = ph * scale;\n        if (drawW < 1 || drawH < 1) continue;\n\n        ctx.save();\n        ctx.translate(screenX, screenY);\n        // 屏幕 Y 轴翻转，取反\n        ctx.rotate(-rzRad);\n\n        ctx.fillStyle = isHighlight\n          ? \"rgba(255,180,50,0.25)\"\n          : \"rgba(124,131,255,0.45)\";\n        ctx.fillRect(-drawW / 2, -drawH / 2, drawW, drawH);\n        ctx.strokeStyle = isHighlight\n          ? \"rgba(255,220,100,1)\"\n          : \"rgba(205,214,244,0.85)\";\n        ctx.lineWidth = isHighlight ? 1.5 : 1;\n        ctx.strokeRect(-drawW / 2, -drawH / 2, drawW, drawH);\n        ctx.restore();\n      } else {\n        // ---- 静态骨骼：应用 cube rotation ----\n        const cubeRot = c.rotation || [0, 0, 0];",
+      "lines": 21,
+      "secondFile": {
+        "end": 472,
+        "endLoc": {
+          "column": 15,
+          "line": 472,
+          "position": 14209
+        },
+        "name": "js\\utils\\model2d.ts",
+        "start": 452,
+        "startLoc": {
+          "column": 45,
+          "line": 452,
+          "position": 13497
+        }
+      },
+      "tokens": 116
+    }
+  ],
+  "statistics": {
+    "detectionDate": "2026-08-03T16:00:25.275Z",
+    "formats": {
+      "javascript": {
+        "clones": 0,
+        "duplicatedLines": 0,
+        "duplicatedTokens": 0,
+        "lines": 1757,
+        "newClones": 0,
+        "newDuplicatedLines": 0,
+        "percentage": 0.0,
+        "percentageTokens": 0.0,
+        "sources": 21,
+        "tokens": 13171
+      },
+      "typescript": {
+        "clones": 38,
+        "duplicatedLines": 604,
+        "duplicatedTokens": 3905,
+        "lines": 23809,
+        "newClones": 0,
+        "newDuplicatedLines": 0,
+        "percentage": 2.5368558108278383,
+        "percentageTokens": 2.848015870121724,
+        "sources": 102,
+        "tokens": 137113
+      }
+    },
+    "total": {
+      "clones": 38,
+      "duplicatedLines": 604,
+      "duplicatedTokens": 3905,
+      "lines": 25566,
+      "newClones": 0,
+      "newDuplicatedLines": 0,
+      "percentage": 2.362512712195885,
+      "percentageTokens": 2.5984136701179104,
+      "sources": 123,
+      "tokens": 150284
+    }
+  }
+}

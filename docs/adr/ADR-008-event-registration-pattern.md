@@ -4,6 +4,7 @@
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/js/bus.js` / `frontend/js/core/global-handlers.js` / `frontend/js/app-modules.js` / AGENTS.md §三
+- **补充**：[ADR-027](./ADR-027-web-component-contract-normalization.md) 规范事件**发射侧**（通道选择与 payload 类型约束）；本 ADR 规范**订阅侧**（注册位置、防重守卫、清理配对）。两者互补，均现行有效。
 
 ---
 

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **25** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为规范索引（按状态分组，可锚点跳转）。
+> 架构决策日志，共 **26** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为规范索引（按状态分组，可锚点跳转）。
 
 ## 按状态分布
 
@@ -16,7 +16,7 @@ permalink: /adr/
 |------|------|
 | [🔄 部分采纳](#部分采纳) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 3 |
-| [✅ 已采纳](#已采纳) | 16 |
+| [✅ 已采纳](#已采纳) | 17 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❌ 已取代](#已取代) | 0 |
 
@@ -43,6 +43,7 @@ permalink: /adr/
 
 | ADR | 主题 | 状态 |
 |-----|------|------|
+| [ADR-027](./ADR-027-web-component-contract-normalization.md) | Web Component 对外契约规范化 | ✅ 已采纳 |
 | [ADR-026](./ADR-026-ysm-parser-ethics-boundary.md) | YSM 解析器集成伦理边界 | ✅ 已采纳 |
 | [ADR-025](./ADR-025-download-mirror-fallback.md) | 工坊下载镜像回退架构 | ✅ 已采纳 |
 | [ADR-024](./ADR-024-multi-resource-federation.md) | 多资源类型联邦架构（ResourceAdapter + resource_types.json 注册表） | ✅ 已采纳 |
@@ -74,6 +75,7 @@ _（暂无）_
 
 | ADR | 主题 | 状态 | 日期 |
 |-----|------|------|------|
+| [ADR-027](./ADR-027-web-component-contract-normalization.md) | Web Component 对外契约规范化 | ✅ 已采纳 | 2026-08-04 |
 | [ADR-026](./ADR-026-ysm-parser-ethics-boundary.md) | YSM 解析器集成伦理边界 | ✅ 已采纳 | 2026-08-04（原决策 2026-06-07） |
 | [ADR-025](./ADR-025-download-mirror-fallback.md) | 工坊下载镜像回退架构 | ✅ 已采纳 | 2026-08-04（原方案 2026-06-06 定稿） |
 | [ADR-024](./ADR-024-multi-resource-federation.md) | 多资源类型联邦架构（ResourceAdapter + resource_types.json 注册表） | ✅ 已采纳 | 2026-08-04（决策时间线：联邦愿景 2025-06-07 起草 / P7 多资源计划 2026-06-10 定稿 / 注册表现行落地） |

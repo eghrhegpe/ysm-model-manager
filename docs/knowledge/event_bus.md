@@ -23,7 +23,7 @@ use_when:
 ## 核心职责
 
 - **统一通信通道**: 所有组件通过 `bus.emit()` 发送事件，`bus.on()` / `bus.off()` 监听
-- **事件命名规范**: 小写蛇形命名，如 `model-selected`, `download-started`
+- **事件命名规范**: 小写 kebab-case + 冒号分段（`domain:action`），如 `nav:changed`, `toast:show`, `tree:set-search`
 - **全局事件注册**: 全局事件必须注册在 `app-content/index.ts` 的 `_registerGlobalHandlers()` 中
 
 ## 对外 API / 入口

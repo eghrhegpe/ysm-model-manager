@@ -25,7 +25,7 @@ use_when:
 ## 核心职责
 
 - 定义资源类型及其 `StorageSubDir`、`specificRoot`、`ResourceExts`
-- 前端 `services/registry.ts` 加载并缓存类型定义
+- 前端 `services/registry.ts` 是**服务注册表**（`register`/`get`/`has`/`unregister`/`clear` 存 Service 实现到 Map），与资源类型定义（`resource_types.json`）无关
 - Go 端 `go/types/` 包同步读取同一份定义
 
 ## 对外 API / 入口

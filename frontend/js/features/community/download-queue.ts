@@ -1,4 +1,4 @@
-// ===== 创意工坊 — 批量下载队列（防骗 / 进度 / 取消） =====
+// ===== 创意工坊 — 批量下载队列（类型化版 — ADR-014 P3 features）=====
 // v2: 模块级持久层 — EventsOn 在脚本加载时注册一次，页面切换不丢失事件
 import { bus } from "../../bus.ts";
 import { renderDisplayName } from "../../utils/display.ts";
@@ -10,37 +10,68 @@ import { Events } from "@wailsio/runtime";
 //  模块顶层 — 持久状态与事件注册（脚本加载时执行一次）
 // ============================================================
 
-/** @type {{ status: string, total: number, remaining: number, currentFile: string, progress: {dl:number,total:number}, errorList: Array, _lastDone: object|null, _lastDoneSeq: number }} */
-const STATE = {
-  status: "idle",          // "idle" | "downloading" | "done" | "cancelled"
+/** 下载任务 */
+export interface DownloadTask {
+  url: string;
+  saveDir: string;
+  name: string;
+  size: number;
+}
+
+/** 队列错误项 */
+export interface QueueError {
+  name: string;
+  err: string;
+}
+
+/** 队列状态快照 */
+export interface DownloadState {
+  status: string; // "idle" | "downloading" | "done" | "cancelled"
+  total: number;
+  remaining: number;
+  currentFile: string;
+  progress: { dl: number; total: number };
+  errorList: QueueError[];
+  _lastDone: { name: string; status: string; errMsg: string } | null;
+  _lastDoneSeq: number;
+}
+
+/** 进度条元素的自定义属性（点动画） */
+type PctEl = HTMLElement & {
+  _dotTimer?: ReturnType<typeof setInterval> | null;
+  _dots?: number;
+};
+
+const STATE: DownloadState = {
+  status: "idle",
   total: 0,
   remaining: 0,
   currentFile: "",
   progress: { dl: 0, total: 0 },
   errorList: [],
-  _lastDone: null,        // { name, status, errMsg } — 最近完成的文件
+  _lastDone: null,
   _lastDoneSeq: 0,
 };
 
-const listeners = new Set();
+const listeners = new Set<(s: DownloadState) => void>();
 let _registered = false;
 
 /**
  * 订阅 STATE 变更。返回取消订阅函数。
- * @param {(s: typeof STATE) => void} fn
- * @returns {() => void}
  */
-export function subscribe(fn) {
+export function subscribe(fn: (s: DownloadState) => void): () => void {
   listeners.add(fn);
-  return () => { listeners.delete(fn); };
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
-function notify() {
-  listeners.forEach(fn => fn(STATE));
+function notify(): void {
+  listeners.forEach((fn) => fn(STATE));
 }
 
-/** @returns {typeof STATE} 当前状态的只读快照 */
-export function getState() {
+/** 当前状态的只读快照 */
+export function getState(): DownloadState {
   return STATE;
 }
 
@@ -49,21 +80,25 @@ export function getState() {
  * 如果下载仍在运行，STATE.status 会更新为 "downloading"，
  * 已订阅的 UI 层会根据 STATE 渲染进度条。
  */
-export async function resume() {
+export async function resume(): Promise<void> {
   try {
     dbg("resume:start");
-    const { QueueStatus } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    const { QueueStatus } = await import(
+      "../../../bindings/ysm-model-manager/internal/app/app.js"
+    );
     const result = await QueueStatus();
     dbg("resume:result", result);
     // Wails v2 多返回值映射：数组/对象/单值 三种格式都要兜底
-    let remaining, running;
+    let remaining: number;
+    let running: boolean;
     if (Array.isArray(result)) {
-      remaining = result[0];
-      running = result[1];
+      remaining = result[0] ?? 0;
+      running = Boolean(result[1]);
     } else if (result && typeof result === "object") {
       // Wails 某些版本返回 {Remaining, Running} 大写字段
-      remaining = result.Remaining ?? result.remaining ?? 0;
-      running   = result.Running   ?? result.running   ?? false;
+      const r = result as { Remaining?: number; remaining?: number; Running?: boolean; running?: boolean };
+      remaining = r.Remaining ?? r.remaining ?? 0;
+      running = r.Running ?? r.running ?? false;
     } else if (typeof result === "number") {
       remaining = result;
       running = remaining > 0;
@@ -75,15 +110,16 @@ export async function resume() {
       STATE.remaining = remaining;
       notify();
     }
-  } catch (_) { /* QueueStatus 调用失败，安全忽略 */ }
+  } catch (_) {
+    /* QueueStatus 调用失败，安全忽略 */
+  }
 }
 
 /**
  * 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。
  * UI 层应在此之前完成配置检查和 DOM 初始化。
- * @param {Array} tasks
  */
-export async function enqueueDownloads(tasks) {
+export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
   dbg("enqueue:start", tasks.length);
   if (STATE.status === "downloading") return;
   if (!tasks || !tasks.length) return;
@@ -98,7 +134,10 @@ export async function enqueueDownloads(tasks) {
   STATE._lastDoneSeq = 0;
   notify();
 
-  const { EnqueueDownloads } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+  tasks.forEach((t) => (t.saveDir = t.saveDir || ""));
+  const { EnqueueDownloads } = await import(
+    "../../../bindings/ysm-model-manager/internal/app/app.js"
+  );
   await EnqueueDownloads(tasks);
   dbg("enqueue:done", STATE.status);
 }
@@ -106,12 +145,16 @@ export async function enqueueDownloads(tasks) {
 /**
  * 模块级取消 — 纯粹的 Go 调用。
  */
-export async function cancelDownloads() {
+export async function cancelDownloads(): Promise<void> {
   if (STATE.status !== "downloading") return;
   try {
-    const { CancelQueue } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    const { CancelQueue } = await import(
+      "../../../bindings/ysm-model-manager/internal/app/app.js"
+    );
     await CancelQueue();
-  } catch (_) { /* 取消失败不影响状态 */ }
+  } catch (_) {
+    /* 取消失败不影响状态 */
+  }
 }
 
 // ── 一次性注册全部后端事件 ──
@@ -120,8 +163,8 @@ export async function cancelDownloads() {
 if (!_registered) {
   _registered = true;
 
-  Events.On("queue:status", (e) => {
-    const [status, total, extra] = e.data;
+  Events.On("queue:status", (e: { data: unknown[] }) => {
+    const [status, total, extra] = e.data as [string, number, unknown];
     dbg("event:queue:status", status, total, extra);
     STATE.total = total ?? STATE.total;
     if (status === "done" || status === "cancelled") {
@@ -140,8 +183,8 @@ if (!_registered) {
     }
   });
 
-  Events.On("queue:file-start", (e) => {
-    const [name, total, remaining] = e.data;
+  Events.On("queue:file-start", (e: { data: unknown[] }) => {
+    const [name, total, remaining] = e.data as [string, number, number];
     dbg("event:queue:file-start", name, total, remaining);
     STATE.currentFile = name;
     STATE.total = total;
@@ -150,8 +193,8 @@ if (!_registered) {
     notify();
   });
 
-  Events.On("queue:file-done", (e) => {
-    const [name, status, errMsg] = e.data;
+  Events.On("queue:file-done", (e: { data: unknown[] }) => {
+    const [name, status, errMsg] = e.data as [string, string, string];
     dbg("event:queue:file-done", name, status, errMsg);
     if (status === "fail") {
       STATE.errorList.push({ name, err: errMsg || "未知错误" });
@@ -168,7 +211,9 @@ if (!_registered) {
         (async () => {
           try {
             const { CachedCreatorAvatar, DebugExtractCreatorAvatar } =
-              await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+              await import(
+                "../../../bindings/ysm-model-manager/internal/app/app.js"
+              );
             let dataUri = await CachedCreatorAvatar(author);
             if (!dataUri) {
               await DebugExtractCreatorAvatar(author);
@@ -178,44 +223,47 @@ if (!_registered) {
               bus.emit("avatar:refresh", { author, dataUri });
             }
           } catch (e) {
-            dbg("avatar-refresh", "提取失败:", author, e?.message);
+            dbg("avatar-refresh", "提取失败:", author, (e as Error)?.message);
           }
         })();
       }
     }
   });
 
-  Events.On("download:progress", (e) => {
-    const [dl, total] = e.data;
+  Events.On("download:progress", (e: { data: unknown[] }) => {
+    const [dl, total] = e.data as [number, number];
     dbg("event:download:progress", dl, total, typeof dl, typeof total);
     STATE.progress = { dl, total };
     notify();
   });
 }
 
-
 // ============================================================
 //  createDownloadQueue — UI 层（订阅 STATE → 渲染 DOM）
 // ============================================================
+
+/** createDownloadQueue 选项 */
+export interface QueueControllerOptions {
+  sr: HTMLElement;
+  esc: (s: string) => string;
+  getLocalMap: () => Map<string, string>;
+  onFileSuccess?: (name: string) => void;
+  onAllDone?: (result: { cancelled: boolean; errorList: QueueError[] }) => void;
+}
+
+/** 队列控制器 */
+export interface QueueController {
+  enqueue: (tasks: DownloadTask[]) => Promise<void>;
+  cancel: () => Promise<void>;
+  isDownloading: () => boolean;
+  destroy: () => void;
+}
 
 /**
  * 创建一个下载队列 UI 控制器。
  * 所有 Go 事件已在模块顶层注册，本函数只负责：
  *   1. 订阅 STATE 变更 → 渲染进度 DOM
  *   2. 暴露 enqueue() / cancel() 供事件绑定使用
- *
- * @param {Object} opts
- * @param {Element} opts.sr - searchResults 容器
- * @param {Object} opts.esc - HTML 转义
- * @param {Function} opts.getLocalMap - ()=>Map<name,hash>
- * @param {Function} opts.onFileSuccess - (name)=>void 下载成功时调用（用于清勾选）
- * @param {Function} opts.onAllDone - ({cancelled,errorList})=>void 队列结束
- * @returns {{
- *   enqueue: (tasks: Array) => Promise<void>,
- *   cancel: () => Promise<void>,
- *   isDownloading: () => boolean,
- *   destroy: () => void,
- * }}
  */
 export function createDownloadQueue({
   sr,
@@ -223,32 +271,42 @@ export function createDownloadQueue({
   getLocalMap,
   onFileSuccess,
   onAllDone,
-}) {
+}: QueueControllerOptions): QueueController {
   let _prevStatus = "idle";
   let _prevFile = "";
   let _prevLastDoneSeq = 0;
   let _lastPct = -1;
-  let _stuckTimer = null;
-  let completeTimer = null;
+  let _stuckTimer: ReturnType<typeof setTimeout> | null = null;
+  let completeTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const qsEl = () => sr.querySelector("#gh-queue-status");
-  const dlBtn = () => sr.querySelector(".gh-dl-selected");
+  const qsEl = (): HTMLElement | null => sr.querySelector("#gh-queue-status");
+  const dlBtn = (): HTMLButtonElement | null =>
+    sr.querySelector(".gh-dl-selected");
 
   // ── 工具函数 ──
 
-  const clearCompleteTimer = () => {
-    if (completeTimer) { clearTimeout(completeTimer); completeTimer = null; }
+  const clearCompleteTimer = (): void => {
+    if (completeTimer) {
+      clearTimeout(completeTimer);
+      completeTimer = null;
+    }
   };
 
-  const stuckGuardReset = () => {
+  const stuckGuardReset = (): void => {
     _lastPct = -1;
     clearCompleteTimer();
-    if (_stuckTimer) { clearTimeout(_stuckTimer); _stuckTimer = null; }
-    const pctEl = qsEl()?.querySelector(".gh-progress-pct");
-    if (pctEl?._dotTimer) { clearInterval(pctEl._dotTimer); pctEl._dotTimer = null; }
+    if (_stuckTimer) {
+      clearTimeout(_stuckTimer);
+      _stuckTimer = null;
+    }
+    const pctEl = qsEl()?.querySelector(".gh-progress-pct") as PctEl | null;
+    if (pctEl?._dotTimer) {
+      clearInterval(pctEl._dotTimer);
+      pctEl._dotTimer = null;
+    }
   };
 
-  const cleanupProgressUI = (errorSummary) => {
+  const cleanupProgressUI = (errorSummary?: string): void => {
     clearCompleteTimer();
     stuckGuardReset();
     const qs = qsEl();
@@ -260,8 +318,14 @@ export function createDownloadQueue({
       }
     }
     try {
-      getApp().then(App => { if (App.ClearScanCache) App.ClearScanCache(); }).catch(() => {});
-    } catch (_) { /* 清除缓存失败不影响清理 */ }
+      getApp()
+        .then((App) => {
+          if (App.ClearScanCache) App.ClearScanCache();
+        })
+        .catch(() => {});
+    } catch (_) {
+      /* 清除缓存失败不影响清理 */
+    }
     bus.emit("tree:reload");
     bus.emit("stats:refresh");
   };
@@ -269,7 +333,7 @@ export function createDownloadQueue({
   // ── 事件 → UI 映射 ──
 
   /** 新文件开始下载 → 渲染进度行 + 取消按钮 */
-  function handleFileStart(s) {
+  function handleFileStart(s: DownloadState): void {
     stuckGuardReset();
     const done = s.total - s.remaining;
     const qs = qsEl();
@@ -278,11 +342,13 @@ export function createDownloadQueue({
       qs.innerHTML =
         '<div class="gh-progress-row">' +
         '<span class="gh-queue-icon">⬇️</span>' +
-        '<span class="gh-progress-name">' + renderDisplayName(s.currentFile) + '</span>' +
+        '<span class="gh-progress-name">' +
+        renderDisplayName(s.currentFile) +
+        "</span>" +
         '<span class="gh-progress-pct">⏳</span>' +
-        (remain > 1 ? '<span class="gh-progress-remain">剩余' + remain + '</span>' : '') +
+        (remain > 1 ? '<span class="gh-progress-remain">剩余' + remain + "</span>" : "") +
         '<button class="btn-base sm gh-cancel-queue" title="取消">✕</button>' +
-        '</div>' +
+        "</div>" +
         '<div class="gh-progress-bar-wrap"><div class="gh-progress-fill"></div></div>';
       qs.querySelector(".gh-cancel-queue")?.addEventListener("click", async () => {
         await cancelDownloads();
@@ -291,12 +357,13 @@ export function createDownloadQueue({
   }
 
   /** 下载进度更新 → 更新进度条和百分比 */
-  function handleProgress(s) {
+  function handleProgress(s: DownloadState): void {
     const qs = qsEl();
     if (!qs) return;
     const { dl, total } = s.progress;
 
-    let pct, label;
+    let pct: number;
+    let label: string;
     if (!total || total <= 0) {
       const mb = (dl / 1024 / 1024).toFixed(1);
       label = mb + "MB";
@@ -312,12 +379,20 @@ export function createDownloadQueue({
     if (isTiny && _lastPct < 10 && pct >= 99 && !completeTimer) {
       label = "99%";
       pct = 99;
-      if (_stuckTimer) { clearTimeout(_stuckTimer); _stuckTimer = null; }
+      if (_stuckTimer) {
+        clearTimeout(_stuckTimer);
+        _stuckTimer = null;
+      }
       _stuckTimer = setTimeout(() => {
-        const pctEl2 = qs?.querySelector(".gh-progress-pct");
-        const fillEl2 = qs?.querySelector(".gh-progress-fill");
+        const pctEl2 = qs?.querySelector(".gh-progress-pct") as PctEl | null;
+        const fillEl2 = qs?.querySelector(
+          ".gh-progress-fill",
+        ) as HTMLElement | null;
         if (pctEl2) pctEl2.textContent = "100%";
-        if (fillEl2) { fillEl2.style.transition = "width .3s"; fillEl2.style.width = "100%"; }
+        if (fillEl2) {
+          fillEl2.style.transition = "width .3s";
+          fillEl2.style.width = "100%";
+        }
         _stuckTimer = null;
       }, 300);
     }
@@ -327,30 +402,43 @@ export function createDownloadQueue({
     if (hasCL && !isTiny && _lastPct < 10 && pct >= 99 && total > 1024 * 1024) {
       label = "99%";
       pct = 99;
-      if (_stuckTimer) { clearTimeout(_stuckTimer); _stuckTimer = null; }
-      qs.querySelector(".gh-progress-pct").textContent = label;
+      if (_stuckTimer) {
+        clearTimeout(_stuckTimer);
+        _stuckTimer = null;
+      }
+      (qs.querySelector(".gh-progress-pct") as PctEl).textContent = label;
       _stuckTimer = setTimeout(() => {
-          const pctEl = qs?.querySelector(".gh-progress-pct");
-          const fillEl = qs?.querySelector(".gh-progress-fill");
-          if (pctEl && pctEl.textContent !== "100%") {
-            pctEl.textContent = "⏳";
-            pctEl.style.fontSize = "9px";
-            pctEl._dots = 0;
-            pctEl._dotTimer = setInterval(() => {
-              if (!pctEl || pctEl.textContent === "100%") { clearInterval(pctEl._dotTimer); return; }
-              pctEl._dots = (pctEl._dots + 1) % 4;
-              pctEl.textContent = "⏳" + ".".repeat(pctEl._dots);
-            }, 400);
-          }
-          if (fillEl) fillEl.style.width = "99%";
-        }, 2000);
+        const pctEl = qs?.querySelector(".gh-progress-pct") as PctEl | null;
+        const fillEl = qs?.querySelector(
+          ".gh-progress-fill",
+        ) as HTMLElement | null;
+        if (pctEl && pctEl.textContent !== "100%") {
+          pctEl.textContent = "⏳";
+          pctEl.style.fontSize = "9px";
+          pctEl._dots = 0;
+          pctEl._dotTimer = setInterval(() => {
+            if (!pctEl || pctEl.textContent === "100%") {
+              if (pctEl?._dotTimer) clearInterval(pctEl._dotTimer);
+              return;
+            }
+            pctEl._dots = ((pctEl._dots || 0) + 1) % 4;
+            pctEl.textContent = "⏳" + ".".repeat(pctEl._dots);
+          }, 400);
+        }
+        if (fillEl) fillEl.style.width = "99%";
+      }, 2000);
     } else {
-      if (_stuckTimer) { clearTimeout(_stuckTimer); _stuckTimer = null; }
+      if (_stuckTimer) {
+        clearTimeout(_stuckTimer);
+        _stuckTimer = null;
+      }
     }
     _lastPct = pct;
 
-    const pctEl = qs.querySelector(".gh-progress-pct");
-    const fillEl = qs.querySelector(".gh-progress-fill");
+    const pctEl = qs.querySelector(".gh-progress-pct") as PctEl | null;
+    const fillEl = qs.querySelector(
+      ".gh-progress-fill",
+    ) as HTMLElement | null;
     if (pctEl && !_stuckTimer) pctEl.textContent = label;
     if (fillEl) {
       fillEl.style.transition = pct === 100 ? "width 0s" : "width .2s";
@@ -361,12 +449,16 @@ export function createDownloadQueue({
       clearCompleteTimer();
       completeTimer = setTimeout(() => {
         if (STATE.status !== "downloading") return;
-        let summary = null;
+        let summary: string | undefined;
         if (STATE.errorList.length > 0) {
-          summary = '<div class="gh-queue-error">⚠️ ' + STATE.errorList.length + " 个文件下载失败</div>";
+          summary =
+            '<div class="gh-queue-error">⚠️ ' +
+            STATE.errorList.length +
+            " 个文件下载失败</div>";
         }
         cleanupProgressUI(summary);
-        if (onAllDone) onAllDone({ cancelled: false, errorList: STATE.errorList });
+        if (onAllDone)
+          onAllDone({ cancelled: false, errorList: STATE.errorList });
       }, 3000);
     } else {
       clearCompleteTimer();
@@ -374,64 +466,90 @@ export function createDownloadQueue({
   }
 
   /** 文件下载完成 → 更新本地缓存 / 清勾选 / 显示错误 */
-  function handleFileDone(done) {
+  function handleFileDone(done: {
+    name: string;
+    status: string;
+    errMsg: string;
+  }): void {
     if (done.status === "ok") {
       // file-done 到达时强制覆盖卡在 99% 的进度条
-      const pctEl = qsEl()?.querySelector(".gh-progress-pct");
-      const fillEl = qsEl()?.querySelector(".gh-progress-fill");
+      const pctEl = qsEl()?.querySelector(".gh-progress-pct") as PctEl | null;
+      const fillEl = qsEl()?.querySelector(
+        ".gh-progress-fill",
+      ) as HTMLElement | null;
       if (pctEl && pctEl.textContent === "99%") {
         pctEl.textContent = "100%";
-        if (pctEl._dotTimer) { clearInterval(pctEl._dotTimer); pctEl._dotTimer = null; }
+        if (pctEl._dotTimer) {
+          clearInterval(pctEl._dotTimer);
+          pctEl._dotTimer = null;
+        }
         if (fillEl) fillEl.style.width = "100%";
       }
       if (done.name) getLocalMap().set(done.name, "");
       const cb = sr.querySelector('.gh-sel[data-name="' + esc(done.name) + '"]');
-      if (cb) cb.checked = false;
+      if (cb) (cb as HTMLInputElement).checked = false;
       if (onFileSuccess) onFileSuccess(done.name);
     } else if (done.status === "fail") {
-      const pctEl = qsEl()?.querySelector(".gh-progress-pct");
-      const fillEl = qsEl()?.querySelector(".gh-progress-fill");
+      const pctEl = qsEl()?.querySelector(".gh-progress-pct") as PctEl | null;
+      const fillEl = qsEl()?.querySelector(
+        ".gh-progress-fill",
+      ) as HTMLElement | null;
       if (pctEl) {
         pctEl.textContent = "❌";
         pctEl.classList.add("gh-progress-error");
         pctEl.title = done.errMsg || "下载失败";
-        if (pctEl._dotTimer) { clearInterval(pctEl._dotTimer); pctEl._dotTimer = null; }
+        if (pctEl._dotTimer) {
+          clearInterval(pctEl._dotTimer);
+          pctEl._dotTimer = null;
+        }
       }
       if (fillEl) fillEl.classList.add("gh-progress-fill-error");
       const cb = sr.querySelector('.gh-sel[data-name="' + esc(done.name) + '"]');
-      if (cb) cb.checked = false;
+      if (cb) (cb as HTMLInputElement).checked = false;
       if (onFileSuccess) onFileSuccess(done.name);
     }
   }
 
   /** 队列结束 → 显示错误摘要 / 清理 UI / 通知外部 */
-  function handleQueueEnded(s) {
+  function handleQueueEnded(s: DownloadState): void {
     const cancelled = s.status === "cancelled";
     let summary = "";
     if (s.errorList.length > 0) {
       summary =
-        '<div class="gh-queue-error">⚠️ ' + s.errorList.length + " 个文件下载失败：</div>" +
-        s.errorList.slice(0, 5).map(e =>
-          '<div class="gh-queue-err-item">❌ ' + renderDisplayName(e.name) + ": " + esc(e.err) + "</div>"
-        ).join("") +
+        '<div class="gh-queue-error">⚠️ ' +
+        s.errorList.length +
+        " 个文件下载失败：</div>" +
+        s.errorList
+          .slice(0, 5)
+          .map(
+            (e) =>
+              '<div class="gh-queue-err-item">❌ ' +
+              renderDisplayName(e.name) +
+              ": " +
+              esc(e.err) +
+              "</div>",
+          )
+          .join("") +
         (s.errorList.length > 5
-          ? '<div class="gh-queue-ellipsis">…还有 ' + (s.errorList.length - 5) + " 个</div>"
+          ? '<div class="gh-queue-ellipsis">…还有 ' +
+            (s.errorList.length - 5) +
+            " 个</div>"
           : "");
     }
     if (cancelled) {
       cleanupProgressUI(summary || '<span class="gh-queue-cancel">⏹ 已取消</span>');
     } else {
-      cleanupProgressUI(summary || null);
+      cleanupProgressUI(summary || undefined);
     }
     if (onAllDone) onAllDone({ cancelled, errorList: s.errorList });
   }
 
   // ── 核心：订阅 STATE → 渲染 DOM ──
 
-  function handleStateChange(s) {
+  function handleStateChange(s: DownloadState): void {
     // 文件完成事件（可能夹在 file-start 和 progress 之间到达）
     if (s._lastDoneSeq > _prevLastDoneSeq) {
-      handleFileDone(s._lastDone);
+      handleFileDone(s._lastDone!);
       _prevLastDoneSeq = s._lastDoneSeq;
     }
 
@@ -461,7 +579,10 @@ export function createDownloadQueue({
           if (s.currentFile) {
             handleFileStart(s);
           } else {
-            qs.innerHTML = '<span class="gh-queue-icon">⬇️</span> 下载中… 剩余 ' + (s.remaining || "?") + " 个";
+            qs.innerHTML =
+              '<span class="gh-queue-icon">⬇️</span> 下载中… 剩余 ' +
+              (s.remaining || "?") +
+              " 个";
           }
         }
       }
@@ -474,17 +595,19 @@ export function createDownloadQueue({
   const unsub = subscribe(handleStateChange);
 
   // 页面进入时恢复下载状态（防止切页期间进度丢失）
-  resume();
+  void resume();
 
   // ── 公开 API ──
 
-  async function enqueue(tasks) {
+  async function enqueue(tasks: DownloadTask[]): Promise<void> {
     if (STATE.status === "downloading") return;
     if (!tasks.length) return;
 
-    const { LoadAppConfig, GetRepoRoot } =
-      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    const { LoadAppConfig, GetRepoRoot } = await import(
+      "../../../bindings/ysm-model-manager/internal/app/app.js"
+    );
     const cfg = await LoadAppConfig();
+    void cfg;
     const repoRoot = await GetRepoRoot("ysm");
     if (!repoRoot) {
       bus.emit("toast:show", {
@@ -503,13 +626,15 @@ export function createDownloadQueue({
     if (qs) {
       qs.classList.add("show");
       qs.innerHTML =
-        '<span class="gh-queue-icon">⬇️</span> 准备下载… 共 ' + tasks.length + " 个";
+        '<span class="gh-queue-icon">⬇️</span> 准备下载… 共 ' +
+        tasks.length +
+        " 个";
     }
 
     await enqueueDownloads(tasks);
   }
 
-  async function cancel() {
+  async function cancel(): Promise<void> {
     await cancelDownloads();
   }
 

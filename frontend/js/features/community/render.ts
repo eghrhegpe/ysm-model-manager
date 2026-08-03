@@ -1,12 +1,32 @@
-// ===== 创意工坊模型列表渲染（DOM API，非字符串拼接） =====
+// ===== 创意工坊模型列表渲染（类型化版 — ADR-014 P3 features）=====
+// DOM API，非字符串拼接
 import { renderDisplayName } from "../../utils/display.ts";
 import { ICONS } from "../../components/app-content/community/workshop-icons.js";
 import { stagger } from "../../utils/stagger.ts";
 
+/** 工坊模型条目（index.json 结构） */
+export interface WorkshopModel {
+  name: string;
+  path: string;
+  size?: number;
+  hash?: string;
+}
+
+/** 工坊站点 */
+export interface WorkshopSite {
+  group?: string;
+  label: string;
+  desc?: string;
+  icon?: string;
+}
+
 /**
  * 判断模型是否缺失（本地不存在）
  */
-export function isModelMissing(m, localMap) {
+export function isModelMissing(
+  m: WorkshopModel | null | undefined,
+  localMap: Map<string, string>,
+): boolean {
   if (!m) return true;
   return m.hash
     ? !(
@@ -19,16 +39,17 @@ export function isModelMissing(m, localMap) {
 /**
  * 计算缺失数量
  */
-export function countMissing(models, localMap) {
+export function countMissing(
+  models: WorkshopModel[],
+  localMap: Map<string, string>,
+): number {
   return models.filter((m) => isModelMissing(m, localMap)).length;
 }
 
 /**
  * 格式化文件大小
- * @param {number} bytes
- * @returns {string}
  */
-function formatSize(bytes) {
+function formatSize(bytes: number): string {
   if (!bytes) return "";
   if (bytes < 1024) return bytes + "B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + "KB";
@@ -37,12 +58,15 @@ function formatSize(bytes) {
 
 /**
  * 创建图标按钮
- * @param {string} iconHTML - SVG 图标 HTML
- * @param {string} action - data-action 值
- * @param {string} [title] - 提示文本
- * @returns {HTMLButtonElement}
+ * @param iconHTML SVG 图标 HTML
+ * @param action data-action 值
+ * @param title 提示文本
  */
-function createIconBtn(iconHTML, action, title) {
+function createIconBtn(
+  iconHTML: string,
+  action: string,
+  title?: string,
+): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.className = "gh-icon-btn";
   btn.dataset.action = action;
@@ -53,30 +77,26 @@ function createIconBtn(iconHTML, action, title) {
 
 /**
  * 渲染模型列表（DocumentFragment）
- * @param {Array} filtered - 已筛选的模型数组
- * @param {string} dlPrefix - 下载 URL 前缀
- * @param {Map} localMap - 本地文件映射
- * @param {boolean} showAll - 是否显示全部
- * @param {Set} selectedSet - 选中集合
- * @param {Function} esc - HTML 转义函数
+ * @param filtered 已筛选的模型数组
+ * @param dlPrefix 下载 URL 前缀
+ * @param localMap 本地文件映射
+ * @param showAll 是否显示全部
+ * @param selectedSet 选中集合
+ * @param esc HTML 转义函数
  */
 export function renderModelList(
-  filtered,
-  dlPrefix,
-  localMap,
-  showAll,
-  selectedSet,
-  esc,
-) {
+  filtered: WorkshopModel[],
+  dlPrefix: string,
+  localMap: Map<string, string>,
+  showAll: boolean,
+  selectedSet: Set<string>,
+  esc: (s: string) => string,
+): DocumentFragment {
   const frag = document.createDocumentFragment();
 
   if (!filtered.length) {
     const empty = document.createElement("div");
     empty.className = "gh-empty";
-
-    // 细化空状态提示 — q / models 由闭包捕获（绑定事件时传入相同作用域）
-    // 这里用 showAll / filtered 推断
-
     frag.appendChild(empty);
     return frag;
   }
@@ -89,7 +109,8 @@ export function renderModelList(
 
     // 列1: 复选框(缺失时) + 名称
     const nameWrap = document.createElement("div");
-    nameWrap.style.cssText = "display:flex;align-items:center;gap:6px;min-width:0";
+    nameWrap.style.cssText =
+      "display:flex;align-items:center;gap:6px;min-width:0";
     if (!exists) {
       const cb = document.createElement("input");
       cb.type = "checkbox";
@@ -109,9 +130,13 @@ export function renderModelList(
     metaCell.className = "gh-meta";
     const sizeSpan = document.createElement("span");
     sizeSpan.className = "gh-size";
-    sizeSpan.textContent = formatSize(m.size);
+    sizeSpan.textContent = formatSize(m.size || 0);
     metaCell.appendChild(sizeSpan);
-    const searchBtn = createIconBtn(ICONS.SEARCH, "search-bili", "B站搜索作者");
+    const searchBtn = createIconBtn(
+      ICONS.SEARCH,
+      "search-bili",
+      "B站搜索作者",
+    );
     metaCell.appendChild(searchBtn);
     row.appendChild(metaCell);
 
@@ -142,7 +167,7 @@ export function renderModelList(
 /**
  * 分组标签映射
  */
-export const GROUP_LABELS = {
+export const GROUP_LABELS: Record<string, { icon: string; label: string }> = {
   search: { icon: "🔍", label: "搜索平台" },
   repo: { icon: "📦", label: "模型仓库" },
   browse: { icon: "👁️", label: "浏览平台" },
@@ -150,12 +175,14 @@ export const GROUP_LABELS = {
 
 /**
  * 生成左栏站点卡片 HTML
- * @param {Array} sites - 站点数组
- * @param {Function} esc - HTML 转义
- * @returns {string}
+ * @param sites 站点数组
+ * @param esc HTML 转义
  */
-export function renderCardsHTML(sites, esc) {
-  const groups = {};
+export function renderCardsHTML(
+  sites: WorkshopSite[],
+  esc: (s: string) => string,
+): string {
+  const groups: Record<string, WorkshopSite[]> = {};
   sites.forEach((s) => {
     const g = s.group || "browse";
     if (!groups[g]) groups[g] = [];
@@ -176,7 +203,9 @@ export function renderCardsHTML(sites, esc) {
       "</div>";
     groups[g].forEach((s) => {
       html +=
-        '<div class="gh-card" style="animation-delay:' + stagger(cardIdx, 30, 300) + 'ms" data-index="' +
+        '<div class="gh-card" style="animation-delay:' +
+        stagger(cardIdx, 30, 300) +
+        'ms" data-index="' +
         sites.indexOf(s) +
         '" data-group="' +
         g +
@@ -189,7 +218,7 @@ export function renderCardsHTML(sites, esc) {
         esc(s.label) +
         "</div>" +
         '<div class="gh-card-desc">' +
-        esc(s.desc) +
+        esc(s.desc || "") +
         "</div>" +
         "</div>" +
         '<div class="gh-card-external" title="系统浏览器打开">↗</div>' +
@@ -202,30 +231,37 @@ export function renderCardsHTML(sites, esc) {
 
 /**
  * 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等）
- * @param {Object} params
- * @returns {string}
  */
-export function renderRepoHeaderHTML({
-  esc,
-  repo,
-  sourceLabel,
-  modelsLength,
-  missingCount,
-}) {
+export function renderRepoHeaderHTML(params: {
+  esc: (s: string) => string;
+  repo: string;
+  sourceLabel: string;
+  modelsLength: number;
+  missingCount: number;
+}): string {
+  const { esc, repo, sourceLabel, modelsLength, missingCount } = params;
   return (
     '<div class="gh-header">' +
     // 行1: 返回 | 模型计数徽章
     '<div class="gh-header-top">' +
     '<button class="btn-base sm gh-back-repo">← 返回</button>' +
     '<span class="gh-section-fill"></span>' +
-    '<span class="gh-model-badge gh-model-badge-total">模型 ' + modelsLength + '</span>' +
+    '<span class="gh-model-badge gh-model-badge-total">模型 ' +
+    modelsLength +
+    "</span>" +
     (missingCount > 0
-      ? '<span class="gh-model-badge gh-model-badge-missing">⬇️ ' + missingCount + '</span>'
+      ? '<span class="gh-model-badge gh-model-badge-missing">⬇️ ' +
+        missingCount +
+        "</span>"
       : "") +
     "</div>" +
     // 行2: 仓库名（独占）+ 来源
     '<div class="gh-header-repo">' +
-    '<span class="gh-repo-name">' + ICONS.PACKAGE + ' ' + esc(repo) + '</span>' +
+    '<span class="gh-repo-name">' +
+    ICONS.PACKAGE +
+    " " +
+    esc(repo) +
+    "</span>" +
     sourceLabel +
     "</div>" +
     // 行3: 搜索

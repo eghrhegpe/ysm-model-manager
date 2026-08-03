@@ -8,6 +8,17 @@ remote_theme: just-the-docs/just-the-docs
 # 项目站点子路径（GitHub Pages 项目页必须；否则 /assets/* 资源 404）
 baseurl: /ysm-model-manager
 
+# 浅色基调（对齐隔壁 MikuMikuAR VitePress 站点默认浅色观感）
+color_scheme: light
+
+# 页内锚点：为标题生成 # 锚点链接（对应 VitePress 右侧「本页导航」）
+heading_anchors: true
+
+# 右上角 GitHub 链接（对应隔壁站点导航栏的 GitHub 项）
+aux_links:
+  "GitHub 源码": "https://github.com/eghrhegpe/ysm-model-manager"
+aux_links_new_tab: true
+
 plugins:
   - jekyll-remote-theme
   - jekyll-seo-tag

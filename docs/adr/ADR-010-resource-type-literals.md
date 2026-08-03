@@ -1,6 +1,6 @@
 # ADR-010：资源类型字面量硬编码治理
 
-- **状态**：已采纳（Accepted，违规未修复）
+- **状态**：✅ 已采纳（2026-08-03 违规清零，见 §5）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`resource_types.json` / `frontend/js/` 全量 / CLEANUP_RULES.md §7
@@ -13,7 +13,7 @@ CLEANUP_RULES.md 第 7 条明确规定：**禁止在 JS 中使用 `"ysm"` / `"mm
 
 但实际代码扫描发现，资源类型字面量**仍然大量存在于前端 JS 中**。
 
-### 违规统计
+### 违规统计（2026-08-03 已清零，下表为 .js 时代历史记录）
 
 | 文件 | 违规字面量 | 位置 |
 |------|-----------|------|
@@ -85,3 +85,22 @@ CLEANUP_RULES.md 第 7 条明确规定：**禁止在 JS 中使用 `"ysm"` / `"mm
 | `resource_types.json` | 资源类型事实来源 |
 | `CLEANUP_RULES.md` §7 | 禁止魔法字符串规则 |
 | `utils/resource-types.js` | `RESOURCE_TYPES` 常量定义（如存在） |
+
+---
+
+## 5. 治理完成（2026-08-03）
+
+**状态更新**：原"已采纳（违规未修复）"→ ✅ 已采纳。commit `b6a74c3` 完成全量治理：
+
+- `GetRepoRoot("ysm")` 21 处（9 个文件）→ `GetRepoRoot(RESOURCE_TYPES.YSM)`
+- 魔法字符串 30+ 处（`"mmd-skin"` / `"vrchat-avatar"` / `"resourcepack"` / `"shaderpack"` /
+  `"create-blueprint"` / `"litematic"` / `"ysm"`）→ `RESOURCE_TYPES` 常量：tab 判断、
+  `DetectZipType()` 返回值判断、rtype 数组、mock 数据、HTML 模板 `data-rtab` /
+  `data-sync-type` / `root` 属性（输出值不变，纯写法迁移）
+- 顺手消除：`sidebar/tpl.ts` push/pull 两组下拉菜单重复 → 提取 `typeMenuItemsHTML()` 共用
+- 保留合理字面量：`extensions.ts`（↔ resource_types.json 的桥）、`RTYPE_LABELS` /
+  `shortLabel`（显示名映射）、preview-litematic-meta 的 `"schematic"` / `"nbt"`
+  （文件类型标签，非资源类型 ID）
+
+验证：`type-consistency.mjs` 全一致、`tsc --noEmit` 通过、`check-deadcode-baseline` 0 ERROR、
+`doctor` 全绿（退出码 0）。

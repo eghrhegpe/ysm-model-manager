@@ -164,7 +164,7 @@ export async function fetchCommunityCreators(
 
 /**
  * 合并社区索引到本地 creators.json
- * @returns { merged, added, updated }
+ * @returns {{ merged: LocalCreator[]; added: number; updated: number }} 合并后的创作者列表、新增数、更新数
  */
 export function mergeCommunityCreators(
   local: LocalCreator[],

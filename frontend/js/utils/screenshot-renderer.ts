@@ -154,7 +154,7 @@ export async function batchRepoScreenshots(
     }
   }
   if (!repoRoot) {
-    console.warn("[batch] 请传入仓库路径: __batchRepoScreenshots('C:/path/repo')");
+    console.warn("[batch] 请传入仓库路径: batchRepoScreenshots('C:/path/repo')");
     return;
   }
 
@@ -165,7 +165,6 @@ export async function batchRepoScreenshots(
         return /\.(ysm|zip|7z|json)$/i.test(p);
       })
     : [];
-  console.log("[batch] 共找到", models.length, "个模型");
 
   let ok = 0;
   let fail = 0;
@@ -173,7 +172,6 @@ export async function batchRepoScreenshots(
     const fullPath = m.Path || m.Name || "";
     const normalized = fullPath.replace(/\\/g, "/");
     const base = normalized.split("/").pop()?.replace(/\.\w+$/, "") || "";
-    console.log("[batch] 截图:", base);
     try {
       const { AnalyzeBedrockModel } = await import(
         "../../bindings/ysm-model-manager/internal/app/app.js"
@@ -205,6 +203,5 @@ export async function batchRepoScreenshots(
       fail++;
     }
   }
-  console.log("[batch] 完成: 成功", ok, "失败", fail, "/", models.length);
   return { ok, fail, total: models.length };
 }

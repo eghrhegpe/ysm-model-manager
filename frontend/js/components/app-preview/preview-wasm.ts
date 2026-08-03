@@ -145,9 +145,6 @@ export async function decodeYsmViaWasm(
         try {
           files = (await decodeYsmFileFromMemory(rebuilt)) || [];
           if (files?.length) {
-            console.log(
-              `[YSM] ✅ 剥离头部(${verLabel})后解码成功: ${files.length} 文件`,
-            );
             break;
           }
         } catch (e3) {
@@ -216,14 +213,6 @@ export async function decodeYsmViaWasm(
             });
           }
         }
-        if (ysmTexOrder)
-          console.log(
-            `[YSM] ysm.json 纹理列表:`,
-            (ysmTexOrder as Array<{ uv?: string; path?: string } | string>)
-              .map((t) => (typeof t === "string" ? t : t?.uv || t?.path))
-              .filter(Boolean),
-            `默认纹理: ${ysmDefaultTex || "无"}`,
-          );
       } catch (e) {
         /* ignore */
       }
@@ -337,23 +326,6 @@ export async function decodeYsmViaWasm(
       devLog(`[YSM] 解析 ${f.path}...`);
       try {
         const jsonStr = new TextDecoder().decode(f.data);
-        const parsedRoot = JSON.parse(jsonStr) as Record<string, unknown>;
-        const rootKeys = Object.keys(parsedRoot);
-        const geoKey = rootKeys.find(
-          (k) => k.includes("minecraft:geometry") || k.includes("geometry"),
-        );
-        if (geoKey) {
-          const geoArr = parsedRoot[geoKey];
-          if (Array.isArray(geoArr) && geoArr.length > 0) {
-            const hasBones = !!(geoArr[0] as { bones?: unknown[] })?.bones?.length;
-            console.log(
-              `[YSM] JSON 调试: rootKeys=[${rootKeys}], geometryKey="${geoKey}", bones=${
-                (geoArr[0] as { bones?: unknown[] })?.bones?.length || 0
-              }`,
-            );
-            if (!hasBones) console.log(`[YSM] JSON 前200字符: ${jsonStr.slice(0, 200)}`);
-          }
-        }
         const parsed = parseBedrockGeometryFromJSON(jsonStr);
         if (!parsed?.bones?.length) return;
         devLog(`[YSM] ✅ ${f.path}: ${parsed.bones.length}骨 ${parsed.cubeCount}方`);

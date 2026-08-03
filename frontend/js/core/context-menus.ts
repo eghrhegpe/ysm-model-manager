@@ -3,6 +3,7 @@
 // 菜单结构来自 menu-defs.ts（唯一事实来源），此处只保留行为 handler 表。
 import { bus, type ToastPayload, type CtxShowPayload, type MenuItem } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
+import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 import { getApp } from "../wails/app.ts";
 import { getMenuDef } from "./menu-defs";
 
@@ -74,7 +75,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
     const { LoadAppConfig, MoveModelFile, GetRepoRoot } =
       await import("../../bindings/ysm-model-manager/internal/app/app.js");
-    const repoRoot = await GetRepoRoot("ysm");
+    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
     if (!repoRoot) {
       bus.emit("toast:show", {
         msg: "❌ 请先配置存储路径",
@@ -118,7 +119,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
     const { LoadAppConfig, CopyModelFile, GetRepoRoot } =
       await import("../../bindings/ysm-model-manager/internal/app/app.js");
-    const repoRoot = await GetRepoRoot("ysm");
+    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
     if (!repoRoot) {
       bus.emit("toast:show", {
         msg: "❌ 请先配置仓库目录",
@@ -230,7 +231,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     if (!folder) return;
     const { LoadAppConfig, MoveModelFile, GetRepoRoot } =
       await import("../../bindings/ysm-model-manager/internal/app/app.js");
-    const repoRoot = await GetRepoRoot("ysm");
+    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
     if (!repoRoot) {
       bus.emit("toast:show", {
         msg: "❌ 请先配置存储路径",
@@ -267,7 +268,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
     const { LoadAppConfig, CopyModelFile, GetRepoRoot } =
       await import("../../bindings/ysm-model-manager/internal/app/app.js");
-    const repoRoot = await GetRepoRoot("ysm");
+    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
     if (!repoRoot) {
       bus.emit("toast:show", {
         msg: "❌ 请先配置仓库目录",

@@ -1,6 +1,7 @@
 // ===== 整合包详情显示 =====
 // 从 events.ts 拆分：showPackageDetail + 数字跳动动画
 import { renderDisplayName } from "../../utils/display.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { bus } from "../../bus.ts";
 
 /** 整合包条目（package:selected payload 视图） */
@@ -104,7 +105,7 @@ export function showPackageDetail(
   animateCount(extraNum as HTMLElement, pkg.extra || 0);
 
   // MMD 类型：变体聚合显示
-  const isMmd = pkg.rtype === "mmd-skin";
+  const isMmd = pkg.rtype === RESOURCE_TYPES.MMD;
   const variantGroups = pkg.variantGroups;
 
   // 填充三个展开列表（MMD 时用变体聚合视图）
@@ -248,7 +249,7 @@ export function registerMmdEvents(root: ShadowRoot): void {
     bus.emit("mmd:sync-variant-folder", {
       instanceName: pkgName || "",
       folderPath: folderPath,
-      rtype: "mmd-skin",
+      rtype: RESOURCE_TYPES.MMD,
     });
   });
 }

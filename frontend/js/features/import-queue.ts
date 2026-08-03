@@ -1,6 +1,7 @@
 // ===== 导入队列 + 拖拽 + 重命名流程（类型化版 — ADR-014 P3 features 收官）=====
 import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
+import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 import { parseModelName, renderDisplayName } from "../utils/display.ts";
 import { renderFormattedText } from "../utils/mc-format.ts";
 import { modalConfirm } from "../dialogs/modal.ts";
@@ -32,7 +33,7 @@ const shouldEnterForm = async (name: string, base64: string): Promise<boolean> =
   if (ext === ".zip" || ext === ".7z") {
     try {
       const { DetectZipType } = await getApp();
-      return (await DetectZipType(base64)) === "ysm";
+      return (await DetectZipType(base64)) === RESOURCE_TYPES.YSM;
     } catch {
       return false;
     }
@@ -138,7 +139,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       try {
         const { CheckFileExists, LoadAppConfig, GetRepoRoot } = await getApp();
         void LoadAppConfig;
-        const repoRoot = await GetRepoRoot("ysm");
+        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const fullPath = (repoRoot || "") + "\\" + name;
         const exists = await CheckFileExists(fullPath);
         const el = root.getElementById("dl-conflict") as HTMLElement | null;
@@ -517,7 +518,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     try {
       const { ScanModelEntries, LoadAppConfig, GetRepoRoot } = await getApp();
       void LoadAppConfig;
-      const repoRoot = await GetRepoRoot("ysm");
+      const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
       if (!repoRoot) return;
       const entries = (await ScanModelEntries(repoRoot)) || [];
       repoFiles = new Set(entries.map((e) => e.Name.replace(/\.ban$/i, "")));
@@ -735,7 +736,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         const { showRenameDialog } = await import("../dialogs/rename.ts");
         const { RenameFile, LoadAppConfig, GetRepoRoot } = await getApp();
         void LoadAppConfig;
-        const repoRoot = await GetRepoRoot("ysm");
+        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const fullPath = repoRoot + "\\" + name;
         const newName = await showRenameDialog(fullPath, name);
         if (!newName) return;

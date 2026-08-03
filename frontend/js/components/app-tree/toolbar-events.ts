@@ -1,5 +1,6 @@
 // ===== 工具栏事件绑定 =====
 import { friendlyError } from "../../utils/errors.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { bus } from "../../bus.ts";
 import { flashBtn } from "./utils.ts";
 import { spinnerHTML } from "./tpl.ts";
@@ -106,7 +107,7 @@ async function openAdvFilterDialog($: $Id, vm: AppTree): Promise<void> {
 
   let modelPaths: Set<string> | null = null;
   if (hasRange) {
-    const repoRoot = await GetRepoRoot("ysm");
+    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
     if (!repoRoot) {
       bus.emit("toast:show", {
         msg: "请先配置仓库目录",
@@ -231,7 +232,7 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
   $("repo-export")?.addEventListener("click", async () => {
     const { ExportBoneStructures, GetRepoRoot } =
       await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-    const repoRoot = await GetRepoRoot("ysm");
+    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
     if (!repoRoot) {
       bus.emit("toast:show", {
         msg: "请先配置存储路径",
@@ -414,7 +415,7 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
         try {
           const { GenerateRepoIndex, GetRepoRoot } =
             await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-          const repoRoot = await GetRepoRoot("ysm");
+          const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
           if (!repoRoot) {
             bus.emit("toast:show", {
               msg: "请先配置存储路径",

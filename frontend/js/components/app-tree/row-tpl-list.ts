@@ -1,5 +1,6 @@
 // ===== 紧凑列表行 HTML 模板（24px 高度）=====
 import { renderDisplayName } from "../../utils/display.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import type { TreeEntry } from "./loader.ts";
 
 /** 文件行 HTML（紧凑列表模式：icon + name + size，无 hover actions、无 date、无 tag dot） */
@@ -16,7 +17,7 @@ export function listFileRowHTML(
   const checked = e.banned ? "" : " on";
   const ban = e.banned ? " ban" : "";
   const typeIcon =
-    e.type === "resourcepack" ? "🎨" : e.type === "ysm" ? "💎" : icon;
+    e.type === RESOURCE_TYPES.PACK ? "🎨" : e.type === RESOURCE_TYPES.YSM ? "💎" : icon;
   const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
   return `<div class="fl-list${ban}${rowCls}" data-path="${p}" data-fullpath="${fp}"${pad}>
 <span class="ck${checked}" data-path="${p}" data-fullpath="${fp}"></span>

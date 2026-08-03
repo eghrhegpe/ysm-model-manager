@@ -4,6 +4,7 @@
 
 import { sidebarHTML, itemHTML, detailHTML, placeholderHTML, type PackMetaDetail } from "./tpl.ts";
 import { bus } from "../../bus.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { getApp } from "../../wails/app.ts";
 
 /** 资源类型配置（resource_types.json 条目视图） */
@@ -79,7 +80,7 @@ export class AppResourceManager extends HTMLElement {
 
   constructor() {
     super();
-    this._rtype = this.getAttribute("rtype") || "resourcepack";
+    this._rtype = this.getAttribute("rtype") || RESOURCE_TYPES.PACK;
     this._instance = this.getAttribute("instance") || "";
   }
 
@@ -90,7 +91,7 @@ export class AppResourceManager extends HTMLElement {
   attributeChangedCallback(name: string, oldVal: string | null, newVal: string | null): void {
     if (oldVal === newVal || !this.isConnected) return;
     if (name === "rtype") {
-      this._rtype = newVal || "resourcepack";
+      this._rtype = newVal || RESOURCE_TYPES.PACK;
       this._init();
     } else if (name === "instance") {
       this._instance = newVal || "";
@@ -344,7 +345,7 @@ export class AppResourceManager extends HTMLElement {
       let displayName = name;
       let enabled = true;
 
-      if (this._rtype === "shaderpack") {
+      if (this._rtype === RESOURCE_TYPES.SHADER) {
         // 光影包：从 lang/en_US.lang 提取显示名
         const { ReadShaderpackLang } =
           await getApp();

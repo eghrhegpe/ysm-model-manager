@@ -1,5 +1,6 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
 import { treeCSS } from "../app-tree-styles.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
 import { renderTree, updateStat, getRenderMode, setRenderMode, type RenderMode, type TreeRow } from "./render.ts";
 import { bindTreeEvents } from "./events.ts";
@@ -264,7 +265,7 @@ export class AppTree extends HTMLElement {
         if (!confirm("确定要删除选中的 " + paths.length + " 个文件吗？"))
           return;
         const rtype = this._rootAttr || "ysm";
-        const isDirModel = ["mmd-skin", "vrchat-avatar"].includes(rtype);
+        const isDirModel = [RESOURCE_TYPES.MMD, RESOURCE_TYPES.VRC].includes(rtype);
         this._deleteSelected(paths, isDirModel);
       }
     }) as EventListener;

@@ -1,6 +1,7 @@
 // ===== 创意工坊 — 批量下载队列（类型化版 — ADR-014 P3 features）=====
 // v2: 模块级持久层 — EventsOn 在脚本加载时注册一次，页面切换不丢失事件
 import { bus } from "../../bus.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { renderDisplayName } from "../../utils/display.ts";
 import { dbg } from "../../utils/debug.ts";
 import { getApp } from "../../wails/app.ts";
@@ -611,7 +612,7 @@ export function createDownloadQueue({
     );
     const cfg = await LoadAppConfig();
     void cfg;
-    const repoRoot = await GetRepoRoot("ysm");
+    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
     if (!repoRoot) {
       bus.emit("toast:show", {
         msg: "请先配置仓库目录",

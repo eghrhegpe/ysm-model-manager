@@ -1,6 +1,7 @@
 // ===== 同步相关：导入缺失 / 同步启用状态（类型化版 — ADR-014 P3）=====
 import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
+import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 import { dbg } from "../utils/debug.ts";
 
 /** 注册同步 handler，push 返回的取消订阅函数到 unsubs */
@@ -61,7 +62,7 @@ export function registerSync(unsubs: Array<() => void>): void {
             if (!st?.Missing?.length) continue;
             for (const srcPath of st.Missing) {
               try {
-                if (rtypeActual === "ysm") {
+                if (rtypeActual === RESOURCE_TYPES.YSM) {
                   await InstallModelTo(srcPath, ins.CustomDir);
                 } else {
                   await InstallResourceToInstance(
@@ -127,7 +128,7 @@ export function registerSync(unsubs: Array<() => void>): void {
           "../../bindings/ysm-model-manager/internal/app/app.js"
         );
         const cfg = await LoadAppConfig();
-        const repoRoot = await GetRepoRoot("ysm");
+        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const mcRoot = cfg.mcRoot || "";
         if (!repoRoot || !mcRoot) {
           bus.emit("toast:show", {
@@ -230,7 +231,7 @@ export function registerSync(unsubs: Array<() => void>): void {
           );
           const cfg = await LoadAppConfig();
           const mcRoot = cfg.mcRoot || "";
-          const mmdRoot = await GetRepoRoot("mmd-skin");
+          const mmdRoot = await GetRepoRoot(RESOURCE_TYPES.MMD);
           if (!mcRoot) {
             bus.emit("toast:show", {
               msg: "请先配置游戏目录",

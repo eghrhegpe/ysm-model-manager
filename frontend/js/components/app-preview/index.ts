@@ -1,6 +1,7 @@
 // ===== <app-preview> 入口 =====
 import { bus } from "../../bus.ts";
 import { previewCSS } from "./preview-css.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { statsHTML, modelDetailHTML } from "./tpl.ts";
 import { bindBusUpdates } from "./events.ts";
 import { bindActions } from "./preview-actions.ts";
@@ -197,16 +198,16 @@ class AppPreview extends HTMLElement implements PreviewCtx {
       const { DetectResourceType } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
       rtype = (await DetectResourceType(path)) || "";
     } catch (_) {}
-    if (rtype === "resourcepack") {
+    if (rtype === RESOURCE_TYPES.PACK) {
       showResourcePack(this, path);
       return;
     }
     // ysm 或无检测结果 → YSM 模型解析
-    if (!rtype || rtype === "ysm") {
+    if (!rtype || rtype === RESOURCE_TYPES.YSM) {
       showModelDetail(this, path);
       return;
     }
-    if (rtype === "litematic" || rtype === "create-blueprint") {
+    if (rtype === RESOURCE_TYPES.LITEMATIC || rtype === RESOURCE_TYPES.BLUEPRINT) {
       showLitematic(this, path);
       return;
     }

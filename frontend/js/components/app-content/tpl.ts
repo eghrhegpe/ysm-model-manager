@@ -1,4 +1,5 @@
 // ===== app-content 页面模板 =====
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 
 export function repositoryHTML(): string {
   return (
@@ -13,20 +14,20 @@ export function repositoryHTML(): string {
     "</div>" +
     // 第二栏：资源类型（仅在文件树 tab 可见）
     '<div class="repo-subtabs" id="repo-subtabs" style="display:flex;gap:2px;padding:2px 8px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
-    '<button class="repo-subtab active" data-rtab="ysm">💎 YSM</button>' +
-    '<button class="repo-subtab" data-rtab="mmd-skin">🎭 MMD</button>' +
-    '<button class="repo-subtab" data-rtab="vrchat-avatar">🥽 VRC</button>' +
+    '<button class="repo-subtab active" data-rtab="' + RESOURCE_TYPES.YSM + '">💎 YSM</button>' +
+    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.MMD + '">🎭 MMD</button>' +
+    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.VRC + '">🥽 VRC</button>' +
     '<span style="padding:3px 4px;color:var(--muted)">│</span>' +
-    '<button class="repo-subtab" data-rtab="resourcepack">🎨 资源包</button>' +
-    '<button class="repo-subtab" data-rtab="shaderpack">☀️ 光影包</button>' +
-    '<button class="repo-subtab" data-rtab="create-blueprint">⚙️ 蓝图</button>' +
-    '<button class="repo-subtab" data-rtab="litematic">📐 投影</button>' +
+    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.PACK + '">🎨 资源包</button>' +
+    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.SHADER + '">☀️ 光影包</button>' +
+    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.BLUEPRINT + '">⚙️ 蓝图</button>' +
+    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.LITEMATIC + '">📐 投影</button>' +
     "</div>" +
     '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
     '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;min-width:0">' +
     '<div class="repo-tab-body" id="repo-tab-tree" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
     // 默认 YSM 文件树（预览在外层共享）
-    '<app-tree root="ysm" style="flex:1;min-width:0"></app-tree>' +
+    '<app-tree root="' + RESOURCE_TYPES.YSM + '" style="flex:1;min-width:0"></app-tree>' +
     "</div>" +
     '<div class="repo-tab-body" id="repo-tab-import" style="display:none;flex:1;overflow-y:auto"></div>' +
     '<div class="repo-tab-body" id="repo-tab-recycle" style="display:none;flex:1;overflow-y:auto"></div>' +
@@ -65,14 +66,14 @@ export function resourceLibraryHTML(): string {
   return (
     '<div class="repo-wrap" style="display:flex;flex-direction:column">' +
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-rtab="ysm">💎 YSM</button>' +
-    '<button class="repo-tab" data-rtab="mmd-skin">🎭 MMD</button>' +
-    '<button class="repo-tab" data-rtab="vrchat-avatar">🥽 VRC</button>' +
+    '<button class="repo-tab active" data-rtab="' + RESOURCE_TYPES.YSM + '">💎 YSM</button>' +
+    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.MMD + '">🎭 MMD</button>' +
+    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.VRC + '">🥽 VRC</button>' +
     '<span style="padding:4px 8px;color:var(--muted);font-size:var(--fs-xs);align-self:center">│</span>' +
-    '<button class="repo-tab" data-rtab="resourcepack">🎨 资源包</button>' +
-    '<button class="repo-tab" data-rtab="shaderpack">☀️ 光影包</button>' +
-    '<button class="repo-tab" data-rtab="create-blueprint">⚙️ 蓝图</button>' +
-    '<button class="repo-tab" data-rtab="litematic">📐 投影</button>' +
+    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.PACK + '">🎨 资源包</button>' +
+    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.SHADER + '">☀️ 光影包</button>' +
+    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.BLUEPRINT + '">⚙️ 蓝图</button>' +
+    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.LITEMATIC + '">📐 投影</button>' +
     "</div>" +
     '<div id="res-panel" style="flex:1;display:flex;overflow:hidden"></div>' +
     "</div>"

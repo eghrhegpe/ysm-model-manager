@@ -1,4 +1,4 @@
-// ===== 高级筛选弹窗 =====
+// ===== 高级筛选弹窗（类型化版 — ADR-014 P3 dialogs）=====
 // 多字段（关键字 + 骨骼/立方体/纹理 范围）
 // 风格与 modal.js 一致（dlg-overlay/dlg-box）
 // 样式：.afv-inp 已提取到 frontend/css/components.css（避免重复注入 <style>）
@@ -7,21 +7,34 @@
 import { esc, closeDlg } from "./modal.js";
 import { getApp } from "../wails/app.ts";
 
+/** 筛选条件 */
+export interface AdvFilterValue {
+  keyword: string;
+  minBones: number | null;
+  maxBones: number | null;
+  minCubes: number | null;
+  maxCubes: number | null;
+  minTex: number | null;
+  maxTex: number | null;
+  tag: string;
+}
+
+export type AdvFilterResult = AdvFilterValue | { cleared: true } | null;
+
 /**
  * 弹出高级筛选弹窗
- * @param {Object} opts
- * @param {Object} [opts.value] 初始值 { keyword, minBones, maxBones, minCubes, maxCubes, minTex, maxTex }
- * @returns {Promise<Object|null>} 筛选条件对象，取消返回 null；清除时返回 { cleared: true }
+ * @param opts 初始值
+ * @returns 筛选条件对象，取消返回 null；清除时返回 { cleared: true }
  */
-export function modalAdvFilter(opts = {}) {
+export function modalAdvFilter(opts: { value?: Partial<AdvFilterValue> } = {}): Promise<AdvFilterResult> {
   return new Promise((resolve) => {
     const v = opts.value || {};
     const overlay = document.createElement("div");
     overlay.className = "dlg-overlay";
-    overlay.onclick = (e) => {
+    overlay.onclick = (e: MouseEvent): void => {
       if (e.target === overlay) closeDlg(overlay, resolve, null);
     };
-    overlay.addEventListener("keydown", (e) => {
+    overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
       if (e.key === "Escape") closeDlg(overlay, resolve, null);
     });
 
@@ -88,28 +101,28 @@ export function modalAdvFilter(opts = {}) {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    const kwInput = box.querySelector("#afv-kw");
+    const kwInput = box.querySelector("#afv-kw") as HTMLInputElement;
     kwInput.focus();
 
-    const tagInput = box.querySelector("#afv-tag");
-    const tagHint = box.querySelector("#afv-tag-hint");
+    const tagInput = box.querySelector("#afv-tag") as HTMLInputElement;
+    const tagHint = box.querySelector("#afv-tag-hint") as HTMLElement;
 
     // 异步加载已有标签提示
     (async () => {
       try {
         const App = await getApp();
-        const all = await App.AllTags();
+        const all = (await App.AllTags()) || [];
         if (all?.length) {
           tagHint.textContent = "已有标签: " + all.join(", ");
         }
       } catch (_) {}
     })();
 
-    const errEl = box.querySelector("#afv-err");
+    const errEl = box.querySelector("#afv-err") as HTMLElement;
 
-    const collect = () => {
-      const num = (id) => {
-        const raw = box.querySelector(id)?.value.trim();
+    const collect = (): AdvFilterValue => {
+      const num = (id: string): number | null => {
+        const raw = (box.querySelector(id) as HTMLInputElement)?.value.trim();
         if (!raw) return null;
         const n = parseInt(raw, 10);
         return isNaN(n) || n < 0 ? null : n;
@@ -126,25 +139,40 @@ export function modalAdvFilter(opts = {}) {
       };
     };
 
-    const close = (result) => closeDlg(overlay, resolve, result);
+    const close = (result: AdvFilterResult): void =>
+      closeDlg(overlay, resolve, result);
 
-    const validate = (data) => {
+    const validate = (data: AdvFilterValue): string | null => {
       // 只在两端都填了数字时才校验（null 表示不限制）
-      if (data.minBones != null && data.maxBones != null && data.minBones > data.maxBones) {
+      if (
+        data.minBones != null &&
+        data.maxBones != null &&
+        data.minBones > data.maxBones
+      ) {
         return "骨骼数：最小值不能大于最大值";
       }
-      if (data.minCubes != null && data.maxCubes != null && data.minCubes > data.maxCubes) {
+      if (
+        data.minCubes != null &&
+        data.maxCubes != null &&
+        data.minCubes > data.maxCubes
+      ) {
         return "立方体：最小值不能大于最大值";
       }
-      if (data.minTex != null && data.maxTex != null && data.minTex > data.maxTex) {
+      if (
+        data.minTex != null &&
+        data.maxTex != null &&
+        data.minTex > data.maxTex
+      ) {
         return "纹理尺寸：最小值不能大于最大值";
       }
       return null;
     };
 
-    box.querySelector("#afv-cancel").onclick = () => close(null);
-    box.querySelector("#afv-clear").onclick = () => closeDlg(overlay, resolve, { cleared: true });
-    box.querySelector("#afv-ok").onclick = () => {
+    (box.querySelector("#afv-cancel") as HTMLElement).onclick = (): void =>
+      close(null);
+    (box.querySelector("#afv-clear") as HTMLElement).onclick = (): void =>
+      closeDlg(overlay, resolve, { cleared: true });
+    (box.querySelector("#afv-ok") as HTMLElement).onclick = (): void => {
       const data = collect();
       const err = validate(data);
       if (err) {
@@ -157,7 +185,7 @@ export function modalAdvFilter(opts = {}) {
     // Enter 提交（任意输入框）
     const allInputs = box.querySelectorAll("input");
     allInputs.forEach((el) => {
-      el.addEventListener("keydown", (e) => {
+      el.addEventListener("keydown", (e: KeyboardEvent): void => {
         if (e.key === "Enter") {
           const data = collect();
           const err = validate(data);

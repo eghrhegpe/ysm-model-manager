@@ -1,4 +1,4 @@
-// ===== 模型标签编辑弹窗 =====
+// ===== 模型标签编辑弹窗（类型化版 — ADR-014 P3 dialogs）=====
 // 读取/写入模型标签，支持输入新标签和选择已有标签
 import { esc } from "../utils/dom.ts";
 import { bus } from "../bus.ts";
@@ -7,17 +7,17 @@ import { getApp } from "../wails/app.ts";
 
 /**
  * 弹出标签编辑弹窗
- * @param {string} modelPath - 模型文件路径
- * @returns {Promise<string[]|null>} 保存后的标签列表，取消返回 null
+ * @param modelPath 模型文件路径
+ * @returns 保存后的标签列表，取消返回 null
  */
-export function modalTagEditor(modelPath) {
+export function modalTagEditor(modelPath: string): Promise<string[] | null> {
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
     overlay.className = "dlg-overlay";
-    overlay.onclick = (e) => {
+    overlay.onclick = (e: MouseEvent): void => {
       if (e.target === overlay) close(null);
     };
-    overlay.addEventListener("keydown", (e) => {
+    overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
       if (e.key === "Escape") close(null);
     });
 
@@ -53,27 +53,27 @@ export function modalTagEditor(modelPath) {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    const errEl = box.querySelector("#te-err");
-    const tagsEl = box.querySelector("#te-tags");
-    const inputEl = box.querySelector("#te-input");
-    const suggestEl = box.querySelector("#te-suggest");
+    const errEl = box.querySelector("#te-err") as HTMLElement;
+    const tagsEl = box.querySelector("#te-tags") as HTMLElement;
+    const inputEl = box.querySelector("#te-input") as HTMLInputElement;
+    const suggestEl = box.querySelector("#te-suggest") as HTMLElement;
 
-    let tags = [];
+    let tags: string[] = [];
 
     // === 加载 ===
     (async () => {
       try {
         const App = await getApp();
-        tags = await App.GetModelTags(modelPath);
+        tags = (await App.GetModelTags(modelPath)) || [];
         renderTags();
-        const allTags = await App.AllTags();
+        const allTags = (await App.AllTags()) || [];
         renderSuggestions(allTags);
       } catch (e) {
-        errEl.textContent = "⚠️ 加载标签失败: " + e.message;
+        errEl.textContent = "⚠️ 加载标签失败: " + (e as Error).message;
       }
     })();
 
-    function renderTags() {
+    function renderTags(): void {
       tagsEl.innerHTML = tags
         .map(
           (t) =>
@@ -86,15 +86,15 @@ export function modalTagEditor(modelPath) {
         )
         .join("");
       tagsEl.querySelectorAll(".te-tag-del").forEach((btn) => {
-        btn.onclick = () => {
-          const t = btn.dataset.tag;
+        (btn as HTMLElement).onclick = (): void => {
+          const t = (btn as HTMLElement).dataset.tag;
           tags = tags.filter((x) => x !== t);
           renderTags();
         };
       });
     }
 
-    function renderSuggestions(allTags) {
+    function renderSuggestions(allTags: string[]): void {
       const unused = allTags.filter((t) => !tags.includes(t));
       suggestEl.innerHTML = unused.length
         ? unused
@@ -109,9 +109,9 @@ export function modalTagEditor(modelPath) {
             .join("")
         : '<span style="color:var(--muted)">暂无其他标签</span>';
       suggestEl.querySelectorAll(".te-sug-btn").forEach((btn) => {
-        btn.onclick = () => {
-          const t = btn.dataset.tag;
-          if (!tags.includes(t)) {
+        (btn as HTMLElement).onclick = (): void => {
+          const t = (btn as HTMLElement).dataset.tag;
+          if (t && !tags.includes(t)) {
             tags = [...tags, t].sort();
             renderTags();
           }
@@ -119,8 +119,8 @@ export function modalTagEditor(modelPath) {
       });
     }
 
-    function addTag(t) {
-      t = t.trim();
+    function addTag(raw: string): void {
+      const t = raw.trim();
       if (!t) return;
       if (tags.includes(t)) {
         errEl.textContent = "⚠️ 标签已存在";
@@ -136,24 +136,28 @@ export function modalTagEditor(modelPath) {
       inputEl.value = "";
     }
 
-    inputEl.addEventListener("keydown", (e) => {
+    inputEl.addEventListener("keydown", (e: KeyboardEvent): void => {
       if (e.key === "Enter") {
         addTag(inputEl.value);
       }
     });
-    box.querySelector("#te-add").onclick = () => addTag(inputEl.value);
+    (box.querySelector("#te-add") as HTMLElement).onclick = (): void =>
+      addTag(inputEl.value);
 
-    const close = (result) => closeDlg(overlay, resolve, result);
+    const close = (result: string[] | null): void =>
+      closeDlg(overlay, resolve, result);
 
-    box.querySelector("#te-cancel").onclick = () => close(null);
-    box.querySelector("#te-save").onclick = async () => {
+    (box.querySelector("#te-cancel") as HTMLElement).onclick = (): void =>
+      close(null);
+    (box.querySelector("#te-save") as HTMLElement).onclick = async (): Promise<void> => {
       try {
         const App = await getApp();
         await App.SetModelTags(modelPath, tags);
         close(tags);
       } catch (e) {
-        errEl.textContent = "⚠️ 保存失败: " + e.message;
+        errEl.textContent = "⚠️ 保存失败: " + (e as Error).message;
       }
     };
+    void bus;
   });
 }

@@ -5,7 +5,7 @@ import { flashBtn } from "./utils.js";
 import { spinnerHTML } from "./tpl.js";
 import { selectState } from "./data.js";
 import { getExts } from "../../utils/extensions.ts";
-import { modalAdvFilter } from "../../dialogs/adv-filter.js";
+import { modalAdvFilter } from "../../dialogs/adv-filter.ts";
 import { updateSelectCount } from "./events.js";
 import { dbg } from "../../utils/debug.ts";
 import { setRenderMode } from "./render.js";

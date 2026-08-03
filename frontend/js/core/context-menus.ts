@@ -390,7 +390,7 @@ export function registerContextMenus(): void {
           {
             label: "🏷️ 编辑标签",
             onClick: async () => {
-              const { modalTagEditor } = await import("../dialogs/tag-editor.js");
+              const { modalTagEditor } = await import("../dialogs/tag-editor.ts");
               const result = await modalTagEditor(path || "");
               if (result) toast(`🏷️ 已保存 ${result.length} 个标签`, 2000);
             },

@@ -1,4 +1,4 @@
-// ===== 导入队列 + 拖拽 + 重命名流程 =====
+// ===== 导入队列 + 拖拽 + 重命名流程（类型化版 — ADR-014 P3 features 收官）=====
 import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { parseModelName, renderDisplayName } from "../utils/display.ts";
@@ -6,10 +6,18 @@ import { renderFormattedText } from "../utils/mc-format.ts";
 import { modalConfirm } from "../dialogs/modal.ts";
 import { DnDLock, PendingImport } from "./dnd-state.ts";
 import { getApp } from "../wails/app.ts";
-
-import { ALL_EXTS, extBelongsTo } from "../utils/extensions.ts";
+import { ALL_EXTS } from "../utils/extensions.ts";
 
 const extsStr = ALL_EXTS.join(" ");
+
+/** 带相对路径的 File（文件夹导入时标记 _relPath） */
+type ImportFile = File & { _relPath?: string };
+
+/** app-content 组件实例（initImportQueue 依赖的成员） */
+export interface ImportQueueHost {
+  _root: ShadowRoot;
+  _esc: (s: string) => string;
+}
 
 /**
  * 判断文件是否需要进入命名表单（异步）
@@ -17,7 +25,7 @@ const extsStr = ALL_EXTS.join(" ");
  * - .zip / .7z → 调 Go 端 DetectZipType 检测内容后决定
  * - 其他已注册扩展名 → 直接导入
  */
-const shouldEnterForm = async (name, base64) => {
+const shouldEnterForm = async (name: string, base64: string): Promise<boolean> => {
   const ext = "." + (name.split(".").pop() || "").toLowerCase();
   if (ext === ".ysm") return true;
   if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
@@ -30,33 +38,46 @@ const shouldEnterForm = async (name, base64) => {
     }
   }
   // 其他已注册扩展名（.pmx, .vrca, .nbt 等）直接导入，不进表单
-  if (ALL_EXTS.includes(ext)) return false;
   return false;
 };
-const isSupportedFile = (name) => {
+
+const isSupportedFile = (name: string): boolean => {
   const ext = "." + (name.split(".").pop() || "").toLowerCase();
   return ALL_EXTS.includes(ext);
 };
 
-export function initImportQueue(app) {
+/** 初始化导入队列，返回清理函数 */
+export function initImportQueue(app: ImportQueueHost): () => void {
   const root = app._root;
-  const esc = (s) => app._esc(s);
-  const dropZone = root.getElementById("dl-drop");
-  const fileInput = root.getElementById("dl-file-input");
-  const folderInput = root.getElementById("dl-folder-input");
-  const importedList = root.getElementById("dl-imported-list");
-  const dlCount = root.getElementById("dl-count");
+  const esc = (s: string): string => app._esc(s);
+  const dropZone = root.getElementById("dl-drop") as HTMLElement;
+  const fileInput = root.getElementById("dl-file-input") as HTMLInputElement;
+  const folderInput = root.getElementById("dl-folder-input") as HTMLInputElement;
+  const importedList = root.getElementById("dl-imported-list") as HTMLElement;
+  const dlCount = root.getElementById("dl-count") as HTMLElement | null;
   // 存储当前文件信息
-  let currentFile = null;
-  let currentBase64 = null;
-  let currentFileName = null;
+  let currentFile: ImportFile | null = null;
+  let currentBase64: string | null = null;
+  let currentFileName: string | null = null;
   let currentRelPath = ""; // 文件夹导入时的相对路径
-  const imported = []; // { name, base64, renamed, time }
-  const fileQueue = []; // { file, base64, name, size }
+  const imported: Array<{
+    name: string;
+    base64?: string;
+    renamed?: boolean;
+    time: string;
+    isYsm?: boolean;
+  }> = []; // { name, base64, renamed, time }
+  const fileQueue: Array<{
+    file: ImportFile;
+    base64: string;
+    name: string;
+    size: number;
+    relPath: string;
+  }> = []; // { file, base64, name, size }
 
   // 切换拖拽区 ↔ 表单（简单 display 切换）
-  const toggleForm = (visible) => {
-    const form = root.getElementById("dl-form");
+  const toggleForm = (visible: boolean): void => {
+    const form = root.getElementById("dl-form") as HTMLElement | null;
     if (visible) {
       dropZone.style.display = "none";
       if (form) form.style.display = "flex";
@@ -66,7 +87,7 @@ export function initImportQueue(app) {
     }
   };
 
-  const showForm = (file, base64) => {
+  const showForm = (file: ImportFile, base64: string): void => {
     currentFile = file;
     currentBase64 = base64;
     currentFileName = file.name;
@@ -74,11 +95,15 @@ export function initImportQueue(app) {
 
     const parsed = parseModelName(file.name);
 
-    root.getElementById("dl-author").value = parsed.author || "";
-    root.getElementById("dl-work").value = parsed.work || "";
-    root.getElementById("dl-chara").value = parsed.chara || "";
-    root.getElementById("dl-variant").value = "";
-    root.getElementById("dl-date").value = parsed.date || "";
+    (root.getElementById("dl-author") as HTMLInputElement).value =
+      parsed.author || "";
+    (root.getElementById("dl-work") as HTMLInputElement).value =
+      parsed.work || "";
+    (root.getElementById("dl-chara") as HTMLInputElement).value =
+      parsed.chara || "";
+    (root.getElementById("dl-variant") as HTMLInputElement).value = "";
+    (root.getElementById("dl-date") as HTMLInputElement).value =
+      parsed.date || "";
     updatePreview();
 
     toggleForm(true);
@@ -86,8 +111,7 @@ export function initImportQueue(app) {
     // 存临时文件供右侧预览面板读取
     (async () => {
       try {
-        const { SavePreviewTempFile } =
-          await getApp();
+        const { SavePreviewTempFile } = await getApp();
         const tmpPath = await SavePreviewTempFile(base64);
         if (tmpPath) {
           bus.emit("model:select", { path: tmpPath });
@@ -97,42 +121,48 @@ export function initImportQueue(app) {
 
     // "读取作者"已勾选时，自动为新文件读取 YSM 头部
     setTimeout(async () => {
-      if (root.getElementById("dl-from-header")?.checked) {
+      if (
+        (root.getElementById("dl-from-header") as HTMLInputElement | null)
+          ?.checked
+      ) {
         await loadHeaderFromBase64();
       }
     }, 0);
   };
 
   // 检查文件是否已存在（防抖）
-  let conflictTimer = null;
-  const checkConflictDebounced = (name) => {
+  let conflictTimer: ReturnType<typeof setTimeout> | null = null;
+  const checkConflictDebounced = (name: string): void => {
     if (conflictTimer) clearTimeout(conflictTimer);
     conflictTimer = setTimeout(async () => {
       try {
-        const { CheckFileExists, LoadAppConfig, GetRepoRoot } =
-          await getApp();
+        const { CheckFileExists, LoadAppConfig, GetRepoRoot } = await getApp();
+        void LoadAppConfig;
         const repoRoot = await GetRepoRoot("ysm");
         const fullPath = (repoRoot || "") + "\\" + name;
         const exists = await CheckFileExists(fullPath);
-        const el = root.getElementById("dl-conflict");
+        const el = root.getElementById("dl-conflict") as HTMLElement | null;
         if (el) el.style.display = exists ? "" : "none";
       } catch {}
     }, 400);
   };
 
-  const updatePreview = () => {
-    const a = root.getElementById("dl-author").value.trim();
-    const w = root.getElementById("dl-work").value.trim();
-    const c = root.getElementById("dl-chara").value.trim();
-    const v = root.getElementById("dl-variant").value.trim();
-    const manualDate = root.getElementById("dl-date").value.trim();
-    const autoOn = root.getElementById("dl-date-auto").checked;
+  const updatePreview = (): void => {
+    const a = (root.getElementById("dl-author") as HTMLInputElement).value.trim();
+    const w = (root.getElementById("dl-work") as HTMLInputElement).value.trim();
+    const c = (root.getElementById("dl-chara") as HTMLInputElement).value.trim();
+    const v = (root.getElementById("dl-variant") as HTMLInputElement).value.trim();
+    const manualDate = (
+      root.getElementById("dl-date") as HTMLInputElement
+    ).value.trim();
+    const autoOn = (root.getElementById("dl-date-auto") as HTMLInputElement)
+      .checked;
     const autoDate =
       new Date().getFullYear() +
       "-" +
       String(new Date().getMonth() + 1).padStart(2, "0");
     const d = manualDate || (autoOn ? autoDate : "");
-    const parts = [];
+    const parts: string[] = [];
     if (a) parts.push("[" + a + "]");
     parts.push("【" + (w || "未知") + "】");
     parts.push(c || "?");
@@ -140,21 +170,20 @@ export function initImportQueue(app) {
     if (d) parts.push(" (" + d + ")");
     const ext = currentFileName?.split(".").pop() || "ysm";
     const preview = parts.join("") + "." + ext;
-    root.getElementById("dl-preview").textContent = preview;
+    (root.getElementById("dl-preview") as HTMLElement).textContent = preview;
 
     // 检查冲突（防抖）
     checkConflictDebounced(preview);
   };
 
   // 从 Go 端解析 base64 头部元数据（复用 header.go 的完整解析逻辑）
-  const loadHeaderFromBase64 = async () => {
+  const loadHeaderFromBase64 = async (): Promise<void> => {
     if (!currentBase64) return;
     try {
-      const { ExtractYSMHeaderFromBase64 } =
-        await getApp();
+      const { ExtractYSMHeaderFromBase64 } = await getApp();
       const header = await ExtractYSMHeaderFromBase64(currentBase64);
       if (header.authorName) {
-        const authorEl = root.getElementById("dl-author");
+        const authorEl = root.getElementById("dl-author") as HTMLInputElement;
         if (!authorEl.value.trim()) {
           authorEl.value = header.authorName;
           authorEl.style.background =
@@ -164,7 +193,7 @@ export function initImportQueue(app) {
         }
       }
       if (header.tips) {
-        const tipsEl = root.getElementById("dl-tips");
+        const tipsEl = root.getElementById("dl-tips") as HTMLElement | null;
         if (tipsEl) {
           tipsEl.innerHTML =
             '<div style="font-weight:600;font-size:9px;color:var(--accent);margin-bottom:2px">📝 头部信息</div><div>' +
@@ -177,14 +206,16 @@ export function initImportQueue(app) {
     } catch (_) {}
   };
 
-  const fromHeaderChk = root.getElementById("dl-from-header");
+  const fromHeaderChk = root.getElementById(
+    "dl-from-header",
+  ) as HTMLInputElement | null;
   if (fromHeaderChk) {
     fromHeaderChk.addEventListener("change", async () => {
       if (fromHeaderChk.checked) {
         await loadHeaderFromBase64();
       } else {
         // 取消勾选时隐藏 tips，不清空已填入的作者（用户可能想保留）
-        const tipsEl = root.getElementById("dl-tips");
+        const tipsEl = root.getElementById("dl-tips") as HTMLElement | null;
         if (tipsEl) tipsEl.style.display = "none";
       }
     });
@@ -200,28 +231,28 @@ export function initImportQueue(app) {
     ?.addEventListener("change", updatePreview);
 
   // 拖拽事件 — 区域内独立处理，阻止冒泡到全局 handler
-  dropZone.addEventListener("dragover", (e) => {
+  dropZone.addEventListener("dragover", (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     dropZone.style.borderColor = "var(--accent)";
   });
-  dropZone.addEventListener("dragleave", (e) => {
+  dropZone.addEventListener("dragleave", (e: DragEvent) => {
     e.stopPropagation();
     dropZone.style.borderColor = "";
   });
-  dropZone.addEventListener("drop", (e) => {
+  dropZone.addEventListener("drop", (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     dropZone.style.borderColor = "";
-    const items = e.dataTransfer.items;
+    const items = e.dataTransfer?.items;
     if (items?.length) {
       processDropItems(items);
     } else {
       // 回退到 files
-      const files = e.dataTransfer.files;
+      const files = e.dataTransfer?.files;
       if (!files?.length) return;
-      let ok = 0,
-        skip = 0;
+      let ok = 0;
+      let skip = 0;
       Array.from(files).forEach((file) => {
         if (!isSupportedFile(file.name)) {
           skip++;
@@ -230,7 +261,7 @@ export function initImportQueue(app) {
         ok++;
         const reader = new FileReader();
         reader.onload = async () => {
-          const base64 = reader.result.split(",")[1];
+          const base64 = String(reader.result).split(",")[1] || "";
           if (await shouldEnterForm(file.name, base64)) {
             enqueueFile(file, base64);
           } else {
@@ -252,7 +283,7 @@ export function initImportQueue(app) {
 
   // 点击：普通点击选文件，Ctrl+点击选文件夹
   let clickLocked = false;
-  dropZone.addEventListener("click", (e) => {
+  dropZone.addEventListener("click", (e: MouseEvent) => {
     if (clickLocked) return;
     clickLocked = true;
     setTimeout(() => {
@@ -266,9 +297,9 @@ export function initImportQueue(app) {
   });
   fileInput.addEventListener("change", () => {
     const files = fileInput.files;
-    if (!files.length) return;
-    let ok = 0,
-      skip = 0;
+    if (!files || !files.length) return;
+    let ok = 0;
+    let skip = 0;
     Array.from(files).forEach((file) => {
       if (!isSupportedFile(file.name)) {
         skip++;
@@ -277,7 +308,7 @@ export function initImportQueue(app) {
       ok++;
       const reader = new FileReader();
       reader.onload = async () => {
-        const base64 = reader.result.split(",")[1];
+        const base64 = String(reader.result).split(",")[1] || "";
         if (await shouldEnterForm(file.name, base64)) {
           enqueueFile(file, base64);
         } else {
@@ -298,14 +329,14 @@ export function initImportQueue(app) {
   });
   folderInput.addEventListener("change", () => {
     const files = folderInput.files;
-    if (!files.length) return;
+    if (!files || !files.length) return;
     let ok = 0;
     Array.from(files).forEach((file) => {
       if (!isSupportedFile(file.name)) return;
       ok++;
       const reader = new FileReader();
       reader.onload = async () => {
-        const base64 = reader.result.split(",")[1];
+        const base64 = String(reader.result).split(",")[1] || "";
         if (await shouldEnterForm(file.name, base64)) {
           enqueueFile(file, base64);
         } else {
@@ -327,16 +358,16 @@ export function initImportQueue(app) {
 
   // 导入按钮
   root.getElementById("dl-import")?.addEventListener("click", async () => {
-    const a = root.getElementById("dl-author").value.trim();
-    const w = root.getElementById("dl-work").value.trim();
-    const c = root.getElementById("dl-chara").value.trim();
-    const v = root.getElementById("dl-variant").value.trim();
-    const d = root.getElementById("dl-date").value.trim();
+    const a = (root.getElementById("dl-author") as HTMLInputElement).value.trim();
+    const w = (root.getElementById("dl-work") as HTMLInputElement).value.trim();
+    const c = (root.getElementById("dl-chara") as HTMLInputElement).value.trim();
+    const v = (root.getElementById("dl-variant") as HTMLInputElement).value.trim();
+    const d = (root.getElementById("dl-date") as HTMLInputElement).value.trim();
     const ext = currentFileName?.split(".").pop() || "ysm";
 
-    let newName;
+    let newName: string;
     if (c) {
-      const parts = [];
+      const parts: string[] = [];
       if (a) parts.push("[" + a + "]");
       parts.push("【" + (w || "未知") + "】");
       parts.push(c);
@@ -349,8 +380,7 @@ export function initImportQueue(app) {
     }
 
     try {
-      const { LoadAppConfig, ImportModelFileTo } =
-        await getApp();
+      const { LoadAppConfig, ImportModelFileTo } = await getApp();
       const cfg = await LoadAppConfig();
       if (!cfg.filesRoot) {
         bus.emit("toast:show", {
@@ -368,12 +398,16 @@ export function initImportQueue(app) {
       const { showRenameDialog } = await import("../dialogs/rename.ts");
       const renameTo = await showRenameDialog(null, newName);
       if (!renameTo) {
-        bus.emit("toast:show", { msg: "已取消导入", duration: 2000, type: "info" });
+        bus.emit("toast:show", {
+          msg: "已取消导入",
+          duration: 2000,
+          type: "info",
+        });
         return;
       }
       const finalName = renameTo;
 
-      await ImportModelFileTo(finalName, subpath, currentBase64);
+      await ImportModelFileTo(finalName, subpath, currentBase64 || "");
       bus.emit("stats:refresh");
       bus.emit("tree:reload");
 
@@ -420,12 +454,11 @@ export function initImportQueue(app) {
         });
         if (confirmed) {
           try {
-            const { ImportModelFileOverwriteTo } =
-              await getApp();
+            const { ImportModelFileOverwriteTo } = await getApp();
             const subpath2 = currentRelPath
               ? currentRelPath.substring(0, currentRelPath.lastIndexOf("/"))
               : "";
-            await ImportModelFileOverwriteTo(newName, subpath2, currentBase64);
+            await ImportModelFileOverwriteTo(newName, subpath2, currentBase64 || "");
             bus.emit("toast:show", {
               msg: "✅ 已覆盖: " + newName,
               duration: 2000,
@@ -479,21 +512,21 @@ export function initImportQueue(app) {
   });
 
   // 添加文件到导入队列
-  let repoFiles = null; // 仓库文件名缓存
-  const loadRepoFiles = async () => {
+  let repoFiles: Set<string> | null = null; // 仓库文件名缓存
+  const loadRepoFiles = async (): Promise<void> => {
     try {
-      const { ScanModelEntries, LoadAppConfig, GetRepoRoot } =
-        await getApp();
+      const { ScanModelEntries, LoadAppConfig, GetRepoRoot } = await getApp();
+      void LoadAppConfig;
       const repoRoot = await GetRepoRoot("ysm");
       if (!repoRoot) return;
-      const entries = await ScanModelEntries(repoRoot);
+      const entries = (await ScanModelEntries(repoRoot)) || [];
       repoFiles = new Set(entries.map((e) => e.Name.replace(/\.ban$/i, "")));
     } catch {
       repoFiles = new Set();
     }
   };
 
-  const enqueueFile = (file, base64) => {
+  const enqueueFile = (file: ImportFile, base64: string): void => {
     // 检查文件名是否已在队列中
     const dup =
       fileQueue.some((fq) => fq.name === file.name) ||
@@ -517,20 +550,22 @@ export function initImportQueue(app) {
   };
 
   // 递归读取文件夹内的模型文件
-  const readEntry = (entry, basePath) => {
+  const readEntry = (entry: FileSystemEntry, basePath: string): Promise<void> => {
     return new Promise((resolve) => {
       try {
         if (entry.isFile) {
-          entry.file(
+          (entry as FileSystemFileEntry).file(
             (file) => {
               if (!isSupportedFile(file.name)) {
                 resolve();
                 return;
               }
-              file._relPath = basePath ? basePath + "/" + file.name : file.name;
+              (file as ImportFile)._relPath = basePath
+                ? basePath + "/" + file.name
+                : file.name;
               const reader = new FileReader();
               reader.onload = async () => {
-                const base64 = reader.result.split(",")[1];
+                const base64 = String(reader.result).split(",")[1] || "";
                 if (await shouldEnterForm(file.name, base64)) {
                   enqueueFile(file, base64);
                 } else {
@@ -544,14 +579,14 @@ export function initImportQueue(app) {
             () => resolve(), // entry.file 回调失败（如 .lnk 快捷方式）→ 直接跳过
           );
         } else if (entry.isDirectory) {
-          const dirReader = entry.createReader();
+          const dirReader = (entry as FileSystemDirectoryEntry).createReader();
           dirReader.readEntries(
             (entries) => {
               const subPath = basePath
                 ? basePath + "/" + entry.name
                 : entry.name;
               Promise.all(
-                Array.from(entries).map((e) => readEntry(e, subPath)),
+                Array.from(entries || []).map((e) => readEntry(e, subPath)),
               ).then(() => resolve());
             },
             () => resolve(), // readEntries 失败时直接跳过
@@ -566,16 +601,16 @@ export function initImportQueue(app) {
   };
 
   // 处理拖入的 items（支持文件和文件夹）
-  const processDropItems = (items) => {
-    const entries = [];
+  const processDropItems = (items: DataTransferItemList): void => {
+    const entries: FileSystemEntry[] = [];
     for (let i = 0; i < items.length; i++) {
       const entry = items[i].webkitGetAsEntry?.();
       if (entry) entries.push(entry);
     }
     if (!entries.length) {
       // 回退：webkitGetAsEntry 不可用时直接用 getAsFile
-      let ok = 0,
-        skip = 0;
+      let ok = 0;
+      let skip = 0;
       for (let i = 0; i < items.length; i++) {
         const file = items[i].getAsFile?.();
         if (!file || !isSupportedFile(file.name)) {
@@ -585,7 +620,7 @@ export function initImportQueue(app) {
         ok++;
         const reader = new FileReader();
         reader.onload = async () => {
-          const base64 = reader.result.split(",")[1];
+          const base64 = String(reader.result).split(",")[1] || "";
           if (await shouldEnterForm(file.name, base64)) {
             enqueueFile(file, base64);
           } else {
@@ -617,7 +652,7 @@ export function initImportQueue(app) {
   };
 
   // 非 YSM 文件直接导入（跳过命名表单）
-  const directImport = async (file, base64) => {
+  const directImport = async (file: ImportFile, base64: string): Promise<void> => {
     try {
       const { ImportModelFile } = await getApp();
       await ImportModelFile(file.name, base64);
@@ -644,7 +679,7 @@ export function initImportQueue(app) {
   };
 
   // 渲染已导入列表（含队列）
-  const renderImportedList = () => {
+  const renderImportedList = (): void => {
     let html = "";
     imported.forEach((item) => {
       html +=
@@ -696,10 +731,10 @@ export function initImportQueue(app) {
     // 已导入的重命名按钮
     importedList.querySelectorAll(".dl-reimport").forEach((btn) => {
       btn.addEventListener("click", async () => {
-        const name = btn.dataset.name;
+        const name = (btn as HTMLElement).dataset.name || "";
         const { showRenameDialog } = await import("../dialogs/rename.ts");
-        const { RenameFile, LoadAppConfig, GetRepoRoot } =
-          await getApp();
+        const { RenameFile, LoadAppConfig, GetRepoRoot } = await getApp();
+        void LoadAppConfig;
         const repoRoot = await GetRepoRoot("ysm");
         const fullPath = repoRoot + "\\" + name;
         const newName = await showRenameDialog(fullPath, name);
@@ -722,10 +757,11 @@ export function initImportQueue(app) {
     });
 
     // 队列行点击 → 设置为当前编辑项
-    importedList.querySelectorAll(".dl-q-item").forEach((row) => {
-      row.addEventListener("click", (e) => {
-        if (e.target.closest(".dl-remove-q")) return;
-        const qi = parseInt(row.dataset.idx, 10);
+    importedList.querySelectorAll(".dl-q-item").forEach((rowEl) => {
+      const row = rowEl as HTMLElement;
+      row.addEventListener("click", (e: MouseEvent) => {
+        if ((e.target as Element).closest(".dl-remove-q")) return;
+        const qi = parseInt((row as HTMLElement).dataset.idx || "", 10);
         const fq = fileQueue[qi];
         if (!fq) return;
         showForm(fq.file, fq.base64);
@@ -734,10 +770,11 @@ export function initImportQueue(app) {
     });
 
     // 队列移除
-    importedList.querySelectorAll(".dl-remove-q").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
+    importedList.querySelectorAll(".dl-remove-q").forEach((btnEl) => {
+      const btn = btnEl as HTMLElement;
+      btn.addEventListener("click", (e: MouseEvent) => {
         e.stopPropagation();
-        const qi = parseInt(btn.dataset.idx, 10);
+        const qi = parseInt((btn as HTMLElement).dataset.idx || "", 10);
         fileQueue.splice(qi, 1);
         if (fileQueue.length === 0) {
           // 队列空了 → 回到拖拽区
@@ -757,7 +794,7 @@ export function initImportQueue(app) {
     });
   };
 
-  const updateQueueCount = () => {
+  const updateQueueCount = (): void => {
     if (dlCount)
       dlCount.textContent =
         imported.length +
@@ -774,8 +811,8 @@ export function initImportQueue(app) {
   renderImportedList();
 
   // 处理待导入文件的通用函数
-  const processPendingImport = (files) => {
-    const list = files || PendingImport.queue;
+  const processPendingImport = (files?: Array<{ name: string; file: File }>): void => {
+    const list = files || (PendingImport.queue as Array<{ name: string; file: File }>);
     if (!list || list.length === 0) return;
     PendingImport.clear();
     if (!DnDLock.acquire()) return;
@@ -787,7 +824,7 @@ export function initImportQueue(app) {
       }
       const reader = new FileReader();
       reader.onload = () => {
-        const base64 = reader.result.split(",")[1];
+        const base64 = String(reader.result).split(",")[1] || "";
         if (base64) enqueueFile(item.file, base64);
         readCount++;
         if (readCount === list.length) {

@@ -168,7 +168,7 @@ function main() {
   }
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ errors, infos, current, baselineUpdated: UPDATE }, null, 2));
+    console.log(JSON.stringify({ _summary: { errors: errors.length, infos: infos.length, knip: current.knip.length, jscpd: current.jscpd.length }, errors, infos, current, baselineUpdated: UPDATE }, null, 2));
     process.exit(errors.length ? 1 : 0);
     return;
   }

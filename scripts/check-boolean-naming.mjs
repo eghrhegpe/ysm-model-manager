@@ -89,7 +89,7 @@ function main() {
   const results = [...uniq.values()];
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ findings: results, scanned: files.length, strict: STRICT }, null, 2));
+    console.log(JSON.stringify({ _summary: { scanned: files.length, findings: results.length }, findings: results, scanned: files.length, strict: STRICT }, null, 2));
     process.exit(STRICT && results.length ? 1 : 0);
     return;
   }

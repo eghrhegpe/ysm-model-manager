@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * 代码红线审查。13 条规则 × 违规扫描（依赖 ripgrep）。
+ * 代码红线审查。12 条规则 × 违规扫描（依赖 ripgrep）。
+ * W3 empty JSDoc / W4 TODO 无编号已移交 comment-checker.mjs（避免双重扫描）。
  * 由 scripts/review.py 迁移（2026-08-03），规则与输出逻辑逐点保真。
  */
 import { execFileSync } from 'node:child_process';
@@ -101,11 +102,8 @@ function runChecks() {
     rg('window\\.go\\.main\\.App', 'frontend/js', ['*.js', '*.ts']),
     'getApp()');
 
-  add('W3', 'empty JSDoc',
-    rg('@param\\s+\\{[^}]*\\}\\s+\\w+\\s*-?\\s*$|@returns\\s*\\{[^}]*\\}\\s*$', 'frontend/js', ['*.js', '*.ts']));
-
-  add('W4', 'TODO no ticket',
-    rg('TODO|FIXME|HACK|XXX', ['.', 'go'], ['*.go']).filter((l) => !l.includes('#') && !l.includes('nolint')));
+  // W3 empty JSDoc / W4 TODO no ticket 已移交 comment-checker.mjs（扫描范围更全，
+  // W4 覆盖 go+frontend，避免双重扫描），此处不再重复。
 
   add('W5', 'async DOM race (callback sets innerHTML without stale guard)',
     rg('=>\\s*\\{[^}]*innerHTML\\s*=', 'frontend/js', ['*.js', '*.ts'])
@@ -134,7 +132,8 @@ function outputText(results) {
 }
 
 function outputJson(results) {
-  process.stdout.write(JSON.stringify(results, null, 2) + '\n');
+  const total = results.reduce((s, r) => s + r.count, 0);
+  process.stdout.write(JSON.stringify({ _summary: { rules: results.length, violations: total }, results }, null, 2) + '\n');
 }
 
 /**

@@ -1,7 +1,14 @@
 // ===== Canvas 全屏放大预览 =====
-// 从 events.js 拆分：openFullPreview
+// 从 events.ts 拆分：openFullPreview
+import type { BedrockGeometry } from "./utils.ts";
+
 /** 全窗放大预览（独立函数，不依赖组件实例） */
-export async function openFullPreview(canvas, model, textureImg, labelsOn) {
+export async function openFullPreview(
+  canvas: HTMLCanvasElement,
+  model: BedrockGeometry,
+  textureImg: HTMLImageElement | null,
+  labelsOn: boolean,
+): Promise<void> {
   const { renderModel2D } = await import("../../utils/model2d.ts");
   const overlay = document.createElement("div");
   overlay.style.cssText =
@@ -18,8 +25,10 @@ export async function openFullPreview(canvas, model, textureImg, labelsOn) {
   overlay.appendChild(hint);
   let zoom = 1,
     rotation = 0;
-  const doRender = () =>
-    renderModel2D(bigCanvas, model, textureImg, {
+  // BedrockGeometry.uv 含 string 形态（对象序列化），model2d 的 BedrockCube.uv 仅 number[]——cast 兼容
+  const model2d = model as Parameters<typeof renderModel2D>[1];
+  const doRender = (): void =>
+    renderModel2D(bigCanvas, model2d, textureImg, {
       showLabels: labelsOn,
       zoom,
       rotation,
@@ -49,7 +58,7 @@ export async function openFullPreview(canvas, model, textureImg, labelsOn) {
   window.addEventListener("mouseup", () => {
     dragging = false;
   });
-  const close = () => {
+  const close = (): void => {
     if (overlay.parentNode) document.body.removeChild(overlay);
   };
   overlay.addEventListener("click", (e) => {

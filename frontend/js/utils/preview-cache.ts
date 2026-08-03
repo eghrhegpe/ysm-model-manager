@@ -10,7 +10,11 @@
 export interface CacheValue {
   texture?: string;
   geometry?: object;
+  animations?: unknown[];
+  authors?: string[];
+  avatars?: Record<string, string>;
   _decodedBy?: string;
+  [key: string]: unknown;
 }
 
 type EvictHandler = (key: string, value: CacheValue | undefined) => void;

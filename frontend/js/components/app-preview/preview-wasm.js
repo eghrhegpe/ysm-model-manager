@@ -1,12 +1,12 @@
 // ===== WASM 解码层 =====
 // 从 index.js 拆分：.ysm 文件的前端 WASM 解码逻辑
-import { devLog } from "./preview-utils.js";
+import { devLog } from "./preview-utils.ts";
 import {
   buildStdYsgpFromTextVariant,
   stripYsgpTextHeader,
-} from "./preview-utils.js";
+} from "./preview-utils.ts";
 import { cacheGet, cacheSet } from "../../utils/preview-cache.ts";
-import { parseBedrockGeometryFromJSON } from "./utils.js";
+import { parseBedrockGeometryFromJSON } from "./utils.ts";
 import { parseBedrockAnimationJSON } from "../../utils/animation.ts";
 
 /**

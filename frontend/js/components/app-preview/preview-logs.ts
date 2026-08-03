@@ -1,12 +1,27 @@
 // ===== 导入日志渲染 =====
-// 从 events.js 拆分：loadLogsPreview
+// 从 events.ts 拆分：loadLogsPreview
 import { renderDisplayName } from "../../utils/display.ts";
 
-const esc = (s) =>
-  (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/** 导入日志条目（Go ImportLog 字段） */
+interface ImportLogEntry {
+  Status?: string;
+  Timestamp?: string;
+  Operation?: string;
+  ModelName?: string;
+  SourcePath?: string;
+  TargetDir?: string;
+  ErrorMsg?: string;
+}
+
+const esc = (s: unknown): string =>
+  (s || "")
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
 /** 加载日志到预览面板（含筛选和搜索） */
-export function loadLogsPreview(root, logs) {
+export function loadLogsPreview(root: ShadowRoot, logs: ImportLogEntry[]): void {
   const list = root.getElementById("dp-log-list");
   if (!list) return;
   if (!logs || !logs.length) {
@@ -16,18 +31,25 @@ export function loadLogsPreview(root, logs) {
   }
   // 读取筛选状态
   const activeBtn = root.querySelector(".dp-log-fbtn.active");
-  const filter = activeBtn ? activeBtn.dataset.status : "all";
-  const search = (root.getElementById("dp-log-search")?.value || "")
+  const filter = activeBtn ? (activeBtn as HTMLElement).dataset.status || "all" : "all";
+  const search = ((root.getElementById("dp-log-search") as HTMLInputElement | null)?.value || "")
     .trim()
     .toLowerCase();
 
-  const opLabels = { import: "📥", download: "⬇️", scan: "🔍", sync: "🔄", rename: "✏️", delete: "🗑️" };
+  const opLabels: Record<string, string> = {
+    import: "📥",
+    download: "⬇️",
+    scan: "🔍",
+    sync: "🔄",
+    rename: "✏️",
+    delete: "🗑️",
+  };
   const items = logs
     .slice(-100)
     .reverse()
     .filter((l) => {
       if (filter !== "all" && l.Status !== filter) return false;
-      if (search && !l.ModelName.toLowerCase().includes(search)) return false;
+      if (search && !(l.ModelName || "").toLowerCase().includes(search)) return false;
       return true;
     })
     .map((l) => {
@@ -40,7 +62,7 @@ export function loadLogsPreview(root, logs) {
             second: "2-digit",
           })
         : "";
-      const opIcon = opLabels[l.Operation] || "📋";
+      const opIcon = opLabels[l.Operation || ""] || "📋";
       const nameHtml = l.ModelName
         ? renderDisplayName(l.ModelName)
         : esc(l.SourcePath || l.TargetDir || "-");

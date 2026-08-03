@@ -1,25 +1,26 @@
 // ===== 预览面板操作按钮绑定 =====
-// 从 events.js 拆分：bindActions + 按钮状态管理
+// 从 events.ts 拆分：bindActions + 按钮状态管理
 import { bus } from "../../bus.ts";
 import { dbg } from "../../utils/debug.ts";
 
 /** 设置全局按钮启用/禁用 */
-function setGlobalButtonsEnabled(root, enabled) {
+function setGlobalButtonsEnabled(root: ShadowRoot, enabled: boolean): void {
   const btns = root.querySelectorAll(
     "#dp-btn-import-all, #dp-btn-upload-all, #dp-btn-sync-all",
   );
   btns.forEach((btn) => {
-    btn.disabled = !enabled;
-    btn.style.opacity = enabled ? "1" : "0.4";
-    btn.style.cursor = enabled ? "pointer" : "not-allowed";
+    const b = btn as HTMLButtonElement;
+    b.disabled = !enabled;
+    b.style.opacity = enabled ? "1" : "0.4";
+    b.style.cursor = enabled ? "pointer" : "not-allowed";
   });
 }
 
 /** 恢复全局按钮文字和启用状态 */
-export function resetGlobalButtons(root) {
-  const btnImport = root.getElementById("dp-btn-import-all");
-  const btnUpload = root.getElementById("dp-btn-upload-all");
-  const btnSync = root.getElementById("dp-btn-sync-all");
+export function resetGlobalButtons(root: ShadowRoot): void {
+  const btnImport = root.getElementById("dp-btn-import-all") as HTMLButtonElement | null;
+  const btnUpload = root.getElementById("dp-btn-upload-all") as HTMLButtonElement | null;
+  const btnSync = root.getElementById("dp-btn-sync-all") as HTMLButtonElement | null;
   if (btnImport) {
     btnImport.disabled = false;
     btnImport.textContent = "⬇️ 导入仓库模型";
@@ -41,11 +42,11 @@ export function resetGlobalButtons(root) {
 }
 
 /** 绑定预览面板操作按钮（导入/上传/同步/日志/卡片） */
-export function bindActions(root) {
+export function bindActions(root: ShadowRoot): void {
   // ===== 全局操作栏 =====
-  const btnImport = root.getElementById("dp-btn-import-all");
-  const btnUpload = root.getElementById("dp-btn-upload-all");
-  const btnSync = root.getElementById("dp-btn-sync-all");
+  const btnImport = root.getElementById("dp-btn-import-all") as HTMLButtonElement | null;
+  const btnUpload = root.getElementById("dp-btn-upload-all") as HTMLButtonElement | null;
+  const btnSync = root.getElementById("dp-btn-sync-all") as HTMLButtonElement | null;
 
   setGlobalButtonsEnabled(root, false);
 
@@ -53,7 +54,7 @@ export function bindActions(root) {
     dbg("preview", "⬇️ 导入 按钮点击");
     btnImport.disabled = true;
     btnImport.textContent = "⬇️ 导入中...";
-    bus.emit("sync:download:missing");
+    bus.emit("sync:download:missing", {});
   });
   btnUpload?.addEventListener("click", () => {
     dbg("preview", "📤 上传 按钮点击");
@@ -71,13 +72,13 @@ export function bindActions(root) {
   // ===== 日志展开/折叠 =====
   const logToggle = root.getElementById("dp-log-toggle");
   const logList = root.getElementById("dp-log-list");
-  const logFilter = root.getElementById("dp-log-filter");
+  const logFilter = root.getElementById("dp-log-filter") as HTMLElement | null;
   if (logToggle && logList) {
     let logExpanded = false;
-    logToggle.onclick = () => {
+    logToggle.onclick = (): void => {
       logExpanded = !logExpanded;
       logList.style.maxHeight = logExpanded ? "300px" : "72px";
-      logFilter.style.display = logExpanded ? "flex" : "none";
+      if (logFilter) logFilter.style.display = logExpanded ? "flex" : "none";
       logToggle.textContent = logExpanded ? "收起 ▾" : "展开 ▸";
       if (logExpanded) bus.emit("logs:refresh");
     };
@@ -95,11 +96,11 @@ export function bindActions(root) {
   });
 
   // 日志搜索
-  const logSearch = root.getElementById("dp-log-search");
+  const logSearch = root.getElementById("dp-log-search") as HTMLInputElement | null;
   if (logSearch) {
-    let searchTimer;
+    let searchTimer: ReturnType<typeof setTimeout> | null = null;
     logSearch.addEventListener("input", () => {
-      clearTimeout(searchTimer);
+      clearTimeout(searchTimer ?? undefined);
       searchTimer = setTimeout(() => bus.emit("logs:refresh"), 300);
     });
   }
@@ -129,7 +130,7 @@ export function bindActions(root) {
     const d = root.getElementById(detail);
     if (c && d) {
       let open = false;
-      c.onclick = () => {
+      c.onclick = (): void => {
         open = !open;
         d.classList.toggle("dp-detail-hidden", !open);
       };

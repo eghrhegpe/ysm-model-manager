@@ -1,24 +1,24 @@
 // ===== <app-preview> 入口 =====
 import { bus } from "../../bus.ts";
-import { previewCSS } from "./preview-css.js";
-import { statsHTML, modelDetailHTML, statsCardHTML } from "./tpl.js";
-import { bindBusUpdates } from "./events.js";
-import { bindActions } from "./preview-actions.js";
-import { showPackageDetail, registerMmdEvents } from "./preview-pack.js";
-import { loadLogsPreview } from "./preview-logs.js";
-import { openFullPreview } from "./preview-zoom.js";
+import { previewCSS } from "./preview-css.ts";
+import { statsHTML, modelDetailHTML, statsCardHTML } from "./tpl.ts";
+import { bindBusUpdates } from "./events.ts";
+import { bindActions } from "./preview-actions.ts";
+import { showPackageDetail, registerMmdEvents } from "./preview-pack.ts";
+import { loadLogsPreview } from "./preview-logs.ts";
+import { openFullPreview } from "./preview-zoom.ts";
 import { summaryCardHTML } from "../../utils/summarize.ts";
 import {
   cacheGet,
   cacheSet,
   cacheSetEvictHandler,
 } from "../../utils/preview-cache.ts";
-import { devLog, stripYsgpTextHeader } from "./preview-utils.js";
+import { devLog, stripYsgpTextHeader } from "./preview-utils.ts";
 import { decodeYsmViaWasm } from "./preview-wasm.js";
-import { showModelDetail, showResourcePack, showShaderPack } from "./preview-detail.js";
-import { showLitematic } from "./preview-litematic-meta.js";
+import { showModelDetail, showResourcePack, showShaderPack } from "./preview-detail.ts";
+import { showLitematic } from "./preview-litematic-meta.ts";
 // loadModelData 由 preview-skeleton.js 统一引入
-import { setupBoneExport } from "./preview-bone-export.js";
+import { setupBoneExport } from "./preview-bone-export.ts";
 
 // 注册缓存淘汰回调：释放 blob URL
 cacheSetEvictHandler((key, val) => {

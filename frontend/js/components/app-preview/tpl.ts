@@ -1,7 +1,7 @@
 // ===== preview HTML 模板 =====
 
 /** 整合包详情面板（stat mode） */
-export function statsHTML() {
+export function statsHTML(): string {
   return `<div class="content" id="detail-panel">
 <div class="dp-placeholder" id="dp-placeholder">
   <div class="big-icon">👈</div>
@@ -55,8 +55,22 @@ export function statsHTML() {
 </div>`;
 }
 
+/** 模型统计元数据（modelDetailHTML 入参） */
+export interface ModelDetailMeta {
+  name?: string;
+  author?: string;
+  version?: string;
+  bones?: number;
+  textures?: number;
+  animations?: number;
+  vertices?: number;
+  faces?: number;
+  hasError?: boolean;
+  errorMsg?: string;
+}
+
 /** 模型详情面板（仓库页面） */
-export function modelDetailHTML(meta) {
+export function modelDetailHTML(meta: ModelDetailMeta | null): string {
   if (!meta) {
     return `<div class="content" id="preview-content">
 <h3>📄 模型信息</h3>
@@ -93,15 +107,28 @@ export function modelDetailHTML(meta) {
 </div>`;
 }
 
-function esc(s) {
+function esc(s: string): string {
   return (s || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
 
+/** 模型统计卡片（statsCardHTML 入参的几何视图） */
+export interface StatsCardModel {
+  boneCount: number;
+  cubeCount: number;
+  texWidth?: number;
+  texHeight?: number;
+  textures?: unknown[];
+}
+
 /** 模型统计卡片 */
-export function statsCardHTML(model, modelPath, decodedBy) {
+export function statsCardHTML(
+  model: StatsCardModel,
+  modelPath: string,
+  decodedBy: string,
+): string {
   const isYsm = /\.ysm$/i.test(modelPath);
   const isJson = /\.json$/i.test(modelPath);
   const fmt = isYsm
@@ -114,9 +141,10 @@ export function statsCardHTML(model, modelPath, decodedBy) {
   const badge = decodedBy ? `<span class="ysm-badge">${decodedBy}</span>` : "";
   // 多纹理概要（仅当存在额外纹理时）
   let texMapHtml = "";
-  const extraCount = model.textures?.length > 0 ? model.textures.length - 1 : 0;
+  const texCount = model.textures?.length || 0;
+  const extraCount = texCount > 0 ? texCount - 1 : 0;
   if (extraCount > 0) {
-    texMapHtml = `<div class="ysm-card-row" style="font-size:9px;color:var(--muted);padding:1px 0">📎 含 ${extraCount} 张额外纹理（共 ${model.textures.length} 张）</div>`;
+    texMapHtml = `<div class="ysm-card-row" style="font-size:9px;color:var(--muted);padding:1px 0">📎 含 ${extraCount} 张额外纹理（共 ${texCount} 张）</div>`;
   }
   return `
 <div class="ysm-card-title">📊 模型概览${badge}</div>

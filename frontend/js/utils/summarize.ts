@@ -13,7 +13,7 @@ export interface SummaryAuthor {
 export interface SummaryAnimGroup {
   name?: string;
   id?: string;
-  items?: string[];
+  items?: string[] | null;
 }
 
 export interface SummaryConfigMenu {
@@ -26,7 +26,7 @@ export interface YsmSummary {
   source?: string;
   tips?: string;
   license?: string;
-  authors?: SummaryAuthor[];
+  authors?: SummaryAuthor[] | null;
   stats?: {
     textures?: number;
     models?: number;
@@ -38,8 +38,8 @@ export interface YsmSummary {
     heightScale?: number;
     widthScale?: number;
   };
-  animGroups?: SummaryAnimGroup[];
-  configMenus?: SummaryConfigMenu[];
+  animGroups?: SummaryAnimGroup[] | null;
+  configMenus?: SummaryConfigMenu[] | null;
   links?: {
     home?: string;
     donate?: string;

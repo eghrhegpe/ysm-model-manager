@@ -1,15 +1,32 @@
 // ===== 预览模块共享工具函数 =====
-// 从 index.js 拆分：模块级函数和状态
+// 从 index.ts 拆分：模块级函数和状态
+import type { BedrockGeometry } from "./utils.ts";
 
 /** DEV 模式下输出调试日志 */
-export const devLog = import.meta.env.DEV ? console.log : () => {};
+export const devLog: (...args: unknown[]) => void = import.meta.env.DEV
+  ? console.log
+  : () => {};
+
+/** 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） */
+export interface PreviewCtx {
+  _root: ShadowRoot;
+  _loadPreviewImage(path: string): Promise<string | null>;
+  decodeYsmViaWasm(
+    path: string,
+  ): Promise<{
+    geometry?: BedrockGeometry;
+    authors?: string[];
+    avatars?: Record<string, string>;
+  } | null>;
+  appendDebug(msg: string): void;
+}
 
 /** 3D 偏好状态（跨模型切换保留） */
 let _prefer3D = false;
-export function getPrefer3D() {
+export function getPrefer3D(): boolean {
   return _prefer3D;
 }
-export function setPrefer3D(v) {
+export function setPrefer3D(v: boolean): void {
   _prefer3D = v;
 }
 
@@ -18,7 +35,10 @@ export function setPrefer3D(v) {
  * V2: 加密数据前有 16B 独立 hash 区
  * V3: 纯加密数据，无独立 hash 区
  */
-export function buildStdYsgpFromTextVariant(bytes, forceVer) {
+export function buildStdYsgpFromTextVariant(
+  bytes: Uint8Array,
+  forceVer?: number,
+): Uint8Array | null {
   if (!bytes || bytes.length < 20) return null;
   if (bytes[0] !== 0xef || bytes[1] !== 0xbb || bytes[2] !== 0xbf) return null;
 
@@ -33,7 +53,7 @@ export function buildStdYsgpFromTextVariant(bytes, forceVer) {
   );
   let dataStart = 3; // skip BOM
   if (tagMatch) {
-    dataStart = 3 + tagMatch.index + tagMatch[0].length;
+    dataStart = 3 + (tagMatch.index ?? 0) + tagMatch[0].length;
   } else {
     // 尝试找二进制数据起始（非文本、非空白字符）
     for (let i = 100; i < bytes.length; i++) {
@@ -51,7 +71,7 @@ export function buildStdYsgpFromTextVariant(bytes, forceVer) {
 
   if (dataStart < 0 || dataStart >= bytes.length - 20) return null;
 
-  let verNum = forceVer || 2;
+  const verNum = forceVer || 2;
 
   // V2: 二进制段 = 16B hash + 加密数据（hash 与 <hash> 标签值相同）
   // V3: 二进制段 = 纯加密数据（hash 仅在 <hash> 标签中）
@@ -73,7 +93,10 @@ export function buildStdYsgpFromTextVariant(bytes, forceVer) {
 /**
  * 剥离 YSGP 文本头部，返回标准二进制格式
  */
-export function stripYsgpTextHeader(bytes, forceVer) {
+export function stripYsgpTextHeader(
+  bytes: Uint8Array,
+  forceVer?: number,
+): Uint8Array {
   const stdYsgp = buildStdYsgpFromTextVariant(bytes, forceVer);
   if (stdYsgp) return stdYsgp;
   if (!bytes || bytes.length < 10) return bytes;

@@ -1,26 +1,29 @@
 // ===== 模型数据加载（唯一入口）=====
-// 供给 preview-skeleton.js 和 screenshot-renderer.js 使用
+// 供给 preview-skeleton.ts 和 screenshot-renderer.ts 使用
 import { cacheGet, cacheSet } from "../../utils/preview-cache.ts";
+import type { PreviewCtx } from "./preview-utils.ts";
+import type { BedrockGeometry } from "./utils.ts";
 
 /**
  * 加载模型几何数据 + 纹理 + 作者信息
  * 统一路径：缓存 → WASM 解码 → Go AnalyzeBedrockModel 兜底
- * @param {string} modelPath
- * @param {object} ctx - { decodeYsmViaWasm(path), appendDebug(msg) }
- * @returns {Promise<{model: object|null, decodedBy: string}>}
  */
-export async function loadModelData(modelPath, ctx) {
-  let model;
+export async function loadModelData(
+  modelPath: string,
+  ctx: Pick<PreviewCtx, "decodeYsmViaWasm" | "appendDebug">,
+): Promise<{ model: BedrockGeometry | null; decodedBy: string }> {
+  let model: BedrockGeometry | null = null;
   let _decodedBy = "";
   const isYsm = /\.ysm$/i.test(modelPath);
-  let _wasmAuthors = [];
-  let _wasmAvatars = {};
+  let _wasmAuthors: string[] = [];
+  let _wasmAvatars: Record<string, string> = {};
 
   // 查缓存
   const cached = cacheGet(modelPath);
-  if (cached?.geometry?.bones?.length) {
-    model = cached.geometry;
-    _decodedBy = cached._decodedBy || "";
+  const cachedGeo = cached?.geometry as BedrockGeometry | undefined;
+  if (cachedGeo?.bones?.length) {
+    model = cachedGeo;
+    _decodedBy = cached?._decodedBy || "";
   }
 
   // .ysm/.json → 前端 WASM 解码（含 parseYsmJsonDirect 提取作者元数据）
@@ -44,23 +47,25 @@ export async function loadModelData(modelPath, ctx) {
   if (!model?.bones?.length) {
     const { AnalyzeBedrockModel } =
       await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-    model = await AnalyzeBedrockModel(modelPath);
+    model = (await AnalyzeBedrockModel(modelPath)) as BedrockGeometry | null;
 
     // .json 解压目录：用 WASM 解析出的 authors 填补（Go 不返回此字段）
-    if (!model._authors && _wasmAuthors.length) {
+    if (model && !model._authors && _wasmAuthors.length) {
       model._authors = _wasmAuthors;
       model._avatars = _wasmAvatars;
     }
 
-    if (model?.bones?.length) {
-      let goClips = [];
+    if (model && model.bones && model.bones.length) {
+      let goClips: unknown[] = [];
       if (model.animations?.length) {
         const { parseBedrockAnimationJSON } =
           await import("../../utils/animation.ts");
-        for (const jsonStr of model.animations) {
+        for (const jsonStr of model.animations as string[]) {
           const { clips } = parseBedrockAnimationJSON(jsonStr);
           for (const clip of clips) {
-            if (clip.hasMolang) { /* skip */ }
+            if (clip.hasMolang) {
+              /* skip */
+            }
           }
           if (clips.length > 0) goClips.push(...clips);
         }
@@ -68,7 +73,7 @@ export async function loadModelData(modelPath, ctx) {
       const goTexCount = model.textures?.length || 0;
       model._texMappingLog = [
         {
-          file: modelPath.split("/").pop().split("\\").pop(),
+          file: modelPath.split(/[/\\]/).pop() || "",
           texKey: goTexCount > 0 ? "texture[0]" : "—",
           texIdx: 0,
           pngSize: "—",
@@ -93,7 +98,7 @@ export async function loadModelData(modelPath, ctx) {
         });
       }
       cacheSet(modelPath, {
-        texture: model.texture,
+        texture: model.texture as string | undefined,
         geometry: model,
         animations: goClips.length > 0 ? goClips : undefined,
         _decodedBy: "📦 Go 原生解析",
@@ -106,7 +111,7 @@ export async function loadModelData(modelPath, ctx) {
   if (model && !model._authors) {
     const cur = cacheGet(modelPath);
     if (cur?.authors?.length) {
-      model._authors = cur.authors;
+      model._authors = cur.authors as string[];
       model._avatars = cur.avatars || {};
     }
   }

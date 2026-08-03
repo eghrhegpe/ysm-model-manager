@@ -213,7 +213,11 @@ function main() {
   }
 
   if (fs.existsSync(filePath)) {
-    console.error(`[FAIL] ${filename} 已存在，放弃写入`);
+    // 撞号：其他并发 AI 已抢到该号。重新扫描当前实际最大号并亮出，
+    // 让调用方感知「已排到哪、该从哪起」——比单纯失败退出更利于协调。
+    const curMax = Math.max(maxFromFiles(), maxFromRegistry());
+    console.error(`[撞号] ${filename} 已存在，放弃写入`);
+    console.error(`[协调] 当前实际最大编号为 ADR-${pad(curMax)}；请从 ADR-${pad(curMax + 1)} 起重新占号，或先跑 --dry-run 确认最新编号`);
     return 1;
   }
 

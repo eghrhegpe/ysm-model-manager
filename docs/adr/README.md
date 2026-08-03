@@ -1,6 +1,8 @@
 # ADR 登记表（Architecture Decision Records）
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
+>
+> 📐 按状态分组的规范索引（锚点跳转，网页可渲染）：[docs/adr/index.md](./index.md)（自动生成）
 
 ## 登记表
 

@@ -186,6 +186,8 @@ const STATIC_TOOLS = [
   'check-deadcode-baseline.mjs',
   // auto-import 默认只提示（rc=0），加 --strict 让缺失 import 成为真检查项
   { tool: 'auto-import.mjs', args: ['--strict'] },
+  // 生成器守护：adr 登记表/规范索引 + releases 索引 + knowledge 委托校验，防生成产物静默过期
+  { tool: 'gen-docs-index.mjs', args: ['--check'] },
 ];
 
 function checkStaticAnalysis() {

@@ -22,7 +22,7 @@
 
 | 要做什么 | 去哪里 |
 |----------|--------|
-| 查当前决策 + 坑点 | `grep docs/adr/` + `bug-chronicle.md`（先 grep 再读，1369 行禁止全量） |
+| 查当前决策 + 坑点 | `grep docs/adr/` + `bug-chronicle.md`（先 grep 再读，1369 行禁止全量）；按状态浏览用 `docs/adr/index.md`（规范索引，自动生成） |
 | 查 ADR 登记一致性 / 占号 | `node scripts/adr-check.mjs`（撞号/漏登/幽灵/跳号） |
 | 查/更新项目状态 | `docs/architecture/PROJECT_STATUS.md`（含治理速览 + 进行中 ADR 清单） |
 | 查某模块「现在长啥样、去哪找」 | `docs/knowledge/`（先读 `routes.md` 路由表 + `index.md` 索引，grep 卡正文锁定符号，按 `source_files` 跳源码） |
@@ -47,7 +47,7 @@
 
 1. 先判断用户意图与所属模块；可先查 `docs/knowledge/routes.md`。
 2. 阅读 `docs/knowledge/index.md` 枢纽索引，定位相关知识卡，再按卡片的 `source_files` 跳转源码。
-3. 用 `docs/adr/README.md` 登记表 + `grep docs/adr/` 查找相关决策、状态和历史坑点；ADR 是决策真相源。
+3. 用 `docs/adr/README.md` 登记表 + `docs/adr/index.md` 规范索引（状态分组，自动生成）+ `grep docs/adr/` 查找相关决策、状态和历史坑点；ADR 是决策真相源。
 4. **修 bug 或排查问题时**：先 `grep` `docs/architecture/bug-chronicle.md` 关键词，再读匹配段落（1369 行，禁止全量）。
 5. 以当前源码为最终事实来源，核对知识卡中的 API、依赖、不变量和资源生命周期。
 6. 修改后运行最小相关检查（契约测试 / link-checker / type-consistency 按域选择）。
@@ -204,9 +204,10 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 目录 | 用途 |
 |------|------|
 | `docs/core/` | ✅ 核心规范（术语、治理规则、命名规范） |
-| `docs/adr/` | 📐 架构决策记录（ADR-001~014，决策真相源，写前先占号；索引 `adr/README.md`） |
+| `docs/adr/` | 📐 架构决策记录（ADR-001~014，决策真相源，写前先占号；登记表 `adr/README.md` + 规范索引 `adr/index.md` 自动生成） |
 | `docs/architecture/` | 🏗️ 架构 + 项目元信息（架构、现状、路线图、Bug 记录、逻辑下沉） |
 | `docs/frontend/` | 🎨 前端专属（设计规范、动画、待清理、废弃名） |
+| `docs/guide/` | 📖 用户向文档（用户指南、项目意义，网站化储备） |
 | `docs/knowledge/` | 🧠 模块知识卡（bus / Wails 桥接 / Go 包）— 索引自动生成于 `knowledge/index.md` |
 | `docs/tasks/` | 📋 任务管理（任务清单、会话交接、每日计划） |
 | `docs/3D/` | 🎮 3D 渲染（攻关计划、开发报告） |
@@ -237,6 +238,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 契约测试 | `for f in tests/*.mjs; do node "$f"; done` | JSON/配置/HTML 引用完整性（CI 已接） |
 | 文档断链 | `node scripts/link-checker.mjs` | 所有 md 内部链接（改文档后必跑） |
 | ADR 登记一致性 | `node scripts/adr-check.mjs` | adr/README.md 登记表 vs 磁盘文件（防撞号/漏登/幽灵） |
+| 生成器守护 | `node scripts/gen-docs-index.mjs --check` | adr 登记表/规范索引 + releases 索引 + knowledge 委托（已挂 doctor + pre-push，防生成产物静默过期） |
 | 知识卡漂移 | `node scripts/check-knowledge-drift.mjs` | knowledge/ 卡与源码一致性 |
 | 红线审查 | `node scripts/review.mjs` / `--audit` | 12 条治理红线（R1-R9 + W1/W2/W5，W3/W4 已移交 comment-checker）；`--audit` 出设计审查 checklist |
 | 类型一致性 | `node scripts/type-consistency.mjs` | resource_types.json ↔ extensions.js |

@@ -5,6 +5,7 @@
  * 零依赖（仅 node:fs / node:path / node:url / node:child_process）。
  * 只重写各文件 `<!-- GEN: xxx -->` 标记区，人工段落原样保留：
  *   - adr      → docs/adr/README.md 的 adr-registry（登记表）+ adr-stats（状态统计）
+ *   - adr      → docs/adr/index.md 的规范索引（状态分组 + 锚点跳转 + 相对链接，整文件重写）
  *   - releases → docs/release-notes/README.md 的 releases-index（最近版本 + 版本全览）
  *   - knowledge→ 委托 gen-knowledge-index.mjs --check（不重写，避免双生成器打架）
  * 单一事实来源 = ADR 文件首部；状态映射与 gen-status-index.mjs 保持一致。
@@ -24,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ADR_DIR = path.join(ROOT, 'docs', 'adr');
 const ADR_REG_FILE = path.join(ADR_DIR, 'README.md');
+const ADR_INDEX_FILE = path.join(ADR_DIR, 'index.md');
 const RELEASE_DIR = path.join(ROOT, 'docs', 'release-notes');
 const RELEASE_FILE = path.join(RELEASE_DIR, 'README.md');
 
@@ -70,6 +72,18 @@ function applyRegion(file, name, content) {
   return { ok: true, changed: true };
 }
 
+/** 整文件重写（非 GEN 区，如 adr/index.md）：一致则 OK；--check 下不一致则 FAIL。返回 {ok, changed}。 */
+function applyWholeFile(file, content, label) {
+  const current = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+  if (current === content) return { ok: true, changed: false };
+  if (CHECK) {
+    console.error(`[FAIL] ${label} 需要更新`);
+    return { ok: false, changed: false };
+  }
+  fs.writeFileSync(file, content, 'utf8');
+  return { ok: true, changed: true };
+}
+
 // ── ADR 解析与状态映射（与 gen-status-index.mjs 一致）──
 
 function parseAdrs() {
@@ -86,6 +100,7 @@ function parseAdrs() {
     if (!titleM) continue;
     list.push({
       num: parseInt(titleM[1], 10),
+      file: f,
       title: titleM[2].trim(),
       statusRaw: statusM ? statusM[1].trim() : '',
       date: dateM ? dateM[1].trim() : '-',
@@ -143,6 +158,79 @@ function buildAdrStats(list) {
   out += `- ⚠️ 已采纳但遗留未修复：${groups.unfixed.length} 篇${fmt(groups.unfixed)}\n`;
   out += `- 🧊 已废弃：${groups.deprecated.length} 篇${fmt(groups.deprecated)}\n`;
   out += `- ❌ 已取代：${groups.replaced.length} 篇${fmt(groups.replaced)}\n`;
+  return out;
+}
+
+// ── adr 分区：规范索引页（docs/adr/index.md，整文件重写）────
+
+/** 状态 → 规范索引分组名（锚点 = 分组标题，Jekyll 可渲染）。 */
+const INDEX_GROUPS = [
+  { key: 'partial', title: '🔄 部分采纳', anchor: '部分采纳' },
+  { key: 'unfixed', title: '⚠️ 已采纳但遗留未修复', anchor: '已采纳但遗留未修复' },
+  { key: 'accepted', title: '✅ 已采纳', anchor: '已采纳' },
+  { key: 'deprecated', title: '🧊 已废弃', anchor: '已废弃' },
+  { key: 'replaced', title: '❌ 已取代', anchor: '已取代' },
+];
+
+function groupAdrs(list) {
+  const groups = { accepted: [], partial: [], unfixed: [], deprecated: [], replaced: [] };
+  for (const a of list) {
+    const st = mapStatus(a.statusRaw);
+    if (st.startsWith('🔄')) groups.partial.push(a);
+    else if (st.startsWith('🧊')) groups.deprecated.push(a);
+    else if (st.startsWith('❌')) groups.replaced.push(a);
+    else if (st.startsWith('⚠️')) groups.unfixed.push(a);
+    else groups.accepted.push(a);
+  }
+  return groups;
+}
+
+function buildAdrIndex(list) {
+  const groups = groupAdrs(list);
+  const total = list.length;
+  const relLink = (a) => `./${a.file}`;
+  const row = (a) => `| [ADR-${pad(a.num)}](${relLink(a)}) | ${escCell(a.title)} | ${escCell(mapStatus(a.statusRaw))} |`;
+
+  let out = '---\n';
+  out += 'layout: page\n';
+  out += 'title: 决策记录（ADR）\n';
+  out += 'permalink: /adr/\n';
+  out += '---\n\n';
+  out += '<!-- 本文件由 scripts/gen-docs-index.mjs 自动生成，禁止手改。重跑：node scripts/gen-docs-index.mjs -->\n\n';
+  out += '# 决策记录（ADR）\n\n';
+  out += `> 架构决策日志，共 **${total}** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为规范索引（按状态分组，可锚点跳转）。\n\n`;
+
+  // 状态分布总览（锚点跳转）
+  out += '## 按状态分布\n\n';
+  out += '| 状态 | 数量 |\n';
+  out += '|------|------|\n';
+  for (const g of INDEX_GROUPS) {
+    out += `| [${g.title}](#${g.anchor}) | ${groups[g.key].length} |\n`;
+  }
+  out += '\n';
+
+  // 分组明细（每组一个表，相对链接）
+  for (const g of INDEX_GROUPS) {
+    const items = groups[g.key];
+    out += `## ${g.title}\n\n`;
+    if (items.length === 0) {
+      out += '_（暂无）_\n\n';
+      continue;
+    }
+    out += '| ADR | 主题 | 状态 |\n';
+    out += '|-----|------|------|\n';
+    const sorted = [...items].sort((a, b) => b.num - a.num);
+    for (const a of sorted) out += `${row(a)}\n`;
+    out += '\n';
+  }
+
+  // 全量附表（编号倒序，供追溯）
+  out += '---\n\n';
+  out += '## 全量列表（按编号倒序）\n\n';
+  out += '| ADR | 主题 | 状态 | 日期 |\n';
+  out += '|-----|------|------|------|\n';
+  const all = [...list].sort((a, b) => b.num - a.num);
+  for (const a of all) out += `| [ADR-${pad(a.num)}](${relLink(a)}) | ${escCell(a.title)} | ${escCell(mapStatus(a.statusRaw))} | ${escCell(a.date)} |\n`;
   return out;
 }
 
@@ -224,10 +312,12 @@ function main() {
       const list = parseAdrs();
       const r1 = applyRegion(ADR_REG_FILE, 'adr-registry', buildAdrRegistry(list));
       const r2 = applyRegion(ADR_REG_FILE, 'adr-stats', buildAdrStats(list));
+      const r3 = applyWholeFile(ADR_INDEX_FILE, buildAdrIndex(list), 'docs/adr/index.md');
       if ((r1.changed || r2.changed) && r1.ok && r2.ok) {
         console.log(`[OK] 已更新 adr/README.md（${path.relative(ROOT, ADR_REG_FILE)}）`);
       }
-      if (!r1.ok || !r2.ok) failed = true;
+      if (r3.changed && r3.ok) console.log(`[OK] 已更新 docs/adr/index.md（规范索引）`);
+      if (!r1.ok || !r2.ok || !r3.ok) failed = true;
     }
   }
 

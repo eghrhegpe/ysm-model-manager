@@ -85,7 +85,7 @@ function main() {
   const cycles = findCycles(graph).map((cyc) => cyc.map((p) => relPosix(p)));
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ modules: files.length, cycles }, null, 2));
+    console.log(JSON.stringify({ _summary: { modules: files.length, cycles: cycles.length }, modules: files.length, cycles }, null, 2));
     process.exit(cycles.length ? 1 : 0);
     return;
   }

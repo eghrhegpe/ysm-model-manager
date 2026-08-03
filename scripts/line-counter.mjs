@@ -5,9 +5,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { getRoot, relPosix } from './_lib/scan-files.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = getRoot();
 
 function walkFiles(dir, patterns, skip = () => false) {
   const list = Array.isArray(patterns) ? patterns : [patterns];
@@ -19,7 +19,7 @@ function walkFiles(dir, patterns, skip = () => false) {
       out.push(...walkFiles(full, list, skip));
     } else if (entry.isFile()) {
       if (skip(full)) continue;
-      const rel = path.relative(ROOT, full).replace(/\\/g, '/');
+      const rel = relPosix(full);
       if (list.some((p) => new RegExp(p.replace(/\*/g, '.*') + '$').test(rel) || rel.endsWith(p.replace('*', '')))) {
         out.push(full);
       }

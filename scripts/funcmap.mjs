@@ -5,9 +5,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { getRoot, relPosix } from './_lib/scan-files.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = getRoot();
 
 function walk(dir, suffix, skipNodeModules = true) {
   const suffixes = Array.isArray(suffix) ? suffix : [suffix];
@@ -256,7 +256,7 @@ allEntries.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] - b[1]));
 
 const lines = ['# 函数映射表', '', '| 文件 | 行 | 签名 | 注释 |', '|------|----|------|------|'];
 for (const [fp, lineno, name, summary] of allEntries) {
-  const rel = path.relative(ROOT, fp);
+  const rel = relPosix(fp);
   lines.push(`| ${rel} | ${lineno} | \`${name}\` | ${summary} |`);
 }
 

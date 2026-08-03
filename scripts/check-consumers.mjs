@@ -132,7 +132,7 @@ function main() {
   const fail = STRICT && flagged.length > 0;
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ symbols: report.length, orphan, top, minConsumers: MIN_CONSUMERS, flagged, strict: STRICT }, null, 2));
+    console.log(JSON.stringify({ _summary: { symbols: report.length, orphan: orphan.length, flagged: flagged.length }, symbols: report.length, orphan, top, minConsumers: MIN_CONSUMERS, flagged, strict: STRICT }, null, 2));
     process.exit(fail ? 1 : 0);
     return;
   }

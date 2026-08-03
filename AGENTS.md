@@ -204,7 +204,8 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 目录 | 用途 |
 |------|------|
 | `docs/core/` | ✅ 核心规范（术语、治理规则、命名规范） |
-| `docs/architecture/` | 🏗️ 架构 + 项目元信息（架构、现状、路线图、Bug 记录、逻辑下沉），含 `adr/`（ADR 决策记录 — 写前先占号） |
+| `docs/adr/` | 📐 架构决策记录（ADR-001~014，决策真相源，写前先占号；索引 `adr/README.md`） |
+| `docs/architecture/` | 🏗️ 架构 + 项目元信息（架构、现状、路线图、Bug 记录、逻辑下沉） |
 | `docs/frontend/` | 🎨 前端专属（设计规范、动画、待清理、废弃名） |
 | `docs/knowledge/` | 🧠 模块知识卡（bus / Wails 桥接 / Go 包）— 索引自动生成于 `knowledge/index.md` |
 | `docs/tasks/` | 📋 任务管理（任务清单、会话交接、每日计划） |

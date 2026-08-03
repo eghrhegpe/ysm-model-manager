@@ -44,6 +44,20 @@ function checkGoBuild() {
   }
 }
 
+function checkGoTest() {
+  // 原 ultrawork 独有步骤，并入 doctor（ultrawork.mjs 已废弃）
+  console.log('\n=== Go Test ===');
+  const { rc, out } = run(['go', 'test', './go/...', '-count=1']);
+  if (rc === 0) {
+    console.log(`  ${PASS} Go test passed`);
+  } else {
+    console.log(`  ${FAIL} Go test failed`);
+    for (const line of out.trim().split('\n').slice(-5)) {
+      console.log(`    ${line}`);
+    }
+  }
+}
+
 function checkFrontendBuild() {
   console.log('\n=== Frontend Build ===');
   // 先检查 npx 是否可用
@@ -189,6 +203,7 @@ function checkStaticAnalysis() {
 
 console.log('========== YSM Doctor ==========');
 checkGoBuild();
+checkGoTest();
 checkFrontendBuild();
 checkTypeScript();
 checkKeyFiles();

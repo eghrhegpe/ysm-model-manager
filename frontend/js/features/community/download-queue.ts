@@ -317,6 +317,9 @@ export function createDownloadQueue({
         qs.classList.remove("show");
       }
     }
+    // 统一恢复下载按钮（成功/取消/失败路径都经此清理，防按钮卡死）
+    const btn = dlBtn();
+    if (btn) btn.disabled = false;
     try {
       getApp()
         .then((App) => {
@@ -631,7 +634,19 @@ export function createDownloadQueue({
         " 个";
     }
 
-    await enqueueDownloads(tasks);
+    try {
+      await enqueueDownloads(tasks);
+    } catch (e) {
+      // Go 入队失败：恢复状态与 UI，防止按钮/进度条卡死（陷阱 #3）
+      STATE.status = "idle";
+      notify();
+      bus.emit("toast:show", {
+        msg: "❌ 入队失败: " + (e instanceof Error ? e.message : String(e)),
+        duration: 4000,
+        type: "error",
+      });
+      cleanupProgressUI();
+    }
   }
 
   async function cancel(): Promise<void> {

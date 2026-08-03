@@ -1,42 +1,23 @@
-# YSM 模型管理器 — AI 代理入职指南
+# YSM 模型管理器 — AI 入口
 
-> **你是 AI 代理。本文件是项目的「文档宪法」——它定义你能读什么、不能读什么。**
-> **读完本文件即可开始工作。需要深水区信息时，按「文档地图」定向跳转，禁止自由探索。**
+> 你是本项目的 AI 代理，与人类架构师 Jieling 协同。回复**简洁精准**：能用 1 句不说 2 句，
+> 结论先行、给 `文件:行号`、表格优先于段落。
+> 项目哲学是**「信任但验证」**：信任本机改动（提交有契约测试 + CI + PR review 兜底，别怕错误），
+> 但改完立即构建验证。**保持进度，不过度谨慎。**
 
-## 启动约束（复制粘贴到会话开头）
+## 硬约束
 
-```
-本次任务硬约束：
-- 只读 AGENTS.md §一「文档地图」列出的文件
-- 禁止 ls / glob / 目录枚举
-- 禁止启动子代理（task / explore / research）
-- 预定义的 subagent skill 不受此限（说 skill 名即可调起）：
-  release-notes-gen / review / doctor / ultrawork /
-  comment-checker / event-audit / bug-search /
-  link-checker / type-consistency / binding-check / deep-init
-- 先输出修改计划或替换表 → 我确认 → 再 apply
-- 必须通过 `tests/` 下所有契约测试（禁止修改测试文件）
-- 优先运行命令而非读取文件全文（运行 `go build`/`node tests/` 看结果，别把源码塞进上下文）
-- 失败熔断：同一命令连续失败 2 次 → 停止并进 Plan 模式分析原因，禁止无脑重试
-```
+> 只读 §一 文档地图列出的文件；**地图没有的目录 = 不存在**（`docs/archive/` 为冻结区，需追溯旧设计时才读）。
+> 大文件（`bug-chronicle.md` 1369 行）先 `grep` 关键词，再读匹配段落，不整文件灌上下文。
+> 新文档：先过 `docs/core/NAMING_GUIDELINES.md` 命名检查，再确认归属目录（文档地图外不建新 md）。
+> 改完即验：Go → `go build`；前端 → `vite build`；文档 → `link-checker`；ADR → `adr-check`。
+> 必须通过 `tests/` 下所有契约测试（测试文件是宪法基石，禁止修改）。
+> 失败熔断：同一命令连续失败 2 次 → 停手进 Plan 分析原因，不无脑重试。
+> 预定义 subagent skill 可直接调起（说 skill 名即可）：
+>   `release-notes-gen` / `review` / `doctor` / `ultrawork` / `comment-checker` /
+>   `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check` / `deep-init`
 
----
-
-## 〇、索引即契约
-
-**本节的每一条都是硬约束。违反 = 浪费时间 + 浪费 token。**
-
-### 禁止操作
-
-| # | 禁止 | 原因 | 正确做法 |
-|---|------|------|----------|
-| 1 | **禁止递归扫描 `docs/`** | 30+ 个归档文件污染上下文 | 只读「文档地图」列出的文件 |
-| 2 | **禁止读取 `docs/archive/` 下任何文件** | 历史文档，对当前任务零价值 | 除非用户明确说「查 archive」 |
-| 3 | **禁止用 `ls` 探索未知目录** | Token 黑洞，一次 ls = 几十行输出 | 查 AGENTS.md 文档地图，没有的目录不存在 |
-| 4 | **禁止全量读取大文件** | bug-chronicle.md 1369 行 | 一律先 `grep` 关键词，再读匹配段落 |
-| 5 | **禁止创建不在文档地图中的新 md 文件** | 文档膨胀失控 | 先在 `docs/core/NAMING_GUIDELINES.md` 确认命名，再确认归属目录 |
-
-### 跨目录引用自检
+## 跨目录引用自检
 
 **任何 Markdown 链接写完后，必须确认目标文件存在。** 断链 = 任务失败，因为下一个 AI 会被误导。
 
@@ -51,7 +32,6 @@
 > 完整命名规范见 `docs/core/NAMING_GUIDELINES.md`
 
 ---
-
 
 ## 一、文档地图
 
@@ -68,10 +48,10 @@
 | `docs/release-notes/` | 📦 版本发布说明（按 vX.Y.Z.md 命名，索引见 `release-notes/README.md`） |
 | `docs/tactics/` | 🎯 产品愿景 |
 | `docs/novel/` | 📖 衍生小说（与项目开发无关） |
-| `docs/archive/` | 🧊 冻结区 — 禁止读取、禁止扫描、禁止引用（含 `old/`：早期规划、QA 清单、接口设计草案） |
+| `docs/archive/` | 🧊 冻结区（历史归档，需追溯旧设计时才读） |
 | `docs/preview/` | 🖼️ UI 截图 |
 | `tests/` | 🔒 契约测试（Node .mjs）— 禁止修改，必须通过 |
-| `scripts/` | Python 工具脚本，被 `.agents/skills/` 调用 |
+| `scripts/` | Node 工具脚本（治理/生成器），被 `.agents/skills/` 调用 |
 | `.agents/skills/` | Reasonix Skill 定义 |
 
 契约测试明细（`tests/`，Node 零依赖）：
@@ -92,7 +72,7 @@
 | `review.mjs` / `doctor.mjs` / `line-counter.mjs` / `ultrawork.mjs` | 治理/诊断用 |
 | `funcmap.mjs` / `link-checker.mjs` / `type-consistency.mjs` | 一致性/映射 |
 | `comment-checker.mjs` / `event-audit.mjs` / `bug-search.mjs` | QA 检查 |
-| `release-notes-gen.mjs` / `binding-check.mjs` / `inspect_ysm.mjs` | 工具 |
+| `release-notes-gen.mjs` / `binding-check.mjs` / `inspect_ysm.mjs` / `adr-check.mjs` | 工具 |
 | `gen-routes.mjs` / `gen-knowledge-index.mjs` / `check-knowledge-drift.mjs` / `new-knowledge-card.mjs` | 生成器（knowledge 体系） |
 
 Skill 分组（`.agents/skills/`）：
@@ -140,7 +120,7 @@ Skill 分组（`.agents/skills/`）：
 
 ### 1.3 检查指令速查（文档与检查成对，改完对应文档/体系必跑）
 
-> 联邦式收口：每个文档体系配一条检查命令，防文档漂移与静默腐烂。
+> 每个文档体系配一条检查命令，防文档漂移与静默腐烂。
 
 | 检查 | 命令 | 覆盖 |
 |------|------|------|
@@ -157,9 +137,6 @@ Skill 分组（`.agents/skills/`）：
 | 全量自检 | `node scripts/doctor.mjs` | 编译 + 构建 + 文件 + 红线 + Git 状态 |
 
 > **检查优先级**：改文档 → `link-checker`；改 ADR → `adr-check`；改资源类型 → `type-consistency`；改前端 → `review` + `comment-checker`；提交前 → `doctor`。
-
-> `docs/archive/` 是历史归档，**默认不读**，除非明确需要追溯旧设计。
-> `docs/architecture/bug-chronicle.md` 很大（1369 行），**禁止全量读取**，先用 grep 搜索相关关键词再读匹配段落。仅用于查证已知问题，修复新 Bug 时不要通读全文，以免被旧思维带偏。
 
 ---
 
@@ -321,6 +298,7 @@ app-xxx/xxx-css.js   — Shadow DOM 样式
 - 结构化：表格 > 段落
 - 不废话：不做无谓的「总的来说」「总结一下」
 - 不改不拆：发现不够改的问题先问「要修吗」
+- 有观点：不模棱两可，给推荐项置首
 
 ---
 
@@ -331,7 +309,3 @@ app-xxx/xxx-css.js   — Shadow DOM 样式
 - **调试日志用完即删**：`console.log` / `fmt.Print` 测试完后**必须请示用户确认**再删，不可自行决定
 - **禁止安装软件**：缺依赖提示用户手动装
 - **发版**：用 `wails build -clean`，流程见 `docs/release-notes/README.md`
-
-## Notes
-
-- C:\Users\zhujieling11\ysm-model-manager\AGENTS.md

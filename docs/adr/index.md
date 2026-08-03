@@ -37,7 +37,7 @@ permalink: /adr/
 |-----|------|------|
 | [ADR-012](./ADR-012-binding-call-consistency.md) | Wails Binding 调用路径一致性 | ⚠️ 已采纳（当前不一致，未修复） |
 | [ADR-011](./ADR-011-path-separator-inconsistency.md) | 前端路径拼接分隔符不一致 | ⚠️ 已采纳（违规未修复） |
-| [ADR-010](./ADR-010-resource-type-literals.md) | 资源类型字面量硬编码治理 | ⚠️ 已采纳（违规未修复） |
+| [ADR-010](./ADR-010-resource-type-literals.md) | 资源类型字面量硬编码治理 | ⚠️ 已采纳（2026-08-03 违规清零，见 §5） |
 
 ## ✅ 已采纳
 
@@ -84,7 +84,7 @@ _（暂无）_
 | [ADR-013](./ADR-013-governance-convergence.md) | 治理体系收敛 — 文档宪法对账与联邦基线对齐 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-012](./ADR-012-binding-call-consistency.md) | Wails Binding 调用路径一致性 | ⚠️ 已采纳（当前不一致，未修复） | 2026-08-03 |
 | [ADR-011](./ADR-011-path-separator-inconsistency.md) | 前端路径拼接分隔符不一致 | ⚠️ 已采纳（违规未修复） | 2026-08-03 |
-| [ADR-010](./ADR-010-resource-type-literals.md) | 资源类型字面量硬编码治理 | ⚠️ 已采纳（违规未修复） | 2026-08-03 |
+| [ADR-010](./ADR-010-resource-type-literals.md) | 资源类型字面量硬编码治理 | ⚠️ 已采纳（2026-08-03 违规清零，见 §5） | 2026-08-03 |
 | [ADR-008](./ADR-008-event-registration-pattern.md) | 事件注册位置与防重复规范 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-007](./ADR-007-context-menu-structure.md) | 右键菜单代码组织决策 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-006](./ADR-006-rename-strictness.md) | 重命名文件名格式约束决策 | ✅ 已采纳 | 2026-08-03 |

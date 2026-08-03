@@ -2,7 +2,8 @@
 // 支持动态行高：grid=28px, list=24px
 export const ROW_H_GRID = 28;
 export const ROW_H_LIST = 24;
-export const BUFFER = 15;
+/** 可见行缓冲（内部渲染计算使用，无需导出） */
+const BUFFER = 15;
 
 /**
  * 根据滚动位置计算可见行范围（支持动态行高）

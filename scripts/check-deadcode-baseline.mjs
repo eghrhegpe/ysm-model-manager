@@ -131,7 +131,7 @@ function main() {
   const knipOut = run('knip', ['--reporter', 'json'], { allowExit1: true });
   if (knipOut !== null) knipFindings = parseKnip(knipOut);
 
-  const jscpdOut = run('jscpd', ['--pattern', 'js/**/*.js', '--min-lines', '10', '--min-tokens', '50', '--reporters', 'json', '--silent']);
+  const jscpdOut = run('jscpd', ['--pattern', 'js/**/*.{js,ts}', '--min-lines', '10', '--min-tokens', '50', '--reporters', 'json', '--silent']);
   if (jscpdOut !== null) {
     jscpdFindings = parseJscpd();
     // 清理 jscpd 产物目录（report/ 是分析副产物，不留仓库）

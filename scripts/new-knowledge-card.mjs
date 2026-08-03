@@ -8,8 +8,8 @@
  *   node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]
  *
  * 示例：
- *   node scripts/new-knowledge-card.mjs event_bus "事件总线 bus.js" core frontend/js/bus.js
- *   node scripts/new-knowledge-card.mjs display_util "文件名渲染 display.js" utils frontend/js/utils/display.js --leaf
+ *   node scripts/new-knowledge-card.mjs event_bus "事件总线 bus.ts" core frontend/js/bus.ts
+ *   node scripts/new-knowledge-card.mjs display_util "文件名渲染 display.ts" utils frontend/js/utils/display.ts --leaf
  */
 import fs from 'node:fs';
 import path from 'node:path';

@@ -13,10 +13,17 @@ const PASS = '[OK]';
 const FAIL = '[FAIL]';
 const WARN = '[WARN]';
 
-function run(cmd, cwd = ROOT) {
-  /** 运行命令，返回 {rc, out}。 */
+function run(cmd, cwd = ROOT, opts = {}) {
+  /**
+   * 运行命令，返回 {rc, out}。
+   * Windows：npx/tsc 是无扩展名 shim，原生 execFileSync 无法 CreateProcess（ENOENT），
+   * 需 opts.shell=true 经 cmd.exe 执行（与 check-deadcode-baseline 一致）；
+   * grep/go/which 是原生可执行文件，保持默认（无 shell），避免 cmd.exe 找不到 Git Bash 工具。
+   */
+  const o = { cwd, encoding: 'utf-8', timeout: 120000 };
+  if (process.platform === 'win32' && opts.shell) o.shell = true;
   try {
-    const stdout = execFileSync(cmd[0], cmd.slice(1), { cwd, encoding: 'utf-8', timeout: 120000 });
+    const stdout = execFileSync(cmd[0], cmd.slice(1), o);
     return { rc: 0, out: stdout };
   } catch (e) {
     if (e.code === 'ENOENT') return { rc: -1, out: 'command not found: ' + cmd[0] };
@@ -46,7 +53,7 @@ function checkFrontendBuild() {
     console.log('        run manually: cd frontend && npx vite build');
     return;
   }
-  const { rc, out } = run(['npx', 'vite', 'build'], path.join(ROOT, 'frontend'));
+  const { rc, out } = run(['npx', 'vite', 'build'], path.join(ROOT, 'frontend'), { shell: true });
   if (rc === 0) {
     console.log(`  ${PASS} Frontend build passed`);
   } else {
@@ -66,7 +73,7 @@ function checkTypeScript() {
     console.log('        run manually: cd frontend && npx tsc --noEmit');
     return;
   }
-  const { rc, out } = run(['npx', 'tsc', '--noEmit'], path.join(ROOT, 'frontend'));
+  const { rc, out } = run(['npx', 'tsc', '--noEmit'], path.join(ROOT, 'frontend'), { shell: true });
   if (rc === 0) {
     console.log(`  ${PASS} tsc --noEmit passed`);
   } else {

@@ -36,6 +36,16 @@ jobs:
         shell: pwsh
         run: go test ./go/... -count=1 | Out-String -Width 200
 
+      - name: 安装前端依赖
+        working-directory: frontend
+        shell: pwsh
+        run: npm ci
+
+      - name: TypeScript 类型检查（ADR-014 P4 门槛，tsc --noEmit）
+        working-directory: frontend
+        shell: pwsh
+        run: npm run typecheck | Out-String -Width 200
+
       - name: 前端构建
         working-directory: frontend
         shell: pwsh

@@ -56,9 +56,9 @@ func TestBuildDuplicateBoneMerge(t *testing.T) {
 		TexHeight: 64,
 		Bones: []types.Bone2D{
 			{
-				Name:   "b1",
-				Pivot:  [3]float64{0, 0, 0},
-				Cubes:  []types.Cube2D{{Origin: [3]float64{0, 0, 0}, Size: [3]float64{2, 2, 2}, Pivot: [3]float64{0, 0, 0}, UV: [2]float64{0, 0}}},
+				Name:  "b1",
+				Pivot: [3]float64{0, 0, 0},
+				Cubes: []types.Cube2D{{Origin: [3]float64{0, 0, 0}, Size: [3]float64{2, 2, 2}, Pivot: [3]float64{0, 0, 0}, UV: [2]float64{0, 0}}},
 			},
 			{
 				Name:   "b1",

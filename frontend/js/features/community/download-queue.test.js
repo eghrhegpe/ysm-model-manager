@@ -1,5 +1,7 @@
 // ===== 下载队列状态机测试（ADR-021 扩展）=====
 // 模块级 STATE：getState/subscribe/enqueue/cancel/resume + 后端事件处理。
+// 每个用例通过 vi.resetModules() + 动态 import 获得全新模块实例，
+// 彻底隔离模块级 STATE（含 errorList），避免跨用例状态泄漏。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // 捕获模块顶层 Events.On 注册的 handler（import 时即执行）
@@ -25,23 +27,26 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   CancelQueue: cancelMock,
 }));
 
-import {
-  getState,
-  subscribe,
-  enqueueDownloads,
-  cancelDownloads,
-  resume,
-} from "./download-queue.ts";
+let getState, subscribe, enqueueDownloads, cancelDownloads, resume;
+
+// 每个用例重置模块注册表并重新 import，拿到干净的模块级 STATE
+beforeEach(async () => {
+  vi.resetModules();
+  enqueueMock.mockClear();
+  statusMock.mockClear();
+  cancelMock.mockClear();
+  const mod = await import("./download-queue.ts");
+  getState = mod.getState;
+  subscribe = mod.subscribe;
+  enqueueDownloads = mod.enqueueDownloads;
+  cancelDownloads = mod.cancelDownloads;
+  resume = mod.resume;
+});
 
 /** 触发后端事件（payload 为 { data: [...] } 格式） */
 function emit(name, data) {
   expect(eventHandlers[name], `未注册事件: ${name}`).toBeTruthy();
   eventHandlers[name]({ data });
-}
-
-/** 重置模块级状态：通过 queue:status done 事件 + enqueue 前的状态清空 */
-function resetState() {
-  emit("queue:status", ["done", 0, undefined]);
 }
 
 describe("下载队列初始状态", () => {
@@ -55,27 +60,18 @@ describe("下载队列初始状态", () => {
 });
 
 describe("下载队列 STATE", () => {
-  beforeEach(() => {
-    resetState();
-  });
-
-  it("subscribe 订阅后收到状态变更通知", async () => {
+  it("subscribe 订阅后收到状态变更通知", () => {
     const fn = vi.fn();
     const unsub = subscribe(fn);
-    resetState(); // done 触发 notify
-    expect(fn).toHaveBeenCalled();
+    emit("queue:status", ["done", 0, undefined]); // 触发 notify
+    expect(fn).toHaveBeenCalledTimes(1);
     unsub();
-    resetState();
+    emit("queue:status", ["done", 0, undefined]);
     expect(fn).toHaveBeenCalledTimes(1); // 取消订阅后不再通知
   });
 });
 
 describe("enqueueDownloads", () => {
-  beforeEach(() => {
-    resetState();
-    enqueueMock.mockClear();
-  });
-
   it("入队设置 downloading 状态并调用 Go 绑定", async () => {
     await enqueueDownloads([{ url: "u", saveDir: "", name: "a", size: 1 }]);
     const s = getState();
@@ -99,11 +95,6 @@ describe("enqueueDownloads", () => {
 });
 
 describe("cancelDownloads", () => {
-  beforeEach(() => {
-    resetState();
-    cancelMock.mockClear();
-  });
-
   it("非下载状态直接返回，不调用 Go", async () => {
     await cancelDownloads();
     expect(cancelMock).not.toHaveBeenCalled();
@@ -117,8 +108,6 @@ describe("cancelDownloads", () => {
 });
 
 describe("后端事件处理", () => {
-  beforeEach(resetState);
-
   it("queue:file-start 更新当前文件与进度", () => {
     emit("queue:file-start", ["f.ysm", 3, 2]);
     const s = getState();
@@ -151,11 +140,6 @@ describe("后端事件处理", () => {
 });
 
 describe("resume", () => {
-  beforeEach(() => {
-    resetState();
-    statusMock.mockReset();
-  });
-
   it("QueueStatus 返回数字且 >0 → downloading", async () => {
     statusMock.mockResolvedValue(5);
     await resume();
@@ -166,7 +150,7 @@ describe("resume", () => {
   it("QueueStatus 返回 0 → 保持原状态", async () => {
     statusMock.mockResolvedValue(0);
     await resume();
-    expect(getState().status).toBe("done");
+    expect(getState().status).toBe("idle");
   });
 
   it("QueueStatus 返回对象格式（大写字段）", async () => {

@@ -1,8 +1,10 @@
-// ===== 右键菜单映射（类型化版 — ADR-014 P3 core 收官）=====
+// ===== 右键菜单映射（类型化版 — ADR-014 P3 core 收官；ADR-021 B 层声明式化）=====
 // 将 ctx:show 事件转换为新版组件使用的 menu:show 事件
-import { bus, type ToastPayload } from "../bus.ts";
+// 菜单结构来自 menu-defs.ts（唯一事实来源），此处只保留行为 handler 表。
+import { bus, type ToastPayload, type CtxShowPayload, type MenuItem } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { getApp } from "../wails/app.ts";
+import { getMenuDef } from "./menu-defs";
 
 type ToastType = NonNullable<ToastPayload["type"]>;
 
@@ -17,478 +19,387 @@ function toast(msg: string, duration = 3000, type: ToastType = "success"): void 
   bus.emit("toast:show", { msg, duration, type });
 }
 
+/** 路径安全过滤：禁止包含 .. 或绝对路径 */
+function isUnsafeFolderName(folder: string): boolean {
+  return /\.\./.test(folder) || /^[/\\]/.test(folder);
+}
+
+// ── 行为 handler 表：action id → (ctx) => void ──────────
+// 与 menu-defs.ts 的 MenuItemDef.action 一一对应；测试遍历声明断言完整性。
+// MenuCtx 保证 paths 已归一化为数组（buildMenuItems 兜底）。
+type MenuCtx = CtxShowPayload & { paths: string[] };
+
+const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
+  noop: () => {},
+
+  // ── instance ──
+  "instance.open-folder": (ctx) => {
+    if (!ctx.path) {
+      toast("❌ 整合包目录未找到", 3000, "error");
+      return;
+    }
+    getApp()
+      .then((App) => App.OpenInstanceFolder(ctx.path || "", ctx.rtype || ""))
+      .catch(() => {});
+  },
+  "instance.export-list": (ctx) =>
+    bus.emit("instance:export-list", {
+      name: ctx.instanceName || "",
+      rtype: ctx.rtype,
+    }),
+  "instance.clear": (ctx) =>
+    bus.emit("instance:clear", {
+      name: ctx.instanceName || "",
+      rtype: ctx.rtype || undefined,
+    }),
+
+  // ── batch ──
+  "batch.rename": (ctx) => bus.emit("batch:rename", { paths: ctx.paths }),
+  "batch.move": async (ctx) => {
+    const { modalPrompt } = await import("../dialogs/modal.ts");
+    const folder = await modalPrompt({
+      title: "移动到文件夹",
+      icon: "📂",
+      placeholder: "输入目标文件夹名，如 [作者名]",
+      okText: "移动",
+    });
+    if (!folder) return;
+    if (isUnsafeFolderName(folder)) {
+      bus.emit("toast:show", {
+        msg: "❌ 文件夹名包含非法字符",
+        duration: 3000,
+        type: "error",
+      });
+      return;
+    }
+    const { LoadAppConfig, MoveModelFile, GetRepoRoot } =
+      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+    const repoRoot = await GetRepoRoot("ysm");
+    if (!repoRoot) {
+      bus.emit("toast:show", {
+        msg: "❌ 请先配置存储路径",
+        duration: 3000,
+        type: "error",
+      });
+      return;
+    }
+    const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
+    toast(`📦 正在移动 ${ctx.paths.length} 个文件到 ${folder}...`, 3000);
+    let ok = 0;
+    let fail = 0;
+    for (const p of ctx.paths) {
+      try {
+        await MoveModelFile(p, dstDir);
+        ok++;
+      } catch (e) {
+        fail++;
+        console.error("移动失败:", p, e);
+      }
+    }
+    toast(ok > 0 ? `✅ ${ok} 个文件已移动到 ${folder}` : "❌ 移动失败", 4000);
+    refreshUI();
+  },
+  "batch.copy": async (ctx) => {
+    const { modalPrompt } = await import("../dialogs/modal.ts");
+    const folder = await modalPrompt({
+      title: "复制到文件夹",
+      icon: "📋",
+      placeholder: "输入目标文件夹名，如 [作者名]",
+      okText: "复制",
+    });
+    if (!folder) return;
+    if (isUnsafeFolderName(folder)) {
+      bus.emit("toast:show", {
+        msg: "❌ 文件夹名包含非法字符",
+        duration: 3000,
+        type: "error",
+      });
+      return;
+    }
+    const { LoadAppConfig, CopyModelFile, GetRepoRoot } =
+      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+    const repoRoot = await GetRepoRoot("ysm");
+    if (!repoRoot) {
+      bus.emit("toast:show", {
+        msg: "❌ 请先配置仓库目录",
+        duration: 3000,
+        type: "error",
+      });
+      return;
+    }
+    const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
+    toast(`📦 正在复制 ${ctx.paths.length} 个文件到 ${folder}...`, 3000);
+    let ok = 0;
+    let fail = 0;
+    for (const p of ctx.paths) {
+      try {
+        await CopyModelFile(p, dstDir);
+        ok++;
+      } catch (e) {
+        fail++;
+        console.error("复制失败:", p, e);
+      }
+    }
+    if (ok > 0) {
+      toast(
+        fail > 0
+          ? `✅ ${ok} 复制成功 / ❌ ${fail} 失败（可能目标已存在）`
+          : `✅ ${ok} 个文件已复制到 ${folder}`,
+        4000,
+      );
+    } else {
+      toast("❌ 复制失败（可能目标已存在）", 4000, "error");
+    }
+  },
+  "batch.recycle": async (ctx) => {
+    const { modalConfirm } = await import("../dialogs/modal.ts");
+    const ok2 = await modalConfirm({
+      title: "批量移入回收站",
+      icon: "♻️",
+      message: `确定将选中的 ${ctx.count || 0} 个文件移入回收站？`,
+      okText: "♻️ 移入",
+      danger: true,
+    });
+    if (!ok2) return;
+    const { MoveToRecycle } =
+      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+    for (const p of ctx.paths) {
+      try {
+        await MoveToRecycle(p);
+      } catch {}
+    }
+    refreshUI();
+  },
+  "batch.copy-paths": async (ctx) => {
+    try {
+      await navigator.clipboard.writeText(ctx.paths.join("\n"));
+      toast(`✅ 已复制 ${ctx.paths.length} 个路径`, 2000);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = ctx.paths.join("\n");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      toast(`✅ 已复制 ${ctx.paths.length} 个路径`, 2000);
+    }
+  },
+  "batch.export-list": (ctx) => {
+    const names = ctx.paths
+      .map((p) => p.split(/[/\\]/).pop())
+      .filter(Boolean)
+      .join("\n");
+    const blob = new Blob([names], {
+      type: "text/plain;charset=utf-8",
+    });
+    const a = document.createElement("a");
+    a.download = `model-list-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.href = URL.createObjectURL(blob);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    toast(`✅ 已导出 ${ctx.paths.length} 个文件名`, 2000);
+  },
+
+  // ── file ──
+  "file.rename": async (ctx) => {
+    try {
+      const { showRenameDialog } = await import("../dialogs/rename.ts");
+      const fileName = (ctx.path || "").split(/[/\\]/).pop() || "";
+      const newName = await showRenameDialog(ctx.path || "", fileName);
+      if (!newName) return;
+      const { RenameFile } =
+        await import("../../bindings/ysm-model-manager/internal/app/app.js");
+      await RenameFile(ctx.path || "", newName);
+      refreshUI();
+    } catch (e) {
+      toast("❌ " + friendlyError(e, "重命名失败"), 4000, "error");
+    }
+  },
+  "file.move": async (ctx) => {
+    const { modalPrompt } = await import("../dialogs/modal.ts");
+    const folder = await modalPrompt({
+      title: "移动到文件夹",
+      icon: "📂",
+      placeholder: "输入目标文件夹名，如 [作者名]",
+      okText: "移动",
+    });
+    if (!folder) return;
+    const { LoadAppConfig, MoveModelFile, GetRepoRoot } =
+      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+    const repoRoot = await GetRepoRoot("ysm");
+    if (!repoRoot) {
+      bus.emit("toast:show", {
+        msg: "❌ 请先配置存储路径",
+        duration: 3000,
+        type: "error",
+      });
+      return;
+    }
+    const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
+    try {
+      await MoveModelFile(ctx.path || "", dstDir);
+      toast(`✅ 已移动到 ${folder}`, 3000);
+      refreshUI();
+    } catch (e) {
+      toast("❌ " + friendlyError(e, "移动失败"), 4000, "error");
+    }
+  },
+  "file.copy": async (ctx) => {
+    const { modalPrompt } = await import("../dialogs/modal.ts");
+    const folder = await modalPrompt({
+      title: "复制到文件夹",
+      icon: "📋",
+      placeholder: "输入目标文件夹名，如 [作者名]",
+      okText: "复制",
+    });
+    if (!folder) return;
+    if (isUnsafeFolderName(folder)) {
+      bus.emit("toast:show", {
+        msg: "❌ 文件夹名包含非法字符",
+        duration: 3000,
+        type: "error",
+      });
+      return;
+    }
+    const { LoadAppConfig, CopyModelFile, GetRepoRoot } =
+      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+    const repoRoot = await GetRepoRoot("ysm");
+    if (!repoRoot) {
+      bus.emit("toast:show", {
+        msg: "❌ 请先配置仓库目录",
+        duration: 3000,
+        type: "error",
+      });
+      return;
+    }
+    const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
+    try {
+      await CopyModelFile(ctx.path || "", dstDir);
+      toast(`✅ 已复制到 ${folder}`, 3000);
+    } catch (e) {
+      toast("❌ " + friendlyError(e, "复制失败"), 4000, "error");
+    }
+  },
+  "file.push-to-pack": async (ctx) => {
+    const { LoadAppConfig, ListVersionInstances, InstallModelTo } =
+      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+    const cfg = await LoadAppConfig();
+    const mcRoot = cfg.mcRoot || "";
+    if (!mcRoot) {
+      toast("请先配置游戏目录", 2000, "warn");
+      return;
+    }
+    const instances = (await ListVersionInstances(mcRoot)) ?? [];
+    if (!instances.length) {
+      toast("未找到任何整合包", 2000, "warn");
+      return;
+    }
+    const { modalSelect } = await import("../dialogs/modal.ts");
+    const names = instances.map((i) => i.Name);
+    const chosen = await modalSelect({
+      title: "推送到整合包",
+      icon: "📦",
+      items: names,
+      okText: "📦 推送",
+    });
+    if (!chosen) return;
+    const match = instances.find((i) => i.Name === chosen);
+    if (!match) return;
+    const name = (ctx.path || "").split(/[/\\]/).pop() || "";
+    try {
+      await InstallModelTo(name, match.CustomDir);
+      toast(`✅ 已推送到 ${chosen}`, 2000);
+    } catch (e) {
+      toast("❌ " + friendlyError(e, "推送失败"), 3000, "error");
+    }
+  },
+  "file.edit-tags": async (ctx) => {
+    const { modalTagEditor } = await import("../dialogs/tag-editor.ts");
+    const result = await modalTagEditor(ctx.path || "");
+    if (result) toast(`🏷️ 已保存 ${result.length} 个标签`, 2000);
+  },
+  "file.recycle": async (ctx) => {
+    const { modalConfirm } = await import("../dialogs/modal.ts");
+    const ok2 = await modalConfirm({
+      title: "移入回收站",
+      icon: "♻️",
+      message: `确定将 ${(ctx.path || "").split("/").pop()} 移入回收站？`,
+      okText: "♻️ 移入",
+      danger: true,
+    });
+    if (!ok2) return;
+    const { MoveToRecycle } =
+      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+    try {
+      await MoveToRecycle(ctx.path || "");
+      refreshUI();
+    } catch {}
+  },
+  "file.reveal": async (ctx) => {
+    const { RevealInExplorer } =
+      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+    try {
+      await RevealInExplorer(ctx.path || "");
+    } catch (e) {
+      toast("❌ " + friendlyError(e, "打开失败"), 3000, "error");
+    }
+  },
+  "file.copy-path": async (ctx) => {
+    try {
+      await navigator.clipboard.writeText(ctx.path || "");
+      toast("✅ 路径已复制到剪贴板", 2000);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = ctx.path || "";
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      toast("✅ 路径已复制到剪贴板", 2000);
+    }
+  },
+
+  // ── dir ──
+  "dir.rename": (ctx) => bus.emit("dir:rename", { dir: ctx.dir || "" }),
+  "dir.batch-rename": (ctx) =>
+    bus.emit("dir:batch-rename", { dir: ctx.dir || "" }),
+  "dir.mkdir": (ctx) => bus.emit("dir:mkdir", { dir: ctx.dir || "" }),
+  "dir.recycle": (ctx) => bus.emit("dir:recycle", { dir: ctx.dir || "" }),
+};
+
+/** 从声明生成 menu:show 载荷（结构来自 menu-defs.ts，行为查 handler 表） */
+function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
+  const def = getMenuDef(ctx.type);
+  if (!def) return [];
+  const paths = ctx.paths || [];
+  const norm: MenuCtx = { ...ctx, paths };
+  return def.items.map((item) => {
+    if (item.divider) return { divider: true };
+    const label = typeof item.label === "function" ? item.label(norm) : item.label;
+    const action = item.action;
+    const out: MenuItem = {
+      label,
+      onClick: action ? () => HANDLERS[action]?.(norm) : undefined,
+    };
+    if (item.icon) out.icon = item.icon;
+    if (item.danger) out.danger = true;
+    return out;
+  });
+}
+
 /** 注册右键菜单映射（ctx:show → menu:show） */
 export function registerContextMenus(): void {
-  bus.on("ctx:show", ({ x, y, type, instanceName, path, banned, dir, name, count, paths = [], rtype }) => {
-    if (type === "instance") {
-      bus.emit("menu:show", {
-        x,
-        y,
-        items: [
-          {
-            label: "📦 " + (instanceName || "") + (rtype ? " (" + rtype + ")" : ""),
-            onClick: () => {},
-          },
-          { divider: true },
-          {
-            label: "打开文件夹",
-            icon: "📂",
-            onClick: () => {
-              if (!path) {
-                toast("❌ 整合包目录未找到", 3000, "error");
-                return;
-              }
-              getApp()
-                .then((App) => App.OpenInstanceFolder(path, rtype || ""))
-                .catch(() => {});
-            },
-          },
-          { divider: true },
-          {
-            label: "复制模型清单",
-            icon: "📄",
-            onClick: () =>
-              bus.emit("instance:export-list", { name: instanceName || "", rtype }),
-          },
-          { divider: true },
-          {
-            label: "清空此整合包的模型",
-            icon: "🗑️",
-            danger: true,
-            onClick: () =>
-              bus.emit("instance:clear", {
-                name: instanceName || "",
-                rtype: rtype || undefined,
-              }),
-          },
-        ],
-      });
-      return;
-    }
-    if (type === "batch") {
-      bus.emit("menu:show", {
-        x,
-        y,
-        items: [
-          { label: `📦 已选 ${count || 0} 个文件`, onClick: () => {} },
-          { divider: true },
-          {
-            label: "批量重命名...",
-            icon: "✂️",
-            onClick: () => bus.emit("batch:rename", { paths }),
-          },
-          {
-            label: "移动到…",
-            icon: "📂",
-            onClick: async () => {
-              const { modalPrompt } = await import("../dialogs/modal.ts");
-              const folder = await modalPrompt({
-                title: "移动到文件夹",
-                icon: "📂",
-                placeholder: "输入目标文件夹名，如 [作者名]",
-                okText: "移动",
-              });
-              if (!folder) return;
-              // 基本路径安全过滤：禁止包含 .. 或绝对路径
-              if (/\.\./.test(folder) || /^[/\\]/.test(folder)) {
-                bus.emit("toast:show", {
-                  msg: "❌ 文件夹名包含非法字符",
-                  duration: 3000,
-                  type: "error",
-                });
-                return;
-              }
-              const { LoadAppConfig, MoveModelFile, GetRepoRoot } =
-                await import("../../bindings/ysm-model-manager/internal/app/app.js");
-              const repoRoot = await GetRepoRoot("ysm");
-              if (!repoRoot) {
-                bus.emit("toast:show", {
-                  msg: "❌ 请先配置存储路径",
-                  duration: 3000,
-                  type: "error",
-                });
-                return;
-              }
-              const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
-              toast(`📦 正在移动 ${paths.length} 个文件到 ${folder}...`, 3000);
-              let ok = 0;
-              let fail = 0;
-              for (const p of paths) {
-                try {
-                  await MoveModelFile(p, dstDir);
-                  ok++;
-                } catch (e) {
-                  fail++;
-                  console.error("移动失败:", p, e);
-                }
-              }
-              toast(ok > 0 ? `✅ ${ok} 个文件已移动到 ${folder}` : "❌ 移动失败", 4000);
-              refreshUI();
-            },
-          },
-          {
-            label: "复制到…",
-            icon: "📋",
-            onClick: async () => {
-              const { modalPrompt } = await import("../dialogs/modal.ts");
-              const folder = await modalPrompt({
-                title: "复制到文件夹",
-                icon: "📋",
-                placeholder: "输入目标文件夹名，如 [作者名]",
-                okText: "复制",
-              });
-              if (!folder) return;
-              if (/\.\./.test(folder) || /^[/\\]/.test(folder)) {
-                bus.emit("toast:show", {
-                  msg: "❌ 文件夹名包含非法字符",
-                  duration: 3000,
-                  type: "error",
-                });
-                return;
-              }
-              const { LoadAppConfig, CopyModelFile, GetRepoRoot } =
-                await import("../../bindings/ysm-model-manager/internal/app/app.js");
-              const repoRoot = await GetRepoRoot("ysm");
-              if (!repoRoot) {
-                bus.emit("toast:show", {
-                  msg: "❌ 请先配置仓库目录",
-                  duration: 3000,
-                  type: "error",
-                });
-                return;
-              }
-              const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
-              toast(`📦 正在复制 ${paths.length} 个文件到 ${folder}...`, 3000);
-              let ok = 0;
-              let fail = 0;
-              for (const p of paths) {
-                try {
-                  await CopyModelFile(p, dstDir);
-                  ok++;
-                } catch (e) {
-                  fail++;
-                  console.error("复制失败:", p, e);
-                }
-              }
-              if (ok > 0) {
-                toast(
-                  fail > 0
-                    ? `✅ ${ok} 复制成功 / ❌ ${fail} 失败（可能目标已存在）`
-                    : `✅ ${ok} 个文件已复制到 ${folder}`,
-                  4000,
-                );
-              } else {
-                toast("❌ 复制失败（可能目标已存在）", 4000, "error");
-              }
-            },
-          },
-          { divider: true },
-          {
-            label: "移入回收站",
-            icon: "♻️",
-            danger: true,
-            onClick: async () => {
-              const { modalConfirm } = await import("../dialogs/modal.ts");
-              const ok2 = await modalConfirm({
-                title: "批量移入回收站",
-                icon: "♻️",
-                message: `确定将选中的 ${count || 0} 个文件移入回收站？`,
-                okText: "♻️ 移入",
-                danger: true,
-              });
-              if (!ok2) return;
-              const { MoveToRecycle } =
-                await import("../../bindings/ysm-model-manager/internal/app/app.js");
-              for (const p of paths) {
-                try {
-                  await MoveToRecycle(p);
-                } catch {}
-              }
-              refreshUI();
-            },
-          },
-          { divider: true },
-          {
-            label: "复制文件路径列表",
-            icon: "📋",
-            onClick: async () => {
-              try {
-                await navigator.clipboard.writeText(paths.join("\n"));
-                toast(`✅ 已复制 ${paths.length} 个路径`, 2000);
-              } catch {
-                const ta = document.createElement("textarea");
-                ta.value = paths.join("\n");
-                ta.style.position = "fixed";
-                ta.style.opacity = "0";
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand("copy");
-                document.body.removeChild(ta);
-                toast(`✅ 已复制 ${paths.length} 个路径`, 2000);
-              }
-            },
-          },
-          {
-            label: "导出文件名清单 (.txt)",
-            icon: "📄",
-            onClick: () => {
-              const names = paths
-                .map((p) => p.split(/[/\\]/).pop())
-                .filter(Boolean)
-                .join("\n");
-              const blob = new Blob([names], {
-                type: "text/plain;charset=utf-8",
-              });
-              const a = document.createElement("a");
-              a.download = `model-list-${new Date().toISOString().slice(0, 10)}.txt`;
-              a.href = URL.createObjectURL(blob);
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(a.href);
-              toast(`✅ 已导出 ${paths.length} 个文件名`, 2000);
-            },
-          },
-        ],
-      });
-      return;
-    }
-    if (type === "file") {
-      bus.emit("menu:show", {
-        x,
-        y,
-        items: [
-          {
-            label: "重命名",
-            icon: "✂️",
-            onClick: async () => {
-              try {
-                const { showRenameDialog } = await import("../dialogs/rename.ts");
-                const fileName = (path || "").split(/[/\\]/).pop() || "";
-                const newName = await showRenameDialog(path || "", fileName);
-                if (!newName) return;
-                const { RenameFile } =
-                  await import("../../bindings/ysm-model-manager/internal/app/app.js");
-                await RenameFile(path || "", newName);
-                refreshUI();
-              } catch (e) {
-                toast("❌ " + friendlyError(e, "重命名失败"), 4000, "error");
-              }
-            },
-          },
-          {
-            label: "移动到…",
-            icon: "📂",
-            onClick: async () => {
-              const { modalPrompt } = await import("../dialogs/modal.ts");
-              const folder = await modalPrompt({
-                title: "移动到文件夹",
-                icon: "📂",
-                placeholder: "输入目标文件夹名，如 [作者名]",
-                okText: "移动",
-              });
-              if (!folder) return;
-              const { LoadAppConfig, MoveModelFile, GetRepoRoot } =
-                await import("../../bindings/ysm-model-manager/internal/app/app.js");
-              const repoRoot = await GetRepoRoot("ysm");
-              if (!repoRoot) {
-                bus.emit("toast:show", {
-                  msg: "❌ 请先配置存储路径",
-                  duration: 3000,
-                  type: "error",
-                });
-                return;
-              }
-              const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
-              try {
-                await MoveModelFile(path || "", dstDir);
-                toast(`✅ 已移动到 ${folder}`, 3000);
-                refreshUI();
-              } catch (e) {
-                toast("❌ " + friendlyError(e, "移动失败"), 4000, "error");
-              }
-            },
-          },
-          {
-            label: "复制到…",
-            icon: "📋",
-            onClick: async () => {
-              const { modalPrompt } = await import("../dialogs/modal.ts");
-              const folder = await modalPrompt({
-                title: "复制到文件夹",
-                icon: "📋",
-                placeholder: "输入目标文件夹名，如 [作者名]",
-                okText: "复制",
-              });
-              if (!folder) return;
-              if (/\.\./.test(folder) || /^[/\\]/.test(folder)) {
-                bus.emit("toast:show", {
-                  msg: "❌ 文件夹名包含非法字符",
-                  duration: 3000,
-                  type: "error",
-                });
-                return;
-              }
-              const { LoadAppConfig, CopyModelFile, GetRepoRoot } =
-                await import("../../bindings/ysm-model-manager/internal/app/app.js");
-              const repoRoot = await GetRepoRoot("ysm");
-              if (!repoRoot) {
-                bus.emit("toast:show", {
-                  msg: "❌ 请先配置仓库目录",
-                  duration: 3000,
-                  type: "error",
-                });
-                return;
-              }
-              const dstDir = repoRoot + "/" + folder.replace(/\\/g, "/");
-              try {
-                await CopyModelFile(path || "", dstDir);
-                toast(`✅ 已复制到 ${folder}`, 3000);
-              } catch (e) {
-                toast("❌ " + friendlyError(e, "复制失败"), 4000, "error");
-              }
-            },
-          },
-          {
-            label: "推送到整合包…",
-            icon: "📦",
-            onClick: async () => {
-              const { LoadAppConfig, ListVersionInstances, InstallModelTo } =
-                await import("../../bindings/ysm-model-manager/internal/app/app.js");
-              const cfg = await LoadAppConfig();
-              const mcRoot = cfg.mcRoot || "";
-              if (!mcRoot) {
-                toast("请先配置游戏目录", 2000, "warn");
-                return;
-              }
-              const instances = (await ListVersionInstances(mcRoot)) ?? [];
-              if (!instances.length) {
-                toast("未找到任何整合包", 2000, "warn");
-                return;
-              }
-              const { modalSelect } = await import("../dialogs/modal.ts");
-              const names = instances.map((i) => i.Name);
-              const chosen = await modalSelect({
-                title: "推送到整合包",
-                icon: "📦",
-                items: names,
-                okText: "📦 推送",
-              });
-              if (!chosen) return;
-              const match = instances.find((i) => i.Name === chosen);
-              if (!match) return;
-              const name = (path || "").split(/[/\\]/).pop() || "";
-              try {
-                await InstallModelTo(name, match.CustomDir);
-                toast(`✅ 已推送到 ${chosen}`, 2000);
-              } catch (e) {
-                toast("❌ " + friendlyError(e, "推送失败"), 3000, "error");
-              }
-            },
-          },
-          { divider: true },
-          {
-            label: "🏷️ 编辑标签",
-            onClick: async () => {
-              const { modalTagEditor } = await import("../dialogs/tag-editor.ts");
-              const result = await modalTagEditor(path || "");
-              if (result) toast(`🏷️ 已保存 ${result.length} 个标签`, 2000);
-            },
-          },
-          { divider: true },
-          {
-            label: "移入回收站",
-            icon: "♻️",
-            danger: true,
-            onClick: async () => {
-              const { modalConfirm } = await import("../dialogs/modal.ts");
-              const ok2 = await modalConfirm({
-                title: "移入回收站",
-                icon: "♻️",
-                message: `确定将 ${(path || "").split("/").pop()} 移入回收站？`,
-                okText: "♻️ 移入",
-                danger: true,
-              });
-              if (!ok2) return;
-              const { MoveToRecycle } =
-                await import("../../bindings/ysm-model-manager/internal/app/app.js");
-              try {
-                await MoveToRecycle(path || "");
-                refreshUI();
-              } catch {}
-            },
-          },
-          {
-            label: "打开文件位置",
-            icon: "📂",
-            onClick: async () => {
-              const { RevealInExplorer } =
-                await import("../../bindings/ysm-model-manager/internal/app/app.js");
-              try {
-                await RevealInExplorer(path || "");
-              } catch (e) {
-                toast("❌ " + friendlyError(e, "打开失败"), 3000, "error");
-              }
-            },
-          },
-          { divider: true },
-          {
-            label: "复制文件路径",
-            icon: "📋",
-            onClick: async () => {
-              try {
-                await navigator.clipboard.writeText(path || "");
-                toast("✅ 路径已复制到剪贴板", 2000);
-              } catch {
-                const ta = document.createElement("textarea");
-                ta.value = path || "";
-                ta.style.position = "fixed";
-                ta.style.opacity = "0";
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand("copy");
-                document.body.removeChild(ta);
-                toast("✅ 路径已复制到剪贴板", 2000);
-              }
-            },
-          },
-        ],
-      });
-      return;
-    }
-    if (type === "dir") {
-      bus.emit("menu:show", {
-        x,
-        y,
-        items: [
-          {
-            label: "重命名…",
-            icon: "✂️",
-            onClick: () => bus.emit("dir:rename", { dir: dir || "" }),
-          },
-          {
-            label: "批量重命名…",
-            icon: "📝",
-            onClick: () => bus.emit("dir:batch-rename", { dir: dir || "" }),
-          },
-          { divider: true },
-          {
-            label: "新建子文件夹…",
-            icon: "🗂",
-            onClick: () => bus.emit("dir:mkdir", { dir: dir || "" }),
-          },
-          { divider: true },
-          {
-            label: "移入回收站",
-            icon: "♻️",
-            danger: true,
-            onClick: () => bus.emit("dir:recycle", { dir: dir || "" }),
-          },
-        ],
-      });
-      return;
-    }
-    void banned;
-    void name;
+  bus.on("ctx:show", (payload) => {
+    bus.emit("menu:show", {
+      x: payload.x,
+      y: payload.y,
+      items: buildMenuItems(payload),
+    });
   });
 }

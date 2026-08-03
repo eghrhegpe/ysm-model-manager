@@ -49,17 +49,18 @@ for (const m of html.matchAll(/<script\s+([^>]*)>/g)) {
   }
 }
 
-// 4. 检查自定义组件标签（<app-xxx>）都有对应 JS 文件
+// 4. 检查自定义组件标签（<app-xxx>）都有对应组件文件（.js/.ts 皆可，ADR-014 渐进迁移）
 for (const m of html.matchAll(/<(\w+-\w+)[>\s]/g)) {
   const tag = m[1];
   if (tag.startsWith('app-')) {
-    const jsFile = `js/components/${tag}/index.js`;
-    const fp = path.join(ROOT, 'frontend', jsFile);
-    if (!fs.existsSync(fp)) {
+    const indexJs = path.join(ROOT, 'frontend', `js/components/${tag}/index.js`);
+    const indexTs = path.join(ROOT, 'frontend', `js/components/${tag}/index.ts`);
+    if (!fs.existsSync(indexJs) && !fs.existsSync(indexTs)) {
       // 有些组件可能是单文件
-      const fp2 = path.join(ROOT, 'frontend', `js/components/${tag}.js`);
-      if (!fs.existsSync(fp2)) {
-        errors.push(`Custom component '${tag}' has no JS file`);
+      const singleJs = path.join(ROOT, 'frontend', `js/components/${tag}.js`);
+      const singleTs = path.join(ROOT, 'frontend', `js/components/${tag}.ts`);
+      if (!fs.existsSync(singleJs) && !fs.existsSync(singleTs)) {
+        errors.push(`Custom component '${tag}' has no JS/TS file`);
       }
     }
   }

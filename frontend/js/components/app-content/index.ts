@@ -1,5 +1,6 @@
 // ===== <app-content> 入口 =====
 import { bus } from "../../bus.ts";
+import { setPendingTreeSearch } from "../app-tree/index.ts";
 import { esc as escUtil } from "../../utils/dom.ts";
 import { dbg } from "../../utils/debug.ts";
 import { contentCSS } from "./content-css.ts";
@@ -85,8 +86,8 @@ class AppContent extends HTMLElement {
     // 创作者详情浮层→搜索本地模型
     this._globalUnsubs.push(
       bus.on("repo:search-creator", (name) => {
-        // 存入搜索词，app-tree 在 _renderTree 时自动检查
-        window._pendingTreeSearch = name;
+        // 存入搜索词，app-tree 在挂载时自动检查消费
+        setPendingTreeSearch(name);
         // 先切到仓库页面
         bus.emit("nav:change", { page: "repository" });
       }),

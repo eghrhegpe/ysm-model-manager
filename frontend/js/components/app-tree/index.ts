@@ -11,11 +11,19 @@ import { bus } from "../../bus.ts";
 import { selectState } from "./data.ts";
 import { dbg } from "../../utils/debug.ts";
 
-// —— 全局扩展：虚拟滚动容器属性 + 待处理搜索 ——
+// 模块级待处理搜索词：切页先存、组件挂载后消费（替代 window._pendingTreeSearch，零 window 全局）
+let _pendingTreeSearch = "";
+export function setPendingTreeSearch(name: string): void {
+  _pendingTreeSearch = name;
+}
+export function takePendingTreeSearch(): string {
+  const v = _pendingTreeSearch;
+  _pendingTreeSearch = "";
+  return v;
+}
+
+// —— 全局扩展：虚拟滚动容器属性 ——
 declare global {
-  interface Window {
-    _pendingTreeSearch?: string;
-  }
   interface ShadowRoot {
     /** 作者列表缓存（root 上，供外部读取） */
     _treeAuthors?: Array<AuthorInfo | string>;
@@ -111,13 +119,13 @@ export class AppTree extends HTMLElement {
       // 检查是否有通过 bus 事件之前发来的待处理搜索
       // 用 setTimeout 确保在所有异步初始化完成后执行
       setTimeout(() => {
-        if (window._pendingTreeSearch) {
+        const pending = takePendingTreeSearch();
+        if (pending) {
           const srch = this._root?.getElementById("srch") as HTMLInputElement | null;
           if (srch) {
-            srch.value = window._pendingTreeSearch;
+            srch.value = pending;
             srch.dispatchEvent(new Event("input", { bubbles: true }));
           }
-          window._pendingTreeSearch = "";
         }
       }, 0);
     } catch (e) {

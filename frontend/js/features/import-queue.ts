@@ -814,8 +814,9 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   const processPendingImport = (files?: Array<{ name: string; file: File }>): void => {
     const list = files || (PendingImport.queue as Array<{ name: string; file: File }>);
     if (!list || list.length === 0) return;
-    PendingImport.clear();
+    // 先获取 DnDLock 再消费队列：锁被占用时不清空 pending，避免文件静默丢失
     if (!DnDLock.acquire()) return;
+    PendingImport.clear();
     let readCount = 0;
     list.forEach((item) => {
       if (!item.file) {

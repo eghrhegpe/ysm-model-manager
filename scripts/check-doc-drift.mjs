@@ -129,7 +129,7 @@ function checkKnowledge() {
       const v = getScalar(fm, key);
       if (v === undefined || v === '') errors.push(`[知识卡] ${cf} 缺少必填字段 ${key}`);
     }
-    const placeholderM = text.match(/^---\r?\n[\s\S]*?<[a-z_]+>\r?\n?/m);
+    const placeholderM = fm.match(/<[a-z_]+>/);
     if (placeholderM) errors.push(`[知识卡] ${cf} 含未填充占位符 <...>`);
 
     // source_files 存在性

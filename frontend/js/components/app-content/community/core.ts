@@ -279,14 +279,3 @@ export function mergeCommunitySites(
  */
 export const DEFAULT_COMMUNITY_URL =
   "https://raw.githubusercontent.com/eghrhegpe/ysm-model-manager/main/creators.json";
-
-/**
- * 获取仓库模型列表 + 本地映射
- */
-export async function getRepoModelsData(
-  repo: string,
-  mirror?: string,
-): Promise<unknown> {
-  const { tryFetchModels } = await import("../../../features/community/data.ts");
-  return tryFetchModels(repo, (mirror || "") as "" | "jsdelivr" | "githubapi");
-}

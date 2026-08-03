@@ -363,6 +363,9 @@ async function batchToggle(
   dir: string,
   enable: boolean,
 ): Promise<void> {
+  if (vm._batchBusy) return; // 并发守卫：连点时后来的批量操作直接忽略
+  vm._batchBusy = true;
+  try {
   const prefix = dir.replace(/\\/g, "/");
   const snapshot = vm._entries
     .filter((e) => e.path && e.path.startsWith(prefix) && e.banned === enable)
@@ -388,9 +391,15 @@ async function batchToggle(
     duration: 3000,
     type: fail > 0 ? "warn" : "success",
   });
+  } finally {
+    vm._batchBusy = false;
+  }
 }
 
 async function batchToggleAll(vm: AppTree, enable: boolean): Promise<void> {
+  if (vm._batchBusy) return; // 并发守卫：连点时后来的批量操作直接忽略
+  vm._batchBusy = true;
+  try {
   let ok = 0,
     fail = 0;
   const snapshot = vm._entries
@@ -414,4 +423,7 @@ async function batchToggleAll(vm: AppTree, enable: boolean): Promise<void> {
     duration: 3000,
     type: fail > 0 ? "warn" : "success",
   });
+  } finally {
+    vm._batchBusy = false;
+  }
 }

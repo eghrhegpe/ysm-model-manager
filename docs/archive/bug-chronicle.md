@@ -1540,3 +1540,35 @@ const dispName = renderDisplayName(k);
 - `URL.createObjectURL` 的生命周期必须跟随其宿主缓存条目的 evict；新增 createObjectURL 时同步检查 evict 回调覆盖面
 - 模块级 flag 与组件生命周期绑定时，必须在 `disconnectedCallback` 复位；Wails `Events.On` 返回解绑函数，捕获它是强制项
 - 转义契约必须是「生产方传原文、消费方负责转义」——双重转义（乱码）与漏转义（XSS）是同一职责不明的两面；handler-dnd 的 100MB 文案问题核实已由并行提交修复，无需重复动手
+
+## 2026-08-04 新增 bug 记录（L2 审计 P3 第二批：并发守卫四项）
+
+> 来源：`docs/review-report.md` L2 审计 P3 清单第二批（并发守卫组），全部通过 typecheck + vite build + 契约测试。
+
+### 症状
+
+1. 连点批量启用/禁用菜单或文件夹开关 → 重叠循环二次 Toggle 把状态打回原形，toast 却仍报成功
+2. app-resource-manager 的 rtype/instance 属性连变时，后发先至把旧类型列表写进新 DOM
+3. sidebar 推送流意外 throw → 按钮永久 ⏳，`_syncInProgress` 永不复位，推送/拉取全锁死（陷阱 #3 同款）
+4. 导入队列连点「导入」/「重命名」→ 重复导入在途文件（modal 单例槽位只挡弹窗叠加，挡不住导入本身的竞态）
+
+### 根因
+
+1. `batchToggle` / `batchToggleAll` / `toggleFolderBatch` 三入口均无并发守卫，各自循环 await `ToggleModelEnable`
+2. `_init` 多处 await（_loadConfig/getApp/实例路径解析）无过期判断，异步结果直接回写共享 DOM
+3. 按钮恢复与 `_syncInProgress` 复位写在 IIFE 体尾部而非 finally 路径，throw 即跳过
+4. dl-import / dl-reimport 入口无 `_importing` 标志，导入 await 期间（确认弹窗后到 ImportModelFileTo 完成）二次点击可再走一遍全流程
+
+### 修复
+
+1. AppTree 新增 `_batchBusy` 共享槽位，三入口统一 `if busy return` + `try/finally` 复位（跨入口互斥：菜单批量与文件夹开关不能重叠）
+2. app-resource-manager 新增 `_initGen` generation：入口自增，四处 await 后比对过期即 return，末尾 `_loadList` 仅在未过期时执行
+3. 推送 IIFE 包 `try/catch/finally`：异常转 error toast，finally 恢复按钮文案/disabled/`_syncInProgress`
+4. import-queue 新增闭包级 `_importing`，dl-import 与 dl-reimport 双入口共用守卫，finally 复位
+
+### 教训
+
+- 「菜单项可以被连点」是默认假设：逐个 await 的循环必须有 busy 槽位；多入口共享同一槽位才能防跨入口重叠
+- generation 计数器已是「异步结果回写共享 DOM」的标准配置（preview-detail `_detailGen`、recycle-bin、resource-manager 同源），新组件带 await 初始化时直接套用
+- 按钮状态恢复永远放 finally——陷阱 #3 虽已入库，新代码仍在复发，审核异步按钮时把「finally 是否覆盖恢复」列为首查项
+- 弹窗单例槽位（registerDlg）只解决「弹窗叠加」，不能替代入口自身的并发守卫：弹窗被结算 ≠ 业务流程被互斥

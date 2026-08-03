@@ -12,8 +12,3 @@ export const getApp = async (): Promise<AppBindings> => {
   _App = await import("../../bindings/ysm-model-manager/internal/app/app.js");
   return _App;
 };
-
-/** 重置缓存（测试用） */
-export const resetAppCache = (): void => {
-  _App = null;
-};

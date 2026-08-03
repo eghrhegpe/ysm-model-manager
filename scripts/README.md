@@ -61,6 +61,7 @@
 | `gen-status-index.mjs` | 扫 ADR 首部 → PROJECT_STATUS.md「当前进行中/近期 ADR」区（`<!-- GEN: active-adr -->`） |
 | `new-adr.mjs` | 新 ADR 脚手架：双源占号 + 四段模板 + 登记表登记 + 自动 adr-check |
 | `gen-docs-index.mjs` | 分区索引：adr 登记表/状态统计 + **adr 规范索引页 `docs/adr/index.md`（状态分组 + 锚点 + 相对链接，整文件重写）** + releases 最近版本/版本全览（GEN 标记区），knowledge 委托校验 |
+| `gen-project-map.mjs` | 项目结构地图生成（`docs/project-map.md`）：扫描磁盘目录 + 合并基线 `scripts/baseline/project-dirs.json` 用途说明，4 个 GEN 标记区；`--check` 已挂 doctor 防漂移；未登记基线的新目录 WARN 提醒 |
 
 ### 生成器维护约定（2026-08-03 新增）
 

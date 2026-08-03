@@ -4,18 +4,6 @@ import { ICONS } from "./workshop-icons.ts";
 
 const STORAGE_KEY = "ysm-fav-creators";
 
-// ===== 站点名称映射 =====
-export const PLATFORM_NAMES: Record<string, string> = {
-  bilibili: "B站",
-  afdian: "爱发电",
-  github: "GitHub",
-  mzhouse: "模之屋",
-  bowlroll: "Bowlroll",
-  vroid: "VRoid",
-  nicovideo: "NicoNico 3D",
-  deviantart: "DeviantArt",
-};
-
 /** 创作者身份识别结果 */
 export interface CreatorIdentity {
   label: string;
@@ -76,7 +64,7 @@ export function loadFavs(): string[] {
   }
 }
 
-export function saveFavs(names: string[]): void {
+function saveFavs(names: string[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(names));
 }
 

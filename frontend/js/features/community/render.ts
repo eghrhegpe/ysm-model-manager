@@ -167,7 +167,7 @@ export function renderModelList(
 /**
  * 分组标签映射
  */
-export const GROUP_LABELS: Record<string, { icon: string; label: string }> = {
+const GROUP_LABELS: Record<string, { icon: string; label: string }> = {
   search: { icon: "🔍", label: "搜索平台" },
   repo: { icon: "📦", label: "模型仓库" },
   browse: { icon: "👁️", label: "浏览平台" },

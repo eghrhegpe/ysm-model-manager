@@ -171,8 +171,9 @@ class AppSidebar extends HTMLElement {
       closeAllMenus();
       pushBtn.textContent = "⏳";
       pushBtn.disabled = true;
-      let failed = 0;
       (async () => {
+        let failed = 0;
+        try {
         const types = resolveTypes((item as HTMLElement).dataset.syncType || "all");
         for (const insName of selected) {
           const results = await Promise.allSettled(
@@ -194,13 +195,18 @@ class AppSidebar extends HTMLElement {
           );
           results.forEach((r) => { if (r.status === "rejected") failed++; });
         }
-        pushBtn.textContent = "⬆️ 推送所选 ▾";
-        pushBtn.disabled = false;
-        this._syncInProgress = false;
         if (failed > 0) {
           bus.emit("toast:show", { msg: `⚠️ 推送完成，${failed} 个操作超时`, duration: 3000, type: "warn" });
         } else {
           bus.emit("toast:show", { msg: `✅ 推送完成：${selected.length} 个整合包`, duration: 2500 });
+        }
+        } catch (err) {
+          bus.emit("toast:show", { msg: "❌ 推送失败: " + (err instanceof Error ? err.message : String(err)), duration: 3000, type: "error" });
+        } finally {
+          // 意外 throw 也必须恢复按钮与锁（陷阱 #3：按钮卡死根因）
+          pushBtn.textContent = "⬆️ 推送所选 ▾";
+          pushBtn.disabled = false;
+          this._syncInProgress = false;
         }
       })();
     });

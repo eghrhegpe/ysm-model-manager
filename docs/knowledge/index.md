@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 28 张知识卡
+> 总计: 43 张知识卡
 
 ## config（1 张）
 
@@ -21,6 +21,16 @@
 | 🏗 event_bus | 事件总线 bus.ts | architecture |
 | 🏗 page_store | 页面状态管理 page-store.ts | architecture |
 | 🏗 wails_bridge | Wails 桥接 app.ts | architecture |
+
+## feature（3 张）
+
+*业务功能（导入队列、同步、社区）*
+
+| 标识 | 名称 | tier |
+|------|------|------|
+| 🏗 import_queue | 导入队列 import-queue | architecture |
+| 🏗 recycle_bin | 回收站界面 recycle-bin | architecture |
+| 🏗 version_updater | 版本更新 version-updater | architecture |
 
 ## go（22 张）
 
@@ -51,14 +61,33 @@
 | 🏗 go_ysm_parser | YSM 解析 go/ysm | architecture |
 | 🏗 wails_bindings | Wails Binding API 总览 internal/app | architecture |
 
-## ui（2 张）
+## ui（10 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
 | 标识 | 名称 | tier |
 |------|------|------|
 | 🏗 app_content | 主内容页 app-content | architecture |
+| 🏗 app_modules | 组件入口 app-modules | architecture |
+| 🍃 app_nav | 顶部导航 app-nav | leaf |
+| 🏗 app_preview | 预览面板 app-preview | architecture |
+| 🏗 app_resource_manager | 资源管理页 app-resource-manager | architecture |
+| 🏗 app_sidebar | 侧边栏 app-sidebar | architecture |
+| 🏗 app_sync_manager | 整合包同步页 app-sync-manager | architecture |
+| 🍃 app_toast | Toast 通知 app-toast | leaf |
 | 🏗 app_tree | 资源树 app-tree | architecture |
+| 🏗 context_menu | 右键菜单系统 | architecture |
+
+## utils（4 张）
+
+*工具函数（display、fmt、dom、animation）*
+
+| 标识 | 名称 | tier |
+|------|------|------|
+| 🍃 utils_display | 文件名显示 display | leaf |
+| 🍃 utils_dom | DOM 工具 dom | leaf |
+| 🍃 utils_fmt | 格式化工具 fmt | leaf |
+| 🍃 utils_icon | 图标映射 icon | leaf |
 
 ---
 

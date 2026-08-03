@@ -9,12 +9,6 @@ export interface AngleShot {
   base64: string;
 }
 
-export interface BatchResult {
-  ok: number;
-  fail: number;
-  total: number;
-}
-
 // renderMultiAngle 透明背景多角度截图
 export async function renderMultiAngle(
   modelPath: string,
@@ -131,77 +125,4 @@ export async function renderMultiAngle(
   });
   renderer.dispose();
   return results;
-}
-
-// batchRepoScreenshots 批量截图仓库所有模型，4 角度，透明背景
-// repoRoot: 仓库根目录（传空则尝试从 App config 读取）
-export async function batchRepoScreenshots(
-  repoRoot?: string,
-  outputDir?: string,
-): Promise<BatchResult | undefined> {
-  const { ScanModelEntries, SaveScreenshotFile } = await import(
-    "../../bindings/ysm-model-manager/internal/app/app.js"
-  );
-  if (!repoRoot) {
-    try {
-      const { LoadAppConfig } = await import(
-        "../../bindings/ysm-model-manager/internal/app/app.js"
-      );
-      const cfg = await LoadAppConfig();
-      repoRoot = cfg?.ysmRoot || cfg?.filesRoot || "";
-    } catch (e) {
-      console.warn("[batch] LoadAppConfig 失败:", e);
-    }
-  }
-  if (!repoRoot) {
-    console.warn("[batch] 请传入仓库路径: batchRepoScreenshots('C:/path/repo')");
-    return;
-  }
-
-  const entries = await ScanModelEntries(repoRoot);
-  const models = Array.isArray(entries)
-    ? entries.filter((e: { Path?: string; path?: string; Name?: string; name?: string }) => {
-        const p = e.Path || e.Name || "";
-        return /\.(ysm|zip|7z|json)$/i.test(p);
-      })
-    : [];
-
-  let ok = 0;
-  let fail = 0;
-  for (const m of models) {
-    const fullPath = m.Path || m.Name || "";
-    const normalized = fullPath.replace(/\\/g, "/");
-    const base = normalized.split("/").pop()?.replace(/\.\w+$/, "") || "";
-    try {
-      const { AnalyzeBedrockModel } = await import(
-        "../../bindings/ysm-model-manager/internal/app/app.js"
-      );
-      let texUrls: string[] = [];
-      try {
-        const modelData = await AnalyzeBedrockModel(fullPath);
-        if (modelData?.textures?.length) texUrls = modelData.textures;
-        else if (modelData?.texture) texUrls = [modelData.texture];
-      } catch (e) {
-        console.warn("[batch] 取纹理失败:", e);
-      }
-      const results = await renderMultiAngle(fullPath, texUrls, { size: 512 });
-      if (!results) {
-        fail++;
-        continue;
-      }
-      const dir =
-        outputDir ||
-        (normalized.includes("/")
-          ? normalized.slice(0, normalized.lastIndexOf("/"))
-          : ".");
-      for (const r of results) {
-        await SaveScreenshotFile(dir + "/" + base + "_" + r.name + ".png", r.base64);
-      }
-      ok++;
-    } catch (e) {
-      console.error("[batch] 失败:", fullPath, e);
-      fail++;
-    }
-  }
-  return { ok, fail, total: models.length };
 }

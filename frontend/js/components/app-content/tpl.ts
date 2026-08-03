@@ -62,24 +62,6 @@ export function instancesHTML(): string {
   );
 }
 
-export function resourceLibraryHTML(): string {
-  return (
-    '<div class="repo-wrap" style="display:flex;flex-direction:column">' +
-    '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-rtab="' + RESOURCE_TYPES.YSM + '">💎 YSM</button>' +
-    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.MMD + '">🎭 MMD</button>' +
-    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.VRC + '">🥽 VRC</button>' +
-    '<span style="padding:4px 8px;color:var(--muted);font-size:var(--fs-xs);align-self:center">│</span>' +
-    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.PACK + '">🎨 资源包</button>' +
-    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.SHADER + '">☀️ 光影包</button>' +
-    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.BLUEPRINT + '">⚙️ 蓝图</button>' +
-    '<button class="repo-tab" data-rtab="' + RESOURCE_TYPES.LITEMATIC + '">📐 投影</button>' +
-    "</div>" +
-    '<div id="res-panel" style="flex:1;display:flex;overflow:hidden"></div>' +
-    "</div>"
-  );
-}
-
 export function settingsHTML(): string {
   return `<div class="repo-wrap">
 <div class="repo-tabs">
@@ -419,10 +401,6 @@ export function settingsHTML(): string {
 </div>
 
 </div>`;
-}
-
-export function placeholderHTML(icon: string, label: string): string {
-  return `<div class="placeholder-box"><div class="big">${icon}</div><div>${label}</div><span class="ptag">预告</span></div>`;
 }
 
 export function downloadsHTML(): string {

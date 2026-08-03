@@ -8,12 +8,12 @@
 > 500 行文件先 grep 定位再读。
 > 按需读取 `docs/knowledge/routes.md`（AI 路由表）+ `docs/knowledge/index.md`（枢纽索引，自动生成）+ grep 卡正文定位功能作用，充实上下文。
 > 涉及 ADR：先 grep `docs/adr/` 看是否已有类似实现；写新 ADR 走叫号脚本（命令与流程见下方「ADR 规则」，禁止手写编号）。
+> 文档地图优先，确认代码归属，但允许探索。发现地图过期时报告漂移、以源码为准。
 > 编号只允许给 ADR、novel 写。
-> 信任本机改动，提交代码：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。会有 GitHub PR review 审核，别怕错误。
+> 改完即验，顺带提交（构建/跑得起来）：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）。 涉及文档改动时用`node scripts/doctor.mjs`。
+> 信任本机改动，提交代码时：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。会有 GitHub PR review 审核，别怕错误。
 > 放弃低效的 `git stash` / `git stash push` / `git stash pop` 指令。
-> 改完即验（构建/跑得起来）：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）。文档/ADR/资源等治理检查见「§1.2 检查指令」，提交前一键跑 `node scripts/doctor.mjs`。
-> 文档地图优先，但允许探索：地图没有的目录 ≠ 不存在，发现地图过期时报告漂移、以源码为准（`docs/archive/` 为冻结区，需追溯旧设计时才读）。
-> 新文档先过命名约束检查（`docs/Design.md` §12 文档命名与归属规范），命名、frontmatter 与归属目录一并确认。
+> 前端建议过一遍命名表（`docs/Design.md` §12 文档命名与归属规范）。
 > 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `review` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check`。
 
 ## 去哪里查
@@ -108,7 +108,8 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 
 ## 审核思维准则（审查员视角）
 
-> AI 执行审核时，不是逐行读代码，而是带着以下 4 个问题去"盘问"代码：
+> 提交代码后，再适当进行审核。
+> 执行审核时，不是逐行读代码，而是带着以下 4 个问题去"盘问"代码：
 
 | 思维模型 | 核心问题 | 审核时怎么做 |
 |----------|---------|-------------|
@@ -277,36 +278,15 @@ const { SomeBinding } = window.go.main.App;
 
 ## 四、项目速查
 
-### 4.1 Go 端
+### 4.1 项目结构
 
-```
-go/installer/  — 模型安装       go/sync/     — 整合包同步
-go/recycle/    — 回收站管理     go/ysm/      — YSM 解析+摘要
-go/watcher/    — 文件监听       go/updater/  — 自动更新
-go/paths/      — 路径安全       go/types/    — 共享类型+注册表
-go/logs/       — 导入日志       go/version/  — 版本号
-go/threejs/    — 3D 骨骼计算    go/importer/ — 导入策略
-internal/app/  — Wails Binding 入口（app.go / resource_bindings.go 已下沉至此）
-main.go        — 程序入口（薄壳）
-```
+完整目录结构与用途见 [docs/project-map.md](docs/project-map.md)（**自动生成**：目录结构由 `node scripts/gen-project-map.mjs` 扫描磁盘，用途说明维护在 `scripts/baseline/project-dirs.json`；改目录结构后跑脚本刷新并补基线，`--check` 已挂 doctor 防漂移）。
 
-### 4.2 前端
+高频锚点（详见「去哪里查」表）：
+- 改 Go 后端 → `internal/app/`（Wails Binding 入口）；逻辑下沉 → `go/` 包
+- 加菜单 / 按钮 / 组件 → `frontend/js/app-modules.ts`
 
-```
-frontend/js/
-  bus.ts                 — 事件总线
-  app-modules.ts         — 组件入口 + 右键菜单映射
-  components/            — Web Components（app-content[含 community/diagnostics/settings]/app-preview/app-tree/app-sidebar/app-resource-manager/app-sync-manager/app-nav/app-toast/context-menu）
-  features/              — 业务功能 (import-queue/recycle-bin/version-updater/community)
-  dialogs/               — 弹窗 (modal/rename/batch-rename/tag-editor)
-  core/                  — 基础设施 (buttons/global-handlers/theme/context-menus)
-  utils/                 — 工具函数 (display/fmt/dom/icon/summarize/model3d)
-  services/registry.ts   — 服务注册
-  wails/                 — Wails 桥接 (app.ts)
-  wasm/                  — WASM 生成数据（base64 豁免文件）
-```
-
-### 4.3 组件拆分规范
+### 4.2 组件拆分规范
 
 ```
 app-xxx/index.ts     — 生命周期编排
@@ -319,7 +299,7 @@ app-xxx/utils.ts     — 组件工具（可选）
 app-xxx/xxx-css.ts   — Shadow DOM 样式
 ```
 
-### 4.4 注册表优先
+### 4.3 注册表优先
 
 所有资源类型定义以 `resource_types.json` 为单一事实来源。**不要在 Go/Frontend 中手写 `StorageSubDir` / `specificRoot` / `ResourceExts` 的新条目**。先在 `resource_types.json` 加，一致性测试会自动校验。
 

@@ -128,14 +128,6 @@ export interface PackMeta {
 }
 
 /**
- * 根据 pack_format 数值获取可读 Minecraft 版本描述
- * @param packFormat 格式号
- */
-export function formatVersion(packFormat: number): string | null {
-  return FORMAT_VERSION_MAP[packFormat] || null;
-}
-
-/**
  * 根据 meta 对象生成格式号 + 版本号描述
  * @param meta ReadPackMeta 返回的 JSON 对象
  */

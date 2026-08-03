@@ -81,8 +81,8 @@ export interface BusEvents {
   // 实例 / 导入
   "instance:export-list": { name: string; rtype?: string };
   "instance:clear": { name: string; rtype?: string };
-  "instance:install": void;
-  "instance:sync": void;
+  "instance:install": { name: string; rtype?: string };
+  "instance:sync": { name: string; rtype?: string };
   "import:pending-changed": { count: number };
   "import:pending-files": Array<{ name: string; file: File }>;
   "dnd:lock-changed": { locked: boolean };
@@ -93,8 +93,8 @@ export interface BusEvents {
   "batch:rename": { paths: string[] };
   "batch:enable-all": void;
   "batch:disable-all": void;
-  "batch:enable": void;
-  "batch:disable": void;
+  "batch:enable": { dir: string };
+  "batch:disable": { dir: string };
   // 目录
   "dir:rename": { dir: string };
   "dir:recycle": { dir: string };
@@ -106,8 +106,8 @@ export interface BusEvents {
   "loading:end": void;
   "recycle:open": void;
   "mmd:sync-variant-folder": { instanceName: string; folderPath: string; rtype: string };
-  "filter:results": void;
-  "entry:toggle": void;
+  "filter:results": Array<{ path: string }>;
+  "entry:toggle": { path: string };
   "entries:dedup": void;
 }
 

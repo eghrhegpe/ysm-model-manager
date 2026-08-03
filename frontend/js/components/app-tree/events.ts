@@ -1,19 +1,16 @@
 // ===== 树事件层（事件委托版，兼容虚拟滚动） =====
 import { bus } from "../../bus.ts";
-import { selectState, toggleSelect } from "./data.js";
-import { updateStat } from "./render.js";
+import { selectState, toggleSelect } from "./data.ts";
+import type { AppTree } from "./index.ts";
+import type { TreeEntry } from "./loader.ts";
 import {
   ToggleModelEnable,
-  ScanModelEntries,
-  IsFileBanned,
-  OpenFolder,
-  LoadAppConfig,
 } from "../../../bindings/ysm-model-manager/internal/app/app.js";
 
 const ENABLE_MULTI_SELECT = true;
 
 // 更新底部"已选 N 个文件"统计（被工具栏复用，避免重复实现）
-export function updateSelectCount(root) {
+export function updateSelectCount(root: ShadowRoot): void {
   const stat = root?.getElementById("ftr-stat");
   if (!stat) return;
   const n = selectState.keys.size;
@@ -26,8 +23,11 @@ export function updateSelectCount(root) {
 }
 
 // 递归收集文件夹下所有条目
-function collectDirEntries(entries, prefix) {
-  const result = [];
+function collectDirEntries(
+  entries: TreeEntry[],
+  prefix: string,
+): TreeEntry[] {
+  const result: TreeEntry[] = [];
   for (const e of entries) {
     if (!e.path) continue;
     const normalized = e.path.replace(/\\/g, "/");
@@ -38,7 +38,7 @@ function collectDirEntries(entries, prefix) {
   return result;
 }
 
-async function toggleFolderBatch(fhEl, vm) {
+async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> {
   const ck = fhEl.querySelector(".ck");
   if (!ck) return;
   const dirKey = fhEl.dataset.dir;
@@ -84,19 +84,21 @@ async function toggleFolderBatch(fhEl, vm) {
 }
 
 // ——— 事件委托：一次性绑定，虚拟滚动替换 innerHTML 后仍然有效 ———
-export function bindTreeEvents(container, vm) {
+export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
   // 点击事件委托
-  container.addEventListener("click", (e) => {
+  container.addEventListener("click", (e: MouseEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
     // 文件夹开关
-    const fhCk = e.target.closest(".fh .ck");
+    const fhCk = target.closest(".fh .ck");
     if (fhCk) {
       e.stopPropagation();
-      toggleFolderBatch(fhCk.closest(".fh"), vm);
+      toggleFolderBatch(fhCk.closest(".fh") as HTMLElement, vm);
       return;
     }
 
     // 文件夹展开/折叠
-    const fh = e.target.closest(".fh");
+    const fh = target.closest(".fh") as HTMLElement | null;
     if (fh) {
       e.stopPropagation();
       const dir = fh.dataset.dir;
@@ -121,14 +123,14 @@ export function bindTreeEvents(container, vm) {
     }
 
     // 文件开关
-    const flCk = e.target.closest(".fl .ck");
+    const flCk = target.closest(".fl .ck") as HTMLElement | null;
     if (flCk) {
       e.stopPropagation();
       const fullPath = flCk.dataset.fullpath || flCk.dataset.path;
-      const fl = flCk.closest(".fl");
+      const fl = flCk.closest(".fl") as HTMLElement | null;
       if (fl) fl.classList.add("flash");
       setTimeout(() => fl?.classList.remove("flash"), 400);
-      ToggleModelEnable(fullPath)
+      ToggleModelEnable(fullPath || "")
         .then(async () => {
           await vm._load();
           vm._renderTree();
@@ -141,7 +143,7 @@ export function bindTreeEvents(container, vm) {
     }
 
     // 悬停快捷操作（在文件选中前检查，因为它们也在 .fl 内部）
-    const haPreview = e.target.closest(".ha-preview");
+    const haPreview = target.closest(".ha-preview") as HTMLElement | null;
     if (haPreview) {
       e.stopPropagation();
       const path = haPreview.dataset.path;
@@ -167,7 +169,7 @@ export function bindTreeEvents(container, vm) {
     }
 
     // 悬停快捷操作：📋 复制文件名
-    const haCopy = e.target.closest(".ha-copy");
+    const haCopy = target.closest(".ha-copy") as HTMLElement | null;
     if (haCopy) {
       e.stopPropagation();
       const path = haCopy.dataset.path;
@@ -182,7 +184,7 @@ export function bindTreeEvents(container, vm) {
     }
 
     // 左键点击文件 → 多选
-    const fl = e.target.closest(".fl");
+    const fl = target.closest(".fl") as HTMLElement | null;
     if (fl && e.button === 0) {
       e.stopPropagation();
       const fullPath = fl.dataset.fullpath || fl.dataset.path;
@@ -235,8 +237,10 @@ export function bindTreeEvents(container, vm) {
   });
 
   // 右键事件委托
-  container.addEventListener("contextmenu", (e) => {
-    const fh = e.target.closest(".fh");
+  container.addEventListener("contextmenu", (e: MouseEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    const fh = target.closest(".fh") as HTMLElement | null;
     if (fh) {
       e.preventDefault();
       e.stopPropagation();
@@ -249,7 +253,7 @@ export function bindTreeEvents(container, vm) {
       return;
     }
 
-    const fl = e.target.closest(".fl");
+    const fl = target.closest(".fl") as HTMLElement | null;
     if (fl) {
       e.preventDefault();
       e.stopPropagation();
@@ -267,7 +271,7 @@ export function bindTreeEvents(container, vm) {
       if (
         ENABLE_MULTI_SELECT &&
         selectedPaths.length > 0 &&
-        selectedPaths.includes(fullPath)
+        selectedPaths.includes(fullPath || "")
       ) {
         bus.emit("ctx:show", {
           x: e.clientX,
@@ -285,7 +289,7 @@ export function bindTreeEvents(container, vm) {
         x: e.clientX,
         y: e.clientY,
         type: "file",
-        path: fullPath,
+        path: fullPath || "",
         banned,
         name,
       });

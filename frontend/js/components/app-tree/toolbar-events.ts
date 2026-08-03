@@ -1,78 +1,89 @@
 // ===== 工具栏事件绑定 =====
 import { friendlyError } from "../../utils/errors.ts";
 import { bus } from "../../bus.ts";
-import { flashBtn } from "./utils.js";
-import { spinnerHTML } from "./tpl.js";
-import { selectState } from "./data.js";
+import { flashBtn } from "./utils.ts";
+import { spinnerHTML } from "./tpl.ts";
+import { selectState } from "./data.ts";
 import { getExts } from "../../utils/extensions.ts";
-import { modalAdvFilter } from "../../dialogs/adv-filter.ts";
-import { updateSelectCount } from "./events.js";
+import { modalAdvFilter, type AdvFilterValue } from "../../dialogs/adv-filter.ts";
+import { updateSelectCount } from "./events.ts";
 import { dbg } from "../../utils/debug.ts";
-import { setRenderMode } from "./render.js";
+import { setRenderMode, type RenderMode } from "./render.ts";
+import type { AppTree } from "./index.ts";
+import type { AuthorInfo } from "./authors.ts";
+
+type $Id = (id: string) => HTMLElement | null;
 
 // 打开弹窗版筛选器（应用结果到 inline 面板 + 后端搜索）
-async function openAdvFilterDialog($, vm) {
+async function openAdvFilterDialog($: $Id, vm: AppTree): Promise<void> {
   dbg("adv-filter", "open:start", { repoRoot: vm._repoRoot });
-  const cur = {
-    keyword: $("srch")?.value || "",
-    minBones: $("af-minBones")?.value || "",
-    maxBones: $("af-maxBones")?.value || "",
-    minCubes: $("af-minCubes")?.value || "",
-    maxCubes: $("af-maxCubes")?.value || "",
-    minTex: $("af-minTex")?.value || "",
-    maxTex: $("af-maxTex")?.value || "",
+  // 输入框值都是字符串形态（弹窗内部转数字）；AdvFilterValue 为 number|null，
+  // 此处是「当前输入框值」表示，类型上放宽转换
+  const $v = (id: string): string => ($(id) as HTMLInputElement | null)?.value || "";
+  const cur: Record<string, string> = {
+    keyword: $v("srch"),
+    minBones: $v("af-minBones"),
+    maxBones: $v("af-maxBones"),
+    minCubes: $v("af-minCubes"),
+    maxCubes: $v("af-maxCubes"),
+    minTex: $v("af-minTex"),
+    maxTex: $v("af-maxTex"),
   };
   dbg("adv-filter", "dialog:open", { cur });
-  const result = await modalAdvFilter({ value: cur });
+  const result = await modalAdvFilter({
+    value: cur as unknown as Partial<AdvFilterValue>,
+  });
   dbg("adv-filter", "dialog:return", { result });
   if (!result) {
     dbg("adv-filter", "dialog:cancelled-or-null");
     return;
   }
+  // "清除全部"路径：result 是 { cleared: true }，无 minBones 等字段——断言为
+  // AdvFilterValue 后字段为 undefined，被 setVal/isUnset/n 的 null 守卫兜底（行为保真）
+  const rv = result as AdvFilterValue;
 
-  // "清除全部"路径：result 是 { cleared: true }，无 minBones 等字段
   // 统一回填 inline 面板（null/undefined → ""）
-  const setVal = (id, v) => {
-    const el = $(id);
-    if (el) el.value = v == null ? "" : v;
+  const setVal = (id: string, v: unknown): void => {
+    const el = $(id) as HTMLInputElement | null;
+    if (el) el.value = v == null ? "" : String(v);
   };
-  setVal("af-minBones", result.minBones);
-  setVal("af-maxBones", result.maxBones);
-  setVal("af-minCubes", result.minCubes);
-  setVal("af-maxCubes", result.maxCubes);
-  setVal("af-minTex", result.minTex);
-  setVal("af-maxTex", result.maxTex);
-  const srchEl = $("srch");
-  if (srchEl && result.keyword !== undefined) {
-    srchEl.value = result.keyword;
-    vm._search = result.keyword;
+  setVal("af-minBones", rv.minBones);
+  setVal("af-maxBones", rv.maxBones);
+  setVal("af-minCubes", rv.minCubes);
+  setVal("af-maxCubes", rv.maxCubes);
+  setVal("af-minTex", rv.minTex);
+  setVal("af-maxTex", rv.maxTex);
+  const srchEl = $("srch") as HTMLInputElement | null;
+  if (srchEl && rv.keyword !== undefined) {
+    srchEl.value = rv.keyword;
+    vm._search = rv.keyword;
   }
 
   const kw = srchEl?.value || "";
-  const hasTag = result.tag && !(result.tag === "");
-  const isUnset = (v) => v == null || v === "";
+  const hasTag = rv.tag && !(rv.tag === "");
+  const isUnset = (v: unknown): boolean => v == null || v === "";
   if (
     !kw &&
     !hasTag &&
-    isUnset(result.minBones) &&
-    isUnset(result.maxBones) &&
-    isUnset(result.minCubes) &&
-    isUnset(result.maxCubes) &&
-    isUnset(result.minTex) &&
-    isUnset(result.maxTex)
+    isUnset(rv.minBones) &&
+    isUnset(rv.maxBones) &&
+    isUnset(rv.minCubes) &&
+    isUnset(rv.maxCubes) &&
+    isUnset(rv.minTex) &&
+    isUnset(rv.maxTex)
   ) {
     vm._filterPaths = null;
     vm._renderTree();
     return;
   }
-  const { LoadAppConfig, SearchModels, ListByTag, GetRepoRoot } =
+  const { SearchModels, ListByTag, GetRepoRoot } =
     await import("../../../bindings/ysm-model-manager/internal/app/app.js");
 
   // 1. 按标签筛选（如果有）
-  let tagPaths = null;
+  let tagPaths: Set<string> | null = null;
   if (hasTag) {
     try {
-      const paths = await ListByTag(result.tag);
+      const paths = await ListByTag(rv.tag);
       tagPaths = new Set(paths || []);
     } catch (e) {
       bus.emit("toast:show", {
@@ -85,17 +96,16 @@ async function openAdvFilterDialog($, vm) {
 
   // 2. 按骨骼/纹理等条件搜索（如果有关键词或范围条件）
   const hasRange =
-    !isUnset(result.minBones) ||
-    !isUnset(result.maxBones) ||
-    !isUnset(result.minCubes) ||
-    !isUnset(result.maxCubes) ||
-    !isUnset(result.minTex) ||
-    !isUnset(result.maxTex) ||
+    !isUnset(rv.minBones) ||
+    !isUnset(rv.maxBones) ||
+    !isUnset(rv.minCubes) ||
+    !isUnset(rv.maxCubes) ||
+    !isUnset(rv.minTex) ||
+    !isUnset(rv.maxTex) ||
     kw;
 
-  let modelPaths = null;
+  let modelPaths: Set<string> | null = null;
   if (hasRange) {
-    const cfg = await LoadAppConfig();
     const repoRoot = await GetRepoRoot("ysm");
     if (!repoRoot) {
       bus.emit("toast:show", {
@@ -105,20 +115,20 @@ async function openAdvFilterDialog($, vm) {
       });
       return;
     }
-    const n = (v) => (v == null ? 0 : parseInt(v, 10) || 0);
+    const n = (v: unknown): number => (v == null ? 0 : parseInt(String(v), 10) || 0);
     try {
       const results = await SearchModels(
         repoRoot,
         kw,
-        n(result.minBones),
-        n(result.maxBones),
-        n(result.minCubes),
-        n(result.maxCubes),
-        n(result.minTex),
-        n(result.maxTex),
+        n(rv.minBones),
+        n(rv.maxBones),
+        n(rv.minCubes),
+        n(rv.maxCubes),
+        n(rv.minTex),
+        n(rv.maxTex),
       );
       modelPaths = results?.length
-        ? new Set(results.map((r) => r.Path))
+        ? new Set(results.map((r) => r.path))
         : new Set();
     } catch (e) {
       dbg("adv-filter", "search:error", { err: String(e) });
@@ -162,9 +172,13 @@ async function openAdvFilterDialog($, vm) {
 }
 
 // 填充作者下拉（hover 或 click 都触发，避免鼠标快速点击时未填充）
-function fillAuthorMenu(menuAuthors, vm, $) {
+function fillAuthorMenu(
+  menuAuthors: HTMLElement,
+  vm: AppTree,
+  $: $Id,
+): void {
   if (menuAuthors.children.length) return; // 已填充
-  const authors = vm._authors || [];
+  const authors: Array<AuthorInfo | string> = vm._authors || [];
   if (!authors.length) {
     menuAuthors.innerHTML =
       '<div style="padding:4px 10px;font-size:10px;color:var(--muted)">暂无作者</div>';
@@ -179,7 +193,7 @@ function fillAuthorMenu(menuAuthors, vm, $) {
     btn.textContent = name + (count ? ` (${count})` : "");
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const srch = $("srch");
+      const srch = $("srch") as HTMLInputElement | null;
       if (srch) {
         srch.value = name;
         srch.dispatchEvent(new Event("input", { bubbles: true }));
@@ -190,15 +204,16 @@ function fillAuthorMenu(menuAuthors, vm, $) {
 }
 
 // 绑定工具栏事件
-export function bindToolbarEvents(root, vm) {
-  const $ = (id) => root.getElementById(id);
-  let ddTimer;
+export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
+  const $: $Id = (id) => root.getElementById(id);
+  let ddTimer: ReturnType<typeof setTimeout> | null = null;
 
   // 全选 / 反选 — 基于当前过滤后可见的行
   const selAllBtn = $("sel-all");
   if (selAllBtn) {
     selAllBtn.addEventListener("click", () => {
-      const rows = vm._root._vsRows || [];
+      // 原代码 vm._root._vsRows 取的是 ShadowRoot 上从未设置的属性（_vsRows 设在 #tree 上）→ 全选恒失效
+      const rows = vm._root.getElementById("tree")?._vsRows || [];
       const visible = rows.filter((r) => r.type === "file");
       const keys = visible.map((r) => r.key).filter(Boolean);
       const allSelected = keys.every((k) => selectState.keys.has(k));
@@ -206,7 +221,7 @@ export function bindToolbarEvents(root, vm) {
         if (allSelected) selectState.keys.delete(k);
         else selectState.keys.add(k);
       });
-      // 复用 events.js 里的实现（避免重复定义）
+      // 复用 events.ts 里的实现（避免重复定义）
       updateSelectCount(root);
       flashBtn(selAllBtn);
     });
@@ -214,7 +229,7 @@ export function bindToolbarEvents(root, vm) {
 
   // 批量导出骨骼名
   $("repo-export")?.addEventListener("click", async () => {
-    const { LoadAppConfig, ExportBoneStructures, GetRepoRoot } =
+    const { ExportBoneStructures, GetRepoRoot } =
       await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     const repoRoot = await GetRepoRoot("ysm");
     if (!repoRoot) {
@@ -247,7 +262,7 @@ export function bindToolbarEvents(root, vm) {
 
   // 搜索框实时过滤
   $("srch")?.addEventListener("input", () => {
-    vm._search = $("srch")?.value || "";
+    vm._search = ($("srch") as HTMLInputElement | null)?.value || "";
     vm._renderTree();
   });
 
@@ -257,7 +272,7 @@ export function bindToolbarEvents(root, vm) {
     // 初始按钮图标：当前模式对应的「切换目标」图标
     viewModeBtn.textContent = vm._renderMode === "list" ? "▦" : "☰";
     viewModeBtn.addEventListener("click", () => {
-      vm._renderMode = vm._renderMode === "list" ? "grid" : "list";
+      vm._renderMode = (vm._renderMode === "list" ? "grid" : "list") as RenderMode;
       setRenderMode(vm._renderMode);
       viewModeBtn.textContent = vm._renderMode === "list" ? "▦" : "☰";
       vm._renderTree();
@@ -282,10 +297,10 @@ export function bindToolbarEvents(root, vm) {
       "af-minTex",
       "af-maxTex",
     ].forEach((id) => {
-      const el = $(id);
+      const el = $(id) as HTMLInputElement | null;
       if (el) el.value = "";
     });
-    const srchEl = $("srch");
+    const srchEl = $("srch") as HTMLInputElement | null;
     if (srchEl) {
       srchEl.value = "";
       vm._search = "";
@@ -314,7 +329,7 @@ export function bindToolbarEvents(root, vm) {
     menuBatch.querySelectorAll("[data-batch]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const action = btn.dataset.batch;
+        const action = (btn as HTMLElement).dataset.batch;
         if (action === "enable-all") bus.emit("batch:enable-all");
         else if (action === "disable-all") bus.emit("batch:disable-all");
       });
@@ -325,10 +340,11 @@ export function bindToolbarEvents(root, vm) {
   const menuMore = $("menu-more");
   if (menuMore) {
     menuMore.addEventListener("click", async (e) => {
-      const item = e.target.closest("[data-more]");
+      const target = e.target as HTMLElement | null;
+      const item = target ? target.closest("[data-more]") : null;
       if (!item) return;
       e.stopPropagation();
-      const action = item.dataset.more;
+      const action = (item as HTMLElement).dataset.more;
       if (action === "open-folder") {
         if (!vm._repoRoot) return;
         const { OpenFolder } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
@@ -392,7 +408,7 @@ export function bindToolbarEvents(root, vm) {
         await vm._load();
         vm._renderTree();
       } else if (action === "genindex") {
-        const btn = item;
+        const btn = item as HTMLButtonElement;
         btn.textContent = "⏳";
         btn.disabled = true;
         try {

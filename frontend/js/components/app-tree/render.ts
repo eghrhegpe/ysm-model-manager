@@ -2,25 +2,45 @@
 import { hl } from "../../utils/dom.ts";
 import { fmt, fmtDate } from "../../utils/fmt.ts";
 import { fileIcon, isYsmName } from "../../utils/icon.ts";
-import { emptyHTML } from "./tpl.js";
-import { fileRowHTML, folderRowHTML } from "./row-tpl.js";
-import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.js";
+import { emptyHTML } from "./tpl.ts";
+import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";
+import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.ts";
 import { renderDisplayName } from "../../utils/display.ts";
 import { animateNumber } from "../../utils/animate.ts";
 import { dbg } from "../../utils/debug.ts";
-import { selectState } from "./data.js";
+import { selectState } from "./data.ts";
+import type { TreeEntry } from "./loader.ts";
 import {
   ROW_H_GRID,
   ROW_H_LIST,
   calcVisibleRange,
   installScrollSync,
-} from "./virtual-scroll.js";
+} from "./virtual-scroll.ts";
+
+/** 扁平化行（虚拟滚动数据单元） */
+export interface TreeRow {
+  id: number;
+  type: "file" | "folder";
+  key: string;
+  depth: number;
+  html: string;
+  isOpen?: boolean;
+}
+
+/** buildTree 嵌套节点（文件夹 = 子节点对象，文件 = { _e: entry }） */
+interface TreeNode {
+  _e?: TreeEntry;
+  [key: string]: TreeNode | TreeEntry | undefined;
+}
+
+/** 渲染模式 */
+export type RenderMode = "grid" | "list";
 
 // localStorage key for render mode
 const RENDER_MODE_KEY = "ysm-render-mode";
 
 /** Get render mode from localStorage, default to 'grid' */
-export function getRenderMode() {
+export function getRenderMode(): RenderMode {
   try {
     const mode = localStorage.getItem(RENDER_MODE_KEY);
     return mode === "list" ? "list" : "grid";
@@ -30,15 +50,20 @@ export function getRenderMode() {
 }
 
 /** Set render mode to localStorage */
-export function setRenderMode(mode) {
+export function setRenderMode(mode: RenderMode): void {
   try {
     localStorage.setItem(RENDER_MODE_KEY, mode);
   } catch {}
 }
 
 // ——— 树构建（与原版一致） ———
-function buildTree(entries, sortMode, search, filterPaths) {
-  const root = {};
+function buildTree(
+  entries: TreeEntry[],
+  sortMode: string,
+  search: string,
+  filterPaths: Set<string> | null,
+): TreeNode {
+  const root: TreeNode = {};
   const query = (search || "").trim().toLowerCase();
   const sorted = [...entries].sort((a, b) => {
     if (sortMode === "name") return a.name.localeCompare(b.name);
@@ -84,8 +109,11 @@ function buildTree(entries, sortMode, search, filterPaths) {
     let node = root;
     for (let i = 0; i < parts.length - 1; i++) {
       if (!parts[i]) continue;
-      if (!node[parts[i]]) node[parts[i]] = {};
-      node = node[parts[i]];
+      const child = node[parts[i]];
+      if (!child || (child as TreeNode)._e) {
+        node[parts[i]] = {};
+      }
+      node = node[parts[i]] as TreeNode;
     }
     const fn = parts[parts.length - 1];
     if (fn) node[fn] = { _e: e };
@@ -94,10 +122,10 @@ function buildTree(entries, sortMode, search, filterPaths) {
 }
 
 /** 收集文件夹下所有条目 */
-function dirEntries(node) {
-  const all = [];
+function dirEntries(node: TreeNode): TreeEntry[] {
+  const all: TreeEntry[] = [];
   for (const k of Object.keys(node)) {
-    const v = node[k];
+    const v = node[k] as TreeNode;
     if (v._e) all.push(v._e);
     else all.push(...dirEntries(v));
   }
@@ -107,26 +135,34 @@ function dirEntries(node) {
 // ——— 扁平化：将嵌套树拍平为一维行数组 ———
 let _rowIdCounter = 0;
 
-function flattenVisible(node, dirPath, search, sort, dirOpen, depth, mode) {
+function flattenVisible(
+  node: TreeNode,
+  dirPath: string,
+  search: string,
+  sort: string,
+  dirOpen: Record<string, boolean>,
+  depth: number,
+  mode: RenderMode,
+): TreeRow[] {
   const hasSearch = !!(search || "").trim();
   const query = (search || "").toLowerCase();
   const keys = Object.keys(node).sort((a, b) => {
-    const aIsDir = !node[a]._e,
-      bIsDir = !node[b]._e;
+    const aIsDir = !(node[a] as TreeNode)._e,
+      bIsDir = !(node[b] as TreeNode)._e;
     if (aIsDir && !bIsDir) return -1;
     if (!aIsDir && bIsDir) return 1;
-    const ea = node[a]._e,
-      eb = node[b]._e;
+    const ea = (node[a] as TreeNode)._e,
+      eb = (node[b] as TreeNode)._e;
     if (sort === "size") return (eb?.size || 0) - (ea?.size || 0);
     if (sort === "date") return (eb?.modTime || 0) - (ea?.modTime || 0);
     return a.localeCompare(b);
   });
 
-  const rows = [];
+  const rows: TreeRow[] = [];
   const indent = depth * 16 + 4;
 
   keys.forEach((k) => {
-    const v = node[k];
+    const v = node[k] as TreeNode;
     const full = dirPath ? dirPath + "/" + k : k;
 
     if (v._e) {
@@ -163,7 +199,7 @@ function flattenVisible(node, dirPath, search, sort, dirOpen, depth, mode) {
       // — 文件夹行 —
       const isLocked = k.startsWith("_");
       const shouldOpen = hasSearch || !!dirOpen[full];
-      const sub = dirEntries(node[k]);
+      const sub = dirEntries(node[k] as TreeNode);
       const hasEnabled = sub.some((e) => !e.banned);
       const hasDisabled = sub.some((e) => e.banned);
       // 根据模式选择模板
@@ -197,7 +233,15 @@ function flattenVisible(node, dirPath, search, sort, dirOpen, depth, mode) {
       });
       if (shouldOpen) {
         rows.push(
-          ...flattenVisible(v, full, search, sort, dirOpen, depth + 1, mode),
+          ...flattenVisible(
+            v,
+            full,
+            search,
+            sort,
+            dirOpen,
+            depth + 1,
+            mode,
+          ),
         );
       }
     }
@@ -206,7 +250,7 @@ function flattenVisible(node, dirPath, search, sort, dirOpen, depth, mode) {
 }
 
 // ——— 仅渲染可见行的 HTML，用 padding 撑出滚动高度 ———
-function renderSlice(container, rows, rowH) {
+function renderSlice(container: HTMLElement, rows: TreeRow[], rowH: number): void {
   const total = rows.length;
   // 首次渲染时容器可能还没布局（clientHeight=0），全量渲染
   const range =
@@ -233,7 +277,7 @@ function renderSlice(container, rows, rowH) {
 
 // ——— 入口：每次数据变化（搜索/排序/展开/折叠）调用 ———
 /** 断开虚拟滚动相关监听 */
-function _cleanupVS(container) {
+function _cleanupVS(container: HTMLElement): void {
   container._vsCleanup?.();
   container._vsCleanup = null;
   container._vsResizeObserver?.disconnect();
@@ -243,14 +287,14 @@ function _cleanupVS(container) {
 }
 
 export function renderTree(
-  container,
-  entries,
-  search,
-  sort,
-  dirOpen,
-  filterPaths,
-  mode = "grid",
-) {
+  container: HTMLElement,
+  entries: TreeEntry[],
+  search: string,
+  sort: string,
+  dirOpen: Record<string, boolean>,
+  filterPaths: Set<string> | null,
+  mode: RenderMode = "grid",
+): void {
   if (!entries.length) {
     container.innerHTML = emptyHTML("📁", "暂无模型文件");
     _cleanupVS(container);
@@ -306,7 +350,7 @@ export function renderTree(
 }
 
 // ——— 选中计数用（兼容旧接口） ———
-export function updateStat(el, entries) {
+export function updateStat(el: HTMLElement | null, entries: TreeEntry[]): void {
   if (!el) return;
   if (!Array.isArray(entries)) entries = [];
   let total = 0,
@@ -320,7 +364,7 @@ export function updateStat(el, entries) {
   const newText =
     "共 " + total + " 项 (已启用 " + enabled + ") · " + fmt(totalSize);
   if (el.textContent !== newText) {
-    const oldTotal = parseInt(el.textContent.match(/(\d+)\s*项/)?.[1], 10) || 0;
+    const oldTotal = parseInt(el.textContent.match(/(\d+)\s*项/)?.[1] || "", 10) || 0;
     if (oldTotal > 0 && oldTotal !== total && total > 0) {
       animateNumber(el, total, 700);
       setTimeout(() => {

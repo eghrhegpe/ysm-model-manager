@@ -1,34 +1,62 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
 import { treeCSS } from "../app-tree-styles.ts";
-import { headerHTML, footerHTML, spinnerHTML } from "./tpl.js";
-import { renderTree, updateStat, getRenderMode, setRenderMode } from "./render.js";
-import { bindTreeEvents } from "./events.js";
-import { bindToolbarEvents } from "./toolbar-events.js";
-import { loadEntries } from "./loader.js";
-import { bindBusEvents } from "./bus-handlers.js";
-import { loadAuthors } from "./authors.js";
+import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
+import { renderTree, updateStat, getRenderMode, setRenderMode, type RenderMode, type TreeRow } from "./render.ts";
+import { bindTreeEvents } from "./events.ts";
+import { bindToolbarEvents } from "./toolbar-events.ts";
+import { loadEntries, type TreeEntry } from "./loader.ts";
+import { bindBusEvents } from "./bus-handlers.ts";
+import { loadAuthors, type AuthorInfo } from "./authors.ts";
 import { bus } from "../../bus.ts";
-import { selectState } from "./data.js";
+import { selectState } from "./data.ts";
 import { dbg } from "../../utils/debug.ts";
-class AppTree extends HTMLElement {
+
+// —— 全局扩展：虚拟滚动容器属性 + 待处理搜索 ——
+declare global {
+  interface Window {
+    _pendingTreeSearch?: string;
+  }
+  interface ShadowRoot {
+    /** 作者列表缓存（root 上，供外部读取） */
+    _treeAuthors?: Array<AuthorInfo | string>;
+  }
+  interface HTMLElement {
+    /** 虚拟滚动清理函数（render/events 共用） */
+    _vsCleanup?: (() => void) | null;
+    /** 虚拟滚动行缓存 */
+    _vsRows?: TreeRow[];
+    /** 当前渲染模式 */
+    _vsMode?: RenderMode | null;
+    /** 尺寸变化观察器 */
+    _vsResizeObserver?: ResizeObserver | null;
+    /** 作者列表缓存（root 上，供外部读取） */
+    _treeAuthors?: AuthorInfo[];
+  }
+}
+
+export class AppTree extends HTMLElement {
+  _root: ShadowRoot;
+  _entries: TreeEntry[] = [];
+  _search = "";
+  _sort = "name";
+  _typeFilter = "";
+  _rootAttr = ""; // 由 root 属性指定，覆盖 _typeFilter 加载用
+  _dirOpen: Record<string, boolean> = {};
+  _repoRoot = "";
+  _authors: Array<AuthorInfo | string> = [];
+  _filterPaths: Set<string> | null = null; // Set 或 null，来自 SearchModels 结果
+  _renderMode: RenderMode = getRenderMode(); // 'grid' | 'list'
+  _unsubs: Array<() => void> = [];
+  private _keydownHandler: EventListener | null = null;
+
   constructor() {
     super();
     this._root = this.attachShadow({ mode: "open" });
     this._root.adoptedStyleSheets = [new CSSStyleSheet()];
     this._root.adoptedStyleSheets[0].replaceSync(treeCSS);
-    this._entries = [];
-    this._search = "";
-    this._sort = "name";
-    this._typeFilter = "";
-    this._rootAttr = ""; // 由 root 属性指定，覆盖 _typeFilter 加载用
-    this._dirOpen = {};
-    this._repoRoot = "";
-    this._authors = [];
-    this._filterPaths = null; // Set 或 null，来自 SearchModels 结果
-    this._renderMode = getRenderMode(); // 'grid' | 'list'
   }
 
-  async connectedCallback() {
+  async connectedCallback(): Promise<void> {
     this._rootAttr = this.getAttribute("root") || "";
 
     try {
@@ -61,7 +89,7 @@ class AppTree extends HTMLElement {
       this._unsubs.push(
         bus.on("filter:results", (results) => {
           if (results && results.length) {
-            this._filterPaths = new Set(results.map((r) => r.Path));
+            this._filterPaths = new Set(results.map((r) => r.path));
           } else {
             this._filterPaths = null;
           }
@@ -72,7 +100,7 @@ class AppTree extends HTMLElement {
       // 监听创作者详情→搜索本地模型
       this._unsubs.push(
         bus.on("tree:set-search", (name) => {
-          const srch = this._root?.getElementById("srch");
+          const srch = this._root?.getElementById("srch") as HTMLInputElement | null;
           if (srch) {
             srch.value = name;
             srch.dispatchEvent(new Event("input", { bubbles: true }));
@@ -84,7 +112,7 @@ class AppTree extends HTMLElement {
       // 用 setTimeout 确保在所有异步初始化完成后执行
       setTimeout(() => {
         if (window._pendingTreeSearch) {
-          const srch = this._root?.getElementById("srch");
+          const srch = this._root?.getElementById("srch") as HTMLInputElement | null;
           if (srch) {
             srch.value = window._pendingTreeSearch;
             srch.dispatchEvent(new Event("input", { bubbles: true }));
@@ -100,7 +128,7 @@ class AppTree extends HTMLElement {
           '<div class="empty"><div class="big">⚠️</div>加载失败</div>';
     }
   }
-  disconnectedCallback() {
+  disconnectedCallback(): void {
     this._unsubs?.forEach((fn) => fn?.());
     if (this._keydownHandler) {
       this._root.removeEventListener("keydown", this._keydownHandler);
@@ -114,7 +142,7 @@ class AppTree extends HTMLElement {
     }
   }
 
-  async _loadAuthorsAsync() {
+  async _loadAuthorsAsync(): Promise<void> {
     try {
       this._authors = await loadAuthors();
     } catch {
@@ -122,7 +150,7 @@ class AppTree extends HTMLElement {
     }
   }
 
-  async _load() {
+  async _load(): Promise<void> {
     try {
       const rtype = this._rootAttr || this._typeFilter;
       const r = await loadEntries(rtype);
@@ -137,7 +165,7 @@ class AppTree extends HTMLElement {
     }
   }
 
-  _renderLayout() {
+  _renderLayout(): void {
     this._root.innerHTML =
       headerHTML() +
       '<div class="list" id="tree">' +
@@ -146,7 +174,7 @@ class AppTree extends HTMLElement {
       footerHTML();
   }
 
-  _renderTree() {
+  _renderTree(): void {
     const c = this._root.getElementById("tree");
     // 清理旧的虚拟滚动监听
     if (c && c._vsCleanup) {
@@ -154,7 +182,7 @@ class AppTree extends HTMLElement {
       c._vsCleanup = null;
     }
     // 按类型过滤
-    let filtered = Array.isArray(this._entries) ? this._entries : [];
+    let filtered: TreeEntry[] = Array.isArray(this._entries) ? this._entries : [];
     if (this._typeFilter) {
       filtered = filtered.filter((e) => e.type === this._typeFilter);
     }
@@ -171,7 +199,7 @@ class AppTree extends HTMLElement {
         JSON.stringify(this._typeFilter),
     );
     renderTree(
-      c,
+      c as HTMLElement,
       filtered,
       this._search,
       this._sort,
@@ -194,12 +222,12 @@ class AppTree extends HTMLElement {
   }
 
   // ========== 键盘快捷键 ==========
-  _initKeyboardShortcuts() {
-    this._keydownHandler = (e) => {
+  private _initKeyboardShortcuts(): void {
+    this._keydownHandler = ((e: KeyboardEvent): void => {
       // Ctrl+F / Cmd+F → 聚焦搜索框（允许输入框内响应）
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
-        const srch = this._root.getElementById("srch");
+        const srch = this._root.getElementById("srch") as HTMLInputElement | null;
         if (srch) {
           srch.focus();
           srch.select();
@@ -208,10 +236,12 @@ class AppTree extends HTMLElement {
       }
 
       // Delete → 删除选中文件（输入框中不触发，避免误删）
+      const target = e.target as HTMLElement | null;
       if (
         (e.key === "Delete" || e.key === "Del") &&
-        e.target.tagName !== "INPUT" &&
-        e.target.tagName !== "TEXTAREA"
+        target &&
+        target.tagName !== "INPUT" &&
+        target.tagName !== "TEXTAREA"
       ) {
         const paths = [...(selectState?.keys || [])];
         if (!paths.length) {
@@ -229,12 +259,12 @@ class AppTree extends HTMLElement {
         const isDirModel = ["mmd-skin", "vrchat-avatar"].includes(rtype);
         this._deleteSelected(paths, isDirModel);
       }
-    };
+    }) as EventListener;
     this._root.addEventListener("keydown", this._keydownHandler);
     document.addEventListener("keydown", this._keydownHandler);
   }
 
-  async _deleteSelected(paths, isDirModel) {
+  async _deleteSelected(paths: string[], isDirModel: boolean): Promise<void> {
     let ok = 0,
       fail = 0;
     const { DeleteModelDir, DeleteResourcePack } =

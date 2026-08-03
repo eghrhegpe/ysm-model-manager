@@ -1,16 +1,17 @@
 // ===== 树节点行 HTML 模板 =====
 import { renderDisplayName } from "../../utils/display.ts";
+import type { TreeEntry } from "./loader.ts";
 
 /** 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） */
 export function fileRowHTML(
-  e,
-  nmHtml,
-  icon,
-  dateStr,
+  e: TreeEntry,
+  nmHtml: string,
+  icon: string,
+  dateStr: string,
   nmCls = "",
-  indent,
+  indent: number | null | undefined,
   rowCls = "",
-) {
+): string {
   const p = attr(e.path);
   const fp = attr(e.fullPath || e.path);
   const checked = e.banned ? "" : " on";
@@ -32,14 +33,14 @@ export function fileRowHTML(
 
 /** 文件夹行 HTML（indent = padding-left，扁平化无 .ch 容器） */
 export function folderRowHTML(
-  k,
-  full,
-  isOpen,
-  isLocked,
-  hasEnabled,
-  hasDisabled,
-  indent,
-) {
+  k: string,
+  full: string,
+  isOpen: boolean,
+  isLocked: boolean,
+  hasEnabled: boolean,
+  hasDisabled: boolean,
+  indent: number | null | undefined,
+): string {
   const fi = isLocked ? "🔒" : "📁";
   const nc = isLocked ? "var(--muted)" : "var(--txt)";
   const lk = isLocked ? " locked" : "";
@@ -60,7 +61,7 @@ export function folderRowHTML(
 <span class="nm" style="color:${nc}">${fi} ${dispName}</span></div>`;
 }
 
-function attr(s) {
+function attr(s: string): string {
   return (s || "")
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
@@ -68,13 +69,13 @@ function attr(s) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
-function size(b) {
+function size(b: number | null | undefined): string {
   if (b == null) return "";
   if (b < 1024) return b + " B";
   if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
   return (b / 1048576).toFixed(1) + " MB";
 }
-function sc(b) {
+function sc(b: number | null | undefined): string {
   if (b == null) return "";
   if (b < 1048576) return "sz-green";
   if (b < 3145728) return "";

@@ -1,11 +1,34 @@
 #!/usr/bin/env python3
 """契约测试：AppConfig JSON 结构校验。匹配 Go types.AppConfig。"""
 import json
+import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-JSON_FILE = ROOT / "ysm_config.json"
+
+
+def _config_path():
+    """解析 AppConfig 实际落点（与 Go 端 configPath() 对齐）。
+
+    Wails 3 迁移（ADR-0001 §7 #5）后配置落在 os.UserConfigDir()/YSM-Model-Manager/ysm_config.json，
+    仓库根的 ysm_config.json 已被 .gitignore 排除、不再作为 canonical 位置。
+    返回首个存在的候选路径；都不存在（首次运行/纯净环境）返回 None。
+    """
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA")
+    elif sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Application Support")
+    else:
+        base = os.path.expanduser("~/.config")
+    candidates = []
+    if base:
+        candidates.append(Path(base) / "YSM-Model-Manager" / "ysm_config.json")
+    candidates.append(ROOT / "ysm_config.json")  # 遗留位置（迁移兼容）
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
 
 # 对应 Go types.AppConfig 的 json tag
 STRING_FIELDS = [
@@ -28,12 +51,11 @@ INT_FIELDS = ALWAYS_REQUIRED[11:] + ["voxelMaxBlocks"]
 
 def validate():
     errors = []
-
-    if not JSON_FILE.exists():
-        errors.append(f"OK: no config file ({JSON_FILE.name}) — first-run state")
+    cfg = _config_path()
+    if cfg is None:
+        # 首次运行或纯净环境无配置文件，属合法状态，不视为违规
         return errors
-
-    data = json.loads(JSON_FILE.read_text("utf-8"))
+    data = json.loads(cfg.read_text("utf-8"))
 
     for field in ALWAYS_REQUIRED:
         if field not in data:

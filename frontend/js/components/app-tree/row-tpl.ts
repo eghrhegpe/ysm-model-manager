@@ -1,5 +1,6 @@
 // ===== 树节点行 HTML 模板 =====
 import { renderDisplayName } from "../../utils/display.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import type { TreeEntry } from "./loader.ts";
 
 /** 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） */
@@ -17,7 +18,7 @@ export function fileRowHTML(
   const checked = e.banned ? "" : " on";
   const ban = e.banned ? " ban" : "";
   const typeIcon =
-    e.type === "resourcepack" ? "🎨" : e.type === "ysm" ? "💎" : icon;
+    e.type === RESOURCE_TYPES.PACK ? "🎨" : e.type === RESOURCE_TYPES.YSM ? "💎" : icon;
   const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
   const tagMark = e.HasTags ? '<span class="tag-dot" title="有标签">🏷️</span>' : "";
   return `<div class="fl${ban}${rowCls}" data-path="${p}" data-fullpath="${fp}"${pad}>

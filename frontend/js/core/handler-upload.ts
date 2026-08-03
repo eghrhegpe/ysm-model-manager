@@ -1,6 +1,7 @@
 // ===== 上传新模型到仓库（类型化版 — ADR-014 P3）=====
 import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
+import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 import { dbg } from "../utils/debug.ts";
 
 /** 注册上传 handler，push 返回的取消订阅函数到 unsubs */
@@ -18,7 +19,7 @@ export function registerUpload(unsubs: Array<() => void>): void {
           GetRepoRoot,
         } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
         const cfg = await LoadAppConfig();
-        const repoRoot = await GetRepoRoot("ysm");
+        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const mcRoot = cfg.mcRoot || "";
         if (!repoRoot || !mcRoot) {
           bus.emit("toast:show", {

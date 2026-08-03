@@ -1,5 +1,6 @@
 // ===== app-tree bus 事件处理 =====
 import { friendlyError } from "../../utils/errors.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { bus } from "../../bus.ts";
 import {
   ToggleModelEnable,
@@ -32,7 +33,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
             GetRepoRoot,
           } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
           const cfg = await LoadAppConfig();
-          const repoRoot = await GetRepoRoot("ysm");
+          const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
           const mcRoot = cfg.mcRoot || "";
           if (repoRoot && mcRoot) {
             const instances = (await ListVersionInstances(mcRoot)) || [];
@@ -126,7 +127,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       try {
         const { RenameDir, GetRepoRoot } =
           await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-        const repoRoot = await GetRepoRoot("ysm");
+        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         await RenameDir(absDir, name.trim());
         await reload(vm);
@@ -154,7 +155,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       try {
         const { CreateDir, GetRepoRoot } =
           await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-        const repoRoot = await GetRepoRoot("ysm");
+        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const absDir = repoRoot
           ? repoRoot + "/" + dir + "/" + name.trim()
           : dir + "/" + name.trim();
@@ -185,7 +186,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
         // 加载仓库根目录 → 拼接绝对路径
         const { ListAllFilePaths, MoveToRecycle, RemoveDir, GetRepoRoot } =
           await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-        const repoRoot = await GetRepoRoot("ysm");
+        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const allFiles = await ListAllFilePaths(absDir);
         let count = 0;
@@ -231,7 +232,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       try {
         const { ScanModelEntries, GetRepoRoot } =
           await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-        const repoRoot = await GetRepoRoot("ysm");
+        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const entries = (await ScanModelEntries(absDir)) || [];
         if (!entries || !entries.length) {

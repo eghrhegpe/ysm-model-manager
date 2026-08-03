@@ -2,6 +2,7 @@
 import { bus } from "../../bus.ts";
 import { setPendingTreeSearch } from "../app-tree/index.ts";
 import { esc as escUtil } from "../../utils/dom.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { dbg } from "../../utils/debug.ts";
 import { contentCSS } from "./content-css.ts";
 import { stagger } from "../../utils/stagger.ts";
@@ -218,7 +219,7 @@ class AppContent extends HTMLElement {
         const content = this._root.getElementById("ins-content");
         if (!content) return;
         const insName = pkg.name || "";
-        const defaultType = pkg.rtype || "ysm";
+        const defaultType = pkg.rtype || RESOURCE_TYPES.YSM;
         content.innerHTML =
           '<app-sync-manager instance="' +
           String(insName).replace(/"/g, "&quot;") +
@@ -237,7 +238,7 @@ class AppContent extends HTMLElement {
     const subtabs = root.querySelectorAll(".repo-subtab");
     const treeBody = root.getElementById("repo-tab-tree");
     import("../app-preview/index.ts").catch(() => {});
-    let curRtype = localStorage.getItem("repo_rtype") || "ysm";
+    let curRtype = localStorage.getItem("repo_rtype") || RESOURCE_TYPES.YSM;
     subtabs.forEach((btn) => {
       btn.addEventListener("click", () => {
         const rtype = (btn as HTMLElement).dataset.rtab || "";
@@ -304,7 +305,7 @@ class AppContent extends HTMLElement {
             if (recycleCleanup) this._unsubs.push(recycleCleanup);
           } else if (tab === "dedup") {
             const { startDedup } = await import("./community/diagnostics.ts");
-            let dedupType = localStorage.getItem("repo_rtype") || "ysm";
+            let dedupType = localStorage.getItem("repo_rtype") || RESOURCE_TYPES.YSM;
             container.innerHTML =
               '<div style="display:flex;flex-direction:column;height:100%">' +
               '<div style="display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid var(--bd)">' +
@@ -355,47 +356,47 @@ class AppContent extends HTMLElement {
             const spCleanup = await initResourcePacks(
               container,
               this,
-              "shaderpack",
+              RESOURCE_TYPES.SHADER,
             );
             this._unsubs = this._unsubs || [];
             if (spCleanup) this._unsubs.push(spCleanup);
-          } else if (tab === "create-blueprint") {
+          } else if (tab === RESOURCE_TYPES.BLUEPRINT) {
             const { initResourcePacks } =
               await import("../../features/resource-packs.ts");
             const cbCleanup = await initResourcePacks(
               container,
               this,
-              "create-blueprint",
+              RESOURCE_TYPES.BLUEPRINT,
             );
             this._unsubs = this._unsubs || [];
             if (cbCleanup) this._unsubs.push(cbCleanup);
-          } else if (tab === "mmd-skin") {
+          } else if (tab === RESOURCE_TYPES.MMD) {
             const { initResourcePacks } =
               await import("../../features/resource-packs.ts");
             const msCleanup = await initResourcePacks(
               container,
               this,
-              "mmd-skin",
+              RESOURCE_TYPES.MMD,
             );
             this._unsubs = this._unsubs || [];
             if (msCleanup) this._unsubs.push(msCleanup);
-          } else if (tab === "vrchat-avatar") {
+          } else if (tab === RESOURCE_TYPES.VRC) {
             const { initResourcePacks } =
               await import("../../features/resource-packs.ts");
             const vaCleanup = await initResourcePacks(
               container,
               this,
-              "vrchat-avatar",
+              RESOURCE_TYPES.VRC,
             );
             this._unsubs = this._unsubs || [];
             if (vaCleanup) this._unsubs.push(vaCleanup);
-          } else if (tab === "litematic") {
+          } else if (tab === RESOURCE_TYPES.LITEMATIC) {
             const { initResourcePacks } =
               await import("../../features/resource-packs.ts");
             const lmCleanup = await initResourcePacks(
               container,
               this,
-              "litematic",
+              RESOURCE_TYPES.LITEMATIC,
             );
             this._unsubs = this._unsubs || [];
             if (lmCleanup) this._unsubs.push(lmCleanup);
@@ -678,7 +679,7 @@ class AppContent extends HTMLElement {
         const AppM = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const cfg = await AppM.LoadAppConfig();
         mirror = cfg.mirror || "";
-        const repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot("ysm") : "";
+        const repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot(RESOURCE_TYPES.YSM) : "";
         if (repoRoot) {
           // 先清缓存再扫描，确保新下载的文件立即可见
           if (AppM.ClearScanCache) await AppM.ClearScanCache();
@@ -841,7 +842,7 @@ class AppContent extends HTMLElement {
           await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const cfg = await LoadAppConfig();
         mirror = cfg.mirror || "";
-        const repoRoot = await GetRepoRoot("ysm");
+        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         // 预先加载本地映射
         const localMap = new Map<string, string>();
         if (repoRoot) {

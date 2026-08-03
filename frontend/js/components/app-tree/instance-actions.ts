@@ -1,5 +1,6 @@
 // ===== 整合包右键操作实现 =====
 import { friendlyError } from "../../utils/errors.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { bus } from "../../bus.ts";
 import type { AppTree } from "./index.ts";
 import {
@@ -94,7 +95,7 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
         const AppM = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const cfg = await AppM.LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
-        const repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot("ysm") : "";
+        const repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot(RESOURCE_TYPES.YSM) : "";
         if (!mcRoot || !repoRoot) {
           bus.emit("toast:show", {
             msg: "请先配置路径",

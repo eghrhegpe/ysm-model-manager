@@ -1,4 +1,5 @@
 // ===== sidebar 数据层 =====
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 
 /** sidebar 整合包实例（loader 转换后的渲染格式） */
 export interface SidebarInstance {
@@ -36,7 +37,7 @@ export function fallbackInstances(): SidebarInstance[] {
       exists: true,
       hasMod: true,
       disabled: 0,
-      rtype: "ysm",
+      rtype: RESOURCE_TYPES.YSM,
       variantGroups: null,
       _missingPaths: [],
       _extraPaths: [],
@@ -63,7 +64,7 @@ export function fallbackInstances(): SidebarInstance[] {
       exists: true,
       hasMod: true,
       disabled: 0,
-      rtype: "ysm",
+      rtype: RESOURCE_TYPES.YSM,
       variantGroups: null,
       _missingPaths: [],
       _extraPaths: [],
@@ -79,7 +80,7 @@ export function fallbackInstances(): SidebarInstance[] {
       exists: true,
       hasMod: true,
       disabled: 0,
-      rtype: "ysm",
+      rtype: RESOURCE_TYPES.YSM,
       variantGroups: null,
       _missingPaths: [],
       _extraPaths: [],
@@ -95,7 +96,7 @@ export function fallbackInstances(): SidebarInstance[] {
       exists: true,
       hasMod: true,
       disabled: 0,
-      rtype: "ysm",
+      rtype: RESOURCE_TYPES.YSM,
       variantGroups: null,
       _missingPaths: [],
       _extraPaths: [],

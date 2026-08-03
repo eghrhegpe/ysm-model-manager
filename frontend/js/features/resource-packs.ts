@@ -1,6 +1,7 @@
 // ===== 资源包管理（类型化版 — ADR-014 P3 组件层）=====
 // 薄 wrapper，由 app-resource-manager 组件驱动
 import { bus } from "../bus.ts";
+import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 
 /**
  * 初始化资源包 tab
@@ -19,7 +20,7 @@ export async function initResourcePacks(
 
   container.innerHTML =
     '<app-resource-manager rtype="' +
-    (rtype || "resourcepack") +
+    (rtype || RESOURCE_TYPES.PACK) +
     '"></app-resource-manager>';
 
   // 监听 Toast 事件，改用事件总线确保 Toast 始终可达

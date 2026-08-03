@@ -4,6 +4,7 @@
 
 import { bus } from "../../bus.ts";
 import { dbg } from "../../utils/debug.ts";
+import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { friendlyError } from "../../utils/errors.ts";
 import {
   containerHTML,
@@ -151,8 +152,8 @@ export class AppSyncManager extends HTMLElement {
       return;
     }
 
-    const modelTypes = ["ysm", "mmd-skin", "vrchat-avatar"];
-    const resourceTypes = ["resourcepack", "shaderpack", "create-blueprint", "litematic"];
+    const modelTypes = [RESOURCE_TYPES.YSM, RESOURCE_TYPES.MMD, RESOURCE_TYPES.VRC];
+    const resourceTypes = [RESOURCE_TYPES.PACK, RESOURCE_TYPES.SHADER, RESOURCE_TYPES.BLUEPRINT, RESOURCE_TYPES.LITEMATIC];
     const shortLabel: Record<string, string> = {
       ysm: "YSM",
       "mmd-skin": "MMD",

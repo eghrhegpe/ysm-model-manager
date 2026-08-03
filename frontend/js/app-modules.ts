@@ -43,7 +43,7 @@ registerContextMenus();
 const THEME_DARK = "cyber";
 const THEME_LIGHT = "warm";
 
-function applyTheme(mode) {
+function applyTheme(mode: string): void {
   const VALID = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "system"];
   if (!VALID.includes(mode)) mode = "system";
   document.body.classList.remove("theme-cyber", "theme-warm", "theme-pro", "theme-sakura", "theme-ocean", "theme-mint");
@@ -71,7 +71,7 @@ async function initTheme() {
     const { LoadAppConfig } = await import("../bindings/ysm-model-manager/internal/app/app.js");
     const cfg = await LoadAppConfig();
     const theme =
-      localStorage.getItem("theme") || cfg.theme || cfg.Theme || THEME_DARK;
+      localStorage.getItem("theme") || cfg.theme || THEME_DARK;
     localStorage.setItem("theme", theme);
     applyTheme(theme);
   } catch {
@@ -98,7 +98,7 @@ function applyUIPrefs() {
     "--fs-xl",
   ].forEach((v) => document.documentElement.style.removeProperty(v));
   // 通过 --fs-scale 控制字号缩放（与设置页 community-settings.js 一致）
-  const scaleMap = { small: "-1px", normal: "0px", large: "2px" };
+  const scaleMap: Record<string, string> = { small: "-1px", normal: "0px", large: "2px" };
   document.documentElement.style.setProperty(
     "--fs-scale",
     scaleMap[fontSize] || "0px",
@@ -135,7 +135,7 @@ function applyUIPrefs() {
 document.addEventListener(
   "dragover",
   (e) => {
-    if (e.target?.closest?.("#ws-page, #dl-drop, .ws-page")) {
+    if ((e.target as HTMLElement | null)?.closest?.("#ws-page, #dl-drop, .ws-page")) {
       e.preventDefault();
       e.stopPropagation();
     }
@@ -145,7 +145,7 @@ document.addEventListener(
 document.addEventListener(
   "drop",
   (e) => {
-    if (e.target?.closest?.("#ws-page, #dl-drop, .ws-page")) {
+    if ((e.target as HTMLElement | null)?.closest?.("#ws-page, #dl-drop, .ws-page")) {
       e.preventDefault();
       e.stopPropagation();
     }

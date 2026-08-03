@@ -116,8 +116,8 @@ function parseJscpd() {
     return clones.map((c) => {
       const f1 = c.firstFile?.name || '?';
       const f2 = c.secondFile?.name || '?';
-      const l = c.firstFile?.startLoc?.line || 0;
-      return `${f1}#${f2}#L${l}`;
+      // key 用文件对级（去行号）：克隆位置随代码微移漂移时，不产生新 key 误报新增
+      return `${f1}#${f2}`;
     });
   } catch {
     errors.push('[解析失败] jscpd 报告读取异常（期望 frontend/report/jscpd-report.json）');

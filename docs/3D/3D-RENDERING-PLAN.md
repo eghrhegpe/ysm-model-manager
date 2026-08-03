@@ -14,7 +14,7 @@
 | `frontend/js/utils/model3d.js` | Three.js 3D 渲染：场景/相机/灯光/网格 | ~464 |
 | `frontend/js/utils/model3d-spec.js` | JS 兜底 Spec 构建（Go 不可用时） | ~255 |
 | `frontend/js/utils/model2d.js` | Canvas 2D 骨骼图：正交投影、旋转、热区 | ~556 |
-| `frontend/js/components/app-preview/preview-3d.js` | 3D 全屏预览覆盖层 | ~212 |
+| `frontend/js/components/app-preview/preview-litematic-3d.js` | 3D 全屏预览覆盖层 | ~212 |
 
 ### 已知痛点
 

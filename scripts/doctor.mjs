@@ -60,7 +60,8 @@ function checkFrontendBuild() {
 function checkKeyFiles() {
   console.log('\n=== Key Files ===');
   const files = [
-    'app.go', 'main.go', 'wails.json', 'resource_bindings.go',
+    'main.go', 'wails.json',
+    'internal/app/app.go', 'internal/app/resource_bindings.go',
     'resource_types.json', 'go.mod', 'reasonix.toml', 'AGENTS.md',
     'frontend/index.html', 'frontend/js/bus.js', 'frontend/js/app-modules.js',
   ];
@@ -135,11 +136,36 @@ function checkGit() {
   else console.log(`  ${PASS} clean`);
 }
 
+const STATIC_TOOLS = [
+  'check-doc-drift.mjs',
+  'check-adr-health.mjs',
+  'check-boolean-naming.mjs',
+  'check-circular.mjs',
+  'check-consumers.mjs',
+  'check-deadcode-baseline.mjs',
+];
+
+function checkStaticAnalysis() {
+  console.log('\n=== Static Analysis (6 tools) ===');
+  let failed = 0;
+  for (const tool of STATIC_TOOLS) {
+    const { rc } = run(['node', path.join('scripts', tool), '--json']);
+    if (rc === 0) console.log(`  ${PASS} ${tool}`);
+    else {
+      failed += 1;
+      console.log(`  ${FAIL} ${tool}`);
+    }
+  }
+  if (failed === 0) console.log(`  ${PASS} all static checks passed`);
+  else console.log(`  ${FAIL} ${failed} tool(s) failed`);
+}
+
 console.log('========== YSM Doctor ==========');
 checkGoBuild();
 checkFrontendBuild();
 checkKeyFiles();
 checkGovernance();
 checkConfig();
+checkStaticAnalysis();
 checkGit();
 console.log('\n========== Done ==========');

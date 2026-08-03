@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: 契约测试 + Go 检查 + 前端构建
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: 契约测试（tests/python/，禁止修改测试文件）
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem tests/python/*.py
+          foreach ($f in $files) { python $f.FullName }
+
+      - name: Go vet
+        shell: pwsh
+        run: go vet ./go/... | Out-String -Width 200
+
+      - name: Go test
+        shell: pwsh
+        run: go test ./go/... -count=1 | Out-String -Width 200
+
+      - name: 前端构建
+        working-directory: frontend
+        shell: pwsh
+        run: npx vite build
+
+  release:
+    name: 发布打包（仅 tag v*）
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: 安装 Task（Wails v3 构建脚手架）
+        shell: pwsh
+        run: go install github.com/go-task/task/v3/cmd/task@latest
+
+      - name: 打包（Taskfile → build/windows/package）
+        shell: pwsh
+        run: |
+          $env:APP_VERSION = "${{ github.ref_name }}"
+          task package
+
+      - name: 上传 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/release/*.zip
+            build/release/SHA256SUMS

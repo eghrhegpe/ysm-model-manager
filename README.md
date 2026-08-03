@@ -229,14 +229,18 @@ ysm-model-manager/
 │       ├── services/           —— 服务注册
 │       ├── utils/              —— 工具函数（display/fmt/dom/icon/summarize/preview-cache）
 │       └── wasm/               —— YSMParser WASM 解码（ysm-wasm-data.js）
-└── docs/                      ← 文档
-    ├── architecture.md        —— 前端架构规范
-    ├── Design.md              —— UI 设计规范（CSS 变量、布局、字体）
-    ├── bug-chronicle.md       —— 问题排查记录
-    ├── release-notes/         —— 版本发版说明
-    ├── postmortem-*.md        —— 复盘
-    ├── preview/               —— README 截图
-    └── plan-p7-*.md           —— 未来计划
+└── docs/                      ← 文档（GitHub Pages 主站）
+    ├── index.md              —— 主站落地页：站点地图 + 功能一览 + 界面预览
+    ├── Design.md             —— UI 设计规范（CSS 变量、布局、字体）
+    ├── adr/                  —— 架构决策记录 ADR-001~017（index.md 自动生成）
+    ├── guide/                —— 用户指南（用户手册，index.md 索引）
+    ├── knowledge/            —— AI 知识卡索引（index.md 自动生成）
+    ├── releases/             —— 各版本发版说明（README.md 索引）
+    ├── app/                  —— 网页版入口占位（预留）
+    ├── novel/                —— 联邦开发 saga（小说）
+    ├── archive/              —— 冻结区：旧架构/状态/复盘，禁止日常编辑
+    ├── funcmap.md            —— 函数地图（自动生成）
+    └── preview/              —— README 截图
 ```
 
 ### 组件规范

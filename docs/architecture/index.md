@@ -268,13 +268,13 @@ Minecraft YSM 模型的一站式管理工具<br>
 ## 🛠️ 技术栈
 
 <span class="badge badge-green">Go</span>
-<span class="badge badge-blue">Wails v2</span>
+<span class="badge badge-blue">Wails v3</span>
 <span class="badge badge-purple">WebView2</span>
 <span class="badge badge-orange">Three.js</span>
 <span class="badge badge-red">Vite</span>
 <span class="badge badge-blue">WASM</span>
 
-YSM 模型管理器基于 **Wails v2** 构建，Go 后端负责文件系统操作、YSM 解析、哈希计算、同步引擎；前端使用原生 JavaScript + Web Components + Shadow DOM 实现组件化。YSM 解析器编译为 WASM 内嵌在前端，无需外部依赖。
+YSM 模型管理器基于 **Wails v3** 构建，Go 后端负责文件系统操作、YSM 解析、哈希计算、同步引擎；前端使用原生 JavaScript + Web Components + Shadow DOM 实现组件化。YSM 解析器编译为 WASM 内嵌在前端，无需外部依赖。
 
 ---
 
@@ -282,7 +282,7 @@ YSM 模型管理器基于 **Wails v2** 构建，Go 后端负责文件系统操�
 
 - [用户指南](用户指南.md) — 完整的使用教程
 - [架构说明](architecture.md) — 项目架构与技术设计
-- [发版说明](release-notes/) — 各版本更新详情
+- [发版说明](../release-notes/) — 各版本更新详情
 - [项目意义](项目意义.md) — 开发背后的故事
 
 ---

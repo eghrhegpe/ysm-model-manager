@@ -1,8 +1,31 @@
 # YSM 模型管理器 — 项目现状汇总
 
-更新时间：2026-06-17  
-当前版本：**v1.8.11**  
-最近提交：`15dd106 feat: 主题系统增强 — 薄荷物语主题 + 自动切换 + UI 重构`
+更新时间：2026-08-03  
+当前版本：**v1.9.3**  
+最近提交：`3cae9cb docs(adr): supplement ADR-0001 with v3 dev lessons and internal/app layout`
+
+---
+
+## 治理状态速览
+
+| 项 | 状态 |
+|----|------|
+| ADR 体系 | 12 篇（ADR-001 ~ ADR-013），索引见 [`adr/README.md`](adr/README.md) |
+| 契约测试 | 6 个（`tests/python/`），已接入 CI（`.github/workflows/release.yml`） |
+| 技术栈 | **Wails v3**（ADR-001 已采纳；根 README 已同步） |
+| 提交纪律 | Conventional Commits + scope（`docs(adr)` / `chore(build)` / `refactor(app)` / `feat`） |
+| 文档漂移治理 | 断链已修复（AI_INDEX → knowledge/index；release-notes/README 已创建）；`link-checker` 可复扫 |
+
+### 当前进行中 / 近期 ADR
+
+| ADR | 主题 | 状态 |
+|-----|------|------|
+| ADR-001 | Wails 3 迁移 | ✅ 已采纳（v1.9.x 起生效） |
+| ADR-003 | 逻辑下沉（Logic Sinking） | 🔄 部分采纳（P0/P1 完成，P2/P3 进行中） |
+| ADR-010 | 资源类型字面量硬编码治理 | ⚠️ 已采纳（违规未修复） |
+| ADR-011 | 前端路径拼接分隔符不一致 | ⚠️ 已采纳（违规未修复） |
+| ADR-012 | Wails Binding 调用路径一致性 | ⚠️ 已采纳（不一致未修复） |
+| ADR-013 | 治理体系收敛 — 文档宪法对账与联邦基线对齐 | 🔄 实施中（本文档头部即产出之一） |
 
 ---
 

@@ -42,10 +42,10 @@
 
 ```
 # ✅ 正确：目标存在
-[设计规范](../frontend/Design.md)
+链接文本 → `docs/frontend/Design.md`（存在）
 
 # ❌ 错误：目标不存在（目录已改名/文件已移动）
-[3D 报告](3D-RENDERING/3d-rendering-report.md)
+链接文本 → `docs/3D-RENDERING/3d-rendering-report.md`（不存在）
 ```
 
 > 完整命名规范见 `docs/core/NAMING_GUIDELINES.md`
@@ -57,48 +57,62 @@
 
 ### 1.1 目录用途
 
-```
-docs/
-├── core/               # ✅ 核心规范（术语、治理规则、命名规范）
-├── architecture/       # 🏗️ 架构 + 项目元信息（架构、现状、路线图、Bug 记录、逻辑下沉）
-├── frontend/           # 🎨 前端专属（设计规范、动画、待清理、废弃名）
-├── tasks/              # 📋 任务管理（任务清单、会话交接、每日计划）
-├── 3D/                 # 🎮 3D 渲染（攻关计划、开发报告）
-├── release-notes/      # 📦 版本发布说明（按 vX.Y.Z.md 命名）
-├── tactics/            # 🎯 产品愿景
-├── novel/              # 📖 衍生小说（与项目开发无关）
-├── archive/            # 🧊 冻结区 — 禁止读取、禁止扫描、禁止引用
-│   └── old/            #    早期规划、QA 清单、接口设计草案
-└── preview/            # 🖼️ UI 截图
-```
-tests/python/           # 🔒 契约测试 — 禁止修改，必须通过
-├── test_resource_schema.py    — resource_types.json 格式校验
-├── test_workshop_schema.py    — workshop_sites.json 结构校验
-├── test_creators_schema.py    — creators.json 必填字段校验
-├── test_config_defaults.py    — AppConfig 字段类型/值域校验
-├── test_config_syntax.py      — wails.json + go.mod + reasonix.toml 语法校验
-└── test_html_integrity.py     — frontend/index.html 引用完整性校验
-scripts/  （Python 工具脚本，被 .agents/skills/ 调用）
-├── review.py / doctor.py / line-counter.py / ultrawork.py   — 治理/诊断用
-├── funcmap.py / link-checker.py / type-consistency.py       — 一致性/映射
-├── comment-checker.py / event-audit.py / bug-search.py      — QA 检查
-├── release-notes-gen.py / binding-check.py / inspect_ysm.py — 工具
-├── (其余一次性脚本: check_*.py, fix_*.py, inspect_ysm*.py)
+| 目录 | 用途 |
+|------|------|
+| `docs/core/` | ✅ 核心规范（术语、治理规则、命名规范） |
+| `docs/architecture/` | 🏗️ 架构 + 项目元信息（架构、现状、路线图、Bug 记录、逻辑下沉），含 `adr/`（ADR 决策记录 — 写前先占号） |
+| `docs/frontend/` | 🎨 前端专属（设计规范、动画、待清理、废弃名） |
+| `docs/knowledge/` | 🧠 模块知识卡（bus / Wails 桥接 / Go 包）— 索引自动生成于 `knowledge/index.md` |
+| `docs/tasks/` | 📋 任务管理（任务清单、会话交接、每日计划） |
+| `docs/3D/` | 🎮 3D 渲染（攻关计划、开发报告） |
+| `docs/release-notes/` | 📦 版本发布说明（按 vX.Y.Z.md 命名，索引见 `release-notes/README.md`） |
+| `docs/tactics/` | 🎯 产品愿景 |
+| `docs/novel/` | 📖 衍生小说（与项目开发无关） |
+| `docs/archive/` | 🧊 冻结区 — 禁止读取、禁止扫描、禁止引用（含 `old/`：早期规划、QA 清单、接口设计草案） |
+| `docs/preview/` | 🖼️ UI 截图 |
+| `tests/python/` | 🔒 契约测试 — 禁止修改，必须通过 |
+| `scripts/` | Python 工具脚本，被 `.agents/skills/` 调用 |
+| `.agents/skills/` | Reasonix Skill 定义 |
 
-.agents/skills/  （Reasonix Skill 定义）
-├── review / doctor / ultrawork                    — 诊断 skill（runAs: subagent）
-├── release-notes-gen / comment-checker            — 生成/QA skill（runAs: subagent）
-├── event-audit / bug-search                       — 审计 skill（runAs: subagent）
-├── link-checker / type-consistency / binding-check — 一致性 skill（runAs: subagent）
-├── deep-init                                       — 项目初始化（runAs: subagent）
-├── line-counter / funcmap                         — 统计/映射 skill（普通调用）
-├── build / release / 3d-debug                     — 工作流 skill
+契约测试明细（`tests/python/`）：
+
+| 测试文件 | 校验内容 |
+|---------|---------|
+| `test_resource_schema.py` | resource_types.json 格式校验 |
+| `test_workshop_schema.py` | workshop_sites.json 结构校验 |
+| `test_creators_schema.py` | creators.json 必填字段校验 |
+| `test_config_defaults.py` | AppConfig 字段类型/值域校验 |
+| `test_config_syntax.py` | wails.json + go.mod + reasonix.toml 语法校验 |
+| `test_html_integrity.py` | frontend/index.html 引用完整性校验 |
+
+脚本分组（`scripts/`）：
+
+| 脚本组 | 用途 |
+|--------|------|
+| `review.py` / `doctor.py` / `line-counter.py` / `ultrawork.py` | 治理/诊断用 |
+| `funcmap.py` / `link-checker.py` / `type-consistency.py` | 一致性/映射 |
+| `comment-checker.py` / `event-audit.py` / `bug-search.py` | QA 检查 |
+| `release-notes-gen.py` / `binding-check.py` / `inspect_ysm.py` | 工具 |
+| 其余一次性脚本 | `check_*.py`, `fix_*.py`, `inspect_ysm*.py` |
+
+Skill 分组（`.agents/skills/`）：
+
+| Skill | 用途 |
+|-------|------|
+| `review` / `doctor` / `ultrawork` | 诊断 skill（runAs: subagent） |
+| `release-notes-gen` / `comment-checker` | 生成/QA skill（runAs: subagent） |
+| `event-audit` / `bug-search` | 审计 skill（runAs: subagent） |
+| `link-checker` / `type-consistency` / `binding-check` | 一致性 skill（runAs: subagent） |
+| `deep-init` | 项目初始化（runAs: subagent） |
+| `line-counter` / `funcmap` | 统计/映射 skill（普通调用） |
+| `build` / `release` / `3d-debug` | 工作流 skill |
 
 ### 1.2 关键文件速查
 
 | 场景 | 读哪些文件 |
 |------|-----------|
 | **每次会话起步** | 本文件 + `.github/copilot-instructions.md`（致命陷阱） |
+| **查模块知识卡** | `docs/knowledge/routes.md`（AI 路由表）+ `docs/knowledge/index.md`（索引） |
 | **新建文档 / 命名** | `docs/core/NAMING_GUIDELINES.md` |
 | **写 UI 文案 / 变量名** | `docs/core/TERMINOLOGY.md`（末尾有 AI 缩写版） |
 | **改 Go 逻辑** | `docs/architecture/architecture.md` + `bug-chronicle.md`（先 grep 再读，1369 行禁止全量） |
@@ -115,6 +129,7 @@ scripts/  （Python 工具脚本，被 .agents/skills/ 调用）
 | **查项目意义（给用户看）** | `docs/architecture/用户指南.md` + `项目意义.md` |
 | **查函数签名 / 全量映射** | `python3 scripts/funcmap.py -o funcmap.md` |
 | **查逻辑下沉方案** | `docs/architecture/logic-sinking.md` |
+| **查 ADR 索引 / 写 ADR** | `docs/architecture/adr/README.md` — 编号取最大号 +1，**先占号再写文件**（防并行撞号） |
 | **查所有脚本用法** | `scripts/脚本体系全景.md` |
 | **写发版说明** | 说 "release-notes-gen" 派子代理自动生成 |
 | **查断链** | 说 "link-checker" 扫描所有 md 链接 |
@@ -185,7 +200,7 @@ cd frontend ; npx vite build 2>&1 | Select-String error
 | 2 | 全局事件放错组件 | 切页后 handler 消失 | 全局 handler 必须放 `app-content/index.js` 的 `_registerGlobalHandlers()` |
 | 3 | 按钮异步后卡死 | 操作失败后按钮灰掉 | `finally` 里 emit 完成事件，不放 try 末尾 |
 | 4 | `const` TDZ | 静默失败 | `const fn = () => {}` 不提升，先定义再调用 |
-| 5 | Go Binding 函数名写错 | 前端调用 undefined | 先用 grep 在 `app.go` 确认函数名 |
+| 5 | Go Binding 函数名写错 | 前端调用 undefined | 先用 grep 在 `internal/app/` 确认函数名 |
 | 6 | 下载进度 99% 卡死 | Content-Length=-1 | 锁定 99%，2s 后转菊花；`stuckGuardReset()` 清全部状态 |
 | 7 | 三入口各自注册 | 事件重复/遗漏 | 单击/多选/全选都走 `enqueueDownloadTasks()`，只注册一组 Wails EventsOn |
 | 8 | 回收站误删 | 硬链接数据丢失 | 符号链接→直接删，硬链接(nlink>1)→直接删，普通→移 `.recycle`，跨分区→复制后删 |
@@ -240,8 +255,8 @@ go/watcher/    — 文件监听       go/updater/  — 自动更新
 go/paths/      — 路径安全       go/types/    — 共享类型+注册表
 go/logs/       — 导入日志       go/version/  — 版本号
 go/threejs/    — 3D 骨骼计算    go/importer/ — 导入策略
-app.go         — Wails Binding 入口
-resource_bindings.go — 核心 Binding 注册
+internal/app/  — Wails Binding 入口（app.go / resource_bindings.go 已下沉至此）
+main.go        — 程序入口（薄壳）
 ```
 
 ### 5.2 前端

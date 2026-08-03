@@ -245,7 +245,8 @@ export function renderModel2D(
   };
 }
 
-function calcBoneHitZones(
+/** 计算骨骼在屏幕上的命中热区（2D 正交投影，供鼠标拾取；导出供测试） */
+export function calcBoneHitZones(
   model: BedrockModel,
   scale: number,
   ox: number,

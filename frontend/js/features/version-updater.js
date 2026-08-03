@@ -1,6 +1,6 @@
 // ===== 版本更新检查 =====
 import { bus } from "../bus.ts";
-import { esc } from "../dialogs/modal.js";
+import { esc } from "../dialogs/modal.ts";
 import { friendlyError } from "../utils/errors.ts";
 
 /** 频次限制 key */

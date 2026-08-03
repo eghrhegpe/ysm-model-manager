@@ -1,6 +1,6 @@
 // ===== 回收站管理 =====
 import { bus } from "../bus.ts";
-import { modalConfirm } from "../dialogs/modal.js";
+import { modalConfirm } from "../dialogs/modal.ts";
 import { renderDisplayName } from "../utils/display.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { loadResourceRegistry } from "../utils/resource-registry.ts";

@@ -1,8 +1,15 @@
-// ===== 统一模态弹窗 =====
+// ===== 统一模态弹窗（类型化版 — ADR-014 P3 dialogs）=====
 // 风格参照 rename.js 的卡片式弹窗，复用 CSS 变量
 // 用法: const name = await modalPrompt({ title, icon, value, placeholder })
 
-export function esc(s) {
+declare global {
+  interface HTMLElement {
+    /** 关闭动画中标记（closeDlg 防重复触发） */
+    _closing?: boolean;
+  }
+}
+
+export function esc(s: string): string {
   return (s || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -12,12 +19,17 @@ export function esc(s) {
 
 /**
  * 带退场动画关闭对话框
- * @param {HTMLElement} overlay - 对话框 overlay 元素
- * @param {Function} resolve - Promise resolve 函数
- * @param {*} value - 要 resolve 的值
- * @param {number} [delay=120] - 退场动画时长 (ms)
+ * @param overlay 对话框 overlay 元素
+ * @param resolve Promise resolve 函数
+ * @param value 要 resolve 的值
+ * @param delay 退场动画时长 (ms)
  */
-export function closeDlg(overlay, resolve, value, delay = 120) {
+export function closeDlg<T>(
+  overlay: HTMLElement,
+  resolve: (value: T) => void,
+  value: T,
+  delay = 120,
+): void {
   if (!overlay || overlay._closing) return;
   overlay._closing = true;
   overlay.classList.add("dlg-closing");
@@ -27,22 +39,26 @@ export function closeDlg(overlay, resolve, value, delay = 120) {
   }, delay);
 }
 
+/** modalPrompt 选项 */
+export interface ModalPromptOptions {
+  title: string;
+  icon?: string;
+  value?: string;
+  placeholder?: string;
+  okText?: string;
+}
+
 /**
  * 弹出带输入框的模态框，类似 styled prompt()
- * @param {object} opts
- * @param {string} opts.title 标题
- * @param {string} [opts.icon] 图标，如 "📁"
- * @param {string} [opts.value] 初始值
- * @param {string} [opts.placeholder] 占位符
- * @param {string} [opts.okText] 确认按钮文字，默认 "确定"
- * @returns {Promise<string|null>} 用户输入的值，取消返回 null
+ * @param opts 选项
+ * @returns 用户输入的值，取消返回 null
  */
-export function modalPrompt(opts) {
+export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
   return new Promise((resolve) => {
     const { title, icon, value, placeholder, okText } = opts;
     const overlay = document.createElement("div");
     overlay.className = "dlg-overlay";
-    overlay.onclick = (e) => {
+    overlay.onclick = (e: MouseEvent): void => {
       if (e.target === overlay) closeDlg(overlay, resolve, null);
     };
 
@@ -62,16 +78,18 @@ export function modalPrompt(opts) {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    const input = box.querySelector("#mp-input");
+    const input = box.querySelector("#mp-input") as HTMLInputElement;
     input.focus();
     input.select();
 
-    const close = (result) => closeDlg(overlay, resolve, result);
+    const close = (result: string | null): void =>
+      closeDlg(overlay, resolve, result);
 
-    const errEl = box.querySelector("#mp-err");
+    const errEl = box.querySelector("#mp-err") as HTMLElement | null;
 
-    box.querySelector("#mp-cancel").onclick = () => close(null);
-    box.querySelector("#mp-ok").onclick = () => {
+    (box.querySelector("#mp-cancel") as HTMLElement).onclick = (): void =>
+      close(null);
+    (box.querySelector("#mp-ok") as HTMLElement).onclick = (): void => {
       const v = input.value.trim();
       if (!v) {
         input.focus();
@@ -80,10 +98,10 @@ export function modalPrompt(opts) {
       }
       close(v);
     };
-    input.addEventListener("input", () => {
+    input.addEventListener("input", (): void => {
       if (errEl) errEl.textContent = "";
     });
-    input.addEventListener("keydown", (e) => {
+    input.addEventListener("keydown", (e: KeyboardEvent): void => {
       if (e.key === "Enter") {
         const v = input.value.trim();
         if (!v) {
@@ -97,22 +115,26 @@ export function modalPrompt(opts) {
   });
 }
 
+/** modalSelect 选项 */
+export interface ModalSelectOptions {
+  title: string;
+  icon?: string;
+  items: string[];
+  placeholder?: string;
+  okText?: string;
+}
+
 /**
  * 弹出下拉选择框
- * @param {object} opts
- * @param {string} opts.title 标题
- * @param {string} [opts.icon] 图标
- * @param {string[]} opts.items 选项列表
- * @param {string} [opts.placeholder] 占位符
- * @param {string} [opts.okText] 确认按钮文字
- * @returns {Promise<string|null>} 选择的项，取消返回 null
+ * @param opts 选项
+ * @returns 选择的项，取消返回 null
  */
-export function modalSelect(opts) {
+export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
   return new Promise((resolve) => {
     const { title, icon, items, placeholder, okText } = opts;
     const overlay = document.createElement("div");
     overlay.className = "dlg-overlay";
-    overlay.onclick = (e) => {
+    overlay.onclick = (e: MouseEvent): void => {
       if (e.target === overlay) closeDlg(overlay, resolve, null);
     };
 
@@ -144,40 +166,49 @@ export function modalSelect(opts) {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    const select = box.querySelector("#ms-select");
+    const select = box.querySelector("#ms-select") as HTMLSelectElement;
     select.focus();
+    void placeholder;
 
-    const close = (result) => closeDlg(overlay, resolve, result);
+    const close = (result: string | null): void =>
+      closeDlg(overlay, resolve, result);
 
-    box.querySelector("#ms-cancel").onclick = () => close(null);
-    box.querySelector("#ms-ok").onclick = () => close(select.value);
-    select.addEventListener("keydown", (e) => {
+    (box.querySelector("#ms-cancel") as HTMLElement).onclick = (): void =>
+      close(null);
+    (box.querySelector("#ms-ok") as HTMLElement).onclick = (): void =>
+      close(select.value);
+    select.addEventListener("keydown", (e: KeyboardEvent): void => {
       if (e.key === "Enter") close(select.value);
       if (e.key === "Escape") close(null);
     });
   });
 }
 
+/** modalConfirm 选项 */
+export interface ModalConfirmOptions {
+  title: string;
+  icon?: string;
+  message: string;
+  okText?: string;
+  danger?: boolean;
+  width?: string;
+}
+
 /**
  * 弹出确认对话框
- * @param {object} opts
- * @param {string} opts.title 标题
- * @param {string} [opts.icon] 图标
- * @param {string} opts.message 消息内容
- * @param {string} [opts.okText] 确认按钮文字，默认 "确定"
- * @param {boolean} [opts.danger] 确认按钮是否为危险风格
- * @returns {Promise<boolean>}
+ * @param opts 选项
+ * @returns 用户是否确认
  */
-export function modalConfirm(opts) {
+export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
     const { title, icon, message, okText, danger, width } = opts;
     const overlay = document.createElement("div");
     overlay.tabIndex = 0;
     overlay.className = "dlg-overlay";
-    overlay.onclick = (e) => {
+    overlay.onclick = (e: MouseEvent): void => {
       if (e.target === overlay) closeDlg(overlay, resolve, false);
     };
-    overlay.addEventListener("keydown", (e) => {
+    overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
       if (e.key === "Escape") closeDlg(overlay, resolve, false);
     });
 
@@ -198,9 +229,12 @@ export function modalConfirm(opts) {
     document.body.appendChild(overlay);
     overlay.focus();
 
-    const close = (result) => closeDlg(overlay, resolve, result);
+    const close = (result: boolean): void =>
+      closeDlg(overlay, resolve, result);
 
-    box.querySelector("#mc-cancel").onclick = () => close(false);
-    box.querySelector("#mc-ok").onclick = () => close(true);
+    (box.querySelector("#mc-cancel") as HTMLElement).onclick = (): void =>
+      close(false);
+    (box.querySelector("#mc-ok") as HTMLElement).onclick = (): void =>
+      close(true);
   });
 }

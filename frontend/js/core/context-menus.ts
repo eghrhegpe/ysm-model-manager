@@ -81,7 +81,7 @@ export function registerContextMenus(): void {
             label: "移动到…",
             icon: "📂",
             onClick: async () => {
-              const { modalPrompt } = await import("../dialogs/modal.js");
+              const { modalPrompt } = await import("../dialogs/modal.ts");
               const folder = await modalPrompt({
                 title: "移动到文件夹",
                 icon: "📂",
@@ -130,7 +130,7 @@ export function registerContextMenus(): void {
             label: "复制到…",
             icon: "📋",
             onClick: async () => {
-              const { modalPrompt } = await import("../dialogs/modal.js");
+              const { modalPrompt } = await import("../dialogs/modal.ts");
               const folder = await modalPrompt({
                 title: "复制到文件夹",
                 icon: "📋",
@@ -188,7 +188,7 @@ export function registerContextMenus(): void {
             icon: "♻️",
             danger: true,
             onClick: async () => {
-              const { modalConfirm } = await import("../dialogs/modal.js");
+              const { modalConfirm } = await import("../dialogs/modal.ts");
               const ok2 = await modalConfirm({
                 title: "批量移入回收站",
                 icon: "♻️",
@@ -280,7 +280,7 @@ export function registerContextMenus(): void {
             label: "移动到…",
             icon: "📂",
             onClick: async () => {
-              const { modalPrompt } = await import("../dialogs/modal.js");
+              const { modalPrompt } = await import("../dialogs/modal.ts");
               const folder = await modalPrompt({
                 title: "移动到文件夹",
                 icon: "📂",
@@ -313,7 +313,7 @@ export function registerContextMenus(): void {
             label: "复制到…",
             icon: "📋",
             onClick: async () => {
-              const { modalPrompt } = await import("../dialogs/modal.js");
+              const { modalPrompt } = await import("../dialogs/modal.ts");
               const folder = await modalPrompt({
                 title: "复制到文件夹",
                 icon: "📋",
@@ -366,7 +366,7 @@ export function registerContextMenus(): void {
                 toast("未找到任何整合包", 2000, "warn");
                 return;
               }
-              const { modalSelect } = await import("../dialogs/modal.js");
+              const { modalSelect } = await import("../dialogs/modal.ts");
               const names = instances.map((i) => i.Name);
               const chosen = await modalSelect({
                 title: "推送到整合包",
@@ -401,7 +401,7 @@ export function registerContextMenus(): void {
             icon: "♻️",
             danger: true,
             onClick: async () => {
-              const { modalConfirm } = await import("../dialogs/modal.js");
+              const { modalConfirm } = await import("../dialogs/modal.ts");
               const ok2 = await modalConfirm({
                 title: "移入回收站",
                 icon: "♻️",

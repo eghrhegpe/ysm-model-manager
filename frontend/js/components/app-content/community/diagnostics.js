@@ -488,4 +488,4 @@ function truncatePath(path, maxLen = 60) {
   return "…/" + result;
 }
 
-// [已迁移到 features/oldest-models.js]
+// [已迁移到 features/oldest-models.ts]

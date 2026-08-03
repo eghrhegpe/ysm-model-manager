@@ -1,29 +1,44 @@
-// ===== 资历最深 + 仓库评分 + 每日推荐（响应全局类型切换） =====
+// ===== 资历最深 + 仓库评分 + 每日推荐（类型化版 — ADR-014 P3 features）=====
+// 响应全局类型切换
 import { bus } from "../bus.ts";
 import { renderDisplayName } from "../utils/display.ts";
 import { loadResourceRegistry } from "../utils/resource-registry.ts";
 import { getApp } from "../wails/app.ts";
 
+/** ScanModelEntries 返回的条目 */
+interface ModelEntry {
+  Name: string;
+  Size: number;
+  Path: string;
+  Ext: string;
+  Hash: string;
+  ModTime: number;
+}
+
 /**
  * 加载资历最深、仓库评分、热力图和每日推荐
- * @param {HTMLElement} container - 渲染容器
- * @param {Function} esc - HTML 转义函数
+ * @param container 渲染容器
+ * @param esc HTML 转义函数
+ * @returns 清理函数
  */
-export async function loadOldestModel(container, esc) {
-  if (!container) return;
+export async function loadOldestModel(
+  container: HTMLElement,
+  esc: (s: string) => string,
+): Promise<() => void> {
+  if (!container) return () => {};
   let currentType = localStorage.getItem("repo_rtype") || "ysm";
-  let unsub = null;
+  let unsub: (() => void) | null = null;
 
   // 命名函数，用于安全地移除/添加 click 监听，避免重复绑定
-  function handleContainerClick(e) {
-    const card = e.target.closest("[data-path]");
+  function handleContainerClick(e: MouseEvent): void {
+    const card = (e.target as Element).closest("[data-path]") as HTMLElement | null;
     if (card) {
       const path = card.dataset.path;
       if (path) bus.emit("model:select", { path });
     }
   }
 
-  async function render() {
+  async function render(): Promise<void> {
     container.innerHTML =
       '<div style="padding:12px;color:#6c7086;font-size:var(--fs-base)">⏳ 扫描中...</div>';
     try {
@@ -35,7 +50,7 @@ export async function loadOldestModel(container, esc) {
         return;
       }
 
-      const entries = await ScanModelEntries(repoRoot);
+      const entries: ModelEntry[] = (await ScanModelEntries(repoRoot)) || [];
       if (!entries || !entries.length) {
         container.innerHTML =
           '<div style="padding:12px;color:#6c7086;font-size:var(--fs-base)">该类型仓库为空</div>';
@@ -43,10 +58,10 @@ export async function loadOldestModel(container, esc) {
       }
 
       // 基础统计
-      let totalSize = 0,
-        banned = 0,
-        oldest = entries[0];
-      const hashMap = {};
+      let totalSize = 0;
+      let banned = 0;
+      let oldest = entries[0];
+      const hashMap: Record<string, number> = {};
       entries.forEach((e) => {
         totalSize += e.Size || 0;
         if (e.ModTime && e.ModTime < oldest.ModTime) oldest = e;
@@ -74,7 +89,8 @@ export async function loadOldestModel(container, esc) {
             : "var(--paid)";
       const healthLabel =
         score >= 80 ? "健康" : score >= 50 ? "亚健康" : "需要整理";
-      const healthTagClass = score >= 80 ? "good" : score >= 50 ? "ok" : "bad";
+      const healthTagClass =
+        score >= 80 ? "good" : score >= 50 ? "ok" : "bad";
 
       // 热力图
       const monthCounts = buildMonthHeatmap(entries);
@@ -159,7 +175,7 @@ export async function loadOldestModel(container, esc) {
       }
 
       // 每日推荐
-      const renderPicks = () => {
+      const renderPicks = (): string => {
         // Fisher-Yates 洗牌后取前 3 个，避免重复且简洁可靠
         const shuffled = [...entries];
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -167,7 +183,7 @@ export async function loadOldestModel(container, esc) {
           [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         const total = Math.min(3, shuffled.length);
-        const picks = [];
+        const picks: string[] = [];
         for (let i = 0; i < total; i++) {
           const p = shuffled[i];
           if (!p) continue;
@@ -266,7 +282,7 @@ export async function loadOldestModel(container, esc) {
     } catch (err) {
       container.innerHTML =
         '<div style="padding:12px;color:#f38ba8;font-size:var(--fs-base)">❌ 加载失败: ' +
-        esc(err.message || String(err)) +
+        esc((err as Error).message || String(err)) +
         "</div>";
     }
   }
@@ -290,7 +306,7 @@ export async function loadOldestModel(container, esc) {
 }
 
 // ====== 工具函数 ======
-function buildMonthHeatmap(entries) {
+function buildMonthHeatmap(entries: ModelEntry[]): number[] {
   const months = new Array(12).fill(0);
   entries.forEach((e) => {
     if (!e.ModTime) return;
@@ -305,7 +321,7 @@ function buildMonthHeatmap(entries) {
   return months;
 }
 
-function fmtSize(bytes) {
+function fmtSize(bytes: number): string {
   if (!bytes || bytes <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB"];
   let u = 0;

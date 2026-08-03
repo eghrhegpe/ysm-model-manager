@@ -314,7 +314,7 @@ class AppContent extends HTMLElement {
             this._unsubs.push(_unsub);
           } else if (tab === "oldest") {
             const { loadOldestModel } =
-              await import("../../features/oldest-models.js");
+              await import("../../features/oldest-models.ts");
             const oldestCleanup = await loadOldestModel(container, (s) =>
               this._esc(s),
             );

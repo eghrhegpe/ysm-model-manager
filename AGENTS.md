@@ -14,7 +14,7 @@
 > 改完即验：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）；文档 → `node scripts/link-checker.mjs`；ADR → `node scripts/adr-check.mjs`。
 > 必须通过 `tests/` 下所有契约测试（测试文件是宪法基石，禁止修改）。
 > 失败熔断：同一命令连续失败 2 次 → 停手进 Plan 分析原因，不无脑重试。
-> 只读 §一 文档地图列出的文件；地图没有的目录 = 不存在（`docs/archive/` 为冻结区，需追溯旧设计时才读）。
+> 文档地图优先，但允许探索：地图没有的目录 ≠ 不存在，发现地图过期时报告漂移、以源码为准（`docs/archive/` 为冻结区，需追溯旧设计时才读）。
 > 新文档先过命名约束检查（`docs/Design.md` §11 + ADR-006），再确认归属目录（见 §一 文档地图）。
 > 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `review` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check`。
 
@@ -89,7 +89,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 规则 | 说明 |
 |------|------|
 | commit 信息格式 | `<type>: <描述>`，type 同 conventional commits（feat/fix/docs/chore/refactor/test） |
-| 提交范围 | 按功能 `git add <通过测试的路径>`，禁止 `git add .` 混并行特性 |
+| 提交范围 | 按功能 `git add <通过测试的路径>`；多会话共享工作区时勿用 `git add .`（会混入并行特性），单会话开发不受此限 |
 | 禁止 | `git stash` / `git stash push` / `git stash pop` |
 
 ---

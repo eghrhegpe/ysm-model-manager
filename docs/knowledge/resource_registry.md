@@ -6,6 +6,8 @@ category: config
 source_files:
   - resource_types.json
   - frontend/js/services/registry.ts
+tests:
+  - frontend/js/services/registry.test.js
 use_when:
   - 资源类型
   - 注册表

@@ -24,5 +24,5 @@ runAs: subagent
 ## brokenlinks-report
 | 文件 | 断链 | 推荐修复 |
 |------|------|---------|
-| `docs/xxx.md` | `[text](path)` | `[text](correct-path)` |
+| docs/xxx.md | 链接 text 指向 path（不存在） | 改为 text 指向 correct-path |
 ```

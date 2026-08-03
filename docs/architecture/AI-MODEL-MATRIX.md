@@ -226,8 +226,8 @@ done-when: 新行类型渲染正确，npx vite build 不红
 
 ## 六、相关文档
 
-- [AGENTS.md 模型索引](../AGENTS.md) — (需要更新，当前列的是旧免费模型)
+- [AGENTS.md 模型索引](../../AGENTS.md) — (需要更新，当前列的是旧免费模型)
 - [架构文档](architecture.md)
-- [任务计划](TASK_PLAN.md)
+- [任务计划](../tasks/TASK_PLAN.md)
 - [3D 渲染计划](../3D/3D-RENDERING-PLAN.md)
 - [定价来源：OpenCode 价目表]

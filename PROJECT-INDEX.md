@@ -1,5 +1,12 @@
 # YSM 模型管理器 — 项目索引
 
+> ⚠️ **本文件已过时（停留在 v1.7.4，实际已 v1.9.3），停止更新。**
+> 索引职责已由以下文档取代（后续接入自动化后本文件将归档删除）：
+> - 开发者文档入口：`docs/architecture/README.md`
+> - 模块知识卡（AI 索引）：`docs/knowledge/index.md`（自动生成）
+> - 项目现状：`docs/architecture/PROJECT_STATUS.md`（含 ADR 进行中清单）
+> - AI 协作规则：`AGENTS.md`
+
 ## 项目概述
 
 YSM 模型管理器是一个专为Minecraft整合包设计的工具，用于管理和同步各种游戏资源（YSM模型、MMD模型、VRC头像、资源包、光影包和蓝图）。项目采用现代Web技术构建，支持桌面应用和游戏内预览功能。

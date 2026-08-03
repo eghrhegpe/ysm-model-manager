@@ -2,7 +2,7 @@
 
 > 像 Steam 创意工坊一样，管理你的 Minecraft YSM 模型。导入、预览、分类、同步到整合包，一站完成。
 
-**技术栈**：Go (Wails v2) + 原生 HTML/CSS/JS (Web Components + Shadow DOM) + Three.js + YSMParser WASM
+**技术栈**：Go (Wails v3) + 原生 HTML/CSS/JS (Web Components + Shadow DOM) + Three.js + YSMParser WASM
 
 **平台支持**：✅ Windows (amd64) · ⚠️ macOS (实验性) · ❓ Linux (待验证)
 
@@ -17,8 +17,9 @@
 3. **首次配置**：启动程序 → 设置游戏根目录（`.minecraft` 文件夹）→ 设置模型仓库路径
 4. **开始使用**：把模型文件放入仓库目录，或通过拖拽导入
 
-> 📖 **详细说明见 [用户指南](docs/用户指南.md)**，包含 FAQ、故障排查、链接模式详解等。
-> 🎨 **设计规范见 [Design.md](docs/Design.md)**，AI 开发时的 UI 约束指南。
+> 📖 **详细说明见 [用户指南](docs/architecture/用户指南.md)**，包含 FAQ、故障排查、链接模式详解等。
+> 🎨 **设计规范见 [Design.md](docs/frontend/Design.md)**，AI 开发时的 UI 约束指南。
+> 🧭 **开发者入口见 [docs/architecture/README.md](docs/architecture/README.md)**，AI 协作规则见 [AGENTS.md](AGENTS.md)。
 
 ---
 
@@ -285,20 +286,21 @@ wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 
 | 文档                                                                 | 内容                                      |
 | -------------------------------------------------------------------- | ----------------------------------------- |
-| [`docs/用户指南.md`](docs/用户指南.md)                               | **用户手册**：安装、配置、功能详解、FAQ   |
-| [`docs/architecture.md`](docs/architecture.md)                       | 前端架构规范 + 组件拆分指南               |
-| [`docs/Design.md`](docs/Design.md)                                   | UI 设计规范（CSS 变量、布局、字体）       |
-| [`docs/bug-chronicle.md`](docs/bug-chronicle.md)                     | Bug 排查记录（含 Debug Path Review）      |
-| [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)                   | **项目当前状态**：已完成功能、遗留问题、下一步方向 |
-| [`docs/TERMINOLOGY.md`](docs/TERMINOLOGY.md)                         | 术语对照表：名词统一、UI 文案规范         |
-| [`docs/CLEANUP_RULES.md`](docs/CLEANUP_RULES.md)                     | 治理规则：9 条禁止模式 × severity × 检测方式 |
-| [`docs/TASK_PLAN.md`](docs/TASK_PLAN.md)                             | **AI 任务计划**：可执行任务清单           |
-| [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md)                 | **会话交接日志**：AI 间信息传递记录       |
-| [`docs/3D-RENDERING/3d-rendering-report.md`](docs/3D-RENDERING/3d-rendering-report.md) | **3D 渲染引擎开发报告**：14 项修复 + 排查方法论 |
-| [`docs/pending-cleanup.md`](docs/pending-cleanup.md)                 | 待清理清单：调试代码、临时方案、技术债    |
-| [`docs/release-notes/`](docs/release-notes/)                         | 各版本发版说明                            |
-| [`docs/README.md`](docs/README.md)                                   | **开发者文档总索引**（含归档文档跳转）    |
-| [`AI_INDEX.md`](AI_INDEX.md)                                         | AI 索引（后端绑定 + 事件总线 + 组件清单） |
+| [`docs/architecture/用户指南.md`](docs/architecture/用户指南.md)     | **用户手册**：安装、配置、功能详解、FAQ   |
+| [`docs/architecture/architecture.md`](docs/architecture/architecture.md) | 前端架构规范 + 组件拆分指南            |
+| [`docs/frontend/Design.md`](docs/frontend/Design.md)                 | UI 设计规范（CSS 变量、布局、字体）       |
+| [`docs/architecture/bug-chronicle.md`](docs/architecture/bug-chronicle.md) | Bug 排查记录（含 Debug Path Review）  |
+| [`docs/architecture/PROJECT_STATUS.md`](docs/architecture/PROJECT_STATUS.md) | **项目当前状态**：已完成功能、遗留问题、下一步方向 |
+| [`docs/core/TERMINOLOGY.md`](docs/core/TERMINOLOGY.md)               | 术语对照表：名词统一、UI 文案规范         |
+| [`docs/core/CLEANUP_RULES.md`](docs/core/CLEANUP_RULES.md)           | 治理规则：9 条禁止模式 × severity × 检测方式 |
+| [`docs/tasks/TASK_PLAN.md`](docs/tasks/TASK_PLAN.md)                 | **AI 任务计划**：可执行任务清单           |
+| [`docs/tasks/SESSION_HANDOFF.md`](docs/tasks/SESSION_HANDOFF.md)     | **会话交接日志**：AI 间信息传递记录       |
+| [`docs/3D/3d-rendering-report.md`](docs/3D/3d-rendering-report.md)   | **3D 渲染引擎开发报告**：14 项修复 + 排查方法论 |
+| [`docs/frontend/pending-cleanup.md`](docs/frontend/pending-cleanup.md) | 待清理清单：调试代码、临时方案、技术债  |
+| [`docs/release-notes/`](docs/release-notes/)                         | 各版本发版说明（索引见 release-notes/README.md） |
+| [`docs/architecture/README.md`](docs/architecture/README.md)         | **开发者文档总索引**（含归档文档跳转）    |
+| [`docs/knowledge/index.md`](docs/knowledge/index.md)                 | AI 知识卡索引（后端绑定 + 事件总线 + 组件清单，自动生成） |
+| [`docs/architecture/adr/README.md`](docs/architecture/adr/README.md) | **ADR 决策记录登记表**（架构决策追踪）    |
 | [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | AI 行为规则 + 痛苦教训                    |
 
 ---
@@ -318,4 +320,4 @@ wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 
 ## 📄 许可证
 
-本项目基于 [Apache-2.0](LICENSE) 许可证开源。
+本项目基于 **Apache-2.0** 许可证开源（LICENSE 文件待补充）。

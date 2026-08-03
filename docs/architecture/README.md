@@ -1,6 +1,6 @@
 # 开发者文档索引
 
-> 面向开发者的技术文档入口。用户手册请看 [README.md](../README.md) → [用户指南](用户指南.md)
+> 面向开发者的技术文档入口。用户手册请看 [README.md](../../README.md) → [用户指南](用户指南.md)
 
 ---
 
@@ -56,8 +56,8 @@
 
 | 文档 | 说明 |
 |------|------|
-| [release-notes/](release-notes/) | 各版本发版说明（按版本号组织） |
-| [release-notes/README.md](release-notes/README.md) | 发版说明索引表 |
+| [release-notes/](../release-notes/) | 各版本发版说明（按版本号组织） |
+| [release-notes/README.md](../release-notes/README.md) | 发版说明索引表 |
 
 ### 构建发布流程
 
@@ -91,7 +91,7 @@
 
 ## 🗂️ 归档文档
 
-历史文档已移至 [archive/](archive/)（**禁止 AI 读取，已冻结**）：
+历史文档已移至 [archive/](../archive/)（**禁止 AI 读取，已冻结**）：
 
 | 子目录 | 内容 |
 |--------|------|
@@ -105,7 +105,8 @@
 
 ## 🔗 快速跳转
 
-- 根目录：[AGENTS.md](../AGENTS.md) — AI 协作规则 + 痛苦教训
-- 根目录：[AI_INDEX.md](../AI_INDEX.md) — AI 索引（后端绑定 + 事件总线 + 组件清单）
-- 前端入口：[frontend/js/app-modules.js](../frontend/js/app-modules.js)
-- Go 入口：[app.go](../app.go)
+- 根目录：[AGENTS.md](../../AGENTS.md) — AI 协作规则 + 痛苦教训
+- 知识卡索引：[knowledge/index.md](../knowledge/index.md) — AI 索引（后端绑定 + 事件总线 + 组件清单，自动生成）
+- ADR 索引：[adr/README.md](adr/README.md) — 架构决策记录登记表（写 ADR 前先占号）
+- 前端入口：[frontend/js/app-modules.js](../../frontend/js/app-modules.js)
+- Go 入口：[internal/app/](../../internal/app/) — Wails Binding 目录（app.go 已下沉于此）

@@ -60,7 +60,7 @@
 
 ## 废弃别名对照
 
-详见 [DEPRECATED_NAMES.md](DEPRECATED_NAMES.md)（可 grep 批量替换清单）。
+详见 [DEPRECATED_NAMES.md](../frontend/DEPRECATED_NAMES.md)（可 grep 批量替换清单）。
 
 ---
 

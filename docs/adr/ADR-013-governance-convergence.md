@@ -3,7 +3,7 @@
 - **状态**：已采纳（Accepted）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`AGENTS.md` §一 / `docs/architecture/adr/` / `docs/architecture/README.md` / `docs/knowledge/` / `.github/workflows/` / `PROJECT-INDEX.md` / `.agents/skills/review/SKILL.md` / `docs/release-notes/`
+- **相关**：`AGENTS.md` §一 / `docs/adr/` / `docs/architecture/README.md` / `docs/knowledge/` / `.github/workflows/` / `PROJECT-INDEX.md` / `.agents/skills/review/SKILL.md` / `docs/release-notes/`
 
 ---
 
@@ -15,7 +15,7 @@
 
 | # | 级别 | 差距 | 证据（已核实） | 影响 |
 |---|------|------|----------------|------|
-| 1 | 🔴 P1 | **ADR 体系未注册进宪法** | AGENTS.md §一 目录用途无 `adr/` 条目；磁盘 `docs/architecture/adr/` 已有 8 篇（ADR-001~008）。无编号/状态/生命周期规则 | 新 AI 从宪法出发感知不到 ADR 体系；ADR 沦为「写了的文档」而非治理机制 |
+| 1 | 🔴 P1 | **ADR 体系未注册进宪法** | AGENTS.md §一 目录用途无 `adr/` 条目；磁盘 `docs/adr/` 已有 8 篇（ADR-001~008）。无编号/状态/生命周期规则 | 新 AI 从宪法出发感知不到 ADR 体系；ADR 沦为「写了的文档」而非治理机制 |
 | 2 | 🔴 P1 | **文档地图与磁盘脱节** | `docs/knowledge/` 18 个文件（含独立 AGENTS.md / README.md / index.md + 3 个维护脚本），宪法地图零注册；违反宪法自身「没有的目录不存在」原则 | 宪法是「愿望清单」而非现实索引；知识库成第二治理体系 |
 | 3 | 🔴 P1 | **断链 + 孤儿文档** | `docs/architecture/README.md:109` 引用 `../AI_INDEX.md`（不存在）；`:60` 与 AGENTS.md 速查表引用 `docs/release-notes/README.md`（不存在）；根目录 `PROJECT-INDEX.md` 停留在 v1.7.4（实际 v1.9.3） | 违反宪法「断链 = 任务失败」；过时索引误导 AI 与新人 |
 | 4 | 🔴 P1 | **CI 名存实亡** | `.github/workflows/` 为空目录；AGENTS.md 与 PROJECT-INDEX.md 均声称 CI 跑 `go vet + go test + 构建打包` | 契约测试只本地人工跑，无线上回归；「必须通过」无强制载体 |
@@ -44,9 +44,9 @@
 
 | 动作 | 内容 | 验收 |
 |------|------|------|
-| 0.1 | AGENTS.md §一 目录用途补 `architecture/adr/`（ADR 归档）与 `knowledge/`（模块知识卡）条目 | 文档地图 = 磁盘现实，双向核对零遗漏 |
+| 0.1 | AGENTS.md §一 目录用途补 `adr/`（ADR 归档）与 `knowledge/`（模块知识卡）条目 | 文档地图 = 磁盘现实，双向核对零遗漏 |
 | 0.2 | AGENTS.md 补 ADR 使用规则：编号 = 现有最大号 +1（三位，如 ADR-013），文件名 `ADR-NNN-kebab-case.md`，禁止「ADR-000N」式前缀；**写文件前先在 `adr/README.md` 登记表占号**，防多会话并行撞号 | 新 ADR 编号唯一性有明文 + 有占号机制 |
-| 0.3 | 建立 `docs/architecture/adr/README.md` 总索引：编号 / 标题 / 状态 / 日期 / 关联 ADR | 任一 ADR 可 30 秒定位上下文 |
+| 0.3 | 建立 `docs/adr/README.md` 总索引：编号 / 标题 / 状态 / 日期 / 关联 ADR | 任一 ADR 可 30 秒定位上下文 |
 | 0.4 | 修订 AGENTS.md 速查表：`docs/release-notes/README.md` 引用改为实际存在路径 | 断链清零 |
 
 ### Phase 1 — 文档清理（孤儿归位）
@@ -110,7 +110,7 @@
 | 来源 | 结果 |
 |------|------|
 | `AGENTS.md` §〇/§一 | 文档地图无 adr/、knowledge/ 条目；断链引用 release-notes/README.md |
-| `docs/architecture/adr/` | ADR-001~008 共 8 篇存在，最新 ADR-008（2026-08-03） |
+| `docs/adr/` | ADR-001~008 共 8 篇存在，最新 ADR-008（2026-08-03） |
 | `docs/knowledge/` | 18 个文件，含独立 AGENTS.md / README.md / index.md；scripts/ 有 gen-knowledge-index.mjs / check-knowledge-drift.mjs / new-knowledge-card.mjs |
 | `docs/architecture/README.md` | :60 引 release-notes/README.md（不存在）；:109 引 AI_INDEX.md（不存在） |
 | `PROJECT-INDEX.md` | 声称 v1.7.4 + .github/workflows/release.yml；实际 v1.9.3 + workflows/ 空目录 |

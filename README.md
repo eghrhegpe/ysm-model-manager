@@ -300,7 +300,7 @@ wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 | [`docs/release-notes/`](docs/release-notes/)                         | 各版本发版说明（索引见 release-notes/README.md） |
 | [`docs/architecture/README.md`](docs/architecture/README.md)         | **开发者文档总索引**（含归档文档跳转）    |
 | [`docs/knowledge/index.md`](docs/knowledge/index.md)                 | AI 知识卡索引（后端绑定 + 事件总线 + 组件清单，自动生成） |
-| [`docs/architecture/adr/README.md`](docs/architecture/adr/README.md) | **ADR 决策记录登记表**（架构决策追踪）    |
+| [`docs/adr/README.md`](docs/adr/README.md) | **ADR 决策记录登记表**（架构决策追踪）    |
 | [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | AI 行为规则 + 痛苦教训                    |
 
 ---

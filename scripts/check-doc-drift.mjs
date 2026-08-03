@@ -5,7 +5,7 @@
  * 零依赖（仅 node:fs / node:path / node:url）。
  *
  * 三个维度：
- *   [ADR 维度]    docs/architecture/adr/ 文件 vs adr/README.md 登记表
+ *   [ADR 维度]    docs/adr/ 文件 vs adr/README.md 登记表
  *                 撞号 / 漏登 / 幽灵文件 / 编号跳号（ERROR 阻断）
  *   [知识卡维度]  docs/knowledge/ 卡 frontmatter / source_files / 索引断链
  *                 必填字段缺失 / 占位符 / 引用不存在（ERROR 阻断）
@@ -13,6 +13,7 @@
  *                 指向磁盘不存在的文件（ERROR 阻断）
  *                 实际源码树（frontend/js/ + go/ + internal/）中未在
  *                 architecture.md 登记的子模块（INFO 基线管理，--fix 刷新）
+ *                 AGENTS.md §4.2 前端目录树 vs 磁盘实况（缺失 → WARN）
  *
  * 用法：
  *   node scripts/check-doc-drift.mjs            # 文本报告
@@ -27,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const ADR_DIR = path.join(ROOT, 'docs/architecture/adr');
+const ADR_DIR = path.join(ROOT, 'docs/adr');
 const KC_DIR = path.join(ROOT, 'docs/knowledge');
 const ARCH_DOCS = ['docs/architecture/architecture.md', 'docs/3D/3D-RENDERING-PLAN.md', 'docs/3D/3d-rendering-report.md'];
 const BASELINE_FILE = path.join(ROOT, 'scripts/baseline/doc-drift-baseline.json');
@@ -36,6 +37,7 @@ const JSON_OUT = process.argv.includes('--json');
 const FIX_MODE = process.argv.includes('--fix');
 
 const errors = [];
+const warns = [];
 const infos = [];
 
 // ── 工具函数 ──────────────────────────────────────────
@@ -67,7 +69,7 @@ function getScalar(fm, key) {
 
 function checkAdr() {
   if (!fs.existsSync(ADR_DIR)) {
-    errors.push('[ADR] docs/architecture/adr/ 目录不存在');
+    errors.push('[ADR] docs/adr/ 目录不存在');
     return;
   }
   const files = fs.readdirSync(ADR_DIR).filter((f) => /^ADR-\d{3}-.*\.md$/.test(f)).sort();
@@ -91,7 +93,7 @@ function checkAdr() {
     fileMeta[num] = { file: f, num };
   }
 
-  const regText = readText('docs/architecture/adr/README.md');
+  const regText = readText('docs/adr/README.md');
   if (regText === null) {
     errors.push('[ADR] adr/README.md 登记表不存在');
     return;
@@ -174,6 +176,28 @@ function checkArchRefs() {
   }
 }
 
+/** AGENTS.md §4.2 前端目录树 vs 磁盘实况（缺失 → WARN，可能是规划中目录）。 */
+function checkAgentsTree() {
+  const text = readText('AGENTS.md');
+  if (text === null) return;
+  const blockM = text.match(/### 4\.2 前端[\s\S]*?```\s*\n([\s\S]*?)```/);
+  if (!blockM) {
+    infos.push('[架构树] AGENTS.md 未找到 §4.2 前端树代码块，跳过');
+    return;
+  }
+  const lines = blockM[1].split(/\r?\n/);
+  const rootIdx = lines.findIndex((l) => l.includes('frontend/js/'));
+  if (rootIdx < 0) return;
+  for (const line of lines.slice(rootIdx + 1)) {
+    const segM = line.match(/^\s{2}([^\s—]+)/);
+    if (!segM) continue;
+    const seg = segM[1];
+    if (!fs.existsSync(path.join(ROOT, 'frontend/js', seg))) {
+      warns.push(`[架构树] AGENTS.md §4.2 描述 frontend/js/${seg} 但磁盘不存在（疑似规划中目录或已删除）`);
+    }
+  }
+}
+
 /** 收集实际源码树一层子模块（frontend/js/ + go/ + internal/）。 */
 function collectSourceModules() {
   const out = [];
@@ -224,9 +248,10 @@ function main() {
   const kc = checkKnowledge();
   checkArchRefs();
   checkArchCoverage();
+  checkAgentsTree();
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ errors, infos, summary: { adrFiles: adr?.files, adrRegistered: adr?.registered, knowledgeCards: kc } }, null, 2));
+    console.log(JSON.stringify({ errors, warns, infos, summary: { adrFiles: adr?.files, adrRegistered: adr?.registered, knowledgeCards: kc } }, null, 2));
     process.exit(errors.length ? 1 : 0);
     return;
   }
@@ -237,9 +262,11 @@ function main() {
   console.log(`ADR 维度     : ${adr ? `${adr.files} 文件 / 登记 ${adr.registered}` : 'FAILED'}`);
   console.log(`知识卡维度   : ${kc ?? 0} 卡`);
   console.log(`ERROR       : ${errors.length}`);
+  console.log(`WARN        : ${warns.length}`);
   console.log(`INFO        : ${infos.length}`);
   console.log('──────────────────────────────────────');
 
+  if (warns.length) for (const w of warns) console.log(`⚠ ${w}`);
   if (infos.length) for (const i of infos) console.log(`ℹ ${i}`);
   if (errors.length) {
     for (const e of errors) console.log(`❌ ${e}`);

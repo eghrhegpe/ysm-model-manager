@@ -26,7 +26,7 @@ function checkWails() {
   }
 
   // Wails 3 契约：v2 平铺结构（outputfilename / frontend:* / bind）已弃用。
-  // 迁移依据见 docs/architecture/adr/ADR-001-wails3-migration.md §3。
+  // 迁移依据见 docs/adr/ADR-001-wails3-migration.md §3。
   if (!data.name) {
     errors.push("'name' must be non-empty");
   }

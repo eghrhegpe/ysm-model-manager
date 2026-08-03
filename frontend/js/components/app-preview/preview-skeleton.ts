@@ -7,15 +7,6 @@ import { openFullPreview } from "./preview-zoom.ts";
 import type { BedrockGeometry } from "./utils.ts";
 import type { BoneSelectInfo } from "../../utils/model3d.ts";
 
-// —— 3D overlay 全局扩展 ——
-// _3dOnBoneSelect / __screenshotPreview 已由 model3d.ts declare global 声明，此处仅补
-// _3dDetailEl（同名 interface 声明自动合并）
-declare global {
-  interface Window {
-    _3dDetailEl?: HTMLElement | null;
-  }
-}
-
 /** RenderModel3DHandle 运行时扩展（_keyHandler/_timeTimer/_boneDetailEl 为 JS 时代附加字段） */
 type Model3DHandleX = import("../../utils/model3d.ts").RenderModel3DHandle & {
   _keyHandler?: ((e: KeyboardEvent) => void) | null;
@@ -331,7 +322,8 @@ export async function loadModel2D(
           const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ".";
           const base = p.split("/").pop()?.replace(/\.\w+$/, "") || "";
           if (key === "current") {
-            const b64 = window.__screenshotPreview?.();
+            const { screenshotPreview } = await import("../../utils/model3d.ts");
+            const b64 = screenshotPreview();
             if (!b64) {
               shotBtn.textContent = "❌";
               return;
@@ -513,9 +505,10 @@ export async function loadModel2D(
             spec as import("../../utils/model3d.ts").Spec3D,
             _texIdx,
           )) as Model3DHandleX;
-          // 3D 骨骼点击回调 → 详情框
-          window._3dOnBoneSelect = function (info: BoneSelectInfo) {
-            if (window._3dDetailEl) {
+          // 3D 骨骼点击回调 → 详情框（走 handle.onBoneSelect，治理红线：零 window 全局）
+          _model3d.onBoneSelect = function (info: BoneSelectInfo) {
+            const detailEl = _model3d?._boneDetailEl;
+            if (detailEl) {
               let txt =
                 "🦴 " + info.name + "\n" +
                 "路径: " + info.path + "\n" +
@@ -533,9 +526,9 @@ export async function loadModel2D(
               if (info.cubePos) {
                 txt += "\ncubePos: (" + info.cubePos.map(function (v) { return v.toFixed(3); }).join(", ") + ")";
               }
-              window._3dDetailEl.textContent = txt;
-              if (window._3dDetailEl.parentNode)
-                (window._3dDetailEl.parentNode as HTMLElement).style.display = "block";
+              detailEl.textContent = txt;
+              if (detailEl.parentNode)
+                (detailEl.parentNode as HTMLElement).style.display = "block";
             }
           };
           loadingEl.remove();
@@ -721,7 +714,6 @@ export async function loadModel2D(
           boneDetail.appendChild(boneDetailText);
           boneDetail.appendChild(boneDetailCopy);
           panel.appendChild(boneDetail);
-          window._3dDetailEl = boneDetailText;
           _model3d._boneDetailEl = boneDetailText;
 
           const tip = document.createElement("div");

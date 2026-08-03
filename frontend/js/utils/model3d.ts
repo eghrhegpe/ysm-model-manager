@@ -62,52 +62,11 @@ export interface RenderModel3DHandle {
   cleanup: () => void;
 }
 
-declare global {
-  interface Window {
-    __dumpScene: () => { bones: unknown[]; stats: { bones: number; meshes: number; vertices: number; indices: number } } | undefined;
-    __scene3d?: THREE.Scene;
-    __camera3d?: THREE.PerspectiveCamera;
-    __renderer3d?: THREE.WebGLRenderer;
-    __rootGroup3d?: THREE.Group;
-    _3dOnBoneSelect?: (info: BoneSelectInfo) => void;
-    __screenshotPreview: () => string | null;
-    __batchRepoScreenshots: (repoRoot?: string) => Promise<unknown>;
-  }
-}
-
-window.__dumpScene = () => {
-  const root = window.__rootGroup3d;
-  if (!root) {
-    console.warn("无 scene，先渲染模型");
-    return;
-  }
-  const wv = new THREE.Vector3();
-  const stats = { bones: 0, meshes: 0, vertices: 0, indices: 0 };
-  const bones: Array<{ name: string; pos: string; world: string }> = [];
-  root.traverse((c) => {
-    const group = c as THREE.Group;
-    const mesh = c as THREE.Mesh;
-    if (group.isGroup && group.name) {
-      stats.bones++;
-      group.getWorldPosition(wv);
-      const p = group.position.toArray().map((v) => +v.toFixed(2));
-      const w = wv.toArray().map((v) => +v.toFixed(2));
-      bones.push({
-        name: group.name,
-        pos: `(${p[0]},${p[1]},${p[2]})`,
-        world: `(${w[0]},${w[1]},${w[2]})`,
-      });
-    }
-    if (mesh.isMesh) {
-      stats.meshes++;
-      stats.vertices += mesh.geometry?.attributes?.position?.count || 0;
-      stats.indices += mesh.geometry?.index?.count || 0;
-    }
-  });
-  console.table(bones);
-  console.log("统计:", stats);
-  return { bones, stats };
-};
+// 模块级 3D 渲染状态（治理红线 R1：零全局调试变量）
+let _scene3d: THREE.Scene | null = null;
+let _camera3d: THREE.PerspectiveCamera | null = null;
+let _renderer3d: THREE.WebGLRenderer | null = null;
+let _rootGroup3d: THREE.Group | null = null;
 
 /** 构建骨骼层级场景（bone group 树），返回组映射与根节点 */
 export function buildSceneMesh(spec: Spec3D): {
@@ -173,18 +132,18 @@ export async function renderModel3D(
   texIdx = 0,
 ): Promise<RenderModel3DHandle> {
   const scene = new THREE.Scene();
-  window.__scene3d = scene;
+  _scene3d = scene;
   scene.background = new THREE.Color(0x1a1b2e);
   const aspect = container.clientWidth / container.clientHeight || 1;
   const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
-  window.__camera3d = camera;
+  _camera3d = camera;
   camera.position.set(0, 80, -120);
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
     powerPreference: "high-performance",
     preserveDrawingBuffer: true,
   });
-  window.__renderer3d = renderer;
+  _renderer3d = renderer;
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -206,7 +165,7 @@ export async function renderModel3D(
   scene.add(new THREE.AxesHelper(60));
 
   const { boneGroupMap, rootGroup } = buildSceneMesh(spec);
-  window.__rootGroup3d = rootGroup;
+  _rootGroup3d = rootGroup;
   scene.add(rootGroup);
 
   for (const mg of spec.models || []) {
@@ -516,7 +475,7 @@ export async function renderModel3D(
   const onPointerClick = (e: MouseEvent): void => {
     if (!_hoveredBone) return;
     const boneId = _hoveredBone; // 局部收窄（闭包捕获变量 TS 不做控制流收窄）
-    if (window._3dOnBoneSelect) {
+    if (handle.onBoneSelect) {
       const bg = boneGroupMap.get(boneId);
       const wp = new THREE.Vector3();
       if (bg) bg.getWorldPosition(wp);
@@ -541,7 +500,7 @@ export async function renderModel3D(
           _hoveredMesh.position.z,
         ];
       }
-      window._3dOnBoneSelect({
+      handle.onBoneSelect({
         name: _boneNameMap.get(boneId) || boneId,
         path: getBonePath(boneId),
         parent: _boneParentMap.get(boneId) ?? null,
@@ -748,6 +707,10 @@ export async function renderModel3D(
       document.removeEventListener("fullscreenchange", _onFSChange);
       document.removeEventListener("webkitfullscreenchange", _onFSChange);
       renderer.dispose();
+      _renderer3d = null;
+      _scene3d = null;
+      _camera3d = null;
+      _rootGroup3d = null;
       container.innerHTML = "";
       scene.traverse((c) => {
         const mesh = c as THREE.Mesh;
@@ -763,20 +726,12 @@ export async function renderModel3D(
   return handle;
 }
 
-window.__screenshotPreview = () => {
-  const r = window.__renderer3d;
-  const s = window.__scene3d;
-  const c = window.__camera3d;
-  if (!r || !s || !c) {
+/** 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null */
+export function screenshotPreview(): string | null {
+  if (!_renderer3d || !_scene3d || !_camera3d) {
     console.warn("[screenshot] 无 3D 渲染器");
     return null;
   }
-  r.render(s, c);
-  return r.domElement.toDataURL("image/png").split(",")[1];
-};
-
-// 延迟加载批量截图
-window.__batchRepoScreenshots = async (repoRoot?: string) => {
-  const mod = await import("./screenshot-renderer.ts");
-  return mod.batchRepoScreenshots(repoRoot);
-};
+  _renderer3d.render(_scene3d, _camera3d);
+  return _renderer3d.domElement.toDataURL("image/png").split(",")[1];
+}

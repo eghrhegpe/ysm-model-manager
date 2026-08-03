@@ -152,22 +152,25 @@ export async function createLitematic3D(
     '<div style="font-size:32px">🧊</div><div>加载体素数据...</div><div style="width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden"><div style="height:100%;width:30%;background:var(--accent,#7c83ff);border-radius:2px;animation:ysm-prog 1.5s ease-in-out infinite"></div></div>';
   viewContainer.appendChild(loadingEl);
 
+  let aborted = false;
+  function escH(e: KeyboardEvent): void {
+    if (e.key === "Escape") closeOverlay();
+  }
   function closeOverlay(): void {
+    aborted = true;
+    document.removeEventListener("keydown", escH);
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
     _voxel3d = null;
   }
   closeBtn.onclick = closeOverlay;
-  document.addEventListener("keydown", function escH(e) {
-    if (e.key === "Escape") {
-      document.removeEventListener("keydown", escH);
-      closeOverlay();
-    }
-  });
+  document.addEventListener("keydown", escH);
 
   try {
     const App = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    if (aborted) return;
     const fn = (App as unknown as Record<string, (p: string) => Promise<string>>)[voxelFn || "GetLitematicVoxelData"];
     const jsonStr = await fn(path);
+    if (aborted) return;
     const data = JSON.parse(jsonStr) as VoxelData;
 
     if (!data || !data.groups || !data.groups.length) {
@@ -178,6 +181,7 @@ export async function createLitematic3D(
 
     const THREE = await import("three");
     const { OrbitControls } = await import("three/addons/controls/OrbitControls.js");
+    if (aborted) return;
 
     const sizeX = data.size[0] || 10;
     const sizeY = data.size[1] || 10;
@@ -549,6 +553,7 @@ export async function createLitematic3D(
     function escHandler(e: KeyboardEvent): void {
       if (e.key === "Escape") fullCleanup();
     }
+    document.removeEventListener("keydown", escH);
     document.addEventListener("keydown", escHandler);
     closeBtn.onclick = fullCleanup;
     _voxel3d = { cleanup: fullCleanup };

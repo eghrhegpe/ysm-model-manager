@@ -1367,3 +1367,32 @@ const dispName = renderDisplayName(k);
 ### 修复方案
 
 统一为 `preview-skeleton.js → loadModelData` 单路径，删除 320 行死代码。详见 `docs/release-notes/v1.8.11.md`。
+
+## 2026-08-03 新增 bug 记录（L2 审计 P1 三连修）
+
+> 来源：`docs/review-report.md` 首轮 L2 模块审计。三个 P1 均已修复并通过 typecheck + vite build + 契约测试。
+
+### 症状
+
+1. 侧栏「推送所选」**必然** 30s 后误报"推送超时"，且每次推送泄漏一批事件监听器
+2. 模型摘要卡的作者主页/B站/赞助链接可被恶意 .ysm 元数据注入（属性逃逸 + `javascript:` 链接）
+3. 体素 3D 预览加载期间按 ESC 关闭后，场景仍继续构建：rAF 循环 + 6 组 document/window 监听永久泄漏
+
+### 根因
+
+1. **`bus.once` off 错对象**（`bus.ts`）：注册的是 `wrapper`，移除时却找 `fn`，监听器永不移除。叠加 `sync:download:done` 类型契约为 `void`，handler-sync emit 不带 payload，而 sidebar 的 `onDone` 要求 `token` 匹配 → 永不命中 → 必超时
+2. **`summarize.ts` 私有 esc 不转义引号**却用于 `href="…"`/`title="…"` 属性插值，且链接无 scheme 校验
+3. **`preview-litematic-3d.ts` 的 ESC 监听在 try 块前注册**，加载期关闭只移除 overlay，不设中止标志；await 兑现后代码继续构建场景并注册全部监听
+
+### 修复
+
+1. `bus.ts` once 改 `this.off(event, wrapper)`；`sync:download:done` 类型补 `{token?, instanceName?}`，handler-sync 两处 emit 带 payload；sidebar 推送流改 `bus.on` + unsub，超时路径也清监听（僵尸监听器归零）
+2. `summarize.ts` 删私有 esc，import `utils/dom.ts` 完整版（含引号转义）；新增 `safeUrl()` 白名单仅放行 `http(s):`，6 处 href 全部套用
+3. `preview-litematic-3d.ts` 加 `aborted` 标志：`closeOverlay()` 置位并清 `escH`；三处 await（bindings/体素数据/three）后检查已中止即 return；场景构建完成后切换到 `escHandler + fullCleanup` 单一清理路径
+
+### 教训
+
+- `once` 这类总线原语必须有契约测试覆盖"触发一次即移除"语义
+- 事件类型表（bus.ts BusEvents）声明 `void` 时用 `as never` 绕过 = 放弃编译期保护，payload 需求应在类型表登记
+- esc 只能有一份实现（`utils/dom.ts`）；凡用于属性插值的转义必须含引号（全项目 14+ 处重复实现待收敛，见 review-report 系统性建议）
+- 「overlay 关闭」与「异步加载完成」是两个并发状态机，任何 await 后重建 DOM/注册监听前必须检查中止标志

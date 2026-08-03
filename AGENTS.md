@@ -16,7 +16,7 @@
 > 失败熔断：同一命令连续失败 2 次 → 停手进 Plan 分析原因，不无脑重试。
 > 只读 §一 文档地图列出的文件；地图没有的目录 = 不存在（`docs/archive/` 为冻结区，需追溯旧设计时才读）。
 > 新文档先过 `docs/core/NAMING_GUIDELINES.md` 命名检查，再确认归属目录。
-> 预定义 subagent skill 可直接调起（说 skill 名即可）：`release-notes-gen` / `review` / `doctor` / `ultrawork` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check` / `deep-init`。
+> 预定义 subagent skill 可直接调起（说 skill 名即可）：`release-notes-gen` / `review` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check` / `deep-init`。
 
 ## 去哪里查
 
@@ -250,6 +250,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 符号消费者 | `node scripts/check-consumers.mjs` | 孤儿导出审计（`--strict` 阻断 / `--min-consumers N` 过滤） |
 | 循环依赖 | `node scripts/check-circular.mjs` | frontend/js ESM import 图找环（ERROR 阻断） |
 | 布尔命名 | `node scripts/check-boolean-naming.mjs` | 布尔变量命名规范（`--strict` 阻断） |
+| 自动补 import | `node scripts/auto-import.mjs` | TS/JS 缺失 import 检测 + 建议（`--fix` 自动写入，歧义跳过；`--watch` 监听） |
 | 全量自检 | `node scripts/doctor.mjs` | 编译 + 构建 + 文件 + 红线 + Git 状态 |
 
 > **检查优先级**：改文档 → `link-checker`；改 ADR → `adr-check` + `check-adr-health`；改前端源码 → `check-circular` + `check-consumers` + `check-deadcode-baseline`；改资源类型 → `type-consistency`；改前端 → `review` + `comment-checker`；提交前 → `doctor`。

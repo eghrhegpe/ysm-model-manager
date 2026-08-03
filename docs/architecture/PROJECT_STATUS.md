@@ -12,6 +12,7 @@
 |----|------|
 | ADR 体系 | 12 篇（ADR-001 ~ ADR-013），索引见 [`adr/README.md`](../adr/README.md) |
 | 契约测试 | 6 个（`tests/`，Node .mjs），已接入 CI（`.github/workflows/release.yml`） |
+| 前端工具链 | 新增 `auto-import.mjs`：TS/JS 缺失 import 检测（`--fix` 自动写入，ADR-014 伴生工具，只读版试水已验证 0 误报 + 阳性对照通过） |
 | 技术栈 | **Wails v3**（ADR-001 已采纳；根 README 已同步） |
 | 提交纪律 | Conventional Commits + scope（`docs(adr)` / `chore(build)` / `refactor(app)` / `feat`） |
 | 文档漂移治理 | 断链已修复（AI_INDEX → knowledge/index；release-notes/README 已创建）；`link-checker` 可复扫 |

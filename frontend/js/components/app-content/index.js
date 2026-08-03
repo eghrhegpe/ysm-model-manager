@@ -275,7 +275,7 @@ class AppContent extends HTMLElement {
             const { recycleHTML } = await import("./tpl.js");
             container.innerHTML = recycleHTML();
             const { initRecycleBin } =
-              await import("../../features/recycle-bin.js");
+              await import("../../features/recycle-bin.ts");
             const recycleCleanup = initRecycleBin(this);
             this._unsubs = this._unsubs || [];
             if (recycleCleanup) this._unsubs.push(recycleCleanup);
@@ -803,7 +803,7 @@ class AppContent extends HTMLElement {
           });
         }
         const { tryFetchModels } =
-          await import("../../features/community/data.js");
+          await import("../../features/community/data.ts");
         let fetchDone = false;
         const result = await tryFetchModels(repo, mirror, (pct, label) => {
           if (fetchDone || _currentRepo !== repo) return;

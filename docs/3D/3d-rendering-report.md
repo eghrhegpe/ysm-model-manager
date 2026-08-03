@@ -118,9 +118,9 @@ YSM 文件 → [解码层] → BedrockModel JSON → [Go spec 层] → Three.js 
 | `go/geometry/archive.go` | ZIP/7z 解析 + ysm.json 读取 + TexSlot 分配 | ~288 |
 | `go/ysm/extracted.go` | 解压后目录的模型/纹理查找 | ~209 |
 | `go/types/bedrock.go` | BedrockModel/Bone2D/Cube2D 数据结构 | ~34 |
-| `frontend/js/utils/model3d.js` | Three.js 3D 渲染（场景/相机/光照/网格） | ~464 |
-| `frontend/js/utils/model3d-spec.js` | JS 兜底 Spec 构建（死代码，格式不兼容） | ~255 |
-| `frontend/js/utils/model2d.js` | Canvas 2D 骨骼线条图 | ~556 |
+| `frontend/js/utils/model3d.ts` | Three.js 3D 渲染（场景/相机/光照/网格） | ~464 |
+| `frontend/js/utils/model3d-spec.ts` | JS 兜底 Spec 构建（死代码，格式不兼容） | ~255 |
+| `frontend/js/utils/model2d.ts` | Canvas 2D 骨骼线条图 | ~556 |
 | `frontend/js/components/app-preview/preview-wasm.js` | WASM 解码 + ysm.json 解析 + 纹理排序 | ~513 |
 | `app_model.go` | Wails Binding 入口 + CLI fallback | ~237 |
 

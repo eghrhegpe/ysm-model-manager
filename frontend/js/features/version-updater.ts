@@ -1,7 +1,17 @@
-// ===== 版本更新检查 =====
+// ===== 版本更新检查（类型化版 — ADR-014 P3 features）=====
 import { bus } from "../bus.ts";
 import { esc } from "../dialogs/modal.ts";
 import { friendlyError } from "../utils/errors.ts";
+
+/** 更新信息（CheckUpdate 返回） */
+export interface UpdateInfo {
+  available: boolean;
+  latest: string;
+  current: string;
+  url?: string;
+  expectedHash?: string;
+  releaseNotes?: string;
+}
 
 /** 频次限制 key */
 const CHECK_KEY = "ysm_lastUpdateCheck";
@@ -9,44 +19,54 @@ const CHECK_KEY = "ysm_lastUpdateCheck";
 const CHECK_INTERVAL = 6 * 60 * 60 * 1000;
 
 /** 检查是否超过频次限制 */
-function canCheck() {
+function canCheck(): boolean {
   const last = parseInt(localStorage.getItem(CHECK_KEY) || "0", 10);
   return Date.now() - last > CHECK_INTERVAL;
 }
 
 /** 记录本次检查时间 */
-function markChecked() {
+function markChecked(): void {
   localStorage.setItem(CHECK_KEY, String(Date.now()));
 }
 
 /** 下载并应用更新（公共逻辑） */
-async function doUpdate(info, statusEl) {
+async function doUpdate(
+  info: UpdateInfo,
+  statusEl: HTMLElement | null,
+): Promise<void> {
   if (statusEl) {
     statusEl.textContent = "⬇️ 下载+安装中...";
   }
-  const { DoUpdate } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
-  const result = await DoUpdate(info.url, info.expectedHash || "");
+  const { DoUpdate } = await import(
+    "../../bindings/ysm-model-manager/internal/app/app.js"
+  );
+  const result = await DoUpdate(info.url || "", info.expectedHash || "");
   if (result !== "success") {
     throw new Error(result);
   }
   // 启动新进程后退出
-  const { RestartApplication } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
+  const { RestartApplication } = await import(
+    "../../bindings/ysm-model-manager/internal/app/app.js"
+  );
   await RestartApplication();
 }
 
 /** 弹出更新确认对话框（手动/静默共用） — 含格式化的更新日志区域 */
-async function promptUpdate(info, statusEl) {
-  const ok = await new Promise((resolve) => {
+async function promptUpdate(
+  info: UpdateInfo,
+  statusEl: HTMLElement | null,
+): Promise<void> {
+  const ok = await new Promise<boolean>((resolve) => {
     const overlay = document.createElement("div");
     overlay.className = "dlg-overlay";
     overlay.tabIndex = 0;
-    overlay.onclick = (e) => {
+    overlay.onclick = (e: MouseEvent): void => {
       if (e.target === overlay) {
         overlay.remove();
         resolve(false);
       }
     };
-    overlay.addEventListener("keydown", (e) => {
+    overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
         overlay.remove();
         resolve(false);
@@ -81,11 +101,11 @@ async function promptUpdate(info, statusEl) {
     document.body.appendChild(overlay);
     overlay.focus();
 
-    box.querySelector("#um-cancel").onclick = () => {
+    (box.querySelector("#um-cancel") as HTMLElement).onclick = (): void => {
       overlay.remove();
       resolve(false);
     };
-    box.querySelector("#um-ok").onclick = () => {
+    (box.querySelector("#um-ok") as HTMLElement).onclick = (): void => {
       overlay.remove();
       resolve(true);
     };
@@ -108,12 +128,14 @@ async function promptUpdate(info, statusEl) {
  * 启动时静默检查更新（受 6h 频次限制）
  * 有新版本则在右下角显示可点击的 toast 通知
  */
-export async function checkUpdateSilent() {
+export async function checkUpdateSilent(): Promise<void> {
   if (!canCheck()) return;
   markChecked();
   try {
-    const { CheckUpdate } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
-    const info = await CheckUpdate();
+    const { CheckUpdate } = await import(
+      "../../bindings/ysm-model-manager/internal/app/app.js"
+    );
+    const info = (await CheckUpdate()) as UpdateInfo;
     if (info?.available) {
       bus.emit("toast:show", {
         msg: `📦 发现新版本 ${info.latest}（当前 ${info.current}）— 点击查看`,
@@ -130,16 +152,18 @@ export async function checkUpdateSilent() {
 /**
  * 手动检查更新（设置页按钮）
  */
-export function initVersionUpdater(root) {
+export function initVersionUpdater(root: Document | ShadowRoot): void {
   root
     .getElementById("set-check-update")
-    ?.addEventListener("click", async () => {
-      const btn = root.getElementById("set-check-update");
+    ?.addEventListener("click", async (): Promise<void> => {
+      const btn = root.getElementById("set-check-update") as HTMLButtonElement;
       btn.textContent = "⏳ 检查中...";
       btn.disabled = true;
       try {
-        const { CheckUpdate } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
-        const info = await CheckUpdate();
+        const { CheckUpdate } = await import(
+          "../../bindings/ysm-model-manager/internal/app/app.js"
+        );
+        const info = (await CheckUpdate()) as UpdateInfo;
         markChecked();
         if (!info.available) {
           bus.emit("toast:show", {

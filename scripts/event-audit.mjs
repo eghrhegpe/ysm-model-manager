@@ -4,29 +4,20 @@
  * 由 scripts/event-audit.py 迁移（2026-08-03），逻辑逐点保真。
  */
 import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { SRC_DIR, walk, relPosix } from './_lib/scan-files.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CORRECT_FILE = 'frontend/js/components/app-content/index.js';
-
-function walk(dir) {
-  const out = [];
-  if (!fs.existsSync(dir)) return out;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...walk(full));
-    else if (entry.isFile() && entry.name.endsWith('.js')) out.push(full);
-  }
-  return out;
-}
+// ADR-014 后 index.js 可能迁移为 index.ts，两者都视为合规位置
+const CORRECT_FILES = new Set([
+  'frontend/js/components/app-content/index.js',
+  'frontend/js/components/app-content/index.ts',
+]);
 
 function scanEvents() {
   /** 扫描所有 EventsOn 和 bus.on 注册位置。 */
   const issues = [];
-  const files = walk(path.join(ROOT, 'frontend/js')).sort();
+  const files = walk(SRC_DIR).sort();
   for (const f of files) {
-    const rel = path.relative(ROOT, f).replace(/\\/g, '/');
+    const rel = relPosix(f);
     const text = fs.readFileSync(f, 'utf-8');
     const lines = text.split('\n');
     for (let i = 0; i < lines.length; i++) {
@@ -36,7 +27,7 @@ function scanEvents() {
         let eventName = '';
         const m = stripped.match(/EventsOn\("([^"]+)"/);
         if (m) eventName = m[1];
-        const safe = rel === CORRECT_FILE;
+        const safe = CORRECT_FILES.has(rel);
         if (!safe) {
           issues.push({
             file: rel, line: i + 1, code: stripped.slice(0, 80),
@@ -53,7 +44,7 @@ function scanEvents() {
         issues.push({
           file: rel, line: i + 1, code: stripped.slice(0, 80),
           event: eventName, type: 'bus.on',
-          safe_location: rel === CORRECT_FILE,
+          safe_location: CORRECT_FILES.has(rel),
         });
       }
     }

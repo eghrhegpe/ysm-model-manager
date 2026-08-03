@@ -127,7 +127,7 @@ function applyUIPrefs() {
   await initTheme();
   applyUIPrefs();
   // 静默检查更新（不阻塞界面）
-  const { checkUpdateSilent } = await import("./features/version-updater.js");
+  const { checkUpdateSilent } = await import("./features/version-updater.ts");
   checkUpdateSilent().catch((e) => console.warn("[updater] 静默检查失败:", e));
 })();
 

@@ -21,7 +21,7 @@ name: 事件总线 bus.js         # 人类可读名称
 tier: architecture | leaf    # architecture=核心架构, leaf=叶子节点
 category: core               # core|go|ui|feature|utils|config
 source_files:                # 必须真实存在于磁盘
-  - frontend/js/bus.js
+  - frontend/js/bus.ts
 use_when:                    # 用户自然语言关键词
   - 事件
   - 事件总线

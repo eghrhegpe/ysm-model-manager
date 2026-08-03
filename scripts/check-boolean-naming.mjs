@@ -23,12 +23,7 @@
  * 退出码：ERROR 数 > 0 → 1；否则 0。
  */
 import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
-const SRC_DIR = path.join(ROOT, 'frontend/js');
+import { SRC_DIR, walk, relPosix } from './_lib/scan-files.mjs';
 
 const ARGS = new Set(process.argv.slice(2));
 const JSON_OUT = ARGS.has('--json');
@@ -46,20 +41,6 @@ const VALID_PREFIXES = new Set([
 
 const findings = [];
 
-function walk(dir, out = []) {
-  for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (d.name.startsWith('.') || d.name === 'node_modules') continue;
-    const p = path.join(dir, d.name);
-    if (d.isDirectory()) {
-      if (d.name === 'css') continue; // 样式目录不扫
-      walk(p, out);
-    } else if (d.name.endsWith('.js')) {
-      out.push(p);
-    }
-  }
-  return out;
-}
-
 function checkName(name, loc) {
   if (name.startsWith('_')) return; // 私有变量豁免（闭包状态命名自由）
   if (/^[a-zA-Z]$/.test(name)) return; // 单字母惯用短名
@@ -73,7 +54,7 @@ function checkName(name, loc) {
 
 function scanFile(file) {
   const lines = fs.readFileSync(file, 'utf-8').split(/\r?\n/);
-  const rel = path.relative(ROOT, file).replace(/\\/g, '/');
+  const rel = relPosix(file);
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const loc = `${rel}:${i + 1}`;

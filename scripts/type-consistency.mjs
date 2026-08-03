@@ -5,9 +5,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { getRoot } from './_lib/scan-files.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = getRoot();
 
 function readResourceTypes() {
   const fp = path.join(ROOT, 'resource_types.json');
@@ -20,10 +20,11 @@ function readResourceTypes() {
 }
 
 function readJsExtensions() {
-  const fp = path.join(ROOT, 'frontend/js/utils/extensions.js');
+  // ADR-014 后 extensions.ts 取代 extensions.js（.test.js 保留供 vitest）
+  const fp = path.join(ROOT, 'frontend/js/utils/extensions.ts');
   const text = fs.readFileSync(fp, 'utf-8');
-  // 提取 RESOURCE_EXTS 对象
-  const m = text.match(/export const RESOURCE_EXTS = \{([^}]+)\}/s);
+  // 提取 RESOURCE_EXTS 对象（TS 版带类型注解 `: Record<...>`，需宽容中间部分）
+  const m = text.match(/export const RESOURCE_EXTS(?::[^{=]+)? = \{([^}]+)\}/s);
   if (!m) return {};
   const body = m[1];
   const types = {};

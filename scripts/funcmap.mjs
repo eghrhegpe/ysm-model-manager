@@ -10,14 +10,15 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function walk(dir, suffix, skipNodeModules = true) {
+  const suffixes = Array.isArray(suffix) ? suffix : [suffix];
   const out = [];
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (skipNodeModules && entry.name === 'node_modules') continue;
-      out.push(...walk(full, suffix, skipNodeModules));
-    } else if (entry.isFile() && entry.name.endsWith(suffix)) {
+      out.push(...walk(full, suffixes, skipNodeModules));
+    } else if (entry.isFile() && suffixes.some((s) => entry.name.endsWith(s))) {
       out.push(full);
     }
   }
@@ -237,14 +238,14 @@ for (const p of goScanPaths) {
   }
 }
 
-// 扫描 JS
+// 扫描 JS（ADR-014 后 .js 与 .ts 并存）
 const jsScanPaths = jsPaths || ['frontend/js'];
 for (const p of jsScanPaths) {
   const fp = path.join(ROOT, p);
-  if (fs.existsSync(fp) && fs.statSync(fp).isFile() && fp.endsWith('.js')) {
+  if (fs.existsSync(fp) && fs.statSync(fp).isFile() && /\.(js|ts)$/.test(fp)) {
     allEntries.push(...extractJsComments(fp));
   } else if (fs.existsSync(fp) && fs.statSync(fp).isDirectory()) {
-    for (const f of walk(fp, '.js')) {
+    for (const f of walk(fp, ['.js', '.ts'])) {
       allEntries.push(...extractJsComments(f));
     }
   }

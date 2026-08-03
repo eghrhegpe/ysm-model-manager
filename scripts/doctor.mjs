@@ -57,13 +57,33 @@ function checkFrontendBuild() {
   }
 }
 
+function checkTypeScript() {
+  console.log('\n=== TypeScript Check ===');
+  // ADR-014：前端 .ts 类型检查（tsc --noEmit，见 frontend/package.json typecheck）
+  const which = run(['which', 'npx']);
+  if (which.rc !== 0) {
+    console.log(`  ${WARN} npx not found in PATH — skip typecheck`);
+    console.log('        run manually: cd frontend && npx tsc --noEmit');
+    return;
+  }
+  const { rc, out } = run(['npx', 'tsc', '--noEmit'], path.join(ROOT, 'frontend'));
+  if (rc === 0) {
+    console.log(`  ${PASS} tsc --noEmit passed`);
+  } else {
+    console.log(`  ${FAIL} tsc --noEmit failed (${out.trim().split('\n').length} errors)`);
+    for (const line of out.trim().split('\n').slice(-5)) {
+      console.log(`    ${line}`);
+    }
+  }
+}
+
 function checkKeyFiles() {
   console.log('\n=== Key Files ===');
   const files = [
     'main.go', 'wails.json',
     'internal/app/app.go', 'internal/app/resource_bindings.go',
     'resource_types.json', 'go.mod', 'reasonix.toml', 'AGENTS.md',
-    'frontend/index.html', 'frontend/js/bus.js', 'frontend/js/app-modules.js',
+    'frontend/index.html', 'frontend/js/bus.ts', 'frontend/js/app-modules.js',
   ];
   for (const f of files) {
     const p = path.join(ROOT, f);
@@ -76,7 +96,7 @@ function checkGovernance() {
   let issues = 0;
 
   // 规则 1: window.__* 全局变量
-  const r1 = run(['grep', '-rn', 'window\\.__', path.join(ROOT, 'frontend/js/'), '--include=*.js', '-l']).out.trim();
+  const r1 = run(['grep', '-rn', 'window\\.__', path.join(ROOT, 'frontend/js/'), '--include=*.js', '--include=*.ts', '-l']).out.trim();
   if (r1) {
     issues += 1;
     console.log(`  ${WARN} [rule1] window.__ global vars:`);
@@ -84,7 +104,7 @@ function checkGovernance() {
   }
 
   // 规则 5: 硬编码颜色
-  const r5 = run(['grep', '-rn', '#[0-9a-f]\\{6\\}\\b', path.join(ROOT, 'frontend/'), '--include=*.js', '--include=*.css']).out.trim();
+  const r5 = run(['grep', '-rn', '#[0-9a-f]\\{6\\}\\b', path.join(ROOT, 'frontend/'), '--include=*.js', '--include=*.ts', '--include=*.css']).out.trim();
   if (r5) {
     issues += 1;
     const lines = r5.split('\n');
@@ -93,7 +113,7 @@ function checkGovernance() {
   }
 
   // 规则 8: innerHTML 拼接
-  const r8 = run(['grep', '-rn', 'innerHTML\\s*=', path.join(ROOT, 'frontend/js/'), '--include=*.js']).out.trim();
+  const r8 = run(['grep', '-rn', 'innerHTML\\s*=', path.join(ROOT, 'frontend/js/'), '--include=*.js', '--include=*.ts']).out.trim();
   if (r8) {
     issues += 1;
     console.log(`  ${WARN} [rule8] innerHTML concat:`);
@@ -101,7 +121,7 @@ function checkGovernance() {
   }
 
   // Wails 调用检查
-  const w = run(['grep', '-rn', 'window\\.go\\.main\\.App', path.join(ROOT, 'frontend/js/'), '--include=*.js']).out.trim();
+  const w = run(['grep', '-rn', 'window\\.go\\.main\\.App', path.join(ROOT, 'frontend/js/'), '--include=*.js', '--include=*.ts']).out.trim();
   if (w) {
     issues += 1;
     console.log(`  ${WARN} [Wails] direct window.go calls:`);
@@ -163,6 +183,7 @@ function checkStaticAnalysis() {
 console.log('========== YSM Doctor ==========');
 checkGoBuild();
 checkFrontendBuild();
+checkTypeScript();
 checkKeyFiles();
 checkGovernance();
 checkConfig();

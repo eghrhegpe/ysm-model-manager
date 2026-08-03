@@ -55,26 +55,26 @@ function runChecks() {
   };
 
   add('R1', 'window.__ vars',
-    rg('window\\.__', 'frontend/js', ['*.js']),
+    rg('window\\.__', 'frontend/js', ['*.js', '*.ts']),
     'let + getter, PageStore');
 
   add('R2', 'repoRoot name',
-    rg('repoRoot', ['.', 'frontend/js'], ['*.go', '*.js', '*.json']),
+    rg('repoRoot', ['.', 'frontend/js'], ['*.go', '*.js', '*.ts', '*.json']),
     'cfg.FilesRoot / filesRoot');
 
   add('R3', 'callback .file() API',
-    rg('\\.file\\s*\\(', 'frontend/js', ['*.js']),
+    rg('\\.file\\s*\\(', 'frontend/js', ['*.js', '*.ts']),
     'new Promise(...)');
 
   add('R4', 'display none/block',
-    rg('display:\\s*(none|block)', 'frontend', ['*.js', '*.css']),
+    rg('display:\\s*(none|block)', 'frontend', ['*.js', '*.ts', '*.css']),
     'opacity/transform');
 
   add('R5', 'hardcoded colors',
-    rg('#[0-9a-f]{6}\\b', 'frontend', ['*.js', '*.css'])
-      .concat(rg('#[0-9a-f]{3}\\b', 'frontend', ['*.js', '*.css']))
-      .concat(rg('rgba?\\(', 'frontend', ['*.js', '*.css']))
-      .concat(rg('hsla?\\(', 'frontend', ['*.js', '*.css'])),
+    rg('#[0-9a-f]{6}\\b', 'frontend', ['*.js', '*.ts', '*.css'])
+      .concat(rg('#[0-9a-f]{3}\\b', 'frontend', ['*.js', '*.ts', '*.css']))
+      .concat(rg('rgba?\\(', 'frontend', ['*.js', '*.ts', '*.css']))
+      .concat(rg('hsla?\\(', 'frontend', ['*.js', '*.ts', '*.css'])),
     'CSS vars');
 
   add('R6', 'JS in public/',
@@ -82,35 +82,35 @@ function runChecks() {
     'ESM import');
 
   add('R7', 'rtype magic strings',
-    rg('"ysm"|"mmd-skin"|"vrchat-avatar"', 'frontend/js', ['*.js']),
+    rg('"ysm"|"mmd-skin"|"vrchat-avatar"', 'frontend/js', ['*.js', '*.ts']),
     'RESOURCE_TYPES');
 
   add('R8', 'innerHTML concat',
-    rg('innerHTML\\s*=', 'frontend/js', ['*.js']),
+    rg('innerHTML\\s*=', 'frontend/js', ['*.js', '*.ts']),
     'esc()');
 
   add('R9', 'manual sidebar',
-    rg('sidebarItem|tb-btn.*title=', 'frontend', ['*.js']),
+    rg('sidebarItem|tb-btn.*title=', 'frontend', ['*.js', '*.ts']),
     'renderSidebar()');
 
   add('W1', 'backslash paths',
-    rg('\\\\', 'frontend/js', ['*.js']).filter((l) => !l.includes('node_modules') && !l.includes('bus.js') && !l.includes('font-display')),
+    rg('\\\\', 'frontend/js', ['*.js', '*.ts']).filter((l) => !l.includes('node_modules') && !l.includes('bus.js') && !l.includes('bus.ts') && !l.includes('font-display')),
     '/ instead of \\');
 
   add('W2', 'window.go.main.App calls',
-    rg('window\\.go\\.main\\.App', 'frontend/js', ['*.js']),
+    rg('window\\.go\\.main\\.App', 'frontend/js', ['*.js', '*.ts']),
     'getApp()');
 
   add('W3', 'empty JSDoc',
-    rg('@param\\s+\\{[^}]*\\}\\s+\\w+\\s*-?\\s*$|@returns\\s*\\{[^}]*\\}\\s*$', 'frontend/js', ['*.js']));
+    rg('@param\\s+\\{[^}]*\\}\\s+\\w+\\s*-?\\s*$|@returns\\s*\\{[^}]*\\}\\s*$', 'frontend/js', ['*.js', '*.ts']));
 
   add('W4', 'TODO no ticket',
     rg('TODO|FIXME|HACK|XXX', ['.', 'go'], ['*.go']).filter((l) => !l.includes('#') && !l.includes('nolint')));
 
   add('W5', 'async DOM race (callback sets innerHTML without stale guard)',
-    rg('=>\\s*\\{[^}]*innerHTML\\s*=', 'frontend/js', ['*.js'])
-      .concat(rg('\\.(then|finally)\\s*\\(.*innerHTML\\s*=', 'frontend/js', ['*.js']))
-      .concat(rg('setTimeout\\s*\\(.*innerHTML\\s*=', 'frontend/js', ['*.js'])),
+    rg('=>\\s*\\{[^}]*innerHTML\\s*=', 'frontend/js', ['*.js', '*.ts'])
+      .concat(rg('\\.(then|finally)\\s*\\(.*innerHTML\\s*=', 'frontend/js', ['*.js', '*.ts']))
+      .concat(rg('setTimeout\\s*\\(.*innerHTML\\s*=', 'frontend/js', ['*.js', '*.ts'])),
     'DOM writes in async callbacks need stale-request guards (fetchDone flag)');
 
   return results;

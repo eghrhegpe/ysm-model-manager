@@ -5,7 +5,7 @@ tier: architecture
 category: config
 source_files:
   - resource_types.json
-  - frontend/js/services/registry.js
+  - frontend/js/services/registry.ts
 use_when:
   - 资源类型
   - 注册表
@@ -29,8 +29,8 @@ use_when:
 ## 与其他子系统关系
 
 - `go/types/`: Go 端注册表加载
-- `frontend/js/utils/resource-types.js`: 前端类型工具
-- `frontend/js/utils/resource-registry.js`: 前端资源注册服务
+- `frontend/js/utils/resource-types.ts`: 前端类型工具
+- `frontend/js/utils/resource-registry.ts`: 前端资源注册服务
 
 ## 不变量
 

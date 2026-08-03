@@ -4,7 +4,7 @@
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
  *
- * 扫描 frontend/js/ 下所有 .js：
+ * 扫描 frontend/js/ 下所有 .js/.ts（ADR-014 后 TS 与 JS 并存）：
  *   1. 提取每个模块的导出符号（export const/function/class/export { a, b }）
  *   2. 解析跨文件 import 消费（import { a } from / import a from）
  *   3. 统计每个导出符号的消费者数量
@@ -21,12 +21,7 @@
  * 退出码：孤儿导出 > 0 → 1；否则 0（--min-consumers 过滤后同规则）。
  */
 import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
-const SRC_DIR = path.join(ROOT, 'frontend/js');
+import { SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.mjs';
 
 const ARGS = new Set(process.argv.slice(2));
 const JSON_OUT = ARGS.has('--json');
@@ -34,41 +29,11 @@ const STRICT = ARGS.has('--strict');
 const minIdx = [...ARGS].indexOf('--min-consumers');
 const MIN_CONSUMERS = minIdx >= 0 ? parseInt([...ARGS][minIdx + 1], 10) || 0 : 0;
 
-// ── 模块收集 ──────────────────────────────────────────
-
-function walk(dir, out = []) {
-  for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (d.name.startsWith('.') || d.name === 'node_modules') continue;
-    const p = path.join(dir, d.name);
-    if (d.isDirectory()) {
-      if (d.name === 'css') continue;
-      walk(p, out);
-    } else if (d.name.endsWith('.js')) {
-      out.push(p);
-    }
-  }
-  return out;
-}
-
 // ── 导出/导入解析 ─────────────────────────────────────
 
 const EXPORT_NAMED_RE = /export\s+(?:async\s+)?(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/g;
 const EXPORT_BLOCK_RE = /export\s*\{([^}]*)\}(?!\s*from)/g;
 const IMPORT_RE = /import\s+(?:([A-Za-z_$][\w$]*)\s*,?\s*)?(?:\{([^}]*)\})?\s*from\s*['"]([^'"]+)['"]/g;
-
-function resolveImport(fromFile, spec, moduleSet) {
-  if (!spec.startsWith('./') && !spec.startsWith('../')) return null;
-  const base = path.dirname(fromFile);
-  const candidates = [path.join(base, spec)];
-  if (!path.extname(spec)) {
-    candidates.push(path.join(base, `${spec}.js`), path.join(base, spec, 'index.js'));
-  }
-  for (const c of candidates) {
-    const resolved = path.resolve(c);
-    if (moduleSet.has(resolved)) return resolved;
-  }
-  return null;
-}
 
 /** 提取模块导出符号（含行号）。 */
 function extractExports(file, text) {
@@ -154,7 +119,7 @@ function main() {
       const consumers = consumed.get(`${sym}@${file}`) || 0;
       report.push({
         symbol: sym,
-        file: path.relative(ROOT, file).replace(/\\/g, '/'),
+        file: relPosix(file),
         line,
         consumers,
       });

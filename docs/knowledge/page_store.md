@@ -4,7 +4,7 @@ name: 页面状态管理 page-store.js
 tier: architecture
 category: core
 source_files:
-  - frontend/js/core/page-store.js
+  - frontend/js/core/page-store.ts
 use_when:
   - 页面
   - 当前页

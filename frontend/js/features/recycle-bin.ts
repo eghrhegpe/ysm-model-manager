@@ -1,14 +1,22 @@
-// ===== 回收站管理 =====
+// ===== 回收站管理（类型化版 — ADR-014 P3 features）=====
 import { bus } from "../bus.ts";
 import { modalConfirm } from "../dialogs/modal.ts";
 import { renderDisplayName } from "../utils/display.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { loadResourceRegistry } from "../utils/resource-registry.ts";
 
-export function initRecycleBin(app) {
+/** app-content 组件实例（initRecycleBin 依赖的成员） */
+export interface RecycleHost {
+  _root: ShadowRoot;
+  _esc: (s: string) => string;
+  _fmtSize: (s: number) => string;
+}
+
+/** 初始化回收站管理，返回清理函数 */
+export function initRecycleBin(app: RecycleHost): () => void {
   const root = app._root;
-  const esc = (s) => app._esc(s);
-  const fmtSize = (s) => app._fmtSize(s);
+  const esc = (s: string): string => app._esc(s);
+  const fmtSize = (s: number): string => app._fmtSize(s);
   root
     .getElementById("recy-refresh")
     ?.addEventListener("click", () => loadRecycleBin());
@@ -22,8 +30,10 @@ export function initRecycleBin(app) {
     });
     if (!confirmed) return;
     try {
-      const { LoadAppConfig, EmptyRecycleBin } =
-        await import("../../bindings/ysm-model-manager/internal/app/app.js");
+      const { LoadAppConfig, EmptyRecycleBin } = await import(
+        "../../bindings/ysm-model-manager/internal/app/app.js"
+      );
+      void LoadAppConfig;
       const n = await EmptyRecycleBin("");
       bus.emit("toast:show", {
         msg: `♻️ 已清空 ${n} 个文件`,
@@ -43,9 +53,9 @@ export function initRecycleBin(app) {
   });
   // 监听全局类型切换
   let currentType = localStorage.getItem("repo_rtype") || "ysm";
-  let _loadingAbort = null;
+  let _loadingAbort: (() => void) | null = null;
 
-  let unsubRtype = bus.on("repo:rtype-changed", (rt) => {
+  const unsubRtype = bus.on("repo:rtype-changed", (rt) => {
     if (rt && rt !== currentType) {
       currentType = rt;
       loadRecycleBin();
@@ -54,7 +64,7 @@ export function initRecycleBin(app) {
 
   loadRecycleBin();
 
-  async function loadRecycleBin() {
+  async function loadRecycleBin(): Promise<void> {
     // 取消过时的请求
     if (_loadingAbort) {
       _loadingAbort();
@@ -72,11 +82,13 @@ export function initRecycleBin(app) {
         DeleteFromRecycle,
         EmptyRecycleBin,
         GetRepoRoot,
-      } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
+      } = await import(
+        "../../bindings/ysm-model-manager/internal/app/app.js"
+      );
 
       // 获取当前类型的根目录（用于路径过滤）
       const currentRoot = await GetRepoRoot(currentType);
-      const allEntries = await ListRecycleBin("");
+      const allEntries = (await ListRecycleBin("")) || [];
 
       // 过滤：只显示路径在当前类型根目录下的文件
       const entries = currentRoot
@@ -114,15 +126,16 @@ export function initRecycleBin(app) {
         .join("");
 
       // 恢复按钮
-      list.querySelectorAll(".recy-restore").forEach((btn) => {
-        btn.onclick = async () => {
+      list.querySelectorAll(".recy-restore").forEach((btnEl) => {
+        const btn = btnEl as HTMLElement;
+        btn.onclick = async (): Promise<void> => {
           const item = btn.closest(".recy-item");
           if (item) {
             item.classList.add("leaving");
             await new Promise((r) => setTimeout(r, 150));
           }
           try {
-            await RestoreFromRecycle(btn.dataset.path, "");
+            await RestoreFromRecycle(btn.dataset.path || "", "");
             bus.emit("toast:show", {
               msg: "✅ 已恢复",
               duration: 2000,
@@ -143,8 +156,9 @@ export function initRecycleBin(app) {
       });
 
       // 删除按钮
-      list.querySelectorAll(".recy-del").forEach((btn) => {
-        btn.onclick = async () => {
+      list.querySelectorAll(".recy-del").forEach((btnEl) => {
+        const btn = btnEl as HTMLElement;
+        btn.onclick = async (): Promise<void> => {
           const confirmed = await modalConfirm({
             title: "删除文件",
             icon: "🗑️",
@@ -159,7 +173,7 @@ export function initRecycleBin(app) {
             await new Promise((r) => setTimeout(r, 150));
           }
           try {
-            await DeleteFromRecycle(btn.dataset.path);
+            await DeleteFromRecycle(btn.dataset.path || "");
             loadRecycleBin();
             bus.emit("toast:show", {
               msg: "✅ 已删除",
@@ -184,8 +198,8 @@ export function initRecycleBin(app) {
           el.classList.contains("recy-del")
         )
           return;
-        el.addEventListener("click", () => {
-          const path = el.dataset.path;
+        el.addEventListener("click", (): void => {
+          const path = (el as HTMLElement).dataset.path;
           if (path) bus.emit("model:select", { path });
         });
       });

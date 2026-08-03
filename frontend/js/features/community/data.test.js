@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { showProgress } from "./data.js";
+import { showProgress } from "./data.ts";
 
 describe("showProgress", () => {
   it("renders progress box with label", () => {

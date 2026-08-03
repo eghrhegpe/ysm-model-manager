@@ -23,7 +23,7 @@ import("./components/app-tree/index.ts").catch((e) =>
 import("./components/app-sidebar/index.ts").catch((e) =>
   console.warn("[module] 组件加载失败: app-sidebar", e),
 );
-import("./components/app-content/index.js").catch((e) =>
+import("./components/app-content/index.ts").catch((e) =>
   console.warn("[module] 组件加载失败: app-content", e),
 );
 import("./components/app-resource-manager/index.ts").catch((e) =>

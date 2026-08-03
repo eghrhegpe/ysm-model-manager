@@ -4,12 +4,15 @@ import { renderDisplayName } from "../../../utils/display.ts";
 import { getApp } from "../../../wails/app.ts";
 import { loadResourceRegistry } from "../../../utils/resource-registry.ts";
 
+/** 转义函数签名（与组件 _esc 一致） */
+type EscFn = (s: unknown) => string;
+
 /**
  * 初始化诊断页所有功能
- * @param {ShadowRoot} root - 组件 shadow root
- * @param {Function} esc - HTML 转义函数
+ * @param root - 组件 shadow root
+ * @param esc - HTML 转义函数
  */
-export function initDiagnostics(root, esc) {
+export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
   root
     .getElementById("diag-refresh")
     ?.addEventListener("click", () => loadDiagnosticsLogs(root, esc));
@@ -29,19 +32,21 @@ export function initDiagnostics(root, esc) {
   // 左栏按钮切换
   root.querySelectorAll(".diag-btn[data-diag]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const name = btn.dataset.diag;
+      const name = (btn as HTMLElement).dataset.diag;
       root
         .querySelectorAll(".diag-btn[data-diag]")
         .forEach((b) => b.classList.toggle("active", b === btn));
-      const logPanel = root.getElementById("diag-log");
-      const conflictPanel = root.getElementById("diag-conflict");
-      logPanel.style.display = name === "log" ? "" : "none";
-      conflictPanel.style.display = name === "conflict" ? "" : "none";
+      const logPanel = root.getElementById("diag-log") as HTMLElement | null;
+      const conflictPanel = root.getElementById("diag-conflict") as HTMLElement | null;
+      if (logPanel) logPanel.style.display = name === "log" ? "" : "none";
+      if (conflictPanel) conflictPanel.style.display = name === "conflict" ? "" : "none";
       // 重启入场动画
       const activePanel = name === "log" ? logPanel : conflictPanel;
-      activePanel.style.animation = "none";
-      activePanel.offsetHeight;
-      activePanel.style.animation = "";
+      if (activePanel) {
+        activePanel.style.animation = "none";
+        void activePanel.offsetHeight;
+        activePanel.style.animation = "";
+      }
       if (name === "log") loadDiagnosticsLogs(root, esc);
     });
   });
@@ -60,9 +65,9 @@ export function initDiagnostics(root, esc) {
   });
 
   // 日志搜索
-  const logSearch = root.getElementById("diag-log-search");
+  const logSearch = root.getElementById("diag-log-search") as HTMLInputElement | null;
   if (logSearch) {
-    let timer;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     logSearch.addEventListener("input", () => {
       clearTimeout(timer);
       timer = setTimeout(() => loadDiagnosticsLogs(root, esc), 300);
@@ -70,12 +75,21 @@ export function initDiagnostics(root, esc) {
   }
 }
 
-async function loadDiagnosticsLogs(root, esc) {
+/** 绑定 ImportLog（仅用到的字段） */
+interface ImportLogLike {
+  Status?: string;
+  Timestamp?: string | number;
+  ModelName?: string;
+  TargetDir?: string;
+  ErrorMsg?: string;
+}
+
+async function loadDiagnosticsLogs(root: ShadowRoot, esc: EscFn): Promise<void> {
   const list = root.getElementById("diag-log-list");
   if (!list) return;
   try {
     const { GetImportLogs } = await getApp();
-    const logs = await GetImportLogs();
+    const logs: ImportLogLike[] = (await GetImportLogs()) || [];
     if (!logs || !logs.length) {
       list.innerHTML =
         '<div class="stat-row diag-stat diag-stat-muted">暂无日志</div>';
@@ -83,17 +97,16 @@ async function loadDiagnosticsLogs(root, esc) {
     }
     // 读筛选状态
     const activeBtn = root.querySelector(".diag-log-fbtn.active");
-    const filter = activeBtn ? activeBtn.dataset.status : "all";
-    const search = (root.getElementById("diag-log-search")?.value || "")
-      .trim()
-      .toLowerCase();
+    const filter = activeBtn ? (activeBtn as HTMLElement).dataset.status : "all";
+    const search = (root.getElementById("diag-log-search") as HTMLInputElement | null)
+      ?.value?.trim().toLowerCase() || "";
 
     const filtered = logs
       .slice(-500)
       .reverse()
       .filter((l) => {
         if (filter !== "all" && l.Status !== filter) return false;
-        if (search && !l.ModelName.toLowerCase().includes(search)) return false;
+        if (search && !(l.ModelName || "").toLowerCase().includes(search)) return false;
         return true;
       });
 
@@ -115,7 +128,7 @@ async function loadDiagnosticsLogs(root, esc) {
             })
           : "";
         const msg =
-          renderDisplayName(l.ModelName) +
+          renderDisplayName(l.ModelName || "") +
           (l.TargetDir ? "<br>📂 " + esc(l.TargetDir) : "") +
           (l.ErrorMsg
             ? "<br>❌ " +
@@ -124,8 +137,11 @@ async function loadDiagnosticsLogs(root, esc) {
                 "<br>$1：",
               )
             : "");
+        // ⚠️ 原 JS 的 `${status}` 引用了未定义变量（模板串求值抛 ReferenceError，
+        // 被外层 catch 吞掉 → 日志列表永远显示「加载日志失败」）。TS 编译期暴露，
+        // 按意图改为 l.Status（与 statusLabel 同源）
         return `<div class="log-row" style="animation-delay:${Math.min(i * 20, 400)}ms">
-<span class="log-status ${status}">${statusLabel}</span>
+<span class="log-status ${l.Status || ""}">${statusLabel}</span>
 <span class="log-msg">${msg}</span>
 <span class="log-time">${t}</span>
 </div>`;
@@ -137,17 +153,25 @@ async function loadDiagnosticsLogs(root, esc) {
   }
 }
 
-export async function startDedup(root, esc, rtype) {
+/** 去重 root 的最小接口（index.js 传 { getElementById: () => list } 包装对象） */
+interface DedupRoot {
+  getElementById(id: string): HTMLElement | null;
+}
+
+export async function startDedup(
+  root: DedupRoot,
+  esc: EscFn,
+  rtype?: string,
+): Promise<void> {
   const list = root.getElementById("diag-dedup-list");
   if (!list) return;
 
   const reg = await loadResourceRegistry();
-  const typeLabel = rtype
-    ? (reg[rtype] && reg[rtype].name) || rtype
-    : "所有";
-  const typeIcon = rtype
-    ? (reg[rtype] && reg[rtype].icon) || "📦"
-    : "📦";
+  const entry = rtype ? reg[rtype] : undefined;
+  const entryName = entry && typeof entry.name === "string" ? entry.name : "";
+  const entryIcon = entry && typeof entry.icon === "string" ? entry.icon : "";
+  const typeLabel = rtype ? entryName || rtype : "所有";
+  const typeIcon = rtype ? entryIcon || "📦" : "📦";
 
   list.innerHTML =
     '<div class="stat-row diag-stat diag-stat-muted">⏳ 扫描 ' +
@@ -161,7 +185,13 @@ export async function startDedup(root, esc, rtype) {
       await getApp();
 
     // 收集目标目录
-    const targets = [];
+    interface DedupTarget {
+      id: string;
+      icon: string;
+      label: string;
+      dir: string;
+    }
+    const targets: DedupTarget[] = [];
     if (rtype && rtype !== "all") {
       const dir = await GetRepoRoot(rtype);
       if (dir)
@@ -169,7 +199,11 @@ export async function startDedup(root, esc, rtype) {
     } else {
       for (const rt of Object.values(reg)) {
         const dir = await GetRepoRoot(rt.id);
-        if (dir) targets.push({ ...rt, label: rt.name, dir });
+        if (dir) {
+          const rtName = typeof rt.name === "string" ? rt.name : rt.id;
+          const rtIcon = typeof rt.icon === "string" ? rt.icon : "📦";
+          targets.push({ id: rt.id, icon: rtIcon, label: rtName, dir });
+        }
       }
     }
 
@@ -180,7 +214,21 @@ export async function startDedup(root, esc, rtype) {
     }
 
     // 逐目录扫描
-    const allResults = [];
+    interface DedupFile {
+      path: string;
+      name: string;
+      size: number;
+      modTime?: string;
+    }
+    interface DedupGroup {
+      files: DedupFile[];
+    }
+    interface DedupGroupResult {
+      icon: string;
+      label: string;
+      groups: DedupGroup[];
+    }
+    const allResults: DedupGroupResult[] = [];
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
       list.innerHTML =
@@ -280,7 +328,7 @@ ${isDefault ? '<span class="diag-dedup-recommend">推荐</span>' : ""}
     list.querySelectorAll("[data-path]").forEach((el) => {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
-        const path = el.dataset.path;
+        const path = (el as HTMLElement).dataset.path;
         if (path) bus.emit("model:select", { path });
       });
     });
@@ -299,10 +347,10 @@ ${isDefault ? '<span class="diag-dedup-recommend">推荐</span>' : ""}
         for (const rtResult of allResults) {
           for (const group of rtResult.groups) {
             const files = group.files || [];
-            var selEl = list.querySelector(
+            const selEl = list.querySelector(
               'input[name="dedup-keep-' + gi2 + '"]:checked',
-            );
-            var selected = selEl ? parseInt(selEl.value, 10) : 0;
+            ) as HTMLInputElement | null;
+            const selected = selEl ? parseInt(selEl.value, 10) : 0;
             // 选中「保留全部」(-1) 时跳过改组
             if (selected === -1) {
               gi2++;
@@ -341,11 +389,17 @@ ${isDefault ? '<span class="diag-dedup-recommend">推荐</span>' : ""}
   }
 }
 
-async function scanConflicts(root, esc) {
+async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void> {
   const list = root.getElementById("diag-conflict-list");
   if (!list) return;
   // 扫描按钮雷达动画
-  const scanBtn = root.getElementById("diag-scan-conflict");
+  const scanBtn = root.getElementById("diag-scan-conflict") as HTMLElement | null;
+  const resetBtn = (): void => {
+    if (scanBtn) {
+      scanBtn.classList.remove("scanning");
+      scanBtn.textContent = "⚡ 开始扫描";
+    }
+  };
   if (scanBtn) {
     scanBtn.classList.add("scanning");
     scanBtn.textContent = "⏳ 扫描中...";
@@ -356,32 +410,35 @@ async function scanConflicts(root, esc) {
     const { LoadAppConfig, ListVersionInstances, ScanModelEntries } =
       await getApp();
     const cfg = await LoadAppConfig();
-    const mcRoot = cfg.mcRoot || cfg.McRoot || "";
+    const mcRoot = cfg.mcRoot || "";
     if (!mcRoot) {
-      if (scanBtn) { scanBtn.classList.remove("scanning"); scanBtn.textContent = "⚡ 开始扫描"; }
+      resetBtn();
       list.innerHTML =
         '<div class="stat-row diag-msg diag-msg-error">请先配置游戏目录</div>';
       return;
     }
 
-    const instances = await ListVersionInstances(mcRoot);
+    const instances = (await ListVersionInstances(mcRoot)) || [];
     if (!instances || !instances.length) {
-      if (scanBtn) { scanBtn.classList.remove("scanning"); scanBtn.textContent = "⚡ 开始扫描"; }
+      resetBtn();
       list.innerHTML =
         '<div class="stat-row diag-msg diag-msg-muted">没有找到整合包</div>';
       return;
     }
 
-    const instanceFiles = {};
+    interface InstanceFile {
+      name: string;
+    }
+    const instanceFiles: Record<string, InstanceFile[]> = {};
     for (const ins of instances) {
       if (!ins.Exists) continue;
-      const entries = await ScanModelEntries(ins.CustomDir);
-      instanceFiles[ins.Name] = (entries || []).map((e) => ({
+      const entries = (await ScanModelEntries(ins.CustomDir)) || [];
+      instanceFiles[ins.Name] = entries.map((e) => ({
         name: e.Name.replace(/\.ban$/i, ""),
       }));
     }
 
-    const nameMap = {};
+    const nameMap: Record<string, string[]> = {};
     for (const [insName, files] of Object.entries(instanceFiles)) {
       for (const f of files) {
         if (!nameMap[f.name]) nameMap[f.name] = [];
@@ -394,7 +451,7 @@ async function scanConflicts(root, esc) {
       .sort((a, b) => b[1].length - a[1].length);
 
     if (!conflicts.length) {
-      if (scanBtn) { scanBtn.classList.remove("scanning"); scanBtn.textContent = "⚡ 开始扫描"; }
+      resetBtn();
       list.innerHTML =
         '<div class="stat-row diag-msg diag-msg-success">✅ 未检测到文件名冲突</div>';
       return;
@@ -414,78 +471,12 @@ async function scanConflicts(root, esc) {
     if (conflicts.length > 50) {
       html += `<div class="stat-row diag-msg diag-msg-muted" style="font-size:10px">...还有 ${conflicts.length - 50} 个</div>`;
     }
-    if (scanBtn) { scanBtn.classList.remove("scanning"); scanBtn.textContent = "⚡ 开始扫描"; }
+    resetBtn();
     list.innerHTML = html;
   } catch (err) {
-    if (scanBtn) { scanBtn.classList.remove("scanning"); scanBtn.textContent = "⚡ 开始扫描"; }
+    resetBtn();
     list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">扫描失败: ${esc(String(err))}</div>`;
   }
 }
 
-/** 👴 资历最深 + 📊 仓库评分 + 🎲 每日推荐 */
-/** 构建年度热力图数据 */
-function buildHeatmap(entries) {
-  // 按天统计活动次数
-  const dayMap = {};
-  entries.forEach((e) => {
-    if (!e.ModTime) return;
-    const d = new Date(e.ModTime);
-    const key = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
-    dayMap[key] = (dayMap[key] || 0) + 1;
-  });
-  // 生成过去 364 天的网格 (52周×7天)
-  const today = new Date();
-  const start = new Date(today);
-  start.setDate(start.getDate() - 363); // 约一年前
-  const cells = [];
-  for (let i = 0; i < 364; i++) {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    const key = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
-    const count = dayMap[key] || 0;
-    let level = 0;
-    if (count > 0) level = count <= 1 ? 1 : count <= 3 ? 2 : count <= 8 ? 3 : 4;
-    cells.push(level);
-  }
-  // 按周分组 (52列×7行)
-  const weeks = [];
-  for (let w = 0; w < 52; w++) {
-    const col = [];
-    for (let d = 0; d < 7; d++) {
-      const idx = w * 7 + d;
-      col.push(idx < cells.length ? cells[idx] : 0);
-    }
-    weeks.push(col);
-  }
-  // 月份标签 (每4周一个)
-  const monthLabels = [];
-  for (let w = 0; w < 52; w += 4) {
-    const d = new Date(start);
-    d.setDate(d.getDate() + w * 7);
-    monthLabels.push(d.getMonth() + 1 + "月");
-  }
-  return { weeks, monthLabels };
-}
-
-/** 👴 资历最深 + 📊 仓库评分 + 🎲 每日推荐 + 热力图 */
-function fmtSize(bytes) {
-  if (!bytes) return "";
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1048576) return (bytes / 1024).toFixed(0) + " KB";
-  return (bytes / 1048576).toFixed(1) + " MB";
-}
-
-function truncatePath(path, maxLen = 60) {
-  if (!path || path.length <= maxLen) return path || "";
-  const parts = path.replace(/\\/g, "/").split("/");
-  let result = parts.pop();
-  while (
-    parts.length > 0 &&
-    result.length + parts[parts.length - 1].length + 3 < maxLen
-  ) {
-    result = parts.pop() + "/" + result;
-  }
-  return "…/" + result;
-}
-
-// [已迁移到 features/oldest-models.ts]
+/** 👴 资历最深 + 📊 仓库评分 + 🎲 每日推荐 + 热力图（已迁移到 features/oldest-models.ts） */

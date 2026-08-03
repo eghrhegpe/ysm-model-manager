@@ -5,30 +5,64 @@ import { dbg } from "../../../utils/debug.ts";
 import { showProgress, tryFetchModels } from "../../../features/community/data.ts";
 import { stagger } from "../../../utils/stagger.ts";
 import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.ts";
-import { getCreatorIdentity, getTagFromRole, parseDescTags, loadFavs, isFaved, toggleFav } from "./workshop-data.js";
+import {
+  getCreatorIdentity,
+  getTagFromRole,
+  parseDescTags,
+  loadFavs,
+  isFaved,
+  toggleFav,
+  type CreatorIdentityInput,
+} from "./workshop-data.ts";
+import type { WorkshopSite, WorkshopCreator, WorkshopPresetSearch } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 
 import { getApp } from "../../../wails/app.ts";
 
-/** @type {Function|null} 当前注册的 storage 监听器（模块私有，防泄漏） */
-let _storageSyncFn = null;
+/** 创作者卡片工厂上下文 */
+interface CrCardCtx {
+  esc: (s: unknown) => string;
+  isFaved: (name: string) => boolean;
+  authorCountMap: Record<string, number>;
+  avatarCache?: Record<string, string> | null;
+  creators: LocalCreatorLike[];
+  allCreators: LocalCreatorLike[];
+  site: WorkshopSite;
+  searchResults: HTMLElement;
+  bus: typeof bus;
+}
 
-/**
- * 渲染并绑定站点视图（预设搜索 + 创作者列表 + 浏览仓库 + 编辑模式）
- * @param {Object} site - 站点配置
- * @param {Object} ctx
- * @param {Function} ctx.esc - HTML 转义
- * @param {Element} ctx.searchResults - 搜索结果容器
- * @param {Element} ctx.creatorView - 创作者视图容器
- * @param {Array} ctx.allCreators - 创作者列表（可变引用）
- * @param {{ v: boolean }} ctx.wsEditModeRef - 编辑模式标记对象
- * @param {Function} ctx.showRepoModels - 显示仓库模型
- * @param {Function} ctx.fillSearch - 填充搜索模板 (tpl, q) => string
- * @param {Object} ctx.repoModelCache - 模型缓存 {}
- * @param {Function} ctx.openUrl - 按开关模式打开 URL (url) => void
- * @param {Function} ctx.backToSite - 返回站点视图的回调
- */
+/** 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） */
+export type RepoAuthorLike = string | { Name?: string; Count?: number };
+
+/** 站点视图渲染上下文（index.ts _initWorkshop 传入） */
+export interface RenderSiteViewCtx {
+  esc: (s: unknown) => string;
+  searchResults: HTMLElement;
+  creatorView: HTMLElement;
+  allSites: WorkshopSite[];
+  allCreators: LocalCreatorLike[];
+  repoAuthors: RepoAuthorLike[];
+  wsEditModeRef: { v: boolean };
+  showRepoModels: (repo: string, models: unknown[], source: string) => Promise<void>;
+  fillSearch: (tpl: string, q: string) => string;
+  repoModelCache: Map<string, { models: unknown[]; source: string }>;
+  openUrl: (url: string) => void;
+  backToSite: () => void;
+  avatarCache: Record<string, string>;
+}
+
+/** 本地创作者（绑定 + 运行时附加字段） */
+export interface LocalCreatorLike extends WorkshopCreator {
+  _fromLocal?: boolean;
+  _fromCommunity?: boolean;
+  [key: string]: unknown;
+}
+
+/** @type {Function|null} 当前注册的 storage 监听器（模块私有，防泄漏） */
+let _storageSyncFn: ((e: StorageEvent) => void) | null = null;
+
 // ===== 创作者卡片工厂 =====
-function createCrCard(cr, ctx) {
+function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement {
   const { esc, isFaved, authorCountMap, avatarCache, creators } = ctx;
   const isGitHub = cr.type && cr.type.includes("github");
   const repoParts = isGitHub ? cr.name.split("/") : null;
@@ -64,9 +98,11 @@ function createCrCard(cr, ctx) {
       ? '<span class="cr-card-local-count">📁</span>'
       : "";
 
-  const platformBadges = cr.type.split(";").map(function(t) {
-    return '<span class="cr-platform-badge">' + t + "</span>";
-  }).join("");
+  const platformBadges = (cr.type || "")
+    .split(";")
+    .filter(Boolean)
+    .map((t: string) => '<span class="cr-platform-badge">' + t + "</span>")
+    .join("");
 
   const repoBtn = hasRepo
     ? '<button class="cr-card-repo-btn gh-card-external" data-repo="' + esc(cr.name) + '">📦 浏览仓库</button>'
@@ -96,7 +132,7 @@ function createCrCard(cr, ctx) {
   return card;
 }
 
-export function renderSiteView(site, ctx) {
+export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): void {
   const {
     esc,
     searchResults,
@@ -121,12 +157,12 @@ export function renderSiteView(site, ctx) {
   );
 
   // 作者模型计数查找表
-  const authorCountMap = {};
+  const authorCountMap: Record<string, number> = {};
   if (repoAuthors) {
     repoAuthors.forEach((a) => {
       const name = typeof a === "string" ? a : a.Name;
-      const count = typeof a === "object" ? a.Count : 0;
-      authorCountMap[name] = count;
+      const count = typeof a === "object" && a ? a.Count || 0 : 0;
+      if (name) authorCountMap[name] = count;
     });
   }
 
@@ -136,7 +172,7 @@ export function renderSiteView(site, ctx) {
   );
 
   // 构建 HTML
-  let parts = [];
+  const parts: string[] = [];
   parts.push('<div class="cr-scroll">');
 
   // 搜索词分区
@@ -178,7 +214,7 @@ export function renderSiteView(site, ctx) {
         ")</span>" +
         '<input type="text" id="ws-cr-search" class="cr-search-input" placeholder="搜创作者名...">' +
         '<span class="cr-section-fill"></span>' +
-        '<button class="cr-fetch-btn" title="\u4ECE GitHub \u62C9\u53D6\u6700\u65B0\u521B\u4F5C\u8005 + \u7AD9\u70B9 + GitHub \u4ED3\u5E93 + \u8D44\u6E90\u7C7B\u578B">\uD83C\uDF10 \u66F4\u65B0\u914D\u7F6E</button>' +
+        '<button class="cr-fetch-btn" title="从 GitHub 拉取最新创作者 + 站点 + GitHub 仓库 + 资源类型">🌐 更新配置</button>' +
         '<button class="cr-edit-btn">✏️ 编辑</button>' +
         "</div>",
     );
@@ -192,7 +228,7 @@ export function renderSiteView(site, ctx) {
         return (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0);
       });
       // 收集所有标签
-      const tagSet = new Set();
+      const tagSet = new Set<string>();
       creators.forEach((cr) => {
         const t = getTagFromRole(cr.role);
         if (t) tagSet.add(t);
@@ -230,44 +266,42 @@ export function renderSiteView(site, ctx) {
     }
   } else if (wsEditModeRef.v) {
     // 🔍 搜索词编辑（即使为空也渲染，让用户能新增）
-    if (site.presetSearches || !site.presetSearches) {
+    parts.push(
+      '<div class="cr-section">' +
+        '<span class="cr-section-title-lg">🔍 搜索词</span>' +
+        "</div>",
+    );
+    (site.presetSearches || []).forEach((ps, idx) => {
       parts.push(
-        '<div class="cr-section">' +
-          '<span class="cr-section-title-lg">🔍 搜索词</span>' +
+        '<div class="cr-edit-card" draggable="false" data-edit="preset" data-edit-idx="' +
+          idx +
+          '">' +
+          '<div class="cr-edit-card-head">' +
+          '<span class="cr-drag-handle">⠿</span>' +
+          '<span class="cr-preset-icon">🔍</span>' +
+          '<input data-idx="' +
+          idx +
+          '" data-fld="label" value="' +
+          esc(ps.label) +
+          '" class="cr-input cr-input-name" placeholder="搜索关键词">' +
+          '<button data-idx="' +
+          idx +
+          '" class="cr-btn-icon cr-order-up" title="上移">↑</button>' +
+          '<button data-idx="' +
+          idx +
+          '" class="cr-btn-icon cr-order-down" title="下移">↓</button>' +
+          '<button data-idx="' +
+          idx +
+          '" class="cr-btn-icon cr-del-preset" title="删除">🗑️</button>' +
+          "</div>" +
           "</div>",
       );
-      (site.presetSearches || []).forEach((ps, idx) => {
-        parts.push(
-          '<div class="cr-edit-card" draggable="false" data-edit="preset" data-edit-idx="' +
-            idx +
-            '">' +
-            '<div class="cr-edit-card-head">' +
-            '<span class="cr-drag-handle">⠿</span>' +
-            '<span class="cr-preset-icon">🔍</span>' +
-            '<input data-idx="' +
-            idx +
-            '" data-fld="label" value="' +
-            esc(ps.label) +
-            '" class="cr-input cr-input-name" placeholder="搜索关键词">' +
-            '<button data-idx="' +
-            idx +
-            '" class="cr-btn-icon cr-order-up" title="上移">↑</button>' +
-            '<button data-idx="' +
-            idx +
-            '" class="cr-btn-icon cr-order-down" title="下移">↓</button>' +
-            '<button data-idx="' +
-            idx +
-            '" class="cr-btn-icon cr-del-preset" title="删除">🗑️</button>' +
-            "</div>" +
-            "</div>",
-        );
-      });
-      parts.push(
-        '<div class="cr-add-area">' +
-          '<button class="cr-add-preset">➕ 新增搜索词</button>' +
-          "</div>",
-      );
-    }
+    });
+    parts.push(
+      '<div class="cr-add-area">' +
+        '<button class="cr-add-preset">➕ 新增搜索词</button>' +
+        "</div>",
+    );
     // ✏️ 创作者编辑
     parts.push(
       '<div class="cr-section">' +
@@ -362,7 +396,7 @@ export function renderSiteView(site, ctx) {
 
   parts.push("</div>");
 
-  let html = parts.join("");
+  const html = parts.join("");
   searchResults.innerHTML = html;
 
   // 无创作者时「浏览本地模型」按钮
@@ -376,7 +410,7 @@ export function renderSiteView(site, ctx) {
   // 用工厂函数填充创作者网格（替代内联字符串）
   const grid = searchResults.querySelector("#cr-creator-grid");
   if (grid && !wsEditModeRef.v && creators.length) {
-    const cardCtx = {
+    const cardCtx: CrCardCtx = {
       esc,
       isFaved,
       authorCountMap,
@@ -396,8 +430,9 @@ export function renderSiteView(site, ctx) {
   // 预设搜索按钮
   searchResults.querySelectorAll(".cr-preset-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
+      const q = (btn as HTMLElement).dataset.q || "";
       if (site.searchUrl && openUrl) {
-        openUrl(fillSearch(site.searchUrl, btn.dataset.q));
+        openUrl(fillSearch(site.searchUrl, q));
       } else if (openUrl) {
         // 没有 searchUrl（如分类索引站），直接打开站点首页
         openUrl(site.url);
@@ -409,17 +444,17 @@ export function renderSiteView(site, ctx) {
   searchResults.querySelectorAll(".cr-star-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const name = btn.dataset.star;
+      const name = (btn as HTMLElement).dataset.star || "";
       const now = toggleFav(name);
       btn.textContent = now ? "⭐" : "☆";
       const card = btn.closest(".gh-card");
       if (card) {
         // 重新排序：收藏→移到首部，取消→移到尾部（不 remove 以免丢失事件）
-        const grid = card.closest(".cr-creator-grid");
+        const grid2 = card.closest(".cr-creator-grid");
         if (now) {
-          grid?.insertBefore(card, grid.firstChild);
+          grid2?.insertBefore(card, grid2.firstChild);
         } else {
-          grid?.appendChild(card);
+          grid2?.appendChild(card);
         }
       }
       bus.emit("toast:show", {
@@ -434,7 +469,7 @@ export function renderSiteView(site, ctx) {
   searchResults.querySelectorAll("[data-debug-avatar]").forEach((img) => {
     img.addEventListener("click", async (e) => {
       e.stopPropagation();
-      const name = img.dataset.debugAvatar;
+      const name = (img as HTMLElement).dataset.debugAvatar;
       if (!name) return;
       try {
         const { DebugExtractCreatorAvatar } =
@@ -450,12 +485,13 @@ export function renderSiteView(site, ctx) {
   // 创作者卡片点击 → 弹出详情浮层
   searchResults.querySelectorAll(".gh-card[data-name]").forEach((card) => {
     card.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
       if (
-        e.target.closest(".gh-card-external[data-repo]") ||
-        e.target.closest(".cr-star-btn")
+        target.closest(".gh-card-external[data-repo]") ||
+        target.closest(".cr-star-btn")
       )
         return;
-      const name = card.dataset.name;
+      const name = (card as HTMLElement).dataset.name;
       const cr = creators.find((c) => c.name === name);
       if (!cr) return;
 
@@ -465,7 +501,7 @@ export function renderSiteView(site, ctx) {
         if (ev.target === overlay) overlay.remove();
       };
 
-      const identity = getCreatorIdentity(cr);
+      const identity = getCreatorIdentity(cr as CreatorIdentityInput);
       const descTags = parseDescTags(cr.desc);
       const isFav = isFaved(cr.name);
       const localCount = authorCountMap[cr.name] || 0;
@@ -503,8 +539,9 @@ export function renderSiteView(site, ctx) {
           ? '<div class="cr-detail-platforms">' +
             cr.type
               .split(";")
+              .filter(Boolean)
               .map(
-                (t) =>
+                (t: string) =>
                   '<span class="cr-platform-badge">' +
                   getSiteIcon(t) +
                   " <span>" +
@@ -549,13 +586,13 @@ export function renderSiteView(site, ctx) {
         "</div>" +
         "</div>";
 
-      searchResults.getRootNode().appendChild(overlay);
+      (searchResults.getRootNode() as Node).appendChild(overlay);
 
       // ⭐ 浮层内的收藏
       overlay.querySelector("[data-star]")?.addEventListener("click", (ev) => {
         ev.stopPropagation();
         const now = toggleFav(cr.name);
-        ev.target.textContent = now ? "⭐" : "☆";
+        (ev.target as HTMLElement).textContent = now ? "⭐" : "☆";
         // 同时更新卡片
         const cardStar = searchResults.querySelector(
           '.cr-star-btn[data-star="' + esc(cr.name) + '"]',
@@ -572,12 +609,12 @@ export function renderSiteView(site, ctx) {
         .querySelector("[data-close]")
         ?.addEventListener("click", () => overlay.remove());
 
-      const searchBtn = overlay.querySelector("[data-search]");
+      const searchBtn = overlay.querySelector("[data-search]") as HTMLElement | null;
       if (searchBtn) {
         searchBtn.addEventListener("click", () => {
           overlay.remove();
           if (site.searchUrl && openUrl) {
-            openUrl(fillSearch(site.searchUrl, searchBtn.dataset.search));
+            openUrl(fillSearch(site.searchUrl, searchBtn.dataset.search || ""));
           }
         });
       }
@@ -596,24 +633,24 @@ export function renderSiteView(site, ctx) {
   // 键盘导航 ←↑↓→
   const crGrid = searchResults.querySelector(".cr-creator-grid");
   if (crGrid) {
-    crGrid.addEventListener("keydown", (e) => {
+    crGrid.addEventListener("keydown", ((e: KeyboardEvent) => {
       const cards = [...crGrid.querySelectorAll(".gh-card[tabindex]")];
-      const cur = document.activeElement;
-      const idx = cards.indexOf(cur);
+      const cur = document.activeElement as HTMLElement | null;
+      const idx = cards.indexOf(cur as Element);
       if (idx < 0) return;
       if (e.key === "ArrowDown" || e.key === "ArrowRight") {
         e.preventDefault();
-        const next = cards[idx + 1] || cards[0];
+        const next = (cards[idx + 1] || cards[0]) as HTMLElement;
         next.focus();
       } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
         e.preventDefault();
-        const prev = cards[idx - 1] || cards[cards.length - 1];
+        const prev = (cards[idx - 1] || cards[cards.length - 1]) as HTMLElement;
         prev.focus();
       } else if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        cur.click();
+        cur?.click();
       }
-    });
+    }) as EventListener);
   }
 
   // storage 事件：多标签页收藏同步（模块私有变量，不挂 window）
@@ -624,20 +661,20 @@ export function renderSiteView(site, ctx) {
     if (e.key === "ysm-fav-creators") {
       const favs = loadFavs();
       searchResults.querySelectorAll(".cr-star-btn").forEach((btn) => {
-        btn.textContent = favs.includes(btn.dataset.star) ? "⭐" : "☆";
+        btn.textContent = favs.includes((btn as HTMLElement).dataset.star || "") ? "⭐" : "☆";
       });
     }
   };
   window.addEventListener("storage", _storageSyncFn);
 
   // 📦 浏览 GitHub 仓库模型
-  const refreshView = () => renderSiteView(site, ctx);
+  const refreshView = (): void => renderSiteView(site, ctx);
 
   searchResults
     .querySelectorAll(".gh-card-external[data-repo]")
     .forEach((btn) => {
       btn.addEventListener("click", async () => {
-        const repo = btn.dataset.repo;
+        const repo = (btn as HTMLElement).dataset.repo || "";
         btn.textContent = "⏳";
 
         let mirror = "";
@@ -650,30 +687,33 @@ export function renderSiteView(site, ctx) {
 
         showProgress(searchResults, 10, "⏳ 准备中…");
         try {
-          if (repoModelCache[repo]) {
-            const cached = repoModelCache[repo];
-            showProgress(searchResults, 100, "✅ 加载完成（缓存）");
-            await new Promise((r) => setTimeout(r, 100));
-            await showRepoModels(repo, cached.models, cached.source);
-            btn.textContent = "📦 浏览";
-            return;
+          if (repoModelCache.has(repo)) {
+            const cached = repoModelCache.get(repo);
+            if (cached) {
+              showProgress(searchResults, 100, "✅ 加载完成（缓存）");
+              await new Promise((r) => setTimeout(r, 100));
+              await showRepoModels(repo, cached.models, cached.source);
+              btn.textContent = "📦 浏览";
+              return;
+            }
           }
           const { models, source } = await tryFetchModels(
             repo,
-            mirror,
+            (mirror || "") as "" | "jsdelivr" | "githubapi",
             (pct, label) => showProgress(searchResults, pct, label),
           );
-          repoModelCache[repo] = { models, source };
+          repoModelCache.set(repo, { models, source });
           showProgress(searchResults, 100, "✅ 加载完成");
           await new Promise((r) => setTimeout(r, 200));
           await showRepoModels(repo, models, source);
         } catch (e) {
-          const isTimeout = e?.name === "AbortError";
-          const isNoIndex = e?.message === "NoIndex";
-          const isOffline = e?.message === "NetworkOffline";
-          const isRateLimited = e?.message === "RateLimited";
-          const isAllFailed = e?.message === "AllFailed";
-          let errMsg, btnLabel;
+          const err = e as Error;
+          const isTimeout = err?.name === "AbortError";
+          const isNoIndex = err?.message === "NoIndex";
+          const isOffline = err?.message === "NetworkOffline";
+          const isRateLimited = err?.message === "RateLimited";
+          const isAllFailed = err?.message === "AllFailed";
+          let errMsg: string, btnLabel: string;
           if (isNoIndex) {
             errMsg =
               "❌ 无 index.json<br>" +
@@ -730,78 +770,83 @@ export function renderSiteView(site, ctx) {
   searchResults
     .querySelector(".cr-fetch-btn")
     ?.addEventListener("click", async () => {
-      var btn = searchResults.querySelector(".cr-fetch-btn");
-      btn.textContent = "\u23F3";
+      const btn = searchResults.querySelector(".cr-fetch-btn") as HTMLButtonElement;
+      btn.textContent = "⏳";
       btn.disabled = true;
       try {
-        var m = await import("./core.js");
-        var App = await getApp();
-        var results = await Promise.all([
+        const m = await import("./core.ts");
+        const App = await getApp();
+        const results = await Promise.all([
           m.fetchCommunityCreators(m.DEFAULT_COMMUNITY_URL),
           m.fetchCommunitySites(),
-          App.LoadGitHubRepos().catch(function() { return []; }),
-          App.LoadResourceTypes().catch(function() { return "{}"; }),
+          App.LoadGitHubRepos().catch(function () {
+            return [];
+          }),
+          App.LoadResourceTypes().catch(function () {
+            return "{}";
+          }),
         ]);
-        var community = results[0],
+        const community = results[0],
           sitesData = results[1],
           gitHubRepos = results[2],
           resourceTypesRaw = results[3];
-        var logs = [];
-        var changed = false;
+        const logs: string[] = [];
+        let changed = false;
 
         if (community && community.length) {
-          var r1 = m.mergeCommunityCreators(allCreators, community);
+          const r1 = m.mergeCommunityCreators(allCreators, community);
           await App.SaveWorkshopCreators(allCreators);
           if (r1.added || r1.updated) {
             logs.push(
-              "\u521B\u4F5C\u8005: +" + r1.added + " \u8865" + r1.updated,
+              "创作者: +" + r1.added + " 补" + r1.updated,
             );
             changed = true;
           }
         }
         if (sitesData && sitesData.length) {
-          var r2 = m.mergeCommunitySites(allSites, sitesData);
+          const r2 = m.mergeCommunitySites(allSites, sitesData);
           if (r2.added > 0) {
             await App.SaveWorkshopSites(allSites);
-            logs.push("\u7AD9\u70B9: +" + r2.added);
+            logs.push("站点: +" + r2.added);
             changed = true;
           }
         }
         if (gitHubRepos && gitHubRepos.length) {
-          logs.push("GitHub: " + gitHubRepos.length + " \u4ED3\u5E93");
+          logs.push("GitHub: " + gitHubRepos.length + " 仓库");
           changed = true;
         }
         // resourceTypesRaw 是 JSON 字符串，解析后取 resourceTypes 数组
-        var resourceTypes = [];
+        let resourceTypes: unknown[] = [];
         try {
-          var parsed = JSON.parse(resourceTypesRaw || "{}");
+          const parsed = JSON.parse(resourceTypesRaw || "{}") as { resourceTypes?: unknown[] };
           resourceTypes = parsed.resourceTypes || [];
         } catch (_) {}
         if (resourceTypes.length) {
-          logs.push("\u7C7B\u578B: " + resourceTypes.length + " \u79CD");
+          logs.push("类型: " + resourceTypes.length + " 种");
           changed = true;
         }
 
         if (changed) {
           bus.emit("toast:show", {
-            msg: "\uD83C\uDF10 " + logs.join(" \u00B7 "),
+            msg: "🌐 " + logs.join(" · "),
             duration: 4000,
             type: "success",
           });
           refreshView();
         } else {
           bus.emit("toast:show", {
-            msg: "\uD83C\uDF10 \u5DF2\u662F\u6700\u65B0\u914D\u7F6E",
+            msg: "🌐 已是最新配置",
             duration: 3000,
             type: "success",
           });
         }
       } catch (e) {
-        const errMsg = e.message === "NetworkOffline"
+        const err = e as Error;
+        const errMsg = err.message === "NetworkOffline"
           ? "🌐 无网络连接，请检查网络后重试"
-          : e.message === "NoIndex"
+          : err.message === "NoIndex"
             ? "📭 社区索引文件不存在"
-            : e.message === "RateLimited"
+            : err.message === "RateLimited"
               ? "⏱️ GitHub API 频率限制，请稍后重试"
               : "🌐 " + friendlyError(e, "拉取失败");
         bus.emit("toast:show", {
@@ -810,7 +855,7 @@ export function renderSiteView(site, ctx) {
           type: "error",
         });
       } finally {
-        btn.textContent = "\uD83C\uDF10 \u66F4\u65B0\u914D\u7F6E";
+        btn.textContent = "🌐 更新配置";
         btn.disabled = false;
       }
     });
@@ -841,14 +886,15 @@ export function renderSiteView(site, ctx) {
         if (allSites && site) {
           const { SaveWorkshopPresetsBySite } =
             await getApp();
-          const newPresets = [];
+          const newPresets: WorkshopPresetSearch[] = [];
           searchResults
             .querySelectorAll(
               ".cr-edit-card[data-edit='preset'] input[data-fld='label']",
             )
             .forEach((inp) => {
-              const val = inp.value.trim();
-              if (val) newPresets.push({ label: val });
+              const val = (inp as HTMLInputElement).value.trim();
+              // 原 JS 仅传 {label}，q 字段 Go 端 JSON 缺省兼容——类型上 cast 补齐
+              if (val) newPresets.push({ label: val } as WorkshopPresetSearch);
             });
           await SaveWorkshopPresetsBySite(site.id, newPresets);
           site.presetSearches = newPresets;
@@ -883,19 +929,19 @@ export function renderSiteView(site, ctx) {
   if (dropZone) {
     let _dragCounter = 0;
 
-    const onDragEnter = (e) => {
+    const onDragEnter = (e: DragEvent): void => {
       e.preventDefault();
       _dragCounter++;
       dropZone.classList.add("cr-drop-zone-active");
     };
-    const onDragLeave = () => {
+    const onDragLeave = (): void => {
       _dragCounter--;
       if (_dragCounter <= 0) {
         _dragCounter = 0;
         dropZone.classList.remove("cr-drop-zone-active");
       }
     };
-    const onDrop = async (e) => {
+    const onDrop = async (e: DragEvent): Promise<void> => {
       e.preventDefault();
       _dragCounter = 0;
       dropZone.classList.remove("cr-drop-zone-active");
@@ -910,7 +956,7 @@ export function renderSiteView(site, ctx) {
         return;
       }
 
-      const resetLabel = () => {
+      const resetLabel = (): void => {
         dropZone.innerHTML =
           '<span class="cr-drop-icon">📥</span>' +
           '<span class="cr-drop-text">拖拽 JSON 文件到此处，导入创作者/站点配置</span>';
@@ -918,7 +964,7 @@ export function renderSiteView(site, ctx) {
 
       try {
         const text = await file.text();
-        const data = JSON.parse(text);
+        const data = JSON.parse(text) as Array<Record<string, unknown>>;
         if (!Array.isArray(data) || !data.length) {
           throw new Error("JSON 必须是对象数组");
         }
@@ -930,16 +976,16 @@ export function renderSiteView(site, ctx) {
           const { MergeWorkshopCreatorsFromJSON, LoadWorkshopCreators } =
             await getApp();
           const result = await MergeWorkshopCreatorsFromJSON(text);
-          let added, updated;
+          let added: number, updated: number;
           if (Array.isArray(result)) {
             added = result[0]; updated = result[1];
           } else {
             added = result; updated = 0;
           }
           // 刷新内存中的 allCreators
-          const fresh = await LoadWorkshopCreators();
+          const fresh = (await LoadWorkshopCreators()) || [];
           allCreators.length = 0;
-          allCreators.push(...fresh);
+          allCreators.push(...(fresh as LocalCreatorLike[]));
           bus.emit("toast:show", {
             msg: "✅ 创作者: 新增 " + added + "，更新 " + updated,
             duration: 3000,
@@ -953,12 +999,13 @@ export function renderSiteView(site, ctx) {
           const existMap = new Map(allSites.map((s) => [s.id, s]));
           let added = 0, updated = 0;
           data.forEach((s) => {
-            if (existMap.has(s.id)) {
-              Object.assign(existMap.get(s.id), s);
+            const sid = String(s.id);
+            if (existMap.has(sid)) {
+              Object.assign(existMap.get(sid) as object, s);
               updated++;
             } else {
-              existMap.set(s.id, s);
-              allSites.push(s);
+              existMap.set(sid, s as unknown as WorkshopSite);
+              allSites.push(s as unknown as WorkshopSite);
               added++;
             }
           });
@@ -983,24 +1030,25 @@ export function renderSiteView(site, ctx) {
       }
     };
 
-    dropZone.addEventListener("dragenter", onDragEnter);
+    dropZone.addEventListener("dragenter", onDragEnter as EventListener);
     dropZone.addEventListener("dragover", (e) => e.preventDefault());
     dropZone.addEventListener("dragleave", onDragLeave);
-    dropZone.addEventListener("drop", onDrop);
+    dropZone.addEventListener("drop", onDrop as unknown as EventListener);
   }
 
   // 行内编辑
   searchResults.querySelectorAll("[data-idx][data-fld]").forEach((inp) => {
     inp.addEventListener("input", () => {
-      const idx = parseInt(inp.dataset.idx, 10);
+      const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
+      const fld = (inp as HTMLElement).dataset.fld || "";
       if (creators[idx]) {
         if (inp.tagName === "SELECT") {
-          creators[idx][inp.dataset.fld] = Array.from(inp.selectedOptions)
+          creators[idx][fld] = Array.from((inp as HTMLSelectElement).selectedOptions)
             .map((o) => o.value)
             .filter(Boolean)
             .join(";");
         } else {
-          creators[idx][inp.dataset.fld] = inp.value.trim();
+          creators[idx][fld] = (inp as HTMLInputElement).value.trim();
         }
       }
     });
@@ -1010,7 +1058,7 @@ export function renderSiteView(site, ctx) {
   searchResults.querySelectorAll(".cr-del").forEach((btn) => {
     btn.addEventListener("click", () => {
       syncAllEditInputs();
-      const idx = parseInt(btn.dataset.idx, 10);
+      const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
       if (creators[idx]) {
         const realIdx = allCreators.indexOf(creators[idx]);
         if (realIdx >= 0) allCreators.splice(realIdx, 1);
@@ -1021,9 +1069,8 @@ export function renderSiteView(site, ctx) {
 
   // 创作者拖拽排序 — 仅拖拽柄触发
   let dragSrcIdx = -1;
-  let dragState = null; // { card, el, originalLeft, originalTop, rect }
   // 拖拽状态清理：防止 JS 异常后 class 卡死在 DOM 上
-  const clearDragState = () => {
+  const clearDragState = (): void => {
     dragSrcIdx = -1;
     dragPresetSrcIdx = -1;
     searchResults.querySelectorAll(".cr-edit-card").forEach((c) => {
@@ -1038,28 +1085,29 @@ export function renderSiteView(site, ctx) {
       if (!handle) return;
       // 点拖拽柄时暂时让卡片可拖拽
       handle.addEventListener("mousedown", () => {
-        card.draggable = true;
+        (card as HTMLElement).draggable = true;
       });
-      card.addEventListener("dragstart", (e) => {
-        card.draggable = false;
-        dragSrcIdx = parseInt(card.dataset.editIdx, 10);
+      card.addEventListener("dragstart", (e: Event) => {
+        const de = e as DragEvent;
+        (card as HTMLElement).draggable = false;
+        dragSrcIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
         card.classList.add("cr-dragging");
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", "");
+        de.dataTransfer!.effectAllowed = "move";
+        de.dataTransfer!.setData("text/plain", "");
       });
       card.addEventListener("dragend", () => {
-        card.draggable = false;
+        (card as HTMLElement).draggable = false;
         clearDragState();
       });
-      card.addEventListener("dragover", (e) => {
+      card.addEventListener("dragover", (e: Event) => {
         e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
+        (e as DragEvent).dataTransfer!.dropEffect = "move";
       });
       card.addEventListener("dragenter", (e) => {
         e.preventDefault();
         card.classList.add("cr-drag-target");
         if (dragSrcIdx >= 0) {
-          const tgt = parseInt(card.dataset.editIdx, 10);
+          const tgt = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
           if (dragSrcIdx < tgt) {
             card.classList.add("cr-drag-before");
           } else if (dragSrcIdx > tgt) {
@@ -1068,12 +1116,12 @@ export function renderSiteView(site, ctx) {
         }
       });
       card.addEventListener("dragleave", () => {
-        card.classList.remove("cr-drag-target","cr-drag-before","cr-drag-after");
+        card.classList.remove("cr-drag-target", "cr-drag-before", "cr-drag-after");
       });
       card.addEventListener("drop", (e) => {
         e.preventDefault();
         card.classList.remove("cr-drag-target");
-        const targetIdx = parseInt(card.dataset.editIdx, 10);
+        const targetIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
         if (dragSrcIdx < 0 || dragSrcIdx === targetIdx) return;
         syncAllEditInputs();
         const [removed] = creators.splice(dragSrcIdx, 1);
@@ -1093,28 +1141,29 @@ export function renderSiteView(site, ctx) {
       const handle = card.querySelector(".cr-drag-handle");
       if (!handle) return;
       handle.addEventListener("mousedown", () => {
-        card.draggable = true;
+        (card as HTMLElement).draggable = true;
       });
-      card.addEventListener("dragstart", (e) => {
-        card.draggable = false;
-        dragPresetSrcIdx = parseInt(card.dataset.editIdx, 10);
+      card.addEventListener("dragstart", (e: Event) => {
+        const de = e as DragEvent;
+        (card as HTMLElement).draggable = false;
+        dragPresetSrcIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
         card.classList.add("cr-dragging");
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", "");
+        de.dataTransfer!.effectAllowed = "move";
+        de.dataTransfer!.setData("text/plain", "");
       });
       card.addEventListener("dragend", () => {
-        card.draggable = false;
+        (card as HTMLElement).draggable = false;
         clearDragState();
       });
-      card.addEventListener("dragover", (e) => {
+      card.addEventListener("dragover", (e: Event) => {
         e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
+        (e as DragEvent).dataTransfer!.dropEffect = "move";
       });
       card.addEventListener("dragenter", (e) => {
         e.preventDefault();
         card.classList.add("cr-drag-target");
         if (dragPresetSrcIdx >= 0) {
-          const tgt = parseInt(card.dataset.editIdx, 10);
+          const tgt = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
           if (dragPresetSrcIdx < tgt) {
             card.classList.add("cr-drag-before");
           } else if (dragPresetSrcIdx > tgt) {
@@ -1123,12 +1172,12 @@ export function renderSiteView(site, ctx) {
         }
       });
       card.addEventListener("dragleave", () => {
-        card.classList.remove("cr-drag-target","cr-drag-before","cr-drag-after");
+        card.classList.remove("cr-drag-target", "cr-drag-before", "cr-drag-after");
       });
       card.addEventListener("drop", (e) => {
         e.preventDefault();
         card.classList.remove("cr-drag-target");
-        const targetIdx = parseInt(card.dataset.editIdx, 10);
+        const targetIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
         if (
           dragPresetSrcIdx < 0 ||
           dragPresetSrcIdx === targetIdx ||
@@ -1142,22 +1191,23 @@ export function renderSiteView(site, ctx) {
         refreshView();
       });
     });
-  function syncAllEditInputs() {
+  function syncAllEditInputs(): void {
     // 同步创作者输入框
     searchResults
       .querySelectorAll(
         ".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]",
       )
       .forEach((inp) => {
-        const idx = parseInt(inp.dataset.idx, 10);
+        const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
+        const fld = (inp as HTMLElement).dataset.fld || "";
         if (creators[idx]) {
           if (inp.tagName === "SELECT") {
-            creators[idx][inp.dataset.fld] = Array.from(inp.selectedOptions)
+            creators[idx][fld] = Array.from((inp as HTMLSelectElement).selectedOptions)
               .map((o) => o.value)
               .filter(Boolean)
               .join(";");
           } else {
-            creators[idx][inp.dataset.fld] = inp.value.trim();
+            creators[idx][fld] = (inp as HTMLInputElement).value.trim();
           }
         }
       });
@@ -1167,9 +1217,9 @@ export function renderSiteView(site, ctx) {
         ".cr-edit-card[data-edit='preset'] input[data-fld='label']",
       )
       .forEach((inp) => {
-        const idx = parseInt(inp.dataset.idx, 10);
+        const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
         if (site.presetSearches && site.presetSearches[idx]) {
-          site.presetSearches[idx].label = inp.value.trim();
+          site.presetSearches[idx].label = (inp as HTMLInputElement).value.trim();
         }
       });
   }
@@ -1177,7 +1227,7 @@ export function renderSiteView(site, ctx) {
   searchResults.querySelectorAll(".cr-del-preset").forEach((btn) => {
     btn.addEventListener("click", () => {
       syncAllEditInputs();
-      const idx = parseInt(btn.dataset.idx, 10);
+      const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
       if (site.presetSearches && site.presetSearches[idx]) {
         site.presetSearches.splice(idx, 1);
         refreshView();
@@ -1188,12 +1238,10 @@ export function renderSiteView(site, ctx) {
   searchResults.querySelectorAll(".cr-order-up").forEach((btn) => {
     btn.addEventListener("click", () => {
       syncAllEditInputs();
-      const idx = parseInt(btn.dataset.idx, 10);
+      const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
       if (site.presetSearches && idx > 0) {
-        [site.presetSearches[idx - 1], site.presetSearches[idx]] = [
-          site.presetSearches[idx],
-          site.presetSearches[idx - 1],
-        ];
+        const arr = site.presetSearches;
+        [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
         refreshView();
       }
     });
@@ -1201,12 +1249,10 @@ export function renderSiteView(site, ctx) {
   searchResults.querySelectorAll(".cr-order-down").forEach((btn) => {
     btn.addEventListener("click", () => {
       syncAllEditInputs();
-      const idx = parseInt(btn.dataset.idx, 10);
+      const idx = parseInt((btn as HTMLElement).dataset.idx || "-1", 10);
       if (site.presetSearches && idx < site.presetSearches.length - 1) {
-        [site.presetSearches[idx], site.presetSearches[idx + 1]] = [
-          site.presetSearches[idx + 1],
-          site.presetSearches[idx],
-        ];
+        const arr = site.presetSearches;
+        [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
         refreshView();
       }
     });
@@ -1215,7 +1261,7 @@ export function renderSiteView(site, ctx) {
   // 新增创作者
   searchResults.querySelector(".cr-add")?.addEventListener("click", () => {
     syncAllEditInputs();
-    creators.push({ name: "新作者", desc: "描述", type: site.id, tag: "" });
+    creators.push({ name: "新作者", desc: "描述", type: site.id, tag: "" } as LocalCreatorLike);
     allCreators.push(creators[creators.length - 1]);
     refreshView();
   });
@@ -1225,22 +1271,22 @@ export function renderSiteView(site, ctx) {
     ?.addEventListener("click", () => {
       syncAllEditInputs();
       if (!site.presetSearches) site.presetSearches = [];
-      site.presetSearches.push({ label: "" });
+      site.presetSearches.push({ label: "", q: "" });
       refreshView();
     });
 
   // 🔍 创作者搜索 + 标签过滤
   let _activeTag = "";
-  const applyFilters = () => {
+  const applyFilters = (): void => {
     const kw = (searchInput?.value || "").trim().toLowerCase();
     const cards = searchResults.querySelectorAll(".gh-card[data-name]");
     let visible = 0;
     cards.forEach((card) => {
-      const name = (card.dataset.name || "").toLowerCase();
+      const name = ((card as HTMLElement).dataset.name || "").toLowerCase();
       const desc = (
         card.querySelector(".cr-card-desc")?.textContent || ""
       ).toLowerCase();
-      const cardTag = (card.dataset.tag || "").toLowerCase();
+      const cardTag = ((card as HTMLElement).dataset.tag || "").toLowerCase();
       const matchName = !kw || name.includes(kw) || desc.includes(kw);
       const matchTag = !_activeTag || _activeTag === cardTag;
       card.classList.toggle("cr-card-hidden", !(matchName && matchTag));
@@ -1250,7 +1296,7 @@ export function renderSiteView(site, ctx) {
     if (countEl) countEl.textContent = "(" + visible + "/" + cards.length + ")";
   };
 
-  const searchInput = searchResults.querySelector("#ws-cr-search");
+  const searchInput = searchResults.querySelector("#ws-cr-search") as HTMLInputElement | null;
   if (searchInput) {
     searchInput.addEventListener("input", applyFilters);
   }
@@ -1258,7 +1304,7 @@ export function renderSiteView(site, ctx) {
   // 标签筛选按钮
   searchResults.querySelectorAll(".cr-tag-filter-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      _activeTag = btn.dataset.tag || "";
+      _activeTag = (btn as HTMLElement).dataset.tag || "";
       searchResults
         .querySelectorAll(".cr-tag-filter-btn")
         .forEach((b) => b.classList.toggle("active", b === btn));

@@ -1,8 +1,8 @@
 // ===== <app-content> 入口 =====
 import { bus } from "../../bus.ts";
-import { esc } from "../../utils/dom.ts";
+import { esc as escUtil } from "../../utils/dom.ts";
 import { dbg } from "../../utils/debug.ts";
-import { contentCSS } from "./content-css.js";
+import { contentCSS } from "./content-css.ts";
 import { stagger } from "../../utils/stagger.ts";
 import { getApp } from "../../wails/app.ts";
 import { Events } from "@wailsio/runtime";
@@ -13,26 +13,46 @@ import {
   diagnosticsHTML,
   workshopHTML,
   githubHTML,
-} from "./tpl.js";
+} from "./tpl.ts";
 
 /** 防止 avatar:config-loaded 事件重复注册 */
 let _avatarConfigLoadedRegistered = false;
 import { registerGlobalHandlers } from "../../core/global-handlers.ts";
-import { initDiagnostics } from "./community/diagnostics.js";
+import { initDiagnostics } from "./community/diagnostics.ts";
 
-import { initSettings } from "./community/settings.js";
+import { initSettings } from "./community/settings.ts";
 import {
   countMissing,
   renderCardsHTML,
   renderRepoHeaderHTML,
 } from "../../features/community/render.ts";
 import { bindRepoEvents } from "../../features/community/events.ts";
-import { renderSiteView } from "./community/site-view.js";
+import { renderSiteView, type RenderSiteViewCtx, type RepoAuthorLike } from "./community/site-view.ts";
 import { getSiteIcon } from "./community/workshop-icons.ts";
-import { loadCommunityData, fillSearch } from "./community/core.js";
+import { loadCommunityData, fillSearch, type LocalCreator } from "./community/core.ts";
 import { friendlyError } from "../../utils/errors.ts";
+import type { WorkshopModel } from "../../features/community/render.ts";
+import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
+
+/** 仓库模型缓存条目（_workshopCache / _githubCache） */
+interface RepoCacheEntry {
+  models: WorkshopModel[];
+  source: string;
+  localMap?: Map<string, string>;
+}
 
 class AppContent extends HTMLElement {
+  _root: ShadowRoot;
+  _current: string;
+  _globalUnsubs: Array<() => void>;
+  _repoEventsCleanup: (() => Promise<void>) | null;
+  _unsub: (() => void) | null = null;
+  _unsubs: Array<() => void> = [];
+  _insListenerReg = false;
+  _avatarRefreshRegistered = false;
+  _workshopCache: Map<string, RepoCacheEntry> | null = null;
+  _githubCache: Map<string, RepoCacheEntry> | null = null;
+
   constructor() {
     super();
     this._root = this.attachShadow({ mode: "open" });
@@ -43,12 +63,14 @@ class AppContent extends HTMLElement {
     this._repoEventsCleanup = null;
   }
 
-  connectedCallback() {
+  connectedCallback(): void {
     this._unsub = bus.on("nav:change", ({ page }) => {
       this._current = page;
       // 切换页面时清除扫描缓存，确保显示最新数据
       try {
-        getApp().then(App => { if (App.ClearScanCache) App.ClearScanCache(); }).catch(() => {});
+        getApp().then((App) => {
+          if (App.ClearScanCache) App.ClearScanCache();
+        }).catch(() => {});
       } catch (_) {}
       bus.emit("nav:changed", { page });
       this._render();
@@ -56,7 +78,7 @@ class AppContent extends HTMLElement {
     // DnD 导入等请求切换到仓库页的某个标签
     this._globalUnsubs.push(
       bus.on("repo:switch-tab", ({ tab }) => {
-        const btn = this._root?.querySelector(`.repo-tab[data-tab="${tab}"]`);
+        const btn = this._root?.querySelector(`.repo-tab[data-tab="${tab}"]`) as HTMLElement | null;
         if (btn) btn.click();
       }),
     );
@@ -73,7 +95,7 @@ class AppContent extends HTMLElement {
     this._globalUnsubs.push(...registerGlobalHandlers());
   }
 
-  disconnectedCallback() {
+  disconnectedCallback(): void {
     if (this._unsub) this._unsub();
     this._globalUnsubs.forEach((fn) => fn());
     this._globalUnsubs = [];
@@ -97,7 +119,7 @@ class AppContent extends HTMLElement {
     this._githubCache = null;
   }
 
-  _render() {
+  _render(): void {
     let inner = "";
     switch (this._current) {
       case "repository":
@@ -144,9 +166,9 @@ class AppContent extends HTMLElement {
     }
   }
 
-  _initPreviewResize() {
+  _initPreviewResize(): void {
     const handle = this._root.getElementById("preview-resize-handle");
-    const preview = this._root.getElementById("app-preview");
+    const preview = this._root.getElementById("app-preview") as HTMLElement | null;
     if (!handle || !preview) return;
 
     // 从 localStorage 恢复宽度
@@ -181,11 +203,11 @@ class AppContent extends HTMLElement {
     });
   }
 
-  _initDiagnostics() {
+  _initDiagnostics(): void {
     initDiagnostics(this._root, (s) => this._esc(s));
   }
 
-  _initInstances() {
+  _initInstances(): void {
     this._bindTabs("ins", ["versions"]);
     // 只注册一次，避免重复监听
     if (this._insListenerReg) return;
@@ -206,7 +228,7 @@ class AppContent extends HTMLElement {
     );
   }
 
-  _initRepository() {
+  _initRepository(): void {
     this._bindTabs("repo", ["tree", "import", "recycle", "dedup", "oldest"]);
 
     // 资源类型 subtab 切换（全局生效）
@@ -217,7 +239,7 @@ class AppContent extends HTMLElement {
     let curRtype = localStorage.getItem("repo_rtype") || "ysm";
     subtabs.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const rtype = btn.dataset.rtab;
+        const rtype = (btn as HTMLElement).dataset.rtab || "";
         if (rtype === curRtype) return;
         const prevRtype = curRtype;
         curRtype = rtype;
@@ -243,16 +265,16 @@ class AppContent extends HTMLElement {
     const savedTab = root.querySelector(
       '.repo-subtab[data-rtab="' + curRtype + '"]',
     );
-    if (savedTab) savedTab.click();
+    if (savedTab) (savedTab as HTMLElement).click();
   }
 
-  _bindTabs(prefix, ids) {
+  _bindTabs(prefix: string, ids: string[]): void {
     const tabs = this._root.querySelectorAll(".repo-tab");
     if (!tabs.length) return;
-    let inited = {};
+    const inited: Record<string, boolean> = {};
     tabs.forEach((btn) => {
       btn.addEventListener("click", async () => {
-        const tab = btn.dataset.tab;
+        const tab = (btn as HTMLElement).dataset.tab || "";
         tabs.forEach((t) => t.classList.toggle("active", t === btn));
         ids.forEach((id) => {
           const el = this._root.getElementById(prefix + "-tab-" + id);
@@ -264,7 +286,7 @@ class AppContent extends HTMLElement {
           const container = this._root.getElementById(prefix + "-tab-" + tab);
           if (!container) return;
           if (tab === "import") {
-            const { downloadsHTML } = await import("./tpl.js");
+            const { downloadsHTML } = await import("./tpl.ts");
             container.innerHTML = downloadsHTML();
             const { initImportQueue } =
               await import("../../features/import-queue.ts");
@@ -272,7 +294,7 @@ class AppContent extends HTMLElement {
             this._unsubs = this._unsubs || [];
             if (importCleanup) this._unsubs.push(importCleanup);
           } else if (tab === "recycle") {
-            const { recycleHTML } = await import("./tpl.js");
+            const { recycleHTML } = await import("./tpl.ts");
             container.innerHTML = recycleHTML();
             const { initRecycleBin } =
               await import("../../features/recycle-bin.ts");
@@ -280,7 +302,7 @@ class AppContent extends HTMLElement {
             this._unsubs = this._unsubs || [];
             if (recycleCleanup) this._unsubs.push(recycleCleanup);
           } else if (tab === "dedup") {
-            const { startDedup } = await import("./community/diagnostics.js");
+            const { startDedup } = await import("./community/diagnostics.ts");
             let dedupType = localStorage.getItem("repo_rtype") || "ysm";
             container.innerHTML =
               '<div style="display:flex;flex-direction:column;height:100%">' +
@@ -290,11 +312,11 @@ class AppContent extends HTMLElement {
               "</div>" +
               '<div id="dedup-result-list" style="flex:1;overflow-y:auto;padding:8px 0"></div>' +
               "</div>";
-            const doDedup = () => {
+            const doDedup = (): void => {
               const list = container.querySelector("#dedup-result-list");
               if (list)
                 startDedup(
-                  { getElementById: () => list },
+                  { getElementById: () => list as HTMLElement | null },
                   this._esc,
                   dedupType,
                 );
@@ -382,30 +404,30 @@ class AppContent extends HTMLElement {
     });
   }
 
-  _initWorkshop() {
+  _initWorkshop(): void {
     const root = this._root;
-    const browserEl = root.getElementById("ws-browser");
-    const iframe = root.getElementById("ws-iframe");
-    const urlEl = root.getElementById("ws-url");
-    const blockedEl = root.getElementById("ws-blocked");
-    const searchResults = root.getElementById("ws-search-results");
-    const creatorView = root.getElementById("ws-creator-view");
-    const creatorList = root.getElementById("ws-cr-list");
-    const creatorTitle = root.getElementById("ws-cr-title");
-    let currentSite = null;
-    let allSites = [];
-    let allCreators = [];
-    let repoAuthors = [];
-    let wsEditMode = false; // 创意工坊创作者编辑模式（放在外面以持久化）
+    const browserEl = root.getElementById("ws-browser") as HTMLElement | null;
+    const iframe = root.getElementById("ws-iframe") as HTMLIFrameElement | null;
+    const urlEl = root.getElementById("ws-url") as HTMLElement | null;
+    const blockedEl = root.getElementById("ws-blocked") as HTMLElement | null;
+    const searchResults = root.getElementById("ws-search-results") as HTMLElement | null;
+    const creatorView = root.getElementById("ws-creator-view") as HTMLElement | null;
+    const creatorList = root.getElementById("ws-cr-list") as HTMLElement | null;
+    const creatorTitle = root.getElementById("ws-cr-title") as HTMLElement | null;
+    let currentSite: WorkshopSite | null = null;
+    let allSites: WorkshopSite[] = [];
+    let allCreators: LocalCreator[] = [];
+    let repoAuthors: RepoAuthorLike[] = [];
+    // 创意工坊创作者编辑模式（放在外面以持久化）
     const wsEditModeRef = { v: false }; // 可共享引用，供 renderSiteView 读写
     if (!this._workshopCache) this._workshopCache = new Map();
     const repoModelCache = this._workshopCache;
 
     // 点击模式切换：外链 / 内嵌（委托到 searchResults，按钮在 renderSiteView 中动态渲染）
     let embedMode = false;
-    const toggleEmbedMode = () => {
+    const toggleEmbedMode = (): void => {
       embedMode = !embedMode;
-      const btn = searchResults.querySelector("#cr-mode-toggle");
+      const btn = searchResults?.querySelector("#cr-mode-toggle");
       if (btn)
         btn
           .querySelectorAll(".cr-mode-opt")
@@ -413,11 +435,11 @@ class AppContent extends HTMLElement {
     };
 
     // B站/爱发电 tab 点击 → 在右侧显示对应站点的创作者（不打开网站）
-    const showCreatorsBySite = async (siteType) => {
+    const showCreatorsBySite = async (siteType: string): Promise<void> => {
       const { sites, creators, authors } = await loadCommunityData();
       allSites = sites;
       allCreators = creators;
-      repoAuthors = authors || [];
+      repoAuthors = (authors || []) as RepoAuthorLike[];
       const site = sites.find((s) => s.id === siteType);
       if (!site) return;
       currentSite = site;
@@ -441,7 +463,7 @@ class AppContent extends HTMLElement {
           const btn = document.createElement("button");
           btn.className = "repo-tab" + (i === 0 ? " active" : "");
           btn.dataset.tab = s.id;
-          btn.innerHTML = getSiteIcon(s.id) + " " + esc(s.label);
+          btn.innerHTML = getSiteIcon(s.id) + " " + escUtil(s.label);
           btn.addEventListener("click", () => showCreatorsBySite(s.id));
           tabsEl.appendChild(btn);
         });
@@ -456,22 +478,23 @@ class AppContent extends HTMLElement {
     }, 100);
 
     // 后台批量提取创作者头像（仅首次完成后刷新）
-    let avatarCache = {};
-    const extractAvatars = async () => {
+    let avatarCache: Record<string, string> = {};
+    const extractAvatars = async (): Promise<void> => {
       try {
         const { BatchExtractCreatorAvatars } =
           await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const result = await BatchExtractCreatorAvatars();
-        const keys = Object.keys(result);
+        const avatars = (result || {}) as Record<string, string>;
+        const keys = Object.keys(avatars);
         if (keys.length > 0) {
           dbg("avatar", "提取了 " + keys.length + " 个头像: " + keys.join(", "));
-          avatarCache = result;
+          avatarCache = avatars;
           if (currentSite) showSiteView(currentSite);
         } else {
           dbg("avatar", "无头像可提取（无 .ysm 文件或无 avatar/ 目录）");
         }
       } catch (e) {
-        dbg("avatar", "提取失败:", e?.message);
+        dbg("avatar", "提取失败:", (e as Error)?.message);
       }
     };
     extractAvatars();
@@ -486,7 +509,7 @@ class AppContent extends HTMLElement {
     }
 
     // 卡片点击 → 正文切换右侧视图，右侧 ↗ 按开关打开
-    const openSite = (site, external = false) => {
+    const openSite = (site: WorkshopSite | null, external = false): void => {
       if (!site) return;
       if (embedMode) {
         openEmbedded(site);
@@ -500,35 +523,36 @@ class AppContent extends HTMLElement {
     // 内嵌浏览
     const PROXY_PORT = 18080;
     const PROXY_BASE = "http://127.0.0.1:" + PROXY_PORT + "/proxy?url=";
-    const openEmbedded = async (site) => {
+    const openEmbedded = async (site: WorkshopSite): Promise<void> => {
       try {
         const { StartProxy } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         await StartProxy(PROXY_PORT);
       } catch (_) {}
-      urlEl.textContent = site.url;
-      iframe.style.display = "";
-      iframe.src = PROXY_BASE + encodeURIComponent(site.url);
-      browserEl.style.display = "flex";
-      blockedEl.style.display = "none";
+      if (urlEl) urlEl.textContent = site.url;
+      if (iframe) {
+        iframe.style.display = "";
+        iframe.src = PROXY_BASE + encodeURIComponent(site.url);
+      }
+      if (browserEl) browserEl.style.display = "flex";
+      if (blockedEl) blockedEl.style.display = "none";
     };
 
-    root.getElementById("ws-back").addEventListener("click", () => {
-      iframe.src = "";
-      browserEl.style.display = "none";
+    root.getElementById("ws-back")?.addEventListener("click", () => {
+      if (iframe) iframe.src = "";
+      if (browserEl) browserEl.style.display = "none";
     });
-    const openCurrent = () => {
-      if (currentSite) {
+    const openCurrent = (): void => {
+      const cs = currentSite;
+      if (cs) {
         import("../../../bindings/ysm-model-manager/internal/app/app.js").then(({ OpenInBrowser }) =>
-          OpenInBrowser(currentSite.url),
+          OpenInBrowser(cs.url),
         );
       }
     };
-    root.getElementById("ws-open").addEventListener("click", openCurrent);
+    root.getElementById("ws-open")?.addEventListener("click", openCurrent);
     root
       .getElementById("ws-open-fallback")
-      .addEventListener("click", openCurrent);
-
-    // 刷新按钮已移除
+      ?.addEventListener("click", openCurrent);
 
     // 站点导出/导入
     root
@@ -574,10 +598,11 @@ class AppContent extends HTMLElement {
       });
 
     // ===== 右栏：JSON驱动的站点视图 =====
-    const showSiteView = (site) => {
-      const openUrl = (url) => {
+    const showSiteView = (site: WorkshopSite | null): void => {
+      if (!site) return;
+      const openUrl = (url: string): void => {
         if (embedMode) {
-          currentSite = { url };
+          currentSite = { url } as unknown as WorkshopSite;
           openEmbedded(currentSite);
         } else {
           // 外链模式：走系统浏览器，共享用户登录态
@@ -586,15 +611,17 @@ class AppContent extends HTMLElement {
           );
         }
       };
-      renderSiteView(site, {
+      const ctx: RenderSiteViewCtx = {
         esc: (s) => this._esc(s),
-        searchResults,
-        creatorView,
+        searchResults: searchResults as HTMLElement,
+        creatorView: creatorView as HTMLElement,
         allSites,
         allCreators,
         repoAuthors,
         wsEditModeRef,
-        showRepoModels,
+        showRepoModels: async (repo, models, source) => {
+          await showRepoModels(repo, models as WorkshopModel[], source);
+        },
         fillSearch,
         repoModelCache,
         openUrl,
@@ -602,9 +629,10 @@ class AppContent extends HTMLElement {
         backToSite: () => {
           if (currentSite) showSiteView(currentSite);
         },
-      });
+      };
+      renderSiteView(site, ctx);
       // 外链/内嵌切换（按钮在 renderSiteView 中动态渲染）
-      const toggleBtn = searchResults.querySelector("#cr-mode-toggle");
+      const toggleBtn = searchResults?.querySelector("#cr-mode-toggle") as HTMLElement | null;
       if (toggleBtn) {
         toggleBtn.onclick = () => {
           embedMode = !embedMode;
@@ -625,8 +653,8 @@ class AppContent extends HTMLElement {
           // 单卡片定点更新，避免整页重渲染
           let found = false;
           root.querySelectorAll(".cr-creator-card").forEach((c) => {
-            if (c.dataset.name === author) {
-              const img = c.querySelector(".cr-avatar");
+            if ((c as HTMLElement).dataset.name === author) {
+              const img = c.querySelector(".cr-avatar") as HTMLImageElement | null;
               if (img && img.tagName === "IMG") img.src = dataUri;
               found = true;
             }
@@ -637,21 +665,25 @@ class AppContent extends HTMLElement {
     }
 
     // 📦 显示 GitHub 仓库模型列表（比对本地已有文件）
-    const showRepoModels = async (repo, models, source) => {
+    const showRepoModels = async (
+      repo: string,
+      models: WorkshopModel[],
+      source: string,
+    ): Promise<void> => {
       // 加载本地仓库已有文件列表 + 镜像配置
-      var localMap = new Map();
-      var mirror = "";
+      const localMap = new Map<string, string>();
+      let mirror = "";
       try {
-        var AppM = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-        var cfg = await AppM.LoadAppConfig();
+        const AppM = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        const cfg = await AppM.LoadAppConfig();
         mirror = cfg.mirror || "";
-        var repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot("ysm") : "";
+        const repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot("ysm") : "";
         if (repoRoot) {
           // 先清缓存再扫描，确保新下载的文件立即可见
           if (AppM.ClearScanCache) await AppM.ClearScanCache();
-          var entries = await AppM.ScanModelEntries(repoRoot);
-          entries.forEach(function (e) {
-            var n = e.Name || "";
+          const entries = (await AppM.ScanModelEntries(repoRoot)) || [];
+          entries.forEach((e) => {
+            let n = e.Name || "";
             if (n.endsWith(".ban")) n = n.slice(0, -4);
             localMap.set(n, e.Hash || "");
           });
@@ -683,107 +715,124 @@ class AppContent extends HTMLElement {
 
       const missingCount = countMissing(models, localMap);
 
-      searchResults.innerHTML = renderRepoHeaderHTML({
-        esc: (s) => this._esc(s),
-        repo,
-        sourceLabel,
-        modelsLength: models.length,
-        missingCount,
-      });
+      if (searchResults) {
+        searchResults.innerHTML = renderRepoHeaderHTML({
+          esc: (s) => this._esc(s),
+          repo,
+          sourceLabel,
+          modelsLength: models.length,
+          missingCount,
+        });
+      }
 
       // 清理前一次绑定
       if (this._repoEventsCleanup) await this._repoEventsCleanup();
 
       // 委托 bindRepoEvents 管理所有事件 + 内部状态 (showAll/selectedSet/renderList)
-      const { renderList, cleanup } = bindRepoEvents(searchResults, {
-        esc: (s) => this._esc(s),
-        models,
-        dlPrefix,
-        repo,
-        source,
-        showRepoModels: () => showRepoModels(repo, models, source),
-        backToSite: () => {
-          if (currentSite) showSiteView(currentSite);
-        },
-        localMap,
-      });
-      this._repoEventsCleanup = cleanup;
+      if (searchResults) {
+        const { renderList, cleanup } = bindRepoEvents(searchResults, {
+          esc: (s) => this._esc(s),
+          models,
+          dlPrefix,
+          repo,
+          source,
+          showRepoModels: () => showRepoModels(repo, models, source),
+          backToSite: () => {
+            if (currentSite) showSiteView(currentSite);
+          },
+          localMap,
+        });
+        this._repoEventsCleanup = cleanup;
 
-      // 初始渲染
-      const listContainer = searchResults.querySelector("#gh-repo-list");
-      if (listContainer) listContainer.appendChild(renderList());
+        // 初始渲染
+        const listContainer = searchResults.querySelector("#gh-repo-list");
+        if (listContainer) listContainer.appendChild(renderList());
+      }
     }; // end showRepoModels
   }
 
-  _initGithub() {
+  _initGithub(): void {
     const root = this._root;
-    const grid = root.getElementById("gh-grid");
-    const resultsBody = root.getElementById("gh-results-body");
-    const sourceInfo = root.getElementById("gh-source-info");
+    const grid = root.getElementById("gh-grid") as HTMLElement | null;
+    const resultsBody = root.getElementById("gh-results-body") as HTMLElement | null;
+    const sourceInfo = root.getElementById("gh-source-info") as HTMLElement | null;
     if (!this._githubCache) this._githubCache = new Map();
     const repoModelCache = this._githubCache;
 
-    const loadRepos = async () => {
-      grid.innerHTML =
-        '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>';
+    const loadRepos = async (): Promise<void> => {
+      if (grid) {
+        grid.innerHTML =
+          '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>';
+      }
       try {
         const App = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
         const repos = await App.LoadGitHubRepos();
         const ghCreators = repos || [];
-        sourceInfo.textContent = ghCreators.length + " 仓库 · JSON驱动";
+        if (sourceInfo) sourceInfo.textContent = ghCreators.length + " 仓库 · JSON驱动";
         if (!ghCreators.length) {
-          grid.innerHTML =
-            '<div style="padding:24px;text-align:center;color:var(--muted);font-size:10px">暂无 GitHub 仓库</div>';
+          if (grid) {
+            grid.innerHTML =
+              '<div style="padding:24px;text-align:center;color:var(--muted);font-size:10px">暂无 GitHub 仓库</div>';
+          }
           return;
         }
-        grid.innerHTML = ghCreators
-          .map(
-            (cr, idx) =>
-              '<div class="gh-card gh-repo-card" style="animation-delay:' + stagger(idx, 30, 300) + 'ms" data-index="' +
-              idx +
-              '" data-repo="' +
-              this._esc(cr.name) +
-              '">' +
-              '<div class="gh-card-body">' +
-              '<div class="ws-name" style="font-size:11px">🐙 ' +
-              this._esc(cr.name) +
-              "</div>" +
-              '<div class="ws-desc" style="font-size:9px">' +
-              this._esc(cr.desc) +
-              "</div>" +
-              "</div></div>",
-          )
-          .join("");
-        // 点击仓库
-        grid.querySelectorAll(".gh-repo-card").forEach((card) => {
-          card.addEventListener("click", () => {
-            grid
-              .querySelectorAll(".gh-card")
-              .forEach((c) => c.classList.remove("active"));
-            card.classList.add("active");
-            const repo = card.dataset.repo;
-            showRepo(repo);
+        if (grid) {
+          grid.innerHTML = ghCreators
+            .map(
+              (cr, idx) =>
+                '<div class="gh-card gh-repo-card" style="animation-delay:' + stagger(idx, 30, 300) + 'ms" data-index="' +
+                idx +
+                '" data-repo="' +
+                this._esc(cr.name) +
+                '">' +
+                '<div class="gh-card-body">' +
+                '<div class="ws-name" style="font-size:11px">🐙 ' +
+                this._esc(cr.name) +
+                "</div>" +
+                '<div class="ws-desc" style="font-size:9px">' +
+                this._esc(cr.desc) +
+                "</div>" +
+                "</div></div>",
+            )
+            .join("");
+          // 点击仓库
+          grid.querySelectorAll(".gh-repo-card").forEach((card) => {
+            card.addEventListener("click", () => {
+              grid
+                .querySelectorAll(".gh-card")
+                .forEach((c) => c.classList.remove("active"));
+              card.classList.add("active");
+              const repo = (card as HTMLElement).dataset.repo || "";
+              showRepo(repo);
+            });
           });
-        });
+        }
       } catch (e) {
-        grid.innerHTML =
-          '<div style="padding:24px;text-align:center;color:var(--muted);font-size:10px">加载失败</div>';
+        if (grid) {
+          grid.innerHTML =
+            '<div style="padding:24px;text-align:center;color:var(--muted);font-size:10px">加载失败</div>';
+        }
       }
     };
 
     // _currentRepo 用于检测过时的异步响应（竞态防护）
     let _currentRepo = "";
 
-    const showRepo = async (repo) => {
+    const showRepo = async (repo: string): Promise<void> => {
       _currentRepo = repo;
-      resultsBody.innerHTML =
-        '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载模型列表中...</div>';
+      if (resultsBody) {
+        resultsBody.innerHTML =
+          '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载模型列表中...</div>';
+      }
       // 使用缓存
       if (repoModelCache.has(repo)) {
-        const { models, source, localMap } = repoModelCache.get(repo);
-        if (_currentRepo !== repo) return; // 已切换，丢弃
-        renderModels(repo, models, source, localMap);
-        return;
+        const cached = repoModelCache.get(repo);
+        if (cached) {
+          const { models, source, localMap } = cached;
+          if (_currentRepo !== repo) return; // 已切换，丢弃
+          renderModels(repo, models, source, localMap || new Map());
+          return;
+        }
       }
       let mirror = "";
       try {
@@ -793,9 +842,9 @@ class AppContent extends HTMLElement {
         mirror = cfg.mirror || "";
         const repoRoot = await GetRepoRoot("ysm");
         // 预先加载本地映射
-        let localMap = new Map();
+        const localMap = new Map<string, string>();
         if (repoRoot) {
-          const entries = await ScanModelEntries(repoRoot);
+          const entries = (await ScanModelEntries(repoRoot)) || [];
           entries.forEach((e) => {
             let n = e.Name || "";
             if (n.endsWith(".ban")) n = n.slice(0, -4);
@@ -805,46 +854,53 @@ class AppContent extends HTMLElement {
         const { tryFetchModels } =
           await import("../../features/community/data.ts");
         let fetchDone = false;
-        const result = await tryFetchModels(repo, mirror, (pct, label) => {
+        const result = await tryFetchModels(repo, (mirror || "") as "" | "jsdelivr" | "githubapi", (pct, label) => {
           if (fetchDone || _currentRepo !== repo) return;
-          resultsBody.innerHTML =
-            '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +
-            (label || "⏳ 加载中...") +
-            "</div>";
+          if (resultsBody) {
+            resultsBody.innerHTML =
+              '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">' +
+              (label || "⏳ 加载中...") +
+              "</div>";
+          }
         });
         fetchDone = true;
         if (result && result.models) {
           repoModelCache.set(repo, {
-            models: result.models,
+            models: result.models as WorkshopModel[],
             source: result.source,
             localMap,
           });
           if (_currentRepo !== repo) return;
-          renderModels(repo, result.models, result.source, localMap);
+          renderModels(repo, result.models as WorkshopModel[], result.source, localMap);
         } else {
           if (_currentRepo !== repo) return;
-          resultsBody.innerHTML =
-            '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ 未找到模型列表</div>' +
-            '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
+          if (resultsBody) {
+            resultsBody.innerHTML =
+              '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ 未找到模型列表</div>' +
+              '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
+          }
         }
       } catch (e) {
+        const err = e as Error;
         if (_currentRepo !== repo) return;
         const msg =
-          e.message === "NetworkOffline"
+          err.message === "NetworkOffline"
             ? "🌐 无网络连接，请检查网络后重试"
-            : e.message === "NoIndex"
+            : err.message === "NoIndex"
               ? "📭 该仓库没有 index.json（尚未建立创意工坊索引）"
-              : e.message === "RateLimited"
+              : err.message === "RateLimited"
                 ? "⏱️ GitHub API 频率限制，请稍后重试或改用浏览器打开"
                 : "❌ 加载失败，请检查网络或稍后重试";
-        resultsBody.innerHTML =
-          '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ ' +
-          this._esc(msg) +
-          "</div>" +
-          '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
+        if (resultsBody) {
+          resultsBody.innerHTML =
+            '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ ' +
+            this._esc(msg) +
+            "</div>" +
+            '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
+        }
       }
       // 绑定打开 GitHub 按钮
-      const openBtn = resultsBody.querySelector("#gh-open-repo");
+      const openBtn = resultsBody?.querySelector("#gh-open-repo");
       if (openBtn)
         openBtn.addEventListener("click", () => {
           import("../../../bindings/ysm-model-manager/internal/app/app.js").then(({ OpenInBrowser }) =>
@@ -853,7 +909,12 @@ class AppContent extends HTMLElement {
         });
     };
 
-    const renderModels = async (repo, models, source, localMap) => {
+    const renderModels = async (
+      repo: string,
+      models: WorkshopModel[],
+      source: string,
+      localMap: Map<string, string>,
+    ): Promise<void> => {
       const dlPrefix =
         source === "jsd"
           ? "https://cdn.jsdelivr.net/gh/" + repo + "@main/"
@@ -867,35 +928,37 @@ class AppContent extends HTMLElement {
               ? '<span class="link-badge link-badge-api">API</span>'
               : "";
       const missingCount = countMissing(models, localMap);
-      resultsBody.innerHTML = renderRepoHeaderHTML({
-        esc: (s) => this._esc(s),
-        repo,
-        sourceLabel,
-        modelsLength: models.length,
-        missingCount,
-      });
-      // 清理前一次绑定
-      if (this._repoEventsCleanup) await this._repoEventsCleanup();
-      const { renderList, cleanup } = bindRepoEvents(resultsBody, {
-        esc: (s) => this._esc(s),
-        models,
-        dlPrefix,
-        repo,
-        source,
-        showRepoModels: () => showRepo(repo),
-        backToSite: () => loadRepos(),
-        localMap,
-      });
-      this._repoEventsCleanup = cleanup;
-      const listContainer = resultsBody.querySelector("#gh-repo-list");
-      if (listContainer) listContainer.appendChild(renderList());
+      if (resultsBody) {
+        resultsBody.innerHTML = renderRepoHeaderHTML({
+          esc: (s) => this._esc(s),
+          repo,
+          sourceLabel,
+          modelsLength: models.length,
+          missingCount,
+        });
+        // 清理前一次绑定
+        if (this._repoEventsCleanup) await this._repoEventsCleanup();
+        const { renderList, cleanup } = bindRepoEvents(resultsBody, {
+          esc: (s) => this._esc(s),
+          models,
+          dlPrefix,
+          repo,
+          source,
+          showRepoModels: () => showRepo(repo),
+          backToSite: () => loadRepos(),
+          localMap,
+        });
+        this._repoEventsCleanup = cleanup;
+        const listContainer = resultsBody.querySelector("#gh-repo-list");
+        if (listContainer) listContainer.appendChild(renderList());
+      }
     };
 
     // 刷新按钮已移除
     loadRepos();
   }
 
-  async _initSettings() {
+  async _initSettings(): Promise<void> {
     this._bindTabs("stg", ["basic", "ui", "about", "credits"]);
     try {
       await initSettings(this._root);
@@ -904,18 +967,22 @@ class AppContent extends HTMLElement {
     }
   }
 
-  _fmtSize(bytes) {
+  _fmtSize(bytes: number): string {
     if (!bytes) return "";
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
     return (bytes / 1048576).toFixed(1) + " MB";
   }
 
-  _esc(s) {
-    return (s || "")
+  _esc(s: unknown): string {
+    return String(s || "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
   }
 }
+
+// 保持渲染工具引用（renderCardsHTML 为 features 导出，此处确保其类型被检查）
+void renderCardsHTML;
+
 customElements.define("app-content", AppContent);

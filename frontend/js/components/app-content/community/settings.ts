@@ -2,13 +2,13 @@
 import { bus } from "../../../bus.ts";
 import { initVersionUpdater } from "../../../features/version-updater.ts";
 import { friendlyError } from "../../../utils/errors.ts";
-import { loadResourceRegistry } from "../../../utils/resource-registry.ts";
+import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/resource-registry.ts";
 
 /**
  * 初始化设置页所有事件绑定
- * @param {ShadowRoot} root - 组件 shadow root
+ * @param root - 组件 shadow root
  */
-export async function initSettings(root) {
+export async function initSettings(root: ShadowRoot): Promise<void> {
   const {
     LoadAppConfig,
     SaveAppConfig,
@@ -24,13 +24,21 @@ export async function initSettings(root) {
   const reg = await loadResourceRegistry();
 
   // 所有路径卡片的刷新函数列表
-  const _cardRefreshers = [];
+  const _cardRefreshers: Array<() => void> = [];
+
+  // cfg 动态索引辅助（cfgKey 来自配置字段，类型收窄为字符串索引）
+  const cfgAny = cfg as unknown as Record<string, unknown>;
+  const cfgStr = (key: string): string => (typeof cfgAny[key] === "string" ? (cfgAny[key] as string) : "");
 
   // 工具：绑定路径卡片点击
-  function bindPathClick(elId, getPath, onSelect) {
+  function bindPathClick(
+    elId: string,
+    getPath: () => string,
+    onSelect: (dir: string) => Promise<void>,
+  ): void {
     const el = root.getElementById(elId);
     if (!el) return;
-    const refresh = () => {
+    const refresh = (): void => {
       const p = getPath();
       el.textContent = p || "📂 选择目录";
       el.style.color = p ? "" : "var(--accent)";
@@ -54,7 +62,12 @@ export async function initSettings(root) {
   }
 
   // 保存 cfg 辅助（保留各字段原值）
-  const saveCfg = async (patch) => {
+  const saveCfg = async (patch: {
+    filesRoot?: string;
+    rpRoot?: string;
+    mcRoot?: string;
+    linkMode?: string;
+  }): Promise<void> => {
     const theme = localStorage.getItem("theme") || "dark";
     await SaveAppConfig(
       patch.filesRoot !== undefined ? patch.filesRoot : cfg.filesRoot || "",
@@ -89,22 +102,28 @@ export async function initSettings(root) {
 
   // 📂 详细调整面板
   // 从注册表构建高级设置条目
-  const advancedTypes = Object.values(reg).map((t) => ({
+  interface AdvancedType {
+    rtype: string;
+    icon: string;
+    name: string;
+    cfgKey: string;
+  }
+  const advancedTypes: AdvancedType[] = Object.values(reg).map((t: ResourceTypeEntry) => ({
     rtype: t.id,
-    icon: t.icon,
-    name: t.name,
+    icon: t.icon as string,
+    name: (t.name as string) || t.id,
     cfgKey: t.configField
-      ? t.configField.charAt(0).toLowerCase() + t.configField.slice(1)
+      ? String(t.configField).charAt(0).toLowerCase() + String(t.configField).slice(1)
       : "",
   }));
 
-  const refreshAdvanced = async () => {
+  const refreshAdvanced = async (): Promise<void> => {
     const grid = root.getElementById("set-advanced-grid");
     if (!grid) return;
     let html = "";
     for (const t of advancedTypes) {
       const canOverride = !!t.cfgKey;
-      const overridePath = canOverride ? cfg[t.cfgKey] || "" : "";
+      const overridePath = canOverride ? cfgStr(t.cfgKey) : "";
       const defaultPath = cfg.filesRoot
         ? (cfg.filesRoot + "\\" + (reg[t.rtype]?.storageSubDir || t.rtype || "")).replace(
             /\//g,
@@ -145,7 +164,7 @@ export async function initSettings(root) {
     // 点击路径文字更改路径
     grid.querySelectorAll(".stg-adv-set").forEach((el) => {
       el.addEventListener("click", async () => {
-        const rtype = el.dataset.rtype;
+        const rtype = (el as HTMLElement).dataset.rtype || "";
         const dir = await SelectDirectory();
         if (!dir) return;
         try {
@@ -153,7 +172,7 @@ export async function initSettings(root) {
             await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
           await SetResourceRoot(rtype, dir);
           const entry = advancedTypes.find((t) => t.rtype === rtype);
-          if (entry) cfg[entry.cfgKey] = dir;
+          if (entry && entry.cfgKey) cfgAny[entry.cfgKey] = dir;
           refreshAdvanced();
           bus.emit("config:updated");
           bus.emit("toast:show", {
@@ -163,7 +182,7 @@ export async function initSettings(root) {
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ " + friendlyError(e.message || e, "保存失败"),
+            msg: "❌ " + friendlyError((e as Error)?.message || e, "保存失败"),
             duration: 4000,
             type: "error",
           });
@@ -174,13 +193,13 @@ export async function initSettings(root) {
     grid.querySelectorAll(".stg-adv-reset").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
-        const rtype = btn.dataset.rtype;
+        const rtype = (btn as HTMLElement).dataset.rtype || "";
         try {
           const { ResetResourceRoot } =
             await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
           await ResetResourceRoot(rtype);
           const entry = advancedTypes.find((t) => t.rtype === rtype);
-          if (entry) cfg[entry.cfgKey] = "";
+          if (entry && entry.cfgKey) cfgAny[entry.cfgKey] = "";
           refreshAdvanced();
           _cardRefreshers.forEach((fn) => fn());
           bus.emit("config:updated");
@@ -191,7 +210,7 @@ export async function initSettings(root) {
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ " + friendlyError(e.message || e, "重置失败"),
+            msg: "❌ " + friendlyError((e as Error)?.message || e, "重置失败"),
             duration: 4000,
             type: "error",
           });
@@ -204,9 +223,9 @@ export async function initSettings(root) {
   root
     .getElementById("set-advanced-toggle")
     ?.addEventListener("click", async () => {
-      const panel = root.getElementById("set-advanced-panel");
-      const btn = root.getElementById("set-advanced-toggle");
-      const card = root.getElementById("stg-files-card");
+      const panel = root.getElementById("set-advanced-panel") as HTMLElement | null;
+      const btn = root.getElementById("set-advanced-toggle") as HTMLElement | null;
+      const card = root.getElementById("stg-files-card") as HTMLElement | null;
       if (!panel || !btn || !card) return;
       const isOpen = panel.classList.contains("adv-open");
       if (isOpen) {
@@ -232,7 +251,7 @@ export async function initSettings(root) {
   refreshAdvanced();
 
   // 游戏路径 - 自动搜索
-  const detectBtn = root.getElementById("set-mc-detect");
+  const detectBtn = root.getElementById("set-mc-detect") as HTMLElement | null;
   detectBtn?.addEventListener("click", async () => {
     const paths = await GetMinecraftPaths();
     if (!paths?.length) {
@@ -244,12 +263,12 @@ export async function initSettings(root) {
       return;
     }
     // 只有一个直接使用，多个让用户选
-    var selected = paths[0];
+    let selected: string | null = paths[0];
     if (paths.length > 1) {
       selected = await showPathPicker(root, paths);
       if (!selected) return; // 用户取消
     }
-    var theme = localStorage.getItem("theme") || "dark";
+    const theme = localStorage.getItem("theme") || "dark";
     await SaveAppConfig(
       cfg.filesRoot || "",
       cfg.resourcepackRoot || "",
@@ -257,8 +276,8 @@ export async function initSettings(root) {
       cfg.linkMode || "copy",
       theme,
     );
-    cfg.mcRoot = selected;
-    _cardRefreshers.forEach(function (fn) {
+    cfg.mcRoot = selected as string; // 语义上此处非空（单路径为 paths[0]，多路径已 return null）
+    _cardRefreshers.forEach((fn) => {
       fn();
     });
     bus.emit("config:updated");
@@ -270,16 +289,16 @@ export async function initSettings(root) {
     });
   });
 
-  function showPathPicker(root, paths) {
+  function showPathPicker(root: ShadowRoot, paths: string[]): Promise<string | null> {
     return new Promise(function (resolve) {
-      var overlay = document.createElement("div");
+      const overlay = document.createElement("div");
       overlay.style.cssText =
         "position:fixed;z-index:var(--z-modal);inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center";
-      var box = document.createElement("div");
+      const box = document.createElement("div");
       box.style.cssText =
         "background:var(--surf,#2a2a3a);border:1px solid var(--bd,#444);border-radius:12px;padding:16px;max-width:500px;width:90%;max-height:70vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.4)";
-      var listHtml = "";
-      for (var i = 0; i < paths.length; i++) {
+      let listHtml = "";
+      for (let i = 0; i < paths.length; i++) {
         listHtml +=
           "<div class='mc-pick-item' data-idx='" +
           i +
@@ -303,22 +322,22 @@ export async function initSettings(root) {
 
       box.querySelectorAll(".mc-pick-item").forEach(function (el) {
         el.addEventListener("click", function () {
-          var idx = parseInt(el.dataset.idx, 10);
+          const idx = parseInt((el as HTMLElement).dataset.idx || "0", 10);
           overlay.remove();
-          resolve(paths[idx]);
+          resolve(paths[idx] || null);
         });
       });
       box
         .querySelector(".mc-pick-cancel")
-        .addEventListener("click", function () {
+        ?.addEventListener("click", function () {
           overlay.remove();
           resolve(null);
         });
     });
   }
   // hover 时预加载并显示扫描到的所有路径 + 搜索范围
-  let _scanTooltip = null;
-  let _scanPaths = null;
+  let _scanTooltip: HTMLElement | null = null;
+  let _scanPaths: string[] | null = null;
   detectBtn?.addEventListener("mouseenter", async () => {
     if (_scanTooltip) return;
     if (!_scanPaths) _scanPaths = await GetMinecraftPaths();
@@ -331,7 +350,11 @@ export async function initSettings(root) {
     }
   });
 
-  function showScanTooltip(root, anchor, paths) {
+  function showScanTooltip(
+    root: ShadowRoot,
+    anchor: HTMLElement,
+    paths: string[],
+  ): HTMLElement {
     const rect = anchor.getBoundingClientRect();
     const tip = document.createElement("div");
     tip.id = "mc-scan-tooltip";
@@ -341,7 +364,7 @@ export async function initSettings(root) {
     tip.style.top = rect.bottom + 4 + "px";
 
     // 搜索范围
-    var html =
+    let html =
       "<div style='font-weight:600;margin-bottom:4px'>🔍 扫描范围</div>" +
       "<div style='font-size:10px;color:var(--muted,#888);margin-bottom:8px;padding-left:4px'>" +
       "C 盘 ~ Z 盘 · 根目录 .minecraft / 各启动器目录<br>" +
@@ -359,7 +382,7 @@ export async function initSettings(root) {
         "<div style='font-weight:600;margin-bottom:4px'>✅ 找到 " +
         paths.length +
         " 个</div>";
-      for (var i = 0; i < paths.length; i++) {
+      for (let i = 0; i < paths.length; i++) {
         html +=
           "<div style='padding:1px 0;display:flex;align-items:center;gap:6px;font-size:10px'>" +
           "<span style='color:var(--accent,#89b4fa);flex-shrink:0'>📁</span>" +
@@ -376,7 +399,7 @@ export async function initSettings(root) {
     return tip;
   }
 
-  function escHtml(s) {
+  function escHtml(s: unknown): string {
     return String(s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -388,14 +411,15 @@ export async function initSettings(root) {
   const themePicker = root.getElementById("theme-picker");
   if (themePicker) {
     themePicker.querySelectorAll(".theme-card").forEach((card) => {
-      card.classList.toggle("active", card.dataset.theme === savedTheme);
+      card.classList.toggle("active", (card as HTMLElement).dataset.theme === savedTheme);
       card.addEventListener("click", () => {
         themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
         card.classList.add("active");
-        window.applyTheme(card.dataset.theme);
-        localStorage.setItem("theme", card.dataset.theme);
+        const themeName = (card as HTMLElement).dataset.theme || "";
+        window.applyTheme?.(themeName);
+        localStorage.setItem("theme", themeName);
         // 关闭自动切换
-        const autoSelect = root.getElementById("theme-auto");
+        const autoSelect = root.getElementById("theme-auto") as HTMLSelectElement | null;
         if (autoSelect) autoSelect.value = "off";
         localStorage.setItem("theme-auto", "off");
       });
@@ -404,14 +428,14 @@ export async function initSettings(root) {
 
   // 自动切换下拉框
   const savedAuto = localStorage.getItem("theme-auto") || "off";
-  const autoSelect = root.getElementById("theme-auto");
+  const autoSelect = root.getElementById("theme-auto") as HTMLSelectElement | null;
   if (autoSelect) {
     autoSelect.value = savedAuto;
     autoSelect.addEventListener("change", () => {
       const mode = autoSelect.value;
       localStorage.setItem("theme-auto", mode);
       if (mode === "system") {
-        window.applyTheme("system");
+        window.applyTheme?.("system");
         localStorage.setItem("theme", "system");
         // 更新卡片选中态
         if (themePicker) themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
@@ -424,26 +448,26 @@ export async function initSettings(root) {
     });
     // 初始化：如果 savedAuto 是 system/time，应用对应主题
     if (savedAuto === "system") {
-      window.applyTheme("system");
+      window.applyTheme?.("system");
     } else if (savedAuto === "time") {
       applyTimeTheme();
     } else {
-      window.applyTheme(savedTheme);
+      window.applyTheme?.(savedTheme);
     }
   } else {
-    window.applyTheme(savedTheme);
+    window.applyTheme?.(savedTheme);
   }
 
   // 时间段主题切换
-  function applyTimeTheme() {
+  function applyTimeTheme(): void {
     const hour = new Date().getHours();
     const isDay = hour >= 6 && hour < 18;
-    window.applyTheme(isDay ? "warm" : "cyber");
+    window.applyTheme?.(isDay ? "warm" : "cyber");
   }
 
   // 镜像源
   const savedMirror = cfg.mirror || "";
-  const mirrorSelect = root.getElementById("set-mirror");
+  const mirrorSelect = root.getElementById("set-mirror") as HTMLSelectElement | null;
   if (mirrorSelect) {
     mirrorSelect.value = savedMirror;
     const initMirrorKey = savedMirror || "direct";
@@ -476,7 +500,7 @@ export async function initSettings(root) {
 
   // ===== 以下代码保持原样（链接模式/主题切换/关于等） =====
   // 链接模式提示切换
-  const updateLinkHint = (mode) => {
+  const updateLinkHint = (mode: string): void => {
     ["copy", "hardlink", "symlink"].forEach((m) => {
       const el = root.getElementById("lm-hint-" + m);
       if (el) el.style.display = m === mode ? "block" : "none";
@@ -485,24 +509,26 @@ export async function initSettings(root) {
   updateLinkHint(linkMode);
 
   // 链接模式变更（下拉菜单）+ 重新应用按钮
-  const doRelink = async () => {
+  const doRelink = async (): Promise<void> => {
     try {
       const {
         LoadAppConfig,
         ListVersionInstances,
         RelinkAllInstanceResources,
-} = await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
-      const cfg = await LoadAppConfig();
-      const mcRoot = cfg.mcRoot || "";
+      } = await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
+      const cfg2 = await LoadAppConfig();
+      const mcRoot = cfg2.mcRoot || "";
       if (!mcRoot) return;
-      const instances = await ListVersionInstances(mcRoot);
+      const instances = (await ListVersionInstances(mcRoot)) || [];
       let total = 0;
       for (const ins of instances) {
         if (!ins.Exists) continue;
         try {
           const n = await RelinkAllInstanceResources(ins.Name);
           total += n;
-        } catch {}
+        } catch {
+          /* 单实例失败不影响其余 */
+        }
       }
       bus.emit("stats:refresh");
       bus.emit("toast:show", {
@@ -519,7 +545,7 @@ export async function initSettings(root) {
     }
   };
 
-  const linkSelect = root.getElementById("set-link-mode");
+  const linkSelect = root.getElementById("set-link-mode") as HTMLSelectElement | null;
   if (linkSelect) {
     linkSelect.value = linkMode;
     linkSelect.addEventListener("change", async () => {
@@ -544,20 +570,22 @@ export async function initSettings(root) {
     });
   }
 
-  const relinkBtn = root.getElementById("set-relink");
+  const relinkBtn = root.getElementById("set-relink") as HTMLElement | null;
   if (relinkBtn) {
     relinkBtn.addEventListener("click", doRelink);
   }
 
   // 显示版本号
-  const showVersion = async () => {
+  const showVersion = async (): Promise<void> => {
     try {
       const { CurrentVersion } =
         await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
       const ver = await CurrentVersion();
       const el = root.getElementById("set-version");
       if (el) el.textContent = ver;
-    } catch {}
+    } catch {
+      /* 版本获取失败静默 */
+    }
   };
   showVersion();
 
@@ -574,7 +602,7 @@ export async function initSettings(root) {
   // ===== 界面与体验设置 =====
 
   // 读取/应用 UI 偏好（localStorage）
-  const applyUIPref = () => {
+  const applyUIPref = (): void => {
     const fontSize = localStorage.getItem("ui-font-size") || "normal";
     const displayFont = localStorage.getItem("ui-display-font") || "kaiti";
     const density = localStorage.getItem("ui-card-density") || "compact";
@@ -592,7 +620,7 @@ export async function initSettings(root) {
       "--fs-xl",
     ].forEach((v) => document.documentElement.style.removeProperty(v));
     // 小=-1px, 标准=0px, 大=+2px
-    const scaleMap = { small: "-1px", normal: "0px", large: "2px" };
+    const scaleMap: Record<string, string> = { small: "-1px", normal: "0px", large: "2px" };
     document.documentElement.style.setProperty(
       "--fs-scale",
       scaleMap[fontSize] || "0px",
@@ -625,7 +653,7 @@ export async function initSettings(root) {
    * 解析 CSS 变量的计算像素值（getComputedStyle 对 calc() 返回原始表达式，
    * 需要间接通过真实 CSS 属性读取）
    */
-  const resolvePx = (varName) => {
+  const resolvePx = (varName: string): string => {
     const d = document.body;
     const orig = d.style.paddingTop;
     d.style.paddingTop = "var(" + varName + ")";
@@ -637,7 +665,7 @@ export async function initSettings(root) {
   /**
    * 读取当前 --fs-* 和 --space-* 的计算值并显示
    */
-  const updateSizePreview = () => {
+  const updateSizePreview = (): void => {
     const base = resolvePx("--fs-base");
     const spaceMd = resolvePx("--space-md");
     const spaceSm = resolvePx("--space-sm");
@@ -660,26 +688,26 @@ export async function initSettings(root) {
 
   // 初始化 UI 控件值
   root.getElementById("set-font-size") &&
-    (root.getElementById("set-font-size").value =
+    ((root.getElementById("set-font-size") as HTMLSelectElement).value =
       localStorage.getItem("ui-font-size") || "normal");
   root.getElementById("set-display-font") &&
-    (root.getElementById("set-display-font").value =
+    ((root.getElementById("set-display-font") as HTMLSelectElement).value =
       localStorage.getItem("ui-display-font") || "kaiti");
   root.getElementById("set-card-density") &&
-    (root.getElementById("set-card-density").value =
+    ((root.getElementById("set-card-density") as HTMLSelectElement).value =
       localStorage.getItem("ui-card-density") || "compact");
   root.getElementById("set-animations") &&
-    (root.getElementById("set-animations").checked =
+    ((root.getElementById("set-animations") as HTMLInputElement).checked =
       localStorage.getItem("ui-animations") !== "off");
   root.getElementById("set-default-page") &&
-    (root.getElementById("set-default-page").value =
+    ((root.getElementById("set-default-page") as HTMLSelectElement).value =
       localStorage.getItem("ui-default-page") || "instances");
 
   applyUIPref();
 
   // 基准字号变更
   root.getElementById("set-font-size")?.addEventListener("change", (e) => {
-    localStorage.setItem("ui-font-size", e.target.value);
+    localStorage.setItem("ui-font-size", (e.target as HTMLSelectElement).value);
     applyUIPref();
     bus.emit("toast:show", {
       msg: "✅ 字号已更新",
@@ -690,7 +718,7 @@ export async function initSettings(root) {
 
   // 创作者字体变更
   root.getElementById("set-display-font")?.addEventListener("change", (e) => {
-    localStorage.setItem("ui-display-font", e.target.value);
+    localStorage.setItem("ui-display-font", (e.target as HTMLSelectElement).value);
     applyUIPref();
     bus.emit("toast:show", {
       msg: "✅ 字体已更新",
@@ -701,7 +729,7 @@ export async function initSettings(root) {
 
   // 卡片密度变更
   root.getElementById("set-card-density")?.addEventListener("change", (e) => {
-    localStorage.setItem("ui-card-density", e.target.value);
+    localStorage.setItem("ui-card-density", (e.target as HTMLSelectElement).value);
     applyUIPref();
     bus.emit("toast:show", {
       msg: "✅ 卡片密度已更新",
@@ -712,10 +740,11 @@ export async function initSettings(root) {
 
   // 动画开关
   root.getElementById("set-animations")?.addEventListener("change", (e) => {
-    localStorage.setItem("ui-animations", e.target.checked ? "on" : "off");
+    const checked = (e.target as HTMLInputElement).checked;
+    localStorage.setItem("ui-animations", checked ? "on" : "off");
     applyUIPref();
     bus.emit("toast:show", {
-      msg: e.target.checked ? "✅ 动画已开启" : "✅ 动画已关闭",
+      msg: checked ? "✅ 动画已开启" : "✅ 动画已关闭",
       duration: 1500,
       type: "success",
     });
@@ -723,7 +752,7 @@ export async function initSettings(root) {
 
   // 默认页面变更
   root.getElementById("set-default-page")?.addEventListener("change", (e) => {
-    localStorage.setItem("ui-default-page", e.target.value);
+    localStorage.setItem("ui-default-page", (e.target as HTMLSelectElement).value);
     bus.emit("toast:show", {
       msg: "✅ 默认页面已保存",
       duration: 1500,

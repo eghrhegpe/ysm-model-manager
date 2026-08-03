@@ -1,5 +1,5 @@
 import { btnBaseCSS, focusVisibleCSS } from "../../css/shared-styles.js";
-export const contentCSS = `
+export const contentCSS: string = `
 :host { display:flex; flex-direction:column; flex:1; overflow:hidden; font-family:var(--font-ui); font-size:var(--fs-base); line-height:1.4; background:var(--bg); }
 /* ===== CSS 变量（标签/标记色） ===== */
 :host { --tag-game:#4a9eff; --tag-game-bg:rgba(74,158,255,.13); --tag-vup:#ff6bb5; --tag-vup-bg:rgba(255,107,181,.13); --tag-oc:#a78bfa; --tag-oc-bg:rgba(167,139,250,.13); --tag-amber:#f9a826; --tag-amber-bg:rgba(249,168,38,.2); --badge-jsd:#f9a826; --badge-jsd-bg:rgba(249,168,38,.12); --badge-api:#89b4fa; --badge-api-bg:rgba(137,180,250,.12); --badge-cdn:#94e2d5; --badge-cdn-bg:rgba(148,226,213,.12); --badge-ghapi:#cba6f7; --badge-ghapi-bg:rgba(203,166,247,.12); --hm-0:#161b22; --hm-1:#0e4429; --hm-2:#006d32; --hm-3:#26a641; --hm-4:#39d353; --sidebar-w:200px; --diag-left-w:120px; --touch-min:44px; }

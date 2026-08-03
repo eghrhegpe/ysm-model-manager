@@ -65,7 +65,7 @@ export interface BusEvents {
   "avatar:refresh": { author: string; dataUri: string };
   // 模型 / 选择
   "model:select": ModelSelectPayload;
-  "package:selected": object; // TODO: 细化 pkg 结构
+  "package:selected": { name: string; rtype?: string }; // sidebar loader 实证：{name, rtype}
   // 菜单 / 上下文
   "menu:show": { x: number; y: number; items: MenuItem[] };
   "ctx:show": CtxShowPayload;

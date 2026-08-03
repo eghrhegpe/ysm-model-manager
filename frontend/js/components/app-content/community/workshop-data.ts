@@ -5,7 +5,7 @@ import { ICONS } from "./workshop-icons.ts";
 const STORAGE_KEY = "ysm-fav-creators";
 
 // ===== 站点名称映射 =====
-export const PLATFORM_NAMES = {
+export const PLATFORM_NAMES: Record<string, string> = {
   bilibili: "B站",
   afdian: "爱发电",
   github: "GitHub",
@@ -16,8 +16,22 @@ export const PLATFORM_NAMES = {
   deviantart: "DeviantArt",
 };
 
+/** 创作者身份识别结果 */
+export interface CreatorIdentity {
+  label: string;
+  icon: string;
+  tag: string;
+}
+
+/** 创作者输入（role/tag 可空，_fromLocal 为运行时附加字段） */
+export interface CreatorIdentityInput {
+  role?: string;
+  tag?: string;
+  [key: string]: unknown;
+}
+
 // ===== 创作者身份识别 =====
-export function getCreatorIdentity(cr) {
+export function getCreatorIdentity(cr: CreatorIdentityInput): CreatorIdentity {
   const role = cr.role || "";
   const tag = cr.tag || "";
   switch (role) {
@@ -39,12 +53,12 @@ export function getCreatorIdentity(cr) {
   return { label: "YSM 创作者", icon: ICONS.CREATOR, tag: "creator" };
 }
 
-export function getTagFromRole(role) {
+export function getTagFromRole(role?: string): string {
   return role || "creator";
 }
 
 // ===== 描述标签解析 =====
-export function parseDescTags(desc) {
+export function parseDescTags(desc?: string): string[] {
   if (!desc) return [];
   return desc
     .split(/[、，,]/)
@@ -54,7 +68,7 @@ export function parseDescTags(desc) {
 }
 
 // ===== 收藏工具 =====
-export function loadFavs() {
+export function loadFavs(): string[] {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   } catch {
@@ -62,15 +76,15 @@ export function loadFavs() {
   }
 }
 
-export function saveFavs(names) {
+export function saveFavs(names: string[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(names));
 }
 
-export function isFaved(name) {
+export function isFaved(name: string): boolean {
   return loadFavs().includes(name);
 }
 
-export function toggleFav(name) {
+export function toggleFav(name: string): boolean {
   const favs = loadFavs();
   const idx = favs.indexOf(name);
   if (idx >= 0) favs.splice(idx, 1);

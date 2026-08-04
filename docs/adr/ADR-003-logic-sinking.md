@@ -1,6 +1,6 @@
 # ADR-003：业务逻辑从 Binding 层下沉至纯 Go 包（Logic Sinking）
 
-- **状态**：部分采纳（Partially Accepted，P0/P1/P1.5 已完成，P2/P3 进行中）
+- **状态**：🔄 部分采纳（P0/P1/P1.5/P3 已完成，P2 扫描进行中）
 - **日期**：2026-08-03（初定），原方案记录于 2026-06-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`internal/app/app_*.go` / `go/download/` / `go/avatar/` / `go/sync/` / AGENTS.md §2.2
@@ -71,7 +71,7 @@ go/download/downloader.go（内核 ~200 行）
 | **P1** | 头像提取 `go/avatar/` | 488 | 400 | 20 | ✅ 完成 | 零 Runtime 依赖 |
 | **P1.5** | 哈希对比 `go/sync/` | 96 | 70 | 25 | ✅ 完成 | 体量小，边界清晰 |
 | **P2** | 扫描 `go/scanner/` | 577 | 400 | 50 | 🟡 进行中 | 文件系统边界 |
-| **P3** | 文件操作 `go/fileops/` | 337 | 250 | 30 | 🔴 待处理 | 边界 bug 多 |
+| **P3** | 文件操作 `go/fileops/` | 337 | 250 | 30 | ✅ 完成 | 文件 CRUD + 移动复制 + 预览提取下沉，app_files.go 337→82 行薄壳 |
 
 > 注：`app_install.go`（1,315 行）为最大债务，未在原始优先级表中列入。
 > 建议补充为独立 P1 项，详见 ADR-002 §4。

@@ -22,7 +22,7 @@ use_when:
 
 - 监听文件新增/修改/删除
 - 去重事件（批量操作只触发一次）
-- 通知前端资源树更新
+- 变更后自动同步启用/禁用状态到整合包 + 清扫描缓存（前端经缓存失效间接感知变化，不直接发 Wails 事件）
 
 ## 对外 API / 入口
 
@@ -33,7 +33,7 @@ use_when:
 
 ## 与其他子系统关系
 
-- 通过 Wails EventsOn 将变化事件通知前端
+- 被 `internal/app/app.go` 启动/停止（ServiceStartup / ServiceShutdown），`clearCacheFn` 注入 `App.ClearScanCache`；变更后自动同步整合包 `.ban` 状态（`go/sync` 的 `SyncToggleStatus`），前端刷新靠扫描缓存失效间接感知，不直接发 Wails 事件
 - `go/fsutil/`: 文件系统工具
 
 ## 不变量

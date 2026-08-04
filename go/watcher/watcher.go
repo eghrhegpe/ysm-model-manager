@@ -121,6 +121,15 @@ func (w *Watcher) IsRunning() bool {
 }
 
 func (w *Watcher) loop() {
+	// panic 兜底：fsnotify 内部异常不能留下"running=true 但监听已死"的假活状态
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[watcher] loop panic: %v", r)
+			w.mu.Lock()
+			w.running = false
+			w.mu.Unlock()
+		}
+	}()
 	for {
 		select {
 		case _, ok := <-w.w.Events:

@@ -42,6 +42,12 @@ func configPath() string {
 	return filepath.Join(configDir(), "ysm_config.json")
 }
 
+// GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application Support）
+// 供前端 UI 展示，避免硬编码 Windows 路径
+func (a *App) GetConfigPath() string {
+	return configPath()
+}
+
 // migrateLegacyConfig 将旧版落在 exe 相对路径（含仓库根）的 ysm_config.json
 // 迁移到用户配置目录。仅当新位置不存在、且旧候选之一存在时执行；
 // 复制成功后才删除旧文件，失败时保留旧文件不丢数据。
@@ -358,69 +364,8 @@ func scanMinecraftDirs() []string {
 		add(filepath.Join(appData, ".minecraft"))
 	}
 
-	// 收集所有可用磁盘（A-Z）
-	// 用 GetLogicalDrives 比逐个 os.Stat 更高效，且避免外置硬盘超时
-	var drives []string
-	for d := 'C'; d <= 'Z'; d++ {
-		root := string(d) + ":\\"
-		if _, err := os.Stat(root); err == nil {
-			drives = append(drives, root)
-		}
-	}
-
-	// 常见启动器目录名（对各磁盘扫描）
-	launcherNames := []string{
-		"PCL2", "PCL",
-		"HMCL",
-		"BakaXL",
-		"MC", "Minecraft", "Games\\Minecraft",
-		"PrismLauncher", "MultiMC", "PolyMC",
-	}
-	for _, root := range drives {
-		for _, name := range launcherNames {
-			// 启动器根目录下的 .minecraft
-			add(filepath.Join(root, name, ".minecraft"))
-			// PrismLauncher/MultiMC/PolyMC：instances 目录或根目录
-			if name == "PrismLauncher" || name == "MultiMC" || name == "PolyMC" {
-				add(filepath.Join(root, name, "instances"))
-				add(filepath.Join(root, name))
-			}
-		}
-		// 各磁盘根目录的直接 .minecraft 文件夹
-		add(filepath.Join(root, ".minecraft"))
-	}
-
-	// 也检查常见用户目录下的 PrismLauncher（不一定在盘符根目录）
-	if cfgDir, err := os.UserConfigDir(); err == nil {
-		add(filepath.Join(cfgDir, "PrismLauncher", "instances"))
-	}
-	if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
-		// PrismLauncher 安装版在 %LOCALAPPDATA%\Programs\PrismLauncher\
-		add(filepath.Join(localAppData, "Programs", "PrismLauncher", "instances"))
-		add(filepath.Join(localAppData, "Programs", "PrismLauncher"))
-		// MultiMC 安装版
-		add(filepath.Join(localAppData, "Programs", "MultiMC", "instances"))
-		add(filepath.Join(localAppData, "Programs", "MultiMC"))
-	}
-	if progData := os.Getenv("ProgramData"); progData != "" {
-		add(filepath.Join(progData, "PrismLauncher", "instances"))
-	}
-
-	// 扫描常见安装路径下的一级子目录（用户可能把启动器放在 D:\Games\Minecraft\PCL2 而非 D:\PCL2）
-	commonBases := []string{
-		filepath.Join(os.Getenv("ProgramFiles"), "Minecraft"),
-		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Minecraft"),
-		"D:\\Games", "D:\\Game", "D:\\Programs",
-		"E:\\Games", "E:\\Game",
-	}
-	for _, base := range commonBases {
-		if _, err := os.Stat(base); err != nil {
-			continue
-		}
-		for _, name := range launcherNames {
-			add(filepath.Join(base, name, ".minecraft"))
-		}
-	}
+	// 平台专属启动器路径扫描（盘符/环境变量/XDG/Apple 标准路径）
+	scanMinecraftDirsPlatform(add)
 
 	return found
 }

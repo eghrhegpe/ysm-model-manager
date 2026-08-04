@@ -381,7 +381,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       "<div style='font-weight:600;margin-bottom:4px'>🔍 扫描范围</div>" +
       "<div style='font-size:10px;color:var(--muted,#888);margin-bottom:8px;padding-left:4px'>" +
       "C 盘 ~ Z 盘 · 根目录 .minecraft / 各启动器目录<br>" +
-      "ProgramFiles · Games · %APPDATA% · EXE 同目录" +
+      "ProgramFiles · Games · 用户配置目录 · EXE 同目录" +
       "</div>" +
       "<div style='border-top:1px solid var(--bd,#444);margin:6px 0'></div>";
 

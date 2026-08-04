@@ -1,148 +1,117 @@
-// ===== preview 工具函数（纯函数，无组件依赖） =====
+// ===== 预览模块共享工具函数 =====
+// 从 index.ts 拆分：模块级函数和状态
+import type { BedrockGeometry } from "./geometry.ts";
 
-/** Bedrock 方块 */
-export interface BedrockCube {
-  origin: number[];
-  size: number[];
-  pivot: number[];
-  rotation: number[];
-  uv: number[] | string;
-  faceUV: string;
-  texSlot: number;
-}
+/** DEV 模式下输出调试日志 */
+export const devLog: (...args: unknown[]) => void = import.meta.env.DEV
+  ? console.log
+  : () => {};
 
-/** Bedrock 骨骼 */
-export interface BedrockBone {
-  name: string;
-  parent: string | null;
-  pivot: number[];
-  rotation: number[];
-  cubes: BedrockCube[];
-  /** WASM 解析附加字段（_texIdx/_texUrl/_texWidth/_texHeight 等） */
-  _texIdx?: number;
-  _texUrl?: string | null;
-  _texWidth?: number;
-  _texHeight?: number;
-  [key: string]: unknown;
-}
-
-/** 解析后的 Bedrock geometry */
-export interface BedrockGeometry {
-  boneCount: number;
-  cubeCount: number;
-  texWidth: number;
-  texHeight: number;
-  bones: BedrockBone[];
-  /** WASM/Go 附加字段（作者/头像/路径/纹理映射日志等） */
-  _authors?: Array<{
-    name?: string;
+/** WASM 解码结果（decodeYsmViaWasm 返回） */
+export interface DecodedYsm {
+  texture?: string | null;
+  geometry?: BedrockGeometry | null;
+  animations?: unknown[];
+  avatars?: Record<string, string>;
+  authors?: Array<{
+    name: string;
     role?: string;
     avatarUrl?: string | null;
     avatarPath?: string;
   }>;
-  _avatars?: Record<string, string>;
-  _modelPath?: string;
-  _texMappingLog?: unknown[];
-  animations?: unknown[];
-  textures?: string[];
-  texture?: string | null;
-  [key: string]: unknown;
+  _wasmTried?: boolean;
 }
 
-/** 从 JSON 字符串解析 Bedrock geometry */
-export function parseBedrockGeometryFromJSON(
-  jsonStr: string,
-): BedrockGeometry | null {
-  const raw = JSON.parse(jsonStr) as {
-    "minecraft:geometry"?: Array<{
-      bones?: BedrockRawBone[];
-      description?: { texture_width?: number; texture_height?: number };
-    }>;
-  };
-  const geo = raw?.["minecraft:geometry"]?.[0];
-  if (!geo?.bones?.length) return null;
-  const bones: BedrockBone[] = [];
-  let cubeCount = 0;
-  for (const b of geo.bones) {
-    const cubes: BedrockCube[] = [];
-    for (const c of b.cubes || []) {
-      let uv: number[] | string = [0, 0];
-      let faceUV = "";
-      if (Array.isArray(c.uv)) {
-        uv = c.uv;
-      } else if (typeof c.uv === "string" && c.uv.startsWith("{")) {
-        faceUV = c.uv;
-      } else if (typeof c.uv === "object" && c.uv !== null) {
-        // 某些模型 UV 是对象格式（如 {uv:[0,0], uv_size:[16,16]}）
-        // 优先取内层 uv 数组作为 expandBoxUV
-        const uvObj = c.uv as { uv?: unknown };
-        if (Array.isArray(uvObj.uv)) {
-          uv = uvObj.uv;
-        }
-        faceUV = JSON.stringify(c.uv);
+/** 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） */
+export interface PreviewCtx {
+  _root: ShadowRoot;
+  /** 组件销毁清理收集（可选：子模块可挂 window/document 监听清理函数） */
+  _unsubs?: Array<() => void>;
+  _loadPreviewImage(path: string): Promise<string | null>;
+  decodeYsmViaWasm(path: string): Promise<DecodedYsm | null>;
+  _decodeYsmViaWasm(path: string): Promise<DecodedYsm | null>;
+  _appendDebug(container: HTMLElement | null, msg: string): void;
+}
+
+/** 3D 偏好状态（跨模型切换保留） */
+let _prefer3D = false;
+export function getPrefer3D(): boolean {
+  return _prefer3D;
+}
+export function setPrefer3D(v: boolean): void {
+  _prefer3D = v;
+}
+
+/**
+ * 将带 UTF-8 BOM + 文本头部的 YSGP 变体重建为标准 YSGP 二进制格式
+ * V2: 加密数据前有 16B 独立 hash 区
+ * V3: 纯加密数据，无独立 hash 区
+ */
+function buildStdYsgpFromTextVariant(
+  bytes: Uint8Array,
+  forceVer?: number,
+): Uint8Array | null {
+  if (!bytes || bytes.length < 20) return null;
+  if (bytes[0] !== 0xef || bytes[1] !== 0xbb || bytes[2] !== 0xbf) return null;
+
+  const prefix = new TextDecoder("utf-8").decode(bytes.slice(0, 4096));
+  const hashMatch = prefix.match(/<hash>([0-9a-f]{32})<\/hash>/i);
+  if (!hashMatch) return null;
+  const fileHash = hashMatch[1];
+
+  // 找到文本头部结束位置（从 "> 文件内容" 或 "</ysm>" 后）
+  const tagMatch = prefix.match(
+    /(?:<\/ysm>|<\/ysmp>|<\/file>|<\/data>|<\/ysm_data>|>)\s*$/,
+  );
+  let dataStart = 3; // skip BOM
+  if (tagMatch) {
+    dataStart = 3 + (tagMatch.index ?? 0) + tagMatch[0].length;
+  } else {
+    // 尝试找二进制数据起始（非文本、非空白字符）
+    for (let i = 100; i < bytes.length; i++) {
+      if (
+        bytes[i] < 0x20 &&
+        bytes[i] !== 0x09 &&
+        bytes[i] !== 0x0a &&
+        bytes[i] !== 0x0d
+      ) {
+        dataStart = i;
+        break;
       }
-      // 每个方块可指定纹理槽索引（YSMViewer 据此区分主纹理与发光/覆盖层）
-      const texSlot = typeof c.texture === "number" ? c.texture : 0;
-      // 统一对象→数组格式（某些导出工具输出 {x,y,z} 对象而非数组）
-      const toArr = (v: unknown): number[] => {
-        if (!v) return [0, 0, 0];
-        if (Array.isArray(v)) return v as number[];
-        if (typeof v === "object")
-          return [(v as Vec3Obj).x || 0, (v as Vec3Obj).y || 0, (v as Vec3Obj).z || 0];
-        return [0, 0, 0];
-      };
-      cubes.push({
-        origin: toArr(c.origin),
-        size: toArr(c.size),
-        pivot: toArr(c.pivot),
-        rotation: toArr(c.rotation),
-        uv,
-        faceUV,
-        texSlot,
-      });
     }
-    // pivot 统一为数组格式（某些导出工具输出 {x,y,z} 对象）
-    let pivot = b.pivot;
-    if (pivot && !Array.isArray(pivot) && typeof pivot === "object") {
-      pivot = [pivot.x || 0, pivot.y || 0, pivot.z || 0];
-    }
-    bones.push({
-      name: b.name,
-      parent: b.parent || null,
-      pivot: pivot || [0, 0, 0],
-      rotation: b.rotation || [0, 0, 0],
-      cubes,
-    });
-    cubeCount += cubes.length;
   }
-  return {
-    boneCount: bones.length,
-    cubeCount,
-    texWidth: geo.description?.texture_width || 0,
-    texHeight: geo.description?.texture_height || 0,
-    bones,
-  };
+
+  if (dataStart < 0 || dataStart >= bytes.length - 20) return null;
+
+  const verNum = forceVer || 2;
+
+  // V2: 二进制段 = 16B hash + 加密数据（hash 与 <hash> 标签值相同）
+  // V3: 二进制段 = 纯加密数据（hash 仅在 <hash> 标签中）
+  const encryptedStart = verNum >= 3 ? dataStart : dataStart + 16;
+  const encrypted = bytes.slice(encryptedStart);
+  const result = new Uint8Array(4 + 4 + 16 + encrypted.length);
+  const magic = new Uint8Array([0x59, 0x53, 0x47, 0x50]); // "YSGP"
+  result.set(magic, 0);
+  const version = new Uint8Array([0, 0, 0, verNum]);
+  result.set(version, 4);
+  // 从 <hash> 标签取 16 字节 hash 二进制
+  for (let i = 0; i < 16; i++) {
+    result[8 + i] = parseInt(fileHash.substr(i * 2, 2), 16);
+  }
+  result.set(encrypted, 24);
+  return result;
 }
 
-/** UV 对象格式（{x,y,z} 向量） */
-interface Vec3Obj {
-  x?: number;
-  y?: number;
-  z?: number;
-}
-
-/** 原始 JSON 骨骼（Bedrock 格式） */
-interface BedrockRawBone {
-  name: string;
-  parent?: string;
-  pivot?: number[] | Vec3Obj;
-  rotation?: number[];
-  cubes?: Array<{
-    origin?: unknown;
-    size?: unknown;
-    pivot?: unknown;
-    rotation?: unknown;
-    uv?: unknown;
-    texture?: unknown;
-  }>;
+/**
+ * 剥离 YSGP 文本头部，返回标准二进制格式
+ */
+export function stripYsgpTextHeader(
+  bytes: Uint8Array,
+  forceVer?: number,
+): Uint8Array {
+  const stdYsgp = buildStdYsgpFromTextVariant(bytes, forceVer);
+  if (stdYsgp) return stdYsgp;
+  if (!bytes || bytes.length < 10) return bytes;
+  // 没有 BOM + 文本头部时原样返回
+  return bytes;
 }

@@ -1,9 +1,9 @@
 // ===== 站点视图编辑模式事件（从 site-view.ts 拆出，ADR-034 方向①）=====
-import { friendlyError } from "../../../../utils/dom/errors.ts";
-import { bus } from "../../../../bus.ts";
-import { getApp } from "../../../../wails/app.ts";
-import type { WorkshopPresetSearch } from "../../../../../bindings/ysm-model-manager/go/types/models.ts";
-import type { LocalCreatorLike } from "./index.ts";
+import { friendlyError } from "../../../utils/dom/errors.ts";
+import { bus } from "../../../bus.ts";
+import { getApp } from "../../../wails/app.ts";
+import type { WorkshopPresetSearch } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
+import type { LocalCreatorLike } from "./site-view.ts";
 import type { SiteViewState, CleanupFn } from "./types.ts";
 
 /**
@@ -32,7 +32,7 @@ export function bindEditEvents(state: SiteViewState, refreshView: () => void): C
       btn.textContent = "⏳";
       btn.disabled = true;
       try {
-        const m = await import("../core.ts");
+        const m = await import("./core.ts");
         const App = await getApp();
         const results = await Promise.all([
           m.fetchCommunityCreators(m.DEFAULT_COMMUNITY_URL),

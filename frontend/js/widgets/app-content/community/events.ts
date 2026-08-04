@@ -1,7 +1,7 @@
 // ===== 站点视图浏览态事件绑定（从 site-view.ts 拆出，ADR-034 方向①）=====
-import { bus } from "../../../../bus.ts";
-import { dbg } from "../../../../utils/debug/debug.ts";
-import { showProgress, tryFetchModels } from "../../../../features/community/data.ts";
+import { bus } from "../../../bus.ts";
+import { dbg } from "../../../utils/debug/debug.ts";
+import { showProgress, tryFetchModels } from "../../../features/community/data.ts";
 import {
   getCreatorIdentity,
   getTagFromRole,
@@ -10,10 +10,10 @@ import {
   isFaved,
   toggleFav,
   type CreatorIdentityInput,
-} from "../workshop-data.ts";
-import { getSiteIcon, getTagIconFromRole } from "../workshop-icons.ts";
+} from "./workshop-data.ts";
+import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.ts";
 import { createCrCard, type CrCardCtx } from "./render.ts";
-import { getApp } from "../../../../wails/app.ts";
+import { getApp } from "../../../wails/app.ts";
 import type { SiteViewState, CleanupFn } from "./types.ts";
 
 // storage 监听器模块私有变量（防泄漏，bindBrowseEvents 返回的 cleanup 会清）

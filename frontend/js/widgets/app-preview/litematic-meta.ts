@@ -1,7 +1,7 @@
 import { renderFormattedText } from "../../utils/format/mc-format.ts";
 import { esc } from "../../utils/dom/dom.ts";
 import { getApp } from "../../wails/app.ts";
-import type { PreviewCtx } from "./preview-utils.ts";
+import type { PreviewCtx } from "./utils.ts";
 
 function fmtTime(ms: number): string {
   if (!ms || ms <= 0) return "未知";
@@ -194,7 +194,7 @@ export async function showLitematic(
         btn3dTab.textContent = "⏳";
         btn3dTab.disabled = true;
         try {
-          const { createLitematic3D } = await import("./preview-litematic-3d.js");
+          const { createLitematic3D } = await import("./litematic-3d.js");
           await createLitematic3D(path, voxelFn);
         } finally {
           btn3dTab.textContent = "🎨 3D";
@@ -210,9 +210,9 @@ export async function showLitematic(
   }
 }
 
-/** 组件销毁时清理体素 3D（转发至 preview-litematic-3d，避免 index 静态依赖 Three.js 渲染模块） */
+/** 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） */
 export function cleanupLitematic3D(): void {
-  import("./preview-litematic-3d.js")
+  import("./litematic-3d.js")
     .then((m) => m.cleanupVoxel3D())
     .catch(() => {});
 }

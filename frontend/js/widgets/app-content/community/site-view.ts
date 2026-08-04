@@ -4,8 +4,8 @@ import { bindBrowseEvents } from "./events.ts";
 import { bindEditEvents } from "./edit.ts";
 import { bindDragEvents } from "./drag.ts";
 import type { SiteViewState, CleanupFn } from "./types.ts";
-import { bus } from "../../../../bus.ts";
-import type { WorkshopSite, WorkshopCreator } from "../../../../../bindings/ysm-model-manager/go/types/models.ts";
+import { bus } from "../../../bus.ts";
+import type { WorkshopSite, WorkshopCreator } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 
 /** 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） */
 export type RepoAuthorLike = string | { Name?: string; Count?: number };

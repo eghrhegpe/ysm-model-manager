@@ -1,10 +1,10 @@
 // ===== 2D 骨骼渲染层 =====
 // 加载统一走 loadModelData，本文件只做 2D 骨骼渲染编排
-import { getPrefer3D, setPrefer3D, type PreviewCtx } from "./preview-utils.ts";
-import { loadModelData } from "./preview-loader.ts";
+import { getPrefer3D, setPrefer3D, type PreviewCtx } from "./utils.ts";
+import { loadModelData } from "./loader.ts";
 import { renderModel2D } from "../../utils/3d/model2d.ts";
-import { openFullPreview } from "./preview-zoom.ts";
-import type { BedrockGeometry } from "./utils.ts";
+import { openFullPreview } from "./zoom.ts";
+import type { BedrockGeometry } from "./geometry.ts";
 import type { BoneSelectInfo } from "../../utils/3d/model3d.ts";
 import { esc } from "../../utils/dom/dom.ts";
 import { getApp } from "../../wails/app.ts";

@@ -2,6 +2,7 @@
 import { bus } from "../bus.ts";
 import { esc, modalConfirm } from "../dialogs/modal.ts";
 import { friendlyError } from "../utils/errors.ts";
+import { getApp } from "../wails/app.ts";
 
 /** 更新信息（CheckUpdate 返回） */
 export interface UpdateInfo {
@@ -101,9 +102,7 @@ async function promptUpdate(
 export async function checkUpdateSilent(): Promise<void> {
   if (!canCheck()) return;
   try {
-    const { CheckUpdate } = await import(
-      "../../bindings/ysm-model-manager/internal/app/app.js"
-    );
+    const { CheckUpdate } = await getApp();
     const info = (await CheckUpdate()) as UpdateInfo;
     // 检查成功才计入频次：失败（网络/API）不阻塞下次启动重试
     markChecked();
@@ -131,9 +130,7 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
       btn.textContent = "⏳ 检查中...";
       btn.disabled = true;
       try {
-        const { CheckUpdate } = await import(
-          "../../bindings/ysm-model-manager/internal/app/app.js"
-        );
+        const { CheckUpdate } = await getApp();
         const info = (await CheckUpdate()) as UpdateInfo;
         markChecked();
         if (!info.available) {

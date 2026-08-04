@@ -5,6 +5,7 @@ import { renderDisplayName } from "../utils/display.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { loadResourceRegistry } from "../utils/resource-registry.ts";
 import { RESOURCE_TYPES } from "../utils/resource-types.ts";
+import { getApp } from "../wails/app.ts";
 
 /** app-content 组件实例（initRecycleBin 依赖的成员） */
 export interface RecycleHost {
@@ -31,9 +32,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
     });
     if (!confirmed) return;
     try {
-      const { EmptyRecycleBin } = await import(
-        "../../bindings/ysm-model-manager/internal/app/app.js"
-      );
+      const { EmptyRecycleBin } = await getApp();
       const n = await EmptyRecycleBin("");
       bus.emit("toast:show", {
         msg: `♻️ 已清空 ${n} 个文件`,
@@ -76,9 +75,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
         RestoreFromRecycle,
         DeleteFromRecycle,
         GetRepoRoot,
-      } = await import(
-        "../../bindings/ysm-model-manager/internal/app/app.js"
-      );
+      } = await getApp();
 
       // 获取当前类型的根目录（用于路径过滤）
       const currentRoot = await GetRepoRoot(currentType);

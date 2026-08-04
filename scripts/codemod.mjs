@@ -31,6 +31,10 @@
  *   - 所有改动都是 in-place 的，运行前确保工作区已 `git commit`
  *   - 改完后必须跑 `npm run check && npm run test` 验证
  *   - 对结果有疑虑时，用 `git diff` 逐块审查
+ * 设计意图：代码重构工具（批量修改源码）
+ * 依赖：node:module / node:url / node:fs / node:path / 本地模块
+ * 退出码：1 / 0（含失败码）
+ * codemod.mjs — 代码重构工具（批量修改源码）
  */
 
 import { createRequire } from 'node:module';

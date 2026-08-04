@@ -3,6 +3,13 @@
  * YSM 文件格式诊断（统一版，合并 inspect_ysm v1-v5）。
  * 检测 YSM V3 / YSGP V2 / BOM / 加密 / 内嵌文件名。
  * 由 scripts/inspect_ysm.py 迁移（2026-08-03），逻辑逐点保真。
+ * inspect_ysm.mjs — inspect_ysm 工具脚本
+ * 设计意图：inspect_ysm 工具脚本
+ * 依赖：node:fs / node:path
+ * 用法：
+ *   node scripts/inspect_ysm.mjs                 # 默认行为
+ *   node scripts/inspect_ysm.mjs --json # JSON 输出（CI/子代理消费）
+ * 退出码：1（失败）
  */
 import fs from 'node:fs';
 import path from 'node:path';

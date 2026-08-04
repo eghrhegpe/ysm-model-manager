@@ -2,6 +2,13 @@
 /**
  * 三方一致性检查。对比 resource_types.json ↔ Go 常量 ↔ JS 常量。
  * 由 scripts/type-consistency.py 迁移（2026-08-03），逻辑逐点保真。
+ * type-consistency.mjs — 类型一致性检查
+ * 设计意图：类型一致性检查
+ * 依赖：node:fs / node:path / 本地模块
+ * 用法：
+ *   node scripts/type-consistency.mjs                 # 默认行为
+ *   node scripts/type-consistency.mjs --json # JSON 输出（CI/子代理消费）
+ * 退出码：0（无 process.exit 调用）
  */
 import fs from 'node:fs';
 import path from 'node:path';

@@ -19,6 +19,8 @@
  *   node scripts/gen-doc-next-steps.mjs
  *
  * 零依赖：node:fs / node:path / node:url / node:child_process。
+ * 退出码：0（无 process.exit 调用）
+ * 设计意图：gen-doc-next-steps 工具脚本
  */
 
 import fs from 'node:fs';

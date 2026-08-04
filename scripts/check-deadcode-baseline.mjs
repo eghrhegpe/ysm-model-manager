@@ -16,6 +16,7 @@
  *   node scripts/check-deadcode-baseline.mjs --json       # JSON（CI 用）
  *
  * 退出码：新增 ERROR → 1；工具缺失 → 1；否则 0。
+ * 设计意图：死代码基线检查（与 baseline 文件比对）
  */
 import fs from 'node:fs';
 import path from 'node:path';

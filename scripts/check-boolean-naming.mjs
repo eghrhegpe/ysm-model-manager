@@ -21,6 +21,7 @@
  *   node scripts/check-boolean-naming.mjs --json     # JSON（CI 用）
  *
  * 退出码：ERROR 数 > 0 → 1；否则 0。
+ * 设计意图：Boolean 字段命名规范检查（env-state-schema.ts）
  */
 import fs from 'node:fs';
 import { SRC_DIR, walk, relPosix } from './_lib/scan-files.mjs';

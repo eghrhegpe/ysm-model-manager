@@ -2,6 +2,12 @@
 /**
  * Wails Binding 签名检查。对比 Go 端导出函数 vs 前端生成的 wailsjs。
  * 由 scripts/binding-check.py 迁移（2026-08-03），逻辑逐点保真。
+ * binding-check.mjs — Go binding 一致性检查
+ * 设计意图：Go binding 一致性检查
+ * 依赖：node:fs / node:path / node:url
+ * 用法：
+ *   node scripts/binding-check.mjs                 # 默认行为
+ * 退出码：0（无 process.exit 调用）
  */
 import fs from 'node:fs';
 import path from 'node:path';

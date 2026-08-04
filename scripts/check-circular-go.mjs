@@ -18,6 +18,7 @@
  *   node scripts/check-circular-go.mjs --json   # JSON（CI 用）
  *
  * 退出码：发现环 → 1；否则 0。
+ * 设计意图：check-circular-go 工具脚本
  */
 import fs from 'node:fs';
 import path from 'node:path';

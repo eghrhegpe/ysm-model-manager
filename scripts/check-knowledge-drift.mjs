@@ -18,6 +18,7 @@
  *   node scripts/check-knowledge-drift.mjs --json     # JSON（CI 用）
  *
  * 退出码：发现 ERROR → 1；否则 0（WARN 不阻断）。
+ * 设计意图：知识卡漂移检查（与代码现实比对）
  */
 import fs from 'node:fs';
 import path from 'node:path';

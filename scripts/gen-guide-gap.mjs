@@ -17,6 +17,8 @@
  *   node scripts/gen-guide-gap.mjs --strict   # 有缺口时 exit 1（CI 可选卡点）
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
+ * 退出码：1 / 0（含失败码）
+ * 设计意图：指南缺口生成器
  */
 
 import fs from 'node:fs';

@@ -17,6 +17,10 @@
  *
  * 范围：仅处理已声明 `symbols:` 字段的卡；未声明的卡不自动发明（避免无差别改写）。
  * 不处理：use_when / category / tier / 正文 prose（属人类判断，不自动生成）。
+ * 设计意图：知识卡符号生成器
+ * 用法：
+ *   node scripts/gen-knowledge-symbols.mjs                 # 默认行为
+ *   node scripts/gen-knowledge-symbols.mjs --check # 启用 check
  */
 
 import fs from 'node:fs';

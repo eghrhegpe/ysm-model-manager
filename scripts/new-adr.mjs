@@ -15,6 +15,8 @@
  *
  * --supersedes：新 ADR 取代既有 ADR 时，自动在对方首部加「被 [ADR-NNN] 取代」标注
  *               （呼应 AGENTS.md ADR 规则「触及就在对方首部标注」）。
+ * 设计意图：ADR 新建工具（占号防撞）
+ * 退出码：main(（失败）
  */
 import fs from 'node:fs';
 import path from 'node:path';

@@ -12,6 +12,9 @@
  * 用法：
  *   node scripts/build-novel-index.mjs          # 写入 docs/novel/index.md
  *   node scripts/build-novel-index.mjs --check  # 只校验不写入，漂移时退 1
+ * 设计意图：小说索引构建工具
+ * 退出码：main(（失败）
+ * 依赖：node:fs / node:path / 本地模块
  */
 import fs from 'node:fs';
 import path from 'node:path';

@@ -16,6 +16,7 @@
  *   node scripts/adr-check.mjs --json       # JSON（CI / 子代理消费）
  *
  * 退出码：发现不一致（撞号 / 漏登 / 幽灵 / 跳号）→ 1；否则 0。
+ * 设计意图：ADR 登记一致性检查（占号防撞）
  */
 import fs from 'node:fs';
 import path from 'node:path';

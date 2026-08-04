@@ -2,6 +2,13 @@
 /**
  * 事件注册审计。扫描 EventsOn/bus.on 注册位置是否合规。
  * 由 scripts/event-audit.py 迁移（2026-08-03），逻辑逐点保真。
+ * event-audit.mjs — 事件系统审计
+ * 设计意图：事件系统审计
+ * 依赖：node:fs / 本地模块
+ * 用法：
+ *   node scripts/event-audit.mjs                 # 默认行为
+ *   node scripts/event-audit.mjs --json # JSON 输出（CI/子代理消费）
+ * 退出码：0（无 process.exit 调用）
  */
 import fs from 'node:fs';
 import { SRC_DIR, walk, relPosix } from './_lib/scan-files.mjs';

@@ -11,11 +11,13 @@
  * 零依赖（仅 node:fs / node:path / node:url）。
  *
  * 用法：
- *   import { walk, resolveImport, toPosix, readText, getRoot, SRC_DIR } from './_lib/scan-files.mjs';
+ *   import { walk, resolveImport, readText, getRoot, SRC_DIR } from './_lib/scan-files.mjs';
+ *   import { toPosix } from './_lib/to-posix.mjs';
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { toPosix } from './to-posix.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -85,12 +87,7 @@ export function resolveImport(fromFile, spec, moduleSet) {
   return null;
 }
 
-/** Windows 反斜杠 → 正斜杠（统一展示/对比用）。 */
-export function toPosix(p) {
-  return p.replace(/\\/g, '/');
-}
-
-/** 相对仓库根的正斜杠路径（报告展示用）。 */
+/** 相对仓库根的正斜杠路径（报告展示用）；toPosix 复用 ./to-posix.mjs，避免重复定义。 */
 export function relPosix(p) {
   return toPosix(path.relative(ROOT, p));
 }

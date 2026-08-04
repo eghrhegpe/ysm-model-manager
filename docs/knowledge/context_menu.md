@@ -4,7 +4,7 @@ name: 右键菜单系统
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/views/context-menu.ts
+  - frontend/js/views/context-menu/index.ts
   - frontend/js/core/context-menus.ts
   - frontend/js/core/menu-defs.ts
 use_when:

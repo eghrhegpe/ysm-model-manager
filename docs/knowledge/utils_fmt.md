@@ -4,7 +4,7 @@ name: 格式化工具 fmt
 tier: leaf
 category: utils
 source_files:
-  - frontend/js/utils/dom/fmt.ts
+  - frontend/js/utils/dom/format.ts
 use_when:
   - 文件大小
   - 字节格式化
@@ -45,4 +45,4 @@ use_when:
 ## 相关
 
 - [app_tree](./app_tree.md) — 主要消费方
-- `frontend/js/utils/dom/fmt.test.js` — 单元测试（验证入口）
+- `frontend/js/utils/dom/format.test.ts` — 单元测试（验证入口）

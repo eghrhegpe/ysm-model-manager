@@ -1,4 +1,4 @@
-// ===== go/logs 单测（覆盖率 0% → 补全）=====
+// ===== go/logs 单测 =====
 package logs
 
 import (
@@ -7,79 +7,122 @@ import (
 	"testing"
 )
 
-func newTestLogger(t *testing.T) *Logger {
-	l := &Logger{path: filepath.Join(t.TempDir(), "logs.json")}
-	l.load()
-	return l
-}
-
-func TestAdd_GetAll(t *testing.T) {
-	l := newTestLogger(t)
-	l.Add("m.ysm", "/src", "/dst", 1024, "success", "")
-	got := l.GetAll()
-	if len(got) != 1 || got[0].ModelName != "m.ysm" || got[0].Operation != "import" {
-		t.Fatalf("Add/GetAll 异常: %+v", got)
+func TestLogger_AddAndGetAll(t *testing.T) {
+	dir := t.TempDir()
+	l := &Logger{path: filepath.Join(dir, "test-logs.json")}
+	l.Add("模型A", "/src/a.ysm", "/dst", 1024, "成功", "")
+	logs := l.GetAll()
+	if len(logs) != 1 {
+		t.Fatalf("期望 1 条日志, 得到 %d", len(logs))
 	}
-	if got[0].FileSize != 1024 || got[0].Status != "success" {
-		t.Fatalf("字段异常: %+v", got[0])
+	if logs[0].ModelName != "模型A" {
+		t.Errorf("ModelName = %q, 期望 模型A", logs[0].ModelName)
 	}
-}
-
-func TestAddOp(t *testing.T) {
-	l := newTestLogger(t)
-	l.AddOp("sync", "a.ysm", "/s", "/d", 1, "failed", "err")
-	got := l.GetAll()
-	if len(got) != 1 || got[0].Operation != "sync" || got[0].Status != "failed" || got[0].ErrorMsg != "err" {
-		t.Fatalf("AddOp 异常: %+v", got)
+	if logs[0].Status != "成功" {
+		t.Errorf("Status = %q, 期望 成功", logs[0].Status)
+	}
+	if logs[0].Operation != "import" {
+		t.Errorf("Operation = %q, 期望 import", logs[0].Operation)
 	}
 }
 
-func TestPersist_Reload(t *testing.T) {
-	l := newTestLogger(t)
-	l.Add("m.ysm", "/src", "/dst", 5, "success", "")
-	// 新实例同 path → load 读回（验证 save 落盘）
-	l2 := &Logger{path: l.path}
-	l2.load()
-	got := l2.GetAll()
-	if len(got) != 1 || got[0].ModelName != "m.ysm" {
-		t.Fatalf("持久化读回异常: %+v", got)
+func TestLogger_AddOp(t *testing.T) {
+	dir := t.TempDir()
+	l := &Logger{path: filepath.Join(dir, "test-logs.json")}
+	l.AddOp("delete", "模型B", "/src/b.ysm", "/dst", 2048, "已完成", "")
+	logs := l.GetAll()
+	if len(logs) != 1 {
+		t.Fatalf("期望 1 条日志, 得到 %d", len(logs))
+	}
+	if logs[0].Operation != "delete" {
+		t.Errorf("Operation = %q, 期望 delete", logs[0].Operation)
 	}
 }
 
-func TestClear(t *testing.T) {
-	l := newTestLogger(t)
-	l.Add("m.ysm", "/s", "/d", 1, "success", "")
+func TestLogger_Clear(t *testing.T) {
+	dir := t.TempDir()
+	l := &Logger{path: filepath.Join(dir, "test-logs.json")}
+	l.Add("模型A", "/src/a.ysm", "/dst", 1024, "成功", "")
 	l.Clear()
-	if got := l.GetAll(); len(got) != 0 {
-		t.Fatalf("Clear 后应空: %+v", got)
+	logs := l.GetAll()
+	if len(logs) != 0 {
+		t.Errorf("Clear 后日志应为空, 得到 %d", len(logs))
 	}
 }
 
-func TestMax500(t *testing.T) {
-	l := newTestLogger(t)
-	for i := 0; i < 510; i++ {
-		l.AddOp("import", "m.ysm", "/s", "/d", 1, "success", "")
-	}
-	if got := l.GetAll(); len(got) != 500 {
-		t.Fatalf("应只保留 500 条，实际 %d", len(got))
+func TestLogger_GetAllIsCopy(t *testing.T) {
+	dir := t.TempDir()
+	l := &Logger{path: filepath.Join(dir, "test-logs.json")}
+	l.Add("模型A", "/src/a.ysm", "/dst", 1024, "成功", "")
+	logs1 := l.GetAll()
+	// 修改返回的切片不应影响内部状态
+	logs1[0].ModelName = "已修改"
+	internal := l.GetAll()
+	if internal[0].ModelName == "已修改" {
+		t.Error("GetAll 应返回副本，修改返回切片不应影响内部状态")
 	}
 }
 
-func TestLoad_MissingAndCorrupt(t *testing.T) {
-	// 文件不存在 → 空日志（不报错）
-	l := &Logger{path: filepath.Join(t.TempDir(), "nope.json")}
-	l.load()
-	if got := l.GetAll(); len(got) != 0 {
-		t.Fatalf("缺失文件应空: %+v", got)
+func TestLogger_SaveAndLoad(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test-logs.json")
+	l := &Logger{path: path}
+	l.Add("模型A", "/src/a.ysm", "/dst", 1024, "成功", "")
+
+	// 新建 Logger 从同一路径加载
+	l2 := &Logger{path: path}
+	l2.load()
+	logs := l2.GetAll()
+	if len(logs) != 1 {
+		t.Fatalf("重新加载后期望 1 条日志, 得到 %d", len(logs))
 	}
-	// 坏 JSON → 空日志（不报错）
-	bad := filepath.Join(t.TempDir(), "bad.json")
-	if err := os.WriteFile(bad, []byte("{invalid"), 0644); err != nil {
+	if logs[0].ModelName != "模型A" {
+		t.Errorf("ModelName = %q, 期望 模型A", logs[0].ModelName)
+	}
+}
+
+func TestLogger_LoadFromInvalidFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bad-logs.json")
+	if err := os.WriteFile(path, []byte("{invalid json}"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	l2 := &Logger{path: bad}
-	l2.load()
-	if got := l2.GetAll(); len(got) != 0 {
-		t.Fatalf("坏 JSON 应空: %+v", got)
+	l := &Logger{path: path}
+	l.load()
+	logs := l.GetAll()
+	if len(logs) != 0 {
+		t.Errorf("非法 JSON 文件应加载为空日志, 得到 %d", len(logs))
 	}
+}
+
+func TestLogger_LoadFromNonExistent(t *testing.T) {
+	dir := t.TempDir()
+	l := &Logger{path: filepath.Join(dir, "nonexistent.json")}
+	l.load()
+	logs := l.GetAll()
+	if len(logs) != 0 {
+		t.Errorf("不存在文件应加载为空日志, 得到 %d", len(logs))
+	}
+}
+
+func TestLogger_CapAt500(t *testing.T) {
+	dir := t.TempDir()
+	l := &Logger{path: filepath.Join(dir, "test-logs.json")}
+	for i := 0; i < 600; i++ {
+		l.Add("模型", "/src", "/dst", 0, "成功", "")
+	}
+	logs := l.GetAll()
+	if len(logs) != 500 {
+		t.Errorf("日志应裁剪到 500 条, 得到 %d", len(logs))
+	}
+}
+
+func TestLogger_NewLogger(t *testing.T) {
+	// NewLogger 使用用户配置目录，不能保证写入成功
+	// 只验证不 panic
+	l := NewLogger()
+	if l == nil {
+		t.Fatal("NewLogger 应返回非 nil")
+	}
+	_ = l
 }

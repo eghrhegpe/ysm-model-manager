@@ -115,12 +115,14 @@ func (q *DownloadQueue) process() {
 		task := q.tasks[0]
 		q.tasks = q.tasks[1:]
 		remaining := len(q.tasks)
+		// 锁内快照 ctx：CancelQueue 会替换 q.ctx，必须用本任务发起时的 ctx 做请求取消
+		ctx := q.ctx
 		q.mu.Unlock()
 
 		log.Printf("[queue] emit queue:file-start name=%s pos=%d left=%d", task.Name, remaining+1, remaining)
 		q.app.app.Event.Emit("queue:file-start", task.Name, remaining+1, remaining)
 
-		savePath, err := q.app.downloadFileWithQueue(task.URL, task.SaveDir)
+		savePath, err := q.app.downloadFileWithQueue(ctx, task.URL, task.SaveDir)
 		if err != nil {
 			log.Printf("[queue] emit queue:file-done name=%s status=fail err=%v", task.Name, err)
 			q.app.app.Event.Emit("queue:file-done", task.Name, "fail", err.Error())
@@ -137,14 +139,14 @@ func (q *DownloadQueue) process() {
 		}
 
 		select {
-		case <-q.ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
 		}
 	}
 }
 
-func (a *App) downloadFileWithQueue(rawURL, saveDir string) (string, error) {
+func (a *App) downloadFileWithQueue(ctx context.Context, rawURL, saveDir string) (string, error) {
 	if err := os.MkdirAll(saveDir, 0755); err != nil {
 		return "", err
 	}
@@ -193,9 +195,9 @@ func (a *App) downloadFileWithQueue(rawURL, saveDir string) (string, error) {
 	for _, s := range sources {
 		var err error
 		if s.kind == "api" {
-			err = a.downloadFromAPI(s.url, savePath)
+			err = a.downloadFromAPI(ctx, s.url, savePath)
 		} else {
-			err = a.downloadFile(s.url, savePath)
+			err = a.downloadFile(ctx, s.url, savePath)
 		}
 		if err == nil {
 			return savePath, nil
@@ -206,12 +208,16 @@ func (a *App) downloadFileWithQueue(rawURL, saveDir string) (string, error) {
 }
 
 func (a *App) DownloadFromGitHub(rawURL string, saveDir string) (string, error) {
-	return a.downloadFileWithQueue(rawURL, saveDir)
+	return a.downloadFileWithQueue(context.Background(), rawURL, saveDir)
 }
 
-func (a *App) downloadFile(url, savePath string) error {
+func (a *App) downloadFile(ctx context.Context, url, savePath string) error {
 	client := &http.Client{Timeout: 300 * time.Second}
-	resp, err := client.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -225,7 +231,14 @@ func (a *App) downloadFile(url, savePath string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	ok := false
+	defer func() {
+		out.Close()
+		if !ok {
+			// 下载中断/失败时清理半截文件，避免残留损坏文件
+			os.Remove(savePath)
+		}
+	}()
 
 	total := resp.ContentLength
 	var downloaded int64
@@ -254,14 +267,15 @@ func (a *App) downloadFile(url, savePath string) error {
 	if total <= 0 {
 		total = downloaded
 	}
+	ok = true
 	log.Printf("[queue] emit download:progress dl=%d total=%d (final)", downloaded, total)
 	a.app.Event.Emit("download:progress", downloaded, total)
 	return nil
 }
 
-func (a *App) downloadFromAPI(apiURL, savePath string) error {
+func (a *App) downloadFromAPI(ctx context.Context, apiURL, savePath string) error {
 	client := &http.Client{Timeout: 300 * time.Second}
-	req, err := http.NewRequest("GET", apiURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 	if err != nil {
 		return err
 	}
@@ -279,7 +293,14 @@ func (a *App) downloadFromAPI(apiURL, savePath string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	ok := false
+	defer func() {
+		out.Close()
+		if !ok {
+			// 下载中断/失败时清理半截文件，避免残留损坏文件
+			os.Remove(savePath)
+		}
+	}()
 
 	total := resp.ContentLength
 	var downloaded int64
@@ -308,6 +329,7 @@ func (a *App) downloadFromAPI(apiURL, savePath string) error {
 	if total <= 0 {
 		total = downloaded
 	}
+	ok = true
 	log.Printf("[queue] emit download:progress dl=%d total=%d (final)", downloaded, total)
 	a.app.Event.Emit("download:progress", downloaded, total)
 	return nil

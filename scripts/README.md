@@ -3,6 +3,28 @@
 > 所有 Node 工具脚本的索引（2026-08-03 由 Python 全量迁移，统一运行时便于多项目共用）。
 > 由 `doctor.mjs` / CI / 手动命令直接调用（口令约定见 AGENTS.md 硬约束；原 `.agents/skills/` 已于治理收敛中删除，能力由本目录脚本承接）。
 
+## 脚本文件头规范（统一约定）
+
+> 本仓库与 MikuMikuAR 共用同一套 `.mjs` 文档约定，确保跨项目可迁移、可机读。
+> 规范由 `scripts/check-script-hygiene.mjs` 校验（`--json` / `--strict`）；决策基线见联邦仓库 **ADR-241**（MikuMikuAR/docs/adr/adr-241-mjs-script-doc-convention.md）。
+
+每个 `scripts/*.mjs`（不含 `_` 前缀共享层 `_lib/`）必须在文件顶部保留 JSDoc 头，且至少包含以下字段：
+
+1. **文件名 + 一句话描述**：`* <name>.mjs — <功能描述>。`
+2. **设计意图**（推荐）：1–2 句说明为什么存在 / 适用场景。
+3. **依赖声明**：`零依赖（node:fs / node:path / node:url）` 或列出外部依赖。
+4. **用法**：`用法：` 块，含默认行为 + `--json`（如适用）示例，命令统一 `node scripts/<name>.mjs ...`。
+5. **退出码**：`退出码：发现 ERROR → 1；否则 0（WARN/INFO 不阻断）。`
+
+硬规则：
+- 检查类脚本（`check-*` / `*-check` / `review` / `doctor` / `link-checker` / `type-consistency` / `event-audit` / `binding-check`）必须支持 `--json` 或默认输出 JSON，供 CI / 子代理稳定消费。
+- 共享能力（`walk` / `rg` / `ROOT` / `frontmatter` 解析）一律 `import` 自 `scripts` 共享层，**禁止内联样板**。
+- 公共函数需写 `/** */` 简述；纯内部小工具可不写。
+
+范例见 `comment-checker.mjs`、`adr-check.mjs`（已按本规范整改）。
+
+> 执行状态：本仓库已落地 `check-script-hygiene.mjs`（与 MikuMikuAR 同款，四口径：退出码失效 / 共享层内联 / `--json` 契约 / 文件头 5 字段）；运行 `node scripts/check-script-hygiene.mjs [--json|--strict]` 即可机检本规范。
+
 ---
 
 ## 按用途分档

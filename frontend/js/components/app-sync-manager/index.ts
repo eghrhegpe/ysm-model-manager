@@ -6,6 +6,7 @@ import { bus } from "../../bus.ts";
 import { dbg } from "../../utils/debug.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { friendlyError } from "../../utils/errors.ts";
+import { esc } from "../../utils/dom.ts";
 import {
   containerHTML,
   itemHTML,
@@ -95,7 +96,7 @@ export class AppSyncManager extends HTMLElement {
       // 保留加载界面不消失也至少显示错误提示
       this.innerHTML +=
         '<div style="padding:12px;color:var(--err)">渲染失败: ' +
-        String(e).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") +
+        esc(String(e)) +
         "</div>";
     }
 

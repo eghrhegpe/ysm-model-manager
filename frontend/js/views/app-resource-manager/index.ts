@@ -7,6 +7,7 @@ import { bus } from "../../bus.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { getApp } from "../../wails/app.ts";
 import { esc } from "../../utils/dom/dom.ts";
+import { modalConfirm } from "../dialogs/modal.ts";
 
 /** 资源类型配置（resource_types.json 条目视图） */
 interface ResourceTypeConfig {
@@ -407,7 +408,13 @@ export class AppResourceManager extends HTMLElement {
         const delBtn = this._contentEl.querySelector(".rm-del-btn") as HTMLElement | null;
         if (delBtn) {
           delBtn.addEventListener("click", async () => {
-            if (!confirm("确定要删除 " + name + " 吗？")) return;
+            if (!(await modalConfirm({
+              title: "删除资源",
+              icon: "🗑️",
+              message: `确定要删除 ${name} 吗？`,
+              okText: "🗑️ 删除",
+              danger: true,
+            }))) return;
             try {
               // 从配置读取 isDir 字段，文件夹型资源（如 mmd-skin/vrchat-avatar）删整个目录
               const type = _findType(this._rtype);

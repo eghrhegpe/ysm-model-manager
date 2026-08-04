@@ -1,302 +1,59 @@
-// ========== 文件操作 + 预览提取 + 包信息 ==========
-// 从 app.go 拆分：文件 CRUD、预览图、纹理提取、包信息、启用/禁用
+// ========== 文件操作 + 预览提取 + 包信息（薄壳，ADR-003 P3）==========
+// 业务逻辑已下沉至 go/fileops（纯 Go 可测）；本文件仅做 Wails 绑定转发 +
+// scanCache 缓存失效处理。
 package app
 
 import (
-	"bytes"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
 
-	"ysm-model-manager/go/geometry"
+	"ysm-model-manager/go/fileops"
 	"ysm-model-manager/go/types"
-	"ysm-model-manager/go/ysm"
 )
 
 // ========== 目录操作 ==========
 func (a *App) CreateDir(dir string) error {
-	dir = strings.TrimSpace(dir)
-	if dir == "" {
-		return fmt.Errorf("目录名为空")
-	}
-	if strings.Contains(dir, "..") || strings.Contains(dir, "~") {
-		return fmt.Errorf("目录名包含非法字符")
-	}
-	fullPath := filepath.Join(a.ysmRoot(), dir)
-	return os.MkdirAll(fullPath, 0755)
+	return fileops.CreateDir(a.ysmRoot(), dir)
 }
 
 func (a *App) RenameDir(oldPath, newName string) error {
-	oldPath = strings.TrimSpace(oldPath)
-	newName = strings.TrimSpace(newName)
-	if oldPath == "" || newName == "" {
-		return fmt.Errorf("参数为空")
-	}
-	parent := filepath.Dir(oldPath)
-	newPath := filepath.Join(parent, newName)
-	return os.Rename(oldPath, newPath)
+	return fileops.RenameDir(oldPath, newName)
 }
 
 func (a *App) RemoveDir(dir string) error {
-	return os.RemoveAll(strings.TrimSpace(dir))
+	return fileops.RemoveDir(dir)
 }
 
 func (a *App) RenameFile(oldPath, newName string) error {
-	oldPath = strings.TrimSpace(oldPath)
-	newName = strings.TrimSpace(newName)
-	if oldPath == "" || newName == "" {
-		return fmt.Errorf("参数为空")
-	}
-	if strings.ContainsAny(newName, "\\/:*?\"<>|") {
-		return fmt.Errorf("文件名包含非法字符")
-	}
-	parent := filepath.Dir(oldPath)
-	newPath := filepath.Join(parent, newName)
-	return os.Rename(oldPath, newPath)
+	return fileops.RenameFile(oldPath, newName)
 }
 
 // ========== 预览提取 ==========
 func (a *App) FindPreviewImage(modelPath string) string {
-	dir := filepath.Dir(modelPath)
-	base := strings.TrimSuffix(filepath.Base(modelPath), filepath.Ext(modelPath))
-	candidates := []string{
-		filepath.Join(dir, base+".png"),
-		filepath.Join(dir, base+".jpg"),
-		filepath.Join(dir, "preview.png"),
-		filepath.Join(dir, "cover.png"),
-		filepath.Join(dir, "thumbnail.png"),
-	}
-	for _, c := range candidates {
-		if _, err := os.Stat(c); err == nil {
-			data, err := os.ReadFile(c)
-			if err == nil && len(data) > 0 {
-				mime := "image/png"
-				if strings.HasSuffix(strings.ToLower(c), ".jpg") {
-					mime = "image/jpeg"
-				}
-				return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
-			}
-		}
-	}
-	return ""
+	return fileops.FindPreviewImage(modelPath)
 }
 
 func (a *App) ExtractPreviewTexture(modelPath string) string {
-	ext := strings.ToLower(filepath.Ext(modelPath))
-	var png []byte
-
-	if ext == ".zip" {
-		data, err := os.ReadFile(modelPath)
-		if err != nil {
-			return ""
-		}
-		png = extractPNGFromZip(data, int64(len(data)))
-	} else if ext == ".7z" {
-		data, err := os.ReadFile(modelPath)
-		if err != nil {
-			return ""
-		}
-		png = extractPNGFrom7z(data, int64(len(data)))
-	} else if ext == ".ysm" {
-		png = a.extractTextureViaYSM(modelPath)
-	} else if ext == ".json" {
-		// 解压后的 YSM 模型：查找 textures/ 子目录中的 PNG
-		dir := filepath.Dir(modelPath)
-		texDir := filepath.Join(dir, "textures")
-		if d, err := os.Stat(texDir); err == nil && d.IsDir() {
-			entries, _ := os.ReadDir(texDir)
-			for _, e := range entries {
-				if e.IsDir() {
-					continue
-				}
-				if strings.HasSuffix(strings.ToLower(e.Name()), ".png") {
-					texPath := filepath.Join(texDir, e.Name())
-					png, _ = os.ReadFile(texPath)
-					if len(png) > 0 {
-						break
-					}
-				}
-			}
-		}
-		// 也搜同目录 PNG
-		if len(png) == 0 {
-			entries, _ := os.ReadDir(dir)
-			for _, e := range entries {
-				if e.IsDir() {
-					continue
-				}
-				if strings.HasSuffix(strings.ToLower(e.Name()), ".png") {
-					texPath := filepath.Join(dir, e.Name())
-					png, _ = os.ReadFile(texPath)
-					if len(png) > 0 {
-						break
-					}
-				}
-			}
-		}
-	}
-
-	if len(png) == 0 {
-		return ""
-	}
-	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
-}
-
-func (a *App) extractTextureViaYSM(modelPath string) []byte {
-	parserPath := ysm.FindCLI()
-	if parserPath == "" {
-		return nil
-	}
-	tmpDir, err := os.MkdirTemp("", "ysm-tex-*")
-	if err != nil {
-		return nil
-	}
-	defer os.RemoveAll(tmpDir)
-
-	inDir := filepath.Join(tmpDir, "input")
-	outDir := filepath.Join(tmpDir, "output")
-	os.MkdirAll(inDir, 0755)
-	os.MkdirAll(outDir, 0755)
-
-	ysmCopy := filepath.Join(inDir, filepath.Base(modelPath))
-	if err := copyFile(modelPath, ysmCopy); err != nil {
-		return nil
-	}
-
-	cmd := exec.Command(parserPath, "-i", inDir, "-o", outDir)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	if err := cmd.Run(); err != nil {
-		return nil
-	}
-
-	var png []byte
-	filepath.WalkDir(outDir, func(p string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() || png != nil {
-			return nil
-		}
-		low := strings.ToLower(p)
-		if strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg") {
-			png, _ = os.ReadFile(p)
-		}
-		return nil
-	})
-	return png
+	return fileops.ExtractPreviewTexture(modelPath)
 }
 
 // ========== 包信息 ==========
 func (a *App) GetPackInfo(dirPath string) types.PackInfo {
-	dirPath = strings.TrimSpace(dirPath)
-	if !filepath.IsAbs(dirPath) && a.ysmRoot() != "" {
-		dirPath = filepath.Join(a.ysmRoot(), dirPath)
-	}
-	absPath, err := filepath.Abs(filepath.FromSlash(dirPath))
-	if err != nil {
-		return types.PackInfo{}
-	}
-	jsonPath := filepath.Join(absPath, "ysm-pack.json")
-	data, err := os.ReadFile(jsonPath)
-	if err != nil {
-		return types.PackInfo{}
-	}
-	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
-	var raw struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Lang        map[string]struct {
-			Name        string `json:"name"`
-			Description string `json:"description"`
-		} `json:"lang"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return types.PackInfo{}
-	}
-	info := types.PackInfo{Name: raw.Name, Description: raw.Description}
-	if raw.Lang != nil {
-		for lang, l := range raw.Lang {
-			_ = lang
-			if l.Name != "" {
-				info.Name = l.Name
-			}
-			if l.Description != "" {
-				info.Description = l.Description
-			}
-		}
-	}
-	imgPath := filepath.Join(absPath, "ysm-pack.png")
-	if imgData, err := os.ReadFile(imgPath); err == nil {
-		info.ImageBase64 = "data:image/png;base64," + base64.StdEncoding.EncodeToString(imgData)
-	}
-	return info
+	return fileops.GetPackInfo(a.ysmRoot(), dirPath)
 }
 
-func extractPNGFromZip(data []byte, size int64) []byte {
-	return geometry.ExtractFirstPNGFromZip(data, size)
-}
-
-func extractPNGFrom7z(data []byte, size int64) []byte {
-	return geometry.ExtractFirstPNGFrom7z(data, size)
-}
-
-// ========== 模型移动 ==========
+// ========== 模型移动/复制 ==========
 func (a *App) MoveModelFile(src, dstDir string) error {
-	src = strings.TrimSpace(src)
-	dstDir = strings.TrimSpace(dstDir)
-	if src == "" || dstDir == "" {
-		return fmt.Errorf("参数空")
-	}
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		return err
-	}
-	return os.Rename(src, filepath.Join(dstDir, filepath.Base(src)))
+	return fileops.MoveModelFile(src, dstDir)
 }
 
-// ========== 模型复制 ==========
-// CopyModelFile 将 src 复制到 dstDir 目录下（保留原文件名）
-// dstDir 必须是 FilesRoot 的子目录（防路径遍历）
+// CopyModelFile 复制（root 传 FilesRoot 做路径安全校验）
 func (a *App) CopyModelFile(src, dstDir string) error {
-	src = strings.TrimSpace(src)
-	dstDir = strings.TrimSpace(dstDir)
-	if src == "" || dstDir == "" {
-		return fmt.Errorf("参数空")
-	}
-	// 路径安全：dstDir 必须落在 FilesRoot 内
 	cfg := a.LoadAppConfig()
-	if cfg.FilesRoot != "" {
-		absRoot, err := filepath.Abs(cfg.FilesRoot)
-		if err != nil {
-			return err
-		}
-		absDst, err := filepath.Abs(dstDir)
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(absRoot, absDst)
-		if err != nil || strings.HasPrefix(rel, "..") || rel == ".." {
-			return fmt.Errorf("目标目录必须在仓库内: %s", dstDir)
-		}
-	}
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		return err
-	}
-	dst := filepath.Join(dstDir, filepath.Base(src))
-	// 防覆盖：目标已存在时直接报错
-	if _, err := os.Stat(dst); err == nil {
-		return fmt.Errorf("目标已存在: %s", dst)
-	}
-	if err := copyFile(src, dst); err != nil {
-		return err
-	}
-	// 复制 .ban 状态文件（如果存在）
-	banSrc := src + ".ban"
-	if _, err := os.Stat(banSrc); err == nil {
-		_ = copyFile(banSrc, dst+".ban")
-	}
-	return nil
+	return fileops.CopyModelFile(cfg.FilesRoot, src, dstDir)
 }
 
 // ========== 在资源管理器中显示 ==========
@@ -311,27 +68,15 @@ func (a *App) RevealInExplorer(path string) error {
 }
 
 // ========== 启用/禁用 ==========
+// ToggleModelEnable 切换 .ban 状态（fileops 纯逻辑 + 薄壳缓存失效）
 func (a *App) ToggleModelEnable(path string) (bool, error) {
-	if strings.HasSuffix(strings.ToLower(path), ".ban") {
-		newPath := strings.TrimSuffix(path, ".ban")
-		if err := os.Rename(path, newPath); err != nil {
-			return false, err
-		}
+	enabled, err := fileops.ToggleModelEnable(path)
+	if err == nil {
 		scanCache.Delete(filepath.Dir(path))
-		return true, nil // 启用
 	}
-	// 禁用
-	newPath := path + ".ban"
-	if _, err := os.Stat(newPath); err == nil {
-		return false, fmt.Errorf("目标文件已存在: %s", newPath)
-	}
-	if err := os.Rename(path, newPath); err != nil {
-		return false, err
-	}
-	scanCache.Delete(filepath.Dir(path))
-	return false, nil // 已禁用
+	return enabled, err
 }
 
 func (a *App) IsFileBanned(path string) bool {
-	return strings.HasSuffix(strings.ToLower(path), ".ban")
+	return fileops.IsFileBanned(path)
 }

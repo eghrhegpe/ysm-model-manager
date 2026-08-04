@@ -26,7 +26,7 @@ permalink: /adr/
 |-----|------|------|
 | [ADR-023](./ADR-023-test-framework.md) | 测试体系 | 🔄 部分采纳（L1 Go 单测 / L2 契约测试现行；L3 Vitest 已落地运行并接入质量门禁——20 文件 / 302 用例 + v8 覆盖率基线 + 阈值红线；pre-push-gate / doctor / CI 均跑） |
 | [ADR-022](./ADR-022-vitepress-site.md) | VitePress 建站 | 🔄 部分采纳（内容体系已就绪，站点搭建由并行 AI 推进中） |
-| [ADR-003](./ADR-003-logic-sinking.md) | 业务逻辑从 Binding 层下沉至纯 Go 包（Logic Sinking） | 🔄 部分采纳（P0/P1/P1.5 已完成，P2/P3 进行中） |
+| [ADR-003](./ADR-003-logic-sinking.md) | 业务逻辑从 Binding 层下沉至纯 Go 包（Logic Sinking） | 🔄 部分采纳（P0/P1/P1.5/P3 已完成，P2 扫描进行中） |
 
 ## ⚠️ 已采纳但遗留未修复
 
@@ -110,6 +110,6 @@ _（暂无）_
 | [ADR-006](./ADR-006-rename-strictness.md) | 重命名文件名格式约束决策 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-005](./ADR-005-frontend-governance-rules.md) | 前端治理规则体系 | ✅ 已采纳 | 2026-08-03（初定，规则时间线 v1.5.1 → 持续维护） |
 | [ADR-004](./ADR-004-3d-rendering-pipeline.md) | 3D 骨骼渲染管线与坐标系决策 | ✅ 已采纳 | 2026-08-03（初定，决策时间线 v1.5.1 → v1.8.7） |
-| [ADR-003](./ADR-003-logic-sinking.md) | 业务逻辑从 Binding 层下沉至纯 Go 包（Logic Sinking） | 🔄 部分采纳（P0/P1/P1.5 已完成，P2/P3 进行中） | 2026-08-03（初定），原方案记录于 2026-06-16 |
+| [ADR-003](./ADR-003-logic-sinking.md) | 业务逻辑从 Binding 层下沉至纯 Go 包（Logic Sinking） | 🔄 部分采纳（P0/P1/P1.5/P3 已完成，P2 扫描进行中） | 2026-08-03（初定），原方案记录于 2026-06-16 |
 | [ADR-002](./ADR-002-project-health-assessment.md) | 项目全面评估与改进方向 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-001](./ADR-001-wails3-migration.md) | 升级至 Wails 3 | ✅ 已采纳 | 2026-07-14 |

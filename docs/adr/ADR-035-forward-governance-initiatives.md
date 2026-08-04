@@ -34,6 +34,14 @@
 
 **落地顺序**：① 本规划入 ADR（G-1 前置） → ② Design.md §19 加 testid 规范 → ③ `test-utils/` helper → ④ 首个组件测试（app-tree 多选/连点路径）→ ⑤ 契约守护。
 
+**隔壁实证增强（联邦 MikuMikuAR ADR-060，已落地）**：
+
+- **数值钩子**：`window.__scene` DEV 钩子暴露 getter（fps/meshCount 等，生产剔除、`VITE_E2E_MODE` 可强制编入）→ ② 升级为 **DEV 钩子 + 阈值断言**（`meshCount > 10`/`fps ≥ 30`，不精确比数）；
+- **守卫就绪探测**：`isLightingReady`/`isRenderReady` 未就绪整域跳过断言——防「UI 可操作但 state 未生效」误报；
+- **testid 前缀命名空间**：`[data-testid^="actor:model"]` 前缀匹配——与①实证一致；
+- **分层运行**：@dom（vitePage，CI 稳定）先立、@webgl（wailsPage，真运行时）后续——本项目先 jsdom 组件级，真 Wails 集成级可选；
+- **种子数据程序化**：`createTestMesh` 程序化网格——组件测试用 mock entries，不依赖真实仓库文件。
+
 **暂缓（未立项）**：ADR-024 多资源联邦扩展（需新资源类型需求信号）、非 Windows 更新支持（ADR-033 明确拒绝，需跨平台需求）。
 
 ## 3. 后果（Consequences）

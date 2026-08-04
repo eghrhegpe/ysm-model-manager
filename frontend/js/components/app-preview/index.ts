@@ -11,7 +11,7 @@ import {
 import { type PreviewCtx, type DecodedYsm } from "./preview-utils.ts";
 import { decodeYsmViaWasm } from "./preview-wasm.ts";
 import { showModelDetail, showResourcePack, showShaderPack } from "./preview-detail.ts";
-import { showLitematic } from "./preview-litematic-meta.ts";
+import { showLitematic, cleanupLitematic3D } from "./preview-litematic-meta.ts";
 import { esc } from "../../utils/dom.ts";
 import type { BedrockGeometry } from "./utils.ts";
 
@@ -69,6 +69,8 @@ class AppPreview extends HTMLElement implements PreviewCtx {
 
   disconnectedCallback(): void {
     this._unsubs.forEach((fn) => fn());
+    // 清理体素 3D（WebGL renderer + rAF 循环）：防切页后 GPU 资源残留
+    cleanupLitematic3D();
   }
 
   private _render(): void {

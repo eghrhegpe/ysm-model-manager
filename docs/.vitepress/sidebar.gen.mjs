@@ -600,6 +600,10 @@ export const autoSidebar = [
           {
             "text": "01-先拆后建的赌局",
             "link": "/novel/02-模型仓库/01-先拆后建的赌局"
+          },
+          {
+            "text": "02-错误的名字",
+            "link": "/novel/02-模型仓库/02-错误的名字"
           }
         ]
       },
@@ -610,6 +614,10 @@ export const autoSidebar = [
           {
             "text": "01-自己问自己的开关",
             "link": "/novel/03-UI器官/01-自己问自己的开关"
+          },
+          {
+            "text": "02-过期的点击",
+            "link": "/novel/03-UI器官/02-过期的点击"
           }
         ]
       },
@@ -630,6 +638,10 @@ export const autoSidebar = [
           {
             "text": "01-假活的心跳",
             "link": "/novel/05-同步与更新/01-假活的心跳"
+          },
+          {
+            "text": "02-脖子上的绳",
+            "link": "/novel/05-同步与更新/02-脖子上的绳"
           }
         ]
       },
@@ -670,6 +682,14 @@ export const autoSidebar = [
           {
             "text": "01-永远红着的灯",
             "link": "/novel/09-工具链/01-永远红着的灯"
+          },
+          {
+            "text": "02-值夜班的灯",
+            "link": "/novel/09-工具链/02-值夜班的灯"
+          },
+          {
+            "text": "03-自动化裁判",
+            "link": "/novel/09-工具链/03-自动化裁判"
           }
         ]
       },
@@ -680,6 +700,10 @@ export const autoSidebar = [
           {
             "text": "01-十二轮之后的账",
             "link": "/novel/10-文档治理/01-十二轮之后的账"
+          },
+          {
+            "text": "02-六条新戒律",
+            "link": "/novel/10-文档治理/02-六条新戒律"
           }
         ]
       },
@@ -786,6 +810,10 @@ export const autoSidebar = [
               {
                 "text": "01-全塔体检",
                 "link": "/novel/appendix/跨模块重构/01-全塔体检"
+              },
+              {
+                "text": "02-四条通往真相的路",
+                "link": "/novel/appendix/跨模块重构/02-四条通往真相的路"
               }
             ]
           },

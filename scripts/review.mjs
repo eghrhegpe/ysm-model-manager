@@ -58,6 +58,10 @@ function runChecks() {
     rg('sidebarItem|tb-btn.*title=', 'frontend', ['*.js', '*.ts']),
     'renderSidebar()');
 
+  add('R10', 'private esc implementations',
+    rg('replace\\(/&/g, "&amp;"\\)', 'frontend/js', ['*.ts', '*.js']).filter((l) => !l.includes('utils/dom.ts')),
+    'import { esc } from utils/dom.ts (5-replace 单点，致命陷阱 #15)');
+
   add('W1', 'backslash paths',
     rg('\\\\', 'frontend/js', ['*.js', '*.ts']).filter((l) => !l.includes('node_modules') && !l.includes('bus.js') && !l.includes('bus.ts') && !l.includes('font-display')),
     '/ instead of \\');
@@ -74,6 +78,10 @@ function runChecks() {
       .concat(rg('\\.(then|finally)\\s*\\(.*innerHTML\\s*=', 'frontend/js', ['*.js', '*.ts']))
       .concat(rg('setTimeout\\s*\\(.*innerHTML\\s*=', 'frontend/js', ['*.js', '*.ts'])),
     'DOM writes in async callbacks need stale-request guards (fetchDone flag)');
+
+  add('W6', 'bypass dialogs (dlg-overlay outside dialogs/modal.ts)',
+    rg('className\\s*=\\s*"dlg-overlay"', 'frontend/js', ['*.ts', '*.js']).filter((l) => !l.includes('dialogs/modal.ts')),
+    '统一走 modal.ts (modalConfirm/registerDlg 单例槽位，致命陷阱 #14)；合法旁路须确认 registerDlg 已登记');
 
   return results;
 }

@@ -71,6 +71,23 @@ description: 项目历史事故浓缩的 12 条避坑教训 — 现象 × 根因
 - **现象**：`new-adr.mjs --help` 被当成标题，误占号生成 `ADR-027-help.md`；`new-knowledge-card.mjs --help` 被当成 kind，生成 `help.md` 知识卡（2026-08-04 并行 AI 实证）。
 - **规则**：凡有 positional 参数的 CLI（title/kind/file 等），未知 `--flag` 必须显式白名单拦截，**绝不落入位置参数位**——`--help`/`-h` 输出用法退出 0，未知 flag 报错退出 1；主流程统一 `process.exit(main())` 让退出码真实生效（否则 `return 1` 恒为 0）。已修复：`new-adr.mjs`（parseArgs 白名单）、`new-knowledge-card.mjs`（positional 过滤 flag）。
 
+## 13. 幽灵路径：状态被旁路写入
+
+- **现象**：模块级状态被「旁路」写入——绕过 setter/注册表。两类实证（2026-08-04 核心逻辑四模块审核）：
+  - `page-store.ts` 的 `setCurrentPage` 零调用方且 emits「完成事件」`nav:changed` 而非「请求事件」——一旦被调用，app-content 渲染链路不触发，「状态变、内容不渲染」；唯一活跃写入是模块级 `bus.on` listener 直接赋值 `_currentPage`。
+  - `registry.ts` 注册空转：`loadInstances`/`loadEntries` 注册进服务表但全项目零 `get()` 消费——DI 容器「建好但没通电」。
+- **规则**：模块级可变状态的唯一写入点收敛到显式 API（`registerXxx(unsubs)` 的 listener）；setter 禁发「完成事件」绕过请求链路（要驱动导航就 emit `nav:change` 请求语义）；服务名用联合类型收窄（编译期拦截拼错），注册必有消费方（`get()`），`console.warn` 覆盖告警。
+
+## 14. 旁路弹窗：不走 modal.ts 单例槽位
+
+- **现象**：自定义 `dlg-overlay` 弹窗未走 `dialogs/modal.ts` 的 `registerDlg` 单例槽位（实证：`version-updater.ts` 自带 47 行弹窗骨架，2026-08-04 审核发现）——连点两次会双弹窗双执行，且绕过「新弹窗先结算旧弹窗」的防叠加逻辑。
+- **规则**：所有弹窗必须走 `dialogs/modal.ts`（`modalConfirm`/`modalPrompt`/`modalSelect` + `registerDlg` 槽位）；复杂布局用 `modalConfirm` 的 `bodyHTML` 选项（调用方负责转义），**禁止自带弹窗骨架**。已修复：`version-updater.ts` 重构复用 `modalConfirm`（review.mjs W6 扫描旁路）。
+
+## 15. esc 重复实现
+
+- **现象**：10+ 文件各自实现 HTML 转义，replace 数量 3-5 个版本并存（实证：`display.ts`/`mc-format.ts` 3-replace 无引号转义、`modal.ts` 4-replace、`context-menu.ts` 5-replace，2026-08-04 收敛）——属性上下文（`data-*`/`src` 插值）缺引号转义 = XSS 面。
+- **规则**：HTML 转义统一 import `utils/dom.ts` 的 `esc`（5-replace 含 `"`/`'`），禁止私有实现；组件 `_esc` 只允许做薄委托。已收敛 10 文件（review.mjs R10 扫描私有实现）。
+
 ---
 
 ## 维护约定

@@ -113,7 +113,7 @@ class AppNav extends HTMLElement {
         ${items
           .map(
             (item) => `
-          <div class="nav-item ${item.id === this._current ? "active" : ""}" data-page="${item.id}">
+          <div class="nav-item ${item.id === this._current ? "active" : ""}" data-testid="nav-item" data-page="${item.id}">
             <span class="icon">${item.icon}</span>
             <span>${item.label}</span>
           </div>

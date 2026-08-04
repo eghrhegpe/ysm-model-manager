@@ -89,7 +89,7 @@ class ContextMenu extends HTMLElement {
         const icon = item.icon ? this._esc(item.icon) : "";
         const danger = item.danger ? "danger" : "";
         return `
-        <div class="item ${danger}" data-idx="${i}" style="animation: itemSlideIn .15s ease ${i * 25}ms both;">
+        <div class="item ${danger}" data-testid="ctx-item" data-idx="${i}" style="animation: itemSlideIn .15s ease ${i * 25}ms both;">
           ${icon ? `<span class="icon">${icon}</span>` : ""}
           <span>${label}</span>
         </div>

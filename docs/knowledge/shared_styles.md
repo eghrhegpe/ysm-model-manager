@@ -5,7 +5,7 @@ tier: leaf
 category: ui
 source_files:
   - frontend/js/css/shared-styles.ts
-  - frontend/js/components/app-tree-styles.ts
+  - frontend/js/widgets/app-tree-styles.ts
 use_when:
   - 共享样式
   - 按钮样式
@@ -31,7 +31,7 @@ use_when:
 
 ## 对外 API / 入口
 
-- 导出：`btnBaseCSS: string`、`focusVisibleCSS: string`（frontend/js/css/shared-styles.ts）；`treeCSS: string`（frontend/js/components/app-tree-styles.ts）
+- 导出：`btnBaseCSS: string`、`focusVisibleCSS: string`（frontend/js/css/shared-styles.ts）；`treeCSS: string`（frontend/js/widgets/app-tree-styles.ts）
 - 消费方式：组件在 Shadow DOM 内经 `adoptedStyleSheets` 或 `<style>` 注入（如 app-tree 注入 `treeCSS`）
 - 无 bus 事件、无 Go 调用
 

@@ -217,7 +217,7 @@ done-when: [验收条件]
 ## 任务分配
 模型: Qwen3.7 Plus
 方向: 3.2 前端 Web Components — app-tree row-tpl.js 新行类型
-参考: frontend/js/components/app-tree/row-tpl.js
+参考: frontend/js/widgets/app-tree/row-tpl.js
 约束: Shadow DOM 内，CSS 通过 style 标签注入，不用 adoptedStyleSheets
 done-when: 新行类型渲染正确，npx vite build 不红
 ````

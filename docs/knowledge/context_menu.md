@@ -4,7 +4,7 @@ name: 右键菜单系统
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/components/context-menu.ts
+  - frontend/js/widgets/context-menu.ts
   - frontend/js/core/context-menus.ts
   - frontend/js/core/menu-defs.ts
 use_when:
@@ -56,5 +56,5 @@ use_when:
 ## 相关
 
 - `frontend/js/dialogs/` — modal / rename / batch-rename / tag-editor 弹窗
-- `frontend/js/components/context-menu.test.js` — 菜单结构契约测试
+- `frontend/js/widgets/context-menu.test.js` — 菜单结构契约测试
 - 知识卡：`app_modules`、`app_tree`、`app_sidebar`、`app_content`、`event_bus`

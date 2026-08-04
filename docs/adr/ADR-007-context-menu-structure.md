@@ -3,7 +3,7 @@
 - **状态**：已采纳（Accepted）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/core/context-menus.js` / `frontend/js/components/context-menu.js` / `frontend/js/app-modules.js`
+- **相关**：`frontend/js/core/context-menus.js` / `frontend/js/widgets/context-menu.js` / `frontend/js/app-modules.js`
 
 ---
 
@@ -113,7 +113,7 @@ if (_lastList && _clickHandler) {
 | 来源 | 结果 |
 |------|------|
 | `frontend/js/core/context-menus.js` | 513 行，包含 3 个 type 分支的完整菜单定义 |
-| `frontend/js/components/context-menu.js` | 134 行，Web Component 渲染器 |
-| `frontend/js/components/app-sidebar/events.js` | 防重复绑定逻辑 |
+| `frontend/js/widgets/context-menu.js` | 134 行，Web Component 渲染器 |
+| `frontend/js/widgets/app-sidebar/events.js` | 防重复绑定逻辑 |
 | `docs/archive/reference/events.md` | 事件规范中 `ctx:show` / `menu:show` 定义 |
 | `docs/architecture/bug-chronicle.md` §3 | 文件夹右键菜单按钮冗余记录 |

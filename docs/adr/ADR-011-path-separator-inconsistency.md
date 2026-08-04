@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳（2026-08-04 清零完成：前端路径拼接统一正斜杠）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/core/context-menus.js` / `frontend/js/components/app-tree/bus-handlers.js` / `frontend/js/features/import-queue.js` / `frontend/js/components/app-content/community/settings.js`
+- **相关**：`frontend/js/core/context-menus.js` / `frontend/js/widgets/app-tree/bus-handlers.js` / `frontend/js/features/import-queue.js` / `frontend/js/widgets/app-content/community/settings.js`
 
 ---
 

@@ -15,7 +15,7 @@ export async function initResourcePacks(
   rtype?: string,
 ): Promise<() => void> {
   // 导入组件（确保已注册）
-  await import("../components/app-resource-manager/index.js");
+  await import("../widgets/app-resource-manager/index.js");
 
   container.innerHTML =
     '<app-resource-manager rtype="' +

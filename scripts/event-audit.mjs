@@ -8,8 +8,8 @@ import { SRC_DIR, walk, relPosix } from './_lib/scan-files.mjs';
 
 // ADR-014 后 index.js 可能迁移为 index.ts，两者都视为合规位置
 const CORRECT_FILES = new Set([
-  'frontend/js/components/app-content/index.js',
-  'frontend/js/components/app-content/index.ts',
+  'frontend/js/widgets/app-content/index.js',
+  'frontend/js/widgets/app-content/index.ts',
 ]);
 
 function scanEvents() {

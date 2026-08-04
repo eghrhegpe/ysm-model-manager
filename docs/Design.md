@@ -908,7 +908,7 @@ G-1 抗脆弱测试基础设施（ADR-035）——测试断言稳定语义而非
 - 全局 CSS 变量: `frontend/css/variables.css` / `layout.css` / `components.css` / `transitions.css`
 - 共享样式片段: `frontend/js/css/shared-styles.ts`（`btnBaseCSS` / `focusVisibleCSS`）
 - 组件注册入口: `frontend/js/app-modules.ts`
-- 组件源码: `frontend/js/components/*`（9 个自定义元素，详见 §15）
+- 组件源码: `frontend/js/widgets/*`（9 个自定义元素，详见 §15）
 - 页面状态: `frontend/js/core/page-store.ts`
 - 架构快照（历史）: `docs/archive/architecture.md`（已冻结；当前架构以 ADR + 源码为准）
 - 参考范式: MikuMikuAR `docs/design.md`（UI 组件规范，键盘导航/无障碍章节来源）

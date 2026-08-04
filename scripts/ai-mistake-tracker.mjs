@@ -34,6 +34,17 @@ const RULE_VIOLATIONS = {
   stash: /git stash/,                 // 宪法禁止 git stash
   full_read_large: /read.*(\.ts|\.js|\.go).*limit\s*=\s*\d{4,}/, // 读大文件没加 limit
   merge_conflict: /conflict|冲突|合并冲突/,
+  // —— 反模式修复信号（ADR-035 G-3 反哺：统计哪些反模式被高频修复，反哺陷阱清单）——
+  anti_delete_first: /先删后建|先装后删|原子替换/,          // 反模式表：先删后建（失败即丢）
+  anti_skip_existing: /存在即跳过|幂等|静默跳过/,           // 反模式表：存在即跳过（静默不更新）
+  anti_debounce_exec: /防抖|串行化|待续跑/,                  // 反模式表：防抖只合并调度不合并执行
+  anti_channel_reuse: /channel|假活|已关闭/,                 // 反模式表：已关闭 channel 复用（假活）
+  anti_limit_truncate: /截断|LimitReader|读满检测/,          // 反模式表：限流器截断静默
+  anti_text_errno: /errno|文本兜底|错误分类/,                // 反模式表：文本匹配错误分类
+  anti_silent: /静默|静默降级|静默吞错/,                     // 失败静默吞错（高频）
+  anti_guard_register: /无守卫|registerGlobalHandlers|配对/, // 事件无守卫注册（ADR-008）
+  anti_no_generation: /generation|代际|竞态/,                // 异步回写无代际守卫
+  anti_partial_file: /半截|半文件|残留/,                     // 失败残留半截文件
 };
 
 // 文件热力图统计范围（ysmc 代码域）

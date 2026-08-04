@@ -15,8 +15,8 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [🔄 部分采纳](#部分采纳) | 1 |
-| [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 2 |
-| [✅ 已采纳](#已采纳) | 31 |
+| [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
+| [✅ 已采纳](#已采纳) | 33 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❌ 已取代](#已取代) | 0 |
 
@@ -28,10 +28,7 @@ permalink: /adr/
 
 ## ⚠️ 已采纳但遗留未修复
 
-| ADR | 主题 | 状态 |
-|-----|------|------|
-| [ADR-012](./ADR-012-binding-call-consistency.md) | Wails Binding 调用路径一致性 | ⚠️ 已采纳（当前不一致，未修复） |
-| [ADR-011](./ADR-011-path-separator-inconsistency.md) | 前端路径拼接分隔符不一致 | ⚠️ 已采纳（违规未修复） |
+_（暂无）_
 
 ## ✅ 已采纳
 
@@ -59,6 +56,8 @@ permalink: /adr/
 | [ADR-015](./ADR-015-unified-animation-system.md) | 前端统一动画系统设计决策 | ✅ 已采纳 |
 | [ADR-014](./ADR-014-typescript-migration.md) | 前端 TypeScript 渐进迁移 | ✅ 已采纳 |
 | [ADR-013](./ADR-013-governance-convergence.md) | 治理体系收敛 — 文档宪法对账与联邦基线对齐 | ✅ 已采纳 |
+| [ADR-012](./ADR-012-binding-call-consistency.md) | Wails Binding 调用路径一致性 | ✅ 已采纳（2026-08-04 全量统一：业务代码直接 import(bindings) 全部改走 getApp()） |
+| [ADR-011](./ADR-011-path-separator-inconsistency.md) | 前端路径拼接分隔符不一致 | ✅ 已采纳（2026-08-04 清零完成：前端路径拼接统一正斜杠） |
 | [ADR-010](./ADR-010-resource-type-literals.md) | 资源类型字面量硬编码治理 | ✅ 已采纳（2026-08-03 清零完成） |
 | [ADR-008](./ADR-008-event-registration-pattern.md) | 事件注册位置与防重复规范 | ✅ 已采纳 |
 | [ADR-007](./ADR-007-context-menu-structure.md) | 右键菜单代码组织决策 | ✅ 已采纳 |
@@ -106,8 +105,8 @@ _（暂无）_
 | [ADR-015](./ADR-015-unified-animation-system.md) | 前端统一动画系统设计决策 | ✅ 已采纳 | 2026-08-03（初定，决策时间线 v1.7.6） |
 | [ADR-014](./ADR-014-typescript-migration.md) | 前端 TypeScript 渐进迁移 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-013](./ADR-013-governance-convergence.md) | 治理体系收敛 — 文档宪法对账与联邦基线对齐 | ✅ 已采纳 | 2026-08-03 |
-| [ADR-012](./ADR-012-binding-call-consistency.md) | Wails Binding 调用路径一致性 | ⚠️ 已采纳（当前不一致，未修复） | 2026-08-03 |
-| [ADR-011](./ADR-011-path-separator-inconsistency.md) | 前端路径拼接分隔符不一致 | ⚠️ 已采纳（违规未修复） | 2026-08-03 |
+| [ADR-012](./ADR-012-binding-call-consistency.md) | Wails Binding 调用路径一致性 | ✅ 已采纳（2026-08-04 全量统一：业务代码直接 import(bindings) 全部改走 getApp()） | 2026-08-03 |
+| [ADR-011](./ADR-011-path-separator-inconsistency.md) | 前端路径拼接分隔符不一致 | ✅ 已采纳（2026-08-04 清零完成：前端路径拼接统一正斜杠） | 2026-08-03 |
 | [ADR-010](./ADR-010-resource-type-literals.md) | 资源类型字面量硬编码治理 | ✅ 已采纳（2026-08-03 清零完成） | 2026-08-03 |
 | [ADR-008](./ADR-008-event-registration-pattern.md) | 事件注册位置与防重复规范 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-007](./ADR-007-context-menu-structure.md) | 右键菜单代码组织决策 | ✅ 已采纳 | 2026-08-03 |

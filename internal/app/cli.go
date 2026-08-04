@@ -102,29 +102,29 @@ func printUsage() {
 // ====== export: 导出 3D 网格数据 ======
 
 type exportBone struct {
-	Name   string        `json:"name"`
-	Parent string        `json:"parent,omitempty"`
-	Pivot  [3]float64    `json:"pivot"`
-	Cubes  []exportCube  `json:"cubes"`
+	Name   string       `json:"name"`
+	Parent string       `json:"parent,omitempty"`
+	Pivot  [3]float64   `json:"pivot"`
+	Cubes  []exportCube `json:"cubes"`
 }
 
 type exportCube struct {
-	Origin   [3]float64  `json:"origin"`
-	Size     [3]float64  `json:"size"`
-	Pivot    [3]float64  `json:"pivot,omitempty"`
-	Rotation [3]float64  `json:"rotation,omitempty"`
-	MeshPos  [3]float64  `json:"meshPos"`
-	MeshRot  [3]float64  `json:"meshRot"`
+	Origin   [3]float64 `json:"origin"`
+	Size     [3]float64 `json:"size"`
+	Pivot    [3]float64 `json:"pivot,omitempty"`
+	Rotation [3]float64 `json:"rotation,omitempty"`
+	MeshPos  [3]float64 `json:"meshPos"`
+	MeshRot  [3]float64 `json:"meshRot"`
 }
 
 type exportModel struct {
-	File       string        `json:"file"`
-	BoneCount  int           `json:"boneCount"`
-	CubeCount  int           `json:"cubeCount"`
-	TexWidth   int           `json:"texWidth"`
-	TexHeight  int           `json:"texHeight"`
-	Animations []string      `json:"animations,omitempty"`
-	Bones      []exportBone  `json:"bones"`
+	File       string       `json:"file"`
+	BoneCount  int          `json:"boneCount"`
+	CubeCount  int          `json:"cubeCount"`
+	TexWidth   int          `json:"texWidth"`
+	TexHeight  int          `json:"texHeight"`
+	Animations []string     `json:"animations,omitempty"`
+	Bones      []exportBone `json:"bones"`
 }
 
 func runExport(args []string) {

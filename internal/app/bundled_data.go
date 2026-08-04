@@ -9,6 +9,7 @@ import (
 //  1. exe 同级目录       —— 便携部署 / updater 热更后的最新副本；
 //  2. exe 上级目录       —— dev 模式下 exe 在 bin/，bin/.. 即仓库根，命中源码中的最新文件；
 //  3. 编译期嵌入的基线   —— 由 SetEmbedded 注入的 resourceFS，保证任何环境都能读到正确数据。
+//
 // 仅当三者皆失败时返回错误（正常情况下嵌入基线必定命中）。
 func loadBundledData(name string) ([]byte, error) {
 	if exe, err := os.Executable(); err == nil {

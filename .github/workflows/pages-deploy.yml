@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    name: 构建站点（Jekyll · docs/）
+    name: 构建站点（VitePress · docs/）
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,13 +35,21 @@ jobs:
       - name: 配置 Pages
         uses: actions/configure-pages@v5
 
-      - name: Jekyll 构建（source = docs/，_config.yml 所在目录）
-        uses: actions/jekyll-build-pages@v1
+      - name: 安装 Node
+        uses: actions/setup-node@v4
         with:
-          source: ./docs
+          node-version: 22
 
-      - name: 上传产物
+      - name: 安装依赖 + VitePress 构建（srcDir = docs/）
+        run: |
+          cd docs
+          npm install
+          npm run build
+
+      - name: 上传产物（VitePress 输出目录）
         uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/.vitepress/dist
 
   deploy:
     name: 发布

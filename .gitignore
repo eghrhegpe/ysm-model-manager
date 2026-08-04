@@ -7,6 +7,9 @@ cmd/*/genindex.exe
 cmd/*/*.exe
 *.exe
 node_modules/
+# VitePress 构建产物（docs 站点，迁移自 Jekyll）
+docs/.vitepress/dist/
+docs/.vitepress/cache/
 .DS_Store
 *.log
 *.tmp

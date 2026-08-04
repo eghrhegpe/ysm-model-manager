@@ -63,3 +63,28 @@ func TestBuildSyncItems_EmptyInputs(t *testing.T) {
 		t.Fatalf("root 为空应跳过，实际 %d", len(items))
 	}
 }
+
+// ====== isResourcePackFolder ======
+
+func TestIsResourcePackFolder_Yes(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "pack.mcmeta"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if !isResourcePackFolder(dir) {
+		t.Error("含 pack.mcmeta 的目录应识别为资源包文件夹")
+	}
+}
+
+func TestIsResourcePackFolder_No(t *testing.T) {
+	dir := t.TempDir()
+	if isResourcePackFolder(dir) {
+		t.Error("无 pack.mcmeta 的目录不应识别")
+	}
+}
+
+func TestIsResourcePackFolder_NonExistent(t *testing.T) {
+	if isResourcePackFolder("/nonexistent/path") {
+		t.Error("不存在的目录不应识别")
+	}
+}

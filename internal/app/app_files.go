@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"ysm-model-manager/go/fileops"
+	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
 )
 
@@ -72,7 +73,7 @@ func (a *App) RevealInExplorer(path string) error {
 func (a *App) ToggleModelEnable(path string) (bool, error) {
 	enabled, err := fileops.ToggleModelEnable(path)
 	if err == nil {
-		scanCache.Delete(filepath.Dir(path))
+		scanner.InvalidatePath(filepath.Dir(path))
 	}
 	return enabled, err
 }

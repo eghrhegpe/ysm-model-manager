@@ -1,22 +1,21 @@
-// ========== 批量导出 + 高级搜索 + 模型扫描 ==========
-// 从 app.go 拆分：骨骼导出、搜索、模型扫描、仓库索引
+// ========== 批量导出 + 高级搜索 + 模型扫描（薄壳，ADR-003 P2）==========
+// 核心扫描/哈希/缓存/作者提取/索引生成已下沉至 go/scanner（纯 Go 可测）；
+// 本文件仅保留依赖 App（AnalyzeBedrockModel / tagsStore / AddOpLog）与 GUI 的方法。
 package app
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/scanner"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
 )
@@ -167,216 +166,9 @@ func (a *App) SetRepoRoot(dir string) {
 	// repoRoot() 动态从 FilesRoot 推导，此方法保留兼容但不再缓存
 }
 
-// GenerateRepoIndex 扫描仓库目录，生成 index.json
-func (a *App) GenerateRepoIndex(repoPath string) (string, error) {
-	entries := a.ScanModelEntries(repoPath)
-	type indexEntry struct {
-		Name string `json:"name"`
-		Path string `json:"path"`
-		Size int64  `json:"size"`
-		Hash string `json:"hash,omitempty"`
-	}
-	var list []indexEntry
-	for _, e := range entries {
-		relPath := e.Path
-		if strings.HasPrefix(relPath, repoPath) {
-			relPath = strings.TrimPrefix(relPath, repoPath)
-			relPath = strings.TrimLeft(relPath, `\/`)
-		}
-		// index.json 供 GitHub Actions（Linux）消费，路径统一正斜杠（ADR-011）
-		relPath = filepath.ToSlash(relPath)
-		// ✅ 修复：将 append 移到循环内部，使用正确的 e 变量
-		list = append(list, indexEntry{Name: e.Name, Path: relPath, Size: e.Size, Hash: e.Hash})
-	}
-	data, err := json.MarshalIndent(list, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	indexPath := filepath.Join(repoPath, "index.json")
-	if err := os.WriteFile(indexPath, data, 0644); err != nil {
-		return "", err
-	}
-
-	workflowDir := filepath.Join(repoPath, ".github", "workflows")
-	if err := os.MkdirAll(workflowDir, 0755); err == nil {
-		workflowPath := filepath.Join(workflowDir, "generate-index.yml")
-		if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
-			os.WriteFile(workflowPath, []byte(generateIndexWorkflow), 0644)
-		}
-	}
-	return indexPath, nil
-}
-
-const generateIndexWorkflow = `name: Generate index.json
-on:
-  push:
-    branches: [main]
-    paths:
-      - "**.ysm"
-      - "**.zip"
-      - "**.7z"
-  workflow_dispatch:
-permissions:
-  contents: write
-jobs:
-  generate-index:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: 生成 index.json
-        run: |
-          cat > genindex.go << 'GOEOF'
-          package main
-          import (
-            "crypto/sha256" "encoding/json" "fmt" "io" "os" "path/filepath" "strings"
-          )
-          type entry struct {
-            Name string ` + "`json:\"name\"`" + `
-            Path string ` + "`json:\"path\"`" + `
-            Size int64  ` + "`json:\"size\"`" + `
-            Hash string ` + "`json:\"hash,omitempty\"`" + `
-          }
-          func main() {
-            var list []entry
-            filepath.WalkDir(".", func(p string, d os.DirEntry, err error) error {
-              if err != nil || d.IsDir() { return nil }
-              ext := strings.ToLower(filepath.Ext(p))
-              if ext != ".ysm" && ext != ".zip" && ext != ".7z" { return nil }
-              if strings.Contains(p, "/.github") { return nil }
-              rel, _ := filepath.Rel(".", p)
-              rel = strings.ReplaceAll(rel, "\\", "/")
-              fi, _ := d.Info()
-              size := int64(0)
-              if fi != nil { size = fi.Size() }
-              hashStr := ""
-              if f, err := os.Open(p); err == nil {
-                h := sha256.New(); io.Copy(h, f); hashStr = fmt.Sprintf("%x", h.Sum(nil)); f.Close()
-              }
-              list = append(list, entry{Name: d.Name(), Path: rel, Size: size, Hash: hashStr})
-              return nil
-            })
-            data, _ := json.MarshalIndent(list, "", "  ")
-            os.WriteFile("index.json", data, 0644)
-          }
-          GOEOF
-          go run genindex.go
-          rm genindex.go
-      - name: 提交更新
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.json
-          if git diff --cached --quiet; then
-            echo "index.json 无变化，跳过提交"
-          else
-            git commit -m ":arrows_counterclockwise: 自动更新 index.json"
-            git push
-          fi
-`
-
-// progressReader 包装 io.Reader，下载时通过回调推送进度
-type progressReader struct {
-	reader     io.Reader
-	total      int64
-	downloaded int64
-	lastPct    int
-	onProgress func(downloaded, total int64)
-}
-
-func (pr *progressReader) Read(p []byte) (int, error) {
-	n, err := pr.reader.Read(p)
-	pr.downloaded += int64(n)
-	if pr.total > 0 {
-		pct := int(pr.downloaded * 100 / pr.total)
-		if pct > pr.lastPct {
-			pr.lastPct = pct
-			if pr.onProgress != nil {
-				pr.onProgress(pr.downloaded, pr.total)
-			}
-		}
-	} else if n > 0 && pr.onProgress != nil {
-		kb := pr.downloaded / 256 / 1024
-		if kb > int64(pr.lastPct) {
-			pr.lastPct = int(kb)
-			pr.onProgress(pr.downloaded, pr.downloaded)
-		}
-	}
-	return n, err
-}
-
-// scanCache 目录扫描结果缓存，30s TTL（原注释写2s，实际值是30s）
-var scanCache sync.Map
-
-type scanCacheEntry struct {
-	entries   []types.ModelEntry
-	expiresAt time.Time
-}
-
-const scanCacheTTL = 30 * time.Second
-
-// ClearScanCache 清除扫描缓存（下载/导入后调用）；统一收敛到包级 InvalidateScanCache
-func (a *App) ClearScanCache() {
-	InvalidateScanCache()
-}
-
-// ========== 模型扫描 ==========
+// ========== 模型扫描（薄壳）==========
 func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
-	dir = strings.TrimSpace(dir)
-	if dir == "" {
-		return []types.ModelEntry{}
-	}
-	// 检查缓存
-	if v, ok := scanCache.Load(dir); ok {
-		entry := v.(scanCacheEntry)
-		if time.Now().Before(entry.expiresAt) {
-			return entry.entries
-		}
-	}
-	entries := []types.ModelEntry{}
-	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			if strings.HasSuffix(strings.ToLower(p), "\\.recycle") || strings.HasSuffix(strings.ToLower(p), "/.recycle") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		ext := strings.ToLower(filepath.Ext(p))
-		originalExt := ext
-		if strings.HasSuffix(strings.ToLower(p), ".ban") {
-			originalExt = strings.ToLower(filepath.Ext(p[:len(p)-4]))
-		}
-		if !types.IsSupportedExt(originalExt) {
-			return nil
-		}
-		// .json 只允许 ysm.json（动作/动画文件不应单独扫描推送）
-		if originalExt == ".json" {
-			baseName := strings.ToLower(filepath.Base(p))
-			baseName = strings.TrimSuffix(baseName, ".ban")
-			if baseName != "ysm.json" {
-				return nil
-			}
-		}
-		info, _ := d.Info()
-		e := types.ModelEntry{Name: filepath.Base(p), Path: p, Ext: originalExt}
-		if info != nil {
-			e.Size = info.Size()
-			e.ModTime = info.ModTime().UnixMilli()
-		}
-		// 计算 SHA256 供同步系统使用（GetInstanceStatus 依赖哈希匹配）
-		// 跳过非 YSM 类型的大文件（MMD/VRC 文件可达数十 MB，哈希全量太慢）
-		// 蓝图文件（.nbt/.schematic/.litematic）通常较小，计入哈希以支持同步对比
-		if originalExt == ".ysm" || originalExt == ".zip" || originalExt == ".7z" || originalExt == ".json" ||
-			originalExt == ".nbt" || originalExt == ".schematic" || originalExt == ".litematic" {
-			e.Hash = computeFileHash(p)
-		}
-		entries = append(entries, e)
-		return nil
-	})
-	// 存入缓存
-	scanCache.Store(dir, scanCacheEntry{entries: entries, expiresAt: time.Now().Add(scanCacheTTL)})
+	entries := scanner.ScanEntries(strings.TrimSpace(dir))
 	// 批量填充 HasTags（利用标签存储的读缓存，不重复读磁盘）
 	if a.tagsStore != nil {
 		for i := range entries {
@@ -389,63 +181,40 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 	return entries
 }
 
-// InvalidateScanCache 清空扫描缓存（同步完成后调用，确保下次扫描取最新数据）
-func InvalidateScanCache() {
-	scanCache.Range(func(key, _ interface{}) bool {
-		scanCache.Delete(key)
-		return true
-	})
-}
-
-// computeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配）
-func computeFileHash(path string) string {
-	f, err := os.Open(path)
-	if err != nil {
-		return ""
-	}
-	defer f.Close()
-	h := sha256.New()
-	io.Copy(h, f)
-	return fmt.Sprintf("%x", h.Sum(nil))
-}
-
 func (a *App) ScanCustomModels(dir string) []types.ModelEntry {
 	return a.ScanModelEntries(strings.TrimSpace(dir))
 }
 
+// ClearScanCache 清除扫描缓存（下载/导入后调用）
+func (a *App) ClearScanCache() {
+	scanner.InvalidateCache()
+}
+
+// InvalidateScanCache 清空扫描缓存（同步完成后调用，确保下次扫描取最新数据）
+func InvalidateScanCache() {
+	scanner.InvalidateCache()
+}
+
+// ListModelAuthors 统计 [作者] 前缀（走扫描缓存，不重复读磁盘）
 func (a *App) ListModelAuthors() []types.AuthorInfo {
 	if a.ysmRoot() == "" {
 		return nil
 	}
-	entries := a.ScanModelEntries(a.ysmRoot())
-	type authorData struct {
-		Count      int
-		SampleFile string
+	return scanner.ListModelAuthors(a.ScanModelEntries(a.ysmRoot()))
+}
+
+// GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板）
+func (a *App) GenerateRepoIndex(repoPath string) (string, error) {
+	return scanner.GenerateRepoIndex(repoPath)
+}
+
+// ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者
+func (a *App) ScanLocalAuthors() []types.WorkshopCreator {
+	roots := map[string]string{}
+	for _, rtype := range []string{"ysm", "mmd-skin", "vrchat-avatar", "resourcepack", "shaderpack", "create-blueprint"} {
+		roots[rtype], _ = a.GetRepoRoot(rtype)
 	}
-	authors := map[string]*authorData{}
-	for _, e := range entries {
-		name := e.Name
-		if strings.HasSuffix(strings.ToLower(name), ".ban") {
-			name = name[:len(name)-4]
-		}
-		if strings.HasPrefix(name, "[") {
-			if idx := strings.Index(name, "]"); idx > 0 {
-				author := name[1:idx]
-				if author != "" {
-					if _, ok := authors[author]; !ok {
-						authors[author] = &authorData{SampleFile: e.Path}
-					}
-					authors[author].Count++
-				}
-			}
-		}
-	}
-	var result []types.AuthorInfo
-	for name, ad := range authors {
-		result = append(result, types.AuthorInfo{Name: name, Count: ad.Count, SampleFile: ad.SampleFile})
-	}
-	sort.Slice(result, func(i, j int) bool { return result[i].Count > result[j].Count })
-	return result
+	return scanner.ScanLocalAuthors(roots)
 }
 
 func (a *App) ListVersionInstances(mcRoot string) []types.VersionInstance {
@@ -475,85 +244,6 @@ func (a *App) CheckFileExists(path string) bool {
 	return err == nil
 }
 
-// ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者
-// 返回统一格式的创作者列表（可直接合并到 creators.json）
-func (a *App) ScanLocalAuthors() []types.WorkshopCreator {
-	seen := map[string]bool{}
-	var result []types.WorkshopCreator
-
-	// 定义要扫描的目录和对应的类型标签
-	type scanTarget struct {
-		root  string
-		rtype string
-		exts  []string
-	}
-	ysmRoot, _ := a.GetRepoRoot("ysm")
-	mmdRoot, _ := a.GetRepoRoot("mmd-skin")
-	vrcRoot, _ := a.GetRepoRoot("vrchat-avatar")
-	rpRoot, _ := a.GetRepoRoot("resourcepack")
-	spRoot, _ := a.GetRepoRoot("shaderpack")
-	bpRoot, _ := a.GetRepoRoot("create-blueprint")
-	targets := []scanTarget{
-		{ysmRoot, "ysm", types.SupportedExtsForType("ysm")},
-		{mmdRoot, "mmd-skin", types.SupportedExtsForType("mmd-skin")},
-		{vrcRoot, "vrchat-avatar", types.SupportedExtsForType("vrchat-avatar")},
-		{rpRoot, "resourcepack", types.SupportedExtsForType("resourcepack")},
-		{spRoot, "shaderpack", types.SupportedExtsForType("shaderpack")},
-		{bpRoot, "create-blueprint", types.SupportedExtsForType("create-blueprint")},
-	}
-
-	for _, t := range targets {
-		if t.root == "" {
-			continue
-		}
-		entries := a.ScanModelEntries(t.root)
-		for _, e := range entries {
-			name := e.Name
-			if strings.HasSuffix(strings.ToLower(name), ".ban") {
-				name = name[:len(name)-4]
-			}
-			// 提取 [作者]
-			if !strings.HasPrefix(name, "[") {
-				continue
-			}
-			idx := strings.Index(name, "]")
-			if idx <= 0 {
-				continue
-			}
-			author := name[1:idx]
-			if author == "" {
-				continue
-			}
-			key := author + "@" + t.rtype
-			if seen[key] {
-				continue
-			}
-			seen[key] = true
-			// 合并已有的 type 标签
-			existing := -1
-			for i, cr := range result {
-				if cr.Name == author {
-					existing = i
-					break
-				}
-			}
-			if existing >= 0 {
-				// 追加类型标签
-				if !strings.Contains(result[existing].Type, t.rtype) {
-					result[existing].Type += ";" + t.rtype
-				}
-			} else {
-				result = append(result, types.WorkshopCreator{
-					Name: author,
-					Desc: "来自本地仓库",
-					Type: t.rtype,
-				})
-			}
-		}
-	}
-	return result
-}
-
 func (a *App) OpenFolder(dir string) error {
 	// 统一路径分隔符（Windows explorer 不接受混合斜杠）
 	dir = filepath.Clean(dir)
@@ -573,4 +263,34 @@ func (a *App) OpenInstanceFolder(instDir, rtype string) error {
 		target = instDir
 	}
 	return a.OpenFolder(target)
+}
+
+// progressReader 包装 io.Reader，下载时通过回调推送进度（保留：下载进度计算）
+type progressReader struct {
+	reader     io.Reader
+	total      int64
+	downloaded int64
+	lastPct    int
+	onProgress func(downloaded, total int64)
+}
+
+func (pr *progressReader) Read(p []byte) (int, error) {
+	n, err := pr.reader.Read(p)
+	pr.downloaded += int64(n)
+	if pr.total > 0 {
+		pct := int(pr.downloaded * 100 / pr.total)
+		if pct > pr.lastPct {
+			pr.lastPct = pct
+			if pr.onProgress != nil {
+				pr.onProgress(pr.downloaded, pr.total)
+			}
+		}
+	} else if n > 0 && pr.onProgress != nil {
+		kb := pr.downloaded / 256 / 1024
+		if kb > int64(pr.lastPct) {
+			pr.lastPct = int(kb)
+			pr.onProgress(pr.downloaded, pr.downloaded)
+		}
+	}
+	return n, err
 }

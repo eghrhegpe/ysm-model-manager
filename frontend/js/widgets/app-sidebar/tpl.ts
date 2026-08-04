@@ -1,5 +1,5 @@
 // ===== sidebar HTML 模板 =====
-import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { esc } from "../../utils/dom/dom.ts";
 
 /** rtype 短标签映射（vcHeaderHTML 徽章） */

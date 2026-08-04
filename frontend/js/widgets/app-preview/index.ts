@@ -1,7 +1,7 @@
 // ===== <app-preview> 入口 =====
 import { bus } from "../../bus.ts";
 import { previewCSS } from "./css.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { modelDetailHTML } from "./tpl.ts";
 import {
   cacheGet,

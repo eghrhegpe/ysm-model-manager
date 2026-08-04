@@ -3,8 +3,8 @@ import { bus } from "../bus.ts";
 import { modalConfirm } from "../dialogs/modal.ts";
 import { renderDisplayName } from "../utils/dom/display.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
-import { loadResourceRegistry } from "../utils/resource/resource-registry.ts";
-import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
+import { loadResourceRegistry } from "../utils/resource/registry.ts";
+import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { getApp } from "../wails/app.ts";
 
 /** app-content 组件实例（initRecycleBin 依赖的成员） */

@@ -1,5 +1,5 @@
 // ===== DnD 导入共享逻辑（import-queue 与 handler-dnd 共用，消除重复）=====
-import { RESOURCE_TYPES } from "../resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../resource/types.ts";
 import { ALL_EXTS } from "../resource/extensions.ts";
 import { getApp } from "../../wails/app.ts";
 

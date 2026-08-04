@@ -1,5 +1,5 @@
 // ===== 调试日志工具（类型化版 — ADR-014 P2）=====
-// 用法：import { dbg } from "../../utils/debug/debug.ts"; dbg("btn-click", { id, value });
+// 用法：import { dbg } from "../../utils/debug.ts"; dbg("btn-click", { id, value });
 // 行为：
 //   - 默认 console.log 输出，附带 [DBG:tag] 前缀
 //   - 可通过 URL ?nodebug=1 关闭（默认开启）

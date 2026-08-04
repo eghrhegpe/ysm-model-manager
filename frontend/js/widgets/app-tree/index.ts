@@ -1,6 +1,6 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
 import { treeCSS } from "./app-tree-styles.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
 import { renderTree, updateStat, getRenderMode, setRenderMode, type RenderMode, type TreeRow } from "./render.ts";
 import { bindTreeEvents } from "./events.ts";
@@ -11,7 +11,7 @@ import { bindBusEvents } from "./bus-handlers.ts";
 import { loadAuthors, type AuthorInfo } from "./authors.ts";
 import { bus } from "../../bus.ts";
 import { selectState } from "./data.ts";
-import { dbg } from "../../utils/debug/debug.ts";
+import { dbg } from "../../utils/debug.ts";
 import { getApp } from "../../wails/app.ts";
 
 // 模块级待处理搜索词：切页先存、组件挂载后消费（替代 window._pendingTreeSearch，零 window 全局）

@@ -1,6 +1,6 @@
 // ===== app-tree bus 事件处理 =====
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { bus } from "../../bus.ts";
 import { get } from "../../services/registry.ts";
 import type { loadEntries } from "./loader.ts";

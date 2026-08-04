@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"strings"
 
-
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/ysm"

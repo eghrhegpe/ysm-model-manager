@@ -75,6 +75,7 @@ export class AppResourceManager extends HTMLElement {
   private _contentEl: HTMLElement | null = null;
   private _packsCache: PackEntry[] = []; // 完整列表缓存（供搜索过滤）
   private _initGen = 0; // generation 守卫：rtype/instance 连变时作废在途 _init 的回写
+  private _detailGen = 0; // generation 守卫：快速点列表项时作废在途 _showDetail 的回写
 
   constructor() {
     super();
@@ -262,32 +263,38 @@ export class AppResourceManager extends HTMLElement {
 
   async _loadList(): Promise<void> {
     if (!this._listEl) return;
+    // 复用 _init 的 generation：await 期间 rtype/instance 变化时，旧结果不得回写新 DOM
+    const gen = this._initGen;
     const { ScanModelEntries, IsResourcePackEnabled } =
       await getApp();
     const entries = await ScanModelEntries(this._rpRoot);
+    if (gen !== this._initGen) return;
     // 从 resource_types.json 获取当前类型的扩展名列表
     const type = _findType(this._rtype);
     const exts = (type && type.extensions) || [".zip"];
-    const packs: PackEntry[] = [];
-    for (const e of entries || []) {
+    // 先按扩展名过滤（.disabled 后缀去后缀后判断）
+    const filtered = (entries || []).filter((e) => {
+      const lower = (e.Name || "").toLowerCase().replace(/\.disabled$/, "");
+      return exts.some((ext) => lower.endsWith(ext));
+    });
+    // 并发查询启用状态（逐项串行在数百资源目录下明显卡顿；单项失败不阻塞整体）
+    const enabledMap = new Map<string, boolean>();
+    if (this._actions.includes("toggle") && filtered.length) {
+      const results = await Promise.all(
+        filtered.map((e) => IsResourcePackEnabled(e.Path || "").catch(() => false)),
+      );
+      filtered.forEach((e, i) => enabledMap.set(e.Path, results[i]));
+    }
+    const packs: PackEntry[] = filtered.map((e) => {
       const name = e.Name || "";
       const fullPath = e.Path || "";
-      const lower = name.toLowerCase();
-      // .disabled 后缀处理：去后缀后判断扩展名
-      const baseName = lower.replace(/\.disabled$/, "");
-      const matches = exts.some((ext) => baseName.endsWith(ext));
-      if (!matches) continue;
-      if (this._actions.includes("toggle")) {
-        const enabled = await IsResourcePackEnabled(fullPath);
-        packs.push({
-          name: name.replace(/\.disabled$/i, ""),
-          path: fullPath,
-          enabled,
-        });
-      } else {
-        packs.push({ name, path: fullPath, enabled: true });
-      }
-    }
+      return {
+        name: name.replace(/\.disabled$/i, ""),
+        path: fullPath,
+        enabled: this._actions.includes("toggle") ? (enabledMap.get(fullPath) ?? false) : true,
+      };
+    });
+    if (gen !== this._initGen) return; // 过期：不写空态
     if (!packs.length) {
       this._packsCache = [];
       this._listEl.innerHTML =
@@ -296,6 +303,7 @@ export class AppResourceManager extends HTMLElement {
         "</div>";
       return;
     }
+    if (gen !== this._initGen) return; // 过期：不覆盖新 DOM
     this._packsCache = packs;
     // 如果有搜索关键字，应用过滤
     const searchInput = this.querySelector(".rm-search") as HTMLInputElement | null;
@@ -335,6 +343,8 @@ export class AppResourceManager extends HTMLElement {
 
   async _showDetail(path: string, name: string): Promise<void> {
     if (!this._contentEl) return;
+    // generation 守卫：快速点 A（慢）→ B（快）时，A 的 await 返回后不得覆盖 B 的详情
+    const gen = ++this._detailGen;
     // 重启入场动画
     this._contentEl.style.animation = "none";
     this._contentEl.innerHTML =
@@ -373,6 +383,8 @@ export class AppResourceManager extends HTMLElement {
           enabled = await IsResourcePackEnabled(path);
         }
       }
+
+      if (gen !== this._detailGen) return; // 过期：用户已点击其他条目
 
       this._contentEl.innerHTML = detailHTML(
         displayName,
@@ -416,6 +428,7 @@ export class AppResourceManager extends HTMLElement {
         }
       }
     } catch (e) {
+      if (gen !== this._detailGen) return; // 过期：不覆盖新条目的详情
       if (this._contentEl) {
         this._contentEl.innerHTML =
           '<div style="padding:12px;color:var(--paid)">⚠️ 读取失败: ' +

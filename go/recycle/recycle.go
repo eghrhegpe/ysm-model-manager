@@ -64,12 +64,16 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 		return nil, err
 	}
 	if info.Mode()&os.ModeSymlink != 0 {
-		os.Remove(src)
+		if err := os.Remove(src); err != nil {
+			return nil, err
+		}
 		return &MoveResult{Action: "deleted_link", Reason: "符号链接，已直接删除"}, nil
 	}
 	// 硬链接检测：Unix 通过 Nlink()，Windows 通过 syscall
 	if isHardLink(info, src) {
-		os.Remove(src)
+		if err := os.Remove(src); err != nil {
+			return nil, err
+		}
 		return &MoveResult{Action: "deleted_link", Reason: "硬链接，已直接删除"}, nil
 	}
 	os.MkdirAll(tm.recycleDir, 0755)
@@ -204,9 +208,14 @@ func (tm *TrashManager) Restore(src string) error {
 		}
 	}
 	if err := copyFile(src, dst); err != nil {
+		// 复制中断/失败时清理半截恢复文件，避免目标目录残留损坏文件
+		os.Remove(dst)
 		return err
 	}
-	return os.Remove(src)
+	if err := os.Remove(src); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Delete 永久删除回收站中的文件

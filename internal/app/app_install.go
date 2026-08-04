@@ -580,11 +580,17 @@ func (a *App) DeleteFromRecycle(src string) error {
 func (a *App) EmptyRecycleBin(_ string) (int, error) {
 	cfg := a.LoadAppConfig()
 	total := 0
+	failed := []string{}
 	for _, r := range a.allRecycleRoots(cfg) {
 		n, err := recycle.Empty(r)
-		if err == nil {
-			total += n
+		if err != nil {
+			failed = append(failed, r)
+			continue
 		}
+		total += n
+	}
+	if len(failed) > 0 {
+		return total, fmt.Errorf("%d 个资源目录清空失败: %s", len(failed), strings.Join(failed, ", "))
 	}
 	return total, nil
 }

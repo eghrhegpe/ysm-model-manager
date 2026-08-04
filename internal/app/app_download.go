@@ -28,19 +28,24 @@ type DownloadTask struct {
 }
 
 // DownloadQueue 串行下载队列
+// 回调注入替代 *App 反向引用（ADR-002 P1：打破 DownloadQueue ↔ App 循环，解锁独立测试）
 type DownloadQueue struct {
-	app       *App
 	tasks     []DownloadTask
 	mu        sync.Mutex
 	running   bool
 	cancelled bool
 	ctx       context.Context
 	cancelFn  context.CancelFunc
+
+	downloadFn func(ctx context.Context, url, saveDir string) (string, error)
+	emitFn     func(name string, args ...interface{})
+	logFn      func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string)
 }
 
-func NewDownloadQueue(a *App) *DownloadQueue {
+// NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入）
+func NewDownloadQueue(downloadFn func(ctx context.Context, url, saveDir string) (string, error), emitFn func(name string, args ...interface{}), logFn func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string)) *DownloadQueue {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &DownloadQueue{app: a, ctx: ctx, cancelFn: cancel}
+	return &DownloadQueue{downloadFn: downloadFn, emitFn: emitFn, logFn: logFn, ctx: ctx, cancelFn: cancel}
 }
 
 func (a *App) EnqueueDownloads(tasks []DownloadTask) error {
@@ -98,7 +103,7 @@ func (q *DownloadQueue) process() {
 		q.mu.Unlock()
 		if !cancelled {
 			log.Printf("[queue] emit queue:status done")
-			q.app.app.Event.Emit("queue:status", "done", 0, "")
+			q.emitFn("queue:status", "done", 0, "")
 		}
 	}()
 
@@ -116,22 +121,22 @@ func (q *DownloadQueue) process() {
 		q.mu.Unlock()
 
 		log.Printf("[queue] emit queue:file-start name=%s pos=%d left=%d", task.Name, remaining+1, remaining)
-		q.app.app.Event.Emit("queue:file-start", task.Name, remaining+1, remaining)
+		q.emitFn("queue:file-start", task.Name, remaining+1, remaining)
 
-		savePath, err := q.app.downloadFileWithQueue(ctx, task.URL, task.SaveDir)
+		savePath, err := q.downloadFn(ctx, task.URL, task.SaveDir)
 		if err != nil {
 			log.Printf("[queue] emit queue:file-done name=%s status=fail err=%v", task.Name, err)
-			q.app.app.Event.Emit("queue:file-done", task.Name, "fail", err.Error())
-			q.app.AddOpLog("download", task.Name, task.URL, task.SaveDir, 0, "failed", err.Error())
+			q.emitFn("queue:file-done", task.Name, "fail", err.Error())
+			q.logFn("download", task.Name, task.URL, task.SaveDir, 0, "failed", err.Error())
 		} else {
 			log.Printf("[queue] emit queue:file-done name=%s status=ok", task.Name)
-			q.app.app.Event.Emit("queue:file-done", task.Name, "ok", "")
+			q.emitFn("queue:file-done", task.Name, "ok", "")
 			// 写入导入日志
 			var fileSize int64
 			if fi, st := os.Stat(savePath); st == nil {
 				fileSize = fi.Size()
 			}
-			q.app.AddOpLog("download", task.Name, task.URL, task.SaveDir, fileSize, "success", "")
+			q.logFn("download", task.Name, task.URL, task.SaveDir, fileSize, "success", "")
 		}
 
 		select {

@@ -36,7 +36,13 @@ func NewApp() *App {
 	a := &App{
 		logger: logs.NewLogger(),
 	}
-	a.queue = NewDownloadQueue(a)
+	// 回调注入：打破 DownloadQueue ↔ App 循环（ADR-002 P1）
+	// emitFn 闭包延迟解析 a.app（SetApp 在应用启动时注入）
+	a.queue = NewDownloadQueue(
+		a.downloadFileWithQueue,
+		func(name string, args ...interface{}) { a.app.Event.Emit(name, args...) },
+		a.AddOpLog,
+	)
 	return a
 }
 

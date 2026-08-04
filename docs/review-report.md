@@ -265,7 +265,7 @@ doctor.mjs 三处缺陷（Go Test 误报 / grep 依赖 / wails.json 解析）建
 
 | 级别 | 文件 | 观察 | 修复 |
 |------|------|------|------|
-| 🟠 P2 | app-modules.ts#L11-L12 | 注册空转：loadInstances/loadEntries 注册后全项目零 get() 消费 | 三处消费方改走 get<typeof loadXxx>("loadXxx")，DI 价值兑现，替换点收敛到 app-modules.ts 一处 |
+| 🟠 P2 | app-modules.ts#L11-L12 | 注册空转：loadInstances/loadEntries 注册后全项目零 get() 消费 | 三处消费方改走 `get&lt;typeof loadXxx>("loadXxx")`，DI 价值兑现，替换点收敛到 app-modules.ts 一处 |
 | 🟡 P3 | registry.ts#L10-L27 | 服务名自由字符串，拼错运行时才炸 | ServiceName 联合收窄 register/get/has/unregister |
 | 🟡 P3 | registry.ts#L21-L23 | 重复注册静默覆盖 | 覆盖时 console.warn 告警 |
 | 🟢 P4 | registry.ts#L11 | 注释「app-modules.js」漂移 | 改 app-modules.ts |

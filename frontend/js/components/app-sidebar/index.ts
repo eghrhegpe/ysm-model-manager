@@ -6,7 +6,8 @@ import { sidebarCSS } from "./sidebar-css.ts";
 import { headerHTML, footerHTML, listContainerHTML } from "./tpl.ts";
 import { renderVersionCards } from "./render.ts";
 import { bindCardEvents, bindFooter } from "./events.ts";
-import { loadInstances } from "./loader.ts";
+import { get } from "../../services/registry.ts";
+import type { loadInstances } from "./loader.ts";
 import type { SidebarInstance } from "./data.ts";
 
 // 持久化勾选状态（跨重新渲染保持）
@@ -275,7 +276,7 @@ class AppSidebar extends HTMLElement {
     if (this._loading) return;
     this._loading = true;
     try {
-      this._instances = await loadInstances(this._rtype);
+      this._instances = await get<typeof loadInstances>("loadInstances")(this._rtype);
       dbg(
         "sidebar",
         "_reload 完成, 实例数:",

@@ -1,6 +1,6 @@
 // ===== 3D 多角度截图渲染器（类型化版 — ADR-014 P2）=====
 import * as THREE from "three";
-import { GetModel3DSpec } from "../../bindings/ysm-model-manager/internal/app/app.js";
+import { getApp } from "../wails/app.ts";
 import { loadTextures } from "./model3d-loader.ts";
 import { buildSceneMesh, type Spec3D } from "./model3d.ts";
 
@@ -16,6 +16,7 @@ export async function renderMultiAngle(
   opts: { size?: number } = {},
 ): Promise<AngleShot[] | null> {
   const size = opts.size || 512;
+  const { GetModel3DSpec } = await getApp();
   const spec = JSON.parse(await GetModel3DSpec(modelPath)) as Spec3D;
   if (!spec.models?.length) return null;
   const texArr = await loadTextures(texUrls);

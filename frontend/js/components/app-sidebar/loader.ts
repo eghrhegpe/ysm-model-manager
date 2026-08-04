@@ -3,12 +3,7 @@ import { bus } from "../../bus.ts";
 import { dbg } from "../../utils/debug.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import type { SidebarInstance } from "./data.ts";
-import {
-  LoadAppConfig,
-  ListVersionInstances,
-  GetResourceInstanceStatus,
-  GetRepoRoot,
-} from "../../../bindings/ysm-model-manager/internal/app/app.js";
+import { getApp } from "../../wails/app.ts";
 
 /** Go 端实例同步状态（绑定类型局部视图，字段以 Go struct 为准） */
 interface InstanceStatusView {
@@ -32,6 +27,12 @@ export async function loadInstances(
 ): Promise<SidebarInstance[]> {
   bus.emit("loading:start");
   try {
+    const {
+      LoadAppConfig,
+      ListVersionInstances,
+      GetResourceInstanceStatus,
+      GetRepoRoot,
+    } = await getApp();
     const cfg = await LoadAppConfig();
     const mcRoot = cfg.mcRoot || "";
 

@@ -3,12 +3,6 @@ import { friendlyError } from "../../utils/errors.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { bus } from "../../bus.ts";
 import type { AppTree } from "./index.ts";
-import {
-  SelectDirectory,
-  ScanModelEntries,
-  ListVersionInstances,
-  SyncCustomToRepo,
-} from "../../../bindings/ysm-model-manager/internal/app/app.js";
 import { getApp } from "../../wails/app.ts";
 
 function addImportLog(
@@ -32,6 +26,7 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
   unsubs.push(
     bus.on("instance:install", async ({ name: insName }) => {
       try {
+        const { SelectDirectory, ListVersionInstances } = await getApp();
         const filePaths = await SelectDirectory();
         if (!filePaths) return;
         // 获取整合包目录
@@ -92,10 +87,16 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
   unsubs.push(
     bus.on("instance:sync", async ({ name: insName }) => {
       try {
-        const AppM = await getApp();
-        const cfg = await AppM.LoadAppConfig();
+        const {
+          LoadAppConfig,
+          GetRepoRoot,
+          ListVersionInstances,
+          ScanModelEntries,
+          SyncCustomToRepo,
+        } = await getApp();
+        const cfg = await LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
-        const repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot(RESOURCE_TYPES.YSM) : "";
+        const repoRoot = GetRepoRoot ? await GetRepoRoot(RESOURCE_TYPES.YSM) : "";
         if (!mcRoot || !repoRoot) {
           bus.emit("toast:show", {
             msg: "请先配置路径",
@@ -114,8 +115,6 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
           });
           return;
         }
-        const { SyncCustomToRepo } =
-          await getApp();
         const repoEntries = await ScanModelEntries(repoRoot);
         const repoNames = new Set(
           (repoEntries || []).map((e) => e.Name.replace(/\.ban$/i, "")),

@@ -3,9 +3,6 @@ import { bus } from "../../bus.ts";
 import { selectState, toggleSelect, selectOnly } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
-import {
-  ToggleModelEnable,
-} from "../../../bindings/ysm-model-manager/internal/app/app.js";
 import { getApp } from "../../wails/app.ts";
 
 const ENABLE_MULTI_SELECT = true;
@@ -43,6 +40,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
   if (vm._batchBusy || vm._toggleBusy) return; // 并发守卫：与单文件/批量 toggle 共用槽位，防重叠循环
   vm._batchBusy = true;
   try {
+  const { ToggleModelEnable } = await getApp();
   const ck = fhEl.querySelector(".ck");
   if (!ck) return;
   const dirKey = fhEl.dataset.dir;
@@ -140,7 +138,8 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
       const fl = flCk.closest(".fl") as HTMLElement | null;
       if (fl) fl.classList.add("flash");
       setTimeout(() => fl?.classList.remove("flash"), 400);
-      ToggleModelEnable(fullPath || "")
+      getApp()
+        .then(({ ToggleModelEnable }) => ToggleModelEnable(fullPath || ""))
         .then(async () => {
           await vm._load();
           vm._renderTree();

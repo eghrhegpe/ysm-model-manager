@@ -130,20 +130,24 @@ let _busInstance: Bus | null = null;
 /** 创建一个新 bus 实例 */
 function createBus(): Bus {
   const listeners: Partial<Record<BusEventName, Array<(payload: unknown) => void>>> = {};
+  // on/off 提取为闭包：unsub 与 once 内部不再依赖 this（解构调用不丢上下文）
+  const on: Bus["on"] = (event, fn) => {
+    ((listeners[event] as Array<(payload: unknown) => void>) ||= []).push(fn as (payload: unknown) => void);
+    return () => off(event, fn);
+  };
+  const off: Bus["off"] = (event, fn) => {
+    const arr = listeners[event];
+    if (arr) {
+      const idx = arr.indexOf(fn as (payload: unknown) => void);
+      if (idx !== -1) arr.splice(idx, 1);
+    }
+  };
   return {
-    on(event, fn) {
-      ((listeners[event] as Array<(payload: unknown) => void>) ||= []).push(fn as (payload: unknown) => void);
-      return () => this.off(event, fn);
-    },
-    off(event, fn) {
-      const arr = listeners[event];
-      if (arr) {
-        const idx = arr.indexOf(fn as (payload: unknown) => void);
-        if (idx !== -1) arr.splice(idx, 1);
-      }
-    },
+    on,
+    off,
     emit(event, ...args) {
-      (listeners[event] || []).forEach((fn) => {
+      // 拷贝快照再遍历：handler 内 on/off 修改注册表不影响本次派发
+      (listeners[event] || []).slice().forEach((fn) => {
         try {
           fn(args[0]);
         } catch (e) {
@@ -153,10 +157,10 @@ function createBus(): Bus {
     },
     once(event, fn) {
       const wrapper = (data: unknown) => {
-        this.off(event, wrapper as never);
+        off(event, wrapper as never);
         fn(data as never);
       };
-      this.on(event, wrapper as never);
+      on(event, wrapper as never);
     },
   };
 }

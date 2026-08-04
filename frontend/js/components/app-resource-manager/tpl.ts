@@ -30,11 +30,11 @@ export function sidebarHTML(
   let btns = "";
   if (actions.includes("import")) {
     btns +=
-      '<button class="btn-base sm rm-import-btn" style="flex:1">📥 导入</button>';
+      '<button class="btn-base sm rm-import-btn" data-testid="rm-import" style="flex:1">📥 导入</button>';
   }
   if (actions.includes("openFolder")) {
     btns +=
-      '<button class="btn-base sm rm-open-btn">📁</button>';
+      '<button class="btn-base sm rm-open-btn" data-testid="rm-open">📁</button>';
   }
   if (btns) {
     html +=
@@ -65,7 +65,7 @@ export function itemHTML(
   idx: number,
 ): string {
   return (
-    '<div class="rm-item" data-path="' +
+    '<div class="rm-item" data-testid="rm-item" data-path="' +
     esc(path) +
     '" data-name="' +
     esc(name) +

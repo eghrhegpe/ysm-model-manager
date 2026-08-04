@@ -3,7 +3,7 @@ import { friendlyError } from "../../../utils/dom/errors.ts";
 import { bus } from "../../../bus.ts";
 import { getApp } from "../../../wails/app.ts";
 import type { WorkshopSite } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
-import type { LocalCreatorLike } from "./site-view.ts";
+import type { LocalCreatorLike } from "../site-view.ts";
 import type { SiteViewState, CleanupFn } from "./types.ts";
 
 /**

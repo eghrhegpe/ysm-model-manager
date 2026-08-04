@@ -36,7 +36,7 @@ async function resolveDstDir(opts: {
   okText: string;
   emptyMsg: string;
 }): Promise<{ folder: string; dstDir: string } | null> {
-  const { modalPrompt } = await import("../dialogs/modal.ts");
+  const { modalPrompt } = await import("../widgets/dialogs/modal.ts");
   const folder = await modalPrompt({
     title: opts.title,
     icon: opts.icon,
@@ -171,7 +171,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
   },
   "batch.recycle": async (ctx) => {
-    const { modalConfirm } = await import("../dialogs/modal.ts");
+    const { modalConfirm } = await import("../widgets/dialogs/modal.ts");
     const ok2 = await modalConfirm({
       title: "批量移入回收站",
       icon: "♻️",
@@ -234,7 +234,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   // ── file ──
   "file.rename": async (ctx) => {
     try {
-      const { showRenameDialog } = await import("../dialogs/rename.ts");
+      const { showRenameDialog } = await import("../widgets/dialogs/rename.ts");
       const fileName = (ctx.path || "").split(/[/\\]/).pop() || "";
       const newName = await showRenameDialog(ctx.path || "", fileName);
       if (!newName) return;
@@ -296,7 +296,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       toast("未找到任何整合包", 2000, "warn");
       return;
     }
-    const { modalSelect } = await import("../dialogs/modal.ts");
+    const { modalSelect } = await import("../widgets/dialogs/modal.ts");
     const names = instances.map((i) => i.Name);
     const chosen = await modalSelect({
       title: "推送到整合包",
@@ -317,12 +317,12 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
   },
   "file.edit-tags": async (ctx) => {
-    const { modalTagEditor } = await import("../dialogs/tag-editor.ts");
+    const { modalTagEditor } = await import("../widgets/dialogs/tag-editor.ts");
     const result = await modalTagEditor(ctx.path || "");
     if (result) toast(`🏷️ 已保存 ${result.length} 个标签`, 2000);
   },
   "file.recycle": async (ctx) => {
-    const { modalConfirm } = await import("../dialogs/modal.ts");
+    const { modalConfirm } = await import("../widgets/dialogs/modal.ts");
     const ok2 = await modalConfirm({
       title: "移入回收站",
       icon: "♻️",

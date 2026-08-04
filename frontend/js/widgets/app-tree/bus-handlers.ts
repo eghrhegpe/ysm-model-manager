@@ -80,7 +80,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
   // 文件夹操作
   unsubs.push(
     bus.on("dir:rename", async ({ dir }) => {
-      const { modalPrompt } = await import("../../dialogs/modal.ts");
+      const { modalPrompt } = await import("../../widgets/dialogs/modal.ts");
       const name = await modalPrompt({
         title: "重命名文件夹",
         icon: "✂️",
@@ -109,7 +109,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
 
   unsubs.push(
     bus.on("dir:mkdir", async ({ dir }) => {
-      const { modalPrompt } = await import("../../dialogs/modal.ts");
+      const { modalPrompt } = await import("../../widgets/dialogs/modal.ts");
       const name = await modalPrompt({
         title: "新建文件夹",
         icon: "📁",
@@ -138,7 +138,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
 
   unsubs.push(
     bus.on("dir:recycle", async ({ dir }) => {
-      const { modalConfirm } = await import("../../dialogs/modal.ts");
+      const { modalConfirm } = await import("../../widgets/dialogs/modal.ts");
       const confirmed = await modalConfirm({
         title: "移入回收站",
         icon: "♻️",
@@ -209,7 +209,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
           return;
         }
         const { showBatchRenameDialog } =
-          await import("../../dialogs/batch-rename.ts");
+          await import("../../widgets/dialogs/batch-rename.ts");
         await showBatchRenameDialog(
           absDir,
           entries.map((e) => ({ Name: e.Name, Path: e.Path })),
@@ -253,7 +253,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
           Path: p,
         }));
         const { showBatchRenameDialog } =
-          await import("../../dialogs/batch-rename.ts");
+          await import("../../widgets/dialogs/batch-rename.ts");
         await showBatchRenameDialog("批量重命名", entries, async (renames) => {
           let ok = 0,
             fail = 0;

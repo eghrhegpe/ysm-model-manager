@@ -10,8 +10,8 @@ import {
   isFaved,
   toggleFav,
   type CreatorIdentityInput,
-} from "./workshop-data.ts";
-import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.ts";
+} from "../workshop-data.ts";
+import { getSiteIcon, getTagIconFromRole } from "../workshop-icons.ts";
 import { createCrCard, type CrCardCtx } from "./render.ts";
 import { getApp } from "../../../wails/app.ts";
 import type { SiteViewState, CleanupFn } from "./types.ts";

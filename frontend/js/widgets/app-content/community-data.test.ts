@@ -8,8 +8,8 @@ import {
   mergeCommunitySites,
   fillSearch,
   type LocalCreator,
-} from "./core.ts";
-import type { WorkshopCreator, WorkshopSite } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
+} from "./community-data.ts";
+import type { WorkshopCreator, WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 
 function localCreator(name: string, extra: Partial<LocalCreator> = {}): LocalCreator {
   return { name, type: "", ...extra } as LocalCreator;

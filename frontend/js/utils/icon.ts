@@ -1,5 +1,5 @@
 // ===== 文件名 → 图标（类型化版 — ADR-014 P2）=====
-import { RESOURCE_TYPES } from "../resource/types.ts";
+import { RESOURCE_TYPES } from "./resource/types.ts";
 
 function getExt(name: string): string {
   return (name.split(".").pop() || "").toLowerCase();

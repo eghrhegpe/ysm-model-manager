@@ -1,6 +1,6 @@
 # ADR-023：测试体系
 
-- **状态**：🔄 部分采纳（L1 Go 单测 / L2 契约测试现行；L3 Vitest 已落地运行并接入质量门禁——20 文件 / 302 用例 + v8 覆盖率基线 + 阈值红线；pre-push-gate / doctor / CI 均跑）
+- **状态**：✅ 已采纳（L1/L2/L3 三层全部落地并接入质量门禁——pre-push-gate / doctor / CI + v8 覆盖率阈值；L3 用例 26 文件持续扩充中）
 - **日期**：2026-08-03（初定），2026-08-04（L3 落地 + 覆盖率基线 + 进门禁/CI + 阈值红线 + 补测报告脚本）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`tests/*.mjs`（契约测试）/ `go/` 各包单测 / `frontend/package.json`（vitest 依赖已装）/ `frontend/vite.config.js`（vitest + v8 coverage 配置 + thresholds）/ `scripts/test-coverage-report.mjs`（补测发现）/ ADR-014 P5 / ADR-020 / 联邦 MikuMikuAR（Vitest 4328 测试实证）

@@ -1,48 +1,98 @@
-// ===== 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 / Design.md §19.1）=====
-// 组件测试统一走本 helper：查询走 data-testid（稳定钩子，不绑定 CSS 类/文案），
-// 等待走轮询（替代固定 sleep）。UI 结构变化只改本文件一处。
+// ===== 测试公共工具（test-utils/index）=====
+// 入口导出：查询 / 事件 / 渲染 / 等待
+export {
+  queryByTestId,
+  getByTestId,
+  queryAllByTestId,
+  getAllByTestId,
+} from "./query-by-testid.ts";
 
-/** 按 data-testid 精确查询（root 可为 document / ShadowRoot / 元素） */
-export function getByTestId(root: ParentNode, testid: string): HTMLElement | null {
-  return root.querySelector(`[data-testid="${testid}"]`) as HTMLElement | null;
-}
+export {
+  fireEvent,
+  fireClick,
+  fireFocus,
+  fireBlur,
+  fireKeyDown,
+  fireInput,
+  fireDrop,
+} from "./events.ts";
 
-/** 按 data-testid 前缀查询全部（同域多实例，如 tree-file） */
-export function getAllByTestId(root: ParentNode, prefix: string): HTMLElement[] {
-  return Array.from(root.querySelectorAll(`[data-testid^="${prefix}"]`)) as HTMLElement[];
-}
+export { renderComponent } from "./render.ts";
 
-/** 轮询等待条件成立（替代固定 sleep；超时抛错） */
-export async function waitFor(
-  fn: () => boolean | Promise<boolean>,
-  timeout = 3000,
-  interval = 50,
-): Promise<void> {
-  const deadline = Date.now() + timeout;
-  while (Date.now() < deadline) {
-    if (await fn()) return;
-    await new Promise((r) => setTimeout(r, interval));
-  }
-  throw new Error(`waitFor 超时（${timeout}ms）`);
-}
-// ===== 测试公共辅助（组件编排测试复用）=====
-// 从 4 个组件测试（app-tree/sidebar/content/preview.component.test.ts）
-// 抽取重复的 sleep / mount / unmount——消除显著重复（≥2 文件反模式）
-// 注意：vi.mock 工厂是 hoisted 的，无法从本模块导出复用——bindings 等
-// mock 仍在各测试文件内联（可复制自样板）
-
-/** 等待异步完成（组件 connectedCallback / bus 事件 / 防抖的真实时序） */
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((r) => setTimeout(r, ms));
-
-/** 挂载自定义元素到 body（触发 connectedCallback） */
-export function mountCustomElement(tag: string): HTMLElement {
-  const el = document.createElement(tag);
-  document.body.appendChild(el);
+/**
+ * 同步渲染自定义元素到 body，返回已创建元素。
+ * 与 renderComponent 不同：不返回 RenderResult，适合简单测试。
+ */
+export function mountCustomElement<T extends Element = HTMLElement>(
+  tagName: string,
+  container: Element = document.body,
+): T {
+  const el = document.createElement(tagName) as unknown as T;
+  container.appendChild(el);
   return el;
 }
 
-/** 卸载元素（触发 disconnectedCallback） */
-export function unmountElement(el: HTMLElement): void {
-  document.body.removeChild(el);
+/**
+ * 卸载元素：从 DOM 移除。
+ */
+export function unmountElement(el: Element): void {
+  el.remove();
+}
+
+/**
+ * 简单睡眠（测试中等待异步渲染）。
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * 轮询等待条件满足（兼容现有测试风格，作为统一导出）。
+ * @param fn 条件函数，返回 truthy 即通过
+ * @param timeout 超时毫秒
+ */
+export async function waitFor(
+  fn: () => unknown,
+  timeout = 5000,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const tick = () => {
+      try {
+        if (fn()) resolve();
+        else if (Date.now() - start < timeout) requestAnimationFrame(tick);
+        else reject(new Error(`waitFor timed out after ${timeout}ms`));
+      } catch {
+        if (Date.now() - start < timeout) requestAnimationFrame(tick);
+        else reject(new Error(`waitFor condition threw after ${timeout}ms`));
+      }
+    };
+    tick();
+  });
+}
+
+/**
+ * 轮询等待元素被移除。
+ * @param fn 返回目标元素
+ * @param timeout 超时毫秒
+ */
+export async function waitForElementToBeRemoved(
+  fn: () => Element | null,
+  timeout = 5000,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const tick = () => {
+      try {
+        const el = fn();
+        if (!el || !el.isConnected) resolve();
+        else if (Date.now() - start < timeout) requestAnimationFrame(tick);
+        else reject(new Error(`waitForElementToBeRemoved timed out after ${timeout}ms`));
+      } catch {
+        if (Date.now() - start < timeout) requestAnimationFrame(tick);
+        else reject(new Error(`waitForElementToBeRemoved condition threw after ${timeout}ms`));
+      }
+    };
+    tick();
+  });
 }

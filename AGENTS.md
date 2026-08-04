@@ -145,6 +145,12 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | **显著重复** | 相似逻辑在 **≥2 个文件**中出现 | 应抽取公共函数或 `utils/` 模块 |
 | **Promise 链断裂** | async 函数中 `.then()` 无 `.catch()`，或 `catch` 后静默吞错 | 错误无声消失，用户不知发生了什么 |
 | **事件无守卫注册** | `bus.on` 顶层直接注册不检查已注册 | 组件多次创建累积 handler（ADR-008） |
+| **先删后建** | 先删除旧文件/目录再安装/重建，失败无回滚 | 失败即丢数据（relinkDir，ADR-028） |
+| **存在即跳过** | 目标已存在即返回成功，不校验内容/链接类型 | 更新静默不生效、relink 假成功（ADR-028） |
+| **防抖只合并调度不合并执行** | timer 合并触发，但执行体可并发重入 | 并发操作同一资源（syncAll，ADR-031） |
+| **已关闭 channel 复用** | Stop 时 close(done)，Start 复用已关闭 channel | 重启后假活、监听失效（ADR-031） |
+| **限流器截断静默** | `io.LimitReader` 截断不报错，下游接受截断数据 | 损坏文件被装盘（Download，ADR-033） |
+| **文本匹配错误分类** | 错误分类靠英文错误子串 `contains` | 脆弱、跨平台失效（isFileLocked/linkErr） |
 
 ## 审核输出格式
 
@@ -239,6 +245,9 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 10 | 回调 API 未 Promise 化 | DnD 数据读不到 | `entry.file(callback)` → `new Promise(resolve => entry.file(resolve))` |
 | 11 | 3D 坐标变换反复修（实证：model3d.ts 9 次 fix 全项目第一） | "对齐 ysmview cube pivot" 连续 5 次 fix | 改 model2d/model3d/spec.go 坐标前先 grep `bug-chronicle` + 对齐 ysmview 口径（pivot X 取反、`from.x = origin.x - size.x`）；改完用自由相机近距验证 |
 | 12 | CLI 未知 flag 被当标题/位置参数（实证：`--help` 误占 ADR-027-help.md / 生成 help.md 卡） | `new-adr.mjs --help` 占号；`new-knowledge-card.mjs --help` 当 kind | 有 positional 参数的 CLI：未知 `--flag` 显式白名单拦截，绝不落入位置参数位；`--help` 退 0 / 未知 flag 退 1；主流程 `process.exit(main())` 让退出码生效 |
+| 13 | 幽灵路径：状态被旁路写入（实证：page-store `setCurrentPage` 零调用方且 emits 完成事件；registry 注册空转零消费） | 状态变了但内容不渲染 / 服务注册无人消费 | 模块级状态唯一写入点收敛到 `registerXxx(unsubs)` listener；setter 禁发「完成事件」绕过请求链路；服务名联合类型收窄、注册必有消费方（`get()`） |
+| 14 | 旁路弹窗：不走 modal.ts 单例槽位（实证：version-updater 自带 47 行 dlg-overlay 骨架） | 连点叠加、单例失效、双执行 | 所有弹窗走 `dialogs/modal.ts`（modalConfirm/modalPrompt/modalSelect + `registerDlg` 槽位），禁止自带弹窗骨架（review.mjs W6 扫描） |
+| 15 | esc 重复实现（实证：10 文件 3-5 个 replace 版本并存） | 属性上下文 XSS 面不统一 | 转义统一 import `utils/dom.ts` 的 esc（5-replace 含引号），禁止私有实现（review.mjs R10 扫描） |
 
 > 完整版见 `docs/pitfalls.md`。
 

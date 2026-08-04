@@ -812,6 +812,7 @@ func (a *App) findInstanceDir(rtype, instanceName, mcRoot string) (string, error
 }
 
 // PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库
+// PullSingleResourceFromInstance 从整合包拉取单个资源（复制核心下沉 go/sync）
 func (a *App) PullSingleResourceFromInstance(rtype, srcPath, instanceName string) error {
 	cfg := a.LoadAppConfig()
 	if cfg.McRoot == "" {
@@ -821,78 +822,28 @@ func (a *App) PullSingleResourceFromInstance(rtype, srcPath, instanceName string
 	if globalDir == "" {
 		return fmt.Errorf("未设置目录")
 	}
-	instances := a.ListVersionInstances(cfg.McRoot)
-	var targetDir string
-	for _, ins := range instances {
-		if ins.Name == instanceName {
-			subDir := types.SubDirMap(rtype)
-			if subDir != "" {
-				targetDir = filepath.Join(ins.VersionDir, subDir)
-			}
-			break
-		}
-	}
-	if targetDir == "" {
-		return fmt.Errorf("未找到整合包: %s", instanceName)
-	}
-	// 文件夹级拉取：整体复制文件夹到全局
-	fi, stErr := os.Stat(srcPath)
-	if stErr == nil && fi.IsDir() {
-		folderName := filepath.Base(srcPath)
-		dstDir := filepath.Join(globalDir, folderName)
-		if err := os.MkdirAll(dstDir, 0755); err != nil {
-			return err
-		}
-		entries, _ := os.ReadDir(srcPath)
-		for _, e := range entries {
-			if e.IsDir() {
-				continue
-			}
-			srcFile := filepath.Join(srcPath, e.Name())
-			if err := copyFile(srcFile, filepath.Join(dstDir, e.Name())); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	dstDir := filepath.Dir(strings.Replace(srcPath, targetDir, globalDir, 1))
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
+	targetDir, err := a.findInstanceDir(rtype, instanceName, cfg.McRoot)
+	if err != nil {
 		return err
 	}
-	return copyFile(srcPath, filepath.Join(dstDir, filepath.Base(srcPath)))
+	return ysmsync.PullSingleResource(globalDir, targetDir, srcPath)
 }
 
-// PushSingleResourceToInstance 推送单个文件/文件夹到整合包
+// PushSingleResourceToInstance 推送单个资源到整合包（分派核心下沉 go/sync）
 func (a *App) PushSingleResourceToInstance(rtype, instanceName, filePath string) error {
 	cfg := a.LoadAppConfig()
 	if cfg.McRoot == "" {
 		return fmt.Errorf("请先设置游戏根目录")
 	}
-	subDir := types.SubDirMap(rtype)
-	if subDir == "" {
-		return fmt.Errorf("未知资源类型: %s", rtype)
+	globalDir, _ := a.GetRepoRoot(rtype)
+	if globalDir == "" {
+		return fmt.Errorf("未设置 %s 类型的仓库目录", rtype)
 	}
-	instances := a.ListVersionInstances(cfg.McRoot)
-	for _, ins := range instances {
-		if ins.Name == instanceName {
-			globalDir, _ := a.GetRepoRoot(rtype)
-			if globalDir == "" {
-				return fmt.Errorf("未设置 %s 类型的仓库目录", rtype)
-			}
-			customDir := filepath.Join(ins.VersionDir, subDir)
-			// 检查是否是文件夹（YSM json / MMD 的文件夹级资源）
-			fi, stErr := os.Stat(filePath)
-			if stErr == nil && fi.IsDir() {
-				return installer.InstallDir(filePath, customDir, globalDir, a.LinkMode, rtype)
-			}
-			ext := strings.ToLower(filepath.Ext(filePath))
-			if ext == ".json" || ext == ".pmx" || ext == ".pmd" {
-				return installer.InstallDir(filepath.Dir(filePath), customDir, globalDir, a.LinkMode, rtype)
-			}
-			return installer.Install(filePath, customDir, globalDir, a.LinkMode)
-		}
+	customDir, err := a.findInstanceDir(rtype, instanceName, cfg.McRoot)
+	if err != nil {
+		return err
 	}
-	return fmt.Errorf("未找到整合包: %s", instanceName)
+	return ysmsync.PushSingleResource(filePath, customDir, globalDir, a.LinkMode, rtype)
 }
 
 // ========== 整合包全类型同步状态 ==========

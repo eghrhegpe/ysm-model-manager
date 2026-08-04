@@ -80,3 +80,63 @@ func TestPullResources(t *testing.T) {
 		t.Fatalf("全局文件应存在: %v", err)
 	}
 }
+
+func TestPullSingleResource_File(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	if err := os.MkdirAll(globalDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := filepath.Join(targetDir, "extra.zip")
+	_ = os.WriteFile(src, []byte("x"), 0644)
+	if err := PullSingleResource(globalDir, targetDir, src); err != nil {
+		t.Fatalf("PullSingle 失败: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(globalDir, "extra.zip")); err != nil {
+		t.Fatalf("全局文件应存在: %v", err)
+	}
+}
+
+func TestPullSingleResource_Dir(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	if err := os.MkdirAll(globalDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	srcDir := filepath.Join(targetDir, "pack")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("x"), 0644)
+	if err := PullSingleResource(globalDir, targetDir, srcDir); err != nil {
+		t.Fatalf("文件夹拉取失败: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(globalDir, "pack", "a.txt")); err != nil {
+		t.Fatalf("全局文件夹应存在: %v", err)
+	}
+}
+
+func TestPushSingleResource_File(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	if err := os.MkdirAll(globalDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(customDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := filepath.Join(globalDir, "pack.zip")
+	_ = os.WriteFile(src, []byte("x"), 0644)
+	if err := PushSingleResource(src, customDir, globalDir, "copy", "resourcepack"); err != nil {
+		t.Fatalf("PushSingle 失败: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(customDir, "pack.zip")); err != nil {
+		t.Fatalf("目标文件应存在: %v", err)
+	}
+}

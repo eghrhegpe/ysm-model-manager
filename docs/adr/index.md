@@ -24,7 +24,7 @@ permalink: /adr/
 
 | ADR | 主题 | 状态 |
 |-----|------|------|
-| [ADR-022](./ADR-022-vitepress-site.md) | VitePress 建站 | 🔄 部分采纳（内容体系已就绪，站点搭建由并行 AI 推进中） |
+| [ADR-022](./ADR-022-vitepress-site.md) | VitePress 建站 | 🔄 部分采纳（内容体系已就绪；站点以 Jekyll + just-the-docs 落地中——原决策 VitePress，方案漂移见 §3 已知遗留） |
 
 ## ⚠️ 已采纳但遗留未修复
 
@@ -96,7 +96,7 @@ _（暂无）_
 | [ADR-025](./ADR-025-download-mirror-fallback.md) | 工坊下载镜像回退架构 | ✅ 已采纳 | 2026-08-04（原方案 2026-06-06 定稿） |
 | [ADR-024](./ADR-024-multi-resource-federation.md) | 多资源类型联邦架构（ResourceAdapter + resource_types.json 注册表） | ✅ 已采纳 | 2026-08-04（决策时间线：联邦愿景 2025-06-07 起草 / P7 多资源计划 2026-06-10 定稿 / 注册表现行落地） |
 | [ADR-023](./ADR-023-test-framework.md) | 测试体系 | ✅ 已采纳（L1/L2/L3 三层全部落地并接入质量门禁——pre-push-gate / doctor / CI + v8 覆盖率阈值；L3 用例 26 文件持续扩充中） | 2026-08-03（初定），2026-08-04（L3 落地 + 覆盖率基线 + 进门禁/CI + 阈值红线 + 补测报告脚本） |
-| [ADR-022](./ADR-022-vitepress-site.md) | VitePress 建站 | 🔄 部分采纳（内容体系已就绪，站点搭建由并行 AI 推进中） | 2026-08-03 |
+| [ADR-022](./ADR-022-vitepress-site.md) | VitePress 建站 | 🔄 部分采纳（内容体系已就绪；站点以 Jekyll + just-the-docs 落地中——原决策 VitePress，方案漂移见 §3 已知遗留） | 2026-08-03 |
 | [ADR-021](./ADR-021-declarative-menu-testing.md) | 前端声明式菜单自动化测试方案 | ✅ 已采纳（A/B 层已实施；C 层 E2E 按决策不引入、列为远期） | 2026-08-03 |
 | [ADR-020](./ADR-020-script-toolchain.md) | 脚本体系 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-019](./ADR-019-knowledge-base.md) | 知识卡体系 | ✅ 已采纳 | 2026-08-03 |

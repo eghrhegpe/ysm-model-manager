@@ -1,6 +1,6 @@
 # ADR-022：VitePress 建站
 
-- **状态**：🔄 部分采纳（内容体系已就绪，站点搭建由并行 AI 推进中）
+- **状态**：🔄 部分采纳（内容体系已就绪；站点以 Jekyll + just-the-docs 落地中——原决策 VitePress，方案漂移见 §3 已知遗留）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`docs/guide/`（26 篇）/ `docs/adr/` / `docs/knowledge/` / `docs/Gemfile` / `docs/_config.yml` / ADR-018 / 联邦 MikuMikuAR（VitePress 站点对标）
@@ -54,7 +54,8 @@
 
 ### 已知遗留
 
-- 站点部署目标（GitHub Pages / 自托管）待并行 AI 完成后补充；
+- **方案漂移（2026-08-04 核实）**：原决策 VitePress，实际落地 **Jekyll + just-the-docs**（`docs/_config.yml` 已入库：`remote_theme: just-the-docs/just-the-docs`、`baseurl: /ysm-model-manager`、`heading_anchors: true`、jekyll-seo-tag；`.vitepress/` 不存在，`docs/Gemfile` + `Gemfile.lock` + `_sass/` 为 Jekyll 生态）。理由（源自 _config.yml 注释）：GitHub Pages 原生支持 Jekyll 零构建配置，just-the-docs 提供原生侧边栏 + 站内搜索，观感对齐 MikuMikuAR VitePress 站点浅色基调。VitePress 方案是否正式废弃待决策人确认。
+- 站点部署目标（GitHub Pages 项目页，baseurl 已配置）待构建发布验证；
 - 本 ADR 状态随建站进度更新（🔄 → ✅）。
 
 ## 4. 数据溯源

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **33** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为规范索引（按状态分组，可锚点跳转）。
+> 架构决策日志，共 **34** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为规范索引（按状态分组，可锚点跳转）。
 
 ## 按状态分布
 
@@ -16,7 +16,7 @@ permalink: /adr/
 |------|------|
 | [🔄 部分采纳](#部分采纳) | 1 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 2 |
-| [✅ 已采纳](#已采纳) | 30 |
+| [✅ 已采纳](#已采纳) | 31 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❌ 已取代](#已取代) | 0 |
 
@@ -37,6 +37,7 @@ permalink: /adr/
 
 | ADR | 主题 | 状态 |
 |-----|------|------|
+| [ADR-035](./ADR-035-forward-governance-initiatives.md) | 远期治理立项：组件测试与 CI 门槛 | ✅ 已采纳（立项登记，实施排期中） |
 | [ADR-034](./ADR-034-remaining-debt-after-12-round-audit.md) | 12 轮审计后的剩余技术债盘点与处置方向 | ✅ 已采纳 |
 | [ADR-033](./ADR-033-updater-download-truncation-version-compare.md) | 更新包下载截断检测与版本比较加固 | ✅ 已采纳 |
 | [ADR-032](./ADR-032-sync-diff-detection-failure-visibility.md) | 同步差异检测与失败可见性加固 | ✅ 已采纳 |
@@ -82,6 +83,7 @@ _（暂无）_
 
 | ADR | 主题 | 状态 | 日期 |
 |-----|------|------|------|
+| [ADR-035](./ADR-035-forward-governance-initiatives.md) | 远期治理立项：组件测试与 CI 门槛 | ✅ 已采纳（立项登记，实施排期中） | 2026-08-04 |
 | [ADR-034](./ADR-034-remaining-debt-after-12-round-audit.md) | 12 轮审计后的剩余技术债盘点与处置方向 | ✅ 已采纳 | 2026-08-04 |
 | [ADR-033](./ADR-033-updater-download-truncation-version-compare.md) | 更新包下载截断检测与版本比较加固 | ✅ 已采纳 | 2026-08-04 |
 | [ADR-032](./ADR-032-sync-diff-detection-failure-visibility.md) | 同步差异检测与失败可见性加固 | ✅ 已采纳 | 2026-08-04 |

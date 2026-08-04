@@ -50,5 +50,5 @@ use_when:
 
 ## 相关
 
-- `frontend/js/utils/display.ts` — 文件名渲染
+- `frontend/js/utils/dom/display.ts` — 文件名渲染
 - `frontend/js/components/app-tree/` — 组件目录

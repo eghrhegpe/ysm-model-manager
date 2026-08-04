@@ -1,8 +1,8 @@
 // ===== 诊断页初始化（为 _initDiagnostics 减负） =====
 import { bus } from "../../../bus.ts";
-import { renderDisplayName } from "../../../utils/display.ts";
+import { renderDisplayName } from "../../../utils/dom/display.ts";
 import { getApp } from "../../../wails/app.ts";
-import { loadResourceRegistry } from "../../../utils/resource-registry.ts";
+import { loadResourceRegistry } from "../../../utils/resource/resource-registry.ts";
 
 /** 转义函数签名（与组件 _esc 一致） */
 type EscFn = (s: unknown) => string;
@@ -82,6 +82,7 @@ interface ImportLogLike {
   ModelName?: string;
   TargetDir?: string;
   ErrorMsg?: string;
+  Operation?: string;
 }
 
 async function loadDiagnosticsLogs(root: ShadowRoot, esc: EscFn): Promise<void> {
@@ -137,6 +138,9 @@ async function loadDiagnosticsLogs(root: ShadowRoot, esc: EscFn): Promise<void> 
                 "<br>$1：",
               )
             : "");
+        const opBadge = l.Operation && l.Operation !== "import"
+          ? '<span class="log-op">' + esc(l.Operation) + "</span>"
+          : "";
         // ⚠️ 原 JS 的 `${status}` 引用了未定义变量（模板串求值抛 ReferenceError，
         // 被外层 catch 吞掉 → 日志列表永远显示「加载日志失败」）。TS 编译期暴露，
         // 按意图改为 l.Status（与 statusLabel 同源）

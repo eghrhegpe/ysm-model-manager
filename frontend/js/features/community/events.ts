@@ -231,7 +231,7 @@ export function bindRepoEvents(
         e.stopPropagation();
         const row = searchBtn.closest("[data-name]");
         if (row) {
-          const { parseModelName } = await import("../../utils/display.ts");
+          const { parseModelName } = await import("../../utils/dom/display.ts");
           const { author } = parseModelName(
             (row as HTMLElement).dataset.name || "",
           );

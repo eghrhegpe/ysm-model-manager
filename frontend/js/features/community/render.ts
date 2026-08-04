@@ -1,8 +1,8 @@
 // ===== 创意工坊模型列表渲染（类型化版 — ADR-014 P3 features）=====
 // DOM API，非字符串拼接
-import { renderDisplayName } from "../../utils/display.ts";
+import { renderDisplayName } from "../../utils/dom/display.ts";
 import { ICONS } from "../../components/app-content/community/workshop-icons.ts";
-import { stagger } from "../../utils/stagger.ts";
+import { stagger } from "../../utils/animation/stagger.ts";
 
 /** 工坊模型条目（index.json 结构） */
 export interface WorkshopModel {

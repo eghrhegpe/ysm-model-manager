@@ -1,11 +1,11 @@
 // ===== 批量重命名对话框（类型化版 — ADR-014 P3 dialogs 收官）=====
 // 复用 parseModelName 解析
 import { bus } from "../bus.ts";
-import { parseModelName, type ParsedModelName } from "../utils/display.ts";
-import { stagger } from "../utils/stagger.ts";
+import { parseModelName, type ParsedModelName } from "../utils/dom/display.ts";
+import { stagger } from "../utils/animation/stagger.ts";
 import { registerDlg } from "./modal.ts";
-import { esc } from "../utils/dom.ts";
-import { RESOURCE_TYPES } from "../utils/resource-types.ts";
+import { esc } from "../utils/dom/dom.ts";
+import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
 
 /** 批量条目（ModelEntry 子集） */
 interface BatchEntry {

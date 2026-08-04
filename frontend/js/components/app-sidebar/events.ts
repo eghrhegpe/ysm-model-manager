@@ -1,7 +1,7 @@
 // ===== sidebar 事件层 =====
 import { bus } from "../../bus.ts";
-import { animateNumber } from "../../utils/animate.ts";
-import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
+import { animateNumber } from "../../utils/animation/animate.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
 import type { SidebarInstance } from "./data.ts";
 import { getApp } from "../../wails/app.ts";
 

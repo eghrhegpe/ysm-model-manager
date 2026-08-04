@@ -1,13 +1,13 @@
 // ===== 树渲染层（虚拟滚动版）=====
-import { hl } from "../../utils/dom.ts";
-import { fmt, fmtDate } from "../../utils/fmt.ts";
-import { fileIcon, isYsmName } from "../../utils/icon.ts";
+import { hl } from "../../utils/dom/dom.ts";
+import { fmt, fmtDate } from "../../utils/dom/fmt.ts";
+import { fileIcon, isYsmName } from "../../utils/icon/icon.ts";
 import { emptyHTML } from "./tpl.ts";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";
 import { listFileRowHTML, listFolderRowHTML } from "./row-tpl-list.ts";
-import { renderDisplayName } from "../../utils/display.ts";
-import { animateNumber } from "../../utils/animate.ts";
-import { dbg } from "../../utils/debug.ts";
+import { renderDisplayName } from "../../utils/dom/display.ts";
+import { animateNumber } from "../../utils/animation/animate.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 import { selectState } from "./data.ts";
 import type { TreeEntry } from "./loader.ts";
 import {

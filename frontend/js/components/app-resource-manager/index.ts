@@ -4,9 +4,9 @@
 
 import { sidebarHTML, itemHTML, detailHTML, placeholderHTML, type PackMetaDetail } from "./tpl.ts";
 import { bus } from "../../bus.ts";
-import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
 import { getApp } from "../../wails/app.ts";
-import { esc } from "../../utils/dom.ts";
+import { esc } from "../../utils/dom/dom.ts";
 
 /** 资源类型配置（resource_types.json 条目视图） */
 interface ResourceTypeConfig {

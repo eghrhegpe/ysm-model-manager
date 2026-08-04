@@ -1,6 +1,6 @@
 // ===== Litematic 体素 3D 预览 =====
 
-import { esc } from "../../utils/dom.ts";
+import { esc } from "../../utils/dom/dom.ts";
 import { getApp } from "../../wails/app.ts";
 
 /** 体素数据（GetLitematicVoxelData 等返回 JSON） */

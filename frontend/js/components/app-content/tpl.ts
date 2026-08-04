@@ -1,5 +1,5 @@
 // ===== app-content 页面模板 =====
-import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
 
 export function repositoryHTML(): string {
   return (

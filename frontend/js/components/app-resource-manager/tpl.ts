@@ -1,7 +1,7 @@
 // ===== 资源管理器布局模板 =====
-import { renderFormattedText } from "../../utils/mc-format.ts";
-import { describeVersionRange, type PackMeta } from "../../utils/pack-format.ts";
-import { esc } from "../../utils/dom.ts";
+import { renderFormattedText } from "../../utils/format/mc-format.ts";
+import { describeVersionRange, type PackMeta } from "../../utils/format/pack-format.ts";
+import { esc } from "../../utils/dom/dom.ts";
 
 /** 详情面板元数据（ReadPackMeta / ReadShaderpackLang 返回 JSON 的兼容视图） */
 export interface PackMetaDetail extends PackMeta {

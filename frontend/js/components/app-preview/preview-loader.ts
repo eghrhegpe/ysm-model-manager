@@ -1,6 +1,6 @@
 // ===== 模型数据加载（唯一入口）=====
 // 供给 preview-skeleton.ts 和 screenshot-renderer.ts 使用
-import { cacheGet, cacheSet } from "../../utils/preview-cache.ts";
+import { cacheGet, cacheSet } from "./preview-cache.ts";
 import { getApp } from "../../wails/app.ts";
 import type { PreviewCtx } from "./preview-utils.ts";
 import type { BedrockGeometry } from "./utils.ts";
@@ -60,7 +60,7 @@ export async function loadModelData(
       let goClips: unknown[] = [];
       if (model.animations?.length) {
         const { parseBedrockAnimationJSON } =
-          await import("../../utils/animation.ts");
+          await import("../../utils/animation/animation.ts");
         for (const jsonStr of model.animations as string[]) {
           const { clips } = parseBedrockAnimationJSON(jsonStr);
           if (clips.length > 0) goClips.push(...clips);

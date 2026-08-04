@@ -1,6 +1,6 @@
 // ===== 资源类型注册表（类型化版 — ADR-014 P2）=====
 // 从 Go 端 resource_types.json 加载
-import { getApp } from "../wails/app.ts";
+import { getApp } from "../../wails/app.ts";
 
 /** 资源类型注册表条目（对应 resource_types.json 结构） */
 export interface ResourceTypeEntry {

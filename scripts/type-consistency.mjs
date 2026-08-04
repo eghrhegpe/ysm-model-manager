@@ -21,7 +21,7 @@ function readResourceTypes() {
 
 function readJsExtensions() {
   // ADR-014 后 extensions.ts 取代 extensions.js（.test.js 保留供 vitest）
-  const fp = path.join(ROOT, 'frontend/js/utils/extensions.ts');
+  const fp = path.join(ROOT, 'frontend/js/utils/resource/extensions.ts');
   const text = fs.readFileSync(fp, 'utf-8');
   // 提取 RESOURCE_EXTS 对象（TS 版带类型注解 `: Record<...>`，需宽容中间部分）
   const m = text.match(/export const RESOURCE_EXTS(?::[^{=]+)? = \{([^}]+)\}/s);

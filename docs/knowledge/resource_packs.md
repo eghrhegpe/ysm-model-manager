@@ -32,7 +32,7 @@ use_when:
 - 导出：`initResourcePacks(container: HTMLElement, host: object, rtype?: string): Promise<() => void>`
 - 监听 bus：无
 - 派发 bus：无（由 app-resource-manager 自行派发）
-- 依赖常量：`RESOURCE_TYPES`（frontend/js/utils/resource-types.ts）
+- 依赖常量：`RESOURCE_TYPES`（frontend/js/utils/resource/resource-types.ts）
 
 ## 与其他子系统关系
 

@@ -4,8 +4,8 @@ name: MC 格式判定 mc-format
 tier: leaf
 category: utils
 source_files:
-  - frontend/js/utils/mc-format.ts
-  - frontend/js/utils/pack-format.ts
+  - frontend/js/utils/format/mc-format.ts
+  - frontend/js/utils/format/pack-format.ts
 use_when:
   - 分节符
   - § 颜色
@@ -53,4 +53,4 @@ use_when:
 
 - [utils_display](./utils_display.md) — 文件名 § 着色消费方
 - [go_packs](./go_packs.md) — 包元数据数据源
-- `frontend/js/utils/mc-format.test.js` — 单元测试（验证入口）
+- `frontend/js/utils/format/mc-format.test.js` — 单元测试（验证入口）

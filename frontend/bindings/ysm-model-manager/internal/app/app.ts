@@ -29,6 +29,10 @@ export function AddImportLog(modelName: string, sourcePath: string, targetDir: s
     return $Call.ByID(3744622591, modelName, sourcePath, targetDir, fileSize, status, errMsg);
 }
 
+export function AddOpLog(op: string, modelName: string, sourcePath: string, targetDir: string, fileSize: number, status: string, errMsg: string): $CancellablePromise<void> {
+    return $Call.ByID(2143326689, op, modelName, sourcePath, targetDir, fileSize, status, errMsg);
+}
+
 /**
  * AllTags 返回所有被使用的标签（按使用次数降序）
  */

@@ -3,6 +3,7 @@ import { bus } from "./bus.ts";
 import { register } from "./services/registry.ts";
 import { Window } from "@wailsio/runtime";
 import { getApp } from "./wails/app.ts";
+import { registerErrorDiary } from "./core/error-diary.ts";
 
 // bus 已在 bus.ts 中挂载 window.bus，此处不再重复赋值
 
@@ -127,6 +128,7 @@ function applyUIPrefs() {
 
 // 启动初始化
 (async () => {
+  registerErrorDiary();
   await initTheme();
   applyUIPrefs();
   // 静默检查更新（不阻塞界面）

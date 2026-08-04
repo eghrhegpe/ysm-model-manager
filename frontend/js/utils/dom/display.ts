@@ -1,5 +1,5 @@
 // ===== 模型文件名解析 + 美化显示管线（类型化版 — ADR-014 P2）=====
-import { renderFormattedText } from "./mc-format.ts";
+import { renderFormattedText } from "../format/mc-format.ts";
 import { esc } from "./dom.ts";
 
 /** 解析后的模型文件名字段 */

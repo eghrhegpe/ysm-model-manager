@@ -9,7 +9,7 @@ export async function openFullPreview(
   textureImg: HTMLImageElement | null,
   labelsOn: boolean,
 ): Promise<void> {
-  const { renderModel2D } = await import("../../utils/model2d.ts");
+  const { renderModel2D } = await import("../../utils/3d/model2d.ts");
   const overlay = document.createElement("div");
   overlay.style.cssText =
     "position:fixed;inset:0;z-index:var(--z-fullscreen);background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;flex-direction:column";

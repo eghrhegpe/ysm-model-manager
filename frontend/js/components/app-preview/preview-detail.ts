@@ -1,8 +1,8 @@
 // ===== 模型/资源包详情面板 =====
 // 从 index.ts 拆分：详情面板渲染逻辑
-import { summaryCardHTML } from "../../utils/summarize.ts";
-import { renderFormattedText } from "../../utils/mc-format.ts";
-import { esc } from "../../utils/dom.ts";
+import { summaryCardHTML } from "../../utils/format/summarize.ts";
+import { renderFormattedText } from "../../utils/format/mc-format.ts";
+import { esc } from "../../utils/dom/dom.ts";
 import { getApp } from "../../wails/app.ts";
 import type { PreviewCtx } from "./preview-utils.ts";
 
@@ -117,7 +117,7 @@ export async function showResourcePack(
     };
     const basename = path.split(/[/\\]/).pop() || "";
     const desc = renderFormattedText(meta.description || "");
-    const { describeVersionRange } = await import("../../utils/pack-format.ts");
+    const { describeVersionRange } = await import("../../utils/format/pack-format.ts");
     if (gen !== _detailGen) return;
     const rv = describeVersionRange(meta);
     ctx._root.innerHTML = `<div class="content" id="preview-content">

@@ -37,8 +37,8 @@ use_when:
 ## 与其他子系统关系
 
 - `go/types/`: Go 端注册表加载
-- `frontend/js/utils/resource-types.ts`: 前端类型工具
-- `frontend/js/utils/resource-registry.ts`: 前端资源注册服务
+- `frontend/js/utils/resource/resource-types.ts`: 前端类型工具
+- `frontend/js/utils/resource/resource-registry.ts`: 前端资源注册服务
 
 ## 不变量
 

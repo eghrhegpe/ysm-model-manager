@@ -144,6 +144,10 @@ export interface ImportLog {
     "Status": string;
     "ErrorMsg"?: string;
     "Timestamp": number;
+    /**
+     * import / scan / download / sync / rename / delete / ui
+     */
+    "Operation"?: string;
 }
 
 /**

@@ -86,6 +86,7 @@ ${focusVisibleCSS}
 .btn.danger:hover { background: color-mix(in srgb, var(--status-error) 27%, transparent); }
 .log-row { padding:3px 16px; display:flex; gap:6px; font-size:var(--fs-base); align-items:center; border-bottom:1px solid var(--bd); }
 .log-row .log-status { font-size:var(--fs-sm); width:20px; text-align:center; }
+.log-row .log-op { font-size:var(--fs-xs); padding:0 4px; border-radius:4px; background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); flex-shrink:0; }
 .log-row .log-msg { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt); }
 /* tag-* 颜色已由通用 .tag-* 规则覆盖 */
 .log-row .log-time { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }

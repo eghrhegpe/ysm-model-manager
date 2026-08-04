@@ -2,8 +2,8 @@
 // 将 ctx:show 事件转换为新版组件使用的 menu:show 事件
 // 菜单结构来自 menu-defs.ts（唯一事实来源），此处只保留行为 handler 表。
 import { bus, type ToastPayload, type CtxShowPayload, type MenuItem } from "../bus.ts";
-import { friendlyError } from "../utils/errors.ts";
-import { RESOURCE_TYPES } from "../utils/resource-types.ts";
+import { friendlyError } from "../utils/dom/errors.ts";
+import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
 import { getApp } from "../wails/app.ts";
 import { getMenuDef } from "./menu-defs";
 

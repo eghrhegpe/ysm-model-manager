@@ -1,13 +1,18 @@
 # 项目维护手册
 
 > 面向项目维护者（人类 + AI）的操作指南：文档网站构建发布、文档体系维护、日常治理检查。
+<<<<<<< HEAD
 > 网站方案见 ADR-022（VitePress + home layout；曾漂移 Jekyll 后迁移回，见 ADR-022 §3）。
+=======
+> 网站方案见 ADR-022（Jekyll + just-the-docs；原决策 VitePress，方案漂移已记录）。
+>>>>>>> 931398e4aa93505cf48e1bf2412b6d57bbdaddfa
 > **AI 注意：项目有文档网站（GitHub Pages），改 docs/ 涉及网站可见内容时需知网站存在与构建方式。**
 
 ---
 
 ## 一、文档网站
 
+<<<<<<< HEAD
 项目以 VitePress 构建文档站点（GitHub Pages 项目页，对标 MikuMikuAR）。
 
 > **当前状态（2026-08-04）**：VitePress 迁移完成（`.vitepress/config.mjs` + `index.md` home layout），网站**尚未构建发布**——`docs/.vitepress/dist/` 未生成、GitHub Pages 未启用；构建需 Node 环境（`docs/` 下 `npm install && npm run build`）。**以 `.vitepress/config.mjs` 配置为准**（VitePress 为唯一方案）。
@@ -18,11 +23,22 @@
 | 配置 | `docs/package.json` / `docs/.vitepress/config.mjs` |
 | 站点路径 | GitHub Pages 项目页，`base: /ysm-model-manager/` |
 | 决策 | ADR-022（🔄：迁移完成，构建/发布待验证）|
+=======
+项目以 Jekyll + just-the-docs 构建文档站点（GitHub Pages 项目页）。
+
+| 项 | 值 |
+|----|-----|
+| 框架 | Jekyll + just-the-docs（`docs/_config.yml`，`remote_theme: just-the-docs/just-the-docs`）|
+| 配置 | `docs/Gemfile` / `Gemfile.lock` / `_config.yml` / `_sass/` |
+| 站点路径 | GitHub Pages 项目页，`baseurl: /ysm-model-manager` |
+| 决策 | ADR-022（🔄：配置已就绪，构建/发布待验证）|
+>>>>>>> 931398e4aa93505cf48e1bf2412b6d57bbdaddfa
 
 ### 构建与发布
 
 ```bash
 cd docs
+<<<<<<< HEAD
 npm install    # 首次安装依赖
 npm run build  # 构建 → 产物 docs/.vitepress/dist/
 npm run dev    # 本地预览开发
@@ -38,6 +54,21 @@ npm run dev    # 本地预览开发
 - **导航收敛**：`sidebar` 显式配置只列用户向内容（guide / releases / maintenance）；内部文档不列导航。
 - **冻结区不发布**：`docs/archive/`（历史归档）不进导航（同内部文档处理）。
 - **frontmatter**：guide 类文档带 `title/description`。
+=======
+bundle install           # 首次安装依赖
+bundle exec jekyll build # 本地构建 → 产物 docs/_site/
+```
+
+- 构建产物 `docs/_site/` 不入库（检查 .gitignore）。
+- GitHub Pages 发布：仓库 Settings → Pages → Source 选分支 + `/docs` 目录 → 推 main 自动构建发布（Jekyll 原生支持）。
+- 站点内容 = docs/ 下所有 Markdown（**exclude 除外**，见下）。
+
+### 网站内容规范
+
+- **冻结区不发布**：`docs/archive/`（历史归档）已在 `_config.yml` 的 `exclude` 中——改归档文件不影响网站。
+- **生成产物不发布**：`funcmap.md` / `project-map.md`（同 exclude）。
+- **frontmatter**：guide 类文档带 `title/description`（VitePress 时代兼容字段，Jekyll 忽略无碍）。
+>>>>>>> 931398e4aa93505cf48e1bf2412b6d57bbdaddfa
 
 ---
 

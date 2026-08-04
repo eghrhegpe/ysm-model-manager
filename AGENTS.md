@@ -40,7 +40,11 @@
 | 查函数签名 | `node scripts/funcmap.mjs` 或 grep |
 | 写大语言模型小说 | `docs/novel/AGENTS.md`（区域归属决策链路，**必读**）+ `SKELETON.md`（骨架与风格）+ `index.md`（自动索引，勿手改）；写完必跑 `node scripts/build-novel-index.mjs`，区域文件夹内禁放 README |
 | 完整发版、更新流程 | `docs/releases/README.md` + `cmd/build-release.ps1` |
+<<<<<<< HEAD
 | 项目维护 / 网站构建 | `docs/MAINTENANCE.md`（维护手册：Jekyll 文档网站构建发布 + 文档体系维护 + 治理检查；**网站当前未发布**）|
+=======
+| 项目维护 / 网站构建 | `docs/MAINTENANCE.md`（维护手册：Jekyll 文档网站构建发布 + 文档体系维护 + 治理检查）|
+>>>>>>> 931398e4aa93505cf48e1bf2412b6d57bbdaddfa
 | 跑全部检查 | `scripts/README.md`（检查命令全表）或 `node scripts/doctor.mjs` |
 
 ## 知识库检索协议

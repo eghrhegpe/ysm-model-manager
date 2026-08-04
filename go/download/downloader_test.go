@@ -1,6 +1,7 @@
 package download
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -18,7 +19,7 @@ func TestFileDownload(t *testing.T) {
 	savePath := filepath.Join(t.TempDir(), "test.txt")
 
 	var progressDownloaded int64
-	err := dl.File(ts.URL, savePath, func(downloaded, total int64) {
+	err := dl.File(context.Background(), ts.URL, savePath, func(downloaded, total int64) {
 		progressDownloaded = downloaded
 	})
 	if err != nil {
@@ -41,7 +42,7 @@ func TestFileDownloadHTTPError(t *testing.T) {
 	defer ts.Close()
 
 	dl := New()
-	err := dl.File(ts.URL, filepath.Join(t.TempDir(), "x.txt"), nil)
+	err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "x.txt"), nil)
 	if err == nil {
 		t.Fatal("expected error for 404")
 	}
@@ -55,7 +56,7 @@ func TestFileDownloadEmptyBody(t *testing.T) {
 
 	dl := New()
 	savePath := filepath.Join(t.TempDir(), "empty.txt")
-	err := dl.File(ts.URL, savePath, nil)
+	err := dl.File(context.Background(), ts.URL, savePath, nil)
 	if err != nil {
 		t.Fatalf("File() error: %v", err)
 	}
@@ -73,7 +74,7 @@ func TestFileDownloadProgressOnlyAtEnd(t *testing.T) {
 
 	dl := New()
 	var calls []int64
-	dl.File(ts.URL, filepath.Join(t.TempDir(), "p.txt"), func(downloaded, total int64) {
+	dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "p.txt"), func(downloaded, total int64) {
 		calls = append(calls, downloaded)
 	})
 
@@ -97,7 +98,7 @@ func TestGitHubAPIDownload(t *testing.T) {
 
 	dl := New()
 	savePath := filepath.Join(t.TempDir(), "api.txt")
-	err := dl.FromGitHubAPI(ts.URL, savePath, nil)
+	err := dl.FromGitHubAPI(context.Background(), ts.URL, savePath, nil)
 	if err != nil {
 		t.Fatalf("FromGitHubAPI() error: %v", err)
 	}

@@ -5,15 +5,11 @@ package app
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
 	"sync"
-	"time"
 
+	"ysm-model-manager/go/download"
 	"ysm-model-manager/go/ysm"
 )
 
@@ -147,42 +143,22 @@ func (q *DownloadQueue) process() {
 }
 
 func (a *App) downloadFileWithQueue(ctx context.Context, rawURL, saveDir string) (string, error) {
-	if err := os.MkdirAll(saveDir, 0755); err != nil {
-		return "", err
-	}
-	relPath := ""
-	repoPath := ""
-	if idx := strings.Index(rawURL, "/main/"); idx > 0 {
-		relPath = rawURL[idx+6:]
-		raw := rawURL
-		if strings.HasPrefix(raw, "https://raw.githubusercontent.com/") {
-			parts := strings.SplitN(raw[len("https://raw.githubusercontent.com/"):], "/", 3)
-			if len(parts) >= 2 {
-				repoPath = parts[0] + "/" + parts[1]
-			}
-		}
-	}
-	if relPath == "" {
-		relPath = filepath.Base(rawURL)
-	}
-	relPath = strings.ReplaceAll(relPath, "/", string(filepath.Separator))
-	// 过滤工坊仓库中可能被提交的 .recycle 目录
-	relPath = strings.TrimPrefix(relPath, ".recycle"+string(filepath.Separator))
-	savePath := filepath.Join(saveDir, relPath)
-	if err := os.MkdirAll(filepath.Dir(savePath), 0755); err != nil {
-		return "", err
+	savePath, jsdURL, apiURL := download.ResolveSavePath(rawURL, saveDir)
+	if savePath == "" {
+		return "", fmt.Errorf("解析保存路径失败: %s", rawURL)
 	}
 
+	dl := download.New()
 	mirror := a.LoadAppConfig().Mirror
 	type src struct {
 		url  string
 		kind string
 	}
 	sources := []src{{rawURL, "raw"}}
-	if repoPath != "" {
-		jsdURL := "https://cdn.jsdelivr.net/gh/" + repoPath + "@main/" + strings.ReplaceAll(relPath, "\\", "/")
+	if jsdURL != "" {
 		sources = append(sources, src{jsdURL, "jsd"})
-		apiURL := "https://api.github.com/repos/" + repoPath + "/contents/" + strings.ReplaceAll(relPath, "\\", "/")
+	}
+	if apiURL != "" {
 		sources = append(sources, src{apiURL, "api"})
 	}
 	if mirror == "jsdelivr" && len(sources) >= 3 {
@@ -195,9 +171,9 @@ func (a *App) downloadFileWithQueue(ctx context.Context, rawURL, saveDir string)
 	for _, s := range sources {
 		var err error
 		if s.kind == "api" {
-			err = a.downloadFromAPI(ctx, s.url, savePath)
+			err = dl.FromGitHubAPI(ctx, s.url, savePath, a.emitDownloadProgress)
 		} else {
-			err = a.downloadFile(ctx, s.url, savePath)
+			err = dl.File(ctx, s.url, savePath, a.emitDownloadProgress)
 		}
 		if err == nil {
 			return savePath, nil
@@ -207,132 +183,14 @@ func (a *App) downloadFileWithQueue(ctx context.Context, rawURL, saveDir string)
 	return "", fmt.Errorf("所有源均失败: %s", lastErr)
 }
 
+// emitDownloadProgress 下载进度回调 → Wails 事件（go/download 包内已做 200ms 节流与 final 兜底）
+func (a *App) emitDownloadProgress(downloaded, total int64) {
+	log.Printf("[queue] emit download:progress dl=%d total=%d", downloaded, total)
+	a.app.Event.Emit("download:progress", downloaded, total)
+}
+
 func (a *App) DownloadFromGitHub(rawURL string, saveDir string) (string, error) {
 	return a.downloadFileWithQueue(context.Background(), rawURL, saveDir)
-}
-
-func (a *App) downloadFile(ctx context.Context, url, savePath string) error {
-	client := &http.Client{Timeout: 300 * time.Second}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP %d", resp.StatusCode)
-	}
-
-	out, err := os.Create(savePath)
-	if err != nil {
-		return err
-	}
-	ok := false
-	defer func() {
-		out.Close()
-		if !ok {
-			// 下载中断/失败时清理半截文件，避免残留损坏文件
-			os.Remove(savePath)
-		}
-	}()
-
-	total := resp.ContentLength
-	var downloaded int64
-	buf := make([]byte, 256*1024)
-	lastEmit := time.Now()
-	for {
-		n, rErr := resp.Body.Read(buf)
-		if n > 0 {
-			if _, wErr := out.Write(buf[:n]); wErr != nil {
-				return wErr
-			}
-			downloaded += int64(n)
-			if time.Since(lastEmit) > 200*time.Millisecond {
-				log.Printf("[queue] emit download:progress dl=%d total=%d", downloaded, total)
-				a.app.Event.Emit("download:progress", downloaded, total)
-				lastEmit = time.Now()
-			}
-		}
-		if rErr == io.EOF {
-			break
-		}
-		if rErr != nil {
-			return rErr
-		}
-	}
-	if total <= 0 {
-		total = downloaded
-	}
-	ok = true
-	log.Printf("[queue] emit download:progress dl=%d total=%d (final)", downloaded, total)
-	a.app.Event.Emit("download:progress", downloaded, total)
-	return nil
-}
-
-func (a *App) downloadFromAPI(ctx context.Context, apiURL, savePath string) error {
-	client := &http.Client{Timeout: 300 * time.Second}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Accept", "application/vnd.github.v3.raw")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API HTTP %d", resp.StatusCode)
-	}
-
-	out, err := os.Create(savePath)
-	if err != nil {
-		return err
-	}
-	ok := false
-	defer func() {
-		out.Close()
-		if !ok {
-			// 下载中断/失败时清理半截文件，避免残留损坏文件
-			os.Remove(savePath)
-		}
-	}()
-
-	total := resp.ContentLength
-	var downloaded int64
-	buf := make([]byte, 256*1024)
-	lastEmit := time.Now()
-	for {
-		n, rErr := resp.Body.Read(buf)
-		if n > 0 {
-			if _, wErr := out.Write(buf[:n]); wErr != nil {
-				return wErr
-			}
-			downloaded += int64(n)
-			if time.Since(lastEmit) > 200*time.Millisecond {
-				log.Printf("[queue] emit download:progress dl=%d total=%d", downloaded, total)
-				a.app.Event.Emit("download:progress", downloaded, total)
-				lastEmit = time.Now()
-			}
-		}
-		if rErr == io.EOF {
-			break
-		}
-		if rErr != nil {
-			return rErr
-		}
-	}
-	if total <= 0 {
-		total = downloaded
-	}
-	ok = true
-	log.Printf("[queue] emit download:progress dl=%d total=%d (final)", downloaded, total)
-	a.app.Event.Emit("download:progress", downloaded, total)
-	return nil
 }
 
 // GetModelTexSizes 扫描仓库文件提取纹理尺寸（轻量级，不解析完整模型）

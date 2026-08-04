@@ -88,7 +88,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 规则 | 说明 |
 |------|------|
 | commit 信息格式 | `<type>: <描述>`，type 同 conventional commits（feat/fix/docs/chore/refactor/test） |
-| 提交范围 | 按功能 `git add <通过测试的路径>`；多会话共享工作区时勿用 `git add .`（会混入并行特性），单会话开发不受此限 |
+| 提交范围 | 按功能 `git add <通过测试的路径>`；杜绝被压缩记忆的可能 |
 | 禁 stash 状态变更 | 仅禁 `git stash push`/`git stash pop`/`git stash apply` 等会改动工作区的操作；只读的 `git stash list`、`git stash show` 不受限 |
 
 ---

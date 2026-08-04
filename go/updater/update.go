@@ -3,7 +3,6 @@ package updater
 import (
 	"archive/zip"
 	"crypto/sha256"
-	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -19,9 +18,6 @@ import (
 	"sync"
 	"time"
 )
-
-//go:embed ysm-updater-helper.exe
-var updaterHelper embed.FS
 
 const (
 	repoOwner = "eghrhegpe"
@@ -421,15 +417,6 @@ func splitVer(s string) []int {
 		// 使该版本恒小于正常版本，绝不误触发更新（防御行为，update_test.go 锁定）
 	}
 	return out
-}
-
-// extractEmbeddedHelper 将内嵌的 ysm-updater-helper.exe 释放到目标路径
-func extractEmbeddedHelper(dest string) error {
-	data, err := updaterHelper.ReadFile("ysm-updater-helper.exe")
-	if err != nil {
-		return fmt.Errorf("读取内嵌 helper: %w", err)
-	}
-	return os.WriteFile(dest, data, 0755)
 }
 
 // fetchExpectedHash 从 SHA256SUMS 文件中解析指定文件名的 hash

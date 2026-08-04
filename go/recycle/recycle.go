@@ -6,10 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
@@ -117,38 +115,8 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 	return &MoveResult{Action: "recycled", Reason: ""}, os.Remove(src)
 }
 
-// isHardLink 跨平台判断文件是否为硬链接（nlink > 1）
-// Unix: 通过 os.FileInfo.Sys().Nlink()
-// Windows: 通过 syscall.GetFileInformationByHandle
-func isHardLink(info os.FileInfo, path string) bool {
-	// Unix/macOS: 通过 Nlink() 接口
-	if stat, ok := info.Sys().(interface{ Nlink() uint64 }); ok && stat.Nlink() > 1 {
-		return true
-	}
-	// Windows: 通过 syscall 获取 NumberOfLinks
-	if runtime.GOOS == "windows" {
-		pathp, err := syscall.UTF16PtrFromString(path)
-		if err != nil {
-			return false
-		}
-		handle, err := syscall.CreateFile(pathp,
-			syscall.GENERIC_READ,
-			syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE,
-			nil,
-			syscall.OPEN_EXISTING,
-			syscall.FILE_ATTRIBUTE_NORMAL,
-			0)
-		if err != nil {
-			return false
-		}
-		defer syscall.CloseHandle(handle)
-		var bhi syscall.ByHandleFileInformation
-		if err := syscall.GetFileInformationByHandle(handle, &bhi); err == nil && bhi.NumberOfLinks > 1 {
-			return true
-		}
-	}
-	return false
-}
+// isHardLink 判断文件是否为硬链接（nlink > 1）。
+// 实现按平台隔离：见 recycle_windows.go / recycle_other.go。
 
 // List 列出回收站中的文件
 func (tm *TrashManager) List() []types.ModelEntry {

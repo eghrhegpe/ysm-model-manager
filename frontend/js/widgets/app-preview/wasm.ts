@@ -1,9 +1,9 @@
 // ===== WASM 解码层 =====
 // 从 index.ts 拆分：.ysm 文件的前端 WASM 解码逻辑
-import { devLog } from "./preview-utils.ts";
-import { stripYsgpTextHeader, type DecodedYsm } from "./preview-utils.ts";
-import { cacheGet, cacheSet } from "./preview-cache.ts";
-import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "./utils.ts";
+import { devLog } from "./utils.ts";
+import { stripYsgpTextHeader, type DecodedYsm } from "./utils.ts";
+import { cacheGet, cacheSet } from "./cache.ts";
+import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "./geometry.ts";
 import { parseBedrockAnimationJSON } from "../../utils/animation/animation.ts";
 import { getApp } from "../../wails/app.ts";
 

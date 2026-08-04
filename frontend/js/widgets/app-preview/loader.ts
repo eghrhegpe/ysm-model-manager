@@ -1,9 +1,9 @@
 // ===== 模型数据加载（唯一入口）=====
-// 供给 preview-skeleton.ts 和 screenshot-renderer.ts 使用
-import { cacheGet, cacheSet } from "./preview-cache.ts";
+// 供给 skeleton.ts 和 screenshot-renderer.ts 使用
+import { cacheGet, cacheSet } from "./cache.ts";
 import { getApp } from "../../wails/app.ts";
-import type { PreviewCtx } from "./preview-utils.ts";
-import type { BedrockGeometry } from "./utils.ts";
+import type { PreviewCtx } from "./utils.ts";
+import type { BedrockGeometry } from "./geometry.ts";
 
 /**
  * 加载模型几何数据 + 纹理 + 作者信息

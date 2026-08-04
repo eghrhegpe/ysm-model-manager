@@ -2,7 +2,7 @@
 // stripYsgpTextHeader：BOM/hash 检测、YSGP V2/V3 重建、无 BOM/过短/无 hash 原样返回。
 // getPrefer3D / setPrefer3D：模块级偏好状态单例。
 import { describe, it, expect, beforeEach } from "vitest";
-import { stripYsgpTextHeader, getPrefer3D, setPrefer3D } from "./preview-utils.ts";
+import { stripYsgpTextHeader, getPrefer3D, setPrefer3D } from "./utils.ts";
 
 /** 构造「BOM + <hash> + </ysm> 文本头 + 加密数据」的变体字节流 */
 function buildYsgpVariant(encLen = 20): Uint8Array {

@@ -171,6 +171,7 @@ function main() {
   const lines = parseStdin().split('\n').filter(Boolean);
   if (!lines.length) {
     console.log(`${B.SKIP} 无可推送 ref（空 stdin），跳过`);
+    console.log(`${B.SKIP} 提示: 若 git 同时报 rejected/non-fast-forward，属远端领先——先 git pull 整合远端提交（本地未提交改动会阻止 rebase，可改用 merge）再重推。`);
     return 0;
   }
 
@@ -320,7 +321,16 @@ function main() {
     return 0;
   }
   console.log(`结论: FAIL ❌ ${results.filter((r) => r.ok).length}/${results.length} 项通过，推送已${dryRun ? '将被' : ''}阻断`);
-  console.log('修复指引: 按上方 [FAIL] 项处理；gofmt 已自动修复时重跑 push 即可。紧急绕过: git push --no-verify');
+  // 修复指引：按 gofmt 实际状态给分支建议（amend 成功 ≠ 失败，盲重推会再次被拦）
+  const gofmt = results.find((r) => r.label === 'gofmt');
+  let gofmtHint = '';
+  if (gofmt && !gofmt.ok) {
+    gofmtHint = gofmt.note?.startsWith('格式化')
+      ? 'gofmt 已 -w 修复文件但 amend 失败（工作区不净/非 HEAD）——手动 `git add <文件>` + `git commit` 后重推。'
+      : 'gofmt 检出未格式化文件——`gofmt -w <文件>` 修复后 `git add` + `git commit` 重推。';
+  }
+  console.log(`修复指引: 按上方 [FAIL] 项处理；${gofmtHint}紧急绕过: git push --no-verify`);
+  console.log(`提示: 若 git 同时输出 rejected/non-fast-forward，属远端领先——先 git pull（本地未提交改动会阻止 rebase 时可改用 merge）再重推。`);
   return 1;
 }
 

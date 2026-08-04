@@ -1,6 +1,6 @@
 // ===== 站点视图浏览态事件绑定（从 site-view.ts 拆出，ADR-034 方向①）=====
 import { bus } from "../../../bus.ts";
-import { dbg } from "../../../utils/debug.ts";
+import { dbg } from "../../../utils/debug/debug.ts";
 import { showProgress, tryFetchModels } from "../../../features/community/data.ts";
 import {
   getCreatorIdentity,

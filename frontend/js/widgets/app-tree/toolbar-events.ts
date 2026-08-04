@@ -8,7 +8,7 @@ import { selectState } from "./data.ts";
 import { getExts } from "../../utils/resource/extensions.ts";
 import { modalAdvFilter, type AdvFilterValue } from "../../widgets/dialogs/adv-filter.ts";
 import { updateSelectCount } from "./events.ts";
-import { dbg } from "../../utils/debug.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 import { setRenderMode, type RenderMode } from "./render.ts";
 import { getApp } from "../../wails/app.ts";
 import type { AppTree } from "./index.ts";

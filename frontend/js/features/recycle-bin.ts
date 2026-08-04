@@ -4,6 +4,7 @@ import { modalConfirm } from "../dialogs/modal.ts";
 import { renderDisplayName } from "../utils/display.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { loadResourceRegistry } from "../utils/resource-registry.ts";
+import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 
 /** app-content 组件实例（initRecycleBin 依赖的成员） */
 export interface RecycleHost {
@@ -51,7 +52,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
     }
   });
   // 监听全局类型切换
-  let currentType = localStorage.getItem("repo_rtype") || "ysm";
+  let currentType = localStorage.getItem("repo_rtype") || RESOURCE_TYPES.YSM;
   let _loadGen = 0;
 
   const unsubRtype = bus.on("repo:rtype-changed", (rt) => {

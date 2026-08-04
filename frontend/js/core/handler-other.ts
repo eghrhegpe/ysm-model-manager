@@ -3,6 +3,7 @@ import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { modalConfirm } from "../dialogs/modal.ts";
 import { getApp } from "../wails/app.ts";
+import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 
 /** 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs */
 export function registerInstanceOps(unsubs: Array<() => void>): void {
@@ -126,13 +127,13 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         }
         const typeLabel = rtype
           ? ({
-              ysm: "YSM",
-              "mmd-skin": "MMD",
-              "vrchat-avatar": "VRC",
-              resourcepack: "资源包",
-              shaderpack: "光影包",
-              "create-blueprint": "蓝图",
-              litematic: "投影",
+              [RESOURCE_TYPES.YSM]: "YSM",
+              [RESOURCE_TYPES.MMD]: "MMD",
+              [RESOURCE_TYPES.VRC]: "VRC",
+              [RESOURCE_TYPES.PACK]: "资源包",
+              [RESOURCE_TYPES.SHADER]: "光影包",
+              [RESOURCE_TYPES.BLUEPRINT]: "蓝图",
+              [RESOURCE_TYPES.LITEMATIC]: "投影",
             } as Record<string, string>)[rtype] || rtype
           : "全部";
         const confirmed = await modalConfirm({

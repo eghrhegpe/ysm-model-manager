@@ -32,7 +32,7 @@ func makePngData(t *testing.T, label string) []byte {
 	t.Helper()
 	// PNG 文件头 + 填充到 5KB
 	data := make([]byte, 5120)
-	copy(data, []byte("\x89PNG\r\n\x1a\n" + label))
+	copy(data, []byte("\x89PNG\r\n\x1a\n"+label))
 	return data
 }
 
@@ -126,10 +126,10 @@ func TestParseFromZip_ModelAsObjects(t *testing.T) {
 	pngA := string(makePngData(t, "tex_a"))
 	pngB := string(makePngData(t, "tex_b"))
 	data := makeZipBytes(t, map[string]string{
-		"ysm.json":          ysmJSON,
+		"ysm.json":           ysmJSON,
 		"sub/model.geo.json": validGeoJSON,
-		"tex_a.png":         pngA + "A",
-		"tex_b.png":         pngB + "B",
+		"tex_a.png":          pngA + "A",
+		"tex_b.png":          pngB + "B",
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
 	if model == nil {
@@ -156,7 +156,7 @@ func TestParseFromZip_ModelAsMap(t *testing.T) {
 	geo2 := `{"format_version":"1.16.0","minecraft:geometry":[{"description":{"identifier":"sub","texture_width":32,"texture_height":32},"bones":[{"name":"arm","cubes":[{"origin":[0,0,0],"size":[4,4,4],"uv":[0,0]}]}]}]}`
 	pngData := string(makePngData(t, "tex1"))
 	data := makeZipBytes(t, map[string]string{
-		"ysm.json":       ysmJSON,
+		"ysm.json":      ysmJSON,
 		"main.geo.json": validGeoJSON,
 		"sub.geo.json":  geo2,
 		"tex1.png":      pngData,
@@ -249,10 +249,10 @@ func TestParseFromZip_AnimationJSON(t *testing.T) {
 	ysmJSON := `{"files":{"player":{"model":["model.geo.json"],"texture":["tex1.png"]}}}`
 	pngData := string(makePngData(t, "tex1"))
 	data := makeZipBytes(t, map[string]string{
-		"ysm.json":          ysmJSON,
-		"model.geo.json":    validGeoJSON,
+		"ysm.json":             ysmJSON,
+		"model.geo.json":       validGeoJSON,
 		"animations/idle.json": `{"animation":{"idle":{"loop":true}}}`,
-		"tex1.png":          pngData,
+		"tex1.png":             pngData,
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
 	if model == nil {
@@ -269,9 +269,9 @@ func TestParseFromZip_AvatarDirFiltered(t *testing.T) {
 	pngData := string(makePngData(t, "tex1"))
 	avatarPng := string(makePngData(t, "avatar"))
 	data := makeZipBytes(t, map[string]string{
-		"ysm.json":       ysmJSON,
-		"model.geo.json": validGeoJSON,
-		"tex1.png":       pngData,
+		"ysm.json":        ysmJSON,
+		"model.geo.json":  validGeoJSON,
+		"tex1.png":        pngData,
 		"avatar/face.png": avatarPng,
 	})
 	_, pngs, names := ParseFromZip(data, int64(len(data)))

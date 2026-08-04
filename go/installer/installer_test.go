@@ -61,8 +61,154 @@ func TestInstall_Hardlink(t *testing.T) {
 		t.Fatalf("Install(hardlink) = %v", err)
 	}
 	dst := filepath.Join(custom, filepath.Base(src))
-	if _, err := os.Stat(dst); os.IsNotExist(err) {
+	// 验证目标是真实硬链接：与源共享 inode
+	si, err := os.Stat(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	di, err := os.Stat(dst)
+	if err != nil {
 		t.Fatal("硬链接目标未创建")
+	}
+	if !os.SameFile(si, di) {
+		t.Fatal("目标不是指向源文件的硬链接")
+	}
+}
+
+func TestInstall_Symlink(t *testing.T) {
+	repo, custom, _, src := setupTestDirs(t)
+
+	err := Install(src, custom, repo, "symlink")
+	if err != nil {
+		// Windows 上创建符号链接需要管理员/开发者模式，环境不支持时跳过
+		t.Skipf("symlink 不可用: %v", err)
+	}
+	dst := filepath.Join(custom, filepath.Base(src))
+	li, err := os.Lstat(dst)
+	if err != nil {
+		t.Fatal("符号链接目标未创建")
+	}
+	if li.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("目标不是符号链接")
+	}
+	// 符号链接应解析到源文件
+	si, _ := os.Stat(src)
+	di, _ := os.Stat(dst)
+	if !os.SameFile(si, di) {
+		t.Fatal("符号链接未指向源文件")
+	}
+}
+
+func TestInstall_Overwrite(t *testing.T) {
+	repo, custom, _, src := setupTestDirs(t)
+
+	// 先以 copy 模式安装（目标为独立副本）
+	if err := Install(src, custom, repo, "copy"); err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(custom, filepath.Base(src))
+	si, _ := os.Stat(src)
+	di, _ := os.Stat(dst)
+	if os.SameFile(si, di) {
+		t.Fatal("前置条件错误：copy 模式不应与源同 inode")
+	}
+	// 更新仓库源内容（模拟下载新版本）
+	if err := os.WriteFile(src, []byte("new version data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// 再以 hardlink 模式安装：旧副本应被原子替换为指向新源的硬链接
+	if err := Install(src, custom, repo, "hardlink"); err != nil {
+		t.Fatalf("Install(overwrite) = %v", err)
+	}
+	di2, _ := os.Stat(dst)
+	if !os.SameFile(si, di2) {
+		t.Fatal("旧副本未被替换为硬链接")
+	}
+	data, _ := os.ReadFile(dst)
+	if string(data) != "new version data" {
+		t.Fatalf("内容 = %q, 期望新版本", string(data))
+	}
+}
+
+func TestInstall_ReinstallIdempotent(t *testing.T) {
+	repo, custom, _, src := setupTestDirs(t)
+
+	if err := Install(src, custom, repo, "hardlink"); err != nil {
+		t.Fatal(err)
+	}
+	// 重复安装同源硬链接应幂等且不报错
+	if err := Install(src, custom, repo, "hardlink"); err != nil {
+		t.Fatalf("重复安装应幂等: %v", err)
+	}
+	dst := filepath.Join(custom, filepath.Base(src))
+	si, _ := os.Stat(src)
+	di, _ := os.Stat(dst)
+	if !os.SameFile(si, di) {
+		t.Fatal("重复安装后目标不再是硬链接")
+	}
+}
+
+func TestInstallDir_Hardlink(t *testing.T) {
+	repo, custom, _, _ := setupTestDirs(t)
+
+	srcDir := filepath.Join(repo, "mmd_model")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "model.pmx"), []byte("pmx"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := InstallDir(srcDir, custom, repo, "hardlink", "mmd-skin"); err != nil {
+		t.Fatalf("InstallDir(hardlink) = %v", err)
+	}
+	srcFile := filepath.Join(srcDir, "model.pmx")
+	dstFile := filepath.Join(custom, filepath.Base(srcDir), "model.pmx")
+	si, err := os.Stat(srcFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	di, err := os.Stat(dstFile)
+	if err != nil {
+		t.Fatal("目录硬链接目标未创建")
+	}
+	if !os.SameFile(si, di) {
+		t.Fatal("目录安装的 pmx 不是硬链接")
+	}
+}
+
+func TestInstallDir_TypeFilter(t *testing.T) {
+	repo, custom, _, _ := setupTestDirs(t)
+
+	srcDir := filepath.Join(repo, "ysm_model")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "model.json"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "notes.txt"), []byte("no"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := InstallDir(srcDir, custom, repo, "copy", "ysm"); err != nil {
+		t.Fatalf("InstallDir(ysm) = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(custom, filepath.Base(srcDir), "model.json")); err != nil {
+		t.Fatal("json 应被安装")
+	}
+	if _, err := os.Stat(filepath.Join(custom, filepath.Base(srcDir), "notes.txt")); err == nil {
+		t.Fatal("txt 应被类型过滤排除")
+	}
+}
+
+func TestInstallToGlobal_UnsupportedExt(t *testing.T) {
+	_, _, mcRoot, _ := setupTestDirs(t)
+
+	badFile := filepath.Join(t.TempDir(), "payload.exe")
+	if err := os.WriteFile(badFile, []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := InstallToGlobal(badFile, mcRoot); err == nil {
+		t.Fatal("不支持的文件类型应返回错误")
 	}
 }
 

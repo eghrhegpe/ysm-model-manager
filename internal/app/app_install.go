@@ -522,7 +522,7 @@ func (a *App) DeduplicateCustomDir(customDir string) (int, int, error) {
 		// 保留第一个，其余移入回收站
 		for _, e := range group[1:] {
 			// dedup: 保留第一个，其余移入回收站
-				if err := recycle.Move(e.Path, a.ysmRoot()); err != nil {
+			if err := recycle.Move(e.Path, a.ysmRoot()); err != nil {
 				a.logger.Add(e.Name, e.Path, customDir, 0, "failed", "回收站移动失败: "+err.Error())
 				continue
 			}
@@ -705,20 +705,29 @@ func (a *App) relinkDir(customDir, repoRoot, rtype string) (int, error) {
 			// 但 InstallDir 会自动创建 {targetSubDir}，如果 dstParent 已经是模型目录
 			// 则会二次嵌套。正确的做法：上一层目录作为 dstDir，让 InstallDir 创建子目录
 			dstBase := filepath.Dir(dstParent)
-			if err := os.RemoveAll(dstParent); err != nil {
+			// 原子替换：先把旧目录挪走作备份，InstallDir 重建成功后再清理备份；
+			// 失败则回滚恢复，避免目录整体丢失（旧实现先 RemoveAll 后重建，失败即丢）
+			backup := dstParent + ".relink-bak"
+			_ = os.RemoveAll(backup)
+			if err := os.Rename(dstParent, backup); err != nil {
+				a.logger.Add(ce.Name, ce.Path, dstParent, 0, "failed", "relink 备份目录失败: "+err.Error())
 				continue
 			}
 			if err := installer.InstallDir(srcDir, dstBase, repoRoot, a.LinkMode, rtype); err != nil {
+				// 回滚：删除半成品，恢复原目录
+				_ = os.RemoveAll(filepath.Join(dstBase, filepath.Base(srcDir)))
+				_ = os.Rename(backup, dstParent)
+				a.logger.Add(ce.Name, ce.Path, dstParent, 0, "failed", "relink 失败: "+err.Error())
 				continue
 			}
+			_ = os.RemoveAll(backup)
 			count++
 			continue
 		}
-		if err := os.Remove(ce.Path); err != nil {
-			continue
-		}
-		// 传入基础 customDir，让 installer.Install 自行计算相对路径
+		// 传入基础 customDir，让 installer.Install 自行计算相对路径。
+		// Install 内部对已存在的旧文件做原子替换（临时链接 + rename），失败不破坏原文件
 		if err := installer.Install(srcPath, customDir, repoRoot, a.LinkMode); err != nil {
+			a.logger.Add(ce.Name, ce.Path, customDir, 0, "failed", "relink 失败: "+err.Error())
 			continue
 		}
 		count++
@@ -1199,7 +1208,6 @@ func (a *App) GetInstanceSyncStatus(instanceName string) string {
 			})
 		}
 	}
-
 
 	data, _ := json.Marshal(items)
 	return string(data)

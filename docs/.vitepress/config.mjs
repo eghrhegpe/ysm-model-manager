@@ -2,6 +2,7 @@
 // 对标 MikuMikuAR：home layout 宣传首页 + 分区导航 + LocalSearch。
 // 内部治理文档（adr/knowledge/novel/app 等）不进导航，文件保留（URL 可直达）。
 import { defineConfig } from 'vitepress'
+import { autoSidebar } from './sidebar.gen.mjs'
 
 export default defineConfig({
   title: 'YSM 模型管理器',
@@ -11,21 +12,9 @@ export default defineConfig({
   lang: 'zh-CN',
   lastUpdated: true,
   cleanUrls: true,
-  // 排除内部治理文档（冻结区/决策/知识卡/小说/开发者向），不进站点（对标 Jekyll exclude）
-  srcExclude: [
-    'archive/**',
-    'adr/**',
-    'knowledge/**',
-    'novel/**',
-    'app/**',
-    'Design.md',
-    'architecture.md',
-    'governance-rules.md',
-    'pitfalls.md',
-    'review-report.md',
-    'funcmap.md',
-    'project-map.md',
-  ],
+  // 仅排除冻结区（archive/ 为历史归档，不发布）；其余全部文档进站
+  // （导航由 scripts/gen-vitepress-sidebar.mjs 自动生成，构建前先跑）
+  srcExclude: ['archive/**'],
 
   themeConfig: {
     nav: [
@@ -34,30 +23,8 @@ export default defineConfig({
       { text: '发版记录', link: '/releases/' },
       { text: '维护手册', link: '/maintenance' },
     ],
-    // 极简 sidebar：分区入口（分区内全量链接见各分区 index 页）
-    sidebar: {
-      '/guide/': [
-        {
-          text: '用户指南',
-          collapsed: false,
-          items: [{ text: '索引', link: '/guide/index' }],
-        },
-      ],
-      '/releases/': [
-        {
-          text: '发版记录',
-          collapsed: false,
-          items: [{ text: '版本索引', link: '/releases/README' }],
-        },
-      ],
-      '/maintenance': [
-        {
-          text: '维护手册',
-          collapsed: false,
-          items: [{ text: '概览', link: '/maintenance' }],
-        },
-      ],
-    },
+    // 自动生成的全文档导航树（sidebar.gen.mjs，由 scripts/gen-vitepress-sidebar.mjs 生成）
+    sidebar: autoSidebar,
     search: { provider: 'local' },
     footer: {
       message: 'YSM 模型管理器',

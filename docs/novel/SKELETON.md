@@ -145,3 +145,70 @@
 6. **禁止写"从此再无 Bug"式结尾——边界悖论是永久的**
 7. **章末用 `---` 分隔，附一行教训摘要（不超过 20 字）**
 8. **人类时刻优先于技术流水账——写 Bug 之前先写"谁在受苦"**
+9. **第四卷起按代码区域写**——改了代码先按「第八节决策链路」命中 `01`–`10` 区域或 `appendix`，再动笔；创业三部曲（第一~三幕）已冻结，不续写。
+
+---
+
+## 八、第四卷起 · 区域志（代码区域锚定系统）
+
+> **适用范围**：第一~三幕（巴别塔 / 筑墙者 / 绘图师）为「创业三部曲」，已冻结原样保留（`act-1-babel` / `act-2-walls` / `act-3-cartographer`）。
+> 自第四卷起，叙事不再依赖「热点事件」锚定，改为**代码区域锚定**——范式参考 `C:\Users\zhujieling11\MikuMikuAR\novel`。
+
+### 为何切换
+
+事件驱动叙事（前三幕 + 演义史 `development-saga.md`）依赖「值得写的突发事件」。项目进入稳定维护期后热点事件变少，按时间/事件排列会断锚。代码区域锚定让每一次「改了哪段代码」都能落到一个固定章节，叙事可持续。
+
+### 双轨解耦
+
+| 维度 | 含义 | 是否连续 |
+|------|------|---------|
+| **物理目录** | `NN-区域名/` 文件夹，锚定一段代码 | 固定 10 区域 + `appendix/`，不新增 |
+| **叙事卷号** | `vol-4` `vol-5`… 时间线标签，写在章节标题顶部 | 可叠加、可不连续 |
+
+AI 按物理目录定位章；读者按卷号读叙事。两套互不干扰（同 MikuMikuAR）。
+
+### 区域总表（10 + appendix）
+
+| 区域 | 锚定代码 | 主题 |
+|------|---------|------|
+| `01-解码与几何` | `go/ysm` `go/geometry` `go/threejs` `frontend/js/wasm` `app-preview` | YSMParser WASM/CLI、格式解析、2D/3D 预览、骨骼/立方体 |
+| `02-模型仓库` | `go/importer` `installer` `instance` `packs` `scanner` `dedup` `resource_types.json` `app-tree` `services` | 导入/安装/实例/整合包/扫描/去重、资源注册表 |
+| `03-UI器官` | `frontend/js/components` `dialogs` `features` | Web Components、对话框、功能页、卡片 UI |
+| `04-事件中枢` | `frontend/js/core`（`bus` `global-handlers` `page-store` `context-menus` `menu-defs`） | 事件总线、全局处理器、页面状态、菜单定义 |
+| `05-同步与更新` | `go/sync` `download` `updater` `handler-sync` | 同步、下载、更新器、进度队列 |
+| `06-创作者社区` | `go/avatar` `creators.json` `workshop_sites.json` `workshop-github.json` `community` | 创作者库、头像、工坊站点、社区索引 |
+| `07-文件与路径` | `go/fileops` `fsutil` `paths` `recycle` `watcher` `litematic` `internal/embedded` | 硬链接/复制、路径安全、回收站、监听、嵌入资源 |
+| `08-配置与状态` | `go/version` `logs` `errors` `tags` `settings` `page-store` | 版本、日志、错误、标签、设置持久化 |
+| `09-工具链` | `scripts` `Taskfile.yml` `wails.json` `cmd/build-release.ps1` `doctor` `funcmap` `codemod` | 自检/审计、构建发布、代码迁移工具 |
+| `10-文档治理` | `AGENTS.md` `docs/knowledge` `docs/adr` `docs/archive/bug-chronicle.md` `audits` | 文档宪法、知识卡、ADR、审计 |
+| `appendix/跨模块重构` | 多模块同时动刀（全仓体检、逆天审计、大重构） | — |
+| `appendix/Go后端` | `app.go` `internal/app` `main.go` Wails 绑定 `wails.json` | — |
+| `appendix/安全横切` | XSS、路径穿越、权限 | — |
+| `appendix/其他` | 原始稿存档、代码块附录 | — |
+
+### 决策链路（AI 续写必走）
+
+```
+go/ysm geometry threejs / frontend/js/wasm / app-preview            → 01-解码与几何
+go/importer installer instance packs scanner dedup / resource_types.json / app-tree / services → 02-模型仓库
+frontend/js/components dialogs features                              → 03-UI器官
+frontend/js/core (bus global-handlers page-store context-menus menu-defs) → 04-事件中枢
+go/sync download updater / handler-sync                             → 05-同步与更新
+go/avatar / creators workshop json / community                      → 06-创作者社区
+go/fileops fsutil paths recycle watcher litematic / internal/embedded → 07-文件与路径
+go/version logs errors tags / settings / page-store                 → 08-配置与状态
+scripts / Taskfile / wails.json / build-release / doctor / funcmap / codemod → 09-工具链
+AGENTS.md / docs/knowledge / docs/adr / bug-chronicle / audits      → 10-文档治理
+多模块同时动刀（审计/重构/体检）                                    → appendix/跨模块重构
+app.go / internal/app / main.go / Wails 绑定                        → appendix/Go后端
+安全/XSS/路径穿越横切                                               → appendix/安全横切
+```
+
+**判定优先级**：单一模块命中 `01`–`10` > 跨模块归 `appendix/跨模块重构` > 文档归 `10-文档治理` > Go 归 `appendix/Go后端`。
+
+### 区域章规则
+
+- 文件名 `NN-标题.md`，两位数字编号（同一区域内连续编号，允许跳号补章）。
+- 章首标注：区域名 + 标题 + `> 对应真实事件/代码改动：xxx`。
+- 沿用前三幕的「四段式（惊醒→追查→真相→教训）+ 章末隐喻 + 教训摘要」硬约束（见第七节）。
+- 不更新 `README.md` 索引的续写 = 没写。下一个 AI 找不到，等于不存在。

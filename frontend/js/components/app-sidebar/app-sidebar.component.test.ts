@@ -17,25 +17,13 @@ import { bus } from "../../bus.ts";
 import { register, clear as clearRegistry } from "../../services/registry.ts";
 import { loadInstances } from "./loader.ts";
 import "./index.ts"; // 触发 customElements.define("app-sidebar")
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise((r) => setTimeout(r, ms));
+import { sleep, mountCustomElement, unmountElement } from "../../test-utils.ts";
 
 /** loadInstances 调用计数（registry 注入 spy，验证 _reload 触发与清理） */
 function spyLoad(): ReturnType<typeof vi.fn> {
   const spy = vi.fn(loadInstances);
   register("loadInstances", spy);
   return spy;
-}
-
-function mount(): HTMLElement {
-  const el = document.createElement("app-sidebar");
-  document.body.appendChild(el);
-  return el;
-}
-
-function unmount(el: HTMLElement): void {
-  document.body.removeChild(el);
 }
 
 describe("app-sidebar 生命周期配对", () => {
@@ -51,7 +39,7 @@ describe("app-sidebar 生命周期配对", () => {
 
   it("connected → 初始 _reload（spy 被调）", async () => {
     const spy = spyLoad();
-    mount();
+    mountCustomElement("app-sidebar");
     // connectedCallback 末尾 setTimeout(_reload, 50)
     await sleep(120);
     expect(spy).toHaveBeenCalled();
@@ -59,7 +47,7 @@ describe("app-sidebar 生命周期配对", () => {
 
   it("stats:refresh → 防抖后重新 _reload（300ms 合并）", async () => {
     const spy = spyLoad();
-    mount();
+    mountCustomElement("app-sidebar");
     await sleep(120); // 初始加载完成
     spy.mockClear();
     bus.emit("stats:refresh");
@@ -71,10 +59,10 @@ describe("app-sidebar 生命周期配对", () => {
 
   it("disconnected → 订阅清理（emit 不再触发 _reload）", async () => {
     const spy = spyLoad();
-    const el = mount();
+    const el = mountCustomElement("app-sidebar");
     await sleep(120);
     spy.mockClear();
-    unmount(el);
+    unmountElement(el);
     bus.emit("stats:refresh");
     await sleep(380);
     expect(spy).not.toHaveBeenCalled(); // 订阅已随 disconnectedCallback 清理

@@ -37,6 +37,7 @@
     "dialogs": "弹窗（modal / rename / batch-rename / tag-editor）",
     "features": "业务功能（import-queue / recycle-bin / version-updater / community）",
     "services": "服务注册（registry.ts）",
+    "test-utils.ts": "测试公共辅助（组件编排测试复用：sleep/mount/unmount）",
     "utils": "工具函数（display / fmt / dom / icon / summarize / model3d）",
     "wails": "Wails 桥接（app.ts）",
     "wasm": "WASM 生成数据（base64 豁免文件）",

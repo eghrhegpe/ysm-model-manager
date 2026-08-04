@@ -65,6 +65,7 @@
 | `wasm/` | WASM 生成数据（base64 豁免文件） |
 | `app-modules.ts` | 组件入口 + 右键菜单映射 |
 | `bus.ts` | 事件总线 |
+| `test-utils.ts` | 测试公共辅助（组件编排测试复用：sleep/mount/unmount） |
 
 <!-- /GEN: frontend-structure -->
 

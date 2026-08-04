@@ -1,7 +1,6 @@
 // ===== 3D 模型加载器（类型化版 — ADR-014 P2）=====
 import * as THREE from "three";
 import { GetModel3DSpec } from "../../bindings/ysm-model-manager/internal/app/app.js";
-import { buildSpecFromModel } from "./model3d-spec.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */
 export interface ModelLike {
@@ -81,26 +80,19 @@ export async function loadTextures(urls?: string[]): Promise<THREE.Texture[]> {
   return texArr;
 }
 
-/** 获取模型 spec（Go 绑定优先，JS 几何兜底） */
+/** 获取模型 spec（Go 绑定为唯一事实来源，ADR-004；失败抛错由上层 toast，不再降级 JS 兜底） */
 async function fetchSpec(model: ModelLike): Promise<ModelSpec> {
-  let spec: ModelSpec = { models: [] };
-  if (model._modelPath) {
-    try {
-      let jsonStr = specCache.get(model._modelPath);
-      if (!jsonStr) {
-        jsonStr = await GetModel3DSpec(model._modelPath);
-        cacheSpec(model._modelPath, jsonStr);
-      }
-      const parsed = JSON.parse(jsonStr) as ModelSpec;
-      if (parsed.models) spec = parsed;
-    } catch (e) {
-      console.warn("[3D] Fallback to JS geometry:", e);
-    }
+  if (!model._modelPath) return { models: [] };
+  let jsonStr = specCache.get(model._modelPath);
+  if (!jsonStr) {
+    jsonStr = await GetModel3DSpec(model._modelPath);
+    cacheSpec(model._modelPath, jsonStr);
   }
-  if (!spec.models?.length && model.bones?.length) {
-    spec = buildSpecFromModel(model as Parameters<typeof buildSpecFromModel>[0]) as unknown as ModelSpec;
+  const parsed = JSON.parse(jsonStr) as ModelSpec;
+  if (!parsed.models?.length) {
+    throw new Error("3D spec 为空");
   }
-  return spec;
+  return parsed;
 }
 
 /** 预加载：纹理 + spec 并行获取 */

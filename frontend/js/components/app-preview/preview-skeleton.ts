@@ -256,6 +256,7 @@ export async function loadModel2D(
     let _is3D = false;
     let _prefer3D = getPrefer3D();
     let _loading3D = false; // 3D 加载中标记：忽略重复触发（防双击竞态）
+    let _model3dGen = 0; // 3D 加载 generation：close3D 时自增，使 in-flight 渲染失效（防渲染器泄漏）
 
     const _toggle3D = async (): Promise<void> => {
       if (_loading3D) return;
@@ -265,6 +266,7 @@ export async function loadModel2D(
 
       if (_is3D) {
         _loading3D = true;
+        const gen = ++_model3dGen;
         const overlay = document.createElement("div");
         overlay.id = "ysm-overlay-3d";
         overlay.style.cssText =
@@ -478,6 +480,7 @@ export async function loadModel2D(
             _model3d.cleanup();
             _model3d = null;
           }
+          _model3dGen++; // 使加载中的 renderModel3D 结果失效
           if (_overlay3d?.parentNode) _overlay3d.parentNode.removeChild(_overlay3d);
           _overlay3d = null;
           _is3D = false;
@@ -533,12 +536,19 @@ export async function loadModel2D(
           const { texArr, spec } = await preloadModel(
             model as import("../../utils/model3d-loader.ts").ModelLike,
           );
-          _model3d = (await renderModel3D(
+          const handle3d = (await renderModel3D(
             viewContainer,
             texArr,
             spec as import("../../utils/model3d.ts").Spec3D,
             _texIdx,
           )) as Model3DHandleX;
+          // 加载期间用户已关闭（ESC/关闭按钮）：立即释放渲染器，防 WebGL 上下文泄漏
+          if (gen !== _model3dGen) {
+            handle3d.cleanup();
+            _loading3D = false;
+            return;
+          }
+          _model3d = handle3d;
           // 3D 骨骼点击回调 → 详情框（走 handle.onBoneSelect，治理红线：零 window 全局）
           _model3d.onBoneSelect = function (info: BoneSelectInfo) {
             const detailEl = _model3d?._boneDetailEl;

@@ -384,9 +384,10 @@ func (a *App) CountInstanceResources(insName, rtype string) (int, error) {
 	return total, nil
 }
 
-// ClearInstanceResources 清空指定整合包中已同步的文件（走回收站）
+// ClearInstanceResources 清空指定整合包中已同步的文件
 // insName: 整合包名, rtype: 资源类型（空=全部, 非空=只清此类型）
-// 返回清除的文件数量
+// 返回清除的文件数量。整合包文件是仓库的副本/链接，删除后可从仓库重新推送恢复；
+// 实例文件在仓库根内才移回收站，其余直接删除（见 clearInstanceDir）
 func (a *App) ClearInstanceResources(insName, rtype string) (int, error) {
 	insName = strings.TrimSpace(insName)
 	if insName == "" {
@@ -480,10 +481,13 @@ func (a *App) clearInstanceDir(dir string, rtype string, repoRoot string) int {
 			continue
 		}
 		if a.ysmRoot() != "" && paths.IsInside(a.ysmRoot(), p) == nil {
+			// 实例文件在仓库根内 → 移回收站（可恢复）
 			if err := recycle.Move(p, a.ysmRoot()); err != nil {
 				continue
 			}
 		} else {
+			// 实例文件不在仓库根内（常见情况：整合包在 mcRoot 下）→ 直接删。
+			// 文件是仓库的副本/硬链接，仓库侧无损，可重新推送恢复
 			if err := os.Remove(p); err != nil {
 				continue
 			}
@@ -837,6 +841,7 @@ func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 	}
 
 	count := 0
+	failed := 0
 
 	// YSM(.json) 和 MMD(.pmx/.pmd) 位于子目录中，需文件夹推送
 	// 用文件夹级同步检测 missing，然后完整复制整个文件夹（含纹理等配套文件）
@@ -845,7 +850,13 @@ func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 		for _, missingDir := range dirResult.Missing {
 			if err := installer.InstallDir(missingDir, targetDir, globalDir, a.LinkMode, rtype); err == nil {
 				count++
+			} else {
+				failed++
+				a.logger.Add(filepath.Base(missingDir), missingDir, targetDir, 0, "failed", "推送失败: "+err.Error())
 			}
+		}
+		if failed > 0 {
+			return count, fmt.Errorf("推送完成: 成功 %d，失败 %d", count, failed)
 		}
 		return count, nil
 	}
@@ -855,7 +866,13 @@ func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 	for _, src := range result.Missing {
 		if err := installer.Install(src, targetDir, globalDir, a.LinkMode); err == nil {
 			count++
+		} else {
+			failed++
+			a.logger.Add(filepath.Base(src), src, targetDir, 0, "failed", "推送失败: "+err.Error())
 		}
+	}
+	if failed > 0 {
+		return count, fmt.Errorf("推送完成: 成功 %d，失败 %d", count, failed)
 	}
 	return count, nil
 }
@@ -895,6 +912,7 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 		result = ysmsync.SyncResources(globalDir, targetDir)
 	}
 	count := 0
+	failed := 0
 	for _, src := range result.Extra {
 		fi, stErr := os.Stat(src)
 		isDir := stErr == nil && fi.IsDir()
@@ -903,6 +921,8 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 				folderName := filepath.Base(src)
 				dstDir := filepath.Join(globalDir, folderName)
 				if err := os.MkdirAll(dstDir, 0755); err != nil {
+					failed++
+					a.logger.Add(folderName, src, dstDir, 0, "failed", "拉取失败: "+err.Error())
 					continue
 				}
 				entries, _ := os.ReadDir(src)
@@ -912,12 +932,16 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 					}
 					srcFile := filepath.Join(src, e.Name())
 					if err := copyFile(srcFile, filepath.Join(dstDir, e.Name())); err != nil {
+						failed++
+						a.logger.Add(e.Name(), srcFile, dstDir, 0, "failed", "拉取失败: "+err.Error())
 						continue
 					}
 				}
 				count++
 			} else {
 				if err := copyFile(src, filepath.Join(globalDir, filepath.Base(src))); err != nil {
+					failed++
+					a.logger.Add(filepath.Base(src), src, globalDir, 0, "failed", "拉取失败: "+err.Error())
 					continue
 				}
 				count++
@@ -926,12 +950,19 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 		}
 		dstDir := filepath.Dir(strings.Replace(src, targetDir, globalDir, 1))
 		if err := os.MkdirAll(dstDir, 0755); err != nil {
+			failed++
+			a.logger.Add(filepath.Base(src), src, dstDir, 0, "failed", "拉取失败: "+err.Error())
 			continue
 		}
 		if err := copyFile(src, filepath.Join(dstDir, filepath.Base(src))); err != nil {
+			failed++
+			a.logger.Add(filepath.Base(src), src, dstDir, 0, "failed", "拉取失败: "+err.Error())
 			continue
 		}
 		count++
+	}
+	if failed > 0 {
+		return count, fmt.Errorf("拉取完成: 成功 %d，失败 %d", count, failed)
 	}
 	return count, nil
 }

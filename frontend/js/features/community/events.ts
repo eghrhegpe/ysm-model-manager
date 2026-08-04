@@ -4,7 +4,7 @@ import { bus } from "../../bus.ts";
 import { modalConfirm } from "../../dialogs/modal.ts";
 import { renderModelList, isModelMissing, type WorkshopModel } from "./render.ts";
 import { createDownloadQueue, type DownloadTask } from "./download-queue.ts";
-import { ICONS } from "../../components/app-content/community/workshop-icons.ts";
+import { ICONS } from "../../widgets/app-content/community/workshop-icons.ts";
 import { getApp } from "../../wails/app.ts";
 
 /** bindRepoEvents 上下文 */

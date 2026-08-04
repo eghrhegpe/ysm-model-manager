@@ -22,7 +22,7 @@ check(
 
 // 2. app-tree row-tpl 关键 testid 存在（G-1 ①，前缀命名空间）
 const rowTpl = readFileSync(
-  path.join(ROOT, "frontend/js/components/app-tree/row-tpl.ts"),
+  path.join(ROOT, "frontend/js/widgets/app-tree/row-tpl.ts"),
   "utf8",
 );
 for (const tid of ["tree-file", "tree-toggle", "tree-dir", "tree-dir-toggle"]) {
@@ -31,8 +31,8 @@ for (const tid of ["tree-file", "tree-toggle", "tree-dir", "tree-dir-toggle"]) {
 
 // 3. 首个组件测试存在（G-1 ④）
 check(
-  existsSync(path.join(ROOT, "frontend/js/components/app-tree/component.test.ts")),
-  "app-tree component.test.ts 缺失",
+  existsSync(path.join(ROOT, "frontend/js/widgets/app-tree/app-tree.state.test.ts")),
+  "app-tree app-tree.state.test.ts 缺失",
 );
 
 if (failed > 0) {

@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理（Riku）
-- **相关**：`frontend/js/utils/model3d.ts`、`frontend/js/components/app-preview/preview-skeleton.ts`、`frontend/js/components/app-content/tpl.ts`、`frontend/js/components/app-content/community/settings.ts`
+- **相关**：`frontend/js/utils/model3d.ts`、`frontend/js/widgets/app-preview/preview-skeleton.ts`、`frontend/js/widgets/app-content/tpl.ts`、`frontend/js/widgets/app-content/community/settings.ts`
 
 ---
 
@@ -33,7 +33,7 @@
 
 ## 4. 数据溯源
 
-- 来源：`docs/knowledge/model3d.md`（3D 渲染层 spec 与 `renderModel3D` 句柄 API）、`frontend/js/utils/model3d.ts`（键位处理段第 317–389 行原 `e.key.toLowerCase()` 硬编码）、`frontend/js/components/app-preview/preview-skeleton.ts`（顶栏速度/旋转控件未持久化）、`frontend/js/components/app-content/community/settings.ts`（UI 偏好统一走 localStorage）。
+- 来源：`docs/knowledge/model3d.md`（3D 渲染层 spec 与 `renderModel3D` 句柄 API）、`frontend/js/utils/model3d.ts`（键位处理段第 317–389 行原 `e.key.toLowerCase()` 硬编码）、`frontend/js/widgets/app-preview/preview-skeleton.ts`（顶栏速度/旋转控件未持久化）、`frontend/js/widgets/app-content/community/settings.ts`（UI 偏好统一走 localStorage）。
 - 结果：新增 ADR-036，落地设置内 3D 操作键位/相机偏好可配置；`tsc --noEmit` 与 `vite build` 通过。
 
 <!-- 文件名: 3d-op-keymap.md → 实际文件 ADR-036-3d-op-keymap.md -->

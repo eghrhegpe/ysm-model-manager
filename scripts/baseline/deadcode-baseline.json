@@ -1,10 +1,10 @@
 {
   "generated": "2026-08-03T19:49:31.106Z",
   "knip": [
-    "js/components/app-content/community/site-view.ts|types|LocalCreatorLike",
-    "js/components/app-preview/utils.ts|types|BedrockBone",
-    "js/components/app-preview/utils.ts|types|BedrockCube",
-    "js/components/app-sidebar/loader.ts|types|MmdVariantGroups",
+    "js/widgets/app-content/community/site-view.ts|types|LocalCreatorLike",
+    "js/widgets/app-preview/utils.ts|types|BedrockBone",
+    "js/widgets/app-preview/utils.ts|types|BedrockCube",
+    "js/widgets/app-sidebar/loader.ts|types|MmdVariantGroups",
     "js/features/community/download-queue.ts|types|QueueError",
     "js/features/version-updater.ts|types|UpdateInfo",
     "js/services/registry.ts|types|RegistrySchema",

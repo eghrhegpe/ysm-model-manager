@@ -4,8 +4,8 @@ name: 资源树 app-tree
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/components/app-tree/index.ts
-  - frontend/js/components/app-tree/
+  - frontend/js/widgets/app-tree/index.ts
+  - frontend/js/widgets/app-tree/
 use_when:
   - 树形
   - 资源列表
@@ -51,4 +51,4 @@ use_when:
 ## 相关
 
 - `frontend/js/utils/dom/display.ts` — 文件名渲染
-- `frontend/js/components/app-tree/` — 组件目录
+- `frontend/js/widgets/app-tree/` — 组件目录

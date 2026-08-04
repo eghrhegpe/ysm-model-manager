@@ -4,36 +4,42 @@ import { register } from "./services/registry.ts";
 import { Window } from "@wailsio/runtime";
 import { getApp } from "./wails/app.ts";
 import { registerErrorDiary } from "./core/error-diary.ts";
+import { friendlyError } from "./utils/dom/errors.ts";
 
 // bus 已在 bus.ts 中挂载 window.bus，此处不再重复赋值
 
 // 注册全局可替换服务
-import { loadInstances } from "./components/app-sidebar/loader.ts";
-import { loadEntries } from "./components/app-tree/loader.ts";
+import { loadInstances } from "./widgets/app-sidebar/loader.ts";
+import { loadEntries } from "./widgets/app-tree/loader.ts";
 register("loadInstances", loadInstances);
 register("loadEntries", loadEntries);
 
 // 新版 Web Component（通过 ES Module 导入以支持 shadow DOM）
 // 静态导入（浏览器加载失败时直接报错，不 try/catch 以免静默吞错）
-import "./components/app-nav.ts";
-import "./components/context-menu.ts";
-import "./components/app-toast.ts";
+import "./widgets/app-nav.ts";
+import "./widgets/context-menu.ts";
+import "./widgets/app-toast.ts";
 // Web Components 动态导入（使用字面量确保 Vite 能在构建时解析路径）
-import("./components/app-tree/index.ts").catch((e) =>
-  console.warn("[module] 组件加载失败: app-tree", e),
-);
-import("./components/app-sidebar/index.ts").catch((e) =>
-  console.warn("[module] 组件加载失败: app-sidebar", e),
-);
-import("./components/app-content/index.ts").catch((e) =>
-  console.warn("[module] 组件加载失败: app-content", e),
-);
-import("./components/app-resource-manager/index.ts").catch((e) =>
-  console.warn("[module] 组件加载失败: app-resource-manager", e),
-);
-import("./components/app-sync-manager/index.ts").catch((e) =>
-  console.warn("[module] 组件加载失败: app-sync-manager", e),
-);
+import("./widgets/app-tree/index.ts").catch((e) => {
+  console.warn("[module] 组件加载失败: app-tree", e);
+  bus.emit("toast:show", { msg: "❌ " + friendlyError(e, "组件加载失败"), duration: 5000, type: "error" });
+});
+import("./widgets/app-sidebar/index.ts").catch((e) => {
+  console.warn("[module] 组件加载失败: app-sidebar", e);
+  bus.emit("toast:show", { msg: "❌ " + friendlyError(e, "组件加载失败"), duration: 5000, type: "error" });
+});
+import("./widgets/app-content/index.ts").catch((e) => {
+  console.warn("[module] 组件加载失败: app-content", e);
+  bus.emit("toast:show", { msg: "❌ " + friendlyError(e, "组件加载失败"), duration: 5000, type: "error" });
+});
+import("./widgets/app-resource-manager/index.ts").catch((e) => {
+  console.warn("[module] 组件加载失败: app-resource-manager", e);
+  bus.emit("toast:show", { msg: "❌ " + friendlyError(e, "组件加载失败"), duration: 5000, type: "error" });
+});
+import("./widgets/app-sync-manager/index.ts").catch((e) => {
+  console.warn("[module] 组件加载失败: app-sync-manager", e);
+  bus.emit("toast:show", { msg: "❌ " + friendlyError(e, "组件加载失败"), duration: 5000, type: "error" });
+});
 
 //  窗口状态已由 Go 端 shutdown 保存，前端不再重复写入
 

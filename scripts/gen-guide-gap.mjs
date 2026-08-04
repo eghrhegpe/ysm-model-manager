@@ -62,7 +62,7 @@ function main() {
   // 1. 提取 app-modules.ts 的功能面：组件路径（app-*）+ register 服务名
   const text = fs.readFileSync(APP_MODULES, 'utf8');
   const faces = new Set();
-  // 组件路径：import "./components/app-xxx.ts" / import("./components/app-xxx/index.ts")
+  // 组件路径：import "./widgets/app-xxx.ts" / import("./widgets/app-xxx/index.ts")
   for (const m of text.matchAll(/components\/(app-[a-z0-9-]+)\//g)) faces.add(m[1]);
   for (const m of text.matchAll(/components\/(app-[a-z0-9-]+)\.ts/g)) faces.add(m[1]);
   // register 服务名：register("loadInstances", ...)

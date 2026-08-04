@@ -44,7 +44,9 @@ async function doUpdate(
   if (result !== "success") {
     throw new Error(result);
   }
-  // 启动新进程后退出
+  // 说明：Go 侧 InstallUpdate 在替换完成后 os.Exit(0) 终止主进程，下面这段实际
+  // 不可达（更新助手 ysm-updater-helper.exe 负责替换 exe 并重启新进程）；
+  // 保留作防御——若未来 InstallUpdate 改为返回而非退出，可在此启动新进程
   const { RestartApplication } = await import(
     "../../bindings/ysm-model-manager/internal/app/app.js"
   );
@@ -130,12 +132,13 @@ async function promptUpdate(
  */
 export async function checkUpdateSilent(): Promise<void> {
   if (!canCheck()) return;
-  markChecked();
   try {
     const { CheckUpdate } = await import(
       "../../bindings/ysm-model-manager/internal/app/app.js"
     );
     const info = (await CheckUpdate()) as UpdateInfo;
+    // 检查成功才计入频次：失败（网络/API）不阻塞下次启动重试
+    markChecked();
     if (info?.available) {
       bus.emit("toast:show", {
         msg: `📦 发现新版本 ${info.latest}（当前 ${info.current}）— 点击查看`,

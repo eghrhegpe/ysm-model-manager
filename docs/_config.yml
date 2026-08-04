@@ -27,6 +27,19 @@ plugins:
 exclude:
   # 冻结区整目录（历史归档，含全部 postmortem/sessions/design/reference 与 .txt）
   - archive/
+  # 内部治理文档（决策/知识卡/小说/网页版占位——面向开发者，不进宣传站导航）
+  - adr/
+  - knowledge/
+  - novel/
+  - app/
+  # 开发者向根文档（决策依据/治理规则/审计报告，不进用户向站点）
+  - Design.md
+  - architecture.md
+  - governance-rules.md
+  - pitfalls.md
+  - review-report.md
   # 生成产物
   - funcmap.md
   - project-map.md
+  # 发版记录只保留索引（版本表），版本详情不进导航（releases/README.md 保留）
+  - releases/v*

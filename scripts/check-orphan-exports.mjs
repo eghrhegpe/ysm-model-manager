@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-consumers.mjs — 符号消费者审计（孤儿导出检测）。
+ * check-orphan-exports.mjs — 孤儿导出检测（零消费者符号审计）。
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
  *
@@ -13,10 +13,13 @@
  * 排除：export default（匿名单例惯用）、export ... from（re-export）、
  * 命名空间导入 import * as（无法对齐符号）。
  *
+ * 注：与联邦 MikuMikuAR 的 check-consumers（符号反向查询 / 重构影响面）同名异实，
+ * 故独立命名为 check-orphan-exports 以消除歧义（ADR-241 §Phase 2）。
+ *
  * 用法：
- *   node scripts/check-consumers.mjs                     # 文本报告
- *   node scripts/check-consumers.mjs --json              # JSON（CI 用）
- *   node scripts/check-consumers.mjs --min-consumers 3   # 只报消费者 ≤3 的符号
+ *   node scripts/check-orphan-exports.mjs                     # 文本报告
+ *   node scripts/check-orphan-exports.mjs --json              # JSON（CI 用）
+ *   node scripts/check-orphan-exports.mjs --min-consumers 3   # 只报消费者 ≤3 的符号
  *
  * 退出码：孤儿导出 > 0 → 1；否则 0（--min-consumers 过滤后同规则）。
  */
@@ -165,7 +168,7 @@ function main() {
   }
 
   console.log('══════════════════════════════════════');
-  console.log(' 符号消费者审计 (check-consumers)');
+  console.log(' 孤儿导出检测 (check-orphan-exports)');
   console.log('══════════════════════════════════════');
   console.log(`模块数   : ${files.length}`);
   console.log(`导出符号 : ${report.length}（含多文件同名导出）`);

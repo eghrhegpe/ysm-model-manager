@@ -339,4 +339,17 @@ function main() {
 const HEAD_OID = git('rev-parse HEAD').out.trim();
 const CURRENT_BRANCH = git('symbolic-ref --short HEAD').out.trim() || 'HEAD';
 
-process.exit(main());
+const GATE_CODE = main();
+
+// ── 文档待补地图：推送前始终刷新（非阻断），供文档类 AI 定位「哪块城邦失修、该补哪里」──
+// 无论门禁 PASS/FAIL 都执行；失败静默吞错，绝不拖累推送心流。
+try {
+  execFileSync('node', ['scripts/gen-doc-next-steps.mjs'], {
+    cwd: ROOT, stdio: 'ignore', shell: true, timeout: 300_000,
+  });
+  console.log('[MAP] 已刷新 docs/.doc-next-steps.md（AI 待补地图，非阻断）');
+} catch {
+  /* 非阻断：地图生成失败不影响推送 */
+}
+
+process.exit(GATE_CODE);

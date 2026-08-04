@@ -1,7 +1,17 @@
 #!/usr/bin/env node
 /**
- * 注释质量检查。检测 AI 废话注释、JSDoc 模板残留、TODO 无编号等。
+ * comment-checker.mjs — 注释质量检查（AI 废话 / 空 JSDoc / TODO 无编号 / 调试残留）。
+ *
  * 由 scripts/comment-checker.py 迁移（2026-08-03），规则与输出逻辑逐点保真。
+ *
+ * 零依赖（仅 node:fs / node:path / node:url + 共享层 _lib/ripgrep、_lib/rg-line）。
+ *
+ * 用法：
+ *   node scripts/comment-checker.mjs              # 文本报告
+ *   node scripts/comment-checker.mjs --json       # JSON（CI / 子代理消费，每类截断 50 条）
+ *   node scripts/comment-checker.mjs --full       # 全量 JSON（不截断）
+ *
+ * 退出码：默认 0（提示工具）。
  */
 import { rg } from './_lib/ripgrep.mjs';
 import { parseRgLine } from './_lib/rg-line.mjs';

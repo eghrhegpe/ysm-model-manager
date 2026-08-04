@@ -1,12 +1,21 @@
 #!/usr/bin/env node
 /**
- * ADR 登记一致性检查（占号防撞机制落地）。
+ * adr-check.mjs — ADR 登记一致性检查（占号防撞机制落地）。
+ *
  * 校验 docs/adr/ 目录文件 vs adr/README.md 登记表：
  *   - 文件编号唯一（无撞号）
  *   - 登记表覆盖全部文件（无漏登）
  *   - 文件都在登记表（无幽灵文件）
  *   - 编号连续（无跳号，空缺需注明）
  * 呼应 ADR-013 Phase 0.2「写文件前先在登记表占号」。
+ *
+ * 零依赖（仅 node:fs / node:path / node:url）。
+ *
+ * 用法：
+ *   node scripts/adr-check.mjs              # 文本报告
+ *   node scripts/adr-check.mjs --json       # JSON（CI / 子代理消费）
+ *
+ * 退出码：发现不一致（撞号 / 漏登 / 幽灵 / 跳号）→ 1；否则 0。
  */
 import fs from 'node:fs';
 import path from 'node:path';

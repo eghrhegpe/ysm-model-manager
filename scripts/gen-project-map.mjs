@@ -14,6 +14,8 @@
  * 输出：docs/project-map.md，含 4 个 GEN 标记区：
  *   go-structure / internal-structure / frontend-structure / root-files
  * 零依赖（仅 node:fs / node:path + scripts/_lib/scan-files.mjs 共享层）。
+ * 设计意图：gen-project-map 工具脚本
+ * 退出码：0（无 process.exit 调用）
  */
 import fs from 'node:fs';
 import path from 'node:path';

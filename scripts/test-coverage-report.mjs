@@ -14,6 +14,8 @@
  *   node scripts/test-coverage-report.mjs --input <path>  # 指定 coverage 文件
  *
  * 依赖：frontend/coverage/coverage-final.json（先跑 npm run test:coverage）
+ * 设计意图：test-coverage-report 工具脚本
+ * 退出码：1（失败）
  */
 import fs from 'node:fs';
 import path from 'node:path';

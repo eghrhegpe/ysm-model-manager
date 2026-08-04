@@ -9,6 +9,8 @@
  * 用法：
  *   node scripts/gen-status-index.mjs            # 写入
  *   node scripts/gen-status-index.mjs --check     # 校验是否已同步（不写入）
+ * 设计意图：状态索引生成器
+ * 退出码：main(（失败）
  */
 import fs from 'node:fs';
 import path from 'node:path';

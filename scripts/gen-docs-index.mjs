@@ -18,6 +18,8 @@
  *   node scripts/gen-docs-index.mjs --releases     # 只跑 releases
  *   node scripts/gen-docs-index.mjs --knowledge    # 只校验 knowledge 漂移
  *   node scripts/gen-docs-index.mjs --check        # 全分区只校验不写入
+ * 设计意图：文档索引生成器（ADR 目录索引）
+ * 退出码：main(（失败）
  */
 import fs from 'node:fs';
 import path from 'node:path';

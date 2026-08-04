@@ -2,6 +2,13 @@
 /**
  * bug-chronicle 搜索。按关键词查找相关 bug，输出结构化摘要。
  * 由 scripts/bug-search.py 迁移（2026-08-03），逻辑逐点保真。
+ * bug-search.mjs — Bug 搜索工具
+ * 设计意图：Bug 搜索工具
+ * 依赖：node:fs / node:path / node:url
+ * 用法：
+ *   node scripts/bug-search.mjs                 # 默认行为
+ *   node scripts/bug-search.mjs --json # JSON 输出（CI/子代理消费）
+ * 退出码：0（无 process.exit 调用）
  */
 import fs from 'node:fs';
 import path from 'node:path';

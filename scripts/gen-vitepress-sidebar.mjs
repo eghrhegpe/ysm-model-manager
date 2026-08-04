@@ -4,6 +4,10 @@
  * 输出：docs/.vitepress/sidebar.gen.mjs（自动生成，勿手改）。
  * 排除：.vitepress / node_modules / dist / archive（冻结区）/ index.md（home 页）。
  * 用法：node scripts/gen-vitepress-sidebar.mjs（构建前先跑，见 docs/package.json build script）
+ * 设计意图：gen-vitepress-sidebar 工具脚本
+ * 依赖：node:fs / node:path / node:url
+ * 退出码：0（无 process.exit 调用）
+ * gen-vitepress-sidebar.mjs — gen-vitepress-sidebar 工具脚本
  */
 import { readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';

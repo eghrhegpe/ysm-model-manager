@@ -12,6 +12,7 @@
  *   node scripts/comment-checker.mjs --full       # 全量 JSON（不截断）
  *
  * 退出码：默认 0（提示工具）。
+ * 设计意图：注释质量检查（AI 废话/JSDoc 残留/TODO 编号）
  */
 import { rg } from './_lib/ripgrep.mjs';
 import { parseRgLine } from './_lib/rg-line.mjs';

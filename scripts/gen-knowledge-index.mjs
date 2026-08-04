@@ -8,6 +8,8 @@
  * 用法：
  *   node scripts/gen-knowledge-index.mjs           # 写入
  *   node scripts/gen-knowledge-index.mjs --check    # 校验是否已同步（不写入）
+ * 设计意图：知识索引生成器
+ * 退出码：main(（失败）
  */
 import fs from 'node:fs';
 import path from 'node:path';

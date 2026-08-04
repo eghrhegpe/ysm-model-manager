@@ -22,6 +22,7 @@
  *   node scripts/check-orphan-exports.mjs --min-consumers 3   # 只报消费者 ≤3 的符号
  *
  * 退出码：孤儿导出 > 0 → 1；否则 0（--min-consumers 过滤后同规则）。
+ * 设计意图：孤儿导出检测（0 消费者的导出符号）
  */
 import fs from 'node:fs';
 import { SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.mjs';

@@ -15,6 +15,8 @@
  *   - link-checker.mjs / type-consistency.mjs 失败时退出码仍为 0，
  *     必须用 --json 解析 _summary 判定，不得依赖退出码。
  *   - Windows 下 npx 是 npx.cmd，node spawn 需 shell:true。
+ * 设计意图：pre-push-gate 工具脚本
+ * 依赖：node:child_process / node:fs / node:path / node:url
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';

@@ -17,6 +17,8 @@
  *   node scripts/gen-knowledge-adr.mjs --check    # 只校验不写入（CI）
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
+ * 设计意图：知识卡 ADR 关联生成器
+ * 退出码：1（失败）
  */
 
 import fs from 'node:fs';

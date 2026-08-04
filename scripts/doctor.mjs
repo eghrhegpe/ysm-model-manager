@@ -2,6 +2,15 @@
 /**
  * 项目健康诊断。一键检查 Go 编译、前端构建、文件完整性、治理红线。
  * 由 scripts/doctor.py 迁移（2026-08-03），逻辑逐点保真。
+ * doctor.mjs — 全量治理检查编排
+ * 设计意图：全量治理检查编排
+ * 依赖：node:child_process / node:fs / node:path / node:url
+ * 用法：
+ *   node scripts/doctor.mjs                 # 默认行为
+ *   node scripts/doctor.mjs --check  # 启用 check
+ *   node scripts/doctor.mjs --json   # JSON 输出（CI/子代理消费）
+ *   node scripts/doctor.mjs --strict # 启用 strict
+ * 退出码：0（无 process.exit 调用）
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';

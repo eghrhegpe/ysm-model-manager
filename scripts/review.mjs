@@ -3,6 +3,12 @@
  * 代码红线审查。12 条规则 × 违规扫描（依赖 ripgrep）。
  * W3 empty JSDoc / W4 TODO 无编号已移交 comment-checker.mjs（避免双重扫描）。
  * 由 scripts/review.py 迁移（2026-08-03），规则与输出逻辑逐点保真。
+ * 设计意图：治理审查工具
+ * 用法：
+ *   node scripts/review.mjs                 # 默认行为
+ *   node scripts/review.mjs --json # JSON 输出（CI/子代理消费）
+ * 退出码：0（成功）
+ * 依赖：本地模块
  */
 import { rg } from './_lib/ripgrep.mjs';
 import { parseRgLine } from './_lib/rg-line.mjs';

@@ -2,6 +2,13 @@
 /**
  * Markdown 链接检查。扫所有 md 文件，验证内部链接目标是否存在。
  * 由 scripts/link-checker.py 迁移（2026-08-03），逻辑逐点保真。
+ * link-checker.mjs — 文档链接检查器
+ * 设计意图：文档链接检查器
+ * 依赖：node:fs / node:path / node:url
+ * 用法：
+ *   node scripts/link-checker.mjs                 # 默认行为
+ *   node scripts/link-checker.mjs --json # JSON 输出（CI/子代理消费）
+ * 退出码：0（成功）
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SKIP_DIRS = new Set(['node_modules', 'archive', '.git', 'vendor']);
+const SKIP_FILES = new Set(['.doc-next-steps.md']); // 自动生成产物，引用路径可能过期，不应计入断链
 
 function walkMd(dir) {
   const out = [];
@@ -18,6 +26,7 @@ function walkMd(dir) {
   } catch { return out; }
   for (const entry of entries) {
     if (SKIP_DIRS.has(entry.name)) continue;
+    if (SKIP_FILES.has(entry.name)) continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) out.push(...walkMd(full));
     else if (entry.isFile() && entry.name.endsWith('.md')) out.push(full);

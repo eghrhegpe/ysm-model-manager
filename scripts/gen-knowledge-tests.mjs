@@ -15,6 +15,8 @@
  *   node scripts/gen-knowledge-tests.mjs --check    # 只校验不写入（CI）
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
+ * 退出码：1（失败）
+ * 设计意图：知识卡测试生成器
  */
 
 import fs from 'node:fs';

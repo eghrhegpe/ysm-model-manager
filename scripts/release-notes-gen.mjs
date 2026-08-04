@@ -2,6 +2,12 @@
 /**
  * 收集 git 数据，供子智能体写发版说明。
  * 由 scripts/release-notes-gen.py 迁移（2026-08-03），逻辑逐点保真。
+ * release-notes-gen.mjs — 发布说明生成器
+ * 设计意图：发布说明生成器
+ * 依赖：node:child_process / node:path / node:url
+ * 用法：
+ *   node scripts/release-notes-gen.mjs                 # 默认行为
+ * 退出码：0（无 process.exit 调用）
  */
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';

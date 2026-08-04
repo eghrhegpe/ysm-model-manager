@@ -2,6 +2,12 @@
 /**
  * 代码行数统计与文件健康度分析。
  * 由 scripts/line-counter.py 迁移（2026-08-03），逻辑逐点保真（含原 package_lines 按文件计数行为）。
+ * line-counter.mjs — line-counter 工具脚本
+ * 设计意图：line-counter 工具脚本
+ * 依赖：node:fs / node:path / 本地模块
+ * 用法：
+ *   node scripts/line-counter.mjs                 # 默认行为
+ * 退出码：0（无 process.exit 调用）
  */
 import fs from 'node:fs';
 import path from 'node:path';

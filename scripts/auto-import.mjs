@@ -29,6 +29,7 @@
  *   node scripts/auto-import.mjs --strict             # 有缺失 → 退出码 1
  *
  * 退出码：默认 0（提示工具）；--strict 且存在缺失建议 → 1。
+ * 设计意图：自动导入修复工具
  */
 import fs from 'node:fs';
 import path from 'node:path';

@@ -14,6 +14,8 @@
  *
  * 输出：docs/funcmap.md（自动生成，docs/_config.yml 已排除出站点发布）。
  * 零依赖（仅 node:fs / node:path + scripts/_lib/scan-files.mjs）。
+ * 设计意图：funcmap 工具脚本
+ * 退出码：0（无 process.exit 调用）
  */
 import fs from 'node:fs';
 import path from 'node:path';

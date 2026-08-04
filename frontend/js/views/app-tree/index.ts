@@ -13,6 +13,7 @@ import { bus } from "../../bus.ts";
 import { selectState } from "./data.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { getApp } from "../../wails/app.ts";
+import { modalConfirm } from "../dialogs/modal.ts";
 
 // 模块级待处理搜索词：切页先存、组件挂载后消费（替代 window._pendingTreeSearch，零 window 全局）
 let _pendingTreeSearch = "";
@@ -269,7 +270,7 @@ export class AppTree extends HTMLElement {
 
   // ========== 键盘快捷键 ==========
   private _initKeyboardShortcuts(): void {
-    this._keydownHandler = ((e: KeyboardEvent): void => {
+    this._keydownHandler = (async (e: KeyboardEvent): Promise<void> => {
       // Ctrl+F / Cmd+F → 聚焦搜索框（允许输入框内响应）
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
@@ -299,7 +300,13 @@ export class AppTree extends HTMLElement {
           return;
         }
         e.preventDefault();
-        if (!confirm("确定要删除选中的 " + paths.length + " 个文件吗？"))
+        if (!(await modalConfirm({
+          title: "批量删除",
+          icon: "🗑️",
+          message: `确定要删除选中的 ${paths.length} 个文件吗？`,
+          okText: "🗑️ 删除",
+          danger: true,
+        })))
           return;
         const rtype = this._rootAttr || "ysm";
         const isDirModel = [RESOURCE_TYPES.MMD, RESOURCE_TYPES.VRC].includes(rtype);

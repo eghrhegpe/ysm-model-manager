@@ -766,7 +766,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         const { RenameFile, LoadAppConfig, GetRepoRoot } = await getApp();
         void LoadAppConfig;
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-        const fullPath = repoRoot + "\\" + name;
+        const fullPath = repoRoot + "/" + name;
         const newName = await showRenameDialog(fullPath, name);
         if (!newName) return;
         try {

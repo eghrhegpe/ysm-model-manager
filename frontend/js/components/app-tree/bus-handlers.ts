@@ -69,7 +69,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
         const cfg = await LoadAppConfig().catch(() => null);
         const theme = localStorage.getItem("theme") || "dark";
         await SaveAppConfig(dir, "", "", cfg?.linkMode || "copy", theme);
-        vm._repoRoot = dir + "\\ysm";
+        vm._repoRoot = dir + "/ysm";
         await reload(vm);
         bus.emit("stats:refresh");
       } catch (err) {

@@ -4,7 +4,7 @@ name: 标签编辑器 tag-editor
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/dialogs/tag-editor.ts
+  - frontend/js/views/dialogs/tag-editor.ts
 use_when:
   - 标签
   - 打标签
@@ -32,7 +32,7 @@ use_when:
 - 导出：`modalTagEditor(modelPath: string): Promise<string[] | null>`
 - 监听/派发 bus：无（`bus` 仅被 import 引用）
 - getApp() 调用：`GetModelTags`、`AllTags`、`SetModelTags`
-- 依赖：`esc`（utils/dom.ts）、`closeDlg`/`registerDlg`（dialogs/modal.js）
+- 依赖：`esc`（utils/dom/html.ts）、`closeDlg`/`registerDlg`（dialogs/modal.js）
 - 调用方：app-tree 文件右键「编辑标签」等入口
 
 ## 与其他子系统关系

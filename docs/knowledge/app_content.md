@@ -7,12 +7,12 @@ source_files:
   - frontend/js/views/app-content/index.ts
   - frontend/js/views/app-content/tpl.ts
   - frontend/js/views/app-content/content-css.ts
-  - frontend/js/views/app-content/community/core.ts
-  - frontend/js/views/app-content/community/diagnostics.ts
-  - frontend/js/views/app-content/community/settings.ts
-  - frontend/js/views/app-content/community/site-view.ts
-  - frontend/js/views/app-content/community/workshop-data.ts
-  - frontend/js/views/app-content/community/workshop-icons.ts
+  - frontend/js/views/app-content/community-data.ts
+  - frontend/js/views/app-content/diagnostics/community.ts
+  - frontend/js/views/app-content/settings/community.ts
+  - frontend/js/views/app-content/site-view.ts
+  - frontend/js/views/app-content/workshop-data.ts
+  - frontend/js/views/app-content/workshop-icons.ts
 use_when:
   - 主内容区
   - 页面切换

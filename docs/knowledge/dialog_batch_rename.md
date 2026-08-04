@@ -4,7 +4,7 @@ name: 批量重命名 batch-rename
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/dialogs/batch-rename.ts
+  - frontend/js/views/dialogs/batch-rename.ts
 use_when:
   - 批量重命名
   - 批量改名

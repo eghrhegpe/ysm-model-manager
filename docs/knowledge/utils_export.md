@@ -5,7 +5,7 @@ tier: architecture
 category: utils
 source_files:
   - frontend/js/views/app-preview/screenshot-renderer.ts
-  - frontend/js/views/app-preview/preview-cache.ts
+  - frontend/js/views/app-preview/cache.ts
 use_when:
   - 截图
   - 导出 PNG

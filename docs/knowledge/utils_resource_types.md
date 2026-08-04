@@ -4,8 +4,8 @@ name: 资源类型工具 resource-types
 tier: leaf
 category: utils
 source_files:
-  - frontend/js/utils/resource/resource-types.ts
-  - frontend/js/utils/resource/resource-registry.ts
+  - frontend/js/utils/resource/types.ts
+  - frontend/js/utils/resource/registry.ts
 use_when:
   - 资源类型
   - RESOURCE_TYPES

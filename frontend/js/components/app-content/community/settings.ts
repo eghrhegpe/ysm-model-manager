@@ -7,6 +7,9 @@ import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/res
 import { esc } from "../../../utils/dom.ts";
 import { getApp } from "../../../wails/app.ts";
 
+// 单一捕获守卫：同一时刻仅允许一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持
+let _activeCapture: ((e: KeyboardEvent) => void) | null = null;
+
 /**
  * 初始化设置页所有事件绑定
  * @param root - 组件 shadow root
@@ -807,6 +810,11 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     localStorage.setItem("td-keymap", JSON.stringify(km));
   };
   const tdRenderKeymap = (): void => {
+    // 重建网格前取消任何进行中的捕获，避免叠加/残留
+    if (_activeCapture) {
+      document.removeEventListener("keydown", _activeCapture, true);
+      _activeCapture = null;
+    }
     const grid = root.getElementById("td-keymap-grid");
     if (!grid) return;
     const km = loadTdKeymap();
@@ -823,11 +831,23 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       btn.textContent = tdKeyLabel(km[key]);
       btn.style.minWidth = "64px";
       btn.addEventListener("click", () => {
+        // 取消上一次未完成的捕获，保证同一时刻仅一个
+        if (_activeCapture) {
+          document.removeEventListener("keydown", _activeCapture, true);
+          _activeCapture = null;
+        }
         btn.textContent = "按键…";
         const onKey = (ev: KeyboardEvent): void => {
+          // 设置页已卸载（grid 不存在）则放弃捕获，先判后拦截，杜绝全局 keydown 劫持
+          if (!root.getElementById("td-keymap-grid")) {
+            document.removeEventListener("keydown", onKey, true);
+            _activeCapture = null;
+            return;
+          }
           ev.preventDefault();
           ev.stopPropagation();
           document.removeEventListener("keydown", onKey, true);
+          _activeCapture = null;
           if (ev.code === "Escape") {
             tdRenderKeymap();
             return;
@@ -852,6 +872,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
             type: "success",
           });
         };
+        _activeCapture = onKey;
         document.addEventListener("keydown", onKey, true);
       });
       row.appendChild(name);

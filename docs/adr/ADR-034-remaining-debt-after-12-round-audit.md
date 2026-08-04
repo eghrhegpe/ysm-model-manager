@@ -79,6 +79,73 @@ HTML 完整性、脚本输出。**Go Wails Binding 契约零覆盖**——前端
 
 **优先级**：P2。跨层守护空白，但需先确认 `bindings/` 生成机制。
 
+### 2.5 方向五：非 Windows 跨平台兼容性（🟠 P1-P2 分层）
+
+**现状**：项目默认 Windows 部署，但 Go 侧已做部分跨平台分支，
+前端几乎无平台假设（`navigator.platform` / `process.platform` 调用 **0 处**）。
+摸排发现 4 类问题，按阻断程度分层：
+
+**P1 阻断级（非 Windows 无法运行）**：
+
+1. `internal/app/wasm_decoder.go:28-29` — 硬编码开发者本机路径
+   `"C:\\Users\\zhujieling11\\emsdk\\node\\22.16.0_64bit\\bin\\node.exe"`，
+   仅作为 candidates 兜底，但路径本身在任何其他机器/平台上都不存在。
+   实际查找链是「硬编码路径 → `exec.LookPath("node")` → `LookPath("node.exe")`」，
+   Linux/macOS 上 `LookPath("node")` 即可命中。**结论：不阻断，但应删除硬编码路径**。
+
+2. `go/ysm/cli.go:13-22` — `FindCLI` 全程拼 `YSMParser.exe`，
+   仅在最后 `exec.LookPath("YSMParser")` 兜底无 `.exe` 后缀。
+   Linux/macOS 上若 CLI 文件名带 `.exe` 后缀也能找到（LookPath 不关心后缀），
+   但 `filepath.Join(dir, "YSMParser.exe")` 在非 Windows 上是合法但怪异的文件名。
+   **结论：不阻断，但应按 `runtime.GOOS` 选择后缀**。
+
+3. `go/updater/update.go:254-256` — `InstallUpdate` 明确拒绝非 Windows：
+   `if runtime.GOOS != "windows" { return fmt.Errorf("自动更新当前仅支持 Windows 平台") }`。
+   `assetPattern()` 对非 Windows 返回 `.tar.gz` 占位。
+   **结论：自动更新是设计上的 Windows-only，非阻断，但需文档明确**。
+
+**P2 功能缺失级（非 Windows 可运行但功能退化）**：
+
+4. `internal/app/app_config.go:397-410` — Minecraft 启动器路径扫描硬编码 Windows 环境变量：
+   `LOCALAPPDATA` / `ProgramFiles` / `ProgramFiles(x86)` / `ProgramData`，
+   以及硬编码盘符 `"D:\\Games", "E:\\Game"` 等。
+   Linux/macOS 上这些环境变量为空，启动器扫描失效。
+   **处置**：按 `runtime.GOOS` 分支，Linux 用 `~/.local/share/PrismLauncher`、
+   macOS 用 `~/Library/Application Support/PrismLauncher` 等 XDG/Apple 标准路径。
+
+5. `go/recycle/recycle.go:129` 与 `go/installer/installer.go:383,446` —
+   `runtime.GOOS == "windows"` 分支调用 `syscall.CreateFile` / `GetFileInformationByHandle`。
+   Unix 分支用 `os.FileInfo.Sys().Nlink()`。**结论：已正确分平台，不阻断**。
+
+6. `go/logs/logs.go` / `go/tags/tags.go` — 注释提及 `%APPDATA%`，
+   但实际用 `os.UserConfigDir()`（跨平台）。**结论：注释漂移，改注释即可**。
+
+**前端侧**：
+
+7. `frontend/js/components/app-content/tpl.ts:333` — UI 文案硬编码
+   `%APPDATA%\YSM-Model-Manager\ysm_config.json`。非 Windows 上路径不同。
+   **处置**：路径从 Go 端取（已有 binding），UI 不硬编码。
+
+8. `frontend/js/components/app-content/community/settings.ts:384` —
+   UI 文案 `"ProgramFiles · Games · %APPDATA% · EXE 同目录"`，同上。
+
+**构建侧**：
+
+9. `cmd/build-release.ps1` / `scripts/release.ps1` — 全 PowerShell 脚本，
+   无 bash/Makefile 等价物。非 Windows 构建需手写 `wails build`。
+   **处置**：补 `build-release.sh` bash 等价脚本，或用 `go-task` 跨平台任务运行器。
+
+10. `go:embed ysm-updater-helper.exe` — 内嵌 Windows helper 二进制。
+    非 Windows 上 `//go:embed` 编译时找不到文件会报错。
+    **处置**：用 `//go:build windows` 构建标签隔离 helper embed，
+    或为非 Windows 提供 stub。
+
+**优先级**：P1 阻断级（wasm_decoder 硬编码路径删除、cli.go 后缀分支），
+P2 功能缺失级（app_config 启动器路径跨平台、构建脚本 bash 等价、updater helper 构建标签）。
+
+**跨平台兼容性目标**：**理论可编译 + 可启动 + 核心功能可用**，
+不承诺非 Windows 正式发布（updater/launcher 扫描等功能退化可接受）。
+
 ---
 
 ## 3. 后果（Consequences）
@@ -113,6 +180,10 @@ HTML 完整性、脚本输出。**Go Wails Binding 契约零覆盖**——前端
 | `grep '\\\\'` 前端 | ADR-011 反斜杠自拼违规 0 处 | 011 治理已生效 |
 | `grep getApp()` vs `from bindings` | 119 处合规 vs 7 处违规 | 012 仅 7 处待改 |
 | `ls tests/*.mjs` | 8 件契约测试，Go Binding 契约零覆盖 | 方向四跨层守护空白 |
+| `grep runtime.GOOS` | 6 处平台分支（installer/recycle/updater/cli/config/logs） | 方向五 Go 侧已部分跨平台 |
+| `grep -rn "%APPDATA%\|LOCALAPPDATA\|ProgramFiles"` | app_config 硬编码 Windows 环境变量 + 盘符 | 方向五 P2 启动器扫描跨平台 |
+| `internal/app/wasm_decoder.go:28-29` | 硬编码开发者本机 node.exe 路径 | 方向五 P1 应删除 |
+| `grep navigator.platform\|process.platform` 前端 | 0 处平台判断 | 方向五前端零平台假设，跨平台基础好 |
 | audit-summary-2026-08-04.md | 12 轮审计 P1×4/P2×14/P3×17 全修复 | 审计线封顶，本 ADR 接力 |
 
 <!-- 文件名: remaining-debt-after-12-round-audit.md → 实际文件 ADR-034-remaining-debt-after-12-round-audit.md -->

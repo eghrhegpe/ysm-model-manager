@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
 )
 
 // CacheDir 返回头像缓存目录（exe 同目录下的 creators_cache/）。

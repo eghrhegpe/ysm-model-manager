@@ -40,6 +40,7 @@
 | 查函数签名 | `node scripts/funcmap.mjs` 或 grep |
 | 写大语言模型小说 | `docs/novel/SKELETON.md` + `development-saga.md` |
 | 完整发版、更新流程 | `docs/releases/README.md` + `cmd/build-release.ps1` |
+| 项目维护 / 网站构建 | `docs/MAINTENANCE.md`（维护手册：Jekyll 文档网站构建发布 + 文档体系维护 + 治理检查）|
 | 跑全部检查 | `scripts/README.md`（检查命令全表）或 `node scripts/doctor.mjs` |
 
 ## 知识库检索协议

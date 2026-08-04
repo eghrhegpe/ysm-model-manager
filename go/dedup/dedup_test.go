@@ -146,3 +146,96 @@ func TestFindDuplicateFiles_SortedOutput(t *testing.T) {
 		t.Errorf("文件路径未排序: %v", paths)
 	}
 }
+
+// ====== CleanEmptyDirs ======
+
+func TestCleanEmptyDirs_EmptyDir(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "empty")
+	if err := os.MkdirAll(sub, 0755); err != nil {
+		t.Fatal(err)
+	}
+	removed, err := CleanEmptyDirs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 删除 empty 后 dir 也变空 → 共 2 个
+	if removed != 2 {
+		t.Errorf("期望删除 2 个空目录（含根），得到 %d", removed)
+	}
+}
+
+func TestCleanEmptyDirs_NestedEmpty(t *testing.T) {
+	dir := t.TempDir()
+	nested := filepath.Join(dir, "a", "b", "c")
+	if err := os.MkdirAll(nested, 0755); err != nil {
+		t.Fatal(err)
+	}
+	removed, err := CleanEmptyDirs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 删除 c → b → a → dir → 共 4 个
+	if removed != 4 {
+		t.Errorf("期望删除 4 个嵌套空目录（含根），得到 %d", removed)
+	}
+}
+
+func TestCleanEmptyDirs_NonEmpty(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	if err := os.MkdirAll(sub, 0755); err != nil {
+		t.Fatal(err)
+	}
+	createTestFile(t, sub, "file.txt", "content")
+	removed, err := CleanEmptyDirs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if removed != 0 {
+		t.Errorf("非空目录不应被删除，得到 %d", removed)
+	}
+}
+
+func TestCleanEmptyDirs_Mixed(t *testing.T) {
+	dir := t.TempDir()
+	// 结构: dir/sub1/empty1, dir/sub2/file.txt, dir/sub3/empty2
+	sub1 := filepath.Join(dir, "sub1", "empty1")
+	if err := os.MkdirAll(sub1, 0755); err != nil {
+		t.Fatal(err)
+	}
+	sub2 := filepath.Join(dir, "sub2")
+	if err := os.MkdirAll(sub2, 0755); err != nil {
+		t.Fatal(err)
+	}
+	createTestFile(t, sub2, "file.txt", "data")
+	sub3 := filepath.Join(dir, "sub3", "empty2", "empty3")
+	if err := os.MkdirAll(sub3, 0755); err != nil {
+		t.Fatal(err)
+	}
+	removed, err := CleanEmptyDirs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// sub1/empty1(1) → sub1(2) → sub3/empty3(3) → empty2(4) → sub3(5) → 共 5 个
+	if removed != 5 {
+		t.Errorf("期望删除 5 个空目录，得到 %d", removed)
+	}
+}
+
+func TestCleanEmptyDirs_EmptyPath(t *testing.T) {
+	_, err := CleanEmptyDirs("")
+	if err == nil {
+		t.Fatal("空路径应报错")
+	}
+}
+
+func TestCleanEmptyDirs_NonExistent(t *testing.T) {
+	removed, err := CleanEmptyDirs("/nonexistent/path")
+	if err != nil {
+		t.Fatal("不存在的目录不应报错")
+	}
+	if removed != 0 {
+		t.Errorf("不存在的目录应返回 0，得到 %d", removed)
+	}
+}

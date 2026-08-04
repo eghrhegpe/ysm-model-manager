@@ -123,6 +123,49 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 	return count, nil
 }
 
+// PullSingleResource 拉取单个资源（文件夹/文件）回仓库
+func PullSingleResource(globalDir, targetDir, srcPath string) error {
+	// 文件夹级拉取：整体复制文件夹到全局
+	fi, stErr := os.Stat(srcPath)
+	if stErr == nil && fi.IsDir() {
+		folderName := filepath.Base(srcPath)
+		dstDir := filepath.Join(globalDir, folderName)
+		if err := os.MkdirAll(dstDir, 0755); err != nil {
+			return err
+		}
+		entries, _ := os.ReadDir(srcPath)
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			srcFile := filepath.Join(srcPath, e.Name())
+			if err := copyFile(srcFile, filepath.Join(dstDir, e.Name())); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	dstDir := filepath.Dir(strings.Replace(srcPath, targetDir, globalDir, 1))
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
+		return err
+	}
+	return copyFile(srcPath, filepath.Join(dstDir, filepath.Base(srcPath)))
+}
+
+// PushSingleResource 推送单个资源到整合包：
+// 文件夹 / .json/.pmx/.pmd（文件夹级类型）走 InstallDir，其余 Install
+func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) error {
+	fi, stErr := os.Stat(filePath)
+	if stErr == nil && fi.IsDir() {
+		return installer.InstallDir(filePath, customDir, globalDir, linkMode, rtype)
+	}
+	ext := strings.ToLower(filepath.Ext(filePath))
+	if ext == ".json" || ext == ".pmx" || ext == ".pmd" {
+		return installer.InstallDir(filepath.Dir(filePath), customDir, globalDir, linkMode, rtype)
+	}
+	return installer.Install(filePath, customDir, globalDir, linkMode)
+}
+
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {

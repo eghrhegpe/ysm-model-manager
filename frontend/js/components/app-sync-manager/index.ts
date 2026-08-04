@@ -52,6 +52,8 @@ export class AppSyncManager extends HTMLElement {
   /** _init 代际计数：instance 快速切换时丢弃过期加载的渲染与订阅，防并发覆盖 */
   private _gen = 0;
   private _unsubs: Array<() => void> = [];
+  /** 单文件推送/拉取在途守卫：防连点并发（同 preview-skeleton _saving 模式） */
+  private _singleBusy = false;
 
   connectedCallback(): void {
     this._instance = this.getAttribute("instance") || "";
@@ -354,9 +356,11 @@ export class AppSyncManager extends HTMLElement {
   }
 
   async _pushSingleFile(path: string): Promise<void> {
-    const { PushSingleResourceToInstance } =
-      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    if (this._singleBusy) return;
+    this._singleBusy = true;
     try {
+      const { PushSingleResourceToInstance } =
+        await import("../../../bindings/ysm-model-manager/internal/app/app.js");
       await PushSingleResourceToInstance(
         this._selectedType,
         this._instance,
@@ -372,14 +376,18 @@ export class AppSyncManager extends HTMLElement {
         duration: 3000,
         type: "error",
       });
+    } finally {
+      this._singleBusy = false;
     }
   }
 
   async _pullSingleFile(path: string): Promise<void> {
+    if (this._singleBusy) return;
+    this._singleBusy = true;
     const rtype = this._selectedType;
-    const { PullSingleResourceFromInstance } =
-      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     try {
+      const { PullSingleResourceFromInstance } =
+        await import("../../../bindings/ysm-model-manager/internal/app/app.js");
       await PullSingleResourceFromInstance(rtype, path, this._instance);
       bus.emit("toast:show", { msg: "✅ 已拉取", duration: 2000 });
       await this._loadData();
@@ -391,6 +399,8 @@ export class AppSyncManager extends HTMLElement {
         duration: 3000,
         type: "error",
       });
+    } finally {
+      this._singleBusy = false;
     }
   }
 }

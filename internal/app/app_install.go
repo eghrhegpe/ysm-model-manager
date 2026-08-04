@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/importer"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/instance"
 	"ysm-model-manager/go/recycle"
@@ -53,7 +54,7 @@ func (a *App) DetectZipType(base64Data string) string {
 	if err != nil {
 		return "unknown"
 	}
-	return detectZipType(data)
+	return importer.DetectZipType(data)
 }
 
 func (a *App) ImportModelFileSkipCheck(fileName, base64Data string) error {
@@ -73,96 +74,15 @@ type importOptions struct {
 	overwrite bool
 }
 
+// importModelFileWithOptions 导入模型文件（校验+写文件核心下沉 go/importer）
 func (a *App) importModelFileWithOptions(fileName, base64Data string, opts importOptions) error {
-	ext := strings.ToLower(filepath.Ext(fileName))
-	if !types.IsSupportedExt(ext) {
-		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式"}
-	}
-	if strings.Contains(fileName, "..") || strings.ContainsAny(fileName, "\\/") {
-		return types.AppError{Code: "FILENAME_INVALID", Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
-	}
-	data, err := base64.StdEncoding.DecodeString(base64Data)
-	if err != nil {
-		return types.AppError{Code: "DECODE_FAILED", Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
-	}
-	if len(data) > 500*1024*1024 {
-		return types.AppError{Code: "FILE_TOO_LARGE", Operation: "导入模型", SourcePath: fileName, Reason: "文件大小超过 500MB 限制", Suggestion: "请压缩文件至 500MB 以内"}
-	}
-	if len(data) == 0 {
-		return types.AppError{Code: "FILE_EMPTY", Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}
-	}
-
-	// 类型检测：优先内容检测（ZIP 可能为 YSM/资源包/光影包），回退扩展名匹配
-	rtype := "ysm"
-	if ext == ".zip" {
-		rtype = detectZipType(data)
-	}
-	if rtype == "ysm" && ext != ".zip" && ext != ".ysm" && ext != ".7z" && ext != ".json" {
-		rtypes := types.ExtBelongsTo(ext)
-		if len(rtypes) > 0 && rtypes[0] != "ysm" {
-			rtype = rtypes[0]
-		}
-	}
-
-	targetRoot, _ := a.GetRepoRoot(rtype)
-	if targetRoot == "" {
-		return fmt.Errorf("请先设置文件存储路径")
-	}
-
-	// 魔数校验
-	if !opts.skipCheck && len(data) >= 4 {
-		if ext == ".zip" || ext == ".ysm" {
-			if data[0] != 0x50 || data[1] != 0x4B || data[2] != 0x03 || data[3] != 0x04 {
-				a.logger.Add(fileName, fileName, targetRoot, 0, "warn", "文件头不匹配标准ZIP格式，可能为旧版或非标准YSM文件，已导入")
-			}
-		} else if ext == ".7z" {
-			if data[0] != 0x37 || data[1] != 0x7A || data[2] != 0xBC || data[3] != 0xAF {
-				a.logger.Add(fileName, fileName, targetRoot, 0, "warn", "文件头不匹配标准7z格式，已导入")
-			}
-		}
-	}
-
-	destPath := filepath.Join(targetRoot, fileName)
-	destDir := filepath.Dir(destPath)
-	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return types.AppError{Code: "MKDIR_FAILED", Operation: "导入模型", TargetPath: destDir, Reason: "无法创建目标目录", Suggestion: "请检查磁盘权限或空间"}
-	}
-	if !opts.overwrite {
-		if _, err := os.Stat(destPath); err == nil {
-			return types.AppError{Code: "FILE_EXISTS", Operation: "导入模型", SourcePath: fileName, Reason: "文件已存在", Suggestion: "如需替换请先删除原文件"}
-		}
-	}
-	return os.WriteFile(destPath, data, 0644)
-}
-
-// detectZipType 通过 ZIP 内容检测真实资源类型（资源包/光影包/YSM）
-func detectZipType(data []byte) string {
-	// 扫描 ZIP local file header 中的文件名
-	idx := 0
-	for idx+30 <= len(data) {
-		if data[idx] != 0x50 || data[idx+1] != 0x4B || data[idx+2] != 0x03 || data[idx+3] != 0x04 {
-			break
-		}
-		nameLen := int(data[idx+26]) | int(data[idx+27])<<8
-		extraLen := int(data[idx+28]) | int(data[idx+29])<<8
-		if idx+30+nameLen > len(data) {
-			break
-		}
-		name := strings.ToLower(string(data[idx+30 : idx+30+nameLen]))
-		if name == "pack.mcmeta" {
-			return "resourcepack"
-		}
-		if strings.HasPrefix(name, "shaders/") || name == "shaders" {
-			return "shaderpack"
-		}
-		if strings.HasSuffix(name, "ysm.json") || strings.HasPrefix(name, "models/") {
-			return "ysm"
-		}
-		// 跳到下一个 entry（跳过压缩数据）
-		compSize := int(data[idx+18]) | int(data[idx+19])<<8 | int(data[idx+20])<<16 | int(data[idx+21])<<24
-		idx += 30 + nameLen + extraLen + compSize
-	}
-	return "ysm" // 默认 YSM
+	return importer.ImportFromBase64(fileName, base64Data, importer.ImportOptions{
+		SkipCheck: opts.skipCheck,
+		Overwrite: opts.overwrite,
+	}, func(rtype string) string {
+		dir, _ := a.GetRepoRoot(rtype)
+		return dir
+	}, a.logger.Add)
 }
 
 func (a *App) ImportModelFileTo(fileName, subpath, base64Data string) error {

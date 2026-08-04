@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/types"
 )
 
 // 文件级分支（非 ysm/mmd-skin）：resourcepack 支持 .zip
@@ -138,5 +140,60 @@ func TestPushSingleResource_File(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(customDir, "pack.zip")); err != nil {
 		t.Fatalf("目标文件应存在: %v", err)
+	}
+}
+
+func TestSyncCustomToRepo(t *testing.T) {
+	base := t.TempDir()
+	customDir := filepath.Join(base, "custom")
+	repoDir := filepath.Join(base, "repo")
+	if err := os.MkdirAll(customDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// 新文件：应复制
+	_ = os.WriteFile(filepath.Join(customDir, "new.ysm"), []byte("new"), 0644)
+	// 同名文件（同哈希）：应跳过
+	_ = os.WriteFile(filepath.Join(customDir, "dup.ysm"), []byte("x"), 0644)
+	_ = os.WriteFile(filepath.Join(repoDir, "dup.ysm"), []byte("x"), 0644)
+
+	scanFn := func(dir string) []types.ModelEntry {
+		files, _ := os.ReadDir(dir)
+		var entries []types.ModelEntry
+		for _, f := range files {
+			if f.IsDir() {
+				continue
+			}
+			entries = append(entries, types.ModelEntry{
+				Name: f.Name(),
+				Path: filepath.Join(dir, f.Name()),
+				Hash: "h-" + f.Name(),
+			})
+		}
+		return entries
+	}
+	count, err := SyncCustomToRepo(customDir, repoDir, scanFn,
+		func(name, src, dst string, size int64, status, msg string) {})
+	if err != nil {
+		t.Fatalf("SyncCustomToRepo 失败: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("应复制 1 个（new.ysm），实际 %d", count)
+	}
+	if _, err := os.Stat(filepath.Join(repoDir, "new.ysm")); err != nil {
+		t.Fatalf("new.ysm 应复制到仓库: %v", err)
+	}
+	// dup.ysm 保留仓库原文件（跳过）
+	data, _ := os.ReadFile(filepath.Join(repoDir, "dup.ysm"))
+	if string(data) != "x" {
+		t.Fatalf("dup.ysm 不应被覆盖: %q", string(data))
+	}
+}
+
+func TestSyncCustomToRepo_Empty(t *testing.T) {
+	if _, err := SyncCustomToRepo("", "repo", nil, nil); err == nil {
+		t.Fatal("空参数应报错")
 	}
 }

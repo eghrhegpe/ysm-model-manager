@@ -2,6 +2,7 @@
 package download
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,14 +38,18 @@ func (d *Downloader) httpClient() *http.Client {
 	return &http.Client{Timeout: d.timeout}
 }
 
-// File 从 URL 下载文件到 savePath，支持进度回调。
-func (d *Downloader) File(url, savePath string, onProgress ProgressFn) error {
+// File 从 URL 下载文件到 savePath，支持进度回调。ctx 取消/超时即中断下载。
+func (d *Downloader) File(ctx context.Context, url, savePath string, onProgress ProgressFn) error {
 	if err := os.MkdirAll(filepath.Dir(savePath), 0755); err != nil {
 		return err
 	}
 
 	client := d.httpClient()
-	resp, err := client.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -58,7 +63,14 @@ func (d *Downloader) File(url, savePath string, onProgress ProgressFn) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	ok := false
+	defer func() {
+		out.Close()
+		if !ok {
+			// 下载中断/失败时清理半截文件，避免残留损坏文件
+			os.Remove(savePath)
+		}
+	}()
 
 	total := resp.ContentLength
 	var downloaded int64
@@ -87,20 +99,21 @@ func (d *Downloader) File(url, savePath string, onProgress ProgressFn) error {
 	if total <= 0 {
 		total = downloaded
 	}
+	ok = true
 	if onProgress != nil {
 		onProgress(downloaded, total)
 	}
 	return nil
 }
 
-// FromGitHubAPI 从 GitHub API 下载（设置 Accept 头）。
-func (d *Downloader) FromGitHubAPI(apiURL, savePath string, onProgress ProgressFn) error {
+// FromGitHubAPI 从 GitHub API 下载（设置 Accept 头）。ctx 取消/超时即中断下载。
+func (d *Downloader) FromGitHubAPI(ctx context.Context, apiURL, savePath string, onProgress ProgressFn) error {
 	if err := os.MkdirAll(filepath.Dir(savePath), 0755); err != nil {
 		return err
 	}
 
 	client := d.httpClient()
-	req, err := http.NewRequest("GET", apiURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 	if err != nil {
 		return err
 	}
@@ -120,7 +133,14 @@ func (d *Downloader) FromGitHubAPI(apiURL, savePath string, onProgress ProgressF
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	ok := false
+	defer func() {
+		out.Close()
+		if !ok {
+			// 下载中断/失败时清理半截文件，避免残留损坏文件
+			os.Remove(savePath)
+		}
+	}()
 
 	total := resp.ContentLength
 	var downloaded int64
@@ -149,6 +169,7 @@ func (d *Downloader) FromGitHubAPI(apiURL, savePath string, onProgress ProgressF
 	if total <= 0 {
 		total = downloaded
 	}
+	ok = true
 	if onProgress != nil {
 		onProgress(downloaded, total)
 	}

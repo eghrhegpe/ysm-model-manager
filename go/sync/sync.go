@@ -2,6 +2,7 @@ package sync
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/ysm"
 )
@@ -211,16 +213,18 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 			if err := os.Rename(p, newPath); err == nil {
 				disableCount++
 			} else if isFileLocked(err) {
-				// 文件被其他进程锁定（如 Minecraft），跳过
+				log.Printf("[sync] 禁用 %s 被占用，跳过: %v", p, err)
 			} else {
-				// 其他错误也跳过，不阻塞
+				log.Printf("[sync] 禁用 %s 失败: %v", p, err)
 			}
 		} else if !shouldBeBanned && isCurrentlyBanned {
 			newPath := p[:len(p)-4]
 			if err := os.Rename(p, newPath); err == nil {
 				enableCount++
 			} else if isFileLocked(err) {
-				// 文件被其他进程锁定（如 Minecraft），跳过
+				log.Printf("[sync] 启用 %s 被占用，跳过: %v", p, err)
+			} else {
+				log.Printf("[sync] 启用 %s 失败: %v", p, err)
 			}
 		}
 		return nil
@@ -377,8 +381,15 @@ func isResourcePackFolder(path string) bool {
 func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 	result := types.ResourceSyncResult{}
 
+	// 文件信息：size 用于同名文件的内容差异检测（mtime 因复制会变，不可靠）
+	type fileInfo struct {
+		path  string
+		size  int64
+		isDir bool
+	}
+
 	// 扫描全局目录，收集文件名
-	globalFiles := make(map[string]string) // name → path
+	globalFiles := make(map[string]fileInfo) // name → fileInfo
 	filepath.Walk(globalDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Printf("[sync] Walk 错误 %s: %v", path, err)
@@ -388,7 +399,7 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 			// 资源包文件夹：扫描其本身但不递归
 			if path != globalDir && isResourcePackFolder(path) {
 				name := strings.ToLower(info.Name())
-				globalFiles[name] = path
+				globalFiles[name] = fileInfo{path: path, isDir: true}
 			}
 			return nil
 		}
@@ -397,12 +408,12 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 		}
 		name := strings.ToLower(info.Name())
 		name = strings.TrimSuffix(name, ".disabled")
-		globalFiles[name] = path
+		globalFiles[name] = fileInfo{path: path, size: info.Size()}
 		return nil
 	})
 
 	// 扫描整合包目录
-	instanceFiles := make(map[string]string)
+	instanceFiles := make(map[string]fileInfo)
 	filepath.Walk(instanceDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Printf("[sync] Walk 错误 %s: %v", path, err)
@@ -412,7 +423,7 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 			// 资源包文件夹：扫描其本身但不递归
 			if path != instanceDir && isResourcePackFolder(path) {
 				name := strings.ToLower(info.Name())
-				instanceFiles[name] = path
+				instanceFiles[name] = fileInfo{path: path, isDir: true}
 			}
 			return nil
 		}
@@ -421,22 +432,26 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 		}
 		name := strings.ToLower(info.Name())
 		name = strings.TrimSuffix(name, ".disabled")
-		instanceFiles[name] = path
+		instanceFiles[name] = fileInfo{path: path, size: info.Size()}
 		return nil
 	})
 
-
 	// 找出 synced / missing / extra
-	for name, gPath := range globalFiles {
-		if _, exists := instanceFiles[name]; exists {
-			result.Synced = append(result.Synced, gPath)
+	// 同名文件若大小不同（内容已变化）视为待推送更新，归入 Missing
+	for name, g := range globalFiles {
+		if i, exists := instanceFiles[name]; exists {
+			if !g.isDir && !i.isDir && g.size != i.size {
+				result.Missing = append(result.Missing, g.path)
+			} else {
+				result.Synced = append(result.Synced, g.path)
+			}
 		} else {
-			result.Missing = append(result.Missing, gPath)
+			result.Missing = append(result.Missing, g.path)
 		}
 	}
-	for name, iPath := range instanceFiles {
+	for name, i := range instanceFiles {
 		if _, exists := globalFiles[name]; !exists {
-			result.Extra = append(result.Extra, iPath)
+			result.Extra = append(result.Extra, i.path)
 		}
 	}
 
@@ -576,8 +591,12 @@ func isFileLocked(err error) bool {
 	if err == nil {
 		return false
 	}
-	// 检查多种错误类型：Windows 上 os.Rename 可能返回 *os.LinkError 或 *os.PathError
-	// 统一检查嵌套错误的消息内容
+	// errno 优先：Windows ERROR_SHARING_VIOLATION(32) / Unix EBUSY(16)
+	// 两端错误码空间互不重叠，rename 不会命中对方语义，跨平台无副作用
+	if errors.Is(err, syscall.Errno(32)) || errors.Is(err, syscall.Errno(16)) {
+		return true
+	}
+	// 兜底：检查嵌套错误的消息内容（Windows 上 os.Rename 可能返回 LinkError/PathError）
 	getMsg := func(e error) string {
 		if e == nil {
 			return ""

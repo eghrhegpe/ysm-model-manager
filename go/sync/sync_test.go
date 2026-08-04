@@ -1,9 +1,12 @@
 package sync
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"ysm-model-manager/go/types"
@@ -303,5 +306,60 @@ func TestCompareGlobalInstanceHashes_Empty(t *testing.T) {
 	results := CompareGlobalInstanceHashes("", "/global", "subdir", "resourcepack", nil, nil, nil)
 	if len(results) != 0 {
 		t.Errorf("expected 0 for empty mcRoot, got %d", len(results))
+	}
+}
+
+// TestSyncResources_SizeMismatch 同名文件大小不同（内容已变化）应归入 Missing 待推送更新
+func TestSyncResources_SizeMismatch(t *testing.T) {
+	globalDir := t.TempDir()
+	instDir := t.TempDir()
+
+	// 同名异 size → 内容已变化，应待推送（Missing）
+	os.WriteFile(filepath.Join(globalDir, "pack.zip"), bytes.Repeat([]byte("a"), 100), 0644)
+	os.WriteFile(filepath.Join(instDir, "pack.zip"), bytes.Repeat([]byte("b"), 50), 0644)
+	// 同名同 size → Synced
+	os.WriteFile(filepath.Join(globalDir, "same.zip"), bytes.Repeat([]byte("x"), 30), 0644)
+	os.WriteFile(filepath.Join(instDir, "same.zip"), bytes.Repeat([]byte("y"), 30), 0644)
+	// 实例独有 → Extra
+	os.WriteFile(filepath.Join(instDir, "only-instance.zip"), []byte("z"), 10)
+
+	result := SyncResources(globalDir, instDir)
+
+	found := func(list []string, name string) bool {
+		for _, p := range list {
+			if filepath.Base(p) == name {
+				return true
+			}
+		}
+		return false
+	}
+
+	if !found(result.Missing, "pack.zip") {
+		t.Errorf("size 变化的同名文件应归入 Missing, got Missing=%v", result.Missing)
+	}
+	if !found(result.Synced, "same.zip") {
+		t.Errorf("同 size 同名文件应 Synced, got Synced=%v", result.Synced)
+	}
+	if !found(result.Extra, "only-instance.zip") {
+		t.Errorf("实例独有文件应 Extra, got Extra=%v", result.Extra)
+	}
+}
+
+// TestIsFileLocked errno 判定优先，文本匹配兜底，无关错误与 nil 不应误判
+func TestIsFileLocked(t *testing.T) {
+	if !isFileLocked(syscall.Errno(32)) {
+		t.Error("Errno(32) 应判定为锁定（Windows ERROR_SHARING_VIOLATION）")
+	}
+	if !isFileLocked(fmt.Errorf("sharing violation")) {
+		t.Error("文本匹配兜底应识别 sharing violation")
+	}
+	if !isFileLocked(fmt.Errorf("Access is denied")) {
+		t.Error("文本匹配兜底应识别 access 错误")
+	}
+	if isFileLocked(fmt.Errorf("no such file")) {
+		t.Error("无关错误不应判定为锁定")
+	}
+	if isFileLocked(nil) {
+		t.Error("nil 不应判定为锁定")
 	}
 }

@@ -48,6 +48,8 @@ export class AppSyncManager extends HTMLElement {
   private _statusFilter: string = "all";
   private _typeConfig: RTypeConfig[] = [];
   private _loading = false;
+  /** _init 代际计数：instance 快速切换时丢弃过期加载的渲染与订阅，防并发覆盖 */
+  private _gen = 0;
   private _unsubs: Array<() => void> = [];
 
   connectedCallback(): void {
@@ -73,6 +75,7 @@ export class AppSyncManager extends HTMLElement {
   }
 
   async _init(): Promise<void> {
+    const gen = ++this._gen;
     this._loading = true;
     this.innerHTML = containerHTML();
     const listEl = this.querySelector(".sm-list");
@@ -80,6 +83,9 @@ export class AppSyncManager extends HTMLElement {
 
     await this._loadTypeConfig();
     await this._loadData();
+
+    // 期间有更新的 _init 启动（instance 切换）：丢弃本次过期加载的渲染与订阅
+    if (gen !== this._gen) return;
 
     this._loading = false;
     try {

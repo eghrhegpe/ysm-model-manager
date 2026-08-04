@@ -345,7 +345,7 @@ func InstallUpdate(zipPath string) error {
 	return nil
 }
 
-// extractZipFile 解压 zip 中的单个文件到目标路径（限制解压大小 200MB）
+// extractZipFile 解压 zip 中的单个文件到目标路径（限制解压大小 200MB，超限报错不静默截断）
 func extractZipFile(f *zip.File, dest string) error {
 	rc, err := f.Open()
 	if err != nil {
@@ -357,10 +357,30 @@ func extractZipFile(f *zip.File, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	ok := false
+	defer func() {
+		out.Close()
+		if !ok {
+			// 解压失败/超限时清理半成品（必须先 Close 再 Remove——Windows 上删除打开的文件会失败）
+			os.Remove(dest)
+		}
+	}()
 
-	_, err = io.Copy(out, io.LimitReader(rc, 200<<20))
-	return err
+	const maxExtract = 200 << 20
+	n, err := io.Copy(out, io.LimitReader(rc, maxExtract))
+	if err != nil {
+		return err
+	}
+	// 截断检测：读到上限后再读 1 字节，仍有数据说明文件超限被截断——报错并清理目标，
+	// 防止损坏的 exe/配置文件被静默装盘（与 Download 截断检测同款语义）
+	if n >= maxExtract {
+		one := make([]byte, 1)
+		if extra, _ := rc.Read(one); extra > 0 {
+			return fmt.Errorf("zip 内文件 %s 超过 %d 字节上限", f.Name, maxExtract)
+		}
+	}
+	ok = true
+	return nil
 }
 
 // ===== semver 比较 =====

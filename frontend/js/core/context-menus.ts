@@ -83,7 +83,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
     getApp()
       .then((App) => App.OpenInstanceFolder(ctx.path || "", ctx.rtype || ""))
-      .catch(() => {});
+      .catch(() => toast("❌ 打开文件夹失败", 3000, "error"));
   },
   "instance.export-list": (ctx) =>
     bus.emit("instance:export-list", {

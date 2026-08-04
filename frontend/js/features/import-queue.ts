@@ -173,7 +173,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     parts.push(c || "?");
     if (v) parts.push("-" + v);
     if (d) parts.push(" (" + d + ")");
-    const ext = currentFileName?.split(".").pop() || "ysm";
+    const ext = currentFileName?.split(".").pop() || RESOURCE_TYPES.YSM;
     const preview = parts.join("") + "." + ext;
     (root.getElementById("dl-preview") as HTMLElement).textContent = preview;
 
@@ -371,7 +371,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     const c = (root.getElementById("dl-chara") as HTMLInputElement).value.trim();
     const v = (root.getElementById("dl-variant") as HTMLInputElement).value.trim();
     const d = (root.getElementById("dl-date") as HTMLInputElement).value.trim();
-    const ext = currentFileName?.split(".").pop() || "ysm";
+    const ext = currentFileName?.split(".").pop() || RESOURCE_TYPES.YSM;
 
     let newName: string;
     if (c) {

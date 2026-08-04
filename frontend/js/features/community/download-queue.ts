@@ -608,11 +608,9 @@ export function createDownloadQueue({
     if (STATE.status === "downloading") return;
     if (!tasks.length) return;
 
-    const { LoadAppConfig, GetRepoRoot } = await import(
+    const { GetRepoRoot } = await import(
       "../../../bindings/ysm-model-manager/internal/app/app.js"
     );
-    const cfg = await LoadAppConfig();
-    void cfg;
     const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
     if (!repoRoot) {
       bus.emit("toast:show", {

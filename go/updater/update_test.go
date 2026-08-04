@@ -2,10 +2,12 @@ package updater
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -216,5 +218,97 @@ func TestDownload_RejectsOversized(t *testing.T) {
 
 	if _, err := Download(server.URL, ""); err == nil {
 		t.Fatal("Content-Length 超限应返回错误")
+	}
+}
+
+// TestCheck_FindsNewer 集成测试：httptest 模拟 GitHub API，验证新版本发现、日志聚合与 hash 解析
+func TestCheck_FindsNewer(t *testing.T) {
+	pattern := assetPattern()
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/sums") {
+			fmt.Fprintf(w, "abc123def456  %s\n", pattern)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]Release{
+			{TagName: "v1.2.0", Body: "版本二说明", Draft: false, Prerelease: false,
+				Assets: []ReleaseAsset{
+					{Name: pattern, BrowserDownloadURL: server.URL + "/dl/1.2.0"},
+					{Name: "SHA256SUMS", BrowserDownloadURL: server.URL + "/sums"},
+				}},
+			{TagName: "v1.1.0", Body: "版本一说明", Draft: false, Prerelease: false, Assets: nil},
+		})
+	}))
+	defer server.Close()
+
+	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
+	if err != nil {
+		t.Fatalf("CheckWithClient() = %v", err)
+	}
+	if !info.Available {
+		t.Fatal("应检测到新版本")
+	}
+	if info.Latest != "v1.2.0" {
+		t.Errorf("Latest = %q, 期望 v1.2.0", info.Latest)
+	}
+	if !strings.Contains(info.ReleaseNotes, "版本二说明") || !strings.Contains(info.ReleaseNotes, "版本一说明") {
+		t.Errorf("应聚合所有新版本日志, got %q", info.ReleaseNotes)
+	}
+	if info.ExpectedHash != "abc123def456" {
+		t.Errorf("ExpectedHash = %q, 期望 abc123def456", info.ExpectedHash)
+	}
+}
+
+func TestCheck_NoNewer(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]Release{
+			{TagName: "v0.9.0", Body: "旧版本", Draft: false, Prerelease: false, Assets: nil},
+		})
+	}))
+	defer server.Close()
+
+	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
+	if err != nil {
+		t.Fatalf("CheckWithClient() = %v", err)
+	}
+	if info.Available {
+		t.Fatal("无新版本时不应 available")
+	}
+}
+
+func TestCheck_SkipsPrerelease(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]Release{
+			{TagName: "v1.5.0", Body: "预发布", Draft: false, Prerelease: true, Assets: nil},
+			{TagName: "v1.4.0", Body: "草稿", Draft: true, Prerelease: false, Assets: nil},
+		})
+	}))
+	defer server.Close()
+
+	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
+	if err != nil {
+		t.Fatalf("CheckWithClient() = %v", err)
+	}
+	if info.Available {
+		t.Fatal("prerelease/draft 不应触发更新")
+	}
+}
+
+func TestCheck_APIError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte(`{"message":"API rate limit exceeded"}`))
+	}))
+	defer server.Close()
+
+	_, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
+	if err == nil {
+		t.Fatal("API 错误应返回错误")
+	}
+	if !strings.Contains(err.Error(), "rate limit") {
+		t.Errorf("错误信息应包含 GitHub message, got %v", err)
 	}
 }

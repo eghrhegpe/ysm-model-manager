@@ -72,12 +72,15 @@ func assetPattern() string {
 
 // Check 检查 GitHub 是否有新版本（聚合所有未读版本的更新日志）
 func Check(current string) (*UpdateInfo, error) {
+	api := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases?per_page=10", repoOwner, repoName)
+	return CheckWithClient(&http.Client{Timeout: 10 * time.Second}, api, current)
+}
+
+// CheckWithClient 可注入 client 与 API URL 的测试变体（Check 的内部实现）
+func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, error) {
 	cur := normalize(current)
 
-	// 取最近 10 个 release，聚合比当前新的所有版本日志
-	api := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases?per_page=10", repoOwner, repoName)
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("GET", api, nil)
+	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return nil, err
 	}

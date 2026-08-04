@@ -48,9 +48,9 @@ npm run dev    # 本地预览开发
 | `docs/adr/` | 新决策走 `node scripts/new-adr.mjs "标题"`（叫号 + 登记表占号 + 自动 adr-check）| `gen-docs-index.mjs` |
 | `docs/knowledge/` | 知识卡（ADR-019 体系）| `new-knowledge-card.mjs` |
 | `docs/guide/` | 用户指南 26 篇（ADR-018 体系）| `gen-docs-index.mjs --guide` |
-| `docs/releases/` | 发版说明（流程见 `docs/releases/README.md` SOP）| `release-notes-gen.mjs` |
+| `docs/releases/` | 发版说明（流程见 `docs/releases/` SOP）| `release-notes-gen.mjs` |
 | `docs/review-report.md` | 审计单元追加（AGENTS.md 五步法）| 手写 |
-| `docs/MAINTENANCE.md` | **本手册**（网站内容之一，VitePress 自动发布）| 手写 |
+| `docs/maintenance.md` | **本手册**（网站内容之一，VitePress 自动发布）| 手写 |
 
 ### 改文档后的检查（AGENTS.md「改完即验」映射）
 
@@ -77,5 +77,5 @@ node scripts/check-deadcode-baseline.mjs  # 死代码/重复代码门禁
 
 ## 四、本手册维护
 
-- 本手册（`docs/MAINTENANCE.md`）是网站内容之一（VitePress 自动发布），也是 AI 的维护入口。
+- 本手册（`docs/maintenance.md`）是网站内容之一（VitePress 自动发布），也是 AI 的维护入口。
 - 新增维护流程 / 网站配置变更时：更新本手册，并同步 AGENTS.md 文档地图（如有入口）。

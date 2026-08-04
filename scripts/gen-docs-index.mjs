@@ -7,7 +7,7 @@
  *   - adr      → docs/adr/README.md 的 adr-registry（登记表）+ adr-stats（状态统计）
  *   - adr      → docs/adr/index.md 的规范索引（状态分组 + 锚点跳转 + 相对链接，整文件重写）
  *   - guide    → docs/guide/index.md 的 guide-index（用户指南表格，从各篇 frontmatter 生成）
- *   - releases → docs/releases/README.md 的 releases-index（最近版本 + 版本全览）
+ *   - releases → docs/releases/index.md 的 releases-index（最近版本 + 版本全览）
  *   - knowledge→ 委托 gen-knowledge-index.mjs --check（不重写，避免双生成器打架）
  * 单一事实来源 = ADR 文件首部 / guide 各篇 frontmatter；状态映射与 gen-status-index.mjs 保持一致。
  *
@@ -29,7 +29,7 @@ const ADR_DIR = path.join(ROOT, 'docs', 'adr');
 const ADR_REG_FILE = path.join(ADR_DIR, 'README.md');
 const ADR_INDEX_FILE = path.join(ADR_DIR, 'index.md');
 const RELEASE_DIR = path.join(ROOT, 'docs', 'releases');
-const RELEASE_FILE = path.join(RELEASE_DIR, 'README.md');
+const RELEASE_FILE = path.join(RELEASE_DIR, 'index.md');
 const GUIDE_DIR = path.join(ROOT, 'docs', 'guide');
 const GUIDE_FILE = path.join(GUIDE_DIR, 'index.md');
 

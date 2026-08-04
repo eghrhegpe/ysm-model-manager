@@ -300,7 +300,7 @@ wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 | [`docs/archive/TASK_PLAN.md`](docs/archive/TASK_PLAN.md)                 | **AI 任务计划**（已归档）           |
 | [`docs/archive/SESSION_HANDOFF.md`](docs/archive/SESSION_HANDOFF.md)     | **会话交接日志**（已归档）       |
 | [`docs/archive/3D/3d-rendering-report.md`](docs/archive/3D/3d-rendering-report.md)   | **3D 渲染引擎开发报告**（已归档） |
-| [`docs/releases/`](docs/releases/)                         | 各版本发版说明（索引见 releases/README.md） |
+| [`docs/releases/`](docs/releases/)                         | 各版本发版说明（索引见 docs/releases/） |
 | [`docs/index.md`](docs/index.md)         | **主站介绍**（功能一览 + 站点地图 + 界面预览）    |
 | [`docs/knowledge/index.md`](docs/knowledge/index.md)                 | AI 知识卡索引（后端绑定 + 事件总线 + 组件清单，自动生成） |
 | [`docs/adr/README.md`](docs/adr/README.md) | **ADR 决策记录登记表**（架构决策追踪）    |

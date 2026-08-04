@@ -23,7 +23,7 @@
 | 查当前决策 + 坑点 | `grep docs/adr/` + `docs/archive/bug-chronicle.md`（先 grep 再读，禁止全量）；按状态浏览用 `docs/adr/index.md`（规范索引，自动生成） |
 | 查 ADR 登记一致性 / 占号 | `node scripts/adr-check.mjs`（撞号/漏登/幽灵/跳号） |
 | 查 AI 高频犯错区（反哺陷阱清单） | `node scripts/ai-mistake-tracker.mjs`（fix 分类统计 / 连续修复链 / 文件热力图 / 规则违反扫描） |
-|发版流程 | 见 `docs/releases/README.md`|
+|发版流程 | 见 `docs/releases/`|
 | 查项目状态（历史） | `docs/archive/PROJECT_STATUS.md`（已冻结只读；实时状态以 ADR 登记表 + git 为准） |
 | 查某模块「现在长啥样、去哪找」 | `docs/knowledge/`（先读 `routes.md` 路由表 + `index.md` 索引，grep 卡正文锁定符号，按 `source_files` 跳源码） |
 | 查/更新函数索引 | `node scripts/funcmap.mjs -o funcmap.md`（按模块分组的 Go/JS/TS 导出符号表，符号带 文件:行） |
@@ -39,8 +39,8 @@
 | 查事件注册位置 | 说 "event-audit"（EventsOn/bus.on） |
 | 查函数签名 | `node scripts/funcmap.mjs` 或 grep |
 | 写大语言模型小说 | `docs/novel/AGENTS.md`（**唯一必读**：上篇·故事圣经 + 下篇·区域归属决策链路）+ `index.md`（自动索引，勿手改）；写完必跑 `node scripts/build-novel-index.mjs`，区域文件夹内禁放 README |
-| 完整发版、更新流程 | `docs/releases/README.md` + `cmd/build-release.ps1` |
-| 项目维护 / 网站构建 | `docs/MAINTENANCE.md`（维护手册：VitePress 文档网站构建发布 + 文档体系维护 + 治理检查）|
+| 完整发版、更新流程 | `docs/releases/` + `cmd/build-release.ps1` |
+| 项目维护 / 网站构建 | `docs/maintenance.md`（维护手册：VitePress 文档网站构建发布 + 文档体系维护 + 治理检查）|
 | 跑全部检查 | `scripts/README.md`（检查命令全表）或 `node scripts/doctor.mjs` |
 
 ## 知识库检索协议

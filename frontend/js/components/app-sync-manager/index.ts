@@ -7,6 +7,7 @@ import { dbg } from "../../utils/debug.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { friendlyError } from "../../utils/errors.ts";
 import { esc } from "../../utils/dom.ts";
+import { getApp } from "../../wails/app.ts";
 import {
   containerHTML,
   itemHTML,
@@ -137,7 +138,7 @@ export class AppSyncManager extends HTMLElement {
 
   async _loadTypeConfig(): Promise<void> {
     const { LoadResourceTypes } =
-      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+      await getApp();
     try {
       const raw = await LoadResourceTypes();
       const parsed = JSON.parse(raw) as { resourceTypes?: RTypeConfig[] };
@@ -149,7 +150,7 @@ export class AppSyncManager extends HTMLElement {
 
   async _loadData(): Promise<void> {
     const { GetInstanceSyncStatus } =
-      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+      await getApp();
     try {
       const json = await GetInstanceSyncStatus(this._instance);
       this._allItems = (JSON.parse(json) as SyncItem[]) || [];
@@ -362,7 +363,7 @@ export class AppSyncManager extends HTMLElement {
     this._singleBusy = true;
     try {
       const { PushSingleResourceToInstance } =
-        await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        await getApp();
       await PushSingleResourceToInstance(
         this._selectedType,
         this._instance,
@@ -389,7 +390,7 @@ export class AppSyncManager extends HTMLElement {
     const rtype = this._selectedType;
     try {
       const { PullSingleResourceFromInstance } =
-        await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        await getApp();
       await PullSingleResourceFromInstance(rtype, path, this._instance);
       bus.emit("toast:show", { msg: "✅ 已拉取", duration: 2000 });
       await this._loadData();

@@ -56,6 +56,21 @@ vi.mock("../dialogs/modal.ts", () => ({
 }));
 vi.mock("../dialogs/rename.ts", () => ({ showRenameDialog: showRenameDialogMock }));
 vi.mock("../dialogs/tag-editor.ts", () => ({ modalTagEditor: modalTagEditorMock }));
+// handler 统一走 getApp()（ADR-012）：mock getApp 返回 bindings mock 对象
+vi.mock("../wails/app.ts", () => ({
+  getApp: vi.fn().mockResolvedValue({
+    OpenInstanceFolder: openFolderMock,
+    GetRepoRoot: GetRepoRootMock,
+    MoveModelFile: MoveModelFileMock,
+    CopyModelFile: CopyModelFileMock,
+    RenameFile: RenameFileMock,
+    MoveToRecycle: MoveToRecycleMock,
+    LoadAppConfig: LoadAppConfigMock,
+    ListVersionInstances: ListVersionInstancesMock,
+    InstallModelTo: InstallModelToMock,
+    RevealInExplorer: RevealInExplorerMock,
+  }),
+}));
 vi.mock("../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   GetRepoRoot: GetRepoRootMock,
   MoveModelFile: MoveModelFileMock,

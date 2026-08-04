@@ -8,6 +8,7 @@ import {
   cacheSet,
   cacheSetEvictHandler,
 } from "../../utils/preview-cache.ts";
+import { getApp } from "../../wails/app.ts";
 import { type PreviewCtx, type DecodedYsm } from "./preview-utils.ts";
 import { decodeYsmViaWasm } from "./preview-wasm.ts";
 import { showModelDetail, showResourcePack, showShaderPack } from "./preview-detail.ts";
@@ -102,7 +103,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
     }
     try {
       const { FindPreviewImage, ExtractPreviewTexture } =
-        await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        await getApp();
       const loose = await FindPreviewImage(modelPath);
       if (loose) {
         cacheSet(modelPath, { texture: loose, _decodedBy: "" });
@@ -140,7 +141,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
 
   private async _preloadTypeRegistry(): Promise<void> {
     try {
-      const { LoadResourceTypes } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+      const { LoadResourceTypes } = await getApp();
       const raw = await LoadResourceTypes();
       const reg = JSON.parse(raw) as { resourceTypes?: Array<{ id: string; name?: string; icon?: string }> };
       this._typeCache = reg.resourceTypes || [];
@@ -151,7 +152,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
     // 检测文件类型
     let rtype = "";
     try {
-      const { DetectResourceType } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+      const { DetectResourceType } = await getApp();
       rtype = (await DetectResourceType(path)) || "";
     } catch (_) {}
     if (rtype === RESOURCE_TYPES.PACK) {
@@ -188,7 +189,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   private async _showPackInfo(dirPath: string): Promise<void> {
     this._root.innerHTML = `<div class="content" id="preview-content"><h3>📦 整合包</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
     try {
-      const { GetPackInfo } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+      const { GetPackInfo } = await getApp();
       const pack = await GetPackInfo(dirPath);
       if (!pack || (!pack.name && !pack.description)) {
         const folderName = dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;

@@ -7,6 +7,7 @@ import { openFullPreview } from "./preview-zoom.ts";
 import type { BedrockGeometry } from "./utils.ts";
 import type { BoneSelectInfo } from "../../utils/model3d.ts";
 import { esc } from "../../utils/dom.ts";
+import { getApp } from "../../wails/app.ts";
 
 // 2D 拖拽的 window 监听器槽位：loadModel2D 每次渲染模型都会绑定，
 // 先移除上一轮处理器再绑定，防止 window 级监听器累积泄漏
@@ -342,7 +343,7 @@ export async function loadModel2D(
           }
         };
         const saveShotInner = async (key: string): Promise<void> => {
-          const { SaveScreenshotFile } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          const { SaveScreenshotFile } = await getApp();
           const p = (model._modelPath || "screenshot").replace(/\\/g, "/");
           const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ".";
           const base = p.split("/").pop()?.replace(/\.\w+$/, "") || "";

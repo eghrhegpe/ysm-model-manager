@@ -1,5 +1,6 @@
 import { renderFormattedText } from "../../utils/mc-format.ts";
 import { esc } from "../../utils/dom.ts";
+import { getApp } from "../../wails/app.ts";
 import type { PreviewCtx } from "./preview-utils.ts";
 
 function fmtTime(ms: number): string {
@@ -129,7 +130,7 @@ export async function showLitematic(
   const label = isSch ? "schematic" : isNbt ? "nbt" : "litematic";
 
   try {
-    const { ReadLitematicMeta, ReadNbtStructure, ReadSchematic } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    const { ReadLitematicMeta, ReadNbtStructure, ReadSchematic } = await getApp();
     let meta: LitematicMeta;
     if (isNbt) {
       meta = JSON.parse((await ReadNbtStructure(path)) || "{}") as LitematicMeta;

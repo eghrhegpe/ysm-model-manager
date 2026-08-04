@@ -10,6 +10,7 @@ import { modalAdvFilter, type AdvFilterValue } from "../../dialogs/adv-filter.ts
 import { updateSelectCount } from "./events.ts";
 import { dbg } from "../../utils/debug.ts";
 import { setRenderMode, type RenderMode } from "./render.ts";
+import { getApp } from "../../wails/app.ts";
 import type { AppTree } from "./index.ts";
 import type { AuthorInfo } from "./authors.ts";
 
@@ -78,7 +79,7 @@ async function openAdvFilterDialog($: $Id, vm: AppTree): Promise<void> {
     return;
   }
   const { SearchModels, ListByTag, GetRepoRoot } =
-    await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    await getApp();
 
   // 1. 按标签筛选（如果有）
   let tagPaths: Set<string> | null = null;
@@ -230,7 +231,7 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
   // 批量导出骨骼名
   $("repo-export")?.addEventListener("click", async () => {
     const { ExportBoneStructures, GetRepoRoot } =
-      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+      await getApp();
     const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
     if (!repoRoot) {
       bus.emit("toast:show", {
@@ -353,12 +354,12 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
       const action = (item as HTMLElement).dataset.more;
       if (action === "open-folder") {
         if (!vm._repoRoot) return;
-        const { OpenFolder } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        const { OpenFolder } = await getApp();
         await OpenFolder(vm._repoRoot);
       } else if (action === "import-file") {
         const rtype = vm._rootAttr || "ysm";
         const { SelectImportFile, ImportByType } =
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          await getApp();
         // 列出所有支持的扩展名（后端 SelectImportFile 用 | 解析 "显示名|*.ext1;*.ext2"）
         const exts = getExts(rtype);
         const extFilter = exts.length
@@ -388,7 +389,7 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
       } else if (action === "import-dir") {
         const rtype = vm._rootAttr || "ysm";
         const { SelectDirectory, ImportByType } =
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          await getApp();
         const dirPath = await SelectDirectory();
         if (!dirPath) return;
         // 后端 ImportByType → SimpleCopyImporter / DirectoryCopyImporter 都判 info.IsDir()，目录/文件都支持
@@ -419,7 +420,7 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
         btn.disabled = true;
         try {
           const { GenerateRepoIndex, GetRepoRoot } =
-            await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+            await getApp();
           const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
           if (!repoRoot) {
             bus.emit("toast:show", {

@@ -12,6 +12,7 @@ import { loadAuthors, type AuthorInfo } from "./authors.ts";
 import { bus } from "../../bus.ts";
 import { selectState } from "./data.ts";
 import { dbg } from "../../utils/debug.ts";
+import { getApp } from "../../wails/app.ts";
 
 // 模块级待处理搜索词：切页先存、组件挂载后消费（替代 window._pendingTreeSearch，零 window 全局）
 let _pendingTreeSearch = "";
@@ -316,7 +317,7 @@ export class AppTree extends HTMLElement {
       let ok = 0,
         fail = 0;
       const { DeleteModelDir, DeleteResourcePack } =
-        await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        await getApp();
       for (const p of paths) {
         try {
           if (isDirModel) await DeleteModelDir(p);

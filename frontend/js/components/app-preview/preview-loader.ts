@@ -1,6 +1,7 @@
 // ===== 模型数据加载（唯一入口）=====
 // 供给 preview-skeleton.ts 和 screenshot-renderer.ts 使用
 import { cacheGet, cacheSet } from "../../utils/preview-cache.ts";
+import { getApp } from "../../wails/app.ts";
 import type { PreviewCtx } from "./preview-utils.ts";
 import type { BedrockGeometry } from "./utils.ts";
 
@@ -46,7 +47,7 @@ export async function loadModelData(
   // 非 YSM/JSON 或 WASM 失败/空骨骼 → 走 Go
   if (!model?.bones?.length) {
     const { AnalyzeBedrockModel } =
-      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+      await getApp();
     model = (await AnalyzeBedrockModel(modelPath)) as BedrockGeometry | null;
 
     // .json 解压目录：用 WASM 解析出的 authors 填补（Go 不返回此字段）

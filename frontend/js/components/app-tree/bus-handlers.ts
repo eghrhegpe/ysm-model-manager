@@ -27,9 +27,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
         const dir = await SelectDirectory();
         if (!dir) return;
         // 透传用户已保存的 linkMode，避免硬编码 "copy" 冲掉硬链接模式
-        const { LoadAppConfig } = await import(
-          "../../../bindings/ysm-model-manager/internal/app/app.js"
-        );
+        const { LoadAppConfig } = await getApp();
         const cfg = await LoadAppConfig().catch(() => null);
         const theme = localStorage.getItem("theme") || "dark";
         await SaveAppConfig(dir, "", "", cfg?.linkMode || "copy", theme);
@@ -97,7 +95,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       if (!name) return;
       try {
         const { RenameDir, GetRepoRoot } =
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          await getApp();
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         await RenameDir(absDir, name.trim());
@@ -125,7 +123,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       if (!name) return;
       try {
         const { CreateDir, GetRepoRoot } =
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          await getApp();
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const absDir = repoRoot
           ? repoRoot + "/" + dir + "/" + name.trim()
@@ -156,7 +154,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       try {
         // 加载仓库根目录 → 拼接绝对路径
         const { ListAllFilePaths, MoveToRecycle, RemoveDir, GetRepoRoot } =
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          await getApp();
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const allFiles = await ListAllFilePaths(absDir);
@@ -202,7 +200,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
     bus.on("dir:batch-rename", async ({ dir }) => {
       try {
         const { ScanModelEntries, GetRepoRoot } =
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          await getApp();
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const entries = (await ScanModelEntries(absDir)) || [];

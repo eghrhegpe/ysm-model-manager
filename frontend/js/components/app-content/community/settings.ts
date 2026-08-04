@@ -4,6 +4,7 @@ import { initVersionUpdater } from "../../../features/version-updater.ts";
 import { friendlyError } from "../../../utils/errors.ts";
 import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/resource-registry.ts";
 import { esc } from "../../../utils/dom.ts";
+import { getApp } from "../../../wails/app.ts";
 
 /**
  * 初始化设置页所有事件绑定
@@ -16,7 +17,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     SelectDirectory,
     GetMinecraftPaths,
     SetLinkMode,
-  } = await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
+  } = await getApp();
   const cfg = await LoadAppConfig();
   const mcPath = cfg.mcRoot || "";
   const linkMode = cfg.linkMode || "copy";
@@ -175,7 +176,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         if (!dir) return;
         try {
           const { SetResourceRoot } =
-            await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
+            await getApp();
           await SetResourceRoot(rtype, dir);
           const entry = advancedTypes.find((t) => t.rtype === rtype);
           if (entry && entry.cfgKey) cfgAny[entry.cfgKey] = dir;
@@ -202,7 +203,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         const rtype = (btn as HTMLElement).dataset.rtype || "";
         try {
           const { ResetResourceRoot } =
-            await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
+            await getApp();
           await ResetResourceRoot(rtype);
           const entry = advancedTypes.find((t) => t.rtype === rtype);
           if (entry && entry.cfgKey) cfgAny[entry.cfgKey] = "";
@@ -487,7 +488,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     mirrorSelect.addEventListener("change", async () => {
       const val = mirrorSelect.value;
       const { SetDownloadMirror } =
-        await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
+        await getApp();
       await SetDownloadMirror(val);
       bus.emit("toast:show", {
         msg:
@@ -524,7 +525,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         LoadAppConfig,
         ListVersionInstances,
         RelinkAllInstanceResources,
-      } = await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
+      } = await getApp();
       const cfg2 = await LoadAppConfig();
       const mcRoot = cfg2.mcRoot || "";
       if (!mcRoot) return;
@@ -588,7 +589,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   const showVersion = async (): Promise<void> => {
     try {
       const { CurrentVersion } =
-        await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
+        await getApp();
       const ver = await CurrentVersion();
       const el = root.getElementById("set-version");
       if (el) el.textContent = ver;
@@ -603,7 +604,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   // 打开发布页
   root.getElementById("set-releases")?.addEventListener("click", () => {
-    import("../../../../bindings/ysm-model-manager/internal/app/app.js").then(({ OpenInBrowser }) =>
+    getApp().then(({ OpenInBrowser }) =>
       OpenInBrowser("https://github.com/eghrhegpe/ysm-model-manager/releases"),
     );
   });

@@ -9,7 +9,6 @@
 | 读目录 | [index.md](index.md) | **全量章节索引**（自动生成，勿手改） |
 | 查世界观 / 角色 / 冲突 | [SKELETON.md](SKELETON.md) | 三幕结构、技术设定、角色表 |
 | 续写前必读 | [AGENTS.md](AGENTS.md) | 目录规范、决策链路、禁则 |
-| 早期叙事（历史稿） | [development-saga.md](development-saga.md) | 事件驱动演义史 |
 
 ---
 

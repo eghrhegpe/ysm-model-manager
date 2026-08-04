@@ -5,7 +5,8 @@ import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
 import { renderTree, updateStat, getRenderMode, setRenderMode, type RenderMode, type TreeRow } from "./render.ts";
 import { bindTreeEvents } from "./events.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
-import { loadEntries, type TreeEntry } from "./loader.ts";
+import { get } from "../../services/registry.ts";
+import type { loadEntries, TreeEntry } from "./loader.ts";
 import { bindBusEvents } from "./bus-handlers.ts";
 import { loadAuthors, type AuthorInfo } from "./authors.ts";
 import { bus } from "../../bus.ts";
@@ -58,7 +59,11 @@ export class AppTree extends HTMLElement {
   _unsubs: Array<() => void> = [];
   /** 批量启用/禁用进行中（防连点菜单重叠循环二次 Toggle 把状态打回原形） */
   _batchBusy = false;
+  /** 单文件开关进行中（防连点翻转状态） */
+  _toggleBusy = false;
   private _keydownHandler: EventListener | null = null;
+  /** 批量删除进行中（防连点 Delete 二次触发） */
+  private _deleting = false;
   /** 已完成 connectedCallback 初始化（用于区分首次挂载与后续属性变更） */
   private _ready = false;
 
@@ -187,7 +192,7 @@ export class AppTree extends HTMLElement {
   async _load(): Promise<void> {
     try {
       const rtype = this._rootAttr || this._typeFilter;
-      const r = await loadEntries(rtype);
+      const r = await get<typeof loadEntries>("loadEntries")(rtype);
       if (r && r.entries) {
         this._repoRoot = r.repoRoot;
         this._entries = r.entries;
@@ -299,28 +304,34 @@ export class AppTree extends HTMLElement {
   }
 
   async _deleteSelected(paths: string[], isDirModel: boolean): Promise<void> {
-    let ok = 0,
-      fail = 0;
-    const { DeleteModelDir, DeleteResourcePack } =
-      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-    for (const p of paths) {
-      try {
-        if (isDirModel) await DeleteModelDir(p);
-        else await DeleteResourcePack(p);
-        ok++;
-      } catch {
-        fail++;
+    if (this._deleting) return; // 并发守卫：连点 Delete 只执行第一次
+    this._deleting = true;
+    try {
+      let ok = 0,
+        fail = 0;
+      const { DeleteModelDir, DeleteResourcePack } =
+        await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+      for (const p of paths) {
+        try {
+          if (isDirModel) await DeleteModelDir(p);
+          else await DeleteResourcePack(p);
+          ok++;
+        } catch {
+          fail++;
+        }
       }
+      selectState.keys.clear();
+      selectState.lastKey = null;
+      await this._load();
+      this._renderTree();
+      bus.emit("toast:show", {
+        msg: "✅ 已删除 " + ok + " 个" + (fail ? "，失败 " + fail : ""),
+        duration: 3000,
+        type: "success",
+      });
+    } finally {
+      this._deleting = false;
     }
-    selectState.keys.clear();
-    selectState.lastKey = null;
-    await this._load();
-    this._renderTree();
-    bus.emit("toast:show", {
-      msg: "✅ 已删除 " + ok + " 个" + (fail ? "，失败 " + fail : ""),
-      duration: 3000,
-      type: "success",
-    });
   }
 }
 

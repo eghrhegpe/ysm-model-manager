@@ -8,7 +8,8 @@ import {
   SaveAppConfig,
   RenameFile,
 } from "../../../bindings/ysm-model-manager/internal/app/app.js";
-import { loadEntries } from "./loader.ts";
+import { get } from "../../services/registry.ts";
+import type { loadEntries } from "./loader.ts";
 import { initInstanceActions } from "./instance-actions.ts";
 import { getApp } from "../../wails/app.ts";
 import type { AppTree } from "./index.ts";
@@ -344,7 +345,7 @@ async function reload(vm: AppTree): Promise<void> {
   } catch (_) {}
   try {
     const rtype = vm._rootAttr || vm._typeFilter || "";
-    const r = await loadEntries(rtype);
+    const r = await get<typeof loadEntries>("loadEntries")(rtype);
     if (r) {
       vm._repoRoot = r.repoRoot;
       vm._entries = r.entries;
@@ -363,7 +364,7 @@ async function batchToggle(
   dir: string,
   enable: boolean,
 ): Promise<void> {
-  if (vm._batchBusy) return; // 并发守卫：连点时后来的批量操作直接忽略
+  if (vm._batchBusy || vm._toggleBusy) return; // 并发守卫：连点时后来的批量操作直接忽略
   vm._batchBusy = true;
   try {
   const prefix = dir.replace(/\\/g, "/");
@@ -397,7 +398,7 @@ async function batchToggle(
 }
 
 async function batchToggleAll(vm: AppTree, enable: boolean): Promise<void> {
-  if (vm._batchBusy) return; // 并发守卫：连点时后来的批量操作直接忽略
+  if (vm._batchBusy || vm._toggleBusy) return; // 并发守卫：连点时后来的批量操作直接忽略
   vm._batchBusy = true;
   try {
   let ok = 0,

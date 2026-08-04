@@ -207,7 +207,6 @@ function fillAuthorMenu(
 // 绑定工具栏事件
 export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
   const $: $Id = (id) => root.getElementById(id);
-  let ddTimer: ReturnType<typeof setTimeout> | null = null;
 
   // 全选 / 反选 — 基于当前过滤后可见的行
   const selAllBtn = $("sel-all");

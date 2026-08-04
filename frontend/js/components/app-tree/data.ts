@@ -10,20 +10,11 @@ export const selectState: {
 };
 
 /**
- * 切换选中状态（支持 Ctrl/Shift）
+ * 切换选中状态
  * @param key - 节点路径
- * @param isRange - 是否 Shift 范围选择
  */
-export function toggleSelect(key: string, isRange = false): void {
-  const { keys, lastKey } = selectState;
-  if (isRange && lastKey && key !== lastKey) {
-    // Shift 范围选择：全选或全不选
-    // 简单模式：选中从 lastKey 到 key 之间的所有文件
-    // 实际范围计算在 events.ts 中处理，这里只做标记
-    keys.add(key);
-    selectState.lastKey = key;
-    return;
-  }
+export function toggleSelect(key: string): void {
+  const { keys } = selectState;
   if (keys.has(key)) {
     keys.delete(key);
     // 如果删光了，重置 lastKey

@@ -1,5 +1,5 @@
 // ===== 树选择状态测试（ADR-021 扩展）=====
-// toggleSelect：普通切换 / Shift 范围选择 / 全清重置 lastKey。
+// toggleSelect：普通切换 / 全清重置 lastKey。Shift 范围选择由 events.ts 实现（需要可见行列表）。
 import { describe, it, expect, beforeEach } from "vitest";
 import { toggleSelect, selectState } from "./data.ts";
 
@@ -38,35 +38,5 @@ describe("toggleSelect 普通切换", () => {
     toggleSelect("/b.ysm");
     expect(selectState.keys.size).toBe(0);
     expect(selectState.lastKey).toBeNull();
-  });
-});
-
-describe("toggleSelect Shift 范围选择", () => {
-  beforeEach(resetState);
-
-  it("isRange 且 lastKey 存在 → 加入 key 并更新 lastKey（不取反）", () => {
-    toggleSelect("/a.ysm");
-    toggleSelect("/b.ysm", true);
-    expect(selectState.keys.has("/b.ysm")).toBe(true);
-    expect(selectState.lastKey).toBe("/b.ysm");
-  });
-
-  it("isRange 但 key 已选中 → 仍加入（范围语义，不取反）", () => {
-    toggleSelect("/a.ysm");
-    toggleSelect("/b.ysm");
-    toggleSelect("/b.ysm", true); // lastKey=/b.ysm, key=/b.ysm 相同 → 走普通切换
-    expect(selectState.keys.has("/b.ysm")).toBe(false); // key===lastKey 退化为普通切换
-  });
-
-  it("isRange 但无 lastKey（首次）→ 走普通切换", () => {
-    toggleSelect("/a.ysm", true);
-    expect(selectState.keys.has("/a.ysm")).toBe(true);
-    expect(selectState.lastKey).toBe("/a.ysm");
-  });
-
-  it("isRange 且 key===lastKey → 走普通切换（取反）", () => {
-    toggleSelect("/a.ysm");
-    toggleSelect("/a.ysm", true);
-    expect(selectState.keys.has("/a.ysm")).toBe(false);
   });
 });

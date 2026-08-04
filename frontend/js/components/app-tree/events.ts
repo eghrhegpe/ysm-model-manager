@@ -39,7 +39,7 @@ function collectDirEntries(
 }
 
 async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> {
-  if (vm._batchBusy) return; // 并发守卫：与 batchToggle/All 共用槽位，防重叠循环
+  if (vm._batchBusy || vm._toggleBusy) return; // 并发守卫：与单文件/批量 toggle 共用槽位，防重叠循环
   vm._batchBusy = true;
   try {
   const ck = fhEl.querySelector(".ck");
@@ -132,6 +132,9 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
     const flCk = target.closest(".fl .ck") as HTMLElement | null;
     if (flCk) {
       e.stopPropagation();
+      // 并发守卫：与批量 toggle 共用槽位，防连点翻转状态 + reload 竞态
+      if (vm._toggleBusy || vm._batchBusy) return;
+      vm._toggleBusy = true;
       const fullPath = flCk.dataset.fullpath || flCk.dataset.path;
       const fl = flCk.closest(".fl") as HTMLElement | null;
       if (fl) fl.classList.add("flash");
@@ -141,10 +144,21 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
           await vm._load();
           vm._renderTree();
           bus.emit("sync:toggle:status");
+          bus.emit("stats:refresh");
         })
-        .catch((err) =>
-          console.warn("[tree] ToggleModelEnable 失败:", fullPath, err),
-        );
+        .catch((err) => {
+          console.warn("[tree] ToggleModelEnable 失败:", fullPath, err);
+          bus.emit("toast:show", {
+            msg:
+              "❌ 切换失败: " +
+              (fullPath ? fullPath.split(/[/\\]/).pop() : ""),
+            duration: 3000,
+            type: "error",
+          });
+        })
+        .finally(() => {
+          vm._toggleBusy = false;
+        });
       return;
     }
 
@@ -224,7 +238,7 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
       }
 
       if (isCtrl) {
-        toggleSelect(fullPath, false);
+        toggleSelect(fullPath);
         vm._renderTree();
         updateSelectCount(vm._root);
         return;

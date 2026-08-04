@@ -60,12 +60,13 @@
 | `dialogs/` | 弹窗（modal / rename / batch-rename / tag-editor） |
 | `features/` | 业务功能（import-queue / recycle-bin / version-updater / community） |
 | `services/` | 服务注册（registry.ts） |
+| `test-utils/` | 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor） |
 | `utils/` | 工具函数（display / fmt / dom / icon / summarize / model3d） |
 | `wails/` | Wails 桥接（app.ts） |
 | `wasm/` | WASM 生成数据（base64 豁免文件） |
 | `app-modules.ts` | 组件入口 + 右键菜单映射 |
 | `bus.ts` | 事件总线 |
-| `test-utils.ts` | 测试公共辅助（组件编排测试复用：sleep/mount/unmount） |
+| `test-utils.ts` | ⚠️ 用途待补基线（scripts/baseline/project-dirs.json） |
 
 <!-- /GEN: frontend-structure -->
 

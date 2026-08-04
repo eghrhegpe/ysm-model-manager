@@ -23,8 +23,8 @@ export function fileRowHTML(
     e.type === RESOURCE_TYPES.PACK ? "🎨" : e.type === RESOURCE_TYPES.YSM ? "💎" : icon;
   const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
   const tagMark = e.HasTags ? '<span class="tag-dot" title="有标签">🏷️</span>' : "";
-  return `<div class="fl${ban}${rowCls}" data-path="${p}" data-fullpath="${fp}"${pad}>
-<span class="ck${checked}" data-path="${p}" data-fullpath="${fp}"></span>
+  return `<div class="fl${ban}${rowCls}" data-testid="tree-file" data-path="${p}" data-fullpath="${fp}"${pad}>
+<span class="ck${checked}" data-testid="tree-toggle" data-path="${p}" data-fullpath="${fp}"></span>
 <span class="ficon">${typeIcon}</span>
 <span class="nm${nmCls}">${tagMark}${nmHtml}</span>
 <span class="hover-actions">
@@ -58,8 +58,8 @@ export function folderRowHTML(
   }
   const dispName = renderDisplayName(k);
   const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
-  return `<div class="fh${lk}" data-dir="${esc(full)}"${pad}>
-<span class="ck${ckCls}" data-dir="${esc(full)}"></span>
+  return `<div class="fh${lk}" data-testid="tree-dir" data-dir="${esc(full)}"${pad}>
+<span class="ck${ckCls}" data-testid="tree-dir-toggle" data-dir="${esc(full)}"></span>
 <span class="ar${ac}">${ar}</span>
 <span class="nm" style="color:${nc}">${fi} ${dispName}</span></div>`;
 }

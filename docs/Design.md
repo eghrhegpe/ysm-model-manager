@@ -874,6 +874,7 @@ disconnectedCallback() {
 - [ ] 跨组件数据走 `bus`，无 `window.__*` 全局隐式状态（§14.2、§18.5）。
 - [ ] 新增 bus 事件已在 `bus.ts` 的 `BusEvents` 登记类型（§16.1）。
 - [ ] 反馈统一 `bus.emit("toast:show", ...)`，不发游离 DOM `toast` 事件（规避 D3）。
+- [ ] 关键交互元素带 `data-testid`（前缀命名空间，如 `tree-file`/`tree-toggle`），展示元素不必（§19.1）。
 
 **键盘与无障碍**
 - [ ] 所有可点击元素可 `Tab`/方向键聚焦，焦点可见（`focusVisibleCSS`）。
@@ -886,6 +887,16 @@ disconnectedCallback() {
 - [ ] 标签 kebab-case + `app-` 前缀；方法 camelCase；bus 事件带域名前缀（§18）。
 - [ ] 改动文档后跑 `node scripts/link-checker.mjs` 验证引用。
 - [ ] 偏离 §14.6 漂移登记的新代码，先修漂移再落地。
+
+### 19.1 测试钩子（data-testid）规范
+
+G-1 抗脆弱测试基础设施（ADR-035）——测试断言稳定语义而非易变实现（CSS 类/文案/DOM 结构）。
+
+- **命名**：`<域>-<角色>` kebab-case 前缀命名空间（`tree-file`/`tree-toggle`/`sync-push`）；同域多实例用前缀匹配 `[data-testid^="tree-file"]`。
+- **必须加**：测试要操作的可交互元素（按钮/开关/列表行/输入）；纯展示元素不必（减少噪音）。
+- **禁止**：把 testid 当 CSS 选择器（样式走 class）；testid 值含空格或大小写混排。
+- **契约守护**：关键 testid 由 `tests/*.mjs` 契约断言存在（删除 → 契约红，防钩子静默失效）。
+- **状态断言**：交互后状态经组件暴露的可查询值（DEV 钩子/事件流）断言，不解析 DOM 结构（ADR-035 G-1 隔壁实证）。
 
 ---
 

@@ -378,9 +378,14 @@ function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
     if (item.divider) return { divider: true };
     const label = typeof item.label === "function" ? item.label(norm) : item.label;
     const action = item.action;
+    const handler = action ? HANDLERS[action] : undefined;
+    if (action && !handler) {
+      // menu-defs.ts 的 action 与 HANDLERS 表键失配（测试应断言零警告）
+      console.warn(`[context-menus] 未注册 action: ${action}（见 menu-defs.ts）`);
+    }
     const out: MenuItem = {
       label,
-      onClick: action ? () => HANDLERS[action]?.(norm) : undefined,
+      onClick: handler ? () => handler(norm) : undefined,
     };
     if (item.icon) out.icon = item.icon;
     if (item.danger) out.danger = true;
@@ -388,13 +393,15 @@ function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
   });
 }
 
-/** 注册右键菜单映射（ctx:show → menu:show） */
-export function registerContextMenus(): void {
-  bus.on("ctx:show", (payload) => {
-    bus.emit("menu:show", {
-      x: payload.x,
-      y: payload.y,
-      items: buildMenuItems(payload),
-    });
-  });
+/** 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 */
+export function registerContextMenus(unsubs: Array<() => void>): void {
+  unsubs.push(
+    bus.on("ctx:show", (payload) => {
+      bus.emit("menu:show", {
+        x: payload.x,
+        y: payload.y,
+        items: buildMenuItems(payload),
+      });
+    }),
+  );
 }

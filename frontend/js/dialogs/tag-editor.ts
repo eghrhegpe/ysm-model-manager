@@ -1,7 +1,6 @@
 // ===== 模型标签编辑弹窗（类型化版 — ADR-014 P3 dialogs）=====
 // 读取/写入模型标签，支持输入新标签和选择已有标签
 import { esc } from "../utils/dom.ts";
-import { bus } from "../bus.ts";
 import { closeDlg, registerDlg } from "./modal.js";
 import { getApp } from "../wails/app.ts";
 
@@ -159,6 +158,5 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
         errEl.textContent = "⚠️ 保存失败: " + (e as Error).message;
       }
     };
-    void bus;
   });
 }

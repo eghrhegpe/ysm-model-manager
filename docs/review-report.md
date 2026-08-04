@@ -228,3 +228,91 @@ doctor.mjs 三处缺陷（Go Test 误报 / grep 依赖 / wails.json 解析）建
 ---
 
 *报告生成：2026-08-03 · 审计单元 1-4 全部完成 · 后续单元审计结果追加于本文件*
+
+---
+
+## 审计单元 5：核心逻辑/工具四模块（2026-08-04）
+
+> 范围：`core/page-store.ts` / `services/registry.ts` / `core/global-handlers.ts` + `handler-*.ts` / `core/context-menus.ts` + `context-menu.ts`
+> 结论：**全部通过或已落地**——4 个 P2、5 个 P3、7 个 P4 全部闭环（四轮提交：af781d8 → a95b0a9 → 616c635 → 98f3a95）。
+
+### page-store — 审核结果
+
+**总体结论：有条件通过 → 已落地（af781d8）**
+
+**亮点：**
+- 幂等守卫 + getter 封装，防回环防重复 emit —— frontend/js/core/page-store.ts#L16
+- 事件名「请求 nav:change / 完成 nav:changed」现在时/过去时区分清晰（bus.ts）
+
+**风险（已修）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟠 P2 | page-store.ts#L15-L19 | `setCurrentPage` 零调用方且语义错误（emits 完成事件），被调用即「状态变、内容不渲染」 | 删除；唯一写入点收敛为 registerPageStore 的 nav:changed listener |
+| 🟠 P2 | page-store.ts#L5,L23-L27 | 幽灵路径：唯一活跃写入是模块级 listener 绕过 setter；不读 localStorage 启动期漂移 | 新增 resolveInitialPage() 恢复 + app-nav 复用，消除两处恢复逻辑漂移 |
+| 🟡 P3 | page-store.ts#L23 | 模块级 bus.on 无守卫，HMR 累积 | 改走 registerXxx(unsubs) 统一生命周期 |
+| 🟢 P4 | page-store.ts#L8 | PageName 宽松 string | 提升为联合类型（bus.ts），拼错编译期拦截 |
+
+### registry — 审核结果
+
+**总体结论：有条件通过 → 已落地（a95b0a9）**
+
+**亮点：**
+- 零依赖纯 Map 封装，API 面最小（5 函数），get 异常契约含服务名
+- 测试覆盖全生命周期 7 用例（ADR-023 Vitest 门禁）
+
+**风险（已修）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟠 P2 | app-modules.ts#L11-L12 | 注册空转：loadInstances/loadEntries 注册后全项目零 get() 消费 | 三处消费方改走 get<typeof loadXxx>("loadXxx")，DI 价值兑现，替换点收敛到 app-modules.ts 一处 |
+| 🟡 P3 | registry.ts#L10-L27 | 服务名自由字符串，拼错运行时才炸 | ServiceName 联合收窄 register/get/has/unregister |
+| 🟡 P3 | registry.ts#L21-L23 | 重复注册静默覆盖 | 覆盖时 console.warn 告警 |
+| 🟢 P4 | registry.ts#L11 | 注释「app-modules.js」漂移 | 改 app-modules.ts |
+
+### 全局 handler 族 — 审核结果
+
+**总体结论：通过**（陷阱 #2 正确实现范例，无阻断项）
+
+**亮点：**
+- handler-dnd.ts#L272-L287 document 监听 4 配 4 清理 + 遮罩 DOM 回收
+- handler-sync.ts#L108-L111 finally 里 emit 完成事件（陷阱 #3 正确模式）
+- 全局 handler 唯一聚合（global-handlers.ts）+ 唯一挂载（app-content:100）+ disconnectedCallback 全链清理
+
+**风险（已修/观察）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟢 P4 | handler-dnd.ts#L46 | dropLeaveTimer 未在 unsubs 清理 | 98f3a95：clearTimeout + 置 null |
+| 🟢 P4 | handler-sync.ts#L184-L200 | catch 内 await AddImportLog 无二次防护 | 98f3a95：内层 try/catch 包裹 |
+| 🟢 P4 | handler-dnd.ts#L114 | onDrop 无顶层 catch | 98f3a95：onDropSafe wrapper 兜底 + toast 反馈 |
+
+### context-menus — 审核结果
+
+**总体结论：通过 → 已落地（616c635）**
+
+**亮点：**
+- menu-defs.ts 声明式唯一事实来源（ADR-021 B 层），加菜单项只改声明表，测试遍历断言
+- context-menu.ts 组件三资源配对零缺陷 + `_esc()` 全量转义 + 边界检测
+
+**风险（已修）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟡 P3 | context-menus.ts#L392-L400 | registerContextMenus 无 unsub 收集 + 无守卫，HMR 累积 | 改 registerContextMenus(unsubs) + 聚合进 registerGlobalHandlers（app-modules.ts 移除直接调用） |
+| 🟡 P3 | context-menus.ts#L383 | HANDLERS[action] 静默 miss，点击无反应难排查 | 查表 miss console.warn（测试断言零警告） |
+| 🟢 P4 | context-menus.ts#L357 | execCommand("copy") 已废弃 API | 保持现状（兼容性好，剪贴板 API 需权限） |
+
+### 闭环验证矩阵（四轮提交后）
+
+| 检查 | 结果 |
+|------|------|
+| `tsc --noEmit` | ✅ 0 错误 |
+| `npx vite build` | ✅ 成功 |
+| `vitest` 全量 | ✅ 22 文件 / 317 用例全过 |
+| `check-circular` | ✅ 0 循环（122 模块）|
+| `check-consumers` / `check-deadcode-baseline` | ✅ 无新增 |
+
+**提交记录：** `af781d8`（page-store 幽灵路径+注册统一化）→ `a95b0a9`（registry DI 兑现+ServiceName）→ `616c635`（context-menus 注册统一化+miss 告警）→ `98f3a95`（DnD/同步 P4 清理兜底）
+
+*报告更新：2026-08-04 · 审计单元 5 完成*

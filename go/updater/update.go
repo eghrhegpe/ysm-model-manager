@@ -362,7 +362,11 @@ func extractZipFile(f *zip.File, dest string) error {
 		out.Close()
 		if !ok {
 			// 解压失败/超限时清理半成品（必须先 Close 再 Remove——Windows 上删除打开的文件会失败）
-			os.Remove(dest)
+			// Remove 失败（文件锁 / Defender 实时扫描窗口）时短暂重试，避免半成品残留
+			if err := os.Remove(dest); err != nil && !os.IsNotExist(err) {
+				time.Sleep(200 * time.Millisecond)
+				_ = os.Remove(dest)
+			}
 		}
 	}()
 

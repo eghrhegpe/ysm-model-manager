@@ -1,5 +1,6 @@
 frontend/dist
 frontend/coverage/
+*.out
 build/bin/
 bin/
 build/ysmparser-cache/

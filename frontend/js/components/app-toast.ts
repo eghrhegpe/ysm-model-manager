@@ -70,6 +70,7 @@ class AppToast extends HTMLElement {
     }
     const t = document.createElement("div") as ToastEl;
     t.className = "toast" + (type ? " " + type : "");
+    t.dataset.testid = "toast"; // G-1 稳定钩子（Design.md §19.1）
     if (clickCallback) t.style.cursor = "pointer";
     t.innerHTML = `<span class="msg">${this._esc(msg)}</span>${undoCallback ? '<button class="undo-btn">↩ 撤销</button>' : ""}<button class="close-btn">✕</button>`;
     c.appendChild(t);

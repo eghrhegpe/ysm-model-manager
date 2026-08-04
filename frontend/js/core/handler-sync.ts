@@ -3,6 +3,7 @@ import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/errors.ts";
 import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 import { dbg } from "../utils/debug.ts";
+import { getApp } from "../wails/app.ts";
 
 /** 注册同步 handler，push 返回的取消订阅函数到 unsubs */
 export function registerSync(unsubs: Array<() => void>): void {
@@ -20,9 +21,7 @@ export function registerSync(unsubs: Array<() => void>): void {
             InstallModelTo,
             InstallResourceToInstance,
             GetRepoRoot,
-          } = await import(
-            "../../bindings/ysm-model-manager/internal/app/app.js"
-          );
+          } = await getApp();
           const cfg = await LoadAppConfig();
           const mcRoot = cfg.mcRoot || "";
           if (!mcRoot) {
@@ -79,9 +78,7 @@ export function registerSync(unsubs: Array<() => void>): void {
           }
           // 强制刷新扫描缓存
           try {
-            const { InvalidateScanCache } = await import(
-              "../../bindings/ysm-model-manager/internal/app/app.js"
-            );
+            const { InvalidateScanCache } = await getApp();
             await InvalidateScanCache();
           } catch {}
           dbg(
@@ -129,9 +126,7 @@ export function registerSync(unsubs: Array<() => void>): void {
           SyncModelToggleStatus,
           AddImportLog,
           GetRepoRoot,
-        } = await import(
-          "../../bindings/ysm-model-manager/internal/app/app.js"
-        );
+        } = await getApp();
         const cfg = await LoadAppConfig();
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const mcRoot = cfg.mcRoot || "";
@@ -188,9 +183,7 @@ export function registerSync(unsubs: Array<() => void>): void {
         bus.emit("stats:refresh");
       } catch (err) {
         try {
-          const { AddImportLog } = await import(
-            "../../bindings/ysm-model-manager/internal/app/app.js"
-          );
+          const { AddImportLog } = await getApp();
           await AddImportLog(
             "sync-status",
             "同步失败",

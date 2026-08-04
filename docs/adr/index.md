@@ -15,8 +15,8 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [🔄 部分采纳](#部分采纳) | 6 |
-| [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 3 |
-| [✅ 已采纳](#已采纳) | 23 |
+| [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 2 |
+| [✅ 已采纳](#已采纳) | 24 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❌ 已取代](#已取代) | 0 |
 
@@ -37,7 +37,6 @@ permalink: /adr/
 |-----|------|------|
 | [ADR-012](./ADR-012-binding-call-consistency.md) | Wails Binding 调用路径一致性 | ⚠️ 已采纳（当前不一致，未修复） |
 | [ADR-011](./ADR-011-path-separator-inconsistency.md) | 前端路径拼接分隔符不一致 | ⚠️ 已采纳（违规未修复） |
-| [ADR-010](./ADR-010-resource-type-literals.md) | 资源类型字面量硬编码治理 | ⚠️ 已采纳（2026-08-03 违规清零，见 §5） |
 
 ## ✅ 已采纳
 
@@ -59,6 +58,7 @@ permalink: /adr/
 | [ADR-015](./ADR-015-unified-animation-system.md) | 前端统一动画系统设计决策 | ✅ 已采纳 |
 | [ADR-014](./ADR-014-typescript-migration.md) | 前端 TypeScript 渐进迁移 | ✅ 已采纳 |
 | [ADR-013](./ADR-013-governance-convergence.md) | 治理体系收敛 — 文档宪法对账与联邦基线对齐 | ✅ 已采纳 |
+| [ADR-010](./ADR-010-resource-type-literals.md) | 资源类型字面量硬编码治理 | ✅ 已采纳（2026-08-03 清零完成） |
 | [ADR-008](./ADR-008-event-registration-pattern.md) | 事件注册位置与防重复规范 | ✅ 已采纳 |
 | [ADR-007](./ADR-007-context-menu-structure.md) | 右键菜单代码组织决策 | ✅ 已采纳 |
 | [ADR-006](./ADR-006-rename-strictness.md) | 重命名文件名格式约束决策 | ✅ 已采纳 |
@@ -104,7 +104,7 @@ _（暂无）_
 | [ADR-013](./ADR-013-governance-convergence.md) | 治理体系收敛 — 文档宪法对账与联邦基线对齐 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-012](./ADR-012-binding-call-consistency.md) | Wails Binding 调用路径一致性 | ⚠️ 已采纳（当前不一致，未修复） | 2026-08-03 |
 | [ADR-011](./ADR-011-path-separator-inconsistency.md) | 前端路径拼接分隔符不一致 | ⚠️ 已采纳（违规未修复） | 2026-08-03 |
-| [ADR-010](./ADR-010-resource-type-literals.md) | 资源类型字面量硬编码治理 | ⚠️ 已采纳（2026-08-03 违规清零，见 §5） | 2026-08-03 |
+| [ADR-010](./ADR-010-resource-type-literals.md) | 资源类型字面量硬编码治理 | ✅ 已采纳（2026-08-03 清零完成） | 2026-08-03 |
 | [ADR-008](./ADR-008-event-registration-pattern.md) | 事件注册位置与防重复规范 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-007](./ADR-007-context-menu-structure.md) | 右键菜单代码组织决策 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-006](./ADR-006-rename-strictness.md) | 重命名文件名格式约束决策 | ✅ 已采纳 | 2026-08-03 |

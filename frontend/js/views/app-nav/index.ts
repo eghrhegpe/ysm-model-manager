@@ -1,8 +1,8 @@
 // ===== <app-nav> — 左侧导航菜单（类型化版 — ADR-014 P3 components）=====
 // 事件：nav:change — 切换页面
-import { bus, type PageName } from "../bus.ts";
-import { resolveInitialPage } from "../core/page-store.ts";
-import { getApp } from "../wails/app.ts";
+import { bus, type PageName } from "../../bus.ts";
+import { resolveInitialPage } from "../../core/page-store.ts";
+import { getApp } from "../../wails/app.ts";
 
 class AppNav extends HTMLElement {
   _current: string;

@@ -1,9 +1,9 @@
 // ===== 整合包操作：导出清单 / 清空目录（类型化版 — ADR-014 P3）=====
-import { bus } from "../bus.ts";
-import { friendlyError } from "../utils/dom/errors.ts";
-import { modalConfirm } from "../views/dialogs/modal.ts";
-import { getApp } from "../wails/app.ts";
-import { RESOURCE_TYPES } from "../utils/resource/types.ts";
+import { bus } from "../../bus.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { modalConfirm } from "../../views/dialogs/modal.ts";
+import { getApp } from "../../wails/app.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 
 /** 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs */
 export function registerInstanceOps(unsubs: Array<() => void>): void {

@@ -20,7 +20,7 @@ import {
 /** 防止 avatar:config-loaded 事件重复注册（unsub 随组件销毁回收并复位 flag） */
 let _avatarConfigLoadedRegistered = false;
 let _avatarConfigLoadedUnsub: (() => void) | null = null;
-import { registerGlobalHandlers } from "../../core/global-handlers.ts";
+import { registerGlobalHandlers } from "../../core/handlers/global.ts";
 import { initDiagnostics } from "./diagnostics/community.ts";
 
 import { initSettings } from "./settings/community.ts";

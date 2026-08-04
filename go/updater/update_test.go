@@ -1,9 +1,11 @@
 package updater
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
@@ -53,6 +55,9 @@ func TestIsNewer(t *testing.T) {
 		{"v1.1.0", "1.9.3", false},
 		{"v1.1.0", "1.0.0", false},
 		{"v1.1.0", "v1.1.0", false},
+		// 多段版本：1.2.3.4.5 第 4 段 4 < 5，应判旧
+		{"1.2.3.4.5", "1.2.3.5", false},
+		{"1.2.3.5", "1.2.3.4.5", true},
 	}
 
 	for _, tt := range tests {
@@ -83,6 +88,8 @@ func TestSplitVer(t *testing.T) {
 		// "vv1.1.0" 时首段 "vv1" Atoi 失败按 0 → [0,1,0]
 		{"v1.1.0", []int{0, 1, 0}},
 		{"vv1.1.0", []int{0, 1, 0}},
+		// 多段版本全量解析（SplitN 截断回归：1.2.3.4.5 不应变 [1,2,3,0]）
+		{"1.2.3.4.5", []int{1, 2, 3, 4, 5}},
 	}
 
 	for _, tt := range tests {
@@ -163,5 +170,51 @@ func TestFetchExpectedHash_InvalidURL(t *testing.T) {
 	result := fetchExpectedHash("http://invalid-url-that-does-not-exist.local/sums", "test.zip")
 	if result != "" {
 		t.Errorf("无效 URL 应返回空字符串，得到 %q", result)
+	}
+}
+
+func TestDownload_OK(t *testing.T) {
+	body := []byte("fake update package content")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(body)
+	}))
+	defer server.Close()
+
+	path, err := Download(server.URL, "")
+	if err != nil {
+		t.Fatalf("Download() = %v", err)
+	}
+	defer os.Remove(path)
+
+	data, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(data, body) {
+		t.Errorf("下载内容不符: err=%v", err)
+	}
+}
+
+func TestDownload_HashMismatch(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("content"))
+	}))
+	defer server.Close()
+
+	path, err := Download(server.URL, "deadbeef")
+	if err == nil {
+		t.Fatal("hash 不匹配应报错")
+	}
+	if path != "" {
+		t.Error("校验失败时不应返回路径")
+	}
+}
+
+func TestDownload_RejectsOversized(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 声明超大 Content-Length（>500MB 上限），实际不写 body
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", 600<<20))
+	}))
+	defer server.Close()
+
+	if _, err := Download(server.URL, ""); err == nil {
+		t.Fatal("Content-Length 超限应返回错误")
 	}
 }

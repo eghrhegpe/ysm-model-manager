@@ -31,6 +31,9 @@ const (
 // updateLock 防止并发更新（多次调用 InstallUpdate/Download）
 var updateLock sync.Mutex
 
+// maxDownloadSize 更新包下载大小上限（500MB）
+const maxDownloadSize = 500 << 20
+
 // ReleaseAsset GitHub Release 中的文件
 type ReleaseAsset struct {
 	Name               string `json:"name"`
@@ -86,6 +89,19 @@ func Check(current string) (*UpdateInfo, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	// 显式检查状态码：403（rate limit）/ 404 等错误体不是 release 数组，
+	// 直接 Decode 会返回误导性错误；解析 GitHub 错误 message 给出可读提示
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
+		var ghErr struct {
+			Message string `json:"message"`
+		}
+		if json.Unmarshal(body, &ghErr) == nil && ghErr.Message != "" {
+			return nil, fmt.Errorf("检查更新失败：GitHub API 返回 %d（%s）", resp.StatusCode, ghErr.Message)
+		}
+		return nil, fmt.Errorf("检查更新失败：GitHub API 返回 %d", resp.StatusCode)
+	}
 
 	var rels []Release
 	if err := json.NewDecoder(resp.Body).Decode(&rels); err != nil {
@@ -170,9 +186,22 @@ func Download(assetURL string, expectedHash string) (string, error) {
 	}
 
 	// 限制下载大小（最大 500MB），同时计算 SHA256
+	// 预检：Content-Length 超限直接拒绝（省流量，防磁盘写满）
+	if resp.ContentLength > maxDownloadSize {
+		os.Remove(tmp)
+		return "", fmt.Errorf("更新包过大（%d 字节），超过 %d 字节上限", resp.ContentLength, maxDownloadSize)
+	}
 	hasher := sha256.New()
-	limitR := io.LimitReader(resp.Body, 500<<20)
-	_, err = io.Copy(f, io.TeeReader(limitR, hasher))
+	n, err := io.Copy(f, io.TeeReader(io.LimitReader(resp.Body, maxDownloadSize), hasher))
+	// 截断检测：读到上限后再读 1 字节，若仍有数据说明更新包超限被截断
+	// （无 Content-Length 的分块传输场景兜底，防止截断包被装盘）
+	if n >= maxDownloadSize {
+		one := make([]byte, 1)
+		if extra, _ := resp.Body.Read(one); extra > 0 {
+			os.Remove(tmp)
+			return "", fmt.Errorf("更新包超过 %d 字节上限", maxDownloadSize)
+		}
+	}
 	closeErr := f.Close()
 	if err != nil {
 		os.Remove(tmp)
@@ -232,6 +261,7 @@ func InstallUpdate(zipPath string) error {
 	targetExe := "YSM-Model-Manager.exe"
 	alwaysOverwrite := map[string]bool{
 		"resource_types.json": true,
+		"ysm-cli.exe":         true, // 发布 zip 内含 CLI 工具，随更新覆盖
 	}
 	createIfMissing := map[string]bool{
 		"workshop_sites.json":  true,
@@ -344,7 +374,8 @@ func splitVer(s string) []int {
 	if idx := strings.IndexAny(s, "-+"); idx >= 0 {
 		s = s[:idx]
 	}
-	parts := strings.SplitN(s, ".", 4)
+	// 全段解析：不用 SplitN 截断，避免 4 段以上版本被截为 [.., "4.5"] 导致 Atoi 归零
+	parts := strings.Split(s, ".")
 	out := make([]int, len(parts))
 	for i, p := range parts {
 		n, err := strconv.Atoi(p)

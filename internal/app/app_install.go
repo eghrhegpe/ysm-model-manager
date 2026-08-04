@@ -815,6 +815,7 @@ func (a *App) SyncResources(rtype, instanceName string) string {
 }
 
 // PushResourceToInstance 将全局中缺失的资源推送到整合包
+// PushResourceToInstance 推送缺失资源到整合包（执行循环下沉 go/sync）
 func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 	cfg := a.LoadAppConfig()
 	if cfg.McRoot == "" {
@@ -825,60 +826,14 @@ func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 		return 0, fmt.Errorf("未设置%s目录", rtype)
 	}
 
-	instances := a.ListVersionInstances(cfg.McRoot)
-	var targetDir string
-	for _, ins := range instances {
-		if ins.Name == instanceName {
-			subDir := types.SubDirMap(rtype)
-			if subDir == "" {
-				return 0, fmt.Errorf("未知资源类型: %s", rtype)
-			}
-			targetDir = filepath.Join(ins.VersionDir, subDir)
-			break
-		}
+	targetDir, err := a.findInstanceDir(rtype, instanceName, cfg.McRoot)
+	if err != nil {
+		return 0, err
 	}
-	if targetDir == "" {
-		return 0, fmt.Errorf("未找到整合包: %s", instanceName)
-	}
-
-	count := 0
-	failed := 0
-
-	// YSM(.json) 和 MMD(.pmx/.pmd) 位于子目录中，需文件夹推送
-	// 用文件夹级同步检测 missing，然后完整复制整个文件夹（含纹理等配套文件）
-	if rtype == "mmd-skin" || rtype == "ysm" {
-		dirResult := ysmsync.SyncResourcesDirLevel(globalDir, targetDir, rtype)
-		for _, missingDir := range dirResult.Missing {
-			if err := installer.InstallDir(missingDir, targetDir, globalDir, a.LinkMode, rtype); err == nil {
-				count++
-			} else {
-				failed++
-				a.logger.Add(filepath.Base(missingDir), missingDir, targetDir, 0, "failed", "推送失败: "+err.Error())
-			}
-		}
-		if failed > 0 {
-			return count, fmt.Errorf("推送完成: 成功 %d，失败 %d", count, failed)
-		}
-		return count, nil
-	}
-
-	// 非文件夹级类型：文件级同步
-	result := ysmsync.SyncResources(globalDir, targetDir)
-	for _, src := range result.Missing {
-		if err := installer.Install(src, targetDir, globalDir, a.LinkMode); err == nil {
-			count++
-		} else {
-			failed++
-			a.logger.Add(filepath.Base(src), src, targetDir, 0, "failed", "推送失败: "+err.Error())
-		}
-	}
-	if failed > 0 {
-		return count, fmt.Errorf("推送完成: 成功 %d，失败 %d", count, failed)
-	}
-	return count, nil
+	return ysmsync.PushResources(rtype, globalDir, targetDir, a.LinkMode, a.logger.Add)
 }
 
-// PullResourceFromInstance 将整合包中多余的资源拉取到全局
+// PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync）
 func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) {
 	cfg := a.LoadAppConfig()
 	if cfg.McRoot == "" {
@@ -889,83 +844,26 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) 
 		return 0, fmt.Errorf("未设置%s目录", rtype)
 	}
 
-	instances := a.ListVersionInstances(cfg.McRoot)
-	var targetDir string
+	targetDir, err := a.findInstanceDir(rtype, instanceName, cfg.McRoot)
+	if err != nil {
+		return 0, err
+	}
+	return ysmsync.PullResources(rtype, globalDir, targetDir, a.logger.Add)
+}
+
+// findInstanceDir 解析整合包实例的资源类型子目录（Push/Pull 共用）
+func (a *App) findInstanceDir(rtype, instanceName, mcRoot string) (string, error) {
+	instances := a.ListVersionInstances(mcRoot)
 	for _, ins := range instances {
 		if ins.Name == instanceName {
 			subDir := types.SubDirMap(rtype)
-			if subDir != "" {
-				targetDir = filepath.Join(ins.VersionDir, subDir)
+			if subDir == "" {
+				return "", fmt.Errorf("未知资源类型: %s", rtype)
 			}
-			break
+			return filepath.Join(ins.VersionDir, subDir), nil
 		}
 	}
-	if targetDir == "" {
-		return 0, fmt.Errorf("未找到整合包: %s", instanceName)
-	}
-
-	// 找出 extra 的文件并复制到全局
-	// 对 YSM/MMD 使用文件夹级同步
-	var result types.ResourceSyncResult
-	if rtype == "ysm" || rtype == "mmd-skin" {
-		result = ysmsync.SyncResourcesDirLevel(globalDir, targetDir, rtype)
-	} else {
-		result = ysmsync.SyncResources(globalDir, targetDir)
-	}
-	count := 0
-	failed := 0
-	for _, src := range result.Extra {
-		fi, stErr := os.Stat(src)
-		isDir := stErr == nil && fi.IsDir()
-		if rtype == "ysm" || rtype == "mmd-skin" {
-			if isDir {
-				folderName := filepath.Base(src)
-				dstDir := filepath.Join(globalDir, folderName)
-				if err := os.MkdirAll(dstDir, 0755); err != nil {
-					failed++
-					a.logger.Add(folderName, src, dstDir, 0, "failed", "拉取失败: "+err.Error())
-					continue
-				}
-				entries, _ := os.ReadDir(src)
-				for _, e := range entries {
-					if e.IsDir() {
-						continue
-					}
-					srcFile := filepath.Join(src, e.Name())
-					if err := copyFile(srcFile, filepath.Join(dstDir, e.Name())); err != nil {
-						failed++
-						a.logger.Add(e.Name(), srcFile, dstDir, 0, "failed", "拉取失败: "+err.Error())
-						continue
-					}
-				}
-				count++
-			} else {
-				if err := copyFile(src, filepath.Join(globalDir, filepath.Base(src))); err != nil {
-					failed++
-					a.logger.Add(filepath.Base(src), src, globalDir, 0, "failed", "拉取失败: "+err.Error())
-					continue
-				}
-				count++
-			}
-			continue
-		}
-		dstDir := filepath.Dir(strings.Replace(src, targetDir, globalDir, 1))
-		if err := os.MkdirAll(dstDir, 0755); err != nil {
-			failed++
-			a.logger.Add(filepath.Base(src), src, dstDir, 0, "failed", "拉取失败: "+err.Error())
-			continue
-		}
-		if err := copyFile(src, filepath.Join(dstDir, filepath.Base(src))); err != nil {
-			failed++
-			a.logger.Add(filepath.Base(src), src, dstDir, 0, "failed", "拉取失败: "+err.Error())
-			continue
-		}
-		count++
-	}
-	if failed > 0 {
-		return count, fmt.Errorf("拉取完成: 成功 %d，失败 %d", count, failed)
-	}
-	return count, nil
+	return "", fmt.Errorf("未找到整合包: %s", instanceName)
 }
 
 // PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库

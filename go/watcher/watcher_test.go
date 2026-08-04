@@ -3,6 +3,7 @@ package watcher
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -188,5 +189,108 @@ func TestDebounceMergesRapidEvents(t *testing.T) {
 	}
 	if n > 3 {
 		t.Logf("防抖合并效果：%d 次文件创建 → %d 次同步调用", 5, n)
+	}
+}
+
+// TestStartStopRestart 回归：Stop 后再 Start 必须恢复监听（done channel 每次重建）
+func TestStartStopRestart(t *testing.T) {
+	repoDir := t.TempDir()
+	mcDir := setupMinecraftRoot(t)
+
+	var callCount atomic.Int32
+	scanFn := func(dir string) []types.ModelEntry {
+		callCount.Add(1)
+		return nil
+	}
+
+	w := New(repoDir, mcDir, scanFn)
+	if err := w.Start(); err != nil {
+		t.Fatalf("Start() #1 = %v", err)
+	}
+	w.Stop()
+	if err := w.Start(); err != nil {
+		t.Fatalf("Start() #2 = %v", err)
+	}
+	defer w.Stop()
+
+	time.Sleep(500 * time.Millisecond)
+	testFile := filepath.Join(repoDir, "restart.ysm")
+	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1500 * time.Millisecond)
+
+	if n := callCount.Load(); n == 0 {
+		t.Fatal("Stop 后重启的 watcher 未监听文件变化")
+	}
+}
+
+// TestSyncAllSerialized 并发触发多次同步应串行执行（防抖合并调度，syncAll 合并执行）
+func TestSyncAllSerialized(t *testing.T) {
+	repoDir := t.TempDir()
+	mcDir := setupMinecraftRoot(t)
+
+	var concurrent atomic.Int32
+	var maxConcurrent atomic.Int32
+	scanFn := func(dir string) []types.ModelEntry {
+		c := concurrent.Add(1)
+		for {
+			old := maxConcurrent.Load()
+			if c <= old || maxConcurrent.CompareAndSwap(old, c) {
+				break
+			}
+		}
+		time.Sleep(150 * time.Millisecond)
+		concurrent.Add(-1)
+		return nil
+	}
+
+	w := New(repoDir, mcDir, scanFn)
+	if err := w.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer w.Stop()
+
+	// 并发触发多次同步（模拟防抖窗口内的连续文件事件）
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			w.syncAll()
+		}()
+	}
+	wg.Wait()
+
+	if n := maxConcurrent.Load(); n > 1 {
+		t.Fatalf("syncAll 最大并发 = %d, 期望串行执行", n)
+	}
+}
+
+// TestStopWaitsForSync Stop 必须等待 in-flight 同步完成，避免退出后仍有后台写盘
+func TestStopWaitsForSync(t *testing.T) {
+	repoDir := t.TempDir()
+	mcDir := setupMinecraftRoot(t)
+
+	var once sync.Once
+	syncDone := make(chan struct{})
+	scanFn := func(dir string) []types.ModelEntry {
+		once.Do(func() { close(syncDone) }) // 进入执行即发信号，sleep 模拟长同步
+		time.Sleep(300 * time.Millisecond)
+		return nil
+	}
+
+	w := New(repoDir, mcDir, scanFn)
+	if err := w.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	go w.syncAll() // 模拟防抖 timer 触发的同步
+	<-syncDone     // 等待同步进入执行（scanFn 运行中）
+
+	start := time.Now()
+	w.Stop()
+	if elapsed := time.Since(start); elapsed < 200*time.Millisecond {
+		t.Fatalf("Stop 未等待 in-flight 同步完成（耗时 %v）", elapsed)
 	}
 }

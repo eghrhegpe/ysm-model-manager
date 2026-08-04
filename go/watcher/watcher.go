@@ -20,15 +20,18 @@ const debounceDelay = 800 * time.Millisecond
 
 // Watcher 监听仓库目录的文件变更，自动同步 .ban 状态到所有整合包
 type Watcher struct {
-	w             *fsnotify.Watcher
-	repoRoot      string
-	mcRoot        string
-	scanFn        ScanFunc
-	clearCacheFn  func()       // 扫描缓存失效回调（可选）
-	mu            sync.Mutex
-	debounce      *time.Timer
-	done          chan struct{}
-	running       bool
+	w            *fsnotify.Watcher
+	repoRoot     string
+	mcRoot       string
+	scanFn       ScanFunc
+	clearCacheFn func() // 扫描缓存失效回调（可选）
+	mu           sync.Mutex
+	debounce     *time.Timer
+	done         chan struct{}
+	running      bool
+	syncRunning  bool           // 同步执行中标志（防并发重入）
+	syncPending  bool           // 执行期间积累的新事件，完成后需再跑一轮
+	wg           sync.WaitGroup // 等待 in-flight 同步完成（Stop 阻塞）
 }
 
 // New 创建文件监听器
@@ -59,6 +62,8 @@ func (w *Watcher) Start() error {
 		return err
 	}
 	w.w = fw
+	// 每次 Start 重建 done：支持 Stop 后再 Start（已关闭的 channel 不可复用）
+	w.done = make(chan struct{})
 	w.running = true
 
 	// 递归添加子目录
@@ -90,8 +95,8 @@ func (w *Watcher) Start() error {
 // Stop 停止监听
 func (w *Watcher) Stop() {
 	w.mu.Lock()
-	defer w.mu.Unlock()
 	if !w.running {
+		w.mu.Unlock()
 		return
 	}
 	w.running = false
@@ -102,6 +107,9 @@ func (w *Watcher) Stop() {
 	if w.w != nil {
 		w.w.Close()
 	}
+	w.mu.Unlock()
+	// 等待正在执行的同步完成，避免退出后仍有后台写盘
+	w.wg.Wait()
 	log.Println("[watcher] 已停止")
 }
 
@@ -147,7 +155,37 @@ func (w *Watcher) debounceSync() {
 }
 
 // syncAll 同步所有整合包的启用/禁用状态
+// 执行串行化：防抖只合并"调度"，此处合并"执行"——已有同步在跑时仅标记待续跑，
+// 当前轮结束后串行再跑一轮，避免多个 syncAll 并发操作同一批整合包目录
 func (w *Watcher) syncAll() {
+	w.mu.Lock()
+	if !w.running {
+		w.mu.Unlock()
+		return
+	}
+	if w.syncRunning {
+		w.syncPending = true
+		w.mu.Unlock()
+		return
+	}
+	w.syncRunning = true
+	w.wg.Add(1) // 持锁 Add，保证先于 Stop 的 Wait，避免 WaitGroup 误用
+	w.mu.Unlock()
+
+	defer func() {
+		w.wg.Done()
+		w.mu.Lock()
+		w.syncRunning = false
+		pending := w.syncPending
+		w.syncPending = false
+		restart := w.running
+		w.mu.Unlock()
+		// 执行期间积累的新事件：串行续跑一轮（Stop 后不再续跑）
+		if pending && restart {
+			w.syncAll()
+		}
+	}()
+
 	// 文件变更后先清扫描缓存，确保下次读取最新数据
 	if w.clearCacheFn != nil {
 		w.clearCacheFn()

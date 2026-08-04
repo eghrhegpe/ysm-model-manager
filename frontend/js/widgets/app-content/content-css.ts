@@ -1,4 +1,4 @@
-import { btnBaseCSS, focusVisibleCSS } from "../../utils/css.ts";
+import { btnBaseCSS, focusVisibleCSS } from "../../utils/dom/css.ts";
 export const contentCSS: string = `
 :host { display:flex; flex-direction:column; flex:1; overflow:hidden; font-family:var(--font-ui); font-size:var(--fs-base); line-height:1.4; background:var(--bg); }
 /* ===== CSS 变量（标签/标记色） ===== */

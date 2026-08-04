@@ -2,19 +2,19 @@
 // 守卫层：PageStore 页面守卫 / DnDLock 并发锁 / registerDnD 资源配对
 // 深层收集逻辑（webkitGetAsEntry 等）依赖浏览器 DnD API，jsdom 不覆盖，测守卫与配对层。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../bus.ts";
-import { registerPageStore } from "./page-store.ts";
-import { registerDnD } from "./handler-dnd.ts";
-import { DnDLock } from "../features/dnd-state.ts";
+import { bus } from "../../bus.ts";
+import { registerPageStore } from "../page-store.ts";
+import { registerDnD } from "./dnd.ts";
+import { DnDLock } from "../../features/dnd-state.ts";
 
-vi.mock("../wails/app.ts", () => ({
+vi.mock("../../wails/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     ImportModelFile: vi.fn().mockResolvedValue(undefined),
     DetectZipType: vi.fn().mockResolvedValue("ysm"),
   }),
 }));
 
-import { getApp } from "../wails/app.ts";
+import { getApp } from "../../wails/app.ts";
 
 const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 

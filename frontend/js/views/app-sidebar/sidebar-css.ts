@@ -1,5 +1,5 @@
 // ===== sidebar Shadow CSS =====
-import { btnBaseCSS } from "../../utils/css.ts";
+import { btnBaseCSS } from "../../utils/dom/css.ts";
 export const sidebarCSS: string = `
 :host {
   display: flex; flex-direction: column;

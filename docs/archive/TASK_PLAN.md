@@ -40,21 +40,21 @@
 | `frontend/js/core/handler-sync.js` | 24, 219 | "请先设置游戏路径" | "请先配置游戏目录" |
 | `frontend/js/core/handler-sync.js` | 38 | "请先设置该资源类型的目录" | "请先配置 {类型} 目录" |
 | `frontend/js/core/handler-other.js` | 22, 107 | "请先设置游戏路径" | "请先配置游戏目录" |
-| `frontend/js/widgets/app-tree/instance-actions.js` | 36 | "请先设置游戏路径" | "请先配置游戏目录" |
-| `frontend/js/widgets/app-content/community-diagnostics.js` | 366 | "请先设置游戏路径" | "请先配置游戏目录" |
+| `frontend/js/views/app-tree/instance-actions.js` | 36 | "请先设置游戏路径" | "请先配置游戏目录" |
+| `frontend/js/views/app-content/community-diagnostics.js` | 366 | "请先设置游戏路径" | "请先配置游戏目录" |
 | `frontend/js/features/oldest-models.js` | 42 | "请先设置该资源类型的目录" | "请先配置 {类型} 目录" |
 | `frontend/js/core/context-menus.js` | 380 | "请先设置游戏根目录" | "请先配置游戏目录" |
 | `frontend/js/features/community/download-queue.js` | 485 | "请先在设置中配置仓库目录" | "请先配置仓库目录" |
-| `frontend/js/widgets/app-tree/toolbar-events.js` | 389 | "请先在设置中配置文件存储路径" | "请先配置存储路径" |
+| `frontend/js/views/app-tree/toolbar-events.js` | 389 | "请先在设置中配置文件存储路径" | "请先配置存储路径" |
 | `frontend/js/features/import-queue.js` | 350 | "请先在设置中配置文件存储路径" | "请先配置存储路径" |
 
 ### 1.2 按钮 / tooltip 缩短
 
 | 文件 | 行号 | 旧 | 新 |
 |------|------|-----|-----|
-| `frontend/js/widgets/app-tree/tpl.js` | 7 | `title="高级筛选（骨骼/立方体/纹理）"` | `title="高级筛选"` |
-| `frontend/js/widgets/app-tree/tpl.js` | 28 | `title="点击选择仓库目录"` | `title="配置仓库目录"` |
-| `frontend/js/widgets/app-sidebar/tpl.js` | 38 | `title="点击选择游戏目录"` | `title="配置游戏目录"` |
+| `frontend/js/views/app-tree/tpl.js` | 7 | `title="高级筛选（骨骼/立方体/纹理）"` | `title="高级筛选"` |
+| `frontend/js/views/app-tree/tpl.js` | 28 | `title="点击选择仓库目录"` | `title="配置仓库目录"` |
+| `frontend/js/views/app-sidebar/tpl.js` | 38 | `title="点击选择游戏目录"` | `title="配置游戏目录"` |
 | `frontend/js/dialogs/batch-rename.js` | 251 | 预设芯片 "去除年份 (2025-08)" | "去除年份" |
 
 ### 验证方式
@@ -86,8 +86,8 @@ cd frontend ; npx vite build 2>&1 | Select-String error
 | `frontend/js/features/oldest-models.js` | "仓库元老" | "资历最深" | Tab 标题、卡片标题 |
 | `frontend/js/features/oldest-models.js` | "健康度" | "仓库评分" | 徽章标签 |
 | `frontend/js/features/oldest-models.js` | "今日推荐" | "每日推荐" | 卡片标题 |
-| `frontend/js/widgets/app-content/tpl.js` | 相关文案 | 同步更新 | 检查模板中的引用 |
-| `frontend/js/widgets/app-nav.js` | 导航项文案 | 同步更新 | 如有"仓库元老"导航项 |
+| `frontend/js/views/app-content/tpl.js` | 相关文案 | 同步更新 | 检查模板中的引用 |
+| `frontend/js/views/app-nav.js` | 导航项文案 | 同步更新 | 如有"仓库元老"导航项 |
 
 ### 验证方式
 

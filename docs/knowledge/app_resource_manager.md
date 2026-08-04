@@ -4,8 +4,8 @@ name: 资源管理页 app-resource-manager
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/widgets/app-resource-manager/index.ts
-  - frontend/js/widgets/app-resource-manager/tpl.ts
+  - frontend/js/views/app-resource-manager/index.ts
+  - frontend/js/views/app-resource-manager/tpl.ts
 use_when:
   - 资源管理
   - 资源包

@@ -37,11 +37,11 @@ CSS 1,419 行 / HTML 182 行），前端 + 后端 + 工具脚本三侧均有明�
 | 级别 | 文件 | 行数 | 说明 |
 |------|------|------|------|
 | 🔴 RED | `go/litematic/block_ids_data.go` | 3,477 | 自动生成，豁免 |
-| 🔴 RED | `frontend/js/widgets/app-content/community/site-view.js` | **1,268** | 社区站点视图，未按规范拆分 |
-| 🟡 YELLOW | `frontend/js/widgets/app-content/index.js` | 921 | 入口聚合，可接受 |
-| 🟡 YELLOW | `frontend/js/widgets/app-content/content-css.js` | 919 | Shadow DOM 样式，免拆 |
+| 🔴 RED | `frontend/js/views/app-content/community/site-view.js` | **1,268** | 社区站点视图，未按规范拆分 |
+| 🟡 YELLOW | `frontend/js/views/app-content/index.js` | 921 | 入口聚合，可接受 |
+| 🟡 YELLOW | `frontend/js/views/app-content/content-css.js` | 919 | Shadow DOM 样式，免拆 |
 | 🟡 YELLOW | `frontend/js/features/import-queue.js` | 835 | 业务逻辑与 UI 渲染混合 |
-| 🟡 YELLOW | `frontend/js/widgets/app-content/community/settings.js` | 733 | 社区设置页 |
+| 🟡 YELLOW | `frontend/js/views/app-content/community/settings.js` | 733 | 社区设置页 |
 
 ### 2.3 架构维度评级
 
@@ -127,7 +127,7 @@ Go 端有 17 个 `_test.go`，但核心业务包（`avatar` / `download` / `sync
 
 ## 6. 受影响范围
 
-- `frontend/js/widgets/app-content/community/site-view.js` → 拆分为多文件
+- `frontend/js/views/app-content/community/site-view.js` → 拆分为多文件
 - `internal/app/app_install.go` → 业务逻辑下沉至 `go/installer/`
 - `internal/app/app_download.go` → 打破 `DownloadQueue` 循环引用
 - `go/installer/` / `go/sync/` / `go/download/` → 新增单元测试

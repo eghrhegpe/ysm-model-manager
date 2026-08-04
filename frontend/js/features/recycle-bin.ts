@@ -1,6 +1,6 @@
 // ===== 回收站管理（类型化版 — ADR-014 P3 features）=====
 import { bus } from "../bus.ts";
-import { modalConfirm } from "../widgets/dialogs/modal.ts";
+import { modalConfirm } from "../views/dialogs/modal.ts";
 import { renderDisplayName } from "../utils/dom/display.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { loadResourceRegistry } from "../utils/resource/registry.ts";

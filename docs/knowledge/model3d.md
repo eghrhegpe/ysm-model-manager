@@ -5,7 +5,7 @@ tier: architecture
 category: utils
 source_files:
   - frontend/js/utils/3d/model3d.ts
-  - frontend/js/widgets/app-preview/model3d-loader.ts
+  - frontend/js/views/app-preview/model3d-loader.ts
   - frontend/js/utils/3d/model3d-spec.ts
 use_when:
   - 3D 预览

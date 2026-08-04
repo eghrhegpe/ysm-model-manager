@@ -4,15 +4,15 @@ name: 主内容页 app-content
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/widgets/app-content/index.ts
-  - frontend/js/widgets/app-content/tpl.ts
-  - frontend/js/widgets/app-content/content-css.ts
-  - frontend/js/widgets/app-content/community/core.ts
-  - frontend/js/widgets/app-content/community/diagnostics.ts
-  - frontend/js/widgets/app-content/community/settings.ts
-  - frontend/js/widgets/app-content/community/site-view.ts
-  - frontend/js/widgets/app-content/community/workshop-data.ts
-  - frontend/js/widgets/app-content/community/workshop-icons.ts
+  - frontend/js/views/app-content/index.ts
+  - frontend/js/views/app-content/tpl.ts
+  - frontend/js/views/app-content/content-css.ts
+  - frontend/js/views/app-content/community/core.ts
+  - frontend/js/views/app-content/community/diagnostics.ts
+  - frontend/js/views/app-content/community/settings.ts
+  - frontend/js/views/app-content/community/site-view.ts
+  - frontend/js/views/app-content/community/workshop-data.ts
+  - frontend/js/views/app-content/community/workshop-icons.ts
 use_when:
   - 主内容区
   - 页面切换
@@ -70,6 +70,6 @@ use_when:
 
 - `frontend/js/core/global-handlers.ts` — 全局 handler 汇聚入口（handler-dnd / handler-sync / handler-other）
 - `frontend/js/features/community/` — 仓库页数据/渲染/事件/下载队列（`bindRepoEvents` 等由 index.ts 调用）
-- `frontend/js/widgets/app-content/community/` — 与 features/community 并存的创意工坊模块（site-view / core / settings / diagnostics / workshop-data / workshop-icons），index.ts 同时引用两套，改动前先确认归属
-- `frontend/js/widgets/app-tree/index.ts` — `setPendingTreeSearch` 搜索词交接
+- `frontend/js/views/app-content/community/` — 与 features/community 并存的创意工坊模块（site-view / core / settings / diagnostics / workshop-data / workshop-icons），index.ts 同时引用两套，改动前先确认归属
+- `frontend/js/views/app-tree/index.ts` — `setPendingTreeSearch` 搜索词交接
 - 知识卡：`app_nav`、`app_preview`、`app_sidebar`、`app_sync_manager`、`event_bus`、`wails_bridge`

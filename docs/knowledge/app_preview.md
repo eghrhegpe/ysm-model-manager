@@ -4,21 +4,21 @@ name: 预览面板 app-preview
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/widgets/app-preview/index.ts
-  - frontend/js/widgets/app-preview/tpl.ts
-  - frontend/js/widgets/app-preview/preview-loader.ts
-  - frontend/js/widgets/app-preview/preview-detail.ts
-  - frontend/js/widgets/app-preview/preview-skeleton.ts
-  - frontend/js/widgets/app-preview/preview-zoom.ts
-  - frontend/js/widgets/app-preview/preview-wasm.ts
-  - frontend/js/widgets/app-preview/preview-litematic-3d.ts
-  - frontend/js/widgets/app-preview/preview-litematic-meta.ts
-  - frontend/js/widgets/app-preview/preview-cache.ts
-  - frontend/js/widgets/app-preview/model3d-loader.ts
-  - frontend/js/widgets/app-preview/screenshot-renderer.ts
-  - frontend/js/widgets/app-preview/preview-utils.ts
-  - frontend/js/widgets/app-preview/preview-css.ts
-  - frontend/js/widgets/app-preview/utils.ts
+  - frontend/js/views/app-preview/index.ts
+  - frontend/js/views/app-preview/tpl.ts
+  - frontend/js/views/app-preview/preview-loader.ts
+  - frontend/js/views/app-preview/preview-detail.ts
+  - frontend/js/views/app-preview/preview-skeleton.ts
+  - frontend/js/views/app-preview/preview-zoom.ts
+  - frontend/js/views/app-preview/preview-wasm.ts
+  - frontend/js/views/app-preview/preview-litematic-3d.ts
+  - frontend/js/views/app-preview/preview-litematic-meta.ts
+  - frontend/js/views/app-preview/preview-cache.ts
+  - frontend/js/views/app-preview/model3d-loader.ts
+  - frontend/js/views/app-preview/screenshot-renderer.ts
+  - frontend/js/views/app-preview/preview-utils.ts
+  - frontend/js/views/app-preview/preview-css.ts
+  - frontend/js/views/app-preview/utils.ts
 use_when:
   - 预览
   - 模型预览
@@ -65,7 +65,7 @@ use_when:
 - 由 `app-content` 仓库页 `_render()` 动态 `import("../app-preview/index.ts")` 懒加载注册（见知识卡 `app_content`）
 - `model:select` 派发方为 `app-tree` 节点点击与诊断页去重定位（见知识卡 `app_tree`）
 - 2D/3D 骨骼计算委托 `frontend/js/utils/3d/model2d.ts` / `utils/3d/model3d.ts`，动画解析走 `utils/animation/animation.ts`
-- WASM 解析口径与 Go 端 `go/ysm` 一致（YSMViewer 算法口径）；缓存层为 `frontend/js/widgets/app-preview/preview-cache.ts`
+- WASM 解析口径与 Go 端 `go/ysm` 一致（YSMViewer 算法口径）；缓存层为 `frontend/js/views/app-preview/preview-cache.ts`
 - 组件实例实现 `PreviewCtx` 最小接口，子模块只依赖该接口，不反向引用组件全貌
 
 ## 不变量
@@ -79,6 +79,6 @@ use_when:
 ## 相关
 
 - `frontend/js/utils/3d/model2d.ts` / `utils/3d/model3d.ts` — 2D/3D 骨骼渲染与计算
-- `frontend/js/widgets/app-preview/preview-cache.ts` — 模块级预览缓存（跨组件生命周期持久）
+- `frontend/js/views/app-preview/preview-cache.ts` — 模块级预览缓存（跨组件生命周期持久）
 - `frontend/js/wasm/` — WASM 生成数据（base64 豁免文件）
 - 知识卡：`app_content`、`app_tree`、`go_ysm_parser`、`event_bus`

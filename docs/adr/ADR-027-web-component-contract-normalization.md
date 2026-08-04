@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/Design.md` §14–§20（契约唯一事实来源） / [ADR-008](./ADR-008-event-registration-pattern.md)（订阅侧规范，本 ADR 为其发射侧补充） / [ADR-005](./ADR-005-frontend-governance-rules.md) / [ADR-014](./ADR-014-typescript-migration.md) / `frontend/js/bus.ts` / `frontend/js/widgets/`
+- **相关**：`docs/Design.md` §14–§20（契约唯一事实来源） / [ADR-008](./ADR-008-event-registration-pattern.md)（订阅侧规范，本 ADR 为其发射侧补充） / [ADR-005](./ADR-005-frontend-governance-rules.md) / [ADR-014](./ADR-014-typescript-migration.md) / `frontend/js/bus.ts` / `frontend/js/views/`
 
 ---
 
@@ -151,10 +151,10 @@ attributeChangedCallback(name, oldVal, newVal) {
 | 全库 `customElements.define` 扫描 | 9 个自定义元素：`app-content` / `app-sidebar` / `app-nav` / `app-tree` / `app-preview` / `app-resource-manager` / `app-sync-manager` / `app-toast` / `context-menu` |
 | `frontend/js/bus.ts` | 类型化 `BusEvents` 接口确认；`on()` 返回取消函数、不防重（与 ADR-008 一致） |
 | `frontend/js/app-modules.ts:47` | 实装 6 套主题（`cyber`/`warm`/`pro`/`sakura`/`ocean`/`mint`）+ `system` 别名 → 修正 Design.md §3（漂移 D1） |
-| `frontend/js/widgets/app-content/tpl.ts` | 漂移 D2（`mode="model"` 残留）复核后**不成立**：全库 grep 零匹配，原登记基于过期快照，已核销 |
-| `frontend/js/widgets/app-resource-manager/index.ts:432-438` | 漂移 D3 处置结果：`_toast()` 现直接 `bus.emit("toast:show", {msg,type,duration})` |
+| `frontend/js/views/app-content/tpl.ts` | 漂移 D2（`mode="model"` 残留）复核后**不成立**：全库 grep 零匹配，原登记基于过期快照，已核销 |
+| `frontend/js/views/app-resource-manager/index.ts:432-438` | 漂移 D3 处置结果：`_toast()` 现直接 `bus.emit("toast:show", {msg,type,duration})` |
 | `frontend/js/features/resource-packs.ts` | D3 配套：桥接 handler 与监听配对已删除，`initResourcePacks()` 返回空清理函数，**上层调用契约不变** |
-| `frontend/js/widgets/app-tree/index.ts:63-68, 148, 152-165` | 漂移 D4 处置结果：`_ready` 闸门 + `observedAttributes:["root"]` + `attributeChangedCallback` |
+| `frontend/js/views/app-tree/index.ts:63-68, 148, 152-165` | 漂移 D4 处置结果：`_ready` 闸门 + `observedAttributes:["root"]` + `attributeChangedCallback` |
 | `docs/Design.md` | 470 行 → 886 行，§14–§20 为本 ADR 的规范正文 |
 
 ### 验证记录（2026-08-04）

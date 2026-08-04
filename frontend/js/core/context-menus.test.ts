@@ -49,13 +49,13 @@ const {
   RevealInExplorerMock: vi.fn(),
 }));
 
-vi.mock("../widgets/dialogs/modal.ts", () => ({
+vi.mock("../views/dialogs/modal.ts", () => ({
   modalPrompt: modalPromptMock,
   modalConfirm: modalConfirmMock,
   modalSelect: modalSelectMock,
 }));
-vi.mock("../widgets/dialogs/rename.ts", () => ({ showRenameDialog: showRenameDialogMock }));
-vi.mock("../widgets/dialogs/tag-editor.ts", () => ({ modalTagEditor: modalTagEditorMock }));
+vi.mock("../views/dialogs/rename.ts", () => ({ showRenameDialog: showRenameDialogMock }));
+vi.mock("../views/dialogs/tag-editor.ts", () => ({ modalTagEditor: modalTagEditorMock }));
 // handler 统一走 getApp()（ADR-012）：mock getApp 返回 bindings mock 对象
 vi.mock("../wails/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({

@@ -63,7 +63,7 @@
 | `check-doc-drift.mjs` | `node scripts/check-doc-drift.mjs` / `--fix` | 文档三一致：ADR 登记 + 知识卡 + 架构树引用（ERROR 阻断；`--fix` 刷新架构树基线） |
 | `check-adr-health.mjs` | `node scripts/check-adr-health.mjs` / `--debt` | ADR 状态机值域 / 登记表同步 / 技术债清单 |
 | `check-deadcode-baseline.mjs` | `node scripts/check-deadcode-baseline.mjs` / `--update-baseline` | knip+jscpd 与 `scripts/baseline/deadcode-baseline.json` 对比，新增项阻断 |
-| `check-consumers.mjs` | `node scripts/check-consumers.mjs` / `--strict` / `--min-consumers N` | 孤儿导出审计 |
+| `check-orphan-exports.mjs` | `node scripts/check-orphan-exports.mjs` / `--strict` / `--min-consumers N` | 孤儿导出审计（零消费者符号；与联邦 check-consumers 同名异实，ADR-241 §Phase 2） |
 | `check-circular.mjs` | `node scripts/check-circular.mjs` | frontend/js ESM import 图找环（ERROR 阻断） |
 | `check-boolean-naming.mjs` | `node scripts/check-boolean-naming.mjs` / `--strict` | 布尔变量命名规范 |
 | `check-script-hygiene.mjs` | `node scripts/check-script-hygiene.mjs` / `--json` / `--strict` | 脚本卫生：退出码失效（裸 main + return 失败码无 process.exit）/ 共享层内联（walk/rg/ROOT 样板）/ 检查类缺 `--json` 契约（WARN 不阻断） |

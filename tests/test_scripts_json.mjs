@@ -24,7 +24,7 @@ const NODE = process.execPath;
 const JSON_SCRIPTS = [
   ['review.mjs', '--json'],
   ['check-circular.mjs', '--json'],
-  ['check-consumers.mjs', '--json'],
+  ['check-orphan-exports.mjs', '--json'],
   ['check-boolean-naming.mjs', '--json'],
   ['check-adr-health.mjs', '--json'],
   ['check-knowledge-drift.mjs', '--json'],

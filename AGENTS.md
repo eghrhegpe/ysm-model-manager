@@ -223,7 +223,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 
 > **改完即验映射表（改哪类 → 跑哪类，唯一权威）**：
 > 改文档 → `link-checker` + `check-knowledge-drift`；改 ADR → `adr-check` + `check-adr-health`；
-> 改前端源码 → `check-circular` + `check-consumers` + `check-deadcode-baseline`；
+> 改前端源码 → `check-circular` + `check-orphan-exports` + `check-deadcode-baseline`；
 > 改资源类型 → `type-consistency`；改前端 UI/文案 → `review` + `comment-checker`；提交前 → `doctor`。
 
 > 注：L14「硬约束」的构建命令（`go build` / `vite build` / `typecheck`）负责「跑得起来」，本节负责「符合仓库治理」，两者互补不重复。

@@ -371,7 +371,8 @@ export function createDownloadQueue({
     if (!total || total <= 0) {
       const mb = (dl / 1024 / 1024).toFixed(1);
       label = mb + "MB";
-      pct = dl > 0 ? 100 : 0;
+      // Content-Length=-1 时不得误报 100%（陷阱 #6）：完成判定只信任 file-done / queue:status done
+      pct = 0;
     } else {
       pct = Math.min(Math.round((dl / total) * 100), 100);
       label = pct + "%";

@@ -52,10 +52,17 @@ func (a *App) EnqueueDownloads(tasks []DownloadTask) error {
 		return nil
 	}
 	a.queue.mu.Lock()
+	// 新一批任务视为重新开始：复位取消标志，否则上次取消后 process 永不发 done（前端会永久卡 downloading）
+	a.queue.cancelled = false
 	a.queue.tasks = append(a.queue.tasks, tasks...)
 	total := len(a.queue.tasks)
+	// running 判断必须在锁内，避免并发入队启动多个 process goroutine
+	start := !a.queue.running
+	if start {
+		a.queue.running = true
+	}
 	a.queue.mu.Unlock()
-	if !a.queue.running {
+	if start {
 		go a.queue.process()
 	}
 	log.Printf("[queue] emit queue:status enqueued total=%d", total)

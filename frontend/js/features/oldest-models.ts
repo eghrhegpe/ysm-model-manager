@@ -1,10 +1,10 @@
 // ===== 资历最深 + 仓库评分 + 每日推荐（类型化版 — ADR-014 P3 features）=====
 // 响应全局类型切换
 import { bus } from "../bus.ts";
-import { renderDisplayName } from "../utils/display.ts";
-import { loadResourceRegistry } from "../utils/resource-registry.ts";
+import { renderDisplayName } from "../utils/dom/display.ts";
+import { loadResourceRegistry } from "../utils/resource/resource-registry.ts";
 import { getApp } from "../wails/app.ts";
-import { RESOURCE_TYPES } from "../utils/resource-types.ts";
+import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
 
 /** ScanModelEntries 返回的条目 */
 interface ModelEntry {

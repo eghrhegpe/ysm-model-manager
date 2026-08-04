@@ -38,7 +38,7 @@
 - 并发守卫齐全且走 try/finally：`_saving`（截图，[preview-skeleton.ts#L325-L334](../frontend/js/components/app-preview/preview-skeleton.ts#L325-L334)）、`_loading3D`（防双击，[L258-L261](../frontend/js/components/app-preview/preview-skeleton.ts#L258-L261)）、litematic 3D 按钮 disabled + finally 恢复 —— [preview-litematic-meta.ts#L192-L202](../frontend/js/components/app-preview/preview-litematic-meta.ts#L192-L202)
 - `close3D()` 统一三条关闭路径（关闭按钮/ESC/切换纹理），并清理 timer + keyHandler + renderer —— [preview-skeleton.ts#L470-L486](../frontend/js/components/app-preview/preview-skeleton.ts#L470-L486)
 - MMD 事件委托用 WeakSet 按 ShadowRoot 实例守卫，组件重建后仍可注册 —— `preview-pack.ts#L207-L217`（已随 P2 死代码清理删除）
-- 预览缓存 FIFO 淘汰 + evict 回调释放 blob URL，设计完整 —— [preview-cache.ts#L47-L64](../frontend/js/utils/preview-cache.ts)
+- 预览缓存 FIFO 淘汰 + evict 回调释放 blob URL，设计完整 —— `preview-cache.ts#L47-L64`
 - 错误路径均有 UI 反馈且 `esc()` 转义到位 —— [preview-skeleton.ts#L776-L781](../frontend/js/components/app-preview/preview-skeleton.ts#L776-L781)
 
 **风险：**
@@ -149,7 +149,7 @@
 
 **亮点：**
 
-- model3d `cleanup()` 是全项目资源释放模板：12 个 listener 逐一 remove、RAF 取消、controls/renderer dispose、geometry/material 遍历释放 —— [model3d.ts#L695-L724](../frontend/js/utils/model3d.ts)
+- model3d `cleanup()` 是全项目资源释放模板：12 个 listener 逐一 remove、RAF 取消、controls/renderer dispose、geometry/material 遍历释放 —— `model3d.ts#L695-L724`
 - app-tree 的 bus 订阅由 `bindBusEvents` 收集 unsub 统一进 `_unsubs`，disconnectedCallback 一次清完 —— [index.ts#L80-L118](../frontend/js/components/app-tree/index.ts#L80-L118)、[L141](../frontend/js/components/app-tree/index.ts#L141)
 - app-toast 并发心理模拟通过：最多 5 条堆叠、移除最旧先 clearTimeout、`_remove` 幂等 —— [app-toast.ts#L62-L69](../frontend/js/components/app-toast.ts#L62-L69)
 - handler-dnd 拖拽边界防呆齐全：目录深度上限 10 / 文件数上限 50 / 大小上限 + DnDLock 拦截 —— [handler-dnd.ts#L141](../frontend/js/core/handler-dnd.ts#L141)、[L181-L189](../frontend/js/core/handler-dnd.ts#L181-L189)
@@ -161,7 +161,7 @@
 
 | 级别 | 文件 | 观察 | 建议 |
 |------|------|------|------|
-| 🔴 极高 P1 | [summarize.ts#L83-L88](../frontend/js/utils/summarize.ts)、[L118](../frontend/js/utils/summarize.ts) 等 | **摘要卡 XSS**：私有 `esc` 不转义引号，却被用于 `href="…"`/`title="…"` 属性插值（已实证 L118 `authorBilibili`）；数据源是 .ysm 模型元数据——攻击者可分发恶意模型，`bilibili='…" onclick="…'` 即属性逃逸注入事件属性；且链接无 scheme 校验（`javascript:` 点击即执行） | 改 import `utils/dom.ts` 的完整 esc；链接渲染前校验 `https?:` scheme 白名单 |
+| 🔴 极高 P1 | `summarize.ts#L83-L88`、`L118` 等 | **摘要卡 XSS**：私有 `esc` 不转义引号，却被用于 `href="…"`/`title="…"` 属性插值（已实证 L118 `authorBilibili`）；数据源是 .ysm 模型元数据——攻击者可分发恶意模型，`bilibili='…" onclick="…'` 即属性逃逸注入事件属性；且链接无 scheme 校验（`javascript:` 点击即执行） | 改 import `utils/dom.ts` 的完整 esc；链接渲染前校验 `https?:` scheme 白名单 |
 | 🔴 极高 P1 | [bus.ts#L151-L157](../frontend/js/bus.ts#L151-L157) | **`once()` 实现错误**：注册的是 `wrapper`，`off` 却找 `fn`（永远找不到）→ once 监听器永不移除、每次 emit 都触发。实证消费者 [app-sidebar/index.ts#L186](../frontend/js/components/app-sidebar/index.ts#L186)：叠加另一问题——`sync:download:done` 类型契约为 `void`，handler emit 不带 payload，而 `onDone` 用 `as never` 强转后要求 `token` 匹配 → **每次推送必然 30s 超时误报"操作超时"**，且每次推送泄漏 N 个僵尸监听器 | 一行修复 `this.off(event, wrapper)`；`sync:download:done` 类型补 `{token?, instanceName?}` 并在 emit 端带上 payload |
 | 🟠 高 P2 | [app-tree/index.ts#L272-L273](../frontend/js/components/app-tree/index.ts#L272-L273) | 同一 `_keydownHandler` 同时注册到 `_root` 与 `document`：shadow 内组合键事件 composed 冒泡 → 焦点在工具栏按钮（不被 INPUT 守卫拦截）按 Delete → 确认弹两次、删除执行两次 | 只保留 document 级注册，删 L272 |
 | 🟠 高 P2 | [app-tree/bus-handlers.ts#L190-L205](../frontend/js/components/app-tree/bus-handlers.ts#L190-L205) | `dir:recycle` 中 L190 已算出 `absDir`，L204 却 `RemoveDir(dir)` 传**相对路径** → 按进程 CWD 解析，空文件夹删不掉被 `catch {}` 吞掉，理论上还有误删 CWD 相对目录风险 | 改 `await RemoveDir(absDir)` |
@@ -172,17 +172,17 @@
 | 🟠 高 P2 | [app-sync-manager/index.ts#L97-L117](../frontend/js/components/app-sync-manager/index.ts#L97-L117) | `_init` 每次调用追加 `bus.on("stats:refresh")` 进 `_unsubs` 但从不清理上一轮 → `instance` 属性二次变更后同一事件双份 handler，一次刷新双倍 `_loadData`，叠加自触发 emit 放大 | `_init` 开头先清旧 `_unsubs` 再注册 |
 | 🟠 高 P2 | [context-menus.ts#L281-L287](../frontend/js/core/context-menus.ts#L281-L287) | `file.copy` 与 `batch.copy` 成功后**均缺 `refreshUI()`**（全部 move 分支都有；初版报告误判 batch.copy 已有，复核更正）→ 复制后树视图不更新，用户以为复制失败 | 两处成功分支均补 `refreshUI()` |
 | 🟠 高 P2 | [recycle-bin.ts#L67-L74](../frontend/js/features/recycle-bin.ts#L67-L74)、[L210](../frontend/js/features/recycle-bin.ts#L210) | `_loadingAbort` 是假守卫：AbortController.signal 从未传给任何请求；先完成者的 `finally { _loadingAbort = null }` 清掉后者句柄；快速切资源类型时**慢的旧请求可覆盖新列表** | 用 generation 计数器：渲染前比对序号再写 DOM |
-| 🟠 高 P2 | [model3d.ts#L318-L337](../frontend/js/utils/model3d.ts) | document 级 keydown 对 WASD/方向键/空格 `preventDefault()` 且**无输入框守卫** → 3D 预览挂载期间打开重命名等弹窗无法打字，按 F 误切调试模式 | 先判 `e.target` 是否 INPUT/TEXTAREA/contentEditable（复用 handler-dnd 的 isEditable） |
+| 🟠 高 P2 | `model3d.ts#L318-L337` | document 级 keydown 对 WASD/方向键/空格 `preventDefault()` 且**无输入框守卫** → 3D 预览挂载期间打开重命名等弹窗无法打字，按 F 误切调试模式 | 先判 `e.target` 是否 INPUT/TEXTAREA/contentEditable（复用 handler-dnd 的 isEditable） |
 | 🟡 中 P3 | `theme.ts` 全文件（模块与测试已按本条建议删除） | **生产死模块**：全仓仅 theme.test.js 引用，真实主题逻辑在 app-modules.ts；若误 import，`bindThemeBtn` 因 `#btn-theme` 不存在会陷入每 100ms 一次的无限 setTimeout | 删除模块 + 测试，或让 app-modules 复用（顺带合并 app-modules 重复注册的 `prefers-color-scheme` 监听） |
 | 🟡 中 P3 | esc 碎片化（系统性） | 全项目 **14+ 处重复 esc**，行为分三档：完整版（dom.ts/display.ts 私有/context-menu/app-sidebar tpl）、缺单引号（modal.ts/batch-rename）、不转义引号（mc-format/summarize/rename/app-content `_esc`）——P1/P2 多处 XSS 面均源于此 | 收敛到 `utils/dom.ts` 的 `esc` 单点导出，逐文件替换（可 codemod 批量） |
 | 🟡 中 P3 | [app-sidebar/index.ts#L175-L201](../frontend/js/components/app-sidebar/index.ts#L175-L201) | 推送流 IIFE 无 try/finally：按钮恢复与 `_syncInProgress` 复位不在 finally 路径，意外 throw → 按钮永久 ⏳ 且推送/拉取全锁死（陷阱 #3 同款） | IIFE 包 try/finally |
 | 🟡 中 P3 | [app-tree/bus-handlers.ts#L65](../frontend/js/components/app-tree/bus-handlers.ts#L65) | `SaveAppConfig(dir, "", "", "copy", theme)` 硬编码 linkMode="copy" → 会把用户已保存的硬链接模式冲掉（对比 sidebar events.ts 保留旧值的正确写法） | 先 LoadAppConfig 透传 `cfg.linkMode` |
 | 🟡 中 P3 | [app-tree/bus-handlers.ts#L356-L412](../frontend/js/components/app-tree/bus-handlers.ts#L356-L412) | `batchToggle`/`batchToggleAll`/`toggleFolderBatch` 无并发守卫，连点菜单 → 重叠循环二次 Toggle 把状态打回原形但 toast 仍报成功 | vm 加 `_batchBusy` 标志 |
-| 🟡 中 P3 | [resource-registry.ts#L29-L31](../frontend/js/utils/resource-registry.ts) | 注册表加载失败被缓存为 `{}` 且永不重试 → Go 桥瞬断后整个会话 `getStorageSubDir` 全部降级 | 失败不缓存（保持 null），下次调用重试 |
+| 🟡 中 P3 | `resource-registry.ts#L29-L31` | 注册表加载失败被缓存为 `{}` 且永不重试 → Go 桥瞬断后整个会话 `getStorageSubDir` 全部降级 | 失败不缓存（保持 null），下次调用重试 |
 | 🟡 中 P3 | [app-resource-manager/index.ts#L91-L102](../frontend/js/components/app-resource-manager/index.ts#L91-L102) | `_init` 无 generation 守卫：rtype/instance 属性连变或配置事件并发时，后发先至把旧类型列表写进新 DOM | 入口记 generation，await 返回后校验 |
 | 🟡 中 P3 | [context-menus.ts#L167-L171](../frontend/js/core/context-menus.ts#L167-L171)、[L338-L341](../frontend/js/core/context-menus.ts#L338-L341) | `MoveToRecycle` 失败 `catch {}` 静默吞错，违「异常路径必须 toast」红线 | catch 补 toast |
 | 🟡 中 P3 | [handler-dnd.ts#L9](../frontend/js/core/handler-dnd.ts#L9)、[L189-L192](../frontend/js/core/handler-dnd.ts#L189-L192) | `MAX_FILE_SIZE` 为 100MB，toast 文案却写「超过 10MB」误导用户 | 文案改 100MB 或抽常量复用 |
-| 🟡 中 P3 | [debug.ts#L28](../frontend/js/utils/debug.ts)、[L86-L97](../frontend/js/utils/debug.ts) | `window._DBG_RING` / `window.debugGetSpec`（直接暴露 Go 绑定）常驻 window，调试残留违背「零隐式全局」精神 | `import.meta.env.DEV` 守卫或生产剥离 |
+| 🟡 中 P3 | `debug.ts#L28`、`L86-L97` | `window._DBG_RING` / `window.debugGetSpec`（直接暴露 Go 绑定）常驻 window，调试残留违背「零隐式全局」精神 | `import.meta.env.DEV` 守卫或生产剥离 |
 | 🟢 低 P4（择要） | 多处 | app-nav 高亮色硬编码 + 版本降级写死 "v1.0.0"；app-tree render.ts `updateStat` 700ms 定时器未跟踪；app-sidebar `_checkedSet` 跨 rtype 串味、`.sidebar-import-all` 死引用；tag-editor overlay 无 focus（ESC 需先点进弹窗）、保存按钮无 disable；app-toast 缺 `.warn` 样式但 bus 契约含 warn；display.ts 占位符 `%%TOKEN%%` 与真实文件名可碰撞；version-updater 静默检查发请求前 markChecked（断网也耗 6h 配额）；dnd-state `release()` 无持有者校验 | 见各子报告，均为点状小修 |
 
 **心理模拟记录（4 模型）：**
@@ -202,7 +202,7 @@
 |---|------|--------|--------|
 | P1-1 | [preview-litematic-3d.ts#L160-L176](../frontend/js/components/app-preview/preview-litematic-3d.ts#L160-L176) | 加载期 ESC 泄漏整个 Three.js 场景 + rAF + 6 组监听 | 加 `aborted` 标志，await 后检查 |
 | P1-2 | [bus.ts#L151-L157](../frontend/js/bus.ts#L151-L157) + [app-sidebar/index.ts#L160-L202](../frontend/js/components/app-sidebar/index.ts#L160-L202) | `once` off 错对象 + done 事件无 payload → 推送必然 30s 超时误报 + 僵尸监听器无限累积 | 一行修 once；类型表补 payload 字段并在 emit 端带上 |
-| P1-3 | [summarize.ts#L83-L88](../frontend/js/utils/summarize.ts) | 摘要卡 href/title 属性注入 + 无 URL scheme 校验，恶意 .ysm 可 XSS | 换 dom.ts esc + scheme 白名单 |
+| P1-3 | `summarize.ts#L83-L88` | 摘要卡 href/title 属性注入 + 无 URL scheme 校验，恶意 .ysm 可 XSS | 换 dom.ts esc + scheme 白名单 |
 
 ### P2（17 项，按模块分批修复）
 

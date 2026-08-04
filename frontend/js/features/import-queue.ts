@@ -1,14 +1,14 @@
 // ===== 导入队列 + 拖拽 + 重命名流程（类型化版 — ADR-014 P3 features 收官）=====
 import { bus } from "../bus.ts";
-import { friendlyError } from "../utils/errors.ts";
-import { RESOURCE_TYPES } from "../utils/resource-types.ts";
-import { parseModelName, renderDisplayName } from "../utils/display.ts";
-import { renderFormattedText } from "../utils/mc-format.ts";
+import { friendlyError } from "../utils/dom/errors.ts";
+import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
+import { parseModelName, renderDisplayName } from "../utils/dom/display.ts";
+import { renderFormattedText } from "../utils/format/mc-format.ts";
 import { modalConfirm } from "../dialogs/modal.ts";
 import { DnDLock, PendingImport } from "./dnd-state.ts";
 import { getApp } from "../wails/app.ts";
-import { ALL_EXTS } from "../utils/extensions.ts";
-import { isSupportedFile, shouldEnterForm } from "../utils/dnd-shared.ts";
+import { ALL_EXTS } from "../utils/resource/extensions.ts";
+import { isSupportedFile, shouldEnterForm } from "../utils/dom/dnd-shared.ts";
 
 const extsStr = ALL_EXTS.join(" ");
 

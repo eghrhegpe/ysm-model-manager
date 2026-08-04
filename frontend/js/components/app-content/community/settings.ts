@@ -1,10 +1,10 @@
 // ===== 设置页初始化（为 _initSettings 减负） =====
 import { bus } from "../../../bus.ts";
-import { loadTdKeymap, type TdKeyAction } from "../../../utils/model3d.ts";
+import { loadTdKeymap, type TdKeyAction } from "../../../utils/3d/model3d.ts";
 import { initVersionUpdater } from "../../../features/version-updater.ts";
-import { friendlyError } from "../../../utils/errors.ts";
-import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/resource-registry.ts";
-import { esc } from "../../../utils/dom.ts";
+import { friendlyError } from "../../../utils/dom/errors.ts";
+import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/resource/resource-registry.ts";
+import { esc } from "../../../utils/dom/dom.ts";
 import { getApp } from "../../../wails/app.ts";
 
 // 单一捕获守卫：同一时刻仅允许一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持

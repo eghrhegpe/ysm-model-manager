@@ -6,7 +6,7 @@ import {
   RESOURCE_TYPE_LABELS,
   ALL_RESOURCE_TYPES,
 } from "./resource-types.ts";
-import resourceTypesJson from "../../../resource_types.json";
+import resourceTypesJson from "../../../../resource_types.json";
 
 /** JSON 中全部资源类型 ID */
 const jsonIds = resourceTypesJson.resourceTypes.map((r) => r.id);

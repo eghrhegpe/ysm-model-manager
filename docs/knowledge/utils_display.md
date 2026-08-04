@@ -4,7 +4,7 @@ name: 文件名显示 display
 tier: leaf
 category: utils
 source_files:
-  - frontend/js/utils/display.ts
+  - frontend/js/utils/dom/display.ts
 use_when:
   - 文件名
   - 文件名显示
@@ -53,5 +53,5 @@ use_when:
 
 - [utils_dom](./utils_dom.md) — esc() HTML 转义红线
 - [utils_mc_format](./utils_mc_format.md) — § 分节符着色
-- `frontend/js/utils/display.test.js` — 单元测试（验证入口）
+- `frontend/js/utils/dom/display.test.js` — 单元测试（验证入口）
 - AGENTS.md §3.3 UI 安全红线

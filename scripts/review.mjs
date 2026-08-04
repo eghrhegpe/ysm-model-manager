@@ -65,8 +65,8 @@ function runChecks() {
     'renderSidebar()');
 
   add('R10', 'private esc implementations',
-    rg('replace\\(/&/g, "&amp;"\\)', 'frontend/js', ['*.ts', '*.js']).filter((l) => !l.includes('utils/dom.ts')),
-    'import { esc } from utils/dom.ts (5-replace 单点，致命陷阱 #15)');
+    rg('replace\\(/&/g, "&amp;"\\)', 'frontend/js', ['*.ts', '*.js']).filter((l) => !l.includes('utils/dom/dom.ts')),
+    'import { esc } from utils/dom/dom.ts (5-replace 单点，致命陷阱 #15)');
 
   // W1 排除正则/转义误报：[/\] 字符类、replace(/\\/g 归一化、\n \t \. \w \d \s \b 等
   // （历史 148 处噪声几乎全来自它们）；真实路径拼接（"\\" 双反斜杠字符串字面量）仍保留

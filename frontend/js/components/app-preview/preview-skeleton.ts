@@ -2,11 +2,11 @@
 // 加载统一走 loadModelData，本文件只做 2D 骨骼渲染编排
 import { getPrefer3D, setPrefer3D, type PreviewCtx } from "./preview-utils.ts";
 import { loadModelData } from "./preview-loader.ts";
-import { renderModel2D } from "../../utils/model2d.ts";
+import { renderModel2D } from "../../utils/3d/model2d.ts";
 import { openFullPreview } from "./preview-zoom.ts";
 import type { BedrockGeometry } from "./utils.ts";
-import type { BoneSelectInfo } from "../../utils/model3d.ts";
-import { esc } from "../../utils/dom.ts";
+import type { BoneSelectInfo } from "../../utils/3d/model3d.ts";
+import { esc } from "../../utils/dom/dom.ts";
 import { getApp } from "../../wails/app.ts";
 
 // 2D 拖拽的 window 监听器槽位：loadModel2D 每次渲染模型都会绑定，
@@ -15,7 +15,7 @@ let _prevWindowMove: ((e: MouseEvent) => void) | null = null;
 let _prevWindowUp: (() => void) | null = null;
 
 /** RenderModel3DHandle 运行时扩展（_keyHandler/_timeTimer/_boneDetailEl 为 JS 时代附加字段） */
-type Model3DHandleX = import("../../utils/model3d.ts").RenderModel3DHandle & {
+type Model3DHandleX = import("../../utils/3d/model3d.ts").RenderModel3DHandle & {
   _keyHandler?: ((e: KeyboardEvent) => void) | null;
   _timeTimer?: ReturnType<typeof setInterval>;
   _boneDetailEl?: HTMLElement | null;
@@ -348,7 +348,7 @@ export async function loadModel2D(
           const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ".";
           const base = p.split("/").pop()?.replace(/\.\w+$/, "") || "";
           if (key === "current") {
-            const { screenshotPreview } = await import("../../utils/model3d.ts");
+            const { screenshotPreview } = await import("../../utils/3d/model3d.ts");
             const b64 = screenshotPreview();
             if (!b64) {
               shotBtn.textContent = "❌";
@@ -359,7 +359,7 @@ export async function loadModel2D(
           } else if (key === "all") {
             for (const k of ["front", "45", "side", "back45"]) await saveShotInner(k);
           } else {
-            const { renderMultiAngle } = await import("../../utils/screenshot-renderer.ts");
+            const { renderMultiAngle } = await import("./screenshot-renderer.ts");
             const texUrls =
               model.textures && model.textures.length > 1
                 ? model.textures
@@ -540,15 +540,15 @@ export async function loadModel2D(
         overlay.appendChild(loadingEl);
 
         try {
-          const { preloadModel } = await import("../../utils/model3d-loader.ts");
-          const { renderModel3D } = await import("../../utils/model3d.ts");
+          const { preloadModel } = await import("./model3d-loader.ts");
+          const { renderModel3D } = await import("../../utils/3d/model3d.ts");
           const { texArr, spec } = await preloadModel(
-            model as import("../../utils/model3d-loader.ts").ModelLike,
+            model as import("./model3d-loader.ts").ModelLike,
           );
           const handle3d = (await renderModel3D(
             viewContainer,
             texArr,
-            spec as import("../../utils/model3d.ts").Spec3D,
+            spec as import("../../utils/3d/model3d.ts").Spec3D,
             _texIdx,
           )) as Model3DHandleX;
           // 加载期间用户已关闭（ESC/关闭按钮）：立即释放渲染器，防 WebGL 上下文泄漏

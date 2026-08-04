@@ -1,14 +1,14 @@
 // ===== 工具栏事件绑定 =====
-import { friendlyError } from "../../utils/errors.ts";
-import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
 import { bus } from "../../bus.ts";
 import { flashBtn } from "./utils.ts";
 import { spinnerHTML } from "./tpl.ts";
 import { selectState } from "./data.ts";
-import { getExts } from "../../utils/extensions.ts";
+import { getExts } from "../../utils/resource/extensions.ts";
 import { modalAdvFilter, type AdvFilterValue } from "../../dialogs/adv-filter.ts";
 import { updateSelectCount } from "./events.ts";
-import { dbg } from "../../utils/debug.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 import { setRenderMode, type RenderMode } from "./render.ts";
 import { getApp } from "../../wails/app.ts";
 import type { AppTree } from "./index.ts";

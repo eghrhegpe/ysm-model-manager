@@ -1,6 +1,6 @@
 // ===== 基岩版模型 2D 线条图渲染（类型化版 — ADR-014 P2 大件收尾）=====
-import { dbg } from "./debug.ts";
-import type { BoneTransform } from "./animation.ts";
+import { dbg } from "../debug/debug.ts";
+import type { BoneTransform } from "../animation/animation.ts";
 
 // ── 结构接口 ────────────────────────────────────────
 

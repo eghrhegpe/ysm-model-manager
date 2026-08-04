@@ -3,10 +3,10 @@
 // 使用: <app-sync-manager instance="1.20.1-Fabric"></app-sync-manager>
 
 import { bus } from "../../bus.ts";
-import { dbg } from "../../utils/debug.ts";
-import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
-import { friendlyError } from "../../utils/errors.ts";
-import { esc } from "../../utils/dom.ts";
+import { dbg } from "../../utils/debug/debug.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
+import { esc } from "../../utils/dom/dom.ts";
 import { getApp } from "../../wails/app.ts";
 import {
   containerHTML,

@@ -1,7 +1,7 @@
 // ===== app-sync-manager 模板 =====
-import { renderFormattedText } from "../../utils/mc-format.ts";
-import { stagger } from "../../utils/stagger.ts";
-import { esc } from "../../utils/dom.ts";
+import { renderFormattedText } from "../../utils/format/mc-format.ts";
+import { stagger } from "../../utils/animation/stagger.ts";
+import { esc } from "../../utils/dom/dom.ts";
 
 /** 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） */
 export interface SyncItem {

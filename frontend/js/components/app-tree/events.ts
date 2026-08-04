@@ -168,7 +168,7 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
       e.stopPropagation();
       const path = haPreview.dataset.path;
       const name = path?.split(/[/\\]/).pop() || "";
-      import("../../utils/display.ts").then(({ parseModelName }) => {
+      import("../../utils/dom/display.ts").then(({ parseModelName }) => {
         const { author } = parseModelName(name);
         if (author) {
           getApp().then(({ OpenInBrowser }) =>

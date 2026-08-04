@@ -4,7 +4,7 @@ name: 常量与调试 constants/debug
 tier: leaf
 category: utils
 source_files:
-  - frontend/js/utils/debug.ts
+  - frontend/js/utils/debug/debug.ts
 use_when:
   - 调试日志
   - dbg

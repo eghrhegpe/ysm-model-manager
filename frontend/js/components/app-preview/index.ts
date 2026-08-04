@@ -1,19 +1,19 @@
 // ===== <app-preview> 入口 =====
 import { bus } from "../../bus.ts";
 import { previewCSS } from "./preview-css.ts";
-import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
 import { modelDetailHTML } from "./tpl.ts";
 import {
   cacheGet,
   cacheSet,
   cacheSetEvictHandler,
-} from "../../utils/preview-cache.ts";
+} from "./preview-cache.ts";
 import { getApp } from "../../wails/app.ts";
 import { type PreviewCtx, type DecodedYsm } from "./preview-utils.ts";
 import { decodeYsmViaWasm } from "./preview-wasm.ts";
 import { showModelDetail, showResourcePack, showShaderPack } from "./preview-detail.ts";
 import { showLitematic, cleanupLitematic3D } from "./preview-litematic-meta.ts";
-import { esc } from "../../utils/dom.ts";
+import { esc } from "../../utils/dom/dom.ts";
 import type { BedrockGeometry } from "./utils.ts";
 
 // 注册缓存淘汰回调：释放 blob URL

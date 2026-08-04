@@ -1,5 +1,5 @@
 // ===== Go 数据加载层 =====
-import { getExts } from "../../utils/extensions.ts";
+import { getExts } from "../../utils/resource/extensions.ts";
 import { getApp } from "../../wails/app.ts";
 
 /** 树条目（loader 转换后的渲染格式） */

@@ -4,7 +4,7 @@ name: 图标映射 icon
 tier: leaf
 category: utils
 source_files:
-  - frontend/js/utils/icon.ts
+  - frontend/js/utils/icon/icon.ts
 use_when:
   - 图标
   - emoji
@@ -42,4 +42,4 @@ use_when:
 ## 相关
 
 - [utils_resource_types](./utils_resource_types.md) — 资源类型常量
-- `frontend/js/utils/icon.test.js` — 单元测试（验证入口）
+- `frontend/js/utils/icon/icon.test.js` — 单元测试（验证入口）

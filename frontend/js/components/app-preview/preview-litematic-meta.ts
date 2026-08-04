@@ -1,5 +1,5 @@
-import { renderFormattedText } from "../../utils/mc-format.ts";
-import { esc } from "../../utils/dom.ts";
+import { renderFormattedText } from "../../utils/format/mc-format.ts";
+import { esc } from "../../utils/dom/dom.ts";
 import { getApp } from "../../wails/app.ts";
 import type { PreviewCtx } from "./preview-utils.ts";
 

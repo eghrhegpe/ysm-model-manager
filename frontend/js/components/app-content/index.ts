@@ -1,11 +1,11 @@
 // ===== <app-content> 入口 =====
 import { bus } from "../../bus.ts";
 import { setPendingTreeSearch } from "../app-tree/index.ts";
-import { esc as escUtil } from "../../utils/dom.ts";
-import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
-import { dbg } from "../../utils/debug.ts";
+import { esc as escUtil } from "../../utils/dom/dom.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 import { contentCSS } from "./content-css.ts";
-import { stagger } from "../../utils/stagger.ts";
+import { stagger } from "../../utils/animation/stagger.ts";
 import { getApp } from "../../wails/app.ts";
 import { Events } from "@wailsio/runtime";
 import {
@@ -33,7 +33,7 @@ import { bindRepoEvents } from "../../features/community/events.ts";
 import { renderSiteView, type RenderSiteViewCtx, type RepoAuthorLike } from "./community/site-view.ts";
 import { getSiteIcon } from "./community/workshop-icons.ts";
 import { loadCommunityData, fillSearch, type LocalCreator } from "./community/core.ts";
-import { friendlyError } from "../../utils/errors.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
 import type { WorkshopModel } from "../../features/community/render.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 

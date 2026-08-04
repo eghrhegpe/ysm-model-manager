@@ -1,8 +1,8 @@
 // ===== 同步相关：导入缺失 / 同步启用状态（类型化版 — ADR-014 P3）=====
 import { bus } from "../bus.ts";
-import { friendlyError } from "../utils/errors.ts";
-import { RESOURCE_TYPES } from "../utils/resource-types.ts";
-import { dbg } from "../utils/debug.ts";
+import { friendlyError } from "../utils/dom/errors.ts";
+import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
+import { dbg } from "../utils/debug/debug.ts";
 import { getApp } from "../wails/app.ts";
 
 /** 注册同步 handler，push 返回的取消订阅函数到 unsubs */

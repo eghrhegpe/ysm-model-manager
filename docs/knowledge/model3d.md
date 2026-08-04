@@ -4,9 +4,9 @@ name: 3D 预览渲染 model3d
 tier: architecture
 category: utils
 source_files:
-  - frontend/js/utils/model3d.ts
-  - frontend/js/utils/model3d-loader.ts
-  - frontend/js/utils/model3d-spec.ts
+  - frontend/js/utils/3d/model3d.ts
+  - frontend/js/components/app-preview/model3d-loader.ts
+  - frontend/js/utils/3d/model3d-spec.ts
 use_when:
   - 3D 预览
   - Three.js
@@ -74,5 +74,5 @@ use_when:
 - [model2d](./model2d.md) — 2D 预览（同一坐标口径约束）
 - [app_preview](./app_preview.md) — 预览面板消费方
 - [utils_export](./utils_export.md) — 截图与导出
-- `frontend/js/utils/model3d-spec.test.js` — JS 兜底 ↔ Go 口径黄金样本测试（验证入口）
+- `frontend/js/utils/3d/model3d-spec.test.js` — JS 兜底 ↔ Go 口径黄金样本测试（验证入口）
 - AGENTS.md 致命陷阱 §二 #11

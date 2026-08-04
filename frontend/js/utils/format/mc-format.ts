@@ -1,5 +1,5 @@
 // ===== Minecraft 分节符颜色渲染（类型化版 — ADR-014 P2）=====
-import { esc } from "./dom.ts";
+import { esc } from "../dom/dom.ts";
 
 const MC_COLORS: Record<string, string> = {
   "0": "#000000",

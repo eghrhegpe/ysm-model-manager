@@ -688,11 +688,14 @@ class AppContent extends HTMLElement {
     }
 
     // 📦 显示 GitHub 仓库模型列表（比对本地已有文件）
+    // _currentRepo 检测过时的异步响应（与 _initGithub 的 showRepo 同模式，防快速切换乱序覆盖）
+    let _currentRepo = "";
     const showRepoModels = async (
       repo: string,
       models: WorkshopModel[],
       source: string,
     ): Promise<void> => {
+      _currentRepo = repo;
       // 加载本地仓库已有文件列表 + 镜像配置
       const localMap = new Map<string, string>();
       let mirror = "";
@@ -714,6 +717,7 @@ class AppContent extends HTMLElement {
       } catch (_) {
         // 加载失败不影响列表显示
       }
+      if (_currentRepo !== repo) return; // 已切换仓库，丢弃过期结果
 
       // 根据镜像源选择下载 URL 前缀
       // 选 jsDelivr 时下载优先走 CDN；选 GitHub API 时走 raw（Go 端内部会按配置回退）
@@ -738,6 +742,7 @@ class AppContent extends HTMLElement {
 
       const missingCount = countMissing(models, localMap);
 
+      if (_currentRepo !== repo) return; // 已切换，丢弃
       if (searchResults) {
         searchResults.innerHTML = renderRepoHeaderHTML({
           esc: (s) => this._esc(s),
@@ -750,6 +755,7 @@ class AppContent extends HTMLElement {
 
       // 清理前一次绑定
       if (this._repoEventsCleanup) await this._repoEventsCleanup();
+      if (_currentRepo !== repo) return; // 清理期间已切换，丢弃
 
       // 委托 bindRepoEvents 管理所有事件 + 内部状态 (showAll/selectedSet/renderList)
       if (searchResults) {

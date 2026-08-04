@@ -25,6 +25,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const B = { OK: '[OK]', FAIL: '[FAIL]', FIX: '[FIX]', SKIP: '[SKIP]' };
 const TIMEOUT = 300_000;
+/** 远端领先提示（SKIP 与 FAIL 共用，避免重复长文案） */
+const PULL_HINT = '提示: git 报 rejected/non-fast-forward 时先 git pull 整合远端再重推。';
 
 /* ---------------- 工具 ---------------- */
 
@@ -171,7 +173,7 @@ function main() {
   const lines = parseStdin().split('\n').filter(Boolean);
   if (!lines.length) {
     console.log(`${B.SKIP} 无可推送 ref（空 stdin），跳过`);
-    console.log(`${B.SKIP} 提示: 若 git 同时报 rejected/non-fast-forward，属远端领先——先 git pull 整合远端提交（本地未提交改动会阻止 rebase，可改用 merge）再重推。`);
+    console.log(`${B.SKIP} ${PULL_HINT}`);
     return 0;
   }
 
@@ -326,11 +328,11 @@ function main() {
   let gofmtHint = '';
   if (gofmt && !gofmt.ok) {
     gofmtHint = gofmt.note?.startsWith('格式化')
-      ? 'gofmt 已 -w 修复文件但 amend 失败（工作区不净/非 HEAD）——手动 `git add <文件>` + `git commit` 后重推。'
-      : 'gofmt 检出未格式化文件——`gofmt -w <文件>` 修复后 `git add` + `git commit` 重推。';
+      ? 'gofmt 已修复但 amend 失败（工作区不净）——git add + git commit 后重推。'
+      : 'gofmt 检出未格式化——gofmt -w 修复后 git commit 重推。';
   }
   console.log(`修复指引: 按上方 [FAIL] 项处理；${gofmtHint}紧急绕过: git push --no-verify`);
-  console.log(`提示: 若 git 同时输出 rejected/non-fast-forward，属远端领先——先 git pull（本地未提交改动会阻止 rebase 时可改用 merge）再重推。`);
+  console.log(PULL_HINT);
   return 1;
 }
 

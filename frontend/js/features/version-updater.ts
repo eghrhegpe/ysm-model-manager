@@ -38,9 +38,7 @@ async function doUpdate(
   if (statusEl) {
     statusEl.textContent = "⬇️ 下载+安装中...";
   }
-  const { DoUpdate } = await import(
-    "../../bindings/ysm-model-manager/internal/app/app.js"
-  );
+  const { DoUpdate, RestartApplication } = await getApp();
   const result = await DoUpdate(info.url || "", info.expectedHash || "");
   if (result !== "success") {
     throw new Error(result);
@@ -48,9 +46,6 @@ async function doUpdate(
   // 说明：Go 侧 InstallUpdate 在替换完成后 os.Exit(0) 终止主进程，下面这段实际
   // 不可达（更新助手 ysm-updater-helper.exe 负责替换 exe 并重启新进程）；
   // 保留作防御——若未来 InstallUpdate 改为返回而非退出，可在此启动新进程
-  const { RestartApplication } = await import(
-    "../../bindings/ysm-model-manager/internal/app/app.js"
-  );
   await RestartApplication();
 }
 

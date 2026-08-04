@@ -113,8 +113,10 @@ describe("app-tree 组件（testid 钩子 + 交互路径）", () => {
     const el = await mountTree();
     const toggle = getByTestId(el.shadowRoot!, "tree-toggle");
     toggle!.click();
-    toggle!.click(); // 第二次被 _toggleBusy 拦截
-    expect(ToggleModelEnable).toHaveBeenCalledTimes(1);
+    // 第一次点击同步置位 _toggleBusy（events.ts:136），第二次点击在同步阶段被拦截
+    toggle!.click(); // 第二次被 _toggleBusy 拦截（events.ts:135）
+    // ToggleModelEnable 经 getApp().then 异步链触发（events.ts:141-142），需等待断言
+    await waitFor(() => (ToggleModelEnable as unknown as { mock: { calls: unknown[] } }).mock.calls.length === 1);
   });
 
   it("6. 子路径文件渲染出文件夹行（tree-dir）", async () => {

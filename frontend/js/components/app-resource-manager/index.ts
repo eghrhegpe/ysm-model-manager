@@ -43,14 +43,21 @@ async function _loadConfig(forceRefresh?: boolean): Promise<ResourceTypeConfig[]
   return STORE._config;
 }
 
-// 监听配置刷新事件（如用户修改了自定义资源类型）
-bus.on("config:resource-types-changed", () => {
-  STORE._config = null;
-  // 通知所有已创建的组件实例重新初始化
-  document.querySelectorAll("app-resource-manager").forEach((el) => {
-    (el as AppResourceManager)._init && (el as AppResourceManager)._init();
-  });
-});
+/**
+ * 全局配置刷新监听：registerGlobalHandlers 统一收集 unsub
+ * （替代顶层无守卫注册 — ADR-008 违规点，TS 化后收敛）
+ */
+export function registerResourceManagerGlobal(unsubs: Array<() => void>): void {
+  unsubs.push(
+    bus.on("config:resource-types-changed", () => {
+      STORE._config = null;
+      // 通知所有已创建的组件实例重新初始化
+      document.querySelectorAll("app-resource-manager").forEach((el) => {
+        (el as AppResourceManager)._init && (el as AppResourceManager)._init();
+      });
+    }),
+  );
+}
 
 function _findType(rtype: string): ResourceTypeConfig | undefined {
   return (STORE._config || []).find((t) => t.id === rtype);

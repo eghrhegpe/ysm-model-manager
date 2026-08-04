@@ -181,9 +181,10 @@ func (a *App) GenerateRepoIndex(repoPath string) (string, error) {
 		relPath := e.Path
 		if strings.HasPrefix(relPath, repoPath) {
 			relPath = strings.TrimPrefix(relPath, repoPath)
-			relPath = strings.TrimPrefix(relPath, "\\")
-			relPath = strings.TrimPrefix(relPath, "/")
+			relPath = strings.TrimLeft(relPath, `\/`)
 		}
+		// index.json 供 GitHub Actions（Linux）消费，路径统一正斜杠（ADR-011）
+		relPath = filepath.ToSlash(relPath)
 		// ✅ 修复：将 append 移到循环内部，使用正确的 e 变量
 		list = append(list, indexEntry{Name: e.Name, Path: relPath, Size: e.Size, Hash: e.Hash})
 	}
@@ -313,12 +314,9 @@ type scanCacheEntry struct {
 
 const scanCacheTTL = 30 * time.Second
 
-// ClearScanCache 清除扫描缓存（下载/导入后调用）
+// ClearScanCache 清除扫描缓存（下载/导入后调用）；统一收敛到包级 InvalidateScanCache
 func (a *App) ClearScanCache() {
-	scanCache.Range(func(key, value interface{}) bool {
-		scanCache.Delete(key)
-		return true
-	})
+	InvalidateScanCache()
 }
 
 // ========== 模型扫描 ==========
@@ -485,7 +483,7 @@ func (a *App) ScanLocalAuthors() []types.WorkshopCreator {
 
 	// 定义要扫描的目录和对应的类型标签
 	type scanTarget struct {
-		root string
+		root  string
 		rtype string
 		exts  []string
 	}

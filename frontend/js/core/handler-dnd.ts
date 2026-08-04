@@ -5,34 +5,10 @@ import { PageStore } from "./page-store.ts";
 import { DnDLock, PendingImport } from "../features/dnd-state.ts";
 import { getApp } from "../wails/app.ts";
 import { ALL_EXTS } from "../utils/extensions.ts";
+import { getExt, isSupportedFile, shouldEnterForm } from "../utils/dnd-shared.ts";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
 const MAX_FILE_COUNT = 50;
-const getExt = (name: string): string =>
-  "." + (name.split(".").pop() || "").toLowerCase();
-const isSupportedFile = (name: string): boolean =>
-  ALL_EXTS.includes(getExt(name));
-
-/**
- * 判断文件是否需要进入命名表单（异步）
- * - .ysm / ysm.json → 始终进表单
- * - .zip / .7z → 调 Go 端 DetectZipType 检测内容后决定
- * - 其他已注册扩展名 → 直接导入
- */
-const shouldEnterForm = async (name: string, base64: string): Promise<boolean> => {
-  const ext = getExt(name);
-  if (ext === ".ysm") return true;
-  if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
-  if (ext === ".zip" || ext === ".7z") {
-    try {
-      const { DetectZipType } = await getApp();
-      return (await DetectZipType(base64)) === RESOURCE_TYPES.YSM;
-    } catch {
-      return false;
-    }
-  }
-  return false;
-};
 
 const readFileAsBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {

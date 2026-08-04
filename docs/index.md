@@ -6,7 +6,7 @@ hero:
   text: Minecraft YSM 模型的一站式管理工具
   tagline: 像 Steam 创意工坊一样管理你的 YSM 模型 — 导入、预览、分类、同步到整合包，一站完成
   image:
-    src: /ysm-model-manager/preview/模型仓库.png
+    src: /preview/模型仓库.png
     alt: YSM 模型管理器
   actions:
     - theme: brand

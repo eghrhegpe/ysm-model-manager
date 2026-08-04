@@ -1,6 +1,6 @@
 # ADR-012：Wails Binding 调用路径一致性
 
-- **状态**：已采纳（Accepted，当前不一致，未修复）
+- **状态**：✅ 已采纳（2026-08-04 全量统一：业务代码直接 import(bindings) 全部改走 getApp()）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/js/wails/app.js` / `frontend/js/features/import-queue.js` / `frontend/js/core/context-menus.js`

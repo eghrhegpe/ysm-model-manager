@@ -23,17 +23,7 @@ func init() {
 }
 
 func findNodeJS() string {
-	// 已知路径（emsdk 自带）
-	candidates := []string{
-		"C:\\Users\\zhujieling11\\emsdk\\node\\22.16.0_64bit\\bin\\node.exe",
-		"C:\\Users\\zhujieling11\\emsdk\\node\\22.16.0_64bit\\node.exe",
-	}
-	for _, p := range candidates {
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
-	}
-	// PATH 查找
+	// PATH 查找（跨平台：Linux/macOS 命中 "node"，Windows 命中 "node.exe"）
 	if p, err := exec.LookPath("node"); err == nil {
 		return p
 	}

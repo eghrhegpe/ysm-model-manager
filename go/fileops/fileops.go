@@ -13,7 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
+
 
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
@@ -180,7 +180,7 @@ func extractTextureViaYSM(modelPath string) []byte {
 	}
 
 	cmd := exec.Command(parserPath, "-i", inDir, "-o", outDir)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	hideWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		return nil
 	}

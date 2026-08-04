@@ -12,7 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
+
 )
 
 // CacheDir 返回头像缓存目录（exe 同目录下的 creators_cache/）。
@@ -329,7 +329,7 @@ main().catch(e=>{console.error(e);process.exit(1)});
 		return nil
 	}
 	cmd := exec.Command(nodeJSPath, scriptPath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	hideWindow(cmd)
 	cmd.Dir = tmpDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {

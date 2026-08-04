@@ -10,6 +10,8 @@
 
 项目以 Jekyll + just-the-docs 构建文档站点（GitHub Pages 项目页）。
 
+> **当前状态（2026-08-04）**：网站**尚未构建发布**——`docs/_site/` 不存在、GitHub Pages 未启用；构建需 Ruby/bundle 环境（本机可能未装，此时构建留给 GitHub Pages / 并行会话）。**当前以 `docs/_config.yml` 配置为准**（Jekyll + just-the-docs 为唯一方案，无方案歧义）。
+
 | 项 | 值 |
 |----|-----|
 | 框架 | Jekyll + just-the-docs（`docs/_config.yml`，`remote_theme: just-the-docs/just-the-docs`）|

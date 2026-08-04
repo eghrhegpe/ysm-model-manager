@@ -54,7 +54,7 @@
 
 ### 已知遗留
 
-- **方案漂移（2026-08-04 核实）**：原决策 VitePress，实际落地 **Jekyll + just-the-docs**（`docs/_config.yml` 已入库：`remote_theme: just-the-docs/just-the-docs`、`baseurl: /ysm-model-manager`、`heading_anchors: true`、jekyll-seo-tag；`.vitepress/` 不存在，`docs/Gemfile` + `Gemfile.lock` + `_sass/` 为 Jekyll 生态）。理由（源自 _config.yml 注释）：GitHub Pages 原生支持 Jekyll 零构建配置，just-the-docs 提供原生侧边栏 + 站内搜索，观感对齐 MikuMikuAR VitePress 站点浅色基调。VitePress 方案是否正式废弃待决策人确认。
+- **方案漂移（2026-08-04 核实）**：原决策 VitePress，实际落地 **Jekyll + just-the-docs**（`docs/_config.yml` 已入库：`remote_theme: just-the-docs/just-the-docs`、`baseurl: /ysm-model-manager`、`heading_anchors: true`、jekyll-seo-tag；`.vitepress/` 不存在，`docs/Gemfile` + `Gemfile.lock` + `_sass/` 为 Jekyll 生态）。理由（源自 _config.yml 注释）：GitHub Pages 原生支持 Jekyll 零构建配置，just-the-docs 提供原生侧边栏 + 站内搜索，观感对齐 MikuMikuAR VitePress 站点浅色基调。**收敛指引：以 Jekyll + just-the-docs 为当前唯一方案，VitePress 不作为候选（废弃确认中，无需 AI/维护者处理）。**
 - 站点部署目标（GitHub Pages 项目页，baseurl 已配置）待构建发布验证；
 - 本 ADR 状态随建站进度更新（🔄 → ✅）。
 

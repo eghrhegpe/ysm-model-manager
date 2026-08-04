@@ -1,6 +1,8 @@
 // ===== 紧凑列表行 HTML 模板（24px 高度）=====
 import { renderDisplayName } from "../../utils/display.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
+import { esc } from "../../utils/dom.ts";
+import { fmt, sizeColor } from "../../utils/fmt.ts";
 import type { TreeEntry } from "./loader.ts";
 
 /** 文件行 HTML（紧凑列表模式：icon + name + size，无 hover actions、无 date、无 tag dot） */
@@ -12,8 +14,8 @@ export function listFileRowHTML(
   indent: number | null | undefined,
   rowCls = "",
 ): string {
-  const p = attr(e.path);
-  const fp = attr(e.fullPath || e.path);
+  const p = esc(e.path);
+  const fp = esc(e.fullPath || e.path);
   const checked = e.banned ? "" : " on";
   const ban = e.banned ? " ban" : "";
   const typeIcon =
@@ -23,7 +25,7 @@ export function listFileRowHTML(
 <span class="ck${checked}" data-path="${p}" data-fullpath="${fp}"></span>
 <span class="ficon">${typeIcon}</span>
 <span class="nm${nmCls}">${nmHtml}</span>
-<span class="sz ${sc(e.size)}">${size(e.size)}</span></div>`;
+<span class="sz ${sizeColor(e.size)}">${fmt(e.size)}</span></div>`;
 }
 
 /** 文件夹行 HTML（紧凑列表模式：arrow + folder icon + name） */
@@ -50,29 +52,8 @@ export function listFolderRowHTML(
   }
   const dispName = renderDisplayName(k);
   const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
-  return `<div class="fh-list${lk}" data-dir="${attr(full)}"${pad}>
-<span class="ck${ckCls}" data-dir="${attr(full)}"></span>
+  return `<div class="fh-list${lk}" data-dir="${esc(full)}"${pad}>
+<span class="ck${ckCls}" data-dir="${esc(full)}"></span>
 <span class="ar${ac}">${ar}</span>
 <span class="nm" style="color:${nc}">${fi} ${dispName}</span></div>`;
-}
-
-function attr(s: string): string {
-  return (s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-function size(b: number | null | undefined): string {
-  if (b == null) return "";
-  if (b < 1024) return b + " B";
-  if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
-  return (b / 1048576).toFixed(1) + " MB";
-}
-function sc(b: number | null | undefined): string {
-  if (b == null) return "";
-  if (b < 1048576) return "sz-green";
-  if (b < 3145728) return "";
-  return "sz-red";
 }

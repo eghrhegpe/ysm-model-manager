@@ -28,7 +28,7 @@ export interface TreeRow {
 }
 
 /** buildTree 嵌套节点（文件夹 = 子节点对象，文件 = { _e: entry }） */
-interface TreeNode {
+export interface TreeNode {
   _e?: TreeEntry;
   [key: string]: TreeNode | TreeEntry | undefined;
 }
@@ -57,7 +57,7 @@ export function setRenderMode(mode: RenderMode): void {
 }
 
 // ——— 树构建（与原版一致） ———
-function buildTree(
+export function buildTree(
   entries: TreeEntry[],
   sortMode: string,
   search: string,
@@ -135,7 +135,7 @@ function dirEntries(node: TreeNode): TreeEntry[] {
 // ——— 扁平化：将嵌套树拍平为一维行数组 ———
 let _rowIdCounter = 0;
 
-function flattenVisible(
+export function flattenVisible(
   node: TreeNode,
   dirPath: string,
   search: string,

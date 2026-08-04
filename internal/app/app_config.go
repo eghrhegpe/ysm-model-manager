@@ -293,7 +293,7 @@ func (a *App) GetWindowPosition() types.WindowState {
 	if cfg.WinScrW > 0 && cfg.WinScrH > 0 && (cfg.WinScrW != vw || cfg.WinScrH != vh) {
 		_, vx, _, _ := getVirtualScreen()
 		state.X = vx + vw*cfg.WinRelX/100
-		state.Y = vh*cfg.WinRelY/100
+		state.Y = vh * cfg.WinRelY / 100
 	}
 	if state.X <= 0 && state.Y <= 0 {
 		state.X = 100
@@ -455,8 +455,3 @@ func (a *App) ValidateMinecraftDir(dir string) (string, string) {
 	}
 	return "", "未检测到 .minecraft 文件夹。请选择包含 versions/ 或 instances/ 等子目录的游戏目录"
 }
-
-
-
-
-

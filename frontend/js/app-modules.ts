@@ -2,6 +2,7 @@
 import { bus } from "./bus.ts";
 import { register } from "./services/registry.ts";
 import { Window } from "@wailsio/runtime";
+import { getApp } from "./wails/app.ts";
 
 // bus 已在 bus.ts 中挂载 window.bus，此处不再重复赋值
 
@@ -70,7 +71,7 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 /** 从 Go 配置或 localStorage 加载主题 */
 async function initTheme() {
   try {
-    const { LoadAppConfig } = await import("../bindings/ysm-model-manager/internal/app/app.js");
+    const { LoadAppConfig } = await getApp();
     const cfg = await LoadAppConfig();
     const theme =
       localStorage.getItem("theme") || cfg.theme || THEME_DARK;

@@ -1,5 +1,6 @@
 // ===== 创意工坊纯数据层 =====
 import { dbg } from "../../../utils/debug.ts";
+import { getApp } from "../../../wails/app.ts";
 import type { WorkshopSite, WorkshopCreator } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 
 /** 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） */
@@ -30,7 +31,7 @@ export interface CommunityData {
  * 自动合并本地仓库提取的作者
  */
 export async function loadCommunityData(): Promise<CommunityData> {
-  const App = await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
+  const App = await getApp();
   const [sites, creators, authors, localAuthors] = await Promise.all([
     App.LoadWorkshopSites(),
     App.LoadWorkshopCreators(),
@@ -79,7 +80,7 @@ async function tryAutoMergeCommunity(creators: LocalCreator[]): Promise<void> {
   if (added > 0) {
     try {
       const { SaveWorkshopCreatorsBySite } =
-        await import("../../../../bindings/ysm-model-manager/internal/app/app.js");
+        await getApp();
       // 按站点分组，逐站点原子保存
       const siteMap: Record<string, LocalCreator[]> = {};
       creators.forEach((c) => {

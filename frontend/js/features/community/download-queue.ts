@@ -84,9 +84,7 @@ export function getState(): DownloadState {
 export async function resume(): Promise<void> {
   try {
     dbg("resume:start");
-    const { QueueStatus } = await import(
-      "../../../bindings/ysm-model-manager/internal/app/app.js"
-    );
+    const { QueueStatus } = await getApp();
     const result = await QueueStatus();
     dbg("resume:result", result);
     // Wails v2 多返回值映射：数组/对象/单值 三种格式都要兜底
@@ -136,9 +134,7 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
   notify();
 
   tasks.forEach((t) => (t.saveDir = t.saveDir || ""));
-  const { EnqueueDownloads } = await import(
-    "../../../bindings/ysm-model-manager/internal/app/app.js"
-  );
+  const { EnqueueDownloads } = await getApp();
   await EnqueueDownloads(tasks);
   dbg("enqueue:done", STATE.status);
 }
@@ -149,9 +145,7 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
 export async function cancelDownloads(): Promise<void> {
   if (STATE.status !== "downloading") return;
   try {
-    const { CancelQueue } = await import(
-      "../../../bindings/ysm-model-manager/internal/app/app.js"
-    );
+    const { CancelQueue } = await getApp();
     await CancelQueue();
   } catch (_) {
     /* 取消失败不影响状态 */
@@ -212,9 +206,7 @@ if (!_registered) {
         (async () => {
           try {
             const { CachedCreatorAvatar, DebugExtractCreatorAvatar } =
-              await import(
-                "../../../bindings/ysm-model-manager/internal/app/app.js"
-              );
+              await getApp();
             let dataUri = await CachedCreatorAvatar(author);
             if (!dataUri) {
               await DebugExtractCreatorAvatar(author);
@@ -608,9 +600,7 @@ export function createDownloadQueue({
     if (STATE.status === "downloading") return;
     if (!tasks.length) return;
 
-    const { GetRepoRoot } = await import(
-      "../../../bindings/ysm-model-manager/internal/app/app.js"
-    );
+    const { GetRepoRoot } = await getApp();
     const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
     if (!repoRoot) {
       bus.emit("toast:show", {

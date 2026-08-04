@@ -1,6 +1,7 @@
 // ===== Litematic 体素 3D 预览 =====
 
 import { esc } from "../../utils/dom.ts";
+import { getApp } from "../../wails/app.ts";
 
 /** 体素数据（GetLitematicVoxelData 等返回 JSON） */
 interface VoxelData {
@@ -171,7 +172,7 @@ export async function createLitematic3D(
   document.addEventListener("keydown", escH);
 
   try {
-    const App = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    const App = await getApp();
     if (aborted) return;
     const fn = (App as unknown as Record<string, (p: string) => Promise<string>>)[voxelFn || "GetLitematicVoxelData"];
     const jsonStr = await fn(path);

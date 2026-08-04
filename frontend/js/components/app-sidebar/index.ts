@@ -9,6 +9,7 @@ import { bindCardEvents, bindFooter } from "./events.ts";
 import { get } from "../../services/registry.ts";
 import type { loadInstances } from "./loader.ts";
 import type { SidebarInstance } from "./data.ts";
+import { getApp } from "../../wails/app.ts";
 
 // 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰
 const _checkedSets = new Map<string, Set<string>>();
@@ -246,7 +247,7 @@ class AppSidebar extends HTMLElement {
       let totalPulled = 0;
       let failed = 0;
       try {
-        const { PullResourceFromInstance } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        const { PullResourceFromInstance } = await getApp();
         const types = resolveTypes((item as HTMLElement).dataset.syncType || "all");
         for (const insName of selected) {
           const results = await Promise.allSettled(

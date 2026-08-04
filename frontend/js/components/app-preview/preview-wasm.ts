@@ -5,6 +5,7 @@ import { stripYsgpTextHeader, type DecodedYsm } from "./preview-utils.ts";
 import { cacheGet, cacheSet } from "../../utils/preview-cache.ts";
 import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "./utils.ts";
 import { parseBedrockAnimationJSON } from "../../utils/animation.ts";
+import { getApp } from "../../wails/app.ts";
 
 /** WASM 解码输出文件 */
 interface DecodedFile {
@@ -33,7 +34,7 @@ export async function decodeYsmViaWasm(
   // 读文件（WASM 和 JSON 都需要，提升到外层作用域供两个 try 块共用）
   let bytes: Uint8Array | null = null;
   try {
-    const { ReadFileBytes } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    const { ReadFileBytes } = await getApp();
     // ReadFileBytes 绑定返回 base64 string | null（非 Uint8Array——原 JS 的
     // instanceof Uint8Array 分支是死代码，已清理）
     const raw = await ReadFileBytes(modelPath);
@@ -86,7 +87,7 @@ export async function decodeYsmViaWasm(
         }
         cacheSet(modelPath, { ...result, _decodedBy: "🧠 JSON 直接解析" });
         // 异步缓存头像到 creators_cache/ 供创作者界面使用
-        import("../../../bindings/ysm-model-manager/internal/app/app.js")
+        getApp()
           .then(({ CacheModelAvatars }) => CacheModelAvatars(modelPath))
           .catch(() => {});
         return result;

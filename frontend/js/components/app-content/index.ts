@@ -505,7 +505,7 @@ class AppContent extends HTMLElement {
     const extractAvatars = async (): Promise<void> => {
       try {
         const { BatchExtractCreatorAvatars } =
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          await getApp();
         const result = await BatchExtractCreatorAvatars();
         const avatars = (result || {}) as Record<string, string>;
         const keys = Object.keys(avatars);
@@ -537,7 +537,7 @@ class AppContent extends HTMLElement {
       if (embedMode) {
         openEmbedded(site);
       } else {
-        import("../../../bindings/ysm-model-manager/internal/app/app.js").then(({ OpenInBrowser }) =>
+        getApp().then(({ OpenInBrowser }) =>
           OpenInBrowser(site.url),
         );
       }
@@ -548,7 +548,7 @@ class AppContent extends HTMLElement {
     const PROXY_BASE = "http://127.0.0.1:" + PROXY_PORT + "/proxy?url=";
     const openEmbedded = async (site: WorkshopSite): Promise<void> => {
       try {
-        const { StartProxy } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        const { StartProxy } = await getApp();
         await StartProxy(PROXY_PORT);
       } catch (_) {}
       if (urlEl) urlEl.textContent = site.url;
@@ -567,7 +567,7 @@ class AppContent extends HTMLElement {
     const openCurrent = (): void => {
       const cs = currentSite;
       if (cs) {
-        import("../../../bindings/ysm-model-manager/internal/app/app.js").then(({ OpenInBrowser }) =>
+        getApp().then(({ OpenInBrowser }) =>
           OpenInBrowser(cs.url),
         );
       }
@@ -583,7 +583,7 @@ class AppContent extends HTMLElement {
       ?.addEventListener("click", async () => {
         try {
           const { ExportWorkshopSitesJSONFile } =
-            await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+            await getApp();
           const path = await ExportWorkshopSitesJSONFile();
           bus.emit("toast:show", {
             msg: "📤 站点已导出: " + path,
@@ -603,7 +603,7 @@ class AppContent extends HTMLElement {
       ?.addEventListener("click", async () => {
         try {
           const { ImportWorkshopSitesJSONFile } =
-            await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+            await getApp();
           const n = await ImportWorkshopSitesJSONFile();
           await showCreatorsBySite("bilibili");
           bus.emit("toast:show", {
@@ -629,7 +629,7 @@ class AppContent extends HTMLElement {
           openEmbedded(currentSite);
         } else {
           // 外链模式：走系统浏览器，共享用户登录态
-          import("../../../bindings/ysm-model-manager/internal/app/app.js").then(({ OpenInBrowser }) =>
+          getApp().then(({ OpenInBrowser }) =>
             OpenInBrowser(url),
           );
         }
@@ -700,7 +700,7 @@ class AppContent extends HTMLElement {
       const localMap = new Map<string, string>();
       let mirror = "";
       try {
-        const AppM = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        const AppM = await getApp();
         const cfg = await AppM.LoadAppConfig();
         mirror = cfg.mirror || "";
         const repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot(RESOURCE_TYPES.YSM) : "";
@@ -794,7 +794,7 @@ class AppContent extends HTMLElement {
           '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">⏳ 加载中...</div>';
       }
       try {
-        const App = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        const App = await getApp();
         const repos = await App.LoadGitHubRepos();
         const ghCreators = repos || [];
         if (sourceInfo) sourceInfo.textContent = ghCreators.length + " 仓库 · JSON驱动";
@@ -866,7 +866,7 @@ class AppContent extends HTMLElement {
       let mirror = "";
       try {
         const { LoadAppConfig, ScanModelEntries, GetRepoRoot } =
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          await getApp();
         const cfg = await LoadAppConfig();
         mirror = cfg.mirror || "";
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
@@ -932,7 +932,7 @@ class AppContent extends HTMLElement {
       const openBtn = resultsBody?.querySelector("#gh-open-repo");
       if (openBtn)
         openBtn.addEventListener("click", () => {
-          import("../../../bindings/ysm-model-manager/internal/app/app.js").then(({ OpenInBrowser }) =>
+          getApp().then(({ OpenInBrowser }) =>
             OpenInBrowser("https://github.com/" + repo),
           );
         });

@@ -3,6 +3,7 @@ import { bus } from "../../bus.ts";
 import { animateNumber } from "../../utils/animate.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import type { SidebarInstance } from "./data.ts";
+import { getApp } from "../../wails/app.ts";
 
 // 绑定每个卡片展开/折叠
 // 返回清理函数，组件销毁时移除事件监听
@@ -145,7 +146,7 @@ export function bindFooter(
     (async () => {
       try {
         const { LoadAppConfig, SaveAppConfig, GetMinecraftPaths } =
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          await getApp();
         const cfg = await LoadAppConfig();
         if (cfg.mcRoot) {
           btn.textContent = `🎮 ${cfg.mcRoot}`;

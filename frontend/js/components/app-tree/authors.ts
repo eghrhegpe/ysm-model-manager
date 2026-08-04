@@ -1,4 +1,5 @@
 // ===== 作者标签模块 =====
+import { getApp } from "../../wails/app.ts";
 
 /** 作者统计（Go ListModelAuthors 返回） */
 export interface AuthorInfo {
@@ -12,7 +13,7 @@ export interface AuthorInfo {
 export async function loadAuthors(): Promise<AuthorInfo[]> {
   try {
     const { ListModelAuthors } =
-      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+      await getApp();
     return (await ListModelAuthors()) || [];
   } catch {
     return [];

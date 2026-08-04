@@ -3,6 +3,7 @@
 import { summaryCardHTML } from "../../utils/summarize.ts";
 import { renderFormattedText } from "../../utils/mc-format.ts";
 import { esc } from "../../utils/dom.ts";
+import { getApp } from "../../wails/app.ts";
 import type { PreviewCtx } from "./preview-utils.ts";
 
 /** 详情面板 generation：每次展示新预览自增，慢请求返回后比对，过期结果不回写 DOM */
@@ -47,7 +48,7 @@ export async function showModelDetail(
 
   try {
     const { ExtractYsmSummary, ExtractYSMHeader } =
-      await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+      await getApp();
     const results = await Promise.allSettled([
       ExtractYsmSummary(path),
       ExtractYSMHeader(path),
@@ -103,7 +104,7 @@ export async function showResourcePack(
 ): Promise<void> {
   const gen = ++_detailGen;
   try {
-    const { ReadPackMeta } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    const { ReadPackMeta } = await getApp();
     const jsonStr = await ReadPackMeta(path);
     if (gen !== _detailGen) return;
     const meta = JSON.parse(jsonStr) as {

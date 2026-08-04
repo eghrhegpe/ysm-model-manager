@@ -52,9 +52,7 @@ async function resolveDstDir(opts: {
     });
     return null;
   }
-  const { GetRepoRoot } = await import(
-    "../../bindings/ysm-model-manager/internal/app/app.js"
-  );
+  const { GetRepoRoot } = await getApp();
   const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
   if (!repoRoot) {
     bus.emit("toast:show", {
@@ -107,9 +105,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     });
     if (!resolved) return;
     const { folder, dstDir } = resolved;
-    const { MoveModelFile } = await import(
-      "../../bindings/ysm-model-manager/internal/app/app.js"
-    );
+    const { MoveModelFile } = await getApp();
     toast(`📦 正在移动 ${ctx.paths.length} 个文件到 ${folder}...`, 3000);
     let ok = 0;
     let fail = 0;
@@ -134,9 +130,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     });
     if (!resolved) return;
     const { folder, dstDir } = resolved;
-    const { CopyModelFile } = await import(
-      "../../bindings/ysm-model-manager/internal/app/app.js"
-    );
+    const { CopyModelFile } = await getApp();
     toast(`📦 正在复制 ${ctx.paths.length} 个文件到 ${folder}...`, 3000);
     let ok = 0;
     let fail = 0;
@@ -172,7 +166,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     });
     if (!ok2) return;
     const { MoveToRecycle } =
-      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+      await getApp();
     let fail = 0;
     let lastErr: unknown = null;
     for (const p of ctx.paths) {
@@ -230,7 +224,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       const newName = await showRenameDialog(ctx.path || "", fileName);
       if (!newName) return;
       const { RenameFile } =
-        await import("../../bindings/ysm-model-manager/internal/app/app.js");
+        await getApp();
       await RenameFile(ctx.path || "", newName);
       refreshUI();
     } catch (e) {
@@ -246,9 +240,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     });
     if (!resolved) return;
     const { folder, dstDir } = resolved;
-    const { MoveModelFile } = await import(
-      "../../bindings/ysm-model-manager/internal/app/app.js"
-    );
+    const { MoveModelFile } = await getApp();
     try {
       await MoveModelFile(ctx.path || "", dstDir);
       toast(`✅ 已移动到 ${folder}`, 3000);
@@ -266,9 +258,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     });
     if (!resolved) return;
     const { folder, dstDir } = resolved;
-    const { CopyModelFile } = await import(
-      "../../bindings/ysm-model-manager/internal/app/app.js"
-    );
+    const { CopyModelFile } = await getApp();
     try {
       await CopyModelFile(ctx.path || "", dstDir);
       refreshUI();
@@ -279,7 +269,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   },
   "file.push-to-pack": async (ctx) => {
     const { LoadAppConfig, ListVersionInstances, InstallModelTo } =
-      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+      await getApp();
     const cfg = await LoadAppConfig();
     const mcRoot = cfg.mcRoot || "";
     if (!mcRoot) {
@@ -326,7 +316,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     });
     if (!ok2) return;
     const { MoveToRecycle } =
-      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+      await getApp();
     try {
       await MoveToRecycle(ctx.path || "");
       refreshUI();
@@ -336,7 +326,7 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   },
   "file.reveal": async (ctx) => {
     const { RevealInExplorer } =
-      await import("../../bindings/ysm-model-manager/internal/app/app.js");
+      await getApp();
     try {
       await RevealInExplorer(ctx.path || "");
     } catch (e) {

@@ -5,6 +5,7 @@
 //   - 可通过 URL ?nodebug=1 关闭（默认开启）
 //   - 可通过 window._DBG_RING 取最近 200 条（用于复盘）
 //   - 写完调试后请删除调用（调试日志用完即删，见 frontend/AGENTS.md）
+import { getApp } from "../wails/app.ts";
 
 interface RingEntry {
   t: string;
@@ -71,7 +72,7 @@ function safeStr(v: unknown): string {
 // 调试：控制台可调 window.debugGetSpec(path) 获取 Go spec 骨骼数据
 window.debugGetSpec = async (path?: string): Promise<unknown> => {
   try {
-    const { GetModel3DSpec } = await import("../../bindings/ysm-model-manager/internal/app/app.js");
+    const { GetModel3DSpec } = await getApp();
     const jsonStr = await GetModel3DSpec(path || "");
     const spec = JSON.parse(jsonStr);
     dbg("model3d", "spec:", spec);

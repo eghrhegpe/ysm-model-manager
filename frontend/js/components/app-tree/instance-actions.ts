@@ -9,6 +9,7 @@ import {
   ListVersionInstances,
   SyncCustomToRepo,
 } from "../../../bindings/ysm-model-manager/internal/app/app.js";
+import { getApp } from "../../wails/app.ts";
 
 function addImportLog(
   type: string,
@@ -18,8 +19,7 @@ function addImportLog(
   status: string,
   msg: string,
 ): void {
-  import("../../../bindings/ysm-model-manager/internal/app/app.js")
-    .then((mod) => {
+  getApp().then((mod) => {
       mod.AddImportLog?.(type, name, path, size, status, msg);
     })
     .catch(() => {});
@@ -36,7 +36,7 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
         if (!filePaths) return;
         // 获取整合包目录
         const cfg = await (
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js")
+          await getApp()
         ).LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {
@@ -59,7 +59,7 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
         }
         // 选择一个 .ysm 文件导入
         const { InstallModelWithOverlay } =
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          await getApp();
         // 绑定签名仅 2 参（overlay 布尔已移除，原 JS 第三参 false 被忽略）
         const result = await InstallModelWithOverlay(
           filePaths,
@@ -92,7 +92,7 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
   unsubs.push(
     bus.on("instance:sync", async ({ name: insName }) => {
       try {
-        const AppM = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+        const AppM = await getApp();
         const cfg = await AppM.LoadAppConfig();
         const mcRoot = cfg.mcRoot || "";
         const repoRoot = AppM.GetRepoRoot ? await AppM.GetRepoRoot(RESOURCE_TYPES.YSM) : "";
@@ -115,7 +115,7 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
           return;
         }
         const { SyncCustomToRepo } =
-          await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+          await getApp();
         const repoEntries = await ScanModelEntries(repoRoot);
         const repoNames = new Set(
           (repoEntries || []).map((e) => e.Name.replace(/\.ban$/i, "")),

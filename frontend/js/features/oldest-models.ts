@@ -29,6 +29,8 @@ export async function loadOldestModel(
   if (!container) return () => {};
   let currentType = localStorage.getItem("repo_rtype") || RESOURCE_TYPES.YSM;
   let unsub: (() => void) | null = null;
+  // 渲染代数：rtype 快速切换时丢弃过期结果（与 recycle-bin 的 _loadGen 同模式）
+  let _loadGen = 0;
 
   // 命名函数，用于安全地移除/添加 click 监听，避免重复绑定
   function handleContainerClick(e: MouseEvent): void {
@@ -40,11 +42,13 @@ export async function loadOldestModel(
   }
 
   async function render(): Promise<void> {
+    const gen = ++_loadGen; // 每次渲染自增：慢响应返回后若已过期则丢弃
     container.innerHTML =
       '<div style="padding:12px;color:#6c7086;font-size:var(--fs-base)">⏳ 扫描中...</div>';
     try {
       const { ScanModelEntries, GetRepoRoot } = await getApp();
       const repoRoot = await GetRepoRoot(currentType);
+      if (gen !== _loadGen) return; // 已切换类型，丢弃过期结果
       if (!repoRoot) {
         container.innerHTML =
           '<div style="padding:12px;color:#f38ba8;font-size:var(--fs-base)">请先配置该资源类型目录</div>';
@@ -52,6 +56,7 @@ export async function loadOldestModel(
       }
 
       const entries: ModelEntry[] = (await ScanModelEntries(repoRoot)) || [];
+      if (gen !== _loadGen) return; // 已切换类型，丢弃过期结果
       if (!entries || !entries.length) {
         container.innerHTML =
           '<div style="padding:12px;color:#6c7086;font-size:var(--fs-base)">该类型仓库为空</div>';
@@ -224,6 +229,7 @@ export async function loadOldestModel(
       };
 
       const reg = await loadResourceRegistry();
+      if (gen !== _loadGen) return; // 已切换类型，丢弃过期结果
       const curIcon = (reg[currentType] && reg[currentType].icon) || "📦";
       container.innerHTML =
         '<div class="oldest-page">' +
@@ -281,6 +287,7 @@ export async function loadOldestModel(
       container.removeEventListener("click", handleContainerClick);
       container.addEventListener("click", handleContainerClick);
     } catch (err) {
+      if (gen !== _loadGen) return; // 已切换类型，丢弃过期结果
       container.innerHTML =
         '<div style="padding:12px;color:#f38ba8;font-size:var(--fs-base)">❌ 加载失败: ' +
         esc((err as Error).message || String(err)) +

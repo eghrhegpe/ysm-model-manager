@@ -114,8 +114,13 @@ export function registerSync(unsubs: Array<() => void>): void {
   );
 
   // 同步启用/禁用状态到所有整合包
+  // 并发守卫：sync:toggle:status 有多个生产者（app-tree 批量/单文件、app-tree/events），
+  // 连点会并发触发多个 SyncToggleStatus 同时 WalkDir+Rename 同一批文件（竞态）
+  let _toggleBusy = false;
   unsubs.push(
     bus.on("sync:toggle:status", async () => {
+      if (_toggleBusy) return;
+      _toggleBusy = true;
       dbg("sync", "toggle-status");
       try {
         const {
@@ -203,6 +208,7 @@ export function registerSync(unsubs: Array<() => void>): void {
           type: "error",
         });
       } finally {
+        _toggleBusy = false;
         bus.emit("tree:reload");
       }
     }),

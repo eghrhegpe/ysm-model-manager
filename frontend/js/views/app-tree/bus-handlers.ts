@@ -321,74 +321,68 @@ async function reload(vm: AppTree): Promise<void> {
   vm._renderTree();
 }
 
-async function batchToggle(
+/**
+ * 批量切换启用/禁用公共实现。
+ * batchToggle（目录前缀过滤）与 batchToggleAll（全局）复用同一套逻辑，
+ * 差异仅在路径前缀与 toast 文案，收敛为单个函数避免重复（P4 合并）。
+ */
+async function runBatchToggle(
   vm: AppTree,
-  dir: string,
   enable: boolean,
+  opts: { prefix?: string; label: string },
 ): Promise<void> {
   if (vm._batchBusy || vm._toggleBusy) return; // 并发守卫：连点时后来的批量操作直接忽略
   vm._batchBusy = true;
   try {
-  const { ToggleModelEnable } = await getApp();
-  const prefix = dir.replace(/\\/g, "/");
-  const snapshot = vm._entries
-    .filter((e) => e.path && e.path.startsWith(prefix) && e.banned === enable)
-    .map((e) => e.fullPath);
-  if (!snapshot.length) return;
-  let ok = 0,
-    fail = 0;
-  for (const fullPath of snapshot) {
-    try {
-      await ToggleModelEnable(fullPath);
-      ok++;
-    } catch (err) {
-      fail++;
-      console.warn("[bus] batchToggle 失败:", fullPath, err);
+    const { ToggleModelEnable } = await getApp();
+    const prefix = opts.prefix?.replace(/\\/g, "/");
+    const snapshot = vm._entries
+      .filter(
+        (e) =>
+          e.path &&
+          e.banned === enable &&
+          (!prefix || e.path.startsWith(prefix)),
+      )
+      .map((e) => e.fullPath);
+    let ok = 0,
+      fail = 0;
+    for (const fullPath of snapshot) {
+      try {
+        await ToggleModelEnable(fullPath);
+        ok++;
+      } catch (err) {
+        fail++;
+        console.warn(`[bus] ${opts.label} 失败:`, fullPath, err);
+      }
     }
-  }
-  if (ok > 0) {
-    await reload(vm);
-    bus.emit("sync:toggle:status");
-  }
-  bus.emit("toast:show", {
-    msg: `批量${enable ? "启用" : "禁用"}: ${ok} 成功, ${fail} 失败`,
-    duration: 3000,
-    type: fail > 0 ? "warn" : "success",
-  });
+    if (ok > 0) {
+      await reload(vm);
+      bus.emit("sync:toggle:status");
+    }
+    bus.emit("toast:show", {
+      msg: `${opts.label}: ${ok} 成功, ${fail} 失败`,
+      duration: 3000,
+      type: fail > 0 ? "warn" : "success",
+    });
   } finally {
     vm._batchBusy = false;
   }
 }
 
-async function batchToggleAll(vm: AppTree, enable: boolean): Promise<void> {
-  if (vm._batchBusy || vm._toggleBusy) return; // 并发守卫：连点时后来的批量操作直接忽略
-  vm._batchBusy = true;
-  try {
-  let ok = 0,
-    fail = 0;
-  const { ToggleModelEnable } = await getApp();
-  const snapshot = vm._entries
-    .filter((e) => e.banned === enable)
-    .map((e) => e.fullPath);
-  for (const fullPath of snapshot) {
-    try {
-      await ToggleModelEnable(fullPath);
-      ok++;
-    } catch (err) {
-      fail++;
-      console.warn("[bus] batchToggleAll 失败:", fullPath, err);
-    }
-  }
-  if (ok > 0) {
-    await reload(vm);
-    bus.emit("sync:toggle:status");
-  }
-  bus.emit("toast:show", {
-    msg: `全部${enable ? "启用" : "禁用"}: ${ok} 成功, ${fail} 失败`,
-    duration: 3000,
-    type: fail > 0 ? "warn" : "success",
+async function batchToggle(
+  vm: AppTree,
+  dir: string,
+  enable: boolean,
+): Promise<void> {
+  if (!vm._entries.some((e) => e.banned === enable)) return;
+  return runBatchToggle(vm, enable, {
+    prefix: dir,
+    label: `批量${enable ? "启用" : "禁用"}`,
   });
-  } finally {
-    vm._batchBusy = false;
-  }
+}
+
+async function batchToggleAll(vm: AppTree, enable: boolean): Promise<void> {
+  return runBatchToggle(vm, enable, {
+    label: `全部${enable ? "启用" : "禁用"}`,
+  });
 }

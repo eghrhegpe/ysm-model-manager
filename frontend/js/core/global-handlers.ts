@@ -2,6 +2,7 @@
 // 统一入口，汇聚所有子 handler 模块
 // app-content/index.js 调用此模块注册所有 handler
 
+import { registerPageStore } from "./page-store.ts";
 import { registerDnD } from "./handler-dnd.ts";
 import { registerSync } from "./handler-sync.ts";
 import { registerInstanceOps } from "./handler-other.ts";
@@ -9,6 +10,7 @@ import { registerInstanceOps } from "./handler-other.ts";
 /** 注册所有全局 handler，返回 unsub 函数数组 */
 export function registerGlobalHandlers(): Array<() => void> {
   const unsubs: Array<() => void> = [];
+  registerPageStore(unsubs);
   registerDnD(unsubs);
   registerSync(unsubs);
   registerInstanceOps(unsubs);

@@ -224,7 +224,6 @@ ${appendixBlock}
 
 - [骨架文档](SKELETON.md) — 世界观、角色、三幕结构、技术设定
 - [AI 行为约束](AGENTS.md) — 区域志目录规范与决策链路
-- [演义史](development-saga.md) — 早期事件驱动叙事（历史稿）
 - [README](README.md) — 门牌页（仅指路，不维护索引）
 `
   );

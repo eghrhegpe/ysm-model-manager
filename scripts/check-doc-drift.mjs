@@ -21,6 +21,7 @@
  *   node scripts/check-doc-drift.mjs --fix      # 刷新 INFO 基线（架构树未登记模块）
  *
  * 退出码：发现 ERROR → 1；否则 0（INFO/WARN 不阻断）。
+ * 设计意图：文档漂移检查器（代码现实 vs 架构文档声称）
  */
 import fs from 'node:fs';
 import path from 'node:path';

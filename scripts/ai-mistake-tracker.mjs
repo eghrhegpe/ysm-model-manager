@@ -1,20 +1,24 @@
-// ===== AI Mistake Tracker — 分析 git 历史中的修复模式，识别 AI 高频犯错区域 =====
-// 对标联邦 MikuMikuAR tests/ai_mistake_tracker.py 的 Node 零依赖版
-//
-// 用法：
-//   node scripts/ai-mistake-tracker.mjs                # 默认最近 200 条 commit
-//   node scripts/ai-mistake-tracker.mjs --limit 500    # 扩大范围
-//   node scripts/ai-mistake-tracker.mjs --json         # JSON 输出（CI 集成用）
+/**
+ * ai-mistake-tracker.mjs — AI 犯错追踪器（git 历史修复模式分析）
+ *
+ * 设计意图：AI 犯错追踪器（git 历史修复模式分析）
+ *
+ * 依赖：node:child_process / node:path / node:url
+ *
+ * 用法：
+ *   node scripts/ai-mistake-tracker.mjs                 # 默认行为
+ *   node scripts/ai-mistake-tracker.mjs --json    # JSON 输出（CI/子代理消费）
+ *   node scripts/ai-mistake-tracker.mjs --limit N # 启用 limit N
+ *
+ * 退出码：0（无 process.exit 调用）
+ */
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-// ── 配置 ──────────────────────────────────────────────
 
-// fix 提交的分类规则（按优先级匹配，适配 ysm commit 风格）
-// scope 前缀 + 内容关键词双轨（无 scope 的内容描述型 fix 也能归类）
 const CATEGORIES = [
   ["ts",          /\b\(ts\)\b|typecheck|typescript|\.ts 化|\.js → \.ts/],
   ["docs",        /\b\(docs\)\b|文档|断链|adr|知识卡/],
@@ -28,13 +32,11 @@ const CATEGORIES = [
   ["ui",          /\b\(ui\)\b|css|组件|theme|样式/],
 ];
 
-// 规则违反检测关键词（ysmc 宪法信号，扫描 commit message）
 const RULE_VIOLATIONS = {
   git_add_all: /git add \./,          // 多会话并行时 git add . 会混入他人特性（单会话不受限，此处仅统计信号）
   stash: /git stash/,                 // 宪法禁止 git stash
   full_read_large: /read.*(\.ts|\.js|\.go).*limit\s*=\s*\d{4,}/, // 读大文件没加 limit
   merge_conflict: /conflict|冲突|合并冲突/,
-  // —— 反模式修复信号（ADR-035 G-3 反哺：统计哪些反模式被高频修复，反哺陷阱清单）——
   anti_delete_first: /先删后建|先装后删|原子替换/,          // 反模式表：先删后建（失败即丢）
   anti_skip_existing: /存在即跳过|幂等|静默跳过/,           // 反模式表：存在即跳过（静默不更新）
   anti_debounce_exec: /防抖|串行化|待续跑/,                  // 反模式表：防抖只合并调度不合并执行
@@ -47,10 +49,8 @@ const RULE_VIOLATIONS = {
   anti_partial_file: /半截|半文件|残留/,                     // 失败残留半截文件
 };
 
-// 文件热力图统计范围（ysmc 代码域）
 const HOTSPOT_PREFIXES = ["frontend/js/", "internal/", "go/", "scripts/"];
 
-// ── Git 操作 ──────────────────────────────────────────
 
 function _run(cmd) {
   try {
@@ -89,7 +89,6 @@ function gitFilesChanged(commitHash) {
   return output.split("\n").map((f) => f.trim()).filter(Boolean);
 }
 
-// ── 分析逻辑 ──────────────────────────────────────────
 
 function categorizeCommit(message) {
   for (const [cat, pattern] of CATEGORIES) {
@@ -170,7 +169,6 @@ function ruleViolationScan(limit = 50) {
   return violations;
 }
 
-// ── 输出 ──────────────────────────────────────────────
 
 function formatReport(commits, chains, hotspots, catStats, violations) {
   const lines = [];
@@ -229,7 +227,6 @@ function formatReport(commits, chains, hotspots, catStats, violations) {
   return lines.join("\n");
 }
 
-// ── 主入口 ──────────────────────────────────────────
 
 const args = process.argv.slice(2);
 const jsonMode = args.includes("--json");

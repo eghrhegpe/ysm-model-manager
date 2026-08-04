@@ -14,6 +14,7 @@
  *   node scripts/check-circular.mjs --json     # JSON（CI 用）
  *
  * 退出码：发现环 → 1；否则 0。
+ * 设计意图：循环依赖检查（source-graph 分析）
  */
 import fs from 'node:fs';
 import { ROOT, SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.mjs';

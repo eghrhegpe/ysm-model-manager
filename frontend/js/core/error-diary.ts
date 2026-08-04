@@ -61,8 +61,8 @@ export function registerErrorDiary(): void {
 async function logUiMsg(msg: string, status: string): Promise<void> {
   try {
     const { AddOpLog } = await getApp();
-    // 净化：去掉 ❌/⚠️ 前缀 + 截断过长消息
-    const clean = msg.replace(/^[❌❎⚠️]\s*/, "").slice(0, 200);
+    // 净化：去掉 ❌/⚠️ 前缀（含 U+FE0F 变体选择器）+ 截断
+    const clean = msg.replace(/^[❌❎⚠]️?\s*/, "").slice(0, 200);
     void AddOpLog("ui", clean, "", "", 0, status, msg.slice(0, 500));
   } catch {
     // 日记写入失败不影响调用方

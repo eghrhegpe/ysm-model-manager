@@ -30,7 +30,7 @@ import {
   renderRepoHeaderHTML,
 } from "../../features/community/render.ts";
 import { bindRepoEvents } from "../../features/community/events.ts";
-import { renderSiteView, type RenderSiteViewCtx, type RepoAuthorLike } from "./community/site-view.ts";
+import { renderSiteView, type RenderSiteViewCtx, type RepoAuthorLike } from "./community/site/index.ts";
 import { getSiteIcon } from "./community/workshop-icons.ts";
 import { loadCommunityData, fillSearch, type LocalCreator } from "./community/core.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";

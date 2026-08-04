@@ -1,12 +1,12 @@
 // ===== 站点视图 HTML 构建（纯函数，从 site-view.ts 拆出）=====
-import { stagger } from "../../../utils/animation/stagger.ts";
-import { getSiteIcon, getTagIconFromRole } from "./workshop-icons.ts";
+import { stagger } from "../../../../utils/animation/stagger.ts";
+import { getSiteIcon, getTagIconFromRole } from "../workshop-icons.ts";
 import {
   getTagFromRole,
   loadFavs,
-} from "./workshop-data.ts";
-import type { WorkshopSite } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
-import type { LocalCreatorLike, RepoAuthorLike } from "./site-view.ts";
+} from "../workshop-data.ts";
+import type { WorkshopSite } from "../../../../../bindings/ysm-model-manager/go/types/models.ts";
+import type { LocalCreatorLike, RepoAuthorLike } from "./index.ts";
 
 /** 创作者卡片工厂上下文 */
 export interface CrCardCtx {

@@ -19,7 +19,7 @@ export const autoSidebar = [
   },
   {
     "text": "项目维护手册",
-    "link": "/MAINTENANCE"
+    "link": "/maintenance"
   },
   {
     "text": "致命陷阱手册",
@@ -847,10 +847,6 @@ export const autoSidebar = [
     "text": "releases",
     "collapsed": true,
     "items": [
-      {
-        "text": "发版说明索引",
-        "link": "/releases/README"
-      },
       {
         "text": "🎨 v1.6.0 - UI 系统全面优化",
         "link": "/releases/RELEASE_NOTES_GITHUB"

@@ -34,7 +34,7 @@ use_when:
 ## 不变量
 
 - 只允许构建期注入，运行时不得改写
-- 发版流程（`cmd/build-release.ps1` / `docs/releases/README.md`）必须注入版本号，否则更新检查会以 `"dev"` 比较
+- 发版流程（`cmd/build-release.ps1` / `docs/releases/`）必须注入版本号，否则更新检查会以 `"dev"` 比较
 
 ## 相关
 

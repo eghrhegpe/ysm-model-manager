@@ -30,9 +30,9 @@ func makeZipBytes(t *testing.T, files map[string]string) []byte {
 func TestExtractFirstPNGFromZip(t *testing.T) {
 	// 含 PNG → 提取第一张
 	data := makeZipBytes(t, map[string]string{
-		"tex/1.png":   "PNGDATA1",
-		"readme.txt":  "hi",
-		"tex/2.png":   "PNGDATA2",
+		"tex/1.png":  "PNGDATA1",
+		"readme.txt": "hi",
+		"tex/2.png":  "PNGDATA2",
 	})
 	got := ExtractFirstPNGFromZip(data, int64(len(data)))
 	if string(got) != "PNGDATA1" {

@@ -268,18 +268,35 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   }
 };
 
+// document listener 顶层兜底：onDrop 内部异常面均已 try/catch，
+// 此处防未来新增代码路径漏包产生 unhandled rejection
+const onDropSafe = (e: DragEvent): void => {
+  onDrop(e).catch((err) => {
+    console.error("[dnd] 拖放处理失败:", err);
+    bus.emit("toast:show", {
+      msg: "❌ 导入处理出错，请重试",
+      duration: 4000,
+      type: "error",
+    });
+  });
+};
+
 /** 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs */
 export function registerDnD(unsubs: Array<() => void>): void {
   document.addEventListener("dragover", onDragOver);
   document.addEventListener("dragleave", onDragLeave);
-  document.addEventListener("drop", onDrop);
+  document.addEventListener("drop", onDropSafe);
   // 兜底：某些场景下 dragleave/drop 不会触发时隐藏遮罩
   document.addEventListener("dragend", hideDropOverlay);
   unsubs.push(() => document.removeEventListener("dragover", onDragOver));
   unsubs.push(() => document.removeEventListener("dragleave", onDragLeave));
-  unsubs.push(() => document.removeEventListener("drop", onDrop));
+  unsubs.push(() => document.removeEventListener("drop", onDropSafe));
   unsubs.push(() => document.removeEventListener("dragend", hideDropOverlay));
   unsubs.push(() => {
+    if (dropLeaveTimer) {
+      clearTimeout(dropLeaveTimer);
+      dropLeaveTimer = null;
+    }
     if (dropOverlay) {
       dropOverlay.remove();
       dropOverlay = null;

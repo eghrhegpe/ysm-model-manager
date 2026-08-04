@@ -182,17 +182,21 @@ export function registerSync(unsubs: Array<() => void>): void {
         });
         bus.emit("stats:refresh");
       } catch (err) {
-        const { AddImportLog } = await import(
-          "../../bindings/ysm-model-manager/internal/app/app.js"
-        );
-        await AddImportLog(
-          "sync-status",
-          "同步失败",
-          "",
-          0,
-          "failed",
-          String(err),
-        );
+        try {
+          const { AddImportLog } = await import(
+            "../../bindings/ysm-model-manager/internal/app/app.js"
+          );
+          await AddImportLog(
+            "sync-status",
+            "同步失败",
+            "",
+            0,
+            "failed",
+            String(err),
+          );
+        } catch {
+          // 日志写入失败不阻断反馈（bus.emit 自带兜底）
+        }
         bus.emit("toast:show", {
           msg: `同步失败: ${String(err)}`,
           duration: 8000,

@@ -144,7 +144,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       try {
         const { CheckFileExists, GetRepoRoot } = await getApp();
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-        const fullPath = (repoRoot || "") + "\\" + name;
+        const fullPath = (repoRoot || "") + "/" + name;
         const exists = await CheckFileExists(fullPath);
         const el = root.getElementById("dl-conflict") as HTMLElement | null;
         if (el) el.style.display = exists ? "" : "none";

@@ -3,6 +3,7 @@
 import { parseModelName } from "../utils/display.ts";
 import { closeDlg, registerDlg, esc } from "./modal.ts";
 import { getApp } from "../wails/app.ts";
+import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 
 /**
  * 弹出重命名对话框
@@ -113,7 +114,7 @@ export async function showRenameDialog(
       const d = (box.querySelector("#rn-date") as HTMLInputElement).value.trim();
       const ext = currentName.includes(".")
         ? currentName.split(".").pop()
-        : "ysm";
+        : RESOURCE_TYPES.YSM;
       const parts: string[] = [];
       if (a) parts.push("[" + a + "]");
       parts.push("【" + (w || "未知") + "】");
@@ -146,7 +147,7 @@ export async function showRenameDialog(
       const d = (box.querySelector("#rn-date") as HTMLInputElement).value.trim();
       const ext = currentName.includes(".")
         ? currentName.split(".").pop()
-        : "ysm";
+        : RESOURCE_TYPES.YSM;
       if (!a || !c) {
         const errEl = box.querySelector("#rn-err") as HTMLElement | null;
         if (errEl) errEl.textContent = "⚠️ 作者、角色名不能为空";

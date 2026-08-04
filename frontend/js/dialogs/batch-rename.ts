@@ -5,6 +5,7 @@ import { parseModelName, type ParsedModelName } from "../utils/display.ts";
 import { stagger } from "../utils/stagger.ts";
 import { registerDlg } from "./modal.ts";
 import { esc } from "../utils/dom.ts";
+import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 
 /** 批量条目（ModelEntry 子集） */
 interface BatchEntry {
@@ -72,7 +73,7 @@ export function showBatchRenameDialog(
       const w = it._work || it.p.work;
       const c = it.p.chara || it.Name.replace(/\.\w+$/, "");
       const d = it.p.date || "";
-      const ext = it.Name.match(/\.(\w+)$/)?.[1] || "ysm";
+      const ext = it.Name.match(/\.(\w+)$/)?.[1] || RESOURCE_TYPES.YSM;
       const parts: string[] = [];
       if (a) parts.push("[" + a + "]");
       if (w) parts.push("【" + w + "】");

@@ -2,35 +2,35 @@
 // 扫描 docs/ 全部 md，按目录树生成 VitePress sidebar
 export const autoSidebar = [
   {
-    "text": "architecture",
+    "text": "架构",
     "link": "/architecture"
   },
   {
-    "text": "Design",
+    "text": "YSM 模型管理器 — Design.md",
     "link": "/Design"
   },
   {
-    "text": "funcmap",
+    "text": "函数映射表",
     "link": "/funcmap"
   },
   {
-    "text": "governance-rules",
+    "text": "前端治理规则手册",
     "link": "/governance-rules"
   },
   {
-    "text": "MAINTENANCE",
+    "text": "项目维护手册",
     "link": "/MAINTENANCE"
   },
   {
-    "text": "pitfalls",
+    "text": "致命陷阱手册",
     "link": "/pitfalls"
   },
   {
-    "text": "project-map",
+    "text": "项目结构地图",
     "link": "/project-map"
   },
   {
-    "text": "review-report",
+    "text": "代码审计报告（L2 模块人工审核）",
     "link": "/review-report"
   },
   {
@@ -38,143 +38,147 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "ADR-001-wails3-migration",
+        "text": "ADR-001：升级至 Wails 3",
         "link": "/adr/ADR-001-wails3-migration"
       },
       {
-        "text": "ADR-002-project-health-assessment",
+        "text": "ADR-002：项目全面评估与改进方向",
         "link": "/adr/ADR-002-project-health-assessment"
       },
       {
-        "text": "ADR-003-logic-sinking",
+        "text": "ADR-003：业务逻辑从 Binding 层下沉至纯 Go 包（Logic Sinking）",
         "link": "/adr/ADR-003-logic-sinking"
       },
       {
-        "text": "ADR-004-3d-rendering-pipeline",
+        "text": "ADR-004：3D 骨骼渲染管线与坐标系决策",
         "link": "/adr/ADR-004-3d-rendering-pipeline"
       },
       {
-        "text": "ADR-005-frontend-governance-rules",
+        "text": "ADR-005：前端治理规则体系",
         "link": "/adr/ADR-005-frontend-governance-rules"
       },
       {
-        "text": "ADR-006-rename-strictness",
+        "text": "ADR-006：重命名文件名格式约束决策",
         "link": "/adr/ADR-006-rename-strictness"
       },
       {
-        "text": "ADR-007-context-menu-structure",
+        "text": "ADR-007：右键菜单代码组织决策",
         "link": "/adr/ADR-007-context-menu-structure"
       },
       {
-        "text": "ADR-008-event-registration-pattern",
+        "text": "ADR-008：事件注册位置与防重复规范",
         "link": "/adr/ADR-008-event-registration-pattern"
       },
       {
-        "text": "ADR-010-resource-type-literals",
+        "text": "ADR-010：资源类型字面量硬编码治理",
         "link": "/adr/ADR-010-resource-type-literals"
       },
       {
-        "text": "ADR-011-path-separator-inconsistency",
+        "text": "ADR-011：前端路径拼接分隔符不一致",
         "link": "/adr/ADR-011-path-separator-inconsistency"
       },
       {
-        "text": "ADR-012-binding-call-consistency",
+        "text": "ADR-012：Wails Binding 调用路径一致性",
         "link": "/adr/ADR-012-binding-call-consistency"
       },
       {
-        "text": "ADR-013-governance-convergence",
+        "text": "ADR-013：治理体系收敛 — 文档宪法对账与联邦基线对齐",
         "link": "/adr/ADR-013-governance-convergence"
       },
       {
-        "text": "ADR-014-typescript-migration",
+        "text": "ADR-014：前端 TypeScript 渐进迁移",
         "link": "/adr/ADR-014-typescript-migration"
       },
       {
-        "text": "ADR-015-unified-animation-system",
+        "text": "ADR-015：前端统一动画系统设计决策",
         "link": "/adr/ADR-015-unified-animation-system"
       },
       {
-        "text": "ADR-016-ui-experience-improvement",
+        "text": "ADR-016：前端 UI 体验优化决策",
         "link": "/adr/ADR-016-ui-experience-improvement"
       },
       {
-        "text": "ADR-017-frontend-enhancement-backlog",
+        "text": "ADR-017: 前端增强待办决策",
         "link": "/adr/ADR-017-frontend-enhancement-backlog"
       },
       {
-        "text": "ADR-018-user-guide",
+        "text": "ADR-018：用户指南体系",
         "link": "/adr/ADR-018-user-guide"
       },
       {
-        "text": "ADR-019-knowledge-base",
+        "text": "ADR-019：知识卡体系",
         "link": "/adr/ADR-019-knowledge-base"
       },
       {
-        "text": "ADR-020-script-toolchain",
+        "text": "ADR-020：脚本体系",
         "link": "/adr/ADR-020-script-toolchain"
       },
       {
-        "text": "ADR-021-declarative-menu-testing",
+        "text": "ADR-021：前端声明式菜单自动化测试方案",
         "link": "/adr/ADR-021-declarative-menu-testing"
       },
       {
-        "text": "ADR-022-vitepress-site",
+        "text": "ADR-022：VitePress 建站",
         "link": "/adr/ADR-022-vitepress-site"
       },
       {
-        "text": "ADR-023-test-framework",
+        "text": "ADR-023：测试体系",
         "link": "/adr/ADR-023-test-framework"
       },
       {
-        "text": "ADR-024-multi-resource-federation",
+        "text": "ADR-024: 多资源类型联邦架构（ResourceAdapter + resource_types.json 注册表）",
         "link": "/adr/ADR-024-multi-resource-federation"
       },
       {
-        "text": "ADR-025-download-mirror-fallback",
+        "text": "ADR-025: 工坊下载镜像回退架构",
         "link": "/adr/ADR-025-download-mirror-fallback"
       },
       {
-        "text": "ADR-026-ysm-parser-ethics-boundary",
+        "text": "ADR-026: YSM 解析器集成伦理边界",
         "link": "/adr/ADR-026-ysm-parser-ethics-boundary"
       },
       {
-        "text": "ADR-027-web-component-contract-normalization",
+        "text": "ADR-027：Web Component 对外契约规范化",
         "link": "/adr/ADR-027-web-component-contract-normalization"
       },
       {
-        "text": "ADR-028-installer-atomic-link-relink",
+        "text": "ADR-028：安装器链接模式原子替换与 relink 回滚保护",
         "link": "/adr/ADR-028-installer-atomic-link-relink"
       },
       {
-        "text": "ADR-029-ysmparser-wasm-embed",
+        "text": "ADR-029：YSMParser 解码架构：WASM 内嵌取代 sidecar EXE",
         "link": "/adr/ADR-029-ysmparser-wasm-embed"
       },
       {
-        "text": "ADR-030-backend-robustness-contract",
+        "text": "ADR-030：后端持久化与健壮性契约",
         "link": "/adr/ADR-030-backend-robustness-contract"
       },
       {
-        "text": "ADR-031-watcher-lifecycle-sync-serialization",
+        "text": "ADR-031：文件监听生命周期与同步串行化加固",
         "link": "/adr/ADR-031-watcher-lifecycle-sync-serialization"
       },
       {
-        "text": "ADR-032-sync-diff-detection-failure-visibility",
+        "text": "ADR-032：同步差异检测与失败可见性加固",
         "link": "/adr/ADR-032-sync-diff-detection-failure-visibility"
       },
       {
-        "text": "ADR-033-updater-download-truncation-version-compare",
+        "text": "ADR-033：更新包下载截断检测与版本比较加固",
         "link": "/adr/ADR-033-updater-download-truncation-version-compare"
       },
       {
-        "text": "ADR-034-remaining-debt-after-12-round-audit",
+        "text": "ADR-034：12 轮审计后的剩余技术债盘点与处置方向",
         "link": "/adr/ADR-034-remaining-debt-after-12-round-audit"
       },
       {
-        "text": "ADR-035-forward-governance-initiatives",
+        "text": "ADR-035：远期治理立项：组件测试与 CI 门槛",
         "link": "/adr/ADR-035-forward-governance-initiatives"
       },
       {
-        "text": "README",
+        "text": "ADR-036：3D 预览操作键位与相机偏好可配置",
+        "link": "/adr/ADR-036-3d-op-keymap"
+      },
+      {
+        "text": "ADR 登记表（Architecture Decision Records）",
         "link": "/adr/README"
       }
     ]
@@ -184,115 +188,115 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "3d-preview",
+        "text": "3D 与 2D 预览",
         "link": "/guide/3d-preview"
       },
       {
-        "text": "项目意义",
+        "text": "YSM 模型管理器 — 项目意义",
         "link": "/guide/项目意义"
       },
       {
-        "text": "用户指南",
+        "text": "🧱 YSM 模型管理器 — 用户指南",
         "link": "/guide/用户指南"
       },
       {
-        "text": "advanced-filter",
+        "text": "高级筛选",
         "link": "/guide/advanced-filter"
       },
       {
-        "text": "backup-migration",
+        "text": "备份与迁移",
         "link": "/guide/backup-migration"
       },
       {
-        "text": "batch-rename",
+        "text": "批量重命名",
         "link": "/guide/batch-rename"
       },
       {
-        "text": "blueprint-preview",
+        "text": "整合包蓝图预览",
         "link": "/guide/blueprint-preview"
       },
       {
-        "text": "creators",
+        "text": "创作者频道",
         "link": "/guide/creators"
       },
       {
-        "text": "diagnostics",
+        "text": "诊断与去重",
         "link": "/guide/diagnostics"
       },
       {
-        "text": "download-queue",
+        "text": "下载队列",
         "link": "/guide/download-queue"
       },
       {
-        "text": "faq",
+        "text": "常见问题（FAQ）",
         "link": "/guide/faq"
       },
       {
-        "text": "first-setup",
+        "text": "首次配置",
         "link": "/guide/first-setup"
       },
       {
-        "text": "import-model",
+        "text": "模型导入",
         "link": "/guide/import-model"
       },
       {
-        "text": "import-queue",
+        "text": "导入队列与命名表单",
         "link": "/guide/import-queue"
       },
       {
-        "text": "install",
+        "text": "下载与安装",
         "link": "/guide/install"
       },
       {
-        "text": "keyboard-shortcuts",
+        "text": "键盘快捷键",
         "link": "/guide/keyboard-shortcuts"
       },
       {
-        "text": "model-dedup",
+        "text": "模型去重",
         "link": "/guide/model-dedup"
       },
       {
-        "text": "oldest-models",
+        "text": "仓库元老",
         "link": "/guide/oldest-models"
       },
       {
-        "text": "pack-sync",
+        "text": "整合包同步",
         "link": "/guide/pack-sync"
       },
       {
-        "text": "recycle-bin",
+        "text": "回收站",
         "link": "/guide/recycle-bin"
       },
       {
-        "text": "repo-health",
+        "text": "仓库健康度",
         "link": "/guide/repo-health"
       },
       {
-        "text": "repository",
+        "text": "模型仓库",
         "link": "/guide/repository"
       },
       {
-        "text": "resource-packs",
+        "text": "资源包管理",
         "link": "/guide/resource-packs"
       },
       {
-        "text": "settings",
+        "text": "设置",
         "link": "/guide/settings"
       },
       {
-        "text": "tags",
+        "text": "标签管理",
         "link": "/guide/tags"
       },
       {
-        "text": "themes",
+        "text": "主题外观",
         "link": "/guide/themes"
       },
       {
-        "text": "update",
+        "text": "版本更新",
         "link": "/guide/update"
       },
       {
-        "text": "workshop",
+        "text": "创意工坊",
         "link": "/guide/workshop"
       }
     ]
@@ -302,275 +306,275 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "AGENTS",
+        "text": "知识卡目录 — AGENTS.md",
         "link": "/knowledge/AGENTS"
       },
       {
-        "text": "animation_system",
+        "text": "动画系统 animation",
         "link": "/knowledge/animation_system"
       },
       {
-        "text": "app_content",
+        "text": "主内容页 app-content",
         "link": "/knowledge/app_content"
       },
       {
-        "text": "app_modules",
+        "text": "组件入口 app-modules",
         "link": "/knowledge/app_modules"
       },
       {
-        "text": "app_nav",
+        "text": "顶部导航 app-nav",
         "link": "/knowledge/app_nav"
       },
       {
-        "text": "app_preview",
+        "text": "预览面板 app-preview",
         "link": "/knowledge/app_preview"
       },
       {
-        "text": "app_resource_manager",
+        "text": "资源管理页 app-resource-manager",
         "link": "/knowledge/app_resource_manager"
       },
       {
-        "text": "app_sidebar",
+        "text": "侧边栏 app-sidebar",
         "link": "/knowledge/app_sidebar"
       },
       {
-        "text": "app_sync_manager",
+        "text": "整合包同步页 app-sync-manager",
         "link": "/knowledge/app_sync_manager"
       },
       {
-        "text": "app_toast",
+        "text": "Toast 通知 app-toast",
         "link": "/knowledge/app_toast"
       },
       {
-        "text": "app_tree",
+        "text": "资源树 app-tree",
         "link": "/knowledge/app_tree"
       },
       {
-        "text": "community_feature",
+        "text": "社区下载 community",
         "link": "/knowledge/community_feature"
       },
       {
-        "text": "context_menu",
+        "text": "右键菜单系统",
         "link": "/knowledge/context_menu"
       },
       {
-        "text": "dialog_adv_filter",
+        "text": "高级筛选 adv-filter",
         "link": "/knowledge/dialog_adv_filter"
       },
       {
-        "text": "dialog_batch_rename",
+        "text": "批量重命名 batch-rename",
         "link": "/knowledge/dialog_batch_rename"
       },
       {
-        "text": "dialog_modal",
+        "text": "弹窗基座 modal",
         "link": "/knowledge/dialog_modal"
       },
       {
-        "text": "dialog_rename",
+        "text": "重命名弹窗 rename",
         "link": "/knowledge/dialog_rename"
       },
       {
-        "text": "dialog_tag_editor",
+        "text": "标签编辑器 tag-editor",
         "link": "/knowledge/dialog_tag_editor"
       },
       {
-        "text": "event_bus",
+        "text": "事件总线 bus.ts",
         "link": "/knowledge/event_bus"
       },
       {
-        "text": "global_handlers",
+        "text": "全局事件处理 global-handlers",
         "link": "/knowledge/global_handlers"
       },
       {
-        "text": "go_avatar",
+        "text": "头像 go/avatar",
         "link": "/knowledge/go_avatar"
       },
       {
-        "text": "go_dedup",
+        "text": "去重 go/dedup",
         "link": "/knowledge/go_dedup"
       },
       {
-        "text": "go_download",
+        "text": "下载器 go/download",
         "link": "/knowledge/go_download"
       },
       {
-        "text": "go_errors",
+        "text": "错误包装 go/errors",
         "link": "/knowledge/go_errors"
       },
       {
-        "text": "go_fsutil",
+        "text": "文件遍历 go/fsutil",
         "link": "/knowledge/go_fsutil"
       },
       {
-        "text": "go_geometry",
+        "text": "Geometry 存档 go/geometry",
         "link": "/knowledge/go_geometry"
       },
       {
-        "text": "go_importer",
+        "text": "导入策略 go/importer",
         "link": "/knowledge/go_importer"
       },
       {
-        "text": "go_installer",
+        "text": "模型安装 go/installer",
         "link": "/knowledge/go_installer"
       },
       {
-        "text": "go_litematic",
+        "text": "Litematic 解析 go/litematic",
         "link": "/knowledge/go_litematic"
       },
       {
-        "text": "go_logs",
+        "text": "导入日志 go/logs",
         "link": "/knowledge/go_logs"
       },
       {
-        "text": "go_packs",
+        "text": "资源包 mcmeta go/packs",
         "link": "/knowledge/go_packs"
       },
       {
-        "text": "go_paths",
+        "text": "路径安全 go/paths",
         "link": "/knowledge/go_paths"
       },
       {
-        "text": "go_recycle",
+        "text": "回收站 go/recycle",
         "link": "/knowledge/go_recycle"
       },
       {
-        "text": "go_sync",
+        "text": "整合包同步 go/sync",
         "link": "/knowledge/go_sync"
       },
       {
-        "text": "go_tags",
+        "text": "标签系统 go/tags",
         "link": "/knowledge/go_tags"
       },
       {
-        "text": "go_threejs",
+        "text": "3D 骨骼 spec go/threejs",
         "link": "/knowledge/go_threejs"
       },
       {
-        "text": "go_types",
+        "text": "共享类型 go/types",
         "link": "/knowledge/go_types"
       },
       {
-        "text": "go_updater",
+        "text": "自动更新 go/updater",
         "link": "/knowledge/go_updater"
       },
       {
-        "text": "go_version",
+        "text": "版本号 go/version",
         "link": "/knowledge/go_version"
       },
       {
-        "text": "go_watcher",
+        "text": "文件监听 go/watcher",
         "link": "/knowledge/go_watcher"
       },
       {
-        "text": "go_ysm_parser",
+        "text": "YSM 解析 go/ysm",
         "link": "/knowledge/go_ysm_parser"
       },
       {
-        "text": "import_queue",
+        "text": "导入队列 import-queue",
         "link": "/knowledge/import_queue"
       },
       {
-        "text": "model2d",
+        "text": "2D 预览渲染 model2d",
         "link": "/knowledge/model2d"
       },
       {
-        "text": "model3d",
+        "text": "3D 预览渲染 model3d",
         "link": "/knowledge/model3d"
       },
       {
-        "text": "oldest_models",
+        "text": "资历最深模型 oldest-models",
         "link": "/knowledge/oldest_models"
       },
       {
-        "text": "page_store",
+        "text": "页面状态管理 page-store.ts",
         "link": "/knowledge/page_store"
       },
       {
-        "text": "README",
+        "text": "知识卡系统",
         "link": "/knowledge/README"
       },
       {
-        "text": "recycle_bin",
+        "text": "回收站界面 recycle-bin",
         "link": "/knowledge/recycle_bin"
       },
       {
-        "text": "resource_packs",
+        "text": "资源包功能 resource-packs",
         "link": "/knowledge/resource_packs"
       },
       {
-        "text": "resource_registry",
+        "text": "资源注册表 registry",
         "link": "/knowledge/resource_registry"
       },
       {
-        "text": "routes",
+        "text": "AI 路由表",
         "link": "/knowledge/routes"
       },
       {
-        "text": "shared_styles",
+        "text": "共享样式 shared-styles",
         "link": "/knowledge/shared_styles"
       },
       {
-        "text": "theme",
+        "text": "主题系统 theme",
         "link": "/knowledge/theme"
       },
       {
-        "text": "utils_display",
+        "text": "文件名显示 display",
         "link": "/knowledge/utils_display"
       },
       {
-        "text": "utils_dom",
+        "text": "DOM 工具 dom",
         "link": "/knowledge/utils_dom"
       },
       {
-        "text": "utils_errors",
+        "text": "错误处理 errors",
         "link": "/knowledge/utils_errors"
       },
       {
-        "text": "utils_export",
+        "text": "截图与导出 export",
         "link": "/knowledge/utils_export"
       },
       {
-        "text": "utils_extensions",
+        "text": "扩展名映射 extensions",
         "link": "/knowledge/utils_extensions"
       },
       {
-        "text": "utils_fmt",
+        "text": "格式化工具 fmt",
         "link": "/knowledge/utils_fmt"
       },
       {
-        "text": "utils_icon",
+        "text": "图标映射 icon",
         "link": "/knowledge/utils_icon"
       },
       {
-        "text": "utils_mc_format",
+        "text": "MC 格式判定 mc-format",
         "link": "/knowledge/utils_mc_format"
       },
       {
-        "text": "utils_misc",
+        "text": "常量与调试 constants/debug",
         "link": "/knowledge/utils_misc"
       },
       {
-        "text": "utils_resource_types",
+        "text": "资源类型工具 resource-types",
         "link": "/knowledge/utils_resource_types"
       },
       {
-        "text": "utils_summarize",
+        "text": "摘要生成 summarize",
         "link": "/knowledge/utils_summarize"
       },
       {
-        "text": "version_updater",
+        "text": "版本更新 version-updater",
         "link": "/knowledge/version_updater"
       },
       {
-        "text": "wails_bindings",
+        "text": "Wails Binding API 总览 internal/app",
         "link": "/knowledge/wails_bindings"
       },
       {
-        "text": "wails_bridge",
+        "text": "Wails 桥接 app.ts",
         "link": "/knowledge/wails_bridge"
       },
       {
-        "text": "ysm_wasm",
+        "text": "WASM 解析器 ysm-parser",
         "link": "/knowledge/ysm_wasm"
       }
     ]
@@ -580,7 +584,7 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "AGENTS",
+        "text": "编码奇谭 · 续写宪法（AI 唯一必读）",
         "link": "/novel/AGENTS"
       },
       {
@@ -588,7 +592,7 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "01-同名者的诅咒",
+            "text": "第 01 区域 · 第 1 章 · 同名者的诅咒",
             "link": "/novel/01-解码与几何/01-同名者的诅咒"
           }
         ]
@@ -598,11 +602,11 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "01-先拆后建的赌局",
+            "text": "第 02 区域 · 第 1 章 · 先拆后建的赌局",
             "link": "/novel/02-模型仓库/01-先拆后建的赌局"
           },
           {
-            "text": "02-错误的名字",
+            "text": "第 02 区域 · 第 2 章 · 错误的名字",
             "link": "/novel/02-模型仓库/02-错误的名字"
           }
         ]
@@ -612,11 +616,11 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "01-自己问自己的开关",
+            "text": "第 03 区域 · 第 1 章 · 自己问自己的开关",
             "link": "/novel/03-UI器官/01-自己问自己的开关"
           },
           {
-            "text": "02-过期的点击",
+            "text": "第 03 区域 · 第 2 章 · 过期的点击",
             "link": "/novel/03-UI器官/02-过期的点击"
           }
         ]
@@ -626,8 +630,12 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "01-听了三遍的耳朵",
+            "text": "第 04 区域 · 第 1 章 · 听了三遍的耳朵",
             "link": "/novel/04-事件中枢/01-听了三遍的耳朵"
+          },
+          {
+            "text": "第 04 区域 · 第 2 章 · 旁路的幽灵",
+            "link": "/novel/04-事件中枢/02-旁路的幽灵"
           }
         ]
       },
@@ -636,11 +644,11 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "01-假活的心跳",
+            "text": "第 05 区域 · 第 1 章 · 假活的心跳",
             "link": "/novel/05-同步与更新/01-假活的心跳"
           },
           {
-            "text": "02-脖子上的绳",
+            "text": "第 05 区域 · 第 2 章 · 脖子上的绳",
             "link": "/novel/05-同步与更新/02-脖子上的绳"
           }
         ]
@@ -650,7 +658,7 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "01-三条通往同一个文件的路",
+            "text": "第 06 区域 · 第 1 章 · 三条通往同一个文件的路",
             "link": "/novel/06-创作者社区/01-三条通往同一个文件的路"
           }
         ]
@@ -660,7 +668,7 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "01-差一个后缀的名字",
+            "text": "第 07 区域 · 第 1 章 · 差一个后缀的名字",
             "link": "/novel/07-文件与路径/01-差一个后缀的名字"
           }
         ]
@@ -670,7 +678,7 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "01-每次都缩小一圈的窗",
+            "text": "第 08 区域 · 第 1 章 · 每次都缩小一圈的窗",
             "link": "/novel/08-配置与状态/01-每次都缩小一圈的窗"
           }
         ]
@@ -680,15 +688,15 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "01-永远红着的灯",
+            "text": "第 09 区域 · 第 1 章 · 永远红着的灯",
             "link": "/novel/09-工具链/01-永远红着的灯"
           },
           {
-            "text": "02-值夜班的灯",
+            "text": "第 09 区域 · 第 2 章 · 值夜班的灯",
             "link": "/novel/09-工具链/02-值夜班的灯"
           },
           {
-            "text": "03-自动化裁判",
+            "text": "第 09 区域 · 第 2 章 · 自动化裁判",
             "link": "/novel/09-工具链/03-自动化裁判"
           }
         ]
@@ -698,11 +706,15 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "01-十二轮之后的账",
+            "text": "第 10 区域 · 第 1 章 · 十二轮之后的账",
             "link": "/novel/10-文档治理/01-十二轮之后的账"
           },
           {
-            "text": "02-六条新戒律",
+            "text": "第 10 区域 · 第 2 章 · 登记簿上的旧伤",
+            "link": "/novel/10-文档治理/02-登记簿上的旧伤"
+          },
+          {
+            "text": "第 10 区域 · 第 2 章 · 六条新戒律",
             "link": "/novel/10-文档治理/02-六条新戒律"
           }
         ]
@@ -712,19 +724,19 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "01-裂隙初现",
+            "text": "第一章 · 裂隙初现",
             "link": "/novel/act-1-babel/01-裂隙初现"
           },
           {
-            "text": "02-幽灵内阁",
+            "text": "第二章 · 幽灵内阁",
             "link": "/novel/act-1-babel/02-幽灵内阁"
           },
           {
-            "text": "03-封印与谎言",
+            "text": "第三章 · 封印与谎言",
             "link": "/novel/act-1-babel/03-封印与谎言"
           },
           {
-            "text": "04-异类降临",
+            "text": "第四章 · 异类降临",
             "link": "/novel/act-1-babel/04-异类降临"
           }
         ]
@@ -734,19 +746,19 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "05-沙箱诅咒",
+            "text": "第五章 · 沙箱诅咒",
             "link": "/novel/act-2-walls/05-沙箱诅咒"
           },
           {
-            "text": "06-影子叛乱",
+            "text": "第六章 · 影子叛乱",
             "link": "/novel/act-2-walls/06-影子叛乱"
           },
           {
-            "text": "07-六脉归一",
+            "text": "第七章 · 六脉归一",
             "link": "/novel/act-2-walls/07-六脉归一"
           },
           {
-            "text": "08-秘钥之战",
+            "text": "第八章 · 秘钥之战",
             "link": "/novel/act-2-walls/08-秘钥之战"
           }
         ]
@@ -756,35 +768,35 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "09-逆天审判",
+            "text": "第九章 · 逆天审判",
             "link": "/novel/act-3-cartographer/09-逆天审判"
           },
           {
-            "text": "10-铁律成典",
+            "text": "第十章 · 铁律成典",
             "link": "/novel/act-3-cartographer/10-铁律成典"
           },
           {
-            "text": "11-照妖镜",
+            "text": "第十一章 · 照妖镜",
             "link": "/novel/act-3-cartographer/11-照妖镜"
           },
           {
-            "text": "12-创作者之面",
+            "text": "第十二章 · 创作者之面",
             "link": "/novel/act-3-cartographer/12-创作者之面"
           },
           {
-            "text": "13-心跳图谱",
+            "text": "第十三章 · 心跳图谱",
             "link": "/novel/act-3-cartographer/13-心跳图谱"
           },
           {
-            "text": "14-正名之书",
+            "text": "第十四章 · 正名之书",
             "link": "/novel/act-3-cartographer/14-正名之书"
           },
           {
-            "text": "15-呼吸之灯",
+            "text": "第十五章 · 呼吸之灯",
             "link": "/novel/act-3-cartographer/15-呼吸之灯"
           },
           {
-            "text": "16-第三只眼",
+            "text": "第十六章 · 第三只眼",
             "link": "/novel/act-3-cartographer/16-第三只眼"
           }
         ]
@@ -798,7 +810,7 @@ export const autoSidebar = [
             "collapsed": true,
             "items": [
               {
-                "text": "01-只看不拿",
+                "text": "附录 · 安全横切 · 第 1 章 · 只看不拿",
                 "link": "/novel/appendix/安全横切/01-只看不拿"
               }
             ]
@@ -808,11 +820,11 @@ export const autoSidebar = [
             "collapsed": true,
             "items": [
               {
-                "text": "01-全塔体检",
+                "text": "01 · 全塔体检",
                 "link": "/novel/appendix/跨模块重构/01-全塔体检"
               },
               {
-                "text": "02-四条通往真相的路",
+                "text": "附录 · 跨模块重构 · 第 2 章 · 四条通往真相的路",
                 "link": "/novel/appendix/跨模块重构/02-四条通往真相的路"
               }
             ]
@@ -822,7 +834,7 @@ export const autoSidebar = [
             "collapsed": true,
             "items": [
               {
-                "text": "01-四千六百零九行",
+                "text": "附录 · Go 后端 · 第 1 章 · 四千六百零九行",
                 "link": "/novel/appendix/Go后端/01-四千六百零九行"
               }
             ]
@@ -836,19 +848,19 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "README",
+        "text": "发版说明索引",
         "link": "/releases/README"
       },
       {
-        "text": "RELEASE_NOTES_GITHUB",
+        "text": "🎨 v1.6.0 - UI 系统全面优化",
         "link": "/releases/RELEASE_NOTES_GITHUB"
       },
       {
-        "text": "release-process",
+        "text": "YSM-Model-Manager 发版程序（Release Process）",
         "link": "/releases/release-process"
       },
       {
-        "text": "v1.0.2-compare",
+        "text": "v1.0.2 — 开发者对比（技术细节）",
         "link": "/releases/v1.0.2-compare"
       },
       {
@@ -856,7 +868,7 @@ export const autoSidebar = [
         "link": "/releases/v1.0.2"
       },
       {
-        "text": "v1.0.3-compare",
+        "text": "v1.0.3 — 开发者对比（技术细节）",
         "link": "/releases/v1.0.3-compare"
       },
       {
@@ -864,7 +876,7 @@ export const autoSidebar = [
         "link": "/releases/v1.0.3"
       },
       {
-        "text": "v1.0.4-compare",
+        "text": "v1.0.4 — 开发者对比（技术细节）",
         "link": "/releases/v1.0.4-compare"
       },
       {
@@ -872,399 +884,399 @@ export const autoSidebar = [
         "link": "/releases/v1.0.4"
       },
       {
-        "text": "v1.0.5-compare",
+        "text": "v1.0.5 — 开发者对比（技术细节）",
         "link": "/releases/v1.0.5-compare"
       },
       {
-        "text": "v1.0.5",
+        "text": "v1.0.5 — P5 功能闭环版",
         "link": "/releases/v1.0.5"
       },
       {
-        "text": "v1.0.6-compare",
+        "text": "v1.0.6 — 开发者对比（技术细节）",
         "link": "/releases/v1.0.6-compare"
       },
       {
-        "text": "v1.0.6",
+        "text": "v1.0.6 — 旧帝国清理 + 拖拽导入封板",
         "link": "/releases/v1.0.6"
       },
       {
-        "text": "v1.0.7-compare",
+        "text": "v1.0.7 — 开发者对比（技术细节）",
         "link": "/releases/v1.0.7-compare"
       },
       {
-        "text": "v1.0.7",
+        "text": "v1.0.7 — 模型预览增强 + 日志筛选 + UX 清理",
         "link": "/releases/v1.0.7"
       },
       {
-        "text": "v1.0.8-compare",
+        "text": "v1.0.8 — 开发者对比（技术细节）",
         "link": "/releases/v1.0.8-compare"
       },
       {
-        "text": "v1.0.8",
+        "text": "v1.0.8 — 2D 模型预览 + YSMParser 集成",
         "link": "/releases/v1.0.8"
       },
       {
-        "text": "v1.0.9-compare",
+        "text": "v1.0.9 — 开发者对比（技术细节）",
         "link": "/releases/v1.0.9-compare"
       },
       {
-        "text": "v1.0.9",
+        "text": "v1.0.9 — WASM 内嵌解码 + 模型预览增强",
         "link": "/releases/v1.0.9"
       },
       {
-        "text": "v1.1.0-compare",
+        "text": "v1.1.0 — 开发者对比（技术细节）",
         "link": "/releases/v1.1.0-compare"
       },
       {
-        "text": "v1.1.0",
+        "text": "v1.1.0 — MC 目录智能检测 + CSS 工程化",
         "link": "/releases/v1.1.0"
       },
       {
-        "text": "v1.2.0-compare",
+        "text": "v1.2.0 — 开发者对比（技术细节）",
         "link": "/releases/v1.2.0-compare"
       },
       {
-        "text": "v1.2.0",
+        "text": "v1.2.0 — CSS 工程化 + 缓存持久化 + 体验优化",
         "link": "/releases/v1.2.0"
       },
       {
-        "text": "v1.3.0-compare",
+        "text": "v1.3.0 — 开发者对比（技术细节）",
         "link": "/releases/v1.3.0-compare"
       },
       {
-        "text": "v1.3.0",
+        "text": "v1.3.0 — 3D 渲染引擎翻修 + 多文件模型管线统一",
         "link": "/releases/v1.3.0"
       },
       {
-        "text": "v1.3.1-compare",
+        "text": "v1.3.1 — 开发者对比（技术细节）",
         "link": "/releases/v1.3.1-compare"
       },
       {
-        "text": "v1.3.1",
+        "text": "v1.3.1 — CSS 工程化 + Shadow DOM 样式隔离修复",
         "link": "/releases/v1.3.1"
       },
       {
-        "text": "v1.3.2-compare",
+        "text": "v1.3.2 — 开发者对比（技术细节）",
         "link": "/releases/v1.3.2-compare"
       },
       {
-        "text": "v1.3.2",
+        "text": "v1.3.2 — 配置文件持久化修复 + 路径设置入口合并",
         "link": "/releases/v1.3.2"
       },
       {
-        "text": "v1.3.3-compare",
+        "text": "v1.3.3 — 开发者对比（技术细节）",
         "link": "/releases/v1.3.3-compare"
       },
       {
-        "text": "v1.3.3",
+        "text": "v1.3.3 — 纹理精度修复 + 旧格式兼容（无 ysm.json ZIP / YSGP V2）",
         "link": "/releases/v1.3.3"
       },
       {
-        "text": "v1.3.4-compare",
+        "text": "v1.3.4 — 开发者对比（技术细节）",
         "link": "/releases/v1.3.4-compare"
       },
       {
-        "text": "v1.3.4",
+        "text": "v1.3.4 — 全局 CSS 加载修复（对话框/批量重命名/滚动条恢复）",
         "link": "/releases/v1.3.4"
       },
       {
-        "text": "v1.3.5-compare",
+        "text": "v1.3.5 — 开发者对比（技术细节）",
         "link": "/releases/v1.3.5-compare"
       },
       {
-        "text": "v1.3.5",
+        "text": "v1.3.5 — WASM 性能优化 + 内存泄漏修复 + mcRoot 配置修复",
         "link": "/releases/v1.3.5"
       },
       {
-        "text": "v1.3.6-compare",
+        "text": "v1.3.6 — 开发者对比（技术细节）",
         "link": "/releases/v1.3.6-compare"
       },
       {
-        "text": "v1.3.6",
+        "text": "v1.3.6 — 更新更稳 + 更新日志直接看",
         "link": "/releases/v1.3.6"
       },
       {
-        "text": "v1.4.0-compare",
+        "text": "v1.4.0 vs v1.3.6 — 对比",
         "link": "/releases/v1.4.0-compare"
       },
       {
-        "text": "v1.4.0",
+        "text": "v1.4.0 — 纹理筛选、仓库健康度、今日推荐",
         "link": "/releases/v1.4.0"
       },
       {
-        "text": "v1.4.1-compare",
+        "text": "v1.4.1 vs v1.4.0 — 对比",
         "link": "/releases/v1.4.1-compare"
       },
       {
-        "text": "v1.4.1",
+        "text": "v1.4.1 — 导航重构 + 多资源架构奠基",
         "link": "/releases/v1.4.1"
       },
       {
-        "text": "v1.4.2-compare",
+        "text": "v1.4.2 vs v1.4.1 — 对比",
         "link": "/releases/v1.4.2-compare"
       },
       {
-        "text": "v1.4.2",
+        "text": "v1.4.2 — 按钮绑定修复 + 创作者数据库扩充",
         "link": "/releases/v1.4.2"
       },
       {
-        "text": "v1.4.3-compare",
+        "text": "v1.4.3 vs v1.4.2 — 对比",
         "link": "/releases/v1.4.3-compare"
       },
       {
-        "text": "v1.4.3",
+        "text": "v1.4.3 — YSM 头部解析修复 + 同步状态修复",
         "link": "/releases/v1.4.3"
       },
       {
-        "text": "v1.4.4-compare",
+        "text": "v1.4.4 vs v1.4.3 — 对比",
         "link": "/releases/v1.4.4-compare"
       },
       {
-        "text": "v1.4.4",
+        "text": "v1.4.4 — 健康度公式修复 + 自动搜索修复 + Go 测试框架",
         "link": "/releases/v1.4.4"
       },
       {
-        "text": "v1.4.5-compare",
+        "text": "v1.4.5 vs v1.4.4 — 对比",
         "link": "/releases/v1.4.5-compare"
       },
       {
-        "text": "v1.4.5",
+        "text": "v1.4.5 — 设置页卡片化 + 主题色按钮修复 + 按钮与字号统一",
         "link": "/releases/v1.4.5"
       },
       {
-        "text": "v1.4.6-compare",
+        "text": "v1.4.6 vs v1.4.5 — 对比",
         "link": "/releases/v1.4.6-compare"
       },
       {
-        "text": "v1.4.6",
+        "text": "v1.4.6 — 自动更新修复 + 渐变头像边框 + 呼吸灯动画",
         "link": "/releases/v1.4.6"
       },
       {
-        "text": "v1.4.7-compare",
+        "text": "v1.4.7 vs v1.4.6 — 对比",
         "link": "/releases/v1.4.7-compare"
       },
       {
-        "text": "v1.4.7",
+        "text": "v1.4.7 — V3 WASM 解码 + CLI 无窗 + 3D 标签页整合",
         "link": "/releases/v1.4.7"
       },
       {
-        "text": "v1.5.0-compare",
+        "text": "v1.5.0 开发者对比说明",
         "link": "/releases/v1.5.0-compare"
       },
       {
-        "text": "v1.5.0",
+        "text": "v1.5.0 — 六合一统·资源大统一",
         "link": "/releases/v1.5.0"
       },
       {
-        "text": "v1.5.1-compare",
+        "text": "v1.5.2 开发者对比说明",
         "link": "/releases/v1.5.1-compare"
       },
       {
-        "text": "v1.5.1",
+        "text": "v1.5.1 — 版本列表重构·多类型同步·推拉体系统一",
         "link": "/releases/v1.5.1"
       },
       {
-        "text": "v1.5.2",
+        "text": "v1.5.2 — 解压模型预览 & 稳定性修复",
         "link": "/releases/v1.5.2"
       },
       {
-        "text": "v1.5.3-compare",
+        "text": "v1.5.3 → v1.5.11 技术债清理全记录",
         "link": "/releases/v1.5.3-compare"
       },
       {
-        "text": "v1.5.3",
+        "text": "v1.5.3 — 界面翻新 & 多资源统一",
         "link": "/releases/v1.5.3"
       },
       {
-        "text": "v1.5.4-compare",
+        "text": "v1.5.4 — 事件联动修复",
         "link": "/releases/v1.5.4-compare"
       },
       {
-        "text": "v1.5.4",
+        "text": "v1.5.4 — 发布修复 & 稳定性补丁",
         "link": "/releases/v1.5.4"
       },
       {
-        "text": "v1.5.5-compare",
+        "text": "v1.5.5 — 全量前端审计修复 🔍🔧",
         "link": "/releases/v1.5.5-compare"
       },
       {
-        "text": "v1.5.5",
+        "text": "v1.5.5 — 全量前端审计修复 🔍🔧",
         "link": "/releases/v1.5.5"
       },
       {
-        "text": "v1.5.6-compare",
+        "text": "v1.5.6 — 创作者管理系统 🏆🎨",
         "link": "/releases/v1.5.6-compare"
       },
       {
-        "text": "v1.5.6",
+        "text": "v1.5.6 — 创作者管理系统 🏆🎨",
         "link": "/releases/v1.5.6"
       },
       {
-        "text": "v1.5.7-compare",
+        "text": "v1.5.7 — PrismLauncher 支持 & 性能优化 🚀",
         "link": "/releases/v1.5.7-compare"
       },
       {
-        "text": "v1.5.7",
+        "text": "v1.5.7 — PrismLauncher 支持 & 性能优化 🚀",
         "link": "/releases/v1.5.7"
       },
       {
-        "text": "v1.5.8-compare",
+        "text": "v1.5.8 — 创意工坊修复 & 自动扫描优化 🔧",
         "link": "/releases/v1.5.8-compare"
       },
       {
-        "text": "v1.5.8",
+        "text": "v1.5.8 — 创意工坊修复 & 自动扫描优化 🔧",
         "link": "/releases/v1.5.8"
       },
       {
-        "text": "v1.5.9",
+        "text": "v1.5.9 — 整合包子目录适配 & 代码审计 🔧",
         "link": "/releases/v1.5.9"
       },
       {
-        "text": "v1.6.0",
+        "text": "v1.6.0 — UI 系统全面优化",
         "link": "/releases/v1.6.0"
       },
       {
-        "text": "v1.6.1",
+        "text": "v1.6.1 — 搜索增强 + 3D 修复 + 批量操作重构",
         "link": "/releases/v1.6.1"
       },
       {
-        "text": "v1.6.2",
+        "text": "v1.6.2 — XSS 加固 + dbg() 调试工具",
         "link": "/releases/v1.6.2"
       },
       {
-        "text": "v1.6.3",
+        "text": "v1.6.3 — 标签系统完善 + console.log→dbg() 迁移",
         "link": "/releases/v1.6.3"
       },
       {
-        "text": "v1.6.4-compare",
+        "text": "v1.6.4 — FilesRoot 统一存储架构 + 设置页 UI 翻新 + 下载修复",
         "link": "/releases/v1.6.4-compare"
       },
       {
-        "text": "v1.6.5-compare",
+        "text": "v1.6.5 — 创意工坊 UI 大翻新 + 创作者频道精简 + 全局样式统一",
         "link": "/releases/v1.6.5-compare"
       },
       {
-        "text": "v1.6.6-compare",
+        "text": "v1.6.6 — 下载队列重构 + 创意工坊渲染优化 + 下载流程加固",
         "link": "/releases/v1.6.6-compare"
       },
       {
-        "text": "v1.6.7-compare",
+        "text": "v1.6.7 — 创作者频道 UI 优化 + 样式微调",
         "link": "/releases/v1.6.7-compare"
       },
       {
-        "text": "v1.6.8-compare",
+        "text": "v1.6.8 — 下载流程加固 + 设置页优化 + CSS 组件样式统一",
         "link": "/releases/v1.6.8-compare"
       },
       {
-        "text": "v1.6.9-compare",
+        "text": "v1.6.9 — 配置持久化修复 + 资源绑定优化 + Go 端小重构",
         "link": "/releases/v1.6.9-compare"
       },
       {
-        "text": "v1.7.0-compare",
+        "text": "v1.7.0 — 创作者频道 UI 翻新 + 头像缓存优化 + 样式调整",
         "link": "/releases/v1.7.0-compare"
       },
       {
-        "text": "v1.7.1",
+        "text": "v1.7.1 — 补充 compare 发版说明",
         "link": "/releases/v1.7.1"
       },
       {
-        "text": "v1.7.10",
+        "text": "v1.7.10 — 核心模块整合 + 对话框动画修复",
         "link": "/releases/v1.7.10"
       },
       {
-        "text": "v1.7.11",
+        "text": "v1.7.11 — 布局优化 + 组件样式统一",
         "link": "/releases/v1.7.11"
       },
       {
-        "text": "v1.7.12",
+        "text": "v1.7.12 — 代码修复 + 样式微调",
         "link": "/releases/v1.7.12"
       },
       {
-        "text": "v1.7.13",
+        "text": "v1.7.13 — UI 优化",
         "link": "/releases/v1.7.13"
       },
       {
-        "text": "v1.7.2",
+        "text": "v1.7.2 — 构建发布 + 脚本修复",
         "link": "/releases/v1.7.2"
       },
       {
-        "text": "v1.7.3",
+        "text": "v1.7.3 — 创作者频道空状态死循环修复 + PR #7 合并",
         "link": "/releases/v1.7.3"
       },
       {
-        "text": "v1.7.4",
+        "text": "v1.7.4 — 社区站点视图迁移至 Go 后端 + 下载后增量提取头像 + 同步管理器 UI 动画化",
         "link": "/releases/v1.7.4"
       },
       {
-        "text": "v1.7.5",
+        "text": "v1.7.5 — 暗色模式自动切换 + 打开文件位置 + 调试代码清理",
         "link": "/releases/v1.7.5"
       },
       {
-        "text": "v1.7.6",
+        "text": "v1.7.6 — 动画系统全量完成 + 设计令牌统一",
         "link": "/releases/v1.7.6"
       },
       {
-        "text": "v1.7.7",
+        "text": "v1.7.7 — 对话框动画 + 按钮反馈 + 页面过渡",
         "link": "/releases/v1.7.7"
       },
       {
-        "text": "v1.7.8",
+        "text": "v1.7.8 — 创作者频道头像提取优化 + 动画补齐",
         "link": "/releases/v1.7.8"
       },
       {
-        "text": "v1.7.9",
+        "text": "v1.7.9 — 核心模块重构",
         "link": "/releases/v1.7.9"
       },
       {
-        "text": "v1.8.0",
+        "text": "v1.8.0 — CSS 动画统一 + Toast 弹窗优化 + 代码清理",
         "link": "/releases/v1.8.0"
       },
       {
-        "text": "v1.8.1",
+        "text": "v1.8.1 — Go 后端重构 + 回收站优化 + 预览动画",
         "link": "/releases/v1.8.1"
       },
       {
-        "text": "v1.8.10",
+        "text": "v1.8.10 — 发版脚本修复 + PR 前置准备",
         "link": "/releases/v1.8.10"
       },
       {
-        "text": "v1.8.11",
+        "text": "v1.8.11 — 加载路径大统一 + 作者头像修复",
         "link": "/releases/v1.8.11"
       },
       {
-        "text": "v1.8.2",
+        "text": "v1.8.2 — 站点视图优化 + 最旧模型视图重构 + 回收站修复",
         "link": "/releases/v1.8.2"
       },
       {
-        "text": "v1.8.3",
+        "text": "v1.8.3 — CSS 动画重构 + 测试文件 + 侧栏样式优化",
         "link": "/releases/v1.8.3"
       },
       {
-        "text": "v1.8.4",
+        "text": "v1.8.4 — YSM Model Manager 综合更新",
         "link": "/releases/v1.8.4"
       },
       {
-        "text": "v1.8.5",
+        "text": "v1.8.5 — 注册表驱动 + 测试覆盖 + 治理收口",
         "link": "/releases/v1.8.5"
       },
       {
-        "text": "v1.8.9",
+        "text": "v1.8.9 — 3D 渲染引擎重构 + 注册表驱动 + 文档治理",
         "link": "/releases/v1.8.9"
       },
       {
-        "text": "v1.9.0",
+        "text": "v1.9.0 — 文档宪法 + 路径大统一 + 主题增强 + 构建修复",
         "link": "/releases/v1.9.0"
       },
       {
-        "text": "v1.9.1",
+        "text": "v1.9.1 — 蓝图预览：3D 体素渲染（by @zuogeren1）",
         "link": "/releases/v1.9.1"
       },
       {
-        "text": "v1.9.2",
+        "text": "v1.9.2 — Skill Python 化 + 子代理发版生成器 + 治理清理",
         "link": "/releases/v1.9.2"
       },
       {
-        "text": "v1.9.3",
+        "text": "v1.9.3 — 3D 渲染增强 + 蓝图修复 + 四元数排查（by @zuogeren）",
         "link": "/releases/v1.9.3"
       }
     ]

@@ -5,7 +5,7 @@
  * 排除：.vitepress / node_modules / dist / archive（冻结区）/ index.md（home 页）。
  * 用法：node scripts/gen-vitepress-sidebar.mjs（构建前先跑，见 docs/package.json build script）
  */
-import { readdirSync, statSync, writeFileSync } from 'node:fs';
+import { readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -18,6 +18,36 @@ function linkify(rel) {
   let p = '/' + rel.replace(/\\/g, '/').replace(/\.md$/, '');
   if (p.endsWith('/index')) p = p.slice(0, -'index'.length);
   return p;
+}
+
+/**
+ * 侧边栏显示标题（自动渲染，优先中文）：
+ *   frontmatter `title` → frontmatter `name`（知识卡）→ 首个 H1 → 文件名。
+ * 这样新增/改名页面无需手改侧边栏；带中文标题的页面自动显示中文行。
+ * 目录名（knowledge/adr/...）保持原样作为分区标题，不在这里改写。
+ */
+function readTitle(rel) {
+  let raw = '';
+  try {
+    raw = readFileSync(join(DOCS, rel), 'utf8');
+  } catch {
+    return null;
+  }
+  const fm = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (fm) {
+    const block = fm[1];
+    const titleM = block.match(/^\s*title:\s*(.+?)\s*$/m);
+    if (titleM) return stripQuotes(titleM[1]);
+    const nameM = block.match(/^\s*name:\s*(.+?)\s*$/m);
+    if (nameM) return stripQuotes(nameM[1]);
+  }
+  const h1 = raw.match(/^\s*#\s+(.+?)\s*$/m);
+  if (h1) return h1[1];
+  return null;
+}
+
+function stripQuotes(s) {
+  return s.replace(/^["']|["']$/g, '').trim();
 }
 
 function walk(dir) {
@@ -37,7 +67,9 @@ function walk(dir) {
       const subs = walk(full);
       if (subs.length) children.push({ text: name, collapsed: true, items: subs });
     } else if (name.endsWith('.md') && name !== 'index.md') {
-      children.push({ text: name.replace(/\.md$/, ''), link: linkify(rel) });
+      const base = name.replace(/\.md$/, '');
+      const text = readTitle(rel) || base;
+      children.push({ text, link: linkify(rel) });
     }
   }
   return children;

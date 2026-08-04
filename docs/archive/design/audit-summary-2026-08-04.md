@@ -74,3 +74,14 @@
 - 审核流程依据：AGENTS.md「审核代码可用性」（五维 + 五步 + 心理模拟）
 - 决策真相源：`docs/adr/`（ADR-028/031/032/033 为本轮相关决策的既有沉淀）
 - 历史坑位：`docs/archive/bug-chronicle.md`（本轮多处修复对齐其教训）
+
+---
+
+## 五、复合复核更新（2026-08-04 收尾复核）
+
+十三批审核 + 优化全部闭环后全量复核，当前状态：
+
+- **复核通过**：`doctor.mjs` 12 项静态检查全过 · `go test ./go/...` 全量 25 包 ok · 前端 `tsc --noEmit` 零错误 · `vitest run` 30 文件 / 357 用例全过（含并行会话新增测试）
+- **ADR-002 P1 销项**：`DownloadQueue ↔ App` 循环引用打破（`b8788df` 回调注入 downloadFn/emitFn/logFn，解锁独立测试）——ADR-002 全部遗留清空
+- **治理沉淀补记**：AGENTS.md 审核反模式表 +6 条实证条目（先删后建 / 存在即跳过 / 防抖只合并调度不合并执行 / 已关闭 channel 复用假活 / 限流器截断静默 / 文本匹配错误分类）；错误分类 errno 化全量落地（isFileLocked / linkErr / symlinkErr 平台分支）；gofmt 债务清零
+- **遗留状态**：记录在案的 P1/P2 全部清空。评估后放弃项：`GetInstanceSyncStatus` Walk 缓存（ms 级收益 vs 失效点遗漏风险）、relinkDir 补测（App 层依赖多，核心原子替换已由 installer 单测覆盖）、`_bindTabs` per-tab 串行化（inited 守卫已兜底）、`_checkedSets` 清理（勾选记忆为设计特性）

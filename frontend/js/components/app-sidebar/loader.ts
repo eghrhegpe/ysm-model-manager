@@ -138,7 +138,7 @@ export async function loadInstances(
  *   - missingGroups/extraGroups: string[] 聚合后的代表路径（父文件夹路径）
  *   - variantMap: { [folderPath]: string[] } 文件夹下的变体文件路径列表
  */
-function groupMmdVariants(
+export function groupMmdVariants(
   missingList: string[],
   extraList: string[],
 ): MmdVariantGroups {
@@ -168,8 +168,9 @@ function groupMmdVariants(
   // 生成聚合后的组列表
   const missingGroups: string[] = [];
   const extraGroups: string[] = [];
-  const seen: Record<string, boolean> = {};
+  // seen 必须按 missing/extra 各自独立：共享会导致同父文件夹「缺失+多余」时 extra 组被 missing 去重污染而漏组
   const assign = (paths: string[], target: string[]): void => {
+    const seen: Record<string, boolean> = {};
     paths.forEach((fp) => {
       const parts = fp.replace(/\\/g, "/").split("/");
       const parent = parts.length >= 2 ? parts.slice(0, -1).join("/") : fp;

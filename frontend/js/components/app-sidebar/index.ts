@@ -10,8 +10,16 @@ import { get } from "../../services/registry.ts";
 import type { loadInstances } from "./loader.ts";
 import type { SidebarInstance } from "./data.ts";
 
-// 持久化勾选状态（跨重新渲染保持）
-const _checkedSet = new Set<string>();
+// 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰
+const _checkedSets = new Map<string, Set<string>>();
+function checkedSetFor(rtype: string): Set<string> {
+  let s = _checkedSets.get(rtype);
+  if (!s) {
+    s = new Set<string>();
+    _checkedSets.set(rtype, s);
+  }
+  return s;
+}
 
 class AppSidebar extends HTMLElement {
   static get observedAttributes(): string[] {
@@ -27,6 +35,10 @@ class AppSidebar extends HTMLElement {
   private _syncInProgress = false; // 防止并发推送/拉取
   private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private _loading = false;
+  /** 重载代数：rtype 快速切换时用代数校验丢弃过期结果 */
+  private _reloadGen = 0;
+  /** _loading 进行中又有新请求 → 标记待补跑（完成后用最新 rtype 再跑一次） */
+  private _pendingReload = false;
 
   constructor() {
     super();
@@ -83,13 +95,14 @@ class AppSidebar extends HTMLElement {
     if (!cb) return;
     cb.addEventListener("change", () => {
       const checked = cb.checked;
+      const set = checkedSetFor(this._rtype);
       this._root.querySelectorAll(".chk").forEach((c) => {
         const input = c as HTMLInputElement;
         input.checked = checked;
         const idx = parseInt(input.dataset.idx || "", 10);
         if (!isNaN(idx) && this._instances[idx]) {
-          if (checked) _checkedSet.add(this._instances[idx].name);
-          else _checkedSet.delete(this._instances[idx].name);
+          if (checked) set.add(this._instances[idx].name);
+          else set.delete(this._instances[idx].name);
         }
       });
     });
@@ -97,14 +110,15 @@ class AppSidebar extends HTMLElement {
 
   // 渲染后恢复勾选 + 监听新 checkbox
   private _restoreCheckboxes(): void {
+    const set = checkedSetFor(this._rtype);
     this._root.querySelectorAll(".chk").forEach((c) => {
       const input = c as HTMLInputElement;
       const idx = parseInt(input.dataset.idx || "", 10);
       if (!isNaN(idx) && this._instances[idx]) {
-        input.checked = _checkedSet.has(this._instances[idx].name);
+        input.checked = set.has(this._instances[idx].name);
         input.addEventListener("change", () => {
-          if (input.checked) _checkedSet.add(this._instances[idx].name);
-          else _checkedSet.delete(this._instances[idx].name);
+          if (input.checked) set.add(this._instances[idx].name);
+          else set.delete(this._instances[idx].name);
         });
       }
     });
@@ -180,14 +194,16 @@ class AppSidebar extends HTMLElement {
           const results = await Promise.allSettled(
             types.map((rt) => new Promise<unknown>((resolve, reject) => {
               const token = `${insName}:${rt}:${Date.now()}`;
+              // timer 先声明再赋值：handler 内引用不在 TDZ（bus 同步 emit 场景安全）
+              let timer: ReturnType<typeof setTimeout> | null = null;
               const unsub = bus.on("sync:download:done", (payload) => {
                 if (payload?.token === token || payload?.instanceName === insName) {
                   unsub();
-                  clearTimeout(timer);
+                  if (timer) clearTimeout(timer);
                   resolve(payload);
                 }
               });
-              const timer = setTimeout(() => {
+              timer = setTimeout(() => {
                 unsub();
                 reject(new Error(`推送超时: ${insName}/${rt}`));
               }, 30000);
@@ -252,10 +268,12 @@ class AppSidebar extends HTMLElement {
         bus.emit("tree:reload");
       } catch (err) {
         bus.emit("toast:show", { msg: "❌ 拉取失败: " + (err instanceof Error ? err.message : String(err)), duration: 3000, type: "error" });
+      } finally {
+        // 意外 throw 也必须恢复按钮与锁（陷阱 #3：按钮卡死根因）
+        pullBtn.textContent = "⬇️ 拉取所选 ▾";
+        pullBtn.disabled = false;
+        this._syncInProgress = false;
       }
-      pullBtn.textContent = "⬇️ 拉取所选 ▾";
-      pullBtn.disabled = false;
-      this._syncInProgress = false;
     });
   }
 
@@ -273,10 +291,18 @@ class AppSidebar extends HTMLElement {
   }
 
   private async _reload(): Promise<void> {
-    if (this._loading) return;
+    if (this._loading) {
+      // 丢弃语义会导致 rtype 快速切换时 _instances 与 _rtype 错配：
+      // 记下补跑请求，当前完成后用最新 rtype 再跑一次
+      this._pendingReload = true;
+      return;
+    }
     this._loading = true;
+    const gen = ++this._reloadGen;
     try {
-      this._instances = await get<typeof loadInstances>("loadInstances")(this._rtype);
+      const instances = await get<typeof loadInstances>("loadInstances")(this._rtype);
+      if (gen !== this._reloadGen) return; // 已被更新的重载取代，丢弃过期结果
+      this._instances = instances;
       dbg(
         "sidebar",
         "_reload 完成, 实例数:",
@@ -293,13 +319,19 @@ class AppSidebar extends HTMLElement {
           : "无",
       );
     } catch (e) {
+      if (gen !== this._reloadGen) return;
       dbg("sidebar", "_reload 失败:", e);
       this._instances = [];
     } finally {
       this._loading = false;
     }
+    if (gen !== this._reloadGen) return;
     this._renderCards();
     bindFooter(this._root, this._instances);
+    if (this._pendingReload) {
+      this._pendingReload = false;
+      void this._reload();
+    }
   }
 
   disconnectedCallback(): void {

@@ -1,6 +1,7 @@
 // ===== <app-nav> — 左侧导航菜单（类型化版 — ADR-014 P3 components）=====
 // 事件：nav:change — 切换页面
-import { bus } from "../bus.ts";
+import { bus, type PageName } from "../bus.ts";
+import { resolveInitialPage } from "../core/page-store.ts";
 import { getApp } from "../wails/app.ts";
 
 class AppNav extends HTMLElement {
@@ -26,11 +27,8 @@ class AppNav extends HTMLElement {
     this.render();
     // 恢复上次保存的页面（首次使用或仓库页也需发射，确保导航栏高亮和 app-content 渲染）
     // 用 queueMicrotask 确保其他组件的 connectedCallback 先完成注册
-    const saved = localStorage.getItem("nav_page");
-    let targetPage = "repository";
-    if (saved && saved !== "repository") {
-      targetPage = saved === "resources" ? "repository" : saved;
-    }
+    // 恢复逻辑统一走 page-store.resolveInitialPage，避免两处漂移
+    const targetPage = resolveInitialPage();
     queueMicrotask(() => bus.emit("nav:change", { page: targetPage }));
   }
 
@@ -127,7 +125,7 @@ class AppNav extends HTMLElement {
     `;
 
     this.shadowRoot!.querySelectorAll(".nav-item").forEach((el) => {
-      (el as HTMLElement).onclick = () => bus.emit("nav:change", { page: (el as HTMLElement).dataset.page || "" });
+      (el as HTMLElement).onclick = () => bus.emit("nav:change", { page: (el as HTMLElement).dataset.page as PageName });
     });
 
     // 异步加载版本号

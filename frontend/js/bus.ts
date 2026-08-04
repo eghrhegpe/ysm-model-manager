@@ -24,8 +24,17 @@ export interface MenuItem {
   // disabled / submenu 字段暂无调用方，按需再补
 }
 
+/** 核心页面名（与 app-nav 导航菜单一致） */
+export type PageName =
+  | "repository"
+  | "instances"
+  | "workshop"
+  | "github"
+  | "diagnostics"
+  | "settings";
+
 export interface NavPagePayload {
-  page: string;
+  page: PageName;
 }
 
 export interface ModelSelectPayload {

@@ -3,6 +3,7 @@
 // app-content/index.js 调用此模块注册所有 handler
 
 import { registerPageStore } from "./page-store.ts";
+import { registerContextMenus } from "./context-menus.ts";
 import { registerDnD } from "./handler-dnd.ts";
 import { registerSync } from "./handler-sync.ts";
 import { registerInstanceOps } from "./handler-other.ts";
@@ -11,6 +12,7 @@ import { registerInstanceOps } from "./handler-other.ts";
 export function registerGlobalHandlers(): Array<() => void> {
   const unsubs: Array<() => void> = [];
   registerPageStore(unsubs);
+  registerContextMenus(unsubs);
   registerDnD(unsubs);
   registerSync(unsubs);
   registerInstanceOps(unsubs);

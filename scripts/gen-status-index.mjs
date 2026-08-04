@@ -14,9 +14,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { ROOT } from './_lib/scan-files.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ADR_DIR = path.join(ROOT, 'docs', 'adr');
 const STATUS_FILE = path.join(ROOT, 'docs', 'architecture', 'PROJECT_STATUS.md');
 const GEN_NAME = 'active-adr';

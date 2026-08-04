@@ -23,10 +23,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { ROOT } from './_lib/scan-files.mjs';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ADR_DIR = path.join(ROOT, 'docs', 'adr');
 const ADR_REG_FILE = path.join(ADR_DIR, 'README.md');
 const ADR_INDEX_FILE = path.join(ADR_DIR, 'index.md');

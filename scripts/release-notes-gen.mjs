@@ -10,10 +10,8 @@
  * 退出码：0（无 process.exit 调用）
  */
 import { execFileSync } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { ROOT } from './_lib/scan-files.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function run(cmd) {
   try {

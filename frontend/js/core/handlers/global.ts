@@ -6,7 +6,7 @@ import { registerPageStore } from "../page-store.ts";
 import { registerContextMenus } from "../context-menus.ts";
 import { registerDnD } from "./dnd.ts";
 import { registerSync } from "./sync.ts";
-import { registerInstanceOps } from "./other.ts";
+import { registerInstanceOps } from "./instance-ops.ts";
 import { registerResourceManagerGlobal } from "../../views/app-resource-manager/index.ts";
 
 /** 注册所有全局 handler，返回 unsub 函数数组 */

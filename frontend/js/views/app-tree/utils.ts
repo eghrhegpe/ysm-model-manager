@@ -8,8 +8,8 @@ export function flashBtn(el: HTMLElement | null): void {
 }
 
 // —— 以下委托到全局工具 ——
-// 文件大小/日期格式化 → js/utils/dom/fmt.ts
-// HTML 转义/高亮 → js/utils/dom/dom.ts
+// 文件大小/日期格式化 → js/utils/dom/format.ts
+// HTML 转义/高亮 → js/utils/dom/html.ts
 // 文件图标 → js/utils/icon/icon.ts
 //
 // 但为了避免循环 import 问题，这些工具直接在 render.ts 中 import。

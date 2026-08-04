@@ -312,9 +312,9 @@ export class AppTree extends HTMLElement {
         const isDirModel = [RESOURCE_TYPES.MMD, RESOURCE_TYPES.VRC].includes(rtype);
         this._deleteSelected(paths, isDirModel);
       }
-    }) as EventListener;
+    }) as unknown as EventListener;
     // 只注册 document 级：shadow 内组合键事件会 composed 冒泡，双注册会导致 Delete 双触发
-    document.addEventListener("keydown", this._keydownHandler);
+    document.addEventListener("keydown", this._keydownHandler as unknown as EventListener);
   }
 
   async _deleteSelected(paths: string[], isDirModel: boolean): Promise<void> {

@@ -1,6 +1,6 @@
 // ===== 树渲染层（虚拟滚动版）=====
-import { hl } from "../../utils/dom/dom.ts";
-import { fmt, fmtDate } from "../../utils/dom/fmt.ts";
+import { hl } from "../../utils/dom/html.ts";
+import { fmt, fmtDate } from "../../utils/dom/format.ts";
 import { fileIcon, isYsmName } from "../../utils/icon/icon.ts";
 import { emptyHTML } from "./tpl.ts";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";

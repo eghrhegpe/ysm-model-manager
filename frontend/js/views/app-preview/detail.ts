@@ -2,7 +2,7 @@
 // 从 index.ts 拆分：详情面板渲染逻辑
 import { summaryCardHTML } from "../../utils/format/summarize.ts";
 import { renderFormattedText } from "../../utils/format/mc-format.ts";
-import { esc } from "../../utils/dom/dom.ts";
+import { esc } from "../../utils/dom/html.ts";
 import { getApp } from "../../wails/app.ts";
 import type { PreviewCtx } from "./utils.ts";
 

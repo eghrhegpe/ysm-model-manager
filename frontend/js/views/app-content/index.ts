@@ -1,7 +1,7 @@
 // ===== <app-content> 入口 =====
 import { bus } from "../../bus.ts";
 import { setPendingTreeSearch } from "../app-tree/index.ts";
-import { esc as escUtil } from "../../utils/dom/dom.ts";
+import { esc as escUtil } from "../../utils/dom/html.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { contentCSS } from "./content-css.ts";

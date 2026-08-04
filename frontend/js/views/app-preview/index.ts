@@ -13,7 +13,7 @@ import { type PreviewCtx, type DecodedYsm } from "./utils.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
 import { showModelDetail, showResourcePack, showShaderPack } from "./detail.ts";
 import { showLitematic, cleanupLitematic3D } from "./litematic-meta.ts";
-import { esc } from "../../utils/dom/dom.ts";
+import { esc } from "../../utils/dom/html.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 
 // 注册缓存淘汰回调：释放 blob URL

@@ -1,5 +1,5 @@
 // ===== preview HTML 模板 =====
-import { esc } from "../../utils/dom/dom.ts";
+import { esc } from "../../utils/dom/html.ts";
 
 /** 模型统计元数据（modelDetailHTML 入参） */
 export interface ModelDetailMeta {

@@ -6,7 +6,7 @@ import { bus } from "../../bus.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { esc } from "../../utils/dom/dom.ts";
+import { esc } from "../../utils/dom/html.ts";
 import { getApp } from "../../wails/app.ts";
 import {
   containerHTML,

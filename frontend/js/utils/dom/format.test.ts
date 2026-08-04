@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fmt, sizeColor, fmtDate } from "./fmt.ts";
+import { fmt, sizeColor, fmtDate } from "./format.ts";
 
 describe("fmt", () => {
   it("formats bytes", () => expect(fmt(0)).toBe("0 B"));

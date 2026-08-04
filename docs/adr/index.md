@@ -14,9 +14,9 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [🔄 部分采纳](#部分采纳) | 6 |
+| [🔄 部分采纳](#部分采纳) | 5 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 2 |
-| [✅ 已采纳](#已采纳) | 24 |
+| [✅ 已采纳](#已采纳) | 25 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❌ 已取代](#已取代) | 0 |
 
@@ -26,7 +26,6 @@ permalink: /adr/
 |-----|------|------|
 | [ADR-023](./ADR-023-test-framework.md) | 测试体系 | 🔄 部分采纳（L1 Go 单测 / L2 契约测试现行；L3 Vitest 已落地运行并接入质量门禁——20 文件 / 302 用例 + v8 覆盖率基线 + 阈值红线；pre-push-gate / doctor / CI 均跑） |
 | [ADR-022](./ADR-022-vitepress-site.md) | VitePress 建站 | 🔄 部分采纳（内容体系已就绪，站点搭建由并行 AI 推进中） |
-| [ADR-021](./ADR-021-declarative-menu-testing.md) | 前端声明式菜单自动化测试方案 | 🔄 部分采纳（方案已定，A 层实施待排期） |
 | [ADR-017](./ADR-017-frontend-enhancement-backlog.md) | 前端增强待办决策 | 🔄 部分采纳 |
 | [ADR-016](./ADR-016-ui-experience-improvement.md) | 前端 UI 体验优化决策 | 🔄 部分采纳（P0/P1 已完成，P2 待实施） |
 | [ADR-003](./ADR-003-logic-sinking.md) | 业务逻辑从 Binding 层下沉至纯 Go 包（Logic Sinking） | 🔄 部分采纳（P0/P1/P1.5 已完成，P2/P3 进行中） |
@@ -52,6 +51,7 @@ permalink: /adr/
 | [ADR-026](./ADR-026-ysm-parser-ethics-boundary.md) | YSM 解析器集成伦理边界 | ✅ 已采纳 |
 | [ADR-025](./ADR-025-download-mirror-fallback.md) | 工坊下载镜像回退架构 | ✅ 已采纳 |
 | [ADR-024](./ADR-024-multi-resource-federation.md) | 多资源类型联邦架构（ResourceAdapter + resource_types.json 注册表） | ✅ 已采纳 |
+| [ADR-021](./ADR-021-declarative-menu-testing.md) | 前端声明式菜单自动化测试方案 | ✅ 已采纳（A/B 层已实施；C 层 E2E 按决策不引入、列为远期） |
 | [ADR-020](./ADR-020-script-toolchain.md) | 脚本体系 | ✅ 已采纳 |
 | [ADR-019](./ADR-019-knowledge-base.md) | 知识卡体系 | ✅ 已采纳 |
 | [ADR-018](./ADR-018-user-guide.md) | 用户指南体系 | ✅ 已采纳 |
@@ -93,7 +93,7 @@ _（暂无）_
 | [ADR-024](./ADR-024-multi-resource-federation.md) | 多资源类型联邦架构（ResourceAdapter + resource_types.json 注册表） | ✅ 已采纳 | 2026-08-04（决策时间线：联邦愿景 2025-06-07 起草 / P7 多资源计划 2026-06-10 定稿 / 注册表现行落地） |
 | [ADR-023](./ADR-023-test-framework.md) | 测试体系 | 🔄 部分采纳（L1 Go 单测 / L2 契约测试现行；L3 Vitest 已落地运行并接入质量门禁——20 文件 / 302 用例 + v8 覆盖率基线 + 阈值红线；pre-push-gate / doctor / CI 均跑） | 2026-08-03（初定），2026-08-04（L3 落地 + 覆盖率基线 + 进门禁/CI + 阈值红线 + 补测报告脚本） |
 | [ADR-022](./ADR-022-vitepress-site.md) | VitePress 建站 | 🔄 部分采纳（内容体系已就绪，站点搭建由并行 AI 推进中） | 2026-08-03 |
-| [ADR-021](./ADR-021-declarative-menu-testing.md) | 前端声明式菜单自动化测试方案 | 🔄 部分采纳（方案已定，A 层实施待排期） | 2026-08-03 |
+| [ADR-021](./ADR-021-declarative-menu-testing.md) | 前端声明式菜单自动化测试方案 | ✅ 已采纳（A/B 层已实施；C 层 E2E 按决策不引入、列为远期） | 2026-08-03 |
 | [ADR-020](./ADR-020-script-toolchain.md) | 脚本体系 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-019](./ADR-019-knowledge-base.md) | 知识卡体系 | ✅ 已采纳 | 2026-08-03 |
 | [ADR-018](./ADR-018-user-guide.md) | 用户指南体系 | ✅ 已采纳 | 2026-08-03 |

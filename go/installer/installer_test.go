@@ -319,3 +319,35 @@ func TestIsValidRepoRoot(t *testing.T) {
 		}
 	}
 }
+
+func TestCopyFile_SrcMissing(t *testing.T) {
+	_, custom, _, _ := setupTestDirs(t)
+	missing := filepath.Join(t.TempDir(), "不存在.ysm")
+
+	_, err := CopyFile(missing, custom)
+	if err == nil {
+		t.Fatal("源文件不存在应返回错误")
+	}
+
+	// 失败路径不得在目标目录残留半截文件
+	dst := filepath.Join(custom, filepath.Base(missing))
+	if _, statErr := os.Stat(dst); !os.IsNotExist(statErr) {
+		t.Fatalf("失败后目标文件不应存在: %v", statErr)
+	}
+}
+
+func TestInstall_CopySrcMissing(t *testing.T) {
+	repo, custom, _, _ := setupTestDirs(t)
+	missing := filepath.Join(repo, "不存在.ysm")
+
+	err := Install(missing, custom, repo, "copy")
+	if err == nil {
+		t.Fatal("源文件不存在应返回错误")
+	}
+
+	dst := filepath.Join(custom, filepath.Base(missing))
+	if _, statErr := os.Stat(dst); !os.IsNotExist(statErr) {
+		t.Fatalf("安装失败后目标文件不应残留: %v", statErr)
+	}
+}
+

@@ -88,11 +88,11 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 
 	switch linkMode {
 	case "hardlink":
-		return linkOrCopy(src, targetDir)
+		return linkOrCopyLocked(src, targetDir)
 	case "symlink":
-		return symlinkOrCopy(src, targetDir)
+		return symlinkOrCopyLocked(src, targetDir)
 	default:
-		_, err := CopyFile(src, targetDir)
+		_, err := copyFileLocked(src, targetDir)
 		return err
 	}
 }
@@ -176,17 +176,17 @@ func installDirRecursive(srcDir, finalDst, linkMode, rtype string) error {
 		srcFile := filepath.Join(srcDir, entry.Name())
 		switch linkMode {
 		case "hardlink":
-			if err := linkOrCopy(srcFile, finalDst); err != nil {
+			if err := linkOrCopyLocked(srcFile, finalDst); err != nil {
 				log.Printf("[installer] linkOrCopy 失败 %s: %v (继续)", srcFile, err)
 				errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 			}
 		case "symlink":
-			if err := symlinkOrCopy(srcFile, finalDst); err != nil {
+			if err := symlinkOrCopyLocked(srcFile, finalDst); err != nil {
 				log.Printf("[installer] symlinkOrCopy 失败 %s: %v (继续)", srcFile, err)
 				errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 			}
 		default:
-			if _, err := CopyFile(srcFile, finalDst); err != nil {
+			if _, err := copyFileLocked(srcFile, finalDst); err != nil {
 				log.Printf("[installer] CopyFile 失败 %s: %v (继续)", srcFile, err)
 				errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 			}
@@ -218,7 +218,7 @@ func InstallToGlobal(src, mcRoot string) (string, error) {
 	if err := os.MkdirAll(customDir, 0755); err != nil {
 		return "", types.AppError{Code: "IO_ERROR", Operation: "安装到全局", TargetPath: customDir, Reason: "无法创建安装目录", Suggestion: "请检查磁盘权限或空间"}
 	}
-	return CopyFile(src, customDir)
+	return copyFileLocked(src, customDir)
 }
 
 // InstallWithOverlay 带冲突检查的安装
@@ -244,11 +244,11 @@ func InstallWithOverlay(src, customDir string) (string, error) {
 	if _, err := os.Stat(dst); err == nil {
 		return "CONFLICT:" + dst, types.AppError{Code: "ALREADY_EXISTS", Operation: "安装模型（覆盖检查）", TargetPath: dst, Reason: "文件已存在", Suggestion: "如需覆盖请先删除原文件"}
 	}
-	return CopyFile(src, customDir)
+	return copyFileLocked(src, customDir)
 }
 
-// CopyFile 复制文件到目标目录
-func CopyFile(src, dstDir string) (string, error) {
+// copyFileLocked 复制文件到目标目录（调用方须持有 installLock，禁止直接调用）
+func copyFileLocked(src, dstDir string) (string, error) {
 	src = cleanAbs(src)
 	dstDir = cleanAbs(dstDir)
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
@@ -268,10 +268,18 @@ func CopyFile(src, dstDir string) (string, error) {
 	if err != nil {
 		return "", types.AppError{Code: "IO_ERROR", Operation: "复制文件", TargetPath: dst, Reason: "无法创建目标文件", Suggestion: "请检查磁盘空间或权限"}
 	}
-	defer out.Close()
+	ok := false
+	defer func() {
+		out.Close()
+		if !ok {
+			// 复制中断/失败时清理半截文件，避免残留损坏文件
+			os.Remove(dst)
+		}
+	}()
 	if _, err := io.Copy(out, in); err != nil {
 		return "", types.AppError{Code: "IO_ERROR", Operation: "复制文件", TargetPath: dst, Reason: "写入目标文件失败", Suggestion: "请检查磁盘空间或权限"}
 	}
+	ok = true
 	// 设置目标文件权限
 	if err := os.Chmod(dst, 0644); err != nil {
 		log.Printf("[installer] 设置权限失败 %s: %v", dst, err)
@@ -279,10 +287,18 @@ func CopyFile(src, dstDir string) (string, error) {
 	return dst, nil
 }
 
-// linkOrCopy 以硬链接落地 src 到 dstDir；目标已存在时：
+// CopyFile 复制文件到目标目录（带互斥锁）
+func CopyFile(src, dstDir string) (string, error) {
+	installLock.Lock()
+	defer installLock.Unlock()
+	return copyFileLocked(src, dstDir)
+}
+
+// linkOrCopyLocked 以硬链接落地 src 到 dstDir（调用方须持有 installLock，禁止直接调用）；
+// 目标已存在时：
 //   - 同源（已是到 src 的硬链接）→ 幂等返回
 //   - 不同源（旧副本/旧版本）→ 先建临时链接再原子替换，失败不破坏原文件
-func linkOrCopy(src, dstDir string) error {
+func linkOrCopyLocked(src, dstDir string) error {
 	src = cleanAbs(src)
 	dstDir = cleanAbs(dstDir)
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
@@ -304,8 +320,16 @@ func linkOrCopy(src, dstDir string) error {
 	return nil
 }
 
-// symlinkOrCopy 以符号链接落地 src 到 dstDir；目标已存在时与 linkOrCopy 同语义
-func symlinkOrCopy(src, dstDir string) error {
+// linkOrCopy 以硬链接落地 src 到 dstDir（带互斥锁）
+func linkOrCopy(src, dstDir string) error {
+	installLock.Lock()
+	defer installLock.Unlock()
+	return linkOrCopyLocked(src, dstDir)
+}
+
+// symlinkOrCopyLocked 以符号链接落地 src 到 dstDir（调用方须持有 installLock，禁止直接调用）；
+// 目标已存在时与 linkOrCopyLocked 同语义
+func symlinkOrCopyLocked(src, dstDir string) error {
 	src = cleanAbs(src)
 	dstDir = cleanAbs(dstDir)
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
@@ -325,6 +349,13 @@ func symlinkOrCopy(src, dstDir string) error {
 		return types.AppError{Code: "IO_ERROR", Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "替换目标文件失败", Suggestion: "请检查目标文件是否被占用或为只读"}
 	}
 	return nil
+}
+
+// symlinkOrCopy 以符号链接落地 src 到 dstDir（带互斥锁）
+func symlinkOrCopy(src, dstDir string) error {
+	installLock.Lock()
+	defer installLock.Unlock()
+	return symlinkOrCopyLocked(src, dstDir)
 }
 
 // sameSource 判断 dst 是否已是 src 的有效落地点（同一文件 / 指向 src 的链接）

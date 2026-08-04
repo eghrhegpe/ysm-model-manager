@@ -1,5 +1,5 @@
 // ===== 站点视图拖拽 JSON 导入（从 site-view.ts 拆出，ADR-034 方向①）=====
-import { friendlyError } from "../../../utils/errors.ts";
+import { friendlyError } from "../../../utils/dom/errors.ts";
 import { bus } from "../../../bus.ts";
 import { getApp } from "../../../wails/app.ts";
 import type { WorkshopSite } from "../../../../bindings/ysm-model-manager/go/types/models.ts";

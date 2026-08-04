@@ -2,7 +2,7 @@
 // 事件：menu:show, menu:hide
 // 监听：menu:show({ x, y, items: [{label, icon?, onClick}] })
 import { bus, type MenuItem } from "../../bus.ts";
-import { esc } from "../../utils/dom/dom.ts";
+import { esc } from "../../utils/dom/html.ts";
 
 class ContextMenu extends HTMLElement {
   _unsub: (() => void) | undefined;

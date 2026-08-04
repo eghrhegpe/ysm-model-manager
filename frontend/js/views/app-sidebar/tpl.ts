@@ -1,6 +1,6 @@
 // ===== sidebar HTML 模板 =====
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { esc } from "../../utils/dom/dom.ts";
+import { esc } from "../../utils/dom/html.ts";
 
 /** rtype 短标签映射（vcHeaderHTML 徽章） */
 const RTYPE_LABELS: Record<string, string> = {

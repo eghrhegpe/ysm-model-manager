@@ -5,7 +5,7 @@ import { PageStore } from "../page-store.ts";
 import { DnDLock, PendingImport } from "../../features/dnd-state.ts";
 import { getApp } from "../../wails/app.ts";
 import { ALL_EXTS } from "../../utils/resource/extensions.ts";
-import { getExt, isSupportedFile, shouldEnterForm } from "../../utils/dom/dnd-shared.ts";
+import { getExt, isSupportedFile, shouldEnterForm } from "../../features/dnd-shared.ts";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
 const MAX_FILE_COUNT = 50;

@@ -1,8 +1,8 @@
 // ===== 树节点行 HTML 模板 =====
 import { renderDisplayName } from "../../utils/dom/display.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { esc } from "../../utils/dom/dom.ts";
-import { fmt, sizeColor } from "../../utils/dom/fmt.ts";
+import { esc } from "../../utils/dom/html.ts";
+import { fmt, sizeColor } from "../../utils/dom/format.ts";
 import type { TreeEntry } from "./loader.ts";
 
 /** 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） */

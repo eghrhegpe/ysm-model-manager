@@ -1,6 +1,6 @@
 // ===== 模型标签编辑弹窗（类型化版 — ADR-014 P3 dialogs）=====
 // 读取/写入模型标签，支持输入新标签和选择已有标签
-import { esc } from "../../utils/dom/dom.ts";
+import { esc } from "../../utils/dom/html.ts";
 import { closeDlg, registerDlg } from "./modal.js";
 import { getApp } from "../../wails/app.ts";
 

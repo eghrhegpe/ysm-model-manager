@@ -8,7 +8,7 @@ import { modalConfirm } from "../views/dialogs/modal.ts";
 import { DnDLock, PendingImport } from "./dnd-state.ts";
 import { getApp } from "../wails/app.ts";
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
-import { isSupportedFile, shouldEnterForm } from "../utils/dom/dnd-shared.ts";
+import { isSupportedFile, shouldEnterForm } from "./dnd-shared.ts";
 
 const extsStr = ALL_EXTS.join(" ");
 

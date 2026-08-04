@@ -75,7 +75,7 @@ describe("app-resource-manager（testid 钩子 + 资源管理交互）", () => {
   it("connected → 导入按钮存在", async () => {
     const el = mountCustomElement("app-resource-manager");
     await waitFor(() => el.querySelector('[data-testid="rm-import"]') !== null, 5000);
-    const importBtn = getByTestId(el, "rm-import");
+    const importBtn = getByTestId(el, "rm-import")!;
     expect(importBtn).toBeTruthy();
     expect(importBtn.textContent).toContain("导入");
     unmountElement(el);

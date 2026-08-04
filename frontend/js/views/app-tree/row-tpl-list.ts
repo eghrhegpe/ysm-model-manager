@@ -1,8 +1,8 @@
 // ===== 紧凑列表行 HTML 模板（24px 高度）=====
 import { renderDisplayName } from "../../utils/dom/display.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { esc } from "../../utils/dom/dom.ts";
-import { fmt, sizeColor } from "../../utils/dom/fmt.ts";
+import { esc } from "../../utils/dom/html.ts";
+import { fmt, sizeColor } from "../../utils/dom/format.ts";
 import type { TreeEntry } from "./loader.ts";
 
 /** 文件行 HTML（紧凑列表模式：icon + name + size，无 hover actions、无 date、无 tag dot） */

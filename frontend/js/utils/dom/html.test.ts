@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { esc, hl } from "./dom.ts";
+import { esc, hl } from "./html.ts";
 
 describe("esc", () => {
   it("escapes &", () => expect(esc("a&b")).toBe("a&amp;b"));

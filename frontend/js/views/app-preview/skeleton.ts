@@ -6,7 +6,7 @@ import { renderModel2D } from "../../utils/3d/model2d.ts";
 import { openFullPreview } from "./zoom.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import type { BoneSelectInfo } from "../../utils/3d/model3d.ts";
-import { esc } from "../../utils/dom/dom.ts";
+import { esc } from "../../utils/dom/html.ts";
 import { getApp } from "../../wails/app.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";

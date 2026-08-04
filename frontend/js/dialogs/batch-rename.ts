@@ -4,6 +4,7 @@ import { bus } from "../bus.ts";
 import { parseModelName, type ParsedModelName } from "../utils/display.ts";
 import { stagger } from "../utils/stagger.ts";
 import { registerDlg } from "./modal.ts";
+import { esc } from "../utils/dom.ts";
 
 /** 批量条目（ModelEntry 子集） */
 interface BatchEntry {
@@ -375,12 +376,4 @@ function close(): void {
     if (res) res(); // 结算调用方 await：对话框已关闭
     setTimeout(() => el.remove(), 120);
   }
-}
-
-function esc(s: string): string {
-  return (s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

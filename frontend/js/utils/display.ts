@@ -1,5 +1,6 @@
 // ===== 模型文件名解析 + 美化显示管线（类型化版 — ADR-014 P2）=====
 import { renderFormattedText } from "./mc-format.ts";
+import { esc } from "./dom.ts";
 
 /** 解析后的模型文件名字段 */
 export interface ParsedModelName {
@@ -67,15 +68,6 @@ export function parseModelName(raw: string): ParsedModelName {
 /** 转义正则特殊字符 */
 function escRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function esc(s: string): string {
-  return (s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 /**

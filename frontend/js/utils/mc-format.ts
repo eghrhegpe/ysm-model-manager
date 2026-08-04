@@ -1,4 +1,5 @@
 // ===== Minecraft 分节符颜色渲染（类型化版 — ADR-014 P2）=====
+import { esc } from "./dom.ts";
 
 const MC_COLORS: Record<string, string> = {
   "0": "#000000",
@@ -31,13 +32,6 @@ const FORMAT_TAGS: Record<string, FormatTag> = {
   n: { open: '<u style="text-decoration:underline">', close: "</u>" },
   m: { open: '<span style="text-decoration:line-through">', close: "</span>" },
 };
-
-function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
 
 /**
  * 将含 Minecraft § 分节符的文本渲染为带颜色的 HTML。

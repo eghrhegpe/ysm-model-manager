@@ -3,6 +3,7 @@ import { bus } from "../../../bus.ts";
 import { initVersionUpdater } from "../../../features/version-updater.ts";
 import { friendlyError } from "../../../utils/errors.ts";
 import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/resource-registry.ts";
+import { esc } from "../../../utils/dom.ts";
 
 /**
  * 初始化设置页所有事件绑定
@@ -414,10 +415,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   }
 
   function escHtml(s: unknown): string {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+    return esc(String(s ?? ""));
   }
 
   // 主题卡片：直接点击切换

@@ -6,6 +6,7 @@ import { sidebarHTML, itemHTML, detailHTML, placeholderHTML, type PackMetaDetail
 import { bus } from "../../bus.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { getApp } from "../../wails/app.ts";
+import { esc } from "../../utils/dom.ts";
 
 /** 资源类型配置（resource_types.json 条目视图） */
 interface ResourceTypeConfig {
@@ -56,11 +57,7 @@ function _findType(rtype: string): ResourceTypeConfig | undefined {
 }
 
 function _esc(s: unknown): string {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return esc(String(s ?? ""));
 }
 
 export class AppResourceManager extends HTMLElement {

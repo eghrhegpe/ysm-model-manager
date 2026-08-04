@@ -1,6 +1,7 @@
 // ===== 资源管理器布局模板 =====
 import { renderFormattedText } from "../../utils/mc-format.ts";
 import { describeVersionRange, type PackMeta } from "../../utils/pack-format.ts";
+import { esc } from "../../utils/dom.ts";
 
 /** 详情面板元数据（ReadPackMeta / ReadShaderpackLang 返回 JSON 的兼容视图） */
 export interface PackMetaDetail extends PackMeta {
@@ -21,12 +22,6 @@ export function sidebarHTML(
   actions: string[],
   label: string,
 ): string {
-  const esc = (s: string): string =>
-    String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
   let html =
     '<div class="rm-sidebar" style="width:220px;overflow-y:auto;padding:8px;border-right:1px solid var(--bd);display:flex;flex-direction:column">' +
     '<div style="font-size:var(--fs-sm);color:var(--muted);padding:4px;word-break:break-all">📂 ' +
@@ -69,12 +64,6 @@ export function itemHTML(
   icon: string,
   idx: number,
 ): string {
-  const esc = (s: string): string =>
-    String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
   return (
     '<div class="rm-item" data-path="' +
     esc(path) +
@@ -113,12 +102,6 @@ export function detailHTML(
   label: string,
   actions: string[],
 ): string {
-  const esc = (s: string): string =>
-    String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
   const desc = renderFormattedText(meta.description || "");
   let html =
     '<div style="display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm);padding:12px">';
@@ -169,12 +152,6 @@ export function detailHTML(
  * @param label - 资源类型名称
  */
 export function placeholderHTML(label: string): string {
-  const esc = (s: string): string =>
-    String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
   return (
     '<div class="dp-placeholder" style="display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;gap:8px;height:100%">' +
     '<div style="font-size:24px">📦</div>' +

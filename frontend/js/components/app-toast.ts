@@ -1,6 +1,7 @@
 // ===== <app-toast> — Toast 通知系统（类型化版 — ADR-014 P3 components）=====
 // 用法：bus.emit('toast:show', { msg, undo?, duration?, type? })
 import { bus } from "../bus.ts";
+import { esc } from "../utils/dom.ts";
 
 /** toast 元素（含关闭定时器） */
 type ToastEl = HTMLElement & {
@@ -101,9 +102,7 @@ class AppToast extends HTMLElement {
   }
 
   _esc(s: string): string {
-    const d = document.createElement("div");
-    d.textContent = s;
-    return d.innerHTML;
+    return esc(s);
   }
 }
 customElements.define("app-toast", AppToast);

@@ -2,12 +2,6 @@
 import { friendlyError } from "../../utils/errors.ts";
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
 import { bus } from "../../bus.ts";
-import {
-  ToggleModelEnable,
-  SelectDirectory,
-  SaveAppConfig,
-  RenameFile,
-} from "../../../bindings/ysm-model-manager/internal/app/app.js";
 import { get } from "../../services/registry.ts";
 import type { loadEntries } from "./loader.ts";
 import { initInstanceActions } from "./instance-actions.ts";
@@ -24,9 +18,10 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
   unsubs.push(
     bus.on("dir:select-repo", async () => {
       try {
+        const { SelectDirectory, SaveAppConfig } = await getApp();
         const dir = await SelectDirectory();
         if (!dir) return;
-        // 透传用户已保存的 linkMode，避免硬编码 "copy" 冲掉硬链接模式
+        // 透传用户已保存的 linkMode，避免硬编码 "copy" 冹掉硬链接模式
         const { LoadAppConfig } = await getApp();
         const cfg = await LoadAppConfig().catch(() => null);
         const theme = localStorage.getItem("theme") || "dark";
@@ -220,6 +215,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
           async (renames) => {
           let ok = 0,
             fail = 0;
+          const { RenameFile } = await getApp();
           for (const r of renames) {
             try {
               await RenameFile(r.oldPath || "", r.newName);
@@ -260,6 +256,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
         await showBatchRenameDialog("批量重命名", entries, async (renames) => {
           let ok = 0,
             fail = 0;
+          const { RenameFile } = await getApp();
           for (const r of renames) {
             try {
               await RenameFile(r.oldPath || "", r.newName);
@@ -330,6 +327,7 @@ async function batchToggle(
   if (vm._batchBusy || vm._toggleBusy) return; // 并发守卫：连点时后来的批量操作直接忽略
   vm._batchBusy = true;
   try {
+  const { ToggleModelEnable } = await getApp();
   const prefix = dir.replace(/\\/g, "/");
   const snapshot = vm._entries
     .filter((e) => e.path && e.path.startsWith(prefix) && e.banned === enable)
@@ -366,6 +364,7 @@ async function batchToggleAll(vm: AppTree, enable: boolean): Promise<void> {
   try {
   let ok = 0,
     fail = 0;
+  const { ToggleModelEnable } = await getApp();
   const snapshot = vm._entries
     .filter((e) => e.banned === enable)
     .map((e) => e.fullPath);

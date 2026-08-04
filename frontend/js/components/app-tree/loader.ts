@@ -1,10 +1,6 @@
 // ===== Go 数据加载层 =====
-import {
-  ScanModelEntries,
-  IsFileBanned,
-  GetRepoRoot,
-} from "../../../bindings/ysm-model-manager/internal/app/app.js";
 import { getExts } from "../../utils/extensions.ts";
+import { getApp } from "../../wails/app.ts";
 
 /** 树条目（loader 转换后的渲染格式） */
 export interface TreeEntry {
@@ -24,6 +20,7 @@ export async function loadEntries(
   rtype: string,
 ): Promise<{ repoRoot: string; entries: TreeEntry[] }> {
   try {
+    const { GetRepoRoot, ScanModelEntries, IsFileBanned } = await getApp();
     const repoRoot = await GetRepoRoot(rtype || "");
     if (!repoRoot) return { repoRoot: "", entries: [] };
 

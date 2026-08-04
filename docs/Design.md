@@ -568,6 +568,23 @@ disconnectedCallback() {
 }
 ```
 
+#### 14.4.1 并发防护范式（审核周期沉淀）
+
+审核周期（2026-08-04）检查了 20 个模块的异步模式，识别出 4 个已在全仓库扩散的统一范式：
+
+| 范式 | 适用场景 | 模板代码 | 出处 |
+|------|----------|----------|------|
+| **`_busy` + `try/finally`** | 按钮点击类异步操作，防止连点重叠触发 | `if (this._busy) return; this._busy = true; try { ... } finally { this._busy = false; }` | app-tree / app-sidebar / import-queue / app-preview |
+| **generation counter** | 多个 await 后写共享 DOM 的初始化/刷新，丢弃过期响应 | `const gen = ++this._loadGen;` + await 后 `if (gen !== this._loadGen) return;` | recycle-bin / oldest-models / preview-detail（`_detailGen`）/ app-resource-manager（`_initGen`） |
+| **单例槽位** | 弹窗类，防止连点叠加/双执行 | `registerDlg(overlay, cancelClose)` — 先结算旧弹窗再登记新的 | modal.ts（`_activeOverlay` / `_closeActive`） |
+| **先移除再绑定** | window/document 级监听，防止切页累积 | `if (this._prevHandler) window.removeEventListener(...);` 再绑新 handler | preview-skeleton 拖拽 / app-content preview resize / handler-dnd document 监听 |
+
+**判断原则**：
+- 按钮/导入/推送等"用户点一次执行一次"的操作 → `_busy` + `finally`
+- 多个 await 后写共享 DOM 的初始化 → generation counter
+- 弹窗/对话框 → `registerDlg` 单例槽位
+- 全局监听（window/document） → 先移除再绑定 + disconnectedCallback 清理
+
 ### 14.5 代码分割与注册入口
 
 入口 `frontend/js/app-modules.ts`：

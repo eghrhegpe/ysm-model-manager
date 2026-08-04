@@ -1,6 +1,6 @@
 // ===== <app-sidebar> 入口 =====
 import { bus } from "../../bus.ts";
-import { dbg } from "../../utils/debug.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS, ALL_RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { sidebarCSS } from "./sidebar-css.ts";
 import { headerHTML, footerHTML, listContainerHTML } from "./tpl.ts";

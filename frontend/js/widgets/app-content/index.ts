@@ -3,7 +3,7 @@ import { bus } from "../../bus.ts";
 import { setPendingTreeSearch } from "../app-tree/index.ts";
 import { esc as escUtil } from "../../utils/dom/dom.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { dbg } from "../../utils/debug.ts";
+import { dbg } from "../../utils/debug/debug.ts";
 import { contentCSS } from "./content-css.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
 import { getApp } from "../../wails/app.ts";

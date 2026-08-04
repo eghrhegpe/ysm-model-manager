@@ -119,7 +119,7 @@ Git commit      → DeepSeek V4 Flash
 
 ### 3.6 小说创作（《巴别塔》技术工程小说）
 
-参考 `docs/novel/SKELETON.md`。
+参考 `docs/novel/AGENTS.md`（上篇·故事圣经）。
 
 | 具体任务 | 推荐模型 | 理由 |
 |----------|----------|------|

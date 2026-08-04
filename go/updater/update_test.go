@@ -1,12 +1,14 @@
 package updater
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -310,5 +312,73 @@ func TestCheck_APIError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "rate limit") {
 		t.Errorf("错误信息应包含 GitHub message, got %v", err)
+	}
+}
+
+func TestExtractZipFile_OK(t *testing.T) {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	fw, err := zw.Create("ok.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fw.Write([]byte("hello")); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dest := filepath.Join(t.TempDir(), "ok.txt")
+	if err := extractZipFile(zr.File[0], dest); err != nil {
+		t.Fatalf("extractZipFile() = %v", err)
+	}
+	data, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "hello" {
+		t.Errorf("内容 = %q, 期望 hello", string(data))
+	}
+}
+
+// TestExtractZipFile_Truncate 验证超过 200MB 上限的 zip 条目被拒绝且目标文件被清理
+func TestExtractZipFile_Truncate(t *testing.T) {
+	// 构造 >200MB 的 zip 条目（全零，deflate 压缩后 zip 文件本身很小）
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	fw, err := zw.Create("big.bin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fw.Write(bytes.Repeat([]byte{0}, (200<<20)+1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(zr.File) != 1 {
+		t.Fatalf("期望 1 个条目, got %d", len(zr.File))
+	}
+
+	dest := filepath.Join(t.TempDir(), "big.bin")
+	err = extractZipFile(zr.File[0], dest)
+	if err == nil {
+		t.Fatal("超过 200MB 应返回错误")
+	}
+	if !strings.Contains(err.Error(), "200") {
+		t.Errorf("错误信息应包含上限, got %v", err)
+	}
+	if _, statErr := os.Stat(dest); !os.IsNotExist(statErr) {
+		t.Errorf("截断失败后目标文件应被删除, stat=%v", statErr)
 	}
 }

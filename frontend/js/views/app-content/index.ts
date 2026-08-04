@@ -184,8 +184,6 @@ class AppContent extends HTMLElement {
         this._initInstances();
       } else if (this._current === "repository") {
         this._initRepository();
-        // 按需加载 Three.js 预览组件
-        import("../app-preview/index.ts").catch(() => {});
       }
     } catch (e) {
       // 页 init 抛错不中断 _render 调用方，反馈给用户而非静默
@@ -309,7 +307,7 @@ class AppContent extends HTMLElement {
   }
 
   _bindTabs(prefix: string, ids: string[]): void {
-    const tabs = this._root.querySelectorAll(".repo-tab");
+    const tabs = this._root.querySelectorAll(`.${prefix}-tab`);
     if (!tabs.length) return;
     const inited: Record<string, boolean> = {};
     tabs.forEach((btn) => {

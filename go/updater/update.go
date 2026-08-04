@@ -61,6 +61,8 @@ type UpdateInfo struct {
 }
 
 // assetPattern 返回当前系统匹配的 asset 名
+// 注意：非 Windows 分支返回 .tar.gz 为占位——自动更新仅支持 Windows
+// （InstallUpdate 平台守卫），此分支供未来扩展或手动下载参考
 func assetPattern() string {
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
@@ -246,6 +248,12 @@ func CleanupOldVersion() {
 func InstallUpdate(zipPath string) error {
 	updateLock.Lock()
 	defer updateLock.Unlock()
+
+	// 平台守卫：非 Windows asset 为 .tar.gz，而 InstallUpdate 仅能解压 zip——
+	// 明确拒绝而非静默下载后在装包时给误导性错误
+	if runtime.GOOS != "windows" {
+		return fmt.Errorf("自动更新当前仅支持 Windows 平台，请手动下载更新")
+	}
 
 	exe, err := os.Executable()
 	if err != nil {

@@ -12,9 +12,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { ROOT } from './_lib/scan-files.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BUG_FILE = path.join(ROOT, 'docs/architecture/bug-chronicle.md');
 
 function loadBugs() {

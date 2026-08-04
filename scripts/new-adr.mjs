@@ -20,10 +20,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { ROOT } from './_lib/scan-files.mjs';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // 与 adr-check.mjs / gen-docs-index.mjs 保持一致：ADR 目录在 docs/adr（非 docs/architecture/adr）
 const ADR_DIR = path.join(ROOT, 'docs', 'adr');
 const REG_FILE = path.join(ADR_DIR, 'README.md');

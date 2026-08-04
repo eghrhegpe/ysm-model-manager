@@ -6,9 +6,10 @@
  * 「脚本文件头规范（统一约定）」节（MikuMikuAR ↔ ysm-model-manager 共用）：
  *   1. 退出码失效：裸 `main();` 调用但 main 内靠 `return 1` 传失败（无 process.exit）
  *      → 退出码恒 0，CI/调用方误判成功（new-knowledge-card.mjs 曾中招）；
- *   2. 共享层内联：内联 `function walk(` / `function rg(` /
+ *   2. 共享层内联：内联 `function rg(` /
  *      `path.resolve(path.dirname(fileURLToPath(...)))` 样板
  *      → 违反 scripts/README.md「共享能力一律 import 自 _lib/，禁止内联样板」；
+ *      带显式扩展名过滤/跳过集合的领域专用 walker（如 .md/.go 收集器）视为合法内联，不告警。
  *   3. --json 契约：检查类脚本（check-* / *-check / review / doctor / link-checker /
  *      type-consistency / event-audit / binding-check / adr-check / pre-push-gate）
  *      应支持 `--json` 或无条件输出 JSON → 子代理/CI 可稳定消费；
@@ -62,15 +63,38 @@ const INLINE_WALK_RE = /^function walk\(|^const walk\s*=/m;
 const INLINE_RG_RE = /^function rg\(|^const rg\s*=|execFileSync\([^)]*['"]rg['"]/m;
 const INLINE_BOILERPLATE_RE = /path\.resolve\(path\.dirname\(fileURLToPath\(import\.meta\.url\)\)/;
 
+// 领域收集器特征：带显式扩展名过滤 / 跳过集合 / 回调的专用 walk 视为合法内联，不告警。
+const DOMAIN_WALK_RE =
+  /endsWith\(\s*['"]\.(md|go|tsx|jsx|ts)['"]|EXCLUDE|SKIP_DIRS|symbolExclude|onFile|ts\|tsx|js\|jsx/;
+
+/** 取 walk 定义后的函数体窗口（到下一个顶层声明或 1200 字符）。 */
+function extractWalkWindow(text) {
+  const m = text.match(INLINE_WALK_RE);
+  if (!m) return null;
+  const rest = text.slice(m.index);
+  const next = rest.slice(1).search(/\n(function |const |let |export |import )/);
+  const end = next >= 0 ? next + 1 : Math.min(rest.length, 1200);
+  return rest.slice(0, end);
+}
+
+/** 仅当 walk 为通用样板时告警；领域专用收集器放行。 */
+function isDomainWalk(text) {
+  const win = extractWalkWindow(text);
+  return !!win && DOMAIN_WALK_RE.test(win);
+}
+
 function checkSharedLayer(text) {
   const out = [];
-  if (INLINE_WALK_RE.test(text)) out.push('内联 walk() 定义（应 import 共享层 _lib/，如 _lib/scan-files.mjs）');
+  if (INLINE_WALK_RE.test(text) && !isDomainWalk(text)) {
+    out.push('内联 walk() 定义（应 import 共享层 _lib/，如 _lib/scan-files.mjs）');
+  }
   if (INLINE_RG_RE.test(text)) out.push('内联 rg() 定义（应 import 共享层 _lib/，如 _lib/ripgrep.mjs）');
   if (INLINE_BOILERPLATE_RE.test(text)) {
     out.push('内联 ROOT 样板 path.resolve(dirname(fileURLToPath(...)))（新脚本应 import 共享层 _lib/ 的 ROOT/getRoot）');
   }
   return out;
 }
+
 
 // ── 检查 3：--json 契约 ────────────────────────────────
 

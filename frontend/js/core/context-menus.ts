@@ -70,6 +70,9 @@ async function resolveDstDir(opts: {
 // MenuCtx 保证 paths 已归一化为数组（buildMenuItems 兜底）。
 type MenuCtx = CtxShowPayload & { paths: string[] };
 
+/** 批量移动/复制在途守卫：连点右键菜单时只执行一轮（同 _importing 模式） */
+let _batchBusy = false;
+
 const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   noop: () => {},
 
@@ -97,63 +100,75 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   // ── batch ──
   "batch.rename": (ctx) => bus.emit("batch:rename", { paths: ctx.paths }),
   "batch.move": async (ctx) => {
-    const resolved = await resolveDstDir({
-      title: "移动到文件夹",
-      icon: "📂",
-      okText: "移动",
-      emptyMsg: "❌ 请先配置存储路径",
-    });
-    if (!resolved) return;
-    const { folder, dstDir } = resolved;
-    const { MoveModelFile } = await getApp();
-    toast(`📦 正在移动 ${ctx.paths.length} 个文件到 ${folder}...`, 3000);
-    let ok = 0;
-    let fail = 0;
-    for (const p of ctx.paths) {
-      try {
-        await MoveModelFile(p, dstDir);
-        ok++;
-      } catch (e) {
-        fail++;
-        console.error("移动失败:", p, e);
+    if (_batchBusy) return;
+    _batchBusy = true;
+    try {
+      const resolved = await resolveDstDir({
+        title: "移动到文件夹",
+        icon: "📂",
+        okText: "移动",
+        emptyMsg: "❌ 请先配置存储路径",
+      });
+      if (!resolved) return;
+      const { folder, dstDir } = resolved;
+      const { MoveModelFile } = await getApp();
+      toast(`📦 正在移动 ${ctx.paths.length} 个文件到 ${folder}...`, 3000);
+      let ok = 0;
+      let fail = 0;
+      for (const p of ctx.paths) {
+        try {
+          await MoveModelFile(p, dstDir);
+          ok++;
+        } catch (e) {
+          fail++;
+          console.error("移动失败:", p, e);
+        }
       }
+      toast(ok > 0 ? `✅ ${ok} 个文件已移动到 ${folder}` : "❌ 移动失败", 4000);
+      refreshUI();
+    } finally {
+      _batchBusy = false;
     }
-    toast(ok > 0 ? `✅ ${ok} 个文件已移动到 ${folder}` : "❌ 移动失败", 4000);
-    refreshUI();
   },
   "batch.copy": async (ctx) => {
-    const resolved = await resolveDstDir({
-      title: "复制到文件夹",
-      icon: "📋",
-      okText: "复制",
-      emptyMsg: "❌ 请先配置仓库目录",
-    });
-    if (!resolved) return;
-    const { folder, dstDir } = resolved;
-    const { CopyModelFile } = await getApp();
-    toast(`📦 正在复制 ${ctx.paths.length} 个文件到 ${folder}...`, 3000);
-    let ok = 0;
-    let fail = 0;
-    for (const p of ctx.paths) {
-      try {
-        await CopyModelFile(p, dstDir);
-        ok++;
-      } catch (e) {
-        fail++;
-        console.error("复制失败:", p, e);
+    if (_batchBusy) return;
+    _batchBusy = true;
+    try {
+      const resolved = await resolveDstDir({
+        title: "复制到文件夹",
+        icon: "📋",
+        okText: "复制",
+        emptyMsg: "❌ 请先配置仓库目录",
+      });
+      if (!resolved) return;
+      const { folder, dstDir } = resolved;
+      const { CopyModelFile } = await getApp();
+      toast(`📦 正在复制 ${ctx.paths.length} 个文件到 ${folder}...`, 3000);
+      let ok = 0;
+      let fail = 0;
+      for (const p of ctx.paths) {
+        try {
+          await CopyModelFile(p, dstDir);
+          ok++;
+        } catch (e) {
+          fail++;
+          console.error("复制失败:", p, e);
+        }
       }
+      if (ok > 0) {
+        toast(
+          fail > 0
+            ? `✅ ${ok} 复制成功 / ❌ ${fail} 失败（可能目标已存在）`
+            : `✅ ${ok} 个文件已复制到 ${folder}`,
+          4000,
+        );
+      } else {
+        toast("❌ 复制失败（可能目标已存在）", 4000, "error");
+      }
+      refreshUI();
+    } finally {
+      _batchBusy = false;
     }
-    if (ok > 0) {
-      toast(
-        fail > 0
-          ? `✅ ${ok} 复制成功 / ❌ ${fail} 失败（可能目标已存在）`
-          : `✅ ${ok} 个文件已复制到 ${folder}`,
-        4000,
-      );
-    } else {
-      toast("❌ 复制失败（可能目标已存在）", 4000, "error");
-    }
-    refreshUI();
   },
   "batch.recycle": async (ctx) => {
     const { modalConfirm } = await import("../dialogs/modal.ts");
@@ -292,9 +307,10 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     if (!chosen) return;
     const match = instances.find((i) => i.Name === chosen);
     if (!match) return;
-    const name = (ctx.path || "").split(/[/\\]/).pop() || "";
+    // 传完整路径：InstallModelTo → installer.Install 内部按仓库内绝对路径校验（IsInside），
+    // 传 basename 会被 cleanAbs 解析到 CWD 下导致「源文件不在仓库目录内」
     try {
-      await InstallModelTo(name, match.CustomDir);
+      await InstallModelTo(ctx.path || "", match.CustomDir);
       toast(`✅ 已推送到 ${chosen}`, 2000);
     } catch (e) {
       toast("❌ " + friendlyError(e, "推送失败"), 3000, "error");

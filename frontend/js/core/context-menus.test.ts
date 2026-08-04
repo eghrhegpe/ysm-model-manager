@@ -465,7 +465,9 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
     modalSelectMock.mockResolvedValue("包A");
     InstallModelToMock.mockResolvedValue(undefined);
     await clickAsync("file", "推送到整合包…", { path: "/dir/a.ysm" });
-    expect(InstallModelToMock).toHaveBeenCalledWith("a.ysm", "/mc/versions/包A");
+    // P2 修复：InstallModelTo → installer.Install 按仓库内绝对路径校验（IsInside），
+    // 必须传完整路径而非 basename，否则「源文件不在仓库目录内」
+    expect(InstallModelToMock).toHaveBeenCalledWith("/dir/a.ysm", "/mc/versions/包A");
     expect(toasts().some((t) => t.msg.includes("已推送"))).toBe(true);
   });
 

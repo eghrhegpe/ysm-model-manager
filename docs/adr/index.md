@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **27** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为规范索引（按状态分组，可锚点跳转）。
+> 架构决策日志，共 **32** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为规范索引（按状态分组，可锚点跳转）。
 
 ## 按状态分布
 
@@ -16,7 +16,7 @@ permalink: /adr/
 |------|------|
 | [🔄 部分采纳](#部分采纳) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 3 |
-| [✅ 已采纳](#已采纳) | 18 |
+| [✅ 已采纳](#已采纳) | 23 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❌ 已取代](#已取代) | 0 |
 
@@ -43,6 +43,11 @@ permalink: /adr/
 
 | ADR | 主题 | 状态 |
 |-----|------|------|
+| [ADR-033](./ADR-033-updater-download-truncation-version-compare.md) | 更新包下载截断检测与版本比较加固 | ✅ 已采纳 |
+| [ADR-032](./ADR-032-sync-diff-detection-failure-visibility.md) | 同步差异检测与失败可见性加固 | ✅ 已采纳 |
+| [ADR-031](./ADR-031-watcher-lifecycle-sync-serialization.md) | 文件监听生命周期与同步串行化加固 | ✅ 已采纳 |
+| [ADR-030](./ADR-030-backend-robustness-contract.md) | 后端持久化与健壮性契约 | ✅ 已采纳 |
+| [ADR-029](./ADR-029-ysmparser-wasm-embed.md) | YSMParser 解码架构：WASM 内嵌取代 sidecar EXE | ✅ 已采纳 |
 | [ADR-028](./ADR-028-installer-atomic-link-relink.md) | 安装器链接模式原子替换与 relink 回滚保护 | ✅ 已采纳 |
 | [ADR-027](./ADR-027-web-component-contract-normalization.md) | Web Component 对外契约规范化 | ✅ 已采纳 |
 | [ADR-026](./ADR-026-ysm-parser-ethics-boundary.md) | YSM 解析器集成伦理边界 | ✅ 已采纳 |
@@ -76,6 +81,11 @@ _（暂无）_
 
 | ADR | 主题 | 状态 | 日期 |
 |-----|------|------|------|
+| [ADR-033](./ADR-033-updater-download-truncation-version-compare.md) | 更新包下载截断检测与版本比较加固 | ✅ 已采纳 | 2026-08-04 |
+| [ADR-032](./ADR-032-sync-diff-detection-failure-visibility.md) | 同步差异检测与失败可见性加固 | ✅ 已采纳 | 2026-08-04 |
+| [ADR-031](./ADR-031-watcher-lifecycle-sync-serialization.md) | 文件监听生命周期与同步串行化加固 | ✅ 已采纳 | 2026-08-04 |
+| [ADR-030](./ADR-030-backend-robustness-contract.md) | 后端持久化与健壮性契约 | ✅ 已采纳 | 2026-08-04 |
+| [ADR-029](./ADR-029-ysmparser-wasm-embed.md) | YSMParser 解码架构：WASM 内嵌取代 sidecar EXE | ✅ 已采纳 | 2026-08-04 |
 | [ADR-028](./ADR-028-installer-atomic-link-relink.md) | 安装器链接模式原子替换与 relink 回滚保护 | ✅ 已采纳 | 2026-08-04 |
 | [ADR-027](./ADR-027-web-component-contract-normalization.md) | Web Component 对外契约规范化 | ✅ 已采纳 | 2026-08-04 |
 | [ADR-026](./ADR-026-ysm-parser-ethics-boundary.md) | YSM 解析器集成伦理边界 | ✅ 已采纳 | 2026-08-04（原决策 2026-06-07） |

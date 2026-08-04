@@ -267,6 +267,8 @@ const STATIC_TOOLS = [
   { tool: 'gen-docs-index.mjs', args: ['--check'] },
   // 项目结构地图：目录结构 vs 磁盘扫描（AGENTS.md §4.1 指针指向 docs/project-map.md）
   { tool: 'gen-project-map.mjs', args: ['--check'] },
+  // 小说总索引：docs/novel/ 目录树 vs docs/novel/index.md，防新增章节漏入索引
+  { tool: 'build-novel-index.mjs', args: ['--check'] },
   // 脚本卫生：退出码失效 / 共享层内联 / --json 契约（WARN 不阻断，默认 rc=0）
   'check-script-hygiene.mjs',
 ];

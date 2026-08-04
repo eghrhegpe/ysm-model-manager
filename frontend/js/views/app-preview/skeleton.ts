@@ -135,7 +135,7 @@ export async function loadModel2D(
           .join("");
       card.innerHTML += authorHtml;
       // 同步填充详情页的作者头像区
-      const avatarContainer = document.getElementById("ysm-author-avatars");
+      const avatarContainer = ctx._root.getElementById("ysm-author-avatars");
       if (avatarContainer) {
         avatarContainer.innerHTML = authors
           .map(

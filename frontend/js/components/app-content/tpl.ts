@@ -330,7 +330,7 @@ export function settingsHTML(): string {
       <div>🐙 GitHub：<a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
       <div>📋 发布页：<a href="https://github.com/eghrhegpe/ysm-model-manager/releases" target="_blank" style="color:var(--accent)">查看所有版本</a></div>
       <div>📖 文档：<a href="https://github.com/eghrhegpe/ysm-model-manager/tree/main/docs" target="_blank" style="color:var(--accent)">docs/ 目录</a></div>
-      <div>📄 配置：<code>%APPDATA%\YSM-Model-Manager\ysm_config.json</code></div>
+      <div>📄 配置：<code>用户配置目录/YSM-Model-Manager/ysm_config.json</code></div>
     </div>
   </div>
 

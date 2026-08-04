@@ -8,7 +8,7 @@ import (
 	"ysm-model-manager/go/tags"
 )
 
-// configDir 返回应用配置目录（%APPDATA%/YSM-Model-Manager/）
+// configDir 返回应用配置目录（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application Support）
 func (a *App) configDir() string {
 	cfgDir, err := os.UserConfigDir()
 	if err != nil {

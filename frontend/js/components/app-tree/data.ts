@@ -24,3 +24,20 @@ export function toggleSelect(key: string): void {
     selectState.lastKey = key;
   }
 }
+
+/**
+ * 清空选中状态（含 lastKey）
+ */
+export function clearSelect(): void {
+  selectState.keys.clear();
+  selectState.lastKey = null;
+}
+
+/**
+ * 单选：清空后选中单个并设为 lastKey（用于单击选中，避免外部直接写 selectState）
+ */
+export function selectOnly(key: string): void {
+  selectState.keys.clear();
+  selectState.keys.add(key);
+  selectState.lastKey = key;
+}

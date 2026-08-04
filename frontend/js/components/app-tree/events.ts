@@ -1,11 +1,12 @@
 // ===== 树事件层（事件委托版，兼容虚拟滚动） =====
 import { bus } from "../../bus.ts";
-import { selectState, toggleSelect } from "./data.ts";
+import { selectState, toggleSelect, selectOnly } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
 import {
   ToggleModelEnable,
 } from "../../../bindings/ysm-model-manager/internal/app/app.js";
+import { getApp } from "../../wails/app.ts";
 
 const ENABLE_MULTI_SELECT = true;
 
@@ -171,7 +172,7 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
       import("../../utils/display.ts").then(({ parseModelName }) => {
         const { author } = parseModelName(name);
         if (author) {
-          import("../../../bindings/ysm-model-manager/internal/app/app.js").then(({ OpenInBrowser }) =>
+          getApp().then(({ OpenInBrowser }) =>
             OpenInBrowser(
               "https://search.bilibili.com/all?keyword=" +
                 encodeURIComponent(author),
@@ -244,11 +245,8 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
         return;
       }
 
-      // 纯单击
-      selectState.keys.clear();
-      selectState.lastKey = null;
-      selectState.keys.add(fullPath);
-      selectState.lastKey = fullPath;
+      // 纯单击（收敛到 data.ts 的方法，避免外部直接写 selectState）
+      selectOnly(fullPath);
       vm._renderTree();
       updateSelectCount(vm._root);
       bus.emit("model:select", { path: fullPath });

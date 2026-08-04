@@ -99,10 +99,10 @@ export function itemHTML(item: SyncItem, index: number): string {
   let actionBtn = "";
   if (item.status === "missing") {
     actionBtn =
-      '<button class="sm-item-btn" data-action="push" style="border:1px solid var(--accent);color:var(--accent)">推送</button>';
+      '<button class="sm-item-btn" data-testid="sm-push" data-action="push" style="border:1px solid var(--accent);color:var(--accent)">推送</button>';
   } else if (item.status === "optional") {
     actionBtn =
-      '<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--sm-optional);color:var(--sm-optional)">拉取</button>';
+      '<button class="sm-item-btn" data-testid="sm-pull" data-action="pull" style="border:1px solid var(--sm-optional);color:var(--sm-optional)">拉取</button>';
   } else if (item.status === "legacy") {
     actionBtn =
       '<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--muted);color:var(--muted);font-size:var(--fs-tiny)">拉取到此仓库</button>';

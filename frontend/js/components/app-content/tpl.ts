@@ -6,22 +6,22 @@ export function repositoryHTML(): string {
     '<div class="repo-wrap">' +
     // 第一栏：操作
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-tab="tree">📁 文件树</button>' +
-    '<button class="repo-tab" data-tab="import">📥 导入</button>' +
-    '<button class="repo-tab" data-tab="recycle">♻️ 回收站</button>' +
-    '<button class="repo-tab" data-tab="dedup">🔗 去重</button>' +
-    '<button class="repo-tab" data-tab="oldest">👴 资历最深</button>' +
+    '<button class="repo-tab active" data-testid="content-tab" data-tab="tree">📁 文件树</button>' +
+    '<button class="repo-tab" data-testid="content-tab" data-tab="import">📥 导入</button>' +
+    '<button class="repo-tab" data-testid="content-tab" data-tab="recycle">♻️ 回收站</button>' +
+    '<button class="repo-tab" data-testid="content-tab" data-tab="dedup">🔗 去重</button>' +
+    '<button class="repo-tab" data-testid="content-tab" data-tab="oldest">👴 资历最深</button>' +
     "</div>" +
     // 第二栏：资源类型（仅在文件树 tab 可见）
     '<div class="repo-subtabs" id="repo-subtabs" style="display:flex;gap:2px;padding:2px 8px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
-    '<button class="repo-subtab active" data-rtab="' + RESOURCE_TYPES.YSM + '">💎 YSM</button>' +
-    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.MMD + '">🎭 MMD</button>' +
-    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.VRC + '">🥽 VRC</button>' +
+    '<button class="repo-subtab active" data-testid="content-subtab" data-rtab="' + RESOURCE_TYPES.YSM + '">💎 YSM</button>' +
+    '<button class="repo-subtab" data-testid="content-subtab" data-rtab="' + RESOURCE_TYPES.MMD + '">🎭 MMD</button>' +
+    '<button class="repo-subtab" data-testid="content-subtab" data-rtab="' + RESOURCE_TYPES.VRC + '">🥽 VRC</button>' +
     '<span style="padding:3px 4px;color:var(--muted)">│</span>' +
-    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.PACK + '">🎨 资源包</button>' +
-    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.SHADER + '">☀️ 光影包</button>' +
-    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.BLUEPRINT + '">⚙️ 蓝图</button>' +
-    '<button class="repo-subtab" data-rtab="' + RESOURCE_TYPES.LITEMATIC + '">📐 投影</button>' +
+    '<button class="repo-subtab" data-testid="content-subtab" data-rtab="' + RESOURCE_TYPES.PACK + '">🎨 资源包</button>' +
+    '<button class="repo-subtab" data-testid="content-subtab" data-rtab="' + RESOURCE_TYPES.SHADER + '">☀️ 光影包</button>' +
+    '<button class="repo-subtab" data-testid="content-subtab" data-rtab="' + RESOURCE_TYPES.BLUEPRINT + '">⚙️ 蓝图</button>' +
+    '<button class="repo-subtab" data-testid="content-subtab" data-rtab="' + RESOURCE_TYPES.LITEMATIC + '">📐 投影</button>' +
     "</div>" +
     '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
     '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;min-width:0">' +

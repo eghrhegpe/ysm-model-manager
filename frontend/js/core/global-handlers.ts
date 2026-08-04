@@ -7,6 +7,7 @@ import { registerContextMenus } from "./context-menus.ts";
 import { registerDnD } from "./handler-dnd.ts";
 import { registerSync } from "./handler-sync.ts";
 import { registerInstanceOps } from "./handler-other.ts";
+import { registerResourceManagerGlobal } from "../components/app-resource-manager/index.ts";
 
 /** 注册所有全局 handler，返回 unsub 函数数组 */
 export function registerGlobalHandlers(): Array<() => void> {
@@ -16,5 +17,6 @@ export function registerGlobalHandlers(): Array<() => void> {
   registerDnD(unsubs);
   registerSync(unsubs);
   registerInstanceOps(unsubs);
+  registerResourceManagerGlobal(unsubs);
   return unsubs;
 }

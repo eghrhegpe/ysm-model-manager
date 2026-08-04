@@ -5,7 +5,7 @@ import { parseModelName, type ParsedModelName } from "../utils/dom/display.ts";
 import { stagger } from "../utils/animation/stagger.ts";
 import { registerDlg } from "./modal.ts";
 import { esc } from "../utils/dom/dom.ts";
-import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 
 /** 批量条目（ModelEntry 子集） */
 interface BatchEntry {

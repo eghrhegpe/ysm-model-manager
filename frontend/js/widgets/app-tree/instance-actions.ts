@@ -1,6 +1,6 @@
 // ===== 整合包右键操作实现 =====
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { bus } from "../../bus.ts";
 import type { AppTree } from "./index.ts";
 import { getApp } from "../../wails/app.ts";

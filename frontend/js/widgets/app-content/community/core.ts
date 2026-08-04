@@ -1,5 +1,5 @@
 // ===== 创意工坊纯数据层 =====
-import { dbg } from "../../../utils/debug/debug.ts";
+import { dbg } from "../../../utils/debug.ts";
 import { getApp } from "../../../wails/app.ts";
 import type { WorkshopSite, WorkshopCreator } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 

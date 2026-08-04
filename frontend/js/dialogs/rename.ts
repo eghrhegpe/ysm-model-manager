@@ -3,7 +3,7 @@
 import { parseModelName } from "../utils/dom/display.ts";
 import { closeDlg, registerDlg, esc } from "./modal.ts";
 import { getApp } from "../wails/app.ts";
-import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 
 /**
  * 弹出重命名对话框

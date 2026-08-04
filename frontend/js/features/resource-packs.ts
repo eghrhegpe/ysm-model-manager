@@ -1,6 +1,6 @@
 // ===== 资源包管理（类型化版 — ADR-014 P3 组件层）=====
 // 薄 wrapper，由 app-resource-manager 组件驱动
-import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 
 /**
  * 初始化资源包 tab

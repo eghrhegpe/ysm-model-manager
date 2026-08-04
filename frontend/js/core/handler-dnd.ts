@@ -1,6 +1,6 @@
 // ===== 全局拖拽导入（类型化版 — ADR-014 P3）=====
 import { bus } from "../bus.ts";
-import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { PageStore } from "./page-store.ts";
 import { DnDLock, PendingImport } from "../features/dnd-state.ts";
 import { getApp } from "../wails/app.ts";

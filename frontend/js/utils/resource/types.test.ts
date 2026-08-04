@@ -5,7 +5,7 @@ import {
   RESOURCE_TYPES,
   RESOURCE_TYPE_LABELS,
   ALL_RESOURCE_TYPES,
-} from "./resource-types.ts";
+} from "./types.ts";
 import resourceTypesJson from "../../../../resource_types.json";
 
 /** JSON 中全部资源类型 ID */

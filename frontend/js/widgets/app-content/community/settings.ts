@@ -3,7 +3,7 @@ import { bus } from "../../../bus.ts";
 import { loadTdKeymap, type TdKeyAction } from "../../../utils/3d/model3d.ts";
 import { initVersionUpdater } from "../../../features/version-updater.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
-import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/resource/resource-registry.ts";
+import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/resource/registry.ts";
 import { esc } from "../../../utils/dom/dom.ts";
 import { getApp } from "../../../wails/app.ts";
 

@@ -6,7 +6,7 @@ import { bus } from "../bus.ts";
 import type { MenuItem, CtxShowPayload, ToastPayload } from "../bus";
 import { registerContextMenus } from "./context-menus.ts";
 import { MENU_DEFS, getMenuDef } from "./menu-defs.ts";
-import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 
 // getApp 是动态 import（wails/app.ts），测试用 mock 替代
 const { openFolderMock } = vi.hoisted(() => ({

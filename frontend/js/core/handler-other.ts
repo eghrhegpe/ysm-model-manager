@@ -3,7 +3,7 @@ import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { modalConfirm } from "../dialogs/modal.ts";
 import { getApp } from "../wails/app.ts";
-import { RESOURCE_TYPES } from "../utils/resource/resource-types.ts";
+import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 
 /** 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs */
 export function registerInstanceOps(unsubs: Array<() => void>): void {

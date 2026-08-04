@@ -2,7 +2,7 @@
 import { bus } from "../../../bus.ts";
 import { renderDisplayName } from "../../../utils/dom/display.ts";
 import { getApp } from "../../../wails/app.ts";
-import { loadResourceRegistry } from "../../../utils/resource/resource-registry.ts";
+import { loadResourceRegistry } from "../../../utils/resource/registry.ts";
 
 /** 转义函数签名（与组件 _esc 一致） */
 type EscFn = (s: unknown) => string;

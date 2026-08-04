@@ -16,14 +16,19 @@ interface Voxel3DHandle {
 
 let _voxel3d: Voxel3DHandle | null = null;
 
-export async function createLitematic3D(
-  path: string,
-  voxelFn: string,
-): Promise<void> {
+/** 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 */
+export function cleanupVoxel3D(): void {
   if (_voxel3d) {
     _voxel3d.cleanup();
     _voxel3d = null;
   }
+}
+
+export async function createLitematic3D(
+  path: string,
+  voxelFn: string,
+): Promise<void> {
+  cleanupVoxel3D(); // 复用：再次创建先清旧的（WebGL 上下文防堆积）
 
   const overlay = document.createElement("div");
   overlay.style.cssText =

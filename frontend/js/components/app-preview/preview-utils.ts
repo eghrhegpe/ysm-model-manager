@@ -25,6 +25,8 @@ export interface DecodedYsm {
 /** 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） */
 export interface PreviewCtx {
   _root: ShadowRoot;
+  /** 组件销毁清理收集（可选：子模块可挂 window/document 监听清理函数） */
+  _unsubs?: Array<() => void>;
   _loadPreviewImage(path: string): Promise<string | null>;
   decodeYsmViaWasm(path: string): Promise<DecodedYsm | null>;
   _decodeYsmViaWasm(path: string): Promise<DecodedYsm | null>;

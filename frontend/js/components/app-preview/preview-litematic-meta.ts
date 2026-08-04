@@ -208,3 +208,10 @@ export async function showLitematic(
     }
   }
 }
+
+/** 组件销毁时清理体素 3D（转发至 preview-litematic-3d，避免 index 静态依赖 Three.js 渲染模块） */
+export function cleanupLitematic3D(): void {
+  import("./preview-litematic-3d.js")
+    .then((m) => m.cleanupVoxel3D())
+    .catch(() => {});
+}

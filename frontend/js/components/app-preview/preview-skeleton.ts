@@ -201,6 +201,13 @@ export async function loadModel2D(
     _prevWindowUp = onWindowUp;
     window.addEventListener("mousemove", onWindowMove);
     window.addEventListener("mouseup", onWindowUp);
+    // 组件销毁时移除 window 监听（与槽位"先移除再绑"互补：槽位管不累积，这里管销毁回收）
+    ctx._unsubs?.push(() => {
+      window.removeEventListener("mousemove", onWindowMove);
+      window.removeEventListener("mouseup", onWindowUp);
+      if (_prevWindowMove === onWindowMove) _prevWindowMove = null;
+      if (_prevWindowUp === onWindowUp) _prevWindowUp = null;
+    });
     canvas.addEventListener("click", (e) => {
       if (_dragged) {
         e.stopPropagation();

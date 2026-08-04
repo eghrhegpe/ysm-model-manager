@@ -91,6 +91,9 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 	for i := 1; ; i++ {
 		if _, err := os.Stat(dst); os.IsNotExist(err) {
 			break
+		} else if err != nil {
+			// 非"不存在"错误（权限等）直接返回，避免静默跳过冲突检测
+			return nil, err
 		}
 		ext := filepath.Ext(rel)
 		name := rel[:len(rel)-len(ext)]
@@ -207,15 +210,16 @@ func (tm *TrashManager) Restore(src string) error {
 			return err
 		}
 	}
+	// 优先瞬时移动（同分区原子操作）；跨设备时回退复制后删，语义不变
+	if err := os.Rename(src, dst); err == nil {
+		return nil
+	}
 	if err := copyFile(src, dst); err != nil {
 		// 复制中断/失败时清理半截恢复文件，避免目标目录残留损坏文件
 		os.Remove(dst)
 		return err
 	}
-	if err := os.Remove(src); err != nil {
-		return err
-	}
-	return nil
+	return os.Remove(src)
 }
 
 // Delete 永久删除回收站中的文件

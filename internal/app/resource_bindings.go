@@ -396,7 +396,8 @@ func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) err
 
 	if cleanParent != cleanRoot && hasPrefix && needsFolder {
 		if err := installer.InstallDir(srcParent, dstDir, globalRoot, a.LinkMode, rtype); err != nil {
-			return installer.Install(srcPath, dstDir, globalRoot, a.LinkMode)
+			// 文件夹级安装失败直接报错：静默降级为单文件会丢配套文件且用户无感知
+			return fmt.Errorf("安装目录失败: %w", err)
 		}
 		return nil
 	}

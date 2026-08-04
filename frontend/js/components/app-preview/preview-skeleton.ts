@@ -425,6 +425,7 @@ export async function loadModel2D(
           opt.textContent = m.t;
           rotSel.appendChild(opt);
         });
+        rotSel.value = localStorage.getItem("td-rot-mode") === "free" ? "false" : "true";
         topBar.appendChild(rotSel);
 
         const spdLabel = document.createElement("span");
@@ -436,13 +437,13 @@ export async function loadModel2D(
         spdSlider.type = "range";
         spdSlider.min = "2";
         spdSlider.max = "200";
-        spdSlider.value = "20";
+        spdSlider.value = localStorage.getItem("td-cam-speed") || "20";
         spdSlider.style.cssText = "width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff)";
         topBar.appendChild(spdSlider);
 
         const spdVal = document.createElement("span");
         spdVal.style.cssText = "font-size:11px;color:rgba(255,255,255,0.6);min-width:20px";
-        spdVal.textContent = "20";
+        spdVal.textContent = localStorage.getItem("td-cam-speed") || "20";
         topBar.appendChild(spdVal);
 
         overlay.appendChild(topBar);
@@ -779,10 +780,12 @@ export async function loadModel2D(
 
           rotSel.onchange = (): void => {
             _model3d?.setRotationMode(rotSel.value === "true");
+            localStorage.setItem("td-rot-mode", rotSel.value === "true" ? "orbit" : "free");
           };
           spdSlider.oninput = (): void => {
             spdVal.textContent = spdSlider.value;
             _model3d?.setSpeed(Number(spdSlider.value));
+            localStorage.setItem("td-cam-speed", spdSlider.value);
           };
 
           const onKey = (e: KeyboardEvent): void => {

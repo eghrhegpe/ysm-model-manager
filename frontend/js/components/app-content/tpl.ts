@@ -274,6 +274,37 @@ export function settingsHTML(): string {
   <div class="stg-hint">启动程序时自动打开的页面。</div>
 </div>
 
+<div class="section-title stg-title stg-sub-title">🕹️ 3D 预览操作</div>
+
+<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:240ms">
+  <div class="setting-row">
+    <span class="label">🎥 相机移动速度</span>
+    <input type="range" id="td-camspeed" min="2" max="200" value="20" style="flex:1;accent-color:var(--accent,#7c83ff)">
+    <span id="td-camspeed-val" style="min-width:28px;text-align:right;color:var(--txt)">20</span>
+  </div>
+  <div class="stg-hint">自由相机（自身模式）下 WASD 移动的快慢，与 3D 预览内滑块同步。</div>
+</div>
+
+<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:270ms">
+  <div class="setting-row">
+    <span class="label">🔄 默认旋转模式</span>
+    <select id="td-rotmode" class="stg-select" style="width:auto">
+      <option value="orbit">环绕模型</option>
+      <option value="free">自身自由</option>
+    </select>
+  </div>
+  <div class="stg-hint">3D 预览打开时的默认相机模式；预览内也可实时切换。</div>
+</div>
+
+<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:300ms">
+  <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:8px">
+    <span class="label">🎮 操作键位（点击后按任意键重绑）</span>
+    <div id="td-keymap-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px;width:100%"></div>
+  </div>
+  <div class="stg-hint">方向键始终可用作移动兜底；修改即时生效，下次 3D 预览启用。</div>
+  <div style="margin-top:8px"><button class="btn-base sm" id="td-keymap-reset">↩️ 恢复默认键位</button></div>
+</div>
+
 </div>
 </div>
 

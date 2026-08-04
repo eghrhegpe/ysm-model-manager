@@ -62,6 +62,52 @@ export interface RenderModel3DHandle {
   cleanup: () => void;
 }
 
+// ── 3D 操作键位 / 偏好（持久化于 localStorage，与界面设置同源）──
+export type TdKeyAction = "forward" | "back" | "left" | "right" | "up" | "down";
+
+/** 默认键位以 KeyboardEvent.code 存储（物理键，跨键盘布局一致） */
+export const DEFAULT_TD_KEYMAP: Record<TdKeyAction, string> = {
+  forward: "KeyW",
+  back: "KeyS",
+  left: "KeyA",
+  right: "KeyD",
+  up: "Space",
+  down: "ShiftLeft",
+};
+
+const TD_KEYMAP_KEY = "td-keymap";
+const TD_CAMSPEED_KEY = "td-cam-speed";
+const TD_ROTMODE_KEY = "td-rot-mode";
+
+/** 读取用户自定义键位（无/非法时回退默认） */
+export function loadTdKeymap(): Record<TdKeyAction, string> {
+  try {
+    const raw = localStorage.getItem(TD_KEYMAP_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<Record<TdKeyAction, string>>;
+      const merged: Record<TdKeyAction, string> = { ...DEFAULT_TD_KEYMAP };
+      (Object.keys(DEFAULT_TD_KEYMAP) as TdKeyAction[]).forEach((k) => {
+        if (typeof parsed[k] === "string" && parsed[k]!.length > 0) merged[k] = parsed[k]!;
+      });
+      return merged;
+    }
+  } catch {
+    /* 解析失败回退默认 */
+  }
+  return { ...DEFAULT_TD_KEYMAP };
+}
+
+/** 相机移动速度（2–200），默认 20 */
+export function loadTdCamSpeed(): number {
+  const v = Number(localStorage.getItem(TD_CAMSPEED_KEY));
+  return Number.isFinite(v) && v >= 2 && v <= 200 ? v : 20;
+}
+
+/** true = 环绕（orbit），false = 自身（free） */
+export function loadTdRotMode(): boolean {
+  return localStorage.getItem(TD_ROTMODE_KEY) !== "free";
+}
+
 // 模块级 3D 渲染状态（治理红线 R1：零全局调试变量）
 let _scene3d: THREE.Scene | null = null;
 let _camera3d: THREE.PerspectiveCamera | null = null;
@@ -316,19 +362,22 @@ export async function renderModel3D(
   document.addEventListener("webkitfullscreenchange", _onFSChange);
   const _keys: Record<string, boolean> = {};
   let _debugMode: "normal" | "pivot" | "bone" = "normal";
+  // 用户自定义键位（物理键 code，跨键盘布局一致）；方向键保留为通用兜底
+  const _keymap = loadTdKeymap();
+  const _isShift = (code: string): boolean => code === "ShiftLeft" || code === "ShiftRight";
+  const _movementCodes = new Set<string>([
+    _keymap.forward, _keymap.back, _keymap.left, _keymap.right, _keymap.up, _keymap.down,
+    "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+  ]);
   const _isEditable = (el: EventTarget | null): boolean => {
     const node = el as HTMLElement | null;
     return !!node && (node.tagName === "INPUT" || node.tagName === "TEXTAREA" || node.isContentEditable);
   };
   const _onKeyDown = (e: KeyboardEvent): void => {
     if (_isEditable(e.target)) return; // 弹窗输入框打字时不吞键
-    _keys[e.key.toLowerCase()] = true;
-    if (
-      ["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(
-        e.key.toLowerCase(),
-      )
-    )
-      e.preventDefault();
+    _keys[e.code] = true;
+    // 吞掉移动键默认行为（空格滚动/方向键滚动）；Shift 作为修饰键不阻止默认
+    if (_movementCodes.has(e.code) && !_isShift(e.code)) e.preventDefault();
     if (e.key.toLowerCase() === "f") {
       const modes: Array<"normal" | "pivot" | "bone"> = ["normal", "pivot", "bone"];
       const next = (modes.indexOf(_debugMode) + 1) % modes.length;
@@ -337,13 +386,13 @@ export async function renderModel3D(
     }
   };
   const _onKeyUp = (e: KeyboardEvent): void => {
-    _keys[e.key.toLowerCase()] = false;
+    _keys[e.code] = false;
   };
   document.addEventListener("keydown", _onKeyDown);
   document.addEventListener("keyup", _onKeyUp);
   let _lastTime = performance.now();
-  let _camSpeed = 20;
-  let _orbitMode = true;
+  let _camSpeed = loadTdCamSpeed();
+  let _orbitMode = loadTdRotMode();
   const _orbitTarget = controls.target.clone();
   const _euler = new THREE.Euler(0, 0, 0, "YXZ");
   let _mouseDown = false;
@@ -381,12 +430,12 @@ export async function renderModel3D(
       .crossVectors(fwd, new THREE.Vector3(0, 1, 0))
       .normalize();
     const mv = new THREE.Vector3();
-    if (_keys["w"] || _keys["arrowup"]) mv.add(fwd);
-    if (_keys["s"] || _keys["arrowdown"]) mv.sub(fwd);
-    if (_keys["a"] || _keys["arrowleft"]) mv.sub(right);
-    if (_keys["d"] || _keys["arrowright"]) mv.add(right);
-    if (_keys[" "]) mv.y += 1;
-    if (_keys["shift"]) mv.y -= 1;
+    if (_keys[_keymap.forward] || _keys["ArrowUp"]) mv.add(fwd);
+    if (_keys[_keymap.back] || _keys["ArrowDown"]) mv.sub(fwd);
+    if (_keys[_keymap.left] || _keys["ArrowLeft"]) mv.sub(right);
+    if (_keys[_keymap.right] || _keys["ArrowRight"]) mv.add(right);
+    if (_keys[_keymap.up]) mv.y += 1;
+    if (_keys[_keymap.down]) mv.y -= 1;
     if (mv.length() > 0) {
       mv.normalize().multiplyScalar(_camSpeed * dt);
       camera.position.add(mv);

@@ -1,5 +1,6 @@
 // ===== 设置页初始化（为 _initSettings 减负） =====
 import { bus } from "../../../bus.ts";
+import { loadTdKeymap, type TdKeyAction } from "../../../utils/model3d.ts";
 import { initVersionUpdater } from "../../../features/version-updater.ts";
 import { friendlyError } from "../../../utils/errors.ts";
 import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/resource-registry.ts";
@@ -769,4 +770,123 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       type: "success",
     });
   });
+
+  // ===== 3D 预览操作（持久化于 localStorage，与 model3d.ts 同源） =====
+  const TD_ACTIONS: Array<{ key: TdKeyAction; label: string }> = [
+    { key: "forward", label: "前移" },
+    { key: "back", label: "后移" },
+    { key: "left", label: "左移" },
+    { key: "right", label: "右移" },
+    { key: "up", label: "上升" },
+    { key: "down", label: "下降" },
+  ];
+  const tdKeyLabel = (code: string): string => {
+    if (!code) return "—";
+    if (code.startsWith("Key")) return code.slice(3);
+    if (code.startsWith("Digit")) return code.slice(5);
+    if (code.startsWith("Numpad")) return "Num " + code.slice(6);
+    const map: Record<string, string> = {
+      Space: "空格",
+      ShiftLeft: "Shift",
+      ShiftRight: "Shift(右)",
+      ControlLeft: "Ctrl",
+      ControlRight: "Ctrl(右)",
+      AltLeft: "Alt",
+      AltRight: "Alt(右)",
+      ArrowUp: "↑",
+      ArrowDown: "↓",
+      ArrowLeft: "←",
+      ArrowRight: "→",
+      Tab: "Tab",
+      Enter: "Enter",
+      Backspace: "⌫",
+    };
+    return map[code] || code;
+  };
+  const tdSaveKeymap = (km: Record<TdKeyAction, string>): void => {
+    localStorage.setItem("td-keymap", JSON.stringify(km));
+  };
+  const tdRenderKeymap = (): void => {
+    const grid = root.getElementById("td-keymap-grid");
+    if (!grid) return;
+    const km = loadTdKeymap();
+    grid.innerHTML = "";
+    TD_ACTIONS.forEach(({ key, label }) => {
+      const row = document.createElement("div");
+      row.style.cssText =
+        "display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:var(--fs-sm)";
+      const name = document.createElement("span");
+      name.textContent = label;
+      name.style.color = "var(--muted)";
+      const btn = document.createElement("button");
+      btn.className = "btn-base sm";
+      btn.textContent = tdKeyLabel(km[key]);
+      btn.style.minWidth = "64px";
+      btn.addEventListener("click", () => {
+        btn.textContent = "按键…";
+        const onKey = (ev: KeyboardEvent): void => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          document.removeEventListener("keydown", onKey, true);
+          if (ev.code === "Escape") {
+            tdRenderKeymap();
+            return;
+          }
+          const cur = loadTdKeymap();
+          const conflict = TD_ACTIONS.find((a) => a.key !== key && cur[a.key] === ev.code);
+          if (conflict) {
+            bus.emit("toast:show", {
+              msg: `⚠️ ${tdKeyLabel(ev.code)} 已被「${conflict.label}」占用`,
+              duration: 2500,
+              type: "warn",
+            });
+            tdRenderKeymap();
+            return;
+          }
+          cur[key] = ev.code;
+          tdSaveKeymap(cur);
+          tdRenderKeymap();
+          bus.emit("toast:show", {
+            msg: `✅ ${label} → ${tdKeyLabel(ev.code)}`,
+            duration: 1500,
+            type: "success",
+          });
+        };
+        document.addEventListener("keydown", onKey, true);
+      });
+      row.appendChild(name);
+      row.appendChild(btn);
+      grid.appendChild(row);
+    });
+  };
+  tdRenderKeymap();
+  root.getElementById("td-keymap-reset")?.addEventListener("click", () => {
+    localStorage.removeItem("td-keymap");
+    tdRenderKeymap();
+    bus.emit("toast:show", {
+      msg: "↩️ 已恢复默认键位",
+      duration: 1500,
+      type: "success",
+    });
+  });
+
+  // 相机移动速度
+  const csEl = root.getElementById("td-camspeed") as HTMLInputElement | null;
+  const csVal = root.getElementById("td-camspeed-val");
+  if (csEl) {
+    csEl.value = localStorage.getItem("td-cam-speed") || "20";
+    if (csVal) csVal.textContent = csEl.value;
+    csEl.addEventListener("input", () => {
+      if (csVal) csVal.textContent = csEl!.value;
+      localStorage.setItem("td-cam-speed", csEl!.value);
+    });
+  }
+  // 默认旋转模式
+  const rmEl = root.getElementById("td-rotmode") as HTMLSelectElement | null;
+  if (rmEl) {
+    rmEl.value = localStorage.getItem("td-rot-mode") === "free" ? "free" : "orbit";
+    rmEl.addEventListener("change", () => {
+      localStorage.setItem("td-rot-mode", rmEl.value);
+    });
+  }
 }

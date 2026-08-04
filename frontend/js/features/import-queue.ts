@@ -8,6 +8,7 @@ import { modalConfirm } from "../dialogs/modal.ts";
 import { DnDLock, PendingImport } from "./dnd-state.ts";
 import { getApp } from "../wails/app.ts";
 import { ALL_EXTS } from "../utils/extensions.ts";
+import { isSupportedFile, shouldEnterForm } from "../utils/dnd-shared.ts";
 
 const extsStr = ALL_EXTS.join(" ");
 
@@ -19,33 +20,6 @@ export interface ImportQueueHost {
   _root: ShadowRoot;
   _esc: (s: string) => string;
 }
-
-/**
- * 判断文件是否需要进入命名表单（异步）
- * - .ysm / ysm.json → 始终进表单
- * - .zip / .7z → 调 Go 端 DetectZipType 检测内容后决定
- * - 其他已注册扩展名 → 直接导入
- */
-const shouldEnterForm = async (name: string, base64: string): Promise<boolean> => {
-  const ext = "." + (name.split(".").pop() || "").toLowerCase();
-  if (ext === ".ysm") return true;
-  if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
-  if (ext === ".zip" || ext === ".7z") {
-      try {
-        const { DetectZipType } = await getApp();
-      return (await DetectZipType(base64)) === RESOURCE_TYPES.YSM;
-    } catch {
-      return false;
-    }
-  }
-  // 其他已注册扩展名（.pmx, .vrca, .nbt 等）直接导入，不进表单
-  return false;
-};
-
-const isSupportedFile = (name: string): boolean => {
-  const ext = "." + (name.split(".").pop() || "").toLowerCase();
-  return ALL_EXTS.includes(ext);
-};
 
 /** 初始化导入队列，返回清理函数 */
 export function initImportQueue(app: ImportQueueHost): () => void {
@@ -66,13 +40,6 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   let currentRelPath = ""; // 文件夹导入时的相对路径
   // 并发守卫：导入/重命名在途时拦截连点（同 preview-skeleton _saving 模式）
   let _importing = false;
-  const imported: Array<{
-    name: string;
-    base64?: string;
-    renamed?: boolean;
-    time: string;
-    isYsm?: boolean;
-  }> = []; // { name, base64, renamed, time }
   const fileQueue: Array<{
     file: ImportFile;
     base64: string;
@@ -80,6 +47,36 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     size: number;
     relPath: string;
   }> = []; // { file, base64, name, size }
+  const imported: Array<{
+    name: string;
+    base64?: string;
+    renamed?: boolean;
+    time: string;
+    isYsm?: boolean;
+  }> = []; // { name, base64, renamed, time }
+  // 读文件并分流（表单/直导）+ 可选完成回调
+  const readAndRouteFile = (file: ImportFile, onDone?: () => void): void => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = String(reader.result).split(",")[1] || "";
+      if (await shouldEnterForm(file.name, base64)) {
+        enqueueFile(file, base64);
+      } else {
+        await directImport(file, base64);
+      }
+      onDone?.();
+    };
+    reader.onerror = () => onDone?.();
+    reader.readAsDataURL(file);
+  };
+  // 队列推进：成功/覆盖后前进到下一项或关闭表单
+  const advanceQueue = (): void => {
+    if (fileQueue.length > 0) {
+      showForm(fileQueue[0].file, fileQueue[0].base64);
+    } else {
+      toggleForm(false);
+    }
+  };
 
   // 切换拖拽区 ↔ 表单（简单 display 切换）
   const toggleForm = (visible: boolean): void => {
@@ -264,16 +261,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
           return;
         }
         ok++;
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const base64 = String(reader.result).split(",")[1] || "";
-          if (await shouldEnterForm(file.name, base64)) {
-            enqueueFile(file, base64);
-          } else {
-            await directImport(file, base64);
-          }
-        };
-        reader.readAsDataURL(file);
+        readAndRouteFile(file);
       });
       if (ok === 0 && skip > 0) {
         bus.emit("toast:show", {
@@ -311,16 +299,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         return;
       }
       ok++;
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = String(reader.result).split(",")[1] || "";
-        if (await shouldEnterForm(file.name, base64)) {
-          enqueueFile(file, base64);
-        } else {
-          await directImport(file, base64);
-        }
-      };
-      reader.readAsDataURL(file);
+      readAndRouteFile(file);
     });
     updateQueueCount();
     if (ok === 0 && skip > 0) {
@@ -339,16 +318,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     Array.from(files).forEach((file) => {
       if (!isSupportedFile(file.name)) return;
       ok++;
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = String(reader.result).split(",")[1] || "";
-        if (await shouldEnterForm(file.name, base64)) {
-          enqueueFile(file, base64);
-        } else {
-          await directImport(file, base64);
-        }
-      };
-      reader.readAsDataURL(file);
+      readAndRouteFile(file);
     });
     updateQueueCount();
     if (ok > 0) {
@@ -446,12 +416,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       currentBase64 = null;
       currentFileName = null;
       currentRelPath = "";
-      if (fileQueue.length > 0) {
-        const nextFq = fileQueue[0];
-        showForm(nextFq.file, nextFq.base64);
-      } else {
-        toggleForm(false);
-      }
+      advanceQueue();
     } catch (e) {
       const errMsg = String(e);
       if (errMsg.includes("FILE_EXISTS") || errMsg.includes("文件已存在")) {
@@ -494,12 +459,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
             currentBase64 = null;
             currentFileName = null;
             currentRelPath = "";
-            if (fileQueue.length > 0) {
-              showForm(fileQueue[0].file, fileQueue[0].base64);
-              renderImportedList();
-            } else {
-              toggleForm(false);
-            }
+            advanceQueue();
             return;
           } catch (e2) {
             bus.emit("toast:show", {
@@ -582,18 +542,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
               (file as ImportFile)._relPath = basePath
                 ? basePath + "/" + file.name
                 : file.name;
-              const reader = new FileReader();
-              reader.onload = async () => {
-                const base64 = String(reader.result).split(",")[1] || "";
-                if (await shouldEnterForm(file.name, base64)) {
-                  enqueueFile(file, base64);
-                } else {
-                  await directImport(file, base64);
-                }
-                resolve();
-              };
-              reader.onerror = () => resolve();
-              reader.readAsDataURL(file);
+              readAndRouteFile(file, resolve);
             },
             () => resolve(), // entry.file 回调失败（如 .lnk 快捷方式）→ 直接跳过
           );
@@ -645,16 +594,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
           continue;
         }
         ok++;
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const base64 = String(reader.result).split(",")[1] || "";
-          if (await shouldEnterForm(file.name, base64)) {
-            enqueueFile(file, base64);
-          } else {
-            await directImport(file, base64);
-          }
-        };
-        reader.readAsDataURL(file);
+        readAndRouteFile(file);
       }
       updateQueueCount();
       if (ok > 0) {

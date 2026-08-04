@@ -75,7 +75,6 @@ export function initRecycleBin(app: RecycleHost): () => void {
         ListRecycleBin,
         RestoreFromRecycle,
         DeleteFromRecycle,
-        EmptyRecycleBin,
         GetRepoRoot,
       } = await import(
         "../../bindings/ysm-model-manager/internal/app/app.js"
@@ -208,7 +207,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
       });
     } catch (e) {
       if (gen !== _loadGen) return;
-      list.innerHTML = `<div class="stat-row" style="padding:12px;color:#f38ba8;font-size:11px">❌ ${esc(friendlyError(e, "读取回收站失败"))}</div>`;
+      list.innerHTML = `<div class="stat-row" style="padding:12px;color:var(--paid);font-size:11px">❌ ${esc(friendlyError(e, "读取回收站失败"))}</div>`;
       if (count) count.textContent = "加载失败";
     }
   }

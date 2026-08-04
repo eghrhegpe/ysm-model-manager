@@ -166,6 +166,58 @@ func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) 
 	return installer.Install(filePath, customDir, globalDir, linkMode)
 }
 
+// SyncCustomToRepo 同步整合包自定义目录的模型到仓库（哈希/名称去重）
+func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.ModelEntry, logger Logger) (int, error) {
+	customDir = strings.TrimSpace(customDir)
+	repoDir = strings.TrimSpace(repoDir)
+	if customDir == "" || repoDir == "" {
+		return 0, fmt.Errorf("参数空")
+	}
+	srcEntries := scanFn(customDir)
+	if len(srcEntries) == 0 {
+		return 0, nil
+	}
+
+	repoEntries := scanFn(repoDir)
+	repoHashes := make(map[string]bool)
+	repoNames := make(map[string]bool)
+	for _, re := range repoEntries {
+		if re.Hash != "" {
+			repoHashes[re.Hash] = true
+		}
+		repoNames[re.Name] = true
+	}
+
+	count := 0
+	for _, e := range srcEntries {
+		if e.Hash != "" && repoHashes[e.Hash] {
+			logger(e.Name, e.Path, repoDir, 0, "skipped", "仓库已存在同哈希文件，跳过")
+			continue
+		}
+		if repoNames[e.Name] {
+			logger(e.Name, e.Path, repoDir, 0, "skipped", "仓库已存在同名文件，跳过")
+			continue
+		}
+		rel, _ := filepath.Rel(customDir, e.Path)
+		if rel == "" {
+			rel = e.Name
+		}
+		dstPath := filepath.Join(repoDir, rel)
+		dstDir := filepath.Dir(dstPath)
+		if err := os.MkdirAll(dstDir, 0755); err != nil {
+			logger(e.Name, e.Path, repoDir, 0, "failed", "创建目录失败: "+err.Error())
+			continue
+		}
+		if _, err := installer.CopyFile(e.Path, dstDir); err != nil {
+			logger(e.Name, e.Path, repoDir, 0, "failed", "复制失败: "+err.Error())
+			continue
+		}
+		count++
+		logger(e.Name, e.Path, repoDir, 0, "success", "已复制到仓库")
+	}
+	return count, nil
+}
+
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {

@@ -38,55 +38,9 @@ func (a *App) InstallModelWithOverlay(src, customDir string) (string, error) {
 	return installer.InstallWithOverlay(src, customDir)
 }
 
+// SyncCustomToRepo 同步整合包自定义目录到仓库（执行逻辑下沉 go/sync）
 func (a *App) SyncCustomToRepo(customDir, repoDir string) (int, error) {
-	customDir = strings.TrimSpace(customDir)
-	repoDir = strings.TrimSpace(repoDir)
-	if customDir == "" || repoDir == "" {
-		return 0, fmt.Errorf("参数空")
-	}
-	srcEntries := a.ScanCustomModels(customDir)
-	if len(srcEntries) == 0 {
-		return 0, nil
-	}
-
-	repoEntries := a.ScanModelEntries(repoDir)
-	repoHashes := make(map[string]bool)
-	repoNames := make(map[string]bool)
-	for _, re := range repoEntries {
-		if re.Hash != "" {
-			repoHashes[re.Hash] = true
-		}
-		repoNames[re.Name] = true
-	}
-
-	count := 0
-	for _, e := range srcEntries {
-		if e.Hash != "" && repoHashes[e.Hash] {
-			a.logger.Add(e.Name, e.Path, repoDir, 0, "skipped", "仓库已存在同哈希文件，跳过")
-			continue
-		}
-		if repoNames[e.Name] {
-			a.logger.Add(e.Name, e.Path, repoDir, 0, "skipped", "仓库已存在同名文件，跳过")
-			continue
-		}
-		rel, _ := filepath.Rel(customDir, e.Path)
-		if rel == "" {
-			rel = e.Name
-		}
-		dstPath := filepath.Join(repoDir, rel)
-		dstDir := filepath.Dir(dstPath)
-		if err := os.MkdirAll(dstDir, 0755); err != nil {
-			a.logger.Add(e.Name, e.Path, repoDir, 0, "failed", "创建目录失败: "+err.Error())
-			continue
-		}
-		if _, err := installer.CopyFile(e.Path, dstDir); err != nil {
-			a.logger.Add(e.Name, e.Path, repoDir, 0, "failed", "复制失败: "+err.Error())
-			continue
-		}
-		count++
-		a.logger.Add(e.Name, e.Path, repoDir, 0, "success", "已复制到仓库")
-	}
-	return count, nil
+	return ysmsync.SyncCustomToRepo(customDir, repoDir, a.ScanModelEntries, a.logger.Add)
 }
 
 func (a *App) ImportModelFile(fileName, base64Data string) error {

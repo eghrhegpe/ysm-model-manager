@@ -21,6 +21,7 @@
  *   node scripts/check-adr-health.mjs --json       # JSON（CI 用）
  *
  * 退出码：发现 ERROR → 1；否则 0（技术债为审计报告，不阻断）。
+ * 设计意图：ADR 健康综合检查（状态/债务/格式/关联/连续性）
  */
 import fs from 'node:fs';
 import path from 'node:path';

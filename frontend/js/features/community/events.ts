@@ -1,10 +1,10 @@
 // ===== 创意工坊事件绑定（类型化版 — ADR-014 P3 features）=====
 // 下载队列逻辑已拆到 download-queue.js，本文件只做事件绑定 + 协调。
 import { bus } from "../../bus.ts";
-import { modalConfirm } from "../../dialogs/modal.ts";
+import { modalConfirm } from "../../widgets/dialogs/modal.ts";
 import { renderModelList, isModelMissing, type WorkshopModel } from "./render.ts";
 import { createDownloadQueue, type DownloadTask } from "./download-queue.ts";
-import { ICONS } from "../../widgets/app-content/community/workshop-icons.ts";
+import { ICONS } from "../../widgets/app-content/workshop-icons.ts";
 import { getApp } from "../../wails/app.ts";
 
 /** bindRepoEvents 上下文 */

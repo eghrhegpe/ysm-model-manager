@@ -1,11 +1,11 @@
 // ===== 调试日志工具（类型化版 — ADR-014 P2）=====
-// 用法：import { dbg } from "../../utils/debug.ts"; dbg("btn-click", { id, value });
+// 用法：import { dbg } from "../../utils/debug/debug.ts"; dbg("btn-click", { id, value });
 // 行为：
 //   - 默认 console.log 输出，附带 [DBG:tag] 前缀
 //   - 可通过 URL ?nodebug=1 关闭（默认开启）
 //   - 可通过 window._DBG_RING 取最近 200 条（用于复盘）
 //   - 写完调试后请删除调用（调试日志用完即删，见 frontend/AGENTS.md）
-import { getApp } from "../wails/app.ts";
+import { getApp } from "../../wails/app.ts";
 
 interface RingEntry {
   t: string;

@@ -1,11 +1,11 @@
 // ===== 创意工坊站点视图（为 _initWorkshop 减负） =====
-import { buildSiteHtml } from "./render.ts";
-import { bindBrowseEvents } from "./events.ts";
-import { bindEditEvents } from "./edit.ts";
-import { bindDragEvents } from "./drag.ts";
-import type { SiteViewState, CleanupFn } from "./types.ts";
-import { bus } from "../../../bus.ts";
-import type { WorkshopSite, WorkshopCreator } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
+import { buildSiteHtml } from "./site/render.ts";
+import { bindBrowseEvents } from "./site/events.ts";
+import { bindEditEvents } from "./site/edit.ts";
+import { bindDragEvents } from "./site/drag.ts";
+import type { SiteViewState, CleanupFn } from "./site/types.ts";
+import { bus } from "../../bus.ts";
+import type { WorkshopSite, WorkshopCreator } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 
 /** 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） */
 export type RepoAuthorLike = string | { Name?: string; Count?: number };

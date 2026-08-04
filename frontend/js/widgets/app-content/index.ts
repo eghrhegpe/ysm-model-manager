@@ -21,18 +21,18 @@ import {
 let _avatarConfigLoadedRegistered = false;
 let _avatarConfigLoadedUnsub: (() => void) | null = null;
 import { registerGlobalHandlers } from "../../core/global-handlers.ts";
-import { initDiagnostics } from "./community/diagnostics.ts";
+import { initDiagnostics } from "./diagnostics/community.ts";
 
-import { initSettings } from "./community/settings.ts";
+import { initSettings } from "./settings/community.ts";
 import {
   countMissing,
   renderCardsHTML,
   renderRepoHeaderHTML,
 } from "../../features/community/render.ts";
 import { bindRepoEvents } from "../../features/community/events.ts";
-import { renderSiteView, type RenderSiteViewCtx, type RepoAuthorLike } from "./community/site-view.ts";
-import { getSiteIcon } from "./community/workshop-icons.ts";
-import { loadCommunityData, fillSearch, type LocalCreator } from "./community/core.ts";
+import { renderSiteView, type RenderSiteViewCtx, type RepoAuthorLike } from "./site-view.ts";
+import { getSiteIcon } from "./workshop-icons.ts";
+import { loadCommunityData, fillSearch, type LocalCreator } from "./community-data.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import type { WorkshopModel } from "../../features/community/render.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
@@ -342,7 +342,7 @@ class AppContent extends HTMLElement {
             this._unsubs = this._unsubs || [];
             if (recycleCleanup) this._unsubs.push(recycleCleanup);
           } else if (tab === "dedup") {
-            const { startDedup } = await import("./community/diagnostics.ts");
+            const { startDedup } = await import("./diagnostics/community.ts");
             let dedupType = localStorage.getItem("repo_rtype") || RESOURCE_TYPES.YSM;
             container.innerHTML =
               '<div style="display:flex;flex-direction:column;height:100%">' +

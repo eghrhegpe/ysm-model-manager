@@ -57,6 +57,8 @@ class AppContent extends HTMLElement {
   _avatarRefreshRegistered = false;
   _workshopCache: Map<string, RepoCacheEntry> | null = null;
   _githubCache: Map<string, RepoCacheEntry> | null = null;
+  /** _initWorkshop 的默认站点定时器（切页销毁时清理，防空跑网络请求） */
+  _workshopTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     super();
@@ -132,6 +134,11 @@ class AppContent extends HTMLElement {
     this._workshopCache = null;
     if (this._githubCache) this._githubCache.clear();
     this._githubCache = null;
+    // 清理 workshop 默认站点定时器（防空跑网络请求）
+    if (this._workshopTimer) {
+      clearTimeout(this._workshopTimer);
+      this._workshopTimer = null;
+    }
   }
 
   _render(): void {
@@ -164,20 +171,30 @@ class AppContent extends HTMLElement {
     // 初始化预览面板拖拽调整宽度
     this._initPreviewResize();
 
-    if (this._current === "diagnostics") {
-      this._initDiagnostics();
-    } else if (this._current === "settings") {
-      this._initSettings();
-    } else if (this._current === "workshop") {
-      this._initWorkshop();
-    } else if (this._current === "github") {
-      this._initGithub();
-    } else if (this._current === "instances") {
-      this._initInstances();
-    } else if (this._current === "repository") {
-      this._initRepository();
-      // 按需加载 Three.js 预览组件
-      import("../app-preview/index.ts").catch(() => {});
+    try {
+      if (this._current === "diagnostics") {
+        this._initDiagnostics();
+      } else if (this._current === "settings") {
+        this._initSettings();
+      } else if (this._current === "workshop") {
+        this._initWorkshop();
+      } else if (this._current === "github") {
+        this._initGithub();
+      } else if (this._current === "instances") {
+        this._initInstances();
+      } else if (this._current === "repository") {
+        this._initRepository();
+        // 按需加载 Three.js 预览组件
+        import("../app-preview/index.ts").catch(() => {});
+      }
+    } catch (e) {
+      // 页 init 抛错不中断 _render 调用方，反馈给用户而非静默
+      console.error("[app-content] 页面初始化失败:", e);
+      bus.emit("toast:show", {
+        msg: "❌ 页面加载失败: " + friendlyError(e),
+        duration: 5000,
+        type: "error",
+      });
     }
   }
 
@@ -475,7 +492,7 @@ class AppContent extends HTMLElement {
       showSiteView(currentSite);
     };
     // 默认显示第一个站点
-    setTimeout(async () => {
+    this._workshopTimer = setTimeout(async () => {
       const { sites } = await loadCommunityData();
       allSites = sites;
       // 动态生成 Tab

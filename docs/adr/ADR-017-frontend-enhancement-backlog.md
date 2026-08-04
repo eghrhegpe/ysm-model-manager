@@ -37,7 +37,7 @@
   2. 新增 `tpl-list-row.js` 紧凑行模板
   3. `render.js` 增加 `renderListView()` 模式
   4. 用户选择持久化到 `localStorage`
-- **涉及文件**：`frontend/js/widgets/app-tree/tpl.js`、`render.js`、`row-tpl.js`（新）、`toolbar-events.js`
+- **涉及文件**：`frontend/js/views/app-tree/tpl.js`、`render.js`、`row-tpl.js`（新）、`toolbar-events.js`
 
 **E-2 model2d 预览缓存（中）**
 

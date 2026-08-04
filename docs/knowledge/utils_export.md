@@ -4,8 +4,8 @@ name: 截图与导出 export
 tier: architecture
 category: utils
 source_files:
-  - frontend/js/widgets/app-preview/screenshot-renderer.ts
-  - frontend/js/widgets/app-preview/preview-cache.ts
+  - frontend/js/views/app-preview/screenshot-renderer.ts
+  - frontend/js/views/app-preview/preview-cache.ts
 use_when:
   - 截图
   - 导出 PNG

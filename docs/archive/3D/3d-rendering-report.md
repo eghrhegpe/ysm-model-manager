@@ -121,7 +121,7 @@ YSM 文件 → [解码层] → BedrockModel JSON → [Go spec 层] → Three.js 
 | `frontend/js/utils/model3d.ts` | Three.js 3D 渲染（场景/相机/光照/网格） | ~464 |
 | `frontend/js/utils/model3d-spec.ts` | JS 兜底 Spec 构建（死代码，格式不兼容） | ~255 |
 | `frontend/js/utils/model2d.ts` | Canvas 2D 骨骼线条图 | ~556 |
-| `frontend/js/widgets/app-preview/preview-wasm.ts` | WASM 解码 + ysm.json 解析 + 纹理排序 | ~513 |
+| `frontend/js/views/app-preview/preview-wasm.ts` | WASM 解码 + ysm.json 解析 + 纹理排序 | ~513 |
 | `app_model.go` | Wails Binding 入口 + CLI fallback | ~237 |
 
 ---

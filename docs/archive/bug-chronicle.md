@@ -489,7 +489,7 @@ for _, b := range g.Bones {
 
 #### 影响文件
 
-`go/types/bedrock.go`, `app.go`, `go/threejs/spec.go`, `frontend/js/utils/model3d.js`, `frontend/js/widgets/app-preview/utils.js`
+`go/types/bedrock.go`, `app.go`, `go/threejs/spec.go`, `frontend/js/utils/model3d.js`, `frontend/js/views/app-preview/utils.js`
 
 ---
 

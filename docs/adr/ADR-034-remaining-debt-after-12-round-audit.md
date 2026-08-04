@@ -122,11 +122,11 @@ HTML 完整性、脚本输出。**Go Wails Binding 契约零覆盖**——前端
 
 **前端侧**：
 
-7. `frontend/js/widgets/app-content/tpl.ts:333` — UI 文案硬编码
+7. `frontend/js/views/app-content/tpl.ts:333` — UI 文案硬编码
    `%APPDATA%\YSM-Model-Manager\ysm_config.json`。非 Windows 上路径不同。
    **处置**：路径从 Go 端取（已有 binding），UI 不硬编码。
 
-8. `frontend/js/widgets/app-content/community/settings.ts:384` —
+8. `frontend/js/views/app-content/community/settings.ts:384` —
    UI 文案 `"ProgramFiles · Games · %APPDATA% · EXE 同目录"`，同上。
 
 **构建侧**：

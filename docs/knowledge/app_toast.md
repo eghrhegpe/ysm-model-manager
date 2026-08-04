@@ -4,7 +4,7 @@ name: Toast 通知 app-toast
 tier: leaf
 category: ui
 source_files:
-  - frontend/js/widgets/app-toast.ts
+  - frontend/js/views/app-toast.ts
 use_when:
   - toast
   - 通知

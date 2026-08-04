@@ -4,13 +4,13 @@ name: 侧边栏 app-sidebar
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/widgets/app-sidebar/index.ts
-  - frontend/js/widgets/app-sidebar/tpl.ts
-  - frontend/js/widgets/app-sidebar/data.ts
-  - frontend/js/widgets/app-sidebar/loader.ts
-  - frontend/js/widgets/app-sidebar/render.ts
-  - frontend/js/widgets/app-sidebar/events.ts
-  - frontend/js/widgets/app-sidebar/sidebar-css.ts
+  - frontend/js/views/app-sidebar/index.ts
+  - frontend/js/views/app-sidebar/tpl.ts
+  - frontend/js/views/app-sidebar/data.ts
+  - frontend/js/views/app-sidebar/loader.ts
+  - frontend/js/views/app-sidebar/render.ts
+  - frontend/js/views/app-sidebar/events.ts
+  - frontend/js/views/app-sidebar/sidebar-css.ts
 use_when:
   - 侧边栏
   - 整合包列表

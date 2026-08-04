@@ -39,19 +39,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 import { bus } from "../../bus.ts";
 import { DetectResourceType } from "../../../bindings/ysm-model-manager/internal/app/app.js";
 import "./index.ts"; // 触发 customElements.define("app-preview")
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise((r) => setTimeout(r, ms));
-
-function mount(): HTMLElement {
-  const el = document.createElement("app-preview");
-  document.body.appendChild(el);
-  return el;
-}
-
-function unmount(el: HTMLElement): void {
-  document.body.removeChild(el);
-}
+import { sleep, mountCustomElement, unmountElement } from "../../test-utils.ts";
 
 describe("app-preview 生命周期配对", () => {
   beforeEach(() => {
@@ -64,28 +52,28 @@ describe("app-preview 生命周期配对", () => {
   });
 
   it("connected → 渲染默认面板（#preview-content 存在）", async () => {
-    const el = mount();
+    const el = mountCustomElement("app-preview");
     await sleep(50);
     expect(el.shadowRoot?.querySelector("#preview-content")).toBeTruthy();
-    unmount(el);
+    unmountElement(el);
   });
 
   it("model:select → 分流渲染（shaderpack 标签出现）", async () => {
-    const el = mount();
+    const el = mountCustomElement("app-preview");
     await sleep(50);
     bus.emit("model:select", { path: "/repo/a.ysm", isDir: false });
     await sleep(100);
     // DetectResourceType mock 返回 "shaderpack" → showShaderPack 渲染 `📦 shaderpack`
     const content = el.shadowRoot?.querySelector("#preview-content")?.textContent || "";
     expect(content).toContain("shaderpack");
-    unmount(el);
+    unmountElement(el);
   });
 
   it("disconnected → 订阅清理（model:select 不再重写 detached DOM）", async () => {
-    const el = mount();
+    const el = mountCustomElement("app-preview");
     await sleep(50);
     const before = el.shadowRoot?.innerHTML || "";
-    unmount(el);
+    unmountElement(el);
     bus.emit("model:select", { path: "/repo/a.ysm", isDir: false });
     await sleep(100);
     // handler 已随 disconnectedCallback 清理：emit 不再触发 _showModelDetail 重写 innerHTML

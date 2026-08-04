@@ -48,19 +48,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 
 import { bus } from "../../bus.ts";
 import "./index.ts"; // 触发 customElements.define("app-content")
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise((r) => setTimeout(r, ms));
-
-function mount(): HTMLElement {
-  const el = document.createElement("app-content");
-  document.body.appendChild(el);
-  return el;
-}
-
-function unmount(el: HTMLElement): void {
-  document.body.removeChild(el);
-}
+import { sleep, mountCustomElement, unmountElement } from "../../test-utils.ts";
 
 describe("app-content 生命周期配对", () => {
   beforeEach(() => {
@@ -72,27 +60,27 @@ describe("app-content 生命周期配对", () => {
   });
 
   it("connected → 渲染默认仓库页（repo tab 存在）", async () => {
-    const el = mount();
+    const el = mountCustomElement("app-content");
     await sleep(150);
     expect(el.shadowRoot?.querySelector(".repo-tab")).toBeTruthy();
-    unmount(el);
+    unmountElement(el);
   });
 
   it("nav:change → 切页渲染（页面内容变化）", async () => {
-    const el = mount();
+    const el = mountCustomElement("app-content");
     await sleep(150);
     const before = el.shadowRoot?.innerHTML || "";
     bus.emit("nav:change", { page: "settings" });
     await sleep(200);
     expect(el.shadowRoot?.innerHTML).not.toBe(before); // 已切换到 settings 页
-    unmount(el);
+    unmountElement(el);
   });
 
   it("disconnected → 订阅清理（nav:change 不再重写 detached DOM）", async () => {
-    const el = mount();
+    const el = mountCustomElement("app-content");
     await sleep(150);
     const before = el.shadowRoot?.innerHTML || "";
-    unmount(el);
+    unmountElement(el);
     bus.emit("nav:change", { page: "settings" });
     await sleep(200);
     expect(el.shadowRoot?.innerHTML).toBe(before); // 订阅已随 disconnectedCallback 清理

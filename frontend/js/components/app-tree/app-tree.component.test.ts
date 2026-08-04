@@ -22,19 +22,7 @@ import { bus } from "../../bus.ts";
 import { register, clear as clearRegistry } from "../../services/registry.ts";
 import { loadEntries } from "./loader.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise((r) => setTimeout(r, ms));
-
-function mount(): HTMLElement {
-  const el = document.createElement("app-tree");
-  document.body.appendChild(el);
-  return el;
-}
-
-function unmount(el: HTMLElement): void {
-  document.body.removeChild(el);
-}
+import { sleep, mountCustomElement, unmountElement } from "../../test-utils.ts";
 
 describe("app-tree 生命周期配对", () => {
   let loadSpy: ReturnType<typeof vi.fn>;
@@ -53,26 +41,26 @@ describe("app-tree 生命周期配对", () => {
   });
 
   it("connected → 渲染树容器（#tree 存在，生命周期跑通）", async () => {
-    const el = mount();
+    const el = mountCustomElement("app-tree");
     await sleep(150);
     expect(el.shadowRoot?.querySelector("#tree")).toBeTruthy();
-    unmount(el);
+    unmountElement(el);
   });
 
   it("tree:reload → 触发 registry loadEntries（bus 订阅生效）", async () => {
-    const el = mount();
+    const el = mountCustomElement("app-tree");
     await sleep(150);
     loadSpy.mockClear();
     bus.emit("tree:reload");
     await sleep(150);
     expect(loadSpy).toHaveBeenCalled(); // bus-handlers reload(vm) → get("loadEntries")
-    unmount(el);
+    unmountElement(el);
   });
 
   it("disconnected → 订阅清理（tree:reload 不再触发 loadEntries）", async () => {
-    const el = mount();
+    const el = mountCustomElement("app-tree");
     await sleep(150);
-    unmount(el);
+    unmountElement(el);
     loadSpy.mockClear();
     bus.emit("tree:reload");
     await sleep(150);

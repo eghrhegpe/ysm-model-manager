@@ -33,8 +33,9 @@ interface RTypeConfig {
   icon?: string;
 }
 
-// 跨实例记住上次选中的类型（整合包间共享）
-let _lastSelectedType = RESOURCE_TYPES.YSM;
+/** 跨实例记住上次选中的类型（整合包间共享，localStorage 持久化） */
+const LAST_TYPE_KEY = "ysm_syncLastType";
+let _lastSelectedType = localStorage.getItem(LAST_TYPE_KEY) || RESOURCE_TYPES.YSM;
 
 export class AppSyncManager extends HTMLElement {
   static get observedAttributes(): string[] {
@@ -327,6 +328,7 @@ export class AppSyncManager extends HTMLElement {
       btn.addEventListener("click", () => {
         this._selectedType = (btn as HTMLElement).dataset.type || "";
         _lastSelectedType = this._selectedType;
+        localStorage.setItem(LAST_TYPE_KEY, this._selectedType);
         this._statusFilter = "all";
         bus.emit("repo:rtype-changed", this._selectedType);
         this._render();

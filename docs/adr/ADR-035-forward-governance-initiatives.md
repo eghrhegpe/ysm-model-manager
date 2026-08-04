@@ -17,9 +17,22 @@
 
 | 编号 | 立项 | 优先级 | 范围 | 验收标准 |
 |------|------|--------|------|---------|
-| G-1 | 前端组件级测试 | P2 | app-tree / app-content 交互路径组件测试（连点/多选/tab 切换等），`vi.mock` bindings 模式（vitest+jsdom 已就绪） | 组件测试 ≥10 用例，`vitest run` 全绿 |
+| G-1 | 前端组件级测试 | P2 | app-tree / app-content 交互路径组件测试（连点/多选/tab 切换等），**前置：抗脆弱测试基础设施**（见下） | 抗脆弱基础设施落地（testid 规范 + 状态可查询 + helper 抽象 + 契约守护）后，组件测试 ≥10 用例且 `vitest run` 全绿 |
 | G-2 | CI 门槛增强 | P2 | `release.yml` 主 CI 增加 `go vet` / `adr-check` / doctor 静态组件为 PR 门槛（防治理规则回潮） | PR 门槛生效，违规即红 |
 | G-3 | ai-mistake-tracker 反哺 | P3 | `ai-mistake-tracker.mjs` 的 `RULE_VIOLATIONS` 增加反模式关键词检测（先删后建/静默降级/无守卫注册/无 generation 等），让修复链数据反哺陷阱清单 | 运行输出可统计反模式修复 |
+
+### G-1 抗脆弱测试基础设施（前置规划）
+
+**问题本质**：E2E/组件测试失效 = 断言绑定了易变实现（CSS 类 / 文案 / DOM 结构）——UI 演进时测试红而功能未坏。**解法**：断言稳定语义，测试信息从 UI 自动获取而非硬编码。
+
+| 层 | 机制 | 解决什么 |
+|----|------|---------|
+| ① 稳定钩子 | 关键交互元素统一 `data-testid`（如 `tree-file` / `tree-toggle` / `sync-push`），规范写入 Design.md §19（唯一规范源） | 文案/类名/结构变化不破坏定位 |
+| ② 状态可查询 | 组件渲染后暴露可查询状态（`container.dataset` 如 `data-count`/`data-selected`，或既有事件总线事件流）——测试断言**状态值**而非 DOM 结构 | "自动从 UI 获取测试信息"的核心 |
+| ③ helper 抽象 | `frontend/js/test-utils/`（`getByTestId` / `waitFor` / `clickTreeFile` 等），测试不直接写选择器/定时器 | 结构变化只改 helper 一处 |
+| ④ 契约守护 | `tests/*.mjs` 断言关键 testid 存在 + BusEvents 类型一致性 | testid 被删 → 契约红，防钩子静默失效 |
+
+**落地顺序**：① 本规划入 ADR（G-1 前置） → ② Design.md §19 加 testid 规范 → ③ `test-utils/` helper → ④ 首个组件测试（app-tree 多选/连点路径）→ ⑤ 契约守护。
 
 **暂缓（未立项）**：ADR-024 多资源联邦扩展（需新资源类型需求信号）、非 Windows 更新支持（ADR-033 明确拒绝，需跨平台需求）。
 

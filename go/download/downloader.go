@@ -38,8 +38,8 @@ func (d *Downloader) httpClient() *http.Client {
 	return &http.Client{Timeout: d.timeout}
 }
 
-// File 从 URL 下载文件到 savePath，支持进度回调。ctx 取消/超时即中断下载。
-func (d *Downloader) File(ctx context.Context, url, savePath string, onProgress ProgressFn) error {
+// downloadTo 下载到 savePath，支持 Accept 头与进度回调；失败/中断时清理半截文件
+func (d *Downloader) downloadTo(ctx context.Context, url, savePath, accept string, onProgress ProgressFn) error {
 	if err := os.MkdirAll(filepath.Dir(savePath), 0755); err != nil {
 		return err
 	}
@@ -48,6 +48,9 @@ func (d *Downloader) File(ctx context.Context, url, savePath string, onProgress 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
+	}
+	if accept != "" {
+		req.Header.Set("Accept", accept)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -106,74 +109,14 @@ func (d *Downloader) File(ctx context.Context, url, savePath string, onProgress 
 	return nil
 }
 
+// File 从 URL 下载文件到 savePath，支持进度回调。ctx 取消/超时即中断下载。
+func (d *Downloader) File(ctx context.Context, url, savePath string, onProgress ProgressFn) error {
+	return d.downloadTo(ctx, url, savePath, "", onProgress)
+}
+
 // FromGitHubAPI 从 GitHub API 下载（设置 Accept 头）。ctx 取消/超时即中断下载。
 func (d *Downloader) FromGitHubAPI(ctx context.Context, apiURL, savePath string, onProgress ProgressFn) error {
-	if err := os.MkdirAll(filepath.Dir(savePath), 0755); err != nil {
-		return err
-	}
-
-	client := d.httpClient()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Accept", "application/vnd.github.v3.raw")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API HTTP %d", resp.StatusCode)
-	}
-
-	out, err := os.Create(savePath)
-	if err != nil {
-		return err
-	}
-	ok := false
-	defer func() {
-		out.Close()
-		if !ok {
-			// 下载中断/失败时清理半截文件，避免残留损坏文件
-			os.Remove(savePath)
-		}
-	}()
-
-	total := resp.ContentLength
-	var downloaded int64
-	buf := make([]byte, 256*1024)
-	lastEmit := time.Now()
-
-	for {
-		n, rErr := resp.Body.Read(buf)
-		if n > 0 {
-			if _, wErr := out.Write(buf[:n]); wErr != nil {
-				return wErr
-			}
-			downloaded += int64(n)
-			if onProgress != nil && time.Since(lastEmit) > 200*time.Millisecond {
-				onProgress(downloaded, total)
-				lastEmit = time.Now()
-			}
-		}
-		if rErr == io.EOF {
-			break
-		}
-		if rErr != nil {
-			return rErr
-		}
-	}
-	if total <= 0 {
-		total = downloaded
-	}
-	ok = true
-	if onProgress != nil {
-		onProgress(downloaded, total)
-	}
-	return nil
+	return d.downloadTo(ctx, apiURL, savePath, "application/vnd.github.v3.raw", onProgress)
 }
 
 // ResolveSavePath 从 GitHub raw URL 解析存储路径和回退源。
@@ -183,14 +126,19 @@ func ResolveSavePath(rawURL, saveDir string) (savePath string, jsdURL, apiURL st
 	}
 	relPath := ""
 	repoPath := ""
-	if idx := strings.Index(rawURL, "/main/"); idx > 0 {
-		relPath = rawURL[idx+6:]
-		raw := rawURL
-		if strings.HasPrefix(raw, "https://raw.githubusercontent.com/") {
-			parts := strings.SplitN(raw[len("https://raw.githubusercontent.com/"):], "/", 3)
-			if len(parts) >= 2 {
-				repoPath = parts[0] + "/" + parts[1]
-			}
+	branch := ""
+	// 支持 main 与 master 默认分支（默认分支非 main 的仓库不再解析失败）
+	for _, b := range []string{"/main/", "/master/"} {
+		if idx := strings.Index(rawURL, b); idx > 0 {
+			relPath = rawURL[idx+len(b):]
+			branch = b[1 : len(b)-1]
+			break
+		}
+	}
+	if relPath != "" && strings.HasPrefix(rawURL, "https://raw.githubusercontent.com/") {
+		parts := strings.SplitN(rawURL[len("https://raw.githubusercontent.com/"):], "/", 3)
+		if len(parts) >= 2 {
+			repoPath = parts[0] + "/" + parts[1]
 		}
 	}
 	if relPath == "" {
@@ -202,7 +150,10 @@ func ResolveSavePath(rawURL, saveDir string) (savePath string, jsdURL, apiURL st
 
 	if repoPath != "" {
 		normalized := strings.ReplaceAll(relPath, "\\", "/")
-		jsdURL = "https://cdn.jsdelivr.net/gh/" + repoPath + "@main/" + normalized
+		if branch == "" {
+			branch = "main"
+		}
+		jsdURL = "https://cdn.jsdelivr.net/gh/" + repoPath + "@" + branch + "/" + normalized
 		apiURL = "https://api.github.com/repos/" + repoPath + "/contents/" + normalized
 	}
 	return

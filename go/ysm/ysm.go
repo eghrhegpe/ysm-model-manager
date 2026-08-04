@@ -1,4 +1,4 @@
-﻿package ysm
+package ysm
 
 import (
 	"archive/zip"
@@ -26,8 +26,11 @@ func IsYSMJar(jarPath string) bool {
 		if err != nil {
 			continue
 		}
-		data, _ := io.ReadAll(io.LimitReader(rc, 1<<20))
+		data, err := io.ReadAll(io.LimitReader(rc, 1<<20))
 		rc.Close()
+		if err != nil {
+			continue
+		}
 
 		content := string(data)
 		lines := strings.Split(content, "\n")

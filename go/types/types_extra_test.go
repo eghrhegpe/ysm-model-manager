@@ -63,9 +63,9 @@ func TestFormatRange_UnmarshalJSON(t *testing.T) {
 		in       string
 		min, max int
 	}{
-		{`15`, 15, 15},                                    // 单 int
-		{`[15]`, 15, 15},                                  // 单元素数组
-		{`[1, 15]`, 1, 15},                                // 双元素数组
+		{`15`, 15, 15},     // 单 int
+		{`[15]`, 15, 15},   // 单元素数组
+		{`[1, 15]`, 1, 15}, // 双元素数组
 		{`{"min_inclusive": 3, "max_inclusive": 5}`, 3, 5}, // 对象格式
 	}
 	for _, c := range cases {

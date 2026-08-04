@@ -161,8 +161,12 @@ export async function createLitematic3D(
   viewContainer.appendChild(loadingEl);
 
   let aborted = false;
+  let cleanupFn: (() => void) | null = null;
   function escH(e: KeyboardEvent): void {
-    if (e.key === "Escape") closeOverlay();
+    if (e.key === "Escape") {
+      if (cleanupFn) cleanupFn();
+      else closeOverlay();
+    }
   }
   function closeOverlay(): void {
     aborted = true;
@@ -170,7 +174,10 @@ export async function createLitematic3D(
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
     _voxel3d = null;
   }
-  closeBtn.onclick = closeOverlay;
+  closeBtn.onclick = () => {
+    if (cleanupFn) cleanupFn();
+    else closeOverlay();
+  };
   document.addEventListener("keydown", escH);
 
   try {
@@ -553,6 +560,7 @@ export async function createLitematic3D(
       window.removeEventListener("mouseup", onMouseUp);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("resize", onResize);
+      // escHandler 在 try 块内注册，此处安全移除（无论是否已注册）
       document.removeEventListener("keydown", escHandler);
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
       _voxel3d = null;
@@ -564,6 +572,7 @@ export async function createLitematic3D(
     document.removeEventListener("keydown", escH);
     document.addEventListener("keydown", escHandler);
     closeBtn.onclick = fullCleanup;
+    cleanupFn = fullCleanup;
     _voxel3d = { cleanup: fullCleanup };
   } catch (e) {
     console.error("[litematic 3D] 加载失败:", e);

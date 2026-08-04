@@ -69,6 +69,7 @@ use_when:
 ## 相关
 
 - `frontend/js/core/global-handlers.ts` — 全局 handler 汇聚入口（handler-dnd / handler-sync / handler-other）
-- `frontend/js/features/community/` — 仓库页数据/渲染/事件/下载队列
+- `frontend/js/features/community/` — 仓库页数据/渲染/事件/下载队列（`bindRepoEvents` 等由 index.ts 调用）
+- `frontend/js/components/app-content/community/` — 与 features/community 并存的创意工坊模块（site-view / core / settings / diagnostics / workshop-data / workshop-icons），index.ts 同时引用两套，改动前先确认归属
 - `frontend/js/components/app-tree/index.ts` — `setPendingTreeSearch` 搜索词交接
 - 知识卡：`app_nav`、`app_preview`、`app_sidebar`、`app_sync_manager`、`event_bus`、`wails_bridge`

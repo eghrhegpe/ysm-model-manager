@@ -67,7 +67,7 @@ use_when:
 
 ## 不变量
 
-- `_unsubs` 中的 `bus.on` 订阅与 `_modelCleanup`（window 级拖拽监听）必须在 `disconnectedCallback` 清理
+- `_unsubs` 中的 `bus.on` 订阅必须在 `disconnectedCallback` 清理；拖拽 window 监听经 `PreviewCtx._unsubs` 挂销毁清理；Litematic 3D 经 `cleanupLitematic3D`（转发 `cleanupVoxel3D`）终止 WebGL renderer + rAF 循环（防切页 GPU 残留）
 - 2D 拖拽的 window 监听先移除上一轮再绑定（模块级槽位 `_prevWindowMove` / `_prevWindowUp`），禁止累积
 - 预览缓存淘汰时必须 `URL.revokeObjectURL` 释放 blob URL（`cacheSetEvictHandler`）
 - Three.js 仅在 Litematic 3D 视图按需 `await import("three")`，不进入首屏 bundle

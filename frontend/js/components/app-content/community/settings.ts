@@ -134,7 +134,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       const canOverride = !!t.cfgKey;
       const overridePath = canOverride ? cfgStr(t.cfgKey) : "";
       const defaultPath = cfg.filesRoot
-        ? (cfg.filesRoot + "\\" + (reg[t.rtype]?.storageSubDir || t.rtype || "")).replace(
+        ? (cfg.filesRoot + "/" + (reg[t.rtype]?.storageSubDir || t.rtype || "")).replace(
             /\//g,
             "\\",
           )

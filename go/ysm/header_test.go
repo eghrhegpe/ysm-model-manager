@@ -247,6 +247,164 @@ func TestParseInt(t *testing.T) {
 	}
 }
 
+// ====== AnalyzeYSMHeaderFromBytes ======
+
+func TestAnalyzeYSMHeaderFromBytes_Full(t *testing.T) {
+	input := "YSGP\n--- [Metadata]\n<name>ByteTest</name>\n<license>MIT</license>\n--- [Authors]\n<name>AuthorName</name>\n==="
+	h := AnalyzeYSMHeaderFromBytes([]byte(input))
+	if !h.IsYSM {
+		t.Error("IsYSM 应为 true")
+	}
+	if h.Name != "ByteTest" {
+		t.Errorf("Name = %q, 期望 ByteTest", h.Name)
+	}
+	if h.License != "MIT" {
+		t.Errorf("License = %q, 期望 MIT", h.License)
+	}
+	if h.AuthorName != "AuthorName" {
+		t.Errorf("AuthorName = %q, 期望 AuthorName", h.AuthorName)
+	}
+}
+
+func TestAnalyzeYSMHeaderFromBytes_Truncated(t *testing.T) {
+	// 超过 4096 字节应截断
+	long := make([]byte, 5000)
+	for i := range long {
+		long[i] = 'a'
+	}
+	copy(long, "YSGP\n--- [Metadata]\n<name>Truncated</name>\n===")
+	h := AnalyzeYSMHeaderFromBytes(long)
+	if !h.IsYSM {
+		t.Error("IsYSM 应为 true")
+	}
+}
+
+func TestAnalyzeYSMHeaderFromBytes_Empty(t *testing.T) {
+	h := AnalyzeYSMHeaderFromBytes([]byte{})
+	if h.IsYSM {
+		t.Error("空字节的 IsYSM 应为 false")
+	}
+}
+
+// ====== detectYSGPHeader ======
+
+func TestDetectYSGPHeader_Simple(t *testing.T) {
+	// detectYSGPHeader 只读取前 100 字节，<name> 值提取到换行符为止
+	path := writeTempFile(t, "YSGP\n--- [Metadata]\n<name>TestModel\n</name>\n")
+	h := detectYSGPHeader(path)
+	if h == nil {
+		t.Fatal("期望非 nil")
+	}
+	if !h.IsYSM {
+		t.Error("IsYSM 应为 true")
+	}
+	if h.Format != 2 {
+		t.Errorf("Format = %d, 期望 2 (YSGP)", h.Format)
+	}
+	if h.Name != "TestModel" {
+		t.Errorf("Name = %q, 期望 TestModel", h.Name)
+	}
+}
+
+func TestDetectYSGPHeader_WithBOM(t *testing.T) {
+	path := writeTempFile(t, "\xef\xbb\xbfYSGP\n--- [Metadata]\n<name>BOMTest\n</name>\n")
+	h := detectYSGPHeader(path)
+	if h == nil {
+		t.Fatal("期望非 nil")
+	}
+	if h.Name != "BOMTest" {
+		t.Errorf("Name = %q, 期望 BOMTest", h.Name)
+	}
+}
+
+func TestDetectYSGPHeader_NotYSGP(t *testing.T) {
+	path := writeTempFile(t, "NOTYSGP\n--- [Metadata]\n<name>Test</name>\n")
+	h := detectYSGPHeader(path)
+	if h != nil {
+		t.Errorf("非 YSGP 应返回 nil, 得到 %+v", h)
+	}
+}
+
+func TestDetectYSGPHeader_EmptyFile(t *testing.T) {
+	path := writeTempFile(t, "")
+	h := detectYSGPHeader(path)
+	if h != nil {
+		t.Errorf("空文件应返回 nil, 得到 %+v", h)
+	}
+}
+
+func TestDetectYSGPHeader_NonExistent(t *testing.T) {
+	h := detectYSGPHeader("/nonexistent/path.ysm")
+	if h != nil {
+		t.Errorf("不存在文件应返回 nil, 得到 %+v", h)
+	}
+}
+
+func TestDetectYSGPHeader_NameInAuthorSection(t *testing.T) {
+	// <name> 在 [Authors] 段内，不应被提取为模型名称
+	path := writeTempFile(t, "YSGP\n--- [Authors]\n<name>AuthorName</name>\n")
+	h := detectYSGPHeader(path)
+	if h == nil {
+		t.Fatal("期望非 nil")
+	}
+	if h.Name != "" {
+		t.Errorf("Name 应为空（在 Authors 段内）, 得到 %q", h.Name)
+	}
+}
+
+// ====== AnalyzeYSMHeader ======
+
+func TestAnalyzeYSMHeader_YSGPWithTextHeader(t *testing.T) {
+	// YSGP + 文本头部 → 合并二进制头部和文本头部信息
+	path := writeTempFile(t, "YSGP\n--- [Metadata]\n<name>MergedModel</name>\n<license>MIT</license>\n--- [Authors]\n<name>Creator</name>\n<role>Modeler</role>\n===")
+	h := AnalyzeYSMHeader(path)
+	if !h.IsYSM {
+		t.Error("IsYSM 应为 true")
+	}
+	if h.Name != "MergedModel" {
+		t.Errorf("Name = %q, 期望 MergedModel", h.Name)
+	}
+	if h.License != "MIT" {
+		t.Errorf("License = %q, 期望 MIT", h.License)
+	}
+	if h.AuthorName != "Creator" {
+		t.Errorf("AuthorName = %q, 期望 Creator", h.AuthorName)
+	}
+	if h.AuthorRole != "Modeler" {
+		t.Errorf("AuthorRole = %q, 期望 Modeler", h.AuthorRole)
+	}
+}
+
+func TestAnalyzeYSMHeader_TextOnly(t *testing.T) {
+	// 纯文本头部（无 YSGP 魔数）
+	path := writeTempFile(t, "--- [Metadata]\n<name>TextOnly</name>\n<free>true</free>\n===")
+	h := AnalyzeYSMHeader(path)
+	if h.Name != "TextOnly" {
+		t.Errorf("Name = %q, 期望 TextOnly", h.Name)
+	}
+	if !h.IsFree {
+		t.Error("IsFree 应为 true")
+	}
+	if !h.HasFree {
+		t.Error("HasFree 应为 true")
+	}
+}
+
+func TestAnalyzeYSMHeader_NonExistent(t *testing.T) {
+	h := AnalyzeYSMHeader("/nonexistent/file.ysm")
+	if h.IsYSM {
+		t.Error("不存在文件 IsYSM 应为 false")
+	}
+}
+
+func TestAnalyzeYSMHeader_EmptyFile(t *testing.T) {
+	path := writeTempFile(t, "")
+	h := AnalyzeYSMHeader(path)
+	if h.IsYSM {
+		t.Error("空文件 IsYSM 应为 false")
+	}
+}
+
 // ====== helpers ======
 
 func writeTempFile(t *testing.T, content string) string {

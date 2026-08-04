@@ -120,3 +120,179 @@ func TestHasModInDir(t *testing.T) {
 		t.Fatal("ysm jar 应 true")
 	}
 }
+
+// ====== AnalyzeYSMModel ======
+
+const validModelJSON = `{
+	"name": "TestModel",
+	"author": "TestAuthor",
+	"version": "1.0.0",
+	"bones": [{"name":"head"},{"name":"body"}],
+	"textures": ["tex1.png","tex2.png","tex3.png"],
+	"animations": [{"name":"idle"},{"name":"walk"}],
+	"model": {
+		"vertices": [1,2,3,4],
+		"faces": [{"a":1},{"b":2}]
+	}
+}`
+
+func TestAnalyzeYSMModel_Valid(t *testing.T) {
+	// .ysm 扩展名
+	path := makeJar(t, map[string]string{"model.json": validModelJSON})
+	ysmPath := filepath.Join(t.TempDir(), "test.ysm")
+	if err := os.Rename(path, ysmPath); err != nil {
+		t.Fatal(err)
+	}
+	meta := AnalyzeYSMModel(ysmPath)
+	if meta.Name != "TestModel" {
+		t.Errorf("Name = %q, 期望 TestModel", meta.Name)
+	}
+	if meta.Author != "TestAuthor" {
+		t.Errorf("Author = %q, 期望 TestAuthor", meta.Author)
+	}
+	if meta.Version != "1.0.0" {
+		t.Errorf("Version = %q, 期望 1.0.0", meta.Version)
+	}
+	if meta.Bones != 2 {
+		t.Errorf("Bones = %d, 期望 2", meta.Bones)
+	}
+	if meta.Textures != 3 {
+		t.Errorf("Textures = %d, 期望 3", meta.Textures)
+	}
+	if meta.Animations != 2 {
+		t.Errorf("Animations = %d, 期望 2", meta.Animations)
+	}
+	if meta.Vertices != 4 {
+		t.Errorf("Vertices = %d, 期望 4", meta.Vertices)
+	}
+	if meta.Faces != 2 {
+		t.Errorf("Faces = %d, 期望 2", meta.Faces)
+	}
+	if meta.HasError {
+		t.Errorf("HasError 应为 false, 得到 %s", meta.ErrorMsg)
+	}
+}
+
+func TestAnalyzeYSMModel_ZipExt(t *testing.T) {
+	// .zip 扩展名也应支持
+	path := makeJar(t, map[string]string{"model.json": validModelJSON})
+	zipPath := filepath.Join(t.TempDir(), "model.zip")
+	if err := os.Rename(path, zipPath); err != nil {
+		t.Fatal(err)
+	}
+	meta := AnalyzeYSMModel(zipPath)
+	if meta.HasError {
+		t.Errorf("zip 扩展名不应报错: %s", meta.ErrorMsg)
+	}
+	if meta.Name != "TestModel" {
+		t.Errorf("Name = %q, 期望 TestModel", meta.Name)
+	}
+}
+
+func TestAnalyzeYSMModel_BanYsmExt(t *testing.T) {
+	// .ban 后缀但内部是 .ysm → 应正常解析
+	path := makeJar(t, map[string]string{"model.json": validModelJSON})
+	banPath := filepath.Join(t.TempDir(), "test.ysm.ban")
+	if err := os.Rename(path, banPath); err != nil {
+		t.Fatal(err)
+	}
+	meta := AnalyzeYSMModel(banPath)
+	if meta.HasError {
+		t.Errorf(".ysm.ban 不应报错: %s", meta.ErrorMsg)
+	}
+	if meta.Name != "TestModel" {
+		t.Errorf("Name = %q, 期望 TestModel", meta.Name)
+	}
+}
+
+func TestAnalyzeYSMModel_BanOtherExt(t *testing.T) {
+	// .ban 后缀但内部不是 .ysm → hasError
+	path := makeJar(t, map[string]string{"model.json": validModelJSON})
+	banPath := filepath.Join(t.TempDir(), "test.txt.ban")
+	if err := os.Rename(path, banPath); err != nil {
+		t.Fatal(err)
+	}
+	meta := AnalyzeYSMModel(banPath)
+	if !meta.HasError {
+		t.Error(".txt.ban 应报错")
+	}
+}
+
+func TestAnalyzeYSMModel_UnsupportedExt(t *testing.T) {
+	path := makeJar(t, map[string]string{"model.json": validModelJSON})
+	txtPath := filepath.Join(t.TempDir(), "test.txt")
+	if err := os.Rename(path, txtPath); err != nil {
+		t.Fatal(err)
+	}
+	meta := AnalyzeYSMModel(txtPath)
+	if !meta.HasError {
+		t.Error(".txt 应报错")
+	}
+}
+
+func TestAnalyzeYSMModel_NotZip(t *testing.T) {
+	bad := filepath.Join(t.TempDir(), "bad.ysm")
+	if err := os.WriteFile(bad, []byte("notzip"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	meta := AnalyzeYSMModel(bad)
+	if !meta.HasError {
+		t.Error("非 zip 文件应报错")
+	}
+}
+
+func TestAnalyzeYSMModel_NoModelJSON(t *testing.T) {
+	path := makeJar(t, map[string]string{"other.txt": "data"})
+	ysmPath := filepath.Join(t.TempDir(), "empty.ysm")
+	if err := os.Rename(path, ysmPath); err != nil {
+		t.Fatal(err)
+	}
+	meta := AnalyzeYSMModel(ysmPath)
+	if !meta.HasError {
+		t.Error("无 model.json 应报错")
+	}
+}
+
+func TestAnalyzeYSMModel_InvalidJSON(t *testing.T) {
+	path := makeJar(t, map[string]string{"model.json": "{not valid json}"})
+	ysmPath := filepath.Join(t.TempDir(), "badjson.ysm")
+	if err := os.Rename(path, ysmPath); err != nil {
+		t.Fatal(err)
+	}
+	meta := AnalyzeYSMModel(ysmPath)
+	if !meta.HasError {
+		t.Error("非法 JSON 应报错")
+	}
+}
+
+func TestAnalyzeYSMModel_TexturesAsObject(t *testing.T) {
+	modelJSON := `{
+		"name": "ObjTex",
+		"textures": {"tex1":"tex1.png","tex2":"tex2.png"}
+	}`
+	path := makeJar(t, map[string]string{"model.json": modelJSON})
+	ysmPath := filepath.Join(t.TempDir(), "objtex.ysm")
+	if err := os.Rename(path, ysmPath); err != nil {
+		t.Fatal(err)
+	}
+	meta := AnalyzeYSMModel(ysmPath)
+	if meta.Textures != 2 {
+		t.Errorf("Textures = %d, 期望 2（对象中的键数）", meta.Textures)
+	}
+}
+
+func TestAnalyzeYSMModel_NoModelField(t *testing.T) {
+	modelJSON := `{"name":"NoModel","bones":[]}`
+	path := makeJar(t, map[string]string{"model.json": modelJSON})
+	ysmPath := filepath.Join(t.TempDir(), "nomodel.ysm")
+	if err := os.Rename(path, ysmPath); err != nil {
+		t.Fatal(err)
+	}
+	meta := AnalyzeYSMModel(ysmPath)
+	if meta.HasError {
+		t.Errorf("无 model 字段不应报错: %s", meta.ErrorMsg)
+	}
+	if meta.Vertices != 0 || meta.Faces != 0 {
+		t.Errorf("无 model 字段时 Vertices/Faces 应为 0, 得到 %d/%d", meta.Vertices, meta.Faces)
+	}
+}

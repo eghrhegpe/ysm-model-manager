@@ -1,51 +1,35 @@
 # 项目维护手册
 
 > 面向项目维护者（人类 + AI）的操作指南：文档网站构建发布、文档体系维护、日常治理检查。
-<<<<<<< HEAD
 > 网站方案见 ADR-022（VitePress + home layout；曾漂移 Jekyll 后迁移回，见 ADR-022 §3）。
-=======
-> 网站方案见 ADR-022（Jekyll + just-the-docs；原决策 VitePress，方案漂移已记录）。
->>>>>>> 931398e4aa93505cf48e1bf2412b6d57bbdaddfa
 > **AI 注意：项目有文档网站（GitHub Pages），改 docs/ 涉及网站可见内容时需知网站存在与构建方式。**
 
 ---
 
 ## 一、文档网站
 
-<<<<<<< HEAD
 项目以 VitePress 构建文档站点（GitHub Pages 项目页，对标 MikuMikuAR）。
 
-> **当前状态（2026-08-04）**：VitePress 迁移完成（`.vitepress/config.mjs` + `index.md` home layout），网站**尚未构建发布**——`docs/.vitepress/dist/` 未生成、GitHub Pages 未启用；构建需 Node 环境（`docs/` 下 `npm install && npm run build`）。**以 `.vitepress/config.mjs` 配置为准**（VitePress 为唯一方案）。
+> **当前状态（2026-08-04）**：VitePress 迁移完成（`.vitepress/config.mjs` + `index.md` home layout）；由 GitHub Actions workflow `pages-deploy.yml` 构建并发布到 GitHub Pages（base `/ysm-model-manager/`）。构建需 Node 环境（`docs/` 下 `npm install && npm run build`）。**以 `.vitepress/config.mjs` 配置为准**（VitePress 为唯一方案）。
 
 | 项 | 值 |
 |----|-----|
 | 框架 | VitePress（`docs/.vitepress/config.mjs`）|
 | 配置 | `docs/package.json` / `docs/.vitepress/config.mjs` |
 | 站点路径 | GitHub Pages 项目页，`base: /ysm-model-manager/` |
-| 决策 | ADR-022（🔄：迁移完成，构建/发布待验证）|
-=======
-项目以 Jekyll + just-the-docs 构建文档站点（GitHub Pages 项目页）。
-
-| 项 | 值 |
-|----|-----|
-| 框架 | Jekyll + just-the-docs（`docs/_config.yml`，`remote_theme: just-the-docs/just-the-docs`）|
-| 配置 | `docs/Gemfile` / `Gemfile.lock` / `_config.yml` / `_sass/` |
-| 站点路径 | GitHub Pages 项目页，`baseurl: /ysm-model-manager` |
-| 决策 | ADR-022（🔄：配置已就绪，构建/发布待验证）|
->>>>>>> 931398e4aa93505cf48e1bf2412b6d57bbdaddfa
+| 决策 | ADR-022（✅：VitePress 为唯一方案，已构建发布）|
 
 ### 构建与发布
 
 ```bash
 cd docs
-<<<<<<< HEAD
 npm install    # 首次安装依赖
 npm run build  # 构建 → 产物 docs/.vitepress/dist/
 npm run dev    # 本地预览开发
 ```
 
 - 构建产物 `docs/.vitepress/dist/` 不入库。
-- GitHub Pages 发布：GitHub Actions workflow（vitepress-deploy）构建 + 部署 Pages。
+- GitHub Pages 发布：GitHub Actions workflow（`pages-deploy.yml`）构建 + 部署 Pages。
 - 站点内容 = 导航配置（nav/sidebar）列出的分区；内部治理文档（adr/knowledge/novel/app 等）**不进导航**（文件保留，URL 可直达）。
 
 ### 网站内容规范
@@ -54,21 +38,6 @@ npm run dev    # 本地预览开发
 - **导航收敛**：`sidebar` 显式配置只列用户向内容（guide / releases / maintenance）；内部文档不列导航。
 - **冻结区不发布**：`docs/archive/`（历史归档）不进导航（同内部文档处理）。
 - **frontmatter**：guide 类文档带 `title/description`。
-=======
-bundle install           # 首次安装依赖
-bundle exec jekyll build # 本地构建 → 产物 docs/_site/
-```
-
-- 构建产物 `docs/_site/` 不入库（检查 .gitignore）。
-- GitHub Pages 发布：仓库 Settings → Pages → Source 选分支 + `/docs` 目录 → 推 main 自动构建发布（Jekyll 原生支持）。
-- 站点内容 = docs/ 下所有 Markdown（**exclude 除外**，见下）。
-
-### 网站内容规范
-
-- **冻结区不发布**：`docs/archive/`（历史归档）已在 `_config.yml` 的 `exclude` 中——改归档文件不影响网站。
-- **生成产物不发布**：`funcmap.md` / `project-map.md`（同 exclude）。
-- **frontmatter**：guide 类文档带 `title/description`（VitePress 时代兼容字段，Jekyll 忽略无碍）。
->>>>>>> 931398e4aa93505cf48e1bf2412b6d57bbdaddfa
 
 ---
 
@@ -81,7 +50,7 @@ bundle exec jekyll build # 本地构建 → 产物 docs/_site/
 | `docs/guide/` | 用户指南 26 篇（ADR-018 体系）| `gen-docs-index.mjs --guide` |
 | `docs/releases/` | 发版说明（流程见 `docs/releases/README.md` SOP）| `release-notes-gen.mjs` |
 | `docs/review-report.md` | 审计单元追加（AGENTS.md 五步法）| 手写 |
-| `docs/MAINTENANCE.md` | **本手册**（网站内容之一，Jekyll 会发布）| 手写 |
+| `docs/MAINTENANCE.md` | **本手册**（网站内容之一，VitePress 自动发布）| 手写 |
 
 ### 改文档后的检查（AGENTS.md「改完即验」映射）
 
@@ -108,5 +77,5 @@ node scripts/check-deadcode-baseline.mjs  # 死代码/重复代码门禁
 
 ## 四、本手册维护
 
-- 本手册（`docs/MAINTENANCE.md`）是网站内容之一（Jekyll 自动发布），也是 AI 的维护入口。
+- 本手册（`docs/MAINTENANCE.md`）是网站内容之一（VitePress 自动发布），也是 AI 的维护入口。
 - 新增维护流程 / 网站配置变更时：更新本手册，并同步 AGENTS.md 文档地图（如有入口）。

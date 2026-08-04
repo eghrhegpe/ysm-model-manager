@@ -23,7 +23,7 @@ const OUT_FILE = path.join(NOVEL_DIR, 'index.md');
 const args = process.argv.slice(2);
 const CHECK = args.includes('--check');
 
-// ── 区域元数据（从 SKELETON §八 / AGENTS §一 抽取，单一事实源）──────────
+// ── 区域元数据（单一事实源：docs/novel/AGENTS.md 下篇·续写宪法 §八）──────────
 
 const REGIONS = [
   { dir: '01-解码与几何', anchor: '`go/ysm` `go/geometry` `go/threejs` `frontend/js/wasm` `app-preview`', theme: 'YSMParser WASM/CLI、格式解析、2D/3D 预览、骨骼/立方体' },
@@ -197,7 +197,7 @@ ${actsBlock}
 ## 区域志（vol 4+ · 代码区域锚定）
 
 > 自第四卷起改为代码区域锚定：改了代码 → 看路径 → 命中下方区域 → 更新该章尾部。
-> 决策链路与禁则见 [AGENTS.md](AGENTS.md)；世界观与角色见 [SKELETON.md](SKELETON.md)。
+> 世界观 / 角色 / 区域归属 / 禁则，见 [AGENTS.md](AGENTS.md)（续写唯一必读，含上篇·故事圣经与下篇·续写宪法）。
 
 ${regionsBlock}
 
@@ -222,9 +222,7 @@ ${appendixBlock}
 
 ## 相关文档
 
-- [骨架文档](SKELETON.md) — 世界观、角色、三幕结构、技术设定
-- [AI 行为约束](AGENTS.md) — 区域志目录规范与决策链路
-- [README](README.md) — 门牌页（仅指路，不维护索引）
+- [续写宪法](AGENTS.md) — 小说续写唯一必读指引（上篇·故事圣经 + 下篇·续写宪法）
 `
   );
 }

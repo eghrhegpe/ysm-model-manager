@@ -584,24 +584,12 @@ export const autoSidebar = [
         "link": "/novel/AGENTS"
       },
       {
-        "text": "development-saga",
-        "link": "/novel/development-saga"
-      },
-      {
-        "text": "README",
-        "link": "/novel/README"
-      },
-      {
-        "text": "SKELETON",
-        "link": "/novel/SKELETON"
-      },
-      {
         "text": "01-解码与几何",
         "collapsed": true,
         "items": [
           {
-            "text": "README",
-            "link": "/novel/01-解码与几何/README"
+            "text": "01-同名者的诅咒",
+            "link": "/novel/01-解码与几何/01-同名者的诅咒"
           }
         ]
       },
@@ -610,8 +598,8 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "README",
-            "link": "/novel/02-模型仓库/README"
+            "text": "01-先拆后建的赌局",
+            "link": "/novel/02-模型仓库/01-先拆后建的赌局"
           }
         ]
       },
@@ -620,8 +608,8 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "README",
-            "link": "/novel/03-UI器官/README"
+            "text": "01-自己问自己的开关",
+            "link": "/novel/03-UI器官/01-自己问自己的开关"
           }
         ]
       },
@@ -630,8 +618,8 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "README",
-            "link": "/novel/04-事件中枢/README"
+            "text": "01-听了三遍的耳朵",
+            "link": "/novel/04-事件中枢/01-听了三遍的耳朵"
           }
         ]
       },
@@ -640,8 +628,8 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "README",
-            "link": "/novel/05-同步与更新/README"
+            "text": "01-假活的心跳",
+            "link": "/novel/05-同步与更新/01-假活的心跳"
           }
         ]
       },
@@ -650,8 +638,8 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "README",
-            "link": "/novel/06-创作者社区/README"
+            "text": "01-三条通往同一个文件的路",
+            "link": "/novel/06-创作者社区/01-三条通往同一个文件的路"
           }
         ]
       },
@@ -660,8 +648,8 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "README",
-            "link": "/novel/07-文件与路径/README"
+            "text": "01-差一个后缀的名字",
+            "link": "/novel/07-文件与路径/01-差一个后缀的名字"
           }
         ]
       },
@@ -670,8 +658,8 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "README",
-            "link": "/novel/08-配置与状态/README"
+            "text": "01-每次都缩小一圈的窗",
+            "link": "/novel/08-配置与状态/01-每次都缩小一圈的窗"
           }
         ]
       },
@@ -680,8 +668,8 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "README",
-            "link": "/novel/09-工具链/README"
+            "text": "01-永远红着的灯",
+            "link": "/novel/09-工具链/01-永远红着的灯"
           }
         ]
       },
@@ -690,8 +678,8 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "README",
-            "link": "/novel/10-文档治理/README"
+            "text": "01-十二轮之后的账",
+            "link": "/novel/10-文档治理/01-十二轮之后的账"
           }
         ]
       },
@@ -786,8 +774,8 @@ export const autoSidebar = [
             "collapsed": true,
             "items": [
               {
-                "text": "README",
-                "link": "/novel/appendix/安全横切/README"
+                "text": "01-只看不拿",
+                "link": "/novel/appendix/安全横切/01-只看不拿"
               }
             ]
           },
@@ -798,20 +786,6 @@ export const autoSidebar = [
               {
                 "text": "01-全塔体检",
                 "link": "/novel/appendix/跨模块重构/01-全塔体检"
-              },
-              {
-                "text": "README",
-                "link": "/novel/appendix/跨模块重构/README"
-              }
-            ]
-          },
-          {
-            "text": "其他",
-            "collapsed": true,
-            "items": [
-              {
-                "text": "README",
-                "link": "/novel/appendix/其他/README"
               }
             ]
           },
@@ -820,8 +794,8 @@ export const autoSidebar = [
             "collapsed": true,
             "items": [
               {
-                "text": "README",
-                "link": "/novel/appendix/Go后端/README"
+                "text": "01-四千六百零九行",
+                "link": "/novel/appendix/Go后端/01-四千六百零九行"
               }
             ]
           }

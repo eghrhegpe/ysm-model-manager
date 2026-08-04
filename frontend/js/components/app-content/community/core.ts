@@ -104,8 +104,53 @@ export const fillSearch = (tpl: string, q: string): string =>
   tpl.replace(/\{\{q\}\}/g, encodeURIComponent(q));
 
 /**
- * 从 GitHub 社区索引拉取 creators.json
- * @param url - 社区索引 raw URL
+ * 三路回退拉取 JSON 数组（raw → jsdelivr → GitHub API）。
+ * mirror 为 "jsdelivr" / "githubapi" 时调整优先级；api 源经 atob 解码 base64 内容。
+ * 每路 8s 超时（AbortController）；全部失败返回 []。
+ * @param attempts - 候选源列表（按尝试顺序）
+ * @param mirror - 镜像配置，调整回退优先级
+ * @param dbgTag - debug 日志模块标签（默认 "community"）
+ */
+async function fetchWithFallback<T>(
+  attempts: Array<{ name: string; url: string; label: string }>,
+  mirror?: string,
+  dbgTag = "community",
+): Promise<T[]> {
+  const sorted =
+    mirror === "jsdelivr"
+      ? [attempts[1], attempts[0], attempts[2]]
+      : mirror === "githubapi"
+        ? [attempts[2], attempts[0], attempts[1]]
+        : attempts;
+
+  for (const a of sorted) {
+    const ctrl = new AbortController();
+    const tmr = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const resp = await fetch(a.url, { signal: ctrl.signal });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      let data: unknown;
+      if (a.name === "api") {
+        const json = (await resp.json()) as { content?: string };
+        if (!json.content) throw new Error("no content");
+        data = JSON.parse(atob(json.content.replace(/\s/g, "")));
+      } else {
+        data = await resp.json();
+      }
+      if (Array.isArray(data)) return data as T[];
+    } catch (err) {
+      if (err && (err as Error)?.name !== "AbortError") {
+        dbg(dbgTag, a.name + " failed:", (err as Error)?.message);
+      }
+    } finally {
+      clearTimeout(tmr);
+    }
+  }
+  return [];
+}
+
+/**
+ * 从 GitHub 拉取 creators.json（三路回退）
  */
 export async function fetchCommunityCreators(
   url: string,
@@ -129,37 +174,7 @@ export async function fetchCommunityCreators(
       },
     );
   }
-  const sorted =
-    mirror === "jsdelivr"
-      ? [attempts[1], attempts[0], attempts[2]]
-      : mirror === "githubapi"
-        ? [attempts[2], attempts[0], attempts[1]]
-        : attempts;
-
-  for (const a of sorted) {
-    const ctrl = new AbortController();
-    const tmr = setTimeout(() => ctrl.abort(), 8000);
-    try {
-      const resp = await fetch(a.url, { signal: ctrl.signal });
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
-      let data: unknown;
-      if (a.name === "api") {
-        const json = (await resp.json()) as { content?: string };
-        if (!json.content) throw new Error("no content");
-        data = JSON.parse(atob(json.content.replace(/\s/g, "")));
-      } else {
-        data = await resp.json();
-      }
-      if (Array.isArray(data)) return data as WorkshopCreator[];
-    } catch (err) {
-      if (err && (err as Error)?.name !== "AbortError") {
-        dbg("community", a.name + " failed:", (err as Error)?.message);
-      }
-    } finally {
-      clearTimeout(tmr);
-    }
-  }
-  return [];
+  return fetchWithFallback<WorkshopCreator>(attempts, mirror);
 }
 
 /**
@@ -221,36 +236,7 @@ export async function fetchCommunitySites(mirror?: string): Promise<WorkshopSite
       label: "⏳ 站点索引: api…",
     },
   ];
-  const sorted =
-    mirror === "jsdelivr"
-      ? [attempts[1], attempts[0], attempts[2]]
-      : mirror === "githubapi"
-        ? [attempts[2], attempts[0], attempts[1]]
-        : attempts;
-  for (const a of sorted) {
-    const ctrl = new AbortController();
-    const tmr = setTimeout(() => ctrl.abort(), 8000);
-    try {
-      const resp = await fetch(a.url, { signal: ctrl.signal });
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
-      let data: unknown;
-      if (a.name === "api") {
-        const json = (await resp.json()) as { content?: string };
-        if (!json.content) throw new Error("no content");
-        data = JSON.parse(atob(json.content.replace(/\s/g, "")));
-      } else {
-        data = await resp.json();
-      }
-      if (Array.isArray(data)) return data as WorkshopSite[];
-    } catch (err) {
-      if (err && (err as Error)?.name !== "AbortError") {
-        dbg("community", "sites " + a.name + " failed:", (err as Error)?.message);
-      }
-    } finally {
-      clearTimeout(tmr);
-    }
-  }
-  return [];
+  return fetchWithFallback<WorkshopSite>(attempts, mirror);
 }
 
 /**

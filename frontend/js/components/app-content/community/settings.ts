@@ -25,6 +25,8 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   // 所有路径卡片的刷新函数列表
   const _cardRefreshers: Array<() => void> = [];
+  // 异步按钮防连点：目录选择/自动检测进行中忽略后续点击（finally 释放）
+  let _busy = false;
 
   // cfg 动态索引辅助（cfgKey 来自配置字段，类型收窄为字符串索引）
   const cfgAny = cfg as unknown as Record<string, unknown>;
@@ -45,18 +47,24 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     };
     _cardRefreshers.push(refresh);
     el.addEventListener("click", async () => {
-      const dir = await SelectDirectory();
-      if (!dir) return;
-      await onSelect(dir);
-      refresh();
-      refreshAdvanced();
-      bus.emit("config:updated");
-      bus.emit("stats:refresh");
-      bus.emit("toast:show", {
-        msg: "✅ 路径已更新",
-        duration: 2000,
-        type: "success",
-      });
+      if (_busy) return; // 防连点：目录选择进行中忽略后续点击
+      _busy = true;
+      try {
+        const dir = await SelectDirectory();
+        if (!dir) return;
+        await onSelect(dir);
+        refresh();
+        refreshAdvanced();
+        bus.emit("config:updated");
+        bus.emit("stats:refresh");
+        bus.emit("toast:show", {
+          msg: "✅ 路径已更新",
+          duration: 2000,
+          type: "success",
+        });
+      } finally {
+        _busy = false;
+      }
     });
     refresh();
   }
@@ -253,40 +261,46 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   // 游戏路径 - 自动搜索
   const detectBtn = root.getElementById("set-mc-detect") as HTMLElement | null;
   detectBtn?.addEventListener("click", async () => {
-    const paths = await GetMinecraftPaths();
-    if (!paths?.length) {
-      bus.emit("toast:show", {
-        msg: "未找到已存在的游戏目录，请手动选择",
-        duration: 3000,
-        type: "warn",
+    if (_busy) return; // 防连点：检测进行中忽略后续点击
+    _busy = true;
+    try {
+      const paths = await GetMinecraftPaths();
+      if (!paths?.length) {
+        bus.emit("toast:show", {
+          msg: "未找到已存在的游戏目录，请手动选择",
+          duration: 3000,
+          type: "warn",
+        });
+        return;
+      }
+      // 只有一个直接使用，多个让用户选
+      let selected: string | null = paths[0];
+      if (paths.length > 1) {
+        selected = await showPathPicker(root, paths);
+        if (!selected) return; // 用户取消
+      }
+      const theme = localStorage.getItem("theme") || "dark";
+      await SaveAppConfig(
+        cfg.filesRoot || "",
+        cfg.resourcepackRoot || "",
+        selected,
+        cfg.linkMode || "copy",
+        theme,
+      );
+      cfg.mcRoot = selected as string; // 语义上此处非空（单路径为 paths[0]，多路径已 return null）
+      _cardRefreshers.forEach((fn) => {
+        fn();
       });
-      return;
+      bus.emit("config:updated");
+      bus.emit("stats:refresh");
+      bus.emit("toast:show", {
+        msg: "✅ 已设置: " + selected,
+        duration: 3000,
+        type: "success",
+      });
+    } finally {
+      _busy = false;
     }
-    // 只有一个直接使用，多个让用户选
-    let selected: string | null = paths[0];
-    if (paths.length > 1) {
-      selected = await showPathPicker(root, paths);
-      if (!selected) return; // 用户取消
-    }
-    const theme = localStorage.getItem("theme") || "dark";
-    await SaveAppConfig(
-      cfg.filesRoot || "",
-      cfg.resourcepackRoot || "",
-      selected,
-      cfg.linkMode || "copy",
-      theme,
-    );
-    cfg.mcRoot = selected as string; // 语义上此处非空（单路径为 paths[0]，多路径已 return null）
-    _cardRefreshers.forEach((fn) => {
-      fn();
-    });
-    bus.emit("config:updated");
-    bus.emit("stats:refresh");
-    bus.emit("toast:show", {
-      msg: "✅ 已设置: " + selected,
-      duration: 3000,
-      type: "success",
-    });
   });
 
   function showPathPicker(root: ShadowRoot, paths: string[]): Promise<string | null> {

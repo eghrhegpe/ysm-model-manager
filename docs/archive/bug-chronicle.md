@@ -1572,3 +1572,74 @@ const dispName = renderDisplayName(k);
 - generation 计数器已是「异步结果回写共享 DOM」的标准配置（preview-detail `_detailGen`、recycle-bin、resource-manager 同源），新组件带 await 初始化时直接套用
 - 按钮状态恢复永远放 finally——陷阱 #3 虽已入库，新代码仍在复发，审核异步按钮时把「finally 是否覆盖恢复」列为首查项
 - 弹窗单例槽位（registerDlg）只解决「弹窗叠加」，不能替代入口自身的并发守卫：弹窗被结算 ≠ 业务流程被互斥
+
+---
+
+## 17. MMD 变体聚合 missing/extra 共用 seen 去重表（app-sidebar loader.ts，2026-08-04 审核发现）
+
+### 症状
+
+- MMD 类型下，同一父文件夹「既有缺失变体又有多余变体」时，`extraGroups` 漏掉该文件夹组
+- 卡片多余徽章少显示一组（extra 计数偏小）
+
+### 根因
+
+`groupMmdVariants` 的 `seen` 去重表在 missing/extra 两组间共享：
+
+```ts
+// ❌ 旧逻辑：seen 在 assign 外共享
+const seen: Record<string, boolean> = {};
+assign(missingList, missingGroups);  // "char" 被标记 seen
+assign(extraList, extraGroups);      // "char" 已被 seen → 跳过 → extraGroups 漏组
+```
+
+### 修复
+
+`seen` 改为每次 `assign` 调用内部独立：
+
+```ts
+const assign = (paths: string[], target: string[]): void => {
+  const seen: Record<string, boolean> = {}; // ✅ 按组独立去重
+  paths.forEach(...);
+};
+```
+
+### 发现途径
+
+补 `loader.test.ts` 单测（同父文件夹缺失+多余用例）第一个用例即暴露——测试覆盖补上后抓到生产 bug 的正向循环。
+
+### 教训
+
+- 去重表的作用域要按「语义分组」隔离：两组共享同一 Set/Record 时，先处理组会污染后处理组的去重
+- 复杂纯函数补单测是找 bug 成本最低的手段，审核时优先给「聚合/转换类」纯函数补用例
+
+---
+
+## 18. oldest-models 资历最深页无 generation 守卫（rtype 切换竞态，2026-08-04 审核发现）
+
+### 症状
+
+- rtype 快速切换时，资历最深/每日推荐页可能短暂显示错类型数据（旧响应覆盖新渲染）
+
+### 根因
+
+`loadOldestModel` 的 `render()` 无代数守卫：
+
+```ts
+async function render() {
+  container.innerHTML = "⏳ 扫描中...";
+  const repoRoot = await GetRepoRoot(currentType);   // 慢 await
+  const entries = await ScanModelEntries(repoRoot);  // 慢 await
+  container.innerHTML = ...大 HTML...;               // 旧响应后到覆盖新类型渲染
+}
+```
+
+rtype 切换触发多次 `render` 并发，无过期丢弃机制。
+
+### 修复
+
+`_loadGen` 代数守卫（与 recycle-bin 同模式）：`render()` 开头 `++_loadGen` 捕获 gen，`GetRepoRoot` / `ScanModelEntries` / `loadResourceRegistry` / catch 四个 await 后校验 `gen !== _loadGen` 即 return。
+
+### 教训
+
+- 同域功能复制时防护要同步复制：recycle-bin 有 `_loadGen` 而 oldest-models 没有——审核时「同功能多实现」的对称性是重点盘问项，两页不对称是竞态防护的高频遗漏点

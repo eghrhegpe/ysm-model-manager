@@ -1,6 +1,6 @@
 ---
 title: 致命陷阱手册
-description: 项目历史事故浓缩的 12 条避坑教训 — 现象 × 根因 × 规则
+description: 项目历史事故浓缩的 16 条避坑教训 — 现象 × 根因 × 规则
 ---
 
 # 致命陷阱手册（Pitfalls）
@@ -87,6 +87,13 @@ description: 项目历史事故浓缩的 12 条避坑教训 — 现象 × 根因
 
 - **现象**：10+ 文件各自实现 HTML 转义，replace 数量 3-5 个版本并存（实证：`display.ts`/`mc-format.ts` 3-replace 无引号转义、`modal.ts` 4-replace、`context-menu.ts` 5-replace，2026-08-04 收敛）——属性上下文（`data-*`/`src` 插值）缺引号转义 = XSS 面。
 - **规则**：HTML 转义统一 import `utils/dom.ts` 的 `esc`（5-replace 含 `"`/`'`），禁止私有实现；组件 `_esc` 只允许做薄委托。已收敛 10 文件（review.mjs R10 扫描私有实现）。
+
+---
+
+## 16. 静默 catch 无 toast
+
+- **现象**：异步操作的 catch 块只 `console.warn` 或空 `catch(() => {})`，用户对失败无感知（实证：`context-menus.ts` open-folder 空 catch、app-tree `events.ts` 单文件 ToggleModelEnable 仅 console.warn，2026-08-04 审核修复）——操作看似没反应，用户重复点击加剧问题。
+- **规则**：所有异常路径必须有 toast 反馈（治理红线 3.3）；catch 内至少 `bus.emit("toast:show", { type: "error" })` 告知用户；`console.warn` 只作辅助日志，不能替代用户反馈。
 
 ---
 

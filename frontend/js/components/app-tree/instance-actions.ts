@@ -121,24 +121,16 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
           (repoEntries || []).map((e) => e.Name.replace(/\.ban$/i, "")),
         );
         const insEntries = await ScanModelEntries(ins.CustomDir);
-        let uploaded = 0,
-          downloaded = 0;
+        let uploaded = 0;
         // 上传整合包特有 -> 仓库
         (insEntries || []).forEach((e) => {
           const base = e.Name.replace(/\.ban$/i, "");
           if (!repoNames.has(base)) uploaded++;
         });
-        // 下载仓库有但整合包没有的
-        const insNames = new Set(
-          (insEntries || []).map((e) => e.Name.replace(/\.ban$/i, "")),
-        );
-        repoNames.forEach((n) => {
-          if (!insNames.has(n)) downloaded++;
-        });
         if (uploaded > 0) await SyncCustomToRepo(ins.CustomDir, repoRoot);
         bus.emit("stats:refresh");
         bus.emit("toast:show", {
-          msg: `🔄 ${insName} 同步完成 | 📤 ${uploaded} 📥 ${downloaded}`,
+          msg: `🔄 ${insName} 同步完成 | 📤 ${uploaded}`,
           duration: 3000,
           type: "success",
         });

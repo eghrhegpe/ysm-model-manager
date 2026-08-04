@@ -20,42 +20,6 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
   // 整合包右键操作
   unsubs.push(...initInstanceActions(vm));
 
-  // 启用/禁用
-  unsubs.push(
-    bus.on("entry:toggle", async ({ path }) => {
-      try {
-        await ToggleModelEnable(path);
-        // 自动同步禁用/启用状态到所有整合包
-        try {
-          const {
-            LoadAppConfig,
-            ListVersionInstances,
-            SyncModelToggleStatus,
-            GetRepoRoot,
-          } = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
-          const cfg = await LoadAppConfig();
-          const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-          const mcRoot = cfg.mcRoot || "";
-          if (repoRoot && mcRoot) {
-            const instances = (await ListVersionInstances(mcRoot)) || [];
-            for (const ins of instances) {
-              if (!ins.Exists) continue;
-              try {
-                await SyncModelToggleStatus(ins.CustomDir, repoRoot);
-              } catch (e) {
-                console.warn("[bus] SyncModelToggleStatus 失败:", e);
-              }
-            }
-          }
-        } catch (e) {
-          console.warn("[bus] 同步 toggle 状态失败:", e);
-        }
-      } catch (_) {}
-      await reload(vm);
-      bus.emit("stats:refresh");
-    }),
-  );
-
   // 选择仓库目录
   unsubs.push(
     bus.on("dir:select-repo", async () => {
@@ -69,7 +33,8 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
         const cfg = await LoadAppConfig().catch(() => null);
         const theme = localStorage.getItem("theme") || "dark";
         await SaveAppConfig(dir, "", "", cfg?.linkMode || "copy", theme);
-        vm._repoRoot = dir + "/ysm";
+        // repoRoot 由 reload 内 loadEntries → GetRepoRoot(rtype) 按当前类型推导，
+        // 不再硬编码 "/ysm"（MMD/VRC/资源包类型的子目录各不相同）
         await reload(vm);
         bus.emit("stats:refresh");
       } catch (err) {

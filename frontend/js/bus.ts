@@ -111,7 +111,6 @@ export interface BusEvents {
   "loading:end": void;
   "recycle:open": void;
   "filter:results": Array<{ path: string }>;
-  "entry:toggle": { path: string };
   "entries:dedup": void;
 }
 

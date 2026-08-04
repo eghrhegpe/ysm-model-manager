@@ -68,13 +68,6 @@ function applyTheme(mode: string): void {
 }
 window.applyTheme = applyTheme;
 
-// 实时监听系统主题变化（仅在 system 模式下生效）
-window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-  if ((localStorage.getItem("theme") || "system") === "system") {
-    applyTheme("system");
-  }
-});
-
 /** 从 Go 配置或 localStorage 加载主题 */
 async function initTheme() {
   try {

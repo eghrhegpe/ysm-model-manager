@@ -339,25 +339,4 @@ function parseUVFromObject(
   }
 }
 
-/** 欧拉角（度）→ 四元数（保留：历史工具函数，当前无引用） */
-export function eulerToQuaternionJS(
-  rxDeg: number,
-  ryDeg: number,
-  rzDeg: number,
-): { x: number; y: number; z: number; w: number } {
-  const rx = (rxDeg * Math.PI) / 180;
-  const ry = (ryDeg * Math.PI) / 180;
-  const rz = (rzDeg * Math.PI) / 180;
-  const cx = Math.cos(rx / 2),
-    sx = Math.sin(rx / 2);
-  const cy = Math.cos(ry / 2),
-    sy = Math.sin(ry / 2);
-  const cz = Math.cos(rz / 2),
-    sz = Math.sin(rz / 2);
-  return {
-    x: sx * cy * cz - cx * sy * sz,
-    y: cx * sy * cz + sx * cy * sz,
-    z: cx * cy * sz + sx * sy * cz,
-    w: cx * cy * cz - sx * sy * sz,
-  };
-}
+

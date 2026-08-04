@@ -5,7 +5,7 @@ import { calcBoneHitZones, renderModel2D } from "./model2d.ts";
 import type { BedrockModel, BedrockCube } from "./model2d.ts";
 import type { BoneTransform, Vec3 } from "./animation.ts";
 
-vi.mock("./debug.ts", () => ({ dbg: vi.fn(), dbgWarn: vi.fn() }));
+vi.mock("./debug.ts", () => ({ dbg: vi.fn() }));
 
 /** 便捷构造：单骨骼单 cube 模型 */
 function cubeModel(bone: string, cube: BedrockCube): BedrockModel {

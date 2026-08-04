@@ -44,21 +44,7 @@ export function dbg(tag: string, ...args: unknown[]): void {
   } catch (_) {}
 }
 
-/** 输出警告（即使关闭调试也保留） */
-export function dbgWarn(tag: string, ...args: unknown[]): void {
-  // eslint-disable-next-line no-console
-  console.warn("[DBG:" + tag + "]", ...args);
-  try {
-    const ring = window._DBG_RING;
-    ring.push({
-      t: new Date().toISOString().slice(11, 23),
-      tag,
-      level: "warn",
-      args: args.map((a) => safeStr(a)),
-    });
-    if (ring.length > RING_MAX) ring.shift();
-  } catch (_) {}
-}
+
 
 function safeStr(v: unknown): string {
   try {

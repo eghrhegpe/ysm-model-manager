@@ -14,6 +14,7 @@
 | `dedup/` | 文件去重检测（纯函数，不绑回收站/UI） |
 | `download/` | 纯下载逻辑（不依赖 Wails runtime） |
 | `errors/` | 用户友好的中文错误信息 |
+| `fileops/` | 文件操作 + 预览提取 + 包信息（ADR-003 P3 下沉） |
 | `fsutil/` | 目录遍历工具（WalkDir 集中管理） |
 | `geometry/` | Bedrock Geometry JSON 解析（ZIP/7z 提取，防炸弹限制） |
 | `importer/` | 资源导入策略接口与内置实现 |
@@ -23,6 +24,7 @@
 | `packs/` | 资源包元数据读取（pack.mcmeta / 光影包 lang / 资源类型检测） |
 | `paths/` | 路径安全 |
 | `recycle/` | 回收站管理 |
+| `scanner/` | ⚠️ 用途待补基线（scripts/baseline/project-dirs.json） |
 | `sync/` | 整合包同步 |
 | `tags/` | 模型标签持久化存储 |
 | `threejs/` | 3D 骨骼计算（对齐 YSMViewer 口径） |

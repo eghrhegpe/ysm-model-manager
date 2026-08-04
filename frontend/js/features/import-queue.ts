@@ -142,8 +142,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     if (conflictTimer) clearTimeout(conflictTimer);
     conflictTimer = setTimeout(async () => {
       try {
-        const { CheckFileExists, LoadAppConfig, GetRepoRoot } = await getApp();
-        void LoadAppConfig;
+        const { CheckFileExists, GetRepoRoot } = await getApp();
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const fullPath = (repoRoot || "") + "\\" + name;
         const exists = await CheckFileExists(fullPath);
@@ -536,8 +535,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   let repoFiles: Set<string> | null = null; // 仓库文件名缓存
   const loadRepoFiles = async (): Promise<void> => {
     try {
-      const { ScanModelEntries, LoadAppConfig, GetRepoRoot } = await getApp();
-      void LoadAppConfig;
+      const { ScanModelEntries, GetRepoRoot } = await getApp();
       const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
       if (!repoRoot) return;
       const entries = (await ScanModelEntries(repoRoot)) || [];
@@ -876,6 +874,14 @@ export function initImportQueue(app: ImportQueueHost): () => void {
           DnDLock.release();
         }
       };
+      // abort（如组件销毁/浏览器取消）也必须计数，否则 DnDLock 永久占用阻塞后续导入
+      reader.onabort = () => {
+        readCount++;
+        if (readCount === list.length) {
+          renderImportedList();
+          DnDLock.release();
+        }
+      };
       reader.readAsDataURL(item.file);
     });
   };
@@ -891,6 +897,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
 
   // 返回清理函数
   return () => {
+    if (conflictTimer) clearTimeout(conflictTimer);
     importPendingUnsub();
   };
 }

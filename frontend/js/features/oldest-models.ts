@@ -4,6 +4,7 @@ import { bus } from "../bus.ts";
 import { renderDisplayName } from "../utils/display.ts";
 import { loadResourceRegistry } from "../utils/resource-registry.ts";
 import { getApp } from "../wails/app.ts";
+import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 
 /** ScanModelEntries 返回的条目 */
 interface ModelEntry {
@@ -26,7 +27,7 @@ export async function loadOldestModel(
   esc: (s: string) => string,
 ): Promise<() => void> {
   if (!container) return () => {};
-  let currentType = localStorage.getItem("repo_rtype") || "ysm";
+  let currentType = localStorage.getItem("repo_rtype") || RESOURCE_TYPES.YSM;
   let unsub: (() => void) | null = null;
 
   // 命名函数，用于安全地移除/添加 click 监听，避免重复绑定

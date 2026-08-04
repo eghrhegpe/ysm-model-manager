@@ -34,7 +34,7 @@ interface RTypeConfig {
 }
 
 // 跨实例记住上次选中的类型（整合包间共享）
-let _lastSelectedType = "ysm";
+let _lastSelectedType = RESOURCE_TYPES.YSM;
 
 export class AppSyncManager extends HTMLElement {
   static get observedAttributes(): string[] {
@@ -42,10 +42,10 @@ export class AppSyncManager extends HTMLElement {
   }
 
   private _instance = "";
-  private _defaultType = "ysm";
+  private _defaultType = RESOURCE_TYPES.YSM;
   private _allItems: SyncItem[] = [];
   private _filteredItems: SyncItem[] = [];
-  private _selectedType: string = "ysm";
+  private _selectedType: string = RESOURCE_TYPES.YSM;
   private _statusFilter: string = "all";
   private _typeConfig: RTypeConfig[] = [];
   private _loading = false;
@@ -55,7 +55,7 @@ export class AppSyncManager extends HTMLElement {
 
   connectedCallback(): void {
     this._instance = this.getAttribute("instance") || "";
-    this._defaultType = this.getAttribute("default-type") || "ysm";
+    this._defaultType = this.getAttribute("default-type") || RESOURCE_TYPES.YSM;
     this._selectedType = _lastSelectedType || this._defaultType;
     if (!this._instance) {
       this.innerHTML =
@@ -152,6 +152,12 @@ export class AppSyncManager extends HTMLElement {
       this._allItems = (JSON.parse(json) as SyncItem[]) || [];
     } catch {
       this._allItems = [];
+      // 失败不静默：避免界面显示「暂无资源文件」误导（坑史同款静默路径）
+      bus.emit("toast:show", {
+        msg: "⚠️ 同步状态加载失败",
+        duration: 3000,
+        type: "warn",
+      });
     }
   }
 

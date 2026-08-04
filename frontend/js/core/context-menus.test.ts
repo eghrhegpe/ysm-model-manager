@@ -6,6 +6,7 @@ import { bus } from "../bus.ts";
 import type { MenuItem, CtxShowPayload, ToastPayload } from "../bus";
 import { registerContextMenus } from "./context-menus.ts";
 import { MENU_DEFS, getMenuDef } from "./menu-defs.ts";
+import { RESOURCE_TYPES } from "../utils/resource-types.ts";
 
 // getApp 是动态 import（wails/app.ts），测试用 mock 替代
 const { openFolderMock } = vi.hoisted(() => ({
@@ -135,7 +136,7 @@ function expectItemsMatchDef(
 /** 构造与声明 label 函数匹配的 ctx 上下文 */
 function payloadCtx(type: CtxShowPayload["type"]): CtxShowPayload {
   const base: CtxShowPayload = { x: 10, y: 20, type, paths: ["/a.ysm"] };
-  if (type === "instance") return { ...base, instanceName: "测试整合包", rtype: "ysm" };
+  if (type === "instance") return { ...base, instanceName: "测试整合包", rtype: RESOURCE_TYPES.YSM };
   if (type === "batch") return { ...base, count: 3 };
   return base;
 }
@@ -185,7 +186,7 @@ describe("菜单项点击行为", () => {
     clickItem("instance", "复制模型清单");
     expect(emitted).toContainEqual({
       e: "instance:export-list",
-      p: { name: "测试整合包", rtype: "ysm" },
+      p: { name: "测试整合包", rtype: RESOURCE_TYPES.YSM },
     });
   });
 
@@ -194,7 +195,7 @@ describe("菜单项点击行为", () => {
     expect(item.danger).toBe(true);
     expect(emitted).toContainEqual({
       e: "instance:clear",
-      p: { name: "测试整合包", rtype: "ysm" },
+      p: { name: "测试整合包", rtype: RESOURCE_TYPES.YSM },
     });
   });
 
@@ -203,7 +204,7 @@ describe("菜单项点击行为", () => {
     const item = payload.items.find((i) => i.label === "打开文件夹");
     item!.onClick!();
     await vi.waitFor(() => expect(openFolderMock).toHaveBeenCalled());
-    expect(openFolderMock).toHaveBeenCalledWith("/packs/x", "ysm");
+    expect(openFolderMock).toHaveBeenCalledWith("/packs/x", RESOURCE_TYPES.YSM);
   });
 
   it("batch 批量重命名 → batch:rename（paths 透传）", () => {

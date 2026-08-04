@@ -258,6 +258,7 @@ const STATIC_TOOLS = [
   'check-adr-health.mjs',
   'check-boolean-naming.mjs',
   'check-circular.mjs',
+  'check-circular-go.mjs',
   'check-consumers.mjs',
   'check-deadcode-baseline.mjs',
   // auto-import 默认只提示（rc=0），加 --strict 让缺失 import 成为真检查项

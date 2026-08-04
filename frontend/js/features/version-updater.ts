@@ -1,6 +1,6 @@
 // ===== 版本更新检查（类型化版 — ADR-014 P3 features）=====
 import { bus } from "../bus.ts";
-import { esc } from "../dialogs/modal.ts";
+import { esc, modalConfirm } from "../dialogs/modal.ts";
 import { friendlyError } from "../utils/errors.ts";
 
 /** 更新信息（CheckUpdate 返回） */
@@ -58,61 +58,29 @@ async function promptUpdate(
   info: UpdateInfo,
   statusEl: HTMLElement | null,
 ): Promise<void> {
-  const ok = await new Promise<boolean>((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "dlg-overlay";
-    overlay.tabIndex = 0;
-    overlay.onclick = (e: MouseEvent): void => {
-      if (e.target === overlay) {
-        overlay.remove();
-        resolve(false);
-      }
-    };
-    overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        overlay.remove();
-        resolve(false);
-      }
-    });
-
-    const box = document.createElement("div");
-    box.className = "dlg-box dlg-pad";
-    box.style.cssText = "gap:10px;width:480px";
-
-    const notesHTML = info.releaseNotes
-      ? (() => {
-          const raw = info.releaseNotes.slice(0, 2000).trim();
-          if (!raw) return "";
-          // 转义 HTML 后保留换行，样式通过 CSS 变量适应主题
-          const d = document.createElement("div");
-          d.textContent = raw;
-          return `<div style="border:1px solid var(--bd);border-radius:6px;background:var(--bg);padding:10px;font-size:11px;line-height:1.6;white-space:pre-wrap;max-height:40vh;overflow-y:auto;color:var(--txt);margin-top:4px">${d.innerHTML}</div>`;
-        })()
-      : "";
-
-    box.innerHTML = `
-      <div class="dlg-title" style="margin:0">📦 发现新版本</div>
-      <div style="font-size:12px;color:var(--txt);line-height:1.5">发现新版本 ${esc(info.latest)}（当前 ${esc(info.current)}）<br>是否下载并更新？</div>
-      ${notesHTML ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">━━━ 更新日志 ━━━</div>${notesHTML}` : ""}
-      <div class="dlg-footer" style="padding:0">
-        <button class="dlg-btn" id="um-cancel">取消 (Esc)</button>
-        <button class="dlg-btn dlg-btn-primary" id="um-ok">⬇️ 下载更新</button>
-      </div>
-    `;
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-    overlay.focus();
-
-    (box.querySelector("#um-cancel") as HTMLElement).onclick = (): void => {
-      overlay.remove();
-      resolve(false);
-    };
-    (box.querySelector("#um-ok") as HTMLElement).onclick = (): void => {
-      overlay.remove();
-      resolve(true);
-    };
+  // 转义 HTML 后保留换行（textContent 法），样式通过 CSS 变量适应主题
+  const notesHTML = info.releaseNotes
+    ? (() => {
+        const raw = info.releaseNotes.slice(0, 2000).trim();
+        if (!raw) return "";
+        const d = document.createElement("div");
+        d.textContent = raw;
+        return `<div style="border:1px solid var(--bd);border-radius:6px;background:var(--bg);padding:10px;font-size:11px;line-height:1.6;white-space:pre-wrap;max-height:40vh;overflow-y:auto;color:var(--txt);margin-top:6px">${d.innerHTML}</div>`;
+      })()
+    : "";
+  const bodyHTML =
+    `<div style="font-size:12px;color:var(--txt);line-height:1.5">发现新版本 ${esc(info.latest)}（当前 ${esc(info.current)}）<br>是否下载并更新？</div>` +
+    (notesHTML
+      ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">━━━ 更新日志 ━━━</div>${notesHTML}`
+      : "");
+  const ok = await modalConfirm({
+    title: "发现新版本",
+    icon: "📦",
+    message: `发现新版本 ${info.latest}（当前 ${info.current}）\n是否下载并更新？`,
+    okText: "⬇️ 下载更新",
+    width: "480px",
+    bodyHTML,
   });
-
   if (!ok) return;
   try {
     await doUpdate(info, statusEl);

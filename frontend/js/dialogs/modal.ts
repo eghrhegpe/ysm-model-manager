@@ -2,19 +2,15 @@
 // 风格参照 rename.js 的卡片式弹窗，复用 CSS 变量
 // 用法: const name = await modalPrompt({ title, icon, value, placeholder })
 
+import { esc } from "../utils/dom.ts";
+
+export { esc };
+
 declare global {
   interface HTMLElement {
     /** 关闭动画中标记（closeDlg 防重复触发） */
     _closing?: boolean;
   }
-}
-
-export function esc(s: string): string {
-  return (s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 /**
@@ -209,6 +205,8 @@ export interface ModalConfirmOptions {
   okText?: string;
   danger?: boolean;
   width?: string;
+  /** 自定义 HTML 内容区（调用方负责转义；传入后替代 message 文本区，用于复杂布局弹窗） */
+  bodyHTML?: string;
 }
 
 /**
@@ -236,7 +234,7 @@ export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
 
     box.innerHTML = `
       <div class="dlg-title" style="margin:0">${icon || ""} ${esc(title)}</div>
-      <div style="font-size:11px;color:var(--txt);line-height:1.5;white-space:pre-wrap;max-height:55vh;overflow-y:auto">${esc(message)}</div>
+      ${opts.bodyHTML ?? `<div style="font-size:11px;color:var(--txt);line-height:1.5;white-space:pre-wrap;max-height:55vh;overflow-y:auto">${esc(message)}</div>`}
       <div class="dlg-footer" style="padding:0">
         <button id="mc-cancel" class="dlg-btn">取消 (Esc)</button>
         <button id="mc-ok" class="dlg-btn ${danger ? "dlg-btn-danger" : "dlg-btn-primary"}">${esc(okText || "确定")} (Enter)</button>

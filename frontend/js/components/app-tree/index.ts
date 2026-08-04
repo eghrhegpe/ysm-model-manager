@@ -66,6 +66,8 @@ export class AppTree extends HTMLElement {
   private _deleting = false;
   /** 已完成 connectedCallback 初始化（用于区分首次挂载与后续属性变更） */
   private _ready = false;
+  /** root 属性切换代际计数：快速切换时丢弃过期加载的渲染 */
+  private _gen = 0;
 
   /** 响应式属性：root（资源类型根，Design.md §15 契约） */
   static get observedAttributes(): string[] {
@@ -134,6 +136,7 @@ export class AppTree extends HTMLElement {
       // 检查是否有通过 bus 事件之前发来的待处理搜索
       // 用 setTimeout 确保在所有异步初始化完成后执行
       setTimeout(() => {
+        if (!this.isConnected) return; // 组件已卸载：不再消费待处理搜索
         const pending = takePendingTreeSearch();
         if (pending) {
           const srch = this._root?.getElementById("srch") as HTMLInputElement | null;
@@ -159,9 +162,12 @@ export class AppTree extends HTMLElement {
     if (name !== "root" || oldVal === newVal) return;
     this._rootAttr = newVal || "";
     if (!this._ready || !this.isConnected) return;
+    const gen = ++this._gen;
     void (async () => {
       try {
         await this._load();
+        // 期间 root 属性再次切换：丢弃本次过期加载的渲染，防旧类型数据覆盖新类型树
+        if (gen !== this._gen) return;
         this._renderTree();
       } catch (e) {
         console.error("[Tree root change Error]", e);

@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
 )
@@ -375,8 +377,26 @@ func sameSource(src, dst string) (bool, error) {
 	return os.SameFile(si, di), nil
 }
 
+// errnoIs 按平台匹配 errno：Windows 用 Win32 错误码（如 ERROR_NOT_SAME_DEVICE=17），
+// Unix 用 POSIX errno（如 EXDEV=18）——两端语义不同，必须分平台判断
+func errnoIs(err error, unix, win int) bool {
+	if runtime.GOOS == "windows" {
+		return errors.Is(err, syscall.Errno(win))
+	}
+	return errors.Is(err, syscall.Errno(unix))
+}
+
 // linkErr 将硬链接错误分类为可操作的提示
 func linkErr(src, dst string, err error) error {
+	// errno 优先：跨设备（Unix EXDEV=18 / Win ERROR_NOT_SAME_DEVICE=17）、
+	// 权限（Unix EACCES=13 / EPERM=1，Win ERROR_ACCESS_DENIED=5）
+	if errnoIs(err, 18, 17) {
+		return types.AppError{Code: "LINK_FAILED", Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "仓库与游戏目录在不同分区，不支持硬链接", Suggestion: "请在设置中切换为复制模式"}
+	}
+	if errnoIs(err, 13, 5) || errnoIs(err, 1, 5) {
+		return types.AppError{Code: "LINK_FAILED", Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "权限不足，无法创建硬链接", Suggestion: "请以管理员身份运行，或在设置中切换为复制模式"}
+	}
+	// 文本兜底（非 errno 包装的异常错误）
 	errStr := strings.ToLower(err.Error())
 	if strings.Contains(errStr, "cross-device") || strings.Contains(errStr, "different") {
 		return types.AppError{Code: "LINK_FAILED", Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "仓库与游戏目录在不同分区，不支持硬链接", Suggestion: "请在设置中切换为复制模式"}
@@ -389,6 +409,11 @@ func linkErr(src, dst string, err error) error {
 
 // symlinkErr 将符号链接错误分类为可操作的提示
 func symlinkErr(src, dst string, err error) error {
+	// errno 优先：权限（Unix EPERM=1 / EACCES=13，Win ERROR_PRIVILEGE_NOT_HELD=1314 / ERROR_ACCESS_DENIED=5）
+	if errnoIs(err, 1, 1314) || errnoIs(err, 13, 5) {
+		return types.AppError{Code: "LINK_FAILED", Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "创建符号链接需要管理员权限", Suggestion: "请以管理员身份运行，或在设置中切换为复制模式"}
+	}
+	// 文本兜底（非 errno 包装的异常错误）
 	errStr := strings.ToLower(err.Error())
 	if strings.Contains(errStr, "access") || strings.Contains(errStr, "privilege") || strings.Contains(errStr, "permission") {
 		return types.AppError{Code: "LINK_FAILED", Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "创建符号链接需要管理员权限", Suggestion: "请以管理员身份运行，或在设置中切换为复制模式"}

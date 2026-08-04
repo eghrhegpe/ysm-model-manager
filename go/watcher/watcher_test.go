@@ -24,6 +24,19 @@ func setupMinecraftRoot(t *testing.T) string {
 	return root
 }
 
+// waitForCall 轮询等待 scanFn 被调用（替代固定 sleep，事件传播不拖长测试时长）
+func waitForCall(t *testing.T, c *atomic.Int32, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if c.Load() > 0 {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatal("scanFn 未在超时内被调用")
+}
+
 func TestNew(t *testing.T) {
 	w := New("/tmp/repo", "/tmp/mc", mockScanFunc)
 	if w == nil {
@@ -113,12 +126,8 @@ func TestFileEventTriggersSync(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 等防抖（800ms）+ syncAll 执行 + buffer
-	time.Sleep(1500 * time.Millisecond)
-
-	if n := callCount.Load(); n == 0 {
-		t.Fatal("scanFn was not called after file creation")
-	}
+	// 条件等待防抖（800ms）+ syncAll 执行，替代固定 sleep
+	waitForCall(t, &callCount, 3*time.Second)
 }
 
 func TestRenameEventTriggersSync(t *testing.T) {
@@ -149,11 +158,7 @@ func TestRenameEventTriggersSync(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	time.Sleep(1500 * time.Millisecond)
-
-	if n := callCount.Load(); n == 0 {
-		t.Fatal("scanFn was not called after file rename")
-	}
+	waitForCall(t, &callCount, 3*time.Second)
 }
 
 func TestDebounceMergesRapidEvents(t *testing.T) {
@@ -181,12 +186,9 @@ func TestDebounceMergesRapidEvents(t *testing.T) {
 		time.Sleep(30 * time.Millisecond)
 	}
 
-	time.Sleep(1500 * time.Millisecond)
+	waitForCall(t, &callCount, 3*time.Second)
 
 	n := callCount.Load()
-	if n == 0 {
-		t.Fatal("scanFn was not called after rapid file creations")
-	}
 	if n > 3 {
 		t.Logf("防抖合并效果：%d 次文件创建 → %d 次同步调用", 5, n)
 	}
@@ -218,11 +220,7 @@ func TestStartStopRestart(t *testing.T) {
 	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(1500 * time.Millisecond)
-
-	if n := callCount.Load(); n == 0 {
-		t.Fatal("Stop 后重启的 watcher 未监听文件变化")
-	}
+	waitForCall(t, &callCount, 3*time.Second)
 }
 
 // TestSyncAllSerialized 并发触发多次同步应串行执行（防抖合并调度，syncAll 合并执行）

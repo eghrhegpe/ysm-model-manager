@@ -1,8 +1,12 @@
 package installer
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -212,6 +216,51 @@ func TestInstallToGlobal_UnsupportedExt(t *testing.T) {
 	}
 }
 
+// TestLinkErr_Errno 跨设备/权限 errno 应分类为可操作提示（按运行平台选错误码）
+func TestLinkErr_Errno(t *testing.T) {
+	var crossDevice syscall.Errno
+	var permission syscall.Errno
+	if runtime.GOOS == "windows" {
+		crossDevice = 17 // ERROR_NOT_SAME_DEVICE
+		permission = 5   // ERROR_ACCESS_DENIED
+	} else {
+		crossDevice = 18 // EXDEV
+		permission = 13  // EACCES
+	}
+	if e := linkErr("/a", "/b", crossDevice); !strings.Contains(e.Error(), "不同分区") {
+		t.Errorf("跨设备 errno 应提示不同分区, got %v", e)
+	}
+	if e := linkErr("/a", "/b", permission); !strings.Contains(e.Error(), "权限不足") {
+		t.Errorf("权限 errno 应提示权限不足, got %v", e)
+	}
+}
+
+// TestLinkErr_TextFallback 非 errno 包装的错误走文本兜底
+func TestLinkErr_TextFallback(t *testing.T) {
+	if e := linkErr("/a", "/b", fmt.Errorf("cross-device link not permitted")); !strings.Contains(e.Error(), "不同分区") {
+		t.Errorf("文本兜底应识别 cross-device, got %v", e)
+	}
+	if e := linkErr("/a", "/b", fmt.Errorf("permission denied")); !strings.Contains(e.Error(), "权限不足") {
+		t.Errorf("文本兜底应识别 permission, got %v", e)
+	}
+	if e := linkErr("/a", "/b", fmt.Errorf("unexpected error")); !strings.Contains(e.Error(), "硬链接失败") {
+		t.Errorf("未知错误应回退通用提示, got %v", e)
+	}
+}
+
+// TestSymlinkErr_Errno 符号链接权限 errno 应提示管理员权限
+func TestSymlinkErr_Errno(t *testing.T) {
+	var perm syscall.Errno
+	if runtime.GOOS == "windows" {
+		perm = 1314 // ERROR_PRIVILEGE_NOT_HELD
+	} else {
+		perm = 1 // EPERM
+	}
+	if e := symlinkErr("/a", "/b", perm); !strings.Contains(e.Error(), "管理员权限") {
+		t.Errorf("符号链接权限 errno 应提示管理员权限, got %v", e)
+	}
+}
+
 func TestInstall_EmptySrc(t *testing.T) {
 	_, custom, _, _ := setupTestDirs(t)
 	err := Install("", custom, "/tmp", "copy")
@@ -350,4 +399,3 @@ func TestInstall_CopySrcMissing(t *testing.T) {
 		t.Fatalf("安装失败后目标文件不应残留: %v", statErr)
 	}
 }
-

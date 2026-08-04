@@ -1,5 +1,6 @@
 // ===== sidebar HTML 模板 =====
 import { RESOURCE_TYPES } from "../../utils/resource-types.ts";
+import { esc } from "../../utils/dom.ts";
 
 /** rtype 短标签映射（vcHeaderHTML 徽章） */
 const RTYPE_LABELS: Record<string, string> = {
@@ -97,13 +98,4 @@ export function vcHeaderHTML(
 <div class="vc-hdr-row1"><span class="name">${esc(name)}</span></div>
 <div class="vc-hdr-row2"><input type="checkbox" class="chk" data-idx="${idx}">📦${chips}</div>
 </div>`;
-}
-
-function esc(s: string): string {
-  return (s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }

@@ -2,6 +2,7 @@
 // 事件：menu:show, menu:hide
 // 监听：menu:show({ x, y, items: [{label, icon?, onClick}] })
 import { bus, type MenuItem } from "../bus.ts";
+import { esc } from "../utils/dom.ts";
 
 class ContextMenu extends HTMLElement {
   _unsub: (() => void) | undefined;
@@ -76,13 +77,7 @@ class ContextMenu extends HTMLElement {
   }
 
   _esc(s: unknown): string {
-    if (s == null) return "";
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+    return esc(s == null ? "" : String(s));
   }
 
   show(x: number, y: number, items: MenuItem[]): void {

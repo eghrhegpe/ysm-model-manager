@@ -1,6 +1,7 @@
 // ===== app-sync-manager 模板 =====
 import { renderFormattedText } from "../../utils/mc-format.ts";
 import { stagger } from "../../utils/stagger.ts";
+import { esc } from "../../utils/dom.ts";
 
 /** 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） */
 export interface SyncItem {
@@ -84,12 +85,6 @@ export function statusTabHTML(
  * 列表项 HTML
  */
 export function itemHTML(item: SyncItem, index: number): string {
-  const esc = (s: string): string =>
-    String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
   const statusIcon =
     item.status === "synced" ? "✅" : item.status === "legacy" ? "🔗" : "·";
   const statusColor =

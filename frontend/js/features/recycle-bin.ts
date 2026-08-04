@@ -30,10 +30,9 @@ export function initRecycleBin(app: RecycleHost): () => void {
     });
     if (!confirmed) return;
     try {
-      const { LoadAppConfig, EmptyRecycleBin } = await import(
+      const { EmptyRecycleBin } = await import(
         "../../bindings/ysm-model-manager/internal/app/app.js"
       );
-      void LoadAppConfig;
       const n = await EmptyRecycleBin("");
       bus.emit("toast:show", {
         msg: `♻️ 已清空 ${n} 个文件`,
@@ -124,8 +123,10 @@ export function initRecycleBin(app: RecycleHost): () => void {
 
       // 恢复按钮
       list.querySelectorAll(".recy-restore").forEach((btnEl) => {
-        const btn = btnEl as HTMLElement;
+        const btn = btnEl as HTMLButtonElement;
         btn.onclick = async (): Promise<void> => {
+          if (btn.disabled) return;
+          btn.disabled = true;
           const item = btn.closest(".recy-item");
           if (item) {
             item.classList.add("leaving");
@@ -143,6 +144,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
             bus.emit("tree:reload");
           } catch (e) {
             if (item) item.classList.remove("leaving");
+            btn.disabled = false;
             bus.emit("toast:show", {
               msg: `❌ ${friendlyError(e)}`,
               duration: 3000,
@@ -154,8 +156,9 @@ export function initRecycleBin(app: RecycleHost): () => void {
 
       // 删除按钮
       list.querySelectorAll(".recy-del").forEach((btnEl) => {
-        const btn = btnEl as HTMLElement;
+        const btn = btnEl as HTMLButtonElement;
         btn.onclick = async (): Promise<void> => {
+          if (btn.disabled) return;
           const confirmed = await modalConfirm({
             title: "删除文件",
             icon: "🗑️",
@@ -164,6 +167,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
             danger: true,
           });
           if (!confirmed) return;
+          btn.disabled = true;
           const item = btn.closest(".recy-item");
           if (item) {
             item.classList.add("leaving");
@@ -179,6 +183,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
             });
           } catch (e) {
             if (item) item.classList.remove("leaving");
+            btn.disabled = false;
             bus.emit("toast:show", {
               msg: `❌ ${friendlyError(e)}`,
               duration: 3000,

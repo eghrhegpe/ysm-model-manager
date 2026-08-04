@@ -15,6 +15,9 @@ export default defineConfig({
   // 仅排除冻结区（archive/ 为历史归档，不发布）；其余全部文档进站
   // （导航由 scripts/gen-vitepress-sidebar.mjs 自动生成，构建前先跑）
   srcExclude: ['archive/**'],
+  // 内部文档引用仓库源码路径（../frontend、../scripts 等）在站点外不可达，
+  // 属于文档站常态（链接在仓库内有效），跳过死链检查
+  ignoreDeadLinks: true,
 
   themeConfig: {
     nav: [

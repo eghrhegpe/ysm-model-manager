@@ -240,7 +240,7 @@ export async function createLitematic3D(
     scene.add(dl2);
 
     const gridSize = Math.ceil(maxDim / 10) * 10;
-    const grid = new THREE.GridHelper(gridSize, Math.min(gridSize, 50), 0x444466, 0x222244);
+    const grid = new THREE.GridHelper(gridSize, Math.min(gridSize, 50), 0x6666aa, 0x444488);
     grid.position.set(centerX, 0, centerZ);
     scene.add(grid);
 

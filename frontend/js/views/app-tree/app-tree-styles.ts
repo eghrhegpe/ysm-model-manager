@@ -72,13 +72,13 @@ ${btnBaseCSS}
 .fl { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px; font-size: var(--fs-base); transition: all var(--tr-normal); cursor: default; user-select: none; -webkit-user-select: none; }
 .fl:hover { background: var(--hover); }
 .fl.flash { background: #a6e3a122; }
-.fl.selected { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); padding-left: 2px; }
-.fl.selected:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
-.fh.selected { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); padding-left: 2px; }
+.fl.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
+.fl.selected:hover { background: color-mix(in srgb, var(--accent) 38%, transparent); }
+.fh.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
 /* 紧凑列表模式（24px 行高） */
 .fl-list { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 4px; border-radius: 4px; font-size: var(--fs-sm); cursor: default; user-select: none; -webkit-user-select: none; transition: background var(--tr-fast); }
 .fl-list:hover { background: var(--hover); }
-.fl-list.selected { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); padding-left: 2px; }
+.fl-list.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
 .fl-list.ban { opacity: .55; }
 .fh-list { display: flex; align-items: center; gap: 4px; height: 24px; padding: 0 4px; border-radius: 0; cursor: pointer; font-size: var(--fs-sm); transition: background var(--tr-fast); border-left: 2px solid transparent; }
 .fh-list:hover { background: var(--hover); }

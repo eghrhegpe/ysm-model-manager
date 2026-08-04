@@ -205,7 +205,7 @@ export async function renderModel3D(
   const backLight = new THREE.DirectionalLight(0xffffff, 0.8);
   backLight.position.set(-10, 10, -20);
   scene.add(backLight);
-  const grid = new THREE.GridHelper(400, 20, 0x6666aa, 0x444488);
+  const grid = new THREE.GridHelper(400, 20, 0x8888cc, 0x6666aa);
   grid.position.y = -1;
   scene.add(grid);
   scene.add(new THREE.AxesHelper(60));

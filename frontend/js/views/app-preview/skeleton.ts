@@ -408,6 +408,13 @@ export async function loadModel2D(
         shotWrap.appendChild(shotMenu);
         topBar.appendChild(shotWrap);
 
+        // 重置视角按钮
+        const resetBtn = document.createElement("button");
+        resetBtn.textContent = "⟲ 重置视角";
+        resetBtn.style.cssText = "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
+        resetBtn.title = "重置相机视角到初始位置";
+        topBar.appendChild(resetBtn);
+
         // 模型选择下拉（多 section 时显示）
         const modelSel = document.createElement("select");
         modelSel.style.cssText = "font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit;margin-right:4px";
@@ -560,6 +567,8 @@ export async function loadModel2D(
             return;
           }
           _model3d = handle3d;
+          // 重置视角按钮接线
+          resetBtn.onclick = (): void => { _model3d?.resetCamera(); };
           // 3D 骨骼点击回调 → 详情框（走 handle.onBoneSelect，治理红线：零 window 全局）
           _model3d.onBoneSelect = function (info: BoneSelectInfo) {
             const detailEl = _model3d?._boneDetailEl;

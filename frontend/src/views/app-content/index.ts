@@ -273,7 +273,14 @@ class AppContent extends HTMLElement {
     const root = this._root;
     const subtabs = root.querySelectorAll(".repo-subtab");
     const treeBody = root.getElementById("repo-tab-tree");
-    import("../app-preview/index.ts").catch(() => {});
+    import("../app-preview/index.ts").catch((e) => {
+      console.warn("[app-content] 预览组件预加载失败:", e);
+      bus.emit("toast:show", {
+        msg: "❌ " + friendlyError(e, "预览组件加载失败"),
+        duration: 4000,
+        type: "error",
+      });
+    });
     let curRtype = localStorage.getItem("repo_rtype") || RESOURCE_TYPES.YSM;
     subtabs.forEach((btn) => {
       btn.addEventListener("click", () => {

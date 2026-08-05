@@ -5,7 +5,6 @@ import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { parseModelName, renderDisplayName } from "../utils/dom/display.ts";
 import { renderFormattedText } from "../utils/format/mc-format.ts";
 import { modalConfirm } from "../views/dialogs/modal.ts";
-import { DnDLock, PendingImport } from "./dnd-state.ts";
 import { getApp } from "../wails/app.ts";
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
 import { isImportableFile, shouldEnterForm, groupCollected } from "./dnd-shared.ts";
@@ -813,98 +812,14 @@ export function initImportQueue(app: ImportQueueHost): () => void {
 
   renderImportedList();
 
-  // 处理待导入文件的通用函数
-  const processPendingImport = (
-    payload?: {
-      files?: Array<{ name: string; file: File }>;
-      folders?: Array<{
-        dir: string;
-        files: Array<{ file: File; relPath: string }>;
-      }>;
-    },
-  ): void => {
-    const files =
-      payload?.files ??
-      (PendingImport.queue as Array<{ name: string; file: File }>);
-    const folders = payload?.folders ?? (PendingImport.folders as Array<{
-      dir: string;
-      files: Array<{ file: File; relPath: string }>;
-    }>);
-    if ((!files || files.length === 0) && (!folders || folders.length === 0)) {
-      return;
-    }
-    // 先获取 DnDLock 再消费队列：锁被占用时不清空 pending，避免文件静默丢失
-    if (!DnDLock.acquire()) return;
-    PendingImport.clear();
-    // 文件夹组整组导入（异步推进，与单文件队列并行；完成才释放锁）
-    const folderPromise = (async () => {
-      for (const g of folders || []) {
-        if (!g || !g.files || !g.files.length) continue;
-        await importModelFolder(
-          g.dir,
-          g.files as Array<{ file: ImportFile; relPath: string }>,
-        );
-      }
-    })().catch(() => {});
-    const list = files || [];
-    if (list.length === 0) {
-      void folderPromise.finally(() => {
-        renderImportedList();
-        setTimeout(() => DnDLock.release(), 1000);
-      });
-      return;
-    }
-    let readCount = 0;
-    const finishAll = (): void => {
-      renderImportedList();
-      void folderPromise.finally(() => setTimeout(() => DnDLock.release(), 1000));
-    };
-    list.forEach((item) => {
-      if (!item.file) {
-        readCount++;
-        if (readCount === list.length) finishAll();
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        // 直接导入（转发全局执行器；历史/去重/toast 单点）
-        // .ysm/.zip/.7z 默认直接入仓，不再强制命名表单（2026-08-05 导入默认直接改造）
-        void directImport(item.file as ImportFile).finally(() => {
-          readCount++;
-          if (readCount === list.length) finishAll();
-        });
-      };
-      reader.onerror = () => {
-        readCount++;
-        if (readCount === list.length) finishAll();
-      };
-      // abort（如组件销毁/浏览器取消）也必须计数，否则 DnDLock 永久占用阻塞后续导入
-      reader.onabort = () => {
-        readCount++;
-        if (readCount === list.length) finishAll();
-      };
-      reader.readAsDataURL(item.file);
-    });
-  };
-
-  // 已在导入页时处理拖入文件
-  const importPendingUnsub = bus.on(
-    "import:pending-files",
-    processPendingImport,
-  );
-
   // 全局导入历史变化 → 刷新已导入列表（拖拽直导走 import-executor，本 tab 需同步）
   const historyUnsub = bus.on("import:history-changed", () => {
     renderImportedList();
   });
 
-  // 首次渲染时检查待导入文件（从其他页面跳转来的）
-  processPendingImport();
-
   // 返回清理函数
   return () => {
     if (conflictTimer) clearTimeout(conflictTimer);
-    importPendingUnsub();
     historyUnsub();
   };
 }

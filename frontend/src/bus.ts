@@ -88,16 +88,8 @@ export interface BusEvents {
   "instance:clear": { name: string; rtype?: string };
   "instance:install": { name: string; rtype?: string };
   "instance:sync": { name: string; rtype?: string };
-  "import:pending-changed": { count: number };
   "import:history-changed": {
     records: Array<{ name: string; time: string; isYsm?: boolean }>;
-  };
-  "import:pending-files": {
-    files: Array<{ name: string; file: File }>;
-    folders?: Array<{
-      dir: string;
-      files: Array<{ file: File; relPath: string }>;
-    }>;
   };
   "dnd:lock-changed": { locked: boolean };
   // 配置

@@ -1,11 +1,10 @@
 // ===== DnD 全局拖拽守卫测试 =====
-// 守卫层：PageStore 页面守卫 / DnDLock 并发锁 / registerDnD 资源配对
+// 守卫层：PageStore 页面守卫 / registerDnD 资源配对
 // 深层收集逻辑（webkitGetAsEntry 等）依赖浏览器 DnD API，jsdom 不覆盖，测守卫与配对层。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../../bus.ts";
 import { registerPageStore } from "../page-store.ts";
 import { registerDnD } from "./dnd.ts";
-import { DnDLock } from "../../features/dnd-state.ts";
 
 vi.mock("../../wails/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
@@ -69,14 +68,6 @@ describe("DnD 守卫层", () => {
     document.dispatchEvent(dropEvent());
     await flush();
     expect(getApp).not.toHaveBeenCalled();
-  });
-
-  it("DnDLock 锁定期间 drop 被并发锁拦截（getApp 零调用）", async () => {
-    DnDLock.acquire();
-    document.dispatchEvent(dropEvent());
-    await flush();
-    expect(getApp).not.toHaveBeenCalled();
-    DnDLock.release();
   });
 
   it("仓库页 drop 无文件时 toast 提示", async () => {

@@ -2,7 +2,6 @@
 import { bus } from "../../bus.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { PageStore } from "../page-store.ts";
-import { DnDLock } from "../../features/dnd-state.ts";
 import { getApp } from "../../wails/app.ts";
 import { ALL_EXTS } from "../../utils/resource/extensions.ts";
 import { executeCollected } from "../../features/import-executor.ts";
@@ -112,7 +111,6 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   hideDropOverlay();
   e.preventDefault();
   if (isEditable(e.target)) return;
-  if (DnDLock.locked) return;
 
   // 非仓库页面不处理 DnD
   if (PageStore.currentPage !== "repository") return;

@@ -105,6 +105,11 @@ func extractBits(longs []int64, bitOffset, bitCount int) int {
 	bitPos := bitOffset % 64
 	mask := (uint64(1) << bitCount) - 1
 
+	// 损坏/截断文件可能导致 longs 长度不足，越界读会 panic（P1 修复）。
+	if longIdx >= len(longs) {
+		return 0
+	}
+
 	if bitPos+bitCount <= 64 {
 		return int((uint64(longs[longIdx]) >> bitPos) & mask)
 	}
@@ -112,7 +117,10 @@ func extractBits(longs []int64, bitOffset, bitCount int) int {
 	bitsFromFirst := 64 - bitPos
 	bitsFromSecond := bitCount - bitsFromFirst
 	low := uint64(longs[longIdx]) >> bitPos
-	high := uint64(longs[longIdx+1]) & ((uint64(1) << bitsFromSecond) - 1)
+	var high uint64
+	if longIdx+1 < len(longs) {
+		high = uint64(longs[longIdx+1]) & ((uint64(1) << bitsFromSecond) - 1)
+	}
 	return int(low | (high << bitsFromFirst))
 }
 

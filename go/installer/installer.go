@@ -396,9 +396,9 @@ func linkErr(src, dst string, err error) error {
 	if errnoIs(err, 13, 5) || errnoIs(err, 1, 5) {
 		return types.AppError{Code: "LINK_FAILED", Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "权限不足，无法创建硬链接", Suggestion: "请以管理员身份运行，或在设置中切换为复制模式"}
 	}
-	// 文本兜底（非 errno 包装的异常错误）
+	// 文本兜底（非 errno 包装的异常错误）——注意避免过宽子串："different" 会误伤无关错误，只匹配跨设备特征短语
 	errStr := strings.ToLower(err.Error())
-	if strings.Contains(errStr, "cross-device") || strings.Contains(errStr, "different") {
+	if strings.Contains(errStr, "cross-device") || strings.Contains(errStr, "different device") || strings.Contains(errStr, "not same device") {
 		return types.AppError{Code: "LINK_FAILED", Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "仓库与游戏目录在不同分区，不支持硬链接", Suggestion: "请在设置中切换为复制模式"}
 	}
 	if strings.Contains(errStr, "access") || strings.Contains(errStr, "permission") {

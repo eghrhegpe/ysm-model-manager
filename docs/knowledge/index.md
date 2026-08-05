@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 65 张知识卡
+> 总计: 68 张知识卡
 
 ## config（1 张）
 
@@ -37,7 +37,7 @@
 | 🏗 resource_packs | 资源包功能 resource-packs | architecture |
 | 🏗 version_updater | 版本更新 version-updater | architecture |
 
-## go（22 张）
+## go（25 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -47,15 +47,18 @@
 | 🏗 go_dedup | 去重 go/dedup | architecture |
 | 🏗 go_download | 下载器 go/download | architecture |
 | 🍃 go_errors | 错误包装 go/errors | leaf |
+| 🏗 go_fileops | 文件操作 go/fileops | architecture |
 | 🍃 go_fsutil | 文件遍历 go/fsutil | leaf |
 | 🏗 go_geometry | Geometry 存档 go/geometry | architecture |
 | 🏗 go_importer | 导入策略 go/importer | architecture |
 | 🏗 go_installer | 模型安装 go/installer | architecture |
+| 🏗 go_instance | 整合包实例 go/instance | architecture |
 | 🏗 go_litematic | Litematic 解析 go/litematic | architecture |
 | 🏗 go_logs | 导入日志 go/logs | architecture |
 | 🏗 go_packs | 资源包 mcmeta go/packs | architecture |
 | 🏗 go_paths | 路径安全 go/paths | architecture |
 | 🏗 go_recycle | 回收站 go/recycle | architecture |
+| 🏗 go_scanner | 扫描核心 go/scanner | architecture |
 | 🏗 go_sync | 整合包同步 go/sync | architecture |
 | 🏗 go_tags | 标签系统 go/tags | architecture |
 | 🏗 go_threejs | 3D 骨骼 spec go/threejs | architecture |

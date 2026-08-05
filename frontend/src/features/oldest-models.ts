@@ -44,14 +44,14 @@ export async function loadOldestModel(
   async function render(): Promise<void> {
     const gen = ++_loadGen; // 每次渲染自增：慢响应返回后若已过期则丢弃
     container.innerHTML =
-      '<div style="padding:12px;color:#6c7086;font-size:var(--fs-base)">⏳ 扫描中...</div>';
+      '<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">⏳ 扫描中...</div>';
     try {
       const { ScanModelEntries, GetRepoRoot } = await getApp();
       const repoRoot = await GetRepoRoot(currentType);
       if (gen !== _loadGen) return; // 已切换类型，丢弃过期结果
       if (!repoRoot) {
         container.innerHTML =
-          '<div style="padding:12px;color:#f38ba8;font-size:var(--fs-base)">请先配置该资源类型目录</div>';
+          '<div style="padding:12px;color:var(--status-error);font-size:var(--fs-base)">请先配置该资源类型目录</div>';
         return;
       }
 
@@ -59,7 +59,7 @@ export async function loadOldestModel(
       if (gen !== _loadGen) return; // 已切换类型，丢弃过期结果
       if (!entries || !entries.length) {
         container.innerHTML =
-          '<div style="padding:12px;color:#6c7086;font-size:var(--fs-base)">该类型仓库为空</div>';
+          '<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">该类型仓库为空</div>';
         return;
       }
 
@@ -289,7 +289,7 @@ export async function loadOldestModel(
     } catch (err) {
       if (gen !== _loadGen) return; // 已切换类型，丢弃过期结果
       container.innerHTML =
-        '<div style="padding:12px;color:#f38ba8;font-size:var(--fs-base)">❌ 加载失败: ' +
+        '<div style="padding:12px;color:var(--status-error);font-size:var(--fs-base)">❌ 加载失败: ' +
         esc((err as Error).message || String(err)) +
         "</div>";
     }

@@ -199,28 +199,32 @@ export class AppResourceManager extends HTMLElement {
       this.querySelector(".rm-import-btn")?.addEventListener(
         "click",
         async () => {
-          const type = _findType(this._rtype);
-          const exts = (type && type.extensions) || [".zip"];
-          const isZip = exts.every((e) => e === ".zip");
-          let filePath: string;
-          if (isZip) {
-            filePath = await SelectImportZip();
-          } else {
-            const filter = (type ? type.name : "") + "|" + exts.map((e) => "*" + e).join(";");
-            filePath = await SelectImportFile(filter, "选择" + (type ? type.name : ""));
+          try {
+            const type = _findType(this._rtype);
+            const exts = (type && type.extensions) || [".zip"];
+            const isZip = exts.every((e) => e === ".zip");
+            let filePath: string;
+            if (isZip) {
+              filePath = await SelectImportZip();
+            } else {
+              const filter = (type ? type.name : "") + "|" + exts.map((e) => "*" + e).join(";");
+              filePath = await SelectImportFile(filter, "选择" + (type ? type.name : ""));
+            }
+            if (!filePath) return;
+            const errMsg = await ImportByType(this._rtype, filePath);
+            if (errMsg) {
+              this._toast("error", "导入失败", errMsg);
+              return;
+            }
+            await this._loadList();
+            this._toast(
+              "ok",
+              "导入成功",
+              "已复制到 " + this._typeLabel + " 目录",
+            );
+          } catch (e) {
+            this._toast("error", "导入失败", e instanceof Error ? e.message : String(e));
           }
-          if (!filePath) return;
-          const errMsg = await ImportByType(this._rtype, filePath);
-          if (errMsg) {
-            this._toast("error", "导入失败", errMsg);
-            return;
-          }
-          await this._loadList();
-          this._toast(
-            "ok",
-            "导入成功",
-            "已复制到 " + this._typeLabel + " 目录",
-          );
         },
       );
     }
@@ -240,22 +244,26 @@ export class AppResourceManager extends HTMLElement {
       const item = target ? target.closest(".rm-item") : null;
       if (!item) return;
 
-      // 切换
-      if (this._actions.includes("toggle") && target && target.closest(".rm-toggle")) {
-        await ToggleResourcePack((item as HTMLElement).dataset.path || "");
-        await this._loadList();
-        return;
-      }
+      try {
+        // 切换
+        if (this._actions.includes("toggle") && target && target.closest(".rm-toggle")) {
+          await ToggleResourcePack((item as HTMLElement).dataset.path || "");
+          await this._loadList();
+          return;
+        }
 
-      // 选中
-      this._listEl
-        ?.querySelectorAll(".rm-item")
-        .forEach((el) => (el as HTMLElement).style.background = "");
-      (item as HTMLElement).style.background = "var(--hover)";
-      await this._showDetail(
-        (item as HTMLElement).dataset.path || "",
-        (item as HTMLElement).dataset.name || "",
-      );
+        // 选中
+        this._listEl
+          ?.querySelectorAll(".rm-item")
+          .forEach((el) => (el as HTMLElement).style.background = "");
+        (item as HTMLElement).style.background = "var(--hover)";
+        await this._showDetail(
+          (item as HTMLElement).dataset.path || "",
+          (item as HTMLElement).dataset.name || "",
+        );
+      } catch (e) {
+        this._toast("error", "操作失败", e instanceof Error ? e.message : String(e));
+      }
     });
 
     // 搜索过滤

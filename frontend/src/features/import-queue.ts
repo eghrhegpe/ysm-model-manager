@@ -50,21 +50,29 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   const imported: Array<{
     name: string;
     base64?: string;
-    renamed?: boolean;
     time: string;
     isYsm?: boolean;
-  }> = []; // { name, base64, renamed, time }
+  }> = []; // { name, base64, time }
   // 读文件并分流（表单/直导）+ 可选完成回调
   const readAndRouteFile = (file: ImportFile, onDone?: () => void): void => {
     const reader = new FileReader();
     reader.onload = async () => {
-      const base64 = String(reader.result).split(",")[1] || "";
-      if (await shouldEnterForm(file.name, base64)) {
-        enqueueFile(file, base64);
-      } else {
-        await directImport(file, base64);
+      try {
+        const base64 = String(reader.result).split(",")[1] || "";
+        if (await shouldEnterForm(file.name, base64)) {
+          enqueueFile(file, base64);
+        } else {
+          await directImport(file, base64);
+        }
+      } catch (e) {
+        bus.emit("toast:show", {
+          msg: "❌ " + friendlyError(e),
+          duration: 5000,
+          type: "error",
+        });
+      } finally {
+        onDone?.();
       }
-      onDone?.();
     };
     reader.onerror = () => onDone?.();
     reader.readAsDataURL(file);
@@ -506,12 +514,10 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   };
 
   const enqueueFile = (file: ImportFile, base64: string): void => {
-    // 检查文件名是否已在队列中
+    // 检查文件名是否已在队列或已导入列表中（renamed 字段已废弃，i.name 即当前磁盘文件名）
     const dup =
       fileQueue.some((fq) => fq.name === file.name) ||
-      imported.some(
-        (i) => i.name === file.name || (i.renamed || i.name) === file.name,
-      );
+      imported.some((i) => i.name === file.name);
     if (dup) return;
     fileQueue.push({
       file,

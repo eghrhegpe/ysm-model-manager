@@ -78,7 +78,9 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 							for _, item := range arr {
 								s := strings.TrimSpace(string(item))
 								if strings.HasPrefix(s, `{`) {
-									var obj struct{ Uv string `json:"uv"` }
+									var obj struct {
+										Uv string `json:"uv"`
+									}
 									if json.Unmarshal(item, &obj) == nil && obj.Uv != "" {
 										tn := obj.Uv
 										if idx := strings.LastIndex(tn, "/"); idx >= 0 {
@@ -244,11 +246,18 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 	}
 	if d, err := os.Stat(texDir); err == nil && d.IsDir() {
 		filepath.WalkDir(texDir, func(path string, d os.DirEntry, err error) error {
-			if err != nil { return nil }
-			if d.IsDir() { return nil }
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				return nil
+			}
 			ext := strings.ToLower(filepath.Ext(d.Name()))
 			if ext == ".png" || ext == ".jpg" || ext == ".tga" {
-				texFiles = append(texFiles, struct{path string; name string}{path, strings.ToLower(d.Name())})
+				texFiles = append(texFiles, struct {
+					path string
+					name string
+				}{path, strings.ToLower(d.Name())})
 			}
 			return nil
 		})
@@ -257,10 +266,15 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 	if len(texFiles) == 0 {
 		entries, _ := os.ReadDir(dir)
 		for _, e := range entries {
-			if e.IsDir() { continue }
+			if e.IsDir() {
+				continue
+			}
 			ext := strings.ToLower(filepath.Ext(e.Name()))
 			if ext == ".png" || ext == ".jpg" {
-				texFiles = append(texFiles, struct{path string; name string}{filepath.Join(dir, e.Name()), strings.ToLower(e.Name())})
+				texFiles = append(texFiles, struct {
+					path string
+					name string
+				}{filepath.Join(dir, e.Name()), strings.ToLower(e.Name())})
 			}
 		}
 	}
@@ -273,7 +287,9 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 		sort.SliceStable(texFiles, func(i, j int) bool {
 			oi, hasI := orderMap[texFiles[i].name]
 			oj, hasJ := orderMap[texFiles[j].name]
-			if hasI && hasJ { return oi < oj }
+			if hasI && hasJ {
+				return oi < oj
+			}
 			return hasI
 		})
 	}
@@ -284,7 +300,6 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 			texData = append(texData, texBytes)
 		}
 	}
-	
 
 	return geoJSON, texData
 }

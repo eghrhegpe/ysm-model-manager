@@ -316,3 +316,247 @@ doctor.mjs 三处缺陷（Go Test 误报 / grep 依赖 / wails.json 解析）建
 **提交记录：** `af781d8`（page-store 幽灵路径+注册统一化）→ `a95b0a9`（registry DI 兑现+ServiceName）→ `616c635`（context-menus 注册统一化+miss 告警）→ `98f3a95`（DnD/同步 P4 清理兜底）
 
 *报告更新：2026-08-04 · 审计单元 5 完成*
+
+
+---
+
+## 审计单元 6：按功能审核（2026-08-05）
+
+> 16 模块逐个盘问，共修 8 次提交、13 处隐患。两族规律系统性清完：
+> **前端「异步失败静默」**（11 处）— AGENTS.md 陷阱 #3「按钮异步后卡死」的变体（Promise 链无 `.catch` / async handler 无 try/catch / 前置 await 在 try 外 / 按钮 disabled 无 finally 恢复 / `model:select` 无代际守卫）；
+> **后端「半截文件残留」**（2 处）— 陷阱 #8 衍生（`io.Copy` 失败未清目标 / `os.Symlink` 错误未检查）。
+> 零修复模块 8 个（download-queue / app-sidebar / app-toast / app-content / app-nav / go-recycle+sync / go-updater / go-installer）。
+
+### app-tree — 审核结果
+
+**总体结论：通过**
+
+**亮点：**
+- 并发守护三层配对：`_toggleBusy`/`_batchBusy`/`_deleting` 各司其职，`finally` 必走
+- `selectState` 4 处写入点各司职（data/events/toolbar/index），无幽灵路径
+- `bus.on` × 15 全 `unsubs` 配对，`document.addEventListener("keydown")` 配对 `removeEventListener`
+- 批量删除走 `modalConfirm` + `danger: true` + 具体数量文案，回收站兜底
+
+**风险（已修/观察）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟢 P4 | events.ts:166 | `import().then()` + `getApp().then()` 双链无 `.catch`，模块加载或 OpenInBrowser 失败静默 | `116c56a`：补两处 `.catch` → toast + console.warn |
+| 🟢 P4 | bus-handlers.ts:44 | `entries:dedup` / `recycle:open` 占位 handler 只弹「开发中」 | 撤修：未落地功能占位，非 bug |
+
+### app-sync-manager — 审核结果
+
+**总体结论：通过**
+
+**亮点：**
+- `_initGen` 代际守卫，instance 切换竞态防住
+- `_singleBusy` 单文件推送/拉取并发守护，`finally` 清
+- `_init` 重入时先 forEach 清旧 `_unsubs` 再装新，防 handler 翻倍
+
+**风险（已修）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟠 P2 | index.ts:136 | `disconnectedCallback` forEach 后未置空 `_unsubs`，重连时旧空数组复用 | `ef7f68f`：补 `this._unsubs = []` |
+| 🟡 P3 | index.ts:113 | `stats:refresh` listener 内 `_loadData().then()` 无 `.catch` | `ef7f68f`：补 `.catch` + console.warn |
+
+### features/import-queue — 审核结果
+
+**总体结论：通过**
+
+**亮点：**
+- 双层并发守护：`_importing`（表单在途）+ `inFlightImports`（per-file Set，并行直导不串行化）
+- DnDLock 防静默丢失：`processPendingImport` 先 `acquire()` 再 `clear()`
+- FileReader 三态全覆盖：`onload`/`onerror`/`onabort` 都计数 + 释放锁
+
+**风险（已修/观察）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟠 P2 | import-queue.ts:618 | `Promise.all(entries.map(readEntry)).then()` 无 `.catch`，任一 reject 整批静默 | `0d9ce2a`：补 `.catch` → toast + console.warn |
+| 🟡 P3 | import-queue.ts:137 | `setTimeout(async () => { await loadHeaderFromBase64(); })` 无 catch | `0d9ce2a`：补 try/catch + console.warn |
+| 🟢 P4 | import-queue.ts:126 | async IIFE 静默 `catch(_) {}` | 撤修：预览临时文件写入失败不该打断表单流程，设计取舍合理 |
+
+### features/community/download-queue — 审核结果
+
+**总体结论：通过（零修复）**
+
+**亮点：**
+- 陷阱 #6 守住：`Content-Length=-1` 不误报 100%，完成判定只信 `file-done`/`queue:status done`
+- 陷阱 #3 守住：`enqueue` try/catch 恢复 `STATE.status="idle"` + `cleanupProgressUI()` + toast
+- `stuckGuardReset` 清三定时器（`_stuckTimer`/`completeTimer`/`_dotTimer`）
+- 小文件/大文件防骗分流：`isTiny`（100KB 阈值）分两路径，各自先清后装 `_stuckTimer`
+
+### app-resource-manager — 审核结果
+
+**总体结论：通过**
+
+**亮点：**
+- 双层代际守卫：`_initGen` + `_detailGen`，async await 期间 rtype/instance/点击切换的过期渲染全拦截
+- 删除走 `modalConfirm` + `danger: true` + 具体名文案，按 `type.isDir` 分流 `DeleteModelDir`/`DeleteResourcePack`
+- 批量查活防静默：`Promise.all(filtered.map(... IsResourcePackEnabled(...).catch(() => false)))`，单个失败不毁整批
+
+**风险（已修/观察）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟠 P2 | index.ts:201 | 导入按钮 `async () => {}` 无 try/catch，`SelectImportZip`/`ImportByType` 抛异常时按钮静默 | `00c2e65`：补 try/catch + `_toast` |
+| 🟡 P3 | index.ts:238 | 列表点击 `async (e) => {}` 无 try/catch，`ToggleResourcePack`/`_showDetail` 抛异常时静默 | `00c2e65`：补 try/catch + `_toast` |
+| 🟢 P4 | index.ts:53 | `registerResourceManagerGlobal` 模块级 `bus.on` 无 unsub | 撤修：单次全局注册，组件生命周期外的 handler，非泄漏 |
+
+### app-sidebar — 审核结果
+
+**总体结论：通过（零修复）**
+
+**亮点：**
+- 陷阱 #3 守住：push/pull 两处 async handler 都有 `try/catch/finally`，finally 恢复按钮 + `_syncInProgress`
+- 陷阱 #13 守住：`_reload` 代际守卫 `_reloadGen` + `_pendingReload` 补跑，rtype 快速切换时丢弃过期结果
+- `bindCardEvents` 返 `_cardCleanup` 配对清，`document.addEventListener("click", _docClickHandler)` 配对 `removeEventListener`
+- push 超时兜底：bus token + 30s setTimeout 超时 reject，`Promise.allSettled` 聚合 rejected 计 failed
+
+### app-toast — 审核结果
+
+**总体结论：通过（零修复）**
+
+**亮点：**
+- 资源配对完整：`connectedCallback` 的 `bus.on` 存 `_unsub`，`disconnectedCallback` 调清
+- 最多 5 个 toast 时同步 `clearTimeout` + `remove` 防异步死循环
+- `innerHTML` 拼接走 `this._esc(msg)`，CSS 全变量无硬编码
+- 撤销链完整：`undoCallback` 走「↩ 撤销」按钮 + 撤后发「✅ 已撤销」反馈
+
+### context-menu（views + core）— 审核结果
+
+**总体结论：通过**
+
+**亮点：**
+- 陷阱 #2 守住：`registerContextMenus` 在 `core/handlers/global.ts` 注册，传 `unsubs` 由 `app-content` 统一生命周期管理
+- `document.addEventListener("click"/"contextmenu")` 配对 `removeEventListener`，切页后无 handler 积压
+- `_batchBusy` 守卫配对 `finally` 清，连点拦截
+- 13 个 async handler 异常反馈齐：try/catch + `toast("❌ " + friendlyError(e, ...), "error")`
+
+**风险（已修）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟡 P3 | context-menus.ts:333 | `file.recycle` 前置 `await`（modalConfirm/getApp）在 try 外，抛异常走 unhandled rejection | `0b1f6a9`：补外层 try/catch |
+| 🟢 P4 | context-menus.ts:294 | `file.push-to-pack` 同构——`LoadAppConfig`/`ListVersionInstances`/`modalSelect` 前置 await 在 try 外 | `0b1f6a9`：补外层 try/catch |
+| 🟢 P4 | context-menus.ts:328 | `file.edit-tags` 整个 async 无 try/catch，`modalTagEditor` 抛异常走 unhandled | `0b1f6a9`：补 try/catch + toast |
+
+### dialogs — 审核结果
+
+**总体结论：通过**
+
+**亮点：**
+- 陷阱 #14 守住：四个 dialog（adv-filter/batch-rename/rename/tag-editor）均走 `registerDlg`/`closeDlg` 单例槽位，无旁路弹窗骨架
+- `modal.ts` 单例槽位：`_activeOverlay`/`_closeActive` 全局对，`registerDlg` 新开前先结算旧弹窗，防连点叠加/双执行
+- `closeDlg` 的 `overlay._closing` 守卫，重复触发不叠加 setTimeout
+- `modalConfirm` 的 `bodyHTML` 注释调用方负责转义，`message` 走 `esc()`；rename.ts 异步按钮有 try/finally 恢复
+
+**风险（已修/观察）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟠 P2 | batch-rename.ts:264 | apply 按钮 `await onApply(...)` 无 try/catch，异常时按钮卡 `⏳` + disabled，弹窗不关 | `025f4e9`：补 try/catch/finally 恢复按钮 + close() |
+| 🟢 P4 | rename.ts:142 | `rn-ok` 按钮 async handler 无 try/catch | 撤修：纯同步收集+校验+close，无 await |
+| 🟢 P4 | tag-editor.ts:152 | save 按钮 async handler 无 finally 恢复按钮 | 撤修：无 disabled=true，catch 走 errEl 反馈是合理设计 |
+
+### app-content — 审核结果
+
+**总体结论：通过（零修复）**
+
+**亮点：**
+- 陷阱 #2 守住：全局 handler 走 `registerGlobalHandlers()` 统一在 `connectedCallback` 注册，`disconnectedCallback` 走 `_globalUnsubs` forEach 清
+- 9 类资源全配对清：`_unsubs`/`_globalUnsubs`/`_repoEventsCleanup`/`_resizeMove`/`_resizeUp`/`_avatarConfigLoadedUnsub`/`_workshopTimer`/`_workshopCache`/`_githubCache`
+- 陷阱 #13 守住：`showRepo`/`showRepoModels` 的 `_currentRepo` 代际守卫，async await 期间切换仓库的过期结果全拦截
+- GitHub API 错误分流：`NetworkOffline`/`NoIndex`/`RateLimited` 各有具体反馈文案
+
+### app-nav — 审核结果
+
+**总体结论：通过（零修复）**
+
+**亮点：**
+- 陷阱 #13 守住：`_current` 初始化走 `resolveInitialPage()`，与 `PageStore` 同源，消除原硬编码 "dashboard" 幽灵值
+- 切页链路闭环：`nav:change` 发射 → `app-content` 收 → emit `nav:changed` → `app-nav` 收敛高亮 + `localStorage` 持久化
+- `queueMicrotask` 确保其他组件 `connectedCallback` 先完成注册再 emit，防 listener 未就绪
+- 版本号加载有兜底：`getApp().then().catch()` 链完整，失败回退硬编码 `v1.0.0`
+
+### app-preview — 审核结果
+
+**总体结论：通过**
+
+**亮点：**
+- ADR-011 警告区守住：`skeleton.ts` 是 2D 骨骼编排层，不碰 ysm cube pivot 坐标变换（那在 `geometry.ts`/`model2d.ts`/`model3d.ts`），走 `renderModel2D`/`renderModel3D` 委托渲染
+- `_prevWindowMove`/`_prevWindowUp` window 监听槽位：先 remove 旧再绑新 + `_unsubs` push 清，防 window 级监听器累积泄漏
+- WASM 解码三层降级链（`initYSMParser`→`decodeYsmFileFromMemory`→`decodeYsmFile`），每层 try/catch 独立
+
+**风险（已修/观察）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟠 P2 | index.ts:61 | `bus.on("model:select", async ...)` 无代际守卫，快速点 A（慢）→ B（快）时 A 的 await 返回后覆盖 B 的渲染 | `396174a`：补 `_previewGen` + `_showModelDetail`/`_showPackInfo` 的 await 后校验 |
+| 🟢 P4 | wasm.ts:92 | `CacheModelAvatars(...).catch(() => {})` 静默 catch | 撤修：头像缓存非用户交互路径 |
+| 🟢 P4 | skeleton.ts:771 | `navigator.clipboard.writeText(txt).catch(function () {})` 静默 catch | 撤修：剪贴板失败无害 |
+
+### go/recycle + go/sync — 审核结果
+
+**总体结论：通过（零修复）**
+
+**亮点：**
+- 陷阱 #8 守住：`moveEx` 三分支分流——符号链接→`os.Remove` 直接删；硬链接（nlink>1）→`os.Remove` 直接删；普通文件→`os.Rename` 移回收站，跨设备回退 `copyFile`+`os.Remove`。硬链接数据不丢
+- 路径越权防注入：`moveEx`/`Restore` 均校验 `paths.IsInside` + `filepath.Clean` + `strings.HasPrefix`，防 `../` 路径逃逸
+- 冲突重名兜底：`for i := 1; ; i++` 循环找唯一 dst，`os.Stat` 非"不存在"错误直接返回，不静默跳过
+- 回滚保护：`Restore` 的 `copyFile`/`copyDirRecursive` 失败时清半截文件，防损坏文件残留
+- `SyncToggleStatus` 文件占用分流：`os.Rename` 失败时 `isFileLocked` 分流——占用跳过+log，其他失败 log，不中断整批
+
+### go/importer — 审核结果
+
+**总体结论：通过**
+
+**亮点：**
+- 陷阱 #8 衍生守住：`copyDir` 的符号链接分流——`Readlink` + `Symlink` 复制链接本身，不跟随复制，防 symlink-to-dir 逃逸
+- 临时目录原子替换：`os.MkdirTemp(".tmp_import_")` 中转，`defer os.RemoveAll(tmpDir)` 兜底回滚，全量复制完后 `os.Rename` 原子替换
+- 路径防注入：`sanitizePath` 走 `filepath.Clean` + `..` 检测；`ImportFromBase64` 的 `fileName` 走 `strings.Contains("..")` + `strings.ContainsAny` 双检
+- 类型校验严：`.json` 白名单（仅 `ysm.json`）+ 魔数校验（ZIP `50 4B 03 04` / 7z `37 7A BC AF`）+ 500MB 大小限 + 空文件检
+
+**风险（已修）：**
+
+| 级别 | 文件 | 观察 | 修复 |
+|------|------|------|------|
+| 🟠 P2 | importer.go:119 | `io.Copy(dstFile, srcFile)` 失败时未清半截 dstFile，`defer Close` 把残文件刷盘，用户导入「成功」但文件损坏 | `dcb611f`：补 `dstFile.Close()` + `os.Remove(dstPath)` 清半截文件 |
+| 🟡 P3 | importer.go:261 | `os.Symlink(target, dstPath)` 错误未检查，符号链接复制失败静默 continue | `dcb611f`：补 err 检查 + return err，Readlink 失败也 return rErr |
+
+### go/updater — 审核结果
+
+**总体结论：通过（零修复）**
+
+**亮点：**
+- ADR-033 截断防线完整：`Download` 的 `io.LimitReader` + 预检 `ContentLength > maxDownloadSize` + 截断兜底 `n >= maxDownloadSize` 再读 1 字节；`extractZipFile` 同款截断检测，防 zip 内大文件超限被装盘
+- 半截文件清理齐：`Download` 的 5 个失败分支全 `os.Remove(tmp)`；`extractZipFile` 的 `defer` 兜底——`ok=false` 时先 Close 再 Remove，Win 忌打开文件会失败的兼容，Remove 失败短暂重试 200ms 防 Defender 实时扫描锁
+- SHA256 校验：`io.TeeReader` 边下边算 hash，下完校验 `EqualFold`，防篡改/不完整
+- 并发守护：`updateLock.Lock()` + `defer Unlock()`，防并发下载/安装
+
+### go/installer — 审核结果
+
+**总体结论：通过（零修复）**
+
+**亮点：**
+- 并发守护统一：`installLock` 全局锁，4 个入口方法（`Install`/`InstallDir`/`InstallModelTo`/`InstallDirTo`）全 `Lock()` + `defer Unlock()`
+- 路径防注入三校：`cleanAbs` + `paths.IsInside(repoRoot, src)` + `paths.ContainsMinecraftMarker(customDir)`，`Install` 还对子目录再校
+- 陷阱 #28「先删后建」守住：`linkOrCopyLocked`/`symlinkOrCopyLocked` 走 `tmp + os.Rename` 原子替换，不先删目标；Rename 失败清 tmp 兜底
+- 陷阱 #28「存在即跳过」守住：`sameSource(src, dst)` 校验同源即返回 nil，不盲目重写
+- 半截文件清理：`copyFileLocked` 的 `defer` + `ok=false` 兜底——`io.Copy` 失败时 `os.Remove(dst)`，与 `go/importer` P2 同族隐患已防住
+
+### 闭环验证矩阵（审计单元 6 提交后）
+
+| 检查 | 结果 |
+|------|------|
+| `tsc --noEmit` | ✅ 0 错误（工作区 `dnd-state.test.ts` 2 个 TS 错误为别人未提交改动，与本轮无关） |
+| `vitest` 全量 | ✅ 41 文件 / 464 用例全过 |
+| `go build ./go/...` | ✅ 全通过 |
+| `go test ./go/importer/...` / `go vet` | ✅ 全绿 |
+| `check-doc-drift` | ✅ 三一致通过（ADR 登记 / 知识卡 / 架构树无 ERROR 级漂移） |
+| `adr-check` | ✅ 36 文件 / 登记 36，无撞号/漏登/幽灵 |
+
+**提交记录：** `116c56a`（app-tree P4-2 `.catch` 补）→ `ef7f68f`（sync-manager P2/P3）→ `0d9ce2a`（import-queue P2-2/P3）→ `00c2e65`（resource-manager P2/P3）→ `0b1f6a9`（context-menus P3/P4 外层 await 链）→ `025f4e9`（batch-rename apply 按钮补 try/catch/finally）→ `396174a`（app-preview model:select 代际守卫）→ `dcb611f`（importer io.Copy 清半截 + Symlink err 检查）
+
+*报告更新：2026-08-05 · 审计单元 6 完成（16 模块按功能审核）*

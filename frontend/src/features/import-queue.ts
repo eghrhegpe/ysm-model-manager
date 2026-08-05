@@ -45,6 +45,16 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   let currentRelPath = ""; // 文件夹导入时的相对路径
   // 并发守卫：导入/重命名在途时拦截连点（同 preview-skeleton _saving 模式）
   let _importing = false;
+  // 资源管理：统一收集 addEventListener，cleanup 时成对 remove（防 tab 切换监听悬挂）
+  const cleanups: Array<() => void> = [];
+  const on = <K extends keyof HTMLElementEventMap>(
+    el: HTMLElement,
+    type: K,
+    handler: (ev: HTMLElementEventMap[K]) => void,
+  ): void => {
+    el.addEventListener(type, handler as EventListener);
+    cleanups.push(() => el.removeEventListener(type, handler as EventListener));
+  };
   const fileQueue: Array<{
     file: ImportFile;
     base64: string;
@@ -224,7 +234,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     "dl-from-header",
   ) as HTMLInputElement | null;
   if (fromHeaderChk) {
-    fromHeaderChk.addEventListener("change", async () => {
+    on(fromHeaderChk, "change", async () => {
       if (fromHeaderChk.checked) {
         await loadHeaderFromBase64();
       } else {
@@ -237,24 +247,24 @@ export function initImportQueue(app: ImportQueueHost): () => void {
 
   ["dl-author", "dl-work", "dl-chara", "dl-variant", "dl-date"].forEach(
     (id) => {
-      root.getElementById(id)?.addEventListener("input", updatePreview);
+      const el = root.getElementById(id);
+      if (el) on(el, "input", updatePreview);
     },
   );
-  root
-    .getElementById("dl-date-auto")
-    ?.addEventListener("change", updatePreview);
+  const dateAutoEl = root.getElementById("dl-date-auto");
+  if (dateAutoEl) on(dateAutoEl, "change", updatePreview);
 
   // 拖拽事件 — 区域内独立处理，阻止冒泡到全局 handler
-  dropZone.addEventListener("dragover", (e: DragEvent) => {
+  on(dropZone, "dragover", (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     dropZone.style.borderColor = "var(--accent)";
   });
-  dropZone.addEventListener("dragleave", (e: DragEvent) => {
+  on(dropZone, "dragleave", (e: DragEvent) => {
     e.stopPropagation();
     dropZone.style.borderColor = "";
   });
-  dropZone.addEventListener("drop", (e: DragEvent) => {
+  on(dropZone, "drop", (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     dropZone.style.borderColor = "";
@@ -288,7 +298,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
 
   // 点击：普通点击选文件，Ctrl+点击选文件夹
   let clickLocked = false;
-  dropZone.addEventListener("click", (e: MouseEvent) => {
+  on(dropZone, "click", (e: MouseEvent) => {
     if (clickLocked) return;
     clickLocked = true;
     setTimeout(() => {
@@ -300,7 +310,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       fileInput.click();
     }
   });
-  fileInput.addEventListener("change", () => {
+  on(fileInput, "change", () => {
     const files = fileInput.files;
     if (!files || !files.length) return;
     let ok = 0;
@@ -323,7 +333,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     }
     fileInput.value = "";
   });
-  folderInput.addEventListener("change", () => {
+  on(folderInput, "change", () => {
     const files = folderInput.files;
     if (!files || !files.length) return;
     // webkitdirectory 的 File 带 webkitRelativePath（保留层级），构造 relPath 后走统一路由
@@ -346,9 +356,11 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   });
 
   // 导入按钮
-  root.getElementById("dl-import")?.addEventListener("click", async () => {
-    if (_importing) return; // 并发守卫：防连点弹出多个重命名对话框/重复导入
-    _importing = true;
+  const importBtn = root.getElementById("dl-import");
+  if (importBtn)
+    on(importBtn, "click", async () => {
+      if (_importing) return; // 并发守卫：防连点弹出多个重命名对话框/重复导入
+      _importing = true;
     try {
     const a = (root.getElementById("dl-author") as HTMLInputElement).value.trim();
     const w = (root.getElementById("dl-work") as HTMLInputElement).value.trim();
@@ -496,13 +508,15 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   });
 
   // 取消按钮：关闭表单，回到拖拽区，正在编辑的项回到队列
-  root.getElementById("dl-cancel")?.addEventListener("click", () => {
-    currentFile = null;
-    currentBase64 = null;
-    currentFileName = null;
-    toggleForm(false);
-    renderImportedList();
-  });
+  const cancelBtn = root.getElementById("dl-cancel");
+  if (cancelBtn)
+    on(cancelBtn, "click", () => {
+      currentFile = null;
+      currentBase64 = null;
+      currentFileName = null;
+      toggleForm(false);
+      renderImportedList();
+    });
 
   // 添加文件到导入队列
   let repoFiles: Set<string> | null = null; // 仓库文件名缓存
@@ -817,10 +831,12 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   };
 
   // 清空列表（清全局导入历史）
-  root.getElementById("dl-clear-list")?.addEventListener("click", () => {
-    ImportHistory.clear();
-    renderImportedList();
-  });
+  const clearListBtn = root.getElementById("dl-clear-list");
+  if (clearListBtn)
+    on(clearListBtn, "click", () => {
+      ImportHistory.clear();
+      renderImportedList();
+    });
 
   renderImportedList();
 
@@ -832,6 +848,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   // 返回清理函数
   return () => {
     if (conflictTimer) clearTimeout(conflictTimer);
+    cleanups.forEach((fn) => fn());
     historyUnsub();
   };
 }

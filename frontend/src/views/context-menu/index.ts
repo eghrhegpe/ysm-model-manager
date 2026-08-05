@@ -8,12 +8,16 @@ class ContextMenu extends HTMLElement {
   _unsub: (() => void) | undefined;
   _docClick: () => void;
   _docCtx: () => void;
+  _docKeydown: (e: KeyboardEvent) => void;
 
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
     this._docClick = (): void => this.hide();
     this._docCtx = (): void => this.hide();
+    this._docKeydown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") this.hide();
+    };
   }
 
   connectedCallback(): void {
@@ -29,6 +33,7 @@ class ContextMenu extends HTMLElement {
     if (this._unsub) this._unsub();
     document.removeEventListener("click", this._docClick);
     document.removeEventListener("contextmenu", this._docCtx);
+    document.removeEventListener("keydown", this._docKeydown);
   }
 
   render(): void {
@@ -101,11 +106,19 @@ class ContextMenu extends HTMLElement {
     menu.querySelectorAll(".item").forEach((el) => {
       (el as HTMLElement).onclick = (e: MouseEvent) => {
         e.stopPropagation();
-        const idx = parseInt((el as HTMLElement).dataset.idx || "", 10);
-        if (items[idx] && items[idx].onClick) items[idx].onClick();
-        this.hide();
+        try {
+          const idx = parseInt((el as HTMLElement).dataset.idx || "", 10);
+          if (items[idx] && items[idx].onClick) items[idx].onClick();
+        } finally {
+          // 无论 onClick 是否抛异常都收菜单，防残留（异常另有全局兜底）
+          this.hide();
+        }
       };
     });
+
+    // Esc 关闭菜单：show 注册、hide 移除（先 remove 再 add 防连续 show 累积）
+    document.removeEventListener("keydown", this._docKeydown);
+    document.addEventListener("keydown", this._docKeydown);
 
     // 边界检测：先测量菜单尺寸再设置位置，避免 RAF 跳变
     this.style.display = "block";

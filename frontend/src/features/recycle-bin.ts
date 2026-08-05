@@ -65,6 +65,19 @@ export function initRecycleBin(app: RecycleHost): () => void {
     }
   });
 
+  // 文件名点击 → 模型详情：事件委托只绑一次，cleanup 成对移除（避免每次渲染累积监听）
+  const listEl = root.getElementById("recy-list");
+  const onListClick = (e: MouseEvent): void => {
+    const t = e.target as Element;
+    if (t.closest(".recy-restore") || t.closest(".recy-del")) return;
+    const el = t.closest("[data-path]");
+    if (el) {
+      const path = el.getAttribute("data-path");
+      if (path) bus.emit("model:select", { path });
+    }
+  };
+  if (listEl) listEl.addEventListener("click", onListClick);
+
   loadRecycleBin();
 
   async function loadRecycleBin(): Promise<void> {
@@ -194,18 +207,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
         };
       });
 
-      // 文件名点击 → 模型详情
-      list.querySelectorAll("[data-path]").forEach((el) => {
-        if (
-          el.classList.contains("recy-restore") ||
-          el.classList.contains("recy-del")
-        )
-          return;
-        el.addEventListener("click", (): void => {
-          const path = (el as HTMLElement).dataset.path;
-          if (path) bus.emit("model:select", { path });
-        });
-      });
+      // 文件名点击 → 模型详情：已在 init 用事件委托统一绑定（onListClick），此处无需逐元素绑定
     } catch (e) {
       if (gen !== _loadGen) return;
       list.innerHTML = `<div class="stat-row" style="padding:12px;color:var(--paid);font-size:11px">❌ ${esc(friendlyError(e, "读取回收站失败"))}</div>`;
@@ -216,6 +218,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
   // 返回清理函数，供上层在组件销毁时调用
   return () => {
     if (unsubRtype) unsubRtype();
+    if (listEl) listEl.removeEventListener("click", onListClick);
     root
       .getElementById("recy-refresh")
       ?.removeEventListener("click", onRefreshClick);

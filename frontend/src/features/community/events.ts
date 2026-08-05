@@ -5,6 +5,7 @@ import { modalConfirm } from "../../views/dialogs/modal.ts";
 import { renderModelList, isModelMissing, type WorkshopModel } from "./render.ts";
 import { createDownloadQueue, type DownloadTask } from "./download-queue.ts";
 import { ICONS } from "../../views/app-content/workshop-icons.ts";
+import { parseModelName } from "../../utils/dom/display.ts";
 import { getApp } from "../../wails/app.ts";
 
 /** bindRepoEvents 上下文 */
@@ -231,7 +232,6 @@ export function bindRepoEvents(
         e.stopPropagation();
         const row = searchBtn.closest("[data-name]");
         if (row) {
-          const { parseModelName } = await import("../../utils/dom/display.ts");
           const { author } = parseModelName(
             (row as HTMLElement).dataset.name || "",
           );

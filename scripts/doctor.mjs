@@ -6,11 +6,12 @@
  * 设计意图：全量治理检查编排
  * 依赖：node:child_process / node:fs / node:path / node:url
  * 用法：
- *   node scripts/doctor.mjs                 # 默认行为
+ *   node scripts/doctor.mjs                 # 默认行为（全量：编译+构建+文件+红线+Git）
+ *   node scripts/doctor.mjs --docs   # 文档模式（轻量：仅文档/ADR/索引检查，跳过 Go/前端编译与测试）
  *   node scripts/doctor.mjs --check  # 启用 check
  *   node scripts/doctor.mjs --json   # JSON 输出（CI/子代理消费）
  *   node scripts/doctor.mjs --strict # 启用 strict
- * 退出码：0（无 process.exit 调用）
+ * 退出码：0（无 process.exit 调用；仅 Governance ERROR 规则置 1）
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -261,6 +262,7 @@ function checkGit() {
   else console.log(`  ${PASS} clean`);
 }
 
+// 全量静态检查列表（保持原 12 项顺序，向后兼容既有输出 / CI）
 const STATIC_TOOLS = [
   'check-doc-drift.mjs',
   'check-adr-health.mjs',
@@ -281,10 +283,25 @@ const STATIC_TOOLS = [
   'check-script-hygiene.mjs',
 ];
 
-function checkStaticAnalysis() {
-  console.log(`\n=== Static Analysis (${STATIC_TOOLS.length} tools) ===`);
+// —— 静态检查工具分组（从 STATIC_TOOLS 派生，避免清单漂移）——
+// 文档相关（--docs 模式运行，轻量、不碰 Go/前端编译）：
+// 文档漂移 / ADR 登记健康 / 索引生成器守卫 / 知识卡 / 脚本卫生
+const DOC_RELEVANT = new Set([
+  'check-doc-drift.mjs',
+  'check-adr-health.mjs',
+  'gen-docs-index.mjs',
+  'gen-project-map.mjs',
+  'build-novel-index.mjs',
+  'check-script-hygiene.mjs',
+]);
+const toolName = (entry) => (typeof entry === 'string' ? entry : entry.tool);
+const DOC_STATIC_TOOLS = STATIC_TOOLS.filter((e) => DOC_RELEVANT.has(toolName(e)));
+const CODE_STATIC_TOOLS = STATIC_TOOLS.filter((e) => !DOC_RELEVANT.has(toolName(e)));
+
+function runStaticTools(tools, label) {
+  console.log(`\n=== Static Analysis: ${label} (${tools.length} tools) ===`);
   let failed = 0;
-  for (const entry of STATIC_TOOLS) {
+  for (const entry of tools) {
     const tool = typeof entry === 'string' ? entry : entry.tool;
     const extraArgs = typeof entry === 'string' ? [] : entry.args || [];
     const { rc } = run(['node', path.join('scripts', tool), '--json', ...extraArgs]);
@@ -298,18 +315,61 @@ function checkStaticAnalysis() {
   else console.log(`  ${FAIL} ${failed} tool(s) failed`);
 }
 
-console.log('========== YSM Doctor ==========');
-buildUpdaterHelper();
-checkGoBuild();
-checkGoVet();
-checkGoTest();
-checkContractTests();
-checkFrontendBuild();
-checkFrontendTest();
-checkTypeScript();
-checkKeyFiles();
-checkGovernance();
-checkConfig();
-checkStaticAnalysis();
-checkGit();
-console.log('\n========== Done ==========');
+function checkStaticAnalysis() {
+  runStaticTools(STATIC_TOOLS, 'full');
+}
+
+// —— 文档模式专属检查 ——
+// 断链 + 知识卡漂移 + ADR 登记一致性（撞号/漏登/幽灵/跳号）。
+// 注意：check-doc-drift / check-adr-health 已并入 DOC_STATIC_TOOLS，此处不重复运行。
+const DOC_EXTRA_SCRIPTS = [
+  'link-checker.mjs',
+  'check-knowledge-drift.mjs',
+  'adr-check.mjs',
+];
+
+function checkDocExtra() {
+  console.log('\n=== Doc Checks (links / drift / ADR registry) ===');
+  let failed = 0;
+  for (const s of DOC_EXTRA_SCRIPTS) {
+    const { rc } = run(['node', path.join('scripts', s), '--json']);
+    if (rc === 0) console.log(`  ${PASS} ${s}`);
+    else {
+      failed += 1;
+      console.log(`  ${FAIL} ${s}`);
+    }
+  }
+  if (failed === 0) console.log(`  ${PASS} all doc checks passed`);
+  else console.log(`  ${FAIL} ${failed} doc check(s) failed`);
+}
+
+const DOCS_MODE = process.argv.includes('--docs');
+
+if (DOCS_MODE) {
+  // —— 文档模式：轻量，跳过一切 Go / 前端编译与测试 ——
+  console.log('========== YSM Doctor (docs mode) ==========');
+  console.log('跳过：Updater Helper / Go Build / Go Vet / Go Test / Contract Tests');
+  console.log('跳过：Frontend Build / Frontend Test (Vitest) / TypeScript Check');
+  console.log('跳过：Key Files / Governance / Config Consistency');
+  checkDocExtra();
+  runStaticTools(DOC_STATIC_TOOLS, 'docs');
+  checkGit();
+  console.log('\n========== Done (docs mode) ==========');
+} else {
+  // —— 全量模式：编译 + 构建 + 文件 + 红线 + Git ——
+  console.log('========== YSM Doctor ==========');
+  buildUpdaterHelper();
+  checkGoBuild();
+  checkGoVet();
+  checkGoTest();
+  checkContractTests();
+  checkFrontendBuild();
+  checkFrontendTest();
+  checkTypeScript();
+  checkKeyFiles();
+  checkGovernance();
+  checkConfig();
+  checkStaticAnalysis();
+  checkGit();
+  console.log('\n========== Done ==========');
+}

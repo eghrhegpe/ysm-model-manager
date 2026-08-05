@@ -15,7 +15,7 @@ export function parseFrontmatter(text) {
 /** 提取标量字段（`key: value`，去注释）。 */
 export function getScalar(fm, key) {
   if (!fm) return undefined;
-  const line = fm.match(new RegExp('^' + key + '\\s*:\\s*(.+)$', 'm'));
+  const line = fm.match(new RegExp('^' + escapeRe(key) + '\\s*:\\s*(.+)$', 'm'));
   if (!line) return undefined;
   const v = line[1].trim();
   if (v === '' || v.startsWith('<')) return undefined;
@@ -29,7 +29,7 @@ export function getList(fm, key) {
   const out = [];
   let inList = false;
   for (const line of lines) {
-    const head = line.match(new RegExp('^' + key + '\\s*:\\s*(.*)$'));
+    const head = line.match(new RegExp('^' + escapeRe(key) + '\\s*:\\s*(.*)$'));
     if (head) {
       inList = true;
       const inline = head[1].replace(/\s*#.*$/, '').trim();
@@ -46,6 +46,11 @@ export function getList(fm, key) {
     }
   }
   return out;
+}
+
+/** 正则转义 key（key 含 `.`/`-` 等特殊字符时防匹配错乱）。 */
+function escapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**

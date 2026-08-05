@@ -99,7 +99,15 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         let totalCount = 0;
         try {
           totalCount = await CountInstanceResources(insName, rtype || "");
-        } catch {}
+        } catch (countErr) {
+          // 统计失败不静默：显示「没有资源」会误导用户以为整合包为空
+          bus.emit("toast:show", {
+            msg: "❌ 统计失败: " + friendlyError(countErr, "无法统计资源数量"),
+            duration: 3000,
+            type: "error",
+          });
+          return;
+        }
         if (totalCount === 0) {
           bus.emit("toast:show", {
             msg: "该整合包没有可清空的资源文件",

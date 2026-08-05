@@ -1,0 +1,1653 @@
+{
+  "duplicates": [
+    {
+      "firstFile": {
+        "end": 116,
+        "endLoc": {
+          "column": 4,
+          "line": 116,
+          "position": 4760
+        },
+        "name": "app-modules.ts",
+        "start": 87,
+        "startLoc": {
+          "column": 24,
+          "line": 87,
+          "position": 3669
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 30,
+      "secondFile": {
+        "end": 651,
+        "endLoc": {
+          "column": 6,
+          "line": 651,
+          "position": 23410
+        },
+        "name": "views\\app-content\\settings\\community.ts",
+        "start": 619,
+        "startLoc": {
+          "column": 34,
+          "line": 619,
+          "position": 22146
+        }
+      },
+      "tokens": 160
+    },
+    {
+      "firstFile": {
+        "end": 114,
+        "endLoc": {
+          "column": 47,
+          "line": 114,
+          "position": 3946
+        },
+        "name": "core\\context-menus.ts",
+        "start": 105,
+        "startLoc": {
+          "column": 8,
+          "line": 105,
+          "position": 3635
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 10,
+      "secondFile": {
+        "end": 258,
+        "endLoc": {
+          "column": 45,
+          "line": 258,
+          "position": 8374
+        },
+        "name": "core\\context-menus.ts",
+        "start": 249,
+        "startLoc": {
+          "column": 30,
+          "line": 249,
+          "position": 8081
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 145,
+        "endLoc": {
+          "column": 47,
+          "line": 145,
+          "position": 4853
+        },
+        "name": "core\\context-menus.ts",
+        "start": 136,
+        "startLoc": {
+          "column": 8,
+          "line": 136,
+          "position": 4542
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 10,
+      "secondFile": {
+        "end": 276,
+        "endLoc": {
+          "column": 45,
+          "line": 276,
+          "position": 8927
+        },
+        "name": "core\\context-menus.ts",
+        "start": 267,
+        "startLoc": {
+          "column": 30,
+          "line": 267,
+          "position": 8634
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 213,
+        "endLoc": {
+          "column": 12,
+          "line": 213,
+          "position": 6868
+        },
+        "name": "core\\context-menus.ts",
+        "start": 206,
+        "startLoc": {
+          "column": 37,
+          "line": 206,
+          "position": 6660
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 8,
+      "secondFile": {
+        "end": 365,
+        "endLoc": {
+          "column": 12,
+          "line": 365,
+          "position": 12000
+        },
+        "name": "core\\context-menus.ts",
+        "start": 358,
+        "startLoc": {
+          "column": 31,
+          "line": 358,
+          "position": 11792
+        }
+      },
+      "tokens": 50
+    },
+    {
+      "firstFile": {
+        "end": 230,
+        "endLoc": {
+          "column": 32,
+          "line": 230,
+          "position": 7438
+        },
+        "name": "core\\context-menus.ts",
+        "start": 225,
+        "startLoc": {
+          "column": 31,
+          "line": 225,
+          "position": 7238
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 6,
+      "secondFile": {
+        "end": 252,
+        "endLoc": {
+          "column": 32,
+          "line": 252,
+          "position": 8376
+        },
+        "name": "views\\app-tree\\toolbar-events.ts",
+        "start": 247,
+        "startLoc": {
+          "column": 36,
+          "line": 247,
+          "position": 8176
+        }
+      },
+      "tokens": 61
+    },
+    {
+      "firstFile": {
+        "end": 86,
+        "endLoc": {
+          "column": 4,
+          "line": 86,
+          "position": 2898
+        },
+        "name": "core\\handlers\\instance-ops.ts",
+        "start": 74,
+        "startLoc": {
+          "column": 73,
+          "line": 74,
+          "position": 2653
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 13,
+      "secondFile": {
+        "end": 143,
+        "endLoc": {
+          "column": 4,
+          "line": 143,
+          "position": 4515
+        },
+        "name": "views\\app-tree\\instance-actions.ts",
+        "start": 131,
+        "startLoc": {
+          "column": 64,
+          "line": 131,
+          "position": 4270
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 90,
+        "endLoc": {
+          "column": 11,
+          "line": 90,
+          "position": 3005
+        },
+        "name": "core\\handlers\\instance-ops.ts",
+        "start": 76,
+        "startLoc": {
+          "column": 25,
+          "line": 76,
+          "position": 2706
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 15,
+      "secondFile": {
+        "end": 89,
+        "endLoc": {
+          "column": 11,
+          "line": 89,
+          "position": 2697
+        },
+        "name": "views\\app-tree\\instance-actions.ts",
+        "start": 76,
+        "startLoc": {
+          "column": 43,
+          "line": 76,
+          "position": 2477
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 157,
+        "endLoc": {
+          "column": 9,
+          "line": 157,
+          "position": 5913
+        },
+        "name": "features\\import-queue.ts",
+        "start": 152,
+        "startLoc": {
+          "column": 36,
+          "line": 152,
+          "position": 5572
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 6,
+      "secondFile": {
+        "end": 343,
+        "endLoc": {
+          "column": 9,
+          "line": 343,
+          "position": 11947
+        },
+        "name": "features\\import-queue.ts",
+        "start": 338,
+        "startLoc": {
+          "column": 8,
+          "line": 338,
+          "position": 11606
+        }
+      },
+      "tokens": 82
+    },
+    {
+      "firstFile": {
+        "end": 172,
+        "endLoc": {
+          "column": 38,
+          "line": 172,
+          "position": 6492
+        },
+        "name": "features\\import-queue.ts",
+        "start": 166,
+        "startLoc": {
+          "column": 52,
+          "line": 166,
+          "position": 6275
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 7,
+      "secondFile": {
+        "end": 123,
+        "endLoc": {
+          "column": 40,
+          "line": 123,
+          "position": 5555
+        },
+        "name": "views\\dialogs\\rename.ts",
+        "start": 117,
+        "startLoc": {
+          "column": 28,
+          "line": 117,
+          "position": 5326
+        }
+      },
+      "tokens": 78
+    },
+    {
+      "firstFile": {
+        "end": 265,
+        "endLoc": {
+          "column": 9,
+          "line": 265,
+          "position": 9673
+        },
+        "name": "features\\import-queue.ts",
+        "start": 255,
+        "startLoc": {
+          "column": 18,
+          "line": 255,
+          "position": 9431
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 11,
+      "secondFile": {
+        "end": 303,
+        "endLoc": {
+          "column": 7,
+          "line": 303,
+          "position": 10620
+        },
+        "name": "features\\import-queue.ts",
+        "start": 293,
+        "startLoc": {
+          "column": 25,
+          "line": 293,
+          "position": 10398
+        }
+      },
+      "tokens": 56
+    },
+    {
+      "firstFile": {
+        "end": 410,
+        "endLoc": {
+          "column": 77,
+          "line": 410,
+          "position": 14183
+        },
+        "name": "features\\import-queue.ts",
+        "start": 396,
+        "startLoc": {
+          "column": 22,
+          "line": 396,
+          "position": 13782
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 15,
+      "secondFile": {
+        "end": 454,
+        "endLoc": {
+          "column": 45,
+          "line": 454,
+          "position": 15801
+        },
+        "name": "features\\import-queue.ts",
+        "start": 441,
+        "startLoc": {
+          "column": 28,
+          "line": 441,
+          "position": 15363
+        }
+      },
+      "tokens": 59
+    },
+    {
+      "firstFile": {
+        "end": 133,
+        "endLoc": {
+          "column": 17,
+          "line": 133,
+          "position": 5392
+        },
+        "name": "features\\recycle-bin.ts",
+        "start": 125,
+        "startLoc": {
+          "column": 26,
+          "line": 125,
+          "position": 5133
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 9,
+      "secondFile": {
+        "end": 174,
+        "endLoc": {
+          "column": 17,
+          "line": 174,
+          "position": 6751
+        },
+        "name": "features\\recycle-bin.ts",
+        "start": 166,
+        "startLoc": {
+          "column": 24,
+          "line": 166,
+          "position": 6492
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 155,
+        "endLoc": {
+          "column": 28,
+          "line": 155,
+          "position": 6053
+        },
+        "name": "features\\recycle-bin.ts",
+        "start": 141,
+        "startLoc": {
+          "column": 34,
+          "line": 141,
+          "position": 5694
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 15,
+      "secondFile": {
+        "end": 194,
+        "endLoc": {
+          "column": 28,
+          "line": 194,
+          "position": 7351
+        },
+        "name": "features\\recycle-bin.ts",
+        "start": 180,
+        "startLoc": {
+          "column": 13,
+          "line": 180,
+          "position": 6972
+        }
+      },
+      "tokens": 64
+    },
+    {
+      "firstFile": {
+        "end": 300,
+        "endLoc": {
+          "column": 17,
+          "line": 300,
+          "position": 8600
+        },
+        "name": "utils\\3d\\model2d.ts",
+        "start": 259,
+        "startLoc": {
+          "column": 29,
+          "line": 259,
+          "position": 7067
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 42,
+      "secondFile": {
+        "end": 546,
+        "endLoc": {
+          "column": 19,
+          "line": 546,
+          "position": 16979
+        },
+        "name": "utils\\3d\\model2d.ts",
+        "start": 504,
+        "startLoc": {
+          "column": 31,
+          "line": 504,
+          "position": 15344
+        }
+      },
+      "tokens": 417
+    },
+    {
+      "firstFile": {
+        "end": 293,
+        "endLoc": {
+          "column": 19,
+          "line": 293,
+          "position": 8331
+        },
+        "name": "utils\\3d\\model2d.ts",
+        "start": 287,
+        "startLoc": {
+          "column": 39,
+          "line": 287,
+          "position": 8097
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 7,
+      "secondFile": {
+        "end": 373,
+        "endLoc": {
+          "column": 13,
+          "line": 373,
+          "position": 10637
+        },
+        "name": "utils\\3d\\model2d.ts",
+        "start": 365,
+        "startLoc": {
+          "column": 36,
+          "line": 365,
+          "position": 10398
+        }
+      },
+      "tokens": 54
+    },
+    {
+      "firstFile": {
+        "end": 410,
+        "endLoc": {
+          "column": 13,
+          "line": 410,
+          "position": 11970
+        },
+        "name": "utils\\3d\\model2d.ts",
+        "start": 390,
+        "startLoc": {
+          "column": 25,
+          "line": 390,
+          "position": 11288
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 21,
+      "secondFile": {
+        "end": 472,
+        "endLoc": {
+          "column": 15,
+          "line": 472,
+          "position": 14227
+        },
+        "name": "utils\\3d\\model2d.ts",
+        "start": 452,
+        "startLoc": {
+          "column": 45,
+          "line": 452,
+          "position": 13515
+        }
+      },
+      "tokens": 116
+    },
+    {
+      "firstFile": {
+        "end": 205,
+        "endLoc": {
+          "column": 7,
+          "line": 205,
+          "position": 6597
+        },
+        "name": "utils\\3d\\model3d.ts",
+        "start": 200,
+        "startLoc": {
+          "column": 17,
+          "line": 200,
+          "position": 6432
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 6,
+      "secondFile": {
+        "end": 40,
+        "endLoc": {
+          "column": 7,
+          "line": 40,
+          "position": 1247
+        },
+        "name": "views\\app-preview\\screenshot-renderer.ts",
+        "start": 34,
+        "startLoc": {
+          "column": 31,
+          "line": 34,
+          "position": 1081
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 282,
+        "endLoc": {
+          "column": 53,
+          "line": 282,
+          "position": 9245
+        },
+        "name": "utils\\3d\\model3d.ts",
+        "start": 275,
+        "startLoc": {
+          "column": 26,
+          "line": 275,
+          "position": 8991
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 8,
+      "secondFile": {
+        "end": 52,
+        "endLoc": {
+          "column": 53,
+          "line": 52,
+          "position": 1676
+        },
+        "name": "views\\app-preview\\screenshot-renderer.ts",
+        "start": 45,
+        "startLoc": {
+          "column": 40,
+          "line": 45,
+          "position": 1422
+        }
+      },
+      "tokens": 54
+    },
+    {
+      "firstFile": {
+        "end": 777,
+        "endLoc": {
+          "column": 9,
+          "line": 777,
+          "position": 26733
+        },
+        "name": "utils\\3d\\model3d.ts",
+        "start": 769,
+        "startLoc": {
+          "column": 6,
+          "line": 769,
+          "position": 26449
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 9,
+      "secondFile": {
+        "end": 126,
+        "endLoc": {
+          "column": 5,
+          "line": 126,
+          "position": 4002
+        },
+        "name": "views\\app-preview\\screenshot-renderer.ts",
+        "start": 118,
+        "startLoc": {
+          "column": 2,
+          "line": 118,
+          "position": 3750
+        }
+      },
+      "tokens": 74
+    },
+    {
+      "firstFile": {
+        "end": 67,
+        "endLoc": {
+          "column": 49,
+          "line": 67,
+          "position": 2715
+        },
+        "name": "views\\app-content\\index.ts",
+        "start": 61,
+        "startLoc": {
+          "column": 46,
+          "line": 61,
+          "position": 2504
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 7,
+      "secondFile": {
+        "end": 53,
+        "endLoc": {
+          "column": 49,
+          "line": 53,
+          "position": 2145
+        },
+        "name": "views\\app-preview\\index.ts",
+        "start": 47,
+        "startLoc": {
+          "column": 79,
+          "line": 47,
+          "position": 1934
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 731,
+        "endLoc": {
+          "column": 9,
+          "line": 731,
+          "position": 28030
+        },
+        "name": "views\\app-content\\index.ts",
+        "start": 725,
+        "startLoc": {
+          "column": 38,
+          "line": 725,
+          "position": 27804
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 7,
+      "secondFile": {
+        "end": 897,
+        "endLoc": {
+          "column": 9,
+          "line": 897,
+          "position": 34247
+        },
+        "name": "views\\app-content\\index.ts",
+        "start": 891,
+        "startLoc": {
+          "column": 33,
+          "line": 891,
+          "position": 34021
+        }
+      },
+      "tokens": 65
+    },
+    {
+      "firstFile": {
+        "end": 27,
+        "endLoc": {
+          "column": 38,
+          "line": 27,
+          "position": 1274
+        },
+        "name": "views\\app-content\\site-view.ts",
+        "start": 14,
+        "startLoc": {
+          "column": 35,
+          "line": 14,
+          "position": 750
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 14,
+      "secondFile": {
+        "end": 26,
+        "endLoc": {
+          "column": 38,
+          "line": 26,
+          "position": 1283
+        },
+        "name": "views\\app-content\\site\\types.ts",
+        "start": 12,
+        "startLoc": {
+          "column": 31,
+          "line": 12,
+          "position": 713
+        }
+      },
+      "tokens": 127
+    },
+    {
+      "firstFile": {
+        "end": 199,
+        "endLoc": {
+          "column": 7,
+          "line": 199,
+          "position": 7181
+        },
+        "name": "views\\app-content\\site\\edit.ts",
+        "start": 186,
+        "startLoc": {
+          "column": 35,
+          "line": 186,
+          "position": 6690
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 14,
+      "secondFile": {
+        "end": 359,
+        "endLoc": {
+          "column": 9,
+          "line": 359,
+          "position": 13171
+        },
+        "name": "views\\app-content\\site\\edit.ts",
+        "start": 346,
+        "startLoc": {
+          "column": 19,
+          "line": 346,
+          "position": 12654
+        }
+      },
+      "tokens": 125
+    },
+    {
+      "firstFile": {
+        "end": 237,
+        "endLoc": {
+          "column": 48,
+          "line": 237,
+          "position": 8529
+        },
+        "name": "views\\app-content\\site\\edit.ts",
+        "start": 227,
+        "startLoc": {
+          "column": 63,
+          "line": 227,
+          "position": 8117
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 11,
+      "secondFile": {
+        "end": 293,
+        "endLoc": {
+          "column": 48,
+          "line": 293,
+          "position": 10712
+        },
+        "name": "views\\app-content\\site\\edit.ts",
+        "start": 284,
+        "startLoc": {
+          "column": 57,
+          "line": 284,
+          "position": 10349
+        }
+      },
+      "tokens": 79
+    },
+    {
+      "firstFile": {
+        "end": 254,
+        "endLoc": {
+          "column": 12,
+          "line": 254,
+          "position": 9188
+        },
+        "name": "views\\app-content\\site\\edit.ts",
+        "start": 238,
+        "startLoc": {
+          "column": 19,
+          "line": 238,
+          "position": 8549
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 17,
+      "secondFile": {
+        "end": 310,
+        "endLoc": {
+          "column": 12,
+          "line": 310,
+          "position": 11377
+        },
+        "name": "views\\app-content\\site\\edit.ts",
+        "start": 294,
+        "startLoc": {
+          "column": 25,
+          "line": 294,
+          "position": 10738
+        }
+      },
+      "tokens": 141
+    },
+    {
+      "firstFile": {
+        "end": 270,
+        "endLoc": {
+          "column": 12,
+          "line": 270,
+          "position": 9860
+        },
+        "name": "views\\app-content\\site\\edit.ts",
+        "start": 258,
+        "startLoc": {
+          "column": 32,
+          "line": 258,
+          "position": 9406
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 13,
+      "secondFile": {
+        "end": 326,
+        "endLoc": {
+          "column": 12,
+          "line": 326,
+          "position": 12067
+        },
+        "name": "views\\app-content\\site\\edit.ts",
+        "start": 314,
+        "startLoc": {
+          "column": 38,
+          "line": 314,
+          "position": 11613
+        }
+      },
+      "tokens": 92
+    },
+    {
+      "firstFile": {
+        "end": 37,
+        "endLoc": {
+          "column": 9,
+          "line": 37,
+          "position": 1999
+        },
+        "name": "views\\app-preview\\detail.ts",
+        "start": 30,
+        "startLoc": {
+          "column": 41,
+          "line": 30,
+          "position": 1665
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 8,
+      "secondFile": {
+        "end": 118,
+        "endLoc": {
+          "column": 9,
+          "line": 118,
+          "position": 5343
+        },
+        "name": "views\\app-preview\\litematic-meta.ts",
+        "start": 111,
+        "startLoc": {
+          "column": 40,
+          "line": 111,
+          "position": 5009
+        }
+      },
+      "tokens": 74
+    },
+    {
+      "firstFile": {
+        "end": 46,
+        "endLoc": {
+          "column": 7,
+          "line": 46,
+          "position": 2439
+        },
+        "name": "views\\app-preview\\detail.ts",
+        "start": 39,
+        "startLoc": {
+          "column": 54,
+          "line": 39,
+          "position": 2178
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 8,
+      "secondFile": {
+        "end": 127,
+        "endLoc": {
+          "column": 7,
+          "line": 127,
+          "position": 5749
+        },
+        "name": "views\\app-preview\\litematic-meta.ts",
+        "start": 120,
+        "startLoc": {
+          "column": 62,
+          "line": 120,
+          "position": 5534
+        }
+      },
+      "tokens": 54
+    },
+    {
+      "firstFile": {
+        "end": 67,
+        "endLoc": {
+          "column": 5,
+          "line": 67,
+          "position": 2570
+        },
+        "name": "views\\app-preview\\litematic-3d.ts",
+        "start": 53,
+        "startLoc": {
+          "column": 27,
+          "line": 53,
+          "position": 1877
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 15,
+      "secondFile": {
+        "end": 436,
+        "endLoc": {
+          "column": 11,
+          "line": 436,
+          "position": 18682
+        },
+        "name": "views\\app-preview\\skeleton.ts",
+        "start": 422,
+        "startLoc": {
+          "column": 35,
+          "line": 422,
+          "position": 17917
+        }
+      },
+      "tokens": 119
+    },
+    {
+      "firstFile": {
+        "end": 79,
+        "endLoc": {
+          "column": 19,
+          "line": 79,
+          "position": 2952
+        },
+        "name": "views\\app-preview\\litematic-3d.ts",
+        "start": 67,
+        "startLoc": {
+          "column": 4,
+          "line": 67,
+          "position": 2569
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 13,
+      "secondFile": {
+        "end": 449,
+        "endLoc": {
+          "column": 25,
+          "line": 449,
+          "position": 19214
+        },
+        "name": "views\\app-preview\\skeleton.ts",
+        "start": 437,
+        "startLoc": {
+          "column": 88,
+          "line": 437,
+          "position": 18771
+        }
+      },
+      "tokens": 71
+    },
+    {
+      "firstFile": {
+        "end": 380,
+        "endLoc": {
+          "column": 9,
+          "line": 380,
+          "position": 14757
+        },
+        "name": "views\\app-preview\\litematic-3d.ts",
+        "start": 372,
+        "startLoc": {
+          "column": 50,
+          "line": 372,
+          "position": 14516
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 9,
+      "secondFile": {
+        "end": 392,
+        "endLoc": {
+          "column": 9,
+          "line": 392,
+          "position": 15205
+        },
+        "name": "views\\app-preview\\litematic-3d.ts",
+        "start": 384,
+        "startLoc": {
+          "column": 77,
+          "line": 384,
+          "position": 14964
+        }
+      },
+      "tokens": 55
+    },
+    {
+      "firstFile": {
+        "end": 418,
+        "endLoc": {
+          "column": 13,
+          "line": 418,
+          "position": 16353
+        },
+        "name": "views\\app-preview\\litematic-3d.ts",
+        "start": 412,
+        "startLoc": {
+          "column": 4,
+          "line": 412,
+          "position": 15914
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 7,
+      "secondFile": {
+        "end": 790,
+        "endLoc": {
+          "column": 19,
+          "line": 790,
+          "position": 36394
+        },
+        "name": "views\\app-preview\\skeleton.ts",
+        "start": 783,
+        "startLoc": {
+          "column": 10,
+          "line": 783,
+          "position": 35907
+        }
+      },
+      "tokens": 61
+    },
+    {
+      "firstFile": {
+        "end": 312,
+        "endLoc": {
+          "column": 12,
+          "line": 312,
+          "position": 11817
+        },
+        "name": "views\\app-preview\\wasm.ts",
+        "start": 302,
+        "startLoc": {
+          "column": 8,
+          "line": 302,
+          "position": 11526
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 11,
+      "secondFile": {
+        "end": 423,
+        "endLoc": {
+          "column": 12,
+          "line": 423,
+          "position": 16105
+        },
+        "name": "views\\app-preview\\wasm.ts",
+        "start": 413,
+        "startLoc": {
+          "column": 8,
+          "line": 413,
+          "position": 15814
+        }
+      },
+      "tokens": 58
+    },
+    {
+      "firstFile": {
+        "end": 182,
+        "endLoc": {
+          "column": 37,
+          "line": 182,
+          "position": 7045
+        },
+        "name": "views\\app-sidebar\\index.ts",
+        "start": 176,
+        "startLoc": {
+          "column": 39,
+          "line": 176,
+          "position": 6790
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 7,
+      "secondFile": {
+        "end": 239,
+        "endLoc": {
+          "column": 37,
+          "line": 239,
+          "position": 9619
+        },
+        "name": "views\\app-sidebar\\index.ts",
+        "start": 233,
+        "startLoc": {
+          "column": 45,
+          "line": 233,
+          "position": 9364
+        }
+      },
+      "tokens": 61
+    },
+    {
+      "firstFile": {
+        "end": 386,
+        "endLoc": {
+          "column": 3,
+          "line": 386,
+          "position": 12527
+        },
+        "name": "views\\app-sync-manager\\index.ts",
+        "start": 373,
+        "startLoc": {
+          "column": 51,
+          "line": 373,
+          "position": 12218
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 14,
+      "secondFile": {
+        "end": 409,
+        "endLoc": {
+          "column": 3,
+          "line": 409,
+          "position": 13201
+        },
+        "name": "views\\app-sync-manager\\index.ts",
+        "start": 396,
+        "startLoc": {
+          "column": 51,
+          "line": 396,
+          "position": 12892
+        }
+      },
+      "tokens": 71
+    },
+    {
+      "firstFile": {
+        "end": 196,
+        "endLoc": {
+          "column": 11,
+          "line": 196,
+          "position": 6179
+        },
+        "name": "views\\app-tree\\bus-handlers.ts",
+        "start": 184,
+        "startLoc": {
+          "column": 8,
+          "line": 184,
+          "position": 5969
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 13,
+      "secondFile": {
+        "end": 248,
+        "endLoc": {
+          "column": 11,
+          "line": 248,
+          "position": 7813
+        },
+        "name": "views\\app-tree\\bus-handlers.ts",
+        "start": 235,
+        "startLoc": {
+          "column": 8,
+          "line": 235,
+          "position": 7560
+        }
+      },
+      "tokens": 50
+    },
+    {
+      "firstFile": {
+        "end": 248,
+        "endLoc": {
+          "column": 11,
+          "line": 248,
+          "position": 7813
+        },
+        "name": "views\\app-tree\\bus-handlers.ts",
+        "start": 215,
+        "startLoc": {
+          "column": 62,
+          "line": 215,
+          "position": 6935
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 34,
+      "secondFile": {
+        "end": 289,
+        "endLoc": {
+          "column": 11,
+          "line": 289,
+          "position": 9033
+        },
+        "name": "views\\app-tree\\bus-handlers.ts",
+        "start": 257,
+        "startLoc": {
+          "column": 62,
+          "line": 257,
+          "position": 8187
+        }
+      },
+      "tokens": 162
+    },
+    {
+      "firstFile": {
+        "end": 50,
+        "endLoc": {
+          "column": 16,
+          "line": 50,
+          "position": 1608
+        },
+        "name": "views\\app-tree\\instance-actions.ts",
+        "start": 40,
+        "startLoc": {
+          "column": 43,
+          "line": 40,
+          "position": 1288
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 11,
+      "secondFile": {
+        "end": 111,
+        "endLoc": {
+          "column": 16,
+          "line": 111,
+          "position": 3469
+        },
+        "name": "views\\app-tree\\instance-actions.ts",
+        "start": 101,
+        "startLoc": {
+          "column": 37,
+          "line": 101,
+          "position": 3149
+        }
+      },
+      "tokens": 67
+    },
+    {
+      "firstFile": {
+        "end": 335,
+        "endLoc": {
+          "column": 7,
+          "line": 335,
+          "position": 9915
+        },
+        "name": "views\\app-tree\\render.ts",
+        "start": 328,
+        "startLoc": {
+          "column": 56,
+          "line": 328,
+          "position": 9697
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 8,
+      "secondFile": {
+        "end": 347,
+        "endLoc": {
+          "column": 7,
+          "line": 347,
+          "position": 10316
+        },
+        "name": "views\\app-tree\\render.ts",
+        "start": 340,
+        "startLoc": {
+          "column": 53,
+          "line": 340,
+          "position": 10098
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 37,
+        "endLoc": {
+          "column": 8,
+          "line": 37,
+          "position": 1378
+        },
+        "name": "views\\app-tree\\row-tpl-list.ts",
+        "start": 25,
+        "startLoc": {
+          "column": 33,
+          "line": 25,
+          "position": 1062
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 13,
+      "secondFile": {
+        "end": 43,
+        "endLoc": {
+          "column": 8,
+          "line": 43,
+          "position": 1776
+        },
+        "name": "views\\app-tree\\row-tpl.ts",
+        "start": 31,
+        "startLoc": {
+          "column": 29,
+          "line": 31,
+          "position": 1460
+        }
+      },
+      "tokens": 75
+    },
+    {
+      "firstFile": {
+        "end": 243,
+        "endLoc": {
+          "column": 5,
+          "line": 243,
+          "position": 7968
+        },
+        "name": "views\\app-tree\\toolbar-events.ts",
+        "start": 233,
+        "startLoc": {
+          "column": 32,
+          "line": 233,
+          "position": 7700
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 11,
+      "secondFile": {
+        "end": 432,
+        "endLoc": {
+          "column": 11,
+          "line": 432,
+          "position": 14351
+        },
+        "name": "views\\app-tree\\toolbar-events.ts",
+        "start": 422,
+        "startLoc": {
+          "column": 35,
+          "line": 422,
+          "position": 14023
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 385,
+        "endLoc": {
+          "column": 14,
+          "line": 385,
+          "position": 12741
+        },
+        "name": "views\\app-tree\\toolbar-events.ts",
+        "start": 373,
+        "startLoc": {
+          "column": 57,
+          "line": 373,
+          "position": 12438
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 13,
+      "secondFile": {
+        "end": 408,
+        "endLoc": {
+          "column": 14,
+          "line": 408,
+          "position": 13553
+        },
+        "name": "views\\app-tree\\toolbar-events.ts",
+        "start": 396,
+        "startLoc": {
+          "column": 56,
+          "line": 396,
+          "position": 13250
+        }
+      },
+      "tokens": 56
+    },
+    {
+      "firstFile": {
+        "end": 80,
+        "endLoc": {
+          "column": 8,
+          "line": 80,
+          "position": 2319
+        },
+        "name": "views\\dialogs\\modal.ts",
+        "start": 69,
+        "startLoc": {
+          "column": 30,
+          "line": 69,
+          "position": 1951
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 12,
+      "secondFile": {
+        "end": 156,
+        "endLoc": {
+          "column": 8,
+          "line": 156,
+          "position": 4950
+        },
+        "name": "views\\dialogs\\modal.ts",
+        "start": 146,
+        "startLoc": {
+          "column": 30,
+          "line": 146,
+          "position": 4583
+        }
+      },
+      "tokens": 82
+    },
+    {
+      "firstFile": {
+        "end": 33,
+        "endLoc": {
+          "column": 19,
+          "line": 33,
+          "position": 1232
+        },
+        "name": "views\\dialogs\\rename.ts",
+        "start": 24,
+        "startLoc": {
+          "column": 75,
+          "line": 24,
+          "position": 941
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 10,
+      "secondFile": {
+        "end": 24,
+        "endLoc": {
+          "column": 19,
+          "line": 24,
+          "position": 924
+        },
+        "name": "views\\dialogs\\tag-editor.ts",
+        "start": 15,
+        "startLoc": {
+          "column": 37,
+          "line": 15,
+          "position": 633
+        }
+      },
+      "tokens": 74
+    },
+    {
+      "firstFile": {
+        "end": 117,
+        "endLoc": {
+          "column": 29,
+          "line": 117,
+          "position": 5327
+        },
+        "name": "views\\dialogs\\rename.ts",
+        "start": 109,
+        "startLoc": {
+          "column": 28,
+          "line": 109,
+          "position": 4794
+        }
+      },
+      "format": "typescript",
+      "fragment": "",
+      "lines": 9,
+      "secondFile": {
+        "end": 150,
+        "endLoc": {
+          "column": 29,
+          "line": 150,
+          "position": 6809
+        },
+        "name": "views\\dialogs\\rename.ts",
+        "start": 142,
+        "startLoc": {
+          "column": 83,
+          "line": 142,
+          "position": 6276
+        }
+      },
+      "tokens": 127
+    }
+  ],
+  "statistics": {
+    "detectionDate": "2026-08-05T02:40:37.556Z",
+    "formats": {
+      "typescript": {
+        "clones": 45,
+        "duplicatedLines": 512,
+        "duplicatedTokens": 3739,
+        "lines": 22979,
+        "newClones": 0,
+        "newDuplicatedLines": 0,
+        "percentage": 2.228121328169198,
+        "percentageTokens": 2.820056416212873,
+        "sources": 104,
+        "tokens": 132586
+      }
+    },
+    "total": {
+      "clones": 45,
+      "duplicatedLines": 512,
+      "duplicatedTokens": 3739,
+      "lines": 22979,
+      "newClones": 0,
+      "newDuplicatedLines": 0,
+      "percentage": 2.228121328169198,
+      "percentageTokens": 2.820056416212873,
+      "sources": 104,
+      "tokens": 132586
+    }
+  }
+}

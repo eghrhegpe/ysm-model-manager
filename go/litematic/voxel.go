@@ -17,23 +17,81 @@ type regionInfo struct {
 	bpe                       int
 }
 
-// BuildVoxelData 构建体素渲染数据（按颜色分组）
-func BuildVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, error) {
+// ===== 三格式（litematic / structure NBT / schematic）公共体素管线 =====
+// BuildVoxelData / BuildNbtVoxelData / BuildSchematicVoxelData 共享：
+//   openGzRoot（打开+gzip+NBT 解码）→ 各格式解析方块 → groupVoxelStream（分组+截断）
+//   → finalizeVoxelData（表面过滤+组装返回）。
+// 截断 / 分组 / 表面过滤逻辑只在此实现一次，防止三兄弟各自手写导致行为漂移。
+
+// voxelBlock 单个方块的体素信息（各格式统一中间表示）
+type voxelBlock struct {
+	Color string
+	X, Y, Z int16
+}
+
+// openGzRoot 打开 gzip NBT 文件并解码 root compound
+func openGzRoot(path string) (map[string]any, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open: %w", err)
 	}
 	defer f.Close()
-
 	gz, err := gzip.NewReader(f)
 	if err != nil {
 		return nil, fmt.Errorf("gzip: %w", err)
 	}
 	defer gz.Close()
-
 	root, err := readRootCompound(gz)
 	if err != nil {
 		return nil, fmt.Errorf("nbt: %w", err)
+	}
+	return root, nil
+}
+
+// groupVoxelStream 从 next 生成器消费方块流，按颜色分组，超过 maxBlocks 截断
+// next 返回 (方块, 是否还有)。返回 colorGroups + truncated。
+func groupVoxelStream(next func() (voxelBlock, bool), maxBlocks int) (map[string][][3]int16, bool) {
+	colorGroups := make(map[string][][3]int16)
+	blockCount := 0
+	truncated := false
+	for {
+		if blockCount >= maxBlocks {
+			truncated = true
+			break
+		}
+		block, ok := next()
+		if !ok {
+			break
+		}
+		colorGroups[block.Color] = append(colorGroups[block.Color], [3]int16{block.X, block.Y, block.Z})
+		blockCount++
+	}
+	return colorGroups, truncated
+}
+
+// finalizeVoxelData 表面过滤 + 组装返回（三兄弟尾部公共段）
+func finalizeVoxelData(size [3]int, colorGroups map[string][][3]int16, truncated bool, maxBlocks int) *types.LitematicVoxelData {
+	colorGroups = filterSurfaceOnly(colorGroups)
+	groups := make([]types.VoxelGroup, 0, len(colorGroups))
+	for color, positions := range colorGroups {
+		groups = append(groups, types.VoxelGroup{
+			Color:     color,
+			Positions: positions,
+		})
+	}
+	return &types.LitematicVoxelData{
+		Size:      size,
+		Groups:    groups,
+		Truncated: truncated,
+		MaxBlocks: maxBlocks,
+	}
+}
+
+// BuildVoxelData 构建体素渲染数据（按颜色分组）
+func BuildVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, error) {
+	root, err := openGzRoot(path)
+	if err != nil {
+		return nil, err
 	}
 
 	encSize := [3]int{}
@@ -69,53 +127,34 @@ func BuildVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, erro
 		regionInfos = append(regionInfos, *info)
 	}
 
-	colorGroups := make(map[string][][3]int16)
-	blockCount := 0
-	truncated := false
-
-	for _, info := range regionInfos {
-		totalInRegion := info.sizeX * info.sizeY * info.sizeZ
-		for i := 0; i < totalInRegion; i++ {
-			if blockCount >= maxBlocks {
-				truncated = true
-				break
+	// 方块生成器：跨 region 顺序推进，跳过 air/invalid（状态由闭包捕获）
+	ri, i := 0, 0
+	next := func() (voxelBlock, bool) {
+		for ri < len(regionInfos) {
+			info := regionInfos[ri]
+			totalInRegion := info.sizeX * info.sizeY * info.sizeZ
+			for i < totalInRegion {
+				paletteIdx := extractBits(info.longs, i*info.bpe, info.bpe)
+				if paletteIdx < 0 || paletteIdx >= len(info.palette) || paletteIdx == 0 {
+					i++
+					continue // air or invalid
+				}
+				// 计算全局坐标（Minecraft 存储顺序：X→Z→Y，Y 最慢）
+				// 公式: i = x + z * sizeX + y * sizeX * sizeZ
+				gx := int16(info.originX + (i % info.sizeX))
+				gz := int16(info.originZ + ((i / info.sizeX) % info.sizeZ))
+				gy := int16(info.originY + (i / (info.sizeX * info.sizeZ)))
+				b := voxelBlock{Color: info.palette[paletteIdx], X: gx, Y: gy, Z: gz}
+				i++
+				return b, true
 			}
-			paletteIdx := extractBits(info.longs, i*info.bpe, info.bpe)
-			if paletteIdx < 0 || paletteIdx >= len(info.palette) || paletteIdx == 0 {
-				continue // air or invalid
-			}
-
-			// 计算全局坐标（Minecraft 存储顺序：X→Z→Y，Y 最慢）
-			// 公式: i = x + z * sizeX + y * sizeX * sizeZ
-			gx := int16(info.originX + (i % info.sizeX))
-			gz := int16(info.originZ + ((i / info.sizeX) % info.sizeZ))
-			gy := int16(info.originY + (i / (info.sizeX * info.sizeZ)))
-
-			color := info.palette[paletteIdx]
-			colorGroups[color] = append(colorGroups[color], [3]int16{gx, gy, gz})
-			blockCount++
+			ri++
+			i = 0
 		}
-		if truncated {
-			break
-		}
+		return voxelBlock{}, false
 	}
-
-	colorGroups = filterSurfaceOnly(colorGroups)
-
-	groups := make([]types.VoxelGroup, 0, len(colorGroups))
-	for color, positions := range colorGroups {
-		groups = append(groups, types.VoxelGroup{
-			Color:     color,
-			Positions: positions,
-		})
-	}
-
-	return &types.LitematicVoxelData{
-		Size:      encSize,
-		Groups:    groups,
-		Truncated: truncated,
-		MaxBlocks: maxBlocks,
-	}, nil
+	colorGroups, truncated := groupVoxelStream(next, maxBlocks)
+	return finalizeVoxelData(encSize, colorGroups, truncated, maxBlocks), nil
 }
 
 // buildRegionInfo 标准化一个 region 的遍历信息
@@ -189,17 +228,7 @@ func buildRegionInfo(region map[string]any) *regionInfo {
 }
 
 func BuildNbtVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	gz, err := gzip.NewReader(f)
-	if err != nil {
-		return nil, err
-	}
-	defer gz.Close()
-	root, err := readRootCompound(gz)
+	root, err := openGzRoot(path)
 	if err != nil {
 		return nil, err
 	}
@@ -232,63 +261,40 @@ func BuildNbtVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, e
 		}
 	}
 
-	colorGroups := make(map[string][][3]int16)
-	blockCount := 0
-	truncated := false
-	for _, elem := range blocksList {
-		if blockCount >= maxBlocks {
-			truncated = true
-			break
+	// 方块生成器：顺序推进 blocks 列表，跳过 air/invalid（状态由闭包捕获）
+	bi := 0
+	next := func() (voxelBlock, bool) {
+		for bi < len(blocksList) {
+			elem := blocksList[bi]
+			bi++
+			block, ok := elem.(map[string]any)
+			if !ok {
+				continue
+			}
+			posList := getList(block, "pos")
+			stateTag := block["state"]
+			if posList == nil || stateTag == nil || len(posList) != 3 {
+				continue
+			}
+			state, ok := stateTag.(int32)
+			if !ok || int(state) < 0 || int(state) >= len(paletteColors) || state == 0 {
+				continue // air or invalid（与 BuildVoxelData/BuildSchematicVoxelData 一致）
+			}
+			return voxelBlock{
+				Color: paletteColors[state],
+				X:     int16(posList[0].(int32)),
+				Y:     int16(posList[1].(int32)),
+				Z:     int16(posList[2].(int32)),
+			}, true
 		}
-		block, ok := elem.(map[string]any)
-		if !ok {
-			continue
-		}
-		posList := getList(block, "pos")
-		stateTag := block["state"]
-		if posList == nil || stateTag == nil || len(posList) != 3 {
-			continue
-		}
-		state, ok := stateTag.(int32)
-		if !ok || int(state) < 0 || int(state) >= len(paletteColors) {
-			continue
-		}
-		bx := int16(posList[0].(int32))
-		by := int16(posList[1].(int32))
-		bz := int16(posList[2].(int32))
-		color := paletteColors[state]
-		colorGroups[color] = append(colorGroups[color], [3]int16{bx, by, bz})
-		blockCount++
+		return voxelBlock{}, false
 	}
-
-	colorGroups = filterSurfaceOnly(colorGroups)
-
-	groups := make([]types.VoxelGroup, 0, len(colorGroups))
-	for color, positions := range colorGroups {
-		groups = append(groups, types.VoxelGroup{Color: color, Positions: positions})
-	}
-	return &types.LitematicVoxelData{
-		Size:      [3]int{sx, sy, sz},
-		Groups:    groups,
-		Truncated: truncated,
-		MaxBlocks: maxBlocks,
-	}, nil
+	colorGroups, truncated := groupVoxelStream(next, maxBlocks)
+	return finalizeVoxelData([3]int{sx, sy, sz}, colorGroups, truncated, maxBlocks), nil
 }
 
 func BuildSchematicVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	gz, err := gzip.NewReader(f)
-	if err != nil {
-		return nil, err
-	}
-	defer gz.Close()
-
-	root, err := readRootCompound(gz)
+	root, err := openGzRoot(path)
 	if err != nil {
 		return nil, err
 	}
@@ -315,65 +321,69 @@ func BuildSchematicVoxelData(path string, maxBlocks int) (*types.LitematicVoxelD
 		}
 	}
 
-	colorGroups := make(map[string][][3]int16)
-	blockCount := 0
-	truncated := false
 	total := w * h * l
+	if blockDataBA == nil && blocksBA == nil {
+		return nil, fmt.Errorf("schematic has no Blocks or BlockData")
+	}
 
-	// v1: raw Blocks byte array; v2+: varint BlockData
-	if blockDataBA != nil && paletteMap != nil {
-		offset := 0
-		for i := 0; i < total; i++ {
-			if blockCount >= maxBlocks { truncated = true; break }
-			if offset >= len(blockDataBA) { break }
-			blockID, newOff := readVarInt(blockDataBA, offset)
-			offset = newOff
-			if blockID == 0 { continue }
-			color := "#7F7F7F"
-			if c, ok := paletteMap[blockID]; ok { color = c }
-			x := int16(i % w)
-			z := int16((i / w) % l)
-			y := int16(i / (w * l))
-			colorGroups[color] = append(colorGroups[color], [3]int16{x, y, z})
-			blockCount++
+	// 方块生成器：v1 raw Blocks / v2 varint BlockData 双路径，跳过 air（blockID 0）
+	// i/offset 由闭包捕获，跨调用推进，避免每次从头扫描
+	i, offset := 0, 0
+	next := func() (voxelBlock, bool) {
+		if blockDataBA != nil && paletteMap != nil {
+			// v2: varint BlockData
+			for i < total && offset < len(blockDataBA) {
+				blockID, newOff := readVarInt(blockDataBA, offset)
+				offset = newOff
+				i++
+				if blockID == 0 {
+					continue
+				}
+				color := "#7F7F7F"
+				if c, ok := paletteMap[blockID]; ok {
+					color = c
+				}
+				return voxelBlock{
+					Color: color,
+					X:     int16((i - 1) % w),
+					Y:     int16((i - 1) / (w * l)),
+					Z:     int16(((i - 1) / w) % l),
+				}, true
+			}
+			return voxelBlock{}, false
 		}
-	} else if blocksBA != nil {
-		for i := 0; i < total && i < len(blocksBA); i++ {
-			if blockCount >= maxBlocks { truncated = true; break }
+		// v1: raw Blocks byte array
+		for i < total && i < len(blocksBA) {
 			blockID := int(blocksBA[i])
-			if blockID == 0 { continue }
+			i++
+			if blockID == 0 {
+				continue
+			}
 			color := "#7F7F7F"
 			if paletteMap != nil {
-				if c, ok := paletteMap[blockID]; ok { color = c }
+				if c, ok := paletteMap[blockID]; ok {
+					color = c
+				}
 			} else {
 				var d byte
-				if dataBA != nil && i < len(dataBA) { d = dataBA[i] }
+				if dataBA != nil && i-1 < len(dataBA) {
+					d = dataBA[i-1]
+				}
 				if name := ResolveBlockName(blockID, d); name != "" {
 					color = MapColor(name)
 				}
 			}
-			x := int16(i % w)
-			z := int16((i / w) % l)
-			y := int16(i / (w * l))
-			colorGroups[color] = append(colorGroups[color], [3]int16{x, y, z})
-			blockCount++
+			return voxelBlock{
+				Color: color,
+				X:     int16((i - 1) % w),
+				Y:     int16((i - 1) / (w * l)),
+				Z:     int16(((i - 1) / w) % l),
+			}, true
 		}
-	} else {
-		return nil, fmt.Errorf("schematic has no Blocks or BlockData")
+		return voxelBlock{}, false
 	}
-
-	colorGroups = filterSurfaceOnly(colorGroups)
-
-	groups := make([]types.VoxelGroup, 0, len(colorGroups))
-	for color, positions := range colorGroups {
-		groups = append(groups, types.VoxelGroup{Color: color, Positions: positions})
-	}
-	return &types.LitematicVoxelData{
-		Size:      [3]int{w, h, l},
-		Groups:    groups,
-		Truncated: truncated,
-		MaxBlocks: maxBlocks,
-	}, nil
+	colorGroups, truncated := groupVoxelStream(next, maxBlocks)
+	return finalizeVoxelData([3]int{w, h, l}, colorGroups, truncated, maxBlocks), nil
 }
 
 // neighborOffsets 6 个相邻方向偏移（用于表面检测）

@@ -1,5 +1,5 @@
 ---
-kind: go_avatar
+kind: go-avatar
 name: 头像 go/avatar
 tier: architecture
 category: go

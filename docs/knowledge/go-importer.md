@@ -1,5 +1,5 @@
 ---
-kind: go_importer
+kind: go-importer
 name: 导入策略 go/importer
 tier: architecture
 category: go

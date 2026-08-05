@@ -1,5 +1,5 @@
 ---
-kind: dialog_rename
+kind: dialog-rename
 name: 重命名弹窗 rename
 tier: leaf
 category: ui

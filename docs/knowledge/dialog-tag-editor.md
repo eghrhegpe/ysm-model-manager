@@ -1,5 +1,5 @@
 ---
-kind: dialog_tag_editor
+kind: dialog-tag-editor
 name: 标签编辑器 tag-editor
 tier: architecture
 category: ui

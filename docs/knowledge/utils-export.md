@@ -1,5 +1,5 @@
 ---
-kind: utils_export
+kind: utils-export
 name: 截图与导出 export
 tier: architecture
 category: utils

@@ -1,5 +1,5 @@
 ---
-kind: go_errors
+kind: go-errors
 name: 错误包装 go/errors
 tier: leaf
 category: go

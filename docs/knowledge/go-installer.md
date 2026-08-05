@@ -1,5 +1,5 @@
 ---
-kind: go_installer
+kind: go-installer
 name: 模型安装 go/installer
 tier: architecture
 category: go

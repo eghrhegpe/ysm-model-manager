@@ -1,5 +1,5 @@
 ---
-kind: utils_resource_types
+kind: utils-resource-types
 name: 资源类型工具 resource-types
 tier: leaf
 category: utils

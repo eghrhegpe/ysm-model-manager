@@ -1,5 +1,5 @@
 ---
-kind: utils_fmt
+kind: utils-fmt
 name: 格式化工具 fmt
 tier: leaf
 category: utils

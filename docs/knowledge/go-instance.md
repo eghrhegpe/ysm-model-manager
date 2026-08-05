@@ -1,5 +1,5 @@
 ---
-kind: go_instance
+kind: go-instance
 name: 整合包实例 go/instance
 tier: architecture
 category: go

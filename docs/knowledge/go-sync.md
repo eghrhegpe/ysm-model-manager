@@ -1,5 +1,5 @@
 ---
-kind: go_sync
+kind: go-sync
 name: 整合包同步 go/sync
 tier: architecture
 category: go

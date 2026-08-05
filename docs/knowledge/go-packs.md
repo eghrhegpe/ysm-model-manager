@@ -1,5 +1,5 @@
 ---
-kind: go_packs
+kind: go-packs
 name: 资源包 mcmeta go/packs
 tier: architecture
 category: go

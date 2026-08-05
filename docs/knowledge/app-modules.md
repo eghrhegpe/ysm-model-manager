@@ -1,5 +1,5 @@
 ---
-kind: app_modules
+kind: app-modules
 name: 组件入口 app-modules
 tier: architecture
 category: ui

@@ -1,5 +1,5 @@
 ---
-kind: app_content
+kind: app-content
 name: 主内容页 app-content
 tier: architecture
 category: ui

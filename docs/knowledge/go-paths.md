@@ -1,5 +1,5 @@
 ---
-kind: go_paths
+kind: go-paths
 name: 路径安全 go/paths
 tier: architecture
 category: go

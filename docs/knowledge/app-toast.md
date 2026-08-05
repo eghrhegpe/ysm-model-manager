@@ -1,5 +1,5 @@
 ---
-kind: app_toast
+kind: app-toast
 name: Toast 通知 app-toast
 tier: leaf
 category: ui

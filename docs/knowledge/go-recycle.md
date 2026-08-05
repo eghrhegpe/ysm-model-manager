@@ -1,5 +1,5 @@
 ---
-kind: go_recycle
+kind: go-recycle
 name: 回收站 go/recycle
 tier: architecture
 category: go

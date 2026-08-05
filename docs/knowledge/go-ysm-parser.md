@@ -1,5 +1,5 @@
 ---
-kind: go_ysm_parser
+kind: go-ysm-parser
 name: YSM 解析 go/ysm
 tier: architecture
 category: go

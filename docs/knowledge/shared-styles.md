@@ -1,5 +1,5 @@
 ---
-kind: shared_styles
+kind: shared-styles
 name: 共享样式 shared-styles
 tier: leaf
 category: ui

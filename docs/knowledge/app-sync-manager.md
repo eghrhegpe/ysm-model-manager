@@ -1,5 +1,5 @@
 ---
-kind: app_sync_manager
+kind: app-sync-manager
 name: 整合包同步页 app-sync-manager
 tier: architecture
 category: ui

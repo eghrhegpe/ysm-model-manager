@@ -1,5 +1,5 @@
 ---
-kind: go_tags
+kind: go-tags
 name: 标签系统 go/tags
 tier: architecture
 category: go

@@ -1,5 +1,5 @@
 ---
-kind: utils_errors
+kind: utils-errors
 name: 错误处理 errors
 tier: leaf
 category: utils

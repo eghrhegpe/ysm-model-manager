@@ -1,5 +1,5 @@
 ---
-kind: go_version
+kind: go-version
 name: 版本号 go/version
 tier: leaf
 category: go

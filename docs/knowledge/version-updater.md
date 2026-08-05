@@ -1,5 +1,5 @@
 ---
-kind: version_updater
+kind: version-updater
 name: 版本更新 version-updater
 tier: architecture
 category: feature

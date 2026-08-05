@@ -1,5 +1,5 @@
 ---
-kind: app_sidebar
+kind: app-sidebar
 name: 侧边栏 app-sidebar
 tier: architecture
 category: ui

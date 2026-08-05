@@ -1,5 +1,5 @@
 ---
-kind: event_bus
+kind: event-bus
 name: 事件总线 bus.ts
 tier: architecture
 category: core

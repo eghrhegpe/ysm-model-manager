@@ -1,5 +1,5 @@
 ---
-kind: app_tree
+kind: app-tree
 name: 资源树 app-tree
 tier: architecture
 category: ui

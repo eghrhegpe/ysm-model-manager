@@ -1,5 +1,5 @@
 ---
-kind: ysm_wasm
+kind: ysm-wasm
 name: WASM 解析器 ysm-parser
 tier: architecture
 category: utils

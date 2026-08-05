@@ -1,5 +1,5 @@
 ---
-kind: app_nav
+kind: app-nav
 name: 顶部导航 app-nav
 tier: leaf
 category: ui

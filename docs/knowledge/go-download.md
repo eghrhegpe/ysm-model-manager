@@ -1,5 +1,5 @@
 ---
-kind: go_download
+kind: go-download
 name: 下载器 go/download
 tier: architecture
 category: go

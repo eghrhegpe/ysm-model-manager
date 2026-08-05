@@ -1,5 +1,5 @@
 ---
-kind: go_dedup
+kind: go-dedup
 name: 去重 go/dedup
 tier: architecture
 category: go

@@ -1,5 +1,5 @@
 ---
-kind: global_handlers
+kind: global-handlers
 name: 全局事件处理 global-handlers
 tier: architecture
 category: core

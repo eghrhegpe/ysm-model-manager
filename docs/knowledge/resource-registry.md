@@ -1,5 +1,5 @@
 ---
-kind: resource_registry
+kind: resource-registry
 name: 资源注册表 registry
 tier: architecture
 category: config

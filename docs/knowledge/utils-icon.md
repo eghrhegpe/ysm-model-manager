@@ -1,5 +1,5 @@
 ---
-kind: utils_icon
+kind: utils-icon
 name: 图标映射 icon
 tier: leaf
 category: utils

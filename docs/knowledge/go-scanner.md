@@ -1,5 +1,5 @@
 ---
-kind: go_scanner
+kind: go-scanner
 name: 扫描核心 go/scanner
 tier: architecture
 category: go

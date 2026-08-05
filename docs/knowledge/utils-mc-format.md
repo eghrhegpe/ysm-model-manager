@@ -1,5 +1,5 @@
 ---
-kind: utils_mc_format
+kind: utils-mc-format
 name: MC 格式判定 mc-format
 tier: leaf
 category: utils

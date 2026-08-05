@@ -1,5 +1,5 @@
 ---
-kind: animation_system
+kind: animation-system
 name: 动画系统 animation
 tier: architecture
 category: utils

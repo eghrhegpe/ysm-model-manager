@@ -109,7 +109,18 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 	if err := os.Rename(src, dst); err == nil {
 		return &MoveResult{Action: "recycled", Reason: ""}, nil
 	}
+	// 跨设备回退：目录（文件夹型模型）递归复制整棵树；文件走 copyFile
+	if info.IsDir() {
+		if err := copyDirRecursive(src, dst); err != nil {
+			// 复制中断/失败时清理半截目录，避免回收站残留损坏数据
+			os.RemoveAll(dst)
+			return nil, err
+		}
+		return &MoveResult{Action: "recycled", Reason: ""}, os.RemoveAll(src)
+	}
 	if err := copyFile(src, dst); err != nil {
+		// 复制中断/失败时清理半截文件，避免回收站残留损坏文件
+		os.Remove(dst)
 		return nil, err
 	}
 	return &MoveResult{Action: "recycled", Reason: ""}, os.Remove(src)

@@ -169,9 +169,9 @@ func TestExtractYsmSummary_ZipWithYsmJSON(t *testing.T) {
 
 func TestExtractYsmSummary_ZipFallbackNoYsmJSON(t *testing.T) {
 	path := writeZip(t, map[string]string{
-		"geo/main.json":        `{"minecraft:geometry": ["geom1"]}`,
+		"geo/main.json":            `{"minecraft:geometry": ["geom1"]}`,
 		"anim/walk_animation.json": `{"animations": {}}`,
-		"tex/a.png":            "png",
+		"tex/a.png":                "png",
 	})
 	summary, err := ExtractYsmSummary(path)
 	if err != nil {

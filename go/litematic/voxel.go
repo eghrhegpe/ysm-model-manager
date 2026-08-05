@@ -25,7 +25,7 @@ type regionInfo struct {
 
 // voxelBlock 单个方块的体素信息（各格式统一中间表示）
 type voxelBlock struct {
-	Color string
+	Color   string
 	X, Y, Z int16
 }
 

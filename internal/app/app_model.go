@@ -137,10 +137,12 @@ func (a *App) GetModel3DSpec(modelPath string) string {
 }
 
 // SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用）
-// 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止 .. 和绝对路径
+// 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路径与路径穿越（.. 段）
 func (a *App) SaveScreenshotFile(filename string, base64Data string) error {
 	clean := filepath.Clean(filename)
-	if filepath.IsAbs(clean) || strings.Contains(clean, "..") {
+	// 用 filepath.Base 比对：合法纯文件名 Clean 后等于自身；含目录/穿越段会被拒绝。
+	// 不能用 strings.Contains(clean, "..") —— 会误杀 my..file.png 这类合法文件名
+	if filepath.IsAbs(clean) || filepath.Base(clean) != clean {
 		return fmt.Errorf("文件名不能包含路径")
 	}
 	tmpDir := filepath.Join(os.TempDir(), "ysm-preview")

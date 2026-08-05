@@ -35,7 +35,12 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 	if ext == ".json" && !types.IsYsmEntryJSON(filepath.Base(fileName)) {
 		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "仅支持 ysm.json 清单文件", Suggestion: "YSM 包内 json 资源（geometry/animation/语言文件）不可单独导入，请导入 .ysm/.zip/.7z 或解压目录中的 ysm.json"}
 	}
-	if strings.Contains(fileName, "..") || strings.ContainsAny(fileName, `\/`) {
+	// 路径穿越检测：仅拦截真正的穿越模式（../、..\\、末尾..），
+	// 避免误杀 my..file.ysm 等合法文件名（ADR-038 D2）
+	if strings.Contains(fileName, "../") || strings.Contains(fileName, "..\\") || strings.HasSuffix(fileName, "..") {
+		return types.AppError{Code: "FILENAME_INVALID", Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含路径穿越", Suggestion: "请使用纯文件名，不要包含路径"}
+	}
+	if strings.ContainsAny(fileName, `\/`) {
 		return types.AppError{Code: "FILENAME_INVALID", Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
 	}
 	data, err := base64.StdEncoding.DecodeString(base64Data)

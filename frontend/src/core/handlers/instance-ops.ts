@@ -56,7 +56,9 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
               allLines.push(...files);
               totalFiles += files.length;
             }
-          } catch {}
+          } catch (e) {
+            console.warn(`[instance-ops] ListFileNames 失败 (${labels[i]}):`, e);
+          }
         }
 
         if (!totalFiles) {

@@ -487,7 +487,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
 	_, err = io.Copy(out, in)
-	return err
+	if err != nil {
+		// 半截文件清理：io.Copy 失败后删除目标文件，避免残留不完整数据
+		// 与 installer.copyFileLocked 的 ok+os.Remove(dst) 模式对齐
+		_ = os.Remove(dst)
+		out.Close()
+		return err
+	}
+	return out.Close()
 }

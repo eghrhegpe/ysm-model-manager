@@ -59,8 +59,9 @@ func ScanEntries(dir string) []types.ModelEntry {
 		}
 	}
 	entries := []types.ModelEntry{}
-	_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
+			fmt.Printf("[scanner] walk error: %s: %v\n", p, err)
 			return nil
 		}
 		if d.IsDir() {

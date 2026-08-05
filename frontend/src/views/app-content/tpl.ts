@@ -497,6 +497,10 @@ export function diagnosticsHTML(): string {
 <span class="diag-btn-icon">📋</span>
 <span>操作日志</span>
 </button>
+<button class="diag-btn" data-diag="runtime">
+<span class="diag-btn-icon">🕹️</span>
+<span>运行时日志</span>
+</button>
 <button class="diag-btn" data-diag="conflict">
 <span class="diag-btn-icon">⚡</span>
 <span>冲突检测</span>
@@ -519,6 +523,9 @@ export function diagnosticsHTML(): string {
 <input id="diag-log-search" placeholder="🔍 搜索模型名..." style="width:130px;font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);margin-left:auto">
 </div>
 <div id="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">暂无日志</div></div>
+</div>
+<div class="diag-panel" id="diag-runtime" style="display:none">
+<div id="diag-runtime-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">暂无运行时日志</div></div>
 </div>
 <div class="diag-panel" id="diag-conflict" style="display:none">
 <div id="diag-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">点击「开始扫描」检测整合包冲突

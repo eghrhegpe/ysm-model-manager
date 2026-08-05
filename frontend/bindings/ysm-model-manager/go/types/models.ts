@@ -134,7 +134,7 @@ export interface CustomFileInfo {
 }
 
 /**
- * ImportLog 导入日志
+ * ImportLog 应用操作日志（导入、扫描、下载、同步等）
  */
 export interface ImportLog {
     "ModelName": string;
@@ -144,8 +144,9 @@ export interface ImportLog {
     "Status": string;
     "ErrorMsg"?: string;
     "Timestamp": number;
+
     /**
-     * import / scan / download / sync / rename / delete / ui
+     * import / scan / download / sync / rename / delete
      */
     "Operation"?: string;
 }
@@ -241,6 +242,14 @@ export interface PackInfo {
      * ysm-pack.png 的 base64 data URI
      */
     "imageBase64"?: string;
+}
+
+/**
+ * RuntimeLog 运行时日志（watcher/sync 等标准库 log 输出，诊断页可见）
+ */
+export interface RuntimeLog {
+    "Message": string;
+    "Timestamp": number;
 }
 
 /**

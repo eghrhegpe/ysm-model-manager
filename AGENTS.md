@@ -15,7 +15,7 @@
 > 放弃低效的 `git stash` / `git stash push` / `git stash pop` 指令。
 > 前端建议过一遍命名表（`docs/Design.md` §12 文档命名与归属规范）。
 > 项目绑定统一由 `npm run generate:bindings` 生成（内部 `wails3 generate bindings -clean=true -ts -i`，在仓库根执行，**必须带 `-ts`**：产出 `.ts`，前端以 `.js` 后缀 import、由 vite `wailsBindingsResolve` 重定向；无 `-ts` 生成会产出 `.js` 并清掉 git 跟踪的 `.ts`，属回归红线。契约见 `docs/architecture.md` §绑定模式）。
-> 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `review` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check` / `wails3-cli-check`。
+> 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `check-redlines` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check` / `wails3-cli-check`。
 
 ## 去哪里查
 
@@ -227,7 +227,7 @@ node scripts/doctor.mjs               # 改代码 / 发版前，全量闸门（�
 > **改完即验映射表（改哪类 → 跑哪类，唯一权威）**：
 > 改文档 → `link-checker` + `check-knowledge-drift`；改 ADR → `adr-check` + `check-adr-health`；
 > 改前端源码 → `check-circular` + `check-orphan-exports` + `check-deadcode-baseline`；
-> 改资源类型 → `type-consistency`；改前端 UI/文案 → `review` + `comment-checker`；提交前 → `doctor`。
+> 改资源类型 → `type-consistency`；改前端 UI/文案 → `check-redlines` + `comment-checker`；提交前 → `doctor`。
 
 > 注：L14「硬约束」的构建命令（`go build` / `vite build` / `typecheck`）负责「跑得起来」，本节负责「符合仓库治理」，两者互补不重复。
 

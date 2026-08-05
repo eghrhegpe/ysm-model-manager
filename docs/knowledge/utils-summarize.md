@@ -1,5 +1,5 @@
 ---
-kind: utils_summarize
+kind: utils-summarize
 name: 摘要生成 summarize
 tier: leaf
 category: utils

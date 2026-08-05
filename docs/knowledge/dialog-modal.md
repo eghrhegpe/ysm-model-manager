@@ -1,5 +1,5 @@
 ---
-kind: dialog_modal
+kind: dialog-modal
 name: 弹窗基座 modal
 tier: architecture
 category: ui

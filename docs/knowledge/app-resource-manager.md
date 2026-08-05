@@ -1,5 +1,5 @@
 ---
-kind: app_resource_manager
+kind: app-resource-manager
 name: 资源管理页 app-resource-manager
 tier: architecture
 category: ui

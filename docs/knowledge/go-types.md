@@ -1,5 +1,5 @@
 ---
-kind: go_types
+kind: go-types
 name: 共享类型 go/types
 tier: architecture
 category: go

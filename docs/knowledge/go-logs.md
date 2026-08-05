@@ -1,5 +1,5 @@
 ---
-kind: go_logs
+kind: go-logs
 name: 导入日志 go/logs
 tier: architecture
 category: go

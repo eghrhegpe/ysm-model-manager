@@ -10,7 +10,7 @@
 
 | 标识 | 名称 | tier |
 |------|------|------|
-| 🏗 resource_registry | 资源注册表 registry | architecture |
+| 🏗 resource-registry | 资源注册表 registry | architecture |
 
 ## core（5 张）
 
@@ -18,11 +18,11 @@
 
 | 标识 | 名称 | tier |
 |------|------|------|
-| 🏗 event_bus | 事件总线 bus.ts | architecture |
-| 🏗 global_handlers | 全局事件处理 global-handlers | architecture |
-| 🏗 page_store | 页面状态管理 page-store.ts | architecture |
+| 🏗 event-bus | 事件总线 bus.ts | architecture |
+| 🏗 global-handlers | 全局事件处理 global-handlers | architecture |
+| 🏗 page-store | 页面状态管理 page-store.ts | architecture |
 | 🍃 theme | 主题系统 theme | leaf |
-| 🏗 wails_bridge | Wails 桥接 app.ts | architecture |
+| 🏗 wails-bridge | Wails 桥接 app.ts | architecture |
 
 ## feature（6 张）
 
@@ -30,12 +30,12 @@
 
 | 标识 | 名称 | tier |
 |------|------|------|
-| 🏗 community_feature | 社区下载 community | architecture |
-| 🏗 import_queue | 导入队列 import-queue | architecture |
-| 🍃 oldest_models | 资历最深模型 oldest-models | leaf |
-| 🏗 recycle_bin | 回收站界面 recycle-bin | architecture |
-| 🏗 resource_packs | 资源包功能 resource-packs | architecture |
-| 🏗 version_updater | 版本更新 version-updater | architecture |
+| 🏗 community-feature | 社区下载 community | architecture |
+| 🏗 import-queue | 导入队列 import-queue | architecture |
+| 🍃 oldest-models | 资历最深模型 oldest-models | leaf |
+| 🏗 recycle-bin | 回收站界面 recycle-bin | architecture |
+| 🏗 resource-packs | 资源包功能 resource-packs | architecture |
+| 🏗 version-updater | 版本更新 version-updater | architecture |
 
 ## go（25 张）
 
@@ -43,31 +43,31 @@
 
 | 标识 | 名称 | tier |
 |------|------|------|
-| 🏗 go_avatar | 头像 go/avatar | architecture |
-| 🏗 go_dedup | 去重 go/dedup | architecture |
-| 🏗 go_download | 下载器 go/download | architecture |
-| 🍃 go_errors | 错误包装 go/errors | leaf |
-| 🏗 go_fileops | 文件操作 go/fileops | architecture |
-| 🍃 go_fsutil | 文件遍历 go/fsutil | leaf |
-| 🏗 go_geometry | Geometry 存档 go/geometry | architecture |
-| 🏗 go_importer | 导入策略 go/importer | architecture |
-| 🏗 go_installer | 模型安装 go/installer | architecture |
-| 🏗 go_instance | 整合包实例 go/instance | architecture |
-| 🏗 go_litematic | Litematic 解析 go/litematic | architecture |
-| 🏗 go_logs | 导入日志 go/logs | architecture |
-| 🏗 go_packs | 资源包 mcmeta go/packs | architecture |
-| 🏗 go_paths | 路径安全 go/paths | architecture |
-| 🏗 go_recycle | 回收站 go/recycle | architecture |
-| 🏗 go_scanner | 扫描核心 go/scanner | architecture |
-| 🏗 go_sync | 整合包同步 go/sync | architecture |
-| 🏗 go_tags | 标签系统 go/tags | architecture |
-| 🏗 go_threejs | 3D 骨骼 spec go/threejs | architecture |
-| 🏗 go_types | 共享类型 go/types | architecture |
-| 🏗 go_updater | 自动更新 go/updater | architecture |
-| 🍃 go_version | 版本号 go/version | leaf |
-| 🏗 go_watcher | 文件监听 go/watcher | architecture |
-| 🏗 go_ysm_parser | YSM 解析 go/ysm | architecture |
-| 🏗 wails_bindings | Wails Binding API 总览 internal/app | architecture |
+| 🏗 go-avatar | 头像 go/avatar | architecture |
+| 🏗 go-dedup | 去重 go/dedup | architecture |
+| 🏗 go-download | 下载器 go/download | architecture |
+| 🍃 go-errors | 错误包装 go/errors | leaf |
+| 🏗 go-fileops | 文件操作 go/fileops | architecture |
+| 🍃 go-fsutil | 文件遍历 go/fsutil | leaf |
+| 🏗 go-geometry | Geometry 存档 go/geometry | architecture |
+| 🏗 go-importer | 导入策略 go/importer | architecture |
+| 🏗 go-installer | 模型安装 go/installer | architecture |
+| 🏗 go-instance | 整合包实例 go/instance | architecture |
+| 🏗 go-litematic | Litematic 解析 go/litematic | architecture |
+| 🏗 go-logs | 导入日志 go/logs | architecture |
+| 🏗 go-packs | 资源包 mcmeta go/packs | architecture |
+| 🏗 go-paths | 路径安全 go/paths | architecture |
+| 🏗 go-recycle | 回收站 go/recycle | architecture |
+| 🏗 go-scanner | 扫描核心 go/scanner | architecture |
+| 🏗 go-sync | 整合包同步 go/sync | architecture |
+| 🏗 go-tags | 标签系统 go/tags | architecture |
+| 🏗 go-threejs | 3D 骨骼 spec go/threejs | architecture |
+| 🏗 go-types | 共享类型 go/types | architecture |
+| 🏗 go-updater | 自动更新 go/updater | architecture |
+| 🍃 go-version | 版本号 go/version | leaf |
+| 🏗 go-watcher | 文件监听 go/watcher | architecture |
+| 🏗 go-ysm-parser | YSM 解析 go/ysm | architecture |
+| 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture |
 
 ## ui（17 张）
 
@@ -75,23 +75,23 @@
 
 | 标识 | 名称 | tier |
 |------|------|------|
-| 🏗 app_content | 主内容页 app-content | architecture |
-| 🏗 app_modules | 组件入口 app-modules | architecture |
-| 🍃 app_nav | 顶部导航 app-nav | leaf |
-| 🏗 app_preview | 预览面板 app-preview | architecture |
-| 🏗 app_resource_manager | 资源管理页 app-resource-manager | architecture |
-| 🏗 app_sidebar | 侧边栏 app-sidebar | architecture |
-| 🏗 app_sync_manager | 整合包同步页 app-sync-manager | architecture |
-| 🍃 app_toast | Toast 通知 app-toast | leaf |
-| 🏗 app_tree | 资源树 app-tree | architecture |
-| 🏗 context_menu | 右键菜单系统 | architecture |
-| 🍃 dialog_adv_filter | 高级筛选 adv-filter | leaf |
-| 🏗 dialog_batch_rename | 批量重命名 batch-rename | architecture |
-| 🏗 dialog_modal | 弹窗基座 modal | architecture |
-| 🍃 dialog_rename | 重命名弹窗 rename | leaf |
-| 🏗 dialog_tag_editor | 标签编辑器 tag-editor | architecture |
-| 🍃 shared_styles | 共享样式 shared-styles | leaf |
-| 🏗 test_utils | 测试工具 test-utils（G-1 抗脆弱测试基础设施） | architecture |
+| 🏗 app-content | 主内容页 app-content | architecture |
+| 🏗 app-modules | 组件入口 app-modules | architecture |
+| 🍃 app-nav | 顶部导航 app-nav | leaf |
+| 🏗 app-preview | 预览面板 app-preview | architecture |
+| 🏗 app-resource-manager | 资源管理页 app-resource-manager | architecture |
+| 🏗 app-sidebar | 侧边栏 app-sidebar | architecture |
+| 🏗 app-sync-manager | 整合包同步页 app-sync-manager | architecture |
+| 🍃 app-toast | Toast 通知 app-toast | leaf |
+| 🏗 app-tree | 资源树 app-tree | architecture |
+| 🏗 context-menu | 右键菜单系统 | architecture |
+| 🍃 dialog-adv-filter | 高级筛选 adv-filter | leaf |
+| 🏗 dialog-batch-rename | 批量重命名 batch-rename | architecture |
+| 🏗 dialog-modal | 弹窗基座 modal | architecture |
+| 🍃 dialog-rename | 重命名弹窗 rename | leaf |
+| 🏗 dialog-tag-editor | 标签编辑器 tag-editor | architecture |
+| 🍃 shared-styles | 共享样式 shared-styles | leaf |
+| 🏗 test-utils | 测试工具 test-utils（G-1 抗脆弱测试基础设施） | architecture |
 
 ## utils（15 张）
 
@@ -99,21 +99,21 @@
 
 | 标识 | 名称 | tier |
 |------|------|------|
-| 🏗 animation_system | 动画系统 animation | architecture |
+| 🏗 animation-system | 动画系统 animation | architecture |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture |
 | 🏗 model3d | 3D 预览渲染 model3d | architecture |
-| 🍃 utils_display | 文件名显示 display | leaf |
-| 🍃 utils_dom | DOM 工具 dom | leaf |
-| 🍃 utils_errors | 错误处理 errors | leaf |
-| 🏗 utils_export | 截图与导出 export | architecture |
-| 🍃 utils_extensions | 扩展名映射 extensions | leaf |
-| 🍃 utils_fmt | 格式化工具 fmt | leaf |
-| 🍃 utils_icon | 图标映射 icon | leaf |
-| 🍃 utils_mc_format | MC 格式判定 mc-format | leaf |
-| 🍃 utils_misc | 常量与调试 constants/debug | leaf |
-| 🍃 utils_resource_types | 资源类型工具 resource-types | leaf |
-| 🍃 utils_summarize | 摘要生成 summarize | leaf |
-| 🏗 ysm_wasm | WASM 解析器 ysm-parser | architecture |
+| 🍃 utils-display | 文件名显示 display | leaf |
+| 🍃 utils-dom | DOM 工具 dom | leaf |
+| 🍃 utils-errors | 错误处理 errors | leaf |
+| 🏗 utils-export | 截图与导出 export | architecture |
+| 🍃 utils-extensions | 扩展名映射 extensions | leaf |
+| 🍃 utils-fmt | 格式化工具 fmt | leaf |
+| 🍃 utils-icon | 图标映射 icon | leaf |
+| 🍃 utils-mc-format | MC 格式判定 mc-format | leaf |
+| 🍃 utils-misc | 常量与调试 constants/debug | leaf |
+| 🍃 utils-resource-types | 资源类型工具 resource-types | leaf |
+| 🍃 utils-summarize | 摘要生成 summarize | leaf |
+| 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture |
 
 ---
 

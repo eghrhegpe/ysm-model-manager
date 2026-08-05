@@ -1,5 +1,5 @@
 ---
-kind: page_store
+kind: page-store
 name: 页面状态管理 page-store.ts
 tier: architecture
 category: core

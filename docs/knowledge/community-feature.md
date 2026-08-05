@@ -1,5 +1,5 @@
 ---
-kind: community_feature
+kind: community-feature
 name: 社区下载 community
 tier: architecture
 category: feature

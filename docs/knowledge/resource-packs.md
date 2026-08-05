@@ -1,5 +1,5 @@
 ---
-kind: resource_packs
+kind: resource-packs
 name: 资源包功能 resource-packs
 tier: architecture
 category: feature

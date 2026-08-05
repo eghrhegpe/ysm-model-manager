@@ -1,5 +1,5 @@
 ---
-kind: oldest_models
+kind: oldest-models
 name: 资历最深模型 oldest-models
 tier: leaf
 category: feature

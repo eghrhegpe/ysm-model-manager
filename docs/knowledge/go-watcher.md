@@ -1,5 +1,5 @@
 ---
-kind: go_watcher
+kind: go-watcher
 name: 文件监听 go/watcher
 tier: architecture
 category: go

@@ -1,5 +1,5 @@
 ---
-kind: go_fsutil
+kind: go-fsutil
 name: 文件遍历 go/fsutil
 tier: leaf
 category: go

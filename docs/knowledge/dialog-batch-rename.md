@@ -1,5 +1,5 @@
 ---
-kind: dialog_batch_rename
+kind: dialog-batch-rename
 name: 批量重命名 batch-rename
 tier: architecture
 category: ui

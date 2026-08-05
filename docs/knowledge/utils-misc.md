@@ -1,5 +1,5 @@
 ---
-kind: utils_misc
+kind: utils-misc
 name: 常量与调试 constants/debug
 tier: leaf
 category: utils

@@ -1,5 +1,5 @@
 ---
-kind: go_litematic
+kind: go-litematic
 name: Litematic 解析 go/litematic
 tier: architecture
 category: go

@@ -1,5 +1,5 @@
 ---
-kind: utils_extensions
+kind: utils-extensions
 name: 扩展名映射 extensions
 tier: leaf
 category: utils

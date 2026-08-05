@@ -9,14 +9,14 @@ docs/knowledge/
 ├── AGENTS.md              ← 本文件（路由指南）
 ├── index.md               ← 自动生成，知识卡索引
 ├── routes.md              ← 自动生成，AI 路由表
-├── <kind>.md              ← 单张知识卡（kind 为 snake_case 标识符）
+├── <kind>.md              ← 单张知识卡（kind 为 kebab-case 标识符，与文件名同源）
 ```
 
 ## 知识卡格式（YAML frontmatter）
 
 ```yaml
 ---
-kind: event_bus              # snake_case 标识符，也是文件名
+kind: event-bus             # kebab-case 标识符，等于文件名（去掉 .md）
 name: 事件总线 bus.ts         # 人类可读名称
 tier: architecture | leaf    # architecture=核心架构, leaf=叶子节点
 category: core               # core|go|ui|feature|utils|config
@@ -74,7 +74,7 @@ node scripts/check-knowledge-drift.mjs --json     # JSON（CI 用）
 ## 约束
 
 - `source_files` **必须**真实存在于磁盘，否则 `check-knowledge-drift.mjs` 报错
-- `kind` **必须**是 snake_case，且与文件名一致
+- `kind` **必须**是 kebab-case，且等于文件名（去掉 .md 后的 kebab 形式）
 - `name` **必须**等于 H1 标题
 - 生成物（`index.md`、`routes.md`）**禁止手改**
 - 卡片正文为人工维护内容，生成物仅为索引/路由

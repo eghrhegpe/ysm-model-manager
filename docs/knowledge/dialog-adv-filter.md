@@ -1,5 +1,5 @@
 ---
-kind: dialog_adv_filter
+kind: dialog-adv-filter
 name: 高级筛选 adv-filter
 tier: leaf
 category: ui

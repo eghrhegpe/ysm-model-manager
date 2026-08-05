@@ -1,5 +1,5 @@
 ---
-kind: wails_bridge
+kind: wails-bridge
 name: Wails 桥接 app.ts
 tier: architecture
 category: core

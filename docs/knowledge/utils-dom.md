@@ -1,5 +1,5 @@
 ---
-kind: utils_dom
+kind: utils-dom
 name: DOM 工具 dom
 tier: leaf
 category: utils

@@ -1,5 +1,5 @@
 ---
-kind: app_preview
+kind: app-preview
 name: 预览面板 app-preview
 tier: architecture
 category: ui

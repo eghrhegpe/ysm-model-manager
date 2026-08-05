@@ -1,5 +1,5 @@
 ---
-kind: test_utils
+kind: test-utils
 name: 测试工具 test-utils（G-1 抗脆弱测试基础设施）
 tier: architecture
 category: ui

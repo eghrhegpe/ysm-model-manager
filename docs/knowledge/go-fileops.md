@@ -1,5 +1,5 @@
 ---
-kind: go_fileops
+kind: go-fileops
 name: 文件操作 go/fileops
 tier: architecture
 category: go

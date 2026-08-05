@@ -1,5 +1,5 @@
 ---
-kind: wails_bindings
+kind: wails-bindings
 name: Wails Binding API 总览 internal/app
 tier: architecture
 category: go

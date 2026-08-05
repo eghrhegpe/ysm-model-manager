@@ -1,5 +1,5 @@
 ---
-kind: go_updater
+kind: go-updater
 name: 自动更新 go/updater
 tier: architecture
 category: go

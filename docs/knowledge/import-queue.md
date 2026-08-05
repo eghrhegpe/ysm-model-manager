@@ -1,5 +1,5 @@
 ---
-kind: import_queue
+kind: import-queue
 name: 导入队列 import-queue
 tier: architecture
 category: feature

@@ -1,5 +1,5 @@
 ---
-kind: go_geometry
+kind: go-geometry
 name: Geometry 存档 go/geometry
 tier: architecture
 category: go

@@ -1,5 +1,5 @@
 ---
-kind: go_threejs
+kind: go-threejs
 name: 3D 骨骼 spec go/threejs
 tier: architecture
 category: go

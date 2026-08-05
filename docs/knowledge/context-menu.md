@@ -1,5 +1,5 @@
 ---
-kind: context_menu
+kind: context-menu
 name: 右键菜单系统
 tier: architecture
 category: ui

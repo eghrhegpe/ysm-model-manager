@@ -8,7 +8,7 @@
  *   [ERROR] 知识卡 source_files 指向磁盘不存在的文件
  *   [ERROR] 知识卡 frontmatter 必填字段缺失（kind/name/category）
  *   [ERROR] 知识卡 category / tier 值域违规
- *   [ERROR] 知识卡 kind 非 snake_case 或含未填充占位符 <...>
+ *   [ERROR] 知识卡 kind 非 kebab-case/snake_case（小写，允许 - 与 _）或含未填充占位符 <...>
  *   [WARN]  H1 标题与 name 不一致
  *   [WARN]  AGENTS.md 含手写事实索引（├──/└── 目录树）
  *   [ERROR] 索引文件（index.md / routes.md）链接指向不存在的卡
@@ -34,7 +34,7 @@ const warns = [];
 const CATEGORY_ENUM = new Set(['core', 'go', 'ui', 'feature', 'utils', 'config']);
 const TIER_ENUM = new Set(['architecture', 'leaf']);
 const REQUIRED_FIELDS = ['kind', 'name', 'category', 'tier'];
-const KIND_RE = /^[a-z][a-z0-9_]*$/;
+const KIND_RE = /^[a-z][a-z0-9_-]*$/;
 const PLACEHOLDER_RE = /^<.*>$/;
 
 // ── 共享 frontmatter 解析（复制 MikuMikuAR _lib/frontmatter.mjs 核心逻辑）──
@@ -151,7 +151,13 @@ function checkKnowledgeMeta() {
     // kind 格式
     const kind = getScalar(fm, 'kind');
     if (kind && !KIND_RE.test(kind)) {
-      errors.push(`知识卡 ${cf} 的 kind 非法: ${kind}（应为 snake_case）`);
+      errors.push(`知识卡 ${cf} 的 kind 非法: ${kind}（应为小写 kebab-case 或 snake_case，允许 - 与 _）`);
+    }
+
+    // kind 与文件名同源（单一不变量：文件名是命名事实源）
+    const stem = cf.replace(/\.md$/, '');
+    if (kind && kind !== stem) {
+      errors.push(`知识卡 ${cf} 的 kind「${kind}」与文件名「${stem}」不一致（kind 应等于文件名 kebab 形式）`);
     }
 
     // category 值域

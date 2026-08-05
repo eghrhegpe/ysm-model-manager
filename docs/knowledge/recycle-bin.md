@@ -1,5 +1,5 @@
 ---
-kind: recycle_bin
+kind: recycle-bin
 name: 回收站界面 recycle-bin
 tier: architecture
 category: feature

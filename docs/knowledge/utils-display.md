@@ -1,5 +1,5 @@
 ---
-kind: utils_display
+kind: utils-display
 name: 文件名显示 display
 tier: leaf
 category: utils

@@ -244,6 +244,12 @@ func InstallWithOverlay(src, customDir string) (string, error) {
 	if err := os.MkdirAll(customDir, 0755); err != nil {
 		return "", types.AppError{Code: "IO_ERROR", Operation: "安装模型（覆盖检查）", TargetPath: customDir, Reason: "无法创建目录", Suggestion: "请检查磁盘权限或空间"}
 	}
+	// 防覆盖检查：在 installLock 临界区内先检查后写入（同一锁内天然原子，无 TOCTOU 窗口）。
+	// 不能把检查下沉到 copyFileLocked —— 那会破坏 Install/RelinkDir 的覆盖替换语义
+	dst := filepath.Join(customDir, filepath.Base(src))
+	if _, err := os.Stat(dst); err == nil {
+		return "CONFLICT:" + dst, types.AppError{Code: "ALREADY_EXISTS", Operation: "安装模型（覆盖检查）", TargetPath: dst, Reason: "文件已存在", Suggestion: "如需覆盖请先删除原文件"}
+	}
 	return copyFileLocked(src, customDir)
 }
 
@@ -258,10 +264,9 @@ func copyFileLocked(src, dstDir string) (string, error) {
 	if src == dst {
 		return dst, nil
 	}
-	// 防覆盖：目标已存在时直接报错（TOCTOU 窗口缩小到同一函数内）
-	if _, err := os.Stat(dst); err == nil {
-		return "", types.AppError{Code: "ALREADY_EXISTS", Operation: "复制文件", TargetPath: dst, Reason: "目标文件已存在", Suggestion: "如需覆盖请先删除原文件"}
-	}
+	// 注意：这里不做防覆盖检查——copyFileLocked 被 Install/RelinkDir 复用，
+	// 它们依赖「已存在则 os.Create 覆盖写 + 半截清理」的替换语义。
+	// 防覆盖只属于 InstallWithOverlay（在同一 installLock 临界区内检查+写入，天然原子）
 	in, err := os.Open(src)
 	if err != nil {
 		return "", types.AppError{Code: "IO_ERROR", Operation: "复制文件", SourcePath: src, Reason: "无法读取源文件", Suggestion: "请检查文件是否被占用或已删除"}

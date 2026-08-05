@@ -4,7 +4,7 @@
 // 样式：.afv-inp 已提取到 frontend/css/components.css（避免重复注入 <style>）
 // 后端约束：当前 Go SearchModels 只支持 (minBones, maxBones, minCubes, maxCubes, minTex, maxTex) 6 个范围 + 1 个关键字；
 //   不支持文件大小、排序（避免展示无效控件）
-import { esc, closeDlg, registerDlg } from "./modal.js";
+import { esc, closeDlg, registerDlg } from "./modal.ts";
 import { getApp } from "../../wails/app.ts";
 
 /** 筛选条件 */

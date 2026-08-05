@@ -134,6 +134,21 @@ export interface CustomFileInfo {
 }
 
 /**
+ * ImportFileItem 文件夹型模型整组导入的文件项（ADR-038 关联：解压目录整组导入）
+ */
+export interface ImportFileItem {
+    /**
+     * 相对文件夹根的路径（正斜杠，保留子目录层级）
+     */
+    "RelPath": string;
+
+    /**
+     * 文件内容
+     */
+    "Base64": string;
+}
+
+/**
  * ImportLog 应用操作日志（导入、扫描、下载、同步等）
  */
 export interface ImportLog {

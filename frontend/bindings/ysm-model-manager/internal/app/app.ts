@@ -181,7 +181,11 @@ export function DeleteModelDir(path: string): $CancellablePromise<void> {
 }
 
 /**
- * DeleteResourcePack 删除资源包文件
+ * DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）：
+ * src 为 ysm.json 时整组删除父目录（文件夹型模型），否则删除单文件。
+ * 统一委托 fileops.DeleteModelFile，消除与 DeleteModelDir 的双轨语义。
+ * 守卫根传类型特定仓库根（ysm 用 a.ysmRoot()）：防根级 ysm.json 清空整个 ysm 仓库；
+ * 守卫拒绝时 fileops 内部回退单文件删除。
  */
 export function DeleteResourcePack(path: string): $CancellablePromise<void> {
     return $Call.ByID(395621705, path);
@@ -453,6 +457,14 @@ export function ImportModelFileSkipCheck(fileName: string, base64Data: string): 
 
 export function ImportModelFileTo(fileName: string, subpath: string, base64Data: string): $CancellablePromise<void> {
     return $Call.ByID(191674492, fileName, subpath, base64Data);
+}
+
+/**
+ * ImportModelFolder 文件夹型模型整组导入（YSM 解压目录，保留子目录层级，ADR-038 关联）
+ * folderName = 仓库文件夹名（模型名）；files = 相对路径 → base64 内容
+ */
+export function ImportModelFolder(folderName: string, subpath: string, files: types$0.ImportFileItem[] | null): $CancellablePromise<void> {
+    return $Call.ByID(100876983, folderName, subpath, files);
 }
 
 /**

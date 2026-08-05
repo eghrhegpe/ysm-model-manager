@@ -43,7 +43,7 @@ const result = await App.SomeBinding();
 ## 不变量
 
 - 禁止 `const { SomeBinding } = window.go.main.App`（治理红线 4.2）
-- 改 Go 文件后必须 `wails build` + 重启（致命陷阱 #1）
+- 改 Go 文件后必须 `wails3 build` + 重启（致命陷阱 #1）
 - Binding 函数名写错会返回 undefined（致命陷阱 #5）
 
 ## 相关

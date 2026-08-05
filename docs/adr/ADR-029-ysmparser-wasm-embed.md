@@ -10,7 +10,7 @@
 
 ## 1. 背景（Context）
 
-`.ysm` 模型文件需在不依赖外部二进制的前提下，于 WebView2 内解码出骨骼（`models/main.json`）与纹理，供 2D 线框预览与 3D 渲染使用。早期方案为随包分发 **YSMParser.exe sidecar**（~1.2 MB），但存在外部依赖、跨平台困难、`wails build -clean` 后丢失需手动恢复等运维包袱。
+`.ysm` 模型文件需在不依赖外部二进制的前提下，于 WebView2 内解码出骨骼（`models/main.json`）与纹理，供 2D 线框预览与 3D 渲染使用。早期方案为随包分发 **YSMParser.exe sidecar**（~1.2 MB），但存在外部依赖、跨平台困难、`wails3 build -clean` 后丢失需手动恢复等运维包袱。
 
 同期调研发现 YSMParser 为 C++ 项目，可用 Emscripten 编译为 WASM 并经 base64 内嵌前端，消除 sidecar。但 WASM 集成横跨 Emscripten 编译链、WASM 运行时调试、JS/WebView2 兼容性，历史踩坑详见被收口来源（8 轮 Debug：从 `Unsupported file version` 到成功解码 187 骨 877 方的加密 .ysm）。
 

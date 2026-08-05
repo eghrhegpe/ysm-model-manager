@@ -14,7 +14,7 @@ description: 项目历史事故浓缩的 16 条避坑教训 — 现象 × 根因
 ## 1. Go 改后未重建
 
 - **现象**：前端调用没反应，Binding 返回 undefined 或旧行为。
-- **规则**：Wails Binding 是编译二进制，改 Go 文件后必须 `wails build` 或 `go build .` + 重启应用。
+- **规则**：Wails Binding 是编译二进制，改 Go 文件后必须 `wails3 build` 或 `go build .` + 重启应用。
 
 ## 2. 全局事件放错组件
 

@@ -268,7 +268,7 @@ app-content/
 cd frontend && npm install
 
 # 开发模式（前端热重载）
-wails dev
+wails3 dev
 
 # 仅构建前端
 cd frontend && npx vite build
@@ -277,12 +277,12 @@ cd frontend && npx vite build
 go build ./go/...
 
 # 完整构建（生产）
-wails build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
+wails3 build -ldflags "-X ysm-model-manager/go/version.Version=vX.X.X"
 ```
 
 **注意**：
 
-- 修改 Go 文件后必须 `go build ./go/...` + `wails build` 并重启
+- 修改 Go 文件后必须 `go build ./go/...` + `wails3 build` 并重启
 - 前端非 module 脚本需在 `app-modules.ts` 中 import，禁止在 `index.html` 加 `<script>`
 - 修改 CSS 变量或全局样式后需刷新（Vite 热重载）
 

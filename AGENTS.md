@@ -15,7 +15,7 @@
 > 放弃低效的 `git stash` / `git stash push` / `git stash pop` 指令。
 > 前端建议过一遍命名表（`docs/Design.md` §12 文档命名与归属规范）。
 > 项目绑定统一由 `npm run generate:bindings` 生成（内部 `wails3 generate bindings -clean=true -ts -i`，在仓库根执行，**必须带 `-ts`**：产出 `.ts`，前端以 `.js` 后缀 import、由 vite `wailsBindingsResolve` 重定向；无 `-ts` 生成会产出 `.js` 并清掉 git 跟踪的 `.ts`，属回归红线。契约见 `docs/architecture.md` §绑定模式）。
-> 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `review` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check`。
+> 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `review` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check` / `wails3-cli-check`。
 
 ## 去哪里查
 
@@ -236,7 +236,7 @@ node scripts/doctor.mjs               # 改代码 / 发版前，全量闸门（�
 
 | # | 陷阱 | 表现 | 规则 |
 |---|------|------|------|
-| 1 | Go 改后未重建 | 前端调用没反应 | 改 Go 文件必须 `wails build` 或 `go build .` + 重启 |
+| 1 | Go 改后未重建 | 前端调用没反应 | 改 Go 文件必须 `wails3 build` 或 `go build .` + 重启 |
 | 2 | 全局事件放错组件 | 切页后 handler 消失 | 全局 handler 必须放 `app-content/index.ts` 的 `_registerGlobalHandlers()` |
 | 3 | 按钮异步后卡死 | 操作失败后按钮灰掉 | `finally` 里 emit 完成事件，不放 try 末尾 |
 | 4 | `const` TDZ | 静默失败 | `const fn = () => {}` 不提升，先定义再调用 |

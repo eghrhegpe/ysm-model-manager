@@ -271,7 +271,7 @@ use_when:
 ## 不变量
 
 - **Binding 函数名写错返回 undefined**（致命陷阱 #5）：调用前必须先 grep `internal/app/` 确认函数名存在，不得凭记忆拼写。
-- **改 Go 后必须重新构建才生效**（致命陷阱 #1）：修改 Binding 后需 `wails build` 或 `go build` 并重启，前端调用无反应先查是否重建。
+- **改 Go 后必须重新构建才生效**（致命陷阱 #1）：修改 Binding 后需 `wails3 build` 或 `go build` 并重启，前端调用无反应先查是否重建。
 - **禁止 `window.go.main.App` 直连**（治理红线 §3.2）：一律走 `getApp()`；零 `window.__*` 全局变量。
 - `frontend/bindings/` 是生成物，禁止手改；Go 方法增删改后重新生成才进入前端清单。
 - `SetApp` / `SetMainWindow` 是启动期框架接线，前端业务代码不得调用。

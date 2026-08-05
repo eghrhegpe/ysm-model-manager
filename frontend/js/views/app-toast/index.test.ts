@@ -1,7 +1,7 @@
 // ===== <app-toast> 组件级测试（G-1 — ADR-035 / Design.md §19.1）=====
 // 断言基于 data-testid 稳定钩子；交互走 bus.emit 事件驱动。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getByTestId, getAllByTestId, waitFor, sleep } from "../../test-utils/index.ts";
+import { getByTestId, getAllByTestId, queryByTestId, waitFor, sleep } from "../../test-utils/index.ts";
 import { bus } from "../../bus.ts";
 import "./index.ts"; // 触发 customElements.define("app-toast")
 
@@ -63,7 +63,7 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
     expect(closeBtn).toBeTruthy();
     closeBtn.click();
     await sleep(300); // 等待 slideOut 动画
-    expect(getByTestId(root, "toast")).toBeNull();
+    expect(queryByTestId(root, "toast")).toBeNull();
     unmount(el);
   });
 
@@ -101,7 +101,7 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
     bus.emit("toast:show", { msg: "断开后不应出现" });
     await sleep(100);
     const root = el.shadowRoot!;
-    expect(getByTestId(root, "toast")).toBeNull();
+    expect(queryByTestId(root, "toast")).toBeNull();
   });
 
   it("duration 到期后自动移除", async () => {
@@ -111,7 +111,7 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
     await waitFor(() => getByTestId(root, "toast") !== null);
     // 50ms 到期 + 200ms 动画移除
     await sleep(300);
-    expect(getByTestId(root, "toast")).toBeNull();
+    expect(queryByTestId(root, "toast")).toBeNull();
     unmount(el);
   });
 });

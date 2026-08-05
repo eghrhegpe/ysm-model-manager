@@ -2,7 +2,7 @@
 // 断言基于 data-testid 稳定钩子 + 交互路径；状态经 selectState/实例字段查询，
 // 不绑定 CSS 类/文案。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getByTestId, getAllByTestId, waitFor } from "../../test-utils/index.ts";
+import { getByTestId, queryAllByTestId, waitFor } from "../../test-utils/index.ts";
 import { selectState } from "./data.ts";
 import { bus } from "../../bus.ts";
 import { ToggleModelEnable } from "../../../bindings/ysm-model-manager/internal/app/app.js";
@@ -58,14 +58,14 @@ async function mountTree(): Promise<TreeLike> {
   await waitFor(() => {
     const root = el.shadowRoot!;
     return (
-      getAllByTestId(root, "tree-file").length + getAllByTestId(root, "tree-dir").length > 0
+      queryAllByTestId(root, "tree-file").length + queryAllByTestId(root, "tree-dir").length > 0
     );
   });
   return el;
 }
 
 function clickRow(el: HTMLElement, idx: number, opts: { ctrl?: boolean; shift?: boolean } = {}): void {
-  const rows = getAllByTestId(el.shadowRoot!, "tree-file");
+  const rows = queryAllByTestId(el.shadowRoot!, "tree-file");
   rows[idx].dispatchEvent(
     new MouseEvent("click", { bubbles: true, ctrlKey: !!opts.ctrl, metaKey: !!opts.ctrl, shiftKey: !!opts.shift }),
   );
@@ -85,7 +85,7 @@ describe("app-tree 组件（testid 钩子 + 交互路径）", () => {
 
   it("1. 渲染后文件行带 tree-file testid", async () => {
     const el = await mountTree();
-    expect(getAllByTestId(el.shadowRoot!, "tree-file").length).toBe(2);
+    expect(queryAllByTestId(el.shadowRoot!, "tree-file").length).toBe(2);
   });
 
   it("2. 单击选中单行（selectState + lastKey）", async () => {
@@ -112,9 +112,9 @@ describe("app-tree 组件（testid 钩子 + 交互路径）", () => {
   it("5. 连点文件开关防重入：ToggleModelEnable 只调一次", async () => {
     const el = await mountTree();
     const toggle = getByTestId(el.shadowRoot!, "tree-toggle");
-    toggle!.click();
+    (toggle as HTMLElement).click();
     // 第一次点击同步置位 _toggleBusy（events.ts:136），第二次点击在同步阶段被拦截
-    toggle!.click(); // 第二次被 _toggleBusy 拦截（events.ts:135）
+    (toggle as HTMLElement).click(); // 第二次被 _toggleBusy 拦截（events.ts:135）
     // ToggleModelEnable 经 getApp().then 异步链触发（events.ts:141-142），需等待断言
     await waitFor(() => (ToggleModelEnable as unknown as { mock: { calls: unknown[] } }).mock.calls.length === 1);
   });
@@ -124,7 +124,7 @@ describe("app-tree 组件（testid 钩子 + 交互路径）", () => {
       { name: "a.ysm", path: "folder/a.ysm", fullPath: "/repo/folder/a.ysm", type: "ysm", banned: false, size: 1, modTime: 0 },
     ];
     const el = await mountTree();
-    expect(getAllByTestId(el.shadowRoot!, "tree-dir").length).toBeGreaterThan(0);
+    expect(queryAllByTestId(el.shadowRoot!, "tree-dir").length).toBeGreaterThan(0);
   });
 
   it("7. 点击文件夹行展开/折叠（_dirOpen 翻转 + 持久化）", async () => {
@@ -132,13 +132,13 @@ describe("app-tree 组件（testid 钩子 + 交互路径）", () => {
       { name: "a.ysm", path: "folder/a.ysm", fullPath: "/repo/folder/a.ysm", type: "ysm", banned: false, size: 1, modTime: 0 },
     ];
     const el = await mountTree();
-    const dirRow = getAllByTestId(el.shadowRoot!, "tree-dir")[0];
+    const dirRow = queryAllByTestId(el.shadowRoot!, "tree-dir")[0];
     dirRow.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     const keys = Object.keys(el._dirOpen);
     expect(keys.length).toBeGreaterThan(0);
     expect(el._dirOpen[keys[0]]).toBe(true);
     // _renderTree 已重建 DOM（旧引用失效），重新获取行再点第二次
-    const dirRow2 = getAllByTestId(el.shadowRoot!, "tree-dir")[0];
+    const dirRow2 = queryAllByTestId(el.shadowRoot!, "tree-dir")[0];
     dirRow2.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(el._dirOpen[keys[0]]).toBe(false);
   });
@@ -149,7 +149,7 @@ describe("app-tree 组件（testid 钩子 + 交互路径）", () => {
     ];
     const el = await mountTree();
     const dirToggle = getByTestId(el.shadowRoot!, "tree-dir-toggle");
-    dirToggle!.click();
+    (dirToggle as HTMLElement).click();
     expect(selectState.keys.size).toBe(0);
   });
 

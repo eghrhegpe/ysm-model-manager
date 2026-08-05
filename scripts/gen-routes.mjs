@@ -14,51 +14,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
+import { parseFrontmatter, getScalar, getList } from './_lib/frontmatter.mjs';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 const OUTPUT = path.join(KC_DIR, 'routes.md');
 const CHECK = process.argv.includes('--check');
-
-// ── 共享 frontmatter 解析 ────────────────────────────
-
-function parseFrontmatter(text) {
-  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  return m ? m[1] : null;
-}
-
-function getScalar(fm, key) {
-  if (!fm) return undefined;
-  const line = fm.match(new RegExp('^' + key + '\\s*:\\s*(.+)$', 'm'));
-  if (!line) return undefined;
-  const v = line[1].trim();
-  if (v === '' || v.startsWith('<')) return undefined;
-  return v.replace(/\s*#.*/, '').trim();
-}
-
-function getList(fm, key) {
-  if (!fm) return [];
-  const lines = fm.split(/\r?\n/);
-  const out = [];
-  let inList = false;
-  for (const line of lines) {
-    const head = line.match(new RegExp('^' + key + '\\s*:\\s*(.*)$'));
-    if (head) {
-      inList = true;
-      const inline = head[1].replace(/\s*#.*$/, '').trim();
-      if (inline && !inline.startsWith('<')) out.push(inline);
-      continue;
-    }
-    if (!inList) continue;
-    const item = line.match(/^\s*-\s*(.+)$/);
-    if (item) {
-      const v = item[1].replace(/\s*#.*$/, '').trim();
-      if (v && !v.startsWith('<')) out.push(v);
-    } else if (/^\S/.test(line)) {
-      inList = false;
-    }
-  }
-  return out;
-}
 
 // ── 配置 ─────────────────────────────────────────────
 

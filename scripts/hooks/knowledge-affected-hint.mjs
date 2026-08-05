@@ -17,6 +17,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { getRoot } from '../_lib/scan-files.mjs';
+import { normalizeGitPath } from '../_lib/posix-gitpath.mjs';
 
 export const BLOCK_START = '📚 受影响知识卡（建议同步复核 docs/knowledge）：';
 export const BLOCK_END = '📚 ──END──';
@@ -38,14 +40,6 @@ export function stripBlock(msg, start = BLOCK_START, end = BLOCK_END) {
 /** 构造待追加区块（卡片 stem → docs/knowledge/<stem>.md）。 */
 export function buildBlock(cards, start = BLOCK_START, end = BLOCK_END) {
   return [BLOCK_START, ...cards.map((c) => `- docs/knowledge/${c}.md`), end].join('\n');
-}
-
-function getRoot() {
-  try {
-    return execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
-  } catch {
-    return '';
-  }
 }
 
 function getStagedChanged() {
@@ -70,15 +64,6 @@ function getAffectedCards(ROOT, changed) {
   } catch {
     return [];
   }
-}
-
-// Git Bash 把 Windows 路径以 msys 形式（/c/Users/...）传给钩子；Windows 版 Node 的
-// path.isAbsolute 会误判其"非绝对"。这里归一化为 C:\... 后再判定，避免 path.join 拼坏。
-function normalizeGitPath(p, root) {
-  if (!p) return p;
-  const m = p.match(/^\/([a-zA-Z])\/(.*)$/);
-  if (m) p = `${m[1]}:/${m[2]}`;
-  return path.isAbsolute(p) ? p : path.join(root, p);
 }
 
 function main() {

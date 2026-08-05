@@ -126,7 +126,7 @@ Wails v3 **Service 反射绑定**：`*app.App` 的所有导出方法自动暴露
 
 - YSMParser 已内嵌 WASM：`frontend/src/wasm/ysm-wasm-data.js`（base64 编码，约 1.52MB），前端 WebView2 直接解码 `.ysm`，**无需 exe sidecar**。
 - exe sidecar 仅作为开发调试的 Go CLI fallback；**发版时不打包 YSMParser.exe**。
-- 调试 CLI fallback 可从 `build/ysmparser-cache/` 恢复（`wails build -clean` 会清空 `build/bin/`，但 WASM 已内嵌，无需强制恢复 exe）。
+- 调试 CLI fallback 可从 `build/ysmparser-cache/` 恢复（`wails3 build -clean` 会清空 `build/bin/`，但 WASM 已内嵌，无需强制恢复 exe）。
 
 ### 4.2 WASM 加载路径
 

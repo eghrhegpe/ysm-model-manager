@@ -132,7 +132,7 @@ HTML 完整性、脚本输出。**Go Wails Binding 契约零覆盖**——前端
 **构建侧**：
 
 9. `cmd/build-release.ps1` / `scripts/release.ps1` — 全 PowerShell 脚本，
-   无 bash/Makefile 等价物。非 Windows 构建需手写 `wails build`。
+   无 bash/Makefile 等价物。非 Windows 构建需手写 `wails3 build`。
    **处置**：补 `build-release.sh` bash 等价脚本，或用 `go-task` 跨平台任务运行器。
 
 10. `go:embed ysm-updater-helper.exe` — 内嵌 Windows helper 二进制。

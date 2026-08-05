@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -77,6 +78,21 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	// 补齐 scheme
 	if parsed.Scheme == "" {
 		parsed.Scheme = "https"
+	}
+	// SSRF 防护（第一层）：仅允许 http/https scheme，拒绝 file:// / ftp:// 等
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		http.Error(w, "Invalid URL scheme", http.StatusBadRequest)
+		return
+	}
+	// SSRF 防护（第二层）：拒绝 loopback/private/link-local 主机
+	// （169.254.169.254 metadata、127.0.0.1 本地端口等走 http 也能命中）
+	if host := parsed.Hostname(); host == "localhost" {
+		http.Error(w, "Blocked host", http.StatusBadRequest)
+		return
+	} else if ip := net.ParseIP(host); ip != nil &&
+		(ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsUnspecified()) {
+		http.Error(w, "Blocked host", http.StatusBadRequest)
+		return
 	}
 
 	proxy := &httputil.ReverseProxy{

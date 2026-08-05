@@ -549,21 +549,26 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       try {
         if (entry.isFile) {
           // entry.file 是 callback API，Promise 化后再路由（失败如 .lnk 快捷方式 → 跳过）
+          // 注意：executor 内同步异常会被 Promise 构造器转成 rejection（不传播到外层
+          // try/catch），必须补 rejection handler 恢复 fail-soft，否则 collectEntry 永不 resolve。
           new Promise<File | null>((resolve) => {
             (entry as FileSystemFileEntry).file(
               (f) => resolve(f),
               () => resolve(null), // entry.file 回调失败（如 .lnk 快捷方式）→ 跳过
             );
-          }).then((file) => {
-            if (file) {
-              const relPath = basePath
-                ? basePath + "/" + file.name
-                : file.name;
-              resolve([{ file: file as ImportFile, relPath }]);
-            } else {
-              resolve([]);
-            }
-          });
+          }).then(
+            (file) => {
+              if (file) {
+                const relPath = basePath
+                  ? basePath + "/" + file.name
+                  : file.name;
+                resolve([{ file: file as ImportFile, relPath }]);
+              } else {
+                resolve([]);
+              }
+            },
+            () => resolve([]), // executor 同步异常 → 不阻塞整个导入
+          );
         } else if (entry.isDirectory) {
           const dirReader = (entry as FileSystemDirectoryEntry).createReader();
           const subPath = basePath

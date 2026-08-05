@@ -1,52 +1,78 @@
-// ===== E2E 冒烟测试：Toast 通知（ADR-037）=====
-// 验证 toast 通知的显示、关闭、撤销功能。
+// ===== E2E 测试：Toast 通知（ADR-037）=====
+// 验证 toast 通知的显示、关闭功能。
+// 走真实 bus.emit 路径（window.bus 由 bus.ts 暴露），非 CustomEvent 模拟。
 // 断言基于 data-testid 稳定钩子（Design.md §19.1）。
-import { test, expect } from "../fixture.ts";
+import { test, expect } from "./fixture.ts";
 
 test.describe("Toast 通知", () => {
-  test("触发 toast:show → toast 元素出现", async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await page.goto("/");
-    // 通过控制台触发 toast 事件
-    await page.evaluate(() => {
-      const bus = (window as unknown as Record<string, unknown>).__bus;
-      // 如果 __bus 暴露，用 bus.emit，否则通过事件总线触发
-      const event = new CustomEvent("toast:show", { detail: { msg: "E2E 测试消息" } });
-      document.dispatchEvent(event);
-    });
-    // 稍等渲染
-    await page.waitForTimeout(500);
-    // 检查 toast 元素
-    const toast = page.locator('[data-testid="toast"]');
-    // 如果通过 CustomEvent 没触发，尝试通过全局 bus 对象
-    const toastCount = await toast.count();
-    if (toastCount === 0) {
-      // 跳过，因为 bus 事件在 E2E 环境中可能不可达
-      test.skip();
-    }
-    await expect(toast.first()).toBeVisible({ timeout: 3000 });
+    // 确保导航栏渲染完成（页面完全加载）
+    const navItems = page.locator('[data-testid="nav-item"]');
+    await expect(navItems.first()).toBeVisible({ timeout: 10000 });
   });
 
-  test("关闭按钮 → 移除 toast", async ({ page }) => {
-    await page.goto("/");
-    // 通过点击触发 toast（如果有触发按钮）
-    // 在 E2E 环境中，模拟 toast 的显示
-    await page.evaluate(() => {
-      const event = new CustomEvent("toast:show", { detail: { msg: "可关闭的 toast" } });
-      document.dispatchEvent(event);
+  test("bus.emit toast:show → toast 元素出现", async ({ page }) => {
+    // 通过 window.bus.emit 走真实事件路径
+    const shown = await page.evaluate(() => {
+      if (typeof window.bus?.emit !== "function") return false;
+      window.bus.emit("toast:show", { msg: "E2E 测试消息", duration: 3000 });
+      return true;
     });
-    await page.waitForTimeout(500);
+    expect(shown).toBe(true);
+
+    // 等待 toast 渲染
     const toast = page.locator('[data-testid="toast"]');
-    const toastCount = await toast.count();
-    if (toastCount === 0) {
-      test.skip();
-      return;
-    }
+    await expect(toast.first()).toBeVisible({ timeout: 3000 });
+    await expect(toast.first()).toContainText("E2E 测试消息");
+  });
+
+  test("close 按钮 → 移除 toast", async ({ page }) => {
+    await page.evaluate(() => {
+      window.bus?.emit("toast:show", { msg: "可关闭的 toast", duration: 5000 });
+    });
+    const toast = page.locator('[data-testid="toast"]');
+    await expect(toast.first()).toBeVisible({ timeout: 3000 });
+
     // 点击关闭按钮
     const closeBtn = toast.locator(".close-btn");
-    if (await closeBtn.count() > 0) {
-      await closeBtn.click();
-      await page.waitForTimeout(500);
-      await expect(toast).not.toBeVisible();
-    }
+    await expect(closeBtn).toBeVisible({ timeout: 2000 });
+    await closeBtn.click();
+    // 等待 slideOut 动画完成
+    await page.waitForTimeout(500);
+    await expect(toast).not.toBeVisible();
+  });
+
+  test("撤销按钮 → 触发回调", async ({ page }) => {
+    let undoCalled = false;
+    await page.exposeFunction("e2eUndoCallback", () => {
+      undoCalled = true;
+    });
+    await page.evaluate(() => {
+      window.bus?.emit("toast:show", {
+        msg: "可撤销",
+        duration: 5000,
+        undo: () => (window as unknown as Record<string, unknown>).e2eUndoCallback(),
+      });
+    });
+    const toast = page.locator('[data-testid="toast"]');
+    await expect(toast.first()).toBeVisible({ timeout: 3000 });
+
+    // 点击撤销按钮
+    const undoBtn = toast.locator(".undo-btn");
+    await expect(undoBtn).toBeVisible({ timeout: 2000 });
+    await undoBtn.click();
+    await page.waitForTimeout(300);
+    expect(undoCalled).toBe(true);
+  });
+
+  test("type 参数 → 正确添加 CSS class", async ({ page }) => {
+    await page.evaluate(() => {
+      window.bus?.emit("toast:show", { msg: "错误消息", type: "error", duration: 3000 });
+    });
+    const toast = page.locator('[data-testid="toast"]');
+    await expect(toast.first()).toBeVisible({ timeout: 3000 });
+    // 验证 error class
+    await expect(toast.first()).toHaveClass(/error/);
   });
 });

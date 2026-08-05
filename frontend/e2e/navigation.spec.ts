@@ -1,7 +1,7 @@
 // ===== E2E 冒烟测试：导航切换（ADR-037）=====
 // 验证核心导航路径：点击 nav-item → 页面切换。
 // 断言基于 data-testid 稳定钩子（Design.md §19.1）。
-import { test, expect } from "../fixture.ts";
+import { test, expect } from "./fixture.ts";
 
 test.describe("导航切换", () => {
   test("首页加载 → 渲染导航栏 6 项", async ({ page }) => {

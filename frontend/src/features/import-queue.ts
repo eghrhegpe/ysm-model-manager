@@ -40,6 +40,9 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   let currentRelPath = ""; // 文件夹导入时的相对路径
   // 并发守卫：导入/重命名在途时拦截连点（同 preview-skeleton _saving 模式）
   let _importing = false;
+  // 直导路径 per-file 在途集合：独立于表单 _importing，避免串行化并行直导。
+  // 仅阻止「同一文件」并发/重复提交到 Go 端，不同文件仍可并行导入。
+  const inFlightImports = new Set<string>();
   const fileQueue: Array<{
     file: ImportFile;
     base64: string;
@@ -626,6 +629,15 @@ export function initImportQueue(app: ImportQueueHost): () => void {
 
   // 非 YSM 文件直接导入（跳过命名表单）
   const directImport = async (file: ImportFile, base64: string): Promise<void> => {
+    // 去重：在途或已导入的同名文件直接跳过，与 enqueueFile 的静态去重对齐，
+    // 避免重复 drop 同一文件时打到 Go 端触发 FILE_EXISTS 报错。
+    if (
+      inFlightImports.has(file.name) ||
+      imported.some((i) => i.name === file.name)
+    ) {
+      return;
+    }
+    inFlightImports.add(file.name);
     try {
       const { ImportModelFile } = await getApp();
       await ImportModelFile(file.name, base64);
@@ -648,6 +660,8 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         duration: 4000,
         type: "error",
       });
+    } finally {
+      inFlightImports.delete(file.name);
     }
   };
 

@@ -784,10 +784,6 @@ export function SaveWorkshopSites(sites: types$0.WorkshopSite[] | null): $Cancel
     return $Call.ByID(2656683497, sites);
 }
 
-export function ScanCustomModels(dir: string): $CancellablePromise<types$0.ModelEntry[] | null> {
-    return $Call.ByID(2414288603, dir);
-}
-
 /**
  * ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者
  */
@@ -863,10 +859,6 @@ export function SetMainWindow(w: application$0.WebviewWindow | null): $Cancellab
  */
 export function SetModelTags(modelPath: string, tags: string[] | null): $CancellablePromise<void> {
     return $Call.ByID(4009573307, modelPath, tags);
-}
-
-export function SetRepoRoot(dir: string): $CancellablePromise<void> {
-    return $Call.ByID(1007646501, dir);
 }
 
 /**

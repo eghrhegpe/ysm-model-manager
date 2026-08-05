@@ -329,20 +329,22 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   folderInput.addEventListener("change", () => {
     const files = folderInput.files;
     if (!files || !files.length) return;
-    let ok = 0;
-    Array.from(files).forEach((file) => {
-      if (!isImportableFile(file.name)) return;
-      ok++;
-      readAndRouteFile(file);
+    // webkitdirectory 的 File 带 webkitRelativePath（保留层级），构造 relPath 后走统一路由
+    const byRel = Array.from(files).map((file) => ({
+      file: file as ImportFile,
+      relPath: (file as File & { webkitRelativePath?: string })
+        .webkitRelativePath || file.name,
+    }));
+    void routeCollected(byRel).then(() => {
+      updateQueueCount();
+      if (fileQueue.length > 0) {
+        bus.emit("toast:show", {
+          msg: `📁 已加入队列: ${fileQueue.length} 个模型文件`,
+          duration: 2000,
+          type: "success",
+        });
+      }
     });
-    updateQueueCount();
-    if (ok > 0) {
-      bus.emit("toast:show", {
-        msg: `📁 已加入队列: ${ok} 个模型文件`,
-        duration: 2000,
-        type: "success",
-      });
-    }
     folderInput.value = "";
   });
 
@@ -541,52 +543,166 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     if (!repoFiles) loadRepoFiles();
   };
 
-  // 递归读取文件夹内的模型文件
-  const readEntry = (entry: FileSystemEntry, basePath: string): Promise<void> => {
+  // 递归收集文件夹内的所有文件（不过滤，交由 routeCollected 路由：
+  // 含 ysm.json 的文件夹 → 整组导入；否则逐文件现有流程）
+  const collectEntry = (
+    entry: FileSystemEntry,
+    basePath: string,
+  ): Promise<Array<{ file: ImportFile; relPath: string }>> => {
     return new Promise((resolve) => {
       try {
         if (entry.isFile) {
           (entry as FileSystemFileEntry).file(
             (file) => {
-              if (!isImportableFile(file.name)) {
-                resolve();
-                return;
-              }
-              (file as ImportFile)._relPath = basePath
+              const relPath = basePath
                 ? basePath + "/" + file.name
                 : file.name;
-              readAndRouteFile(file, resolve);
+              resolve([{ file: file as ImportFile, relPath }]);
             },
-            () => resolve(), // entry.file 回调失败（如 .lnk 快捷方式）→ 直接跳过
+            () => resolve([]), // entry.file 回调失败（如 .lnk 快捷方式）→ 跳过
           );
         } else if (entry.isDirectory) {
           const dirReader = (entry as FileSystemDirectoryEntry).createReader();
           const subPath = basePath
             ? basePath + "/" + entry.name
             : entry.name;
+          const collected: Array<{ file: ImportFile; relPath: string }> = [];
           // readEntries 单次最多返回 100 条（浏览器 API 契约），循环读取直到返回空数组
           const readAll = (): void => {
             dirReader.readEntries(
               (entries) => {
                 if (!entries || !entries.length) {
-                  resolve();
+                  resolve(collected);
                   return;
                 }
                 Promise.all(
-                  Array.from(entries).map((e) => readEntry(e, subPath)),
-                ).then(() => readAll());
+                  Array.from(entries).map((e) => collectEntry(e, subPath)),
+                ).then((groups) => {
+                  for (const g of groups) collected.push(...g);
+                  readAll();
+                });
               },
-              () => resolve(), // readEntries 失败时直接跳过
+              () => resolve(collected), // readEntries 失败 → 返回已收集
             );
           };
           readAll();
         } else {
-          resolve();
+          resolve([]);
         }
       } catch {
-        resolve(); // 任何异常不阻塞整个导入
+        resolve([]); // 任何异常不阻塞整个导入
       }
     });
+  };
+
+  /** File → base64（空内容返回 ""） */
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () =>
+        resolve(String(reader.result).split(",")[1] || "");
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(file);
+    });
+
+  // 文件夹型模型（含 ysm.json）整组导入：原名入仓，保留子目录层级（ADR-038 关联）
+  const importModelFolder = async (
+    dirRel: string,
+    files: Array<{ file: ImportFile; relPath: string }>,
+  ): Promise<void> => {
+    const parts = dirRel.split("/");
+    const folderName = parts[parts.length - 1] || "模型";
+    const subpath = parts.slice(0, -1).join("/");
+    const items: Array<{ RelPath: string; Base64: string }> = [];
+    for (const c of files) {
+      const rel = c.relPath.startsWith(dirRel + "/")
+        ? c.relPath.slice(dirRel.length + 1)
+        : c.relPath;
+      const b64 = await fileToBase64(c.file);
+      if (!b64) continue;
+      items.push({ RelPath: rel, Base64: b64 });
+    }
+    if (!items.length) return;
+    try {
+      const { ImportModelFolder } = await getApp();
+      await ImportModelFolder(folderName, subpath, items);
+      imported.unshift({
+        name: folderName + "（文件夹）",
+        time: new Date().toLocaleTimeString(),
+        isYsm: false,
+      });
+      renderImportedList();
+      bus.emit("stats:refresh");
+      bus.emit("tree:reload");
+      bus.emit("toast:show", {
+        msg: `✅ 已整组导入: ${folderName}`,
+        duration: 2500,
+        type: "success",
+      });
+    } catch (e) {
+      const msg = String(e);
+      if (msg.includes("FILE_EXISTS") || msg.includes("目标已存在")) {
+        bus.emit("toast:show", {
+          msg: `❌ ${folderName} 已存在，请重命名文件夹后再导入`,
+          duration: 4000,
+          type: "error",
+        });
+      } else {
+        bus.emit("toast:show", {
+          msg: "❌ 整组导入失败: " + msg,
+          duration: 4000,
+          type: "error",
+        });
+      }
+    }
+  };
+
+  // 路由一组收集到的文件：含 ysm.json → 按模型目录分组整组导入；否则逐文件现有流程
+  const routeCollected = async (
+    collected: Array<{ file: ImportFile; relPath: string }>,
+  ): Promise<void> => {
+    const ysmJsonEntries = collected.filter((c) => {
+      const parts = c.relPath.split("/");
+      return parts[parts.length - 1].toLowerCase() === "ysm.json";
+    });
+    if (ysmJsonEntries.length > 0) {
+      // 一个拖入文件夹可能含多个模型目录（每个目录一个 ysm.json）→ 分组整组导入
+      const ysmDirs = ysmJsonEntries.map((y) =>
+        y.relPath.split("/").slice(0, -1).join("/"),
+      );
+      const groups = new Map<
+        string,
+        Array<{ file: ImportFile; relPath: string }>
+      >();
+      for (const c of collected) {
+        let owner: string | null = null;
+        for (const d of ysmDirs) {
+          if (c.relPath === d || c.relPath.startsWith(d + "/")) {
+            owner = d;
+            break;
+          }
+        }
+        if (owner !== null) {
+          const arr = groups.get(owner) || [];
+          arr.push(c);
+          groups.set(owner, arr);
+        } else if (isImportableFile(c.file.name)) {
+          // 不属于任何模型目录的顶层文件（如散落 .ysm）→ 逐文件
+          (c.file as ImportFile)._relPath = c.relPath;
+          readAndRouteFile(c.file);
+        }
+      }
+      for (const [dir, files] of groups) {
+        await importModelFolder(dir, files);
+      }
+    } else {
+      // 普通文件夹：逐文件现有流程（isImportableFile 过滤 + 路由）
+      for (const c of collected) {
+        if (!isImportableFile(c.file.name)) continue;
+        (c.file as ImportFile)._relPath = c.relPath;
+        readAndRouteFile(c.file);
+      }
+    }
   };
 
   // 处理拖入的 items（支持文件和文件夹）
@@ -619,8 +735,10 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       }
       return;
     }
-    Promise.all(entries.map((entry) => readEntry(entry, "")))
-      .then(() => {
+    Promise.all(entries.map((entry) => collectEntry(entry, "")))
+      .then(async (groups) => {
+        const all = groups.flat();
+        await routeCollected(all);
         updateQueueCount();
         if (fileQueue.length > 0) {
           bus.emit("toast:show", {
@@ -642,6 +760,15 @@ export function initImportQueue(app: ImportQueueHost): () => void {
 
   // 非 YSM 文件直接导入（跳过命名表单）
   const directImport = async (file: ImportFile, base64: string): Promise<void> => {
+    // ysm.json 单文件导入 = 光杆清单（geometry/纹理全丢），引导拖整个文件夹
+    if (file.name.toLowerCase() === "ysm.json") {
+      bus.emit("toast:show", {
+        msg: "ysm.json 是模型清单，请拖入整个模型文件夹（含 geometry/动画/纹理，将整组导入）",
+        duration: 4000,
+        type: "warn",
+      });
+      return;
+    }
     // 去重：在途或已导入的同名文件直接跳过，与 enqueueFile 的静态去重对齐，
     // 避免重复 drop 同一文件时打到 Go 端触发 FILE_EXISTS 报错。
     if (

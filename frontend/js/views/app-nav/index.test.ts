@@ -41,10 +41,11 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     const root = el.shadowRoot!;
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
     const spy = vi.fn();
-    bus.on("nav:change", spy);
+    const offNav = bus.on("nav:change", spy);
     const items = getAllByTestId(root, "nav-item");
-    items[1].click(); // 点击第二个（整合包管理）
+    (items[1] as HTMLElement).click(); // 点击第二个（整合包管理）
     expect(spy).toHaveBeenCalledWith({ page: "instances" });
+    offNav();
     unmountElement(el);
   });
 
@@ -57,7 +58,7 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     const items = getAllByTestId(root, "nav-item");
     const active = items.filter((i) => i.classList.contains("active"));
     expect(active.length).toBe(1);
-    expect(active[0].dataset.page).toBe("settings");
+    expect((active[0] as HTMLElement).dataset.page).toBe("settings");
     unmountElement(el);
   });
 

@@ -197,3 +197,143 @@ func TestSyncCustomToRepo_Empty(t *testing.T) {
 		t.Fatal("空参数应报错")
 	}
 }
+
+// ===== PushResources 文件夹级分支（YSM/MMD 类型走 SyncResourcesDirLevel）=====
+
+func TestPushResources_FolderLevelYSM(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	_ = os.MkdirAll(globalDir, 0755)
+	_ = os.MkdirAll(targetDir, 0755)
+
+	// 文件夹级：global 下有一个含 ysm.json 的文件夹，target 没有 → 应推送
+	_ = os.MkdirAll(filepath.Join(globalDir, "modelpack"), 0755)
+	_ = os.WriteFile(filepath.Join(globalDir, "modelpack", "ysm.json"), []byte("{}"), 0644)
+
+	var logs []string
+	count, err := PushResources("ysm", globalDir, targetDir, "copy",
+		func(name, src, dst string, size int64, status, msg string) { logs = append(logs, name+":"+status) })
+	if err != nil {
+		t.Fatalf("Push 文件夹级失败: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("应推送 1 个文件夹，实际 %d", count)
+	}
+	if _, err := os.Stat(filepath.Join(targetDir, "modelpack", "ysm.json")); err != nil {
+		t.Fatalf("目标文件夹应存在: %v", err)
+	}
+}
+
+func TestPushResources_FolderLevelMMD(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	_ = os.MkdirAll(globalDir, 0755)
+	_ = os.MkdirAll(targetDir, 0755)
+
+	_ = os.MkdirAll(filepath.Join(globalDir, "mmdmodel"), 0755)
+	_ = os.WriteFile(filepath.Join(globalDir, "mmdmodel", "char.pmx"), []byte("pmx"), 0644)
+
+	count, err := PushResources("mmd-skin", globalDir, targetDir, "copy",
+		func(name, src, dst string, size int64, status, msg string) {})
+	if err != nil {
+		t.Fatalf("Push MMD 失败: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("应推送 1 个 MMD 文件夹，实际 %d", count)
+	}
+}
+
+func TestPushResources_AllSyncedNoOp(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	_ = os.MkdirAll(globalDir, 0755)
+	_ = os.MkdirAll(targetDir, 0755)
+
+	// 两边都有同名同内容文件 → Synced → 无推送
+	_ = os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("x"), 0644)
+	_ = os.WriteFile(filepath.Join(targetDir, "pack.zip"), []byte("x"), 0644)
+
+	count, err := PushResources("resourcepack", globalDir, targetDir, "copy",
+		func(name, src, dst string, size int64, status, msg string) {})
+	if err != nil {
+		t.Fatalf("全同步不应报错: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("全同步应推送 0 个，实际 %d", count)
+	}
+}
+
+// ===== PullResources 文件夹级分支（YSM/MMD）=====
+
+func TestPullResources_FolderLevelDir(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	_ = os.MkdirAll(globalDir, 0755)
+	_ = os.MkdirAll(targetDir, 0755)
+
+	// 目标实例有文件夹级 extra（含 .ysm）→ 拉取整个文件夹
+	_ = os.MkdirAll(filepath.Join(targetDir, "extra-pack"), 0755)
+	_ = os.WriteFile(filepath.Join(targetDir, "extra-pack", "m.ysm"), []byte("e"), 0644)
+	// 还有平铺文件 extra
+	_ = os.WriteFile(filepath.Join(targetDir, "flat.ysm"), []byte("f"), 0644)
+
+	count, err := PullResources("ysm", globalDir, targetDir,
+		func(name, src, dst string, size int64, status, msg string) {})
+	if err != nil {
+		t.Fatalf("Pull 文件夹级失败: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("应拉取 2 个（文件夹+平铺），实际 %d", count)
+	}
+	if _, err := os.Stat(filepath.Join(globalDir, "extra-pack", "m.ysm")); err != nil {
+		t.Fatalf("文件夹应已拉取到 global: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(globalDir, "flat.ysm")); err != nil {
+		t.Fatalf("平铺文件应已拉取到 global: %v", err)
+	}
+}
+
+func TestPullResources_NoExtra(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	_ = os.MkdirAll(globalDir, 0755)
+	_ = os.MkdirAll(targetDir, 0755)
+
+	// 两边相同 → 无 extra → 0
+	_ = os.WriteFile(filepath.Join(globalDir, "same.zip"), []byte("x"), 0644)
+	_ = os.WriteFile(filepath.Join(targetDir, "same.zip"), []byte("x"), 0644)
+
+	count, err := PullResources("resourcepack", globalDir, targetDir,
+		func(name, src, dst string, size int64, status, msg string) {})
+	if err != nil {
+		t.Fatalf("无 extra 不应报错: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("应拉取 0 个，实际 %d", count)
+	}
+}
+
+func TestPullResources_MMDFolderLevel(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	targetDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	_ = os.MkdirAll(globalDir, 0755)
+	_ = os.MkdirAll(targetDir, 0755)
+
+	_ = os.MkdirAll(filepath.Join(targetDir, "mmd-pack"), 0755)
+	_ = os.WriteFile(filepath.Join(targetDir, "mmd-pack", "m.pmx"), []byte("m"), 0644)
+
+	count, err := PullResources("mmd-skin", globalDir, targetDir,
+		func(name, src, dst string, size int64, status, msg string) {})
+	if err != nil {
+		t.Fatalf("Pull MMD 失败: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("应拉取 1 个 MMD 文件夹，实际 %d", count)
+	}
+}

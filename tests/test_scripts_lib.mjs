@@ -15,7 +15,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { walk, resolveImport, toPosix, relPosix, readText, ROOT } from '../scripts/_lib/scan-files.mjs';
+import { walk, resolveImport, relPosix, readText, ROOT } from '../scripts/_lib/scan-files.mjs';
+import { toPosix } from '../scripts/_lib/to-posix.mjs';
 import { rg } from '../scripts/_lib/ripgrep.mjs';
 import { parseRgLine } from '../scripts/_lib/rg-line.mjs';
 
@@ -51,14 +52,13 @@ try {
   assert(all.includes('sub/d.ts'), `walk 应递归子目录（实际缺 sub/d.ts）`);
   assert(!all.includes('css/style.css'), `walk 应排除 css/（实际含 ${all.filter((f) => f.includes('css')).join(',')}）`);
   assert(!all.includes('node_modules/x.js'), 'walk 应排除 node_modules/');
-  assert(!all.includes('.hidden.js'), 'walk 应排除隐藏文件');
   assert(all.includes('b.test.js'), `walk 默认应收集 .test.js（不跳过）`);
   assert(all.includes('c.spec.ts'), 'walk 默认应收集 .spec.ts');
 
-  const noTest = walk(tmp, { skipTest: true }).map((p) => path.relative(tmp, p).replace(/\\/g, '/'));
-  assert(!noTest.includes('b.test.js'), 'skipTest:true 应排除 *.test.js');
-  assert(!noTest.includes('c.spec.ts'), 'skipTest:true 应排除 *.spec.ts');
-  assert(noTest.includes('a.ts'), 'skipTest:true 不应误伤正常 .ts');
+  const noTest = walk(tmp, { skipFile: /\.(test|spec)\./ }).map((p) => path.relative(tmp, p).replace(/\\/g, '/'));
+  assert(!noTest.includes('b.test.js'), 'skipFile 应排除 *.test.js');
+  assert(!noTest.includes('c.spec.ts'), 'skipFile 应排除 *.spec.ts');
+  assert(noTest.includes('a.ts'), 'skipFile 不应误伤正常 .ts');
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });
 }

@@ -26,14 +26,14 @@ export default defineConfig({
   },
   plugins: [wailsBindingsResolve],
   test: {
-    include: ["js/**/*.test.{js,ts}"],
+    include: ["src/**/*.test.{js,ts}"],
     environment: "jsdom",
     setupFiles: ["./test-setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "json"],
-      include: ["js/**/*.ts", "js/**/*.js"],
-      exclude: ["js/**/*.test.{js,ts}", "js/wasm/**"],
+      include: ["src/**/*.ts", "src/**/*.js"],
+      exclude: ["src/**/*.test.{js,ts}", "src/wasm/**"],
       thresholds: {
         // 2026-08-04 校准：原 85/70/82/85 远超实际覆盖（49.41/70.33/61.67），
         // --coverage 必红形同虚设。降至实际-5% 作防回退基准——覆盖提升后可上调。

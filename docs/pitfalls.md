@@ -54,7 +54,7 @@ description: 项目历史事故浓缩的 16 条避坑教训 — 现象 × 根因
 ## 9. `public/` 下放 JS
 
 - **现象**：模块加载错乱，改动不生效。
-- **规则**：Vite dev 优先加载 `public/` 绕过模块系统。新 JS 放 `frontend/js/`，ESM import → `app-modules.ts` 加注册（治理红线 R6）。
+- **规则**：Vite dev 优先加载 `public/` 绕过模块系统。新 JS 放 `frontend/src/`，ESM import → `app-modules.ts` 加注册（治理红线 R6）。
 
 ## 10. 回调 API 未 Promise 化
 

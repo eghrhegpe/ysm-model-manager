@@ -34,7 +34,7 @@ use_when:
 ## 与其他子系统关系
 
 - `go/version/`: 版本信息管理
-- `frontend/js/features/version-updater.ts`: 前端更新 UI
+- `frontend/src/features/version-updater.ts`: 前端更新 UI
 
 ## 不变量
 
@@ -42,4 +42,4 @@ use_when:
 
 ## 相关
 
-- `frontend/js/features/version-updater.ts`
+- `frontend/src/features/version-updater.ts`

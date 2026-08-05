@@ -3,7 +3,7 @@
 - **状态**：已采纳（Accepted）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/dialogs/rename.js` / `frontend/js/dialogs/batch-rename.js` / `frontend/js/utils/display.js`
+- **相关**：`frontend/src/dialogs/rename.js` / `frontend/src/dialogs/batch-rename.js` / `frontend/src/utils/display.js`
 
 ---
 
@@ -78,7 +78,7 @@ v1.0.2 引入时选择了这套格式作为默认，至今未变。
 
 | 来源 | 结果 |
 |------|------|
-| `frontend/js/dialogs/rename.js` | 单文件重命名对话框，固定 5 字段拼接 |
-| `frontend/js/dialogs/batch-rename.js` | 批量重命名，复用 `parseModelName` |
-| `frontend/js/utils/display.js` | `parseModelName()` 解析器 |
+| `frontend/src/dialogs/rename.js` | 单文件重命名对话框，固定 5 字段拼接 |
+| `frontend/src/dialogs/batch-rename.js` | 批量重命名，复用 `parseModelName` |
+| `frontend/src/utils/display.js` | `parseModelName()` 解析器 |
 | `docs/release-notes/v1.0.2.md` | 文件名解析增强引入历史 |

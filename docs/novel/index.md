@@ -59,7 +59,7 @@
 
 ### 01-解码与几何
 
-> 锚定代码：`go/ysm` `go/geometry` `go/threejs` `frontend/js/wasm` `app-preview`
+> 锚定代码：`go/ysm` `go/geometry` `go/threejs` `frontend/src/wasm` `app-preview`
 > 主题：YSMParser WASM/CLI、格式解析、2D/3D 预览、骨骼/立方体
 > 章节数：2
 
@@ -88,7 +88,7 @@
 
 ### 03-UI器官
 
-> 锚定代码：`frontend/js/components` `dialogs` `features`
+> 锚定代码：`frontend/src/components` `dialogs` `features`
 > 主题：Web Components、对话框、功能页、卡片 UI
 > 章节数：5
 
@@ -104,7 +104,7 @@
 
 ### 04-事件中枢
 
-> 锚定代码：`frontend/js/core`（`bus` `global-handlers` `page-store` `context-menus` `menu-defs`）
+> 锚定代码：`frontend/src/core`（`bus` `global-handlers` `page-store` `context-menus` `menu-defs`）
 > 主题：事件总线、全局处理器、页面状态、菜单定义
 > 章节数：3
 

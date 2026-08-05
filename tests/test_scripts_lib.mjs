@@ -153,8 +153,8 @@ assert(relPosix(path.join(ROOT, 'scripts', 'x.mjs')) === 'scripts/x.mjs', `relPo
   assert(c2 === 'const url = "http://x:8080/p"', `内容含冒号应完整保留（got: ${c2}）`);
 
   // 相对路径（非盘符）
-  const [f3, l3, c3] = parseRgLine('frontend/js/bus.ts:165:setBus');
-  assert(f3 === 'frontend/js/bus.ts' && l3 === 165 && c3 === 'setBus', `相对路径解析失败（got: ${f3}:${l3} ${c3}）`);
+  const [f3, l3, c3] = parseRgLine('frontend/src/bus.ts:165:setBus');
+  assert(f3 === 'frontend/src/bus.ts' && l3 === 165 && c3 === 'setBus', `相对路径解析失败（got: ${f3}:${l3} ${c3}）`);
 
   // 无行号/非标准行 → 降级返回 [原行, 0, '']
   const [f4, l4, c4] = parseRgLine('some random output line');
@@ -177,4 +177,4 @@ if (errors.length) {
 }
 console.log('OK: scan-files 共享层边界测试全过');
 console.log(`   ROOT=${ROOT}`);
-console.log(`   SRC_DIR=${rel(path.join(ROOT, 'frontend/js'))}`);
+console.log(`   SRC_DIR=${rel(path.join(ROOT, 'frontend/src'))}`);

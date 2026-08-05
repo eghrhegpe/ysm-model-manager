@@ -69,4 +69,4 @@
 
 - `docs/archive/vision.md` —— 联邦制理念、ResourceAdapter 接口、跨资源操作铁律、明确不做清单、试点建议。
 - `docs/archive/design/plan-p7-multi-resource.md` —— `resource_types.json` 注册表结构示例、四原则、图标系统方案与迁移策略。
-- 现行实现：`resource_types.json`（7 类）、`go/types/resource.go` `LoadRegistry()`、`internal/app/resource_bindings.go:21` `LoadResourceTypes()`、`frontend/js/utils/extensions.ts`。
+- 现行实现：`resource_types.json`（7 类）、`go/types/resource.go` `LoadRegistry()`、`internal/app/resource_bindings.go:21` `LoadResourceTypes()`、`frontend/src/utils/extensions.ts`。

@@ -47,7 +47,7 @@ const RULE_VIOLATIONS = {
   anti_partial_file: /半截|半文件|残留/,                     // 失败残留半截文件
 };
 
-const HOTSPOT_PREFIXES = ["frontend/js/", "internal/", "go/", "scripts/"];
+const HOTSPOT_PREFIXES = ["frontend/src/", "internal/", "go/", "scripts/"];
 
 
 function _run(cmd) {

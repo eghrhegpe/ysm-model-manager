@@ -4,7 +4,7 @@ name: 弹窗基座 modal
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/views/dialogs/modal.ts
+  - frontend/src/views/dialogs/modal.ts
 use_when:
   - 弹窗
   - 对话框

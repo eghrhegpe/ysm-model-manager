@@ -72,8 +72,8 @@ function build() {
 
   const goDirs = subdirs(path.join(ROOT, 'go'));
   const internalDirs = subdirs(path.join(ROOT, 'internal'));
-  const feDirs = subdirs(path.join(ROOT, 'frontend', 'js'));
-  const feFiles = topFiles(path.join(ROOT, 'frontend', 'js'), ['.ts', '.js']);
+  const feDirs = subdirs(path.join(ROOT, 'frontend', 'src'));
+  const feFiles = topFiles(path.join(ROOT, 'frontend', 'src'), ['.ts', '.js']);
   const rootFiles = topFiles(ROOT, ['.go', '.json', '.md']);
 
   // 幽灵检查：基线有、磁盘无

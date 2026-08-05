@@ -8,8 +8,8 @@
  *   node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]
  *
  * 示例：
- *   node scripts/new-knowledge-card.mjs event_bus "事件总线 bus.ts" core frontend/js/bus.ts
- *   node scripts/new-knowledge-card.mjs display_util "文件名渲染 display.ts" utils frontend/js/utils/display.ts --leaf
+ *   node scripts/new-knowledge-card.mjs event_bus "事件总线 bus.ts" core frontend/src/bus.ts
+ *   node scripts/new-knowledge-card.mjs display_util "文件名渲染 display.ts" utils frontend/src/utils/display.ts --leaf
  * 设计意图：知识卡新建工具
  * 退出码：1 / main(（含失败码）
  */

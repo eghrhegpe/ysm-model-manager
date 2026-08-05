@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-04（原决策 2026-06-07）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/wasm/`（YSMParser WASM 内嵌）/ `frontend/js/utils/model3d.ts`（仅 2D/静态渲染）/ `docs/architecture.md` §4 / 原 `docs/archive/old/ysm-parser-ethics.md`（已迁本 ADR，去闲聊噪声）
+- **相关**：`frontend/src/wasm/`（YSMParser WASM 内嵌）/ `frontend/src/utils/model3d.ts`（仅 2D/静态渲染）/ `docs/architecture.md` §4 / 原 `docs/archive/old/ysm-parser-ethics.md`（已迁本 ADR，去闲聊噪声）
 
 ---
 
@@ -48,4 +48,4 @@
 ### 数据溯源
 
 - 原 `docs/archive/old/ysm-parser-ethics.md`（2026-06-07 决策）。
-- 现行实现：`frontend/js/wasm/ysm-wasm-data.js`（WASM 内嵌）、`frontend/js/utils/model3d.ts`（仅静态 2D/3D 渲染，无导出）、`docs/architecture.md` §4（渲染标准与存档约定）。
+- 现行实现：`frontend/src/wasm/ysm-wasm-data.js`（WASM 内嵌）、`frontend/src/utils/model3d.ts`（仅静态 2D/3D 渲染，无导出）、`docs/architecture.md` §4（渲染标准与存档约定）。

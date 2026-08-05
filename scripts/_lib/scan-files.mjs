@@ -27,9 +27,9 @@ export function getRoot() {
   return path.resolve(__dirname, '..', '..');
 }
 
-/** 前端源码根目录（frontend/js）。 */
+/** 前端源码根目录（frontend/src）。 */
 export function getSrcDir() {
-  return path.join(getRoot(), 'frontend/js');
+  return path.join(getRoot(), 'frontend/src');
 }
 
 export const ROOT = getRoot();

@@ -4,15 +4,15 @@ name: 主内容页 app-content
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/views/app-content/index.ts
-  - frontend/js/views/app-content/tpl.ts
-  - frontend/js/views/app-content/content-css.ts
-  - frontend/js/views/app-content/community-data.ts
-  - frontend/js/views/app-content/diagnostics/community.ts
-  - frontend/js/views/app-content/settings/community.ts
-  - frontend/js/views/app-content/site-view.ts
-  - frontend/js/views/app-content/workshop-data.ts
-  - frontend/js/views/app-content/workshop-icons.ts
+  - frontend/src/views/app-content/index.ts
+  - frontend/src/views/app-content/tpl.ts
+  - frontend/src/views/app-content/content-css.ts
+  - frontend/src/views/app-content/community-data.ts
+  - frontend/src/views/app-content/diagnostics/community.ts
+  - frontend/src/views/app-content/settings/community.ts
+  - frontend/src/views/app-content/site-view.ts
+  - frontend/src/views/app-content/workshop-data.ts
+  - frontend/src/views/app-content/workshop-icons.ts
 use_when:
   - 主内容区
   - 页面切换
@@ -68,8 +68,8 @@ use_when:
 
 ## 相关
 
-- `frontend/js/core/global-handlers.ts` — 全局 handler 汇聚入口（handler-dnd / handler-sync / handler-other）
-- `frontend/js/features/community/` — 仓库页数据/渲染/事件/下载队列（`bindRepoEvents` 等由 index.ts 调用）
-- `frontend/js/views/app-content/community/` — 与 features/community 并存的创意工坊模块（site-view / core / settings / diagnostics / workshop-data / workshop-icons），index.ts 同时引用两套，改动前先确认归属
-- `frontend/js/views/app-tree/index.ts` — `setPendingTreeSearch` 搜索词交接
+- `frontend/src/core/global-handlers.ts` — 全局 handler 汇聚入口（handler-dnd / handler-sync / handler-other）
+- `frontend/src/features/community/` — 仓库页数据/渲染/事件/下载队列（`bindRepoEvents` 等由 index.ts 调用）
+- `frontend/src/views/app-content/community/` — 与 features/community 并存的创意工坊模块（site-view / core / settings / diagnostics / workshop-data / workshop-icons），index.ts 同时引用两套，改动前先确认归属
+- `frontend/src/views/app-tree/index.ts` — `setPendingTreeSearch` 搜索词交接
 - 知识卡：`app_nav`、`app_preview`、`app_sidebar`、`app_sync_manager`、`event_bus`、`wails_bridge`

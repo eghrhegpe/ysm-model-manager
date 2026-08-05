@@ -4,7 +4,7 @@ name: 导入队列 import-queue
 tier: architecture
 category: feature
 source_files:
-  - frontend/js/features/import-queue.ts
+  - frontend/src/features/import-queue.ts
 use_when:
   - 导入
   - 导入队列

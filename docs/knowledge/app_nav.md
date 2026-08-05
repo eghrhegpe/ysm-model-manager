@@ -4,7 +4,7 @@ name: 顶部导航 app-nav
 tier: leaf
 category: ui
 source_files:
-  - frontend/js/views/app-nav/index.ts
+  - frontend/src/views/app-nav/index.ts
 use_when:
   - 导航栏
   - 导航
@@ -48,5 +48,5 @@ use_when:
 
 ## 相关
 
-- `frontend/js/bus.ts` — 事件总线（见知识卡 `event_bus`）
+- `frontend/src/bus.ts` — 事件总线（见知识卡 `event_bus`）
 - 知识卡：`app_content`、`page_store`

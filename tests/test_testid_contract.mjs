@@ -18,29 +18,29 @@ const FE = path.join(ROOT, 'frontend');
  */
 const TESTID_REGISTRY = {
   // app-content 标签栏
-  'content-tab':    'js/views/app-content/tpl.ts',
-  'content-subtab': 'js/views/app-content/tpl.ts',
+  'content-tab':    'src/views/app-content/tpl.ts',
+  'content-subtab': 'src/views/app-content/tpl.ts',
   // app-nav 导航项
-  'nav-item':       'js/views/app-nav/index.ts',
+  'nav-item':       'src/views/app-nav/index.ts',
   // app-resource-manager 资源管理器
-  'rm-import':      'js/views/app-resource-manager/tpl.ts',
-  'rm-open':        'js/views/app-resource-manager/tpl.ts',
-  'rm-item':        'js/views/app-resource-manager/tpl.ts',
+  'rm-import':      'src/views/app-resource-manager/tpl.ts',
+  'rm-open':        'src/views/app-resource-manager/tpl.ts',
+  'rm-item':        'src/views/app-resource-manager/tpl.ts',
   // app-sidebar 侧栏操作
-  'sidebar-push':   'js/views/app-sidebar/tpl.ts',
-  'sidebar-pull':   'js/views/app-sidebar/tpl.ts',
+  'sidebar-push':   'src/views/app-sidebar/tpl.ts',
+  'sidebar-pull':   'src/views/app-sidebar/tpl.ts',
   // app-sync-manager 同步管理器
-  'sm-push':        'js/views/app-sync-manager/tpl.ts',
-  'sm-pull':        'js/views/app-sync-manager/tpl.ts',
+  'sm-push':        'src/views/app-sync-manager/tpl.ts',
+  'sm-pull':        'src/views/app-sync-manager/tpl.ts',
   // app-toast 通知
-  'toast':          'js/views/app-toast/index.ts',
+  'toast':          'src/views/app-toast/index.ts',
   // app-tree 文件树
-  'tree-file':      'js/views/app-tree/row-tpl.ts',
-  'tree-toggle':    'js/views/app-tree/row-tpl.ts',
-  'tree-dir':       'js/views/app-tree/row-tpl.ts',
-  'tree-dir-toggle':'js/views/app-tree/row-tpl.ts',
+  'tree-file':      'src/views/app-tree/row-tpl.ts',
+  'tree-toggle':    'src/views/app-tree/row-tpl.ts',
+  'tree-dir':       'src/views/app-tree/row-tpl.ts',
+  'tree-dir-toggle':'src/views/app-tree/row-tpl.ts',
   // context-menu 右键菜单
-  'ctx-item':       'js/views/context-menu/index.ts',
+  'ctx-item':       'src/views/context-menu/index.ts',
 };
 
 const errors = [];

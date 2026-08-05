@@ -162,10 +162,10 @@
 
 | 区域 | 文件夹 | 锚定代码 | 主题 |
 |------|--------|---------|------|
-| 01 | `01-解码与几何/` | `go/ysm` `go/geometry` `go/threejs` `frontend/js/wasm` `app-preview` | YSMParser WASM/CLI、格式解析、2D/3D 预览、骨骼/立方体 |
+| 01 | `01-解码与几何/` | `go/ysm` `go/geometry` `go/threejs` `frontend/src/wasm` `app-preview` | YSMParser WASM/CLI、格式解析、2D/3D 预览、骨骼/立方体 |
 | 02 | `02-模型仓库/` | `go/importer` `installer` `instance` `packs` `scanner` `dedup` `resource_types.json` `app-tree` `services` | 导入/安装/实例/整合包/扫描/去重、资源注册表 |
-| 03 | `03-UI器官/` | `frontend/js/components` `dialogs` `features` | Web Components、对话框、功能页、卡片 UI |
-| 04 | `04-事件中枢/` | `frontend/js/core`（`bus` `global-handlers` `page-store` `context-menus` `menu-defs`） | 事件总线、全局处理器、页面状态、菜单定义 |
+| 03 | `03-UI器官/` | `frontend/src/components` `dialogs` `features` | Web Components、对话框、功能页、卡片 UI |
+| 04 | `04-事件中枢/` | `frontend/src/core`（`bus` `global-handlers` `page-store` `context-menus` `menu-defs`） | 事件总线、全局处理器、页面状态、菜单定义 |
 | 05 | `05-同步与更新/` | `go/sync` `download` `updater` `handler-sync` | 同步、下载、更新器、进度队列 |
 | 06 | `06-创作者社区/` | `go/avatar` `creators.json` `workshop_sites.json` `workshop-github.json` `community` | 创作者库、头像、工坊站点、社区索引 |
 | 07 | `07-文件与路径/` | `go/fileops` `fsutil` `paths` `recycle` `watcher` `litematic` `internal/embedded` | 硬链接/复制、路径安全、回收站、监听、嵌入资源 |
@@ -187,10 +187,10 @@
 **改了代码 → 看路径前缀 → 命中 01–10 某一区域 → 直接去更新该章尾部。**
 
 ```
-go/ysm geometry threejs / frontend/js/wasm / app-preview            → 01-解码与几何
+go/ysm geometry threejs / frontend/src/wasm / app-preview            → 01-解码与几何
 go/importer installer instance packs scanner dedup / resource_types.json / app-tree / services → 02-模型仓库
-frontend/js/components dialogs features                              → 03-UI器官
-frontend/js/core (bus global-handlers page-store context-menus menu-defs) → 04-事件中枢
+frontend/src/components dialogs features                              → 03-UI器官
+frontend/src/core (bus global-handlers page-store context-menus menu-defs) → 04-事件中枢
 go/sync download updater / handler-sync                             → 05-同步与更新
 go/avatar / creators workshop json / community                      → 06-创作者社区
 go/fileops fsutil paths recycle watcher litematic / internal/embedded → 07-文件与路径

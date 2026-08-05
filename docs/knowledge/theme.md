@@ -4,7 +4,7 @@ name: 主题系统 theme
 tier: leaf
 category: core
 source_files:
-  - frontend/js/app-modules.ts
+  - frontend/src/app-modules.ts
   - frontend/css/variables.css
 use_when:
   - 主题

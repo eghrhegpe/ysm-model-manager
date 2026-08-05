@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03（初定，决策时间线 v1.7.6）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/`（动画相关 Web Components）/ `docs/Design.md` §3 主题系统
+- **相关**：`frontend/src/`（动画相关 Web Components）/ `docs/Design.md` §3 主题系统
 
 > **规范条文已并入 `docs/Design.md` §7.2**（统一 keyframe / stagger / 设计令牌 / 技术约束），写动画先查 Design.md；本 ADR 仅保留决策依据与实施历史。
 

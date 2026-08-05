@@ -528,366 +528,366 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `bus()` | `frontend/js/bus:157` | 默认实例（组件直接使用） |
-| `ToastPayload()` | `frontend/js/bus:7` | — |
-| `MenuItem()` | `frontend/js/bus:18` | — |
-| `NavPagePayload()` | `frontend/js/bus:27` | — |
-| `ModelSelectPayload()` | `frontend/js/bus:31` | — |
-| `CtxShowPayload()` | `frontend/js/bus:36` | — |
-| `BusEvents()` | `frontend/js/bus:53` | — |
-| `BusEventName()` | `frontend/js/bus:109` | — |
-| `Bus()` | `frontend/js/bus:111` | — |
-| `setBus()` | `frontend/js/bus:160` | 替换 bus 实例（入口层 / 测试用） |
+| `bus()` | `frontend/src/bus:157` | 默认实例（组件直接使用） |
+| `ToastPayload()` | `frontend/src/bus:7` | — |
+| `MenuItem()` | `frontend/src/bus:18` | — |
+| `NavPagePayload()` | `frontend/src/bus:27` | — |
+| `ModelSelectPayload()` | `frontend/src/bus:31` | — |
+| `CtxShowPayload()` | `frontend/src/bus:36` | — |
+| `BusEvents()` | `frontend/src/bus:53` | — |
+| `BusEventName()` | `frontend/src/bus:109` | — |
+| `Bus()` | `frontend/src/bus:111` | — |
+| `setBus()` | `frontend/src/bus:160` | 替换 bus 实例（入口层 / 测试用） |
 
 ## 前端·组件
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `LocalCreator()` | `frontend/js/views/app-content/community/core:6` | 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） |
-| `CommunityData()` | `frontend/js/views/app-content/community/core:22` | 站点 + 创作者 + 作者 数据包 |
-| `loadCommunityData()` | `frontend/js/views/app-content/community/core:32` | 加载站点 + 创作者数据（纯数据，不碰 DOM） 自动合并本地仓库提取的作者 |
-| `fillSearch()` | `frontend/js/views/app-content/community/core:103` | 替换 {{q}} 为查询词 |
-| `fetchCommunityCreators()` | `frontend/js/views/app-content/community/core:110` | 从 GitHub 社区索引拉取 creators.json |
-| `mergeCommunityCreators()` | `frontend/js/views/app-content/community/core:169` | 合并社区索引到本地 creators.json |
-| `fetchCommunitySites()` | `frontend/js/views/app-content/community/core:206` | 从 GitHub 拉取 workshop_sites.json（三路回退） |
-| `mergeCommunitySites()` | `frontend/js/views/app-content/community/core:259` | 合并社区站点到本地 workshop_sites.json |
-| `DEFAULT_COMMUNITY_URL()` | `frontend/js/views/app-content/community/core:280` | 社区索引的默认 URL（可配置为社区维护的独立 creators JSON） 贡献通道：https://github.com/eghrhegpe/ysm-model-manager |
-| `getRepoModelsData()` | `frontend/js/views/app-content/community/core:286` | 获取仓库模型列表 + 本地映射 |
-| `initDiagnostics()` | `frontend/js/views/app-content/community/diagnostics:15` | 初始化诊断页所有功能 |
-| `startDedup()` | `frontend/js/views/app-content/community/diagnostics:161` | — |
-| `initSettings()` | `frontend/js/views/app-content/community/settings:11` | 初始化设置页所有事件绑定 |
-| `RepoAuthorLike()` | `frontend/js/views/app-content/community/site-view:35` | 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） |
-| `RenderSiteViewCtx()` | `frontend/js/views/app-content/community/site-view:38` | 站点视图渲染上下文（index.ts _initWorkshop 传入） |
-| `LocalCreatorLike()` | `frontend/js/views/app-content/community/site-view:55` | 本地创作者（绑定 + 运行时附加字段） |
-| `renderSiteView()` | `frontend/js/views/app-content/community/site-view:135` | — |
-| `PLATFORM_NAMES()` | `frontend/js/views/app-content/community/workshop-data:8` | — |
-| `CreatorIdentity()` | `frontend/js/views/app-content/community/workshop-data:20` | 创作者身份识别结果 |
-| `CreatorIdentityInput()` | `frontend/js/views/app-content/community/workshop-data:27` | 创作者输入（role/tag 可空，_fromLocal 为运行时附加字段） |
-| `getCreatorIdentity()` | `frontend/js/views/app-content/community/workshop-data:34` | — |
-| `getTagFromRole()` | `frontend/js/views/app-content/community/workshop-data:56` | — |
-| `parseDescTags()` | `frontend/js/views/app-content/community/workshop-data:61` | — |
-| `loadFavs()` | `frontend/js/views/app-content/community/workshop-data:71` | — |
-| `saveFavs()` | `frontend/js/views/app-content/community/workshop-data:79` | — |
-| `isFaved()` | `frontend/js/views/app-content/community/workshop-data:83` | — |
-| `toggleFav()` | `frontend/js/views/app-content/community/workshop-data:87` | — |
-| `ICONS()` | `frontend/js/views/app-content/community/workshop-icons:3` | — |
-| `getSiteIcon()` | `frontend/js/views/app-content/community/workshop-icons:46` | — |
-| `getTagIconFromRole()` | `frontend/js/views/app-content/community/workshop-icons:50` | — |
-| `contentCSS()` | `frontend/js/views/app-content/content-css:2` | — |
-| `repositoryHTML()` | `frontend/js/views/app-content/tpl:4` | — |
-| `instancesHTML()` | `frontend/js/views/app-content/tpl:44` | — |
-| `resourceLibraryHTML()` | `frontend/js/views/app-content/tpl:65` | — |
-| `settingsHTML()` | `frontend/js/views/app-content/tpl:83` | — |
-| `placeholderHTML()` | `frontend/js/views/app-content/tpl:424` | — |
-| `downloadsHTML()` | `frontend/js/views/app-content/tpl:428` | — |
-| `diagnosticsHTML()` | `frontend/js/views/app-content/tpl:479` | — |
-| `recycleHTML()` | `frontend/js/views/app-content/tpl:531` | — |
-| `githubHTML()` | `frontend/js/views/app-content/tpl:544` | ===== GitHub 仓库页面 ===== |
-| `workshopHTML()` | `frontend/js/views/app-content/tpl:575` | — |
-| `previewCSS()` | `frontend/js/views/app-preview/preview-css:2` | — |
-| `showModelDetail()` | `frontend/js/views/app-preview/preview-detail:12` | 显示模型详情（YSM 模型） |
-| `showResourcePack()` | `frontend/js/views/app-preview/preview-detail:100` | 显示资源包信息（pack.mcmeta + pack.png） |
-| `showShaderPack()` | `frontend/js/views/app-preview/preview-detail:138` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
-| `createLitematic3D()` | `frontend/js/views/app-preview/preview-litematic-3d:19` | — |
-| `showLitematic()` | `frontend/js/views/app-preview/preview-litematic-meta:89` | 显示投影文件详情面板（tab 布局） |
-| `loadModelData()` | `frontend/js/views/app-preview/preview-loader:11` | 加载模型几何数据 + 纹理 + 作者信息 统一路径：缓存 → WASM 解码 → Go AnalyzeBedrockModel 兜底 |
-| `loadModel2D()` | `frontend/js/views/app-preview/preview-skeleton:27` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this._root, this._appendDebug 等） |
-| `devLog()` | `frontend/js/views/app-preview/preview-utils:6` | DEV 模式下输出调试日志 |
-| `DecodedYsm()` | `frontend/js/views/app-preview/preview-utils:11` | WASM 解码结果（decodeYsmViaWasm 返回） |
-| `PreviewCtx()` | `frontend/js/views/app-preview/preview-utils:26` | 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） |
-| `getPrefer3D()` | `frontend/js/views/app-preview/preview-utils:36` | — |
-| `setPrefer3D()` | `frontend/js/views/app-preview/preview-utils:39` | — |
-| `buildStdYsgpFromTextVariant()` | `frontend/js/views/app-preview/preview-utils:48` | 将带 UTF-8 BOM + 文本头部的 YSGP 变体重建为标准 YSGP 二进制格式 V2: 加密数据前有 16B 独立 hash 区 V3: 纯加密数据，无独立 hash 区 |
-| `stripYsgpTextHeader()` | `frontend/js/views/app-preview/preview-utils:106` | 剥离 YSGP 文本头部，返回标准二进制格式 |
-| `decodeYsmViaWasm()` | `frontend/js/views/app-preview/preview-wasm:25` | 通过前端 WASM 解码 .ysm，返回 { texture, geometry, animations } 不依赖组件实例（无 this 引用），可独立调用 |
-| `openFullPreview()` | `frontend/js/views/app-preview/preview-zoom:6` | 全窗放大预览（独立函数，不依赖组件实例） |
-| `ModelDetailMeta()` | `frontend/js/views/app-preview/tpl:5` | 模型统计元数据（modelDetailHTML 入参） |
-| `modelDetailHTML()` | `frontend/js/views/app-preview/tpl:19` | 模型详情面板（仓库页面） |
-| `StatsCardModel()` | `frontend/js/views/app-preview/tpl:57` | 模型统计卡片（statsCardHTML 入参的几何视图） |
-| `statsCardHTML()` | `frontend/js/views/app-preview/tpl:66` | 模型统计卡片 |
-| `BedrockCube()` | `frontend/js/views/app-preview/utils:4` | Bedrock 方块 |
-| `BedrockBone()` | `frontend/js/views/app-preview/utils:15` | Bedrock 骨骼 |
-| `BedrockGeometry()` | `frontend/js/views/app-preview/utils:30` | 解析后的 Bedrock geometry |
-| `parseBedrockGeometryFromJSON()` | `frontend/js/views/app-preview/utils:53` | 从 JSON 字符串解析 Bedrock geometry |
-| `AppResourceManager()` | `frontend/js/views/app-resource-manager/index:66` | — |
-| `PackMetaDetail()` | `frontend/js/views/app-resource-manager/tpl:6` | 详情面板元数据（ReadPackMeta / ReadShaderpackLang 返回 JSON 的兼容视图） |
-| `sidebarHTML()` | `frontend/js/views/app-resource-manager/tpl:19` | 侧栏布局（路径 + 操作栏 + 列表） |
-| `itemHTML()` | `frontend/js/views/app-resource-manager/tpl:65` | 列表项 HTML |
-| `detailHTML()` | `frontend/js/views/app-resource-manager/tpl:108` | 详情面板 HTML |
-| `placeholderHTML()` | `frontend/js/views/app-resource-manager/tpl:171` | 空状态占位 |
-| `bindInstanceActions()` | `frontend/js/views/app-sidebar/actions:7` | 绑定整合包卡片中的操作按钮和缺失条目点击事件 |
-| `SidebarInstance()` | `frontend/js/views/app-sidebar/data:5` | sidebar 整合包实例（loader 转换后的渲染格式） |
-| `fallbackInstances()` | `frontend/js/views/app-sidebar/data:29` | Go 不可用时的后备模拟数据 |
-| `bindCardEvents()` | `frontend/js/views/app-sidebar/events:14` | — |
-| `bindFooter()` | `frontend/js/views/app-sidebar/events:135` | — |
-| `MmdVariantGroups()` | `frontend/js/views/app-sidebar/loader:23` | MMD 变体聚合结果 |
-| `loadInstances()` | `frontend/js/views/app-sidebar/loader:30` | 从 Go 加载整合包实例列表，转换为 render 需要的格式 |
-| `renderVersionCards()` | `frontend/js/views/app-sidebar/render:6` | — |
-| `sidebarCSS()` | `frontend/js/views/app-sidebar/sidebar-css:3` | — |
-| `headerHTML()` | `frontend/js/views/app-sidebar/tpl:15` | — |
-| `footerHTML()` | `frontend/js/views/app-sidebar/tpl:34` | — |
-| `listContainerHTML()` | `frontend/js/views/app-sidebar/tpl:57` | — |
-| `vcHeaderHTML()` | `frontend/js/views/app-sidebar/tpl:76` | 单个整合包卡片头部。 |
-| `AppSyncManager()` | `frontend/js/views/app-sync-manager/index:38` | — |
-| `SyncItem()` | `frontend/js/views/app-sync-manager/tpl:6` | 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） |
-| `containerHTML()` | `frontend/js/views/app-sync-manager/tpl:18` | 容器骨架 |
-| `statusTabHTML()` | `frontend/js/views/app-sync-manager/tpl:57` | 状态筛选标签 HTML |
-| `itemHTML()` | `frontend/js/views/app-sync-manager/tpl:86` | 列表项 HTML |
-| `emptyHTML()` | `frontend/js/views/app-sync-manager/tpl:150` | 空状态 HTML |
-| `loadingHTML()` | `frontend/js/views/app-sync-manager/tpl:164` | 加载中 |
-| `treeCSS()` | `frontend/js/views/app-tree-styles:3` | — |
-| `AuthorInfo()` | `frontend/js/views/app-tree/authors:4` | 作者统计（Go ListModelAuthors 返回） |
-| `loadAuthors()` | `frontend/js/views/app-tree/authors:12` | 从 Go 端加载作者列表 |
-| `bindBusEvents()` | `frontend/js/views/app-tree/bus-handlers:16` | — |
-| `selectState()` | `frontend/js/views/app-tree/data:4` | 多选状态 |
-| `toggleSelect()` | `frontend/js/views/app-tree/data:17` | 切换选中状态（支持 Ctrl/Shift） |
-| `updateSelectCount()` | `frontend/js/views/app-tree/events:13` | — |
-| `bindTreeEvents()` | `frontend/js/views/app-tree/events:87` | — |
-| `setPendingTreeSearch()` | `frontend/js/views/app-tree/index:17` | — |
-| `takePendingTreeSearch()` | `frontend/js/views/app-tree/index:20` | — |
-| `AppTree()` | `frontend/js/views/app-tree/index:46` | — |
-| `initInstanceActions()` | `frontend/js/views/app-tree/instance-actions:29` | — |
-| `TreeEntry()` | `frontend/js/views/app-tree/loader:10` | 树条目（loader 转换后的渲染格式） |
-| `loadEntries()` | `frontend/js/views/app-tree/loader:23` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |
-| `TreeRow()` | `frontend/js/views/app-tree/render:21` | 扁平化行（虚拟滚动数据单元） |
-| `RenderMode()` | `frontend/js/views/app-tree/render:37` | 渲染模式 |
-| `getRenderMode()` | `frontend/js/views/app-tree/render:43` | Get render mode from localStorage, default to 'grid' |
-| `setRenderMode()` | `frontend/js/views/app-tree/render:53` | Set render mode to localStorage |
-| `renderTree()` | `frontend/js/views/app-tree/render:289` | — |
-| `updateStat()` | `frontend/js/views/app-tree/render:353` | — |
-| `listFileRowHTML()` | `frontend/js/views/app-tree/row-tpl-list:7` | 文件行 HTML（紧凑列表模式：icon + name + size，无 hover actions、无 date、无 tag dot） |
-| `listFolderRowHTML()` | `frontend/js/views/app-tree/row-tpl-list:30` | 文件夹行 HTML（紧凑列表模式：arrow + folder icon + name） |
-| `fileRowHTML()` | `frontend/js/views/app-tree/row-tpl:7` | 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） |
-| `folderRowHTML()` | `frontend/js/views/app-tree/row-tpl:36` | 文件夹行 HTML（indent = padding-left，扁平化无 .ch 容器） |
-| `bindToolbarEvents()` | `frontend/js/views/app-tree/toolbar-events:208` | — |
-| `headerHTML()` | `frontend/js/views/app-tree/tpl:3` | — |
-| `footerHTML()` | `frontend/js/views/app-tree/tpl:27` | — |
-| `emptyHTML()` | `frontend/js/views/app-tree/tpl:35` | — |
-| `spinnerHTML()` | `frontend/js/views/app-tree/tpl:39` | — |
-| `flashBtn()` | `frontend/js/views/app-tree/utils:4` | — |
-| `ROW_H_GRID()` | `frontend/js/views/app-tree/virtual-scroll:3` | — |
-| `ROW_H_LIST()` | `frontend/js/views/app-tree/virtual-scroll:4` | — |
-| `calcVisibleRange()` | `frontend/js/views/app-tree/virtual-scroll:14` | 根据滚动位置计算可见行范围（支持动态行高） |
-| `installScrollSync()` | `frontend/js/views/app-tree/virtual-scroll:31` | 在容器上安装滚动监听，当滚动到新范围时自动重新渲染可见行 |
+| `LocalCreator()` | `frontend/src/views/app-content/community/core:6` | 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） |
+| `CommunityData()` | `frontend/src/views/app-content/community/core:22` | 站点 + 创作者 + 作者 数据包 |
+| `loadCommunityData()` | `frontend/src/views/app-content/community/core:32` | 加载站点 + 创作者数据（纯数据，不碰 DOM） 自动合并本地仓库提取的作者 |
+| `fillSearch()` | `frontend/src/views/app-content/community/core:103` | 替换 {{q}} 为查询词 |
+| `fetchCommunityCreators()` | `frontend/src/views/app-content/community/core:110` | 从 GitHub 社区索引拉取 creators.json |
+| `mergeCommunityCreators()` | `frontend/src/views/app-content/community/core:169` | 合并社区索引到本地 creators.json |
+| `fetchCommunitySites()` | `frontend/src/views/app-content/community/core:206` | 从 GitHub 拉取 workshop_sites.json（三路回退） |
+| `mergeCommunitySites()` | `frontend/src/views/app-content/community/core:259` | 合并社区站点到本地 workshop_sites.json |
+| `DEFAULT_COMMUNITY_URL()` | `frontend/src/views/app-content/community/core:280` | 社区索引的默认 URL（可配置为社区维护的独立 creators JSON） 贡献通道：https://github.com/eghrhegpe/ysm-model-manager |
+| `getRepoModelsData()` | `frontend/src/views/app-content/community/core:286` | 获取仓库模型列表 + 本地映射 |
+| `initDiagnostics()` | `frontend/src/views/app-content/community/diagnostics:15` | 初始化诊断页所有功能 |
+| `startDedup()` | `frontend/src/views/app-content/community/diagnostics:161` | — |
+| `initSettings()` | `frontend/src/views/app-content/community/settings:11` | 初始化设置页所有事件绑定 |
+| `RepoAuthorLike()` | `frontend/src/views/app-content/community/site-view:35` | 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） |
+| `RenderSiteViewCtx()` | `frontend/src/views/app-content/community/site-view:38` | 站点视图渲染上下文（index.ts _initWorkshop 传入） |
+| `LocalCreatorLike()` | `frontend/src/views/app-content/community/site-view:55` | 本地创作者（绑定 + 运行时附加字段） |
+| `renderSiteView()` | `frontend/src/views/app-content/community/site-view:135` | — |
+| `PLATFORM_NAMES()` | `frontend/src/views/app-content/community/workshop-data:8` | — |
+| `CreatorIdentity()` | `frontend/src/views/app-content/community/workshop-data:20` | 创作者身份识别结果 |
+| `CreatorIdentityInput()` | `frontend/src/views/app-content/community/workshop-data:27` | 创作者输入（role/tag 可空，_fromLocal 为运行时附加字段） |
+| `getCreatorIdentity()` | `frontend/src/views/app-content/community/workshop-data:34` | — |
+| `getTagFromRole()` | `frontend/src/views/app-content/community/workshop-data:56` | — |
+| `parseDescTags()` | `frontend/src/views/app-content/community/workshop-data:61` | — |
+| `loadFavs()` | `frontend/src/views/app-content/community/workshop-data:71` | — |
+| `saveFavs()` | `frontend/src/views/app-content/community/workshop-data:79` | — |
+| `isFaved()` | `frontend/src/views/app-content/community/workshop-data:83` | — |
+| `toggleFav()` | `frontend/src/views/app-content/community/workshop-data:87` | — |
+| `ICONS()` | `frontend/src/views/app-content/community/workshop-icons:3` | — |
+| `getSiteIcon()` | `frontend/src/views/app-content/community/workshop-icons:46` | — |
+| `getTagIconFromRole()` | `frontend/src/views/app-content/community/workshop-icons:50` | — |
+| `contentCSS()` | `frontend/src/views/app-content/content-css:2` | — |
+| `repositoryHTML()` | `frontend/src/views/app-content/tpl:4` | — |
+| `instancesHTML()` | `frontend/src/views/app-content/tpl:44` | — |
+| `resourceLibraryHTML()` | `frontend/src/views/app-content/tpl:65` | — |
+| `settingsHTML()` | `frontend/src/views/app-content/tpl:83` | — |
+| `placeholderHTML()` | `frontend/src/views/app-content/tpl:424` | — |
+| `downloadsHTML()` | `frontend/src/views/app-content/tpl:428` | — |
+| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:479` | — |
+| `recycleHTML()` | `frontend/src/views/app-content/tpl:531` | — |
+| `githubHTML()` | `frontend/src/views/app-content/tpl:544` | ===== GitHub 仓库页面 ===== |
+| `workshopHTML()` | `frontend/src/views/app-content/tpl:575` | — |
+| `previewCSS()` | `frontend/src/views/app-preview/preview-css:2` | — |
+| `showModelDetail()` | `frontend/src/views/app-preview/preview-detail:12` | 显示模型详情（YSM 模型） |
+| `showResourcePack()` | `frontend/src/views/app-preview/preview-detail:100` | 显示资源包信息（pack.mcmeta + pack.png） |
+| `showShaderPack()` | `frontend/src/views/app-preview/preview-detail:138` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
+| `createLitematic3D()` | `frontend/src/views/app-preview/preview-litematic-3d:19` | — |
+| `showLitematic()` | `frontend/src/views/app-preview/preview-litematic-meta:89` | 显示投影文件详情面板（tab 布局） |
+| `loadModelData()` | `frontend/src/views/app-preview/preview-loader:11` | 加载模型几何数据 + 纹理 + 作者信息 统一路径：缓存 → WASM 解码 → Go AnalyzeBedrockModel 兜底 |
+| `loadModel2D()` | `frontend/src/views/app-preview/preview-skeleton:27` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this._root, this._appendDebug 等） |
+| `devLog()` | `frontend/src/views/app-preview/preview-utils:6` | DEV 模式下输出调试日志 |
+| `DecodedYsm()` | `frontend/src/views/app-preview/preview-utils:11` | WASM 解码结果（decodeYsmViaWasm 返回） |
+| `PreviewCtx()` | `frontend/src/views/app-preview/preview-utils:26` | 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） |
+| `getPrefer3D()` | `frontend/src/views/app-preview/preview-utils:36` | — |
+| `setPrefer3D()` | `frontend/src/views/app-preview/preview-utils:39` | — |
+| `buildStdYsgpFromTextVariant()` | `frontend/src/views/app-preview/preview-utils:48` | 将带 UTF-8 BOM + 文本头部的 YSGP 变体重建为标准 YSGP 二进制格式 V2: 加密数据前有 16B 独立 hash 区 V3: 纯加密数据，无独立 hash 区 |
+| `stripYsgpTextHeader()` | `frontend/src/views/app-preview/preview-utils:106` | 剥离 YSGP 文本头部，返回标准二进制格式 |
+| `decodeYsmViaWasm()` | `frontend/src/views/app-preview/preview-wasm:25` | 通过前端 WASM 解码 .ysm，返回 { texture, geometry, animations } 不依赖组件实例（无 this 引用），可独立调用 |
+| `openFullPreview()` | `frontend/src/views/app-preview/preview-zoom:6` | 全窗放大预览（独立函数，不依赖组件实例） |
+| `ModelDetailMeta()` | `frontend/src/views/app-preview/tpl:5` | 模型统计元数据（modelDetailHTML 入参） |
+| `modelDetailHTML()` | `frontend/src/views/app-preview/tpl:19` | 模型详情面板（仓库页面） |
+| `StatsCardModel()` | `frontend/src/views/app-preview/tpl:57` | 模型统计卡片（statsCardHTML 入参的几何视图） |
+| `statsCardHTML()` | `frontend/src/views/app-preview/tpl:66` | 模型统计卡片 |
+| `BedrockCube()` | `frontend/src/views/app-preview/utils:4` | Bedrock 方块 |
+| `BedrockBone()` | `frontend/src/views/app-preview/utils:15` | Bedrock 骨骼 |
+| `BedrockGeometry()` | `frontend/src/views/app-preview/utils:30` | 解析后的 Bedrock geometry |
+| `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/utils:53` | 从 JSON 字符串解析 Bedrock geometry |
+| `AppResourceManager()` | `frontend/src/views/app-resource-manager/index:66` | — |
+| `PackMetaDetail()` | `frontend/src/views/app-resource-manager/tpl:6` | 详情面板元数据（ReadPackMeta / ReadShaderpackLang 返回 JSON 的兼容视图） |
+| `sidebarHTML()` | `frontend/src/views/app-resource-manager/tpl:19` | 侧栏布局（路径 + 操作栏 + 列表） |
+| `itemHTML()` | `frontend/src/views/app-resource-manager/tpl:65` | 列表项 HTML |
+| `detailHTML()` | `frontend/src/views/app-resource-manager/tpl:108` | 详情面板 HTML |
+| `placeholderHTML()` | `frontend/src/views/app-resource-manager/tpl:171` | 空状态占位 |
+| `bindInstanceActions()` | `frontend/src/views/app-sidebar/actions:7` | 绑定整合包卡片中的操作按钮和缺失条目点击事件 |
+| `SidebarInstance()` | `frontend/src/views/app-sidebar/data:5` | sidebar 整合包实例（loader 转换后的渲染格式） |
+| `fallbackInstances()` | `frontend/src/views/app-sidebar/data:29` | Go 不可用时的后备模拟数据 |
+| `bindCardEvents()` | `frontend/src/views/app-sidebar/events:14` | — |
+| `bindFooter()` | `frontend/src/views/app-sidebar/events:135` | — |
+| `MmdVariantGroups()` | `frontend/src/views/app-sidebar/loader:23` | MMD 变体聚合结果 |
+| `loadInstances()` | `frontend/src/views/app-sidebar/loader:30` | 从 Go 加载整合包实例列表，转换为 render 需要的格式 |
+| `renderVersionCards()` | `frontend/src/views/app-sidebar/render:6` | — |
+| `sidebarCSS()` | `frontend/src/views/app-sidebar/sidebar-css:3` | — |
+| `headerHTML()` | `frontend/src/views/app-sidebar/tpl:15` | — |
+| `footerHTML()` | `frontend/src/views/app-sidebar/tpl:34` | — |
+| `listContainerHTML()` | `frontend/src/views/app-sidebar/tpl:57` | — |
+| `vcHeaderHTML()` | `frontend/src/views/app-sidebar/tpl:76` | 单个整合包卡片头部。 |
+| `AppSyncManager()` | `frontend/src/views/app-sync-manager/index:38` | — |
+| `SyncItem()` | `frontend/src/views/app-sync-manager/tpl:6` | 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） |
+| `containerHTML()` | `frontend/src/views/app-sync-manager/tpl:18` | 容器骨架 |
+| `statusTabHTML()` | `frontend/src/views/app-sync-manager/tpl:57` | 状态筛选标签 HTML |
+| `itemHTML()` | `frontend/src/views/app-sync-manager/tpl:86` | 列表项 HTML |
+| `emptyHTML()` | `frontend/src/views/app-sync-manager/tpl:150` | 空状态 HTML |
+| `loadingHTML()` | `frontend/src/views/app-sync-manager/tpl:164` | 加载中 |
+| `treeCSS()` | `frontend/src/views/app-tree-styles:3` | — |
+| `AuthorInfo()` | `frontend/src/views/app-tree/authors:4` | 作者统计（Go ListModelAuthors 返回） |
+| `loadAuthors()` | `frontend/src/views/app-tree/authors:12` | 从 Go 端加载作者列表 |
+| `bindBusEvents()` | `frontend/src/views/app-tree/bus-handlers:16` | — |
+| `selectState()` | `frontend/src/views/app-tree/data:4` | 多选状态 |
+| `toggleSelect()` | `frontend/src/views/app-tree/data:17` | 切换选中状态（支持 Ctrl/Shift） |
+| `updateSelectCount()` | `frontend/src/views/app-tree/events:13` | — |
+| `bindTreeEvents()` | `frontend/src/views/app-tree/events:87` | — |
+| `setPendingTreeSearch()` | `frontend/src/views/app-tree/index:17` | — |
+| `takePendingTreeSearch()` | `frontend/src/views/app-tree/index:20` | — |
+| `AppTree()` | `frontend/src/views/app-tree/index:46` | — |
+| `initInstanceActions()` | `frontend/src/views/app-tree/instance-actions:29` | — |
+| `TreeEntry()` | `frontend/src/views/app-tree/loader:10` | 树条目（loader 转换后的渲染格式） |
+| `loadEntries()` | `frontend/src/views/app-tree/loader:23` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |
+| `TreeRow()` | `frontend/src/views/app-tree/render:21` | 扁平化行（虚拟滚动数据单元） |
+| `RenderMode()` | `frontend/src/views/app-tree/render:37` | 渲染模式 |
+| `getRenderMode()` | `frontend/src/views/app-tree/render:43` | Get render mode from localStorage, default to 'grid' |
+| `setRenderMode()` | `frontend/src/views/app-tree/render:53` | Set render mode to localStorage |
+| `renderTree()` | `frontend/src/views/app-tree/render:289` | — |
+| `updateStat()` | `frontend/src/views/app-tree/render:353` | — |
+| `listFileRowHTML()` | `frontend/src/views/app-tree/row-tpl-list:7` | 文件行 HTML（紧凑列表模式：icon + name + size，无 hover actions、无 date、无 tag dot） |
+| `listFolderRowHTML()` | `frontend/src/views/app-tree/row-tpl-list:30` | 文件夹行 HTML（紧凑列表模式：arrow + folder icon + name） |
+| `fileRowHTML()` | `frontend/src/views/app-tree/row-tpl:7` | 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） |
+| `folderRowHTML()` | `frontend/src/views/app-tree/row-tpl:36` | 文件夹行 HTML（indent = padding-left，扁平化无 .ch 容器） |
+| `bindToolbarEvents()` | `frontend/src/views/app-tree/toolbar-events:208` | — |
+| `headerHTML()` | `frontend/src/views/app-tree/tpl:3` | — |
+| `footerHTML()` | `frontend/src/views/app-tree/tpl:27` | — |
+| `emptyHTML()` | `frontend/src/views/app-tree/tpl:35` | — |
+| `spinnerHTML()` | `frontend/src/views/app-tree/tpl:39` | — |
+| `flashBtn()` | `frontend/src/views/app-tree/utils:4` | — |
+| `ROW_H_GRID()` | `frontend/src/views/app-tree/virtual-scroll:3` | — |
+| `ROW_H_LIST()` | `frontend/src/views/app-tree/virtual-scroll:4` | — |
+| `calcVisibleRange()` | `frontend/src/views/app-tree/virtual-scroll:14` | 根据滚动位置计算可见行范围（支持动态行高） |
+| `installScrollSync()` | `frontend/src/views/app-tree/virtual-scroll:31` | 在容器上安装滚动监听，当滚动到新范围时自动重新渲染可见行 |
 
 ## 前端·核心
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `registerContextMenus()` | `frontend/js/core/context-menus:400` | 注册右键菜单映射（ctx:show → menu:show） |
-| `registerGlobalHandlers()` | `frontend/js/core/global-handlers:10` | 注册所有全局 handler，返回 unsub 函数数组 |
-| `registerDnD()` | `frontend/js/core/handler-dnd:272` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
-| `registerInstanceOps()` | `frontend/js/core/handler-other:8` | 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs |
-| `registerSync()` | `frontend/js/core/handler-sync:8` | 注册同步 handler，push 返回的取消订阅函数到 unsubs |
-| `MenuDef()` | `frontend/js/core/menu-defs:18` | 单类菜单的完整声明 |
-| `MENU_DEFS()` | `frontend/js/core/menu-defs:24` | 四类右键菜单的声明式规格（唯一事实来源） |
-| `getMenuDef()` | `frontend/js/core/menu-defs:109` | 测试辅助：按 type 取声明（不存在返回 undefined） |
-| `PageName()` | `frontend/js/core/page-store:8` | 页面名（宽松字符串，核心页见 AGENTS.md TERMINOLOGY） |
-| `PageStore()` | `frontend/js/core/page-store:10` | — |
+| `registerContextMenus()` | `frontend/src/core/context-menus:400` | 注册右键菜单映射（ctx:show → menu:show） |
+| `registerGlobalHandlers()` | `frontend/src/core/global-handlers:10` | 注册所有全局 handler，返回 unsub 函数数组 |
+| `registerDnD()` | `frontend/src/core/handler-dnd:272` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
+| `registerInstanceOps()` | `frontend/src/core/handler-other:8` | 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs |
+| `registerSync()` | `frontend/src/core/handler-sync:8` | 注册同步 handler，push 返回的取消订阅函数到 unsubs |
+| `MenuDef()` | `frontend/src/core/menu-defs:18` | 单类菜单的完整声明 |
+| `MENU_DEFS()` | `frontend/src/core/menu-defs:24` | 四类右键菜单的声明式规格（唯一事实来源） |
+| `getMenuDef()` | `frontend/src/core/menu-defs:109` | 测试辅助：按 type 取声明（不存在返回 undefined） |
+| `PageName()` | `frontend/src/core/page-store:8` | 页面名（宽松字符串，核心页见 AGENTS.md TERMINOLOGY） |
+| `PageStore()` | `frontend/src/core/page-store:10` | — |
 
 ## 前端·对话框
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `AdvFilterValue()` | `frontend/js/dialogs/adv-filter:11` | 筛选条件 |
-| `AdvFilterResult()` | `frontend/js/dialogs/adv-filter:22` | — |
-| `modalAdvFilter()` | `frontend/js/dialogs/adv-filter:29` | 弹出高级筛选弹窗 |
-| `BatchRenameChange()` | `frontend/js/dialogs/batch-rename:16` | 应用变更载荷 |
-| `showBatchRenameDialog()` | `frontend/js/dialogs/batch-rename:45` | 弹出批量重命名对话框 重复打开时先结算上一个 Promise，调用方 await 不会永远悬挂 |
-| `esc()` | `frontend/js/dialogs/modal:12` | — |
-| `closeDlg()` | `frontend/js/dialogs/modal:27` | 带退场动画关闭对话框 |
-| `registerDlg()` | `frontend/js/dialogs/modal:51` | 弹窗 append 到 body 后调用，登记为当前活动弹窗 |
-| `ModalPromptOptions()` | `frontend/js/dialogs/modal:58` | modalPrompt 选项 |
-| `modalPrompt()` | `frontend/js/dialogs/modal:71` | 弹出带输入框的模态框，类似 styled prompt() |
-| `ModalSelectOptions()` | `frontend/js/dialogs/modal:135` | modalSelect 选项 |
-| `modalSelect()` | `frontend/js/dialogs/modal:148` | 弹出下拉选择框 |
-| `ModalConfirmOptions()` | `frontend/js/dialogs/modal:205` | modalConfirm 选项 |
-| `modalConfirm()` | `frontend/js/dialogs/modal:219` | 弹出确认对话框 |
-| `showRenameDialog()` | `frontend/js/dialogs/rename:13` | 弹出重命名对话框 |
-| `modalTagEditor()` | `frontend/js/dialogs/tag-editor:13` | 弹出标签编辑弹窗 |
+| `AdvFilterValue()` | `frontend/src/dialogs/adv-filter:11` | 筛选条件 |
+| `AdvFilterResult()` | `frontend/src/dialogs/adv-filter:22` | — |
+| `modalAdvFilter()` | `frontend/src/dialogs/adv-filter:29` | 弹出高级筛选弹窗 |
+| `BatchRenameChange()` | `frontend/src/dialogs/batch-rename:16` | 应用变更载荷 |
+| `showBatchRenameDialog()` | `frontend/src/dialogs/batch-rename:45` | 弹出批量重命名对话框 重复打开时先结算上一个 Promise，调用方 await 不会永远悬挂 |
+| `esc()` | `frontend/src/dialogs/modal:12` | — |
+| `closeDlg()` | `frontend/src/dialogs/modal:27` | 带退场动画关闭对话框 |
+| `registerDlg()` | `frontend/src/dialogs/modal:51` | 弹窗 append 到 body 后调用，登记为当前活动弹窗 |
+| `ModalPromptOptions()` | `frontend/src/dialogs/modal:58` | modalPrompt 选项 |
+| `modalPrompt()` | `frontend/src/dialogs/modal:71` | 弹出带输入框的模态框，类似 styled prompt() |
+| `ModalSelectOptions()` | `frontend/src/dialogs/modal:135` | modalSelect 选项 |
+| `modalSelect()` | `frontend/src/dialogs/modal:148` | 弹出下拉选择框 |
+| `ModalConfirmOptions()` | `frontend/src/dialogs/modal:205` | modalConfirm 选项 |
+| `modalConfirm()` | `frontend/src/dialogs/modal:219` | 弹出确认对话框 |
+| `showRenameDialog()` | `frontend/src/dialogs/rename:13` | 弹出重命名对话框 |
+| `modalTagEditor()` | `frontend/src/dialogs/tag-editor:13` | 弹出标签编辑弹窗 |
 
 ## 前端·特性
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `showProgress()` | `frontend/js/features/community/data:7` | 创建进度条 UI（插入到 searchResults 容器） |
-| `FetchModelsResult()` | `frontend/js/features/community/data:31` | 抓取结果 |
-| `tryFetchModels()` | `frontend/js/features/community/data:44` | 从 GitHub 获取 index.json（并发竞速：同时请求所有镜像源，取最快响应） |
-| `DownloadTask()` | `frontend/js/features/community/download-queue:15` | 下载任务 |
-| `QueueError()` | `frontend/js/features/community/download-queue:23` | 队列错误项 |
-| `DownloadState()` | `frontend/js/features/community/download-queue:29` | 队列状态快照 |
-| `subscribe()` | `frontend/js/features/community/download-queue:63` | 订阅 STATE 变更。返回取消订阅函数。 |
-| `getState()` | `frontend/js/features/community/download-queue:75` | 当前状态的只读快照 |
-| `resume()` | `frontend/js/features/community/download-queue:84` | 页面切回时调用，从 Go 端恢复当前队列状态。 |
-| `enqueueDownloads()` | `frontend/js/features/community/download-queue:123` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
-| `cancelDownloads()` | `frontend/js/features/community/download-queue:149` | 模块级取消 — 纯粹的 Go 调用。 |
-| `QueueControllerOptions()` | `frontend/js/features/community/download-queue:247` | createDownloadQueue 选项 |
-| `QueueController()` | `frontend/js/features/community/download-queue:256` | 队列控制器 |
-| `createDownloadQueue()` | `frontend/js/features/community/download-queue:269` | 创建一个下载队列 UI 控制器。 |
-| `RepoEventsContext()` | `frontend/js/features/community/events:10` | bindRepoEvents 上下文 |
-| `RepoEventsHandle()` | `frontend/js/features/community/events:22` | 绑定返回值 |
-| `bindRepoEvents()` | `frontend/js/features/community/events:35` | 绑定仓库模型页面的所有事件。 |
-| `WorkshopModel()` | `frontend/js/features/community/render:8` | 工坊模型条目（index.json 结构） |
-| `WorkshopSite()` | `frontend/js/features/community/render:16` | 工坊站点 |
-| `isModelMissing()` | `frontend/js/features/community/render:26` | 判断模型是否缺失（本地不存在） |
-| `countMissing()` | `frontend/js/features/community/render:42` | 计算缺失数量 |
-| `renderModelList()` | `frontend/js/features/community/render:87` | 渲染模型列表（DocumentFragment） |
-| `GROUP_LABELS()` | `frontend/js/features/community/render:170` | 分组标签映射 |
-| `renderCardsHTML()` | `frontend/js/features/community/render:181` | 生成左栏站点卡片 HTML |
-| `renderRepoHeaderHTML()` | `frontend/js/features/community/render:235` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
-| `DnDLock()` | `frontend/js/features/dnd-state:7` | — |
-| `PendingImport()` | `frontend/js/features/dnd-state:25` | — |
-| `ImportQueueHost()` | `frontend/js/features/import-queue:18` | app-content 组件实例（initImportQueue 依赖的成员） |
-| `initImportQueue()` | `frontend/js/features/import-queue:51` | 初始化导入队列，返回清理函数 |
-| `loadOldestModel()` | `frontend/js/features/oldest-models:24` | 加载资历最深、仓库评分、热力图和每日推荐 |
-| `RecycleHost()` | `frontend/js/features/recycle-bin:9` | app-content 组件实例（initRecycleBin 依赖的成员） |
-| `initRecycleBin()` | `frontend/js/features/recycle-bin:16` | 初始化回收站管理，返回清理函数 |
-| `initResourcePacks()` | `frontend/js/features/resource-packs:13` | 初始化资源包 tab |
-| `UpdateInfo()` | `frontend/js/features/version-updater:7` | 更新信息（CheckUpdate 返回） |
-| `checkUpdateSilent()` | `frontend/js/features/version-updater:131` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
-| `initVersionUpdater()` | `frontend/js/features/version-updater:155` | 手动检查更新（设置页按钮） |
+| `showProgress()` | `frontend/src/features/community/data:7` | 创建进度条 UI（插入到 searchResults 容器） |
+| `FetchModelsResult()` | `frontend/src/features/community/data:31` | 抓取结果 |
+| `tryFetchModels()` | `frontend/src/features/community/data:44` | 从 GitHub 获取 index.json（并发竞速：同时请求所有镜像源，取最快响应） |
+| `DownloadTask()` | `frontend/src/features/community/download-queue:15` | 下载任务 |
+| `QueueError()` | `frontend/src/features/community/download-queue:23` | 队列错误项 |
+| `DownloadState()` | `frontend/src/features/community/download-queue:29` | 队列状态快照 |
+| `subscribe()` | `frontend/src/features/community/download-queue:63` | 订阅 STATE 变更。返回取消订阅函数。 |
+| `getState()` | `frontend/src/features/community/download-queue:75` | 当前状态的只读快照 |
+| `resume()` | `frontend/src/features/community/download-queue:84` | 页面切回时调用，从 Go 端恢复当前队列状态。 |
+| `enqueueDownloads()` | `frontend/src/features/community/download-queue:123` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
+| `cancelDownloads()` | `frontend/src/features/community/download-queue:149` | 模块级取消 — 纯粹的 Go 调用。 |
+| `QueueControllerOptions()` | `frontend/src/features/community/download-queue:247` | createDownloadQueue 选项 |
+| `QueueController()` | `frontend/src/features/community/download-queue:256` | 队列控制器 |
+| `createDownloadQueue()` | `frontend/src/features/community/download-queue:269` | 创建一个下载队列 UI 控制器。 |
+| `RepoEventsContext()` | `frontend/src/features/community/events:10` | bindRepoEvents 上下文 |
+| `RepoEventsHandle()` | `frontend/src/features/community/events:22` | 绑定返回值 |
+| `bindRepoEvents()` | `frontend/src/features/community/events:35` | 绑定仓库模型页面的所有事件。 |
+| `WorkshopModel()` | `frontend/src/features/community/render:8` | 工坊模型条目（index.json 结构） |
+| `WorkshopSite()` | `frontend/src/features/community/render:16` | 工坊站点 |
+| `isModelMissing()` | `frontend/src/features/community/render:26` | 判断模型是否缺失（本地不存在） |
+| `countMissing()` | `frontend/src/features/community/render:42` | 计算缺失数量 |
+| `renderModelList()` | `frontend/src/features/community/render:87` | 渲染模型列表（DocumentFragment） |
+| `GROUP_LABELS()` | `frontend/src/features/community/render:170` | 分组标签映射 |
+| `renderCardsHTML()` | `frontend/src/features/community/render:181` | 生成左栏站点卡片 HTML |
+| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:235` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
+| `DnDLock()` | `frontend/src/features/dnd-state:7` | — |
+| `PendingImport()` | `frontend/src/features/dnd-state:25` | — |
+| `ImportQueueHost()` | `frontend/src/features/import-queue:18` | app-content 组件实例（initImportQueue 依赖的成员） |
+| `initImportQueue()` | `frontend/src/features/import-queue:51` | 初始化导入队列，返回清理函数 |
+| `loadOldestModel()` | `frontend/src/features/oldest-models:24` | 加载资历最深、仓库评分、热力图和每日推荐 |
+| `RecycleHost()` | `frontend/src/features/recycle-bin:9` | app-content 组件实例（initRecycleBin 依赖的成员） |
+| `initRecycleBin()` | `frontend/src/features/recycle-bin:16` | 初始化回收站管理，返回清理函数 |
+| `initResourcePacks()` | `frontend/src/features/resource-packs:13` | 初始化资源包 tab |
+| `UpdateInfo()` | `frontend/src/features/version-updater:7` | 更新信息（CheckUpdate 返回） |
+| `checkUpdateSilent()` | `frontend/src/features/version-updater:131` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
+| `initVersionUpdater()` | `frontend/src/features/version-updater:155` | 手动检查更新（设置页按钮） |
 
 ## 前端·服务
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `RegistrySchema()` | `frontend/js/services/registry:10` | — |
-| `register()` | `frontend/js/services/registry:21` | 注册一个服务（.ts 调用方：register("name", impl as X) 声明类型） |
-| `get()` | `frontend/js/services/registry:26` | 获取一个服务（.ts 调用方：get&lt;X&gt;("name") 断言期望类型） |
-| `has()` | `frontend/js/services/registry:33` | 检查服务是否已注册 |
-| `unregister()` | `frontend/js/services/registry:38` | 注销（测试用） |
-| `clear()` | `frontend/js/services/registry:43` | 清空所有（测试用） |
+| `RegistrySchema()` | `frontend/src/services/registry:10` | — |
+| `register()` | `frontend/src/services/registry:21` | 注册一个服务（.ts 调用方：register("name", impl as X) 声明类型） |
+| `get()` | `frontend/src/services/registry:26` | 获取一个服务（.ts 调用方：get&lt;X&gt;("name") 断言期望类型） |
+| `has()` | `frontend/src/services/registry:33` | 检查服务是否已注册 |
+| `unregister()` | `frontend/src/services/registry:38` | 注销（测试用） |
+| `clear()` | `frontend/src/services/registry:43` | 清空所有（测试用） |
 
 ## 前端·工具
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `animateNumber()` | `frontend/js/utils/animate:11` | 里程表滚动进位动画 |
-| `BoneNode()` | `frontend/js/utils/animation-player:6` | 骨骼层级节点（用于层级变换传播） |
-| `AnimationPlayer()` | `frontend/js/utils/animation-player:11` | — |
-| `Vec3()` | `frontend/js/utils/animation:9` | 三维向量 [x, y, z] |
-| `Keyframe()` | `frontend/js/utils/animation:12` | 关键帧 |
-| `BoneChannels()` | `frontend/js/utils/animation:20` | 单骨骼三通道 |
-| `AnimationClip()` | `frontend/js/utils/animation:27` | 动画剪辑 |
-| `BoneTransform()` | `frontend/js/utils/animation:36` | 骨骼变换（evaluateClip 结果值） |
-| `BoneHierarchyNode()` | `frontend/js/utils/animation:43` | 骨骼层级节点 |
-| `parseBedrockAnimationJSON()` | `frontend/js/utils/animation:193` | 解析完整的基岩版动画 JSON 字符串 |
-| `evaluateKeyframes()` | `frontend/js/utils/animation:290` | 在指定时间 t 对一组关键帧求值 |
-| `evaluateClip()` | `frontend/js/utils/animation:334` | 对整个动画 clip 在指定时间求值（支持骨骼层级） |
-| `addExportButton()` | `frontend/js/utils/canvas-export:9` | 在 canvas 下方附加"导出 PNG"按钮 |
-| `PREVIEW_CANVAS_SIZE()` | `frontend/js/utils/constants:4` | 骨骼预览 Canvas 尺寸 |
-| `FULL_PREVIEW_CANVAS_SIZE()` | `frontend/js/utils/constants:5` | — |
-| `DEFAULT_TEX_SIZE()` | `frontend/js/utils/constants:8` | 纹理尺寸默认值 |
-| `LABEL_MAX_WIDTH()` | `frontend/js/utils/constants:11` | 骨骼名标注最大文本宽度阈值 |
-| `ZOOM_MIN()` | `frontend/js/utils/constants:14` | 缩放范围 |
-| `ZOOM_MAX()` | `frontend/js/utils/constants:15` | — |
-| `ZOOM_STEP()` | `frontend/js/utils/constants:16` | — |
-| `ZOOM_STEP_WHEEL()` | `frontend/js/utils/constants:17` | — |
-| `ROTATION_PER_PX()` | `frontend/js/utils/constants:20` | 旋转增量（度/像素拖拽） |
-| `MINI_MAP_SIZE()` | `frontend/js/utils/constants:23` | 预览缩略图尺寸 |
-| `MAX_LOG_ITEMS()` | `frontend/js/utils/constants:26` | 日志最大显示条数 |
-| `STUCK_GUARD_DELAY()` | `frontend/js/utils/constants:29` | 下载队列 |
-| `COMPLETE_TIMEOUT()` | `frontend/js/utils/constants:30` | — |
-| `ANIMATE_MAX_STEPS()` | `frontend/js/utils/constants:33` | 数字跳动动画 |
-| `ANIMATE_INTERVAL_MS()` | `frontend/js/utils/constants:34` | — |
-| `dbg()` | `frontend/js/utils/debug:31` | 输出调试日志（保留 tag 用于过滤） |
-| `dbgWarn()` | `frontend/js/utils/debug:48` | 输出警告（即使关闭调试也保留） |
-| `ParsedModelName()` | `frontend/js/utils/display:5` | 解析后的模型文件名字段 |
-| `parseModelName()` | `frontend/js/utils/display:27` | 解析模型文件名 → 结构化字段 支持格式: [作者]【作品】角色变体2023-05.ysm 也兼容: [作者]《作品》角色变体2023-05.ysm |
-| `renderDisplayName()` | `frontend/js/utils/display:87` | 渲染美化文件名 HTML（通用接口） 应用 CSS 变量: --meta-author, --meta-work, --meta-date |
-| `renderModelName()` | `frontend/js/utils/display:165` | renderModelName = renderDisplayName 别名，options.showExt 支持 |
-| `renderModelNameWithHighlight()` | `frontend/js/utils/display:174` | 搜索高亮版 |
-| `esc()` | `frontend/js/utils/dom:4` | HTML 转义（治理红线：所有 innerHTML 拼接必须过 esc） |
-| `hl()` | `frontend/js/utils/dom:16` | 关键词高亮：转义 + &lt;mark&gt; 包裹命中段 |
-| `friendlyError()` | `frontend/js/utils/errors:9` | 将 Go 错误转换为中文友好提示 |
-| `RESOURCE_EXTS()` | `frontend/js/utils/extensions:8` | 每种资源类型对应的扩展名 |
-| `ALL_EXTS()` | `frontend/js/utils/extensions:19` | 所有支持的扩展名列表（去重，用于 UI 提示文案） |
-| `getExts()` | `frontend/js/utils/extensions:34` | 获取某资源类型支持的扩展名 |
-| `isSupportedExt()` | `frontend/js/utils/extensions:39` | 检查扩展名是否被某资源类型支持 |
-| `extBelongsTo()` | `frontend/js/utils/extensions:44` | 返回扩展名所属的资源类型 ID |
-| `fmt()` | `frontend/js/utils/fmt:4` | 字节数 → 可读大小（B/KB/MB），非法值返回空串 |
-| `sizeColor()` | `frontend/js/utils/fmt:12` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，&gt;3MB 红色 |
-| `fmtDate()` | `frontend/js/utils/fmt:22` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
-| `fileIcon()` | `frontend/js/utils/icon:9` | 按扩展名返回图标 emoji |
-| `isYsmName()` | `frontend/js/utils/icon:28` | 是否为 YSM 文件 |
-| `renderFormattedText()` | `frontend/js/utils/mc-format:51` | 将含 Minecraft § 分节符的文本渲染为带颜色的 HTML。 |
-| `BedrockCube()` | `frontend/js/utils/model2d:8` | Bedrock cube（AnalyzeBedrockModel 结构） |
-| `BedrockBone()` | `frontend/js/utils/model2d:18` | Bedrock bone |
-| `BedrockModel()` | `frontend/js/utils/model2d:24` | BedrockModel（AnalyzeBedrockModel 返回） |
-| `Model2DOptions()` | `frontend/js/utils/model2d:29` | renderModel2D 选项 |
-| `renderModel2D()` | `frontend/js/utils/model2d:59` | 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转） |
-| `calcBoneHitZones()` | `frontend/js/utils/model2d:249` | 计算骨骼在屏幕上的命中热区（2D 正交投影，供鼠标拾取；导出供测试） |
-| `ModelLike()` | `frontend/js/utils/model3d-loader:7` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
-| `ModelSpec()` | `frontend/js/utils/model3d-loader:15` | Go 返回的 3D spec（models 数组） |
-| `loadTextures()` | `frontend/js/utils/model3d-loader:31` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组 |
-| `fetchSpec()` | `frontend/js/utils/model3d-loader:85` | 获取模型 spec（Go 绑定优先，JS 几何兜底） |
-| `preloadModel()` | `frontend/js/utils/model3d-loader:107` | 预加载：纹理 + spec 并行获取 |
-| `SpecCube()` | `frontend/js/utils/model3d-spec:10` | 立方体（骨骼上的 box 元素） |
-| `SpecBone()` | `frontend/js/utils/model3d-spec:20` | 骨骼 |
-| `SpecModelInput()` | `frontend/js/utils/model3d-spec:28` | 模型输入（buildSpecFromModel 参数） |
-| `SpecBuildResult()` | `frontend/js/utils/model3d-spec:35` | 构建产物：mesh data + bones |
-| `SpecMeshData()` | `frontend/js/utils/model3d-spec:43` | 单 mesh 数据（Go spec meshGroups 结构近似） |
-| `buildSpecFromModel()` | `frontend/js/utils/model3d-spec:64` | 构建 Three.js 可消费的 spec 结构 { bones[], meshes[] } |
-| `eulerToQuaternionJS()` | `frontend/js/utils/model3d-spec:335` | 欧拉角（度）→ 四元数（保留：历史工具函数，当前无引用） |
-| `SpecBone3D()` | `frontend/js/utils/model3d:7` | — |
-| `SpecMeshGroup3D()` | `frontend/js/utils/model3d:15` | — |
-| `SpecModelGroup3D()` | `frontend/js/utils/model3d:27` | — |
-| `Spec3D()` | `frontend/js/utils/model3d:32` | — |
-| `BoneSelectInfo()` | `frontend/js/utils/model3d:37` | 骨骼选中信息（window._3dOnBoneSelect 回调参数） |
-| `RenderModel3DHandle()` | `frontend/js/utils/model3d:51` | renderModel3D 返回的渲染句柄 |
-| `buildSceneMesh()` | `frontend/js/utils/model3d:72` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
-| `renderModel3D()` | `frontend/js/utils/model3d:128` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/js/utils/model3d:735` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
-| `PackMeta()` | `frontend/js/utils/pack-format:123` | ReadPackMeta 返回的 JSON 对象（仅覆盖用到的字段） |
-| `formatVersion()` | `frontend/js/utils/pack-format:134` | 根据 pack_format 数值获取可读 Minecraft 版本描述 |
-| `describeVersionRange()` | `frontend/js/utils/pack-format:142` | 根据 meta 对象生成格式号 + 版本号描述 |
-| `CacheValue()` | `frontend/js/utils/preview-cache:10` | 缓存条目值 |
-| `cacheSetEvictHandler()` | `frontend/js/utils/preview-cache:39` | 注册 evict 回调，淘汰条目时调用 |
-| `cacheGet()` | `frontend/js/utils/preview-cache:43` | — |
-| `cacheSet()` | `frontend/js/utils/preview-cache:47` | — |
-| `cacheHas()` | `frontend/js/utils/preview-cache:66` | — |
-| `cacheDelete()` | `frontend/js/utils/preview-cache:70` | — |
-| `cacheClear()` | `frontend/js/utils/preview-cache:78` | — |
-| `cacheKeys()` | `frontend/js/utils/preview-cache:89` | — |
-| `cacheValues()` | `frontend/js/utils/preview-cache:93` | — |
-| `cacheEntries()` | `frontend/js/utils/preview-cache:97` | — |
-| `cacheSize()` | `frontend/js/utils/preview-cache:102` | 缓存大小 |
-| `ResourceTypeEntry()` | `frontend/js/utils/resource-registry:6` | 资源类型注册表条目（对应 resource_types.json 结构） |
-| `loadResourceRegistry()` | `frontend/js/utils/resource-registry:19` | 加载资源类型注册表 |
-| `getResourceType()` | `frontend/js/utils/resource-registry:36` | 获取某资源类型的注册表条目 |
-| `getStorageSubDir()` | `frontend/js/utils/resource-registry:41` | 获取存储子目录（对应 resource_types.json 的 storageSubDir 字段） |
-| `RESOURCE_TYPES()` | `frontend/js/utils/resource-types:4` | 资源类型 ID（键为类型标签，值为内部 ID） |
-| `RESOURCE_TYPE_LABELS()` | `frontend/js/utils/resource-types:15` | 资源类型显示标签（内部 ID → 中文名） |
-| `ALL_RESOURCE_TYPES()` | `frontend/js/utils/resource-types:26` | 全部资源类型 ID 列表 |
-| `AngleShot()` | `frontend/js/utils/screenshot-renderer:7` | — |
-| `BatchResult()` | `frontend/js/utils/screenshot-renderer:12` | — |
-| `renderMultiAngle()` | `frontend/js/utils/screenshot-renderer:19` | — |
-| `batchRepoScreenshots()` | `frontend/js/utils/screenshot-renderer:138` | — |
-| `stagger()` | `frontend/js/utils/stagger:11` | — |
-| `SummaryAuthor()` | `frontend/js/utils/summarize:8` | — |
-| `SummaryAnimGroup()` | `frontend/js/utils/summarize:14` | — |
-| `SummaryConfigMenu()` | `frontend/js/utils/summarize:20` | — |
-| `YsmSummary()` | `frontend/js/utils/summarize:25` | — |
-| `YSMHeader()` | `frontend/js/utils/summarize:50` | — |
-| `summaryCardHTML()` | `frontend/js/utils/summarize:151` | 从 YsmSummary + YSMHeader 渲染为精简摘要卡片 |
+| `animateNumber()` | `frontend/src/utils/animate:11` | 里程表滚动进位动画 |
+| `BoneNode()` | `frontend/src/utils/animation-player:6` | 骨骼层级节点（用于层级变换传播） |
+| `AnimationPlayer()` | `frontend/src/utils/animation-player:11` | — |
+| `Vec3()` | `frontend/src/utils/animation:9` | 三维向量 [x, y, z] |
+| `Keyframe()` | `frontend/src/utils/animation:12` | 关键帧 |
+| `BoneChannels()` | `frontend/src/utils/animation:20` | 单骨骼三通道 |
+| `AnimationClip()` | `frontend/src/utils/animation:27` | 动画剪辑 |
+| `BoneTransform()` | `frontend/src/utils/animation:36` | 骨骼变换（evaluateClip 结果值） |
+| `BoneHierarchyNode()` | `frontend/src/utils/animation:43` | 骨骼层级节点 |
+| `parseBedrockAnimationJSON()` | `frontend/src/utils/animation:193` | 解析完整的基岩版动画 JSON 字符串 |
+| `evaluateKeyframes()` | `frontend/src/utils/animation:290` | 在指定时间 t 对一组关键帧求值 |
+| `evaluateClip()` | `frontend/src/utils/animation:334` | 对整个动画 clip 在指定时间求值（支持骨骼层级） |
+| `addExportButton()` | `frontend/src/utils/canvas-export:9` | 在 canvas 下方附加"导出 PNG"按钮 |
+| `PREVIEW_CANVAS_SIZE()` | `frontend/src/utils/constants:4` | 骨骼预览 Canvas 尺寸 |
+| `FULL_PREVIEW_CANVAS_SIZE()` | `frontend/src/utils/constants:5` | — |
+| `DEFAULT_TEX_SIZE()` | `frontend/src/utils/constants:8` | 纹理尺寸默认值 |
+| `LABEL_MAX_WIDTH()` | `frontend/src/utils/constants:11` | 骨骼名标注最大文本宽度阈值 |
+| `ZOOM_MIN()` | `frontend/src/utils/constants:14` | 缩放范围 |
+| `ZOOM_MAX()` | `frontend/src/utils/constants:15` | — |
+| `ZOOM_STEP()` | `frontend/src/utils/constants:16` | — |
+| `ZOOM_STEP_WHEEL()` | `frontend/src/utils/constants:17` | — |
+| `ROTATION_PER_PX()` | `frontend/src/utils/constants:20` | 旋转增量（度/像素拖拽） |
+| `MINI_MAP_SIZE()` | `frontend/src/utils/constants:23` | 预览缩略图尺寸 |
+| `MAX_LOG_ITEMS()` | `frontend/src/utils/constants:26` | 日志最大显示条数 |
+| `STUCK_GUARD_DELAY()` | `frontend/src/utils/constants:29` | 下载队列 |
+| `COMPLETE_TIMEOUT()` | `frontend/src/utils/constants:30` | — |
+| `ANIMATE_MAX_STEPS()` | `frontend/src/utils/constants:33` | 数字跳动动画 |
+| `ANIMATE_INTERVAL_MS()` | `frontend/src/utils/constants:34` | — |
+| `dbg()` | `frontend/src/utils/debug:31` | 输出调试日志（保留 tag 用于过滤） |
+| `dbgWarn()` | `frontend/src/utils/debug:48` | 输出警告（即使关闭调试也保留） |
+| `ParsedModelName()` | `frontend/src/utils/display:5` | 解析后的模型文件名字段 |
+| `parseModelName()` | `frontend/src/utils/display:27` | 解析模型文件名 → 结构化字段 支持格式: [作者]【作品】角色变体2023-05.ysm 也兼容: [作者]《作品》角色变体2023-05.ysm |
+| `renderDisplayName()` | `frontend/src/utils/display:87` | 渲染美化文件名 HTML（通用接口） 应用 CSS 变量: --meta-author, --meta-work, --meta-date |
+| `renderModelName()` | `frontend/src/utils/display:165` | renderModelName = renderDisplayName 别名，options.showExt 支持 |
+| `renderModelNameWithHighlight()` | `frontend/src/utils/display:174` | 搜索高亮版 |
+| `esc()` | `frontend/src/utils/dom:4` | HTML 转义（治理红线：所有 innerHTML 拼接必须过 esc） |
+| `hl()` | `frontend/src/utils/dom:16` | 关键词高亮：转义 + &lt;mark&gt; 包裹命中段 |
+| `friendlyError()` | `frontend/src/utils/errors:9` | 将 Go 错误转换为中文友好提示 |
+| `RESOURCE_EXTS()` | `frontend/src/utils/extensions:8` | 每种资源类型对应的扩展名 |
+| `ALL_EXTS()` | `frontend/src/utils/extensions:19` | 所有支持的扩展名列表（去重，用于 UI 提示文案） |
+| `getExts()` | `frontend/src/utils/extensions:34` | 获取某资源类型支持的扩展名 |
+| `isSupportedExt()` | `frontend/src/utils/extensions:39` | 检查扩展名是否被某资源类型支持 |
+| `extBelongsTo()` | `frontend/src/utils/extensions:44` | 返回扩展名所属的资源类型 ID |
+| `fmt()` | `frontend/src/utils/fmt:4` | 字节数 → 可读大小（B/KB/MB），非法值返回空串 |
+| `sizeColor()` | `frontend/src/utils/fmt:12` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，&gt;3MB 红色 |
+| `fmtDate()` | `frontend/src/utils/fmt:22` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
+| `fileIcon()` | `frontend/src/utils/icon:9` | 按扩展名返回图标 emoji |
+| `isYsmName()` | `frontend/src/utils/icon:28` | 是否为 YSM 文件 |
+| `renderFormattedText()` | `frontend/src/utils/mc-format:51` | 将含 Minecraft § 分节符的文本渲染为带颜色的 HTML。 |
+| `BedrockCube()` | `frontend/src/utils/model2d:8` | Bedrock cube（AnalyzeBedrockModel 结构） |
+| `BedrockBone()` | `frontend/src/utils/model2d:18` | Bedrock bone |
+| `BedrockModel()` | `frontend/src/utils/model2d:24` | BedrockModel（AnalyzeBedrockModel 返回） |
+| `Model2DOptions()` | `frontend/src/utils/model2d:29` | renderModel2D 选项 |
+| `renderModel2D()` | `frontend/src/utils/model2d:59` | 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转） |
+| `calcBoneHitZones()` | `frontend/src/utils/model2d:249` | 计算骨骼在屏幕上的命中热区（2D 正交投影，供鼠标拾取；导出供测试） |
+| `ModelLike()` | `frontend/src/utils/model3d-loader:7` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
+| `ModelSpec()` | `frontend/src/utils/model3d-loader:15` | Go 返回的 3D spec（models 数组） |
+| `loadTextures()` | `frontend/src/utils/model3d-loader:31` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组 |
+| `fetchSpec()` | `frontend/src/utils/model3d-loader:85` | 获取模型 spec（Go 绑定优先，JS 几何兜底） |
+| `preloadModel()` | `frontend/src/utils/model3d-loader:107` | 预加载：纹理 + spec 并行获取 |
+| `SpecCube()` | `frontend/src/utils/model3d-spec:10` | 立方体（骨骼上的 box 元素） |
+| `SpecBone()` | `frontend/src/utils/model3d-spec:20` | 骨骼 |
+| `SpecModelInput()` | `frontend/src/utils/model3d-spec:28` | 模型输入（buildSpecFromModel 参数） |
+| `SpecBuildResult()` | `frontend/src/utils/model3d-spec:35` | 构建产物：mesh data + bones |
+| `SpecMeshData()` | `frontend/src/utils/model3d-spec:43` | 单 mesh 数据（Go spec meshGroups 结构近似） |
+| `buildSpecFromModel()` | `frontend/src/utils/model3d-spec:64` | 构建 Three.js 可消费的 spec 结构 { bones[], meshes[] } |
+| `eulerToQuaternionJS()` | `frontend/src/utils/model3d-spec:335` | 欧拉角（度）→ 四元数（保留：历史工具函数，当前无引用） |
+| `SpecBone3D()` | `frontend/src/utils/model3d:7` | — |
+| `SpecMeshGroup3D()` | `frontend/src/utils/model3d:15` | — |
+| `SpecModelGroup3D()` | `frontend/src/utils/model3d:27` | — |
+| `Spec3D()` | `frontend/src/utils/model3d:32` | — |
+| `BoneSelectInfo()` | `frontend/src/utils/model3d:37` | 骨骼选中信息（window._3dOnBoneSelect 回调参数） |
+| `RenderModel3DHandle()` | `frontend/src/utils/model3d:51` | renderModel3D 返回的渲染句柄 |
+| `buildSceneMesh()` | `frontend/src/utils/model3d:72` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
+| `renderModel3D()` | `frontend/src/utils/model3d:128` | 渲染 3D 模型到容器，返回控制句柄 |
+| `screenshotPreview()` | `frontend/src/utils/model3d:735` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `PackMeta()` | `frontend/src/utils/pack-format:123` | ReadPackMeta 返回的 JSON 对象（仅覆盖用到的字段） |
+| `formatVersion()` | `frontend/src/utils/pack-format:134` | 根据 pack_format 数值获取可读 Minecraft 版本描述 |
+| `describeVersionRange()` | `frontend/src/utils/pack-format:142` | 根据 meta 对象生成格式号 + 版本号描述 |
+| `CacheValue()` | `frontend/src/utils/preview-cache:10` | 缓存条目值 |
+| `cacheSetEvictHandler()` | `frontend/src/utils/preview-cache:39` | 注册 evict 回调，淘汰条目时调用 |
+| `cacheGet()` | `frontend/src/utils/preview-cache:43` | — |
+| `cacheSet()` | `frontend/src/utils/preview-cache:47` | — |
+| `cacheHas()` | `frontend/src/utils/preview-cache:66` | — |
+| `cacheDelete()` | `frontend/src/utils/preview-cache:70` | — |
+| `cacheClear()` | `frontend/src/utils/preview-cache:78` | — |
+| `cacheKeys()` | `frontend/src/utils/preview-cache:89` | — |
+| `cacheValues()` | `frontend/src/utils/preview-cache:93` | — |
+| `cacheEntries()` | `frontend/src/utils/preview-cache:97` | — |
+| `cacheSize()` | `frontend/src/utils/preview-cache:102` | 缓存大小 |
+| `ResourceTypeEntry()` | `frontend/src/utils/resource-registry:6` | 资源类型注册表条目（对应 resource_types.json 结构） |
+| `loadResourceRegistry()` | `frontend/src/utils/resource-registry:19` | 加载资源类型注册表 |
+| `getResourceType()` | `frontend/src/utils/resource-registry:36` | 获取某资源类型的注册表条目 |
+| `getStorageSubDir()` | `frontend/src/utils/resource-registry:41` | 获取存储子目录（对应 resource_types.json 的 storageSubDir 字段） |
+| `RESOURCE_TYPES()` | `frontend/src/utils/resource-types:4` | 资源类型 ID（键为类型标签，值为内部 ID） |
+| `RESOURCE_TYPE_LABELS()` | `frontend/src/utils/resource-types:15` | 资源类型显示标签（内部 ID → 中文名） |
+| `ALL_RESOURCE_TYPES()` | `frontend/src/utils/resource-types:26` | 全部资源类型 ID 列表 |
+| `AngleShot()` | `frontend/src/utils/screenshot-renderer:7` | — |
+| `BatchResult()` | `frontend/src/utils/screenshot-renderer:12` | — |
+| `renderMultiAngle()` | `frontend/src/utils/screenshot-renderer:19` | — |
+| `batchRepoScreenshots()` | `frontend/src/utils/screenshot-renderer:138` | — |
+| `stagger()` | `frontend/src/utils/stagger:11` | — |
+| `SummaryAuthor()` | `frontend/src/utils/summarize:8` | — |
+| `SummaryAnimGroup()` | `frontend/src/utils/summarize:14` | — |
+| `SummaryConfigMenu()` | `frontend/src/utils/summarize:20` | — |
+| `YsmSummary()` | `frontend/src/utils/summarize:25` | — |
+| `YSMHeader()` | `frontend/src/utils/summarize:50` | — |
+| `summaryCardHTML()` | `frontend/src/utils/summarize:151` | 从 YsmSummary + YSMHeader 渲染为精简摘要卡片 |
 
 ## 前端·Wails 桥接
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `getApp()` | `frontend/js/wails/app:10` | 获取 Go App 绑定的缓存引用，避免重复动态 import |
-| `resetAppCache()` | `frontend/js/wails/app:17` | 重置缓存（测试用） |
+| `getApp()` | `frontend/src/wails/app:10` | 获取 Go App 绑定的缓存引用，避免重复动态 import |
+| `resetAppCache()` | `frontend/src/wails/app:17` | 重置缓存（测试用） |
 
 ## 前端·WASM
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `_getGlueCode()` | `frontend/js/wasm/ysm-glue-data:4` | — |
-| `YsmDecodedFile()` | `frontend/js/wasm/ysm-parser:46` | 解码输出文件 |
-| `initYSMParser()` | `frontend/js/wasm/ysm-parser:55` | — |
-| `decodeYsmFileFromMemory()` | `frontend/js/wasm/ysm-parser:135` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组） 返回 [{path, data}]，失败返回 null |
-| `decodeYsmFile()` | `frontend/js/wasm/ysm-parser:174` | 通过 callMain + MEMFS 解码 .ysm（回退路径） 保留以兼容旧的 WASM 编译 |
-| `_getWasmBinary()` | `frontend/js/wasm/ysm-wasm-data:4` | — |
+| `_getGlueCode()` | `frontend/src/wasm/ysm-glue-data:4` | — |
+| `YsmDecodedFile()` | `frontend/src/wasm/ysm-parser:46` | 解码输出文件 |
+| `initYSMParser()` | `frontend/src/wasm/ysm-parser:55` | — |
+| `decodeYsmFileFromMemory()` | `frontend/src/wasm/ysm-parser:135` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组） 返回 [{path, data}]，失败返回 null |
+| `decodeYsmFile()` | `frontend/src/wasm/ysm-parser:174` | 通过 callMain + MEMFS 解码 .ysm（回退路径） 保留以兼容旧的 WASM 编译 |
+| `_getWasmBinary()` | `frontend/src/wasm/ysm-wasm-data:4` | — |
 
 ---
 

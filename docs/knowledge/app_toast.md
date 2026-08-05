@@ -4,7 +4,7 @@ name: Toast 通知 app-toast
 tier: leaf
 category: ui
 source_files:
-  - frontend/js/views/app-toast/index.ts
+  - frontend/src/views/app-toast/index.ts
 use_when:
   - toast
   - 通知
@@ -47,6 +47,6 @@ use_when:
 
 ## 相关
 
-- `frontend/js/bus.ts` — 事件总线（见知识卡 `event_bus`）
-- `frontend/js/app-modules.ts` — 组件装配入口（见知识卡 `app_modules`）
+- `frontend/src/bus.ts` — 事件总线（见知识卡 `event_bus`）
+- `frontend/src/app-modules.ts` — 组件装配入口（见知识卡 `app_modules`）
 - `docs/governance-rules.md` — 「所有异常路径必须有 toast 反馈」规则条文

@@ -3,7 +3,7 @@
 - **状态**：已采纳（Accepted）
 - **日期**：2026-07-14
 - **决策人**：Jieling（人类首席架构师）、Riku（联邦首席架构师 AI）
-- **相关**：wails.json / go.mod / main.go / app*.go / frontend/js
+- **相关**：wails.json / go.mod / main.go / app*.go / frontend/src
 
 ---
 
@@ -77,7 +77,7 @@
 ## 6. 受影响文件清单
 
 - Go：`go.mod`、`main.go`、`app.go`、`app_config.go`、`app_download.go`、`resource_bindings.go`
-- 前端：`frontend/package.json`、`frontend/js/wails/app.js`、~50 处绑定导入、
+- 前端：`frontend/package.json`、`frontend/src/wails/app.js`、~50 处绑定导入、
   5 处 `window.runtime.*` 事件监听、`frontend/index.html`（如需移除 v2 runtime 注入）
 - 构建：`wails.json`、`build-release.ps1`
 - 暂缓：`tests/python/test_config_syntax.py`（不在本次范围）

@@ -4,7 +4,7 @@ name: 版本更新 version-updater
 tier: architecture
 category: feature
 source_files:
-  - frontend/js/features/version-updater.ts
+  - frontend/src/features/version-updater.ts
 use_when:
   - 更新
   - 升级

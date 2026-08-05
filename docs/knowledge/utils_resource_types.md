@@ -4,8 +4,8 @@ name: 资源类型工具 resource-types
 tier: leaf
 category: utils
 source_files:
-  - frontend/js/utils/resource/types.ts
-  - frontend/js/utils/resource/registry.ts
+  - frontend/src/utils/resource/types.ts
+  - frontend/src/utils/resource/registry.ts
 use_when:
   - 资源类型
   - RESOURCE_TYPES
@@ -55,4 +55,4 @@ use_when:
 - [resource_registry](./resource_registry.md) — 单一事实源 + services/registry.ts
 - [utils_extensions](./utils_extensions.md) — 扩展名映射
 - [wails_bridge](./wails_bridge.md) — getApp() 桥接
-- `frontend/js/utils/resource/resource-types.test.js` — 单元测试（验证入口）
+- `frontend/src/utils/resource/resource-types.test.js` — 单元测试（验证入口）

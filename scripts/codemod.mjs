@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * @file AST 感知的代码批量重构工具（基于 ts-morph）
- * 移植自 MikuMikuAR 联邦 scripts/codemod.mjs（源码目录 frontend/src → frontend/js）
+ * 移植自 MikuMikuAR 联邦 scripts/codemod.mjs（源码目录 frontend/src → frontend/src）
  *
  * 用法:
  *   node scripts/codemod.mjs <命令> [参数...]
@@ -97,7 +97,7 @@ function findExportDecl(name) {
 
 /** 在 frontend/src 下 grep 字符串匹配（纯 Node.js，跨平台） */
 function grepString(pattern) {
-  // ysm 源码目录为 frontend/js（联邦为 frontend/src）
+  // ysm 源码目录为 frontend/src（联邦为 frontend/src）
   const srcDir = path.join(FRONTEND, 'js');
   const results = [];
   const re = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');

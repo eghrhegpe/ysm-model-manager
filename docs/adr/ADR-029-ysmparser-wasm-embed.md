@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/wasm/ysm-wasm-data.js`（base64 内嵌）、`frontend/js/wasm/ysm-glue-data.js`、`frontend/js/wasm/ysm-parser.js`、`app.go`（`runYSMParserOnFile` Go CLI fallback）、`go/ysm/`（Go 端几何解析）、`docs/architecture.md §4`
+- **相关**：`frontend/src/wasm/ysm-wasm-data.js`（base64 内嵌）、`frontend/src/wasm/ysm-glue-data.js`、`frontend/src/wasm/ysm-parser.js`、`app.go`（`runYSMParserOnFile` Go CLI fallback）、`go/ysm/`（Go 端几何解析）、`docs/architecture.md §4`
 - **被收口来源**：`docs/archive/postmortem/postmortem-20250608.md`、`postmortem-20250608-wasm.md`、`postmortem-20250609.md`、`postmortem-20250610.md`、`postmortem-20250611.md`
 
 ---

@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳（2026-08-03 清零完成）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`resource_types.json` / `frontend/js/` 全量 / CLEANUP_RULES.md §7
+- **相关**：`resource_types.json` / `frontend/src/` 全量 / CLEANUP_RULES.md §7
 
 ---
 

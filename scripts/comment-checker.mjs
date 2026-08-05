@@ -20,7 +20,7 @@ import { parseRgLine } from './_lib/rg-line.mjs';
 function scanAiFluff() {
   /** 检测 AI 废话注释：用于/这是/检查.*是否 */
   const results = [];
-  for (const src of ['go', 'frontend/js']) {
+  for (const src of ['go', 'frontend/src']) {
     for (const line of rg(/^\s*\/\/.*\u7528\u4e8e|^\s*\/\/.*\u8fd9\u662f|^\s*\/\/.*\u68c0\u67e5.*\u662f\u5426/.source, src, ['*.go', '*.js', '*.ts'])) {
       const [f, ln, txt] = parseRgLine(line);
       results.push({ file: f, line: ln, snippet: txt, type: 'AI_fluff' });
@@ -32,7 +32,7 @@ function scanAiFluff() {
 function scanEmptyJsdoc() {
   /** 检测空 JSDoc：@param @returns 无实质描述 */
   const results = [];
-  for (const line of rg(/@param\s+\{[^}]*\}\s+\w+\s*-?\s*$|@returns\s*\{[^}]*\}\s*$/.source, 'frontend/js', ['*.js', '*.ts'])) {
+  for (const line of rg(/@param\s+\{[^}]*\}\s+\w+\s*-?\s*$|@returns\s*\{[^}]*\}\s*$/.source, 'frontend/src', ['*.js', '*.ts'])) {
     const [f, ln, txt] = parseRgLine(line);
     results.push({ file: f, line: ln, snippet: txt, type: 'empty_jsdoc' });
   }
@@ -42,7 +42,7 @@ function scanEmptyJsdoc() {
 function scanCommentedCode() {
   /** 检测注释掉的代码行 */
   const results = [];
-  for (const line of rg(/^\s*\/\/\s+(var |let |const |function |if |for |return |import |export )/.source, 'frontend/js', ['*.js', '*.ts'])) {
+  for (const line of rg(/^\s*\/\/\s+(var |let |const |function |if |for |return |import |export )/.source, 'frontend/src', ['*.js', '*.ts'])) {
     const [f, ln, txt] = parseRgLine(line);
     results.push({ file: f, line: ln, snippet: txt, type: 'commented_code' });
   }
@@ -52,7 +52,7 @@ function scanCommentedCode() {
 function scanTodoNoTicket() {
   /** 检测无编号的 TODO/FIXME/HACK */
   const results = [];
-  for (const src of ['go', 'frontend/js']) {
+  for (const src of ['go', 'frontend/src']) {
     for (const line of rg('TODO|FIXME|HACK|XXX|TEMP', src, ['*.go', '*.js', '*.ts'])) {
       // 过滤有编号的
       if (line.includes('#') || line.includes('// nolint')) continue;
@@ -70,7 +70,7 @@ function scanTodoNoTicket() {
 function scanDebugLog() {
   /** 检测 console.log / console.debug（可能有调试残留） */
   const results = [];
-  for (const line of rg('console\\.log|console\\.debug', 'frontend/js', ['*.js', '*.ts'])) {
+  for (const line of rg('console\\.log|console\\.debug', 'frontend/src', ['*.js', '*.ts'])) {
     const [f, ln, txt] = parseRgLine(line);
     // 排除业务日志
     if (txt.includes('[YSM]') || txt.includes('[3dspec]') || txt.includes('[Toast]') || txt.includes('[sync]')) continue;

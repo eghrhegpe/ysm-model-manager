@@ -88,7 +88,7 @@ function packageLines(base, pattern) {
 
 function main() {
   const goDirs = [path.join(ROOT, 'go')];
-  const jsDir = path.join(ROOT, 'frontend', 'js');
+  const jsDir = path.join(ROOT, 'frontend', 'src');
   const cssDir = path.join(ROOT, 'frontend', 'css');
 
   // === 项目总览 ===
@@ -123,13 +123,13 @@ function main() {
 
   // === 前端组件分布 ===
   console.log('\n=== 前端组件行数 ===');
-  for (const [name, lines] of packageLines(path.join(ROOT, 'frontend', 'js', 'components'), ['*.js', '*.ts'])) {
+  for (const [name, lines] of packageLines(path.join(ROOT, 'frontend', 'src', 'views'), ['*.js', '*.ts'])) {
     console.log(`  ${name}: ${lines} 行`);
   }
 
   // === 功能模块分布 ===
   console.log('\n=== 功能模块行数 ===');
-  for (const [name, lines] of packageLines(path.join(ROOT, 'frontend', 'js', 'features'), ['*.js', '*.ts'])) {
+  for (const [name, lines] of packageLines(path.join(ROOT, 'frontend', 'src', 'features'), ['*.js', '*.ts'])) {
     console.log(`  ${name}: ${lines} 行`);
   }
 

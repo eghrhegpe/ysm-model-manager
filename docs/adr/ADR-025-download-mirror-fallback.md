@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-04（原方案 2026-06-06 定稿）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`internal/app/app_download.go`（`DownloadFromGitHub` 镜像回退）/ `frontend/js/features/community/download-queue.ts` / 原 `docs/archive/design/download-mirror-arch.md`（已迁本 ADR）
+- **相关**：`internal/app/app_download.go`（`DownloadFromGitHub` 镜像回退）/ `frontend/src/features/community/download-queue.ts` / 原 `docs/archive/design/download-mirror-arch.md`（已迁本 ADR）
 
 ---
 
@@ -68,4 +68,4 @@ api:  https://api.github.com/repos/{owner}/{repo}/contents/{path}
 ### 数据溯源
 
 - 原 `docs/archive/design/download-mirror-arch.md`（2026-06-06 定稿）。
-- 现行实现：`internal/app/app_download.go:50-64`（入队 + `Event.Emit("queue:status")` + `DownloadFromGitHub` 镜像回退）、`frontend/js/features/community/download-queue.ts:139-142`（`EnqueueDownloads`）。
+- 现行实现：`internal/app/app_download.go:50-64`（入队 + `Event.Emit("queue:status")` + `DownloadFromGitHub` 镜像回退）、`frontend/src/features/community/download-queue.ts:139-142`（`EnqueueDownloads`）。

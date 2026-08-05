@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`go/updater/update.go, frontend/js/features/version-updater.ts`
+- **相关**：`go/updater/update.go, frontend/src/features/version-updater.ts`
 
 ---
 

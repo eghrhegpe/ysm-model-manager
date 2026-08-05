@@ -4,7 +4,7 @@
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
  *
- * 扫描 frontend/js/ 下所有 .js/.ts（ADR-014 后 TS 与 JS 并存），解析相对路径
+ * 扫描 frontend/src/ 下所有 .js/.ts（ADR-014 后 TS 与 JS 并存），解析相对路径
  * import/export-from 语句，构建模块依赖图，DFS 三色标记找环，输出完整环链 + 涉及文件数。
  *
  * 非相对导入（node_modules 包）跳过；扩展名自动补全（.ts/.js/index.ts/index.js）。
@@ -65,7 +65,7 @@ function findCycles(graph) {
 
 function main() {
   if (!fs.existsSync(SRC_DIR)) {
-    console.log(JSON_OUT ? JSON.stringify({ cycles: [], error: 'frontend/js 不存在' }) : 'frontend/js 目录不存在');
+    console.log(JSON_OUT ? JSON.stringify({ cycles: [], error: 'frontend/src 不存在' }) : 'frontend/src 目录不存在');
     process.exit(1);
   }
 

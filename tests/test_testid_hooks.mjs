@@ -16,13 +16,13 @@ const check = (ok, msg) => {
 
 // 1. test-utils helper 存在（G-1 ③）
 check(
-  existsSync(path.join(ROOT, "frontend/js/test-utils/index.ts")),
-  "frontend/js/test-utils/index.ts 缺失",
+  existsSync(path.join(ROOT, "frontend/src/test-utils/index.ts")),
+  "frontend/src/test-utils/index.ts 缺失",
 );
 
 // 2. app-tree row-tpl 关键 testid 存在（G-1 ①，前缀命名空间）
 const rowTpl = readFileSync(
-  path.join(ROOT, "frontend/js/views/app-tree/row-tpl.ts"),
+  path.join(ROOT, "frontend/src/views/app-tree/row-tpl.ts"),
   "utf8",
 );
 for (const tid of ["tree-file", "tree-toggle", "tree-dir", "tree-dir-toggle"]) {
@@ -31,7 +31,7 @@ for (const tid of ["tree-file", "tree-toggle", "tree-dir", "tree-dir-toggle"]) {
 
 // 3. 首个组件测试存在（G-1 ④）
 check(
-  existsSync(path.join(ROOT, "frontend/js/views/app-tree/app-tree.state.test.ts")),
+  existsSync(path.join(ROOT, "frontend/src/views/app-tree/app-tree.state.test.ts")),
   "app-tree app-tree.state.test.ts 缺失",
 );
 

@@ -4,10 +4,10 @@ name: 社区下载 community
 tier: architecture
 category: feature
 source_files:
-  - frontend/js/features/community/data.ts
-  - frontend/js/features/community/download-queue.ts
-  - frontend/js/features/community/events.ts
-  - frontend/js/features/community/render.ts
+  - frontend/src/features/community/data.ts
+  - frontend/src/features/community/download-queue.ts
+  - frontend/src/features/community/events.ts
+  - frontend/src/features/community/render.ts
 use_when:
   - 创意工坊
   - 社区

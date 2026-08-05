@@ -31,7 +31,7 @@
 | 校验文档漂移 | `node scripts/link-checker.mjs`（断链）+ `check-knowledge-drift.mjs`（知识卡）+ `adr-check.mjs`（ADR 登记） |
 | 查项目技术（历史） | `docs/archive/architecture.md`（已冻结；当前架构以 ADR + 源码为准） |
 | 写 UI 文案 / 变量名 | `docs/Design.md`（设计规范；UI 文案与代码字段保持一致） |
-| 加菜单 / 按钮 / 组件 | `frontend/js/app-modules.ts`（组件入口）+ `docs/Design.md`（唯一设计规范） |
+| 加菜单 / 按钮 / 组件 | `frontend/src/app-modules.ts`（组件入口）+ `docs/Design.md`（唯一设计规范） |
 | 改前端子模块 | `docs/Design.md`（唯一设计规范；动画系统 §7.2 / UI 体验原则 §13 已收编）；增强待办台账查 ADR-017 |
 | 改 Go 后端 | `internal/app/`（Wails Binding 入口）+ `docs/archive/architecture.md`（逻辑下沉优先 `go/` 包） |
 | 修 Bug 查历史 | 说 "bug-search <关键词>" 查 `docs/archive/bug-chronicle.md` |
@@ -242,7 +242,7 @@ node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红�
 | 6 | 下载进度 99% 卡死 | Content-Length=-1 | 锁定 99%，2s 后转菊花；`stuckGuardReset()` 清全部状态 |
 | 7 | 三入口各自注册 | 事件重复/遗漏 | 单击/多选/全选都走 `enqueueDownloadTasks()`，只注册一组 Wails EventsOn |
 | 8 | 回收站误删 | 硬链接数据丢失 | 符号链接→直接删，硬链接(nlink>1)→直接删，普通→移 `.recycle`，跨分区→复制后删 |
-| 9 | `public/` 下放 JS | Vite dev 优先加载 | 新 JS 放 `frontend/js/`，ES module → `app-modules.ts` 加 import |
+| 9 | `public/` 下放 JS | Vite dev 优先加载 | 新 JS 放 `frontend/src/`，ES module → `app-modules.ts` 加 import |
 | 10 | 回调 API 未 Promise 化 | DnD 数据读不到 | `entry.file(callback)` → `new Promise(resolve => entry.file(resolve))` |
 | 11 | 3D 坐标变换反复修（实证：model3d.ts 9 次 fix 全项目第一） | "对齐 ysmview cube pivot" 连续 5 次 fix | 改 model2d/model3d/spec.go 坐标前先 grep `bug-chronicle` + 对齐 ysmview 口径（pivot X 取反、`from.x = origin.x - size.x`）；改完用自由相机近距验证 |
 | 12 | CLI 未知 flag 被当标题/位置参数（实证：`--help` 误占 ADR-027-help.md / 生成 help.md 卡） | `new-adr.mjs --help` 占号；`new-knowledge-card.mjs --help` 当 kind | 有 positional 参数的 CLI：未知 `--flag` 显式白名单拦截，绝不落入位置参数位；`--help` 退 0 / 未知 flag 退 1；主流程 `process.exit(main())` 让退出码生效 |
@@ -295,7 +295,7 @@ const { SomeBinding } = window.go.main.App;
 
 高频锚点（详见「去哪里查」表）：
 - 改 Go 后端 → `internal/app/`（Wails Binding 入口）；逻辑下沉 → `go/` 包
-- 加菜单 / 按钮 / 组件 → `frontend/js/app-modules.ts`
+- 加菜单 / 按钮 / 组件 → `frontend/src/app-modules.ts`
 
 ### 4.2 组件拆分规范
 

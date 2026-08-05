@@ -4,11 +4,11 @@ name: 全局事件处理 global-handlers
 tier: architecture
 category: core
 source_files:
-  - frontend/js/core/handlers/global.ts
-  - frontend/js/core/handlers/dnd.ts
-  - frontend/js/core/handlers/instance-ops.ts
-  - frontend/js/core/handlers/sync.ts
-  - frontend/js/features/dnd-state.ts
+  - frontend/src/core/handlers/global.ts
+  - frontend/src/core/handlers/dnd.ts
+  - frontend/src/core/handlers/instance-ops.ts
+  - frontend/src/core/handlers/sync.ts
+  - frontend/src/features/dnd-state.ts
 use_when:
   - 全局事件
   - 拖拽导入

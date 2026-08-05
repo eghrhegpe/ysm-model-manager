@@ -122,13 +122,13 @@ Wails v3 **Service 反射绑定**：`*app.App` 的所有导出方法自动暴露
 
 ### 4.1 YSMParser WASM 内嵌
 
-- YSMParser 已内嵌 WASM：`frontend/js/wasm/ysm-wasm-data.js`（base64 编码，约 1.52MB），前端 WebView2 直接解码 `.ysm`，**无需 exe sidecar**。
+- YSMParser 已内嵌 WASM：`frontend/src/wasm/ysm-wasm-data.js`（base64 编码，约 1.52MB），前端 WebView2 直接解码 `.ysm`，**无需 exe sidecar**。
 - exe sidecar 仅作为开发调试的 Go CLI fallback；**发版时不打包 YSMParser.exe**。
 - 调试 CLI fallback 可从 `build/ysmparser-cache/` 恢复（`wails build -clean` 会清空 `build/bin/`，但 WASM 已内嵌，无需强制恢复 exe）。
 
 ### 4.2 WASM 加载路径
 
-`frontend/js/wasm/ysm-parser.ts`（~8KB）加载链：
+`frontend/src/wasm/ysm-parser.ts`（~8KB）加载链：
 
 1. 动态 `import()` 两个 data 文件 → 补丁胶水代码追加 `Module["HEAPU8"]=HEAPU8`（:75-78）；
 2. 设 `window.Module = { wasmBinary, noInitialRun: true }`（:81-86）；
@@ -172,7 +172,7 @@ ReadFileBytes(Go, base64) → atob → Uint8Array
 
 ### 4.6 存档
 
-- 当前稳定版为 `frontend/js/utils/model3d.ts`（旧 `docs/model3d.js` / `docs/model3d-ysm-attempt.js` 备份已随文档治理删除）。
+- 当前稳定版为 `frontend/src/utils/model3d.ts`（旧 `docs/model3d.js` / `docs/model3d-ysm-attempt.js` 备份已随文档治理删除）。
 - 旧版 `applyBoxUV`/`applyFaceUV` + `BoxGeometry` 方案永久废弃，不允许再提及或恢复。
 
 ---
@@ -437,7 +437,7 @@ app-content/community/core.ts:35-36
 
 ## 15. 参考
 
-- 事件总线：`frontend/js/bus.ts`（类型化，`window.bus` 兼容）
+- 事件总线：`frontend/src/bus.ts`（类型化，`window.bus` 兼容）
 - Vite 构建：`frontend/vite.config.js`
 - 发版脚本：`cmd/build-release.ps1`
 - 治理自检：`scripts/doctor.mjs`、`scripts/link-checker.mjs`

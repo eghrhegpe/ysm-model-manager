@@ -4,7 +4,7 @@ name: 事件总线 bus.ts
 tier: architecture
 category: core
 source_files:
-  - frontend/js/bus.ts
+  - frontend/src/bus.ts
 use_when:
   - 事件
   - 事件总线
@@ -46,5 +46,5 @@ use_when:
 
 ## 相关
 
-- `frontend/js/core/global-handlers.ts` — 全局事件处理
-- `frontend/js/app-modules.ts` — 子模块事件路由
+- `frontend/src/core/global-handlers.ts` — 全局事件处理
+- `frontend/src/app-modules.ts` — 子模块事件路由

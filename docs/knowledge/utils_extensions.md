@@ -4,7 +4,7 @@ name: 扩展名映射 extensions
 tier: leaf
 category: utils
 source_files:
-  - frontend/js/utils/resource/extensions.ts
+  - frontend/src/utils/resource/extensions.ts
 use_when:
   - 扩展名
   - 支持的文件类型
@@ -50,4 +50,4 @@ use_when:
 
 - [resource_registry](./resource_registry.md) — 单一事实源 resource_types.json
 - [utils_resource_types](./utils_resource_types.md) — 资源类型常量
-- `frontend/js/utils/resource/extensions.test.js` — 契约测试（验证入口）
+- `frontend/src/utils/resource/extensions.test.js` — 契约测试（验证入口）

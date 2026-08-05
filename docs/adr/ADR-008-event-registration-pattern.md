@@ -3,7 +3,7 @@
 - **状态**：已采纳（Accepted）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/bus.js` / `frontend/js/core/global-handlers.js` / `frontend/js/app-modules.js` / AGENTS.md §三
+- **相关**：`frontend/src/bus.js` / `frontend/src/core/global-handlers.js` / `frontend/src/app-modules.js` / AGENTS.md §三
 - **补充**：[ADR-027](./ADR-027-web-component-contract-normalization.md) 规范事件**发射侧**（通道选择与 payload 类型约束）；本 ADR 规范**订阅侧**（注册位置、防重守卫、清理配对）。两者互补，均现行有效。
 
 ---
@@ -134,9 +134,9 @@ on(event, fn) {
 
 | 来源 | 结果 |
 |------|------|
-| `frontend/js/bus.js` | 发布订阅实现，无自动防重 |
-| `frontend/js/features/community/download-queue.js` | `_registered` 守卫模式 |
-| `frontend/js/views/app-preview/events.js` | `_unsubs` 数组清理模式 |
-| `frontend/js/views/app-resource-manager/index.js` | 已知违规：无守卫注册 |
+| `frontend/src/bus.js` | 发布订阅实现，无自动防重 |
+| `frontend/src/features/community/download-queue.js` | `_registered` 守卫模式 |
+| `frontend/src/views/app-preview/events.js` | `_unsubs` 数组清理模式 |
+| `frontend/src/views/app-resource-manager/index.js` | 已知违规：无守卫注册 |
 | `AGENTS.md` §三 陷阱 #3 #8 | 历史事故记录 |
 | `docs/knowledge/event_bus.md` | 事件总线架构文档 |

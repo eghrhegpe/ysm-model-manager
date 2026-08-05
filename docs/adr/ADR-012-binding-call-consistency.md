@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳（2026-08-04 全量统一：业务代码直接 import(bindings) 全部改走 getApp()）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/wails/app.js` / `frontend/js/features/import-queue.js` / `frontend/js/core/context-menus.js`
+- **相关**：`frontend/src/wails/app.js` / `frontend/src/features/import-queue.js` / `frontend/src/core/context-menus.js`
 
 ---
 
@@ -13,7 +13,7 @@
 
 | 路径 | 代码 | 缓存 | 来源 |
 |------|------|------|------|
-| **路径 A** | `const App = await getApp()` | ✅ 模块级缓存（`_App`） | `frontend/js/wails/app.js` |
+| **路径 A** | `const App = await getApp()` | ✅ 模块级缓存（`_App`） | `frontend/src/wails/app.js` |
 | **路径 B** | `await import("../../bindings/.../app.js")` | ❌ 每次动态 import | 各处内联 |
 
 **`getApp()` 实现**（`wails/app.js`）：
@@ -122,7 +122,7 @@ getApp().then(App => App.OpenInstanceFolder(path, rtype || "")).catch(() => {});
 
 | 来源 | 结果 |
 |------|------|
-| `frontend/js/wails/app.js` | `getApp()` 缓存实现 |
-| `frontend/js/features/import-queue.js` | `getApp()` 连续调用两次 |
-| `frontend/js/core/context-menus.js` | 10 处直接 `import()` |
+| `frontend/src/wails/app.js` | `getApp()` 缓存实现 |
+| `frontend/src/features/import-queue.js` | `getApp()` 连续调用两次 |
+| `frontend/src/core/context-menus.js` | 10 处直接 `import()` |
 | AGENTS.md §四.2 | "Wails 调用统一走 getApp()" |

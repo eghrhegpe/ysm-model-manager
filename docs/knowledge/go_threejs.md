@@ -36,7 +36,7 @@ use_when:
 
 - 被 `internal/app/app_model.go` 调用（`threejs.Build` 生成 spec → Wails binding 下发前端）
 - 上游输入来自 [go_geometry](./go_geometry.md) / [go_ysm_parser](./go_ysm_parser.md) 解析出的 `types.BedrockModel`
-- 前端消费方：`frontend/js/utils/3d/model3d.ts`（Three.js 渲染）
+- 前端消费方：`frontend/src/utils/3d/model3d.ts`（Three.js 渲染）
 
 ## 不变量
 

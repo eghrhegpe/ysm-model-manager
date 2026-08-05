@@ -65,10 +65,10 @@ export function instancesHTML(): string {
 export function settingsHTML(): string {
   return `<div class="repo-wrap">
 <div class="repo-tabs">
-<button class="repo-tab active" data-tab="basic">⚙️ 基础设置</button>
-<button class="repo-tab" data-tab="ui">⚙️ 界面与体验</button>
-<button class="repo-tab" data-tab="about">ℹ️ 关于</button>
-<button class="repo-tab" data-tab="credits">🙏 鸣谢</button>
+<button class="stg-tab active" data-tab="basic">⚙️ 基础设置</button>
+<button class="stg-tab" data-tab="ui">⚙️ 界面与体验</button>
+<button class="stg-tab" data-tab="about">ℹ️ 关于</button>
+<button class="stg-tab" data-tab="credits">🙏 鸣谢</button>
 </div>
 <div class="repo-tab-body" id="stg-tab-basic">
 <div class="stg-page" style="padding:16px 20px;overflow-y:auto">

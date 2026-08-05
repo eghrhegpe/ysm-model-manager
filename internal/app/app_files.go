@@ -21,10 +21,16 @@ func (a *App) CreateDir(dir string) error {
 }
 
 func (a *App) RenameDir(oldPath, newName string) error {
+	if !a.isPathInRoot(oldPath) {
+		return fmt.Errorf("路径超出仓库目录")
+	}
 	return fileops.RenameDir(oldPath, newName)
 }
 
 func (a *App) RemoveDir(dir string) error {
+	if !a.isPathInRoot(dir) {
+		return fmt.Errorf("路径超出仓库目录")
+	}
 	return fileops.RemoveDir(dir)
 }
 
@@ -48,6 +54,9 @@ func (a *App) GetPackInfo(dirPath string) types.PackInfo {
 
 // ========== 模型移动/复制 ==========
 func (a *App) MoveModelFile(src, dstDir string) error {
+	if !a.isPathInRoot(src) || !a.isPathInRoot(dstDir) {
+		return fmt.Errorf("路径超出仓库目录")
+	}
 	return fileops.MoveModelFile(src, dstDir)
 }
 

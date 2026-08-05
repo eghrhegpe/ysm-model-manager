@@ -321,8 +321,15 @@ func (a *App) DeleteResourcePack(path string) error {
 }
 
 // DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹
+// 路径守卫：限制在 FilesRoot 内，防止删除系统目录
 func (a *App) DeleteModelDir(path string) error {
-	return os.RemoveAll(filepath.Dir(path))
+	root := a.ysmRoot()
+	clean := filepath.Clean(filepath.Dir(path))
+	rel, err := filepath.Rel(root, clean)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return fmt.Errorf("路径超出仓库目录")
+	}
+	return os.RemoveAll(clean)
 }
 
 // FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串）

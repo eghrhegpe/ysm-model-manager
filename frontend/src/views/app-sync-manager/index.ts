@@ -86,6 +86,12 @@ export class AppSyncManager extends HTMLElement {
     const listEl = this.querySelector(".sm-list");
     if (listEl) listEl.innerHTML = loadingHTML();
 
+    // 先清旧订阅（移到加载前，异常路径也能清理，防 handler 累积泄漏）
+    if (this._unsubs) {
+      this._unsubs.forEach((fn) => fn());
+      this._unsubs = [];
+    }
+
     await this._loadTypeConfig();
     await this._loadData();
 
@@ -105,11 +111,6 @@ export class AppSyncManager extends HTMLElement {
       bus.emit("toast:show", { msg: "❌ " + friendlyError(e, "同步管理器渲染失败"), duration: 5000, type: "error" });
     }
 
-    // 监听刷新：_init 可能因属性变更多次执行，先清旧订阅防止 handler 翻倍
-    if (this._unsubs) {
-      this._unsubs.forEach((fn) => fn());
-      this._unsubs = [];
-    }
     const unsub = bus.on("stats:refresh", () => {
       if (!this.isConnected) return;
       dbg("sync-manager", "stats:refresh 收到");

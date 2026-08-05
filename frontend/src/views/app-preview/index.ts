@@ -62,10 +62,16 @@ class AppPreview extends HTMLElement implements PreviewCtx {
     this._unsubs.push(
       bus.on("model:select", async ({ path, isDir }) => {
         ++this._previewGen; // 代际计数：子方法 await 后校验 gen !== _previewGen 即丢弃过期渲染
-        if (isDir) {
-          await this._showPackInfo(path);
-        } else {
-          await this._showModelDetail(path);
+        try {
+          if (isDir) {
+            await this._showPackInfo(path);
+          } else {
+            await this._showModelDetail(path);
+          }
+        } catch (e) {
+          console.error("[preview] 加载失败:", e);
+          this._root.innerHTML =
+            '<div class="content"><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">加载失败</div></div></div>';
         }
       }),
     );

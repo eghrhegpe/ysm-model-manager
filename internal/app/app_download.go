@@ -52,6 +52,12 @@ func (a *App) EnqueueDownloads(tasks []DownloadTask) error {
 	if len(tasks) == 0 {
 		return nil
 	}
+	// URL 校验：仅允许 https scheme，拒绝 file:// / ftp:// 等（防 SSRF / 本地文件读取）
+	for _, t := range tasks {
+		if !strings.HasPrefix(t.URL, "https://") {
+			return fmt.Errorf("不支持的 URL scheme: %s（仅支持 https）", t.URL)
+		}
+	}
 	a.queue.mu.Lock()
 	// 新一批任务视为重新开始：复位取消标志，否则上次取消后 process 永不发 done（前端会永久卡 downloading）
 	a.queue.cancelled = false

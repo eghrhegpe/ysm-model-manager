@@ -17,11 +17,11 @@ func (a *App) configDir() string {
 	return filepath.Join(cfgDir, "YSM-Model-Manager")
 }
 
-// getTagsStore 初始化或获取标签存储实例（懒加载）
+// getTagsStore 初始化或获取标签存储实例（懒加载，sync.Once 保护）
 func (a *App) getTagsStore() *tags.Store {
-	if a.tagsStore == nil {
+	a.tagsStoreOnce.Do(func() {
 		a.tagsStore = tags.NewStore(a.configDir())
-	}
+	})
 	return a.tagsStore
 }
 

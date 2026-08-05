@@ -246,18 +246,20 @@ func (tm *TrashManager) Restore(src string) error {
 	// 优先瞬时移动（同分区原子操作）；跨设备时回退复制后删，语义不变
 	if err := os.Rename(src, dst); err == nil {
 		return nil
+	} else if !isCrossDeviceErr(err) {
+		return err // 权限/占用等非跨设备错误直接返回，不尝试复制
 	}
 	// 目录（整组合并条目）跨设备：递归复制整棵树；文件走 copyFile
 	if info, statErr := os.Lstat(src); statErr == nil && info.IsDir() {
 		if err := copyDirRecursive(src, dst); err != nil {
-			os.RemoveAll(dst)
+			_ = os.RemoveAll(dst)
 			return err
 		}
 		return os.RemoveAll(src)
 	}
 	if err := copyFile(src, dst); err != nil {
 		// 复制中断/失败时清理半截恢复文件，避免目标目录残留损坏文件
-		os.Remove(dst)
+		_ = os.Remove(dst)
 		return err
 	}
 	return os.Remove(src)

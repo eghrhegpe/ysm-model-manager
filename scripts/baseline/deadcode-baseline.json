@@ -1,6 +1,7 @@
 {
-  "generated": "2026-08-05T03:13:36.263Z",
+  "generated": "2026-08-05T10:34:00.241Z",
   "knip": [
+    "package.json|binaries|wails3",
     "package.json|devDependencies|jscpd",
     "src/features/community/download-queue.ts|types|QueueError",
     "src/features/version-updater.ts|types|UpdateInfo",
@@ -33,8 +34,6 @@
     "src/utils/3d/model3d.ts|types|SpecMeshGroup3D",
     "src/utils/3d/model3d.ts|types|SpecModelGroup3D",
     "src/utils/animation/animation.ts|types|BoneChannels",
-    "src/utils/format/mc-format.ts|duplicates|",
-    "src/utils/format/mc-format.ts|exports|default",
     "src/utils/format/summarize.ts|types|SummaryAnimGroup",
     "src/utils/format/summarize.ts|types|SummaryAuthor",
     "src/utils/format/summarize.ts|types|SummaryConfigMenu",

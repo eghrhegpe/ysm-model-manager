@@ -216,6 +216,8 @@ func InstallToGlobal(src, mcRoot string) (string, error) {
 	if !isSupportedModelExt(src) {
 		return "", types.AppError{Code: "UNSUPPORTED_FORMAT", Operation: "安装到全局", SourcePath: src, Reason: "不支持的文件类型", Suggestion: "支持格式: " + strings.Join(types.AllExts(), " / ")}
 	}
+	// 固定布局约定：YSM mod 的全局模型目录固定在 config/yes_steve_model/custom（mod 加载约定），
+	// 非用户可配置项；多实例根场景由上层传入具体 mcRoot，此处仅拼接布局
 	customDir := filepath.Join(mcRoot, "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(customDir, 0755); err != nil {
 		return "", types.AppError{Code: "IO_ERROR", Operation: "安装到全局", TargetPath: customDir, Reason: "无法创建安装目录", Suggestion: "请检查磁盘权限或空间"}

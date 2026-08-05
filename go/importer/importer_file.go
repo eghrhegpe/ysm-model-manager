@@ -123,5 +123,7 @@ func DetectZipType(data []byte) string {
 		compSize := int(data[idx+18]) | int(data[idx+19])<<8 | int(data[idx+20])<<16 | int(data[idx+21])<<24
 		idx += 30 + nameLen + extraLen + compSize
 	}
+	// 默认按 YSM 处理（保守默认）：ZIP 内无任何识别特征时，导入目标路径按 YSM 归类。
+	// 影响仅为导入去向，后续以实际内容解析为准；不返回空值以免调用方失去类型上下文
 	return "ysm" // 默认 YSM
 }

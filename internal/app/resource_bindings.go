@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/dedup"
+	"ysm-model-manager/go/fileops"
 	"ysm-model-manager/go/importer"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/litematic"
@@ -310,9 +311,13 @@ func (a *App) ImportByType(rtype, srcPath string) string {
 	return h.Import(srcPath, dstDir)
 }
 
-// DeleteResourcePack 删除资源包文件
+// DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）：
+// src 为 ysm.json 时整组删除父目录（文件夹型模型），否则删除单文件。
+// 统一委托 fileops.DeleteModelFile，消除与 DeleteModelDir 的双轨语义。
+// root 传 FilesRoot 做目录提升守卫：防根级 ysm.json 清空整个仓库。
 func (a *App) DeleteResourcePack(path string) error {
-	return os.Remove(path)
+	cfg := a.LoadAppConfig()
+	return fileops.DeleteModelFile(cfg.FilesRoot, path)
 }
 
 // DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹

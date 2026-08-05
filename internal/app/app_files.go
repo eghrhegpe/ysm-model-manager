@@ -71,7 +71,7 @@ func (a *App) RevealInExplorer(path string) error {
 // ========== 启用/禁用 ==========
 // ToggleModelEnable 切换 .ban 状态（fileops 纯逻辑 + 薄壳缓存失效）
 func (a *App) ToggleModelEnable(path string) (bool, error) {
-	enabled, err := fileops.ToggleModelEnable(path)
+	enabled, err := fileops.ToggleModelEnable(a.ysmRoot(), path)
 	if err == nil {
 		scanner.InvalidatePath(filepath.Dir(path))
 	}

@@ -19,7 +19,9 @@ const readFileAsBase64 = (file: File): Promise<string> =>
   });
 
 let dropOverlay: HTMLElement | null = null;
-let dropLeaveTimer: ReturnType<typeof setTimeout> | null = null;
+// 深度计数器：dragenter 进入子元素 +1、dragleave 离开子元素 -1；归零即真正离开窗口。
+// 这是窗口级拖拽遮罩「显示/隐藏」唯一可靠的状态来源（单独依赖 dragleave 易误判/漏触发）。
+let dragDepth = 0;
 const DROP_EXTS_STR = ALL_EXTS.join(" ");
 
 const showDropOverlay = (hasModel?: boolean): void => {
@@ -50,11 +52,13 @@ const showDropOverlay = (hasModel?: boolean): void => {
 };
 
 const hideDropOverlay = (): void => {
-  if (dropLeaveTimer) clearTimeout(dropLeaveTimer);
   if (!dropOverlay) return;
   dropOverlay.style.display = "none";
   dropOverlay.style.opacity = "0";
 };
+
+const detectHasModel = (e: DragEvent): boolean =>
+  Array.from(e.dataTransfer?.items ?? []).some((item) => item.kind === "file");
 
 const isEditable = (el: EventTarget | null): boolean => {
   const node = el as HTMLElement | null;
@@ -66,6 +70,18 @@ const isEditable = (el: EventTarget | null): boolean => {
   );
 };
 
+const onDragEnter = (e: DragEvent): void => {
+  // 只在仓库页面显示拖拽遮罩
+  if (PageStore.currentPage !== "repository") return;
+  // 检测是否拖拽的是文件（items 在 dragover 阶段可能为空，用 types 更可靠）
+  if (!e.dataTransfer?.types?.includes("Files")) return;
+  if (isEditable(e.target)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+  dragDepth++;
+  showDropOverlay(detectHasModel(e));
+};
+
 const onDragOver = (e: DragEvent): void => {
   // 只在仓库页面显示拖拽遮罩
   if (PageStore.currentPage !== "repository") return;
@@ -74,20 +90,32 @@ const onDragOver = (e: DragEvent): void => {
   if (isEditable(e.target)) return;
   e.preventDefault();
   e.dataTransfer.dropEffect = "copy";
-  const hasModel = Array.from(e.dataTransfer.items).some(
-    (item) => item.kind === "file",
-  );
-  showDropOverlay(hasModel);
+  // 仅维持 drop 允许 + 刷新内容；遮罩隐藏完全由 leave/exit 决定，不再管理定时器
+  showDropOverlay(detectHasModel(e));
 };
 
 const onDragLeave = (e: DragEvent): void => {
   if (PageStore.currentPage !== "repository") return;
-  if (dropLeaveTimer) clearTimeout(dropLeaveTimer);
-  // 防抖：50ms 后隐藏遮罩，若期间 dragover 重新触发则取消
-  dropLeaveTimer = setTimeout(hideDropOverlay, 50);
+  // 真正离开浏览器视口：relatedTarget 为 null（光标离开文档），
+  // 或坐标落在视口边界外。这是 OS 文件拖出窗口后松手（dragend 不触发）仍能收起遮罩的关键。
+  const leftWindow =
+    e.relatedTarget === null ||
+    e.clientX <= 0 ||
+    e.clientY <= 0 ||
+    e.clientX >= window.innerWidth ||
+    e.clientY >= window.innerHeight;
+  if (leftWindow) {
+    dragDepth = 0;
+    hideDropOverlay();
+    return;
+  }
+  // 子元素间穿梭：enter/leave 配对，用计数器保持遮罩稳定，不再误触隐藏
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) hideDropOverlay();
 };
 
 const onDrop = async (e: DragEvent): Promise<void> => {
+  dragDepth = 0;
   hideDropOverlay();
   e.preventDefault();
   if (isEditable(e.target)) return;
@@ -257,22 +285,26 @@ const onDropSafe = (e: DragEvent): void => {
   });
 };
 
+const onDragEnd = (): void => {
+  // 兜底：拖拽被取消 / 在窗口内松手但未触发 drop 时收起遮罩
+  dragDepth = 0;
+  hideDropOverlay();
+};
+
 /** 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs */
 export function registerDnD(unsubs: Array<() => void>): void {
+  document.addEventListener("dragenter", onDragEnter);
   document.addEventListener("dragover", onDragOver);
   document.addEventListener("dragleave", onDragLeave);
   document.addEventListener("drop", onDropSafe);
-  // 兜底：某些场景下 dragleave/drop 不会触发时隐藏遮罩
-  document.addEventListener("dragend", hideDropOverlay);
+  // 兜底：拖拽被取消 / 在窗口外松手（OS 文件拖拽未必触发 dragend）时收起遮罩
+  document.addEventListener("dragend", onDragEnd);
+  unsubs.push(() => document.removeEventListener("dragenter", onDragEnter));
   unsubs.push(() => document.removeEventListener("dragover", onDragOver));
   unsubs.push(() => document.removeEventListener("dragleave", onDragLeave));
   unsubs.push(() => document.removeEventListener("drop", onDropSafe));
-  unsubs.push(() => document.removeEventListener("dragend", hideDropOverlay));
+  unsubs.push(() => document.removeEventListener("dragend", onDragEnd));
   unsubs.push(() => {
-    if (dropLeaveTimer) {
-      clearTimeout(dropLeaveTimer);
-      dropLeaveTimer = null;
-    }
     if (dropOverlay) {
       dropOverlay.remove();
       dropOverlay = null;

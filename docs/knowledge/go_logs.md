@@ -5,6 +5,7 @@ tier: architecture
 category: go
 source_files:
   - go/logs/logs.go
+  - go/logs/runtime.go
 use_when:
   - 导入日志
   - 操作记录

@@ -11,6 +11,11 @@ source_files:
   - frontend/src/views/app-content/diagnostics/community.ts
   - frontend/src/views/app-content/settings/community.ts
   - frontend/src/views/app-content/site-view.ts
+  - frontend/src/views/app-content/site/drag.ts
+  - frontend/src/views/app-content/site/edit.ts
+  - frontend/src/views/app-content/site/events.ts
+  - frontend/src/views/app-content/site/render.ts
+  - frontend/src/views/app-content/site/types.ts
   - frontend/src/views/app-content/workshop-data.ts
   - frontend/src/views/app-content/workshop-icons.ts
 use_when:

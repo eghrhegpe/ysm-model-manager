@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 68 张知识卡
+> 总计: 69 张知识卡
 
 ## config（1 张）
 
@@ -69,7 +69,7 @@
 | 🏗 go_ysm_parser | YSM 解析 go/ysm | architecture |
 | 🏗 wails_bindings | Wails Binding API 总览 internal/app | architecture |
 
-## ui（16 张）
+## ui（17 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -91,6 +91,7 @@
 | 🍃 dialog_rename | 重命名弹窗 rename | leaf |
 | 🏗 dialog_tag_editor | 标签编辑器 tag-editor | architecture |
 | 🍃 shared_styles | 共享样式 shared-styles | leaf |
+| 🏗 test_utils | 测试工具 test-utils（G-1 抗脆弱基础设施） | architecture |
 
 ## utils（15 张）
 

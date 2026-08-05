@@ -10,10 +10,14 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/ysm"
 )
+
+// syncLock 防止同步操作与安装操作并发
+var syncLock sync.Mutex
 
 // ScanFunc 扫描模型（函数类型，由 app.go 注入）
 type ScanFunc func(dir string) []types.ModelEntry
@@ -131,6 +135,8 @@ func GetInstanceStatusWith(mcRoot, repoDir string, scanFn ScanFunc, listFn ListV
 
 // SyncToggleStatus 同步启用/禁用状态
 func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int, int, error) {
+	syncLock.Lock()
+	defer syncLock.Unlock()
 	repoEntries := scanFn(repoRoot)
 	repoHash := make(map[string]bool) // hash → banned
 	repoName := make(map[string]bool) // relPath(去.ban) → banned，用于同名不同文件夹的文件
@@ -156,8 +162,12 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 		return 0, 0, fmt.Errorf("仓库中未找到模型文件")
 	}
 
-	disableCount := 0
-	enableCount := 0
+	// 阶段 1：收集待 Rename 的文件（不修改目录结构）
+	type renameOp struct {
+		src string
+		dst string
+	}
+	var ops []renameOp
 	customDirClean := strings.ToLower(filepath.Clean(instanceCustomDir)) + string(filepath.Separator)
 	filepath.WalkDir(instanceCustomDir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -208,27 +218,32 @@ func SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int,
 		if shouldBeBanned && !isCurrentlyBanned {
 			newPath := p + ".ban"
 			if _, err := os.Stat(newPath); err == nil {
-				return nil
+				return nil // 目标已存在，跳过
 			}
-			if err := os.Rename(p, newPath); err == nil {
-				disableCount++
-			} else if isFileLocked(err) {
-				log.Printf("[sync] 禁用 %s 被占用，跳过: %v", p, err)
-			} else {
-				log.Printf("[sync] 禁用 %s 失败: %v", p, err)
-			}
+			ops = append(ops, renameOp{src: p, dst: newPath})
 		} else if !shouldBeBanned && isCurrentlyBanned {
 			newPath := p[:len(p)-4]
-			if err := os.Rename(p, newPath); err == nil {
-				enableCount++
-			} else if isFileLocked(err) {
-				log.Printf("[sync] 启用 %s 被占用，跳过: %v", p, err)
-			} else {
-				log.Printf("[sync] 启用 %s 失败: %v", p, err)
-			}
+			ops = append(ops, renameOp{src: p, dst: newPath})
 		}
 		return nil
 	})
+
+	// 阶段 2：统一执行 Rename（目录结构已稳定，无竞态）
+	disableCount := 0
+	enableCount := 0
+	for _, op := range ops {
+		if err := os.Rename(op.src, op.dst); err == nil {
+			if strings.HasSuffix(strings.ToLower(op.dst), ".ban") {
+				disableCount++
+			} else {
+				enableCount++
+			}
+		} else if isFileLocked(err) {
+			log.Printf("[sync] 文件被占用，跳过: %s → %s: %v", op.src, op.dst, err)
+		} else {
+			log.Printf("[sync] Rename 失败: %s → %s: %v", op.src, op.dst, err)
+		}
+	}
 	return disableCount, enableCount, nil
 }
 

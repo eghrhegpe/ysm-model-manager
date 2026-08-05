@@ -20,8 +20,9 @@ export function sizeColor(b: number): string {
 
 /** 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D */
 export function fmtDate(ts: number): string {
-  if (!ts) return "";
+  if (!ts || Number.isNaN(ts)) return "";
   const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
   if (isToday)

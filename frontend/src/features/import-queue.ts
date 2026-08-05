@@ -342,7 +342,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       relPath: (file as File & { webkitRelativePath?: string })
         .webkitRelativePath || file.name,
     }));
-    void routeCollected(byRel).then(() => {
+    routeCollected(byRel).then(() => {
       updateQueueCount();
       if (fileQueue.length > 0) {
         bus.emit("toast:show", {
@@ -351,6 +351,12 @@ export function initImportQueue(app: ImportQueueHost): () => void {
           type: "success",
         });
       }
+    }).catch((e) => {
+      bus.emit("toast:show", {
+        msg: "❌ 文件夹导入失败: " + String(e),
+        duration: 4000,
+        type: "error",
+      });
     });
     folderInput.value = "";
   });

@@ -162,12 +162,18 @@ export function renderModelName(raw: string, options: { tpl?: unknown; showExt?:
   );
 }
 
-/** 搜索高亮版 */
+/** 搜索高亮版：先对纯文本高亮，再渲染 HTML，避免 keyword 命中 HTML 标签内容破坏 DOM */
 export function renderModelNameWithHighlight(raw: string, keyword?: string, options: { tpl?: unknown; showExt?: boolean } = {}): string {
-  let html = renderDisplayName(raw, options);
+  const p = parseModelName(raw);
+  // 对纯文本（不含扩展名）做高亮
+  const plain = raw.replace(/\.\w+$/, "");
+  let highlighted = plain;
   if (keyword) {
     const re = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
-    html = html.replace(re, "<mark>$1</mark>");
+    highlighted = highlighted.replace(re, "<mark>$1</mark>");
   }
-  return html;
+  // 用高亮后的纯文本渲染（renderDisplayName 内部会 esc，但此处已含 <mark>，需特殊处理）
+  // 策略：直接拼接高亮 HTML + 扩展名标签
+  const extHtml = options.showExt && p.ext ? `<span class="tag-ext">.${esc(p.ext)}</span>` : "";
+  return highlighted + extHtml;
 }

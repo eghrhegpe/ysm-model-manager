@@ -25,6 +25,7 @@ type App struct {
 	watcher      *watcher.Watcher
 	queue        *DownloadQueue
 	tagsStore    *tags.Store
+	tagsStoreOnce sync.Once
 	configCache  types.AppConfig
 	configLoaded bool
 	configMu     sync.RWMutex

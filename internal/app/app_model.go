@@ -64,6 +64,16 @@ func (a *App) SavePreviewTempFile(base64Data string) (string, error) {
 }
 
 func (a *App) ReadFileBytes(path string) []byte {
+	// 路径守卫：限制在 FilesRoot 内，防止读取系统任意文件
+	root := a.ysmRoot()
+	if root == "" {
+		return nil
+	}
+	clean := filepath.Clean(path)
+	rel, err := filepath.Rel(root, clean)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return nil
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil
@@ -126,12 +136,22 @@ func (a *App) GetModel3DSpec(modelPath string) string {
 }
 
 // SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用）
+// 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止 .. 和绝对路径
 func (a *App) SaveScreenshotFile(filename string, base64Data string) error {
+	clean := filepath.Clean(filename)
+	if filepath.IsAbs(clean) || strings.Contains(clean, "..") {
+		return fmt.Errorf("文件名不能包含路径")
+	}
+	tmpDir := filepath.Join(os.TempDir(), "ysm-preview")
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return err
+	}
+	dest := filepath.Join(tmpDir, clean)
 	data, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filename, data, 0644)
+	return os.WriteFile(dest, data, 0644)
 }
 
 func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {

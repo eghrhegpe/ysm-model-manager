@@ -222,6 +222,9 @@ func (a *App) GetGlobalCustomDir(mcRoot string) string {
 }
 
 func (a *App) ListFileNames(dir string) []string {
+	if !a.isPathInRoot(dir) {
+		return nil
+	}
 	files := fsutil.WalkAllFiles(dir, true)
 	names := make([]string, len(files))
 	for i, p := range files {
@@ -232,12 +235,29 @@ func (a *App) ListFileNames(dir string) []string {
 
 // ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名）
 func (a *App) ListAllFilePaths(dir string) []string {
+	if !a.isPathInRoot(dir) {
+		return nil
+	}
 	return fsutil.WalkAllFiles(dir, true)
 }
 
 func (a *App) CheckFileExists(path string) bool {
+	if !a.isPathInRoot(path) {
+		return false
+	}
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// isPathInRoot 检查路径是否在 FilesRoot 内（路径守卫辅助函数）
+func (a *App) isPathInRoot(path string) bool {
+	root := a.ysmRoot()
+	if root == "" {
+		return false
+	}
+	clean := filepath.Clean(path)
+	rel, err := filepath.Rel(root, clean)
+	return err == nil && !strings.HasPrefix(rel, "..")
 }
 
 func (a *App) OpenFolder(dir string) error {

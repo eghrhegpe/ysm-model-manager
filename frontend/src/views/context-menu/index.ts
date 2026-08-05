@@ -141,6 +141,7 @@ class ContextMenu extends HTMLElement {
 
   hide(): void {
     this.style.display = "none";
+    document.removeEventListener("keydown", this._docKeydown);
   }
 }
 customElements.define("context-menu", ContextMenu);

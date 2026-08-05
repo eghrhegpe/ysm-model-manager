@@ -239,7 +239,11 @@ export class AppResourceManager extends HTMLElement {
       this.querySelector(".rm-open-btn")?.addEventListener(
         "click",
         async () => {
-          await OpenFolder(this._rpRoot);
+          try {
+            await OpenFolder(this._rpRoot);
+          } catch (e) {
+            this._toast("error", "打开文件夹失败", e instanceof Error ? e.message : String(e));
+          }
         },
       );
     }
@@ -470,7 +474,7 @@ export class AppResourceManager extends HTMLElement {
   private _toast(type: string, title: string, msg?: string): void {
     bus.emit("toast:show", {
       msg: title + (msg ? ": " + msg : ""),
-      type: (type || "info") as "info" | "success" | "error" | "warn",
+      type: (type === "ok" ? "success" : (type || "info")) as "info" | "success" | "error" | "warn",
       duration: 3000,
     });
   }

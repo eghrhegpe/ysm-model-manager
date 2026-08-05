@@ -81,9 +81,11 @@ function cleanText(text: unknown): string {
     .trim();
 }
 
-/** 安全链接：仅放行 http/https，其余 scheme（javascript:/data: 等）替换为占位符 */
+/** 安全链接：仅放行 http/https，拦截 javascript:/data: 等危险 scheme */
 function safeUrl(url: string): string {
-  return /^https?:\/\//i.test((url || "").trim()) ? url : "#";
+  const trimmed = (url || "").trim();
+  if (/^javascript:|^data:/i.test(trimmed)) return "#";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : "#";
 }
 
 // ── 卡片渲染 ───────────────────────────────────────

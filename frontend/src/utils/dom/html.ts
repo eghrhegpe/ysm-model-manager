@@ -19,8 +19,9 @@ export function hl(text: string, query?: string): string {
   const lq = query.toLowerCase();
   const idx = text.toLowerCase().indexOf(lq);
   if (idx === -1) return s;
-  const before = esc(text.substring(0, idx));
+  // 从已转义的 s 中按原始索引切分，避免双重转义
+  const before = s.substring(0, idx);
   const match = esc(text.substring(idx, idx + query.length));
-  const after = esc(text.substring(idx + query.length));
+  const after = s.substring(idx + query.length);
   return before + "<mark>" + match + "</mark>" + after;
 }

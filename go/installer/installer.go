@@ -244,10 +244,6 @@ func InstallWithOverlay(src, customDir string) (string, error) {
 	if err := os.MkdirAll(customDir, 0755); err != nil {
 		return "", types.AppError{Code: "IO_ERROR", Operation: "安装模型（覆盖检查）", TargetPath: customDir, Reason: "无法创建目录", Suggestion: "请检查磁盘权限或空间"}
 	}
-	dst := filepath.Join(customDir, filepath.Base(src))
-	if _, err := os.Stat(dst); err == nil {
-		return "CONFLICT:" + dst, types.AppError{Code: "ALREADY_EXISTS", Operation: "安装模型（覆盖检查）", TargetPath: dst, Reason: "文件已存在", Suggestion: "如需覆盖请先删除原文件"}
-	}
 	return copyFileLocked(src, customDir)
 }
 
@@ -261,6 +257,10 @@ func copyFileLocked(src, dstDir string) (string, error) {
 	dst := filepath.Join(dstDir, filepath.Base(src))
 	if src == dst {
 		return dst, nil
+	}
+	// 防覆盖：目标已存在时直接报错（TOCTOU 窗口缩小到同一函数内）
+	if _, err := os.Stat(dst); err == nil {
+		return "", types.AppError{Code: "ALREADY_EXISTS", Operation: "复制文件", TargetPath: dst, Reason: "目标文件已存在", Suggestion: "如需覆盖请先删除原文件"}
 	}
 	in, err := os.Open(src)
 	if err != nil {

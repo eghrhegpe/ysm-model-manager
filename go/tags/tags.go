@@ -87,6 +87,7 @@ func (s *Store) SetTags(modelPath string, tags []string) error {
 		return err
 	}
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	if len(tags) == 0 {
 		delete(s.data, modelPath) // 空列表 → 删除条目
 	} else {
@@ -104,7 +105,6 @@ func (s *Store) SetTags(modelPath string, tags []string) error {
 		sort.Strings(unique)
 		s.data[modelPath] = unique
 	}
-	s.mu.Unlock()
 	return s.save()
 }
 
@@ -114,16 +114,19 @@ func (s *Store) AddTag(modelPath, tag string) error {
 	if tag == "" {
 		return nil
 	}
-	current, err := s.GetTags(modelPath)
-	if err != nil {
+	if err := s.load(); err != nil {
 		return err
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	current := s.data[modelPath]
 	for _, t := range current {
 		if t == tag {
 			return nil // 已存在
 		}
 	}
-	return s.SetTags(modelPath, append(current, tag))
+	s.data[modelPath] = append(current, tag)
+	return s.save()
 }
 
 // RemoveTag 移除单个标签
@@ -132,10 +135,12 @@ func (s *Store) RemoveTag(modelPath, tag string) error {
 	if tag == "" {
 		return nil
 	}
-	current, err := s.GetTags(modelPath)
-	if err != nil {
+	if err := s.load(); err != nil {
 		return err
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	current := s.data[modelPath]
 	var kept []string
 	for _, t := range current {
 		if t != tag {
@@ -145,7 +150,12 @@ func (s *Store) RemoveTag(modelPath, tag string) error {
 	if len(kept) == len(current) {
 		return nil // 无变化
 	}
-	return s.SetTags(modelPath, kept)
+	if len(kept) == 0 {
+		delete(s.data, modelPath)
+	} else {
+		s.data[modelPath] = kept
+	}
+	return s.save()
 }
 
 // ListByTag 返回所有打了指定标签的文件路径列表

@@ -309,3 +309,41 @@ func TestList_FolderModelNotGrouped(t *testing.T) {
 		t.Fatalf("条目应为 a.ysm, 实际 %s", entries[0].Name)
 	}
 }
+
+func TestDelete_FolderModelGrouped(t *testing.T) {
+	// ADR-038 D3.4：永久删除整组合并条目（Path 指向目录）应成功（os.RemoveAll 目录）
+	dir := t.TempDir()
+	tm := New(dir)
+
+	// 文件夹模型整组移入回收站
+	modelDir := filepath.Join(dir, "模型A")
+	if err := os.MkdirAll(filepath.Join(modelDir, "textures"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(`{"spec":1}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "main.json"), []byte(`{}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := tm.Move(modelDir); err != nil {
+		t.Fatalf("整组移入回收站失败: %v", err)
+	}
+
+	entries := tm.List()
+	if len(entries) != 1 {
+		t.Fatalf("应合并为 1 条, 实际 %d", len(entries))
+	}
+	// 永久删除整组条目（Path 指向目录）
+	if err := tm.Delete(entries[0].Path); err != nil {
+		t.Fatalf("永久删除整组条目失败: %v", err)
+	}
+	// 回收站内目录应已删除
+	if _, err := os.Stat(entries[0].Path); !os.IsNotExist(err) {
+		t.Fatalf("整组条目应已删除: %v", err)
+	}
+	// 列表应为空
+	if got := tm.List(); len(got) != 0 {
+		t.Fatalf("删除后列表应为空, 实际 %d 条", len(got))
+	}
+}

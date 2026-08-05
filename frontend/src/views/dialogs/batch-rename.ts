@@ -3,7 +3,7 @@
 import { bus } from "../../bus.ts";
 import { parseModelName, type ParsedModelName } from "../../utils/dom/display.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
-import { registerDlg } from "./modal.ts";
+import { registerDlg, closeDlg } from "./modal.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 
@@ -381,12 +381,11 @@ function renderPreview(el: HTMLElement | null, items: BatchItem[]): void {
 
 function close(): void {
   if (dialogEl) {
-    dialogEl.classList.add("dlg-closing");
     const el = dialogEl;
     dialogEl = null;
     const res = _pendingResolve;
     _pendingResolve = null;
-    if (res) res(); // 结算调用方 await：对话框已关闭
-    setTimeout(() => el.remove(), 120);
+    // 走 closeDlg 统一结算：退场动画 + DOM 移除 + 清 _activeOverlay 单例槽位
+    closeDlg(el, () => res?.(), undefined);
   }
 }

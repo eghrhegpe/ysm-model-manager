@@ -417,4 +417,7 @@ export class AppSyncManager extends HTMLElement {
 }
 
 // 注册
-customElements.define("app-sync-manager", AppSyncManager);
+// 注册组件（防 HMR/重复 import 时重复 define）
+if (!customElements.get("app-sync-manager")) {
+  customElements.define("app-sync-manager", AppSyncManager);
+}

@@ -47,7 +47,7 @@
 | `doctor.mjs` | `node scripts/doctor.mjs` | Go 编译 + 单测 + 前端构建 + **前端单测（vitest，ADR-023 P3）** + tsc + 文件 + 红线 + 静态分析 + Git（原 ultrawork 一键三连已并入，ultrawork.mjs 删除） |
 | `comment-checker.mjs` | `node scripts/comment-checker.mjs` / `--json` / `--full` | 注释质量（废话/JSDoc/TODO/调试日志）；`--json` 默认每类截断 50 条 + `_summary` 分类计数，`--full` 全量（防 wasm base64 超长行误报/爆炸） |
 | `event-audit.mjs` | `node scripts/event-audit.mjs` / `--json` | EventsOn/bus.on 注册位置检查 |
-| `binding-check.mjs` | `node scripts/binding-check.mjs` | Go 导出函数 vs wailsjs 绑定一致性 |
+| `binding-check.mjs` | `node scripts/binding-check.mjs` | Go 导出函数 vs v3 bindings 产物（`-ts` 契约 app.ts）一致性 |
 | `adr-check.mjs` | `node scripts/adr-check.mjs` | ADR 登记表 vs 磁盘对账（防撞号/漏登/幽灵） |
 | `ai-mistake-tracker.mjs` | `node scripts/ai-mistake-tracker.mjs` / `--limit N` / `--json` | 分析 git 历史找 AI 高频犯错区（fix 分类统计 / 连续修复链 / 文件热力图 / 规则违反扫描），反哺 AGENTS.md 陷阱清单 |
 | `codemod.mjs` | `node scripts/codemod.mjs help` / `rename-function` / `move-function` / `add-param` | AST 感知重构（ts-morph）：批量重命名 / 移函数（自动迁 import）/ 加参数；move 不重写外部引用方，改后跑 tsc |
@@ -154,7 +154,7 @@
 | AI 废话注释（「用于」「这是」「检查…是否」） | `comment-checker.mjs` |
 | 注释掉的代码行 | `comment-checker.mjs` |
 | `console.log` 调试残留 | `comment-checker.mjs` |
-| Go 导出函数 vs wailsjs 绑定一致性 | `binding-check.mjs` |
+| Go 导出函数 vs v3 bindings 产物（`-ts` 契约 app.ts）一致性 | `binding-check.mjs` |
 
 ---
 

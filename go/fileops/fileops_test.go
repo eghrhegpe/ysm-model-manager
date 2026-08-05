@@ -422,14 +422,59 @@ func TestWriteModelFolder_Ok(t *testing.T) {
 	}
 }
 
-func TestWriteModelFolder_MissingYsmJson(t *testing.T) {
+func TestWriteModelFolder_MissingSupported(t *testing.T) {
 	repo := t.TempDir()
-	// 缺 ysm.json → 拒绝（防乱导入非 YSM 文件夹）
+	// 无任何支持文件（只有 main.json 等包内资源）→ 拒绝（防杂物文件夹入仓）
 	files := []types.ImportFileItem{
 		{RelPath: "main.json", Base64: b64(`{}`)},
+		{RelPath: "zh_cn.json", Base64: b64(`{}`)},
 	}
 	if err := WriteModelFolder(repo, "", "模型B", files); err == nil {
-		t.Fatal("缺 ysm.json 应拒绝")
+		t.Fatal("无支持文件应拒绝")
+	}
+	// 空列表 → 拒绝
+	if err := WriteModelFolder(repo, "", "模型B2", nil); err == nil {
+		t.Fatal("空文件列表应拒绝")
+	}
+}
+
+func TestWriteModelFolder_PlainFolderWithYsm(t *testing.T) {
+	repo := t.TempDir()
+	// 普通文件夹（无 ysm.json 清单）装 2 个 ysm → 允许整组入仓（保留层级）
+	files := []types.ImportFileItem{
+		{RelPath: "模型A.ysm", Base64: b64("YSMBIN")},
+		{RelPath: "模型B.ysm", Base64: b64("YSMBIN2")},
+		{RelPath: "sub/说明.txt", Base64: b64("note")},
+	}
+	if err := WriteModelFolder(repo, "", "合集", files); err != nil {
+		t.Fatalf("普通文件夹含 ysm 应允许整组导入: %v", err)
+	}
+	for _, f := range []string{"模型A.ysm", "模型B.ysm", filepath.Join("sub", "说明.txt")} {
+		if _, err := os.Stat(filepath.Join(repo, "合集", f)); err != nil {
+			t.Fatalf("组内 %s 应写入: %v", f, err)
+		}
+	}
+}
+
+func TestWriteModelFolder_MultiLevelNested(t *testing.T) {
+	repo := t.TempDir()
+	// 多层嵌套：顶层目录 a 内含 ysm.json + 深层子目录
+	files := []types.ImportFileItem{
+		{RelPath: "ysm.json", Base64: b64(`{"spec":1}`)},
+		{RelPath: "animations/run.animation.json", Base64: b64(`{}`)},
+		{RelPath: "textures/char/deep/skin.png", Base64: b64("PNG")},
+	}
+	if err := WriteModelFolder(repo, "", "模型C", files); err != nil {
+		t.Fatalf("多层嵌套整组导入失败: %v", err)
+	}
+	for _, f := range []string{
+		"ysm.json",
+		filepath.Join("animations", "run.animation.json"),
+		filepath.Join("textures", "char", "deep", "skin.png"),
+	} {
+		if _, err := os.Stat(filepath.Join(repo, "模型C", f)); err != nil {
+			t.Fatalf("嵌套 %s 应写入: %v", f, err)
+		}
 	}
 }
 

@@ -3,6 +3,16 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { bus } from "../bus.ts";
 
+// mock wails app：directImport 路径会调用 ImportModelFile
+const ImportModelFileMock = vi.fn().mockResolvedValue(undefined);
+vi.mock("../wails/app.ts", () => ({
+  getApp: vi.fn().mockResolvedValue({
+    ImportModelFile: ImportModelFileMock,
+    ImportModelFolder: vi.fn().mockResolvedValue(undefined),
+    LoadAppConfig: vi.fn().mockResolvedValue({ filesRoot: "/tmp" }),
+  }),
+}));
+
 // 模拟 app-content 宿主（ImportQueueHost）
 function createMockHost(): { root: ShadowRoot; esc: (s: string) => string } {
   const hostEl = document.createElement("div");
@@ -81,5 +91,28 @@ describe("initImportQueue — 队列边界", () => {
     cleanups.push(c1);
     cleanups.push(c2);
     expect(() => bus.emit("import:pending-files", { files: [] })).not.toThrow();
+  });
+});
+
+describe("initImportQueue — processPendingImport 单文件直接导入", () => {
+  it("全局拖拽的 ysm 单文件走 directImport（不再进待处理队列）", async () => {
+    ImportModelFileMock.mockClear();
+    const { root, esc } = createMockHost();
+    const { initImportQueue } = await import("./import-queue.ts");
+    const cleanup = initImportQueue({ _root: root, _esc: esc });
+    cleanups.push(cleanup);
+
+    // 构造真实 File（FileReader 需在 jsdom 中可用）
+    const file = new File(["ysm-bytes"], "测试模型.ysm", { type: "application/octet-stream" });
+    bus.emit("import:pending-files", {
+      files: [{ name: "测试模型.ysm", file }],
+      folders: [],
+    });
+
+    // FileReader.readAsDataURL 是异步的，等待 ImportModelFile 被调用
+    await vi.waitFor(() => {
+      expect(ImportModelFileMock).toHaveBeenCalled();
+    }, { timeout: 3000 });
+    expect(ImportModelFileMock.mock.calls[0][0]).toBe("测试模型.ysm");
   });
 });

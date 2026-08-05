@@ -6,6 +6,8 @@ import {
   isImportableFile,
   shouldEnterForm,
   getExt,
+  groupCollected,
+  type CollectedEntry,
 } from "./dnd-shared.ts";
 import { getApp } from "../wails/app.ts";
 
@@ -110,5 +112,74 @@ describe("shouldEnterForm — 是否进入命名表单", () => {
   it("不支持的扩展名返回 false", async () => {
     const result = await shouldEnterForm("file.txt", "fakebase64");
     expect(result).toBe(false);
+  });
+});
+
+describe("groupCollected — 文件夹整组分组", () => {
+  const entry = (relPath: string, name?: string): CollectedEntry => ({
+    file: new File([], name || relPath.split("/").pop() || relPath),
+    relPath,
+  });
+
+  it("含 ysm.json 的模型目录 → 整组", () => {
+    const collected = [
+      entry("模型A/ysm.json"),
+      entry("模型A/main.json"),
+      entry("模型A/textures/skin.png"),
+    ];
+    const { folders, singles } = groupCollected(collected);
+    expect(folders.length).toBe(1);
+    expect(folders[0].dir).toBe("模型A");
+    expect(folders[0].files.length).toBe(3);
+    expect(singles.length).toBe(0);
+  });
+
+  it("普通文件夹装多个 ysm（无 ysm.json）→ 整组", () => {
+    const collected = [
+      entry("合集/模型A.ysm"),
+      entry("合集/模型B.ysm"),
+      entry("合集/说明.txt"),
+    ];
+    const { folders, singles } = groupCollected(collected);
+    expect(folders.length).toBe(1);
+    expect(folders[0].dir).toBe("合集");
+    expect(folders[0].files.length).toBe(3); // 非支持文件也随组保留
+    expect(singles.length).toBe(0);
+  });
+
+  it("多层嵌套保留完整 relPath", () => {
+    const collected = [
+      entry("a/b/ysm.json"),
+      entry("a/b/textures/char/skin.png"),
+    ];
+    const { folders } = groupCollected(collected);
+    expect(folders.length).toBe(1);
+    expect(folders[0].dir).toBe("a"); // 顶层目录
+    expect(folders[0].files.some((c) => c.relPath === "a/b/textures/char/skin.png")).toBe(true);
+  });
+
+  it("纯杂物文件夹（无支持文件）→ 整组丢弃", () => {
+    const collected = [entry("杂物/readme.txt"), entry("杂物/photo.png")];
+    const { folders, singles } = groupCollected(collected);
+    expect(folders.length).toBe(0);
+    expect(singles.length).toBe(0);
+  });
+
+  it("散落单文件 → singles（支持文件过滤）", () => {
+    const collected = [entry("模型A.ysm"), entry("notes.txt")];
+    const { folders, singles } = groupCollected(collected);
+    expect(folders.length).toBe(0);
+    expect(singles.length).toBe(1);
+    expect(singles[0].relPath).toBe("模型A.ysm");
+  });
+
+  it("多个文件夹各自成组", () => {
+    const collected = [
+      entry("模型A/ysm.json"),
+      entry("模型B/模型B.ysm"),
+    ];
+    const { folders } = groupCollected(collected);
+    expect(folders.length).toBe(2);
+    expect(folders.map((f) => f.dir).sort()).toEqual(["模型A", "模型B"]);
   });
 });

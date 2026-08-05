@@ -8,6 +8,8 @@ source_files:
   - frontend/src/core/handlers/dnd.ts
   - frontend/src/core/handlers/instance-ops.ts
   - frontend/src/core/handlers/sync.ts
+  - frontend/src/core/handlers/require-mcroot.ts
+  - frontend/src/core/error-diary.ts
 use_when:
   - 全局事件
   - 拖拽导入

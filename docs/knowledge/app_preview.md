@@ -16,6 +16,7 @@ source_files:
   - frontend/src/views/app-preview/cache.ts
   - frontend/src/views/app-preview/model3d-loader.ts
   - frontend/src/views/app-preview/screenshot-renderer.ts
+  - frontend/src/views/app-preview/geometry.ts
   - frontend/src/views/app-preview/utils.ts
   - frontend/src/views/app-preview/css.ts
   - frontend/src/views/app-preview/utils.ts

@@ -5,6 +5,8 @@ tier: architecture
 category: feature
 source_files:
   - frontend/src/features/import-queue.ts
+  - frontend/src/features/dnd-shared.ts
+  - frontend/src/features/import-executor.ts
 use_when:
   - 导入
   - 导入队列

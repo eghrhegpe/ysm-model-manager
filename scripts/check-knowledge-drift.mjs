@@ -239,7 +239,8 @@ function checkAgentsNoHandcraftedIndex() {
 // 未覆盖 = 代码有模块、知识库无卡片 → WARN 提醒补登，不阻断 CI。
 
 const SOURCE_ROOTS = ['frontend/src', 'go'];
-const WALK_EXCLUDE_RE = /(node_modules|\/dist\/|\/bindings\/|\/test\/|\.test\.|\.spec\.)/;
+// 排除：node_modules / dist / bindings / test 目录 / .test. / _test.（Go *_test.go） / .spec.
+const WALK_EXCLUDE_RE = /(node_modules|\/dist\/|\/bindings\/|\/test\/|\.test\.|_test\.|\.spec\.)/;
 
 function walkSources(dir, out = []) {
   if (!fs.existsSync(dir)) return out;

@@ -100,5 +100,3 @@ export function renderFormattedText(text: string): string {
     })
     .join("<br>");
 }
-
-export default renderFormattedText;

@@ -171,12 +171,21 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
       import("../../utils/dom/display.ts").then(({ parseModelName }) => {
         const { author } = parseModelName(name);
         if (author) {
-          getApp().then(({ OpenInBrowser }) =>
-            OpenInBrowser(
-              "https://search.bilibili.com/all?keyword=" +
-                encodeURIComponent(author),
-            ),
-          );
+          getApp()
+            .then(({ OpenInBrowser }) =>
+              OpenInBrowser(
+                "https://search.bilibili.com/all?keyword=" +
+                  encodeURIComponent(author),
+              ),
+            )
+            .catch((err) => {
+              console.warn("[tree] OpenInBrowser 失败:", err);
+              bus.emit("toast:show", {
+                msg: "❌ 打开浏览器失败",
+                duration: 3000,
+                type: "error",
+              });
+            });
         } else {
           bus.emit("toast:show", {
             msg: "未解析到作者名",
@@ -184,6 +193,13 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
             type: "warn",
           });
         }
+      }).catch((err) => {
+        console.warn("[tree] 加载 display 模块失败:", err);
+        bus.emit("toast:show", {
+          msg: "❌ 加载解析模块失败",
+          duration: 3000,
+          type: "error",
+        });
       });
       return;
     }

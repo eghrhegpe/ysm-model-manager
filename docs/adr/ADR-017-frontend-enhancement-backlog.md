@@ -29,6 +29,22 @@
 | E-1 | 列表/网格视图切换 | 低 | ✅ 已完成（toolbar 切换 + localStorage 持久化） |
 | E-2 | model2d 预览缓存 | 中 | ✅ 已完成（preview-loader 走 preview-cache 缓存 geometry） |
 
+### 代码去重热点台账（jscpd 扫描，2026-08-05 立账）
+
+> 量级：前端 TS 102 文件 / 22917 行，重复率 2.53%（50 克隆 / 580 行）；Go 重复率 < 3%。
+> 结论：**低于 5% 健康阈值，不启动全面去重 refactor**。仅登记跨文件热点，待触及或主动清理时据此定优先级。
+> 同文件内重复（前端 60% / Go 86%）多为初始化块、并列 case 分支，抽函数后跨函数传参反而损可读性，归为 jscpd 噪声，不单列。
+
+| 编号 | 热点 | 行数 | 性质 | 处置 |
+| ---- | ---- | ---- | ---- | ---- |
+| D-1 | `core/handlers/instance-ops.ts` ↔ `views/app-tree/instance-actions.ts` | 39 | 跨文件，handler/action 两层职责重叠 | **可合并**，收益明确，最高优先 |
+| D-2 | `views/app-tree/row-tpl-list.ts` ↔ `row-tpl.ts` | 36 | 跨文件，grid/list 两套行模板 | 可抽参数化公共函数 |
+| D-3 | `views/app-preview/litematic-3d.ts` ↔ `skeleton.ts` | 35 | 跨文件，3D 场景初始化重复 | ⚠️ ADR-011 警告：model3d 坐标是重灾区，碰前先 grep bug-chronicle + 对齐 ysmview 口径 |
+| D-4 | `geometry/archive.go` 单文件内重复 | 250 | 同文件，占 Go 总重复 47% | 结构性问题，非去重；碰它按 ADR-011 规矩走 |
+
+> 活用规则：D-1~D-3 触及改动时，先查本台账确认编号与处置；D-4 独立评估，不与 D-1~D-3 打包。
+> 重扫命令：`cd frontend && npx jscpd --format typescript --ignore "**/*.test.ts,**/wasm/**,**/bindings/**" js`
+
 **E-1 列表/网格视图切换（低）**
 
 - **问题**：仓库列表只支持卡片视图，紧凑列表视图可提升浏览效率。

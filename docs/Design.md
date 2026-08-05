@@ -349,7 +349,7 @@ style="animation-delay:${stagger(i)}ms"
 | `sidebar-css.ts` | `app-sidebar` 的所有子组件样式     |
 | `preview-css.ts` | `app-preview` 的所有子组件样式     |
 | `nav-css.ts`     | `app-nav` 样式                     |
-| `tree-css.ts`    | `app-tree` 样式（实际位于 `components/app-tree-styles.ts`，见 §11 / §14.6） |
+| `tree-css.ts`    | `app-tree` 样式（实际位于 `views/app-tree/app-tree-styles.ts`，见 §11 / §14.6） |
 
 ### Shadow DOM 样式注入机制
 
@@ -423,7 +423,7 @@ background: rgba(0, 0, 0, 0.5);
 每个组件一个目录，约定子文件职责：
 
 ```
-components/app-xxx/
+views/app-xxx/
   index.ts        — 生命周期编排（connectedCallback / disconnectedCallback / 渲染入口）
   tpl.ts          — HTML 模板字符串（布局骨架）
   render.ts       — 渲染逻辑（输入 → HTML）
@@ -435,7 +435,7 @@ components/app-xxx/
 
 **实际偏差（以源码为准）**：
 - `app-content/` 下含 `community/` 子目录（`site-view.ts` / `settings.ts` / `diagnostics.ts`），为 app-content 的子页面模块。
-- `app-tree` 的样式文件为 `components/app-tree-styles.ts`（位于 `components/` **根**，非 `app-tree/` 子目录），由 `app-tree/index.ts:64-65` 引用。
+- `app-tree` 的样式文件为 `views/app-tree/app-tree-styles.ts`（位于 `app-tree/` **子目录**），由 `app-tree/index.ts:64-65` 引用。
 - `app-sidebar` 比规范更细：除 `index.ts` / `events.ts` / `sidebar-css.ts` 外，还有 `loader.ts`（loading:start/end）、`actions.ts`（推送/拉取动作）。
 - `app-preview` 重构后子文件为 `preview-detail.ts` / `preview-litematic-*.ts` / `preview-skeleton.ts` / `preview-utils.ts` / `preview-wasm.ts`（旧 `events.ts`/`preview-actions.ts`/`preview-pack.ts` 已移除）。
 - `features/` 与 `core/` 是 bus 事件的主要生产/消费层（见 §14.2、§16），组件目录只是其消费者之一。
@@ -614,15 +614,15 @@ disconnectedCallback() {
 
 | 标签 | 文件 | 角色 | observedAttributes | 关键 bus 事件（订阅→发射） |
 |------|------|------|--------------------|----------------------------|
-| `<app-nav>` | `components/app-nav.ts` | 主导航 + 主题切换 | 无 | 订阅 `nav:changed`；发射 `nav:change` |
-| `<app-content>` | `components/app-content/index.ts` | 主内容编排器 | 无 | 订阅 `nav:change`/`repo:*`/`package:selected`；发射 `nav:changed`/`repo:rtype-changed`/`toast:show` |
-| `<app-sidebar>` | `components/app-sidebar/index.ts` | 实例整合包侧栏 | `rtype` | 订阅 `stats:refresh`/`repo:rtype-changed`；发射 `sync:download:missing`/`toast:show`/`tree:reload` |
-| `<app-tree>` | `components/app-tree/index.ts` | 资源/文件树 | 无（`root` 命令式读） | 订阅 `filter:results`/`tree:set-search`/`bus-handlers` 多事件；发射 `model:select`/`ctx:show`/`stats:refresh` |
-| `<app-preview>` | `components/app-preview/index.ts` | 模型/资源预览详情 | 无 | 仅订阅 `model:select` |
-| `<app-resource-manager>` | `components/app-resource-manager/index.ts` | 资源类型/包管理列表 | `rtype`,`instance` | 订阅 `config:resource-types-changed`；反馈走 `bus.emit("toast:show")` |
-| `<app-sync-manager>` | `components/app-sync-manager/index.ts` | 单实例同步管理 | `instance`,`default-type` | 订阅 `stats:refresh`；发射 `repo:rtype-changed`/`toast:show` |
-| `<app-toast>` | `components/app-toast.ts` | 全局通知条 | 无 | 仅订阅 `toast:show` |
-| `<context-menu>` | `components/context-menu.ts` | 右键/弹出菜单层 | 无 | 仅订阅 `menu:show` |
+| `<app-nav>` | `views/app-nav/index.ts` | 主导航 + 主题切换 | 无 | 订阅 `nav:changed`；发射 `nav:change` |
+| `<app-content>` | `views/app-content/index.ts` | 主内容编排器 | 无 | 订阅 `nav:change`/`repo:*`/`package:selected`；发射 `nav:changed`/`repo:rtype-changed`/`toast:show` |
+| `<app-sidebar>` | `views/app-sidebar/index.ts` | 实例整合包侧栏 | `rtype` | 订阅 `stats:refresh`/`repo:rtype-changed`；发射 `sync:download:missing`/`toast:show`/`tree:reload` |
+| `<app-tree>` | `views/app-tree/index.ts` | 资源/文件树 | 无（`root` 命令式读） | 订阅 `filter:results`/`tree:set-search`/`bus-handlers` 多事件；发射 `model:select`/`ctx:show`/`stats:refresh` |
+| `<app-preview>` | `views/app-preview/index.ts` | 模型/资源预览详情 | 无 | 仅订阅 `model:select` |
+| `<app-resource-manager>` | `views/app-resource-manager/index.ts` | 资源类型/包管理列表 | `rtype`,`instance` | 订阅 `config:resource-types-changed`；反馈走 `bus.emit("toast:show")` |
+| `<app-sync-manager>` | `views/app-sync-manager/index.ts` | 单实例同步管理 | `instance`,`default-type` | 订阅 `stats:refresh`；发射 `repo:rtype-changed`/`toast:show` |
+| `<app-toast>` | `views/app-toast/index.ts` | 全局通知条 | 无 | 仅订阅 `toast:show` |
+| `<context-menu>` | `views/context-menu/index.ts` | 右键/弹出菜单层 | 无 | 仅订阅 `menu:show` |
 
 ### 15.1 `<app-nav>`
 
@@ -853,7 +853,7 @@ disconnectedCallback() {
 
 ### 18.6 目录结构（修正 AGENTS.md）
 
-见 §11。要点：`.ts` 扩展名；`app-xxx/index.ts` + `tpl.ts` + `render.ts` + `events.ts` + `data.ts` + `xxx-css.ts`；`app-tree-styles.ts` 在 `components/` 根；`app-content/community/` 为子页面模块。
+见 §11。要点：`.ts` 扩展名；`app-xxx/index.ts` + `tpl.ts` + `render.ts` + `events.ts` + `data.ts` + `xxx-css.ts`；`app-tree-styles.ts` 在 `app-tree/` 子目录；`app-content/community/` 为子页面模块。
 
 ---
 

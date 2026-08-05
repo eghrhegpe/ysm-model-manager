@@ -396,6 +396,10 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 			return nil
 		}
 		if info.IsDir() {
+			// 跳过回收站目录（与 scanner.ScanEntries 对齐）：回收站内模型不是仓库活跃模型
+			if path != globalDir && strings.EqualFold(info.Name(), ".recycle") {
+				return filepath.SkipDir
+			}
 			// 资源包文件夹：扫描其本身但不递归
 			if path != globalDir && isResourcePackFolder(path) {
 				name := strings.ToLower(info.Name())
@@ -420,6 +424,10 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 			return nil
 		}
 		if info.IsDir() {
+			// 跳过回收站目录（防御：整合包路径下历史遗留 .recycle 不应参与同步）
+			if path != instanceDir && strings.EqualFold(info.Name(), ".recycle") {
+				return filepath.SkipDir
+			}
 			// 资源包文件夹：扫描其本身但不递归
 			if path != instanceDir && isResourcePackFolder(path) {
 				name := strings.ToLower(info.Name())
@@ -526,6 +534,10 @@ func SyncResourcesDirLevel(globalDir, instanceDir, rtype string) types.ResourceS
 			}
 			if !info.IsDir() || path == rootDir {
 				return nil
+			}
+			// 跳过回收站目录（与 scanner.ScanEntries 对齐）
+			if strings.EqualFold(info.Name(), ".recycle") {
+				return filepath.SkipDir
 			}
 			if isDirTypeModelFolder(path, rtype) {
 				name := strings.ToLower(info.Name())

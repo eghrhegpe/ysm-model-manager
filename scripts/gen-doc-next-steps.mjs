@@ -27,9 +27,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { ROOT } from './_lib/scan-files.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
 const OUT_PATH = path.join(ROOT, 'docs', '.doc-next-steps.md');
 
 // ── 子进程跑检查器，吞掉非零退出（检查器遇错会 exit(1)），只取 stdout ──

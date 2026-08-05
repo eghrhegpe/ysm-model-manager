@@ -21,12 +21,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { parseFrontmatter } from './_lib/frontmatter.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
+import { ROOT } from './_lib/scan-files.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
 const KNOW_DIR = path.join(ROOT, 'docs', 'knowledge');
 const FRONTEND_JS_DIR = path.join(ROOT, 'frontend', 'js');
 

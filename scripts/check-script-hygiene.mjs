@@ -30,10 +30,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { ROOT } from './_lib/scan-files.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
 const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 
 const JSON_OUT = process.argv.includes('--json');
@@ -61,7 +59,7 @@ function checkExitCode(text) {
 
 const INLINE_WALK_RE = /^function walk\(|^const walk\s*=/m;
 const INLINE_RG_RE = /^function rg\(|^const rg\s*=|execFileSync\([^)]*['"]rg['"]/m;
-const INLINE_BOILERPLATE_RE = /path\.resolve\(path\.dirname\(fileURLToPath\(import\.meta\.url\)\)/;
+const INLINE_BOILERPLATE_RE = /path\.resolve\(path\.dirname\(fileURLToPath\(import\.meta\.url\)\)\)|const __dirname = path\.dirname\(fileURLToPath\(import\.meta\.url\)\);\r?\nconst ROOT = path\.resolve\(__dirname, '\.\.'\)/;
 
 // 领域收集器特征：带显式扩展名过滤 / 跳过集合 / 回调的专用 walk 视为合法内联，不告警。
 const DOMAIN_WALK_RE =

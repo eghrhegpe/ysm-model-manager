@@ -25,10 +25,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { ROOT } from './_lib/scan-files.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
 const ADR_DIR = path.join(ROOT, 'docs/adr');
 const KC_DIR = path.join(ROOT, 'docs/knowledge');
 const ARCH_DOCS = ['docs/archive/architecture.md', 'docs/archive/3D/3D-RENDERING-PLAN.md', 'docs/archive/3D/3d-rendering-report.md'];

@@ -13,6 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { toPosix } from './to-posix.mjs';
+import { walk } from './scan-files.mjs';
 
 export const EXCLUDE_DIRS = new Set(['__tests__', '__mocks__', 'node_modules', 'wailsjs', 'bindings', 'dist']);
 export const EXCLUDE_FILES = [/\.d\.ts$/, /\.test\.tsx?$/, /\.spec\.tsx?$/, /\.gen\.tsx?$/];
@@ -30,22 +31,13 @@ export function shouldTraverseDir(name) {
 }
 
 export function walkSourceFiles(srcDir, dir = srcDir, base = '', extensions = SOURCE_EXTENSIONS) {
-  const entries = [];
-  if (!fs.existsSync(dir)) return entries;
-
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    const rel = base ? `${base}/${entry.name}` : entry.name;
-    if (entry.isDirectory()) {
-      if (shouldTraverseDir(entry.name)) {
-        entries.push(...walkSourceFiles(srcDir, full, rel, extensions));
-      }
-    } else if (entry.isFile() && isSourceFile(entry.name, extensions)) {
-      entries.push({ file: full, rel });
-    }
-  }
-
-  return entries;
+  return walk(dir, {
+    exts: extensions,
+    skipDir: (name) => !shouldTraverseDir(name),
+    skipFile: (name) => EXCLUDE_FILES.some((re) => re.test(name)),
+    rel: true,
+    base,
+  }).map(({ abs, rel }) => ({ file: abs, rel }));
 }
 
 function stripImportExtension(spec) {

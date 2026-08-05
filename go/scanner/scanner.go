@@ -81,7 +81,7 @@ func ScanEntries(dir string) []types.ModelEntry {
 		if originalExt == ".json" {
 			baseName := strings.ToLower(filepath.Base(p))
 			baseName = strings.TrimSuffix(baseName, ".ban")
-			if baseName != "ysm.json" {
+			if !types.IsYsmEntryJSON(baseName) {
 				return nil
 			}
 		}

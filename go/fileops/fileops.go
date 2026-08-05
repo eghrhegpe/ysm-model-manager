@@ -51,7 +51,7 @@ func RemoveDir(dir string) error {
 	return os.RemoveAll(strings.TrimSpace(dir))
 }
 
-// RenameFile 重命名文件（校验非法字符）
+// RenameFile 重命名文件（校验非法字符；ysm.json 为模型目录清单，禁止改名）
 func RenameFile(oldPath, newName string) error {
 	oldPath = strings.TrimSpace(oldPath)
 	newName = strings.TrimSpace(newName)
@@ -60,6 +60,10 @@ func RenameFile(oldPath, newName string) error {
 	}
 	if strings.ContainsAny(newName, `\/:*?"<>|`) {
 		return fmt.Errorf("文件名包含非法字符")
+	}
+	// ADR-038 D3：ysm.json 是模型目录清单（游戏按目录名识别模型），禁止单文件改名
+	if types.IsYsmEntryJSON(filepath.Base(oldPath)) {
+		return fmt.Errorf("ysm.json 是模型目录清单，请重命名所在文件夹（整组操作）")
 	}
 	parent := filepath.Dir(oldPath)
 	newPath := filepath.Join(parent, newName)
@@ -255,7 +259,8 @@ func GetPackInfo(root, dirPath string) types.PackInfo {
 
 // ========== 模型移动/复制 ==========
 
-// MoveModelFile 移动 src 到 dstDir（保留文件名）
+// MoveModelFile 移动 src 到 dstDir（保留原名）
+// ADR-038 D3：src 为 ysm.json 时提升为移动整个模型目录（整组语义）；目录直接整组移动
 func MoveModelFile(src, dstDir string) error {
 	src = strings.TrimSpace(src)
 	dstDir = strings.TrimSpace(dstDir)
@@ -265,10 +270,15 @@ func MoveModelFile(src, dstDir string) error {
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		return err
 	}
+	// ysm.json 是模型目录清单：整组移动父目录（包内 geometry/animation/语言资源随目录一起走）
+	if types.IsYsmEntryJSON(filepath.Base(src)) {
+		src = filepath.Dir(src)
+	}
 	return os.Rename(src, filepath.Join(dstDir, filepath.Base(src)))
 }
 
 // CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验）
+// ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 ysm.json 时提升为复制整个模型目录
 func CopyModelFile(root, src, dstDir string) error {
 	src = strings.TrimSpace(src)
 	dstDir = strings.TrimSpace(dstDir)
@@ -293,10 +303,21 @@ func CopyModelFile(root, src, dstDir string) error {
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		return err
 	}
+	// ysm.json 提升：复制整个模型目录（ADR-038 D3）
+	if types.IsYsmEntryJSON(filepath.Base(src)) {
+		src = filepath.Dir(src)
+	}
 	dst := filepath.Join(dstDir, filepath.Base(src))
-	// 防覆盖：目标已存在时直接报错
+	// 防覆盖：目标已存在直接报错（单文件与目录一致）
 	if _, err := os.Stat(dst); err == nil {
 		return fmt.Errorf("目标已存在: %s", dst)
+	}
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		return copyDirRecursive(src, dst)
 	}
 	if err := copyFile(src, dst); err != nil {
 		return err
@@ -307,6 +328,27 @@ func CopyModelFile(root, src, dstDir string) error {
 		_ = copyFile(banSrc, dst+".ban")
 	}
 	return nil
+}
+
+// copyDirRecursive 递归复制目录（.ban 状态文件作为普通文件随遍历自然复制；防覆盖）
+func copyDirRecursive(srcDir, dstDir string) error {
+	return filepath.WalkDir(srcDir, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, relErr := filepath.Rel(srcDir, p)
+		if relErr != nil {
+			return relErr
+		}
+		target := filepath.Join(dstDir, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0755)
+		}
+		if _, err := os.Stat(target); err == nil {
+			return fmt.Errorf("目标已存在: %s", target)
+		}
+		return copyFile(p, target)
+	})
 }
 
 // ========== 启用/禁用 ==========

@@ -39,6 +39,13 @@ func IsSupportedExt(ext string) bool {
 	return false
 }
 
+// IsYsmEntryJSON 判断是否为 YSM 解压目录的唯一清单入口 ysm.json（大小写不敏感）
+// ADR-038 D2：.json 仅放行 ysm.json；包内 geometry/animation/语言 json 不得作为独立条目
+// 扫描（scanner）、导入（importer/app_install）统一走此判定，口径单点维护。
+func IsYsmEntryJSON(baseName string) bool {
+	return strings.EqualFold(strings.TrimSpace(baseName), "ysm.json")
+}
+
 // ExtBelongsTo 返回扩展名所属的资源类型 ID 列表（可能多个）
 func ExtBelongsTo(ext string) []string {
 	ext = strings.ToLower(ext)

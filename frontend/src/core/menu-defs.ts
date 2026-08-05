@@ -93,6 +93,9 @@ export const MENU_DEFS: MenuDef[] = [
       { action: "dir.rename", label: "重命名…", icon: "✂️" },
       { action: "dir.batch-rename", label: "批量重命名…", icon: "📝" },
       { divider: true },
+      { action: "dir.move", label: "移动到…", icon: "📂" },
+      { action: "dir.copy", label: "复制到…", icon: "📋" },
+      { divider: true },
       { action: "dir.mkdir", label: "新建子文件夹…", icon: "🗂" },
       { divider: true },
       {

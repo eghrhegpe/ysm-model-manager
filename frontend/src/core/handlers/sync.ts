@@ -8,11 +8,16 @@ import { requireMcRoot } from "./require-mcroot.ts";
 
 /** 注册同步 handler，push 返回的取消订阅函数到 unsubs */
 export function registerSync(unsubs: Array<() => void>): void {
+  // 并发守卫：sync:download:missing 有多个生产者（app-sidebar 推送、app-content 等），
+  // 连点会并发跑多个 InstallModelTo 循环操作同一批文件（竞态）
+  let _downloadBusy = false;
   // 导入仓库模型到整合包
   unsubs.push(
     bus.on(
       "sync:download:missing",
       async ({ instanceName, rtype, token }) => {
+        if (_downloadBusy) return;
+        _downloadBusy = true;
         dbg("sync", "download-missing", instanceName || "all", "rtype:", rtype);
         try {
           const {
@@ -95,6 +100,7 @@ export function registerSync(unsubs: Array<() => void>): void {
             type: "error",
           });
         } finally {
+          _downloadBusy = false;
           bus.emit("sync:download:done", { token, instanceName });
           bus.emit("tree:reload");
         }

@@ -352,4 +352,7 @@ class AppSidebar extends HTMLElement {
     this._root.innerHTML = headerHTML() + listContainerHTML() + footerHTML();
   }
 }
-customElements.define("app-sidebar", AppSidebar);
+// 注册组件（防 HMR/重复 import 时重复 define）
+if (!customElements.get("app-sidebar")) {
+  customElements.define("app-sidebar", AppSidebar);
+}

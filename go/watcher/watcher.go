@@ -86,7 +86,9 @@ func (w *Watcher) Start() error {
 	})
 
 	// 提示：Linux 下 inotify 默认限制 8192 个监听文件。
-	// 若仓库目录结构过深导致 fw.Add 失败，可考虑实现定期全量扫描作为回退。
+	// 项目默认 Windows 部署（ReadDirectoryChangesW 无此限制），故暂不实现定期全量扫描回退；
+	// 若未来支持 Linux 且仓库过深导致 fw.Add 失败，再考虑全量扫描兜底。
+	// 失败已 log.Printf 记录，便于诊断。
 
 	go w.loop()
 	log.Printf("[watcher] 已启动: %s", w.repoRoot)

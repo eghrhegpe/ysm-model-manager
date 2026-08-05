@@ -346,6 +346,45 @@ func TestSyncResources_SizeMismatch(t *testing.T) {
 	}
 }
 
+// TestSyncResources_IgnoresRecycleDir 仓库 .recycle 内模型不应视为仓库活跃模型
+// （2026-08-05 回归：同步管理器把回收站模型识别为 missing 并可推送）
+func TestSyncResources_IgnoresRecycleDir(t *testing.T) {
+	globalDir := t.TempDir()
+	instDir := t.TempDir()
+
+	// 仓库活跃模型
+	os.WriteFile(filepath.Join(globalDir, "active.ysm"), []byte("active"), 0644)
+	// 仓库回收站内的模型（历史遗留，不应参与同步）
+	recycleDir := filepath.Join(globalDir, ".recycle")
+	os.MkdirAll(filepath.Join(recycleDir, "模型文件夹"), 0755)
+	os.WriteFile(filepath.Join(recycleDir, "trashed.ysm"), []byte("trashed"), 0644)
+	os.WriteFile(filepath.Join(recycleDir, "模型文件夹", "ysm.json"), []byte("{}"), 0644)
+	// 整合包目录（无任何模型）
+	_ = os.MkdirAll(instDir, 0755)
+
+	result := SyncResources(globalDir, instDir)
+
+	found := func(list []string, name string) bool {
+		for _, p := range list {
+			if filepath.Base(p) == name {
+				return true
+			}
+		}
+		return false
+	}
+	if !found(result.Missing, "active.ysm") {
+		t.Errorf("仓库活跃模型应 Missing, got Missing=%v", result.Missing)
+	}
+	if found(result.Missing, "trashed.ysm") {
+		t.Errorf(".recycle 内模型不应出现在 Missing: %v", result.Missing)
+	}
+	for _, p := range result.Missing {
+		if strings.Contains(filepath.ToSlash(p), ".recycle/") {
+			t.Errorf("Missing 中出现 .recycle 路径: %s", p)
+		}
+	}
+}
+
 // ===== SyncToggleStatus =====
 
 func TestSyncToggleStatus_EnableDisable(t *testing.T) {

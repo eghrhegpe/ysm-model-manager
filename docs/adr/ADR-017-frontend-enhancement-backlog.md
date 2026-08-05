@@ -40,9 +40,9 @@
 | D-1 | `core/handlers/instance-ops.ts` ↔ `views/app-tree/instance-actions.ts` | 39 | 跨文件，handler/action 两层职责重叠 | ✅ 已完成（2026-08-05）：原计划「合并」是 jscpd 误报（结构相似、语义不同：数据操作 vs 导入/同步），改为抽 `requireMcRoot()` 消除 5 处「读 mcRoot + 空守卫 + toast」模板，D-1 跨文件重复 39→0 |
 | D-2 | `views/app-tree/row-tpl-list.ts` ↔ `row-tpl.ts` | 36 | 跨文件，grid/list 两套行模板 | ✅ 已完成（2026-08-05）：抽 `row-common.ts` 的 `fileRowCommon` / `folderRowCommon`，两套模板各自只保留外层 class + testid + 差异段，D-2 跨文件重复 36→0 |
 | D-3 | `views/app-preview/litematic-3d.ts` ↔ `skeleton.ts` | 35 | 跨文件，3D overlay UI 构建模板 | 🧊 撤账（2026-08-05）：jscpd 误报，非纯复制——两版有持久化行为差异（skeleton 走 localStorage 读 `td-rot-mode`/`td-cam-speed`，litematic-3d 硬编码默认值）；35 行是 overlay topBar 构建（摄像机旋转 select + 速度 slider + WASD 提示 div），非坐标变换逻辑（ADR-011 警告区是 model3d.ts 坐标，不是此处）。抽公共函数要传 4-5 参数区分持久化，调用点可读性反降；app-preview 无单测覆盖（ADR-037 §2.5 排除 3D 渲染），改动全靠人工验证，风险>收益。**不补测试**:3D 渲染测试在 jsdom 里假绿（mock 掉要测的东西）、截图对比维护成本高且 CI 环境不稳定、纯函数抽取 refactor 成本高——行业惯例是渲染层不测靠人工可视化验证 |
-| D-4 | `geometry/archive.go` 单文件内重复 | 250 | 同文件，占 Go 总重复 47% | 结构性问题，非去重；碰它按 ADR-011 规矩走 |
+| D-4 | `geometry/archive.go` 单文件内重复 | 250 | 同文件，占 Go 总重复 47% | 🧊 撤账（2026-08-05）：jscpd 误报——`ParseFromZip` 与 `ParseFrom7z` 是**功能差异**非纯复制：ZIP 版支持动画 JSON（返回 animJSONs）+ 单次遍历多分流（性能优化），7z 版不支持动画 + 三次遍历各分流（简单直接）。250 行是「ZIP 版抄 7z 骨架后扩展」的正常演进，非复制粘贴。原台账备注「ADR-011 警告区」过度保守：ADR-011 警告 `model3d.ts` 坐标变换重灾区，`geometry/archive.go` 是数据提取层，不在坐标变换区。**不补测试**:既有 `archive_test.go` 已覆盖两版的核心解析路径 |
 
-> 活用规则：D-1~D-3 触及改动时，先查本台账确认编号与处置；D-4 独立评估，不与 D-1~D-3 打包。
+> 活用规则：D-1~D-4 已全部结案（D-1/D-2 已完成，D-3/D-4 撤账——jscpd 误报，非纯复制）。下次重扫若现新热点，按本台账格式补 D-5+。
 > 重扫命令：`cd frontend && npx jscpd --format typescript --ignore "**/*.test.ts,**/wasm/**,**/bindings/**" js`
 
 **E-1 列表/网格视图切换（低）**

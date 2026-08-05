@@ -4,6 +4,7 @@ import { friendlyError } from "../../utils/dom/errors.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { getApp } from "../../wails/app.ts";
+import { requireMcRoot } from "./require-mcroot.ts";
 
 /** 注册同步 handler，push 返回的取消订阅函数到 unsubs */
 export function registerSync(unsubs: Array<() => void>): void {
@@ -15,23 +16,14 @@ export function registerSync(unsubs: Array<() => void>): void {
         dbg("sync", "download-missing", instanceName || "all", "rtype:", rtype);
         try {
           const {
-            LoadAppConfig,
             ListVersionInstances,
             GetResourceInstanceStatus,
             InstallModelTo,
             InstallResourceToInstance,
             GetRepoRoot,
           } = await getApp();
-          const cfg = await LoadAppConfig();
-          const mcRoot = cfg.mcRoot || "";
-          if (!mcRoot) {
-            bus.emit("toast:show", {
-              msg: "请先配置游戏目录",
-              duration: 3000,
-              type: "warn",
-            });
-            return;
-          }
+          const mcRoot = await requireMcRoot();
+          if (!mcRoot) return;
           const instances = (await ListVersionInstances(mcRoot)) ?? [];
           let totalOk = 0;
           let totalFail = 0;
@@ -121,15 +113,13 @@ export function registerSync(unsubs: Array<() => void>): void {
       dbg("sync", "toggle-status");
       try {
         const {
-          LoadAppConfig,
           ListVersionInstances,
           SyncModelToggleStatus,
           AddImportLog,
           GetRepoRoot,
         } = await getApp();
-        const cfg = await LoadAppConfig();
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-        const mcRoot = cfg.mcRoot || "";
+        const mcRoot = await requireMcRoot();
         if (!repoRoot || !mcRoot) {
           bus.emit("toast:show", {
             msg: "请先配置目录",

@@ -117,7 +117,13 @@ const onDrop = async (e: DragEvent): Promise<void> => {
 
   const getFileFromEntry = (entry: FileSystemFileEntry): Promise<File> =>
     new Promise((resolve, reject) => {
-      entry.file(resolve, reject);
+      const timer = setTimeout(() => {
+        reject(new Error("getFileFromEntry timeout"));
+      }, 5000);
+      entry.file(
+        (f) => { clearTimeout(timer); resolve(f); },
+        (e) => { clearTimeout(timer); reject(e); },
+      );
     });
 
   // 收集模式：不过滤扩展名，保留 relPath（子目录层级），交由导入页统一路由

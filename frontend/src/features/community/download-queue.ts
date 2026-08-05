@@ -1,5 +1,12 @@
 // ===== 创意工坊 — 批量下载队列（类型化版 — ADR-014 P3 features）=====
 // v2: 模块级持久层 — EventsOn 在脚本加载时注册一次，页面切换不丢失事件
+//
+// ⚠️ ADR-039 §2.2 Events.On 豁免声明：
+// 本模块顶层注册 4 组 Wails Events.On（queue:status / queue:file-start / queue:file-done /
+// download:progress），无对应 Events.Off 退出路径。认定为 app 级单例豁免——
+// download-queue 是社区页常驻单例（_registered 布尔守卫防重复注册），
+// 生命周期等于应用生命周期，与 registerErrorDiary / matchMedia 监听同类。
+// 禁止非 app 级模块复制此模式；若未来社区页支持卸载/热重载，再补 Events.Off。
 import { bus } from "../../bus.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { renderDisplayName } from "../../utils/dom/display.ts";

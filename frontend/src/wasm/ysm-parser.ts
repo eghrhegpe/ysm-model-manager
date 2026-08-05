@@ -86,6 +86,9 @@ export async function initYSMParser(): Promise<boolean> {
     };
 
     // 4. 间接 eval 执行胶水代码（代替 <script> 注入，快 ~5x）
+    //    ⚠️ ADR-039 §2.1 安全边界：eval 仅执行 auto-generated 内嵌胶水代码（可信链），
+    //    无外部输入。WebView2/Wails v3 当前无 CSP 配置 API，若未来需 CSP 白名单，
+    //    改用 <script> 注入或 Web Worker 沙箱承载（需回归 ADR-029 解码优先级链）。
     (0, eval)(patchedGlue);
 
     // 5. 调用工厂

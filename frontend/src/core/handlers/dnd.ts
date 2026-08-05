@@ -2,13 +2,12 @@
 import { bus } from "../../bus.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { PageStore } from "../page-store.ts";
-import { DnDLock, PendingImport } from "../../features/dnd-state.ts";
+import { DnDLock } from "../../features/dnd-state.ts";
 import { getApp } from "../../wails/app.ts";
 import { ALL_EXTS } from "../../utils/resource/extensions.ts";
-import { isImportableFile, groupCollected } from "../../features/dnd-shared.ts";
+import { executeCollected } from "../../features/import-executor.ts";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
-const MAX_FILE_COUNT = 50;
 
 let dropOverlay: HTMLElement | null = null;
 // 深度计数器：dragenter 进入子元素 +1、dragleave 离开子元素 -1；归零即真正离开窗口。
@@ -223,50 +222,20 @@ const onDrop = async (e: DragEvent): Promise<void> => {
     return;
   }
 
-  // 分组：文件夹 → 整组（含 ysm.json 的模型目录与普通文件夹一视同仁，
-  // 组内至少 1 个支持文件才入仓）；散落文件 → 单文件队列
-  const { folders: folderGroups, singles: singleCollected } = groupCollected(
-    collected as Array<{ file: File; relPath: string }>,
-  );
-  const singleFiles: Array<{ name: string; file: File }> =
-    singleCollected.map((c) => ({ name: c.file.name, file: c.file }));
-  if (singleFiles.length === 0 && folderGroups.length === 0) {
-    bus.emit("toast:show", {
-      msg: "📂 未检测到支持的资源文件" + "（" + DROP_EXTS_STR + "）",
-      duration: 3000,
-      type: "info",
-    });
-    return;
-  }
-  if (singleFiles.length > MAX_FILE_COUNT) {
-    bus.emit("toast:show", {
-      msg: `⚠️ 单次导入文件过多（${singleFiles.length} 个），请分批处理`,
-      duration: 5000,
-      type: "warn",
-    });
-    return;
-  }
-
-  // 统一交给导入页消费（单文件队列 + 文件夹组整组导入）
-  PendingImport.setQueue(singleFiles);
-  PendingImport.setFolders(folderGroups);
-  if (PageStore.currentPage === "repository") {
-    bus.emit("import:pending-files", {
-      files: singleFiles,
-      folders: folderGroups,
-    });
-    bus.emit("repo:switch-tab", { tab: "import" });
-  } else {
-    bus.emit("nav:change", { page: "repository" });
-    const unsub = bus.on("nav:changed", ({ page }) => {
-      if (page === "repository") {
-        unsub();
-        requestAnimationFrame(() =>
-          bus.emit("repo:switch-tab", { tab: "import" }),
-        );
+  // 静默导入：全局执行器直接入仓（不切导入 tab、不弹表单）。
+  // 历史/结果由 import-executor 维护，导入 tab 挂载时从 ImportHistory 渲染。
+  const total = collected.length;
+  void executeCollected(collected as Array<{ file: File; relPath: string }>).then(
+    (r) => {
+      if (r.folders === 0 && r.singles === 0 && total > 0) {
+        bus.emit("toast:show", {
+          msg: "📂 未检测到支持的资源文件" + "（" + DROP_EXTS_STR + "）",
+          duration: 3000,
+          type: "info",
+        });
       }
-    });
-  }
+    },
+  );
 };
 
 // document listener 顶层兜底：onDrop 内部异常面均已 try/catch，

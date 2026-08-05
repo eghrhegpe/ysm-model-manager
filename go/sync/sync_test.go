@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 	"testing"
@@ -342,6 +343,160 @@ func TestSyncResources_SizeMismatch(t *testing.T) {
 	}
 	if !found(result.Extra, "only-instance.zip") {
 		t.Errorf("实例独有文件应 Extra, got Extra=%v", result.Extra)
+	}
+}
+
+// ===== SyncToggleStatus =====
+
+func TestSyncToggleStatus_EnableDisable(t *testing.T) {
+	base := t.TempDir()
+	repoDir := filepath.Join(base, "repo")
+	customDir := filepath.Join(base, "custom")
+	os.MkdirAll(repoDir, 0755)
+	os.MkdirAll(customDir, 0755)
+
+	// repo: model_a 已 ban, model_b 正常
+	os.WriteFile(filepath.Join(repoDir, "model_a.ysm.ban"), []byte("aaa"), 0644)
+	os.WriteFile(filepath.Join(repoDir, "model_b.ysm"), []byte("bbb"), 0644)
+	// custom: model_a 正常（应与 repo 同步 → 禁用）, model_b 已 ban（应与 repo 同步 → 启用）
+	os.WriteFile(filepath.Join(customDir, "model_a.ysm"), []byte("aaa"), 0644)
+	os.WriteFile(filepath.Join(customDir, "model_b.ysm.ban"), []byte("bbb"), 0644)
+
+	scanFn := func(dir string) []types.ModelEntry {
+		return []types.ModelEntry{
+			{Name: "model_a.ysm.ban", Path: filepath.Join(repoDir, "model_a.ysm.ban"), Hash: "hash_a"},
+			{Name: "model_b.ysm", Path: filepath.Join(repoDir, "model_b.ysm"), Hash: "hash_b"},
+		}
+	}
+
+	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
+	if err != nil {
+		t.Fatalf("SyncToggleStatus 失败: %v", err)
+	}
+	if disable != 1 {
+		t.Errorf("应禁用 1 个（model_a），实际 %d", disable)
+	}
+	if enable != 1 {
+		t.Errorf("应启用 1 个（model_b），实际 %d", enable)
+	}
+	// 验证文件状态
+	if _, err := os.Stat(filepath.Join(customDir, "model_a.ysm.ban")); os.IsNotExist(err) {
+		t.Error("model_a 应已被禁（.ban）")
+	}
+	if _, err := os.Stat(filepath.Join(customDir, "model_b.ysm")); os.IsNotExist(err) {
+		t.Error("model_b 应已被启用（去掉 .ban）")
+	}
+}
+
+func TestSyncToggleStatus_NoMatch(t *testing.T) {
+	base := t.TempDir()
+	repoDir := filepath.Join(base, "repo")
+	customDir := filepath.Join(base, "custom")
+	os.MkdirAll(repoDir, 0755)
+	os.MkdirAll(customDir, 0755)
+
+	// repo 有文件，custom 没有匹配的 → 不动
+	os.WriteFile(filepath.Join(repoDir, "m.ysm"), []byte("r"), 0644)
+	os.WriteFile(filepath.Join(customDir, "other.ysm"), []byte("o"), 0644)
+
+	scanFn := func(dir string) []types.ModelEntry {
+		return []types.ModelEntry{
+			{Name: "m.ysm", Path: filepath.Join(repoDir, "m.ysm"), Hash: "hash_m"},
+		}
+	}
+
+	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
+	if err != nil {
+		t.Fatalf("SyncToggleStatus 失败: %v", err)
+	}
+	if disable != 0 || enable != 0 {
+		t.Errorf("无匹配文件应不动，实际 disable=%d enable=%d", disable, enable)
+	}
+}
+
+func TestSyncToggleStatus_EmptyRepo(t *testing.T) {
+	base := t.TempDir()
+	repoDir := filepath.Join(base, "empty-repo")
+	customDir := filepath.Join(base, "custom")
+	os.MkdirAll(repoDir, 0755)
+	os.MkdirAll(customDir, 0755)
+
+	scanFn := func(dir string) []types.ModelEntry { return nil }
+	_, _, err := SyncToggleStatus(customDir, repoDir, scanFn)
+	if err == nil {
+		t.Fatal("空仓库应报错「未找到模型文件」")
+	}
+}
+
+// ===== SyncResourcesDirLevel =====
+
+func TestSyncResourcesDirLevel_SyncedMissingExtra(t *testing.T) {
+	globalDir := t.TempDir()
+	instDir := t.TempDir()
+
+	// global: 文件夹 A（含 .ysm → 算文件夹级条目）, 平铺 B.ysm, 独有 C.ysm
+	os.MkdirAll(filepath.Join(globalDir, "folderA"), 0755)
+	os.WriteFile(filepath.Join(globalDir, "folderA", "m.ysm"), []byte("a"), 0644)
+	os.WriteFile(filepath.Join(globalDir, "B.ysm"), []byte("b"), 0644)
+	os.WriteFile(filepath.Join(globalDir, "C.ysm"), []byte("c"), 0644)
+	// instance: 文件夹 A（同 global → Synced）, 平铺 B.ysm（同 global → Synced）, 独有 D.ysm
+	os.MkdirAll(filepath.Join(instDir, "folderA"), 0755)
+	os.WriteFile(filepath.Join(instDir, "folderA", "m.ysm"), []byte("a"), 0644)
+	os.WriteFile(filepath.Join(instDir, "B.ysm"), []byte("b"), 0644)
+	os.WriteFile(filepath.Join(instDir, "D.ysm"), []byte("d"), 0644)
+
+	result := SyncResourcesDirLevel(globalDir, instDir, "ysm")
+
+	found := func(list []string, name string) bool {
+		for _, p := range list {
+			if filepath.Base(p) == name {
+				return true
+			}
+		}
+		return false
+	}
+
+	// C.ysm global 独有 → Missing
+	if !found(result.Missing, "C.ysm") {
+		t.Errorf("C.ysm 应归入 Missing, got Missing=%v", result.Missing)
+	}
+	// folderA 和 B.ysm 两边都有 → Synced
+	if !found(result.Synced, "folderA") {
+		t.Errorf("folderA 应归入 Synced, got Synced=%v", result.Synced)
+	}
+	if !found(result.Synced, "B.ysm") {
+		t.Errorf("B.ysm 应归入 Synced（或 B）, got Synced=%v", result.Synced)
+	}
+	// D.ysm instance 独有 → Extra
+	if !found(result.Extra, "D.ysm") {
+		t.Errorf("D.ysm 应归入 Extra, got Extra=%v", result.Extra)
+	}
+
+	// 排序检查
+	if !sort.StringsAreSorted(result.Synced) {
+		t.Error("Synced 应已排序")
+	}
+	if !sort.StringsAreSorted(result.Missing) {
+		t.Error("Missing 应已排序")
+	}
+	if !sort.StringsAreSorted(result.Extra) {
+		t.Error("Extra 应已排序")
+	}
+}
+
+func TestSyncResourcesDirLevel_AllExtra(t *testing.T) {
+	globalDir := t.TempDir()
+	instDir := t.TempDir()
+
+	os.WriteFile(filepath.Join(instDir, "E.ysm"), []byte("e"), 0644)
+	os.WriteFile(filepath.Join(instDir, "F.ysm"), []byte("f"), 0644)
+
+	result := SyncResourcesDirLevel(globalDir, instDir, "ysm")
+	if len(result.Missing) != 0 {
+		t.Errorf("global 为空不应有 Missing, got %v", result.Missing)
+	}
+	if len(result.Extra) != 2 {
+		t.Errorf("应识别 2 个 Extra, got %d: %v", len(result.Extra), result.Extra)
 	}
 }
 

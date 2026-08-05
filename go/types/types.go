@@ -59,6 +59,12 @@ type ImportLog struct {
 	Operation  string `json:"Operation,omitempty"` // import / scan / download / sync / rename / delete
 }
 
+// RuntimeLog 运行时日志（watcher/sync 等标准库 log 输出，诊断页可见）
+type RuntimeLog struct {
+	Message   string `json:"Message"`
+	Timestamp int64  `json:"Timestamp"`
+}
+
 // LinkType 链接类型
 type LinkType string
 

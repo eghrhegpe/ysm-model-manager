@@ -1,7 +1,12 @@
 // ===== DnD 导入共享逻辑测试（dnd-shared.ts）=====
-// 覆盖：isSupportedFile、shouldEnterForm、getExt
+// 覆盖：isSupportedFile、isImportableFile、shouldEnterForm、getExt
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { isSupportedFile, shouldEnterForm, getExt } from "./dnd-shared.ts";
+import {
+  isSupportedFile,
+  isImportableFile,
+  shouldEnterForm,
+  getExt,
+} from "./dnd-shared.ts";
 import { getApp } from "../wails/app.ts";
 
 // mock getApp 以隔离 Wails 调用
@@ -49,6 +54,34 @@ describe("isSupportedFile — 扩展名支持检查", () => {
   it("大小写不敏感", () => {
     expect(isSupportedFile("Model.YSM")).toBe(true);
     expect(isSupportedFile("Archive.ZIP")).toBe(true);
+  });
+});
+
+describe("isImportableFile — 可独立导入判定（ysm 包内 json 白名单）", () => {
+  it(".ysm / .zip / .7z 与扩展名支持一致", () => {
+    expect(isImportableFile("model.ysm")).toBe(true);
+    expect(isImportableFile("archive.zip")).toBe(true);
+    expect(isImportableFile("archive.7z")).toBe(true);
+  });
+
+  it("ysm.json 是可导入入口清单", () => {
+    expect(isImportableFile("ysm.json")).toBe(true);
+    expect(isImportableFile("YSM.JSON")).toBe(true);
+  });
+
+  it("包内 geometry / animation / 语言 json 一律拒绝", () => {
+    expect(isImportableFile("main.json")).toBe(false);
+    expect(isImportableFile("arm.json")).toBe(false);
+    expect(isImportableFile("slashblade.animation.json")).toBe(false);
+    expect(isImportableFile("tac.animation.json")).toBe(false);
+    expect(isImportableFile("zh_cn.json")).toBe(false);
+    expect(isImportableFile("en_us.json")).toBe(false);
+  });
+
+  it("其它类型扩展名不受影响", () => {
+    expect(isImportableFile("skin.pmx")).toBe(true);
+    expect(isImportableFile("avatar.vrm")).toBe(true);
+    expect(isImportableFile("file.txt")).toBe(false);
   });
 });
 

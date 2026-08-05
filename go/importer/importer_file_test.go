@@ -63,6 +63,32 @@ func TestImportFromBase64_Invalid(t *testing.T) {
 	}
 }
 
+func TestImportFromBase64_JsonWhitelist(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "repo")
+	if err := os.MkdirAll(root, 0755); err != nil {
+		t.Fatal(err)
+	}
+	rootFn := func(rtype string) string { return root }
+	logFn := func(name, src, dst string, size int64, status, msg string) {}
+	b64 := base64.StdEncoding.EncodeToString([]byte("{}"))
+
+	// ysm.json 入口清单放行
+	if err := ImportFromBase64("ysm.json", b64, ImportOptions{}, rootFn, logFn); err != nil {
+		t.Fatalf("ysm.json 应放行: %v", err)
+	}
+	// 大写 YSM.JSON 放行
+	if err := ImportFromBase64("YSM.JSON", b64, ImportOptions{Overwrite: true}, rootFn, logFn); err != nil {
+		t.Fatalf("YSM.JSON 应放行: %v", err)
+	}
+	// 包内 geometry / animation / 语言 json 一律拒绝
+	for _, name := range []string{"main.json", "arm.json", "slashblade.animation.json", "zh_cn.json", "en_us.json"} {
+		if err := ImportFromBase64(name, b64, ImportOptions{}, rootFn, logFn); err == nil {
+			t.Fatalf("%s 应被 ysm.json 白名单拒绝", name)
+		}
+	}
+}
+
 func TestDetectZipType(t *testing.T) {
 	// 构造最小 ZIP local file header（PK\x03\x04 + 文件名）
 	buildZip := func(name string) []byte {

@@ -35,6 +35,8 @@ const JSON_OUT = process.argv.includes('--json');
 const AFFECTED_MODE = process.argv.includes('--affected');
 const _aIdx = process.argv.indexOf('--affected');
 const AFFECTED_PATHS = _aIdx >= 0 ? process.argv.slice(_aIdx + 1) : [];
+// --quiet：--affected 仅输出受影响卡 stem（每行一个），供钩子机读消费
+const QUIET = process.argv.includes('--quiet');
 const errors = [];
 const warns = [];
 
@@ -338,6 +340,7 @@ function runAffected(changed) {
   if (changed.length === 0) {
     console.log('用法: node scripts/check-knowledge-drift.mjs --affected <变更文件...>');
     console.log('  常与 git 联动: git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.mjs --affected {}');
+    console.log('  机读模式:      node scripts/check-knowledge-drift.mjs --affected --quiet <变更文件...>  （仅输出卡 stem）');
     process.exit(0);
     return;
   }
@@ -361,7 +364,13 @@ function runAffected(changed) {
     }
   }
   if (hits.size === 0) {
-    console.log(`✅ 变更的 ${changed.length} 个文件未被任何知识卡 source_files 引用，无需复核。`);
+    if (!QUIET) console.log(`✅ 变更的 ${changed.length} 个文件未被任何知识卡 source_files 引用，无需复核。`);
+    process.exit(0);
+    return;
+  }
+  if (QUIET) {
+    // 机读模式：仅输出卡 stem，每行一个（供 prepare-commit-msg 钩子消费）
+    for (const card of [...hits.keys()].sort()) console.log(card);
     process.exit(0);
     return;
   }

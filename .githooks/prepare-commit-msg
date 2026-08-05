@@ -1,0 +1,17 @@
+#!/bin/sh
+# YSM 知识卡漂移主动防御（prepare-commit-msg 薄壳，非阻断）
+# 职责：把受本次 staged 变更影响的知识卡写入 commit message body，供 PR review 参考。
+# 安装：git config core.hooksPath .githooks（仓库已配置）
+# 逃生阀：YSM_SKIP_KNOWLEDGE_HINT=1 git commit
+set -u
+
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null || exit 0)
+[ -z "${ROOT:-}" ] && exit 0
+if [ "${YSM_SKIP_KNOWLEDGE_HINT:-0}" = "1" ]; then exit 0; fi
+
+NODE=$(command -v node 2>/dev/null)
+[ -z "$NODE" ] && exit 0
+
+# 辅助脚本内部用 process.execPath 自取 node，无需透传 NODE_BIN
+"$NODE" "$ROOT/scripts/hooks/knowledge-affected-hint.mjs" "$1" "$2" || true
+exit 0

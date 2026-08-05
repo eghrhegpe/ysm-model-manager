@@ -64,6 +64,21 @@ node scripts/check-knowledge-drift.mjs --affected <f>…  # 主动：源码变�
 
 > 主动防御：`--affected` 接收变更文件清单（仓库相对 POSIX 路径），输出引用了它们的知识卡，
 > 供提交前/CI 提示「这些源码改了，下面 N 张卡该复核」。匹配规则：文件精确命中 / 目录前缀命中。
+> `--affected --quiet` 仅吐 card stem（每行一个），供钩子机读消费。
+
+**提交期自动提示（非阻断）**：仓库已启用 `prepare-commit-msg` 钩子（`.githooks/prepare-commit-msg` →
+`scripts/hooks/knowledge-affected-hint.mjs`）。提交时自动把受影响卡写入 commit message body，随 commit 进 PR：
+
+```text
+📚 受影响知识卡（建议同步复核 docs/knowledge）：
+- docs/knowledge/resource-registry.md
+📚 ──END──
+```
+
+- 非阻断：`exit 0` 永不作为；`--amend` 幂等（自动剥离旧区块再重写）；merge/squash 提交跳过。
+- 逃生阀：`YSM_SKIP_KNOWLEDGE_HINT=1 git commit`（与 `YSM_SKIP_GATE` 并列）。
+- 设计取舍：放在 `prepare-commit-msg` 而非 `pre-push`——push 处于流程末端、阻断体验差、diff 范围过大（整分支累积），不适合做 advisory。
+
 
 ## 分类映射
 

@@ -14,46 +14,50 @@ import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 
 
-// Go 文件，搜索 func (a *App) FuncName(
+// Go 文件，搜索 func (a *App) FuncName(（Go 源码位于 internal/app/ 下）
 const GO_FILES = [
   'app.go', 'app_avatar.go', 'app_config.go', 'app_download.go',
   'app_files.go', 'app_install.go', 'app_model.go', 'app_scan.go',
   'app_tags.go', 'app_workshop.go', 'resource_bindings.go',
   'proxy.go', 'wasm_decoder.go', 'wasm_embed.go',
 ];
+// Wails 绑定统一走 -ts 契约（frontend/bindings），对照 v3 生成的 app.ts
+const BINDINGS_FILE = path.join(ROOT, 'frontend/bindings/ysm-model-manager/internal/app/app.ts');
 
-const WAILSJS_FILE = path.join(ROOT, 'frontend/wailsjs/go/main/App.js');
+// 框架生命周期方法（带 context/application 参数），Wails 不生成绑定，应排除
+const FRAMEWORK_METHODS = new Set(['ServiceStartup', 'ServiceShutdown']);
 
 function extractGoExports() {
   /** 从 Go 源码提取所有 func (a *App) 导出函数。 */
   const exports = {};
   for (const fname of GO_FILES) {
-    const fp = path.join(ROOT, fname);
+    const fp = path.join(ROOT, 'internal/app', fname);
     if (!fs.existsSync(fp)) continue;
     const text = fs.readFileSync(fp, 'utf-8');
     for (const m of text.matchAll(/func \(a \*App\) (\w+)\(/g)) {
       const name = m[1];
-      // 跳过大写开头的非导出函数（Go 惯例）
+      // 跳过大写开头的非导出函数（Go 惯例）+ 框架生命周期方法
       if (name[0] === name[0].toLowerCase()) continue;
+      if (FRAMEWORK_METHODS.has(name)) continue;
       if (!(name in exports)) exports[name] = path.basename(fp);
     }
   }
   return exports;
 }
 
-function extractWailsjsExports() {
-  /** 从 wailsjs App.js 提取所有导出的包装函数。 */
+function extractBindingsExports() {
+  /** 从 v3 契约产物 app.ts 提取所有导出的包装函数。 */
   const exports = {};
-  if (!fs.existsSync(WAILSJS_FILE)) return exports;
-  const text = fs.readFileSync(WAILSJS_FILE, 'utf-8');
+  if (!fs.existsSync(BINDINGS_FILE)) return exports;
+  const text = fs.readFileSync(BINDINGS_FILE, 'utf-8');
   for (const m of text.matchAll(/export function (\w+)\(/g)) {
-    exports[m[1]] = path.basename(WAILSJS_FILE);
+    exports[m[1]] = path.basename(BINDINGS_FILE);
   }
   return exports;
 }
 
 const goExports = extractGoExports();
-const jsExports = extractWailsjsExports();
+const jsExports = extractBindingsExports();
 
 const issues = [];
 
@@ -68,7 +72,7 @@ for (const [name, f] of Object.entries(goExports).sort(([a], [b]) => a.localeCom
 const jsNames = new Set(Object.keys(jsExports));
 const goNames = new Set(Object.keys(goExports));
 for (const name of [...jsNames].filter((n) => !goNames.has(n)).sort()) {
-  issues.push({ type: 'extra_in_js', func: name, js_file: path.relative(ROOT, WAILSJS_FILE) });
+  issues.push({ type: 'extra_in_js', func: name, js_file: path.relative(ROOT, BINDINGS_FILE) });
 }
 
 const out = { _summary: { go_functions: Object.keys(goExports).length, js_functions: Object.keys(jsExports).length, issues: issues.length }, issues };

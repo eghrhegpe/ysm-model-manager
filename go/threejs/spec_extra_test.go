@@ -230,12 +230,12 @@ func TestBuildCubeMeshData_Valid(t *testing.T) {
 
 func TestBuildCubeMeshData_CustomTexDim(t *testing.T) {
 	c := types.Cube2D{
-		Origin:    [3]float64{0, 0, 0},
-		Size:      [3]float64{8, 8, 8},
-		Pivot:     [3]float64{4, 4, 4},
-		UV:        [2]float64{0, 0},
-		CubeTexW:  128,
-		CubeTexH:  64,
+		Origin:   [3]float64{0, 0, 0},
+		Size:     [3]float64{8, 8, 8},
+		Pivot:    [3]float64{4, 4, 4},
+		UV:       [2]float64{0, 0},
+		CubeTexW: 128,
+		CubeTexH: 64,
 	}
 	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
 	if md == nil {

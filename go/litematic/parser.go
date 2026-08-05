@@ -2,33 +2,19 @@ package litematic
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/base64"
 	"fmt"
 	"image"
 	"image/png"
-	"os"
 	"sort"
 
 	"ysm-model-manager/go/types"
 )
 
 func ParseMeta(path string) (*types.LitematicMeta, error) {
-	f, err := os.Open(path)
+	root, err := openGzRoot(path)
 	if err != nil {
-		return nil, fmt.Errorf("open: %w", err)
-	}
-	defer f.Close()
-
-	gz, err := gzip.NewReader(f)
-	if err != nil {
-		return nil, fmt.Errorf("gzip: %w", err)
-	}
-	defer gz.Close()
-
-	root, err := readRootCompound(gz)
-	if err != nil {
-		return nil, fmt.Errorf("nbt: %w", err)
+		return nil, err
 	}
 
 	meta := &types.LitematicMeta{}
@@ -170,19 +156,7 @@ func convertPreviewImage(data []byte) string {
 }
 
 func ParseSchematic(path string) map[string]interface{} {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-
-	gz, err := gzip.NewReader(f)
-	if err != nil {
-		return nil
-	}
-	defer gz.Close()
-
-	root, err := readRootCompound(gz)
+	root, err := openGzRoot(path)
 	if err != nil {
 		return nil
 	}
@@ -276,19 +250,7 @@ func ParseSchematic(path string) map[string]interface{} {
 }
 
 func ParseNbtStructure(path string) map[string]interface{} {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-
-	gz, err := gzip.NewReader(f)
-	if err != nil {
-		return nil
-	}
-	defer gz.Close()
-
-	root, err := readRootCompound(gz)
+	root, err := openGzRoot(path)
 	if err != nil {
 		return nil
 	}

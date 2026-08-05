@@ -37,8 +37,8 @@
 
 | 编号 | 热点 | 行数 | 性质 | 处置 |
 | ---- | ---- | ---- | ---- | ---- |
-| D-1 | `core/handlers/instance-ops.ts` ↔ `views/app-tree/instance-actions.ts` | 39 | 跨文件，handler/action 两层职责重叠 | **可合并**，收益明确，最高优先 |
-| D-2 | `views/app-tree/row-tpl-list.ts` ↔ `row-tpl.ts` | 36 | 跨文件，grid/list 两套行模板 | 可抽参数化公共函数 |
+| D-1 | `core/handlers/instance-ops.ts` ↔ `views/app-tree/instance-actions.ts` | 39 | 跨文件，handler/action 两层职责重叠 | ✅ 已完成（2026-08-05）：原计划「合并」是 jscpd 误报（结构相似、语义不同：数据操作 vs 导入/同步），改为抽 `requireMcRoot()` 消除 5 处「读 mcRoot + 空守卫 + toast」模板，D-1 跨文件重复 39→0 |
+| D-2 | `views/app-tree/row-tpl-list.ts` ↔ `row-tpl.ts` | 36 | 跨文件，grid/list 两套行模板 | ✅ 已完成（2026-08-05）：抽 `row-common.ts` 的 `fileRowCommon` / `folderRowCommon`，两套模板各自只保留外层 class + testid + 差异段，D-2 跨文件重复 36→0 |
 | D-3 | `views/app-preview/litematic-3d.ts` ↔ `skeleton.ts` | 35 | 跨文件，3D 场景初始化重复 | ⚠️ ADR-011 警告：model3d 坐标是重灾区，碰前先 grep bug-chronicle + 对齐 ysmview 口径 |
 | D-4 | `geometry/archive.go` 单文件内重复 | 250 | 同文件，占 Go 总重复 47% | 结构性问题，非去重；碰它按 ADR-011 规矩走 |
 

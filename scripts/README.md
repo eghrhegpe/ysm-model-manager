@@ -65,6 +65,7 @@
 | `check-deadcode-baseline.mjs` | `node scripts/check-deadcode-baseline.mjs` / `--update-baseline` | knip+jscpd 与 `scripts/baseline/deadcode-baseline.json` 对比，新增项阻断 |
 | `check-orphan-exports.mjs` | `node scripts/check-orphan-exports.mjs` / `--strict` / `--min-consumers N` | 孤儿导出审计（零消费者符号；与联邦 check-consumers 同名异实，ADR-241 §Phase 2） |
 | `check-circular.mjs` | `node scripts/check-circular.mjs` | frontend/src ESM import 图找环（ERROR 阻断） |
+| `check-circular-go.mjs` | `node scripts/check-circular-go.mjs` / `--json` | Go 包级循环依赖检测（`go/` 目录下 import 图找环；ERROR 阻断，`--json` 供 CI 消费） |
 | `check-boolean-naming.mjs` | `node scripts/check-boolean-naming.mjs` / `--strict` | 布尔变量命名规范 |
 | `check-script-hygiene.mjs` | `node scripts/check-script-hygiene.mjs` / `--json` / `--strict` | 脚本卫生：退出码失效（裸 main + return 失败码无 process.exit）/ 共享层内联（walk/rg/ROOT 样板）/ 检查类缺 `--json` 契约（WARN 不阻断） |
 | `auto-import.mjs` | `node scripts/auto-import.mjs` / `--fix` / `--watch` / `--strict` | TS/JS 缺失 import 检测（ADR-014 伴生，已接入 doctor 静态分析） |
@@ -89,6 +90,8 @@
 | `gen-project-map.mjs` | 项目结构地图生成（`docs/project-map.md`）：扫描磁盘目录 + 合并基线 `scripts/baseline/project-dirs.json` 用途说明，4 个 GEN 标记区；`--check` 已挂 doctor 防漂移；未登记基线的新目录 WARN 提醒 |
 | `gen-guide-gap.mjs` | 指南覆盖缺口扫描：提取 app-modules.ts 组件/服务功能面，与 docs/guide 对照列出缺口（WARN 不阻断；`--strict` 缺口时退出码 1） |
 | `build-novel-index.mjs` | 小说总索引生成（`docs/novel/index.md`）：扫 `docs/novel/` 目录树（act-\* + 01..10 区域 + appendix），整文件重写；区域文件夹内**禁放 README**（索引唯一来源即本脚本）；`--check` 已挂 doctor 防漂移 |
+| `gen-vitepress-sidebar.mjs` | VitePress 侧边栏生成：扫 `docs/` 全量 md 按目录树组织导航 → `docs/.vitepress/sidebar.gen.mjs`（勿手改），`docs/package.json` build 脚本前置调用（ADR-022） |
+| `gen-doc-next-steps.mjs` | 文档体系「待补地图」诊断聚合：聚合 `check-knowledge-drift` / `link-checker` / `adr-check` 的 `--json` → `docs/.doc-next-steps.md`（只读报告，不修改源文件） |
 
 ### 生成器维护约定（2026-08-03 新增）
 

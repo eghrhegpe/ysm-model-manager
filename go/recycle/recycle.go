@@ -213,6 +213,14 @@ func (tm *TrashManager) Restore(src string) error {
 	if err := os.Rename(src, dst); err == nil {
 		return nil
 	}
+	// 目录（整组合并条目）跨设备：递归复制整棵树；文件走 copyFile
+	if info, statErr := os.Lstat(src); statErr == nil && info.IsDir() {
+		if err := copyDirRecursive(src, dst); err != nil {
+			os.RemoveAll(dst)
+			return err
+		}
+		return os.RemoveAll(src)
+	}
 	if err := copyFile(src, dst); err != nil {
 		// 复制中断/失败时清理半截恢复文件，避免目标目录残留损坏文件
 		os.Remove(dst)
@@ -221,10 +229,39 @@ func (tm *TrashManager) Restore(src string) error {
 	return os.Remove(src)
 }
 
+// copyDirRecursive 递归复制目录树（跨设备 Restore 整组合并条目的 fallback）
+func copyDirRecursive(src, dst string) error {
+	if err := os.MkdirAll(dst, 0755); err != nil {
+		return err
+	}
+	return filepath.WalkDir(src, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, p)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0755)
+		}
+		return copyFile(p, target)
+	})
+}
+
 // Delete 永久删除回收站中的文件
+// ADR-038 D3.4：整组合并条目 Path 指向目录，os.Remove 无法删非空目录 → 目录用 RemoveAll
 func (tm *TrashManager) Delete(src string) error {
 	if err := paths.IsInside(tm.recycleDir, src); err != nil {
 		return err
+	}
+	info, err := os.Lstat(src)
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		return os.RemoveAll(src)
 	}
 	return os.Remove(src)
 }

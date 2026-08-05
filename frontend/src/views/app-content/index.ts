@@ -15,13 +15,22 @@ import {
   diagnosticsHTML,
   workshopHTML,
   githubHTML,
+  downloadsHTML,
+  recycleHTML,
 } from "./tpl.ts";
 
 /** 防止 avatar:config-loaded 事件重复注册（unsub 随组件销毁回收并复位 flag） */
 let _avatarConfigLoadedRegistered = false;
 let _avatarConfigLoadedUnsub: (() => void) | null = null;
 import { registerGlobalHandlers } from "../../core/handlers/global.ts";
-import { initDiagnostics } from "./diagnostics/community.ts";
+import { initDiagnostics, startDedup } from "./diagnostics/community.ts";
+import { initImportQueue } from "../../features/import-queue.ts";
+import { initRecycleBin } from "../../features/recycle-bin.ts";
+import { loadOldestModel } from "../../features/oldest-models.ts";
+import { initResourcePacks } from "../../features/resource-packs.ts";
+import { tryFetchModels } from "../../features/community/data.ts";
+// 副作用导入：注册 <app-preview> 组件（原动态 import 预加载的静态化替代）
+import "../app-preview/index.ts";
 
 import { initSettings } from "./settings/community.ts";
 import {
@@ -273,14 +282,6 @@ class AppContent extends HTMLElement {
     const root = this._root;
     const subtabs = root.querySelectorAll(".repo-subtab");
     const treeBody = root.getElementById("repo-tab-tree");
-    import("../app-preview/index.ts").catch((e) => {
-      console.warn("[app-content] 预览组件预加载失败:", e);
-      bus.emit("toast:show", {
-        msg: "❌ " + friendlyError(e, "预览组件加载失败"),
-        duration: 4000,
-        type: "error",
-      });
-    });
     let curRtype = localStorage.getItem("repo_rtype") || RESOURCE_TYPES.YSM;
     subtabs.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -335,23 +336,16 @@ class AppContent extends HTMLElement {
           const container = this._root.getElementById(prefix + "-tab-" + tab);
           if (!container) return;
           if (tab === "import") {
-            const { downloadsHTML } = await import("./tpl.ts");
             container.innerHTML = downloadsHTML();
-            const { initImportQueue } =
-              await import("../../features/import-queue.ts");
             const importCleanup = initImportQueue(this);
             this._unsubs = this._unsubs || [];
             if (importCleanup) this._unsubs.push(importCleanup);
           } else if (tab === "recycle") {
-            const { recycleHTML } = await import("./tpl.ts");
             container.innerHTML = recycleHTML();
-            const { initRecycleBin } =
-              await import("../../features/recycle-bin.ts");
             const recycleCleanup = initRecycleBin(this);
             this._unsubs = this._unsubs || [];
             if (recycleCleanup) this._unsubs.push(recycleCleanup);
           } else if (tab === "dedup") {
-            const { startDedup } = await import("./diagnostics/community.ts");
             let dedupType = localStorage.getItem("repo_rtype") || RESOURCE_TYPES.YSM;
             container.innerHTML =
               '<div style="display:flex;flex-direction:column;height:100%">' +
@@ -384,22 +378,16 @@ class AppContent extends HTMLElement {
             this._unsubs = this._unsubs || [];
             this._unsubs.push(_unsub);
           } else if (tab === "oldest") {
-            const { loadOldestModel } =
-              await import("../../features/oldest-models.ts");
             const oldestCleanup = await loadOldestModel(container, (s) =>
               this._esc(s),
             );
             this._unsubs = this._unsubs || [];
             if (oldestCleanup) this._unsubs.push(oldestCleanup);
           } else if (tab === "resourcepacks") {
-            const { initResourcePacks } =
-              await import("../../features/resource-packs.ts");
             const rpCleanup = await initResourcePacks(container, this);
             this._unsubs = this._unsubs || [];
             if (rpCleanup) this._unsubs.push(rpCleanup);
           } else if (tab === "shaderpacks") {
-            const { initResourcePacks } =
-              await import("../../features/resource-packs.ts");
             const spCleanup = await initResourcePacks(
               container,
               this,
@@ -408,8 +396,6 @@ class AppContent extends HTMLElement {
             this._unsubs = this._unsubs || [];
             if (spCleanup) this._unsubs.push(spCleanup);
           } else if (tab === RESOURCE_TYPES.BLUEPRINT) {
-            const { initResourcePacks } =
-              await import("../../features/resource-packs.ts");
             const cbCleanup = await initResourcePacks(
               container,
               this,
@@ -418,8 +404,6 @@ class AppContent extends HTMLElement {
             this._unsubs = this._unsubs || [];
             if (cbCleanup) this._unsubs.push(cbCleanup);
           } else if (tab === RESOURCE_TYPES.MMD) {
-            const { initResourcePacks } =
-              await import("../../features/resource-packs.ts");
             const msCleanup = await initResourcePacks(
               container,
               this,
@@ -428,8 +412,6 @@ class AppContent extends HTMLElement {
             this._unsubs = this._unsubs || [];
             if (msCleanup) this._unsubs.push(msCleanup);
           } else if (tab === RESOURCE_TYPES.VRC) {
-            const { initResourcePacks } =
-              await import("../../features/resource-packs.ts");
             const vaCleanup = await initResourcePacks(
               container,
               this,
@@ -438,8 +420,6 @@ class AppContent extends HTMLElement {
             this._unsubs = this._unsubs || [];
             if (vaCleanup) this._unsubs.push(vaCleanup);
           } else if (tab === RESOURCE_TYPES.LITEMATIC) {
-            const { initResourcePacks } =
-              await import("../../features/resource-packs.ts");
             const lmCleanup = await initResourcePacks(
               container,
               this,
@@ -906,8 +886,6 @@ class AppContent extends HTMLElement {
             localMap.set(n, e.Hash || "");
           });
         }
-        const { tryFetchModels } =
-          await import("../../features/community/data.ts");
         let fetchDone = false;
         const result = await tryFetchModels(repo, (mirror || "") as "" | "jsdelivr" | "githubapi", (pct, label) => {
           if (fetchDone || _currentRepo !== repo) return;

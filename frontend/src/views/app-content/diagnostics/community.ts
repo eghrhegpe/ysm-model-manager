@@ -241,18 +241,16 @@ async function loadRuntimeLogs(root: ShadowRoot, esc: EscFn): Promise<void> {
   }
 }
 
-/** 去重 root 的最小接口（index.js 传 { getElementById: () => list } 包装对象） */
-interface DedupRoot {
-  getElementById(id: string): HTMLElement | null;
-}
-
+/**
+ * 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。
+ * 之前调用方传 { getElementById: () => list } 包装对象，startDedup 内部查
+ * "diag-dedup-list"——模板中并无此 id，靠包装对象兜底才不崩，报错无法定位。
+ */
 export async function startDedup(
-  root: DedupRoot,
+  list: HTMLElement,
   esc: EscFn,
   rtype?: string,
 ): Promise<void> {
-  const list = root.getElementById("diag-dedup-list");
-  if (!list) return;
 
   const reg = await loadResourceRegistry();
   const entry = rtype ? reg[rtype] : undefined;

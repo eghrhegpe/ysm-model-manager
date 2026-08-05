@@ -595,6 +595,11 @@ export function workshopHTML(): string {
     '<div class="repo-tabs" id="ws-tabs">' +
     '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">⏳ 加载中...</span>' +
     "</div>" +
+    // 站点配置导入/导出工具栏（index.ts ws-export-btn / ws-import-btn 绑定）
+    '<div style="display:flex;gap:6px;padding:4px 12px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
+    '<button class="btn-base sm" id="ws-export-btn" title="导出全部站点配置为 JSON 文件">📤 导出站点</button>' +
+    '<button class="btn-base sm" id="ws-import-btn" title="从 JSON 文件导入站点配置">📥 导入站点</button>' +
+    "</div>" +
     '<div class="repo-tab-body" id="cr-tab-creators">' +
     '<div class="cr-page" id="ws-page">' +
     '<div class="cr-right" style="width:100%;flex:1;display:flex;flex-direction:column;overflow:hidden" id="ws-right">' +

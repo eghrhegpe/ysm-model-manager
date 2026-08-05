@@ -3,6 +3,10 @@ import { bus } from "../bus.ts";
 
 let _locked = false;
 let _queue: unknown[] = [];
+let _folders: Array<{
+  dir: string;
+  files: Array<{ file: File; relPath: string }>;
+}> = [];
 
 export const DnDLock = {
   get locked(): boolean {
@@ -27,13 +31,33 @@ export const PendingImport = {
     return _queue;
   },
 
+  get folders(): Array<{
+    dir: string;
+    files: Array<{ file: File; relPath: string }>;
+  }> {
+    return _folders;
+  },
+
   setQueue(files: unknown[]): void {
     _queue = files || [];
     bus.emit("import:pending-changed", { count: _queue.length });
   },
 
+  setFolders(
+    groups: Array<{
+      dir: string;
+      files: Array<{ file: File; relPath: string }>;
+    }>,
+  ): void {
+    _folders = groups || [];
+    bus.emit("import:pending-changed", {
+      count: _queue.length + _folders.length,
+    });
+  },
+
   clear(): void {
     _queue = [];
+    _folders = [];
     bus.emit("import:pending-changed", { count: 0 });
   },
 };

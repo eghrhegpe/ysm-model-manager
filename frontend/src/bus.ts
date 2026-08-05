@@ -89,7 +89,13 @@ export interface BusEvents {
   "instance:install": { name: string; rtype?: string };
   "instance:sync": { name: string; rtype?: string };
   "import:pending-changed": { count: number };
-  "import:pending-files": Array<{ name: string; file: File }>;
+  "import:pending-files": {
+    files: Array<{ name: string; file: File }>;
+    folders?: Array<{
+      dir: string;
+      files: Array<{ file: File; relPath: string }>;
+    }>;
+  };
   "dnd:lock-changed": { locked: boolean };
   // 配置
   "config:updated": void;

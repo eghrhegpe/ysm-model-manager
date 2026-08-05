@@ -5,18 +5,10 @@ import { PageStore } from "../page-store.ts";
 import { DnDLock, PendingImport } from "../../features/dnd-state.ts";
 import { getApp } from "../../wails/app.ts";
 import { ALL_EXTS } from "../../utils/resource/extensions.ts";
-import { getExt, isImportableFile, shouldEnterForm } from "../../features/dnd-shared.ts";
+import { isImportableFile } from "../../features/dnd-shared.ts";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
 const MAX_FILE_COUNT = 50;
-
-const readFileAsBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 
 let dropOverlay: HTMLElement | null = null;
 // 深度计数器：dragenter 进入子元素 +1、dragleave 离开子元素 -1；归零即真正离开窗口。
@@ -129,52 +121,64 @@ const onDrop = async (e: DragEvent): Promise<void> => {
       entry.file(resolve, reject);
     });
 
+  // 收集模式：不过滤扩展名，保留 relPath（子目录层级），交由导入页统一路由
+  // （含 ysm.json 的目录 → 整组导入；单文件 → isImportableFile 过滤）
   const collectFiles = async (
     items: DataTransferItem[] | FileSystemEntry[],
     isEntryArray: boolean,
-  ): Promise<File[]> => {
-    const result: File[] = [];
+    basePath = "",
+  ): Promise<Array<{ file: File; relPath: string }>> => {
+    const result: Array<{ file: File; relPath: string }> = [];
     for (const item of items) {
       if (!isEntryArray && (item as DataTransferItem).kind !== "file") continue;
       const entry =
         (item as DataTransferItem).webkitGetAsEntry?.() ||
         (isEntryArray ? (item as FileSystemEntry) : null);
       if (entry?.isDirectory) {
+        const subPath = basePath ? basePath + "/" + entry.name : entry.name;
         const reader = (entry as FileSystemDirectoryEntry).createReader();
-        const readAll = async (depth = 0): Promise<File[]> => {
+        const readAll = async (
+          depth = 0,
+        ): Promise<Array<{ file: File; relPath: string }>> => {
           if (depth > 10) return []; // 防止深层递归导致卡顿
           const batch = await new Promise<FileSystemEntry[]>((r) =>
             reader.readEntries(r),
           );
           if (!batch.length) return [];
-          const deeper = await collectFiles(batch, true);
+          const deeper = await collectFiles(batch, true, subPath);
           const next = await readAll(depth + 1);
           return [...deeper, ...next];
         };
         result.push(...(await readAll()));
       } else if (entry?.isFile) {
-        if (isImportableFile((entry as FileSystemFileEntry).name)) {
-          try {
-            result.push(await getFileFromEntry(entry as FileSystemFileEntry));
-          } catch (_) {}
-        }
+        const relPath = basePath
+          ? basePath + "/" + entry.name
+          : entry.name;
+        try {
+          result.push({
+            file: await getFileFromEntry(entry as FileSystemFileEntry),
+            relPath,
+          });
+        } catch (_) {}
       } else if ((item as DataTransferItem).getAsFile) {
         // fallback: 浏览器不支持 webkitGetAsEntry 时用 getAsFile
         const f = (item as DataTransferItem).getAsFile();
-        if (f && isImportableFile(f.name)) result.push(f);
+        if (f) result.push({ file: f, relPath: f.name });
       }
     }
     return result;
   };
 
-  let allFiles: File[] = [];
+  let collected: Array<{ file: File; relPath: string }> = [];
   const items = Array.from(e.dataTransfer?.items || []);
-  if (items.length > 0) allFiles = await collectFiles(items, false);
-  if (allFiles.length === 0) {
-    const direct = Array.from(e.dataTransfer?.files || []);
-    allFiles = direct.filter((f) => isImportableFile(f.name));
+  if (items.length > 0) collected = await collectFiles(items, false);
+  if (collected.length === 0) {
+    collected = Array.from(e.dataTransfer?.files || []).map((f) => ({
+      file: f,
+      relPath: f.name,
+    }));
   }
-  if (allFiles.length === 0) {
+  if (collected.length === 0) {
     bus.emit("toast:show", {
       msg: "📂 未检测到支持的资源文件" + "（" + DROP_EXTS_STR + "）",
       duration: 3000,
@@ -182,93 +186,89 @@ const onDrop = async (e: DragEvent): Promise<void> => {
     });
     return;
   }
-  if (allFiles.length > MAX_FILE_COUNT) {
-    bus.emit("toast:show", {
-      msg: `⚠️ 单次导入文件过多（${allFiles.length} 个），请分批处理`,
-      duration: 5000,
-      type: "warn",
-    });
-    return;
-  }
-  const oversized = allFiles.filter((f) => f.size > MAX_FILE_SIZE);
+  const oversized = collected.filter((c) => c.file.size > MAX_FILE_SIZE);
   if (oversized.length > 0) {
     bus.emit("toast:show", {
-      msg: `⚠️ ${oversized[0].name} 超过 100MB，请直接放入仓库文件夹`,
+      msg: `⚠️ ${oversized[0].file.name} 超过 100MB，请直接放入仓库文件夹`,
       duration: 5000,
       type: "warn",
     });
     return;
   }
 
-  // 分类：YSM 进命名队列，非 YSM 直接导入（ZIP 需调 Go 端 DetectZipType 内容判定）
-  const ysmFiles: File[] = [];
-  const nonYsmFiles: File[] = [];
-  for (const f of allFiles) {
-    const ext = getExt(f.name);
-    if (ext === ".ysm") {
-      ysmFiles.push(f);
-    } else if (ext === ".zip" || ext === ".7z") {
-      try {
-        const base64 = await readFileAsBase64(f);
-        if (await shouldEnterForm(f.name, base64)) {
-          ysmFiles.push(f);
-        } else {
-          nonYsmFiles.push(f);
-        }
-      } catch {
-        nonYsmFiles.push(f);
-      }
-    } else {
-      nonYsmFiles.push(f);
+  // 分类：含 ysm.json 的目录 → 文件夹组（整组导入）；其余 → 单文件队列
+  const ysmJsonEntries = collected.filter((c) => {
+    const parts = c.relPath.split("/");
+    return parts[parts.length - 1].toLowerCase() === "ysm.json";
+  });
+  const folderGroups: Array<{
+    dir: string;
+    files: Array<{ file: File; relPath: string }>;
+  }> = [];
+  const singleFiles: Array<{ name: string; file: File }> = [];
+  if (ysmJsonEntries.length > 0) {
+    const ysmDirs = [
+      ...new Set(
+        ysmJsonEntries.map((y) => y.relPath.split("/").slice(0, -1).join("/")),
+      ),
+    ];
+    const consumed = new Set<{ file: File; relPath: string }>();
+    for (const d of ysmDirs) {
+      const files = collected.filter(
+        (c) => c.relPath === d || c.relPath.startsWith(d + "/"),
+      );
+      files.forEach((f) => consumed.add(f));
+      folderGroups.push({ dir: d, files });
     }
-  }
-
-  // 非 YSM 文件直接导入（Go 端 ImportModelFile 已内置 ExtBelongsTo 路由）
-  if (nonYsmFiles.length > 0) {
-    const { ImportModelFile } = await getApp();
-    let imported = 0;
-    for (const f of nonYsmFiles) {
-      try {
-        const base64 = await readFileAsBase64(f);
-        await ImportModelFile(f.name, base64);
-        imported++;
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: `❌ 导入失败: ${f.name} — ${String(e)}`,
-          duration: 4000,
-          type: "error",
-        });
+    for (const c of collected) {
+      if (consumed.has(c)) continue;
+      if (isImportableFile(c.file.name)) {
+        singleFiles.push({ name: c.file.name, file: c.file });
       }
     }
-    if (imported > 0) {
-      bus.emit("stats:refresh");
-      bus.emit("tree:reload");
-      bus.emit("toast:show", {
-        msg: `✅ 已导入 ${imported} 个文件`,
-        duration: 3000,
-        type: "success",
-      });
+  } else {
+    for (const c of collected) {
+      if (isImportableFile(c.file.name)) {
+        singleFiles.push({ name: c.file.name, file: c.file });
+      }
     }
   }
+  if (singleFiles.length === 0 && folderGroups.length === 0) {
+    bus.emit("toast:show", {
+      msg: "📂 未检测到支持的资源文件" + "（" + DROP_EXTS_STR + "）",
+      duration: 3000,
+      type: "info",
+    });
+    return;
+  }
+  if (singleFiles.length > MAX_FILE_COUNT) {
+    bus.emit("toast:show", {
+      msg: `⚠️ 单次导入文件过多（${singleFiles.length} 个），请分批处理`,
+      duration: 5000,
+      type: "warn",
+    });
+    return;
+  }
 
-  // YSM 文件走原有命名表单流程
-  if (ysmFiles.length > 0) {
-    const pendingFiles = ysmFiles.map((f) => ({ name: f.name, file: f }));
-    PendingImport.setQueue(pendingFiles);
-    if (PageStore.currentPage === "repository") {
-      bus.emit("import:pending-files", pendingFiles);
-      bus.emit("repo:switch-tab", { tab: "import" });
-    } else {
-      bus.emit("nav:change", { page: "repository" });
-      const unsub = bus.on("nav:changed", ({ page }) => {
-        if (page === "repository") {
-          unsub();
-          requestAnimationFrame(() =>
-            bus.emit("repo:switch-tab", { tab: "import" }),
-          );
-        }
-      });
-    }
+  // 统一交给导入页消费（单文件队列 + 文件夹组整组导入）
+  PendingImport.setQueue(singleFiles);
+  PendingImport.setFolders(folderGroups);
+  if (PageStore.currentPage === "repository") {
+    bus.emit("import:pending-files", {
+      files: singleFiles,
+      folders: folderGroups,
+    });
+    bus.emit("repo:switch-tab", { tab: "import" });
+  } else {
+    bus.emit("nav:change", { page: "repository" });
+    const unsub = bus.on("nav:changed", ({ page }) => {
+      if (page === "repository") {
+        unsub();
+        requestAnimationFrame(() =>
+          bus.emit("repo:switch-tab", { tab: "import" }),
+        );
+      }
+    });
   }
 };
 

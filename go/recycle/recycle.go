@@ -22,11 +22,19 @@ type MoveResult struct {
 // TrashManager 可配置的回收站管理器
 type TrashManager struct {
 	recycleDir string
+	// 跨设备回退的 rename/目录复制实现（测试注入点：模拟 EXDEV 与复制中途失败），
+	// 生产恒为真实实现（New 中初始化）
+	renameForMove  func(src, dst string) error
+	copyDirForMove func(src, dst string) error
 }
 
 // New 创建回收站管理器，root 是资源根目录，回收站为 root/.recycle
 func New(root string) *TrashManager {
-	return &TrashManager{recycleDir: filepath.Join(root, ".recycle")}
+	return &TrashManager{
+		recycleDir:     filepath.Join(root, ".recycle"),
+		renameForMove:  os.Rename,
+		copyDirForMove: copyDirRecursive,
+	}
 }
 
 // RecycleDir 返回回收站目录路径
@@ -48,11 +56,6 @@ func (tm *TrashManager) MoveEx(src string) *MoveResult {
 	}
 	return res
 }
-
-// renameForMove / copyDirForMove 包级可注入实现（测试用：EXDEV 模拟跨设备失败、
-// 复制中途失败），生产环境始终为真实实现
-var renameForMove = os.Rename
-var copyDirForMove = copyDirRecursive
 
 func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 	if tm.recycleDir == "" {
@@ -112,14 +115,14 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return nil, err
 	}
-	if err := renameForMove(src, dst); err == nil {
+	if err := tm.renameForMove(src, dst); err == nil {
 		return &MoveResult{Action: "recycled", Reason: ""}, nil
 	} else if !isCrossDeviceErr(err) {
 		return nil, err
 	}
 	// 跨设备回退：目录（文件夹型模型）递归复制整棵树；文件走 copyFile
 	if info.IsDir() {
-		if err := copyDirForMove(src, dst); err != nil {
+		if err := tm.copyDirForMove(src, dst); err != nil {
 			// 复制中断/失败时清理半截目录，避免回收站残留损坏数据
 			if rerr := os.RemoveAll(dst); rerr != nil {
 				log.Printf("[recycle] 清理半截目录失败 %s: %v", dst, rerr)

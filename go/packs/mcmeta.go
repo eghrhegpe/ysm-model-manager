@@ -197,8 +197,6 @@ func hasShaders(path string) bool {
 	return false
 }
 
-
-
 // ReadShaderpackLang 从光影包 ZIP 中读取 lang/en_US.lang，尝试提取显示名
 // 返回 {name, entries}，name 为空时前端用文件名兜底
 func ReadShaderpackLang(path string) string {

@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/scanner"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
@@ -159,13 +158,6 @@ func (a *App) SearchModels(repoRoot string, keyword string, minBones, maxBones, 
 	return results
 }
 
-func (a *App) SetRepoRoot(dir string) {
-	if !installer.IsValidRepoRoot(dir) {
-		return
-	}
-	// repoRoot() 动态从 FilesRoot 推导，此方法保留兼容但不再缓存
-}
-
 // ========== 模型扫描（薄壳）==========
 // scanModelEntries 扫描核心（无操作日志）：watcher 自动同步等后台路径使用，
 // 避免自动化触发刷屏操作日志面板。
@@ -187,10 +179,6 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 	entries := a.scanModelEntries(dir)
 	a.AddOpLog("scan", fmt.Sprintf("扫描 %d 个文件", len(entries)), dir, "", int64(len(entries)), "success", "")
 	return entries
-}
-
-func (a *App) ScanCustomModels(dir string) []types.ModelEntry {
-	return a.ScanModelEntries(strings.TrimSpace(dir))
 }
 
 // ClearScanCache 清除扫描缓存（下载/导入后调用）

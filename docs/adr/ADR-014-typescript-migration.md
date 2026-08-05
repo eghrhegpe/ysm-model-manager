@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/`（120 个业务 JS）/ `frontend/vite.config.js` / `frontend/wailsjs/go/main/App.d.ts` / `AGENTS.md` §审核体系（B1 盲区 #1）
+- **相关**：`frontend/src/`（120 个业务 JS）/ `frontend/vite.config.js` / `frontend/bindings/ysm-model-manager/internal/app/app.ts`（v3 `-ts` 契约产物）/ `AGENTS.md` §审核体系（B1 盲区 #1）
 
 ---
 
@@ -70,7 +70,7 @@
 - 前端无单测框架（Vitest）暂不引入，测试覆盖维度仍靠 review（P5 另行决策）。
 
 ### 已知遗留
-- `wailsjs/go/main/App.js` 为生成产物，不迁移；以 `App.d.ts` 为类型源；
+- `frontend/bindings/` 为 v3 `-ts` 契约生成产物（2026-08-05 起 wailsjs v2 目录已删除），以 `app.ts` 为类型源；
 - `frontend/dist/` 构建产物不受影响。
 
 ---
@@ -90,7 +90,7 @@
 | 来源 | 结果 |
 |------|------|
 | `find frontend/src -name "*.js"` | 120 个业务文件（排除 node_modules/dist） |
-| `frontend/wailsjs/go/main/App.d.ts` | Wails v3 已生成绑定类型声明 |
+| `frontend/bindings/ysm-model-manager/internal/app/app.ts` | Wails v3 `-ts` 契约生成绑定类型声明（v2 wailsjs 已删） |
 | `frontend/vite.config.js` | 已有 wails-bindings-resolve 插件（.js→.ts） |
 | 联邦（MikuMikuAR） | 365 个 .ts + Vitest 4328 测试，TS 收益实证 |
 | `AGENTS.md` §审核体系 | B1 盲区 #1：原生 JS 无类型系统 |

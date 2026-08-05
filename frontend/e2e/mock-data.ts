@@ -61,7 +61,6 @@ export const MOCK_DATA = {
   GetModelTexSizes: [],
   ExportBoneStructures: "",
   SearchModels: [],
-  ScanCustomModels: [],
   ListModelAuthors: [],
   GenerateRepoIndex: "",
 } as const;

@@ -358,7 +358,7 @@ class AppContent extends HTMLElement {
               const list = container.querySelector("#dedup-result-list");
               if (list)
                 startDedup(
-                  { getElementById: () => list as HTMLElement | null },
+                  list as HTMLElement,
                   this._esc,
                   dedupType,
                 );

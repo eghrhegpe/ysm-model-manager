@@ -149,7 +149,7 @@ func (a *App) restartWatcher(repoRoot, mcRoot string) {
 		a.watcher = nil
 	}
 	if repoRoot != "" && mcRoot != "" {
-		a.watcher = watcher.New(repoRoot, mcRoot, a.ScanModelEntries, a.ClearScanCache)
+		a.watcher = watcher.New(repoRoot, mcRoot, a.scanModelEntries, a.ClearScanCache)
 		if err := a.watcher.Start(); err != nil {
 			println("[watcher] 重启失败:", err.Error())
 		}

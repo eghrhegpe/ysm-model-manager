@@ -167,7 +167,9 @@ func (a *App) SetRepoRoot(dir string) {
 }
 
 // ========== 模型扫描（薄壳）==========
-func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
+// scanModelEntries 扫描核心（无操作日志）：watcher 自动同步等后台路径使用，
+// 避免自动化触发刷屏操作日志面板。
+func (a *App) scanModelEntries(dir string) []types.ModelEntry {
 	entries := scanner.ScanEntries(strings.TrimSpace(dir))
 	// 批量填充 HasTags（利用标签存储的读缓存，不重复读磁盘）
 	if a.tagsStore != nil {
@@ -177,6 +179,12 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 			}
 		}
 	}
+	return entries
+}
+
+// ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志
+func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
+	entries := a.scanModelEntries(dir)
 	a.AddOpLog("scan", fmt.Sprintf("扫描 %d 个文件", len(entries)), dir, "", int64(len(entries)), "success", "")
 	return entries
 }

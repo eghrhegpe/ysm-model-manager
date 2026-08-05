@@ -35,12 +35,11 @@ New-Item -ItemType Directory -Path "$OutputDir" -Force | Out-Null
 Write-Host "🔨 构建版本 $VerTag ..." -ForegroundColor Cyan
 
 # 0. 生成 Wails 3 绑定（前端源，必须在 vite build 之前生成）
-#    注：必须带 -ts 产出 frontend/bindings/ysm-model-manager/internal/app/app.ts，
-#        前端以 .js 后缀 import、由 vite wailsBindingsResolve 重定向到 .ts；
-#        漏 -ts 会生成 .js 破坏该契约（回归教训 2026-08-05）。
+#    统一入口：npm run generate:bindings（内部 wails3 generate bindings -clean=true -ts -i，
+#    产出 .ts；前端以 .js 后缀 import、由 vite wailsBindingsResolve 重定向）。
 Write-Host "🧬 生成 Wails 3 绑定..." -ForegroundColor Yellow
 Set-Location $ProjectRoot
-wails3 generate bindings -ts 2>&1
+npm --prefix frontend run generate:bindings 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ 绑定生成失败（请确认 wails3 CLI 已安装且在 PATH 中）" -ForegroundColor Red
     exit 1

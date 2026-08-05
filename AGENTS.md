@@ -14,7 +14,7 @@
 > 信任本机改动，提交代码时：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。会有 GitHub PR review 审核，别怕错误。
 > 放弃低效的 `git stash` / `git stash push` / `git stash pop` 指令。
 > 前端建议过一遍命名表（`docs/Design.md` §12 文档命名与归属规范）。
-> 项目采用 `wails3 generate bindings -ts` 自动生成绑定，**必须带 `-ts`**（产出 `.ts`，前端以 `.js` 后缀 import、由 vite `wailsBindingsResolve` 重定向）。无 `-ts` 生成会产出 `.js` 并清掉 git 跟踪的 `.ts`，属回归红线（契约见 `docs/architecture.md` §绑定模式）。
+> 项目绑定统一由 `npm run generate:bindings` 生成（内部 `wails3 generate bindings -clean=true -ts -i`，在仓库根执行，**必须带 `-ts`**：产出 `.ts`，前端以 `.js` 后缀 import、由 vite `wailsBindingsResolve` 重定向；无 `-ts` 生成会产出 `.js` 并清掉 git 跟踪的 `.ts`，属回归红线。契约见 `docs/architecture.md` §绑定模式）。
 > 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `review` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check`。
 
 ## 去哪里查
@@ -69,7 +69,7 @@
 
 | 层 | 选型 |
 |----|------|
-| 桌面 | Wails v3 (Go + WebView2)，绑定 `wails3 generate bindings -ts`（**必须带 -ts**，见硬约束） |
+| 桌面 | Wails v3 (Go + WebView2)，绑定统一走 `npm run generate:bindings`（必须 -ts，见硬约束） |
 | 前端 | 原生 HTML/CSS/JS (Web Components + Shadow DOM) |
 | 3D | Three.js + YSMParser WASM（YSMViewer 算法口径） |
 | 数据 | resource_types.json 单一事实来源 + creators.json / workshop_sites.json / workshop-github.json |

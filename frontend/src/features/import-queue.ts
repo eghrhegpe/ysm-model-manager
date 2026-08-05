@@ -945,16 +945,55 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   renderImportedList();
 
   // 处理待导入文件的通用函数
-  const processPendingImport = (files?: Array<{ name: string; file: File }>): void => {
-    const list = files || (PendingImport.queue as Array<{ name: string; file: File }>);
-    if (!list || list.length === 0) return;
+  const processPendingImport = (
+    payload?: {
+      files?: Array<{ name: string; file: File }>;
+      folders?: Array<{
+        dir: string;
+        files: Array<{ file: File; relPath: string }>;
+      }>;
+    },
+  ): void => {
+    const files =
+      payload?.files ??
+      (PendingImport.queue as Array<{ name: string; file: File }>);
+    const folders = payload?.folders ?? (PendingImport.folders as Array<{
+      dir: string;
+      files: Array<{ file: File; relPath: string }>;
+    }>);
+    if ((!files || files.length === 0) && (!folders || folders.length === 0)) {
+      return;
+    }
     // 先获取 DnDLock 再消费队列：锁被占用时不清空 pending，避免文件静默丢失
     if (!DnDLock.acquire()) return;
     PendingImport.clear();
+    // 文件夹组整组导入（异步推进，与单文件队列并行；完成才释放锁）
+    const folderPromise = (async () => {
+      for (const g of folders || []) {
+        if (!g || !g.files || !g.files.length) continue;
+        await importModelFolder(
+          g.dir,
+          g.files as Array<{ file: ImportFile; relPath: string }>,
+        );
+      }
+    })().catch(() => {});
+    const list = files || [];
+    if (list.length === 0) {
+      void folderPromise.finally(() => {
+        renderImportedList();
+        setTimeout(() => DnDLock.release(), 1000);
+      });
+      return;
+    }
     let readCount = 0;
+    const finishAll = (): void => {
+      renderImportedList();
+      void folderPromise.finally(() => setTimeout(() => DnDLock.release(), 1000));
+    };
     list.forEach((item) => {
       if (!item.file) {
         readCount++;
+        if (readCount === list.length) finishAll();
         return;
       }
       const reader = new FileReader();
@@ -962,25 +1001,16 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         const base64 = String(reader.result).split(",")[1] || "";
         if (base64) enqueueFile(item.file, base64);
         readCount++;
-        if (readCount === list.length) {
-          renderImportedList();
-          setTimeout(() => DnDLock.release(), 1000);
-        }
+        if (readCount === list.length) finishAll();
       };
       reader.onerror = () => {
         readCount++;
-        if (readCount === list.length) {
-          renderImportedList();
-          DnDLock.release();
-        }
+        if (readCount === list.length) finishAll();
       };
       // abort（如组件销毁/浏览器取消）也必须计数，否则 DnDLock 永久占用阻塞后续导入
       reader.onabort = () => {
         readCount++;
-        if (readCount === list.length) {
-          renderImportedList();
-          DnDLock.release();
-        }
+        if (readCount === list.length) finishAll();
       };
       reader.readAsDataURL(item.file);
     });

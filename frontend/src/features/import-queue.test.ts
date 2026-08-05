@@ -48,7 +48,7 @@ describe("initImportQueue — 生命周期", () => {
     let moduleFired = false;
     const probe = bus.on("import:pending-files", () => { moduleFired = true; });
     cleanup();
-    bus.emit("import:pending-files", []);
+    bus.emit("import:pending-files", { files: [] });
     probe();
     expect(moduleFired).toBe(true); // probe 自身收到，验证 emit 链路通
   });
@@ -70,7 +70,7 @@ describe("initImportQueue — 队列边界", () => {
     const { initImportQueue } = await import("./import-queue.ts");
     const cleanup = initImportQueue({ _root: root, _esc: esc });
     cleanups.push(cleanup);
-    expect(() => bus.emit("import:pending-files", [])).not.toThrow();
+    expect(() => bus.emit("import:pending-files", { files: [] })).not.toThrow();
   });
 
   it("多次 init 不抛错", async () => {
@@ -80,6 +80,6 @@ describe("initImportQueue — 队列边界", () => {
     const c2 = initImportQueue({ _root: root, _esc: esc });
     cleanups.push(c1);
     cleanups.push(c2);
-    expect(() => bus.emit("import:pending-files", [])).not.toThrow();
+    expect(() => bus.emit("import:pending-files", { files: [] })).not.toThrow();
   });
 });

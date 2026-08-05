@@ -1,11 +1,12 @@
 // ===== 文件大小/日期格式化（类型化版 — ADR-014 P2）=====
 
-/** 字节数 → 可读大小（B/KB/MB），非法值返回空串 */
+/** 字节数 → 可读大小（B/KB/MB/GB），非法值返回空串 */
 export function fmt(b: number): string {
   if (!b && b !== 0) return "";
   if (b < 1024) return b + " B";
   if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
-  return (b / 1048576).toFixed(1) + " MB";
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + " MB";
+  return (b / 1073741824).toFixed(1) + " GB";
 }
 
 /** 文件大小颜色 class：<1MB 绿色，1-3MB 正常，>3MB 红色 */

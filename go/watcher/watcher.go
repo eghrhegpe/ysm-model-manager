@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -132,9 +133,13 @@ func (w *Watcher) loop() {
 	}()
 	for {
 		select {
-		case _, ok := <-w.w.Events:
+		case ev, ok := <-w.w.Events:
 			if !ok {
 				return
+			}
+			// 过滤噪声事件（临时/锁/下载中文件），不触发同步
+			if isNoiseEvent(ev.Name) {
+				continue
 			}
 			// 任何文件系统变化（Create/Rename/Remove/Write）都触发防抖同步
 			// 这同时覆盖了：禁用（创建 .ban）、启用（删除/重命名 .ban）、新增模型等所有场景
@@ -151,6 +156,20 @@ func (w *Watcher) loop() {
 			return
 		}
 	}
+}
+
+// isNoiseEvent 判断是否为噪声事件（临时/锁/下载中文件），不触发同步
+func isNoiseEvent(name string) bool {
+	base := strings.ToLower(filepath.Base(name))
+	if strings.HasPrefix(base, "~$") {
+		return true
+	}
+	for _, suffix := range []string{".tmp", ".temp", ".swp", ".crdownload", ".part"} {
+		if strings.HasSuffix(base, suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 // debounceSync 防抖触发同步
@@ -201,6 +220,10 @@ func (w *Watcher) syncAll() {
 	}
 	instances := mdsync.ListVersions(w.mcRoot)
 	if len(instances) == 0 {
+		return
+	}
+	// 空仓库短路：仓库无模型文件时无需同步状态，避免每个实例重复空扫
+	if len(w.scanFn(w.repoRoot)) == 0 {
 		return
 	}
 	totalDisable := 0

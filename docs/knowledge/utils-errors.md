@@ -38,8 +38,8 @@ use_when:
 ## 与其他子系统关系
 
 - 消费方覆盖全部异步操作层：`core/handler-sync` + `handler-other` + `context-menus`、`features/version-updater` + `recycle-bin` + `import-queue`、`app-tree`（instance-actions / bus-handlers / toolbar-events）、`app-content/community`（settings / site-view）、`app-sync-manager`
-- 标准调用模式：`catch (e) { bus.emit("toast:show", { type: "error", message: friendlyError(e, "XX失败") }) }`，toast 呈现见 [app_toast](./app_toast.md)
-- Go 端错误源头见 [go_errors](./go_errors.md)
+- 标准调用模式：`catch (e) { bus.emit("toast:show", { type: "error", message: friendlyError(e, "XX失败") }) }`，toast 呈现见 [app_toast](./app-toast.md)
+- Go 端错误源头见 [go_errors](./go-errors.md)
 
 ## 不变量
 
@@ -49,7 +49,7 @@ use_when:
 
 ## 相关
 
-- [app_toast](./app_toast.md) — toast 呈现
-- [go_errors](./go_errors.md) — Go 端错误源
-- [event_bus](./event_bus.md) — toast:show 事件通道
+- [app_toast](./app-toast.md) — toast 呈现
+- [go_errors](./go-errors.md) — Go 端错误源
+- [event_bus](./event-bus.md) — toast:show 事件通道
 - `frontend/src/utils/dom/errors.test.js` — 单元测试（验证入口）

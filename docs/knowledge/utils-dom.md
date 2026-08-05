@@ -43,6 +43,6 @@ HTML 转义与搜索高亮工具。`esc()` 是全前端 HTML 转义的统一入�
 
 ## 相关
 
-- [utils_display](./utils_display.md) — 文件名显示（同源红线）
+- [utils_display](./utils-display.md) — 文件名显示（同源红线）
 - `frontend/src/utils/dom/html.test.ts` — 单元测试（验证入口）
 - AGENTS.md §3.3 UI 安全红线

@@ -41,7 +41,7 @@ use_when:
 
 - 被 `internal/app/app_avatar.go` 调用（GetCachedAvatar / ExtractAuthorAvatar 等 binding）
 - 被 `internal/app/wasm_decoder.go` 调用（`SetNodeJS` 注入解码环境）
-- 依赖 YSMParser WASM（与 [go_ysm_parser](./go_ysm_parser.md) 同源算法口径）、Node.js 运行时
+- 依赖 YSMParser WASM（与 [go_ysm_parser](./go-ysm-parser.md) 同源算法口径）、Node.js 运行时
 
 ## 不变量
 
@@ -52,5 +52,5 @@ use_when:
 
 ## 相关
 
-- [go_ysm_parser](./go_ysm_parser.md) — YSM 格式解析（同一 WASM 口径）
-- [wails_bridge](./wails_bridge.md) — 头像 binding
+- [go_ysm_parser](./go-ysm-parser.md) — YSM 格式解析（同一 WASM 口径）
+- [wails_bridge](./wails-bridge.md) — 头像 binding

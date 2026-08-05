@@ -66,9 +66,9 @@ use_when:
 
 ## 与其他子系统关系
 
-- 由 [app_content](./app_content.md) 懒加载初始化；清理函数收进组件 `_unsubs` 统一在 `disconnectedCallback` 释放
-- 与 [global_handlers](./global_handlers.md) 分工：全局 DnD 收集完（含 100MB 上限拦截）直接 `await executeCollected` 静默入仓，**不切 tab、不弹表单**；导入完成后经 `import:history-changed` 驱动本模块刷新已导入列表——导入 tab 未挂载时导入照常生效，挂载后从 `ImportHistory` 补渲染
-- 导入成功后发 `stats:refresh` + `tree:reload` 联动 [app_tree](./app_tree.md) 与统计；单文件落盘策略见 [go_importer](./go_importer.md)，文件夹整组写入见 `go/fileops.WriteModelFolder`（[go_fileops](./go_fileops.md)）
+- 由 [app_content](./app-content.md) 懒加载初始化；清理函数收进组件 `_unsubs` 统一在 `disconnectedCallback` 释放
+- 与 [global_handlers](./global-handlers.md) 分工：全局 DnD 收集完（含 100MB 上限拦截）直接 `await executeCollected` 静默入仓，**不切 tab、不弹表单**；导入完成后经 `import:history-changed` 驱动本模块刷新已导入列表——导入 tab 未挂载时导入照常生效，挂载后从 `ImportHistory` 补渲染
+- 导入成功后发 `stats:refresh` + `tree:reload` 联动 [app_tree](./app-tree.md) 与统计；单文件落盘策略见 [go_importer](./go-importer.md)，文件夹整组写入见 `go/fileops.WriteModelFolder`（[go_fileops](./go-fileops.md)）
 
 ## 不变量
 
@@ -81,7 +81,7 @@ use_when:
 
 ## 相关
 
-- [global_handlers](./global_handlers.md) — 全局拖拽入口与遮罩状态机
-- [dialog_rename](./dialog_rename.md) — 导入确认与重命名弹窗
-- [dialog_modal](./dialog_modal.md) — 覆盖确认 modalConfirm
-- [app_content](./app_content.md) — 宿主组件与 tab 懒加载
+- [global_handlers](./global-handlers.md) — 全局拖拽入口与遮罩状态机
+- [dialog_rename](./dialog-rename.md) — 导入确认与重命名弹窗
+- [dialog_modal](./dialog-modal.md) — 覆盖确认 modalConfirm
+- [app_content](./app-content.md) — 宿主组件与 tab 懒加载

@@ -44,5 +44,5 @@ use_when:
 
 ## 相关
 
-- [app_tree](./app_tree.md) — 主要消费方
+- [app_tree](./app-tree.md) — 主要消费方
 - `frontend/src/utils/dom/format.test.ts` — 单元测试（验证入口）

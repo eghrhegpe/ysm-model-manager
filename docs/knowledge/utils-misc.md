@@ -40,7 +40,7 @@ use_when:
 ## 与其他子系统关系
 
 - `dbg` 消费方众多：`app-tree`（index / toolbar-events / render）、`app-sidebar`（index / loader）、`app-sync-manager/index.ts`、`app-content/index.ts` + `community/core.ts` + `site-view.ts`、`features/community/download-queue.ts`、`core/handler-sync.ts`、`utils/model2d.ts`
-- `window.debugGetSpec` 依赖 [wails_bindings](./wails_bindings.md) 的 GetModel3DSpec
+- `window.debugGetSpec` 依赖 [wails_bindings](./wails-bindings.md) 的 GetModel3DSpec
 - 下载卡死守护语义对应 AGENTS.md 致命陷阱 #6
 
 ## 不变量
@@ -52,5 +52,5 @@ use_when:
 ## 相关
 
 - [model3d](./model3d.md) — debugGetSpec 排查对象（3D spec）
-- [wails_bindings](./wails_bindings.md) — GetModel3DSpec
+- [wails_bindings](./wails-bindings.md) — GetModel3DSpec
 - AGENTS.md 致命陷阱 §二 #6（下载 99% 卡死）

@@ -56,5 +56,5 @@ use_when:
 
 ## 相关
 
-- [wails_bridge](./wails_bridge.md) — 日志查询/清空 binding
-- [go_types](./go_types.md) — `ImportLog` 定义
+- [wails_bridge](./wails-bridge.md) — 日志查询/清空 binding
+- [go_types](./go-types.md) — `ImportLog` 定义

@@ -48,5 +48,5 @@ use_when:
 
 ## 相关
 
-- [wails_bridge](./wails_bridge.md) — 标签 binding 入口
+- [wails_bridge](./wails-bridge.md) — 标签 binding 入口
 - 前端 `frontend/src/dialogs/tag-editor/` — 标签编辑弹窗

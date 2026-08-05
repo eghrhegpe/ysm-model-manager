@@ -70,7 +70,7 @@ use_when:
 - `internal/app/app_files.go` / `resource_bindings.go`：薄壳转发（`ToggleModelEnable` 传 `a.ysmRoot()`、`DeleteResourcePack` 传 `a.ysmRoot()`、`ImportModelFolder` 传 `GetRepoRoot("ysm")`）
 - `go/scanner/`：扫描缓存失效（`InvalidatePath` / 整组导入后 `InvalidateCache`）
 - `go/types/`：`IsYsmEntryJSON` 辅助（`ysm.json` 识别）、`IsSupportedExt`、`ImportFileItem`、`ModelEntry`
-- 前端拖拽整组入口见 [import_queue](./import_queue.md)（`import-executor.importFolder` → `ImportModelFolder`）
+- 前端拖拽整组入口见 [import_queue](./import-queue.md)（`import-executor.importFolder` → `ImportModelFolder`）
 
 ## 不变量
 

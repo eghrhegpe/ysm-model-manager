@@ -20,7 +20,7 @@ use_when:
 
 ## 概览
 
-前端资源类型常量与注册表加载工具。与 [resource_registry](./resource_registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/registry.ts`；本卡讲 `utils/` 下的两套工具 —— 静态常量表（同步、直接 import）与轻量注册表加载器（异步、走 Wails binding）。
+前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/registry.ts`；本卡讲 `utils/` 下的两套工具 —— 静态常量表（同步、直接 import）与轻量注册表加载器（异步、走 Wails binding）。
 
 ## 核心职责
 
@@ -52,7 +52,7 @@ use_when:
 
 ## 相关
 
-- [resource_registry](./resource_registry.md) — 单一事实源 + services/registry.ts
-- [utils_extensions](./utils_extensions.md) — 扩展名映射
-- [wails_bridge](./wails_bridge.md) — getApp() 桥接
+- [resource_registry](./resource-registry.md) — 单一事实源 + services/registry.ts
+- [utils_extensions](./utils-extensions.md) — 扩展名映射
+- [wails_bridge](./wails-bridge.md) — getApp() 桥接
 - `frontend/src/utils/resource/resource-types.test.js` — 单元测试（验证入口）

@@ -40,8 +40,8 @@ use_when:
 
 ## 与其他子系统关系
 
-- 被 [dialog_rename](./dialog_rename.md)、[dialog_batch_rename](./dialog_batch_rename.md)、[dialog_tag_editor](./dialog_tag_editor.md)、[dialog_adv_filter](./dialog_adv_filter.md) 复用原语与样式类
-- 被业务层大量直接调用 `modalConfirm` 做破坏性操作防呆：[recycle_bin](./recycle_bin.md)（清空/删除）、[global_handlers](./global_handlers.md)（清空整合包）、[community_feature](./community_feature.md)（大文件下载）、[import_queue](./import_queue.md)（覆盖导入）
+- 被 [dialog_rename](./dialog-rename.md)、[dialog_batch_rename](./dialog-batch-rename.md)、[dialog_tag_editor](./dialog-tag-editor.md)、[dialog_adv_filter](./dialog-adv-filter.md) 复用原语与样式类
+- 被业务层大量直接调用 `modalConfirm` 做破坏性操作防呆：[recycle_bin](./recycle-bin.md)（清空/删除）、[global_handlers](./global-handlers.md)（清空整合包）、[community_feature](./community-feature.md)（大文件下载）、[import_queue](./import-queue.md)（覆盖导入）
 - version-updater 复用其 `esc` 导出
 
 ## 不变量
@@ -54,7 +54,7 @@ use_when:
 
 ## 相关
 
-- [dialog_rename](./dialog_rename.md) — 重命名弹窗
-- [dialog_batch_rename](./dialog_batch_rename.md) — 批量重命名弹窗
-- [dialog_tag_editor](./dialog_tag_editor.md) — 标签编辑器
-- [dialog_adv_filter](./dialog_adv_filter.md) — 高级筛选弹窗
+- [dialog_rename](./dialog-rename.md) — 重命名弹窗
+- [dialog_batch_rename](./dialog-batch-rename.md) — 批量重命名弹窗
+- [dialog_tag_editor](./dialog-tag-editor.md) — 标签编辑器
+- [dialog_adv_filter](./dialog-adv-filter.md) — 高级筛选弹窗

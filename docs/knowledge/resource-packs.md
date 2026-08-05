@@ -39,10 +39,10 @@ use_when:
 
 ## 与其他子系统关系
 
-- 由 [app_content](./app_content.md) 的 `_bindTabs` 在首次切到对应 tab 时调用（app-content 顶层静态 import 本模块，非动态 import 懒加载），返回的 cleanup 收进 `_unsubs`
-- 实际业务（扫描、导入、启用/禁用、删除）在 [app_resource_manager](./app_resource_manager.md) 组件内
-- 资源类型定义以 [resource_registry](./resource_registry.md)（resource_types.json）为单一事实来源，本文件不硬编码子目录/扩展名
-- 资源包 mcmeta 解析等后端能力见 [go_packs](./go_packs.md)
+- 由 [app_content](./app-content.md) 的 `_bindTabs` 在首次切到对应 tab 时调用（app-content 顶层静态 import 本模块，非动态 import 懒加载），返回的 cleanup 收进 `_unsubs`
+- 实际业务（扫描、导入、启用/禁用、删除）在 [app_resource_manager](./app-resource-manager.md) 组件内
+- 资源类型定义以 [resource_registry](./resource-registry.md)（resource_types.json）为单一事实来源，本文件不硬编码子目录/扩展名
+- 资源包 mcmeta 解析等后端能力见 [go_packs](./go-packs.md)
 
 ## 不变量
 
@@ -53,6 +53,6 @@ use_when:
 
 ## 相关
 
-- [app_resource_manager](./app_resource_manager.md) — 实际渲染与业务逻辑
-- [app_content](./app_content.md) — tab 懒加载宿主
-- [resource_registry](./resource_registry.md) — 资源类型注册表
+- [app_resource_manager](./app-resource-manager.md) — 实际渲染与业务逻辑
+- [app_content](./app-content.md) — tab 懒加载宿主
+- [resource_registry](./resource-registry.md) — 资源类型注册表

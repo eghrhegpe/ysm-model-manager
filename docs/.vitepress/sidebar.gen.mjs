@@ -315,167 +315,167 @@ export const autoSidebar = [
       },
       {
         "text": "动画系统 animation",
-        "link": "/knowledge/animation_system"
+        "link": "/knowledge/animation-system"
       },
       {
         "text": "主内容页 app-content",
-        "link": "/knowledge/app_content"
+        "link": "/knowledge/app-content"
       },
       {
         "text": "组件入口 app-modules",
-        "link": "/knowledge/app_modules"
+        "link": "/knowledge/app-modules"
       },
       {
         "text": "顶部导航 app-nav",
-        "link": "/knowledge/app_nav"
+        "link": "/knowledge/app-nav"
       },
       {
         "text": "预览面板 app-preview",
-        "link": "/knowledge/app_preview"
+        "link": "/knowledge/app-preview"
       },
       {
         "text": "资源管理页 app-resource-manager",
-        "link": "/knowledge/app_resource_manager"
+        "link": "/knowledge/app-resource-manager"
       },
       {
         "text": "侧边栏 app-sidebar",
-        "link": "/knowledge/app_sidebar"
+        "link": "/knowledge/app-sidebar"
       },
       {
         "text": "整合包同步页 app-sync-manager",
-        "link": "/knowledge/app_sync_manager"
+        "link": "/knowledge/app-sync-manager"
       },
       {
         "text": "Toast 通知 app-toast",
-        "link": "/knowledge/app_toast"
+        "link": "/knowledge/app-toast"
       },
       {
         "text": "资源树 app-tree",
-        "link": "/knowledge/app_tree"
+        "link": "/knowledge/app-tree"
       },
       {
         "text": "社区下载 community",
-        "link": "/knowledge/community_feature"
+        "link": "/knowledge/community-feature"
       },
       {
         "text": "右键菜单系统",
-        "link": "/knowledge/context_menu"
+        "link": "/knowledge/context-menu"
       },
       {
         "text": "高级筛选 adv-filter",
-        "link": "/knowledge/dialog_adv_filter"
+        "link": "/knowledge/dialog-adv-filter"
       },
       {
         "text": "批量重命名 batch-rename",
-        "link": "/knowledge/dialog_batch_rename"
+        "link": "/knowledge/dialog-batch-rename"
       },
       {
         "text": "弹窗基座 modal",
-        "link": "/knowledge/dialog_modal"
+        "link": "/knowledge/dialog-modal"
       },
       {
         "text": "重命名弹窗 rename",
-        "link": "/knowledge/dialog_rename"
+        "link": "/knowledge/dialog-rename"
       },
       {
         "text": "标签编辑器 tag-editor",
-        "link": "/knowledge/dialog_tag_editor"
+        "link": "/knowledge/dialog-tag-editor"
       },
       {
         "text": "事件总线 bus.ts",
-        "link": "/knowledge/event_bus"
+        "link": "/knowledge/event-bus"
       },
       {
         "text": "全局事件处理 global-handlers",
-        "link": "/knowledge/global_handlers"
+        "link": "/knowledge/global-handlers"
       },
       {
         "text": "头像 go/avatar",
-        "link": "/knowledge/go_avatar"
+        "link": "/knowledge/go-avatar"
       },
       {
         "text": "去重 go/dedup",
-        "link": "/knowledge/go_dedup"
+        "link": "/knowledge/go-dedup"
       },
       {
         "text": "下载器 go/download",
-        "link": "/knowledge/go_download"
+        "link": "/knowledge/go-download"
       },
       {
         "text": "错误包装 go/errors",
-        "link": "/knowledge/go_errors"
+        "link": "/knowledge/go-errors"
       },
       {
         "text": "文件遍历 go/fsutil",
-        "link": "/knowledge/go_fsutil"
+        "link": "/knowledge/go-fsutil"
       },
       {
         "text": "Geometry 存档 go/geometry",
-        "link": "/knowledge/go_geometry"
+        "link": "/knowledge/go-geometry"
       },
       {
         "text": "导入策略 go/importer",
-        "link": "/knowledge/go_importer"
+        "link": "/knowledge/go-importer"
       },
       {
         "text": "模型安装 go/installer",
-        "link": "/knowledge/go_installer"
+        "link": "/knowledge/go-installer"
       },
       {
         "text": "Litematic 解析 go/litematic",
-        "link": "/knowledge/go_litematic"
+        "link": "/knowledge/go-litematic"
       },
       {
         "text": "导入日志 go/logs",
-        "link": "/knowledge/go_logs"
+        "link": "/knowledge/go-logs"
       },
       {
         "text": "资源包 mcmeta go/packs",
-        "link": "/knowledge/go_packs"
+        "link": "/knowledge/go-packs"
       },
       {
         "text": "路径安全 go/paths",
-        "link": "/knowledge/go_paths"
+        "link": "/knowledge/go-paths"
       },
       {
         "text": "回收站 go/recycle",
-        "link": "/knowledge/go_recycle"
+        "link": "/knowledge/go-recycle"
       },
       {
         "text": "整合包同步 go/sync",
-        "link": "/knowledge/go_sync"
+        "link": "/knowledge/go-sync"
       },
       {
         "text": "标签系统 go/tags",
-        "link": "/knowledge/go_tags"
+        "link": "/knowledge/go-tags"
       },
       {
         "text": "3D 骨骼 spec go/threejs",
-        "link": "/knowledge/go_threejs"
+        "link": "/knowledge/go-threejs"
       },
       {
         "text": "共享类型 go/types",
-        "link": "/knowledge/go_types"
+        "link": "/knowledge/go-types"
       },
       {
         "text": "自动更新 go/updater",
-        "link": "/knowledge/go_updater"
+        "link": "/knowledge/go-updater"
       },
       {
         "text": "版本号 go/version",
-        "link": "/knowledge/go_version"
+        "link": "/knowledge/go-version"
       },
       {
         "text": "文件监听 go/watcher",
-        "link": "/knowledge/go_watcher"
+        "link": "/knowledge/go-watcher"
       },
       {
         "text": "YSM 解析 go/ysm",
-        "link": "/knowledge/go_ysm_parser"
+        "link": "/knowledge/go-ysm-parser"
       },
       {
         "text": "导入队列 import-queue",
-        "link": "/knowledge/import_queue"
+        "link": "/knowledge/import-queue"
       },
       {
         "text": "2D 预览渲染 model2d",
@@ -487,11 +487,11 @@ export const autoSidebar = [
       },
       {
         "text": "资历最深模型 oldest-models",
-        "link": "/knowledge/oldest_models"
+        "link": "/knowledge/oldest-models"
       },
       {
         "text": "页面状态管理 page-store.ts",
-        "link": "/knowledge/page_store"
+        "link": "/knowledge/page-store"
       },
       {
         "text": "知识卡系统",
@@ -499,15 +499,15 @@ export const autoSidebar = [
       },
       {
         "text": "回收站界面 recycle-bin",
-        "link": "/knowledge/recycle_bin"
+        "link": "/knowledge/recycle-bin"
       },
       {
         "text": "资源包功能 resource-packs",
-        "link": "/knowledge/resource_packs"
+        "link": "/knowledge/resource-packs"
       },
       {
         "text": "资源注册表 registry",
-        "link": "/knowledge/resource_registry"
+        "link": "/knowledge/resource-registry"
       },
       {
         "text": "AI 路由表",
@@ -515,7 +515,7 @@ export const autoSidebar = [
       },
       {
         "text": "共享样式 shared-styles",
-        "link": "/knowledge/shared_styles"
+        "link": "/knowledge/shared-styles"
       },
       {
         "text": "主题系统 theme",
@@ -523,63 +523,63 @@ export const autoSidebar = [
       },
       {
         "text": "文件名显示 display",
-        "link": "/knowledge/utils_display"
+        "link": "/knowledge/utils-display"
       },
       {
         "text": "DOM 工具 dom",
-        "link": "/knowledge/utils_dom"
+        "link": "/knowledge/utils-dom"
       },
       {
         "text": "错误处理 errors",
-        "link": "/knowledge/utils_errors"
+        "link": "/knowledge/utils-errors"
       },
       {
         "text": "截图与导出 export",
-        "link": "/knowledge/utils_export"
+        "link": "/knowledge/utils-export"
       },
       {
         "text": "扩展名映射 extensions",
-        "link": "/knowledge/utils_extensions"
+        "link": "/knowledge/utils-extensions"
       },
       {
         "text": "格式化工具 fmt",
-        "link": "/knowledge/utils_fmt"
+        "link": "/knowledge/utils-fmt"
       },
       {
         "text": "图标映射 icon",
-        "link": "/knowledge/utils_icon"
+        "link": "/knowledge/utils-icon"
       },
       {
         "text": "MC 格式判定 mc-format",
-        "link": "/knowledge/utils_mc_format"
+        "link": "/knowledge/utils-mc-format"
       },
       {
         "text": "常量与调试 constants/debug",
-        "link": "/knowledge/utils_misc"
+        "link": "/knowledge/utils-misc"
       },
       {
         "text": "资源类型工具 resource-types",
-        "link": "/knowledge/utils_resource_types"
+        "link": "/knowledge/utils-resource-types"
       },
       {
         "text": "摘要生成 summarize",
-        "link": "/knowledge/utils_summarize"
+        "link": "/knowledge/utils-summarize"
       },
       {
         "text": "版本更新 version-updater",
-        "link": "/knowledge/version_updater"
+        "link": "/knowledge/version-updater"
       },
       {
         "text": "Wails Binding API 总览 internal/app",
-        "link": "/knowledge/wails_bindings"
+        "link": "/knowledge/wails-bindings"
       },
       {
         "text": "Wails 桥接 app.ts",
-        "link": "/knowledge/wails_bridge"
+        "link": "/knowledge/wails-bridge"
       },
       {
         "text": "WASM 解析器 ysm-parser",
-        "link": "/knowledge/ysm_wasm"
+        "link": "/knowledge/ysm-wasm"
       }
     ]
   },

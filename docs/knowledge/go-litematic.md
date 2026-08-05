@@ -46,7 +46,7 @@ use_when:
 
 - 被 `internal/app/resource_bindings.go` 调用（GetLitematicMeta / 三种体素构建 / schematic 与 nbt 摘要等 binding）
 - 依赖 `github.com/Tnze/go-mc/nbt`（NBT 解码）、`go/types`（LitematicMeta/LitematicVoxelData/VoxelGroup）
-- 资源类型归属由 [resource_registry](./resource_registry.md) 的 `litematic` / `create-blueprint` 条目定义
+- 资源类型归属由 [resource_registry](./resource-registry.md) 的 `litematic` / `create-blueprint` 条目定义
 
 ## 不变量
 
@@ -62,6 +62,6 @@ use_when:
 
 ## 相关
 
-- [go_types](./go_types.md) — LitematicMeta / LitematicVoxelData 结构
-- [resource_registry](./resource_registry.md) — litematic/create-blueprint 类型定义
-- [wails_bridge](./wails_bridge.md) — 投影解析 binding
+- [go_types](./go-types.md) — LitematicMeta / LitematicVoxelData 结构
+- [resource_registry](./resource-registry.md) — litematic/create-blueprint 类型定义
+- [wails_bridge](./wails-bridge.md) — 投影解析 binding

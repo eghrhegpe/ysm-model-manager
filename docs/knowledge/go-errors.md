@@ -39,5 +39,5 @@ use_when:
 
 ## 相关
 
-- [wails_bridge](./wails_bridge.md) — binding 错误返回的消费侧
+- [wails_bridge](./wails-bridge.md) — binding 错误返回的消费侧
 - AGENTS.md 治理红线 §三.3（UI 安全：异常路径必须有 toast 反馈）

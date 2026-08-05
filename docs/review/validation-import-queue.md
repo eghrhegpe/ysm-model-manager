@@ -8,7 +8,7 @@
 ## 1. 验证目标
 
 - 模块：`frontend/src/features/import-queue.ts`（本轮未改动，保证冷审查）
-- 知识卡单元：`docs/knowledge/import_queue.md`
+- 知识卡单元：`docs/knowledge/import-queue.md`
 - 验证命题：**子代理思维链对主模型不可见的前提下，流水线仍能产出可信、可独立核实的审查结论。**
 
 ---

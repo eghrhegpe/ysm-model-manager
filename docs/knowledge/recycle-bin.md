@@ -43,11 +43,11 @@ use_when:
 
 ## 与其他子系统关系
 
-- 由 [app_content](./app_content.md) 懒加载初始化，清理函数收进 `_unsubs`
-- 后端删除/恢复实现见 [go_recycle](./go_recycle.md)（删除策略表：符号链接→直接删、硬链接 nlink>1→直接删、普通→优先 `rename` 移入 `.recycle`、仅 EXDEV 跨设备→复制后删，即致命陷阱 #8）
+- 由 [app_content](./app-content.md) 懒加载初始化，清理函数收进 `_unsubs`
+- 后端删除/恢复实现见 [go_recycle](./go-recycle.md)（删除策略表：符号链接→直接删、硬链接 nlink>1→直接删、普通→优先 `rename` 移入 `.recycle`、仅 EXDEV 跨设备→复制后删，即致命陷阱 #8）
 - 条目整组合并（ADR-038 D3.4）由后端 `recycle.List` 完成，前端一条即一个模型（目录或单文件）
-- 恢复/删除/清空后发 `stats:refresh` + `tree:reload` 联动 [app_tree](./app_tree.md) 与统计
-- 确认弹窗走 [dialog_modal](./dialog_modal.md)，反馈走 [app_toast](./app_toast.md)
+- 恢复/删除/清空后发 `stats:refresh` + `tree:reload` 联动 [app_tree](./app-tree.md) 与统计
+- 确认弹窗走 [dialog_modal](./dialog-modal.md)，反馈走 [app_toast](./app-toast.md)
 
 ## 不变量
 
@@ -60,7 +60,7 @@ use_when:
 
 ## 相关
 
-- [go_recycle](./go_recycle.md) — 后端软删除/恢复实现与删除策略
-- [dialog_modal](./dialog_modal.md) — modalConfirm 确认弹窗
-- [app_content](./app_content.md) — 宿主组件与 tab 懒加载
-- [app_tree](./app_tree.md) — 恢复后联动刷新的资源树
+- [go_recycle](./go-recycle.md) — 后端软删除/恢复实现与删除策略
+- [dialog_modal](./dialog-modal.md) — modalConfirm 确认弹窗
+- [app_content](./app-content.md) — 宿主组件与 tab 懒加载
+- [app_tree](./app-tree.md) — 恢复后联动刷新的资源树

@@ -52,5 +52,5 @@ use_when:
 ## 相关
 
 - [model3d](./model3d.md) — 场景构建与 screenshotPreview
-- [app_preview](./app_preview.md) — 预览面板消费方
-- [wails_bindings](./wails_bindings.md) — GetModel3DSpec 等 Go binding
+- [app_preview](./app-preview.md) — 预览面板消费方
+- [wails_bindings](./wails-bindings.md) — GetModel3DSpec 等 Go binding

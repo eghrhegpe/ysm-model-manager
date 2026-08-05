@@ -40,9 +40,9 @@ use_when:
 
 ## 与其他子系统关系
 
-- 弹窗登记与结算均复用 [dialog_modal](./dialog_modal.md) 的 `registerDlg` / `closeDlg` 与 dlg-* 样式类；HTML 转义走共享 `esc`（utils/dom/html.ts），本文件仅保留薄封装的局部 `close()`
+- 弹窗登记与结算均复用 [dialog_modal](./dialog-modal.md) 的 `registerDlg` / `closeDlg` 与 dlg-* 样式类；HTML 转义走共享 `esc`（utils/dom/html.ts），本文件仅保留薄封装的局部 `close()`
 - 实际批量改名执行（逐个 `RenameFile` + 失败汇总）在调用方 `app-tree/bus-handlers.ts`；右键菜单只负责派发 `dir:batch-rename` / `batch:rename`
-- 命名解析口径与 [dialog_rename](./dialog_rename.md) 一致（parseModelName）
+- 命名解析口径与 [dialog_rename](./dialog-rename.md) 一致（parseModelName）
 
 ## 不变量
 
@@ -54,7 +54,7 @@ use_when:
 
 ## 相关
 
-- [dialog_modal](./dialog_modal.md) — 弹窗基座与样式
-- [dialog_rename](./dialog_rename.md) — 单文件重命名（同构命名规范）
-- [app_tree](./app_tree.md) — 目录右键批量重命名入口
-- [context_menu](./context_menu.md) — 右键菜单映射
+- [dialog_modal](./dialog-modal.md) — 弹窗基座与样式
+- [dialog_rename](./dialog-rename.md) — 单文件重命名（同构命名规范）
+- [app_tree](./app-tree.md) — 目录右键批量重命名入口
+- [context_menu](./context-menu.md) — 右键菜单映射

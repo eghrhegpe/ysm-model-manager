@@ -37,7 +37,7 @@ use_when:
 
 ## 与其他子系统关系
 
-- `treeCSS` 被 [app_tree](./app_tree.md) 组件注入使用；`btnBaseCSS` 被各 Shadow DOM 组件（tree/sidebar/sync-manager 等）拼接复用
+- `treeCSS` 被 [app_tree](./app-tree.md) 组件注入使用；`btnBaseCSS` 被各 Shadow DOM 组件（tree/sidebar/sync-manager 等）拼接复用
 - 所有变量值来自主题系统（frontend/css/variables.css，见知识卡 [theme](./theme.md)），Shadow DOM 跨主题特判用 `:host-context(.theme-*)`
 - 按钮交互一致性（UX 维度「交互一致性」）依赖全应用按钮统一走 `.btn-base`
 
@@ -51,5 +51,5 @@ use_when:
 ## 相关
 
 - [theme](./theme.md) — CSS 变量来源与主题切换
-- [app_tree](./app_tree.md) — treeCSS 消费方
+- [app_tree](./app-tree.md) — treeCSS 消费方
 - `docs/Design.md` — 唯一设计规范（按钮/动画口径）

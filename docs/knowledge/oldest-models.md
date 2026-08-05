@@ -41,10 +41,10 @@ use_when:
 
 ## 与其他子系统关系
 
-- 由 [app_content](./app_content.md) 的 `_bindTabs` 在 oldest tab 首次激活时懒加载，清理函数收进 `_unsubs`
-- 条目扫描后端与去重统计口径相关：[go_types](./go_types.md)（ModelEntry）、[go_dedup](./go_dedup.md)（重复判定同样基于 hash）
-- 卡片点击后由 [app_preview](./app_preview.md) 展示模型详情
-- 健康度配色/字号全走 CSS 变量（`var(--free)`/`var(--paid)`/`var(--tag-amber)` 等），见 [shared_styles](./shared_styles.md) 与主题系统
+- 由 [app_content](./app-content.md) 的 `_bindTabs` 在 oldest tab 首次激活时懒加载，清理函数收进 `_unsubs`
+- 条目扫描后端与去重统计口径相关：[go_types](./go-types.md)（ModelEntry）、[go_dedup](./go-dedup.md)（重复判定同样基于 hash）
+- 卡片点击后由 [app_preview](./app-preview.md) 展示模型详情
+- 健康度配色/字号全走 CSS 变量（`var(--free)`/`var(--paid)`/`var(--tag-amber)` 等），见 [shared_styles](./shared-styles.md) 与主题系统
 
 ## 不变量
 
@@ -55,6 +55,6 @@ use_when:
 
 ## 相关
 
-- [app_content](./app_content.md) — tab 懒加载宿主
-- [app_preview](./app_preview.md) — 卡片点击后的预览
-- [go_dedup](./go_dedup.md) — 重复统计的同源 hash 口径
+- [app_content](./app-content.md) — tab 懒加载宿主
+- [app_preview](./app-preview.md) — 卡片点击后的预览
+- [go_dedup](./go-dedup.md) — 重复统计的同源 hash 口径

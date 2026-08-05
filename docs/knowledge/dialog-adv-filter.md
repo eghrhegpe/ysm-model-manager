@@ -40,10 +40,10 @@ use_when:
 
 ## 与其他子系统关系
 
-- 弹窗基座复用 [dialog_modal](./dialog_modal.md)
-- 后端搜索能力见 [wails_bindings](./wails_bindings.md)（SearchModels 的 6 范围 + 关键字参数）
-- 标签条件与 [dialog_tag_editor](./dialog_tag_editor.md) 写入的标签同源（go/tags，见 [go_tags](./go_tags.md)）
-- 筛选结果展示在 [app_tree](./app_tree.md)（`filter:results` 事件）
+- 弹窗基座复用 [dialog_modal](./dialog-modal.md)
+- 后端搜索能力见 [wails_bindings](./wails-bindings.md)（SearchModels 的 6 范围 + 关键字参数）
+- 标签条件与 [dialog_tag_editor](./dialog-tag-editor.md) 写入的标签同源（go/tags，见 [go_tags](./go-tags.md)）
+- 筛选结果展示在 [app_tree](./app-tree.md)（`filter:results` 事件）
 
 ## 不变量
 
@@ -54,7 +54,7 @@ use_when:
 
 ## 相关
 
-- [dialog_modal](./dialog_modal.md) — 弹窗基座
-- [app_tree](./app_tree.md) — 筛选入口与结果展示
-- [go_tags](./go_tags.md) — 标签数据来源
-- [dialog_tag_editor](./dialog_tag_editor.md) — 标签编辑
+- [dialog_modal](./dialog-modal.md) — 弹窗基座
+- [app_tree](./app-tree.md) — 筛选入口与结果展示
+- [go_tags](./go-tags.md) — 标签数据来源
+- [dialog_tag_editor](./dialog-tag-editor.md) — 标签编辑

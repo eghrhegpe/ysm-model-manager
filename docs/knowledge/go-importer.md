@@ -53,7 +53,7 @@ use_when:
 - `internal/app/app_install.go`：薄壳转发 `ImportFromBase64`（注入 `a.GetRepoRoot` 与 `App.logger.Add`）与 `DetectZipType`
 - `internal/app/resource_bindings.go`：按 rtype `importer.Get(rtype)` 取策略执行本地路径导入
 - `go/types/`：`IsSupportedExt` / `IsYsmEntryJSON` / `ExtBelongsTo` / `AppError`
-- 前端调用方见 [import_queue](./import_queue.md)（`import-executor.directImport` → `ImportModelFile`）
+- 前端调用方见 [import_queue](./import-queue.md)（`import-executor.directImport` → `ImportModelFile`）
 
 ## 不变量
 
@@ -66,4 +66,4 @@ use_when:
 ## 相关
 
 - ADR-003（逻辑下沉）
-- [import_queue](./import_queue.md) — 前端导入执行器与导入 tab
+- [import_queue](./import-queue.md) — 前端导入执行器与导入 tab

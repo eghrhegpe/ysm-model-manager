@@ -21,7 +21,7 @@ use_when:
 
 ## 概览
 
-YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64 内嵌的 WASM 二进制与 Emscripten 胶水代码。采用 `Module.wasmBinary` 注入方式加载，规避 WebView2 的 fetch() 限制。Go 端兜底解析见 [go_ysm_parser](./go_ysm_parser.md)。
+YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64 内嵌的 WASM 二进制与 Emscripten 胶水代码。采用 `Module.wasmBinary` 注入方式加载，规避 WebView2 的 fetch() 限制。Go 端兜底解析见 [go_ysm_parser](./go-ysm-parser.md)。
 
 ## 核心职责
 
@@ -44,8 +44,8 @@ YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-p
 ## 与其他子系统关系
 
 - 唯一消费方：`app-preview/preview-wasm.ts`（预览面板 WASM 解码分支，decodeYsmViaWasm）
-- 解码产物（模型 JSON/纹理/动画）流向 preview-cache 与 [animation_system](./animation_system.md) 的 parseBedrockAnimationJSON
-- 兜底链路：WASM 不可用时回退 Go 端解析（[go_ysm_parser](./go_ysm_parser.md)）
+- 解码产物（模型 JSON/纹理/动画）流向 preview-cache 与 [animation_system](./animation-system.md) 的 parseBedrockAnimationJSON
+- 兜底链路：WASM 不可用时回退 Go 端解析（[go_ysm_parser](./go-ysm-parser.md)）
 
 ## 不变量
 
@@ -56,6 +56,6 @@ YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-p
 
 ## 相关
 
-- [go_ysm_parser](./go_ysm_parser.md) — Go 端兜底解析
-- [app_preview](./app_preview.md) — 预览面板消费方
-- [animation_system](./animation_system.md) — 解码出的动画 JSON 解析
+- [go_ysm_parser](./go-ysm-parser.md) — Go 端兜底解析
+- [app_preview](./app-preview.md) — 预览面板消费方
+- [animation_system](./animation-system.md) — 解码出的动画 JSON 解析

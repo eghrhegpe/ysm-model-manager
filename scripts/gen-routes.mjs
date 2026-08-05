@@ -84,11 +84,12 @@ function buildRoutes() {
 
     const kind = getScalar(fm, 'kind') || f.replace(/\.md$/, '');
     const name = getScalar(fm, 'name') || kind;
+    const fileStem = f.replace(/\.md$/, ''); // 链接目标用真实文件名(kebab)，与 kind(snake) 解耦
     const keywords = getList(fm, 'use_when');
 
     for (const kw of keywords) {
       if (!keywordMap[kw]) keywordMap[kw] = [];
-      keywordMap[kw].push({ kind, name });
+      keywordMap[kw].push({ kind, name, fileStem });
     }
   }
 
@@ -103,7 +104,7 @@ function buildRoutes() {
 
   for (const kw of Object.keys(keywordMap).sort()) {
     for (const target of keywordMap[kw]) {
-      out += `| ${kw} | [${target.kind}](${target.kind}.md) | ${target.name} |\n`;
+      out += `| ${kw} | [${target.kind}](${target.fileStem}.md) | ${target.name} |\n`;
     }
   }
 

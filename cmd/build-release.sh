@@ -57,9 +57,11 @@ mkdir -p "$OUTPUT_DIR"
 echo -e "\033[36m🔨 构建版本 $VER_TAG ...\033[0m"
 
 # 0. 生成 Wails 3 绑定（前端源，必须在 vite build 之前生成）
+#    契约：必须带 -ts 产出 .ts，前端以 .js 后缀 import、由 vite wailsBindingsResolve 重定向；
+#    漏 -ts 会生成 .js 破坏该契约（回归教训 2026-08-05）。
 echo -e "\033[33m🧬 生成 Wails 3 绑定...\033[0m"
 cd "$PROJECT_ROOT"
-if ! wails3 generate bindings 2>&1; then
+if ! wails3 generate bindings -ts 2>&1; then
   echo -e "\033[31m❌ 绑定生成失败（请确认 wails3 CLI 已安装且在 PATH 中）\033[0m" >&2
   exit 1
 fi

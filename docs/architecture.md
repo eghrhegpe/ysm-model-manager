@@ -64,6 +64,8 @@ YSM 模型管理器是一个桌面端工具，用于管理 Minecraft **YSM（Yet
 
 Wails v3 **Service 反射绑定**：`*app.App` 的所有导出方法自动暴露给前端，**无 `//export` 注解**。`wails3 generate bindings` 产出 `frontend/bindings/ysm-model-manager/internal/app/app.ts`（`cmd/build-release.ps1:37-46`），前端以 `.js` 后缀 import，由 `vite.config.js` 的 `wailsBindingsResolve` 插件重定向到 `.ts`。
 
+> **🔒 硬性契约（2026-08-05 回归后固化）**：bindings **必须**以 `wails3 generate bindings -ts` 生成（产出 `.ts`）；**禁止**无 `-ts` 调用——会生成 `.js` 并 `-clean` 清掉跟踪的 `.ts`，破坏上方 import 重定向契约。带 `-ts` 的入口：`build/Taskfile.yml:160`（build 任务）、`cmd/build-release.ps1`、`cmd/build-release.sh`。若误跑无 `-ts` 生成导致 `.ts` 被删，立即用 `wails3 generate bindings -ts -clean=true` 恢复。
+
 反向通道（Go → 前端事件）：`a.app.Event.Emit(...)`，例如 `app.go:101` 的 `config-loaded`、`app_download.go:62` 的 `queue:status`。
 
 ---

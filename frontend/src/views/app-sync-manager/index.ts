@@ -113,28 +113,35 @@ export class AppSyncManager extends HTMLElement {
     const unsub = bus.on("stats:refresh", () => {
       if (!this.isConnected) return;
       dbg("sync-manager", "stats:refresh 收到");
-      this._loadData().then(() => {
-        dbg(
-          "sync-manager",
-          "_loadData 完成, items:",
-          this._allItems ? this._allItems.length : 0,
-        );
-        if (this._allItems && this._allItems.length) {
-          const counts: Record<string, number> = {};
-          this._allItems.forEach((i) => {
-            counts[i.status] = (counts[i.status] || 0) + 1;
-          });
-          dbg("sync-manager", "重渲染, 计数:", counts);
-          this._render();
-        }
-      });
+      this._loadData()
+        .then(() => {
+          dbg(
+            "sync-manager",
+            "_loadData 完成, items:",
+            this._allItems ? this._allItems.length : 0,
+          );
+          if (this._allItems && this._allItems.length) {
+            const counts: Record<string, number> = {};
+            this._allItems.forEach((i) => {
+              counts[i.status] = (counts[i.status] || 0) + 1;
+            });
+            dbg("sync-manager", "重渲染, 计数:", counts);
+            this._render();
+          }
+        })
+        .catch((err) => {
+          console.warn("[sync-manager] stats:refresh 重载失败:", err);
+        });
     });
     this._unsubs = this._unsubs || [];
     this._unsubs.push(unsub);
   }
 
   disconnectedCallback(): void {
-    if (this._unsubs) this._unsubs.forEach((fn) => fn());
+    if (this._unsubs) {
+      this._unsubs.forEach((fn) => fn());
+      this._unsubs = [];
+    }
   }
 
   async _loadTypeConfig(): Promise<void> {

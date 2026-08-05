@@ -45,6 +45,8 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   _unsubs: Array<() => void> = [];
   private _typeCache: Array<{ id: string; name?: string; icon?: string }> = [];
   private _typeReg: Record<string, { id: string; name?: string; icon?: string }> | null = null;
+  /** 预览代际计数：快速点 A（慢）→ B（快）时，丢弃过期加载的渲染，防并发覆盖 */
+  private _previewGen = 0;
 
   constructor() {
     super();
@@ -59,10 +61,11 @@ class AppPreview extends HTMLElement implements PreviewCtx {
     this._preloadTypeRegistry();
     this._unsubs.push(
       bus.on("model:select", async ({ path, isDir }) => {
+        ++this._previewGen; // 代际计数：子方法 await 后校验 gen !== _previewGen 即丢弃过期渲染
         if (isDir) {
-          this._showPackInfo(path);
+          await this._showPackInfo(path);
         } else {
-          this._showModelDetail(path);
+          await this._showModelDetail(path);
         }
       }),
     );
@@ -149,12 +152,15 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   }
 
   private async _showModelDetail(path: string): Promise<void> {
+    const gen = this._previewGen;
     // 检测文件类型
     let rtype = "";
     try {
       const { DetectResourceType } = await getApp();
       rtype = (await DetectResourceType(path)) || "";
     } catch (_) {}
+    // 过期守卫：await 期间用户已点其他文件，丢弃本次分流
+    if (gen !== this._previewGen) return;
     if (rtype === RESOURCE_TYPES.PACK) {
       showResourcePack(this, path);
       return;
@@ -187,10 +193,13 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   }
 
   private async _showPackInfo(dirPath: string): Promise<void> {
+    const gen = this._previewGen;
     this._root.innerHTML = `<div class="content" id="preview-content"><h3>📦 整合包</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
     try {
       const { GetPackInfo } = await getApp();
       const pack = await GetPackInfo(dirPath);
+      // 过期守卫：await 期间用户已点其他文件，丢弃本次渲染
+      if (gen !== this._previewGen) return;
       if (!pack || (!pack.name && !pack.description)) {
         const folderName = dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
         this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 文件夹</h3><div class="model-detail-title" style="font-size:13px;font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">该文件夹暂无整合包信息</div></div></div>`;

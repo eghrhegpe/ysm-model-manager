@@ -22,6 +22,9 @@ import { ROOT, SRC_DIR, walk, resolveImport, relPosix } from './_lib/scan-files.
 const JSON_OUT = process.argv.includes('--json');
 
 const IMPORT_RE = /(?:^|\n)\s*(?:import[\s\S]*?\sfrom\s+|import\s+|export\s*\{[^}]*\}\s*from\s+|export\s+\*\s+from\s+)['"]([^'"]+)['"]/g;
+// 动态 import('...')：任意位置（不要求行首/await），`import("x").catch(...)` 与 `await import("x")` 均覆盖。
+// 前导排除标识符字符，避免误匹配（如 import.meta / 变量名含 import 前缀的写法）。
+const DYNAMIC_IMPORT_RE = /(?:^|[^A-Za-z0-9_$])import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
 // ── 环检测（DFS 三色）─────────────────────────────────
 
@@ -80,6 +83,11 @@ function main() {
       // type-only import（`import type {...} from`）编译期擦除，不构成运行时依赖——
       // 计入会产生假阳性环（如 app-tree/events.ts `import type { AppTree }`）
       if (/^\s*import\s+type\b/.test(m[0])) continue;
+      const target = resolveImport(f, m[1], moduleSet);
+      if (target && target !== f) deps.add(target);
+    }
+    // 动态 import('...') 同样构成运行时依赖（加载即执行模块副作用）
+    for (const m of text.matchAll(DYNAMIC_IMPORT_RE)) {
       const target = resolveImport(f, m[1], moduleSet);
       if (target && target !== f) deps.add(target);
     }

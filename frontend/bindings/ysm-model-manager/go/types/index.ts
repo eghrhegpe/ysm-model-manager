@@ -12,6 +12,7 @@ export type {
     Bone2D,
     Cube2D,
     CustomFileInfo,
+    ImportFileItem,
     ImportLog,
     InstanceStatus,
     ModelEntry,

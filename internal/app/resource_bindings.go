@@ -314,10 +314,10 @@ func (a *App) ImportByType(rtype, srcPath string) string {
 // DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）：
 // src 为 ysm.json 时整组删除父目录（文件夹型模型），否则删除单文件。
 // 统一委托 fileops.DeleteModelFile，消除与 DeleteModelDir 的双轨语义。
-// root 传 FilesRoot 做目录提升守卫：防根级 ysm.json 清空整个仓库。
+// 守卫根传类型特定仓库根（ysm 用 a.ysmRoot()）：防根级 ysm.json 清空整个 ysm 仓库；
+// 守卫拒绝时 fileops 内部回退单文件删除。
 func (a *App) DeleteResourcePack(path string) error {
-	cfg := a.LoadAppConfig()
-	return fileops.DeleteModelFile(cfg.FilesRoot, path)
+	return fileops.DeleteModelFile(a.ysmRoot(), path)
 }
 
 // DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹

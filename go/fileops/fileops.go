@@ -356,7 +356,8 @@ func copyDirRecursive(srcDir, dstDir string) error {
 // DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）：
 // src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animation/语言资源随目录一起删）；
 // 其余文件删除单文件。消除「单文件删除 vs 目录删除」双轨语义入口。
-// root 为资源仓库根（可选，空则跳过守卫）：防止根级/盘符级 ysm.json 把整个仓库误删。
+// root 为资源类型仓库根（可选，空则跳过守卫）：防止根级/盘符级 ysm.json 把整个仓库误删；
+// 守卫拒绝时回退单文件删除（不整组、不误删仓库）。
 func DeleteModelFile(root, path string) error {
 	path = strings.TrimSpace(path)
 	if path == "" {
@@ -375,8 +376,14 @@ func DeleteModelFile(root, path string) error {
 				return err
 			}
 			rel, err := filepath.Rel(absRoot, absParent)
-			if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-				return fmt.Errorf("拒绝删除仓库根或其上级: %s", parent)
+			if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				// 仓库外路径（rel 无法判定或 .. 前缀）：显式拒绝，不静默降级——
+				// 否则只删 ysm.json 单文件会留下孤儿资源目录且前端误报「已删除」
+				return fmt.Errorf("拒绝删除仓库外路径: %s", path)
+			}
+			if rel == "." {
+				// 真正的根级 ysm.json（父目录 == 仓库根）：回退单文件删除（不整组提升，防误删仓库）
+				return os.Remove(path)
 			}
 		}
 		return os.RemoveAll(parent)
@@ -400,10 +407,14 @@ func ToggleModelEnable(root, path string) (bool, error) {
 		bannedParent := filepath.Dir(path)
 		if strings.HasSuffix(strings.ToLower(path), ".ban") {
 			// 文件自身也带 .ban（旧状态残留）：优先还原父目录再还原文件
-			_ = os.Rename(path, strings.TrimSuffix(path, ".ban"))
+			fileNew := path[:len(path)-len(".ban")]
+			if err := os.Rename(path, fileNew); err != nil {
+				return false, err
+			}
 		}
-		newPath := strings.TrimSuffix(bannedParent, ".ban")
-		if err := os.Rename(bannedParent, newPath); err != nil {
+		// 大小写不敏感去 .ban 后缀（Windows 上 .BAN 目录也能还原）
+		dirNew := bannedParent[:len(bannedParent)-len(".ban")]
+		if err := os.Rename(bannedParent, dirNew); err != nil {
 			return false, err
 		}
 		return true, nil // 整组启用

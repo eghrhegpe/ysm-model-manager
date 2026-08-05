@@ -101,29 +101,32 @@ export async function renderMultiAngle(
   ];
 
   const results: AngleShot[] = [];
-  for (const { name, theta } of angles) {
-    camera.position.set(
-      center.x + Math.sin(theta) * dist,
-      center.y,
-      center.z - Math.cos(theta) * dist,
-    );
-    camera.lookAt(center);
-    renderer.render(scene, camera);
-    results.push({
-      name,
-      base64: renderer.domElement.toDataURL("image/png").split(",")[1] || "",
-    });
-  }
-
-  scene.traverse((c) => {
-    const mesh = c as THREE.Mesh;
-    if (mesh.isMesh) {
-      mesh.geometry?.dispose();
-      if (Array.isArray(mesh.material))
-        mesh.material.forEach((m) => m.dispose());
-      else mesh.material?.dispose();
+  try {
+    for (const { name, theta } of angles) {
+      camera.position.set(
+        center.x + Math.sin(theta) * dist,
+        center.y,
+        center.z - Math.cos(theta) * dist,
+      );
+      camera.lookAt(center);
+      renderer.render(scene, camera);
+      results.push({
+        name,
+        base64: renderer.domElement.toDataURL("image/png").split(",")[1] || "",
+      });
     }
-  });
-  renderer.dispose();
-  return results;
+    return results;
+  } finally {
+    // toDataURL 抛异常（GPU 上下文丢失等）也必须释放资源，防 WebGL 泄漏
+    scene.traverse((c) => {
+      const mesh = c as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.geometry?.dispose();
+        if (Array.isArray(mesh.material))
+          mesh.material.forEach((m) => m.dispose());
+        else mesh.material?.dispose();
+      }
+    });
+    renderer.dispose();
+  }
 }

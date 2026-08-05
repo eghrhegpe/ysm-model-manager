@@ -82,7 +82,9 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 		}
 		return &MoveResult{Action: "deleted_link", Reason: "硬链接，已直接删除"}, nil
 	}
-	os.MkdirAll(tm.recycleDir, 0755)
+	if err := os.MkdirAll(tm.recycleDir, 0755); err != nil {
+		return nil, err // fail-fast：回收站目录创建失败（权限/磁盘满）提前暴露，避免后续 rename 报无关错误
+	}
 	rel, err := filepath.Rel(rootDir, src)
 	if err != nil {
 		return nil, err

@@ -27,8 +27,10 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 	if info.IsDir() {
 		// 目录格式资源包
 		metaPath := filepath.Join(path, "pack.mcmeta")
-		if meta, err := os.ReadFile(metaPath); err == nil {
-			data = meta
+		if meta, err := os.Open(metaPath); err == nil {
+			// 限制 pack.mcmeta 大小（1MB，合法文件通常 < 1KB），防畸形大文件读入内存
+			data, _ = io.ReadAll(io.LimitReader(meta, 1<<20))
+			meta.Close()
 		}
 		pngPath := filepath.Join(path, "pack.png")
 		if png, err := os.ReadFile(pngPath); err == nil {
@@ -48,7 +50,8 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 				if err != nil {
 					continue
 				}
-				readData, readErr := io.ReadAll(rc)
+				// 限制 pack.mcmeta 大小（1MB），与 pack.png 的 LimitReader 保护对齐
+				readData, readErr := io.ReadAll(io.LimitReader(rc, 1<<20))
 				rc.Close()
 				if readErr == nil {
 					data = readData

@@ -16,6 +16,32 @@ let dropOverlay: HTMLElement | null = null;
 let dragDepth = 0;
 const DROP_EXTS_STR = ALL_EXTS.join(" ");
 
+// ===== 拖拽诊断（临时埋点：排查 WebView2 全局拖拽失效，定位后移除）=====
+let _diagLog: string[] = [];
+const diag = (ev: string, stage: string, e: DragEvent, reason?: string): void => {
+  const target = e.target as HTMLElement | null;
+  const line =
+    `[dnd-diag] ${ev}.${stage}${reason ? " ⛔" + reason : ""} ` +
+    `page=${PageStore.currentPage} ` +
+    `types=[${e.dataTransfer ? Array.from(e.dataTransfer.types).join(",") : "(null)"}] ` +
+    `items=${e.dataTransfer?.items?.length ?? -1} ` +
+    `files=${e.dataTransfer?.files?.length ?? -1} ` +
+    `target=${target?.tagName ?? String(e.target)} ` +
+    `editable=${isEditable(e.target)} depth=${dragDepth}`;
+  _diagLog.push(line);
+  console.log(line);
+};
+const flushDiag = (tag: string): void => {
+  if (_diagLog.length === 0) return;
+  const tail = _diagLog.slice(-5).join("  |  ").replace(/\[dnd-diag\] /g, "");
+  bus.emit("toast:show", {
+    msg: "🧭 DnD 诊断 (" + tag + ") " + tail,
+    duration: 9000,
+    type: "info",
+  });
+  _diagLog = [];
+};
+
 const showDropOverlay = (hasModel?: boolean): void => {
   if (!dropOverlay || !document.body.contains(dropOverlay)) {
     if (dropOverlay) dropOverlay.remove();
@@ -63,23 +89,44 @@ const isEditable = (el: EventTarget | null): boolean => {
 };
 
 const onDragEnter = (e: DragEvent): void => {
+  diag("enter", "in", e);
   // 只在仓库页面显示拖拽遮罩
-  if (PageStore.currentPage !== "repository") return;
+  if (PageStore.currentPage !== "repository") {
+    diag("enter", "out", e, "page!=repository");
+    return;
+  }
   // 检测是否拖拽的是文件（items 在 dragover 阶段可能为空，用 types 更可靠）
-  if (!e.dataTransfer?.types?.includes("Files")) return;
-  if (isEditable(e.target)) return;
+  if (!e.dataTransfer?.types?.includes("Files")) {
+    diag("enter", "out", e, "types 无 Files");
+    return;
+  }
+  if (isEditable(e.target)) {
+    diag("enter", "out", e, "editable");
+    return;
+  }
   e.preventDefault();
   e.dataTransfer.dropEffect = "copy";
   dragDepth++;
   showDropOverlay(detectHasModel(e));
+  diag("enter", "ok", e, "遮罩已显示");
 };
 
 const onDragOver = (e: DragEvent): void => {
+  diag("over", "in", e);
   // 只在仓库页面显示拖拽遮罩
-  if (PageStore.currentPage !== "repository") return;
+  if (PageStore.currentPage !== "repository") {
+    diag("over", "out", e, "page!=repository");
+    return;
+  }
   // 检测是否拖拽的是文件（items 在 dragover 阶段可能为空，用 types 更可靠）
-  if (!e.dataTransfer?.types?.includes("Files")) return;
-  if (isEditable(e.target)) return;
+  if (!e.dataTransfer?.types?.includes("Files")) {
+    diag("over", "out", e, "types 无 Files");
+    return;
+  }
+  if (isEditable(e.target)) {
+    diag("over", "out", e, "editable");
+    return;
+  }
   e.preventDefault();
   e.dataTransfer.dropEffect = "copy";
   // 仅维持 drop 允许 + 刷新内容；遮罩隐藏完全由 leave/exit 决定，不再管理定时器
@@ -87,7 +134,11 @@ const onDragOver = (e: DragEvent): void => {
 };
 
 const onDragLeave = (e: DragEvent): void => {
-  if (PageStore.currentPage !== "repository") return;
+  diag("leave", "in", e);
+  if (PageStore.currentPage !== "repository") {
+    diag("leave", "out", e, "page!=repository");
+    return;
+  }
   // 真正离开浏览器视口：relatedTarget 为 null（光标离开文档），
   // 或坐标落在视口边界外。这是 OS 文件拖出窗口后松手（dragend 不触发）仍能收起遮罩的关键。
   const leftWindow =
@@ -99,6 +150,7 @@ const onDragLeave = (e: DragEvent): void => {
   if (leftWindow) {
     dragDepth = 0;
     hideDropOverlay();
+    flushDiag("leave窗口");
     return;
   }
   // 子元素间穿梭：enter/leave 配对，用计数器保持遮罩稳定，不再误触隐藏
@@ -107,14 +159,25 @@ const onDragLeave = (e: DragEvent): void => {
 };
 
 const onDrop = async (e: DragEvent): Promise<void> => {
+  diag("drop", "in", e);
   dragDepth = 0;
   hideDropOverlay();
   e.preventDefault();
-  if (isEditable(e.target)) return;
-  if (DnDLock.locked) return;
+  if (isEditable(e.target)) {
+    diag("drop", "out", e, "editable");
+    return;
+  }
+  if (DnDLock.locked) {
+    diag("drop", "out", e, "DnDLock 占用");
+    return;
+  }
 
   // 非仓库页面不处理 DnD
-  if (PageStore.currentPage !== "repository") return;
+  if (PageStore.currentPage !== "repository") {
+    diag("drop", "out", e, "page!=repository");
+    flushDiag("drop");
+    return;
+  }
 
   const getFileFromEntry = (entry: FileSystemFileEntry): Promise<File> =>
     new Promise((resolve, reject) => {
@@ -295,6 +358,8 @@ const onDrop = async (e: DragEvent): Promise<void> => {
       }
     });
   }
+  diag("drop", "ok", e, `单文件 ${singleFiles.length} 文件夹组 ${folderGroups.length}`);
+  flushDiag("drop");
 };
 
 // document listener 顶层兜底：onDrop 内部异常面均已 try/catch，
@@ -302,6 +367,8 @@ const onDrop = async (e: DragEvent): Promise<void> => {
 const onDropSafe = (e: DragEvent): void => {
   onDrop(e).catch((err) => {
     console.error("[dnd] 拖放处理失败:", err);
+    _diagLog.push("[dnd-diag] drop.catch ⛔ " + String(err));
+    flushDiag("drop异常");
     bus.emit("toast:show", {
       msg: "❌ 导入处理出错，请重试",
       duration: 4000,
@@ -318,6 +385,7 @@ const onDragEnd = (): void => {
 
 /** 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs */
 export function registerDnD(unsubs: Array<() => void>): void {
+  console.log("[dnd-diag] registerDnD 已注册（页面初始: " + PageStore.currentPage + "）");
   document.addEventListener("dragenter", onDragEnter);
   document.addEventListener("dragover", onDragOver);
   document.addEventListener("dragleave", onDragLeave);

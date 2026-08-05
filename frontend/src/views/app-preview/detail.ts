@@ -5,6 +5,8 @@ import { renderFormattedText } from "../../utils/format/mc-format.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { getApp } from "../../wails/app.ts";
 import type { PreviewCtx } from "./utils.ts";
+import { loadModel2D } from "./skeleton.ts";
+import { describeVersionRange } from "../../utils/format/pack-format.ts";
 
 /** 详情面板 generation：每次展示新预览自增，慢请求返回后比对，过期结果不回写 DOM */
 let _detailGen = 0;
@@ -84,7 +86,6 @@ export async function showModelDetail(
     if (detailDiv) detailDiv.innerHTML = cardHTML;
 
     // 加载 2D 模型预览（骨架 tab）；loadModel2D 内部已兜底渲染错误，此处仅防未处理拒绝
-    const { loadModel2D } = await import("./skeleton.ts");
     loadModel2D(ctx, path, ctx._root.getElementById("preview-skeleton")).catch(
       (e) => console.warn("[preview] loadModel2D:", e),
     );
@@ -117,7 +118,6 @@ export async function showResourcePack(
     };
     const basename = path.split(/[/\\]/).pop() || "";
     const desc = renderFormattedText(meta.description || "");
-    const { describeVersionRange } = await import("../../utils/format/pack-format.ts");
     if (gen !== _detailGen) return;
     const rv = describeVersionRange(meta);
     ctx._root.innerHTML = `<div class="content" id="preview-content">

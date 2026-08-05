@@ -2,6 +2,7 @@
 // 供给 skeleton.ts 和 screenshot-renderer.ts 使用
 import { cacheGet, cacheSet } from "./cache.ts";
 import { getApp } from "../../wails/app.ts";
+import { parseBedrockAnimationJSON } from "../../utils/animation/animation.ts";
 import type { PreviewCtx } from "./utils.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 
@@ -59,8 +60,6 @@ export async function loadModelData(
     if (model && model.bones && model.bones.length) {
       let goClips: unknown[] = [];
       if (model.animations?.length) {
-        const { parseBedrockAnimationJSON } =
-          await import("../../utils/animation/animation.ts");
         for (const jsonStr of model.animations as string[]) {
           const { clips } = parseBedrockAnimationJSON(jsonStr);
           if (clips.length > 0) goClips.push(...clips);

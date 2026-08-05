@@ -5,6 +5,7 @@ import { stripYsgpTextHeader, type DecodedYsm } from "./utils.ts";
 import { cacheGet, cacheSet } from "./cache.ts";
 import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "./geometry.ts";
 import { parseBedrockAnimationJSON } from "../../utils/animation/animation.ts";
+import { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } from "../../wasm/ysm-parser.ts";
 import { getApp } from "../../wails/app.ts";
 
 /** WASM 解码输出文件 */
@@ -105,8 +106,6 @@ export async function decodeYsmViaWasm(
   // .ysm 文件 → 初始化 WASM 解码
   try {
     devLog("[YSM] 加载 WASM 模块...");
-    const { initYSMParser, decodeYsmFileFromMemory, decodeYsmFile } =
-      await import("../../wasm/ysm-parser.ts");
     const ok = await initYSMParser();
     console.log(`[YSM] WASM init: ${ok ? "✅" : "❌"}`);
     if (!ok) {

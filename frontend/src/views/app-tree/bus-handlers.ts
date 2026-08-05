@@ -7,6 +7,8 @@ import type { loadEntries } from "./loader.ts";
 import { initInstanceActions } from "./instance-actions.ts";
 import { getApp } from "../../wails/app.ts";
 import type { AppTree } from "./index.ts";
+import { modalPrompt, modalConfirm } from "../../views/dialogs/modal.ts";
+import { showBatchRenameDialog } from "../../views/dialogs/batch-rename.ts";
 
 export function bindBusEvents(vm: AppTree): Array<() => void> {
   const unsubs: Array<() => void> = [];
@@ -80,7 +82,6 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
   // 文件夹操作
   unsubs.push(
     bus.on("dir:rename", async ({ dir }) => {
-      const { modalPrompt } = await import("../../views/dialogs/modal.ts");
       const name = await modalPrompt({
         title: "重命名文件夹",
         icon: "✂️",
@@ -109,7 +110,6 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
 
   unsubs.push(
     bus.on("dir:mkdir", async ({ dir }) => {
-      const { modalPrompt } = await import("../../views/dialogs/modal.ts");
       const name = await modalPrompt({
         title: "新建文件夹",
         icon: "📁",
@@ -138,7 +138,6 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
 
   unsubs.push(
     bus.on("dir:recycle", async ({ dir }) => {
-      const { modalConfirm } = await import("../../views/dialogs/modal.ts");
       const confirmed = await modalConfirm({
         title: "移入回收站",
         icon: "♻️",
@@ -208,8 +207,6 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
           });
           return;
         }
-        const { showBatchRenameDialog } =
-          await import("../../views/dialogs/batch-rename.ts");
         await showBatchRenameDialog(
           absDir,
           entries.map((e) => ({ Name: e.Name, Path: e.Path })),
@@ -252,8 +249,6 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
           Name: p.split(/[/\\]/).pop() || "",
           Path: p,
         }));
-        const { showBatchRenameDialog } =
-          await import("../../views/dialogs/batch-rename.ts");
         await showBatchRenameDialog("批量重命名", entries, async (renames) => {
           let ok = 0,
             fail = 0;

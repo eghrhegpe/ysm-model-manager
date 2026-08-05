@@ -4,6 +4,8 @@ import { esc } from "../../utils/dom/html.ts";
 import { getApp } from "../../wails/app.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 /** 体素数据（GetLitematicVoxelData 等返回 JSON） */
 interface VoxelData {
@@ -194,8 +196,6 @@ export async function createLitematic3D(
     }
     loadingEl.remove();
 
-    const THREE = await import("three");
-    const { OrbitControls } = await import("three/addons/controls/OrbitControls.js");
     if (aborted) return;
 
     const sizeX = data.size[0] || 10;

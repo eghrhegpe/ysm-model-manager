@@ -6,6 +6,9 @@ import { friendlyError } from "../utils/dom/errors.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { getApp } from "../wails/app.ts";
 import { getMenuDef } from "./menu-defs";
+import { modalPrompt, modalConfirm, modalSelect } from "../views/dialogs/modal.ts";
+import { showRenameDialog } from "../views/dialogs/rename.ts";
+import { modalTagEditor } from "../views/dialogs/tag-editor.ts";
 
 type ToastType = NonNullable<ToastPayload["type"]>;
 
@@ -36,7 +39,6 @@ async function resolveDstDir(opts: {
   okText: string;
   emptyMsg: string;
 }): Promise<{ folder: string; dstDir: string } | null> {
-  const { modalPrompt } = await import("../views/dialogs/modal.ts");
   const folder = await modalPrompt({
     title: opts.title,
     icon: opts.icon,
@@ -171,7 +173,6 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
   },
   "batch.recycle": async (ctx) => {
-    const { modalConfirm } = await import("../views/dialogs/modal.ts");
     const ok2 = await modalConfirm({
       title: "批量移入回收站",
       icon: "♻️",
@@ -244,7 +245,6 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
         );
         return;
       }
-      const { showRenameDialog } = await import("../views/dialogs/rename.ts");
       const newName = await showRenameDialog(ctx.path || "", fileName);
       if (!newName) return;
       const { RenameFile } =
@@ -306,7 +306,6 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
         toast("未找到任何整合包", 2000, "warn");
         return;
       }
-      const { modalSelect } = await import("../views/dialogs/modal.ts");
       const names = instances.map((i) => i.Name);
       const chosen = await modalSelect({
         title: "推送到整合包",
@@ -331,7 +330,6 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   },
   "file.edit-tags": async (ctx) => {
     try {
-      const { modalTagEditor } = await import("../views/dialogs/tag-editor.ts");
       const result = await modalTagEditor(ctx.path || "");
       if (result) toast(`🏷️ 已保存 ${result.length} 个标签`, 2000);
     } catch (e) {
@@ -340,7 +338,6 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   },
   "file.recycle": async (ctx) => {
     try {
-      const { modalConfirm } = await import("../views/dialogs/modal.ts");
       const ok2 = await modalConfirm({
         title: "移入回收站",
         icon: "♻️",

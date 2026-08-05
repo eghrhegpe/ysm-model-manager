@@ -27,6 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseFrontmatter, parseSourceFiles } from './_lib/frontmatter.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 import { getExportedSymbolsAny } from './_lib/source-graph.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -132,7 +133,7 @@ function setsEqual(a, b) {
 // ---------- 主流程 ----------
 
 function main() {
-  const checkMode = process.argv.includes('--check');
+  const { check: checkMode } = parseArgs(process.argv.slice(2), { bools: ['check'] });
   if (!fs.existsSync(KNOWLEDGE_DIR)) {
     console.log('知识卡目录不存在：' + KNOWLEDGE_DIR);
     process.exit(0);

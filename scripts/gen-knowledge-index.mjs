@@ -14,28 +14,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseFrontmatter, getScalar } from './_lib/frontmatter.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 const OUTPUT = path.join(KC_DIR, 'index.md');
-const CHECK = process.argv.includes('--check');
-
-// ── 共享 frontmatter 解析（与 _lib/frontmatter.mjs 一致）──
-
-function parseFrontmatter(text) {
-  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  return m ? m[1] : null;
-}
-
-function getScalar(fm, key) {
-  if (!fm) return undefined;
-  const line = fm.match(new RegExp('^' + key + '\\s*:\\s*(.+)$', 'm'));
-  if (!line) return undefined;
-  const v = line[1].trim();
-  if (v === '' || v.startsWith('<')) return undefined;
-  return v.replace(/\s*#.*/, '').trim();
-}
+const { check: CHECK } = parseArgs(process.argv.slice(2), { bools: ['check'] });
 
 // ── 配置 ─────────────────────────────────────────────
 

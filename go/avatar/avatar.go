@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -49,8 +50,12 @@ func ReadCachedAvatar(authorName string) (string, error) {
 
 // SaveAvatarData 将头像数据写入缓存。
 func SaveAvatarData(safeName string, data []byte, mime string) string {
-	os.MkdirAll(CacheDir(), 0755)
-	os.WriteFile(filepath.Join(CacheDir(), safeName+".png"), data, 0644)
+	if err := os.MkdirAll(CacheDir(), 0755); err != nil {
+		log.Printf("[avatar] 缓存目录创建失败: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(CacheDir(), safeName+".png"), data, 0644); err != nil {
+		log.Printf("[avatar] 缓存写入失败: %v", err)
+	}
 	return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
 }
 

@@ -138,10 +138,20 @@ func copyDirRecursive(src, dst string) error {
 		return err
 	}
 
-	// 原子性：先重命名临时目录为目标目录
-	// 若目标已存在，先删除再 rename（os.Rename 在 Windows 上不覆盖已存在的目录）
+	// 原子替换：若目标已存在，先挪走作备份再 rename（os.Rename 在 Windows 上不覆盖已存在的目录）
+	// 与 sync_relink.go 同模式：rename 失败则回滚恢复，避免「先删后建」失败即丢目录（ADR-028）
 	if _, stErr := os.Stat(dst); stErr == nil {
-		os.RemoveAll(dst)
+		backup := dst + ".import-bak"
+		_ = os.RemoveAll(backup)
+		if err := os.Rename(dst, backup); err != nil {
+			return err
+		}
+		if err := os.Rename(tmpDir, dst); err != nil {
+			_ = os.Rename(backup, dst) // 回滚恢复原目录
+			return err
+		}
+		_ = os.RemoveAll(backup)
+		return nil
 	}
 	return os.Rename(tmpDir, dst)
 }
@@ -289,8 +299,19 @@ func copyDir(src, dst string) error {
 		}
 	}
 
+	// 原子替换：目标已存在时先备份再 rename，失败回滚恢复（ADR-028 反模式规避）
 	if _, stErr := os.Stat(dst); stErr == nil {
-		os.RemoveAll(dst)
+		backup := dst + ".import-bak"
+		_ = os.RemoveAll(backup)
+		if err := os.Rename(dst, backup); err != nil {
+			return err
+		}
+		if err := os.Rename(tmpDir, dst); err != nil {
+			_ = os.Rename(backup, dst) // 回滚恢复原目录
+			return err
+		}
+		_ = os.RemoveAll(backup)
+		return nil
 	}
 	return os.Rename(tmpDir, dst)
 }

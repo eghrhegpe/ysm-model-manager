@@ -70,8 +70,13 @@ func ParseMeta(path string) (*types.LitematicMeta, error) {
 	return meta, nil
 }
 
+// maxStatBlocks 大投影方块统计截断上限：与渲染路径 maxBlocks 截断口径一致，
+// 防止超大投影（如 100³=1M+ 方块）逐块提取拖慢元数据解析；上限内抽样统计足够反映方块占比
+const maxStatBlocks = 2_000_000
+
 func aggregateBlockStatsFromPalette(regions map[string]any) []types.LitematicBlockStat {
 	counts := make(map[string]int)
+	scanned := 0
 
 	for _, regionTag := range regions {
 		region, ok := regionTag.(map[string]any)
@@ -101,14 +106,24 @@ func aggregateBlockStatsFromPalette(regions map[string]any) []types.LitematicBlo
 		}
 
 		totalBlocks := info.sizeX * info.sizeY * info.sizeZ
+		if remain := maxStatBlocks - scanned; totalBlocks > remain {
+			totalBlocks = remain
+		}
+		// bitOffset 累加代替 i*bpe 乘法；extractBits 内部已带越界守卫
+		bitOffset := 0
 		for i := 0; i < totalBlocks; i++ {
-			paletteIdx := extractBits(info.longs, i*info.bpe, info.bpe)
+			paletteIdx := extractBits(info.longs, bitOffset, info.bpe)
+			bitOffset += info.bpe
 			if paletteIdx < 0 || paletteIdx >= len(paletteNames) || paletteIdx == 0 {
 				continue
 			}
 			if name := paletteNames[paletteIdx]; name != "" {
 				counts[name]++
 			}
+		}
+		scanned += totalBlocks
+		if scanned >= maxStatBlocks {
+			break
 		}
 	}
 

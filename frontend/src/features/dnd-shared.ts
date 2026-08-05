@@ -30,3 +30,51 @@ export const shouldEnterForm = async (
 
 /** 获取小写扩展名（含点，如 ".ysm"） */
 export { getExt };
+
+// ===== 文件夹整组分组（dnd.ts 全局拖拽与 import-queue 导入页共用）=====
+
+/** 收集条目（文件 + 相对路径） */
+export interface CollectedEntry {
+  file: File;
+  relPath: string;
+}
+
+/** 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） */
+export interface FolderGroup {
+  dir: string;
+  files: CollectedEntry[];
+}
+
+/**
+ * 将收集到的条目分组：
+ * - 有目录前缀的条目 → 按「顶层目录」整组（dir = 第一段路径），组内保留完整 relPath（支持多层嵌套）
+ * - 无目录前缀的散落文件 → 单文件队列（isImportableFile 过滤）
+ * - 组内至少含 1 个支持文件（.ysm/.zip/.7z/ysm.json 等）才作为整组导入，否则整组丢弃（防杂物）
+ *   与 go/fileops.WriteModelFolder 的 isSupportedEntryFile 判定对齐
+ */
+export const groupCollected = (
+  collected: CollectedEntry[],
+): { folders: FolderGroup[]; singles: CollectedEntry[] } => {
+  const byDir = new Map<string, CollectedEntry[]>();
+  const singles: CollectedEntry[] = [];
+  for (const c of collected) {
+    const slash = c.relPath.indexOf("/");
+    if (slash === -1) {
+      // 顶层散落文件：过滤后再入单文件队列
+      if (isImportableFile(c.file.name)) singles.push(c);
+      continue;
+    }
+    const dir = c.relPath.slice(0, slash);
+    const arr = byDir.get(dir) || [];
+    arr.push(c);
+    byDir.set(dir, arr);
+  }
+  const folders: FolderGroup[] = [];
+  for (const [dir, files] of byDir) {
+    // 组内至少 1 个支持文件才整组导入（与后端 WriteModelFolder 校验一致）
+    if (files.some((c) => isImportableFile(c.file.name))) {
+      folders.push({ dir, files });
+    }
+  }
+  return { folders, singles };
+};

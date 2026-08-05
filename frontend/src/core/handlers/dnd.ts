@@ -5,7 +5,7 @@ import { PageStore } from "../page-store.ts";
 import { DnDLock, PendingImport } from "../../features/dnd-state.ts";
 import { getApp } from "../../wails/app.ts";
 import { ALL_EXTS } from "../../utils/resource/extensions.ts";
-import { isImportableFile } from "../../features/dnd-shared.ts";
+import { isImportableFile, groupCollected } from "../../features/dnd-shared.ts";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
 const MAX_FILE_COUNT = 50;
@@ -216,43 +216,13 @@ const onDrop = async (e: DragEvent): Promise<void> => {
     return;
   }
 
-  // 分类：含 ysm.json 的目录 → 文件夹组（整组导入）；其余 → 单文件队列
-  const ysmJsonEntries = collected.filter((c) => {
-    const parts = c.relPath.split("/");
-    return parts[parts.length - 1].toLowerCase() === "ysm.json";
-  });
-  const folderGroups: Array<{
-    dir: string;
-    files: Array<{ file: File; relPath: string }>;
-  }> = [];
-  const singleFiles: Array<{ name: string; file: File }> = [];
-  if (ysmJsonEntries.length > 0) {
-    const ysmDirs = [
-      ...new Set(
-        ysmJsonEntries.map((y) => y.relPath.split("/").slice(0, -1).join("/")),
-      ),
-    ];
-    const consumed = new Set<{ file: File; relPath: string }>();
-    for (const d of ysmDirs) {
-      const files = collected.filter(
-        (c) => c.relPath === d || c.relPath.startsWith(d + "/"),
-      );
-      files.forEach((f) => consumed.add(f));
-      folderGroups.push({ dir: d, files });
-    }
-    for (const c of collected) {
-      if (consumed.has(c)) continue;
-      if (isImportableFile(c.file.name)) {
-        singleFiles.push({ name: c.file.name, file: c.file });
-      }
-    }
-  } else {
-    for (const c of collected) {
-      if (isImportableFile(c.file.name)) {
-        singleFiles.push({ name: c.file.name, file: c.file });
-      }
-    }
-  }
+  // 分组：文件夹 → 整组（含 ysm.json 的模型目录与普通文件夹一视同仁，
+  // 组内至少 1 个支持文件才入仓）；散落文件 → 单文件队列
+  const { folders: folderGroups, singles: singleCollected } = groupCollected(
+    collected as Array<{ file: File; relPath: string }>,
+  );
+  const singleFiles: Array<{ name: string; file: File }> =
+    singleCollected.map((c) => ({ name: c.file.name, file: c.file }));
   if (singleFiles.length === 0 && folderGroups.length === 0) {
     bus.emit("toast:show", {
       msg: "📂 未检测到支持的资源文件" + "（" + DROP_EXTS_STR + "）",

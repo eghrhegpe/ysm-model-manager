@@ -8,7 +8,7 @@ import { modalConfirm } from "../views/dialogs/modal.ts";
 import { DnDLock, PendingImport } from "./dnd-state.ts";
 import { getApp } from "../wails/app.ts";
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
-import { isImportableFile, shouldEnterForm } from "./dnd-shared.ts";
+import { isImportableFile, shouldEnterForm, groupCollected } from "./dnd-shared.ts";
 import { showRenameDialog } from "../views/dialogs/rename.ts";
 
 const extsStr = ALL_EXTS.join(" ");
@@ -657,51 +657,21 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     }
   };
 
-  // 路由一组收集到的文件：含 ysm.json → 按模型目录分组整组导入；否则逐文件现有流程
+  // 路由一组收集到的文件：文件夹 → 整组导入（含 ysm.json 与普通文件夹一视同仁，
+  // 组内至少 1 个支持文件）；散落单文件 → 直接导入
   const routeCollected = async (
     collected: Array<{ file: ImportFile; relPath: string }>,
   ): Promise<void> => {
-    const ysmJsonEntries = collected.filter((c) => {
-      const parts = c.relPath.split("/");
-      return parts[parts.length - 1].toLowerCase() === "ysm.json";
-    });
-    if (ysmJsonEntries.length > 0) {
-      // 一个拖入文件夹可能含多个模型目录（每个目录一个 ysm.json）→ 分组整组导入
-      const ysmDirs = ysmJsonEntries.map((y) =>
-        y.relPath.split("/").slice(0, -1).join("/"),
+    const { folders, singles } = groupCollected(collected);
+    for (const g of folders) {
+      await importModelFolder(
+        g.dir,
+        g.files as Array<{ file: ImportFile; relPath: string }>,
       );
-      const groups = new Map<
-        string,
-        Array<{ file: ImportFile; relPath: string }>
-      >();
-      for (const c of collected) {
-        let owner: string | null = null;
-        for (const d of ysmDirs) {
-          if (c.relPath === d || c.relPath.startsWith(d + "/")) {
-            owner = d;
-            break;
-          }
-        }
-        if (owner !== null) {
-          const arr = groups.get(owner) || [];
-          arr.push(c);
-          groups.set(owner, arr);
-        } else if (isImportableFile(c.file.name)) {
-          // 不属于任何模型目录的顶层文件（如散落 .ysm）→ 逐文件
-          (c.file as ImportFile)._relPath = c.relPath;
-          readAndRouteFile(c.file);
-        }
-      }
-      for (const [dir, files] of groups) {
-        await importModelFolder(dir, files);
-      }
-    } else {
-      // 普通文件夹：逐文件现有流程（isImportableFile 过滤 + 路由）
-      for (const c of collected) {
-        if (!isImportableFile(c.file.name)) continue;
-        (c.file as ImportFile)._relPath = c.relPath;
-        readAndRouteFile(c.file);
-      }
+    }
+    for (const c of singles) {
+      (c.file as ImportFile)._relPath = c.relPath;
+      readAndRouteFile(c.file);
     }
   };
 
@@ -998,9 +968,17 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = String(reader.result).split(",")[1] || "";
-        if (base64) enqueueFile(item.file, base64);
-        readCount++;
-        if (readCount === list.length) finishAll();
+        // 直接导入（与导入页 dropZone 的 readAndRouteFile 语义一致）：
+        // .ysm/.zip/.7z 默认直接入仓，不再强制命名表单（2026-08-05 导入默认直接改造）
+        if (base64) {
+          void directImport(item.file as ImportFile, base64).finally(() => {
+            readCount++;
+            if (readCount === list.length) finishAll();
+          });
+        } else {
+          readCount++;
+          if (readCount === list.length) finishAll();
+        }
       };
       reader.onerror = () => {
         readCount++;

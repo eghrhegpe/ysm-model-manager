@@ -100,3 +100,59 @@ describe("DnD 守卫层", () => {
     unsubToast();
   });
 });
+
+describe("拖拽遮罩隐藏状态机（dragDepth 计数器）", () => {
+  const pageUnsubs: Array<() => void> = [];
+  const dndUnsubs: Array<() => void> = [];
+
+  // jsdom 无 DragEvent 真实实现：用 Event + defineProperty 注入 dataTransfer / relatedTarget
+  const makeDrag = (
+    type: string,
+    relatedTarget: EventTarget | null,
+    types: string[] = ["Files"],
+  ): DragEvent => {
+    const ev = new Event(type, { bubbles: true, cancelable: true }) as DragEvent;
+    Object.defineProperty(ev, "dataTransfer", {
+      value: { types, items: [], dropEffect: "" },
+      configurable: true,
+    });
+    Object.defineProperty(ev, "relatedTarget", {
+      value: relatedTarget,
+      configurable: true,
+    });
+    return ev;
+  };
+
+  beforeEach(() => {
+    pageUnsubs.length = 0;
+    dndUnsubs.length = 0;
+    document.querySelectorAll("#global-drop-overlay").forEach((el) => el.remove());
+    registerPageStore(pageUnsubs);
+    bus.emit("nav:changed", { page: "repository" });
+    registerDnD(dndUnsubs);
+  });
+
+  afterEach(() => {
+    pageUnsubs.forEach((fn) => fn());
+    dndUnsubs.forEach((fn) => fn());
+    document.querySelectorAll("#global-drop-overlay").forEach((el) => el.remove());
+  });
+
+  it("进入即显示；子元素穿梭不隐藏；relatedTarget=null 才隐藏", () => {
+    document.dispatchEvent(makeDrag("dragenter", document.body));
+    document.dispatchEvent(makeDrag("dragenter", document.body)); // 进入子元素
+    let ov = document.getElementById("global-drop-overlay");
+    expect(ov).not.toBeNull();
+    expect(ov!.style.display).not.toBe("none");
+
+    // 子元素间穿梭：leave 落到真实元素（relatedTarget 非 null）→ 计数器 -1，不隐藏
+    document.dispatchEvent(makeDrag("dragleave", document.body));
+    ov = document.getElementById("global-drop-overlay");
+    expect(ov!.style.display).not.toBe("none");
+
+    // 真正离开视口：relatedTarget 为 null → 隐藏并归零
+    document.dispatchEvent(makeDrag("dragleave", null));
+    ov = document.getElementById("global-drop-overlay");
+    expect(ov!.style.display).toBe("none");
+  });
+});

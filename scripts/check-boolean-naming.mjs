@@ -4,7 +4,7 @@
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
  *
- * 扫描 frontend/js/ 下所有 .js（排除 css/ 子目录），检查三类布尔声明：
+ * 扫描 frontend/src/ 下所有 .js（排除 css/ 子目录），检查三类布尔声明：
  *   1. 字面量初始化  const/let/var x = true|false
  *   2. 类型注解      x: boolean
  *   3. 函数返回类型  function f(): boolean
@@ -79,7 +79,7 @@ function scanFile(file) {
 
 function main() {
   if (!fs.existsSync(SRC_DIR)) {
-    console.log(JSON_OUT ? JSON.stringify({ findings: [], error: 'frontend/js 不存在' }) : 'frontend/js 目录不存在');
+    console.log(JSON_OUT ? JSON.stringify({ findings: [], error: 'frontend/src 不存在' }) : 'frontend/src 目录不存在');
     process.exit(1);
   }
   const files = walk(SRC_DIR);

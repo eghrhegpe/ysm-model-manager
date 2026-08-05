@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["index.html", "js/app-modules.js", "vite.config.js"],
-  "project": ["js/**/*.{js,ts}"],
+  "entry": ["index.html", "src/app-modules.js", "vite.config.js"],
+  "project": ["src/**/*.{js,ts}"],
   "ignore": ["report/**", "dist/**", "build/**"]
 }

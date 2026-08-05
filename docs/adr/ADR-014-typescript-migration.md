@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/`（120 个业务 JS）/ `frontend/vite.config.js` / `frontend/wailsjs/go/main/App.d.ts` / `AGENTS.md` §审核体系（B1 盲区 #1）
+- **相关**：`frontend/src/`（120 个业务 JS）/ `frontend/vite.config.js` / `frontend/wailsjs/go/main/App.d.ts` / `AGENTS.md` §审核体系（B1 盲区 #1）
 
 ---
 
@@ -89,7 +89,7 @@
 
 | 来源 | 结果 |
 |------|------|
-| `find frontend/js -name "*.js"` | 120 个业务文件（排除 node_modules/dist） |
+| `find frontend/src -name "*.js"` | 120 个业务文件（排除 node_modules/dist） |
 | `frontend/wailsjs/go/main/App.d.ts` | Wails v3 已生成绑定类型声明 |
 | `frontend/vite.config.js` | 已有 wails-bindings-resolve 插件（.js→.ts） |
 | 联邦（MikuMikuAR） | 365 个 .ts + Vitest 4328 测试，TS 收益实证 |

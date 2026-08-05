@@ -4,7 +4,7 @@ name: 回收站界面 recycle-bin
 tier: architecture
 category: feature
 source_files:
-  - frontend/js/features/recycle-bin.ts
+  - frontend/src/features/recycle-bin.ts
 use_when:
   - 回收站
   - 恢复文件

@@ -4,7 +4,7 @@ name: 标签编辑器 tag-editor
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/views/dialogs/tag-editor.ts
+  - frontend/src/views/dialogs/tag-editor.ts
 use_when:
   - 标签
   - 打标签

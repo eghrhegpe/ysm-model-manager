@@ -3,7 +3,7 @@
  * gen-guide-gap.mjs — 用户指南覆盖缺口扫描（适配自 MikuMikuAR）。
  *
  * 本项目无隔壁式 menu-map.md（声明式菜单 folder 面板）；事实源改用
- * frontend/js/app-modules.ts（组件统一入口）：提取注册的组件路径
+ * frontend/src/app-modules.ts（组件统一入口）：提取注册的组件路径
  * （app-* 组件）与 register() 服务名作为「功能面」，与 docs/guide/ 页面
  * 清单对照，列出「有组件/服务但用户指南无对应页」的缺口（WARN 不阻断）。
  *
@@ -25,7 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 
-const APP_MODULES = path.join(ROOT, 'frontend', 'js', 'app-modules.ts');
+const APP_MODULES = path.join(ROOT, 'frontend', 'src', 'app-modules.ts');
 const GUIDE_DIR = path.join(ROOT, 'docs', 'guide');
 
 /** 已知豁免：UI 骨架/基础设施组件/内部服务，无独立操作页，不要求 guide 覆盖 */

@@ -206,8 +206,8 @@ function extractDocSummary(filePath, sym, lang) {
 
 /** 由相对仓库根的路径推导模块 key。 */
 function moduleOf(rel) {
-  if (rel.startsWith('frontend/js/')) {
-    const rest = rel.slice('frontend/js/'.length);
+  if (rel.startsWith('frontend/src/')) {
+    const rest = rel.slice('frontend/src/'.length);
     const parts = rest.split('/');
     return parts.length > 1 ? `frontend/${parts[0]}` : 'frontend';
   }
@@ -336,7 +336,7 @@ function main() {
 
   const groups = new Map();
 
-  // 1. 前端（frontend/js，复用 scan-files.walk 跳过 css/node_modules/隐藏/测试）
+  // 1. 前端（frontend/src，复用 scan-files.walk 跳过 css/node_modules/隐藏/测试）
   const feFiles = walk(undefined, { skipTest: true });
   for (const f of feFiles) {
     const syms = getExportedSymbols(f, 'js');

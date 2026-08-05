@@ -2,7 +2,7 @@
 /**
  * gen-knowledge-tests.mjs — 知识卡 `tests:` 字段自动登记（适配自 MikuMikuAR）。
  *
- * 扫描前端测试文件（本项目散落于 frontend/js/**，非隔壁集中 __tests__），
+ * 扫描前端测试文件（本项目散落于 frontend/src/**，非隔壁集中 __tests__），
  * 按卡名/source_files basename 匹配，为「tests 为空但实际有测试文件」的
  * architecture 卡补登测试路径。
  *
@@ -26,7 +26,7 @@ import { parseArgs } from './_lib/parse-args.mjs';
 import { ROOT } from './_lib/scan-files.mjs';
 
 const KNOW_DIR = path.join(ROOT, 'docs', 'knowledge');
-const FRONTEND_JS_DIR = path.join(ROOT, 'frontend', 'js');
+const FRONTEND_JS_DIR = path.join(ROOT, 'frontend', 'src');
 
 /** 非知识卡文件（与 check-knowledge-drift / gen-knowledge-h1/adr 保持一致；含本项目 AGENTS.md） */
 const NON_CARDS = new Set([
@@ -50,7 +50,7 @@ function collectTestFiles() {
       else if (/\.(test|spec)\.(ts|js)$/.test(e.name)) out.push(relPath);
     }
   };
-  if (fs.existsSync(FRONTEND_JS_DIR)) walk(FRONTEND_JS_DIR, 'frontend/js');
+  if (fs.existsSync(FRONTEND_JS_DIR)) walk(FRONTEND_JS_DIR, 'frontend/src');
   return out;
 }
 
@@ -118,7 +118,7 @@ function main() {
     process.exit(1);
   }
   const testFiles = collectTestFiles();
-  console.error(`📄 frontend/js 下测试文件 ${testFiles.length} 个`);
+  console.error(`📄 frontend/src 下测试文件 ${testFiles.length} 个`);
 
   // 收集「architecture 卡 + tests 为空」
   const targets = [];

@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳（A/B 层已实施；C 层 E2E 按决策不引入、列为远期）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/core/context-menus.ts` / `frontend/js/views/context-menu.ts` / `frontend/js/bus.ts`（MenuItem）/ `frontend/package.json`（vitest + jsdom）/ `tests/*.mjs`（契约测试）/ ADR-007 / ADR-014
+- **相关**：`frontend/src/core/context-menus.ts` / `frontend/src/views/context-menu.ts` / `frontend/src/bus.ts`（MenuItem）/ `frontend/package.json`（vitest + jsdom）/ `tests/*.mjs`（契约测试）/ ADR-007 / ADR-014
 
 ---
 
@@ -96,10 +96,10 @@ ctx:show ──► context-menus.ts（纯事件映射，产出 MenuItem[] 声明
 
 | 来源 | 结果 |
 |------|------|
-| `frontend/js/core/context-menus.ts` | 四类菜单 items 声明（instance/batch/file/dir 四分支） |
-| `frontend/js/views/context-menu.ts` | `<context-menu>` 渲染 / 点击绑定（data-idx → onClick → hide） |
-| `frontend/js/bus.ts` | `MenuItem` 接口 + `menu:show` / `ctx:show` 事件契约 |
+| `frontend/src/core/context-menus.ts` | 四类菜单 items 声明（instance/batch/file/dir 四分支） |
+| `frontend/src/views/context-menu.ts` | `<context-menu>` 渲染 / 点击绑定（data-idx → onClick → hide） |
+| `frontend/src/bus.ts` | `MenuItem` 接口 + `menu:show` / `ctx:show` 事件契约 |
 | `frontend/package.json` | vitest ^0.34.6 + jsdom ^29 已安装，`test: vitest run` 已配置 |
-| `frontend/js/utils/display.test.js` 等 | 现有 vitest 用例模式（describe/it/expect 直接可用） |
+| `frontend/src/utils/display.test.js` 等 | 现有 vitest 用例模式（describe/it/expect 直接可用） |
 | `docs/adr/ADR-007-context-menu-structure.md` | 负面清单：「onClick 难以独立测试」——本 ADR 的出发点 |
 | `docs/adr/ADR-014-typescript-migration.md` | P5「评估 Vitest」预留，本 ADR 承接 |

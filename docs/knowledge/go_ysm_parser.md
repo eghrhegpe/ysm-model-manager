@@ -34,7 +34,7 @@ use_when:
 ## 与其他子系统关系
 
 - `go/types/`: 共享类型定义
-- `frontend/js/wasm/`: Wasm 端 YSM 解析器（客户端补充解析）
+- `frontend/src/wasm/`: Wasm 端 YSM 解析器（客户端补充解析）
 
 ## 不变量
 
@@ -43,4 +43,4 @@ use_when:
 
 ## 相关
 
-- `frontend/js/wasm/ysm-parser.ts` — Wasm 端解析器
+- `frontend/src/wasm/ysm-parser.ts` — Wasm 端解析器

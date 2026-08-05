@@ -29,10 +29,10 @@ const CHECK = args.includes('--check');
 // ── 区域元数据（单一事实源：docs/novel/AGENTS.md 下篇·续写宪法 §八）──────────
 
 const REGIONS = [
-  { dir: '01-解码与几何', anchor: '`go/ysm` `go/geometry` `go/threejs` `frontend/js/wasm` `app-preview`', theme: 'YSMParser WASM/CLI、格式解析、2D/3D 预览、骨骼/立方体' },
+  { dir: '01-解码与几何', anchor: '`go/ysm` `go/geometry` `go/threejs` `frontend/src/wasm` `app-preview`', theme: 'YSMParser WASM/CLI、格式解析、2D/3D 预览、骨骼/立方体' },
   { dir: '02-模型仓库', anchor: '`go/importer` `installer` `instance` `packs` `scanner` `dedup` `resource_types.json` `app-tree` `services`', theme: '导入/安装/实例/整合包/扫描/去重、资源注册表' },
-  { dir: '03-UI器官', anchor: '`frontend/js/components` `dialogs` `features`', theme: 'Web Components、对话框、功能页、卡片 UI' },
-  { dir: '04-事件中枢', anchor: '`frontend/js/core`（`bus` `global-handlers` `page-store` `context-menus` `menu-defs`）', theme: '事件总线、全局处理器、页面状态、菜单定义' },
+  { dir: '03-UI器官', anchor: '`frontend/src/components` `dialogs` `features`', theme: 'Web Components、对话框、功能页、卡片 UI' },
+  { dir: '04-事件中枢', anchor: '`frontend/src/core`（`bus` `global-handlers` `page-store` `context-menus` `menu-defs`）', theme: '事件总线、全局处理器、页面状态、菜单定义' },
   { dir: '05-同步与更新', anchor: '`go/sync` `download` `updater` `handler-sync`', theme: '同步、下载、更新器、进度队列' },
   { dir: '06-创作者社区', anchor: '`go/avatar` `creators.json` `workshop_sites.json` `workshop-github.json` `community`', theme: '创作者库、头像、工坊站点、社区索引' },
   { dir: '07-文件与路径', anchor: '`go/fileops` `fsutil` `paths` `recycle` `watcher` `litematic` `internal/embedded`', theme: '硬链接/复制、路径安全、回收站、监听、嵌入资源' },

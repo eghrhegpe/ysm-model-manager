@@ -238,7 +238,7 @@ function checkAgentsNoHandcraftedIndex() {
 // source_files 引用了它（目录条目按前缀匹配，文件条目按精确匹配）。
 // 未覆盖 = 代码有模块、知识库无卡片 → WARN 提醒补登，不阻断 CI。
 
-const SOURCE_ROOTS = ['frontend/js', 'go'];
+const SOURCE_ROOTS = ['frontend/src', 'go'];
 const WALK_EXCLUDE_RE = /(node_modules|\/dist\/|\/bindings\/|\/test\/|\.test\.|\.spec\.)/;
 
 function walkSources(dir, out = []) {

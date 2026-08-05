@@ -4,7 +4,7 @@ name: 资历最深模型 oldest-models
 tier: leaf
 category: feature
 source_files:
-  - frontend/js/features/oldest-models.ts
+  - frontend/src/features/oldest-models.ts
 use_when:
   - 资历最深
   - 老模型

@@ -4,7 +4,7 @@ name: Wails 桥接 app.ts
 tier: architecture
 category: core
 source_files:
-  - frontend/js/wails/app.ts
+  - frontend/src/wails/app.ts
 use_when:
   - Wails
   - 桥接

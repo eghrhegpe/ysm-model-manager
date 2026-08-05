@@ -9,7 +9,7 @@
   - render.js（渲染逻辑，不绑事件）
   - events.js（事件绑定，不拼 HTML）
   - utils.js（组件特有工具）
-- 通用工具引用 frontend/js/utils/ 下的共享模块（fmt.js / dom.js / icon.js）。
+- 通用工具引用 frontend/src/utils/ 下的共享模块（fmt.js / dom.js / icon.js）。
 
 ## 引用方式
 - 非 module 组件（全局定义类）→ index.html 用 <script src="...">

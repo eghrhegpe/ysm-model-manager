@@ -262,7 +262,7 @@ use_when:
 
 ## 与其他子系统关系
 
-- **前端桥接**：所有调用经 `frontend/js/wails/app.ts` 的 `getApp()` 动态 import 生成绑定（见 [wails_bridge](./wails_bridge.md)），返回 Promise，异常走 rejection（须有 toast 反馈）。
+- **前端桥接**：所有调用经 `frontend/src/wails/app.ts` 的 `getApp()` 动态 import 生成绑定（见 [wails_bridge](./wails_bridge.md)），返回 Promise，异常走 rejection（须有 toast 反馈）。
 - **业务下沉**：本层是薄壳，真实逻辑在 `go/installer`（安装）、`go/sync`（整合包同步）、`go/recycle`（回收站）、`go/tags`（标签）、`go/updater`（更新）、`go/ysm`（解析）等包，细节见对应 `go_*` 知识卡。
 - **资源类型参数**：各方法中的 `rtype` 参数取值来自 `resource_types.json` 注册表（见 [resource_registry](./resource_registry.md)），禁止手写新类型。
 - **事件通道**：下载进度等异步状态不经 Binding 返回值，而走 Wails 事件由前端 bus 订阅（见 [event_bus](./event_bus.md)）；三入口统一走 `EnqueueDownloads` 只注册一组 EventsOn（致命陷阱 #7）。

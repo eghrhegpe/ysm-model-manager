@@ -4,7 +4,7 @@
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
  *
- * 扫描 frontend/js/ 下所有 .js/.ts（ADR-014 后 TS 与 JS 并存）：
+ * 扫描 frontend/src/ 下所有 .js/.ts（ADR-014 后 TS 与 JS 并存）：
  *   1. 提取每个模块的导出符号（export const/function/class/export { a, b }）
  *   2. 解析跨文件 import 消费（import { a } from / import a from）
  *   3. 统计每个导出符号的消费者数量
@@ -116,7 +116,7 @@ function extractImports(file, text, moduleSet) {
 
 function main() {
   if (!fs.existsSync(SRC_DIR)) {
-    console.log(JSON_OUT ? JSON.stringify({ orphan: [], error: 'frontend/js 不存在' }) : 'frontend/js 目录不存在');
+    console.log(JSON_OUT ? JSON.stringify({ orphan: [], error: 'frontend/src 不存在' }) : 'frontend/src 目录不存在');
     process.exit(1);
   }
 

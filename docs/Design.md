@@ -64,7 +64,7 @@
 
 ## 3. 主题系统
 
-> **当前实装 6 套主题 + `system` 别名**（以 `frontend/js/app-modules.ts:47` 的 `VALID` 为准）。
+> **当前实装 6 套主题 + `system` 别名**（以 `frontend/src/app-modules.ts:47` 的 `VALID` 为准）。
 > `system` 不是独立 class，而是 mode 别名：运行时按 OS 偏好落到 `theme-cyber` / `theme-warm`（app-modules.ts:50–56）。
 > 通过 body class 切换，**永不硬编码颜色值**。
 
@@ -513,7 +513,7 @@ description: 一句话摘要
 
 ### 14.2 跨组件通信：类型化事件总线
 
-- 单例总线定义在 `frontend/js/bus.ts`，调用方 `import { bus }`。运行时挂在 `window.bus`（`bus.ts:173`），`setBus(mockBus)` 可替换（测试 / 入口层）。
+- 单例总线定义在 `frontend/src/bus.ts`，调用方 `import { bus }`。运行时挂在 `window.bus`（`bus.ts:173`），`setBus(mockBus)` 可替换（测试 / 入口层）。
 - **类型契约（ADR-014 P1 渐进迁移）**：`BusEvents` 接口（`bus.ts:53-107`）将事件名映射到 payload 类型；`.ts` 调用方拼错事件名或 payload 形状错误 → **编译期报错**；`.js` 存量代码不受影响。
 - `bus.on(event, fn)` 返回 **退订函数** `() => void`，必须在组件卸载时调用（见 §14.4）。
 - 类型安全用法：
@@ -587,7 +587,7 @@ disconnectedCallback() {
 
 ### 14.5 代码分割与注册入口
 
-入口 `frontend/js/app-modules.ts`：
+入口 `frontend/src/app-modules.ts`：
 
 - **静态 import**（首屏即用）：`app-nav` / `context-menu` / `app-toast`。
 - **动态 `import()` 懒加载**（与 `customElements.define` 配对）：`app-tree` / `app-sidebar` / `app-content` / `app-resource-manager` / `app-sync-manager`。
@@ -717,7 +717,7 @@ disconnectedCallback() {
 
 ## 16. 事件总线契约
 
-> 权威来源：`frontend/js/bus.ts` 的 `BusEvents` 接口（:53-107）。新增事件必须先在此登记类型，再使用。
+> 权威来源：`frontend/src/bus.ts` 的 `BusEvents` 接口（:53-107）。新增事件必须先在此登记类型，再使用。
 
 ### 16.1 事件名 → payload 登记表
 
@@ -903,12 +903,12 @@ G-1 抗脆弱测试基础设施（ADR-035）——测试断言稳定语义而非
 ## 20. 参考
 
 - 视频: [AI做的UI设计为什么总是很丑？3套解决方案](https://www.bilibili.com/video/BV1GpEs6gEgL/)
-- 主题变量与实装主题列表: `frontend/js/app-modules.ts`（VALID 数组 :47）
-- 类型化事件总线契约: `frontend/js/bus.ts`（`BusEvents` :53-107）
+- 主题变量与实装主题列表: `frontend/src/app-modules.ts`（VALID 数组 :47）
+- 类型化事件总线契约: `frontend/src/bus.ts`（`BusEvents` :53-107）
 - 全局 CSS 变量: `frontend/css/variables.css` / `layout.css` / `components.css` / `transitions.css`
-- 共享样式片段: `frontend/js/css/shared-styles.ts`（`btnBaseCSS` / `focusVisibleCSS`）
-- 组件注册入口: `frontend/js/app-modules.ts`
-- 组件源码: `frontend/js/views/*`（9 个自定义元素，详见 §15）
-- 页面状态: `frontend/js/core/page-store.ts`
+- 共享样式片段: `frontend/src/css/shared-styles.ts`（`btnBaseCSS` / `focusVisibleCSS`）
+- 组件注册入口: `frontend/src/app-modules.ts`
+- 组件源码: `frontend/src/views/*`（9 个自定义元素，详见 §15）
+- 页面状态: `frontend/src/core/page-store.ts`
 - 架构快照（历史）: `docs/archive/architecture.md`（已冻结；当前架构以 ADR + 源码为准）
 - 参考范式: MikuMikuAR `docs/design.md`（UI 组件规范，键盘导航/无障碍章节来源）

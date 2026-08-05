@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳（推翻了 ADR-021「C 层 E2E 不引入」决策）
 - **日期**：2026-08-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/adr/ADR-021-declarative-menu-testing.md`（被推翻条款 C 层） / `frontend/package.json`（Playwright devDependency） / `frontend/vite.config.js` / `frontend/e2e/` / `frontend/js/test-utils/`（G-1 基础设施） / `docs/Design.md` §19.1（testid 规范） / `tests/test_testid_contract.mjs`（testid 契约守护）
+- **相关**：`docs/adr/ADR-021-declarative-menu-testing.md`（被推翻条款 C 层） / `frontend/package.json`（Playwright devDependency） / `frontend/vite.config.js` / `frontend/e2e/` / `frontend/src/test-utils/`（G-1 基础设施） / `docs/Design.md` §19.1（testid 规范） / `tests/test_testid_contract.mjs`（testid 契约守护）
 
 ---
 
@@ -139,7 +139,7 @@ vite dev（纯前端，无 Wails 后端）
 | `docs/adr/ADR-021-declarative-menu-testing.md` §2.3 | 推翻 C 层「不引入，列为远期」决策 |
 | `docs/adr/ADR-035-forward-governance-initiatives.md` G-1 | 抗脆弱测试基础设施（testid + helper + 契约）已落地 |
 | `docs/Design.md` §19.1 | testid 命名规范已定稿 |
-| `frontend/js/test-utils/index.ts` | `getByTestId` / `getAllByTestId` / `waitFor` helper 已投产 |
+| `frontend/src/test-utils/index.ts` | `getByTestId` / `getAllByTestId` / `waitFor` helper 已投产 |
 | `tests/test_testid_contract.mjs` | 16 个关键 testid 契约守护已运行 |
 | `frontend/package.json` | vitest ^0.34.6 + jsdom ^29 已安装（Playwright 为新加） |
 | 联邦 MikuMikuAR ADR-060 | Playwright + testid 模式实证可用 |

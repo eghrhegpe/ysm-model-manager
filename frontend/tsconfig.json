@@ -18,8 +18,8 @@
     "types": ["vite/client"]
   },
   "include": [
-    "js/**/*.ts",
-    "js/**/*.js",
+    "src/**/*.ts",
+    "src/**/*.js",
     "wailsjs/**/*.ts",
     "vite.config.js"
   ],

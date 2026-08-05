@@ -3,7 +3,7 @@
 - **状态**：已采纳（Accepted）
 - **日期**：2026-08-03（初定，决策时间线 v1.5.1 → v1.8.7）
 - **决策人**：Jieling（人类首席架构师）、DeepSeek V4 Pro / V4 Flash、Qwen3.7 Plus、GLM-5.1
-- **相关**：`go/threejs/spec.go` / `go/geometry/archive.go` / `go/ysm/extracted.go` / `frontend/js/utils/model3d.js` / `frontend/js/utils/model2d.js` / `frontend/js/views/app-preview/preview-wasm.js`
+- **相关**：`go/threejs/spec.go` / `go/geometry/archive.go` / `go/ysm/extracted.go` / `frontend/src/utils/model3d.js` / `frontend/src/utils/model2d.js` / `frontend/src/views/app-preview/preview-wasm.js`
 
 ---
 
@@ -125,9 +125,9 @@ eulerToQuaternion(-rx, -ry, -rz)  // 三轴取反
 | `go/threejs/spec.go` | Go 端骨骼计算、pivot、顶点、四元数 |
 | `go/geometry/archive.go` | ZIP/7z 解析 + ysm.json 读取 + TexSlot 分配 |
 | `go/ysm/extracted.go` | 解压后目录的模型/纹理查找 |
-| `frontend/js/utils/model3d.js` | Three.js 3D 渲染 |
-| `frontend/js/utils/model2d.js` | Canvas 2D 骨骼图 |
-| `frontend/js/views/app-preview/preview-wasm.js` | WASM 解码 + ysm.json 解析 + 纹理排序 |
+| `frontend/src/utils/model3d.js` | Three.js 3D 渲染 |
+| `frontend/src/utils/model2d.js` | Canvas 2D 骨骼图 |
+| `frontend/src/views/app-preview/preview-wasm.js` | WASM 解码 + ysm.json 解析 + 纹理排序 |
 
 ---
 
@@ -138,7 +138,7 @@ eulerToQuaternion(-rx, -ry, -rz)  // 三轴取反
 | `docs/3D/3d-rendering-report.md` | 开发报告全文，含修复记录、回退方案、能力对比表 |
 | `go/threejs/spec.go` | 实际代码中的坐标系/旋转/顶点公式 |
 | `go/geometry/archive.go` | TexIdxMap 分配逻辑 |
-| `frontend/js/utils/model3d.js` | 消费 Go spec 格式，JS 兜底路径确认不兼容 |
+| `frontend/src/utils/model3d.js` | 消费 Go spec 格式，JS 兜底路径确认不兼容 |
 
 ---
 

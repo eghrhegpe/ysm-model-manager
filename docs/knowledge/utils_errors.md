@@ -4,7 +4,7 @@ name: 错误处理 errors
 tier: leaf
 category: utils
 source_files:
-  - frontend/js/utils/dom/errors.ts
+  - frontend/src/utils/dom/errors.ts
 use_when:
   - 错误提示
   - 友好错误
@@ -52,4 +52,4 @@ use_when:
 - [app_toast](./app_toast.md) — toast 呈现
 - [go_errors](./go_errors.md) — Go 端错误源
 - [event_bus](./event_bus.md) — toast:show 事件通道
-- `frontend/js/utils/dom/errors.test.js` — 单元测试（验证入口）
+- `frontend/src/utils/dom/errors.test.js` — 单元测试（验证入口）

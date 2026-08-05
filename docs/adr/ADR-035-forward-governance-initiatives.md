@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳（立项登记，实施排期中）
 - **日期**：2026-08-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/components` / `.github/workflows/release.yml` / `scripts/ai-mistake-tracker.mjs`
+- **相关**：`frontend/src/components` / `.github/workflows/release.yml` / `scripts/ai-mistake-tracker.mjs`
 
 ---
 
@@ -29,7 +29,7 @@
 |----|------|---------|
 | ① 稳定钩子 | 关键交互元素统一 `data-testid`（如 `tree-file` / `tree-toggle` / `sync-push`），规范写入 Design.md §19（唯一规范源） | 文案/类名/结构变化不破坏定位 |
 | ② 状态可查询 | 组件渲染后暴露可查询状态（`container.dataset` 如 `data-count`/`data-selected`，或既有事件总线事件流）——测试断言**状态值**而非 DOM 结构 | "自动从 UI 获取测试信息"的核心 |
-| ③ helper 抽象 | `frontend/js/test-utils/`（`getByTestId` / `waitFor` / `clickTreeFile` 等），测试不直接写选择器/定时器 | 结构变化只改 helper 一处 |
+| ③ helper 抽象 | `frontend/src/test-utils/`（`getByTestId` / `waitFor` / `clickTreeFile` 等），测试不直接写选择器/定时器 | 结构变化只改 helper 一处 |
 | ④ 契约守护 | `tests/*.mjs` 断言关键 testid 存在 + BusEvents 类型一致性 | testid 被删 → 契约红，防钩子静默失效 |
 
 **落地顺序**：① 本规划入 ADR（G-1 前置） → ② Design.md §19 加 testid 规范 → ③ `test-utils/` helper → ④ 首个组件测试（app-tree 多选/连点路径）→ ⑤ 契约守护。

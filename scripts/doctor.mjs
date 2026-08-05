@@ -185,7 +185,7 @@ function checkKeyFiles() {
     'main.go', 'wails.json',
     'internal/app/app.go', 'internal/app/resource_bindings.go',
     'resource_types.json', 'go.mod', 'reasonix.toml', 'AGENTS.md',
-    'frontend/index.html', 'frontend/js/bus.ts', 'frontend/js/app-modules.ts',
+    'frontend/index.html', 'frontend/src/bus.ts', 'frontend/src/app-modules.ts',
   ];
   for (const f of files) {
     const p = path.join(ROOT, f);
@@ -198,7 +198,7 @@ function checkGovernance() {
   let errors = 0;
 
   // 规则 1: window.__* 全局变量（ERROR 硬门槛，doctor 退出码 1 阻断提交）
-  const r1 = run(['grep', '-rn', 'window\\.__', path.join(ROOT, 'frontend/js/'), '--include=*.js', '--include=*.ts', '-l']).out.trim();
+  const r1 = run(['grep', '-rn', 'window\\.__', path.join(ROOT, 'frontend/src/'), '--include=*.js', '--include=*.ts', '-l']).out.trim();
   if (r1) {
     errors += 1;
     console.log(`  ${FAIL} [rule1] window.__ global vars:`);
@@ -207,7 +207,7 @@ function checkGovernance() {
 
   // 规则 8 动态拼接: innerHTML 含表达式插值（非纯标识符，如 ${e.message}）必须 esc()（ERROR 硬门槛）
   // 纯标识符插值（${inner} 等受信 HTML 片段）放行；命中行含 esc( 视为已转义
-  const r8dyn = run(['grep', '-rnE', 'innerHTML\\s*=[^;]*\\$\\{[^}]*[^A-Za-z0-9_$}][^}]*\\}', path.join(ROOT, 'frontend/js/'), '--include=*.js', '--include=*.ts']).out.trim();
+  const r8dyn = run(['grep', '-rnE', 'innerHTML\\s*=[^;]*\\$\\{[^}]*[^A-Za-z0-9_$}][^}]*\\}', path.join(ROOT, 'frontend/src/'), '--include=*.js', '--include=*.ts']).out.trim();
   if (r8dyn) {
     const unescaped = r8dyn.split('\n').filter((l) => !/esc\(/.test(l));
     if (unescaped.length) {
@@ -226,7 +226,7 @@ function checkGovernance() {
   }
 
   // Wails 调用检查（WARN 级，注释误报已知）
-  const w = run(['grep', '-rn', 'window\\.go\\.main\\.App', path.join(ROOT, 'frontend/js/'), '--include=*.js', '--include=*.ts']).out.trim();
+  const w = run(['grep', '-rn', 'window\\.go\\.main\\.App', path.join(ROOT, 'frontend/src/'), '--include=*.js', '--include=*.ts']).out.trim();
   if (w) {
     console.log(`  ${WARN} [Wails] direct window.go calls:`);
     for (const line of w.split('\n')) console.log(`    ${line}`);

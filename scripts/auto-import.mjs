@@ -5,7 +5,7 @@
  * 零依赖（仅 node:fs / node:path），复用 _lib/scan-files.mjs 共享层。
  *
  * 原理（goimports 轻量版，正则级非 AST 级）：
- *   1. 扫描 frontend/js 下所有 .ts/.js，提取每个模块的导出符号表
+ *   1. 扫描 frontend/src 下所有 .ts/.js，提取每个模块的导出符号表
  *      （export const/function/class + export type/interface/enum + export { a, b }）；
  *   2. 对目标文件做词法剥离（注释/字符串/模板字面量），收集代码中出现的标识符；
  *   3. 排除：关键词/全局内置、本文件定义（const/function/class/参数/解构）、
@@ -21,7 +21,7 @@
  *
  * 用法：
  *   node scripts/auto-import.mjs                      # 检测全部 .ts
- *   node scripts/auto-import.mjs frontend/js/core/handler-other.ts   # 单文件
+ *   node scripts/auto-import.mjs frontend/src/core/handler-other.ts   # 单文件
  *   node scripts/auto-import.mjs --include-js         # 连存量 .js 一起扫
  *   node scripts/auto-import.mjs --fix                # 自动写入缺失 import（歧义跳过）
  *   node scripts/auto-import.mjs --watch              # 监听变化自动重扫
@@ -483,14 +483,14 @@ function checkFile(file, symbolMap) {
     if (defined.has(name) || imported.has(name) || selfExports.has(name)) continue;
     // re-export 花括号区间内的符号：跳过
     if (reExportRanges.some(([a, b]) => start > a && start < b)) continue;
-    // 属性访问 obj.prop 的 prop：前一个非空白字符是 `.`
+    // 属性访问 obj.prop 的 prop：前一个非空白字符是 `.`（用 stripped，注释已剥为空）
     let j = start - 1;
-    while (j >= 0 && /\s/.test(text[j])) j--;
-    if (j >= 0 && text[j] === '.') continue;
-    // 对象字面量 key `{ bus: 1 }` / `type X = { bus: string }`：key 非引用。
-    // 前一个非空白是 `{`/`,` 且后一个非空白是 `:` 才判定为 key；
+    while (j >= 0 && /\s/.test(stripped[j])) j--;
+    if (j >= 0 && stripped[j] === '.') continue;
+    // 对象字面量 key `{ bus: 1 }` / 接口字段 `{ esc: string; fillSearch: ... }`：key 非引用。
+    // 前一个非空白（stripped，注释/空白已归一）是 `{`/`,`/`;` 且后一个非空白是 `:` 才判定为 key；
     // `{ bus }` 简写属性与 `[bus, fmt]` 数组元素不满足 `:` 条件，仍按引用处理。
-    if (j >= 0 && (text[j] === '{' || text[j] === ',')) {
+    if (j >= 0 && (stripped[j] === '{' || stripped[j] === ',' || stripped[j] === ';')) {
       let k = start + name.length;
       while (k < text.length && /\s/.test(text[k])) k++;
       if (text[k] === ':') continue;

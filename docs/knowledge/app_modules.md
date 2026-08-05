@@ -4,7 +4,7 @@ name: 组件入口 app-modules
 tier: architecture
 category: ui
 source_files:
-  - frontend/js/app-modules.ts
+  - frontend/src/app-modules.ts
 use_when:
   - 组件入口
   - 模块装配
@@ -20,7 +20,7 @@ use_when:
 
 ## 概览
 
-`app-modules.ts` 是前端所有 ES module 组件的统一装配入口：注册可替换服务、按「轻量静态 + 重量级动态」策略导入全部 Web Components、注册右键菜单映射、初始化主题与 UI 偏好、静默检查更新。新增组件必须在此文件登记 import（致命陷阱 #9：新 JS 放 `frontend/js/` 并在此加入口）。
+`app-modules.ts` 是前端所有 ES module 组件的统一装配入口：注册可替换服务、按「轻量静态 + 重量级动态」策略导入全部 Web Components、注册右键菜单映射、初始化主题与 UI 偏好、静默检查更新。新增组件必须在此文件登记 import（致命陷阱 #9：新 JS 放 `frontend/src/` 并在此加入口）。
 
 ## 核心职责
 
@@ -43,7 +43,7 @@ use_when:
 ## 与其他子系统关系
 
 - 装配的全部组件：见知识卡 `app_nav`、`app_toast`、`context_menu`、`app_tree`、`app_sidebar`、`app_content`、`app_resource_manager`、`app_sync_manager`
-- 服务注册表：`frontend/js/services/registry.ts`（见知识卡 `resource_registry`），`loadInstances` / `loadEntries` 可被测试替换
+- 服务注册表：`frontend/src/services/registry.ts`（见知识卡 `resource_registry`），`loadInstances` / `loadEntries` 可被测试替换
 - 主题切换与设置页联动：设置页改主题后经 localStorage `theme` + `window.applyTheme` 生效
 - 静默更新走 `features/version-updater.ts`（Go 端 `go/updater`）
 
@@ -57,6 +57,6 @@ use_when:
 ## 相关
 
 - `frontend/index.html` — 以 module script 引入本文件
-- `frontend/js/services/registry.ts` — 服务注册表
-- `frontend/js/features/version-updater.ts` — 更新检查
+- `frontend/src/services/registry.ts` — 服务注册表
+- `frontend/src/features/version-updater.ts` — 更新检查
 - 知识卡：`app_content`、`context_menu`、`resource_registry`、`event_bus`

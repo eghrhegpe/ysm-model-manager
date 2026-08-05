@@ -66,7 +66,7 @@ description: 9 条前端治理规则的唯一事实来源 — 规则条文 × �
 ### R6 禁止 `public/` 下放 JS（Error）
 
 - **规则**：JS 文件不得放入 `public/` 目录。
-- **替代**：新 JS 放 `frontend/js/`，ESM import → `app-modules.ts` 统一注册。
+- **替代**：新 JS 放 `frontend/src/`，ESM import → `app-modules.ts` 统一注册。
 - **背景**：Vite dev 模式优先加载 `public/` 文件，绕过模块系统，依赖关系断裂（致命陷阱 #9）。
 
 ### R7 禁止魔法字符串资源类型字面量（Warn）

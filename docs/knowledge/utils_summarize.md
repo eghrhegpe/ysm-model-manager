@@ -4,7 +4,7 @@ name: 摘要生成 summarize
 tier: leaf
 category: utils
 source_files:
-  - frontend/js/utils/format/summarize.ts
+  - frontend/src/utils/format/summarize.ts
 use_when:
   - 模型详情
   - 摘要卡片
@@ -50,4 +50,4 @@ use_when:
 
 - [app_preview](./app_preview.md) — 预览面板
 - [go_ysm_parser](./go_ysm_parser.md) — 摘要数据源
-- `frontend/js/utils/format/summarize.test.js` — 单元测试（验证入口）
+- `frontend/src/utils/format/summarize.test.js` — 单元测试（验证入口）

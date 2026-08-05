@@ -53,12 +53,12 @@ for (const m of html.matchAll(/<script\s+([^>]*)>/g)) {
 for (const m of html.matchAll(/<(\w+-\w+)[>\s]/g)) {
   const tag = m[1];
   if (tag.startsWith('app-')) {
-    const indexJs = path.join(ROOT, 'frontend', `js/views/${tag}/index.js`);
-    const indexTs = path.join(ROOT, 'frontend', `js/views/${tag}/index.ts`);
+    const indexJs = path.join(ROOT, 'frontend', `src/views/${tag}/index.js`);
+    const indexTs = path.join(ROOT, 'frontend', `src/views/${tag}/index.ts`);
     if (!fs.existsSync(indexJs) && !fs.existsSync(indexTs)) {
       // 有些组件可能是单文件
-      const singleJs = path.join(ROOT, 'frontend', `js/views/${tag}.js`);
-      const singleTs = path.join(ROOT, 'frontend', `js/views/${tag}.ts`);
+      const singleJs = path.join(ROOT, 'frontend', `src/views/${tag}.js`);
+      const singleTs = path.join(ROOT, 'frontend', `src/views/${tag}.ts`);
       if (!fs.existsSync(singleJs) && !fs.existsSync(singleTs)) {
         errors.push(`Custom component '${tag}' has no JS/TS file`);
       }

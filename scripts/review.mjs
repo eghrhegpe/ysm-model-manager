@@ -26,15 +26,15 @@ function runChecks() {
   };
 
   add('R1', 'window.__ vars',
-    rg('window\\.__', 'frontend/js', ['*.js', '*.ts']),
+    rg('window\\.__', 'frontend/src', ['*.js', '*.ts']),
     'let + getter, PageStore');
 
   add('R2', 'repoRoot name',
-    rg('repoRoot', ['.', 'frontend/js'], ['*.go', '*.js', '*.ts', '*.json']),
+    rg('repoRoot', ['.', 'frontend/src'], ['*.go', '*.js', '*.ts', '*.json']),
     'cfg.FilesRoot / filesRoot');
 
   add('R3', 'callback .file() API',
-    rg('\\.file\\s*\\(', 'frontend/js', ['*.js', '*.ts']),
+    rg('\\.file\\s*\\(', 'frontend/src', ['*.js', '*.ts']),
     'new Promise(...)');
 
   add('R4', 'display none/block',
@@ -53,13 +53,13 @@ function runChecks() {
     'ESM import');
 
   add('R7', 'rtype magic strings',
-    rg('"ysm"|"mmd-skin"|"vrchat-avatar"', 'frontend/js', ['*.js', '*.ts']),
+    rg('"ysm"|"mmd-skin"|"vrchat-avatar"', 'frontend/src', ['*.js', '*.ts']),
     'RESOURCE_TYPES');
 
   // R8 只报「非纯字符串字面量赋值 + 行内无 esc(」的 innerHTML：
   // 纯静态模板（= "..." / = `...` 开头）与已转义插值不计入（历史 149 处噪声多来自它们）；
   // 变量/拼接赋值仍保留待人工确认
-  const r8Inner = rg('innerHTML\\s*=\\s*[^\'"`\\n]', 'frontend/js', ['*.js', '*.ts']).filter(
+  const r8Inner = rg('innerHTML\\s*=\\s*[^\'"`\\n]', 'frontend/src', ['*.js', '*.ts']).filter(
     (l) => !/esc\(/.test(l),
   );
   add('R8', 'innerHTML concat (non-literal)',
@@ -71,13 +71,13 @@ function runChecks() {
     'renderSidebar()');
 
   add('R10', 'private esc implementations',
-    rg('replace\\(/&/g, "&amp;"\\)', 'frontend/js', ['*.ts', '*.js']).filter((l) => !l.includes('utils/dom/dom.ts')),
+    rg('replace\\(/&/g, "&amp;"\\)', 'frontend/src', ['*.ts', '*.js']).filter((l) => !l.includes('utils/dom/dom.ts')),
     'import { esc } from utils/dom/dom.ts (5-replace 单点，致命陷阱 #15)');
 
   // W1 排除正则/转义误报：[/\] 字符类、replace(/\\/g 归一化、\n \t \. \w \d \s \b 等
   // （历史 148 处噪声几乎全来自它们）；真实路径拼接（"\\" 双反斜杠字符串字面量）仍保留
   add('W1', 'backslash paths',
-    rg('\\\\', 'frontend/js', ['*.js', '*.ts']).filter(
+    rg('\\\\', 'frontend/src', ['*.js', '*.ts']).filter(
       (l) =>
         !l.includes('node_modules') &&
         !l.includes('bus.js') &&
@@ -88,20 +88,20 @@ function runChecks() {
     '/ instead of \\');
 
   add('W2', 'window.go.main.App calls',
-    rg('window\\.go\\.main\\.App', 'frontend/js', ['*.js', '*.ts']),
+    rg('window\\.go\\.main\\.App', 'frontend/src', ['*.js', '*.ts']),
     'getApp()');
 
   // W3 empty JSDoc / W4 TODO no ticket 已移交 comment-checker.mjs（扫描范围更全，
   // W4 覆盖 go+frontend，避免双重扫描），此处不再重复。
 
   add('W5', 'async DOM race (callback sets innerHTML without stale guard)',
-    rg('=>\\s*\\{[^}]*innerHTML\\s*=', 'frontend/js', ['*.js', '*.ts'])
-      .concat(rg('\\.(then|finally)\\s*\\(.*innerHTML\\s*=', 'frontend/js', ['*.js', '*.ts']))
-      .concat(rg('setTimeout\\s*\\(.*innerHTML\\s*=', 'frontend/js', ['*.js', '*.ts'])),
+    rg('=>\\s*\\{[^}]*innerHTML\\s*=', 'frontend/src', ['*.js', '*.ts'])
+      .concat(rg('\\.(then|finally)\\s*\\(.*innerHTML\\s*=', 'frontend/src', ['*.js', '*.ts']))
+      .concat(rg('setTimeout\\s*\\(.*innerHTML\\s*=', 'frontend/src', ['*.js', '*.ts'])),
     'DOM writes in async callbacks need stale-request guards (fetchDone flag)');
 
   add('W6', 'bypass dialogs (dlg-overlay outside dialogs/modal.ts)',
-    rg('className\\s*=\\s*"dlg-overlay"', 'frontend/js', ['*.ts', '*.js']).filter((l) => !l.includes('dialogs/modal.ts')),
+    rg('className\\s*=\\s*"dlg-overlay"', 'frontend/src', ['*.ts', '*.js']).filter((l) => !l.includes('dialogs/modal.ts')),
     '统一走 modal.ts (modalConfirm/registerDlg 单例槽位，致命陷阱 #14)；合法旁路须确认 registerDlg 已登记');
 
   return results;

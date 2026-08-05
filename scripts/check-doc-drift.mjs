@@ -11,7 +11,7 @@
  *                 必填字段缺失 / 占位符 / 引用不存在（ERROR 阻断）
  *   [架构树维度]  docs/archive/architecture.md 反引号代码路径引用
  *                 指向磁盘不存在的文件（ERROR 阻断）
- *                 实际源码树（frontend/js/ + go/ + internal/）中未在
+ *                 实际源码树（frontend/src/ + go/ + internal/）中未在
  *                 architecture.md 登记的子模块（INFO 基线管理，--fix 刷新）
  *                 AGENTS.md §4.2 前端目录树 vs 磁盘实况（缺失 → WARN）
  *
@@ -191,23 +191,23 @@ function checkAgentsTree() {
     return;
   }
   const lines = blockM[1].split(/\r?\n/);
-  const rootIdx = lines.findIndex((l) => l.includes('frontend/js/'));
+  const rootIdx = lines.findIndex((l) => l.includes('frontend/src/'));
   if (rootIdx < 0) return;
   for (const line of lines.slice(rootIdx + 1)) {
     const segM = line.match(/^\s{2}([^\s—]+)/);
     if (!segM) continue;
     const seg = segM[1];
-    if (!fs.existsSync(path.join(ROOT, 'frontend/js', seg))) {
-      warns.push(`[架构树] AGENTS.md §4.2 描述 frontend/js/${seg} 但磁盘不存在（疑似规划中目录或已删除）`);
+    if (!fs.existsSync(path.join(ROOT, 'frontend/src', seg))) {
+      warns.push(`[架构树] AGENTS.md §4.2 描述 frontend/src/${seg} 但磁盘不存在（疑似规划中目录或已删除）`);
     }
   }
 }
 
-/** 收集实际源码树一层子模块（frontend/js/ + go/ + internal/）。 */
+/** 收集实际源码树一层子模块（frontend/src/ + go/ + internal/）。 */
 function collectSourceModules() {
   const out = [];
   const roots = [
-    ['frontend/js', (d) => /^[a-z][a-z0-9-]*$/.test(d) && d !== 'css'],
+    ['frontend/src', (d) => /^[a-z][a-z0-9-]*$/.test(d) && d !== 'css'],
     ['go', (d) => /^[a-z][a-z0-9-]*$/.test(d)],
     ['internal', (d) => /^[a-z][a-z0-9-]*$/.test(d)],
   ];

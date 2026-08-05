@@ -1,13 +1,13 @@
 {
   "generated": "2026-08-05T01:32:50.748Z",
   "unregistered": [
-    "frontend/js/core",
-    "frontend/js/features",
-    "frontend/js/services",
-    "frontend/js/test-utils",
-    "frontend/js/wails",
-    "frontend/js/wasm",
-    "frontend/js/widgets",
+    "frontend/src/core",
+    "frontend/src/features",
+    "frontend/src/services",
+    "frontend/src/test-utils",
+    "frontend/src/wails",
+    "frontend/src/wasm",
+    "frontend/src/widgets",
     "go/avatar",
     "go/dedup",
     "go/download",
@@ -35,6 +35,7 @@
     "frontend/js/utils/model3d-spec.ts",
     "frontend/js/utils/model2d.ts",
     "frontend/js/views/app-preview/preview-litematic-3d.ts",
-    "frontend/js/views/app-preview/preview-wasm.ts"
+    "frontend/js/views/app-preview/preview-wasm.ts",
+    "frontend/js/bus.ts"
   ]
 }

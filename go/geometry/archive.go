@@ -153,8 +153,14 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 					} else if raw[0] == '{' {
 						var mm map[string]string
 						if json.Unmarshal(ysm.Files.Player.Model, &mm) == nil {
-							for _, v := range mm {
-								modelOrder = append(modelOrder, v)
+							// map 遍历顺序随机，按 key 排序保证 modelOrder 稳定（texSlot 绑定一致）
+							keys := make([]string, 0, len(mm))
+							for k := range mm {
+								keys = append(keys, k)
+							}
+							sort.Strings(keys)
+							for _, k := range keys {
+								modelOrder = append(modelOrder, mm[k])
 							}
 						}
 					} else {

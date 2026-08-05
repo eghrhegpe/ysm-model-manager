@@ -42,9 +42,8 @@ import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 import { toPosix } from './_lib/to-posix.mjs';
+import { ROOT } from './_lib/scan-files.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
 const FRONTEND = path.join(ROOT, 'frontend');
 const require_ = createRequire(path.join(FRONTEND, 'package.json'));
 const { Project, SyntaxKind } = require_('ts-morph');

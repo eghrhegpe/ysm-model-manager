@@ -23,12 +23,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { parseFrontmatter, getScalar } from './_lib/frontmatter.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
+import { ROOT } from './_lib/scan-files.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
 const KNOW_DIR = path.join(ROOT, 'docs', 'knowledge');
 
 /** 非知识卡文件（与 check-knowledge-drift / gen-knowledge-h1 保持一致；含本项目 AGENTS.md） */

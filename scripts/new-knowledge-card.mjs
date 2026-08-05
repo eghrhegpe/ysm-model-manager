@@ -15,10 +15,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { ROOT } from './_lib/scan-files.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 
 const KNOWN_CATEGORIES = ['core', 'go', 'ui', 'feature', 'utils', 'config'];

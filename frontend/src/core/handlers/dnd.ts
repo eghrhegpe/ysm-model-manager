@@ -141,9 +141,21 @@ const onDrop = async (e: DragEvent): Promise<void> => {
           depth = 0,
         ): Promise<Array<{ file: File; relPath: string }>> => {
           if (depth > 10) return []; // 防止深层递归导致卡顿
-          const batch = await new Promise<FileSystemEntry[]>((r) =>
-            reader.readEntries(r),
-          );
+          // WebView2 对部分目录 readEntries 会触发 error（安全策略/权限）：
+          // 必须带错误回调 + 超时兜底，否则 Promise 永不 resolve → onDrop 挂起（拖拽失效）
+          const batch = await new Promise<FileSystemEntry[]>((resolve) => {
+            let settled = false;
+            const done = (v: FileSystemEntry[]): void => {
+              if (settled) return;
+              settled = true;
+              resolve(v);
+            };
+            reader.readEntries(
+              (entries) => done(entries || []),
+              () => done([]),
+            );
+            setTimeout(() => done([]), 3000);
+          });
           if (!batch.length) return [];
           const deeper = await collectFiles(batch, true, subPath);
           const next = await readAll(depth + 1);
@@ -172,6 +184,19 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   let collected: Array<{ file: File; relPath: string }> = [];
   const items = Array.from(e.dataTransfer?.items || []);
   if (items.length > 0) collected = await collectFiles(items, false);
+  // WebView2 全局 drop 可能只暴露 dataTransfer.files（webkitGetAsEntry 受限）：
+  // 合并 files 兜底，保留 webkitRelativePath 层级（无则用文件名）
+  const seen = new Set(collected.map((c) => c.file));
+  for (const f of Array.from(e.dataTransfer?.files || [])) {
+    if (seen.has(f)) continue;
+    seen.add(f);
+    collected.push({
+      file: f,
+      relPath:
+        (f as File & { webkitRelativePath?: string }).webkitRelativePath ||
+        f.name,
+    });
+  }
   if (collected.length === 0) {
     collected = Array.from(e.dataTransfer?.files || []).map((f) => ({
       file: f,

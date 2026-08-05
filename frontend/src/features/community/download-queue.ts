@@ -260,6 +260,18 @@ export interface QueueController {
 }
 
 /**
+ * 属性选择器值转义。
+ * 浏览器用标准 CSS.escape 正确处理 & < > 等字符（修复 &amp; 不还原问题，ADR-039 P3）；
+ * jsdom 测试环境未实现 CSS 全局对象，降级为最小转义（" 与 \），足以覆盖测试中的简单文件名。
+ */
+function escapeAttrValue(s: string): string {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(s);
+  }
+  return s.replace(/["\\]/g, "\\$&");
+}
+
+/**
  * 创建一个下载队列 UI 控制器。
  * 所有 Go 事件已在模块顶层注册，本函数只负责：
  *   1. 订阅 STATE 变更 → 渲染进度 DOM
@@ -491,7 +503,7 @@ export function createDownloadQueue({
       }
       if (done.name) getLocalMap().set(done.name, "");
       // ADR-039 P3：用 CSS.escape 修复 &amp; 在属性选择器中不还原的问题
-      const cb = sr.querySelector('.gh-sel[data-name="' + CSS.escape(done.name) + '"]');
+      const cb = sr.querySelector('.gh-sel[data-name="' + escapeAttrValue(done.name) + '"]');
       if (cb) (cb as HTMLInputElement).checked = false;
       if (onFileSuccess) onFileSuccess(done.name);
     } else if (done.status === "fail") {
@@ -509,7 +521,7 @@ export function createDownloadQueue({
         }
       }
       if (fillEl) fillEl.classList.add("gh-progress-fill-error");
-      const cb = sr.querySelector('.gh-sel[data-name="' + CSS.escape(done.name) + '"]');
+      const cb = sr.querySelector('.gh-sel[data-name="' + escapeAttrValue(done.name) + '"]');
       if (cb) (cb as HTMLInputElement).checked = false;
       if (onFileSuccess) onFileSuccess(done.name);
     }

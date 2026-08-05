@@ -94,18 +94,6 @@ func TestDesc_Empty(t *testing.T) {
 // ====== SetRegistryPath ======
 
 func TestSetRegistryPath(t *testing.T) {
-	// 保存原始 registry 状态
-	oldPath := registryPath
-	oldRegistry := registry
-	oldOnce := registryOnce
-
-	// 重置
-	defer func() {
-		registryPath = oldPath
-		registry = oldRegistry
-		registryOnce = oldOnce
-	}()
-
 	// 先确保 registry 已加载
 	_ = LoadRegistry()
 
@@ -118,6 +106,6 @@ func TestSetRegistryPath(t *testing.T) {
 	if registry != nil {
 		t.Error("SetRegistryPath 后 registry 应为 nil")
 	}
-	// registryOnce 已重置，下次 LoadRegistry 会重新加载
-	// 只验证不 panic
+	// 恢复（避免影响其他测试）
+	SetRegistryPath("")
 }

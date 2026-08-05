@@ -20,7 +20,7 @@
 | 信号 | 证据 |
 |------|------|
 | 规模可控 | 120 个业务 JS（联邦 365 个 .ts 的 1/3） |
-| Wails 类型已生成 | `frontend/wailsjs/go/main/App.d.ts` 存在，前端 JS 却未消费 |
+| Wails 类型已生成 | `frontend/bindings/ysm-model-manager/internal/app/app.ts`（v3 `-ts` 契约产物）存在，前端 JS 却未消费 |
 | Vite 已半铺路 | `vite.config.js` 已有 `wails-bindings-resolve` 插件（.js import 解析到 .ts） |
 | Vite 原生转译 | esbuild 转 TS 零配置，`.js` / `.ts` 可混编共存 |
 

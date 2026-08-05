@@ -32,8 +32,8 @@ ${btnBaseCSS}
 .hdr-btn { padding:var(--pad-btn-primary) 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-primary);font-family:inherit; }
 .hdr-btn:hover { background:var(--hover); }
 .hdr-btn.accent { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 33%, transparent); }
-:host-context(.theme-warm) .hdr-btn.accent { color:#8b4513; }
-:host-context(.theme-pro) .hdr-btn.accent { color:#ffffff; }
+/* 主题特判收口：warm 主题 --accent 即 #8b4513（冗余行已删）；pro 主题浅色文字走 --txt */
+:host-context(.theme-pro) .hdr-btn.accent { color: var(--txt); }
 .hdr-btn.accent:hover { background: color-mix(in srgb, var(--accent) 33%, transparent); }
 .hdr-btn.flash { background: color-mix(in srgb, var(--status-success) 20%, transparent); border-color: color-mix(in srgb, var(--status-success) 33%, transparent); }
 .dd-wrap { position:relative;display:inline-block; }
@@ -58,7 +58,7 @@ ${btnBaseCSS}
 .empty .big { font-size: 36px; margin-bottom: 8px; }
 .fh { display: flex; align-items: center; gap: 4px; padding: 3px 4px; border-radius: 0; cursor: pointer; font-size: var(--fs-base); transition: background var(--tr-fast); border-left: 2px solid transparent; }
 .fh:hover { background: var(--hover); }
-.fh.has-items { border-left-color: #a6e3a166; }
+.fh.has-items { border-left-color: color-mix(in srgb, var(--status-success) 40%, transparent); }
 .fh .ar { font-size: var(--fs-sm); color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; transition: transform var(--tr-fast); }
 .fh .ar.open { transform: rotate(90deg); }
 .fh .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
@@ -71,7 +71,7 @@ ${btnBaseCSS}
 .fh.locked .nm { color: var(--muted); }
 .fl { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px; font-size: var(--fs-base); transition: all var(--tr-normal); cursor: default; user-select: none; -webkit-user-select: none; }
 .fl:hover { background: var(--hover); }
-.fl.flash { background: #a6e3a122; }
+.fl.flash { background: color-mix(in srgb, var(--status-success) 13%, transparent); }
 .fl.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
 .fl.selected:hover { background: color-mix(in srgb, var(--accent) 38%, transparent); }
 .fh.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
@@ -85,9 +85,9 @@ ${btnBaseCSS}
 .fh-list.locked { opacity: .5; }
 .fl-list .ck, .fh-list .ck { width: 22px; height: 12px; border-radius: 6px; background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background var(--tr-normal); font-size: 0; line-height: 0; }
 .fl-list .ck::after, .fh-list .ck::after { content: ""; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--txt); transition: left var(--tr-normal); }
-.fl-list .ck.on, .fh-list .ck.on { background: #a6e3a1; }
+.fl-list .ck.on, .fh-list .ck.on { background: var(--status-success); }
 .fl-list .ck.on::after, .fh-list .ck.on::after { left: 12px; }
-.fh-list .ck.partial { background: #f9a826; }
+.fh-list .ck.partial { background: var(--sm-optional); }
 .fh-list .ck.partial::after { left: 7px; }
 .fl-list .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fh-list .ar { font-size: var(--fs-sm); color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; transition: transform var(--tr-fast); }
@@ -101,9 +101,9 @@ ${btnBaseCSS}
 .fl-list .ficon { font-size: var(--fs-sm); flex-shrink: 0; }
 .fl .ck, .fh .ck { width: 22px; height: 12px; border-radius: 6px; background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background var(--tr-normal); font-size: 0; line-height: 0; }
 .fl .ck::after, .fh .ck::after { content: ""; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--txt); transition: left var(--tr-normal); }
-.fl .ck.on, .fh .ck.on { background: #a6e3a1; }
+.fl .ck.on, .fh .ck.on { background: var(--status-success); }
 .fl .ck.on::after, .fh .ck.on::after { left: 12px; }
-.fh .ck.partial { background: #f9a826; }
+.fh .ck.partial { background: var(--sm-optional); }
 .fh .ck.partial::after { left: 7px; }
 .fl .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fl .nm .tag-author,.fl .nm .tag-work,.fl .nm .tag-date { display:inline-block;padding:0 5px;border-radius:3px;font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }

@@ -68,10 +68,14 @@ export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
   return new Promise((resolve) => {
     const { title, icon, value, placeholder, okText } = opts;
     const overlay = document.createElement("div");
+    overlay.tabIndex = 0; // ADR-039 P3：补 overlay Esc（对齐 modalConfirm/select）
     overlay.className = "dlg-overlay";
     overlay.onclick = (e: MouseEvent): void => {
       if (e.target === overlay) closeDlg(overlay, resolve, null);
     };
+    overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
+      if (e.key === "Escape") closeDlg(overlay, resolve, null);
+    });
 
     const box = document.createElement("div");
     box.className = "dlg-box dlg-pad";

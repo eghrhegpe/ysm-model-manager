@@ -243,9 +243,20 @@ func BuildNbtVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, e
 		return nil, fmt.Errorf("invalid size")
 	}
 
-	sx := int(sizeList[0].(int32))
-	sy := int(sizeList[1].(int32))
-	sz := int(sizeList[2].(int32))
+	// ADR-039 P3：comma-ok 防畸形 NBT 裸断言 panic
+	sxTag, ok := sizeList[0].(int32)
+	if !ok {
+		return nil, fmt.Errorf("invalid size[0] type")
+	}
+	syTag, ok := sizeList[1].(int32)
+	if !ok {
+		return nil, fmt.Errorf("invalid size[1] type")
+	}
+	szTag, ok := sizeList[2].(int32)
+	if !ok {
+		return nil, fmt.Errorf("invalid size[2] type")
+	}
+	sx, sy, sz := int(sxTag), int(syTag), int(szTag)
 
 	paletteColors := make([]string, len(paletteList))
 	for i, elem := range paletteList {

@@ -16,6 +16,7 @@ export interface ImportRecord {
   name: string;
   time: string;
   isYsm?: boolean;
+  relPath?: string; // ADR-039 P3：去重需比对相对路径，防同名不同目录文件误丢
 }
 
 /** 收集条目（文件 + 相对路径） */

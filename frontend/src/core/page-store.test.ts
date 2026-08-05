@@ -14,9 +14,25 @@ describe("resolveInitialPage（localStorage 恢复）", () => {
     expect(resolveInitialPage()).toBe("repository");
   });
 
-  it("读取上次保存的页面", () => {
+  it("设置项启动默认页优先于上次停留页", () => {
+    localStorage.setItem("ui-default-page", "workshop");
+    localStorage.setItem("nav_page", "settings");
+    expect(resolveInitialPage()).toBe("workshop");
+  });
+
+  it("仅设置项存在时用设置项", () => {
+    localStorage.setItem("ui-default-page", "instances");
+    expect(resolveInitialPage()).toBe("instances");
+  });
+
+  it("无设置项时读取上次保存的页面", () => {
     localStorage.setItem("nav_page", "settings");
     expect(resolveInitialPage()).toBe("settings");
+  });
+
+  it("设置项 resources 历史名映射回仓库页", () => {
+    localStorage.setItem("ui-default-page", "resources");
+    expect(resolveInitialPage()).toBe("repository");
   });
 
   it("历史页面名 resources 映射回仓库页", () => {

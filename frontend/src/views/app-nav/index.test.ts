@@ -25,14 +25,17 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     document.body.innerHTML = "";
   });
 
-  it("connected → 渲染 6 个导航项（无 active，因 nav:changed 未收到）", async () => {
+  it("connected → 渲染 6 个导航项（初始 active 同源 resolveInitialPage）", async () => {
     const el = mountCustomElement("app-nav");
     const root = el.shadowRoot!;
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
     const items = getAllByTestId(root, "nav-item");
     expect(items.length).toBe(6);
-    // 单独挂载时无 nav:changed 响应，不应有 active 项
-    expect(items.some((i) => i.classList.contains("active"))).toBe(false);
+    // 构造器与 PageStore 同源：nav_page 未保存时默认 repository，首个导航项 active
+    // （旧行为硬编码幽灵值 "dashboard"，无任何项 active——启动高亮缺失的根因）
+    const active = items.filter((i) => i.classList.contains("active"));
+    expect(active.length).toBe(1);
+    expect((active[0] as HTMLElement).dataset.page).toBe("repository");
     unmountElement(el);
   });
 

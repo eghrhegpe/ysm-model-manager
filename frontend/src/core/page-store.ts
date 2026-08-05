@@ -7,8 +7,18 @@ import { bus, type PageName } from "../bus.ts";
 // 状态出现幽灵路径（历史教训：setCurrentPage 曾绕过渲染链路，且 emits 完成
 // 事件而非请求事件，被调用即"状态变、内容不渲染"）。
 
-/** 恢复上次保存的页面（与 app-nav 旧内联逻辑同源；"resources" 为历史页面名，映射回仓库页） */
+/**
+ * 解析启动初始页面（app-nav / app-content / PageStore 三处同源调用）。
+ * 优先级：① 设置项「启动默认页面」（ui-default-page，用户显式配置）
+ *        ② 上次停留页（nav_page，app-nav 每次切页写入）
+ *        ③ 仓库页（repository，兜底）
+ * "resources" 为历史页面名，映射回仓库页。
+ */
 export function resolveInitialPage(): PageName {
+  const configured = localStorage.getItem("ui-default-page");
+  if (configured) {
+    return configured === "resources" ? "repository" : (configured as PageName);
+  }
   const saved = localStorage.getItem("nav_page");
   if (saved && saved !== "repository") {
     return saved === "resources" ? "repository" : (saved as PageName);

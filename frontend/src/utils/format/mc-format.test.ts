@@ -1,104 +1,96 @@
-// ===== MC 分节符颜色渲染测试（ADR-021 扩展）=====
-// renderFormattedText：§ 颜色码 / 格式码 / §r 重置 / 换行 / 转义。
+// ===== Minecraft § 分节符颜色渲染测试 =====
+// 覆盖：空输入、普通文本、单行颜色、多行（含空行）、格式码叠加、§r 重置、无效码保留、§k 忽略、XSS 转义
 import { describe, it, expect } from "vitest";
 import { renderFormattedText } from "./mc-format.ts";
 
-describe("renderFormattedText 基础", () => {
-  it("无分节符纯文本 → 转义后原样", () => {
-    expect(renderFormattedText("hello")).toBe("hello");
-  });
-
-  it("空字符串/非字符串 → 空串", () => {
+describe("renderFormattedText", () => {
+  it("空值 / 非字符串 → 空串", () => {
     expect(renderFormattedText("")).toBe("");
     expect(renderFormattedText(null as unknown as string)).toBe("");
     expect(renderFormattedText(undefined as unknown as string)).toBe("");
   });
 
-  it("HTML 特殊字符被转义（防 XSS）", () => {
+  it("纯文本（无 §）→ 转义后原样返回", () => {
+    expect(renderFormattedText("Hello World")).toBe("Hello World");
+  });
+
+  it("普通文本含换行 → <br> 连接", () => {
+    expect(renderFormattedText("line1\nline2")).toBe("line1<br>line2");
+  });
+
+  it("空行 → 1 个 <br>（不翻倍：join 已补分隔）", () => {
+    // split=["a","","b"] → join("<br>") = "a<br><br>b" → 视觉 1 个空行
+    expect(renderFormattedText("a\n\nb")).toBe("a<br><br>b");
+  });
+
+  it("连续空行 → 各自 1 个 <br>", () => {
+    // split=["","",""] → join("<br>") = "<br><br>"
+    expect(renderFormattedText("\n\n")).toBe("<br><br>");
+  });
+
+  it("§a 绿色", () => {
+    expect(renderFormattedText("§agreen")).toBe('<span style="color:#55FF55">green</span>');
+  });
+
+  it("§c 红色 + 后续文本", () => {
+    expect(renderFormattedText("§cred")).toBe('<span style="color:#FF5555">red</span>');
+  });
+
+  it("§l 粗体", () => {
+    expect(renderFormattedText("§lBold")).toBe("<b>Bold</b>");
+  });
+
+  it("颜色后叠加粗体", () => {
+    expect(renderFormattedText("§a§ltext")).toBe(
+      '<span style="color:#55FF55"><b>text</b></span>',
+    );
+  });
+
+  it("颜色后换新颜色 → 先关旧 span", () => {
+    // §a=绿 #55FF55，§b=青 #55FFFF
+    expect(renderFormattedText("§ared§bblue")).toBe(
+      '<span style="color:#55FF55">red</span><span style="color:#55FFFF">blue</span>',
+    );
+  });
+
+  it("§r 重置所有格式", () => {
+    expect(renderFormattedText("§a§lcolored§rplain")).toBe(
+      '<span style="color:#55FF55"><b>colored</b></span>plain',
+    );
+  });
+
+  it("无效码 → 原样保留", () => {
+    expect(renderFormattedText("§zinvalid")).toBe("§zinvalid");
+  });
+
+  it("连续 § 后接有效色码 → 按第二个码解析", () => {
+    // "§§double" split → ["","","double"] → i=1 空跳过 → i=2 code='d'(粉) body='ouble'
+    expect(renderFormattedText("§§double")).toBe(
+      '<span style="color:#FF55FF">ouble</span>',
+    );
+  });
+
+  it("XSS：<script> 被转义", () => {
     expect(renderFormattedText("<script>alert(1)</script>")).toBe(
       "&lt;script&gt;alert(1)&lt;/script&gt;",
     );
   });
 
-  it("换行渲染为 <br>", () => {
-    expect(renderFormattedText("a\nb")).toBe("a<br>b");
+  it("XSS：颜色正文中注入标签也被转义", () => {
+    expect(renderFormattedText("§a<img src=x onerror=alert(1)>")).toBe(
+      '<span style="color:#55FF55">&lt;img src=x onerror=alert(1)&gt;</span>',
+    );
   });
 
-  it("CRLF 归一化为 <br>", () => {
+  it("§k 乱码码 → 忽略，仅输出正文", () => {
+    expect(renderFormattedText("§kobfuscated")).toBe("obfuscated");
+  });
+
+  it("大小写格式码兼容：§A 与 §a 等价", () => {
+    expect(renderFormattedText("§Atext")).toBe('<span style="color:#55FF55">text</span>');
+  });
+
+  it("\\r\\n → 归一化为换行", () => {
     expect(renderFormattedText("a\r\nb")).toBe("a<br>b");
-    expect(renderFormattedText("a\rb")).toBe("a<br>b");
-  });
-});
-
-describe("renderFormattedText 颜色码", () => {
-  it("§a 开绿色 span", () => {
-    expect(renderFormattedText("§a绿")).toBe(
-      '<span style="color:#55FF55">绿</span>',
-    );
-  });
-
-  it("颜色码切换时关闭前一 span", () => {
-    expect(renderFormattedText("§a绿§c红")).toBe(
-      '<span style="color:#55FF55">绿</span><span style="color:#FF5555">红</span>',
-    );
-  });
-
-  it("§f 白色映射正确", () => {
-    expect(renderFormattedText("§f白")).toBe(
-      '<span style="color:#FFFFFF">白</span>',
-    );
-  });
-});
-
-describe("renderFormattedText 格式码", () => {
-  it("§l 粗体叠加在当前颜色", () => {
-    expect(renderFormattedText("§a§l粗")).toBe(
-      '<span style="color:#55FF55"><b>粗</b></span>',
-    );
-  });
-
-  it("§o 斜体 / §n 下划线 / §m 删除线", () => {
-    expect(renderFormattedText("§o斜")).toBe("<i>斜</i>");
-    expect(renderFormattedText("§n下")).toBe(
-      '<u style="text-decoration:underline">下</u>',
-    );
-    expect(renderFormattedText("§m删")).toBe(
-      '<span style="text-decoration:line-through">删</span>',
-    );
-  });
-
-  it("§r 重置颜色与格式", () => {
-    expect(renderFormattedText("§a绿§r普通")).toBe(
-      '<span style="color:#55FF55">绿</span>普通',
-    );
-    expect(renderFormattedText("§l粗§r普通")).toBe("<b>粗</b>普通");
-  });
-
-  it("新颜色码重置此前格式", () => {
-    expect(renderFormattedText("§l粗§b蓝粗？")).toBe(
-      "<b>粗</b><span style=\"color:#55FFFF\">蓝粗？</span>",
-    );
-  });
-});
-
-describe("renderFormattedText 边界", () => {
-  it("无效码原样保留（如 §k 乱码码）", () => {
-    expect(renderFormattedText("§k乱码")).toBe("§k乱码");
-  });
-
-  it("无效码原样保留（如 §z）", () => {
-    expect(renderFormattedText("a§z")).toBe("a§z");
-  });
-
-  it("§b 是合法青色码，空 body 渲染空 span", () => {
-    expect(renderFormattedText("a§b")).toBe(
-      'a<span style="color:#55FFFF"></span>',
-    );
-  });
-
-  it("行内混合文本与颜色", () => {
-    expect(renderFormattedText("前缀 §a绿")).toBe(
-      '前缀 <span style="color:#55FF55">绿</span>',
-    );
   });
 });

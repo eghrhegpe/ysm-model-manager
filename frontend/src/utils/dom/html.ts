@@ -14,14 +14,14 @@ export function esc(s: string): string {
 
 /** 关键词高亮：转义 + <mark> 包裹命中段 */
 export function hl(text: string, query?: string): string {
-  const s = esc(text);
-  if (!query) return s;
+  if (!query) return esc(text);
   const lq = query.toLowerCase();
   const idx = text.toLowerCase().indexOf(lq);
-  if (idx === -1) return s;
-  // 从已转义的 s 中按原始索引切分，避免双重转义
-  const before = s.substring(0, idx);
+  if (idx === -1) return esc(text);
+  // 三个片段分别从「原始 text」切片再各自 esc()，避免双重转义，
+  // 且不能用已转义串按原始索引切（&lt; 等会错位，回归测试锁定）
+  const before = esc(text.substring(0, idx));
   const match = esc(text.substring(idx, idx + query.length));
-  const after = s.substring(idx + query.length);
+  const after = esc(text.substring(idx + query.length));
   return before + "<mark>" + match + "</mark>" + after;
 }

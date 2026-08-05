@@ -246,6 +246,15 @@ func copyDirRecursive(src, dst string) error {
 		if d.IsDir() {
 			return os.MkdirAll(target, 0755)
 		}
+		// 符号链接：复制链接本身（保留语义）；不跟随复制——symlink-to-dir 走
+		// copyFile 会 os.Open(目录)+io.Copy → EISDIR 中断整棵树复制
+		if d.Type()&os.ModeSymlink != 0 {
+			linkTarget, err := os.Readlink(p)
+			if err != nil {
+				return err
+			}
+			return os.Symlink(linkTarget, target)
+		}
 		return copyFile(p, target)
 	})
 }

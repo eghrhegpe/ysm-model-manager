@@ -57,6 +57,20 @@ func (a *App) CopyModelFile(src, dstDir string) error {
 	return fileops.CopyModelFile(cfg.FilesRoot, src, dstDir)
 }
 
+// ImportModelFolder 文件夹型模型整组导入（YSM 解压目录，保留子目录层级，ADR-038 关联）
+// folderName = 仓库文件夹名（模型名）；files = 相对路径 → base64 内容
+func (a *App) ImportModelFolder(folderName, subpath string, files []types.ImportFileItem) error {
+	root, _ := a.GetRepoRoot("ysm")
+	if root == "" {
+		return fmt.Errorf("请先设置文件存储路径")
+	}
+	if err := fileops.WriteModelFolder(root, subpath, folderName, files); err != nil {
+		return err
+	}
+	scanner.InvalidateCache()
+	return nil
+}
+
 // ========== 在资源管理器中显示 ==========
 func (a *App) RevealInExplorer(path string) error {
 	path = strings.TrimSpace(path)

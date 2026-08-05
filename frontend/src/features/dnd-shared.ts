@@ -1,7 +1,5 @@
 // ===== DnD 导入共享逻辑（import-queue 与 handler-dnd 共用，消除重复）=====
-import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
-import { getApp } from "../wails/app.ts";
 
 const getExt = (name: string): string =>
   "." + (name.split(".").pop() || "").toLowerCase();
@@ -18,22 +16,15 @@ export const isImportableFile = (name: string): boolean => {
   return isSupportedFile(name);
 };
 
-/** 判断文件是否需要进入命名表单（异步） */
+/** 判断文件是否需要进入命名表单（异步）
+ *  2026-08-05：导入默认直接（保留原文件名，后端自动路由类型/冲突覆盖确认），
+ *  不再强制命名表单；ys m.json 单文件保留表单提示（整组导入走文件夹路由）。 */
 export const shouldEnterForm = async (
   name: string,
   base64: string,
 ): Promise<boolean> => {
   const ext = getExt(name);
-  if (ext === ".ysm") return true;
   if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
-  if (ext === ".zip" || ext === ".7z") {
-    try {
-      const { DetectZipType } = await getApp();
-      return (await DetectZipType(base64)) === RESOURCE_TYPES.YSM;
-    } catch {
-      return false;
-    }
-  }
   return false;
 };
 

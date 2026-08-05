@@ -28,6 +28,12 @@ type ModelEntry struct {
 	HasTags bool   `json:"HasTags"` // 是否有标签
 }
 
+// ImportFileItem 文件夹型模型整组导入的文件项（ADR-038 关联：解压目录整组导入）
+type ImportFileItem struct {
+	RelPath string `json:"RelPath"` // 相对文件夹根的路径（正斜杠，保留子目录层级）
+	Base64  string `json:"Base64"`  // 文件内容
+}
+
 // VersionInstance 整合包信息
 type VersionInstance struct {
 	Name       string `json:"Name"`

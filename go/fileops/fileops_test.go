@@ -4,10 +4,13 @@ package fileops
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/types"
 )
 
 func TestRenameFile_IllegalChars(t *testing.T) {
@@ -390,6 +393,70 @@ func TestRenameFile_BlockYsmJson(t *testing.T) {
 	}
 }
 
+// ====== WriteModelFolder（ADR-038 关联：文件夹型模型整组导入）======
+
+func b64(s string) string {
+	return base64.StdEncoding.EncodeToString([]byte(s))
+}
+
+func TestWriteModelFolder_Ok(t *testing.T) {
+	repo := t.TempDir()
+	files := []types.ImportFileItem{
+		{RelPath: "ysm.json", Base64: b64(`{"spec":1}`)},
+		{RelPath: "main.json", Base64: b64(`{"geometry":{}}`)},
+		{RelPath: "arm.animation.json", Base64: b64(`{}`)},
+		{RelPath: "zh_cn.json", Base64: b64(`{}`)},
+		{RelPath: "textures/skin.png", Base64: b64("PNG")},
+	}
+	if err := WriteModelFolder(repo, "", "模型A", files); err != nil {
+		t.Fatalf("整组导入失败: %v", err)
+	}
+	for _, f := range []string{"ysm.json", "main.json", "arm.animation.json", "zh_cn.json", "textures/skin.png"} {
+		if _, err := os.Stat(filepath.Join(repo, "模型A", f)); err != nil {
+			t.Fatalf("组内 %s 应写入: %v", f, err)
+		}
+	}
+	// 子路径层级保留
+	if _, err := os.Stat(filepath.Join(repo, "模型A", "textures", "skin.png")); err != nil {
+		t.Fatalf("textures 子目录层级应保留: %v", err)
+	}
+}
+
+func TestWriteModelFolder_MissingYsmJson(t *testing.T) {
+	repo := t.TempDir()
+	// 缺 ysm.json → 拒绝（防乱导入非 YSM 文件夹）
+	files := []types.ImportFileItem{
+		{RelPath: "main.json", Base64: b64(`{}`)},
+	}
+	if err := WriteModelFolder(repo, "", "模型B", files); err == nil {
+		t.Fatal("缺 ysm.json 应拒绝")
+	}
+}
+
+func TestWriteModelFolder_ExistsAndTraversal(t *testing.T) {
+	repo := t.TempDir()
+	files := []types.ImportFileItem{{RelPath: "ysm.json", Base64: b64(`{}`)}}
+	// 目标已存在 → 防覆盖
+	if err := WriteModelFolder(repo, "", "模型C", files); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteModelFolder(repo, "", "模型C", files); err == nil {
+		t.Fatal("目标已存在应报错")
+	}
+	// 路径穿越 → 拒绝
+	evil := []types.ImportFileItem{
+		{RelPath: "ysm.json", Base64: b64(`{}`)},
+		{RelPath: "../evil.json", Base64: b64(`{}`)},
+	}
+	if err := WriteModelFolder(repo, "", "模型D", evil); err == nil {
+		t.Fatal("路径穿越应拒绝")
+	}
+	// 非法文件夹名 → 拒绝
+	if err := WriteModelFolder(repo, "", "a/b", files); err == nil {
+		t.Fatal("非法文件夹名应拒绝")
+	}
+}
+
 func TestExtractPreviewTexture_FromZipNoPNG(t *testing.T) {
 	dir := t.TempDir()
 	var buf bytes.Buffer
@@ -513,8 +580,9 @@ func TestDeleteModelFile_EmptyArgs(t *testing.T) {
 	}
 }
 
-func TestDeleteModelFile_RootLevelYsmJsonRejected(t *testing.T) {
-	// 根级 ysm.json（父目录 == 仓库根）：目录提升应被守卫拒绝，不得清空仓库
+func TestDeleteModelFile_RootLevelYsmJsonFallsBack(t *testing.T) {
+	// 根级 ysm.json（父目录 == 仓库根）：目录提升被守卫拒绝 → 回退单文件删除，
+	// 不得 os.RemoveAll 清空仓库，仓库内模型必须保留。
 	base := t.TempDir()
 	rootYsm := filepath.Join(base, "ysm.json")
 	if err := os.WriteFile(rootYsm, []byte(`{"spec":1}`), 0644); err != nil {
@@ -523,11 +591,16 @@ func TestDeleteModelFile_RootLevelYsmJsonRejected(t *testing.T) {
 	// 仓库内放一个真实模型，验证未被误删
 	modelDir := makeYsmModelDir(base, "模型A")
 
-	if err := DeleteModelFile(base, rootYsm); err == nil {
-		t.Fatal("根级 ysm.json 删除应被守卫拒绝")
+	if err := DeleteModelFile(base, rootYsm); err != nil {
+		t.Fatalf("根级 ysm.json 应回退单文件删除: %v", err)
 	}
-	if _, err := os.Stat(rootYsm); err != nil {
-		t.Fatalf("根级 ysm.json 不应被删除: %v", err)
+	// 根级 ysm.json 本身被删（单文件）
+	if _, err := os.Stat(rootYsm); !os.IsNotExist(err) {
+		t.Fatalf("根级 ysm.json 应被单文件删除: %v", err)
+	}
+	// 仓库根与仓库内模型必须保留（未被 RemoveAll 清空）
+	if _, err := os.Stat(base); err != nil {
+		t.Fatalf("仓库根不应被删除: %v", err)
 	}
 	if _, err := os.Stat(modelDir); err != nil {
 		t.Fatalf("仓库内模型不应被误删: %v", err)
@@ -637,5 +710,47 @@ func TestIsFileBanned_DirBan(t *testing.T) {
 	// 正常路径不误判
 	if IsFileBanned(filepath.Join("模型A", "ysm.json")) {
 		t.Fatal("正常目录不应误判为禁用")
+	}
+}
+
+func TestToggleModelEnable_UpperBanSuffix(t *testing.T) {
+	// P3 修复验证：大小写不敏感去 .ban 后缀（Windows 上 .BAN 目录也能还原）
+	base := t.TempDir()
+	modelDir := makeYsmModelDir(base, "模型A")
+	// 模拟 Windows 大写后缀：目录名改为 .BAN
+	bannedDir := modelDir + ".BAN"
+	if err := os.Rename(modelDir, bannedDir); err != nil {
+		t.Fatal(err)
+	}
+	// 目录内 ysm.json 路径经 IsFileBanned 应识别为禁用（大小写不敏感）
+	bannedYsm := filepath.Join(bannedDir, "ysm.json")
+	if !IsFileBanned(bannedYsm) {
+		t.Fatal("父目录级 .BAN 应识别为禁用")
+	}
+	// 启用：.BAN 目录内的 ysm.json 传入 → 父目录还原为原名
+	enabled, err := ToggleModelEnable(base, bannedYsm)
+	if err != nil || !enabled {
+		t.Fatalf("启用应返回 enabled=true: %v", err)
+	}
+	if _, err := os.Stat(modelDir); err != nil {
+		t.Fatalf(".BAN 目录应还原为原名 %s: %v", modelDir, err)
+	}
+}
+
+func TestDeleteModelFile_OutOfRootRejected(t *testing.T) {
+	// P3 修复验证：仓库外路径显式拒绝（不静默降级为单文件删除）
+	base := t.TempDir()
+	outside := t.TempDir() // 仓库外目录
+	ysmPath := filepath.Join(outside, "ysm.json")
+	if err := os.WriteFile(ysmPath, []byte(`{"spec":1}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// 仓库外的 ysm.json：父目录不在仓库根内 → 显式报错，不得删除
+	if err := DeleteModelFile(base, ysmPath); err == nil {
+		t.Fatal("仓库外 ysm.json 删除应被拒绝")
+	}
+	// 文件应保留
+	if _, err := os.Stat(ysmPath); err != nil {
+		t.Fatalf("仓库外 ysm.json 不应被删除: %v", err)
 	}
 }

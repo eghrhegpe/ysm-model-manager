@@ -90,54 +90,24 @@ describe("shouldEnterForm — 是否进入命名表单", () => {
     vi.clearAllMocks();
   });
 
-  it(".ysm 文件直接返回 true（不查 zip 类型）", async () => {
+  it(".ysm 默认直接导入（不进表单，2026-08-05 简化）", async () => {
     const result = await shouldEnterForm("model.ysm", "fakebase64");
-    expect(result).toBe(true);
-  });
-
-  it("ysm.json 文件直接返回 true", async () => {
-    const result = await shouldEnterForm("ysm.json", "fakebase64");
-    expect(result).toBe(true);
-  });
-
-  it("大写 YSM.JSON 也返回 true", async () => {
-    const result = await shouldEnterForm("YSM.JSON", "fakebase64");
-    expect(result).toBe(true);
-  });
-
-  it(".zip 文件调用 DetectZipType 并返回结果", async () => {
-    (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      DetectZipType: vi.fn().mockResolvedValue("ysm"),
-    });
-    const result = await shouldEnterForm("archive.zip", "fakebase64");
-    expect(result).toBe(true);
-  });
-
-  it(".7z 文件调用 DetectZipType 并返回结果", async () => {
-    (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      DetectZipType: vi.fn().mockResolvedValue("ysm"),
-    });
-    const result = await shouldEnterForm("archive.7z", "fakebase64");
-    expect(result).toBe(true);
-  });
-
-  it("DetectZipType 返回非 ysm 时返回 false", async () => {
-    (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      DetectZipType: vi.fn().mockResolvedValue("resourcepack"),
-    });
-    const result = await shouldEnterForm("archive.zip", "fakebase64");
     expect(result).toBe(false);
   });
 
-  it("DetectZipType 抛错时返回 false（不传播异常）", async () => {
-    (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      DetectZipType: vi.fn().mockRejectedValue(new Error("timeout")),
-    });
-    const result = await shouldEnterForm("archive.zip", "fakebase64");
-    expect(result).toBe(false);
+  it(".zip / .7z 默认直接导入（后端自动路由类型，不再探测进表单）", async () => {
+    expect(await shouldEnterForm("archive.zip", "fakebase64")).toBe(false);
+    expect(await shouldEnterForm("archive.7z", "fakebase64")).toBe(false);
+    // 不再调用 DetectZipType
+    expect(getApp).not.toHaveBeenCalled();
   });
 
-  it("不支持的扩展名返回 false（不查 zip 类型）", async () => {
+  it("ysm.json 单文件保留表单提示（整组导入走文件夹路由）", async () => {
+    expect(await shouldEnterForm("ysm.json", "fakebase64")).toBe(true);
+    expect(await shouldEnterForm("YSM.JSON", "fakebase64")).toBe(true);
+  });
+
+  it("不支持的扩展名返回 false", async () => {
     const result = await shouldEnterForm("file.txt", "fakebase64");
     expect(result).toBe(false);
   });

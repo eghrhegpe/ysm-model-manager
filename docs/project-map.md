@@ -54,19 +54,19 @@
 
 | 路径 | 用途 |
 |------|------|
-| `components/` | Web Components（app-content / app-preview / app-tree / app-sidebar / app-resource-manager / app-sync-manager / app-nav / app-toast / context-menu） |
 | `core/` | 基础设施（buttons / global-handlers / theme / context-menus） |
 | `css/` | 共享样式（shared-styles） |
-| `dialogs/` | 弹窗（modal / rename / batch-rename / tag-editor） |
 | `features/` | 业务功能（import-queue / recycle-bin / version-updater / community） |
 | `services/` | 服务注册（registry.ts） |
 | `test-utils/` | 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor） |
 | `utils/` | 工具函数（display / fmt / dom / icon / summarize / model3d） |
+| `views/` | 页面级视图组件（app-content / app-tree / app-preview 等） |
 | `wails/` | Wails 桥接（app.ts） |
 | `wasm/` | WASM 生成数据（base64 豁免文件） |
+| `widgets/` | 可复用 UI 小部件（loading / tooltip 等） |
 | `app-modules.ts` | 组件入口 + 右键菜单映射 |
+| `bus.test.ts` | 事件总线测试 |
 | `bus.ts` | 事件总线 |
-| `test-utils.ts` | ⚠️ 用途待补基线（scripts/baseline/project-dirs.json） |
 
 <!-- /GEN: frontend-structure -->
 
@@ -80,6 +80,7 @@
 | `cli_export.go` | CLI 模式构建入口（build tag: cli） |
 | `creators.json` | 创作者数据 |
 | `embed.go` | 内嵌资源声明（embed 文件系统） |
+| `link-checker-out.json` | 链接检查器输出产物（不入库） |
 | `main.go` | 程序入口（薄壳，GUI 构建） |
 | `opencode.json` | opencode 配置 |
 | `README.md` | 项目说明（面向用户） |

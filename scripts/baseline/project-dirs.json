@@ -31,16 +31,17 @@
   },
   "frontend": {
     "bus.ts": "事件总线",
+    "bus.test.ts": "事件总线测试",
     "app-modules.ts": "组件入口 + 右键菜单映射",
-    "components": "Web Components（app-content / app-preview / app-tree / app-sidebar / app-resource-manager / app-sync-manager / app-nav / app-toast / context-menu）",
     "core": "基础设施（buttons / global-handlers / theme / context-menus）",
-    "dialogs": "弹窗（modal / rename / batch-rename / tag-editor）",
     "features": "业务功能（import-queue / recycle-bin / version-updater / community）",
     "services": "服务注册（registry.ts）",
     "test-utils": "测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor）",
     "utils": "工具函数（display / fmt / dom / icon / summarize / model3d）",
+    "views": "页面级视图组件（app-content / app-tree / app-preview 等）",
     "wails": "Wails 桥接（app.ts）",
     "wasm": "WASM 生成数据（base64 豁免文件）",
+    "widgets": "可复用 UI 小部件（loading / tooltip 等）",
     "css": "共享样式（shared-styles）"
   },
   "root": {
@@ -52,6 +53,7 @@
     "workshop_sites.json": "工坊站点配置",
     "workshop-github.json": "工坊 GitHub 关联",
     "AGENTS.md": "AI 入口手册（硬约束 + 导航）",
+    "link-checker-out.json": "链接检查器输出产物（不入库）",
     "README.md": "项目说明（面向用户）",
     "wails.json": "Wails 配置",
     "opencode.json": "opencode 配置"

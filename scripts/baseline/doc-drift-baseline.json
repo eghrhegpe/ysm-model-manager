@@ -1,29 +1,40 @@
 {
-  "generated": "2026-08-03T13:21:09.149Z",
+  "generated": "2026-08-05T01:32:50.748Z",
   "unregistered": [
     "frontend/js/core",
-    "frontend/js/dialogs",
     "frontend/js/features",
     "frontend/js/services",
+    "frontend/js/test-utils",
     "frontend/js/wails",
     "frontend/js/wasm",
+    "frontend/js/widgets",
     "go/avatar",
     "go/dedup",
     "go/download",
     "go/errors",
+    "go/fileops",
     "go/fsutil",
     "go/importer",
     "go/installer",
+    "go/instance",
     "go/litematic",
     "go/logs",
     "go/packs",
     "go/paths",
     "go/recycle",
+    "go/scanner",
     "go/tags",
     "go/updater",
     "go/version",
     "go/watcher",
     "internal/app",
     "internal/embedded"
+  ],
+  "staleRefs": [
+    "frontend/js/utils/model3d.ts",
+    "frontend/js/utils/model3d-spec.ts",
+    "frontend/js/utils/model2d.ts",
+    "frontend/js/views/app-preview/preview-litematic-3d.ts",
+    "frontend/js/views/app-preview/preview-wasm.ts"
   ]
 }

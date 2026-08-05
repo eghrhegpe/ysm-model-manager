@@ -158,8 +158,13 @@ function checkKnowledge() {
 
 const CODE_PATH_RE = /`((?:frontend|go|internal|scripts)\/[a-zA-Z0-9_./-]+)`/g;
 
-/** 提取架构文档中的代码路径引用并验证存在性。 */
+/** 提取架构文档中的代码路径引用并验证存在性。已知过期引用记录在基线 staleRefs 中。 */
 function checkArchRefs() {
+  let baseline = { staleRefs: [] };
+  if (fs.existsSync(BASELINE_FILE)) {
+    try { baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf-8')); } catch { baseline = { staleRefs: [] }; }
+  }
+  const staleRefs = new Set(baseline.staleRefs || []);
   for (const doc of ARCH_DOCS) {
     const text = readText(doc);
     if (text === null) {
@@ -168,6 +173,7 @@ function checkArchRefs() {
     }
     for (const m of text.matchAll(CODE_PATH_RE)) {
       const ref = m[1];
+      if (staleRefs.has(ref)) continue;
       if (!fs.existsSync(path.join(ROOT, ref))) {
         errors.push(`[架构树] ${doc} 引用不存在的路径: ${ref}`);
       }

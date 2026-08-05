@@ -117,6 +117,9 @@ func (s *SimpleCopyImporter) Import(srcPath, dstDir string) string {
 	defer dstFile.Close()
 
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		// 复制中断/失败时清理半截目标文件，避免损坏文件留盘误导用户
+		dstFile.Close()
+		os.Remove(dstPath)
 		return fmt.Sprintf("复制文件失败: %v", err)
 	}
 	return ""
@@ -258,7 +261,11 @@ func copyDir(src, dst string) error {
 		if e.IsDir() {
 			if e.Type()&os.ModeSymlink != 0 {
 				if target, rErr := os.Readlink(srcPath); rErr == nil {
-					os.Symlink(target, dstPath)
+					if sErr := os.Symlink(target, dstPath); sErr != nil {
+						return sErr
+					}
+				} else {
+					return rErr
 				}
 				continue
 			}
@@ -268,7 +275,11 @@ func copyDir(src, dst string) error {
 		} else {
 			if e.Type()&os.ModeSymlink != 0 {
 				if target, rErr := os.Readlink(srcPath); rErr == nil {
-					os.Symlink(target, dstPath)
+					if sErr := os.Symlink(target, dstPath); sErr != nil {
+						return sErr
+					}
+				} else {
+					return rErr
 				}
 				continue
 			}

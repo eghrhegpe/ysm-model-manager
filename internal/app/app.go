@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -19,6 +21,7 @@ import (
 type App struct {
 	LinkMode     string
 	logger       *logs.Logger
+	runtimeLogs  *logs.RuntimeBuffer
 	watcher      *watcher.Watcher
 	queue        *DownloadQueue
 	tagsStore    *tags.Store
@@ -34,7 +37,8 @@ func (a *App) ysmRoot() string { dir, _ := a.GetRepoRoot("ysm"); return dir }
 
 func NewApp() *App {
 	a := &App{
-		logger: logs.NewLogger(),
+		logger:      logs.NewLogger(),
+		runtimeLogs: logs.NewRuntimeBuffer(200),
 	}
 	// 回调注入：打破 DownloadQueue ↔ App 循环（ADR-002 P1）
 	// emitFn 闭包延迟解析 a.app（SetApp 在应用启动时注入）
@@ -56,6 +60,9 @@ func (a *App) SetMainWindow(w *application.WebviewWindow) { a.mainWindow = w }
 
 // ServiceStartup 对应 v2 的 startup，在 app.Run() 期间由框架调用
 func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
+	// 捕获标准库 log 输出（watcher/sync 等）到运行时环形缓冲，供诊断页查看
+	log.SetOutput(io.MultiWriter(os.Stderr, a.runtimeLogs))
+
 	// 清理上一次更新留下的 .old 备份
 	updater.CleanupOldVersion()
 

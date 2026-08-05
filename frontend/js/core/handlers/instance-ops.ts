@@ -3,6 +3,7 @@ import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { modalConfirm } from "../../views/dialogs/modal.ts";
 import { getApp } from "../../wails/app.ts";
+import { requireMcRoot } from "./require-mcroot.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 
 /** 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs */
@@ -12,21 +13,12 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
     bus.on("instance:export-list", async ({ name: insName, rtype }) => {
       try {
         const {
-          LoadAppConfig,
           ListVersionInstances,
           ListFileNames,
           GetRepoRoot,
         } = await getApp();
-        const cfg = await LoadAppConfig();
-        const mcRoot = cfg.mcRoot || "";
-        if (!mcRoot) {
-          bus.emit("toast:show", {
-            msg: "请先配置游戏目录",
-            duration: 3000,
-            type: "warn",
-          });
-          return;
-        }
+        const mcRoot = await requireMcRoot();
+        if (!mcRoot) return;
         const instances = (await ListVersionInstances(mcRoot)) ?? [];
         const ins = instances.find((i) => i.Name === insName);
         if (!ins?.VersionDir) {
@@ -98,20 +90,11 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
     bus.on("instance:clear", async ({ name: insName, rtype }) => {
       try {
         const {
-          LoadAppConfig,
           CountInstanceResources,
           ClearInstanceResources,
         } = await getApp();
-        const cfg = await LoadAppConfig();
-        const mcRoot = cfg.mcRoot || "";
-        if (!mcRoot) {
-          bus.emit("toast:show", {
-            msg: "请先配置游戏目录",
-            duration: 3000,
-            type: "warn",
-          });
-          return;
-        }
+        const mcRoot = await requireMcRoot();
+        if (!mcRoot) return;
         // 先统计数量——传入 rtype 限定范围
         let totalCount = 0;
         try {

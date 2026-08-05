@@ -4,6 +4,7 @@ import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { bus } from "../../bus.ts";
 import type { AppTree } from "./index.ts";
 import { getApp } from "../../wails/app.ts";
+import { requireMcRoot } from "../../core/handlers/require-mcroot.ts";
 
 function addImportLog(
   type: string,
@@ -88,14 +89,12 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
     bus.on("instance:sync", async ({ name: insName }) => {
       try {
         const {
-          LoadAppConfig,
           GetRepoRoot,
           ListVersionInstances,
           ScanModelEntries,
           SyncCustomToRepo,
         } = await getApp();
-        const cfg = await LoadAppConfig();
-        const mcRoot = cfg.mcRoot || "";
+        const mcRoot = await requireMcRoot();
         const repoRoot = GetRepoRoot ? await GetRepoRoot(RESOURCE_TYPES.YSM) : "";
         if (!mcRoot || !repoRoot) {
           bus.emit("toast:show", {

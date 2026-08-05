@@ -1,10 +1,12 @@
 {
-  "generated": "2026-08-05T01:32:50.748Z",
+  "generated": "2026-08-05T04:37:00.426Z",
   "unregistered": [
     "frontend/src/core",
     "frontend/src/features",
     "frontend/src/services",
     "frontend/src/test-utils",
+    "frontend/src/utils",
+    "frontend/src/views",
     "frontend/src/wails",
     "frontend/src/wasm",
     "frontend/src/widgets",
@@ -29,13 +31,5 @@
     "go/watcher",
     "internal/app",
     "internal/embedded"
-  ],
-  "staleRefs": [
-    "frontend/js/utils/model3d.ts",
-    "frontend/js/utils/model3d-spec.ts",
-    "frontend/js/utils/model2d.ts",
-    "frontend/js/views/app-preview/preview-litematic-3d.ts",
-    "frontend/js/views/app-preview/preview-wasm.ts",
-    "frontend/js/bus.ts"
   ]
 }

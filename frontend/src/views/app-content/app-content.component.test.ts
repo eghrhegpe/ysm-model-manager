@@ -53,6 +53,9 @@ import { sleep, mountCustomElement, unmountElement } from "../../test-utils/inde
 describe("app-content 生命周期配对", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
+    // 清除启动恢复状态，避免测试依赖环境 localStorage（resolveInitialPage 读取）
+    localStorage.removeItem("nav_page");
+    localStorage.removeItem("ui-default-page");
   });
 
   afterEach(() => {
@@ -84,5 +87,24 @@ describe("app-content 生命周期配对", () => {
     bus.emit("nav:change", { page: "settings" });
     await sleep(200);
     expect(el.shadowRoot?.innerHTML).toBe(before); // 订阅已随 disconnectedCallback 清理
+  });
+
+  it("启动恢复 → nav_page=settings 时 mount 直接渲染设置页（resolveInitialPage 白名单）", async () => {
+    localStorage.setItem("nav_page", "settings");
+    const el = mountCustomElement("app-content");
+    await sleep(200);
+    // settings 页渲染：.stg-tab 存在、仓库页 .repo-tab 不渲染
+    expect(el.shadowRoot?.querySelector(".stg-tab")).toBeTruthy();
+    expect(el.shadowRoot?.querySelector(".repo-tab")).toBeNull();
+    unmountElement(el);
+  });
+
+  it("启动恢复 → 未知/损坏 nav_page 值回退仓库页（不死页）", async () => {
+    localStorage.setItem("nav_page", "legacy-garbage");
+    const el = mountCustomElement("app-content");
+    await sleep(200);
+    // 未知值应回退 repository（仓库页渲染，且绑定正常）
+    expect(el.shadowRoot?.querySelector(".repo-tab")).toBeTruthy();
+    unmountElement(el);
   });
 });

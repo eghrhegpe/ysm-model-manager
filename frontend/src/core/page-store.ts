@@ -13,15 +13,26 @@ import { bus, type PageName } from "../bus.ts";
  *        ② 上次停留页（nav_page，app-nav 每次切页写入）
  *        ③ 仓库页（repository，兜底）
  * "resources" 为历史页面名，映射回仓库页。
+ * 未知值（遗留/损坏的 localStorage）回退 repository，防止 _render 落入
+ * default 分支却无对应 init 分发（死页，历史教训：resources 遗留值）。
  */
+const VALID_PAGES: PageName[] = [
+  "repository", "instances", "workshop", "github", "diagnostics", "settings",
+];
+
+function sanitizePage(v: string | null): PageName {
+  if (v === "resources") return "repository"; // 历史页面名映射
+  return (VALID_PAGES as string[]).includes(v ?? "") ? (v as PageName) : "repository";
+}
+
 export function resolveInitialPage(): PageName {
   const configured = localStorage.getItem("ui-default-page");
   if (configured) {
-    return configured === "resources" ? "repository" : (configured as PageName);
+    return sanitizePage(configured);
   }
   const saved = localStorage.getItem("nav_page");
-  if (saved && saved !== "repository") {
-    return saved === "resources" ? "repository" : (saved as PageName);
+  if (saved) {
+    return sanitizePage(saved);
   }
   return "repository";
 }

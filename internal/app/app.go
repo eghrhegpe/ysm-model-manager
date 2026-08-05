@@ -108,7 +108,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 
 	// 启动文件监听器（自动同步启用/禁用状态到整合包）
 	if ysmRoot != "" && cfg.McRoot != "" {
-		a.watcher = watcher.New(ysmRoot, cfg.McRoot, a.ScanModelEntries, a.ClearScanCache)
+		a.watcher = watcher.New(ysmRoot, cfg.McRoot, a.scanModelEntries, a.ClearScanCache)
 		if err := a.watcher.Start(); err != nil {
 			println("[startup] 文件监听器启动失败:", err.Error())
 		}

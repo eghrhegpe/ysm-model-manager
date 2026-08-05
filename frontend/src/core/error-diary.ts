@@ -6,8 +6,8 @@ import { getApp } from "../wails/app.ts";
 
 let _registered = false;
 let _unsubToast: (() => void) | undefined;
-let _unsubError: (() => void) | undefined;
-let _unsubRejection: (() => void) | undefined;
+let _unsubError: ((e: ErrorEvent) => void) | undefined;
+let _unsubRejection: ((e: PromiseRejectionEvent) => void) | undefined;
 
 /**
  * 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。
@@ -48,14 +48,14 @@ export function registerErrorDiary(): void {
     void logUiMsg(msg, "failed");
   };
   window.addEventListener("error", onError);
-  _unsubError = onError as unknown as () => void;
+  _unsubError = onError;
 
   const onRejection = (e: PromiseRejectionEvent): void => {
     const msg = e.reason?.message || String(e.reason || "未处理的 Promise 拒绝");
     void logUiMsg(msg, "failed");
   };
   window.addEventListener("unhandledrejection", onRejection);
-  _unsubRejection = onRejection as unknown as () => void;
+  _unsubRejection = onRejection;
 }
 
 async function logUiMsg(msg: string, status: string): Promise<void> {

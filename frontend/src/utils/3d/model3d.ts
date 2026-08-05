@@ -140,10 +140,11 @@ export function buildSceneMesh(spec: Spec3D): {
     for (const bd of mg.bones || []) {
       const g = new THREE.Group();
       g.name = bd.name;
+      const pos = bd.localPosition || [0, 0, 0];
       g.position.set(
-        bd.localPosition[0],
-        bd.localPosition[1],
-        bd.localPosition[2],
+        pos[0] ?? 0,
+        pos[1] ?? 0,
+        pos[2] ?? 0,
       );
       if (
         bd.localRotation[3] !== 1 ||

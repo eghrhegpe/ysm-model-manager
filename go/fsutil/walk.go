@@ -2,6 +2,7 @@
 package fsutil
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,7 @@ func WalkAllFiles(dir string, skipRecycle bool) []string {
 	var result []string
 	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
+			log.Printf("[fsutil] WalkDir 访问 %s 失败: %v", p, err)
 			return nil
 		}
 		if d.IsDir() {

@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳（E-1/E-2 已完成）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/js/`（前端增强待办）/ `docs/Design.md` / 原 `docs/frontend/pending-cleanup.md`（已删除，2026-08-03）
+- **相关**：`frontend/src/`（前端增强待办）/ `docs/Design.md` / 原 `docs/frontend/pending-cleanup.md`（已删除，2026-08-03）
 
 ---
 
@@ -39,7 +39,7 @@
 | ---- | ---- | ---- | ---- | ---- |
 | D-1 | `core/handlers/instance-ops.ts` ↔ `views/app-tree/instance-actions.ts` | 39 | 跨文件，handler/action 两层职责重叠 | ✅ 已完成（2026-08-05）：原计划「合并」是 jscpd 误报（结构相似、语义不同：数据操作 vs 导入/同步），改为抽 `requireMcRoot()` 消除 5 处「读 mcRoot + 空守卫 + toast」模板，D-1 跨文件重复 39→0 |
 | D-2 | `views/app-tree/row-tpl-list.ts` ↔ `row-tpl.ts` | 36 | 跨文件，grid/list 两套行模板 | ✅ 已完成（2026-08-05）：抽 `row-common.ts` 的 `fileRowCommon` / `folderRowCommon`，两套模板各自只保留外层 class + testid + 差异段，D-2 跨文件重复 36→0 |
-| D-3 | `views/app-preview/litematic-3d.ts` ↔ `skeleton.ts` | 35 | 跨文件，3D 场景初始化重复 | ⚠️ ADR-011 警告：model3d 坐标是重灾区，碰前先 grep bug-chronicle + 对齐 ysmview 口径 |
+| D-3 | `views/app-preview/litematic-3d.ts` ↔ `skeleton.ts` | 35 | 跨文件，3D overlay UI 构建模板 | 🧊 撤账（2026-08-05）：jscpd 误报，非纯复制——两版有持久化行为差异（skeleton 走 localStorage 读 `td-rot-mode`/`td-cam-speed`，litematic-3d 硬编码默认值）；35 行是 overlay topBar 构建（摄像机旋转 select + 速度 slider + WASD 提示 div），非坐标变换逻辑（ADR-011 警告区是 model3d.ts 坐标，不是此处）。抽公共函数要传 4-5 参数区分持久化，调用点可读性反降；app-preview 无单测覆盖（ADR-037 §2.5 排除 3D 渲染），改动全靠人工验证，风险>收益。**不补测试**:3D 渲染测试在 jsdom 里假绿（mock 掉要测的东西）、截图对比维护成本高且 CI 环境不稳定、纯函数抽取 refactor 成本高——行业惯例是渲染层不测靠人工可视化验证 |
 | D-4 | `geometry/archive.go` 单文件内重复 | 250 | 同文件，占 Go 总重复 47% | 结构性问题，非去重；碰它按 ADR-011 规矩走 |
 
 > 活用规则：D-1~D-3 触及改动时，先查本台账确认编号与处置；D-4 独立评估，不与 D-1~D-3 打包。
@@ -53,7 +53,7 @@
   2. 新增 `tpl-list-row.js` 紧凑行模板
   3. `render.js` 增加 `renderListView()` 模式
   4. 用户选择持久化到 `localStorage`
-- **涉及文件**：`frontend/js/views/app-tree/tpl.js`、`render.js`、`row-tpl.js`（新）、`toolbar-events.js`
+- **涉及文件**：`frontend/src/views/app-tree/tpl.js`、`render.js`、`row-tpl.js`（新）、`toolbar-events.js`
 
 **E-2 model2d 预览缓存（中）**
 
@@ -63,7 +63,7 @@
   2. 缓存键：`sha256 + 文件大小`
   3. LRU 上限 50 项（已有）
   4. 命中时跳过 `ExtractYsmSummary` 调用
-- **涉及文件**：`frontend/js/utils/preview-cache.js`、`features/community/events.js`
+- **涉及文件**：`frontend/src/utils/preview-cache.js`、`features/community/events.js`
 
 ### 已完成项（历史追溯，非遗漏）
 
@@ -73,8 +73,8 @@
 | F-2 | Windows 自更新替换策略（独立 helper 替换 EXE） | v1.6.0 | `cmd/updater/main.go`、`go/updater/update.go`、`build-release.ps1` |
 | F-3 | 导入日志文件位置迁移（`os.UserConfigDir()`） | v1.6.0 | `go/logs/logs.go` |
 | F-4 | 标签系统数据后端 | v1.6.3 | `go/tags/tags.go`、`app_tags.go`、`dialogs/tag-editor.js` |
-| F-5 | 系统暗色模式变化自动切换 | v1.7.5 | `frontend/js/app-modules.js` |
-| F-6 | 右键"打开文件位置"（`RevealInExplorer`） | v1.7.5 | `app_files.go`、`wails.json`、`frontend/js/core/context-menus.js` |
+| F-5 | 系统暗色模式变化自动切换 | v1.7.5 | `frontend/src/app-modules.js` |
+| F-6 | 右键"打开文件位置"（`RevealInExplorer`） | v1.7.5 | `app_files.go`、`wails.json`、`frontend/src/core/context-menus.js` |
 
 > 注：F-1~F-6 若已有专属 ADR，以专属 ADR 为真相源；本表仅作跨版本追溯锚点。
 

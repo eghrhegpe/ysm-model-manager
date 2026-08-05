@@ -12,6 +12,7 @@
 import { readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { toPosix } from './_lib/to-posix.mjs';
 
 const DOCS = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'docs');
 const OUT = join(DOCS, '.vitepress', 'sidebar.gen.mjs');
@@ -19,7 +20,7 @@ const EXCLUDE = new Set(['.vitepress', 'node_modules', 'dist', 'archive', '_sass
 
 /** 相对路径 → VitePress 链接（cleanUrls 去 .md；index.md → 目录） */
 function linkify(rel) {
-  let p = '/' + rel.replace(/\\/g, '/').replace(/\.md$/, '');
+  let p = '/' + toPosix(rel).replace(/\.md$/, '');
   if (p.endsWith('/index')) p = p.slice(0, -'index'.length);
   return p;
 }

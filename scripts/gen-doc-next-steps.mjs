@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT, toPosix } from './_lib/scan-files.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_PATH = path.join(ROOT, 'docs', '.doc-next-steps.md');
@@ -53,7 +53,7 @@ function runChecker(script) {
 // ── 行号解析（带简单缓存，避免重复读同一文件）──
 const _fileCache = new Map();
 function readFileCached(rel) {
-  const fp = path.join(ROOT, rel.replace(/\\/g, '/'));
+  const fp = path.join(ROOT, toPosix(rel));
   if (!_fileCache.has(fp)) {
     _fileCache.set(fp, fs.existsSync(fp) ? fs.readFileSync(fp, 'utf8') : null);
   }
@@ -77,7 +77,7 @@ function lineOfSubstring(rel, sub) {
   }
   return '?';
 }
-const disp = (rel) => rel.replace(/\\/g, '/');
+const disp = toPosix;
 
 // ── 分类构建 ──
 function section(title, fixHint, items) {

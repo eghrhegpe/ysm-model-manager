@@ -1,17 +1,23 @@
 #!/bin/sh
-# YSM 知识卡漂移主动防御（prepare-commit-msg 薄壳，非阻断）
-# 职责：把受本次 staged 变更影响的知识卡写入 commit message body，供 PR review 参考。
+# YSM commit-time 非阻断建议（prepare-commit-msg 薄壳）
+# 职责：向 commit message body 追加两类建议，随 commit 进 PR 供 review 参考：
+#   📚 知识卡漂移 —— 受本次 staged 变更影响的知识卡（check-knowledge-drift --affected）
+#   🔬 覆盖率建议 —— 低于语句覆盖率阈值的源文件（test-coverage-report --suggest）
 # 安装：git config core.hooksPath .githooks（仓库已配置）
-# 逃生阀：YSM_SKIP_KNOWLEDGE_HINT=1 git commit
+# 逃生阀：YSM_SKIP_KNOWLEDGE_HINT=1 / YSM_SKIP_COVERAGE_HINT=1 git commit
 set -u
 
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null || exit 0)
 [ -z "${ROOT:-}" ] && exit 0
-if [ "${YSM_SKIP_KNOWLEDGE_HINT:-0}" = "1" ]; then exit 0; fi
 
 NODE=$(command -v node 2>/dev/null)
 [ -z "$NODE" ] && exit 0
 
-# 辅助脚本内部用 process.execPath 自取 node，无需透传 NODE_BIN
-"$NODE" "$ROOT/scripts/hooks/knowledge-affected-hint.mjs" "$1" "$2" || true
+# 辅助脚本内部用 process.execPath 自取 node，无需透传 NODE_BIN；各自独立逃生阀
+if [ "${YSM_SKIP_KNOWLEDGE_HINT:-0}" != "1" ]; then
+  "$NODE" "$ROOT/scripts/hooks/knowledge-affected-hint.mjs" "$1" "$2" || true
+fi
+if [ "${YSM_SKIP_COVERAGE_HINT:-0}" != "1" ]; then
+  "$NODE" "$ROOT/scripts/hooks/coverage-suggest-hint.mjs" "$1" "$2" || true
+fi
 exit 0

@@ -430,6 +430,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         name: finalName,
         time: new Date().toLocaleTimeString(),
         isYsm: true,
+        relPath: currentRelPath,
       });
       // 从队列中移除已导入的文件
       const importedIdx = fileQueue.findIndex((fq) => fq.file === currentFile);
@@ -474,6 +475,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
               name: finalName,
               time: new Date().toLocaleTimeString(),
               isYsm: true,
+              relPath: currentRelPath,
             });
             const importedIdx = fileQueue.findIndex(
               (fq) => fq.file === currentFile,
@@ -533,10 +535,11 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   };
 
   const enqueueFile = (file: ImportFile, base64: string): void => {
-    // 检查文件名是否已在队列或已导入列表中（renamed 字段已废弃，i.name 即当前磁盘文件名）
+    // ADR-039 P3：去重同时比 name + relPath，防止同名不同目录文件误丢
+    const relPath = file._relPath || "";
     const dup =
-      fileQueue.some((fq) => fq.name === file.name) ||
-      ImportHistory.records.some((i) => i.name === file.name);
+      fileQueue.some((fq) => fq.name === file.name && fq.relPath === relPath) ||
+      ImportHistory.records.some((i) => i.name === file.name && i.relPath === relPath);
     if (dup) return;
     fileQueue.push({
       file,

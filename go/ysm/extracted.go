@@ -116,10 +116,16 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 		if mainPath, ok := modelMapOrig["main"]; ok {
 			orderedNames = append(orderedNames, mainPath)
 		}
-		for k, v := range modelMapOrig {
+		// 排序非 main 键，确保遍历顺序确定性（ADR-039 P3：map 遍历随机 → texSlot 漂移）
+		var otherKeys []string
+		for k := range modelMapOrig {
 			if k != "main" {
-				orderedNames = append(orderedNames, v)
+				otherKeys = append(otherKeys, k)
 			}
+		}
+		sort.Strings(otherKeys)
+		for _, k := range otherKeys {
+			orderedNames = append(orderedNames, modelMapOrig[k])
 		}
 	} else {
 		orderedNames = modelNames

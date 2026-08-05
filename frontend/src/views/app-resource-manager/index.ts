@@ -92,7 +92,13 @@ export class AppResourceManager extends HTMLElement {
   }
 
   async connectedCallback(): Promise<void> {
-    await this._init();
+    this._init().catch((e) => {
+      console.error("[app-resource-manager] _init 失败:", e);
+      this.innerHTML =
+        '<div style="padding:12px;color:var(--paid)">⚠️ 初始化失败: ' +
+        _esc(String(e?.message || e)) +
+        "</div>";
+    });
   }
 
   attributeChangedCallback(name: string, oldVal: string | null, newVal: string | null): void {

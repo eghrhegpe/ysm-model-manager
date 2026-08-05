@@ -490,7 +490,8 @@ export function createDownloadQueue({
         if (fillEl) fillEl.style.width = "100%";
       }
       if (done.name) getLocalMap().set(done.name, "");
-      const cb = sr.querySelector('.gh-sel[data-name="' + esc(done.name) + '"]');
+      // ADR-039 P3：用 CSS.escape 修复 &amp; 在属性选择器中不还原的问题
+      const cb = sr.querySelector('.gh-sel[data-name="' + CSS.escape(done.name) + '"]');
       if (cb) (cb as HTMLInputElement).checked = false;
       if (onFileSuccess) onFileSuccess(done.name);
     } else if (done.status === "fail") {
@@ -508,7 +509,7 @@ export function createDownloadQueue({
         }
       }
       if (fillEl) fillEl.classList.add("gh-progress-fill-error");
-      const cb = sr.querySelector('.gh-sel[data-name="' + esc(done.name) + '"]');
+      const cb = sr.querySelector('.gh-sel[data-name="' + CSS.escape(done.name) + '"]');
       if (cb) (cb as HTMLInputElement).checked = false;
       if (onFileSuccess) onFileSuccess(done.name);
     }

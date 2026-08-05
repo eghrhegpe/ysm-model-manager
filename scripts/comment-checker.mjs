@@ -14,6 +14,7 @@
  * 退出码：默认 0（提示工具）。
  * 设计意图：注释质量检查（AI 废话/JSDoc 残留/TODO 编号）
  */
+import fs from 'node:fs';
 import { rg } from './_lib/ripgrep.mjs';
 import { parseRgLine } from './_lib/rg-line.mjs';
 
@@ -23,6 +24,8 @@ function scanAiFluff() {
   for (const src of ['go', 'frontend/src']) {
     for (const line of rg(/^\s*\/\/.*\u7528\u4e8e|^\s*\/\/.*\u8fd9\u662f|^\s*\/\/.*\u68c0\u67e5.*\u662f\u5426/.source, src, ['*.go', '*.js', '*.ts'])) {
       const [f, ln, txt] = parseRgLine(line);
+      // 白名单：带 [doc:adr-XXX] / [ADR-XXX] 文档引用的合法注释不视为废话
+      if (/\[doc:adr-|\[ADR-\d|ADR-\d{2,3}/i.test(txt)) continue;
       results.push({ file: f, line: ln, snippet: txt, type: 'AI_fluff' });
     }
   }
@@ -40,10 +43,26 @@ function scanEmptyJsdoc() {
 }
 
 function scanCommentedCode() {
-  /** 检测注释掉的代码行 */
+  /** 检测注释掉的代码行；跳过 JSDoc 示例（// 后 ≥2 空格）与 why/prose 注释 */
   const results = [];
+  const fileCache = new Map();
+  const readLine = (f, ln) => {
+    if (!fileCache.has(f)) {
+      try { fileCache.set(f, fs.readFileSync(f, 'utf8').split('\n')); }
+      catch { fileCache.set(f, []); }
+    }
+    return fileCache.get(f)[ln - 1] ?? '';
+  };
   for (const line of rg(/^\s*\/\/\s+(var |let |const |function |if |for |return |import |export )/.source, 'frontend/src', ['*.js', '*.ts'])) {
     const [f, ln, txt] = parseRgLine(line);
+    const raw = readLine(f, ln);
+    // 跳过 JSDoc 代码样例：// 后跟 ≥2 空格（缩进示例，如 utils 用法示例）
+    const slashIdx = raw.indexOf('//');
+    if (slashIdx >= 0 && /^\s{2,}/.test(raw.slice(slashIdx + 2))) continue;
+    // 跳过 why/prose 注释：关键字后无代码特征（= ; ( { from =>），如循环依赖说明
+    const kw = (txt.match(/^(var|let|const|function|if|for|return|import|export)\b/) || [])[0] || '';
+    const rest = txt.slice(kw.length).trim();
+    if (!/[=;({]|from\b|=>/.test(rest)) continue;
     results.push({ file: f, line: ln, snippet: txt, type: 'commented_code' });
   }
   return results;

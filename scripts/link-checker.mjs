@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 
-const SKIP_DIRS = new Set(['node_modules', 'archive', '.git', 'vendor']);
+const SKIP_DIRS = new Set(['node_modules', 'archive', '.git', 'vendor', 'build', 'dist']);
 const SKIP_FILES = new Set(['.doc-next-steps.md']); // 自动生成产物，引用路径可能过期，不应计入断链
 
 function walkMd(dir) {
@@ -41,10 +41,13 @@ function extractLinks(filepath) {
     text = fs.readFileSync(filepath, 'utf-8');
   } catch { return links; }
 
+  // 先剔除 fenced 代码块（```...```），避免示例链接（如 adr 占位章节路径）被误判为断链
+  const stripped = text.replace(/```[\s\S]*?```/g, '');
+
   // 匹配 [text](path) 和 [text](path "title")
   const re = /\[([^\]]*)\]\(([^)\s]+(?:\s+"[^"]*")?)\)/g;
   let m;
-  while ((m = re.exec(text)) !== null) {
+  while ((m = re.exec(stripped)) !== null) {
     const linkText = m[1];
     const rawPath = m[2].split(/\s+/)[0]; // 去掉 title 部分
     links.push([linkText, rawPath, m.index]);
@@ -55,7 +58,9 @@ function extractLinks(filepath) {
 function resolvePath(filepath, rawPath) {
   /** 将 Markdown 相对路径解析为实际文件系统路径。 */
   if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) return null; // 外部链接跳过
+  if (rawPath.startsWith('file://')) return null; // 源码引用(file://...)非文档链接，跳过
   if (rawPath.startsWith('#')) return null; // 锚点跳过
+  if (/[<>]/.test(rawPath)) return null; // 占位符链接（如 <page>-<n>.png）非真实链接，跳过
   let candidate;
   if (rawPath.startsWith('/')) {
     // 绝对路径从项目根开始
@@ -107,6 +112,7 @@ function checkLinks(files) {
 
 const args = process.argv.slice(2);
 const jsonMode = args.includes('--json');
+const strict = args.includes('--strict'); // 门禁模式：断链即 exit 1，可接 CI 卡点
 
 // 收集所有 md 文件（跳过 archive）
 const files = [];
@@ -136,3 +142,6 @@ if (broken.length) {
 } else {
   process.stdout.write('全部链接有效\n');
 }
+
+// 门禁模式：存在断链则非零退出（可接 CI 卡点）；--strict 未启用时仅信息展示
+process.exit(strict && broken.length ? 1 : 0);

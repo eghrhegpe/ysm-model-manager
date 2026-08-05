@@ -25,17 +25,24 @@ import { stripBlock } from './knowledge-affected-hint.mjs';
 
 export const BLOCK_START = '🔬 覆盖率建议（非阻断，frontend/vite.config.js 阈值）：';
 export const BLOCK_END = '🔬 ──END──';
+/** 区块内最多列出的低覆盖文件数，避免 commit message 过长（完整清单见 --suggest）。 */
+export const MAX_SUGGEST_FILES = 20;
 
-/** 构造待追加区块（低覆盖率文件 → 一行一个：百分比 + 文件 + 未覆盖行区间）。 */
+/** 构造待追加区块（低覆盖率文件 → 一行一个：百分比 + 文件 + 未覆盖行区间；超上限省略）。 */
 export function buildBlock(files, start = BLOCK_START, end = BLOCK_END) {
-  return [
+  const shown = files.slice(0, MAX_SUGGEST_FILES);
+  const lines = [
     start,
-    ...files.map((f) => {
+    ...shown.map((f) => {
       const range = f.uncoveredRanges ? `（未覆盖行 ${f.uncoveredRanges}）` : '';
       return `- [${f.stmts}%] ${f.file}${range}`;
     }),
-    end,
-  ].join('\n');
+  ];
+  if (files.length > MAX_SUGGEST_FILES) {
+    lines.push(`- …其余 ${files.length - MAX_SUGGEST_FILES} 个见 node scripts/test-coverage-report.mjs --suggest`);
+  }
+  lines.push(end);
+  return lines.join('\n');
 }
 
 /** 调 test-coverage-report --suggest --json，取低于阈值的文件清单（永远不抛）。 */

@@ -38,24 +38,36 @@ export const SRC_DIR = getSrcDir();
 export const SRC_EXTS = ['.js', '.ts'];
 
 /**
- * 递归收集 dir 下所有前端源码文件（.js/.ts）。
- * 跳过：隐藏项、node_modules、css/ 样式目录。
+ * 递归收集 dir 下满足条件的源文件；共享底层遍历，供 source-graph.walkSourceFiles 复用。
  * @param {string} dir 起始目录
- * @param {object} [opts] { skipTest: true } 排除 *.test.* / *.spec.*（vitest 用）
- * @returns {string[]} 绝对路径数组
+ * @param {object} [opts]
+ *   - exts {string[]}                  匹配扩展名，默认 SRC_EXTS（.js/.ts）
+ *   - skipDir {(n:string)=>boolean}    返回 true 跳过该目录（默认跳过隐藏项 / node_modules / css）
+ *   - skipFile {(n:string)=>boolean|RegExp} 返回/匹配 true 跳过该文件
+ *   - rel {boolean}                    true 返回 { abs, rel }（rel 相对 dir），false 返回绝对路径字符串
+ *   - base {string}                    rel 模式下的初始相对前缀
+ * @returns {string[]|{abs:string,rel:string}[]}
  */
 export function walk(dir = SRC_DIR, opts = {}) {
+  const {
+    exts = SRC_EXTS,
+    skipDir = (n) => n.startsWith('.') || n === 'node_modules' || n === 'css',
+    skipFile = null,
+    rel = false,
+    base = '',
+  } = opts;
   const out = [];
   if (!fs.existsSync(dir)) return out;
   for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (d.name.startsWith('.') || d.name === 'node_modules') continue;
-    const p = path.join(dir, d.name);
     if (d.isDirectory()) {
-      if (d.name === 'css') continue;
-      out.push(...walk(p, opts));
-    } else if (SRC_EXTS.some((ext) => d.name.endsWith(ext))) {
-      if (opts.skipTest && /\.(test|spec)\.(js|ts)$/.test(d.name)) continue;
-      out.push(p);
+      if (skipDir(d.name)) continue;
+      const childBase = rel ? (base ? `${base}/${d.name}` : d.name) : base;
+      out.push(...walk(path.join(dir, d.name), { ...opts, base: childBase }));
+    } else if (d.isFile()) {
+      if (!exts.some((ext) => d.name.endsWith(ext))) continue;
+      if (skipFile && (skipFile instanceof RegExp ? skipFile.test(d.name) : skipFile(d.name))) continue;
+      const abs = path.join(dir, d.name);
+      out.push(rel ? { abs, rel: base ? `${base}/${d.name}` : d.name } : abs);
     }
   }
   return out;

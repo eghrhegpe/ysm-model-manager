@@ -68,7 +68,7 @@ npm run dev    # 本地预览开发
 ```bash
 node scripts/doctor.mjs --docs     # 改文档时用，轻量秒级（仅文档/ADR/索引检查，跳过 Go/前端编译与测试）
 node scripts/doctor.mjs            # 全量自检（编译 + 构建 + 文件 + 红线 + Git）
-node scripts/review.mjs            # 红线扫描（R1-R10 规则 + W1-W6 警告）
+node scripts/check-redlines.mjs            # 红线扫描（R1-R10 规则 + W1-W6 警告）
 node scripts/check-adr-health.mjs  # ADR 状态机与登记表一致性
 node scripts/link-checker.mjs      # 文档断链
 node scripts/check-deadcode-baseline.mjs  # 死代码/重复代码门禁

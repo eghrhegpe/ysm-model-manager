@@ -81,12 +81,12 @@ description: 项目历史事故浓缩的 16 条避坑教训 — 现象 × 根因
 ## 14. 旁路弹窗：不走 modal.ts 单例槽位
 
 - **现象**：自定义 `dlg-overlay` 弹窗未走 `dialogs/modal.ts` 的 `registerDlg` 单例槽位（实证：`version-updater.ts` 自带 47 行弹窗骨架，2026-08-04 审核发现）——连点两次会双弹窗双执行，且绕过「新弹窗先结算旧弹窗」的防叠加逻辑。
-- **规则**：所有弹窗必须走 `dialogs/modal.ts`（`modalConfirm`/`modalPrompt`/`modalSelect` + `registerDlg` 槽位）；复杂布局用 `modalConfirm` 的 `bodyHTML` 选项（调用方负责转义），**禁止自带弹窗骨架**。已修复：`version-updater.ts` 重构复用 `modalConfirm`（review.mjs W6 扫描旁路）。
+- **规则**：所有弹窗必须走 `dialogs/modal.ts`（`modalConfirm`/`modalPrompt`/`modalSelect` + `registerDlg` 槽位）；复杂布局用 `modalConfirm` 的 `bodyHTML` 选项（调用方负责转义），**禁止自带弹窗骨架**。已修复：`version-updater.ts` 重构复用 `modalConfirm`（check-redlines.mjs W6 扫描旁路）。
 
 ## 15. esc 重复实现
 
 - **现象**：10+ 文件各自实现 HTML 转义，replace 数量 3-5 个版本并存（实证：`display.ts`/`mc-format.ts` 3-replace 无引号转义、`modal.ts` 4-replace、`context-menu.ts` 5-replace，2026-08-04 收敛）——属性上下文（`data-*`/`src` 插值）缺引号转义 = XSS 面。
-- **规则**：HTML 转义统一 import `utils/dom.ts` 的 `esc`（5-replace 含 `"`/`'`），禁止私有实现；组件 `_esc` 只允许做薄委托。已收敛 10 文件（review.mjs R10 扫描私有实现）。
+- **规则**：HTML 转义统一 import `utils/dom.ts` 的 `esc`（5-replace 含 `"`/`'`），禁止私有实现；组件 `_esc` 只允许做薄委托。已收敛 10 文件（check-redlines.mjs R10 扫描私有实现）。
 
 ---
 

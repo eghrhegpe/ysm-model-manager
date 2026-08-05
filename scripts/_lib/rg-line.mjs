@@ -2,7 +2,7 @@
 /**
  * rg-line.mjs — rg 输出行解析共享层（scripts/_lib）。
  *
- * 统一 review.mjs parseRgLine / comment-checker.mjs parseLine 的重复实现。
+ * 统一 check-redlines.mjs parseRgLine / comment-checker.mjs parseLine 的重复实现。
  * 解析 ripgrep 输出行 "文件:行号:内容"：
  *   1. Windows 盘符路径（C:/foo.js:12:...）→ 盘符与路径合并为文件部分
  *   2. 内容含冒号（如 URL、代码 `a: b`）→ 从右侧定位行号，内容完整保留

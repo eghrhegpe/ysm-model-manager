@@ -178,6 +178,10 @@ export const autoSidebar = [
         "link": "/adr/ADR-036-3d-op-keymap"
       },
       {
+        "text": "ADR-037：E2E 测试引入（Playwright + vite dev 纯前端模式）",
+        "link": "/adr/ADR-037-e2e-introduction"
+      },
+      {
         "text": "ADR 登记表（Architecture Decision Records）",
         "link": "/adr/README"
       }
@@ -594,6 +598,10 @@ export const autoSidebar = [
           {
             "text": "第 01 区域 · 第 1 章 · 同名者的诅咒",
             "link": "/novel/01-解码与几何/01-同名者的诅咒"
+          },
+          {
+            "text": "第 01 区域 · 第 2 章 · 胃的八次反复",
+            "link": "/novel/01-解码与几何/02-胃的八次反复"
           }
         ]
       },
@@ -608,6 +616,18 @@ export const autoSidebar = [
           {
             "text": "第 02 区域 · 第 2 章 · 错误的名字",
             "link": "/novel/02-模型仓库/02-错误的名字"
+          },
+          {
+            "text": "第 02 区域 · 第 2 章 · 空转的门",
+            "link": "/novel/02-模型仓库/02-空转的门"
+          },
+          {
+            "text": "第 02 区域 · 第 3 章 · 负负得正",
+            "link": "/novel/02-模型仓库/03-负负得正"
+          },
+          {
+            "text": "第 02 区域 · 第 4 章 · 共享的桌子",
+            "link": "/novel/02-模型仓库/04-共享的桌子"
           }
         ]
       },
@@ -622,6 +642,18 @@ export const autoSidebar = [
           {
             "text": "第 03 区域 · 第 2 章 · 过期的点击",
             "link": "/novel/03-UI器官/02-过期的点击"
+          },
+          {
+            "text": "第 03 区域 · 第 2 章 · 十种砖十种缝",
+            "link": "/novel/03-UI器官/02-十种砖十种缝"
+          },
+          {
+            "text": "第 03 区域 · 第 3 章 · 违章建筑",
+            "link": "/novel/03-UI器官/03-违章建筑"
+          },
+          {
+            "text": "第 03 区域 · 第 4 章 · 裸奔的边界",
+            "link": "/novel/03-UI器官/04-裸奔的边界"
           }
         ]
       },
@@ -636,6 +668,10 @@ export const autoSidebar = [
           {
             "text": "第 04 区域 · 第 2 章 · 旁路的幽灵",
             "link": "/novel/04-事件中枢/02-旁路的幽灵"
+          },
+          {
+            "text": "第 04 区域 · 第 3 章 · 只响不做的按钮",
+            "link": "/novel/04-事件中枢/03-只响不做的按钮"
           }
         ]
       },
@@ -670,6 +706,10 @@ export const autoSidebar = [
           {
             "text": "第 07 区域 · 第 1 章 · 差一个后缀的名字",
             "link": "/novel/07-文件与路径/01-差一个后缀的名字"
+          },
+          {
+            "text": "第 07 区域 · 第 2 章 · 拦路的门卫",
+            "link": "/novel/07-文件与路径/02-拦路的门卫"
           }
         ]
       },
@@ -680,6 +720,14 @@ export const autoSidebar = [
           {
             "text": "第 08 区域 · 第 1 章 · 每次都缩小一圈的窗",
             "link": "/novel/08-配置与状态/01-每次都缩小一圈的窗"
+          },
+          {
+            "text": "第 08 区域 · 第 2 章 · 过期的回声",
+            "link": "/novel/08-配置与状态/02-过期的回声"
+          },
+          {
+            "text": "第 08 区域 · 第 3 章 · 消失的呐喊",
+            "link": "/novel/08-配置与状态/03-消失的呐喊"
           }
         ]
       },
@@ -716,6 +764,10 @@ export const autoSidebar = [
           {
             "text": "第 10 区域 · 第 2 章 · 六条新戒律",
             "link": "/novel/10-文档治理/02-六条新戒律"
+          },
+          {
+            "text": "第 10 区域 · 第 3 章 · 换墙记",
+            "link": "/novel/10-文档治理/03-换墙记"
           }
         ]
       },

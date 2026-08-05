@@ -28,6 +28,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
+import { toPosix } from './_lib/to-posix.mjs';
+import { parseFrontmatter, getScalar, parseSourceFiles } from './_lib/frontmatter.mjs';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 
@@ -52,77 +54,7 @@ const GEN_RE = /(^|\/)bindings(\/|$)|(^|\/)dist(\/|$)|(^|\/)node_modules(\/|$)/;
 const TEST_RE = /\.(test|spec)\.(ts|js)$|_test\.go$|(^|\/)test(\/|$)/;
 const ROOT_ESCAPE_RE = /\\|^[A-Za-z]:|^\/|^~|\.\.\//; // 反斜杠 / 绝对路径 / .. 逃逸
 
-// ── 共享 frontmatter 解析（复制 MikuMikuAR _lib/frontmatter.mjs 核心逻辑）──
-
-function parseFrontmatter(text) {
-  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  return m ? m[1] : null;
-}
-
-function getScalar(fm, key) {
-  if (!fm) return undefined;
-  const line = fm.match(new RegExp('^' + key + '\\s*:\\s*(.+)$', 'm'));
-  if (!line) return undefined;
-  const v = line[1].trim();
-  if (v === '' || v.startsWith('<')) return undefined;
-  return v.replace(/\s*#.*/, '').trim();
-}
-
-function getList(fm, key) {
-  if (!fm) return [];
-  const lines = fm.split(/\r?\n/);
-  const out = [];
-  let inList = false;
-  for (const line of lines) {
-    const head = line.match(new RegExp('^' + key + '\\s*:\\s*(.*)$'));
-    if (head) {
-      inList = true;
-      const inline = head[1].replace(/\s*#.*$/, '').trim();
-      if (inline && !inline.startsWith('<')) out.push(inline);
-      continue;
-    }
-    if (!inList) continue;
-    const item = line.match(/^\s*-\s*(.+)$/);
-    if (item) {
-      const v = item[1].replace(/\s*#.*$/, '').trim();
-      if (v && !v.startsWith('<')) out.push(v);
-    } else if (/^\S/.test(line)) {
-      inList = false;
-    }
-  }
-  return out;
-}
-
-function parseSourceFiles(fm) {
-  if (!fm) return [];
-  const lines = fm.split(/\r?\n/);
-  const out = [];
-  let seen = false;
-  for (const line of lines) {
-    const head = line.match(/^source_files\s*:\s*(.*)$/);
-    if (head) {
-      seen = true;
-      const inline = head[1].match(/\[([^\]]*)\]/);
-      if (inline) {
-        inline[1].split(',').forEach((s) => {
-          const v = s.trim().replace(/^['"]|['"]$/g, '');
-          if (v) out.push(v);
-        });
-        return out;
-      }
-      continue;
-    }
-    if (seen && /^\S/.test(line)) break;
-    if (seen) {
-      const item = line.match(/^\s*-\s*(.+?)\s*$/);
-      if (item) {
-        const v = item[1].replace(/^['"]|['"]$/g, '').trim();
-        if (v) out.push(v);
-      }
-    }
-  }
-  return out;
-}
+// ── 共享 frontmatter 解析统一走 _lib/frontmatter.mjs（见顶部 import）──
 
 // ── 检查 1：知识卡 frontmatter 治理 ──────────────────
 
@@ -207,7 +139,7 @@ function checkKnowledgeSources() {
     const fm = parseFrontmatter(text);
     if (!fm) continue;
     // 抽出 + 归一（反斜杠 → 正斜杠），供存在性 / 格式 / 语义三检共用
-    const sources = parseSourceFiles(fm).map((s) => ({ raw: s, norm: s.replace(/\\/g, '/') }));
+    const sources = parseSourceFiles(fm).map((s) => ({ raw: s, norm: toPosix(s) }));
     for (const { raw, norm } of sources) {
       // [ERROR] 路径格式：反斜杠 / 绝对路径 / .. 逃逸 → 不可移植，CI 其他平台 404
       if (ROOT_ESCAPE_RE.test(raw)) {
@@ -314,7 +246,7 @@ function checkKnowledgeCoverage() {
   let total = 0;
   for (const root of SOURCE_ROOTS) {
     for (const f of walkSources(path.join(ROOT, root))) {
-      const rel = path.relative(ROOT, f).replace(/\\/g, '/');
+      const rel = toPosix(path.relative(ROOT, f));
       const hit = [...referenced].some((entry) => covers(rel, entry));
       if (hit) continue;
       total++;
@@ -351,11 +283,11 @@ function runAffected(changed) {
     const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf8');
     const fm = parseFrontmatter(text);
     if (!fm) continue;
-    const sources = parseSourceFiles(fm).map((s) => s.replace(/\\/g, '/'));
+    const sources = parseSourceFiles(fm).map((s) => toPosix(s));
     if (sources.length) index.push({ card: cf.replace(/\.md$/, ''), sources });
   }
   const hits = new Map();
-  for (const ch of changed.map((c) => c.replace(/\\/g, '/'))) {
+  for (const ch of changed.map((c) => toPosix(c))) {
     for (const { card, sources } of index) {
       if (sources.some((entry) => covers(ch, entry))) {
         if (!hits.has(card)) hits.set(card, new Set());

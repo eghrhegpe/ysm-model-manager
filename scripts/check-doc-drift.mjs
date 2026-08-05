@@ -26,6 +26,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
+import { parseFrontmatter, getScalar } from './_lib/frontmatter.mjs';
 
 const ADR_DIR = path.join(ROOT, 'docs/adr');
 const KC_DIR = path.join(ROOT, 'docs/knowledge');
@@ -48,20 +49,6 @@ function readText(rel) {
   } catch {
     return null;
   }
-}
-
-function parseFrontmatter(text) {
-  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  return m ? m[1] : null;
-}
-
-function getScalar(fm, key) {
-  if (!fm) return undefined;
-  const line = fm.match(new RegExp('^' + key + '\\s*:\\s*(.+)$', 'm'));
-  if (!line) return undefined;
-  const v = line[1].trim();
-  if (v === '' || v.startsWith('<')) return undefined;
-  return v.replace(/\s*#.*/, '').trim();
 }
 
 // ── 维度 1：ADR 登记一致（复用 adr-check 核心）───────

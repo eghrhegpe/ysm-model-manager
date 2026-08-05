@@ -50,7 +50,9 @@ export function renderFormattedText(text: string): string {
     .replace(/\r/g, "\n")
     .split("\n")
     .map((line) => {
-      if (!line) return "<br>";
+      // 空行返回 ""：join("<br>") 会为每个分隔补 <br>，空行夹在中间自然形成空行。
+      // 注意不能返回 "<br>" —— 会与 join 的 <br> 叠加导致空行翻倍（回归测试锁定）
+      if (!line) return "";
       const parts = line.split("§");
       if (parts.length === 1) return esc(parts[0]);
 
@@ -87,6 +89,9 @@ export function renderFormattedText(text: string): string {
         } else if (code === "r") {
           closeFormats();
           closeColor();
+          html += esc(body);
+        } else if (code === "k") {
+          // §k 乱码码：按注释约定直接忽略，仅输出正文
           html += esc(body);
         } else {
           // 无效码或连续 §，原样保留

@@ -36,10 +36,12 @@ export function friendlyError(err: unknown, fallback = "操作失败"): string {
       /sharing violation|used by another process|is locked|file exists/i,
       "文件被其他程序占用，请关闭相关程序后重试",
     ],
-    [/(?:is )?empty|no files/i, "目录为空，没有可操作的文件"],
+    // 裸 "empty" 会误伤 "empty response body" 等，只匹配目录/文件为空的具体短语（与 go/errors 对齐）
+    [/(?:directory|folder) is empty|no files/i, "目录为空，没有可操作的文件"],
     [/timeout|timed out/i, "连接超时，请检查网络"],
     [/network|proxy|fetch/i, "网络连接异常"],
-    [/invalid argument|invalid/i, "参数无效"],
+    // 裸 "invalid" 会误伤 "invalid model name" 等，只匹配 syscall.EINVAL 对应文案（与 go/errors 对齐）
+    [/invalid argument/i, "参数无效"],
     [/already exists/i, "文件已存在"],
     [/disk full|no space|disk quota/i, "磁盘空间不足"],
     [/unsupported|not supported/i, "不支持的格式或操作"],

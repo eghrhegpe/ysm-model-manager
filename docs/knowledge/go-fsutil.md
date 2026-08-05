@@ -34,7 +34,7 @@ use_when:
 ## 与其他子系统关系
 
 - 被 `internal/app/app_scan.go`（模型扫描取文件列表）与 `internal/app/app_install.go`（计数、遍历、删库后清空目录）调用
-- 与 [go_recycle](./go_recycle.md) 协作：`skipRecycle=true` 时跳过 `.recycle`，扫描/清理不触碰回收站数据
+- 与 [go_recycle](./go-recycle.md) 协作：`skipRecycle=true` 时跳过 `.recycle`，扫描/清理不触碰回收站数据
 
 ## 不变量
 
@@ -44,5 +44,5 @@ use_when:
 
 ## 相关
 
-- [go_recycle](./go_recycle.md) — `.recycle` 目录语义
-- [go_sync](./go_sync.md) — 同步扫描的底层遍历补充（sync 内部另有局部 Walk）
+- [go_recycle](./go-recycle.md) — `.recycle` 目录语义
+- [go_sync](./go-sync.md) — 同步扫描的底层遍历补充（sync 内部另有局部 Walk）

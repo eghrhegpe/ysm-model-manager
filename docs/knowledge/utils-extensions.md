@@ -48,6 +48,6 @@ use_when:
 
 ## 相关
 
-- [resource_registry](./resource_registry.md) — 单一事实源 resource_types.json
-- [utils_resource_types](./utils_resource_types.md) — 资源类型常量
+- [resource_registry](./resource-registry.md) — 单一事实源 resource_types.json
+- [utils_resource_types](./utils-resource-types.md) — 资源类型常量
 - `frontend/src/utils/resource/extensions.test.js` — 契约测试（验证入口）

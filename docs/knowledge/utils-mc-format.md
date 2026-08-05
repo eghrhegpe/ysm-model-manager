@@ -41,7 +41,7 @@ use_when:
 
 - renderFormattedText 消费方：`utils/display.ts`（文件名着色）、`utils/summarize.ts`（tips）、`app-resource-manager/tpl.ts`、`app-sync-manager/tpl.ts`、`app-preview/preview-detail.ts` + `preview-litematic-meta.ts`、`features/import-queue.ts`
 - describeVersionRange 消费方：`app-resource-manager/tpl.ts`（资源包卡片）
-- PackMeta 上游为 Go 端包元数据读取 binding（见 [go_packs](./go_packs.md)）
+- PackMeta 上游为 Go 端包元数据读取 binding（见 [go_packs](./go-packs.md)）
 
 ## 不变量
 
@@ -51,6 +51,6 @@ use_when:
 
 ## 相关
 
-- [utils_display](./utils_display.md) — 文件名 § 着色消费方
-- [go_packs](./go_packs.md) — 包元数据数据源
+- [utils_display](./utils-display.md) — 文件名 § 着色消费方
+- [go_packs](./go-packs.md) — 包元数据数据源
 - `frontend/src/utils/format/mc-format.test.js` — 单元测试（验证入口）

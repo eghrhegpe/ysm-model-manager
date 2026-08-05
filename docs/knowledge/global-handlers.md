@@ -44,10 +44,10 @@ use_when:
 
 ## 与其他子系统关系
 
-- 唯一调用方 [app_content](./app_content.md)：`connectedCallback` 注册、`disconnectedCallback` 逐个 unsub
-- 收集到的文件经 [import_queue](./import_queue.md) 的全局执行器入仓，导入完成后经 `import:history-changed` 驱动其刷新已导入列表
-- 页面判断依赖 [page_store](./page_store.md)；同步执行后端见 [go_sync](./go_sync.md)/[go_installer](./go_installer.md)；清空整合包走 [go_recycle](./go_recycle.md) 回收站
-- 确认弹窗走 [dialog_modal](./dialog_modal.md)，反馈走 [app_toast](./app_toast.md)
+- 唯一调用方 [app_content](./app-content.md)：`connectedCallback` 注册、`disconnectedCallback` 逐个 unsub
+- 收集到的文件经 [import_queue](./import-queue.md) 的全局执行器入仓，导入完成后经 `import:history-changed` 驱动其刷新已导入列表
+- 页面判断依赖 [page_store](./page-store.md)；同步执行后端见 [go_sync](./go-sync.md)/[go_installer](./go-installer.md)；清空整合包走 [go_recycle](./go-recycle.md) 回收站
+- 确认弹窗走 [dialog_modal](./dialog-modal.md)，反馈走 [app_toast](./app-toast.md)
 
 ## 不变量
 
@@ -58,7 +58,7 @@ use_when:
 
 ## 相关
 
-- [app_content](./app_content.md) — 注册与清理宿主
-- [import_queue](./import_queue.md) — 导入页 UI 与已导入列表刷新
-- [page_store](./page_store.md) — 页面状态判断
-- [go_sync](./go_sync.md) — 同步后端实现
+- [app_content](./app-content.md) — 注册与清理宿主
+- [import_queue](./import-queue.md) — 导入页 UI 与已导入列表刷新
+- [page_store](./page-store.md) — 页面状态判断
+- [go_sync](./go-sync.md) — 同步后端实现

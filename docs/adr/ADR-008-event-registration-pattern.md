@@ -139,4 +139,4 @@ on(event, fn) {
 | `frontend/src/views/app-preview/events.js` | `_unsubs` 数组清理模式 |
 | `frontend/src/views/app-resource-manager/index.js` | 已知违规：无守卫注册 |
 | `AGENTS.md` §三 陷阱 #3 #8 | 历史事故记录 |
-| `docs/knowledge/event_bus.md` | 事件总线架构文档 |
+| `docs/knowledge/event-bus.md` | 事件总线架构文档 |

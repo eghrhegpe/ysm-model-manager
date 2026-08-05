@@ -59,7 +59,7 @@ use_when:
 
 - `go/paths/`: 路径安全校验（`IsInside`）
 - `go/types/`: `ModelEntry` 条目结构、`IsSupportedExt`
-- 前端展示层见 [recycle_bin](./recycle_bin.md)
+- 前端展示层见 [recycle_bin](./recycle-bin.md)
 
 ## 不变量
 

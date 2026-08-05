@@ -35,7 +35,7 @@ use_when:
 ## 与其他子系统关系
 
 - 被 `internal/app/app_model.go` 调用（`threejs.Build` 生成 spec → Wails binding 下发前端）
-- 上游输入来自 [go_geometry](./go_geometry.md) / [go_ysm_parser](./go_ysm_parser.md) 解析出的 `types.BedrockModel`
+- 上游输入来自 [go_geometry](./go-geometry.md) / [go_ysm_parser](./go-ysm-parser.md) 解析出的 `types.BedrockModel`
 - 前端消费方：`frontend/src/utils/3d/model3d.ts`（Three.js 渲染）
 
 ## 不变量
@@ -47,6 +47,6 @@ use_when:
 
 ## 相关
 
-- [go_geometry](./go_geometry.md) — BedrockModel 来源（ZIP/7z/JSON 解析）
-- [go_ysm_parser](./go_ysm_parser.md) — YSM 格式解析
+- [go_geometry](./go-geometry.md) — BedrockModel 来源（ZIP/7z/JSON 解析）
+- [go_ysm_parser](./go-ysm-parser.md) — YSM 格式解析
 - AGENTS.md 致命陷阱 §二 #11（3D 坐标变换）

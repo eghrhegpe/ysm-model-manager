@@ -51,7 +51,7 @@ use_when:
 
 ## 相关
 
-- [utils_dom](./utils_dom.md) — esc() HTML 转义红线
-- [utils_mc_format](./utils_mc_format.md) — § 分节符着色
+- [utils_dom](./utils-dom.md) — esc() HTML 转义红线
+- [utils_mc_format](./utils-mc-format.md) — § 分节符着色
 - `frontend/src/utils/dom/display.test.js` — 单元测试（验证入口）
 - AGENTS.md §3.3 UI 安全红线

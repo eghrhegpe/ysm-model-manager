@@ -29,7 +29,7 @@ use_when:
 ## 与其他子系统关系
 
 - 被 `internal/app/app.go` 的 GetVersion binding 返回给前端展示
-- 被 `internal/app/app_config.go` 使用：`CurrentVersion()` 返回、`updater.Check(version.Version)` 作为自动更新的当前版本入参（见 [go_updater](./go_updater.md)）
+- 被 `internal/app/app_config.go` 使用：`CurrentVersion()` 返回、`updater.Check(version.Version)` 作为自动更新的当前版本入参（见 [go_updater](./go-updater.md)）
 
 ## 不变量
 
@@ -38,5 +38,5 @@ use_when:
 
 ## 相关
 
-- [go_updater](./go_updater.md) — 以 Version 为基准检查新版本
-- [wails_bridge](./wails_bridge.md) — GetVersion binding
+- [go_updater](./go-updater.md) — 以 Version 为基准检查新版本
+- [wails_bridge](./wails-bridge.md) — GetVersion binding

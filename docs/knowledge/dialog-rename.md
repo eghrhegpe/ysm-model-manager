@@ -34,14 +34,14 @@ use_when:
 - 监听/派发 bus：无
 - getApp() 调用：`ExtractYSMHeader`
 - 依赖：`parseModelName`（utils/display.ts）、`closeDlg`/`registerDlg`/`esc`（dialogs/modal.ts）
-- 调用方：app-tree 右键重命名、[import_queue](./import_queue.md)（导入命名确认与已导入项改名后调 `RenameFile`）
+- 调用方：app-tree 右键重命名、[import_queue](./import-queue.md)（导入命名确认与已导入项改名后调 `RenameFile`）
 
 ## 与其他子系统关系
 
-- 弹窗生命周期原语与样式复用 [dialog_modal](./dialog_modal.md)
+- 弹窗生命周期原语与样式复用 [dialog_modal](./dialog-modal.md)
 - 命名解析/拼接与 `parseModelName`/`renderDisplayName` 同一套口径（utils/display.ts）
-- 头部元数据解析后端见 [go_ysm_parser](./go_ysm_parser.md)
-- 实际重命名 binding `RenameFile` 见 [wails_bindings](./wails_bindings.md)
+- 头部元数据解析后端见 [go_ysm_parser](./go-ysm-parser.md)
+- 实际重命名 binding `RenameFile` 见 [wails_bindings](./wails-bindings.md)
 
 ## 不变量
 
@@ -52,7 +52,7 @@ use_when:
 
 ## 相关
 
-- [dialog_modal](./dialog_modal.md) — 弹窗基座
-- [import_queue](./import_queue.md) — 导入命名确认调用方
-- [app_tree](./app_tree.md) — 右键重命名调用方
-- [go_ysm_parser](./go_ysm_parser.md) — ExtractYSMHeader 后端
+- [dialog_modal](./dialog-modal.md) — 弹窗基座
+- [import_queue](./import-queue.md) — 导入命名确认调用方
+- [app_tree](./app-tree.md) — 右键重命名调用方
+- [go_ysm_parser](./go-ysm-parser.md) — ExtractYSMHeader 后端

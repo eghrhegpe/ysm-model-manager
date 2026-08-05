@@ -38,7 +38,7 @@ use_when:
 
 - 唯一消费方：`app-preview/preview-detail.ts`（预览面板详情区）
 - 依赖 `utils/display.ts`（parseModelName 回退）、`utils/mc-format.ts`（renderFormattedText 着色）、`utils/dom/html.ts`（esc）
-- 上游数据来自 Go 端模型分析 binding（summary/header），解析链路见 [go_ysm_parser](./go_ysm_parser.md)
+- 上游数据来自 Go 端模型分析 binding（summary/header），解析链路见 [go_ysm_parser](./go-ysm-parser.md)
 
 ## 不变量
 
@@ -48,6 +48,6 @@ use_when:
 
 ## 相关
 
-- [app_preview](./app_preview.md) — 预览面板
-- [go_ysm_parser](./go_ysm_parser.md) — 摘要数据源
+- [app_preview](./app-preview.md) — 预览面板
+- [go_ysm_parser](./go-ysm-parser.md) — 摘要数据源
 - `frontend/src/utils/format/summarize.test.js` — 单元测试（验证入口）

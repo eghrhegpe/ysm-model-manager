@@ -34,7 +34,7 @@ use_when:
 
 ## 概览
 
-`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp()`（见 [wails_bridge](./wails_bridge.md) 卡）调用这些方法，禁止 `window.go.main.App` 直连。
+`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp()`（见 [wails_bridge](./wails-bridge.md) 卡）调用这些方法，禁止 `window.go.main.App` 直连。
 
 本卡是全部可调用方法的索引（API 字典），共 **153 个**，与 Wails v3 自动生成的 TS 绑定 `frontend/bindings/ysm-model-manager/internal/app/app.ts` 逐一对应；类型定义见同目录 `models.ts` 及 `frontend/bindings/ysm-model-manager/go/types/models.ts`。`bindings/` 目录为生成物，禁止手改。
 
@@ -262,10 +262,10 @@ use_when:
 
 ## 与其他子系统关系
 
-- **前端桥接**：所有调用经 `frontend/src/wails/app.ts` 的 `getApp()` 动态 import 生成绑定（见 [wails_bridge](./wails_bridge.md)），返回 Promise，异常走 rejection（须有 toast 反馈）。
+- **前端桥接**：所有调用经 `frontend/src/wails/app.ts` 的 `getApp()` 动态 import 生成绑定（见 [wails_bridge](./wails-bridge.md)），返回 Promise，异常走 rejection（须有 toast 反馈）。
 - **业务下沉**：本层是薄壳，真实逻辑在 `go/installer`（安装）、`go/sync`（整合包同步）、`go/recycle`（回收站）、`go/tags`（标签）、`go/updater`（更新）、`go/ysm`（解析）等包，细节见对应 `go_*` 知识卡。
-- **资源类型参数**：各方法中的 `rtype` 参数取值来自 `resource_types.json` 注册表（见 [resource_registry](./resource_registry.md)），禁止手写新类型。
-- **事件通道**：下载进度等异步状态不经 Binding 返回值，而走 Wails 事件由前端 bus 订阅（见 [event_bus](./event_bus.md)）；三入口统一走 `EnqueueDownloads` 只注册一组 EventsOn（致命陷阱 #7）。
+- **资源类型参数**：各方法中的 `rtype` 参数取值来自 `resource_types.json` 注册表（见 [resource_registry](./resource-registry.md)），禁止手写新类型。
+- **事件通道**：下载进度等异步状态不经 Binding 返回值，而走 Wails 事件由前端 bus 订阅（见 [event_bus](./event-bus.md)）；三入口统一走 `EnqueueDownloads` 只注册一组 EventsOn（致命陷阱 #7）。
 - **生成绑定**：`frontend/bindings/` 由 Wails v3 构建时自动生成（含 `app.ts` 与各级 `models.ts`），是前端可见的方法与类型清单。
 
 ## 不变量
@@ -280,8 +280,8 @@ use_when:
 
 ## 相关
 
-- [wails_bridge](./wails_bridge.md) — 前端 getApp() 调用入口
-- [resource_registry](./resource_registry.md) — rtype 资源类型注册表
-- [event_bus](./event_bus.md) — 前端事件总线（进度/完成事件订阅）
+- [wails_bridge](./wails-bridge.md) — 前端 getApp() 调用入口
+- [resource_registry](./resource-registry.md) — rtype 资源类型注册表
+- [event_bus](./event-bus.md) — 前端事件总线（进度/完成事件订阅）
 - 致命陷阱 §二 #1（改 Go 未重建）、#5（Binding 函数名写错）、#7（三入口重复注册）
 - 治理红线 §三.2（Wails 调用统一走 getApp()）

@@ -47,10 +47,10 @@ use_when:
 
 ## 与其他子系统关系
 
-- 由 [app_content](./app_content.md) 的 workshop/github 视图初始化；视图销毁时调 `cleanup()`（cancel 队列 + `queue.destroy()` 退订 STATE）
-- 下载执行后端见 [go_download](./go_download.md)；入队后的文件安装见 [go_installer](./go_installer.md)
-- 头像提取联动见 [go_avatar](./go_avatar.md)（`avatar:refresh` 消费方在 app-content/app-tree）
-- 下载完成发 `tree:reload`/`stats:refresh` 联动 [app_tree](./app_tree.md)；确认弹窗走 [dialog_modal](./dialog_modal.md)
+- 由 [app_content](./app-content.md) 的 workshop/github 视图初始化；视图销毁时调 `cleanup()`（cancel 队列 + `queue.destroy()` 退订 STATE）
+- 下载执行后端见 [go_download](./go-download.md)；入队后的文件安装见 [go_installer](./go-installer.md)
+- 头像提取联动见 [go_avatar](./go-avatar.md)（`avatar:refresh` 消费方在 app-content/app-tree）
+- 下载完成发 `tree:reload`/`stats:refresh` 联动 [app_tree](./app-tree.md)；确认弹窗走 [dialog_modal](./dialog-modal.md)
 
 ## 不变量
 
@@ -68,7 +68,7 @@ use_when:
 
 ## 相关
 
-- [go_download](./go_download.md) — 后端下载队列与事件发射
-- [app_content](./app_content.md) — workshop/github 页面宿主
-- [go_avatar](./go_avatar.md) — 创作者头像提取与缓存
-- [context_menu](./context_menu.md) — 右键信息展示
+- [go_download](./go-download.md) — 后端下载队列与事件发射
+- [app_content](./app-content.md) — workshop/github 页面宿主
+- [go_avatar](./go-avatar.md) — 创作者头像提取与缓存
+- [context_menu](./context-menu.md) — 右键信息展示

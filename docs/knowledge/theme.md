@@ -42,9 +42,9 @@ use_when:
 
 ## 与其他子系统关系
 
-- 启动编排在 [app_modules](./app_modules.md)（initTheme → applyUIPrefs → checkUpdateSilent）
+- 启动编排在 [app_modules](./app-modules.md)（initTheme → applyUIPrefs → checkUpdateSilent）
 - 主题选择 UI 在 app-content 设置页（settings.ts），经 `window.applyTheme` 与 localStorage 与入口同步
-- 所有组件样式消费 CSS 变量（见 [shared_styles](./shared_styles.md) 与各组件 css），Shadow DOM 内用 `:host-context(.theme-*)` 做主题特判
+- 所有组件样式消费 CSS 变量（见 [shared_styles](./shared-styles.md) 与各组件 css），Shadow DOM 内用 `:host-context(.theme-*)` 做主题特判
 - 动画开关 `no-animations` 被各组件 CSS（如 app-tree-styles）以 `animation: none !important` 响应
 
 ## 不变量
@@ -57,6 +57,6 @@ use_when:
 
 ## 相关
 
-- [app_modules](./app_modules.md) — 启动序列与主题挂载
-- [shared_styles](./shared_styles.md) — 消费 CSS 变量的共享样式
-- [wails_bindings](./wails_bindings.md) — LoadAppConfig 后端
+- [app_modules](./app-modules.md) — 启动序列与主题挂载
+- [shared_styles](./shared-styles.md) — 消费 CSS 变量的共享样式
+- [wails_bindings](./wails-bindings.md) — LoadAppConfig 后端

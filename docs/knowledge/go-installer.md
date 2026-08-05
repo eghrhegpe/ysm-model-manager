@@ -40,9 +40,9 @@ use_when:
 ## 与其他子系统关系
 
 - 被 `internal/app/app_install.go`（安装/全局安装/覆盖安装）与 `internal/app/resource_bindings.go`（资源类型推送）调用
-- 被 [go_sync](./go_sync.md) 的 `sync_push.go`（推送）与 `sync_relink.go`（重链接）调用——同步差异算出来后由本包执行落地
-- 依赖 [go_paths](./go_paths.md)（`ContainsMinecraftMarker` / `IsInside`）、[go_types](./go_types.md)（`AppError` / `IsSupportedExt` / `AllExts`）
-- 与 [go_download](./go_download.md) **无直接调用关系**：下载产物先入仓库，再由上层触发安装
+- 被 [go_sync](./go-sync.md) 的 `sync_push.go`（推送）与 `sync_relink.go`（重链接）调用——同步差异算出来后由本包执行落地
+- 依赖 [go_paths](./go-paths.md)（`ContainsMinecraftMarker` / `IsInside`）、[go_types](./go-types.md)（`AppError` / `IsSupportedExt` / `AllExts`）
+- 与 [go_download](./go-download.md) **无直接调用关系**：下载产物先入仓库，再由上层触发安装
 
 ## 不变量
 
@@ -58,7 +58,7 @@ use_when:
 
 ## 相关
 
-- [go_sync](./go_sync.md) — 差异计算与推送/重链接编排
-- [go_paths](./go_paths.md) — 路径安全校验
-- [go_recycle](./go_recycle.md) — 删除时按链接类型分流
+- [go_sync](./go-sync.md) — 差异计算与推送/重链接编排
+- [go_paths](./go-paths.md) — 路径安全校验
+- [go_recycle](./go-recycle.md) — 删除时按链接类型分流
 - AGENTS.md 致命陷阱 §二 #8（硬链接误删）

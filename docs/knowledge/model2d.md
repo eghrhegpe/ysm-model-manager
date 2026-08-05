@@ -50,7 +50,7 @@ Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可
 ## 相关
 
 - [model3d](./model3d.md) — 3D 预览（同一几何口径）
-- [animation_system](./animation_system.md) — BoneTransform 来源
-- [app_preview](./app_preview.md) — 预览面板消费方
+- [animation_system](./animation-system.md) — BoneTransform 来源
+- [app_preview](./app-preview.md) — 预览面板消费方
 - `frontend/src/utils/3d/model2d.test.js` — 单元测试（验证入口）
 - AGENTS.md 致命陷阱 §二 #11

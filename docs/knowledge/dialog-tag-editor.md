@@ -37,9 +37,9 @@ use_when:
 
 ## 与其他子系统关系
 
-- 后端存储为 go/tags Store（tags.json，路径→标签列表），见 [go_tags](./go_tags.md)；binding 经 [wails_bindings](./wails_bindings.md) 暴露
-- 标签反查与高级筛选的标签条件联动 [dialog_adv_filter](./dialog_adv_filter.md)（同样消费 `AllTags`）
-- 弹窗基座与样式复用 [dialog_modal](./dialog_modal.md)
+- 后端存储为 go/tags Store（tags.json，路径→标签列表），见 [go_tags](./go-tags.md)；binding 经 [wails_bindings](./wails-bindings.md) 暴露
+- 标签反查与高级筛选的标签条件联动 [dialog_adv_filter](./dialog-adv-filter.md)（同样消费 `AllTags`）
+- 弹窗基座与样式复用 [dialog_modal](./dialog-modal.md)
 
 ## 不变量
 
@@ -50,7 +50,7 @@ use_when:
 
 ## 相关
 
-- [go_tags](./go_tags.md) — 后端标签存储
-- [dialog_adv_filter](./dialog_adv_filter.md) — 按标签筛选
-- [dialog_modal](./dialog_modal.md) — 弹窗基座
-- [app_tree](./app_tree.md) — 右键编辑标签入口
+- [go_tags](./go-tags.md) — 后端标签存储
+- [dialog_adv_filter](./dialog-adv-filter.md) — 按标签筛选
+- [dialog_modal](./dialog-modal.md) — 弹窗基座
+- [app_tree](./app-tree.md) — 右键编辑标签入口

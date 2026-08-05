@@ -62,5 +62,5 @@ use_when:
 ## 相关
 
 - [model3d](./model3d.md) / [model2d](./model2d.md) — 模型动画的呈现端
-- [app_preview](./app_preview.md) — 动画解析消费方
+- [app_preview](./app-preview.md) — 动画解析消费方
 - `frontend/src/utils/animation/animation.test.js`、`frontend/src/utils/animation/stagger.test.js` — 单元测试（验证入口）

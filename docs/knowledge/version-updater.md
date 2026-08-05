@@ -40,9 +40,9 @@ use_when:
 
 ## 与其他子系统关系
 
-- 后端更新流水线见 [go_updater](./go_updater.md)（版本比对/下载/hash 校验/替换）
-- 启动挂载点见 [app_modules](./app_modules.md)（`registerErrorDiary` → `initTheme` → `applyUIPrefs` 之后 fire-and-forget 静默检查，不阻塞界面）
-- toast 通知（含 `click` 回调支持）由 [app_toast](./app_toast.md) 渲染；确认弹窗直接复用 [dialog_modal](./dialog_modal.md) 的 `modalConfirm`（含其 Esc / 点遮罩关闭行为），本文件不再自建 `dlg-overlay`
+- 后端更新流水线见 [go_updater](./go-updater.md)（版本比对/下载/hash 校验/替换）
+- 启动挂载点见 [app_modules](./app-modules.md)（`registerErrorDiary` → `initTheme` → `applyUIPrefs` 之后 fire-and-forget 静默检查，不阻塞界面）
+- toast 通知（含 `click` 回调支持）由 [app_toast](./app-toast.md) 渲染；确认弹窗直接复用 [dialog_modal](./dialog-modal.md) 的 `modalConfirm`（含其 Esc / 点遮罩关闭行为），本文件不再自建 `dlg-overlay`
 - 转义复用 `dialogs/modal.ts` 导出的 `esc`；错误文案复用 `utils/dom/errors.ts` 的 `friendlyError`
 
 ## 不变量
@@ -57,7 +57,7 @@ use_when:
 
 ## 相关
 
-- [go_updater](./go_updater.md) — 后端检查/下载/应用更新
-- [app_modules](./app_modules.md) — 启动时调用 checkUpdateSilent
-- [app_toast](./app_toast.md) — 可点击更新通知
-- [dialog_modal](./dialog_modal.md) — 弹窗样式与 esc 来源
+- [go_updater](./go-updater.md) — 后端检查/下载/应用更新
+- [app_modules](./app-modules.md) — 启动时调用 checkUpdateSilent
+- [app_toast](./app-toast.md) — 可点击更新通知
+- [dialog_modal](./dialog-modal.md) — 弹窗样式与 esc 来源

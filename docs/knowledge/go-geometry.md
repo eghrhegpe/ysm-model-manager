@@ -38,8 +38,8 @@ use_when:
 ## 与其他子系统关系
 
 - 被 `internal/app/app_model.go` 调用（3D 预览前置解析）、`internal/app/app_files.go`（缩略图）、`internal/app/wasm_decoder.go`（解码后解析）
-- 被 [go_ysm_parser](./go_ysm_parser.md) 的 `extracted.go` 调用（解压产物解析）
-- 下游产物交给 [go_threejs](./go_threejs.md) 生成渲染 spec；依赖 `go/types`（BedrockModel/Bone2D/Cube2D）
+- 被 [go_ysm_parser](./go-ysm-parser.md) 的 `extracted.go` 调用（解压产物解析）
+- 下游产物交给 [go_threejs](./go-threejs.md) 生成渲染 spec；依赖 `go/types`（BedrockModel/Bone2D/Cube2D）
 
 ## 不变量
 
@@ -54,6 +54,6 @@ use_when:
 
 ## 相关
 
-- [go_threejs](./go_threejs.md) — BedrockModel → Three.js spec
-- [go_ysm_parser](./go_ysm_parser.md) — YSM 格式与解压流程
-- [go_types](./go_types.md) — BedrockModel 结构
+- [go_threejs](./go-threejs.md) — BedrockModel → Three.js spec
+- [go_ysm_parser](./go-ysm-parser.md) — YSM 格式与解压流程
+- [go_types](./go-types.md) — BedrockModel 结构

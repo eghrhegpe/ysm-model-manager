@@ -26,7 +26,7 @@ use_when:
 
 ## 概览
 
-`go/sync/` 包负责模型库（全局仓库）与 Minecraft 整合包实例之间的同步：发现实例（原版 / PrismLauncher 布局）、按 SHA256 哈希对比出缺失/多余/禁用文件、按文件名或文件夹对比资源包差异、检测目标文件的链接类型（符号链接/硬链接/复制），并**编排推送/拉取/重链接的执行循环**（ADR-003 补充下沉，从 `internal/app/app_install.go` 提取）。单文件的实际落地（复制/硬链接/符号链接）仍由 [go_installer](./go_installer.md) 按 `LinkMode` 完成，本包只负责「算差异 + 决定对哪些条目调用 installer + 计数与失败上报」。
+`go/sync/` 包负责模型库（全局仓库）与 Minecraft 整合包实例之间的同步：发现实例（原版 / PrismLauncher 布局）、按 SHA256 哈希对比出缺失/多余/禁用文件、按文件名或文件夹对比资源包差异、检测目标文件的链接类型（符号链接/硬链接/复制），并**编排推送/拉取/重链接的执行循环**（ADR-003 补充下沉，从 `internal/app/app_install.go` 提取）。单文件的实际落地（复制/硬链接/符号链接）仍由 [go_installer](./go-installer.md) 按 `LinkMode` 完成，本包只负责「算差异 + 决定对哪些条目调用 installer + 计数与失败上报」。
 
 ## 核心职责
 
@@ -59,9 +59,9 @@ use_when:
 
 - 被 `internal/app/app_install.go` 调用（状态对比、推送/拉取、启禁同步、`GetLinkType` 决定删除策略）
 - 被 `internal/app/app_scan.go` 调用（`ListVersions`）、`internal/app/app_config.go` 引用
-- 被 [go_watcher](./go_watcher.md) 调用（文件变更时 `ListVersions` + `SyncToggleStatus` 自动同步启禁）
+- 被 [go_watcher](./go-watcher.md) 调用（文件变更时 `ListVersions` + `SyncToggleStatus` 自动同步启禁）
 - 依赖 `go/types`（ModelEntry/InstanceStatus/LinkType 等）、`go/ysm`（`ysm.HasYSMMod` 检测实例 mod）
-- `sync_push.go` / `sync_relink.go` 反向依赖 [go_installer](./go_installer.md)（`Install` / `InstallDir` / `CopyFile`）——本包→installer 是单向的，installer 不得回调本包
+- `sync_push.go` / `sync_relink.go` 反向依赖 [go_installer](./go-installer.md)（`Install` / `InstallDir` / `CopyFile`）——本包→installer 是单向的，installer 不得回调本包
 
 ## 不变量
 
@@ -76,12 +76,12 @@ use_when:
 - `RelinkDir` 处理文件夹级类型时先把旧目录 rename 成 `.relink-bak`，重建成功才删备份、失败则回滚恢复——不能先 `RemoveAll` 再重建，否则失败即整目录丢失
 - 硬链接检测跨平台分实现，系统调用失败一律降级 `LinkCopy`；`GetLinkType` 必须先 `os.Lstat` 判 `os.ModeSymlink`（`sync.go:588-594`）——用 `os.Stat` 会跟随链接、把符号链接误判成普通文件，进而按「复制」策略走回收站
 - 链接类型是删除策略依据：硬链接(nlink>1)/符号链接直接删，普通文件才移回收站（致命陷阱 #8）
-- 拉取侧 `copyFile`（`sync_push.go:221`）是**跟随符号链接**的裸复制：`os.Open` + `io.Copy`，不保留链接语义、不 chmod、失败不清理半截目标文件。`PullResources` / `PullSingleResource` 遍历文件夹时按 `e.IsDir()` 跳过子目录，而指向目录的符号链接 `IsDir()` 为 false 不被跳过，会走进 `copyFile` 并在 `io.Copy` 阶段报错（EISDIR 类）——该条目计 failed 但循环继续，不会中断整组拉取。这与 [go_recycle](./go_recycle.md) 的 `copyDirRecursive` 已改用 `os.Readlink` + `os.Symlink` 保留链接的做法不同，本包尚未对齐
+- 拉取侧 `copyFile`（`sync_push.go:221`）是**跟随符号链接**的裸复制：`os.Open` + `io.Copy`，不保留链接语义、不 chmod、失败不清理半截目标文件。`PullResources` / `PullSingleResource` 遍历文件夹时按 `e.IsDir()` 跳过子目录，而指向目录的符号链接 `IsDir()` 为 false 不被跳过，会走进 `copyFile` 并在 `io.Copy` 阶段报错（EISDIR 类）——该条目计 failed 但循环继续，不会中断整组拉取。这与 [go_recycle](./go-recycle.md) 的 `copyDirRecursive` 已改用 `os.Readlink` + `os.Symlink` 保留链接的做法不同，本包尚未对齐
 - 实例 custom 目录固定为 `config/yes_steve_model/custom`
 
 ## 相关
 
-- [go_installer](./go_installer.md) — 按 LinkMode 实际落地复制/硬链接/符号链接
-- [go_recycle](./go_recycle.md) — 删除时按链接类型分流
-- [go_watcher](./go_watcher.md) — 文件监听触发自动同步
+- [go_installer](./go-installer.md) — 按 LinkMode 实际落地复制/硬链接/符号链接
+- [go_recycle](./go-recycle.md) — 删除时按链接类型分流
+- [go_watcher](./go-watcher.md) — 文件监听触发自动同步
 - AGENTS.md 致命陷阱 §二 #8（硬链接误删）

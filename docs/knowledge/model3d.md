@@ -23,7 +23,7 @@ use_when:
 
 ## 概览
 
-前端 Three.js 3D 渲染层，由三个文件组成：`model3d.ts` 负责场景搭建/相机/渲染循环，`model3d-loader.ts` 负责纹理与 spec 加载（Go binding 优先 + JS 兜底），`model3d-spec.ts` 是 JS 端兜底 spec 构建算法（与 Go `threejs.Build()` 口径一致）。几何数据（顶点/法线/UV/骨骼四元数）全部由 Go 端 [go_threejs](./go_threejs.md) 预计算，本层只渲染、不做几何计算。
+前端 Three.js 3D 渲染层，由三个文件组成：`model3d.ts` 负责场景搭建/相机/渲染循环，`model3d-loader.ts` 负责纹理与 spec 加载（Go binding 优先 + JS 兜底），`model3d-spec.ts` 是 JS 端兜底 spec 构建算法（与 Go `threejs.Build()` 口径一致）。几何数据（顶点/法线/UV/骨骼四元数）全部由 Go 端 [go_threejs](./go-threejs.md) 预计算，本层只渲染、不做几何计算。
 
 ## 核心职责
 
@@ -58,7 +58,7 @@ use_when:
 ## 与其他子系统关系
 
 - 消费方：`app-preview/preview-skeleton.ts`（动态 import renderModel3D / preloadModel / screenshotPreview）、`utils/screenshot-renderer.ts`（复用 buildSceneMesh + loadTextures 做离屏多角度截图）
-- 上游数据：Go `GetModel3DSpec` binding ← [go_threejs](./go_threejs.md) `threejs.Build()`；纹理/模型对象来自 [go_geometry](./go_geometry.md)
+- 上游数据：Go `GetModel3DSpec` binding ← [go_threejs](./go-threejs.md) `threejs.Build()`；纹理/模型对象来自 [go_geometry](./go-geometry.md)
 - 相机/调试状态存于模块级 `_scene3d/_camera3d/_renderer3d/_rootGroup3d`（供 screenshotPreview 使用，cleanup 时置空，不挂 window 全局）
 
 ## 不变量
@@ -70,9 +70,9 @@ use_when:
 
 ## 相关
 
-- [go_threejs](./go_threejs.md) — spec 生成（Go 端）
+- [go_threejs](./go-threejs.md) — spec 生成（Go 端）
 - [model2d](./model2d.md) — 2D 预览（同一坐标口径约束）
-- [app_preview](./app_preview.md) — 预览面板消费方
-- [utils_export](./utils_export.md) — 截图与导出
+- [app_preview](./app-preview.md) — 预览面板消费方
+- [utils_export](./utils-export.md) — 截图与导出
 - `frontend/src/utils/3d/model3d-spec.test.js` — JS 兜底 ↔ Go 口径黄金样本测试（验证入口）
 - AGENTS.md 致命陷阱 §二 #11

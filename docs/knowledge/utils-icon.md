@@ -41,5 +41,5 @@ use_when:
 
 ## 相关
 
-- [utils_resource_types](./utils_resource_types.md) — 资源类型常量
+- [utils_resource_types](./utils-resource-types.md) — 资源类型常量
 - `frontend/src/utils/icon/icon.test.js` — 单元测试（验证入口）

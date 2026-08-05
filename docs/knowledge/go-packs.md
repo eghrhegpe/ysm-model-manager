@@ -35,7 +35,7 @@ use_when:
 
 - 被 `internal/app/resource_bindings.go` 调用（ReadPackMeta / ReadShaderpackLang / DetectResourceType binding）
 - 依赖 `go/types`（PackMeta、ResourceTypeRegistry）
-- detector/扩展名定义来自 [resource_registry](./resource_registry.md)，本包不自行维护类型清单
+- detector/扩展名定义来自 [resource_registry](./resource-registry.md)，本包不自行维护类型清单
 
 ## 不变量
 
@@ -45,6 +45,6 @@ use_when:
 
 ## 相关
 
-- [resource_registry](./resource_registry.md) — detector 与扩展名定义
-- [go_types](./go_types.md) — PackMeta / FormatRange
-- [wails_bridge](./wails_bridge.md) — 资源包 binding
+- [resource_registry](./resource-registry.md) — detector 与扩展名定义
+- [go_types](./go-types.md) — PackMeta / FormatRange
+- [wails_bridge](./wails-bridge.md) — 资源包 binding

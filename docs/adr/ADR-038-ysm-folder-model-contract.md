@@ -49,7 +49,7 @@ YSM 模型有三种分发形态：`.ysm` 单文件（zip 容器）、`.zip` / `.
 **负面 / 已知遗留**：
 - 历史已误导入的孤儿 json（如本次现场 17 个及更早）仍残留在仓库，`ScanEntries` 白名单使其界面不可见 → **遗留项**：孤儿清理工具或一次性清扫脚本。
 - 回收站 `List` 对整组目录仍拆散成单文件条目显示（`Restore` 可还原目录结构）→ **遗留项**：合并显示。
-- 文档缺口：`docs/knowledge/go_ysm_parser.md` 无「YSM 包内结构 + 仅 ysm.json 可作独立条目」段落 → 补卡。
+- 文档缺口：`docs/knowledge/go-ysm-parser.md` 无「YSM 包内结构 + 仅 ysm.json 可作独立条目」段落 → 补卡。
 
 ## 4. 数据溯源
 

@@ -9,6 +9,7 @@ import { DnDLock, PendingImport } from "./dnd-state.ts";
 import { getApp } from "../wails/app.ts";
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
 import { isImportableFile, shouldEnterForm } from "./dnd-shared.ts";
+import { showRenameDialog } from "../views/dialogs/rename.ts";
 
 const extsStr = ALL_EXTS.join(" ");
 
@@ -392,7 +393,6 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         ? currentRelPath.substring(0, currentRelPath.lastIndexOf("/"))
         : "";
       // 先弹出重命名确认对话框，确认后再导入
-      const { showRenameDialog } = await import("../views/dialogs/rename.ts");
       const renameTo = await showRenameDialog(null, newName);
       if (!renameTo) {
         bus.emit("toast:show", {
@@ -862,7 +862,6 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         _importing = true;
         try {
         const name = (btn as HTMLElement).dataset.name || "";
-        const { showRenameDialog } = await import("../views/dialogs/rename.ts");
         const { RenameFile, LoadAppConfig, GetRepoRoot } = await getApp();
         void LoadAppConfig;
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);

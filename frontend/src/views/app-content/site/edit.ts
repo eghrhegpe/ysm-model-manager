@@ -5,6 +5,7 @@ import { getApp } from "../../../wails/app.ts";
 import type { WorkshopPresetSearch } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 import type { LocalCreatorLike } from "../site-view.ts";
 import type { SiteViewState, CleanupFn } from "./types.ts";
+import * as m from "../community-data.ts";
 
 /**
  * 绑定编辑模式事件：编辑入口 / 拉取配置 / 取消 / 保存 / 行内编辑 /
@@ -32,7 +33,6 @@ export function bindEditEvents(state: SiteViewState, refreshView: () => void): C
       btn.textContent = "⏳";
       btn.disabled = true;
       try {
-        const m = await import("../community-data.ts");
         const App = await getApp();
         const results = await Promise.all([
           m.fetchCommunityCreators(m.DEFAULT_COMMUNITY_URL),

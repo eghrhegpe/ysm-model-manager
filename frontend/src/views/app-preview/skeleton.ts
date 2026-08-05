@@ -10,6 +10,10 @@ import { esc } from "../../utils/dom/html.ts";
 import { getApp } from "../../wails/app.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
+import { statsCardHTML } from "./tpl.ts";
+import { screenshotPreview, renderModel3D } from "../../utils/3d/model3d.ts";
+import { renderMultiAngle } from "./screenshot-renderer.ts";
+import { preloadModel } from "./model3d-loader.ts";
 
 // 2D 拖拽的 window 监听器槽位：loadModel2D 每次渲染模型都会绑定，
 // 先移除上一轮处理器再绑定，防止 window 级监听器累积泄漏
@@ -106,7 +110,6 @@ export async function loadModel2D(
     container.appendChild(toggleRow);
 
     // ---- 统计卡片 ----
-    const { statsCardHTML } = await import("./tpl.ts");
     const card = document.createElement("div");
     card.className = "ysm-card";
     card.innerHTML = statsCardHTML(model, modelPath, _decodedBy);
@@ -350,7 +353,6 @@ export async function loadModel2D(
           const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ".";
           const base = p.split("/").pop()?.replace(/\.\w+$/, "") || "";
           if (key === "current") {
-            const { screenshotPreview } = await import("../../utils/3d/model3d.ts");
             const b64 = screenshotPreview();
             if (!b64) {
               shotBtn.textContent = "❌";
@@ -361,7 +363,6 @@ export async function loadModel2D(
           } else if (key === "all") {
             for (const k of ["front", "45", "side", "back45"]) await saveShotInner(k);
           } else {
-            const { renderMultiAngle } = await import("./screenshot-renderer.ts");
             const texUrls =
               model.textures && model.textures.length > 1
                 ? model.textures
@@ -549,8 +550,6 @@ export async function loadModel2D(
         overlay.appendChild(loadingEl);
 
         try {
-          const { preloadModel } = await import("./model3d-loader.ts");
-          const { renderModel3D } = await import("../../utils/3d/model3d.ts");
           const { texArr, spec } = await preloadModel(
             model as import("./model3d-loader.ts").ModelLike,
           );

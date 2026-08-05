@@ -20,7 +20,6 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.js",
-    "wailsjs/**/*.ts",
     "vite.config.js"
   ],
   "exclude": ["node_modules", "dist"]

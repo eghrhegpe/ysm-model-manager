@@ -548,15 +548,22 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     return new Promise((resolve) => {
       try {
         if (entry.isFile) {
-          (entry as FileSystemFileEntry).file(
-            (file) => {
+          // entry.file 是 callback API，Promise 化后再路由（失败如 .lnk 快捷方式 → 跳过）
+          new Promise<File | null>((resolve) => {
+            (entry as FileSystemFileEntry).file(
+              (f) => resolve(f),
+              () => resolve(null), // entry.file 回调失败（如 .lnk 快捷方式）→ 跳过
+            );
+          }).then((file) => {
+            if (file) {
               const relPath = basePath
                 ? basePath + "/" + file.name
                 : file.name;
               resolve([{ file: file as ImportFile, relPath }]);
-            },
-            () => resolve([]), // entry.file 回调失败（如 .lnk 快捷方式）→ 跳过
-          );
+            } else {
+              resolve([]);
+            }
+          });
         } else if (entry.isDirectory) {
           const dirReader = (entry as FileSystemDirectoryEntry).createReader();
           const subPath = basePath

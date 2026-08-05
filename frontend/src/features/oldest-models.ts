@@ -66,11 +66,9 @@ export async function loadOldestModel(
       // 基础统计
       let totalSize = 0;
       let banned = 0;
-      let oldest = entries[0];
       const hashMap: Record<string, number> = {};
       entries.forEach((e) => {
         totalSize += e.Size || 0;
-        if (e.ModTime && e.ModTime < oldest.ModTime) oldest = e;
         if ((e.Name || "").toLowerCase().endsWith(".ban")) banned++;
         if (e.Hash) hashMap[e.Hash] = (hashMap[e.Hash] || 0) + 1;
       });
@@ -116,9 +114,10 @@ export async function loadOldestModel(
                     ? "var(--tag-amber)"
                     : "var(--paid)";
             const nowYear = new Date().getFullYear();
-            const monthLabel = new Date(nowYear, i, 1).toLocaleDateString(
-              "zh-CN",
-              { month: "short" },
+            const monthLabel = esc(
+              new Date(nowYear, i, 1).toLocaleDateString("zh-CN", {
+                month: "short",
+              }),
             );
             return (
               '<div class="heatmap-bar-wrap">' +

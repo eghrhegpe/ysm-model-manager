@@ -198,7 +198,11 @@ export function summaryCardHTML(
     animGroupHtml = summary.animGroups
       .map((g) => {
         const name = cleanText(g.name || g.id || "");
-        const items = (g.items || []).filter((it) => !isInternalId(it));
+        // items 先过 cleanText 再判内部标识符：含 § 码前缀的条目清洗后不再误判为外部标识符
+        // 清洗后为空的条目（纯 § 码/控制字符）直接排除，避免渲染空徽章
+        const items = (g.items || [])
+          .map((it) => cleanText(it))
+          .filter((it) => it && !isInternalId(it));
         if (!items.length) return ""; // 全是内部标识符，跳过
         const displayItems = items.slice(0, 8);
         const more = items.length > 8 ? ` +${items.length - 8}` : "";

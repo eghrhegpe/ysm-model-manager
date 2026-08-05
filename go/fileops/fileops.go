@@ -353,8 +353,85 @@ func copyDirRecursive(srcDir, dstDir string) error {
 
 // ========== 启用/禁用 ==========
 
+// DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）：
+// src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animation/语言资源随目录一起删）；
+// 其余文件删除单文件。消除「单文件删除 vs 目录删除」双轨语义入口。
+// root 为资源仓库根（可选，空则跳过守卫）：防止根级/盘符级 ysm.json 把整个仓库误删。
+func DeleteModelFile(root, path string) error {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return fmt.Errorf("参数空")
+	}
+	if types.IsYsmEntryJSON(filepath.Base(path)) {
+		parent := filepath.Dir(path)
+		// 目录提升守卫：父目录必须严格深于仓库根（防根级 ysm.json 清空整个仓库）
+		if root != "" {
+			absRoot, err := filepath.Abs(root)
+			if err != nil {
+				return err
+			}
+			absParent, err := filepath.Abs(parent)
+			if err != nil {
+				return err
+			}
+			rel, err := filepath.Rel(absRoot, absParent)
+			if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				return fmt.Errorf("拒绝删除仓库根或其上级: %s", parent)
+			}
+		}
+		return os.RemoveAll(parent)
+	}
+	return os.Remove(path)
+}
+
 // ToggleModelEnable 切换 .ban 状态文件（返回是否处于启用态；缓存失效由薄壳处理）
-func ToggleModelEnable(path string) (bool, error) {
+// ADR-038 D3.7：src 为 ysm.json 时提升为父目录级 .ban——文件夹模型整组禁用，
+// 目录重命名为 `父目录.ban`，几何/动画/语言资源随目录一起被隔离。
+// root 为资源仓库根（可选，空则跳过守卫）：防止根级 ysm.json 把整个仓库根重命名成 .ban。
+func ToggleModelEnable(root, path string) (bool, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return false, fmt.Errorf("参数为空")
+	}
+	// 目录级 .ban 识别（与 IsFileBanned 对称）：父目录名以 .ban 结尾 = 整组禁用态。
+	// 启用方向：还原父目录名（去 .ban）；禁用方向：目录已在 .ban 内，幂等返回。
+	parentBase := filepath.Base(filepath.Dir(path))
+	if strings.HasSuffix(strings.ToLower(parentBase), ".ban") {
+		bannedParent := filepath.Dir(path)
+		if strings.HasSuffix(strings.ToLower(path), ".ban") {
+			// 文件自身也带 .ban（旧状态残留）：优先还原父目录再还原文件
+			_ = os.Rename(path, strings.TrimSuffix(path, ".ban"))
+		}
+		newPath := strings.TrimSuffix(bannedParent, ".ban")
+		if err := os.Rename(bannedParent, newPath); err != nil {
+			return false, err
+		}
+		return true, nil // 整组启用
+	}
+	// ysm.json 是模型目录清单：.ban 作用于整个模型目录（整组语义）
+	if types.IsYsmEntryJSON(filepath.Base(path)) {
+		parent := filepath.Dir(path)
+		// 目录提升守卫：父目录必须严格深于仓库根（防根级 ysm.json 重命名仓库根）
+		if root != "" {
+			absRoot, err := filepath.Abs(root)
+			if err != nil {
+				return false, err
+			}
+			absParent, err := filepath.Abs(parent)
+			if err != nil {
+				return false, err
+			}
+			rel, err := filepath.Rel(absRoot, absParent)
+			if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				// 根级 ysm.json：回退到文件级 .ban（不整组提升）
+				path = parent + string(filepath.Separator) + filepath.Base(path)
+			} else {
+				path = parent
+			}
+		} else {
+			path = filepath.Dir(path)
+		}
+	}
 	if strings.HasSuffix(strings.ToLower(path), ".ban") {
 		newPath := strings.TrimSuffix(path, ".ban")
 		if err := os.Rename(path, newPath); err != nil {
@@ -373,9 +450,18 @@ func ToggleModelEnable(path string) (bool, error) {
 	return false, nil // 已禁用
 }
 
-// IsFileBanned 判断是否为 .ban 状态文件
+// IsFileBanned 判断路径是否被 .ban 标记（文件级或目录级，ADR-038 D3.7）
 func IsFileBanned(path string) bool {
-	return strings.HasSuffix(strings.ToLower(path), ".ban")
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return false
+	}
+	if strings.HasSuffix(strings.ToLower(path), ".ban") {
+		return true
+	}
+	// 目录级 .ban：父目录名以 .ban 结尾（文件夹模型整组禁用）
+	parent := filepath.Base(filepath.Dir(path))
+	return strings.HasSuffix(strings.ToLower(parent), ".ban")
 }
 
 // ========== 内部工具 ==========

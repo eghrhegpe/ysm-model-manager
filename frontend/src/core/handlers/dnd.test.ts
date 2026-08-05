@@ -38,9 +38,9 @@ describe("registerDnD 资源配对", () => {
     const addSpy = vi.spyOn(document, "addEventListener");
     const removeSpy = vi.spyOn(document, "removeEventListener");
     registerDnD(unsubs);
-    expect(addSpy).toHaveBeenCalledTimes(4); // dragover/dragleave/drop/dragend
+    expect(addSpy).toHaveBeenCalledTimes(5); // dragenter/dragover/dragleave/drop/dragend
     unsubs.forEach((fn) => fn());
-    expect(removeSpy).toHaveBeenCalledTimes(4);
+    expect(removeSpy).toHaveBeenCalledTimes(5);
     addSpy.mockRestore();
     removeSpy.mockRestore();
   });

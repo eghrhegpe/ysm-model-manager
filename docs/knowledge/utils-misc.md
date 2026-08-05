@@ -29,7 +29,6 @@ use_when:
 
 `debug.ts`：
 - `dbg(tag: string, ...args: unknown[]): void` — `[DBG:tag]` 前缀 console.log，并写入 `window._DBG_RING` 环形缓冲（上限 200 条）；URL `?nodebug=1` 或 localStorage `_debug=0` 时静默
-- `dbgWarn(tag: string, ...args: unknown[]): void` — 警告级，即使调试关闭也输出
 - `window._DBG_RING` — 最近 200 条日志复盘入口（含时间/tag/level/截断后的参数）
 - `window.debugGetSpec(path?)` — 控制台调试助手：动态 import `GetModel3DSpec` binding 取 Go 3D spec 骨骼数据
 

@@ -291,11 +291,24 @@ func BuildNbtVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, e
 			if !ok || int(state) < 0 || int(state) >= len(paletteColors) || state == 0 {
 				continue // air or invalid（与 BuildVoxelData/BuildSchematicVoxelData 一致）
 			}
+			// ADR-039 P3：comma-ok 防畸形 NBT 的 pos 元素非 int32 时裸断言 panic（与 sizeList 一致）
+			px, ok := posList[0].(int32)
+			if !ok {
+				continue
+			}
+			py, ok := posList[1].(int32)
+			if !ok {
+				continue
+			}
+			pz, ok := posList[2].(int32)
+			if !ok {
+				continue
+			}
 			return voxelBlock{
 				Color: paletteColors[state],
-				X:     int16(posList[0].(int32)),
-				Y:     int16(posList[1].(int32)),
-				Z:     int16(posList[2].(int32)),
+				X:     int16(px),
+				Y:     int16(py),
+				Z:     int16(pz),
 			}, true
 		}
 		return voxelBlock{}, false

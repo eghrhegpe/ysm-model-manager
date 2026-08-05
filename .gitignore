@@ -1,5 +1,9 @@
 frontend/dist
 frontend/coverage/
+# Playwright E2E 运行产物（.last-run.json / 失败截图）
+frontend/test-results/
+# link-checker 输出报告（工具产物，不入库）
+link-checker-out.json
 *.out
 build/bin/
 bin/

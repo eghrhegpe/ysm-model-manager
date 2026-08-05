@@ -38,12 +38,16 @@ func SafeName(name string) string {
 }
 
 // ReadCachedAvatar 读取缓存中的头像，返回 data URI。
+// 缓存未命中时返回 ("", nil)，IO 错误时返回 ("", err)。
 func ReadCachedAvatar(authorName string) (string, error) {
 	safe := SafeName(authorName)
 	cachedPath := filepath.Join(CacheDir(), safe+".png")
 	data, err := os.ReadFile(cachedPath)
 	if err != nil {
-		return "", nil
+		if os.IsNotExist(err) {
+			return "", nil // 缓存未命中，非错误
+		}
+		return "", err // IO 错误（权限/磁盘故障等）
 	}
 	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(data), nil
 }

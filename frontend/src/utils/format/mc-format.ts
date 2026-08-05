@@ -50,7 +50,7 @@ export function renderFormattedText(text: string): string {
     .replace(/\r/g, "\n")
     .split("\n")
     .map((line) => {
-      if (!line) return "";
+      if (!line) return "<br>";
       const parts = line.split("§");
       if (parts.length === 1) return esc(parts[0]);
 

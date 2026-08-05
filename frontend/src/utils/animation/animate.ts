@@ -7,49 +7,60 @@
  * @param el 目标元素（textContent 中的数字将被替换）
  * @param to 目标数值
  * @param duration 总时长 ms（默认 700）
+ * @returns 取消函数（组件卸载时调用）
  */
-export function animateNumber(el: HTMLElement, to: number, duration = 700): void {
-  if (!el) return;
+export function animateNumber(el: HTMLElement, to: number, duration = 700): () => void {
+  if (!el) return () => {};
   const text = el.textContent || "";
   const match = text.match(/([0-9]+)/);
-  if (!match) return;
+  if (!match) return () => {};
   const from = parseInt(match[1], 10);
-  if (from === to) return;
+  if (from === to) return () => {};
 
   const numStr = String(to);
   const fromStr = String(from).padStart(numStr.length, "0");
   const len = numStr.length;
 
-  // 从右到左逐位进位：个位先转→十位→百位
-  // 例: from=0, to=141 → [1, 41, 141]（个位→十位→百位）
   const frames: number[] = [];
   for (let p = len - 1; p >= 0; p--) {
-    // 第 p 位取目标值，右边取目标，左边保留旧值
     let val = "";
     for (let i = 0; i < len; i++) {
-      if (i < p) val += fromStr[i]; // 左边保留旧值
-      else if (i === p) val += numStr[i]; // 当前位取目标
-      else val += numStr[i]; // 右边取目标
+      if (i < p) val += fromStr[i];
+      else if (i === p) val += numStr[i];
+      else val += numStr[i];
     }
     frames.push(parseInt(val, 10));
   }
-  // 去重 + 去头（去掉与 from 相同的）
   const unique = frames.filter((v, i) => v !== (i > 0 ? frames[i - 1] : from));
 
-  // 帧数量不足时直接跳转，防止卡顿
   if (unique.length <= 1) {
     el.textContent = text.replace(/[0-9]+/, String(to));
-    return;
+    return () => {};
   }
-  // 逐帧播放（从右到左逐位进位）
+
   const stepDuration = duration / unique.length;
   let idx = 0;
+  let cancelled = false;
+  const timers: ReturnType<typeof setTimeout>[] = [];
+
+  const schedule = (fn: () => void, delay: number): void => {
+    if (cancelled) return;
+    const t = setTimeout(fn, delay);
+    timers.push(t);
+  };
+
   const play = (): void => {
+    if (cancelled) return;
     el.textContent = (el.textContent || "").replace(/[0-9]+/, String(unique[idx]));
     idx++;
     if (idx < unique.length) {
-      setTimeout(play, stepDuration);
+      schedule(play, stepDuration);
     }
   };
   play();
+
+  return () => {
+    cancelled = true;
+    timers.forEach(clearTimeout);
+  };
 }

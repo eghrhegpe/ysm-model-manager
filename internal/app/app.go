@@ -19,18 +19,18 @@ import (
 )
 
 type App struct {
-	LinkMode     string
-	logger       *logs.Logger
-	runtimeLogs  *logs.RuntimeBuffer
-	watcher      *watcher.Watcher
-	queue        *DownloadQueue
-	tagsStore    *tags.Store
+	LinkMode      string
+	logger        *logs.Logger
+	runtimeLogs   *logs.RuntimeBuffer
+	watcher       *watcher.Watcher
+	queue         *DownloadQueue
+	tagsStore     *tags.Store
 	tagsStoreOnce sync.Once
-	configCache  types.AppConfig
-	configLoaded bool
-	configMu     sync.RWMutex
-	app          *application.App
-	mainWindow   *application.WebviewWindow
+	configCache   types.AppConfig
+	configLoaded  bool
+	configMu      sync.RWMutex
+	app           *application.App
+	mainWindow    *application.WebviewWindow
 }
 
 // repoRoot 动态返回 YSM 模型存储根目录（始终从配置推导，无需手动维护缓存）

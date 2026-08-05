@@ -52,6 +52,21 @@ let wasmModule: WasmModuleLike | null = null;
 let loading = false;
 let waiters: Array<(ok: boolean) => void> = [];
 
+/** 销毁 WASM 实例，释放 HEAP 内存 */
+export function destroyYSMParser(): void {
+  if (wasmModule) {
+    try {
+      // 尝试释放 WASM 分配的内存
+      wasmModule._free(0);
+    } catch {
+      // 忽略：部分 Emscripten 版本不支持 _free(0)
+    }
+    wasmModule = null;
+  }
+  loading = false;
+  waiters = [];
+}
+
 export async function initYSMParser(): Promise<boolean> {
   if (wasmModule) return true;
   if (loading) return new Promise<boolean>((r) => waiters.push(r));
@@ -212,7 +227,11 @@ export async function decodeYsmFile(
     }
   }
 
-  return collectOutputFiles(FS, "/output");
+  const files = collectOutputFiles(FS, "/output");
+  // 读取后立即清理 MEMFS，避免 WASM HEAP 残留
+  wipeDir(FS, "/output");
+  wipeDir(FS, "/input");
+  return files;
 }
 
 function wipeDir(FS: FSLike, dir: string): void {

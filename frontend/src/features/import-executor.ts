@@ -65,10 +65,10 @@ const refreshRepo = (): void => {
 };
 
 const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
-    reader.onerror = () => resolve("");
+    reader.onerror = () => reject(new Error("读取文件失败: " + file.name));
     reader.readAsDataURL(file);
   });
 

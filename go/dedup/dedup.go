@@ -154,8 +154,12 @@ func CountDuplicates(dir string, skipRecycle bool) (groups int, extraFiles int, 
 			return nil
 		}
 		h := sha256.New()
-		io.Copy(h, f)
+		_, copyErr := io.Copy(h, f)
 		f.Close()
+		if copyErr != nil {
+			log.Printf("[dedup] 读取文件失败 %s: %v", p, copyErr)
+			return nil
+		}
 		hash := fmt.Sprintf("%x", h.Sum(nil))
 		hashCount[hash]++
 		return nil

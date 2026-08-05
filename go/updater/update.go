@@ -199,6 +199,7 @@ func Download(assetURL string, expectedHash string) (string, error) {
 	if n >= maxDownloadSize {
 		one := make([]byte, 1)
 		if extra, _ := resp.Body.Read(one); extra > 0 {
+			f.Close()
 			os.Remove(tmp)
 			return "", fmt.Errorf("更新包超过 %d 字节上限", maxDownloadSize)
 		}

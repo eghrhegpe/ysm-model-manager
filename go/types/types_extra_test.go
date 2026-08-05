@@ -42,6 +42,32 @@ func TestFindInstDir_NoMatch(t *testing.T) {
 	}
 }
 
+// ====== IsYsmEntryJSON（ADR-038 D2 白名单）======
+
+func TestIsYsmEntryJSON(t *testing.T) {
+	cases := []struct {
+		name string
+		want bool
+	}{
+		{"ysm.json", true},
+		{"YSM.JSON", true},
+		{"Ysm.Json", true},
+		{" ysm.json ", true}, // TrimSpace
+		{"main.json", false},
+		{"arm.json", false},
+		{"slashblade.animation.json", false},
+		{"zh_cn.json", false},
+		{"en_us.json", false},
+		{"ysm.json.bak", false},
+		{"", false},
+	}
+	for _, c := range cases {
+		if got := IsYsmEntryJSON(c.name); got != c.want {
+			t.Errorf("IsYsmEntryJSON(%q) = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
 func TestAppError_Error(t *testing.T) {
 	e := AppError{Code: "X", Operation: "导入", SourcePath: "/s", Reason: "失败", Suggestion: "重试"}
 	msg := e.Error()

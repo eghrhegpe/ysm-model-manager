@@ -443,6 +443,41 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
     expect(toasts().some((t) => t.type === "error")).toBe(true);
   });
 
+  // ── ADR-038 D3：ysm.json 重命名护栏 + 文件夹整组操作 ──
+  it("file.rename 对 ysm.json → warn toast 且不调 RenameFile", async () => {
+    await clickAsync("file", "重命名", { path: "/models/模型A/ysm.json" });
+    expect(showRenameDialogMock).not.toHaveBeenCalled();
+    expect(RenameFileMock).not.toHaveBeenCalled();
+    expect(toasts().some((t) => t.type === "warn" && t.msg.includes("ysm.json"))).toBe(true);
+  });
+
+  it("dir.move 成功 → MoveModelFile(目录路径) + toast + 刷新", async () => {
+    modalPromptMock.mockResolvedValue("作者B");
+    GetRepoRootMock.mockResolvedValue("/repo/models");
+    MoveModelFileMock.mockResolvedValue(undefined);
+    await clickAsync("dir", "移动到…", { dir: "/repo/models/模型A" });
+    expect(MoveModelFileMock).toHaveBeenCalledWith("/repo/models/模型A", "/repo/models/作者B");
+    expect(toasts().some((t) => t.msg.includes("已移动文件夹到 作者B"))).toBe(true);
+    expect(reloaded()).toBe(true);
+  });
+
+  it("dir.move 未配置存储路径 → error toast", async () => {
+    modalPromptMock.mockResolvedValue("作者B");
+    GetRepoRootMock.mockResolvedValue("");
+    await clickAsync("dir", "移动到…", { dir: "/repo/models/模型A" });
+    expect(MoveModelFileMock).not.toHaveBeenCalled();
+    expect(toasts().some((t) => t.type === "error")).toBe(true);
+  });
+
+  it("dir.copy 成功 → CopyModelFile(目录路径) + toast", async () => {
+    modalPromptMock.mockResolvedValue("备份");
+    GetRepoRootMock.mockResolvedValue("/repo/models");
+    CopyModelFileMock.mockResolvedValue(undefined);
+    await clickAsync("dir", "复制到…", { dir: "/repo/models/模型A" });
+    expect(CopyModelFileMock).toHaveBeenCalledWith("/repo/models/模型A", "/repo/models/备份");
+    expect(toasts().some((t) => t.msg.includes("已复制文件夹到 备份"))).toBe(true);
+  });
+
   // ── file.push-to-pack ──
   it("file.push-to-pack 未配置游戏目录 → warn toast", async () => {
     LoadAppConfigMock.mockResolvedValue({ mcRoot: "" });

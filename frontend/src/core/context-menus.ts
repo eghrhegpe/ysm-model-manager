@@ -234,8 +234,17 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   // ── file ──
   "file.rename": async (ctx) => {
     try {
-      const { showRenameDialog } = await import("../views/dialogs/rename.ts");
       const fileName = (ctx.path || "").split(/[/\\]/).pop() || "";
+      // ADR-038 D3：ysm.json 是模型目录清单（游戏按目录名识别），禁止单文件重命名
+      if (fileName.toLowerCase() === "ysm.json") {
+        toast(
+          "ysm.json 是模型目录清单，请右键所在文件夹「重命名」（整组操作）",
+          4000,
+          "warn",
+        );
+        return;
+      }
+      const { showRenameDialog } = await import("../views/dialogs/rename.ts");
       const newName = await showRenameDialog(ctx.path || "", fileName);
       if (!newName) return;
       const { RenameFile } =
@@ -370,6 +379,43 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   "dir.rename": (ctx) => bus.emit("dir:rename", { dir: ctx.dir || "" }),
   "dir.batch-rename": (ctx) =>
     bus.emit("dir:batch-rename", { dir: ctx.dir || "" }),
+  // ADR-038 D3：文件夹级移动/复制（后端对 ysm.json 目录组整组处理，目录直接整组）
+  "dir.move": async (ctx) => {
+    const resolved = await resolveDstDir({
+      title: "移动文件夹到",
+      icon: "📂",
+      okText: "移动",
+      emptyMsg: "❌ 请先配置存储路径",
+    });
+    if (!resolved) return;
+    const { folder, dstDir } = resolved;
+    const { MoveModelFile } = await getApp();
+    try {
+      await MoveModelFile(ctx.dir || "", dstDir);
+      toast(`✅ 已移动文件夹到 ${folder}`, 3000);
+      refreshUI();
+    } catch (e) {
+      toast("❌ " + friendlyError(e, "移动失败"), 4000, "error");
+    }
+  },
+  "dir.copy": async (ctx) => {
+    const resolved = await resolveDstDir({
+      title: "复制文件夹到",
+      icon: "📋",
+      okText: "复制",
+      emptyMsg: "❌ 请先配置仓库目录",
+    });
+    if (!resolved) return;
+    const { folder, dstDir } = resolved;
+    const { CopyModelFile } = await getApp();
+    try {
+      await CopyModelFile(ctx.dir || "", dstDir);
+      refreshUI();
+      toast(`✅ 已复制文件夹到 ${folder}`, 3000);
+    } catch (e) {
+      toast("❌ " + friendlyError(e, "复制失败"), 4000, "error");
+    }
+  },
   "dir.mkdir": (ctx) => bus.emit("dir:mkdir", { dir: ctx.dir || "" }),
   "dir.recycle": (ctx) => bus.emit("dir:recycle", { dir: ctx.dir || "" }),
 };

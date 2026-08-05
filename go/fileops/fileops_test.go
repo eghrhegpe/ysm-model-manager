@@ -272,6 +272,124 @@ func TestExtractPreviewTexture_FromZip(t *testing.T) {
 	}
 }
 
+// ====== ADR-038 D3：文件夹模型整组操作 ======
+
+// 构造一个解压后的 YSM 模型目录（ysm.json + geometry + animation + 语言 json + textures + .ban）
+func makeYsmModelDir(base, name string) string {
+	modelDir := filepath.Join(base, name)
+	_ = os.MkdirAll(filepath.Join(modelDir, "textures"), 0755)
+	_ = os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(`{"spec":1}`), 0644)
+	_ = os.WriteFile(filepath.Join(modelDir, "main.json"), []byte(`{"geometry":{}}`), 0644)
+	_ = os.WriteFile(filepath.Join(modelDir, "arm.animation.json"), []byte(`{}`), 0644)
+	_ = os.WriteFile(filepath.Join(modelDir, "zh_cn.json"), []byte(`{}`), 0644)
+	_ = os.WriteFile(filepath.Join(modelDir, "textures", "skin.png"), []byte("PNG"), 0644)
+	return modelDir
+}
+
+func TestMoveModelFile_YsmJsonLiftsParentDir(t *testing.T) {
+	base := t.TempDir()
+	srcRepo := filepath.Join(base, "src")
+	dstRepo := filepath.Join(base, "dst")
+	_ = os.MkdirAll(srcRepo, 0755)
+	_ = os.MkdirAll(dstRepo, 0755)
+	modelDir := makeYsmModelDir(srcRepo, "模型A")
+
+	// 对 ysm.json 执行移动 → 应整组移动父目录
+	if err := MoveModelFile(filepath.Join(modelDir, "ysm.json"), dstRepo); err != nil {
+		t.Fatalf("移动失败: %v", err)
+	}
+	moved := filepath.Join(dstRepo, "模型A")
+	if _, err := os.Stat(filepath.Join(moved, "ysm.json")); err != nil {
+		t.Fatalf("ysm.json 应随目录移动: %v", err)
+	}
+	for _, f := range []string{"main.json", "arm.animation.json", "zh_cn.json", "textures/skin.png"} {
+		if _, err := os.Stat(filepath.Join(moved, f)); err != nil {
+			t.Fatalf("组内 %s 应随目录整组移动: %v", f, err)
+		}
+	}
+	if _, err := os.Stat(modelDir); !os.IsNotExist(err) {
+		t.Fatal("原模型目录应不存在")
+	}
+}
+
+func TestMoveModelFile_DirMovesWholeDir(t *testing.T) {
+	base := t.TempDir()
+	srcRepo := filepath.Join(base, "src")
+	dstRepo := filepath.Join(base, "dst")
+	_ = os.MkdirAll(srcRepo, 0755)
+	_ = os.MkdirAll(dstRepo, 0755)
+	modelDir := makeYsmModelDir(srcRepo, "模型B")
+
+	if err := MoveModelFile(modelDir, dstRepo); err != nil {
+		t.Fatalf("目录移动失败: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dstRepo, "模型B", "ysm.json")); err != nil {
+		t.Fatalf("目录应整组移动: %v", err)
+	}
+	if _, err := os.Stat(modelDir); !os.IsNotExist(err) {
+		t.Fatal("原目录应不存在")
+	}
+}
+
+func TestCopyModelFile_YsmJsonLiftsParentDir(t *testing.T) {
+	base := t.TempDir()
+	srcRepo := filepath.Join(base, "src")
+	dstRepo := filepath.Join(base, "dst")
+	_ = os.MkdirAll(srcRepo, 0755)
+	_ = os.MkdirAll(dstRepo, 0755)
+	modelDir := makeYsmModelDir(srcRepo, "模型C")
+
+	if err := CopyModelFile(base, filepath.Join(modelDir, "ysm.json"), dstRepo); err != nil {
+		t.Fatalf("复制失败: %v", err)
+	}
+	copied := filepath.Join(dstRepo, "模型C")
+	for _, f := range []string{"ysm.json", "main.json", "arm.animation.json", "zh_cn.json", "textures/skin.png"} {
+		if _, err := os.Stat(filepath.Join(copied, f)); err != nil {
+			t.Fatalf("组内 %s 应整组复制: %v", f, err)
+		}
+	}
+	// 原目录保留
+	if _, err := os.Stat(filepath.Join(modelDir, "ysm.json")); err != nil {
+		t.Fatal("原模型应保留")
+	}
+}
+
+func TestCopyModelFile_DirRecursiveCopiesBan(t *testing.T) {
+	base := t.TempDir()
+	srcRepo := filepath.Join(base, "src")
+	dstRepo := filepath.Join(base, "dst")
+	_ = os.MkdirAll(srcRepo, 0755)
+	_ = os.MkdirAll(dstRepo, 0755)
+	modelDir := makeYsmModelDir(srcRepo, "模型D")
+	// 禁用标记 ysm.json.ban 应随目录复制
+	_ = os.WriteFile(filepath.Join(modelDir, "ysm.json.ban"), []byte("x"), 0644)
+
+	if err := CopyModelFile(base, modelDir, dstRepo); err != nil {
+		t.Fatalf("目录复制失败: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dstRepo, "模型D", "ysm.json.ban")); err != nil {
+		t.Fatalf(".ban 状态文件应随目录复制: %v", err)
+	}
+	// 目标已存在 → 防覆盖报错
+	if err := CopyModelFile(base, modelDir, dstRepo); err == nil {
+		t.Fatal("重复复制到已存在目标应报错")
+	}
+}
+
+func TestRenameFile_BlockYsmJson(t *testing.T) {
+	dir := t.TempDir()
+	modelDir := makeYsmModelDir(dir, "模型E")
+	ysmPath := filepath.Join(modelDir, "ysm.json")
+	if err := RenameFile(ysmPath, "renamed.json"); err == nil {
+		t.Fatal("ysm.json 单文件重命名应被拒绝")
+	}
+	// 普通文件重命名不受影响
+	normal := filepath.Join(modelDir, "main.json")
+	if err := RenameFile(normal, "new-main.json"); err != nil {
+		t.Fatalf("普通 json 重命名应放行: %v", err)
+	}
+}
+
 func TestExtractPreviewTexture_FromZipNoPNG(t *testing.T) {
 	dir := t.TempDir()
 	var buf bytes.Buffer

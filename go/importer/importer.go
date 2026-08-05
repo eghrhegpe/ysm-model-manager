@@ -12,7 +12,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Handler 资源导入策略接口
@@ -140,8 +142,9 @@ func copyDirRecursive(src, dst string) error {
 
 	// 原子替换：若目标已存在，先挪走作备份再 rename（os.Rename 在 Windows 上不覆盖已存在的目录）
 	// 与 sync_relink.go 同模式：rename 失败则回滚恢复，避免「先删后建」失败即丢目录（ADR-028）
+	// backup 文件名加时间戳后缀，防并发导入同名目录时备份互相覆盖
 	if _, stErr := os.Stat(dst); stErr == nil {
-		backup := dst + ".import-bak"
+		backup := dst + ".import-bak-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 		_ = os.RemoveAll(backup)
 		if err := os.Rename(dst, backup); err != nil {
 			return err
@@ -300,8 +303,9 @@ func copyDir(src, dst string) error {
 	}
 
 	// 原子替换：目标已存在时先备份再 rename，失败回滚恢复（ADR-028 反模式规避）
+	// backup 文件名加时间戳后缀，防并发导入同名目录时备份互相覆盖
 	if _, stErr := os.Stat(dst); stErr == nil {
-		backup := dst + ".import-bak"
+		backup := dst + ".import-bak-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 		_ = os.RemoveAll(backup)
 		if err := os.Rename(dst, backup); err != nil {
 			return err

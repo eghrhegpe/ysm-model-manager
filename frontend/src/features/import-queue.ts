@@ -9,6 +9,11 @@ import { DnDLock, PendingImport } from "./dnd-state.ts";
 import { getApp } from "../wails/app.ts";
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
 import { isImportableFile, shouldEnterForm, groupCollected } from "./dnd-shared.ts";
+import {
+  ImportHistory,
+  directImport as execDirectImport,
+  importFolder as execImportFolder,
+} from "./import-executor.ts";
 import { showRenameDialog } from "../views/dialogs/rename.ts";
 
 const extsStr = ALL_EXTS.join(" ");
@@ -41,9 +46,6 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   let currentRelPath = ""; // 文件夹导入时的相对路径
   // 并发守卫：导入/重命名在途时拦截连点（同 preview-skeleton _saving 模式）
   let _importing = false;
-  // 直导路径 per-file 在途集合：独立于表单 _importing，避免串行化并行直导。
-  // 仅阻止「同一文件」并发/重复提交到 Go 端，不同文件仍可并行导入。
-  const inFlightImports = new Set<string>();
   const fileQueue: Array<{
     file: ImportFile;
     base64: string;
@@ -51,12 +53,6 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     size: number;
     relPath: string;
   }> = []; // { file, base64, name, size }
-  const imported: Array<{
-    name: string;
-    base64?: string;
-    time: string;
-    isYsm?: boolean;
-  }> = []; // { name, base64, time }
   // 读文件并分流（表单/直导）+ 可选完成回调
   const readAndRouteFile = (file: ImportFile, onDone?: () => void): void => {
     const reader = new FileReader();
@@ -66,7 +62,8 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         if (await shouldEnterForm(file.name, base64)) {
           enqueueFile(file, base64);
         } else {
-          await directImport(file, base64);
+          // 直导：执行器内部自行读 base64（历史/去重/toast 单点）
+          await directImport(file);
         }
       } catch (e) {
         bus.emit("toast:show", {
@@ -417,8 +414,8 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       repoFiles = null;
       loadRepoFiles();
 
-      // 加入已导入列表
-      imported.unshift({
+      // 加入已导入列表（全局历史）
+      ImportHistory.push({
         name: finalName,
         time: new Date().toLocaleTimeString(),
         isYsm: true,
@@ -461,8 +458,8 @@ export function initImportQueue(app: ImportQueueHost): () => void {
             // 刷新 repo 文件缓存
             repoFiles = null;
             loadRepoFiles();
-            // 继续正常流程
-            imported.unshift({
+            // 继续正常流程（全局历史）
+            ImportHistory.push({
               name: finalName,
               time: new Date().toLocaleTimeString(),
               isYsm: true,
@@ -526,7 +523,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     // 检查文件名是否已在队列或已导入列表中（renamed 字段已废弃，i.name 即当前磁盘文件名）
     const dup =
       fileQueue.some((fq) => fq.name === file.name) ||
-      imported.some((i) => i.name === file.name);
+      ImportHistory.records.some((i) => i.name === file.name);
     if (dup) return;
     fileQueue.push({
       file,
@@ -595,66 +592,12 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     });
   };
 
-  /** File → base64（空内容返回 ""） */
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () =>
-        resolve(String(reader.result).split(",")[1] || "");
-      reader.onerror = () => resolve("");
-      reader.readAsDataURL(file);
-    });
-
-  // 文件夹型模型（含 ysm.json）整组导入：原名入仓，保留子目录层级（ADR-038 关联）
+  // 文件夹整组导入：转发全局执行器（历史/去重/toast 单点，ADR-038 关联）
   const importModelFolder = async (
     dirRel: string,
     files: Array<{ file: ImportFile; relPath: string }>,
   ): Promise<void> => {
-    const parts = dirRel.split("/");
-    const folderName = parts[parts.length - 1] || "模型";
-    const subpath = parts.slice(0, -1).join("/");
-    const items: Array<{ RelPath: string; Base64: string }> = [];
-    for (const c of files) {
-      const rel = c.relPath.startsWith(dirRel + "/")
-        ? c.relPath.slice(dirRel.length + 1)
-        : c.relPath;
-      const b64 = await fileToBase64(c.file);
-      if (!b64) continue;
-      items.push({ RelPath: rel, Base64: b64 });
-    }
-    if (!items.length) return;
-    try {
-      const { ImportModelFolder } = await getApp();
-      await ImportModelFolder(folderName, subpath, items);
-      imported.unshift({
-        name: folderName + "（文件夹）",
-        time: new Date().toLocaleTimeString(),
-        isYsm: false,
-      });
-      renderImportedList();
-      bus.emit("stats:refresh");
-      bus.emit("tree:reload");
-      bus.emit("toast:show", {
-        msg: `✅ 已整组导入: ${folderName}`,
-        duration: 2500,
-        type: "success",
-      });
-    } catch (e) {
-      const msg = String(e);
-      if (msg.includes("FILE_EXISTS") || msg.includes("目标已存在")) {
-        bus.emit("toast:show", {
-          msg: `❌ ${folderName} 已存在，请重命名文件夹后再导入`,
-          duration: 4000,
-          type: "error",
-        });
-      } else {
-        bus.emit("toast:show", {
-          msg: "❌ 整组导入失败: " + msg,
-          duration: 4000,
-          type: "error",
-        });
-      }
-    }
+    await execImportFolder(dirRel, files);
   };
 
   // 路由一组收集到的文件：文件夹 → 整组导入（含 ysm.json 与普通文件夹一视同仁，
@@ -671,7 +614,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     }
     for (const c of singles) {
       (c.file as ImportFile)._relPath = c.relPath;
-      readAndRouteFile(c.file);
+      await directImport(c.file);
     }
   };
 
@@ -728,57 +671,15 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       });
   };
 
-  // 非 YSM 文件直接导入（跳过命名表单）
-  const directImport = async (file: ImportFile, base64: string): Promise<void> => {
-    // ysm.json 单文件导入 = 光杆清单（geometry/纹理全丢），引导拖整个文件夹
-    if (file.name.toLowerCase() === "ysm.json") {
-      bus.emit("toast:show", {
-        msg: "ysm.json 是模型清单，请拖入整个模型文件夹（含 geometry/动画/纹理，将整组导入）",
-        duration: 4000,
-        type: "warn",
-      });
-      return;
-    }
-    // 去重：在途或已导入的同名文件直接跳过，与 enqueueFile 的静态去重对齐，
-    // 避免重复 drop 同一文件时打到 Go 端触发 FILE_EXISTS 报错。
-    if (
-      inFlightImports.has(file.name) ||
-      imported.some((i) => i.name === file.name)
-    ) {
-      return;
-    }
-    inFlightImports.add(file.name);
-    try {
-      const { ImportModelFile } = await getApp();
-      await ImportModelFile(file.name, base64);
-      imported.unshift({
-        name: file.name,
-        time: new Date().toLocaleTimeString(),
-        isYsm: false,
-      });
-      renderImportedList();
-      bus.emit("stats:refresh");
-      bus.emit("tree:reload");
-      bus.emit("toast:show", {
-        msg: "✅ 已导入: " + file.name,
-        duration: 2000,
-        type: "success",
-      });
-    } catch (e) {
-      bus.emit("toast:show", {
-        msg: "❌ 导入失败: " + String(e),
-        duration: 4000,
-        type: "error",
-      });
-    } finally {
-      inFlightImports.delete(file.name);
-    }
+  // 非 YSM 文件直接导入（跳过命名表单）：转发全局执行器（历史/去重/toast 单点）
+  const directImport = async (file: ImportFile): Promise<void> => {
+    await execDirectImport(file);
   };
 
-  // 渲染已导入列表（含队列）
+  // 渲染已导入列表（含队列）：数据源为全局 ImportHistory（拖拽直导与手动导入统一）
   const renderImportedList = (): void => {
     let html = "";
-    imported.forEach((item) => {
+    ImportHistory.records.forEach((item) => {
       html +=
         '<div style="display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:3px;font-size:10px;border:1px solid var(--bd)">' +
         '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
@@ -840,8 +741,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         if (!newName) return;
         try {
           await RenameFile(fullPath, newName);
-          const idx = imported.findIndex((it) => it.name === name);
-          if (idx >= 0) imported[idx].name = newName;
+          ImportHistory.rename(name, newName);
           renderImportedList();
           bus.emit("stats:refresh");
           bus.emit("tree:reload");
@@ -900,14 +800,14 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     if (dlQueueCount) dlQueueCount.textContent = String(fileQueue.length);
     if (dlCount)
       dlCount.textContent =
-        imported.length +
+        ImportHistory.records.length +
         " 个已导入" +
         (fileQueue.length ? " · " + fileQueue.length + " 个待处理" : "");
   };
 
-  // 清空列表
+  // 清空列表（清全局导入历史）
   root.getElementById("dl-clear-list")?.addEventListener("click", () => {
-    imported.length = 0;
+    ImportHistory.clear();
     renderImportedList();
   });
 
@@ -967,18 +867,12 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       }
       const reader = new FileReader();
       reader.onload = () => {
-        const base64 = String(reader.result).split(",")[1] || "";
-        // 直接导入（与导入页 dropZone 的 readAndRouteFile 语义一致）：
+        // 直接导入（转发全局执行器；历史/去重/toast 单点）
         // .ysm/.zip/.7z 默认直接入仓，不再强制命名表单（2026-08-05 导入默认直接改造）
-        if (base64) {
-          void directImport(item.file as ImportFile, base64).finally(() => {
-            readCount++;
-            if (readCount === list.length) finishAll();
-          });
-        } else {
+        void directImport(item.file as ImportFile).finally(() => {
           readCount++;
           if (readCount === list.length) finishAll();
-        }
+        });
       };
       reader.onerror = () => {
         readCount++;
@@ -999,6 +893,11 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     processPendingImport,
   );
 
+  // 全局导入历史变化 → 刷新已导入列表（拖拽直导走 import-executor，本 tab 需同步）
+  const historyUnsub = bus.on("import:history-changed", () => {
+    renderImportedList();
+  });
+
   // 首次渲染时检查待导入文件（从其他页面跳转来的）
   processPendingImport();
 
@@ -1006,5 +905,6 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   return () => {
     if (conflictTimer) clearTimeout(conflictTimer);
     importPendingUnsub();
+    historyUnsub();
   };
 }

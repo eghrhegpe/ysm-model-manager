@@ -89,6 +89,9 @@ export interface BusEvents {
   "instance:install": { name: string; rtype?: string };
   "instance:sync": { name: string; rtype?: string };
   "import:pending-changed": { count: number };
+  "import:history-changed": {
+    records: Array<{ name: string; time: string; isYsm?: boolean }>;
+  };
   "import:pending-files": {
     files: Array<{ name: string; file: File }>;
     folders?: Array<{

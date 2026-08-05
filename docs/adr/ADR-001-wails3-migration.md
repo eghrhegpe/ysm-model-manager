@@ -137,3 +137,17 @@
 
 > 注：§6「受影响文件清单」中的 `app.go`/`app_config.go` 等现已位于 `internal/app/`，
 > 以本节落点对照为准。
+
+---
+
+## 9. 已知限制（2026-08-05 补充，迁移后实测）
+
+v3 迁移落地后实测踩坑汇总，供后续会话/维护者规避。
+
+| # | 限制 | 说明 | 防线 / 现状 |
+|---|------|------|-------------|
+| 1 | **CLI 必须写 `wails3`** | v2/v3 并存时 PATH 同时有 `wails`（v2）与 `wails3`（v3）；写裸 `wails` 命中 v2 CLI，bindings 生成路径/格式完全不同。AI/文档从旧资料抄命令极易踩中（相邻城邦知识卡曾漂移为 `wails generate bindings`） | `scripts/check-wails3-cli.mjs` 扫描活跃文档/脚本，命中裸 `wails (generate\|build\|dev\|bindings\|doctor)` 即红（退出码 1）；口令 `wails3-cli-check` |
+| 2 | **bindings 必须带 `-ts`** | 无 `-ts` 生成 `.js`，带 `-ts` 生成 `.ts`；前端以 `.js` 后缀 import、由 vite `wailsBindingsResolve` 重定向到 `.ts`，故 `.ts` 是硬依赖。2026-08-05 发布脚本漏 `-ts`，曾致 17 个跟踪 `.ts` 被 `-clean` 清掉、换为 `.js`（回归，已修复） | **统一入口** `npm run generate:bindings`（`frontend/package.json`，内部 `cd .. && wails3 generate bindings -clean=true -ts -i`）；ps1/sh/Taskfile 全部对齐该入口 |
+| 3 | **生成路径相对 CWD** | `-d` 默认 `frontend/bindings` 是相对当前目录的，且 wails3 扫描 Go 包要求 CWD 在模块根。错误目录下执行会错位生成（历史遗留 `frontend/frontend/wailsjs/runtime/` 错误产物，v1.6.5 误提交入仓，2026-08-05 清理） | npm 脚本内部 `cd ..` 强制仓库根执行；`check-wails3-cli.mjs` 不覆盖此场景，靠单入口约束 |
+| 4 | **alpha 系列行为可漂移** | 当前 CLI 为 `v3.0.0-alpha2.117`（较 §1 目标 alpha2.105 已更新）；bindings 输出格式（`.ts`/`.js` 默认、目录结构）随 alpha 迭代可能变化 | 升级/降级 `wails3` CLI 后必须重跑 `npm run generate:bindings`，确认产物为 `.ts` 且 `git status frontend/bindings` 无意外 diff |
+| 5 | **v2 生成物残留** | `frontend/wailsjs/`（v2 产物）与 v3 的 `frontend/bindings/` 并存；`scripts/binding-check.mjs` 仍读 v2 路径 `frontend/wailsjs/go/main/App.js` | 遗留项：binding-check 需迁移至 v3 路径（`frontend/bindings/`）后校验 Go 签名一致性 |

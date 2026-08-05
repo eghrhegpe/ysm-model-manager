@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "codemod": "node ../scripts/codemod.mjs"
+    "codemod": "node ../scripts/codemod.mjs",
+    "generate:bindings": "cd .. && wails3 generate bindings -clean=true -ts -i"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

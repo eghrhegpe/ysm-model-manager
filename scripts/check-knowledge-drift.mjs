@@ -6,6 +6,9 @@
  *
  * 检查项（适配 YSM 规模，去掉了 ADR/符号覆盖率/状态索引等不相关项）：
  *   [ERROR] 知识卡 source_files 指向磁盘不存在的文件
+ *   [ERROR] 知识卡 source_files 路径格式非法（反斜杠 / 绝对路径 / .. 逃逸，必须仓库相对 POSIX）
+ *   [WARN]  知识卡 source_files 指向生成物（bindings/dist/node_modules）→ 非源码事实源
+ *   [WARN]  知识卡 source_files 指向测试文件 → 实现应放 source_files，测试放 tests:
  *   [ERROR] 知识卡 frontmatter 必填字段缺失（kind/name/category）
  *   [ERROR] 知识卡 category / tier 值域违规
  *   [ERROR] 知识卡 kind 非 kebab-case/snake_case（小写，允许 - 与 _）或含未填充占位符 <...>
@@ -14,11 +17,13 @@
  *   [ERROR] 索引文件（index.md / routes.md）链接指向不存在的卡
  *
  * 用法：
- *   node scripts/check-knowledge-drift.mjs            # 文本报告
- *   node scripts/check-knowledge-drift.mjs --json     # JSON（CI 用）
+ *   node scripts/check-knowledge-drift.mjs                  # 文本报告（被动：卡间/卡→源码引用漂移）
+ *   node scripts/check-knowledge-drift.mjs --json           # JSON（CI 用，doctor --docs 调用）
+ *   node scripts/check-knowledge-drift.mjs --affected <f>…  # 主动：源码变更即列出受影响知识卡（治未病）
+ *     # 常与 git 联动：git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.mjs --affected {}
  *
- * 退出码：发现 ERROR → 1；否则 0（WARN 不阻断）。
- * 设计意图：知识卡漂移检查（与代码现实比对）
+ * 退出码：发现 ERROR → 1；否则 0（WARN 不阻断；--affected 恒为 0）。
+ * 设计意图：知识卡漂移检查（与代码现实比对）+ 源码变更主动防御。
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,6 +32,9 @@ import { ROOT } from './_lib/scan-files.mjs';
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 
 const JSON_OUT = process.argv.includes('--json');
+const AFFECTED_MODE = process.argv.includes('--affected');
+const _aIdx = process.argv.indexOf('--affected');
+const AFFECTED_PATHS = _aIdx >= 0 ? process.argv.slice(_aIdx + 1) : [];
 const errors = [];
 const warns = [];
 
@@ -36,6 +44,11 @@ const TIER_ENUM = new Set(['architecture', 'leaf']);
 const REQUIRED_FIELDS = ['kind', 'name', 'category', 'tier'];
 const KIND_RE = /^[a-z][a-z0-9_-]*$/;
 const PLACEHOLDER_RE = /^<.*>$/;
+
+// 源码事实源黑名单：生成物（构建产物，非稳定事实源）/ 测试文件（应在 tests: 字段）
+const GEN_RE = /(^|\/)bindings(\/|$)|(^|\/)dist(\/|$)|(^|\/)node_modules(\/|$)/;
+const TEST_RE = /\.(test|spec)\.(ts|js)$|_test\.go$|(^|\/)test(\/|$)/;
+const ROOT_ESCAPE_RE = /\\|^[A-Za-z]:|^\/|^~|\.\.\//; // 反斜杠 / 绝对路径 / .. 逃逸
 
 // ── 共享 frontmatter 解析（复制 MikuMikuAR _lib/frontmatter.mjs 核心逻辑）──
 
@@ -182,7 +195,7 @@ function checkKnowledgeMeta() {
   return { count };
 }
 
-// ── 检查 2：source_files 存在性 ──────────────────────
+// ── 检查 2：source_files 存在性 + 路径格式 + 语义漂移 ──
 
 function checkKnowledgeSources() {
   if (!fs.existsSync(KC_DIR)) return;
@@ -191,10 +204,26 @@ function checkKnowledgeSources() {
     const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf8');
     const fm = parseFrontmatter(text);
     if (!fm) continue;
-    const sources = parseSourceFiles(fm);
-    for (const src of sources) {
-      if (!fs.existsSync(path.join(ROOT, src))) {
-        errors.push(`知识卡 ${cf} 的 source_files 引用不存在: ${src}`);
+    // 抽出 + 归一（反斜杠 → 正斜杠），供存在性 / 格式 / 语义三检共用
+    const sources = parseSourceFiles(fm).map((s) => ({ raw: s, norm: s.replace(/\\/g, '/') }));
+    for (const { raw, norm } of sources) {
+      // [ERROR] 路径格式：反斜杠 / 绝对路径 / .. 逃逸 → 不可移植，CI 其他平台 404
+      if (ROOT_ESCAPE_RE.test(raw)) {
+        errors.push(`知识卡 ${cf} 的 source_files 路径格式非法: ${raw}（禁止反斜杠/绝对路径/..，必须仓库相对 POSIX 路径）`);
+        continue;
+      }
+      // [ERROR] 文件不存在（硬 404，源码删除/移动/重命名即触发）
+      if (!fs.existsSync(path.join(ROOT, norm))) {
+        errors.push(`知识卡 ${cf} 的 source_files 引用不存在: ${norm}`);
+        continue;
+      }
+      // [WARN] 指向生成物（bindings/dist/node_modules）→ 非源码事实源，重构后静默失真
+      if (GEN_RE.test(norm)) {
+        warns.push(`知识卡 ${cf} 的 source_files 指向生成物: ${norm}（应引用源码实现，而非构建产物）`);
+      }
+      // [WARN] 指向测试文件 → 卡片事实源应是实现，测试应放 tests: 字段
+      if (TEST_RE.test(norm)) {
+        warns.push(`知识卡 ${cf} 的 source_files 指向测试文件: ${norm}（实现放 source_files，测试放 tests:）`);
       }
     }
   }
@@ -300,9 +329,56 @@ function checkKnowledgeCoverage() {
   warns.push(`代码→卡片覆盖盲区：${total} 个源码文件未被任何知识卡引用（TOP: ${topSummary}）。非阻断提醒，建议补登知识卡。`);
 }
 
+// ── 主动防御：源码变更即标记受影响知识卡 ──────────────
+// 给定变更文件清单（仓库相对 POSIX 路径），输出引用了它们的知识卡。
+// 与 git 联动：git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.mjs --affected {}
+// 匹配规则复用 covers()：文件精确命中 / 目录前缀命中（source_files 可整目录引用）。
+
+function runAffected(changed) {
+  if (changed.length === 0) {
+    console.log('用法: node scripts/check-knowledge-drift.mjs --affected <变更文件...>');
+    console.log('  常与 git 联动: git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.mjs --affected {}');
+    process.exit(0);
+    return;
+  }
+  if (!fs.existsSync(KC_DIR)) process.exit(0);
+  // 建立 卡片 → source_files 索引
+  const index = [];
+  for (const cf of fs.readdirSync(KC_DIR).filter((f) => f.endsWith('.md') && !/^(readme|agents)\.md$/i.test(f))) {
+    const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf8');
+    const fm = parseFrontmatter(text);
+    if (!fm) continue;
+    const sources = parseSourceFiles(fm).map((s) => s.replace(/\\/g, '/'));
+    if (sources.length) index.push({ card: cf.replace(/\.md$/, ''), sources });
+  }
+  const hits = new Map();
+  for (const ch of changed.map((c) => c.replace(/\\/g, '/'))) {
+    for (const { card, sources } of index) {
+      if (sources.some((entry) => covers(ch, entry))) {
+        if (!hits.has(card)) hits.set(card, new Set());
+        hits.get(card).add(ch);
+      }
+    }
+  }
+  if (hits.size === 0) {
+    console.log(`✅ 变更的 ${changed.length} 个文件未被任何知识卡 source_files 引用，无需复核。`);
+    process.exit(0);
+    return;
+  }
+  console.log(`⚠ 以下 ${hits.size} 张知识卡引用了本次变更的文件，建议复核:`);
+  for (const [card, files] of [...hits.entries()].sort()) {
+    console.log(`  - ${card}  ←  ${[...files].join(', ')}`);
+  }
+  process.exit(0);
+}
+
 // ── 主流程 ────────────────────────────────────────────
 
 function main() {
+  if (AFFECTED_MODE) {
+    runAffected(AFFECTED_PATHS);
+    return;
+  }
   checkKnowledgeMeta();
   checkKnowledgeSources();
   checkIndexLinks();

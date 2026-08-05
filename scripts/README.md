@@ -78,7 +78,7 @@
 |------|------|
 | `gen-routes.mjs` | AI 路由表生成（docs/knowledge/routes.md） |
 | `gen-knowledge-index.mjs` | 知识卡索引生成（docs/knowledge/index.md） |
-| `check-knowledge-drift.mjs` | 知识卡漂移检查（含代码→卡片覆盖盲区 WARN 提醒） |
+| `check-knowledge-drift.mjs` | 知识卡漂移检查（含代码→卡片覆盖盲区 WARN；`--affected <文件...>` 主动列出受源码变更影响的知识卡） |
 | `gen-knowledge-symbols.mjs` | 知识卡 `symbols:` 字段同步（源码导出符号提取，JS/TS + Go 双栈，gen/--check） |
 | `gen-knowledge-h1.mjs` | 知识卡正文补 `# <name>` 标题（frontmatter 后插入，已有 h1 跳过） |
 | `gen-knowledge-adr.mjs` | 知识卡 `adr:` 关联补全（扫描源码 `[doc:adr-NNN]` 标记，仅 architecture 卡） |

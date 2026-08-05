@@ -20,7 +20,7 @@ kind: event-bus             # kebab-case 标识符，等于文件名（去掉 .m
 name: 事件总线 bus.ts         # 人类可读名称
 tier: architecture | leaf    # architecture=核心架构, leaf=叶子节点
 category: core               # core|go|ui|feature|utils|config
-source_files:                # 必须真实存在于磁盘
+source_files:                # 必须真实存在于磁盘；仓库相对 POSIX 路径，禁止反斜杠/绝对路径/..；勿指向 bindings/dist/node_modules 等生成物或测试文件（实现放 source_files，测试放 tests:）
   - frontend/src/bus.ts
 use_when:                    # 用户自然语言关键词
   - 事件
@@ -56,9 +56,14 @@ node scripts/gen-routes.mjs
 ### 漂移检查
 
 ```bash
-node scripts/check-knowledge-drift.mjs            # 文本报告
-node scripts/check-knowledge-drift.mjs --json     # JSON（CI 用）
+node scripts/check-knowledge-drift.mjs                  # 文本报告（被动：卡间/卡→源码引用漂移）
+node scripts/check-knowledge-drift.mjs --json           # JSON（CI 用，doctor --docs 调用）
+node scripts/check-knowledge-drift.mjs --affected <f>…  # 主动：源码变更即列出受影响知识卡（治未病）
+# 常与 git 联动：git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.mjs --affected {}
 ```
+
+> 主动防御：`--affected` 接收变更文件清单（仓库相对 POSIX 路径），输出引用了它们的知识卡，
+> 供提交前/CI 提示「这些源码改了，下面 N 张卡该复核」。匹配规则：文件精确命中 / 目录前缀命中。
 
 ## 分类映射
 
@@ -73,7 +78,8 @@ node scripts/check-knowledge-drift.mjs --json     # JSON（CI 用）
 
 ## 约束
 
-- `source_files` **必须**真实存在于磁盘，否则 `check-knowledge-drift.mjs` 报错
+- `source_files` **必须**真实存在于磁盘，否则 `check-knowledge-drift.mjs` 报错（[ERROR]）
+- `source_files` 路径格式非法（反斜杠 / 绝对路径 / `..` 逃逸）→ [ERROR]；指向生成物（bindings/dist/node_modules）或测试文件 → [WARN]
 - `kind` **必须**是 kebab-case，且等于文件名（去掉 .md 后的 kebab 形式）
 - `name` **必须**等于 H1 标题
 - 生成物（`index.md`、`routes.md`）**禁止手改**

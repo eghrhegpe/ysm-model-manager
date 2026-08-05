@@ -178,4 +178,45 @@
 |------|------|--------|
 | `4d092d0` | 第一轮：fileops 半截文件、dnd timeout、scanner 错误记录、importer 文件名误杀、全局事件冲突、instance-ops 日志 | 6 |
 | `9ac3acd` | 第二轮：sync 两阶段 Rename、Wails 路径守卫、tags 锁、recycle 清理、XSS 修复、async catch、type guards | 20 |
-| `f8f0063` | 第三轮：model3d dispose、WASM 清理、updater 句柄、community cleanup、sidebar handler、animateNumber cancel、import-executor reject、debug ring、mc-format 空行、modal Escape |
+| `f8f0063` | 第三轮：model3d dispose、WASM 清理、updater 句柄、community cleanup、sidebar handler、animateNumber cancel、import-executor reject、debug ring、mc-format 空行、modal Escape | 14 |
+| `42d1839` / `baceeb5` | 第四轮：litematic extractBits 越界 panic（P1）、sync:download:missing 并发守卫、batch-rename closeDlg 单例槽位、define 守卫、installer 文本分类过宽 | 6 |
+| `89af7c7` / `0b70e54` | 第五轮：geometry modelOrder 排序、import-queue/recycle-bin 事件监听配对、dnd promise 链、context-menu Esc | 5 |
+| `40e0615` | 第六轮：errors 文本匹配收紧（P2）、importer 先删后建改 backup 回滚（ADR-028） | 2 |
+| `c07f521` | 第七轮：litematic 大投影统计截断（P2 性能） | 1 |
+| `6ccf698` | 第八轮：posList 裸断言、screenshot dispose finally、mcmeta LimitReader、recycle MkdirAll fail-fast（P2×4） | 4 |
+| `e3b5c9d` | 第九轮：installer HasPrefix 边界统一、sync isFileLocked "access" 收窄（P2 收官） | 2 |
+| `b54d1ed` | 第十轮：app-content _unsub 置空、avatar 写失败日志、context-menu 主题变量、recycle-bin 权威源注释（P3×4） | 4 |
+| `ba42e58` | 第十一轮：importer/installer/watcher 注释级收尾（P3×3） | 3 |
+| `7435f6d` | 第十二轮：绑定层 subpath 穿越校验、proxy SSRF 双层防护（P2 安全×2） | 4 |
+| `269dae5` / `9894c60` | 候选卡自审修复：oldest-models 死代码、summarize 清洗、errors 正则收紧 | 2 |
+| `4676063` / `cd87eb9` | 遗留项收尾：dbgWarn 漂移、fmt GB 阈值、fmtVer 死键、tree 硬编码色 | 4 |
+
+---
+
+## 六、架构建议（决策真相源：ADR-040）
+
+### 6.1 已立项的架构治理（ADR-040）
+
+规模治理三项决策已落盘（见 `docs/adr/ADR-040-architecture-scale-governance.md`）：
+
+| 决策 | 内容 | 优先级 |
+|------|------|--------|
+| §2.1 前端大文件拆分 | app-content/index.ts(1028)/community.ts(916)/import-queue(863) 等 9 个 >500 行文件按 AGENTS.md §4.2 增量拆分（红线：≤400 行/文件） | P1 |
+| §2.2 internal 下沉收口 | app_install.go(765)/cli.go(728) 业务下沉 go/ 包，sync.go 拆子文件 | P2/P3 |
+| §2.3 知识卡补盲 | wails_bindings 补 21 绑定文件目录索引，不拆新卡 | P3 |
+
+### 6.2 审计结论（架构层面）
+
+- **结构无缺陷，规模是主债**：单一事实源（resource_types.json）、三层解耦、事件治理三件套（_unsubs/_registered/代际计数）经 50+ 模块审核零结构性违规
+- **优先项**：§2.1 app-content 拆分（唯一超千行 RED）；绑定层安全面已由 `7435f6d` 收口（subpath/proxy）
+- **不采纳项**：WASM eval 迁移（WebView2 无 CSP API，留待未来，ADR-039 §2.1）；知识卡加卡（绑定层薄 wrapper，目录索引足够）
+
+### 6.3 审计账本
+
+| 级别 | 总数 | 修复 | 剩余 |
+|------|------|------|------|
+| P1 | 10 | 10 | 0 |
+| P2 | 40 | 40 | 0 |
+| P3 | 15 | 14 | 1（`catch {}` 静默系设计意图，跳过项） |
+
+> 三轮基线（并行会话 `4d092d0`/`9ac3acd`/`f8f0063`）+ 九轮补充（本会话 42d1839→cd87eb9）合并统计。

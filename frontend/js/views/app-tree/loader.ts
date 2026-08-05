@@ -1,6 +1,8 @@
 // ===== Go 数据加载层 =====
 import { getExts } from "../../utils/resource/extensions.ts";
 import { getApp } from "../../wails/app.ts";
+import { bus } from "../../bus.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
 
 /** 树条目（loader 转换后的渲染格式） */
 export interface TreeEntry {
@@ -13,6 +15,21 @@ export interface TreeEntry {
   type: string;
   /** 标签标记（row-tpl 用到，Go 端可选） */
   HasTags?: boolean;
+}
+
+/** 加载失败 toast 节流：自动重载（stats:refresh/tree:reload）可能高频触发，防刷屏 */
+let _lastErrorToastAt = 0;
+const ERROR_TOAST_MIN_GAP = 5000; // 5s 内只提示一次
+
+function toastLoadError(err: unknown): void {
+  const now = Date.now();
+  if (now - _lastErrorToastAt < ERROR_TOAST_MIN_GAP) return;
+  _lastErrorToastAt = now;
+  bus.emit("toast:show", {
+    msg: "❌ 文件树加载失败: " + friendlyError(err, "读取仓库失败"),
+    duration: 5000,
+    type: "error",
+  });
 }
 
 /** 从 Go 后端加载仓库文件列表，返回格式化的 entries */
@@ -61,7 +78,9 @@ export async function loadEntries(
       };
     });
     return { repoRoot, entries };
-  } catch {
+  } catch (err) {
+    // 失败不静默：自动重载场景用户看不到报错，明确 toast 提示（带节流防刷屏）
+    toastLoadError(err);
     return { repoRoot: "", entries: [] };
   }
 }

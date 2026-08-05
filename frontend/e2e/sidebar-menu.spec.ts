@@ -8,11 +8,24 @@ import { test, expect } from "./fixture.ts";
 async function gotoInstances(page: import("@playwright/test").Page): Promise<void> {
   const navItems = page.locator('[data-testid="nav-item"]');
   await expect(navItems.first()).toBeVisible({ timeout: 10000 });
+
+  // 等待 app-content 挂载完成（nav:change 监听器注册后点击才不丢失）
+  await page.evaluate(async () => {
+    const deadline = Date.now() + 8000;
+    while (Date.now() < deadline) {
+      const content = document.querySelector("app-content") as { _current?: string } | null;
+      if (content && content._current) return;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  });
+
+  // 原生点击 instances 导航项
   await page.evaluate(() => {
     const nav = document.querySelector("app-nav") as { shadowRoot?: ShadowRoot } | null;
     const items = nav?.shadowRoot?.querySelectorAll('[data-testid="nav-item"]');
     if (items?.[1]) (items[1] as HTMLElement).click();
   });
+
   // 轮询等待 _current 切到 instances
   const deadline = Date.now() + 8000;
   while (Date.now() < deadline) {

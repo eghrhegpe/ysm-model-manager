@@ -4,6 +4,7 @@ import { dbg } from "../../utils/debug/debug.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import type { SidebarInstance } from "./data.ts";
 import { getApp } from "../../wails/app.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
 
 /** Go 端实例同步状态（绑定类型局部视图，字段以 Go struct 为准） */
 interface InstanceStatusView {
@@ -126,7 +127,13 @@ export async function loadInstances(
       statusList ? statusList.length : 0,
     );
     return instances;
-  } catch {
+  } catch (err) {
+    // 失败不静默：显示空整合包列表会误导用户以为没装实例
+    bus.emit("toast:show", {
+      msg: "❌ 整合包列表加载失败: " + friendlyError(err, "读取整合包失败"),
+      duration: 5000,
+      type: "error",
+    });
     return [];
   } finally {
     bus.emit("loading:end");

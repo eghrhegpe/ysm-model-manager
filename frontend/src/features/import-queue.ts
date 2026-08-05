@@ -8,7 +8,7 @@ import { modalConfirm } from "../views/dialogs/modal.ts";
 import { DnDLock, PendingImport } from "./dnd-state.ts";
 import { getApp } from "../wails/app.ts";
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
-import { isSupportedFile, shouldEnterForm } from "./dnd-shared.ts";
+import { isImportableFile, shouldEnterForm } from "./dnd-shared.ts";
 
 const extsStr = ALL_EXTS.join(" ");
 
@@ -256,7 +256,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       let ok = 0;
       let skip = 0;
       Array.from(files).forEach((file) => {
-        if (!isSupportedFile(file.name)) {
+        if (!isImportableFile(file.name)) {
           skip++;
           return;
         }
@@ -294,7 +294,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     let ok = 0;
     let skip = 0;
     Array.from(files).forEach((file) => {
-      if (!isSupportedFile(file.name)) {
+      if (!isImportableFile(file.name)) {
         skip++;
         return;
       }
@@ -316,7 +316,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     if (!files || !files.length) return;
     let ok = 0;
     Array.from(files).forEach((file) => {
-      if (!isSupportedFile(file.name)) return;
+      if (!isImportableFile(file.name)) return;
       ok++;
       readAndRouteFile(file);
     });
@@ -535,7 +535,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         if (entry.isFile) {
           (entry as FileSystemFileEntry).file(
             (file) => {
-              if (!isSupportedFile(file.name)) {
+              if (!isImportableFile(file.name)) {
                 resolve();
                 return;
               }
@@ -589,7 +589,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       let skip = 0;
       for (let i = 0; i < items.length; i++) {
         const file = items[i].getAsFile?.();
-        if (!file || !isSupportedFile(file.name)) {
+        if (!file || !isImportableFile(file.name)) {
           skip++;
           continue;
         }

@@ -102,6 +102,10 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 	if !types.IsSupportedExt(ext) {
 		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式", Suggestion: "支持格式: " + strings.Join(types.AllExts(), " / ")}
 	}
+	// ysm 包内 json 白名单：.json 仅允许 ysm.json 入口清单（与 go/importer + go/scanner 对齐，ADR-038 D2）
+	if ext == ".json" && !types.IsYsmEntryJSON(filepath.Base(fileName)) {
+		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "仅支持 ysm.json 清单文件", Suggestion: "YSM 包内 json 资源（geometry/animation/语言文件）不可单独导入，请导入 .ysm/.zip/.7z 或解压目录中的 ysm.json"}
+	}
 	data, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {
 		return types.AppError{Code: "DECODE_FAILED", Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
@@ -748,4 +752,14 @@ func (a *App) GetImportLogs() []types.ImportLog {
 
 func (a *App) ClearImportLogs() {
 	a.logger.Clear()
+}
+
+// GetRuntimeLogs 获取运行时日志（watcher/sync 等标准库 log 输出）
+func (a *App) GetRuntimeLogs() []types.RuntimeLog {
+	return a.runtimeLogs.GetAll()
+}
+
+// ClearRuntimeLogs 清空运行时日志缓冲
+func (a *App) ClearRuntimeLogs() {
+	a.runtimeLogs.Clear()
 }

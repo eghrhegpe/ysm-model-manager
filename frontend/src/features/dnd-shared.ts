@@ -10,6 +10,14 @@ const getExt = (name: string): string =>
 export const isSupportedFile = (name: string): boolean =>
   ALL_EXTS.includes(getExt(name));
 
+/** 是否可作为独立文件导入：.json 仅放行 ysm.json 入口清单
+ *  包内 geometry/animation/语言 json（main.json / *.animation.json / zh_cn.json 等）不得单独导入
+ *  与 go/scanner/scanner.go:80-87 的 ysm.json 白名单对齐（base name 级判断，任意子目录均适用） */
+export const isImportableFile = (name: string): boolean => {
+  if (getExt(name) === ".json") return name.toLowerCase() === "ysm.json";
+  return isSupportedFile(name);
+};
+
 /** 判断文件是否需要进入命名表单（异步） */
 export const shouldEnterForm = async (
   name: string,

@@ -5,7 +5,7 @@ import { PageStore } from "../page-store.ts";
 import { DnDLock, PendingImport } from "../../features/dnd-state.ts";
 import { getApp } from "../../wails/app.ts";
 import { ALL_EXTS } from "../../utils/resource/extensions.ts";
-import { getExt, isSupportedFile, shouldEnterForm } from "../../features/dnd-shared.ts";
+import { getExt, isImportableFile, shouldEnterForm } from "../../features/dnd-shared.ts";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
 const MAX_FILE_COUNT = 50;
@@ -125,7 +125,7 @@ const onDrop = async (e: DragEvent): Promise<void> => {
         };
         result.push(...(await readAll()));
       } else if (entry?.isFile) {
-        if (isSupportedFile((entry as FileSystemFileEntry).name)) {
+        if (isImportableFile((entry as FileSystemFileEntry).name)) {
           try {
             result.push(await getFileFromEntry(entry as FileSystemFileEntry));
           } catch (_) {}
@@ -133,7 +133,7 @@ const onDrop = async (e: DragEvent): Promise<void> => {
       } else if ((item as DataTransferItem).getAsFile) {
         // fallback: 浏览器不支持 webkitGetAsEntry 时用 getAsFile
         const f = (item as DataTransferItem).getAsFile();
-        if (f && isSupportedFile(f.name)) result.push(f);
+        if (f && isImportableFile(f.name)) result.push(f);
       }
     }
     return result;
@@ -144,7 +144,7 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   if (items.length > 0) allFiles = await collectFiles(items, false);
   if (allFiles.length === 0) {
     const direct = Array.from(e.dataTransfer?.files || []);
-    allFiles = direct.filter((f) => isSupportedFile(f.name));
+    allFiles = direct.filter((f) => isImportableFile(f.name));
   }
   if (allFiles.length === 0) {
     bus.emit("toast:show", {

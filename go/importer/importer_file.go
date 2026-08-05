@@ -30,6 +30,11 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 	if !types.IsSupportedExt(ext) {
 		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "不支持的文件格式"}
 	}
+	// ysm 包内 json 白名单：.json 仅允许 ysm.json 入口清单，包内 geometry/animation/语言 json 不得单独导入
+	// 与 go/scanner/scanner.go 的 ysm.json 白名单对齐（ADR-038 D2）
+	if ext == ".json" && !types.IsYsmEntryJSON(filepath.Base(fileName)) {
+		return types.AppError{Code: "FILE_TYPE_UNSUPPORTED", Operation: "导入模型", SourcePath: fileName, Reason: "仅支持 ysm.json 清单文件", Suggestion: "YSM 包内 json 资源（geometry/animation/语言文件）不可单独导入，请导入 .ysm/.zip/.7z 或解压目录中的 ysm.json"}
+	}
 	if strings.Contains(fileName, "..") || strings.ContainsAny(fileName, `\/`) {
 		return types.AppError{Code: "FILENAME_INVALID", Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
 	}

@@ -194,7 +194,7 @@ export async function showLitematic(
         btn3dTab.textContent = "⏳";
         btn3dTab.disabled = true;
         try {
-          const { createLitematic3D } = await import("./litematic-3d.js");
+          const { createLitematic3D } = await import("./litematic-3d.ts");
           await createLitematic3D(path, voxelFn);
         } finally {
           btn3dTab.textContent = "🎨 3D";

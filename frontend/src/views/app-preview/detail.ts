@@ -84,7 +84,7 @@ export async function showModelDetail(
     if (detailDiv) detailDiv.innerHTML = cardHTML;
 
     // 加载 2D 模型预览（骨架 tab）；loadModel2D 内部已兜底渲染错误，此处仅防未处理拒绝
-    const { loadModel2D } = await import("./skeleton.js");
+    const { loadModel2D } = await import("./skeleton.ts");
     loadModel2D(ctx, path, ctx._root.getElementById("preview-skeleton")).catch(
       (e) => console.warn("[preview] loadModel2D:", e),
     );

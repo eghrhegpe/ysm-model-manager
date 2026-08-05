@@ -69,20 +69,20 @@ func Install(src, customDir, repoRoot, linkMode string) error {
 	}
 
 	// 计算相对路径，保持目录结构
+	// 上方 IsInside 已 fail-fast 保证 srcClean 在仓库内，此处直接用 Clean 后路径算 rel，
+	// 不用 HasPrefix 二次判断（无分隔符边界校验，/repo 会误匹配 /repository）
 	targetDir := customDir
 	if repoRoot != "" {
 		absRepo := cleanAbs(repoRoot)
-		if strings.HasPrefix(strings.ToLower(src), strings.ToLower(absRepo)) {
-			rel, err := filepath.Rel(absRepo, src)
-			if err == nil {
-				relDir := filepath.Dir(rel)
-				if relDir != "." {
-					targetDir = filepath.Join(customDir, relDir)
-					// 再次校验子目录也在 .minecraft 内
-					targetDir = cleanAbs(targetDir)
-					if !paths.ContainsMinecraftMarker(targetDir) {
-						return types.AppError{Code: "INVALID_PATH", Operation: "安装模型", SourcePath: targetDir, Reason: "子目录不在 .minecraft 路径内", Suggestion: "请确保整合包的 custom 目录位于 .minecraft 内"}
-					}
+		rel, err := filepath.Rel(absRepo, srcClean)
+		if err == nil {
+			relDir := filepath.Dir(rel)
+			if relDir != "." {
+				targetDir = filepath.Join(customDir, relDir)
+				// 再次校验子目录也在 .minecraft 内
+				targetDir = cleanAbs(targetDir)
+				if !paths.ContainsMinecraftMarker(targetDir) {
+					return types.AppError{Code: "INVALID_PATH", Operation: "安装模型", SourcePath: targetDir, Reason: "子目录不在 .minecraft 路径内", Suggestion: "请确保整合包的 custom 目录位于 .minecraft 内"}
 				}
 			}
 		}

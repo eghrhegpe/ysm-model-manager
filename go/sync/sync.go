@@ -625,8 +625,10 @@ func isFileLocked(err error) bool {
 		msg = getMsg(pathErr.Err)
 	}
 
+	// 文本兜底：避免过宽子串（"access" 会误伤 "accessibility" 等无关错误），
+	// 只匹配 Windows 锁定典型文案 "access is denied"
 	return strings.Contains(msg, "sharing") ||
-		strings.Contains(msg, "access") ||
+		strings.Contains(msg, "access is denied") ||
 		strings.Contains(msg, "used by another process")
 }
 

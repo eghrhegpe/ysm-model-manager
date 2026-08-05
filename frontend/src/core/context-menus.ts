@@ -292,59 +292,71 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
   },
   "file.push-to-pack": async (ctx) => {
-    const { LoadAppConfig, ListVersionInstances, InstallModelTo } =
-      await getApp();
-    const cfg = await LoadAppConfig();
-    const mcRoot = cfg.mcRoot || "";
-    if (!mcRoot) {
-      toast("请先配置游戏目录", 2000, "warn");
-      return;
-    }
-    const instances = (await ListVersionInstances(mcRoot)) ?? [];
-    if (!instances.length) {
-      toast("未找到任何整合包", 2000, "warn");
-      return;
-    }
-    const { modalSelect } = await import("../views/dialogs/modal.ts");
-    const names = instances.map((i) => i.Name);
-    const chosen = await modalSelect({
-      title: "推送到整合包",
-      icon: "📦",
-      items: names,
-      okText: "📦 推送",
-    });
-    if (!chosen) return;
-    const match = instances.find((i) => i.Name === chosen);
-    if (!match) return;
-    // 传完整路径：InstallModelTo → installer.Install 内部按仓库内绝对路径校验（IsInside），
-    // 传 basename 会被 cleanAbs 解析到 CWD 下导致「源文件不在仓库目录内」
     try {
-      await InstallModelTo(ctx.path || "", match.CustomDir);
-      toast(`✅ 已推送到 ${chosen}`, 2000);
+      const { LoadAppConfig, ListVersionInstances, InstallModelTo } =
+        await getApp();
+      const cfg = await LoadAppConfig();
+      const mcRoot = cfg.mcRoot || "";
+      if (!mcRoot) {
+        toast("请先配置游戏目录", 2000, "warn");
+        return;
+      }
+      const instances = (await ListVersionInstances(mcRoot)) ?? [];
+      if (!instances.length) {
+        toast("未找到任何整合包", 2000, "warn");
+        return;
+      }
+      const { modalSelect } = await import("../views/dialogs/modal.ts");
+      const names = instances.map((i) => i.Name);
+      const chosen = await modalSelect({
+        title: "推送到整合包",
+        icon: "📦",
+        items: names,
+        okText: "📦 推送",
+      });
+      if (!chosen) return;
+      const match = instances.find((i) => i.Name === chosen);
+      if (!match) return;
+      // 传完整路径：InstallModelTo → installer.Install 内部按仓库内绝对路径校验（IsInside），
+      // 传 basename 会被 cleanAbs 解析到 CWD 下导致「源文件不在仓库目录内」
+      try {
+        await InstallModelTo(ctx.path || "", match.CustomDir);
+        toast(`✅ 已推送到 ${chosen}`, 2000);
+      } catch (e) {
+        toast("❌ " + friendlyError(e, "推送失败"), 3000, "error");
+      }
     } catch (e) {
       toast("❌ " + friendlyError(e, "推送失败"), 3000, "error");
     }
   },
   "file.edit-tags": async (ctx) => {
-    const { modalTagEditor } = await import("../views/dialogs/tag-editor.ts");
-    const result = await modalTagEditor(ctx.path || "");
-    if (result) toast(`🏷️ 已保存 ${result.length} 个标签`, 2000);
+    try {
+      const { modalTagEditor } = await import("../views/dialogs/tag-editor.ts");
+      const result = await modalTagEditor(ctx.path || "");
+      if (result) toast(`🏷️ 已保存 ${result.length} 个标签`, 2000);
+    } catch (e) {
+      toast("❌ " + friendlyError(e, "标签编辑失败"), 3000, "error");
+    }
   },
   "file.recycle": async (ctx) => {
-    const { modalConfirm } = await import("../views/dialogs/modal.ts");
-    const ok2 = await modalConfirm({
-      title: "移入回收站",
-      icon: "♻️",
-      message: `确定将 ${(ctx.path || "").split("/").pop()} 移入回收站？`,
-      okText: "♻️ 移入",
-      danger: true,
-    });
-    if (!ok2) return;
-    const { MoveToRecycle } =
-      await getApp();
     try {
-      await MoveToRecycle(ctx.path || "");
-      refreshUI();
+      const { modalConfirm } = await import("../views/dialogs/modal.ts");
+      const ok2 = await modalConfirm({
+        title: "移入回收站",
+        icon: "♻️",
+        message: `确定将 ${(ctx.path || "").split("/").pop()} 移入回收站？`,
+        okText: "♻️ 移入",
+        danger: true,
+      });
+      if (!ok2) return;
+      const { MoveToRecycle } =
+        await getApp();
+      try {
+        await MoveToRecycle(ctx.path || "");
+        refreshUI();
+      } catch (e) {
+        toast("❌ " + friendlyError(e, "移入回收站失败"), 3000, "error");
+      }
     } catch (e) {
       toast("❌ " + friendlyError(e, "移入回收站失败"), 3000, "error");
     }

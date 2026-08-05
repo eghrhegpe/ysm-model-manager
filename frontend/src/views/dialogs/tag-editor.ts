@@ -32,7 +32,7 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
       <div id="te-tags" style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px;padding:4px;border:1px solid var(--bd);border-radius:5px;background:var(--bg);align-content:flex-start"></div>
 
       <div style="display:flex;gap:4px">
-        <input id="te-input" maxlength="30" placeholder="输入标签后按 Enter" style="flex:1;padding:5px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
+        <input id="te-input" maxlength="20" placeholder="输入标签后按 Enter" style="flex:1;padding:5px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px">
         <button id="te-add" class="dlg-btn dlg-btn-primary" style="padding:4px 10px">+ 添加</button>
       </div>
 

@@ -26,13 +26,13 @@ use_when:
 ## 核心职责
 
 - `parse.go` — 标准 geometry JSON 解析（骨骼/立方体/UV/旋转/纹理槽）
-- `archive.go` — ZIP/7z 存档解包：ysm.json 清单（model/texture 顺序）、多 geometry 文件合并、PNG 纹理与动画 JSON 收集、首张 PNG 快速缩略
+- `archive.go` — ZIP/7z 存档解包：ysm.json 清单（model/texture 顺序）、多 geometry 文件合并、cube→texSlot 绑定、PNG 纹理与动画 JSON 收集、首张 PNG 快速缩略
 
 ## 对外 API / 入口
 
 - `ParseBedrockGeometry(data []byte) *types.BedrockModel` — 解析单个 geometry JSON；输入上限 100MB；UV 兼容数组与 per-face 对象两种形态；失败返回 nil
-- `ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []string)` — 从 ZIP 解析，返回（合并模型、纹理 PNG 列表、动画 JSON 字符串列表）；按 ysm.json 声明的顺序排列模型与纹理
-- `ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte)` — 7z 版（`github.com/bodgit/sevenzip`），返回模型与纹理
+- `ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []string)` — 从 ZIP 解析，返回（合并模型、纹理 PNG 列表、动画 JSON 字符串列表）；模型文件与纹理均按 ysm.json 声明顺序稳定排序
+- `ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte)` — 7z 版（`github.com/bodgit/sevenzip`），返回模型与纹理；不单独分流动画 JSON（动画文件当 geometry 解析失败后自然跳过）
 - `ExtractFirstPNGFromZip(data []byte, size int64) []byte` / `ExtractFirstPNGFrom7z(data []byte, size int64) []byte` — 提取第一张 PNG 做快速预览
 
 ## 与其他子系统关系
@@ -45,7 +45,11 @@ use_when:
 
 - 存档内单文件读取上限 50MB（`maxExtractSize`，`io.LimitReader`），防 ZIP 炸弹
 - `ParseBedrockGeometry` 输入上限 100MB（`maxParseSize`），超限拒绝并记日志
-- `ysm.json` 是清单不是模型文件，不参与 geometry 解析；文件名含 animation/controller 的 JSON 归入动画而非模型
+- `ysm.json` 是清单不是模型文件，不参与 geometry 解析；文件名含 animation/controller 的 JSON 归入动画而非模型（仅 ZIP 路径分流）
+- `ysm.json` 的 `files.player.model` 支持 4 种形态：字符串 / 字符串数组 / `{path|name}` 对象数组 / `map[string]string` 对象。**对象形态必须按 key 排序后展开**——Go map 遍历顺序随机，不排序会让 `modelOrder` 每次不同，进而使 cube 的 `TexSlot` 绑定漂移、预览纹理错位（`archive.go:156-163`，`sort.Strings(keys)` 在 `archive.go:161`）；7z 路径的对象形态目前仍按 map 随机序展开（`archive.go:414`），多纹理 7z 包的 texSlot 尚不保证稳定
+- 模型文件与纹理排序一律用 `sort.SliceStable`：清单声明过的条目按声明顺序在前，未声明的保持存档内原始顺序排在其后
+- texSlot 映射为「第 i 个模型 → 第 i 个纹理」，索引超出纹理数量时钳到最后一张（`ti >= texCount` → `texCount-1`）；`texOrder` 为空时退化为按模型数量取索引
+- 纹理只收 `.png`/`.jpg`，排除 `avatar/` 目录且过滤 <4KB 的小图（头像/预览图）
 - 解析失败统一返回 nil/空，由调用方决定降级路径，不 panic
 
 ## 相关

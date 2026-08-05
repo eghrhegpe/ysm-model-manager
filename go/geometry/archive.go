@@ -108,18 +108,26 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 							for _, item := range arr {
 								s := strings.TrimSpace(string(item))
 								if strings.HasPrefix(s, `{`) {
-									var obj struct{ Uv string `json:"uv"` }
+									var obj struct {
+										Uv string `json:"uv"`
+									}
 									if json.Unmarshal(item, &obj) == nil && obj.Uv != "" {
 										tn := obj.Uv
-										if idx := strings.LastIndex(tn, "/"); idx >= 0 { tn = tn[idx+1:] }
-										if idx := strings.LastIndex(tn, "\\"); idx >= 0 { tn = tn[idx+1:] }
+										if idx := strings.LastIndex(tn, "/"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
+										if idx := strings.LastIndex(tn, "\\"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
 										texOrder = append(texOrder, strings.ToLower(tn))
 									}
 								} else {
 									var sval string
 									if json.Unmarshal(item, &sval) == nil && sval != "" {
 										tn := sval
-										if idx := strings.LastIndex(tn, "/"); idx >= 0 { tn = tn[idx+1:] }
+										if idx := strings.LastIndex(tn, "/"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
 										texOrder = append(texOrder, strings.ToLower(tn))
 									}
 								}
@@ -136,11 +144,18 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 							for _, item := range arr {
 								s := strings.TrimSpace(string(item))
 								if len(s) > 0 && s[0] == '{' {
-									var obj struct { Path string `json:"path"`; Name string `json:"name"` }
+									var obj struct {
+										Path string `json:"path"`
+										Name string `json:"name"`
+									}
 									if json.Unmarshal(item, &obj) == nil {
 										n := obj.Path
-										if n == "" { n = obj.Name }
-										if n != "" { modelOrder = append(modelOrder, n) }
+										if n == "" {
+											n = obj.Name
+										}
+										if n != "" {
+											modelOrder = append(modelOrder, n)
+										}
 									}
 								} else {
 									var sval string
@@ -248,7 +263,9 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 	// 建立模型文件→纹理索引映射
 	texIdxMap := make(map[string]int)
 	texCount := len(texOrder)
-	if texCount == 0 { texCount = len(modelOrder) }
+	if texCount == 0 {
+		texCount = len(modelOrder)
+	}
 	if len(modelOrder) > 0 {
 		for i, p := range modelOrder {
 			p = strings.ReplaceAll(p, "\\", "/")
@@ -256,7 +273,9 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 				p = p[idx+1:]
 			}
 			ti := i
-			if ti >= texCount { ti = texCount - 1 }
+			if ti >= texCount {
+				ti = texCount - 1
+			}
 			texIdxMap[strings.TrimSuffix(p, ".json")] = ti
 		}
 	}
@@ -310,13 +329,17 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 		sort.SliceStable(pngs, func(i, j int) bool {
 			oi, hasI := orderMap[strings.ToLower(pngNames[i])]
 			oj, hasJ := orderMap[strings.ToLower(pngNames[j])]
-			if hasI && hasJ { return oi < oj }
+			if hasI && hasJ {
+				return oi < oj
+			}
 			return hasI
 		})
 		sort.SliceStable(pngNames, func(i, j int) bool {
 			oi, hasI := orderMap[strings.ToLower(pngNames[i])]
 			oj, hasJ := orderMap[strings.ToLower(pngNames[j])]
-			if hasI && hasJ { return oi < oj }
+			if hasI && hasJ {
+				return oi < oj
+			}
 			return hasI
 		})
 	}
@@ -368,18 +391,26 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 							for _, item := range arr {
 								s := strings.TrimSpace(string(item))
 								if strings.HasPrefix(s, `{`) {
-									var obj struct{ Uv string `json:"uv"` }
+									var obj struct {
+										Uv string `json:"uv"`
+									}
 									if json.Unmarshal(item, &obj) == nil && obj.Uv != "" {
 										tn := obj.Uv
-										if idx := strings.LastIndex(tn, "/"); idx >= 0 { tn = tn[idx+1:] }
-										if idx := strings.LastIndex(tn, "\\"); idx >= 0 { tn = tn[idx+1:] }
+										if idx := strings.LastIndex(tn, "/"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
+										if idx := strings.LastIndex(tn, "\\"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
 										texOrder = append(texOrder, strings.ToLower(tn))
 									}
 								} else {
 									var sval string
 									if json.Unmarshal(item, &sval) == nil && sval != "" {
 										tn := sval
-										if idx := strings.LastIndex(tn, "/"); idx >= 0 { tn = tn[idx+1:] }
+										if idx := strings.LastIndex(tn, "/"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
 										texOrder = append(texOrder, strings.ToLower(tn))
 									}
 								}
@@ -395,10 +426,18 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 							for _, item := range arr {
 								s := strings.TrimSpace(string(item))
 								if len(s) > 0 && s[0] == '{' {
-									var obj struct{ Path string `json:"path"`; Name string `json:"name"` }
+									var obj struct {
+										Path string `json:"path"`
+										Name string `json:"name"`
+									}
 									if json.Unmarshal(item, &obj) == nil {
-										n := obj.Path; if n == "" { n = obj.Name }
-										if n != "" { modelOrder = append(modelOrder, n) }
+										n := obj.Path
+										if n == "" {
+											n = obj.Name
+										}
+										if n != "" {
+											modelOrder = append(modelOrder, n)
+										}
 									}
 								} else {
 									var sval string
@@ -411,7 +450,9 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 					} else if raw[0] == '{' {
 						var mm map[string]string
 						if json.Unmarshal(ysm.Files.Player.Model, &mm) == nil {
-							for _, v := range mm { modelOrder = append(modelOrder, v) }
+							for _, v := range mm {
+								modelOrder = append(modelOrder, v)
+							}
 						}
 					} else {
 						var sval string
@@ -451,7 +492,9 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 		sort.SliceStable(geoFiles, func(i, j int) bool {
 			ai, oki := orderMap[geoFiles[i].name]
 			aj, okj := orderMap[geoFiles[j].name]
-			if oki && okj { return ai < aj }
+			if oki && okj {
+				return ai < aj
+			}
 			return oki
 		})
 	}
@@ -459,19 +502,27 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 	// 建立 texIdx 映射
 	texIdxMap := make(map[string]int)
 	texCount := len(texOrder)
-	if texCount == 0 { texCount = len(modelOrder) }
+	if texCount == 0 {
+		texCount = len(modelOrder)
+	}
 	for i, p := range modelOrder {
 		p = strings.ReplaceAll(p, "\\", "/")
-		if idx := strings.LastIndex(p, "/"); idx >= 0 { p = p[idx+1:] }
+		if idx := strings.LastIndex(p, "/"); idx >= 0 {
+			p = p[idx+1:]
+		}
 		ti := i
-		if ti >= texCount { ti = texCount - 1 }
+		if ti >= texCount {
+			ti = texCount - 1
+		}
 		texIdxMap[strings.TrimSuffix(p, ".json")] = ti
 	}
 
 	// 解析 geometry
 	for _, gf := range geoFiles {
 		g := ParseBedrockGeometry(gf.data)
-		if g == nil || g.BoneCount == 0 { continue }
+		if g == nil || g.BoneCount == 0 {
+			continue
+		}
 		for bi := range g.Bones {
 			for ci := range g.Bones[bi].Cubes {
 				g.Bones[bi].Cubes[ci].CubeTexW = g.TexWidth
@@ -479,7 +530,9 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 			}
 		}
 		geoName := gf.name
-		if idx := strings.LastIndex(geoName, "/"); idx >= 0 { geoName = geoName[idx+1:] }
+		if idx := strings.LastIndex(geoName, "/"); idx >= 0 {
+			geoName = geoName[idx+1:]
+		}
 		geoName = strings.TrimSuffix(strings.TrimSuffix(geoName, ".json"), ".geo.json")
 		if ti, hasTex := texIdxMap[geoName]; hasTex {
 			for bi := range g.Bones {
@@ -494,8 +547,12 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 			geo.Bones = append(geo.Bones, g.Bones...)
 			geo.BoneCount += g.BoneCount
 			geo.CubeCount += g.CubeCount
-			if g.TexWidth > geo.TexWidth { geo.TexWidth = g.TexWidth }
-			if g.TexHeight > geo.TexHeight { geo.TexHeight = g.TexHeight }
+			if g.TexWidth > geo.TexWidth {
+				geo.TexWidth = g.TexWidth
+			}
+			if g.TexHeight > geo.TexHeight {
+				geo.TexHeight = g.TexHeight
+			}
 		}
 	}
 
@@ -504,13 +561,19 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 		low := strings.ToLower(f.Name)
 		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !f.FileInfo().IsDir() && !strings.Contains(low, "avatar/") {
 			rc, err := f.Open()
-			if err != nil { continue }
+			if err != nil {
+				continue
+			}
 			pngData, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
 			rc.Close()
 			if len(pngData) > 4096 {
 				name := f.Name
-				if idx := strings.LastIndex(name, "/"); idx >= 0 { name = name[idx+1:] }
-				if idx := strings.LastIndex(name, "\\"); idx >= 0 { name = name[idx+1:] }
+				if idx := strings.LastIndex(name, "/"); idx >= 0 {
+					name = name[idx+1:]
+				}
+				if idx := strings.LastIndex(name, "\\"); idx >= 0 {
+					name = name[idx+1:]
+				}
 				name = strings.TrimSuffix(strings.TrimSuffix(name, ".png"), ".jpg")
 				pngNames = append(pngNames, name)
 				pngs = append(pngs, pngData)
@@ -525,13 +588,17 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 		sort.SliceStable(pngs, func(i, j int) bool {
 			oi, hasI := orderMap[strings.ToLower(pngNames[i])]
 			oj, hasJ := orderMap[strings.ToLower(pngNames[j])]
-			if hasI && hasJ { return oi < oj }
+			if hasI && hasJ {
+				return oi < oj
+			}
 			return hasI
 		})
 		sort.SliceStable(pngNames, func(i, j int) bool {
 			oi, hasI := orderMap[strings.ToLower(pngNames[i])]
 			oj, hasJ := orderMap[strings.ToLower(pngNames[j])]
-			if hasI && hasJ { return oi < oj }
+			if hasI && hasJ {
+				return oi < oj
+			}
 			return hasI
 		})
 	}

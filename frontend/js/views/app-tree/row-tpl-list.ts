@@ -1,9 +1,8 @@
 // ===== 紧凑列表行 HTML 模板（24px 高度）=====
-import { renderDisplayName } from "../../utils/dom/display.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { fmt, sizeColor } from "../../utils/dom/format.ts";
 import type { TreeEntry } from "./loader.ts";
+import { fileRowCommon, folderRowCommon } from "./row-common.ts";
 
 /** 文件行 HTML（紧凑列表模式：icon + name + size，无 hover actions、无 date、无 tag dot） */
 export function listFileRowHTML(
@@ -14,13 +13,7 @@ export function listFileRowHTML(
   indent: number | null | undefined,
   rowCls = "",
 ): string {
-  const p = esc(e.path);
-  const fp = esc(e.fullPath || e.path);
-  const checked = e.banned ? "" : " on";
-  const ban = e.banned ? " ban" : "";
-  const typeIcon =
-    e.type === RESOURCE_TYPES.PACK ? "🎨" : e.type === RESOURCE_TYPES.YSM ? "💎" : icon;
-  const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
+  const { p, fp, checked, ban, typeIcon, pad } = fileRowCommon(e, icon, indent);
   return `<div class="fl-list${ban}${rowCls}" data-path="${p}" data-fullpath="${fp}"${pad}>
 <span class="ck${checked}" data-path="${p}" data-fullpath="${fp}"></span>
 <span class="ficon">${typeIcon}</span>
@@ -38,20 +31,9 @@ export function listFolderRowHTML(
   hasDisabled: boolean,
   indent: number | null | undefined,
 ): string {
-  const fi = isLocked ? "🔒" : "📁";
-  const nc = isLocked ? "var(--muted)" : "var(--txt)";
-  const lk = isLocked ? " locked" : "";
-  const ar = isOpen ? "▾" : "▸";
-  const ac = isOpen ? " open" : "";
-  // 文件夹开关：部分选中用半开
-  let ckCls = "";
-  if (hasEnabled && hasDisabled) {
-    ckCls = " on partial";
-  } else if (hasEnabled && !hasDisabled) {
-    ckCls = " on";
-  }
-  const dispName = renderDisplayName(k);
-  const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
+  const { fi, nc, lk, ar, ac, ckCls, dispName, pad } = folderRowCommon(
+    k, full, isOpen, isLocked, hasEnabled, hasDisabled, indent,
+  );
   return `<div class="fh-list${lk}" data-dir="${esc(full)}"${pad}>
 <span class="ck${ckCls}" data-dir="${esc(full)}"></span>
 <span class="ar${ac}">${ar}</span>

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-wails3-cli.mjs — Wails v3 CLI 拼写检查（wails 必须带 3）。
+ * wails3-cli-check.mjs — Wails v3 CLI 拼写检查（wails 必须带 3）。
  *
  * 背景：v2 的 `wails`（不带 3）在 v3 中为 `wails3`。AI/文档从旧资料抄
  * 命令时易写成不带 3 的裸 `wails X`——错 CLI 或漏 -ts 会生成 .js
@@ -16,7 +16,7 @@
  *   - docs/adr/ADR-001-wails3-migration.md  v2→v3 迁移对照表（左列刻意写旧命令）
  *
  * 用法：
- *   node scripts/check-wails3-cli.mjs       # 违规 → 退出码 1
+ *   node scripts/wails3-cli-check.mjs       # 违规 → 退出码 1
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
  */

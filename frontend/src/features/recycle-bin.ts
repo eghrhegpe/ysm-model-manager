@@ -19,10 +19,13 @@ export function initRecycleBin(app: RecycleHost): () => void {
   const root = app._root;
   const esc = (s: string): string => app._esc(s);
   const fmtSize = (s: number): string => app._fmtSize(s);
+  const onRefreshClick = (): void => {
+    loadRecycleBin();
+  };
   root
     .getElementById("recy-refresh")
-    ?.addEventListener("click", () => loadRecycleBin());
-  root.getElementById("recy-empty")?.addEventListener("click", async () => {
+    ?.addEventListener("click", onRefreshClick);
+  const onEmptyClick = async (): Promise<void> => {
     const confirmed = await modalConfirm({
       title: "清空回收站",
       icon: "♻️",
@@ -49,7 +52,8 @@ export function initRecycleBin(app: RecycleHost): () => void {
         type: "error",
       });
     }
-  });
+  };
+  root.getElementById("recy-empty")?.addEventListener("click", onEmptyClick);
   // 监听全局类型切换
   let currentType = localStorage.getItem("repo_rtype") || RESOURCE_TYPES.YSM;
   let _loadGen = 0;
@@ -212,5 +216,9 @@ export function initRecycleBin(app: RecycleHost): () => void {
   // 返回清理函数，供上层在组件销毁时调用
   return () => {
     if (unsubRtype) unsubRtype();
+    root
+      .getElementById("recy-refresh")
+      ?.removeEventListener("click", onRefreshClick);
+    root.getElementById("recy-empty")?.removeEventListener("click", onEmptyClick);
   };
 }

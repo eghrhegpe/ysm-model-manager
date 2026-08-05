@@ -118,7 +118,9 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 // isHardLink 判断文件是否为硬链接（nlink > 1）。
 // 实现按平台隔离：见 recycle_windows.go / recycle_other.go。
 
-// List 列出回收站中的文件
+// List 列出回收站中的文件。
+// ADR-038 D3.4：文件夹型模型（含 ysm.json 的目录）整组合并显示为单一条目，
+// 不再拆散成 ysm.json / 几何 / 动画 / 语言 json 等单文件；Restore 保持目录级还原。
 func (tm *TrashManager) List() []types.ModelEntry {
 	entries := []types.ModelEntry{}
 	filepath.WalkDir(tm.recycleDir, func(p string, d os.DirEntry, err error) error {
@@ -127,6 +129,20 @@ func (tm *TrashManager) List() []types.ModelEntry {
 			return nil
 		}
 		if d.IsDir() {
+			// 文件夹模型整组：目录含 ysm.json 清单 → 合并为单一条目，跳过目录内部文件
+			if _, statErr := os.Stat(filepath.Join(p, "ysm.json")); statErr == nil {
+				info, _ := d.Info()
+				e := types.ModelEntry{
+					Name: filepath.Base(p),
+					Path: p,
+					Ext:  "",
+				}
+				if info != nil {
+					e.Size = dirSize(p)
+				}
+				entries = append(entries, e)
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(p))
@@ -147,6 +163,21 @@ func (tm *TrashManager) List() []types.ModelEntry {
 		return nil
 	})
 	return entries
+}
+
+// dirSize 递归统计目录总大小（文件夹模型整组条目显示用）
+func dirSize(dir string) int64 {
+	var total int64
+	_ = filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		if info, err := d.Info(); err == nil {
+			total += info.Size()
+		}
+		return nil
+	})
+	return total
 }
 
 // Restore 从回收站恢复到原目录

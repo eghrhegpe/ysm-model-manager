@@ -79,13 +79,17 @@ function compactRanges(lines) {
 /** 从 coverage key（生成机绝对路径）提取仓库相对路径，跨平台免疫。
  *  coverage-final.json 的 key 是生成时机的绝对路径（Windows: C:\...；Linux: /home/...），
  *  若换机解析，path.relative(ROOT, key) 会因平台路径风格不一致而错乱。
- *  这里定位仓库顶层目录段（/frontend|go|internal/...）取其后部分，不依赖盘符与分隔符；
- *  找不到时回退 relPosix（同平台场景）。 */
+ *  策略：同平台场景 relPosix 结果恒正确且以仓库顶层段开头，优先采用；
+ *  跨平台场景（非 frontend/go/internal 前缀）定位顶层段，取【最后一次】出现，
+ *  避免仓库父路径含同名段（如 /home/u/go/ysm/...）时误命中祖先段。 */
 function repoRel(p) {
+  const rel = relPosix(p);
+  if (rel.startsWith('frontend/') || rel.startsWith('go/') || rel.startsWith('internal/')) return rel;
   const posix = toPosix(p);
-  const m = posix.match(/\/(frontend|go|internal|scripts|tests)\//);
+  const matches = [...posix.matchAll(/\/(frontend|go|internal)\//g)];
+  const m = matches[matches.length - 1];
   if (m) return posix.slice(m.index + 1);
-  return relPosix(p);
+  return rel;
 }
 
 const raw = JSON.parse(fs.readFileSync(inputPath, 'utf-8'));

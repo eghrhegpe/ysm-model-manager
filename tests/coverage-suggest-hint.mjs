@@ -10,10 +10,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ROOT } from '../scripts/_lib/scan-files.mjs';
-import { buildBlock } from '../scripts/hooks/coverage-suggest-hint.mjs';
+import { buildBlock, MAX_SUGGEST_FILES } from '../scripts/hooks/coverage-suggest-hint.mjs';
 import { stripBlock } from '../scripts/hooks/knowledge-affected-hint.mjs';
 import { BLOCK_START, BLOCK_END } from '../scripts/hooks/coverage-suggest-hint.mjs';
 
@@ -46,6 +46,19 @@ check('buildBlock 无 uncoveredRanges', () => {
   const block = buildBlock([{ file: 'frontend/src/b.ts', stmts: 10, uncoveredRanges: '' }]);
   assert.ok(block.includes('- [10%] frontend/src/b.ts'));
   assert.ok(!block.includes('（未覆盖行）'));
+});
+
+check('buildBlock 超上限省略', () => {
+  const files = Array.from({ length: MAX_SUGGEST_FILES + 5 }, (_, i) => ({
+    file: `frontend/src/f${i}.ts`,
+    stmts: 10 + i,
+    uncoveredRanges: `${i}`,
+  }));
+  const block = buildBlock(files);
+  const lines = block.split('\n');
+  // 首行标记 + 20 个文件 + 1 省略行 + 尾标记
+  assert.equal(lines.length, 1 + MAX_SUGGEST_FILES + 1 + 1);
+  assert.ok(lines.some((l) => l.includes(`其余 5 个见 node scripts/test-coverage-report.mjs`)));
 });
 
 // ── 2. stripBlock 自定义标记幂等 ──
@@ -114,6 +127,33 @@ check('逃生阀 YSM_SKIP_COVERAGE_HINT=1 不写区块', () => {
   } finally {
     try { fs.unlinkSync(msgFile); } catch { /* ignore */ }
   }
+});
+
+// ── 6. merge/squash 跳过 ──
+check('merge/squash 提交跳过（不写区块）', () => {
+  for (const source of ['merge', 'squash']) {
+    const msgFile = path.join(ROOT, `.cov-hint-${source}.txt`);
+    fs.writeFileSync(msgFile, `feat: ${source}\n`);
+    try {
+      execFileSync(process.execPath, [HINT, msgFile, source], { encoding: 'utf8' });
+      const msg = fs.readFileSync(msgFile, 'utf8');
+      assert.ok(!msg.includes(BLOCK_START), `${source} 应跳过`);
+    } finally {
+      try { fs.unlinkSync(msgFile); } catch { /* ignore */ }
+    }
+  }
+});
+
+// ── 7. 缺数据 graceful（脚本级）──
+check('--suggest 缺数据 graceful（exit 0 且提示）', () => {
+  const missing = path.join(ROOT, 'frontend/coverage/__nonexistent__.json');
+  const r = spawnSync(
+    process.execPath,
+    [path.join(ROOT, 'scripts/test-coverage-report.mjs'), '--suggest', '--input', missing],
+    { encoding: 'utf8' },
+  );
+  assert.equal(r.status, 0, '缺数据应 exit 0');
+  assert.ok((r.stderr || '').includes('未找到覆盖率产物'), 'stderr 应提示先跑 test:coverage');
 });
 
 // ── 汇总 ──

@@ -1,6 +1,6 @@
 # ADR-022：VitePress 建站
 
-- **状态**：🔄 部分采纳（内容体系已就绪；VitePress 迁移完成——首页 home layout 无导航，构建/发布待验证，见 §3）
+- **状态**：✅ 已采纳（VitePress 迁移完成 + 本地构建验证通过 2026-08-05 + CI 部署流水线就绪 `pages-deploy.yml`）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`docs/guide/`（26 篇）/ `docs/adr/` / `docs/knowledge/` / `docs/Gemfile` / `docs/_config.yml` / ADR-018 / 联邦 MikuMikuAR（VitePress 站点对标）
@@ -57,7 +57,8 @@
 - **方案漂移（2026-08-04 核实）**：原决策 VitePress，实际落地 **Jekyll + just-the-docs**（`docs/_config.yml` 已入库：`remote_theme: just-the-docs/just-the-docs`、`baseurl: /ysm-model-manager`、`heading_anchors: true`、jekyll-seo-tag；`.vitepress/` 不存在，`docs/Gemfile` + `Gemfile.lock` + `_sass/` 为 Jekyll 生态）。理由（源自 _config.yml 注释）：GitHub Pages 原生支持 Jekyll 零构建配置，just-the-docs 提供原生侧边栏 + 站内搜索，观感对齐 MikuMikuAR VitePress 站点浅色基调。**收敛指引：以 Jekyll + just-the-docs 为当前唯一方案，VitePress 不作为候选（废弃确认中，无需 AI/维护者处理）。**
 - **迁移回 VitePress（2026-08-04）**：Jekyll + just-the-docs **首页强制左侧导航（无 home 布局特例）**，docs/ 全量 255+ 文档链接挤占主站宣传能力；迁移回 VitePress（回归本 ADR 原决策，对标 MikuMikuAR）——`docs/.vitepress/config.mjs` + `docs/package.json` + `docs/index.md` 改 `layout: home`（hero + features 卡片，**首页无导航**）+ 显式 `sidebar` 导航收敛（只列用户向内容）。Jekyll 配置（`_config.yml` / `Gemfile` / `_sass`）已移除。
 - 站点部署目标（GitHub Pages 项目页，baseurl 已配置）待构建发布验证；
-- 本 ADR 状态随建站进度更新（🔄 → ✅）。
+- **构建验证通过（2026-08-05）**：本地 `cd docs && npm run build` 15s 完成，产物完整（首页/ADR/guide 全渲染）；CI 部署流水线 `pages-deploy.yml`（build→deploy）配置就绪，契约测试+link-checker 作部署前门禁。
+- 本 ADR 状态随建站进度更新（🔄 → ✅，2026-08-05 升级）。
 
 ## 4. 数据溯源
 

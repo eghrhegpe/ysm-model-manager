@@ -585,6 +585,24 @@ export async function renderModel3D(
 
   const rebuildDebug = (): void => {
     if (_debugGroup) {
+      // 释放旧 debug 组内的几何体/材质/纹理，防止内存泄漏
+      _debugGroup.traverse((c) => {
+        const obj = c as THREE.Mesh | THREE.Line | THREE.Sprite;
+        if ((obj as THREE.Mesh).isMesh) {
+          (obj as THREE.Mesh).geometry?.dispose();
+          const m = (obj as THREE.Mesh).material;
+          if (Array.isArray(m)) m.forEach((x) => x.dispose());
+          else m?.dispose();
+        } else if ((obj as THREE.Line).isLine) {
+          (obj as THREE.Line).geometry?.dispose();
+          const lm = (obj as THREE.Line).material;
+          if (Array.isArray(lm)) lm.forEach((x) => x.dispose());
+          else lm?.dispose();
+        } else if ((obj as THREE.Sprite).isSprite) {
+          (obj as THREE.Sprite).material.map?.dispose();
+          (obj as THREE.Sprite).material?.dispose();
+        }
+      });
       scene.remove(_debugGroup);
       _debugGroup = null;
     }

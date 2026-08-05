@@ -291,6 +291,10 @@ export function bindRepoEvents(
 
   // 对外暴露的清理函数（供上层在视图销毁时调用）
   const externalCleanup = async (): Promise<void> => {
+    // 移除所有 DOM 事件监听器
+    sr.querySelectorAll(".gh-back-repo, #gh-repo-srch, .gh-toggle-missing, #gh-repo-list, .gh-dl-selected, .gh-select-all input[type=checkbox]").forEach((el) => {
+      el.replaceWith(el.cloneNode(true));
+    });
     await queue.cancel();
     selectedSet.clear();
     queue.destroy();

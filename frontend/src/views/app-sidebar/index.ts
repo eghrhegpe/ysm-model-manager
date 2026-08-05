@@ -154,7 +154,10 @@ class AppSidebar extends HTMLElement {
     // 菜单内点击也阻止冒泡
     pushMenu.addEventListener("click", (e) => e.stopPropagation());
     pullMenu.addEventListener("click", (e) => e.stopPropagation());
-    // 点击其他地方关闭
+    // 点击其他地方关闭（先移除旧 handler 防止重复注册）
+    if (this._docClickHandler) {
+      document.removeEventListener("click", this._docClickHandler);
+    }
     this._docClickHandler = () => closeAllMenus();
     document.addEventListener("click", this._docClickHandler);
 

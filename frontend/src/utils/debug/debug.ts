@@ -42,7 +42,9 @@ export function dbg(tag: string, ...args: unknown[]): void {
       args: args.map((a) => safeStr(a)),
     });
     if (ring.length > RING_MAX) ring.shift();
-  } catch (_) {}
+  } catch (e) {
+    console.error("[DBG] ring 写入失败:", e);
+  }
 }
 
 

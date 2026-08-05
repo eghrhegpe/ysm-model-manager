@@ -150,9 +150,13 @@ export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
     const { title, icon, items, placeholder, okText } = opts;
     const overlay = document.createElement("div");
     overlay.className = "dlg-overlay";
+    overlay.tabIndex = -1;
     overlay.onclick = (e: MouseEvent): void => {
       if (e.target === overlay) closeDlg(overlay, resolve, null);
     };
+    overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
+      if (e.key === "Escape") closeDlg(overlay, resolve, null);
+    });
 
     const box = document.createElement("div");
     box.className = "dlg-box dlg-pad";
@@ -182,6 +186,7 @@ export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     registerDlg(overlay, () => closeDlg(overlay, resolve, null));
+    overlay.focus();
 
     const select = box.querySelector("#ms-select") as HTMLSelectElement;
     select.focus();

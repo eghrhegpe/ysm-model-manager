@@ -13,9 +13,15 @@ type EscFn = (s: unknown) => string;
  * @param esc - HTML 转义函数
  */
 export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
+  // 刷新按钮：按当前激活的诊断 tab 刷新对应面板
   root
     .getElementById("diag-refresh")
-    ?.addEventListener("click", () => loadDiagnosticsLogs(root, esc));
+    ?.addEventListener("click", () => {
+      const active = root.querySelector(".diag-btn[data-diag].active") as HTMLElement | null;
+      const name = active?.dataset.diag;
+      if (name === "runtime") loadRuntimeLogs(root, esc);
+      else loadDiagnosticsLogs(root, esc);
+    });
   root.getElementById("diag-clear")?.addEventListener("click", async () => {
     const { ClearImportLogs } = await getApp();
     await ClearImportLogs();
@@ -37,17 +43,21 @@ export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
         .querySelectorAll(".diag-btn[data-diag]")
         .forEach((b) => b.classList.toggle("active", b === btn));
       const logPanel = root.getElementById("diag-log") as HTMLElement | null;
+      const runtimePanel = root.getElementById("diag-runtime") as HTMLElement | null;
       const conflictPanel = root.getElementById("diag-conflict") as HTMLElement | null;
       if (logPanel) logPanel.style.display = name === "log" ? "" : "none";
+      if (runtimePanel) runtimePanel.style.display = name === "runtime" ? "" : "none";
       if (conflictPanel) conflictPanel.style.display = name === "conflict" ? "" : "none";
       // 重启入场动画
-      const activePanel = name === "log" ? logPanel : conflictPanel;
+      const activePanel =
+        name === "log" ? logPanel : name === "runtime" ? runtimePanel : conflictPanel;
       if (activePanel) {
         activePanel.style.animation = "none";
         void activePanel.offsetHeight;
         activePanel.style.animation = "";
       }
       if (name === "log") loadDiagnosticsLogs(root, esc);
+      if (name === "runtime") loadRuntimeLogs(root, esc);
     });
   });
 
@@ -85,6 +95,23 @@ interface ImportLogLike {
   Operation?: string;
 }
 
+/** 操作类型 → 中文标签 + 图标（分组标题与行内徽标共用） */
+const OP_META: Record<string, { label: string; icon: string }> = {
+  import: { label: "导入", icon: "📥" },
+  scan: { label: "扫描", icon: "🔍" },
+  download: { label: "下载", icon: "⬇️" },
+  sync: { label: "同步", icon: "🔄" },
+  rename: { label: "重命名", icon: "✏️" },
+  delete: { label: "删除", icon: "🗑️" },
+  ui: { label: "界面", icon: "⚠️" },
+};
+
+/** 未知 op 回退到通用标签，避免显示裸英文 */
+function opMeta(op: string | undefined): { label: string; icon: string } {
+  if (op && OP_META[op]) return OP_META[op];
+  return { label: op || "导入", icon: "🧾" };
+}
+
 async function loadDiagnosticsLogs(root: ShadowRoot, esc: EscFn): Promise<void> {
   const list = root.getElementById("diag-log-list");
   if (!list) return;
@@ -117,8 +144,23 @@ async function loadDiagnosticsLogs(root: ShadowRoot, esc: EscFn): Promise<void> 
       return;
     }
 
-    list.innerHTML = filtered
-      .map((l, i) => {
+    // 按操作类型分组（保持时间倒序），组内行带中文徽标
+    const groups = new Map<string, ImportLogLike[]>();
+    for (const l of filtered) {
+      const key = l.Operation || "import";
+      const arr = groups.get(key);
+      if (arr) arr.push(l);
+      else groups.set(key, [l]);
+    }
+
+    const parts: string[] = [];
+    for (const [op, items] of groups) {
+      const meta = opMeta(op);
+      parts.push(
+        `<div class="log-group" style="padding:4px 16px 2px;font-size:var(--fs-xs);color:var(--muted);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd);background:var(--surf)">
+<span>${meta.icon} ${meta.label}</span><span style="margin-left:auto">${items.length} 条</span></div>`,
+      );
+      items.forEach((l, i) => {
         const statusLabel =
           l.Status === "success" ? "✅" : l.Status === "failed" ? "❌" : "⏭️";
         const t = l.Timestamp
@@ -138,22 +180,64 @@ async function loadDiagnosticsLogs(root: ShadowRoot, esc: EscFn): Promise<void> 
                 "<br>$1：",
               )
             : "");
-        const opBadge = l.Operation && l.Operation !== "import"
-          ? '<span class="log-op">' + esc(l.Operation) + "</span>"
-          : "";
         // ⚠️ 原 JS 的 `${status}` 引用了未定义变量（模板串求值抛 ReferenceError，
         // 被外层 catch 吞掉 → 日志列表永远显示「加载日志失败」）。TS 编译期暴露，
         // 按意图改为 l.Status（与 statusLabel 同源）
-        return `<div class="log-row" style="animation-delay:${Math.min(i * 20, 400)}ms">
+        parts.push(
+          `<div class="log-row" style="animation-delay:${Math.min(i * 20, 400)}ms">
 <span class="log-status ${l.Status || ""}">${statusLabel}</span>
 <span class="log-msg">${msg}</span>
+<span class="log-time">${t}</span>
+</div>`,
+        );
+      });
+    }
+    list.innerHTML = parts.join("");
+  } catch (_) {
+    list.innerHTML =
+      '<div class="stat-row diag-stat diag-stat-error">加载日志失败</div>';
+  }
+}
+
+/** 运行时日志条目（仅用到的字段） */
+interface RuntimeLogLike {
+  Message?: string;
+  Timestamp?: string | number;
+}
+
+/** 加载运行时日志（watcher/sync 等标准库 log 输出） */
+async function loadRuntimeLogs(root: ShadowRoot, esc: EscFn): Promise<void> {
+  const list = root.getElementById("diag-runtime-list");
+  if (!list) return;
+  try {
+    const { GetRuntimeLogs } = await getApp();
+    const logs: RuntimeLogLike[] = (await GetRuntimeLogs()) || [];
+    if (!logs || !logs.length) {
+      list.innerHTML =
+        '<div class="stat-row diag-stat diag-stat-muted">暂无运行时日志</div>';
+      return;
+    }
+    list.innerHTML = logs
+      .slice(-300)
+      .reverse()
+      .map((l, i) => {
+        const t = l.Timestamp
+          ? new Date(l.Timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
+          : "";
+        return `<div class="log-row" style="animation-delay:${Math.min(i * 20, 400)}ms">
+<span class="log-status">🕹️</span>
+<span class="log-msg" style="white-space:pre-wrap">${esc(l.Message || "")}</span>
 <span class="log-time">${t}</span>
 </div>`;
       })
       .join("");
   } catch (_) {
     list.innerHTML =
-      '<div class="stat-row diag-stat diag-stat-error">加载日志失败</div>';
+      '<div class="stat-row diag-stat diag-stat-error">加载运行时日志失败</div>';
   }
 }
 

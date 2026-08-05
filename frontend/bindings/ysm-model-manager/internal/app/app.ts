@@ -98,12 +98,20 @@ export function ClearImportLogs(): $CancellablePromise<void> {
 }
 
 /**
- * ClearInstanceResources 清空指定整合包中已同步的文件（走回收站）
+ * ClearInstanceResources 清空指定整合包中已同步的文件
  * insName: 整合包名, rtype: 资源类型（空=全部, 非空=只清此类型）
- * 返回清除的文件数量
+ * 返回清除的文件数量。整合包文件是仓库的副本/链接，删除后可从仓库重新推送恢复；
+ * 实例文件在仓库根内才移回收站，其余直接删除（见 clearInstanceDir）
  */
 export function ClearInstanceResources(insName: string, rtype: string): $CancellablePromise<number> {
     return $Call.ByID(310409492, insName, rtype);
+}
+
+/**
+ * ClearRuntimeLogs 清空运行时日志缓冲
+ */
+export function ClearRuntimeLogs(): $CancellablePromise<void> {
+    return $Call.ByID(232184103);
 }
 
 /**
@@ -114,9 +122,7 @@ export function ClearScanCache(): $CancellablePromise<void> {
 }
 
 /**
- * ========== 模型复制 ==========
- * CopyModelFile 将 src 复制到 dstDir 目录下（保留原文件名）
- * dstDir 必须是 FilesRoot 的子目录（防路径遍历）
+ * CopyModelFile 复制（root 传 FilesRoot 做路径安全校验）
  */
 export function CopyModelFile(src: string, dstDir: string): $CancellablePromise<void> {
     return $Call.ByID(2849400957, src, dstDir);
@@ -156,6 +162,9 @@ export function DebugExtractCreatorAvatar(authorName: string): $CancellablePromi
     return $Call.ByID(1802835376, authorName);
 }
 
+/**
+ * DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle）
+ */
 export function DeduplicateCustomDir(customDir: string): $CancellablePromise<[number, number]> {
     return $Call.ByID(2166378965, customDir);
 }
@@ -272,7 +281,7 @@ export function FindPreviewImage(modelPath: string): $CancellablePromise<string>
 }
 
 /**
- * GenerateRepoIndex 扫描仓库目录，生成 index.json
+ * GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板）
  */
 export function GenerateRepoIndex(repoPath: string): $CancellablePromise<string> {
     return $Call.ByID(1563740856, repoPath);
@@ -283,6 +292,14 @@ export function GenerateRepoIndex(repoPath: string): $CancellablePromise<string>
  */
 export function GetAppVersion(): $CancellablePromise<string> {
     return $Call.ByID(115297084);
+}
+
+/**
+ * GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application Support）
+ * 供前端 UI 展示，避免硬编码 Windows 路径
+ */
+export function GetConfigPath(): $CancellablePromise<string> {
+    return $Call.ByID(3095584372);
 }
 
 export function GetGlobalCustomDir(mcRoot: string): $CancellablePromise<string> {
@@ -302,6 +319,7 @@ export function GetInstanceStatus(mcRoot: string, repoDir: string): $Cancellable
 
 /**
  * GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表）
+ * GetInstanceSyncStatus 整合包同步状态（组装逻辑已下沉 go/instance，此处仅注入依赖）
  */
 export function GetInstanceSyncStatus(instanceName: string): $CancellablePromise<string> {
     return $Call.ByID(839308247, instanceName);
@@ -367,6 +385,13 @@ export function GetRepoRoot(rtype: string): $CancellablePromise<string> {
  */
 export function GetResourceInstanceStatus(rtype: string, mcRoot: string, repoDir: string): $CancellablePromise<types$0.InstanceStatus[] | null> {
     return $Call.ByID(779607888, rtype, mcRoot, repoDir);
+}
+
+/**
+ * GetRuntimeLogs 获取运行时日志（watcher/sync 等标准库 log 输出）
+ */
+export function GetRuntimeLogs(): $CancellablePromise<types$0.RuntimeLog[] | null> {
+    return $Call.ByID(3524121676);
 }
 
 /**
@@ -511,6 +536,9 @@ export function ListFileNames(dir: string): $CancellablePromise<string[] | null>
     return $Call.ByID(223101035, dir);
 }
 
+/**
+ * ListModelAuthors 统计 [作者] 前缀（走扫描缓存，不重复读磁盘）
+ */
 export function ListModelAuthors(): $CancellablePromise<types$0.AuthorInfo[] | null> {
     return $Call.ByID(2783678748);
 }
@@ -551,7 +579,7 @@ export function MergeWorkshopCreatorsFromJSON(jsonContent: string): $Cancellable
 }
 
 /**
- * ========== 模型移动 ==========
+ * ========== 模型移动/复制 ==========
  */
 export function MoveModelFile(src: string, dstDir: string): $CancellablePromise<void> {
     return $Call.ByID(1018628389, src, dstDir);
@@ -587,7 +615,7 @@ export function OpenInstanceFolder(instDir: string, rtype: string): $Cancellable
 }
 
 /**
- * PullResourceFromInstance 将整合包中多余的资源拉取到全局
+ * PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync）
  */
 export function PullResourceFromInstance(rtype: string, instanceName: string): $CancellablePromise<number> {
     return $Call.ByID(3336031775, rtype, instanceName);
@@ -595,6 +623,7 @@ export function PullResourceFromInstance(rtype: string, instanceName: string): $
 
 /**
  * PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库
+ * PullSingleResourceFromInstance 从整合包拉取单个资源（复制核心下沉 go/sync）
  */
 export function PullSingleResourceFromInstance(rtype: string, srcPath: string, instanceName: string): $CancellablePromise<void> {
     return $Call.ByID(2266526243, rtype, srcPath, instanceName);
@@ -602,13 +631,14 @@ export function PullSingleResourceFromInstance(rtype: string, srcPath: string, i
 
 /**
  * PushResourceToInstance 将全局中缺失的资源推送到整合包
+ * PushResourceToInstance 推送缺失资源到整合包（执行循环下沉 go/sync）
  */
 export function PushResourceToInstance(rtype: string, instanceName: string): $CancellablePromise<number> {
     return $Call.ByID(3583202917, rtype, instanceName);
 }
 
 /**
- * PushSingleResourceToInstance 推送单个文件/文件夹到整合包
+ * PushSingleResourceToInstance 推送单个资源到整合包（分派核心下沉 go/sync）
  */
 export function PushSingleResourceToInstance(rtype: string, instanceName: string, filePath: string): $CancellablePromise<void> {
     return $Call.ByID(3553253805, rtype, instanceName, filePath);
@@ -760,14 +790,13 @@ export function ScanCustomModels(dir: string): $CancellablePromise<types$0.Model
 
 /**
  * ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者
- * 返回统一格式的创作者列表（可直接合并到 creators.json）
  */
 export function ScanLocalAuthors(): $CancellablePromise<types$0.WorkshopCreator[] | null> {
     return $Call.ByID(3176279871);
 }
 
 /**
- * ========== 模型扫描 ==========
+ * ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志
  */
 export function ScanModelEntries(dir: string): $CancellablePromise<types$0.ModelEntry[] | null> {
     return $Call.ByID(963930825, dir);
@@ -868,6 +897,9 @@ export function StopProxy(): $CancellablePromise<void> {
     return $Call.ByID(3863670921);
 }
 
+/**
+ * SyncCustomToRepo 同步整合包自定义目录到仓库（执行逻辑下沉 go/sync）
+ */
 export function SyncCustomToRepo(customDir: string, repoDir: string): $CancellablePromise<number> {
     return $Call.ByID(1317956650, customDir, repoDir);
 }
@@ -885,6 +917,7 @@ export function SyncResources(rtype: string, instanceName: string): $Cancellable
 
 /**
  * ========== 启用/禁用 ==========
+ * ToggleModelEnable 切换 .ban 状态（fileops 纯逻辑 + 薄壳缓存失效）
  */
 export function ToggleModelEnable(path: string): $CancellablePromise<boolean> {
     return $Call.ByID(3300558263, path);

@@ -16,6 +16,7 @@ export type {
     InstanceStatus,
     ModelEntry,
     PackInfo,
+    RuntimeLog,
     SearchResult,
     VersionInstance,
     WindowState,

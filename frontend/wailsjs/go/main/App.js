@@ -58,6 +58,10 @@ export function ClearImportLogs() {
   return window['go']['main']['App']['ClearImportLogs']();
 }
 
+export function ClearRuntimeLogs() {
+  return window['go']['main']['App']['ClearRuntimeLogs']();
+}
+
 export function ClearInstanceResources(arg1, arg2) {
   return window['go']['main']['App']['ClearInstanceResources'](arg1, arg2);
 }
@@ -192,6 +196,10 @@ export function GetGlobalCustomDir(arg1) {
 
 export function GetImportLogs() {
   return window['go']['main']['App']['GetImportLogs']();
+}
+
+export function GetRuntimeLogs() {
+  return window['go']['main']['App']['GetRuntimeLogs']();
 }
 
 export function GetInstanceStatus(arg1, arg2) {

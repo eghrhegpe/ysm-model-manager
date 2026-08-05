@@ -88,10 +88,17 @@ const onDragOver = (e: DragEvent): void => {
 
 const onDragLeave = (e: DragEvent): void => {
   if (PageStore.currentPage !== "repository") return;
-  // 真正离开浏览器视口：relatedTarget 为 null 即光标离开文档。
-  // 这是 OS 文件拖出窗口后松手（dragend 不触发）仍能收起遮罩的关键。
-  // 不依赖 clientX/Y 边界判断 —— 否则光标停在窗口四角（坐标≈0）且仍在拖拽时会误判为离开。
-  if (e.relatedTarget === null) {
+  // 真正离开浏览器视口：relatedTarget 为 null（光标离开文档），
+  // 或坐标落在视口边界外（带 2px 小负阈值，避免光标停在窗口四角坐标≈0 时误判）。
+  // 这是 OS 文件拖出窗口后松手（dragend 不触发）仍能收起遮罩的关键；
+  // WebView2 下 relatedTarget 可能非 null，坐标兜底是防遮罩卡屏的必要保险。
+  const leftWindow =
+    e.relatedTarget === null ||
+    e.clientX < -2 ||
+    e.clientY < -2 ||
+    e.clientX > window.innerWidth + 2 ||
+    e.clientY > window.innerHeight + 2;
+  if (leftWindow) {
     dragDepth = 0;
     hideDropOverlay();
     return;

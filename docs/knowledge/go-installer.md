@@ -53,6 +53,8 @@ use_when:
 - 错误分类 **errno 优先且分平台**（`errnoIs`，Windows 用 Win32 码、Unix 用 POSIX errno，两者数值语义不同不可混用）：`linkErr` 跨设备 = EXDEV(18) / ERROR_NOT_SAME_DEVICE(17)（`installer.go:393`）、权限 = EACCES(13)、EPERM(1) / ERROR_ACCESS_DENIED(5)（`installer.go:396`）；`symlinkErr` 特权 = EPERM(1) / ERROR_PRIVILEGE_NOT_HELD(1314)、EACCES(13) / ERROR_ACCESS_DENIED(5)（`installer.go:413`）
 - 文本兜底匹配已收窄（`installer.go:401`）：只认 `cross-device` / `different device` / `not same device` 三个跨设备特征短语，不再用 `different` 这类过宽子串误伤无关错误；兜底仅作用于 `linkErr` 的跨设备判定，`symlinkErr` 无跨设备分支，只按 `access` / `privilege` / `permission` 归权限类（`installer.go:418`），两者最终都有兜底 `LINK_FAILED`（"硬链接失败" / "符号链接失败"）
 - 复制中断/失败会删除半截目标文件，成功后 `chmod 0644`；`src == dst` 直接返回
+- **原子文件替换模式**（审计发现）：写入文件时先写入 `.tmp` 临时文件，成功后 `os.Rename` 原子替换目标文件；失败时删除临时文件，不破坏原文件（`linkOrCopyLocked` / `symlinkOrCopyLocked` 的 `.link-tmp` / `.symlink-tmp` 模式）。`copyFileLocked` 失败时也删除半截目标文件（`os.Remove(dst)`），与 `fileops.copyFile` 对齐（P2）。
+- **TOCTOU 缩小模式**（审计发现）：文件存在性检查（`os.Stat`）和写入操作（`os.WriteFile`/`os.Rename`）应在**同一函数内**完成，缩小时间窗口。`InstallWithOverlay` 的防覆盖检查已移入 `copyFileLocked` 内部（P2），不再在调用方和 `copyFileLocked` 之间留有竞态窗口。
 - `installDirRecursive` 单个文件失败不中断整棵树，逐条记日志并聚合成一条错误返回；扩展名白名单：`mmd-skin` → `.pmx/.pmd/.png/.tga/.spa/.sph`，`ysm` → `.json/.png/.jpg/.jpeg`，其余 rtype 全放行
 - 扩展名校验兼容 `.ban` 变体（先剥 `.ban` 再判 `types.IsSupportedExt`）
 

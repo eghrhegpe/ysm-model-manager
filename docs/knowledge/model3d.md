@@ -65,6 +65,7 @@ use_when:
 
 - **致命陷阱 #11**：3D 坐标变换是全项目 fix 次数最多的区域（model3d.ts 历史 fix 第一）。坐标口径必须对齐 YSMViewer：pivot X 取反、`from.x = origin.x - size.x`（Go go/threejs 实现，JS 兜底 model3d-spec.ts 必须同口径）。改 model2d/model3d/threejs spec 前先 grep `docs/archive/bug-chronicle.md`，改完用自由相机近距验证
 - cleanup() 必须完整执行：cancelAnimationFrame、移除 keydown/keyup/mouse/resize/fullscreenchange 全部监听、dispose controls/renderer/geometry/material、清空容器 —— 缺一即泄漏
+- **Three.js 资源 dispose 模式**（审计发现）：移除 `Object3D` 时，`Object3D.remove()` 只从场景图移除引用，**不释放底层 WebGL 资源**。必须遍历子对象并调用 `geometry?.dispose()`、`material?.dispose()`、`texture?.dispose()`。`rebuildDebug`（`model3d.ts:586-605`）和 `makeTextTexture`（`model3d.ts:663-683`）是典型场景——频繁切换 debug 模式或 pivot 模式每骨骼一个标签，不 dispose 会持续累积 GPU 内存泄漏（P1）。
 - 几何计算（顶点/UV/四元数）在 Go 端完成，前端不得私改几何口径；JS 兜底仅为 Go spec 不可用时的降级
 - 治理红线 R1：模块级状态不挂 `window.__*`
 

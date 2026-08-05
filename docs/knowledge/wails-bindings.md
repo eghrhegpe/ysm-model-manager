@@ -277,6 +277,8 @@ use_when:
 - `SetApp` / `SetMainWindow` 是启动期框架接线，前端业务代码不得调用。
 - Go 端的 `ServiceStartup` / `ServiceShutdown`（服务生命周期）与 `AddOpLog`（内部操作日志）不在生成绑定中，前端不可调用（共 156 个 Go 方法，前端可用 153 个）。
 - 所有异常路径必须有 toast 反馈；异步按钮操作在 `finally` 中恢复状态（致命陷阱 #3）。
+- **路径守卫模式**（审计发现）：所有 Wails Binding 暴露的文件操作方法（`ReadFileBytes`、`SaveScreenshotFile`、`DeleteModelDir`、`ListFileNames`、`ListAllFilePaths`、`CheckFileExists`、`CreateDir`、`RenameDir`、`RemoveDir`、`MoveModelFile`）在操作前统一加 `paths.IsInside(a.ysmRoot(), path)` 守卫，限制操作范围在 `FilesRoot` 内。原因：Wails Binding 是前端可直接调用的 API，无路径校验会导致任意文件读写（P1 安全漏洞）。新增文件操作 Binding 时必须遵循此模式。
+- **URL 校验模式**（审计发现）：`EnqueueDownloads` 入队前校验 URL scheme，仅放行 `http://` / `https://`，拒绝 `file://`、`javascript:` 等（P2 安全漏洞）。
 
 ## 相关
 

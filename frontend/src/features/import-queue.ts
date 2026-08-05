@@ -135,11 +135,15 @@ export function initImportQueue(app: ImportQueueHost): () => void {
 
     // "读取作者"已勾选时，自动为新文件读取 YSM 头部
     setTimeout(async () => {
-      if (
-        (root.getElementById("dl-from-header") as HTMLInputElement | null)
-          ?.checked
-      ) {
-        await loadHeaderFromBase64();
+      try {
+        if (
+          (root.getElementById("dl-from-header") as HTMLInputElement | null)
+            ?.checked
+        ) {
+          await loadHeaderFromBase64();
+        }
+      } catch (err) {
+        console.warn("[import-queue] 自动读取头部失败:", err);
       }
     }, 0);
   };
@@ -615,16 +619,25 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       }
       return;
     }
-    Promise.all(entries.map((entry) => readEntry(entry, ""))).then(() => {
-      updateQueueCount();
-      if (fileQueue.length > 0) {
+    Promise.all(entries.map((entry) => readEntry(entry, "")))
+      .then(() => {
+        updateQueueCount();
+        if (fileQueue.length > 0) {
+          bus.emit("toast:show", {
+            msg: `📥 已加入队列: ${fileQueue.length} 个文件`,
+            duration: 2000,
+            type: "success",
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn("[import-queue] 读取拖入项失败:", err);
         bus.emit("toast:show", {
-          msg: `📥 已加入队列: ${fileQueue.length} 个文件`,
-          duration: 2000,
-          type: "success",
+          msg: "❌ 读取拖入文件失败",
+          duration: 3000,
+          type: "error",
         });
-      }
-    });
+      });
   };
 
   // 非 YSM 文件直接导入（跳过命名表单）

@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseFrontmatter } from './_lib/frontmatter.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -39,7 +40,7 @@ function parseCard(text) {
 }
 
 function main() {
-  const isCheck = process.argv.includes('--check');
+  const { check: isCheck } = parseArgs(process.argv.slice(2), { bools: ['check'] });
 
   if (!fs.existsSync(KNOW_DIR)) {
     console.error('❌ docs/knowledge/ 不存在，请确认在仓库根目录运行');

@@ -10,7 +10,7 @@
 > 涉及 ADR：先 grep `docs/adr/` 看是否已有类似实现；写新 ADR 走叫号脚本（命令与流程见下方「ADR 规则」，禁止手写编号）。
 > 文档地图优先，确认代码归属，但允许探索。发现地图过期时报告漂移、以源码为准。
 > 编号只允许给 ADR、novel 写。
-> 改完即验，顺带提交（构建/跑得起来）：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）。 涉及文档改动时用`node scripts/doctor.mjs`。
+> 改完即验，顺带提交（构建/跑得起来）：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）。 涉及文档改动时用 `node scripts/doctor.mjs --docs`（轻量秒级，跳过 Go/前端编译与测试）；改代码或发版前用全量 `node scripts/doctor.mjs`。
 > 信任本机改动，提交代码时：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。会有 GitHub PR review 审核，别怕错误。
 > 放弃低效的 `git stash` / `git stash push` / `git stash pop` 指令。
 > 前端建议过一遍命名表（`docs/Design.md` §12 文档命名与归属规范）。
@@ -42,7 +42,7 @@
 | 写大语言模型小说 | `docs/novel/AGENTS.md`（**唯一必读**：上篇·故事圣经 + 下篇·区域归属决策链路）+ `index.md`（自动索引，勿手改）；写完必跑 `node scripts/build-novel-index.mjs`，区域文件夹内禁放 README |
 | 完整发版、更新流程 | `docs/releases/` + `cmd/build-release.ps1` |
 | 项目维护 / 网站构建 | `docs/maintenance.md`（维护手册：VitePress 文档网站构建发布 + 文档体系维护 + 治理检查）|
-| 跑全部检查 | `scripts/README.md`（检查命令全表）或 `node scripts/doctor.mjs` |
+| 跑全部检查 | `scripts/README.md`（检查命令全表）；文档改动用 `node scripts/doctor.mjs --docs`（轻量秒级），代码/发版用 `node scripts/doctor.mjs`（全量闸门） |
 
 ## 知识库检索协议
 
@@ -83,7 +83,8 @@
 go build ./go/...                     # Go
 cd frontend && npx vite build         # 前端
 for f in tests/*.mjs; do node "$f"; done   # 契约测试
-node scripts/doctor.mjs               # 全量自检（编译+构建+文件+红线+Git）
+node scripts/doctor.mjs --docs        # 改文档时用，轻量秒级（仅文档/ADR/索引检查，跳过 Go/前端编译与测试）
+node scripts/doctor.mjs               # 改代码 / 发版前，全量闸门（编译+构建+文件+红线+Git）
 ```
 
 | 规则 | 说明 |

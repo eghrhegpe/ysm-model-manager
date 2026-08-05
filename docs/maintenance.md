@@ -59,13 +59,14 @@ npm run dev    # 本地预览开发
 | 改 ADR | `adr-check.mjs` + `check-adr-health.mjs` + `gen-docs-index.mjs` |
 | 改普通文档 | `link-checker.mjs`（断链）|
 | 改知识卡 | `check-knowledge-drift.mjs` |
-| 全量自检 | `node scripts/doctor.mjs` |
+| 全量自检 | `node scripts/doctor.mjs`（改代码/发版前）；文档改动用 `node scripts/doctor.mjs --docs`（轻量秒级） |
 
 ---
 
 ## 三、日常治理检查（提交前）
 
 ```bash
+node scripts/doctor.mjs --docs     # 改文档时用，轻量秒级（仅文档/ADR/索引检查，跳过 Go/前端编译与测试）
 node scripts/doctor.mjs            # 全量自检（编译 + 构建 + 文件 + 红线 + Git）
 node scripts/review.mjs            # 红线扫描（R1-R10 规则 + W1-W6 警告）
 node scripts/check-adr-health.mjs  # ADR 状态机与登记表一致性

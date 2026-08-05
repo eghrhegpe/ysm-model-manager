@@ -91,7 +91,7 @@
 | 🍃 dialog_rename | 重命名弹窗 rename | leaf |
 | 🏗 dialog_tag_editor | 标签编辑器 tag-editor | architecture |
 | 🍃 shared_styles | 共享样式 shared-styles | leaf |
-| 🏗 test_utils | 测试工具 test-utils（G-1 抗脆弱基础设施） | architecture |
+| 🏗 test_utils | 测试工具 test-utils（G-1 抗脆弱测试基础设施） | architecture |
 
 ## utils（15 张）
 

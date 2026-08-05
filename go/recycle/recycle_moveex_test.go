@@ -1,7 +1,8 @@
 // ===== moveEx 跨设备回退分支单测（审核 P2/P3 补测）=====
 // 覆盖：非跨设备失败直接返回、目录/文件跨设备复制回退成功、
-// 复制中途失败时半截副本清理。通过包级注入 renameForMove/copyDirForMove
-// 确定性触发分支（真实跨设备无法在测试中稳定构造）。
+// 复制中途失败时半截副本清理。通过 TrashManager 实例字段注入
+// renameForMove/copyDirForMove 确定性触发分支（真实跨设备无法在测试中稳定构造），
+// 注入作用域限定在单个实例，不污染同包其他测试。
 package recycle
 
 import (
@@ -11,27 +12,27 @@ import (
 	"testing"
 )
 
-// withRenameErr 注入 renameForMove 返回指定错误，测试结束后恢复真实实现
-func withRenameErr(t *testing.T, err error) {
+// newTMWithRenameErr 构造注入 rename 返回指定错误的 TrashManager
+func newTMWithRenameErr(t *testing.T, root string, err error) *TrashManager {
 	t.Helper()
-	orig := renameForMove
-	renameForMove = func(src, dst string) error { return err }
-	t.Cleanup(func() { renameForMove = orig })
+	tm := New(root)
+	tm.renameForMove = func(src, dst string) error { return err }
+	return tm
 }
 
 func TestMoveEx_RenameNonCrossDeviceError(t *testing.T) {
 	dir := t.TempDir()
 	src := createTestFile(t, dir, "locked.ysm", "content")
-	withRenameErr(t, os.ErrPermission)
+	tm := newTMWithRenameErr(t, dir, os.ErrPermission)
 
-	res := MoveEx(src, dir)
+	res := tm.MoveEx(src)
 	if res.Action != "error" {
 		t.Fatalf("非跨设备 rename 失败应报 error, 得到 %s/%s", res.Action, res.Reason)
 	}
 	if _, err := os.Stat(src); err != nil {
 		t.Fatalf("源文件应保留: %v", err)
 	}
-	if entries := List(dir); len(entries) != 0 {
+	if entries := tm.List(); len(entries) != 0 {
 		t.Fatalf("回收站不应有新条目: %v", entries)
 	}
 }
@@ -39,16 +40,16 @@ func TestMoveEx_RenameNonCrossDeviceError(t *testing.T) {
 func TestMoveEx_CrossDeviceFileFallback(t *testing.T) {
 	dir := t.TempDir()
 	src := createTestFile(t, dir, "single.ysm", "content")
-	withRenameErr(t, syscall.EXDEV)
+	tm := newTMWithRenameErr(t, dir, syscall.EXDEV)
 
-	res := MoveEx(src, dir)
+	res := tm.MoveEx(src)
 	if res.Action != "recycled" {
 		t.Fatalf("跨设备文件回退应 recycled, 得到 %s/%s", res.Action, res.Reason)
 	}
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Fatal("源文件应已被删除")
 	}
-	entries := List(dir)
+	entries := tm.List()
 	if len(entries) != 1 || entries[0].Name != "single.ysm" {
 		t.Fatalf("回收站应恰有 single.ysm, 得到 %v", entries)
 	}
@@ -66,16 +67,16 @@ func TestMoveEx_CrossDeviceDirFallback(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(modDir, "model.pmx"), []byte("x"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	withRenameErr(t, syscall.EXDEV)
+	tm := newTMWithRenameErr(t, dir, syscall.EXDEV)
 
-	res := MoveEx(modDir, dir)
+	res := tm.MoveEx(modDir)
 	if res.Action != "recycled" {
 		t.Fatalf("跨设备目录回退应 recycled, 得到 %s/%s", res.Action, res.Reason)
 	}
 	if _, err := os.Stat(modDir); !os.IsNotExist(err) {
 		t.Fatal("源目录应已被删除")
 	}
-	entries := List(dir)
+	entries := tm.List()
 	if len(entries) != 1 {
 		t.Fatalf("回收站应有 1 个整组条目, 得到 %d", len(entries))
 	}
@@ -97,10 +98,9 @@ func TestMoveEx_CrossDeviceCopyFails_CleansDst(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(modDir, "ysm.json"), []byte("{}"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	withRenameErr(t, syscall.EXDEV)
+	tm := newTMWithRenameErr(t, dir, syscall.EXDEV)
 	// 模拟复制中途失败：先写入半截文件再报错，验证 dst 整棵被清理
-	origCopy := copyDirForMove
-	copyDirForMove = func(src, dst string) error {
+	tm.copyDirForMove = func(src, dst string) error {
 		if err := os.MkdirAll(dst, 0755); err != nil {
 			return err
 		}
@@ -109,9 +109,8 @@ func TestMoveEx_CrossDeviceCopyFails_CleansDst(t *testing.T) {
 		}
 		return os.ErrPermission
 	}
-	t.Cleanup(func() { copyDirForMove = origCopy })
 
-	res := MoveEx(modDir, dir)
+	res := tm.MoveEx(modDir)
 	if res.Action != "error" {
 		t.Fatalf("复制失败应报 error, 得到 %s/%s", res.Action, res.Reason)
 	}

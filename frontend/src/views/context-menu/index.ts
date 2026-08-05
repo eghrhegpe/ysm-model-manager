@@ -66,7 +66,7 @@ class ContextMenu extends HTMLElement {
           cursor: pointer;
           transition: background .1s;
         }
-        .item:hover { background: #7c83ff33; color: var(--accent); }
+        .item:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
         .item.danger:hover { background: var(--paid); color: #fff; }
         .item .icon { font-size: var(--fs-base); width: 16px; text-align: center; }
         .divider {

@@ -117,7 +117,10 @@ class AppContent extends HTMLElement {
   }
 
   disconnectedCallback(): void {
-    if (this._unsub) this._unsub();
+    if (this._unsub) {
+      this._unsub();
+      this._unsub = null;
+    }
     this._globalUnsubs.forEach((fn) => fn());
     this._globalUnsubs = [];
     if (this._resizeMove) document.removeEventListener("mousemove", this._resizeMove);

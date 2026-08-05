@@ -55,6 +55,8 @@ export function initRecycleBin(app: RecycleHost): () => void {
   };
   root.getElementById("recy-empty")?.addEventListener("click", onEmptyClick);
   // 监听全局类型切换
+  // currentType 初值取 localStorage（持久化权威源，由 app-nav 写入）；运行期以 repo:rtype-changed
+  // 事件载荷为准，二者一致时不会重复加载（事件是唯一运行期变更入口）
   let currentType = localStorage.getItem("repo_rtype") || RESOURCE_TYPES.YSM;
   let _loadGen = 0;
 

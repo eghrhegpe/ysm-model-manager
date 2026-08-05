@@ -72,6 +72,8 @@ use_when:
 - 哈希对比类入口（`GetInstanceStatus` / `CompareGlobalInstanceHashes`）自身不 Walk 仓库，`.recycle` 的排除依赖注入的 `scanFn`（即 `scanner.ScanEntries`）——换用不排 `.recycle` 的 scanFn 会重新引入误判
 - `SyncResources` 同名文件按**大小**判定内容是否变化（复制会改 mtime，mtime 不可靠），大小不同归入 Missing 视为待更新；三个结果列表返回前均 `sort.Strings` 排序
 - `isSyncAllowed` 只放行 `types.AllExts()` 的扩展名，`.json` 中仅 `ysm.json` 例外——动画/控制器等散装 JSON 不单独推送
+- **两阶段遍历-执行模式**（`SyncToggleStatus`，`sync.go:162-231`）：`filepath.WalkDir` 回调中**不直接执行** `os.Rename`，而是先收集 `[]renameOp`（含源路径、目标路径、操作类型），遍历完成后再批量执行。原因：`filepath.WalkDir` 在遍历过程中修改目录结构（如重命名文件）会导致后续条目被跳过或重复处理——文件丢失/重复/损坏风险。这是本包最重要的设计模式，所有在 WalkDir 回调中修改文件系统的操作都必须遵循此模式
+- `SyncToggleStatus` 持有包级 `syncLock`（`sync.Mutex`），防止与 `go/installer` 的安装操作并发写同一文件（`sync.go:137-138`）
 - 文件被占用（如 Minecraft 锁定）时 `isFileLocked` 识别后静默跳过不阻塞（errno 优先：Win ERROR_SHARING_VIOLATION(32) / Unix EBUSY(16)，再按消息兜底）
 - `RelinkDir` 处理文件夹级类型时先把旧目录 rename 成 `.relink-bak`，重建成功才删备份、失败则回滚恢复——不能先 `RemoveAll` 再重建，否则失败即整目录丢失
 - 硬链接检测跨平台分实现，系统调用失败一律降级 `LinkCopy`；`GetLinkType` 必须先 `os.Lstat` 判 `os.ModeSymlink`（`sync.go:588-594`）——用 `os.Stat` 会跟随链接、把符号链接误判成普通文件，进而按「复制」策略走回收站

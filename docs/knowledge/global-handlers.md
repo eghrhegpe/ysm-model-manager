@@ -55,6 +55,7 @@ use_when:
 - `sync:download:missing` 的完成事件必须放 `finally`（含 token），保证按钮方无论成败都能解锁（致命陷阱 #3）
 - DnD 收集必须走 `webkitGetAsEntry` 并在不支持时回退 `getAsFile`；`entry.file` 回调必须 Promise 化（致命陷阱 #10）
 - 遮罩隐藏由 `dragenter`/`dragleave` 深度计数器唯一决定（`dragDepth===0` 才隐藏），`dragleave` 检测 `relatedTarget===null`/坐标越界立即隐藏（覆盖 OS 文件拖出窗口松手、dragend 不触发的卡死场景）；旧 50ms 防抖方案已废弃（拖拽停顿会误隐藏）
+- **类型安全事件处理器模式**（审计发现）：存储 `EventListener` 时使用具体类型（`EventListener`）而非 `unknown as () => void`。`removeEventListener` 要求传入的函数与 `addEventListener` 时传入的函数是**同一个引用**，类型转换会破坏引用相等性导致无法移除（P3）。`error-diary.ts` 已修复：`_unsubError`/`_unsubRejection` 改为 `EventListener` 类型。
 
 ## 相关
 

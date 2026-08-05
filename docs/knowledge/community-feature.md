@@ -58,6 +58,7 @@ use_when:
 - **ADR-039 §2.2 Events.On 豁免**（提交 bbe5fad，文件头有显式声明块）：这 4 组监听无对应 `Events.Off` 退出路径，按「app 级常驻单例」豁免（生命周期等同应用，与 `registerErrorDiary` / matchMedia 监听同类）。非 app 级模块禁止复制此模式；若社区页将来支持卸载/热重载，必须补 `Events.Off`
 - `STATE.status === "downloading"` 时 `enqueueDownloads`/`enqueue` 直接返回，防止并发双队列
 - 三个下载入口（单击/多选/全选）统一走 `queue.enqueue` → 模块级 `enqueueDownloads` → `EnqueueDownloads` binding，事件监听只有一组
+- **DOM 事件监听器清理模式**（审计发现）：`events.ts` 的 `bindEvents` 向容器元素注册了 7 个 DOM 事件监听器（click/change/contextmenu/input），`externalCleanup` 必须移除所有监听器。推荐做法：用 `cloneNode(false)` 替换所有绑定元素（`sr.replaceChild(sr.cloneNode(false), sr)`），一次性解除所有事件绑定，比逐个 `removeEventListener` 更可靠（P2）。
 - `enqueue` 内 Go 入队失败必须回滚 `STATE.status = "idle"` + `notify()` + `cleanupProgressUI()`，防按钮/进度条卡死（致命陷阱 #3）
 - 99% 卡死守护：`_lastPct < 10` 直跳 ≥99% 视为可疑，锁 99% 并起 `_stuckTimer`（小文件 300ms 补 100%，大文件 2s 转菊花）；所有定时器必须经 `stuckGuardReset()` 清理
 - 进度为 `Content-Length ≤ 0`（未知长度）时 `pct` 恒置 0、只显示已下载 MB 数，完成判定只信任 `queue:file-done` / `queue:status=done`，不得据进度条推断 100%（致命陷阱 #6）

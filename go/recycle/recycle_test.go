@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/types"
 )
 
 func createTestFile(t *testing.T, dir, name, content string) string {
@@ -215,5 +217,95 @@ func TestRestoreConflict(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "keep(1).ysm")); err != nil {
 		t.Error("冲突恢复应生成 keep(1).ysm")
+	}
+}
+
+func TestList_FolderModelGrouped(t *testing.T) {
+	// ADR-038 D3.4：文件夹型模型（含 ysm.json 的目录）整组合并显示为单一条目
+	dir := t.TempDir()
+	tm := New(dir)
+
+	// 构造一个文件夹模型目录：模型A/ysm.json + main.json + textures/
+	modelDir := filepath.Join(dir, "模型A")
+	if err := os.MkdirAll(filepath.Join(modelDir, "textures"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(`{"spec":1}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "main.json"), []byte(`{}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(modelDir, "textures", "skin.png"), []byte("PNG"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// 整组移入回收站
+	if err := tm.Move(modelDir); err != nil {
+		t.Fatalf("整组移入回收站失败: %v", err)
+	}
+	// 另放一个单文件模型
+	single := createTestFile(t, dir, "single.ysm", "x")
+	if err := tm.Move(single); err != nil {
+		t.Fatal(err)
+	}
+
+	entries := tm.List()
+	// 应合并为 2 条：模型A（整组）+ single.ysm（单文件）
+	if len(entries) != 2 {
+		t.Fatalf("回收站应有 2 条（整组目录 1 + 单文件 1），实际 %d", len(entries))
+	}
+	// 找到整组目录条目：Name = 模型A，Path 指向目录（含 ysm.json）
+	var groupEntry *types.ModelEntry
+	for i := range entries {
+		if entries[i].Name == "模型A" {
+			groupEntry = &entries[i]
+			break
+		}
+	}
+	if groupEntry == nil {
+		t.Fatal("应存在整组目录条目 模型A")
+	}
+	// Path 应指向目录本身（而非 ysm.json 单文件）
+	if _, err := os.Stat(filepath.Join(groupEntry.Path, "ysm.json")); err != nil {
+		t.Fatalf("整组条目 Path 应指向含 ysm.json 的目录: %v", err)
+	}
+	// 整组大小应包含目录内全部文件
+	if groupEntry.Size <= 0 {
+		t.Fatal("整组条目 Size 应大于 0")
+	}
+	// Restore 应目录级还原：整组回来
+	if err := tm.Restore(groupEntry.Path); err != nil {
+		t.Fatalf("整组还原失败: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "模型A", "ysm.json")); err != nil {
+		t.Fatalf("整组还原后 ysm.json 应存在: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "模型A", "textures", "skin.png")); err != nil {
+		t.Fatalf("整组还原后 textures/skin.png 应存在: %v", err)
+	}
+}
+
+func TestList_FolderModelNotGrouped(t *testing.T) {
+	// ADR-038 D3.4：无 ysm.json 的普通目录不合并，文件仍逐个列出
+	dir := t.TempDir()
+	tm := New(dir)
+
+	// 普通目录（无 ysm.json）
+	plainDir := filepath.Join(dir, "plain")
+	if err := os.MkdirAll(plainDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	plainFile := createTestFile(t, plainDir, "a.ysm", "x")
+	if err := tm.Move(plainFile); err != nil {
+		t.Fatal(err)
+	}
+
+	entries := tm.List()
+	// 普通目录内的 .ysm 文件应逐个列出（不合并）
+	if len(entries) != 1 {
+		t.Fatalf("普通目录文件应逐个列出, 实际 %d", len(entries))
+	}
+	if entries[0].Name != "a.ysm" {
+		t.Fatalf("条目应为 a.ysm, 实际 %s", entries[0].Name)
 	}
 }

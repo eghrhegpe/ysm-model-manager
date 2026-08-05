@@ -1,9 +1,11 @@
 {
-  "generated": "2026-08-05T10:34:00.241Z",
+  "generated": "2026-08-05T17:56:15.456Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|jscpd",
     "src/features/community/download-queue.ts|types|QueueError",
+    "src/features/import-executor.ts|exports|isImportableFile",
+    "src/features/import-executor.ts|types|ImportFile",
     "src/features/version-updater.ts|types|UpdateInfo",
     "src/test-utils/events.ts|exports|fireBlur",
     "src/test-utils/events.ts|exports|fireClick",

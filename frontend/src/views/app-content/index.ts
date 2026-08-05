@@ -246,7 +246,7 @@ class AppContent extends HTMLElement {
   }
 
   _initInstances(): void {
-    this._bindTabs("ins", ["versions"]);
+    this._bindTabs(".repo-tab", "ins", ["versions"]);
     // 只注册一次，避免重复监听
     if (this._insListenerReg) return;
     this._insListenerReg = true;
@@ -267,7 +267,7 @@ class AppContent extends HTMLElement {
   }
 
   _initRepository(): void {
-    this._bindTabs("repo", ["tree", "import", "recycle", "dedup", "oldest"]);
+    this._bindTabs(".repo-tab", "repo", ["tree", "import", "recycle", "dedup", "oldest"]);
 
     // 资源类型 subtab 切换（全局生效）
     const root = this._root;
@@ -306,8 +306,12 @@ class AppContent extends HTMLElement {
     if (savedTab) (savedTab as HTMLElement).click();
   }
 
-  _bindTabs(prefix: string, ids: string[]): void {
-    const tabs = this._root.querySelectorAll(`.${prefix}-tab`);
+  /**
+   * 绑定 tab 按钮切换。按钮选择器与内容卡前缀解耦（样式类可复用，语义前缀独立）：
+   *   _bindTabs(".repo-tab", "ins", ["versions"]) —— 按钮用 repo-tab 样式类，内容卡 id 为 ins-tab-versions
+   */
+  _bindTabs(tabSelector: string, prefix: string, ids: string[]): void {
+    const tabs = this._root.querySelectorAll(tabSelector);
     if (!tabs.length) return;
     const inited: Record<string, boolean> = {};
     tabs.forEach((btn) => {
@@ -1003,7 +1007,7 @@ class AppContent extends HTMLElement {
   }
 
   async _initSettings(): Promise<void> {
-    this._bindTabs("stg", ["basic", "ui", "about", "credits"]);
+    this._bindTabs(".stg-tab", "stg", ["basic", "ui", "about", "credits"]);
     try {
       await initSettings(this._root);
     } catch (e) {

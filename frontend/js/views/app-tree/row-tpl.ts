@@ -1,9 +1,8 @@
-// ===== 树节点行 HTML 模板 =====
-import { renderDisplayName } from "../../utils/dom/display.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+// ===== 树节点行 HTML 模板（grid 模式）=====
 import { esc } from "../../utils/dom/html.ts";
 import { fmt, sizeColor } from "../../utils/dom/format.ts";
 import type { TreeEntry } from "./loader.ts";
+import { fileRowCommon, folderRowCommon } from "./row-common.ts";
 
 /** 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） */
 export function fileRowHTML(
@@ -15,13 +14,7 @@ export function fileRowHTML(
   indent: number | null | undefined,
   rowCls = "",
 ): string {
-  const p = esc(e.path);
-  const fp = esc(e.fullPath || e.path);
-  const checked = e.banned ? "" : " on";
-  const ban = e.banned ? " ban" : "";
-  const typeIcon =
-    e.type === RESOURCE_TYPES.PACK ? "🎨" : e.type === RESOURCE_TYPES.YSM ? "💎" : icon;
-  const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
+  const { p, fp, checked, ban, typeIcon, pad } = fileRowCommon(e, icon, indent);
   const tagMark = e.HasTags ? '<span class="tag-dot" title="有标签">🏷️</span>' : "";
   return `<div class="fl${ban}${rowCls}" data-testid="tree-file" data-path="${p}" data-fullpath="${fp}"${pad}>
 <span class="ck${checked}" data-testid="tree-toggle" data-path="${p}" data-fullpath="${fp}"></span>
@@ -44,20 +37,9 @@ export function folderRowHTML(
   hasDisabled: boolean,
   indent: number | null | undefined,
 ): string {
-  const fi = isLocked ? "🔒" : "📁";
-  const nc = isLocked ? "var(--muted)" : "var(--txt)";
-  const lk = isLocked ? " locked" : "";
-  const ar = isOpen ? "▾" : "▸";
-  const ac = isOpen ? " open" : "";
-  // 文件夹开关：部分选中用半开
-  let ckCls = "";
-  if (hasEnabled && hasDisabled) {
-    ckCls = " on partial";
-  } else if (hasEnabled && !hasDisabled) {
-    ckCls = " on";
-  }
-  const dispName = renderDisplayName(k);
-  const pad = indent != null ? ' style="padding-left:' + indent + 'px"' : "";
+  const { fi, nc, lk, ar, ac, ckCls, dispName, pad } = folderRowCommon(
+    k, full, isOpen, isLocked, hasEnabled, hasDisabled, indent,
+  );
   return `<div class="fh${lk}" data-testid="tree-dir" data-dir="${esc(full)}"${pad}>
 <span class="ck${ckCls}" data-testid="tree-dir-toggle" data-dir="${esc(full)}"></span>
 <span class="ar${ac}">${ar}</span>

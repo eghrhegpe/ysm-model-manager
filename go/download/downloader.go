@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -122,6 +123,7 @@ func (d *Downloader) FromGitHubAPI(ctx context.Context, apiURL, savePath string,
 // ResolveSavePath 从 GitHub raw URL 解析存储路径和回退源。
 func ResolveSavePath(rawURL, saveDir string) (savePath string, jsdURL, apiURL string) {
 	if err := os.MkdirAll(saveDir, 0755); err != nil {
+		log.Printf("[download] 创建保存目录失败 %s: %v", saveDir, err)
 		return "", "", ""
 	}
 	relPath := ""

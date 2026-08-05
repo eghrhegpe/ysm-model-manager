@@ -115,7 +115,8 @@ export function renderModel2D(
   const cosA = Math.cos(angle);
   const sinA = Math.sin(angle);
   const boneTransforms = opts?.boneTransforms || null;
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
   const W = canvas.width;
   const H = canvas.height;
   ctx.clearRect(0, 0, W, H);

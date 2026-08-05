@@ -18,7 +18,7 @@
 
 硬规则：
 - 检查类脚本（`check-*` / `*-check` / `review` / `doctor` / `link-checker` / `type-consistency` / `event-audit` / `binding-check`）必须支持 `--json` 或默认输出 JSON，供 CI / 子代理稳定消费。
-- 共享能力（`walk` / `rg` / `ROOT` / `frontmatter` 解析）一律 `import` 自 `scripts` 共享层，**禁止内联样板**。
+- 共享能力（`walk` / `rg` / `ROOT` / `frontmatter` 解析）一律 `import` 自 `scripts` 共享层，**禁止内联通用样板**；领域专用的文件收集器（带扩展名过滤 / 跳过集合 / 回调，如 `gen-vitepress-sidebar` 的 md walker）属合法内联，不计入违规。
 - 公共函数需写 `/** */` 简述；纯内部小工具可不写。
 
 范例见 `comment-checker.mjs`、`adr-check.mjs`（已按本规范整改）。
@@ -178,7 +178,7 @@
 | `_lib/ripgrep.mjs` | `rg`（--no-heading -n --path-separator /，glob 过滤，容错返回 []） | 需要 ripgrep 扫描的任何脚本 |
 | `_lib/frontmatter.mjs` | frontmatter 解析 | 读取 md 文档 frontmatter |
 
-违规形态：内联 `function walk(...)`、内联 `rg(...)`、内联 `path.resolve(path.dirname(fileURLToPath(import.meta.url)))`。doctor/静态检查不会自动拦截（脚本是自由 Node），靠 code review 约定 + `comment-checker` 抽查。
+违规形态：内联「通用」 `walk`（即 scan-files.walk 的等价递归、无扩展名/跳过定制）/ 内联 `rg(...)` / 内联 `path.resolve(path.dirname(fileURLToPath(import.meta.url)))`。带显式过滤的领域专用收集器（如 `endsWith('.md')` / `EXCLUDE` / `symbolExclude` / `onFile`）为合法内联，不计入违规；doctor/静态检查不会自动拦截（脚本是自由 Node），靠 code review 约定 + `comment-checker` 抽查。
 
 ---
 

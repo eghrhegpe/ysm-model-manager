@@ -261,14 +261,26 @@ export function showBatchRenameDialog(
     const btn = dialogEl!.querySelector("#br-apply") as HTMLButtonElement;
     btn.textContent = "⏳ 执行中...";
     btn.disabled = true;
-    await onApply(
-      changed.map((it) => ({
-        oldPath: it.Path,
-        oldName: it.Name,
-        newName: it.newName,
-      })),
-    );
-    close();
+    try {
+      await onApply(
+        changed.map((it) => ({
+          oldPath: it.Path,
+          oldName: it.Name,
+          newName: it.newName,
+        })),
+      );
+    } catch (e) {
+      bus.emit("toast:show", {
+        msg: "❌ 批量重命名失败: " + (e instanceof Error ? e.message : String(e)),
+        duration: 4000,
+        type: "error",
+      });
+    } finally {
+      // 意外 throw 也必须恢复按钮 + 关弹窗（陷阱 #3：按钮卡死根因）
+      btn.textContent = "📝 执行重命名";
+      btn.disabled = false;
+      close();
+    }
   });
 
   return pending;

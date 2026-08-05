@@ -25,7 +25,8 @@ use_when:
 
 ## 核心职责
 
-- `index.ts` — `<app-resource-manager>` 组件：`observedAttributes: ["rtype", "instance"]`；`_init` 读取类型配置、推导根目录（全局走 `GetRepoRoot`，带 `instance` 属性时从 `mcRoot + installDir` 经 `ListVersionInstances` 查实际版本目录做实例隔离）、绑定导入/打开目录/列表点击/搜索过滤；`_loadList` 扫描条目并按扩展名过滤（`.disabled` 后缀表禁用态）；`_showDetail` 渲染详情（光影包走 `ReadShaderpackLang` 提取显示名，其余走 `ReadPackMeta`）
+- `index.ts` — `<app-resource-manager>` 组件：`observedAttributes: ["rtype", "instance"]`；`_init` 读取类型配置、推导根目录（全局走 `GetRepoRoot`，带 `instance` 属性时从 `mcRoot + installDir` 经 `ListVersionInstances` 查实际版本目录做实例隔离）、绑定导入/打开目录/列表点击/搜索过滤；`_loadList` 扫描条目并按扩展名过滤（`.disabled` 后缀表禁用态）；`_showDetail` 渲染详情（光影包走 `ReadShaderpackLang` 提取显示名，其余走 `ReadPackMeta`），以 `_detailGen` 代际守卫作废快速切换条目时在途的回写
+- 异步事件 handler 全包 try/catch：导入按钮（`index.ts:202`–`227`，`SelectImportZip` / `SelectImportFile` / `ImportByType` 抛错转 `_toast("error","导入失败")`）与列表点击（`index.ts:247`–`266`，`ToggleResourcePack` / `_showDetail` 抛错转 `_toast("error","操作失败")`）；删除按钮同样自带 try/catch（`index.ts:426`–`448`）。async handler 的 rejection 无处可传，不接住就是按钮静默失效
 - `tpl.ts` — 布局模板：`sidebarHTML`（路径+操作栏+搜索+列表）/ `itemHTML` / `detailHTML` / `placeholderHTML` + `PackMetaDetail` 类型
 
 ## 对外 API / 入口
@@ -41,13 +42,15 @@ use_when:
 - 类型定义唯一事实来源是 `resource_types.json`（`actions` / `extensions` / `installDir` / `isDir` 字段），经 Go `LoadResourceTypes` 加载（见知识卡 `resource_registry`）
 - 由 `app-content` 仓库页标签（resourcepacks / shaderpacks）与整合包内子页实例化；`config:resource-types-changed` 由设置页自定义类型修改后派发（见知识卡 `app_content`）
 - Go binding 位于 `internal/app/resource_bindings.go` / `app_scan.go`（`ScanModelEntries`）
-- 删除走 Go 回收站策略（`go/recycle`），前端仅二次 `confirm` 防呆
+- 删除走 Go 回收站策略（`go/recycle`），前端以 `modalConfirm`（`views/dialogs/modal.ts`）二次确认防呆，不用原生 `confirm`
 
 ## 不变量
 
 - 不在前端手写资源类型/扩展名/安装目录逻辑，一切以 `resource_types.json` 条目为准（治理红线：注册表优先）
 - 模块级 `STORE._config` 缓存仅在 `config:resource-types-changed` 或强制刷新时失效
-- 所有反馈统一走 `bus.emit("toast:show")`，不派发游离 DOM 事件；破坏性删除前置 `confirm`
+- 所有反馈统一走 `_toast` → `bus.emit("toast:show")`，不派发游离 DOM 事件；破坏性删除前置 `modalConfirm`（`danger: true`）
+- 所有 `async` DOM 事件 handler 必须自带 try/catch 并把异常转成 `_toast`：`addEventListener` 不会消费返回的 Promise，未捕获的 rejection 只会进 `unhandledrejection`，用户侧表现为「点了没反应」
+- `await` 之后回写 DOM 前先比对 `_detailGen` 代际，防快速点条目时旧详情覆盖新详情
 - 注册带 `customElements.get` 守卫（`if (!customElements.get("app-resource-manager"))`）防重复 define
 - 该组件为 light DOM（直接 `this.innerHTML`），样式继承页面级 CSS 变量
 

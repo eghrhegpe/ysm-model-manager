@@ -26,7 +26,7 @@ use_when:
 - 渲染模型资源目录树
 - 节点选择与多选
 - 右键菜单触发
-- 拖拽排序支持
+- 节点悬停快捷操作（ha-preview 🔍：解析模型名作者并在 B站搜索）
 
 ## 对外 API / 入口
 
@@ -47,6 +47,7 @@ use_when:
 - 文件名显示统一走 `renderDisplayName()`（治理红线 4.3）
 - 使用 Shadow DOM 隔离样式
 - 组件拆分遵循 app-xxx 规范（index/tpl/row-tpl/data/render/events）
+- 动态 import 链路带 `.catch` 兜底（如 ha-preview 解析模块加载失败以 toast 提示，见 events.ts:196）
 
 ## 相关
 

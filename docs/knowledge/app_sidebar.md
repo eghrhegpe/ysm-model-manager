@@ -43,14 +43,14 @@ use_when:
 - 自定义元素：`<app-sidebar rtype="ysm">`（属性变更触发 `_reload` 与按钮文案更新）
 - 监听 bus：`stats:refresh`（300ms 防抖重载）、`repo:rtype-changed`（随仓库页类型切换重载）、`sync:download:done`（按 token 匹配推送结果，30s 超时）
 - 派发 bus：`package:selected`、`ctx:show`、`sync:download:missing`（含 token）、`toast:show`、`stats:refresh`、`tree:reload`、`nav:change`（底部路径按钮跳设置页）、`loading:start` / `loading:end`
-- Go 调用：静态 import `LoadAppConfig` / `ListVersionInstances` / `GetResourceInstanceStatus` / `GetRepoRoot`（loader.ts）；动态 import `PullResourceFromInstance`（拉取）、`SaveAppConfig` / `GetMinecraftPaths`（bindFooter 自动检测 MC 路径）；「推送到整合包」由 `core/context-menus.ts` 的 `file.push-to-pack` 走 `InstallModelTo`（见知识卡 `context_menu`）
+- Go 调用：统一经 `getApp()` 取绑定（ADR-012 红线，禁 `window.go.main.App.*`）——`LoadAppConfig` / `ListVersionInstances` / `GetResourceInstanceStatus` / `GetRepoRoot`（loader.ts）、`PullResourceFromInstance`（index.ts 拉取）、`LoadAppConfig` / `SaveAppConfig` / `GetMinecraftPaths`（events.ts bindFooter 自动检测 MC 路径）；「推送到整合包」由 `core/context-menus.ts` 的 `file.push-to-pack` 走 `InstallModelTo`（见知识卡 `context_menu`）
 - 导出符号：`loadInstances`（loader.ts，被 `app-modules.ts` 注册为全局服务）
 
 ## 与其他子系统关系
 
 - 卡片点击派发 `package:selected` → `app-content` instances 页据此挂载 `<app-sync-manager>`（见知识卡 `app_content`、`app_sync_manager`）
 - 右键派发 `ctx:show`（type=instance）→ `core/context-menus.ts` 转 `menu:show`（见知识卡 `context_menu`）
-- 推送经 `sync:download:missing` 交给全局同步 handler（`core/handler-sync.ts`，由 `app-content` 注册）；数据源对应 Go 端 `go/sync` 包与 `internal/app/app_install.go`
+- 推送经 `sync:download:missing` 交给全局同步 handler（`core/handlers/sync.ts` 的 `registerSync`，由 `app-content` 经 `registerGlobalHandlers` 注册）；数据源对应 Go 端 `go/sync` 包与 `internal/app/app_install.go`
 - `loadInstances` 经 `services/registry.ts` 注册，可被测试或其他模块替换（见知识卡 `resource_registry`）
 - 刷新由 `stats:refresh` 驱动，派发方包括设置页、右键菜单操作、去重流程等
 

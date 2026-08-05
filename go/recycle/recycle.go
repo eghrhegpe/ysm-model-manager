@@ -49,6 +49,11 @@ func (tm *TrashManager) MoveEx(src string) *MoveResult {
 	return res
 }
 
+// renameForMove / copyDirForMove 包级可注入实现（测试用：EXDEV 模拟跨设备失败、
+// 复制中途失败），生产环境始终为真实实现
+var renameForMove = os.Rename
+var copyDirForMove = copyDirRecursive
+
 func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 	if tm.recycleDir == "" {
 		return nil, fmt.Errorf("回收站目录未设置")
@@ -102,28 +107,41 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 		}
 	}
 	// 优先瞬时移动（同分区原子操作，避免大模型文件全量复制）；
-	// 跨设备（EXDEV）或文件占用时回退复制后删，语义不变
+	// 仅跨设备（EXDEV）回退复制后删；权限/占用等其他失败直接报错，
+	// 避免无谓全量复制，以及「副本已入站、源未删」的重试堆积（审核 P2）
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return nil, err
 	}
-	if err := os.Rename(src, dst); err == nil {
+	if err := renameForMove(src, dst); err == nil {
 		return &MoveResult{Action: "recycled", Reason: ""}, nil
+	} else if !isCrossDeviceErr(err) {
+		return nil, err
 	}
 	// 跨设备回退：目录（文件夹型模型）递归复制整棵树；文件走 copyFile
 	if info.IsDir() {
-		if err := copyDirRecursive(src, dst); err != nil {
+		if err := copyDirForMove(src, dst); err != nil {
 			// 复制中断/失败时清理半截目录，避免回收站残留损坏数据
-			os.RemoveAll(dst)
+			if rerr := os.RemoveAll(dst); rerr != nil {
+				log.Printf("[recycle] 清理半截目录失败 %s: %v", dst, rerr)
+			}
 			return nil, err
 		}
-		return &MoveResult{Action: "recycled", Reason: ""}, os.RemoveAll(src)
+		if err := os.RemoveAll(src); err != nil {
+			return nil, fmt.Errorf("回收站已入副本但源目录删除失败 %s: %w（副本在 %s，请手动清理）", src, err, dst)
+		}
+		return &MoveResult{Action: "recycled", Reason: ""}, nil
 	}
 	if err := copyFile(src, dst); err != nil {
 		// 复制中断/失败时清理半截文件，避免回收站残留损坏文件
-		os.Remove(dst)
+		if rerr := os.Remove(dst); rerr != nil {
+			log.Printf("[recycle] 清理半截文件失败 %s: %v", dst, rerr)
+		}
 		return nil, err
 	}
-	return &MoveResult{Action: "recycled", Reason: ""}, os.Remove(src)
+	if err := os.Remove(src); err != nil {
+		return nil, fmt.Errorf("回收站已入副本但源文件删除失败 %s: %w（副本在 %s，请手动清理）", src, err, dst)
+	}
+	return &MoveResult{Action: "recycled", Reason: ""}, nil
 }
 
 // isHardLink 判断文件是否为硬链接（nlink > 1）。

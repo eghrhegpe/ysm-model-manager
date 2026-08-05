@@ -222,18 +222,18 @@ const onDrop = async (e: DragEvent): Promise<void> => {
 
   // 静默导入：全局执行器直接入仓（不切导入 tab、不弹表单）。
   // 历史/结果由 import-executor 维护，导入 tab 挂载时从 ImportHistory 渲染。
+  // await 让 rejection 向上传递，由 onDropSafe 的 catch 统一兜底（避免 void 切断 Promise 链）
   const total = collected.length;
-  void executeCollected(collected as Array<{ file: File; relPath: string }>).then(
-    (r) => {
-      if (r.folders === 0 && r.singles === 0 && total > 0) {
-        bus.emit("toast:show", {
-          msg: "📂 未检测到支持的资源文件" + "（" + DROP_EXTS_STR + "）",
-          duration: 3000,
-          type: "info",
-        });
-      }
-    },
+  const r = await executeCollected(
+    collected as Array<{ file: File; relPath: string }>,
   );
+  if (r.folders === 0 && r.singles === 0 && total > 0) {
+    bus.emit("toast:show", {
+      msg: "📂 未检测到支持的资源文件" + "（" + DROP_EXTS_STR + "）",
+      duration: 3000,
+      type: "info",
+    });
+  }
 };
 
 // document listener 顶层兜底：onDrop 内部异常面均已 try/catch，

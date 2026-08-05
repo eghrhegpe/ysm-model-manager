@@ -15,19 +15,19 @@ description: 9 条前端治理规则的唯一事实来源 — 规则条文 × �
 
 | # | 规则 | 严重度 | 检测 |
 |---|------|--------|------|
-| R1 | 禁止 `window.*` 全局变量 | Error | `review.mjs R1` + `doctor.mjs` |
-| R2 | 禁止 `repoRoot` 变量名 | Error | `review.mjs R2` |
-| R3 | 禁止回调式 API | Warn | `review.mjs R3` |
-| R4 | 禁止 `display: none/block` 做动画切换 | Warn | `review.mjs R4` |
-| R5 | 禁止硬编码颜色值 | Warn | `review.mjs R5` + `doctor.mjs` |
-| R6 | 禁止 `public/` 下放 JS | Error | `review.mjs R6` |
-| R7 | 禁止魔法字符串资源类型字面量 | Warn | `review.mjs R7` + `type-consistency.mjs` |
-| R8 | 禁止未转义拼接 HTML | Error | `review.mjs R8` + `doctor.mjs` |
-| R9 | 禁止侧边栏手动拼接 | Warn | `review.mjs R9` |
+| R1 | 禁止 `window.*` 全局变量 | Error | `check-redlines.mjs R1` + `doctor.mjs` |
+| R2 | 禁止 `repoRoot` 变量名 | Error | `check-redlines.mjs R2` |
+| R3 | 禁止回调式 API | Warn | `check-redlines.mjs R3` |
+| R4 | 禁止 `display: none/block` 做动画切换 | Warn | `check-redlines.mjs R4` |
+| R5 | 禁止硬编码颜色值 | Warn | `check-redlines.mjs R5` + `doctor.mjs` |
+| R6 | 禁止 `public/` 下放 JS | Error | `check-redlines.mjs R6` |
+| R7 | 禁止魔法字符串资源类型字面量 | Warn | `check-redlines.mjs R7` + `type-consistency.mjs` |
+| R8 | 禁止未转义拼接 HTML | Error | `check-redlines.mjs R8` + `doctor.mjs` |
+| R9 | 禁止侧边栏手动拼接 | Warn | `check-redlines.mjs R9` |
 
 **严重度分级**：Error（4 条）= 运行时错误或安全风险，必须拦截；Warn（5 条）= 长期债务或可维护性问题，建议修复，不阻塞发布。
 
-> review.mjs 另有 W1/W2/W5 附加扫描项（反斜杠路径 / `window.go.main.App` 直调等），属 AGENTS.md §三 治理红线范畴，不在本手册 9 条之内。
+> check-redlines.mjs 另有 W1/W2/W5 附加扫描项（反斜杠路径 / `window.go.main.App` 直调等），属 AGENTS.md §三 治理红线范畴，不在本手册 9 条之内。
 
 ---
 

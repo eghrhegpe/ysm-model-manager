@@ -22,7 +22,7 @@ const NODE = process.execPath;
 
 // [脚本名, 参数] —— 只测无参数即可输出 JSON 的快速脚本
 const JSON_SCRIPTS = [
-  ['review.mjs', '--json'],
+  ['check-redlines.mjs', '--json'],
   ['check-circular.mjs', '--json'],
   ['check-orphan-exports.mjs', '--json'],
   ['check-boolean-naming.mjs', '--json'],

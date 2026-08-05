@@ -20,7 +20,7 @@
 | 级别 | 观察 | 建议 |
 |------|------|------|
 | 🟡 L1-1 | doctor Go Test 段在直测全过时报 FAIL | 核对 doctor 对 `go test` 输出的判定逻辑（疑似把 `?  pkg [no test files]` 或缓存行误判） |
-| 🟡 L1-2 | Governance Rules 依赖系统 `grep`，Windows pwsh 环境全段失效 | 改用 Node 内置实现（与 review.mjs 同口径），消除对外部 grep 的依赖 |
+| 🟡 L1-2 | Governance Rules 依赖系统 `grep`，Windows pwsh 环境全段失效 | 改用 Node 内置实现（与 check-redlines.mjs 同口径），消除对外部 grep 的依赖 |
 | 🟡 L1-3 | doctor 解析 wails.json 失败但契约测试通过 | 统一走 `test_config_syntax.mjs` 同一解析路径 |
 
 ---

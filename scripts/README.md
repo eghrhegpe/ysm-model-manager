@@ -33,7 +33,7 @@
 
 | 脚本 | 调用方式 | 说明 |
 |------|---------|------|
-| `review.mjs` | `node scripts/review.mjs` / `--json` / `--audit` | 12 条治理红线（R1-R9 + W1/W2/W5）+ `--audit` 设计审查 checklist（B 类盘问锚点）；W3/W4 已移交 comment-checker |
+| `check-redlines.mjs` | `node scripts/check-redlines.mjs` / `--json` / `--audit` | 12 条治理红线（R1-R9 + W1/W2/W5）+ `--audit` 设计审查 checklist（B 类盘问锚点）；W3/W4 已移交 comment-checker |
 | `type-consistency.mjs` | `node scripts/type-consistency.mjs` / `--json` | resource_types.json vs JS 扩展名一致性 |
 | `link-checker.mjs` | `node scripts/link-checker.mjs` / `--json` | 所有 md 内部链接断链检测 |
 | `release-notes-gen.mjs` | `node scripts/release-notes-gen.mjs` | git diff + commit 归类 → 结构化 JSON |
@@ -133,16 +133,16 @@
 
 | 红线 | 工具 |
 |------|------|
-| `window.__*` 全局变量 | `review.mjs R1` + `doctor.mjs` |
-| 硬编码颜色 `#xxxxxx` / `rgb()` / `hsl()` | `review.mjs R5` + `doctor.mjs` |
-| `innerHTML` 拼接 | `review.mjs R8` + `doctor.mjs` |
-| `display:none/block` 做动画 | `review.mjs R4` |
-| `window.go.main.App` 直接调用 | `review.mjs W2` + `doctor.mjs` |
-| 反斜杠路径 | `review.mjs W1` |
+| `window.__*` 全局变量 | `check-redlines.mjs R1` + `doctor.mjs` |
+| 硬编码颜色 `#xxxxxx` / `rgb()` / `hsl()` | `check-redlines.mjs R5` + `doctor.mjs` |
+| `innerHTML` 拼接 | `check-redlines.mjs R8` + `doctor.mjs` |
+| `display:none/block` 做动画 | `check-redlines.mjs R4` |
+| `window.go.main.App` 直接调用 | `check-redlines.mjs W2` + `doctor.mjs` |
+| 反斜杠路径 | `check-redlines.mjs W1` |
 | 空 JSDoc 模板 | `comment-checker.mjs`（原 review W3 并入） |
 | TODO 无 ticket 编号 | `comment-checker.mjs`（原 review W4 并入，覆盖 go+frontend） |
-| magic string 资源类型 | `review.mjs R7` |
-| 回调式 `.file()` API | `review.mjs R3` |
+| magic string 资源类型 | `check-redlines.mjs R7` |
+| 回调式 `.file()` API | `check-redlines.mjs R3` |
 
 ### 一致性校验
 
@@ -162,7 +162,7 @@
 
 | 盲区 | 修复状态 |
 |------|---------|
-| CSS 变量覆盖率（`rgb()`/`hsl()`/3 位 hex） | ✅ `review.mjs R5` 已扩展 |
+| CSS 变量覆盖率（`rgb()`/`hsl()`/3 位 hex） | ✅ `check-redlines.mjs R5` 已扩展 |
 | Wails Binding 签名一致性 | ✅ `binding-check.mjs` 新建 |
 | inspect_ysm 1-5 分散 | ✅ 合并为 `inspect_ysm.mjs` + `--json` |
 | Python/Node 双运行时分裂 | ✅ 全量迁移 Node（2026-08-03），契约测试同步 mjs |

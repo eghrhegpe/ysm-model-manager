@@ -3,10 +3,10 @@
  * 代码红线审查。12 条规则 × 违规扫描（依赖 ripgrep）。
  * W3 empty JSDoc / W4 TODO 无编号已移交 comment-checker.mjs（避免双重扫描）。
  * 由 scripts/review.py 迁移（2026-08-03），规则与输出逻辑逐点保真。
- * 设计意图：治理审查工具
+ * 设计意图：治理审查工具（原 review.mjs，2026-08-05 更名去误导）
  * 用法：
- *   node scripts/review.mjs                 # 默认行为
- *   node scripts/review.mjs --json # JSON 输出（CI/子代理消费）
+ *   node scripts/check-redlines.mjs                 # 默认行为
+ *   node scripts/check-redlines.mjs --json # JSON 输出（CI/子代理消费）
  * 退出码：0（成功）
  * 依赖：本地模块
  */
@@ -108,7 +108,8 @@ function runChecks() {
 }
 
 function outputText(results) {
-  const out = ['========== Code Review =========='];
+  const out = ['========== Check Redlines =========='];
+  out.push('⚠️ 正则红线扫描候选清单，非审核结论——violations 需逐条人工确认，勿直接采信');
   for (const r of results) {
     if (r.count === 0) {
       out.push(`  [OK] [${r.rule_id}] ${r.name}`);
@@ -120,13 +121,20 @@ function outputText(results) {
       if (r.fix) out.push(`    -> ${r.fix}`);
     }
   }
-  out.push(`${'='.repeat(10)} Review Complete ${'='.repeat(10)}`);
+  out.push(`${'='.repeat(10)} Check Complete ${'='.repeat(10)}`);
   process.stdout.write(out.join('\n') + '\n');
 }
 
 function outputJson(results) {
   const total = results.reduce((s, r) => s + r.count, 0);
-  process.stdout.write(JSON.stringify({ _summary: { rules: results.length, violations: total }, results }, null, 2) + '\n');
+  process.stdout.write(JSON.stringify({
+    _summary: {
+      rules: results.length,
+      violations: total,
+      notice: '正则红线扫描候选清单，非审核结论——violations 需逐条人工确认，勿直接采信',
+    },
+    results,
+  }, null, 2) + '\n');
 }
 
 /**

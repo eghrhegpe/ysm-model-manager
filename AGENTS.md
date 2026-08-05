@@ -249,8 +249,8 @@ node scripts/doctor.mjs               # 改代码 / 发版前，全量闸门（�
 | 11 | 3D 坐标变换反复修（实证：model3d.ts 9 次 fix 全项目第一） | "对齐 ysmview cube pivot" 连续 5 次 fix | 改 model2d/model3d/spec.go 坐标前先 grep `bug-chronicle` + 对齐 ysmview 口径（pivot X 取反、`from.x = origin.x - size.x`）；改完用自由相机近距验证 |
 | 12 | CLI 未知 flag 被当标题/位置参数（实证：`--help` 误占 ADR-027-help.md / 生成 help.md 卡） | `new-adr.mjs --help` 占号；`new-knowledge-card.mjs --help` 当 kind | 有 positional 参数的 CLI：未知 `--flag` 显式白名单拦截，绝不落入位置参数位；`--help` 退 0 / 未知 flag 退 1；主流程 `process.exit(main())` 让退出码生效 |
 | 13 | 幽灵路径：状态被旁路写入（实证：page-store `setCurrentPage` 零调用方且 emits 完成事件；registry 注册空转零消费） | 状态变了但内容不渲染 / 服务注册无人消费 | 模块级状态唯一写入点收敛到 `registerXxx(unsubs)` listener；setter 禁发「完成事件」绕过请求链路；服务名联合类型收窄、注册必有消费方（`get()`） |
-| 14 | 旁路弹窗：不走 modal.ts 单例槽位（实证：version-updater 自带 47 行 dlg-overlay 骨架） | 连点叠加、单例失效、双执行 | 所有弹窗走 `dialogs/modal.ts`（modalConfirm/modalPrompt/modalSelect + `registerDlg` 槽位），禁止自带弹窗骨架（review.mjs W6 扫描） |
-| 15 | esc 重复实现（实证：10 文件 3-5 个 replace 版本并存） | 属性上下文 XSS 面不统一 | 转义统一 import `utils/dom.ts` 的 esc（5-replace 含引号），禁止私有实现（review.mjs R10 扫描） |
+| 14 | 旁路弹窗：不走 modal.ts 单例槽位（实证：version-updater 自带 47 行 dlg-overlay 骨架） | 连点叠加、单例失效、双执行 | 所有弹窗走 `dialogs/modal.ts`（modalConfirm/modalPrompt/modalSelect + `registerDlg` 槽位），禁止自带弹窗骨架（check-redlines.mjs W6 扫描） |
+| 15 | esc 重复实现（实证：10 文件 3-5 个 replace 版本并存） | 属性上下文 XSS 面不统一 | 转义统一 import `utils/dom.ts` 的 esc（5-replace 含引号），禁止私有实现（check-redlines.mjs R10 扫描） |
 
 > 完整版见 `docs/pitfalls.md`。
 

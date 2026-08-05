@@ -40,6 +40,12 @@ jobs:
           node scripts/check-doc-drift.mjs | Out-String -Width 200
           node scripts/check-deadcode-baseline.mjs | Out-String -Width 200
 
+      - name: 脚本卫生检查（禁止内联 ROOT 样板，--strict 阻断）
+        # P6 收口护栏：scripts/*.mjs 出现内联 ROOT 样板 / 文件头缺失 / 退出码失效 即 exit 1，
+        # 防止 P2–P6 双仓 scripts 约定回退。--strict 将 WARN 升级为失败。
+        shell: pwsh
+        run: node scripts/check-script-hygiene.mjs --strict
+
       - name: 构建更新助手 helper（embed 前置，修复 go vet 缺文件）
         # go/updater/update.go 通过 //go:embed 内嵌 ysm-updater-helper.exe，
         # 该文件由 cmd/updater/main.go 编译生成（见 cmd/build-release.ps1 步骤 1b），

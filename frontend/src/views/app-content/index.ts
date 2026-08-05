@@ -1,5 +1,6 @@
 // ===== <app-content> 入口 =====
 import { bus } from "../../bus.ts";
+import { resolveInitialPage } from "../../core/page-store.ts";
 import { setPendingTreeSearch } from "../app-tree/index.ts";
 import { esc as escUtil } from "../../utils/dom/html.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
@@ -74,7 +75,11 @@ class AppContent extends HTMLElement {
     this._root = this.attachShadow({ mode: "open" });
     this._root.adoptedStyleSheets = [new CSSStyleSheet()];
     this._root.adoptedStyleSheets[0].replaceSync(contentCSS);
-    this._current = "repository";
+    // 与 PageStore 同源初始化：app-nav 的初始 nav:change 在 app-content 动态
+    // import 完成前可能被吞（app-modules.ts 动态加载），此时若硬编码 "repository"
+    // 会导致 UI 渲染与 PageStore 脱节（守卫误拦 DnD 遮罩）。统一走
+    // resolveInitialPage，即使初始事件丢失，两者也保持一致。
+    this._current = resolveInitialPage();
     this._globalUnsubs = [];
     this._repoEventsCleanup = null;
   }

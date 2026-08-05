@@ -11,7 +11,9 @@ class AppNav extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._current = "dashboard";
+    // 与 PageStore 同源初始化（原硬编码 "dashboard" 是幽灵值——PageName 中
+    // 不存在此页，启动时导航高亮缺失，靠 nav:changed 收敛后才恢复）
+    this._current = resolveInitialPage();
   }
 
   connectedCallback(): void {

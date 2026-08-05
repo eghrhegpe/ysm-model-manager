@@ -713,9 +713,12 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   root.getElementById("set-animations") &&
     ((root.getElementById("set-animations") as HTMLInputElement).checked =
       localStorage.getItem("ui-animations") !== "off");
+  // 启动默认页面：显示「实际生效」的值——有显式配置用配置，否则回退
+  // resolveInitialPage 的默认结果（仓库页）。旧写法 || "instances" 会显示
+  // 一个从未生效的死默认值，与真实启动页不符（死设置遗留 bug）。
   root.getElementById("set-default-page") &&
     ((root.getElementById("set-default-page") as HTMLSelectElement).value =
-      localStorage.getItem("ui-default-page") || "instances");
+      localStorage.getItem("ui-default-page") || "repository");
 
   applyUIPref();
 

@@ -21,7 +21,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT, toPosix } from './_lib/scan-files.mjs';
 
 
 const B = { OK: '[OK]', FAIL: '[FAIL]', FIX: '[FIX]', SKIP: '[SKIP]' };
@@ -131,7 +131,7 @@ function isAmendSafe(localRef, localOid, files) {
   const { out } = git('status --porcelain');
   // 注意：不可对整体 trim —— porcelain 首行前导空格是 index 状态占位符，trim 后 slice(3) 会丢路径首字符
   const dirty = out.split('\n').filter(Boolean).map((l) => l.replace(/\r$/, '').slice(3));
-  const want = new Set(files.map((f) => f.replace(/\\/g, '/')));
+  const want = new Set(files.map((f) => toPosix(f)));
   return dirty.every((f) => want.has(f));
 }
 
@@ -142,7 +142,7 @@ function tryGofmtFix(goFiles, localRef, localOid) {
   if (!unformatted.length) return { fixed: [], amended: false };
   // 先修复代码（无论能否 amend，格式化本身无副作用）
   sh(`gofmt -w ${unformatted.join(' ')}`);
-  const fixed = unformatted.map((f) => f.replace(/\\/g, '/'));
+  const fixed = unformatted.map((f) => toPosix(f));
   // 守卫：工作区只含被修文件且 push 的就是 HEAD 才 amend，否则留待手动提交
   if (!isAmendSafe(localRef, localOid, fixed)) return { fixed, amended: false };
   const add = git(`add ${fixed.join(' ')}`);

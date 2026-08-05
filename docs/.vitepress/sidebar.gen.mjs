@@ -182,6 +182,14 @@ export const autoSidebar = [
         "link": "/adr/ADR-037-e2e-introduction"
       },
       {
+        "text": "ADR-038：YSM 文件夹模型统一契约：ysm.json 单一入口与整组操作",
+        "link": "/adr/ADR-038-ysm-folder-model-contract"
+      },
+      {
+        "text": "ADR-039：两轮功能审核后的遗留决策项与处置方向",
+        "link": "/adr/ADR-039-audit-remaining-decisions"
+      },
+      {
         "text": "ADR 登记表（Architecture Decision Records）",
         "link": "/adr/README"
       }
@@ -406,6 +414,10 @@ export const autoSidebar = [
         "link": "/knowledge/go-errors"
       },
       {
+        "text": "文件操作 go/fileops",
+        "link": "/knowledge/go-fileops"
+      },
+      {
         "text": "文件遍历 go/fsutil",
         "link": "/knowledge/go-fsutil"
       },
@@ -420,6 +432,10 @@ export const autoSidebar = [
       {
         "text": "模型安装 go/installer",
         "link": "/knowledge/go-installer"
+      },
+      {
+        "text": "整合包实例 go/instance",
+        "link": "/knowledge/go-instance"
       },
       {
         "text": "Litematic 解析 go/litematic",
@@ -440,6 +456,10 @@ export const autoSidebar = [
       {
         "text": "回收站 go/recycle",
         "link": "/knowledge/go-recycle"
+      },
+      {
+        "text": "扫描核心 go/scanner",
+        "link": "/knowledge/go-scanner"
       },
       {
         "text": "整合包同步 go/sync",
@@ -516,6 +536,10 @@ export const autoSidebar = [
       {
         "text": "共享样式 shared-styles",
         "link": "/knowledge/shared-styles"
+      },
+      {
+        "text": "测试工具 test-utils（G-1 抗脆弱测试基础设施）",
+        "link": "/knowledge/test-utils"
       },
       {
         "text": "主题系统 theme",
@@ -710,6 +734,10 @@ export const autoSidebar = [
           {
             "text": "第 07 区域 · 第 2 章 · 拦路的门卫",
             "link": "/novel/07-文件与路径/02-拦路的门卫"
+          },
+          {
+            "text": "第 07 区域 · 第 3 章 · 搬家只搬了门牌",
+            "link": "/novel/07-文件与路径/03-搬家只搬了门牌"
           }
         ]
       },
@@ -1326,6 +1354,20 @@ export const autoSidebar = [
       {
         "text": "v1.9.3 — 3D 渲染增强 + 蓝图修复 + 四元数排查（by @zuogeren）",
         "link": "/releases/v1.9.3"
+      }
+    ]
+  },
+  {
+    "text": "review",
+    "collapsed": true,
+    "items": [
+      {
+        "text": "大模块审核子代理流水线 Playbook",
+        "link": "/review/subagent-review-playbook"
+      },
+      {
+        "text": "验证记录 — `import-queue.ts` 模块（子代理审核流水线实跑）",
+        "link": "/review/validation-import-queue"
       }
     ]
   }

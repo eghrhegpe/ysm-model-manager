@@ -12,10 +12,13 @@
  *   node scripts/test-coverage-report.mjs --top 5    # 只列最差 5 个
  *   node scripts/test-coverage-report.mjs --json     # 结构化输出（子代理消费）
  *   node scripts/test-coverage-report.mjs --input <path>  # 指定 coverage 文件
+ *   node scripts/test-coverage-report.mjs --suggest # 非阻断建议（提交期钩子用，永远 exit 0）
+ *     # 只列低于阈值文件；缺失数据 graceful degrade；--threshold N 可覆盖阈值
+ *     # 阈值默认读 frontend/vite.config.js coverage.thresholds.statements
  *
  * 依赖：frontend/coverage/coverage-final.json（先跑 npm run test:coverage）
  * 设计意图：test-coverage-report 工具脚本
- * 退出码：1（失败）
+ * 退出码：默认 1（数据缺失）；--suggest 永远 0（非阻断）
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,15 +29,36 @@ const DEFAULT_INPUT = path.join(ROOT, 'frontend/coverage/coverage-final.json');
 
 const args = process.argv.slice(2);
 const jsonMode = args.includes('--json');
+const suggestMode = args.includes('--suggest');
 const topIdx = args.indexOf('--top');
 const topN = topIdx !== -1 ? parseInt(args[topIdx + 1], 10) : 15;
 const inputIdx = args.indexOf('--input');
 const inputPath = inputIdx !== -1 ? args[inputIdx + 1] : DEFAULT_INPUT;
+const thIdx = args.indexOf('--threshold');
+const thresholdArg = thIdx !== -1 ? parseInt(args[thIdx + 1], 10) : NaN;
+
+/** 语句覆盖率阈值：优先从 frontend/vite.config.js coverage.thresholds.statements
+ *  提取（单一事实源，2026-08-04 校准为 45），提取失败回退 45，--threshold 可覆盖。 */
+function resolveThreshold() {
+  if (Number.isFinite(thresholdArg)) return thresholdArg;
+  try {
+    const cfgPath = path.join(ROOT, 'frontend', 'vite.config.js');
+    const cfg = fs.readFileSync(cfgPath, 'utf8');
+    const m = cfg.match(/statements\s*:\s*(\d+)/);
+    if (m) return parseInt(m[1], 10);
+  } catch {
+    /* 读不到配置则用默认值 */
+  }
+  return 45;
+}
+const THRESHOLD = resolveThreshold();
 
 if (!fs.existsSync(inputPath)) {
   process.stderr.write(
     `未找到覆盖率产物 ${inputPath}\n请先运行 cd frontend && npm run test:coverage\n`
   );
+  // --suggest 为提交期非阻断模式：数据缺失 graceful degrade，绝不卡提交
+  if (suggestMode) process.exit(0);
   process.exit(1);
 }
 
@@ -52,12 +76,26 @@ function compactRanges(lines) {
   return out.join(', ');
 }
 
+/** 从 coverage key（生成机绝对路径）提取仓库相对路径，跨平台免疫。
+ *  coverage-final.json 的 key 是生成时机的绝对路径（Windows: C:\...；Linux: /home/...），
+ *  若换机解析，path.relative(ROOT, key) 会因平台路径风格不一致而错乱。
+ *  这里定位仓库顶层目录段（/frontend|go|internal/...）取其后部分，不依赖盘符与分隔符；
+ *  找不到时回退 relPosix（同平台场景）。 */
+function repoRel(p) {
+  const posix = toPosix(p);
+  const m = posix.match(/\/(frontend|go|internal|scripts|tests)\//);
+  if (m) return posix.slice(m.index + 1);
+  return relPosix(p);
+}
+
 const raw = JSON.parse(fs.readFileSync(inputPath, 'utf-8'));
 
 const rows = [];
 for (const [absPath, entry] of Object.entries(raw)) {
-  if (!absPath.includes(`${path.sep}js${path.sep}`)) continue;
-  const rel = relPosix(absPath);
+  // 注：不再按 path.sep 拼装目录段过滤（该写法在 Windows 上找 \js\、Linux 上找 /js/，
+  // 对绝对路径 key 恒为 false，曾把全部文件滤掉导致"假全绿"）。
+  const rel = repoRel(absPath);
+  if (!rel.startsWith('frontend/') && !rel.startsWith('go/') && !rel.startsWith('internal/')) continue;
   if (/\.(test|spec)\.(js|ts)$/.test(rel)) continue;
 
   const stmts = Object.values(entry.s);
@@ -92,6 +130,50 @@ rows.sort((a, b) => a.stmts - b.stmts);
 const totalFiles = rows.length;
 const sumStmts = rows.reduce((acc, r) => acc + r.stmts, 0);
 const overall = totalFiles ? Number((sumStmts / totalFiles).toFixed(2)) : 100;
+
+const belowThreshold = rows.filter((r) => r.stmts < THRESHOLD);
+
+if (suggestMode) {
+  // ── 非阻断建议模式（prepare-commit-msg 钩子消费；永远 exit 0）──
+  if (jsonMode) {
+    process.stdout.write(
+      JSON.stringify(
+        {
+          _summary: {
+            files: totalFiles,
+            overallStmts: overall,
+            belowThreshold: belowThreshold.length,
+            thresholdStmts: THRESHOLD,
+            source: inputPath,
+          },
+          files: belowThreshold.map((r) => ({
+            file: r.file,
+            stmts: r.stmts,
+            uncoveredRanges: r.uncoveredLines.length ? compactRanges(r.uncoveredLines) : '',
+            uncoveredFns: r.uncoveredFns,
+          })),
+        },
+        null,
+        2
+      ) + '\n'
+    );
+  } else if (belowThreshold.length === 0) {
+    process.stdout.write(
+      `✅ 覆盖率全达标：整体 ${overall}%，无文件低于 ${THRESHOLD}% 阈值（frontend/vite.config.js coverage.thresholds.statements）\n`
+    );
+  } else {
+    process.stdout.write(`## 🔧 覆盖率建议（非阻断）\n`);
+    process.stdout.write(
+      `以下 ${belowThreshold.length} 个源文件语句覆盖率低于阈值 ${THRESHOLD}%（frontend/vite.config.js coverage.thresholds.statements）：\n`
+    );
+    for (const r of belowThreshold) {
+      const lineDesc = r.uncoveredLines.length ? compactRanges(r.uncoveredLines) : '(无)';
+      process.stdout.write(`  [${r.stmts}%] ${r.file}  未覆盖行: ${lineDesc}\n`);
+    }
+    process.stdout.write(`补测参考: node scripts/test-coverage-report.mjs\n`);
+  }
+  process.exit(0);
+}
 
 if (jsonMode) {
   process.stdout.write(

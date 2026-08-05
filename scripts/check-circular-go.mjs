@@ -22,7 +22,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT, toPosix } from './_lib/scan-files.mjs';
 
 const MODULE = 'ysm-model-manager';
 const JSON_OUT = process.argv.includes('--json');
@@ -72,7 +72,7 @@ function extractImports(text) {
 // 目录 → 包节点 key（相对 ROOT，posix 风格；根目录用 "."）
 function dirKey(file) {
   const rel = path.relative(ROOT, path.dirname(file));
-  return rel.split(path.sep).join('/') || '.';
+  return toPosix(rel) || '.';
 }
 
 // ── 环检测（DFS 三色，复用 check-circular.mjs 算法）──

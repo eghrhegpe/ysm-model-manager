@@ -3,7 +3,7 @@
  * new-adr.mjs — 新 ADR 脚手架（占号 → 模板 → 登记 → 自检闭环）。
  *
  * 零依赖（仅 node:fs / node:path / node:url / node:child_process）。
- * 呼应 ADR-013 Phase 0.2「写文件前先在 adr/README.md 登记表占号」：
+ * 呼应 ADR-013 Phase 0.2「写文件前先在 adr/index.md 登记表占号」：
  *   1. 双源取最大编号（磁盘文件 + 登记表）→ +1 占号
  *   2. 生成 ADR-NNN-slug.md 四段模板（背景/决策/后果/数据溯源）
  *   3. 登记表插入占号行
@@ -25,7 +25,7 @@ import { spawnSync } from 'node:child_process';
 
 // 与 adr-check.mjs / gen-docs-index.mjs 保持一致：ADR 目录在 docs/adr（非 docs/architecture/adr）
 const ADR_DIR = path.join(ROOT, 'docs', 'adr');
-const REG_FILE = path.join(ADR_DIR, 'README.md');
+const REG_FILE = path.join(ADR_DIR, 'index.md'); // 登记表已并入 index（ADR 双文件合并）
 
 // ── 参数解析 ────────────────────────────────────────────
 
@@ -303,7 +303,7 @@ function main() {
       return 1;
     }
     fs.writeFileSync(REG_FILE, next, 'utf8');
-    console.log('[OK] 已登记占号 adr/README.md');
+    console.log('[OK] 已登记占号 adr/index.md');
 
     // 2.5 被取代标注
     if (args.supersedes.length) {

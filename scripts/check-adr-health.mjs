@@ -8,7 +8,7 @@
  *   [状态机 status]   文件内 `- **状态**：` 值域合法性（四态归一化）
  *                     已采纳 / 部分采纳 / 已废弃 / 已取代（中英混写均识别）
  *                     非法值 → ERROR
- *   [登记同步 health] 文件状态 vs adr/README.md 登记表状态归一化比对
+ *   [登记同步 health] 文件状态 vs adr/index.md 登记表状态归一化比对
  *                     不一致 → ERROR
  *   [技术债 debt]     识别「违规未修复 / 不一致未修复 / 部分采纳·进行中」
  *                     输出债清单（ADR | 标题 | 债类型 | 严重度 P1/P2/P3）
@@ -28,7 +28,7 @@ import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 
 const ADR_DIR = path.join(ROOT, 'docs/adr');
-const REG_FILE = path.join(ADR_DIR, 'README.md');
+const REG_FILE = path.join(ADR_DIR, 'index.md'); // 登记表已并入 index
 
 const ARGS = new Set(process.argv.slice(2));
 const JSON_OUT = ARGS.has('--json');
@@ -116,7 +116,7 @@ function checkRegistry(statusRowsMap) {
   try {
     regText = fs.readFileSync(REG_FILE, 'utf-8');
   } catch {
-    errors.push('[登记同步] adr/README.md 登记表不存在');
+    errors.push('[登记同步] adr/index.md 登记表不存在');
     return;
   }
   const regMap = {};

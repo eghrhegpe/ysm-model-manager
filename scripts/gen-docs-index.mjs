@@ -27,7 +27,6 @@ import { ROOT } from './_lib/scan-files.mjs';
 import { spawnSync } from 'node:child_process';
 
 const ADR_DIR = path.join(ROOT, 'docs', 'adr');
-const ADR_REG_FILE = path.join(ADR_DIR, 'README.md');
 const ADR_INDEX_FILE = path.join(ADR_DIR, 'index.md');
 const RELEASE_DIR = path.join(ROOT, 'docs', 'releases');
 const RELEASE_FILE = path.join(RELEASE_DIR, 'index.md');
@@ -178,6 +177,19 @@ const INDEX_GROUPS = [
   { key: 'replaced', title: '❌ 已取代', anchor: '已取代' },
 ];
 
+/**
+ * 使用规则（硬约束）——原 docs/adr/README.md 手写段，合并至 index 后由生成器承载。
+ * 改规则 = 改本常量后重跑 gen-docs-index.mjs（index 保持「全生成、禁手改」）。
+ */
+const ADR_USAGE_RULES = [
+  '1. **编号**：取本表最大编号 +1（三位，如 `ADR-014`），禁止 `ADR-000N` 式前缀，禁止跳号复用。',
+  '2. **占号**：写文件**前**先在本表登记占号（并提交登记），再创建文件——多会话并行时以登记顺序为准，撞号者必须让位改号。',
+  '3. **命名**：文件名 `ADR-NNN-kebab-case.md`（如 `ADR-013-governance-convergence.md`）。',
+  '4. **必填字段**：状态 / 日期 / 决策人 / 相关；正文结构：背景（Context）→ 决策（Decision）→ 后果（Consequences）→ 数据溯源。',
+  '5. **状态值**：`✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代` / `⚠️ 已采纳（违规或未修复，自动从文件首部识别）`。状态变更只改文件首部，本页由 `gen-docs-index.mjs` 自动重写。',
+  '6. **新 ADR 落地后**：本页自动重写（改文件首部即可），无需手动同步；历史 `PROJECT_STATUS.md` 已冻结于 `docs/archive/`，不再维护。',
+];
+
 function groupAdrs(list) {
   const groups = { accepted: [], partial: [], unfixed: [], deprecated: [], replaced: [] };
   for (const a of list) {
@@ -205,6 +217,7 @@ function buildAdrIndex(list) {
   out += '<!-- 本文件由 scripts/gen-docs-index.mjs 自动生成，禁止手改。重跑：node scripts/gen-docs-index.mjs -->\n\n';
   out += '# 决策记录（ADR）\n\n';
   out += `> 架构决策日志，共 **${total}** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为规范索引（按状态分组，可锚点跳转）。\n\n`;
+  out += '> 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。\n\n';
 
   // 状态分布总览（锚点跳转）
   out += '## 按状态分布\n\n';
@@ -213,6 +226,16 @@ function buildAdrIndex(list) {
   for (const g of INDEX_GROUPS) {
     out += `| [${g.title}](#${g.anchor}) | ${groups[g.key].length} |\n`;
   }
+  out += '\n';
+
+  // 登记表（占号/对账契约：行格式 `| ADR-NNN | 标题 | 状态 | 日期 |`，adr-check/new-adr 机器消费）
+  out += '## 登记表\n\n';
+  out += buildAdrRegistry(list);
+  out += '\n';
+
+  // 使用规则（硬约束，作者向操作规程）
+  out += '## 使用规则（硬约束）\n\n';
+  for (const r of ADR_USAGE_RULES) out += `${r}\n`;
   out += '\n';
 
   // 分组明细（每组一个表，相对链接；含日期列——分组即全量，不再另附全量列表）
@@ -229,6 +252,10 @@ function buildAdrIndex(list) {
     for (const a of sorted) out += `${row(a)}\n`;
     out += '\n';
   }
+
+  // 尾部维护说明
+  out += '---\n\n';
+  out += '*登记表由 `gen-docs-index.mjs` 自动重写；一致性校验已接入：`node scripts/check-adr-health.mjs`（状态值域 + 登记同步 + 技术债）+ `node scripts/check-doc-drift.mjs`（编号连续性/漏登/幽灵）。*\n';
   return out;
 }
 
@@ -356,14 +383,10 @@ function main() {
       failed = true;
     } else {
       const list = parseAdrs();
-      const r1 = applyRegion(ADR_REG_FILE, 'adr-registry', buildAdrRegistry(list));
-      const r2 = applyRegion(ADR_REG_FILE, 'adr-stats', buildAdrStats(list));
+      // 登记表/规则已并入 index.md（整文件重写）；README.md 为固定指针页，不再由本生成器管理
       const r3 = applyWholeFile(ADR_INDEX_FILE, buildAdrIndex(list), 'docs/adr/index.md');
-      if ((r1.changed || r2.changed) && r1.ok && r2.ok) {
-        console.log(`[OK] 已更新 adr/README.md（${path.relative(ROOT, ADR_REG_FILE)}）`);
-      }
-      if (r3.changed && r3.ok) console.log(`[OK] 已更新 docs/adr/index.md（规范索引）`);
-      if (!r1.ok || !r2.ok || !r3.ok) failed = true;
+      if (r3.changed && r3.ok) console.log(`[OK] 已更新 docs/adr/index.md（规范索引 + 登记表 + 使用规则）`);
+      if (!r3.ok) failed = true;
     }
   }
 

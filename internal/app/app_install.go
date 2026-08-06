@@ -745,6 +745,14 @@ func (a *App) SetLinkMode(mode string) error {
 	if mode != "symlink" && mode != "hardlink" && mode != "copy" {
 		return fmt.Errorf("无效的链接模式: %s", mode)
 	}
+	cfg := a.LoadAppConfig()
+	if cfg.LinkMode == mode {
+		return nil
+	}
+	cfg.LinkMode = mode
+	if err := a.saveConfig(cfg); err != nil {
+		return err
+	}
 	a.LinkMode = mode
 	return nil
 }

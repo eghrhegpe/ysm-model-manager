@@ -69,7 +69,7 @@
 3. **命名**：文件名 `ADR-NNN-kebab-case.md`（如 `ADR-013-governance-convergence.md`）。
 4. **必填字段**：状态 / 日期 / 决策人 / 相关；正文结构：背景（Context）→ 决策（Decision）→ 后果（Consequences）→ 数据溯源。
 5. **状态值**：`✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代` / `⚠️ 已采纳（违规或未修复，自动从文件首部识别）`。状态变更必须同步更新本表（本表由 `gen-docs-index.mjs` 自动重写，改文件首部即可）。
-6. **新 ADR 落地后**：本表同步更新 + `PROJECT_STATUS.md` 的「当前进行中 / 近期 ADR」段同步。
+6. **新 ADR 落地后**：本表由 `gen-docs-index.mjs` 自动重写（改文件首部即可），无需手动同步；历史 `PROJECT_STATUS.md` 已冻结于 `docs/archive/`，不再维护。
 
 ---
 

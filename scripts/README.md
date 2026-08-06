@@ -91,7 +91,6 @@
 | `gen-knowledge-adr.mjs` | 知识卡 `adr:` 关联补全（扫描源码 `[doc:adr-NNN]` 标记，仅 architecture 卡） |
 | `gen-knowledge-tests.mjs` | 知识卡 `tests:` 登记（扫描 frontend/src 测试文件按名匹配补登） |
 | `new-knowledge-card.mjs` | 知识卡脚手架 |
-| `gen-status-index.mjs` | ⚠️ 僵尸脚本：目标 `docs/architecture/PROJECT_STATUS.md` 已冻结迁移至 `docs/archive/`（无该文件），脚本必失败；无实际消费者，待清理 |
 | `new-adr.mjs` | 新 ADR 脚手架：双源占号 + 四段模板 + 登记表登记 + 自动 adr-check；用法 `node scripts/new-adr.mjs "标题" [--slug kebab-name] [--related 关联内容] [--supersedes ADR-0XX,...] [--dry-run]` |
 | `gen-docs-index.mjs` | 分区索引：adr 登记表/状态统计 + **adr 规范索引页 `docs/adr/index.md`（状态分组 + 锚点 + 相对链接，整文件重写）** + releases 最近版本/版本全览（GEN 标记区），knowledge 委托校验 |
 | `gen-project-map.mjs` | 项目结构地图生成（`docs/project-map.md`）：扫描磁盘目录 + 合并基线 `scripts/baseline/project-dirs.json` 用途说明，4 个 GEN 标记区；`--check` 已挂 doctor 防漂移；未登记基线的新目录 WARN 提醒 |
@@ -113,6 +112,12 @@
 | `check_*.py` / `fix_*.py` / `restore_nico.py` / `transform_creators.py` / `validate_data.py` | 一次性数据修复脚本，历史使命完成，随迁移清理 |
 | `compare-*.py` | 一次性对比工具 |
 | `safe-edit-service.py` / `safe-edit.bat` | 半成品（`do_GET` 备份逻辑为空 `pass`），删除 |
+
+### 已删除（2026-08-06 清理）
+
+| 原脚本 | 原因 |
+|------|------|
+| `gen-status-index.mjs` | 僵尸脚本：目标 `docs/architecture/PROJECT_STATUS.md` 已冻结迁移至 `docs/archive/`（2026-08-03），脚本必失败且无实际消费者，删除；状态映射职责由 `gen-docs-index.mjs` 承接 |
 
 ---
 

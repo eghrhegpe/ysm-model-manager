@@ -9,7 +9,7 @@
  *   - guide    → docs/guide/index.md 的 guide-index（用户指南表格，从各篇 frontmatter 生成）
  *   - releases → docs/releases/index.md 的 releases-index（最近版本 + 版本全览）
  *   - knowledge→ 委托 gen-knowledge-index.mjs --check（不重写，避免双生成器打架）
- * 单一事实来源 = ADR 文件首部 / guide 各篇 frontmatter；状态映射与 gen-status-index.mjs 保持一致。
+ * 单一事实来源 = ADR 文件首部 / guide 各篇 frontmatter；状态映射以 ADR 首部状态行为准。
  *
  * 用法：
  *   node scripts/gen-docs-index.mjs                # 全分区写入
@@ -90,7 +90,7 @@ function applyWholeFile(file, content, label) {
   return { ok: true, changed: true };
 }
 
-// ── ADR 解析与状态映射（与 gen-status-index.mjs 一致）──
+// ── ADR 解析与状态映射（状态值域以 adr-check.mjs 为准）──
 
 function parseAdrs() {
   const files = fs

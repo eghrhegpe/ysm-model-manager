@@ -34,6 +34,40 @@ const CATEGORY_LABELS = {
 
 const NON_CARDS = new Set(['index.md', 'README.md', 'AGENTS.md']);
 
+/**
+ * 使用说明（原 docs/knowledge/README.md 操作手册，并入 index 后由生成器承载）。
+ * 改说明 = 改本常量后重跑 gen-knowledge-index.mjs（index 保持「全生成、禁手改」）。
+ */
+const KNOWLEDGE_USAGE = [
+  '### 快速开始',
+  '',
+  '```bash',
+  '# 新建知识卡',
+  'node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]',
+  '',
+  '# 漂移检查',
+  'node scripts/check-knowledge-drift.mjs',
+  '',
+  '# 重新生成索引',
+  'node scripts/gen-knowledge-index.mjs',
+  '```',
+  '',
+  '### 文件结构',
+  '',
+  '| 文件 | 说明 |',
+  '|------|------|',
+  '| `AGENTS.md` | 分区路由指南（必读） |',
+  '| `index.md` | 分类索引（自动生成） |',
+  '| `<kind>.md` | 知识卡（kind 为 snake_case） |',
+  '',
+  '### 约束',
+  '',
+  '- `source_files` **必须**真实存在于磁盘',
+  '- `kind` = 文件名，snake_case',
+  '- 生成物（`index.md`）**禁止手改**',
+  '- H1 标题 = `name` 字段',
+];
+
 // ── 工具函数 ─────────────────────────────────────────
 
 /** 提取卡片 `## 概览` 段落内容作为摘要。 */
@@ -105,6 +139,10 @@ function buildIndex() {
   }
 
   out += '---\n\n';
+  out += '## 使用说明\n\n';
+  for (const line of KNOWLEDGE_USAGE) out += line + '\n';
+  out += '\n';
+
   out += '## 分类说明\n\n';
   out += '| 分类 | 用途 |\n';
   out += '|------|------|\n';

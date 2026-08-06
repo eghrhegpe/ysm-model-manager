@@ -246,7 +246,8 @@ function parseGuidePages() {
     const get = (key) => {
       if (!fm) return '';
       const m = fm[1].match(new RegExp('^' + key + '\\s*:\\s*(.+)$', 'm'));
-      return m ? m[1].trim().replace(/\s*#.*$/, '').trim() : '';
+      // 剥 YAML 外层引号（frontmatter 标题常带 "..."），避免索引表显示引号残留
+      return m ? m[1].trim().replace(/\s*#.*$/, '').trim().replace(/^["']|["']$/g, '').trim() : '';
     };
     pages.push({ file: f, title: get('title') || f.replace(/\.md$/, ''), desc: get('description') || '' });
   }

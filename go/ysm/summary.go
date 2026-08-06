@@ -12,8 +12,8 @@ import (
 )
 
 type Author struct {
-	Name    string `json:"name"`
-	Roles   string `json:"roles,omitempty"`
+	Name     string `json:"name"`
+	Roles    string `json:"roles,omitempty"`
 	Bilibili string `json:"bilibili,omitempty"`
 }
 
@@ -36,27 +36,27 @@ type ConfigMenu struct {
 
 type PreviewInfo struct {
 	DefaultTexture string  `json:"defaultTexture,omitempty"`
-	HasGUI        bool    `json:"hasGui"`
-	HeightScale   float64 `json:"heightScale,omitempty"`
-	WidthScale    float64 `json:"widthScale,omitempty"`
+	HasGUI         bool    `json:"hasGui"`
+	HeightScale    float64 `json:"heightScale,omitempty"`
+	WidthScale     float64 `json:"widthScale,omitempty"`
 }
 
 // YsmSummary 是前端右侧面板和 AI 搜索消费的标准摘要
 type YsmSummary struct {
-	Schema     string       `json:"schema"`     // "ysm-summary/v1"
-	Source     string       `json:"source"`     // 原始文件名
-	Name       string       `json:"name"`
-	Tips       string       `json:"tips,omitempty"`
-	License    string       `json:"license,omitempty"`
-	Authors    []Author     `json:"authors,omitempty"`
-	Links      Link         `json:"links,omitempty"`
-	Spec       int          `json:"spec"`
-	Format     string       `json:"format"`      // "ysm" 或 "zip"
-	Size       int64        `json:"size"`        // 文件大小 bytes
-	Stats      Stats        `json:"stats"`
-	AnimGroups []AnimGroup  `json:"animGroups,omitempty"`
+	Schema      string       `json:"schema"` // "ysm-summary/v1"
+	Source      string       `json:"source"` // 原始文件名
+	Name        string       `json:"name"`
+	Tips        string       `json:"tips,omitempty"`
+	License     string       `json:"license,omitempty"`
+	Authors     []Author     `json:"authors,omitempty"`
+	Links       Link         `json:"links,omitempty"`
+	Spec        int          `json:"spec"`
+	Format      string       `json:"format"` // "ysm" 或 "zip"
+	Size        int64        `json:"size"`   // 文件大小 bytes
+	Stats       Stats        `json:"stats"`
+	AnimGroups  []AnimGroup  `json:"animGroups,omitempty"`
 	ConfigMenus []ConfigMenu `json:"configMenus,omitempty"`
-	Preview    PreviewInfo  `json:"preview"`
+	Preview     PreviewInfo  `json:"preview"`
 }
 
 type Stats struct {
@@ -70,18 +70,18 @@ type Stats struct {
 // ===== 内部解析用的完整 ysm.json 结构 =====
 
 type ysmRoot struct {
-	Spec       int              `json:"spec"`
-	Metadata   *ysmMetadata     `json:"metadata,omitempty"`
-	Properties *ysmProperties   `json:"properties,omitempty"`
-	Files      json.RawMessage  `json:"files,omitempty"`
+	Spec       int             `json:"spec"`
+	Metadata   *ysmMetadata    `json:"metadata,omitempty"`
+	Properties *ysmProperties  `json:"properties,omitempty"`
+	Files      json.RawMessage `json:"files,omitempty"`
 }
 
 type ysmMetadata struct {
-	Name    string         `json:"name"`
-	Tips    string         `json:"tips,omitempty"`
-	License *ysmLicense    `json:"license,omitempty"`
-	Authors []ysmAuthor    `json:"authors,omitempty"`
-	Link    *ysmLink       `json:"link,omitempty"`
+	Name    string      `json:"name"`
+	Tips    string      `json:"tips,omitempty"`
+	License *ysmLicense `json:"license,omitempty"`
+	Authors []ysmAuthor `json:"authors,omitempty"`
+	Link    *ysmLink    `json:"link,omitempty"`
 }
 
 type ysmLicense struct {
@@ -89,10 +89,10 @@ type ysmLicense struct {
 }
 
 type ysmAuthor struct {
-	Name    string        `json:"name"`
-	Role    string        `json:"role,omitempty"`
-	Avatar  string        `json:"avatar,omitempty"`
-	Contact *ysmContact   `json:"contact,omitempty"`
+	Name    string      `json:"name"`
+	Role    string      `json:"role,omitempty"`
+	Avatar  string      `json:"avatar,omitempty"`
+	Contact *ysmContact `json:"contact,omitempty"`
 }
 
 type ysmContact struct {
@@ -105,12 +105,12 @@ type ysmLink struct {
 }
 
 type ysmProperties struct {
-	DefaultTexture       string                 `json:"default_texture,omitempty"`
-	HeightScale          float64                `json:"height_scale,omitempty"`
-	WidthScale           float64                `json:"width_scale,omitempty"`
-	ExtraAnimation       map[string]interface{} `json:"extra_animation,omitempty"`
-	ExtraAnimClassify    []ysmAnimClassify      `json:"extra_animation_classify,omitempty"`
-	ExtraAnimButtons     []ysmConfigButton      `json:"extra_animation_buttons,omitempty"`
+	DefaultTexture    string                 `json:"default_texture,omitempty"`
+	HeightScale       float64                `json:"height_scale,omitempty"`
+	WidthScale        float64                `json:"width_scale,omitempty"`
+	ExtraAnimation    map[string]interface{} `json:"extra_animation,omitempty"`
+	ExtraAnimClassify []ysmAnimClassify      `json:"extra_animation_classify,omitempty"`
+	ExtraAnimButtons  []ysmConfigButton      `json:"extra_animation_buttons,omitempty"`
 }
 
 type ysmAnimClassify struct {

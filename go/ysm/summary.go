@@ -585,12 +585,13 @@ func extractControlTypes(raw json.RawMessage) []string {
 	return types
 }
 
-// 截断字符串
+// 截断字符串（按 rune 计，避免中文字符被字节截断产生乱码）
 func truncate(s string, max int) string {
-	if len(s) <= max {
+	runes := []rune(s)
+	if len(runes) <= max {
 		return s
 	}
-	return s[:max] + "..."
+	return string(runes[:max]) + "..."
 }
 
 // isYSGP 检测文件是否是 YSGP（YSM V2）二进制格式（支持带 BOM 的变体）

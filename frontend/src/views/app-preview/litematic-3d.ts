@@ -560,8 +560,8 @@ export async function createLitematic3D(
       window.removeEventListener("mouseup", onMouseUp);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("resize", onResize);
-      // escHandler 在 try 块内注册，此处安全移除（无论是否已注册）
-      document.removeEventListener("keydown", escHandler);
+      // 统一移除 escH（初始注册于 L183）；escHandler 是 fullCleanup 内新注册的后继，无需再移
+      document.removeEventListener("keydown", escH);
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
       _voxel3d = null;
     }
@@ -575,6 +575,7 @@ export async function createLitematic3D(
     cleanupFn = fullCleanup;
     _voxel3d = { cleanup: fullCleanup };
   } catch (e) {
+    document.removeEventListener("keydown", escH); // await getApp() 抛异常时确保移除旧 escH
     console.error("[litematic 3D] 加载失败:", e);
     loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>加载失败: ${esc(e instanceof Error ? e.message : String(e))}</div>`;
     bus.emit("toast:show", { msg: "❌ " + friendlyError(e, "体素 3D 加载失败"), duration: 5000, type: "error" });

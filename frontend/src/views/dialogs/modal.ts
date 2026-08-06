@@ -13,6 +13,36 @@ declare global {
   }
 }
 
+/** 可聚焦元素选择器 */
+const FOCUSABLE_SEL =
+  "button,input,select,textarea,tabindex,[tabindex]:not([tabindex=\"-1\"]),a[href],summary";
+
+/**
+ * 焦点陷阱：Tab 键在弹窗内可聚焦元素间循环，防止焦点逃逸到背后页面
+ * @param overlay 弹窗 overlay 元素
+ * @returns cleanup 函数（移除 keydown 监听器）
+ */
+export function trapFocus(overlay: HTMLElement): () => void {
+  const handler = (e: KeyboardEvent): void => {
+    if (e.key !== "Tab") return;
+    const focusable = overlay.querySelectorAll<HTMLElement>(FOCUSABLE_SEL);
+    if (!focusable.length) return;
+    const arr = Array.from(focusable);
+    const first = arr[0];
+    const last = arr[arr.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || active === overlay)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && (active === last || active === overlay)) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+  overlay.addEventListener("keydown", handler);
+  return () => overlay.removeEventListener("keydown", handler);
+}
+
 /**
  * 带退场动画关闭对话框
  * @param overlay 对话框 overlay 元素
@@ -97,6 +127,7 @@ export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
     const input = box.querySelector("#mp-input") as HTMLInputElement;
     input.focus();
     input.select();
+    trapFocus(overlay);
 
     const close = (result: string | null): void =>
       closeDlg(overlay, resolve, result);
@@ -190,6 +221,7 @@ export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
 
     const select = box.querySelector("#ms-select") as HTMLSelectElement;
     select.focus();
+    trapFocus(overlay);
     void placeholder;
 
     const close = (result: string | null): void =>
@@ -253,6 +285,7 @@ export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
     document.body.appendChild(overlay);
     registerDlg(overlay, () => closeDlg(overlay, resolve, false));
     overlay.focus();
+    trapFocus(overlay);
 
     const close = (result: boolean): void =>
       closeDlg(overlay, resolve, result);

@@ -70,6 +70,10 @@
 | `check-boolean-naming.mjs` | `node scripts/check-boolean-naming.mjs` / `--strict` | 布尔变量命名规范 |
 | `check-script-hygiene.mjs` | `node scripts/check-script-hygiene.mjs` / `--json` / `--strict` | 脚本卫生：退出码失效（裸 main + return 失败码无 process.exit）/ 共享层内联（walk/rg/ROOT 样板）/ 检查类缺 `--json` 契约（WARN 不阻断） |
 | `auto-import.mjs` | `node scripts/auto-import.mjs` / `--fix` / `--watch` / `--strict` | TS/JS 缺失 import 检测（ADR-014 伴生，已接入 doctor 静态分析） |
+| `gen-adr-supersede.mjs` | `node scripts/gen-adr-supersede.mjs` / `--check` | ADR 取代关系判定（五层证据：已登记 / 漏标 / 废弃未指明 / 可疑 / 表格弱宣称）；`--check` 仅漏标失败退出 1（供 check:docs） |
+| `check-dynamic-import.mjs` | `node scripts/check-dynamic-import.mjs` / `--json` | 动态 import() 合理性审查（对照 app_modules 规范：失败处理缺失 / 空 catch 吞错 / .js 后缀残留 / 轻量工具模块误动态导入；WARN 阻断） |
+| `check-tpl-refs.mjs` | `node scripts/check-tpl-refs.mjs` / `--json` | 前端 JS id 引用 ↔ 模板定义交叉核对：引用有定义无 → ERROR 断链阻断（幽灵 id 守护） |
+| `wails3-cli-check.mjs` | `node scripts/wails3-cli-check.mjs` / `--json` | Wails v3 CLI 拼写检查：活跃路径裸 `wails X`（非 wails3）→ ERROR（v2→v3 回归守护，2026-08-05 绑定教训） |
 
 > 基线文件位于 `scripts/baseline/`（`deadcode-baseline.json` / `doc-drift-baseline.json`），刷新基线用对应脚本的 `--update-baseline` / `--fix`。
 
@@ -80,6 +84,7 @@
 | `gen-knowledge-index.mjs` | 知识卡索引生成（docs/knowledge/index.md） |
 | `check-knowledge-drift.mjs` | 知识卡漂移检查（含代码→卡片覆盖盲区 WARN；`--affected <文件...>` 主动列出受源码变更影响的知识卡；`--affected --quiet` 机读模式供钩子消费） |
 | `hooks/knowledge-affected-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：把受影响知识卡写入 commit message body + stderr 摘要提示（非阻断、幂等，AI 终端可见），归一化 Git Bash msys 路径 |
+| `hooks/coverage-suggest-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：低于语句覆盖率阈值的源文件写入 commit message body，随 commit 进 PR 供 review 参考补测方向（非阻断、幂等；逃生阀 `YSM_SKIP_COVERAGE_HINT=1`） |
 | `gen-knowledge-symbols.mjs` | 知识卡 `symbols:` 字段同步（源码导出符号提取，JS/TS + Go 双栈，gen/--check） |
 | `gen-knowledge-h1.mjs` | 知识卡正文补 `# <name>` 标题（frontmatter 后插入，已有 h1 跳过） |
 | `gen-knowledge-adr.mjs` | 知识卡 `adr:` 关联补全（扫描源码 `[doc:adr-NNN]` 标记，仅 architecture 卡） |

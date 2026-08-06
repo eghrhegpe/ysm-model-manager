@@ -6,7 +6,7 @@
 ## 硬约束
 
 > 500 行文件先 grep 定位再读。
-> 按需读取 `docs/knowledge/index.md`（枢纽索引，自动生成）+ grep 卡正文定位功能作用，充实上下文。
+> 按需读取 `docs/knowledge/`（枢纽索引，自动生成）+ grep 卡正文定位功能作用，充实上下文。
 > 涉及 ADR：先 grep `docs/adr/` 看是否已有类似实现；写新 ADR 走叫号脚本（命令与流程见下方「ADR 规则」，禁止手写编号）。
 > 文档地图优先，确认代码归属，但允许探索。发现地图过期时报告漂移、以源码为准。
 > 编号只允许给 ADR、novel 写。
@@ -33,8 +33,8 @@
 
 | 要做什么 | 去哪里 |
 |----------|--------|
-| **决策与问题** | `grep docs/adr/`（当前决策） + `bug-search <关键词>`（历史坑点） |
-| **文档与代码** | `docs/knowledge/`（查 `index.md` 枢纽索引） |
+| **决策与问题** | `grep docs/adr/index.md`（当前决策） + `bug-search <关键词>`（历史坑点） |
+| **文档与代码** | `docs/knowledge/index.md`（查大致功能枢纽索引） |
 | **函数与重构** | `node scripts/funcmap.mjs`（函数索引）<br>`node scripts/codemod.mjs help`（批量重构） |
 | **规范与设计** | `docs/Design.md`（UI文案/组件规范）<br>`frontend/src/app-modules.ts`（注册组件） |
 | **发布与维护** | `docs/releases/`（发版流程）<br>`docs/maintenance.md`（维护手册） |

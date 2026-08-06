@@ -14,7 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
-import { parseFrontmatter, getScalar } from './_lib/frontmatter.mjs';
+import { parseFrontmatter, getScalar, getList } from './_lib/frontmatter.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
@@ -34,6 +34,18 @@ const CATEGORY_LABELS = {
 
 const NON_CARDS = new Set(['index.md', 'README.md', 'AGENTS.md']);
 
+// ── 工具函数 ─────────────────────────────────────────
+
+/** 提取卡片 `## 概览` 段落内容作为摘要。 */
+function extractSummary(text) {
+  const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+  // 匹配 ## 概览 到下一个 ## 标题之间的内容
+  const m = body.match(/^##\s+概览\s*\n([\s\S]*?)(?=^##\s+|$)/m);
+  if (!m) return '';
+  const summary = m[1].replace(/\n{2,}/g, ' ').replace(/\s+/g, ' ').trim();
+  return summary.length > 120 ? summary.slice(0, 120) + '…' : summary;
+}
+
 // ── 构建索引 ─────────────────────────────────────────
 
 function buildIndex() {
@@ -52,6 +64,8 @@ function buildIndex() {
       name: getScalar(fm, 'name') || f.replace(/\.md$/, ''),
       category: getScalar(fm, 'category') || 'unknown',
       tier: getScalar(fm, 'tier') || 'architecture',
+      keywords: getList(fm, 'use_when'),
+      summary: extractSummary(text),
     });
   }
 
@@ -63,19 +77,31 @@ function buildIndex() {
   let out = '<!-- 本文件由 scripts/gen-knowledge-index.mjs 自动生成，禁止手改 -->\n\n';
   out += '# 知识卡索引\n\n';
   out += `> 总计: ${cards.length} 张知识卡\n\n`;
+  out += '> 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。\n\n';
 
   for (const cat of Object.keys(groups).sort()) {
     const items = groups[cat];
     const label = CATEGORY_LABELS[cat] || '';
     out += `## ${cat}（${items.length} 张）\n\n`;
     if (label) out += `*${label}*\n\n`;
-    out += '| 标识 | 名称 | tier |\n';
-    out += '|------|------|------|\n';
+    out += '| 标识 | 名称 | tier | 关键词 |\n';
+    out += '|------|------|------|--------|\n';
     for (const c of items) {
       const marker = c.tier === 'architecture' ? '🏗' : '🍃';
-      out += `| ${marker} ${c.kind} | ${c.name} | ${c.tier} |\n`;
+      const kw = c.keywords.length ? c.keywords.join(', ') : '—';
+      out += `| ${marker} ${c.kind} | ${c.name} | ${c.tier} | ${kw} |\n`;
     }
     out += '\n';
+
+    // 摘要区块
+    const withSummary = items.filter((c) => c.summary);
+    if (withSummary.length) {
+      out += '### 摘要\n\n';
+      for (const c of withSummary) {
+        out += `- **${c.kind}**（${c.name}）：${c.summary}\n`;
+      }
+      out += '\n';
+    }
   }
 
   out += '---\n\n';

@@ -170,10 +170,11 @@ function novelItemsBuilder() {
 }
 
 // ---------- 组装 ----------
+// 全部分组统一 collapsed: true（侧边栏只导航，浏览交给分组主站页 /xxx/）
 const sidebar = [
-  { text: '用户指南', link: '/guide/', items: guideItems },
+  { text: '用户指南', link: '/guide/', collapsed: true, items: guideItems },
   { text: '发版记录', link: '/releases/', collapsed: true, items: releasesItems },
-  { text: '架构与规范', link: '/architecture', items: archItems },
+  { text: '架构与规范', link: '/architecture', collapsed: true, items: archItems },
   { text: '决策记录 (ADR)', link: '/adr/', collapsed: true, items: adrItems },
   { text: '知识卡', link: '/knowledge/', collapsed: true, items: knowledgeItemsBuilder() },
   { text: '小说', link: '/novel/', collapsed: true, items: novelItemsBuilder() },

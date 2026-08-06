@@ -25,16 +25,15 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { ROOT, toPosix } from './_lib/scan-files.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 const OUT_PATH = path.join(ROOT, 'docs', '.doc-next-steps.md');
 
 // ── 子进程跑检查器，吞掉非零退出（检查器遇错会 exit(1)），只取 stdout ──
 function runChecker(script) {
-  const p = path.join(__dirname, script);
+  const p = path.join(SCRIPTS_DIR, script);
   if (!fs.existsSync(p)) return { ok: false, raw: `检查器缺失: ${script}` };
   const r = spawnSync(process.execPath, [p, '--json'], {
     cwd: ROOT,

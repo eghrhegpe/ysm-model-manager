@@ -658,6 +658,7 @@ function fmtText({ files, suggestions, totals }) {
 function fmtJson({ files, suggestions, totals }) {
   return JSON.stringify(
     {
+      _summary: { scanned: files.length, missing: totals.totalMissing },
       scanned: files.length,
       totals,
       files: suggestions.map((s) => ({

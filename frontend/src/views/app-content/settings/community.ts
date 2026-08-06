@@ -528,6 +528,9 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   // 链接模式变更（下拉菜单）+ 重新应用按钮
   const doRelink = async (): Promise<void> => {
+    if (_busy) return; // 防连点：重新链接进行中忽略后续点击（含链接模式切换并发触发）
+    _busy = true;
+    let failed = 0;
     try {
       const {
         LoadAppConfig,
@@ -536,21 +539,32 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       } = await getApp();
       const cfg2 = await LoadAppConfig();
       const mcRoot = cfg2.mcRoot || "";
-      if (!mcRoot) return;
+      if (!mcRoot) {
+        bus.emit("toast:show", { msg: "请先设置游戏根目录", duration: 2500, type: "warn" });
+        return;
+      }
       const instances = (await ListVersionInstances(mcRoot)) || [];
       let total = 0;
       for (const ins of instances) {
-        if (!ins.Exists) continue;
+        if (!ins.Exists || !ins.Name) continue;
         try {
-          const n = await RelinkAllInstanceResources(ins.Name);
-          total += n;
-        } catch {
-          /* 单实例失败不影响其余 */
+          total += await RelinkAllInstanceResources(ins.Name);
+        } catch (e) {
+          failed++;
+          console.warn("[community] 重新链接失败:", ins.Name, e);
         }
       }
       bus.emit("stats:refresh");
+      if (total === 0) {
+        bus.emit("toast:show", {
+          msg: failed > 0 ? `⚠️ ${failed} 个整合包重新链接失败` : "没有需要重新链接的文件",
+          duration: 3000,
+          type: failed > 0 ? "error" : "info",
+        });
+        return;
+      }
       bus.emit("toast:show", {
-        msg: `🔄 已重新链接 ${total} 个文件`,
+        msg: failed > 0 ? `🔄 已重新链接 ${total} 个文件（${failed} 个失败）` : `🔄 已重新链接 ${total} 个文件`,
         duration: 3000,
         type: "success",
       });
@@ -560,6 +574,8 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         duration: 5000,
         type: "error",
       });
+    } finally {
+      _busy = false;
     }
   };
 

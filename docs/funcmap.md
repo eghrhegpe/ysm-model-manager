@@ -30,7 +30,7 @@
 | Go·更新器 | 1 | 8 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 33 |
-| Go(internal)·应用入口 | 15 | 174 |
+| Go(internal)·应用入口 | 15 | 175 |
 | 前端·根 (app-modules/bus) | 1 | 10 |
 | 前端·核心 | 8 | 13 |
 | 前端·特性 | 12 | 49 |
@@ -40,7 +40,7 @@
 | frontend/views | 52 | 143 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **166** | **781** |
+| **合计** | **166** | **782** |
 
 ## Go·头像
 
@@ -512,20 +512,21 @@
 | `App.ExportModelStructureJSON()` | `internal/app/app_scan:79` | ExportModelStructureJSON 导出单模型骨骼结构 |
 | `App.SearchModels()` | `internal/app/app_scan:116` | ========== 高级搜索 ========== |
 | `App.ScanModelEntries()` | `internal/app/app_scan:186` | ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志。 |
-| `App.ClearScanCache()` | `internal/app/app_scan:195` | ClearScanCache 清除扫描缓存（下载/导入后调用） |
-| `InvalidateScanCache()` | `internal/app/app_scan:200` | InvalidateScanCache 清空扫描缓存（同步完成后调用，确保下次扫描取最新数据） |
-| `App.ListModelAuthors()` | `internal/app/app_scan:205` | ListModelAuthors 统计 [作者] 前缀（走扫描缓存，不重复读磁盘） |
-| `App.GenerateRepoIndex()` | `internal/app/app_scan:214` | GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板） |
-| `App.ScanLocalAuthors()` | `internal/app/app_scan:219` | ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者 |
-| `App.ListVersionInstances()` | `internal/app/app_scan:227` | — |
-| `App.GetGlobalCustomDir()` | `internal/app/app_scan:231` | — |
-| `App.ListFileNames()` | `internal/app/app_scan:235` | — |
-| `App.ListAllFilePaths()` | `internal/app/app_scan:248` | ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名） |
-| `App.CheckFileExists()` | `internal/app/app_scan:255` | — |
-| `App.OpenFolder()` | `internal/app/app_scan:274` | — |
-| `App.OpenInstanceFolder()` | `internal/app/app_scan:281` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
-| `progressReader.Read()` | `internal/app/app_scan:304` | — |
-| `progressReader()` | `internal/app/app_scan:296` | progressReader 包装 io.Reader，下载时通过回调推送进度（保留：下载进度计算） |
+| `App.ScanModelEntriesWithLabel()` | `internal/app/app_scan:197` | ScanModelEntriesWithLabel 同 ScanModelEntries，但操作日志附带资源类型标签 （如「资源包」「光影包」「模型」），便于在操作日志面板区分扫描 |
+| `App.ClearScanCache()` | `internal/app/app_scan:210` | ClearScanCache 清除扫描缓存（下载/导入后调用） |
+| `InvalidateScanCache()` | `internal/app/app_scan:215` | InvalidateScanCache 清空扫描缓存（同步完成后调用，确保下次扫描取最新数据） |
+| `App.ListModelAuthors()` | `internal/app/app_scan:220` | ListModelAuthors 统计 [作者] 前缀（走扫描缓存，不重复读磁盘） |
+| `App.GenerateRepoIndex()` | `internal/app/app_scan:229` | GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板） |
+| `App.ScanLocalAuthors()` | `internal/app/app_scan:234` | ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者 |
+| `App.ListVersionInstances()` | `internal/app/app_scan:242` | — |
+| `App.GetGlobalCustomDir()` | `internal/app/app_scan:246` | — |
+| `App.ListFileNames()` | `internal/app/app_scan:250` | — |
+| `App.ListAllFilePaths()` | `internal/app/app_scan:263` | ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名） |
+| `App.CheckFileExists()` | `internal/app/app_scan:270` | — |
+| `App.OpenFolder()` | `internal/app/app_scan:289` | — |
+| `App.OpenInstanceFolder()` | `internal/app/app_scan:296` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
+| `progressReader.Read()` | `internal/app/app_scan:319` | — |
+| `progressReader()` | `internal/app/app_scan:311` | progressReader 包装 io.Reader，下载时通过回调推送进度（保留：下载进度计算） |
 | `App.GetModelTags()` | `internal/app/app_tags:29` | GetModelTags 返回指定模型文件的所有标签 |
 | `App.SetModelTags()` | `internal/app/app_tags:34` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
 | `App.ListByTag()` | `internal/app/app_tags:39` | ListByTag 返回所有打了指定标签的文件路径列表 |
@@ -837,8 +838,8 @@
 | `mergeCommunitySites()` | `frontend/src/views/app-content/community-data:246` | 合并社区站点到本地 workshop_sites.json |
 | `DEFAULT_COMMUNITY_URL()` | `frontend/src/views/app-content/community-data:267` | 社区索引的默认 URL（可配置为社区维护的独立 creators JSON） 贡献通道：https://github.com/eghrhegpe/ysm-model-manager |
 | `contentCSS()` | `frontend/src/views/app-content/content-css:2` | — |
-| `initDiagnostics()` | `frontend/src/views/app-content/diagnostics/community:15` | 初始化诊断页所有功能 |
-| `startDedup()` | `frontend/src/views/app-content/diagnostics/community:250` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
+| `initDiagnostics()` | `frontend/src/views/app-content/diagnostics/community:16` | 初始化诊断页所有功能 |
+| `startDedup()` | `frontend/src/views/app-content/diagnostics/community:251` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
 | `initSettings()` | `frontend/src/views/app-content/settings/community:17` | 初始化设置页所有事件绑定 |
 | `RepoAuthorLike()` | `frontend/src/views/app-content/site-view:11` | 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） |
 | `RenderSiteViewCtx()` | `frontend/src/views/app-content/site-view:14` | 竚点视图渲染上下文（index.ts _initWorkshop 传入） |
@@ -943,8 +944,8 @@
 | `setPendingTreeSearch()` | `frontend/src/views/app-tree/index:20` | — |
 | `AppTree()` | `frontend/src/views/app-tree/index:49` | — |
 | `initInstanceActions()` | `frontend/src/views/app-tree/instance-actions:24` | — |
-| `TreeEntry()` | `frontend/src/views/app-tree/loader:8` | 树条目（loader 转换后的渲染格式） |
-| `loadEntries()` | `frontend/src/views/app-tree/loader:36` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |
+| `TreeEntry()` | `frontend/src/views/app-tree/loader:9` | 树条目（loader 转换后的渲染格式） |
+| `loadEntries()` | `frontend/src/views/app-tree/loader:37` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |
 | `TreeRow()` | `frontend/src/views/app-tree/render:21` | 扁平化行（虚拟滚动数据单元） |
 | `TreeNode()` | `frontend/src/views/app-tree/render:31` | buildTree 嵌套节点（文件夹 = 子节点对象，文件 = { _e: entry }） |
 | `RenderMode()` | `frontend/src/views/app-tree/render:37` | 渲染模式 |

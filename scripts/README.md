@@ -55,7 +55,7 @@
 | `test-coverage-report.mjs` | `node scripts/test-coverage-report.mjs` / `--json` / `--top N` | 读 vitest v8 coverage 产物输出未覆盖清单（文件+行+函数，升序），供补测决策；需先跑 `npm run test:coverage` |
 | `line-counter.mjs` | `node scripts/line-counter.mjs` | 代码行数统计与文件健康度分析（由 line-counter.py 迁移，含 package_lines 按文件计数行为） |
 | `pre-push-gate.mjs` | `node scripts/pre-push-gate.mjs <remote> <url>`（.githooks/pre-push 调度器）/ `--dry-run` | 本地质量门禁：按变更域（Go/前端/数据/文档）只跑相关检查；gofmt 自动修复并 amend，构建/断链/契约失败阻断推送 |
-| `.githooks/pre-commit`（薄壳） | commit 时自动执行（无需手打） | 秒级文档/索引自动同步：跑 11 个 gen（docs 分区索引 / funcmap / 知识卡 index+routes+字段 / novel 索引 / project-map / vitepress sidebar）后 `git add docs/`（幂等：无漂移零副作用）；失败仅提示不阻断；输出走 stderr；逃生阀 `YSM_SKIP_GEN=1` |
+| `.githooks/pre-commit`（薄壳） | commit 时自动执行（无需手打） | 秒级文档/索引自动同步：跑 10 个 gen（docs 分区索引 / funcmap / 知识卡 index+字段 / novel 索引 / project-map / vitepress sidebar）后 `git add docs/`（幂等：无漂移零副作用）；失败仅提示不阻断；输出走 stderr；逃生阀 `YSM_SKIP_GEN=1` |
 
 ### 治理检查（check-* 系列；唯一登记处，AGENTS.md §1.2 仅作指针）
 
@@ -77,7 +77,6 @@
 
 | 脚本 | 说明 |
 |------|------|
-| `gen-routes.mjs` | AI 路由表生成（docs/knowledge/routes.md） |
 | `gen-knowledge-index.mjs` | 知识卡索引生成（docs/knowledge/index.md） |
 | `check-knowledge-drift.mjs` | 知识卡漂移检查（含代码→卡片覆盖盲区 WARN；`--affected <文件...>` 主动列出受源码变更影响的知识卡；`--affected --quiet` 机读模式供钩子消费） |
 | `hooks/knowledge-affected-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：把受影响知识卡写入 commit message body + stderr 摘要提示（非阻断、幂等，AI 终端可见），归一化 Git Bash msys 路径 |

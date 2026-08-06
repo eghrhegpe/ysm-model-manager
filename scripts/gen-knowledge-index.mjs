@@ -32,7 +32,7 @@ const CATEGORY_LABELS = {
   config: '配置与注册表（resource_types、AppConfig）',
 };
 
-const NON_CARDS = new Set(['index.md', 'routes.md', 'README.md', 'AGENTS.md']);
+const NON_CARDS = new Set(['index.md', 'README.md', 'AGENTS.md']);
 
 // ── 构建索引 ─────────────────────────────────────────
 

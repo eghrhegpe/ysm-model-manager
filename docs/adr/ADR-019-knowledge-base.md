@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/knowledge/`（18 个文件）/ `scripts/gen-knowledge-index.mjs` / `scripts/check-knowledge-drift.mjs` / `scripts/gen-routes.mjs` / `scripts/new-knowledge-card.mjs` / ADR-013 / 联邦 MikuMikuAR `docs/knowledge/`（适配来源）
+- **相关**：`docs/knowledge/`（17 个文件）/ `scripts/gen-knowledge-index.mjs` / `scripts/check-knowledge-drift.mjs` / `scripts/new-knowledge-card.mjs` / ADR-013 / 联邦 MikuMikuAR `docs/knowledge/`（适配来源）
 
 ---
 
@@ -19,7 +19,7 @@
 
 ## 2. 决策（Decision）
 
-**决策**：建立 `docs/knowledge/` 知识卡体系——统一 frontmatter schema + 三脚本机制（生成索引 / 漂移检查 / 路由表）+ 脚手架，作为模块知识的程序化入口。技术细节如下。
+**决策**：建立 `docs/knowledge/` 知识卡体系——统一 frontmatter schema + 两脚本机制（生成索引 / 漂移检查）+ 脚手架，作为模块知识的程序化入口。技术细节如下。
 
 ### 2.1 frontmatter schema（单一事实来源）
 
@@ -42,13 +42,12 @@
 |------|------|------|
 | `gen-knowledge-index.mjs` | 按 category 分组生成 `index.md`（GEN 区） | `node scripts/gen-knowledge-index.mjs` / `--check` |
 | `check-knowledge-drift.mjs` | 漂移检查：source_files 存在性、必填字段、值域、kind 命名、H1 一致性、索引链接 | `node scripts/check-knowledge-drift.mjs`（ERROR 阻断） |
-| `gen-routes.mjs` | 由 `use_when` 生成 `routes.md`（用户自然语言 → 知识卡映射） | `node scripts/gen-routes.mjs` / `--check` |
 
 辅助：`new-knowledge-card.mjs` 脚手架（`<kind> <name> <category> <source_file> [--leaf]`）生成卡模板。
 
 ### 2.3 检索协议
 
-- AI 处理任务时先查 `routes.md` 路由表定位关键词 → 读 `index.md` 枢纽索引 → 按卡的 `source_files` 跳转源码；
+- AI 处理任务时先查 `index.md` 枢纽索引定位知识卡 → 按卡的 `source_files` 跳转源码；
 - 知识来源优先级：当前源码 > `docs/adr/` > `docs/knowledge/` > `docs/architecture/architecture.md`；
 - 知识卡与源码不一致时报告文档漂移，以源码为准。
 
@@ -68,7 +67,7 @@ ADR-013 Phase 3 遗留的「knowledge 与 architecture.md 职能重叠」边界�
 ### 负面
 
 - 新增模块知识需先跑脚手架生成卡模板（多一步仪式）；
-- `index.md` / `routes.md` 为生成产物，禁止手改（GEN 区约定）；
+- `index.md` 为生成产物，禁止手改（GEN 区约定）；
 - 卡片数量增长后，`use_when` 关键词可能重叠，需维护消歧。
 
 ### 已知遗留
@@ -83,8 +82,7 @@ ADR-013 Phase 3 遗留的「knowledge 与 architecture.md 职能重叠」边界�
 | 联邦 MikuMikuAR `docs/knowledge/` | frontmatter schema / 索引生成器 / 漂移检查适配来源（check-knowledge-drift 头注释自述） |
 | `scripts/gen-knowledge-index.mjs` | CATEGORY_LABELS 六分类（core/go/ui/feature/utils/config） |
 | `scripts/check-knowledge-drift.mjs` | 检查项枚举（必填字段 / 值域 / kind 命名 / source_files / 索引链接） |
-| `scripts/gen-routes.mjs` | use_when → 路由表映射机制 |
-| `docs/knowledge/` | 18 个文件（含 index.md / routes.md / README.md / AGENTS.md） |
+| `docs/knowledge/` | 17 个文件（含 index.md / README.md / AGENTS.md） |
 | ADR-013 | Phase 3 遗留「knowledge vs architecture.md 职能重叠」待决 |
 
 <!-- 文件名: knowledge-base.md → 实际文件 ADR-019-knowledge-base.md -->

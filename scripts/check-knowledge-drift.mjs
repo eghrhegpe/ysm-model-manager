@@ -14,7 +14,7 @@
  *   [ERROR] 知识卡 kind 非 kebab-case/snake_case（小写，允许 - 与 _）或含未填充占位符 <...>
  *   [WARN]  H1 标题与 name 不一致
  *   [WARN]  AGENTS.md 含手写事实索引（├──/└── 目录树）
- *   [ERROR] 索引文件（index.md / routes.md）链接指向不存在的卡
+ *   [ERROR] 索引文件（index.md）链接指向不存在的卡
  *
  * 用法：
  *   node scripts/check-knowledge-drift.mjs                  # 文本报告（被动：卡间/卡→源码引用漂移）
@@ -163,9 +163,9 @@ function checkKnowledgeSources() {
   }
 }
 
-// ── 检查 3：索引断链（routes.md / index.md 中 ./xxx.md 链接）──
+// ── 检查 3：索引断链（index.md 中 ./xxx.md 链接）──
 
-const INDEX_FILES = ['index.md', 'routes.md'];
+const INDEX_FILES = ['index.md'];
 const LINK_RE = /\]\(\.\/([a-zA-Z0-9_-]+\.md)\)/g;
 
 function checkIndexLinks() {

@@ -8,7 +8,6 @@
 docs/knowledge/
 ├── AGENTS.md              ← 本文件（路由指南）
 ├── index.md               ← 自动生成，知识卡索引
-├── routes.md              ← 自动生成，AI 路由表
 ├── <kind>.md              ← 单张知识卡（kind 为 kebab-case 标识符，与文件名同源）
 ```
 
@@ -35,7 +34,7 @@ use_when:                    # 用户自然语言关键词
 
 ### 查询
 
-1. 用户提问 → 查 `routes.md` 匹配关键词
+1. 用户提问 → 查 `index.md` 枢纽索引定位知识卡
 2. 打开对应 `kind.md` 获取上下文
 3. 需要源码细节 → 按 `source_files` 路径跳转
 
@@ -50,7 +49,6 @@ node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--le
 
 ```bash
 node scripts/gen-knowledge-index.mjs
-node scripts/gen-routes.mjs
 ```
 
 ### 漂移检查
@@ -79,7 +77,7 @@ node scripts/check-knowledge-drift.mjs --affected <f>…  # 主动：源码变�
 - 逃生阀：`YSM_SKIP_KNOWLEDGE_HINT=1 git commit`（与 `YSM_SKIP_GATE` 并列）。
 - 设计取舍：放在 `prepare-commit-msg` 而非 `pre-push`——push 处于流程末端、阻断体验差、diff 范围过大（整分支累积），不适合做 advisory。
 
-**索引/生成物同步（pre-commit）**：`.githooks/pre-commit` 在 commit 时自动跑秒级 gen（含 `gen-knowledge-index` / `gen-routes` / `gen-knowledge-h1/symbols/adr/tests`）并 `git add docs/`，失败仅提示不阻断；逃生阀 `YSM_SKIP_GEN=1`。知识卡 index/routes/字段同步无需手动跑。
+**索引/生成物同步（pre-commit）**：`.githooks/pre-commit` 在 commit 时自动跑秒级 gen（含 `gen-knowledge-index` / `gen-knowledge-h1/symbols/adr/tests`）并 `git add docs/`，失败仅提示不阻断；逃生阀 `YSM_SKIP_GEN=1`。知识卡 index/字段同步无需手动跑。
 
 
 ## 分类映射
@@ -99,8 +97,8 @@ node scripts/check-knowledge-drift.mjs --affected <f>…  # 主动：源码变�
 - `source_files` 路径格式非法（反斜杠 / 绝对路径 / `..` 逃逸）→ [ERROR]；指向生成物（bindings/dist/node_modules）或测试文件 → [WARN]
 - `kind` **必须**是 kebab-case，且等于文件名（去掉 .md 后的 kebab 形式）
 - `name` **必须**等于 H1 标题
-- 生成物（`index.md`、`routes.md`）**禁止手改**
-- 卡片正文为人工维护内容，生成物仅为索引/路由
+- 生成物（`index.md`）**禁止手改**
+- 卡片正文为人工维护内容，生成物仅为索引
 
 ## 脚本体系
 
@@ -108,6 +106,5 @@ node scripts/check-knowledge-drift.mjs --affected <f>…  # 主动：源码变�
 |------|------|
 | `scripts/_lib/frontmatter.mjs` | frontmatter 解析共享库 |
 | `scripts/gen-knowledge-index.mjs` | 按分类生成 `index.md` |
-| `scripts/gen-routes.mjs` | 按 `use_when` 生成 `routes.md` |
 | `scripts/check-knowledge-drift.mjs` | 知识卡漂移检查（ERROR/WARN） |
 | `scripts/new-knowledge-card.mjs` | 卡片模板生成器 |

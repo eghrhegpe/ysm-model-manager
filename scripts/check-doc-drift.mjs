@@ -131,7 +131,7 @@ function checkKnowledge() {
     }
   }
   // 索引断链
-  for (const idx of ['index.md', 'routes.md']) {
+  for (const idx of ['index.md']) {
     const idxText = readText(`docs/knowledge/${idx}`);
     if (!idxText) continue;
     for (const m of idxText.matchAll(/\]\(\.\/([a-zA-Z0-9_-]+\.md)\)/g)) {

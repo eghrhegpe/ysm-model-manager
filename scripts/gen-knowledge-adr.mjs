@@ -31,7 +31,7 @@ const KNOW_DIR = path.join(ROOT, 'docs', 'knowledge');
 
 /** 非知识卡文件（与 check-knowledge-drift / gen-knowledge-h1 保持一致；含本项目 AGENTS.md） */
 const NON_CARDS = new Set([
-  'README.md', 'index.md', 'routes.md', 'AGENTS.md', 'menu-map.md', 'graph.md', 'tier-review.md',
+  'README.md', 'index.md', 'AGENTS.md', 'menu-map.md', 'graph.md', 'tier-review.md',
 ]);
 
 /** 提取 frontmatter 块。 */

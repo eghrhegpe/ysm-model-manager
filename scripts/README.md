@@ -86,7 +86,7 @@
 | `gen-knowledge-tests.mjs` | 知识卡 `tests:` 登记（扫描 frontend/src 测试文件按名匹配补登） |
 | `new-knowledge-card.mjs` | 知识卡脚手架 |
 | `gen-status-index.mjs` | ⚠️ 僵尸脚本：目标 `docs/architecture/PROJECT_STATUS.md` 已冻结迁移至 `docs/archive/`（无该文件），脚本必失败；无实际消费者，待清理 |
-| `new-adr.mjs` | 新 ADR 脚手架：双源占号 + 四段模板 + 登记表登记 + 自动 adr-check |
+| `new-adr.mjs` | 新 ADR 脚手架：双源占号 + 四段模板 + 登记表登记 + 自动 adr-check；用法 `node scripts/new-adr.mjs "标题" [--slug kebab-name] [--related 关联内容] [--supersedes ADR-0XX,...] [--dry-run]` |
 | `gen-docs-index.mjs` | 分区索引：adr 登记表/状态统计 + **adr 规范索引页 `docs/adr/index.md`（状态分组 + 锚点 + 相对链接，整文件重写）** + releases 最近版本/版本全览（GEN 标记区），knowledge 委托校验 |
 | `gen-project-map.mjs` | 项目结构地图生成（`docs/project-map.md`）：扫描磁盘目录 + 合并基线 `scripts/baseline/project-dirs.json` 用途说明，4 个 GEN 标记区；`--check` 已挂 doctor 防漂移；未登记基线的新目录 WARN 提醒 |
 | `gen-guide-gap.mjs` | 指南覆盖缺口扫描：提取 app-modules.ts 组件/服务功能面，与 docs/guide 对照列出缺口（WARN 不阻断；`--strict` 缺口时退出码 1） |
@@ -98,7 +98,7 @@
 
 - **单一事实来源 = ADR 文件首部**：登记表 / 状态统计 / status 表全部由文件驱动，改状态只改文件首部，跑 `gen-docs-index.mjs` 全量同步。
 - **GEN 标记区**：混合文档（人工段 + 生成段）用 `<!-- GEN: xxx --> ... <!-- /GEN: xxx -->` 包裹生成区，脚本只重写区内，缺标记会 FAIL 提示一次性插入。
-- **占号闭环**：新 ADR 一律 `node scripts/new-adr.mjs "标题" [--slug x]`，禁止手写编号；`--dry-run` 只算号不落盘。
+- **占号闭环**：新 ADR 一律 `node scripts/new-adr.mjs "标题" [--slug kebab-name] [--related 关联内容] [--supersedes ADR-0XX,...] [--dry-run]`，禁止手写编号；`--dry-run` 只算号不落盘。
 
 ### 已删除（2026-08-03 Python 迁移）
 

@@ -18,6 +18,15 @@ source_files:
   - frontend/src/views/app-content/site/types.ts
   - frontend/src/views/app-content/workshop-data.ts
   - frontend/src/views/app-content/workshop-icons.ts
+tests:
+  - frontend/src/utils/resource/types.test.ts
+  - frontend/src/views/app-content/community-data.test.ts
+  - frontend/src/views/app-nav/index.test.ts
+  - frontend/src/views/app-resource-manager/index.test.ts
+  - frontend/src/views/app-sync-manager/index.test.ts
+  - frontend/src/views/app-toast/index.test.ts
+  - frontend/src/views/app-tree/render.test.ts
+  - frontend/src/views/context-menu/index.test.ts
 use_when:
   - 主内容区
   - 页面切换

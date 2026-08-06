@@ -8,6 +8,14 @@ source_files:
   - frontend/src/core/context-menus.ts
   - frontend/src/core/menu-defs.ts
   - frontend/src/core/handlers/instance-ops.ts
+tests:
+  - frontend/src/core/context-menus.test.ts
+  - frontend/src/core/handlers/instance-ops.test.ts
+  - frontend/src/views/app-nav/index.test.ts
+  - frontend/src/views/app-resource-manager/index.test.ts
+  - frontend/src/views/app-sync-manager/index.test.ts
+  - frontend/src/views/app-toast/index.test.ts
+  - frontend/src/views/context-menu/index.test.ts
 use_when:
   - 右键菜单
   - 右键

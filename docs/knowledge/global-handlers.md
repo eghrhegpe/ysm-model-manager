@@ -10,6 +10,12 @@ source_files:
   - frontend/src/core/handlers/sync.ts
   - frontend/src/core/handlers/require-mcroot.ts
   - frontend/src/core/error-diary.ts
+tests:
+  - frontend/src/core/error-diary.test.ts
+  - frontend/src/core/handlers/dnd.test.ts
+  - frontend/src/core/handlers/instance-ops.test.ts
+  - frontend/src/core/handlers/sync.test.ts
+  - frontend/src/features/dnd-shared.test.ts
 use_when:
   - 全局事件
   - 拖拽导入

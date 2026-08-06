@@ -6,6 +6,10 @@ export const autoSidebar = [
     "link": "/architecture"
   },
   {
+    "text": "YSM 模型管理器 — 代码质量审计报告",
+    "link": "/audit-report-2026-08-06"
+  },
+  {
     "text": "YSM 模型管理器 — Design.md",
     "link": "/Design"
   },
@@ -188,6 +192,10 @@ export const autoSidebar = [
       {
         "text": "ADR-039：两轮功能审核后的遗留决策项与处置方向",
         "link": "/adr/ADR-039-audit-remaining-decisions"
+      },
+      {
+        "text": "ADR-040：架构规模治理——前端大文件拆分与 internal 下沉收口",
+        "link": "/adr/ADR-040-architecture-scale-governance"
       },
       {
         "text": "ADR 登记表（Architecture Decision Records）",

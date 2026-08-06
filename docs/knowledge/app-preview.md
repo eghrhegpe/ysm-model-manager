@@ -19,6 +19,15 @@ source_files:
   - frontend/src/views/app-preview/geometry.ts
   - frontend/src/views/app-preview/utils.ts
   - frontend/src/views/app-preview/css.ts
+tests:
+  - frontend/src/views/app-nav/index.test.ts
+  - frontend/src/views/app-preview/utils.test.ts
+  - frontend/src/views/app-resource-manager/index.test.ts
+  - frontend/src/views/app-sidebar/loader.test.ts
+  - frontend/src/views/app-sync-manager/index.test.ts
+  - frontend/src/views/app-toast/index.test.ts
+  - frontend/src/views/app-tree/utils.test.ts
+  - frontend/src/views/context-menu/index.test.ts
 use_when:
   - 预览
   - 模型预览

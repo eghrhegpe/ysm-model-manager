@@ -87,6 +87,12 @@ function main() {
   const next = stripped.trimEnd() + block + '\n';
   try {
     fs.writeFileSync(absFile, next);
+    // 摘要走 stderr：AI 的感知通道是终端，commit body 是给 PR review 看的（AI 是写信人不是收信人）
+    const preview = files.slice(0, 3).map((f) => f.file).join('、');
+    console.error(
+      `[prepare-commit-msg] 🔬 ${files.length} 个源文件低于覆盖率阈值，已写入 commit body` +
+        (files.length > 3 ? `（前 3：${preview}…）` : `：${preview}`),
+    );
   } catch {
     /* 非阻断：写失败不影响提交 */
   }

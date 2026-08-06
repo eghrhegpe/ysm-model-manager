@@ -79,6 +79,8 @@ node scripts/check-knowledge-drift.mjs --affected <f>…  # 主动：源码变�
 - 逃生阀：`YSM_SKIP_KNOWLEDGE_HINT=1 git commit`（与 `YSM_SKIP_GATE` 并列）。
 - 设计取舍：放在 `prepare-commit-msg` 而非 `pre-push`——push 处于流程末端、阻断体验差、diff 范围过大（整分支累积），不适合做 advisory。
 
+**索引/生成物同步（pre-commit）**：`.githooks/pre-commit` 在 commit 时自动跑秒级 gen（含 `gen-knowledge-index` / `gen-routes` / `gen-knowledge-h1/symbols/adr/tests`）并 `git add docs/`，失败仅提示不阻断；逃生阀 `YSM_SKIP_GEN=1`。知识卡 index/routes/字段同步无需手动跑。
+
 
 ## 分类映射
 

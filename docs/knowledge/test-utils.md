@@ -8,6 +8,13 @@ source_files:
   - frontend/src/test-utils/events.ts
   - frontend/src/test-utils/query-by-testid.ts
   - frontend/src/test-utils/render.ts
+tests:
+  - frontend/src/views/app-nav/index.test.ts
+  - frontend/src/views/app-resource-manager/index.test.ts
+  - frontend/src/views/app-sync-manager/index.test.ts
+  - frontend/src/views/app-toast/index.test.ts
+  - frontend/src/views/app-tree/render.test.ts
+  - frontend/src/views/context-menu/index.test.ts
 use_when:
   - 测试工具
   - testid

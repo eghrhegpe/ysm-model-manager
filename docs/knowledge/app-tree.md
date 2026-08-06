@@ -6,6 +6,12 @@ category: ui
 source_files:
   - frontend/src/views/app-tree/index.ts
   - frontend/src/views/app-tree/
+tests:
+  - frontend/src/views/app-nav/index.test.ts
+  - frontend/src/views/app-resource-manager/index.test.ts
+  - frontend/src/views/app-sync-manager/index.test.ts
+  - frontend/src/views/app-toast/index.test.ts
+  - frontend/src/views/context-menu/index.test.ts
 use_when:
   - 树形
   - 资源列表

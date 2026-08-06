@@ -96,6 +96,11 @@ function main() {
   const next = stripped.trimEnd() + block + '\n';
   try {
     fs.writeFileSync(absFile, next);
+    // 摘要走 stderr：AI 的感知通道是终端，commit body 是给 PR review 看的（AI 是写信人不是收信人）
+    console.error(
+      `[prepare-commit-msg] 📚 ${cards.length} 张知识卡受影响，已写入 commit body：` +
+        cards.map((c) => `docs/knowledge/${c}.md`).join('、'),
+    );
   } catch {
     /* 非阻断：写失败不影响提交 */
   }

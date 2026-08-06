@@ -5,6 +5,8 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/views/dialogs/modal.ts
+tests:
+  - frontend/src/views/dialogs/modal.test.ts
 use_when:
   - 弹窗
   - 对话框

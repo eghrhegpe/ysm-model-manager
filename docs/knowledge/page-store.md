@@ -5,6 +5,8 @@ tier: architecture
 category: core
 source_files:
   - frontend/src/core/page-store.ts
+tests:
+  - frontend/src/core/page-store.test.ts
 use_when:
   - 页面
   - 当前页

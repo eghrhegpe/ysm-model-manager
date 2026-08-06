@@ -55,6 +55,7 @@
 | `test-coverage-report.mjs` | `node scripts/test-coverage-report.mjs` / `--json` / `--top N` | 读 vitest v8 coverage 产物输出未覆盖清单（文件+行+函数，升序），供补测决策；需先跑 `npm run test:coverage` |
 | `line-counter.mjs` | `node scripts/line-counter.mjs` | 代码行数统计与文件健康度分析（由 line-counter.py 迁移，含 package_lines 按文件计数行为） |
 | `pre-push-gate.mjs` | `node scripts/pre-push-gate.mjs <remote> <url>`（.githooks/pre-push 调度器）/ `--dry-run` | 本地质量门禁：按变更域（Go/前端/数据/文档）只跑相关检查；gofmt 自动修复并 amend，构建/断链/契约失败阻断推送 |
+| `.githooks/pre-commit`（薄壳） | commit 时自动执行（无需手打） | 秒级文档/索引自动同步：跑 11 个 gen（docs 分区索引 / funcmap / 知识卡 index+routes+字段 / novel 索引 / project-map / vitepress sidebar）后 `git add docs/`（幂等：无漂移零副作用）；失败仅提示不阻断；输出走 stderr；逃生阀 `YSM_SKIP_GEN=1` |
 
 ### 治理检查（check-* 系列；唯一登记处，AGENTS.md §1.2 仅作指针）
 
@@ -79,13 +80,13 @@
 | `gen-routes.mjs` | AI 路由表生成（docs/knowledge/routes.md） |
 | `gen-knowledge-index.mjs` | 知识卡索引生成（docs/knowledge/index.md） |
 | `check-knowledge-drift.mjs` | 知识卡漂移检查（含代码→卡片覆盖盲区 WARN；`--affected <文件...>` 主动列出受源码变更影响的知识卡；`--affected --quiet` 机读模式供钩子消费） |
-| `hooks/knowledge-affected-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：把受影响知识卡写入 commit message body（非阻断、幂等），归一化 Git Bash msys 路径 |
+| `hooks/knowledge-affected-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：把受影响知识卡写入 commit message body + stderr 摘要提示（非阻断、幂等，AI 终端可见），归一化 Git Bash msys 路径 |
 | `gen-knowledge-symbols.mjs` | 知识卡 `symbols:` 字段同步（源码导出符号提取，JS/TS + Go 双栈，gen/--check） |
 | `gen-knowledge-h1.mjs` | 知识卡正文补 `# <name>` 标题（frontmatter 后插入，已有 h1 跳过） |
 | `gen-knowledge-adr.mjs` | 知识卡 `adr:` 关联补全（扫描源码 `[doc:adr-NNN]` 标记，仅 architecture 卡） |
 | `gen-knowledge-tests.mjs` | 知识卡 `tests:` 登记（扫描 frontend/src 测试文件按名匹配补登） |
 | `new-knowledge-card.mjs` | 知识卡脚手架 |
-| `gen-status-index.mjs` | 扫 ADR 首部 → PROJECT_STATUS.md「当前进行中/近期 ADR」区（`<!-- GEN: active-adr -->`） |
+| `gen-status-index.mjs` | ⚠️ 僵尸脚本：目标 `docs/architecture/PROJECT_STATUS.md` 已冻结迁移至 `docs/archive/`（无该文件），脚本必失败；无实际消费者，待清理 |
 | `new-adr.mjs` | 新 ADR 脚手架：双源占号 + 四段模板 + 登记表登记 + 自动 adr-check |
 | `gen-docs-index.mjs` | 分区索引：adr 登记表/状态统计 + **adr 规范索引页 `docs/adr/index.md`（状态分组 + 锚点 + 相对链接，整文件重写）** + releases 最近版本/版本全览（GEN 标记区），knowledge 委托校验 |
 | `gen-project-map.mjs` | 项目结构地图生成（`docs/project-map.md`）：扫描磁盘目录 + 合并基线 `scripts/baseline/project-dirs.json` 用途说明，4 个 GEN 标记区；`--check` 已挂 doctor 防漂移；未登记基线的新目录 WARN 提醒 |

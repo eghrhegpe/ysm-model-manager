@@ -82,6 +82,11 @@ func (d *Downloader) downloadTo(ctx context.Context, url, savePath, accept strin
 	lastEmit := time.Now()
 
 	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		n, rErr := resp.Body.Read(buf)
 		if n > 0 {
 			if _, wErr := out.Write(buf[:n]); wErr != nil {
@@ -149,6 +154,23 @@ func ResolveSavePath(rawURL, saveDir string) (savePath string, jsdURL, apiURL st
 	relPath = strings.ReplaceAll(relPath, "/", string(filepath.Separator))
 	relPath = strings.TrimPrefix(relPath, ".recycle"+string(filepath.Separator))
 	savePath = filepath.Join(saveDir, relPath)
+
+	// P1 修复：路径遍历防护——确保 savePath 经 Clean 后仍在 saveDir 下
+	savePath = filepath.Clean(savePath)
+	absSaveDir, err := filepath.Abs(saveDir)
+	if err != nil {
+		log.Printf("[download] saveDir 路径异常 %s: %v", saveDir, err)
+		return "", "", ""
+	}
+	absSavePath, err := filepath.Abs(savePath)
+	if err != nil {
+		log.Printf("[download] savePath 路径异常 %s: %v", savePath, err)
+		return "", "", ""
+	}
+	if !strings.HasPrefix(absSavePath, absSaveDir+string(filepath.Separator)) && absSavePath != absSaveDir {
+		log.Printf("[download] 拒绝路径越界: %s (期望在 %s 内)", absSavePath, absSaveDir)
+		return "", "", ""
+	}
 
 	if repoPath != "" {
 		normalized := strings.ReplaceAll(relPath, "\\", "/")

@@ -4,7 +4,7 @@ name: 高级筛选 adv-filter
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/views/dialogs/adv-filter.ts
+  - frontend/src/utils/dom/dialogs/adv-filter.ts
 use_when:
   - 高级筛选
   - 筛选

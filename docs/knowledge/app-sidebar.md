@@ -11,6 +11,16 @@ source_files:
   - frontend/src/views/app-sidebar/render.ts
   - frontend/src/views/app-sidebar/events.ts
   - frontend/src/views/app-sidebar/sidebar-css.ts
+tests:
+  - frontend/src/features/community/data.test.ts
+  - frontend/src/views/app-nav/index.test.ts
+  - frontend/src/views/app-resource-manager/index.test.ts
+  - frontend/src/views/app-sidebar/loader.test.ts
+  - frontend/src/views/app-sync-manager/index.test.ts
+  - frontend/src/views/app-toast/index.test.ts
+  - frontend/src/views/app-tree/data.test.ts
+  - frontend/src/views/app-tree/render.test.ts
+  - frontend/src/views/context-menu/index.test.ts
 use_when:
   - 侧边栏
   - 整合包列表

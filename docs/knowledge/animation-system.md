@@ -7,6 +7,10 @@ source_files:
   - frontend/src/utils/animation/animation.ts
   - frontend/src/utils/animation/animate.ts
   - frontend/src/utils/animation/stagger.ts
+tests:
+  - frontend/src/utils/animation/animate.test.ts
+  - frontend/src/utils/animation/animation.test.ts
+  - frontend/src/utils/animation/stagger.test.ts
 use_when:
   - 动画
   - 骨骼动画

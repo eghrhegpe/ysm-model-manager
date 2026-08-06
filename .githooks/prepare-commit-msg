@@ -5,6 +5,8 @@
 #   🔬 覆盖率建议 —— 低于语句覆盖率阈值的源文件（test-coverage-report --suggest）
 # 安装：git config core.hooksPath .githooks（仓库已配置）
 # 逃生阀：YSM_SKIP_KNOWLEDGE_HINT=1 / YSM_SKIP_COVERAGE_HINT=1 git commit
+# 输出：全部走 stderr（exec 1>&2）——Windows git hook 下 stdout 管道易断，且 stderr 是 AI 必看的终端通道
+exec 1>&2
 set -u
 
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null || exit 0)

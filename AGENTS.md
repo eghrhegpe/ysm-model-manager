@@ -231,6 +231,8 @@ node scripts/doctor.mjs               # 改代码 / 发版前，全量闸门（�
 
 > 注：L14「硬约束」的构建命令（`go build` / `vite build` / `typecheck`）负责「跑得起来」，本节负责「符合仓库治理」，两者互补不重复。
 
+> **pre-commit 自动接管**：`.githooks/pre-commit` 在 commit 时自动跑秒级 gen（docs 分区索引 / funcmap / 知识卡 index+routes+字段 / novel 索引 / project-map / vitepress sidebar）并 `git add docs/`，失败仅提示不阻断。**索引/文档类生成物同步无需手动跑**；逃生阀 `YSM_SKIP_GEN=1 git commit`。验证类检查（lint / 契约 / 断链 / adr-check 等）仍在 pre-push 门禁。
+
 ---
 
 ## 二、致命陷阱

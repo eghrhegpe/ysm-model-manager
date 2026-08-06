@@ -5,6 +5,8 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/utils/3d/model2d.ts
+tests:
+  - frontend/src/utils/3d/model2d.test.ts
 use_when:
   - 2D 预览
   - 骨骼图

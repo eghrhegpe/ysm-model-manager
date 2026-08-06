@@ -8,6 +8,11 @@ source_files:
   - frontend/src/features/community/download-queue.ts
   - frontend/src/features/community/events.ts
   - frontend/src/features/community/render.ts
+tests:
+  - frontend/src/features/community/data.test.ts
+  - frontend/src/features/community/download-queue.test.ts
+  - frontend/src/views/app-tree/data.test.ts
+  - frontend/src/views/app-tree/render.test.ts
 use_when:
   - 创意工坊
   - 社区

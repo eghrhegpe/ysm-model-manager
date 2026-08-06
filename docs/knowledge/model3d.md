@@ -7,6 +7,8 @@ source_files:
   - frontend/src/utils/3d/model3d.ts
   - frontend/src/views/app-preview/model3d-loader.ts
   - frontend/src/utils/3d/model3d-spec.ts
+tests:
+  - frontend/src/utils/3d/model3d-spec.test.ts
 use_when:
   - 3D 预览
   - Three.js

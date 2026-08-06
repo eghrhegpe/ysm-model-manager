@@ -5,7 +5,7 @@
  * 零依赖（仅 node:fs / node:path / node:url）。
  *
  * 三个维度：
- *   [ADR 维度]    docs/adr/ 文件 vs adr/README.md 登记表
+ *   [ADR 维度]    docs/adr/ 文件 vs adr/index.md 登记表
  *                 撞号 / 漏登 / 幽灵文件 / 编号跳号（ERROR 阻断）
  *   [知识卡维度]  docs/knowledge/ 卡 frontmatter / source_files / 索引断链
  *                 必填字段缺失 / 占位符 / 引用不存在（ERROR 阻断）
@@ -79,9 +79,9 @@ function checkAdr() {
     fileMeta[num] = { file: f, num };
   }
 
-  const regText = readText('docs/adr/README.md');
+  const regText = readText('docs/adr/index.md');
   if (regText === null) {
-    errors.push('[ADR] adr/README.md 登记表不存在');
+    errors.push('[ADR] adr/index.md 登记表不存在');
     return;
   }
   const regNums = new Set();

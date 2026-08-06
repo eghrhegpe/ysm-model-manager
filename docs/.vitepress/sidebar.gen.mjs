@@ -198,7 +198,7 @@ export const autoSidebar = [
         "link": "/adr/ADR-040-architecture-scale-governance"
       },
       {
-        "text": "ADR 登记表（Architecture Decision Records）",
+        "text": "ADR 决策记录（Architecture Decision Records）",
         "link": "/adr/README"
       }
     ]

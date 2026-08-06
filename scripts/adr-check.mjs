@@ -2,7 +2,7 @@
 /**
  * adr-check.mjs — ADR 登记一致性检查（占号防撞机制落地）。
  *
- * 校验 docs/adr/ 目录文件 vs adr/README.md 登记表：
+ * 校验 docs/adr/ 目录文件 vs adr/index.md 登记表：
  *   - 文件编号唯一（无撞号）
  *   - 登记表覆盖全部文件（无漏登）
  *   - 文件都在登记表（无幽灵文件）
@@ -23,7 +23,7 @@ import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 
 const ADR_DIR = path.join(ROOT, 'docs/adr');
-const REG_FILE = path.join(ADR_DIR, 'README.md');
+const REG_FILE = path.join(ADR_DIR, 'index.md'); // 登记表已并入 index（ADR 双文件合并）
 
 const args = process.argv.slice(2);
 const jsonMode = args.includes('--json');
@@ -72,7 +72,7 @@ let regText = '';
 try {
   regText = fs.readFileSync(REG_FILE, 'utf-8');
 } catch {
-  errors.push('MISSING: adr/README.md 登记表不存在');
+  errors.push('MISSING: adr/index.md 登记表不存在');
   finish();
 }
 
@@ -87,7 +87,7 @@ for (const m of regText.matchAll(/^\|\s*ADR-(\d{3})\s*\|/gm)) {
 // 4. 对账
 for (const num of Object.keys(fileMeta).map(Number).sort((a, b) => a - b)) {
   if (!regNums.has(num)) {
-    errors.push(`NOT_REGISTERED: ADR-${String(num).padStart(3, '0')} (${fileMeta[num].file}) 未在 adr/README.md 登记表占号`);
+    errors.push(`NOT_REGISTERED: ADR-${String(num).padStart(3, '0')} (${fileMeta[num].file}) 未在 adr/index.md 登记表占号`);
   }
 }
 for (const num of [...regNums].sort((a, b) => a - b)) {

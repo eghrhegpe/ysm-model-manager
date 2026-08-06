@@ -24,12 +24,14 @@
 | `pre-commit` | 自动生成文档索引（docs 分区索引 / funcmap / 知识卡 index+字段 / novel 索引 / project-map / vitepress sidebar）并 `git add docs/` | `YSM_SKIP_GEN=1` |
 | `prepare-commit-msg` | 自动提示受影响知识卡 + 覆盖率 | `YSM_SKIP_KNOWLEDGE_HINT=1` |
 | `pre-push` | 自动跑 `pre-push-gate.mjs` 按变更域检查（Go/前端/数据/文档），失败阻断 | `YSM_SKIP_GATE=1` |
+| commit 信息格式 | `<type>: <描述>`，type 同 conventional commits（feat/fix/docs/chore/refactor/test） |
+| 提交范围 | 按功能 `git add <通过测试的路径>`；杜绝被压缩记忆的可能 |
+| 禁 stash 状态变更 | 仅禁 `git stash push`/`git stash pop`/`git stash apply` 等会改动工作区的操作；只读的 `git stash list`、`git stash show` 不受限 |
 
 > **关键原则**：doctor检查若输出`[WARN]...skip`，必须手动运行`node_modules/.bin/tsc`验证
 
 
-## 去哪里查
-## 去哪里查（核心路径）
+# 去哪里查
 
 | 要做什么 | 去哪里 |
 |----------|--------|
@@ -68,7 +70,7 @@
 
 > **核心原则**：被取代=决策被推翻（ADR-012→113），≠功能演进。新ADR落地时**必须**检查并标注被取代方。
 
-## 技术栈
+# 技术栈
 
 | 层 | 选型 |
 |----|------|
@@ -90,11 +92,6 @@ node scripts/doctor.mjs --docs        # 改文档时用，轻量秒级（仅文�
 node scripts/doctor.mjs               # 改代码 / 发版前，全量闸门（编译+构建+文件+红线+Git）
 ```
 
-| 规则 | 说明 |
-|------|------|
-| commit 信息格式 | `<type>: <描述>`，type 同 conventional commits（feat/fix/docs/chore/refactor/test） |
-| 提交范围 | 按功能 `git add <通过测试的路径>`；杜绝被压缩记忆的可能 |
-| 禁 stash 状态变更 | 仅禁 `git stash push`/`git stash pop`/`git stash apply` 等会改动工作区的操作；只读的 `git stash list`、`git stash show` 不受限 |
 
 ---
 
@@ -165,7 +162,7 @@ grep -E '\.dispose\(|\bremove\w+\b|\bdelete\w+\b' <文件路径> # 释放点
 
 ---
 
-## 一、常见反模式（审查时重点排查）
+# 一、常见反模式（审查时重点排查）
 
 | 反模式 | 表现 | 危害 |
 |--------|------|------|
@@ -206,7 +203,7 @@ grep -E '\.dispose\(|\bremove\w+\b|\bdelete\w+\b' <文件路径> # 释放点
 
 > 完整版见 `docs/pitfalls.md`。
 
-## 三、三条治理红线
+## 三、治理红线
 
 ### 3.1 零 `window.__*` 全局变量
 

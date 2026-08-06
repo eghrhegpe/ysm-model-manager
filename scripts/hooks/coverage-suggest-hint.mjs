@@ -25,6 +25,9 @@ import { stripBlock } from './knowledge-affected-hint.mjs';
 
 export const BLOCK_START = '🔬 覆盖率建议（非阻断，frontend/vite.config.js 阈值）：';
 export const BLOCK_END = '🔬 ──END──';
+/** diff 覆盖率建议区块标记（check-diff-coverage --suggest 输出，幂等剥离用） */
+export const DIFF_BLOCK_START = '📈 diff 覆盖率建议（非阻断，变更行阈值 60%）：';
+export const DIFF_BLOCK_END = '📈 ──END──';
 /** 区块内最多列出的低覆盖文件数，避免 commit message 过长（完整清单见 --suggest）。 */
 export const MAX_SUGGEST_FILES = 20;
 
@@ -60,6 +63,24 @@ function getLowCoverageFiles(ROOT) {
   }
 }
 
+/**
+ * 调 check-diff-coverage --suggest --staged，取本次暂存变更的「变更行覆盖率」建议区块。
+ * 返回 📈 包裹的 Markdown 区块，或 null（无缺口/无数据，--suggest 永远 exit 0 不抛）。
+ */
+function getDiffCoverageBlock(ROOT) {
+  try {
+    const out = execFileSync(
+      process.execPath,
+      [path.join(ROOT, 'scripts', 'check-diff-coverage.mjs'), '--suggest', '--staged'],
+      { encoding: 'utf8' },
+    ).trim();
+    if (!out) return null;
+    return [DIFF_BLOCK_START, out, DIFF_BLOCK_END].join('\n');
+  } catch {
+    return null;
+  }
+}
+
 function main() {
   const msgFile = process.argv[2];
   const source = process.argv[3] || '';
@@ -72,7 +93,8 @@ function main() {
   if (!ROOT) return;
 
   const files = getLowCoverageFiles(ROOT);
-  if (files.length === 0) return; // 无缺口或数据缺失：都不写区块
+  const diffBlock = getDiffCoverageBlock(ROOT);
+  if (files.length === 0 && !diffBlock) return; // 无缺口或数据缺失：都不写区块
 
   const absFile = normalizeGitPath(msgFile, ROOT);
   let msg;
@@ -82,16 +104,23 @@ function main() {
     return;
   }
 
-  const stripped = stripBlock(msg, BLOCK_START, BLOCK_END);
-  const block = '\n' + buildBlock(files);
+  // 幂等剥离：🔬 整体建议 + 📈 diff 建议均按标记剥离，再按需重新附加（--amend 不重复）
+  let stripped = stripBlock(msg, BLOCK_START, BLOCK_END);
+  stripped = stripBlock(stripped, DIFF_BLOCK_START, DIFF_BLOCK_END);
+  const parts = [];
+  if (files.length > 0) parts.push(buildBlock(files));
+  if (diffBlock) parts.push(diffBlock);
+  const block = '\n' + parts.join('\n');
   const next = stripped.trimEnd() + block + '\n';
   try {
     fs.writeFileSync(absFile, next);
     // 摘要走 stderr：AI 的感知通道是终端，commit body 是给 PR review 看的（AI 是写信人不是收信人）
     const preview = files.slice(0, 3).map((f) => f.file).join('、');
+    const diffCount = diffBlock ? diffBlock.split('\n').filter((l) => l.startsWith('- `')).length : 0;
     console.error(
       `[prepare-commit-msg] 🔬 ${files.length} 个源文件低于覆盖率阈值，已写入 commit body` +
-        (files.length > 3 ? `（前 3：${preview}…）` : `：${preview}`),
+        (files.length > 3 ? `（前 3：${preview}…）` : `：${preview}`) +
+        (diffCount > 0 ? `；📈 ${diffCount} 个变更文件低于 diff 覆盖率阈值` : ''),
     );
   } catch {
     /* 非阻断：写失败不影响提交 */

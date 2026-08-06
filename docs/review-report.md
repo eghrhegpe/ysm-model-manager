@@ -152,9 +152,9 @@
 - model3d `cleanup()` 是全项目资源释放模板：12 个 listener 逐一 remove、RAF 取消、controls/renderer dispose、geometry/material 遍历释放 —— `model3d.ts#L695-L724`
 - app-tree 的 bus 订阅由 `bindBusEvents` 收集 unsub 统一进 `_unsubs`，disconnectedCallback 一次清完 —— [index.ts#L80-L118](../frontend/src/views/app-tree/index.ts#L80-L118)、[L141](../frontend/src/views/app-tree/index.ts#L141)
 - app-toast 并发心理模拟通过：最多 5 条堆叠、移除最旧先 clearTimeout、`_remove` 幂等 —— [app-toast.ts#L62-L69](../frontend/src/views/app-toast/index.ts#L62-L69)
-- handler-dnd 拖拽边界防呆齐全：目录深度上限 10 / 文件数上限 50 / 大小上限 + DnDLock 拦截 —— [handler-dnd.ts#L141](../frontend/src/core/handlers/dnd.ts#L141)、[L181-L189](../frontend/src/core/handlers/dnd.ts#L181-L189)
+- handler-dnd 拖拽边界防呆齐全：目录深度上限 10 / 文件数上限 50 / 大小上限 + DnDLock 拦截 —— [handler-dnd.ts#L141](../frontend/src/features/import-dnd.ts#L141)、[L181-L189](../frontend/src/features/import-dnd.ts#L181-L189)
 - recycle-bin 破坏性操作防呆到位（陷阱 #8）：清空回收站 danger 确认、单项永久删除确认 —— [recycle-bin.ts#L24-L30](../frontend/src/features/recycle-bin.ts#L24-L30)、[L162-L168](../frontend/src/features/recycle-bin.ts#L162-L168)
-- batch-rename 的模块槽位 `if (dialogEl) dialogEl.remove()` 是全 dialogs 唯一正确的防叠加实现 —— [batch-rename.ts#L33](../frontend/src/views/dialogs/batch-rename.ts#L33)、[L46](../frontend/src/views/dialogs/batch-rename.ts#L46)
+- batch-rename 的模块槽位 `if (dialogEl) dialogEl.remove()` 是全 dialogs 唯一正确的防叠加实现 —— [batch-rename.ts#L33](../frontend/src/utils/dom/dialogs/batch-rename.ts#L33)、[L46](../frontend/src/utils/dom/dialogs/batch-rename.ts#L46)
 - dialogs 的 ESC/keydown 全部绑在 overlay 元素自身，随 `remove()` 回收，无一处 document 级泄漏
 
 **风险：**
@@ -166,9 +166,9 @@
 | 🟠 高 P2 | [app-tree/index.ts#L272-L273](../frontend/src/views/app-tree/index.ts#L272-L273) | 同一 `_keydownHandler` 同时注册到 `_root` 与 `document`：shadow 内组合键事件 composed 冒泡 → 焦点在工具栏按钮（不被 INPUT 守卫拦截）按 Delete → 确认弹两次、删除执行两次 | 只保留 document 级注册，删 L272 |
 | 🟠 高 P2 | [app-tree/bus-handlers.ts#L190-L205](../frontend/src/views/app-tree/bus-handlers.ts#L190-L205) | `dir:recycle` 中 L190 已算出 `absDir`，L204 却 `RemoveDir(dir)` 传**相对路径** → 按进程 CWD 解析，空文件夹删不掉被 `catch {}` 吞掉，理论上还有误删 CWD 相对目录风险 | 改 `await RemoveDir(absDir)` |
 | 🟠 高 P2 | app-tree/tpl.ts `#sort` + [index.ts#L50](../frontend/src/views/app-tree/index.ts#L50) | `#sort` 下拉框渲染了但全项目无任何 change 监听（grep 证实），`vm._sort` 初始化后从未写入 → 用户切排序无反应 | 补 change 绑定写 `vm._sort` 后重渲染，或移除控件 |
-| 🟠 高 P2 | [modal.ts#L56](../frontend/src/views/dialogs/modal.ts#L56) 等 | **modal 家族无单例**（batch-rename 除外）：modalPrompt/modalSelect/modalConfirm/showRenameDialog/modalTagEditor 每次调用都新建 overlay 叠加；连点无守卫的按钮（实证 import-queue `dl-reimport`）→ 双弹窗叠放、双 Promise 各自结算触发两次业务操作 | modal.ts 加模块级活动弹窗槽位，新开前先结算旧弹窗（长治久安方案，优于逐个调用方打补丁） |
-| 🟠 高 P2 | [rename.ts#L7-L12](../frontend/src/views/dialogs/rename.ts#L7-L12) | 本地 `esc` 不转义双引号，却用于 `value="…"` 属性插值 → 文件名含 `"` 可逃逸属性（与 summarize 同类，数据源为本地文件名） | 删本地 esc，import modal.ts/dom.ts 的完整版 |
-| 🟠 高 P2 | [batch-rename.ts#L41-L45](../frontend/src/views/dialogs/batch-rename.ts#L41-L45) | 返回的 Promise 在**弹窗打开瞬间** resolve，调用方 `await showBatchRenameDialog(...)` 形同虚设，"应用"后的错误无法被调用方捕获 | Promise 延迟到 `close()` 时结算（内部保留 resolve 引用） |
+| 🟠 高 P2 | [modal.ts#L56](../frontend/src/utils/dom/dialogs/modal.ts#L56) 等 | **modal 家族无单例**（batch-rename 除外）：modalPrompt/modalSelect/modalConfirm/showRenameDialog/modalTagEditor 每次调用都新建 overlay 叠加；连点无守卫的按钮（实证 import-queue `dl-reimport`）→ 双弹窗叠放、双 Promise 各自结算触发两次业务操作 | modal.ts 加模块级活动弹窗槽位，新开前先结算旧弹窗（长治久安方案，优于逐个调用方打补丁） |
+| 🟠 高 P2 | [rename.ts#L7-L12](../frontend/src/utils/dom/dialogs/rename.ts#L7-L12) | 本地 `esc` 不转义双引号，却用于 `value="…"` 属性插值 → 文件名含 `"` 可逃逸属性（与 summarize 同类，数据源为本地文件名） | 删本地 esc，import modal.ts/dom.ts 的完整版 |
+| 🟠 高 P2 | [batch-rename.ts#L41-L45](../frontend/src/utils/dom/dialogs/batch-rename.ts#L41-L45) | 返回的 Promise 在**弹窗打开瞬间** resolve，调用方 `await showBatchRenameDialog(...)` 形同虚设，"应用"后的错误无法被调用方捕获 | Promise 延迟到 `close()` 时结算（内部保留 resolve 引用） |
 | 🟠 高 P2 | [app-sync-manager/index.ts#L97-L117](../frontend/src/views/app-sync-manager/index.ts#L97-L117) | `_init` 每次调用追加 `bus.on("stats:refresh")` 进 `_unsubs` 但从不清理上一轮 → `instance` 属性二次变更后同一事件双份 handler，一次刷新双倍 `_loadData`，叠加自触发 emit 放大 | `_init` 开头先清旧 `_unsubs` 再注册 |
 | 🟠 高 P2 | [context-menus.ts#L281-L287](../frontend/src/core/context-menus.ts#L281-L287) | `file.copy` 与 `batch.copy` 成功后**均缺 `refreshUI()`**（全部 move 分支都有；初版报告误判 batch.copy 已有，复核更正）→ 复制后树视图不更新，用户以为复制失败 | 两处成功分支均补 `refreshUI()` |
 | 🟠 高 P2 | [recycle-bin.ts#L67-L74](../frontend/src/features/recycle-bin.ts#L67-L74)、[L210](../frontend/src/features/recycle-bin.ts#L210) | `_loadingAbort` 是假守卫：AbortController.signal 从未传给任何请求；先完成者的 `finally { _loadingAbort = null }` 清掉后者句柄；快速切资源类型时**慢的旧请求可覆盖新列表** | 用 generation 计数器：渲染前比对序号再写 DOM |
@@ -181,7 +181,7 @@
 | 🟡 中 P3 | `resource-registry.ts#L29-L31` | 注册表加载失败被缓存为 `{}` 且永不重试 → Go 桥瞬断后整个会话 `getStorageSubDir` 全部降级 | 失败不缓存（保持 null），下次调用重试 |
 | 🟡 中 P3 | [app-resource-manager/index.ts#L91-L102](../frontend/src/views/app-resource-manager/index.ts#L91-L102) | `_init` 无 generation 守卫：rtype/instance 属性连变或配置事件并发时，后发先至把旧类型列表写进新 DOM | 入口记 generation，await 返回后校验 |
 | 🟡 中 P3 | [context-menus.ts#L167-L171](../frontend/src/core/context-menus.ts#L167-L171)、[L338-L341](../frontend/src/core/context-menus.ts#L338-L341) | `MoveToRecycle` 失败 `catch {}` 静默吞错，违「异常路径必须 toast」红线 | catch 补 toast |
-| 🟡 中 P3 | [handler-dnd.ts#L9](../frontend/src/core/handlers/dnd.ts#L9)、[L189-L192](../frontend/src/core/handlers/dnd.ts#L189-L192) | `MAX_FILE_SIZE` 为 100MB，toast 文案却写「超过 10MB」误导用户 | 文案改 100MB 或抽常量复用 |
+| 🟡 中 P3 | [handler-dnd.ts#L9](../frontend/src/features/import-dnd.ts#L9)、[L189-L192](../frontend/src/features/import-dnd.ts#L189-L192) | `MAX_FILE_SIZE` 为 100MB，toast 文案却写「超过 10MB」误导用户 | 文案改 100MB 或抽常量复用 |
 | 🟡 中 P3 | `debug.ts#L28`、`L86-L97` | `window._DBG_RING` / `window.debugGetSpec`（直接暴露 Go 绑定）常驻 window，调试残留违背「零隐式全局」精神 | `import.meta.env.DEV` 守卫或生产剥离 |
 | 🟢 低 P4（择要） | 多处 | app-nav 高亮色硬编码 + 版本降级写死 "v1.0.0"；app-tree render.ts `updateStat` 700ms 定时器未跟踪；app-sidebar `_checkedSet` 跨 rtype 串味、`.sidebar-import-all` 死引用；tag-editor overlay 无 focus（ESC 需先点进弹窗）、保存按钮无 disable；app-toast 缺 `.warn` 样式但 bus 契约含 warn；display.ts 占位符 `%%TOKEN%%` 与真实文件名可碰撞；version-updater 静默检查发请求前 markChecked（断网也耗 6h 配额）；dnd-state `release()` 无持有者校验 | 见各子报告，均为点状小修 |
 

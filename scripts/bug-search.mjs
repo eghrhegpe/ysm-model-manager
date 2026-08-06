@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 
-const BUG_FILE = path.join(ROOT, 'docs/architecture/bug-chronicle.md');
+const BUG_FILE = path.join(ROOT, 'docs/archive/bug-chronicle.md');
 
 function loadBugs() {
   /** 将 bug-chronicle 解析为 bug 列表。 */

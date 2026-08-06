@@ -16,6 +16,11 @@
 > 前端建议过一遍命名表（`docs/Design.md` §12 文档命名与归属规范）。
 > 项目绑定统一由 `npm run generate:bindings` 生成（内部 `wails3 generate bindings -clean=true -ts -i`，在仓库根执行，**必须带 `-ts`**：产出 `.ts`，前端以 `.js` 后缀 import、由 vite `wailsBindingsResolve` 重定向；无 `-ts` 生成会产出 `.js` 并清掉 git 跟踪的 `.ts`，属回归红线。契约见 `docs/architecture.md` §绑定模式）。
 > 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `check-redlines` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check` / `wails3-cli-check`。
+> **钩子自动执行（commit/push 时自动跑，无需手打）**：
+> - `pre-commit`：commit 时自动跑 11 个秒级 gen（docs 分区索引 / funcmap / 知识卡 index+routes+字段 / novel 索引 / project-map / vitepress sidebar）并 `git add docs/`；逃生阀 `YSM_SKIP_GEN=1`。
+> - `prepare-commit-msg`：commit 时自动把受影响知识卡 + 覆盖率建议写入 body，并向 stderr 打一行摘要（AI 终端可见）；逃生阀 `YSM_SKIP_KNOWLEDGE_HINT=1` / `YSM_SKIP_COVERAGE_HINT=1`。
+> - `pre-push`：push 时自动跑 `pre-push-gate.mjs` 按变更域检查（Go/前端/数据/文档），失败阻断；逃生阀 `YSM_SKIP_GATE=1`。
+> **信任但验证**：doctor 检查项若输出 `[WARN] … skip`（工具探测失败），**不等于验证通过**——须直接跑 `node_modules/.bin/tsc` 等确认，勿把空转跳过当通过。
 
 ## 去哪里查
 
@@ -254,6 +259,7 @@ node scripts/doctor.mjs               # 改代码 / 发版前，全量闸门（�
 | 13 | 幽灵路径：状态被旁路写入（实证：page-store `setCurrentPage` 零调用方且 emits 完成事件；registry 注册空转零消费） | 状态变了但内容不渲染 / 服务注册无人消费 | 模块级状态唯一写入点收敛到 `registerXxx(unsubs)` listener；setter 禁发「完成事件」绕过请求链路；服务名联合类型收窄、注册必有消费方（`get()`） |
 | 14 | 旁路弹窗：不走 modal.ts 单例槽位（实证：version-updater 自带 47 行 dlg-overlay 骨架） | 连点叠加、单例失效、双执行 | 所有弹窗走 `dialogs/modal.ts`（modalConfirm/modalPrompt/modalSelect + `registerDlg` 槽位），禁止自带弹窗骨架（check-redlines.mjs W6 扫描） |
 | 15 | esc 重复实现（实证：10 文件 3-5 个 replace 版本并存） | 属性上下文 XSS 面不统一 | 转义统一 import `utils/dom.ts` 的 esc（5-replace 含引号），禁止私有实现（check-redlines.mjs R10 扫描） |
+| 16 | doctor 检查项 `[WARN] … skip` 被当「通过」（实证：npx 探测误跳过，多轮 typecheck 假绿） | 前端检查全程空转，类型错误漏网 | doctor 前端检查直接查 `frontend/node_modules/.bin/{name}`；见 `[WARN] skip` 必须手动跑 `node_modules/.bin/tsc` 确认，信任但验证 |
 
 > 完整版见 `docs/pitfalls.md`。
 

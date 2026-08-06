@@ -7,8 +7,8 @@ import type { loadEntries } from "./loader.ts";
 import { initInstanceActions } from "./instance-actions.ts";
 import { getApp } from "../../wails/app.ts";
 import type { AppTree } from "./index.ts";
-import { modalPrompt, modalConfirm } from "../../views/dialogs/modal.ts";
-import { showBatchRenameDialog } from "../../views/dialogs/batch-rename.ts";
+import { modalPrompt, modalConfirm } from "../../utils/dom/dialogs/modal.ts";
+import { showBatchRenameDialog } from "../../utils/dom/dialogs/batch-rename.ts";
 
 export function bindBusEvents(vm: AppTree): Array<() => void> {
   const unsubs: Array<() => void> = [];

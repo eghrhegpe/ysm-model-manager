@@ -7,7 +7,7 @@ import { bus } from "../../bus.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { getApp } from "../../wails/app.ts";
 import { esc } from "../../utils/dom/html.ts";
-import { modalConfirm } from "../dialogs/modal.ts";
+import { modalConfirm } from "../../utils/dom/dialogs/modal.ts";
 
 /** 资源类型配置（resource_types.json 条目视图） */
 interface ResourceTypeConfig {

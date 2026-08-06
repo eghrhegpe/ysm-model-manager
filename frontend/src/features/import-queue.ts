@@ -4,7 +4,7 @@ import { friendlyError } from "../utils/dom/errors.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { parseModelName, renderDisplayName } from "../utils/dom/display.ts";
 import { renderFormattedText } from "../utils/format/mc-format.ts";
-import { modalConfirm } from "../views/dialogs/modal.ts";
+import { modalConfirm } from "../utils/dom/dialogs/modal.ts";
 import { getApp } from "../wails/app.ts";
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
 import { isImportableFile, shouldEnterForm, groupCollected } from "./dnd-shared.ts";
@@ -13,7 +13,7 @@ import {
   directImport as execDirectImport,
   importFolder as execImportFolder,
 } from "./import-executor.ts";
-import { showRenameDialog } from "../views/dialogs/rename.ts";
+import { showRenameDialog } from "../utils/dom/dialogs/rename.ts";
 
 const extsStr = ALL_EXTS.join(" ");
 

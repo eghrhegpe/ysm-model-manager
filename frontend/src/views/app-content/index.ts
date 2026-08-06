@@ -41,7 +41,7 @@ import {
 } from "../../features/community/render.ts";
 import { bindRepoEvents } from "../../features/community/events.ts";
 import { renderSiteView, type RenderSiteViewCtx, type RepoAuthorLike } from "./site-view.ts";
-import { getSiteIcon } from "./workshop-icons.ts";
+import { getSiteIcon } from "../../utils/icon/workshop-icons.ts";
 import { loadCommunityData, fillSearch, type LocalCreator } from "./community-data.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import type { WorkshopModel } from "../../features/community/render.ts";

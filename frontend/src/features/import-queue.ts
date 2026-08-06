@@ -1,7 +1,7 @@
 // ===== 导入队列 + 拖拽 + 重命名流程（类型化版 — ADR-014 P3 features 收官）=====
 import { bus } from "../bus.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
-import { RESOURCE_TYPES } from "../utils/resource/types.ts";
+import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../utils/resource/types.ts";
 import { parseModelName, renderDisplayName } from "../utils/dom/display.ts";
 import { renderFormattedText } from "../utils/format/mc-format.ts";
 import { modalConfirm } from "../utils/dom/dialogs/modal.ts";
@@ -530,10 +530,10 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   let repoFiles: Set<string> | null = null; // 仓库文件名缓存
   const loadRepoFiles = async (): Promise<void> => {
     try {
-      const { ScanModelEntries, GetRepoRoot } = await getApp();
+      const { ScanModelEntriesWithLabel, GetRepoRoot } = await getApp();
       const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
       if (!repoRoot) return;
-      const entries = (await ScanModelEntries(repoRoot)) || [];
+      const entries = (await ScanModelEntriesWithLabel(repoRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
       repoFiles = new Set(entries.map((e) => e.Name.replace(/\.ban$/i, "")));
     } catch {
       repoFiles = new Set();

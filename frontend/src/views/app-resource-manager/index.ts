@@ -291,9 +291,9 @@ export class AppResourceManager extends HTMLElement {
     if (!this._listEl) return;
     // 复用 _init 的 generation：await 期间 rtype/instance 变化时，旧结果不得回写新 DOM
     const gen = this._initGen;
-    const { ScanModelEntries, IsResourcePackEnabled } =
+    const { ScanModelEntriesWithLabel, IsResourcePackEnabled } =
       await getApp();
-    const entries = await ScanModelEntries(this._rpRoot);
+    const entries = await ScanModelEntriesWithLabel(this._rpRoot, this._typeLabel);
     if (gen !== this._initGen) return;
     // 从 resource_types.json 获取当前类型的扩展名列表
     const type = _findType(this._rtype);

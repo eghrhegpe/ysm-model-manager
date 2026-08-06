@@ -175,6 +175,7 @@ export function DeleteFromRecycle(src: string): $CancellablePromise<void> {
 
 /**
  * DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹
+ * 路径守卫：限制在 FilesRoot 内，防止删除系统目录
  */
 export function DeleteModelDir(path: string): $CancellablePromise<void> {
     return $Call.ByID(2959912528, path);
@@ -765,6 +766,7 @@ export function SavePreviewTempFile(base64Data: string): $CancellablePromise<str
 
 /**
  * SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用）
+ * 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路径与路径穿越（.. 段）
  */
 export function SaveScreenshotFile(filename: string, base64Data: string): $CancellablePromise<void> {
     return $Call.ByID(1822573792, filename, base64Data);
@@ -804,10 +806,20 @@ export function ScanLocalAuthors(): $CancellablePromise<types$0.WorkshopCreator[
 }
 
 /**
- * ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志
+ * ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志。
+ * 仅在真正扫盘（缓存未命中）时记日志，30s 内重复访问命中缓存则跳过，避免刷屏。
  */
 export function ScanModelEntries(dir: string): $CancellablePromise<types$0.ModelEntry[] | null> {
     return $Call.ByID(963930825, dir);
+}
+
+/**
+ * ScanModelEntriesWithLabel 同 ScanModelEntries，但操作日志附带资源类型标签
+ * （如「资源包」「光影包」「模型」），便于在操作日志面板区分扫描的文件类型。
+ * 仅在缓存未命中时记日志，避免刷屏。
+ */
+export function ScanModelEntriesWithLabel(dir: string, label: string): $CancellablePromise<types$0.ModelEntry[] | null> {
+    return $Call.ByID(3762097925, dir, label);
 }
 
 /**
@@ -875,6 +887,7 @@ export function SetModelTags(modelPath: string, tags: string[] | null): $Cancell
 
 /**
  * SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认）
+ * P1 修复：非空入参经 filepath.Abs(filepath.Clean()) 规范化，防止含 .. 或未规范化路径
  */
 export function SetResourceRoot(rtype: string, path: string): $CancellablePromise<void> {
     return $Call.ByID(3405438717, rtype, path);

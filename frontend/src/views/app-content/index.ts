@@ -3,7 +3,7 @@ import { bus } from "../../bus.ts";
 import { resolveInitialPage } from "../../core/page-store.ts";
 import { setPendingTreeSearch } from "../app-tree/index.ts";
 import { esc as escUtil } from "../../utils/dom/html.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { contentCSS } from "./content-css.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
@@ -722,7 +722,7 @@ class AppContent extends HTMLElement {
         if (repoRoot) {
           // 先清缓存再扫描，确保新下载的文件立即可见
           if (AppM.ClearScanCache) await AppM.ClearScanCache();
-          const entries = (await AppM.ScanModelEntries(repoRoot)) || [];
+          const entries = (await AppM.ScanModelEntriesWithLabel(repoRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
           entries.forEach((e) => {
             let n = e.Name || "";
             if (n.endsWith(".ban")) n = n.slice(0, -4);
@@ -880,7 +880,7 @@ class AppContent extends HTMLElement {
       }
       let mirror = "";
       try {
-        const { LoadAppConfig, ScanModelEntries, GetRepoRoot } =
+        const { LoadAppConfig, ScanModelEntriesWithLabel, GetRepoRoot } =
           await getApp();
         const cfg = await LoadAppConfig();
         mirror = cfg.mirror || "";
@@ -888,7 +888,7 @@ class AppContent extends HTMLElement {
         // 预先加载本地映射
         const localMap = new Map<string, string>();
         if (repoRoot) {
-          const entries = (await ScanModelEntries(repoRoot)) || [];
+          const entries = (await ScanModelEntriesWithLabel(repoRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
           entries.forEach((e) => {
             let n = e.Name || "";
             if (n.endsWith(".ban")) n = n.slice(0, -4);

@@ -1,5 +1,6 @@
 // ===== Go 数据加载层 =====
 import { getExts } from "../../utils/resource/extensions.ts";
+import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { getApp } from "../../wails/app.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
@@ -37,11 +38,11 @@ export async function loadEntries(
   rtype: string,
 ): Promise<{ repoRoot: string; entries: TreeEntry[] }> {
   try {
-    const { GetRepoRoot, ScanModelEntries, IsFileBanned } = await getApp();
+    const { GetRepoRoot, ScanModelEntriesWithLabel, IsFileBanned } = await getApp();
     const repoRoot = await GetRepoRoot(rtype || "");
     if (!repoRoot) return { repoRoot: "", entries: [] };
 
-    const raw = await ScanModelEntries(repoRoot);
+    const raw = await ScanModelEntriesWithLabel(repoRoot, RESOURCE_TYPE_LABELS[rtype] || rtype);
     if (!raw || !raw.length) return { repoRoot, entries: [] };
 
     // 按类型过滤扩展名（防止共享仓库中混入其他类型的文件）

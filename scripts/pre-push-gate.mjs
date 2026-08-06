@@ -238,6 +238,18 @@ function main() {
 
   /* --- 前端域 --- */
   if (plan.frontend) {
+    // 分层守护：前端目录间反向依赖（R1/R2 零容忍 + R3/R4 基线，现基线 0 条）
+    const tL = Date.now();
+    const ll = sh('node scripts/check-layering.mjs --json');
+    let lz = null;
+    try { lz = JSON.parse(ll.out)._summary; } catch { /* parse fail */ }
+    const lOk = ll.rc === 0;
+    results.push({ label: 'check-layering', ok: lOk, time: Date.now() - tL,
+      note: lz === null ? '输出解析失败（scripts/check-layering.mjs 缺失？）'
+        : (lOk ? `分层合规（零容忍 ${lz.zero_tolerance} / 回归 ${lz.regressions}）`
+          : `零容忍 ${lz.zero_tolerance} + 新增回归 ${lz.regressions}`) });
+    if (!lOk) blocked = true;
+
     const t0 = Date.now();
     const fb = sh('npx vite build', { cwd: path.join(ROOT, 'frontend') });
     results.push({ label: 'vite build', ok: fb.rc === 0, time: Date.now() - t0,

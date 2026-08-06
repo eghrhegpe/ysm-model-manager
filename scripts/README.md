@@ -44,7 +44,7 @@
 | 脚本 | 调用方式 | 说明 |
 |------|---------|------|
 | `funcmap.mjs` | `node scripts/funcmap.mjs -o funcmap.md` | 提取 Go/JS/TS 导出符号映射表（按模块分组，参考 MikuMikuAR 风格） |
-| `doctor.mjs` | `node scripts/doctor.mjs` | Go 编译 + 单测 + 前端构建 + **前端单测（vitest，ADR-023 P3）** + tsc + 文件 + 红线 + 静态分析 + Git（原 ultrawork 一键三连已并入，ultrawork.mjs 删除） |
+| `doctor.mjs` | `node scripts/doctor.mjs` | Go 编译 + 单测 + 前端构建 + **前端单测（vitest，ADR-023 P3）** + tsc + 文件 + 红线 + 静态分析（含 check-layering 分层守护）+ Git（原 ultrawork 一键三连已并入，ultrawork.mjs 删除） |
 | `comment-checker.mjs` | `node scripts/comment-checker.mjs` / `--json` / `--full` | 注释质量（废话/JSDoc/TODO/调试日志）；`--json` 默认每类截断 50 条 + `_summary` 分类计数，`--full` 全量（防 wasm base64 超长行误报/爆炸） |
 | `event-audit.mjs` | `node scripts/event-audit.mjs` / `--json` | EventsOn/bus.on 注册位置检查 |
 | `binding-check.mjs` | `node scripts/binding-check.mjs` | Go 导出函数 vs v3 bindings 产物（`-ts` 契约 app.ts）一致性 |
@@ -54,7 +54,7 @@
 | `inspect_ysm.mjs` | `node scripts/inspect_ysm.mjs <文件>` / `--json` | YSM 文件格式诊断（合并 v1-v5 的统一版） |
 | `test-coverage-report.mjs` | `node scripts/test-coverage-report.mjs` / `--json` / `--top N` | 读 vitest v8 coverage 产物输出未覆盖清单（文件+行+函数，升序），供补测决策；需先跑 `npm run test:coverage` |
 | `line-counter.mjs` | `node scripts/line-counter.mjs` | 代码行数统计与文件健康度分析（由 line-counter.py 迁移，含 package_lines 按文件计数行为） |
-| `pre-push-gate.mjs` | `node scripts/pre-push-gate.mjs <remote> <url>`（.githooks/pre-push 调度器）/ `--dry-run` | 本地质量门禁：按变更域（Go/前端/数据/文档）只跑相关检查；gofmt 自动修复并 amend，构建/断链/契约失败阻断推送 |
+| `pre-push-gate.mjs` | `node scripts/pre-push-gate.mjs <remote> <url>`（.githooks/pre-push 调度器）/ `--dry-run` | 本地质量门禁：按变更域（Go/前端/数据/文档）只跑相关检查；前端域含 **check-layering 分层硬门禁**（反向依赖阻断）；gofmt 自动修复并 amend，构建/断链/契约失败阻断推送 |
 | `.githooks/pre-commit`（薄壳） | commit 时自动执行（无需手打） | 秒级文档/索引自动同步：跑 10 个 gen（docs 分区索引 / funcmap / 知识卡 index+字段 / novel 索引 / project-map / vitepress sidebar）后 `git add docs/`（幂等：无漂移零副作用）；失败仅提示不阻断；输出走 stderr；逃生阀 `YSM_SKIP_GEN=1` |
 
 ### 治理检查（check-* 系列；唯一登记处，AGENTS.md §1.2 仅作指针）
@@ -86,7 +86,7 @@
 | `gen-knowledge-index.mjs` | 知识卡索引生成（docs/knowledge/index.md） |
 | `check-knowledge-drift.mjs` | 知识卡漂移检查（含代码→卡片覆盖盲区 WARN；`--affected <文件...>` 主动列出受源码变更影响的知识卡；`--affected --quiet` 机读模式供钩子消费） |
 | `hooks/knowledge-affected-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：把受影响知识卡写入 commit message body + stderr 摘要提示（非阻断、幂等，AI 终端可见），归一化 Git Bash msys 路径 |
-| `hooks/coverage-suggest-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：低于语句覆盖率阈值的源文件写入 commit message body，随 commit 进 PR 供 review 参考补测方向（非阻断、幂等；逃生阀 `YSM_SKIP_COVERAGE_HINT=1`） |
+| `hooks/coverage-suggest-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：低于语句覆盖率阈值的源文件写入 commit message body，随 commit 进 PR 供 review 参考补测方向（非阻断、幂等；逃生阀 `YSM_SKIP_COVERAGE_HINT=1`）；v2：并入 **check-diff-coverage --suggest --staged** 的「📈 变更行覆盖率建议」区块（本次暂存变更文件，双区块幂等剥离） |
 | `gen-knowledge-symbols.mjs` | 知识卡 `symbols:` 字段同步（源码导出符号提取，JS/TS + Go 双栈，gen/--check） |
 | `gen-knowledge-h1.mjs` | 知识卡正文补 `# <name>` 标题（frontmatter 后插入，已有 h1 跳过） |
 | `gen-knowledge-adr.mjs` | 知识卡 `adr:` 关联补全（扫描源码 `[doc:adr-NNN]` 标记，仅 architecture 卡） |

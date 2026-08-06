@@ -283,6 +283,8 @@ const STATIC_TOOLS = [
   'check-circular-go.mjs',
   'check-orphan-exports.mjs',
   'check-deadcode-baseline.mjs',
+  // 前端分层依赖方向守护（views → features → services → utils → core，零容忍 + 基线）
+  'check-layering.mjs',
   // 前端 JS id 引用 ↔ 模板定义交叉核对（幽灵 id 断链检测，防事件绑定静默失效）
   'check-tpl-refs.mjs',
   // 动态 import() 合理性审查（对照 app_modules 规范：失败处理/轻量工具/.js 后缀）

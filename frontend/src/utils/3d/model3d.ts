@@ -804,16 +804,15 @@ export async function renderModel3D(
           if ((obj as THREE.Mesh).isMesh) {
             (obj as THREE.Mesh).geometry?.dispose();
             const m = (obj as THREE.Mesh).material;
-            if (Array.isArray(m)) m.forEach((x) => { x.map?.dispose(); x.dispose(); });
-            else { m.map?.dispose(); m?.dispose(); }
+            if (Array.isArray(m)) m.forEach((x) => disposeMaterial(x));
+            else disposeMaterial(m);
           } else if ((obj as THREE.Line).isLine) {
             (obj as THREE.Line).geometry?.dispose();
             const lm = (obj as THREE.Line).material;
-            if (Array.isArray(lm)) lm.forEach((x) => { x.dispose(); });
+            if (Array.isArray(lm)) lm.forEach((x) => x.dispose());
             else lm?.dispose();
           } else if ((obj as THREE.Sprite).isSprite) {
-            (obj as THREE.Sprite).material.map?.dispose();
-            (obj as THREE.Sprite).material?.dispose();
+            disposeMaterial((obj as THREE.Sprite).material);
           }
         });
         scene.remove(_debugGroup);
@@ -824,11 +823,8 @@ export async function renderModel3D(
         if (mesh.isMesh) {
           mesh.geometry?.dispose();
           if (Array.isArray(mesh.material))
-            mesh.material.forEach((m) => { m.map?.dispose(); m.dispose(); });
-          else {
-            mesh.material?.map?.dispose();
-            mesh.material?.dispose();
-          }
+            mesh.material.forEach((m) => disposeMaterial(m));
+          else disposeMaterial(mesh.material);
         }
       });
       renderer.dispose();
@@ -850,4 +846,21 @@ export function screenshotPreview(): string | null {
   }
   _renderer3d.render(_scene3d, _camera3d);
   return _renderer3d.domElement.toDataURL("image/png").split(",")[1];
+}
+
+/** 带 map 纹理的材质接口（MeshStandardMaterial/MeshPhongMaterial 等共有） */
+interface MaterialWithMap {
+  map: { dispose(): void } | null;
+  dispose(): void;
+}
+
+/**
+ * 释放材质及其 map 纹理。
+ * Material 基类无 map 属性，需运行时探测（类型层面用 MaterialWithMap 收窄）。
+ */
+function disposeMaterial(m: THREE.Material | null | undefined): void {
+  if (!m) return;
+  const withMap = m as THREE.Material & Partial<MaterialWithMap>;
+  if (withMap.map) withMap.map.dispose();
+  m.dispose();
 }

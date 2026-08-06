@@ -39,8 +39,8 @@
 | 前端·工具 | 19 | 72 |
 | frontend/views | 58 | 163 |
 | 前端·Wails 桥接 | 1 | 1 |
-| 前端·WASM | 3 | 7 |
-| **合计** | **166** | **781** |
+| 前端·WASM | 3 | 6 |
+| **合计** | **166** | **780** |
 
 ## Go·头像
 
@@ -754,7 +754,7 @@
 | `loadTdRotMode()` | `frontend/src/utils/3d/model3d:107` | true = 环绕（orbit），false = 自身（free） |
 | `buildSceneMesh()` | `frontend/src/utils/3d/model3d:120` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
 | `renderModel3D()` | `frontend/src/utils/3d/model3d:177` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/src/utils/3d/model3d:846` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `screenshotPreview()` | `frontend/src/utils/3d/model3d:842` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
 | `animateNumber()` | `frontend/src/utils/animation/animate:12` | 里程表滚动进位动画 |
 | `Vec3()` | `frontend/src/utils/animation/animation:9` | 三维向量 [x, y, z] |
 | `Keyframe()` | `frontend/src/utils/animation/animation:12` | 关键帧 |
@@ -982,10 +982,9 @@
 |------|--------|------|
 | `_getGlueCode()` | `frontend/src/wasm/ysm-glue-data:4` | — |
 | `YsmDecodedFile()` | `frontend/src/wasm/ysm-parser:46` | 解码输出文件 |
-| `destroyYSMParser()` | `frontend/src/wasm/ysm-parser:56` | 销毁 WASM 实例，释放 HEAP 内存 |
-| `initYSMParser()` | `frontend/src/wasm/ysm-parser:70` | — |
-| `decodeYsmFileFromMemory()` | `frontend/src/wasm/ysm-parser:153` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组） 返回 [{path, data}]，失败返回 null |
-| `decodeYsmFile()` | `frontend/src/wasm/ysm-parser:192` | 通过 callMain + MEMFS 解码 .ysm（回退路径） 保留以兼容旧的 WASM 编译 |
+| `initYSMParser()` | `frontend/src/wasm/ysm-parser:59` | — |
+| `decodeYsmFileFromMemory()` | `frontend/src/wasm/ysm-parser:142` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组） 返回 [{path, data}]，失败返回 null |
+| `decodeYsmFile()` | `frontend/src/wasm/ysm-parser:181` | 通过 callMain + MEMFS 解码 .ysm（回退路径） 保留以兼容旧的 WASM 编译 |
 | `_getWasmBinary()` | `frontend/src/wasm/ysm-wasm-data:4` | — |
 
 ---

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-05T17:56:15.456Z",
+  "generated": "2026-08-06T09:44:01.622Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|jscpd",
@@ -40,7 +40,8 @@
     "src/utils/format/summarize.ts|types|SummaryAuthor",
     "src/utils/format/summarize.ts|types|SummaryConfigMenu",
     "src/views/app-preview/geometry.ts|types|BedrockBone",
-    "src/views/app-preview/geometry.ts|types|BedrockCube"
+    "src/views/app-preview/geometry.ts|types|BedrockCube",
+    "src/views/dialogs/modal.ts|exports|trapFocus"
   ],
   "jscpd": []
 }

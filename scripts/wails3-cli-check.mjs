@@ -2,9 +2,10 @@
 /**
  * wails3-cli-check.mjs — Wails v3 CLI 拼写检查（wails 必须带 3）。
  *
- * 背景：v2 的 `wails`（不带 3）在 v3 中为 `wails3`。AI/文档从旧资料抄
+ * 设计意图：v2 的 `wails`（不带 3）在 v3 中为 `wails3`。AI/文档从旧资料抄
  * 命令时易写成不带 3 的裸 `wails X`——错 CLI 或漏 -ts 会生成 .js
  * bindings，破坏前端 import 契约（2026-08-05 回归教训，见 architecture.md §绑定模式）。
+ * 本脚本守护活跃路径命令拼写，防止 v2→v3 迁移回归。
  *
  * 扫描活跃路径：AGENTS.md / Taskfile.yml / README.md / docs（除 archive /
  * releases / novel）/ cmd / scripts / build/*.yml / frontend/package.json。
@@ -16,15 +17,18 @@
  *   - docs/adr/ADR-001-wails3-migration.md  v2→v3 迁移对照表（左列刻意写旧命令）
  *
  * 用法：
- *   node scripts/wails3-cli-check.mjs       # 违规 → 退出码 1
+ *   node scripts/wails3-cli-check.mjs            # 文本报告；违规 → 退出码 1
+ *   node scripts/wails3-cli-check.mjs --json     # JSON（CI / 子代理消费）
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
+ * 退出码：发现违规 → 1；否则 0。
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const JSON_OUT = process.argv.includes('--json');
 
 // 裸 wails 命令：wails + 子命令，且 wails 后不是 3（wails3 豁免）
 const RE = /\bwails(?!3)\s+(generate|build|dev|bindings|doctor)\b/g;
@@ -96,9 +100,20 @@ for (const dir of ['docs', 'cmd', 'scripts', 'build', 'frontend']) {
 }
 
 if (results.length) {
-  console.log(`❌ 发现 ${results.length} 处裸 wails 命令（应写 wails3）:`);
-  for (const r of results) console.log(`  ${r}`);
-  console.log('\n退出码 1：v3 项目禁止 `wails X`，统一 `wails3 X`。');
+  if (JSON_OUT) {
+    console.log(JSON.stringify({
+      _summary: { scanned, violations: results.length },
+      violations: results,
+    }, null, 2));
+  } else {
+    console.log(`❌ 发现 ${results.length} 处裸 wails 命令（应写 wails3）:`);
+    for (const r of results) console.log(`  ${r}`);
+    console.log('\n退出码 1：v3 项目禁止 `wails X`，统一 `wails3 X`。');
+  }
   process.exit(1);
 }
-console.log(`✅ wails3 CLI 拼写合规（扫描 ${scanned} 个文件，无裸 wails 命令）。`);
+if (JSON_OUT) {
+  console.log(JSON.stringify({ _summary: { scanned, violations: 0 }, violations: [] }, null, 2));
+} else {
+  console.log(`✅ wails3 CLI 拼写合规（扫描 ${scanned} 个文件，无裸 wails 命令）。`);
+}

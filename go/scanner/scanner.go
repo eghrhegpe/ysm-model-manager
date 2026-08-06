@@ -51,6 +51,8 @@ func ScanEntries(dir string) []types.ModelEntry {
 	if dir == "" {
 		return []types.ModelEntry{}
 	}
+	// 记录扫描开始时间（进入时），TTL 从此时刻算，不被扫描耗时侵蚀
+	startTime := time.Now()
 	// 检查缓存
 	if v, ok := scanCache.Load(dir); ok {
 		entry := v.(scanCacheEntry)
@@ -65,7 +67,9 @@ func ScanEntries(dir string) []types.ModelEntry {
 			return nil
 		}
 		if d.IsDir() {
-			if strings.HasSuffix(strings.ToLower(p), "\\.recycle") || strings.HasSuffix(strings.ToLower(p), "/.recycle") {
+			// P2 修复：用 d.Name() + EqualFold 精确匹配 .recycle 目录，
+			// 与 go/sync 排除口径一致，避免子串误杀 foo.recycle.ysm 等合法文件
+			if strings.EqualFold(d.Name(), ".recycle") {
 				return filepath.SkipDir
 			}
 			return nil
@@ -102,8 +106,10 @@ func ScanEntries(dir string) []types.ModelEntry {
 		entries = append(entries, e)
 		return nil
 	})
-	// 存入缓存
-	scanCache.Store(dir, scanCacheEntry{entries: entries, expiresAt: time.Now().Add(scanCacheTTL)})
+	// P3 修复：克隆 slice 后 Store，避免 sync.Map.Load 读到 WalkDir 中途
+	// append 的部分写入（单线程 Wails 场景安全，但并发扫描无 race）
+	stored := append([]types.ModelEntry(nil), entries...)
+	scanCache.Store(dir, scanCacheEntry{entries: stored, expiresAt: startTime.Add(scanCacheTTL)})
 	return entries
 }
 

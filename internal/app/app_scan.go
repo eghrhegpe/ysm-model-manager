@@ -160,9 +160,16 @@ func (a *App) SearchModels(repoRoot string, keyword string, minBones, maxBones, 
 
 // ========== 模型扫描（薄壳）==========
 // scanModelEntries 扫描核心（无操作日志）：watcher 自动同步等后台路径使用，
-// 避免自动化触发刷屏操作日志面板。
+// 避免自动化触发刷屏操作日志面板。保持单返回值以兼容 watcher.ScanFunc 契约。
 func (a *App) scanModelEntries(dir string) []types.ModelEntry {
-	entries := scanner.ScanEntries(strings.TrimSpace(dir))
+	entries, _ := a.scanModelEntriesWithHit(dir)
+	return entries
+}
+
+// scanModelEntriesWithHit 同 scanModelEntries，但额外返回是否命中 30s 缓存，
+// 供 ScanModelEntries 决定是否记录扫描日志（命中缓存不记，避免刷屏）。
+func (a *App) scanModelEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
+	entries, hit := scanner.ScanEntriesWithHit(strings.TrimSpace(dir))
 	// 批量填充 HasTags（利用标签存储的读缓存，不重复读磁盘）
 	if a.tagsStore != nil {
 		for i := range entries {
@@ -171,13 +178,16 @@ func (a *App) scanModelEntries(dir string) []types.ModelEntry {
 			}
 		}
 	}
-	return entries
+	return entries, hit
 }
 
-// ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志
+// ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志。
+// 仅在真正扫盘（缓存未命中）时记日志，30s 内重复访问命中缓存则跳过，避免刷屏。
 func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
-	entries := a.scanModelEntries(dir)
-	a.AddOpLog("scan", fmt.Sprintf("扫描 %d 个文件", len(entries)), dir, "", int64(len(entries)), "success", "")
+	entries, hit := a.scanModelEntriesWithHit(dir)
+	if !hit {
+		a.AddOpLog("scan", fmt.Sprintf("扫描 %d 个文件", len(entries)), dir, "", int64(len(entries)), "success", "")
+	}
 	return entries
 }
 
@@ -196,7 +206,8 @@ func (a *App) ListModelAuthors() []types.AuthorInfo {
 	if a.ysmRoot() == "" {
 		return nil
 	}
-	return scanner.ListModelAuthors(a.ScanModelEntries(a.ysmRoot()))
+	entries := a.scanModelEntries(a.ysmRoot())
+	return scanner.ListModelAuthors(entries)
 }
 
 // GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板）

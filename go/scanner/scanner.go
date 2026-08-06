@@ -47,9 +47,16 @@ func InvalidatePath(dir string) {
 
 // ScanEntries 扫描目录下的模型文件（含 .recycle 排除、扩展名过滤、SHA256 哈希、30s TTL 缓存）
 func ScanEntries(dir string) []types.ModelEntry {
+	entries, _ := ScanEntriesWithHit(dir)
+	return entries
+}
+
+// ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。
+// 调用方据此决定是否记录扫描日志，避免 30s 内重复访问同一目录时刷屏操作日志面板。
+func ScanEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
-		return []types.ModelEntry{}
+		return []types.ModelEntry{}, false
 	}
 	// 记录扫描开始时间（进入时），TTL 从此时刻算，不被扫描耗时侵蚀
 	startTime := time.Now()
@@ -57,7 +64,7 @@ func ScanEntries(dir string) []types.ModelEntry {
 	if v, ok := scanCache.Load(dir); ok {
 		entry := v.(scanCacheEntry)
 		if time.Now().Before(entry.expiresAt) {
-			return entry.entries
+			return entry.entries, true
 		}
 	}
 	entries := []types.ModelEntry{}
@@ -110,7 +117,7 @@ func ScanEntries(dir string) []types.ModelEntry {
 	// append 的部分写入（单线程 Wails 场景安全，但并发扫描无 race）
 	stored := append([]types.ModelEntry(nil), entries...)
 	scanCache.Store(dir, scanCacheEntry{entries: stored, expiresAt: startTime.Add(scanCacheTTL)})
-	return entries
+	return entries, false
 }
 
 // ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配）

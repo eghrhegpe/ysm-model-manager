@@ -33,6 +33,13 @@ jobs:
         shell: pwsh
         run: node scripts/adr-check.mjs | Out-String -Width 200
 
+      - name: 安装前端依赖
+        # 必须前置于「治理静态检查」：check-deadcode-baseline.mjs 依赖
+        # frontend/node_modules 中的 knip / jscpd，否则以「工具缺失」exit 1。
+        working-directory: frontend
+        shell: pwsh
+        run: npm ci
+
       - name: 治理静态检查（G-2：文档漂移 + 链接 + 死代码基线）
         shell: pwsh
         run: |
@@ -68,11 +75,6 @@ jobs:
       - name: Go test
         shell: pwsh
         run: go test ./go/... -count=1 | Out-String -Width 200
-
-      - name: 安装前端依赖
-        working-directory: frontend
-        shell: pwsh
-        run: npm ci
 
       - name: TypeScript 类型检查（ADR-014 P4 门槛，tsc --noEmit）
         working-directory: frontend

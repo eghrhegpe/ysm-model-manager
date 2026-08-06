@@ -41,7 +41,7 @@
     "src/utils/format/summarize.ts|types|SummaryConfigMenu",
     "src/views/app-preview/geometry.ts|types|BedrockBone",
     "src/views/app-preview/geometry.ts|types|BedrockCube",
-    "src/views/dialogs/modal.ts|exports|trapFocus"
+    "src/utils/dom/dialogs/modal.ts|exports|trapFocus"
   ],
   "jscpd": []
 }

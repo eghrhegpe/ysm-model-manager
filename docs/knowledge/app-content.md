@@ -17,7 +17,7 @@ source_files:
   - frontend/src/views/app-content/site/render.ts
   - frontend/src/views/app-content/site/types.ts
   - frontend/src/views/app-content/workshop-data.ts
-  - frontend/src/views/app-content/workshop-icons.ts
+  - frontend/src/utils/icon/workshop-icons.ts
 tests:
   - frontend/src/utils/resource/types.test.ts
   - frontend/src/views/app-content/community-data.test.ts

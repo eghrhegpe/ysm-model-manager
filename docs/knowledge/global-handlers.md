@@ -5,14 +5,14 @@ tier: architecture
 category: core
 source_files:
   - frontend/src/core/handlers/global.ts
-  - frontend/src/core/handlers/dnd.ts
+  - frontend/src/features/import-dnd.ts
   - frontend/src/core/handlers/instance-ops.ts
   - frontend/src/core/handlers/sync.ts
   - frontend/src/core/handlers/require-mcroot.ts
   - frontend/src/core/error-diary.ts
 tests:
   - frontend/src/core/error-diary.test.ts
-  - frontend/src/core/handlers/dnd.test.ts
+  - frontend/src/features/import-dnd.test.ts
   - frontend/src/core/handlers/instance-ops.test.ts
   - frontend/src/core/handlers/sync.test.ts
   - frontend/src/features/dnd-shared.test.ts

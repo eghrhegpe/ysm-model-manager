@@ -4,7 +4,7 @@ name: 重命名弹窗 rename
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/views/dialogs/rename.ts
+  - frontend/src/utils/dom/dialogs/rename.ts
 use_when:
   - 重命名
   - 改名

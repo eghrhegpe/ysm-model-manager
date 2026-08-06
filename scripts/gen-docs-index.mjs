@@ -146,26 +146,6 @@ function buildAdrRegistry(list) {
   return out;
 }
 
-function buildAdrStats(list) {
-  const groups = { accepted: [], partial: [], unfixed: [], deprecated: [], replaced: [] };
-  for (const a of list) {
-    const st = mapStatus(a.statusRaw);
-    if (st.startsWith('🔄')) groups.partial.push(a);
-    else if (st.startsWith('🧊')) groups.deprecated.push(a);
-    else if (st.startsWith('❌')) groups.replaced.push(a);
-    else if (st.startsWith('⚠️')) groups.unfixed.push(a);
-    else groups.accepted.push(a);
-  }
-  const fmt = (arr) => (arr.length ? `（${arr.map((a) => `ADR-${pad(a.num)}`).join(' / ')}）` : '');
-  let out = '';
-  out += `- ✅ 已采纳：${groups.accepted.length} 篇${fmt(groups.accepted)}\n`;
-  out += `- 🔄 部分采纳：${groups.partial.length} 篇${fmt(groups.partial)}\n`;
-  out += `- ⚠️ 已采纳但遗留未修复：${groups.unfixed.length} 篇${fmt(groups.unfixed)}\n`;
-  out += `- 🧊 已废弃：${groups.deprecated.length} 篇${fmt(groups.deprecated)}\n`;
-  out += `- ❌ 已取代：${groups.replaced.length} 篇${fmt(groups.replaced)}\n`;
-  return out;
-}
-
 // ── adr 分区：规范索引页（docs/adr/index.md，整文件重写）────
 
 /** 状态 → 规范索引分组名（锚点 = 分组标题，Jekyll 可渲染）。 */
@@ -206,8 +186,6 @@ function groupAdrs(list) {
 function buildAdrIndex(list) {
   const groups = groupAdrs(list);
   const total = list.length;
-  const relLink = (a) => `./${a.file}`;
-  const row = (a) => `| [ADR-${pad(a.num)}](${relLink(a)}) | ${escCell(a.title)} | ${escCell(mapStatus(a.statusRaw))} | ${escCell(a.date)} |`;
 
   let out = '---\n';
   out += 'layout: page\n';
@@ -216,19 +194,19 @@ function buildAdrIndex(list) {
   out += '---\n\n';
   out += '<!-- 本文件由 scripts/gen-docs-index.mjs 自动生成，禁止手改。重跑：node scripts/gen-docs-index.mjs -->\n\n';
   out += '# 决策记录（ADR）\n\n';
-  out += `> 架构决策日志，共 **${total}** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为规范索引（按状态分组，可锚点跳转）。\n\n`;
+  out += `> 架构决策日志，共 **${total}** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。\n\n`;
   out += '> 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。\n\n';
 
-  // 状态分布总览（锚点跳转）
+  // 状态分布总览（统计；登记表为全量明细，不另设重复的分组表）
   out += '## 按状态分布\n\n';
   out += '| 状态 | 数量 |\n';
   out += '|------|------|\n';
   for (const g of INDEX_GROUPS) {
-    out += `| [${g.title}](#${g.anchor}) | ${groups[g.key].length} |\n`;
+    out += `| ${g.title} | ${groups[g.key].length} |\n`;
   }
   out += '\n';
 
-  // 登记表（占号/对账契约：行格式 `| ADR-NNN | 标题 | 状态 | 日期 |`，adr-check/new-adr 机器消费）
+  // 登记表（全量明细 + 占号/对账契约：行格式 `| ADR-NNN | 标题 | 状态 | 日期 |`，adr-check/new-adr 机器消费）
   out += '## 登记表\n\n';
   out += buildAdrRegistry(list);
   out += '\n';
@@ -237,21 +215,6 @@ function buildAdrIndex(list) {
   out += '## 使用规则（硬约束）\n\n';
   for (const r of ADR_USAGE_RULES) out += `${r}\n`;
   out += '\n';
-
-  // 分组明细（每组一个表，相对链接；含日期列——分组即全量，不再另附全量列表）
-  for (const g of INDEX_GROUPS) {
-    const items = groups[g.key];
-    out += `## ${g.title}\n\n`;
-    if (items.length === 0) {
-      out += '_（暂无）_\n\n';
-      continue;
-    }
-    out += '| ADR | 主题 | 状态 | 日期 |\n';
-    out += '|-----|------|------|------|\n';
-    const sorted = [...items].sort((a, b) => b.num - a.num);
-    for (const a of sorted) out += `${row(a)}\n`;
-    out += '\n';
-  }
 
   // 尾部维护说明
   out += '---\n\n';

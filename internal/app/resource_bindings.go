@@ -236,8 +236,16 @@ func (a *App) SelectImportFile(filter, title string) string {
 }
 
 // SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认）
+// P1 修复：非空入参经 filepath.Abs(filepath.Clean()) 规范化，防止含 .. 或未规范化路径
 func (a *App) SetResourceRoot(rtype, path string) error {
 	cfg := a.LoadAppConfig()
+	if path != "" {
+		abs, err := filepath.Abs(filepath.Clean(path))
+		if err != nil {
+			return fmt.Errorf("路径异常: %v", err)
+		}
+		path = abs
+	}
 	switch rtype {
 	case "ysm":
 		cfg.YsmRoot = path

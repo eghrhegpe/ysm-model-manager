@@ -432,6 +432,10 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         const themeName = (card as HTMLElement).dataset.theme || "";
         window.applyTheme?.(themeName);
         localStorage.setItem("theme", themeName);
+        // P2 修复：主题切后同步到 ysm_config.json，保持 localStorage ↔ JSON 一致
+        void (async () => {
+          try { await SaveAppConfig(cfg.filesRoot || "", cfg.resourcepackRoot || "", cfg.mcRoot || "", linkMode, themeName); } catch { /* 保存失败不影响 UI 主题 */ }
+        })();
         // 关闭自动切换
         const autoSelect = root.getElementById("theme-auto") as HTMLSelectElement | null;
         if (autoSelect) autoSelect.value = "off";

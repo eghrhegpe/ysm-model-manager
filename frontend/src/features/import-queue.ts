@@ -500,7 +500,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
               duration: 4000,
               type: "error",
             });
-            return;
+            return; // 外层 finally { _importing = false } 会释放按钮
           }
         }
       }

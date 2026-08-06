@@ -26,8 +26,14 @@ export function fmtDate(ts: number): string {
   if (Number.isNaN(d.getTime())) return "";
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
+  // 固定 24 小时制 HH:mm：不依赖运行环境 locale（en-US 会输出 "10:30 AM"，
+  // 与其余中文固定格式不一致，且导致 CI 与本地行为漂移）
   if (isToday)
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return (
+      String(d.getHours()).padStart(2, "0") +
+      ":" +
+      String(d.getMinutes()).padStart(2, "0")
+    );
   // 今年显示 M月D日，往年显示 YYYY/M/D
   if (d.getFullYear() === now.getFullYear()) {
     return d.getMonth() + 1 + "月" + d.getDate() + "日";

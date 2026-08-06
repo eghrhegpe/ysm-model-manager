@@ -139,6 +139,13 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 	for i, mn := range orderedNames {
 		for _, sub := range []string{"", "models/", "models\\"} {
 			candidate := filepath.Join(dir, sub, mn)
+			// P2 修复：路径穿越防护——确保拼接后的 candidate 仍在 ysm.json 所在目录内
+			candidate = filepath.Clean(candidate)
+			cleanDir := filepath.Clean(dir)
+			if !strings.HasPrefix(candidate, cleanDir+string(filepath.Separator)) && candidate != cleanDir {
+				log.Printf("[ysm] 拒绝路径越界模型文件: %q (期望在 %q 内)", candidate, cleanDir)
+				continue
+			}
 			if _, err := os.Stat(candidate); err == nil {
 				ti := i
 				if ti > maxTexIdx {

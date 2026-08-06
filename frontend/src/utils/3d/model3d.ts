@@ -113,6 +113,8 @@ let _scene3d: THREE.Scene | null = null;
 let _camera3d: THREE.PerspectiveCamera | null = null;
 let _renderer3d: THREE.WebGLRenderer | null = null;
 let _rootGroup3d: THREE.Group | null = null;
+/** 当前活跃的 RAF ID（入口复用守卫 + cleanup 共享） */
+let _rafIdGuard: number | null = null;
 
 /** 构建骨骼层级场景（bone group 树），返回组映射与根节点 */
 export function buildSceneMesh(spec: Spec3D): {
@@ -178,6 +180,21 @@ export async function renderModel3D(
   spec: Spec3D,
   texIdx = 0,
 ): Promise<RenderModel3DHandle> {
+  // P1 修复：入口复用守卫——若上一场景未 cleanup，先主动清理旧 RAF/renderer，避免僵尸循环
+  if (_renderer3d) {
+    if (_rafIdGuard != null) cancelAnimationFrame(_rafIdGuard);
+    try {
+      _renderer3d.dispose();
+    } catch { /* renderer 已被 dispose 则忽略 */ }
+    if (_renderer3d.domElement.parentNode) {
+      _renderer3d.domElement.parentNode.removeChild(_renderer3d.domElement);
+    }
+    _renderer3d = null;
+    _scene3d = null;
+    _camera3d = null;
+    _rootGroup3d = null;
+  }
+
   const scene = new THREE.Scene();
   _scene3d = scene;
   scene.background = new THREE.Color(0x1a1b2e);
@@ -422,6 +439,7 @@ export async function renderModel3D(
   controls.enableRotate = true;
   const loop = (): void => {
     _rafId = requestAnimationFrame(loop);
+    _rafIdGuard = _rafId;
     const dt = Math.min((performance.now() - _lastTime) / 1000, 0.1);
     _lastTime = performance.now();
     const cd = new THREE.Vector3();
@@ -767,6 +785,7 @@ export async function renderModel3D(
     },
     cleanup: () => {
       if (_rafId != null) cancelAnimationFrame(_rafId);
+      _rafIdGuard = null;
       document.removeEventListener("keydown", _onKeyDown);
       document.removeEventListener("keyup", _onKeyUp);
       renderer.domElement.removeEventListener("mousedown", onMouseDown);
@@ -774,26 +793,50 @@ export async function renderModel3D(
       window.removeEventListener("mousemove", onMouseMove);
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
       renderer.domElement.removeEventListener("click", onPointerClick);
-      if (_debugGroup) scene.remove(_debugGroup);
       controls.dispose();
       window.removeEventListener("resize", _onResize);
       document.removeEventListener("fullscreenchange", _onFSChange);
       document.removeEventListener("webkitfullscreenchange", _onFSChange);
+      // 先移除 debug 组，再逐层 dispose 所有场景资源（含纹理），最后 dispose renderer
+      if (_debugGroup) {
+        _debugGroup.traverse((c) => {
+          const obj = c as THREE.Mesh | THREE.Line | THREE.Sprite;
+          if ((obj as THREE.Mesh).isMesh) {
+            (obj as THREE.Mesh).geometry?.dispose();
+            const m = (obj as THREE.Mesh).material;
+            if (Array.isArray(m)) m.forEach((x) => { x.map?.dispose(); x.dispose(); });
+            else { m.map?.dispose(); m?.dispose(); }
+          } else if ((obj as THREE.Line).isLine) {
+            (obj as THREE.Line).geometry?.dispose();
+            const lm = (obj as THREE.Line).material;
+            if (Array.isArray(lm)) lm.forEach((x) => { x.dispose(); });
+            else lm?.dispose();
+          } else if ((obj as THREE.Sprite).isSprite) {
+            (obj as THREE.Sprite).material.map?.dispose();
+            (obj as THREE.Sprite).material?.dispose();
+          }
+        });
+        scene.remove(_debugGroup);
+        _debugGroup = null;
+      }
+      scene.traverse((c) => {
+        const mesh = c as THREE.Mesh;
+        if (mesh.isMesh) {
+          mesh.geometry?.dispose();
+          if (Array.isArray(mesh.material))
+            mesh.material.forEach((m) => { m.map?.dispose(); m.dispose(); });
+          else {
+            mesh.material?.map?.dispose();
+            mesh.material?.dispose();
+          }
+        }
+      });
       renderer.dispose();
       _renderer3d = null;
       _scene3d = null;
       _camera3d = null;
       _rootGroup3d = null;
       container.innerHTML = "";
-      scene.traverse((c) => {
-        const mesh = c as THREE.Mesh;
-        if (mesh.isMesh) {
-          mesh.geometry?.dispose();
-          if (Array.isArray(mesh.material))
-            mesh.material.forEach((m) => m.dispose());
-          else mesh.material?.dispose();
-        }
-      });
     },
   };
   return handle;

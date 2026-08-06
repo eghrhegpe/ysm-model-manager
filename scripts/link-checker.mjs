@@ -130,7 +130,8 @@ if (jsonMode) {
     broken_links: broken,
   };
   process.stdout.write(JSON.stringify(out, null, 2) + '\n');
-  process.exit(0);
+  // 门禁模式：断链即 exit 1（--json --strict 下同样生效，doctor.mjs 352 用 rc 判定）
+  process.exit(strict && broken.length ? 1 : 0);
 }
 
 process.stdout.write(`扫描 ${files.length} 个 md 文件\n有效链接: ${ok}, 断链: ${broken.length}\n\n`);

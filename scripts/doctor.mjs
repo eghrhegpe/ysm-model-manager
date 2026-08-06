@@ -9,7 +9,6 @@
  *   node scripts/doctor.mjs                 # 默认行为（全量：编译+构建+文件+红线+Git）
  *   node scripts/doctor.mjs --docs   # 文档模式（轻量：仅文档/ADR/索引检查，跳过 Go/前端编译与测试）
  *   node scripts/doctor.mjs --check  # 启用 check
- *   node scripts/doctor.mjs --json   # JSON 输出（CI/子代理消费）
  *   node scripts/doctor.mjs --strict # 启用 strict
  * 退出码：0（无 process.exit 调用；仅 Governance ERROR 规则置 1）
  */

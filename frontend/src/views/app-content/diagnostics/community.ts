@@ -91,6 +91,7 @@ interface ImportLogLike {
   Timestamp?: string | number;
   ModelName?: string;
   TargetDir?: string;
+  SourcePath?: string;
   ErrorMsg?: string;
   Operation?: string;
 }
@@ -172,7 +173,7 @@ async function loadDiagnosticsLogs(root: ShadowRoot, esc: EscFn): Promise<void> 
           : "";
         const msg =
           renderDisplayName(l.ModelName || "") +
-          (l.TargetDir ? "<br>📂 " + esc(l.TargetDir) : "") +
+          ((l.TargetDir || l.SourcePath) ? "<br>📂 " + esc(l.TargetDir || l.SourcePath) : "") +
           (l.ErrorMsg
             ? "<br>❌ " +
               esc(l.ErrorMsg).replace(

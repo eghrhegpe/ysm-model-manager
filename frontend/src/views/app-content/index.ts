@@ -89,12 +89,8 @@ class AppContent extends HTMLElement {
   connectedCallback(): void {
     this._unsub = bus.on("nav:change", ({ page }) => {
       this._current = page;
-      // 切换页面时清除扫描缓存，确保显示最新数据
-      try {
-        getApp().then((App) => {
-          if (App.ClearScanCache) App.ClearScanCache();
-        }).catch(() => {});
-      } catch (_) {}
+      // 不再每次 nav:change 清扫描缓存：30s 缓存由导入/同步/下载等实际数据变更处
+      // 显式清除（sync.ts / download-queue.ts），避免重复扫盘 + 刷屏扫描日志
       bus.emit("nav:changed", { page });
       this._render();
     });

@@ -13,7 +13,7 @@ const { mocks } = vi.hoisted(() => {
 
 vi.mock("../wails/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
-    ScanModelEntries: mocks.ScanModelEntries,
+    ScanModelEntriesWithLabel: mocks.ScanModelEntries,
     GetRepoRoot: mocks.GetRepoRoot,
   }),
 }));

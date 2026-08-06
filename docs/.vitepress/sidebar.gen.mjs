@@ -206,6 +206,10 @@ export const autoSidebar = [
         "link": "/releases/v1.1.0"
       },
       {
+        "text": "v1.10.0 — Wails3 平台迁移 + 技术债大清欠 + 安全审计收官",
+        "link": "/releases/v1.10.0"
+      },
+      {
         "text": "v1.2.0 — 开发者对比（技术细节）",
         "link": "/releases/v1.2.0-compare"
       },

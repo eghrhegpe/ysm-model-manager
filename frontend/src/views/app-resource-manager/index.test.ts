@@ -18,6 +18,7 @@ vi.mock("../../wails/app.ts", () => ({
       pack_format: 15,
     })),
     ScanModelEntries: vi.fn().mockResolvedValue(mockScanResult),
+    ScanModelEntriesWithLabel: vi.fn().mockResolvedValue(mockScanResult),
     ToggleResourcePack: vi.fn().mockResolvedValue(undefined),
     IsResourcePackEnabled: vi.fn().mockResolvedValue(true),
     SelectImportZip: vi.fn().mockResolvedValue(""),

@@ -29,6 +29,8 @@ vi.mock("../utils/resource/registry.ts", () => ({
 // 注意：不能使用 vi.restoreAllMocks() —— 它会清掉 vi.mock factory 中 getApp 的
 // mockResolvedValue 实现，导致后续测试 getApp() 返回 undefined
 let randomSpy: ReturnType<typeof vi.spyOn> | null = null;
+// model:select 测试监听器（afterEach 用 unsub 精确清理）
+let unsubModelSelect: (() => void) | null = null;
 beforeEach(() => {
   vi.clearAllMocks();
   randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.1);
@@ -39,8 +41,9 @@ beforeEach(() => {
 afterEach(() => {
   randomSpy?.mockRestore();
   randomSpy = null;
+  unsubModelSelect?.();
+  unsubModelSelect = null;
   localStorage.removeItem("repo_rtype");
-  bus.off("model:select");
 });
 
 function flush(): Promise<void> {
@@ -104,7 +107,7 @@ describe("loadOldestModel", () => {
   it("点击卡片 → bus.emit model:select", async () => {
     mocks.ScanModelEntries.mockResolvedValue(sampleEntries);
     const selected: Array<{ path: string }> = [];
-    bus.on("model:select", (p) => selected.push(p as { path: string }));
+    unsubModelSelect = bus.on("model:select", (p) => selected.push(p as { path: string }));
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
     const cleanup = await loadOldestModel(container, (s) => s);

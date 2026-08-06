@@ -120,16 +120,29 @@ function checkContractTests() {
   else console.log(`  ${FAIL} ${failed} contract test(s) failed`);
 }
 
+/**
+ * 前端工具探测：直接查 frontend/node_modules/.bin/{name}，不依赖 npx/PATH。
+ * Git Bash 环境下 `which npx` 会失败（which 不在 Windows PATH、npx 是 .cmd shim），
+ * 导致前端检查被误跳过；与 check-deadcode-baseline.mjs 的 bin() 模式对齐。
+ * Windows 下带 .cmd 后缀 + shell:true 经 cmd.exe 执行。
+ */
+function frontendBin(name) {
+  const dir = path.join(ROOT, 'frontend', 'node_modules', '.bin');
+  const candidates = process.platform === 'win32'
+    ? [path.join(dir, name + '.cmd'), path.join(dir, name)]
+    : [path.join(dir, name)];
+  return candidates.find((p) => fs.existsSync(p)) || null;
+}
+
 function checkFrontendBuild() {
   console.log('\n=== Frontend Build ===');
-  // 先检查 npx 是否可用
-  const which = run(['which', 'npx']);
-  if (which.rc !== 0) {
-    console.log(`  ${WARN} npx not found in PATH — skip frontend build`);
+  const bin = frontendBin('vite');
+  if (!bin) {
+    console.log(`  ${WARN} vite not found in node_modules/.bin — skip frontend build`);
     console.log('        run manually: cd frontend && npx vite build');
     return;
   }
-  const { rc, out } = run(['npx', 'vite', 'build'], path.join(ROOT, 'frontend'), { shell: true });
+  const { rc, out } = run([bin, 'build'], path.join(ROOT, 'frontend'), { shell: true });
   if (rc === 0) {
     console.log(`  ${PASS} Frontend build passed`);
   } else {
@@ -143,13 +156,13 @@ function checkFrontendBuild() {
 function checkFrontendTest() {
   // ADR-023 P3：L3 Vitest 前端单测并入全量自检（写了要跑、坏了要红）
   console.log('\n=== Frontend Test (Vitest) ===');
-  const which = run(['which', 'npx']);
-  if (which.rc !== 0) {
-    console.log(`  ${WARN} npx not found in PATH — skip vitest`);
+  const bin = frontendBin('vitest');
+  if (!bin) {
+    console.log(`  ${WARN} vitest not found in node_modules/.bin — skip vitest`);
     console.log('        run manually: cd frontend && npx vitest run');
     return;
   }
-  const { rc, out } = run(['npx', 'vitest', 'run'], path.join(ROOT, 'frontend'), { shell: true });
+  const { rc, out } = run([bin, 'run'], path.join(ROOT, 'frontend'), { shell: true });
   if (rc === 0) {
     console.log(`  ${PASS} vitest run passed`);
   } else {
@@ -163,13 +176,13 @@ function checkFrontendTest() {
 function checkTypeScript() {
   console.log('\n=== TypeScript Check ===');
   // ADR-014：前端 .ts 类型检查（tsc --noEmit，见 frontend/package.json typecheck）
-  const which = run(['which', 'npx']);
-  if (which.rc !== 0) {
-    console.log(`  ${WARN} npx not found in PATH — skip typecheck`);
+  const bin = frontendBin('tsc');
+  if (!bin) {
+    console.log(`  ${WARN} tsc not found in node_modules/.bin — skip typecheck`);
     console.log('        run manually: cd frontend && npx tsc --noEmit');
     return;
   }
-  const { rc, out } = run(['npx', 'tsc', '--noEmit'], path.join(ROOT, 'frontend'), { shell: true });
+  const { rc, out } = run([bin, '--noEmit'], path.join(ROOT, 'frontend'), { shell: true });
   if (rc === 0) {
     console.log(`  ${PASS} tsc --noEmit passed`);
   } else {

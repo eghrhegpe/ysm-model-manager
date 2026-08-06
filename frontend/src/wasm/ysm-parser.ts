@@ -52,20 +52,9 @@ let wasmModule: WasmModuleLike | null = null;
 let loading = false;
 let waiters: Array<(ok: boolean) => void> = [];
 
-/** 销毁 WASM 实例，释放 HEAP 内存 */
-export function destroyYSMParser(): void {
-  if (wasmModule) {
-    try {
-      // 尝试释放 WASM 分配的内存
-      wasmModule._free(0);
-    } catch {
-      // 忽略：部分 Emscripten 版本不支持 _free(0)
-    }
-    wasmModule = null;
-  }
-  loading = false;
-  waiters = [];
-}
+// 注：WASM 为 app 级常驻单例（initYSMParser 懒加载后生命周期等同应用），
+// 无销毁场景——曾提供 destroyYSMParser() 但 _free(0) 无法真正释放 HEAP，
+// 且销毁后重新 init 有加载成本，已移除（knip 死代码基线）
 
 export async function initYSMParser(): Promise<boolean> {
   if (wasmModule) return true;

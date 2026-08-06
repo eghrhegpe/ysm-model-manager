@@ -104,21 +104,19 @@ func readTexFromZip(path string) (int, int) {
 
 // readTexFrom7z 尝试从 7z 读取纹理尺寸（简化为仅扫描第一层）
 func readTexFrom7z(path string) (int, int) {
-	// 7z 解析较复杂，暂不实现详细解析
-	// 直接读取文件前几 KB 看是否有 JSON 片段
-	data, err := os.ReadFile(path)
+	// P2 修复：只读前 64KB 而非整文件，避免大 7z（数百 MB）内存膨胀
+	f, err := os.Open(path)
 	if err != nil {
 		return 0, 0
 	}
-	// 只看前 64KB
-	limit := len(data)
-	if limit > 65536 {
-		limit = 65536
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, 65536))
+	if err != nil {
+		return 0, 0
 	}
 	// 查找 texture_width/texture_height 文本
-	s := string(data[:limit])
+	s := string(data)
 	if strings.Contains(s, "texture_width") && strings.Contains(s, "texture_height") {
-		// 尝试解析 JSON 片段
 		if w, h := extractTexSizeFromGeometryBytes(data); w > 0 && h > 0 {
 			return w, h
 		}

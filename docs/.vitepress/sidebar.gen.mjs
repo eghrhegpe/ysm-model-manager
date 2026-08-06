@@ -4,6 +4,7 @@ export const autoSidebar = [
   {
     "text": "用户指南",
     "link": "/guide/",
+    "collapsed": true,
     "items": [
       {
         "text": "3D 与 2D 预览",
@@ -557,6 +558,7 @@ export const autoSidebar = [
   {
     "text": "架构与规范",
     "link": "/architecture",
+    "collapsed": true,
     "items": [
       {
         "text": "架构",

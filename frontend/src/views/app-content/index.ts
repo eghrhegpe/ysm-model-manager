@@ -24,6 +24,8 @@ import {
 let _avatarConfigLoadedRegistered = false;
 let _avatarConfigLoadedUnsub: (() => void) | null = null;
 import { registerGlobalHandlers } from "../../core/handlers/global.ts";
+import { registerDnD } from "../../features/import-dnd.ts";
+import { registerResourceManagerGlobal } from "../app-resource-manager/index.ts";
 import { initDiagnostics, startDedup } from "./diagnostics/community.ts";
 import { initImportQueue } from "../../features/import-queue.ts";
 import { initRecycleBin } from "../../features/recycle-bin.ts";
@@ -114,6 +116,9 @@ class AppContent extends HTMLElement {
     );
     this._render();
     this._globalUnsubs.push(...registerGlobalHandlers());
+    // features/views 层注册归位（core handler 不依赖上层；分层债务清理）
+    registerDnD(this._globalUnsubs);
+    registerResourceManagerGlobal(this._globalUnsubs);
   }
 
   disconnectedCallback(): void {

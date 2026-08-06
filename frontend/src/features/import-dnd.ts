@@ -1,10 +1,10 @@
 // ===== 全局拖拽导入（类型化版 — ADR-014 P3）=====
-import { bus } from "../../bus.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
-import { PageStore } from "../page-store.ts";
-import { getApp } from "../../wails/app.ts";
-import { ALL_EXTS } from "../../utils/resource/extensions.ts";
-import { executeCollected } from "../../features/import-executor.ts";
+import { bus } from "../bus.ts";
+import { RESOURCE_TYPES } from "../utils/resource/types.ts";
+import { PageStore } from "../core/page-store.ts";
+import { getApp } from "../wails/app.ts";
+import { ALL_EXTS } from "../utils/resource/extensions.ts";
+import { executeCollected } from "./import-executor.ts";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB（MMD/VRC 大文件可达 50MB+）
 

@@ -1,7 +1,7 @@
 // ===== 资源包管理（类型化版 — ADR-014 P3 组件层）=====
 // 薄 wrapper，由 app-resource-manager 组件驱动
+// 组件注册由 app-modules.ts 动态 import 保证，此处不再副作用导入（分层债务清理）
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
-import "../views/app-resource-manager/index.ts";
 
 /**
  * 初始化资源包 tab

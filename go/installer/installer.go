@@ -254,6 +254,8 @@ func InstallWithOverlay(src, customDir string) (string, error) {
 }
 
 // copyFileLocked 复制文件到目标目录（调用方须持有 installLock，禁止直接调用）
+// 原子写入模式：先写入 .copy-tmp 临时文件，再 os.Rename 原子替换目标文件，
+// 确保中途崩溃/失败时不留下半截目标文件（进程 kill 后 defer 不执行时仍安全）
 func copyFileLocked(src, dstDir string) (string, error) {
 	src = cleanAbs(src)
 	dstDir = cleanAbs(dstDir)
@@ -264,35 +266,39 @@ func copyFileLocked(src, dstDir string) (string, error) {
 	if src == dst {
 		return dst, nil
 	}
-	// 注意：这里不做防覆盖检查——copyFileLocked 被 Install/RelinkDir 复用，
-	// 它们依赖「已存在则 os.Create 覆盖写 + 半截清理」的替换语义。
-	// 防覆盖只属于 InstallWithOverlay（在同一 installLock 临界区内检查+写入，天然原子）
+	// P1 修复：原子写入——写 .copy-tmp 再 Rename，进程崩溃无半截目标残留
+	tmp := dst + ".copy-tmp"
+	_ = os.Remove(tmp)
+	ok := false
+	defer func() {
+		if !ok {
+			os.Remove(tmp)
+		}
+	}()
 	in, err := os.Open(src)
 	if err != nil {
 		return "", types.AppError{Code: "IO_ERROR", Operation: "复制文件", SourcePath: src, Reason: "无法读取源文件", Suggestion: "请检查文件是否被占用或已删除"}
-
 	}
 	defer in.Close()
-	out, err := os.Create(dst)
+	out, err := os.Create(tmp)
 	if err != nil {
-		return "", types.AppError{Code: "IO_ERROR", Operation: "复制文件", TargetPath: dst, Reason: "无法创建目标文件", Suggestion: "请检查磁盘空间或权限"}
+		return "", types.AppError{Code: "IO_ERROR", Operation: "复制文件", TargetPath: dst, Reason: "无法创建临时文件", Suggestion: "请检查磁盘空间或权限"}
 	}
-	ok := false
-	defer func() {
-		out.Close()
-		if !ok {
-			// 复制中断/失败时清理半截文件，避免残留损坏文件
-			os.Remove(dst)
-		}
-	}()
+	defer out.Close()
 	if _, err := io.Copy(out, in); err != nil {
-		return "", types.AppError{Code: "IO_ERROR", Operation: "复制文件", TargetPath: dst, Reason: "写入目标文件失败", Suggestion: "请检查磁盘空间或权限"}
+		return "", types.AppError{Code: "IO_ERROR", Operation: "复制文件", TargetPath: dst, Reason: "写入临时文件失败", Suggestion: "请检查磁盘空间或权限"}
+	}
+	// 显式 Close + Sync 确保数据落盘后再 Rename
+	if err := out.Close(); err != nil {
+		return "", types.AppError{Code: "IO_ERROR", Operation: "复制文件", TargetPath: dst, Reason: "临时文件写入未完成", Suggestion: "请检查磁盘空间或权限"}
+	}
+	if err := os.Chmod(tmp, 0644); err != nil {
+		log.Printf("[installer] 设置临时文件权限失败 %s: %v", tmp, err)
+	}
+	if err := os.Rename(tmp, dst); err != nil {
+		return "", types.AppError{Code: "IO_ERROR", Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "替换目标文件失败", Suggestion: "请检查目标文件是否被占用或为只读"}
 	}
 	ok = true
-	// 设置目标文件权限
-	if err := os.Chmod(dst, 0644); err != nil {
-		log.Printf("[installer] 设置权限失败 %s: %v", dst, err)
-	}
 	return dst, nil
 }
 

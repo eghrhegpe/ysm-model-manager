@@ -195,7 +195,7 @@ function buildAdrIndex(list) {
   const groups = groupAdrs(list);
   const total = list.length;
   const relLink = (a) => `./${a.file}`;
-  const row = (a) => `| [ADR-${pad(a.num)}](${relLink(a)}) | ${escCell(a.title)} | ${escCell(mapStatus(a.statusRaw))} |`;
+  const row = (a) => `| [ADR-${pad(a.num)}](${relLink(a)}) | ${escCell(a.title)} | ${escCell(mapStatus(a.statusRaw))} | ${escCell(a.date)} |`;
 
   let out = '---\n';
   out += 'layout: page\n';
@@ -215,7 +215,7 @@ function buildAdrIndex(list) {
   }
   out += '\n';
 
-  // 分组明细（每组一个表，相对链接）
+  // 分组明细（每组一个表，相对链接；含日期列——分组即全量，不再另附全量列表）
   for (const g of INDEX_GROUPS) {
     const items = groups[g.key];
     out += `## ${g.title}\n\n`;
@@ -223,20 +223,12 @@ function buildAdrIndex(list) {
       out += '_（暂无）_\n\n';
       continue;
     }
-    out += '| ADR | 主题 | 状态 |\n';
-    out += '|-----|------|------|\n';
+    out += '| ADR | 主题 | 状态 | 日期 |\n';
+    out += '|-----|------|------|------|\n';
     const sorted = [...items].sort((a, b) => b.num - a.num);
     for (const a of sorted) out += `${row(a)}\n`;
     out += '\n';
   }
-
-  // 全量附表（编号倒序，供追溯）
-  out += '---\n\n';
-  out += '## 全量列表（按编号倒序）\n\n';
-  out += '| ADR | 主题 | 状态 | 日期 |\n';
-  out += '|-----|------|------|------|\n';
-  const all = [...list].sort((a, b) => b.num - a.num);
-  for (const a of all) out += `| [ADR-${pad(a.num)}](${relLink(a)}) | ${escCell(a.title)} | ${escCell(mapStatus(a.statusRaw))} | ${escCell(a.date)} |\n`;
   return out;
 }
 

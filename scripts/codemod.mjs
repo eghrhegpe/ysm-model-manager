@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * @file AST 感知的代码批量重构工具（基于 ts-morph）
+ * codemod.mjs — AST 感知的代码批量重构工具（基于 ts-morph）。
+ *
  * 移植自 MikuMikuAR 联邦 scripts/codemod.mjs（源码目录 frontend/src → frontend/src）
+ * 设计意图：基于 ts-morph 的批量源码重构（rename / move / add-param），自动更新引用与 import。
  *
  * 用法:
  *   node scripts/codemod.mjs <命令> [参数...]
@@ -33,8 +35,7 @@
  *   - 对结果有疑虑时，用 `git diff` 逐块审查
  * 设计意图：代码重构工具（批量修改源码）
  * 依赖：node:module / node:url / node:fs / node:path / 本地模块
- * 退出码：1 / 0（含失败码）
- * codemod.mjs — 代码重构工具（批量修改源码）
+ * 退出码：0（成功）/ 1（失败）。
  */
 
 import { createRequire } from 'node:module';

@@ -6,9 +6,9 @@ import { friendlyError } from "../utils/dom/errors.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { getApp } from "../wails/app.ts";
 import { getMenuDef } from "./menu-defs";
-import { modalPrompt, modalConfirm, modalSelect } from "../views/dialogs/modal.ts";
-import { showRenameDialog } from "../views/dialogs/rename.ts";
-import { modalTagEditor } from "../views/dialogs/tag-editor.ts";
+import { modalPrompt, modalConfirm, modalSelect } from "../utils/dom/dialogs/modal.ts";
+import { showRenameDialog } from "../utils/dom/dialogs/rename.ts";
+import { modalTagEditor } from "../utils/dom/dialogs/tag-editor.ts";
 
 type ToastType = NonNullable<ToastPayload["type"]>;
 

@@ -6,7 +6,7 @@ import { flashBtn } from "./utils.ts";
 import { spinnerHTML } from "./tpl.ts";
 import { selectState } from "./data.ts";
 import { getExts } from "../../utils/resource/extensions.ts";
-import { modalAdvFilter, type AdvFilterValue } from "../../views/dialogs/adv-filter.ts";
+import { modalAdvFilter, type AdvFilterValue } from "../../utils/dom/dialogs/adv-filter.ts";
 import { updateSelectCount } from "./events.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { setRenderMode, type RenderMode } from "./render.ts";

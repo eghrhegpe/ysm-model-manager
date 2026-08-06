@@ -2,7 +2,7 @@
 // 风格参照 rename.js 的卡片式弹窗，复用 CSS 变量
 // 用法: const name = await modalPrompt({ title, icon, value, placeholder })
 
-import { esc } from "../../utils/dom/html.ts";
+import { esc } from "../../../utils/dom/html.ts";
 
 export { esc };
 

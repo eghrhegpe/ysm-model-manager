@@ -1,6 +1,6 @@
 // ===== 版本更新检查（类型化版 — ADR-014 P3 features）=====
 import { bus } from "../bus.ts";
-import { esc, modalConfirm } from "../views/dialogs/modal.ts";
+import { esc, modalConfirm } from "../utils/dom/dialogs/modal.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { getApp } from "../wails/app.ts";
 

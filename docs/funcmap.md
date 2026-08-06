@@ -36,8 +36,8 @@
 | 前端·特性 | 11 | 48 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 19 | 72 |
-| frontend/views | 58 | 163 |
+| 前端·工具 | 25 | 92 |
+| frontend/views | 52 | 143 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
 | **合计** | **166** | **780** |
@@ -769,6 +769,23 @@
 | `dbg()` | `frontend/src/utils/debug/debug:32` | 输出调试日志（保留 tag 用于过滤） |
 | `btnBaseCSS()` | `frontend/src/utils/dom/css:1` | — |
 | `focusVisibleCSS()` | `frontend/src/utils/dom/css:32` | Shadow DOM 通用 focus-visible 规则（所有 button/input/select/textarea） |
+| `AdvFilterValue()` | `frontend/src/utils/dom/dialogs/adv-filter:11` | 筛选条件 |
+| `AdvFilterResult()` | `frontend/src/utils/dom/dialogs/adv-filter:22` | — |
+| `modalAdvFilter()` | `frontend/src/utils/dom/dialogs/adv-filter:29` | 弹出高级筛选弹窗 |
+| `BatchRenameChange()` | `frontend/src/utils/dom/dialogs/batch-rename:18` | 应用变更载荷 |
+| `showBatchRenameDialog()` | `frontend/src/utils/dom/dialogs/batch-rename:47` | 弹出批量重命名对话框 重复打开时先结算上一个 Promise，调用方 await 不会永远悬挂 |
+| `esc()` | `frontend/src/utils/dom/dialogs/modal` | — |
+| `trapFocus()` | `frontend/src/utils/dom/dialogs/modal:25` | 焦点陷阱：Tab 键在弹窗内可聚焦元素间循环，防止焦点逃逸到背后页面 |
+| `closeDlg()` | `frontend/src/utils/dom/dialogs/modal:53` | 带退场动画关闭对话框 |
+| `registerDlg()` | `frontend/src/utils/dom/dialogs/modal:77` | 弹窗 append 到 body 后调用，登记为当前活动弹窗 |
+| `ModalPromptOptions()` | `frontend/src/utils/dom/dialogs/modal:84` | modalPrompt 选项 |
+| `modalPrompt()` | `frontend/src/utils/dom/dialogs/modal:97` | 弹出带输入框的模态框，类似 styled prompt() |
+| `ModalSelectOptions()` | `frontend/src/utils/dom/dialogs/modal:166` | modalSelect 选项 |
+| `modalSelect()` | `frontend/src/utils/dom/dialogs/modal:179` | 弹出下拉选择框 |
+| `ModalConfirmOptions()` | `frontend/src/utils/dom/dialogs/modal:242` | modalConfirm 选项 |
+| `modalConfirm()` | `frontend/src/utils/dom/dialogs/modal:258` | 弹出确认对话框 |
+| `showRenameDialog()` | `frontend/src/utils/dom/dialogs/rename:14` | 弹出重命名对话框 |
+| `modalTagEditor()` | `frontend/src/utils/dom/dialogs/tag-editor:12` | 弹出标签编辑弹窗 |
 | `ParsedModelName()` | `frontend/src/utils/dom/display:6` | 解析后的模型文件名字段 |
 | `parseModelName()` | `frontend/src/utils/dom/display:28` | 解析模型文件名 → 结构化字段 支持格式: [作者]【作品】角色变体2023-05.ysm 也兼容: [作者]《作品》角色变体2023-05.ysm |
 | `renderDisplayName()` | `frontend/src/utils/dom/display:79` | 渲染美化文件名 HTML（通用接口） 应用 CSS 变量: --meta-author, --meta-work, --meta-date |
@@ -791,6 +808,9 @@
 | `summaryCardHTML()` | `frontend/src/utils/format/summarize:153` | 从 YsmSummary + YSMHeader 渲染为精简摘要卡片 |
 | `fileIcon()` | `frontend/src/utils/icon/icon:9` | 按扩展名返回图标 emoji |
 | `isYsmName()` | `frontend/src/utils/icon/icon:28` | 是否为 YSM 文件 |
+| `ICONS()` | `frontend/src/utils/icon/workshop-icons:3` | — |
+| `getSiteIcon()` | `frontend/src/utils/icon/workshop-icons:46` | — |
+| `getTagIconFromRole()` | `frontend/src/utils/icon/workshop-icons:50` | — |
 | `RESOURCE_EXTS()` | `frontend/src/utils/resource/extensions:8` | 每种资源类型对应的扩展名 |
 | `ALL_EXTS()` | `frontend/src/utils/resource/extensions:19` | 所有支持的扩展名列表（去重，用于 UI 提示文案） |
 | `getExts()` | `frontend/src/utils/resource/extensions:34` | 获取某资源类型支持的扩展名 |
@@ -848,9 +868,6 @@
 | `loadFavs()` | `frontend/src/views/app-content/workshop-data:59` | — |
 | `isFaved()` | `frontend/src/views/app-content/workshop-data:71` | — |
 | `toggleFav()` | `frontend/src/views/app-content/workshop-data:75` | — |
-| `ICONS()` | `frontend/src/views/app-content/workshop-icons:3` | — |
-| `getSiteIcon()` | `frontend/src/views/app-content/workshop-icons:46` | — |
-| `getTagIconFromRole()` | `frontend/src/views/app-content/workshop-icons:50` | — |
 | `CacheValue()` | `frontend/src/views/app-preview/cache:10` | 缓存条目值 |
 | `cacheSetEvictHandler()` | `frontend/src/views/app-preview/cache:39` | 注册 evict 回调，淘汰条目时调用 |
 | `cacheGet()` | `frontend/src/views/app-preview/cache:43` | — |
@@ -952,23 +969,6 @@
 | `ROW_H_LIST()` | `frontend/src/views/app-tree/virtual-scroll:4` | — |
 | `calcVisibleRange()` | `frontend/src/views/app-tree/virtual-scroll:14` | 根据滚动位置计算可见行范围（支持动态行高） |
 | `installScrollSync()` | `frontend/src/views/app-tree/virtual-scroll:31` | 在容器上安装滚动监听，当滚动到新范围时自动重新渲染可见行 |
-| `AdvFilterValue()` | `frontend/src/views/dialogs/adv-filter:11` | 筛选条件 |
-| `AdvFilterResult()` | `frontend/src/views/dialogs/adv-filter:22` | — |
-| `modalAdvFilter()` | `frontend/src/views/dialogs/adv-filter:29` | 弹出高级筛选弹窗 |
-| `BatchRenameChange()` | `frontend/src/views/dialogs/batch-rename:18` | 应用变更载荷 |
-| `showBatchRenameDialog()` | `frontend/src/views/dialogs/batch-rename:47` | 弹出批量重命名对话框 重复打开时先结算上一个 Promise，调用方 await 不会永远悬挂 |
-| `esc()` | `frontend/src/views/dialogs/modal` | — |
-| `trapFocus()` | `frontend/src/views/dialogs/modal:25` | 焦点陷阱：Tab 键在弹窗内可聚焦元素间循环，防止焦点逃逸到背后页面 |
-| `closeDlg()` | `frontend/src/views/dialogs/modal:53` | 带退场动画关闭对话框 |
-| `registerDlg()` | `frontend/src/views/dialogs/modal:77` | 弹窗 append 到 body 后调用，登记为当前活动弹窗 |
-| `ModalPromptOptions()` | `frontend/src/views/dialogs/modal:84` | modalPrompt 选项 |
-| `modalPrompt()` | `frontend/src/views/dialogs/modal:97` | 弹出带输入框的模态框，类似 styled prompt() |
-| `ModalSelectOptions()` | `frontend/src/views/dialogs/modal:166` | modalSelect 选项 |
-| `modalSelect()` | `frontend/src/views/dialogs/modal:179` | 弹出下拉选择框 |
-| `ModalConfirmOptions()` | `frontend/src/views/dialogs/modal:242` | modalConfirm 选项 |
-| `modalConfirm()` | `frontend/src/views/dialogs/modal:258` | 弹出确认对话框 |
-| `showRenameDialog()` | `frontend/src/views/dialogs/rename:14` | 弹出重命名对话框 |
-| `modalTagEditor()` | `frontend/src/views/dialogs/tag-editor:12` | 弹出标签编辑弹窗 |
 
 ## 前端·Wails 桥接
 

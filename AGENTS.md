@@ -16,57 +16,44 @@
 > 前端建议过一遍命名表（`docs/Design.md` §12 文档命名与归属规范）。
 > 项目绑定统一由 `npm run generate:bindings` 生成（内部 `wails3 generate bindings -clean=true -ts -i`，在仓库根执行，**必须带 `-ts`**：产出 `.ts`，前端以 `.js` 后缀 import、由 vite `wailsBindingsResolve` 重定向；无 `-ts` 生成会产出 `.js` 并清掉 git 跟踪的 `.ts`，属回归红线。契约见 `docs/architecture.md` §绑定模式）。
 > 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `check-redlines` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check` / `wails3-cli-check`。
-> **钩子自动执行（commit/push 时自动跑，无需手打）**：
-> - `pre-commit`：commit 时自动跑 11 个秒级 gen（docs 分区索引 / funcmap / 知识卡 index+routes+字段 / novel 索引 / project-map / vitepress sidebar）并 `git add docs/`；逃生阀 `YSM_SKIP_GEN=1`。
-> - `prepare-commit-msg`：commit 时自动把受影响知识卡 + 覆盖率建议写入 body，并向 stderr 打一行摘要（AI 终端可见）；逃生阀 `YSM_SKIP_KNOWLEDGE_HINT=1` / `YSM_SKIP_COVERAGE_HINT=1`。
-> - `pre-push`：push 时自动跑 `pre-push-gate.mjs` 按变更域检查（Go/前端/数据/文档），失败阻断；逃生阀 `YSM_SKIP_GATE=1`。
-> **信任但验证**：doctor 检查项若输出 `[WARN] … skip`（工具探测失败），**不等于验证通过**——须直接跑 `node_modules/.bin/tsc` 等确认，勿把空转跳过当通过。
+
+## 钩子自动化（无需手动触发）
+
+| 钩子 | 功能 | 逃生阀 |
+|------|------|--------|
+| `pre-commit` | 自动生成文档索引（docs 分区索引 / funcmap / 知识卡 index+routes+字段 / novel 索引 / project-map / vitepress sidebar）并 `git add docs/` | `YSM_SKIP_GEN=1` |
+| `prepare-commit-msg` | 自动提示受影响知识卡 + 覆盖率 | `YSM_SKIP_KNOWLEDGE_HINT=1` |
+| `pre-push` | 自动跑 `pre-push-gate.mjs` 按变更域检查（Go/前端/数据/文档），失败阻断 | `YSM_SKIP_GATE=1` |
+
+> **关键原则**：doctor检查若输出`[WARN]...skip`，必须手动运行`node_modules/.bin/tsc`验证
+
 
 ## 去哪里查
+## 去哪里查（核心路径）
 
 | 要做什么 | 去哪里 |
 |----------|--------|
-| 查当前决策 + 坑点 | `grep docs/adr/` + `docs/archive/bug-chronicle.md`（先 grep 再读，禁止全量）；按状态浏览用 `docs/adr/index.md`（规范索引，自动生成） |
-| 查 ADR 登记一致性 / 占号 | `node scripts/adr-check.mjs`（撞号/漏登/幽灵/跳号） |
-| 查 AI 高频犯错区（反哺陷阱清单） | `node scripts/ai-mistake-tracker.mjs`（fix 分类统计 / 连续修复链 / 文件热力图 / 规则违反扫描） |
-|发版流程 | 见 `docs/releases/`|
-| 查项目状态（历史） | `docs/archive/PROJECT_STATUS.md`（已冻结只读；实时状态以 ADR 登记表 + git 为准） |
-| 查某模块「现在长啥样、去哪找」 | `docs/knowledge/`（先读 `routes.md` 路由表 + `index.md` 索引，grep 卡正文锁定符号，按 `source_files` 跳源码） |
-| 查/更新函数索引 | `node scripts/funcmap.mjs -o funcmap.md`（按模块分组的 Go/JS/TS 导出符号表，符号带 文件:行） |
-| 批量重构代码（重命名/移函数/加参数） | `node scripts/codemod.mjs help`（AST 感知，ts-morph；move-function 不重写外部引用方，改后跑 tsc） |
-| 校验文档漂移 | `node scripts/link-checker.mjs`（断链）+ `check-knowledge-drift.mjs`（知识卡）+ `adr-check.mjs`（ADR 登记） |
-| 查项目技术（历史） | `docs/archive/architecture.md`（已冻结；当前架构以 ADR + 源码为准） |
-| 写 UI 文案 / 变量名 | `docs/Design.md`（设计规范；UI 文案与代码字段保持一致） |
-| 加菜单 / 按钮 / 组件 | `frontend/src/app-modules.ts`（组件入口）+ `docs/Design.md`（唯一设计规范） |
-| 改前端子模块 | `docs/Design.md`（唯一设计规范；动画系统 §7.2 / UI 体验原则 §13 已收编）；增强待办台账查 ADR-017 |
-| 改 Go 后端 | `internal/app/`（Wails Binding 入口）+ `docs/archive/architecture.md`（逻辑下沉优先 `go/` 包） |
-| 修 Bug 查历史 | 说 "bug-search <关键词>" 查 `docs/archive/bug-chronicle.md` |
-| 查资源类型一致性 | 说 "type-consistency"（resource_types.json ↔ extensions.ts） |
-| 查事件注册位置 | 说 "event-audit"（EventsOn/bus.on） |
-| 查函数签名 | `node scripts/funcmap.mjs` 或 grep |
-| 写大语言模型小说 | `docs/novel/AGENTS.md`（**唯一必读**：上篇·故事圣经 + 下篇·区域归属决策链路）+ `index.md`（自动索引，勿手改）；写完必跑 `node scripts/build-novel-index.mjs`，区域文件夹内禁放 README |
-| 完整发版、更新流程 | `docs/releases/` + `cmd/build-release.ps1` |
-| 项目维护 / 网站构建 | `docs/maintenance.md`（维护手册：VitePress 文档网站构建发布 + 文档体系维护 + 治理检查）|
-| 跑全部检查 | `scripts/README.md`（检查命令全表）；文档改动用 `node scripts/doctor.mjs --docs`（轻量秒级），代码/发版用 `node scripts/doctor.mjs`（全量闸门） |
+| **决策与问题** | `grep docs/adr/`（当前决策） + `bug-search <关键词>`（历史坑点） |
+| **文档与代码** | `docs/knowledge/`（先查`routes.md`路由表） |
+| **函数与重构** | `node scripts/funcmap.mjs`（函数索引）<br>`node scripts/codemod.mjs help`（批量重构） |
+| **规范与设计** | `docs/Design.md`（UI文案/组件规范）<br>`frontend/src/app-modules.ts`（注册组件） |
+| **发布与维护** | `docs/releases/`（发版流程）<br>`docs/maintenance.md`（维护手册） |
+| **自动化检查** | 预定义口令（`type-consistency`/`event-audit`等）<br>`scripts/README.md`（命令全表） |
+| **特殊创作** | `docs/novel/AGENTS.md`（小说圣经） |
 
 ## 知识库检索协议
 
-处理代码任务时，不得把 `docs/knowledge/` 当作源码替代品；按以下顺序检索，避免无目标通读仓库：
+处理代码时：
+1. 查`routes.md`→`index.md`定位知识卡
+2. 用`grep`查ADR和bug-chronicle
+3. 源码为最终依据
+4. 修改后运行最小检查
 
-1. 先判断用户意图与所属模块；可先查 `docs/knowledge/routes.md`。
-2. 阅读 `docs/knowledge/index.md` 枢纽索引，定位相关知识卡，再按卡片的 `source_files` 跳转源码。
-3. 用 `docs/adr/README.md` 登记表 + `docs/adr/index.md` 规范索引（状态分组，自动生成）+ `grep docs/adr/` 查找相关决策、状态和历史坑点；ADR 是决策真相源。
-4. **修 bug 或排查问题时**：先 `grep` `docs/archive/bug-chronicle.md` 关键词，再读匹配段落（禁止全量）。
-5. 以当前源码为最终事实来源，核对知识卡中的 API、依赖、不变量和资源生命周期。
-6. 修改后运行最小相关检查（契约测试 / link-checker / type-consistency 按域选择）。
-7. 文档 / ADR / 函数签名变更后，按「改完即验」清单运行对应检查。
-
-知识来源优先级：当前源码 > `docs/adr/` > `docs/knowledge/` > `docs/archive/architecture.md`（历史）。
-若知识卡与源码不一致，报告文档漂移并以源码为准，不得静默假定卡片正确。
+优先级：当前源码 > `docs/adr/` > `docs/knowledge/` > `docs/archive/architecture.md`（历史）。
 
 ## ADR 规则
 
-> 新 ADR 一律走叫号脚本：`node scripts/new-adr.mjs "标题" [--slug x]`（双源取号 + 登记表占号 + 四段模板 + 自动 adr-check，带原子锁防多会话并行撞号；`--dry-run` 只算号不落盘），禁止手写编号。
+> 新 ADR 一律走叫号脚本：`node scripts/new-adr.mjs "标题" [--slug x]`（双源取号 + 登记表占号 + 四段模板 + 自动 adr-check），禁止手写编号。
 > 状态值：`✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代`；状态变更同步更新登记表。
 > 新 ADR 落地时检查是否触及既有 ADR 决策；触及就在对方首部标注「被 [ADR-NNN] 取代」。
 

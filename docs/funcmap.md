@@ -32,8 +32,8 @@
 | Go·YSM 核心 | 7 | 33 |
 | Go(internal)·应用入口 | 15 | 174 |
 | 前端·根 (app-modules/bus) | 1 | 10 |
-| 前端·核心 | 9 | 14 |
-| 前端·特性 | 11 | 48 |
+| 前端·核心 | 8 | 13 |
+| 前端·特性 | 12 | 49 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 25 | 92 |
@@ -612,8 +612,7 @@
 | `registerContextMenus()` | `frontend/src/core/context-menus:458` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
 | `__TEST__resetDiary()` | `frontend/src/core/error-diary:16` | 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。 |
 | `registerErrorDiary()` | `frontend/src/core/error-diary:34` | 注册 UI 报错落日记功能。 |
-| `registerDnD()` | `frontend/src/core/handlers/dnd:265` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
-| `registerGlobalHandlers()` | `frontend/src/core/handlers/global:13` | 注册所有全局 handler，返回 unsub 函数数组 |
+| `registerGlobalHandlers()` | `frontend/src/core/handlers/global:11` | 注册所有 core 全局 handler，返回 unsub 函数数组（features/views 层注册由 app-content 编排） |
 | `registerInstanceOps()` | `frontend/src/core/handlers/instance-ops:10` | 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs |
 | `requireMcRoot()` | `frontend/src/core/handlers/require-mcroot:12` | 读取游戏根目录（mcRoot），空时发 warn toast 并返回 null。 |
 | `registerSync()` | `frontend/src/core/handlers/sync:10` | 注册同步 handler，push 返回的取消订阅函数到 unsubs |
@@ -659,6 +658,7 @@
 | `CollectedEntry()` | `frontend/src/features/dnd-shared:37` | 收集条目（文件 + 相对路径） |
 | `FolderGroup()` | `frontend/src/features/dnd-shared:43` | 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） |
 | `groupCollected()` | `frontend/src/features/dnd-shared:55` | 将收集到的条目分组： - 有目录前缀的条目 → 按「顶层目录」整组（dir = 第一段路径），组内保留完整 relPath（支持多层嵌套） - 无目录前缀的散落文件 → 单文件队列 |
+| `registerDnD()` | `frontend/src/features/import-dnd:265` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
 | `isImportableFile()` | `frontend/src/features/import-executor` | — |
 | `ImportFile()` | `frontend/src/features/import-executor:12` | 带相对路径的 File（文件夹导入时标记 _relPath） |
 | `ImportRecord()` | `frontend/src/features/import-executor:15` | 已导入历史条目（导入 tab「已导入」列表数据源） |

@@ -6,7 +6,7 @@
 ## 硬约束
 
 > 500 行文件先 grep 定位再读。
-> 按需读取 `docs/knowledge/routes.md`（AI 路由表）+ `docs/knowledge/index.md`（枢纽索引，自动生成）+ grep 卡正文定位功能作用，充实上下文。
+> 按需读取 `docs/knowledge/index.md`（枢纽索引，自动生成）+ grep 卡正文定位功能作用，充实上下文。
 > 涉及 ADR：先 grep `docs/adr/` 看是否已有类似实现；写新 ADR 走叫号脚本（命令与流程见下方「ADR 规则」，禁止手写编号）。
 > 文档地图优先，确认代码归属，但允许探索。发现地图过期时报告漂移、以源码为准。
 > 编号只允许给 ADR、novel 写。
@@ -21,7 +21,7 @@
 
 | 钩子 | 功能 | 逃生阀 |
 |------|------|--------|
-| `pre-commit` | 自动生成文档索引（docs 分区索引 / funcmap / 知识卡 index+routes+字段 / novel 索引 / project-map / vitepress sidebar）并 `git add docs/` | `YSM_SKIP_GEN=1` |
+| `pre-commit` | 自动生成文档索引（docs 分区索引 / funcmap / 知识卡 index+字段 / novel 索引 / project-map / vitepress sidebar）并 `git add docs/` | `YSM_SKIP_GEN=1` |
 | `prepare-commit-msg` | 自动提示受影响知识卡 + 覆盖率 | `YSM_SKIP_KNOWLEDGE_HINT=1` |
 | `pre-push` | 自动跑 `pre-push-gate.mjs` 按变更域检查（Go/前端/数据/文档），失败阻断 | `YSM_SKIP_GATE=1` |
 
@@ -34,7 +34,7 @@
 | 要做什么 | 去哪里 |
 |----------|--------|
 | **决策与问题** | `grep docs/adr/`（当前决策） + `bug-search <关键词>`（历史坑点） |
-| **文档与代码** | `docs/knowledge/`（先查`routes.md`路由表） |
+| **文档与代码** | `docs/knowledge/`（查 `index.md` 枢纽索引） |
 | **函数与重构** | `node scripts/funcmap.mjs`（函数索引）<br>`node scripts/codemod.mjs help`（批量重构） |
 | **规范与设计** | `docs/Design.md`（UI文案/组件规范）<br>`frontend/src/app-modules.ts`（注册组件） |
 | **发布与维护** | `docs/releases/`（发版流程）<br>`docs/maintenance.md`（维护手册） |
@@ -44,8 +44,8 @@
 ## 知识库检索协议
 
 处理代码时：
-1. 查`routes.md`→`index.md`定位知识卡
-2. 用`grep`查ADR和bug-chronicle
+1. 查 `index.md` 枢纽索引定位知识卡
+2. 用 `grep` 查 ADR 和 bug-chronicle
 3. 源码为最终依据
 4. 修改后运行最小检查
 
@@ -223,7 +223,7 @@ node scripts/doctor.mjs               # 改代码 / 发版前，全量闸门（�
 
 > 注：L14「硬约束」的构建命令（`go build` / `vite build` / `typecheck`）负责「跑得起来」，本节负责「符合仓库治理」，两者互补不重复。
 
-> **pre-commit 自动接管**：`.githooks/pre-commit` 在 commit 时自动跑秒级 gen（docs 分区索引 / funcmap / 知识卡 index+routes+字段 / novel 索引 / project-map / vitepress sidebar）并 `git add docs/`，失败仅提示不阻断。**索引/文档类生成物同步无需手动跑**；逃生阀 `YSM_SKIP_GEN=1 git commit`。验证类检查（lint / 契约 / 断链 / adr-check 等）仍在 pre-push 门禁。
+> **pre-commit 自动接管**：`.githooks/pre-commit` 在 commit 时自动跑秒级 gen（docs 分区索引 / funcmap / 知识卡 index+字段 / novel 索引 / project-map / vitepress sidebar）并 `git add docs/`，失败仅提示不阻断。**索引/文档类生成物同步无需手动跑**；逃生阀 `YSM_SKIP_GEN=1 git commit`。验证类检查（lint / 契约 / 断链 / adr-check 等）仍在 pre-push 门禁。
 
 ---
 

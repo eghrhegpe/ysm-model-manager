@@ -538,10 +538,6 @@ export const autoSidebar = [
         "link": "/knowledge/resource-registry"
       },
       {
-        "text": "AI 路由表",
-        "link": "/knowledge/routes"
-      },
-      {
         "text": "共享样式 shared-styles",
         "link": "/knowledge/shared-styles"
       },

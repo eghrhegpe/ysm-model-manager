@@ -40,7 +40,6 @@ echo "[pre-commit] 文档自动同步..."
 GEN_CMDS='gen-docs-index.mjs
 funcmap.mjs
 gen-knowledge-index.mjs
-gen-routes.mjs
 build-novel-index.mjs
 gen-project-map.mjs
 gen-vitepress-sidebar.mjs

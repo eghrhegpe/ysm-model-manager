@@ -30,7 +30,7 @@ const FRONTEND_JS_DIR = path.join(ROOT, 'frontend', 'src');
 
 /** 非知识卡文件（与 check-knowledge-drift / gen-knowledge-h1/adr 保持一致；含本项目 AGENTS.md） */
 const NON_CARDS = new Set([
-  'README.md', 'index.md', 'routes.md', 'AGENTS.md', 'menu-map.md', 'graph.md', 'tier-review.md',
+  'README.md', 'index.md', 'AGENTS.md', 'menu-map.md', 'graph.md', 'tier-review.md',
 ]);
 
 /** 递归收集前端测试文件相对仓库路径（.test/.spec + .ts/.js）。 */

@@ -74,6 +74,7 @@
 | `check-dynamic-import.mjs` | `node scripts/check-dynamic-import.mjs` / `--json` | 动态 import() 合理性审查（对照 app_modules 规范：失败处理缺失 / 空 catch 吞错 / .js 后缀残留 / 轻量工具模块误动态导入；WARN 阻断） |
 | `check-tpl-refs.mjs` | `node scripts/check-tpl-refs.mjs` / `--json` | 前端 JS id 引用 ↔ 模板定义交叉核对：引用有定义无 → ERROR 断链阻断（幽灵 id 守护） |
 | `wails3-cli-check.mjs` | `node scripts/wails3-cli-check.mjs` / `--json` | Wails v3 CLI 拼写检查：活跃路径裸 `wails X`（非 wails3）→ ERROR（v2→v3 回归守护，2026-08-05 绑定教训） |
+| `check-diff-coverage.mjs` | `node scripts/check-diff-coverage.mjs` / `--json` / `--suggest` / `--staged` / `--uncommitted` / `--threshold N` | 变更文件覆盖率门禁（diff-coverage gate）：只查本次 git 变更的非测试源码「变更行覆盖率」，低于阈值阻断（保护新代码有测试）；`--suggest` 非阻断建议（输出 commit message 区块）；源自 MikuMikuAR P8-A 适配，配套 `tests/test_check_diff_coverage.mjs` |
 
 > 基线文件位于 `scripts/baseline/`（`deadcode-baseline.json` / `doc-drift-baseline.json`），刷新基线用对应脚本的 `--update-baseline` / `--fix`。
 

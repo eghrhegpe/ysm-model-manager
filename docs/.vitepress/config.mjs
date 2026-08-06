@@ -1,6 +1,7 @@
 // ===== VitePress 站点配置（ADR-022 迁移回 VitePress）=====
 // 对标 MikuMikuAR：home layout 宣传首页 + 分区导航 + LocalSearch。
-// 内部治理文档（adr/knowledge/novel/app 等）不进导航，文件保留（URL 可直达）。
+// nav 顶层仅用户向（首页/指南/发版/维护）；sidebar 按内容类型分组收纳
+// （架构与规范/决策记录/知识卡/小说折叠），内部治理文档不进 nav 顶层但 URL 可直达。
 import { defineConfig } from 'vitepress'
 import { autoSidebar } from './sidebar.gen.mjs'
 

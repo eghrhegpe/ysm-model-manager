@@ -461,7 +461,13 @@ func (a *App) allRecycleRoots(cfg types.AppConfig) []string {
 
 // ========== 状态同步 ==========
 func (a *App) GetInstanceStatus(mcRoot, repoDir string) []types.InstanceStatus {
-	return ysmsync.GetInstanceStatus(mcRoot, repoDir, a.ScanModelEntries)
+	// 扫描日志带类型标签（YSM），与前端术语一致
+	label := "模型"
+	if rt := types.RegistryType("ysm"); rt != nil {
+		label = rt.Name
+	}
+	scanFn := func(dir string) []types.ModelEntry { return a.ScanModelEntriesWithLabel(dir, label) }
+	return ysmsync.GetInstanceStatus(mcRoot, repoDir, scanFn)
 }
 
 // GetResourceInstanceStatus 按资源类型获取整合包同步状态
@@ -470,6 +476,12 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 	if mcRoot == "" || rtype == "" {
 		return []types.InstanceStatus{}
 	}
+	// 扫描日志带类型标签，与前端术语一致
+	label := ""
+	if rt := types.RegistryType(rtype); rt != nil {
+		label = rt.Name
+	}
+	scanFn := func(dir string) []types.ModelEntry { return a.ScanModelEntriesWithLabel(dir, label) }
 	// YSM 走原有逻辑（对比 repo 和 custom 目录）
 	if rtype == "ysm" {
 		if repoDir == "" {
@@ -478,7 +490,7 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 		if repoDir == "" {
 			return []types.InstanceStatus{}
 		}
-		results := ysmsync.GetInstanceStatus(mcRoot, repoDir, a.ScanModelEntries)
+		results := ysmsync.GetInstanceStatus(mcRoot, repoDir, scanFn)
 		for i := range results {
 			modsDir := filepath.Join(results[i].CustomDir, "..", "..", "..", "mods")
 			results[i].HasMod = ysm.HasModInDir(modsDir, rtype)
@@ -496,7 +508,7 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 		return []types.InstanceStatus{}
 	}
 	return ysmsync.CompareGlobalInstanceHashes(mcRoot, globalDir, subDir, rtype,
-		a.ScanModelEntries, ysmsync.ListVersions,
+		scanFn, ysmsync.ListVersions,
 		func(modsDir string) bool { return ysm.HasModInDir(modsDir, rtype) })
 }
 

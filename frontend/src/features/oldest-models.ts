@@ -4,7 +4,7 @@ import { bus } from "../bus.ts";
 import { renderDisplayName } from "../utils/dom/display.ts";
 import { loadResourceRegistry } from "../utils/resource/registry.ts";
 import { getApp } from "../wails/app.ts";
-import { RESOURCE_TYPES } from "../utils/resource/types.ts";
+import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../utils/resource/types.ts";
 
 /** ScanModelEntries 返回的条目 */
 interface ModelEntry {
@@ -46,7 +46,7 @@ export async function loadOldestModel(
     container.innerHTML =
       '<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">⏳ 扫描中...</div>';
     try {
-      const { ScanModelEntries, GetRepoRoot } = await getApp();
+      const { ScanModelEntriesWithLabel, GetRepoRoot } = await getApp();
       const repoRoot = await GetRepoRoot(currentType);
       if (gen !== _loadGen) return; // 已切换类型，丢弃过期结果
       if (!repoRoot) {
@@ -55,7 +55,7 @@ export async function loadOldestModel(
         return;
       }
 
-      const entries: ModelEntry[] = (await ScanModelEntries(repoRoot)) || [];
+      const entries: ModelEntry[] = (await ScanModelEntriesWithLabel(repoRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
       if (gen !== _loadGen) return; // 已切换类型，丢弃过期结果
       if (!entries || !entries.length) {
         container.innerHTML =

@@ -1,6 +1,6 @@
 // ===== 整合包右键操作实现 =====
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { bus } from "../../bus.ts";
 import type { AppTree } from "./index.ts";
 import { getApp } from "../../wails/app.ts";
@@ -91,7 +91,7 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
         const {
           GetRepoRoot,
           ListVersionInstances,
-          ScanModelEntries,
+          ScanModelEntriesWithLabel,
           SyncCustomToRepo,
         } = await getApp();
         const mcRoot = await requireMcRoot();
@@ -114,11 +114,11 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
           });
           return;
         }
-        const repoEntries = await ScanModelEntries(repoRoot);
+        const repoEntries = await ScanModelEntriesWithLabel(repoRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM]);
         const repoNames = new Set(
           (repoEntries || []).map((e) => e.Name.replace(/\.ban$/i, "")),
         );
-        const insEntries = await ScanModelEntries(ins.CustomDir);
+        const insEntries = await ScanModelEntriesWithLabel(ins.CustomDir, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM]);
         let uploaded = 0;
         // 上传整合包特有 -> 仓库
         (insEntries || []).forEach((e) => {

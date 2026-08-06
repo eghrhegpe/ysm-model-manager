@@ -3,6 +3,7 @@ import { bus } from "../../../bus.ts";
 import { renderDisplayName } from "../../../utils/dom/display.ts";
 import { getApp } from "../../../wails/app.ts";
 import { loadResourceRegistry } from "../../../utils/resource/registry.ts";
+import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../../utils/resource/types.ts";
 
 /** 转义函数签名（与组件 _esc 一致） */
 type EscFn = (s: unknown) => string;
@@ -494,7 +495,7 @@ async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void> {
   list.innerHTML =
     '<div class="scan-radar-wrap"><div class="scan-radar"></div><div class="scan-radar-dot"></div></div><div class="stat-row diag-msg diag-msg-muted" style="text-align:center">正在扫描整合包冲突...</div>';
   try {
-    const { LoadAppConfig, ListVersionInstances, ScanModelEntries } =
+    const { LoadAppConfig, ListVersionInstances, ScanModelEntriesWithLabel } =
       await getApp();
     const cfg = await LoadAppConfig();
     const mcRoot = cfg.mcRoot || "";
@@ -519,7 +520,7 @@ async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void> {
     const instanceFiles: Record<string, InstanceFile[]> = {};
     for (const ins of instances) {
       if (!ins.Exists) continue;
-      const entries = (await ScanModelEntries(ins.CustomDir)) || [];
+      const entries = (await ScanModelEntriesWithLabel(ins.CustomDir, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
       instanceFiles[ins.Name] = entries.map((e) => ({
         name: e.Name.replace(/\.ban$/i, ""),
       }));

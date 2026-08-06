@@ -191,6 +191,21 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 	return entries
 }
 
+// ScanModelEntriesWithLabel 同 ScanModelEntries，但操作日志附带资源类型标签
+// （如「资源包」「光影包」「模型」），便于在操作日志面板区分扫描的文件类型。
+// 仅在缓存未命中时记日志，避免刷屏。
+func (a *App) ScanModelEntriesWithLabel(dir string, label string) []types.ModelEntry {
+	entries, hit := a.scanModelEntriesWithHit(dir)
+	if !hit {
+		msg := fmt.Sprintf("扫描 %d 个文件", len(entries))
+		if label != "" {
+			msg += " · " + label
+		}
+		a.AddOpLog("scan", msg, dir, "", int64(len(entries)), "success", "")
+	}
+	return entries
+}
+
 // ClearScanCache 清除扫描缓存（下载/导入后调用）
 func (a *App) ClearScanCache() {
 	scanner.InvalidateCache()

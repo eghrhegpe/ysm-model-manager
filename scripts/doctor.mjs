@@ -10,7 +10,7 @@
  *   node scripts/doctor.mjs --docs   # 文档模式（轻量：仅文档/ADR/索引检查，跳过 Go/前端编译与测试）
  *   node scripts/doctor.mjs --check  # 启用 check
  *   node scripts/doctor.mjs --strict # 启用 strict
- * 退出码：0（无 process.exit 调用；仅 Governance ERROR 规则置 1）
+ * 退出码：任何非零检查([FAIL])均置 process.exitCode=1 阻断；仅 WARN/skip 不阻断
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -46,6 +46,7 @@ function checkGoBuild() {
     console.log(`  ${PASS} Go build passed`);
   } else {
     console.log(`  ${FAIL} Go build failed`);
+    process.exitCode = 1;
     for (const line of out.trim().split('\n').slice(-5)) {
       console.log(`    ${line}`);
     }
@@ -60,6 +61,7 @@ function checkGoTest() {
     console.log(`  ${PASS} Go test passed`);
   } else {
     console.log(`  ${FAIL} Go test failed`);
+    process.exitCode = 1;
     for (const line of out.trim().split('\n').slice(-5)) {
       console.log(`    ${line}`);
     }
@@ -78,6 +80,7 @@ function buildUpdaterHelper() {
     console.log(`  ${PASS} updater helper built -> go/updater/ysm-updater-helper.exe`);
   } else {
     console.log(`  ${FAIL} updater helper build failed (go vet/build/test 将因此失败)`);
+    process.exitCode = 1;
     for (const line of out.trim().split('\n').slice(-5)) console.log(`    ${line}`);
   }
 }
@@ -89,6 +92,7 @@ function checkGoVet() {
     console.log(`  ${PASS} go vet passed`);
   } else {
     console.log(`  ${FAIL} go vet failed`);
+    process.exitCode = 1;
     for (const line of out.trim().split('\n').slice(-5)) console.log(`    ${line}`);
   }
 }
@@ -116,7 +120,10 @@ function checkContractTests() {
     }
   }
   if (failed === 0) console.log(`  ${PASS} all contract tests passed`);
-  else console.log(`  ${FAIL} ${failed} contract test(s) failed`);
+  else {
+    console.log(`  ${FAIL} ${failed} contract test(s) failed`);
+    process.exitCode = 1;
+  }
 }
 
 /**
@@ -146,6 +153,7 @@ function checkFrontendBuild() {
     console.log(`  ${PASS} Frontend build passed`);
   } else {
     console.log(`  ${FAIL} Frontend build failed`);
+    process.exitCode = 1;
     for (const line of out.trim().split('\n').slice(-5)) {
       console.log(`    ${line}`);
     }
@@ -166,6 +174,7 @@ function checkFrontendTest() {
     console.log(`  ${PASS} vitest run passed`);
   } else {
     console.log(`  ${FAIL} vitest run failed`);
+    process.exitCode = 1;
     for (const line of out.trim().split('\n').slice(-5)) {
       console.log(`    ${line}`);
     }
@@ -186,6 +195,7 @@ function checkTypeScript() {
     console.log(`  ${PASS} tsc --noEmit passed`);
   } else {
     console.log(`  ${FAIL} tsc --noEmit failed (${out.trim().split('\n').length} errors)`);
+    process.exitCode = 1;
     for (const line of out.trim().split('\n').slice(-5)) {
       console.log(`    ${line}`);
     }
@@ -202,7 +212,9 @@ function checkKeyFiles() {
   ];
   for (const f of files) {
     const p = path.join(ROOT, f);
-    console.log(`  ${fs.existsSync(p) ? PASS : FAIL} ${f}`);
+    const ok = fs.existsSync(p);
+    console.log(`  ${ok ? PASS : FAIL} ${f}`);
+    if (!ok) process.exitCode = 1;
   }
 }
 
@@ -264,6 +276,7 @@ function checkConfig() {
     console.log(`  ${PASS} wails.json: ${name}`);
   } else {
     console.log(`  ${FAIL} wails.json parse failed`);
+    process.exitCode = 1;
   }
 }
 
@@ -330,7 +343,10 @@ function runStaticTools(tools, label) {
     }
   }
   if (failed === 0) console.log(`  ${PASS} all static checks passed`);
-  else console.log(`  ${FAIL} ${failed} tool(s) failed`);
+  else {
+    console.log(`  ${FAIL} ${failed} tool(s) failed`);
+    process.exitCode = 1;
+  }
 }
 
 function checkStaticAnalysis() {
@@ -358,7 +374,10 @@ function checkDocExtra() {
     }
   }
   if (failed === 0) console.log(`  ${PASS} all doc checks passed`);
-  else console.log(`  ${FAIL} ${failed} doc check(s) failed`);
+  else {
+    console.log(`  ${FAIL} ${failed} doc check(s) failed`);
+    process.exitCode = 1;
+  }
 }
 
 const DOCS_MODE = process.argv.includes('--docs');

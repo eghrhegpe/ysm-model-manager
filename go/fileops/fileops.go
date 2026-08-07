@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -353,8 +354,10 @@ func CopyModelFile(root, src, dstDir string) error {
 	// 复制 .ban 状态文件（如果存在）
 	banSrc := src + ".ban"
 	if _, err := os.Stat(banSrc); err == nil {
-		// P3 修复：.ban 副本写入失败不再吞掉——禁用状态丢失需透出错误（模型已复制但状态不一致）
+		// P3 修复：.ban 副本写入失败不再吞掉——禁用状态丢失需透出错误（模型已复制但状态不一致）。
+		// 同时回滚已复制的 dst，避免「目标已存在」阻塞重试（与目录路径整树回滚语义对齐）
 		if err := copyFile(banSrc, dst+".ban"); err != nil {
+			_ = os.Remove(dst)
 			return fmt.Errorf("复制禁用标记失败: %w", err)
 		}
 	}
@@ -366,7 +369,10 @@ func copyDirRecursive(srcDir, dstDir string) error {
 	// P2 修复：失败时整树回滚（RemoveAll dstDir），防止半棵树残留 + 下次「目标已存在」永久卡死
 	err := copyDirRecursiveInner(srcDir, dstDir)
 	if err != nil {
-		_ = os.RemoveAll(dstDir)
+		// P3 修复（code_review）：回滚失败也要记录，否则残留半棵树且重试被「目标已存在」永久阻塞时无诊断线索
+		if rmErr := os.RemoveAll(dstDir); rmErr != nil {
+			log.Printf("[fileops] 复制失败回滚清理失败 %s: %v（原错误: %v）", dstDir, rmErr, err)
+		}
 	}
 	return err
 }

@@ -25,6 +25,10 @@ func WriteModelFolder(repoRoot, subpath, folderName string, files []types.Import
 	if strings.ContainsAny(folderName, `\/:*?"<>|`) {
 		return fmt.Errorf("文件夹名包含非法字符")
 	}
+	// P3 修复：拒绝 . / ..（原实现 folderName=="." 会直接写进 repoRoot/subpath，绕过模型文件夹抽象）
+	if folderName == "." || folderName == ".." {
+		return fmt.Errorf("文件夹名非法: %s", folderName)
+	}
 	// 子路径防穿越
 	subpath = strings.Trim(subpath, `\/`)
 	if subpath != "" {
@@ -57,6 +61,17 @@ func WriteModelFolder(repoRoot, subpath, folderName string, files []types.Import
 	if !hasSupported {
 		return fmt.Errorf("文件夹内没有可识别的模型文件（需至少 1 个 .ysm/.zip/.7z/ysm.json 等支持文件）")
 	}
+	// P2 修复：写入失败时清理已写的半成品目录（RemoveAll dstRoot），
+	// 防止残留 + 下次被「目标已存在」永久阻塞（陷阱 #8 变体）
+	if err := writeModelFolderFiles(dstRoot, files); err != nil {
+		_ = os.RemoveAll(dstRoot)
+		return err
+	}
+	return nil
+}
+
+// writeModelFolderFiles 顺序写文件夹内全部文件（独立函数便于失败回滚）
+func writeModelFolderFiles(dstRoot string, files []types.ImportFileItem) error {
 	for _, f := range files {
 		data, err := base64.StdEncoding.DecodeString(f.Base64)
 		if err != nil {

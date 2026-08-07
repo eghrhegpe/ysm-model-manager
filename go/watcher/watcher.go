@@ -130,6 +130,12 @@ func (w *Watcher) loop() {
 			log.Printf("[watcher] loop panic: %v", r)
 			w.mu.Lock()
 			w.running = false
+			// P2 修复：panic 后必须关闭 fsnotify watcher，否则其 inotify/句柄永久泄漏——
+			// Stop 因 !running 早退不会清理（原实现），再次 Start 又新建一个 → 泄漏累积
+			if w.w != nil {
+				w.w.Close()
+				w.w = nil
+			}
 			w.mu.Unlock()
 		}
 	}()
@@ -213,6 +219,15 @@ func (w *Watcher) syncAll() {
 		// 执行期间积累的新事件：串行续跑一轮（Stop 后不再续跑）
 		if pending && restart {
 			w.syncAll()
+		}
+	}()
+
+	// P2 修复：syncAll 在 time.AfterFunc 的 goroutine 中执行，loop 的 recover 覆盖不到；
+	// scanFn/ListVersions/SyncToggleStatus/clearCacheFn 任一 panic 会直接崩溃整个进程。
+	// 兜底恢复并记录日志（wg.Done/syncRunning 复位仍由上方 defer 保证执行）。
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[watcher] syncAll panic: %v", r)
 		}
 	}()
 

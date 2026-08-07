@@ -43,6 +43,14 @@ func RenameDir(oldPath, newName string) error {
 	if oldPath == "" || newName == "" {
 		return fmt.Errorf("参数为空")
 	}
+	// P2 修复：与 RenameFile 对齐，newName 必须通过非法字符 + 穿越校验。
+	// 原实现 `filepath.Join(parent, "../x")` 可逃出父目录/仓库。
+	if strings.ContainsAny(newName, `\/:*?"<>|`) {
+		return fmt.Errorf("目录名包含非法字符")
+	}
+	if newName == "." || newName == ".." || strings.Contains(newName, ".."+string(filepath.Separator)) || strings.HasSuffix(newName, "..") {
+		return fmt.Errorf("目录名包含非法路径段")
+	}
 	parent := filepath.Dir(oldPath)
 	newPath := filepath.Join(parent, newName)
 	return os.Rename(oldPath, newPath)
@@ -279,7 +287,13 @@ func MoveModelFile(src, dstDir string) error {
 	if types.IsYsmEntryJSON(filepath.Base(src)) {
 		src = filepath.Dir(src)
 	}
-	return os.Rename(src, filepath.Join(dstDir, filepath.Base(src)))
+	dst := filepath.Join(dstDir, filepath.Base(src))
+	// P1 修复：移动前防覆盖检查，与 CopyModelFile 语义对齐——
+	// 原实现 os.Rename 在 POSIX 上静默覆盖同名目标，Windows 上报错，行为不一致且可能数据丢失
+	if _, err := os.Stat(dst); err == nil {
+		return fmt.Errorf("目标已存在: %s", dst)
+	}
+	return os.Rename(src, dst)
 }
 
 // CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验）
@@ -303,6 +317,15 @@ func CopyModelFile(root, src, dstDir string) error {
 		rel, err := filepath.Rel(absRoot, absDst)
 		if err != nil || strings.HasPrefix(rel, "..") || rel == ".." {
 			return fmt.Errorf("目标目录必须在仓库内: %s", dstDir)
+		}
+		// P3 修复：src 也须落在仓库内——否则可把仓库外任意文件拷入仓库（读取越界）
+		absSrc, err := filepath.Abs(src)
+		if err != nil {
+			return err
+		}
+		relSrc, err := filepath.Rel(absRoot, absSrc)
+		if err != nil || strings.HasPrefix(relSrc, "..") || relSrc == ".." {
+			return fmt.Errorf("源文件必须在仓库内: %s", src)
 		}
 	}
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
@@ -330,13 +353,25 @@ func CopyModelFile(root, src, dstDir string) error {
 	// 复制 .ban 状态文件（如果存在）
 	banSrc := src + ".ban"
 	if _, err := os.Stat(banSrc); err == nil {
-		_ = copyFile(banSrc, dst+".ban")
+		// P3 修复：.ban 副本写入失败不再吞掉——禁用状态丢失需透出错误（模型已复制但状态不一致）
+		if err := copyFile(banSrc, dst+".ban"); err != nil {
+			return fmt.Errorf("复制禁用标记失败: %w", err)
+		}
 	}
 	return nil
 }
 
 // copyDirRecursive 递归复制目录（.ban 状态文件作为普通文件随遍历自然复制；防覆盖）
 func copyDirRecursive(srcDir, dstDir string) error {
+	// P2 修复：失败时整树回滚（RemoveAll dstDir），防止半棵树残留 + 下次「目标已存在」永久卡死
+	err := copyDirRecursiveInner(srcDir, dstDir)
+	if err != nil {
+		_ = os.RemoveAll(dstDir)
+	}
+	return err
+}
+
+func copyDirRecursiveInner(srcDir, dstDir string) error {
 	return filepath.WalkDir(srcDir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -449,7 +484,9 @@ func ToggleModelEnable(root, path string) (bool, error) {
 		}
 	}
 	if strings.HasSuffix(strings.ToLower(path), ".ban") {
-		newPath := strings.TrimSuffix(path, ".ban")
+		// P2 修复：用长度切片去 .ban 后缀（大小写不敏感，与目录级 L421 一致）。
+		// 原 TrimSuffix 大小写敏感，`x.ysm.BAN` 触发检测后不剥离 → os.Rename(path,path) 空转假启用
+		newPath := path[:len(path)-len(".ban")]
 		if err := os.Rename(path, newPath); err != nil {
 			return false, err
 		}

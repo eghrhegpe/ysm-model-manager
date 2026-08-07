@@ -26,7 +26,7 @@
 | Go·同步 | 3 | 21 |
 | Go·标签 | 1 | 8 |
 | Go·Three.js | 1 | 5 |
-| Go·类型 | 5 | 48 |
+| Go·类型 | 5 | 49 |
 | Go·更新器 | 1 | 8 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 22 |
@@ -37,10 +37,10 @@
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 25 | 91 |
-| frontend/views | 52 | 142 |
+| frontend/views | 52 | 143 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **165** | **758** |
+| **合计** | **165** | **760** |
 
 ## Go·头像
 
@@ -233,14 +233,14 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `InvalidateCache()` | `go/scanner/scanner:51` | InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用） |
-| `InvalidatePath()` | `go/scanner/scanner:60` | InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用） |
-| `ScanEntries()` | `go/scanner/scanner:68` | ScanEntries 扫描目录下的模型文件（含 .recycle 排除、扩展名过滤、SHA256 哈希、30s TTL 缓存） |
-| `ScanEntriesWithHit()` | `go/scanner/scanner:75` | ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。 |
-| `ComputeFileHash()` | `go/scanner/scanner:151` | ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配） |
-| `ListModelAuthors()` | `go/scanner/scanner:169` | ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序） |
-| `ScanLocalAuthors()` | `go/scanner/scanner:201` | ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root） |
-| `GenerateRepoIndex()` | `go/scanner/scanner:260` | GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub Actions/Linux 消费，正斜杠路径） |
+| `InvalidateCache()` | `go/scanner/scanner:52` | InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用） |
+| `InvalidatePath()` | `go/scanner/scanner:61` | InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用） |
+| `ScanEntries()` | `go/scanner/scanner:69` | ScanEntries 扫描目录下的模型文件（含 .recycle 排除、扩展名过滤、SHA256 哈希、30s TTL 缓存） |
+| `ScanEntriesWithHit()` | `go/scanner/scanner:76` | ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。 |
+| `ComputeFileHash()` | `go/scanner/scanner:154` | ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配） |
+| `ListModelAuthors()` | `go/scanner/scanner:172` | ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序） |
+| `ScanLocalAuthors()` | `go/scanner/scanner:204` | ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root） |
+| `GenerateRepoIndex()` | `go/scanner/scanner:263` | GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub Actions/Linux 消费，正斜杠路径） |
 
 ## Go·同步
 
@@ -306,14 +306,15 @@
 | `AllExts()` | `go/types/extensions:13` | AllExts 返回所有支持的扩展名（去重后） |
 | `IsSupportedExt()` | `go/types/extensions:29` | IsSupportedExt 检查扩展名是否被任何资源类型支持 |
 | `IsYsmEntryJSON()` | `go/types/extensions:45` | IsYsmEntryJSON 判断是否为 YSM 解压目录的唯一清单入口 ysm.json（大小写不敏感） ADR-038 D2：.json 仅放行 ysm.json；包内 geo |
-| `ExtBelongsTo()` | `go/types/extensions:50` | ExtBelongsTo 返回扩展名所属的资源类型 ID 列表（可能多个） |
-| `SupportedExtsForType()` | `go/types/extensions:65` | SupportedExtsForType 返回指定资源类型的所有扩展名 |
-| `FindInstDir()` | `go/types/extensions:79` | FindInstDir 查找整合包中指定资源类型的子目录： 1. |
-| `StorageSubDir()` | `go/types/extensions:122` | StorageSubDir 每种资源类型在 FilesRoot 下的存储子目录 从 resource_types.json 注册表读取，无匹配时返回 rtype 自身 |
-| `SubDirMap()` | `go/types/extensions:136` | SubDirMap 返回指定资源类型在整合包实例版本目录中的扫描子目录 |
-| `SubDirAll()` | `go/types/extensions:148` | SubDirAll 返回所有资源类型在整合包实例中的版本扫描子目录映射 |
-| `AllSubDirs()` | `go/types/extensions:160` | AllSubDirs 返回所有资源类型的版本子目录信息（遍历用） |
-| `SubDirEntry()` | `go/types/extensions:130` | SubDirEntry 资源类型的版本子目录信息 |
+| `ShouldHashExt()` | `go/types/extensions:52` | ShouldHashExt 判断扩展名是否需要计算 SHA256 哈希（用于同步系统文件匹配） 跳过非 YSM 类型的大文件（MMD/VRC 文件可达数十 MB，哈希全量太慢） 蓝 |
+| `ExtBelongsTo()` | `go/types/extensions:61` | ExtBelongsTo 返回扩展名所属的资源类型 ID 列表（可能多个） |
+| `SupportedExtsForType()` | `go/types/extensions:76` | SupportedExtsForType 返回指定资源类型的所有扩展名 |
+| `FindInstDir()` | `go/types/extensions:90` | FindInstDir 查找整合包中指定资源类型的子目录： 1. |
+| `StorageSubDir()` | `go/types/extensions:133` | StorageSubDir 每种资源类型在 FilesRoot 下的存储子目录 从 resource_types.json 注册表读取，无匹配时返回 rtype 自身 |
+| `SubDirMap()` | `go/types/extensions:147` | SubDirMap 返回指定资源类型在整合包实例版本目录中的扫描子目录 |
+| `SubDirAll()` | `go/types/extensions:159` | SubDirAll 返回所有资源类型在整合包实例中的版本扫描子目录映射 |
+| `AllSubDirs()` | `go/types/extensions:171` | AllSubDirs 返回所有资源类型的版本子目录信息（遍历用） |
+| `SubDirEntry()` | `go/types/extensions:141` | SubDirEntry 资源类型的版本子目录信息 |
 | `SetRegistryPath()` | `go/types/resource:41` | SetRegistryPath 设置注册表文件路径（仅测试用） 加锁保护：并发调用 LoadRegistry + SetRegistryPath 触发数据竞争（审计 P1 #2）。 |
 | `LoadRegistry()` | `go/types/resource:52` | LoadRegistry 加载资源类型注册表 优先读取外部 JSON 文件（可通过 SetRegistryPath 自定义路径）， 文件不存在或读取失败时回退到编译时嵌入的默认数据 |
 | `RegistryType()` | `go/types/resource:96` | RegistryType 按 id 查找资源类型，不存在时返回 nil |
@@ -929,6 +930,7 @@
 | `setRenderMode()` | `frontend/src/views/app-tree/render:53` | Set render mode to localStorage |
 | `buildTree()` | `frontend/src/views/app-tree/render:60` | — |
 | `flattenVisible()` | `frontend/src/views/app-tree/render:138` | — |
+| `cleanupVirtualScroll()` | `frontend/src/views/app-tree/render:280` | 断开虚拟滚动相关监听 |
 | `renderTree()` | `frontend/src/views/app-tree/render:289` | — |
 | `updateStat()` | `frontend/src/views/app-tree/render:353` | — |
 | `fileRowCommon()` | `frontend/src/views/app-tree/row-common:11` | 文件行公共计算：path 转义、开关状态、禁用 class、类型图标、缩进 |

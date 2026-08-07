@@ -20,6 +20,15 @@ export default defineConfig({
   // 属于文档站常态（链接在仓库内有效），跳过死链检查
   ignoreDeadLinks: true,
 
+  // 防 FOUC 主题脚本（借鉴 reasonix.io 的 <head> 内联模式，落 VitePress 主题）。
+  // 显式加固层：首帧前同步 appearance 偏好并设 color-scheme，消除自定义主题变量加载前的白屏闪烁；幂等。
+  appearance: 'dark',
+  transformHead() {
+    const noFouc =
+      "(function(){try{var k='vitepress-theme-appearance';var s=localStorage.getItem(k)||'auto';var d=s==='auto'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):s;var c=d==='dark';var r=document.documentElement;r.classList.toggle('dark',c);r.style.colorScheme=c?'dark':'light';}catch(e){}})();"
+    return [['script', { id: 'ysm-no-fouc' }, noFouc]]
+  },
+
   themeConfig: {
     nav: [
       { text: '首页', link: '/' },
@@ -29,7 +38,19 @@ export default defineConfig({
     ],
     // 自动生成的全文档导航树（sidebar.gen.mjs，由 scripts/gen-vitepress-sidebar.mjs 生成）
     sidebar: autoSidebar,
-    search: { provider: 'local' },
+    search: {
+      provider: 'local',
+      options: {
+        translations: {
+          button: { buttonText: '搜索', buttonAriaLabel: '搜索' },
+          modal: {
+            noResultsText: '未找到相关结果',
+            resetButtonTitle: '清除',
+            footer: { selectText: '选择', navigateText: '切换', closeText: '关闭' },
+          },
+        },
+      },
+    },
     footer: {
       message: 'YSM 模型管理器',
       copyright: 'Minecraft YSM 模型的一站式管理工具',

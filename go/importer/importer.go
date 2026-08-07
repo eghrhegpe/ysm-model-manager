@@ -171,8 +171,12 @@ func copyDirContents(src, dst string) error {
 		if entry.IsDir() {
 			// 符号链接目录：复制链接本身而非进入
 			if entry.Type()&os.ModeSymlink != 0 {
-				if target, rErr := os.Readlink(srcPath); rErr == nil {
-					os.Symlink(target, dstPath)
+				target, rErr := os.Readlink(srcPath)
+				if rErr != nil {
+					return rErr
+				}
+				if sErr := os.Symlink(target, dstPath); sErr != nil {
+					return sErr
 				}
 				continue
 			}
@@ -182,8 +186,12 @@ func copyDirContents(src, dst string) error {
 		} else {
 			// 符号链接文件：复制链接本身
 			if entry.Type()&os.ModeSymlink != 0 {
-				if target, rErr := os.Readlink(srcPath); rErr == nil {
-					os.Symlink(target, dstPath)
+				target, rErr := os.Readlink(srcPath)
+				if rErr != nil {
+					return rErr
+				}
+				if sErr := os.Symlink(target, dstPath); sErr != nil {
+					return sErr
 				}
 				continue
 			}
@@ -335,13 +343,16 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	defer out.Close()
-	_, err = io.Copy(out, in)
-	if err == nil {
-		if chErr := os.Chmod(dst, 0644); chErr != nil {
-			log.Printf("[importer] 设置权限失败 %s: %v", dst, chErr)
-		}
+	if _, err := io.Copy(out, in); err != nil {
+		// 复制中断/失败时清理半截目标文件，避免损坏文件留盘误导用户
+		out.Close()
+		os.Remove(dst)
+		return err
 	}
-	return err
+	if chErr := os.Chmod(dst, 0644); chErr != nil {
+		log.Printf("[importer] 设置权限失败 %s: %v", dst, chErr)
+	}
+	return nil
 }
 
 // ===== 初始化注册 =====

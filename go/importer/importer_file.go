@@ -47,7 +47,7 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 	if err != nil {
 		return types.AppError{Code: "DECODE_FAILED", Operation: "导入模型", Reason: "Base64 解码失败", Suggestion: "文件可能已损坏，请重新下载"}
 	}
-	if len(data) > 500*1024*1024 {
+	if len(data) > types.MaxImportSize {
 		return types.AppError{Code: "FILE_TOO_LARGE", Operation: "导入模型", SourcePath: fileName, Reason: "文件大小超过 500MB 限制", Suggestion: "请压缩文件至 500MB 以内"}
 	}
 	if len(data) == 0 {

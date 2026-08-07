@@ -106,9 +106,9 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `WalkAllFiles()` | `go/fsutil/walk:13` | WalkAllFiles 递归遍历目录返回所有文件的完整路径（不限制扩展名） skipRecycle 为 true 时跳过 .recycle 子目录 |
-| `WalkAllDirs()` | `go/fsutil/walk:38` | WalkAllDirs 递归遍历目录，返回所有子目录路径（广度优先，后序遍历用） 不包含根目录本身，按深度优先顺序（后序：子目录在前，父目录在后） |
-| `CountFiles()` | `go/fsutil/walk:67` | CountFiles 统计目录中的文件数（不限制扩展名） |
-| `CleanEmptyDirs()` | `go/fsutil/walk:72` | CleanEmptyDirs 递归删除空子目录，返回删除数 |
+| `WalkAllDirs()` | `go/fsutil/walk:38` | WalkAllDirs 递归遍历目录，返回所有子目录路径（深度优先后序：子目录在前，父目录在后） 不包含根目录本身。后序便于删除类操作（先删深目录，父目录变空后可被继续删除）。 |
+| `CountFiles()` | `go/fsutil/walk:70` | CountFiles 统计目录中的文件数（不限制扩展名） |
+| `CleanEmptyDirs()` | `go/fsutil/walk:75` | CleanEmptyDirs 递归删除空子目录，返回删除数 |
 
 ## Go·几何
 
@@ -202,7 +202,7 @@
 |------|--------|------|
 | `ErrPathEscalation.Error()` | `go/paths/safe:16` | — |
 | `IsInside()` | `go/paths/safe:23` | IsInside 检查 path 是否在 baseDir 下，防止路径遍历。 |
-| `ContainsMinecraftMarker()` | `go/paths/safe:51` | ContainsMinecraftMarker 检查路径中是否包含 .minecraft 或 minecraft 标记 PrismLauncher 实例目录下可能是 minecra |
+| `ContainsMinecraftMarker()` | `go/paths/safe:53` | ContainsMinecraftMarker 检查路径中是否包含 .minecraft 或 minecraft 标记 PrismLauncher 实例目录下可能是 minecra |
 | `ErrPathEscalation()` | `go/paths/safe:10` | ErrPathEscalation 路径越权错误 |
 
 ## Go·回收站

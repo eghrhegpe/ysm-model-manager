@@ -38,9 +38,10 @@ use_when:
 
 ## 不变量
 
-- `skipRecycle` 判定大小写不敏感（目录基名 `.recycle`）
-- 遍历中单个文件/目录读取失败不中断整体（返回 nil/跳过该项）
+- `skipRecycle` 判定大小写不敏感（目录基名 `.recycle`，经 `ToLower` 全路径比对）
+- 遍历中单个文件/目录读取失败不中断整体（返回 nil/跳过该项）；`WalkAllFiles` 对 WalkDir 错误 `log.Printf` 后跳过，`WalkAllDirs` 对 ReadDir 错误同样打日志后跳过（P2 修复——原实现完全静默，不可读子树从结果消失且调用方无感知）
 - 空目录路径、空输入一律返回 nil 而非空切片字面量，调用方按 len 判断即可
+- `WalkAllDirs` 是**深度优先后序**（子目录在前、父目录在后），便于删除类操作（先删深目录使父目录变空）；`CleanEmptyDirs` 基于该后序由深到浅删除，根目录自身永不入列（不删根，与 dedup.CleanEmptyDirs 语义对齐）
 
 ## 相关
 

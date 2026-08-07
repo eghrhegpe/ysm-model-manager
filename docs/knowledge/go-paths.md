@@ -37,6 +37,8 @@ use_when:
 ## 不变量
 
 - 所有用户输入的路径必须经过此包校验
+- **实际依赖范围**：仅 `go/installer` 与 `go/recycle` 引用本包（grep 核实）；`internal/app` 的 `isPathInRoot`、`go/fileops.CopyModelFile`、`go/download.ResolveSavePath`、`go/importer.sanitizePath` 均各自实现守卫（语义近似但未收敛），「单一咽喉」是理想而非现状——新增文件操作时优先复用本包
+- `IsInside` **不解析符号链接**（safe.go 注释声明）：baseDir/path 含指向外部目录的符号链接时可能误判安全，调用方需自行 `filepath.EvalSymlinks`
 
 ## 相关
 

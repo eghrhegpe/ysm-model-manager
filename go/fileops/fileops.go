@@ -24,14 +24,17 @@ import (
 
 // ========== 目录操作 ==========
 
-// CreateDir 在 root 下创建子目录（校验非法字符）
+// CreateDir 在 root 下创建子目录（校验非法字符，与 RenameDir 对齐）
 func CreateDir(root, dir string) error {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
 		return fmt.Errorf("目录名为空")
 	}
-	if strings.Contains(dir, "..") || strings.Contains(dir, "~") {
+	if strings.ContainsAny(dir, `\/:*?"<>|`) {
 		return fmt.Errorf("目录名包含非法字符")
+	}
+	if dir == "." || dir == ".." || strings.Contains(dir, ".."+string(filepath.Separator)) || strings.HasSuffix(dir, "..") {
+		return fmt.Errorf("目录名包含非法路径段")
 	}
 	fullPath := filepath.Join(root, dir)
 	return os.MkdirAll(fullPath, 0755)
@@ -127,7 +130,9 @@ func ExtractPreviewTexture(modelPath string) string {
 		}
 		png = extractFirstPNGFrom7z(data, int64(len(data)))
 	} else if ext == ".ysm" {
-		png = extractTextureViaYSM(modelPath)
+		if r, err := extractTextureViaYSM(modelPath); err == nil {
+			png = r
+		}
 	} else if ext == ".json" {
 		// 解压后的 YSM 模型：查找 textures/ 子目录中的 PNG
 		dir := filepath.Dir(modelPath)
@@ -172,25 +177,29 @@ func ExtractPreviewTexture(modelPath string) string {
 }
 
 // extractTextureViaYSM 调 YSM CLI 解析器提取纹理
-func extractTextureViaYSM(modelPath string) []byte {
+func extractTextureViaYSM(modelPath string) ([]byte, error) {
 	parserPath := ysm.FindCLI()
 	if parserPath == "" {
-		return nil
+		return nil, fmt.Errorf("YSM CLI 解析器未找到")
 	}
 	tmpDir, err := os.MkdirTemp("", "ysm-tex-*")
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	defer os.RemoveAll(tmpDir)
 
 	inDir := filepath.Join(tmpDir, "input")
 	outDir := filepath.Join(tmpDir, "output")
-	_ = os.MkdirAll(inDir, 0755)
-	_ = os.MkdirAll(outDir, 0755)
+	if err := os.MkdirAll(inDir, 0755); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(outDir, 0755); err != nil {
+		return nil, err
+	}
 
 	ysmCopy := filepath.Join(inDir, filepath.Base(modelPath))
 	if err := copyFile(modelPath, ysmCopy); err != nil {
-		return nil
+		return nil, err
 	}
 
 	// 超时护栏：YSMParser 若挂起则 goroutine 永久阻塞，故加 30s 硬上限（ADR 审计 P2 #7）
@@ -199,7 +208,7 @@ func extractTextureViaYSM(modelPath string) []byte {
 	cmd := exec.CommandContext(ctx, parserPath, "-i", inDir, "-o", outDir)
 	hideWindow(cmd)
 	if err := cmd.Run(); err != nil {
-		return nil
+		return nil, err
 	}
 
 	var png []byte
@@ -213,7 +222,7 @@ func extractTextureViaYSM(modelPath string) []byte {
 		}
 		return nil
 	})
-	return png
+	return png, nil
 }
 
 func extractFirstPNGFromZip(data []byte, size int64) []byte {

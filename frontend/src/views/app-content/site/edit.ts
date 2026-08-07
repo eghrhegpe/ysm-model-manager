@@ -182,10 +182,12 @@ export function bindEditEvents(state: SiteViewState, refreshView: () => void): C
     });
 
   // ===== 行内编辑 =====
-  // P2 修复：排除预设搜索词卡片（data-edit='preset'）——原选择器 [data-idx][data-fld]
-  // 同时命中预设 input（data-fld="label"），输入会污染 creators[idx].label
-  // （与 syncAllEditInputs 的 .cr-edit-card[data-edit='preset'] 隔离不一致）
-  searchResults.querySelectorAll("[data-idx][data-fld]:not([data-edit='preset'])").forEach((inp) => {
+  // P2 修复（code_review 复核）：排除预设搜索词卡片——data-edit 属性在父卡片
+  // `.cr-edit-card` 上（render.ts:212），input 自身无该属性，属性选择器不继承祖先，
+  // 所以必须用「卡片作用域」选择器（与 syncAllEditInputs 的 L355 同构）才能真正排除
+  searchResults
+    .querySelectorAll(".cr-edit-card:not([data-edit='preset']) [data-idx][data-fld]")
+    .forEach((inp) => {
     inp.addEventListener("input", () => {
       const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
       const fld = (inp as HTMLElement).dataset.fld || "";

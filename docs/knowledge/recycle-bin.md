@@ -46,14 +46,14 @@ use_when:
 - 由 [app_content](./app-content.md) 懒加载初始化，清理函数收进 `_unsubs`
 - 后端删除/恢复实现见 [go_recycle](./go-recycle.md)（删除策略表：符号链接→直接删、硬链接 nlink>1→直接删、普通→优先 `rename` 移入 `.recycle`、仅 EXDEV 跨设备→复制后删，即致命陷阱 #8）
 - 条目整组合并（ADR-038 D3.4）由后端 `recycle.List` 完成，前端一条即一个模型（目录或单文件）
-- 恢复/删除/清空后发 `stats:refresh` + `tree:reload` 联动 [app_tree](./app-tree.md) 与统计
+- 恢复/删除/清空后发 `stats:refresh` + `tree:reload` 联动 [app_tree](./app-tree.md) 与统计（删除路径已补发，P2 修复）
 - 确认弹窗走 [dialog_modal](./dialog-modal.md)，反馈走 [app_toast](./app-toast.md)
 
 ## 不变量
 
 - `_loadGen` generation 守卫：每个 `await` 后 `if (gen !== _loadGen) return`，防止快速切换资源类型时旧结果覆盖新列表
 - 清空回收站与单条永久删除必须先过 `modalConfirm`（danger 样式）二次确认，不可直接执行
-- 列表仅显示路径前缀匹配当前类型 `GetRepoRoot` 根目录的条目，路径分隔符统一转 `/` 再比较
+- 列表仅显示路径前缀匹配当前类型 `GetRepoRoot` 根目录的条目（**带路径分隔符边界**：`path === root || path.startsWith(root + "/")`，防 `ysm2/` 误入 `ysm/`，P3 修复），路径分隔符统一转 `/` 再比较；`GetRepoRoot` 返回空时回退显示全量条目（回退语义属设计取舍）
 - 显示名需剥离 `.ban` 后缀（`replace(/\.(ysm|zip|7z)\.ban$/i, ".$1")`）后走 `renderDisplayName`
 - 列表点击监听只在 init 绑一次并在 cleanup 成对移除；渲染时 `innerHTML` 重建的按钮用 `btn.onclick` 赋值（覆盖式，不累积）
 - 所有异常路径必须 toast 反馈（`friendlyError` 包装），恢复/删除失败需回滚条目 `leaving` 类并把按钮 `disabled` 解锁

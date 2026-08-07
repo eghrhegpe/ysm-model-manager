@@ -26,10 +26,16 @@ func IsYSMJar(jarPath string) bool {
 		if err != nil {
 			continue
 		}
-		data, err := io.ReadAll(io.LimitReader(rc, 1<<20))
+		// P2 修复：limit+1 探测截断——LimitReader 截断后 ReadAll 返回 nil 错误（ADR-033 陷阱），
+		// >1MB 的 mods.toml 会以截断数据继续匹配，导致 IsYSMJar 误判 false
+		const maxModsToml = 1 << 20
+		data, err := io.ReadAll(io.LimitReader(rc, maxModsToml+1))
 		rc.Close()
 		if err != nil {
 			continue
+		}
+		if len(data) > maxModsToml {
+			continue // mods.toml 超过 1MB 上限，视为畸形文件跳过
 		}
 
 		content := string(data)

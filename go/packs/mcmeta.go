@@ -37,8 +37,11 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 			}
 		}
 		pngPath := filepath.Join(path, "pack.png")
-		if png, err := os.ReadFile(pngPath); err == nil {
-			packPng = png
+		// P2 修复：目录形态 pack.png 与 ZIP 分支对齐 10MB 上限（stat 预检防超大图整读内存）
+		if st, err := os.Stat(pngPath); err == nil && st.Size() <= (10<<20) {
+			if png, err := os.ReadFile(pngPath); err == nil {
+				packPng = png
+			}
 		}
 	} else if strings.HasSuffix(strings.ToLower(path), ".zip") {
 		// ZIP 格式资源包
@@ -66,10 +69,12 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 				if err != nil {
 					continue
 				}
-				// 限制 pack.png 大小（最大 10MB）
-				readData, readErr := io.ReadAll(io.LimitReader(rc, 10<<20))
+				// P2 修复：limit+1 探测截断（ADR-033 陷阱）——超 10MB 的 pack.png 被截断后
+				// readErr==nil，损坏 PNG 会被 base64 包装展示。超限时置空跳过
+				const maxPackPng = 10 << 20
+				readData, readErr := io.ReadAll(io.LimitReader(rc, maxPackPng+1))
 				rc.Close()
-				if readErr == nil {
+				if readErr == nil && len(readData) <= maxPackPng {
 					packPng = readData
 				}
 			}

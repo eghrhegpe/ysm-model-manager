@@ -31,32 +31,38 @@ type ResourceType struct {
 }
 
 var (
+	registryMu   sync.Mutex
 	registry     *ResourceTypeRegistry
-	registryOnce sync.Once
 	registryPath = "resource_types.json" // 可被 tests 替换
 )
 
 // SetRegistryPath 设置注册表文件路径（仅测试用）
+// 加锁保护：并发调用 LoadRegistry + SetRegistryPath 触发数据竞争（审计 P1 #2）。
 func SetRegistryPath(path string) {
+	registryMu.Lock()
+	defer registryMu.Unlock()
 	registryPath = path
 	registry = nil
-	registryOnce = sync.Once{}
 }
 
 // LoadRegistry 加载资源类型注册表
 // 优先读取外部 JSON 文件（可通过 SetRegistryPath 自定义路径），
 // 文件不存在或读取失败时回退到编译时嵌入的默认数据。
+// 加锁替代 sync.Once：避免 SetRegistryPath 重置 once 与 Do 之间的竞争。
 func LoadRegistry() *ResourceTypeRegistry {
-	registryOnce.Do(func() {
-		data := loadRegistryBytes()
-		var reg ResourceTypeRegistry
-		if err := json.Unmarshal(data, &reg); err != nil {
-			log.Printf("[types] 解析注册表失败: %v", err)
-			registry = &ResourceTypeRegistry{}
-			return
-		}
-		registry = &reg
-	})
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	if registry != nil {
+		return registry
+	}
+	data := loadRegistryBytes()
+	var reg ResourceTypeRegistry
+	if err := json.Unmarshal(data, &reg); err != nil {
+		log.Printf("[types] 解析注册表失败: %v", err)
+		registry = &ResourceTypeRegistry{}
+		return registry
+	}
+	registry = &reg
 	return registry
 }
 

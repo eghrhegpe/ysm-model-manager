@@ -1,7 +1,7 @@
 # 函数映射表
 
 > AI 找代码用。改功能前先 grep 此表定位文件:行。
-> **自动生成**（2026-08-06）— 由 `scripts/funcmap.mjs` 生成（提取 Go/JS/TS 导出符号，参考 MikuMikuAR docs/function-map.md 风格）。
+> **自动生成**（2026-08-07）— 由 `scripts/funcmap.mjs` 生成（提取 Go/JS/TS 导出符号，参考 MikuMikuAR docs/function-map.md 风格）。
 
 ## 总览
 
@@ -88,18 +88,18 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `CreateDir()` | `go/fileops/fileops:25` | CreateDir 在 root 下创建子目录（校验非法字符） |
-| `RenameDir()` | `go/fileops/fileops:38` | RenameDir 重命名目录（仅改末段，保持父目录） |
-| `RemoveDir()` | `go/fileops/fileops:50` | RemoveDir 递归删除目录 |
-| `RenameFile()` | `go/fileops/fileops:55` | RenameFile 重命名文件（校验非法字符；ysm.json 为模型目录清单，禁止改名） |
-| `FindPreviewImage()` | `go/fileops/fileops:76` | FindPreviewImage 查找模型同目录的预览图并转 data URI |
-| `ExtractPreviewTexture()` | `go/fileops/fileops:102` | ExtractPreviewTexture 从模型文件中提取预览纹理（zip/7z/ysm/json） |
-| `GetPackInfo()` | `go/fileops/fileops:216` | GetPackInfo 读取 ysm-pack.json（root 为空时按绝对路径处理） |
-| `MoveModelFile()` | `go/fileops/fileops:264` | MoveModelFile 移动 src 到 dstDir（保留原名） ADR-038 D3：src 为 ysm.json 时提升为移动整个模型目录（整组语义）；目录直接整组移动 |
-| `CopyModelFile()` | `go/fileops/fileops:282` | CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验） ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 |
-| `DeleteModelFile()` | `go/fileops/fileops:361` | DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）： src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animat |
-| `ToggleModelEnable()` | `go/fileops/fileops:398` | ToggleModelEnable 切换 .ban 状态文件（返回是否处于启用态；缓存失效由薄壳处理） ADR-038 D3.7：src 为 ysm.json 时提升为父目录级 . |
-| `IsFileBanned()` | `go/fileops/fileops:465` | IsFileBanned 判断路径是否被 .ban 标记（文件级或目录级，ADR-038 D3.7） |
+| `CreateDir()` | `go/fileops/fileops:27` | CreateDir 在 root 下创建子目录（校验非法字符） |
+| `RenameDir()` | `go/fileops/fileops:40` | RenameDir 重命名目录（仅改末段，保持父目录） |
+| `RemoveDir()` | `go/fileops/fileops:52` | RemoveDir 递归删除目录 |
+| `RenameFile()` | `go/fileops/fileops:57` | RenameFile 重命名文件（校验非法字符；ysm.json 为模型目录清单，禁止改名） |
+| `FindPreviewImage()` | `go/fileops/fileops:78` | FindPreviewImage 查找模型同目录的预览图并转 data URI |
+| `ExtractPreviewTexture()` | `go/fileops/fileops:104` | ExtractPreviewTexture 从模型文件中提取预览纹理（zip/7z/ysm/json） |
+| `GetPackInfo()` | `go/fileops/fileops:221` | GetPackInfo 读取 ysm-pack.json（root 为空时按绝对路径处理） |
+| `MoveModelFile()` | `go/fileops/fileops:269` | MoveModelFile 移动 src 到 dstDir（保留原名） ADR-038 D3：src 为 ysm.json 时提升为移动整个模型目录（整组语义）；目录直接整组移动 |
+| `CopyModelFile()` | `go/fileops/fileops:287` | CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验） ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 |
+| `DeleteModelFile()` | `go/fileops/fileops:366` | DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）： src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animat |
+| `ToggleModelEnable()` | `go/fileops/fileops:403` | ToggleModelEnable 切换 .ban 状态文件（返回是否处于启用态；缓存失效由薄壳处理） ADR-038 D3.7：src 为 ysm.json 时提升为父目录级 . |
+| `IsFileBanned()` | `go/fileops/fileops:470` | IsFileBanned 判断路径是否被 .ban 标记（文件级或目录级，ADR-038 D3.7） |
 | `WriteModelFolder()` | `go/fileops/folder_import:19` | WriteModelFolder 写入文件夹整组到仓库（YSM 解压目录或普通模型文件夹）。 |
 
 ## Go·文件系统
@@ -320,19 +320,19 @@
 | `SubDirAll()` | `go/types/extensions:148` | SubDirAll 返回所有资源类型在整合包实例中的版本扫描子目录映射 |
 | `AllSubDirs()` | `go/types/extensions:160` | AllSubDirs 返回所有资源类型的版本子目录信息（遍历用） |
 | `SubDirEntry()` | `go/types/extensions:130` | SubDirEntry 资源类型的版本子目录信息 |
-| `SetRegistryPath()` | `go/types/resource:40` | SetRegistryPath 设置注册表文件路径（仅测试用） |
-| `LoadRegistry()` | `go/types/resource:49` | LoadRegistry 加载资源类型注册表 优先读取外部 JSON 文件（可通过 SetRegistryPath 自定义路径）， 文件不存在或读取失败时回退到编译时嵌入的默认数据 |
-| `RegistryType()` | `go/types/resource:89` | RegistryType 按 id 查找资源类型，不存在时返回 nil |
-| `FormatRange.UnmarshalJSON()` | `go/types/resource:106` | UnmarshalJSON 实现 json.Unmarshaler，支持 int / [int] / [int,int] 三种格式 |
-| `PackMeta.Desc()` | `go/types/resource:200` | Desc 返回 description 的可读文本（处理 string / JSON text component 对象 / 数组） |
+| `SetRegistryPath()` | `go/types/resource:41` | SetRegistryPath 设置注册表文件路径（仅测试用） 加锁保护：并发调用 LoadRegistry + SetRegistryPath 触发数据竞争（审计 P1 #2）。 |
+| `LoadRegistry()` | `go/types/resource:52` | LoadRegistry 加载资源类型注册表 优先读取外部 JSON 文件（可通过 SetRegistryPath 自定义路径）， 文件不存在或读取失败时回退到编译时嵌入的默认数据 |
+| `RegistryType()` | `go/types/resource:95` | RegistryType 按 id 查找资源类型，不存在时返回 nil |
+| `FormatRange.UnmarshalJSON()` | `go/types/resource:112` | UnmarshalJSON 实现 json.Unmarshaler，支持 int / [int] / [int,int] 三种格式 |
+| `PackMeta.Desc()` | `go/types/resource:206` | Desc 返回 description 的可读文本（处理 string / JSON text component 对象 / 数组） |
 | `ResourceTypeRegistry()` | `go/types/resource:13` | ResourceTypeRegistry 资源类型注册表 |
 | `ResourceType()` | `go/types/resource:18` | ResourceType 一种受支持的资源类型定义 |
-| `FormatRange()` | `go/types/resource:100` | FormatRange 资源包 supported_formats 范围（可为 int 或 [int,int]） |
-| `PackMeta()` | `go/types/resource:189` | PackMeta 资源包信息（来自 pack.mcmeta） |
-| `LitematicMeta()` | `go/types/resource:207` | LitematicMeta 投影文件元数据（对应 .litematic 中 Metadata compound） |
-| `LitematicBlockStat()` | `go/types/resource:224` | LitematicBlockStat 方块类型统计 |
-| `LitematicVoxelData()` | `go/types/resource:230` | LitematicVoxelData 体素渲染数据 |
-| `VoxelGroup()` | `go/types/resource:238` | VoxelGroup 同一颜色的方块组 |
+| `FormatRange()` | `go/types/resource:106` | FormatRange 资源包 supported_formats 范围（可为 int 或 [int,int]） |
+| `PackMeta()` | `go/types/resource:195` | PackMeta 资源包信息（来自 pack.mcmeta） |
+| `LitematicMeta()` | `go/types/resource:213` | LitematicMeta 投影文件元数据（对应 .litematic 中 Metadata compound） |
+| `LitematicBlockStat()` | `go/types/resource:230` | LitematicBlockStat 方块类型统计 |
+| `LitematicVoxelData()` | `go/types/resource:236` | LitematicVoxelData 体素渲染数据 |
+| `VoxelGroup()` | `go/types/resource:244` | VoxelGroup 同一颜色的方块组 |
 | `e.Error()` | `go/types/types:113` | — |
 | `WindowState()` | `go/types/types:6` | WindowState 窗口位置 |
 | `AuthorInfo()` | `go/types/types:14` | AuthorInfo 作者信息（含模型计数） |
@@ -611,7 +611,7 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `registerContextMenus()` | `frontend/src/core/context-menus:458` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
+| `registerContextMenus()` | `frontend/src/core/context-menus:464` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
 | `__TEST__resetDiary()` | `frontend/src/core/error-diary:16` | 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。 |
 | `registerErrorDiary()` | `frontend/src/core/error-diary:34` | 注册 UI 报错落日记功能。 |
 | `registerGlobalHandlers()` | `frontend/src/core/handlers/global:11` | 注册所有 core 全局 handler，返回 unsub 函数数组（features/views 层注册由 app-content 编排） |
@@ -668,7 +668,7 @@
 | `ImportHistory()` | `frontend/src/features/import-executor:32` | — |
 | `directImport()` | `frontend/src/features/import-executor:76` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
 | `importFolder()` | `frontend/src/features/import-executor:107` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） |
-| `executeCollected()` | `frontend/src/features/import-executor:149` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
+| `executeCollected()` | `frontend/src/features/import-executor:154` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
 | `ImportQueueHost()` | `frontend/src/features/import-queue:24` | app-content 组件实例（initImportQueue 依赖的成员） |
 | `initImportQueue()` | `frontend/src/features/import-queue:30` | 初始化导入队列，返回清理函数 |
 | `loadOldestModel()` | `frontend/src/features/oldest-models:25` | 加载资历最深、仓库评分、热力图和每日推荐 |

@@ -5,6 +5,7 @@ package fileops
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
@@ -182,7 +184,10 @@ func extractTextureViaYSM(modelPath string) []byte {
 		return nil
 	}
 
-	cmd := exec.Command(parserPath, "-i", inDir, "-o", outDir)
+	// 超时护栏：YSMParser 若挂起则 goroutine 永久阻塞，故加 30s 硬上限（ADR 审计 P2 #7）
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, parserPath, "-i", inDir, "-o", outDir)
 	hideWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		return nil

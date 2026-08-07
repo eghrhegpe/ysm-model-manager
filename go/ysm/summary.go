@@ -392,7 +392,7 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 					if err != nil {
 						continue
 					}
-					data, _ := io.ReadAll(rc)
+					data, _ := io.ReadAll(io.LimitReader(rc, 50<<20))
 					rc.Close()
 					if w, h := extractTexSizeFromGeometry(data); w > 0 && h > 0 {
 						stats.TexWidth = w

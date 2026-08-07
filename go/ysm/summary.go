@@ -404,14 +404,14 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 				if strings.HasSuffix(strings.ToLower(f.Name), strings.ToLower(geoPath)) {
 					rc, err := f.Open()
 					if err != nil {
-					 continue
+						continue
 					}
 					// P2 修复：limit+1 探测截断 + 不丢弃 ReadAll 错误（ADR-033 陷阱）
 					const maxTexGeo = 50 << 20
 					data, err := io.ReadAll(io.LimitReader(rc, maxTexGeo+1))
 					rc.Close()
 					if err != nil || len(data) > maxTexGeo {
-					 continue
+						continue
 					}
 					if w, h := extractTexSizeFromGeometry(data); w > 0 && h > 0 {
 						stats.TexWidth = w

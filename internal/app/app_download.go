@@ -38,9 +38,9 @@ type DownloadQueue struct {
 	// epoch 代际计数：CancelQueue / EnqueueDownloads 递增。
 	// process 记录启动时 epoch，退出时仅当代际一致才复位 running / 发 done，
 	// 防止「取消后立即重新入队」时旧 goroutine 与新 goroutine 并发处理同一队列（P1 竞态修复）。
-	epoch     uint64
-	ctx       context.Context
-	cancelFn  context.CancelFunc
+	epoch    uint64
+	ctx      context.Context
+	cancelFn context.CancelFunc
 
 	downloadFn func(ctx context.Context, url, saveDir string) (string, error)
 	emitFn     func(name string, args ...interface{})

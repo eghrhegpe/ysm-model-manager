@@ -118,16 +118,34 @@ function checkKnowledge() {
     const placeholderM = fm.match(/<[a-z_]+>/);
     if (placeholderM) errors.push(`[知识卡] ${cf} 含未填充占位符 <...>`);
 
-    // source_files 存在性
+    // source_files 存在性（inline array 与 block list 两种格式都解析：
+    // `source_files: [a, b]` 或 `source_files:\n  - a`，block list 此前漏检——code_review P2）
     const srcM = fm.match(/^source_files\s*:\s*(.+)$/m);
+    const srcItems = [];
     if (srcM) {
       const list = srcM[1].match(/\[([^\]]*)\]/);
       if (list) {
         for (const s of list[1].split(',')) {
           const v = s.trim().replace(/^['"]|['"]$/g, '');
-          if (v && !fs.existsSync(path.join(ROOT, v))) errors.push(`[知识卡] ${cf} 的 source_files 引用不存在: ${v}`);
+          if (v) srcItems.push(v);
         }
       }
+    } else if (/^source_files\s*:\s*$/m.test(fm)) {
+      // block list：source_files: 下跟随的 `- xxx` 缩进行
+      const lines = fm.split(/\r?\n/);
+      let inSrc = false;
+      for (const line of lines) {
+        if (/^source_files\s*:\s*$/.test(line)) { inSrc = true; continue; }
+        if (inSrc) {
+          if (/^\s*- /.test(line)) {
+            const v = line.replace(/^\s*- /, '').trim().replace(/^['"]|['"]$/g, '');
+            if (v) srcItems.push(v);
+          } else if (/^\S/.test(line)) break; // 离开 source_files 块
+        }
+      }
+    }
+    for (const v of srcItems) {
+      if (!fs.existsSync(path.join(ROOT, v))) errors.push(`[知识卡] ${cf} 的 source_files 引用不存在: ${v}`);
     }
   }
   // 索引断链

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-06T09:44:01.622Z",
+  "generated": "2026-08-07T22:52:25.706Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|jscpd",
@@ -36,12 +36,31 @@
     "src/utils/3d/model3d.ts|types|SpecMeshGroup3D",
     "src/utils/3d/model3d.ts|types|SpecModelGroup3D",
     "src/utils/animation/animation.ts|types|BoneChannels",
+    "src/utils/dom/dialogs/modal.ts|exports|trapFocus",
     "src/utils/format/summarize.ts|types|SummaryAnimGroup",
     "src/utils/format/summarize.ts|types|SummaryAuthor",
     "src/utils/format/summarize.ts|types|SummaryConfigMenu",
     "src/views/app-preview/geometry.ts|types|BedrockBone",
-    "src/views/app-preview/geometry.ts|types|BedrockCube",
-    "src/utils/dom/dialogs/modal.ts|exports|trapFocus"
+    "src/views/app-preview/geometry.ts|types|BedrockCube"
   ],
-  "jscpd": []
+  "jscpd": [
+    "src/app-modules.ts#src/views/app-content/settings/community.ts",
+    "src/core/context-menus.ts#src/core/context-menus.ts",
+    "src/core/handlers/instance-ops.test.ts#src/core/handlers/sync.test.ts",
+    "src/core/handlers/instance-ops.ts#src/views/app-tree/instance-actions.ts",
+    "src/features/import-queue.ts#src/features/import-queue.ts",
+    "src/features/recycle-bin.ts#src/features/recycle-bin.ts",
+    "src/utils/3d/model2d.ts#src/utils/3d/model2d.ts",
+    "src/utils/3d/model3d-spec.test.ts#src/utils/3d/model3d-spec.test.ts",
+    "src/utils/dom/dialogs/adv-filter.ts#src/utils/dom/dialogs/modal.ts",
+    "src/views/app-content/site-view.ts#src/views/app-content/site/types.ts",
+    "src/views/app-content/site/edit.ts#src/views/app-content/site/edit.ts",
+    "src/views/app-preview/litematic-3d.ts#src/views/app-preview/skeleton.ts",
+    "src/views/app-preview/wasm.ts#src/views/app-preview/wasm.ts",
+    "src/views/app-sync-manager/index.ts#src/views/app-sync-manager/index.ts",
+    "src/views/app-tree/bus-handlers.ts#src/views/app-tree/bus-handlers.ts",
+    "src/views/app-tree/instance-actions.ts#src/views/app-tree/instance-actions.ts",
+    "src/views/app-tree/row-tpl-list.ts#src/views/app-tree/row-tpl.ts",
+    "src/views/app-tree/toolbar-events.ts#src/views/app-tree/toolbar-events.ts"
+  ]
 }

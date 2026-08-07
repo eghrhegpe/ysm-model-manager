@@ -113,8 +113,10 @@ function parseJscpd() {
     const data = JSON.parse(fs.readFileSync(JSCPD_REPORT, 'utf-8'));
     const clones = data.duplicates || [];
     return clones.map((c) => {
-      const f1 = c.firstFile?.name || '?';
-      const f2 = c.secondFile?.name || '?';
+      // jscpd 在 Windows 输出反斜杠路径（如 views\a.ts），基线为正斜杠——
+      // 统一 toPosix 归一化，否则跨平台比对全部误判「新增」（code_review P3）
+      const f1 = (c.firstFile?.name || '?').replace(/\\/g, '/');
+      const f2 = (c.secondFile?.name || '?').replace(/\\/g, '/');
       // key 用文件对级（去行号）：克隆位置随代码微移漂移时，不产生新 key 误报新增
       return `${f1}#${f2}`;
     });
@@ -130,11 +132,12 @@ function main() {
   const knipOut = run('knip', ['--reporter', 'json'], { allowExit1: true });
   if (knipOut !== null) knipFindings = parseKnip(knipOut);
 
-  const jscpdOut = run('jscpd', ['--pattern', 'js/**/*.{js,ts}', '--min-lines', '10', '--min-tokens', '50', '--reporters', 'json', '--silent']);
+  const jscpdOut = run('jscpd', ['--pattern', 'src/**/*.{js,ts}', '--min-lines', '10', '--min-tokens', '50', '--reporters', 'json', '--silent'], { allowExit1: true });
   if (jscpdOut !== null) {
     jscpdFindings = parseJscpd();
-    // 清理 jscpd 产物目录（report/ 是分析副产物，不留仓库）
-    fs.rmSync(path.dirname(JSCPD_REPORT), { recursive: true, force: true });
+    // 清理 jscpd 产物文件（report/jscpd-report.json 是分析副产物，不留仓库；
+    // 只删报告文件本身，不 rmSync 整个 report/ 目录——避免误删其他产物，code_review P3）
+    fs.rmSync(JSCPD_REPORT, { force: true });
   }
 
   const current = { knip: [...new Set(knipFindings)].sort(), jscpd: [...new Set(jscpdFindings)].sort() };

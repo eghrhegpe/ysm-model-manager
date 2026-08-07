@@ -1,4 +1,14 @@
 #!/usr/bin/env node
+/**
+ * knowledge-affected-hint.mjs — 知识卡漂移主动防御 · prepare-commit-msg 辅助脚本（非阻断）。
+ *
+ * 设计意图：由 .githooks/prepare-commit-msg 薄壳调用，把"受本次 staged 变更影响的知识卡"
+ * 以终端（stderr）即时提醒的方式输出，不写入 commit message body。
+ *
+ * 依赖：node:child_process / node:path / node:url / 本地模块
+ * 用法：由 .githooks/prepare-commit-msg 薄壳调用（非直接命令行入口）
+ * 退出码：恒 0（非阻断）；任何异常仅静默跳过，绝不阻塞提交。
+ */
 // scripts/hooks/knowledge-affected-hint.mjs
 //
 // 知识卡漂移主动防御 · prepare-commit-msg 辅助脚本（非阻断）。

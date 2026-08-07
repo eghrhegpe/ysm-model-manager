@@ -1,4 +1,14 @@
 #!/usr/bin/env node
+/**
+ * coverage-suggest-hint.mjs — 覆盖率建议 · prepare-commit-msg 辅助脚本（非阻断）。
+ *
+ * 设计意图：由 .githooks/prepare-commit-msg 薄壳调用，把"低于语句覆盖率阈值的源文件"
+ * 以终端（stderr）即时提醒的方式输出，不写入 commit message body。
+ *
+ * 依赖：node:child_process / node:path / node:url / 本地模块
+ * 用法：由 .githooks/prepare-commit-msg 薄壳调用（非直接命令行入口）
+ * 退出码：恒 0（非阻断）；任何异常仅静默跳过，绝不阻塞提交。
+ */
 // scripts/hooks/coverage-suggest-hint.mjs
 //
 // 覆盖率建议 · prepare-commit-msg 辅助脚本（非阻断）。

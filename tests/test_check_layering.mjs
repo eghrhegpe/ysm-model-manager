@@ -15,6 +15,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+// 静态 import：check-layering.mjs 带 invokedDirectly 守卫，被 import 时不执行 main()
+import { matchImports } from '../scripts/check-layering.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
@@ -75,6 +77,53 @@ check('--update 生成合法基线（幂等性：连续两次 update 后 tracked
   const dataAfter = JSON.parse(after);
   assert.equal(dataAfter._summary.tracked, dataBefore._summary.tracked, 'update 不应改变 tracked 数量');
   assert.equal(dataAfter._summary.regressions, 0, 'update 后不应有回归');
+});
+
+// ── matchImports 纯函数（多行 import / type-only 豁免 / 模板字符串剥离）──
+check('matchImports 捕获单行 import 并正确标记 type-only', () => {
+  const r = matchImports('import { a } from "./views/foo.ts";\nimport type { B } from "./services/bar.ts";');
+  assert.equal(r.length, 2);
+  assert.equal(r[0].spec, './views/foo.ts');
+  assert.equal(r[0].typeOnly, false);
+  assert.equal(r[1].spec, './services/bar.ts');
+  assert.equal(r[1].typeOnly, true);
+});
+
+check('matchImports 捕获多行具名 import（from 在后续行），行号为起始行', () => {
+  const text = 'import {\n  type A,\n  b,\n} from "./views/foo.ts";\nconst x = 1;\n';
+  const r = matchImports(text);
+  assert.equal(r.length, 1, '多行 import 应被捕获（修复前漏报）');
+  assert.equal(r[0].spec, './views/foo.ts');
+  assert.equal(r[0].line, 1, '行号应为 import 起始行');
+});
+
+check('matchImports 多行全 type 具名 import 判定为 type-only（豁免）', () => {
+  const text = 'import {\n  type A,\n  type B as C,\n} from "./views/foo.ts";\n';
+  const r = matchImports(text);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].typeOnly, true, '多行全 type 具名 import 应豁免运行时耦合');
+});
+
+check('matchImports 剥离模板字面量/注释内的 import 形状文本（防幽灵违规）', () => {
+  const text = [
+    'const s = `',
+    '  import {',
+    '    a,',
+    "  } from './views/foo.ts';",
+    '`;',
+    '// import { x } from "./features/bar.ts";',
+    'import { real } from "./core/real.ts";',
+  ].join('\n');
+  const r = matchImports(text);
+  assert.equal(r.length, 1, '模板字面量/注释内的 import 形状文本不应被捕获');
+  assert.equal(r[0].spec, './core/real.ts');
+});
+
+check('matchImports 捕获副作用导入（import "x"）并标记运行时', () => {
+  const r = matchImports('import "./styles.css";\n');
+  assert.equal(r.length, 1);
+  assert.equal(r[0].spec, './styles.css');
+  assert.equal(r[0].typeOnly, false);
 });
 
 if (fails.length) {

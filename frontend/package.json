@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "@types/three": "^0.185.3",
+    "@types/three": "^0.185.4",
     "@vitest/coverage-v8": "^4.1.10",
     "happy-dom": "^20.11.1",
     "jscpd": "^5.0.14",
@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@wailsio/runtime": "^3.0.0-alpha.97",
-    "three": "^0.160.0"
+    "three": "^0.185.1"
   },
   "knip": {
     "ignoreDependencies": [

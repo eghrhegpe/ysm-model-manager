@@ -3,22 +3,21 @@
 //
 // 知识卡漂移主动防御 · prepare-commit-msg 辅助脚本（非阻断）。
 // 由 .githooks/prepare-commit-msg 薄壳调用，把"受本次 staged 变更影响的知识卡"
-// 写入 commit message body，随 commit 进入 PR，供 review 参考。
+// 以终端（stderr）即时提醒的方式输出，不写入 commit message body。
 //
 // 设计要点：
 //   - 永远 exit 0（非阻断）；任何异常仅静默跳过，绝不阻塞提交。
-//   - 幂等：追加前先剥离旧区块，--amend 重跑不会重复。
+//   - 仅终端输出：code review 不核验文档，写进 body 无受益方；终端提醒已能即时触达
+//     AI/提交者，故不污染 commit 历史。
 //   - merge / squash 提交跳过（message 固定、diff 巨大，无追加价值）。
 //   - 逃生阀：YSM_SKIP_KNOWLEDGE_HINT=1 git commit
 //
 // 纯函数（stripBlock / buildBlock）导出供契约测试复用，主流程用 import.meta 守卫。
 
-import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { getRoot } from '../_lib/scan-files.mjs';
-import { normalizeGitPath } from '../_lib/posix-gitpath.mjs';
 
 export const BLOCK_START = '📚 受影响知识卡（建议同步复核 docs/knowledge）：';
 export const BLOCK_END = '📚 ──END──';
@@ -83,27 +82,14 @@ function main() {
   const cards = getAffectedCards(ROOT, changed);
   if (cards.length === 0) return;
 
-  const absFile = normalizeGitPath(msgFile, ROOT);
-  let msg;
-  try {
-    msg = fs.readFileSync(absFile, 'utf8');
-  } catch {
-    return;
-  }
-
-  const stripped = stripBlock(msg);
-  const block = '\n' + buildBlock(cards);
-  const next = stripped.trimEnd() + block + '\n';
-  try {
-    fs.writeFileSync(absFile, next);
-    // 摘要走 stderr：AI 的感知通道是终端，commit body 是给 PR review 看的（AI 是写信人不是收信人）
-    console.error(
-      `[prepare-commit-msg] 📚 ${cards.length} 张知识卡受影响，已写入 commit body：` +
-        cards.map((c) => `docs/knowledge/${c}.md`).join('、'),
-    );
-  } catch {
-    /* 非阻断：写失败不影响提交 */
-  }
+  // 仅终端提醒：不写 commit body。
+  // 原设计把受影响知识卡写进 body 供 PR reviewer 复核文档，但 code review 不核验文档，
+  // body 追加无受益方；终端 stderr 摘要已能即时提醒提交者/AI，故改为仅终端输出。
+  console.error(
+    `[prepare-commit-msg] 📚 ${cards.length} 张知识卡受影响，建议复核：` +
+      cards.map((c) => `docs/knowledge/${c}.md`).join('、') +
+      `（仅终端提醒，未写入 commit body）`,
+  );
 }
 
 // 仅当作为入口直接执行时才跑主流程（被测试 import 时不触发）

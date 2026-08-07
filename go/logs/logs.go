@@ -46,11 +46,21 @@ func (l *Logger) load() {
 		return
 	}
 	if err := json.Unmarshal(data, &l.logs); err != nil {
-		log.Printf("[logs] 解析日志文件失败: %v, 将创建新日志", err)
+		// P2 修复：损坏 JSON 备份 .corrupt 再置空（对齐 go/tags 已修模式），
+		// 防止损坏现场被下次 save 覆盖、旧数据不可溯
+		log.Printf("[logs] 解析日志文件失败: %v, 备份为 .corrupt 后创建新日志", err)
+		corrupt := l.path + ".corrupt"
+		if renErr := os.Rename(l.path, corrupt); renErr != nil {
+			log.Printf("[logs] 备份损坏日志失败: %v", renErr)
+		}
 		l.logs = []types.ImportLog{}
 	}
 	if l.logs == nil {
 		l.logs = []types.ImportLog{}
+	}
+	// P4 修复：合法但超 500 条的旧文件 load 后也裁到上限（与写入路径口径一致）
+	if len(l.logs) > 500 {
+		l.logs = l.logs[len(l.logs)-500:]
 	}
 }
 
@@ -69,8 +79,16 @@ func (l *Logger) save() {
 			return
 		}
 	}
-	if err := os.WriteFile(l.path, data, 0644); err != nil {
+	// P1 修复：写临时文件 + rename 原子替换（对齐 go/tags 已修模式）——
+	// 原 os.WriteFile 直接覆盖，崩溃/断电留半截 JSON，下次 load 解析失败全部历史丢失
+	tmp := l.path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0644); err != nil {
 		log.Printf("[logs] 写入日志文件失败: %v", err)
+		return
+	}
+	if err := os.Rename(tmp, l.path); err != nil {
+		_ = os.Remove(tmp)
+		log.Printf("[logs] 替换日志文件失败: %v", err)
 	}
 }
 

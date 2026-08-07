@@ -40,14 +40,14 @@ function findCycles(graph) {
     for (const next of graph.get(node) || []) {
       const c = color.get(next) ?? WHITE;
       if (c === WHITE) {
-        if (dfs(next)) return true;
+        dfs(next);
       } else if (c === GRAY) {
         // 找到环：stack 中 next 位置截取，去掉首尾重复（next 即栈内起点）
         const start = stack.indexOf(next);
+        if (start < 0) continue; // 防御：颜色残留兜底（正常流程 GRAY 必在栈内）
         const display = stack.slice(start); // [a, b]（a 在栈中）
         const key = [...display].sort().join('→');
         cycles.set(key, display);
-        return true; // 剪枝防指数爆炸
       }
     }
     stack.pop();
@@ -81,8 +81,16 @@ function main() {
     const deps = new Set();
     for (const m of text.matchAll(IMPORT_RE)) {
       // type-only import（`import type {...} from`）编译期擦除，不构成运行时依赖——
-      // 计入会产生假阳性环（如 app-tree/events.ts `import type { AppTree }`）
-      if (/^\s*import\s+type\b/.test(m[0])) continue;
+      // 计入会产生假阳性环（如 app-tree/events.ts `import type { AppTree }`）。
+      // 同时覆盖内联 type 形式：`import { type X } from` / `export type {} from` /
+      // `export { type X } from`（全部具名均为 type 前缀 → 纯类型转发，code_review P2）。
+      const stmt = m[0];
+      const braceM = stmt.match(/\{([^}]*)\}/);
+      const allTypeNamed = braceM
+        ? braceM[1].split(',').map((s) => s.trim()).filter(Boolean).length > 0 &&
+          braceM[1].split(',').map((s) => s.trim()).filter(Boolean).every((s) => /^type\s+/.test(s))
+        : false;
+      if (/^\s*import\s+type\b/.test(stmt) || /^\s*export\s+type\b/.test(stmt) || allTypeNamed) continue;
       const target = resolveImport(f, m[1], moduleSet);
       if (target && target !== f) deps.add(target);
     }

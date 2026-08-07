@@ -79,9 +79,11 @@ function resolveTarget(spec, fromSrcRel) {
 }
 
 /* ---------- 扫描 ---------- */
-// 匹配 import / export-from 语句，捕获是否 type-only 与来源字符串
-const IMPORT_RE = /^\s*(?:import|export)\s+(type\s+)?([^'"]*?)from\s*['"]([^'"]+)['"]/;
-const BARE_IMPORT_RE = /^\s*import\s*['"]([^'"]+)['"]/;
+// 匹配 import / export-from 语句，捕获是否 type-only 与来源字符串。
+// 用 gm + matchAll 对全文匹配（[^'"]*? 可跨行）：多行具名 import（import {\n a,\n} from 'x'）
+// 的 from 在后续行时逐行 exec 会漏报（code_review 实证 frontend/src 存在多行 import）。
+const IMPORT_RE = /^\s*(?:import|export)\s+(type\s+)?([^'"]*?)from\s*['"]([^'"]+)['"]/gm;
+const BARE_IMPORT_RE = /^\s*import\s*['"]([^'"]+)['"]/gm;
 
 const violations = [];
 
@@ -90,22 +92,11 @@ for (const abs of walk(SRC_ROOT, SCAN_OPTS)) {
   const fromLayer = layerOf(srcRel);
   if (!fromLayer || fromLayer === 'views') continue; // views 是顶层，向下依赖合法
 
-  const lines = readFileSync(abs, 'utf8').split('\n');
-  lines.forEach((line, i) => {
-    let spec = null;
-    let typeOnly = false;
+  const text = readFileSync(abs, 'utf8');
+  const lineNo = (m) => text.slice(0, m.index).split('\n').length; // 1-based
 
-    const m = IMPORT_RE.exec(line);
-    if (m) {
-      spec = m[3];
-      // `import type … from`（整句 type-only），或具名项全部带 `type` 前缀
-      typeOnly = Boolean(m[1]) || /^\s*\{\s*(?:type\s+\w+(?:\s+as\s+\w+)?\s*,?\s*)+\}\s*$/.test(m[2]);
-    } else {
-      const b = BARE_IMPORT_RE.exec(line);
-      if (b) spec = b[1]; // 副作用导入，必为运行时
-    }
+  const evaluate = (spec, typeOnly, line) => {
     if (!spec) return;
-
     const target = resolveTarget(spec, srcRel);
     if (!target) return;
     const toLayer = layerOf(target);
@@ -129,8 +120,18 @@ for (const abs of walk(SRC_ROOT, SCAN_OPTS)) {
     }
     if (!rule) return;
 
-    violations.push({ rule, from: srcRel, line: i + 1, to: target, fromLayer, toLayer });
-  });
+    violations.push({ rule, from: srcRel, line, to: target, fromLayer, toLayer });
+  };
+
+  for (const m of text.matchAll(IMPORT_RE)) {
+    // `import type … from`（整句 type-only），或具名项全部带 `type` 前缀
+    const typeOnly =
+      Boolean(m[1]) || /^\s*\{\s*(?:type\s+\w+(?:\s+as\s+\w+)?\s*,?\s*)+\}\s*$/.test(m[2]);
+    evaluate(m[3], typeOnly, lineNo(m));
+  }
+  for (const b of text.matchAll(BARE_IMPORT_RE)) {
+    evaluate(b[1], false, lineNo(b)); // 副作用导入，必为运行时
+  }
 }
 
 /* ---------- 基线比对 ---------- */

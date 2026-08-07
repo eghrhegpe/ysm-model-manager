@@ -78,6 +78,26 @@ describe("事件总线 — once", () => {
     bus.emit("stats:refresh");
     expect(count).toBe(1);
   });
+
+  it("once 返回退订函数，触发前调用则幽灵监听器被移除", () => {
+    // P2 修复回归测试（code_review）：once 现在返回 () => void（与 on 契约对齐），
+    // 事件永不触发时调用方可主动移除 wrapper，防其永久驻留全局单例 listeners
+    let count = 0;
+    const unsub = bus.once("stats:refresh", () => { count++; });
+    unsub(); // 触发前退订
+    bus.emit("stats:refresh");
+    bus.emit("stats:refresh");
+    expect(count).toBe(0);
+  });
+
+  it("once 退订后再注册仍可正常触发", () => {
+    let count = 0;
+    const unsub1 = bus.once("stats:refresh", () => { count++; });
+    unsub1();
+    bus.once("stats:refresh", () => { count++; });
+    bus.emit("stats:refresh");
+    expect(count).toBe(1);
+  });
 });
 
 describe("事件总线 — 带 payload 事件", () => {

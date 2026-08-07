@@ -45,6 +45,13 @@ function walkExt(dir, exts, out = []) {
 
 /** JS/TS：提取全部导出符号（export 声明 + export {} 聚合）。 */
 function getJsExportedSymbols(text) {
+  // 先剥离注释与字符串字面量，避免注释/字符串内的 `export { x }` 伪匹配产生幽灵符号（与 Go 路径对齐）
+  const stripped = text
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/"(?:\\.|[^"\\])*"/g, '""')
+    .replace(/'(?:\\.|[^'\\])*'/g, "''")
+    .replace(/`(?:\\.|[^`\\])*`/g, '``')
+    .replace(/\/\/.*$/gm, ' ');
   const syms = [];
   const seen = new Set();
   const push = (s) => {
@@ -57,7 +64,7 @@ function getJsExportedSymbols(text) {
 
   // export { a, b as c, type D } 块（可多行）
   const reBlock = /export\s*(?:type\s+)?\{\s*([\s\S]*?)\}/g;
-  while ((m = reBlock.exec(text))) {
+  while ((m = reBlock.exec(stripped))) {
     m[1]
       .split(',')
       .map((s) => s.trim())
@@ -71,15 +78,15 @@ function getJsExportedSymbols(text) {
 
   // export default function/class/const/... Name
   const reDefaultDecl = /export\s+default\s+(?:async\s+)?(?:function|class|const|let|var|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
-  while ((m = reDefaultDecl.exec(text))) push(m[1]);
+  while ((m = reDefaultDecl.exec(stripped))) push(m[1]);
 
   // export function/const/... Name
   const reDecl = /export\s+(?:async\s+)?(?:function|const|let|var|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
-  while ((m = reDecl.exec(text))) push(m[1]);
+  while ((m = reDecl.exec(stripped))) push(m[1]);
 
   // export default <Identifier>（排除关键字）
   const reDefaultId = /export\s+default\s+(?!(?:function|class|const|let|var|interface|type|enum)\b)([A-Za-z_$][\w$]*)/g;
-  while ((m = reDefaultId.exec(text))) push(m[1]);
+  while ((m = reDefaultId.exec(stripped))) push(m[1]);
 
   return syms;
 }
@@ -114,7 +121,7 @@ function getGoExportedSymbols(text) {
     }
   }
 
-  const reType = /^type\s+([A-Za-z_$][\w$]*)\s+/gm;
+  const reType = /^type\s+([A-Z][\w$]*)\s+/gm; // 仅导出类型（首字母大写），与 reFn 的导出过滤一致
   while ((m = reType.exec(stripped))) push(m[1]);
 
   return syms;
@@ -132,7 +139,10 @@ function findLine(filePath, sym, lang) {
   if (lang === 'go') {
     const dot = sym.indexOf('.');
     const methodName = dot >= 0 ? sym.slice(dot + 1) : sym;
-    const re = new RegExp(`^(?:func\\s+(?:\\([^)]*\\)\\s+)?|type\\s+)${escapeRe(methodName)}\\b`);
+    // 方法符号 Type.Method：用 receiver 类型收窄匹配，避免同文件不同 type 的同名方法行号指错
+    const recvType = dot >= 0 ? sym.slice(0, dot) : '';
+    const recvPat = recvType ? `\\([^)]*\\*?${escapeRe(recvType)}\\)\\s+` : '(?:\\([^)]*\\)\\s+)?';
+    const re = new RegExp(`^(?:func\\s+${recvPat}|type\\s+)${escapeRe(methodName)}\\b`);
     for (let i = 0; i < lines.length; i++) if (re.test(lines[i])) return i + 1;
   } else {
     const re = new RegExp(
@@ -154,7 +164,10 @@ function extractDocSummary(filePath, sym, lang) {
   if (lang === 'go') {
     const dot = sym.indexOf('.');
     const methodName = dot >= 0 ? sym.slice(dot + 1) : sym;
-    const re = new RegExp(`^(?:func\\s+(?:\\([^)]*\\)\\s+)?|type\\s+)${escapeRe(methodName)}\\b`);
+    // 与 findLine 同步：receiver 类型收窄匹配，防同名方法指错定义行
+    const recvType = dot >= 0 ? sym.slice(0, dot) : '';
+    const recvPat = recvType ? `\\([^)]*\\*?${escapeRe(recvType)}\\)\\s+` : '(?:\\([^)]*\\)\\s+)?';
+    const re = new RegExp(`^(?:func\\s+${recvPat}|type\\s+)${escapeRe(methodName)}\\b`);
     for (let i = 0; i < lines.length; i++) if (re.test(lines[i])) { defIdx = i; break; }
     if (defIdx <= 0) return '';
     let i = defIdx - 1;
@@ -325,10 +338,18 @@ function renderMarkdown(groups, sortedKeys) {
 
 function main() {
   const args = process.argv.slice(2);
+  if (args.includes('-h') || args.includes('--help')) {
+    console.error('用法: node scripts/funcmap.mjs [-o|--output <path>]\n默认输出 docs/funcmap.md');
+    process.exit(0);
+  }
   const outIdx = args.indexOf('-o') >= 0 ? args.indexOf('-o') : args.indexOf('--output');
   let outputFile = 'docs/funcmap.md';
   if (outIdx >= 0) {
     const v = args[outIdx + 1];
+    if (!v || v.startsWith('-')) {
+      console.error('✖ -o/--output 需要一个文件路径参数');
+      process.exit(2);
+    }
     // 兼容历史命令 `-o funcmap.md` → 重定向到 docs/funcmap.md
     outputFile = path.basename(v) === 'funcmap.md' && path.dirname(v) === '.' ? 'docs/funcmap.md' : v;
   }

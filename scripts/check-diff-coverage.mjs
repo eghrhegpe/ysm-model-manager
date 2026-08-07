@@ -248,6 +248,10 @@ function main() {
   const base = args.base ?? 'origin/main';
   const head = args.head ?? 'HEAD';
   const threshold = Number(args.threshold ?? '60');
+  if (!Number.isFinite(threshold)) {
+    console.error(`[diff-coverage] --threshold 需为数字，收到：${args.threshold ?? '60'}`);
+    process.exit(USAGE_ERROR);
+  }
   const uncommitted = Boolean(args.uncommitted);
   const staged = Boolean(args.staged);
   const json = Boolean(args.json);
@@ -255,8 +259,9 @@ function main() {
 
   if (!existsSync(coveragePath)) {
     if (suggest) {
-      // 非阻断建议模式：无覆盖率数据时静默跳过，不阻塞提交
-      console.log(`[diff-coverage] 未找到覆盖率文件：${coveragePath}（建议模式：先跑 \`vitest run --coverage\` 可生成建议）`);
+      // 非阻断建议模式：无覆盖率数据时静默跳过，不阻塞提交。
+      // 提示走 stderr，保持 stdout 干净（消费方 coverage-suggest-hint 把 stdout 原样包进区块）
+      console.error(`[diff-coverage] 未找到覆盖率文件：${coveragePath}（建议模式：先跑 \`vitest run --coverage\` 可生成建议）`);
       process.exit(0);
     }
     console.error(`[diff-coverage] 未找到覆盖率文件：${coveragePath}`);
@@ -273,7 +278,7 @@ function main() {
   // 门禁模式（默认/json/文本）fail-closed 退出 USAGE_ERROR；--suggest 提示模式保持非阻断。
   const failOrWarn = (msg) => {
     if (suggest) {
-      console.log(`[diff-coverage] ${msg}（建议模式：跳过）`);
+      console.error(`[diff-coverage] ${msg}（建议模式：跳过）`);
       process.exit(0);
     }
     console.error(`[diff-coverage] ${msg}`);

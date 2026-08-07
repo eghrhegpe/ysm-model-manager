@@ -52,13 +52,13 @@ use_when:
 
 - Litematica packed LongArray 是**小端位序**（`extractBits` 从每个 long 的 LSB 连续排列、可跨 64 位边界），与原版 1.16+ 大端 packed array 相反——搞反会导致 3D 预览全乱
 - `extractBits` 必须做越界防护：`longIdx >= len(longs)` 直接返回 0，跨 64 位边界时若无后继 long 只取低位（high 位留零）（`nbt.go:109` / `nbt.go:121`）。声明的 `Size` 与实际 `BlockStates` 长度不匹配的损坏/截断文件会让索引跑出数组，缺这两道判断就是解析 panic；另有 `bitCount == 0` 早返回 0（`nbt.go:101`），对应 `bitsPerEntry` 在 palette ≤1 时返回 0 的单方块情形
-- 越界防护是**两层**的：`extractBits` 保证不越 `longs` 数组，取出的 palette 索引还要再过 `paletteIdx < 0 || paletteIdx >= len(info.palette)` 的范围判断才用于取色（`voxel.go:138`，structure NBT 同理见 `voxel.go:280`）——损坏文件可能解出合法位宽但超出 palette 范围的索引
+- 越界防护是**两层**的：`extractBits` 保证不越 `longs` 数组，取出的 palette 索引还要再过 `paletteIdx < 0 || paletteIdx >= len(info.palette)` 的范围判断才用于取色（`voxel.go:138`，structure NBT 同理见 `voxel.go:291`）——损坏文件可能解出合法位宽但超出 palette 范围的索引；`buildRegionInfo` 另做 Size 与 BlockStates 容量交叉校验（总方块数 ≤ longs 可承载位数 `len*64/bpe`，超限丢弃该 region，防损坏文件超大 Size DoS，P3 修复）
 - 方块线性索引存储顺序为 X→Z→Y：`i = x + z*sizeX + y*sizeX*sizeZ`
 - palette 索引 0 视为空气跳过（三格式一致：litematic 的 `paletteIdx==0`、structure NBT 的 `state==0`、schematic 的 `blockID==0`）
 - **先截断后过滤**：`groupVoxelStream` 按 `maxBlocks` 截断并置 `Truncated=true`（`voxel.go:58`），`finalizeVoxelData` 才做 `filterSurfaceOnly` 表面过滤（`voxel.go:74`），因此返回的体素数通常远小于 `maxBlocks`（上限由 AppConfig.VoxelMaxBlocks 控制，默认 200000）。截断判定在取下一块之前，故方块数恰好等于 `maxBlocks` 时也会置 `Truncated=true`
 - 截断 / 分组 / 表面过滤只在公共段实现一次，三个 Build* 入口不得各自手写，否则行为漂移
 - `.litematic` / `.schematic` / `.nbt` 一律经 `openGzRoot` 走 gzip 解压，非 gzip 文件直接报错
-- `.schematic` 双路径：有 `Palette` + `BlockData`（varint）走 v2，否则读 `Blocks` 字节数组走 v1 并用 `ResolveBlockName(id, data)` 兜底取色，未知方块回退 `#7F7F7F`
+- `.schematic` 双路径：有 `Palette` + `BlockData`（varint）走 v2，否则读 `Blocks` 字节数组走 v1——v1 有 Palette 时优先用 paletteMap 取色，无 Palette 才用 `ResolveBlockName(id, data)` 兜底，未知方块回退 `#7F7F7F`
 
 ## 相关
 

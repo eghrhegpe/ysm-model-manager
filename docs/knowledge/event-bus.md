@@ -30,9 +30,9 @@ use_when:
 
 ## 对外 API / 入口
 
-- `createBus` — 创建事件总线实例
-- `on` / `off` / `once` / `emit` — 订阅 / 退订 / 一次性 / 发布（`Bus` 接口）
-- `BusEvents` — 事件名 → payload 类型映射（类型化总线，`BusEventName` 联合类型）；`on` 返回取消订阅函数供 `_unsubs` 收集
+- `createBus` — 创建事件总线实例（**模块内私有，未导出**——全局仅 `bus` 单例；如需测试替身，`Design.md` 声称的 `setBus(mockBus)` 当前**不存在**，测试用真单例 + 手工清理）
+- `on` / `off` / `once` / `emit` — 订阅 / 退订 / 一次性 / 发布（`Bus` 接口）；`on` 返回取消订阅函数供 `_unsubs` 收集；**`once` 同样返回退订函数**（P2 修复：事件永不触发时调用方可主动移除 wrapper，防幽灵监听器——历史「once off 错对象」风险被设计缓解）
+- `BusEvents` — 事件名 → payload 类型映射（类型化总线，`BusEventName` 联合类型）；`window.bus` 挂载为 index.html 内联脚本兼容句柄（类型化 `declare global`，不违反零 `window.__*` 红线——红线正则只匹配 `window\.__`）
 
 ## 与其他子系统关系
 

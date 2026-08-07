@@ -1,6 +1,8 @@
 package packs
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -105,6 +107,77 @@ func TestReadPackMeta_InvalidJSON(t *testing.T) {
 	_, _, err := ReadPackMeta(dir)
 	if err == nil {
 		t.Fatal("ReadPackMeta(invalid JSON) = nil, want error")
+	}
+}
+
+// writeZipPack 构造 ZIP 资源包（pack.mcmeta + 可选 pack.png），返回文件路径
+func writeZipPack(t *testing.T, png []byte) string {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	mcmeta := `{"pack":{"pack_format":15,"description":"测试"}}`
+	if w, err := zw.Create("pack.mcmeta"); err != nil {
+		t.Fatal(err)
+	} else if _, err := w.Write([]byte(mcmeta)); err != nil {
+		t.Fatal(err)
+	}
+	if png != nil {
+		if w, err := zw.Create("pack.png"); err != nil {
+			t.Fatal(err)
+		} else if _, err := w.Write(png); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "pack.zip")
+	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// P3 修复（code_review）：ADR-033 截断探测边界回归——pack.png 恰好 10MB 保留、
+// 10MB+1 截断置空（limit+1 探测），防未来回退成普通 LimitReader 后损坏缩略图静默展示
+func TestReadPackMeta_ZipPackPngAtLimit(t *testing.T) {
+	path := writeZipPack(t, bytes.Repeat([]byte{1}, 10<<20))
+	_, thumb, err := ReadPackMeta(path)
+	if err != nil {
+		t.Fatalf("ReadPackMeta() = %v", err)
+	}
+	if thumb == "" {
+		t.Fatal("pack.png 恰好 10MB 应保留缩略图")
+	}
+}
+
+func TestReadPackMeta_ZipPackPngOverLimit(t *testing.T) {
+	path := writeZipPack(t, bytes.Repeat([]byte{1}, (10<<20)+1))
+	_, thumb, err := ReadPackMeta(path)
+	if err != nil {
+		t.Fatalf("ReadPackMeta() = %v", err)
+	}
+	if thumb != "" {
+		t.Fatal("pack.png 超过 10MB 应置空缩略图（截断检测），实际返回了缩略图")
+	}
+}
+
+func TestReadPackMeta_DirPackPngOverLimit(t *testing.T) {
+	dir := t.TempDir()
+	metaPath := filepath.Join(dir, "pack.mcmeta")
+	if err := os.WriteFile(metaPath, []byte(`{"pack":{"pack_format":15,"description":"测试"}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// 目录形态 pack.png > 10MB：stat 预检跳过
+	if err := os.WriteFile(filepath.Join(dir, "pack.png"), bytes.Repeat([]byte{1}, (10<<20)+1), 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, thumb, err := ReadPackMeta(dir)
+	if err != nil {
+		t.Fatalf("ReadPackMeta(dir) = %v", err)
+	}
+	if thumb != "" {
+		t.Fatal("目录形态 pack.png 超过 10MB 应置空缩略图，实际返回了缩略图")
 	}
 }
 

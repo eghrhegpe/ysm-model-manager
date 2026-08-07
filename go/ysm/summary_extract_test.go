@@ -70,6 +70,28 @@ func minimalYsmJSON() string {
 }`
 }
 
+// P3 修复（code_review）：ADR-033 截断探测边界回归——裸 ysm.json 超过 50MB 应拒绝解析
+func TestExtractYsmSummary_PlainJSONOverLimit(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "model.json")
+	// 50MB+1：触发 summary.go 的裸 json 上限守卫
+	if err := os.WriteFile(path, bytes.Repeat([]byte{' '}, (50<<20)+1), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ExtractYsmSummary(path); err == nil {
+		t.Fatal("裸 ysm.json 超过 50MB 应拒绝解析，实际返回 nil 错误")
+	}
+}
+
+// P3 修复（code_review）：ZIP 内 ysm.json 超过 50MB 应拒绝（limit+1 探测）
+func TestExtractYsmSummary_ZipYsmJSONOverLimit(t *testing.T) {
+	// 构造大字符串触发 zip 分支 50MB 上限
+	big := bytes.Repeat([]byte{' '}, (50<<20)+1)
+	path := writeZip(t, map[string]string{"ysm.json": string(big)})
+	if _, err := ExtractYsmSummary(path); err == nil {
+		t.Fatal("zip 内 ysm.json 超过 50MB 应拒绝解析，实际返回 nil 错误")
+	}
+}
+
 func TestExtractYsmSummary_YSGP(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "encrypted.ysm")
 	// YSGP 魔数 + 文本头（见 isYSGP 判定）

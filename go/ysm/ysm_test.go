@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -67,6 +68,16 @@ modId="other_mod"
 	}
 	if IsYSMJar(bad) {
 		t.Fatal("非 zip 不应识别")
+	}
+}
+
+// P3 修复（code_review）：ADR-033 截断探测边界回归——mods.toml 超过 1MB 应跳过（IsYSMJar false）
+func TestIsYSMJar_ModsTomlOverLimit(t *testing.T) {
+	// 1MB+1 触发 ysm.go 的 limit+1 探测
+	huge := strings.Repeat("x", (1<<20)+1)
+	jar := makeJar(t, map[string]string{"META-INF/mods.toml": huge})
+	if IsYSMJar(jar) {
+		t.Fatal("mods.toml 超过 1MB 应跳过（截断检测），实际误判为 YSM")
 	}
 }
 

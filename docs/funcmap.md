@@ -1,7 +1,7 @@
 # 函数映射表
 
 > AI 找代码用。改功能前先 grep 此表定位文件:行。
-> **自动生成**（2026-08-07）— 由 `scripts/funcmap.mjs` 生成（提取 Go/JS/TS 导出符号，参考 MikuMikuAR docs/function-map.md 风格）。
+> **自动生成** — 由 `scripts/funcmap.mjs` 生成（提取 Go/JS/TS 导出符号，参考 MikuMikuAR docs/function-map.md 风格）。
 
 ## 总览
 

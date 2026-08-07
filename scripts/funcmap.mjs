@@ -266,12 +266,11 @@ function groupPriority(key) {
 
 function renderMarkdown(groups, sortedKeys) {
   const lines = [];
-  const now = new Date().toISOString().slice(0, 10);
 
   lines.push('# 函数映射表');
   lines.push('');
   lines.push('> AI 找代码用。改功能前先 grep 此表定位文件:行。');
-  lines.push(`> **自动生成**（${now}）— 由 \`scripts/funcmap.mjs\` 生成（提取 Go/JS/TS 导出符号，参考 MikuMikuAR docs/function-map.md 风格）。`);
+  lines.push('> **自动生成** — 由 `scripts/funcmap.mjs` 生成（提取 Go/JS/TS 导出符号，参考 MikuMikuAR docs/function-map.md 风格）。');
   lines.push('');
   lines.push('## 总览');
   lines.push('');

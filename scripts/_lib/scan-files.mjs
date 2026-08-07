@@ -47,10 +47,11 @@ export const SRC_EXTS = ['.js', '.ts'];
  *   - skipFile {(n:string)=>boolean|RegExp} 返回/匹配 true 跳过该文件
  *   - rel {boolean}                    true 返回 { abs, rel }（rel 相对 dir），false 返回绝对路径字符串
  *   - base {string}                    rel 模式下的初始相对前缀
+ *   - skipTest {boolean}               跳过测试文件（*.test.ts / *.spec.ts 及其 __tests__ 目录），默认 false
  * @returns {string[]|{abs:string,rel:string}[]}
  */
 export function walk(dir = SRC_DIR, opts = {}) {
-  const KNOWN_WALK_OPTS = new Set(['exts', 'skipDir', 'skipFile', 'rel', 'base']);
+  const KNOWN_WALK_OPTS = new Set(['exts', 'skipDir', 'skipFile', 'rel', 'base', 'skipTest']);
   for (const k of Object.keys(opts)) {
     if (!KNOWN_WALK_OPTS.has(k)) {
       console.warn(`[scan-files.walk] 忽略未知选项 "${k}"（已知：${[...KNOWN_WALK_OPTS].join('/')}）`);
@@ -62,16 +63,19 @@ export function walk(dir = SRC_DIR, opts = {}) {
     skipFile = null,
     rel = false,
     base = '',
+    skipTest = false,
   } = opts;
   const out = [];
   if (!fs.existsSync(dir)) return out;
   for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
     if (d.isDirectory()) {
       if (skipDir(d.name)) continue;
+      if (skipTest && d.name === '__tests__') continue;
       const childBase = rel ? (base ? `${base}/${d.name}` : d.name) : base;
       out.push(...walk(path.join(dir, d.name), { ...opts, base: childBase }));
     } else if (d.isFile()) {
       if (!exts.some((ext) => d.name.endsWith(ext))) continue;
+      if (skipTest && /\.(test|spec)\.[jt]s$/.test(d.name)) continue;
       if (skipFile && (skipFile instanceof RegExp ? skipFile.test(d.name) : skipFile(d.name))) continue;
       const abs = path.join(dir, d.name);
       out.push(rel ? { abs, rel: base ? `${base}/${d.name}` : d.name } : abs);

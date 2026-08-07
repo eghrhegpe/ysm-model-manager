@@ -24,9 +24,12 @@ func Friendly(err error) error {
 		patterns []string
 		msg      string
 	}{
-		{[]string{"access is denied", "permission denied", "eacces"}, "权限不足，无法访问文件"},
+		{[]string{"access is denied", "permission denied", "eacces", "operation not permitted"}, "权限不足，无法访问文件"},
 		{[]string{"no such file", "not found", "cannot find", "does not exist"}, "文件或目录不存在"},
-		{[]string{"sharing violation", "used by another process", "is locked", "file exists"}, "文件被其他程序占用"},
+		// "file exists" 是 syscall.EEXIST 的裸消息（os.OpenFile O_EXCL 等），语义是「文件已存在」；
+		// 不能与「被占用」混为一谈（sharing violation/used by another process 才是占用）。P2 修复。
+		{[]string{"sharing violation", "used by another process", "is locked", "device or resource busy", "resource busy"}, "文件被其他程序占用"},
+		{[]string{"file already exists", "file exists"}, "文件已存在"},
 		// "empty" 过于宽泛（如 "empty response body" 会被误分类），只匹配目录/文件为空的具体短语
 		{[]string{"directory is empty", "no files", "folder is empty"}, "目录为空，没有可操作的文件"},
 		{[]string{"timeout", "timed out"}, "连接超时，请检查网络"},
@@ -36,10 +39,12 @@ func Friendly(err error) error {
 		// 裸 "invalid" 会误伤 "invalid model name" 等（应为文件名/格式错误而非参数无效），
 		// 只匹配 syscall.EINVAL 对应的 "invalid argument"
 		{[]string{"invalid argument"}, "参数无效"},
-		{[]string{"already exists"}, "文件已存在"},
 		{[]string{"disk full", "no space left", "disk quota"}, "磁盘空间不足，请清理后重试"},
 		{[]string{"unsupported", "not supported"}, "不支持的格式或操作"},
-		{[]string{"too many"}, "操作过于频繁，请稍后重试"},
+		// P2 修复：裸 "too many" 会误伤 EMFILE("too many open files")/ELOOP("too many levels of symbolic links")，
+		// 改为限流场景的具体短语
+		{[]string{"too many requests", "rate limit", "rate limited"}, "操作过于频繁，请稍后重试"},
+		{[]string{"too many open files"}, "打开的文件过多，请关闭部分文件后重试"},
 		{[]string{"not a directory"}, "路径不是目录"},
 		{[]string{"is a directory"}, "路径是目录，不是文件"},
 	}

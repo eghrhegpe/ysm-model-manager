@@ -182,7 +182,10 @@ export function bindEditEvents(state: SiteViewState, refreshView: () => void): C
     });
 
   // ===== 行内编辑 =====
-  searchResults.querySelectorAll("[data-idx][data-fld]").forEach((inp) => {
+  // P2 修复：排除预设搜索词卡片（data-edit='preset'）——原选择器 [data-idx][data-fld]
+  // 同时命中预设 input（data-fld="label"），输入会污染 creators[idx].label
+  // （与 syncAllEditInputs 的 .cr-edit-card[data-edit='preset'] 隔离不一致）
+  searchResults.querySelectorAll("[data-idx][data-fld]:not([data-edit='preset'])").forEach((inp) => {
     inp.addEventListener("input", () => {
       const idx = parseInt((inp as HTMLElement).dataset.idx || "-1", 10);
       const fld = (inp as HTMLElement).dataset.fld || "";
@@ -269,10 +272,18 @@ export function bindEditEvents(state: SiteViewState, refreshView: () => void): C
         const targetIdx = parseInt((card as HTMLElement).dataset.editIdx || "-1", 10);
         if (dragSrcIdx < 0 || dragSrcIdx === targetIdx) return;
         syncAllEditInputs();
-        const [removed] = creators.splice(dragSrcIdx, 1);
-        creators.splice(targetIdx, 0, removed);
-        allCreators.length = 0;
-        allCreators.push(...creators);
+        // P2 修复：用 realIdx 在 allCreators 全量数组上重排（对齐删除路径）——
+        // 原实现 `allCreators.length=0; push(...creators)` 会用按 site.id 过滤的子集
+        // 一次性清空其他站点的创作者（共享内存态污染）
+        const src = creators[dragSrcIdx];
+        const realSrc = allCreators.indexOf(src);
+        const realTgt = allCreators.indexOf(creators[targetIdx]);
+        if (realSrc < 0 || realTgt < 0) {
+          dragSrcIdx = -1;
+          return;
+        }
+        const [removed] = allCreators.splice(realSrc, 1);
+        allCreators.splice(realTgt, 0, removed);
         dragSrcIdx = -1;
         refreshView();
       });

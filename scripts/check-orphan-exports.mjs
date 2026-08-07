@@ -10,8 +10,8 @@
  *   3. 统计每个导出符号的消费者数量
  *   4. 输出孤儿导出（0 消费者，WARN）+ 高频消费者 TOP
  *
- * 排除：export default（匿名单例惯用）、export ... from（re-export）、
- * 命名空间导入 import * as（无法对齐符号）。
+ * 排除：export default（匿名单例惯用）、export ... from（re-export）。
+ * 命名空间导入 import * as：按 ns.<symbol> 用法对齐具体符号（不排除）。
  *
  * 注：与联邦 MikuMikuAR 的 check-consumers（符号反向查询 / 重构影响面）同名异实，
  * 故独立命名为 check-orphan-exports 以消除歧义（ADR-241 §Phase 2）。
@@ -19,9 +19,11 @@
  * 用法：
  *   node scripts/check-orphan-exports.mjs                     # 文本报告
  *   node scripts/check-orphan-exports.mjs --json              # JSON（CI 用）
+ *   node scripts/check-orphan-exports.mjs --strict            # 孤儿 > 0 → 退出 1
  *   node scripts/check-orphan-exports.mjs --min-consumers 3   # 只报消费者 ≤3 的符号
  *
- * 退出码：孤儿导出 > 0 → 1；否则 0（--min-consumers 过滤后同规则）。
+ * 退出码：默认审计模式 rc=0（孤儿仅报告，供 doctor 审计不阻断）；
+ *         --strict 下孤儿/低消费 > 0 → rc=1（--min-consumers 过滤后同规则）。
  * 设计意图：孤儿导出检测（0 消费者的导出符号）
  */
 import fs from 'node:fs';

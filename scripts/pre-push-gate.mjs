@@ -72,23 +72,25 @@ function resolveChanges(remoteOid) {
    * 计算本次 push 的变更文件集（相对 HEAD）。
    * remoteOid 全 0（新分支/新仓库）→ 回退最近一次提交；
    * 无祖先提交 → 首个提交的完整文件清单。
+   * 返回文件数组；解析彻底失败（git diff/show 均不可用）返回 null，
+   * 由调用方阻断推送而非静默空跑放行（fail-closed）。
    */
   const isNew = /^0+$/.test(remoteOid || '');
   if (!isNew && remoteOid !== HEAD_OID) {
     const { rc, out } = git(`diff --name-only ${remoteOid}..HEAD`);
-    if (rc === 0 && out.trim()) return out.trim().split('\n').filter(Boolean);
+    if (rc === 0) return out.trim().split('\n').filter(Boolean); // 成功即权威答案（空 = 本次无变更）
   }
   // 新分支：优先 merge-base（有远端追踪分支时），否则最近提交
   const mb = git(`merge-base HEAD origin/${CURRENT_BRANCH} 2>/dev/null`).out.trim();
   if (mb) {
     const { rc, out } = git(`diff --name-only ${mb}..HEAD`);
-    if (rc === 0 && out.trim()) return out.trim().split('\n').filter(Boolean);
+    if (rc === 0) return out.trim().split('\n').filter(Boolean);
   }
   const { rc, out } = git(`diff --name-only HEAD~1..HEAD`);
-  if (rc === 0 && out.trim()) return out.trim().split('\n').filter(Boolean);
+  if (rc === 0) return out.trim().split('\n').filter(Boolean);
   // 首个提交（diff-tree 对 root commit 默认忽略，须用 git show）
-  const t = git('show --name-only --format= HEAD').out.trim();
-  return t ? t.split('\n').filter(Boolean) : [];
+  const t = git('show --name-only --format= HEAD');
+  return t.rc === 0 && t.out.trim() ? t.out.trim().split('\n').filter(Boolean) : null;
 }
 
 function planFromFiles(files) {
@@ -180,6 +182,11 @@ function main() {
 
   const [localRef, localOid, , remoteOid] = lines[0].trim().split(/\s+/);
   const files = resolveChanges(remoteOid);
+  if (files === null) {
+    console.log(`${B.FAIL} 变更集解析失败（git diff/show 均不可用），拒绝空跑放行 — 请检查本地 git 状态后重推`);
+    console.log(PULL_HINT);
+    return 1;
+  }
   const plan = planFromFiles(files);
   const byDomain = {};
   for (const f of files) (byDomain[classify(f)] = byDomain[classify(f)] || []).push(f);

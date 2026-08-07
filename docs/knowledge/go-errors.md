@@ -21,7 +21,7 @@ use_when:
 
 ## 核心职责
 
-- `errors.go` — 错误汉化：汉字检测、常见系统错误模式映射表、兜底前缀
+- `errors.go` — 错误汉化：汉字检测、常见系统错误模式映射表、兜底前缀。映射表现 16 组（P2 修复后）：权限不足（含 EPERM "operation not permitted"）、不存在、被占用（含 EBUSY "device or resource busy"）、文件已存在（EEXIST "file exists" 归此组，不再误归占用）、目录为空、超时、拒绝、网络中断、网络异常、参数无效、磁盘满、不支持、限流（"too many requests"/"rate limit"，不再误伤 EMFILE/ELOOP）、打开文件过多、非目录、是目录
 
 ## 对外 API / 入口
 

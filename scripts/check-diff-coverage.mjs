@@ -267,6 +267,27 @@ function main() {
   const cov = JSON.parse(readFileSync(coveragePath, 'utf8'));
   const covKeys = Object.keys(cov).filter((k) => k !== 'total');
 
+  // 门禁前置校验：git 环境异常时绝不“空跑报通过”。
+  // git() 在命令失败时返回 ''（catch 吞错），若不加校验，base 不可达/浅克隆未 fetch
+  // 会使 diff 全空 → srcFiles=[] → 错误落入「本次无改动源码需要检查。通过。」分支。
+  // 门禁模式（默认/json/文本）fail-closed 退出 USAGE_ERROR；--suggest 提示模式保持非阻断。
+  const failOrWarn = (msg) => {
+    if (suggest) {
+      console.log(`[diff-coverage] ${msg}（建议模式：跳过）`);
+      process.exit(0);
+    }
+    console.error(`[diff-coverage] ${msg}`);
+    process.exit(USAGE_ERROR);
+  };
+  if (!args.files) {
+    if (!git(['rev-parse', 'HEAD'])) {
+      failOrWarn('无法解析 HEAD（git 环境异常/不在仓库内）');
+    }
+    if (!staged && !git(['rev-parse', '--verify', base])) {
+      failOrWarn(`基准分支不可达：${base}（请先 \`git fetch\` 或改用 --base 指向本地分支）`);
+    }
+  }
+
   const changed = args.files
     ? args.files.split(',').map((s) => s.trim()).filter(Boolean)
     : getChangedFiles(base, head, uncommitted, staged);

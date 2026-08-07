@@ -61,7 +61,7 @@ function isLightweightUtil(spec) {
 }
 
 function main() {
-  const files = walk(SRC_DIR, { include: ['.ts', '.js'] }).filter(
+  const files = walk(SRC_DIR, { exts: ['.ts', '.js'] }).filter(
     (f) => !/\.test\./.test(f) && !/\.spec\./.test(f),
   );
 

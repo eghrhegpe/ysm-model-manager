@@ -6,7 +6,7 @@
  *   1. 统一参数：--no-heading -n --path-separator /（正斜杠输出，Windows 友好）
  *   2. glob 过滤：'-g *.js' 追加到命令尾部
  *   3. 目标路径：相对仓库根拼接（paths 可为 string | string[]）
- *   4. 容错：rg 缺失/无匹配 → 返回 []，不抛异常
+ *   4. 退出码语义：rg 退出码 1（无匹配）→ 返回 []；rg 缺失(ENOENT)/坏正则(status 2) → 抛错（供严格调用方感知）；提示工具请用 rgSafe
  *
  * 零依赖（仅 node:child_process / node:path / node:url）。
  */
@@ -38,6 +38,30 @@ export function rg(pattern, paths, globs = null) {
   try {
     const out = execFileSync('rg', cmd, { encoding: 'utf-8', timeout: 30000, maxBuffer: 64 * 1024 * 1024 });
     if (out.trim()) return out.trim().split('\n').filter((l) => l.trim());
-  } catch { /* rg 缺失或无匹配 */ }
-  return [];
+    return []; // rg 退出码 1：无匹配
+  } catch (err) {
+    // 退出码 1 = 无匹配（正常返回空）；其余视为扫描不可信，向上抛错让调用方知情
+    if (err.status === 1) return [];
+    if (err.code === 'ENOENT') {
+      throw new Error(`ripgrep(rg) 未安装或不在 PATH，无法执行扫描：pattern=${pattern}`);
+    }
+    throw new Error(`ripgrep 执行失败（status=${err.status ?? 'unknown'}）：pattern=${pattern}`);
+  }
+}
+
+/**
+ * 容错版 rg：供「恒 exit 0」的提示工具（check-redlines / comment-checker）使用。
+ * rg 抛错（缺失/坏正则）时打印 WARN 并返回 []，避免静默假绿或崩溃（仍能被用户/AI 察觉扫描不可用）。
+ * @param {string} pattern 正则模式（原始字符串）
+ * @param {string|string[]} paths 相对仓库根的目录/文件
+ * @param {string[]} [globs] glob 过滤
+ * @returns {string[]}
+ */
+export function rgSafe(pattern, paths, globs = null) {
+  try {
+    return rg(pattern, paths, globs);
+  } catch (e) {
+    console.error(`[warn] ripgrep 扫描跳过（${e.message}）`);
+    return [];
+  }
 }

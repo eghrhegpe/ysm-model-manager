@@ -18,7 +18,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT, readText, writeText } from './_lib/scan-files.mjs';
 
 const NOVEL_DIR = path.join(ROOT, 'docs', 'novel');
 const OUT_FILE = path.join(NOVEL_DIR, 'index.md');
@@ -239,7 +239,7 @@ function main() {
       console.error(`[novel-index] ✗ ${path.relative(ROOT, OUT_FILE)} 不存在，请先运行生成器`);
       return 1;
     }
-    const current = fs.readFileSync(OUT_FILE, 'utf8');
+    const current = readText(OUT_FILE); // 归一化 CRLF→LF：磁盘行尾不影响幂等判定
     if (current === generated) {
       console.log(`[novel-index] ✓ ${path.relative(ROOT, OUT_FILE)} 无漂移`);
       return 0;
@@ -247,7 +247,7 @@ function main() {
     console.error(`[novel-index] ✗ ${path.relative(ROOT, OUT_FILE)} 有漂移，请重跑生成器`);
     return 1;
   }
-  fs.writeFileSync(OUT_FILE, generated, 'utf8');
+  writeText(OUT_FILE, generated); // 保留原行尾风格（CRLF 文件不被改写成 LF）
   const stats = countAll();
   console.log(`[novel-index] ✓ 已生成 ${path.relative(ROOT, OUT_FILE)}（共 ${stats.total} 章）`);
   return 0;

@@ -70,6 +70,7 @@ func LoadRegistry() *ResourceTypeRegistry {
 //  1. 显式路径（SetRegistryPath 设置的测试/自定义绝对路径）；
 //  2. exe 同级 / 上级目录（部署 / updater 热更位），彻底摆脱对 cwd 的依赖；
 //  3. 编译期嵌入的基线 embeddedRegistryJSON。
+//
 // 默认 registryPath 为相对名 "resource_types.json" 时视为未显式设置，跳过 cwd 裸读。
 func loadRegistryBytes() []byte {
 	if registryPath != "" && registryPath != "resource_types.json" {
@@ -159,7 +160,9 @@ func descString(raw json.RawMessage) string {
 	}
 	// JSON text component 对象 → 取 text 字段
 	if raw[0] == '{' {
-		var obj struct{ Text string `json:"text"` }
+		var obj struct {
+			Text string `json:"text"`
+		}
 		if json.Unmarshal(raw, &obj) == nil && obj.Text != "" {
 			return obj.Text
 		}
@@ -194,11 +197,11 @@ func descString(raw json.RawMessage) string {
 // PackMeta 资源包信息（来自 pack.mcmeta）
 type PackMeta struct {
 	Pack struct {
-		PackFormat       int            `json:"pack_format"`
+		PackFormat       int             `json:"pack_format"`
 		Description      json.RawMessage `json:"description"`
-		SupportedFormats *FormatRange   `json:"supported_formats,omitempty"`
-		MinFormat        *FormatRange   `json:"min_format,omitempty"`
-		MaxFormat        *FormatRange   `json:"max_format,omitempty"`
+		SupportedFormats *FormatRange    `json:"supported_formats,omitempty"`
+		MinFormat        *FormatRange    `json:"min_format,omitempty"`
+		MaxFormat        *FormatRange    `json:"max_format,omitempty"`
 	} `json:"pack"`
 }
 

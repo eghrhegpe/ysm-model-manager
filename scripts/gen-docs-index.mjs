@@ -23,7 +23,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT, readText, writeText } from './_lib/scan-files.mjs';
 import { spawnSync } from 'node:child_process';
 
 const ADR_DIR = path.join(ROOT, 'docs', 'adr');
@@ -62,7 +62,7 @@ function applyRegion(file, name, content) {
     console.error(`[FAIL] ${path.relative(ROOT, file)} 不存在`);
     return { ok: false, changed: false };
   }
-  const current = fs.readFileSync(file, 'utf8');
+  const current = readText(file); // 归一化 CRLF→LF：磁盘行尾不影响幂等判定
   const next = replaceGenRegion(current, name, content);
   if (next === null) {
     console.error(`[FAIL] ${path.relative(ROOT, file)} 缺少 <!-- GEN: ${name} --> 标记，需一次性插入`);
@@ -73,19 +73,19 @@ function applyRegion(file, name, content) {
     console.error(`[FAIL] ${name} 区需要更新（${path.relative(ROOT, file)}）`);
     return { ok: false, changed: false };
   }
-  fs.writeFileSync(file, next, 'utf8');
+  writeText(file, next); // 保留原行尾风格（CRLF 文件不被改写成 LF）
   return { ok: true, changed: true };
 }
 
 /** 整文件重写（非 GEN 区，如 adr/index.md）：一致则 OK；--check 下不一致则 FAIL。返回 {ok, changed}。 */
 function applyWholeFile(file, content, label) {
-  const current = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+  const current = fs.existsSync(file) ? readText(file) : null; // 归一化比较，CRLF 下幂等不失效
   if (current === content) return { ok: true, changed: false };
   if (CHECK) {
     console.error(`[FAIL] ${label} 需要更新`);
     return { ok: false, changed: false };
   }
-  fs.writeFileSync(file, content, 'utf8');
+  writeText(file, content); // 保留原行尾风格（CRLF 文件不被改写成 LF）
   return { ok: true, changed: true };
 }
 

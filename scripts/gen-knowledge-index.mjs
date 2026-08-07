@@ -13,7 +13,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './_lib/scan-files.mjs';
+import { ROOT, readText, writeText } from './_lib/scan-files.mjs';
 import { parseFrontmatter, getScalar, getList } from './_lib/frontmatter.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
 
@@ -156,7 +156,7 @@ function buildIndex() {
 
 function main() {
   const expected = buildIndex();
-  const current = fs.existsSync(OUTPUT) ? fs.readFileSync(OUTPUT, 'utf8') : null;
+  const current = fs.existsSync(OUTPUT) ? readText(OUTPUT) : null; // 归一化比较，CRLF 下幂等不失效
 
   if (current === expected) {
     console.log('[OK] index.md 已是最新');
@@ -168,7 +168,7 @@ function main() {
     return 1;
   }
 
-  fs.writeFileSync(OUTPUT, expected, 'utf8');
+  writeText(OUTPUT, expected); // 保留原行尾风格（CRLF 文件不被改写成 LF）
   console.log(`[OK] 已生成 ${OUTPUT}`);
   return 0;
 }

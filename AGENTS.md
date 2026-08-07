@@ -7,8 +7,8 @@
 
 > 500 行文件先 grep 定位再读。
 > 按需读取 `docs/knowledge/index.md`（枢纽索引，自动生成）+ grep 卡正文定位功能作用，充实上下文。
-> 涉及 ADR：先 grep `docs/adr/` 看是否已有类似实现；写新 ADR 走叫号脚本（命令与流程见下方「ADR 规则」，禁止手写编号）。
-> 文档地图优先，确认代码归属，但允许探索。发现地图过期时报告漂移、以源码为准。
+> 新 ADR 落地前先 Grep `> \*\*状态\*\*:.*(规划|实施中|部分实现)` in `docs/adr` 看是否已有类似实现；若触及既有 ADR 决策，就在对方首部标注「被 [ADR-NNN] 取代」。
+> 写新 ADR 走叫号脚本（命令与流程见下方「ADR 规则」，禁止手写编号）。编号只允许给 ADR、novel 写。
 > 编号只允许给 ADR、novel 写。
 > 改完即验，顺带提交（构建/跑得起来）：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）。 涉及文档改动时用 `node scripts/doctor.mjs --docs`（轻量秒级，跳过 Go/前端编译与测试）；改代码或发版前用全量 `node scripts/doctor.mjs`。
 > 信任本机改动，提交代码时：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。正常的更改，无需询问。先提交`docs/`,捎带了无关文件也别怕。
@@ -18,7 +18,25 @@
 > 项目绑定统一由 `npm run generate:bindings` 生成（内部 `wails3 generate bindings -clean=true -ts -i`，在仓库根执行，**必须带 `-ts`**：产出 `.ts`，前端以 `.js` 后缀 import、由 vite `wailsBindingsResolve` 重定向；无 `-ts` 生成会产出 `.js` 并清掉 git 跟踪的 `.ts`，属回归红线。契约见 `docs/architecture.md` §绑定模式）。
 > 预定义脚本口令可直接调起（说名字即执行对应 `scripts/` 脚本）：`release-notes-gen` / `check-redlines` / `doctor` / `comment-checker` / `event-audit` / `bug-search` / `link-checker` / `type-consistency` / `binding-check` / `wails3-cli-check`。
 
+```bash
+# 暂存（本地缓存）
+git add <通过测试的路径...> # 精准提交自己的代码。
+git commit -m "<type>: <简短描述>"    # pre-commit 自动同步文档/索引（秒级），勿 --no-verify 跳过
+git push --verbose 2>&1 | Select-Object -Last 50    # 推送结束时，返回检查信息。
+
+# 恢复（从本地缓存取出）
+git reset --soft HEAD~1               # 撤销最近一条 commit，把改动留在暂存区（staged）
+git reset HEAD~1                      # 撤销最近一条 commit，把改动放回工作区（unstaged）
+```
+| 规则 | 说明 |
+|------|------|
+| commit 信息格式 | `<type>: <描述>`，type 同conventional commits（feat/fix/docs/chore/refactor/test） |
+| 推送前 squash | 多个本地 commit 可以 `git rebase -i` 合并为一个有意义的 PR commit |
+| 建议避免 | `git stash` / `git stash push` / `git stash pop`（易丢失未提交改动；`list` / `show` 只读操作不受限） |
+
 ## 钩子自动化（无需手动触发）
+
+> **Git 钩子（非阻断）**：仓库钩子位于 `.githooks/`，克隆后需激活：`git config core.hooksPath .githooks`。pre-commit 自动同步文档/索引（秒级 gen）；prepare-commit-msg 把覆盖率缺口建议写入 commit message；均不阻塞提交。逃生阀 `git commit --no-verify`。
 
 | 钩子 | 功能 | 逃生阀 |
 |------|------|--------|
@@ -44,16 +62,6 @@
 | **自动化检查** | 预定义口令（`type-consistency`/`event-audit`等）<br>`scripts/README.md`（命令全表） |
 | **特殊创作** | `docs/novel/AGENTS.md`（小说圣经） |
 
-## 知识库检索协议
-
-处理代码时：
-1. 查 `index.md` 枢纽索引定位知识卡
-2. 用 `grep` 查 ADR 和 bug-chronicle
-3. 源码为最终依据
-4. 修改后运行最小检查
-
-优先级：当前源码 > `docs/adr/` > `docs/knowledge/` > `docs/archive/architecture.md`（历史）。
-
 ## ADR 规则
 
 > 新 ADR 一律走叫号脚本：`node scripts/new-adr.mjs "标题" [--slug kebab-name] [--related 关联内容] [--supersedes ADR-0XX,...] [--dry-run]`（双源取号 + 登记表占号 + 四段模板 + 自动 adr-check），禁止手写编号。
@@ -76,23 +84,29 @@
 | 层 | 选型 |
 |----|------|
 | 桌面 | Wails v3 (Go + WebView2)，绑定统一走 `npm run generate:bindings`（必须 -ts，见硬约束） |
-| 前端 | 原生 HTML/CSS/JS (Web Components + Shadow DOM) |
+| 前端 | 原生 HTML/CSS/TS (Web Components + Shadow DOM) |
 | 3D | Three.js + YSMParser WASM（YSMViewer 算法口径） |
 | 数据 | resource_types.json 单一事实来源 + creators.json / workshop_sites.json / workshop-github.json |
+| 命令行 | pwsh / bash + GitHub cli |
 | 脚本 | Node（.mjs，零依赖工具链） |
 | 测试 | Go 单测 + Node 契约测试（tests/*.mjs） |
-| 命令行 | pwsh / bash + GitHub cli |
 
 ## 构建
 
 ```bash
-go build ./go/...                     # Go
+ # 测试套件
 cd frontend && npx vite build         # 前端
+go build ./go/...                     # Go
 for f in tests/*.mjs; do node "$f"; done   # 契约测试
+ # 文档更新
 node scripts/doctor.mjs --docs        # 改文档时用，轻量秒级（仅文档/ADR/索引检查，跳过 Go/前端编译与测试）
 node scripts/doctor.mjs               # 改代码 / 发版前，全量闸门（编译+构建+文件+红线+Git）
 ```
 
+```html
+edge://inspect Edog网页调试
+http://localhost:9222/json 实际网页一览
+```
 
 ---
 

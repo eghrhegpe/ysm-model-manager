@@ -79,4 +79,5 @@ const out = { _summary: { go_functions: Object.keys(goExports).length, js_functi
 process.stdout.write(JSON.stringify(out, null, 2) + '\n');
 
 // 退出码：契约不一致即非 0，供 doctor / CI 真实阻断（原实现恒 exit 0，假绿）
-process.exit(issues.length ? 1 : 0);
+// 用 exitCode 而非 process.exit()：让 stdout 管道下的异步写入排空后再退出，避免 JSON 被截断
+process.exitCode = issues.length ? 1 : 0;

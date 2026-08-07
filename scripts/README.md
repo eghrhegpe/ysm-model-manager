@@ -64,7 +64,7 @@
 | `check-doc-drift.mjs` | `node scripts/check-doc-drift.mjs` / `--fix` | 文档三一致：ADR 登记 + 知识卡 + 架构树引用（ERROR 阻断；`--fix` 刷新架构树基线） |
 | `check-adr-health.mjs` | `node scripts/check-adr-health.mjs` / `--debt` | ADR 状态机值域 / 登记表同步 / 技术债清单 |
 | `check-deadcode-baseline.mjs` | `node scripts/check-deadcode-baseline.mjs` / `--update-baseline` | knip+jscpd 与 `scripts/baseline/deadcode-baseline.json` 对比，新增项阻断 |
-| `check-orphan-exports.mjs` | `node scripts/check-orphan-exports.mjs` / `--strict` / `--min-consumers N` | 孤儿导出审计（零消费者符号；与联邦 check-consumers 同名异实，ADR-241 §Phase 2） |
+| `check-orphan-exports.mjs` | `node scripts/check-orphan-exports.mjs` / `--strict` / `--min-consumers N` | 孤儿导出审计（零消费者符号；默认审计仅报告 rc=0，`--strict` 孤儿>0 时 rc=1 阻断；与联邦 check-consumers 同名异实，ADR-241 §Phase 2） |
 | `check-circular.mjs` | `node scripts/check-circular.mjs` | frontend/src ESM import 图找环（ERROR 阻断） |
 | `check-layering.mjs` | `node scripts/check-layering.mjs` / `--json` / `--update` | 前端分层依赖方向守护：R1/R2 零容忍（utils/services 不碰 UI 层）+ R3/R4 基线防新增（core→上层 / features→views，现有债务入 `docs/.layering-baseline.json` 待清理）；`import type` 豁免；源自 MikuMikuAR ADR-242 骨架适配，配套 `tests/test_check_layering.mjs` |
 | `check-circular-go.mjs` | `node scripts/check-circular-go.mjs` / `--json` | Go 包级循环依赖检测（`go/` 目录下 import 图找环；ERROR 阻断，`--json` 供 CI 消费） |
@@ -191,7 +191,7 @@
 | 共享层 | 提供 | 强制场景 |
 |--------|------|---------|
 | `_lib/scan-files.mjs` | `walk`（.js/.ts 双扩展名）、`resolveImport`（.ts/.js/index 补全）、`toPosix`/`relPosix`、`readText`（BOM/CRLF 容错）、`getRoot` | 扫描 frontend/src 源码、解析 import、路径输出 |
-| `_lib/ripgrep.mjs` | `rg`（--no-heading -n --path-separator /，glob 过滤，容错返回 []） | 需要 ripgrep 扫描的任何脚本 |
+| `_lib/ripgrep.mjs` | `rg`（严格：exit 1 → []；rg 缺失/坏正则 → 抛错）、`rgSafe`（容错：抛错 → WARN + []） | 需要 ripgrep 扫描的任何脚本（恒 exit 0 提示工具用 `rgSafe`） |
 | `_lib/frontmatter.mjs` | frontmatter 解析 | 读取 md 文档 frontmatter |
 
 违规形态：内联「通用」 `walk`（即 scan-files.walk 的等价递归、无扩展名/跳过定制）/ 内联 `rg(...)` / 内联 `path.resolve(path.dirname(fileURLToPath(import.meta.url)))`。带显式过滤的领域专用收集器（如 `endsWith('.md')` / `EXCLUDE` / `symbolExclude` / `onFile`）为合法内联，不计入违规；doctor/静态检查不会自动拦截（脚本是自由 Node），靠 code review 约定 + `comment-checker` 抽查。

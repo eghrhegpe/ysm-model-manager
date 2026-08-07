@@ -132,11 +132,14 @@ function main() {
   const knipOut = run('knip', ['--reporter', 'json'], { allowExit1: true });
   if (knipOut !== null) knipFindings = parseKnip(knipOut);
 
-  const jscpdOut = run('jscpd', ['--pattern', 'src/**/*.{js,ts}', '--min-lines', '10', '--min-tokens', '50', '--reporters', 'json', '--silent'], { allowExit1: true });
+  // jscpd 5.x 发现重复代码时默认 exit 0（未传 --threshold/--exitCode），
+  // exit 1 仅代表真实失败（glob 错误/IO/崩溃）——不传 allowExit1，让真实失败
+  // 以 [执行失败] 暴露，而非被掩盖成 [解析失败]/消费陈旧报告（code_review P3）
+  const jscpdOut = run('jscpd', ['--pattern', 'src/**/*.{js,ts}', '--min-lines', '10', '--min-tokens', '50', '--reporters', 'json', '--silent']);
   if (jscpdOut !== null) {
     jscpdFindings = parseJscpd();
     // 清理 jscpd 产物文件（report/jscpd-report.json 是分析副产物，不留仓库；
-    // 只删报告文件本身，不 rmSync 整个 report/ 目录——避免误删其他产物，code_review P3）
+    // 只删报告文件本身，不 rmSync 整个 report/ 目录——避免误删其他产物）
     fs.rmSync(JSCPD_REPORT, { force: true });
   }
 

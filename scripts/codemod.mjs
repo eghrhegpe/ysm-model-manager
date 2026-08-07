@@ -99,7 +99,7 @@ function findExportDecl(name) {
 /** 在 frontend/src 下 grep 字符串匹配（纯 Node.js，跨平台） */
 function grepString(pattern) {
   // ysm 源码目录为 frontend/src（联邦为 frontend/src）
-  const srcDir = path.join(FRONTEND, 'js');
+  const srcDir = path.join(FRONTEND, 'src');
   const results = [];
   const re = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
   walkAndGrep(srcDir, results, re);
@@ -118,9 +118,13 @@ function walkAndGrep(dir, results, regex) {
     } else if (e.isFile() && /\.(ts|js)$/.test(e.name)) {
       try {
         const content = fs.readFileSync(full, 'utf8');
+        // 全局正则跨文件共享：test() 成功后 lastIndex 推进，不清零会让下一个
+        // 文件/行从错误起点搜索而漏检（假安全信号）。每次 test 前显式重置。
+        regex.lastIndex = 0;
         if (regex.test(content)) {
           const lines = content.split('\n');
           for (let i = 0; i < lines.length; i++) {
+            regex.lastIndex = 0;
             if (regex.test(lines[i])) {
               const rel = toPosix(path.relative(FRONTEND, full));
               results.push(`${rel}:${i + 1}: ${lines[i].trim().slice(0, 120)}`);

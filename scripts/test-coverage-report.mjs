@@ -92,10 +92,25 @@ function repoRel(p) {
   return rel;
 }
 
-const raw = JSON.parse(fs.readFileSync(inputPath, 'utf-8'));
+/** 读覆盖率产物；损坏（JSON 解析失败）时优雅报错，--suggest 非阻断模式 graceful degrade。 */
+function loadCoverage() {
+  try {
+    return JSON.parse(fs.readFileSync(inputPath, 'utf-8'));
+  } catch (e) {
+    process.stderr.write(
+      `覆盖率产物损坏（JSON 解析失败）: ${inputPath}\n${e.message}\n请重新运行 cd frontend && npm run test:coverage\n`
+    );
+    if (suggestMode) process.exit(0); // 提交期非阻断：绝不卡提交
+    process.exit(1);
+  }
+}
+
+const raw = loadCoverage();
 
 const rows = [];
 for (const [absPath, entry] of Object.entries(raw)) {
+  // 损坏条目守卫：entry 非对象或缺 s 统计（statementMap）时跳过，不抛 TypeError
+  if (!entry || typeof entry !== 'object' || !entry.s) continue;
   // 注：不再按 path.sep 拼装目录段过滤（该写法在 Windows 上找 \js\、Linux 上找 /js/，
   // 对绝对路径 key 恒为 false，曾把全部文件滤掉导致"假全绿"）。
   const rel = repoRel(absPath);
@@ -110,14 +125,14 @@ for (const [absPath, entry] of Object.entries(raw)) {
   const uncoveredLines = [];
   for (const [id, count] of Object.entries(entry.s)) {
     if (count > 0) continue;
-    const loc = entry.statementMap[id];
+    const loc = entry.statementMap?.[id];
     if (loc?.start?.line) uncoveredLines.push(loc.start.line);
   }
 
   const uncoveredFns = [];
-  for (const [id, count] of Object.entries(entry.f)) {
+  for (const [id, count] of Object.entries(entry.f ?? {})) {
     if (count > 0) continue;
-    const fn = entry.fnMap[id];
+    const fn = entry.fnMap?.[id];
     if (fn?.name) uncoveredFns.push(`${fn.name} (${fn.line})`);
   }
 

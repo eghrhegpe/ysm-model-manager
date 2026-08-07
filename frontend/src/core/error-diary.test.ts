@@ -115,11 +115,17 @@ describe("registerErrorDiary", () => {
   it("unhandledrejection → AddOpLog called", async () => {
     registerErrorDiary();
     const reason = new Error("API 请求失败");
-    // 避免 vitest 捕获未处理的 rejection
-    const rejectionEvent = new PromiseRejectionEvent("unhandledrejection", {
-      reason,
-      promise: Promise.reject(reason).catch(() => {}),
-    });
+    // happy-dom 未实现全局 PromiseRejectionEvent 构造器（jsdom 有），
+    // 用局部构造器兜底：真实浏览器均支持该事件，生产代码依赖的只是 reason 字段
+    const RejectionCtor = (
+      globalThis as unknown as { PromiseRejectionEvent?: typeof PromiseRejectionEvent }
+    ).PromiseRejectionEvent;
+    const rejectionEvent = RejectionCtor
+      ? new RejectionCtor("unhandledrejection", {
+          reason,
+          promise: Promise.reject(reason).catch(() => {}),
+        })
+      : Object.assign(new Event("unhandledrejection"), { reason });
     window.dispatchEvent(rejectionEvent);
     await flush();
     expect(addOpLogMock).toHaveBeenCalledTimes(1);

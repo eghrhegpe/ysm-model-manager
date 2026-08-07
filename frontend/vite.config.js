@@ -27,7 +27,7 @@ export default defineConfig({
   plugins: [wailsBindingsResolve],
   test: {
     include: ["src/**/*.test.{js,ts}"],
-    environment: "jsdom",
+    environment: "happy-dom",
     setupFiles: ["./test-setup.ts"],
     coverage: {
       provider: "v8",

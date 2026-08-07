@@ -1,25 +1,25 @@
 #!/bin/sh
 # YSM commit-time 非阻断建议（prepare-commit-msg 薄壳）
-# 职责：向 commit message body 追加两类建议，随 commit 进 PR 供 review 参考：
+# 职责：在终端(stderr)即时输出两类非阻断建议，不写入 commit message body：
 #   📚 知识卡漂移 —— 受本次 staged 变更影响的知识卡（check-knowledge-drift --affected）
 #   🔬 覆盖率建议 —— 低于语句覆盖率阈值的源文件（test-coverage-report --suggest）
+# 设计：永远 exit 0，绝不阻断提交；提示信息经 stderr 直达终端（AI 必看通道）
 # 安装：git config core.hooksPath .githooks（仓库已配置）
 # 逃生阀：YSM_SKIP_KNOWLEDGE_HINT=1 / YSM_SKIP_COVERAGE_HINT=1 git commit
-# 输出：全部走 stderr（exec 1>&2）——Windows git hook 下 stdout 管道易断，且 stderr 是 AI 必看的终端通道
 exec 1>&2
-set -u
 
-ROOT=$(git rev-parse --show-toplevel 2>/dev/null || exit 0)
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 [ -z "${ROOT:-}" ] && exit 0
 
 NODE=$(command -v node 2>/dev/null)
-[ -z "$NODE" ] && exit 0
+[ -z "${NODE:-}" ] && exit 0
 
 # 辅助脚本内部用 process.execPath 自取 node，无需透传 NODE_BIN；各自独立逃生阀
+# 位置参数用 ${n:-} 守卫：git 某些调用路径下 $2 可能未设置，避免 nounset 中止提交
 if [ "${YSM_SKIP_KNOWLEDGE_HINT:-0}" != "1" ]; then
-  "$NODE" "$ROOT/scripts/hooks/knowledge-affected-hint.mjs" "$1" "$2" || true
+  "$NODE" "$ROOT/scripts/hooks/knowledge-affected-hint.mjs" "${1:-}" "${2:-}" || true
 fi
 if [ "${YSM_SKIP_COVERAGE_HINT:-0}" != "1" ]; then
-  "$NODE" "$ROOT/scripts/hooks/coverage-suggest-hint.mjs" "$1" "$2" || true
+  "$NODE" "$ROOT/scripts/hooks/coverage-suggest-hint.mjs" "${1:-}" "${2:-}" || true
 fi
 exit 0

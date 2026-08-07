@@ -245,7 +245,7 @@ function checkKeyFiles() {
   const files = [
     'main.go', 'wails.json',
     'internal/app/app.go', 'internal/app/resource_bindings.go',
-    'resource_types.json', 'go.mod', 'reasonix.toml', 'AGENTS.md',
+    'resource_types.json', 'go.mod', 'AGENTS.md',
     'frontend/index.html', 'frontend/src/bus.ts', 'frontend/src/app-modules.ts',
   ];
   for (const f of files) {

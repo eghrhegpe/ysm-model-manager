@@ -88,6 +88,13 @@ function extractImports(file, text, moduleSet) {
     if (!target || target === file) continue;
     if (m[2]) pushNamed(target, m[2]);
   }
+  // 重导出 `export { a, b } from "./y"`：转发即消费（桶文件链），否则仅经桶文件
+  // 转发消费的符号会被误报孤儿（code_review P2，实证 test-utils/index.ts）。
+  for (const m of text.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g)) {
+    const target = resolveImport(file, m[2], moduleSet);
+    if (!target || target === file) continue;
+    pushNamed(target, m[1]);
+  }
   // 动态导入：const { a, b } = await import("spec")
   for (const m of text.matchAll(DYN_DESTRUCT_RE)) {
     const target = resolveDynImport(file, m[2], moduleSet);

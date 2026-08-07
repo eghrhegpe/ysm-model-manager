@@ -133,12 +133,12 @@
 | `NewSimpleCopy()` | `go/importer/importer:62` | NewSimpleCopy 创建简单文件复制导入器 |
 | `SimpleCopyImporter.Type()` | `go/importer/importer:66` | — |
 | `SimpleCopyImporter.Import()` | `go/importer/importer:68` | — |
-| `NewDirectoryCopy()` | `go/importer/importer:206` | NewDirectoryCopy 创建文件夹复制导入器 |
-| `DirectoryCopyImporter.Type()` | `go/importer/importer:210` | — |
-| `DirectoryCopyImporter.Import()` | `go/importer/importer:215` | Import 复制源文件夹到目标目录 srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身 若 srcPath 是文件则取父目录，若是目录则直接使用 |
+| `NewDirectoryCopy()` | `go/importer/importer:214` | NewDirectoryCopy 创建文件夹复制导入器 |
+| `DirectoryCopyImporter.Type()` | `go/importer/importer:218` | — |
+| `DirectoryCopyImporter.Import()` | `go/importer/importer:223` | Import 复制源文件夹到目标目录 srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身 若 srcPath 是文件则取父目录，若是目录则直接使用 |
 | `Handler()` | `go/importer/importer:21` | Handler 资源导入策略接口 |
 | `SimpleCopyImporter()` | `go/importer/importer:57` | — |
-| `DirectoryCopyImporter()` | `go/importer/importer:201` | — |
+| `DirectoryCopyImporter()` | `go/importer/importer:209` | — |
 
 ## Go·安装
 
@@ -303,18 +303,18 @@
 | `WorkshopPresetSearch()` | `go/types/config:38` | WorkshopPresetSearch 预设搜索词 |
 | `WorkshopSite()` | `go/types/config:44` | WorkshopSite 创意工坊站点配置 |
 | `WorkshopCreator()` | `go/types/config:57` | WorkshopCreator 创作者条目 Type 是平台标签，分号分隔，如 "bilibili;afdian" |
-| `AllExts()` | `go/types/extensions:13` | AllExts 返回所有支持的扩展名（去重后） |
-| `IsSupportedExt()` | `go/types/extensions:29` | IsSupportedExt 检查扩展名是否被任何资源类型支持 |
-| `IsYsmEntryJSON()` | `go/types/extensions:45` | IsYsmEntryJSON 判断是否为 YSM 解压目录的唯一清单入口 ysm.json（大小写不敏感） ADR-038 D2：.json 仅放行 ysm.json；包内 geo |
-| `ShouldHashExt()` | `go/types/extensions:52` | ShouldHashExt 判断扩展名是否需要计算 SHA256 哈希（用于同步系统文件匹配） 跳过非 YSM 类型的大文件（MMD/VRC 文件可达数十 MB，哈希全量太慢） 蓝 |
-| `ExtBelongsTo()` | `go/types/extensions:61` | ExtBelongsTo 返回扩展名所属的资源类型 ID 列表（可能多个） |
-| `SupportedExtsForType()` | `go/types/extensions:76` | SupportedExtsForType 返回指定资源类型的所有扩展名 |
-| `FindInstDir()` | `go/types/extensions:90` | FindInstDir 查找整合包中指定资源类型的子目录： 1. |
-| `StorageSubDir()` | `go/types/extensions:133` | StorageSubDir 每种资源类型在 FilesRoot 下的存储子目录 从 resource_types.json 注册表读取，无匹配时返回 rtype 自身 |
-| `SubDirMap()` | `go/types/extensions:147` | SubDirMap 返回指定资源类型在整合包实例版本目录中的扫描子目录 |
-| `SubDirAll()` | `go/types/extensions:159` | SubDirAll 返回所有资源类型在整合包实例中的版本扫描子目录映射 |
-| `AllSubDirs()` | `go/types/extensions:171` | AllSubDirs 返回所有资源类型的版本子目录信息（遍历用） |
-| `SubDirEntry()` | `go/types/extensions:141` | SubDirEntry 资源类型的版本子目录信息 |
+| `AllExts()` | `go/types/extensions:17` | AllExts 返回所有支持的扩展名（去重后） |
+| `IsSupportedExt()` | `go/types/extensions:33` | IsSupportedExt 检查扩展名是否被任何资源类型支持 |
+| `IsYsmEntryJSON()` | `go/types/extensions:49` | IsYsmEntryJSON 判断是否为 YSM 解压目录的唯一清单入口 ysm.json（大小写不敏感） ADR-038 D2：.json 仅放行 ysm.json；包内 geo |
+| `ShouldHashExt()` | `go/types/extensions:56` | ShouldHashExt 判断扩展名是否需要计算 SHA256 哈希（用于同步系统文件匹配） 跳过非 YSM 类型的大文件（MMD/VRC 文件可达数十 MB，哈希全量太慢） 蓝 |
+| `ExtBelongsTo()` | `go/types/extensions:65` | ExtBelongsTo 返回扩展名所属的资源类型 ID 列表（可能多个） |
+| `SupportedExtsForType()` | `go/types/extensions:80` | SupportedExtsForType 返回指定资源类型的所有扩展名 |
+| `FindInstDir()` | `go/types/extensions:94` | FindInstDir 查找整合包中指定资源类型的子目录： 1. |
+| `StorageSubDir()` | `go/types/extensions:137` | StorageSubDir 每种资源类型在 FilesRoot 下的存储子目录 从 resource_types.json 注册表读取，无匹配时返回 rtype 自身 |
+| `SubDirMap()` | `go/types/extensions:151` | SubDirMap 返回指定资源类型在整合包实例版本目录中的扫描子目录 |
+| `SubDirAll()` | `go/types/extensions:163` | SubDirAll 返回所有资源类型在整合包实例中的版本扫描子目录映射 |
+| `AllSubDirs()` | `go/types/extensions:175` | AllSubDirs 返回所有资源类型的版本子目录信息（遍历用） |
+| `SubDirEntry()` | `go/types/extensions:145` | SubDirEntry 资源类型的版本子目录信息 |
 | `SetRegistryPath()` | `go/types/resource:41` | SetRegistryPath 设置注册表文件路径（仅测试用） 加锁保护：并发调用 LoadRegistry + SetRegistryPath 触发数据竞争（审计 P1 #2）。 |
 | `LoadRegistry()` | `go/types/resource:52` | LoadRegistry 加载资源类型注册表 优先读取外部 JSON 文件（可通过 SetRegistryPath 自定义路径）， 文件不存在或读取失败时回退到编译时嵌入的默认数据 |
 | `RegistryType()` | `go/types/resource:96` | RegistryType 按 id 查找资源类型，不存在时返回 nil |
@@ -679,7 +679,7 @@
 | `fireBlur()` | `frontend/src/test-utils/events:31` | 模拟失焦 |
 | `fireKeyDown()` | `frontend/src/test-utils/events:38` | 模拟键盘按下 |
 | `fireInput()` | `frontend/src/test-utils/events:45` | 模拟输入变化（更新 input.value 并触发 input + change 事件） |
-| `fireDrop()` | `frontend/src/test-utils/events:55` | 模拟拖拽：构造 DragEvent（使用 test-setup.ts 的 polyfill） |
+| `fireDrop()` | `frontend/src/test-utils/events:55` | 模拟拖拽：构造 DragEvent |
 | `queryByTestId()` | `frontend/src/test-utils/index` | — |
 | `getByTestId()` | `frontend/src/test-utils/index` | — |
 | `queryAllByTestId()` | `frontend/src/test-utils/index` | — |

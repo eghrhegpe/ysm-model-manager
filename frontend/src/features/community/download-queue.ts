@@ -279,7 +279,7 @@ export interface QueueController {
 /**
  * 属性选择器值转义。
  * 浏览器用标准 CSS.escape 正确处理 & < > 等字符（修复 &amp; 不还原问题，ADR-039 P3）；
- * jsdom 测试环境未实现 CSS 全局对象，降级为最小转义（" 与 \），足以覆盖测试中的简单文件名。
+ * 降级分支（CSS.escape 不可用时）做最小转义（" 与 \），覆盖非标准环境。
  */
 function escapeAttrValue(s: string): string {
   if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {

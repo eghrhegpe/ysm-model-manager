@@ -4,6 +4,7 @@ package avatar
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -11,8 +12,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // CacheDir 返回头像缓存目录（exe 同目录下的 creators_cache/）。
@@ -34,7 +37,42 @@ func SafeName(name string) string {
 		"/", "_", "\\", "_", ":", "_", "*", "_",
 		"?", "_", "\"", "_", "<", "_", ">", "_", "|", "_",
 	)
-	return r.Replace(name)
+	safe := r.Replace(name)
+	// P2 修复：Windows 保留设备名（CON/PRN/AUX/NUL/COM1-9/LPT1-9）与尾部点/空格
+	// 会导致缓存写失败（"CON.png" 被系统拒绝）；去尾后与保留名比对则加下划线前缀
+	safe = strings.TrimRight(safe, " .")
+	base := safe
+	if idx := strings.IndexByte(base, '_'); idx >= 0 {
+		base = base[:idx]
+	}
+	switch strings.ToUpper(base) {
+	case "CON", "PRN", "AUX", "NUL",
+		"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+		"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9":
+		return "_" + safe
+	}
+	return safe
+}
+
+// isSafeAvatarPath 强校验头像相对路径：
+// Clean 规范化后必须位于 "avatar" 目录下（严格前缀），且不含 ".." 逃逸段。
+// P1 修复：原 HasPrefix("avatar") 弱校验放行 "avatar/../../x" 逃出模型目录，
+// 且 "avatars/.."、"avatarx/.." 等非精确目录也会误放行。
+func isSafeAvatarPath(ap string) bool {
+	clean := path.Clean(strings.ToLower(strings.TrimSpace(ap)))
+	if clean == "avatar" {
+		return true
+	}
+	if !strings.HasPrefix(clean, "avatar/") {
+		return false
+	}
+	// 拒绝任何 ".." 段（Clean 后仍含则说明原路径有逃逸意图）
+	for _, seg := range strings.Split(clean, "/") {
+		if seg == ".." {
+			return false
+		}
+	}
+	return true
 }
 
 // ReadCachedAvatar 读取缓存中的头像，返回 data URI。
@@ -184,10 +222,15 @@ func DecodeOneAvatar(modelPath, cacheDir, safeName string) string {
 		for _, au := range authors {
 			if SafeName(au.Name) == safeName && au.Avatar != "" {
 				ap := strings.ToLower(au.Avatar)
-				if !strings.HasPrefix(ap, "avatar") && !strings.Contains(ap, "/avatar/") {
+				// P1 修复：强校验（Clean + avatar/ 前缀 + 拒绝 ..），防 avatar/../../x 逃逸读任意文件
+				if !isSafeAvatarPath(ap) {
 					continue
 				}
 				avatarPath := filepath.Join(dir, au.Avatar)
+				// 落盘前 Rel 复查：Join 后必须仍在模型目录内
+				if rel, err := filepath.Rel(dir, avatarPath); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+					continue
+				}
 				if avatarData, err := os.ReadFile(avatarPath); err == nil {
 					mime := "image/png"
 					if strings.HasSuffix(strings.ToLower(au.Avatar), ".jpg") {
@@ -234,12 +277,19 @@ func CacheAvatarsFromJSON(modelPath string) {
 			continue
 		}
 		ap := au.Avatar
-		if !strings.HasPrefix(ap, "avatar") && !strings.Contains(ap, "/avatar") {
-			ap = "avatar/" + ap
+		// P1 修复：强校验（Clean + avatar/ 前缀 + 拒绝 ..），防逃逸读模型目录外文件并写入缓存
+		if !isSafeAvatarPath(ap) {
+			continue
 		}
 		avatarPath := filepath.Join(dir, ap)
+		// Rel 复查：Join 后必须仍在模型目录内
+		if rel, err := filepath.Rel(dir, avatarPath); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			continue
+		}
 		if avatarData, err := os.ReadFile(avatarPath); err == nil {
-			os.WriteFile(cachedPath, avatarData, 0644)
+			if err := os.WriteFile(cachedPath, avatarData, 0644); err != nil {
+				log.Printf("[avatar] 缓存写入失败 %s: %v", cachedPath, err)
+			}
 		}
 	}
 }
@@ -336,11 +386,18 @@ main().catch(e=>{console.error(e);process.exit(1)});
 	if err := os.WriteFile(scriptPath, []byte(script), 0644); err != nil {
 		return nil
 	}
-	cmd := exec.Command(nodeJSPath, scriptPath)
+	// P2 修复：子进程加超时护栏（WASM 死循环/Node 卡死时防永久挂起冻结 UI 线程）
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, nodeJSPath, scriptPath)
 	hideWindow(cmd)
 	cmd.Dir = tmpDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			fmt.Fprintln(os.Stderr, "[ysm-avatar] decode timed out after 60s")
+			return nil
+		}
 		fmt.Fprintln(os.Stderr, "[ysm-avatar] decode failed:", string(output))
 		return nil
 	}

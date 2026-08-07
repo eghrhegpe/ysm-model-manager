@@ -53,10 +53,16 @@ declare global {
 
 const THEME_DARK = "cyber";
 const THEME_LIGHT = "warm";
+// 主题白名单（applyTheme 与 initTheme 共用，防两处口径漂移）
+const THEME_VALID = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "system"];
+
+/** 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） */
+function normalizeTheme(mode: string): string {
+  return THEME_VALID.includes(mode) ? mode : "system";
+}
 
 function applyTheme(mode: string): void {
-  const VALID = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "system"];
-  if (!VALID.includes(mode)) mode = "system";
+  if (!THEME_VALID.includes(mode)) mode = "system";
   document.body.classList.remove("theme-cyber", "theme-warm", "theme-pro", "theme-sakura", "theme-ocean", "theme-mint");
   if (mode === "system") {
     const prefersDark = window.matchMedia(
@@ -74,12 +80,16 @@ async function initTheme() {
   try {
     const { LoadAppConfig } = await getApp();
     const cfg = await LoadAppConfig();
-    const theme =
-      localStorage.getItem("theme") || cfg.theme || THEME_DARK;
+    const raw = localStorage.getItem("theme") || cfg.theme || THEME_DARK;
+    // P2 修复：持久层只回写合法值——原实现把 localStorage 非法值（如设置页误写的 "time"）
+    // 原样写回，脏数据持续污染导致后续 matchMedia 跟随失效
+    const theme = normalizeTheme(raw);
     localStorage.setItem("theme", theme);
     applyTheme(theme);
   } catch {
-    const theme = localStorage.getItem("theme") || THEME_DARK;
+    const raw = localStorage.getItem("theme") || THEME_DARK;
+    const theme = normalizeTheme(raw);
+    localStorage.setItem("theme", theme);
     applyTheme(theme);
   }
 }

@@ -177,20 +177,26 @@ func CountDuplicates(dir string, skipRecycle bool) (groups int, extraFiles int, 
 	return groups, extraFiles, nil
 }
 
-// CleanEmptyDirs 递归删除指定目录下的所有空子目录。
+// CleanEmptyDirs 递归删除指定目录下的所有空子目录（不含 dir 自身）。
 // 返回删除的空目录数。从最深层开始删除，确保祖父目录也能被清理。
 func CleanEmptyDirs(dir string) (int, error) {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
 		return 0, fmt.Errorf("目录为空")
 	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return 0, err
+	}
 	var removed int
-	removeEmptyDirs(dir, &removed)
+	removeEmptyDirs(abs, abs, &removed)
 	return removed, nil
 }
 
-// removeEmptyDirs 递归后序遍历删除空目录
-func removeEmptyDirs(dir string, removed *int) int {
+// removeEmptyDirs 递归后序遍历删除空目录。
+// root 为调用入口目录：根目录自身永不删除（P2 修复——原实现 isEmptyDir(root) 命中时
+// 会误删整个根目录，与「删除所有空子目录」契约矛盾，也与 fsutil 语义分叉）。
+func removeEmptyDirs(root, dir string, removed *int) int {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return 0
@@ -198,11 +204,11 @@ func removeEmptyDirs(dir string, removed *int) int {
 	for _, e := range entries {
 		if e.IsDir() {
 			subPath := filepath.Join(dir, e.Name())
-			removeEmptyDirs(subPath, removed)
+			removeEmptyDirs(root, subPath, removed)
 		}
 	}
-	// 再次检查是否为空（子目录可能已被删除）
-	if isEmptyDir(dir) {
+	// 再次检查是否为空（子目录可能已被删除）；根目录自身跳过
+	if dir != root && isEmptyDir(dir) {
 		if err := os.Remove(dir); err == nil {
 			(*removed)++
 		}

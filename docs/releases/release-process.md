@@ -58,9 +58,8 @@
 ### 1.1 依赖与版本
 - Go `1.24`（CI 固定；`wails/v3` 版本从 `go.mod` 动态读取，禁写死 `@latest`）。
 - Node `22`、`npm ci` 基于 `frontend/package-lock.json`。
-- Wails v3 CLI：本地需 `go install github.com/wailsapp/wails/v3/cmd/wails3@<go.mod 中版本>`。
+- Wails v3 CLI：CI 与本地均需 `go install github.com/wailsapp/wails/v3/cmd/wails3@<go.mod 中版本>`（build-release.ps1 的 `generate:bindings` 依赖）。构建链路为 `build-release.ps1`，不再依赖 Task / NSIS。
 - `gh` CLI：上传 GitHub Release 用（`build-release.ps1` 优先走 gh，退回 GH_TOKEN 环境变量）。
-- Task（Wails v3 构建脚手架）：CI 用 `go install github.com/go-task/task/v3/cmd/task@latest`；本地 `task package` 需此。
 
 ### 1.2 Secrets
 | Secret | 用途 |
@@ -96,7 +95,7 @@
 
 5. **等 CI 完成**：`gh run list --workflow release.yml --limit 3` 监控进度。两个 job 全绿：
    - **test job**：契约测试（`tests/*.mjs`）→ 构建 `ysm-updater-helper.exe`（embed 前置）→ `go vet` → `go test` → 前端 `npm ci` → `tsc --noEmit` → `vitest run` → `vite build`。
-   - **release job**（仅 tag 触发）：`go install task` → `task package`（Taskfile → `build/windows/package`）→ 上传 zip + SHA256SUMS 到 GitHub Release。
+   - **release job**（仅 tag 触发）：`go install wails3 CLI` → `npm ci` → `build-release.ps1 -SkipUpload`（产出 `build/release/*.zip` + SHA256SUMS）→ `softprops/action-gh-release` 建 Release 并上传资产。job 需声明 `permissions: contents: write`（默认只读 token 会 403 "Resource not accessible by integration"）。
 
 6. **核对 Release**：
    - 到 `https://github.com/eghrhegpe/ysm-model-manager/releases/tag/vX.Y.Z` 确认 zip + SHA256SUMS 齐全、body 为手写 notes（非占位文本 `YSM Model Manager vX.Y.Z`）。
@@ -112,7 +111,7 @@
 - **版本注入路径**：
   | 产物 | 注入方式 | 代码位置 |
   |------|----------|----------|
-  | 主程序 | `go build -ldflags "-X ysm-model-manager/go/version.Version=$VerTag"` | `cmd/build-release.ps1:79`、`release.yml` `task package` 步 |
+  | 主程序 | `go build -ldflags "-X ysm-model-manager/go/version.Version=$VerTag"` | `cmd/build-release.ps1:79`（CI 经 `release.yml` 调 `build-release.ps1`） |
   | CLI 工具 | 同上，`-tags cli` | `cmd/build-release.ps1:93` |
   | 更新助手 | 同上，编译到 `go/updater/ysm-updater-helper.exe` | `cmd/build-release.ps1:57` |
 - **默认值**：未注入时 `go/version.Version = "dev"`（`go/version/version.go:6`）。若应用内显示 `dev`，说明 ldflags 注入失败。
@@ -123,7 +122,7 @@
 
 - 路径：`docs/releases/vX.Y.Z.md`（小写 `releases`，文件名带 `v` 前缀与 tag 一致）。
 - `build-release.ps1` 上传时**优先用该文件作 Release body**（`build-release.ps1:143-151`）；缺失则用默认占位文本 `YSM Model Manager $VerTag`。
-- CI 侧 `softprops/action-gh-release@v2` 上传 zip + SHA256SUMS，body 由 `build-release.ps1` 已写入（若走 CI 路径，body 为空，需 `gh release edit` 补）。
+- CI 侧 `build-release.ps1 -SkipUpload` 只构建不上传（`-SkipUpload` 跳过脚本内上传段），`softprops/action-gh-release@v2` 上传 zip + SHA256SUMS；body 为空，需 `gh release edit vX.Y.Z --notes-file docs/releases/vX.Y.Z.md` 补（v1.10.0 实测）。
 - 应用内更新日志：`go/updater` 的 `Check` 聚合 GitHub Release `body`（`UpdateInfo.ReleaseNotes`），展示未读版本日志。
 - **历史 `vX.Y.Z-compare.md` 双文件模式（v1.0.2 ~ v1.7.0）为早期遗留，不再新增**；新版本只产出单一 `vX.Y.Z.md`。
 

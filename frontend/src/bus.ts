@@ -171,3 +171,11 @@ const bus: Bus = _busInstance || (_busInstance = createBus());
 
 export { bus };
 export default bus;
+
+// index.html 内联脚本通过 window.bus 访问（ES module 无法被内联脚本直接 import）
+declare global {
+  interface Window {
+    bus: Bus;
+  }
+}
+window.bus = bus;

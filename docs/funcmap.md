@@ -33,14 +33,14 @@
 | Go(internal)·应用入口 | 15 | 175 |
 | 前端·根 (app-modules/bus) | 1 | 10 |
 | 前端·核心 | 8 | 13 |
-| 前端·特性 | 12 | 49 |
+| 前端·特性 | 12 | 48 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 25 | 92 |
-| frontend/views | 52 | 143 |
+| 前端·工具 | 25 | 91 |
+| frontend/views | 52 | 142 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **166** | **782** |
+| **合计** | **166** | **779** |
 
 ## Go·头像
 
@@ -135,8 +135,8 @@
 | `SimpleCopyImporter.Type()` | `go/importer/importer:66` | — |
 | `SimpleCopyImporter.Import()` | `go/importer/importer:68` | — |
 | `NewDirectoryCopy()` | `go/importer/importer:206` | NewDirectoryCopy 创建文件夹复制导入器 |
-| `DirectoryCopyImporter.Type()` | `go/importer/importer:66` | — |
-| `DirectoryCopyImporter.Import()` | `go/importer/importer:68` | — |
+| `DirectoryCopyImporter.Type()` | `go/importer/importer:210` | — |
+| `DirectoryCopyImporter.Import()` | `go/importer/importer:215` | Import 复制源文件夹到目标目录 srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身 若 srcPath 是文件则取父目录，若是目录则直接使用 |
 | `Handler()` | `go/importer/importer:21` | Handler 资源导入策略接口 |
 | `SimpleCopyImporter()` | `go/importer/importer:57` | — |
 | `DirectoryCopyImporter()` | `go/importer/importer:201` | — |
@@ -333,7 +333,7 @@
 | `LitematicBlockStat()` | `go/types/resource:233` | LitematicBlockStat 方块类型统计 |
 | `LitematicVoxelData()` | `go/types/resource:239` | LitematicVoxelData 体素渲染数据 |
 | `VoxelGroup()` | `go/types/resource:247` | VoxelGroup 同一颜色的方块组 |
-| `e.Error()` | `go/types/types:113` | — |
+| `e.Error()` | `go/types/types` | — |
 | `WindowState()` | `go/types/types:6` | WindowState 窗口位置 |
 | `AuthorInfo()` | `go/types/types:14` | AuthorInfo 作者信息（含模型计数） |
 | `ModelEntry()` | `go/types/types:21` | ModelEntry 模型文件条目 |
@@ -642,7 +642,6 @@
 | `cancelDownloads()` | `frontend/src/features/community/download-queue:152` | 模块级取消 — 纯粹的 Go 调用。 |
 | `QueueControllerOptions()` | `frontend/src/features/community/download-queue:246` | createDownloadQueue 选项 |
 | `QueueController()` | `frontend/src/features/community/download-queue:255` | 队列控制器 |
-| `createDownloadQueue()` | `frontend/src/features/community/download-queue:280` | 创建一个下载队列 UI 控制器。 |
 | `RepoEventsContext()` | `frontend/src/features/community/events:12` | bindRepoEvents 上下文 |
 | `RepoEventsHandle()` | `frontend/src/features/community/events:24` | 绑定返回值 |
 | `bindRepoEvents()` | `frontend/src/features/community/events:37` | 绑定仓库模型页面的所有事件。 |
@@ -798,7 +797,6 @@
 | `sizeColor()` | `frontend/src/utils/dom/format:13` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，&gt;3MB 红色 |
 | `fmtDate()` | `frontend/src/utils/dom/format:23` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
 | `esc()` | `frontend/src/utils/dom/html:4` | HTML 转义（治理红线：所有 innerHTML 拼接必须过 esc） |
-| `hl()` | `frontend/src/utils/dom/html:16` | 关键词高亮：转义 + &lt;mark&gt; 包裹命中段 |
 | `renderFormattedText()` | `frontend/src/utils/format/mc-format:45` | 将含 Minecraft § 分节符的文本渲染为带颜色的 HTML。 |
 | `PackMeta()` | `frontend/src/utils/format/pack-format:92` | ReadPackMeta 返回的 JSON 对象（仅覆盖用到的字段） |
 | `describeVersionRange()` | `frontend/src/utils/format/pack-format:103` | 根据 meta 对象生成格式号 + 版本号描述 |
@@ -851,7 +849,6 @@
 | `CrCardCtx()` | `frontend/src/views/app-content/site/render:12` | 创作者卡片工厂上下文 |
 | `BuildSiteHtmlCtx()` | `frontend/src/views/app-content/site/render:23` | buildSiteHtml 依赖的渲染上下文 |
 | `createCrCard()` | `frontend/src/views/app-content/site/render:35` | 创作者卡片工厂 |
-| `buildSiteHtml()` | `frontend/src/views/app-content/site/render:109` | 构建站点视图 HTML 字符串（纯函数，不碰 DOM）。 |
 | `SiteViewState()` | `frontend/src/views/app-content/site/types:12` | SiteViewState —— renderSiteView 内部闭包共享变量的显式收拢。 |
 | `CleanupFn()` | `frontend/src/views/app-content/site/types:39` | bindXxxEvents 函数的统一返回：清理函数，主入口聚合成单一 cleanup |
 | `repositoryHTML()` | `frontend/src/views/app-content/tpl:4` | — |

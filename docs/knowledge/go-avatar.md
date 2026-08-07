@@ -45,10 +45,10 @@ use_when:
 
 ## 不变量
 
-- 头像路径必须位于 `avatar/` 目录下（前缀校验），防止读取包内任意文件
+- 头像路径必须位于 `avatar/` 目录下（`isSafeAvatarPath` 强校验：`path.Clean` 规范化后严格 `avatar/` 前缀 + 拒绝 `..` 段 + 落盘前 `filepath.Rel` 复查），防止读取包内任意文件或逃逸读磁盘任意文件
 - `SetNodeJS` 未注入时 `DecodeYSMFiles` 直接返回 nil，不 panic
-- 解码临时目录 `MkdirTemp` 用完必 `RemoveAll`；Windows 子进程 `HideWindow` 不弹窗口
-- 缓存文件名一律经 `SafeName` 清洗，防路径穿越
+- 解码临时目录 `MkdirTemp` 用完必 `RemoveAll`；Windows 子进程 `HideWindow` 不弹窗口；Node 子进程带 60s 超时护栏（`exec.CommandContext`），WASM 死循环/卡死不会永久挂起 UI 线程
+- 缓存文件名一律经 `SafeName` 清洗（非法字符 + Windows 保留设备名 CON/PRN/AUX/NUL/COM1-9/LPT1-9 + 尾部点/空格），防路径穿越与写缓存失败
 
 ## 相关
 

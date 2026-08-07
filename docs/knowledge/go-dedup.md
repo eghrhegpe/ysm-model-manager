@@ -36,6 +36,8 @@ use_when:
 ## 不变量
 
 - 重复检测不影响已安装资源
+- `CleanEmptyDirs` 只删空**子目录**，根目录自身永不删除（与 `go/fsutil.CleanEmptyDirs` 语义对齐）
+- 头像/去重路径不在此包；去重实际消费方为 `internal/app/resource_bindings.go`（Wails 绑定），非知识卡所列 importer（后者无 dedup 引用）
 
 ## 相关
 

@@ -521,7 +521,9 @@ export function createDownloadQueue({
       const fillEl = qsEl()?.querySelector(
         ".gh-progress-fill",
       ) as HTMLElement | null;
-      if (pctEl && pctEl.textContent === "99%") {
+      if (pctEl && (_stuckLocked || pctEl.textContent === "99%")) {
+        // P3 修复（code_review）：大文件 2s 转菊花后 textContent 是 ⏳ 而非 99%，
+        // 必须按 _stuckLocked 判断才能命中，否则 _stuckLocked 与 _dotTimer 永不复位
         pctEl.textContent = "100%";
         _stuckLocked = false;
         if (pctEl._dotTimer) {

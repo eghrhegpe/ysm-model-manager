@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"ysm-model-manager/go/types"
@@ -26,7 +27,8 @@ var scanCache sync.Map
 // cacheGen 缓存代际：InvalidateCache/InvalidatePath 递增。
 // 在途扫描 Store 前比对代际，若扫描期间缓存已被失效则丢弃本次结果，
 // 防止「刚失效又被旧扫描结果重新 Store」导致失效白做（P2 竞态修复）。
-var cacheGen uint64
+// 用 atomic 保护：watcher 后台 goroutine 与 Wails 绑定线程并发读写，普通 uint64 存在数据竞争（code_review P3）。
+var cacheGen atomic.Uint64
 
 type scanCacheEntry struct {
 	entries   []types.ModelEntry
@@ -47,7 +49,7 @@ func normalizeScanKey(dir string) string {
 
 // InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用）
 func InvalidateCache() {
-	cacheGen++
+	cacheGen.Add(1)
 	scanCache.Range(func(key, _ interface{}) bool {
 		scanCache.Delete(key)
 		return true
@@ -56,7 +58,7 @@ func InvalidateCache() {
 
 // InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用）
 func InvalidatePath(dir string) {
-	cacheGen++
+	cacheGen.Add(1)
 	scanCache.Delete(normalizeScanKey(dir))
 }
 
@@ -78,7 +80,7 @@ func ScanEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 	// 记录扫描开始时间（进入时），TTL 从此时刻算，不被扫描耗时侵蚀
 	startTime := time.Now()
 	// 记录进入时代际：扫描期间若缓存被失效，Store 前比对并丢弃结果
-	gen := cacheGen
+	gen := cacheGen.Load()
 	// 检查缓存
 	if v, ok := scanCache.Load(dir); ok {
 		entry := v.(scanCacheEntry)
@@ -139,7 +141,7 @@ func ScanEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 	stored := append([]types.ModelEntry(nil), entries...)
 	// P2 修复：扫描期间缓存被失效（cacheGen 已变）则丢弃结果，不重新 Store，
 	// 否则刚执行的 Invalidate 被在途扫描的旧结果覆盖（带全新 30s TTL）
-	if cacheGen == gen {
+	if cacheGen.Load() == gen {
 		scanCache.Store(dir, scanCacheEntry{entries: stored, expiresAt: startTime.Add(scanCacheTTL)})
 	}
 	return entries, false

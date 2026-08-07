@@ -71,9 +71,9 @@
 |------|--------|------|
 | `New()` | `go/download/downloader:26` | New 创建 Downloader，默认 5 分钟超时。 |
 | `NewWithClient()` | `go/download/downloader:31` | NewWithClient 使用指定 HTTP client。 |
-| `Downloader.File()` | `go/download/downloader:119` | File 从 URL 下载文件到 savePath，支持进度回调。ctx 取消/超时即中断下载。 |
-| `Downloader.FromGitHubAPI()` | `go/download/downloader:124` | FromGitHubAPI 从 GitHub API 下载（设置 Accept 头）。ctx 取消/超时即中断下载。 |
-| `ResolveSavePath()` | `go/download/downloader:129` | ResolveSavePath 从 GitHub raw URL 解析存储路径和回退源。 |
+| `Downloader.File()` | `go/download/downloader:122` | File 从 URL 下载文件到 savePath，支持进度回调。ctx 取消/超时即中断下载。 |
+| `Downloader.FromGitHubAPI()` | `go/download/downloader:127` | FromGitHubAPI 从 GitHub API 下载（设置 Accept 头）。ctx 取消/超时即中断下载。 |
+| `ResolveSavePath()` | `go/download/downloader:132` | ResolveSavePath 从 GitHub raw URL 解析存储路径和回退源。 |
 | `ProgressFn()` | `go/download/downloader:17` | ProgressFn 下载进度回调。downloaded / total 为字节数。 |
 | `Downloader()` | `go/download/downloader:20` | Downloader 文件下载器。 |
 
@@ -233,14 +233,14 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `InvalidateCache()` | `go/scanner/scanner:34` | InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用） |
-| `InvalidatePath()` | `go/scanner/scanner:42` | InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用） |
-| `ScanEntries()` | `go/scanner/scanner:49` | ScanEntries 扫描目录下的模型文件（含 .recycle 排除、扩展名过滤、SHA256 哈希、30s TTL 缓存） |
-| `ScanEntriesWithHit()` | `go/scanner/scanner:56` | ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。 |
-| `ComputeFileHash()` | `go/scanner/scanner:124` | ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配） |
-| `ListModelAuthors()` | `go/scanner/scanner:138` | ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序） |
-| `ScanLocalAuthors()` | `go/scanner/scanner:170` | ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root） |
-| `GenerateRepoIndex()` | `go/scanner/scanner:229` | GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub Actions/Linux 消费，正斜杠路径） |
+| `InvalidateCache()` | `go/scanner/scanner:49` | InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用） |
+| `InvalidatePath()` | `go/scanner/scanner:58` | InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用） |
+| `ScanEntries()` | `go/scanner/scanner:66` | ScanEntries 扫描目录下的模型文件（含 .recycle 排除、扩展名过滤、SHA256 哈希、30s TTL 缓存） |
+| `ScanEntriesWithHit()` | `go/scanner/scanner:73` | ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。 |
+| `ComputeFileHash()` | `go/scanner/scanner:149` | ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配） |
+| `ListModelAuthors()` | `go/scanner/scanner:167` | ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序） |
+| `ScanLocalAuthors()` | `go/scanner/scanner:199` | ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root） |
+| `GenerateRepoIndex()` | `go/scanner/scanner:258` | GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub Actions/Linux 消费，正斜杠路径） |
 
 ## Go·同步
 
@@ -419,12 +419,12 @@
 | `App.SelectDirectory()` | `internal/app/app_config:312` | ========== 目录选择 ========== |
 | `App.GetMinecraftPaths()` | `internal/app/app_config:373` | — |
 | `App.ValidateMinecraftDir()` | `internal/app/app_config:375` | — |
-| `NewDownloadQueue()` | `internal/app/app_download:47` | NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入） |
-| `App.EnqueueDownloads()` | `internal/app/app_download:52` | — |
-| `App.CancelQueue()` | `internal/app/app_download:81` | — |
-| `App.QueueStatus()` | `internal/app/app_download:95` | — |
-| `App.DownloadFromGitHub()` | `internal/app/app_download:204` | — |
-| `App.GetModelTexSizes()` | `internal/app/app_download:209` | GetModelTexSizes 扫描仓库文件提取纹理尺寸（轻量级，不解析完整模型） |
+| `NewDownloadQueue()` | `internal/app/app_download:51` | NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入） |
+| `App.EnqueueDownloads()` | `internal/app/app_download:56` | — |
+| `App.CancelQueue()` | `internal/app/app_download:86` | — |
+| `App.QueueStatus()` | `internal/app/app_download:103` | — |
+| `App.DownloadFromGitHub()` | `internal/app/app_download:228` | — |
+| `App.GetModelTexSizes()` | `internal/app/app_download:233` | GetModelTexSizes 扫描仓库文件提取纹理尺寸（轻量级，不解析完整模型） |
 | `QueueStatusInfo()` | `internal/app/app_download:18` | QueueStatusInfo 队列状态（替代多返回值，Wails 自动映射为 JS object） |
 | `DownloadTask()` | `internal/app/app_download:24` | DownloadTask 下载队列任务 |
 | `DownloadQueue()` | `internal/app/app_download:33` | DownloadQueue 串行下载队列 回调注入替代 *App 反向引用（ADR-002 P1：打破 DownloadQueue ↔ App 循环，解锁独立测试） |
@@ -616,11 +616,11 @@
 | `subscribe()` | `frontend/src/features/community/download-queue:70` | 订阅 STATE 变更。返回取消订阅函数。 |
 | `getState()` | `frontend/src/features/community/download-queue:82` | 当前状态的只读快照 |
 | `resume()` | `frontend/src/features/community/download-queue:91` | 页面切回时调用，从 Go 端恢复当前队列状态。 |
-| `enqueueDownloads()` | `frontend/src/features/community/download-queue:128` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
-| `cancelDownloads()` | `frontend/src/features/community/download-queue:152` | 模块级取消 — 纯粹的 Go 调用。 |
-| `QueueControllerOptions()` | `frontend/src/features/community/download-queue:246` | createDownloadQueue 选项 |
-| `QueueController()` | `frontend/src/features/community/download-queue:255` | 队列控制器 |
-| `createDownloadQueue()` | `frontend/src/features/community/download-queue:280` | 创建一个下载队列 UI 控制器。 |
+| `enqueueDownloads()` | `frontend/src/features/community/download-queue:137` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
+| `cancelDownloads()` | `frontend/src/features/community/download-queue:169` | 模块级取消 — 纯粹的 Go 调用。 |
+| `QueueControllerOptions()` | `frontend/src/features/community/download-queue:263` | createDownloadQueue 选项 |
+| `QueueController()` | `frontend/src/features/community/download-queue:272` | 队列控制器 |
+| `createDownloadQueue()` | `frontend/src/features/community/download-queue:297` | 创建一个下载队列 UI 控制器。 |
 | `RepoEventsContext()` | `frontend/src/features/community/events:12` | bindRepoEvents 上下文 |
 | `RepoEventsHandle()` | `frontend/src/features/community/events:24` | 绑定返回值 |
 | `bindRepoEvents()` | `frontend/src/features/community/events:37` | 绑定仓库模型页面的所有事件。 |

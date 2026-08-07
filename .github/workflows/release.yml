@@ -111,6 +111,13 @@ jobs:
         shell: pwsh
         run: go install github.com/go-task/task/v3/cmd/task@latest
 
+      - name: 安装 Wails v3 CLI（Taskfile windows:check:deps 要求 PATH 含 wails3）
+        # 版本对齐 go.mod（wailsapp/wails/v3 v3.0.0-alpha2.105），
+        # 避免 CLI 与库版本错配导致 build 异常。GOPATH/bin 已在 PATH（task 同路径可寻），
+        # 故安装后 wails3 可直接被 task package 调用。
+        shell: pwsh
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.105
+
       - name: 打包（Taskfile → build/windows/package）
         shell: pwsh
         run: |

@@ -490,6 +490,12 @@ export async function loadModel2D(
 
         // 统一关闭 3D：移除 resize/keydown 监听器 + 清理渲染资源（关闭按钮/ESC/切换纹理三条路径共用）
         const close3D = (): void => {
+          // P3 修复（code_review）：正常关闭时把本次 push 的 close3D 从 _unsubs 移除——
+          // 否则每次打开 3D/切换纹理都 push 新闭包（捕获整个模型+纹理+DOM），
+          // 组件销毁前永久累积（_unsubs 挂在 AppPreview 实例上，整个浏览会话存活）。
+          // 配合 disconnectedCallback 的快照遍历（slice）保证销毁时全部执行、不跳项。
+          const unsubIdx = ctx._unsubs?.indexOf(close3D);
+          if (unsubIdx !== undefined && unsubIdx > -1) ctx._unsubs?.splice(unsubIdx, 1);
           document.removeEventListener("mousemove", onResizeMove);
           document.removeEventListener("mouseup", onResizeUp);
           if (_model3d) {

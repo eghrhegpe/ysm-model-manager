@@ -285,8 +285,12 @@ export function bindRepoEvents(
     }
 
     btn.innerHTML = ICONS.HOURGLASS;
-    await queue.enqueue([{ url, saveDir: "", name: cbName, size }]);
-    btn.innerHTML = ICONS.DOWNLOAD;
+    // P2 修复：try/finally 保证无论 enqueue 成功/失败按钮都恢复，防永久卡 HOURGLASS
+    try {
+      await queue.enqueue([{ url, saveDir: "", name: cbName, size }]);
+    } finally {
+      btn.innerHTML = ICONS.DOWNLOAD;
+    }
   }
 
   // 对外暴露的清理函数（供上层在视图销毁时调用）

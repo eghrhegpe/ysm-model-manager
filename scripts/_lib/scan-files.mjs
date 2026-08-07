@@ -50,10 +50,14 @@ export const SRC_EXTS = ['.js', '.ts'];
  *   - skipTest {boolean}               跳过测试文件（*.test.ts / *.spec.ts 及其 __tests__ 目录），默认 false
  * @returns {string[]|{abs:string,rel:string}[]}
  */
+/** 已告警过的未知选项键（walk 递归每层都会校验，按键去重避免每目录刷屏）。 */
+const warnedWalkOpts = new Set();
+
 export function walk(dir = SRC_DIR, opts = {}) {
   const KNOWN_WALK_OPTS = new Set(['exts', 'skipDir', 'skipFile', 'rel', 'base', 'skipTest']);
   for (const k of Object.keys(opts)) {
-    if (!KNOWN_WALK_OPTS.has(k)) {
+    if (!KNOWN_WALK_OPTS.has(k) && !warnedWalkOpts.has(k)) {
+      warnedWalkOpts.add(k);
       console.warn(`[scan-files.walk] 忽略未知选项 "${k}"（已知：${[...KNOWN_WALK_OPTS].join('/')}）`);
     }
   }
@@ -118,4 +122,17 @@ export function relPosix(p) {
 /** 容错读文本：去 BOM + 统一 CRLF → LF（Windows 下编辑的源文件常见）。 */
 export function readText(fp) {
   return fs.readFileSync(fp, 'utf-8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+}
+
+/**
+ * 容错写文本：保留原文件行尾风格（CRLF 文件不被改写为 LF），避免无意义 diff。
+ * 与 readText 配套：readText 归一化读 → 比较/处理 → writeText 按原风格写回，
+ * 生成器在 CRLF 检出（Windows autocrlf）下 --check 幂等判定不失效。
+ */
+export function writeText(fp, content) {
+  let eol = '\n';
+  try {
+    if (fs.readFileSync(fp, 'utf-8').includes('\r\n')) eol = '\r\n';
+  } catch { /* 文件不存在等：默认 LF */ }
+  fs.writeFileSync(fp, eol === '\r\n' ? content.replace(/\n/g, '\r\n') : content, 'utf-8');
 }

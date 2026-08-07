@@ -44,10 +44,12 @@ Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可
 
 ## 不变量
 
-- **致命陷阱 #11 同样适用**：2D 投影的坐标口径必须与 YSMViewer 一致（pivot X 取反、cube 旋转绕 pivot、屏幕 Y 轴翻转取反）；改本文件前先 grep `docs/archive/bug-chronicle.md`，改完用实际模型比对
+- **致命陷阱 #11 同样适用**：2D 投影的坐标口径必须与 YSMViewer 一致（cube 旋转绕 pivot、屏幕 Y 轴翻转取反）；注意 **2D 管线与 3D 不同**——`pivot X 取反` 发生在 go/threejs spec 生成期（3D 专用），model2d 走原始坐标，两者差异已在知识卡明确，勿把取反误读到 2D
 - cube 无显式 pivot 时兜底取几何中心 `[x+sx/2, y+sy/2, z+sz/2]`
 - 悬停监听通过 `canvas._hoverCleanup()` 清理，重绘前必须先调用旧清理函数，禁止累积监听
+- 骨骼热区（`calcBoneHitZones`）必须应用 cube 级 `c.rotation`（与 drawView 静态分支同口径），否则静态旋转 cube 的拾取命中域 ≠ 绘制形状（P2 修复）
 - CSS 颜色（骨骼线/标签）在调用方样式中走 CSS 变量
+- 消费方：`frontend/src/views/app-preview/skeleton.ts` 与 `zoom.ts`（知识卡旧称仅 skeleton.ts 已过时）；测试文件为 `model2d.test.ts`
 
 ## 相关
 

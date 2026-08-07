@@ -209,7 +209,8 @@ function checkAgentsNoHandcraftedIndex() {
 
 const SOURCE_ROOTS = ['frontend/src', 'go'];
 // 排除：node_modules / dist / bindings / test 目录 / .test. / _test.（Go *_test.go） / .spec.
-const WALK_EXCLUDE_RE = /(node_modules|\/dist\/|\/bindings\/|\/test\/|\.test\.|_test\.|\.spec\.)/;
+// 同时匹配 / 与 \（Windows 下 path.join 产反斜杠路径，仅正斜杠会漏排除——code_review P3）
+const WALK_EXCLUDE_RE = /(node_modules|[\\/]dist[\\/]|[\\/]bindings[\\/]|[\\/]test[\\/]|\.test\.|_test\.|\.spec\.)/;
 
 function walkSources(dir, out = []) {
   if (!fs.existsSync(dir)) return out;

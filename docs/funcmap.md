@@ -69,13 +69,13 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `New()` | `go/download/downloader:26` | New 创建 Downloader，默认 5 分钟超时。 |
-| `NewWithClient()` | `go/download/downloader:31` | NewWithClient 使用指定 HTTP client。 |
-| `Downloader.File()` | `go/download/downloader:122` | File 从 URL 下载文件到 savePath，支持进度回调。ctx 取消/超时即中断下载。 |
-| `Downloader.FromGitHubAPI()` | `go/download/downloader:127` | FromGitHubAPI 从 GitHub API 下载（设置 Accept 头）。ctx 取消/超时即中断下载。 |
-| `ResolveSavePath()` | `go/download/downloader:132` | ResolveSavePath 从 GitHub raw URL 解析存储路径和回退源。 |
-| `ProgressFn()` | `go/download/downloader:17` | ProgressFn 下载进度回调。downloaded / total 为字节数。 |
-| `Downloader()` | `go/download/downloader:20` | Downloader 文件下载器。 |
+| `New()` | `go/download/downloader:36` | New 创建 Downloader，默认 5 分钟超时。 |
+| `NewWithClient()` | `go/download/downloader:41` | NewWithClient 使用指定 HTTP client。 |
+| `Downloader.File()` | `go/download/downloader:132` | File 从 URL 下载文件到 savePath，支持进度回调。ctx 取消/超时即中断下载。 |
+| `Downloader.FromGitHubAPI()` | `go/download/downloader:137` | FromGitHubAPI 从 GitHub API 下载（设置 Accept 头）。ctx 取消/超时即中断下载。 |
+| `ResolveSavePath()` | `go/download/downloader:142` | ResolveSavePath 从 GitHub raw URL 解析存储路径和回退源。 |
+| `ProgressFn()` | `go/download/downloader:27` | ProgressFn 下载进度回调。downloaded / total 为字节数。 |
+| `Downloader()` | `go/download/downloader:30` | Downloader 文件下载器。 |
 
 ## Go·错误
 
@@ -634,10 +634,10 @@
 | `getExt()` | `frontend/src/features/dnd-shared:4` | — |
 | `isSupportedFile()` | `frontend/src/features/dnd-shared:8` | 扩展名是否在支持列表 |
 | `isImportableFile()` | `frontend/src/features/dnd-shared:14` | 是否可作为独立文件导入：.json 仅放行 ysm.json 入口清单 包内 geometry/animation/语言 json（main.json / *.animation. |
-| `shouldEnterForm()` | `frontend/src/features/dnd-shared:22` | 判断文件是否需要进入命名表单（异步） 2026-08-05：导入默认直接（保留原文件名，后端自动路由类型/冲突覆盖确认）， 不再强制命名表单；ys m.json 单文件保留表单提示 |
-| `CollectedEntry()` | `frontend/src/features/dnd-shared:37` | 收集条目（文件 + 相对路径） |
-| `FolderGroup()` | `frontend/src/features/dnd-shared:43` | 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） |
-| `groupCollected()` | `frontend/src/features/dnd-shared:55` | 将收集到的条目分组： - 有目录前缀的条目 → 按「顶层目录」整组（dir = 第一段路径），组内保留完整 relPath（支持多层嵌套） - 无目录前缀的散落文件 → 单文件队列 |
+| `shouldEnterForm()` | `frontend/src/features/dnd-shared:22` | 判断文件是否需要进入命名表单 2026-08-05：导入默认直接（保留原文件名，后端自动路由类型/冲突覆盖确认）， 不再强制命名表单；ysm.json 单文件保留表单提示（整组导入 |
+| `CollectedEntry()` | `frontend/src/features/dnd-shared:33` | 收集条目（文件 + 相对路径） |
+| `FolderGroup()` | `frontend/src/features/dnd-shared:39` | 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） |
+| `groupCollected()` | `frontend/src/features/dnd-shared:51` | 将收集到的条目分组： - 有目录前缀的条目 → 按「顶层目录」整组（dir = 第一段路径），组内保留完整 relPath（支持多层嵌套） - 无目录前缀的散落文件 → 单文件队列 |
 | `registerDnD()` | `frontend/src/features/import-dnd:265` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
 | `isImportableFile()` | `frontend/src/features/import-executor` | — |
 | `ImportFile()` | `frontend/src/features/import-executor:12` | 带相对路径的 File（文件夹导入时标记 _relPath） |
@@ -821,7 +821,7 @@
 | `RepoAuthorLike()` | `frontend/src/views/app-content/site-view:11` | 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） |
 | `RenderSiteViewCtx()` | `frontend/src/views/app-content/site-view:14` | 竚点视图渲染上下文（index.ts _initWorkshop 传入） |
 | `LocalCreatorLike()` | `frontend/src/views/app-content/site-view:31` | 本地创作者（绑定 + 运行时附加字段） |
-| `renderSiteView()` | `frontend/src/views/app-content/site-view:41` | 站点视图渲染主入口 — 编排壳：构造数据 → 构 HTML → 绑事件 → 聚 cleanup。 |
+| `renderSiteView()` | `frontend/src/views/app-content/site-view:42` | 站点视图渲染主入口 — 编排壳：构造数据 → 构 HTML → 绑事件 → 聚 cleanup。 |
 | `bindDragEvents()` | `frontend/src/views/app-content/site/drag:13` | 绑定拖拽 JSON 导入事件：创作者 JSON / 站点 JSON 识别 + 合并。 |
 | `bindEditEvents()` | `frontend/src/views/app-content/site/edit:15` | 绑定编辑模式事件：编辑入口 / 拉取配置 / 取消 / 保存 / 行内编辑 / 删除创作者 / 拖拽排序 / 增删搜索词 / 搜索过滤。 |
 | `bindBrowseEvents()` | `frontend/src/views/app-content/site/events:27` | 绑定浏览态事件：空状态按钮 / 创作者卡片网格 / 预设搜索 / 收藏 / 头像调试 / 卡片点击详情浮层 / 键盘导航 / storage 同步 / 浏览仓库模型。 |

@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+// MaxImportSize 导入文件最大体积限制（500MB）
+// MMD/VRC 模型文件可达数十 MB，但超过 500MB 的文件可能是异常数据
+const MaxImportSize = 500 * 1024 * 1024
+
 // AllExts 返回所有支持的扩展名（去重后）
 func AllExts() []string {
 	reg := LoadRegistry()

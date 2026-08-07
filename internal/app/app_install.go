@@ -126,7 +126,7 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 	if strings.ContainsAny(fileName, `\/`) {
 		return types.AppError{Code: "FILENAME_INVALID", Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
 	}
-	if len(data) > 500*1024*1024 {
+	if len(data) > types.MaxImportSize {
 		return types.AppError{Code: "FILE_TOO_LARGE", Operation: "导入模型", SourcePath: fileName, Reason: "文件大小超过 500MB 限制", Suggestion: "请压缩文件至 500MB 以内"}
 	}
 	if len(data) == 0 {

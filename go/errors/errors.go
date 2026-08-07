@@ -27,9 +27,11 @@ func Friendly(err error) error {
 		{[]string{"access is denied", "permission denied", "eacces", "operation not permitted"}, "权限不足，无法访问文件"},
 		{[]string{"no such file", "not found", "cannot find", "does not exist"}, "文件或目录不存在"},
 		// "file exists" 是 syscall.EEXIST 的裸消息（os.OpenFile O_EXCL 等），语义是「文件已存在」；
-		// 不能与「被占用」混为一谈（sharing violation/used by another process 才是占用）。P2 修复。
+		// 不能与「被占用」混为一谈（sharing violation/used by another process 才是占用）。
+		// 保留宽泛 "already exists"（directory/path/destination already exists 等）——
+		// 语义无歧义，收窄会导致这些消息掉进「操作失败:」兜底。P2/P3 修复。
 		{[]string{"sharing violation", "used by another process", "is locked", "device or resource busy", "resource busy"}, "文件被其他程序占用"},
-		{[]string{"file already exists", "file exists"}, "文件已存在"},
+		{[]string{"file already exists", "file exists", "already exists"}, "文件已存在"},
 		// "empty" 过于宽泛（如 "empty response body" 会被误分类），只匹配目录/文件为空的具体短语
 		{[]string{"directory is empty", "no files", "folder is empty"}, "目录为空，没有可操作的文件"},
 		{[]string{"timeout", "timed out"}, "连接超时，请检查网络"},

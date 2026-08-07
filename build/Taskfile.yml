@@ -172,6 +172,10 @@ tasks:
       - "darwin/icons.icns"
       - "windows/icon.ico"
     cmds:
+      # wails3 alpha 不会自动创建输出父目录，而 build/darwin/ 未入库（仅本地生成），
+      # 导致 CI 全新 checkout 时 `open darwin/icons.icns` 失败。这里自包含地预建目录，
+      # 与 checkout 内容解耦，任何环境稳健（不影响 windows/ 已入库目录）。
+      - mkdir -p darwin windows
       - wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename windows/icon.ico -iconcomposerinput appicon.icon -macassetdir darwin
 
   dev:frontend:

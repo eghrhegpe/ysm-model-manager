@@ -151,6 +151,10 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 
 	// 裸 ysm.json（解压后的 YSM 模型文件），直接读取 JSON
 	if strings.HasSuffix(strings.ToLower(path), ".json") {
+		// P2 修复：裸 ysm.json 也设大小上限（与 zip 分支 50MB 对齐），防超大文件整读内存
+		if fi, err := os.Stat(path); err == nil && fi.Size() > (50<<20) {
+			return summary, fmt.Errorf("ysm.json 超过 50MB 上限，已拒绝解析")
+		}
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return summary, fmt.Errorf("无法读取 JSON: %v", err)
@@ -240,8 +244,13 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 				if err != nil {
 					continue
 				}
-				buf, _ := io.ReadAll(io.LimitReader(rc, 5<<20))
+				// P2 修复：limit+1 探测截断 + 不丢弃 ReadAll 错误（ADR-033 陷阱）
+				const maxGeoJSON = 5 << 20
+				buf, err := io.ReadAll(io.LimitReader(rc, maxGeoJSON+1))
 				rc.Close()
+				if err != nil || len(buf) > maxGeoJSON {
+					continue // 读取失败或超过 5MB 上限，跳过该文件
+				}
 				if len(buf) > 0 && (bytes.Contains(buf, []byte(`"minecraft:geometry"`)) || bytes.Contains(buf, []byte(`"minecraft:geometry":`))) {
 					modelCount++
 					continue
@@ -270,9 +279,14 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 	}
 	defer rc.Close()
 
-	data, err := io.ReadAll(io.LimitReader(rc, 50<<20))
+	// P2 修复：limit+1 探测截断（ADR-033 陷阱）——截断数据 JSON 解析会失败且报错信息误导
+	const maxYsmJSON = 50 << 20
+	data, err := io.ReadAll(io.LimitReader(rc, maxYsmJSON+1))
 	if err != nil {
 		return summary, fmt.Errorf("读取 ysm.json 失败: %v", err)
+	}
+	if len(data) > maxYsmJSON {
+		return summary, fmt.Errorf("ysm.json 超过 %dMB 上限，已拒绝解析", maxYsmJSON>>20)
 	}
 
 	var root ysmRoot
@@ -390,10 +404,15 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 				if strings.HasSuffix(strings.ToLower(f.Name), strings.ToLower(geoPath)) {
 					rc, err := f.Open()
 					if err != nil {
-						continue
+					 continue
 					}
-					data, _ := io.ReadAll(io.LimitReader(rc, 50<<20))
+					// P2 修复：limit+1 探测截断 + 不丢弃 ReadAll 错误（ADR-033 陷阱）
+					const maxTexGeo = 50 << 20
+					data, err := io.ReadAll(io.LimitReader(rc, maxTexGeo+1))
 					rc.Close()
+					if err != nil || len(data) > maxTexGeo {
+					 continue
+					}
 					if w, h := extractTexSizeFromGeometry(data); w > 0 && h > 0 {
 						stats.TexWidth = w
 						stats.TexHeight = h

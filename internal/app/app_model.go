@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,6 +26,9 @@ func (a *App) AnalyzeYSMModel(path string) ysm.YSMModelMeta {
 func (a *App) ExtractYsmSummary(path string) ysm.YsmSummary {
 	summary, err := ysm.ExtractYsmSummary(path)
 	if err != nil {
+		// P2 修复：解析失败不再完全静默——记录日志便于诊断。
+		// 绑定签名保持单返回值（不破坏前端契约），前端 detail.ts 有 hasRealSummary 兜底 toast
+		log.Printf("[ysm] ExtractYsmSummary 解析失败 %s: %v", path, err)
 		summary = ysm.YsmSummary{
 			Schema: "ysm-summary/v1",
 			Source: filepath.Base(path),

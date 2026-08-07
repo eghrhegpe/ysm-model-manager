@@ -55,6 +55,8 @@ func readTexSizeFromFile(path string) (int, int) {
 
 // readTexFromZip 从 zip 中提取 geometry JSON 读取纹理尺寸
 func readTexFromZip(path string) (int, int) {
+	// P2 修复：limit+1 探测截断（ADR-033 陷阱），两个循环共用
+	const maxTexJSON = 50 << 20
 	r, err := zip.OpenReader(path)
 	if err != nil {
 		return 0, 0
@@ -71,9 +73,9 @@ func readTexFromZip(path string) (int, int) {
 		if err != nil {
 			continue
 		}
-		data, err := io.ReadAll(io.LimitReader(rc, 50<<20))
+		data, err := io.ReadAll(io.LimitReader(rc, maxTexJSON+1))
 		rc.Close()
-		if err != nil {
+		if err != nil || len(data) > maxTexJSON {
 			continue
 		}
 		if w, h := extractTexSizeFromGeometryBytes(data); w > 0 && h > 0 {
@@ -90,9 +92,9 @@ func readTexFromZip(path string) (int, int) {
 		if err != nil {
 			continue
 		}
-		data, err := io.ReadAll(io.LimitReader(rc, 50<<20))
+		data, err := io.ReadAll(io.LimitReader(rc, maxTexJSON+1))
 		rc.Close()
-		if err != nil {
+		if err != nil || len(data) > maxTexJSON {
 			continue
 		}
 		if w, h := extractTexSizeFromGeometryBytes(data); w > 0 && h > 0 {

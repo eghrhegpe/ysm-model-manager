@@ -148,17 +148,18 @@ export function buildSceneMesh(spec: Spec3D): {
         pos[1] ?? 0,
         pos[2] ?? 0,
       );
+      const rot = bd.localRotation;
       if (
-        bd.localRotation[3] !== 1 ||
-        bd.localRotation[0] !== 0 ||
-        bd.localRotation[1] !== 0 ||
-        bd.localRotation[2] !== 0
+        rot?.[3] !== 1 ||
+        rot?.[0] !== 0 ||
+        rot?.[1] !== 0 ||
+        rot?.[2] !== 0
       )
         g.quaternion.set(
-          bd.localRotation[0],
-          bd.localRotation[1],
-          bd.localRotation[2],
-          bd.localRotation[3],
+          rot?.[0] ?? 0,
+          rot?.[1] ?? 0,
+          rot?.[2] ?? 0,
+          rot?.[3] ?? 1,
         );
       boneGroupMap.set(bd.id, g);
     }

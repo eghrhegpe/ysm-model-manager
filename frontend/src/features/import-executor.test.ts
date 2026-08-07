@@ -15,7 +15,7 @@ vi.mock("../wails/app.ts", () => ({
   }),
 }));
 
-// jsdom 无真实 FileReader：mock 为立即触发 onload
+// happy-dom 已原生支持 FileReader（历史 jsdom 缺失，mock 保留以防环境切换）
 class MockFileReader {
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;

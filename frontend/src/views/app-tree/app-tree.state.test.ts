@@ -9,13 +9,15 @@ import { ToggleModelEnable } from "../../../bindings/ysm-model-manager/internal/
 import "./index.ts"; // 注册 app-tree 自定义元素（constructor 里 attachShadow）
 import type { TreeEntry } from "./loader.ts";
 
-// jsdom 缺 ResizeObserver（render 虚拟滚动依赖）——空实现防 _renderTree 抛错
-class MockResizeObserver {
-  observe(): void {}
-  unobserve(): void {}
-  disconnect(): void {}
+// happy-dom 已原生支持 ResizeObserver，空实现保留作兼容兜底
+if (typeof globalThis.ResizeObserver === "undefined") {
+  class MockResizeObserver {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
 }
-(globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
 
 // 可配置的 mock 种子数据（vi.hoisted 避免工厂提升问题）
 const mockData = vi.hoisted(() => ({

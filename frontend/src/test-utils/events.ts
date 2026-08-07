@@ -51,10 +51,10 @@ export function fireInput(el: Element, value: string): Event {
   return inputEv;
 }
 
-/** 模拟拖拽：构造 DragEvent（使用 test-setup.ts 的 polyfill） */
+/** 模拟拖拽：构造 DragEvent */
 export function fireDrop(el: Element, dataTransfer?: Record<string, unknown>): DragEvent {
   const dt = (dataTransfer ?? {}) as unknown as DataTransfer;
-  const ev = new (globalThis.DragEvent as new (type: string, init?: DragEventInit) => DragEvent)(
+  const ev = new DragEvent(
     "drop",
     { bubbles: true, cancelable: true, dataTransfer: dt },
   );

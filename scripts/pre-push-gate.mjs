@@ -94,10 +94,12 @@ function resolveChanges(remoteOid) {
   // 新分支：优先 merge-base（有远端追踪分支时），否则 fallback 链
   // origin/<branch> → origin/HEAD → origin/main → origin/master，最后才最近提交，
   // 避免多提交新分支只看 HEAD~1..HEAD 漏检中间提交（code_review P3）。
-  let mb = git(`merge-base HEAD origin/${CURRENT_BRANCH} 2>/dev/null`).out.trim();
-  if (!mb) mb = git('merge-base HEAD origin/HEAD 2>/dev/null').out.trim();
-  if (!mb) mb = git('merge-base HEAD origin/main 2>/dev/null').out.trim();
-  if (!mb) mb = git('merge-base HEAD origin/master 2>/dev/null').out.trim();
+  // 不用 `2>/dev/null`：cmd.exe 下会解析为 dev\null 相对路径并中止整条命令（code_review P3）
+  const mergeBase = (ref) => {
+    const r = git(`merge-base HEAD ${ref}`);
+    return r.rc === 0 ? r.out.trim() : '';
+  };
+  let mb = mergeBase(`origin/${CURRENT_BRANCH}`) || mergeBase('origin/HEAD') || mergeBase('origin/main') || mergeBase('origin/master');
   if (mb) {
     const { rc, out } = git(`diff --name-only ${mb}..HEAD`);
     if (rc === 0) return out.trim().split('\n').filter(Boolean);
@@ -251,7 +253,7 @@ function main() {
         results.push({ label: 'gofmt', ok: true, time: Date.now() - t2, note: '无未格式化文件' });
       }
     } else {
-      const unformatted = sh(`gofmt -l ${goFiles.join(' ')}`).out.trim()
+      const unformatted = sh(`gofmt -l ${goFiles.map(shq).join(' ')}`).out.trim() // 与自动修复分支一致的 shq 转义（code_review P3）
         .split('\n').filter((f) => f.endsWith('.go'));
       results.push({ label: 'gofmt', ok: unformatted.length === 0, time: Date.now() - t2,
         note: unformatted.length ? `DRY-RUN 检出 ${unformatted.length} 个未格式化文件（未修改）` : '无未格式化文件' });

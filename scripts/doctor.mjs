@@ -263,7 +263,7 @@ function checkGovernance() {
   // 规则 1: window.__* 全局变量（ERROR 硬门槛，doctor 退出码 1 阻断提交）
   // node 原生扫描（grep 直调在 Windows MSYS 下吞反斜杠，`window\.__` 变 `window.__` 假绿）
   const srcTs = scanAllFiles(path.join(ROOT, 'frontend/src'), ['.js', '.ts']);
-  const r1 = grepLines(srcTs, /window\.__/).map((l) => l.split(':')[0]);
+  const r1 = grepLines(srcTs, /window\.__/).map((l) => l.replace(/:\d+:.*$/, '')); // 右剥 :行号:内容，Windows 盘符路径不受 split(':')[0] 截断（code_review P2）
   if (r1.length) {
     errors += 1;
     console.log(`  ${FAIL} [rule1] window.__ global vars:`);

@@ -19,6 +19,19 @@ import (
 // maxExtractSize 单个文件最大读取大小（ZIP/7z 内文件），防止 ZIP 炸弹
 const maxExtractSize = 50 << 20 // 50MB
 
+// readLimitedEntry 读取 zip/7z 单条目：limit+1 探测截断（ADR-033 修复）——
+// 原 `io.ReadAll(io.LimitReader(rc, maxExtractSize))` 截断后 err==nil 静默，
+// 超 50MB 的 PNG/geometry 会被截断后继续使用（损坏数据装盘）。
+// 读取错误或超限返回 nil，调用方跳过该条目。
+func readLimitedEntry(rc io.ReadCloser) []byte {
+	defer rc.Close()
+	buf, err := io.ReadAll(io.LimitReader(rc, int64(maxExtractSize)+1))
+	if err != nil || len(buf) > maxExtractSize {
+		return nil
+	}
+	return buf
+}
+
 // ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览）
 func ExtractFirstPNGFromZip(data []byte, size int64) []byte {
 	reader, err := zip.NewReader(bytes.NewReader(data), size)
@@ -31,8 +44,7 @@ func ExtractFirstPNGFromZip(data []byte, size int64) []byte {
 			if err != nil {
 				continue
 			}
-			buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
-			rc.Close()
+			buf := readLimitedEntry(rc)
 			if len(buf) > 0 {
 				return buf
 			}
@@ -53,8 +65,7 @@ func ExtractFirstPNGFrom7z(data []byte, size int64) []byte {
 			if err != nil {
 				continue
 			}
-			buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
-			rc.Close()
+			buf := readLimitedEntry(rc)
 			if len(buf) > 0 {
 				return buf
 			}
@@ -83,8 +94,7 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 			if err != nil {
 				continue
 			}
-			buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
-			rc.Close()
+			buf := readLimitedEntry(rc)
 			var ysm struct {
 				Properties struct {
 					DefaultTexture string `json:"default_texture"`
@@ -218,8 +228,7 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 			if err != nil {
 				continue
 			}
-			buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
-			rc.Close()
+			buf := readLimitedEntry(rc)
 			geoFiles = append(geoFiles, geoEntry{name: f.Name, data: buf})
 		}
 		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !f.FileInfo().IsDir() && !strings.Contains(low, "avatar/") {
@@ -227,8 +236,7 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 			if err != nil {
 				continue
 			}
-			pngData, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
-			rc.Close()
+			pngData := readLimitedEntry(rc)
 			if len(pngData) > 4096 { // 过滤 <4KB 的头像/预览图
 				name := f.Name
 				if idx := strings.LastIndex(name, "/"); idx >= 0 {
@@ -322,9 +330,15 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 	}
 
 	if len(texOrder) > 0 {
+		// P2 修复：orderMap 的 key 必须与查询 key 同口径——
+		// texOrder 条目是「小写 basename 含扩展名」（如 tex1.png），而查询 key 是
+		// `strings.ToLower(pngNames[i])`（pngNames 已 TrimSuffix 去扩展名，如 tex1），
+		// 原实现 key 永不命中 → 「纹理按声明顺序排序」形同死代码，TexSlot 绑定错位。
 		orderMap := make(map[string]int, len(texOrder))
 		for i, n := range texOrder {
-			orderMap[n] = i
+			bn := strings.TrimSuffix(n, ".png")
+			bn = strings.TrimSuffix(bn, ".jpg")
+			orderMap[bn] = i
 		}
 		sort.SliceStable(pngs, func(i, j int) bool {
 			oi, hasI := orderMap[strings.ToLower(pngNames[i])]
@@ -366,8 +380,7 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 			if err != nil {
 				continue
 			}
-			buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
-			rc.Close()
+			buf := readLimitedEntry(rc)
 			var ysm struct {
 				Properties struct {
 					DefaultTexture string `json:"default_texture"`
@@ -450,8 +463,15 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 					} else if raw[0] == '{' {
 						var mm map[string]string
 						if json.Unmarshal(ysm.Files.Player.Model, &mm) == nil {
-							for _, v := range mm {
-								modelOrder = append(modelOrder, v)
+							// P2 修复：map 遍历顺序随机会导致 modelOrder 每次不同、
+							// TexSlot 绑定漂移（与 ZIP 路径 archive.go 的 sort.Strings 对齐）
+							keys := make([]string, 0, len(mm))
+							for k := range mm {
+								keys = append(keys, k)
+							}
+							sort.Strings(keys)
+							for _, k := range keys {
+								modelOrder = append(modelOrder, mm[k])
 							}
 						}
 					} else {
@@ -479,8 +499,7 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 			if err != nil {
 				continue
 			}
-			buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
-			rc.Close()
+			buf := readLimitedEntry(rc)
 			geoFiles = append(geoFiles, geoEntry{name: f.Name, data: buf})
 		}
 	}
@@ -564,8 +583,7 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 			if err != nil {
 				continue
 			}
-			pngData, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
-			rc.Close()
+			pngData := readLimitedEntry(rc)
 			if len(pngData) > 4096 {
 				name := f.Name
 				if idx := strings.LastIndex(name, "/"); idx >= 0 {
@@ -581,9 +599,15 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 		}
 	}
 	if len(texOrder) > 0 {
+		// P2 修复：orderMap 的 key 必须与查询 key 同口径——
+		// texOrder 条目是「小写 basename 含扩展名」（如 tex1.png），而查询 key 是
+		// `strings.ToLower(pngNames[i])`（pngNames 已 TrimSuffix 去扩展名，如 tex1），
+		// 原实现 key 永不命中 → 「纹理按声明顺序排序」形同死代码，TexSlot 绑定错位。
 		orderMap := make(map[string]int, len(texOrder))
 		for i, n := range texOrder {
-			orderMap[n] = i
+			bn := strings.TrimSuffix(n, ".png")
+			bn = strings.TrimSuffix(bn, ".jpg")
+			orderMap[bn] = i
 		}
 		sort.SliceStable(pngs, func(i, j int) bool {
 			oi, hasI := orderMap[strings.ToLower(pngNames[i])]

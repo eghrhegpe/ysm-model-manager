@@ -270,6 +270,10 @@ export function calcBoneHitZones(
       const [x, y, z] = c.origin;
       const [sx, sy, sz] = c.size;
       const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
+      // P2 修复：热区必须应用 cube 级 c.rotation（与 drawView 静态分支 :410-470 同口径），
+      // 否则静态旋转 cube 的拾取命中域是「未旋转包围盒」，与绘制形状不一致
+      const cubeRot = c.rotation || [0, 0, 0];
+      const cubeHasRot = cubeRot[0] !== 0 || cubeRot[1] !== 0 || cubeRot[2] !== 0;
       for (let dx = 0; dx <= 1; dx++) {
         for (let dy = 0; dy <= 1; dy++) {
           for (let dz = 0; dz <= 1; dz++) {
@@ -295,6 +299,23 @@ export function calcBoneHitZones(
               if (rx !== 0) {
                 const dyy = cy - pivot[1];
                 cy = pivot[1] + dyy * Math.cos(rx);
+              }
+            }
+            // cube 级旋转：与 drawView 静态分支一致——先 X 轴（Y 压缩）再 Z 轴（绕 pivot）
+            if (cubeHasRot) {
+              const rxRad = (cubeRot[0] * Math.PI) / 180;
+              const rzRad = (cubeRot[2] * Math.PI) / 180;
+              if (rxRad !== 0) {
+                const dyy = cy - pivot[1];
+                cy = pivot[1] + dyy * Math.cos(rxRad);
+              }
+              if (rzRad !== 0) {
+                const cRz = Math.cos(rzRad);
+                const sRz = Math.sin(rzRad);
+                const dxx = cx - pivot[0];
+                const dyy = cy - pivot[1];
+                cx = pivot[0] + dxx * cRz - dyy * sRz;
+                cy = pivot[1] + dxx * sRz + dyy * cRz;
               }
             }
             const rxx = cx * cosA - cz * sinA;

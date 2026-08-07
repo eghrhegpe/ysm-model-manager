@@ -22,9 +22,10 @@ export function register<T extends Service = Service>(name: ServiceName, impl: T
 
 /** 获取一个服务（.ts 调用方：get<X>("name") 断言期望类型；未注册抛错，错误含服务名） */
 export function get<T extends Service = Service>(name: ServiceName): T {
-  const s = services.get(name);
-  if (!s) throw new Error(`[registry] Service not found: ${name}`);
-  return s as T;
+  // P3 修复（code_review 建议）：用 Map.has() 判定未注册——原 `if (!s)` 会把
+  // 已注册的 falsy 实现（0/""/false/null）误判为未注册
+  if (!services.has(name)) throw new Error(`[registry] Service not found: ${name}`);
+  return services.get(name) as T;
 }
 
 /** 检查服务是否已注册 */

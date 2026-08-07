@@ -47,13 +47,13 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `SafeName()` | `go/avatar/avatar:32` | SafeName 将非法文件名字符替换为下划线。 |
-| `ReadCachedAvatar()` | `go/avatar/avatar:42` | ReadCachedAvatar 读取缓存中的头像，返回 data URI。 |
-| `SaveAvatarData()` | `go/avatar/avatar:56` | SaveAvatarData 将头像数据写入缓存。 |
-| `DecodeOneAvatar()` | `go/avatar/avatar:68` | DecodeOneAvatar 从模型文件中提取指定所有者的头像。 |
-| `CacheAvatarsFromJSON()` | `go/avatar/avatar:205` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
-| `ReadFileFromZip()` | `go/avatar/avatar:248` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
-| `SetNodeJS()` | `go/avatar/avatar:276` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
-| `DecodeYSMFiles()` | `go/avatar/avatar:283` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
+| `ReadCachedAvatar()` | `go/avatar/avatar:77` | ReadCachedAvatar 读取缓存中的头像，返回 data URI。 |
+| `SaveAvatarData()` | `go/avatar/avatar:91` | SaveAvatarData 将头像数据写入缓存。 |
+| `DecodeOneAvatar()` | `go/avatar/avatar:103` | DecodeOneAvatar 从模型文件中提取指定所有者的头像。 |
+| `CacheAvatarsFromJSON()` | `go/avatar/avatar:245` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
+| `ReadFileFromZip()` | `go/avatar/avatar:295` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
+| `SetNodeJS()` | `go/avatar/avatar:323` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
+| `DecodeYSMFiles()` | `go/avatar/avatar:330` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
 
 ## Go·去重
 
@@ -61,7 +61,7 @@
 |------|--------|------|
 | `FindDuplicateFiles()` | `go/dedup/dedup:32` | FindDuplicateFiles 扫描目录，按 SHA256 哈希分组，返回包含重复的分组 skipRecycle 为 true 时跳过 .recycle 子目录 |
 | `CountDuplicates()` | `go/dedup/dedup:124` | CountDuplicates 统计重复文件数量（比 FindDuplicateFiles 轻量，只计数） |
-| `CleanEmptyDirs()` | `go/dedup/dedup:182` | CleanEmptyDirs 递归删除指定目录下的所有空子目录。 |
+| `CleanEmptyDirs()` | `go/dedup/dedup:182` | CleanEmptyDirs 递归删除指定目录下的所有空子目录（不含 dir 自身）。 |
 | `FileEntry()` | `go/dedup/dedup:16` | FileEntry 文件条目 |
 | `Group()` | `go/dedup/dedup:24` | Group 重复文件分组 |
 

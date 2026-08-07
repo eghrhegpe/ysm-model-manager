@@ -13,6 +13,16 @@ import (
 	"time"
 )
 
+// 下载参数常量
+const (
+	// readBufferSize 读取缓冲区大小（256KB）
+	readBufferSize = 256 << 10
+	// progressEmitInterval 进度上报节流间隔（200ms）
+	progressEmitInterval = 200 * time.Millisecond
+	// defaultTimeout 默认下载超时（5分钟）
+	defaultTimeout = 300 * time.Second
+)
+
 // ProgressFn 下载进度回调。downloaded / total 为字节数。
 type ProgressFn func(downloaded, total int64)
 
@@ -24,7 +34,7 @@ type Downloader struct {
 
 // New 创建 Downloader，默认 5 分钟超时。
 func New() *Downloader {
-	return &Downloader{timeout: 300 * time.Second}
+	return &Downloader{timeout: defaultTimeout}
 }
 
 // NewWithClient 使用指定 HTTP client。
@@ -81,7 +91,7 @@ func (d *Downloader) downloadTo(ctx context.Context, url, savePath, accept strin
 
 	total := resp.ContentLength
 	var downloaded int64
-	buf := make([]byte, 256*1024)
+	buf := make([]byte, readBufferSize)
 	lastEmit := time.Now()
 
 	for {
@@ -96,7 +106,7 @@ func (d *Downloader) downloadTo(ctx context.Context, url, savePath, accept strin
 				return wErr
 			}
 			downloaded += int64(n)
-			if onProgress != nil && time.Since(lastEmit) > 200*time.Millisecond {
+			if onProgress != nil && time.Since(lastEmit) > progressEmitInterval {
 				onProgress(downloaded, total)
 				lastEmit = time.Now()
 			}

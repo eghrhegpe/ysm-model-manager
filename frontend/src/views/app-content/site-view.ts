@@ -36,9 +36,10 @@ export interface LocalCreatorLike extends WorkshopCreator {
 
 /**
  * 站点视图渲染主入口 — 编排壳：构造数据 → 构 HTML → 绑事件 → 聚 cleanup。
-* 各块实现在 site-view-{render,events,edit,drag}.ts，共享状态走 SiteViewState 显式传递。
-*/
-export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): void {
+ * 各块实现在 site-view-{render,events,edit,drag}.ts，共享状态走 SiteViewState 显式传递。
+ * 返回 cleanup 函数，供调用方在切页/重渲染时清理 storage 等监听。
+ */
+export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): CleanupFn {
   const {
     esc,
     searchResults,
@@ -84,7 +85,9 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): void
   searchResults.innerHTML = html;
 
   // 主入口编排：构造共享状态 → 调各块事件绑定 → 聚合 cleanup
-  const refreshView = (): void => renderSiteView(site, ctx);
+  const refreshView = (): void => {
+    renderSiteView(site, ctx);
+  };
   const state: SiteViewState = {
     esc, searchResults, creatorView, allSites, allCreators, repoAuthors,
     wsEditModeRef, showRepoModels, fillSearch, repoModelCache, openUrl,
@@ -95,8 +98,8 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): void
   unsubs.push(bindEditEvents(state, refreshView));
   unsubs.push(bindDragEvents(state, refreshView));
 
-  // cleanup：聚合各块监听清理（storage 等），供外层切页时统一调用。
-  // 注：renderSiteView 是单次渲染函数，cleanup 由调用方按需调用
-  // （当前调用方 index.ts _initWorkshop 未接 cleanup，后续可补 disconnectedCallback）
-  void unsubs;
+  // 返回聚合清理函数：调用各块 cleanup（storage 等），供外层切页时统一调用
+  return () => {
+    unsubs.forEach((fn) => fn());
+  };
 }

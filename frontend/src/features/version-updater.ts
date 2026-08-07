@@ -79,11 +79,12 @@ async function promptUpdate(
   });
   if (!ok) return;
   // P2 修复：静默路径（toast click 触发）statusEl 为 null，下载期（上限 500MB）界面零反馈——
-  // 先发一条「下载中」toast，避免用户点完更新后长时间无感知
+  // 先发一条「下载中」toast，避免用户点完更新后长时间无感知。
+  // P3 修复（code_review）：10s 对慢网大文件不够，拉到 60s，保证覆盖整个下载窗口
   if (!statusEl) {
     bus.emit("toast:show", {
       msg: `⬇️ 正在下载 ${info.latest}… 下载完成将自动重启应用`,
-      duration: 10000,
+      duration: 60000,
       type: "info",
     });
   }

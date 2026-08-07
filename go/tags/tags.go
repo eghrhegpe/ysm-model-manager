@@ -47,7 +47,15 @@ func (s *Store) load() error {
 	}
 	var m map[string][]string
 	if err := json.Unmarshal(data, &m); err != nil {
-		return fmt.Errorf("解析标签文件失败: %w", err)
+		// P2 修复（code_review）：损坏文件备份为 .corrupt 并重建空存储——
+		// 若不恢复，load 每次调用都报错，Get/Set/Add/Remove 全部永久失败（写路径也被阻塞）。
+		// 备份保留现场供人工排查；重建后 SetTags 可写回全新文件完成自我修复。
+		corrupt := s.path + ".corrupt"
+		if renErr := os.Rename(s.path, corrupt); renErr != nil {
+			return fmt.Errorf("解析标签文件失败: %w（备份失败: %v）", err, renErr)
+		}
+		s.data = make(map[string][]string)
+		return nil
 	}
 	s.data = m
 	return nil

@@ -39,7 +39,7 @@ use_when:
 
 ## 不变量
 
-- ZIP 内 pack.png 读取上限 10MB（`io.LimitReader`），防超大图拖垮内存
+- ZIP 内 pack.png 读取上限 10MB（`io.LimitReader` + limit+1 截断探测，超限置空跳过，防损坏缩略图被展示）；目录形态 pack.png 同样 stat 预检 10MB 上限
 - `.7z` 无法用 `zip.OpenReader` 打开：YSM 检测直接按扩展名放行，mcmeta/shader 检测返回 false
 - `supported_formats` 兼容三种 JSON 形态（int / [min,max] 数组 / {min_inclusive,max_inclusive} 对象），由 `types.FormatRange` 承接
 

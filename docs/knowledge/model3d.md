@@ -25,14 +25,14 @@ use_when:
 
 ## 概览
 
-前端 Three.js 3D 渲染层，由三个文件组成：`model3d.ts` 负责场景搭建/相机/渲染循环，`model3d-loader.ts` 负责纹理与 spec 加载（Go binding 优先 + JS 兜底），`model3d-spec.ts` 是 JS 端兜底 spec 构建算法（与 Go `threejs.Build()` 口径一致）。几何数据（顶点/法线/UV/骨骼四元数）全部由 Go 端 [go_threejs](./go-threejs.md) 预计算，本层只渲染、不做几何计算。
+前端 Three.js 3D 渲染层，由三个文件组成：`model3d.ts` 负责场景搭建/相机/渲染循环，`model3d-loader.ts` 负责纹理与 spec 加载（**Go binding 为唯一事实来源，不再降级 JS 兜底**），`model3d-spec.ts` 是历史 JS 端兜底 spec 构建算法（已废弃、无消费方，仅测试保留作口径参考）。几何数据（顶点/法线/UV/骨骼四元数）全部由 Go 端 [go_threejs](./go-threejs.md) 预计算，本层只渲染、不做几何计算。
 
 ## 核心职责
 
 - Three.js 场景搭建：PerspectiveCamera(45°) + OrbitControls + 环境光/双方向光 + GridHelper/AxesHelper
 - 骨骼层级组树构建（buildSceneMesh）、mesh 合并与纹理槽分配、渲染循环、骨骼拾取回调
-- 纹理并行加载（NearestFilter 像素风采样、低分辨率纹理过滤）、spec 获取（Go 优先 + LRU 缓存 + JS 兜底）
-- JS 兜底 spec 构建（同名骨骼合并、box UV / faceUV 解析）
+- 纹理并行加载（NearestFilter 像素风采样、低分辨率纹理过滤）、spec 获取（Go binding 唯一事实来源，模块级 specCache FIFO 缓存上限 20，**空 models 直接 throw 不再 JS 兜底**）
+- `model3d-spec.ts`：历史 JS 兜底 spec 构建（同名骨骼合并、box UV / faceUV 解析）——**已废弃不消费**（fetchSpec 空 models throw，buildSpecFromModel 全项目无调用方）
 
 ## 对外 API / 入口
 
@@ -44,7 +44,7 @@ use_when:
 
 `model3d-loader.ts`：
 - `loadTextures(urls?): Promise<THREE.Texture[]>` — 并行加载，flipY=false + NearestFilter + SRGB；按像素量阈值过滤过小纹理；全失败时警告并返回空数组（fallback 颜色）
-- `preloadModel(model): Promise<{ texArr, spec }>` — 纹理 + spec 并行预加载；内部 fetchSpec（未导出）走 Go `GetModel3DSpec` binding 优先（模块级 specCache，LRU 上限 20），失败或空 models 时用 `buildSpecFromModel` JS 兜底
+- `preloadModel(model): Promise<{ texArr, spec }>` — 纹理 + spec 并行预加载；内部 fetchSpec（未导出）走 Go `GetModel3DSpec` binding（模块级 specCache，FIFO 上限 20），空 models 时抛错由上层 toast（不再降级 JS 兜底）
 - `ModelLike` / `ModelSpec` 接口 — 轻量模型对象与 spec 结构
 
 `model3d-spec.ts`：
@@ -68,7 +68,7 @@ use_when:
 - **致命陷阱 #11**：3D 坐标变换是全项目 fix 次数最多的区域（model3d.ts 历史 fix 第一）。坐标口径必须对齐 YSMViewer：pivot X 取反、`from.x = origin.x - size.x`（Go go/threejs 实现，JS 兜底 model3d-spec.ts 必须同口径）。改 model2d/model3d/threejs spec 前先 grep `docs/archive/bug-chronicle.md`，改完用自由相机近距验证
 - cleanup() 必须完整执行：cancelAnimationFrame、移除 keydown/keyup/mouse/resize/fullscreenchange 全部监听、dispose controls/renderer/geometry/material、清空容器 —— 缺一即泄漏
 - **Three.js 资源 dispose 模式**（审计发现）：移除 `Object3D` 时，`Object3D.remove()` 只从场景图移除引用，**不释放底层 WebGL 资源**。必须遍历子对象并调用 `geometry?.dispose()`、`material?.dispose()`、`texture?.dispose()`。`rebuildDebug`（`model3d.ts:586-605`）和 `makeTextTexture`（`model3d.ts:663-683`）是典型场景——频繁切换 debug 模式或 pivot 模式每骨骼一个标签，不 dispose 会持续累积 GPU 内存泄漏（P1）。
-- 几何计算（顶点/UV/四元数）在 Go 端完成，前端不得私改几何口径；JS 兜底仅为 Go spec 不可用时的降级
+- 几何计算（顶点/UV/四元数）在 Go 端完成，前端不得私改几何口径；JS 兜底算法（model3d-spec.ts）已废弃，不再承担降级职责
 - 治理红线 R1：模块级状态不挂 `window.__*`
 
 ## 相关
@@ -77,5 +77,5 @@ use_when:
 - [model2d](./model2d.md) — 2D 预览（同一坐标口径约束）
 - [app_preview](./app-preview.md) — 预览面板消费方
 - [utils_export](./utils-export.md) — 截图与导出
-- `frontend/src/utils/3d/model3d-spec.test.js` — JS 兜底 ↔ Go 口径黄金样本测试（验证入口）
+- `frontend/src/utils/3d/model3d-spec.test.ts` — JS 兜底 ↔ Go 口径黄金样本测试（验证入口；注意 UV 归一化/面序尚未与 Go 对齐，见测试自述）
 - AGENTS.md 致命陷阱 §二 #11

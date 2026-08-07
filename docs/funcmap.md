@@ -193,8 +193,8 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `ReadPackMeta()` | `go/packs/mcmeta:18` | ReadPackMeta 从资源包文件（.zip 或目录）中读取 pack.mcmeta，返回名称和 base64 缩略图 |
-| `DetectResourceType()` | `go/packs/mcmeta:100` | DetectResourceType 检测文件属于哪种资源类型 |
-| `ReadShaderpackLang()` | `go/packs/mcmeta:206` | ReadShaderpackLang 从光影包 ZIP 中读取 lang/en_US.lang，尝试提取显示名 返回 {name, entries}，name 为空时前端用文件名兜 |
+| `DetectResourceType()` | `go/packs/mcmeta:105` | DetectResourceType 检测文件属于哪种资源类型 |
+| `ReadShaderpackLang()` | `go/packs/mcmeta:211` | ReadShaderpackLang 从光影包 ZIP 中读取 lang/en_US.lang，尝试提取显示名 返回 {name, entries}，name 为空时前端用文件名兜 |
 
 ## Go·路径
 
@@ -388,12 +388,12 @@
 | `YsmSummary()` | `go/ysm/summary:45` | YsmSummary 是前端右侧面板和 AI 搜索消费的标准摘要 |
 | `Stats()` | `go/ysm/summary:62` | — |
 | `ScanModelTexSizes()` | `go/ysm/texsize:22` | ScanModelTexSizes 扫描仓库文件读取纹理尺寸，不调用 YSMParser/WASM 仅支持 zip/7z 格式（未加密模型），加密 .ysm 返回 0,0 |
-| `ScanFiles()` | `go/ysm/texsize:144` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
+| `ScanFiles()` | `go/ysm/texsize:146` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
 | `TexInfo()` | `go/ysm/texsize:14` | TexInfo 轻量级纹理尺寸（不解析完整模型） |
 | `ModelEntry()` | `go/ysm/texsize:37` | ModelEntry 轻量级条目（仅用于纹理扫描签名，调用方传入完整路径） |
 | `IsYSMJar()` | `go/ysm/ysm:12` | IsYSMJar 检查单个 jar 是否是 YSM 模组（支持 mods.toml 和 neoforge.mods.toml） |
-| `HasYSMMod()` | `go/ysm/ysm:74` | HasYSMMod 检查 mods 目录是否有 YSM 模组（先做文件名过滤避免对每个 JAR 打开 ZIP） |
-| `HasModInDir()` | `go/ysm/ysm:103` | HasModInDir 检查 mods 目录是否有匹配指定类型关键词的 jar |
+| `HasYSMMod()` | `go/ysm/ysm:80` | HasYSMMod 检查 mods 目录是否有 YSM 模组（先做文件名过滤避免对每个 JAR 打开 ZIP） |
+| `HasModInDir()` | `go/ysm/ysm:109` | HasModInDir 检查 mods 目录是否有匹配指定类型关键词的 jar |
 
 ## Go(internal)·应用入口
 
@@ -481,15 +481,15 @@
 | `App.ClearImportLogs()` | `internal/app/app_install:789` | — |
 | `App.GetRuntimeLogs()` | `internal/app/app_install:794` | GetRuntimeLogs 获取运行时日志（watcher/sync 等标准库 log 输出） |
 | `App.ClearRuntimeLogs()` | `internal/app/app_install:799` | ClearRuntimeLogs 清空运行时日志缓冲 |
-| `App.AnalyzeYSMModel()` | `internal/app/app_model:21` | — |
-| `App.ExtractYsmSummary()` | `internal/app/app_model:25` | — |
-| `App.ExtractYSMHeader()` | `internal/app/app_model:36` | — |
-| `App.ExtractYSMHeaderFromBase64()` | `internal/app/app_model:40` | — |
-| `App.SavePreviewTempFile()` | `internal/app/app_model:48` | — |
-| `App.ReadFileBytes()` | `internal/app/app_model:67` | — |
-| `App.AnalyzeBedrockModel()` | `internal/app/app_model:85` | — |
-| `App.GetModel3DSpec()` | `internal/app/app_model:130` | — |
-| `App.SaveScreenshotFile()` | `internal/app/app_model:141` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
+| `App.AnalyzeYSMModel()` | `internal/app/app_model:22` | — |
+| `App.ExtractYsmSummary()` | `internal/app/app_model:26` | — |
+| `App.ExtractYSMHeader()` | `internal/app/app_model:40` | — |
+| `App.ExtractYSMHeaderFromBase64()` | `internal/app/app_model:44` | — |
+| `App.SavePreviewTempFile()` | `internal/app/app_model:52` | — |
+| `App.ReadFileBytes()` | `internal/app/app_model:71` | — |
+| `App.AnalyzeBedrockModel()` | `internal/app/app_model:89` | — |
+| `App.GetModel3DSpec()` | `internal/app/app_model:134` | — |
+| `App.SaveScreenshotFile()` | `internal/app/app_model:145` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
 | `App.ExportBoneStructures()` | `internal/app/app_scan:23` | ========== 批量导出骨骼结构 ========== |
 | `App.ExportModelStructureJSON()` | `internal/app/app_scan:79` | ExportModelStructureJSON 导出单模型骨骼结构 |
 | `App.SearchModels()` | `internal/app/app_scan:116` | ========== 高级搜索 ========== |
@@ -733,8 +733,8 @@
 | `loadTdCamSpeed()` | `frontend/src/utils/3d/model3d:101` | 相机移动速度（2–200），默认 20 |
 | `loadTdRotMode()` | `frontend/src/utils/3d/model3d:107` | true = 环绕（orbit），false = 自身（free） |
 | `buildSceneMesh()` | `frontend/src/utils/3d/model3d:120` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
-| `renderModel3D()` | `frontend/src/utils/3d/model3d:177` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/src/utils/3d/model3d:842` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `renderModel3D()` | `frontend/src/utils/3d/model3d:178` | 渲染 3D 模型到容器，返回控制句柄 |
+| `screenshotPreview()` | `frontend/src/utils/3d/model3d:843` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
 | `animateNumber()` | `frontend/src/utils/animation/animate:12` | 里程表滚动进位动画 |
 | `Vec3()` | `frontend/src/utils/animation/animation:9` | 三维向量 [x, y, z] |
 | `Keyframe()` | `frontend/src/utils/animation/animation:12` | 关键帧 |

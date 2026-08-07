@@ -301,7 +301,11 @@ function main() {
   const srcFiles = changed.filter(isSourceFile);
 
   if (srcFiles.length === 0) {
-    console.log(`[diff-coverage] 本次无改动源码需要检查（阈值 ${threshold}%）。通过。`);
+    // suggest 模式下提示走 stderr：消费方 coverage-suggest-hint 把 stdout 原样包进建议区块，
+    // 不能让「无改动源码」提示被当成建议输出（code_review P3）
+    const msg = `[diff-coverage] 本次无改动源码需要检查（阈值 ${threshold}%）。通过。`;
+    if (suggest) console.error(msg);
+    else console.log(msg);
     process.exit(0);
   }
 

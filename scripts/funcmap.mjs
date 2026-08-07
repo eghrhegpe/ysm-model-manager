@@ -45,12 +45,13 @@ function walkExt(dir, exts, out = []) {
 
 /** JS/TS：提取全部导出符号（export 声明 + export {} 聚合）。 */
 function getJsExportedSymbols(text) {
-  // 先剥离注释与字符串字面量，避免注释/字符串内的 `export { x }` 伪匹配产生幽灵符号（与 Go 路径对齐）
+  // 先剥离字符串/模板字面量（其内嵌 /* 不参与注释匹配），再剥离块/行注释，
+  // 避免字符串内 `/*` 无闭合时非贪婪块注释吞掉中间的真实 export（code_review P3）
   const stripped = text
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
     .replace(/"(?:\\.|[^"\\])*"/g, '""')
     .replace(/'(?:\\.|[^'\\])*'/g, "''")
     .replace(/`(?:\\.|[^`\\])*`/g, '``')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
     .replace(/\/\/.*$/gm, ' ');
   const syms = [];
   const seen = new Set();
@@ -113,7 +114,9 @@ function getGoExportedSymbols(text) {
     const name = m[2];
     if (!/^[A-Z]/.test(name)) continue; // 仅导出符号
     if (recv) {
-      const tm = recv.match(/\*\s*([A-Za-z_][\w]*)/) || recv.match(/([A-Za-z_][\w]*)/);
+      // receiver 类型取最后一个标识符：`(e AppError)` → AppError、`(d *Downloader)` → Downloader。
+      // 旧实现取第一个标识符，value receiver 会拿到变量名 e → 符号 e.Error 且 findLine 收窄后失配。
+      const tm = recv.match(/([A-Za-z_][\w]*)\s*$/);
       const t = tm ? tm[1] : '';
       push(`${t}.${name}`);
     } else {

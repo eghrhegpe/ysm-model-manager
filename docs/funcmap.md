@@ -33,14 +33,14 @@
 | Go(internal)·应用入口 | 15 | 170 |
 | 前端·根 (app-modules/bus) | 1 | 10 |
 | 前端·核心 | 8 | 13 |
-| 前端·特性 | 12 | 48 |
+| 前端·特性 | 12 | 49 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 25 | 91 |
 | frontend/views | 52 | 142 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **165** | **757** |
+| **合计** | **165** | **758** |
 
 ## Go·头像
 
@@ -327,7 +327,7 @@
 | `LitematicBlockStat()` | `go/types/resource:233` | LitematicBlockStat 方块类型统计 |
 | `LitematicVoxelData()` | `go/types/resource:239` | LitematicVoxelData 体素渲染数据 |
 | `VoxelGroup()` | `go/types/resource:247` | VoxelGroup 同一颜色的方块组 |
-| `e.Error()` | `go/types/types` | — |
+| `AppError.Error()` | `go/types/types:113` | — |
 | `WindowState()` | `go/types/types:6` | WindowState 窗口位置 |
 | `AuthorInfo()` | `go/types/types:14` | AuthorInfo 作者信息（含模型计数） |
 | `ModelEntry()` | `go/types/types:21` | ModelEntry 模型文件条目 |
@@ -620,6 +620,7 @@
 | `cancelDownloads()` | `frontend/src/features/community/download-queue:152` | 模块级取消 — 纯粹的 Go 调用。 |
 | `QueueControllerOptions()` | `frontend/src/features/community/download-queue:246` | createDownloadQueue 选项 |
 | `QueueController()` | `frontend/src/features/community/download-queue:255` | 队列控制器 |
+| `createDownloadQueue()` | `frontend/src/features/community/download-queue:280` | 创建一个下载队列 UI 控制器。 |
 | `RepoEventsContext()` | `frontend/src/features/community/events:12` | bindRepoEvents 上下文 |
 | `RepoEventsHandle()` | `frontend/src/features/community/events:24` | 绑定返回值 |
 | `bindRepoEvents()` | `frontend/src/features/community/events:37` | 绑定仓库模型页面的所有事件。 |

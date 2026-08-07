@@ -3,6 +3,7 @@ package litematic
 import (
 	"compress/gzip"
 	"fmt"
+	"log"
 	"os"
 
 	"ysm-model-manager/go/types"
@@ -215,6 +216,17 @@ func buildRegionInfo(region map[string]any) *regionInfo {
 
 	bpe := bitsPerEntry(len(palette))
 	if bpe == 0 {
+		return nil
+	}
+
+	// P3 修复（审计）：region 声明的 Size 与 BlockStates 容量交叉校验——
+	// 损坏/恶意文件可声明超大 Size（int32 上限）而 BlockStates 实际很短，
+	// extractBits 全返回 0 判空气后仍会全量扫描到 totalInRegion（可达 10⁹+），
+	// 形成 DoS。总方块数不得超过 longs 可承载位数（len*64/bpe），超限丢弃该 region。
+	total := int64(sx) * int64(sy) * int64(sz)
+	capacity := int64(len(longs)) * 64 / int64(bpe)
+	if total > capacity {
+		log.Printf("[litematic] region Size 与 BlockStates 容量不符，跳过: size=%d capacity=%d", total, capacity)
 		return nil
 	}
 

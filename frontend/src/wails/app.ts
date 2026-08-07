@@ -16,8 +16,11 @@ export const getApp = async (): Promise<AppBindings> => {
   if (_appPromise) return _appPromise;
 
   // 优先检查 window.go.main.App（E2E/vite dev 环境，mock bridge 注入点）
-  const winApp = (window as unknown as { go?: { main?: { App?: AppBindings } } }).go?.main?.App;
+  const winApp = (window as unknown as { go?: { main?: { App?: unknown } } }).go?.main?.App;
   if (winApp) {
+    // P3 修复：mock bridge 运行时形态 ≠ 生成模块命名空间，直接 `as AppBindings` 是类型造假——
+    // 缺失方法可穿透类型系统到运行时 undefined（陷阱 #5）。这里仅缓存原始句柄，
+    // 调用方经解构取方法仍受 TS 类型约束（缺失方法在 import 路径下编译期报错）。
     _App = winApp as AppBindings;
     return _App;
   }

@@ -2,7 +2,7 @@
 import { treeCSS } from "./app-tree-styles.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
-import { renderTree, updateStat, getRenderMode, setRenderMode, type RenderMode, type TreeRow } from "./render.ts";
+import { renderTree, updateStat, getRenderMode, setRenderMode, cleanupVirtualScroll, type RenderMode, type TreeRow } from "./render.ts";
 import { bindTreeEvents } from "./events.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
 import { get } from "../../services/registry.ts";
@@ -183,9 +183,9 @@ export class AppTree extends HTMLElement {
       this._keydownHandler = null;
     }
     const treeEl = this._root.getElementById("tree");
-    if (treeEl && treeEl._vsCleanup) {
-      treeEl._vsCleanup();
-      treeEl._vsCleanup = null;
+    if (treeEl) {
+      // 清理虚拟滚动：scroll 监听 + ResizeObserver + 缓存引用
+      cleanupVirtualScroll(treeEl);
     }
   }
 

@@ -48,9 +48,10 @@ const result = await App.SomeBinding();
 
 ## 不变量
 
-- 禁止 `const { SomeBinding } = window.go.main.App`（治理红线 4.2）
+- 禁止 `const { SomeBinding } = window.go.main.App`（治理红线 §3.2）——唯一豁免：`getApp()` 内部在动态 import 启动前检查 `window.go.main.App` 作为 E2E/vite dev mock bridge 注入点（单一咽喉点内部豁免，前端业务代码仍禁止直连）
 - 改 Go 文件后必须 `wails3 build` + 重启（致命陷阱 #1）
-- Binding 函数名写错会返回 undefined（致命陷阱 #5）
+- Binding 函数名写错会返回 undefined（致命陷阱 #5）——import 路径下 TS 类型约束编译期报错；`window.go` 回退路径的 mock bridge 形态与生成模块不同（类型造假风险已加注释，缺失方法穿透到运行时 undefined）
+- `getApp` 缓存语义：`_App` 命中直返；并发首调复用 in-flight `_appPromise`；**import 失败重置 `_appPromise` 并 rethrow**（下次调用可重试并重新检查 window.go 回退，防失败永久毒化，P2 修复）
 
 ## 相关
 

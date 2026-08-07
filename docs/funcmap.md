@@ -168,9 +168,9 @@
 | `ParseMeta()` | `go/litematic/parser:14` | — |
 | `ParseSchematic()` | `go/litematic/parser:173` | — |
 | `ParseNbtStructure()` | `go/litematic/parser:267` | — |
-| `BuildVoxelData()` | `go/litematic/voxel:91` | BuildVoxelData 构建体素渲染数据（按颜色分组） |
-| `BuildNbtVoxelData()` | `go/litematic/voxel:230` | — |
-| `BuildSchematicVoxelData()` | `go/litematic/voxel:320` | — |
+| `BuildVoxelData()` | `go/litematic/voxel:92` | BuildVoxelData 构建体素渲染数据（按颜色分组） |
+| `BuildNbtVoxelData()` | `go/litematic/voxel:242` | — |
+| `BuildSchematicVoxelData()` | `go/litematic/voxel:332` | — |
 
 ## Go·日志
 
@@ -575,7 +575,7 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `bus()` | `frontend/src/bus:170` | 默认实例（组件直接使用） |
+| `bus()` | `frontend/src/bus:173` | 默认实例（组件直接使用） |
 | `ToastPayload()` | `frontend/src/bus:7` | — |
 | `MenuItem()` | `frontend/src/bus:18` | — |
 | `PageName()` | `frontend/src/bus:28` | 核心页面名（与 app-nav 导航菜单一致） |

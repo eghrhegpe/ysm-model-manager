@@ -113,16 +113,25 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []ResourceTypeInfo, repoR
 		// 对于非模型类型（光影包/蓝图/资源包），额外扫描整合包目录中所有未被 SyncResources 覆盖的文件
 		// （SyncResources 的 map 去重会丢失同名文件）
 		if rt.ID == "shaderpack" || rt.ID == "create-blueprint" || rt.ID == "resourcepack" {
-			// 已由 result 覆盖的文件名集合（避免额外扫描重复添加）
+			// 已由 result 覆盖的文件名集合（避免额外扫描重复添加）。
+			// P2 修复：只记录「确实展示」的条目名（extMatch 通过者），
+			// 否则资源包文件夹名已被 result 记录 → seenNames 命中 → 兜底 Walk 的
+			// 文件夹分支被跳过，导致「未解压资源包文件夹」永远不出现在同步列表
 			seenNames := map[string]bool{}
 			for _, p := range result.Extra {
-				seenNames[strings.ToLower(filepath.Base(p))] = true
+				if extMatch(filepath.Base(p), rt.ID) {
+					seenNames[strings.ToLower(filepath.Base(p))] = true
+				}
 			}
 			for _, p := range result.Synced {
-				seenNames[strings.ToLower(filepath.Base(p))] = true
+				if extMatch(filepath.Base(p), rt.ID) {
+					seenNames[strings.ToLower(filepath.Base(p))] = true
+				}
 			}
 			for _, p := range result.Missing {
-				seenNames[strings.ToLower(filepath.Base(p))] = true
+				if extMatch(filepath.Base(p), rt.ID) {
+					seenNames[strings.ToLower(filepath.Base(p))] = true
+				}
 			}
 			_ = filepath.Walk(instDir, func(path string, info os.FileInfo, err error) error {
 				if err != nil {

@@ -47,13 +47,13 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `SafeName()` | `go/avatar/avatar:35` | SafeName 将非法文件名字符替换为下划线。 |
-| `ReadCachedAvatar()` | `go/avatar/avatar:80` | ReadCachedAvatar 读取缓存中的头像，返回 data URI。 |
-| `SaveAvatarData()` | `go/avatar/avatar:94` | SaveAvatarData 将头像数据写入缓存。 |
-| `DecodeOneAvatar()` | `go/avatar/avatar:106` | DecodeOneAvatar 从模型文件中提取指定所有者的头像。 |
-| `CacheAvatarsFromJSON()` | `go/avatar/avatar:248` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
-| `ReadFileFromZip()` | `go/avatar/avatar:298` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
-| `SetNodeJS()` | `go/avatar/avatar:326` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
-| `DecodeYSMFiles()` | `go/avatar/avatar:333` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
+| `ReadCachedAvatar()` | `go/avatar/avatar:86` | ReadCachedAvatar 读取缓存中的头像，返回 data URI。 |
+| `SaveAvatarData()` | `go/avatar/avatar:100` | SaveAvatarData 将头像数据写入缓存。 |
+| `DecodeOneAvatar()` | `go/avatar/avatar:112` | DecodeOneAvatar 从模型文件中提取指定所有者的头像。 |
+| `CacheAvatarsFromJSON()` | `go/avatar/avatar:254` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
+| `ReadFileFromZip()` | `go/avatar/avatar:304` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
+| `SetNodeJS()` | `go/avatar/avatar:332` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
+| `DecodeYSMFiles()` | `go/avatar/avatar:339` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
 
 ## Go·去重
 

@@ -39,6 +39,42 @@ function run(cmd, cwd = ROOT, opts = {}) {
   }
 }
 
+/**
+ * node 原生递归收集目录下指定扩展名文件（模拟 grep -rn 的目录遍历）。
+ * 注意：Windows 下 execFileSync 直调 MSYS grep/rg 时参数反斜杠会被吞，
+ * 正则检查全部改走本函数 + JS 正则，避免治理红线假绿（code_review 实证）。
+ */
+function scanAllFiles(dir, exts) {
+  const out = [];
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const d of entries) {
+    if (d.isDirectory()) out.push(...scanAllFiles(path.join(dir, d.name), exts));
+    else if (exts.some((e) => d.name.endsWith(e))) out.push(path.join(dir, d.name));
+  }
+  return out;
+}
+
+/** 返回文件中匹配正则的行，格式 `绝对路径:行号:内容`（与 grep -rn 输出一致）。 */
+function grepLines(files, re) {
+  const hits = [];
+  for (const f of files) {
+    let text;
+    try {
+      text = fs.readFileSync(f, 'utf-8');
+    } catch {
+      continue;
+    }
+    const lines = text.split('\n');
+    for (let i = 0; i < lines.length; i++) if (re.test(lines[i])) hits.push(`${f}:${i + 1}:${lines[i]}`);
+  }
+  return hits;
+}
+
 function checkGoBuild() {
   console.log('=== Go Build ===');
   const { rc, out } = run(['go', 'build', './go/...']);
@@ -194,9 +230,11 @@ function checkTypeScript() {
   if (rc === 0) {
     console.log(`  ${PASS} tsc --noEmit passed`);
   } else {
-    console.log(`  ${FAIL} tsc --noEmit failed (${out.trim().split('\n').length} errors)`);
+    // 空输出时 trim().split 得 ['']，直接 length 会假报 1 errors（code_review P2）
+    const lines = out.trim().split('\n').filter(Boolean);
+    console.log(`  ${FAIL} tsc --noEmit failed (${lines.length} errors)`);
     process.exitCode = 1;
-    for (const line of out.trim().split('\n').slice(-5)) {
+    for (const line of lines.slice(-5)) {
       console.log(`    ${line}`);
     }
   }
@@ -223,18 +261,20 @@ function checkGovernance() {
   let errors = 0;
 
   // 规则 1: window.__* 全局变量（ERROR 硬门槛，doctor 退出码 1 阻断提交）
-  const r1 = run(['grep', '-rn', 'window\\.__', path.join(ROOT, 'frontend/src/'), '--include=*.js', '--include=*.ts', '-l']).out.trim();
-  if (r1) {
+  // node 原生扫描（grep 直调在 Windows MSYS 下吞反斜杠，`window\.__` 变 `window.__` 假绿）
+  const srcTs = scanAllFiles(path.join(ROOT, 'frontend/src'), ['.js', '.ts']);
+  const r1 = grepLines(srcTs, /window\.__/).map((l) => l.split(':')[0]);
+  if (r1.length) {
     errors += 1;
     console.log(`  ${FAIL} [rule1] window.__ global vars:`);
-    for (const f of r1.split('\n')) console.log(`    ${f}`);
+    for (const f of [...new Set(r1)]) console.log(`    ${f}`);
   }
 
   // 规则 8 动态拼接: innerHTML 含表达式插值（非纯标识符，如 ${e.message}）必须 esc()（ERROR 硬门槛）
   // 纯标识符插值（${inner} 等受信 HTML 片段）放行；命中行含 esc( 视为已转义
-  const r8dyn = run(['grep', '-rnE', 'innerHTML\\s*=[^;]*\\$\\{[^}]*[^A-Za-z0-9_$}][^}]*\\}', path.join(ROOT, 'frontend/src/'), '--include=*.js', '--include=*.ts']).out.trim();
-  if (r8dyn) {
-    const unescaped = r8dyn.split('\n').filter((l) => !/esc\(/.test(l));
+  const r8dyn = grepLines(srcTs, /innerHTML\s*=[^;]*\$\{[^}]*[^A-Za-z0-9_$}][^}]*\}/);
+  if (r8dyn.length) {
+    const unescaped = r8dyn.filter((l) => !/esc\(/.test(l));
     if (unescaped.length) {
       errors += 1;
       console.log(`  ${FAIL} [rule8] innerHTML 表达式插值未 esc()`);
@@ -243,19 +283,16 @@ function checkGovernance() {
   }
 
   // 规则 5: 硬编码颜色（WARN 级，存量允许）
-  const r5 = run(['grep', '-rn', '#[0-9a-f]\\{6\\}\\b', path.join(ROOT, 'frontend/'), '--include=*.js', '--include=*.ts', '--include=*.css']).out.trim();
-  if (r5) {
-    const lines = r5.split('\n');
-    console.log(`  ${WARN} [rule5] hardcoded colors (${lines.length} hits, top 10):`);
-    for (const line of lines.slice(0, 10)) console.log(`    ${line}`);
+  const r5 = grepLines(scanAllFiles(path.join(ROOT, 'frontend'), ['.js', '.ts', '.css']), /#[0-9a-f]{6}\b/);
+  if (r5.length) {
+    console.log(`  ${WARN} [rule5] hardcoded colors (${r5.length} hits, top 10):`);
+    for (const line of r5.slice(0, 10)) console.log(`    ${line}`);
   }
 
-  // Wails 调用检查（WARN 级）。过滤注释行：`// ...` 或 ` * ...` 里出现
+  // Wails 调用检查（WARN 级）。过滤注释行：`// ...`、`/* ... */`、` * ...` 里出现
   // window.go.main.App 只是文档说明（如 wails/app.ts 治理注释），非真实调用。
-  const w = run(['grep', '-rn', 'window\\.go\\.main\\.App', path.join(ROOT, 'frontend/src/'), '--include=*.js', '--include=*.ts'])
-    .out.trim()
-    .split('\n')
-    .filter((l) => l && !/:\d+:\s*(\/\/|\*)/.test(l))
+  const w = grepLines(srcTs, /window\.go\.main\.App/)
+    .filter((l) => l && !/:\d+:\s*(?:\/\/|\/\*|\*)/.test(l))
     .join('\n');
   if (w) {
     console.log(`  ${WARN} [Wails] direct window.go calls:`);
@@ -272,14 +309,25 @@ function checkGovernance() {
 
 function checkConfig() {
   console.log('\n=== Config Consistency ===');
-  const { rc } = run(['grep', '-c', '^\\[\\[plugins\\]\\]', path.join(ROOT, 'reasonix.toml')]);
-  console.log(`  reasonix.toml plugins: ${rc}`);
+  // node 原生计数（grep -c 直调在 Windows MSYS 下吞反斜杠，正则失效；且 rc 是退出码不是计数）
+  let pluginsCount = '0（无匹配或文件缺失）';
+  try {
+    const toml = fs.readFileSync(path.join(ROOT, 'reasonix.toml'), 'utf-8');
+    const n = (toml.match(/^\[\[plugins\]\]/gm) || []).length;
+    pluginsCount = String(n);
+  } catch { /* 文件缺失保持提示 */ }
+  console.log(`  reasonix.toml plugins: ${pluginsCount}`);
 
-  const r = run(['grep', '-o', '"name"[[:space:]]*:[[:space:]]*"[^"]*"', path.join(ROOT, 'wails.json')]);
-  if (r.rc === 0) {
-    const name = r.out.trim().split('\n')[0] || '?';
-    console.log(`  ${PASS} wails.json: ${name}`);
-  } else {
+  // wails.json name 提取（node 原生，消除 grep 依赖）
+  try {
+    const wailsJson = fs.readFileSync(path.join(ROOT, 'wails.json'), 'utf-8');
+    const m = wailsJson.match(/"name"\s*:\s*"[^"]*"/);
+    if (m) console.log(`  ${PASS} wails.json: ${m[0]}`);
+    else {
+      console.log(`  ${FAIL} wails.json parse failed`);
+      process.exitCode = 1;
+    }
+  } catch {
     console.log(`  ${FAIL} wails.json parse failed`);
     process.exitCode = 1;
   }

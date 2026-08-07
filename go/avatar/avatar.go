@@ -42,7 +42,10 @@ func SafeName(name string) string {
 	// 会导致缓存写失败（"CON.png" 被系统拒绝）；去尾后与保留名比对则加下划线前缀
 	safe = strings.TrimRight(safe, " .")
 	base := safe
-	if idx := strings.IndexByte(base, '_'); idx >= 0 {
+	// P3 修复（code_review）：按 '.' 与 '_' 均分割——Windows 保留设备名
+	// 无论带什么扩展名/后缀都被系统拒绝（CON.png / COM1.config / CON.Doe），
+	// 原实现只按 '_' 分割导致点号变体逃逸
+	if idx := strings.IndexAny(base, "._"); idx >= 0 {
 		base = base[:idx]
 	}
 	switch strings.ToUpper(base) {
@@ -58,13 +61,16 @@ func SafeName(name string) string {
 // Clean 规范化后必须位于 "avatar" 目录下（严格前缀），且不含 ".." 逃逸段。
 // P1 修复：原 HasPrefix("avatar") 弱校验放行 "avatar/../../x" 逃出模型目录，
 // 且 "avatars/.."、"avatarx/.." 等非精确目录也会误放行。
+// P2 修复（code_review）：接受裸文件名（"alice.png" → avatar/alice.png 归一化），
+// 兼容 ysm.json 中不带 avatar/ 前缀的旧式声明——安全目标（拒绝 .. 逃逸）不牺牲兼容。
 func isSafeAvatarPath(ap string) bool {
 	clean := path.Clean(strings.ToLower(strings.TrimSpace(ap)))
 	if clean == "avatar" {
 		return true
 	}
 	if !strings.HasPrefix(clean, "avatar/") {
-		return false
+		// 裸文件名：归一化为 avatar/ 前缀再校验（旧式 ysm.json 声明兼容）
+		clean = path.Clean("avatar/" + clean)
 	}
 	// 拒绝任何 ".." 段（Clean 后仍含则说明原路径有逃逸意图）
 	for _, seg := range strings.Split(clean, "/") {
@@ -72,7 +78,7 @@ func isSafeAvatarPath(ap string) bool {
 			return false
 		}
 	}
-	return true
+	return strings.HasPrefix(clean, "avatar/")
 }
 
 // ReadCachedAvatar 读取缓存中的头像，返回 data URI。

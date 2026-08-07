@@ -23,10 +23,19 @@ export const getApp = async (): Promise<AppBindings> => {
   }
 
   // 生产环境：动态 import Wails 生成的 bindings，通过 Promise 缓存避免并发重复 import
-  _appPromise = import("../../bindings/ysm-model-manager/internal/app/app.js").then((mod) => {
-    _App = mod;
-    _appPromise = null;
-    return _App;
-  });
+  _appPromise = import("../../bindings/ysm-model-manager/internal/app/app.js")
+    .then((mod) => {
+      _App = mod;
+      _appPromise = null;
+      return _App;
+    })
+    .catch((err) => {
+      // P2 修复（code_review）：import 失败必须重置缓存并 rethrow——
+      // 否则 _appPromise 永久持有 rejected promise，后续所有 getApp() 调用
+      // （含 window.go.main.App mock bridge 回退路径）全部返回同一失败，
+      // 一次瞬态错误永久毒化整个 Go bridge，无恢复路径
+      _appPromise = null;
+      throw err;
+    });
   return _appPromise;
 };

@@ -77,14 +77,12 @@ class AppToast extends HTMLElement {
     if (clickCallback) {
       (t.querySelector(".msg") as HTMLElement).onclick = (e: MouseEvent) => {
         e.stopPropagation();
-        clickCallback();
-        this._remove(t);
+        try { clickCallback(); } finally { this._remove(t); }
       };
     }
     if (undoCallback) {
       (t.querySelector(".undo-btn") as HTMLElement).onclick = () => {
-        undoCallback();
-        this._remove(t);
+        try { undoCallback(); } finally { this._remove(t); }
         this.show("✅ 已撤销", null, 2000, "success");
       };
     }

@@ -87,18 +87,18 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `CreateDir()` | `go/fileops/fileops:28` | CreateDir 在 root 下创建子目录（校验非法字符） |
-| `RenameDir()` | `go/fileops/fileops:41` | RenameDir 重命名目录（仅改末段，保持父目录） |
-| `RemoveDir()` | `go/fileops/fileops:61` | RemoveDir 递归删除目录 |
-| `RenameFile()` | `go/fileops/fileops:66` | RenameFile 重命名文件（校验非法字符；ysm.json 为模型目录清单，禁止改名） |
-| `FindPreviewImage()` | `go/fileops/fileops:87` | FindPreviewImage 查找模型同目录的预览图并转 data URI |
-| `ExtractPreviewTexture()` | `go/fileops/fileops:113` | ExtractPreviewTexture 从模型文件中提取预览纹理（zip/7z/ysm/json） |
-| `GetPackInfo()` | `go/fileops/fileops:230` | GetPackInfo 读取 ysm-pack.json（root 为空时按绝对路径处理） |
-| `MoveModelFile()` | `go/fileops/fileops:278` | MoveModelFile 移动 src 到 dstDir（保留原名） ADR-038 D3：src 为 ysm.json 时提升为移动整个模型目录（整组语义）；目录直接整组移动 |
-| `CopyModelFile()` | `go/fileops/fileops:302` | CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验） ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 |
-| `DeleteModelFile()` | `go/fileops/fileops:407` | DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）： src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animat |
-| `ToggleModelEnable()` | `go/fileops/fileops:444` | ToggleModelEnable 切换 .ban 状态文件（返回是否处于启用态；缓存失效由薄壳处理） ADR-038 D3.7：src 为 ysm.json 时提升为父目录级 . |
-| `IsFileBanned()` | `go/fileops/fileops:513` | IsFileBanned 判断路径是否被 .ban 标记（文件级或目录级，ADR-038 D3.7） |
+| `CreateDir()` | `go/fileops/fileops:28` | CreateDir 在 root 下创建子目录（校验非法字符，与 RenameDir 对齐） |
+| `RenameDir()` | `go/fileops/fileops:44` | RenameDir 重命名目录（仅改末段，保持父目录） |
+| `RemoveDir()` | `go/fileops/fileops:64` | RemoveDir 递归删除目录 |
+| `RenameFile()` | `go/fileops/fileops:69` | RenameFile 重命名文件（校验非法字符；ysm.json 为模型目录清单，禁止改名） |
+| `FindPreviewImage()` | `go/fileops/fileops:90` | FindPreviewImage 查找模型同目录的预览图并转 data URI |
+| `ExtractPreviewTexture()` | `go/fileops/fileops:116` | ExtractPreviewTexture 从模型文件中提取预览纹理（zip/7z/ysm/json） |
+| `GetPackInfo()` | `go/fileops/fileops:239` | GetPackInfo 读取 ysm-pack.json（root 为空时按绝对路径处理） |
+| `MoveModelFile()` | `go/fileops/fileops:287` | MoveModelFile 移动 src 到 dstDir（保留原名） ADR-038 D3：src 为 ysm.json 时提升为移动整个模型目录（整组语义）；目录直接整组移动 |
+| `CopyModelFile()` | `go/fileops/fileops:311` | CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验） ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 |
+| `DeleteModelFile()` | `go/fileops/fileops:416` | DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）： src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animat |
+| `ToggleModelEnable()` | `go/fileops/fileops:453` | ToggleModelEnable 切换 .ban 状态文件（返回是否处于启用态；缓存失效由薄壳处理） ADR-038 D3.7：src 为 ysm.json 时提升为父目录级 . |
+| `IsFileBanned()` | `go/fileops/fileops:522` | IsFileBanned 判断路径是否被 .ban 标记（文件级或目录级，ADR-038 D3.7） |
 | `WriteModelFolder()` | `go/fileops/folder_import:19` | WriteModelFolder 写入文件夹整组到仓库（YSM 解压目录或普通模型文件夹）。 |
 
 ## Go·文件系统

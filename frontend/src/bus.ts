@@ -121,7 +121,7 @@ export interface Bus {
   on<K extends BusEventName>(event: K, fn: (payload: BusEvents[K]) => void): () => void;
   off<K extends BusEventName>(event: K, fn: (payload: BusEvents[K]) => void): void;
   emit<K extends BusEventName>(event: K, ...args: BusEvents[K] extends void ? [] : [BusEvents[K]]): void;
-  once<K extends BusEventName>(event: K, fn: (payload: BusEvents[K]) => void): void;
+  once<K extends BusEventName>(event: K, fn: (payload: BusEvents[K]) => void): () => void;
 }
 
 // ── 运行时实现（与原 bus.js 行为完全一致）──────────
@@ -162,6 +162,9 @@ function createBus(): Bus {
         fn(data as never);
       };
       on(event, wrapper as never);
+      // P2 修复：返回退订函数（与 on 契约对齐）——事件永不触发时调用方可主动移除 wrapper，
+      // 否则 wrapper 永久驻留全局单例 listeners，且 off(event, 原fn) 按引用匹配不到 wrapper（幽灵监听器）
+      return () => off(event, wrapper as never);
     },
   };
 }

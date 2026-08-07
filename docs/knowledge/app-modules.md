@@ -28,9 +28,9 @@ use_when:
   - 服务注册：`register("loadInstances", ...)`（app-sidebar/loader）与 `register("loadEntries", ...)`（app-tree/loader）写入 `services/registry.ts`
   - 静态导入轻量组件：`app-nav.ts` / `context-menu.ts` / `app-toast.ts`（失败直接报错，不 try/catch 以免静默吞错）
   - 动态导入重组件：`app-tree` / `app-sidebar` / `app-content` / `app-resource-manager` / `app-sync-manager`（字面量路径确保 Vite 构建解析，`.catch` 输出 `console.warn` 告警不阻塞）
-  - `registerContextMenus()` 注册右键菜单映射（仅此处调用一次）
-  - 主题：`applyTheme`（cyber/warm/pro/sakura/ocean/mint/system 白名单，system 跟随 `prefers-color-scheme`）挂 `window.applyTheme`；`initTheme` 从 Go `LoadAppConfig` 或 localStorage 读主题；`applyUIPrefs` 应用字号（`--fs-scale`）/字体/密度/动画开关（`.no-animations`）
-  - 启动 IIFE：`initTheme()` → `applyUIPrefs()` → 动态 import `features/version-updater.ts` 的 `checkUpdateSilent()` 静默检查更新
+  - `registerContextMenus()` 注册右键菜单映射——注意：**实际在 `core/handlers/global.ts`（经 `registerGlobalHandlers` ← app-content connectedCallback）调用，非本文件**（仅此处链路调用一次）
+  - 主题：`applyTheme`（cyber/warm/pro/sakura/ocean/mint/system 白名单，system 跟随 `prefers-color-scheme`）挂 `window.applyTheme`；`initTheme` 从 Go `LoadAppConfig` 或 localStorage 读主题，**归一化后回写合法值**（白名单外回落 system，防脏值污染持久层）；`applyUIPrefs` 应用字号（`--fs-scale`）/字体/密度/动画开关（`.no-animations`）
+  - 启动 IIFE：`initTheme()` → `applyUIPrefs()` → `checkUpdateSilent()` 静默检查更新（**静态导入** `features/version-updater.ts`，非动态 import）
   - 杂项：capture 阶段拦截旧版 document 拖拽处理器（`#ws-page` / `#dl-drop` / `.ws-page` 区域）；dev 模式（`?dev=1` 或 localStorage `_devtools`）启用 F12/Ctrl+Shift+I 打开 DevTools（`Window.OpenDevTools`）
 
 ## 对外 API / 入口

@@ -84,8 +84,10 @@ function main() {
   broken.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 
   if (JSON_OUT) {
+    // refs 为唯一 id 数，broken 为出现次数（维度不同，分别列明避免歧义，code_review P3）
+    const refOccurrences = [...refs.values()].reduce((n, occ) => n + occ.length, 0);
     console.log(JSON.stringify({
-      _summary: { files_scanned: files.length, refs: refs.size, broken: broken.length },
+      _summary: { files_scanned: files.length, refs: refs.size, ref_occurrences: refOccurrences, broken: broken.length },
       broken,
     }, null, 2));
     return broken.length ? 1 : 0;

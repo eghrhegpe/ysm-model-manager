@@ -322,17 +322,17 @@
 | `SubDirEntry()` | `go/types/extensions:130` | SubDirEntry 资源类型的版本子目录信息 |
 | `SetRegistryPath()` | `go/types/resource:41` | SetRegistryPath 设置注册表文件路径（仅测试用） 加锁保护：并发调用 LoadRegistry + SetRegistryPath 触发数据竞争（审计 P1 #2）。 |
 | `LoadRegistry()` | `go/types/resource:52` | LoadRegistry 加载资源类型注册表 优先读取外部 JSON 文件（可通过 SetRegistryPath 自定义路径）， 文件不存在或读取失败时回退到编译时嵌入的默认数据 |
-| `RegistryType()` | `go/types/resource:95` | RegistryType 按 id 查找资源类型，不存在时返回 nil |
-| `FormatRange.UnmarshalJSON()` | `go/types/resource:112` | UnmarshalJSON 实现 json.Unmarshaler，支持 int / [int] / [int,int] 三种格式 |
-| `PackMeta.Desc()` | `go/types/resource:206` | Desc 返回 description 的可读文本（处理 string / JSON text component 对象 / 数组） |
+| `RegistryType()` | `go/types/resource:96` | RegistryType 按 id 查找资源类型，不存在时返回 nil |
+| `FormatRange.UnmarshalJSON()` | `go/types/resource:113` | UnmarshalJSON 实现 json.Unmarshaler，支持 int / [int] / [int,int] 三种格式 |
+| `PackMeta.Desc()` | `go/types/resource:209` | Desc 返回 description 的可读文本（处理 string / JSON text component 对象 / 数组） |
 | `ResourceTypeRegistry()` | `go/types/resource:13` | ResourceTypeRegistry 资源类型注册表 |
 | `ResourceType()` | `go/types/resource:18` | ResourceType 一种受支持的资源类型定义 |
-| `FormatRange()` | `go/types/resource:106` | FormatRange 资源包 supported_formats 范围（可为 int 或 [int,int]） |
-| `PackMeta()` | `go/types/resource:195` | PackMeta 资源包信息（来自 pack.mcmeta） |
-| `LitematicMeta()` | `go/types/resource:213` | LitematicMeta 投影文件元数据（对应 .litematic 中 Metadata compound） |
-| `LitematicBlockStat()` | `go/types/resource:230` | LitematicBlockStat 方块类型统计 |
-| `LitematicVoxelData()` | `go/types/resource:236` | LitematicVoxelData 体素渲染数据 |
-| `VoxelGroup()` | `go/types/resource:244` | VoxelGroup 同一颜色的方块组 |
+| `FormatRange()` | `go/types/resource:107` | FormatRange 资源包 supported_formats 范围（可为 int 或 [int,int]） |
+| `PackMeta()` | `go/types/resource:198` | PackMeta 资源包信息（来自 pack.mcmeta） |
+| `LitematicMeta()` | `go/types/resource:216` | LitematicMeta 投影文件元数据（对应 .litematic 中 Metadata compound） |
+| `LitematicBlockStat()` | `go/types/resource:233` | LitematicBlockStat 方块类型统计 |
+| `LitematicVoxelData()` | `go/types/resource:239` | LitematicVoxelData 体素渲染数据 |
+| `VoxelGroup()` | `go/types/resource:247` | VoxelGroup 同一颜色的方块组 |
 | `e.Error()` | `go/types/types:113` | — |
 | `WindowState()` | `go/types/types:6` | WindowState 窗口位置 |
 | `AuthorInfo()` | `go/types/types:14` | AuthorInfo 作者信息（含模型计数） |

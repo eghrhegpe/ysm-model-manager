@@ -64,28 +64,42 @@ export function initImportQueue(app: ImportQueueHost): () => void {
   }> = []; // { file, base64, name, size }
   // 读文件并分流（表单/直导）+ 可选完成回调
   const readAndRouteFile = (file: ImportFile, onDone?: () => void): void => {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const base64 = String(reader.result).split(",")[1] || "";
-        if (await shouldEnterForm(file.name, base64)) {
+    // 先按文件名判断是否需要进入命名表单，避免非必要读取 base64
+    if (shouldEnterForm(file.name)) {
+      // 仅 ysm.json 需要读取 base64 进入表单
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64 = String(reader.result).split(",")[1] || "";
           enqueueFile(file, base64);
-        } else {
-          // 直导：执行器内部自行读 base64（历史/去重/toast 单点）
-          await directImport(file);
+        } catch (e) {
+          bus.emit("toast:show", {
+            msg: "❌ " + friendlyError(e),
+            duration: 5000,
+            type: "error",
+          });
+        } finally {
+          onDone?.();
         }
-      } catch (e) {
-        bus.emit("toast:show", {
-          msg: "❌ " + friendlyError(e),
-          duration: 5000,
-          type: "error",
-        });
-      } finally {
-        onDone?.();
-      }
-    };
-    reader.onerror = () => onDone?.();
-    reader.readAsDataURL(file);
+      };
+      reader.onerror = () => onDone?.();
+      reader.readAsDataURL(file);
+    } else {
+      // 直导：执行器内部自行读 base64（历史/去重/toast 单点）
+      (async () => {
+        try {
+          await directImport(file);
+        } catch (e) {
+          bus.emit("toast:show", {
+            msg: "❌ " + friendlyError(e),
+            duration: 5000,
+            type: "error",
+          });
+        } finally {
+          onDone?.();
+        }
+      })();
+    }
   };
   // 队列推进：成功/覆盖后前进到下一项或关闭表单
   const advanceQueue = (): void => {

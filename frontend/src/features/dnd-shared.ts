@@ -16,16 +16,12 @@ export const isImportableFile = (name: string): boolean => {
   return isSupportedFile(name);
 };
 
-/** 判断文件是否需要进入命名表单（异步）
+/** 判断文件是否需要进入命名表单
  *  2026-08-05：导入默认直接（保留原文件名，后端自动路由类型/冲突覆盖确认），
- *  不再强制命名表单；ys m.json 单文件保留表单提示（整组导入走文件夹路由）。 */
-export const shouldEnterForm = async (
-  name: string,
-  base64: string,
-): Promise<boolean> => {
+ *  不再强制命名表单；ysm.json 单文件保留表单提示（整组导入走文件夹路由）。 */
+export const shouldEnterForm = (name: string): boolean => {
   const ext = getExt(name);
-  if (ext === ".json" && name.toLowerCase() === "ysm.json") return true;
-  return false;
+  return ext === ".json" && name.toLowerCase() === "ysm.json";
 };
 
 /** 获取小写扩展名（含点，如 ".ysm"） */

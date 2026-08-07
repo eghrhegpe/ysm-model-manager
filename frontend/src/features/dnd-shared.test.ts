@@ -92,25 +92,25 @@ describe("shouldEnterForm — 是否进入命名表单", () => {
     vi.clearAllMocks();
   });
 
-  it(".ysm 默认直接导入（不进表单，2026-08-05 简化）", async () => {
-    const result = await shouldEnterForm("model.ysm", "fakebase64");
+  it(".ysm 默认直接导入（不进表单，2026-08-05 简化）", () => {
+    const result = shouldEnterForm("model.ysm");
     expect(result).toBe(false);
   });
 
-  it(".zip / .7z 默认直接导入（后端自动路由类型，不再探测进表单）", async () => {
-    expect(await shouldEnterForm("archive.zip", "fakebase64")).toBe(false);
-    expect(await shouldEnterForm("archive.7z", "fakebase64")).toBe(false);
+  it(".zip / .7z 默认直接导入（后端自动路由类型，不再探测进表单）", () => {
+    expect(shouldEnterForm("archive.zip")).toBe(false);
+    expect(shouldEnterForm("archive.7z")).toBe(false);
     // 不再调用 DetectZipType
     expect(getApp).not.toHaveBeenCalled();
   });
 
-  it("ysm.json 单文件保留表单提示（整组导入走文件夹路由）", async () => {
-    expect(await shouldEnterForm("ysm.json", "fakebase64")).toBe(true);
-    expect(await shouldEnterForm("YSM.JSON", "fakebase64")).toBe(true);
+  it("ysm.json 单文件保留表单提示（整组导入走文件夹路由）", () => {
+    expect(shouldEnterForm("ysm.json")).toBe(true);
+    expect(shouldEnterForm("YSM.JSON")).toBe(true);
   });
 
-  it("不支持的扩展名返回 false", async () => {
-    const result = await shouldEnterForm("file.txt", "fakebase64");
+  it("不支持的扩展名返回 false", () => {
+    const result = shouldEnterForm("file.txt");
     expect(result).toBe(false);
   });
 });

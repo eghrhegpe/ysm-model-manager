@@ -636,8 +636,15 @@ class AppContent extends HTMLElement {
       });
 
     // ===== 右栏：JSON驱动的站点视图 =====
+    // 保存站点视图的 cleanup 函数，用于在重新渲染前清理 storage 等监听
+    let siteViewCleanup: (() => void) | null = null;
     const showSiteView = (site: WorkshopSite | null): void => {
       if (!site) return;
+      // 先清理上一次的监听，防止 storage 事件监听泄漏
+      if (siteViewCleanup) {
+        siteViewCleanup();
+        siteViewCleanup = null;
+      }
       const openUrl = (url: string): void => {
         if (embedMode) {
           currentSite = { url } as unknown as WorkshopSite;
@@ -668,7 +675,7 @@ class AppContent extends HTMLElement {
           if (currentSite) showSiteView(currentSite);
         },
       };
-      renderSiteView(site, ctx);
+      siteViewCleanup = renderSiteView(site, ctx);
       // 外链/内嵌切换（按钮在 renderSiteView 中动态渲染）
       const toggleBtn = searchResults?.querySelector("#cr-mode-toggle") as HTMLElement | null;
       if (toggleBtn) {

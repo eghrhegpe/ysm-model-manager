@@ -11,9 +11,10 @@
  *   node scripts/pre-push-gate.mjs --dry-run <remote-name> <remote-url>
  *     只检查不修改（跳过 gofmt 修复/amend，失败不阻断），供调试与 CI 复用
  *
- * 已知坑（2026-08-03 确认）：
- *   - link-checker.mjs / type-consistency.mjs 失败时退出码仍为 0，
- *     必须用 --json 解析 _summary 判定，不得依赖退出码。
+ * 已知坑（2026-08-03 确认，2026-08-07 更新）：
+ *   - link-checker.mjs / type-consistency.mjs 正常路径退出码恒 0，
+ *     必须用 --json 解析 _summary 判定，不得依赖退出码；
+ *     type-consistency 数据损坏/缺失的 fatal 路径现在 exit 1（+哨兵 _summary.issues=9999，code_review P3）。
  *   - Windows 下 npx 是 npx.cmd，node spawn 需 shell:true。
  * 设计意图：pre-push-gate 工具脚本
  * 依赖：node:child_process / node:fs / node:path / node:url

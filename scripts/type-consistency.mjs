@@ -9,7 +9,8 @@
  * 用法：
  *   node scripts/type-consistency.mjs                 # 默认行为
  *   node scripts/type-consistency.mjs --json # JSON 输出（CI/子代理消费）
- * 退出码：0（无 process.exit 调用）
+ * 退出码：正常路径恒 0（无 process.exit 调用，靠 --json 的 _summary.issues 判定，
+ *   见 pre-push-gate 已知坑注释）；仅数据文件损坏/缺失的 fatal 路径 exit 1（code_review P3）。
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -80,12 +81,10 @@ function emit(issues) {
   }
 }
 
-let issues;
+let issues = [];
 try {
-  const jsonTypes = readResourceTypes([]);
+  const jsonTypes = readResourceTypes(issues); // 传入真实 issues 数组，dup_id_in_json 才会被保留（code_review P2）
   const jsTypes = readJsExtensions();
-
-  issues = [];
 
   // JSON → JS: 检查 JS 是否缺失类型
   for (const [tid, rt] of Object.entries(jsonTypes)) {

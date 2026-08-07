@@ -14,6 +14,17 @@ export interface RecycleHost {
   _fmtSize: (s: number) => string;
 }
 
+/**
+ * 判断条目路径是否位于资源根目录内（带路径分隔符边界，P3 修复）。
+ * - 裸 startsWith 会把 D:/games/ysm2/… 误入 D:/games/ysm 根目录 → 要求 === 或 root + "/" 前缀
+ * - root 尾部可能带分隔符（specificRoot 返回用户配置原值）→ 先剥尾部分隔符
+ */
+export function isPathInRoot(path: string, root: string): boolean {
+  const p = path.replace(/\\/g, "/");
+  const r = root.replace(/\\/g, "/").replace(/\/+$/, "");
+  return p === r || p.startsWith(r + "/");
+}
+
 /** 初始化回收站管理，返回清理函数 */
 export function initRecycleBin(app: RecycleHost): () => void {
   const root = app._root;
@@ -103,14 +114,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
 
       // 过滤：只显示路径在当前类型根目录下的文件
       const entries = currentRoot
-        ? allEntries.filter((e) => {
-            if (!e.Path) return false;
-            const p = e.Path.replace(/\\/g, "/");
-            const root = currentRoot.replace(/\\/g, "/");
-            // P3 修复：路径分隔符边界——裸 startsWith 会把 D:/games/ysm2/… 误入
-            // D:/games/ysm 根目录；必须要求 path === root 或 path.startsWith(root + "/")
-            return p === root || p.startsWith(root + "/");
-          })
+        ? allEntries.filter((e) => e.Path && isPathInRoot(e.Path, currentRoot))
         : allEntries;
 
       if (!entries || !entries.length) {

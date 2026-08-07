@@ -33,14 +33,14 @@
 | Go(internal)·应用入口 | 15 | 170 |
 | 前端·根 (app-modules/bus) | 1 | 10 |
 | 前端·核心 | 8 | 13 |
-| 前端·特性 | 12 | 49 |
+| 前端·特性 | 12 | 50 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 25 | 91 |
 | frontend/views | 52 | 143 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **165** | **760** |
+| **合计** | **165** | **761** |
 
 ## Go·头像
 
@@ -652,7 +652,8 @@
 | `initImportQueue()` | `frontend/src/features/import-queue:30` | 初始化导入队列，返回清理函数 |
 | `loadOldestModel()` | `frontend/src/features/oldest-models:25` | 加载资历最深、仓库评分、热力图和每日推荐 |
 | `RecycleHost()` | `frontend/src/features/recycle-bin:11` | app-content 组件实例（initRecycleBin 依赖的成员） |
-| `initRecycleBin()` | `frontend/src/features/recycle-bin:18` | 初始化回收站管理，返回清理函数 |
+| `isPathInRoot()` | `frontend/src/features/recycle-bin:22` | 判断条目路径是否位于资源根目录内（带路径分隔符边界，P3 修复）。 |
+| `initRecycleBin()` | `frontend/src/features/recycle-bin:29` | 初始化回收站管理，返回清理函数 |
 | `initResourcePacks()` | `frontend/src/features/resource-packs:13` | 初始化资源包 tab |
 | `UpdateInfo()` | `frontend/src/features/version-updater:8` | 更新信息（CheckUpdate 返回） |
 | `checkUpdateSilent()` | `frontend/src/features/version-updater:107` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |

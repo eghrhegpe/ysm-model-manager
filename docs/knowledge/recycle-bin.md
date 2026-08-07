@@ -5,6 +5,8 @@ tier: architecture
 category: feature
 source_files:
   - frontend/src/features/recycle-bin.ts
+tests:
+  - frontend/src/features/recycle-bin.test.ts
 use_when:
   - 回收站
   - 恢复文件

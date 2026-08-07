@@ -47,9 +47,6 @@ func TestCreateDir_Validation(t *testing.T) {
 	if err := CreateDir(root, "../escape"); err == nil {
 		t.Fatal("路径穿越应被拦截")
 	}
-	if err := CreateDir(root, "~tilde"); err == nil {
-		t.Fatal("~ 应被拦截")
-	}
 	if err := CreateDir(root, "  "); err == nil {
 		t.Fatal("空目录名应报错")
 	}

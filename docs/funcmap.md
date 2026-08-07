@@ -273,12 +273,12 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `NewStore()` | `go/tags/tags:24` | NewStore 创建标签存储（懒加载：首次 Get/Set 时自动读取） |
-| `Store.GetTags()` | `go/tags/tags:68` | GetTags 返回指定路径的所有标签（已排序） |
-| `Store.SetTags()` | `go/tags/tags:85` | SetTags 设置指定路径的标签列表（覆盖写入） |
-| `Store.AddTag()` | `go/tags/tags:112` | AddTag 追加单个标签（不会重复） |
-| `Store.RemoveTag()` | `go/tags/tags:133` | RemoveTag 移除单个标签 |
-| `Store.ListByTag()` | `go/tags/tags:162` | ListByTag 返回所有打了指定标签的文件路径列表 |
-| `Store.AllTags()` | `go/tags/tags:186` | AllTags 返回所有被使用的标签（按使用次数降序） |
+| `Store.GetTags()` | `go/tags/tags:80` | GetTags 返回指定路径的所有标签（已排序） |
+| `Store.SetTags()` | `go/tags/tags:97` | SetTags 设置指定路径的标签列表（覆盖写入） |
+| `Store.AddTag()` | `go/tags/tags:129` | AddTag 追加单个标签（不会重复） |
+| `Store.RemoveTag()` | `go/tags/tags:152` | RemoveTag 移除单个标签 |
+| `Store.ListByTag()` | `go/tags/tags:181` | ListByTag 返回所有打了指定标签的文件路径列表 |
+| `Store.AllTags()` | `go/tags/tags:205` | AllTags 返回所有被使用的标签（按使用次数降序） |
 | `Store()` | `go/tags/tags:17` | Store 是标签存储，线程安全 |
 
 ## Go·Three.js
@@ -655,8 +655,8 @@
 | `initRecycleBin()` | `frontend/src/features/recycle-bin:18` | 初始化回收站管理，返回清理函数 |
 | `initResourcePacks()` | `frontend/src/features/resource-packs:13` | 初始化资源包 tab |
 | `UpdateInfo()` | `frontend/src/features/version-updater:8` | 更新信息（CheckUpdate 返回） |
-| `checkUpdateSilent()` | `frontend/src/features/version-updater:97` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
-| `initVersionUpdater()` | `frontend/src/features/version-updater:120` | 手动检查更新（设置页按钮） |
+| `checkUpdateSilent()` | `frontend/src/features/version-updater:106` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
+| `initVersionUpdater()` | `frontend/src/features/version-updater:129` | 手动检查更新（设置页按钮） |
 
 ## 前端·服务
 

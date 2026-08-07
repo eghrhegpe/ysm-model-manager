@@ -66,16 +66,34 @@ func Build(model types.BedrockModel) (string, error) {
 		texH = 64
 	}
 
-	// 收集 bone pivots 用于层级计算（同名骨骼优先保留有 parent 的 pivot）
-	// 多文件合并时，main.json 的骨骼有正确层级，应覆盖 arm.json 的扁平版本
+	// 收集 bone pivots 用于层级计算。
+	// 同名骨骼的保留规则必须与下方骨骼构建循环的 overwrite 决策**完全一致**：
+	// 骨骼循环保留「首次出现」条目，仅当满足 overwrite 条件（无 parent→有 parent，
+	// 或同有 parent 且无旋转→有旋转）才被后者替换。
+	// 若此处 pivots 按更宽规则（同名且有 parent 即覆盖）预收集，会造成
+	// 「bones 保留首次、pivots 用后者」的错位 → cube 整体偏移（bug-chronicle #14 复发形态，P2 修复）。
+	type boneFirst struct {
+		pivot     vec3
+		hasParent bool
+		hasRot    bool
+	}
+	first := make(map[string]boneFirst)
 	pivots := make(map[string]vec3)
 	for _, b := range model.Bones {
 		np := vec3{b.Pivot[0], b.Pivot[1], b.Pivot[2]}
-		if _, exists := pivots[b.Name]; !exists {
+		fi, exists := first[b.Name]
+		if !exists {
+			first[b.Name] = boneFirst{np, b.Parent != "", b.Rotation[0] != 0 || b.Rotation[1] != 0 || b.Rotation[2] != 0}
 			pivots[b.Name] = np
-		} else if b.Parent != "" {
-			// 同名骨骼且当前有 parent → 用当前 pivot 覆盖（main.json 的正确层级优先）
+			continue
+		}
+		newHasParent := b.Parent != ""
+		newHasRot := b.Rotation[0] != 0 || b.Rotation[1] != 0 || b.Rotation[2] != 0
+		overwrite := (!fi.hasParent && newHasParent) ||
+			(fi.hasParent && newHasParent && !fi.hasRot && newHasRot)
+		if overwrite {
 			pivots[b.Name] = np
+			first[b.Name] = boneFirst{np, newHasParent, newHasRot}
 		}
 	}
 

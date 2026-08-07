@@ -34,17 +34,22 @@ func (s *Store) load() error {
 	if s.data != nil {
 		return nil // 已加载
 	}
-	s.data = make(map[string][]string)
+	// P2 修复：data 的初始化移到读取成功之后——原实现在 ReadFile/Unmarshal 之前
+	// 就 `s.data = make(...)`，tags.json 损坏或不可读时 load 返回 error 但 data 已非 nil，
+	// 后续所有 Get/Set 静默视为「已加载空数据」，损坏被永久掩盖（且 SetTags 会覆盖损坏文件）。
 	data, err := os.ReadFile(s.path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil // 首次使用，无文件
+			s.data = make(map[string][]string) // 首次使用，无文件
+			return nil
 		}
 		return fmt.Errorf("读取标签文件失败: %w", err)
 	}
-	if err := json.Unmarshal(data, &s.data); err != nil {
+	var m map[string][]string
+	if err := json.Unmarshal(data, &m); err != nil {
 		return fmt.Errorf("解析标签文件失败: %w", err)
 	}
+	s.data = m
 	return nil
 }
 
@@ -58,8 +63,15 @@ func (s *Store) save() error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("创建标签目录失败: %w", err)
 	}
-	if err := os.WriteFile(s.path, data, 0644); err != nil {
+	// P2 修复：写临时文件 + rename 原子替换，避免崩溃/断电留下半截 tags.json
+	// （原 os.WriteFile 直接覆盖，下次 load 报解析失败且无恢复路径）
+	tmp := s.path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0644); err != nil {
 		return fmt.Errorf("写入标签文件失败: %w", err)
+	}
+	if err := os.Rename(tmp, s.path); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("替换标签文件失败: %w", err)
 	}
 	return nil
 }
@@ -103,7 +115,12 @@ func (s *Store) SetTags(modelPath string, tags []string) error {
 			unique = append(unique, t)
 		}
 		sort.Strings(unique)
-		s.data[modelPath] = unique
+		// P3 修复：全空白串（如 ["  "," "]）trim 后为空集合，应走 delete 分支而非写入空数组
+		if len(unique) == 0 {
+			delete(s.data, modelPath)
+		} else {
+			s.data[modelPath] = unique
+		}
 	}
 	return s.save()
 }
@@ -126,6 +143,8 @@ func (s *Store) AddTag(modelPath, tag string) error {
 		}
 	}
 	s.data[modelPath] = append(current, tag)
+	// P3 修复：AddTag 后保持存储排序不变量（SetTags 存的是有序的，GetTags 依赖排序去重缓存）
+	sort.Strings(s.data[modelPath])
 	return s.save()
 }
 

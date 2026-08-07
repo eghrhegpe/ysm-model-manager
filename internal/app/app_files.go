@@ -35,6 +35,10 @@ func (a *App) RemoveDir(dir string) error {
 }
 
 func (a *App) RenameFile(oldPath, newName string) error {
+	// P2 修复：补路径守卫——原实现无校验，任意 oldPath 均可被改名（知识卡守卫清单漏列 RenameFile）
+	if !a.isPathInRoot(oldPath) {
+		return fmt.Errorf("路径超出仓库目录")
+	}
 	return fileops.RenameFile(oldPath, newName)
 }
 

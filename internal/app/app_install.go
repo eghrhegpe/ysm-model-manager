@@ -192,6 +192,11 @@ func (a *App) ClearCustomDir(customDir string) (int, error) {
 	if customDir == "" {
 		return 0, fmt.Errorf("目录为空")
 	}
+	// P2 修复：补根守卫——原实现对任意 customDir 直接 WalkDir + os.Remove，
+	// 可删仓库外任意 .ysm/.zip/.7z（仅限与仓库同名的文件）
+	if !a.isPathInRoot(customDir) {
+		return 0, fmt.Errorf("路径超出仓库目录")
+	}
 
 	repoFiles := a.ScanModelEntries(a.ysmRoot())
 	repoByName := map[string]types.ModelEntry{}

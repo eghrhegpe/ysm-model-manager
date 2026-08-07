@@ -103,13 +103,14 @@ export function initRecycleBin(app: RecycleHost): () => void {
 
       // 过滤：只显示路径在当前类型根目录下的文件
       const entries = currentRoot
-        ? allEntries.filter(
-            (e) =>
-              e.Path &&
-              e.Path.replace(/\\/g, "/").startsWith(
-                currentRoot.replace(/\\/g, "/"),
-              ),
-          )
+        ? allEntries.filter((e) => {
+            if (!e.Path) return false;
+            const p = e.Path.replace(/\\/g, "/");
+            const root = currentRoot.replace(/\\/g, "/");
+            // P3 修复：路径分隔符边界——裸 startsWith 会把 D:/games/ysm2/… 误入
+            // D:/games/ysm 根目录；必须要求 path === root 或 path.startsWith(root + "/")
+            return p === root || p.startsWith(root + "/");
+          })
         : allEntries;
 
       if (!entries || !entries.length) {
@@ -192,6 +193,9 @@ export function initRecycleBin(app: RecycleHost): () => void {
           try {
             await DeleteFromRecycle(btn.dataset.path || "");
             loadRecycleBin();
+            // P2 修复：与 restore/empty 对齐，删除后联动统计与资源树刷新
+            bus.emit("stats:refresh");
+            bus.emit("tree:reload");
             bus.emit("toast:show", {
               msg: "✅ 已删除",
               duration: 2000,

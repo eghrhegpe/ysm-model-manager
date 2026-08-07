@@ -114,10 +114,10 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `ExtractFirstPNGFromZip()` | `go/geometry/archive:23` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
-| `ExtractFirstPNGFrom7z()` | `go/geometry/archive:45` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
-| `ParseFromZip()` | `go/geometry/archive:67` | ParseFromZip 从 ZIP 字节中解析 Bedrock Geometry 并提取纹理和动画 |
-| `ParseFrom7z()` | `go/geometry/archive:350` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
+| `ExtractFirstPNGFromZip()` | `go/geometry/archive:36` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
+| `ExtractFirstPNGFrom7z()` | `go/geometry/archive:57` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
+| `ParseFromZip()` | `go/geometry/archive:78` | ParseFromZip 从 ZIP 字节中解析 Bedrock Geometry 并提取纹理和动画 |
+| `ParseFrom7z()` | `go/geometry/archive:364` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
 | `ParseBedrockGeometry()` | `go/geometry/parse:17` | ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式） 注意：data 大小不应超过 maxP |
 
 ## Go·导入
@@ -665,9 +665,9 @@
 | `ServiceName()` | `frontend/src/services/registry:11` | 已知服务名（新服务先在 app-modules.ts 注册，再在此登记） |
 | `register()` | `frontend/src/services/registry:18` | 注册一个服务（.ts 调用方：register("name", impl as X) 声明类型；重复注册覆盖旧实例并告警） |
 | `get()` | `frontend/src/services/registry:24` | 获取一个服务（.ts 调用方：get&lt;X&gt;("name") 断言期望类型；未注册抛错，错误含服务名） |
-| `has()` | `frontend/src/services/registry:31` | 检查服务是否已注册 |
-| `unregister()` | `frontend/src/services/registry:36` | 注销（测试用） |
-| `clear()` | `frontend/src/services/registry:41` | 清空所有（测试用） |
+| `has()` | `frontend/src/services/registry:32` | 检查服务是否已注册 |
+| `unregister()` | `frontend/src/services/registry:37` | 注销（测试用） |
+| `clear()` | `frontend/src/services/registry:42` | 清空所有（测试用） |
 
 ## frontend/test-utils
 

@@ -50,6 +50,7 @@ tests/python/__pycache__/
 .rg-test-tmp/
 .qoder/
 .workbuddy/
+.codebuddy/
 
 # 构建产物
 build/

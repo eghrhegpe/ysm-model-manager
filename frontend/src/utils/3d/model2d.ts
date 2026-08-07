@@ -301,8 +301,11 @@ export function calcBoneHitZones(
                 cy = pivot[1] + dyy * Math.cos(rx);
               }
             }
-            // cube 级旋转：与 drawView 静态分支一致——先 X 轴（Y 压缩）再 Z 轴（绕 pivot）
-            if (cubeHasRot) {
+            // cube 级旋转：与 drawView 静态分支一致——先 X 轴（Y 压缩）再 Z 轴（绕 pivot）。
+            // P3 修复（code_review）：仅限无动画变换的骨骼（!btx）——
+            // drawView 的动画分支（hasAnim）只应用 bone 级旋转、不读 c.rotation，
+            // 无条件应用会让动画骨骼的热区与绘制形状不一致
+            if (!btx && cubeHasRot) {
               const rxRad = (cubeRot[0] * Math.PI) / 180;
               const rzRad = (cubeRot[2] * Math.PI) / 180;
               if (rxRad !== 0) {

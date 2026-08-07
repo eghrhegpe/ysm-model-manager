@@ -250,8 +250,13 @@ function checkGovernance() {
     for (const line of lines.slice(0, 10)) console.log(`    ${line}`);
   }
 
-  // Wails 调用检查（WARN 级，注释误报已知）
-  const w = run(['grep', '-rn', 'window\\.go\\.main\\.App', path.join(ROOT, 'frontend/src/'), '--include=*.js', '--include=*.ts']).out.trim();
+  // Wails 调用检查（WARN 级）。过滤注释行：`// ...` 或 ` * ...` 里出现
+  // window.go.main.App 只是文档说明（如 wails/app.ts 治理注释），非真实调用。
+  const w = run(['grep', '-rn', 'window\\.go\\.main\\.App', path.join(ROOT, 'frontend/src/'), '--include=*.js', '--include=*.ts'])
+    .out.trim()
+    .split('\n')
+    .filter((l) => l && !/:\d+:\s*(\/\/|\*)/.test(l))
+    .join('\n');
   if (w) {
     console.log(`  ${WARN} [Wails] direct window.go calls:`);
     for (const line of w.split('\n')) console.log(`    ${line}`);

@@ -88,7 +88,9 @@ function runChecks() {
     '/ instead of \\');
 
   add('W2', 'window.go.main.App calls',
-    rg('window\\.go\\.main\\.App', 'frontend/src', ['*.js', '*.ts']),
+    rg('window\\.go\\.main\\.App', 'frontend/src', ['*.js', '*.ts']).filter(
+      (l) => !/:\d+:\s*(\/\/|\*)/.test(l), // 过滤注释行（wails/app.ts 治理注释等，非真实调用）
+    ),
     'getApp()');
 
   // W3 empty JSDoc / W4 TODO no ticket 已移交 comment-checker.mjs（扫描范围更全，

@@ -340,6 +340,12 @@ class AppSidebar extends HTMLElement {
 
   disconnectedCallback(): void {
     this._unsubs.forEach((fn) => fn());
+    // 清理防抖定时器，防止组件销毁后回调在已销毁实例上执行
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+    }
+    this._pendingReload = false;
     // 清理 DOM 事件监听
     if (this._cardCleanup) {
       this._cardCleanup();

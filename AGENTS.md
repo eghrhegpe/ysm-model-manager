@@ -11,7 +11,7 @@
 > 文档地图优先，确认代码归属，但允许探索。发现地图过期时报告漂移、以源码为准。
 > 编号只允许给 ADR、novel 写。
 > 改完即验，顺带提交（构建/跑得起来）：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）。 涉及文档改动时用 `node scripts/doctor.mjs --docs`（轻量秒级，跳过 Go/前端编译与测试）；改代码或发版前用全量 `node scripts/doctor.mjs`。
-> 信任本机改动，提交代码时：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。正常的更改，无需询问。先提交`does/`,捎带了无关文件也别怕。
+> 信任本机改动，提交代码时：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。正常的更改，无需询问。先提交`docs/`,捎带了无关文件也别怕。
 > 最后询问用户是否需要处理预料之外的报错。
 > 放弃低效的 `git stash` / `git stash push` / `git stash pop` 指令。
 > 前端建议过一遍命名表（`docs/Design.md` §12 文档命名与归属规范）。

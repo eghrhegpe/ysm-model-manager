@@ -27,7 +27,7 @@
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from './_lib/parse-args.mjs';
 import { walk } from './_lib/scan-files.mjs';
 
@@ -51,8 +51,6 @@ const TRACKED_RULES = [
   { from: 'core', to: ['views', 'features'] },
   { from: 'features', to: ['views'] },
 ];
-
-const { json, update } = parseArgs(process.argv.slice(2), { bools: ['json', 'update'] });
 
 /* ---------- 收集源文件（复用 _lib/scan-files 共享遍历层） ---------- */
 const SCAN_OPTS = {
@@ -85,120 +83,146 @@ function resolveTarget(spec, fromSrcRel) {
 const IMPORT_RE = /^\s*(?:import|export)\s+(type\s+)?([^'"]*?)from\s*['"]([^'"]+)['"]/gm;
 const BARE_IMPORT_RE = /^\s*import\s*['"]([^'"]+)['"]/gm;
 
-const violations = [];
+/**
+ * 剥离注释与模板字面量（空格等长替换，保持行结构/行号）。
+ * 多行匹配启用后 [^'"]*? 可跨行，模板字面量/注释内的 import 形状文本
+ * 若不被剥离会误判为真实 import → 幽灵违规（code_review P3）。
+ */
+function stripNoise(text) {
+  return text
+    .replace(/`(?:\\.|[^`\\])*`/g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/\/\/.*$/gm, (m) => m.replace(/[^\n]/g, ' '));
+}
 
-for (const abs of walk(SRC_ROOT, SCAN_OPTS)) {
-  const srcRel = relative(SRC_ROOT, abs).replace(/\\/g, '/');
-  const fromLayer = layerOf(srcRel);
-  if (!fromLayer || fromLayer === 'views') continue; // views 是顶层，向下依赖合法
-
-  const text = readFileSync(abs, 'utf8');
-  const lineNo = (m) => text.slice(0, m.index).split('\n').length; // 1-based
-
-  const evaluate = (spec, typeOnly, line) => {
-    if (!spec) return;
-    const target = resolveTarget(spec, srcRel);
-    if (!target) return;
-    const toLayer = layerOf(target);
-    if (!toLayer) return;
-    if (typeOnly) return; // type-only 豁免
-
-    let rule = null;
-    for (let i = 0; i < ZERO_TOLERANCE.length; i++) {
-      if (fromLayer === ZERO_TOLERANCE[i].from && ZERO_TOLERANCE[i].to.includes(toLayer)) {
-        rule = `R${i + 1}`;
-        break;
-      }
-    }
-    if (!rule) {
-      for (let i = 0; i < TRACKED_RULES.length; i++) {
-        if (fromLayer === TRACKED_RULES[i].from && TRACKED_RULES[i].to.includes(toLayer)) {
-          rule = i === 0 ? 'R3' : 'R4';
-          break;
-        }
-      }
-    }
-    if (!rule) return;
-
-    violations.push({ rule, from: srcRel, line, to: target, fromLayer, toLayer });
-  };
-
-  for (const m of text.matchAll(IMPORT_RE)) {
+/**
+ * 提取文本中所有 import/export-from 语句（支持多行）。
+ * 返回 [{ spec, typeOnly, line }]（line 为 1-based 起始行）。
+ * 导出供契约测试复用（tests/test_check_layering.mjs）。
+ */
+export function matchImports(text) {
+  const clean = stripNoise(text);
+  const out = [];
+  for (const m of clean.matchAll(IMPORT_RE)) {
     // `import type … from`（整句 type-only），或具名项全部带 `type` 前缀
     const typeOnly =
       Boolean(m[1]) || /^\s*\{\s*(?:type\s+\w+(?:\s+as\s+\w+)?\s*,?\s*)+\}\s*$/.test(m[2]);
-    evaluate(m[3], typeOnly, lineNo(m));
+    out.push({ spec: m[3], typeOnly, line: clean.slice(0, m.index).split('\n').length });
   }
-  for (const b of text.matchAll(BARE_IMPORT_RE)) {
-    evaluate(b[1], false, lineNo(b)); // 副作用导入，必为运行时
+  for (const b of clean.matchAll(BARE_IMPORT_RE)) {
+    out.push({ spec: b[1], typeOnly: false, line: clean.slice(0, b.index).split('\n').length }); // 副作用导入，必为运行时
   }
+  return out;
 }
 
-/* ---------- 基线比对 ---------- */
-const key = (v) => `${v.from}:${v.to}`;
-const rZero = violations.filter((v) => v.rule === 'R1' || v.rule === 'R2');
-const tracked = violations.filter((v) => v.rule === 'R3' || v.rule === 'R4');
+/* ---------- 主流程 ---------- */
+function main() {
+  const { json, update } = parseArgs(process.argv.slice(2), { bools: ['json', 'update'] });
+  const violations = [];
 
-const baseline = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, 'utf8')) : null;
+  for (const abs of walk(SRC_ROOT, SCAN_OPTS)) {
+    const srcRel = relative(SRC_ROOT, abs).replace(/\\/g, '/');
+    const fromLayer = layerOf(srcRel);
+    if (!fromLayer || fromLayer === 'views') continue; // views 是顶层，向下依赖合法
 
-if (update) {
-  const data = {
-    _comment: '前端分层反向边基线（R3 core→上层 / R4 features→views）。仅允许减少，不允许增加。更新: node scripts/check-layering.mjs --update',
-    generatedAt: new Date().toISOString().slice(0, 10),
-    entries: [...new Set(tracked.map(key))].sort(),
-  };
-  writeFileSync(BASELINE_FILE, JSON.stringify(data, null, 2) + '\n');
-  console.log(`[layering] 基线已更新: ${relative(REPO_ROOT, BASELINE_FILE)}（${data.entries.length} 条反向边）`);
-  process.exit(0);
+    const text = readFileSync(abs, 'utf8');
+    for (const { spec, typeOnly, line } of matchImports(text)) {
+      const target = resolveTarget(spec, srcRel);
+      if (!target) continue;
+      const toLayer = layerOf(target);
+      if (!toLayer) continue;
+      if (typeOnly) continue; // type-only 豁免
+
+      let rule = null;
+      for (let i = 0; i < ZERO_TOLERANCE.length; i++) {
+        if (fromLayer === ZERO_TOLERANCE[i].from && ZERO_TOLERANCE[i].to.includes(toLayer)) {
+          rule = `R${i + 1}`;
+          break;
+        }
+      }
+      if (!rule) {
+        for (let i = 0; i < TRACKED_RULES.length; i++) {
+          if (fromLayer === TRACKED_RULES[i].from && TRACKED_RULES[i].to.includes(toLayer)) {
+            rule = i === 0 ? 'R3' : 'R4';
+            break;
+          }
+        }
+      }
+      if (!rule) continue;
+
+      violations.push({ rule, from: srcRel, line, to: target, fromLayer, toLayer });
+    }
+  }
+
+  /* ---------- 基线比对 ---------- */
+  const key = (v) => `${v.from}:${v.to}`;
+  const rZero = violations.filter((v) => v.rule === 'R1' || v.rule === 'R2');
+  const tracked = violations.filter((v) => v.rule === 'R3' || v.rule === 'R4');
+
+  const baseline = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, 'utf8')) : null;
+
+  if (update) {
+    const data = {
+      _comment: '前端分层反向边基线（R3 core→上层 / R4 features→views）。仅允许减少，不允许增加。更新: node scripts/check-layering.mjs --update',
+      generatedAt: new Date().toISOString().slice(0, 10),
+      entries: [...new Set(tracked.map(key))].sort(),
+    };
+    writeFileSync(BASELINE_FILE, JSON.stringify(data, null, 2) + '\n');
+    console.log(`[layering] 基线已更新: ${relative(REPO_ROOT, BASELINE_FILE)}（${data.entries.length} 条反向边）`);
+    process.exit(0);
+  }
+
+  const known = new Set(baseline?.entries ?? []);
+  const regressions = tracked.filter((v) => !known.has(key(v)));
+  const fixed = [...known].filter((k) => !tracked.some((v) => key(v) === k));
+
+  if (json) {
+    console.log(JSON.stringify({
+      _summary: {
+        zero_tolerance: rZero.length,
+        tracked: tracked.length,
+        regressions: regressions.length,
+        fixed: fixed.length,
+      },
+      zero_tolerance_violations: rZero,
+      regressions,
+      fixed,
+      baseline: known.size,
+      debt: [...tracked.map(key)].sort(), // 当前基线内分层债务（待清理）
+    }, null, 2));
+    process.exit(rZero.length || regressions.length ? 1 : 0);
+  }
+
+  /* ---------- 报告 ---------- */
+  console.log('=== 前端分层依赖方向检查 ===');
+  console.log('分层: views → features → services → utils → core\n');
+
+  if (rZero.length) {
+    console.error(`❌ R1/R2 违规（零容忍：utils/services 向上依赖）${rZero.length} 条：`);
+    for (const v of rZero) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
+  } else {
+    console.log('✅ R1/R2 utils/services → 上层：0 条');
+  }
+
+  const trackedEdges = new Set(tracked.map(key));
+  console.log(`\nR3/R4 反向边: ${trackedEdges.size} 条唯一边 / ${tracked.length} 处 import（基线 ${known.size} 条）`);
+  if (regressions.length) {
+    console.error(`❌ 新增 ${regressions.length} 条反向边（超出基线）：`);
+    for (const v of regressions) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
+  }
+  if (fixed.length) {
+    console.log(`🎉 已消除 ${fixed.length} 条：${fixed.slice(0, 5).join(', ')}${fixed.length > 5 ? ' …' : ''}`);
+    console.log('   运行 `node scripts/check-layering.mjs --update` 收紧基线');
+  }
+  if (trackedEdges.size) {
+    console.log(`\n📋 分层债务（基线内待清理，不阻断）：`);
+    for (const e of [...trackedEdges].sort()) console.log(`   ${e}`);
+  }
+
+  const failed = rZero.length > 0 || regressions.length > 0;
+  console.log(failed ? '\n❌ 分层检查未通过' : '\n✅ 分层检查通过');
+  process.exit(failed ? 1 : 0);
 }
 
-const known = new Set(baseline?.entries ?? []);
-const regressions = tracked.filter((v) => !known.has(key(v)));
-const fixed = [...known].filter((k) => !tracked.some((v) => key(v) === k));
-
-if (json) {
-  console.log(JSON.stringify({
-    _summary: {
-      zero_tolerance: rZero.length,
-      tracked: tracked.length,
-      regressions: regressions.length,
-      fixed: fixed.length,
-    },
-    zero_tolerance_violations: rZero,
-    regressions,
-    fixed,
-    baseline: known.size,
-    debt: [...tracked.map(key)].sort(), // 当前基线内分层债务（待清理）
-  }, null, 2));
-  process.exit(rZero.length || regressions.length ? 1 : 0);
-}
-
-/* ---------- 报告 ---------- */
-console.log('=== 前端分层依赖方向检查 ===');
-console.log('分层: views → features → services → utils → core\n');
-
-if (rZero.length) {
-  console.error(`❌ R1/R2 违规（零容忍：utils/services 向上依赖）${rZero.length} 条：`);
-  for (const v of rZero) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
-} else {
-  console.log('✅ R1/R2 utils/services → 上层：0 条');
-}
-
-const trackedEdges = new Set(tracked.map(key));
-console.log(`\nR3/R4 反向边: ${trackedEdges.size} 条唯一边 / ${tracked.length} 处 import（基线 ${known.size} 条）`);
-if (regressions.length) {
-  console.error(`❌ 新增 ${regressions.length} 条反向边（超出基线）：`);
-  for (const v of regressions) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
-}
-if (fixed.length) {
-  console.log(`🎉 已消除 ${fixed.length} 条：${fixed.slice(0, 5).join(', ')}${fixed.length > 5 ? ' …' : ''}`);
-  console.log('   运行 `node scripts/check-layering.mjs --update` 收紧基线');
-}
-if (trackedEdges.size) {
-  console.log(`\n📋 分层债务（基线内待清理，不阻断）：`);
-  for (const e of [...trackedEdges].sort()) console.log(`   ${e}`);
-}
-
-const failed = rZero.length > 0 || regressions.length > 0;
-console.log(failed ? '\n❌ 分层检查未通过' : '\n✅ 分层检查通过');
-process.exit(failed ? 1 : 0);
+// 仅当作为入口直接执行时才跑主流程（被契约测试 import 时不触发，避免误退出）
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) main();

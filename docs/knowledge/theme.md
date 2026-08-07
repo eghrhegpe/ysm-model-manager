@@ -53,6 +53,7 @@ use_when:
 - 合法模式仅 6 套皮肤 + `system`，非法值一律回落 `system`，不产生无主题状态
 - `LoadAppConfig` 失败必须回退 localStorage/默认值，主题初始化失败不得阻塞启动序列
 - 系统偏好监听只在 `system` 模式下生效，手动选定主题不被系统变化覆盖
+- **写入侧也须写合法值**：设置页主题卡写 6 套皮肤名、`theme-auto="time"` 时经 `applyTimeTheme()` 把实际主题（warm/cyber）写入 `theme` 键——不允许写 `"time"`/`"dark"` 等非法值到 `theme`（否则重启 initTheme 归一化为 system，按时间段模式被静默降级，P2 修复）
 - UI 偏好修改只操作 CSS 变量与类名（`--fs-scale`/`no-animations`），不直接改各 `--fs-*` 计算值
 
 ## 相关

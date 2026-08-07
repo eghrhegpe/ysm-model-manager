@@ -71,7 +71,15 @@ export function walk(dir = SRC_DIR, opts = {}) {
   } = opts;
   const out = [];
   if (!fs.existsSync(dir)) return out;
-  for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (e) {
+    // 子目录权限拒绝/超长路径等：跳过该目录，不让单点异常炸掉整棵扫描树
+    if (e.code === 'EACCES' || e.code === 'EPERM' || e.code === 'ENOTDIR' || e.code === 'ENAMETOOLONG') return out;
+    throw e;
+  }
+  for (const d of entries) {
     if (d.isDirectory()) {
       if (skipDir(d.name)) continue;
       if (skipTest && d.name === '__tests__') continue;

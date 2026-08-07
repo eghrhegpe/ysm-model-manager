@@ -7,7 +7,7 @@
 
 | 模块 | 文件数 | 导出符号数 |
 |------|--------|-----------|
-| Go·头像 | 1 | 9 |
+| Go·头像 | 1 | 8 |
 | Go·去重 | 1 | 5 |
 | Go·下载 | 1 | 7 |
 | Go·错误 | 1 | 1 |
@@ -17,20 +17,20 @@
 | Go·导入 | 2 | 15 |
 | Go·安装 | 1 | 6 |
 | go/instance | 1 | 2 |
-| Go·Litematic | 5 | 12 |
+| Go·Litematic | 4 | 9 |
 | Go·日志 | 2 | 11 |
 | Go·包管理 | 1 | 3 |
 | Go·路径 | 1 | 4 |
 | Go·回收站 | 2 | 19 |
-| go/scanner | 1 | 9 |
+| go/scanner | 1 | 8 |
 | Go·同步 | 3 | 21 |
 | Go·标签 | 1 | 8 |
-| Go·Three.js | 1 | 6 |
+| Go·Three.js | 1 | 5 |
 | Go·类型 | 5 | 48 |
 | Go·更新器 | 1 | 8 |
 | Go·监听 | 1 | 6 |
-| Go·YSM 核心 | 7 | 33 |
-| Go(internal)·应用入口 | 15 | 175 |
+| Go·YSM 核心 | 7 | 22 |
+| Go(internal)·应用入口 | 15 | 170 |
 | 前端·根 (app-modules/bus) | 1 | 10 |
 | 前端·核心 | 8 | 13 |
 | 前端·特性 | 12 | 48 |
@@ -40,7 +40,7 @@
 | frontend/views | 52 | 142 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **166** | **779** |
+| **合计** | **165** | **757** |
 
 ## Go·头像
 
@@ -54,7 +54,6 @@
 | `ReadFileFromZip()` | `go/avatar/avatar:248` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
 | `SetNodeJS()` | `go/avatar/avatar:276` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
 | `DecodeYSMFiles()` | `go/avatar/avatar:283` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
-| `authorEntry()` | `go/avatar/avatar:25` | — |
 
 ## Go·去重
 
@@ -166,15 +165,12 @@
 | `MapColor()` | `go/litematic/block_colors:10` | MapColor 返回 minecraft 方块名对应的近似十六进制颜色。 |
 | `ResolveBlockName()` | `go/litematic/block_ids:12` | ResolveBlockName 把旧版数字 ID（schematic v1）解析为注册名。 |
 | `ResolveBlockZH()` | `go/litematic/block_ids:26` | ResolveBlockZH 把注册名映射为中文名（自动去除 minecraft: 前缀）。 |
-| `prBlock()` | `go/litematic/gen/main:16` | — |
 | `ParseMeta()` | `go/litematic/parser:14` | — |
 | `ParseSchematic()` | `go/litematic/parser:173` | — |
 | `ParseNbtStructure()` | `go/litematic/parser:267` | — |
 | `BuildVoxelData()` | `go/litematic/voxel:91` | BuildVoxelData 构建体素渲染数据（按颜色分组） |
 | `BuildNbtVoxelData()` | `go/litematic/voxel:230` | — |
 | `BuildSchematicVoxelData()` | `go/litematic/voxel:320` | — |
-| `regionInfo()` | `go/litematic/voxel:12` | regionInfo 标准化后的 region 遍历信息 |
-| `voxelBlock()` | `go/litematic/voxel:27` | voxelBlock 单个方块的体素信息（各格式统一中间表示） |
 
 ## Go·日志
 
@@ -245,7 +241,6 @@
 | `ListModelAuthors()` | `go/scanner/scanner:138` | ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序） |
 | `ScanLocalAuthors()` | `go/scanner/scanner:170` | ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root） |
 | `GenerateRepoIndex()` | `go/scanner/scanner:229` | GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub Actions/Linux 消费，正斜杠路径） |
-| `scanCacheEntry()` | `go/scanner/scanner:26` | — |
 
 ## Go·同步
 
@@ -295,7 +290,6 @@
 | `ModelGroup()` | `go/threejs/spec:20` | — |
 | `BoneData()` | `go/threejs/spec:31` | — |
 | `MeshData()` | `go/threejs/spec:39` | — |
-| `vec3()` | `go/threejs/spec:53` | — |
 
 ## Go·类型
 
@@ -385,8 +379,6 @@
 | `YSMHeader()` | `go/ysm/header:12` | YSMHeader 从 YSM 文件文本头部提取的元数据（适用于加密和非加密模型） |
 | `AnalyzeYSMModel()` | `go/ysm/parse:43` | AnalyzeYSMModel 解析 .ysm 文件，提取模型元数据 |
 | `YSMModelMeta()` | `go/ysm/parse:13` | YSMModelMeta 模型元数据（从 model.json 提取） |
-| `ysmModelJSON()` | `go/ysm/parse:27` | 内部用——model.json 的完整结构（只关心需要的字段） |
-| `ysmGeometry()` | `go/ysm/parse:37` | — |
 | `ExtractYsmSummary()` | `go/ysm/summary:131` | ExtractYsmSummary 从 .ysm / .zip 文件中提取摘要 |
 | `Author()` | `go/ysm/summary:14` | — |
 | `Link()` | `go/ysm/summary:20` | — |
@@ -395,15 +387,6 @@
 | `PreviewInfo()` | `go/ysm/summary:37` | — |
 | `YsmSummary()` | `go/ysm/summary:45` | YsmSummary 是前端右侧面板和 AI 搜索消费的标准摘要 |
 | `Stats()` | `go/ysm/summary:62` | — |
-| `ysmRoot()` | `go/ysm/summary:72` | — |
-| `ysmMetadata()` | `go/ysm/summary:79` | — |
-| `ysmLicense()` | `go/ysm/summary:87` | — |
-| `ysmAuthor()` | `go/ysm/summary:91` | — |
-| `ysmContact()` | `go/ysm/summary:98` | — |
-| `ysmLink()` | `go/ysm/summary:102` | — |
-| `ysmProperties()` | `go/ysm/summary:107` | — |
-| `ysmAnimClassify()` | `go/ysm/summary:116` | — |
-| `ysmConfigButton()` | `go/ysm/summary:122` | — |
 | `ScanModelTexSizes()` | `go/ysm/texsize:22` | ScanModelTexSizes 扫描仓库文件读取纹理尺寸，不调用 YSMParser/WASM 仅支持 zip/7z 格式（未加密模型），加密 .ysm 返回 0,0 |
 | `ScanFiles()` | `go/ysm/texsize:144` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
 | `TexInfo()` | `go/ysm/texsize:14` | TexInfo 轻量级纹理尺寸（不解析完整模型） |
@@ -498,7 +481,6 @@
 | `App.ClearImportLogs()` | `internal/app/app_install:789` | — |
 | `App.GetRuntimeLogs()` | `internal/app/app_install:794` | GetRuntimeLogs 获取运行时日志（watcher/sync 等标准库 log 输出） |
 | `App.ClearRuntimeLogs()` | `internal/app/app_install:799` | ClearRuntimeLogs 清空运行时日志缓冲 |
-| `importOptions()` | `internal/app/app_install:72` | — |
 | `App.AnalyzeYSMModel()` | `internal/app/app_model:21` | — |
 | `App.ExtractYsmSummary()` | `internal/app/app_model:25` | — |
 | `App.ExtractYSMHeader()` | `internal/app/app_model:36` | — |
@@ -526,7 +508,6 @@
 | `App.OpenFolder()` | `internal/app/app_scan:289` | — |
 | `App.OpenInstanceFolder()` | `internal/app/app_scan:296` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
 | `progressReader.Read()` | `internal/app/app_scan:319` | — |
-| `progressReader()` | `internal/app/app_scan:311` | progressReader 包装 io.Reader，下载时通过回调推送进度（保留：下载进度计算） |
 | `App.GetModelTags()` | `internal/app/app_tags:29` | GetModelTags 返回指定模型文件的所有标签 |
 | `App.SetModelTags()` | `internal/app/app_tags:34` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
 | `App.ListByTag()` | `internal/app/app_tags:39` | ListByTag 返回所有打了指定标签的文件路径列表 |
@@ -557,9 +538,6 @@
 | `App()` | `internal/app/app:21` | — |
 | `SetEmbedded()` | `internal/app/assets:16` | SetEmbedded 由根包 main 的 init() 注入编译期嵌入的静态资产。 |
 | `CLIMain()` | `internal/app/cli:18` | — |
-| `exportBone()` | `internal/app/cli:104` | — |
-| `exportCube()` | `internal/app/cli:111` | — |
-| `exportModel()` | `internal/app/cli:120` | — |
 | `Issue()` | `internal/app/cli:183` | — |
 | `App.StartProxy()` | `internal/app/proxy:23` | StartProxy 启动本地反代服务器（127.0.0.1 仅本机可访问） |
 | `App.StopProxy()` | `internal/app/proxy:45` | StopProxy 关闭反代服务器 |

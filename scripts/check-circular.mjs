@@ -28,11 +28,12 @@ const DYNAMIC_IMPORT_RE = /(?:^|[^A-Za-z0-9_$])import\s*\(\s*['"]([^'"]+)['"]\s*
 
 // ── 环检测（DFS 三色）─────────────────────────────────
 
-function findCycles(graph) {
+function findCycles(graph, maxCycles = 100) {
   const WHITE = 0, GRAY = 1, BLACK = 2;
   const color = new Map();
   const stack = [];
   const cycles = new Map(); // key（排序去重）→ 原始顺序环链
+  let truncated = false;
 
   function dfs(node) {
     color.set(node, GRAY);
@@ -40,6 +41,7 @@ function findCycles(graph) {
     for (const next of graph.get(node) || []) {
       const c = color.get(next) ?? WHITE;
       if (c === WHITE) {
+        if (cycles.size >= maxCycles) { truncated = true; continue; }
         dfs(next);
       } else if (c === GRAY) {
         // 找到环：stack 中 next 位置截取，去掉首尾重复（next 即栈内起点）
@@ -48,6 +50,7 @@ function findCycles(graph) {
         const display = stack.slice(start); // [a, b]（a 在栈中）
         const key = [...display].sort().join('→');
         cycles.set(key, display);
+        if (cycles.size >= maxCycles) truncated = true; // 枚举上限，防稠密环区指数爆炸（code_review P3）
       }
     }
     stack.pop();
@@ -82,15 +85,20 @@ function main() {
     for (const m of text.matchAll(IMPORT_RE)) {
       // type-only import（`import type {...} from`）编译期擦除，不构成运行时依赖——
       // 计入会产生假阳性环（如 app-tree/events.ts `import type { AppTree }`）。
-      // 同时覆盖内联 type 形式：`import { type X } from` / `export type {} from` /
-      // `export { type X } from`（全部具名均为 type 前缀 → 纯类型转发，code_review P2）。
+      // 内联 type 形式：`import { type X } from` / `export { type X } from`
+      // （花括号内全部具名为 type 前缀 → 纯类型转发，code_review P2）。
+      // 注意：`export type { A } from` 不匹配 IMPORT_RE（无对应备选分支），天然不构成边，
+      // 无需在此跳过（code_review P3 不可达分支已清理）。
       const stmt = m[0];
       const braceM = stmt.match(/\{([^}]*)\}/);
       const allTypeNamed = braceM
         ? braceM[1].split(',').map((s) => s.trim()).filter(Boolean).length > 0 &&
           braceM[1].split(',').map((s) => s.trim()).filter(Boolean).every((s) => /^type\s+/.test(s))
         : false;
-      if (/^\s*import\s+type\b/.test(stmt) || /^\s*export\s+type\b/.test(stmt) || allTypeNamed) continue;
+      // 默认导入（`import store, { type State }`）是运行时值依赖，即使花括号全 type
+      // 也不能跳过——否则丢失 f→./store 依赖边造成假阴性环（code_review P3）。
+      const hasRuntimeDefault = /^import\s+[A-Za-z_$][\w$]*\s*,/.test(stmt);
+      if (/^\s*import\s+type\b/.test(stmt) || (allTypeNamed && !hasRuntimeDefault)) continue;
       const target = resolveImport(f, m[1], moduleSet);
       if (target && target !== f) deps.add(target);
     }

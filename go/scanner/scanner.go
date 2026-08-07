@@ -23,6 +23,11 @@ import (
 
 var scanCache sync.Map
 
+// cacheGen 缓存代际：InvalidateCache/InvalidatePath 递增。
+// 在途扫描 Store 前比对代际，若扫描期间缓存已被失效则丢弃本次结果，
+// 防止「刚失效又被旧扫描结果重新 Store」导致失效白做（P2 竞态修复）。
+var cacheGen uint64
+
 type scanCacheEntry struct {
 	entries   []types.ModelEntry
 	expiresAt time.Time
@@ -30,8 +35,19 @@ type scanCacheEntry struct {
 
 const scanCacheTTL = 30 * time.Second
 
+// normalizeScanKey 统一缓存 key：TrimSpace + filepath.Clean（去尾部分隔符/相对路径归一）。
+// ScanEntries 与 InvalidatePath 必须共用同一规整，否则失效 key 与扫描 key 字节级不一致会脱靶（P2 修复）。
+func normalizeScanKey(dir string) string {
+	dir = strings.TrimSpace(dir)
+	if dir == "" {
+		return ""
+	}
+	return filepath.Clean(dir)
+}
+
 // InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用）
 func InvalidateCache() {
+	cacheGen++
 	scanCache.Range(func(key, _ interface{}) bool {
 		scanCache.Delete(key)
 		return true
@@ -40,7 +56,8 @@ func InvalidateCache() {
 
 // InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用）
 func InvalidatePath(dir string) {
-	scanCache.Delete(dir)
+	cacheGen++
+	scanCache.Delete(normalizeScanKey(dir))
 }
 
 // ========== 模型扫描 ==========
@@ -54,17 +71,21 @@ func ScanEntries(dir string) []types.ModelEntry {
 // ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。
 // 调用方据此决定是否记录扫描日志，避免 30s 内重复访问同一目录时刷屏操作日志面板。
 func ScanEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
-	dir = strings.TrimSpace(dir)
+	dir = normalizeScanKey(dir)
 	if dir == "" {
 		return []types.ModelEntry{}, false
 	}
 	// 记录扫描开始时间（进入时），TTL 从此时刻算，不被扫描耗时侵蚀
 	startTime := time.Now()
+	// 记录进入时代际：扫描期间若缓存被失效，Store 前比对并丢弃结果
+	gen := cacheGen
 	// 检查缓存
 	if v, ok := scanCache.Load(dir); ok {
 		entry := v.(scanCacheEntry)
 		if time.Now().Before(entry.expiresAt) {
-			return entry.entries, true
+			// P2 修复：命中路径克隆后返回，避免调用方（app_scan.go HasTags 填充）写回内部切片，
+			// 污染缓存后备数组 + 并发扫描数据竞争
+			return append([]types.ModelEntry(nil), entry.entries...), true
 		}
 	}
 	entries := []types.ModelEntry{}
@@ -116,7 +137,11 @@ func ScanEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 	// P3 修复：克隆 slice 后 Store，避免 sync.Map.Load 读到 WalkDir 中途
 	// append 的部分写入（单线程 Wails 场景安全，但并发扫描无 race）
 	stored := append([]types.ModelEntry(nil), entries...)
-	scanCache.Store(dir, scanCacheEntry{entries: stored, expiresAt: startTime.Add(scanCacheTTL)})
+	// P2 修复：扫描期间缓存被失效（cacheGen 已变）则丢弃结果，不重新 Store，
+	// 否则刚执行的 Invalidate 被在途扫描的旧结果覆盖（带全新 30s TTL）
+	if cacheGen == gen {
+		scanCache.Store(dir, scanCacheEntry{entries: stored, expiresAt: startTime.Add(scanCacheTTL)})
+	}
 	return entries, false
 }
 
@@ -128,7 +153,11 @@ func ComputeFileHash(path string) string {
 	}
 	defer f.Close()
 	h := sha256.New()
-	_, _ = io.Copy(h, f)
+	// P3 修复：检查 io.Copy 读错误，读失败返回空哈希（与 open 失败一致），
+	// 避免截断哈希静默进入同步匹配（截断哈希与完整哈希无法区分）
+	if _, err := io.Copy(h, f); err != nil {
+		return ""
+	}
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
@@ -237,7 +266,11 @@ func GenerateRepoIndex(repoPath string) (string, error) {
 	var list []indexEntry
 	for _, e := range entries {
 		relPath := e.Path
-		if strings.HasPrefix(relPath, repoPath) {
+		// P3 修复：用 filepath.Rel 替代大小写敏感的前缀裁剪，
+		// 避免相对/绝对路径拼写差异把绝对路径泄露进 index.json
+		if rp, err := filepath.Rel(repoPath, e.Path); err == nil {
+			relPath = rp
+		} else if strings.HasPrefix(relPath, repoPath) {
 			relPath = strings.TrimPrefix(relPath, repoPath)
 			relPath = strings.TrimLeft(relPath, `\/`)
 		}
@@ -250,7 +283,13 @@ func GenerateRepoIndex(repoPath string) (string, error) {
 		return "", err
 	}
 	indexPath := filepath.Join(repoPath, "index.json")
-	if err := os.WriteFile(indexPath, data, 0644); err != nil {
+	// P3 修复：临时文件 + rename 原子替换，避免崩溃/中断留下半截 index.json（陷阱 #8 变体）
+	tmpPath := indexPath + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+		return "", err
+	}
+	if err := os.Rename(tmpPath, indexPath); err != nil {
+		_ = os.Remove(tmpPath)
 		return "", err
 	}
 

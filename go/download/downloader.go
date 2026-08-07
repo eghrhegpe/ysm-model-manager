@@ -71,8 +71,11 @@ func (d *Downloader) downloadTo(ctx context.Context, url, savePath, accept strin
 	defer func() {
 		out.Close()
 		if !ok {
-			// 下载中断/失败时清理半截文件，避免残留损坏文件
-			os.Remove(savePath)
+			// 下载中断/失败时清理半截文件，避免残留损坏文件被扫描/预览
+			if err := os.Remove(savePath); err != nil {
+				// P3 修复：删除失败（权限/占用）时记录日志，避免半截文件残留无痕迹
+				log.Printf("[download] 清理半截文件失败 %s: %v", savePath, err)
+			}
 		}
 	}()
 

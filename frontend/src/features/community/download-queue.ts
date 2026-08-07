@@ -122,12 +122,21 @@ export async function resume(): Promise<void> {
 }
 
 /**
+ * 队列是否处于活跃下载中（downloading 或 enqueued）。
+ * Go 端入队后只发 queue:status "enqueued"（从不发 "downloading"），
+ * 因此所有「是否在下载」守卫必须同时认两个状态，否则取消/防重入会静默失效（P1 修复）。
+ */
+function isActiveStatus(s: DownloadState): boolean {
+  return s.status === "downloading" || s.status === "enqueued";
+}
+
+/**
  * 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。
  * UI 层应在此之前完成配置检查和 DOM 初始化。
  */
 export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
   dbg("enqueue:start", tasks.length);
-  if (STATE.status === "downloading") return;
+  if (isActiveStatus(STATE)) return;
   if (!tasks || !tasks.length) return;
 
   STATE.status = "downloading";
@@ -141,16 +150,24 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
   notify();
 
   tasks.forEach((t) => (t.saveDir = t.saveDir || ""));
-  const { EnqueueDownloads } = await getApp();
-  await EnqueueDownloads(tasks);
-  dbg("enqueue:done", STATE.status);
+  try {
+    const { EnqueueDownloads } = await getApp();
+    await EnqueueDownloads(tasks);
+    dbg("enqueue:done", STATE.status);
+  } catch (e) {
+    // P3 修复：模块级函数失败也回滚 idle，否则状态永久卡 downloading，
+    // 后续所有入队被守卫静默拦截（UI 层 enqueue 另有 toast/按钮恢复兜底）
+    STATE.status = "idle";
+    notify();
+    throw e;
+  }
 }
 
 /**
  * 模块级取消 — 纯粹的 Go 调用。
  */
 export async function cancelDownloads(): Promise<void> {
-  if (STATE.status !== "downloading") return;
+  if (!isActiveStatus(STATE)) return;
   try {
     const { CancelQueue } = await getApp();
     await CancelQueue();
@@ -288,6 +305,9 @@ export function createDownloadQueue({
   let _prevFile = "";
   let _prevLastDoneSeq = 0;
   let _lastPct = -1;
+  // P3 修复：99% 锁定态标志。锁定后置 true，防止下一条 progress 事件经 else 分支
+  // 清掉 _stuckTimer（锁定后 _lastPct=99，守卫条件不再成立，原逻辑会立刻解除锁定）。
+  let _stuckLocked = false;
   let _stuckTimer: ReturnType<typeof setTimeout> | null = null;
   let completeTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -306,6 +326,7 @@ export function createDownloadQueue({
 
   const stuckGuardReset = (): void => {
     _lastPct = -1;
+    _stuckLocked = false;
     clearCompleteTimer();
     if (_stuckTimer) {
       clearTimeout(_stuckTimer);
@@ -395,6 +416,7 @@ export function createDownloadQueue({
     if (isTiny && _lastPct < 10 && pct >= 99 && !completeTimer) {
       label = "99%";
       pct = 99;
+      _stuckLocked = true;
       if (_stuckTimer) {
         clearTimeout(_stuckTimer);
         _stuckTimer = null;
@@ -410,6 +432,7 @@ export function createDownloadQueue({
           fillEl2.style.width = "100%";
         }
         _stuckTimer = null;
+        _stuckLocked = false;
       }, 300);
     }
 
@@ -418,11 +441,14 @@ export function createDownloadQueue({
     if (hasCL && !isTiny && _lastPct < 10 && pct >= 99 && total > 1024 * 1024) {
       label = "99%";
       pct = 99;
+      _stuckLocked = true;
       if (_stuckTimer) {
         clearTimeout(_stuckTimer);
         _stuckTimer = null;
       }
-      (qs.querySelector(".gh-progress-pct") as PctEl).textContent = label;
+      // P3 修复：判空再写 textContent（resume 恢复路径渲染无 pct 元素时防 TypeError）
+      const lockPctEl = qs.querySelector(".gh-progress-pct") as PctEl | null;
+      if (lockPctEl) lockPctEl.textContent = label;
       _stuckTimer = setTimeout(() => {
         const pctEl = qs?.querySelector(".gh-progress-pct") as PctEl | null;
         const fillEl = qs?.querySelector(
@@ -442,8 +468,10 @@ export function createDownloadQueue({
           }, 400);
         }
         if (fillEl) fillEl.style.width = "99%";
+        // 大文件转菊花后保持锁定直到 file-done 强制 100%（handleFileDone 复位）
       }, 2000);
-    } else {
+    } else if (!_stuckLocked) {
+      // P3 修复：锁定态不清 _stuckTimer（否则 300ms/2s 补写逻辑被下一条 progress 打断）
       if (_stuckTimer) {
         clearTimeout(_stuckTimer);
         _stuckTimer = null;
@@ -455,7 +483,7 @@ export function createDownloadQueue({
     const fillEl = qs.querySelector(
       ".gh-progress-fill",
     ) as HTMLElement | null;
-    if (pctEl && !_stuckTimer) pctEl.textContent = label;
+    if (pctEl && !_stuckLocked) pctEl.textContent = label;
     if (fillEl) {
       fillEl.style.transition = pct === 100 ? "width 0s" : "width .2s";
       fillEl.style.width = pct + "%";
@@ -464,7 +492,7 @@ export function createDownloadQueue({
     if (pct >= 100) {
       clearCompleteTimer();
       completeTimer = setTimeout(() => {
-        if (STATE.status !== "downloading") return;
+        if (!isActiveStatus(STATE)) return;
         let summary: string | undefined;
         if (STATE.errorList.length > 0) {
           summary =
@@ -495,6 +523,7 @@ export function createDownloadQueue({
       ) as HTMLElement | null;
       if (pctEl && pctEl.textContent === "99%") {
         pctEl.textContent = "100%";
+        _stuckLocked = false;
         if (pctEl._dotTimer) {
           clearInterval(pctEl._dotTimer);
           pctEl._dotTimer = null;
@@ -617,37 +646,39 @@ export function createDownloadQueue({
   // ── 公开 API ──
 
   async function enqueue(tasks: DownloadTask[]): Promise<void> {
-    if (STATE.status === "downloading") return;
+    if (isActiveStatus(STATE)) return;
     if (!tasks.length) return;
 
-    const { GetRepoRoot } = await getApp();
-    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-    if (!repoRoot) {
-      bus.emit("toast:show", {
-        msg: "请先配置仓库目录",
-        duration: 3000,
-        type: "warn",
-      });
-      return;
-    }
-    tasks.forEach((t) => (t.saveDir = repoRoot));
-
-    const btn = dlBtn();
-    if (btn) btn.disabled = true;
-
-    const qs = qsEl();
-    if (qs) {
-      qs.classList.add("show");
-      qs.innerHTML =
-        '<span class="gh-queue-icon">⬇️</span> 准备下载… 共 ' +
-        tasks.length +
-        " 个";
-    }
-
     try {
+      // P2 修复：getApp/GetRepoRoot 移入 try 内——原实现前置 await 在 try 外，
+      // 任一 reject 时按钮永久卡禁用且无 toast（陷阱 #3 变体）
+      const { GetRepoRoot } = await getApp();
+      const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
+      if (!repoRoot) {
+        bus.emit("toast:show", {
+          msg: "请先配置仓库目录",
+          duration: 3000,
+          type: "warn",
+        });
+        return;
+      }
+      tasks.forEach((t) => (t.saveDir = repoRoot));
+
+      const btn = dlBtn();
+      if (btn) btn.disabled = true;
+
+      const qs = qsEl();
+      if (qs) {
+        qs.classList.add("show");
+        qs.innerHTML =
+          '<span class="gh-queue-icon">⬇️</span> 准备下载… 共 ' +
+          tasks.length +
+          " 个";
+      }
+
       await enqueueDownloads(tasks);
     } catch (e) {
-      // Go 入队失败：恢复状态与 UI，防止按钮/进度条卡死（陷阱 #3）
+      // Go 入队失败（含 getApp/GetRepoRoot reject）：恢复状态与 UI，防止按钮/进度条卡死（陷阱 #3）
       STATE.status = "idle";
       notify();
       bus.emit("toast:show", {
@@ -666,7 +697,7 @@ export function createDownloadQueue({
   return {
     enqueue,
     cancel,
-    isDownloading: () => STATE.status === "downloading",
+    isDownloading: () => isActiveStatus(STATE),
     /** 组件销毁时取消订阅，防止僵尸回调累积 */
     destroy: unsub,
   };

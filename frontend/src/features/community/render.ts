@@ -208,10 +208,10 @@ export function renderCardsHTML(
         'ms" data-index="' +
         sites.indexOf(s) +
         '" data-group="' +
-        g +
+        esc(g) +
         '">' +
         '<div class="gh-card-icon">' +
-        (s.icon || "🔗") +
+        esc(s.icon || "🔗") +
         "</div>" +
         '<div class="gh-card-body">' +
         '<div class="gh-card-label">' +

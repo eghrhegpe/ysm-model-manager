@@ -78,12 +78,16 @@ export async function tryFetchModels(
   const TIMEOUT = 8000;
   // 共享标志：当某个请求明确返回 404 时，提前终止所有请求
   let _earlyExitReason: string | null = null;
+  // P2 修复：某个源已成功返回后置位，p2/p3 的延迟定时器到点时不再发出迟到请求，
+  // 避免「首源快速成功仍烧带宽/限流」的孤儿请求
+  let _succeeded = false;
 
   const fetchOne = async (
     attempt: { name: string; url: string; label: string },
   ): Promise<FetchModelsResult> => {
-    // 如果已经提前退出，直接抛错
+    // 如果已经提前退出或已有成功结果，直接抛错（不再发请求）
     if (_earlyExitReason) throw new Error(_earlyExitReason);
+    if (_succeeded) throw new Error("already succeeded");
     const ctrl = new AbortController();
     controllers.push(ctrl);
     const tmr = setTimeout(function (): void {
@@ -120,8 +124,10 @@ export async function tryFetchModels(
       } else {
         models = await resp.json();
       }
-      if (Array.isArray(models))
+      if (Array.isArray(models)) {
+        _succeeded = true;
         return { models, source: attempt.name };
+      }
     } catch (err) {
       clearTimeout(tmr);
       throw err;
@@ -151,7 +157,8 @@ export async function tryFetchModels(
   ): Promise<{ _earlyExit: boolean }> {
     return new Promise(function (resolve): void {
       const check = function (): void {
-        if (_earlyExitReason) {
+        // 已有成功结果也算提前退出：p2/p3 不再发出（P2 修复）
+        if (_earlyExitReason || _succeeded) {
           resolve({ _earlyExit: true });
           return;
         }

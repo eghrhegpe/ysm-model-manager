@@ -35,6 +35,10 @@ type DownloadQueue struct {
 	mu        sync.Mutex
 	running   bool
 	cancelled bool
+	// epoch 代际计数：CancelQueue / EnqueueDownloads 递增。
+	// process 记录启动时 epoch，退出时仅当代际一致才复位 running / 发 done，
+	// 防止「取消后立即重新入队」时旧 goroutine 与新 goroutine 并发处理同一队列（P1 竞态修复）。
+	epoch     uint64
 	ctx       context.Context
 	cancelFn  context.CancelFunc
 
@@ -68,6 +72,7 @@ func (a *App) EnqueueDownloads(tasks []DownloadTask) error {
 	start := !a.queue.running
 	if start {
 		a.queue.running = true
+		a.queue.epoch++
 	}
 	a.queue.mu.Unlock()
 	if start {
@@ -82,6 +87,9 @@ func (a *App) CancelQueue() {
 	a.queue.mu.Lock()
 	defer a.queue.mu.Unlock()
 	a.queue.cancelled = true
+	// 递增代际：使在途 process goroutine 退出时不再复位 running / 发 done，
+	// 避免「取消后立即重新入队」启动新 goroutine 时双 process 并发（P1 竞态）
+	a.queue.epoch++
 	if a.queue.running {
 		a.queue.cancelFn()
 		a.queue.ctx, a.queue.cancelFn = context.WithCancel(context.Background())
@@ -101,10 +109,18 @@ func (a *App) QueueStatus() QueueStatusInfo {
 func (q *DownloadQueue) process() {
 	q.mu.Lock()
 	q.running = true
+	myEpoch := q.epoch
 	q.mu.Unlock()
 
 	defer func() {
 		q.mu.Lock()
+		// 仅当代际一致才复位 running / 发 done：
+		// 若已被 CancelQueue（或取消后重新入队）取代，本 goroutine 不再触碰队列状态，
+		// 防止旧 goroutine 退出时把新队列的 running 误复位或重复发 done（P1 竞态修复）
+		if q.epoch != myEpoch {
+			q.mu.Unlock()
+			return
+		}
 		q.running = false
 		cancelled := q.cancelled
 		q.mu.Unlock()
@@ -116,6 +132,11 @@ func (q *DownloadQueue) process() {
 
 	for {
 		q.mu.Lock()
+		if q.epoch != myEpoch {
+			// 代际已变：本队列已被取代（取消后重新入队），立即退出不再消费新任务
+			q.mu.Unlock()
+			return
+		}
 		if len(q.tasks) == 0 {
 			q.mu.Unlock()
 			return
@@ -197,7 +218,10 @@ func (a *App) downloadFileWithQueue(ctx context.Context, rawURL, saveDir string)
 
 // emitDownloadProgress 下载进度回调 → Wails 事件（go/download 包内已做 200ms 节流与 final 兜底）
 func (a *App) emitDownloadProgress(downloaded, total int64) {
-	log.Printf("[queue] emit download:progress dl=%d total=%d", downloaded, total)
+	// P3 修复：进度事件高频（200ms/文件），只对 final（下载完成）打日志，避免长队列刷屏日志
+	if total > 0 && downloaded >= total {
+		log.Printf("[queue] emit download:progress final dl=%d total=%d", downloaded, total)
+	}
 	a.app.Event.Emit("download:progress", downloaded, total)
 }
 

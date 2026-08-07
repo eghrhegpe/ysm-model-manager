@@ -219,10 +219,15 @@ func buildRegionInfo(region map[string]any) *regionInfo {
 		return nil
 	}
 
-	// P3 修复（审计）：region 声明的 Size 与 BlockStates 容量交叉校验——
-	// 损坏/恶意文件可声明超大 Size（int32 上限）而 BlockStates 实际很短，
-	// extractBits 全返回 0 判空气后仍会全量扫描到 totalInRegion（可达 10⁹+），
-	// 形成 DoS。总方块数不得超过 longs 可承载位数（len*64/bpe），超限丢弃该 region。
+	// P3 修复（code_review）：先按维度上限拒绝离谱声明，再做容量交叉校验——
+	// sx/sy/sz 来自 NBT int32（可达 2^31-1），三者乘积可到 ~1e28 远超 int64 max，
+	// 直接 `int64(sx)*int64(sy)*int64(sz)` 会回绕（负值使 total > capacity 恒假，守卫失效）。
+	// 真实 litematic region 每轴远小于 2^21，超限直接丢弃该 region（同时收紧 DoS 扫描上界）。
+	const maxRegionAxis = 1 << 21
+	if sx > maxRegionAxis || sy > maxRegionAxis || sz > maxRegionAxis {
+		log.Printf("[litematic] region Size 超出合理范围，跳过: %d×%d×%d", sx, sy, sz)
+		return nil
+	}
 	total := int64(sx) * int64(sy) * int64(sz)
 	capacity := int64(len(longs)) * 64 / int64(bpe)
 	if total > capacity {

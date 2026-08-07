@@ -169,8 +169,8 @@
 | `ParseSchematic()` | `go/litematic/parser:173` | — |
 | `ParseNbtStructure()` | `go/litematic/parser:267` | — |
 | `BuildVoxelData()` | `go/litematic/voxel:92` | BuildVoxelData 构建体素渲染数据（按颜色分组） |
-| `BuildNbtVoxelData()` | `go/litematic/voxel:242` | — |
-| `BuildSchematicVoxelData()` | `go/litematic/voxel:332` | — |
+| `BuildNbtVoxelData()` | `go/litematic/voxel:247` | — |
+| `BuildSchematicVoxelData()` | `go/litematic/voxel:337` | — |
 
 ## Go·日志
 

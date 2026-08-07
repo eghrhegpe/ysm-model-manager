@@ -88,7 +88,6 @@ function section(title, fixHint, items) {
 }
 
 function main() {
-  const ts = new Date().toISOString().slice(0, 19).replace('T', ' ');
   const kd = runChecker('check-knowledge-drift.mjs');
   const lc = runChecker('link-checker.mjs');
   const ac = runChecker('adr-check.mjs');
@@ -132,7 +131,6 @@ function main() {
   L.push('# 文档体系 · AI 待补地图');
   L.push('');
   L.push('> 由 `scripts/gen-doc-next-steps.mjs` 自动生成（聚合 check-knowledge-drift / link-checker / adr-check 的 `--json`）。');
-  L.push('> 生成时间: ' + ts);
   L.push('> 只读产物，供文档类 AI / 人类定位「哪块城邦失修、该补哪里」。**不修改任何源文件。**');
   L.push('> 每条 `path#Ln` 可在编辑器直跳；分类头部「如何修」为通用动作。');
   L.push('');

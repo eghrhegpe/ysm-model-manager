@@ -50,6 +50,12 @@ export const SRC_EXTS = ['.js', '.ts'];
  * @returns {string[]|{abs:string,rel:string}[]}
  */
 export function walk(dir = SRC_DIR, opts = {}) {
+  const KNOWN_WALK_OPTS = new Set(['exts', 'skipDir', 'skipFile', 'rel', 'base']);
+  for (const k of Object.keys(opts)) {
+    if (!KNOWN_WALK_OPTS.has(k)) {
+      console.warn(`[scan-files.walk] 忽略未知选项 "${k}"（已知：${[...KNOWN_WALK_OPTS].join('/')}）`);
+    }
+  }
   const {
     exts = SRC_EXTS,
     skipDir = (n) => n.startsWith('.') || n === 'node_modules' || n === 'css',

@@ -10,7 +10,7 @@
  * 退出码：0（成功）
  * 依赖：本地模块
  */
-import { rg } from './_lib/ripgrep.mjs';
+import { rgSafe as rg } from './_lib/ripgrep.mjs';
 import { parseRgLine } from './_lib/rg-line.mjs';
 
 function runChecks() {

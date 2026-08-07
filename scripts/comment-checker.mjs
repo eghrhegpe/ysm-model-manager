@@ -15,7 +15,7 @@
  * 设计意图：注释质量检查（AI 废话/JSDoc 残留/TODO 编号）
  */
 import fs from 'node:fs';
-import { rg } from './_lib/ripgrep.mjs';
+import { rgSafe as rg } from './_lib/ripgrep.mjs';
 import { parseRgLine } from './_lib/rg-line.mjs';
 
 function scanAiFluff() {

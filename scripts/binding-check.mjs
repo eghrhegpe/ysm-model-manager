@@ -7,20 +7,20 @@
  * 依赖：node:fs / node:path / node:url
  * 用法：
  *   node scripts/binding-check.mjs                 # 默认行为
- * 退出码：0（无 process.exit 调用）
+ * 退出码：发现 missing_in_js / extra_in_js 不一致 → 1；一致 → 0
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 
 
-// Go 文件，搜索 func (a *App) FuncName(（Go 源码位于 internal/app/ 下）
-const GO_FILES = [
-  'app.go', 'app_avatar.go', 'app_config.go', 'app_download.go',
-  'app_files.go', 'app_install.go', 'app_model.go', 'app_scan.go',
-  'app_tags.go', 'app_workshop.go', 'resource_bindings.go',
-  'proxy.go', 'wasm_decoder.go', 'wasm_embed.go',
-];
+// Go 文件：动态扫描 internal/app/ 下所有非测试 .go（避免硬编码清单漏扫新增文件）
+function listGoFiles() {
+  const dir = path.join(ROOT, 'internal/app');
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter((f) => f.endsWith('.go') && !f.endsWith('_test.go')).sort();
+}
+const GO_FILES = listGoFiles();
 // Wails 绑定统一走 -ts 契约（frontend/bindings），对照 v3 生成的 app.ts
 const BINDINGS_FILE = path.join(ROOT, 'frontend/bindings/ysm-model-manager/internal/app/app.ts');
 
@@ -77,3 +77,6 @@ for (const name of [...jsNames].filter((n) => !goNames.has(n)).sort()) {
 
 const out = { _summary: { go_functions: Object.keys(goExports).length, js_functions: Object.keys(jsExports).length, issues: issues.length }, issues };
 process.stdout.write(JSON.stringify(out, null, 2) + '\n');
+
+// 退出码：契约不一致即非 0，供 doctor / CI 真实阻断（原实现恒 exit 0，假绿）
+process.exit(issues.length ? 1 : 0);

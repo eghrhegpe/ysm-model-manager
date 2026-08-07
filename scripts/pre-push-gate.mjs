@@ -45,6 +45,17 @@ function sh(cmd, { cwd = ROOT, timeout = TIMEOUT } = {}) {
   }
 }
 
+/**
+ * shell 参数转义：文件名等动态值拼入命令字符串前必须包裹，防止含空格/元字符
+ * 的路径被 shell 拆词或注入（code_review P1）。win32 走 cmd.exe 用双引号（"→""），
+ * 其余平台走 /bin/sh 用单引号（'→'\''）。
+ */
+function shq(s) {
+  const str = String(s);
+  if (process.platform === 'win32') return `"${str.replace(/"/g, '""')}"`;
+  return `'${str.replace(/'/g, `'\\''`)}'`;
+}
+
 function git(args, { cwd = ROOT } = {}) {
   // core.quotepath=false：非 ASCII 文件名输出原始 UTF-8，避免引号/八进制转义破坏域匹配
   return sh(`git -c core.quotepath=false ${args}`, { cwd });
@@ -80,8 +91,13 @@ function resolveChanges(remoteOid) {
     const { rc, out } = git(`diff --name-only ${remoteOid}..HEAD`);
     if (rc === 0) return out.trim().split('\n').filter(Boolean); // 成功即权威答案（空 = 本次无变更）
   }
-  // 新分支：优先 merge-base（有远端追踪分支时），否则最近提交
-  const mb = git(`merge-base HEAD origin/${CURRENT_BRANCH} 2>/dev/null`).out.trim();
+  // 新分支：优先 merge-base（有远端追踪分支时），否则 fallback 链
+  // origin/<branch> → origin/HEAD → origin/main → origin/master，最后才最近提交，
+  // 避免多提交新分支只看 HEAD~1..HEAD 漏检中间提交（code_review P3）。
+  let mb = git(`merge-base HEAD origin/${CURRENT_BRANCH} 2>/dev/null`).out.trim();
+  if (!mb) mb = git('merge-base HEAD origin/HEAD 2>/dev/null').out.trim();
+  if (!mb) mb = git('merge-base HEAD origin/main 2>/dev/null').out.trim();
+  if (!mb) mb = git('merge-base HEAD origin/master 2>/dev/null').out.trim();
   if (mb) {
     const { rc, out } = git(`diff --name-only ${mb}..HEAD`);
     if (rc === 0) return out.trim().split('\n').filter(Boolean);
@@ -139,15 +155,15 @@ function isAmendSafe(localRef, localOid, files) {
 
 function tryGofmtFix(goFiles, localRef, localOid) {
   /** gofmt -l 找出未格式化文件；安全前提下 -w 修复并 amend。返回 { fixed: string[], amended: boolean }。 */
-  const unformatted = sh(`gofmt -l ${goFiles.join(' ')}`).out.trim()
+  const unformatted = sh(`gofmt -l ${goFiles.map(shq).join(' ')}`).out.trim()
     .split('\n').filter((f) => f.endsWith('.go'));
   if (!unformatted.length) return { fixed: [], amended: false };
   // 先修复代码（无论能否 amend，格式化本身无副作用）
-  sh(`gofmt -w ${unformatted.join(' ')}`);
+  sh(`gofmt -w ${unformatted.map(shq).join(' ')}`);
   const fixed = unformatted.map((f) => toPosix(f));
   // 守卫：工作区只含被修文件且 push 的就是 HEAD 才 amend，否则留待手动提交
   if (!isAmendSafe(localRef, localOid, fixed)) return { fixed, amended: false };
-  const add = git(`add ${fixed.join(' ')}`);
+  const add = git(`add ${fixed.map(shq).join(' ')}`);
   if (add.rc !== 0) return { fixed, amended: false };
   const cm = git('commit --amend --no-edit');
   return { fixed, amended: cm.rc === 0 };

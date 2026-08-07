@@ -71,8 +71,8 @@ function runChecks() {
     'renderSidebar()');
 
   add('R10', 'private esc implementations',
-    rg('replace\\(/&/g, "&amp;"\\)', 'frontend/src', ['*.ts', '*.js']).filter((l) => !l.includes('utils/dom/dom.ts')),
-    'import { esc } from utils/dom/dom.ts (5-replace 单点，致命陷阱 #15)');
+    rg('replace\\(/&/g, "&amp;"\\)', 'frontend/src', ['*.ts', '*.js']).filter((l) => !l.includes('utils/dom/html.ts')),
+    'import { esc } from utils/dom/html.ts (5-replace 单点，致命陷阱 #15)');
 
   // W1 排除正则/转义误报：[/\] 字符类、replace(/\\/g 归一化、\n \t \. \w \d \s \b 等
   // （历史 148 处噪声几乎全来自它们）；真实路径拼接（"\\" 双反斜杠字符串字面量）仍保留
@@ -89,7 +89,7 @@ function runChecks() {
 
   add('W2', 'window.go.main.App calls',
     rg('window\\.go\\.main\\.App', 'frontend/src', ['*.js', '*.ts']).filter(
-      (l) => !/:\d+:\s*(\/\/|\*)/.test(l), // 过滤注释行（wails/app.ts 治理注释等，非真实调用）
+      (l) => !/:\d+:\s*(?:\/\/|\/\*|\*)/.test(l), // 过滤注释行（//、/* 块注释、* 续行；wails/app.ts 治理注释等）
     ),
     'getApp()');
 

@@ -108,20 +108,23 @@ export const importFolder = async (
   dir: string,
   files: CollectedEntry[],
 ): Promise<void> => {
+  // 并发守护：与 directImport 的 _inFlight 对称，阻止同一文件夹重复提交
+  if (_inFlight.has(dir)) return;
+  _inFlight.add(dir);
   const parts = dir.split("/");
   const folderName = parts[parts.length - 1] || "模型";
   const subpath = parts.slice(0, -1).join("/");
-  const items: Array<{ RelPath: string; Base64: string }> = [];
-  for (const c of files) {
-    const rel = c.relPath.startsWith(dir + "/")
-      ? c.relPath.slice(dir.length + 1)
-      : c.relPath;
-    const b64 = await fileToBase64(c.file);
-    if (!b64) continue;
-    items.push({ RelPath: rel, Base64: b64 });
-  }
-  if (!items.length) return;
   try {
+    const items: Array<{ RelPath: string; Base64: string }> = [];
+    for (const c of files) {
+      const rel = c.relPath.startsWith(dir + "/")
+        ? c.relPath.slice(dir.length + 1)
+        : c.relPath;
+      const b64 = await fileToBase64(c.file);
+      if (!b64) continue;
+      items.push({ RelPath: rel, Base64: b64 });
+    }
+    if (!items.length) return;
     const { ImportModelFolder } = await getApp();
     await ImportModelFolder(folderName, subpath, items);
     ImportHistory.push({
@@ -138,6 +141,8 @@ export const importFolder = async (
     } else {
       toast("❌ 整组导入失败: " + msg, "error", 4000);
     }
+  } finally {
+    _inFlight.delete(dir);
   }
 };
 

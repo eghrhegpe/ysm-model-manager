@@ -554,7 +554,7 @@ class AppContent extends HTMLElement {
       } else {
         getApp().then(({ OpenInBrowser }) =>
           OpenInBrowser(site.url),
-        );
+        ).catch(() => {});
       }
     };
 
@@ -584,7 +584,7 @@ class AppContent extends HTMLElement {
       if (cs) {
         getApp().then(({ OpenInBrowser }) =>
           OpenInBrowser(cs.url),
-        );
+        ).catch(() => {});
       }
     };
     root.getElementById("ws-open")?.addEventListener("click", openCurrent);
@@ -646,7 +646,7 @@ class AppContent extends HTMLElement {
           // 外链模式：走系统浏览器，共享用户登录态
           getApp().then(({ OpenInBrowser }) =>
             OpenInBrowser(url),
-          );
+          ).catch(() => {});
         }
       };
       const ctx: RenderSiteViewCtx = {
@@ -947,7 +947,7 @@ class AppContent extends HTMLElement {
         openBtn.addEventListener("click", () => {
           getApp().then(({ OpenInBrowser }) =>
             OpenInBrowser("https://github.com/" + repo),
-          );
+          ).catch(() => {});
         });
     };
 

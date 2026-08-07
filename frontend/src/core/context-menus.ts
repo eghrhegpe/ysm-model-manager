@@ -173,6 +173,9 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
   },
   "batch.recycle": async (ctx) => {
+    if (_batchBusy) return;
+    _batchBusy = true;
+    try {
     const ok2 = await modalConfirm({
       title: "批量移入回收站",
       icon: "♻️",
@@ -197,6 +200,9 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       toast(`❌ ${fail} 个文件移入回收站失败：${friendlyError(lastErr, "移动失败")}`, 5000, "error");
     }
     refreshUI();
+    } finally {
+      _batchBusy = false;
+    }
   },
   "batch.copy-paths": async (ctx) => {
     try {

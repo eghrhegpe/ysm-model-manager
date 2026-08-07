@@ -78,7 +78,9 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   }
 
   disconnectedCallback(): void {
-    this._unsubs.forEach((fn) => fn());
+    // 快照遍历：unsub 内部可能 splice 自身（如 close3D 的 P3 修复），
+    // 用 slice() 防止 forEach 遍历中移除元素导致跳项
+    this._unsubs.slice().forEach((fn) => fn());
     // 清理体素 3D（WebGL renderer + rAF 循环）：防切页后 GPU 资源残留
     cleanupLitematic3D();
   }

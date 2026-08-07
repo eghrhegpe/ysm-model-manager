@@ -23,7 +23,7 @@
 | 钩子 | 功能 | 逃生阀 |
 |------|------|--------|
 | `pre-commit` | 自动生成文档索引（docs 分区索引 / funcmap / 知识卡 index+字段 / novel 索引 / project-map / vitepress sidebar）并 `git add docs/` | `YSM_SKIP_GEN=1` |
-| `prepare-commit-msg` | 自动提示受影响知识卡 + 覆盖率 | `YSM_SKIP_KNOWLEDGE_HINT=1` |
+| `prepare-commit-msg` | 终端提示受影响知识卡 + 覆盖率（不写 commit body） | `YSM_SKIP_KNOWLEDGE_HINT=1` / `YSM_SKIP_COVERAGE_HINT=1` |
 | `pre-push` | 自动跑 `pre-push-gate.mjs` 按变更域检查（Go/前端/数据/文档），失败阻断 | `YSM_SKIP_GATE=1` |
 | commit 信息格式 | `<type>: <描述>`，type 同 conventional commits（feat/fix/docs/chore/refactor/test） |
 | 提交范围 | 按功能 `git add <通过测试的路径>`；杜绝被压缩记忆的可能 |

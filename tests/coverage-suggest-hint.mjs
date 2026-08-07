@@ -4,8 +4,8 @@
 //   1. buildBlock：含/不含 uncoveredRanges 的区块格式
 //   2. stripBlock：自定义 🔬 标记的幂等剥离（复用 knowledge-affected-hint）
 //   3. --suggest：真实 coverage-final.json 解析出低覆盖率文件（>0）
-//   4. 端到端：钩子写 message 区块 + 幂等重跑不重复
-//   5. 逃生阀：YSM_SKIP_COVERAGE_HINT=1 不写区块
+//   4. 端到端：钩子仅终端提醒（不写 body）+ stderr 含 🔬
+//   5. 逃生阀：YSM_SKIP_COVERAGE_HINT=1 静默（不提醒不写）
 // 约定：只读现有 frontend/coverage/coverage-final.json，绝不触发 vitest --coverage。
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -97,54 +97,60 @@ check('--suggest 解析真实 coverage（低覆盖率文件 > 0）', () => {
 });
 
 // ── 4. 端到端：写 message + 幂等（CI 无产物时 graceful 跳过）──
-check('端到端：写区块 + 幂等重跑不重复', () => {
+check('端到端：仅终端提醒，不写 body 区块', () => {
   if (!fs.existsSync(COV)) {
-    console.log('  ↳ skip: 无 coverage 产物，钩子不写区块，跳过端到端断言');
+    console.log('  ↳ skip: 无 coverage 产物，跳过端到端断言');
     return;
   }
   const msgFile = path.join(ROOT, '.cov-hint-e2e.txt');
   fs.writeFileSync(msgFile, 'feat: e2e\n');
   try {
-    execFileSync(process.execPath, [HINT, msgFile, ''], { encoding: 'utf8' });
-    let msg = fs.readFileSync(msgFile, 'utf8');
-    const firstCount = (msg.match(new RegExp(BLOCK_START, 'g')) || []).length;
-    assert.equal(firstCount, 1, '首次应写入一块');
-    assert.ok(msg.includes('🔬 覆盖率建议'), '应含覆盖率区块');
-
-    execFileSync(process.execPath, [HINT, msgFile, ''], { encoding: 'utf8' });
-    msg = fs.readFileSync(msgFile, 'utf8');
-    const secondCount = (msg.match(new RegExp(BLOCK_START, 'g')) || []).length;
-    assert.equal(secondCount, 1, '幂等重跑应仍只有一块');
+    const r = spawnSync(process.execPath, [HINT, msgFile, ''], { encoding: 'utf8' });
+    assert.equal(r.status, 0, '钩子应 exit 0');
+    const msg = fs.readFileSync(msgFile, 'utf8');
+    assert.ok(!msg.includes(BLOCK_START), '终端模式不应写 body 区块');
+    assert.ok((r.stderr || '').includes('🔬'), '终端应打印覆盖率提醒');
+    assert.ok((r.stderr || '').includes('未写入 commit body'), '应标注仅终端提醒');
   } finally {
     try { fs.unlinkSync(msgFile); } catch { /* ignore */ }
   }
 });
 
 // ── 5. 逃生阀 ──
-check('逃生阀 YSM_SKIP_COVERAGE_HINT=1 不写区块', () => {
+check('逃生阀 YSM_SKIP_COVERAGE_HINT=1 静默（不提醒不写）', () => {
+  if (!fs.existsSync(COV)) {
+    console.log('  ↳ skip: 无 coverage 产物，跳过逃生阀断言');
+    return;
+  }
   const msgFile = path.join(ROOT, '.cov-hint-skip.txt');
   fs.writeFileSync(msgFile, 'feat: skip\n');
   try {
-    execFileSync(process.execPath, [HINT, msgFile, ''], {
+    const r = spawnSync(process.execPath, [HINT, msgFile, ''], {
       encoding: 'utf8',
       env: { ...process.env, YSM_SKIP_COVERAGE_HINT: '1' },
     });
     const msg = fs.readFileSync(msgFile, 'utf8');
-    assert.ok(!msg.includes(BLOCK_START), '逃生阀应跳过写入');
+    assert.ok(!msg.includes(BLOCK_START), '逃生阀不应写 body');
+    assert.ok(!(r.stderr || '').includes('🔬'), '逃生阀应静默（终端不提醒）');
   } finally {
     try { fs.unlinkSync(msgFile); } catch { /* ignore */ }
   }
 });
 
 // ── 6. merge/squash 跳过 ──
-check('merge/squash 提交跳过（不写区块）', () => {
+check('merge/squash 提交跳过（不写区块、终端静默）', () => {
+  if (!fs.existsSync(COV)) {
+    console.log('  ↳ skip: 无 coverage 产物，跳过');
+    return;
+  }
   for (const source of ['merge', 'squash']) {
     const msgFile = path.join(ROOT, `.cov-hint-${source}.txt`);
     fs.writeFileSync(msgFile, `feat: ${source}\n`);
     try {
-      execFileSync(process.execPath, [HINT, msgFile, source], { encoding: 'utf8' });
+      const r = spawnSync(process.execPath, [HINT, msgFile, source], { encoding: 'utf8' });
       const msg = fs.readFileSync(msgFile, 'utf8');
-      assert.ok(!msg.includes(BLOCK_START), `${source} 应跳过`);
+      assert.ok(!msg.includes(BLOCK_START), `${source} 不应写 body`);
+      assert.ok(!(r.stderr || '').includes('🔬'), `${source} 应终端静默`);
     } finally {
       try { fs.unlinkSync(msgFile); } catch { /* ignore */ }
     }

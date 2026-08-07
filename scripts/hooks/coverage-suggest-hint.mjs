@@ -3,25 +3,24 @@
 //
 // 覆盖率建议 · prepare-commit-msg 辅助脚本（非阻断）。
 // 由 .githooks/prepare-commit-msg 薄壳调用，把"低于语句覆盖率阈值的源文件"
-// 写入 commit message body，随 commit 进入 PR，供 review 参考补测方向。
+// 以终端（stderr）即时提醒的方式输出，不写入 commit message body。
 //
 // 设计要点：
 //   - 永远 exit 0（非阻断）；任何异常仅静默跳过，绝不阻塞提交。
 //   - 只读 frontend/coverage/coverage-final.json，绝不触发 vitest --coverage
 //     （避开 Windows safe-delete 对 coverage/ 目录的路径格式拦截，秒级返回）。
-//   - 幂等：复用 knowledge-affected-hint 的 stripBlock（自定义 🔬 标记），--amend 不重复。
+//   - 仅终端输出：coverage 数据来自 stale 的 coverage-final.json（脚本绝不重跑测试），
+//     写进 body 会在发版时成为噪声且清单多半已不准；终端提醒已能即时触达 AI/提交者，
+//     故不污染 commit 历史。
 //   - merge / squash 提交跳过（message 固定、diff 巨大，无追加价值）。
 //   - 逃生阀：YSM_SKIP_COVERAGE_HINT=1 git commit
 //
-// 纯函数（stripBlock / buildBlock）导出供契约测试复用，主流程用 import.meta 守卫。
+// 纯函数（buildBlock）导出供契约测试复用，主流程用 import.meta 守卫。
 
-import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { getRoot } from '../_lib/scan-files.mjs';
-import { normalizeGitPath } from '../_lib/posix-gitpath.mjs';
-import { stripBlock } from './knowledge-affected-hint.mjs';
 
 export const BLOCK_START = '🔬 覆盖率建议（非阻断，frontend/vite.config.js 阈值）：';
 export const BLOCK_END = '🔬 ──END──';
@@ -94,37 +93,21 @@ function main() {
 
   const files = getLowCoverageFiles(ROOT);
   const diffBlock = getDiffCoverageBlock(ROOT);
-  if (files.length === 0 && !diffBlock) return; // 无缺口或数据缺失：都不写区块
+  if (files.length === 0 && !diffBlock) return; // 无缺口或数据缺失：不输出
 
-  const absFile = normalizeGitPath(msgFile, ROOT);
-  let msg;
-  try {
-    msg = fs.readFileSync(absFile, 'utf8');
-  } catch {
-    return;
-  }
-
-  // 幂等剥离：🔬 整体建议 + 📈 diff 建议均按标记剥离，再按需重新附加（--amend 不重复）
-  let stripped = stripBlock(msg, BLOCK_START, BLOCK_END);
-  stripped = stripBlock(stripped, DIFF_BLOCK_START, DIFF_BLOCK_END);
-  const parts = [];
-  if (files.length > 0) parts.push(buildBlock(files));
-  if (diffBlock) parts.push(diffBlock);
-  const block = '\n' + parts.join('\n');
-  const next = stripped.trimEnd() + block + '\n';
-  try {
-    fs.writeFileSync(absFile, next);
-    // 摘要走 stderr：AI 的感知通道是终端，commit body 是给 PR review 看的（AI 是写信人不是收信人）
-    const preview = files.slice(0, 3).map((f) => f.file).join('、');
-    const diffCount = diffBlock ? diffBlock.split('\n').filter((l) => l.startsWith('- `')).length : 0;
-    console.error(
-      `[prepare-commit-msg] 🔬 ${files.length} 个源文件低于覆盖率阈值，已写入 commit body` +
-        (files.length > 3 ? `（前 3：${preview}…）` : `：${preview}`) +
-        (diffCount > 0 ? `；📈 ${diffCount} 个变更文件低于 diff 覆盖率阈值` : ''),
-    );
-  } catch {
-    /* 非阻断：写失败不影响提交 */
-  }
+  // 仅终端提醒：不写 commit body。
+  // 原设计把欠测文件清单写进 body 供 PR reviewer 参考，但 coverage 数据来自 stale 的
+  // coverage-final.json（脚本绝不重跑测试），到发版时清单多半已不准；且 body 追加会污染
+  // commit 历史、在 release-notes 中成为噪声。终端 stderr 摘要已能即时提醒 AI/提交者，
+  // 故改为仅终端输出，commit body 保持干净。
+  const preview = files.slice(0, 3).map((f) => f.file).join('、');
+  const diffCount = diffBlock ? diffBlock.split('\n').filter((l) => l.startsWith('- `')).length : 0;
+  console.error(
+    `[prepare-commit-msg] 🔬 ${files.length} 个源文件低于覆盖率阈值` +
+      (files.length > 3 ? `（前 3：${preview}…）` : `：${preview}`) +
+      (diffCount > 0 ? `；📈 ${diffCount} 个变更文件低于 diff 覆盖率阈值` : '') +
+      `（仅终端提醒，未写入 commit body）`,
+  );
 }
 
 // 仅当作为入口直接执行时才跑主流程（被测试 import 时不触发）

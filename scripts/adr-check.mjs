@@ -30,13 +30,19 @@ const jsonMode = args.includes('--json');
 
 const errors = [];
 
+// 早退路径（目录/登记表缺失时提前 finish()）也需可读：顶部初始化默认值，
+// 后续流程赋值，避免 finish() 访问未初始化 const 命中 TDZ 崩栈。
+let files = [];
+let regNums = new Set();
+let gaps = [];
+
 // 1. 扫描目录文件
 if (!fs.existsSync(ADR_DIR)) {
   errors.push('MISSING: docs/adr/ 目录不存在');
   finish();
 }
 
-const files = fs.readdirSync(ADR_DIR)
+files = fs.readdirSync(ADR_DIR)
   .filter((f) => /^ADR-\d{3}-.*\.md$/.test(f))
   .sort();
 
@@ -76,7 +82,7 @@ try {
   finish();
 }
 
-const regNums = new Set();
+regNums = new Set();
 const regRows = {};
 for (const m of regText.matchAll(/^\|\s*ADR-(\d{3})\s*\|/gm)) {
   const num = parseInt(m[1], 10);
@@ -98,7 +104,7 @@ for (const num of [...regNums].sort((a, b) => a - b)) {
 
 // 5. 编号连续性（空缺注明为警告）
 const nums = Object.keys(fileMeta).map(Number).sort((a, b) => a - b);
-const gaps = [];
+gaps = [];
 if (nums.length > 1) {
   for (let i = nums[0]; i <= nums[nums.length - 1]; i++) {
     if (!fileMeta[i] && !regNums.has(i)) gaps.push(i);

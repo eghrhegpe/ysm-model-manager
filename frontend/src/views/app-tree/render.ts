@@ -277,7 +277,7 @@ function renderSlice(container: HTMLElement, rows: TreeRow[], rowH: number): voi
 
 // ——— 入口：每次数据变化（搜索/排序/展开/折叠）调用 ———
 /** 断开虚拟滚动相关监听 */
-function _cleanupVS(container: HTMLElement): void {
+export function cleanupVirtualScroll(container: HTMLElement): void {
   container._vsCleanup?.();
   container._vsCleanup = null;
   container._vsResizeObserver?.disconnect();
@@ -297,14 +297,14 @@ export function renderTree(
 ): void {
   if (!entries.length) {
     container.innerHTML = emptyHTML("📁", "暂无模型文件");
-    _cleanupVS(container);
+    cleanupVirtualScroll(container);
     return;
   }
   const root = buildTree(entries, sort, search, filterPaths);
   const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode);
   if (!rows.length) {
     container.innerHTML = emptyHTML("🔍", "未找到匹配的文件");
-    _cleanupVS(container);
+    cleanupVirtualScroll(container);
     return;
   }
   container._vsRows = rows;

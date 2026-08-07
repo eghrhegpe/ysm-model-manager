@@ -46,6 +46,17 @@ func IsYsmEntryJSON(baseName string) bool {
 	return strings.EqualFold(strings.TrimSpace(baseName), "ysm.json")
 }
 
+// ShouldHashExt 判断扩展名是否需要计算 SHA256 哈希（用于同步系统文件匹配）
+// 跳过非 YSM 类型的大文件（MMD/VRC 文件可达数十 MB，哈希全量太慢）
+// 蓝图文件（.nbt/.schematic/.litematic）通常较小，计入哈希以支持同步对比
+func ShouldHashExt(ext string) bool {
+	switch strings.ToLower(ext) {
+	case ".ysm", ".zip", ".7z", ".json", ".nbt", ".schematic", ".litematic":
+		return true
+	}
+	return false
+}
+
 // ExtBelongsTo 返回扩展名所属的资源类型 ID 列表（可能多个）
 func ExtBelongsTo(ext string) []string {
 	ext = strings.ToLower(ext)

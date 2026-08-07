@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -120,7 +121,10 @@ func ScanEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 				return nil
 			}
 		}
-		info, _ := d.Info()
+		info, err := d.Info()
+		if err != nil {
+			log.Printf("[scanner] 获取文件信息失败 %s: %v", p, err)
+		}
 		e := types.ModelEntry{Name: filepath.Base(p), Path: p, Ext: originalExt}
 		if info != nil {
 			e.Size = info.Size()
@@ -129,8 +133,7 @@ func ScanEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 		// 计算 SHA256 供同步系统使用（GetInstanceStatus 依赖哈希匹配）
 		// 跳过非 YSM 类型的大文件（MMD/VRC 文件可达数十 MB，哈希全量太慢）
 		// 蓝图文件（.nbt/.schematic/.litematic）通常较小，计入哈希以支持同步对比
-		if originalExt == ".ysm" || originalExt == ".zip" || originalExt == ".7z" || originalExt == ".json" ||
-			originalExt == ".nbt" || originalExt == ".schematic" || originalExt == ".litematic" {
+		if types.ShouldHashExt(originalExt) {
 			e.Hash = ComputeFileHash(p)
 		}
 		entries = append(entries, e)

@@ -161,3 +161,76 @@ func TestNoFileOnFirstUse(t *testing.T) {
 		t.Error("tags.json should not exist before first SetTags")
 	}
 }
+
+// P3 修复（code_review）：损坏 tags.json → 备份 .corrupt + 重建空存储，写路径可恢复
+func TestCorruptFileRecovers(t *testing.T) {
+	dir := t.TempDir()
+	s := NewStore(dir)
+	// 先写一个损坏的 tags.json
+	if err := os.WriteFile(s.path, []byte("{not valid json"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// 读应不报错（已备份重建），返回空
+	tags, err := s.GetTags("/m")
+	if err != nil {
+		t.Fatalf("GetTags after corrupt should not error: %v", err)
+	}
+	if len(tags) != 0 {
+		t.Errorf("expected empty tags after corrupt recovery, got %v", tags)
+	}
+	// 备份文件存在
+	if _, err := os.Stat(s.path + ".corrupt"); err != nil {
+		t.Errorf("corrupt backup missing: %v", err)
+	}
+	// 写路径可恢复：SetTags 后能读回
+	if err := s.SetTags("/m", []string{"new"}); err != nil {
+		t.Fatalf("SetTags after corrupt failed: %v", err)
+	}
+	tags, _ = s.GetTags("/m")
+	if len(tags) != 1 || tags[0] != "new" {
+		t.Errorf("tags not recovered after SetTags: %v", tags)
+	}
+}
+
+// P3 修复（code_review）：SetTags 全空白串应删除条目而非写空数组
+func TestSetTagsWhitespaceOnlyDeletes(t *testing.T) {
+	dir := t.TempDir()
+	s := NewStore(dir)
+	s.SetTags("/m", []string{"a", "b"})
+	if err := s.SetTags("/m", []string{"  ", " "}); err != nil {
+		t.Fatalf("SetTags whitespace-only failed: %v", err)
+	}
+	tags, _ := s.GetTags("/m")
+	if len(tags) != 0 {
+		t.Errorf("whitespace-only SetTags should delete entry, got %v", tags)
+	}
+}
+
+// P3 修复（code_review）：AddTag 后保持存储排序不变量
+func TestAddTagKeepsSorted(t *testing.T) {
+	dir := t.TempDir()
+	s := NewStore(dir)
+	s.SetTags("/m", []string{"zeta", "alpha"})
+	if err := s.AddTag("/m", "middle"); err != nil {
+		t.Fatalf("AddTag failed: %v", err)
+	}
+	tags, _ := s.GetTags("/m")
+	want := []string{"alpha", "middle", "zeta"}
+	for i := range want {
+		if tags[i] != want[i] {
+			t.Fatalf("tags not sorted after AddTag: %v (want %v)", tags, want)
+		}
+	}
+}
+
+// P3 修复（code_review）：save 原子写后无 .tmp 残留
+func TestSaveLeavesNoTmp(t *testing.T) {
+	dir := t.TempDir()
+	s := NewStore(dir)
+	if err := s.SetTags("/m", []string{"x"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(s.path + ".tmp"); err == nil {
+		t.Error("tags.json.tmp should not remain after save")
+	}
+}

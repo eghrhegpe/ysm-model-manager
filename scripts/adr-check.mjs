@@ -52,6 +52,9 @@ if (!files.length) {
 }
 
 // 2. 解析每个文件编号 + 标题 + 状态
+// 合法状态前缀（AGENTS.md：✅ 已采纳 / 🔄 部分采纳 / 🧊 已废弃 / ❌ 已取代；
+// 存量文件存在无 emoji 的「已采纳」写法，两者均放行，避免误报存量）
+const VALID_STATUS = ['✅ 已采纳', '🔄 部分采纳', '🧊 已废弃', '❌ 已取代', '已采纳', '部分采纳', '已废弃', '已取代'];
 const fileMeta = {};
 for (const f of files) {
   const text = fs.readFileSync(path.join(ADR_DIR, f), 'utf-8');
@@ -64,12 +67,19 @@ for (const f of files) {
   const num = parseInt(titleM[1], 10);
   if (fileMeta[num]) {
     errors.push(`DUP_NUM: 编号 ADR-${String(num).padStart(3, '0')} 撞号：${fileMeta[num].file} 与 ${f}`);
+    continue; // 撞号时保留首个文件元数据供后续对账，避免被覆盖（code_review P3-1）
+  }
+  const statusRaw = statusM ? statusM[1].trim() : '';
+  if (!statusRaw) {
+    errors.push(`STATUS_MISSING: ${f} 缺少 '- **状态**：' 行`);
+  } else if (!VALID_STATUS.some((s) => statusRaw.startsWith(s))) {
+    errors.push(`BAD_STATUS: ${f} 状态「${statusRaw}」不在合法枚举 ${VALID_STATUS.join(' / ')}（code_review P2-1）`);
   }
   fileMeta[num] = {
     file: f,
     num,
     title: titleM[2].trim(),
-    status: statusM ? statusM[1].trim() : '(未标注状态)',
+    status: statusRaw || '(未标注状态)',
   };
 }
 
@@ -77,8 +87,9 @@ for (const f of files) {
 let regText = '';
 try {
   regText = fs.readFileSync(REG_FILE, 'utf-8');
-} catch {
-  errors.push('MISSING: adr/index.md 登记表不存在');
+} catch (e) {
+  // 区分"不存在"与"权限/其他读取失败"，避免把 EACCES 误报成 MISSING（code_review P3-3）
+  errors.push(`MISSING: adr/index.md 登记表读取失败: ${e.code || e.message}`);
   finish();
 }
 

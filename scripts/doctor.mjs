@@ -409,8 +409,10 @@ function checkStaticAnalysis() {
 // —— 文档模式专属检查 ——
 // 断链 + 知识卡漂移 + ADR 登记一致性（撞号/漏登/幽灵/跳号）。
 // 注意：check-doc-drift / check-adr-health 已并入 DOC_STATIC_TOOLS，此处不重复运行。
+// link-checker 必须带 --strict：其 --json 模式默认恒 exit 0（仅 strict 才按断链非零退出，
+// 避免断链时 doctor 误判 passed——code_review P2）。
 const DOC_EXTRA_SCRIPTS = [
-  'link-checker.mjs',
+  { tool: 'link-checker.mjs', args: ['--strict'] },
   'check-knowledge-drift.mjs',
   'adr-check.mjs',
 ];
@@ -419,11 +421,13 @@ function checkDocExtra() {
   console.log('\n=== Doc Checks (links / drift / ADR registry) ===');
   let failed = 0;
   for (const s of DOC_EXTRA_SCRIPTS) {
-    const { rc } = run(['node', path.join('scripts', s), '--json']);
-    if (rc === 0) console.log(`  ${PASS} ${s}`);
+    const tool = typeof s === 'string' ? s : s.tool;
+    const extra = typeof s === 'string' ? [] : s.args || [];
+    const { rc } = run(['node', path.join('scripts', tool), '--json', ...extra]);
+    if (rc === 0) console.log(`  ${PASS} ${tool}`);
     else {
       failed += 1;
-      console.log(`  ${FAIL} ${s}`);
+      console.log(`  ${FAIL} ${tool}`);
     }
   }
   if (failed === 0) console.log(`  ${PASS} all doc checks passed`);

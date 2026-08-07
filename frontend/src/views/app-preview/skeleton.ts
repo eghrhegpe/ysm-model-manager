@@ -507,6 +507,9 @@ export async function loadModel2D(
           setPrefer3D(false);
         };
 
+        // 组件销毁时自动清理 3D overlay，防止 WebGL 上下文泄漏
+        ctx._unsubs?.push(close3D);
+
         // 辅助函数
         const sec = (text: string): HTMLDivElement => {
           const d = document.createElement("div");

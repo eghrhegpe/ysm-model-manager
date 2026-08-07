@@ -9,7 +9,6 @@
 > 按需读取 `docs/knowledge/index.md`（枢纽索引，自动生成）+ grep 卡正文定位功能作用，充实上下文。
 > 新 ADR 落地前先 Grep `> \*\*状态\*\*:.*(规划|实施中|部分实现)` in `docs/adr` 看是否已有类似实现；若触及既有 ADR 决策，就在对方首部标注「被 [ADR-NNN] 取代」。
 > 写新 ADR 走叫号脚本（命令与流程见下方「ADR 规则」，禁止手写编号）。编号只允许给 ADR、novel 写。
-> 编号只允许给 ADR、novel 写。
 > 改完即验，顺带提交（构建/跑得起来）：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）。 涉及文档改动时用 `node scripts/doctor.mjs --docs`（轻量秒级，跳过 Go/前端编译与测试）；改代码或发版前用全量 `node scripts/doctor.mjs`。
 > 信任本机改动，提交代码时：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。正常的更改，无需询问。先提交`docs/`,捎带了无关文件也别怕。
 > 最后询问用户是否需要处理预料之外的报错。
@@ -28,6 +27,7 @@ git push --verbose 2>&1 | Select-Object -Last 50    # 推送结束时，返回�
 git reset --soft HEAD~1               # 撤销最近一条 commit，把改动留在暂存区（staged）
 git reset HEAD~1                      # 撤销最近一条 commit，把改动放回工作区（unstaged）
 ```
+
 | 规则 | 说明 |
 |------|------|
 | commit 信息格式 | `<type>: <描述>`，type 同conventional commits（feat/fix/docs/chore/refactor/test） |
@@ -67,6 +67,7 @@ git reset HEAD~1                      # 撤销最近一条 commit，把改动放
 > 新 ADR 一律走叫号脚本：`node scripts/new-adr.mjs "标题" [--slug kebab-name] [--related 关联内容] [--supersedes ADR-0XX,...] [--dry-run]`（双源取号 + 登记表占号 + 四段模板 + 自动 adr-check），禁止手写编号。
 > 状态值：`✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代`；状态变更同步更新登记表。
 > 新 ADR 落地时检查是否触及既有 ADR 决策；触及就在对方首部标注「被 [ADR-NNN] 取代」。
+> 优先级：当前源码 > docs/adr/ > docs/knowledge/ > docs/archive/architecture.md（历史）。
 
 ### 取代判别（五层证据）
 | 证据层级 | 判定方式                  | 处置措施                     |

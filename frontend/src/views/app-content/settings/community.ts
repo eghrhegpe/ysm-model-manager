@@ -458,8 +458,10 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         // 更新卡片选中态
         if (themePicker) themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
       } else if (mode === "time") {
-        applyTimeTheme();
-        localStorage.setItem("theme", "time");
+        // P2 修复：applyTimeTheme 返回实际主题（warm/cyber）并写入 theme 键——
+        // 原实现写 "time" 非法值，重启后 initTheme 归一化为 system，按时间段模式被静默降级
+        const themeName = applyTimeTheme();
+        localStorage.setItem("theme", themeName);
         if (themePicker) themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
       }
       // "off" 时不改变当前主题，等用户手动点卡片
@@ -468,7 +470,8 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     if (savedAuto === "system") {
       window.applyTheme?.("system");
     } else if (savedAuto === "time") {
-      applyTimeTheme();
+      const themeName = applyTimeTheme();
+      localStorage.setItem("theme", themeName);
     } else {
       window.applyTheme?.(savedTheme);
     }
@@ -476,11 +479,13 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     window.applyTheme?.(savedTheme);
   }
 
-  // 时间段主题切换
-  function applyTimeTheme(): void {
+  // 时间段主题切换：返回实际应用的主题名（warm 白天 / cyber 夜晚）
+  function applyTimeTheme(): string {
     const hour = new Date().getHours();
     const isDay = hour >= 6 && hour < 18;
-    window.applyTheme?.(isDay ? "warm" : "cyber");
+    const themeName = isDay ? "warm" : "cyber";
+    window.applyTheme?.(themeName);
+    return themeName;
   }
 
   // 镜像源

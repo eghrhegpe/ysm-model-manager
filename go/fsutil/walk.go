@@ -33,8 +33,8 @@ func WalkAllFiles(dir string, skipRecycle bool) []string {
 	return result
 }
 
-// WalkAllDirs 递归遍历目录，返回所有子目录路径（广度优先，后序遍历用）
-// 不包含根目录本身，按深度优先顺序（后序：子目录在前，父目录在后）
+// WalkAllDirs 递归遍历目录，返回所有子目录路径（深度优先后序：子目录在前，父目录在后）
+// 不包含根目录本身。后序便于删除类操作（先删深目录，父目录变空后可被继续删除）。
 func WalkAllDirs(dir string, skipRecycle bool) []string {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
@@ -48,6 +48,9 @@ func WalkAllDirs(dir string, skipRecycle bool) []string {
 func walkAllDirs(dir string, skipRecycle bool, out *[]string) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
+		// P2 修复：与 WalkAllFiles 对齐，ReadDir 失败打日志——
+		// 原实现完全静默 return，不可读子目录及其整棵子树从结果中消失且调用方无感知
+		log.Printf("[fsutil] ReadDir 访问 %s 失败: %v", dir, err)
 		return
 	}
 	for _, e := range entries {

@@ -34,7 +34,9 @@ func IsInside(baseDir, path string) error {
 	if err != nil {
 		return &ErrPathEscalation{Path: path, BaseDir: baseDir, Reason: "计算相对路径失败: " + err.Error()}
 	}
-	if strings.HasPrefix(rel, "..") || rel == ".." {
+	// P3 修复：`rel == ".."` 或 `rel` 以 `..` + 分隔符开头才算越权——
+	// 裸 `strings.HasPrefix(rel, "..")` 会把 base 下合法子目录名 `..foo` 误判为越权（false positive）
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return &ErrPathEscalation{Path: path, BaseDir: baseDir, Reason: "路径不在基准目录内"}
 	}
 	// 大小写不敏感检查（Windows 路径不区分大小写）

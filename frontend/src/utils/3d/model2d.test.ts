@@ -268,7 +268,8 @@ describe("renderModel2D 冒烟（canvas 2D mock）", () => {
   it("mousemove 触发重绘（命中或离开均重绘一次）", () => {
     const canvas = makeMockCanvas();
     renderModel2D(canvas as unknown as HTMLCanvasElement, SIMPLE_MODEL, null, {});
-    const onMove = canvas.addEventListener.mock.calls.find((c) => c[0] === "mousemove")[1];
+    // vitest 4 类型更严：find 可能返回 undefined，非空断言（renderModel2D 必注册 mousemove）
+    const onMove = canvas.addEventListener.mock.calls.find((c) => c[0] === "mousemove")![1];
     const before = canvas._ctx.clearRect.mock.calls.length;
     onMove({ clientX: 90, clientY: 90 });
     expect(canvas._ctx.clearRect.mock.calls.length).toBeGreaterThan(before);

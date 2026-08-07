@@ -159,9 +159,9 @@ func TestCleanEmptyDirs_EmptyDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// 删除 empty 后 dir 也变空 → 共 2 个
-	if removed != 2 {
-		t.Errorf("期望删除 2 个空目录（含根），得到 %d", removed)
+	// P2 修复后：根目录自身永不删除（只删空子目录）→ 仅 empty 1 个
+	if removed != 1 {
+		t.Errorf("期望删除 1 个空子目录（根不删），得到 %d", removed)
 	}
 }
 
@@ -175,9 +175,9 @@ func TestCleanEmptyDirs_NestedEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// 删除 c → b → a → dir → 共 4 个
-	if removed != 4 {
-		t.Errorf("期望删除 4 个嵌套空目录（含根），得到 %d", removed)
+	// P2 修复后：删除 c → b → a 共 3 个，根 dir 自身不删
+	if removed != 3 {
+		t.Errorf("期望删除 3 个嵌套空子目录（根不删），得到 %d", removed)
 	}
 }
 

@@ -32,7 +32,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { getRoot } from '../_lib/scan-files.mjs';
 
-export const BLOCK_START = '🔬 覆盖率建议（非阻断，frontend/vite.config.js 阈值）：';
+export const BLOCK_START = '🔬 覆盖率建议（非阻断，frontend/vitest.config.ts 阈值）：';
 export const BLOCK_END = '🔬 ──END──';
 /** diff 覆盖率建议区块标记（check-diff-coverage --suggest 输出，幂等剥离用） */
 export const DIFF_BLOCK_START = '📈 diff 覆盖率建议（非阻断，变更行阈值 60%）：';
@@ -112,12 +112,14 @@ function main() {
   // 故改为仅终端输出，commit body 保持干净。
   const preview = files.slice(0, 3).map((f) => f.file).join('、');
   const diffCount = diffBlock ? diffBlock.split('\n').filter((l) => l.startsWith('- `')).length : 0;
-  console.error(
-    `[prepare-commit-msg] 🔬 ${files.length} 个源文件低于覆盖率阈值` +
-      (files.length > 3 ? `（前 3：${preview}…）` : `：${preview}`) +
-      (diffCount > 0 ? `；📈 ${diffCount} 个变更文件低于 diff 覆盖率阈值` : '') +
-      `（仅终端提醒，未写入 commit body）`,
-  );
+  // P2-2：files 为空时不再输出「0 个…：」悬空冒号（preview 为空串），只报 📈 部分
+  const parts = [];
+  if (files.length > 0) {
+    parts.push(`🔬 ${files.length} 个源文件低于覆盖率阈值` + (files.length > 3 ? `（前 3：${preview}…）` : `：${preview}`));
+  }
+  if (diffCount > 0) parts.push(`📈 ${diffCount} 个变更文件低于 diff 覆盖率阈值`);
+  if (parts.length === 0) return; // 无缺口（files=[] 且 diff 无缺口）→ 不输出
+  console.error(`[prepare-commit-msg] ${parts.join('；')}（仅终端提醒，未写入 commit body）`);
 }
 
 // 仅当作为入口直接执行时才跑主流程（被测试 import 时不触发）

@@ -50,10 +50,10 @@ YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-p
 ## 不变量
 
 - **两个 *-data.js 是自动生成的 base64 数据文件（豁免文件），禁止手改**；更新需走生成脚本重新产出
-- 已知问题（源码注释明示）：`ysm-glue-data.js` 的 `_getGlueCode` 引用未声明的 `_cachedWasm`（ReferenceError）且返回 ArrayBuffer 而非 string —— WASM 路径实际会静默失败并回退 Go 解析；修复应改生成脚本，不得手改数据文件
+- **已知问题已修复（审计核实 2026-08-08）**：此前知识卡/注释声称 `ysm-glue-data.js` 的 `_getGlueCode` 引用未声明 `_cachedWasm`（ReferenceError）且返回 ArrayBuffer——**现状数据文件用 `_cachedGlue` 且返回 TextDecoder string**，bug 已不存在，「WASM 路径必静默回退 Go」假设已失效；内存直解路径（`decodeYsmFileFromMemory`）实际可用，需在真实 WebView2 环境做一次端到端回归确认后按正式路径维护
 - `_malloc` 的指针必须在 finally 中 `_free`；HEAPU8 每次从 `window.Module` 取最新值（内存扩容后旧视图失效）
 - WASM 加载状态是模块级单例（wasmModule/loading/waiters），不得挂额外 window 全局
-- **WASM 生命周期管理**（审计发现）：`decodeYsmFile` 回退路径中，MEMFS 输出文件读取后必须 `FS.unlink` 清理，否则 HEAP 内存永不释放（P2）。WASM 为 **app 级常驻单例**（initYSMParser 懒加载后生命周期等同应用，与 ADR-039 §2.2 常驻单例豁免同类），**无销毁场景**——曾提供 `destroyYSMParser()` 但 `_free(0)` 无法真正释放 HEAP，且销毁后重新 init 有加载成本，已移除（2026-08-06，knip 死代码基线）。若未来出现真实长运行内存压力场景，应实现真正的 Emscripten 实例销毁（`Module.destroy`/instance 释放）而非 `_free(0)`。
+- **WASM 生命周期管理**（审计发现）：`decodeYsmFile` 回退路径中，MEMFS 输出文件读取后必须 `FS.unlink` 清理（`wipeDir`，已落地）；`decodeYsmFileFromMemory` 内存直解路径的 /output 在下一次调用前清理（P3 观察：成功后未立即 wipe，产物常驻至下次解码）。WASM 为 **app 级常驻单例**（initYSMParser 懒加载后生命周期等同应用，与 ADR-039 §2.2 常驻单例豁免同类），**无销毁场景**——曾提供 `destroyYSMParser()` 但 `_free(0)` 无法真正释放 HEAP，且销毁后重新 init 有加载成本，已移除（2026-08-06，knip 死代码基线）。若未来出现真实长运行内存压力场景，应实现真正的 Emscripten 实例销毁（`Module.destroy`/instance 释放）而非 `_free(0)`。
 
 ## 相关
 

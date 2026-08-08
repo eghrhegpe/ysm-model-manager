@@ -37,13 +37,13 @@ use_when:
 
 ## 与其他子系统关系
 
-- 消费方：`core/handler-dnd.ts`（拖拽过滤 ALL_EXTS）、`features/import-queue.ts`（导入队列 ALL_EXTS）、`app-tree/loader.ts` + `app-tree/toolbar-events.ts`（getExts）
-- 一致性对端：`resource_types.json`（单一事实源）↔ Go `types.ResourceExts` ↔ 本文件
+- 消费方：`features/dnd-shared.ts`（拖拽过滤 ALL_EXTS）、`features/import-dnd.ts`、`features/import-queue.ts`（导入队列 ALL_EXTS）、`views/app-tree/loader.ts` + `views/app-tree/toolbar-events.ts`（getExts）
+- 一致性对端：`resource_types.json`（单一事实源）↔ Go `LoadRegistry()` 运行时加载（无静态 ResourceExts 表）↔ 本文件
 
 ## 不变量
 
-- **改扩展名三步走**：1) 改 `resource_types.json` → 2) 改 Go 侧 ResourceExts → 3) 改本文件；三处必须同步，禁止单独改本文件（注册表优先，AGENTS.md §4.4）
-- 一致性由契约测试守护（`extensions.test.js` + Go `registry_test.go` + type-consistency 检查）
+- **改扩展名两步走**：1) 改 `resource_types.json` → 2) 改本文件（Go 端运行时直读 JSON 无需手工改）；两处必须同步，禁止单独改本文件（注册表优先，AGENTS.md §4.4）
+- 一致性由 vitest 守护（`extensions.test.ts` 已 import `resource_types.json` 做双向对账——7 类型/每类型扩展名/无额外类型，P2 修复：原测试硬编码断言，三端一致性只靠退出码恒 0 陷阱的外部 type-consistency.mjs）+ Go `registry_test.go`
 - 扩展名比较一律小写；扩展名带前导点（".ysm"）
 
 ## 相关

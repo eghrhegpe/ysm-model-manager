@@ -964,8 +964,8 @@
 | `_getGlueCode()` | `frontend/src/wasm/ysm-glue-data:4` | — |
 | `YsmDecodedFile()` | `frontend/src/wasm/ysm-parser:46` | 解码输出文件 |
 | `initYSMParser()` | `frontend/src/wasm/ysm-parser:59` | — |
-| `decodeYsmFileFromMemory()` | `frontend/src/wasm/ysm-parser:142` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组） 返回 [{path, data}]，失败返回 null |
-| `decodeYsmFile()` | `frontend/src/wasm/ysm-parser:181` | 通过 callMain + MEMFS 解码 .ysm（回退路径） 保留以兼容旧的 WASM 编译 |
+| `decodeYsmFileFromMemory()` | `frontend/src/wasm/ysm-parser:143` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组） 返回 [{path, data}]，失败返回 null |
+| `decodeYsmFile()` | `frontend/src/wasm/ysm-parser:182` | 通过 callMain + MEMFS 解码 .ysm（回退路径） 保留以兼容旧的 WASM 编译 |
 | `_getWasmBinary()` | `frontend/src/wasm/ysm-wasm-data:4` | — |
 
 ---

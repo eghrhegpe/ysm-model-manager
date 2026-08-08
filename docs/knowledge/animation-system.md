@@ -58,10 +58,11 @@ use_when:
 
 ## 不变量
 
-- Molang 表达式不解释执行：检测到即标记 hasMolang 并跳过该值（避免 eval 任意表达式）
+- Molang 表达式不解释执行：检测到即标记 hasMolang 并跳过该值（避免 eval 任意表达式）；注意实现细节——**直接字符串帧被跳过 ✓，但数组含 Molang 轴被零填充保留**（animation.ts:105-108），且**纯数字字符串可能误判 Molang**（animation.ts:170，`hasMolangInChannelData` 的宽松数字判定，P3 观察）
 - evaluateKeyframes 对空数组/越界时间返回端点值或 null，不抛异常
 - `no-animations` 开关作用于 CSS animation；JS 驱动的动画（模型动画求值/数字滚动）不受该 class 影响，属模型数据呈现而非装饰动效
 - 播放循环（RAF）由消费方组件自行管理并须在卸载时 cancelAnimationFrame；曾有的 AnimationPlayer 封装类因长期无消费方已在死代码清理中移除，如需播放器请基于 evaluateClip 重建
+- **求值链路当前休眠**（审计 2026-08-08）：`evaluateClip` / `evaluateKeyframes` 全仓无运行时消费方（grep 仅测试命中），模型动画求值处于潜伏态；`animateNumber` 实际返回取消函数 `() => void`（文档签名漏记），消费方 app-tree/render.ts:369、app-sidebar/events.ts:190 **忽略取消函数**（快速连续渲染叠加未清理 timer，P3 观察）；`isMolang` 为死代码（仅定义处命中）
 
 ## 相关
 

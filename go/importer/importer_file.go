@@ -94,7 +94,28 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 			return types.AppError{Code: "FILE_EXISTS", Operation: "导入模型", SourcePath: fileName, Reason: "文件已存在", Suggestion: "如需替换请先删除原文件"}
 		}
 	}
-	return os.WriteFile(destPath, data, 0644)
+	// P2 修复：临时文件 + rename 原子落地——原 `os.WriteFile` 直写目标，磁盘满/IO 中断时
+	// 半截损坏文件留盘且非覆盖模式再次导入命中 FILE_EXISTS 形成「损坏文件阻塞重导」死锁
+	// （项目头号反模式：不得留下损坏文件；与 copyFile/SimpleCopyImporter 的 io.Copy 清理模式对齐）
+	tmp, err := os.CreateTemp(destDir, ".import-*.tmp")
+	if err != nil {
+		return types.AppError{Code: "MKDIR_FAILED", Operation: "导入模型", TargetPath: destDir, Reason: "无法创建临时文件", Suggestion: "请检查磁盘权限或空间"}
+	}
+	tmpName := tmp.Name()
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpName)
+		return types.AppError{Code: "WRITE_FAILED", Operation: "导入模型", TargetPath: destPath, Reason: "写入失败: " + err.Error(), Suggestion: "请检查磁盘空间"}
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpName)
+		return types.AppError{Code: "WRITE_FAILED", Operation: "导入模型", TargetPath: destPath, Reason: "关闭失败: " + err.Error()}
+	}
+	if err := os.Rename(tmpName, destPath); err != nil {
+		os.Remove(tmpName)
+		return types.AppError{Code: "WRITE_FAILED", Operation: "导入模型", TargetPath: destPath, Reason: "落地失败: " + err.Error()}
+	}
+	return nil
 }
 
 // DetectZipType 扫描 ZIP local file header 中的文件名识别资源类型

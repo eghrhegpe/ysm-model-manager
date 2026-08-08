@@ -352,14 +352,25 @@ func TestInstallDir_EmptyDst(t *testing.T) {
 }
 
 func TestIsValidRepoRoot(t *testing.T) {
+	// P2 修复：Windows 盘符用例加 GOOS 守卫——原用例在 Linux/macOS 上 filepath.Abs("C:\\")
+	// 不触发盘符根判断、禁列也不匹配 → 函数返回 true 而用例期望 false，非 Windows 平台 go test 必失败
 	tests := []struct {
 		path string
 		want bool
 	}{
 		{t.TempDir(), true},
-		{"C:\\", false},
-		{"C:\\Windows", false},
-		{"C:\\Program Files", false},
+	}
+	if runtime.GOOS == "windows" {
+		tests = append(tests,
+			[]struct {
+				path string
+				want bool
+			}{
+				{"C:\\", false},
+				{"C:\\Windows", false},
+				{"C:\\Program Files", false},
+			}...,
+		)
 	}
 	for _, tc := range tests {
 		got := IsValidRepoRoot(tc.path)

@@ -48,6 +48,18 @@ func RelinkDir(customDir, repoRoot, rtype, linkMode string, scanFn func(string) 
 			srcDir := filepath.Dir(srcPath)
 			// ce.Path 已在目标子目录内，父层才是 InstallDir 要写入的基础目录
 			dstParent := filepath.Dir(ce.Path)
+			// P1 修复：ysm.json/.pmx 平铺在 customDir 根层时（dstParent == customDir），
+			// InstallDir 的「挪走整目录→重建→回滚」会连带把同目录其他模型一起 rename 走、
+			// 重建失败回滚后其他模型也随备份 RemoveAll 丢失。根层平铺退化为 Install 单文件
+			// 路径（按 src 相对 repoRoot 还原目录结构），不做整目录替换。
+			if filepath.Clean(dstParent) == filepath.Clean(customDir) {
+				if err := installer.Install(srcPath, customDir, repoRoot, linkMode); err != nil {
+					logger(ce.Name, ce.Path, customDir, 0, "failed", "relink 失败: "+err.Error())
+					continue
+				}
+				count++
+				continue
+			}
 			// 但 InstallDir 会自动创建 {targetSubDir}，如果 dstParent 已经是模型目录
 			// 则会二次嵌套。正确的做法：上一层目录作为 dstDir，让 InstallDir 创建子目录
 			dstBase := filepath.Dir(dstParent)

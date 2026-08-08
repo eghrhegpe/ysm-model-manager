@@ -59,3 +59,6 @@ build/
 *.keystore
 *.jks
 docs/.doc-next-steps.md
+
+#参考源码
+upstream/

@@ -198,8 +198,13 @@ func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
 		if idx := strings.LastIndexAny(tn, "/\\"); idx >= 0 {
 			tn = tn[idx+1:]
 		}
-		tn = strings.TrimSuffix(tn, ".png")
-		tn = strings.TrimSuffix(tn, ".jpg")
+		// 按小写判定扩展名（与上方过滤同口径，兼容 Player.PNG 等大写扩展名），
+		// 用切片保留原显示大小写（code_review P3）
+		if strings.HasSuffix(strings.ToLower(tn), ".png") {
+			tn = tn[:len(tn)-4]
+		} else if strings.HasSuffix(strings.ToLower(tn), ".jpg") {
+			tn = tn[:len(tn)-4]
+		}
 		merged.TextureNames = []string{tn}
 		break
 	}

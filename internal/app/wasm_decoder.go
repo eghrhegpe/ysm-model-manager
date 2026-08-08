@@ -189,9 +189,8 @@ func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
 			continue
 		}
 		data := f.Data
-		if len(data) < 4096 {
-			continue // 过滤 <4KB 头像/预览图（与 ParseFromZip 同口径）
-		}
+		// 注意：不过滤 <4KB 小图——与前端 WASM 主路径（wasm.ts 只过滤 avatar/）
+		// 口径一致；64×64 真实箭矢纹理（如芙宁娜 arrow.png ~2KB）会被 4KB 过滤误杀
 		mime := "image/png"
 		if strings.HasSuffix(low, ".jpg") {
 			mime = "image/jpeg"

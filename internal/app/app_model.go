@@ -302,7 +302,9 @@ func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 		}
 		low := strings.ToLower(p)
 		if strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg") {
-			if data, rErr := os.ReadFile(p); rErr == nil && len(data) > 4096 {
+			// 注意：不过滤 <4KB 小图——与前端 WASM 主路径口径一致（wasm.ts 只过滤
+			// avatar/）；64×64 真实纹理（如芙宁娜 arrow.png ~2KB）会被 4KB 过滤误杀
+			if data, rErr := os.ReadFile(p); rErr == nil && len(data) > 0 {
 				mime := "image/png"
 				if strings.HasSuffix(low, ".jpg") {
 					mime = "image/jpeg"

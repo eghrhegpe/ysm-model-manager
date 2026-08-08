@@ -55,8 +55,11 @@ export const PageStore = {
 export function registerPageStore(unsubs: Array<() => void>): void {
   unsubs.push(
     bus.on("nav:changed", ({ page }) => {
-      if (page !== _currentPage) {
-        _currentPage = page;
+      // P3 修复：写入前过 sanitizePage 白名单——原注释自述「运行时信任 emit 方类型」，
+      // 任何遗留 .js 或未来调用方 emit 非法值会使 _currentPage 脱离 PageName 联合
+      const safe = sanitizePage(page ?? null);
+      if (safe !== _currentPage) {
+        _currentPage = safe;
       }
     }),
   );

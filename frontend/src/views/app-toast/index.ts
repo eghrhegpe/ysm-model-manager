@@ -77,13 +77,26 @@ class AppToast extends HTMLElement {
     if (clickCallback) {
       (t.querySelector(".msg") as HTMLElement).onclick = (e: MouseEvent) => {
         e.stopPropagation();
+        // P2 修复：禁用交互防 200ms 出场动画窗口内重复触发（连点双开弹窗）
+        t.style.pointerEvents = "none";
         try { clickCallback(); } finally { this._remove(t); }
       };
     }
     if (undoCallback) {
       (t.querySelector(".undo-btn") as HTMLElement).onclick = () => {
-        try { undoCallback(); } finally { this._remove(t); }
-        this.show("✅ 已撤销", null, 2000, "success");
+        // P2 修复：禁用交互防撤销连点重复执行 undoCallback
+        t.style.pointerEvents = "none";
+        try {
+          undoCallback();
+          this.show("✅ 已撤销", null, 2000, "success");
+        } catch (e) {
+          // P2 修复：undo 抛错不得跳过反馈——原 try/finally 无 catch，
+          // 异常传播跳过「已撤销」确认且冒泡控制台无用户反馈
+          console.error("[toast] 撤销回调失败:", e);
+          this.show("❌ 撤销失败", null, 3000, "error");
+        } finally {
+          this._remove(t);
+        }
       };
     }
     (t.querySelector(".close-btn") as HTMLElement).onclick = (e: MouseEvent) => {

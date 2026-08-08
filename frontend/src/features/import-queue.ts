@@ -548,7 +548,9 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
       if (!repoRoot) return;
       const entries = (await ScanModelEntriesWithLabel(repoRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
-      repoFiles = new Set(entries.map((e) => e.Name.replace(/\.ban$/i, "")));
+      // P2 修复：键统一存「去扩展名」形态（与 :759 预警查询 fq.name.replace(/\.\w+$/,"") 对齐）——
+      // 原存 e.Name.replace(/\.ban$/i,"")（含扩展名），两侧键格式不匹配 → 队列行 ⚠️ 重名预警永不触发
+      repoFiles = new Set(entries.map((e) => e.Name.replace(/\.\w+$/i, "").replace(/\.ban$/i, "")));
     } catch {
       repoFiles = new Set();
     }

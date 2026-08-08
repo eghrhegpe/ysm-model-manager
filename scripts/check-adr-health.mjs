@@ -53,7 +53,8 @@ function normalizeState(raw) {
   // 精确优先：'Partially Accepted' 含子串 'Accepted'，必须先判 partial 防误抢
   if (/Partially Accepted|部分采纳|🔄/.test(raw)) return { key: 'partial', raw: raw.trim() };
   if (/Deprecated|已废弃|🧊/.test(raw)) return { key: 'deprecated', raw: raw.trim() };
-  if (/Superseded|已取代/.test(raw)) return { key: 'superseded', raw: raw.trim() };
+  // 补 ❌：AGENTS.md 枚举为 `❌ 已取代`，纯 emoji 或英文混写均识别（code_review P2-1）
+  if (/Superseded|已取代|❌/.test(raw)) return { key: 'superseded', raw: raw.trim() };
   if (/Accepted|已采纳|✅/.test(raw)) return { key: 'accepted', raw: raw.trim() };
   return { key: 'unknown', raw: raw.trim() };
 }
@@ -65,8 +66,9 @@ const STATE_LABEL = { accepted: '✅ 已采纳', partial: '🔄 部分采纳', d
 /** 从状态字符串提取债类型与严重度。 */
 function extractDebt(adr, title, raw) {
   const debtType = [];
-  if (/违规未修复/.test(raw)) debtType.push('违规未修复');
-  if (/不一致未修复|不一致，未修复|不一致,未修复/.test(raw)) debtType.push('不一致未修复');
+  // 兼容「违规未修复」与 AGENTS.md 措辞「违规或未修复」（含「或」，code_review P2-2）
+  if (/违规未修复|违规或未修复/.test(raw)) debtType.push('违规未修复');
+  if (/不一致未修复|不一致，未修复|不一致,未修复|不一致或未修复/.test(raw)) debtType.push('不一致未修复');
   if (/部分采纳/.test(raw)) {
     if (/进行中|未完成|P2\/P3|P3/.test(raw)) debtType.push('部分采纳·进行中');
     else debtType.push('部分采纳');

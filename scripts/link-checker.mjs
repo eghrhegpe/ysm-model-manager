@@ -55,19 +55,9 @@ function extractLinks(filepath) {
   return links;
 }
 
-/** 判断给定字符偏移是否位于 fenced 代码块（```...```）内。 */
+/** 判断给定字符偏移是否位于 fenced 代码块（```...```）内：统计到 pos 为止的 ``` 围栏数，奇数即在块内。 */
 function insideFence(text, pos) {
   const upTo = text.slice(0, pos);
-  let fence = false;
-  let inCode = false;
-  for (const line of upTo.split('\n')) {
-    const t = line.trim();
-    if (/^```/.test(t)) {
-      if (!inCode) inCode = true;
-      else if (/^```/.test(t)) inCode = false;
-    }
-  }
-  // 简化：统计到 pos 为止的 ``` 围栏数，奇数则在代码块内
   const fences = (upTo.match(/^```/gm) || []).length;
   return fences % 2 === 1;
 }

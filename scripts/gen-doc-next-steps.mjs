@@ -139,7 +139,7 @@ function main() {
 
   L.push('## 总览');
   L.push('');
-  L.push(`- 🔴 阻断级（须修）：知识卡失效 **${kdErr.length}** / 断链 **${broken.length}** / ADR 问题 **${adrErr.length}**`);
+  L.push(`- 🔴 阻断级（须修）：知识卡失效 **${kdErr.length}** / 断链 **${broken.length}** / ADR 问题 **${adrErr.length}**${lcFail.length ? ` / link-checker **未运行**` : ''}`);
   L.push(`- 🟡 提醒级（建议补）：知识卡待补 **${kdWarn.length}** / ADR 编号空缺 **${adrGaps.length}**`);
   L.push('');
 
@@ -149,7 +149,7 @@ function main() {
 
   L.push(...section('🔴 断链（ERROR）',
     '到对应行，修正相对路径或创建缺失的目标文件（锚点 #Lxx 失效时确认目标文件是否改名/移动）',
-    linkItems));
+    [...lcFail, ...linkItems]));
 
   L.push(...section('🔴 ADR 体系问题（ERROR）',
     '走 new-adr.mjs 重新叫号 / 在 docs/adr/README.md 登记表占号或删幽灵行，与磁盘对账',

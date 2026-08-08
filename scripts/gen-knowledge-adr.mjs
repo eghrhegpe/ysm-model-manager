@@ -89,10 +89,12 @@ function writeAdrBlock(text, adrList) {
   const fm = fmBlock(text);
   if (!fm) return text;
   // 移除旧的空 adr 键（两种形态：`adr: []` 行内 / `adr:` 后无内容的空块），
-  // 避免 frontmatter 出现两处 adr: 键（VitePress 解析失败，code_review P2-2）
+  // 避免 frontmatter 出现两处 adr: 键（VitePress 解析失败，code_review P2-2）。
+  // 注意：只删「空」键——有内容的块（手写 adr 列表）由 main() 的 existing 守卫跳过，
+  // 这里不得用 `(\n\s*-[^\n]*)*` 吞掉非空列表（code_review P3 契约矛盾）
   const fmNoEmptyAdr = fm
     .replace(/^adr\s*:\s*\[\]\s*$/m, '')
-    .replace(/^adr\s*:\s*(\n\s*-[^\n]*)*$/m, '')
+    .replace(/^adr\s*:\s*$/m, '')
     .replace(/\n{2,}/g, '\n');
   const adrBlock = adrList.map((a) => `  - ${a}`).join('\n');
   const newFm = fmNoEmptyAdr.replace(

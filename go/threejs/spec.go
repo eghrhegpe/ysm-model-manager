@@ -4,6 +4,7 @@ package threejs
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"math"
 	"strconv"
@@ -54,8 +55,52 @@ type vec3 struct{ x, y, z float64 }
 
 // Build 接收已解析的 BedrockModel，生成 Three.js 可直接消费的 JSON spec
 func Build(model types.BedrockModel) (string, error) {
-	if len(model.Bones) == 0 {
+	mg, err := buildModelGroup(model, "main", 0)
+	if err != nil {
+		return "{}", err
+	}
+	if mg.Bones == nil && mg.MeshGroups == nil {
+		return "{}", nil // 无骨骼 → 空 spec
+	}
+	spec := Model3DSpec{Models: []ModelGroup{mg}}
+	data, err := json.Marshal(spec)
+	return string(data), err
+}
+
+// BuildMulti 多组件 spec：每个组件独立构建为 spec.models 元素（YSMViewer 式多组件同屏）。
+// texIdxBase 为组件在全局纹理数组中的起点偏移（组件内 cube.TexSlot 已由解析层全局化）。
+func BuildMulti(models []types.BedrockModel, texIdxBase []int) (string, error) {
+	if len(models) == 0 {
 		return "{}", nil
+	}
+	groups := make([]ModelGroup, 0, len(models))
+	for i, m := range models {
+		if len(m.Bones) == 0 {
+			continue
+		}
+		base := 0
+		if i < len(texIdxBase) {
+			base = texIdxBase[i]
+		}
+		mg, err := buildModelGroup(m, fmt.Sprintf("comp_%d", i), base)
+		if err != nil {
+			return "{}", err
+		}
+		groups = append(groups, mg)
+	}
+	if len(groups) == 0 {
+		return "{}", nil
+	}
+	spec := Model3DSpec{Models: groups}
+	data, err := json.Marshal(spec)
+	return string(data), err
+}
+
+// buildModelGroup 单组件 spec 构建核心（Build 与 BuildMulti 共用）。
+// compID 为该组件在 models 数组中的 ID；texIdxBase 用于生成组件级 textureId。
+func buildModelGroup(model types.BedrockModel, compID string, texIdxBase int) (ModelGroup, error) {
+	if len(model.Bones) == 0 {
+		return ModelGroup{}, nil
 	}
 	texW := float64(model.TexWidth)
 	if texW == 0 {
@@ -313,25 +358,20 @@ func Build(model types.BedrockModel) (string, error) {
 	// Texture ID
 	var texID *string
 	if len(model.Textures) > 0 || model.Texture != "" {
-		s := "tex_0"
+		s := fmt.Sprintf("tex_%d", texIdxBase)
 		texID = &s
 	}
 
-	spec := Model3DSpec{
-		Models: []ModelGroup{{
-			ID:             "main",
-			Name:           "main",
-			DefaultVisible: true,
-			TextureWidth:   texW,
-			TextureHeight:  texH,
-			TextureID:      texID,
-			Bones:          bones,
-			MeshGroups:     meshes,
-		}},
-	}
-
-	data, err := json.Marshal(spec)
-	return string(data), err
+	return ModelGroup{
+		ID:             compID,
+		Name:           compID,
+		DefaultVisible: true,
+		TextureWidth:   texW,
+		TextureHeight:  texH,
+		TextureID:      texID,
+		Bones:          bones,
+		MeshGroups:     meshes,
+	}, nil
 }
 
 // ===== 立方体几何构建 =====

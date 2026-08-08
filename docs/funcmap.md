@@ -25,7 +25,7 @@
 | go/scanner | 1 | 8 |
 | Go·同步 | 3 | 21 |
 | Go·标签 | 1 | 8 |
-| Go·Three.js | 1 | 5 |
+| Go·Three.js | 1 | 6 |
 | Go·类型 | 5 | 49 |
 | Go·更新器 | 1 | 8 |
 | Go·监听 | 1 | 6 |
@@ -40,7 +40,7 @@
 | frontend/views | 52 | 144 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **165** | **763** |
+| **合计** | **165** | **764** |
 
 ## Go·头像
 
@@ -285,11 +285,12 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `Build()` | `go/threejs/spec:56` | Build 接收已解析的 BedrockModel，生成 Three.js 可直接消费的 JSON spec |
-| `Model3DSpec()` | `go/threejs/spec:16` | — |
-| `ModelGroup()` | `go/threejs/spec:20` | — |
-| `BoneData()` | `go/threejs/spec:31` | — |
-| `MeshData()` | `go/threejs/spec:39` | — |
+| `Build()` | `go/threejs/spec:57` | Build 接收已解析的 BedrockModel，生成 Three.js 可直接消费的 JSON spec |
+| `BuildMulti()` | `go/threejs/spec:72` | BuildMulti 多组件 spec：每个组件独立构建为 spec.models 元素（YSMViewer 式多组件同屏）。 |
+| `Model3DSpec()` | `go/threejs/spec:17` | — |
+| `ModelGroup()` | `go/threejs/spec:21` | — |
+| `BoneData()` | `go/threejs/spec:32` | — |
+| `MeshData()` | `go/threejs/spec:40` | — |
 
 ## Go·类型
 

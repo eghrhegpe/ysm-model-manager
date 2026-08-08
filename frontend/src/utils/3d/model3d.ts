@@ -794,8 +794,9 @@ export async function renderModel3D(
       if (g) g.traverse((c) => (c.visible = !c.visible));
     },
     showModelGroup: (idx: number) => {
-      // 组件级控制（YSMViewer modelGroup.visible 式）：整组件显隐，不受同名骨骼冲突影响
-      modelGroups.forEach((g, i) => (g.visible = i === idx));
+      // 组件级控制（YSMViewer modelGroup.visible 式）：整组件显隐，不受同名骨骼冲突影响。
+      // idx < 0（如 -1）= 全部显示（默认态，对应 UI「全部组件」选项）。
+      modelGroups.forEach((g, i) => (g.visible = i === idx || idx < 0));
     },
     getModelGroupCount: () => spec.models?.length || 0,
     onBoneSelect: null, // 外部设置的回调: (boneInfo) => void

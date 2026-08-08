@@ -657,16 +657,20 @@ export async function loadModel2D(
             }
           }
 
-          // 模型选择器
+          // 模型选择器（YSMViewer 式组件切换；-1 = 全部组件 = 默认态）
           const mgCount = _model3d.getModelGroupCount();
           if (mgCount > 1) {
             modelSel.style.display = "";
+            const allOpt = document.createElement("option");
+            allOpt.value = "-1";
+            allOpt.textContent = "全部组件";
+            allOpt.selected = true;
+            modelSel.appendChild(allOpt);
             for (let i = 0; i < mgCount; i++) {
               const mg = (spec.models || [])[i] as { name?: string; id?: string; bones?: unknown[] };
               const opt = document.createElement("option");
               opt.value = String(i);
               opt.textContent = (mg.name || mg.id || "model") + " (" + (mg.bones?.length || 0) + ")";
-              if (i === 0) opt.selected = true;
               modelSel.appendChild(opt);
             }
             modelSel.onchange = (): void => {

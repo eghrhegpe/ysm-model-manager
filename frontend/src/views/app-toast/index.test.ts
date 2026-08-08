@@ -83,6 +83,40 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
     unmount(el);
   });
 
+  it("P2 修复：undo 回调抛错 → 显示❌撤销失败且原 toast 移除", async () => {
+    const el = mountToast();
+    bus.emit("toast:show", {
+      msg: "会失败的撤销",
+      undo: () => {
+        throw new Error("撤销失败");
+      },
+    });
+    const root = el.shadowRoot!;
+    await waitFor(() => getByTestId(root, "toast") !== null);
+    const undoBtn = root.querySelector(".undo-btn") as HTMLElement;
+    undoBtn.click();
+    // 抛错后应出现「❌ 撤销失败」错误 toast（不跳过反馈）
+    await waitFor(() =>
+      getAllByTestId(root, "toast").some((t) =>
+        t.innerHTML.includes("撤销失败"),
+      ),
+    );
+    unmount(el);
+  });
+
+  it("P2 修复：撤销按钮连点只执行一次 undo 回调（pointer-events 守卫）", async () => {
+    const el = mountToast();
+    const undoFn = vi.fn();
+    bus.emit("toast:show", { msg: "连点", undo: undoFn });
+    const root = el.shadowRoot!;
+    await waitFor(() => getByTestId(root, "toast") !== null);
+    const undoBtn = root.querySelector(".undo-btn") as HTMLElement;
+    undoBtn.click();
+    undoBtn.click();
+    expect(undoFn).toHaveBeenCalledTimes(1);
+    unmount(el);
+  });
+
   it("最多 5 条同时显示，超出移除最早的", async () => {
     const el = mountToast();
     for (let i = 0; i < 6; i++) {

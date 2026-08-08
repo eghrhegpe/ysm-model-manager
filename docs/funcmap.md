@@ -33,14 +33,14 @@
 | Go(internal)·应用入口 | 15 | 170 |
 | 前端·根 (app-modules/bus) | 1 | 10 |
 | 前端·核心 | 8 | 13 |
-| 前端·特性 | 12 | 50 |
+| 前端·特性 | 12 | 51 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 25 | 91 |
 | frontend/views | 52 | 144 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **165** | **762** |
+| **合计** | **165** | **763** |
 
 ## Go·头像
 
@@ -648,8 +648,9 @@
 | `directImport()` | `frontend/src/features/import-executor:76` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
 | `importFolder()` | `frontend/src/features/import-executor:107` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） |
 | `executeCollected()` | `frontend/src/features/import-executor:154` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
-| `ImportQueueHost()` | `frontend/src/features/import-queue:24` | app-content 组件实例（initImportQueue 依赖的成员） |
-| `initImportQueue()` | `frontend/src/features/import-queue:30` | 初始化导入队列，返回清理函数 |
+| `normalizeRepoName()` | `frontend/src/features/import-queue:25` | 仓库文件名归一化为「纯名」键（⚠️ 重名预警的 repoFiles Set 与查询共用契约）： 先剥 `.ban` 再剥扩展名（顺序不可反）——`foo.ysm` 与 `foo.y |
+| `ImportQueueHost()` | `frontend/src/features/import-queue:33` | app-content 组件实例（initImportQueue 依赖的成员） |
+| `initImportQueue()` | `frontend/src/features/import-queue:39` | 初始化导入队列，返回清理函数 |
 | `loadOldestModel()` | `frontend/src/features/oldest-models:25` | 加载资历最深、仓库评分、热力图和每日推荐 |
 | `RecycleHost()` | `frontend/src/features/recycle-bin:11` | app-content 组件实例（initRecycleBin 依赖的成员） |
 | `isPathInRoot()` | `frontend/src/features/recycle-bin:22` | 判断条目路径是否位于资源根目录内（带路径分隔符边界，P3 修复）。 |

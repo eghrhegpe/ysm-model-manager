@@ -17,6 +17,15 @@ import { showRenameDialog } from "../utils/dom/dialogs/rename.ts";
 
 const extsStr = ALL_EXTS.join(" ");
 
+/**
+ * 仓库文件名归一化为「纯名」键（⚠️ 重名预警的 repoFiles Set 与查询共用契约）：
+ * 先剥 `.ban` 再剥扩展名（顺序不可反）——`foo.ysm` 与 `foo.ysm.ban` 都归一化为 `foo`。
+ * P2 修复：原实现先剥扩展名再剥 .ban，banned 条目归一化后仍带扩展名，与查询键不匹配 → 预警永不触发。
+ */
+export function normalizeRepoName(name: string): string {
+  return name.replace(/\.ban$/i, "").replace(/\.\w+$/i, "");
+}
+
 /** 带相对路径的 File（文件夹导入时标记 _relPath） */
 type ImportFile = File & { _relPath?: string };
 
@@ -548,9 +557,11 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
       if (!repoRoot) return;
       const entries = (await ScanModelEntriesWithLabel(repoRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
-      // P2 修复：键统一存「去扩展名」形态（与 :759 预警查询 fq.name.replace(/\.\w+$/,"") 对齐）——
-      // 原存 e.Name.replace(/\.ban$/i,"")（含扩展名），两侧键格式不匹配 → 队列行 ⚠️ 重名预警永不触发
-      repoFiles = new Set(entries.map((e) => e.Name.replace(/\.\w+$/i, "").replace(/\.ban$/i, "")));
+      // P2 修复：键统一存「去扩展名」形态（与 :761 预警查询 fq.name.replace(/\.\w+$/,"") 对齐）——
+      // 先剥 `.ban` 再剥扩展名（顺序不可反）：banned 条目 `foo.ysm.ban` 需归一化为 `foo`，
+      // 原 `replace(/\.\w+$/i,"").replace(/\.ban$/i,"")` 先剥扩展名得到 `foo.ysm`（.ban 已是死代码），
+      // 与查询键 `foo` 不匹配 → 仓库仅有 banned 形态时 ⚠️ 预警仍不触发
+      repoFiles = new Set(entries.map((e) => normalizeRepoName(e.Name)));
     } catch {
       repoFiles = new Set();
     }

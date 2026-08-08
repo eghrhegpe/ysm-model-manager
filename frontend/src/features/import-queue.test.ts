@@ -60,4 +60,26 @@ describe("initImportQueue — 生命周期", () => {
   });
 });
 
+// P3 修复（code_review）：⚠️ 预警键契约——repoFiles 键须与预警查询
+// fq.name.replace(/\.\w+$/,"") 对齐（去扩展名），normal 与 banned 条目都归一化为纯名。
+// 直接锁 normalizeRepoName 纯函数（避免 mock 完整 getApp 148 个绑定属性的类型负担）
+describe("normalizeRepoName ⚠️ 预警键契约（P3）", () => {
+  it("normal 条目 foo.ysm → foo", async () => {
+    const { normalizeRepoName } = await import("./import-queue.ts");
+    expect(normalizeRepoName("foo.ysm")).toBe("foo");
+  });
+
+  it("banned 条目 foo.ysm.ban → foo（先剥 .ban 再剥扩展名，顺序不可反）", async () => {
+    const { normalizeRepoName } = await import("./import-queue.ts");
+    expect(normalizeRepoName("foo.ysm.ban")).toBe("foo");
+    // 顺序反了会得到 foo.ysm（死代码）——断言非此形态
+    expect(normalizeRepoName("foo.ysm.ban")).not.toBe("foo.ysm");
+  });
+
+  it("无扩展名条目原样返回", async () => {
+    const { normalizeRepoName } = await import("./import-queue.ts");
+    expect(normalizeRepoName("README")).toBe("README");
+  });
+});
+
 

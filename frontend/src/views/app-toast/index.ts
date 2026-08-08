@@ -77,14 +77,17 @@ class AppToast extends HTMLElement {
     if (clickCallback) {
       (t.querySelector(".msg") as HTMLElement).onclick = (e: MouseEvent) => {
         e.stopPropagation();
-        // P2 修复：禁用交互防 200ms 出场动画窗口内重复触发（连点双开弹窗）
+        // P2 修复：JS 层防重入——pointer-events:none 只拦真实鼠标事件，
+        // 拦不住编程式 click()/键盘激活；handler 首行检查标记双保险
+        if (t.style.pointerEvents === "none") return;
         t.style.pointerEvents = "none";
         try { clickCallback(); } finally { this._remove(t); }
       };
     }
     if (undoCallback) {
       (t.querySelector(".undo-btn") as HTMLElement).onclick = () => {
-        // P2 修复：禁用交互防撤销连点重复执行 undoCallback
+        // P2 修复：JS 层防重入（同 click）——防撤销连点重复执行 undoCallback
+        if (t.style.pointerEvents === "none") return;
         t.style.pointerEvents = "none";
         try {
           undoCallback();

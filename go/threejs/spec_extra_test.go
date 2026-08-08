@@ -315,6 +315,39 @@ func TestBuildCubeMeshData_Inflate(t *testing.T) {
 	if xMin2 != -3.5 || xMax2 != 3.5 {
 		t.Errorf("inflate -0.5 后 X 跨度应为 [-3.5, 3.5]（相对 pivot），实际 [%v, %v]", xMin2, xMax2)
 	}
+	// box UV 必须基于**未膨胀**原始尺寸（对齐 C# 黄金参考：expandBoxUV(原始 sz) 再 inflate）：
+	// East face u 跨度 = 8/64 = 0.125，而非膨胀后的 9/64（P2）
+	u0, u1 := md.Uvs[0], md.Uvs[2]
+	if math.Abs(u1-u0-8.0/64) > 1e-9 {
+		t.Errorf("box UV 应基于原始尺寸: East u 跨度 = %v, 期望 8/64=%v（inflate 后几何 9/64 不得入 UV）", u1-u0, 8.0/64)
+	}
+	_ = c2
+}
+
+func TestBuildCubeMeshData_InflateClamp(t *testing.T) {
+	// 负 inflate 超过半尺寸 → 尺寸缩成负数 → 面翻转（法线反、正面剔除后不可见，P3）。
+	// clamp 到 thicknessEpsilon 保证 lx < hx。
+	c := types.Cube2D{
+		Origin:  [3]float64{0, 0, 0},
+		Size:    [3]float64{1, 1, 1},
+		Pivot:   [3]float64{0.5, 0.5, 0.5},
+		UV:      [2]float64{0, 0},
+		Inflate: -1.0, // 1 + 2*(-1) = -1 → clamp
+	}
+	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
+	if md == nil {
+		t.Fatal("clamp 后 cube 应仍有效")
+	}
+	// East x=hx、West x=lx（相对 pivot 0.5）：clamp 后 hx > lx
+	xWest, xEast := md.Positions[12], md.Positions[0]
+	if xEast <= xWest {
+		t.Errorf("clamp 后 X 跨度应为正（lx<hx）: lx=%v hx=%v", xWest, xEast)
+	}
+	// UV 仍基于原始尺寸 1/64，不随 clamp 后几何
+	u0, u1 := md.Uvs[0], md.Uvs[2]
+	if math.Abs(u1-u0-1.0/64) > 1e-9 {
+		t.Errorf("clamp 后 box UV 仍应基于原始尺寸: East u 跨度 = %v, 期望 1/64=%v", u1-u0, 1.0/64)
+	}
 }
 
 func TestBuildCubeMeshData_Mirror(t *testing.T) {

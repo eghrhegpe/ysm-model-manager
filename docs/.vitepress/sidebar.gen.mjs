@@ -604,6 +604,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-042：渲染复现借鉴上游 ModernYSM：二进制直读 pivot/rotation 与动画纯计算移植",
+        "link": "/adr/ADR-042-modernysm-pivot-rotation"
+      },
+      {
         "text": "ADR-041：渲染对齐：Go spec 对齐 YSMViewer（C# ThreeJsPayloadBuilder）",
         "link": "/adr/ADR-041-spec-render-alignment"
       },

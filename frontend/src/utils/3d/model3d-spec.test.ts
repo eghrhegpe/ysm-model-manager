@@ -143,4 +143,41 @@ describe("buildSpecFromModel 黄金样本（对齐 Go threejs.Build）", () => {
     expect(r.texWidth).toBe(64);
     expect(r.texHeight).toBe(64);
   });
+
+  it("inflate：几何膨胀、UV 基于原始尺寸（镜像 Go TestBuildCubeMeshData_Inflate）", () => {
+    const r = buildSpecFromModel(
+      singleBoneModel({
+        origin: [0, 0, 0],
+        size: [8, 8, 8],
+        pivot: [4, 4, 4],
+        uv: [0, 0],
+        inflate: 0.5,
+      }),
+    );
+    const m = r.meshes[0];
+    // 几何 origin -inflate、size +2*inflate（对齐 Go buildCubeMeshData）
+    expect(m.origin).toEqual([-0.5, -0.5, -0.5]);
+    expect(m.size).toEqual([9, 9, 9]);
+    // box UV 基于**未膨胀**原始尺寸：East u 跨度 = 8/64 = 0.125（非 9/64）
+    const face = m.uv[0] as Array<[number, number]>;
+    const u0 = face[0][0];
+    const u1 = face[1][0];
+    expect(Math.abs(Math.abs(u1 - u0) - 8 / 64)).toBeLessThan(1e-9);
+  });
+
+  it("mirror：UV 水平翻转（镜像 Go TestBuildCubeMeshData_Mirror）", () => {
+    const plain = buildSpecFromModel(
+      singleBoneModel({ origin: [0, 0, 0], size: [8, 8, 8], pivot: [4, 4, 4], uv: [0, 0] }),
+    );
+    const mirrored = buildSpecFromModel(
+      singleBoneModel({ origin: [0, 0, 0], size: [8, 8, 8], pivot: [4, 4, 4], uv: [0, 0], mirror: true }),
+    );
+    const p0 = (plain.meshes[0].uv[0] as Array<[number, number]>)[0][0];
+    const p1 = (plain.meshes[0].uv[0] as Array<[number, number]>)[1][0];
+    const m0 = (mirrored.meshes[0].uv[0] as Array<[number, number]>)[0][0];
+    const m1 = (mirrored.meshes[0].uv[0] as Array<[number, number]>)[1][0];
+    // u 交换：mirror 后第 0/1 顶点 u 互换
+    expect(m0).toBe(p1);
+    expect(m1).toBe(p0);
+  });
 });

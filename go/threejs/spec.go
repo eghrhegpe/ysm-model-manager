@@ -408,6 +408,17 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 		sx += 2 * c.Inflate
 		sy += 2 * c.Inflate
 		sz += 2 * c.Inflate
+		// 下限防护（P3）：负 inflate 超过半尺寸会把 cube 缩成负宽 → hx2<0 → 面翻转
+		// （法线反、正面剔除后 cube 不可见）。C# 黄金参考同缺陷，此处为改进不背离。
+		if sx < thicknessEpsilon {
+			sx = thicknessEpsilon
+		}
+		if sy < thicknessEpsilon {
+			sy = thicknessEpsilon
+		}
+		if sz < thicknessEpsilon {
+			sz = thicknessEpsilon
+		}
 	}
 	cp := [3]float64{c.Pivot[0], c.Pivot[1], c.Pivot[2]}
 	// cube 未显式 pivot（Blockbench 缺省，解析为零值）→ 用 cube 中心作为旋转中心，
@@ -462,9 +473,11 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 		hz += thicknessEpsilon
 	}
 
-	// 解析 UV
+	// 解析 UV：box UV 展开必须基于**未膨胀**的原始尺寸（c.Size），对齐 C# 黄金参考
+	// csharp-builder.mjs 先 expandBoxUV(原始 sz) 再 inflate 几何；若用膨胀后尺寸，
+	// UV 范围随膨胀漂移 → 贴图拉伸/塌缩成色块（P2）。
 	var faceUVs [6][8]float64 // face order: east,west,up,down,south,north; each face: u0,v0,u1,v0,u0,v1,u1,v1
-	hasUV := parseUV(c, &faceUVs, sx, sy, sz, texW, texH)
+	hasUV := parseUV(c, &faceUVs, c.Size[0], c.Size[1], c.Size[2], texW, texH)
 	// Blockbench mirror：UV 水平翻转（u 方向交换，对齐 Java GeoQuad 的
 	// mirror 分支——纹理左右镜像；几何不翻转，YSMParser 解码亦无 mirror 处理佐证）。
 	if c.Mirror {

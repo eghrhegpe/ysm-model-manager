@@ -14,6 +14,8 @@ export interface SpecCube {
   rotation?: number[];
   uv?: number[];
   faceUV?: string;
+  inflate?: number; // Blockbench 膨胀（正=外扩，负=收缩），几何 origin-i、size+2i，UV 用原始尺寸
+  mirror?: boolean; // Blockbench 镜像（UV 水平翻转，几何不翻转）
 }
 
 /** 骨骼 */
@@ -94,7 +96,7 @@ export function buildSpecFromModel(model: SpecModelInput): SpecBuildResult {
       const size = c.size || [1, 1, 1];
       const pivot = c.pivot || [0, 0, 0];
       const rotation = c.rotation || [0, 0, 0];
-      return { origin, size, pivot, rotation, uv: c.uv, faceUV: c.faceUV };
+      return { origin, size, pivot, rotation, uv: c.uv, faceUV: c.faceUV, inflate: c.inflate, mirror: c.mirror };
     });
     if (!boneCubes[b.name]) {
       boneCubes[b.name] = cubes;
@@ -179,10 +181,18 @@ function buildCubeMeshDataJS(
   const size = c.size || [1, 1, 1];
   const pivot = c.pivot || [0, 0, 0];
   const [sx, sy, sz] = size;
+  // Blockbench inflate：几何 origin 各轴 -i、size 各轴 +2i（对齐 Go buildCubeMeshData）；
+  // UV 展开基于**原始尺寸**（对齐 C# 黄金参考 expandBoxUV(原始 sz) 再 inflate）。
+  const inflate = c.inflate || 0;
+  const geoOrigin = inflate
+    ? [origin[0] - inflate, origin[1] - inflate, origin[2] - inflate]
+    : origin;
+  const geoSize = inflate ? [sx + 2 * inflate, sy + 2 * inflate, sz + 2 * inflate] : size;
+  const [gsx, gsy, gsz] = geoSize;
   const cubeOrigin = [
-    origin[0] - bonePivot[0],
-    origin[1] - bonePivot[1],
-    origin[2] - bonePivot[2],
+    geoOrigin[0] - bonePivot[0],
+    geoOrigin[1] - bonePivot[1],
+    geoOrigin[2] - bonePivot[2],
   ];
   const cubePivot = [
     pivot[0] - bonePivot[0],
@@ -194,11 +204,24 @@ function buildCubeMeshDataJS(
   const uvData = faceUV
     ? parseUVFromObject(faceUV, sx, sy, sz, texW, texH)
     : parseUVJS(c, sx, sy, sz, texW, texH);
+  // Blockbench mirror：UV 水平翻转（u 交换，对齐 Go/Java GeoQuad；几何不翻转）
+  if (c.mirror && uvData.uv) {
+    for (const face of uvData.uv) {
+      if (face.length === 4) {
+        const t = face[0][0];
+        face[0][0] = face[1][0];
+        face[1][0] = t;
+        const t2 = face[2][0];
+        face[2][0] = face[3][0];
+        face[3][0] = t2;
+      }
+    }
+  }
   const texIdx = uvData.texIdx || 0;
   return {
     boneID,
     origin: cubeOrigin,
-    size,
+    size: geoSize,
     pivot: cubePivot,
     rotation: rot,
     uv: uvData.uv, // 6 faces × 4 vertices × 2 coords

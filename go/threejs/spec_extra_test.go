@@ -280,3 +280,66 @@ func TestBuildCubeMeshData_ThinCube(t *testing.T) {
 		t.Errorf("零厚度 X 方向应被修正为 ≥%v，实际 %v", thicknessEpsilon, xEast-xWest)
 	}
 }
+
+func TestBuildCubeMeshData_Inflate(t *testing.T) {
+	// Blockbench inflate（P2 修复）：origin 各轴 -i、size 各轴 +2i，对齐 Java GeoCube。
+	// 老模型（1.10+ 导出，如 inflate:0.01 / -0.35）此前被丢弃 → 尺寸偏小。
+	// cube 8x8x8 @ origin[0,0,0]，inflate 0.5 → 膨胀后 X 跨度 = (0-0.5)..(0+8+0.5) = 9
+	c := types.Cube2D{
+		Origin:  [3]float64{0, 0, 0},
+		Size:    [3]float64{8, 8, 8},
+		Pivot:   [3]float64{4, 4, 4},
+		UV:      [2]float64{0, 0},
+		Inflate: 0.5,
+	}
+	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
+	if md == nil {
+		t.Fatal("有效 cube 应返回非 nil")
+	}
+	// East 面（x=hx）顶点 x = (cx+hx2) - cp[0]；cx/hx2 基于膨胀后 fx..tx
+	// 膨胀后 fx=-0.5, tx=8.5 → cx=4, hx2=4.5 → lx=-0.5, hx=8.5（相对 pivot 4）
+	xMin, xMax := md.Positions[12], md.Positions[0]
+	if xMin != -4.5 || xMax != 4.5 {
+		t.Errorf("inflate 0.5 后 X 跨度应为 [-4.5, 4.5]（相对 pivot），实际 [%v, %v]", xMin, xMax)
+	}
+	// 负 inflate：尺寸收缩
+	c2 := types.Cube2D{
+		Origin:  [3]float64{0, 0, 0},
+		Size:    [3]float64{8, 8, 8},
+		Pivot:   [3]float64{4, 4, 4},
+		UV:      [2]float64{0, 0},
+		Inflate: -0.5,
+	}
+	md2 := buildCubeMeshData(c2, vec3{0, 0, 0}, 64, 64, "bone1", 0)
+	xMin2, xMax2 := md2.Positions[12], md2.Positions[0]
+	if xMin2 != -3.5 || xMax2 != 3.5 {
+		t.Errorf("inflate -0.5 后 X 跨度应为 [-3.5, 3.5]（相对 pivot），实际 [%v, %v]", xMin2, xMax2)
+	}
+}
+
+func TestBuildCubeMeshData_Mirror(t *testing.T) {
+	// Blockbench mirror（P2 修复）：UV 水平翻转（u 交换），对齐 Java GeoQuad。
+	// cube 8x8x8 @ origin[0,0,0]，box UV [0,0]：
+	//   East face u0=0/64=0, u1=8/64=0.125（无 mirror）
+	//   mirror 后 u0/u1 交换 → u0=0.125, u1=0
+	c := types.Cube2D{
+		Origin: [3]float64{0, 0, 0},
+		Size:   [3]float64{8, 8, 8},
+		Pivot:  [3]float64{4, 4, 4},
+		UV:     [2]float64{0, 0},
+	}
+	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
+	if md == nil {
+		t.Fatal("有效 cube 应返回非 nil")
+	}
+	u0Plain, u1Plain := md.Uvs[0], md.Uvs[2]
+	if u0Plain == u1Plain {
+		t.Fatal("非 mirror 的 u0/u1 应不同（测试前提不成立）")
+	}
+	c.Mirror = true
+	mdMirror := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
+	if mdMirror.Uvs[0] != u1Plain || mdMirror.Uvs[2] != u0Plain {
+		t.Errorf("mirror 后 UV 应水平翻转: 期望 u0=%v u1=%v, 实际 u0=%v u1=%v",
+			u1Plain, u0Plain, mdMirror.Uvs[0], mdMirror.Uvs[2])
+	}
+}

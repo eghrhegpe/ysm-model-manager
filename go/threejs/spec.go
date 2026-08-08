@@ -397,6 +397,18 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 	sx := c.Size[0]
 	sy := c.Size[1]
 	sz := c.Size[2]
+	// Blockbench inflate（像素单位）：origin 各轴 -i、size 各轴 +2i，对齐 Java
+	// GeoCube P1-P8 顶点口径（origin.x-inflate .. origin.x+size.x+inflate）。
+	// Go 端几何为像素坐标（前端统一 scale 1/16），inflate 直接用像素值，无需 /16。
+	// 缺失此字段时老模型（1.10+ Blockbench 导出，如 inflate:0.01/-0.35）尺寸偏小（P2）。
+	if c.Inflate != 0 {
+		ox -= c.Inflate
+		oy -= c.Inflate
+		oz -= c.Inflate
+		sx += 2 * c.Inflate
+		sy += 2 * c.Inflate
+		sz += 2 * c.Inflate
+	}
 	cp := [3]float64{c.Pivot[0], c.Pivot[1], c.Pivot[2]}
 	// cube 未显式 pivot（Blockbench 缺省，解析为零值）→ 用 cube 中心作为旋转中心，
 	// 对齐 YSMViewer 口径。此前当 [0,0,0] 会让 mesh localPos = bonePivot，与骨骼链
@@ -453,6 +465,14 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 	// 解析 UV
 	var faceUVs [6][8]float64 // face order: east,west,up,down,south,north; each face: u0,v0,u1,v0,u0,v1,u1,v1
 	hasUV := parseUV(c, &faceUVs, sx, sy, sz, texW, texH)
+	// Blockbench mirror：UV 水平翻转（u 方向交换，对齐 Java GeoQuad 的
+	// mirror 分支——纹理左右镜像；几何不翻转，YSMParser 解码亦无 mirror 处理佐证）。
+	if c.Mirror {
+		for fi := 0; fi < 6; fi++ {
+			faceUVs[fi][0], faceUVs[fi][2] = faceUVs[fi][2], faceUVs[fi][0]
+			faceUVs[fi][4], faceUVs[fi][6] = faceUVs[fi][6], faceUVs[fi][4]
+		}
+	}
 
 	var positions []float64
 	var normals []float64

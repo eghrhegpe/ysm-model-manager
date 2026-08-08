@@ -33,12 +33,14 @@ func ParseBedrockGeometry(data []byte) *types.BedrockModel {
 				Pivot    [3]float64      `json:"pivot"`
 				Rotation json.RawMessage `json:"rotation,omitempty"`
 				Cubes    []struct {
-					Origin   [3]float64      `json:"origin"`
-					Size     [3]float64      `json:"size"`
-					Pivot    [3]float64      `json:"pivot,omitempty"`
-					UV       json.RawMessage `json:"uv,omitempty"`
-					Rotation json.RawMessage `json:"rotation,omitempty"`
-					Texture  int             `json:"texture"`
+				 Origin   [3]float64      `json:"origin"`
+				 Size     [3]float64      `json:"size"`
+				 Pivot    [3]float64      `json:"pivot,omitempty"`
+				 UV       json.RawMessage `json:"uv,omitempty"`
+				 Rotation json.RawMessage `json:"rotation,omitempty"`
+				 Texture  int             `json:"texture"`
+				 Inflate  float64         `json:"inflate,omitempty"`
+				 Mirror   bool            `json:"mirror,omitempty"`
 				} `json:"cubes"`
 			} `json:"bones"`
 		} `json:"minecraft:geometry"`
@@ -81,6 +83,7 @@ func ParseBedrockGeometry(data []byte) *types.BedrockModel {
 				Origin: c.Origin, Size: c.Size, Pivot: c.Pivot,
 				UV: uv, FaceUV: faceUV, Rotation: rot,
 				TexSlot: c.Texture,
+				Inflate: c.Inflate, Mirror: c.Mirror,
 			})
 		}
 		var boneRot [3]float64

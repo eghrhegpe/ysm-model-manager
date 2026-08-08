@@ -20,6 +20,29 @@ func TestFindInstDir_StandardDir(t *testing.T) {
 	}
 }
 
+// TestShouldHashExt_PinnedList 钉住 ShouldHashExt 的硬编码扩展名清单：
+// 该函数手写扩展名（违反「注册表优先」理想，但注册表无 hash 开关字段，
+// 且 MMD/VRC 大文件跳过哈希是性能决策），测试钉住防止清单意外漂移。
+// 若未来注册表新增 hash 字段，应改注册表驱动并删除本测试的「钉住」断言。
+func TestShouldHashExt_PinnedList(t *testing.T) {
+	hashable := []string{".ysm", ".zip", ".7z", ".json", ".nbt", ".schematic", ".litematic"}
+	nonHashable := []string{".mmd", ".pmx", ".pmd", ".vrc", ".png", ".txt", ".ban"}
+	for _, ext := range hashable {
+		if !ShouldHashExt(ext) {
+			t.Errorf("ShouldHashExt(%s) = false, want true（清单漂移？）", ext)
+		}
+	}
+	for _, ext := range nonHashable {
+		if ShouldHashExt(ext) {
+			t.Errorf("ShouldHashExt(%s) = true, want false", ext)
+		}
+	}
+	// 大小写不敏感
+	if !ShouldHashExt(".YSM") {
+		t.Error("ShouldHashExt(.YSM) = false, want true（大小写不敏感）")
+	}
+}
+
 func TestFindInstDir_FallbackScan(t *testing.T) {
 	versionDir := t.TempDir()
 	// 无标准目录；创建含 .zip 文件的子目录（resourcepack 支持 .zip）

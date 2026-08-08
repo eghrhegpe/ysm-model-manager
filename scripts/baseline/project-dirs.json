@@ -33,6 +33,7 @@
     "bus.ts": "事件总线",
     "bus.test.ts": "事件总线测试",
     "app-modules.ts": "组件入口 + 右键菜单映射",
+    "app-modules.test.ts": "app-modules 主题/隐私模式启动链测试（normalizeTheme / safeGet / initTheme / applyUIPrefs）",
     "core": "基础设施（buttons / global-handlers / theme / context-menus）",
     "features": "业务功能（import-queue / recycle-bin / version-updater / community）",
     "services": "服务注册（registry.ts）",

@@ -63,7 +63,7 @@
 | `views/` | 页面级视图组件（app-content / app-tree / app-preview 等） |
 | `wails/` | Wails 桥接（app.ts） |
 | `wasm/` | WASM 生成数据（base64 豁免文件） |
-| `app-modules.test.ts` | ⚠️ 用途待补基线（scripts/baseline/project-dirs.json） |
+| `app-modules.test.ts` | app-modules 主题/隐私模式启动链测试（normalizeTheme / safeGet / initTheme / applyUIPrefs） |
 | `app-modules.ts` | 组件入口 + 右键菜单映射 |
 | `bus.test.ts` | 事件总线测试 |
 | `bus.ts` | 事件总线 |

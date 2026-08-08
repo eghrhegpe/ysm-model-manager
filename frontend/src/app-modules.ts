@@ -57,11 +57,11 @@ const THEME_LIGHT = "warm";
 const THEME_VALID = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "system"];
 
 /** 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） */
-function normalizeTheme(mode: string): string {
+export function normalizeTheme(mode: string): string {
   return THEME_VALID.includes(mode) ? mode : "system";
 }
 
-function applyTheme(mode: string): void {
+export function applyTheme(mode: string): void {
   if (!THEME_VALID.includes(mode)) mode = "system";
   document.body.classList.remove("theme-cyber", "theme-warm", "theme-pro", "theme-sakura", "theme-ocean", "theme-mint");
   if (mode === "system") {
@@ -80,21 +80,21 @@ window.applyTheme = applyTheme;
 // checkUpdateSilent 被跳过、主题不生效（index.html 已为此场景做防护，此处口径对齐）。
 // 提升到模块级供 matchMedia 监听器复用（code_review：该监听器原裸调 getItem，隐私模式
 // 下每次系统主题切换抛错 → 主题跟随静默失效）
-function safeGet(key: string): string | null {
+export function safeGet(key: string): string | null {
   try {
     return localStorage.getItem(key);
   } catch {
     return null;
   }
 }
-function safeSet(key: string, val: string): void {
+export function safeSet(key: string, val: string): void {
   try {
     localStorage.setItem(key, val);
   } catch {
     /* 隐私模式：忽略持久化 */
   }
 }
-async function initTheme() {
+export async function initTheme() {
   try {
     const { LoadAppConfig } = await getApp();
     const cfg = await LoadAppConfig();
@@ -113,7 +113,7 @@ async function initTheme() {
 }
 
 /** 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 */
-function applyUIPrefs() {
+export function applyUIPrefs() {
   // P3 修复：隐私模式 localStorage 抛错不得中断启动链（与 initTheme 的 safeGet 同口径）
   let fontSize = "normal";
   let displayFont = "kaiti";

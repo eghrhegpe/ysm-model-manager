@@ -351,9 +351,9 @@
 |------|--------|------|
 | `Check()` | `go/updater/update:72` | Check 检查 GitHub 是否有新版本（聚合所有未读版本的更新日志） |
 | `CheckWithClient()` | `go/updater/update:78` | CheckWithClient 可注入 client 与 API URL 的测试变体（Check 的内部实现） |
-| `Download()` | `go/updater/update:167` | Download 下载更新包到临时目录，返回 zip 路径。 |
-| `CleanupOldVersion()` | `go/updater/update:230` | CleanupOldVersion 启动时清理上一次更新留下的 .old 文件 |
-| `InstallUpdate()` | `go/updater/update:245` | InstallUpdate 解压更新包并通过 helper 进程替换当前 exe。 |
+| `Download()` | `go/updater/update:174` | Download 下载更新包到临时目录，返回 zip 路径。 |
+| `CleanupOldVersion()` | `go/updater/update:244` | CleanupOldVersion 启动时清理上一次更新留下的 .old 文件 |
+| `InstallUpdate()` | `go/updater/update:259` | InstallUpdate 解压更新包并通过 helper 进程替换当前 exe。 |
 | `ReleaseAsset()` | `go/updater/update:34` | ReleaseAsset GitHub Release 中的文件 |
 | `Release()` | `go/updater/update:40` | Release GitHub Release 信息 |
 | `UpdateInfo()` | `go/updater/update:49` | UpdateInfo 更新信息（序列化给前端） |

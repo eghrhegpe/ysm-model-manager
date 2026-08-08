@@ -460,17 +460,18 @@ function printHelp() {
   console.log(content.slice(start, end + 2).replace(/^ \* ?/gm, '').trim());
 }
 
-// 未知 flag 白名单拦截（致命陷阱 #12）：本工具不支持任何旗标，绝不让
-// `--dry-run` 之类落入位置参数位被静默吞掉或当参数值（P1-1）
-const UNKNOWN_FLAG = args.find((a) => a.startsWith('-') && !['-h', '--help'].includes(a));
+// 未知 flag 白名单拦截（致命陷阱 #12）：只拦截 `--` 开头的明确旗标（如 `--dry-run`），
+// 绝不让其落入位置参数位被静默吞掉或当参数值（P1-1）；单横杠 token 可能是合法位置
+// 参数值（如 add-param 默认值 `-1`），不得误判为 flag（code_review P3）
+const UNKNOWN_FLAG = args.find((a) => a.startsWith('--') && a !== '--help');
 if (UNKNOWN_FLAG) {
   console.error(`❌ 未知 flag: ${UNKNOWN_FLAG}（本工具不支持任何旗标，见 help）`);
   printHelp();
   process.exit(1);
 }
 
-// --help / -h 退 0（陷阱 #12 要求）；裸 help 同语义
-if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
+// --help / -h 退 0（陷阱 #12 要求）；裸 help 同语义（任意位置出现均触发）
+if (!cmd || cmd === 'help' || args.includes('--help') || args.includes('-h')) {
   printHelp();
   process.exit(0);
 }

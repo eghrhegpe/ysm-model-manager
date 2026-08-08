@@ -11,6 +11,10 @@ function fmtTime(ms: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// P2 修复：模块级代际计数——showLitematic 独立于 app-preview 的 _previewGen，
+// await Go 解析期间用户切到别的模型时，慢结果不得写进新模型的 #preview-detail
+let litematicGen = 0;
+
 function shortName(name: string): string {
   return (name || "").replace(/^minecraft:/, "");
 }
@@ -92,6 +96,7 @@ export async function showLitematic(
   ctx: PreviewCtx,
   path: string,
 ): Promise<void> {
+  const gen = ++litematicGen;
   const basename = path.split(/[/\\]/).pop() || "";
   const savedTab = localStorage.getItem("lt_previewTab") || "detail";
 
@@ -160,6 +165,8 @@ export async function showLitematic(
 
     const detailDiv = ctx._root.getElementById("preview-detail");
     if (detailDiv) {
+      // P2 修复：await Go 解析后比对代际——慢 litematic A 迟到不得污染已切换的 B
+      if (gen !== litematicGen) return;
       let extra = "";
       if (isNbt || isSch) {
         extra = `${field("数据版本", meta.dataVersion)}${field("格式版本", meta.version)}${field("名称", meta.name)}${field("作者", meta.author)}`;
@@ -203,6 +210,8 @@ export async function showLitematic(
       };
     }
   } catch (e) {
+    // P2 修复：catch 分支同样比对代际——失败迟到不得覆盖已切换模型
+    if (gen !== litematicGen) return;
     const detailDiv = ctx._root.getElementById("preview-detail");
     if (detailDiv) {
       detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e instanceof Error ? e.message : String(e))}</div></div>`;

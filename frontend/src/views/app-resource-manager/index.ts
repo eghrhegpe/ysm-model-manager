@@ -54,7 +54,18 @@ export function registerResourceManagerGlobal(unsubs: Array<() => void>): void {
       STORE._config = null;
       // 通知所有已创建的组件实例重新初始化
       document.querySelectorAll("app-resource-manager").forEach((el) => {
-        (el as AppResourceManager)._init && (el as AppResourceManager)._init();
+        // P2 修复：_init() 未接 rejection → 配置刷新后 await 链 reject 变 unhandled
+        //（陷阱 #1「改配置后没反应」），与 connectedCallback 的 .catch 对齐
+        const rm = el as AppResourceManager;
+        if (rm._init) {
+          rm._init().catch((e) => {
+            console.error("[app-resource-manager] 配置刷新 _init 失败:", e);
+            rm.innerHTML =
+              '<div style="padding:12px;color:var(--paid)">⚠️ 初始化失败: ' +
+              _esc(String(e?.message || e)) +
+              "</div>";
+          });
+        }
       });
     }),
   );
@@ -105,10 +116,24 @@ export class AppResourceManager extends HTMLElement {
     if (oldVal === newVal || !this.isConnected) return;
     if (name === "rtype") {
       this._rtype = newVal || RESOURCE_TYPES.PACK;
-      this._init();
+      // P2 修复：_init 内部 await（LoadAppConfig/ListVersionInstances/GetRepoRoot）任一
+      // reject → unhandled rejection（陷阱 #1「改类型后没反应」），与 connectedCallback 对齐
+      this._init().catch((e) => {
+        console.error("[app-resource-manager] rtype 变更 _init 失败:", e);
+        this.innerHTML =
+          '<div style="padding:12px;color:var(--paid)">⚠️ 初始化失败: ' +
+          _esc(String(e?.message || e)) +
+          "</div>";
+      });
     } else if (name === "instance") {
       this._instance = newVal || "";
-      this._init();
+      this._init().catch((e) => {
+        console.error("[app-resource-manager] instance 变更 _init 失败:", e);
+        this.innerHTML =
+          '<div style="padding:12px;color:var(--paid)">⚠️ 初始化失败: ' +
+          _esc(String(e?.message || e)) +
+          "</div>";
+      });
     }
   }
 

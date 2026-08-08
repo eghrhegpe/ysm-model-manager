@@ -220,6 +220,9 @@ ${pack.imageBase64 ? `<div class="preview-thumb"><img src="${esc(pack.imageBase6
 ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px;line-height:1.6">${esc(pack.description)}</div>` : ""}
 </div>`;
     } catch (err) {
+      // P2 修复：catch 分支同样比对代际——A 目录 GetPackInfo 失败迟到时
+      // 若用户已切到 B，不得把「无法读取整合包信息」覆盖到 B 的预览
+      if (gen !== this._previewGen) return;
       this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 文件夹</h3><div class="dp-placeholder"><div class="big-icon">📁</div><div class="dp-hint">无法读取整合包信息</div></div></div>`;
     }
   }

@@ -113,9 +113,11 @@ export class AppSyncManager extends HTMLElement {
 
     const unsub = bus.on("stats:refresh", () => {
       if (!this.isConnected) return;
+      const gen = this._gen; // P2 修复：捕获当前代际，防 instance 快速切换后旧代际 .then 重渲染新面板
       dbg("sync-manager", "stats:refresh 收到");
       this._loadData()
         .then(() => {
+          if (gen !== this._gen) return; // P2 修复：过期代际丢弃
           dbg(
             "sync-manager",
             "_loadData 完成, items:",
@@ -158,12 +160,17 @@ export class AppSyncManager extends HTMLElement {
   }
 
   async _loadData(): Promise<void> {
+    // P2 修复：捕获当前代际——await getApp 期间 instance 可能已切换，
+    // 旧代际晚到的 _allItems 写入不得覆盖新代际数据（后续过滤交互基于错误数据）
+    const gen = this._gen;
     const { GetInstanceSyncStatus } =
       await getApp();
     try {
       const json = await GetInstanceSyncStatus(this._instance);
+      if (gen !== this._gen) return; // 过期代际丢弃
       this._allItems = (JSON.parse(json) as SyncItem[]) || [];
     } catch {
+      if (gen !== this._gen) return; // 过期代际丢弃（失败 toast 同样作废）
       this._allItems = [];
       // 失败不静默：避免界面显示「暂无资源文件」误导（坑史同款静默路径）
       bus.emit("toast:show", {

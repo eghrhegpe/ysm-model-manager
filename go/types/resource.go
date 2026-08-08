@@ -58,9 +58,16 @@ func LoadRegistry() *ResourceTypeRegistry {
 	data := loadRegistryBytes()
 	var reg ResourceTypeRegistry
 	if err := json.Unmarshal(data, &reg); err != nil {
-		log.Printf("[types] 解析注册表失败: %v", err)
-		registry = &ResourceTypeRegistry{}
-		return registry
+		// P2 修复：解析失败回退嵌入基线而不是缓存空注册表——
+		// 原实现 `registry = &ResourceTypeRegistry{}` 会让空注册表
+		// 在进程生命周期内永久缓存（无重试、不回退），所有扩展名查询静默失效
+		log.Printf("[types] 解析注册表失败，回退嵌入基线: %v", err)
+		if err := json.Unmarshal(embeddedRegistryJSON, &reg); err != nil {
+			// 嵌入基线本身损坏（生成文件被破坏）时仍不 panic，但标记空表避免二次解析
+			log.Printf("[types] 嵌入基线解析也失败: %v", err)
+			registry = &ResourceTypeRegistry{}
+			return registry
+		}
 	}
 	registry = &reg
 	return registry

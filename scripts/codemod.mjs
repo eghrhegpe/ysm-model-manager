@@ -263,7 +263,21 @@ function cmdMoveFunction(funcName, destRelPath) {
 
   const srcSf = target.sourceFile;
   const stmt = target.node;
-  const text = stmt.getFullText();
+  // P1-2：kind='variable'（const 箭头函数/常量）时 stmt 是 VariableDeclaration，
+  // 只含 `name = () => {}` 无 const/export，直接搬会写出裸赋值（ESM ReferenceError）。
+  // 取整条 VariableStatement（含 export const）并校验多声明符（a, b 同语句无法安全拆分）。
+  let moveText;
+  if (target.kind === 'variable') {
+    const vStmt = stmt.getParent().getParent();
+    if (vStmt.getDeclarations().length > 1) {
+      console.error(`❌ "${funcName}" 与其它声明共用一条 export const（a, b 同语句），无法安全移动，请先拆分`);
+      process.exit(1);
+    }
+    moveText = vStmt.getFullText();
+  } else {
+    moveText = stmt.getFullText();
+  }
+  const text = moveText;
   const srcPath = srcSf.getFilePath();
 
   // 1. 解析函数体用到的 import
@@ -297,9 +311,14 @@ function cmdMoveFunction(funcName, destRelPath) {
     );
 
     if (namedBindings.length === 0 && !defaultStillUsed) {
-      // namespace import 或裸 import：全部移除
-      imp.remove();
-      removedCount++;
+      // namespace import 或裸 import：仅当命名空间名不再被源文件其余代码使用才移除
+      // （P1-3：此前无条件删除 `import * as d3`，若剩余代码仍用 d3.select 会被静默删掉）
+      const nsName = imp.getNamespaceImport()?.getText();
+      const nsStillUsed = nsName != null && remainingNames.has(nsName);
+      if (!nsStillUsed) {
+        imp.remove();
+        removedCount++;
+      }
     } else if (stillUsedNamed.length === namedBindings.length && (defaultStillUsed || !defaultName)) {
       // 仍然全部在用，不动
     } else if (stillUsedNamed.length > 0 || defaultStillUsed) {
@@ -373,6 +392,13 @@ function cmdAddParam(funcName, paramSignature, defaultValue) {
   const [paramName, ...typeParts] = paramSignature.split(':').map((s) => s.trim());
   const paramType = typeParts.join(':').trim() || undefined;
 
+  // P2-4 幂等守卫：add-param 非幂等（重复运行会给定义叠加同名参数、给调用方叠 undefined），
+  // 参数已存在时直接拒绝，避免二次破坏
+  if (fn.getParameters().some((p) => p.getName() === paramName)) {
+    console.error(`❌ "${funcName}" 已存在参数 "${paramName}"；add-param 非幂等，重复运行会叠加，请先 git checkout 还原再执行`);
+    process.exit(1);
+  }
+
   // 统计原始调用方
   let callerCount = 0;
   const callerFiles = new Set();
@@ -434,7 +460,17 @@ function printHelp() {
   console.log(content.slice(start, end + 2).replace(/^ \* ?/gm, '').trim());
 }
 
-if (!cmd || cmd === 'help') {
+// 未知 flag 白名单拦截（致命陷阱 #12）：本工具不支持任何旗标，绝不让
+// `--dry-run` 之类落入位置参数位被静默吞掉或当参数值（P1-1）
+const UNKNOWN_FLAG = args.find((a) => a.startsWith('-') && !['-h', '--help'].includes(a));
+if (UNKNOWN_FLAG) {
+  console.error(`❌ 未知 flag: ${UNKNOWN_FLAG}（本工具不支持任何旗标，见 help）`);
+  printHelp();
+  process.exit(1);
+}
+
+// --help / -h 退 0（陷阱 #12 要求）；裸 help 同语义
+if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
   printHelp();
   process.exit(0);
 }

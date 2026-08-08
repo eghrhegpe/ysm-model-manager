@@ -21,8 +21,13 @@ function listGoFiles() {
   return fs.readdirSync(dir).filter((f) => f.endsWith('.go') && !f.endsWith('_test.go')).sort();
 }
 const GO_FILES = listGoFiles();
-// Wails 绑定统一走 -ts 契约（frontend/bindings），对照 v3 生成的 app.ts
-const BINDINGS_FILE = path.join(ROOT, 'frontend/bindings/ysm-model-manager/internal/app/app.ts');
+// Wails 绑定统一走 -ts 契约（frontend/bindings），对照 v3 生成的 app.ts。
+// 模块名从 go.mod 推导（P2-1）：硬编码 ysm-model-manager 在模块重命名时会静默退化
+const goModText = fs.existsSync(path.join(ROOT, 'go.mod')) ? fs.readFileSync(path.join(ROOT, 'go.mod'), 'utf-8') : '';
+const BIND_MODULE = (goModText.match(/^module\s+(\S+)/m) || [])[1];
+const BINDINGS_FILE = BIND_MODULE
+  ? path.join(ROOT, 'frontend/bindings', BIND_MODULE, 'internal/app/app.ts')
+  : path.join(ROOT, 'frontend/bindings/ysm-model-manager/internal/app/app.ts');
 
 // 框架生命周期方法（带 context/application 参数），Wails 不生成绑定，应排除
 const FRAMEWORK_METHODS = new Set(['ServiceStartup', 'ServiceShutdown']);
@@ -34,7 +39,9 @@ function extractGoExports() {
     const fp = path.join(ROOT, 'internal/app', fname);
     if (!fs.existsSync(fp)) continue;
     const text = fs.readFileSync(fp, 'utf-8');
-    for (const m of text.matchAll(/func \(a \*App\) (\w+)\(/g)) {
+    // P2-2：接收者名任意 + 指针/值均可（`func (a *App)` / `func (app *App)` / `func (a App)`），
+    // 硬编码 `a *App` 会把合法变体静默漏扫（假阳性 extra_in_js 或假绿）
+    for (const m of text.matchAll(/func \(\w+ \*?App\) (\w+)\(/g)) {
       const name = m[1];
       // 跳过大写开头的非导出函数（Go 惯例）+ 框架生命周期方法
       if (name[0] === name[0].toLowerCase()) continue;

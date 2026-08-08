@@ -91,8 +91,11 @@ function scanDebugLog() {
   const results = [];
   for (const line of rg('console\\.log|console\\.debug', 'frontend/src', ['*.js', '*.ts'])) {
     const [f, ln, txt] = parseRgLine(line);
-    // 排除业务日志
-    if (txt.includes('[YSM]') || txt.includes('[3dspec]') || txt.includes('[Toast]') || txt.includes('[sync]')) continue;
+    // 排除业务日志：精确匹配 [YSM]/[3dspec]/[Toast]/[sync]/[DBG] 标签，
+    // 而非子串 includes（避免误放行含标签的普通文本，code_review P3）
+    if (/\[(YSM|3dspec|Toast|sync|DBG)\]/.test(txt)) continue;
+    // 排除调试基础设施本身（debug.ts 定义 / devLog 工具），其 console.log 是业务实现非残留
+    if (/debug\.ts$/.test(f) || /devLog/.test(txt)) continue;
     results.push({ file: f, line: ln, snippet: txt, type: 'debug_log' });
   }
   return results;

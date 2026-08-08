@@ -554,6 +554,18 @@ export async function renderModel3D(
     let foundBone: string | null = null;
     let foundMesh: THREE.Object3D | null = null;
     for (const hit of intersects) {
+      // THREE Raycaster 不检查 visible（仅按 layers 过滤），需手动沿父链跳过
+      // 已隐藏的骨骼/网格（setBoneVisible / showModelGroup 均通过 visible 控制）。
+      let node: THREE.Object3D | null = hit.object;
+      let hidden = false;
+      while (node) {
+        if (!node.visible) {
+          hidden = true;
+          break;
+        }
+        node = node.parent;
+      }
+      if (hidden) continue;
       const boneId = getMeshBoneId(hit.object);
       if (boneId) {
         foundBone = boneId;

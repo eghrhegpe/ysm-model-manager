@@ -56,17 +56,17 @@ export function modalAdvFilter(opts: { value?: Partial<AdvFilterValue> } = {}): 
           <div>
             <label style="display:block;color:var(--muted);margin-bottom:3px">🦴 骨骼数</label>
             <div style="display:flex;gap:4px;align-items:center">
-              <input id="afv-minBones" type="number" min="0" value="${esc(String(v.minBones || ""))}" placeholder="最小" class="afv-inp" style="flex:1;width:0;min-width:0">
+              <input id="afv-minBones" type="number" min="0" value="${esc(String(v.minBones ?? ""))}" placeholder="最小" class="afv-inp" style="flex:1;width:0;min-width:0">
               <span style="color:var(--muted)">—</span>
-              <input id="afv-maxBones" type="number" min="0" value="${esc(String(v.maxBones || ""))}" placeholder="最大" class="afv-inp" style="flex:1;width:0;min-width:0">
+              <input id="afv-maxBones" type="number" min="0" value="${esc(String(v.maxBones ?? ""))}" placeholder="最大" class="afv-inp" style="flex:1;width:0;min-width:0">
             </div>
           </div>
           <div>
             <label style="display:block;color:var(--muted);margin-bottom:3px">🧊 立方体</label>
             <div style="display:flex;gap:4px;align-items:center">
-              <input id="afv-minCubes" type="number" min="0" value="${esc(String(v.minCubes || ""))}" placeholder="最小" class="afv-inp" style="flex:1;width:0;min-width:0">
+              <input id="afv-minCubes" type="number" min="0" value="${esc(String(v.minCubes ?? ""))}" placeholder="最小" class="afv-inp" style="flex:1;width:0;min-width:0">
               <span style="color:var(--muted)">—</span>
-              <input id="afv-maxCubes" type="number" min="0" value="${esc(String(v.maxCubes || ""))}" placeholder="最大" class="afv-inp" style="flex:1;width:0;min-width:0">
+              <input id="afv-maxCubes" type="number" min="0" value="${esc(String(v.maxCubes ?? ""))}" placeholder="最大" class="afv-inp" style="flex:1;width:0;min-width:0">
             </div>
           </div>
         </div>
@@ -74,9 +74,9 @@ export function modalAdvFilter(opts: { value?: Partial<AdvFilterValue> } = {}): 
         <div>
           <label style="display:block;color:var(--muted);margin-bottom:3px">🖼 纹理尺寸 (px)</label>
           <div style="display:flex;gap:4px;align-items:center">
-            <input id="afv-minTex" type="number" min="0" value="${esc(String(v.minTex || ""))}" placeholder="最小" class="afv-inp" style="flex:1;width:0;min-width:0">
+            <input id="afv-minTex" type="number" min="0" value="${esc(String(v.minTex ?? ""))}" placeholder="最小" class="afv-inp" style="flex:1;width:0;min-width:0">
             <span style="color:var(--muted)">—</span>
-            <input id="afv-maxTex" type="number" min="0" value="${esc(String(v.maxTex || ""))}" placeholder="最大" class="afv-inp" style="flex:1;width:0;min-width:0">
+            <input id="afv-maxTex" type="number" min="0" value="${esc(String(v.maxTex ?? ""))}" placeholder="最大" class="afv-inp" style="flex:1;width:0;min-width:0">
           </div>
         </div>
 

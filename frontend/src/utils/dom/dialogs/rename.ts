@@ -27,6 +27,12 @@ export async function showRenameDialog(
     };
     overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
       if (e.key === "Escape") close(null);
+      // P3 修复：Enter 键接线——按钮文案「重命名 (Enter)」但原实现只处理 Escape，
+      // 键盘 Enter 无法提交（与按钮 onclick 共享同一校验/关闭路径）
+      else if (e.key === "Enter") {
+        e.preventDefault();
+        (box.querySelector("#rn-ok") as HTMLElement | null)?.click();
+      }
     });
 
     const box = document.createElement("div");

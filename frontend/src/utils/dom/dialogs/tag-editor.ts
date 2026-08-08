@@ -62,6 +62,12 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
 
     // === 加载 ===
     (async () => {
+      const inputEl2 = inputEl;
+      const addBtn = box.querySelector("#te-add") as HTMLButtonElement | null;
+      // P3 修复：加载期间禁用输入/添加——GetModelTags 异步返回晚于用户输入时
+      // `tags = [...]` 会覆写用户已编辑内容（竞态）；加载完成后再启用
+      inputEl2.disabled = true;
+      if (addBtn) addBtn.disabled = true;
       try {
         const App = await getApp();
         tags = (await App.GetModelTags(modelPath)) || [];
@@ -70,6 +76,10 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
         renderSuggestions(allTags);
       } catch (e) {
         errEl.textContent = "⚠️ 加载标签失败: " + (e as Error).message;
+      } finally {
+        inputEl2.disabled = false;
+        if (addBtn) addBtn.disabled = false;
+        inputEl2.focus();
       }
     })();
 

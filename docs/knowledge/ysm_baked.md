@@ -8,6 +8,8 @@ source_files:
   - frontend/src/views/app-preview/geometry.ts
   - upstream/ModernYSM-1.20.1-forge/common/src/main/java/com/elfmcys/yesstevemodel/resource/YSMBinaryDeserializer.java
   - upstream/ModernYSM-1.20.1-forge/common/src/main/java/com/elfmcys/yesstevemodel/resource/pojo/RawYsmModel.java
+tests:
+  - frontend/src/views/app-preview/geometry.test.ts
 use_when:
   - 烘焙
   - 几何反推

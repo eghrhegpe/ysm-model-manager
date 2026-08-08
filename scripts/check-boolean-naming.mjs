@@ -40,10 +40,11 @@ const VALID_PREFIXES = new Set([
   'error', 'editable', 'clickable', 'draggable', 'resizable',
   // 补充状态词（与头注释「语义动词/状态词」规范对齐，防合规命名误报，code_review P2-5）
   'available', 'locked', 'cancelled', 'ok', 'hidden', 'complete',
-  'connected', 'installed', 'expired', 'enabled', 'disabled',
+  'connected', 'installed', 'expired',
 ]);
 
 const findings = [];
+let scannedCount = 0; // 实际读取成功的文件数（scanFile 静默跳过不可读文件，不能拿 walk 总数虚报，code_review P3）
 
 function checkName(name, loc) {
   if (name.startsWith('_')) return; // 私有变量豁免（闭包状态命名自由）
@@ -63,6 +64,7 @@ function scanFile(file) {
   } catch {
     return; // 文件级不可读（权限/竞态）跳过，不让单文件崩溃整脚本（code_review P3-3）
   }
+  scannedCount++; // 计入实际读取的文件
   const lines = text.split(/\r?\n/);
   const rel = relPosix(file);
   for (let i = 0; i < lines.length; i++) {
@@ -100,7 +102,7 @@ function main() {
   const results = [...uniq.values()];
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ _summary: { scanned: files.length, findings: results.length }, findings: results, scanned: files.length, strict: STRICT }, null, 2));
+    console.log(JSON.stringify({ _summary: { scanned: scannedCount, findings: results.length }, findings: results, scanned: scannedCount, strict: STRICT }, null, 2));
     process.exit(STRICT && results.length ? 1 : 0);
     return;
   }
@@ -108,7 +110,7 @@ function main() {
   console.log('══════════════════════════════════════');
   console.log(' 布尔命名检查 (check-boolean-naming)');
   console.log('══════════════════════════════════════');
-  console.log(`扫描文件 : ${files.length}`);
+  console.log(`扫描文件 : ${scannedCount}`);
   console.log(`违规     : ${results.length}（${STRICT ? 'ERROR 级' : 'WARN 级'}）`);
   console.log('──────────────────────────────────────');
 

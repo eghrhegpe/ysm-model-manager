@@ -43,8 +43,9 @@ function subdirs(dir) {
     .readdirSync(dir, { withFileTypes: true })
     .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
     .map((d) => d.name)
-    // 固定 locale（zh-Hans-CN）：避免跨 ICU 版本排序不稳定导致 --check 幂等误报（code_review P1-1）
-    .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+    // 字节序比较（排序名全 ASCII，见 code_review P1-1）：localeCompare 依赖 ICU/CLDR
+    // 版本，跨平台排序可能不一致导致 --check 幂等误报；字节序与 locale 无关，确定性最强
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
 /** 一级文件名的子集（按扩展名过滤，跳过隐藏项）。 */
@@ -54,8 +55,8 @@ function topFiles(dir, exts) {
     .readdirSync(dir, { withFileTypes: true })
     .filter((d) => d.isFile() && !d.name.startsWith('.') && exts.some((e) => d.name.endsWith(e)))
     .map((d) => d.name)
-    // 固定 locale（zh-Hans-CN）：避免跨 ICU 版本排序不稳定导致 --check 幂等误报（code_review P1-1）
-    .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+    // 字节序比较（排序名全 ASCII）：locale 无关，跨 ICU/CLDR 版本确定性最强（code_review P1-1）
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
 /** 渲染一行表格；未登记基线的条目显示占位并计入漂移。 */

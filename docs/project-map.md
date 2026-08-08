@@ -76,16 +76,16 @@
 | 文件 | 用途 |
 |------|------|
 | `AGENTS.md` | AI 入口手册（硬约束 + 导航） |
+| `README.md` | 项目说明（面向用户） |
 | `cli_export.go` | CLI 模式构建入口（build tag: cli） |
 | `creators.json` | 创作者数据 |
 | `embed.go` | 内嵌资源声明（embed 文件系统） |
 | `link-checker-out.json` | 链接检查器输出产物（不入库） |
 | `main.go` | 程序入口（薄壳，GUI 构建） |
 | `opencode.json` | opencode 配置 |
-| `README.md` | 项目说明（面向用户） |
 | `resource_types.json` | 资源类型单一事实来源（注册表优先） |
 | `wails.json` | Wails 配置 |
-| `workshop_sites.json` | 工坊站点配置 |
 | `workshop-github.json` | 工坊 GitHub 关联 |
+| `workshop_sites.json` | 工坊站点配置 |
 
 <!-- /GEN: root-files -->

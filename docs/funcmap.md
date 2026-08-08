@@ -33,14 +33,14 @@
 | Go(internal)·应用入口 | 15 | 170 |
 | 前端·根 (app-modules/bus) | 2 | 16 |
 | 前端·核心 | 8 | 13 |
-| 前端·特性 | 12 | 51 |
+| 前端·特性 | 13 | 57 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 25 | 92 |
+| 前端·工具 | 26 | 94 |
 | frontend/views | 52 | 144 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **166** | **776** |
+| **合计** | **168** | **784** |
 
 ## Go·头像
 
@@ -634,9 +634,15 @@
 | `QueueControllerOptions()` | `frontend/src/features/community/download-queue:263` | createDownloadQueue 选项 |
 | `QueueController()` | `frontend/src/features/community/download-queue:272` | 队列控制器 |
 | `createDownloadQueue()` | `frontend/src/features/community/download-queue:297` | 创建一个下载队列 UI 控制器。 |
-| `RepoEventsContext()` | `frontend/src/features/community/events:12` | bindRepoEvents 上下文 |
-| `RepoEventsHandle()` | `frontend/src/features/community/events:24` | 绑定返回值 |
-| `bindRepoEvents()` | `frontend/src/features/community/events:37` | 绑定仓库模型页面的所有事件。 |
+| `DOWNLOAD_CONFIRM_BYTES()` | `frontend/src/features/community/download-tasks:7` | 超过该大小需弹窗确认（含边界值本身直接下载） |
+| `DOWNLOAD_REJECT_BYTES()` | `frontend/src/features/community/download-tasks:9` | 超过该大小直接拒绝（含边界值本身需确认） |
+| `DownloadSizeDecision()` | `frontend/src/features/community/download-tasks:11` | — |
+| `classifyDownloadSize()` | `frontend/src/features/community/download-tasks:14` | 下载大小策略：≤4MB 直接下；4–10MB 需确认；&gt;10MB 拒绝 |
+| `DownloadCandidate()` | `frontend/src/features/community/download-tasks:21` | 下载候选（结构类型，兼容 WorkshopModel） |
+| `buildDownloadTasks()` | `frontend/src/features/community/download-tasks:28` | 选中集 → 下载任务列表（路径统一转正斜杠；未匹配的选中项静默跳过） |
+| `RepoEventsContext()` | `frontend/src/features/community/events:13` | bindRepoEvents 上下文 |
+| `RepoEventsHandle()` | `frontend/src/features/community/events:25` | 绑定返回值 |
+| `bindRepoEvents()` | `frontend/src/features/community/events:38` | 绑定仓库模型页面的所有事件。 |
 | `WorkshopModel()` | `frontend/src/features/community/render:8` | 工坊模型条目（index.json 结构） |
 | `WorkshopSite()` | `frontend/src/features/community/render:16` | 工坊站点 |
 | `isModelMissing()` | `frontend/src/features/community/render:26` | 判断模型是否缺失（本地不存在） |
@@ -780,7 +786,9 @@
 | `modalSelect()` | `frontend/src/utils/dom/dialogs/modal:179` | 弹出下拉选择框 |
 | `ModalConfirmOptions()` | `frontend/src/utils/dom/dialogs/modal:242` | modalConfirm 选项 |
 | `modalConfirm()` | `frontend/src/utils/dom/dialogs/modal:258` | 弹出确认对话框 |
-| `showRenameDialog()` | `frontend/src/utils/dom/dialogs/rename:14` | 弹出重命名对话框 |
+| `RenameFields()` | `frontend/src/utils/dom/dialogs/rename-format:6` | 重命名字段（调用方已 trim） |
+| `buildRenameName()` | `frontend/src/utils/dom/dialogs/rename-format:18` | 按 YSM 命名规范拼接新文件名：`[作者]【品牌】角色-变体 (年月).ext` 品牌缺省「未知」、角色缺省「?」，与预览一致。 |
+| `showRenameDialog()` | `frontend/src/utils/dom/dialogs/rename:15` | 弹出重命名对话框 |
 | `modalTagEditor()` | `frontend/src/utils/dom/dialogs/tag-editor:12` | 弹出标签编辑弹窗 |
 | `ParsedModelName()` | `frontend/src/utils/dom/display:6` | 解析后的模型文件名字段 |
 | `parseModelName()` | `frontend/src/utils/dom/display:28` | 解析模型文件名 → 结构化字段 支持格式: [作者]【作品】角色变体2023-05.ysm 也兼容: [作者]《作品》角色变体2023-05.ysm |

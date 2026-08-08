@@ -71,6 +71,7 @@ use_when:
 - `createDownloadQueue` 返回的 `destroy` 即 `subscribe` 的退订函数，视图销毁必须调用，防僵尸回调累积
 - `menu:show` 传原文，转义职责归 context-menu 组件（二次 esc 会出现 `&amp;`）
 - 本目录已无动态 `import()`：`parseModelName` 等依赖一律顶层静态导入，禁止回退到 `await import(...)` 或带 `.js` 后缀的路径
+- **P3 观察（2026-08 复审）**：① `enqueue` 在 isActiveStatus 守卫后有 `await getApp()`/`await GetRepoRoot()` 才进 `enqueueDownloads`——快速连点两个不同文件可双双通过守卫，第二批次被 `enqueueDownloads` 守卫静默丢弃（无 toast）；② 8s `AbortController` 超时在 headers 到达即 clearTimeout，`resp.json()` body 读取无超时保护（body 卡死可无限挂起）；③ progress=100% 后 3s `completeTimer` 回调只查 isActiveStatus 不校验当前文件已 file-done，大文件落盘慢时提前拆除 UI 并二次触发 onAllDone；④ 下载 URL `dlPrefix + m.path` 未 encodeURIComponent，文件名含 `#`/`?` 时 URL 截断。均属低触发面，未证实用户可见影响
 
 ## 相关
 

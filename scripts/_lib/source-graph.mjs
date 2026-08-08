@@ -193,16 +193,18 @@ export function getGoExportedSymbols(filePath) {
 
   // func Name(...) / func (r *T) Name(...)
   // P2-2：方法与 funcmap 口径一致记录为 `Type.Method`（裸方法名不是包级导出标识符，
-  // 且不同 receiver 的同名方法会被 Set 去重吞掉；接收者类型取末尾标识符）
+  // 且不同 receiver 的同名方法会被 Set 去重吞掉；接收者类型取末尾标识符）。
+  // P3（复核）：容忍泛型接收者 `r *Foo[T]`（类型参数后无裸标识符结尾，提取失败时
+  // 回退记录裸方法名而非丢弃）
   const reFunc = /\bfunc\s+(?:\(([^)]*)\)\s+)?([A-Za-z0-9_]+)\s*\(/gm;
   let m;
   while ((m = reFunc.exec(text))) {
     const name = m[2];
     if (!isExport(name)) continue;
     if (m[1]) {
-      const tm = m[1].match(/([A-Za-z0-9_]+)\s*$/);
+      const tm = m[1].match(/([A-Za-z0-9_]+)(?:\s*\[[^\]]*\])?\s*$/);
       const t = tm ? tm[1] : '';
-      if (t) syms.add(`${t}.${name}`);
+      syms.add(t ? `${t}.${name}` : name); // 提取不到接收者类型时回退裸方法名
     } else {
       syms.add(name);
     }
@@ -217,13 +219,21 @@ export function getGoExportedSymbols(filePath) {
   while ((m = reVal.exec(text))) if (isExport(m[1])) syms.add(m[1]);
 
   // 分组声明 `const ( A = ... / B = ... )`、`var (...)`、`type (...)`（P2-3：此前全部漏提取）
-  // 逐行扫描分组块内的大写开头标识符
+  // 逐行扫描分组块内的大写开头标识符。
+  // P2（复核）：成员可带类型说明符（`LinkCopy LinkType = "copy"`，go/types/types.go 实证），
+  // 标识符与 `=`/行尾之间容忍一个类型 token 序列。
   const reGroupHead = /^(?:const|var|type)\s*\(/gm;
-  const reGroupBody = /^\s*([A-Za-z0-9_]+)\s*(?:=|$|,)/gm;
+  const reGroupBody = /^\s*([A-Za-z0-9_]+)(?:\s+[A-Za-z0-9_\[\]\.\*]+)*\s*(?:=|$|,)/gm;
   let gm;
   while ((gm = reGroupHead.exec(text))) {
-    const blockEnd = text.indexOf('\n)', gm.index);
-    const block = blockEnd >= 0 ? text.slice(gm.index, blockEnd) : '';
+    // P3（复核）：块结束不依赖 `\n)`（缩进闭合会失配、嵌入 `\n)` 会越界）——
+    // 逐行扫描到首个 trim 后为 `)` 的行（容忍尾部注释）
+    let blockEnd = -1;
+    const lines = text.slice(gm.index).split('\n');
+    for (let li = 1; li < lines.length; li++) {
+      if (/^\s*\)/.test(lines[li])) { blockEnd = gm.index + lines.slice(0, li).join('\n').length + 1; break; }
+    }
+    const block = blockEnd > gm.index ? text.slice(gm.index, blockEnd) : '';
     let bm;
     while ((bm = reGroupBody.exec(block))) if (isExport(bm[1])) syms.add(bm[1]);
   }

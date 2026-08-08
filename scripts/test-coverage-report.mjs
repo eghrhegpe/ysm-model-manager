@@ -37,12 +37,13 @@ const inputPath = inputIdx !== -1 ? args[inputIdx + 1] : DEFAULT_INPUT;
 const thIdx = args.indexOf('--threshold');
 const thresholdArg = thIdx !== -1 ? parseInt(args[thIdx + 1], 10) : NaN;
 
-/** 语句覆盖率阈值：优先从 frontend/vite.config.js coverage.thresholds.statements
- *  提取（单一事实源，2026-08-04 校准为 45），提取失败回退 45，--threshold 可覆盖。 */
+/** 语句覆盖率阈值：优先从 frontend/vitest.config.ts coverage.thresholds.statements
+ *  提取（单一事实源，2026-08-04 校准为 45；vitest.config.ts:17-24 定义 thresholds——
+ *  vite.config.js 无阈值，code_review P3 复核后切换来源），提取失败回退 45，--threshold 可覆盖。 */
 function resolveThreshold() {
   if (Number.isFinite(thresholdArg)) return thresholdArg;
   try {
-    const cfgPath = path.join(ROOT, 'frontend', 'vite.config.js');
+    const cfgPath = path.join(ROOT, 'frontend', 'vitest.config.ts');
     const cfg = fs.readFileSync(cfgPath, 'utf8');
     const m = cfg.match(/statements\s*:\s*(\d+)/);
     if (m) return parseInt(m[1], 10);

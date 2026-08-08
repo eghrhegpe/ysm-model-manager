@@ -25,6 +25,9 @@ export interface SpecMeshGroup3D {
 }
 
 export interface SpecModelGroup3D {
+  id?: string;
+  name?: string;
+  defaultVisible?: boolean;
   bones?: SpecBone3D[];
   meshGroups?: SpecMeshGroup3D[];
 }
@@ -116,19 +119,34 @@ let _rootGroup3d: THREE.Group | null = null;
 /** 当前活跃的 RAF ID（入口复用守卫 + cleanup 共享） */
 let _rafIdGuard: number | null = null;
 
+/** 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突） */
+function compKey(mi: number, id: string) {
+  return mi + ":" + id;
+}
+
 /** 构建骨骼层级场景（bone group 树），返回组映射与根节点 */
 export function buildSceneMesh(spec: Spec3D): {
   boneGroupMap: Map<string, THREE.Group>;
   rootGroup: THREE.Group;
   modelScale: number;
+  modelGroups: THREE.Group[];
 } {
   // 显示尺寸：固定 1/16（基岩标准：16 像素 = 1 米），严格对齐 YSMViewer ExportScale。
   // 历史：曾动态 scale（>32→1/16、>4→1/4、else→1）把小模型放大，渲染对齐裁决后移除。
   const modelScale = 1 / 16;
   const rootGroup = new THREE.Group();
   rootGroup.scale.set(modelScale, modelScale, modelScale);
+  // 组件级 modelGroup（YSMViewer 式多组件同屏）：每个 spec.model 一个组，
+  // bone 树挂各自 modelGroup，可见性由 defaultVisible 控制（arm 等组件独立渲染）。
+  const modelGroups = (spec.models || []).map((mg) => {
+    const g = new THREE.Group();
+    g.name = mg.id || "comp";
+    g.visible = mg.defaultVisible !== false;
+    return g;
+  });
+  for (const g of modelGroups) rootGroup.add(g);
   const boneGroupMap = new Map<string, THREE.Group>();
-  for (const mg of spec.models || [])
+  for (const [mi, mg] of (spec.models || []).entries())
     for (const bd of mg.bones || []) {
       const g = new THREE.Group();
       g.name = bd.name;
@@ -151,17 +169,19 @@ export function buildSceneMesh(spec: Spec3D): {
           rot?.[2] ?? 0,
           rot?.[3] ?? 1,
         );
-      boneGroupMap.set(bd.id, g);
+      boneGroupMap.set(compKey(mi, bd.id), g);
+      // 全局 key：main 组件优先（先到先得），供 hover/UI/动画（v1 单组件语义）
+      if (!boneGroupMap.has(bd.id)) boneGroupMap.set(bd.id, g);
     }
-  for (const mg of spec.models || [])
+  for (const [mi, mg] of (spec.models || []).entries())
     for (const bd of mg.bones || []) {
-      const g = boneGroupMap.get(bd.id);
+      const g = boneGroupMap.get(compKey(mi, bd.id));
       if (!g) continue;
-      if (bd.parentId && boneGroupMap.has(bd.parentId))
-        boneGroupMap.get(bd.parentId)!.add(g);
-      else rootGroup.add(g);
+      if (bd.parentId && boneGroupMap.has(compKey(mi, bd.parentId)))
+        boneGroupMap.get(compKey(mi, bd.parentId))!.add(g);
+      else modelGroups[mi].add(g);
     }
-  return { boneGroupMap, rootGroup, modelScale };
+  return { boneGroupMap, rootGroup, modelScale, modelGroups };
 }
 
 /** 渲染 3D 模型到容器，返回控制句柄 */
@@ -221,11 +241,11 @@ export async function renderModel3D(
   scene.add(grid);
   scene.add(new THREE.AxesHelper(60));
 
-  const { boneGroupMap, rootGroup } = buildSceneMesh(spec);
+  const { boneGroupMap, rootGroup, modelGroups } = buildSceneMesh(spec);
   _rootGroup3d = rootGroup;
   scene.add(rootGroup);
 
-  for (const mg of spec.models || []) {
+  for (const [mi, mg] of (spec.models || []).entries()) {
     if (!mg.meshGroups?.length) continue;
     const grouped = new Map<string, SpecMeshGroup3D[]>();
     for (const md of mg.meshGroups) {
@@ -285,7 +305,7 @@ export async function renderModel3D(
     }
     mg.meshGroups = merged;
     for (const md of mg.meshGroups) {
-      const bg = boneGroupMap.get(md.boneId);
+      const bg = boneGroupMap.get(compKey(mi, md.boneId));
       if (!bg) continue;
       const geo = new THREE.BufferGeometry();
       geo.setAttribute(
@@ -633,18 +653,18 @@ export async function renderModel3D(
       string,
       { pos: THREE.Vector3; name: string; parentId?: string }
     >();
-    for (const mg of spec.models || []) {
-      for (const bd of mg.bones || []) {
-        const bg = boneGroupMap.get(bd.id);
-        if (!bg) continue;
-        const wp = new THREE.Vector3();
-        bg.getWorldPosition(wp);
-        boneWorldPositions.set(bd.id, {
-          pos: wp,
-          name: bd.name,
-          parentId: bd.parentId,
-        });
-      }
+    // v1：boneWorldPositions 只收集 main 组件（spec.models[0]，全局 key 即 main），
+    // 动画驱动 main 骨骼；arm 等组件独立树静止（跨组件骨骼绑定留 v2）
+    for (const bd of spec.models?.[0]?.bones || []) {
+      const bg = boneGroupMap.get(bd.id);
+      if (!bg) continue;
+      const wp = new THREE.Vector3();
+      bg.getWorldPosition(wp);
+      boneWorldPositions.set(bd.id, {
+        pos: wp,
+        name: bd.name,
+        parentId: bd.parentId,
+      });
     }
 
     if (_debugMode === "pivot") {
@@ -770,10 +790,8 @@ export async function renderModel3D(
       if (g) g.traverse((c) => (c.visible = !c.visible));
     },
     showModelGroup: (idx: number) => {
-      (spec.models || []).forEach((mg, i) => {
-        const vis = i === idx;
-        for (const bd of mg.bones || []) handle.setBoneVisible(bd.id, vis);
-      });
+      // 组件级控制（YSMViewer modelGroup.visible 式）：整组件显隐，不受同名骨骼冲突影响
+      modelGroups.forEach((g, i) => (g.visible = i === idx));
     },
     getModelGroupCount: () => spec.models?.length || 0,
     onBoneSelect: null, // 外部设置的回调: (boneInfo) => void

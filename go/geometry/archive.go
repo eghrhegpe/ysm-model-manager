@@ -211,16 +211,24 @@ func collectArchiveFiles(entries []archiveEntry) (modelOrder, texOrder []string,
 							}
 						}
 					} else if raw[0] == '{' {
-						var mm map[string]string
-						if json.Unmarshal(ysm.Files.Player.Model, &mm) == nil {
-							// map 遍历顺序随机，按 key 排序保证 modelOrder 稳定（texSlot 绑定一致）
-							keys := make([]string, 0, len(mm))
-							for k := range mm {
-								keys = append(keys, k)
-							}
-							sort.Strings(keys)
-							for _, k := range keys {
-								modelOrder = append(modelOrder, mm[k])
+						// map 格式：JSON 对象**写入序**即 Bedrock 声明序（main 通常最先声明）。
+						// Go map 丢失写入序，必须 json.Decoder Token 流式保序遍历——
+						// sort.Strings 键排序会把 main 排到 arm 后，导致 texSlot 绑定错位（P2 修复）。
+						dec := json.NewDecoder(bytes.NewReader(ysm.Files.Player.Model))
+						if tok, err := dec.Token(); err == nil && tok == json.Delim('{') {
+							for dec.More() {
+								keyTok, err := dec.Token()
+								if err != nil {
+									break
+								}
+								_, _ = keyTok.(string) // 键名仅作引用，写入序即声明序
+								var val string
+								if err := dec.Decode(&val); err != nil {
+									break
+								}
+								if val != "" {
+									modelOrder = append(modelOrder, val)
+								}
 							}
 						}
 					} else {
@@ -387,16 +395,24 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 							}
 						}
 					} else if raw[0] == '{' {
-						var mm map[string]string
-						if json.Unmarshal(ysm.Files.Player.Model, &mm) == nil {
-							// map 遍历顺序随机，按 key 排序保证 modelOrder 稳定（texSlot 绑定一致）
-							keys := make([]string, 0, len(mm))
-							for k := range mm {
-								keys = append(keys, k)
-							}
-							sort.Strings(keys)
-							for _, k := range keys {
-								modelOrder = append(modelOrder, mm[k])
+						// map 格式：JSON 对象**写入序**即 Bedrock 声明序（main 通常最先声明）。
+						// Go map 丢失写入序，必须 json.Decoder Token 流式保序遍历——
+						// sort.Strings 键排序会把 main 排到 arm 后，导致 texSlot 绑定错位（P2 修复）。
+						dec := json.NewDecoder(bytes.NewReader(ysm.Files.Player.Model))
+						if tok, err := dec.Token(); err == nil && tok == json.Delim('{') {
+							for dec.More() {
+								keyTok, err := dec.Token()
+								if err != nil {
+									break
+								}
+								_, _ = keyTok.(string) // 键名仅作引用，写入序即声明序
+								var val string
+								if err := dec.Decode(&val); err != nil {
+									break
+								}
+								if val != "" {
+									modelOrder = append(modelOrder, val)
+								}
 							}
 						}
 					} else {
@@ -678,17 +694,24 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 							}
 						}
 					} else if raw[0] == '{' {
-						var mm map[string]string
-						if json.Unmarshal(ysm.Files.Player.Model, &mm) == nil {
-							// P2 修复：map 遍历顺序随机会导致 modelOrder 每次不同、
-							// TexSlot 绑定漂移（与 ZIP 路径 archive.go 的 sort.Strings 对齐）
-							keys := make([]string, 0, len(mm))
-							for k := range mm {
-								keys = append(keys, k)
-							}
-							sort.Strings(keys)
-							for _, k := range keys {
-								modelOrder = append(modelOrder, mm[k])
+						// map 格式：JSON 对象**写入序**即 Bedrock 声明序（main 通常最先声明）。
+						// Go map 丢失写入序，必须 json.Decoder Token 流式保序遍历——
+						// sort.Strings 键排序会把 main 排到 arm 后，导致 texSlot 绑定错位（P2 修复）。
+						dec := json.NewDecoder(bytes.NewReader(ysm.Files.Player.Model))
+						if tok, err := dec.Token(); err == nil && tok == json.Delim('{') {
+							for dec.More() {
+								keyTok, err := dec.Token()
+								if err != nil {
+									break
+								}
+								_, _ = keyTok.(string) // 键名仅作引用，写入序即声明序
+								var val string
+								if err := dec.Decode(&val); err != nil {
+									break
+								}
+								if val != "" {
+									modelOrder = append(modelOrder, val)
+								}
 							}
 						}
 					} else {
@@ -880,79 +903,76 @@ func ParseComponentsFromZip(data []byte, size int64) ([]types.BedrockModel, []st
 	return buildComponents(geoFiles, modelOrder, texOrder)
 }
 
-// buildComponents 组件化收集：main 优先排序 + modelOrder 排序 + TexSlot 全局化 + 独立解析。
+// buildComponents 组件化收集：main 优先排序 + TexSlot 全局化 + 独立解析。
 // 与 ParseFromZip 合并逻辑同源（collectArchiveFiles 共享收集），仅解析阶段不合并 bones、
-// texSlot 不按 texOrder 钳制（texArr 含全部组件纹理，texSlot = 全局组件序）。
-// 返回 texNames（组件序纹理名，R1 契约校验用）：i < len(texOrder) 用 texOrder[i]
-// （texture 声明序与 model 声明序位置对应，Bedrock 惯例）；否则组件 basename
-// （补扫段 texArr 按名排序与组件补扫按名一致）。
+// texSlot 不按 texOrder 钳制（texArr 含全部组件纹理，texSlot = 成功组件序，连续无空洞）。
+// 返回 texNames（组件序纹理名，R1 契约校验用）：取「组件在 modelOrder **声明序**中的
+// 原始位置 j」的 texOrder[j]（main 优先只影响显示排序，不改变纹理槽基——P2 修复）；
+// 无声明/越界用组件 basename（补扫段 texArr 按名排序与组件补扫按名一致）。
 func buildComponents(geoFiles []geoEntry, modelOrder, texOrder []string) ([]types.BedrockModel, []string, error) {
-	if len(modelOrder) > 0 {
-		orderMap := make(map[string]int, len(modelOrder))
-		for i, p := range modelOrder {
-			orderMap[strings.ReplaceAll(p, "\\", "/")] = i
+	orderMap := make(map[string]int, len(modelOrder))
+	for i, p := range modelOrder {
+		orderMap[strings.ReplaceAll(p, "\\", "/")] = i
+	}
+	// 排序：main 优先 + modelOrder 相对序；modelOrder 为空（ysm.json 无 player.model
+	// 声明或解析失败）时回退 IsMainModelName 优先 + 路径字典序——与 WASM 路径同口径（P2）。
+	sort.SliceStable(geoFiles, func(i, j int) bool {
+		mi := IsMainModelName(geoFiles[i].name)
+		mj := IsMainModelName(geoFiles[j].name)
+		if mi != mj {
+			return mi
 		}
-		sort.SliceStable(geoFiles, func(i, j int) bool {
-			ai, oki := orderMap[geoFiles[i].name]
-			aj, okj := orderMap[geoFiles[j].name]
+		if len(modelOrder) > 0 {
+			ai, oki := orderMap[strings.ReplaceAll(geoFiles[i].name, "\\", "/")]
+			aj, okj := orderMap[strings.ReplaceAll(geoFiles[j].name, "\\", "/")]
 			if oki && okj {
-				// main 优先（YSMViewer 主组件），其余保持 modelOrder 相对顺序
-				mi := IsMainModelName(geoFiles[i].name)
-				mj := IsMainModelName(geoFiles[j].name)
-				if mi != mj {
-					return mi
-				}
 				return ai < aj
 			}
-			return oki
-		})
-	}
-	// texIdxMap：模型 basename → 全局 texSlot（= 排序后组件序，main 优先已应用；
-	// 无钳制，与 WASM 路径 decodeYSMComponentsViaNodeJS 同口径）。
-	// 不能用 modelOrder 索引：map 分支按 key 字母序（arm 在 main 前）会与 main 优先错位。
-	texIdxMap := make(map[string]int, len(geoFiles))
-	for i, gf := range geoFiles {
-		geoName := gf.name
-		if idx := strings.LastIndex(geoName, "/"); idx >= 0 {
-			geoName = geoName[idx+1:]
+			if oki != okj {
+				return oki
+			}
 		}
-		texIdxMap[strings.TrimSuffix(geoName, ".json")] = i
-	}
+		return geoFiles[i].name < geoFiles[j].name
+	})
 	var comps []types.BedrockModel
-	// R1 契约：组件序纹理名（i < len(texOrder) 用声明序纹理名，否则组件 basename）
+	// texNames = texArr **期望序**（契约校验：前端 texArr 来自元数据，序 = texOrderNames
+	// 优先 + 其余按名；texNames[i] = texArr 第 i 个的期望名 = texOrder[i]，越界用 basename）。
+	// texSlot = 纹理槽（组件贴 texArr[texSlot]）：已声明组件用**声明序位置 j**
+	// （texArr 声明段 = texOrderNames 序）；未声明组件 = len(texOrder) + 按名段序号
+	// （组件序尾部未声明段按路径排序，与 texArr 按名段一致）。——P2 修复：
+	// 之前 texSlot=组件序会让 main 非首位时贴错纹理（如 model:["arm","main"] 时 main 贴 arm）。
 	texNames := make([]string, 0, len(geoFiles))
-	for i, gf := range geoFiles {
+	undeclSeq := 0 // 未声明组件按名段序号（texSlot 基 = len(texOrder)）
+	for _, gf := range geoFiles {
 		g := ParseBedrockGeometry(gf.data)
 		if g == nil || g.BoneCount == 0 {
 			continue
 		}
-		// 每个 cube 记住来源文件 tex 维度
+		texSlot := len(texOrder) + undeclSeq
+		if j, ok := orderMap[strings.ReplaceAll(gf.name, "\\", "/")]; ok && j < len(texOrder) {
+			// 已声明且在纹理声明范围内：贴 texArr[j]
+			texSlot = j
+		} else {
+			// 未声明 / 声明序越界（模型多于纹理声明）：降级到按名段
+			undeclSeq++
+		}
 		for bi := range g.Bones {
 			for ci := range g.Bones[bi].Cubes {
 				g.Bones[bi].Cubes[ci].CubeTexW = g.TexWidth
 				g.Bones[bi].Cubes[ci].CubeTexH = g.TexHeight
+				g.Bones[bi].Cubes[ci].TexSlot = texSlot
 			}
 		}
-		// R1 契约：组件 i 的期望纹理名（texOrder 声明序位置对应；越界用组件 basename）
-		geoName := gf.name
+		// TrimSuffix 先 .geo.json 后 .json：main.geo.json → "main" 而非 "main.geo"（P2）
+		geoName := strings.ReplaceAll(gf.name, "\\", "/")
 		if idx := strings.LastIndex(geoName, "/"); idx >= 0 {
 			geoName = geoName[idx+1:]
 		}
-		geoName = strings.TrimSuffix(strings.TrimSuffix(geoName, ".json"), ".geo.json")
-		tn := geoName
-		if i < len(texOrder) && texOrder[i] != "" {
-			tn = texOrder[i]
+		tn := strings.TrimSuffix(strings.TrimSuffix(geoName, ".geo.json"), ".json")
+		if len(texNames) < len(texOrder) && texOrder[len(texNames)] != "" {
+			tn = texOrder[len(texNames)]
 		}
 		texNames = append(texNames, tn)
-		// 按模型文件位置设置 cube 纹理索引（全局 texSlot，前端 texArr 全局数组按序索引）
-		// 按模型文件位置设置 cube 纹理索引（全局 texSlot，前端 texArr 全局数组按序索引）
-		if ti, hasTex := texIdxMap[geoName]; hasTex {
-			for bi := range g.Bones {
-				for ci := range g.Bones[bi].Cubes {
-					g.Bones[bi].Cubes[ci].TexSlot = ti
-				}
-			}
-		}
 		comps = append(comps, *g)
 	}
 	return comps, texNames, nil

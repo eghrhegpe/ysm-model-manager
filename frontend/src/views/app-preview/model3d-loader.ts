@@ -40,7 +40,7 @@ function getCachedSpec(path: string): string | undefined {
 }
 
 /** 并行加载纹理 URL 列表，返回 THREE.Texture 数组 */
-export async function loadTextures(urls?: string[]): Promise<THREE.Texture[]> {
+export async function loadTextures(urls?: string[]): Promise<(THREE.Texture | null)[]> {
   if (!urls?.length) return [];
   const texMap = new Map<string, THREE.Texture>();
   const loads = urls.filter(Boolean).map(
@@ -64,14 +64,11 @@ export async function loadTextures(urls?: string[]): Promise<THREE.Texture[]> {
       }),
   );
   await Promise.all(loads);
-  // 不做「按像素量过滤小纹理」：Go 解析层已过滤 avatar/ 与 <4KB 小图，前端若再按尺寸
-  // 剔除会**重排 texArr 索引**，而多组件 spec 的 texIdx 是全局组件序（0,1,2...），
-  // 索引漂移 → 组件贴错纹理（P1）。像素风合法小纹理（如 64×64）也不应被误杀。
-  const texArr = urls
-    .filter(Boolean)
-    .map((url) => texMap.get(url))
-    .filter((t): t is THREE.Texture => Boolean(t));
-  if (texArr.length === 0)
+  // 失败项保留 null **占位**（不 filter 压缩索引）：多组件 spec 的 texIdx 是全局组件序
+  // （0,1,2...），压缩会让后续组件索引漂移 → 贴错纹理（P1）。消费端用 `texArr[i] ?? texArr[0]`
+  // 降级到 fallback 颜色，不影响其他组件索引。
+  const texArr: (THREE.Texture | null)[] = urls.map((url) => texMap.get(url) ?? null);
+  if (texArr.every((t) => t === null))
     console.warn("[3D] 纹理加载失败，模型将显示为 fallback 颜色");
   return texArr;
 }
@@ -94,7 +91,7 @@ async function fetchSpec(model: ModelLike): Promise<ModelSpec> {
 
 /** 预加载：纹理 + spec 并行获取 */
 export async function preloadModel(model: ModelLike): Promise<{
-  texArr: THREE.Texture[];
+  texArr: (THREE.Texture | null)[];
   spec: ModelSpec;
 }> {
   const [texArr, spec] = await Promise.all([
@@ -108,7 +105,10 @@ export async function preloadModel(model: ModelLike): Promise<{
   const actual = (model as { textureNames?: string[] }).textureNames;
   if (order?.length && actual?.length) {
     for (let i = 0; i < Math.min(order.length, actual.length); i++) {
-      if (String(order[i]).toLowerCase() !== String(actual[i]).toLowerCase()) {
+      const exp = String(order[i] ?? "").trim().toLowerCase();
+      const got = String(actual[i] ?? "").trim().toLowerCase();
+      if (!exp || !got) continue; // 空值跳过：WASM 路径 / 未命名纹理（P2）
+      if (exp !== got) {
         console.warn(
           `[model3d] R1 纹理序不一致: 组件 ${i} 期望 ${order[i]}, texArr 实际 ${actual[i]}（可能贴错纹理）`,
         );

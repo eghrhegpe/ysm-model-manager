@@ -4,6 +4,7 @@
 package ysm
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"os"
@@ -64,13 +65,28 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 					modelRaw := string(player.Model)
 					trimmed := strings.TrimSpace(modelRaw)
 					if strings.HasPrefix(trimmed, `{`) {
-						var mm map[string]string
-						if json.Unmarshal(player.Model, &mm) == nil {
-							modelMapOrig = mm
-							for _, v := range mm {
-								modelNames = append(modelNames, v)
+						// map 格式：JSON 对象**写入序**即 Bedrock 声明序（main 通常最先声明）。
+						// Go map 丢失写入序，必须 json.Decoder Token 流式保序遍历（P2 修复）。
+						mm := make(map[string]string)
+						dec := json.NewDecoder(bytes.NewReader(player.Model))
+						if tok, err := dec.Token(); err == nil && tok == json.Delim('{') {
+							for dec.More() {
+								keyTok, err := dec.Token()
+								if err != nil {
+									break
+								}
+								key, _ := keyTok.(string)
+								var val string
+								if err := dec.Decode(&val); err != nil {
+									break
+								}
+								if val != "" {
+									modelNames = append(modelNames, val)
+									mm[key] = val
+								}
 							}
 						}
+						modelMapOrig = mm
 					} else if strings.HasPrefix(trimmed, `[`) {
 						var arr []string
 						if json.Unmarshal(player.Model, &arr) == nil {
@@ -386,13 +402,28 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) ([]types.BedrockModel, []s
 					modelRaw := string(player.Model)
 					trimmed := strings.TrimSpace(modelRaw)
 					if strings.HasPrefix(trimmed, `{`) {
-						var mm map[string]string
-						if json.Unmarshal(player.Model, &mm) == nil {
-							modelMapOrig = mm
-							for _, v := range mm {
-								modelNames = append(modelNames, v)
+						// map 格式：JSON 对象**写入序**即 Bedrock 声明序（main 通常最先声明）。
+						// Go map 丢失写入序，必须 json.Decoder Token 流式保序遍历（P2 修复）。
+						mm := make(map[string]string)
+						dec := json.NewDecoder(bytes.NewReader(player.Model))
+						if tok, err := dec.Token(); err == nil && tok == json.Delim('{') {
+							for dec.More() {
+								keyTok, err := dec.Token()
+								if err != nil {
+									break
+								}
+								key, _ := keyTok.(string)
+								var val string
+								if err := dec.Decode(&val); err != nil {
+									break
+								}
+								if val != "" {
+									modelNames = append(modelNames, val)
+									mm[key] = val
+								}
 							}
 						}
+						modelMapOrig = mm
 					} else if strings.HasPrefix(trimmed, `[`) {
 						var arr []string
 						if json.Unmarshal(player.Model, &arr) == nil {
@@ -495,18 +526,29 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) ([]types.BedrockModel, []s
 		}
 	}
 
+	// 声明序位置（R1 契约）：modelNames 保序解析（map 写入序 / 数组索引），
+	// 补扫组件不在其中 → fallback basename。
+	declPos := make(map[string]int, len(modelNames))
+	for i, n := range modelNames {
+		declPos[n] = i
+	}
+
 	var comps []types.BedrockModel
-	// R1 契约：组件序纹理名（i < len(texOrderNames) 用声明序纹理名，否则组件 basename）
+	// texNames = texArr **期望序**（契约校验：texArr 序 = texOrderNames 优先 + 按名；
+	// texNames[i] = texOrderNames[i]，越界用组件 basename）。
+	// texSlot = 纹理槽：已声明组件用**声明序位置 j**（组件贴 texArr[j]）；未声明组件
+	// = len(texOrderNames) + 按名段序号（补扫段按名排序与 texArr 按名段一致）——P2 修复。
 	texNames := make([]string, 0, len(orderedNames))
-	for i, mn := range orderedNames {
+	undeclSeq := 0
+	for _, mn := range orderedNames {
 		base := mn
 		if idx := strings.LastIndexAny(base, "/\\"); idx >= 0 {
 			base = base[idx+1:]
 		}
-		base = strings.TrimSuffix(strings.TrimSuffix(base, ".json"), ".geo.json")
+		base = strings.TrimSuffix(strings.TrimSuffix(base, ".geo.json"), ".json")
 		tn := strings.ToLower(base)
-		if i < len(texOrderNames) && texOrderNames[i] != "" {
-			tn = texOrderNames[i]
+		if len(texNames) < len(texOrderNames) && texOrderNames[len(texNames)] != "" {
+			tn = texOrderNames[len(texNames)]
 		}
 		tnUsed := tn
 		for _, sub := range []string{"", "models/", "models\\"} {
@@ -523,12 +565,19 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) ([]types.BedrockModel, []s
 				if readErr == nil {
 					gj := geometry.ParseBedrockGeometry(geoData)
 					if gj != nil {
+						texSlot := len(texOrderNames) + undeclSeq
+						if j, ok := declPos[mn]; ok && j < len(texOrderNames) {
+							// 已声明且在纹理声明范围内：贴 texArr[j]
+							texSlot = j
+						} else {
+							// 未声明 / 声明序越界（模型多于纹理声明）：降级到按名段
+							undeclSeq++
+						}
 						texNames = append(texNames, tnUsed)
-						// TexSlot = 全局组件序（前端 texArr 含全部组件纹理：
-						// texOrderNames 优先 + 其余按名，与补扫排序一致）
+						// TexSlot = 声明序位置（texArr 全局索引；未声明=按名段）
 						for bi := range gj.Bones {
 							for ci := range gj.Bones[bi].Cubes {
-								gj.Bones[bi].Cubes[ci].TexSlot = i
+								gj.Bones[bi].Cubes[ci].TexSlot = texSlot
 								gj.Bones[bi].Cubes[ci].CubeTexW = gj.TexWidth
 								gj.Bones[bi].Cubes[ci].CubeTexH = gj.TexHeight
 							}

@@ -116,11 +116,11 @@
 |------|--------|------|
 | `ExtractFirstPNGFromZip()` | `go/geometry/archive:61` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
 | `ExtractFirstPNGFrom7z()` | `go/geometry/archive:82` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
-| `ParseFromZip()` | `go/geometry/archive:289` | — |
-| `ParseFrom7z()` | `go/geometry/archive:581` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
-| `IsMainModelName()` | `go/geometry/archive:858` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
-| `ParseComponentsFromZip()` | `go/geometry/archive:870` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
-| `ParseComponentsFrom7z()` | `go/geometry/archive:948` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
+| `ParseFromZip()` | `go/geometry/archive:297` | — |
+| `ParseFrom7z()` | `go/geometry/archive:597` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
+| `IsMainModelName()` | `go/geometry/archive:881` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
+| `ParseComponentsFromZip()` | `go/geometry/archive:893` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
+| `ParseComponentsFrom7z()` | `go/geometry/archive:983` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
 | `ParseBedrockGeometry()` | `go/geometry/parse:17` | ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式） 注意：data 大小不应超过 maxP |
 
 ## Go·导入
@@ -289,7 +289,7 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `Build()` | `go/threejs/spec:57` | Build 接收已解析的 BedrockModel，生成 Three.js 可直接消费的 JSON spec |
-| `BuildMulti()` | `go/threejs/spec:72` | BuildMulti 多组件 spec：每个组件独立构建为 spec.models 元素（YSMViewer 式多组件同屏）。 |
+| `BuildMulti()` | `go/threejs/spec:73` | BuildMulti 多组件 spec：每个组件独立构建为 spec.models 元素（YSMViewer 式多组件同屏）。 |
 | `Model3DSpec()` | `go/threejs/spec:17` | — |
 | `ModelGroup()` | `go/threejs/spec:21` | — |
 | `BoneData()` | `go/threejs/spec:32` | — |
@@ -378,8 +378,8 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `FindCLI()` | `go/ysm/cli:11` | FindCLI 查找 YSMParser.exe 可执行文件路径 |
-| `FindGeometryInExtractedYSM()` | `go/ysm/extracted:33` | FindGeometryInExtractedYSM 在解压后的 YSM 模型目录中查找 geometry 和纹理 ysmJsonPath: ysm.json 的完整路径 返回: |
-| `FindComponentsInExtractedYSM()` | `go/ysm/extracted:356` | FindComponentsInExtractedYSM 多组件解析（YSMViewer 式）：解压目录内每个模型文件独立组件， **不合并 bones、不排除 arm**（arm |
+| `FindGeometryInExtractedYSM()` | `go/ysm/extracted:34` | FindGeometryInExtractedYSM 在解压后的 YSM 模型目录中查找 geometry 和纹理 ysmJsonPath: ysm.json 的完整路径 返回: |
+| `FindComponentsInExtractedYSM()` | `go/ysm/extracted:372` | FindComponentsInExtractedYSM 多组件解析（YSMViewer 式）：解压目录内每个模型文件独立组件， **不合并 bones、不排除 arm**（arm |
 | `AnalyzeYSMHeader()` | `go/ysm/header:167` | AnalyzeYSMHeader 读取 YSM 文件的文本头部，提取元数据 |
 | `AnalyzeYSMHeaderFromBytes()` | `go/ysm/header:320` | AnalyzeYSMHeaderFromBytes 从字节数据解析 YSM 头部（适用于 base64 导入场景） |
 | `YSMHeader()` | `go/ysm/header:12` | YSMHeader 从 YSM 文件文本头部提取的元数据（适用于加密和非加密模型） |
@@ -743,7 +743,7 @@
 | `compKey()` | `frontend/src/utils/3d/model3d:124` | 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突）。 |
 | `buildSceneMesh()` | `frontend/src/utils/3d/model3d:129` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
 | `renderModel3D()` | `frontend/src/utils/3d/model3d:189` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/src/utils/3d/model3d:868` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `screenshotPreview()` | `frontend/src/utils/3d/model3d:870` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
 | `animateNumber()` | `frontend/src/utils/animation/animate:12` | 里程表滚动进位动画 |
 | `Vec3()` | `frontend/src/utils/animation/animation:9` | 三维向量 [x, y, z] |
 | `Keyframe()` | `frontend/src/utils/animation/animation:12` | 关键帧 |
@@ -876,7 +876,7 @@
 | `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:6` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
 | `ModelSpec()` | `frontend/src/views/app-preview/model3d-loader:14` | Go 返回的 3D spec（models 数组） |
 | `loadTextures()` | `frontend/src/views/app-preview/model3d-loader:43` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组 |
-| `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:96` | 预加载：纹理 + spec 并行获取 |
+| `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:93` | 预加载：纹理 + spec 并行获取 |
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:7` | — |
 | `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:13` | — |
 | `loadModel2D()` | `frontend/src/views/app-preview/skeleton:34` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this._root, this._appendDebug 等） |

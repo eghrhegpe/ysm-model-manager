@@ -188,7 +188,7 @@ export function buildSceneMesh(spec: Spec3D): {
 /** 渲染 3D 模型到容器，返回控制句柄 */
 export async function renderModel3D(
   container: HTMLElement,
-  texArr: THREE.Texture[],
+  texArr: (THREE.Texture | null)[],
   spec: Spec3D,
   texIdx = 0,
 ): Promise<RenderModel3DHandle> {
@@ -800,7 +800,9 @@ export async function renderModel3D(
     },
     showModelGroup: (idx: number) => {
       // 组件级控制（YSMViewer modelGroup.visible 式）：整组件显隐，不受同名骨骼冲突影响。
-      // idx < 0（如 -1）= 全部显示（默认态，对应 UI「全部组件」选项）。
+      // idx < 0（如 -1）= 全部显示（默认态，对应 UI「全部组件」选项）；
+      // NaN 防御：parseInt 空值/异常输入按全部显示处理（P3）。
+      if (Number.isNaN(idx)) idx = -1;
       modelGroups.forEach((g, i) => (g.visible = i === idx || idx < 0));
     },
     getModelGroupCount: () => spec.models?.length || 0,

@@ -69,6 +69,7 @@ func Build(model types.BedrockModel) (string, error) {
 
 // BuildMulti 多组件 spec：每个组件独立构建为 spec.models 元素（YSMViewer 式多组件同屏）。
 // texIdxBase 为组件在全局纹理数组中的起点偏移（组件内 cube.TexSlot 已由解析层全局化）。
+// nil/越界时按组件序 i 回退（与 texSlot 连续分配一致，避免 textureId 全 tex_0——P2 修复）。
 func BuildMulti(models []types.BedrockModel, texIdxBase []int) (string, error) {
 	if len(models) == 0 {
 		return "{}", nil
@@ -78,7 +79,7 @@ func BuildMulti(models []types.BedrockModel, texIdxBase []int) (string, error) {
 		if len(m.Bones) == 0 {
 			continue
 		}
-		base := 0
+		base := i
 		if i < len(texIdxBase) {
 			base = texIdxBase[i]
 		}

@@ -50,10 +50,11 @@ use_when:
 
 ## 不变量
 
-- 文件名显示统一走 `renderDisplayName()`（治理红线 4.3）
+- 文件名显示统一走 `renderDisplayName()`（治理红线 4.3）；搜索态走 `hl(e.name, search)`（utils/dom/html.ts，同源转义但美化样式在搜索时丢失——P3 观察）
 - 使用 Shadow DOM 隔离样式
 - 组件拆分遵循 app-xxx 规范（index/tpl/row-tpl/data/render/events）
 - 动态 import 链路带 `.catch` 兜底（如 ha-preview 解析模块加载失败以 toast 提示，见 events.ts:196）
+- **选中态在数据变更链路（回收/重命名）成功后必须清空**（P2 修复：`selectState` 是模块级单例，bus-handlers 的 dir:recycle / batch:rename / dir:batch-rename 成功后清 keys+lastKey——原旧路径滞留会显示「已选 N 个文件」并对已不存在路径误删）
 
 ## 相关
 

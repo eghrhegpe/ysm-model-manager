@@ -810,12 +810,12 @@
 | `LocalCreator()` | `frontend/src/views/app-content/community-data:7` | 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） |
 | `CommunityData()` | `frontend/src/views/app-content/community-data:23` | 站点 + 创作者 + 作者 数据包 |
 | `loadCommunityData()` | `frontend/src/views/app-content/community-data:33` | 加载站点 + 创作者数据（纯数据，不碰 DOM） 自动合并本地仓库提取的作者 |
-| `fillSearch()` | `frontend/src/views/app-content/community-data:104` | 替换 {{q}} 为查询词 |
-| `fetchCommunityCreators()` | `frontend/src/views/app-content/community-data:156` | 从 GitHub 拉取 creators.json（三路回退） |
-| `mergeCommunityCreators()` | `frontend/src/views/app-content/community-data:185` | 合并社区索引到本地 creators.json |
-| `fetchCommunitySites()` | `frontend/src/views/app-content/community-data:222` | 从 GitHub 拉取 workshop_sites.json（三路回退） |
-| `mergeCommunitySites()` | `frontend/src/views/app-content/community-data:246` | 合并社区站点到本地 workshop_sites.json |
-| `DEFAULT_COMMUNITY_URL()` | `frontend/src/views/app-content/community-data:267` | 社区索引的默认 URL（可配置为社区维护的独立 creators JSON） 贡献通道：https://github.com/eghrhegpe/ysm-model-manager |
+| `fillSearch()` | `frontend/src/views/app-content/community-data:119` | 替换 {{q}} 为查询词 |
+| `fetchCommunityCreators()` | `frontend/src/views/app-content/community-data:171` | 从 GitHub 拉取 creators.json（三路回退） |
+| `mergeCommunityCreators()` | `frontend/src/views/app-content/community-data:200` | 合并社区索引到本地 creators.json |
+| `fetchCommunitySites()` | `frontend/src/views/app-content/community-data:237` | 从 GitHub 拉取 workshop_sites.json（三路回退） |
+| `mergeCommunitySites()` | `frontend/src/views/app-content/community-data:261` | 合并社区站点到本地 workshop_sites.json |
+| `DEFAULT_COMMUNITY_URL()` | `frontend/src/views/app-content/community-data:282` | 社区索引的默认 URL（可配置为社区维护的独立 creators JSON） 贡献通道：https://github.com/eghrhegpe/ysm-model-manager |
 | `contentCSS()` | `frontend/src/views/app-content/content-css:2` | — |
 | `initDiagnostics()` | `frontend/src/views/app-content/diagnostics/community:16` | 初始化诊断页所有功能 |
 | `startDedup()` | `frontend/src/views/app-content/diagnostics/community:251` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
@@ -913,7 +913,7 @@
 | `treeCSS()` | `frontend/src/views/app-tree/app-tree-styles:3` | — |
 | `AuthorInfo()` | `frontend/src/views/app-tree/authors:5` | 作者统计（Go ListModelAuthors 返回） |
 | `loadAuthors()` | `frontend/src/views/app-tree/authors:13` | 从 Go 端加载作者列表 |
-| `bindBusEvents()` | `frontend/src/views/app-tree/bus-handlers:13` | — |
+| `bindBusEvents()` | `frontend/src/views/app-tree/bus-handlers:14` | — |
 | `selectState()` | `frontend/src/views/app-tree/data:4` | 多选状态 |
 | `toggleSelect()` | `frontend/src/views/app-tree/data:16` | 切换选中状态 |
 | `selectOnly()` | `frontend/src/views/app-tree/data:31` | 单选：清空后选中单个并设为 lastKey（用于单击选中，避免外部直接写 selectState） |

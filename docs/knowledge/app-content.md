@@ -82,7 +82,7 @@ use_when:
 - 全局事件 handler 只在 `app-content` 的 `connectedCallback` 注册一次（致命陷阱 #2），返回的 unsub 全部收进 `_globalUnsubs`
 - 初始页面**三源同源**：`app-nav`、`app-content`、`PageStore` 都只能通过 `resolveInitialPage()` 取初始页，禁止任一处硬编码页面名，否则 UI 与 `PageStore` 脱节会让依赖 `PageStore.currentPage` 的守卫（如 DnD 遮罩）误判
 - `resolveInitialPage()` 的 localStorage 取值必须过 `sanitizePage()` 白名单（`VALID_PAGES`）：历史页面名 `resources` 映射为 `repository`，其余未知/损坏值一律回退 `repository`，防止 `_render()` 落入 `default` 分支却无对应 init 分发而形成死页
-- 所有 `bus.on` 订阅（`_unsub` / `_globalUnsubs` / `_unsubs`）必须在 `disconnectedCallback` 逐一清理；`document` 级 resize 监听先移除再重绑，防止切页累积泄漏
+- 所有 `bus.on` 订阅（`_unsub` / `_globalUnsubs` / `_unsubs`）必须在 `disconnectedCallback` 逐一清理；`document` 级 resize 监听先移除再重绑，防止切页累积泄漏。**`_unsubs` 在 `_render()` 开头同样清理**（P2 修复：app-content 常驻不卸载，原仅 disconnectedCallback 清理 → 多次访问 repository 的 dedup/oldest/import/recycle 会让 `repo:rtype-changed` 监听跨访问累积，N 次访问后一次切换触发 N 次 doDedup）
 - `_render()` 内页面 init 分发整体包 try/catch：init 抛错不中断调用方，转 `console.error` + `toast:show` 反馈用户而非静默
 - 样式走 `adoptedStyleSheets` + CSS 变量，无硬编码颜色；`innerHTML` 拼接统一过 `_esc` / `esc`
 - 页面级临时缓存（`_workshopCache` / `_githubCache`）与 `_workshopTimer` 定时器在 `disconnectedCallback` 清空

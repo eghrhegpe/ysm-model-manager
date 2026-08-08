@@ -41,18 +41,35 @@ function extractLinks(filepath) {
     text = fs.readFileSync(filepath, 'utf-8');
   } catch { return links; }
 
-  // 先剔除 fenced 代码块（```...```），避免示例链接（如 adr 占位章节路径）被误判为断链
-  const stripped = text.replace(/```[\s\S]*?```/g, '');
-
-  // 匹配 [text](path) 和 [text](path "title")
+  // 在原文上匹配，position 即原文偏移（供 gen-doc-next-steps 的 file#line 直跳）；
+  // fenced 代码块（```...```）内的链接跳过（示例链接如 adr 占位章节路径不判断链），
+  // 而非先剥离再匹配——剥离会让 position 与原文错位、行号系统性偏移（code_review P2-1）
   const re = /\[([^\]]*)\]\(([^)\s]+(?:\s+"[^"]*")?)\)/g;
   let m;
-  while ((m = re.exec(stripped)) !== null) {
+  while ((m = re.exec(text)) !== null) {
+    if (insideFence(text, m.index)) continue; // 位于 fenced 代码块内 → 跳过
     const linkText = m[1];
     const rawPath = m[2].split(/\s+/)[0]; // 去掉 title 部分
     links.push([linkText, rawPath, m.index]);
   }
   return links;
+}
+
+/** 判断给定字符偏移是否位于 fenced 代码块（```...```）内。 */
+function insideFence(text, pos) {
+  const upTo = text.slice(0, pos);
+  let fence = false;
+  let inCode = false;
+  for (const line of upTo.split('\n')) {
+    const t = line.trim();
+    if (/^```/.test(t)) {
+      if (!inCode) inCode = true;
+      else if (/^```/.test(t)) inCode = false;
+    }
+  }
+  // 简化：统计到 pos 为止的 ``` 围栏数，奇数则在代码块内
+  const fences = (upTo.match(/^```/gm) || []).length;
+  return fences % 2 === 1;
 }
 
 function resolvePath(filepath, rawPath) {

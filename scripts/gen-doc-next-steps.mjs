@@ -94,7 +94,9 @@ function main() {
 
   const kdErr = kd.ok ? kd.data.errors || [] : [`⚠️ 检查器未正常运行：${kd.raw}`];
   const kdWarn = kd.ok ? kd.data.warns || [] : [];
+  // P2-2：link-checker 运行失败时不再静默显示「断链 0」（总览会误导），改为显式警告条目
   const broken = lc.ok ? lc.data.broken_links || [] : [];
+  const lcFail = !lc.ok ? [`⚠️ link-checker 未正常运行：${lc.raw}`] : [];
   const adrErr = ac.ok ? ac.data.errors || [] : [`⚠️ 检查器未正常运行：${ac.raw}`];
   const adrGaps = ac.ok ? ac.data.gaps || [] : [];
 

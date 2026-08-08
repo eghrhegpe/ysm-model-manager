@@ -84,12 +84,16 @@ function scanDocAdrMarkers(sourceFiles) {
     .map((n) => `ADR-${String(n).padStart(3, '0')}`);
 }
 
-/** 把 adr 列表写入 frontmatter：先移除旧的空 `adr: []` 行，再在 `tier:` 行后插入 `adr:` 块。 */
+/** 把 adr 列表写入 frontmatter：移除旧的空 `adr:` 键（`adr: []` 行内空列表 / `adr:` 空块），再在 `tier:` 行后插入 `adr:` 块。 */
 function writeAdrBlock(text, adrList) {
   const fm = fmBlock(text);
   if (!fm) return text;
-  // 移除旧的空列表行（`adr: []`），避免 frontmatter 出现两处 adr: 键（VitePress 解析失败）
-  const fmNoEmptyAdr = fm.replace(/^adr\s*:\s*\[\]\s*$/m, '').replace(/\n{2,}/g, '\n');
+  // 移除旧的空 adr 键（两种形态：`adr: []` 行内 / `adr:` 后无内容的空块），
+  // 避免 frontmatter 出现两处 adr: 键（VitePress 解析失败，code_review P2-2）
+  const fmNoEmptyAdr = fm
+    .replace(/^adr\s*:\s*\[\]\s*$/m, '')
+    .replace(/^adr\s*:\s*(\n\s*-[^\n]*)*$/m, '')
+    .replace(/\n{2,}/g, '\n');
   const adrBlock = adrList.map((a) => `  - ${a}`).join('\n');
   const newFm = fmNoEmptyAdr.replace(
     /^(tier:\s*.+)$/m,
@@ -117,8 +121,9 @@ function main() {
     if (tier !== 'architecture') continue;
     const existing = fmList(text, 'adr').filter((a) => a !== '[]');
     if (existing.length) continue; // 已有手写关联，不动
-    // YSM 双栈：source_files 支持 go/ 与 frontend/ 双前缀
-    const sources = [...fmTxt.matchAll(/^\s*-\s*((?:go|frontend)\/\S+)\s*$/gm)].map((m) => m[1]);
+    // YSM 双栈：source_files 支持 go/、frontend/、internal/ 三前缀（P2-1：此前漏 internal/，
+    // 指向 internal/ 包的卡无法补全 adr 关联，--check 假绿）
+    const sources = [...fmTxt.matchAll(/^\s*-\s*((?:go|frontend|internal)\/\S+)\s*$/gm)].map((m) => m[1]);
     const adrs = scanDocAdrMarkers(sources);
     if (adrs.length) targets.push({ file: f, text, adrs });
   }

@@ -123,10 +123,21 @@ func (q *DownloadQueue) process() {
 		}
 		q.running = false
 		cancelled := q.cancelled
+		// P2 修复：丢失唤醒竞态——process 判空解锁 return 与 defer 取锁复位 running 之间，
+		// Enqueue 可能已追加任务（running 仍 true → start=false 不启新 goroutine）；
+		// 复位后重检任务列表：代际一致且有任务则重启处理，防队列静默停滞
+		restart := !cancelled && len(q.tasks) > 0
+		if restart {
+			q.running = true
+			q.epoch++
+		}
 		q.mu.Unlock()
-		if !cancelled {
+		if !cancelled && !restart {
 			log.Printf("[queue] emit queue:status done")
 			q.emitFn("queue:status", "done", 0, "")
+		}
+		if restart {
+			go q.process()
 		}
 	}()
 

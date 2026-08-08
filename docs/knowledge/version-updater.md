@@ -5,6 +5,8 @@ tier: architecture
 category: feature
 source_files:
   - frontend/src/features/version-updater.ts
+tests:
+  - frontend/src/features/version-updater.test.ts
 use_when:
   - 更新
   - 升级

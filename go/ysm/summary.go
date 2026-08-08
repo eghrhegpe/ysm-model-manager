@@ -164,7 +164,13 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 
 		// 尝试解析 ysm.json 完整结构
 		var root ysmRoot
-		if err := json.Unmarshal(data, &root); err == nil && root.Metadata != nil {
+		if err := json.Unmarshal(data, &root); err != nil {
+			// P2 修复：解析失败必须返回结构化错误——原实现 `err == nil && root.Metadata != nil`
+			// 使 Unmarshal 失败时整个 if 跳过、静默降级为「文件名摘要」（返回 nil error），
+			// 违反「解析错误必须返回结构化错误信息」不变量，前端 toast 链路无法触发
+			return summary, fmt.Errorf("ysm.json 解析失败: %v", err)
+		}
+		if root.Metadata != nil {
 			summary.Name = root.Metadata.Name
 			summary.Tips = root.Metadata.Tips
 			if root.Metadata.License != nil {

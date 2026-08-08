@@ -103,6 +103,13 @@ func ScanEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 			if strings.EqualFold(d.Name(), ".recycle") {
 				return filepath.SkipDir
 			}
+			// P2 修复：目录级 .ban（fileops.ToggleModelEnable 对文件夹模型整组禁用时
+			// 把父目录改名 modelA.ban，ADR-038 D3.7）不得被扫描为活跃条目——
+			// 原实现只过滤文件级 .ban，目录级禁用模型会以活跃身份进入 sync 的
+			// repoHash/repoName，被 GetInstanceStatus 列为 Missing 或 SyncToggleStatus 重新启用
+			if strings.HasSuffix(strings.ToLower(d.Name()), ".ban") {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(p))

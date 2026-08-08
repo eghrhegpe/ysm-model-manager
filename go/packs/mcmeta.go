@@ -224,8 +224,11 @@ func ReadShaderpackLang(path string) string {
 	if info.IsDir() {
 		// 已解压的目录格式
 		langPath := filepath.Join(path, "lang", "en_US.lang")
-		if data, err := os.ReadFile(langPath); err == nil {
-			langData = data
+		const maxLangSize = 1 << 20 // 1MB（合法 lang 通常 < 10KB）
+		if fi, err := os.Stat(langPath); err == nil && fi.Size() <= maxLangSize {
+			if data, err := os.ReadFile(langPath); err == nil {
+				langData = data
+			}
 		}
 	} else if strings.HasSuffix(strings.ToLower(path), ".zip") {
 		r, err := zip.OpenReader(path)
@@ -241,7 +244,13 @@ func ReadShaderpackLang(path string) string {
 				if err != nil {
 					continue
 				}
-				langData, _ = io.ReadAll(rc)
+				// P3 修复：lang 文件设大小上限（limit+1 截断探测，对齐 ADR-033）——
+				// 原 io.ReadAll 全量读入，畸形/超大 lang 可拖垮内存，与包内其余 LimitReader 防护不统一
+				const maxLangSize = 1 << 20 // 1MB（合法 lang 通常 < 10KB）
+				langData, _ = io.ReadAll(io.LimitReader(rc, maxLangSize+1))
+				if len(langData) > maxLangSize {
+					langData = nil // 超限视为无效，返回空 name（前端用文件名兜底）
+				}
 				rc.Close()
 				break
 			}

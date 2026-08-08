@@ -37,10 +37,10 @@
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 26 | 94 |
-| frontend/views | 52 | 144 |
+| frontend/views | 53 | 146 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **168** | **784** |
+| **合计** | **169** | **786** |
 
 ## Go·头像
 
@@ -870,6 +870,8 @@
 | `loadFavs()` | `frontend/src/views/app-content/workshop-data:63` | — |
 | `isFaved()` | `frontend/src/views/app-content/workshop-data:75` | — |
 | `toggleFav()` | `frontend/src/views/app-content/workshop-data:79` | — |
+| `BoneEntry()` | `frontend/src/views/app-preview/bone-names:5` | 骨骼条目（结构类型，兼容 DecodedYsm.bones 元素） |
+| `buildBoneNamesText()` | `frontend/src/views/app-preview/bone-names:15` | 构建骨骼名导出文本行： 首行 `模型: &lt;path&gt;`、次行 `骨骼总数: &lt;n&gt;`，其后每根骨骼 有方块则 `名称 (n 方)`，结构骨骼（无方块）则 `名称 (结构骨骼,无方) |
 | `CacheValue()` | `frontend/src/views/app-preview/cache:10` | 缓存条目值 |
 | `cacheSetEvictHandler()` | `frontend/src/views/app-preview/cache:39` | 注册 evict 回调，淘汰条目时调用 |
 | `cacheGet()` | `frontend/src/views/app-preview/cache:43` | — |
@@ -894,7 +896,7 @@
 | `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:93` | 预加载：纹理 + spec 并行获取 |
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:7` | — |
 | `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:13` | — |
-| `loadModel2D()` | `frontend/src/views/app-preview/skeleton:34` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this._root, this._appendDebug 等） |
+| `loadModel2D()` | `frontend/src/views/app-preview/skeleton:35` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this._root, this._appendDebug 等） |
 | `ModelDetailMeta()` | `frontend/src/views/app-preview/tpl:5` | 模型统计元数据（modelDetailHTML 入参） |
 | `modelDetailHTML()` | `frontend/src/views/app-preview/tpl:19` | 模型详情面板（仓库页面） |
 | `StatsCardModel()` | `frontend/src/views/app-preview/tpl:57` | 模型统计卡片（statsCardHTML 入参的几何视图） |

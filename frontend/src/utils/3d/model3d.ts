@@ -322,6 +322,11 @@ export async function renderModel3D(
       // 多组件：md.texIdx 是 Go 端全局组件槽位（组件序 0,1,2...），必须用；
       // 单组件：Go 端恒输出 texIdx 字段（无 omitempty，单组件=0），若用 ?? 则
       // 纹理选择器（调用方 texIdx 参数）被架空——永远贴第 0 张（P2）。
+      // ?? 0 仅作防御：Go 端 BuildMulti/Build 恒输出 texIdx，缺失即契约破坏（R4），
+      // 不应静默——warn 让错误可见。
+      if (md.texIdx === undefined) {
+        console.warn("[model3d] mesh 缺 texIdx（spec 契约破坏），回退 0", spec.models?.length);
+      }
       const mti = (spec.models?.length ?? 1) > 1 ? (md.texIdx ?? 0) : (texIdx ?? 0);
       const mt = texArr.length > 0 ? texArr[mti] || texArr[0] : null;
       // ysmview 风格材质：统一 FrontSide + transparent + alphaTest 0.1 + depthWrite。

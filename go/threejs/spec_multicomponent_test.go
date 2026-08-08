@@ -60,6 +60,14 @@ func TestBuildMulti_TwoComponents(t *testing.T) {
 	if spec.Models[1].TextureID == nil || *spec.Models[1].TextureID != "tex_1" {
 		t.Errorf("comp_1 textureId = %v, want tex_1", spec.Models[1].TextureID)
 	}
+	// R4 契约：每个 meshGroup 必输出 texIdx（无 omitempty，缺失即契约破坏）
+	for mi, m := range spec.Models {
+		for _, mg := range m.MeshGroups {
+			if mg.TexIdx < 0 {
+				t.Errorf("组件 %d mesh %s texIdx 缺失（契约破坏）", mi, mg.BoneID)
+			}
+		}
+	}
 }
 
 // TestBuildMulti_Empty 验证空组件列表返回空 spec。

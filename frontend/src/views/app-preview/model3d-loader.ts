@@ -19,11 +19,24 @@ export interface ModelSpec {
 const specCache = new Map<string, string>();
 const SPEC_CACHE_MAX = 20;
 function cacheSpec(path: string, data: string): void {
-  if (specCache.size >= SPEC_CACHE_MAX) {
+  // LRU：命中先删后插（刷新访问序，避免高频 spec 被冷数据挤出——R5）；
+  // 满员时淘汰最久未用（Map 首项，插入序即访问序）
+  if (specCache.has(path)) {
+    specCache.delete(path);
+  } else if (specCache.size >= SPEC_CACHE_MAX) {
     const firstKey = specCache.keys().next().value;
     if (firstKey !== undefined) specCache.delete(firstKey);
   }
   specCache.set(path, data);
+}
+function getCachedSpec(path: string): string | undefined {
+  const data = specCache.get(path);
+  if (data !== undefined) {
+    // LRU 读取刷新：删除重插，保持「最近使用在前」
+    specCache.delete(path);
+    specCache.set(path, data);
+  }
+  return data;
 }
 
 /** 并行加载纹理 URL 列表，返回 THREE.Texture 数组 */
@@ -66,7 +79,7 @@ export async function loadTextures(urls?: string[]): Promise<THREE.Texture[]> {
 /** 获取模型 spec（Go 绑定为唯一事实来源，ADR-004；失败抛错由上层 toast，不再降级 JS 兜底） */
 async function fetchSpec(model: ModelLike): Promise<ModelSpec> {
   if (!model._modelPath) return { models: [] };
-  let jsonStr = specCache.get(model._modelPath);
+  let jsonStr = getCachedSpec(model._modelPath);
   if (!jsonStr) {
     const { GetModel3DSpec } = await getApp();
     jsonStr = await GetModel3DSpec(model._modelPath);

@@ -743,7 +743,7 @@
 | `compKey()` | `frontend/src/utils/3d/model3d:124` | 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突）。 |
 | `buildSceneMesh()` | `frontend/src/utils/3d/model3d:129` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
 | `renderModel3D()` | `frontend/src/utils/3d/model3d:189` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/src/utils/3d/model3d:863` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `screenshotPreview()` | `frontend/src/utils/3d/model3d:868` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
 | `animateNumber()` | `frontend/src/utils/animation/animate:12` | 里程表滚动进位动画 |
 | `Vec3()` | `frontend/src/utils/animation/animation:9` | 三维向量 [x, y, z] |
 | `Keyframe()` | `frontend/src/utils/animation/animation:12` | 关键帧 |
@@ -875,8 +875,8 @@
 | `loadModelData()` | `frontend/src/views/app-preview/loader:13` | 加载模型几何数据 + 纹理 + 作者信息 统一路径：缓存 → WASM 解码 → Go AnalyzeBedrockModel 兜底 |
 | `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:6` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
 | `ModelSpec()` | `frontend/src/views/app-preview/model3d-loader:14` | Go 返回的 3D spec（models 数组） |
-| `loadTextures()` | `frontend/src/views/app-preview/model3d-loader:30` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组 |
-| `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:83` | 预加载：纹理 + spec 并行获取 |
+| `loadTextures()` | `frontend/src/views/app-preview/model3d-loader:43` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组 |
+| `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:96` | 预加载：纹理 + spec 并行获取 |
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:7` | — |
 | `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:13` | — |
 | `loadModel2D()` | `frontend/src/views/app-preview/skeleton:34` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this._root, this._appendDebug 等） |

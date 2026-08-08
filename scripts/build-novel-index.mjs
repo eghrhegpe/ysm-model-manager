@@ -70,7 +70,8 @@ function scanChapters(dir, regionDir) {
     })
     .sort((a, b) => {
       if (a.num !== b.num) return a.num - b.num;
-      return a.name.localeCompare(b.name, 'zh');
+      // 用固定 locale（zh-Hans-CN）比较，避免跨 ICU 版本排序不稳定导致 --check 幂等误报（code_review P2-3）
+      return a.name.localeCompare(b.name, 'zh-Hans-CN');
     });
   return mdFiles;
 }
@@ -79,8 +80,9 @@ function scanChapters(dir, regionDir) {
 function extractH1(dir, regionDir, fileName) {
   const full = path.join(dir, regionDir, fileName);
   try {
-    const content = fs.readFileSync(full, 'utf8');
-    const lines = content.split(/\r?\n/);
+    // 用 readText 去 BOM + 统一 CRLF→LF：带 BOM 的章节文件首行 `# 标题` 才会被正则命中（code_review P2-1）
+    const content = readText(full);
+    const lines = content.split('\n');
     for (const line of lines) {
       const m = line.match(/^#\s+(.+?)\s*$/);
       if (m) return m[1];

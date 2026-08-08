@@ -102,7 +102,11 @@ function parseAdrs() {
     const titleM = text.match(/^# ADR-(\d{3})[：:]\s*(.+)$/m);
     const statusM = text.match(/^-\s*\*\*状态\*\*[：:]\s*(.+)$/m);
     const dateM = text.match(/^-\s*\*\*日期\*\*[：:]\s*(.+)$/m);
-    if (!titleM) continue;
+    if (!titleM) {
+      // 与 adr-check.mjs 的 TITLE_MISSING 一致：无标题 ADR 不应静默跳过，生成器落一条提示
+      console.error(`[WARN] ${f} 缺少 '# ADR-NNN：' 标题（将被登记表忽略，adr-check 会阻断）`);
+      continue;
+    }
     list.push({
       num: parseInt(titleM[1], 10),
       file: f,
@@ -129,7 +133,8 @@ function mapStatus(raw) {
   if (/已取代/.test(s)) return `❌ 已取代${tail}`;
   if (/部分采纳/.test(s)) return `🔄 部分采纳${tail}`;
   if (/已采纳/.test(s)) {
-    if (/违规|不一致|未修复/.test(s)) return `⚠️ 已采纳${tail}`;
+    // 精确匹配「未修复/不一致」而非裸「违规」：`违规已修复` 不应被误判为 ⚠️ 遗留未修复（code_review P2）
+    if (/未修复|不一致(?:未修复)?/.test(s)) return `⚠️ 已采纳${tail}`;
     return `✅ 已采纳${tail}`;
   }
   return s;

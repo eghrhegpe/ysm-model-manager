@@ -28,13 +28,13 @@ use_when:
 
 ## 与其他子系统关系
 
-- 被 `internal/app/app.go` 的 GetVersion binding 返回给前端展示
-- 被 `internal/app/app_config.go` 使用：`CurrentVersion()` 返回、`updater.Check(version.Version)` 作为自动更新的当前版本入参（见 [go_updater](./go-updater.md)）
+- 被 `internal/app/app.go` 的 `GetAppVersion` binding 返回给前端展示（知识卡旧文称 GetVersion，命名漂移已修正）
+- 被 `internal/app/app_config.go` 使用：`CurrentVersion()` 返回（与 GetAppVersion 双入口同源冗余，P4 观察待收敛）、`updater.Check(version.Version)` 作为自动更新的当前版本入参（见 [go_updater](./go-updater.md)）
 
 ## 不变量
 
-- 只允许构建期注入，运行时不得改写
-- 发版流程（`cmd/build-release.ps1` / `docs/releases/`）必须注入版本号，否则更新检查会以 `"dev"` 比较
+- 只允许构建期注入，运行时不得改写（`Version` 为导出可变全局，防写仅靠约定，P4 文档级）
+- 发版流程（`cmd/build-release.ps1` / `docs/releases/`）必须注入版本号，否则更新检查会以 `"dev"` 比较；dev 语义下 `splitVer("dev")` 归零 → 更新检查恒提示有新版（P3 观察：无代码兜底，updater 无 dev 特判测试）
 
 ## 相关
 

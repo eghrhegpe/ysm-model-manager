@@ -697,12 +697,12 @@
 | `unmountElement()` | `frontend/src/test-utils/index:38` | 卸载元素：从 DOM 移除。 |
 | `sleep()` | `frontend/src/test-utils/index:45` | 简单睡眠（测试中等待异步渲染）。 |
 | `waitFor()` | `frontend/src/test-utils/index:54` | 轮询等待条件满足（兼容现有测试风格，作为统一导出）。 |
-| `waitForElementToBeRemoved()` | `frontend/src/test-utils/index:79` | 轮询等待元素被移除。 |
+| `waitForElementToBeRemoved()` | `frontend/src/test-utils/index:83` | 轮询等待元素被移除。 |
 | `QueryContainer()` | `frontend/src/test-utils/query-by-testid:11` | — |
 | `queryByTestId()` | `frontend/src/test-utils/query-by-testid:19` | — |
-| `getByTestId()` | `frontend/src/test-utils/query-by-testid:26` | — |
-| `getAllByTestId()` | `frontend/src/test-utils/query-by-testid:35` | — |
-| `queryAllByTestId()` | `frontend/src/test-utils/query-by-testid:44` | — |
+| `getByTestId()` | `frontend/src/test-utils/query-by-testid:27` | — |
+| `getAllByTestId()` | `frontend/src/test-utils/query-by-testid:36` | — |
+| `queryAllByTestId()` | `frontend/src/test-utils/query-by-testid:45` | — |
 | `RenderOptions()` | `frontend/src/test-utils/render:6` | 渲染配置 |
 | `RenderResult()` | `frontend/src/test-utils/render:13` | — |
 | `renderComponent()` | `frontend/src/test-utils/render:31` | 渲染一个自定义元素到 DOM。 |

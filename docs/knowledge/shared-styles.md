@@ -20,7 +20,7 @@ use_when:
 
 ## 概览
 
-两个样式模块为 Shadow DOM 组件提供可复用的 CSS 字符串：`css/shared-styles.ts` 导出全应用统一的按钮体系 `.btn-base` 与通用 focus-visible 规则；`components/app-tree-styles.ts` 导出 app-tree 组件的完整样式 `treeCSS`（内联插入 `${btnBaseCSS}` 复用按钮体系）。样式独立成文件可避免 JS 热更新时重编译 CSS，所有颜色/间距/字号均消费 CSS 变量，随主题切换自动适配。
+两个样式模块为 Shadow DOM 组件提供可复用的 CSS 字符串：`utils/dom/css.ts` 导出全应用统一的按钮体系 `.btn-base` 与通用 focus-visible 规则；`views/app-tree/app-tree-styles.ts` 导出 app-tree 组件的完整样式 `treeCSS`（内联插入 `${btnBaseCSS}` 复用按钮体系）。样式独立成文件可避免 JS 热更新时重编译 CSS，所有颜色/间距/字号均消费 CSS 变量，随主题切换自动适配。
 
 ## 核心职责
 
@@ -44,9 +44,9 @@ use_when:
 ## 不变量
 
 - 所有颜色/尺寸必须走 CSS 变量（`var(--txt)`/`var(--bd)`/`var(--btn-*)` 等），禁止引入硬编码主题色（治理红线 §3.3；`#a6e3a1` 等少量状态色为历史存量）
-- 新增按钮样式必须扩展 `.btn-base` 变体，禁止另起一套按钮类（Design.md 唯一设计规范）
-- `treeCSS` 内联 `${btnBaseCSS}` 时必须保持按钮体系单一来源，不得复制改写
-- 动画必须可被 `no-animations` 类关闭（关键行动画补 `animation: none !important` 规则）
+- 新增按钮样式必须扩展 `.btn-base` 变体，禁止另起一套按钮类（Design.md 唯一设计规范）；`components.css` 存在 `.btn-base` 平行副本（light DOM 用，primary:hover 混色与 css.ts 分叉，P3 观察待统一）
+- `treeCSS` 内联 `${btnBaseCSS}` **与 `${focusVisibleCSS}`**（P2 修复：原仅内联按钮体系，`.srch-inp`/`.sort-sel` 显式 `outline:none` 导致键盘聚焦无可见焦点环，a11y 缺口）；保持按钮体系单一来源，不得复制改写
+- 动画必须可被 `no-animations` 类关闭——**Shadow DOM 内必须用 `:host-context(.no-animations)`**（P2 修复：该类挂在 documentElement 上，后代选择器不能跨界上溯 shadow 边界，原 `.no-animations .fl` 永不命中）
 
 ## 相关
 

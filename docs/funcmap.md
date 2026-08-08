@@ -13,7 +13,7 @@
 | Go·错误 | 1 | 1 |
 | go/fileops | 2 | 13 |
 | Go·文件系统 | 1 | 4 |
-| Go·几何 | 2 | 7 |
+| Go·几何 | 2 | 8 |
 | Go·导入 | 2 | 15 |
 | Go·安装 | 1 | 6 |
 | go/instance | 1 | 2 |
@@ -40,7 +40,7 @@
 | frontend/views | 52 | 144 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **165** | **768** |
+| **合计** | **165** | **769** |
 
 ## Go·头像
 
@@ -120,6 +120,7 @@
 | `ParseFrom7z()` | `go/geometry/archive:575` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
 | `IsMainModelName()` | `go/geometry/archive:848` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
 | `ParseComponentsFromZip()` | `go/geometry/archive:860` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
+| `ParseComponentsFrom7z()` | `go/geometry/archive:941` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
 | `ParseBedrockGeometry()` | `go/geometry/parse:17` | ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式） 注意：data 大小不应超过 maxP |
 
 ## Go·导入
@@ -494,7 +495,7 @@
 | `App.ReadFileBytes()` | `internal/app/app_model:71` | — |
 | `App.AnalyzeBedrockModel()` | `internal/app/app_model:89` | — |
 | `App.GetModel3DSpec()` | `internal/app/app_model:134` | — |
-| `App.SaveScreenshotFile()` | `internal/app/app_model:179` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
+| `App.SaveScreenshotFile()` | `internal/app/app_model:185` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
 | `App.ExportBoneStructures()` | `internal/app/app_scan:23` | ========== 批量导出骨骼结构 ========== |
 | `App.ExportModelStructureJSON()` | `internal/app/app_scan:79` | ExportModelStructureJSON 导出单模型骨骼结构 |
 | `App.SearchModels()` | `internal/app/app_scan:116` | ========== 高级搜索 ========== |

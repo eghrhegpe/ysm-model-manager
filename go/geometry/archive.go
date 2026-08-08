@@ -935,3 +935,18 @@ func buildComponents(geoFiles []geoEntry, modelOrder []string) ([]types.BedrockM
 	}
 	return comps, nil
 }
+
+// ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构，
+// 复用 collectArchiveFiles/buildComponents（含 arm、main 优先、TexSlot 全局化）。
+func ParseComponentsFrom7z(data []byte, size int64) ([]types.BedrockModel, error) {
+	reader, err := sevenzip.NewReader(bytes.NewReader(data), size)
+	if err != nil {
+		return nil, err
+	}
+	files := make([]archiveEntry, 0, len(reader.File))
+	for _, f := range reader.File {
+		files = append(files, archiveEntry{name: f.Name, file: f})
+	}
+	modelOrder, _, geoFiles, _, _, _ := collectArchiveFiles(files)
+	return buildComponents(geoFiles, modelOrder)
+}

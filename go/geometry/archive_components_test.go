@@ -80,3 +80,14 @@ func TestParseComponentsFromZipEmpty(t *testing.T) {
 		t.Fatal("损坏 zip 组件应为 nil")
 	}
 }
+
+// TestParseComponentsFrom7zBadData 损坏 7z 返回错误（7z 构造需 sevenzip Writer，仅覆盖错误路径）
+func TestParseComponentsFrom7zBadData(t *testing.T) {
+	comps, err := ParseComponentsFrom7z([]byte("not7z"), 5)
+	if err == nil {
+		t.Fatal("损坏 7z 应返回错误")
+	}
+	if comps != nil {
+		t.Fatal("损坏 7z 组件应为 nil")
+	}
+}

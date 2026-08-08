@@ -165,6 +165,12 @@ func (a *App) collect3DComponents(modelPath, ext string) []types.BedrockModel {
 				return comps
 			}
 		}
+	case ".7z":
+		if data, err := os.ReadFile(modelPath); err == nil {
+			if comps, cerr := geometry.ParseComponentsFrom7z(data, int64(len(data))); cerr == nil {
+				return comps
+			}
+		}
 	case ".json":
 		// 解压目录的 ysm.json 路径
 		if strings.HasSuffix(strings.ToLower(modelPath), "ysm.json") {

@@ -115,3 +115,35 @@ describe("summaryCardHTML 徽章与转义", () => {
     expect(html).not.toContain("<script>");
   });
 });
+
+// ===== header-only 卡 basename 作者/作品分行（P3 修复回归测试）=====
+// 覆盖 p 路径的 4 种组合：作者+作品 / 仅作品 / 仅作者 / 两者皆无，
+// 锁定「作者行与作品行分开、作品不被标为作者」的修复
+describe("summaryCardHTML header-only basename 作者/作品分行", () => {
+  it("作者+作品 → 标题含作者、作品行含 tag-work", () => {
+    const html = summaryCardHTML(null, { isYsm: true }, "[作者A]【作品B】角色.ysm");
+    expect(html).toContain('class="tag-author">作者A');
+    expect(html).toContain('class="tag-work">作品B');
+    expect(html).toContain('<span class="md-label">作品</span>');
+  });
+
+  it("仅作品 → 作品行渲染且不被标为作者", () => {
+    const html = summaryCardHTML(null, { isYsm: true }, "【作品B】角色.ysm");
+    expect(html).toContain('class="tag-work">作品B');
+    // 作者行不应出现（作品不得被标为作者）
+    expect(html).not.toContain('<span class="md-label">作者</span>');
+  });
+
+  it("仅作者 → 标题含作者、无作品行", () => {
+    const html = summaryCardHTML(null, { isYsm: true }, "[作者A]角色.ysm");
+    expect(html).toContain('class="tag-author">作者A');
+    expect(html).not.toContain('<span class="md-label">作品</span>');
+  });
+
+  it("无作者无作品 → 标题显示角色名、无作者/作品行", () => {
+    const html = summaryCardHTML(null, { isYsm: true }, "角色.ysm");
+    expect(html).toContain("角色");
+    expect(html).not.toContain('<span class="md-label">作者</span>');
+    expect(html).not.toContain('<span class="md-label">作品</span>');
+  });
+});

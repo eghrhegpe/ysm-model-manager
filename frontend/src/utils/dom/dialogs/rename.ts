@@ -28,8 +28,15 @@ export async function showRenameDialog(
     overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
       if (e.key === "Escape") close(null);
       // P3 修复：Enter 键接线——按钮文案「重命名 (Enter)」但原实现只处理 Escape，
-      // 键盘 Enter 无法提交（与按钮 onclick 共享同一校验/关闭路径）
-      else if (e.key === "Enter") {
+      // 键盘 Enter 无法提交（与按钮 onclick 共享同一校验/关闭路径）。
+      // P2 修复（code_review）：仅当焦点不在按钮上时才转发 Enter 到 #rn-ok——
+      // 聚焦在「取消 (Esc)」/「📖 读取头部」按钮时 Enter 是原生激活方式，
+      // 若一律 preventDefault + 转发会把「Tab 到取消按 Enter」变成意外重命名
+      else if (
+        e.key === "Enter" &&
+        !(e.target instanceof HTMLButtonElement) &&
+        !e.isComposing
+      ) {
         e.preventDefault();
         (box.querySelector("#rn-ok") as HTMLElement | null)?.click();
       }

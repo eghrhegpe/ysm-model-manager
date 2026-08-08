@@ -59,15 +59,20 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
     const suggestEl = box.querySelector("#te-suggest") as HTMLElement;
 
     let tags: string[] = [];
+    // P2 修复（code_review）：loading 标志——保存按钮在加载完成前禁用，
+    // 否则 tags 仍为初始 [] 时点保存会 SetModelTags(path, [])，
+    // 后端把空列表当「删除条目」→ 该模型全部标签被永久清除（数据丢失）
+    let loading = true;
 
     // === 加载 ===
     (async () => {
-      const inputEl2 = inputEl;
       const addBtn = box.querySelector("#te-add") as HTMLButtonElement | null;
-      // P3 修复：加载期间禁用输入/添加——GetModelTags 异步返回晚于用户输入时
+      const saveBtn = box.querySelector("#te-save") as HTMLButtonElement | null;
+      // P3 修复：加载期间禁用输入/添加/保存——GetModelTags 异步返回晚于用户输入时
       // `tags = [...]` 会覆写用户已编辑内容（竞态）；加载完成后再启用
-      inputEl2.disabled = true;
+      inputEl.disabled = true;
       if (addBtn) addBtn.disabled = true;
+      if (saveBtn) saveBtn.disabled = true;
       try {
         const App = await getApp();
         tags = (await App.GetModelTags(modelPath)) || [];
@@ -77,9 +82,11 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
       } catch (e) {
         errEl.textContent = "⚠️ 加载标签失败: " + (e as Error).message;
       } finally {
-        inputEl2.disabled = false;
+        loading = false;
+        inputEl.disabled = false;
         if (addBtn) addBtn.disabled = false;
-        inputEl2.focus();
+        if (saveBtn) saveBtn.disabled = false;
+        inputEl.focus();
       }
     })();
 

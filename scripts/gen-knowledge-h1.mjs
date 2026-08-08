@@ -32,8 +32,8 @@ function parseCard(text) {
   const fm = parseFrontmatter(text);
   if (!fm) return null;
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
-  // P2：name 解析改走共享 getScalar（处理缩进键/引号/行内注释/多行值），
-  // 不再用列 0 手写正则（code_review P2）
+  // P2：name 解析改走共享 getScalar（与 check-knowledge-drift 同口径，支持行内注释剥离；
+  // 注：getScalar 仅处理列 0 键 + 单行标量，引号/多行值不在其能力内，与旧正则一致）
   const name = getScalar(fm, 'name');
   const h1Exists = /^#\s+.+$/m.test(body);
   return { name: name ? name.trim() : null, body, h1Exists };
@@ -49,6 +49,7 @@ function main() {
 
   const missing = [];
   const noName = [];
+  const failures = []; // 读/写失败计数：CI 模式下不可静默通过（code_review P2）
   for (const f of fs.readdirSync(KNOW_DIR).filter((f) => f.endsWith('.md'))) {
     if (NON_CARDS.has(f.toLowerCase())) continue; // P3-8：大小写不敏感，与 check-knowledge-drift 一致
     const filePath = path.join(KNOW_DIR, f);
@@ -56,6 +57,7 @@ function main() {
     try {
       text = fs.readFileSync(filePath, 'utf8');
     } catch (e) {
+      failures.push(f); // 记录而非仅 warn——check 模式须以非零退出暴露未校验卡
       console.warn(`⚠️ 读取失败（跳过）: ${f} — ${e.message}`);
       continue; // P3-5：单文件不可读不中断整轮
     }
@@ -81,6 +83,11 @@ function main() {
     // P3-7：缺 name 的卡无法补 H1，check 模式应失败（此前仅 warn 可绿灯）
     if (noName.length) {
       console.error(`❌ ${noName.length} 张卡缺 name 字段（无法补 H1），请先修复 frontmatter`);
+      process.exit(1);
+    }
+    // P2：读取失败同样使 check 失败——有卡未校验不得绿灯
+    if (failures.length) {
+      console.error(`❌ ${failures.length} 张卡读取失败（未校验），请检查文件权限/损坏: ${failures.slice(0, 5).join(', ')}${failures.length > 5 ? '…' : ''}`);
       process.exit(1);
     }
     console.log('✅ 所有知识卡正文均有 # 标题');

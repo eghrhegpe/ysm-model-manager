@@ -19,7 +19,9 @@ export function getScalar(fm, key) {
   if (!line) return undefined;
   const v = line[1].trim();
   if (v === '' || v.startsWith('<')) return undefined;
-  return v.replace(/\s*#.*/, '').trim();
+  // 仅当 # 前有空白才按行内注释剥离（code_review P2）：`name: C# 指南` 的 # 属合法值
+  // 不得截断，`name: Foo  # 说明` 的 # 前有空白才是注释
+  return v.replace(/\s+#.*$/, '').trim();
 }
 
 /** 提取列表字段（块列表或行内数组），返回字符串数组。 */

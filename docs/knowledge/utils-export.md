@@ -44,10 +44,11 @@ use_when:
 
 ## 不变量
 
-- 离屏渲染器必须 `preserveDrawingBuffer: true` 才能 toDataURL 截图；用完必须 dispose（geometry/material/renderer），否则 WebGL 上下文泄漏
-- preview-cache 淘汰必须走 evict 回调释放 blob URL，绕过回调直接删 Map 会泄漏对象 URL
+- 离屏渲染器必须 `preserveDrawingBuffer: true` 才能 toDataURL 截图；用完必须 dispose（geometry/material/renderer），否则 WebGL 上下文泄漏。**整个「renderer 创建 → 场景构建 → 四角度循环」都在 try/finally 内**（P2 修复：原 try 起点在角度循环，场景构建段抛错 renderer 永不 dispose），且失败统一返回 `null` 不 reject（P2 修复：原 spec 获取/JSON.parse 失败直接 reject，消费者无 catch → unhandled rejection）；dispose 后追加 `forceContextLoss()` 强制释放上下文（P3）
+- preview-cache 淘汰**与覆盖**都必须走 evict 回调释放 blob URL（P2 修复：原同 key `cacheSet` 覆盖旧值不触发 evict，WASM 解码产物的旧 URL 泄漏）
 - 缓存是模块级单例：组件 disconnectedCallback 不得清空（跨页复用），淘汰只由 FIFO 上限驱动
 - Canvas 手动导出 PNG 按钮（原 canvas-export.ts）与仓库批量截图（batchRepoScreenshots）因长期无消费方已在死代码清理中移除；如需恢复以本卡与 git 历史为准
+- `AngleShot.name` 实现为 `string`（知识卡声明联合类型，运行时只产出四角度，类型收紧留待后续）
 
 ## 相关
 

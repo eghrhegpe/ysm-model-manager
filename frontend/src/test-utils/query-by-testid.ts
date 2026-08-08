@@ -46,9 +46,13 @@ export function queryAllByTestId(
   container: QueryContainer,
   testid: string,
 ): Element[] {
-  // P2 修复：前缀匹配 `^=`——知识卡/Design.md §19.1 约定「同域多实例前缀命名空间」
-  // （如 tree-file-1/tree-file-2 → getAllByTestId(root,"tree-file") 一次取全）。
-  // 原实现精确匹配 `=`，组件一旦用带序号 testid 则 getAll 返回 0 抛错（契约漂移）。
-  // 注意：精确 testid 值（如 "nav-item"）也是其自身前缀的子集，现有测试不受影响。
-  return Array.from(scope(container).querySelectorAll(`[data-testid^="${testid}"]`));
+  // P2 修复：前缀匹配限定「精确 testid 或 testid + '-' 序号后缀」——
+  // 裸 `^=` 会把兄弟角色也扫进来（tree-dir 匹配到 tree-dir-toggle，row-tpl.ts:43-44），
+  // 且空串会匹配全部 testid。复合选择器既支持 tree-file-1/2 编号实例，
+  // 又排除 tree-dir-toggle 这类「testid 是其前缀」的其他角色。
+  return Array.from(
+    scope(container).querySelectorAll(
+      `[data-testid="${testid}"], [data-testid^="${testid}-"]`,
+    ),
+  );
 }

@@ -23,8 +23,9 @@ func TestVersion_Format(t *testing.T) {
 	if v == "" {
 		t.Fatal("Version 不应为空")
 	}
-	// dev 或 vX.Y.Z[-suffix] 格式（P4：补 $ 锚定，防 "v1.2.3garbage!" 通过）
-	ok := v == "dev" || regexp.MustCompile(`^v?\d+\.\d+\.\d+`).MatchString(v)
+	// dev 或 vX.Y.Z[-suffix] 格式（P4：真补 $ 锚定——原注释声称锚定但正则未锚，
+	// "v1.2.3garbage!" 仍通过；可选后缀保留 "-beta" 类格式）
+	ok := v == "dev" || regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`).MatchString(v)
 	if !ok {
 		t.Fatalf("Version 格式异常: %q", v)
 	}

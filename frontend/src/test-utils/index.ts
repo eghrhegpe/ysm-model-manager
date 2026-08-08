@@ -64,7 +64,7 @@ export async function waitFor(
       try {
         if (fn()) resolve();
         else if (Date.now() - start < timeout) requestAnimationFrame(tick);
-        else reject(new Error(`waitFor timed out after ${timeout}ms${firstErr ? `; last error: ${String((firstErr as Error)?.message ?? firstErr)}` : ""}`));
+        else reject(new Error(`waitFor timed out after ${timeout}ms${firstErr ? `; first error: ${String((firstErr as Error)?.message ?? firstErr)}` : ""}`));
       } catch (e) {
         if (firstErr === null) firstErr = e;
         if (Date.now() - start < timeout) requestAnimationFrame(tick);

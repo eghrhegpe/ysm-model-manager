@@ -223,8 +223,28 @@ func TestDownload_RejectsOversized(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if _, err := Download(server.URL, ""); err == nil {
+	// P3 修复（code_review）：加路径段——原 `server.URL` 的 filepath.Base 在 Windows 上
+	// 是含冒号的非法文件名，os.Create 在 Content-Length 预检前失败 → 超限分支在
+	// 主平台从未真正执行（测试通过但测的是别的错误）
+	if _, err := Download(server.URL+"/pkg.zip", ""); err == nil {
 		t.Fatal("Content-Length 超限应返回错误")
+	}
+}
+
+func TestDownload_HTTPError(t *testing.T) {
+	// P2 修复（code_review）：非 200 分支专项测试——404 错误页 HTML 不得被当更新包装盘
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("<html>404 Not Found</html>"))
+	}))
+	defer server.Close()
+
+	path, err := Download(server.URL+"/pkg.zip", "")
+	if err == nil {
+		t.Fatal("404 应返回错误（错误页不得当更新包）")
+	}
+	if path != "" {
+		t.Errorf("失败时不应返回临时文件路径，得到 %q", path)
 	}
 }
 

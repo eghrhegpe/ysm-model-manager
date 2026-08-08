@@ -97,6 +97,10 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         await RenameDir(absDir, name.trim());
+        // P3 修复（code_review）：dir:rename 同样清空选中态——文件夹重命名后
+        // 旧路径失效，滞留 keys 会让 Delete 误删新文件或显示陈旧「已选 N 个文件」
+        selectState.keys.clear();
+        selectState.lastKey = null;
         await reload(vm);
         bus.emit("stats:refresh");
       } catch (e) {
@@ -168,12 +172,14 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
         try {
           await RemoveDir(absDir);
         } catch {}
-        await reload(vm);
-        bus.emit("stats:refresh");
-        // P2 修复：数据变更链路（回收/重命名/移动）成功后清空选中态——
-        // selectState 是模块级单例，旧路径不失效会滞留「已选 N 个文件」并误删已不存在的路径
+        // P2 修复：数据变更链路（回收/重命名/移动）成功前清空选中态——
+        // selectState 是模块级单例，旧路径不失效会滞留「已选 N 个文件」并误删已不存在的路径。
+        // 必须在 reload 之前清空（与 app-tree/index.ts:337-340 删除流程一致）：
+        // 重渲染时 footer 统计 `keys.size>0` 会跳过 updateStat，清空后再 reload 才能刷新页脚
         selectState.keys.clear();
         selectState.lastKey = null;
+        await reload(vm);
+        bus.emit("stats:refresh");
         const suffix = errors.length
           ? "，失败 " +
             errors.length +
@@ -227,11 +233,12 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
               fail++;
             }
           }
-          await reload(vm);
-          bus.emit("stats:refresh");
-          // P2 修复：重命名成功后清空选中态（旧路径已失效，滞留会误删不存在路径）
+          // P2 修复：重命名前清空选中态（旧路径已失效，滞留会误删不存在路径；
+          // 须在 reload 前清空才能刷新页脚统计）
           selectState.keys.clear();
           selectState.lastKey = null;
+          await reload(vm);
+          bus.emit("stats:refresh");
           bus.emit("toast:show", {
             msg: `✅ 批量重命名完成：${ok} 成功${fail ? "，失败 " + fail : ""}`,
             duration: 3000,
@@ -269,11 +276,12 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
               fail++;
             }
           }
-          await reload(vm);
-          bus.emit("stats:refresh");
-          // P2 修复：重命名成功后清空选中态（旧路径已失效，滞留会误删不存在路径）
+          // P2 修复：重命名前清空选中态（旧路径已失效，滞留会误删不存在路径；
+          // 须在 reload 前清空才能刷新页脚统计）
           selectState.keys.clear();
           selectState.lastKey = null;
+          await reload(vm);
+          bus.emit("stats:refresh");
           bus.emit("toast:show", {
             msg: `✅ 批量重命名完成：${ok} 成功${fail ? "，失败 " + fail : ""}`,
             duration: 3000,

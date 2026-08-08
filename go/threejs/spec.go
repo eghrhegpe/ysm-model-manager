@@ -355,11 +355,9 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 		texH = float64(c.CubeTexH)
 	}
 
-	if sx == 0 || sy == 0 || sz == 0 {
-		return nil
-	}
-
 	// 最小/最大顶点（不取反）
+	// 注：零尺寸 cube 不再丢弃（对齐 C# BuildCubeMeshData：零厚度面由下方
+	// thicknessEpsilon 修正保留，见 spec_portability 对比 #3）
 	fx := ox
 	fy := oy
 	fz := oz

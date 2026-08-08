@@ -192,10 +192,23 @@ func TestEulerToQuaternion_180X(t *testing.T) {
 // ====== buildCubeMeshData ======
 
 func TestBuildCubeMeshData_ZeroSize(t *testing.T) {
+	// 全零尺寸 cube → 对齐 C#：保留（三轴均被 thicknessEpsilon 修正，见 spec_portability 对比 #3）
 	c := types.Cube2D{Size: [3]float64{0, 0, 0}}
 	md := buildCubeMeshData(c, vec3{}, 64, 64, "bone1", 0)
-	if md != nil {
-		t.Error("零尺寸 cube 应返回 nil")
+	if md == nil {
+		t.Fatal("零尺寸 cube 应保留（不再返回 nil）")
+	}
+	// 每轴跨度 ≥ thicknessEpsilon
+	for _, axis := range []int{0, 1, 2} {
+		lo, hi := 1e9, -1e9
+		for i := 0; i < len(md.Positions); i += 3 {
+			v := md.Positions[i+axis]
+			if v < lo { lo = v }
+			if v > hi { hi = v }
+		}
+		if hi-lo < thicknessEpsilon {
+			t.Errorf("轴 %d 跨度 %v 应 ≥ %v", axis, hi-lo, thicknessEpsilon)
+		}
 	}
 }
 
@@ -249,7 +262,7 @@ func TestBuildCubeMeshData_CustomTexDim(t *testing.T) {
 }
 
 func TestBuildCubeMeshData_ThinCube(t *testing.T) {
-	// 零厚度面（sx=0）→ buildCubeMeshData 返回 nil
+	// 零厚度面（sx=0）→ 对齐 C# BuildCubeMeshData：保留 + thicknessEpsilon 修正（见 spec_portability 对比 #3）
 	c := types.Cube2D{
 		Origin: [3]float64{0, 0, 0},
 		Size:   [3]float64{0, 8, 8}, // x 方向厚度为 0
@@ -257,7 +270,13 @@ func TestBuildCubeMeshData_ThinCube(t *testing.T) {
 		UV:     [2]float64{0, 0},
 	}
 	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
-	if md != nil {
-		t.Error("零尺寸 cube 应返回 nil")
+	if md == nil {
+		t.Fatal("零尺寸 cube 应保留（不再返回 nil）")
+	}
+	// lx==hx → hx += thicknessEpsilon：X 方向跨度（East 面 x=hx，West 面 x=lx）非零
+	// East 面顶点1 是 Positions[0..2]，West 面顶点1 是 Positions[12..14]
+	xEast, xWest := md.Positions[0], md.Positions[12]
+	if xEast-xWest < thicknessEpsilon {
+		t.Errorf("零厚度 X 方向应被修正为 ≥%v，实际 %v", thicknessEpsilon, xEast-xWest)
 	}
 }

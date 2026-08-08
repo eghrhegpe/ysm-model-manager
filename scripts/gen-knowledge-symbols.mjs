@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseFrontmatter, parseSourceFiles } from './_lib/frontmatter.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
-import { getExportedSymbolsAny } from './_lib/source-graph.mjs';
+import { getExportedSymbolsAny, EXCLUDE_DIRS } from './_lib/source-graph.mjs';
 import { ROOT } from './_lib/scan-files.mjs';
 
 const KNOWLEDGE_DIR = path.join(ROOT, 'docs', 'knowledge');
@@ -111,10 +111,13 @@ function walkDir(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (e.name.startsWith('.')) continue;
+    // 复用共享层 EXCLUDE_DIRS（__tests__/__mocks__/node_modules/wailsjs/bindings/dist）：
+    // 自研递归此前不排除生成物目录，source_files 指向整包目录时会深入 bindings/dist（code_review P2-2）
+    if (e.isDirectory() && EXCLUDE_DIRS.has(e.name)) continue;
     const p = path.join(dir, e.name);
     if (e.isDirectory()) {
       walkDir(p, out);
-    } else if (e.isFile() && /\.(ts|tsx|js|jsx|go)$/.test(e.name) && !/(\.test\.|\.spec\.|\.d\.ts$)/.test(e.name)) {
+    } else if (e.isFile() && /\.(ts|tsx|js|jsx|go)$/.test(e.name) && !/(\.test\.|\.spec\.|_test\.go$|\.d\.ts$)/.test(e.name)) {
       out.push(p);
     }
   }

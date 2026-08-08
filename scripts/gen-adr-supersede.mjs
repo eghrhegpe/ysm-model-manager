@@ -53,6 +53,8 @@ function parseAdrHeader(filePath) {
   let title = '';
   let status = '';
   let statusLine = -1;
+  // new-adr.mjs 写独立行 `- **被取代**：[ADR-NNN] 取代`（P1-1：读取侧兼容）
+  let supersededBy = null;
 
   for (let i = 0; i < Math.min(lines.length, 20); i++) {
     const line = lines[i];
@@ -72,13 +74,19 @@ function parseAdrHeader(filePath) {
       statusLine = i;
       continue;
     }
+
+    // - **被取代**：[ADR-NNN] 取代（new-adr --supersedes 写入的独立标注行）
+    const mSup = line.match(/^-\s*\*\*被取代\*\*\s*[：:]\s*\[?ADR-(\d+)\]?\s*(?:取代|替代|推翻|退役)/);
+    if (mSup && supersededBy === null) {
+      supersededBy = parseInt(mSup[1], 10);
+    }
   }
 
   if (num === null) return { error: '未找到 ADR 编号' };
   if (!status) return { error: '未找到可解析的状态字段' };
   if (!title) return { error: '未找到 ADR 标题' };
 
-  return { num, title, status, statusLine };
+  return { num, title, status, statusLine, supersededBy };
 }
 
 // ── 主流程 ─────────────────────────────────────────────
@@ -106,9 +114,12 @@ function main() {
   for (const file of files) {
     const parsed = parseAdrHeader(path.join(ADR_DIR, file));
     if (parsed && !parsed.error && parsed.num !== null) {
-      const { num, title, status, statusLine } = parsed;
-      adrList.push({ num, file, title, status, statusLine });
+      const { num, title, status, statusLine, supersededBy } = parsed;
+      adrList.push({ num, file, title, status, statusLine, supersededBy });
       adrNums.add(num);
+    } else if (parsed?.error) {
+      // 解析失败（BOM/标题非 3 位编号/状态缺失）静默跳过会让 --check 假绿（P2-2）：输出警告
+      console.error(`⚠️ ${file} 首部解析失败已跳过：${parsed.error}`);
     }
   }
   adrList.sort((a, b) => a.num - b.num || a.file.localeCompare(b.file));
@@ -119,20 +130,44 @@ function main() {
     const text = fs.readFileSync(path.join(ADR_DIR, meta.file), 'utf8');
     const lines = text.split(/\r?\n/);
 
-    // ① 状态行声明「被 ADR-NNN 取代」
-    const mBy = meta.status.match(RE_SUPERSEDED_BY);
+    // ① 状态行声明「被 ADR-NNN 取代」，或独立 `- **被取代**：` 行（new-adr --supersedes 写入，P1-1）
+    const mBy = meta.status.match(RE_SUPERSEDED_BY)
+      ?? (meta.supersededBy != null ? { 1: String(meta.supersededBy) } : null);
     const isPartial = Boolean(mBy) && /部分|局部|§\d|条目\s*\d/.test(meta.status);
     if (mBy && parseInt(mBy[1], 10) !== num) {
-      const entry = { old: num, by: parseInt(mBy[1], 10), source: meta.status };
-      (isPartial ? partial : registered).push(entry);
+      // ①b 校验取代者编号存在性：指向不存在 ADR 的错写（非法编号/幽灵号）应报可疑而非照录已登记（P2-3）
+      const byNum = parseInt(mBy[1], 10);
+      if (!adrNums.has(byNum)) {
+        suspicious.push({ num, target: byNum, line: `状态行/被取代行指向不存在的 ADR-${byNum}: ${meta.status.slice(0, 80)}` });
+      } else {
+        const entry = { old: num, by: byNum, source: meta.status };
+        (isPartial ? partial : registered).push(entry);
+      }
     }
 
-    // ③ 状态行自身废弃（⚠️/🗑️ 强调或开头即废弃类词）但未指明取代者
+    // ③ 状态行自身废弃（⚠️/🗑️/🧊 强调或开头即废弃类词）但未指明取代者
     if (RE_SELF_DEPRECATED.test(meta.status) && !mBy) {
       unpointed.push({ num, source: meta.status });
     }
 
-    // ② / ④ 正文扫描（跳过首部状态行）
+    // ② 状态行内宣称（P1-2）：`✅ 已采纳（推翻了 ADR-021...）` 之类状态行宣称，
+    // 此前被 headerEnd = statusLine+1 跳过导致对 ② 完全不可见（ADR-037→021 实锤假绿）
+    const statusClaims = [];
+    for (const m of meta.status.matchAll(RE_CLAIM_A_G)) statusClaims.push(parseInt(m[1], 10));
+    for (const m of meta.status.matchAll(RE_CLAIM_B_G)) statusClaims.push(parseInt(m[1], 10));
+    for (const target of statusClaims) {
+      if (target !== num && adrNums.has(target)) {
+        const tMeta = adrList.find((e) => e.num === target);
+        const tMarked = RE_SUPERSEDED_BY.test(tMeta.status)
+          || (tMeta.supersededBy != null)
+          || RE_SELF_DEPRECATED.test(tMeta.status);
+        if (!tMarked) {
+          unmarked.push({ claimedBy: num, target, line: `[状态行] ${meta.status.slice(0, 120)}` });
+        }
+      }
+    }
+
+    // ② / ④ 正文扫描（跳过首部状态行；状态行宣称已在上方单独处理）
     const headerEnd = meta.statusLine >= 0
       ? Math.min(lines.length, meta.statusLine + 1)
       : Math.min(lines.length, 20);

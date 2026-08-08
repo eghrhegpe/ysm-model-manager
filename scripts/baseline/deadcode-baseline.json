@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-07T22:52:25.706Z",
+  "generated": "2026-08-08T09:58:33.994Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|jscpd",
@@ -53,6 +53,7 @@
     "src/utils/3d/model2d.ts#src/utils/3d/model2d.ts",
     "src/utils/3d/model3d-spec.test.ts#src/utils/3d/model3d-spec.test.ts",
     "src/utils/dom/dialogs/adv-filter.ts#src/utils/dom/dialogs/modal.ts",
+    "src/utils/dom/dialogs/rename.ts#src/utils/dom/dialogs/tag-editor.ts",
     "src/views/app-content/site-view.ts#src/views/app-content/site/types.ts",
     "src/views/app-content/site/edit.ts#src/views/app-content/site/edit.ts",
     "src/views/app-preview/litematic-3d.ts#src/views/app-preview/skeleton.ts",

@@ -669,8 +669,8 @@
 | `initRecycleBin()` | `frontend/src/features/recycle-bin:29` | 初始化回收站管理，返回清理函数 |
 | `initResourcePacks()` | `frontend/src/features/resource-packs:13` | 初始化资源包 tab |
 | `UpdateInfo()` | `frontend/src/features/version-updater:8` | 更新信息（CheckUpdate 返回） |
-| `checkUpdateSilent()` | `frontend/src/features/version-updater:107` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
-| `initVersionUpdater()` | `frontend/src/features/version-updater:130` | 手动检查更新（设置页按钮） |
+| `checkUpdateSilent()` | `frontend/src/features/version-updater:109` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
+| `initVersionUpdater()` | `frontend/src/features/version-updater:132` | 手动检查更新（设置页按钮） |
 
 ## 前端·服务
 
@@ -794,7 +794,7 @@
 | `esc()` | `frontend/src/utils/dom/html:4` | HTML 转义（治理红线：所有 innerHTML 拼接必须过 esc） |
 | `renderFormattedText()` | `frontend/src/utils/format/mc-format:45` | 将含 Minecraft § 分节符的文本渲染为带颜色的 HTML。 |
 | `PackMeta()` | `frontend/src/utils/format/pack-format:92` | ReadPackMeta 返回的 JSON 对象（仅覆盖用到的字段） |
-| `describeVersionRange()` | `frontend/src/utils/format/pack-format:103` | 根据 meta 对象生成格式号 + 版本号描述 |
+| `describeVersionRange()` | `frontend/src/utils/format/pack-format:105` | 根据 meta 对象生成格式号 + 版本号描述 拼接用「 / 」作分隔符，避免出现 "1.9 ~ 1.10.2 ~ 1.11" 的四段歧义串。 |
 | `SummaryAuthor()` | `frontend/src/utils/format/summarize:8` | — |
 | `SummaryAnimGroup()` | `frontend/src/utils/format/summarize:14` | — |
 | `SummaryConfigMenu()` | `frontend/src/utils/format/summarize:20` | — |
@@ -857,11 +857,11 @@
 | `CreatorIdentity()` | `frontend/src/views/app-content/workshop-data:8` | 创作者身份识别结果 |
 | `CreatorIdentityInput()` | `frontend/src/views/app-content/workshop-data:15` | 创作者输入（role/tag 可空，_fromLocal 为运行时附加字段） |
 | `getCreatorIdentity()` | `frontend/src/views/app-content/workshop-data:22` | — |
-| `getTagFromRole()` | `frontend/src/views/app-content/workshop-data:44` | — |
-| `parseDescTags()` | `frontend/src/views/app-content/workshop-data:49` | — |
-| `loadFavs()` | `frontend/src/views/app-content/workshop-data:59` | — |
-| `isFaved()` | `frontend/src/views/app-content/workshop-data:71` | — |
-| `toggleFav()` | `frontend/src/views/app-content/workshop-data:75` | — |
+| `getTagFromRole()` | `frontend/src/views/app-content/workshop-data:48` | — |
+| `parseDescTags()` | `frontend/src/views/app-content/workshop-data:53` | — |
+| `loadFavs()` | `frontend/src/views/app-content/workshop-data:63` | — |
+| `isFaved()` | `frontend/src/views/app-content/workshop-data:75` | — |
+| `toggleFav()` | `frontend/src/views/app-content/workshop-data:79` | — |
 | `CacheValue()` | `frontend/src/views/app-preview/cache:10` | 缓存条目值 |
 | `cacheSetEvictHandler()` | `frontend/src/views/app-preview/cache:39` | 注册 evict 回调，淘汰条目时调用 |
 | `cacheGet()` | `frontend/src/views/app-preview/cache:43` | — |
@@ -873,7 +873,7 @@
 | `BedrockCube()` | `frontend/src/views/app-preview/geometry:4` | Bedrock 方块 |
 | `BedrockBone()` | `frontend/src/views/app-preview/geometry:15` | Bedrock 骨骼 |
 | `BedrockGeometry()` | `frontend/src/views/app-preview/geometry:30` | 解析后的 Bedrock geometry |
-| `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:55` | 从 JSON 字符串解析 Bedrock geometry |
+| `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:63` | 从 JSON 字符串解析 Bedrock geometry |
 | `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:25` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:32` | — |
 | `invalidateLitematicPreview()` | `frontend/src/views/app-preview/litematic-meta:24` | P2 修复（code_review）：任意新预览派发时推进代际——原 litematicGen 只在 showLitematic 自身递增，litematic A 解析中切到 YS |

@@ -58,7 +58,11 @@ async function decodeYsm(ysmPath) {
     try { FS.mkdir('/output'); } catch { /* 已存在 */ }
     FS.writeFile('/input/model.ysm', ys);
     try { mod.callMain(['-i', '/input', '-o', '/output']); } catch (e) {
+      // P1-1（code_review）：ExitStatus 是 emscripten 对 main 返回的封装——name 匹配还不够，
+      // status 非零即解码失败，必须显式抛错，否则损坏 .ysm 会被记录为「成功空行」（0 组件/0 纹理、退出 0）
       if (!(e && e.name === 'ExitStatus')) throw e;
+      const st = e.status ?? e.code ?? 1;
+      if (st !== 0) throw new Error(`YSMParser 解码退出码 ${st}`);
     }
     function collect(dir) {
       const out = [];
@@ -130,15 +134,20 @@ async function analyzeModel(ysmPath) {
   const files = await decodeYsm(ysmPath);
   const models = files.filter(
     (f) =>
-      isGeometry(f) &&
-      !f.path.toLowerCase().includes('ysm.json') &&
-      !/animation|controller/.test(f.path.toLowerCase()),
+      // P2-3（code_review）：对齐 Go——只按 ysm.json 后缀排除，无 animation/controller 名称黑名单
+      //（wasm_decoder.go:235-243 靠 ParseBedrockGeometry 解析结果过滤，路径含 animation/controller 的
+      // 合法 geometry 如 animations/head.geo.json 不应被整条剔除）；endsWith 而非 includes（子串过宽）
+      isGeometry(f) && !f.path.toLowerCase().endsWith('ysm.json'),
   );
   const textures = files.filter(
     (f) =>
       /\.(png|jpg)$/i.test(f.path) &&
-      !f.path.toLowerCase().includes('avatar') &&
-      f.data.length > 4096, // 对齐 collectArchiveFiles 的 <4KB 过滤
+      // P2-2（code_review）：与 Go 三处 `avatar/` 前缀口径一致——任意子串 includes 会把
+      // my_avatar.png / avatars/foo.png 等非头像纹理误剔
+      !f.path.toLowerCase().includes('avatar/') &&
+      // P2-1（code_review）：WASM 主路径不过滤 <4KB（wasm_decoder.go:191-193），golden 须与运行时同口径；
+      // 64×64 真实箭矢纹理（~2KB）会被 4KB 过滤误杀（此过滤只存在于 zip 路径 archive.go:830）
+      f.data.length > 0,
   );
   const sorted = sortComponents(models);
   const texOrder = parseTexOrder(files);
@@ -184,7 +193,9 @@ async function main() {
   }
   const ysmFiles = fs.readdirSync(opts.dir).filter((f) => f.toLowerCase().endsWith('.ysm'));
   if (ysmFiles.length === 0) {
-    console.log(`[texture-golden] 未找到 .ysm（目录: ${opts.dir}）`);
+    // P2-4（code_review）：--json 模式空目录也必须输出合法 JSON（消费者按 JSON 解析，人类文本会抛异常）
+    if (opts.json) console.log(JSON.stringify({ total: 0, errors: 0, rows: [] }));
+    else console.log(`[texture-golden] 未找到 .ysm（目录: ${opts.dir}）`);
     return 0;
   }
   let errors = 0;

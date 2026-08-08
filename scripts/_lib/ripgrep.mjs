@@ -31,10 +31,22 @@ const ROOT = getRoot();
  * @returns {string[]} "文件:行号:内容" 行
  */
 export function rg(pattern, paths, globs = null) {
+  // P1（code_review）：路径契约校验——传绝对路径给 rg 会让输出带绝对路径前缀，
+  // 消费者 parseRgLine 按 `:` 切分拿错路径（Windows 盘符冒号尤其）；undefined/空数组
+  // 会抛 TypeError 或误扫整个 ROOT。统一在入口拒绝，把编程错误与扫描失败分开。
+  if (!pattern) throw new Error('ripgrep: pattern 不能为空');
+  const targets = Array.isArray(paths) ? paths : [paths];
+  if (targets.length === 0) throw new Error('ripgrep: paths 为空，至少需要一个相对仓库根的路径');
   const cmd = ['--no-heading', '-n', '--path-separator', '/', pattern];
   for (const g of (globs || [])) cmd.push('-g', g);
-  const targets = Array.isArray(paths) ? paths : [paths];
-  for (const p of targets) cmd.push(path.join(ROOT, p));
+  for (const p of targets) {
+    if (typeof p !== 'string' || !p) throw new TypeError(`ripgrep: paths 元素必须为非空字符串（got ${typeof p}）`);
+    // P1（code_review）：显式拒绝绝对路径——path.join(ROOT, abs) 在 Windows 不重置、
+    // path.relative 又可能还原出盘符路径，导致 rg 实际去扫系统目录（os error 32/5 实证）。
+    // isAbsolute 才是可靠判定：rg 输出须为相对仓库根路径，parseRgLine 才能正确切分。
+    if (path.isAbsolute(p)) throw new Error(`ripgrep: paths 元素应为相对仓库根路径（got ${p}）`);
+    cmd.push(p);
+  }
   try {
     const out = execFileSync('rg', cmd, { encoding: 'utf-8', timeout: 30000, maxBuffer: 64 * 1024 * 1024 });
     if (out.trim()) return out.trim().split('\n').filter((l) => l.trim());

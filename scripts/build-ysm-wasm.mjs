@@ -18,8 +18,8 @@
 // build-wasm 目录。emsdk 路径可用 EMSDK 环境变量覆盖。
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, copyFileSync, existsSync, mkdirSync, statSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { readFileSync, writeFileSync, copyFileSync, existsSync, mkdirSync, statSync, renameSync } from "node:fs";
+import { join, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -122,14 +122,30 @@ function toDataFile(filePath, fnName, comment, isGlue) {
 }
 const wasmData = toDataFile(join(OUT_DIR, "YSMParser.wasm"), "_getWasmBinary", "YSMParser.wasm", false);
 const glueData = toDataFile(join(OUT_DIR, "YSMParser.js"), "_getGlueCode", "YSMParser.js 胶水代码", true);
-writeFileSync(join(FRONT_SRC, "ysm-wasm-data.js"), wasmData, "utf8");
-writeFileSync(join(FRONT_SRC, "ysm-glue-data.js"), glueData, "utf8");
+// P3-3（code_review）：原子写（临时文件 + renameSync）——直接 writeFileSync 在断点/失败时
+// 留下半截 base64 产物，前端 eval 直接坏；rename 同目录原子替换，产物要么旧要么完整
+function atomicWrite(target, content) {
+  const tmp = join(dirname(target), `.${basename(target)}.tmp`);
+  writeFileSync(tmp, content, "utf8");
+  renameSync(tmp, target);
+}
+atomicWrite(join(FRONT_SRC, "ysm-wasm-data.js"), wasmData);
+atomicWrite(join(FRONT_SRC, "ysm-glue-data.js"), glueData);
 console.log(`[pack] ✅ 前端 data: ${statSync(join(FRONT_SRC, "ysm-wasm-data.js")).size}B / ${statSync(join(FRONT_SRC, "ysm-glue-data.js")).size}B`);
 
 // Go embed 拷贝
 copyFileSync(join(OUT_DIR, "YSMParser.js"), join(FRONT_PUBLIC, "YSMParser.js"));
 copyFileSync(join(OUT_DIR, "YSMParser.wasm"), join(FRONT_PUBLIC, "YSMParser.wasm"));
 console.log(`[pack] ✅ Go 拷贝: ${statSync(join(FRONT_PUBLIC, "YSMParser.wasm")).size}B / ${statSync(join(FRONT_PUBLIC, "YSMParser.js")).size}B`);
+
+// P3-4（code_review）：Go embed 实际嵌入 frontend/dist/wasm/（embed.go:12 是
+// `//go:embed frontend/dist/wasm/YSMParser.wasm`，不是 public/）——只跑本脚本后
+// 立刻 `go build` 时 dist 缺失会报 no matching files、存在则内嵌旧二进制。
+// 显式同步 dist，保证「上游更新后重跑一次」的承诺成立。
+const FRONT_DIST_WASM = join(ROOT, "frontend", "dist", "wasm");
+mkdirSync(FRONT_DIST_WASM, { recursive: true });
+copyFileSync(join(OUT_DIR, "YSMParser.wasm"), join(FRONT_DIST_WASM, "YSMParser.wasm"));
+console.log(`[pack] ✅ Go embed 源已同步: frontend/dist/wasm/YSMParser.wasm`);
 
 // 验证锚点
 const glue = readFileSync(join(FRONT_PUBLIC, "YSMParser.js"), "utf8");

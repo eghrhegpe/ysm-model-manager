@@ -40,7 +40,7 @@ const RULE_VIOLATIONS = {
   anti_delete_first: /先删后建|先装后删|原子替换/,          // 反模式表：先删后建（失败即丢）
   anti_skip_existing: /存在即跳过|幂等|静默跳过/,           // 反模式表：存在即跳过（静默不更新）
   anti_debounce_exec: /防抖|串行化|待续跑/,                  // 反模式表：防抖只合并调度不合并执行
-  anti_channel_reuse: /已关闭(channel|的连接)|channel(已|复|重)用|假活|channel reuse/i, // 反模式表：已关闭 channel 复用（假活）
+  anti_channel_reuse: /已关闭\s*(channel|的连接)|channel\s*(已|复|重)用|假活|channel reuse/i, // 反模式表：已关闭 channel 复用（假活）
   anti_limit_truncate: /截断|LimitReader|读满检测/,          // 反模式表：限流器截断静默
   anti_text_errno: /errno|文本兜底|错误分类/,                // 反模式表：文本匹配错误分类
   anti_silent: /静默(吞|降|跳|忽略|失败|返回空)|静默降级|静默吞错|silently (swallow|ignore|skip)/i, // 失败静默吞错（高频）

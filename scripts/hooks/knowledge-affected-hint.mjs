@@ -53,9 +53,11 @@ export function buildBlock(cards, start = BLOCK_START, end = BLOCK_END) {
 
 function getStagedChanged() {
   try {
-    // P2-1（code_review）：--diff-filter=ACMRD 含删除(D)/重命名(R)——仅 ACM 会漏掉
-    // 删卡/重命名卡场景（卡文件被删时同样需要提示复核）；quotePath=false 保证
-    // 非 ASCII 路径不被引号/八进制转义破坏与 check-knowledge-drift 的匹配（P3-2）
+    // --diff-filter=ACMRD 含删除(D)/重命名(R)：卡 source_files 引用的源码文件被删/重命名时
+    // 同样需要提示复核（此前仅 ACM 漏掉 D/R）；quotePath=false 保证非 ASCII 路径不被
+    // 引号/八进制转义破坏与 check-knowledge-drift 的匹配。
+    // 注意：被删/重命名的「卡文件本身」不在此覆盖（--affected 只匹配磁盘上现存卡的
+    // source_files，删除的卡不在索引中），那是另一类场景（code_review P3 注释校准）。
     return execFileSync('git', ['-c', 'core.quotePath=false', 'diff', '--cached', '--name-only', '--diff-filter=ACMRD'], { encoding: 'utf8' })
       .split('\n').map((s) => s.trim()).filter(Boolean);
   } catch {

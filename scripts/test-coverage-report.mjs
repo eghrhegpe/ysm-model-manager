@@ -176,7 +176,8 @@ if (suggestMode) {
           },
           files: belowThreshold.map((r) => ({
             file: r.file,
-            stmts: r.stmts,
+            stmts: Number(r.stmtsRaw.toFixed(2)), // P2（复核）：输出与过滤同源（未舍入），
+            // 保证契约测试 `f.stmts < thresholdStmts` 对边界文件（44.996%）也成立
             uncoveredRanges: r.uncoveredLines.length ? compactRanges(r.uncoveredLines) : '',
             uncoveredFns: r.uncoveredFns,
           })),
@@ -196,7 +197,8 @@ if (suggestMode) {
     );
     for (const r of belowThreshold) {
       const lineDesc = r.uncoveredLines.length ? compactRanges(r.uncoveredLines) : '(无)';
-      process.stdout.write(`  [${r.stmts}%] ${r.file}  未覆盖行: ${lineDesc}\n`);
+      // P2（复核）：文本显示同用未舍入值，避免「45% 低于 45% 阈值」的自我矛盾
+      process.stdout.write(`  [${r.stmtsRaw.toFixed(2)}%] ${r.file}  未覆盖行: ${lineDesc}\n`);
     }
     process.stdout.write(`补测参考: node scripts/test-coverage-report.mjs\n`);
   }

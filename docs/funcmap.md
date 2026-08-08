@@ -851,7 +851,7 @@
 | `CacheValue()` | `frontend/src/views/app-preview/cache:10` | 缓存条目值 |
 | `cacheSetEvictHandler()` | `frontend/src/views/app-preview/cache:39` | 注册 evict 回调，淘汰条目时调用 |
 | `cacheGet()` | `frontend/src/views/app-preview/cache:43` | — |
-| `cacheSet()` | `frontend/src/views/app-preview/cache:47` | — |
+| `cacheSet()` | `frontend/src/views/app-preview/cache:63` | — |
 | `previewCSS()` | `frontend/src/views/app-preview/css:2` | — |
 | `showModelDetail()` | `frontend/src/views/app-preview/detail:15` | 显示模型详情（YSM 模型） |
 | `showResourcePack()` | `frontend/src/views/app-preview/detail:102` | 显示资源包信息（pack.mcmeta + pack.png） |

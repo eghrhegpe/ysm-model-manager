@@ -44,12 +44,41 @@ export function cacheGet(path: string): CacheValue | null {
   return _cache.get(path) || null;
 }
 
+/** 收集缓存值中全部 blob URL（evict 释放用） */
+function collectBlobUrls(v: CacheValue | undefined): Set<string> {
+  const s = new Set<string>();
+  if (!v) return s;
+  const geo = v.geometry as { textures?: string[]; texture?: string } | undefined;
+  if (geo?.textures) for (const u of geo.textures) if (u?.startsWith("blob:")) s.add(u);
+  if (geo?.texture?.startsWith("blob:")) s.add(geo.texture);
+  if (v.texture?.startsWith("blob:")) s.add(v.texture);
+  for (const au of v.authors || []) {
+    const url = typeof au === "object" ? au.avatarUrl : undefined;
+    if (url?.startsWith("blob:")) s.add(url);
+  }
+  for (const u of Object.values(v.avatars || {})) if (u?.startsWith("blob:")) s.add(u);
+  return s;
+}
+
 export function cacheSet(path: string, data: CacheValue): void {
-  // 已有该 key：覆盖前先对旧值调 evict 释放资源（blob URL 等），
-  // 否则 WASM 解码产物（wasm.ts createObjectURL）的旧 URL 永久泄漏（P2 修复）
+  // 已有该 key：仅在「新值不再引用旧值的 blob URL」时 evict 释放旧资源——
+  // 本项目存在大量「同 key re-set 相同解码对象」模式（loader.ts:42 读旧值补 _decodedBy
+  // 塞回、wasm.ts 解码后 index.ts 对同一 key 二次 set 同一对象），新旧值引用同一批 blob URL。
+  // 无条件 evict 会 revoke 新值仍在引用的 URL → .ysm 预览纹理/缩略图/头像损坏（code_review P1）。
   if (_cache.has(path)) {
     const oldVal = _cache.get(path);
-    if (_onEvict) _onEvict(path, oldVal);
+    if (oldVal && _onEvict) {
+      const oldUrls = collectBlobUrls(oldVal);
+      const newUrls = collectBlobUrls(data);
+      let needsEvict = false;
+      for (const u of oldUrls) {
+        if (!newUrls.has(u)) {
+          needsEvict = true;
+          break;
+        }
+      }
+      if (needsEvict) _onEvict(path, oldVal);
+    }
     _cache.set(path, data);
     return;
   }

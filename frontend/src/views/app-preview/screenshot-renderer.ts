@@ -138,8 +138,12 @@ export async function renderMultiAngle(
         if ((obj as THREE.Mesh).isMesh) {
           const mesh = obj as THREE.Mesh;
           mesh.geometry?.dispose();
-          const mat = mesh.material as THREE.Material | undefined;
-          mat?.dispose();
+          // P3 修复（code_review）：恢复数组材质分支——three.js 的 mesh.material 可为
+          // Material | Material[]，`mat?.dispose()` 对数组短路不释放；与 model3d.ts:826-828
+          // 的清理逻辑保持一致，防未来多材质 mesh 泄漏 GPU 资源
+          const mat = mesh.material;
+          if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+          else mat?.dispose();
         }
       });
       renderer.dispose();

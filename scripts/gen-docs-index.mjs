@@ -133,8 +133,9 @@ function mapStatus(raw) {
   if (/已取代/.test(s)) return `❌ 已取代${tail}`;
   if (/部分采纳/.test(s)) return `🔄 部分采纳${tail}`;
   if (/已采纳/.test(s)) {
-    // 精确匹配「未修复/不一致」而非裸「违规」：`违规已修复` 不应被误判为 ⚠️ 遗留未修复（code_review P2）
-    if (/未修复|不一致(?:未修复)?/.test(s)) return `⚠️ 已采纳${tail}`;
+    // 契约（ADR_USAGE_RULES：「违规或未修复，自动从文件首部识别」）：裸「违规/不一致/未修复」→ ⚠️；
+    // 但「违规已修复 / 不一致已修复」不属遗留未修复 → ✅（code_review P2 双向一致）
+    if ((/违规|不一致|未修复/.test(s)) && !/已修复/.test(s)) return `⚠️ 已采纳${tail}`;
     return `✅ 已采纳${tail}`;
   }
   return s;

@@ -788,7 +788,7 @@
 | `YSMHeader()` | `frontend/src/utils/format/summarize:50` | — |
 | `summaryCardHTML()` | `frontend/src/utils/format/summarize:154` | 从 YsmSummary + YSMHeader 渲染为精简摘要卡片 |
 | `fileIcon()` | `frontend/src/utils/icon/icon:9` | 按扩展名返回图标 emoji |
-| `isYsmName()` | `frontend/src/utils/icon/icon:28` | 是否为 YSM 文件 |
+| `isYsmName()` | `frontend/src/utils/icon/icon:29` | 是否为 YSM 文件 |
 | `ICONS()` | `frontend/src/utils/icon/workshop-icons:3` | — |
 | `getSiteIcon()` | `frontend/src/utils/icon/workshop-icons:46` | — |
 | `getTagIconFromRole()` | `frontend/src/utils/icon/workshop-icons:50` | — |

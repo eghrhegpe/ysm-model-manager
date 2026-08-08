@@ -220,6 +220,41 @@ func TestRestoreConflict(t *testing.T) {
 	}
 }
 
+// P3 修复（code_review）：Restore 对非 IsNotExist 错误必须返回而不静默成功——
+// 用「恢复目标父路径组件是文件」构造：MkdirAll(dir/sub) 遇同名文件返回 ENOTDIR，
+// 旧实现若把这类错误当 IsNotExist 处理会静默降级/死循环，新实现应返回错误
+func TestRestoreConflict_NonNotExistError(t *testing.T) {
+	dir := t.TempDir()
+	tm := New(dir)
+
+	// 嵌套路径移入回收站：dir/sub/keep.ysm → 回收站 sub/keep.ysm（rel 保留层级）
+	subDir := filepath.Join(dir, "sub")
+	if err := os.MkdirAll(subDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	src := filepath.Join(subDir, "keep.ysm")
+	if err := os.WriteFile(src, []byte("orig"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := tm.Move(src); err != nil {
+		t.Fatal(err)
+	}
+	// 破坏恢复目标：把 sub 目录删掉、换成同名文件 → MkdirAll(dir/sub) 遇文件报 ENOTDIR（非 IsNotExist）
+	if err := os.RemoveAll(subDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(subDir, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	entries := tm.List()
+	if len(entries) != 1 {
+		t.Fatalf("回收站应有 1 个文件")
+	}
+	if err := tm.Restore(entries[0].Path); err == nil {
+		t.Fatal("恢复应失败（父路径组件是文件，MkdirAll/Stat 报非 IsNotExist 错误）")
+	}
+}
+
 func TestList_FolderModelGrouped(t *testing.T) {
 	// ADR-038 D3.4：文件夹型模型（含 ysm.json 的目录）整组合并显示为单一条目
 	dir := t.TempDir()

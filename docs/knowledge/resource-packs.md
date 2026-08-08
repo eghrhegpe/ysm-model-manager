@@ -5,6 +5,8 @@ tier: architecture
 category: feature
 source_files:
   - frontend/src/features/resource-packs.ts
+tests:
+  - frontend/src/features/resource-packs.test.ts
 use_when:
   - 资源包
   - 光影包

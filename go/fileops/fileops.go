@@ -314,7 +314,10 @@ func CopyModelFile(root, src, dstDir string) error {
 	if src == "" || dstDir == "" {
 		return fmt.Errorf("参数空")
 	}
-	// 路径安全：dstDir 必须落在 FilesRoot 内
+	// P2 修复：拒绝目录自嵌套复制——dstDir 位于 src 子树内时（先 MkdirAll 在 src 内创建
+	// dstDir，再 WalkDir 遍历到它）递归自嵌套无限膨胀直至 ENAMETOOLONG。
+	// 含 dstDir == src 等值情形（此时 dst=Join(src, Base(src)) 仍是 src 严格子目录，同样爆炸）。
+	// 放在 MkdirAll 之前执行：被拒复制不得在 src 内留下空 junk 目录（code_review）。
 	if root != "" {
 		absRoot, err := filepath.Abs(root)
 		if err != nil {
@@ -338,22 +341,24 @@ func CopyModelFile(root, src, dstDir string) error {
 			return fmt.Errorf("源文件必须在仓库内: %s", src)
 		}
 	}
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		return err
-	}
 	// ysm.json 提升：复制整个模型目录（ADR-038 D3）
 	if types.IsYsmEntryJSON(filepath.Base(src)) {
 		src = filepath.Dir(src)
 	}
-	// P2 修复：拒绝目录自嵌套复制——dstDir 位于 src 子树内时（先 MkdirAll 在 src 内创建
-	// dstDir，再 WalkDir 遍历到它）递归自嵌套无限膨胀直至 ENAMETOOLONG
+	// P2 修复（code_review）：自嵌套检查须在 MkdirAll 之前执行——被拒复制不得在 src 内
+	// 留下空 junk 目录（原实现 MkdirAll 先行，拒绝后 src 内残留空子目录污染后续复制）。
+	// dstDir 位于 src 子树内时拒绝（含等值 "."——此时 dst=Join(src,Base(src)) 仍是 src
+	// 严格子目录，WalkDir 自嵌套无限膨胀至 ENAMETOOLONG）
 	if absSrc, err := filepath.Abs(src); err == nil {
 		if absDstDir, err := filepath.Abs(dstDir); err == nil {
 			if relToSrc, err := filepath.Rel(absSrc, absDstDir); err == nil &&
-				relToSrc != "." && relToSrc != ".." && !strings.HasPrefix(relToSrc, ".."+string(filepath.Separator)) {
+				!strings.HasPrefix(relToSrc, ".."+string(filepath.Separator)) && relToSrc != ".." {
 				return fmt.Errorf("目标目录不能位于源目录内: %s", dstDir)
 			}
 		}
+	}
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
+		return err
 	}
 	dst := filepath.Join(dstDir, filepath.Base(src))
 	// 防覆盖：目标已存在直接报错（单文件与目录一致）

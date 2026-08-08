@@ -184,7 +184,7 @@
 | 🍃 utils-misc | 常量与调试 constants/debug | leaf | 调试日志, dbg, 调试开关, 环形日志, debugGetSpec, 全局常量 |
 | 🍃 utils-resource-types | 资源类型工具 resource-types | leaf | 资源类型, RESOURCE_TYPES, 类型标签, 存储子目录, storageSubDir, LoadResourceTypes, 注册表加载 |
 | 🍃 utils-summarize | 摘要生成 summarize | leaf | 模型详情, 摘要卡片, summaryCardHTML, 预览卡片, 加密模型, 作者信息, 动画分组, 免费付费 |
-| 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | WASM, YSMParser, ysm 解码, 加密模型, wasm 加载, Emscripten, MEMFS |
+| 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | WASM, YSMParser, ysm 解码, 加密模型, wasm 加载, Emscripten, MEMFS, node 解码, callMain |
 
 ### 摘要
 

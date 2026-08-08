@@ -39,6 +39,8 @@ detectYsmVersion(path)
 - **内存解析优先**：WASM 必须走 `YSMParserFactory::Create(data, size)` 内存接口（`ysm_decode_from_memory`），绕过 MEMFS 文件 I/O（早期 `callMain` 因 base64 编码损坏被弃用，修复后 V3 场景重新启用）。
 - **Go CLI 回退**：WASM 解码失败（含 WebView2 兼容异常）时，`app.go` 的 `runYSMParserOnFile` 调 YSMParser.exe（已加 `SysProcAttr{HideWindow: true}` 防黑框），保证「永不无预览」。
 
+> **实现现状（2026-08-08 核实，不改决策）**：Go 端解码已演进为 **Node.js 子进程 + 内嵌 WASM `callMain`**（`internal/app/wasm_decoder.go` `decodeYSMViaNodeJS` / `go/avatar/avatar.go` `DecodeYSMFiles`），与 CLI exe 走完全相同的 `-i/-o` 参数路径，**纯 Node 即可解码、不依赖浏览器**（已实测 `upstream/` 下 10 个 .ysm 全量解码）。YSMParser.exe 实际仅剩开发调试用途（发版不打包）。仓库存在两份 WASM 资产：6-08 前端版（`ysm-wasm-data.js`，导出 `ysm_decode_from_memory`/`_malloc`/`ccall`，供 WebView2 内存直解）与 6-17 Go 版（`frontend/public/wasm/YSMParser.wasm`，仅导出 `_main`，供 Node.js `callMain`）。细节见 `docs/architecture.md` §4。
+
 ### 2.2 数据传递契约（每层必须验证类型）
 
 跨语言链路：`Go ReadFileBytes() → base64 string → JS atob() → Uint8Array → WASM _malloc → HEAPU8.set → ccall(ysm_decode_from_memory) → C++ 解析 → MEMFS /output → JS 收集 → parseBedrockGeometryFromJSON`。

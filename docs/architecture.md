@@ -122,30 +122,62 @@ Wails v3 **Service 反射绑定**：`*app.App` 的所有导出方法自动暴露
 
 ## 4. YSM 模型解析与渲染（Three.js + YSMParser WASM）
 
-### 4.1 YSMParser WASM 内嵌
+### 4.1 YSMParser WASM 内嵌（两份资产，一个能力）
 
-- YSMParser 已内嵌 WASM：`frontend/src/wasm/ysm-wasm-data.js`（base64 编码，约 1.52MB），前端 WebView2 直接解码 `.ysm`，**无需 exe sidecar**。
-- exe sidecar 仅作为开发调试的 Go CLI fallback；**发版时不打包 YSMParser.exe**。
+上游 [YSMParser](https://github.com/OpenYSM/YSMParser)（C++）经 Emscripten 编译为 WASM 后 base64 内嵌，**取代 exe sidecar**。仓库里实际存在**两份不同编译产物**，导出面不同——这是理解解码链路的关键：
+
+| 资产 | 位置 | 编译时间 | wasm 大小 | Emscripten 导出面 | 用途 |
+|------|------|----------|-----------|-------------------|------|
+| 前端版 | `frontend/src/wasm/ysm-wasm-data.js` + `ysm-glue-data.js` | 2026-06-08 | 1,138,316 B | `ysm_decode_from_memory` / `_malloc` / `ccall` | WebView2 前端内存直解 |
+| Go 版 | `frontend/public/wasm/YSMParser.{js,wasm}`（`embed.go` 经 `frontend/dist/wasm/` 内嵌） | 2026-06-17 | 1,135,526 B | 仅 `_main`（即 `callMain`） | Go 端 Node.js 子进程解码 |
+
+- Go 版（6-17）**未导出 `_malloc` / `ccall` / `ysm_decode_from_memory`**——前端那套「内存直解」API 在 Go 端资产上不存在，Go 端走 `callMain`（与 CLI exe 完全相同的 `-i/-o` 参数路径）。
+- exe sidecar 仅作开发调试的 Go CLI fallback；**发版时不打包 YSMParser.exe**。
 - 调试 CLI fallback 可从 `build/ysmparser-cache/` 恢复（`wails3 build -clean` 会清空 `build/bin/`，但 WASM 已内嵌，无需强制恢复 exe）。
 
-### 4.2 WASM 加载路径
+### 4.2 解码运行时：两条路径，同一份 C++ 能力
 
-`frontend/src/wasm/ysm-parser.ts`（~8KB）加载链：
+**路径 A — 前端 WebView2**（`frontend/src/wasm/ysm-parser.ts`，加载 6-08 前端版）：
 
 1. 动态 `import()` 两个 data 文件 → 补丁胶水代码追加 `Module["HEAPU8"]=HEAPU8`（:75-78）；
 2. 设 `window.Module = { wasmBinary, noInitialRun: true }`（:81-86）；
-3. **间接 `eval`** `(0,eval)(patchedGlue)`（:89，注释称比 `<script>` 注入快 5x）→ 调用 `YSMParserModule` 工厂；绕开 WebView2 的 `fetch()` 限制；
-4. 双解码路径：`decodeYsmFileFromMemory`（`ccall("ysm_decode_from_memory")` + `_malloc`，:135-168）优先；`decodeYsmFile`（`callMain` + MEMFS，:174-213）回退。
+3. **间接 `eval`** `(0,eval)(patchedGlue)`（:89）→ 调 `YSMParserModule` 工厂；绕开 WebView2 的 `fetch()` 限制；
+4. 双解码路径：`decodeYsmFileFromMemory`（`ccall("ysm_decode_from_memory")` + `_malloc`）优先；`decodeYsmFile`（`callMain` + MEMFS）回退。
 
-> ⚠️ 已知 bug（`ysm-parser.ts:63-65`）：`_getGlueCode` 引用未声明的 `_cachedWasm` 且返回 `ArrayBuffer` 而非 string → WASM 路径实际静默失败并回退 Go 解析。属待修项，非设计意图。
+> 历史注记：早期版本 `ysm-glue-data.js` 的 `_getGlueCode` 引用未声明 `_cachedWasm` 且返回 `ArrayBuffer`，导致前端 WASM 路径静默失败回退 Go 解析；审计核实（2026-08-08）该 bug 已随数据文件更新（现用 `_cachedGlue` 且返回 string）修复，「WASM 路径必回退 Go」的假设已失效。
 
-消费方 `preview-wasm.ts:25-160` 完整链：
+**路径 B — Go 端 Node.js 子进程（生产主路径，发版时 `.ysm` 解码的唯一路径）**（`internal/app/wasm_decoder.go` `decodeYSMViaNodeJS`、`go/avatar/avatar.go` `DecodeYSMFiles`，加载 6-17 Go 版）：
+
+1. `findNodeJS()` 在 PATH 找 `node`/`node.exe`（`wasm_decoder.go:25`），找不到则路径 B 不可用；
+2. 内嵌 glue + wasm 写到临时目录，拼 `decode.cjs` 脚本：
+   - `const YSMParser = require(glueFile)` → `await YSMParser({ wasmBinary, noInitialRun: true })` 实例化 Emscripten 模块；
+   - `FS.writeFile('/input/model.ysm', ys)` 写入 MEMFS；
+   - **`mod.callMain(['-i','/input','-o','/output'])`** —— 参数与 CLI exe 一致，等于在 Node 运行时里执行原版 C++ 解析器；
+   - 递归收集 `/output` 文件，打 `FILES_JSON:` 标记输出（:88）；
+3. 子进程带超时护栏 + `HideWindow` 防黑框；输出经 `geometry.ParseBedrockGeometry` 合并多骨骼、填纹理 base64 → `types.BedrockModel`（:127-180）；
+4. **纯 Node 即可解码，不依赖浏览器/WebView2**（已实测：`upstream/` 下 10 个 .ysm 全部可用此路径解码出骨骼/动画/纹理/头像）。`go/avatar/avatar.go` 的 `DecodeYSMFiles` 是同一套机制的复用（头像提取），两处脚本逻辑近似。
+
+> ⚠️ **两份资产不是同一份二进制**。若未来更新 YSMParser 上游，两处资产与生成脚本需同步重出；前端 `ysm-parser.ts` 若改用 Go 版资产，`_malloc`/`ccall` 将不可用，必须走 callMain。
+
+**解码优先级链（现状总表）**：
+
+| 输入 | 第一优先级 | 第二优先级 | 最终 |
+|------|-----------|-----------|------|
+| `.ysm`（加密 V2/V3 / 开放） | `runYSMParserOnFile` → `FindCLI()`（exe，仅开发态存在） | `decodeYSMViaNodeJS`（Node.js + WASM `callMain`） | 空 `BedrockModel{}` |
+| `.zip` / `.7z`（开放 OYSM） | Go 原生 `geometry.ParseFromZip/7z` | `runYSMParserOnFile`（同 `.ysm`） | 空 |
+| `.json`（已解压目录） | `ysm.FindGeometryInExtractedYSM` | — | 空 |
+| 前端预览 `.ysm` | WebView2 WASM（内存直解 → `callMain`） | Go `AnalyzeBedrockModel` | 空 |
+
+- **发版场景（不打包 exe）**：`.ysm` 实际解码主路径就是 **Node.js + WASM `callMain`**——Go 自己零解密代码，能力全部继承自原版 C++ 解析器（认识 YSGP V2 / YSGP V3 / OYSM 全变体），这就是「支持所有版本」的来源。
+- **无 node 场景**：路径 B 不可用，加密 `.ysm` 无法解码（仅开放 zip/7z 走 Go 原生），这是 ADR-029 保留 exe 回退的初衷。
+
+消费方 `preview-wasm.ts:25-160` 完整链（前端）：
 ```
 ReadFileBytes(Go, base64) → atob → Uint8Array
   → (.json 走 parseYsmJsonDirect 直解)
   → initYSMParser → 内存解码 → MEMFS
   → stripYsgpTextHeader 剥文本头重试 (V2/V3)
-  → 全失败回退 Go CLI (wasm_decoder.go)
+  → 全失败回退 Go AnalyzeBedrockModel（app_model.go，其内部再走 Node.js + WASM / exe）
 ```
 
 `utils/model3d-loader.ts` — `fetchSpec` 优先调 Go `GetModel3DSpec`，失败回退 `buildSpecFromModel`（JS 几何），LRU 20 条 spec 缓存。

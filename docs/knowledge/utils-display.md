@@ -34,7 +34,7 @@ use_when:
 - `parseModelName(raw: string): ParsedModelName` — 解析文件名为 `{ raw, isBanned, author, work, chara, character, date, ext }`；支持 `[作者]`/`[[作者]]`、`【作品】`/`《作品》`、`YYYY[-_.]MM` 日期；`.ban` 后缀标记封禁文件
 - `renderDisplayName(raw: string, opts?: unknown): string` — **治理红线函数**，所有 UI 文件名展示必经：`[...]`/【...】/《...》→ `.tag-work` span，日期 → `.tag-date` span，其余部分走 `renderFormattedText` 做 § 分节符着色；封禁文件直接返回转义后的原文
 - `renderModelName(raw, options?: { tpl?, showExt? })` — renderDisplayName 的别名包装，`showExt: true` 追加 `.tag-ext` 扩展名后缀
-- `renderModelNameWithHighlight(raw, keyword?, options?)` — 在 renderDisplayName 结果上用 `<mark>` 全局包裹搜索命中段
+- `renderModelNameWithHighlight(raw, keyword?, options?)` — 在纯文本高亮（`<mark>`）后**逐段转义重组**返回（P2 修复：原实现直接拼接高亮结果，文件名含 `<script>`/`<img onerror>` 可注入 HTML，是 display 管线唯一未转义输出口；现策略拆出 `<mark>…</mark>` 段、内容 esc 后重组，扩展名标签同样 esc）
 
 ## 与其他子系统关系
 

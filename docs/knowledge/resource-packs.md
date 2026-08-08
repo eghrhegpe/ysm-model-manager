@@ -21,9 +21,11 @@ use_when:
 
 `resource-packs.ts` 是一个薄 wrapper：把仓库页的各类资源包 tab（资源包/光影包/蓝图/MMD/VRC/投影）统一委托给 `<app-resource-manager>` 组件渲染。文件本身不含业务逻辑，仅负责挂载组件、以 `rtype` 属性区分资源类型，是「tab 页 → 通用资源管理组件」的适配层。
 
+> **⚠️ 幽灵路径状态（审计发现 2026-08-08）**：当前 UI 的 repo 模板（tpl.ts:9-13）只有 tree/import/recycle/dedup/oldest 五个 `.repo-tab` 按钮，**无 resourcepacks/shaderpacks 等 tab 按钮**——资源类型切换改由 `.repo-subtab`（data-rtab）重渲染 `<app-tree>`（tpl.ts:16-25）。因此 `initResourcePacks` 的六个调用分支全部不可达（app-content/index.ts:395-438 为死分支）。若为 UI 重构有意移除，后续可删除死分支；wrapper 保留作兼容层。
+
 ## 核心职责
 
-- 组件注册走**模块顶层静态副作用导入** `import "../views/app-resource-manager/index.ts"`（ADR-039 动态导入静态化，提交 50635b3）；函数体内不再有 `await import(...)`
+- 组件注册**实际链路**（审计修正）：`app-content/index.ts:28` 静态导入 `registerResourceManagerGlobal` → 模块副作用执行 `customElements.define("app-resource-manager")`（幂等守卫）；`app-modules.ts:36` 动态 import 为冗余兜底。本文件**无顶层副作用导入组件**（此前卡文记载的 `../views/app-resource-manager/index.ts` 静态副作用导入与源码不符）
 - `initResourcePacks(container, host, rtype?)`：向容器写入 `<app-resource-manager rtype="...">` 字符串，除此之外无其他动作
 - `rtype` 缺省为 `RESOURCE_TYPES.PACK`（`"resourcepack"`）；app-content 按 tab 分别传入 `RESOURCE_TYPES.SHADER` / `BLUEPRINT` / `MMD` / `VRC` / `LITEMATIC`
 - 返回空清理函数 `() => {}` 以兼容上层「init 必返回 cleanup」的调用契约（Toast 由 app-resource-manager 内部直接 `bus.emit("toast:show")`，此处不桥接游离 DOM 事件）

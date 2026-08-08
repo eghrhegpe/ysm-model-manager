@@ -85,6 +85,10 @@ export function showBatchRenameDialog(
   };
 
   const applyReplace = (findText: string, replaceText: string, isRegex: boolean): void => {
+    // P2 修复：空查找串守卫——`"abc".replaceAll("", x)` 会在每两个字符间插入替换串，
+    // `new RegExp("","g")` 同理；用户在「替换为」先输入而 find 仍空时防抖触发即开始
+    // 破坏预览，点击应用会按损坏名真正重命名
+    if (!findText) return;
     // 重置正则错误标志，允许每次调用都提示
     const cnt = document.getElementById("br-changed");
     if (cnt) delete cnt.dataset.regexErr;
@@ -123,7 +127,13 @@ export function showBatchRenameDialog(
   });
   dialogEl.innerHTML = genHTML(dir, items);
   document.body.appendChild(dialogEl);
-  registerDlg(dialogEl, () => close());
+  // P1 修复：cancelClose 捕获本次元素引用——原 `() => close()` 引用模块级 dialogEl，
+  // 重复打开时旧 cancelClose 在 registerDlg 抢占中被调，此时 dialogEl 已是新元素 →
+  // close() 误杀新弹窗、后续 dialogEl.focus() 在 null 上抛 TypeError、初始化全断
+  const thisEl = dialogEl;
+  registerDlg(thisEl, () => {
+    if (dialogEl === thisEl) close();
+  });
   dialogEl.focus();
 
   // 批量修改作者/作品
@@ -161,6 +171,14 @@ export function showBatchRenameDialog(
   };
   batchAuthor?.addEventListener("input", applyBatchDebounced);
   batchWork?.addEventListener("input", applyBatchDebounced);
+  // P2 修复：防抖 timer 挂到 dialogEl 上供 close() 清理——关闭后 200ms 内幽灵回调
+  // 若新开弹窗会跨弹窗污染（document.getElementById 全局查找写入新弹窗 DOM）
+  // 数组元素含 null（brTimer 初始为 null），类型必须容纳
+  (dialogEl as HTMLElement & { _brTimers?: Array<ReturnType<typeof setTimeout> | null> })._brTimers = [brTimer];
+  const clearBrTimer = (): void => {
+    if (brTimer) clearTimeout(brTimer);
+    brTimer = null;
+  };
 
   // 复选框事件委托（全选 + 单个）
   previewEl?.addEventListener("change", (e: Event): void => {
@@ -382,6 +400,9 @@ function renderPreview(el: HTMLElement | null, items: BatchItem[]): void {
 function close(): void {
   if (dialogEl) {
     const el = dialogEl;
+    // P2 修复：清理本次弹窗挂载的防抖 timer，防关闭后 200ms 幽灵回调跨弹窗污染
+    const timers = (el as HTMLElement & { _brTimers?: ReturnType<typeof setTimeout>[] })._brTimers;
+    if (timers) timers.forEach((t) => clearTimeout(t));
     dialogEl = null;
     const res = _pendingResolve;
     _pendingResolve = null;

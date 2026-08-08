@@ -59,8 +59,11 @@
     <context-menu></context-menu>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
+        // P2 修复：默认页与 page-store 兜底对齐为 repository——
+        // 原 "instances" 与 resolveInitialPage 的兜底（repository）冲突，
+        // settings/community.ts:742-746 已把同类旧写法标注为「死默认值 bug」
         const defaultPage =
-          localStorage.getItem("ui-default-page") || "instances";
+          localStorage.getItem("ui-default-page") || "repository";
         window.bus?.emit("nav:change", { page: defaultPage });
 
         // 加载动画控制

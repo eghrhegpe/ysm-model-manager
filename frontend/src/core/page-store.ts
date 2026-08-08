@@ -26,13 +26,19 @@ function sanitizePage(v: string | null): PageName {
 }
 
 export function resolveInitialPage(): PageName {
-  const configured = localStorage.getItem("ui-default-page");
-  if (configured) {
-    return sanitizePage(configured);
-  }
-  const saved = localStorage.getItem("nav_page");
-  if (saved) {
-    return sanitizePage(saved);
+  // P2 修复：读路径也包 try/catch——写路径（app-nav）已有防护，读路径在隐私模式/
+  // 禁 cookie 下 getItem 抛错会使 app-nav/app-content 构造失败（组件起不来）
+  try {
+    const configured = localStorage.getItem("ui-default-page");
+    if (configured) {
+      return sanitizePage(configured);
+    }
+    const saved = localStorage.getItem("nav_page");
+    if (saved) {
+      return sanitizePage(saved);
+    }
+  } catch {
+    /* localStorage 不可用（隐私模式），回退默认页 */
   }
   return "repository";
 }

@@ -275,9 +275,10 @@ use_when:
 - **禁止 `window.go.main.App` 直连**（治理红线 §3.2）：一律走 `getApp()`；零 `window.__*` 全局变量。
 - `frontend/bindings/` 是生成物，禁止手改；Go 方法增删改后重新生成才进入前端清单。
 - `SetApp` / `SetMainWindow` 是启动期框架接线，前端业务代码不得调用。
-- Go 端的 `ServiceStartup` / `ServiceShutdown`（服务生命周期）与 `AddOpLog`（内部操作日志）不在生成绑定中，前端不可调用（共 156 个 Go 方法，前端可用 153 个）。
+- Go 端的 `ServiceStartup` / `ServiceShutdown`（服务生命周期）不在生成绑定中，前端不可调用（实际导出 `*App` 方法 159 个、生成 app.ts 157 个，仅这两个未绑定——知识卡旧文「156/153」计数已修正；`AddOpLog`/`AddImportLog`/`SetApp`/`SetMainWindow` 均在生成绑定中，知识卡旧文「AddOpLog 不可调用」漂移已修正）
+- 知识卡旧文列 `ScanCustomModels`、`SetRepoRoot` 为 API 属幽灵方法（代码与前端均不存在，前端若调用将得 undefined）；实际在码但旧文未列的 `GetConfigPath`/`GetRuntimeLogs`/`ClearRuntimeLogs`/`ImportModelFolder`/`ScanModelEntriesWithLabel` 已补入
 - 所有异常路径必须有 toast 反馈；异步按钮操作在 `finally` 中恢复状态（致命陷阱 #3）。
-- **路径守卫模式**（审计发现）：所有 Wails Binding 暴露的文件操作方法（`ReadFileBytes`、`SaveScreenshotFile`、`DeleteModelDir`、`ListFileNames`、`ListAllFilePaths`、`CheckFileExists`、`CreateDir`、`RenameDir`、`RemoveDir`、`MoveModelFile`、**`RenameFile`、`ClearCustomDir`**）在操作前统一加 `paths.IsInside(a.ysmRoot(), path)` 守卫（壳层经 `isPathInRoot`），限制操作范围在 `FilesRoot` 内。原因：Wails Binding 是前端可直接调用的 API，无路径校验会导致任意文件读写（P1 安全漏洞）。新增文件操作 Binding 时必须遵循此模式。
+- **路径守卫模式**（审计发现）：所有 Wails Binding 暴露的文件操作方法（`ReadFileBytes`、`SaveScreenshotFile`、`DeleteModelDir`、`ListFileNames`、`ListAllFilePaths`、`CheckFileExists`、`CreateDir`、`RenameDir`、`RemoveDir`、`MoveModelFile`、**`RenameFile`、`ClearCustomDir`、`ToggleResourcePack`**）在操作前统一加 `paths.IsInside(a.ysmRoot(), path)` 守卫（壳层经 `isPathInRoot`），限制操作范围在 `FilesRoot` 内。原因：Wails Binding 是前端可直接调用的 API，无路径校验会导致任意文件读写（P1 安全漏洞）。`ToggleResourcePack` 为 P2 修复补加（原 `os.Rename` 对任意路径可重命名）；**`DeleteModelDir` 额外拒绝 `rel == "."`**（P1 修复：原仅查 `".."` 前缀，传入仓库根路径时 `os.RemoveAll` 可整删整个 ysm 仓库）。新增文件操作 Binding 时必须遵循此模式。
 - **URL 校验模式**（审计发现）：`EnqueueDownloads` 入队前校验 URL scheme，仅放行 `http://` / `https://`，拒绝 `file://`、`javascript:` 等（P2 安全漏洞）。
 
 ## 相关

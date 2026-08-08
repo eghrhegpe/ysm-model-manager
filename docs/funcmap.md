@@ -548,32 +548,32 @@
 | `App.StartProxy()` | `internal/app/proxy:23` | StartProxy 启动本地反代服务器（127.0.0.1 仅本机可访问） |
 | `App.StopProxy()` | `internal/app/proxy:45` | StopProxy 关闭反代服务器 |
 | `App.IsProxyRunning()` | `internal/app/proxy:60` | IsProxyRunning 检查代理是否运行中 |
-| `App.LoadResourceTypes()` | `internal/app/resource_bindings:22` | LoadResourceTypes 加载资源类型注册表 |
-| `App.ReadPackMeta()` | `internal/app/resource_bindings:31` | ReadPackMeta 读取资源包信息（pack.mcmeta + pack.png） |
-| `App.ReadShaderpackLang()` | `internal/app/resource_bindings:56` | ReadShaderpackLang 读取光影包 lang/en_US.lang 提取显示名 |
-| `App.GetNbtVoxelData()` | `internal/app/resource_bindings:83` | GetNbtVoxelData 读取 .nbt 结构文件体素数据 |
-| `App.GetSchematicVoxelData()` | `internal/app/resource_bindings:88` | GetSchematicVoxelData 读取 .schematic 文件体素数据 |
-| `App.ReadSchematic()` | `internal/app/resource_bindings:93` | ReadSchematic 读取 .schematic 文件基本信息 |
-| `App.ReadNbtStructure()` | `internal/app/resource_bindings:103` | ReadNbtStructure 读取 .nbt 结构文件基本信息 |
-| `App.ReadLitematicMeta()` | `internal/app/resource_bindings:113` | ReadLitematicMeta 读取投影文件元数据（作者/时间/版本/方块统计/预览图） |
-| `App.GetLitematicVoxelData()` | `internal/app/resource_bindings:124` | GetLitematicVoxelData 读取投影文件体素数据（按颜色分组的方块位置） |
-| `App.SetVoxelMaxBlocks()` | `internal/app/resource_bindings:129` | SetVoxelMaxBlocks 设置 3D 体素渲染上限，0=恢复默认 200000 |
-| `App.DetectResourceType()` | `internal/app/resource_bindings:136` | DetectResourceType 检测指定文件的资源类型 |
-| `App.GetRepoRoot()` | `internal/app/resource_bindings:145` | GetRepoRoot 根据资源类型返回对应的仓库根目录 |
-| `App.ToggleResourcePack()` | `internal/app/resource_bindings:184` | ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled） |
-| `App.IsResourcePackEnabled()` | `internal/app/resource_bindings:201` | IsResourcePackEnabled 检查资源包是否启用 |
-| `App.SelectImportZip()` | `internal/app/resource_bindings:206` | SelectImportZip 打开文件选择器选取 .zip 文件 |
-| `App.SelectImportFile()` | `internal/app/resource_bindings:219` | SelectImportFile 打开文件选择器，按给定扩展名过滤 filter 格式: "显示名|*.ext1;*.ext2" |
-| `App.SetResourceRoot()` | `internal/app/resource_bindings:240` | SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认） P1 修复：非空入参经 filepath.Abs(filepath.Clean()) 规范化，防止含 |
-| `App.ResetResourceRoot()` | `internal/app/resource_bindings:271` | ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值） |
-| `App.ImportResourcePack()` | `internal/app/resource_bindings:297` | ImportResourcePack 使用策略模式导入资源包 |
-| `App.ImportByType()` | `internal/app/resource_bindings:310` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
-| `App.DeleteResourcePack()` | `internal/app/resource_bindings:327` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： src 为 ysm.json 时整组删除父目录（文件夹型模型），否则删除单文件。 |
-| `App.DeleteModelDir()` | `internal/app/resource_bindings:333` | DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹 路径守卫：限制在 FilesRoot 内，防止删除系统目录 |
-| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:344` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串） |
-| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:354` | CountDuplicateFiles 快速统计重复文件数量 |
-| `App.InvalidateScanCache()` | `internal/app/resource_bindings:364` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据 |
-| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:370` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
+| `App.LoadResourceTypes()` | `internal/app/resource_bindings:23` | LoadResourceTypes 加载资源类型注册表 |
+| `App.ReadPackMeta()` | `internal/app/resource_bindings:32` | ReadPackMeta 读取资源包信息（pack.mcmeta + pack.png） |
+| `App.ReadShaderpackLang()` | `internal/app/resource_bindings:57` | ReadShaderpackLang 读取光影包 lang/en_US.lang 提取显示名 |
+| `App.GetNbtVoxelData()` | `internal/app/resource_bindings:84` | GetNbtVoxelData 读取 .nbt 结构文件体素数据 |
+| `App.GetSchematicVoxelData()` | `internal/app/resource_bindings:89` | GetSchematicVoxelData 读取 .schematic 文件体素数据 |
+| `App.ReadSchematic()` | `internal/app/resource_bindings:94` | ReadSchematic 读取 .schematic 文件基本信息 |
+| `App.ReadNbtStructure()` | `internal/app/resource_bindings:104` | ReadNbtStructure 读取 .nbt 结构文件基本信息 |
+| `App.ReadLitematicMeta()` | `internal/app/resource_bindings:114` | ReadLitematicMeta 读取投影文件元数据（作者/时间/版本/方块统计/预览图） |
+| `App.GetLitematicVoxelData()` | `internal/app/resource_bindings:125` | GetLitematicVoxelData 读取投影文件体素数据（按颜色分组的方块位置） |
+| `App.SetVoxelMaxBlocks()` | `internal/app/resource_bindings:130` | SetVoxelMaxBlocks 设置 3D 体素渲染上限，0=恢复默认 200000 |
+| `App.DetectResourceType()` | `internal/app/resource_bindings:137` | DetectResourceType 检测指定文件的资源类型 |
+| `App.GetRepoRoot()` | `internal/app/resource_bindings:146` | GetRepoRoot 根据资源类型返回对应的仓库根目录 |
+| `App.ToggleResourcePack()` | `internal/app/resource_bindings:187` | ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled） P2 修复：补路径守卫——原实现 os.Rename 对任意路径可重命 |
+| `App.IsResourcePackEnabled()` | `internal/app/resource_bindings:207` | IsResourcePackEnabled 检查资源包是否启用 |
+| `App.SelectImportZip()` | `internal/app/resource_bindings:212` | SelectImportZip 打开文件选择器选取 .zip 文件 |
+| `App.SelectImportFile()` | `internal/app/resource_bindings:225` | SelectImportFile 打开文件选择器，按给定扩展名过滤 filter 格式: "显示名|*.ext1;*.ext2" |
+| `App.SetResourceRoot()` | `internal/app/resource_bindings:246` | SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认） P1 修复：非空入参经 filepath.Abs(filepath.Clean()) 规范化，防止含 |
+| `App.ResetResourceRoot()` | `internal/app/resource_bindings:277` | ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值） |
+| `App.ImportResourcePack()` | `internal/app/resource_bindings:303` | ImportResourcePack 使用策略模式导入资源包 |
+| `App.ImportByType()` | `internal/app/resource_bindings:316` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
+| `App.DeleteResourcePack()` | `internal/app/resource_bindings:333` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： src 为 ysm.json 时整组删除父目录（文件夹型模型），否则删除单文件。 |
+| `App.DeleteModelDir()` | `internal/app/resource_bindings:339` | DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹 路径守卫：限制在 FilesRoot 内，防止删除系统目录 |
+| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:352` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串） |
+| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:362` | CountDuplicateFiles 快速统计重复文件数量 |
+| `App.InvalidateScanCache()` | `internal/app/resource_bindings:372` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据 |
+| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:378` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
 | `App.GetWasmBinary()` | `internal/app/wasm_embed:5` | GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。 |
 
 ## 前端·根 (app-modules/bus)

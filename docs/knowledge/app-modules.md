@@ -53,6 +53,7 @@ use_when:
 - `registerContextMenus()` 只调用一次，重复注册会造成菜单 handler 翻倍（ADR-008）
 - 不引入 `window.__*` 全局变量（治理红线 §3.1）；唯一例外是显式声明类型的 `window.applyTheme`
 - 主题白名单外的值一律回落 `system`；动画全局开关经 `document.documentElement` 的 `.no-animations` 类控制，组件动画必须响应该类
+- **隐私模式 localStorage 读写全部走 safe 包装**（P3 修复：`initTheme` 的 try/catch 两分支、`applyUIPrefs` 四项、`_devtools` 标志——原裸调在存储禁用时抛错会中断启动 IIFE 或中止模块求值）；`?dev=1` 与 `_devtools` 均生效（`_devtools` 无写入方，实际仅 ?dev=1 可用，注释声明）
 
 ## 相关
 

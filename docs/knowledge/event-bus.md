@@ -45,6 +45,8 @@ use_when:
 - 全局事件只注册一次，不重复注册（见 AGENTS.md §三 陷阱 #3 #8）
 - 异步操作的 `finally` 中必须 emit 完成事件，不可放 `try` 末尾
 - 不通过 `window` 传递事件，统一走 bus
+- **`once` 只能用它返回的退订函数取消**（P3 观察：`bus.off(event, 原fn)` 按引用匹配不到 wrapper、静默 no-op、wrapper 永久驻留全局单例——「once off 错对象」残余路径；用返回 unsub 的调用方无碍）
+- `async` listener 的 promise rejection 不经 emit 捕获（P3 观察：emit 只 catch 同步抛错，调用方须内部 try/catch——全库 handler 已大多遵守）
 
 ## 相关
 

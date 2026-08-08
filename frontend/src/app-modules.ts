@@ -75,25 +75,26 @@ function applyTheme(mode: string): void {
 }
 window.applyTheme = applyTheme;
 
-/** 从 Go 配置或 localStorage 加载主题 */
+// P3 修复：隐私模式/存储禁用下 localStorage 读写抛错——原 try 与 catch 两分支都裸调
+// getItem/setItem，任一抛错 → 启动 IIFE 拒绝（unhandledrejection），applyUIPrefs 与
+// checkUpdateSilent 被跳过、主题不生效（index.html 已为此场景做防护，此处口径对齐）。
+// 提升到模块级供 matchMedia 监听器复用（code_review：该监听器原裸调 getItem，隐私模式
+// 下每次系统主题切换抛错 → 主题跟随静默失效）
+function safeGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function safeSet(key: string, val: string): void {
+  try {
+    localStorage.setItem(key, val);
+  } catch {
+    /* 隐私模式：忽略持久化 */
+  }
+}
 async function initTheme() {
-  // P3 修复：隐私模式/存储禁用下 localStorage 读写抛错——原 try 与 catch 两分支都裸调
-  // getItem/setItem，任一抛错 → 启动 IIFE 拒绝（unhandledrejection），applyUIPrefs 与
-  // checkUpdateSilent 被跳过、主题不生效（index.html 已为此场景做防护，此处口径对齐）
-  const safeGet = (key: string): string | null => {
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  };
-  const safeSet = (key: string, val: string): void => {
-    try {
-      localStorage.setItem(key, val);
-    } catch {
-      /* 隐私模式：忽略持久化 */
-    }
-  };
   try {
     const { LoadAppConfig } = await getApp();
     const cfg = await LoadAppConfig();
@@ -196,7 +197,8 @@ document.addEventListener(
 window
   .matchMedia("(prefers-color-scheme: dark)")
   .addEventListener("change", (e) => {
-    const theme = localStorage.getItem("theme") || "system";
+    // P3 修复（code_review）：裸调改 safeGet——隐私模式每次系统主题切换抛错 → 主题跟随静默失效
+    const theme = safeGet("theme") || "system";
     if (theme === "system") {
       applyTheme("system");
       bus.emit("toast:show", {

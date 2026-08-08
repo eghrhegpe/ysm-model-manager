@@ -183,8 +183,14 @@ func specificRoot(cfg types.AppConfig, rtype string) string {
 
 // ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled）
 // P2 修复：补路径守卫——原实现 os.Rename 对任意路径可重命名（对齐 ToggleModelEnable 经 fileops
-// 的 ysmRoot 防护；rename 目标派生自输入路径，越权路径会连带生成越权目标）
+// 的 ysmRoot 防护；rename 目标派生自输入路径，越权路径会连带生成越权目标）。
+// P2 修复（code_review）：额外拒绝 path == 仓库根——IsInside 对「路径等于基准」按设计返回 nil，
+// 传入仓库根时 os.Rename(root, root+".disabled") 会把整个仓库移出配置位置（镜像 DeleteModelDir
+// 的 rel=="." 拒绝同类输入）
 func (a *App) ToggleResourcePack(path string) bool {
+	if filepath.Clean(path) == filepath.Clean(a.ysmRoot()) {
+		return false
+	}
 	if err := paths.IsInside(a.ysmRoot(), path); err != nil {
 		return false
 	}

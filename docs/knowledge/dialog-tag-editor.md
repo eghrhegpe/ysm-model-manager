@@ -47,6 +47,8 @@ use_when:
 - 保存必须经 `SetModelTags` 成功后才关闭弹窗；失败保留弹窗并展示错误，允许重试
 - 标签列表写入前保持排序（`[...tags, t].sort()`），与后端 SetTags 的排序口径一致
 - 弹窗内经 `registerDlg` 登记、`closeDlg` 关闭；动态文本过 `esc` 转义
+- **加载期间禁用输入/添加控件**（P3 修复）：GetModelTags/AllTags 异步返回晚于用户输入时 `tags = [...]` 会覆写已编辑内容（竞态），`finally` 恢复并聚焦
+- 建议区不随增删刷新（已加标签仍残留在建议列表，P4 观察）；`esc` 直引 html.ts 合规（本文件与其他 dialog 不同，已按陷阱 #15 直引）
 
 ## 相关
 

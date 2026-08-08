@@ -49,6 +49,8 @@ use_when:
 - 文件名非法字符与 255 长度上限在前端先行拦截，不等 Go 端报错
 - 「读取头部」按钮的文案/disabled 必须在 `finally` 恢复，防读取失败后卡死
 - 弹窗必须经 `registerDlg` 登记，关闭统一走 `closeDlg`（退场动画 + 单次结算）
+- **Enter 键已接线**（P3 修复）：overlay keydown 的 Enter 触发 `#rn-ok` click，与按钮共享校验/关闭路径（原按钮文案「重命名 (Enter)」虚标，键盘 Enter 无法提交）；Esc 走取消
+- 弹窗未做 `trapFocus`（modal 家族其余成员有，此处一致性缺口 P3 观察）；`esc` 从 modal.ts 再导出引入（与 html.ts 等价，P4 约定性）
 
 ## 相关
 

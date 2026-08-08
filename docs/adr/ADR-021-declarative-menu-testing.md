@@ -1,6 +1,7 @@
 # ADR-021：前端声明式菜单自动化测试方案
 
 - **状态**：✅ 已采纳（A/B 层已实施；C 层 E2E 按决策不引入、列为远期）
+- **被取代**：[ADR-037] 取代（C 层 E2E 条款被推翻，A/B 层保留）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/core/context-menus.ts` / `frontend/src/views/context-menu.ts` / `frontend/src/bus.ts`（MenuItem）/ `frontend/package.json`（vitest + jsdom）/ `tests/*.mjs`（契约测试）/ ADR-007 / ADR-014

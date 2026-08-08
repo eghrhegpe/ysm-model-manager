@@ -12,9 +12,9 @@ import (
 
 // Logger 导入日志管理器
 type Logger struct {
-	mu    sync.Mutex
-	logs  []types.ImportLog
-	path  string
+	mu   sync.Mutex
+	logs []types.ImportLog
+	path string
 }
 
 // NewLogger 创建日志管理器

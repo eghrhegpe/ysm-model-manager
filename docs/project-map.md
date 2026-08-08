@@ -75,7 +75,6 @@
 
 | 文件 | 用途 |
 |------|------|
-| `3D-DOMAIN-OWNERSHIP.md` | 3D 域文件所有权临时协作约定（fix/3d-render-alignment 分支专用，合并后删除） |
 | `AGENTS.md` | AI 入口手册（硬约束 + 导航） |
 | `README.md` | 项目说明（面向用户） |
 | `cli_export.go` | CLI 模式构建入口（build tag: cli） |

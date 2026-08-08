@@ -62,12 +62,18 @@ func LoadRegistry() *ResourceTypeRegistry {
 		// 原实现 `registry = &ResourceTypeRegistry{}` 会让空注册表
 		// 在进程生命周期内永久缓存（无重试、不回退），所有扩展名查询静默失效
 		log.Printf("[types] 解析注册表失败，回退嵌入基线: %v", err)
-		if err := json.Unmarshal(embeddedRegistryJSON, &reg); err != nil {
+		// P2 修复（code_review）：回退解码必须用全新零值变量——
+		// encoding/json 对字段类型错误是「跳过该字段继续解码」，失败后 reg 可能已部分填充，
+		// 复用 reg 解码基线会得到「基线 + 损坏文件残留字段」的混合注册表
+		// （baseline 缺 configFallback 等字段时残留值存活），违反「回退=干净基线」契约
+		var baseline ResourceTypeRegistry
+		if err := json.Unmarshal(embeddedRegistryJSON, &baseline); err != nil {
 			// 嵌入基线本身损坏（生成文件被破坏）时仍不 panic，但标记空表避免二次解析
 			log.Printf("[types] 嵌入基线解析也失败: %v", err)
 			registry = &ResourceTypeRegistry{}
 			return registry
 		}
+		reg = baseline
 	}
 	registry = &reg
 	return registry

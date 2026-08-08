@@ -2,7 +2,7 @@
 // 支持动态行高：grid=28px, list=24px
 export const ROW_H_GRID = 28;
 export const ROW_H_LIST = 24;
-/** 可见行缓冲（内部渲染计算使用，无需导出） */
+/** 可见行缓冲：上下各多渲染 BUFFER 行，保证快速滚动不露白（28px 行高下约 420px 余量） */
 const BUFFER = 15;
 
 /**

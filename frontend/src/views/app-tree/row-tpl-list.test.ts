@@ -19,7 +19,7 @@ function entry(over: Partial<TreeEntry>): TreeEntry {
 
 describe("listFileRowHTML", () => {
   it("普通 YSM 文件行：勾选 on + 💎 图标 + 格式化大小", () => {
-    const html = listFileRowHTML(entry({}), "a.ysm", "📄");
+    const html = listFileRowHTML(entry({}), "a.ysm", "📄", "");
     expect(html).toContain('class="fl-list"');
     expect(html).toContain('class="ck on"');
     expect(html).toContain("💎");
@@ -28,7 +28,7 @@ describe("listFileRowHTML", () => {
   });
 
   it("被禁用的文件行：ban class + 空勾选", () => {
-    const html = listFileRowHTML(entry({ banned: true }), "a.ysm", "📄");
+    const html = listFileRowHTML(entry({ banned: true }), "a.ysm", "📄", "");
     expect(html).toContain("fl-list ban");
     expect(html).toContain('class="ck"');
   });
@@ -38,6 +38,7 @@ describe("listFileRowHTML", () => {
       entry({ type: "resourcepack", fullPath: "" }),
       "a.zip",
       "📄",
+      "",
     );
     expect(html).toContain("🎨");
     expect(html).toContain('data-fullpath="/repo/a.ysm"');

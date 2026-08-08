@@ -59,10 +59,10 @@ describe("openFullPreview", () => {
     big.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, cancelable: true }));
     big.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, cancelable: true }));
 
-    // 首次 + 3 次缩放
+    // 首次 + 3 次缩放（比例式：±deltaY 各一次 → 净 exp(0.1)）
     expect(renderModel2D).toHaveBeenCalledTimes(4);
     const lastZoom = renderModel2D.mock.calls.at(-1)?.[3].zoom;
-    expect(lastZoom).toBe(1 - 0.3 + 0.3 + 0.3); // 先缩小 0.3，再放大两次
+    expect(lastZoom).toBeCloseTo(Math.exp(0.1), 4);
   });
 
   it("拖拽旋转：mousedown + mousemove 更新 rotation", async () => {

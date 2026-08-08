@@ -10,7 +10,7 @@ export function listFileRowHTML(
   nmHtml: string,
   icon: string,
   nmCls = "",
-  indent: number | null | undefined,
+  indent: number | null | undefined = null,
   rowCls = "",
 ): string {
   const { p, fp, checked, ban, typeIcon, pad } = fileRowCommon(e, icon, indent);

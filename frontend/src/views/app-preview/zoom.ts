@@ -38,7 +38,10 @@ export async function openFullPreview(
     "wheel",
     (e) => {
       e.preventDefault();
-      zoom = Math.max(0.2, Math.min(10, zoom + (e.deltaY > 0 ? -0.3 : 0.3)));
+      // 比例式缩放：缩放幅度跟随 deltaY 大小（高 DPI/慢速滚轮精细，猛滚快速），
+      // 优于固定步长 ±0.3（输入强度与缩放脱钩）
+      const factor = Math.exp(-e.deltaY * 0.001);
+      zoom = Math.max(0.2, Math.min(10, zoom * factor));
       doRender();
     },
     { passive: false },

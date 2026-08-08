@@ -36,18 +36,23 @@ export function renderComponent<T extends Element = HTMLElement>(
   const el = document.createElement(tagName) as unknown as T;
   container.appendChild(el);
 
-  // 等待 connectedCallback（通过检测 shadowRoot 是否就绪）
-  const timer = setTimeout(() => {
-    throw new Error(`renderComponent: connectedCallback for <${tagName}> timed out (${connectedTimeout}ms)`);
+  // 等待 connectedCallback：轮询 shadowRoot 就绪。
+  // 注：旧实现监听的 "connected" 自定义事件无组件派发（死代码），已移除；
+  // 超时只 console.warn 不 throw——组件未注册时抛 uncaught 会炸掉整个测试文件而非当前用例。
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let poll: ReturnType<typeof setInterval> | undefined;
+
+  timer = setTimeout(() => {
+    if (poll) clearInterval(poll);
+    console.warn(
+      `renderComponent: <${tagName}> connectedCallback timed out (${connectedTimeout}ms)`,
+    );
   }, connectedTimeout);
 
-  el.addEventListener("connected", () => clearTimeout(timer), { once: true });
-
-  // 兼容无 connected 事件的组件：轮询 shadowRoot
-  const poll = setInterval(() => {
+  poll = setInterval(() => {
     if (el.shadowRoot) {
-      clearTimeout(timer);
-      clearInterval(poll);
+      if (timer) clearTimeout(timer);
+      if (poll) clearInterval(poll);
     }
   }, 16);
 
@@ -55,8 +60,8 @@ export function renderComponent<T extends Element = HTMLElement>(
     el,
     container,
     unmount: () => {
-      clearTimeout(timer);
-      clearInterval(poll);
+      if (timer) clearTimeout(timer);
+      if (poll) clearInterval(poll);
       if (el.isConnected) el.remove();
     },
   };

@@ -37,6 +37,12 @@ describe("getCreatorIdentity", () => {
     expect(getCreatorIdentity({ tag: "oc" })).toEqual({
       label: "OC 原创角色", icon: ICONS.OC, tag: "oc",
     });
+    expect(getCreatorIdentity({ tag: "official" })).toEqual({
+      label: "官方IP模型库", icon: ICONS.OFFICIAL, tag: "official",
+    });
+    expect(getCreatorIdentity({ tag: "repo" })).toEqual({
+      label: "社区模型仓库", icon: ICONS.REPO, tag: "repo",
+    });
   });
 
   it("未知 role/tag 回退 YSM 创作者", () => {

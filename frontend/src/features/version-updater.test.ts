@@ -98,6 +98,15 @@ describe("checkUpdateSilent", () => {
     await expect(checkUpdateSilent()).resolves.toBeUndefined();
     expect(toasts).toHaveLength(0);
   });
+
+  it("localStorage 损坏为非数字 → 视为未检查过，不永久禁用", async () => {
+    localStorage.setItem(CHECK_KEY, "abc"); // parseInt → NaN
+    const toasts = spyToasts();
+    const { checkUpdateSilent } = await import("./version-updater.ts");
+    await checkUpdateSilent();
+    expect(mocks.CheckUpdate).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(CHECK_KEY)).not.toBe("abc"); // 检查成功后重写
+  });
 });
 
 describe("initVersionUpdater（手动检查）", () => {

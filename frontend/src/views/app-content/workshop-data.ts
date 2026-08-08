@@ -34,10 +34,14 @@ export function getCreatorIdentity(cr: CreatorIdentityInput): CreatorIdentity {
     case "oc":
       return { label: "OC 原创角色", icon: ICONS.OC, tag: "oc" };
   }
-  // fallback: detect from old tag field
+  // fallback: detect from old tag field（与 role 分支对齐，五种身份均可识别）
+  if (tag === "official")
+    return { label: "官方IP模型库", icon: ICONS.OFFICIAL, tag: "official" };
   if (tag === "vup")
     return { label: "VTuber 创作者", icon: ICONS.VUP, tag: "vup" };
   if (tag === "oc") return { label: "OC 原创角色", icon: ICONS.OC, tag: "oc" };
+  if (tag === "repo")
+    return { label: "社区模型仓库", icon: ICONS.REPO, tag: "repo" };
   return { label: "YSM 创作者", icon: ICONS.CREATOR, tag: "creator" };
 }
 

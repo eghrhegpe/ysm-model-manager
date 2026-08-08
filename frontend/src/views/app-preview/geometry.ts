@@ -51,16 +51,25 @@ export interface BedrockGeometry {
   [key: string]: unknown;
 }
 
+/** Bedrock geometry JSON 结构（minecraft:geometry 数组第一项为有效模型） */
+interface BedrockRawGeometry {
+  "minecraft:geometry"?: Array<{
+    bones?: BedrockRawBone[];
+    description?: { texture_width?: number; texture_height?: number };
+  }>;
+}
+
 /** 从 JSON 字符串解析 Bedrock geometry */
 export function parseBedrockGeometryFromJSON(
   jsonStr: string,
 ): BedrockGeometry | null {
-  const raw = JSON.parse(jsonStr) as {
-    "minecraft:geometry"?: Array<{
-      bones?: BedrockRawBone[];
-      description?: { texture_width?: number; texture_height?: number };
-    }>;
-  };
+  // 畸形输入 JSON.parse 会抛 SyntaxError——解析函数自身兜底返回 null，避免调用链未捕获
+  let raw: BedrockRawGeometry | null = null;
+  try {
+    raw = JSON.parse(jsonStr) as BedrockRawGeometry;
+  } catch {
+    return null;
+  }
   const geo = raw?.["minecraft:geometry"]?.[0];
   if (!geo?.bones?.length) return null;
   const bones: BedrockBone[] = [];

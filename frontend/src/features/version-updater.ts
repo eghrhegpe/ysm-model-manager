@@ -21,7 +21,9 @@ const CHECK_INTERVAL = 6 * 60 * 60 * 1000;
 
 /** 检查是否超过频次限制 */
 function canCheck(): boolean {
-  const last = parseInt(localStorage.getItem(CHECK_KEY) || "0", 10);
+  const raw = parseInt(localStorage.getItem(CHECK_KEY) || "0", 10);
+  // 守卫：存储值损坏为非数字时 parseInt→NaN，NaN 比较恒 false 会永久禁用更新检查
+  const last = Number.isNaN(raw) ? 0 : raw;
   return Date.now() - last > CHECK_INTERVAL;
 }
 

@@ -4,10 +4,10 @@ import { describe, it, expect } from "vitest";
 import { describeVersionRange } from "./pack-format.ts";
 
 describe("describeVersionRange", () => {
-  it("supported_formats 双元素 → 范围描述", () => {
+  it("supported_formats 双元素 → 范围描述（版本用 / 分隔，避免范围串歧义）", () => {
     expect(describeVersionRange({ supported_formats: [46, 50] })).toEqual({
       format: "46 ~ 50",
-      version: "1.21.4 ~ 1.21.5",
+      version: "1.21.4 / 1.21.5",
     });
   });
 
@@ -18,17 +18,17 @@ describe("describeVersionRange", () => {
     });
   });
 
-  it("min_format/max_format 数字 → 范围描述", () => {
+  it("min_format/max_format 数字 → 范围描述（minVer 自身含范围时用 / 分隔）", () => {
     expect(describeVersionRange({ min_format: 3, max_format: 4 })).toEqual({
       format: "3 ~ 4",
-      version: "1.11 ~ 1.12.2 ~ 1.13 ~ 1.14.4",
+      version: "1.11 ~ 1.12.2 / 1.13 ~ 1.14.4",
     });
   });
 
-  it("min_format/max_format 为数组形态 → 取首元素", () => {
-    expect(describeVersionRange({ min_format: [3, 3], max_format: [4, 4] })).toEqual({
-      format: "3 ~ 4",
-      version: "1.11 ~ 1.12.2 ~ 1.13 ~ 1.14.4",
+  it("min_format/max_format 为 [min,max] 双值数组 → min 取首、max 取末", () => {
+    expect(describeVersionRange({ min_format: [46, 46], max_format: [46, 50] })).toEqual({
+      format: "46 ~ 50",
+      version: "1.21.4 / 1.21.5",
     });
   });
 
@@ -65,7 +65,7 @@ describe("describeVersionRange", () => {
     // supported_formats 中 max=90（>88）→ fmtVer 返回"最新版本"
     expect(describeVersionRange({ supported_formats: [46, 90] })).toEqual({
       format: "46 ~ 90",
-      version: "1.21.4 ~ 最新版本",
+      version: "1.21.4 / 最新版本",
     });
   });
 

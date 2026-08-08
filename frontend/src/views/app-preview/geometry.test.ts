@@ -42,6 +42,11 @@ describe("parseBedrockGeometryFromJSON", () => {
     ).toBeNull();
   });
 
+  it("畸形 JSON → null（不抛 SyntaxError）", () => {
+    expect(() => parseBedrockGeometryFromJSON("{bad json")).not.toThrow();
+    expect(parseBedrockGeometryFromJSON("{bad json")).toBeNull();
+  });
+
   it("UV 字符串形态（{...}）→ 存 faceUV，uv 默认 [0,0]", () => {
     const g = parseBedrockGeometryFromJSON(
       JSON.stringify({

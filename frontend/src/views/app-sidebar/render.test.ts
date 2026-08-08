@@ -46,7 +46,7 @@ describe("renderVersionCards", () => {
       instance({ name: "P2" }),
     ]);
 
-    const cards = container.querySelectorAll(".vc");
+    const cards = Array.from(container.querySelectorAll<HTMLElement>(".vc"));
     expect(cards).toHaveLength(2);
     expect(cards[0].dataset.idx).toBe("0");
     expect(cards[1].dataset.idx).toBe("1");

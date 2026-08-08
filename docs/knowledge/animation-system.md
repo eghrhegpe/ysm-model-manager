@@ -56,6 +56,28 @@ use_when:
 - `stagger` 消费方：`app-content/index.ts`、`app-sync-manager/tpl.ts`、`dialogs/batch-rename.ts`、`features/community/render.ts` + `site-view.ts`（卡片入场）
 - 全局开关：`app-modules.ts` 按设置切换 `document.documentElement` 的 `no-animations` class；CSS 侧对卡片/弹窗/主题动效统一 `animation: none !important`
 
+## 上游留档：YSMParser 动画模型 ID 映射（v0.3.6）
+
+`GetAnimationModelName(modelId, isNewVersion)`（`upstream/YesSteveModel-Parser/YSMParser/parsers/v3/YSMParserV3.cpp:136`，调用点 :2222/:2329/:2655）把动画文件内部的 modelId 翻译成模型名：
+
+| ID | 新版本（v3+） | 旧版本 |
+|----|--------------|--------|
+| 1 | main | main |
+| 2 | arm | arm |
+| 3 | extra | extra |
+| 4 | tac | tac |
+| 5 | arrow | arrow |
+| 6 | carryon | carryon |
+| 7 | parcool | parcool |
+| 8 | swem | swem |
+| 9 | slashblade | slashblade |
+| 10 | tlm | tlm |
+| 11 | fp.arm | fp_arm |
+| 12 | immersive_melodies | immersive_melodies |
+| 13 | iss | irons_spell_books |
+
+**利用判断（2026-08 结论）**：该映射已**体现在解码产物文件名**（`model/animations/main.animation.json`、`arm.animation.json`…），产物侧不存在需要 modelId 的断点，项目未引入 modelId 消费路径。此表仅作**未来「动画按组件归属播放」的命名参考**：按动画文件名前缀归属组件（复用多组件解析的 `orderedNames` 组件序与 `IsMainModelName` 分类），与模型 ID 表同构但不依赖它。
+
 ## 不变量
 
 - Molang 表达式不解释执行：检测到即标记 hasMolang 并跳过该值（避免 eval 任意表达式）；注意实现细节——**直接字符串帧被跳过 ✓，但数组含 Molang 轴被零填充保留**（animation.ts:105-108），且**纯数字字符串可能误判 Molang**（animation.ts:170，`hasMolangInChannelData` 的宽松数字判定，P3 观察）

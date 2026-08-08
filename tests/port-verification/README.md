@@ -28,7 +28,7 @@ node tests/port-verification/compare.mjs "tests/ysm-reference/<模型>/output/mo
 | 双月希瞳 v2.2（main，836 骨） | ✅ 836=836 | ❌ 0/836 | ✅ 5678=5678 | ❌ **0/5678** |
 
 - positions / normals / uvs / indices / localPosition / localRotation **全部 0 差异**
-- 五类差异的修复记录见 [ADR-041](../docs/adr/ADR-041-spec-render-alignment.md)
+- 五类差异的修复记录见 [ADR-041](../../docs/adr/ADR-041-spec-render-alignment.md)
 
 ## 五类差异 → 修复结论（ADR-041）
 

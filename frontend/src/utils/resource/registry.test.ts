@@ -3,7 +3,10 @@
 // 重复调用仅一次 Go 调用。mock getApp / LoadResourceTypes。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const loadMock = vi.fn();
+// P3 修复（code_review）：loadMock 经 vi.hoisted() 声明——Vitest 会把 vi.mock 提升到
+// 文件顶部，工厂闭包捕获 loadMock；当前仅动态 import 触发工厂（安全），但一旦未来
+// 加静态 import，工厂在 const 初始化前执行会抛 TDZ ReferenceError。hoisted 消除该脆弱性
+const { loadMock } = vi.hoisted(() => ({ loadMock: vi.fn() }));
 vi.mock("../../wails/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({ LoadResourceTypes: loadMock }),
 }));

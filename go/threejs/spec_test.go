@@ -43,8 +43,8 @@ func TestBuildSingleCube(t *testing.T) {
 	if !strings.Contains(out, `"name":"b1"`) {
 		t.Fatalf("bone b1 missing in: %s", out)
 	}
-	// mesh localPosition = cubePivot - bonePivot = [4,4,4] - [0,0,0]
-	if !strings.Contains(out, `"localPosition":[4,4,4]`) {
+	// mesh localPosition = X 翻转对齐 C#（ConvertBones）→ bonePivot - cubePivot = [0,0,0] - [4,4,4]
+	if !strings.Contains(out, `"localPosition":[-4,4,4]`) {
 		t.Fatalf("mesh localPosition mismatch: %s", out)
 	}
 }
@@ -85,8 +85,8 @@ func TestBuildDuplicateBoneMerge(t *testing.T) {
 			if b.ParentID == nil || *b.ParentID != "p1" {
 				t.Fatalf("b1 parentId = %v, want p1 (有 parent 的同名骨骼应覆盖)", b.ParentID)
 			}
-			// localPosition = b1.pivot - p1.pivot = [10,0,0] - [0,0,0]
-			if b.LocalPosition != [3]float64{10, 0, 0} {
+			// localPosition = X 翻转对齐 C# → p1.pivot - b1.pivot = [0,0,0] - [10,0,0]
+			if b.LocalPosition != [3]float64{-10, 0, 0} {
 				t.Fatalf("b1 localPosition = %v, want [10 0 0]", b.LocalPosition)
 			}
 		}
@@ -99,9 +99,9 @@ func TestBuildDuplicateBoneMerge(t *testing.T) {
 		t.Fatalf("meshes = %d, want 1（overwrite 整体替换旧 cube）", len(spec.Models[0].MeshGroups))
 	}
 	m := spec.Models[0].MeshGroups[0]
-	// 保留的是 cubeB（pivot [11,0,0] - bonePivot [10,0,0] = [1,0,0]）
-	if m.LocalPosition != [3]float64{1, 0, 0} {
-		t.Fatalf("mesh localPosition = %v, want [1 0 0]（cubeB 替换 cubeA）", m.LocalPosition)
+	// 保留的是 cubeB（X 翻转对齐 C# → bonePivot [10,0,0] - pivot [11,0,0] = [-1,0,0]）
+	if m.LocalPosition != [3]float64{-1, 0, 0} {
+		t.Fatalf("mesh localPosition = %v, want [-1 0 0]（cubeB 替换 cubeA）", m.LocalPosition)
 	}
 }
 

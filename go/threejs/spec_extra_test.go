@@ -235,8 +235,8 @@ func TestBuildCubeMeshData_Valid(t *testing.T) {
 	if len(md.Indices) != 6*6 { // 6 faces * 6 indices
 		t.Errorf("Indices 长度 = %d, 期望 36", len(md.Indices))
 	}
-	// localPosition = cubePivot - bonePivot = [4,4,4] - [0,0,0]
-	if md.LocalPosition != [3]float64{4, 4, 4} {
+	// localPosition = X 翻转对齐 C#（ConvertBones）→ bonePivot - cubePivot = [0,0,0] - [4,4,4]
+	if md.LocalPosition != [3]float64{-4, 4, 4} {
 		t.Errorf("LocalPosition = %v, 期望 [4,4,4]", md.LocalPosition)
 	}
 }

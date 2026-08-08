@@ -105,16 +105,16 @@ func Build(model types.BedrockModel) (string, error) {
 	for _, b := range model.Bones {
 		bp := pivots[b.Name]
 
-		// 骨骼 local position = (bone.pivot - parent.pivot)
+		// 骨骼 local position = (bone.pivot - parent.pivot)，X 翻转对齐 C# ConvertBones（-pivot.x）
 		var localPos [3]float64
 		if b.Parent != "" {
 			if pp, ok := pivots[b.Parent]; ok {
-				localPos = [3]float64{bp.x - pp.x, bp.y - pp.y, bp.z - pp.z}
+				localPos = [3]float64{pp.x - bp.x, bp.y - pp.y, bp.z - pp.z}
 			} else {
-				localPos = [3]float64{bp.x, bp.y, bp.z}
+				localPos = [3]float64{-bp.x, bp.y, bp.z}
 			}
 		} else {
-			localPos = [3]float64{bp.x, bp.y, bp.z}
+			localPos = [3]float64{-bp.x, bp.y, bp.z}
 		}
 
 		var localRot [4]float64 = [4]float64{0, 0, 0, 1}
@@ -204,14 +204,14 @@ func Build(model types.BedrockModel) (string, error) {
 					parentName = b.Parent
 					if b.Parent != "" {
 						if pp, ok := pivots[b.Parent]; ok {
-							localPos = [3]float64{bp.x - pp.x, bp.y - pp.y, bp.z - pp.z}
+							localPos = [3]float64{pp.x - bp.x, bp.y - pp.y, bp.z - pp.z}
 						} else {
 							// 父骨骼无 pivot 数据 → 挂到 root，用世界坐标
 							parentName = ""
-							localPos = [3]float64{bp.x, bp.y, bp.z}
+							localPos = [3]float64{-bp.x, bp.y, bp.z}
 						}
 					} else {
-						localPos = [3]float64{bp.x, bp.y, bp.z}
+						localPos = [3]float64{-bp.x, bp.y, bp.z}
 					}
 					break
 				}
@@ -222,7 +222,7 @@ func Build(model types.BedrockModel) (string, error) {
 					log.Printf("[spec] ⚠️ 骨骼 %q 无 pivot（纯 parent 引用）", name)
 				}
 				// 挂到 root，用世界坐标
-				localPos = [3]float64{bp.x, bp.y, bp.z}
+				localPos = [3]float64{-bp.x, bp.y, bp.z}
 				parentName = ""
 			}
 			var parentID *string
@@ -277,10 +277,10 @@ func Build(model types.BedrockModel) (string, error) {
 		if ancestor != "" {
 			ancPivot := pivots[ancestor]
 			bones[i].ParentID = &ancestor
-			bones[i].LocalPosition = [3]float64{bp.x - ancPivot.x, bp.y - ancPivot.y, bp.z - ancPivot.z}
+			bones[i].LocalPosition = [3]float64{ancPivot.x - bp.x, bp.y - ancPivot.y, bp.z - ancPivot.z}
 		} else {
 			bones[i].ParentID = nil
-			bones[i].LocalPosition = [3]float64{bp.x, bp.y, bp.z}
+			bones[i].LocalPosition = [3]float64{-bp.x, bp.y, bp.z}
 		}
 	}
 
@@ -292,7 +292,7 @@ func Build(model types.BedrockModel) (string, error) {
 					raPivot := pivots["RightArm"]
 					armPivot := pivots["Arm"]
 					bones[i].ParentID = &bones[j].Name
-					bones[i].LocalPosition = [3]float64{raPivot.x - armPivot.x, raPivot.y - armPivot.y, raPivot.z - armPivot.z}
+					bones[i].LocalPosition = [3]float64{armPivot.x - raPivot.x, raPivot.y - armPivot.y, raPivot.z - armPivot.z}
 					break
 				}
 			}
@@ -303,7 +303,7 @@ func Build(model types.BedrockModel) (string, error) {
 					laPivot := pivots["LeftArm"]
 					armPivot := pivots["Arm"]
 					bones[i].ParentID = &bones[j].Name
-					bones[i].LocalPosition = [3]float64{laPivot.x - armPivot.x, laPivot.y - armPivot.y, laPivot.z - armPivot.z}
+					bones[i].LocalPosition = [3]float64{armPivot.x - laPivot.x, laPivot.y - armPivot.y, laPivot.z - armPivot.z}
 					break
 				}
 			}
@@ -373,7 +373,7 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 	hy2 := (ty - fy) * 0.5
 	hz2 := (tz - fz) * 0.5
 
-	// 顶点相对 cube pivot（旋转中心），mesh 位置 = cubePivot - bonePivot
+	// 顶点相对 cube pivot（旋转中心），mesh 位置 = bonePivot - cubePivot（X 翻转对齐 C#）
 	lx := cx - hx2 - cp[0]
 	ly := cy - hy2 - cp[1]
 	lz := cz - hz2 - cp[2]
@@ -432,9 +432,9 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 		indices = append(indices, bi, bi+2, bi+1, bi+2, bi+3, bi+1)
 	}
 
-	// Mesh local position = cubePivot - bonePivot（顶点已相对 cubePivot）
+	// Mesh local position = bonePivot - cubePivot（X 翻转对齐 C# ConvertBones；顶点已相对 cubePivot）
 	meshID := boneID + "_" + strconv.Itoa(cubeIdx)
-	localPos := [3]float64{cp[0] - bonePivot.x, cp[1] - bonePivot.y, cp[2] - bonePivot.z}
+	localPos := [3]float64{bonePivot.x - cp[0], cp[1] - bonePivot.y, cp[2] - bonePivot.z}
 
 	// Cube rotation → quaternion (CreateBlockbenchQuaternion)
 	localRot := eulerToQuaternion(-c.Rotation[0], -c.Rotation[1], c.Rotation[2])

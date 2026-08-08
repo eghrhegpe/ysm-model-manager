@@ -491,7 +491,7 @@
 | `App.ReadFileBytes()` | `internal/app/app_model:71` | — |
 | `App.AnalyzeBedrockModel()` | `internal/app/app_model:89` | — |
 | `App.GetModel3DSpec()` | `internal/app/app_model:134` | — |
-| `App.SaveScreenshotFile()` | `internal/app/app_model:145` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
+| `App.SaveScreenshotFile()` | `internal/app/app_model:160` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
 | `App.ExportBoneStructures()` | `internal/app/app_scan:23` | ========== 批量导出骨骼结构 ========== |
 | `App.ExportModelStructureJSON()` | `internal/app/app_scan:79` | ExportModelStructureJSON 导出单模型骨骼结构 |
 | `App.SearchModels()` | `internal/app/app_scan:116` | ========== 高级搜索 ========== |
@@ -728,17 +728,17 @@
 | `SpecBone3D()` | `frontend/src/utils/3d/model3d:7` | — |
 | `SpecMeshGroup3D()` | `frontend/src/utils/3d/model3d:15` | — |
 | `SpecModelGroup3D()` | `frontend/src/utils/3d/model3d:27` | — |
-| `Spec3D()` | `frontend/src/utils/3d/model3d:32` | — |
-| `BoneSelectInfo()` | `frontend/src/utils/3d/model3d:37` | 骨骼选中信息（window._3dOnBoneSelect 回调参数） |
-| `RenderModel3DHandle()` | `frontend/src/utils/3d/model3d:51` | renderModel3D 返回的渲染句柄 |
-| `TdKeyAction()` | `frontend/src/utils/3d/model3d:66` | — |
-| `DEFAULT_TD_KEYMAP()` | `frontend/src/utils/3d/model3d:69` | 默认键位以 KeyboardEvent.code 存储（物理键，跨键盘布局一致） |
-| `loadTdKeymap()` | `frontend/src/utils/3d/model3d:83` | 读取用户自定义键位（无/非法时回退默认） |
-| `loadTdCamSpeed()` | `frontend/src/utils/3d/model3d:101` | 相机移动速度（2–200），默认 20 |
-| `loadTdRotMode()` | `frontend/src/utils/3d/model3d:107` | true = 环绕（orbit），false = 自身（free） |
-| `buildSceneMesh()` | `frontend/src/utils/3d/model3d:120` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
-| `renderModel3D()` | `frontend/src/utils/3d/model3d:168` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/src/utils/3d/model3d:840` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `Spec3D()` | `frontend/src/utils/3d/model3d:35` | — |
+| `BoneSelectInfo()` | `frontend/src/utils/3d/model3d:40` | 骨骼选中信息（window._3dOnBoneSelect 回调参数） |
+| `RenderModel3DHandle()` | `frontend/src/utils/3d/model3d:54` | renderModel3D 返回的渲染句柄 |
+| `TdKeyAction()` | `frontend/src/utils/3d/model3d:69` | — |
+| `DEFAULT_TD_KEYMAP()` | `frontend/src/utils/3d/model3d:72` | 默认键位以 KeyboardEvent.code 存储（物理键，跨键盘布局一致） |
+| `loadTdKeymap()` | `frontend/src/utils/3d/model3d:86` | 读取用户自定义键位（无/非法时回退默认） |
+| `loadTdCamSpeed()` | `frontend/src/utils/3d/model3d:104` | 相机移动速度（2–200），默认 20 |
+| `loadTdRotMode()` | `frontend/src/utils/3d/model3d:110` | true = 环绕（orbit），false = 自身（free） |
+| `buildSceneMesh()` | `frontend/src/utils/3d/model3d:128` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
+| `renderModel3D()` | `frontend/src/utils/3d/model3d:188` | 渲染 3D 模型到容器，返回控制句柄 |
+| `screenshotPreview()` | `frontend/src/utils/3d/model3d:858` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
 | `animateNumber()` | `frontend/src/utils/animation/animate:12` | 里程表滚动进位动画 |
 | `Vec3()` | `frontend/src/utils/animation/animation:9` | 三维向量 [x, y, z] |
 | `Keyframe()` | `frontend/src/utils/animation/animation:12` | 关键帧 |

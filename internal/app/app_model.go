@@ -132,6 +132,21 @@ func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 }
 
 func (a *App) GetModel3DSpec(modelPath string) string {
+	// 多组件路径（YSMViewer 式）：.ysm 解码出 main+arm+... 各组件独立构建，合并 spec.models。
+	// 纹理 texIdx 由解析层全局化（组件 i → i），前端 texArr 全局数组按序索引。
+	ext := strings.ToLower(filepath.Ext(modelPath))
+	if ext == ".ysm" {
+		data, err := os.ReadFile(modelPath)
+		if err == nil {
+			if comps := decodeYSMComponentsViaNodeJS(data); len(comps) > 0 {
+				spec, err := threejs.BuildMulti(comps, nil)
+				if err == nil && spec != "{}" {
+					return spec
+				}
+			}
+		}
+	}
+	// 单组件兜底（.zip/.7z/.json 或 .ysm 多组件失败时）
 	model := a.AnalyzeBedrockModel(modelPath)
 	spec, err := threejs.Build(model)
 	if err != nil {

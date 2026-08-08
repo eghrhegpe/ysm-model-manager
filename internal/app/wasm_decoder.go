@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -35,7 +36,14 @@ func findNodeJS() string {
 
 // decodeYSMViaNodeJS 用 Node.js + WASM 解码 .ysm 文件
 // 嵌入的 JS 胶水代码和 WASM 二进制会写到临时目录执行
-func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
+type decodedYSMExtra struct {
+	Path string
+	Data []byte
+}
+
+// runYSMNodeJSDecode 用 Node.js + WASM 解码 .ysm，返回解出的全部文件（Path/Data）。
+// decodeYSMViaNodeJS（合并单组件）与 decodeYSMComponentsViaNodeJS（多组件）共用此解码。
+func runYSMNodeJSDecode(ysmData []byte) []decodedYSMExtra {
 	if nodeJSPath == "" {
 		return nil
 	}
@@ -115,26 +123,40 @@ main().catch(e=>{console.error(e);process.exit(1)});
 	}
 	jsonStr := outStr[idx+len("FILES_JSON:"):]
 
-	var files []struct {
+	var rawFiles []struct {
 		Path string `json:"path"`
 		Data []int  `json:"data"`
 	}
-	if err := json.Unmarshal([]byte(jsonStr), &files); err != nil {
+	if err := json.Unmarshal([]byte(jsonStr), &rawFiles); err != nil {
 		fmt.Fprintln(os.Stderr, "[ysm-node] JSON 解析失败:", err)
 		return nil
 	}
+	files := make([]decodedYSMExtra, 0, len(rawFiles))
+	for _, rf := range rawFiles {
+		data := make([]byte, len(rf.Data))
+		for i, v := range rf.Data {
+			data[i] = byte(v)
+		}
+		files = append(files, decodedYSMExtra{Path: rf.Path, Data: data})
+	}
+	return files
+}
 
-	// 找 geometry JSON 文件
+// decodeYSMViaNodeJS 用 Node.js + WASM 解码 .ysm 并合并为单 BedrockModel（单组件模式）。
+func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
+	files := runYSMNodeJSDecode(ysmData)
+	if len(files) == 0 {
+		return nil
+	}
+
+	// 找 geometry JSON 文件（合并全部组件 bones，保持历史单组件行为）
 	var merged *types.BedrockModel
 	for _, f := range files {
 		low := strings.ToLower(f.Path)
 		if !strings.HasSuffix(low, ".json") || strings.HasSuffix(low, "ysm.json") {
 			continue
 		}
-		data := make([]byte, len(f.Data))
-		for i, v := range f.Data {
-			data[i] = byte(v)
-		}
+		data := f.Data
 		if g := geometry.ParseBedrockGeometry(data); g != nil {
 			for bi := range g.Bones {
 				for ci := range g.Bones[bi].Cubes {
@@ -165,10 +187,7 @@ main().catch(e=>{console.error(e);process.exit(1)});
 		if strings.Contains(low, "avatar/") {
 			continue
 		}
-		data := make([]byte, len(f.Data))
-		for i, v := range f.Data {
-			data[i] = byte(v)
-		}
+		data := f.Data
 		mime := "image/png"
 		if strings.HasSuffix(low, ".jpg") {
 			mime = "image/jpeg"
@@ -178,4 +197,61 @@ main().catch(e=>{console.error(e);process.exit(1)});
 	}
 
 	return merged
+}
+
+// decodeYSMComponentsViaNodeJS 解码 .ysm 并收集为多组件列表（不合并 bones）。
+// 每个组件 = 独立 BedrockModel；TexSlot 按全局文件序分配（main 优先，其余按路径排序），
+// 供 threejs.BuildMulti 生成多组件 spec（YSMViewer 式多组件同屏，arm 等保留为独立组件）。
+func decodeYSMComponentsViaNodeJS(ysmData []byte) []types.BedrockModel {
+	files := runYSMNodeJSDecode(ysmData)
+	if len(files) == 0 {
+		return nil
+	}
+
+	// 收集模型文件（ParseBedrockGeometry 非空的 .json；动画 JSON 解析为 nil 自动过滤）
+	type mf struct {
+		path string
+		data []byte
+	}
+	var modelFiles []mf
+	for _, f := range files {
+		low := strings.ToLower(f.Path)
+		if !strings.HasSuffix(low, ".json") || strings.HasSuffix(low, "ysm.json") {
+			continue
+		}
+		if g := geometry.ParseBedrockGeometry(f.Data); g != nil {
+			modelFiles = append(modelFiles, mf{path: f.Path, data: f.Data})
+		}
+	}
+	if len(modelFiles) == 0 {
+		return nil
+	}
+	// main 优先（YSMViewer 式主组件），其余按路径排序（确定性，ADR-039）
+	sort.SliceStable(modelFiles, func(i, j int) bool {
+		mi := strings.Contains(strings.ToLower(modelFiles[i].path), "main.json")
+		mj := strings.Contains(strings.ToLower(modelFiles[j].path), "main.json")
+		if mi != mj {
+			return mi
+		}
+		return modelFiles[i].path < modelFiles[j].path
+	})
+
+	comps := make([]types.BedrockModel, 0, len(modelFiles))
+	for i, mf := range modelFiles {
+		g := geometry.ParseBedrockGeometry(mf.data)
+		if g == nil {
+			continue
+		}
+		// TexSlot = 全局纹理序（组件 i 的纹理起点；与 FindGeometryInExtractedYSM 的
+		// 文件序 texSlot 口径一致，前端 texArr 全局数组按序索引）
+		for bi := range g.Bones {
+			for ci := range g.Bones[bi].Cubes {
+				g.Bones[bi].Cubes[ci].CubeTexW = g.TexWidth
+				g.Bones[bi].Cubes[ci].CubeTexH = g.TexHeight
+				g.Bones[bi].Cubes[ci].TexSlot = i
+			}
+		}
+		comps = append(comps, *g)
+	}
+	return comps
 }

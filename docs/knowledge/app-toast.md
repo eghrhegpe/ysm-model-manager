@@ -44,6 +44,7 @@ use_when:
 - 消息文本必须过 `_esc`（textContent→innerHTML 方式）转义，禁止直拼 HTML
 - 超过 5 条时同步移除最早条目（不可走异步 `_remove`，否则死循环）；移除前必须 `clearTimeout` 对应定时器
 - 组件实例全局唯一（`app-modules.ts` 静态导入一次），反馈路径禁止另起炉灶
+- **撤销/点击回调在 `_remove` 200ms 出场动画窗口内禁止重复触发**（P2 修复：回调触发即置 `pointer-events:none`；原实现 handler 未摘除、连点可重复执行 undo/双开弹窗）；**`undoCallback` 抛错不得跳过反馈**（P2 修复：原 try/finally 无 catch，异常传播跳过「✅ 已撤销」且无用户提示；现 catch 后给「❌ 撤销失败」）
 
 ## 相关
 

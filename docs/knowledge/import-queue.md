@@ -77,11 +77,12 @@ use_when:
 ## 不变量
 
 - 拖拽区内事件必须 `stopPropagation`，否则与全局 DnD 遮罩双重触发
-- `enqueueFile` 重名去重：`fileQueue` 与 `ImportHistory.records` 中已有同名文件则跳过
+- `enqueueFile` 重名去重：`fileQueue` 与 `ImportHistory.records` 中已有同名文件则跳过（比 name + relPath，ADR-039 P3）
 - `directImport` 的 `_inFlight` 去重键为文件名，`finally` 中必须删除，否则该文件后续再也导不进来
 - 覆盖分支仅在 Go 返回 `FILE_EXISTS`/「文件已存在」时经 `modalConfirm` 确认后执行，且 `finalName` 在 try 外声明保证 catch 可见
 - 文件夹整组要求组内至少 1 个支持文件（`groupCollected` 前端判定与后端 `isSupportedEntryFile` 对齐），否则整组丢弃
 - 拖拽区点击有 500ms `clickLocked` 节流，防抖出双开文件选择器
+- **队列行 ⚠️ 重名预警的 `repoFiles` 键统一「去扩展名」形态**（P2 修复：原 Set 存 `e.Name` 含扩展名、预警查去扩展名，两侧键格式不匹配 → 预警永不触发）
 
 ## 相关
 

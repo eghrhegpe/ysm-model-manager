@@ -46,11 +46,12 @@ use_when:
 
 ## 不变量
 
-- 模块级 `dialogEl` 单例：新弹窗打开前必须先 `close()` 结算旧 `_pendingResolve`，杜绝悬挂 Promise 与双弹窗
-- 替换只作用于文件名主体，扩展名分离保护（`/(\.[^.]+)$/`）
+- 模块级 `dialogEl` 单例：新弹窗打开前必须先 `close()` 结算旧 `_pendingResolve`，杜绝悬挂 Promise 与双弹窗；**registerDlg 的 cancelClose 捕获本次元素引用**（P1 修复：原 `() => close()` 引用模块级 dialogEl，重复打开时旧 cancelClose 在 registerDlg 抢占中被调 → 误杀新弹窗 + `dialogEl.focus()` 抛 TypeError）
+- 替换只作用于文件名主体，扩展名分离保护（`/(\.[^.]+)$/`）；**空查找串守卫**（P2 修复：`replaceAll("", x)` 每两字符间插入破坏预览）
 - 应用按钮必须先 disabled 再 `await onApply`，且「恢复按钮 + `close()`」只能放 `finally`——onApply 抛错时不得残留「⏳ 执行中...」死按钮或不关的弹窗（陷阱 #3）
 - 变更判定以 `newName !== Name` 为准，未变化条目不进 `onApply` 载荷
 - 预览行动态文本一律过共享 `esc` 转义
+- **防抖 timer 挂载到 dialogEl 并在 close() 清理**（P2 修复：原 brTimer 闭包内局部，关闭后 200ms 幽灵回调若新开弹窗会跨弹窗污染）
 
 ## 相关
 

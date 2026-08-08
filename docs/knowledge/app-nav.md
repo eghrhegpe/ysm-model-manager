@@ -41,9 +41,9 @@ use_when:
 
 ## 不变量
 
-- 启动恢复页面的 `nav:change` 必须用 `queueMicrotask` 延迟派发，确保 `app-content` 等组件的 `connectedCallback` 先完成 `bus.on` 注册，否则首屏丢事件
-- `nav:change` 的派发源头只此一处（加上程序化切页方），高亮状态只由 `nav:changed` 回环驱动，不本地抢跑
-- `_unsub` 在 `disconnectedCallback` 清理；localStorage 写入包 try/catch 防隐私模式异常
+- 启动恢复页面的 `nav:change` 用 `queueMicrotask` 延迟派发——但**生产环境 app-content 为动态 import**（app-modules.ts:32），恢复事件实际在 app-content 订阅前触发而丢失；首屏不丢的真正保证来自 app-content 构造器 `resolveInitialPage` 兜底（知识卡旧文把 queueMicrotask 描述为首屏保证，实为动态 import 下失效，漂移已修正）
+- `nav:change` 的派发源头有三处（app-nav 点击/启动恢复、程序化切页方、**index.html:60-64 内联 DOMContentLoaded 脚本**——P2 修正：该内联源默认值已从 `"instances"` 改为 `"repository"`，与 page-store 兜底对齐）；高亮状态只由 `nav:changed` 回环驱动，不本地抢跑
+- `_unsub` 在 `disconnectedCallback` 清理；localStorage 写入包 try/catch 防隐私模式异常（**读路径 `resolveInitialPage` 同样包 try/catch**，P2 修复：隐私模式 getItem 抛错会使 app-nav/app-content 构造失败）
 - 样式走 CSS 变量（`var(--bg)` / `var(--accent)` 等），动画受 `.no-animations` 全局开关约束
 
 ## 相关

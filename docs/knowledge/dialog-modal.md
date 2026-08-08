@@ -48,11 +48,12 @@ use_when:
 
 ## 不变量
 
-- 活动弹窗单例槽位（`_activeOverlay`/`_closeActive`）：新弹窗 `registerDlg` 时旧弹窗必须按「取消值」结算，杜绝弹窗叠加与悬挂 Promise
+- 活动弹窗单例槽位（`_activeOverlay`/`_closeActive`）：新弹窗 `registerDlg` 时旧弹窗必须按「取消值」结算，杜绝弹窗叠加与悬挂 Promise；`closeDlg` 结算槽位带 `_activeOverlay === overlay` 判定，旧弹窗晚到的定时器不误清新弹窗槽位
 - `closeDlg` 必须经 `overlay._closing` 守卫，同一弹窗只结算一次
-- 弹窗内所有动态文本必须过 `esc`，禁止直拼未转义 HTML
+- 弹窗内所有动态文本必须过 `esc`，禁止直拼未转义 HTML（modal.ts 从 html.ts import 并 re-export，无双源；`'` 也转义为 `&#39;`，比知识卡声明的 `& < > "` 更严格）
 - 弹窗只 resolve 不 reject：取消/关闭一律 resolve 取消值（null/false），调用方无需 catch
 - 弹窗 append 到 `document.body` 后必须立即 `registerDlg`，顺序不可颠倒
+- trapFocus 已导出（modal.ts:25-44）供三个内置弹窗使用；P3 观察：`FOCUSABLE_SEL` 裸 `tabindex` 会匹配 `tabindex="-1"`（当前内置弹窗无 -1 后代，静态推导未证实触发）；modalConfirm 初始焦点在 overlay 而 Enter 不触发确认（UX 缺口）；modalSelect 的 `placeholder` 选项为死代码
 
 ## 相关
 

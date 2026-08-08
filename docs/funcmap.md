@@ -601,8 +601,8 @@
 | `MENU_DEFS()` | `frontend/src/core/menu-defs:24` | 四类右键菜单的声明式规格（唯一事实来源） |
 | `getMenuDef()` | `frontend/src/core/menu-defs:112` | 测试辅助：按 type 取声明（不存在返回 undefined） |
 | `resolveInitialPage()` | `frontend/src/core/page-store:28` | — |
-| `PageStore()` | `frontend/src/core/page-store:42` | — |
-| `registerPageStore()` | `frontend/src/core/page-store:49` | 注册页面状态同步（由 registerGlobalHandlers 统一调用，bus.on 的 unsub 收集进 unsubs 清理） |
+| `PageStore()` | `frontend/src/core/page-store:48` | — |
+| `registerPageStore()` | `frontend/src/core/page-store:55` | 注册页面状态同步（由 registerGlobalHandlers 统一调用，bus.on 的 unsub 收集进 unsubs 清理） |
 
 ## 前端·特性
 

@@ -127,6 +127,12 @@ export function showBatchRenameDialog(
   });
   dialogEl.innerHTML = genHTML(dir, items);
   document.body.appendChild(dialogEl);
+  // P2 修复：防抖 timer 挂到 dialogEl 上供 close() 清理——关闭后 200ms 内幽灵回调
+  // 若新开弹窗会跨弹窗污染（document.getElementById 全局查找写入新弹窗 DOM）。
+  // 数组元素含 null（timer 初始为 null），类型必须容纳；槽位 0=批量防抖、1=替换防抖。
+  // 显式标注类型：`[null, null]` 字面量会被推断为 null[]，写回 Timeout 时报 TS2322
+  const brTimers: Array<ReturnType<typeof setTimeout> | null> = [null, null];
+  (dialogEl as HTMLElement & { _brTimers?: Array<ReturnType<typeof setTimeout> | null> })._brTimers = brTimers;
   // P1 修复：cancelClose 捕获本次元素引用——原 `() => close()` 引用模块级 dialogEl，
   // 重复打开时旧 cancelClose 在 registerDlg 抢占中被调，此时 dialogEl 已是新元素 →
   // close() 误杀新弹窗、后续 dialogEl.focus() 在 null 上抛 TypeError、初始化全断
@@ -168,17 +174,12 @@ export function showBatchRenameDialog(
   const applyBatchDebounced = (): void => {
     if (brTimer) clearTimeout(brTimer);
     brTimer = setTimeout(applyBatch, 200);
+    // P2 修复（code_review）：把 live timer id 写回数组——原实现 _brTimers 只存初始 null 快照，
+    // 后续 brTimer 重新赋值但数组不变，close() 的 clearTimeout 清的是空句柄（防抖永不被取消）
+    brTimers[0] = brTimer;
   };
   batchAuthor?.addEventListener("input", applyBatchDebounced);
   batchWork?.addEventListener("input", applyBatchDebounced);
-  // P2 修复：防抖 timer 挂到 dialogEl 上供 close() 清理——关闭后 200ms 内幽灵回调
-  // 若新开弹窗会跨弹窗污染（document.getElementById 全局查找写入新弹窗 DOM）
-  // 数组元素含 null（brTimer 初始为 null），类型必须容纳
-  (dialogEl as HTMLElement & { _brTimers?: Array<ReturnType<typeof setTimeout> | null> })._brTimers = [brTimer];
-  const clearBrTimer = (): void => {
-    if (brTimer) clearTimeout(brTimer);
-    brTimer = null;
-  };
 
   // 复选框事件委托（全选 + 单个）
   previewEl?.addEventListener("change", (e: Event): void => {
@@ -235,6 +236,9 @@ export function showBatchRenameDialog(
       renderPreview(previewEl, items);
       updateCount();
     }, 200);
+    // P2 修复（code_review）：replaceTimer 同样写回数组（槽位 1）——原实现只注册
+    // 批量防抖，替换防抖从未进 _brTimers，close() 清不到 → 替换模式幽灵回调跨弹窗污染
+    brTimers[1] = replaceTimer;
   };
   findInput?.addEventListener("input", applyReplaceDebounced);
   replaceInput?.addEventListener("input", applyReplaceDebounced);

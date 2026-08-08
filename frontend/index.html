@@ -61,9 +61,16 @@
       document.addEventListener("DOMContentLoaded", () => {
         // P2 修复：默认页与 page-store 兜底对齐为 repository——
         // 原 "instances" 与 resolveInitialPage 的兜底（repository）冲突，
-        // settings/community.ts:742-746 已把同类旧写法标注为「死默认值 bug」
-        const defaultPage =
-          localStorage.getItem("ui-default-page") || "repository";
+        // settings/community.ts:742-746 已把同类旧写法标注为「死默认值 bug」。
+        // P3 修复（code_review）：读路径包 try/catch（与 page-store.resolveInitialPage
+        // 一致）——隐私模式 getItem 抛错会 abort 整个 DOMContentLoaded，nav:change
+        // 发射与 loading 监听注册全部丢失
+        let defaultPage = "repository";
+        try {
+          defaultPage = localStorage.getItem("ui-default-page") || "repository";
+        } catch {
+          /* 隐私模式：localStorage 不可用，回退默认页 */
+        }
         window.bus?.emit("nav:change", { page: defaultPage });
 
         // 加载动画控制

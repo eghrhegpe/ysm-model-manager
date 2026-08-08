@@ -121,20 +121,10 @@ export function buildSceneMesh(spec: Spec3D): {
   boneGroupMap: Map<string, THREE.Group>;
   rootGroup: THREE.Group;
   modelScale: number;
-  meshMax: number;
 } {
-  let meshMax = 0;
-  for (const mg of spec.models || [])
-    for (const md of mg.meshGroups || [])
-      for (let i = 0; i < (md.positions?.length || 0); i += 3) {
-        const v = Math.max(
-          Math.abs(md.positions[i]),
-          Math.abs(md.positions[i + 1] || 0),
-          Math.abs(md.positions[i + 2] || 0),
-        );
-        if (v > meshMax) meshMax = v;
-      }
-  const modelScale = meshMax > 32 ? 1 / 16 : meshMax > 4 ? 1 / 4 : 1;
+  // 显示尺寸：固定 1/16（基岩标准：16 像素 = 1 米），严格对齐 YSMViewer ExportScale。
+  // 历史：曾动态 scale（>32→1/16、>4→1/4、else→1）把小模型放大，渲染对齐裁决后移除。
+  const modelScale = 1 / 16;
   const rootGroup = new THREE.Group();
   rootGroup.scale.set(modelScale, modelScale, modelScale);
   const boneGroupMap = new Map<string, THREE.Group>();
@@ -171,7 +161,7 @@ export function buildSceneMesh(spec: Spec3D): {
         boneGroupMap.get(bd.parentId)!.add(g);
       else rootGroup.add(g);
     }
-  return { boneGroupMap, rootGroup, modelScale, meshMax };
+  return { boneGroupMap, rootGroup, modelScale };
 }
 
 /** 渲染 3D 模型到容器，返回控制句柄 */

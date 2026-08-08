@@ -233,8 +233,14 @@ func (tm *TrashManager) Restore(src string) error {
 		return err
 	}
 	for i := 1; ; i++ {
-		if _, err := os.Stat(dst); os.IsNotExist(err) {
+		if _, err := os.Stat(dst); err == nil {
+			// 目标已存在 → 加后缀重试
+		} else if os.IsNotExist(err) {
 			break
+		} else {
+			// P2 修复：非 IsNotExist 错误（权限 EACCES 等）直接返回——原实现继续加后缀循环，
+			// 若错误持续（同一父目录权限问题）i 无界递增 → 死循环（moveEx 同场景已正确处理）
+			return err
 		}
 		ext := filepath.Ext(rel)
 		name := rel[:len(rel)-len(ext)]

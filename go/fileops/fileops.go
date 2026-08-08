@@ -345,6 +345,16 @@ func CopyModelFile(root, src, dstDir string) error {
 	if types.IsYsmEntryJSON(filepath.Base(src)) {
 		src = filepath.Dir(src)
 	}
+	// P2 修复：拒绝目录自嵌套复制——dstDir 位于 src 子树内时（先 MkdirAll 在 src 内创建
+	// dstDir，再 WalkDir 遍历到它）递归自嵌套无限膨胀直至 ENAMETOOLONG
+	if absSrc, err := filepath.Abs(src); err == nil {
+		if absDstDir, err := filepath.Abs(dstDir); err == nil {
+			if relToSrc, err := filepath.Rel(absSrc, absDstDir); err == nil &&
+				relToSrc != "." && relToSrc != ".." && !strings.HasPrefix(relToSrc, ".."+string(filepath.Separator)) {
+				return fmt.Errorf("目标目录不能位于源目录内: %s", dstDir)
+			}
+		}
+	}
 	dst := filepath.Join(dstDir, filepath.Base(src))
 	// 防覆盖：目标已存在直接报错（单文件与目录一致）
 	if _, err := os.Stat(dst); err == nil {

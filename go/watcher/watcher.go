@@ -139,9 +139,14 @@ func (w *Watcher) loop() {
 			w.mu.Unlock()
 		}
 	}()
+	// P2 修复：loop 入口一次性捕获本地 channel 引用——原 select 每轮读共享字段
+	// w.w.Events/w.w.Errors/w.done，Stop→立即 Start（restartWatcher 正是此序列）后
+	// 旧 loop 回到 select 会读到新 watcher → 双 loop 双倍触发防抖 + -race 数据竞争，
+	// 且旧 loop 的 recover 可能误关新 watcher
+	evs, errs, done := w.w.Events, w.w.Errors, w.done
 	for {
 		select {
-		case ev, ok := <-w.w.Events:
+		case ev, ok := <-evs:
 			if !ok {
 				return
 			}
@@ -154,13 +159,13 @@ func (w *Watcher) loop() {
 			// 不需要复杂的事件类型/文件名校验，syncAll 内部会扫描实际状态差异
 			w.debounceSync()
 
-		case err, ok := <-w.w.Errors:
+		case err, ok := <-errs:
 			if !ok {
 				return
 			}
 			log.Printf("[watcher] 错误: %v", err)
 
-		case <-w.done:
+		case <-done:
 			return
 		}
 	}

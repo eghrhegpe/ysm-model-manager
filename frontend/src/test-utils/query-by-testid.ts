@@ -20,6 +20,7 @@ export function queryByTestId(
   container: QueryContainer,
   testid: string,
 ): Element | null {
+  // 精确匹配（单个元素，如 data-testid="nav-item"）
   return scope(container).querySelector(`[data-testid="${testid}"]`);
 }
 
@@ -45,5 +46,9 @@ export function queryAllByTestId(
   container: QueryContainer,
   testid: string,
 ): Element[] {
-  return Array.from(scope(container).querySelectorAll(`[data-testid="${testid}"]`));
+  // P2 修复：前缀匹配 `^=`——知识卡/Design.md §19.1 约定「同域多实例前缀命名空间」
+  // （如 tree-file-1/tree-file-2 → getAllByTestId(root,"tree-file") 一次取全）。
+  // 原实现精确匹配 `=`，组件一旦用带序号 testid 则 getAll 返回 0 抛错（契约漂移）。
+  // 注意：精确 testid 值（如 "nav-item"）也是其自身前缀的子集，现有测试不受影响。
+  return Array.from(scope(container).querySelectorAll(`[data-testid^="${testid}"]`));
 }

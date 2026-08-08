@@ -57,14 +57,18 @@ export async function waitFor(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const start = Date.now();
+    // P2 修复：记录首个异常，超时 reject 时带上原始错误——原实现 catch 静默吞错，
+    // 真实根因被通用消息掩盖，调试成本高
+    let firstErr: unknown = null;
     const tick = () => {
       try {
         if (fn()) resolve();
         else if (Date.now() - start < timeout) requestAnimationFrame(tick);
-        else reject(new Error(`waitFor timed out after ${timeout}ms`));
-      } catch {
+        else reject(new Error(`waitFor timed out after ${timeout}ms${firstErr ? `; last error: ${String((firstErr as Error)?.message ?? firstErr)}` : ""}`));
+      } catch (e) {
+        if (firstErr === null) firstErr = e;
         if (Date.now() - start < timeout) requestAnimationFrame(tick);
-        else reject(new Error(`waitFor condition threw after ${timeout}ms`));
+        else reject(new Error(`waitFor condition threw after ${timeout}ms: ${String((e as Error)?.message ?? e)}`));
       }
     };
     tick();

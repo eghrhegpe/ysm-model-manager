@@ -8,11 +8,10 @@ import (
 
 // TestVersion_Default 确认未注入时为 dev
 func TestVersion_Default(t *testing.T) {
-	if Version != "dev" && Version != "" {
-		// 测试环境可能被构建脚本注入了版本号，接受任一非空值
-		if Version == "" {
-			t.Fatal("Version 不应为空字符串")
-		}
+	// P4 修复：原逻辑倒置恒真——`Version!="dev" && Version!=""` 时外层条件为 false 直接通过，
+	// 且内层 `if Version==""` 是分支内死代码，空串也能过测。改为直接断言非空。
+	if Version == "" {
+		t.Fatal("Version 不应为空字符串（默认 dev 或 ldflags 注入值）")
 	}
 }
 
@@ -24,7 +23,7 @@ func TestVersion_Format(t *testing.T) {
 	if v == "" {
 		t.Fatal("Version 不应为空")
 	}
-	// dev 或 vX.Y.Z[-suffix] 格式
+	// dev 或 vX.Y.Z[-suffix] 格式（P4：补 $ 锚定，防 "v1.2.3garbage!" 通过）
 	ok := v == "dev" || regexp.MustCompile(`^v?\d+\.\d+\.\d+`).MatchString(v)
 	if !ok {
 		t.Fatalf("Version 格式异常: %q", v)

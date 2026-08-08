@@ -1,5 +1,5 @@
 // ===== app-tree 样式（独立文件，避免 JS 热更新时重编译 CSS） =====
-import { btnBaseCSS } from "../../utils/dom/css.ts";
+import { btnBaseCSS, focusVisibleCSS } from "../../utils/dom/css.ts";
 export const treeCSS: string = `
 :host {
   display: flex;
@@ -28,6 +28,9 @@ export const treeCSS: string = `
 .af-sep { font-size:10px;color:var(--muted); }
 /* ===== 统一按钮系统 .btn-base ===== */
 ${btnBaseCSS}
+/* P2 修复：内联 focusVisibleCSS——Shadow DOM 内通用 :focus-visible 焦点环，
+   覆盖 srch-inp/sort-sel 等显式 outline:none 的输入控件（键盘聚焦可见性，a11y） */
+${focusVisibleCSS}
 /* ===== 旧按钮兼容层 ===== */
 .hdr-btn { padding:var(--pad-btn-primary) 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-primary);font-family:inherit; }
 .hdr-btn:hover { background:var(--hover); }
@@ -130,5 +133,8 @@ ${btnBaseCSS}
 /* 行入场动画 — 暂时移除，排查滚动闪烁 */
 /* @keyframes treeRowIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } } */
 /* .fl,.fh { animation: treeRowIn .2s ease forwards; } */
-.no-animations .fl,.no-animations .fh { animation: none !important; }
+/* P2 修复：no-animations 类挂在 documentElement 上，Shadow DOM 内后代选择器无法
+   跨界上溯命中（app-modules.ts 只 toggle 在 <html>），必须用 :host-context 才能命中 */
+:host-context(.no-animations) .fl,
+:host-context(.no-animations) .fh { animation: none !important; }
 `;

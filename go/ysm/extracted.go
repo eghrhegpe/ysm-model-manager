@@ -412,6 +412,14 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) []types.BedrockModel {
 		}
 	} else {
 		orderedNames = modelNames
+		// 数组/字符串形声明也要 main 优先（对齐 map 分支与 zip/WASM 路径，
+		// 否则 arm 声明在前时 TexSlot=组件序会让 arm 占 0、main 纹理错位，P2）：
+		// 稳定排序保持非 main 组件相对声明顺序。
+		sort.SliceStable(orderedNames, func(i, j int) bool {
+			mi := geometry.IsMainModelName(orderedNames[i])
+			mj := geometry.IsMainModelName(orderedNames[j])
+			return mi && !mj
+		})
 	}
 
 	// 补扫 models/ 目录：player.model 未列出的 geometry（projectiles/vehicles 等

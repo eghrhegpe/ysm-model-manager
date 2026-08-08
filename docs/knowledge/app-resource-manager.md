@@ -55,7 +55,7 @@ use_when:
 - 不在前端手写资源类型/扩展名/安装目录逻辑，一切以 `resource_types.json` 条目为准（治理红线：注册表优先）
 - 模块级 `STORE._config` 缓存仅在 `config:resource-types-changed` 或强制刷新时失效
 - 所有反馈统一走 `_toast` → `bus.emit("toast:show")`，不派发游离 DOM 事件；破坏性删除前置 `modalConfirm`（`danger: true`）
-- 所有 `async` DOM 事件 handler 必须自带 try/catch 并把异常转成 `_toast`：`addEventListener` 不会消费返回的 Promise，未捕获的 rejection 只会进 `unhandledrejection`，用户侧表现为「点了没反应」
+- 所有 `async` DOM 事件 handler 必须自带 try/catch 并把异常转成 `_toast`：`addEventListener` 不会消费返回的 Promise，未捕获的 rejection 只会进 `unhandledrejection`，用户侧表现为「点了没反应」。**`attributeChangedCallback`（rtype/instance 变更）与 `config:resource-types-changed` bus handler 调 `_init()` 同样必须 `.catch`**（P2 修复：原两处无 catch，_init 内 await LoadAppConfig/ListVersionInstances/GetRepoRoot reject → 陷阱 #1「改类型/配置后没反应」）
 - `await` 之后回写 DOM 前先比对 `_detailGen` 代际，防快速点条目时旧详情覆盖新详情
 - 注册带 `customElements.get` 守卫（`if (!customElements.get("app-resource-manager"))`）防重复 define
 - 该组件为 light DOM（直接 `this.innerHTML`），样式继承页面级 CSS 变量

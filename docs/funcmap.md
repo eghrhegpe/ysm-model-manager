@@ -862,8 +862,8 @@
 | `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:53` | 从 JSON 字符串解析 Bedrock geometry |
 | `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:25` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:32` | — |
-| `showLitematic()` | `frontend/src/views/app-preview/litematic-meta:91` | 显示投影文件详情面板（tab 布局） |
-| `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:214` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |
+| `showLitematic()` | `frontend/src/views/app-preview/litematic-meta:95` | 显示投影文件详情面板（tab 布局） |
+| `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:223` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |
 | `loadModelData()` | `frontend/src/views/app-preview/loader:13` | 加载模型几何数据 + 纹理 + 作者信息 统一路径：缓存 → WASM 解码 → Go AnalyzeBedrockModel 兜底 |
 | `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:6` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
 | `ModelSpec()` | `frontend/src/views/app-preview/model3d-loader:14` | Go 返回的 3D spec（models 数组） |
@@ -885,7 +885,7 @@
 | `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:27` | 通过前端 WASM 解码 .ysm，返回 { texture, geometry, animations } 不依赖组件实例（无 this 引用），可独立调用 |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `registerResourceManagerGlobal()` | `frontend/src/views/app-resource-manager/index:51` | 全局配置刷新监听：registerGlobalHandlers 统一收集 unsub （替代顶层无守卫注册 — ADR-008 违规点，TS 化后收敛） |
-| `AppResourceManager()` | `frontend/src/views/app-resource-manager/index:71` | — |
+| `AppResourceManager()` | `frontend/src/views/app-resource-manager/index:82` | — |
 | `PackMetaDetail()` | `frontend/src/views/app-resource-manager/tpl:7` | 详情面板元数据（ReadPackMeta / ReadShaderpackLang 返回 JSON 的兼容视图） |
 | `sidebarHTML()` | `frontend/src/views/app-resource-manager/tpl:20` | 侧栏布局（路径 + 操作栏 + 列表） |
 | `itemHTML()` | `frontend/src/views/app-resource-manager/tpl:60` | 列表项 HTML |

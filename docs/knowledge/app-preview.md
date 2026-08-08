@@ -83,7 +83,8 @@ use_when:
 
 ## 不变量
 
-- `model:select` 回调进入即 `++_previewGen`；`_showModelDetail` / `_showPackInfo` 在每个 `await` 之后必须 `if (gen !== this._previewGen) return`（`index.ts:163`、`:202`），否则慢条目 A 的迟到结果会覆盖已切换的 B 的预览（与 `app-sidebar._reloadGen`、`app-sync-manager._gen` 同模式）
+- `model:select` 回调进入即 `++_previewGen`；`_showModelDetail` / `_showPackInfo` 在每个 `await` 之后必须 `if (gen !== this._previewGen) return`（`index.ts:171` / `:210`，**catch 分支同样必须比对**——P2 修复：`_showPackInfo` 的 catch 原无守卫，A 目录失败迟到会覆盖已切换的 B 预览），否则慢条目 A 的迟到结果会覆盖已切换的 B 的预览（与 `app-sidebar._reloadGen`、`app-sync-manager._gen` 同模式）
+- **`showLitematic` 有独立模块级代际 `litematicGen`**（P2 修复：原无任何守卫，await Go 解析期间切模型时慢结果写进新模型的 `#preview-detail` 跨污染；现 await 后与 catch 分支均比对）
 - `_unsubs` 中的 `bus.on` 订阅必须在 `disconnectedCallback` 清理；拖拽 window 监听经 `PreviewCtx._unsubs` 挂销毁清理；Litematic 3D 经 `cleanupLitematic3D`（转发 `cleanupVoxel3D`）终止 WebGL renderer + rAF 循环（防切页 GPU 残留）
 - 2D 拖拽的 window 监听先移除上一轮再绑定（模块级槽位 `_prevWindowMove` / `_prevWindowUp`），禁止累积
 - 预览缓存淘汰时必须 `URL.revokeObjectURL` 释放 blob URL（`cacheSetEvictHandler`）

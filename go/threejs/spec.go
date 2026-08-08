@@ -35,6 +35,7 @@ type BoneData struct {
 	ParentID      *string    `json:"parentId"`
 	LocalPosition [3]float64 `json:"localPosition"`
 	LocalRotation [4]float64 `json:"localRotation"` // quaternion [x,y,z,w]
+	CubeCount     int        `json:"_cubeCount"`    // 该骨骼挂载的立方体数（前端统计用，underscore 字段）
 }
 
 type MeshData struct {
@@ -219,6 +220,10 @@ func buildModelGroup(model types.BedrockModel, compID string, texIdxBase int) (M
 		bonePivot, hasPivot := pivots[b.Name]
 		if !hasPivot {
 			bonePivot = vec3{b.Pivot[0], b.Pivot[1], b.Pivot[2]}
+		}
+		// 前端统计：该骨骼合并后的立方体数（spec 统计面板"立方体 N 个"依赖 _cubeCount）
+		if idx, ok := boneIdx[b.Name]; ok {
+			bones[idx].CubeCount = len(boneCubes[b.Name])
 		}
 		for ci, c := range boneCubes[b.Name] {
 			meshData := buildCubeMeshData(c, bonePivot, texW, texH, b.Name, ci)

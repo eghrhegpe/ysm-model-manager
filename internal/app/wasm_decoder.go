@@ -178,7 +178,8 @@ func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
 		return nil
 	}
 
-	// 找纹理
+	// 找纹理（收集全部：Textures 数组供多纹理/3D texArr，Texture 取第一张兼容单纹理）
+	var texNames []string
 	for _, f := range files {
 		low := strings.ToLower(f.Path)
 		if !strings.HasSuffix(low, ".png") && !strings.HasSuffix(low, ".jpg") {
@@ -188,25 +189,30 @@ func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
 			continue
 		}
 		data := f.Data
+		if len(data) < 4096 {
+			continue // 过滤 <4KB 头像/预览图（与 ParseFromZip 同口径）
+		}
 		mime := "image/png"
 		if strings.HasSuffix(low, ".jpg") {
 			mime = "image/jpeg"
 		}
-		merged.Texture = "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
-		// 纹理名（去扩展名）供前端纹理列表显示，与 AnalyzeBedrockModel 的 Textures 契约一致
+		// 纹理名（去扩展名）供前端纹理列表显示
 		tn := f.Path
 		if idx := strings.LastIndexAny(tn, "/\\"); idx >= 0 {
 			tn = tn[idx+1:]
 		}
-		// 按小写判定扩展名（与上方过滤同口径，兼容 Player.PNG 等大写扩展名），
-		// 用切片保留原显示大小写（code_review P3）
-		if strings.HasSuffix(strings.ToLower(tn), ".png") {
+		lowTn := strings.ToLower(tn)
+		if strings.HasSuffix(lowTn, ".png") {
 			tn = tn[:len(tn)-4]
-		} else if strings.HasSuffix(strings.ToLower(tn), ".jpg") {
+		} else if strings.HasSuffix(lowTn, ".jpg") {
 			tn = tn[:len(tn)-4]
 		}
-		merged.TextureNames = []string{tn}
-		break
+		texNames = append(texNames, tn)
+		merged.Textures = append(merged.Textures, "data:"+mime+";base64,"+base64.StdEncoding.EncodeToString(data))
+	}
+	if len(merged.Textures) > 0 {
+		merged.Texture = merged.Textures[0]
+		merged.TextureNames = texNames
 	}
 
 	return merged

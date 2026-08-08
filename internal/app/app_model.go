@@ -294,22 +294,31 @@ func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 		return types.BedrockModel{}
 	}
 
+	// 收集全部纹理（Textures 数组 + 名字，供多纹理/3D texArr；Texture 取第一张兼容单纹理）
+	var texNames []string
 	filepath.WalkDir(outDir, func(p string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() || merged.Texture != "" {
+		if err != nil || d.IsDir() {
 			return nil
 		}
 		low := strings.ToLower(p)
 		if strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg") {
-			if data, rErr := os.ReadFile(p); rErr == nil && len(data) > 0 {
+			if data, rErr := os.ReadFile(p); rErr == nil && len(data) > 4096 {
 				mime := "image/png"
 				if strings.HasSuffix(low, ".jpg") {
 					mime = "image/jpeg"
 				}
-				merged.Texture = "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+				tn := filepath.Base(p)
+				tn = strings.TrimSuffix(strings.TrimSuffix(tn, ".png"), ".jpg")
+				texNames = append(texNames, tn)
+				merged.Textures = append(merged.Textures, "data:"+mime+";base64,"+base64.StdEncoding.EncodeToString(data))
 			}
 		}
 		return nil
 	})
+	if len(merged.Textures) > 0 {
+		merged.Texture = merged.Textures[0]
+		merged.TextureNames = texNames
+	}
 	return *merged
 }
 

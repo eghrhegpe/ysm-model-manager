@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 
-const SKIP_DIRS = new Set(['node_modules', 'archive', '.git', 'vendor', 'build', 'dist']);
+const SKIP_DIRS = new Set(['node_modules', 'archive', '.git', 'vendor', 'upstream', 'build', 'dist']);
 const SKIP_FILES = new Set(['.doc-next-steps.md']); // 自动生成产物，引用路径可能过期，不应计入断链
 
 function walkMd(dir) {

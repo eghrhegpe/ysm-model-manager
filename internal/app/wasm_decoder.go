@@ -215,10 +215,10 @@ func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
 // decodeYSMComponentsViaNodeJS 解码 .ysm 并收集为多组件列表（不合并 bones）。
 // 每个组件 = 独立 BedrockModel；TexSlot 按全局文件序分配（main 优先，其余按路径排序），
 // 供 threejs.BuildMulti 生成多组件 spec（YSMViewer 式多组件同屏，arm 等保留为独立组件）。
-func decodeYSMComponentsViaNodeJS(ysmData []byte) []types.BedrockModel {
+func decodeYSMComponentsViaNodeJS(ysmData []byte) ([]types.BedrockModel, []string) {
 	files := runYSMNodeJSDecode(ysmData)
 	if len(files) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	// 收集模型文件（ParseBedrockGeometry 非空的 .json；动画 JSON 解析为 nil 自动过滤）
@@ -237,7 +237,7 @@ func decodeYSMComponentsViaNodeJS(ysmData []byte) []types.BedrockModel {
 		}
 	}
 	if len(modelFiles) == 0 {
-		return nil
+		return nil, nil
 	}
 	// main 优先（YSMViewer 式主组件），其余按路径排序（确定性，ADR-039）
 	// 注意：用 basename 判定 main（main.json / main.geo.json），与 zip 版
@@ -269,5 +269,7 @@ func decodeYSMComponentsViaNodeJS(ysmData []byte) []types.BedrockModel {
 		}
 		comps = append(comps, *g)
 	}
-	return comps
+	// R1 契约：WASM 路径无 ysm.json texture 声明（texArr 序由 AnalyzeBedrockModel 决定），
+	// 返回 nil texNames——前端跳过契约比对（避免误报）。
+	return comps, nil
 }

@@ -59,7 +59,7 @@ func TestFindComponentsInExtractedYSM(t *testing.T) {
 		}
 	}
 
-	comps := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
+	comps, _ := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
 	if len(comps) != 4 {
 		t.Fatalf("组件数 = %d, 期望 4（main/arm/arrow/boat 补扫）", len(comps))
 	}

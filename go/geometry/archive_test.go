@@ -345,7 +345,7 @@ func TestParseComponentsFromZip_MainFirstAndTexSlot(t *testing.T) {
 		"main.geo.json": validGeoJSON, // head 骨骼
 		"arm.geo.json":  geoArmJSON,   // arm 骨骼
 	})
-	comps, err := ParseComponentsFromZip(data, int64(len(data)))
+	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
 	if err != nil {
 		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
 	}
@@ -390,7 +390,7 @@ func TestParseComponentsFromZip_MainPriorityOverDeclOrder(t *testing.T) {
 		"main.geo.json": validGeoJSON,
 		"arm.geo.json":  geoArmJSON,
 	})
-	comps, err := ParseComponentsFromZip(data, int64(len(data)))
+	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
 	if err != nil {
 		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
 	}
@@ -423,7 +423,7 @@ func TestParseComponentsFromZip_TexSlotGlobal(t *testing.T) {
 		"main.geo.json": validGeoJSON,
 		"arm.geo.json":  geoArmJSON,
 	})
-	comps, err := ParseComponentsFromZip(data, int64(len(data)))
+	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
 	if err != nil {
 		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
 	}

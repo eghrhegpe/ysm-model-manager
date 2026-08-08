@@ -101,5 +101,20 @@ export async function preloadModel(model: ModelLike): Promise<{
     loadTextures(model.textures && model.textures.length > 1 ? model.textures.filter((u): u is string => Boolean(u)) : (model.texture ? [model.texture] : [])),
     fetchSpec(model),
   ]);
+  // R1 契约校验：spec.texArrOrder（Go 端组件序期望纹理名）vs model.textureNames
+  // （texArr 实际序）——不一致说明组件贴错纹理（texture 声明序 ≠ model 声明序），
+  // 只 warn 不阻断，让错误可见。WASM 路径无 texArrOrder（nil），自动跳过。
+  const order = (spec as ModelSpec).texArrOrder as string[] | undefined;
+  const actual = (model as { textureNames?: string[] }).textureNames;
+  if (order?.length && actual?.length) {
+    for (let i = 0; i < Math.min(order.length, actual.length); i++) {
+      if (String(order[i]).toLowerCase() !== String(actual[i]).toLowerCase()) {
+        console.warn(
+          `[model3d] R1 纹理序不一致: 组件 ${i} 期望 ${order[i]}, texArr 实际 ${actual[i]}（可能贴错纹理）`,
+        );
+        break;
+      }
+    }
+  }
   return { texArr, spec };
 }

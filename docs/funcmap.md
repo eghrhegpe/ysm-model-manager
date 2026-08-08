@@ -116,11 +116,11 @@
 |------|--------|------|
 | `ExtractFirstPNGFromZip()` | `go/geometry/archive:61` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
 | `ExtractFirstPNGFrom7z()` | `go/geometry/archive:82` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
-| `ParseFromZip()` | `go/geometry/archive:287` | — |
-| `ParseFrom7z()` | `go/geometry/archive:579` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
-| `IsMainModelName()` | `go/geometry/archive:856` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
-| `ParseComponentsFromZip()` | `go/geometry/archive:868` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
-| `ParseComponentsFrom7z()` | `go/geometry/archive:949` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
+| `ParseFromZip()` | `go/geometry/archive:289` | — |
+| `ParseFrom7z()` | `go/geometry/archive:581` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
+| `IsMainModelName()` | `go/geometry/archive:858` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
+| `ParseComponentsFromZip()` | `go/geometry/archive:870` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
+| `ParseComponentsFrom7z()` | `go/geometry/archive:963` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
 | `ParseBedrockGeometry()` | `go/geometry/parse:17` | ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式） 注意：data 大小不应超过 maxP |
 
 ## Go·导入
@@ -487,15 +487,15 @@
 | `App.ClearImportLogs()` | `internal/app/app_install:794` | — |
 | `App.GetRuntimeLogs()` | `internal/app/app_install:799` | GetRuntimeLogs 获取运行时日志（watcher/sync 等标准库 log 输出） |
 | `App.ClearRuntimeLogs()` | `internal/app/app_install:804` | ClearRuntimeLogs 清空运行时日志缓冲 |
-| `App.AnalyzeYSMModel()` | `internal/app/app_model:22` | — |
-| `App.ExtractYsmSummary()` | `internal/app/app_model:26` | — |
-| `App.ExtractYSMHeader()` | `internal/app/app_model:40` | — |
-| `App.ExtractYSMHeaderFromBase64()` | `internal/app/app_model:44` | — |
-| `App.SavePreviewTempFile()` | `internal/app/app_model:52` | — |
-| `App.ReadFileBytes()` | `internal/app/app_model:71` | — |
-| `App.AnalyzeBedrockModel()` | `internal/app/app_model:89` | — |
-| `App.GetModel3DSpec()` | `internal/app/app_model:134` | — |
-| `App.SaveScreenshotFile()` | `internal/app/app_model:185` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
+| `App.AnalyzeYSMModel()` | `internal/app/app_model:23` | — |
+| `App.ExtractYsmSummary()` | `internal/app/app_model:27` | — |
+| `App.ExtractYSMHeader()` | `internal/app/app_model:41` | — |
+| `App.ExtractYSMHeaderFromBase64()` | `internal/app/app_model:45` | — |
+| `App.SavePreviewTempFile()` | `internal/app/app_model:53` | — |
+| `App.ReadFileBytes()` | `internal/app/app_model:72` | — |
+| `App.AnalyzeBedrockModel()` | `internal/app/app_model:90` | — |
+| `App.GetModel3DSpec()` | `internal/app/app_model:135` | — |
+| `App.SaveScreenshotFile()` | `internal/app/app_model:206` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
 | `App.ExportBoneStructures()` | `internal/app/app_scan:23` | ========== 批量导出骨骼结构 ========== |
 | `App.ExportModelStructureJSON()` | `internal/app/app_scan:79` | ExportModelStructureJSON 导出单模型骨骼结构 |
 | `App.SearchModels()` | `internal/app/app_scan:116` | ========== 高级搜索 ========== |
@@ -969,12 +969,12 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `_getGlueCode()` | `frontend/src/wasm/ysm-glue-data:4` | — |
+| `_getGlueCode()` | `frontend/src/wasm/ysm-glue-data:3` | — |
 | `YsmDecodedFile()` | `frontend/src/wasm/ysm-parser:46` | 解码输出文件 |
 | `initYSMParser()` | `frontend/src/wasm/ysm-parser:59` | — |
 | `decodeYsmFileFromMemory()` | `frontend/src/wasm/ysm-parser:143` | 内存解析 .ysm（优先路径 — 无文件 I/O，直接传入字节数组） 返回 [{path, data}]，失败返回 null |
 | `decodeYsmFile()` | `frontend/src/wasm/ysm-parser:182` | 通过 callMain + MEMFS 解码 .ysm（回退路径） 保留以兼容旧的 WASM 编译 |
-| `_getWasmBinary()` | `frontend/src/wasm/ysm-wasm-data:4` | — |
+| `_getWasmBinary()` | `frontend/src/wasm/ysm-wasm-data:3` | — |
 
 ---
 

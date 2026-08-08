@@ -4,6 +4,7 @@ package app
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -136,9 +137,13 @@ func (a *App) GetModel3DSpec(modelPath string) string {
 	// 各自组件独立构建，合并 spec.models；纹理 texIdx 由解析层全局化（组件 i → i），
 	// 前端 texArr 全局数组按序索引。
 	ext := strings.ToLower(filepath.Ext(modelPath))
-	if comps := a.collect3DComponents(modelPath, ext); len(comps) > 0 {
+	if comps, texNames := a.collect3DComponents(modelPath, ext); len(comps) > 0 {
 		spec, err := threejs.BuildMulti(comps, nil)
 		if err == nil && spec != "{}" {
+			// R1 契约：注入组件序纹理名（texArrOrder），前端比对 texArr 序防止贴错纹理
+			if len(texNames) > 0 {
+				spec = injectTexArrOrder(spec, texNames)
+			}
 			return spec
 		}
 	}
@@ -151,9 +156,25 @@ func (a *App) GetModel3DSpec(modelPath string) string {
 	return spec
 }
 
+// injectTexArrOrder 在 spec JSON 中注入 texArrOrder（组件序纹理名数组，R1 契约）。
+// 前端拿到后与 model.textureNames（texArr 实际序）比对，不一致即纹理错位预警。
+func injectTexArrOrder(spec string, texNames []string) string {
+	var m map[string]any
+	if err := json.Unmarshal([]byte(spec), &m); err != nil {
+		return spec
+	}
+	m["texArrOrder"] = texNames
+	b, err := json.Marshal(m)
+	if err != nil {
+		return spec
+	}
+	return string(b)
+}
+
 // collect3DComponents 收集多组件列表（含 arm/载具等独立组件，不合并 bones）。
-// .ysm → WASM 解码；.zip → 压缩包解析；ysm.json → 解压目录。其余返回 nil（单组件兜底）。
-func (a *App) collect3DComponents(modelPath, ext string) []types.BedrockModel {
+// 返回 (组件列表, 组件序纹理名数组)——后者仅 zip/解压目录路径有（R1 契约）；
+// .ysm WASM 路径无 ysm.json texture 声明，返回 nil（前端跳过比对）。
+func (a *App) collect3DComponents(modelPath, ext string) ([]types.BedrockModel, []string) {
 	switch ext {
 	case ".ysm":
 		if data, err := os.ReadFile(modelPath); err == nil {
@@ -161,14 +182,14 @@ func (a *App) collect3DComponents(modelPath, ext string) []types.BedrockModel {
 		}
 	case ".zip":
 		if data, err := os.ReadFile(modelPath); err == nil {
-			if comps, cerr := geometry.ParseComponentsFromZip(data, int64(len(data))); cerr == nil {
-				return comps
+			if comps, tn, cerr := geometry.ParseComponentsFromZip(data, int64(len(data))); cerr == nil {
+				return comps, tn
 			}
 		}
 	case ".7z":
 		if data, err := os.ReadFile(modelPath); err == nil {
-			if comps, cerr := geometry.ParseComponentsFrom7z(data, int64(len(data))); cerr == nil {
-				return comps
+			if comps, tn, cerr := geometry.ParseComponentsFrom7z(data, int64(len(data))); cerr == nil {
+				return comps, tn
 			}
 		}
 	case ".json":
@@ -177,7 +198,7 @@ func (a *App) collect3DComponents(modelPath, ext string) []types.BedrockModel {
 			return ysm.FindComponentsInExtractedYSM(modelPath)
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用）

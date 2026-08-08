@@ -353,10 +353,10 @@ func isDir(path string) bool {
 // 供 GetModel3DSpec → threejs.BuildMulti 生成多组件 spec。
 // 注：ysm.json player.model 解析逻辑与 FindGeometryInExtractedYSM 同源；
 // v1 内联复制避免大重构，后续可抽公共解析函数。
-func FindComponentsInExtractedYSM(ysmJsonPath string) []types.BedrockModel {
+func FindComponentsInExtractedYSM(ysmJsonPath string) ([]types.BedrockModel, []string) {
 	data, err := os.ReadFile(ysmJsonPath)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 
 	// 解析 ysm.json 找 model 文件名（player.model）
@@ -366,6 +366,7 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) []types.BedrockModel {
 	}
 	var modelNames []string
 	var modelMapOrig map[string]string
+	var texOrderNames []string // player.texture 声明序（R1 契约：组件序纹理名）
 	if err := json.Unmarshal(data, &ysmRoot); err == nil {
 		var filesObj map[string]json.RawMessage
 		if json.Unmarshal(ysmRoot.Files, &filesObj) == nil {
@@ -374,7 +375,8 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) []types.BedrockModel {
 					continue
 				}
 				var player struct {
-					Model json.RawMessage `json:"model"`
+					Model   json.RawMessage `json:"model"`
+					Texture json.RawMessage `json:"texture"`
 				}
 				if err := json.Unmarshal(val, &player); err != nil {
 					log.Printf("[ysm] 解析 player 失败: %v", err)
@@ -398,6 +400,42 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) []types.BedrockModel {
 						}
 					} else {
 						modelNames = append(modelNames, strings.Trim(trimmed, `"`))
+					}
+				}
+				// R1 契约：收集 player.texture 声明序（数组格式，去扩展名小写）
+				if len(player.Texture) > 0 {
+					if strings.HasPrefix(strings.TrimSpace(string(player.Texture)), `[`) {
+						var arr []json.RawMessage
+						if json.Unmarshal(player.Texture, &arr) == nil {
+							for _, item := range arr {
+								s := strings.TrimSpace(string(item))
+								if strings.HasPrefix(s, `{`) {
+									var obj struct {
+										Uv string `json:"uv"`
+									}
+									if json.Unmarshal(item, &obj) == nil && obj.Uv != "" {
+										tn := obj.Uv
+										if idx := strings.LastIndexAny(tn, "/\\"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
+										tn = strings.TrimSuffix(strings.ToLower(tn), ".png")
+										tn = strings.TrimSuffix(tn, ".jpg")
+										texOrderNames = append(texOrderNames, tn)
+									}
+								} else {
+									var sval string
+									if json.Unmarshal(item, &sval) == nil && sval != "" {
+										tn := sval
+										if idx := strings.LastIndexAny(tn, "/\\"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
+										tn = strings.TrimSuffix(strings.ToLower(tn), ".png")
+										tn = strings.TrimSuffix(tn, ".jpg")
+										texOrderNames = append(texOrderNames, tn)
+									}
+								}
+							}
+						}
 					}
 				}
 			}
@@ -458,7 +496,19 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) []types.BedrockModel {
 	}
 
 	var comps []types.BedrockModel
+	// R1 契约：组件序纹理名（i < len(texOrderNames) 用声明序纹理名，否则组件 basename）
+	texNames := make([]string, 0, len(orderedNames))
 	for i, mn := range orderedNames {
+		base := mn
+		if idx := strings.LastIndexAny(base, "/\\"); idx >= 0 {
+			base = base[idx+1:]
+		}
+		base = strings.TrimSuffix(strings.TrimSuffix(base, ".json"), ".geo.json")
+		tn := strings.ToLower(base)
+		if i < len(texOrderNames) && texOrderNames[i] != "" {
+			tn = texOrderNames[i]
+		}
+		tnUsed := tn
 		for _, sub := range []string{"", "models/", "models\\"} {
 			candidate := filepath.Join(dir, sub, mn)
 			// 路径穿越防护：确保 candidate 仍在 ysm.json 所在目录内
@@ -473,6 +523,7 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) []types.BedrockModel {
 				if readErr == nil {
 					gj := geometry.ParseBedrockGeometry(geoData)
 					if gj != nil {
+						texNames = append(texNames, tnUsed)
 						// TexSlot = 全局组件序（前端 texArr 含全部组件纹理：
 						// texOrderNames 优先 + 其余按名，与补扫排序一致）
 						for bi := range gj.Bones {
@@ -489,5 +540,5 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) []types.BedrockModel {
 			}
 		}
 	}
-	return comps
+	return comps, texNames
 }

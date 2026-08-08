@@ -47,12 +47,22 @@ func TestParseComponentsFromZip(t *testing.T) {
 	}
 	data := buf.Bytes()
 
-	comps, err := ParseComponentsFromZip(data, int64(len(data)))
+	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(comps) != 3 {
 		t.Fatalf("组件数 = %d, 期望 3（main/arm/arrow）", len(comps))
+	}
+	// R1 契约：texNames = 组件序期望纹理名（texOrder[0]=skin；越界用组件 basename）
+	if len(texNames) != 3 {
+		t.Fatalf("texNames 长度 = %d, 期望 3", len(texNames))
+	}
+	wantNames := []string{"skin", "arm", "arrow"}
+	for i, want := range wantNames {
+		if texNames[i] != want {
+			t.Errorf("texNames[%d] = %q, 期望 %q", i, texNames[i], want)
+		}
 	}
 	// main 优先（组件 0）
 	if comps[0].BoneCount == 0 {
@@ -72,7 +82,7 @@ func TestParseComponentsFromZip(t *testing.T) {
 
 // TestParseComponentsFromZipEmpty 空/损坏 zip 不 panic
 func TestParseComponentsFromZipEmpty(t *testing.T) {
-	comps, err := ParseComponentsFromZip([]byte("not-a-zip"), 9)
+	comps, _, err := ParseComponentsFromZip([]byte("not-a-zip"), 9)
 	if err == nil {
 		t.Fatal("损坏 zip 应返回错误")
 	}
@@ -83,7 +93,7 @@ func TestParseComponentsFromZipEmpty(t *testing.T) {
 
 // TestParseComponentsFrom7zBadData 损坏 7z 返回错误（7z 构造需 sevenzip Writer，仅覆盖错误路径）
 func TestParseComponentsFrom7zBadData(t *testing.T) {
-	comps, err := ParseComponentsFrom7z([]byte("not7z"), 5)
+	comps, _, err := ParseComponentsFrom7z([]byte("not7z"), 5)
 	if err == nil {
 		t.Fatal("损坏 7z 应返回错误")
 	}

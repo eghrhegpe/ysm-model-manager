@@ -162,7 +162,8 @@ func collectArchiveFiles(entries []archiveEntry) (modelOrder, texOrder []string,
 										if idx := strings.LastIndex(tn, "\\"); idx >= 0 {
 											tn = tn[idx+1:]
 										}
-										texOrder = append(texOrder, strings.ToLower(tn))
+										tn = strings.TrimSuffix(strings.TrimSuffix(strings.ToLower(tn), ".png"), ".jpg")
+										texOrder = append(texOrder, tn)
 									}
 								} else {
 									var sval string
@@ -171,7 +172,8 @@ func collectArchiveFiles(entries []archiveEntry) (modelOrder, texOrder []string,
 										if idx := strings.LastIndex(tn, "/"); idx >= 0 {
 											tn = tn[idx+1:]
 										}
-										texOrder = append(texOrder, strings.ToLower(tn))
+										tn = strings.TrimSuffix(strings.TrimSuffix(strings.ToLower(tn), ".png"), ".jpg")
+										texOrder = append(texOrder, tn)
 									}
 								}
 							}
@@ -865,23 +867,26 @@ func IsMainModelName(name string) bool {
 // ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件，
 // 含 arm/载具等组件（不合并、不排除）；main 优先排序，TexSlot 全局化。
 // 供 threejs.BuildMulti 生成多组件 spec。
-func ParseComponentsFromZip(data []byte, size int64) ([]types.BedrockModel, error) {
+func ParseComponentsFromZip(data []byte, size int64) ([]types.BedrockModel, []string, error) {
 	reader, err := zip.NewReader(bytes.NewReader(data), size)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	files := make([]archiveEntry, 0, len(reader.File))
 	for _, f := range reader.File {
 		files = append(files, archiveEntry{name: f.Name, file: f})
 	}
-	modelOrder, _, geoFiles, _, _, _ := collectArchiveFiles(files)
-	return buildComponents(geoFiles, modelOrder)
+	modelOrder, texOrder, geoFiles, _, _, _ := collectArchiveFiles(files)
+	return buildComponents(geoFiles, modelOrder, texOrder)
 }
 
 // buildComponents 组件化收集：main 优先排序 + modelOrder 排序 + TexSlot 全局化 + 独立解析。
 // 与 ParseFromZip 合并逻辑同源（collectArchiveFiles 共享收集），仅解析阶段不合并 bones、
 // texSlot 不按 texOrder 钳制（texArr 含全部组件纹理，texSlot = 全局组件序）。
-func buildComponents(geoFiles []geoEntry, modelOrder []string) ([]types.BedrockModel, error) {
+// 返回 texNames（组件序纹理名，R1 契约校验用）：i < len(texOrder) 用 texOrder[i]
+// （texture 声明序与 model 声明序位置对应，Bedrock 惯例）；否则组件 basename
+// （补扫段 texArr 按名排序与组件补扫按名一致）。
+func buildComponents(geoFiles []geoEntry, modelOrder, texOrder []string) ([]types.BedrockModel, []string, error) {
 	if len(modelOrder) > 0 {
 		orderMap := make(map[string]int, len(modelOrder))
 		for i, p := range modelOrder {
@@ -914,7 +919,9 @@ func buildComponents(geoFiles []geoEntry, modelOrder []string) ([]types.BedrockM
 		texIdxMap[strings.TrimSuffix(geoName, ".json")] = i
 	}
 	var comps []types.BedrockModel
-	for _, gf := range geoFiles {
+	// R1 契约：组件序纹理名（i < len(texOrder) 用声明序纹理名，否则组件 basename）
+	texNames := make([]string, 0, len(geoFiles))
+	for i, gf := range geoFiles {
 		g := ParseBedrockGeometry(gf.data)
 		if g == nil || g.BoneCount == 0 {
 			continue
@@ -926,12 +933,19 @@ func buildComponents(geoFiles []geoEntry, modelOrder []string) ([]types.BedrockM
 				g.Bones[bi].Cubes[ci].CubeTexH = g.TexHeight
 			}
 		}
-		// 按模型文件位置设置 cube 纹理索引（全局 texSlot，前端 texArr 全局数组按序索引）
+		// R1 契约：组件 i 的期望纹理名（texOrder 声明序位置对应；越界用组件 basename）
 		geoName := gf.name
 		if idx := strings.LastIndex(geoName, "/"); idx >= 0 {
 			geoName = geoName[idx+1:]
 		}
 		geoName = strings.TrimSuffix(strings.TrimSuffix(geoName, ".json"), ".geo.json")
+		tn := geoName
+		if i < len(texOrder) && texOrder[i] != "" {
+			tn = texOrder[i]
+		}
+		texNames = append(texNames, tn)
+		// 按模型文件位置设置 cube 纹理索引（全局 texSlot，前端 texArr 全局数组按序索引）
+		// 按模型文件位置设置 cube 纹理索引（全局 texSlot，前端 texArr 全局数组按序索引）
 		if ti, hasTex := texIdxMap[geoName]; hasTex {
 			for bi := range g.Bones {
 				for ci := range g.Bones[bi].Cubes {
@@ -941,20 +955,20 @@ func buildComponents(geoFiles []geoEntry, modelOrder []string) ([]types.BedrockM
 		}
 		comps = append(comps, *g)
 	}
-	return comps, nil
+	return comps, texNames, nil
 }
 
 // ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构，
 // 复用 collectArchiveFiles/buildComponents（含 arm、main 优先、TexSlot 全局化）。
-func ParseComponentsFrom7z(data []byte, size int64) ([]types.BedrockModel, error) {
+func ParseComponentsFrom7z(data []byte, size int64) ([]types.BedrockModel, []string, error) {
 	reader, err := sevenzip.NewReader(bytes.NewReader(data), size)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	files := make([]archiveEntry, 0, len(reader.File))
 	for _, f := range reader.File {
 		files = append(files, archiveEntry{name: f.Name, file: f})
 	}
-	modelOrder, _, geoFiles, _, _, _ := collectArchiveFiles(files)
-	return buildComponents(geoFiles, modelOrder)
+	modelOrder, texOrder, geoFiles, _, _, _ := collectArchiveFiles(files)
+	return buildComponents(geoFiles, modelOrder, texOrder)
 }

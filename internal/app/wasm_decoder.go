@@ -193,6 +193,14 @@ func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
 			mime = "image/jpeg"
 		}
 		merged.Texture = "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+		// 纹理名（去扩展名）供前端纹理列表显示，与 AnalyzeBedrockModel 的 Textures 契约一致
+		tn := f.Path
+		if idx := strings.LastIndexAny(tn, "/\\"); idx >= 0 {
+			tn = tn[idx+1:]
+		}
+		tn = strings.TrimSuffix(tn, ".png")
+		tn = strings.TrimSuffix(tn, ".jpg")
+		merged.TextureNames = []string{tn}
 		break
 	}
 

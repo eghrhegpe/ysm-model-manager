@@ -319,11 +319,22 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 		})
 	}
 	// 读取纹理数据
+	var texNames []string
 	for _, tf := range texFiles {
 		texBytes, readErr := os.ReadFile(tf.path)
 		if readErr == nil && len(texBytes) > 0 {
 			texData = append(texData, texBytes)
+			// 去扩展名后作为纹理名（与 texData 同序）
+			bn := tf.name
+			bn = strings.TrimSuffix(bn, ".png")
+			bn = strings.TrimSuffix(bn, ".jpg")
+			bn = strings.TrimSuffix(bn, ".tga")
+			texNames = append(texNames, bn)
 		}
+	}
+	// 纹理名与 texData 同序，供前端纹理列表显示
+	if geoJSON != nil {
+		geoJSON.TextureNames = texNames
 	}
 
 	return geoJSON, texData

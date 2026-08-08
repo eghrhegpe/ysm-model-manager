@@ -471,6 +471,8 @@ export async function decodeYsmViaWasm(
     if (geo) {
       geo.bones = allBones;
       geo.textures = orderedTexKeys.map((k) => textures[k]).filter(Boolean);
+      // 纹理名与 textures 同序（key 即去扩展名文件名），供纹理列表显示
+      geo.textureNames = orderedTexKeys;
       geo.texture = orderedTexKeys.length > 0 ? textures[orderedTexKeys[0]] : null;
       if (maxTexW > geo.texWidth) geo.texWidth = maxTexW;
       if (maxTexH > geo.texHeight) geo.texHeight = maxTexH;

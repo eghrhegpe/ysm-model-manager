@@ -45,6 +45,8 @@ export interface BedrockGeometry {
   _texMappingLog?: unknown[];
   animations?: unknown[];
   textures?: string[];
+  /** 纹理文件名（去扩展名），与 textures 同序（Go AnalyzeBedrockModel / WASM 解码填充） */
+  textureNames?: string[];
   texture?: string | null;
   [key: string]: unknown;
 }

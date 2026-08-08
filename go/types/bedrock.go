@@ -6,6 +6,7 @@ type BedrockModel struct {
 	CubeCount  int       `json:"cubeCount"`
 	Texture    string    `json:"texture,omitempty"`    // 纹理图 base64 data URI（单纹理兼容）
 	Textures   []string  `json:"textures,omitempty"`   // 多纹理 base64 data URI 数组
+	TextureNames []string `json:"textureNames,omitempty"` // 纹理文件名（去扩展名），与 Textures 同序
 	Format     string    `json:"format,omitempty"`     // "1.12.0" 等
 	TexWidth   int       `json:"texWidth,omitempty"`
 	TexHeight  int       `json:"texHeight,omitempty"`

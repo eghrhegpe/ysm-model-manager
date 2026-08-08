@@ -117,10 +117,10 @@
 | `ExtractFirstPNGFromZip()` | `go/geometry/archive:61` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
 | `ExtractFirstPNGFrom7z()` | `go/geometry/archive:82` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
 | `ParseFromZip()` | `go/geometry/archive:287` | — |
-| `ParseFrom7z()` | `go/geometry/archive:575` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
-| `IsMainModelName()` | `go/geometry/archive:848` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
-| `ParseComponentsFromZip()` | `go/geometry/archive:860` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
-| `ParseComponentsFrom7z()` | `go/geometry/archive:941` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
+| `ParseFrom7z()` | `go/geometry/archive:579` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
+| `IsMainModelName()` | `go/geometry/archive:856` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
+| `ParseComponentsFromZip()` | `go/geometry/archive:868` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
+| `ParseComponentsFrom7z()` | `go/geometry/archive:949` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
 | `ParseBedrockGeometry()` | `go/geometry/parse:17` | ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式） 注意：data 大小不应超过 maxP |
 
 ## Go·导入
@@ -300,8 +300,8 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `BedrockModel()` | `go/types/bedrock:4` | BedrockModel 基岩版模型几何体摘要（用于 2D 预览） |
-| `Bone2D()` | `go/types/bedrock:17` | Bone2D 骨骼简化信息（只用于 2D 线条图） |
-| `Cube2D()` | `go/types/bedrock:27` | Cube2D 立方体信息 |
+| `Bone2D()` | `go/types/bedrock:18` | Bone2D 骨骼简化信息（只用于 2D 线条图） |
+| `Cube2D()` | `go/types/bedrock:28` | Cube2D 立方体信息 |
 | `AppConfig()` | `go/types/config:4` | AppConfig 应用持久化配置 |
 | `PackInfo()` | `go/types/config:31` | PackInfo 模型整合包信息（ysm-pack.json） |
 | `WorkshopPresetSearch()` | `go/types/config:38` | WorkshopPresetSearch 预设搜索词 |
@@ -379,7 +379,7 @@
 |------|--------|------|
 | `FindCLI()` | `go/ysm/cli:11` | FindCLI 查找 YSMParser.exe 可执行文件路径 |
 | `FindGeometryInExtractedYSM()` | `go/ysm/extracted:33` | FindGeometryInExtractedYSM 在解压后的 YSM 模型目录中查找 geometry 和纹理 ysmJsonPath: ysm.json 的完整路径 返回: |
-| `FindComponentsInExtractedYSM()` | `go/ysm/extracted:345` | FindComponentsInExtractedYSM 多组件解析（YSMViewer 式）：解压目录内每个模型文件独立组件， **不合并 bones、不排除 arm**（arm |
+| `FindComponentsInExtractedYSM()` | `go/ysm/extracted:356` | FindComponentsInExtractedYSM 多组件解析（YSMViewer 式）：解压目录内每个模型文件独立组件， **不合并 bones、不排除 arm**（arm |
 | `AnalyzeYSMHeader()` | `go/ysm/header:167` | AnalyzeYSMHeader 读取 YSM 文件的文本头部，提取元数据 |
 | `AnalyzeYSMHeaderFromBytes()` | `go/ysm/header:320` | AnalyzeYSMHeaderFromBytes 从字节数据解析 YSM 头部（适用于 base64 导入场景） |
 | `YSMHeader()` | `go/ysm/header:12` | YSMHeader 从 YSM 文件文本头部提取的元数据（适用于加密和非加密模型） |
@@ -866,7 +866,7 @@
 | `BedrockCube()` | `frontend/src/views/app-preview/geometry:4` | Bedrock 方块 |
 | `BedrockBone()` | `frontend/src/views/app-preview/geometry:15` | Bedrock 骨骼 |
 | `BedrockGeometry()` | `frontend/src/views/app-preview/geometry:30` | 解析后的 Bedrock geometry |
-| `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:53` | 从 JSON 字符串解析 Bedrock geometry |
+| `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:55` | 从 JSON 字符串解析 Bedrock geometry |
 | `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:25` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:32` | — |
 | `invalidateLitematicPreview()` | `frontend/src/views/app-preview/litematic-meta:24` | P2 修复（code_review）：任意新预览派发时推进代际——原 litematicGen 只在 showLitematic 自身递增，litematic A 解析中切到 YS |

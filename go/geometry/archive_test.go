@@ -294,6 +294,42 @@ func TestParseFrom7z_BadData(t *testing.T) {
 // geoArmJSON 独立 arm 组件（与 validGeoJSON 的 head 骨骼区分）
 const geoArmJSON = `{"format_version":"1.16.0","minecraft:geometry":[{"description":{"identifier":"arm","texture_width":32,"texture_height":32},"bones":[{"name":"arm","pivot":[0,0,0],"cubes":[{"origin":[0,0,0],"size":[4,4,4],"uv":[0,0]}]}]}]}`
 
+// ====== ParseFromZip 纹理名契约（textureNames 与 Textures 同序）======
+
+func TestParseFromZip_TextureNames(t *testing.T) {
+	// ysm.json texture 声明序 → TextureNames 与 Textures/pngs 同序（含排序）
+	ysmJSON := `{
+		"files": {
+			"player": {
+				"model": ["model.geo.json"],
+				"texture": ["tex_b.png", "tex_a.png"]
+			}
+		}
+	}`
+	data := makeZipBytes(t, map[string]string{
+		"ysm.json":       ysmJSON,
+		"model.geo.json": validGeoJSON,
+		"tex_a.png":      string(makePngData(t, "tex_a")),
+		"tex_b.png":      string(makePngData(t, "tex_b")),
+	})
+	model, pngs, _ := ParseFromZip(data, int64(len(data)))
+	if model == nil {
+		t.Fatal("模型应为非 nil")
+	}
+	if len(pngs) != 2 {
+		t.Fatalf("pngs = %d, 期望 2", len(pngs))
+	}
+	// Textures（base64）由 app 层 AnalyzeBedrockModel 填充；geometry 层契约是
+	// TextureNames 与 pngs 同序——这里验证名字数组与 pngs 长度一致且按声明序排序
+	if len(model.TextureNames) != len(pngs) {
+		t.Fatalf("TextureNames = %d, 期望与 pngs 同长 %d", len(model.TextureNames), len(pngs))
+	}
+	// 按 ysm texture 声明序排序后：tex_b 在前，tex_a 在后（与 pngs 同序）
+	if model.TextureNames[0] != "tex_b" || model.TextureNames[1] != "tex_a" {
+		t.Errorf("TextureNames = %v, 期望 [tex_b tex_a]（按 ysm texture 声明序）", model.TextureNames)
+	}
+}
+
 func TestParseComponentsFromZip_MainFirstAndTexSlot(t *testing.T) {
 	// ysm.json 声明 model 数组 + texture 数组：main 优先排序，TexSlot 按 modelOrder 全局化
 	ysmJSON := `{

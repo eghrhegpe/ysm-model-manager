@@ -634,8 +634,12 @@ export async function loadModel2D(
               const h =
                 t?.userData?.imgHeight || (t?.image as HTMLImageElement | undefined)?.naturalHeight || 0;
               const url = model.textures?.[i] || "";
+              // 优先用纹理名数组（Go/WASM 填充，去扩展名文件名）；base64/blob URL
+              // 解析不出可读名（R1 修复），兜底"纹理 N"
               const name =
-                url.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || "纹理 " + (i + 1);
+                model.textureNames?.[i] ||
+                url.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") ||
+                "纹理 " + (i + 1);
               const d = document.createElement("div");
               d.style.cssText = "display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer";
               const img = document.createElement("canvas");

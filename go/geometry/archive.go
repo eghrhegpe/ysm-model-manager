@@ -568,6 +568,10 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 			return hasI
 		})
 	}
+	// 纹理名与 pngs 同序（同一循环收集 + 同一 orderMap 排序），供前端纹理列表显示
+	if geo != nil {
+		geo.TextureNames = pngNames
+	}
 	return geo, pngs, animJSONs
 }
 
@@ -839,6 +843,10 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 			}
 			return hasI
 		})
+	}
+	// 纹理名与 pngs 同序，供前端纹理列表显示（与 ParseFromZip 同契约）
+	if geo != nil {
+		geo.TextureNames = pngNames
 	}
 	return geo, pngs
 }

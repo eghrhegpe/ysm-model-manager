@@ -430,8 +430,8 @@
 | `App.EnqueueDownloads()` | `internal/app/app_download:56` | — |
 | `App.CancelQueue()` | `internal/app/app_download:86` | — |
 | `App.QueueStatus()` | `internal/app/app_download:103` | — |
-| `App.DownloadFromGitHub()` | `internal/app/app_download:239` | — |
-| `App.GetModelTexSizes()` | `internal/app/app_download:244` | GetModelTexSizes 扫描仓库文件提取纹理尺寸（轻量级，不解析完整模型） |
+| `App.DownloadFromGitHub()` | `internal/app/app_download:255` | — |
+| `App.GetModelTexSizes()` | `internal/app/app_download:260` | GetModelTexSizes 扫描仓库文件提取纹理尺寸（轻量级，不解析完整模型） |
 | `QueueStatusInfo()` | `internal/app/app_download:18` | QueueStatusInfo 队列状态（替代多返回值，Wails 自动映射为 JS object） |
 | `DownloadTask()` | `internal/app/app_download:24` | DownloadTask 下载队列任务 |
 | `DownloadQueue()` | `internal/app/app_download:33` | DownloadQueue 串行下载队列 回调注入替代 *App 反向引用（ADR-002 P1：打破 DownloadQueue ↔ App 循环，解锁独立测试） |

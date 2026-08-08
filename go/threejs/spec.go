@@ -421,11 +421,13 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 		}
 	}
 	cp := [3]float64{c.Pivot[0], c.Pivot[1], c.Pivot[2]}
-	// cube 未显式 pivot（Blockbench 缺省，解析为零值）→ 用 cube 中心作为旋转中心，
-	// 对齐 YSMViewer 口径。此前当 [0,0,0] 会让 mesh localPos = bonePivot，与骨骼链
-	// 累加（X 翻转后 ≈ -bonePivot）恰好抵消 → 手臂等无 pivot cube 堆到模型原点，
-	// fox 解压目录模型 main 手臂消失（P1）。
-	if cp == [3]float64{0, 0, 0} {
+	// cube 未显式 pivot（Blockbench 缺省，解析层 PivotSet=false）→ 用 cube 中心作为
+	// 旋转中心，对齐 YSMViewer 口径。此前当 [0,0,0] 会让 mesh localPos = bonePivot，
+	// 与骨骼链累加（X 翻转后 ≈ -bonePivot）恰好抵消 → 手臂等无 pivot cube 堆到
+	// 模型原点，fox 解压目录模型 main 手臂消失（P1）。
+	// 注意：必须用 PivotSet 而非 cp==[0,0,0] 判定——显式 pivot:[0,0,0]（绕模型
+	// 原点旋转的铰接件）是合法 Blockbench 模式，误判会改变旋转中心（code_review P2）。
+	if !c.PivotSet {
 		cp = [3]float64{ox + sx*0.5, oy + sy*0.5, oz + sz*0.5}
 	}
 	// 优先用 cube 自身 tex 维度

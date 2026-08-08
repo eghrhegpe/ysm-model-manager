@@ -12,6 +12,14 @@ import (
 // maxParseSize ParseBedrockGeometry 接受的最大输入大小
 const maxParseSize = 100 << 20 // 100MB
 
+// pivotOf 解引用 cube 的 pivot 指针；JSON 缺席（nil）→ 零值 [0,0,0]
+func pivotOf(p *[3]float64) [3]float64 {
+	if p == nil {
+		return [3]float64{}
+	}
+	return *p
+}
+
 // ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式）
 // 注意：data 大小不应超过 maxParseSize（100MB），调用方应自行限制
 func ParseBedrockGeometry(data []byte) *types.BedrockModel {
@@ -35,7 +43,7 @@ func ParseBedrockGeometry(data []byte) *types.BedrockModel {
 				Cubes    []struct {
 				 Origin   [3]float64      `json:"origin"`
 				 Size     [3]float64      `json:"size"`
-				 Pivot    [3]float64      `json:"pivot,omitempty"`
+				 Pivot    *[3]float64     `json:"pivot,omitempty"` // nil=缺席（显式 [0,0,0] 可区分）
 				 UV       json.RawMessage `json:"uv,omitempty"`
 				 Rotation json.RawMessage `json:"rotation,omitempty"`
 				 Texture  int             `json:"texture"`
@@ -80,8 +88,10 @@ func ParseBedrockGeometry(data []byte) *types.BedrockModel {
 				}
 			}
 			cubes = append(cubes, types.Cube2D{
-				Origin: c.Origin, Size: c.Size, Pivot: c.Pivot,
-				UV: uv, FaceUV: faceUV, Rotation: rot,
+				Origin: c.Origin, Size: c.Size,
+				Pivot:    pivotOf(c.Pivot),
+				PivotSet: c.Pivot != nil,
+				UV:       uv, FaceUV: faceUV, Rotation: rot,
 				TexSlot: c.Texture,
 				Inflate: c.Inflate, Mirror: c.Mirror,
 			})

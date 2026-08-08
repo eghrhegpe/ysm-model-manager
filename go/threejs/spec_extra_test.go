@@ -376,3 +376,54 @@ func TestBuildCubeMeshData_Mirror(t *testing.T) {
 			u1Plain, u0Plain, mdMirror.Uvs[0], mdMirror.Uvs[2])
 	}
 }
+
+func TestBuildCubeMeshData_PivotFallback(t *testing.T) {
+	// cube 未显式 pivot（PivotSet=false，Blockbench 缺省）→ 用 cube 中心作为旋转中心，
+	// 对齐 YSMViewer 口径；修复 fox 解压目录模型 main 手臂消失（P1）。
+	// cube 8x8x8 @ origin[0,0,0]，中心 = [4,4,4]；mesh localPos = bonePivot - cubePivot。
+	c := types.Cube2D{
+		Origin: [3]float64{0, 0, 0},
+		Size:   [3]float64{8, 8, 8},
+		UV:     [2]float64{0, 0},
+		// PivotSet=false（未显式 pivot）
+	}
+	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
+	if md == nil {
+		t.Fatal("有效 cube 应返回非 nil")
+	}
+	// fallback pivot = 中心 [4,4,4] → localPos = bonePivot(0) - cp，但 Y 轴翻转对齐
+	// C#（cp[1]-bonePivot.y）→ [-4, 4, 4]
+	lp := md.LocalPosition
+	if lp[0] != -4 || lp[1] != 4 || lp[2] != 4 {
+		t.Errorf("无 pivot 应 fallback 到 cube 中心: localPos = %v, 期望 [-4 4 4]（Y 翻转对齐）", lp)
+	}
+	// 顶点相对中心：cube 8x8 中心 4 → lx=-4, hx=4（X 翻转对齐后同）
+	if md.Positions[0] != 4 || md.Positions[12] != -4 {
+		t.Errorf("顶点应相对中心对称: xMax=%v xMin=%v, 期望 4 / -4", md.Positions[0], md.Positions[12])
+	}
+}
+
+func TestBuildCubeMeshData_ExplicitZeroPivot(t *testing.T) {
+	// 显式 pivot:[0,0,0]（PivotSet=true，绕模型原点旋转的铰接件）→ **不得** fallback
+	// 到 cube 中心，旋转中心保持模型原点（code_review P2）。
+	// cube 8x8x8 @ origin[0,0,0]，显式 pivot [0,0,0] → localPos = bonePivot - [0,0,0] = [0,0,0]
+	c := types.Cube2D{
+		Origin:   [3]float64{0, 0, 0},
+		Size:     [3]float64{8, 8, 8},
+		Pivot:    [3]float64{0, 0, 0},
+		PivotSet: true,
+		UV:       [2]float64{0, 0},
+	}
+	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
+	if md == nil {
+		t.Fatal("有效 cube 应返回非 nil")
+	}
+	lp := md.LocalPosition
+	if lp[0] != 0 || lp[1] != 0 || lp[2] != 0 {
+		t.Errorf("显式 pivot [0,0,0] 应保留原点旋转中心: localPos = %v, 期望 [0 0 0]（不得 fallback 到中心）", lp)
+	}
+	// 顶点相对原点：cube 8x8 → lx=0, hx=8
+	if md.Positions[0] != 8 || md.Positions[12] != 0 {
+		t.Errorf("顶点应相对模型原点: xMax=%v xMin=%v, 期望 8 / 0", md.Positions[0], md.Positions[12])
+	}
+}

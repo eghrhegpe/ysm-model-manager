@@ -64,7 +64,7 @@ func TestBuildDuplicateBoneMerge(t *testing.T) {
 				Name:   "b1",
 				Parent: "p1",
 				Pivot:  [3]float64{10, 0, 0},
-				Cubes:  []types.Cube2D{{Origin: [3]float64{10, 0, 0}, Size: [3]float64{2, 2, 2}, Pivot: [3]float64{11, 0, 0}, UV: [2]float64{0, 0}}},
+				Cubes:  []types.Cube2D{{Origin: [3]float64{10, 0, 0}, Size: [3]float64{2, 2, 2}, Pivot: [3]float64{11, 0, 0}, PivotSet: true, UV: [2]float64{0, 0}}},
 			},
 			{Name: "p1", Pivot: [3]float64{0, 0, 0}},
 		},

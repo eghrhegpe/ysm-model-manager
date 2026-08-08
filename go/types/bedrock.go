@@ -30,6 +30,7 @@ type Cube2D struct {
 	Origin   [3]float64 `json:"origin"`
 	Size     [3]float64 `json:"size"`
 	Pivot    [3]float64 `json:"pivot,omitempty"`
+	PivotSet bool       `json:"-"` // pivot 是否显式声明（区分"缺席"与显式 [0,0,0]，防误判为缺失）
 	UV       [2]float64 `json:"uv,omitempty"`
 	FaceUV   string     `json:"faceUV,omitempty"` // 每面独立 UV（JSON 字符串）
 	Rotation [3]float64 `json:"rotation,omitempty"`

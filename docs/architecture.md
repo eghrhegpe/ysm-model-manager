@@ -122,22 +122,21 @@ Wails v3 **Service 反射绑定**：`*app.App` 的所有导出方法自动暴露
 
 ## 4. YSM 模型解析与渲染（Three.js + YSMParser WASM）
 
-### 4.1 YSMParser WASM 内嵌（两份资产，一个能力）
+### 4.1 YSMParser WASM 内嵌（单一资产，两个消费端）
 
-上游 [YSMParser](https://github.com/OpenYSM/YSMParser)（C++）经 Emscripten 编译为 WASM 后 base64 内嵌，**取代 exe sidecar**。仓库里实际存在**两份不同编译产物**，导出面不同——这是理解解码链路的关键：
+上游 [YSMParser](https://github.com/OpenYSM/YSMParser)（C++）经 Emscripten 编译为 WASM 后 base64 内嵌，**取代 exe sidecar**。2026-08-08 起**统一为单一 web 产物**（此前「前端版 / Go 版」两份不同二进制——导出面不同导致维护与重出负担，统一方向：Node 能 require web glue（实测 callMain 解码成功），WebView2 反之不行（NODERAWFS 依赖 Node fs），故保留 web、弃 node）：
 
-| 资产 | 位置 | 编译时间 | wasm 大小 | Emscripten 导出面 | 用途 |
-|------|------|----------|-----------|-------------------|------|
-| 前端版 | `frontend/src/wasm/ysm-wasm-data.js` + `ysm-glue-data.js` | 2026-06-08 | 1,138,316 B | `ysm_decode_from_memory` / `_malloc` / `ccall` | WebView2 前端内存直解 |
-| Go 版 | `frontend/public/wasm/YSMParser.{js,wasm}`（`embed.go` 经 `frontend/dist/wasm/` 内嵌） | 2026-06-17 | 1,135,526 B | 仅 `_main`（即 `callMain`） | Go 端 Node.js 子进程解码 |
+| 资产 | 位置 | Emscripten 导出面 | 消费端 |
+|------|------|-------------------|--------|
+| 统一 web 产物（编译自 `upstream/YesSteveModel-Parser`，产物暂存 `build-unified/`） | 前端 base64：`frontend/src/wasm/ysm-wasm-data.js` + `ysm-glue-data.js`；Go embed：`frontend/public/wasm/YSMParser.{js,wasm}`（`embed.go` 经 `frontend/dist/wasm/` 内嵌） | `_main`（callMain）/ `ysm_decode_from_memory` / `_malloc` / `ccall` / `cwrap` / `FS` | 前端 WebView2 内存直解 + Go 端 Node.js 子进程 callMain |
 
-- Go 版（6-17）**未导出 `_malloc` / `ccall` / `ysm_decode_from_memory`**——前端那套「内存直解」API 在 Go 端资产上不存在，Go 端走 `callMain`（与 CLI exe 完全相同的 `-i/-o` 参数路径）。
+- **重建脚本**：`node scripts/build-ysm-wasm.mjs`（em++ 一次编译 → 前端 base64 打包 → Go embed 拷贝 → glue 锚点校验），上游更新后只需重跑一次，两端同步生效，不再有「两份资产不同步」问题。
 - exe sidecar 仅作开发调试的 Go CLI fallback；**发版时不打包 YSMParser.exe**。
 - 调试 CLI fallback 可从 `build/ysmparser-cache/` 恢复（`wails3 build -clean` 会清空 `build/bin/`，但 WASM 已内嵌，无需强制恢复 exe）。
 
 ### 4.2 解码运行时：两条路径，同一份 C++ 能力
 
-**路径 A — 前端 WebView2**（`frontend/src/wasm/ysm-parser.ts`，加载 6-08 前端版）：
+**路径 A — 前端 WebView2**（`frontend/src/wasm/ysm-parser.ts`，加载统一 web 产物）：
 
 1. 动态 `import()` 两个 data 文件 → 补丁胶水代码追加 `Module["HEAPU8"]=HEAPU8`（:75-78）；
 2. 设 `window.Module = { wasmBinary, noInitialRun: true }`（:81-86）；
@@ -146,7 +145,7 @@ Wails v3 **Service 反射绑定**：`*app.App` 的所有导出方法自动暴露
 
 > 历史注记：早期版本 `ysm-glue-data.js` 的 `_getGlueCode` 引用未声明 `_cachedWasm` 且返回 `ArrayBuffer`，导致前端 WASM 路径静默失败回退 Go 解析；审计核实（2026-08-08）该 bug 已随数据文件更新（现用 `_cachedGlue` 且返回 string）修复，「WASM 路径必回退 Go」的假设已失效。
 
-**路径 B — Go 端 Node.js 子进程（生产主路径，发版时 `.ysm` 解码的唯一路径）**（`internal/app/wasm_decoder.go` `decodeYSMViaNodeJS`、`go/avatar/avatar.go` `DecodeYSMFiles`，加载 6-17 Go 版）：
+**路径 B — Go 端 Node.js 子进程（生产主路径，发版时 `.ysm` 解码的唯一路径）**（`internal/app/wasm_decoder.go` `decodeYSMViaNodeJS`、`go/avatar/avatar.go` `DecodeYSMFiles`，加载同一统一 web 产物）：
 
 1. `findNodeJS()` 在 PATH 找 `node`/`node.exe`（`wasm_decoder.go:25`），找不到则路径 B 不可用；
 2. 内嵌 glue + wasm 写到临时目录，拼 `decode.cjs` 脚本：
@@ -157,7 +156,7 @@ Wails v3 **Service 反射绑定**：`*app.App` 的所有导出方法自动暴露
 3. 子进程带超时护栏 + `HideWindow` 防黑框；输出经 `geometry.ParseBedrockGeometry` 合并多骨骼、填纹理 base64 → `types.BedrockModel`（:127-180）；
 4. **纯 Node 即可解码，不依赖浏览器/WebView2**（已实测：`upstream/` 下 10 个 .ysm 全部可用此路径解码出骨骼/动画/纹理/头像）。`go/avatar/avatar.go` 的 `DecodeYSMFiles` 是同一套机制的复用（头像提取），两处脚本逻辑近似。
 
-> ⚠️ **两份资产不是同一份二进制**。若未来更新 YSMParser 上游，两处资产与生成脚本需同步重出；前端 `ysm-parser.ts` 若改用 Go 版资产，`_malloc`/`ccall` 将不可用，必须走 callMain。
+> ✅ **前后端共用同一份 web 产物**（2026-08-08 统一）。若未来更新 YSMParser 上游，重跑 `node scripts/build-ysm-wasm.mjs` 即可同步重出两处（前端 base64 data + Go embed），不再需要两套编译参数。
 
 **解码优先级链（现状总表）**：
 

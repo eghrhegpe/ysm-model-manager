@@ -120,7 +120,7 @@
 | `ParseFrom7z()` | `go/geometry/archive:581` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
 | `IsMainModelName()` | `go/geometry/archive:858` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
 | `ParseComponentsFromZip()` | `go/geometry/archive:870` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
-| `ParseComponentsFrom7z()` | `go/geometry/archive:963` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
+| `ParseComponentsFrom7z()` | `go/geometry/archive:948` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
 | `ParseBedrockGeometry()` | `go/geometry/parse:17` | ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式） 注意：data 大小不应超过 maxP |
 
 ## Go·导入

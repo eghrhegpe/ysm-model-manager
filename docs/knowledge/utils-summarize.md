@@ -45,6 +45,7 @@ use_when:
 - 所有动态文本经 esc() 转义后才进 HTML；所有外链经 safeUrl 过滤（治理红线 UI 安全）
 - 动画分组中纯内部标识符（全小写下划线、range/checkbox/radio/slider/toggle）不显示徽章；徽章最多 8 个，超出折叠为「+N」
 - 徽章/卡片颜色全走 CSS 变量（--accent / --free / --paid / --surf / --txt / --muted）
+- 加密卡 `format`/`crypto` 缺字段渲染用 `?? 0` 归一（P3 修复：原直接插值 → vundefined）；header-only 作者/作品分行渲染（P3 修复：原 p.author 为空时作品被标为作者）；configMenus 全部渲染（P3 注释修正：原注释「只显示前5项」与实现/测试不符）
 
 ## 相关
 

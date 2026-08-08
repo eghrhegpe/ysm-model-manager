@@ -54,7 +54,11 @@ function normalizeState(raw) {
   if (/Partially Accepted|部分采纳|🔄/.test(raw)) return { key: 'partial', raw: raw.trim() };
   if (/Deprecated|已废弃|🧊/.test(raw)) return { key: 'deprecated', raw: raw.trim() };
   // 补 ❌：AGENTS.md 枚举为 `❌ 已取代`，纯 emoji 或英文混写均识别（code_review P2-1）
-  if (/Superseded|已取代|❌/.test(raw)) return { key: 'superseded', raw: raw.trim() };
+  // P3 修复（code_review）：❌ 仅在状态同时含已采纳/✅ 标记时才不算取代——
+  // 原 `/Superseded|已取代|❌/` 分支在 accepted 之前，`✅ 已采纳（❌ 子项未完成）`
+  // 这类带 ❌ 注解的已采纳状态会被误判为 superseded
+  if (/Superseded|已取代/.test(raw) || (/❌/.test(raw) && !/Accepted|已采纳|✅/.test(raw)))
+    return { key: 'superseded', raw: raw.trim() };
   if (/Accepted|已采纳|✅/.test(raw)) return { key: 'accepted', raw: raw.trim() };
   return { key: 'unknown', raw: raw.trim() };
 }

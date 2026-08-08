@@ -31,7 +31,7 @@ use_when:
 ## 对外 API / 入口
 
 `mc-format.ts`：
-- `renderFormattedText(text: string): string`（同时有 default 导出）— 逐行解析 § 码：颜色码重置此前所有格式并新开颜色 span；格式码叠加（b/i/下划线/删除线）；§r 重置全部；无效码与孤立 § 原样保留；换行转 `<br>`；正文内部转义（& < >），输出可直接拼 innerHTML
+- `renderFormattedText(text: string): string`（**仅具名导出，无 default 导出**）— 逐行解析 § 码：颜色码重置此前所有格式并新开颜色 span；格式码叠加（b/i/下划线/删除线）；§r 重置全部；§k 忽略仅输出正文；无效码原样保留、**行尾孤立 § 原样保留**（P3 修复：原实现 `if (!part) continue` 丢弃，与「无效码与孤立 § 原样保留」契约不符；连续 `§§code` 中间的空 part 仍跳过——走第二条码，测试锁定）；换行转 `<br>`；正文内部转义（& < >），输出可直接拼 innerHTML
 
 `pack-format.ts`：
 - `PackMeta` 接口 — `{ supported_formats?, min_format?, max_format?, pack_format? }`（对应 Go ReadPackMeta 返回的 JSON）

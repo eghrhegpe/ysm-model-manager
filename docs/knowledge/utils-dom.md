@@ -27,13 +27,13 @@ HTML 转义与搜索高亮工具。`esc()` 是全前端 HTML 转义的统一入�
 
 ## 对外 API / 入口
 
-- `esc(s: string): string` — **治理红线函数**：转义 `&` `<` `>` `"` `'` 五种字符为 HTML 实体；null/undefined 按空串处理不抛错
-- `hl(text: string, query?: string): string` — 先整体转义，再大小写不敏感查找 query 的**首个**命中并用 `<mark>` 包裹；无 query 或未命中时返回纯转义文本
+- `esc(s: string): string` — **治理红线函数**：转义 `&` `<` `>` `"` `'` 五种字符为 HTML 实体（`&` 最先替换防二次转义）；null/undefined 按空串处理不抛错
+- `hl(text: string, query?: string): string` — 先在**原始 text** 上大小写不敏感定位 query 的**首个**命中，再按原始索引切 before/match/after 三段、各自 `esc()` 后拼 `<mark>`（非「先整体转义再查找」——该路径会因 `&lt;` 错位，html.ts:21-22 注释显式否决）；无 query 或未命中时返回纯转义文本
 
 ## 与其他子系统关系
 
 - 全项目消费最广的工具函数之一：`app-preview`（index / tpl / preview-detail / preview-skeleton / preview-litematic-3d / preview-litematic-meta）、`app-content/index.ts`、`app-tree/render.ts`（hl 高亮）、`dialogs/tag-editor.ts` 等
-- `utils/display.ts` / `utils/mc-format.ts` / `utils/summarize.ts` 内部各有同行为的局部 esc 副本；新代码统一 import 本模块
+- `utils/display.ts` / `utils/mc-format.ts` / `utils/summarize.ts` **均已 import 本模块的 `esc`**（无局部副本——早期声明「各有同行为局部副本」已过时）
 
 ## 不变量
 

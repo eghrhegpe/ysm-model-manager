@@ -53,10 +53,11 @@ use_when:
 
 ## 不变量
 
-- 注册表加载是 `sync.Once` 单例；默认**不读 cwd 裸文件名**，避免部署时工作目录漂移读到旧 JSON
+- 注册表加载是加锁单例（`registryMu`，实现注释「加锁替代 sync.Once」——避免 SetRegistryPath 重置与 Once.Do 竞争；行为上仍是单例）；默认**不读 cwd 裸文件名**，避免部署时工作目录漂移读到旧 JSON
+- 外部 JSON 解析失败时**回退嵌入基线**并记录告警（P2 修复：原实现缓存空注册表，进程生命周期内所有扩展名查询静默失效）；仅当嵌入基线也损坏才缓存空表
 - `RepoRoot` 为旧版字段（v1.6.4+ 弃用），仅用于配置迁移，新功能不得使用
 - `resource_types_embed.go` 由脚本从 `resource_types.json` 生成（头部有 DO NOT EDIT 标记），手改会被覆盖
-- 新增资源类型只改 `resource_types.json`，Go 端不手写 StorageSubDir/扩展名条目（治理红线：注册表优先）
+- 新增资源类型只改 `resource_types.json`，Go 端不手写 StorageSubDir/扩展名条目（治理红线：注册表优先）。`ShouldHashExt` 是已知例外：硬编码 `.ysm/.zip/.7z/.json/.nbt/.schematic/.litematic`（MMD/VRC 大文件跳过哈希的性能决策，注册表无 hash 开关字段），已有测试钉住清单（`TestShouldHashExt_PinnedList`），若注册表新增 hash 字段应改注册表驱动
 
 ## 相关
 

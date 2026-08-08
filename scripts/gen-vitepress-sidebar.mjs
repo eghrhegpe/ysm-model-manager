@@ -25,7 +25,9 @@ import { parseFrontmatter, getScalar } from './_lib/frontmatter.mjs';
 
 const DOCS = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'docs');
 const OUT = join(DOCS, '.vitepress', 'sidebar.gen.mjs');
-const EXCLUDE = new Set(['.vitepress', 'node_modules', 'dist', 'archive', '_sass']);
+// 隐藏/构建目录不参与扫描：mdNames 只列 .md 文件，子目录不以 .md 结尾自动排除；
+// 此处显式排除以点开头的隐藏文件（如 .doc-next-steps.md，诊断产物不应进导航，code_review P2-1/P2-2）
+const HIDDEN_FILE_RE = /^\./;
 
 /** 相对路径 → VitePress 链接（cleanUrls 去 .md；index.md → 目录） */
 function linkify(rel) {
@@ -62,12 +64,12 @@ function stripQuotes(s) {
   return s.replace(/^["']|["']$/g, '').trim();
 }
 
-/** 列出 relDir 下顶层 .md（不含子目录、不含 index/README 白名单），按文件名排序。 */
+/** 列出 relDir 下顶层 .md（不含子目录、不含隐藏文件、不含 index/README 白名单），按文件名排序。 */
 function mdNames(relDir) {
   const abs = join(DOCS, relDir);
   if (!statSync(abs, { throwIfNoEntry: false })?.isDirectory()) return [];
   return readdirSync(abs)
-    .filter((f) => f.endsWith('.md') && statSync(join(abs, f)).isFile())
+    .filter((f) => f.endsWith('.md') && !HIDDEN_FILE_RE.test(f) && statSync(join(abs, f)).isFile())
     .sort((a, b) => a.localeCompare(b, 'zh-CN'));
 }
 
@@ -161,7 +163,20 @@ function novelItemsBuilder() {
   for (const d of dirs) {
     const relDir = join('novel', d).replace(/\\/g, '/');
     const items = scanItems(relDir, ['README.md']);
-    if (items.length) groups.push({ text: d, collapsed: true, items });
+    if (items.length) {
+      groups.push({ text: d, collapsed: true, items });
+    } else {
+      // 一级目录无顶层 md 但含二级子目录（如 appendix/Go后端、appendix/安全横切）：
+      // 递归一层按二级子目录分组，避免内容漏扫（code_review P2-3）
+      const sub = join(abs, d);
+      const subDirs = readdirSync(sub)
+        .filter((n) => statSync(join(sub, n)).isDirectory() && !n.startsWith('.'))
+        .sort((a, b) => a.localeCompare(b, 'zh-CN'));
+      for (const sd of subDirs) {
+        const sdItems = scanItems(join(relDir, sd), ['README.md']);
+        if (sdItems.length) groups.push({ text: `${d}/${sd}`, collapsed: true, items: sdItems });
+      }
+    }
   }
   // novel 根目录散 md（如有）
   const rootNovel = scanItems('novel', ['index.md', 'README.md', 'AGENTS.md']);

@@ -19,7 +19,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { getRoot, readText } from './_lib/scan-files.mjs';
+import { getRoot, readText, writeText } from './_lib/scan-files.mjs';
 
 const ROOT = getRoot();
 const OUT = path.join(ROOT, 'docs', 'project-map.md');
@@ -43,7 +43,8 @@ function subdirs(dir) {
     .readdirSync(dir, { withFileTypes: true })
     .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
     .map((d) => d.name)
-    .sort((a, b) => a.localeCompare(b));
+    // 固定 locale（zh-Hans-CN）：避免跨 ICU 版本排序不稳定导致 --check 幂等误报（code_review P1-1）
+    .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
 }
 
 /** 一级文件名的子集（按扩展名过滤，跳过隐藏项）。 */
@@ -53,7 +54,8 @@ function topFiles(dir, exts) {
     .readdirSync(dir, { withFileTypes: true })
     .filter((d) => d.isFile() && !d.name.startsWith('.') && exts.some((e) => d.name.endsWith(e)))
     .map((d) => d.name)
-    .sort((a, b) => a.localeCompare(b));
+    // 固定 locale（zh-Hans-CN）：避免跨 ICU 版本排序不稳定导致 --check 幂等误报（code_review P1-1）
+    .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
 }
 
 /** 渲染一行表格；未登记基线的条目显示占位并计入漂移。 */
@@ -182,7 +184,7 @@ if (CHECK) {
     console.log('[gen-project-map] docs/project-map.md 最新。');
   }
 } else {
-  fs.writeFileSync(OUT, md, 'utf8');
+  writeText(OUT, md); // 保留原行尾风格（CRLF 文件不被改写为 LF，--check 幂等不失效，code_review P2-1）
   if (!JSON_OUT) console.log(`[gen-project-map] 已写入 ${path.relative(ROOT, OUT)}`);
 }
 

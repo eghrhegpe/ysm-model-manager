@@ -110,3 +110,37 @@ func TestDetectZipType(t *testing.T) {
 		t.Fatalf("非 ZIP 应默认 ysm: %s", got)
 	}
 }
+
+// P3 修复（code_review）：失败清理分支——WriteFileAtomic 任一失败不得留 .import-*.tmp 残渣、
+// 不得留半截目标文件（头号反模式回归防线）
+func TestImportFromBase64_WriteFailureCleanup(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "repo")
+	if err := os.MkdirAll(root, 0755); err != nil {
+		t.Fatal(err)
+	}
+	rootFn := func(rtype string) string { return root }
+	logFn := func(name, src, dst string, size int64, status, msg string) {}
+	b64 := base64.StdEncoding.EncodeToString([]byte("modeldata"))
+
+	// 制造落地失败：destPath 的父目录是已存在文件（Rename 到文件内部必然失败）
+	blocker := filepath.Join(root, "blocker")
+	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// 直接测 WriteFileAtomic：destPath 的 dir 是普通文件 → CreateTemp 失败（应报错且无 tmp 残留）
+	err := ImportFromBase64("blocker", b64, ImportOptions{Overwrite: true}, rootFn, logFn)
+	if err == nil {
+		t.Fatal("目标为文件时导入应失败")
+	}
+	// 目标目录下不应有 .import-*.tmp 残渣（WriteFileAtomic 清理验证）
+	matches, _ := filepath.Glob(filepath.Join(root, ".import-*.tmp"))
+	if len(matches) != 0 {
+		t.Fatalf("失败后不应有 .import-*.tmp 残留: %v", matches)
+	}
+	// 正常路径无半截文件：目标存在（overwrite 前内容不变）
+	data, err := os.ReadFile(blocker)
+	if err != nil || string(data) != "x" {
+		t.Fatalf("阻塞文件不应被半截写入: %q %v", string(data), err)
+	}
+}

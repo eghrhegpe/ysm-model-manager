@@ -94,9 +94,16 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 			return types.AppError{Code: "FILE_EXISTS", Operation: "导入模型", SourcePath: fileName, Reason: "文件已存在", Suggestion: "如需替换请先删除原文件"}
 		}
 	}
-	// P2 修复：临时文件 + rename 原子落地——原 `os.WriteFile` 直写目标，磁盘满/IO 中断时
-	// 半截损坏文件留盘且非覆盖模式再次导入命中 FILE_EXISTS 形成「损坏文件阻塞重导」死锁
-	// （项目头号反模式：不得留下损坏文件；与 copyFile/SimpleCopyImporter 的 io.Copy 清理模式对齐）
+	return WriteFileAtomic(destPath, data)
+}
+
+// WriteFileAtomic 临时文件 + rename 原子落地（P2 修复，importer 与 app_install.go 的
+// subpath 导入路径共享）：原 `os.WriteFile` 直写目标，磁盘满/IO 中断时半截损坏文件留盘
+// 且非覆盖模式再次导入命中 FILE_EXISTS 形成「损坏文件阻塞重导」死锁（项目头号反模式）。
+// CreateTemp 恒建 0600，落地前 chmod 0644（对齐 installer.copyFileLocked 约定）；
+// 任一失败分支删除临时文件，不留 .import-*.tmp 残渣。
+func WriteFileAtomic(destPath string, data []byte) error {
+	destDir := filepath.Dir(destPath)
 	tmp, err := os.CreateTemp(destDir, ".import-*.tmp")
 	if err != nil {
 		return types.AppError{Code: "MKDIR_FAILED", Operation: "导入模型", TargetPath: destDir, Reason: "无法创建临时文件", Suggestion: "请检查磁盘权限或空间"}
@@ -110,6 +117,12 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 	if err := tmp.Close(); err != nil {
 		os.Remove(tmpName)
 		return types.AppError{Code: "WRITE_FAILED", Operation: "导入模型", TargetPath: destPath, Reason: "关闭失败: " + err.Error()}
+	}
+	// code_review：os.CreateTemp 恒建 0600，rename 不改权限 → 导入文件从 0644 退化为
+	// 0600（多用户/共享目录下其他进程不可读、导入成功但模型加载失败）；对齐 copyFileLocked 约定
+	if err := os.Chmod(tmpName, 0644); err != nil {
+		os.Remove(tmpName)
+		return types.AppError{Code: "WRITE_FAILED", Operation: "导入模型", TargetPath: destPath, Reason: "权限设置失败: " + err.Error()}
 	}
 	if err := os.Rename(tmpName, destPath); err != nil {
 		os.Remove(tmpName)

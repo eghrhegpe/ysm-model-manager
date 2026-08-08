@@ -142,7 +142,10 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 			return types.AppError{Code: "FILE_EXISTS", Operation: "导入模型", SourcePath: fileName, Reason: "文件已存在", Suggestion: "如需替换请先删除原文件"}
 		}
 	}
-	return os.WriteFile(destPath, data, 0644)
+	// P2 修复（code_review）：subpath 导入路径复用 importer.WriteFileAtomic——原 `os.WriteFile`
+	// 直写目标，磁盘满/IO 中断留半截文件且非覆盖模式再次导入命中 FILE_EXISTS 死锁；
+	// 与 ImportFromBase64 的原子写入语义保持一致
+	return importer.WriteFileAtomic(destPath, data)
 }
 
 // ========== 回收站 ==========

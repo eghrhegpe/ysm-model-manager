@@ -5,6 +5,8 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/app-modules.ts
+tests:
+  - frontend/src/app-modules.test.ts
 use_when:
   - 组件入口
   - 模块装配

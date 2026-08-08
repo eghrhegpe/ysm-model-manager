@@ -50,10 +50,14 @@ func RelinkDir(customDir, repoRoot, rtype, linkMode string, scanFn func(string) 
 			dstParent := filepath.Dir(ce.Path)
 			// P1 修复：ysm.json/.pmx 平铺在 customDir 根层时（dstParent == customDir），
 			// InstallDir 的「挪走整目录→重建→回滚」会连带把同目录其他模型一起 rename 走、
-			// 重建失败回滚后其他模型也随备份 RemoveAll 丢失。根层平铺退化为 Install 单文件
-			// 路径（按 src 相对 repoRoot 还原目录结构），不做整目录替换。
+			// 重建失败回滚后其他模型也随备份 RemoveAll 丢失。根层平铺退化为单文件落地，
+			// 不做整目录替换。
 			if filepath.Clean(dstParent) == filepath.Clean(customDir) {
-				if err := installer.Install(srcPath, customDir, repoRoot, linkMode); err != nil {
+				// P2 修复（code_review）：用 CopyFile 装到 customDir 平铺位置——
+				// installer.Install 按 rel(srcPath, repoRoot) 推导目标，仓库侧文件在子目录时
+				// 会装到 <customDir>/<subdir>/<base> 而平铺位置 <customDir>/<base> 残留陈旧副本
+				//（报告成功但游戏实际加载的文件未重链）。CopyFile 直接落地到平铺目录。
+				if _, err := installer.CopyFile(srcPath, customDir); err != nil {
 					logger(ce.Name, ce.Path, customDir, 0, "failed", "relink 失败: "+err.Error())
 					continue
 				}

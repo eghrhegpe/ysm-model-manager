@@ -139,6 +139,23 @@ export class AppResourceManager extends HTMLElement {
 
   async _init(): Promise<void> {
     const gen = ++this._initGen;
+    try {
+      await this._initInner(gen);
+    } catch (e) {
+      // P2 修复（code_review）：错误渲染移入 _init 内部并带 _initGen 守卫——
+      // 原调用方 .catch 无条件写 innerHTML，rtype X→Y→Z 快速切换时 gen1(X) 失败迟到
+      // 会覆盖已成功渲染的 Y 面板（stale-async-overwrites-newer 同类缺陷）
+      console.error("[app-resource-manager] _init 失败:", e);
+      if (gen === this._initGen) {
+        this.innerHTML =
+          '<div style="padding:12px;color:var(--paid)">⚠️ 初始化失败: ' +
+          _esc(String((e as { message?: unknown })?.message || e)) +
+          "</div>";
+      }
+    }
+  }
+
+  private async _initInner(gen: number): Promise<void> {
     await _loadConfig();
     if (gen !== this._initGen) return; // 过期：已有更新的 _init 发起
     const type = _findType(this._rtype);

@@ -15,6 +15,16 @@ function fmtTime(ms: number): string {
 // await Go 解析期间用户切到别的模型时，慢结果不得写进新模型的 #preview-detail
 let litematicGen = 0;
 
+/**
+ * P2 修复（code_review）：任意新预览派发时推进代际——原 litematicGen 只在
+ * showLitematic 自身递增，litematic A 解析中切到 YSM B（走 detail.ts 的 _detailGen）
+ * 不触碰它 → A 迟到仍写进 B 的 #preview-detail（跨类型污染）。index.ts 的
+ * model:select 回调开头调用本函数，使所有新选择都作废在途 litematic 结果。
+ */
+export function invalidateLitematicPreview(): void {
+  litematicGen++;
+}
+
 function shortName(name: string): string {
   return (name || "").replace(/^minecraft:/, "");
 }

@@ -12,7 +12,7 @@ import { getApp } from "../../wails/app.ts";
 import { type PreviewCtx, type DecodedYsm } from "./utils.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
 import { showModelDetail, showResourcePack, showShaderPack } from "./detail.ts";
-import { showLitematic, cleanupLitematic3D } from "./litematic-meta.ts";
+import { showLitematic, cleanupLitematic3D, invalidateLitematicPreview } from "./litematic-meta.ts";
 import { esc } from "../../utils/dom/html.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 
@@ -62,6 +62,10 @@ class AppPreview extends HTMLElement implements PreviewCtx {
     this._unsubs.push(
       bus.on("model:select", async ({ path, isDir }) => {
         ++this._previewGen; // 代际计数：子方法 await 后校验 gen !== _previewGen 即丢弃过期渲染
+        // P2 修复（code_review）：任意新选择作废在途 litematic 解析——
+        // litematicGen 只在 showLitematic 自身递增，切到 YSM/资源包（走 _detailGen）
+        // 不触碰它，litematic A 迟到会写进 B 的 #preview-detail（跨类型污染）
+        invalidateLitematicPreview();
         try {
           if (isDir) {
             await this._showPackInfo(path);

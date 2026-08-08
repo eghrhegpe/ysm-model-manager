@@ -937,6 +937,8 @@ func buildComponents(geoFiles []geoEntry, modelOrder, texOrder []string) ([]type
 	var comps []types.BedrockModel
 	// texNames = texArr **期望序**（契约校验：前端 texArr 来自元数据，序 = texOrderNames
 	// 优先 + 其余按名；texNames[i] = texArr 第 i 个的期望名 = texOrder[i]，越界用 basename）。
+	// 注意：texNames 索引是 texArr 连续索引（与组件解析跳过无关——texArr 来自元数据，
+	// 不因组件跳过而收缩）；长度 = 成功组件数，契约比对 Math.min 截断，未解析组件槽位不比对。
 	// texSlot = 纹理槽（组件贴 texArr[texSlot]）：已声明组件用**声明序位置 j**
 	// （texArr 声明段 = texOrderNames 序）；未声明组件 = len(texOrder) + 按名段序号
 	// （组件序尾部未声明段按路径排序，与 texArr 按名段一致）。——P2 修复：

@@ -104,6 +104,8 @@ export async function preloadModel(model: ModelLike): Promise<{
   const order = (spec as ModelSpec).texArrOrder as string[] | undefined;
   const actual = (model as { textureNames?: string[] }).textureNames;
   if (order?.length && actual?.length) {
+    // Math.min 截断：有意为之——texNames 长度 = 成功解析组件数 ≤ texArr 长度，
+    // 未解析组件槽位不比对（WASM 路径 texArrOrder 缺失整体跳过）。
     for (let i = 0; i < Math.min(order.length, actual.length); i++) {
       const exp = String(order[i] ?? "").trim().toLowerCase();
       const got = String(actual[i] ?? "").trim().toLowerCase();

@@ -15,6 +15,18 @@ import (
 	"ysm-model-manager/go/types"
 )
 
+// isArmModelName 判断模型文件是否为第一人称手臂模型（arm.json / arm.geo.json）。
+// 该类文件是游戏第一人称视角的手臂几何，与 main.json 的手臂重叠，
+// 合并会渲染出两对手臂，加载时须排除。
+func isArmModelName(name string) bool {
+	base := strings.ToLower(name)
+	if idx := strings.LastIndexAny(base, "/\\"); idx >= 0 {
+		base = base[idx+1:]
+	}
+	base = strings.TrimSuffix(base, ".json")
+	return base == "arm" || base == "arm.geo"
+}
+
 // FindGeometryInExtractedYSM 在解压后的 YSM 模型目录中查找 geometry 和纹理
 // ysmJsonPath: ysm.json 的完整路径
 // 返回: 合并后的 BedrockModel（不含纹理 base64），纹理原始字节
@@ -112,7 +124,9 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 	var geoJSON *types.BedrockModel
 	dir := filepath.Dir(ysmJsonPath)
 
-	// 统一加载全部模型文件，main 排首位（texIdx=0）
+	// 加载全部模型文件（main 排首位 texIdx=0），但排除第一人称手臂模型 arm.json：
+	// arm 是游戏第一人称视角的手臂几何，与 main.json 的手臂（第三人称全身已含）重叠，
+	// 合并会渲染出两对手臂（双手臂问题）。
 	var orderedNames []string
 	if modelMapOrig != nil {
 		if mainPath, ok := modelMapOrig["main"]; ok {
@@ -121,7 +135,7 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 		// 排序非 main 键，确保遍历顺序确定性（ADR-039 P3：map 遍历随机 → texSlot 漂移）
 		var otherKeys []string
 		for k := range modelMapOrig {
-			if k != "main" {
+			if k != "main" && !isArmModelName(modelMapOrig[k]) {
 				otherKeys = append(otherKeys, k)
 			}
 		}
@@ -130,7 +144,11 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 			orderedNames = append(orderedNames, modelMapOrig[k])
 		}
 	} else {
-		orderedNames = modelNames
+		for _, n := range modelNames {
+			if !isArmModelName(n) {
+				orderedNames = append(orderedNames, n)
+			}
+		}
 	}
 	maxTexIdx := len(texOrderNames) - 1
 	if maxTexIdx < 0 {

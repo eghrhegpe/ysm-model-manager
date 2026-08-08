@@ -32,6 +32,30 @@ func readLimitedEntry(rc io.ReadCloser) []byte {
 	return buf
 }
 
+// isArmModelName 判断模型文件是否为第一人称手臂模型（arm.json / arm.geo.json）。
+// 该类文件是游戏第一人称视角的手臂几何，与 main.json 的手臂重叠，
+// 合并会渲染出两对手臂，加载时须排除。
+func isArmModelName(name string) bool {
+	base := strings.ToLower(name)
+	if idx := strings.LastIndexAny(base, "/\\"); idx >= 0 {
+		base = base[idx+1:]
+	}
+	base = strings.TrimSuffix(base, ".json")
+	return base == "arm" || base == "arm.geo"
+}
+
+// filterArmModels 移除模型顺序表中的第一人称手臂模型占位：
+// 避免 arm.json 占据 texIdx 槽位导致 main 纹理错位。
+func filterArmModels(order []string) []string {
+	out := make([]string, 0, len(order))
+	for _, p := range order {
+		if !isArmModelName(p) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览）
 func ExtractFirstPNGFromZip(data []byte, size int64) []byte {
 	reader, err := zip.NewReader(bytes.NewReader(data), size)
@@ -229,6 +253,9 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 				continue
 			}
 			buf := readLimitedEntry(rc)
+			if isArmModelName(f.Name) {
+				continue // 排除第一人称手臂模型 arm.json（与 main 手臂重叠 → 双手臂）
+			}
 			geoFiles = append(geoFiles, geoEntry{name: f.Name, data: buf})
 		}
 		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !f.FileInfo().IsDir() && !strings.Contains(low, "avatar/") {
@@ -252,6 +279,9 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 			}
 		}
 	}
+
+	// 移除第一人称手臂模型占位：避免 arm.json 占据 texIdx 槽位导致 main 纹理错位
+	modelOrder = filterArmModels(modelOrder)
 
 	if len(modelOrder) > 0 {
 		orderMap := make(map[string]int, len(modelOrder))
@@ -500,9 +530,16 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 				continue
 			}
 			buf := readLimitedEntry(rc)
+			if isArmModelName(f.Name) {
+				continue // 排除第一人称手臂模型 arm.json（与 main 手臂重叠 → 双手臂）
+			}
 			geoFiles = append(geoFiles, geoEntry{name: f.Name, data: buf})
 		}
 	}
+
+	// 移除第一人称手臂模型占位：避免 arm.json 占据 texIdx 槽位导致 main 纹理错位
+	modelOrder = filterArmModels(modelOrder)
+
 	if len(modelOrder) > 0 {
 		orderMap := make(map[string]int, len(modelOrder))
 		for i, p := range modelOrder {

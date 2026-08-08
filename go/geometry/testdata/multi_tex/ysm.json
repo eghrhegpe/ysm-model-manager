@@ -1,0 +1,14 @@
+{
+  "files": {
+    "player": {
+      "model": [
+        "main.json",
+        "arm.json"
+      ],
+      "texture": [
+        "01tex.png",
+        "02tex.png"
+      ]
+    }
+  }
+}

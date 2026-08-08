@@ -74,12 +74,14 @@ async function register(): Promise<void> {
 /** 监听 toast / 事件并登记清理 */
 function spyEvents() {
   const toasts: Array<{ msg: string; type: string }> = [];
-  const doneEvents: Array<{ token?: string }> = [];
+  // P1 修复（code_review）：doneEvents 元素类型补 skipped——原 { token?: string }
+  // 缺该字段，新断言 d.skipped 在 tsc --noEmit（strict）下 TS2339 报错
+  const doneEvents: Array<{ token?: string; skipped?: boolean }> = [];
   const refreshEvents: string[] = [];
   const reloadEvents: string[] = [];
   cleanups.push(
     bus.on("toast:show", (t) => toasts.push(t as { msg: string; type: string })),
-    bus.on("sync:download:done", (e) => doneEvents.push(e as { token?: string })),
+    bus.on("sync:download:done", (e) => doneEvents.push(e)),
     bus.on("stats:refresh", () => refreshEvents.push("stats:refresh")),
     bus.on("tree:reload", () => reloadEvents.push("tree:reload")),
   );

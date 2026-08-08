@@ -894,7 +894,7 @@
 | `placeholderHTML()` | `frontend/src/views/app-resource-manager/tpl:154` | 空状态占位 |
 | `SidebarInstance()` | `frontend/src/views/app-sidebar/data:4` | sidebar 整合包实例（loader 转换后的渲染格式） |
 | `bindCardEvents()` | `frontend/src/views/app-sidebar/events:15` | — |
-| `bindFooter()` | `frontend/src/views/app-sidebar/events:144` | — |
+| `bindFooter()` | `frontend/src/views/app-sidebar/events:148` | — |
 | `MmdVariantGroups()` | `frontend/src/views/app-sidebar/loader:19` | MMD 变体聚合结果 |
 | `loadInstances()` | `frontend/src/views/app-sidebar/loader:26` | 从 Go 加载整合包实例列表，转换为 render 需要的格式 |
 | `groupMmdVariants()` | `frontend/src/views/app-sidebar/loader:149` | 对 MMD 类型，按父文件夹聚合 .pmx 变体文件。 |

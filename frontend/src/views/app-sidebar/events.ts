@@ -36,6 +36,10 @@ export function bindCardEvents(
     prevList.removeEventListener("click", prevClick);
     prevList.removeEventListener("contextmenu", prevCtx);
   }
+  // P2 修复（code_review）：list 被替换 = 新 sidebar 挂载（切页重建），复位去重标记——
+  // 否则 _lastEmittedPkg 沿用上一次会话的 emitKey，restoreSelectedCard 抑制重发
+  // package:selected，右侧 <app-sync-manager> 停留在占位（选择恢复回归）
+  _lastEmittedPkg = null;
 
   const clickHandler = (e: MouseEvent): void => {
     const target = e.target as HTMLElement | null;

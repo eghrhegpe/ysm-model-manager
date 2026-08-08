@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/fs"
 	"log"
 	"sort"
 	"strings"
@@ -99,6 +100,190 @@ func ExtractFirstPNGFrom7z(data []byte, size int64) []byte {
 }
 
 // ParseFromZip 从 ZIP 字节中解析 Bedrock Geometry 并提取纹理和动画
+// archiveEntry 统一 zip.File 与 sevenzip.File 的访问（两者 Name 均为字段而非方法，
+// 故用 struct 包装 name + file 接口，避免 Go slice 协变与字段/方法差异）。
+type archiveEntry struct {
+	name string
+	file interface {
+		FileInfo() fs.FileInfo
+		Open() (io.ReadCloser, error)
+	}
+}
+
+type geoEntry struct {
+	name string
+	data []byte
+}
+
+// collectArchiveFiles 从压缩包收集 ysm.json 映射/模型文件/纹理（合并版与组件版共用）。
+// 与 ParseFromZip 原内联逻辑等价，但 geoFiles **不排除 arm**（arm 过滤由合并版调用方
+// filterArmModels 做；组件版需要 arm 作为独立组件）。
+func collectArchiveFiles(entries []archiveEntry) (modelOrder, texOrder []string, geoFiles []geoEntry, pngs [][]byte, pngNames, animJSONs []string) {
+	for _, e := range entries {
+		f := e.file
+		low := strings.ToLower(e.name)
+		if strings.HasSuffix(low, "ysm.json") && !f.FileInfo().IsDir() {
+			rc, err := f.Open()
+			if err != nil {
+				continue
+			}
+			buf := readLimitedEntry(rc)
+			var ysm struct {
+				Properties struct {
+					DefaultTexture string `json:"default_texture"`
+				} `json:"properties"`
+				Files struct {
+					Player struct {
+						Model   json.RawMessage `json:"model"`
+						Texture json.RawMessage `json:"texture"`
+					} `json:"player"`
+				} `json:"files"`
+			}
+			if err := json.Unmarshal(buf, &ysm); err != nil {
+				log.Printf("[geometry] 解析 ysm.json 失败: %v", err)
+			} else {
+				// 解析 texture 顺序
+				if len(ysm.Files.Player.Texture) > 0 {
+					texRaw := string(ysm.Files.Player.Texture)
+					if strings.HasPrefix(strings.TrimSpace(texRaw), `[`) {
+						var arr []json.RawMessage
+						if json.Unmarshal(ysm.Files.Player.Texture, &arr) == nil {
+							for _, item := range arr {
+								s := strings.TrimSpace(string(item))
+								if strings.HasPrefix(s, `{`) {
+									var obj struct {
+										Uv string `json:"uv"`
+									}
+									if json.Unmarshal(item, &obj) == nil && obj.Uv != "" {
+										tn := obj.Uv
+										if idx := strings.LastIndex(tn, "/"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
+										if idx := strings.LastIndex(tn, "\\"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
+										texOrder = append(texOrder, strings.ToLower(tn))
+									}
+								} else {
+									var sval string
+									if json.Unmarshal(item, &sval) == nil && sval != "" {
+										tn := sval
+										if idx := strings.LastIndex(tn, "/"); idx >= 0 {
+											tn = tn[idx+1:]
+										}
+										texOrder = append(texOrder, strings.ToLower(tn))
+									}
+								}
+							}
+						}
+					}
+				}
+				// 解析 model 字段（支持 4 种格式）
+				raw := strings.TrimSpace(string(ysm.Files.Player.Model))
+				if len(raw) > 0 {
+					if raw[0] == '[' {
+						var arr []json.RawMessage
+						if json.Unmarshal(ysm.Files.Player.Model, &arr) == nil {
+							for _, item := range arr {
+								s := strings.TrimSpace(string(item))
+								if len(s) > 0 && s[0] == '{' {
+									var obj struct {
+										Path string `json:"path"`
+										Name string `json:"name"`
+									}
+									if json.Unmarshal(item, &obj) == nil {
+										n := obj.Path
+										if n == "" {
+											n = obj.Name
+										}
+										if n != "" {
+											modelOrder = append(modelOrder, n)
+										}
+									}
+								} else {
+									var sval string
+									if json.Unmarshal(item, &sval) == nil && sval != "" {
+										modelOrder = append(modelOrder, sval)
+									}
+								}
+							}
+						}
+					} else if raw[0] == '{' {
+						var mm map[string]string
+						if json.Unmarshal(ysm.Files.Player.Model, &mm) == nil {
+							// map 遍历顺序随机，按 key 排序保证 modelOrder 稳定（texSlot 绑定一致）
+							keys := make([]string, 0, len(mm))
+							for k := range mm {
+								keys = append(keys, k)
+							}
+							sort.Strings(keys)
+							for _, k := range keys {
+								modelOrder = append(modelOrder, mm[k])
+							}
+						}
+					} else {
+						var sval string
+						if json.Unmarshal(ysm.Files.Player.Model, &sval) == nil && sval != "" {
+							modelOrder = append(modelOrder, sval)
+						}
+					}
+				}
+			}
+			break
+		}
+	}
+
+	for _, e := range entries {
+		f := e.file
+		low := strings.ToLower(e.name)
+		if strings.HasSuffix(low, ".json") && !f.FileInfo().IsDir() {
+			if strings.Contains(low, "ysm.json") {
+				continue
+			}
+			if strings.Contains(low, "animation") || strings.Contains(low, "controller") {
+				rc, err := f.Open()
+				if err != nil {
+					continue
+				}
+				buf, _ := io.ReadAll(io.LimitReader(rc, maxExtractSize))
+				rc.Close()
+				if len(buf) > 10 {
+					animJSONs = append(animJSONs, string(buf))
+				}
+				continue
+			}
+			rc, err := f.Open()
+			if err != nil {
+				continue
+			}
+			buf := readLimitedEntry(rc)
+			// 注意：不排除 arm（组件版需要；合并版由调用方 filterArmModels 过滤）
+			geoFiles = append(geoFiles, geoEntry{name: e.name, data: buf})
+		}
+		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !f.FileInfo().IsDir() && !strings.Contains(low, "avatar/") {
+			rc, err := f.Open()
+			if err != nil {
+				continue
+			}
+			pngData := readLimitedEntry(rc)
+			if len(pngData) > 4096 { // 过滤 <4KB 的头像/预览图
+				name := e.name
+				if idx := strings.LastIndex(name, "/"); idx >= 0 {
+					name = name[idx+1:]
+				}
+				if idx := strings.LastIndex(name, "\\"); idx >= 0 {
+					name = name[idx+1:]
+				}
+				name = strings.TrimSuffix(name, ".png")
+				name = strings.TrimSuffix(name, ".jpg")
+				pngNames = append(pngNames, name)
+				pngs = append(pngs, pngData)
+			}
+		}
+	}
+	return modelOrder, texOrder, geoFiles, pngs, pngNames, animJSONs
+}
+
 func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []string) {
 	reader, err := zip.NewReader(bytes.NewReader(data), size)
 	if err != nil {
@@ -224,10 +409,6 @@ func ParseFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []str
 		}
 	}
 
-	type geoEntry struct {
-		name string
-		data []byte
-	}
 	var geoFiles []geoEntry
 
 	for _, f := range reader.File {
@@ -517,10 +698,6 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 	}
 
 	// 按 modelOrder 排序 geo 文件
-	type geoEntry struct {
-		name string
-		data []byte
-	}
 	var geoFiles []geoEntry
 	for _, f := range reader.File {
 		low := strings.ToLower(f.Name)
@@ -664,4 +841,103 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 		})
 	}
 	return geo, pngs
+}
+
+// isMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）
+func isMainModelName(name string) bool {
+	base := strings.ToLower(name)
+	if idx := strings.LastIndexAny(base, "/\\"); idx >= 0 {
+		base = base[idx+1:]
+	}
+	base = strings.TrimSuffix(base, ".json")
+	return base == "main" || base == "main.geo"
+}
+
+// ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件，
+// 含 arm/载具等组件（不合并、不排除）；main 优先排序，TexSlot 全局化。
+// 供 threejs.BuildMulti 生成多组件 spec。
+func ParseComponentsFromZip(data []byte, size int64) ([]types.BedrockModel, error) {
+	reader, err := zip.NewReader(bytes.NewReader(data), size)
+	if err != nil {
+		return nil, err
+	}
+	files := make([]archiveEntry, 0, len(reader.File))
+	for _, f := range reader.File {
+		files = append(files, archiveEntry{name: f.Name, file: f})
+	}
+	modelOrder, texOrder, geoFiles, _, _, _ := collectArchiveFiles(files)
+	return buildComponents(geoFiles, modelOrder, texOrder)
+}
+
+// buildComponents 组件化收集：main 优先排序 + modelOrder 排序 + TexSlot 全局化 + 独立解析。
+// 与 ParseFromZip 合并逻辑同源（collectArchiveFiles 共享收集），仅解析阶段不合并 bones。
+func buildComponents(geoFiles []geoEntry, modelOrder, texOrder []string) ([]types.BedrockModel, error) {
+	if len(modelOrder) > 0 {
+		orderMap := make(map[string]int, len(modelOrder))
+		for i, p := range modelOrder {
+			orderMap[strings.ReplaceAll(p, "\\", "/")] = i
+		}
+		sort.SliceStable(geoFiles, func(i, j int) bool {
+			ai, oki := orderMap[geoFiles[i].name]
+			aj, okj := orderMap[geoFiles[j].name]
+			if oki && okj {
+				// main 优先（YSMViewer 主组件），其余保持 modelOrder 相对顺序
+				mi := isMainModelName(geoFiles[i].name)
+				mj := isMainModelName(geoFiles[j].name)
+				if mi != mj {
+					return mi
+				}
+				return ai < aj
+			}
+			return oki
+		})
+	}
+	// texIdxMap：模型 basename → 全局纹理索引（与合并版同口径）
+	texIdxMap := make(map[string]int)
+	texCount := len(texOrder)
+	if texCount == 0 {
+		texCount = len(modelOrder)
+	}
+	if len(modelOrder) > 0 {
+		for i, p := range modelOrder {
+			p = strings.ReplaceAll(p, "\\", "/")
+			if idx := strings.LastIndex(p, "/"); idx >= 0 {
+				p = p[idx+1:]
+			}
+			ti := i
+			if ti >= texCount {
+				ti = texCount - 1
+			}
+			texIdxMap[strings.TrimSuffix(p, ".json")] = ti
+		}
+	}
+	var comps []types.BedrockModel
+	for _, gf := range geoFiles {
+		g := ParseBedrockGeometry(gf.data)
+		if g == nil || g.BoneCount == 0 {
+			continue
+		}
+		// 每个 cube 记住来源文件 tex 维度
+		for bi := range g.Bones {
+			for ci := range g.Bones[bi].Cubes {
+				g.Bones[bi].Cubes[ci].CubeTexW = g.TexWidth
+				g.Bones[bi].Cubes[ci].CubeTexH = g.TexHeight
+			}
+		}
+		// 按模型文件位置设置 cube 纹理索引（全局 texSlot，前端 texArr 全局数组按序索引）
+		geoName := gf.name
+		if idx := strings.LastIndex(geoName, "/"); idx >= 0 {
+			geoName = geoName[idx+1:]
+		}
+		geoName = strings.TrimSuffix(strings.TrimSuffix(geoName, ".json"), ".geo.json")
+		if ti, hasTex := texIdxMap[geoName]; hasTex {
+			for bi := range g.Bones {
+				for ci := range g.Bones[bi].Cubes {
+					g.Bones[bi].Cubes[ci].TexSlot = ti
+				}
+			}
+		}
+		comps = append(comps, *g)
+	}
+	return comps, nil
 }

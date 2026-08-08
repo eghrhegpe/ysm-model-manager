@@ -13,7 +13,7 @@
 | Go·错误 | 1 | 1 |
 | go/fileops | 2 | 13 |
 | Go·文件系统 | 1 | 4 |
-| Go·几何 | 2 | 5 |
+| Go·几何 | 2 | 6 |
 | Go·导入 | 2 | 15 |
 | Go·安装 | 1 | 6 |
 | go/instance | 1 | 2 |
@@ -40,7 +40,7 @@
 | frontend/views | 52 | 144 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **165** | **764** |
+| **合计** | **165** | **765** |
 
 ## Go·头像
 
@@ -114,10 +114,11 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `ExtractFirstPNGFromZip()` | `go/geometry/archive:60` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
-| `ExtractFirstPNGFrom7z()` | `go/geometry/archive:81` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
-| `ParseFromZip()` | `go/geometry/archive:102` | ParseFromZip 从 ZIP 字节中解析 Bedrock Geometry 并提取纹理和动画 |
-| `ParseFrom7z()` | `go/geometry/archive:394` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
+| `ExtractFirstPNGFromZip()` | `go/geometry/archive:61` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
+| `ExtractFirstPNGFrom7z()` | `go/geometry/archive:82` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
+| `ParseFromZip()` | `go/geometry/archive:287` | — |
+| `ParseFrom7z()` | `go/geometry/archive:575` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
+| `ParseComponentsFromZip()` | `go/geometry/archive:859` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
 | `ParseBedrockGeometry()` | `go/geometry/parse:17` | ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式） 注意：data 大小不应超过 maxP |
 
 ## Go·导入

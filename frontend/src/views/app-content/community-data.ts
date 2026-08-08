@@ -32,12 +32,27 @@ export interface CommunityData {
  */
 export async function loadCommunityData(): Promise<CommunityData> {
   const App = await getApp();
-  const [sites, creators, authors, localAuthors] = await Promise.all([
-    App.LoadWorkshopSites(),
-    App.LoadWorkshopCreators(),
-    App.ListModelAuthors(),
-    App.ScanLocalAuthors().catch(() => []),
-  ]);
+  // P2 修复：Promise.all 整体加 catch——原仅 ScanLocalAuthors 有 .catch(() => [])，
+  // 其余三个 Go 绑定任一个 reject 会使整链 reject，调用方（tab click / _workshopTimer
+  // 定时器路径）无 try/catch → unhandled rejection（致命陷阱 #1）
+  let sites: WorkshopSite[] = [];
+  let creators: WorkshopCreator[] = [];
+  let authors: unknown[] = [];
+  let localAuthors: LocalAuthorLike[] = [];
+  try {
+    const results = await Promise.all([
+      App.LoadWorkshopSites(),
+      App.LoadWorkshopCreators(),
+      App.ListModelAuthors(),
+      App.ScanLocalAuthors().catch(() => []),
+    ]);
+    sites = results[0] || [];
+    creators = results[1] || [];
+    authors = results[2] || [];
+    localAuthors = results[3] || [];
+  } catch (e) {
+    console.warn("[community] 社区数据加载失败:", e);
+  }
 
   // 合并本地作者到创作者列表
   const merged = (creators || []) as LocalCreator[];

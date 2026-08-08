@@ -9,6 +9,7 @@ import { getApp } from "../../wails/app.ts";
 import type { AppTree } from "./index.ts";
 import { modalPrompt, modalConfirm } from "../../utils/dom/dialogs/modal.ts";
 import { showBatchRenameDialog } from "../../utils/dom/dialogs/batch-rename.ts";
+import { selectState } from "./data.ts";
 
 export function bindBusEvents(vm: AppTree): Array<() => void> {
   const unsubs: Array<() => void> = [];
@@ -169,6 +170,10 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
         } catch {}
         await reload(vm);
         bus.emit("stats:refresh");
+        // P2 修复：数据变更链路（回收/重命名/移动）成功后清空选中态——
+        // selectState 是模块级单例，旧路径不失效会滞留「已选 N 个文件」并误删已不存在的路径
+        selectState.keys.clear();
+        selectState.lastKey = null;
         const suffix = errors.length
           ? "，失败 " +
             errors.length +
@@ -224,6 +229,9 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
           }
           await reload(vm);
           bus.emit("stats:refresh");
+          // P2 修复：重命名成功后清空选中态（旧路径已失效，滞留会误删不存在路径）
+          selectState.keys.clear();
+          selectState.lastKey = null;
           bus.emit("toast:show", {
             msg: `✅ 批量重命名完成：${ok} 成功${fail ? "，失败 " + fail : ""}`,
             duration: 3000,
@@ -263,6 +271,9 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
           }
           await reload(vm);
           bus.emit("stats:refresh");
+          // P2 修复：重命名成功后清空选中态（旧路径已失效，滞留会误删不存在路径）
+          selectState.keys.clear();
+          selectState.lastKey = null;
           bus.emit("toast:show", {
             msg: `✅ 批量重命名完成：${ok} 成功${fail ? "，失败 " + fail : ""}`,
             duration: 3000,

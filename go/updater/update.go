@@ -147,8 +147,15 @@ func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, 
 	}
 
 	// 从 SHA256SUMS 中解析对应 zip 的 hash
+	// P2 修复：fetchExpectedHash 现返回 (string, error)——原 "" 同时表达三种失败态，
+	// 404/403 时哈希校验静默跳过；现失败记录告警但保留 old 行为（hash 缺失仍可下载，
+	// 由 Download 侧状态码检查兜底，不让「hash 不可得」阻塞整个更新流程）
 	if latestSHASumsURL != "" {
-		expectedHash = fetchExpectedHash(latestSHASumsURL, assetPattern())
+		hash, err := fetchExpectedHash(latestSHASumsURL, assetPattern())
+		if err != nil {
+			log.Printf("[updater] 获取期望哈希失败（更新将继续但无哈希校验）: %v", err)
+		}
+		expectedHash = hash
 	}
 
 	return &UpdateInfo{
@@ -179,6 +186,13 @@ func Download(assetURL string, expectedHash string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	// P2 修复：非 200 直接拒绝——原实现不检查状态码，asset URL 返回 404 时
+	// 在 expectedHash=="" 场景下错误页 HTML 会被当更新包写入 tmp 并返回成功
+	// （随后 InstallUpdate 才报 zip 打开失败，用户被误导为已下载成功）
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("更新包下载失败: HTTP %d（%s）", resp.StatusCode, assetURL)
+	}
 
 	tmp := filepath.Join(os.TempDir(), filepath.Base(assetURL))
 	f, err := os.Create(tmp)
@@ -421,23 +435,30 @@ func splitVer(s string) []int {
 }
 
 // fetchExpectedHash 从 SHA256SUMS 文件中解析指定文件名的 hash
-func fetchExpectedHash(sumsURL string, fileName string) string {
+// P2 修复：返回 (string, error)——原实现空字符串同时表达「未找到/网络错误/HTTP 错误」，
+// 404/403 错误体按行解析不到返回 ""，Download 侧 `expectedHash==""` 门控使哈希校验整体
+// 静默跳过（更新包无校验装盘）。现非 200 返回显式错误，调用方 CheckWithClient 记录告警。
+func fetchExpectedHash(sumsURL string, fileName string) (string, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest("GET", sumsURL, nil)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	req.Header.Set("User-Agent", "YSM-Model-Manager/")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("SHA256SUMS 获取失败: HTTP %d", resp.StatusCode)
+	}
+
 	data, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10)) // 最多 64KB
 	if err != nil {
-		return ""
+		return "", err
 	}
 
 	lines := strings.Split(string(data), "\n")
@@ -453,8 +474,8 @@ func fetchExpectedHash(sumsURL string, fileName string) string {
 		}
 		name := strings.TrimPrefix(parts[1], "*")
 		if strings.EqualFold(name, fileName) {
-			return strings.ToLower(parts[0])
+			return strings.ToLower(parts[0]), nil
 		}
 	}
-	return ""
+	return "", fmt.Errorf("SHA256SUMS 中未找到 %s 的 hash", fileName)
 }

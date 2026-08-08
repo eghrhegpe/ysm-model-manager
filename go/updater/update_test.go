@@ -136,7 +136,7 @@ fed789cba012 *YSM-Model-Manager_windows_arm64.zip
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("file=%s", tt.fileName), func(t *testing.T) {
-			result := fetchExpectedHash(server.URL+"/sums", tt.fileName)
+			result, _ := fetchExpectedHash(server.URL+"/sums", tt.fileName)
 			if result != tt.expected {
 				t.Errorf("fetchExpectedHash(..., %q) = %q, 期望 %q", tt.fileName, result, tt.expected)
 			}
@@ -152,9 +152,10 @@ func TestFetchExpectedHash_EmptyResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result := fetchExpectedHash(server.URL+"/sums", "YSM-Model-Manager_windows_amd64.zip")
-	if result != "" {
-		t.Errorf("空响应应返回空字符串，得到 %q", result)
+	// P2 修复后签名返回 (string, error)：空响应（未找到 hash）应返回 error
+	_, err := fetchExpectedHash(server.URL+"/sums", "YSM-Model-Manager_windows_amd64.zip")
+	if err == nil {
+		t.Error("空响应（未找到 hash）应返回错误")
 	}
 }
 
@@ -164,16 +165,18 @@ func TestFetchExpectedHash_ServerError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result := fetchExpectedHash(server.URL+"/sums", "YSM-Model-Manager_windows_amd64.zip")
-	if result != "" {
-		t.Errorf("服务器错误应返回空字符串，得到 %q", result)
+	// P2 修复后签名返回 (string, error)：服务器 500 应返回 error
+	_, err := fetchExpectedHash(server.URL+"/sums", "YSM-Model-Manager_windows_amd64.zip")
+	if err == nil {
+		t.Error("服务器错误应返回错误")
 	}
 }
 
 func TestFetchExpectedHash_InvalidURL(t *testing.T) {
-	result := fetchExpectedHash("http://invalid-url-that-does-not-exist.local/sums", "test.zip")
-	if result != "" {
-		t.Errorf("无效 URL 应返回空字符串，得到 %q", result)
+	// P2 修复后签名返回 (string, error)：无效 URL 应返回 error
+	_, err := fetchExpectedHash("http://invalid-url-that-does-not-exist.local/sums", "test.zip")
+	if err == nil {
+		t.Error("无效 URL 应返回错误")
 	}
 }
 
@@ -184,7 +187,9 @@ func TestDownload_OK(t *testing.T) {
 	}))
 	defer server.Close()
 
-	path, err := Download(server.URL, "")
+	// P2 修复：URL 带路径段——原 `server.URL` 的 filepath.Base 在 Windows 上得到
+	// "127.0.0.1:PORT"（冒号非法文件名），os.Create 失败 → 主平台测试必挂
+	path, err := Download(server.URL+"/pkg.zip", "")
 	if err != nil {
 		t.Fatalf("Download() = %v", err)
 	}
@@ -202,7 +207,7 @@ func TestDownload_HashMismatch(t *testing.T) {
 	}))
 	defer server.Close()
 
-	path, err := Download(server.URL, "deadbeef")
+	path, err := Download(server.URL+"/pkg.zip", "deadbeef")
 	if err == nil {
 		t.Fatal("hash 不匹配应报错")
 	}

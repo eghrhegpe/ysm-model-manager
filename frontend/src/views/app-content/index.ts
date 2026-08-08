@@ -160,6 +160,16 @@ class AppContent extends HTMLElement {
   }
 
   _render(): void {
+    // P2 修复：每次重渲染前释放上一轮 _bindTabs 收集的 tab 订阅——
+    // app-content 常驻不卸载，_unsubs 只在 disconnectedCallback 清理，
+    // 多次访问 repository 的 dedup/oldest/import/recycle 会让 repo:rtype-changed
+    // 监听与 cleanup 跨访问累积（N 次访问后一次 rtype-changed 触发 N 次 doDedup/render）
+    if (this._unsubs && Array.isArray(this._unsubs)) {
+      this._unsubs.forEach((fn) => {
+        if (typeof fn === "function") fn();
+      });
+      this._unsubs = [];
+    }
     let inner = "";
     switch (this._current) {
       case "repository":

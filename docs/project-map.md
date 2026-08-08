@@ -66,6 +66,7 @@
 | `app-modules.ts` | 组件入口 + 右键菜单映射 |
 | `bus.test.ts` | 事件总线测试 |
 | `bus.ts` | 事件总线 |
+| `zz_mm_scratch.test.ts` | ⚠️ 用途待补基线（scripts/baseline/project-dirs.json） |
 
 <!-- /GEN: frontend-structure -->
 

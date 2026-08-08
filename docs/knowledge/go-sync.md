@@ -75,8 +75,8 @@ use_when:
 - **两阶段遍历-执行模式**（`SyncToggleStatus`，`sync.go:162-231`）：`filepath.WalkDir` 回调中**不直接执行** `os.Rename`，而是先收集 `[]renameOp`（含源路径、目标路径、操作类型），遍历完成后再批量执行。原因：`filepath.WalkDir` 在遍历过程中修改目录结构（如重命名文件）会导致后续条目被跳过或重复处理——文件丢失/重复/损坏风险。这是本包最重要的设计模式，所有在 WalkDir 回调中修改文件系统的操作都必须遵循此模式
 - `SyncToggleStatus` 持有包级 `syncLock`（`sync.Mutex`），防止与 `go/installer` 的安装操作并发写同一文件（`sync.go:137-138`）
 - 文件被占用（如 Minecraft 锁定）时 `isFileLocked` 识别后静默跳过不阻塞（errno 优先：Win ERROR_SHARING_VIOLATION(32) / Unix EBUSY(16)，再按消息兜底）
-- `RelinkDir` 处理文件夹级类型时先把旧目录 rename 成 `.relink-bak`，重建成功才删备份、失败则回滚恢复——不能先 `RemoveAll` 再重建，否则失败即整目录丢失
-- 硬链接检测跨平台分实现，系统调用失败一律降级 `LinkCopy`；`GetLinkType` 必须先 `os.Lstat` 判 `os.ModeSymlink`（`sync.go:588-594`）——用 `os.Stat` 会跟随链接、把符号链接误判成普通文件，进而按「复制」策略走回收站
+- `RelinkDir` 处理文件夹级类型时先把旧目录 rename 成 `.relink-bak`，重建成功才删备份、失败则回滚恢复——不能先 `RemoveAll` 再重建，否则失败即整目录丢失。**根层平铺的 ysm.json/.pmx 退化为 `installer.Install` 单文件路径**（P1 修复：`dstParent == customDir` 时原逻辑会把整个实例目录 rename 走、同目录其他模型随备份 RemoveAll 丢失）
+- 硬链接检测跨平台分实现，系统调用失败一律降级 `LinkCopy`；`GetLinkType` 必须先 `os.Lstat` 判 `os.ModeSymlink`（`sync.go:602-614`）——用 `os.Stat` 会跟随链接、把符号链接误判成普通文件，进而按「复制」策略走回收站
 - 链接类型是删除策略依据：硬链接(nlink>1)/符号链接直接删，普通文件才移回收站（致命陷阱 #8）
 - 拉取侧 `copyFile`（`sync_push.go:221`）是**跟随符号链接**的裸复制：`os.Open` + `io.Copy`，不保留链接语义、不 chmod、失败不清理半截目标文件。`PullResources` / `PullSingleResource` 遍历文件夹时按 `e.IsDir()` 跳过子目录，而指向目录的符号链接 `IsDir()` 为 false 不被跳过，会走进 `copyFile` 并在 `io.Copy` 阶段报错（EISDIR 类）——该条目计 failed 但循环继续，不会中断整组拉取。这与 [go_recycle](./go-recycle.md) 的 `copyDirRecursive` 已改用 `os.Readlink` + `os.Symlink` 保留链接的做法不同，本包尚未对齐
 - 实例 custom 目录固定为 `config/yes_steve_model/custom`

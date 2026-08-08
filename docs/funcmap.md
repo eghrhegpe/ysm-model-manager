@@ -128,7 +128,7 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `ImportFromBase64()` | `go/importer/importer_file:28` | ImportFromBase64 从 base64 导入模型文件（校验 + 类型检测 + 写文件） rootFn 按资源类型返回仓库根目录（薄壳注入 a.GetRepoRoot） |
-| `DetectZipType()` | `go/importer/importer_file:101` | DetectZipType 扫描 ZIP local file header 中的文件名识别资源类型 |
+| `DetectZipType()` | `go/importer/importer_file:122` | DetectZipType 扫描 ZIP local file header 中的文件名识别资源类型 |
 | `ImportOptions()` | `go/importer/importer_file:18` | ImportOptions 导入选项 |
 | `ImportLogger()` | `go/importer/importer_file:24` | ImportLogger 导入日志回调（薄壳注入 App.logger.Add） |
 | `Register()` | `go/importer/importer:31` | Register 注册导入策略 |

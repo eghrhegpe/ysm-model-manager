@@ -58,7 +58,7 @@ use_when:
 ## 不变量
 
 - 非覆盖模式下目标已存在必须返回 `FILE_EXISTS`，由前端二次确认后再走覆盖分支
-- **`io.Copy` 失败必须清理半截目标文件**（`SimpleCopyImporter` 复制失败时 `Close` + `os.Remove(dstPath)`），不得留下损坏文件误导用户
+- **`io.Copy` 失败必须清理半截目标文件**（`SimpleCopyImporter` 复制失败时 `Close` + `os.Remove(dstPath)`），不得留下损坏文件误导用户；**base64 路径写盘同样原子化**（P2 修复：`ImportFromBase64` 原 `os.WriteFile` 直写目标，磁盘满/IO 中断留半截文件且非覆盖模式再次导入命中 FILE_EXISTS 死锁——现改临时文件 + `os.Rename` 原子落地，失败删临时文件）
 - 复制目录时符号链接复制链接本身（`Readlink` + `Symlink`）而非跟随；`DirectoryCopyImporter.copyDir` 对 `Readlink`/`Symlink` 的错误显式返回，不静默吞掉
 - 目录复制先写入 `MkdirTemp` 临时目录再 `os.Rename` 落地，保证原子性（失败 `defer RemoveAll` 清理）
 - `sanitizePath` 是防御纵深：上层 `installer.Install` 已用 `paths.IsInside` 严校验，包被独立使用时仍拒绝 `..`

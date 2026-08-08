@@ -38,7 +38,9 @@ use_when:
 
 ## 不变量
 
-- 文件变化事件必须去重
+- 文件变化事件必须去重（800ms 防抖 + syncRunning/syncPending 串行化）
+- **loop 入口必须一次性捕获本地 channel 引用**（P2 修复：原 select 每轮读共享字段 `w.w.Events`/`w.w.Errors`/`w.done`，Stop→立即 Start（restartWatcher 正是此序列）后旧 loop 读到新 watcher → 双 loop 双倍触发防抖 + `-race` 数据竞争，且旧 loop 的 recover 可能误关新 watcher）
+- `Start` 每次重建 `done` channel（已关闭的 channel 不可复用，ADR-031）；`syncAll` 串行化 + `wg.Wait()` 在 Unlock 后等 in-flight 同步
 
 ## 相关
 

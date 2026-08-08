@@ -78,6 +78,7 @@ use_when:
 - 目录提升必须带 root 守卫：父目录 = 仓库根 → 回退文件级；父目录在仓库外 → 显式拒绝
 - `WriteModelFolder` 不覆盖已存在目录；组内至少 1 个支持文件；每个 `RelPath` 必须落在 `dstRoot` 内
 - `.ban` 检测大小写不敏感（Windows `.BAN` 兼容）
+- **`CopyModelFile` 拒绝目录自嵌套复制**（P2 修复：`dstDir` 位于 `src` 子树内时原实现 WalkDir 递归自嵌套无限膨胀至 ENAMETOOLONG——复制前校验 `filepath.Rel(src, dstDir)` 无 `..` 前缀即拒绝）
 
 ## 相关
 

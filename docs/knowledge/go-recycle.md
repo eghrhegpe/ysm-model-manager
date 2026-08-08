@@ -69,6 +69,7 @@ use_when:
 - 跨设备回退复制失败时必须清理半截 `dst`，不得在回收站留下损坏副本
 - `dst` 每次重算后都要复查仍在 `.recycle` 目录内
 - `.recycle` 目录独立于主数据存储
+- **冲突后缀循环遇非 IsNotExist 错误必须返回**（P2 修复：Restore 的 `os.Stat(dst)` 返回权限类错误时原实现继续加后缀循环，错误持续则死循环——已对齐 moveEx 的 `else if err != nil { return err }` 处理）
 
 ## 相关
 

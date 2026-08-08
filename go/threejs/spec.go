@@ -120,7 +120,7 @@ func Build(model types.BedrockModel) (string, error) {
 		var localRot [4]float64 = [4]float64{0, 0, 0, 1}
 		// 解析骨骼旋转（Blockbench 欧拉角 → 四元数）
 		if b.Rotation[0] != 0 || b.Rotation[1] != 0 || b.Rotation[2] != 0 {
-			localRot = eulerToQuaternion(-b.Rotation[0], -b.Rotation[1], -b.Rotation[2])
+			localRot = eulerToQuaternion(-b.Rotation[0], -b.Rotation[1], b.Rotation[2])
 		}
 		var parentID *string
 		if b.Parent != "" {
@@ -437,7 +437,7 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 	localPos := [3]float64{cp[0] - bonePivot.x, cp[1] - bonePivot.y, cp[2] - bonePivot.z}
 
 	// Cube rotation → quaternion (CreateBlockbenchQuaternion)
-	localRot := eulerToQuaternion(-c.Rotation[0], -c.Rotation[1], -c.Rotation[2])
+	localRot := eulerToQuaternion(-c.Rotation[0], -c.Rotation[1], c.Rotation[2])
 
 	return &MeshData{
 		ID:            meshID,
@@ -594,6 +594,10 @@ func parseFaceUV(faceUVStr string, faces *[6][8]float64, texW, texH float64) boo
 
 // eulerToQuaternion 对应 YSMViewer CreateBlockbenchQuaternion()
 // 将欧拉角（度）转为四元数，旋转顺序: Rx * Ry * Rz (Three.js 默认)
+// 口径：调用方传入的是已取反角度（X/Y 取反、Z 不取反），等效于 C#
+// YsmLoaderService.ConvertBones（-rx,-ry,+rz）+ builder 正角度四元数。
+// 历史注记：曾三轴取反（-rx,-ry,-rz），与 C# 在 Z 轴符号相反，
+// 渲染对齐对比（tests/port-verification）定位后改为 Z 不取反。
 func eulerToQuaternion(rxDeg, ryDeg, rzDeg float64) [4]float64 {
 	rx := rxDeg * math.Pi / 180.0
 	ry := ryDeg * math.Pi / 180.0

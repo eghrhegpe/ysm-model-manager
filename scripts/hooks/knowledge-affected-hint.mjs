@@ -53,7 +53,10 @@ export function buildBlock(cards, start = BLOCK_START, end = BLOCK_END) {
 
 function getStagedChanged() {
   try {
-    return execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACM'], { encoding: 'utf8' })
+    // P2-1（code_review）：--diff-filter=ACMRD 含删除(D)/重命名(R)——仅 ACM 会漏掉
+    // 删卡/重命名卡场景（卡文件被删时同样需要提示复核）；quotePath=false 保证
+    // 非 ASCII 路径不被引号/八进制转义破坏与 check-knowledge-drift 的匹配（P3-2）
+    return execFileSync('git', ['-c', 'core.quotePath=false', 'diff', '--cached', '--name-only', '--diff-filter=ACMRD'], { encoding: 'utf8' })
       .split('\n').map((s) => s.trim()).filter(Boolean);
   } catch {
     return [];

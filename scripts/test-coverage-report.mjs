@@ -107,6 +107,13 @@ function loadCoverage() {
 }
 
 const raw = loadCoverage();
+// P2-1（code_review）：合法 JSON 但为 null/非对象/数组时 Object.entries 会抛未捕获
+// TypeError——加结构守卫，--suggest 的「永远 exit 0」契约不被破坏
+if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+  process.stderr.write(`覆盖率数据为空或结构异常: ${inputPath}\n`);
+  if (suggestMode) process.exit(0); // 提交期非阻断
+  process.exit(1);
+}
 
 const rows = [];
 for (const [absPath, entry] of Object.entries(raw)) {
@@ -140,6 +147,7 @@ for (const [absPath, entry] of Object.entries(raw)) {
   rows.push({
     file: toPosix(rel),
     stmts: total ? Number(stmtPct.toFixed(2)) : 100,
+    stmtsRaw: total ? stmtPct : 100, // P3-1：未舍入值参与阈值比较（44.996% 不得漏报为达标）
     uncoveredLines: uncoveredLines.sort((a, b) => a - b),
     uncoveredFns,
   });
@@ -151,7 +159,7 @@ const totalFiles = rows.length;
 const sumStmts = rows.reduce((acc, r) => acc + r.stmts, 0);
 const overall = totalFiles ? Number((sumStmts / totalFiles).toFixed(2)) : 100;
 
-const belowThreshold = rows.filter((r) => r.stmts < THRESHOLD);
+const belowThreshold = rows.filter((r) => r.stmtsRaw < THRESHOLD);
 
 if (suggestMode) {
   // ── 非阻断建议模式（prepare-commit-msg 钩子消费；永远 exit 0）──
@@ -179,12 +187,12 @@ if (suggestMode) {
     );
   } else if (belowThreshold.length === 0) {
     process.stdout.write(
-      `✅ 覆盖率全达标：整体 ${overall}%，无文件低于 ${THRESHOLD}% 阈值（frontend/vite.config.js coverage.thresholds.statements）\n`
+      `✅ 覆盖率全达标：整体 ${overall}%，无文件低于 ${THRESHOLD}% 阈值（frontend/vitest.config.ts coverage.thresholds.statements）\n`
     );
   } else {
     process.stdout.write(`## 🔧 覆盖率建议（非阻断）\n`);
     process.stdout.write(
-      `以下 ${belowThreshold.length} 个源文件语句覆盖率低于阈值 ${THRESHOLD}%（frontend/vite.config.js coverage.thresholds.statements）：\n`
+      `以下 ${belowThreshold.length} 个源文件语句覆盖率低于阈值 ${THRESHOLD}%（frontend/vitest.config.ts coverage.thresholds.statements）：\n`
     );
     for (const r of belowThreshold) {
       const lineDesc = r.uncoveredLines.length ? compactRanges(r.uncoveredLines) : '(无)';
@@ -196,6 +204,8 @@ if (suggestMode) {
 }
 
 if (jsonMode) {
+  // P3-3（code_review）：统一 schema——纯 --json 与 --suggest --json 的 files 条目
+  // 字段一致（uncoveredRanges 字符串），避免未来消费者按 suggest 契约取值得 undefined
   process.stdout.write(
     JSON.stringify(
       {
@@ -203,9 +213,14 @@ if (jsonMode) {
           files: totalFiles,
           overallStmts: overall,
           source: inputPath,
-          hint: '低于阈值的文件会让 npm run test:coverage 失败（见 frontend/vite.config.js coverage.thresholds）',
+          hint: '文件级语句覆盖率仅供参考（vitest 全局阈值见 frontend/vitest.config.ts coverage.thresholds）',
         },
-        files: rows.slice(0, topN),
+        files: rows.slice(0, topN).map((r) => ({
+          file: r.file,
+          stmts: r.stmts,
+          uncoveredRanges: r.uncoveredLines.length ? compactRanges(r.uncoveredLines) : '',
+          uncoveredFns: r.uncoveredFns,
+        })),
       },
       null,
       2

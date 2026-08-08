@@ -34,14 +34,16 @@ const RULE_VIOLATIONS = {
   git_add_all: /git add \./,          // 多会话并行时 git add . 会混入他人特性（单会话不受限，此处仅统计信号）
   stash: /git stash/,                 // 宪法禁止 git stash
   full_read_large: /read.*(\.ts|\.js|\.go).*limit\s*=\s*\d{4,}/, // 读大文件没加 limit
-  merge_conflict: /conflict|冲突|合并冲突/,
+  // P3-7（code_review）：以下反模式正则带上下文收紧——单字命中会假阳性稀释信号
+  // （本报告被 subagent-review-playbook 当优先关注项，过宽会误导子代理审查方向）
+  merge_conflict: /merge conflict|合并冲突|冲突已解决|解决冲突|conflict resolution/i,
   anti_delete_first: /先删后建|先装后删|原子替换/,          // 反模式表：先删后建（失败即丢）
   anti_skip_existing: /存在即跳过|幂等|静默跳过/,           // 反模式表：存在即跳过（静默不更新）
   anti_debounce_exec: /防抖|串行化|待续跑/,                  // 反模式表：防抖只合并调度不合并执行
-  anti_channel_reuse: /channel|假活|已关闭/,                 // 反模式表：已关闭 channel 复用（假活）
+  anti_channel_reuse: /已关闭(channel|的连接)|channel(已|复|重)用|假活|channel reuse/i, // 反模式表：已关闭 channel 复用（假活）
   anti_limit_truncate: /截断|LimitReader|读满检测/,          // 反模式表：限流器截断静默
   anti_text_errno: /errno|文本兜底|错误分类/,                // 反模式表：文本匹配错误分类
-  anti_silent: /静默|静默降级|静默吞错/,                     // 失败静默吞错（高频）
+  anti_silent: /静默(吞|降|跳|忽略|失败|返回空)|静默降级|静默吞错|silently (swallow|ignore|skip)/i, // 失败静默吞错（高频）
   anti_guard_register: /无守卫|registerGlobalHandlers|配对/, // 事件无守卫注册（ADR-008）
   anti_no_generation: /generation|代际|竞态/,                // 异步回写无代际守卫
   anti_partial_file: /半截|半文件|残留/,                     // 失败残留半截文件
@@ -96,7 +98,9 @@ function categorizeCommit(message) {
 }
 
 function isFixCommit(message) {
-  return /^\s*fix/i.test(message);
+  // P2（code_review）：严格限定 `<type>: <desc>` 的 fix: / fix(scope): 前缀——
+  // 过宽的 /^\s*fix/i 会把 fixup! / fixed: / fixme: / fixture 都算 fix，污染占比与修复链统计
+  return /^\s*fix(?:\([^)]*\))?\s*:/i.test(message);
 }
 
 function findFixChains(commits, minChain = 3) {

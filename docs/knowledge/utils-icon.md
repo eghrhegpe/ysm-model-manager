@@ -37,7 +37,7 @@ use_when:
 ## 不变量
 
 - 扩展名取 `name.split(".").pop()` 小写，不带前导点
-- YSM 判断必须经 `RESOURCE_TYPES` 常量，禁止硬编码 —— 注册表优先原则（AGENTS.md §4.4）
+- YSM 判断必须经 `RESOURCE_TYPES` 常量，禁止硬编码 —— 注册表优先原则（AGENTS.md §4.4）；litematic 分支同样走 `RESOURCE_TYPES.LITEMATIC` 常量（P3 修复：原硬编码 `"litematic"` 与 YSM 分支不对称）
 
 ## 相关
 

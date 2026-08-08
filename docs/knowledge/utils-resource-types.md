@@ -35,8 +35,9 @@ use_when:
 - `ALL_RESOURCE_TYPES: string[]` — 全部 ID 列表
 
 `resource-registry.ts`（异步加载器）：
-- `loadResourceRegistry(): Promise<Record<string, ResourceTypeEntry>>` — 经 `getApp().LoadResourceTypes()` 加载，模块级 `_registry` 缓存；**失败返回 {} 且不缓存**（Go 桥瞬断后下次调用重试，避免整会话降级）
-- `ResourceTypeEntry` 接口：`{ id, storageSubDir?, label?, [key: string]: unknown }`
+- `loadResourceRegistry(): Promise<Record<string, ResourceTypeEntry>>` — 经 `getApp().LoadResourceTypes()` 加载，模块级 `_registry` 缓存；**仅当拿到非空 `resourceTypes` 数组才写缓存**（P2 修复：Go 端错误路径返回 `"{}"` 时原实现会缓存空注册表、整会话降级；现失败/空结果返回 `{}` 不缓存，Go 桥瞬断后下次调用重试）
+- `ResourceTypeEntry` 接口：`{ id, storageSubDir?, label?, [key: string]: unknown }`（`label` 为幽灵字段，JSON 无此字段、全库无消费者读 entry.label）
+- 有 vitest 覆盖（registry.test.ts：成功缓存/失败不缓存/空结果不缓存/重复调用仅一次 Go 调用，P2 补测）
 
 ## 与其他子系统关系
 

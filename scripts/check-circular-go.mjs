@@ -104,7 +104,6 @@ function findCycles(graph, maxCycles = 100) {
     }
     stack.pop();
     color.set(node, BLACK);
-    return false;
   }
 
   for (const node of graph.keys()) {

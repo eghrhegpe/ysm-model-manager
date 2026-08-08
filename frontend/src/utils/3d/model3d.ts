@@ -192,7 +192,9 @@ export async function renderModel3D(
   const aspect = container.clientWidth / container.clientHeight || 1;
   const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
   _camera3d = camera;
-  camera.position.set(0, 80, -120);
+  // 默认相机在 Z 正侧（对齐 YSMViewer 默认方位，其相机为 (0,0,+CAMERA_DISTANCE)）
+  // 历史：曾用 (0, 80, -120)（Z 负侧），渲染对齐（ADR-041）后与 YSMViewer 视角相反，改回 +Z
+  camera.position.set(0, 80, 120);
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
     powerPreference: "high-performance",
@@ -346,7 +348,7 @@ export async function renderModel3D(
     camera.lookAt(center);
     controls.target.copy(center);
   } else {
-    camera.position.set(0, 80, -120);
+    camera.position.set(0, 80, 120);
     controls.target.set(0, 80, 0);
   }
   controls.update();

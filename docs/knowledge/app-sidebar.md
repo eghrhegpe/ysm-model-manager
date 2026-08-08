@@ -69,7 +69,8 @@ use_when:
 - `bus.on` 订阅全部收进 `_unsubs` 并在 `disconnectedCallback` 清理；`_cardCleanup` / `_docClickHandler`（document 级）同步清理
 - `_loading` 守卫防止并发 `_reload`（`_reloadGen` 代数校验丢弃过期结果 + `_pendingReload` 补跑最新 rtype）；`_syncInProgress` 守卫防止推送/拉取并发触发；`stats:refresh` 走 300ms 防抖
 - 模块级 `_checkedSets`（按 rtype 隔离的 Map）跨重渲染持久化勾选状态；事件绑定用事件委托 + 「list 未变则复用 handler」防止监听累积
-- 渲染后经 `_restoreCheckboxes` 恢复勾选，选中卡片经 localStorage 恢复
+- 渲染后经 `_restoreCheckboxes` 恢复勾选，选中卡片经 localStorage 恢复；**`restoreSelectedCard` 仅选中项实际变化时才 emit `package:selected`**（P2 修复：原每次 `_reload` 都重发，app-content 反复重建 `<app-sync-manager>` 状态丢失/闪烁）
+- **推送 done 按 token 精确匹配 + 识别 `skipped`**（P1 修复，与 sync.ts 联动）：原 `instanceName ===` fallback 会把「busy 被吞未处理」误判为成功（toast 报 ✅ 实际未推）；现 sync.ts busy 命中时回 done 带 `skipped: true`，sidebar 按拒绝处理
 
 ## 相关
 

@@ -63,7 +63,7 @@ use_when:
 - 菜单结构只允许在 `menu-defs.ts` 修改；`MenuItemDef.action` 与 `HANDLERS` 表一一对应，`buildMenuItems` 对失配 action 打 `console.warn`，契约测试遍历声明断言零警告（缺 handler 会测试失败）
 - `registerContextMenus(unsubs)` 只由 `registerGlobalHandlers()` 调用一次且必须把 unsub 收进数组，禁止组件内重复注册（事件无守卫注册反模式，ADR-008）
 - 菜单项 label/icon 一律过 `_esc`（委托 utils/dom/html.ts 的 `esc`）转义；移动/复制目标文件夹名过 `isUnsafeFolderName` 安全过滤
-- 每个 async handler 的最外层 await 链都要有 catch 出口——右键菜单点击是「发射后不管」调用，未捕获异常只会变成 unhandledrejection，用户看不到任何反馈
+- 每个 async handler 的最外层 await 链都要有 catch 出口——右键菜单点击是「发射后不管」调用，未捕获异常只会变成 unhandledrejection，用户看不到任何反馈。**已全量补齐**（P2 修复）：batch.move/batch.copy/batch.recycle 补外层 catch，file.move/file.copy/dir.move/dir.copy 的 `resolveDstDir`/`getApp` 与 file.reveal 的 `getApp` 纳入 try——原实现 `getApp`（import 失败 rethrow）与 `resolveDstDir`（内含 GetRepoRoot）在 try 外，reject 时 rejection 逸出
 - `ysm.json` 禁止单文件重命名（ADR-038 D3），`file.rename` 直接 warn toast 引导改目录名
 - `<context-menu>` 的 `bus.on` 与 document 级 click/contextmenu/keydown 监听在 `disconnectedCallback` 成对清理
 

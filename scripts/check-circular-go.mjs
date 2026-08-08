@@ -77,7 +77,7 @@ function dirKey(file) {
 
 // ── 环检测（DFS 三色，复用 check-circular.mjs 算法）──
 
-function findCycles(graph) {
+function findCycles(graph, maxCycles = 100) {
   const WHITE = 0,
     GRAY = 1,
     BLACK = 2;
@@ -91,13 +91,15 @@ function findCycles(graph) {
     for (const next of graph.get(node) || []) {
       const c = color.get(next) ?? WHITE;
       if (c === WHITE) {
-        if (dfs(next)) return true;
+        if (cycles.size >= maxCycles) continue; // 枚举上限，防稠密环区指数爆炸
+        dfs(next);
       } else if (c === GRAY) {
         const start = stack.indexOf(next);
+        if (start < 0) continue; // 防御：颜色残留兜底（正常流程 GRAY 必在栈内）
         const display = stack.slice(start);
         const key = [...display].sort().join('→');
         cycles.set(key, display);
-        return true; // 剪枝防指数爆炸
+        if (cycles.size >= maxCycles) continue;
       }
     }
     stack.pop();

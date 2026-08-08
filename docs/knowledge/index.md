@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 69 张知识卡
+> 总计: 70 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -18,7 +18,7 @@
 
 - **resource-registry**（资源注册表 registry）：`resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。
 
-## core（5 张）
+## core（6 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
@@ -29,6 +29,7 @@
 | 🏗 page-store | 页面状态管理 page-store.ts | architecture | 页面, 当前页, 状态管理, page store, currentPage |
 | 🍃 theme | 主题系统 theme | leaf | 主题, 换肤, 深色, 浅色, 跟随系统, 动画开关, 字号, 界面偏好 |
 | 🏗 wails-bridge | Wails 桥接 app.ts | architecture | Wails, 桥接, getApp, Go 调用, Binding, window.go.main.App |
+| 🏗 ysm_baked | YSM 烘焙与几何反推 | architecture | 烘焙, 几何反推, pivot, 骨骼错位, 模型错位, UV 对不上, 贴图错位, RawYsmModel, RawFace, YSM 导出, BlockBench |
 
 ### 摘要
 
@@ -37,6 +38,7 @@
 - **page-store**（页面状态管理 page-store.ts）：`page-store.ts` 管理 YSM 的前端页面导航状态，是 `PageStore.currentPage` 的唯一数据源，替代了旧版 `window.__currentPage`。核心职责是维护只读当前页状态与启动初始页解析——*…
 - **theme**（主题系统 theme）：主题系统的实现在组件入口 `app-modules.ts`（无独立 theme.ts 文件）：提供 6 套主题皮肤（cyber/warm/pro/sakura/ocean/mint）+ `system` 跟随系统模式，全部通过在 `<bod…
 - **wails-bridge**（Wails 桥接 app.ts）：`wails/app.ts` 是前端调用 Go Binding 的唯一入口。所有 Go 端方法通过 `getApp()` 获取，禁止直接通过 `window.go.main.App` 访问。
+- **ysm_baked**（YSM 烘焙与几何反推）：YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。…
 
 ## feature（6 张）
 

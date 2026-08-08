@@ -724,11 +724,11 @@
 | `renderModel2D()` | `frontend/src/utils/3d/model2d:59` | 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转） |
 | `calcBoneHitZones()` | `frontend/src/utils/3d/model2d:250` | 计算骨骼在屏幕上的命中热区（2D 正交投影，供鼠标拾取；导出供测试） |
 | `SpecCube()` | `frontend/src/utils/3d/model3d-spec:10` | 立方体（骨骼上的 box 元素） |
-| `SpecBone()` | `frontend/src/utils/3d/model3d-spec:20` | 骨骼 |
-| `SpecModelInput()` | `frontend/src/utils/3d/model3d-spec:28` | 模型输入（buildSpecFromModel 参数） |
-| `SpecBuildResult()` | `frontend/src/utils/3d/model3d-spec:35` | 构建产物：mesh data + bones |
-| `SpecMeshData()` | `frontend/src/utils/3d/model3d-spec:43` | 单 mesh 数据（Go spec meshGroups 结构近似） |
-| `buildSpecFromModel()` | `frontend/src/utils/3d/model3d-spec:64` | 构建 Three.js 可消费的 spec 结构 { bones[], meshes[] } |
+| `SpecBone()` | `frontend/src/utils/3d/model3d-spec:22` | 骨骼 |
+| `SpecModelInput()` | `frontend/src/utils/3d/model3d-spec:30` | 模型输入（buildSpecFromModel 参数） |
+| `SpecBuildResult()` | `frontend/src/utils/3d/model3d-spec:37` | 构建产物：mesh data + bones |
+| `SpecMeshData()` | `frontend/src/utils/3d/model3d-spec:45` | 单 mesh 数据（Go spec meshGroups 结构近似） |
+| `buildSpecFromModel()` | `frontend/src/utils/3d/model3d-spec:66` | 构建 Three.js 可消费的 spec 结构 { bones[], meshes[] } |
 | `SpecBone3D()` | `frontend/src/utils/3d/model3d:7` | — |
 | `SpecMeshGroup3D()` | `frontend/src/utils/3d/model3d:15` | — |
 | `SpecModelGroup3D()` | `frontend/src/utils/3d/model3d:27` | — |

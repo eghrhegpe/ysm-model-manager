@@ -793,6 +793,10 @@ export const autoSidebar = [
           {
             "text": "Wails 桥接 app.ts",
             "link": "/knowledge/wails-bridge"
+          },
+          {
+            "text": "YSM 烘焙与几何反推",
+            "link": "/knowledge/ysm_baked"
           }
         ]
       },

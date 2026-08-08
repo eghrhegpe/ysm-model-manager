@@ -184,7 +184,8 @@ function main() {
         if (target !== num && adrNums.has(target)) {
           claimedThisLine.push(target);
           const tMeta = adrList.find((e) => e.num === target);
-          const tMarked = RE_SUPERSEDED_BY.test(tMeta.status) || RE_SELF_DEPRECATED.test(tMeta.status);
+          // 与 ①/状态行② 同口径：独立 `- **被取代**：` 行（new-adr --supersedes）也是有效回标（code_review P2）
+          const tMarked = RE_SUPERSEDED_BY.test(tMeta.status) || tMeta.supersededBy != null || RE_SELF_DEPRECATED.test(tMeta.status);
           if (!tMarked) {
             unmarked.push({ claimedBy: num, target, line: line.trim().slice(0, 120) });
           }
@@ -199,12 +200,13 @@ function main() {
           .filter((n) => n !== num && adrNums.has(n));
         const anyOtherMarked = others.some((o) => {
           const t = adrList.find((e) => e.num === o);
-          return t && (RE_SUPERSEDED_BY.test(t.status) || RE_SELF_DEPRECATED.test(t.status));
+          // 与 ② 同口径：独立被取代行也是有效回标（code_review P2）
+          return t && (RE_SUPERSEDED_BY.test(t.status) || t.supersededBy != null || RE_SELF_DEPRECATED.test(t.status));
         });
         if (!anyOtherMarked) {
           for (const other of others) {
             const tMeta = adrList.find((e) => e.num === other);
-            const tMarked = RE_SUPERSEDED_BY.test(tMeta.status) || RE_SELF_DEPRECATED.test(tMeta.status);
+            const tMarked = RE_SUPERSEDED_BY.test(tMeta.status) || tMeta.supersededBy != null || RE_SELF_DEPRECATED.test(tMeta.status);
             if (!tMarked && !KNOWN_ERRATA.has(`${num}-${other}`)) {
               suspicious.push({ num, target: other, line: line.trim().slice(0, 120) });
             }

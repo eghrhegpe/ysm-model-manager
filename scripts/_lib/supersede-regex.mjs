@@ -30,10 +30,10 @@ export function globalOf(re) {
   return new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
 }
 
-// ③ 状态行自身废弃：带 ⚠️/🗑️/🧊 强调标记，或以废弃类词开头（不指明取代者）
-// 兼容 AGENTS.md 合法状态 `🧊 已废弃` / `❌ 已取代`（code_review P2-1）
+// ③ 状态行自身废弃：带 ⚠️/🗑️/🧊/❌ 强调标记，或以废弃类词开头（不指明取代者）
+// 兼容 AGENTS.md 合法状态 `🧊 已废弃` / `❌ 已取代`（code_review P2-1 + P2 复核）
 export const RE_SELF_DEPRECATED =
-  /(?:⚠️|🗑️|🧊)\s*\**(?:已废弃|已过时|已放弃|已搁置|已退役)|^(?:已废弃|已过时|已放弃|已搁置|已退役|搁置|废弃|已取代)/;
+  /(?:⚠️|🗑️|🧊|❌)\s*\**(?:已废弃|已过时|已放弃|已搁置|已退役|已取代)|^(?:已废弃|已过时|已放弃|已搁置|已退役|搁置|废弃|已取代)/;
 
 // ④ 可疑信号强词：仅「推翻」与「过时」值得人工确认（决策冲突/文档漂移）
 export const RE_DEPRECATED_WORD = /(推翻|已过时)/;

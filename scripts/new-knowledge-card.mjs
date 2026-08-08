@@ -102,7 +102,7 @@ function main() {
   const kind = toSnakeCase(kindRaw);
   if (!KIND_RE.test(kind)) {
     // 与 check-knowledge-drift.mjs KIND_RE 同款校验：中文/camelCase/前导数字会静默归一成必挂卡的命名（code_review P2）
-    console.error(`[FAIL] kind 非法: ${kind}（须小写字母/数字开头，仅 a-z0-9_-）`);
+    console.error(`[FAIL] kind 非法: ${kind}（须小写字母开头，仅 a-z0-9_-）`);
     return 1;
   }
   if (kindRaw !== kind) console.warn(`[提示] kind 已归一化: ${kindRaw} → ${kind}`);

@@ -23,6 +23,20 @@ describe("RESOURCE_EXTS ↔ resource_types.json 双向对账（P2）", () => {
     }
   });
 
+  it("前端表每个扩展名都存在于 JSON 对应类型（反向对账，P3）", () => {
+    // P3 修复（code_review）：test 1 只验证 JSON→前端单向；若开发者在
+    // RESOURCE_EXTS.ysm 加 ".foo" 而不改 JSON，test 1/2 仍绿而前端
+    // ALL_EXTS/extBelongsTo 与 Go 后端漂移。这里补前端→JSON 反向断言。
+    const jsonById = new Map(jsonTypes.map((rt) => [rt.id, rt.extensions]));
+    for (const [id, exts] of Object.entries(RESOURCE_EXTS)) {
+      const jsonExts = jsonById.get(id);
+      expect(jsonExts, `JSON 缺类型 ${id}（对账参照缺失）`).toBeDefined();
+      for (const ext of exts) {
+        expect(jsonExts, `前端表 ${id} 多出扩展名 ${ext}（JSON 无此扩展名）`).toContain(ext);
+      }
+    }
+  });
+
   it(".zip 归属三类（ysm/resourcepack/shaderpack）", () => {
     const types = extBelongsTo(".zip");
     expect(types).toContain("ysm");

@@ -774,9 +774,9 @@
 | `renderModelName()` | `frontend/src/utils/dom/display:157` | renderModelName = renderDisplayName 别名，options.showExt 支持 |
 | `renderModelNameWithHighlight()` | `frontend/src/utils/dom/display:166` | 搜索高亮版：先对纯文本高亮，再渲染 HTML，避免 keyword 命中 HTML 标签内容破坏 DOM |
 | `friendlyError()` | `frontend/src/utils/dom/errors:9` | 将 Go 错误转换为中文友好提示 |
-| `fmt()` | `frontend/src/utils/dom/format:4` | 字节数 → 可读大小（B/KB/MB/GB），非法值返回空串 |
-| `sizeColor()` | `frontend/src/utils/dom/format:13` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，&gt;3MB 红色 |
-| `fmtDate()` | `frontend/src/utils/dom/format:23` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
+| `fmt()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值返回空串 |
+| `sizeColor()` | `frontend/src/utils/dom/format:22` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
+| `fmtDate()` | `frontend/src/utils/dom/format:32` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
 | `esc()` | `frontend/src/utils/dom/html:4` | HTML 转义（治理红线：所有 innerHTML 拼接必须过 esc） |
 | `renderFormattedText()` | `frontend/src/utils/format/mc-format:45` | 将含 Minecraft § 分节符的文本渲染为带颜色的 HTML。 |
 | `PackMeta()` | `frontend/src/utils/format/pack-format:92` | ReadPackMeta 返回的 JSON 对象（仅覆盖用到的字段） |
@@ -786,7 +786,7 @@
 | `SummaryConfigMenu()` | `frontend/src/utils/format/summarize:20` | — |
 | `YsmSummary()` | `frontend/src/utils/format/summarize:25` | — |
 | `YSMHeader()` | `frontend/src/utils/format/summarize:50` | — |
-| `summaryCardHTML()` | `frontend/src/utils/format/summarize:153` | 从 YsmSummary + YSMHeader 渲染为精简摘要卡片 |
+| `summaryCardHTML()` | `frontend/src/utils/format/summarize:154` | 从 YsmSummary + YSMHeader 渲染为精简摘要卡片 |
 | `fileIcon()` | `frontend/src/utils/icon/icon:9` | 按扩展名返回图标 emoji |
 | `isYsmName()` | `frontend/src/utils/icon/icon:28` | 是否为 YSM 文件 |
 | `ICONS()` | `frontend/src/utils/icon/workshop-icons:3` | — |

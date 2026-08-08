@@ -28,9 +28,10 @@ use_when:
 
 ## 对外 API / 入口
 
-- `fmt(b: number): string` — 字节数 → `"N B"` / `"N.N KB"` / `"N.N MB"`（KB/MB 阈值 1024 / 1048576）；非法值（null/undefined/NaN）返回空串
-- `sizeColor(b: number): string` — 返回 CSS class：`"sz-green"`（<1MB）、`""`（1-3MB）、`"sz-red"`（>3MB，阈值 3145728）
+- `fmt(b: number): string` — 字节数 → `"N B"` / `"N.N KB"` / `"N.N MB"` / `"N.N GB"`（KB/MB/GB 阈值 1024 / 1048576 / 1073741824）；非法值（null/undefined/NaN/**±Infinity**）返回空串（P2 修复：原 `!b && b !== 0` 守卫挡不住 truthy 的 ±Infinity → 输出 "Infinity GB"）
+- `sizeColor(b: number): string` — 返回 CSS class：`"sz-green"`（<1MB）、`""`（1-3MB）、`"sz-red"`（**≥**3MB，阈值 3145728，含边界）
 - `fmtDate(ts: number): string` — 时间戳 → 友好日期；0/空值返回空串
+- 阈值已具名化（`KB/MB/GB/RED_BOUND` 模块常量，P3 魔法数值治理）
 
 ## 与其他子系统关系
 

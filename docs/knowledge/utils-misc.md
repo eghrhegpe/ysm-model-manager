@@ -45,8 +45,9 @@ use_when:
 ## 不变量
 
 - **调试代码用完即删**（frontend/AGENTS.md）：dbg 调用属临时排查手段，提交前应清除；生产环境无控制台，用户反馈问题依赖桌面 `ysm-debug.log` 日志文件（见 `docs/guide/用户指南.md`）
-- dbg 必须带 tag 便于过滤；参数经内部 safeStr 截断（200 字符）防大对象撑爆环形缓冲
+- dbg 必须带 tag 便于过滤；参数经内部 safeStr 截断（200 字符）防大对象撑爆环形缓冲，**Error 分支同样截断**（P3 修复：原直接返回 v.message 可突破上限）
 - `window._DBG_RING` / `window.debugGetSpec` 属调试豁免接口，不是 `window.__*` 状态红线（不存页面状态）
+- 环形缓冲**一次性截断**到 200 条上限（P3 修复：原 `shift()` 单条收敛，外部预置超量时长期无法回归）
 
 ## 相关
 

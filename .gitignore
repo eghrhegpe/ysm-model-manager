@@ -62,3 +62,6 @@ docs/.doc-next-steps.md
 
 #参考源码
 upstream/
+
+# 解码落盘产物（渲染对齐验证工具的输出，20MB 级）
+tests/ysm-reference/

@@ -103,15 +103,16 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
       : '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">🔒 付费</span>'
     : "";
   let authorHtml = "";
+  let workHtml = "";
   if (p) {
-    // 从文件名解析到作者/作品/角色，用 renderDisplayName 渲染标题
-    authorHtml = p.author
-      ? `<span class="tag-author">${esc(p.author)}</span>`
-      : "";
+    // 从文件名解析到作者/作品/角色，用 renderDisplayName 渲染标题。
+    // P3 修复：作者与作品分开成行——原 authorHtml 混装 p.work，p.author 为空时
+    // 作品被标注为作者（且标题行重复显示作品 tag）
+    if (p.author) {
+      authorHtml = `<span class="tag-author">${esc(p.author)}</span>`;
+    }
     if (p.work) {
-      authorHtml +=
-        (authorHtml ? " " : "") +
-        `<span class="tag-work">${esc(p.work)}</span>`;
+      workHtml = `<span class="tag-work">${esc(p.work)}</span>`;
     }
   } else {
     if (header.authorName) {
@@ -131,7 +132,7 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   return `<div class="content" id="preview-content">
 <div class="model-detail-title">📄 模型详情</div>
 ${titleHtml}
-${p?.work ? `<div class="md-row"><span class="md-label">作品</span><span class="md-value"><span class="tag-work">${esc(p.work)}</span></span></div>` : ""}
+${workHtml ? `<div class="md-row"><span class="md-label">作品</span><span class="md-value">${workHtml}</span></div>` : ""}
 ${tips ? `<div style="font-size:11px;color:var(--txt);margin-bottom:10px;line-height:1.6;padding:6px 10px;background:var(--surf);border-radius:6px;border-left:3px solid var(--accent)">${tips}</div>` : ""}
 <div class="md-row"><span class="md-label">许可</span><span class="md-value">${esc(licenseType) || "未标注"}</span></div>
 ${p?.author ? `<div class="md-row"><span class="md-label">作者</span><span class="md-value"><span class="tag-author">${esc(p.author)}</span></span></div>` : authorHtml ? `<div class="md-row"><span class="md-label">作者</span><span class="md-value">${authorHtml}</span></div>` : ""}
@@ -140,7 +141,7 @@ ${header.linkUpdate ? `<div class="md-row"><span class="md-label">更新</span><
 ${header.hash ? `<div class="md-row" style="font-size:9px;color:var(--muted)"><span class="md-label">指纹</span><span class="md-value" style="font-family:monospace;font-size:8px;word-break:break-all">${esc(header.hash)}</span></div>` : ""}
 <div class="md-divider"></div>
 <div class="md-row" style="color:var(--muted);font-size:10px"><span>🔒 加密模型，资源详情不可用</span></div>
-${(header.format ?? 0) > 0 || (header.crypto ?? 0) > 0 ? `<div style="font-size:8px;color:var(--muted);margin-top:4px;text-align:right">格式 v${header.format} · 加密 v${header.crypto}</div>` : ""}
+${(header.format ?? 0) > 0 || (header.crypto ?? 0) > 0 ? `<div style="font-size:8px;color:var(--muted);margin-top:4px;text-align:right">格式 v${header.format ?? 0} · 加密 v${header.crypto ?? 0}</div>` : ""}
 </div>`;
 }
 
@@ -219,7 +220,8 @@ export function summaryCardHTML(
       .join("");
   }
 
-  // 配置菜单（只显示前5项，纯标识符的不显示）
+  // 配置菜单（全部渲染，纯标识符的经 cleanText 去 § 码后照常显示——P3 注释修正：
+  // 原注释「只显示前5项，纯标识符的不显示」与实现不符，测试已锁定纯标识符也渲染）
   let configHtml = "";
   if (summary?.configMenus && summary.configMenus.length > 0) {
     configHtml = summary.configMenus

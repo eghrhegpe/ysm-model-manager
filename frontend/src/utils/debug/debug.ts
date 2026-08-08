@@ -41,7 +41,9 @@ export function dbg(tag: string, ...args: unknown[]): void {
       tag,
       args: args.map((a) => safeStr(a)),
     });
-    if (ring.length > RING_MAX) ring.shift();
+    // P3 修复：一次性截断到上限——原 `if (len > RING_MAX) shift()` 在
+    // window._DBG_RING 被外部预置 >200 条时每次只删 1 条，长时间无法收敛
+    if (ring.length > RING_MAX) ring.splice(0, ring.length - RING_MAX);
   } catch (e) {
     console.error("[DBG] ring 写入失败:", e);
   }
@@ -53,7 +55,10 @@ function safeStr(v: unknown): string {
   try {
     if (v == null) return String(v);
     if (typeof v === "string") return v.length > 200 ? v.slice(0, 200) + "…" : v;
-    if (v instanceof Error) return v.message;
+    // P3 修复：Error 分支也走 200 字符截断——原实现直接返回 v.message，
+    // 超长 message 会让环形缓冲条目突破上限约束
+    if (v instanceof Error)
+      return v.message.length > 200 ? v.message.slice(0, 200) + "…" : v.message;
     if (v instanceof Set)
       return (
         "Set(" +

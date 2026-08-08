@@ -29,16 +29,17 @@ function scanEvents() {
     const lines = text.split('\n');
     for (let i = 0; i < lines.length; i++) {
       const stripped = lines[i].trim();
-      // 检测 EventsOn 注册
-      if (stripped.includes('EventsOn(')) {
+      // 检测 Events.On / EventsOn 注册（Wails v3 实际 API 是 `Events.On(`，
+      // 旧 `EventsOn(` 已废弃——两者都查，防死代码漏检，code_review P1-1）
+      if (stripped.includes('Events.On(') || stripped.includes('EventsOn(')) {
         let eventName = '';
-        const m = stripped.match(/EventsOn\("([^"]+)"/);
+        const m = stripped.match(/(?:Events\.On|EventsOn)\("([^"]+)"/);
         if (m) eventName = m[1];
         const safe = CORRECT_FILES.has(rel);
         if (!safe) {
           issues.push({
             file: rel, line: i + 1, code: stripped.slice(0, 80),
-            event: eventName, type: 'EventsOn',
+            event: eventName, type: 'Events.On',
             safe_location: false,
           });
         }
@@ -46,8 +47,11 @@ function scanEvents() {
       // 检测 bus.on 注册
       if (/bus\.on\(/.test(stripped)) {
         let eventName = '';
-        const m = stripped.match(/bus\.on\("([^"]+)"/);
+        // P2-1：支持双/单引号与模板字符串字面量；多行/动态名取不到时显式标注
+        // `<unparsed>` 而非静默空串，避免空事件名掩盖提取失败
+        const m = stripped.match(/bus\.on\(["'`]([^"'`]+)["'`]/);
         if (m) eventName = m[1];
+        else if (/bus\.on\(/.test(stripped)) eventName = '<unparsed>';
         issues.push({
           file: rel, line: i + 1, code: stripped.slice(0, 80),
           event: eventName, type: 'bus.on',

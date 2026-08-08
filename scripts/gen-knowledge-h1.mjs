@@ -16,7 +16,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseFrontmatter } from './_lib/frontmatter.mjs';
+import { parseFrontmatter, getScalar } from './_lib/frontmatter.mjs';
 import { parseArgs } from './_lib/parse-args.mjs';
 import { ROOT } from './_lib/scan-files.mjs';
 
@@ -32,7 +32,9 @@ function parseCard(text) {
   const fm = parseFrontmatter(text);
   if (!fm) return null;
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
-  const name = (fm.match(/^name\s*:\s*(.+)$/m) || [])[1];
+  // P2：name 解析改走共享 getScalar（处理缩进键/引号/行内注释/多行值），
+  // 不再用列 0 手写正则（code_review P2）
+  const name = getScalar(fm, 'name');
   const h1Exists = /^#\s+.+$/m.test(body);
   return { name: name ? name.trim() : null, body, h1Exists };
 }
@@ -48,9 +50,15 @@ function main() {
   const missing = [];
   const noName = [];
   for (const f of fs.readdirSync(KNOW_DIR).filter((f) => f.endsWith('.md'))) {
-    if (NON_CARDS.has(f)) continue;
+    if (NON_CARDS.has(f.toLowerCase())) continue; // P3-8：大小写不敏感，与 check-knowledge-drift 一致
     const filePath = path.join(KNOW_DIR, f);
-    const text = fs.readFileSync(filePath, 'utf8');
+    let text;
+    try {
+      text = fs.readFileSync(filePath, 'utf8');
+    } catch (e) {
+      console.warn(`⚠️ 读取失败（跳过）: ${f} — ${e.message}`);
+      continue; // P3-5：单文件不可读不中断整轮
+    }
     const card = parseCard(text);
     if (!card) continue; // 无 frontmatter（非卡）
     if (!card.name) {
@@ -70,6 +78,11 @@ function main() {
       for (const t of missing.slice(0, 20)) console.error(`   - ${t.file}（name: ${t.name}）`);
       process.exit(1);
     }
+    // P3-7：缺 name 的卡无法补 H1，check 模式应失败（此前仅 warn 可绿灯）
+    if (noName.length) {
+      console.error(`❌ ${noName.length} 张卡缺 name 字段（无法补 H1），请先修复 frontmatter`);
+      process.exit(1);
+    }
     console.log('✅ 所有知识卡正文均有 # 标题');
     return;
   }
@@ -82,7 +95,12 @@ function main() {
       `$1\n\n# ${t.name}\n`
     );
     if (newText === t.text) continue;
-    fs.writeFileSync(t.filePath, newText, 'utf8');
+    try {
+      fs.writeFileSync(t.filePath, newText, 'utf8');
+    } catch (e) {
+      console.error(`❌ 写入失败: ${t.file} — ${e.message}`);
+      continue; // P3-5：写失败不中断整轮
+    }
     written++;
     console.log(`✍️  ${t.file} → # ${t.name}`);
   }

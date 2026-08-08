@@ -595,10 +595,6 @@ export const autoSidebar = [
       {
         "text": "YSM 模型管理器 — 代码质量审计报告",
         "link": "/audit-report-2026-08-06"
-      },
-      {
-        "text": "文档体系 · AI 待补地图",
-        "link": "/.doc-next-steps"
       }
     ]
   },
@@ -1352,6 +1348,40 @@ export const autoSidebar = [
           {
             "text": "第十六章 · 第三只眼",
             "link": "/novel/act-3-cartographer/16-第三只眼"
+          }
+        ]
+      },
+      {
+        "text": "appendix/安全横切",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "附录 · 安全横切 · 第 1 章 · 只看不拿",
+            "link": "/novel/appendix/安全横切/01-只看不拿"
+          }
+        ]
+      },
+      {
+        "text": "appendix/跨模块重构",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "01 · 全塔体检",
+            "link": "/novel/appendix/跨模块重构/01-全塔体检"
+          },
+          {
+            "text": "附录 · 跨模块重构 · 第 2 章 · 四条通往真相的路",
+            "link": "/novel/appendix/跨模块重构/02-四条通往真相的路"
+          }
+        ]
+      },
+      {
+        "text": "appendix/Go后端",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "附录 · Go 后端 · 第 1 章 · 四千六百零九行",
+            "link": "/novel/appendix/Go后端/01-四千六百零九行"
           }
         ]
       }

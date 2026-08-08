@@ -64,9 +64,10 @@ export async function initYSMParser(): Promise<boolean> {
   try {
     // 1. 从内嵌 JS 拿 .wasm 二进制 + 胶水代码
     // ⚠️ ysm-wasm-data.js / ysm-glue-data.js 为自动生成的 base64 数据文件（保持 .js）
-    // ⚠️ 已知自动生成 bug：ysm-glue-data.js 的 _getGlueCode 引用未声明的 _cachedWasm
-    //    （ReferenceError）且返回 ArrayBuffer 而非 string——WASM 路径实际会静默失败
-    //    回退 Go 解析；此处保持原行为，待生成脚本修复
+    // P2 修复（审计）：此前注释声称 ysm-glue-data.js 的 _getGlueCode 引用未声明的
+    // _cachedWasm（ReferenceError）且返回 ArrayBuffer——已核实数据文件现用 _cachedGlue
+    // 且返回 TextDecoder string，bug 已不存在，WASM 路径不再必然回退 Go。
+    // 若未来生成脚本变动导致 glue 结构变化，先核对 _getGlueCode 返回值形态再改本段。
     const { _getWasmBinary } = await import("./ysm-wasm-data.js");
     const { _getGlueCode } = await import("./ysm-glue-data.js");
     const wasmBinary = _getWasmBinary() as ArrayBuffer | null;

@@ -37,10 +37,10 @@
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 25 | 91 |
-| frontend/views | 52 | 143 |
+| frontend/views | 52 | 144 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **165** | **761** |
+| **合计** | **165** | **762** |
 
 ## Go·头像
 
@@ -862,8 +862,9 @@
 | `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:53` | 从 JSON 字符串解析 Bedrock geometry |
 | `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:25` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:32` | — |
-| `showLitematic()` | `frontend/src/views/app-preview/litematic-meta:95` | 显示投影文件详情面板（tab 布局） |
-| `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:223` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |
+| `invalidateLitematicPreview()` | `frontend/src/views/app-preview/litematic-meta:24` | P2 修复（code_review）：任意新预览派发时推进代际——原 litematicGen 只在 showLitematic 自身递增，litematic A 解析中切到 YS |
+| `showLitematic()` | `frontend/src/views/app-preview/litematic-meta:105` | 显示投影文件详情面板（tab 布局） |
+| `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:233` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |
 | `loadModelData()` | `frontend/src/views/app-preview/loader:13` | 加载模型几何数据 + 纹理 + 作者信息 统一路径：缓存 → WASM 解码 → Go AnalyzeBedrockModel 兜底 |
 | `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:6` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
 | `ModelSpec()` | `frontend/src/views/app-preview/model3d-loader:14` | Go 返回的 3D spec（models 数组） |

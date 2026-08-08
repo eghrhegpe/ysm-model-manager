@@ -1,6 +1,7 @@
 # ADR-004：3D 骨骼渲染管线与坐标系决策
 
-- **状态**：已采纳（Accepted）
+- **状态**：🔄 部分采纳（§2.1 渲染管线单一事实来源仍有效；§2.2/§2.3 被 ADR-041 取代）
+- **被取代**：[ADR-041] 取代 §2.2（X 轴不取反 → 翻转）/ §2.3（三轴取反 → Z 不取反），以 C# ThreeJsPayloadBuilder 源码级对比（tests/port-verification 归零）为证
 - **日期**：2026-08-03（初定，决策时间线 v1.5.1 → v1.8.7）
 - **决策人**：Jieling（人类首席架构师）、DeepSeek V4 Pro / V4 Flash、Qwen3.7 Plus、GLM-5.1
 - **相关**：`go/threejs/spec.go` / `go/geometry/archive.go` / `go/ysm/extracted.go` / `frontend/src/utils/model3d.js` / `frontend/src/utils/model2d.js` / `frontend/src/views/app-preview/preview-wasm.js`

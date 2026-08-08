@@ -604,6 +604,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-041：渲染对齐：Go spec 对齐 YSMViewer（C# ThreeJsPayloadBuilder）",
+        "link": "/adr/ADR-041-spec-render-alignment"
+      },
+      {
         "text": "ADR-040：架构规模治理——前端大文件拆分与 internal 下沉收口",
         "link": "/adr/ADR-040-architecture-scale-governance"
       },

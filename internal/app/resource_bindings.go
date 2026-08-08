@@ -15,6 +15,7 @@ import (
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/litematic"
 	"ysm-model-manager/go/packs"
+	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types"
 )
 
@@ -181,7 +182,12 @@ func specificRoot(cfg types.AppConfig, rtype string) string {
 }
 
 // ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled）
+// P2 修复：补路径守卫——原实现 os.Rename 对任意路径可重命名（对齐 ToggleModelEnable 经 fileops
+// 的 ysmRoot 防护；rename 目标派生自输入路径，越权路径会连带生成越权目标）
 func (a *App) ToggleResourcePack(path string) bool {
+	if err := paths.IsInside(a.ysmRoot(), path); err != nil {
+		return false
+	}
 	disabled := strings.HasSuffix(path, ".disabled")
 	var src, dst string
 	if disabled {
@@ -334,7 +340,9 @@ func (a *App) DeleteModelDir(path string) error {
 	root := a.ysmRoot()
 	clean := filepath.Clean(filepath.Dir(path))
 	rel, err := filepath.Rel(root, clean)
-	if err != nil || strings.HasPrefix(rel, "..") {
+	// P1 修复：`rel == "."`（clean 即根目录本身）同样拒绝——原 `strings.HasPrefix(rel, "..")`
+	// 对 `"."` 不成立 → 传入仓库根路径时可 `os.RemoveAll` 整删整个 ysm 仓库
+	if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
 		return fmt.Errorf("路径超出仓库目录")
 	}
 	return os.RemoveAll(clean)

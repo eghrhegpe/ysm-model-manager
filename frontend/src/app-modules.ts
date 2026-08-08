@@ -77,29 +77,55 @@ window.applyTheme = applyTheme;
 
 /** 从 Go 配置或 localStorage 加载主题 */
 async function initTheme() {
+  // P3 修复：隐私模式/存储禁用下 localStorage 读写抛错——原 try 与 catch 两分支都裸调
+  // getItem/setItem，任一抛错 → 启动 IIFE 拒绝（unhandledrejection），applyUIPrefs 与
+  // checkUpdateSilent 被跳过、主题不生效（index.html 已为此场景做防护，此处口径对齐）
+  const safeGet = (key: string): string | null => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  };
+  const safeSet = (key: string, val: string): void => {
+    try {
+      localStorage.setItem(key, val);
+    } catch {
+      /* 隐私模式：忽略持久化 */
+    }
+  };
   try {
     const { LoadAppConfig } = await getApp();
     const cfg = await LoadAppConfig();
-    const raw = localStorage.getItem("theme") || cfg.theme || THEME_DARK;
+    const raw = safeGet("theme") || cfg.theme || THEME_DARK;
     // P2 修复：持久层只回写合法值——原实现把 localStorage 非法值（如设置页误写的 "time"）
     // 原样写回，脏数据持续污染导致后续 matchMedia 跟随失效
     const theme = normalizeTheme(raw);
-    localStorage.setItem("theme", theme);
+    safeSet("theme", theme);
     applyTheme(theme);
   } catch {
-    const raw = localStorage.getItem("theme") || THEME_DARK;
+    const raw = safeGet("theme") || THEME_DARK;
     const theme = normalizeTheme(raw);
-    localStorage.setItem("theme", theme);
+    safeSet("theme", theme);
     applyTheme(theme);
   }
 }
 
 /** 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 */
 function applyUIPrefs() {
-  const fontSize = localStorage.getItem("ui-font-size") || "normal";
-  const displayFont = localStorage.getItem("ui-display-font") || "kaiti";
-  const density = localStorage.getItem("ui-card-density") || "compact";
-  const anim = localStorage.getItem("ui-animations") !== "off";
+  // P3 修复：隐私模式 localStorage 抛错不得中断启动链（与 initTheme 的 safeGet 同口径）
+  let fontSize = "normal";
+  let displayFont = "kaiti";
+  let density = "compact";
+  let anim = true;
+  try {
+    fontSize = localStorage.getItem("ui-font-size") || "normal";
+    displayFont = localStorage.getItem("ui-display-font") || "kaiti";
+    density = localStorage.getItem("ui-card-density") || "compact";
+    anim = localStorage.getItem("ui-animations") !== "off";
+  } catch {
+    /* 隐私模式：全部走默认值 */
+  }
 
   // 清除旧版直接设 --fs-* 的内联值（避免覆盖 calc()）
   [
@@ -183,9 +209,15 @@ window
 
 // ===== F12 / Ctrl+Shift+I 打开 DevTools（仅开发/调试环境）=====
 // 通过查询参数 ?dev=1 或 localStorage 标志启用
+// P3 修复：localStorage 裸调在隐私模式抛错会中止模块求值——即使 ?dev=1 也无法启用
+let _devtoolsFlag = false;
+try {
+  _devtoolsFlag = localStorage.getItem("_devtools") === "1";
+} catch {
+  /* 隐私模式：仅 ?dev=1 生效 */
+}
 const _devMode =
-  new URLSearchParams(window.location.search).has("dev") ||
-  localStorage.getItem("_devtools") === "1";
+  new URLSearchParams(window.location.search).has("dev") || _devtoolsFlag;
 if (_devMode) {
   document.addEventListener("keydown", (e) => {
     if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {

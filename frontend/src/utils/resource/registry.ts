@@ -22,7 +22,14 @@ export async function loadResourceRegistry(): Promise<ResourceRegistry> {
     const App = await getApp();
     const raw = await App.LoadResourceTypes();
     const data = JSON.parse(raw || "{}") as { resourceTypes?: ResourceTypeEntry[] };
-    _registry = (data.resourceTypes || []).reduce<ResourceRegistry>((map, t) => {
+    // P2 修复：仅当拿到非空 resourceTypes 才写缓存——
+    // Go 端 LoadResourceTypes 失败时返回 "{}"（resource_bindings.go:25），
+    // 原实现 JSON.parse("{}") 成功 → _registry={} 被缓存（对象 truthy），
+    // 整会话永远返回空注册表，违反「失败不缓存可重试」契约
+    if (!Array.isArray(data.resourceTypes) || data.resourceTypes.length === 0) {
+      return {};
+    }
+    _registry = data.resourceTypes.reduce<ResourceRegistry>((map, t) => {
       map[t.id] = t;
       return map;
     }, {});

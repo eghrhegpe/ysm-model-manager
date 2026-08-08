@@ -12,7 +12,8 @@ export function fileIcon(name: string): string {
   if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) return "📦";
   if (["pmx", "pmd"].includes(ext)) return "🎭";
   if (["vrca", "vrcw"].includes(ext)) return "🥽";
-  if (["litematic"].includes(ext)) return "📐";
+  // P3 修复：litematic 分支与 YSM 分支对称走 RESOURCE_TYPES 常量（原硬编码 "litematic"，注册表优先）
+  if (ext === RESOURCE_TYPES.LITEMATIC) return "📐";
   if (["nbt", "schematic", "schem"].includes(ext)) return "⚙️";
   if (["png", "jpg", "jpeg", "gif", "webp", "bmp"].includes(ext)) return "🖼️";
   if (

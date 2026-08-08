@@ -126,10 +126,6 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "🎨 v1.6.0 - UI 系统全面优化",
-        "link": "/releases/RELEASE_NOTES_GITHUB"
-      },
-      {
         "text": "YSM-Model-Manager 发版程序（Release Process）",
         "link": "/releases/release-process"
       },

@@ -23,7 +23,7 @@
 3. **填写发布信息**
    - **Tag version:** `v1.6.0`（从下拉列表选择）
    - **Release title:** `v1.6.0 - UI 系统全面优化`
-   - **Description:** 复制 `RELEASE_NOTES_GITHUB.md` 的内容
+   - **Description:** 复制 `docs/releases/v1.6.0.md` 的内容（旧流程曾用独立的 `RELEASE_NOTES_GITHUB.md` GitHub body 文件，现已并入单文件 `vX.Y.Z.md` 模式，该文件已删除）
 
 4. **上传二进制文件**
    - 点击 "Attach binaries by dropping them here or selecting them"
@@ -44,7 +44,7 @@
 # 创建 Release
 gh release create v1.6.0 \
   --title "v1.6.0 - UI 系统全面优化" \
-  --notes-file RELEASE_NOTES_GITHUB.md \
+  --notes-file docs/releases/v1.6.0.md \
   --latest \
   build/bin/YSM-Model-Manager.exe
 

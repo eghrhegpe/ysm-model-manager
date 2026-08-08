@@ -110,6 +110,8 @@ export function bindCardEvents(
 }
 
 /** 根据 localStorage 选中最匹配的整合包 */
+let _lastEmittedPkg: string | null = null; // P2 修复：模块级去重——原每次 _reload 都重发 package:selected，app-content 反复重建右侧面板
+
 function restoreSelectedCard(
   root: ShadowRoot,
   instances: SidebarInstance[],
@@ -127,7 +129,13 @@ function restoreSelectedCard(
       const hdr = vc.querySelector(".vc-header");
       if (!hdr) return;
       hdr.classList.add("active");
-      bus.emit("package:selected", instances[idx]);
+      // P2 修复：仅选中项实际变化时才 emit——原每次重载都重发，
+      // app-content 每次收到都 innerHTML 重建 <app-sync-manager>（状态丢失/闪烁）
+      const emitKey = rtypeKey + ":" + savedName;
+      if (_lastEmittedPkg !== emitKey) {
+        _lastEmittedPkg = emitKey;
+        bus.emit("package:selected", instances[idx]);
+      }
     });
   } catch (_) {}
 }

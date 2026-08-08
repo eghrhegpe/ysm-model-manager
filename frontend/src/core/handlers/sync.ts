@@ -16,7 +16,13 @@ export function registerSync(unsubs: Array<() => void>): void {
     bus.on(
       "sync:download:missing",
       async ({ instanceName, rtype, token }) => {
-        if (_downloadBusy) return;
+        if (_downloadBusy) {
+          // P1 修复：busy 命中时也要回 done（带 skipped 标记）——原实现直接 return，
+          // 调用方（app-sidebar 推送）因 token/instanceName 永远等不到 done 而 30s 超时
+          // 或经 instanceName fallback 误判成功；现让调用方立即解锁并识别「被跳过」
+          bus.emit("sync:download:done", { token, instanceName, skipped: true });
+          return;
+        }
         _downloadBusy = true;
         dbg("sync", "download-missing", instanceName || "all", "rtype:", rtype);
         try {

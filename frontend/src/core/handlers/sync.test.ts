@@ -153,7 +153,10 @@ describe("registerSync — sync:download:missing", () => {
 
     // 只有第一次执行了安装
     expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
-    expect(doneEvents.length).toBe(1);
+    // P1 修复后契约：busy 命中的第二个请求也回 done（带 skipped）——调用方（app-sidebar）
+    // 得以立即解锁而非 30s 超时；断言 2 个 done（1 正常 + 1 skipped）
+    expect(doneEvents.length).toBe(2);
+    expect(doneEvents.filter((d) => d.skipped).length).toBe(1);
   });
 
   it("requireMcRoot 为空 → 直接返回但 finally 解锁", async () => {

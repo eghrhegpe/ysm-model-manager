@@ -82,7 +82,7 @@ export interface BusEvents {
   "repo:search-creator": string;
   "sync:toggle:status": void;
   "sync:download:missing": { instanceName?: string; rtype?: string; token?: string };
-  "sync:download:done": { token?: string; instanceName?: string };
+  "sync:download:done": { token?: string; instanceName?: string; skipped?: boolean };
   // 实例 / 导入
   "instance:export-list": { name: string; rtype?: string };
   "instance:clear": { name: string; rtype?: string };

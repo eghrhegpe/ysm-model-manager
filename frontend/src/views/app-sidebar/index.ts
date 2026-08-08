@@ -201,10 +201,17 @@ class AppSidebar extends HTMLElement {
               // timer 先声明再赋值：handler 内引用不在 TDZ（bus 同步 emit 场景安全）
               let timer: ReturnType<typeof setTimeout> | null = null;
               const unsub = bus.on("sync:download:done", (payload) => {
-                if (payload?.token === token || payload?.instanceName === insName) {
+                // P1 修复：只按 token 精确匹配 + 识别 skipped——原 `|| payload?.instanceName === insName`
+                // 会把「busy 被吞未处理」误判为成功（toast 报 ✅ 实际未推）；
+                // 现被吞请求带 skipped 标记按拒绝处理
+                if (payload?.token === token) {
                   unsub();
                   if (timer) clearTimeout(timer);
-                  resolve(payload);
+                  if (payload.skipped) {
+                    reject(new Error(`推送被跳过（已有同步进行中）: ${insName}/${rt}`));
+                  } else {
+                    resolve(payload);
+                  }
                 }
               });
               timer = setTimeout(() => {

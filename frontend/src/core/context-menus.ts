@@ -128,6 +128,10 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       }
       toast(ok > 0 ? `✅ ${ok} 个文件已移动到 ${folder}` : "❌ 移动失败", 4000);
       refreshUI();
+    } catch (e) {
+      // P2 修复：最外层补 catch——resolveDstDir/getApp 可 reject（getApp import 失败会
+      // rethrow），原 try/finally 无 catch 使 rejection 逸出 → unhandledrejection、用户无反馈
+      toast(`❌ ${friendlyError(e)}`, 4000, "error");
     } finally {
       _batchBusy = false;
     }
@@ -168,6 +172,10 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
         toast("❌ 复制失败（可能目标已存在）", 4000, "error");
       }
       refreshUI();
+    } catch (e) {
+      // P2 修复：最外层补 catch（同 batch.move）——resolveDstDir/getApp reject 时
+      // 原 try/finally 无 catch 使 rejection 逸出 → unhandledrejection
+      toast(`❌ ${friendlyError(e)}`, 4000, "error");
     } finally {
       _batchBusy = false;
     }
@@ -200,6 +208,10 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       toast(`❌ ${fail} 个文件移入回收站失败：${friendlyError(lastErr, "移动失败")}`, 5000, "error");
     }
     refreshUI();
+    } catch (e) {
+      // P2 修复：最外层补 catch（同 batch.move/copy）——modalConfirm/getApp reject 时
+      // rejection 逸出 → unhandledrejection
+      toast(`❌ ${friendlyError(e)}`, 5000, "error");
     } finally {
       _batchBusy = false;
     }
@@ -262,34 +274,36 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
   },
   "file.move": async (ctx) => {
-    const resolved = await resolveDstDir({
-      title: "移动到文件夹",
-      icon: "📂",
-      okText: "移动",
-      emptyMsg: "❌ 请先配置存储路径",
-    });
-    if (!resolved) return;
-    const { folder, dstDir } = resolved;
-    const { MoveModelFile } = await getApp();
     try {
+      const resolved = await resolveDstDir({
+        title: "移动到文件夹",
+        icon: "📂",
+        okText: "移动",
+        emptyMsg: "❌ 请先配置存储路径",
+      });
+      if (!resolved) return;
+      const { folder, dstDir } = resolved;
+      const { MoveModelFile } = await getApp();
       await MoveModelFile(ctx.path || "", dstDir);
       toast(`✅ 已移动到 ${folder}`, 3000);
       refreshUI();
     } catch (e) {
+      // P2 修复：resolveDstDir/getApp 纳入 try——原在 try 外，getApp import 失败
+      // 或 GetRepoRoot reject → rejection 逸出 → unhandledrejection
       toast("❌ " + friendlyError(e, "移动失败"), 4000, "error");
     }
   },
   "file.copy": async (ctx) => {
-    const resolved = await resolveDstDir({
-      title: "复制到文件夹",
-      icon: "📋",
-      okText: "复制",
-      emptyMsg: "❌ 请先配置仓库目录",
-    });
-    if (!resolved) return;
-    const { folder, dstDir } = resolved;
-    const { CopyModelFile } = await getApp();
     try {
+      const resolved = await resolveDstDir({
+        title: "复制到文件夹",
+        icon: "📋",
+        okText: "复制",
+        emptyMsg: "❌ 请先配置仓库目录",
+      });
+      if (!resolved) return;
+      const { folder, dstDir } = resolved;
+      const { CopyModelFile } = await getApp();
       await CopyModelFile(ctx.path || "", dstDir);
       refreshUI();
       toast(`✅ 已复制到 ${folder}`, 3000);
@@ -365,11 +379,12 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     }
   },
   "file.reveal": async (ctx) => {
-    const { RevealInExplorer } =
-      await getApp();
     try {
+      const { RevealInExplorer } =
+        await getApp();
       await RevealInExplorer(ctx.path || "");
     } catch (e) {
+      // P2 修复：getApp 纳入 try——原在 try 外，import 失败 rejection 逸出
       toast("❌ " + friendlyError(e, "打开失败"), 3000, "error");
     }
   },
@@ -396,38 +411,40 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     bus.emit("dir:batch-rename", { dir: ctx.dir || "" }),
   // ADR-038 D3：文件夹级移动/复制（后端对 ysm.json 目录组整组处理，目录直接整组）
   "dir.move": async (ctx) => {
-    const resolved = await resolveDstDir({
-      title: "移动文件夹到",
-      icon: "📂",
-      okText: "移动",
-      emptyMsg: "❌ 请先配置存储路径",
-    });
-    if (!resolved) return;
-    const { folder, dstDir } = resolved;
-    const { MoveModelFile } = await getApp();
     try {
+      const resolved = await resolveDstDir({
+        title: "移动文件夹到",
+        icon: "📂",
+        okText: "移动",
+        emptyMsg: "❌ 请先配置存储路径",
+      });
+      if (!resolved) return;
+      const { folder, dstDir } = resolved;
+      const { MoveModelFile } = await getApp();
       await MoveModelFile(ctx.dir || "", dstDir);
       toast(`✅ 已移动文件夹到 ${folder}`, 3000);
       refreshUI();
     } catch (e) {
+      // P2 修复：resolveDstDir/getApp 纳入 try（同 file.move）——原在 try 外
       toast("❌ " + friendlyError(e, "移动失败"), 4000, "error");
     }
   },
   "dir.copy": async (ctx) => {
-    const resolved = await resolveDstDir({
-      title: "复制文件夹到",
-      icon: "📋",
-      okText: "复制",
-      emptyMsg: "❌ 请先配置仓库目录",
-    });
-    if (!resolved) return;
-    const { folder, dstDir } = resolved;
-    const { CopyModelFile } = await getApp();
     try {
+      const resolved = await resolveDstDir({
+        title: "复制文件夹到",
+        icon: "📋",
+        okText: "复制",
+        emptyMsg: "❌ 请先配置仓库目录",
+      });
+      if (!resolved) return;
+      const { folder, dstDir } = resolved;
+      const { CopyModelFile } = await getApp();
       await CopyModelFile(ctx.dir || "", dstDir);
       refreshUI();
       toast(`✅ 已复制文件夹到 ${folder}`, 3000);
     } catch (e) {
+      // P2 修复：resolveDstDir/getApp 纳入 try（同 file.copy）
       toast("❌ " + friendlyError(e, "复制失败"), 4000, "error");
     }
   },

@@ -20,17 +20,21 @@ export function friendlyError(err: unknown, fallback = "操作失败"): string {
   // 优先级：社区抓取常见错误 > 通用文件/网络错误
   const patterns: Array<[RegExp, string]> = [
     // ===== 社区功能高频错误 =====
-    [/rate limit|429|too many requests/i, "GitHub API 访问频率受限，请稍后重试"],
+    // P3 修复：\b429\b 加词边界——裸 429 会误伤含 "429" 的路径/文件名（pack_429.ysm）
+    [/\brate limit\b|\b429\b|\btoo many requests\b/i, "GitHub API 访问频率受限，请稍后重试"],
     [/abort|cancelled/i, "请求已取消"],
     [/parse error|unexpected token|malformed|syntaxerror/i, "数据格式异常"],
-    [/dns|resolve|getaddrinfo|ENOTFOUND/i, "域名解析失败，请检查网络连接"],
+    // P3 修复：resolve 限定为 DNS 语境——裸 resolve 会误伤 "failed to resolve symlink" 等文件语义
+    [/dns|getaddrinfo|ENOTFOUND|resolve host|resolve.*domain/i, "域名解析失败，请检查网络连接"],
     [
-      /econnrefused|econnreset|eof|socket|connection refused|refused/i,
+      // P3 修复：去掉裸 refused（误伤 "permission refused"/"access refused"，使权限规则永远等不到），
+      // 保留 connection refused / ECONNREFUSED
+      /econnrefused|econnreset|eof|socket|connection refused/i,
       "连接中断，请检查网络稳定性",
     ],
     [/ssl|tls|certificate/i, "SSL/TLS 连接错误，请检查系统时间或网络"],
     // ===== 通用文件/网络错误 =====
-    [/access is denied|permission denied|eacces/i, "权限不足，无法访问文件"],
+    [/access is denied|permission denied|eacces|access refused/i, "权限不足，无法访问文件"],
     [/no such file|not found|cannot find|does not exist/i, "文件或目录不存在"],
     [
       /sharing violation|used by another process|is locked|file exists/i,

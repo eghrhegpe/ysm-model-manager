@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { getApp } from "../../wails/app.ts";
 import { loadTextures } from "./model3d-loader.ts";
-import { buildSceneMesh, type Spec3D } from "../../utils/3d/model3d.ts";
+import { buildSceneMesh, compKey, type Spec3D } from "../../utils/3d/model3d.ts";
 
 export interface AngleShot {
   name: string;
@@ -51,11 +51,12 @@ export async function renderMultiAngle(
     const { boneGroupMap, rootGroup } = buildSceneMesh(spec);
     scene.add(rootGroup);
 
-    // Mesh 创建
-    for (const mg of spec.models || []) {
+    // Mesh 创建（组件索引 mi 参与骨骼组查找，与 model3d.ts renderModel3D 的
+    // compKey(mi, md.boneId) 口径一致——多组件 spec 下同名骨骼需按组件定位）
+    for (const [mi, mg] of (spec.models || []).entries()) {
       if (!mg.meshGroups?.length) continue;
       for (const md of mg.meshGroups) {
-        const bg = boneGroupMap.get(md.boneId);
+        const bg = boneGroupMap.get(compKey(mi, md.boneId));
         if (!bg) continue;
         const geo = new THREE.BufferGeometry();
         geo.setAttribute(

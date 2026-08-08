@@ -288,3 +288,120 @@ func TestParseFrom7z_BadData(t *testing.T) {
 		t.Fatalf("坏 7z 应全 nil, 得到 model=%v pngs=%v", model, pngs)
 	}
 }
+
+// ====== ParseComponentsFromZip 多组件契约（code_review P3 补测）======
+
+// geoArmJSON 独立 arm 组件（与 validGeoJSON 的 head 骨骼区分）
+const geoArmJSON = `{"format_version":"1.16.0","minecraft:geometry":[{"description":{"identifier":"arm","texture_width":32,"texture_height":32},"bones":[{"name":"arm","pivot":[0,0,0],"cubes":[{"origin":[0,0,0],"size":[4,4,4],"uv":[0,0]}]}]}]}`
+
+func TestParseComponentsFromZip_MainFirstAndTexSlot(t *testing.T) {
+	// ysm.json 声明 model 数组 + texture 数组：main 优先排序，TexSlot 按 modelOrder 全局化
+	ysmJSON := `{
+		"files": {
+			"player": {
+				"model": ["main.geo.json", "arm.geo.json"],
+				"texture": ["tex_a.png", "tex_b.png"]
+			}
+		}
+	}`
+	data := makeZipBytes(t, map[string]string{
+		"ysm.json":      ysmJSON,
+		"main.geo.json": validGeoJSON, // head 骨骼
+		"arm.geo.json":  geoArmJSON,   // arm 骨骼
+	})
+	comps, err := ParseComponentsFromZip(data, int64(len(data)))
+	if err != nil {
+		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
+	}
+	if len(comps) != 2 {
+		t.Fatalf("期望 2 个组件, 得到 %d", len(comps))
+	}
+	if got := comps[0].Bones[0].Name; got != "head" {
+		t.Errorf("组件 0 应为 main(head), 得到 %s", got)
+	}
+	if got := comps[1].Bones[0].Name; got != "arm" {
+		t.Errorf("组件 1 应为 arm, 得到 %s", got)
+	}
+	// TexSlot 全局化：main→0, arm→1（按 modelOrder 声明序）
+	for _, b := range comps[0].Bones {
+		for _, c := range b.Cubes {
+			if c.TexSlot != 0 {
+				t.Errorf("main 组件 cube TexSlot = %d, 期望 0", c.TexSlot)
+			}
+		}
+	}
+	for _, b := range comps[1].Bones {
+		for _, c := range b.Cubes {
+			if c.TexSlot != 1 {
+				t.Errorf("arm 组件 cube TexSlot = %d, 期望 1", c.TexSlot)
+			}
+		}
+	}
+}
+
+func TestParseComponentsFromZip_MainPriorityOverDeclOrder(t *testing.T) {
+	// ysm.json 声明 arm 在前 → main 仍应排首位（IsMainModelName 优先于 modelOrder）
+	ysmJSON := `{
+		"files": {
+			"player": {
+				"model": ["arm.geo.json", "main.geo.json"],
+				"texture": ["tex_a.png"]
+			}
+		}
+	}`
+	data := makeZipBytes(t, map[string]string{
+		"ysm.json":      ysmJSON,
+		"main.geo.json": validGeoJSON,
+		"arm.geo.json":  geoArmJSON,
+	})
+	comps, err := ParseComponentsFromZip(data, int64(len(data)))
+	if err != nil {
+		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
+	}
+	if len(comps) != 2 {
+		t.Fatalf("期望 2 个组件, 得到 %d", len(comps))
+	}
+	if got := comps[0].Bones[0].Name; got != "head" {
+		t.Errorf("arm 声明在前时组件 0 仍应为 main(head), 得到 %s", got)
+	}
+	if got := comps[1].Bones[0].Name; got != "arm" {
+		t.Errorf("组件 1 应为 arm, 得到 %s", got)
+	}
+}
+
+func TestParseComponentsFromZip_TexSlotGlobal(t *testing.T) {
+	// 多组件 texSlot = 全局组件序（无钳制）：texArr 元数据含全部组件纹理
+	// （FindGeometryInExtractedYSM 递归扫描 textures/ 全部 + texOrderNames 优先 + 其余按名），
+	// 与 WASM 路径 decodeYSMComponentsViaNodeJS 同口径；钳制会让 arrow/boat 等
+	// 组件错误共用皮肤纹理。
+	ysmJSON := `{
+		"files": {
+			"player": {
+				"model": ["main.geo.json", "arm.geo.json"],
+				"texture": ["tex_a.png"]
+			}
+		}
+	}`
+	data := makeZipBytes(t, map[string]string{
+		"ysm.json":      ysmJSON,
+		"main.geo.json": validGeoJSON,
+		"arm.geo.json":  geoArmJSON,
+	})
+	comps, err := ParseComponentsFromZip(data, int64(len(data)))
+	if err != nil {
+		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
+	}
+	if len(comps) != 2 {
+		t.Fatalf("期望 2 个组件, 得到 %d", len(comps))
+	}
+	// texSlot = 组件序：main(i=0)→0, arm(i=1)→1（全局 texArr 索引）
+	for i, comp := range comps {
+		for _, b := range comp.Bones {
+			for _, c := range b.Cubes {
+				if c.TexSlot != i {
+					t.Errorf("组件 %d cube TexSlot = %d, 期望 %d（全局组件序）", i, c.TexSlot, i)
+				}
+			}
+		}
+	}
+}

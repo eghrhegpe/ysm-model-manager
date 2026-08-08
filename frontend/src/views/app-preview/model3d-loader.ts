@@ -51,30 +51,13 @@ export async function loadTextures(urls?: string[]): Promise<THREE.Texture[]> {
       }),
   );
   await Promise.all(loads);
+  // 不做「按像素量过滤小纹理」：Go 解析层已过滤 avatar/ 与 <4KB 小图，前端若再按尺寸
+  // 剔除会**重排 texArr 索引**，而多组件 spec 的 texIdx 是全局组件序（0,1,2...），
+  // 索引漂移 → 组件贴错纹理（P1）。像素风合法小纹理（如 64×64）也不应被误杀。
   const texArr = urls
     .filter(Boolean)
     .map((url) => texMap.get(url))
     .filter((t): t is THREE.Texture => Boolean(t));
-  const maxPixels = texArr.reduce(
-    (m, t) =>
-      Math.max(
-        m,
-        ((t.image as HTMLImageElement)?.naturalWidth || 0) * ((t.image as HTMLImageElement)?.naturalHeight || 0),
-      ),
-    0,
-  );
-  if (maxPixels > 0) {
-    const threshold = Math.max(maxPixels / 4, 128 * 128);
-    const filtered = texArr.filter(
-      (t) =>
-        ((t.image as HTMLImageElement)?.naturalWidth || 0) * ((t.image as HTMLImageElement)?.naturalHeight || 0) >=
-        threshold,
-    );
-    if (filtered.length > 0) {
-      texArr.length = 0;
-      texArr.push(...filtered);
-    }
-  }
   if (texArr.length === 0)
     console.warn("[3D] 纹理加载失败，模型将显示为 fallback 颜色");
   return texArr;

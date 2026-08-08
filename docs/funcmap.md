@@ -13,7 +13,7 @@
 | Go·错误 | 1 | 1 |
 | go/fileops | 2 | 13 |
 | Go·文件系统 | 1 | 4 |
-| Go·几何 | 2 | 6 |
+| Go·几何 | 2 | 7 |
 | Go·导入 | 2 | 15 |
 | Go·安装 | 1 | 6 |
 | go/instance | 1 | 2 |
@@ -29,18 +29,18 @@
 | Go·类型 | 5 | 49 |
 | Go·更新器 | 1 | 8 |
 | Go·监听 | 1 | 6 |
-| Go·YSM 核心 | 7 | 22 |
+| Go·YSM 核心 | 7 | 23 |
 | Go(internal)·应用入口 | 15 | 170 |
 | 前端·根 (app-modules/bus) | 1 | 10 |
 | 前端·核心 | 8 | 13 |
 | 前端·特性 | 12 | 51 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 25 | 91 |
+| 前端·工具 | 25 | 92 |
 | frontend/views | 52 | 144 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **165** | **765** |
+| **合计** | **165** | **768** |
 
 ## Go·头像
 
@@ -118,7 +118,8 @@
 | `ExtractFirstPNGFrom7z()` | `go/geometry/archive:82` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
 | `ParseFromZip()` | `go/geometry/archive:287` | — |
 | `ParseFrom7z()` | `go/geometry/archive:575` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
-| `ParseComponentsFromZip()` | `go/geometry/archive:859` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
+| `IsMainModelName()` | `go/geometry/archive:848` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
+| `ParseComponentsFromZip()` | `go/geometry/archive:860` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
 | `ParseBedrockGeometry()` | `go/geometry/parse:17` | ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式） 注意：data 大小不应超过 maxP |
 
 ## Go·导入
@@ -377,6 +378,7 @@
 |------|--------|------|
 | `FindCLI()` | `go/ysm/cli:11` | FindCLI 查找 YSMParser.exe 可执行文件路径 |
 | `FindGeometryInExtractedYSM()` | `go/ysm/extracted:33` | FindGeometryInExtractedYSM 在解压后的 YSM 模型目录中查找 geometry 和纹理 ysmJsonPath: ysm.json 的完整路径 返回: |
+| `FindComponentsInExtractedYSM()` | `go/ysm/extracted:345` | FindComponentsInExtractedYSM 多组件解析（YSMViewer 式）：解压目录内每个模型文件独立组件， **不合并 bones、不排除 arm**（arm |
 | `AnalyzeYSMHeader()` | `go/ysm/header:167` | AnalyzeYSMHeader 读取 YSM 文件的文本头部，提取元数据 |
 | `AnalyzeYSMHeaderFromBytes()` | `go/ysm/header:320` | AnalyzeYSMHeaderFromBytes 从字节数据解析 YSM 头部（适用于 base64 导入场景） |
 | `YSMHeader()` | `go/ysm/header:12` | YSMHeader 从 YSM 文件文本头部提取的元数据（适用于加密和非加密模型） |
@@ -492,7 +494,7 @@
 | `App.ReadFileBytes()` | `internal/app/app_model:71` | — |
 | `App.AnalyzeBedrockModel()` | `internal/app/app_model:89` | — |
 | `App.GetModel3DSpec()` | `internal/app/app_model:134` | — |
-| `App.SaveScreenshotFile()` | `internal/app/app_model:160` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
+| `App.SaveScreenshotFile()` | `internal/app/app_model:179` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
 | `App.ExportBoneStructures()` | `internal/app/app_scan:23` | ========== 批量导出骨骼结构 ========== |
 | `App.ExportModelStructureJSON()` | `internal/app/app_scan:79` | ExportModelStructureJSON 导出单模型骨骼结构 |
 | `App.SearchModels()` | `internal/app/app_scan:116` | ========== 高级搜索 ========== |
@@ -737,9 +739,10 @@
 | `loadTdKeymap()` | `frontend/src/utils/3d/model3d:86` | 读取用户自定义键位（无/非法时回退默认） |
 | `loadTdCamSpeed()` | `frontend/src/utils/3d/model3d:104` | 相机移动速度（2–200），默认 20 |
 | `loadTdRotMode()` | `frontend/src/utils/3d/model3d:110` | true = 环绕（orbit），false = 自身（free） |
-| `buildSceneMesh()` | `frontend/src/utils/3d/model3d:128` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
-| `renderModel3D()` | `frontend/src/utils/3d/model3d:188` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/src/utils/3d/model3d:858` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `compKey()` | `frontend/src/utils/3d/model3d:124` | 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突）。 |
+| `buildSceneMesh()` | `frontend/src/utils/3d/model3d:129` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
+| `renderModel3D()` | `frontend/src/utils/3d/model3d:189` | 渲染 3D 模型到容器，返回控制句柄 |
+| `screenshotPreview()` | `frontend/src/utils/3d/model3d:862` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
 | `animateNumber()` | `frontend/src/utils/animation/animate:12` | 里程表滚动进位动画 |
 | `Vec3()` | `frontend/src/utils/animation/animation:9` | 三维向量 [x, y, z] |
 | `Keyframe()` | `frontend/src/utils/animation/animation:12` | 关键帧 |
@@ -872,7 +875,7 @@
 | `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:6` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
 | `ModelSpec()` | `frontend/src/views/app-preview/model3d-loader:14` | Go 返回的 3D spec（models 数组） |
 | `loadTextures()` | `frontend/src/views/app-preview/model3d-loader:30` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组 |
-| `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:100` | 预加载：纹理 + spec 并行获取 |
+| `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:83` | 预加载：纹理 + spec 并行获取 |
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:7` | — |
 | `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:13` | — |
 | `loadModel2D()` | `frontend/src/views/app-preview/skeleton:34` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this._root, this._appendDebug 等） |

@@ -843,8 +843,9 @@ func ParseFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 	return geo, pngs
 }
 
-// isMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）
-func isMainModelName(name string) bool {
+// IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。
+// 导出供 wasm 多组件路径（decodeYSMComponentsViaNodeJS）与 zip 路径统一 main 判定口径。
+func IsMainModelName(name string) bool {
 	base := strings.ToLower(name)
 	if idx := strings.LastIndexAny(base, "/\\"); idx >= 0 {
 		base = base[idx+1:]
@@ -865,13 +866,14 @@ func ParseComponentsFromZip(data []byte, size int64) ([]types.BedrockModel, erro
 	for _, f := range reader.File {
 		files = append(files, archiveEntry{name: f.Name, file: f})
 	}
-	modelOrder, texOrder, geoFiles, _, _, _ := collectArchiveFiles(files)
-	return buildComponents(geoFiles, modelOrder, texOrder)
+	modelOrder, _, geoFiles, _, _, _ := collectArchiveFiles(files)
+	return buildComponents(geoFiles, modelOrder)
 }
 
 // buildComponents 组件化收集：main 优先排序 + modelOrder 排序 + TexSlot 全局化 + 独立解析。
-// 与 ParseFromZip 合并逻辑同源（collectArchiveFiles 共享收集），仅解析阶段不合并 bones。
-func buildComponents(geoFiles []geoEntry, modelOrder, texOrder []string) ([]types.BedrockModel, error) {
+// 与 ParseFromZip 合并逻辑同源（collectArchiveFiles 共享收集），仅解析阶段不合并 bones、
+// texSlot 不按 texOrder 钳制（texArr 含全部组件纹理，texSlot = 全局组件序）。
+func buildComponents(geoFiles []geoEntry, modelOrder []string) ([]types.BedrockModel, error) {
 	if len(modelOrder) > 0 {
 		orderMap := make(map[string]int, len(modelOrder))
 		for i, p := range modelOrder {
@@ -882,8 +884,8 @@ func buildComponents(geoFiles []geoEntry, modelOrder, texOrder []string) ([]type
 			aj, okj := orderMap[geoFiles[j].name]
 			if oki && okj {
 				// main 优先（YSMViewer 主组件），其余保持 modelOrder 相对顺序
-				mi := isMainModelName(geoFiles[i].name)
-				mj := isMainModelName(geoFiles[j].name)
+				mi := IsMainModelName(geoFiles[i].name)
+				mj := IsMainModelName(geoFiles[j].name)
 				if mi != mj {
 					return mi
 				}
@@ -892,24 +894,16 @@ func buildComponents(geoFiles []geoEntry, modelOrder, texOrder []string) ([]type
 			return oki
 		})
 	}
-	// texIdxMap：模型 basename → 全局纹理索引（与合并版同口径）
-	texIdxMap := make(map[string]int)
-	texCount := len(texOrder)
-	if texCount == 0 {
-		texCount = len(modelOrder)
-	}
-	if len(modelOrder) > 0 {
-		for i, p := range modelOrder {
-			p = strings.ReplaceAll(p, "\\", "/")
-			if idx := strings.LastIndex(p, "/"); idx >= 0 {
-				p = p[idx+1:]
-			}
-			ti := i
-			if ti >= texCount {
-				ti = texCount - 1
-			}
-			texIdxMap[strings.TrimSuffix(p, ".json")] = ti
+	// texIdxMap：模型 basename → 全局 texSlot（= 排序后组件序，main 优先已应用；
+	// 无钳制，与 WASM 路径 decodeYSMComponentsViaNodeJS 同口径）。
+	// 不能用 modelOrder 索引：map 分支按 key 字母序（arm 在 main 前）会与 main 优先错位。
+	texIdxMap := make(map[string]int, len(geoFiles))
+	for i, gf := range geoFiles {
+		geoName := gf.name
+		if idx := strings.LastIndex(geoName, "/"); idx >= 0 {
+			geoName = geoName[idx+1:]
 		}
+		texIdxMap[strings.TrimSuffix(geoName, ".json")] = i
 	}
 	var comps []types.BedrockModel
 	for _, gf := range geoFiles {

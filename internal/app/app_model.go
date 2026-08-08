@@ -132,27 +132,46 @@ func (a *App) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 }
 
 func (a *App) GetModel3DSpec(modelPath string) string {
-	// 多组件路径（YSMViewer 式）：.ysm 解码出 main+arm+... 各组件独立构建，合并 spec.models。
-	// 纹理 texIdx 由解析层全局化（组件 i → i），前端 texArr 全局数组按序索引。
+	// 多组件路径（YSMViewer 式）：.ysm（WASM 解码）/ .zip / 解压目录 ysm.json
+	// 各自组件独立构建，合并 spec.models；纹理 texIdx 由解析层全局化（组件 i → i），
+	// 前端 texArr 全局数组按序索引。
 	ext := strings.ToLower(filepath.Ext(modelPath))
-	if ext == ".ysm" {
-		data, err := os.ReadFile(modelPath)
-		if err == nil {
-			if comps := decodeYSMComponentsViaNodeJS(data); len(comps) > 0 {
-				spec, err := threejs.BuildMulti(comps, nil)
-				if err == nil && spec != "{}" {
-					return spec
-				}
-			}
+	if comps := a.collect3DComponents(modelPath, ext); len(comps) > 0 {
+		spec, err := threejs.BuildMulti(comps, nil)
+		if err == nil && spec != "{}" {
+			return spec
 		}
 	}
-	// 单组件兜底（.zip/.7z/.json 或 .ysm 多组件失败时）
+	// 单组件兜底（.7z 或多组件失败时）
 	model := a.AnalyzeBedrockModel(modelPath)
 	spec, err := threejs.Build(model)
 	if err != nil {
 		return "{}"
 	}
 	return spec
+}
+
+// collect3DComponents 收集多组件列表（含 arm/载具等独立组件，不合并 bones）。
+// .ysm → WASM 解码；.zip → 压缩包解析；ysm.json → 解压目录。其余返回 nil（单组件兜底）。
+func (a *App) collect3DComponents(modelPath, ext string) []types.BedrockModel {
+	switch ext {
+	case ".ysm":
+		if data, err := os.ReadFile(modelPath); err == nil {
+			return decodeYSMComponentsViaNodeJS(data)
+		}
+	case ".zip":
+		if data, err := os.ReadFile(modelPath); err == nil {
+			if comps, cerr := geometry.ParseComponentsFromZip(data, int64(len(data))); cerr == nil {
+				return comps
+			}
+		}
+	case ".json":
+		// 解压目录的 ysm.json 路径
+		if strings.HasSuffix(strings.ToLower(modelPath), "ysm.json") {
+			return ysm.FindComponentsInExtractedYSM(modelPath)
+		}
+	}
+	return nil
 }
 
 // SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用）

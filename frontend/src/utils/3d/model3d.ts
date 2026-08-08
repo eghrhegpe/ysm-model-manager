@@ -119,8 +119,9 @@ let _rootGroup3d: THREE.Group | null = null;
 /** 当前活跃的 RAF ID（入口复用守卫 + cleanup 共享） */
 let _rafIdGuard: number | null = null;
 
-/** 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突） */
-function compKey(mi: number, id: string) {
+/** 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突）。
+ * 导出供截图渲染器（screenshot-renderer）与 buildSceneMesh 消费方共用，防 key 口径漂移。 */
+export function compKey(mi: number, id: string) {
   return mi + ":" + id;
 }
 
@@ -318,7 +319,10 @@ export async function renderModel3D(
       );
       geo.setAttribute("uv", new THREE.Float32BufferAttribute(md.uvs, 2));
       geo.setIndex(md.indices);
-      const mti = md.texIdx ?? texIdx ?? 0;
+      // 多组件：md.texIdx 是 Go 端全局组件槽位（组件序 0,1,2...），必须用；
+      // 单组件：Go 端恒输出 texIdx 字段（无 omitempty，单组件=0），若用 ?? 则
+      // 纹理选择器（调用方 texIdx 参数）被架空——永远贴第 0 张（P2）。
+      const mti = (spec.models?.length ?? 1) > 1 ? (md.texIdx ?? 0) : (texIdx ?? 0);
       const mt = texArr.length > 0 ? texArr[mti] || texArr[0] : null;
       // ysmview 风格材质：统一 FrontSide + transparent + alphaTest 0.1 + depthWrite。
       // alphaTest 把 <0.1 alpha 像素直接裁剪（硬透明，边缘干净）；

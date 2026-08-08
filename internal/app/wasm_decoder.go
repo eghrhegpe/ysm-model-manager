@@ -227,9 +227,12 @@ func decodeYSMComponentsViaNodeJS(ysmData []byte) []types.BedrockModel {
 		return nil
 	}
 	// main 优先（YSMViewer 式主组件），其余按路径排序（确定性，ADR-039）
+	// 注意：用 basename 判定 main（main.json / main.geo.json），与 zip 版
+	// geometry.IsMainModelName 同口径——strings.Contains(..., "main.json")
+	// 对 main.geo.json 不命中，会把 arm 排在 main 前（code_review P2）。
 	sort.SliceStable(modelFiles, func(i, j int) bool {
-		mi := strings.Contains(strings.ToLower(modelFiles[i].path), "main.json")
-		mj := strings.Contains(strings.ToLower(modelFiles[j].path), "main.json")
+		mi := geometry.IsMainModelName(modelFiles[i].path)
+		mj := geometry.IsMainModelName(modelFiles[j].path)
 		if mi != mj {
 			return mi
 		}

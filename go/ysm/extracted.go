@@ -328,3 +328,147 @@ func FindGeometryInExtractedYSM(ysmJsonPath string) (*types.BedrockModel, [][]by
 
 	return geoJSON, texData
 }
+
+// isDir 判断路径是否为目录
+func isDir(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi.IsDir()
+}
+
+// FindComponentsInExtractedYSM 多组件解析（YSMViewer 式）：解压目录内每个模型文件独立组件，
+// **不合并 bones、不排除 arm**（arm/载具为独立组件）；main 优先排序 + 补扫 models/ 目录
+// （projectiles/vehicles 等 player.model 未列出的 geometry 也作为组件）；
+// TexSlot = 全局组件序（对齐 WASM 路径 decodeYSMComponentsViaNodeJS）。
+// 供 GetModel3DSpec → threejs.BuildMulti 生成多组件 spec。
+// 注：ysm.json player.model 解析逻辑与 FindGeometryInExtractedYSM 同源；
+// v1 内联复制避免大重构，后续可抽公共解析函数。
+func FindComponentsInExtractedYSM(ysmJsonPath string) []types.BedrockModel {
+	data, err := os.ReadFile(ysmJsonPath)
+	if err != nil {
+		return nil
+	}
+
+	// 解析 ysm.json 找 model 文件名（player.model）
+	var ysmRoot struct {
+		Spec  int             `json:"spec"`
+		Files json.RawMessage `json:"files"`
+	}
+	var modelNames []string
+	var modelMapOrig map[string]string
+	if err := json.Unmarshal(data, &ysmRoot); err == nil {
+		var filesObj map[string]json.RawMessage
+		if json.Unmarshal(ysmRoot.Files, &filesObj) == nil {
+			for key, val := range filesObj {
+				if key != "player" {
+					continue
+				}
+				var player struct {
+					Model json.RawMessage `json:"model"`
+				}
+				if err := json.Unmarshal(val, &player); err != nil {
+					log.Printf("[ysm] 解析 player 失败: %v", err)
+					continue
+				}
+				if len(player.Model) > 0 {
+					modelRaw := string(player.Model)
+					trimmed := strings.TrimSpace(modelRaw)
+					if strings.HasPrefix(trimmed, `{`) {
+						var mm map[string]string
+						if json.Unmarshal(player.Model, &mm) == nil {
+							modelMapOrig = mm
+							for _, v := range mm {
+								modelNames = append(modelNames, v)
+							}
+						}
+					} else if strings.HasPrefix(trimmed, `[`) {
+						var arr []string
+						if json.Unmarshal(player.Model, &arr) == nil {
+							modelNames = arr
+						}
+					} else {
+						modelNames = append(modelNames, strings.Trim(trimmed, `"`))
+					}
+				}
+			}
+		}
+	}
+
+	dir := filepath.Dir(ysmJsonPath)
+	// 组件顺序：main 优先 + 其余键排序（含 arm/载具，不排除；多组件下 arm 为独立组件）
+	var orderedNames []string
+	if modelMapOrig != nil {
+		if mainPath, ok := modelMapOrig["main"]; ok {
+			orderedNames = append(orderedNames, mainPath)
+		}
+		var otherKeys []string
+		for k := range modelMapOrig {
+			if k != "main" {
+				otherKeys = append(otherKeys, k)
+			}
+		}
+		sort.Strings(otherKeys)
+		for _, k := range otherKeys {
+			orderedNames = append(orderedNames, modelMapOrig[k])
+		}
+	} else {
+		orderedNames = modelNames
+	}
+
+	// 补扫 models/ 目录：player.model 未列出的 geometry（projectiles/vehicles 等
+	// 游戏实体组件如 arrow/boat/foxcar）也作为独立组件收集，与 WASM 解码路径对齐
+	// （decodeYSMComponentsViaNodeJS 收 models/ 全部）；按文件名排序（确定性）
+	seen := make(map[string]bool, len(orderedNames))
+	for _, n := range orderedNames {
+		seen[strings.ToLower(filepath.Base(n))] = true
+	}
+	if modelsDir := filepath.Join(dir, "models"); isDir(modelsDir) {
+		var extra []string
+		if entries, err := os.ReadDir(modelsDir); err == nil {
+			for _, e := range entries {
+				if e.IsDir() || !strings.HasSuffix(strings.ToLower(e.Name()), ".json") {
+					continue
+				}
+				if seen[strings.ToLower(e.Name())] {
+					continue
+				}
+				extra = append(extra, filepath.Join("models", e.Name()))
+			}
+			sort.Strings(extra)
+			orderedNames = append(orderedNames, extra...)
+		}
+	}
+
+	var comps []types.BedrockModel
+	for i, mn := range orderedNames {
+		for _, sub := range []string{"", "models/", "models\\"} {
+			candidate := filepath.Join(dir, sub, mn)
+			// 路径穿越防护：确保 candidate 仍在 ysm.json 所在目录内
+			candidate = filepath.Clean(candidate)
+			cleanDir := filepath.Clean(dir)
+			if !strings.HasPrefix(candidate, cleanDir+string(filepath.Separator)) && candidate != cleanDir {
+				log.Printf("[ysm] 拒绝路径越界模型文件: %q (期望在 %q 内)", candidate, cleanDir)
+				continue
+			}
+			if _, err := os.Stat(candidate); err == nil {
+				geoData, readErr := os.ReadFile(candidate)
+				if readErr == nil {
+					gj := geometry.ParseBedrockGeometry(geoData)
+					if gj != nil {
+						// TexSlot = 全局组件序（前端 texArr 含全部组件纹理：
+						// texOrderNames 优先 + 其余按名，与补扫排序一致）
+						for bi := range gj.Bones {
+							for ci := range gj.Bones[bi].Cubes {
+								gj.Bones[bi].Cubes[ci].TexSlot = i
+								gj.Bones[bi].Cubes[ci].CubeTexW = gj.TexWidth
+								gj.Bones[bi].Cubes[ci].CubeTexH = gj.TexHeight
+							}
+						}
+						comps = append(comps, *gj)
+					}
+				}
+				break
+			}
+		}
+	}
+	return comps
+}

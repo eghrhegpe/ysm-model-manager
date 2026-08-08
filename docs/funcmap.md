@@ -736,7 +736,7 @@
 | `loadTdRotMode()` | `frontend/src/utils/3d/model3d:107` | true = 环绕（orbit），false = 自身（free） |
 | `buildSceneMesh()` | `frontend/src/utils/3d/model3d:120` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
 | `renderModel3D()` | `frontend/src/utils/3d/model3d:168` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/src/utils/3d/model3d:835` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `screenshotPreview()` | `frontend/src/utils/3d/model3d:840` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
 | `animateNumber()` | `frontend/src/utils/animation/animate:12` | 里程表滚动进位动画 |
 | `Vec3()` | `frontend/src/utils/animation/animation:9` | 三维向量 [x, y, z] |
 | `Keyframe()` | `frontend/src/utils/animation/animation:12` | 关键帧 |

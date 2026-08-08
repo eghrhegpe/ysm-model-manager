@@ -300,12 +300,17 @@ export async function renderModel3D(
       geo.setIndex(md.indices);
       const mti = md.texIdx ?? texIdx ?? 0;
       const mt = texArr.length > 0 ? texArr[mti] || texArr[0] : null;
-      // ysmview 风格材质：统一 FrontSide + transparent，无 slot/alphaTest 判断
+      // ysmview 风格材质：统一 FrontSide + transparent + alphaTest 0.1 + depthWrite。
+      // alphaTest 把 <0.1 alpha 像素直接裁剪（硬透明，边缘干净）；
+      // depthWrite: true 让不透明像素写深度，避免透明面穿透后方网格（YSMViewer 同款）。
+      // 历史：曾仅 transparent: true（alpha 混合 + 不写深度）→ 材质边缘虚化/内部穿帮。
       const mat = mt
         ? new THREE.MeshBasicMaterial({
             map: mt,
             side: THREE.FrontSide,
             transparent: true,
+            alphaTest: 0.1,
+            depthWrite: true,
           })
         : new THREE.MeshBasicMaterial({ color: 0xcccccc, side: THREE.FrontSide });
       const mesh = new THREE.Mesh(geo, mat);

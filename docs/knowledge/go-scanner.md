@@ -56,6 +56,7 @@ use_when:
 
 - 扫描结果受 30s 缓存保护，直接改盘后需显式失效缓存
 - `.json` 只允许 `ysm.json` 与 Go importer / 前端 `isImportableFile` 三处口径一致（ADR-038 D2 纵深防御）
+- **目录级 `.ban` 目录整体跳过**（P2 修复：`fileops.ToggleModelEnable` 对文件夹模型整组禁用时把父目录改名 `modelA.ban`，ADR-038 D3.7——原实现只过滤文件级 `.ban`，目录级禁用模型会以活跃身份进入 sync 的 repoHash 被列为 Missing 或被 SyncToggleStatus 重新启用）
 
 ## 相关
 

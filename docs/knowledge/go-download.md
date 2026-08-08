@@ -44,6 +44,7 @@ use_when:
 - Content-Length = -1 时进度由前端锁定 99% 转菊花（致命陷阱 #6）；Go 端结束时 `total<=0` 归一为 `downloaded` 再发 final progress
 - 三入口（单击/多选/全选）都走 `enqueueDownloads()`，前端只注册一组 Wails EventsOn（致命陷阱 #7）
 - 取消语义：`CancelQueue` 置 cancelled + cancel ctx → 正在下载的文件立即中断、队列结束不发 `queue:status done`；`EnqueueDownloads` 入队时复位 cancelled（取消后再下载不哑火）。队列带 `epoch` 代际计数：取消/新入队递增，旧 process goroutine 退出时仅当代际一致才复位 running / 发 done，防止「取消后立即重新入队」双 goroutine 并发处理同一队列
+- **process 判空退出前复位 running 后重检任务列表**（P2 修复：判空解锁 return 与 defer 复位 running 之间 Enqueue 可能已追加任务——running 仍 true 不启新 goroutine、defer 又复位+发 done → 队列静默停滞；现复位后代际一致且有任务则重启处理）
 
 ## 相关
 

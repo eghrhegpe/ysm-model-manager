@@ -172,8 +172,20 @@ export function renderModelNameWithHighlight(raw: string, keyword?: string, opti
     const re = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
     highlighted = highlighted.replace(re, "<mark>$1</mark>");
   }
-  // 用高亮后的纯文本渲染（renderDisplayName 内部会 esc，但此处已含 <mark>，需特殊处理）
-  // 策略：直接拼接高亮 HTML + 扩展名标签
+  // P2 修复：高亮结果必须逐段转义后再拼回（<mark> 除外）——
+  // 原实现直接拼接 highlighted（文件名含 <script>/<img onerror> 时注入 HTML），
+  // 且绕过 renderDisplayName 的 esc 契约，是 display 管线唯一未转义输出口。
+  // 策略：拆出 <mark>…</mark> 段，内容 esc 后重组。
+  let safe = "";
+  let rest = highlighted;
+  let m: RegExpExecArray | null;
+  const markRe = /<mark>(.*?)<\/mark>/g;
+  let last = 0;
+  while ((m = markRe.exec(rest)) !== null) {
+    safe += esc(rest.slice(last, m.index)) + "<mark>" + esc(m[1]) + "</mark>";
+    last = m.index + m[0].length;
+  }
+  safe += esc(rest.slice(last));
   const extHtml = options.showExt && p.ext ? `<span class="tag-ext">.${esc(p.ext)}</span>` : "";
-  return highlighted + extHtml;
+  return safe + extHtml;
 }

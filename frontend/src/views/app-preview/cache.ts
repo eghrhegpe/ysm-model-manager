@@ -45,9 +45,11 @@ export function cacheGet(path: string): CacheValue | null {
 }
 
 export function cacheSet(path: string, data: CacheValue): void {
-  // 已达上限 → 淘汰最旧的
+  // 已有该 key：覆盖前先对旧值调 evict 释放资源（blob URL 等），
+  // 否则 WASM 解码产物（wasm.ts createObjectURL）的旧 URL 永久泄漏（P2 修复）
   if (_cache.has(path)) {
-    // 已有该 key，只更新值，不改变淘汰顺序
+    const oldVal = _cache.get(path);
+    if (_onEvict) _onEvict(path, oldVal);
     _cache.set(path, data);
     return;
   }

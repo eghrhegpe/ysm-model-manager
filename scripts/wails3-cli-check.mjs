@@ -41,12 +41,23 @@ const EXCLUDE_DIRS = new Set([
 // 单文件豁免：ADR-001 v2→v3 迁移对照表（左列刻意写旧命令）
 const EXCLUDE_FILES = new Set(['docs/adr/ADR-001-wails3-migration.md']);
 
-/** 递归遍历，跳过排除目录 */
+/** 递归遍历，跳过排除目录；子目录/文件读取失败（权限/竞态）跳过不崩溃（code_review P3）。 */
 function* walk(dir, rel) {
-  for (const name of fs.readdirSync(dir)) {
+  let names;
+  try {
+    names = fs.readdirSync(dir);
+  } catch {
+    return;
+  }
+  for (const name of names) {
     const full = path.join(dir, name);
     const relPath = rel ? `${rel}/${name}` : name;
-    const st = fs.statSync(full);
+    let st;
+    try {
+      st = fs.statSync(full);
+    } catch {
+      continue; // 单个条目不可读跳过
+    }
     if (st.isDirectory()) {
       if (EXCLUDE_DIRS.has(relPath)) continue;
       yield* walk(full, relPath);

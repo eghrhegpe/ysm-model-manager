@@ -38,6 +38,9 @@ const VALID_PREFIXES = new Set([
   'success', 'failed', 'pending', 'show', 'hide', 'expanded', 'collapsed',
   'focused', 'hovered', 'dragging', 'running', 'stopped', 'done', 'empty',
   'error', 'editable', 'clickable', 'draggable', 'resizable',
+  // 补充状态词（与头注释「语义动词/状态词」规范对齐，防合规命名误报，code_review P2-5）
+  'available', 'locked', 'cancelled', 'ok', 'hidden', 'complete',
+  'connected', 'installed', 'expired', 'enabled', 'disabled',
 ]);
 
 const findings = [];
@@ -54,7 +57,13 @@ function checkName(name, loc) {
 }
 
 function scanFile(file) {
-  const lines = fs.readFileSync(file, 'utf-8').split(/\r?\n/);
+  let text;
+  try {
+    text = fs.readFileSync(file, 'utf-8');
+  } catch {
+    return; // 文件级不可读（权限/竞态）跳过，不让单文件崩溃整脚本（code_review P3-3）
+  }
+  const lines = text.split(/\r?\n/);
   const rel = relPosix(file);
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -79,10 +88,11 @@ function scanFile(file) {
 
 function main() {
   if (!fs.existsSync(SRC_DIR)) {
-    console.log(JSON_OUT ? JSON.stringify({ findings: [], error: 'frontend/src 不存在' }) : 'frontend/src 目录不存在');
+    // 错误路径也输出合法 JSON（含 _summary），满足 --json 契约（test_scripts_json 校验，code_review P3-4）
+    console.log(JSON_OUT ? JSON.stringify({ _summary: { scanned: 0, findings: 0 }, findings: [], error: 'frontend/src 不存在' }) : 'frontend/src 目录不存在');
     process.exit(1);
   }
-  const files = walk(SRC_DIR);
+  const files = walk(SRC_DIR, { skipTest: true }); // 跳过测试文件：测试中的布尔命名不属生产规范（code_review P4-1）
   for (const f of files) scanFile(f);
 
   const uniq = new Map(); // 去重（同名同文件多行可能重复）

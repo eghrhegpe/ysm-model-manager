@@ -3,13 +3,13 @@
  * gen-knowledge-index.mjs — 按分类生成知识卡索引 (docs/knowledge/index.md)。
  *
  * 零依赖（仅 node:fs / node:path / node:url）。
- * 本文件由 gen-knowledge-index.mjs 自动生成，禁止手改。
+ * 产出 docs/knowledge/index.md（自动生成物，禁止手改）；本文件是生成器本身。
  *
  * 用法：
  *   node scripts/gen-knowledge-index.mjs           # 写入
  *   node scripts/gen-knowledge-index.mjs --check    # 校验是否已同步（不写入）
  * 设计意图：知识索引生成器
- * 退出码：main(（失败）
+ * 退出码：main() 失败 → 1；否则 0。
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -77,14 +77,20 @@ function extractSummary(text) {
   const m = body.match(/^##\s+概览\s*\n([\s\S]*?)(?=^##\s+|$)/m);
   if (!m) return '';
   const summary = m[1].replace(/\n{2,}/g, ' ').replace(/\s+/g, ' ').trim();
-  return summary.length > 120 ? summary.slice(0, 120) + '…' : summary;
+  // 按码点截断（Array.from）：避免切断 surrogate pair（emoji）产生 U+FFFD（code_review P4-3）
+  if (summary.length <= 120) return summary;
+  return Array.from(summary).slice(0, 120).join('') + '…';
 }
 
 // ── 构建索引 ─────────────────────────────────────────
 
 function buildIndex() {
   const files = fs.existsSync(KC_DIR)
-    ? fs.readdirSync(KC_DIR).filter((f) => f.endsWith('.md') && !NON_CARDS.has(f)).sort()
+    ? fs
+        .readdirSync(KC_DIR, { withFileTypes: true }) // withFileTypes：排除同名目录/坏链接，防 EISDIR 崩溃（code_review P3-3）
+        .filter((e) => e.isFile() && e.name.endsWith('.md') && !NON_CARDS.has(e.name.toLowerCase()))
+        .map((e) => e.name)
+        .sort()
     : [];
 
   const cards = [];

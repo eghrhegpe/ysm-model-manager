@@ -263,6 +263,13 @@ func decodeYSMComponentsViaNodeJS(ysmData []byte) ([]types.BedrockModel, []strin
 		if g == nil {
 			continue
 		}
+		// SourceName = 组件源模型文件名（去扩展名，如 main/arm/arrow），UI 组件名用
+		src := mf.path
+		if idx := strings.LastIndexAny(src, "/\\"); idx >= 0 {
+			src = src[idx+1:]
+		}
+		src = strings.TrimSuffix(strings.TrimSuffix(src, ".geo.json"), ".json")
+		g.SourceName = src
 		// TexSlot = 全局纹理序（组件 i 的纹理起点；与 FindGeometryInExtractedYSM 的
 		// 文件序 texSlot 口径一致，前端 texArr 全局数组按序索引）
 		for bi := range g.Bones {

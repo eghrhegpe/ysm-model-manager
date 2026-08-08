@@ -368,9 +368,14 @@ func buildModelGroup(model types.BedrockModel, compID string, texIdxBase int) (M
 		texID = &s
 	}
 
+	// Name 用组件源模型文件名（main/arm/arrow，UI 组件选择器显示），空则回退 compID
+	compName := model.SourceName
+	if compName == "" {
+		compName = compID
+	}
 	return ModelGroup{
 		ID:             compID,
-		Name:           compID,
+		Name:           compName,
 		DefaultVisible: true,
 		TextureWidth:   texW,
 		TextureHeight:  texH,

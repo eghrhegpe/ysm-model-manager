@@ -971,6 +971,8 @@ func buildComponents(geoFiles []geoEntry, modelOrder, texOrder []string) ([]type
 			geoName = geoName[idx+1:]
 		}
 		tn := strings.TrimSuffix(strings.TrimSuffix(geoName, ".geo.json"), ".json")
+		// SourceName = 组件源模型文件名（去扩展名，如 main/arm/arrow），UI 组件名用
+		g.SourceName = tn
 		if len(texNames) < len(texOrder) && texOrder[len(texNames)] != "" {
 			tn = texOrder[len(texNames)]
 		}

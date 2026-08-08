@@ -574,6 +574,8 @@ func FindComponentsInExtractedYSM(ysmJsonPath string) ([]types.BedrockModel, []s
 							undeclSeq++
 						}
 						texNames = append(texNames, tnUsed)
+						// SourceName = 组件源模型文件名（去扩展名，如 main/arm/arrow），UI 组件名用
+						gj.SourceName = strings.TrimSuffix(strings.TrimSuffix(base, ".geo.json"), ".json")
 						// TexSlot = 声明序位置（texArr 全局索引；未声明=按名段）
 						for bi := range gj.Bones {
 							for ci := range gj.Bones[bi].Cubes {

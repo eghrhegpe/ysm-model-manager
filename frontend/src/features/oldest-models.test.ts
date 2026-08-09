@@ -96,11 +96,13 @@ describe("loadOldestModel", () => {
     expect(html).toContain("资历最深");
     expect(html).toContain("月度活动");
     expect(html).toContain("每日推荐");
-    // 资历最深卡片：oldest.ysm 应出现（最早 ModTime）
-    expect(html).toContain("oldest.ysm");
-    expect(html).toContain("data-path");
-    // 评分：3 个条目 1 个 ban → 100 - round(1/3*40)=100-13=87
-    expect(html).toContain("87");
+    // 资历最深卡片按 ModTime 升序：oldest.ysm（-365d）→ banned（-5s）→ new（-1s）
+    const paths = [...container.querySelectorAll(".model-card-sm")].map(
+      (el) => el.getAttribute("data-path"),
+    );
+    expect(paths).toEqual(["/repo/oldest.ysm", "/repo/banned.ysm.ban", "/repo/new.ysm"]);
+    // 评分：3 个条目 1 个 ban → 100 - round(1/3*40)=100-13=87（精确锁定评分环数值）
+    expect(html).toContain('oldest-health-ring-num">87<');
     cleanup();
   });
 

@@ -230,31 +230,39 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
 
   // 批量导出骨骼名
   $("repo-export")?.addEventListener("click", async () => {
-    const { ExportBoneStructures, GetRepoRoot } =
-      await getApp();
-    const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-    if (!repoRoot) {
+    try {
+      const { ExportBoneStructures, GetRepoRoot } =
+        await getApp();
+      const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
+      if (!repoRoot) {
+        bus.emit("toast:show", {
+          msg: "请先配置存储路径",
+          duration: 2000,
+          type: "warn",
+        });
+        return;
+      }
+      const text = await ExportBoneStructures(repoRoot);
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.download = `bone-structures-${new Date().toISOString().slice(0, 10)}.txt`;
+      a.href = URL.createObjectURL(blob);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
       bus.emit("toast:show", {
-        msg: "请先配置存储路径",
+        msg: "✅ 骨骼结构已导出",
         duration: 2000,
-        type: "warn",
+        type: "success",
       });
-      return;
+    } catch (e) {
+      bus.emit("toast:show", {
+        msg: "❌ " + friendlyError(e),
+        duration: 4000,
+        type: "error",
+      });
     }
-    const text = await ExportBoneStructures(repoRoot);
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const a = document.createElement("a");
-    a.download = `bone-structures-${new Date().toISOString().slice(0, 10)}.txt`;
-    a.href = URL.createObjectURL(blob);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(a.href);
-    bus.emit("toast:show", {
-      msg: "✅ 骨骼结构已导出",
-      duration: 2000,
-      type: "success",
-    });
   });
 
   $("btn-repo")?.addEventListener("click", () => {
@@ -346,12 +354,14 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
   // 「⋮ 更多」下拉菜单
   const menuMore = $("menu-more");
   if (menuMore) {
-    menuMore.addEventListener("click", async (e) => {
+    menuMore.addEventListener("click", (e) => {
       const target = e.target as HTMLElement | null;
       const item = target ? target.closest("[data-more]") : null;
       if (!item) return;
       e.stopPropagation();
       const action = (item as HTMLElement).dataset.more;
+      // 绑定层/文件选择器/加载失败统一兜底（genindex 内层 try/finally 仍负责按钮恢复）
+      void (async (): Promise<void> => {
       if (action === "open-folder") {
         if (!vm._repoRoot) return;
         const { OpenFolder } = await getApp();
@@ -447,6 +457,13 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
           btn.disabled = false;
         }
       }
+      })().catch((err) => {
+        bus.emit("toast:show", {
+          msg: "❌ " + friendlyError(err),
+          duration: 4000,
+          type: "error",
+        });
+      });
     });
   }
 }

@@ -155,6 +155,12 @@ func (a *App) MoveToRecycle(src string) error {
 	if root == "" {
 		root = a.ysmRoot()
 	}
+	// P2 修复（根级守卫对齐）：src 等于资源根本身时拒绝——findRecycleRoot 对 rel=="."
+	// 判命中 + recycle.IsInside 对 path==root 放行 → 整仓库移入 .recycle（可恢复但误操作面大）；
+	// fallback 到 ysmRoot 后 Clean 相等同样拒绝
+	if filepath.Clean(src) == filepath.Clean(root) {
+		return fmt.Errorf("不能把资源根目录整体移入回收站")
+	}
 	return recycle.Move(src, root)
 }
 
@@ -183,9 +189,19 @@ func (a *App) findRecycleRoot(src string) string {
 			continue
 		}
 		rel, err := filepath.Rel(r, src)
-		if err == nil && !strings.HasPrefix(rel, "..") {
-			return r
+		if err != nil {
+			continue
 		}
+		// P2 修复：与 isPathInRoot 根拒绝对齐——rel=="."（src 即根）不得判命中，
+		// 精确段比较替代裸 HasPrefix（..foo 合法目录不误拒）
+		if rel == "." || rel == ".." {
+			continue
+		}
+		sep := string(filepath.Separator)
+		if strings.HasPrefix(rel, ".."+sep) {
+			continue
+		}
+		return r
 	}
 	return ""
 }
@@ -197,6 +213,8 @@ func (a *App) ClearCustomDir(customDir string) (int, error) {
 	}
 	// P2 修复：补根守卫——原实现对任意 customDir 直接 WalkDir + os.Remove，
 	// 可删仓库外任意 .ysm/.zip/.7z（仅限与仓库同名的文件）
+	// 根级（customDir == ysmRoot）由 isPathInRoot 的 rel=="." 拒绝覆盖（2026-08-09 P1 修复）——
+	// 该函数已拒绝根路径本身，customDir==ysmRoot 时返回「路径超出仓库目录」
 	if !a.isPathInRoot(customDir) {
 		return 0, fmt.Errorf("路径超出仓库目录")
 	}

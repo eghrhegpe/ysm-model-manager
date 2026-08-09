@@ -470,6 +470,18 @@ func ToggleModelEnable(root, path string) (bool, error) {
 	if path == "" {
 		return false, fmt.Errorf("参数为空")
 	}
+	// P2 修复（根级守卫对齐）：path 等于仓库根本身时拒绝——原 root 守卫仅覆盖 ysm.json
+	// 提升分支，非 ysm.json 输入（普通文件/目录禁用段 os.Rename(path, path+".ban")）无守卫，
+	// path==root 时整个仓库根被改名成 ysm.ban 隔离（与 MoveToRecycle/DeleteModelFile 根拒绝对齐）
+	if root != "" {
+		absRoot, err := filepath.Abs(root)
+		if err == nil {
+			absPath, err2 := filepath.Abs(path)
+			if err2 == nil && filepath.Clean(absPath) == filepath.Clean(absRoot) {
+				return false, fmt.Errorf("不能对资源根目录执行启用/禁用操作")
+			}
+		}
+	}
 	// 目录级 .ban 识别（与 IsFileBanned 对称）：父目录名以 .ban 结尾 = 整组禁用态。
 	// 启用方向：还原父目录名（去 .ban）；禁用方向：目录已在 .ban 内，幂等返回。
 	parentBase := filepath.Base(filepath.Dir(path))

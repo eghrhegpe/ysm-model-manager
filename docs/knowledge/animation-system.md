@@ -80,11 +80,13 @@ use_when:
 
 ## 不变量
 
-- Molang 表达式不解释执行：检测到即标记 hasMolang 并跳过该值（避免 eval 任意表达式）；注意实现细节——**直接字符串帧被跳过 ✓，但数组含 Molang 轴被零填充保留**（animation.ts:105-108），且**纯数字字符串可能误判 Molang**（animation.ts:170，`hasMolangInChannelData` 的宽松数字判定，P3 观察）
-- evaluateKeyframes 对空数组/越界时间返回端点值或 null，不抛异常
+- Molang 表达式不解释执行：检测到即标记 hasMolang 并跳过该值（避免 eval 任意表达式）；注意实现细节——**直接字符串帧被跳过 ✓，但数组含 Molang 轴被零填充保留**（animation.ts:105-108），且**纯数字字符串可能误判 Molang**（animation.ts:170，`hasMolangInChannelData` 的宽松数字判定，P3 观察——复用 foldMolangConstant 折叠失败才算 Molang 可修复）；**Molang 只是标记不拦截求值**（零填充帧仍被当真实关键帧插值，P3 观察）
+- evaluateKeyframes 对空数组/越界时间返回端点值或 null，不抛异常（`t=NaN` 时二分插值产生 NaN 向量，无守卫，P3 观察）
 - `no-animations` 开关作用于 CSS animation；JS 驱动的动画（模型动画求值/数字滚动）不受该 class 影响，属模型数据呈现而非装饰动效
 - 播放循环（RAF）由消费方组件自行管理并须在卸载时 cancelAnimationFrame；曾有的 AnimationPlayer 封装类因长期无消费方已在死代码清理中移除，如需播放器请基于 evaluateClip 重建
-- **求值链路当前休眠**（审计 2026-08-08）：`evaluateClip` / `evaluateKeyframes` 全仓无运行时消费方（grep 仅测试命中），模型动画求值处于潜伏态；`animateNumber` 实际返回取消函数 `() => void`（文档签名漏记），消费方 app-tree/render.ts:369、app-sidebar/events.ts:190 **忽略取消函数**（快速连续渲染叠加未清理 timer，P3 观察）；`isMolang` 为死代码（仅定义处命中）
+- **求值链路当前休眠**（审计 2026-08-08/2026-08-09）：`evaluateClip` / `evaluateKeyframes` 全仓无运行时消费方（grep 仅测试命中），模型动画求值处于潜伏态；`animateNumber` 实际返回取消函数 `() => void`（**JSDoc 已标注 `@returns 取消函数`**——旧文「文档签名漏记」已自愈），消费方 app-tree/render.ts:369、app-sidebar/events.ts:217 **忽略取消函数**（快速连续渲染叠加未清理 timer，P3 观察）；`isMolang` 为死代码（仅定义处命中）
+- **层级传播未应用父级旋转**（animation.ts:414-419，P3 观察）：注释声称「子级位移经父级旋转后」累加，实现却是纯向量相加 `pp+cp`、旋转仅欧拉角分量相加——父级非零旋转时传播结果错误；求值链路休眠态无运行时影响，属唤醒前的设计降级点（唤醒需先补旋转矩阵/四元数传播，测试仅覆盖无旋转父级）
+- **消费方文件名漂移已修正**（2026-08-09）：`parseBedrockAnimationJSON` 消费方为 `app-preview/wasm.ts:490`（+loader.ts:71，旧文 preview-wasm.ts 已过时）；stagger 消费方含 `app-content/site/render.ts`（旧文 site-view.ts 过时）；测试文件均为 `.ts`（旧文 .js 过时）
 
 ## 相关
 

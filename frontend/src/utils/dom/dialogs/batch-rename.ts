@@ -112,6 +112,16 @@ export function showBatchRenameDialog(
   dialogEl.style.background = "rgba(0,0,0,.55)";
   dialogEl.addEventListener("keydown", (e: KeyboardEvent): void => {
     if (e.key === "Escape") close();
+    // P3 修复（审核发现）：按钮文案声明「(Enter)」但源码只有 Escape——
+    // 补 Enter 提交（复用 apply 点击路径，含 busy/disabled 保护），
+    // 参照兄弟弹窗 rename.ts 的守卫：不在输入组合态、焦点不在按钮上时生效
+    if (e.key === "Enter") {
+      const t = e.target as HTMLElement | null;
+      // isComposing 是 KeyboardEvent 属性（输入法组合态），非 input 元素属性
+      if (t && (t.tagName === "BUTTON" || e.isComposing)) return;
+      const applyBtn = dialogEl?.querySelector("#br-apply") as HTMLButtonElement | null;
+      if (applyBtn && !applyBtn.disabled) applyBtn.click();
+    }
   });
   dialogEl.innerHTML = genHTML(dir, items);
   document.body.appendChild(dialogEl);
@@ -209,6 +219,12 @@ export function showBatchRenameDialog(
         it._author = "";
         it._work = "";
       });
+      // P3 修复（审核发现）：同时清空输入框显示值——原只重置内部解析状态，
+      // 用户看到作者输入框仍有值，但 apply 时走解析值 → 显示与实际应用不一致
+      const authorInput = dialogEl?.querySelector("#br-batch-author") as HTMLInputElement | null;
+      const workInput = dialogEl?.querySelector("#br-batch-work") as HTMLInputElement | null;
+      if (authorInput) authorInput.value = "";
+      if (workInput) workInput.value = "";
       updateAll();
       renderPreview(previewEl, items);
     }

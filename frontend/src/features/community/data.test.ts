@@ -39,6 +39,16 @@ describe("showProgress", () => {
       el.querySelector(".gh-progress-fill")!.classList.contains("gh-striped"),
     ).toBe(false);
   });
+
+  it("钳制越界/非法 pct（P3 修复：NaN/负值/超 100 → [0,100]）", () => {
+    const el = document.createElement("div");
+    showProgress(el, Number.NaN, "x");
+    expect((el.querySelector(".gh-progress-fill") as HTMLElement).style.width).toBe("0%");
+    showProgress(el, 150, "x");
+    expect((el.querySelector(".gh-progress-fill") as HTMLElement).style.width).toBe("100%");
+    showProgress(el, -5, "x");
+    expect((el.querySelector(".gh-progress-fill") as HTMLElement).style.width).toBe("0%");
+  });
 });
 
 type FetchResp = { ok: boolean; status: number; json: () => Promise<unknown> };
@@ -98,6 +108,21 @@ describe("tryFetchModels 成功路径（并发竞速取最快）", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(
       "https://api.github.com/repos/owner/repo/contents/index.json",
     );
+  });
+
+  it("api 源 base64 含 \\r\\n 换行也能解码（P2 修复：GitHub 实际返回可能带 CRLF）", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("atob", (b64: string) => Buffer.from(b64, "base64").toString("binary"));
+    const models = [{ name: "crlf-model" }];
+    const b64 = Buffer.from(JSON.stringify(models), "utf-8").toString("base64");
+    // 模拟 GitHub API 返回带 \r\n 的 base64（原只去 \n，\r 残留令 atob 抛错 → AllFailed）
+    const contentWithCRLF = b64.slice(0, 10) + "\r\n" + b64.slice(10);
+    mockFetch(() =>
+      Promise.resolve(okJson({ encoding: "base64", content: contentWithCRLF })),
+    );
+    const result = await tryFetchModels("owner/repo", "githubapi");
+    expect(result.source).toBe("api");
+    expect(result.models).toEqual(models);
   });
 
   it("首个请求返回非数组 → 竞速继续到下一源成功", async () => {

@@ -9,6 +9,11 @@ export function showProgress(
   pct: number,
   label?: string,
 ): void {
+  // P3 修复（审核发现）：pct 无钳制会输出 width:"NaN%"/"150%"/"-5%"——
+  // 数值守卫范式（AGENTS §3.4 ②）拦截非有限值并钳制到 [0,100]
+  const clamped = Number.isFinite(pct)
+    ? Math.min(100, Math.max(0, Math.round(pct)))
+    : 0;
   searchResults.innerHTML =
     '<div class="gh-progress-box">' +
     '<div class="gh-progress-label">' +
@@ -18,9 +23,9 @@ export function showProgress(
     "</span></div>" +
     '<div class="gh-progress-track">' +
     '<div class="gh-progress-fill' +
-    (pct < 100 ? " gh-striped" : "") +
+    (clamped < 100 ? " gh-striped" : "") +
     '" style="width:' +
-    pct +
+    clamped +
     "%;transition:width 0.3s" +
     '"></div>' +
     "</div>" +
@@ -101,9 +106,12 @@ export async function tryFetchModels(
         if (resp.status === 404) {
           _earlyExitReason = "NoIndex";
           controllers.forEach(function (c): void {
+            // P4：abort 在规范中不抛错，此处 try/catch 仅为防御（无需上报）
             try {
               c.abort();
-            } catch (_) {}
+            } catch (_) {
+              /* abort 防御性保护 */
+            }
           });
         }
         throw new Error("HTTP " + resp.status);
@@ -114,9 +122,11 @@ export async function tryFetchModels(
           encoding?: string;
           content?: string;
         };
-        if (data.encoding !== "base64" || !data.content)
+        if (data.encoding !== "base64" || data.content == null)
           throw new Error("no content");
-        const binary = atob(data.content.replace(/\n/g, ""));
+        // P2 修复（审核发现）：GitHub API base64 可能含 \r\n 换行——原只去 \n，
+        // \r 残留令 atob 抛错 → 误判 AllFailed；统一去 [\r\n\s]
+        const binary = atob(data.content.replace(/[\r\n\s]/g, ""));
         const bytes = Uint8Array.from(binary, function (c): number {
           return c.charCodeAt(0);
         });

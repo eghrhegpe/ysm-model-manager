@@ -107,7 +107,12 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   // ── batch ──
   "batch.rename": (ctx) => bus.emit("batch:rename", { paths: ctx.paths }),
   "batch.move": async (ctx) => {
-    if (_batchBusy) return;
+    if (_batchBusy) {
+      // P3 修复（审核发现）：busy 命中不再静默吞事件（ADR-044）——用户连点第二次
+      // 菜单动作无任何反馈，发 toast 提示操作在途
+      toast("⏳ 操作进行中，请稍候", 1500, "info");
+      return;
+    }
     _batchBusy = true;
     try {
       const resolved = await resolveDstDir({
@@ -242,9 +247,22 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
       ta.style.opacity = "0";
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand("copy");
+      // P3 修复（审核发现）：execCommand("copy") 返回值被忽略——复制失败仍 toast
+      // 「✅ 已复制」；且此处已在 catch 内，若 execCommand 抛异常会逸出为 unhandled
+      let copied = false;
+      try {
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      }
       document.body.removeChild(ta);
-      toast(`✅ 已复制 ${ctx.paths.length} 个路径`, 2000);
+      toast(
+        copied
+          ? `✅ 已复制 ${ctx.paths.length} 个路径`
+          : `❌ 复制失败，请手动复制`,
+        copied ? 2000 : 3000,
+        copied ? undefined : "error",
+      );
     }
   },
   "batch.export-list": (ctx) => {

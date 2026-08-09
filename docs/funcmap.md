@@ -602,7 +602,7 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `registerContextMenus()` | `frontend/src/core/context-menus:497` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
+| `registerContextMenus()` | `frontend/src/core/context-menus:515` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
 | `__TEST__resetDiary()` | `frontend/src/core/error-diary:16` | 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。 |
 | `registerErrorDiary()` | `frontend/src/core/error-diary:34` | 注册 UI 报错落日记功能。 |
 | `registerGlobalHandlers()` | `frontend/src/core/handlers/global:11` | 注册所有 core 全局 handler，返回 unsub 函数数组（features/views 层注册由 app-content 编排） |
@@ -634,8 +634,8 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `showProgress()` | `frontend/src/features/community/data:7` | 创建进度条 UI（插入到 searchResults 容器） |
-| `FetchModelsResult()` | `frontend/src/features/community/data:31` | 抓取结果 |
-| `tryFetchModels()` | `frontend/src/features/community/data:44` | 从 GitHub 获取 index.json（并发竞速：同时请求所有镜像源，取最快响应） |
+| `FetchModelsResult()` | `frontend/src/features/community/data:36` | 抓取结果 |
+| `tryFetchModels()` | `frontend/src/features/community/data:49` | 从 GitHub 获取 index.json（并发竞速：同时请求所有镜像源，取最快响应） |
 | `DownloadTask()` | `frontend/src/features/community/download-queue:23` | 下载任务 |
 | `QueueError()` | `frontend/src/features/community/download-queue:31` | 队列错误项 |
 | `DownloadState()` | `frontend/src/features/community/download-queue:37` | 队列状态快照 |

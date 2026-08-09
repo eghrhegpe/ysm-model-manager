@@ -20,3 +20,12 @@ export function safeSet(key: string, val: string): void {
     /* 隐私模式：忽略持久化 */
   }
 }
+
+/** 安全删：存储不可用时静默忽略（不中断调用方） */
+export function safeRemove(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* 隐私模式：忽略删除 */
+  }
+}

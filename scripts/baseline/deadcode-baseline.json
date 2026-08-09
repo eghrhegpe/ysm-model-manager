@@ -1,8 +1,9 @@
 {
-  "generated": "2026-08-09T02:24:25.375Z",
+  "generated": "2026-08-09T10:22:11.220Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|jscpd",
+    "src/core/i18n/locale.ts|exports|loadLocale",
     "src/features/community/download-queue.ts|types|QueueError",
     "src/features/community/render.ts|exports|SITE_GROUP_ORDER",
     "src/features/import-executor.ts|exports|isImportableFile",
@@ -16,6 +17,7 @@
     "src/test-utils/index.ts|exports|fireInput",
     "src/test-utils/index.ts|exports|fireKeyDown",
     "src/test-utils/index.ts|exports|renderComponent",
+    "src/utils/3d/mesh.ts|types|MaterialWithMap",
     "src/utils/3d/model2d.ts|types|BedrockBone",
     "src/utils/3d/model3d-spec.ts|types|SpecBone",
     "src/utils/3d/model3d-spec.ts|types|SpecMeshData",
@@ -28,7 +30,8 @@
     "src/utils/format/summarize.ts|types|SummaryAuthor",
     "src/utils/format/summarize.ts|types|SummaryConfigMenu",
     "src/views/app-preview/geometry.ts|types|BedrockBone",
-    "src/views/app-preview/geometry.ts|types|BedrockCube"
+    "src/views/app-preview/geometry.ts|types|BedrockCube",
+    "src/views/app-preview/utils.ts|types|PreviewImageLoader"
   ],
   "jscpd": [
     "src/app-modules.ts#src/views/app-content/settings/community.ts",
@@ -40,17 +43,21 @@
     "src/features/recycle-bin.ts#src/features/recycle-bin.ts",
     "src/utils/3d/model2d.ts#src/utils/3d/model2d.ts",
     "src/utils/3d/model3d-spec.test.ts#src/utils/3d/model3d-spec.test.ts",
+    "src/utils/3d/model3d.test.ts#src/views/app-preview/litematic-3d.test.ts",
     "src/utils/dom/dialogs/adv-filter.test.ts#src/utils/dom/dialogs/rename.test.ts",
     "src/utils/dom/dialogs/adv-filter.ts#src/utils/dom/dialogs/modal.ts",
     "src/utils/dom/dialogs/rename.ts#src/utils/dom/dialogs/tag-editor.ts",
+    "src/views/app-content/app-content.component.test.ts#src/views/app-content/app-content.methods.test.ts",
     "src/views/app-content/site-view.ts#src/views/app-content/site/types.ts",
     "src/views/app-content/site/edit.ts#src/views/app-content/site/edit.ts",
     "src/views/app-preview/litematic-3d.ts#src/views/app-preview/skeleton.ts",
     "src/views/app-preview/wasm.ts#src/views/app-preview/wasm.ts",
+    "src/views/app-sidebar/app-sidebar.sync.test.ts#src/views/app-sidebar/app-sidebar.sync.test.ts",
     "src/views/app-sync-manager/index.ts#src/views/app-sync-manager/index.ts",
     "src/views/app-tree/bus-handlers.ts#src/views/app-tree/bus-handlers.ts",
     "src/views/app-tree/instance-actions.ts#src/views/app-tree/instance-actions.ts",
     "src/views/app-tree/row-tpl-list.ts#src/views/app-tree/row-tpl.ts",
+    "src/views/app-tree/toolbar-events.test.ts#src/views/app-tree/toolbar-events.test.ts",
     "src/views/app-tree/toolbar-events.ts#src/views/app-tree/toolbar-events.ts"
   ]
 }

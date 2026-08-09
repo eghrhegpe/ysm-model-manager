@@ -129,7 +129,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
       list.innerHTML = entries
         .map((e, i) => {
           const name = e.Name.replace(/\.(ysm|zip|7z)\.ban$/i, ".$1");
-          const size = e.Size ? fmtSize(e.Size) : "?";
+          const size = Number.isFinite(e.Size) ? fmtSize(e.Size as number) : "?";
           return `<div class="recy-item" style="animation-delay:${Math.min(i * 25, 400)}ms;display:flex;flex-direction:column;gap:2px;padding:5px 8px;border-radius:5px;background:var(--bg);font-size:var(--fs-sm)">
 <div style="display:flex;align-items:center;gap:6px">
 <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);cursor:pointer" title="点击查看详情: ${esc(e.Path)}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>

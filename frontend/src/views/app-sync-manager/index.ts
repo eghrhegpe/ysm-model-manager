@@ -388,7 +388,9 @@ export class AppSyncManager extends HTMLElement {
         path,
       );
       bus.emit("toast:show", { msg: "✅ 已推送", duration: 2000 });
+      const gen = this._gen; // P2：捕获代际，防 await 期间 instance 切换后旧代际重渲染
       await this._loadData();
+      if (gen !== this._gen) return;
       this._render();
       bus.emit("stats:refresh");
     } catch (e) {
@@ -411,7 +413,9 @@ export class AppSyncManager extends HTMLElement {
         await getApp();
       await PullSingleResourceFromInstance(rtype, path, this._instance);
       bus.emit("toast:show", { msg: "✅ 已拉取", duration: 2000 });
+      const gen = this._gen; // P2：捕获代际，防 await 期间 instance 切换后旧代际重渲染
       await this._loadData();
+      if (gen !== this._gen) return;
       this._render();
       bus.emit("stats:refresh");
     } catch (e) {

@@ -79,7 +79,7 @@ window.applyTheme = applyTheme;
 // P3 修复（code_review）：把 page-store 白名单桥接到 window，供 index.html 内联
 // DOMContentLoaded 脚本复用（经典脚本无法 import）——消除内联源硬编码第二份列表的
 // 双源漂移（新增页时内联源把新页重置回 repository 的静默回归）。
-// 红线 §3.1 只禁 `window.__*` 双下划线前缀；非 __ 前缀与 window.applyTheme 同模式。
+// 红线 §3.1 只禁双下划线前缀（window. 后接两个下划线）；非 __ 前缀与 window.applyTheme 同模式。
 (window as unknown as { PAGE_WHITELIST?: readonly string[] }).PAGE_WHITELIST = PAGE_WHITELIST;
 
 // ADR-044 策略 A：safeGet/safeSet 收敛至 utils/dom/storage.ts 统一实现——

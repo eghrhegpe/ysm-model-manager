@@ -95,7 +95,8 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       try {
         const { RenameDir, GetRepoRoot } =
           await getApp();
-        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
+        const rtype = vm._rootAttr || vm._typeFilter || RESOURCE_TYPES.YSM;
+        const repoRoot = await GetRepoRoot(rtype);
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         await RenameDir(absDir, name.trim());
         // P3 修复（code_review）：dir:rename 同样清空选中态——文件夹重命名后
@@ -126,7 +127,8 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       try {
         const { CreateDir, GetRepoRoot } =
           await getApp();
-        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
+        const rtype = vm._rootAttr || vm._typeFilter || RESOURCE_TYPES.YSM;
+        const repoRoot = await GetRepoRoot(rtype);
         const absDir = repoRoot
           ? repoRoot + "/" + dir + "/" + name.trim()
           : dir + "/" + name.trim();
@@ -156,7 +158,8 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
         // 加载仓库根目录 → 拼接绝对路径
         const { ListAllFilePaths, MoveToRecycle, RemoveDir, GetRepoRoot } =
           await getApp();
-        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
+        const rtype = vm._rootAttr || vm._typeFilter || RESOURCE_TYPES.YSM;
+        const repoRoot = await GetRepoRoot(rtype);
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const allFiles = await ListAllFilePaths(absDir);
         let count = 0;
@@ -208,7 +211,8 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       try {
         const { ScanModelEntries, GetRepoRoot } =
           await getApp();
-        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
+        const rtype = vm._rootAttr || vm._typeFilter || RESOURCE_TYPES.YSM;
+        const repoRoot = await GetRepoRoot(rtype);
         const absDir = repoRoot ? repoRoot + "/" + dir : dir;
         const entries = (await ScanModelEntries(absDir)) || [];
         if (!entries || !entries.length) {
@@ -346,7 +350,15 @@ async function runBatchToggle(
   enable: boolean,
   opts: { prefix?: string; label: string },
 ): Promise<void> {
-  if (vm._batchBusy || vm._toggleBusy) return; // 并发守卫：连点时后来的批量操作直接忽略
+  if (vm._batchBusy || vm._toggleBusy) {
+    // P2 修复：busy 命中不再静默吞事件，提示用户操作在途
+    bus.emit("toast:show", {
+      msg: "⏳ 批量操作进行中，请稍候",
+      duration: 1500,
+      type: "info",
+    });
+    return;
+  }
   vm._batchBusy = true;
   try {
     const { ToggleModelEnable } = await getApp();

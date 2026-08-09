@@ -25,6 +25,8 @@ export function registerSync(unsubs: Array<() => void>): void {
         }
         _downloadBusy = true;
         dbg("sync", "download-missing", instanceName || "all", "rtype:", rtype);
+        // P2：done 语义——catch/配置缺失分支也视为失败，带 skipped 标记通知调用方
+        let failed = false;
         try {
           const {
             ListVersionInstances,
@@ -34,7 +36,10 @@ export function registerSync(unsubs: Array<() => void>): void {
             GetRepoRoot,
           } = await getApp();
           const mcRoot = await requireMcRoot();
-          if (!mcRoot) return;
+          if (!mcRoot) {
+            failed = true;
+            return;
+          }
           const instances = (await ListVersionInstances(mcRoot)) ?? [];
           let totalOk = 0;
           let totalFail = 0;
@@ -42,6 +47,7 @@ export function registerSync(unsubs: Array<() => void>): void {
           const rtypeActual = rtype || RESOURCE_TYPES.YSM;
           const repoRoot = await GetRepoRoot(rtypeActual);
           if (!repoRoot) {
+            failed = true;
             bus.emit("toast:show", {
               msg: "请先配置该资源类型目录",
               duration: 3000,
@@ -100,6 +106,7 @@ export function registerSync(unsubs: Array<() => void>): void {
             type: totalFail > 0 ? "warn" : "success",
           });
         } catch (e) {
+          failed = true;
           bus.emit("toast:show", {
             msg: `❌ ${friendlyError(e)}`,
             duration: 5000,
@@ -107,7 +114,7 @@ export function registerSync(unsubs: Array<() => void>): void {
           });
         } finally {
           _downloadBusy = false;
-          bus.emit("sync:download:done", { token, instanceName });
+          bus.emit("sync:download:done", { token, instanceName, skipped: failed });
           bus.emit("tree:reload");
         }
       },
@@ -156,8 +163,8 @@ export function registerSync(unsubs: Array<() => void>): void {
           if (!ins.Exists) continue;
           try {
             const res = await SyncModelToggleStatus(ins.CustomDir, repoRoot);
-            totalDisable += res?.[0] || 0;
-            totalEnable += res?.[1] || 0;
+            totalDisable += res?.[0] ?? 0;
+            totalEnable += res?.[1] ?? 0;
           } catch (e) {
             errors.push(`${ins.Name}: ${String(e)}`);
           }

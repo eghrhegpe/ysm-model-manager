@@ -1,5 +1,6 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
 import { t } from "../../core/i18n/t.ts";
+import { friendlyError } from "../../utils/dom/errors.ts";
 import { treeCSS } from "./app-tree-styles.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
@@ -86,6 +87,9 @@ export class AppTree extends HTMLElement {
 
   async connectedCallback(): Promise<void> {
     this._rootAttr = this.getAttribute("root") || "";
+    // P3 修复：挂载代际捕获——二次挂载时若 root 在途被切换（attributeChangedCallback 已 ++_gen），
+    // 丢弃本代过期 _load 的渲染，防旧类型数据覆盖新树（绑定逻辑不受影响，容器不变）
+    const gen = ++this._gen;
 
     try {
       Object.assign(
@@ -101,7 +105,9 @@ export class AppTree extends HTMLElement {
       this._unsubs.push(...bindBusEvents(this));
 
       await this._load();
-      this._renderTree();
+      // P3：挂载期间 root 已切换（attributeChangedCallback 在途 ++_gen）→ 丢弃本代渲染
+      //（不 return：事件绑定/订阅与渲染解耦，容器不变，后续逻辑照常执行）
+      if (gen === this._gen) this._renderTree();
 
       // 事件委托绑定（只一次，虚拟滚动换 innerHTML 仍有效）
       const treeEl = this._root.getElementById("tree");
@@ -343,6 +349,13 @@ export class AppTree extends HTMLElement {
         msg: `✅ ${t("tree.deleted", { ok, fail: fail || 0 })}`,
         duration: 3000,
         type: "success",
+      });
+    } catch (e) {
+      // P2 修复：getApp/删除/刷新任一环节失败都要有出口，避免 unhandled rejection 静默
+      bus.emit("toast:show", {
+        msg: "❌ " + friendlyError(e),
+        duration: 5000,
+        type: "error",
       });
     } finally {
       this._deleting = false;

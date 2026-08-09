@@ -5,7 +5,7 @@ import { initVersionUpdater } from "../../../features/version-updater.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/resource/registry.ts";
 import { esc } from "../../../utils/dom/html.ts";
-import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
+import { safeGet, safeSet, safeRemove } from "../../../utils/dom/storage.ts";
 import { getApp } from "../../../wails/app.ts";
 import { t } from "../../../core/i18n/t.ts";
 
@@ -35,6 +35,15 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   const _cardRefreshers: Array<() => void> = [];
   // 异步按钮防连点：目录选择/自动检测进行中忽略后续点击（finally 释放）
   let _busy = false;
+
+  // P2 修复：async handler 统一错误出口（抽公共函数，避免 5 处相似 catch 块重复）
+  const toastError = (e: unknown): void => {
+    bus.emit("toast:show", {
+      msg: "❌ " + friendlyError(e),
+      duration: 5000,
+      type: "error",
+    });
+  };
 
   // cfg 动态索引辅助（cfgKey 来自配置字段，类型收窄为字符串索引）
   const cfgAny = cfg as unknown as Record<string, unknown>;
@@ -70,6 +79,9 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
           duration: 2000,
           type: "success",
         });
+      } catch (e) {
+        // P2 修复：SelectDirectory/onSelect 失败要有出口，避免 unhandled rejection 静默
+        toastError(e);
       } finally {
         _busy = false;
       }
@@ -84,7 +96,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     mcRoot?: string;
     linkMode?: string;
   }): Promise<void> => {
-    const theme = localStorage.getItem("theme") || "dark";
+    const theme = safeGet("theme") || "dark";
     await SaveAppConfig(
       patch.filesRoot !== undefined ? patch.filesRoot : cfg.filesRoot || "",
       patch.rpRoot !== undefined ? patch.rpRoot : cfg.resourcepackRoot || "",
@@ -284,7 +296,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         selected = await showPathPicker(root, paths);
         if (!selected) return; // 用户取消
       }
-      const theme = localStorage.getItem("theme") || "dark";
+      const theme = safeGet("theme") || "dark";
       await SaveAppConfig(
         cfg.filesRoot || "",
         cfg.resourcepackRoot || "",
@@ -303,6 +315,9 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         duration: 3000,
         type: "success",
       });
+    } catch (e) {
+      // P2 修复：GetMinecraftPaths/SaveAppConfig 失败要有出口，避免 unhandled rejection 静默
+      toastError(e);
     } finally {
       _busy = false;
     }
@@ -508,20 +523,25 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     });
     mirrorSelect.addEventListener("change", async () => {
       const val = mirrorSelect.value;
-      const { SetDownloadMirror } =
-        await getApp();
-      await SetDownloadMirror(val);
-      bus.emit("toast:show", {
-        msg:
-          "✅ 下载源已切换为 " +
-          (val === "jsdelivr"
-            ? "jsDelivr CDN"
-            : val === "githubapi"
-              ? "GitHub API"
-              : "直连"),
-        duration: 2000,
-        type: "success",
-      });
+      try {
+        const { SetDownloadMirror } =
+          await getApp();
+        await SetDownloadMirror(val);
+        bus.emit("toast:show", {
+          msg:
+            "✅ 下载源已切换为 " +
+            (val === "jsdelivr"
+              ? "jsDelivr CDN"
+              : val === "githubapi"
+                ? "GitHub API"
+                : "直连"),
+          duration: 2000,
+          type: "success",
+        });
+      } catch (e) {
+        // P2 修复：getApp/SetDownloadMirror 失败要有出口，避免 unhandled rejection 静默
+        toastError(e);
+      }
       ["direct", "jsdelivr", "githubapi"].forEach((m) => {
         const el = root.getElementById("mirror-hint-" + m);
         if (el) el.style.display = m === (val || "direct") ? "block" : "none";
@@ -598,22 +618,27 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     linkSelect.addEventListener("change", async () => {
       const val = linkSelect.value;
       updateLinkHint(val);
-      const theme = localStorage.getItem("theme") || "dark";
-      await SaveAppConfig(
-        cfg.filesRoot || "",
-        cfg.resourcepackRoot || "",
-        cfg.mcRoot || "",
-        val,
-        theme,
-      );
-      await SetLinkMode(val);
-      bus.emit("toast:show", {
-        msg: `✅ 链接模式已切换至: ${val}`,
-        duration: 2000,
-        type: "success",
-      });
-      // 自动重新链接
-      await doRelink();
+      try {
+        const theme = safeGet("theme") || "dark";
+        await SaveAppConfig(
+          cfg.filesRoot || "",
+          cfg.resourcepackRoot || "",
+          cfg.mcRoot || "",
+          val,
+          theme,
+        );
+        await SetLinkMode(val);
+        bus.emit("toast:show", {
+          msg: `✅ 链接模式已切换至: ${val}`,
+          duration: 2000,
+          type: "success",
+        });
+        // 自动重新链接
+        await doRelink();
+      } catch (e) {
+        // P2 修复：SaveAppConfig/SetLinkMode 失败要有出口，避免 unhandled rejection 静默
+        toastError(e);
+      }
     });
   }
 
@@ -738,28 +763,28 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   // 初始化 UI 控件值
   root.getElementById("set-font-size") &&
     ((root.getElementById("set-font-size") as HTMLSelectElement).value =
-      localStorage.getItem("ui-font-size") || "normal");
+      safeGet("ui-font-size") || "normal");
   root.getElementById("set-display-font") &&
     ((root.getElementById("set-display-font") as HTMLSelectElement).value =
-      localStorage.getItem("ui-display-font") || "kaiti");
+      safeGet("ui-display-font") || "kaiti");
   root.getElementById("set-card-density") &&
     ((root.getElementById("set-card-density") as HTMLSelectElement).value =
-      localStorage.getItem("ui-card-density") || "compact");
+      safeGet("ui-card-density") || "compact");
   root.getElementById("set-animations") &&
     ((root.getElementById("set-animations") as HTMLInputElement).checked =
-      localStorage.getItem("ui-animations") !== "off");
+      safeGet("ui-animations") !== "off");
   // 启动默认页面：显示「实际生效」的值——有显式配置用配置，否则回退
   // resolveInitialPage 的默认结果（仓库页）。旧写法 || "instances" 会显示
   // 一个从未生效的死默认值，与真实启动页不符（死设置遗留 bug）。
   root.getElementById("set-default-page") &&
     ((root.getElementById("set-default-page") as HTMLSelectElement).value =
-      localStorage.getItem("ui-default-page") || "repository");
+      safeGet("ui-default-page") || "repository");
 
   applyUIPref();
 
   // 基准字号变更
   root.getElementById("set-font-size")?.addEventListener("change", (e) => {
-    localStorage.setItem("ui-font-size", (e.target as HTMLSelectElement).value);
+    safeSet("ui-font-size", (e.target as HTMLSelectElement).value);
     applyUIPref();
     bus.emit("toast:show", {
       msg: "✅ 字号已更新",
@@ -770,7 +795,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   // 创作者字体变更
   root.getElementById("set-display-font")?.addEventListener("change", (e) => {
-    localStorage.setItem("ui-display-font", (e.target as HTMLSelectElement).value);
+    safeSet("ui-display-font", (e.target as HTMLSelectElement).value);
     applyUIPref();
     bus.emit("toast:show", {
       msg: "✅ 字体已更新",
@@ -781,7 +806,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   // 卡片密度变更
   root.getElementById("set-card-density")?.addEventListener("change", (e) => {
-    localStorage.setItem("ui-card-density", (e.target as HTMLSelectElement).value);
+    safeSet("ui-card-density", (e.target as HTMLSelectElement).value);
     applyUIPref();
     bus.emit("toast:show", {
       msg: "✅ 卡片密度已更新",
@@ -793,7 +818,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   // 动画开关
   root.getElementById("set-animations")?.addEventListener("change", (e) => {
     const checked = (e.target as HTMLInputElement).checked;
-    localStorage.setItem("ui-animations", checked ? "on" : "off");
+    safeSet("ui-animations", checked ? "on" : "off");
     applyUIPref();
     bus.emit("toast:show", {
       msg: checked ? "✅ 动画已开启" : "✅ 动画已关闭",
@@ -804,7 +829,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   // 默认页面变更
   root.getElementById("set-default-page")?.addEventListener("change", (e) => {
-    localStorage.setItem("ui-default-page", (e.target as HTMLSelectElement).value);
+    safeSet("ui-default-page", (e.target as HTMLSelectElement).value);
     bus.emit("toast:show", {
       msg: "✅ 默认页面已保存",
       duration: 1500,
@@ -845,7 +870,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     return map[code] || code;
   };
   const tdSaveKeymap = (km: Record<TdKeyAction, string>): void => {
-    localStorage.setItem("td-keymap", JSON.stringify(km));
+    safeSet("td-keymap", JSON.stringify(km));
   };
   const tdRenderKeymap = (): void => {
     // 重建网格前取消任何进行中的捕获，避免叠加/残留
@@ -920,7 +945,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   };
   tdRenderKeymap();
   root.getElementById("td-keymap-reset")?.addEventListener("click", () => {
-    localStorage.removeItem("td-keymap");
+    safeRemove("td-keymap");
     tdRenderKeymap();
     bus.emit("toast:show", {
       msg: "↩️ 已恢复默认键位",
@@ -933,19 +958,19 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   const csEl = root.getElementById("td-camspeed") as HTMLInputElement | null;
   const csVal = root.getElementById("td-camspeed-val");
   if (csEl) {
-    csEl.value = localStorage.getItem("td-cam-speed") || "20";
+    csEl.value = safeGet("td-cam-speed") || "20";
     if (csVal) csVal.textContent = csEl.value;
     csEl.addEventListener("input", () => {
       if (csVal) csVal.textContent = csEl!.value;
-      localStorage.setItem("td-cam-speed", csEl!.value);
+      safeSet("td-cam-speed", csEl!.value);
     });
   }
   // 默认旋转模式
   const rmEl = root.getElementById("td-rotmode") as HTMLSelectElement | null;
   if (rmEl) {
-    rmEl.value = localStorage.getItem("td-rot-mode") === "free" ? "free" : "orbit";
+    rmEl.value = safeGet("td-rot-mode") === "free" ? "free" : "orbit";
     rmEl.addEventListener("change", () => {
-      localStorage.setItem("td-rot-mode", rmEl.value);
+      safeSet("td-rot-mode", rmEl.value);
     });
   }
 
@@ -955,7 +980,12 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     const { getLang, setLang } = await import("../../../core/i18n/locale.ts");
     langSelect.value = getLang();
     langSelect.addEventListener("change", async () => {
-      await setLang(langSelect.value as "zh-CN" | "en" | "ja");
+      try {
+        await setLang(langSelect.value as "zh-CN" | "en" | "ja");
+      } catch (e) {
+        // P2 修复：语言包加载失败要有出口，避免 unhandled rejection 静默
+        toastError(e);
+      }
       // 热切换（ADR-045 增强）：不再整页 reload——setLang 内部 emit lang:changed，
       // app-content 全局订阅后重渲染当前页（t() 读取新语言包），保留应用状态
     });

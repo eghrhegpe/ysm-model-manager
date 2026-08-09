@@ -23,9 +23,14 @@ function toast(msg: string, duration = 3000, type: ToastType = "success"): void 
   bus.emit("toast:show", { msg, duration, type });
 }
 
-/** 路径安全过滤：禁止包含 .. 或绝对路径 */
+/** 路径安全过滤：禁止逃逸段（. / ..）与绝对路径（边界对称范式：覆盖上下界，精确段比较） */
 function isUnsafeFolderName(folder: string): boolean {
-  return /\.\./.test(folder) || /^[/\\]/.test(folder);
+  const trimmed = folder.trim();
+  if (!trimmed) return true;
+  // 绝对路径（以 / 或 \ 开头）或盘符前缀（C:\ 等）
+  if (/^[/\\]/.test(trimmed) || /^[A-Za-z]:/.test(trimmed)) return true;
+  // 精确段比较：仅当整段为 . 或 .. 才判逃逸（原 /\.\./ 子串匹配会误伤 "model..v2" 类合法名）
+  return trimmed.split(/[/\\]/).some((seg) => seg === "." || seg === "..");
 }
 
 /**

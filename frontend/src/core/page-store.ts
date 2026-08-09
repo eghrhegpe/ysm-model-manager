@@ -22,7 +22,7 @@ const VALID_PAGES: PageName[] = [
 
 // P3 修复（code_review）：导出白名单供 index.html 内联脚本经 window 桥接复用——
 // 原内联脚本硬编码第二份六页列表，新增页时两源漂移 → 内联源（后发射）把新页重置回
-// repository，静默启动回归。红线 §3.1 只禁 `window.__*` 双下划线前缀，非 __ 前缀与
+// repository，静默启动回归。红线 §3.1 只禁双下划线前缀（window. 后接两个下划线），非 __ 前缀与
 // window.applyTheme 同模式合规（app-modules 挂载，见 app-modules.ts）。
 export const PAGE_WHITELIST: readonly string[] = VALID_PAGES;
 

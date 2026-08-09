@@ -367,6 +367,8 @@ const STATIC_TOOLS = [
   { tool: 'build-novel-index.mjs', args: ['--check'] },
   // 脚本卫生：退出码失效 / 共享层内联 / --json 契约（WARN 不阻断，默认 rc=0）
   'check-script-hygiene.mjs',
+  // i18n key 契约：parity/占位符/漏译/语言清单漂移（warning 模式，缺口不阻断；--strict 留给 CI）
+  'i18n-check.mjs',
 ];
 
 // —— 静态检查工具分组（从 STATIC_TOOLS 派生，避免清单漂移）——

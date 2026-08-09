@@ -46,7 +46,7 @@ func TestIsInside(t *testing.T) {
 		}
 	})
 
-	t.Run("大小写不敏感（Windows 语义）→ nil", func(t *testing.T) {
+	t.Run("大小写差异（Windows 放行 / POSIX 拒绝）", func(t *testing.T) {
 		inside := filepath.Join(base, "SUB", "model.ysm")
 		// 大小写不同的基准路径
 		baseMixed := strings.ToUpper(base)
@@ -102,8 +102,10 @@ func TestIsInside_DotDotFooNoFalsePositive(t *testing.T) {
 	if err := IsInside(base, outside); err == nil {
 		t.Fatal(".. 逃逸应拒绝, got nil")
 	}
-	// 深层逃逸：base/a/../../evil 拒绝
-	deep := filepath.Join(base, "a", "..", "..", "evil.ysm")
+	// 深层逃逸：跨两层以上（rel = ../../evil.ysm）——注意 filepath.Join 会折叠中间段，
+	// 需用真实四层回溯才能产出 `../../` 前缀（code_review P3：原 `base/a/../..` 被折叠后
+	// 与浅层 `outside` 相同，未真正覆盖深层分支）
+	deep := filepath.Join(base, "a", "b", "c", "..", "..", "..", "..", "evil.ysm")
 	if err := IsInside(base, deep); err == nil {
 		t.Fatal("深层 .. 逃逸应拒绝, got nil")
 	}

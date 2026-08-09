@@ -859,18 +859,18 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `LocalCreator()` | `frontend/src/views/app-content/community-data:7` | 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） |
-| `CommunityData()` | `frontend/src/views/app-content/community-data:23` | 站点 + 创作者 + 作者 数据包 |
-| `loadCommunityData()` | `frontend/src/views/app-content/community-data:33` | 加载站点 + 创作者数据（纯数据，不碰 DOM） 自动合并本地仓库提取的作者 |
-| `fillSearch()` | `frontend/src/views/app-content/community-data:123` | 替换 {{q}} 为查询词 |
-| `fetchCommunityCreators()` | `frontend/src/views/app-content/community-data:177` | 从 GitHub 拉取 creators.json（三路回退） |
-| `mergeCommunityCreators()` | `frontend/src/views/app-content/community-data:206` | 合并社区索引到本地 creators.json |
-| `fetchCommunitySites()` | `frontend/src/views/app-content/community-data:243` | 从 GitHub 拉取 workshop_sites.json（三路回退） |
-| `mergeCommunitySites()` | `frontend/src/views/app-content/community-data:267` | 合并社区站点到本地 workshop_sites.json |
-| `DEFAULT_COMMUNITY_URL()` | `frontend/src/views/app-content/community-data:288` | 社区索引的默认 URL（可配置为社区维护的独立 creators JSON） 贡献通道：https://github.com/eghrhegpe/ysm-model-manager |
+| `LocalCreator()` | `frontend/src/views/app-content/community-data:8` | 本地合并后的创作者（绑定 WorkshopCreator + 运行时附加字段） |
+| `CommunityData()` | `frontend/src/views/app-content/community-data:24` | 站点 + 创作者 + 作者 数据包 |
+| `loadCommunityData()` | `frontend/src/views/app-content/community-data:34` | 加载站点 + 创作者数据（纯数据，不碰 DOM） 自动合并本地仓库提取的作者 |
+| `fillSearch()` | `frontend/src/views/app-content/community-data:124` | 替换 {{q}} 为查询词 |
+| `fetchCommunityCreators()` | `frontend/src/views/app-content/community-data:178` | 从 GitHub 拉取 creators.json（三路回退） |
+| `mergeCommunityCreators()` | `frontend/src/views/app-content/community-data:207` | 合并社区索引到本地 creators.json |
+| `fetchCommunitySites()` | `frontend/src/views/app-content/community-data:244` | 从 GitHub 拉取 workshop_sites.json（三路回退） |
+| `mergeCommunitySites()` | `frontend/src/views/app-content/community-data:268` | 合并社区站点到本地 workshop_sites.json |
+| `DEFAULT_COMMUNITY_URL()` | `frontend/src/views/app-content/community-data:289` | 社区索引的默认 URL（可配置为社区维护的独立 creators JSON） 贡献通道：https://github.com/eghrhegpe/ysm-model-manager |
 | `contentCSS()` | `frontend/src/views/app-content/content-css:2` | — |
-| `initDiagnostics()` | `frontend/src/views/app-content/diagnostics/community:16` | 初始化诊断页所有功能 |
-| `startDedup()` | `frontend/src/views/app-content/diagnostics/community:251` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
+| `initDiagnostics()` | `frontend/src/views/app-content/diagnostics/community:17` | 初始化诊断页所有功能 |
+| `startDedup()` | `frontend/src/views/app-content/diagnostics/community:252` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
 | `initSettings()` | `frontend/src/views/app-content/settings/community:18` | 初始化设置页所有事件绑定 |
 | `RepoAuthorLike()` | `frontend/src/views/app-content/site-view:11` | 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） |
 | `RenderSiteViewCtx()` | `frontend/src/views/app-content/site-view:14` | 竚点视图渲染上下文（index.ts _initWorkshop 传入） |
@@ -940,8 +940,8 @@
 | `stripYsgpTextHeader()` | `frontend/src/views/app-preview/utils:108` | 剥离 YSGP 文本头部，返回标准二进制格式 |
 | `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:28` | 通过前端 WASM 解码 .ysm，返回 { texture, geometry, animations } 不依赖组件实例（无 this 引用），可独立调用 |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
-| `registerResourceManagerGlobal()` | `frontend/src/views/app-resource-manager/index:51` | 全局配置刷新监听：registerGlobalHandlers 统一收集 unsub （替代顶层无守卫注册 — ADR-008 违规点，TS 化后收敛） |
-| `AppResourceManager()` | `frontend/src/views/app-resource-manager/index:82` | — |
+| `registerResourceManagerGlobal()` | `frontend/src/views/app-resource-manager/index:52` | 全局配置刷新监听：registerGlobalHandlers 统一收集 unsub （替代顶层无守卫注册 — ADR-008 违规点，TS 化后收敛） |
+| `AppResourceManager()` | `frontend/src/views/app-resource-manager/index:84` | — |
 | `PackMetaDetail()` | `frontend/src/views/app-resource-manager/tpl:7` | 详情面板元数据（ReadPackMeta / ReadShaderpackLang 返回 JSON 的兼容视图） |
 | `sidebarHTML()` | `frontend/src/views/app-resource-manager/tpl:20` | 侧栏布局（路径 + 操作栏 + 列表） |
 | `itemHTML()` | `frontend/src/views/app-resource-manager/tpl:60` | 列表项 HTML |
@@ -951,16 +951,16 @@
 | `bindCardEvents()` | `frontend/src/views/app-sidebar/events:20` | — |
 | `resetSelectedEmit()` | `frontend/src/views/app-sidebar/events:130` | 复位去重标记：组件真正卸载（disconnectedCallback）时调用—— 同组件 reload 不复位（去重跨 reload 生效），仅新挂载会话才需重置（P2 复核修复） |
 | `bindFooter()` | `frontend/src/views/app-sidebar/events:163` | — |
-| `MmdVariantGroups()` | `frontend/src/views/app-sidebar/loader:19` | MMD 变体聚合结果 |
-| `loadInstances()` | `frontend/src/views/app-sidebar/loader:26` | 从 Go 加载整合包实例列表，转换为 render 需要的格式 |
-| `groupMmdVariants()` | `frontend/src/views/app-sidebar/loader:149` | 对 MMD 类型，按父文件夹聚合 .pmx 变体文件。 |
+| `MmdVariantGroups()` | `frontend/src/views/app-sidebar/loader:20` | MMD 变体聚合结果 |
+| `loadInstances()` | `frontend/src/views/app-sidebar/loader:27` | 从 Go 加载整合包实例列表，转换为 render 需要的格式 |
+| `groupMmdVariants()` | `frontend/src/views/app-sidebar/loader:150` | 对 MMD 类型，按父文件夹聚合 .pmx 变体文件。 |
 | `renderVersionCards()` | `frontend/src/views/app-sidebar/render:6` | — |
 | `sidebarCSS()` | `frontend/src/views/app-sidebar/sidebar-css:3` | — |
 | `headerHTML()` | `frontend/src/views/app-sidebar/tpl:16` | — |
 | `footerHTML()` | `frontend/src/views/app-sidebar/tpl:35` | — |
 | `listContainerHTML()` | `frontend/src/views/app-sidebar/tpl:58` | — |
 | `vcHeaderHTML()` | `frontend/src/views/app-sidebar/tpl:77` | 单个整合包卡片头部。 |
-| `AppSyncManager()` | `frontend/src/views/app-sync-manager/index:41` | — |
+| `AppSyncManager()` | `frontend/src/views/app-sync-manager/index:42` | — |
 | `SyncItem()` | `frontend/src/views/app-sync-manager/tpl:7` | 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） |
 | `containerHTML()` | `frontend/src/views/app-sync-manager/tpl:19` | 容器骨架 |
 | `statusTabHTML()` | `frontend/src/views/app-sync-manager/tpl:58` | 状态筛选标签 HTML |

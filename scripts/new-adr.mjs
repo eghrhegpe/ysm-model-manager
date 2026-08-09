@@ -22,36 +22,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 import { spawnSync } from 'node:child_process';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 // 与 adr-check.mjs / gen-docs-index.mjs 保持一致：ADR 目录在 docs/adr（非 docs/architecture/adr）
 const ADR_DIR = path.join(ROOT, 'docs', 'adr');
 const REG_FILE = path.join(ADR_DIR, 'index.md'); // 登记表已并入 index（ADR 双文件合并）
-
-// ── 参数解析 ────────────────────────────────────────────
-
-function parseArgs(argv) {
-  const args = { title: null, slug: null, related: null, supersedes: [], dryRun: false, help: false, unknown: [] };
-  const positional = [];
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--dry-run') args.dryRun = true;
-    else if (a === '--help' || a === '-h') args.help = true;
-    else if (a === '--slug') args.slug = argv[++i] ?? null;
-    else if (a === '--related') args.related = argv[++i] ?? null;
-    else if (a === '--supersedes') {
-      const v = argv[++i] ?? '';
-      args.supersedes = v
-        .split(/[，,]/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-    } else if (a.startsWith('--') && a !== '--') {
-      // 未知 flag：不当作标题（避免 --help 类误用被推进 positional 占号）
-      args.unknown.push(a);
-    } else positional.push(a);
-  }
-  args.title = positional[0] ?? null;
-  return args;
-}
 
 function usage() {
   console.error(
@@ -230,7 +205,24 @@ function releaseLock() {
 // ── 主流程 ──────────────────────────────────────────────
 
 function main() {
-  const args = parseArgs(process.argv.slice(2));
+  // 统一走共享 parseArgs（陷阱 #12 防御同款）：--dry-run 是 bool，slug/related/supersedes 是带值；
+  // title 取位置参数 `_`[0]（共享库把裸参数收进 _，与自带版 positional[0] 等价）
+  const parsed = parseArgs(process.argv.slice(2), {
+    bools: ['dry-run'],
+    strings: ['slug', 'related', 'supersedes'],
+  });
+  const args = {
+    help: parsed.help,
+    unknown: parsed.unknown,
+    dryRun: parsed['dry-run'],
+    slug: parsed.slug,
+    related: parsed.related,
+    supersedes: (parsed.supersedes ?? '')
+      .split(/[，,]/)
+      .map((s) => s.trim())
+      .filter(Boolean), // 与自带版 --supersedes 逗号分隔语义一致
+    title: parsed._[0] ?? null,
+  };
 
   // --help / -h：输出用法退出，绝不占号（修复 --help 被当标题的误用）
   if (args.help) {

@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { ROOT, toPosix } from './_lib/scan-files.mjs';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 
@@ -71,22 +72,23 @@ function toSnakeCase(text) {
 }
 
 function main() {
-  const args = process.argv.slice(2);
+  // 统一走共享 parseArgs：bools:['leaf'] 识别 --leaf，未知 flag 收进 unknown（陷阱 #12），
+  // --help/-h 置 help，位置参数在 _（此前手写 filter 三遍）
+  const args = parseArgs(process.argv.slice(2), { bools: ['leaf'] });
 
   // --help / -h：输出用法退出，绝不创建卡片（防 --help 被当 kind）
-  if (args.includes('--help') || args.includes('-h')) {
+  if (args.help) {
     console.error('用法: node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]');
     return 0;
   }
   // 未知 flag：拒绝而非当 kind（防 --foo 类误用，与 new-adr.mjs 同款防护）
-  const unknownFlags = args.filter((a) => a.startsWith('--') && a !== '--leaf');
-  if (unknownFlags.length) {
-    console.error(`[FAIL] 未知参数: ${unknownFlags.join(', ')}（--help 查看用法）`);
+  if (args.unknown.length) {
+    console.error(`[FAIL] 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
     console.error('用法: node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]');
     return 1;
   }
 
-  const positional = args.filter((a) => !a.startsWith('--'));
+  const positional = args._;
   if (positional.length < 4) {
     console.error('用法: node scripts/new-knowledge-card.mjs <kind> <name> <category> <source_file> [--leaf]');
     process.exit(1);
@@ -98,7 +100,7 @@ function main() {
     console.error('[FAIL] kind/name/category/source_file 不能为空字符串');
     return 1;
   }
-  const isLeaf = args.includes('--leaf');
+  const isLeaf = args.leaf;
   const kind = toSnakeCase(kindRaw);
   if (!KIND_RE.test(kind)) {
     // 与 check-knowledge-drift.mjs KIND_RE 同款校验：中文/camelCase/前导数字会静默归一成必挂卡的命名（code_review P2）

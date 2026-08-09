@@ -22,6 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from './_lib/parse-args.mjs';
 
 const require = createRequire(import.meta.url);
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -29,17 +30,6 @@ const ROOT = path.resolve(SCRIPT_DIR, '..');
 const WASM_DIR = path.join(ROOT, 'frontend', 'public', 'wasm');
 const GLUE_JS = path.join(WASM_DIR, 'YSMParser.js');
 const WASM_BIN = path.join(WASM_DIR, 'YSMParser.wasm');
-
-function parseArgs(argv) {
-  const opts = { dir: path.join(ROOT, 'upstream'), json: false, limit: Infinity };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--json') opts.json = true;
-    else if (a === '--dir') opts.dir = argv[++i];
-    else if (a === '--limit') opts.limit = Number(argv[++i]) || Infinity;
-  }
-  return opts;
-}
 
 /** 解码单个 .ysm（YSGP 容器 → 文件列表），与 internal/app/wasm_decoder.go 同源逻辑。
  * 临时静音 console：YSMParser 会打印解析日志污染 stdout（--json 需纯净输出）。 */
@@ -182,7 +172,17 @@ function formatTable(rows) {
 }
 
 async function main() {
-  const opts = parseArgs(process.argv.slice(2));
+  // 统一走共享 parseArgs：--json bool、--dir/--limit 带值；limit 需 Number 转换
+  const parsed = parseArgs(process.argv.slice(2), {
+    bools: ['json'],
+    strings: ['dir', 'limit'],
+    defaults: { dir: path.join(ROOT, 'upstream') },
+  });
+  const opts = {
+    json: parsed.json,
+    dir: parsed.dir,
+    limit: parsed.limit ? Number(parsed.limit) || Infinity : Infinity,
+  };
   if (!fs.existsSync(GLUE_JS) || !fs.existsSync(WASM_BIN)) {
     console.error(`[texture-golden] 缺少 WASM 资源: ${WASM_DIR}`);
     return 1;

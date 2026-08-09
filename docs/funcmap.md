@@ -614,10 +614,10 @@
 | `LangCode()` | `frontend/src/core/i18n/locale:16` | — |
 | `_warned()` | `frontend/src/core/i18n/locale:27` | 缺失 key 告警节流（每 key 只告警一次） |
 | `loadLocale()` | `frontend/src/core/i18n/locale:36` | 加载指定语言的 JSON 包（幂等：已加载不重复 fetch）。 |
-| `getBundle()` | `frontend/src/core/i18n/locale:50` | 获取指定语言的翻译包（已加载时直接读缓存，否则回落到基准） |
-| `getLang()` | `frontend/src/core/i18n/locale:58` | 读取当前语言代码 |
-| `setLang()` | `frontend/src/core/i18n/locale:63` | 切换语言（异步加载语言包后触发事件） |
-| `initI18n()` | `frontend/src/core/i18n/locale:100` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
+| `getBundle()` | `frontend/src/core/i18n/locale:53` | 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN） |
+| `getLang()` | `frontend/src/core/i18n/locale:67` | 读取当前语言代码 |
+| `setLang()` | `frontend/src/core/i18n/locale:72` | 切换语言（异步加载语言包后触发事件） |
+| `initI18n()` | `frontend/src/core/i18n/locale:109` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
 | `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:5` | — |
 | `t()` | `frontend/src/core/i18n/t:12` | 翻译函数。 |
 | `AVAILABLE_LANGS()` | `frontend/src/core/i18n/t:33` | 可用语言列表（由构建脚本确保与 locales/ 目录对齐） |

@@ -27,6 +27,7 @@ export const zhCN: Record<string, string> = {
   "common.empty": "暂无数据",
   "common.back": "返回",
   "common.close": "关闭",
+  "common.clear": "清空",
 
   // ── 右键菜单 ──
   "menu.openFolder": "打开文件夹",
@@ -88,6 +89,16 @@ export const zhCN: Record<string, string> = {
   "import.queue": "队列",
   "import.imported": "已导入",
   "import.dropHint": "拖拽模型文件 … 或文件夹到此处，或点击选择文件",
+  "import.tab": "导入",
+
+  // ── 模型仓库（content tab 栏） ──
+  "repo.tab.tree": "文件树",
+  "repo.tab.dedup": "去重",
+  "repo.tab.oldest": "资历最深",
+
+  // ── 整合包实例 ──
+  "instances.tab.versions": "版本列表",
+  "instances.emptyHint": "点击左侧整合包查看模型",
 
   // ── 诊断页 ──
   "diagnostics.title": "诊断与冲突",
@@ -99,11 +110,13 @@ export const zhCN: Record<string, string> = {
   "diagnostics.failed": "失败",
   "diagnostics.skipped": "跳过",
   "diagnostics.noLogs": "暂无日志",
+  "diagnostics.noRuntimeLogs": "暂无运行时日志",
   "diagnostics.startScan": "开始扫描",
 
   // ── 回收站 ──
   "recycle.title": "回收站",
   "recycle.empty": "清空回收站",
+  "recycle.tab": "回收站",
 
   // ── 关于页 ──
   "about.title": "关于 YSM 模型管理器",

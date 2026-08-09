@@ -41,15 +41,24 @@ export async function loadLocale(lang: string): Promise<void> {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     bundles[lang] = await resp.json();
   } catch (e) {
-    console.warn(`[i18n] 加载 ${lang} 失败:`, e);
-    bundles[lang] = {};
+    // P2（code_review）：失败不缓存空对象——`if (bundles[lang]) return` 会把 {} 当
+    // "已加载"阻断重试，且 getBundle 的空对象 truthy 让 zh-CN 兜底永不触发。
+    // 删除键允许后续 setLang/initI18n 重试（瞬态网络失败可自愈）。
+    console.warn(`[i18n] 加载 ${lang} 失败（未缓存，可重试）:`, e);
+    delete bundles[lang];
   }
 }
 
-/** 获取指定语言的翻译包（已加载时直接读缓存，否则回落到基准） */
+/** 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN） */
 export function getBundle(lang?: string): Bundle {
   const code = lang ?? _currentLang;
-  return bundles[code] ?? bundles["zh-CN"] ?? {};
+  const cur = bundles[code];
+  // P2（code_review）：空对象 {} 是 truthy——`bundles[code] ?? zh-CN` 会被空包短路，
+  // 文档承诺的"否则回落到基准"永不执行；只返回非空包，否则回落非空 zh-CN
+  if (cur && Object.keys(cur).length > 0) return cur;
+  const base = bundles["zh-CN"];
+  if (base && Object.keys(base).length > 0) return base;
+  return {};
 }
 
 // ── 语言读写 ──────────────────────────────────────────

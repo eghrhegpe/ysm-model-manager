@@ -92,7 +92,7 @@ func (a *App) GetSchematicVoxelData(path string) string {
 
 // ReadSchematic 读取 .schematic 文件基本信息
 func (a *App) ReadSchematic(path string) string {
-	result := litematic.ParseSchematic(path)
+	result := litematic.ParseSchematicSummary(path)
 	if result == nil {
 		return "{}"
 	}

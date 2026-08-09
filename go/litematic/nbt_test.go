@@ -105,18 +105,18 @@ func TestGetList_WrongType(t *testing.T) {
 	}
 }
 
-// ====== getCompoundKey ======
+// ====== getAny ======
 
 func TestGetCompoundKey_Found(t *testing.T) {
 	m := map[string]any{"key": "value"}
-	v := getCompoundKey(m, "key")
+	v := getAny(m, "key")
 	if v.(string) != "value" {
 		t.Errorf("期望 value, 得到 %v", v)
 	}
 }
 
 func TestGetCompoundKey_NotFound(t *testing.T) {
-	v := getCompoundKey(map[string]any{}, "nope")
+	v := getAny(map[string]any{}, "nope")
 	if v != nil {
 		t.Errorf("未找到应返回 nil, 得到 %v", v)
 	}

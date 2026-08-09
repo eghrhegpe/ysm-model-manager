@@ -70,10 +70,10 @@ func TestSanitizePath(t *testing.T) {
 		{"ok/path/../nested", false},
 	}
 	for _, tc := range tests {
-		_, errMsg := sanitizePath(tc.path, "test")
-		gotErr := errMsg != ""
+		_, err := sanitizePath(tc.path, "test")
+		gotErr := err != nil
 		if gotErr != tc.wantErr {
-			t.Errorf("sanitizePath(%q) err=%q, wantErr=%v", tc.path, errMsg, tc.wantErr)
+			t.Errorf("sanitizePath(%q) err=%v, wantErr=%v", tc.path, err, tc.wantErr)
 		}
 	}
 }

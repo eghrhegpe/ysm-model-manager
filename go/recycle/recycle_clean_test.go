@@ -9,7 +9,7 @@ import (
 	"ysm-model-manager/go/types"
 )
 
-func TestCleanInstanceDir_RemovesRepoFilesOnly(t *testing.T) {
+func TestRemoveRepoDuplicates_RemovesRepoFilesOnly(t *testing.T) {
 	base := t.TempDir()
 	dir := filepath.Join(base, "inst")
 	repoRoot := filepath.Join(base, "repo")
@@ -29,7 +29,7 @@ func TestCleanInstanceDir_RemovesRepoFilesOnly(t *testing.T) {
 	// 非仓库文件：inst 有 user.ysm，repo 没有 → 保留
 	_ = os.WriteFile(filepath.Join(dir, "user.ysm"), []byte("x"), 0644)
 
-	count := CleanInstanceDir(dir, repoRoot, recycleRoot)
+	count := RemoveRepoDuplicates(dir, repoRoot, recycleRoot)
 	if count != 1 {
 		t.Fatalf("应清理 1 个，实际 %d", count)
 	}
@@ -41,10 +41,10 @@ func TestCleanInstanceDir_RemovesRepoFilesOnly(t *testing.T) {
 	}
 }
 
-func TestCleanInstanceDir_NoRepoRoot(t *testing.T) {
+func TestRemoveRepoDuplicates_NoRepoRoot(t *testing.T) {
 	dir := t.TempDir()
 	_ = os.WriteFile(filepath.Join(dir, "m.ysm"), []byte("x"), 0644)
-	if count := CleanInstanceDir(dir, "", ""); count != 0 {
+	if count := RemoveRepoDuplicates(dir, "", ""); count != 0 {
 		t.Fatalf("无仓库根应返回 0，实际 %d", count)
 	}
 }

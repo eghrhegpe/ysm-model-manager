@@ -40,15 +40,15 @@ func Get(rtype string) Handler {
 // sanitizePath 清理路径，确保不含路径遍历组件（..）
 // 注意：上层调用（installer.Install）已通过 paths.IsInside 做了严格校验，
 // 此处的检查是防御纵深，防止 importer 被独立使用时出现路径遍历。
-func sanitizePath(path, label string) (string, string) {
+func sanitizePath(path, label string) (string, error) {
 	cleaned := filepath.Clean(path)
 	// filepath.Clean 会规范化路径，但若 path 以 .. 开头（如 ../etc），Clean 后可能仍含 ..。
 	// 此处检查清理后的结果是否仍有 .. 前缀或组件。
 	sep := string(filepath.Separator)
 	if cleaned == ".." || strings.HasPrefix(cleaned, ".."+sep) || strings.Contains(cleaned, sep+".."+sep) || strings.HasSuffix(cleaned, sep+"..") {
-		return cleaned, fmt.Sprintf("%s 包含非法路径 '..'", label)
+		return cleaned, fmt.Errorf("%s 包含非法路径 '..'", label)
 	}
-	return cleaned, ""
+	return cleaned, nil
 }
 
 // ===== SimpleCopyImporter =====
@@ -74,14 +74,13 @@ func (s *SimpleCopyImporter) Import(srcPath, dstDir string) string {
 	}
 
 	// 路径清理与遍历防护
-	var errMsg string
-	srcPath, errMsg = sanitizePath(srcPath, "源路径")
-	if errMsg != "" {
-		return errMsg
+	srcPath, err := sanitizePath(srcPath, "源路径")
+	if err != nil {
+		return err.Error()
 	}
-	dstDir, errMsg = sanitizePath(dstDir, "目标路径")
-	if errMsg != "" {
-		return errMsg
+	dstDir, err = sanitizePath(dstDir, "目标路径")
+	if err != nil {
+		return err.Error()
 	}
 
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
@@ -229,14 +228,13 @@ func (d *DirectoryCopyImporter) Import(srcPath, dstDir string) string {
 	}
 
 	// 路径清理与遍历防护
-	var errMsg string
-	srcPath, errMsg = sanitizePath(srcPath, "源路径")
-	if errMsg != "" {
-		return errMsg
+	srcPath, err := sanitizePath(srcPath, "源路径")
+	if err != nil {
+		return err.Error()
 	}
-	dstDir, errMsg = sanitizePath(dstDir, "目标路径")
-	if errMsg != "" {
-		return errMsg
+	dstDir, err = sanitizePath(dstDir, "目标路径")
+	if err != nil {
+		return err.Error()
 	}
 
 	// 判断 srcPath 是文件还是目录

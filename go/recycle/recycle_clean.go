@@ -13,12 +13,12 @@ import (
 	"ysm-model-manager/go/types"
 )
 
-// CleanLogger 清理操作日志回调（薄壳注入 App.logger.Add）
-type CleanLogger func(name, src, dst string, size int64, status, msg string)
+// CleanOpLogger 清理操作日志回调（薄壳注入 App.logger.Add）
+type CleanOpLogger func(name, src, dst string, size int64, status, msg string)
 
-// CleanInstanceDir 清理整合包子目录中仓库已有的文件：
+// RemoveRepoDuplicates 清理整合包子目录中仓库已有的文件：
 // 在 recycleRoot 内的移入回收站（可恢复），否则直接删除（仓库侧无损可重推）
-func CleanInstanceDir(dir, repoRoot, recycleRoot string) int {
+func RemoveRepoDuplicates(dir, repoRoot, recycleRoot string) int {
 	targets := fsutil.WalkAllFiles(dir, true)
 	if repoRoot == "" {
 		// 没有仓库根目录时不做处理
@@ -55,7 +55,7 @@ func CleanInstanceDir(dir, repoRoot, recycleRoot string) int {
 }
 
 // DeduplicateEntries 按 SHA256 哈希分组去重：保留每组第一个，其余移入回收站
-func DeduplicateEntries(entries []types.ModelEntry, recycleRoot string, logger CleanLogger) (removed, kept int) {
+func DeduplicateEntries(entries []types.ModelEntry, recycleRoot string, logger CleanOpLogger) (removed, kept int) {
 	hashGroups := make(map[string][]types.ModelEntry)
 	for _, e := range entries {
 		if e.Hash == "" {

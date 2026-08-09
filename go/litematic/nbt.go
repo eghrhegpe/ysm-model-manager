@@ -90,7 +90,7 @@ func getList(m map[string]any, key string) []any {
 	return nil
 }
 
-func getCompoundKey(m map[string]any, key string) any {
+func getAny(m map[string]any, key string) any {
 	return m[key]
 }
 

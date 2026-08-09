@@ -182,9 +182,9 @@ func TestConvertPreviewImage_Empty(t *testing.T) {
 	}
 }
 
-// ====== ParseSchematic ======
+// ====== ParseSchematicSummary ======
 
-func TestParseSchematic_Valid(t *testing.T) {
+func TestParseSchematicSummary_Valid(t *testing.T) {
 	// 构造一个最小 schematic NBT 文件
 	root := nbtCompound("",
 		nbtInt("Version", 2),
@@ -215,7 +215,7 @@ func TestParseSchematic_Valid(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := ParseSchematic(path)
+	result := ParseSchematicSummary(path)
 	if result == nil {
 		t.Fatal("期望非 nil")
 	}
@@ -227,25 +227,25 @@ func TestParseSchematic_Valid(t *testing.T) {
 	}
 }
 
-func TestParseSchematic_NonExistent(t *testing.T) {
-	result := ParseSchematic("/nonexistent/path.schematic")
+func TestParseSchematicSummary_NonExistent(t *testing.T) {
+	result := ParseSchematicSummary("/nonexistent/path.schematic")
 	if result != nil {
 		t.Errorf("不存在文件应返回 nil, 得到 %v", result)
 	}
 }
 
-func TestParseSchematic_NotGzip(t *testing.T) {
+func TestParseSchematicSummary_NotGzip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bad.schematic")
 	if err := os.WriteFile(path, []byte("notgzip"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	result := ParseSchematic(path)
+	result := ParseSchematicSummary(path)
 	if result != nil {
 		t.Errorf("非 gzip 应返回 nil, 得到 %v", result)
 	}
 }
 
-func TestParseSchematic_NotNBT(t *testing.T) {
+func TestParseSchematicSummary_NotNBT(t *testing.T) {
 	// gzip 但非 NBT 数据
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
@@ -255,7 +255,7 @@ func TestParseSchematic_NotNBT(t *testing.T) {
 	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
 		t.Fatal(err)
 	}
-	result := ParseSchematic(path)
+	result := ParseSchematicSummary(path)
 	if result != nil {
 		t.Errorf("非 NBT 应返回 nil, 得到 %v", result)
 	}

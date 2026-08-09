@@ -168,7 +168,7 @@ func buildRegionInfo(region map[string]any) *regionInfo {
 	palette := make([]string, len(paletteList))
 	for i, elem := range paletteList {
 		if elemMap, ok := elem.(map[string]any); ok {
-			nameTag := getCompoundKey(elemMap, "Name")
+			nameTag := getAny(elemMap, "Name")
 			if name, ok := nameTag.(string); ok {
 				palette[i] = MapColor(name)
 			} else {
@@ -294,7 +294,7 @@ func BuildNbtVoxelData(path string, maxBlocks int) (*types.LitematicVoxelData, e
 	paletteColors := make([]string, len(paletteList))
 	for i, elem := range paletteList {
 		if elemMap, ok := elem.(map[string]any); ok {
-			nameTag := getCompoundKey(elemMap, "Name")
+			nameTag := getAny(elemMap, "Name")
 			if name, ok := nameTag.(string); ok {
 				paletteColors[i] = MapColor(name)
 			} else {

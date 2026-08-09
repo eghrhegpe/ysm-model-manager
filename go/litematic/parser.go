@@ -92,7 +92,7 @@ func aggregateBlockStatsFromPalette(regions map[string]any) []types.LitematicBlo
 		paletteNames := make([]string, len(paletteList))
 		for i, elem := range paletteList {
 			if elemMap, ok := elem.(map[string]any); ok {
-				if nameTag := getCompoundKey(elemMap, "Name"); nameTag != nil {
+				if nameTag := getAny(elemMap, "Name"); nameTag != nil {
 					if name, ok := nameTag.(string); ok {
 						paletteNames[i] = name
 					}
@@ -170,7 +170,7 @@ func convertPreviewImage(data []byte) string {
 	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
-func ParseSchematic(path string) map[string]interface{} {
+func ParseSchematicSummary(path string) map[string]interface{} {
 	root, err := openGzRoot(path)
 	if err != nil {
 		return nil
@@ -298,7 +298,7 @@ func ParseNbtStructure(path string) map[string]interface{} {
 		counts := map[string]int{}
 		for _, elem := range paletteList {
 			if elemMap, ok := elem.(map[string]any); ok {
-				nameTag := getCompoundKey(elemMap, "Name")
+				nameTag := getAny(elemMap, "Name")
 				if name, ok := nameTag.(string); ok && name != "" {
 					cn := ResolveBlockZH(name)
 					counts[cn]++

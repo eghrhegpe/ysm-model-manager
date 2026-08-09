@@ -140,12 +140,12 @@
 | `NewSimpleCopy()` | `go/importer/importer:62` | NewSimpleCopy 创建简单文件复制导入器 |
 | `SimpleCopyImporter.Type()` | `go/importer/importer:66` | — |
 | `SimpleCopyImporter.Import()` | `go/importer/importer:68` | — |
-| `NewDirectoryCopy()` | `go/importer/importer:214` | NewDirectoryCopy 创建文件夹复制导入器 |
-| `DirectoryCopyImporter.Type()` | `go/importer/importer:218` | — |
-| `DirectoryCopyImporter.Import()` | `go/importer/importer:223` | Import 复制源文件夹到目标目录 srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身 若 srcPath 是文件则取父目录，若是目录则直接使用 |
+| `NewDirectoryCopy()` | `go/importer/importer:213` | NewDirectoryCopy 创建文件夹复制导入器 |
+| `DirectoryCopyImporter.Type()` | `go/importer/importer:217` | — |
+| `DirectoryCopyImporter.Import()` | `go/importer/importer:222` | Import 复制源文件夹到目标目录 srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身 若 srcPath 是文件则取父目录，若是目录则直接使用 |
 | `Handler()` | `go/importer/importer:21` | Handler 资源导入策略接口 |
 | `SimpleCopyImporter()` | `go/importer/importer:57` | — |
-| `DirectoryCopyImporter()` | `go/importer/importer:209` | — |
+| `DirectoryCopyImporter()` | `go/importer/importer:208` | — |
 
 ## Go·安装
 
@@ -173,7 +173,7 @@
 | `ResolveBlockName()` | `go/litematic/block_ids:12` | ResolveBlockName 把旧版数字 ID（schematic v1）解析为注册名。 |
 | `ResolveBlockZH()` | `go/litematic/block_ids:26` | ResolveBlockZH 把注册名映射为中文名（自动去除 minecraft: 前缀）。 |
 | `ParseMeta()` | `go/litematic/parser:14` | — |
-| `ParseSchematic()` | `go/litematic/parser:173` | — |
+| `ParseSchematicSummary()` | `go/litematic/parser:173` | — |
 | `ParseNbtStructure()` | `go/litematic/parser:267` | — |
 | `BuildVoxelData()` | `go/litematic/voxel:92` | BuildVoxelData 构建体素渲染数据（按颜色分组） |
 | `BuildNbtVoxelData()` | `go/litematic/voxel:263` | — |
@@ -216,7 +216,7 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `CleanInstanceDir()` | `go/recycle/recycle_clean:21` | CleanInstanceDir 清理整合包子目录中仓库已有的文件： 在 recycleRoot 内的移入回收站（可恢复），否则直接删除（仓库侧无损可重推） |
+| `RemoveRepoDuplicates()` | `go/recycle/recycle_clean:21` | RemoveRepoDuplicates 清理整合包子目录中仓库已有的文件： 在 recycleRoot 内的移入回收站（可恢复），否则直接删除（仓库侧无损可重推） |
 | `DeduplicateEntries()` | `go/recycle/recycle_clean:58` | DeduplicateEntries 按 SHA256 哈希分组去重：保留每组第一个，其余移入回收站 |
 | `CleanOpLogger()` | `go/recycle/recycle_clean:17` | CleanOpLogger 清理操作日志回调（薄壳注入 App.logger.Add） |
 | `New()` | `go/recycle/recycle:32` | New 创建回收站管理器，root 是资源根目录，回收站为 root/.recycle |
@@ -522,22 +522,22 @@
 | `App.SetModelTags()` | `internal/app/app_tags:34` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
 | `App.ListByTag()` | `internal/app/app_tags:39` | ListByTag 返回所有打了指定标签的文件路径列表 |
 | `App.AllTags()` | `internal/app/app_tags:44` | AllTags 返回所有被使用的标签（按使用次数降序） |
-| `App.LoadWorkshopSites()` | `internal/app/app_workshop:56` | — |
-| `App.SaveWorkshopSites()` | `internal/app/app_workshop:64` | — |
-| `App.LoadWorkshopCreators()` | `internal/app/app_workshop:109` | — |
-| `App.SaveWorkshopCreators()` | `internal/app/app_workshop:117` | — |
-| `App.SaveWorkshopCreatorsBySite()` | `internal/app/app_workshop:126` | SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动 |
-| `App.SaveWorkshopPresetsBySite()` | `internal/app/app_workshop:142` | SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动 |
-| `App.LoadGitHubRepos()` | `internal/app/app_workshop:162` | — |
-| `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:170` | — |
-| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:183` | ========== CSV 导出/导入 ========== |
-| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:195` | — |
-| `App.ImportWorkshopSitesJSONFile()` | `internal/app/app_workshop:208` | — |
-| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:224` | — |
-| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:250` | — |
-| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:257` | — |
-| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:270` | — |
-| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:308` | — |
+| `App.LoadWorkshopSites()` | `internal/app/app_workshop:49` | — |
+| `App.SaveWorkshopSites()` | `internal/app/app_workshop:57` | — |
+| `App.LoadWorkshopCreators()` | `internal/app/app_workshop:102` | — |
+| `App.SaveWorkshopCreators()` | `internal/app/app_workshop:110` | — |
+| `App.SaveWorkshopCreatorsBySite()` | `internal/app/app_workshop:119` | SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动 |
+| `App.SaveWorkshopPresetsBySite()` | `internal/app/app_workshop:135` | SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动 |
+| `App.LoadGitHubRepos()` | `internal/app/app_workshop:155` | — |
+| `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:163` | — |
+| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:176` | ========== CSV 导出/导入 ========== |
+| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:188` | — |
+| `App.ImportWorkshopSitesJSONFile()` | `internal/app/app_workshop:201` | — |
+| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:217` | — |
+| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:243` | — |
+| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:250` | — |
+| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:263` | — |
+| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:301` | — |
 | `NewApp()` | `internal/app/app:39` | — |
 | `App.SetApp()` | `internal/app/app:55` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
 | `App.SetMainWindow()` | `internal/app/app:60` | SetMainWindow 注入主窗口实例，避免依赖 Window.Current()。 |
@@ -617,7 +617,7 @@
 | `getBundle()` | `frontend/src/core/i18n/locale:57` | 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN）。 |
 | `getLang()` | `frontend/src/core/i18n/locale:71` | 读取当前语言代码 |
 | `setLang()` | `frontend/src/core/i18n/locale:76` | 切换语言（异步加载语言包后触发事件） |
-| `initI18n()` | `frontend/src/core/i18n/locale:115` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
+| `initI18n()` | `frontend/src/core/i18n/locale:117` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
 | `en()` | `frontend/src/core/i18n/locales/en:4` | — |
 | `ja()` | `frontend/src/core/i18n/locales/ja:5` | — |
 | `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:6` | — |

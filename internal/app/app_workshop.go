@@ -12,17 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 )
 
-// atomicWrite 原子写入：写 tmp → rename，防崩溃半写
-func atomicWrite(path string, data []byte) error {
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
-}
 
 // ========== 创意工坊站点配置 ==========
 func workshopSitesPath() string {
@@ -66,7 +59,7 @@ func (a *App) SaveWorkshopSites(sites []types.WorkshopSite) error {
 	if err != nil {
 		return err
 	}
-	return atomicWrite(workshopSitesPath(), data)
+	return fsutil.WriteFileAtomic(workshopSitesPath(), data)
 }
 
 func defaultWorkshopSites() []types.WorkshopSite {
@@ -119,7 +112,7 @@ func (a *App) SaveWorkshopCreators(list []types.WorkshopCreator) error {
 	if err != nil {
 		return err
 	}
-	return atomicWrite(creatorsPath(), data)
+	return fsutil.WriteFileAtomic(creatorsPath(), data)
 }
 
 // SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动
@@ -172,7 +165,7 @@ func (a *App) ResetWorkshopConfigs() ([]types.WorkshopSite, error) {
 	a.BackupWorkshopCreators()
 	sites := defaultWorkshopSites()
 	data, _ := json.MarshalIndent(sites, "", "  ")
-	if err := atomicWrite(workshopSitesPath(), data); err != nil {
+	if err := fsutil.WriteFileAtomic(workshopSitesPath(), data); err != nil {
 		return nil, err
 	}
 	os.Remove(creatorsPath())
@@ -199,7 +192,7 @@ func (a *App) ExportWorkshopSitesJSONFile() (string, error) {
 		return "", err
 	}
 	path := workshopSitesPath()
-	if err := atomicWrite(path, data); err != nil {
+	if err := fsutil.WriteFileAtomic(path, data); err != nil {
 		return "", err
 	}
 	return path, nil

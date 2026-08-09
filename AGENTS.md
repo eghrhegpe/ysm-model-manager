@@ -10,6 +10,7 @@
 > 新 ADR 落地前先 Grep `> \*\*状态\*\*:.*(规划|实施中|部分实现)` in `docs/adr` 看是否已有类似实现；若触及既有 ADR 决策，就在对方首部标注「被 [ADR-NNN] 取代」。
 > 写新 ADR 走叫号脚本（命令与流程见下方「ADR 规则」，禁止手写编号）。编号只允许给 ADR、novel 写。
 > 改完即验，顺带提交（构建/跑得起来）：Go → `go build ./go/...`；前端 → `npx vite build` + `npm run typecheck`（tsc --noEmit，ADR-014 门槛）。 涉及文档改动时用 `node scripts/doctor.mjs --docs`（轻量秒级，跳过 Go/前端编译与测试）；改代码或发版前用全量 `node scripts/doctor.mjs`。
+> 如果测试写入难度较大，建议改进源码的可测性与潜在风险。
 > 信任本机改动，提交代码时：先测试 → `git status --short` 抓清单 → 按功能 `git add <通过测试的路径...>` → `git commit`。正常的更改，无需询问。先提交`docs/`,捎带了无关文件也别怕。
 > 最后询问用户是否需要处理预料之外的报错。
 > 放弃低效的 `git stash` / `git stash push` / `git stash pop` 指令。

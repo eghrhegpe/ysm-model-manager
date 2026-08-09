@@ -11,6 +11,7 @@ import { getApp } from "../../wails/app.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { statsCardHTML } from "./tpl.ts";
+import { buildBoneNamesText } from "./bone-names.ts";
 import { screenshotPreview, renderModel3D } from "../../utils/3d/model3d.ts";
 import { renderMultiAngle } from "./screenshot-renderer.ts";
 import { preloadModel } from "./model3d-loader.ts";
@@ -242,13 +243,7 @@ export async function loadModel2D(
     boneHint.className = "ysm-hint";
     boneHint.textContent = `${model.boneCount} 骨骼`;
     boneBtn.onclick = (): void => {
-      const lines: string[] = [`模型: ${modelPath}`, `骨骼总数: ${model.boneCount}`];
-      for (const b of model.bones || []) {
-        const cs = b.cubes || [];
-        lines.push(
-          `${b.name}${cs.length ? ` (${cs.length} 方)` : " (结构骨骼,无方)"}`,
-        );
-      }
+      const lines = buildBoneNamesText(modelPath, model.boneCount, model.bones || []);
       const blob = new Blob([lines.join("\n")], { type: "text/plain" });
       const a = document.createElement("a");
       a.download =

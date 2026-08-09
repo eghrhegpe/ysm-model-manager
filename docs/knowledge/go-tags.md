@@ -42,9 +42,11 @@ use_when:
 
 ## 不变量
 
-- `sync.RWMutex` 保护：读用 RLock、写用 Lock；`load()` 以 `s.data != nil` 守卫保证只加载一次
+- `sync.RWMutex` 保护：读用 RLock、写用 Lock；`load()` 以 `s.data != nil` 守卫保证只加载一次。**JSON `null` 内容守卫破口已封**（P3 修复：Unmarshal 成功但内容恰为 `null` 时 m 为 nil map → 现补 `if m == nil { m = make(...) }`，防每次 Get/Set 重复整文件读盘）
 - 标签统一 `TrimSpace`，空白标签被丢弃
-- `SetTags` 每次写后都落盘（JSON 缩进格式），`GetTags` 返回副本防外部篡改
+- `SetTags` 每次写后都落盘（JSON 缩进格式，**tmp + `os.Rename` 原子替换**，rename 失败清理 tmp；`TestSaveLeavesNoTmp` 守护）；`GetTags` 返回副本防外部篡改
+- **损坏恢复**：tags.json 解析失败 → 备份 `.corrupt`（保留现场）→ 重建空存储（读路径恢复 + 写路径自我修复，`TestCorruptFileRecovers` 守护）——第 4 批修复，知识卡原卡未记载已补
+- P3 观察：`save()` 失败（磁盘满/权限）时内存已变更、磁盘未更新，属「内存优先、落盘尽力」契约（调用方拿到 error 但 GetTags 读到新值，进程崩溃则上次写丢失）；`ListByTag` 空 tag 返回 nil 与 GetTags 的 `[]string{}` 约定不一致（P4）
 
 ## 相关
 

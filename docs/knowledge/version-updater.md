@@ -50,12 +50,12 @@ use_when:
 ## 不变量
 
 - 静默检查必须先过 `canCheck()` 频次闸门；`markChecked()` 只在 `CheckUpdate()` 成功后写，失败不占用 6h 窗口
-- 静默路径异常一律静默捕获，绝不向启动流程抛错
+- 静默路径异常一律静默捕获，绝不向启动流程抛错（**`canCheck()` 已移入 try**——P3 修复：原在 try 外，隐私模式 localStorage 抛错时 promise reject 靠调用方 `.catch` 兜底而非模块内静默）
 - 手动检查按钮的文案/disabled 必须在 `finally` 中恢复，防止异步失败后按钮卡死（致命陷阱 #3）
 - `promptUpdate` 内部捕获 `doUpdate` 异常转 toast，不再向外抛（由外层 finally 恢复按钮）
 - 更新日志展示前必须经 textContent 转义（先写 `textContent` 再取 `innerHTML`），长度截断 2000 字符
-- `DoUpdate` 返回值非 `"success"` 一律视为失败抛错，不做部分成功假设
-- `doUpdate` 末尾的 `RestartApplication()` 是防御性死代码（Go 侧已 `os.Exit(0)`），不得据此假设前端能拿到「更新完成」后续控制权
+- `DoUpdate` 返回值非 `"success"` 一律视为失败抛错，不做部分成功假设（**此分支与 releaseNotes 转义截断零测试覆盖**，P3 观察）
+- `doUpdate` 末尾的 `RestartApplication()` 是防御性死代码（Go 侧已 `os.Exit(0)`），不得据此假设前端能拿到「更新完成」后续控制权（测试断言该路径属锁防御行为）
 
 ## 相关
 

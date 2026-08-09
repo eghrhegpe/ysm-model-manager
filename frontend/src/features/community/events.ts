@@ -3,7 +3,8 @@
 import { bus } from "../../bus.ts";
 import { modalConfirm } from "../../utils/dom/dialogs/modal.ts";
 import { renderModelList, isModelMissing, type WorkshopModel } from "./render.ts";
-import { createDownloadQueue, type DownloadTask } from "./download-queue.ts";
+import { createDownloadQueue } from "./download-queue.ts";
+import { buildDownloadTasks, classifyDownloadSize } from "./download-tasks.ts";
 import { ICONS } from "../../utils/icon/workshop-icons.ts";
 import { parseModelName } from "../../utils/dom/display.ts";
 import { getApp } from "../../wails/app.ts";
@@ -149,17 +150,7 @@ export function bindRepoEvents(
   if (dlSelBtn) {
     dlSelBtn.addEventListener("click", async () => {
       if (queue.isDownloading() || !selectedSet.size) return;
-      const tasks = [...selectedSet]
-        .map((name) => models.find((m) => m.name === name))
-        .filter((m): m is WorkshopModel => Boolean(m))
-        .map(
-          (m): DownloadTask => ({
-            url: dlPrefix + m.path.replace(/\\/g, "/"),
-            saveDir: "",
-            name: m.name,
-            size: m.size || 0,
-          }),
-        );
+      const tasks = buildDownloadTasks(models, selectedSet, dlPrefix);
       await queue.enqueue(tasks);
     });
   }
@@ -256,9 +247,8 @@ export function bindRepoEvents(
     const cbName = btn.dataset.name || "";
     const url = btn.dataset.url || "";
     const size = parseInt(btn.dataset.size || "", 10) || 0;
-    const FOUR_MB = 4 * 1024 * 1024;
-    const TEN_MB = 10 * 1024 * 1024;
-    if (size > TEN_MB) {
+    const decision = classifyDownloadSize(size);
+    if (decision === "reject") {
       bus.emit("toast:show", {
         msg: "📏 文件超过 10MB，已拒绝下载",
         duration: 3000,
@@ -266,7 +256,7 @@ export function bindRepoEvents(
       });
       return;
     }
-    if (size > FOUR_MB) {
+    if (decision === "confirm") {
       const ok = await modalConfirm({
         title: "文件较大",
         icon: "📏",

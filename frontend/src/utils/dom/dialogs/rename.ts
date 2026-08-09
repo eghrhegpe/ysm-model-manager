@@ -4,6 +4,7 @@ import { parseModelName } from "../../../utils/dom/display.ts";
 import { closeDlg, registerDlg, esc } from "./modal.ts";
 import { getApp } from "../../../wails/app.ts";
 import { RESOURCE_TYPES } from "../../../utils/resource/types.ts";
+import { buildRenameName, validateRenameFields, type RenameFields } from "./rename-format.ts";
 
 /**
  * 弹出重命名对话框
@@ -119,23 +120,24 @@ export async function showRenameDialog(
         }
       };
 
-    const update = (): void => {
-      const a = (box.querySelector("#rn-author") as HTMLInputElement).value.trim();
-      const w = (box.querySelector("#rn-work") as HTMLInputElement).value.trim();
-      const c = (box.querySelector("#rn-chara") as HTMLInputElement).value.trim();
-      const v = (box.querySelector("#rn-variant") as HTMLInputElement).value.trim();
-      const d = (box.querySelector("#rn-date") as HTMLInputElement).value.trim();
-      const ext = currentName.includes(".")
-        ? currentName.split(".").pop()
+    /** 读取五个输入框字段（update 与提交共用，避免 jscpd 重复） */
+    const readFields = (): RenameFields => ({
+      author: (box.querySelector("#rn-author") as HTMLInputElement).value.trim(),
+      work: (box.querySelector("#rn-work") as HTMLInputElement).value.trim(),
+      chara: (box.querySelector("#rn-chara") as HTMLInputElement).value.trim(),
+      variant: (box.querySelector("#rn-variant") as HTMLInputElement).value.trim(),
+      date: (box.querySelector("#rn-date") as HTMLInputElement).value.trim(),
+    });
+
+    /** 从当前文件名推导扩展名（无扩展名用默认资源类型） */
+    const getExt = (): string =>
+      currentName.includes(".")
+        ? currentName.split(".").pop() || ""
         : RESOURCE_TYPES.YSM;
-      const parts: string[] = [];
-      if (a) parts.push("[" + a + "]");
-      parts.push("【" + (w || "未知") + "】");
-      parts.push(c || "?");
-      if (v) parts.push("-" + v);
-      if (d) parts.push(" (" + d + ")");
+
+    const update = (): void => {
       (box.querySelector("#rn-preview") as HTMLElement).textContent =
-        parts.join("") + "." + ext;
+        buildRenameName(readFields(), getExt());
     };
 
     ["rn-author", "rn-work", "rn-chara", "rn-variant", "rn-date"].forEach(
@@ -153,53 +155,22 @@ export async function showRenameDialog(
     (box.querySelector("#rn-cancel") as HTMLElement).onclick = (): void =>
       close(null);
     (box.querySelector("#rn-ok") as HTMLElement).onclick = async (): Promise<void> => {
-      const a = (box.querySelector("#rn-author") as HTMLInputElement).value.trim();
-      const w = (box.querySelector("#rn-work") as HTMLInputElement).value.trim();
-      const c = (box.querySelector("#rn-chara") as HTMLInputElement).value.trim();
-      const v = (box.querySelector("#rn-variant") as HTMLInputElement).value.trim();
-      const d = (box.querySelector("#rn-date") as HTMLInputElement).value.trim();
-      const ext = currentName.includes(".")
-        ? currentName.split(".").pop()
-        : RESOURCE_TYPES.YSM;
-      if (!a || !c) {
+      const f = readFields();
+      const ext = getExt();
+      const err = validateRenameFields(f, ext);
+      if (err) {
         const errEl = box.querySelector("#rn-err") as HTMLElement | null;
-        if (errEl) errEl.textContent = "⚠️ 作者、角色名不能为空";
-        const focusEl = box.querySelector(
-          !a ? "#rn-author" : "#rn-chara",
-        ) as HTMLElement | null;
-        focusEl?.focus();
+        if (errEl) errEl.textContent = err;
+        // 仅必填缺失时聚焦对应输入框（与原实现行为一致）
+        if (!f.author || !f.chara) {
+          const focusEl = box.querySelector(
+            !f.author ? "#rn-author" : "#rn-chara",
+          ) as HTMLElement | null;
+          focusEl?.focus();
+        }
         return;
       }
-      // 检查非法字符
-      const illegal = /[<>:"\\|?*\/\u0000-\u001f]/;
-      const allFields = [a, w, c, v, d].filter(Boolean);
-      if (allFields.some((f) => illegal.test(f))) {
-        const errEl = box.querySelector("#rn-err") as HTMLElement | null;
-        if (errEl)
-          errEl.textContent =
-            '⚠️ 文件名不能包含 < > : " / \\ | ? * 等字符';
-        return;
-      }
-      // 检查新文件名长度
-      const newName =
-        "[" +
-        a +
-        "]【" +
-        (w || "未知") +
-        "】" +
-        c +
-        (v ? "-" + v : "") +
-        (d ? " (" + d + ")" : "") +
-        "." +
-        ext;
-      if (newName.length > 255) {
-        const errEl = box.querySelector("#rn-err") as HTMLElement | null;
-        if (errEl)
-          errEl.textContent =
-            "⚠️ 文件名过长（" + newName.length + " 字符），请精简";
-        return;
-      }
-      close(newName);
+      close(buildRenameName(f, ext));
     };
   });
 }

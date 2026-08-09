@@ -17,6 +17,9 @@ import { ROOT } from './_lib/scan-files.mjs';
 
 const CHECK = process.argv.includes('--check');
 const RELEASES_DIR = path.join(ROOT, 'docs', 'releases');
+/** 豁免 tag：非正式发版（预发布/开源准备等临时标记），不要求发版说明。
+ * v1.7.0-open-source-prep.20260617 为开源准备临时 tag，非正式版本（历史遗留）。 */
+const EXEMPT_TAGS = new Set(['v1.7.0-open-source-prep.20260617']);
 
 
 function run(cmd) {
@@ -130,6 +133,7 @@ function checkReleaseNotes() {
   }
 
   const missing = tags.filter((t) => {
+    if (EXEMPT_TAGS.has(t)) return false; // 预发布/临时 tag 豁免（非正式发版）
     // 兼容历史 compare 双文件模式（index.md：v1.0.2~v1.7.0 早期遗留）——
     // `vX.md` 或 `vX-compare.md` 任一存在即算已覆盖
     return !fs.existsSync(path.join(RELEASES_DIR, `${t}.md`))

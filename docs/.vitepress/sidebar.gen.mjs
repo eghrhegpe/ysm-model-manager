@@ -130,6 +130,14 @@ export const autoSidebar = [
         "link": "/releases/release-process"
       },
       {
+        "text": "v1.0.0 — 初始版本（YSM Model Manager 基线）",
+        "link": "/releases/v1.0.0"
+      },
+      {
+        "text": "v1.0.1 — 回收站/同步/安装器修复 + 路径安全",
+        "link": "/releases/v1.0.1"
+      },
+      {
         "text": "v1.0.2 — 开发者对比（技术细节）",
         "link": "/releases/v1.0.2-compare"
       },
@@ -180,6 +188,10 @@ export const autoSidebar = [
       {
         "text": "v1.0.8 — 开发者对比（技术细节）",
         "link": "/releases/v1.0.8-compare"
+      },
+      {
+        "text": "v1.0.8.1 — ysm-parser-ethics 文档 + 发版说明补档",
+        "link": "/releases/v1.0.8.1"
       },
       {
         "text": "v1.0.8 — 2D 模型预览 + YSMParser 集成",
@@ -532,6 +544,18 @@ export const autoSidebar = [
       {
         "text": "v1.8.5 — 注册表驱动 + 测试覆盖 + 治理收口",
         "link": "/releases/v1.8.5"
+      },
+      {
+        "text": "v1.8.6 — 3D 渲染引擎重构 + 资源配置重构 + 调试清理",
+        "link": "/releases/v1.8.6"
+      },
+      {
+        "text": "v1.8.7 — Go 路径纹理映射补齐（WASM 对等能力）",
+        "link": "/releases/v1.8.7"
+      },
+      {
+        "text": "v1.8.8 — 3D 渲染文档 + 多模型测试数据 + Go 解码修复",
+        "link": "/releases/v1.8.8"
       },
       {
         "text": "v1.8.9 — 3D 渲染引擎重构 + 注册表驱动 + 文档治理",

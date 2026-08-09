@@ -281,6 +281,17 @@ export const zhCN: Record<string, string> = {
   // ── 创作者频道 ──
   "community.fromLocal": "来自本地仓库",
 
+  // ── 预览详情页 ──
+  "preview.modelInfo": "模型信息",
+  "preview.parsing": "正在解析模型文件",
+  "preview.cannotParse": "无法解析此文件",
+  "preview.unknownError": "未知错误",
+  "preview.parseFailed": "解析失败",
+  "preview.resourcePack": "资源包",
+  "preview.readFailed": "读取失败",
+  "preview.shaderPack": "光影包",
+  "preview.title3d": "3D 预览",
+
   // ── 错误消息 ──
   "error.fallback": "操作失败",
   "error.unknown": "未知错误",

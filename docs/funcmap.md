@@ -908,18 +908,18 @@
 | `cacheGet()` | `frontend/src/views/app-preview/cache:43` | — |
 | `cacheSet()` | `frontend/src/views/app-preview/cache:65` | — |
 | `previewCSS()` | `frontend/src/views/app-preview/css:2` | — |
-| `showModelDetail()` | `frontend/src/views/app-preview/detail:15` | 显示模型详情（YSM 模型） |
-| `showResourcePack()` | `frontend/src/views/app-preview/detail:102` | 显示资源包信息（pack.mcmeta + pack.png） |
-| `showShaderPack()` | `frontend/src/views/app-preview/detail:139` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
+| `showModelDetail()` | `frontend/src/views/app-preview/detail:16` | 显示模型详情（YSM 模型） |
+| `showResourcePack()` | `frontend/src/views/app-preview/detail:103` | 显示资源包信息（pack.mcmeta + pack.png） |
+| `showShaderPack()` | `frontend/src/views/app-preview/detail:140` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
 | `BedrockCube()` | `frontend/src/views/app-preview/geometry:4` | Bedrock 方块 |
 | `BedrockBone()` | `frontend/src/views/app-preview/geometry:15` | Bedrock 骨骼 |
 | `BedrockGeometry()` | `frontend/src/views/app-preview/geometry:30` | 解析后的 Bedrock geometry |
 | `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:63` | 从 JSON 字符串解析 Bedrock geometry |
 | `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:25` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:32` | — |
-| `invalidateLitematicPreview()` | `frontend/src/views/app-preview/litematic-meta:24` | P2 修复（code_review）：任意新预览派发时推进代际——原 litematicGen 只在 showLitematic 自身递增，litematic A 解析中切到 YS |
-| `showLitematic()` | `frontend/src/views/app-preview/litematic-meta:105` | 显示投影文件详情面板（tab 布局） |
-| `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:233` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |
+| `invalidateLitematicPreview()` | `frontend/src/views/app-preview/litematic-meta:25` | P2 修复（code_review）：任意新预览派发时推进代际——原 litematicGen 只在 showLitematic 自身递增，litematic A 解析中切到 YS |
+| `showLitematic()` | `frontend/src/views/app-preview/litematic-meta:106` | 显示投影文件详情面板（tab 布局） |
+| `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:234` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |
 | `loadModelData()` | `frontend/src/views/app-preview/loader:13` | 加载模型几何数据 + 纹理 + 作者信息 统一路径：缓存 → WASM 解码 → Go AnalyzeBedrockModel 兜底 |
 | `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:6` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
 | `ModelSpec()` | `frontend/src/views/app-preview/model3d-loader:16` | Go 返回的 3D spec（models 数组） |
@@ -928,7 +928,7 @@
 | `parseYsmJsonDirect()` | `frontend/src/views/app-preview/parse-ysm-json:7` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:7` | — |
 | `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:13` | — |
-| `loadModel2D()` | `frontend/src/views/app-preview/skeleton:35` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this._root, this._appendDebug 等） |
+| `loadModel2D()` | `frontend/src/views/app-preview/skeleton:36` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this._root, this._appendDebug 等） |
 | `ModelDetailMeta()` | `frontend/src/views/app-preview/tpl:5` | 模型统计元数据（modelDetailHTML 入参） |
 | `modelDetailHTML()` | `frontend/src/views/app-preview/tpl:19` | 模型详情面板（仓库页面） |
 | `StatsCardModel()` | `frontend/src/views/app-preview/tpl:57` | 模型统计卡片（statsCardHTML 入参的几何视图） |

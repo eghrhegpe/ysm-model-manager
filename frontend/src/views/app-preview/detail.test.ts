@@ -30,9 +30,10 @@ function makeCtx(): PreviewCtx {
     _root: root,
     _loadPreviewImage: vi.fn().mockResolvedValue(null),
     _unsubs: [],
+    decodeYsmViaWasm: vi.fn(),
     _decodeYsmViaWasm: vi.fn(),
     _appendDebug: vi.fn(),
-  } as unknown as PreviewCtx;
+  };
 }
 
 beforeEach(() => {

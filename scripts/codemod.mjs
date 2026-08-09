@@ -47,20 +47,39 @@ import { ROOT } from './_lib/scan-files.mjs';
 
 const FRONTEND = path.join(ROOT, 'frontend');
 const require_ = createRequire(path.join(FRONTEND, 'package.json'));
-const { Project, SyntaxKind } = require_('ts-morph');
 const TS_CONFIG = path.join(FRONTEND, 'tsconfig.json');
 const FILESELF = fileURLToPath(import.meta.url);
 
-if (!fs.existsSync(TS_CONFIG)) {
-  console.error(`❌ 未找到 tsconfig: ${TS_CONFIG}`);
-  console.error('请在项目根目录运行此脚本');
-  process.exit(1);
+// ts-morph 惰性加载：只有 rename/move/add-param 执行路径才 require。
+// --help / -h / 未知 flag 拦截是纯 CLI 行为，不应依赖 frontend/node_modules
+// （契约测试在无依赖环境跑，顶层 require 会让 help 也崩，见陷阱 #12）
+let project = null;
+let SyntaxKind = null;
+let Project = null;
+function ensureTsMorph() {
+  if (project) return;
+  if (!fs.existsSync(TS_CONFIG)) {
+    console.error(`❌ 未找到 tsconfig: ${TS_CONFIG}`);
+    console.error('请在项目根目录运行此脚本');
+    process.exit(1);
+  }
+  try {
+    ({ Project, SyntaxKind } = require_('ts-morph'));
+    project = new Project({
+      tsConfigFilePath: TS_CONFIG,
+      skipAddingFilesFromTsConfig: false,
+    });
+  } catch (e) {
+    if (e?.code === 'MODULE_NOT_FOUND') {
+      console.error('❌ 未找到 ts-morph 依赖（frontend/node_modules 缺失）。');
+      console.error('   请先在 frontend/ 下执行 npm install 后再运行重命名/移动/加参命令；');
+      console.error('   help 与旗标守卫无需该依赖。');
+    } else {
+      console.error('❌ 初始化 ts-morph 失败:', e?.message ?? e);
+    }
+    process.exit(1);
+  }
 }
-
-const project = new Project({
-  tsConfigFilePath: TS_CONFIG,
-  skipAddingFilesFromTsConfig: false,
-});
 
 // ── helpers ────────────────────────────────────────────────────────────
 
@@ -478,6 +497,7 @@ if (!cmd || cmd === 'help' || args.includes('--help') || args.includes('-h')) {
 
 switch (cmd) {
   case 'rename-function': {
+    ensureTsMorph();
     const [, oldName, newName] = args;
     if (!oldName || !newName) {
       console.error('用法: node scripts/codemod.mjs rename-function <旧名> <新名>');
@@ -487,6 +507,7 @@ switch (cmd) {
     break;
   }
   case 'move-function': {
+    ensureTsMorph();
     const [, funcName, destPath] = args;
     if (!funcName || !destPath) {
       console.error('用法: node scripts/codemod.mjs move-function <函数名> <目标文件>');
@@ -496,6 +517,7 @@ switch (cmd) {
     break;
   }
   case 'add-param': {
+    ensureTsMorph();
     const [, funcName, paramSignature, defaultValue] = args;
     if (!funcName || !paramSignature) {
       console.error('用法: node scripts/codemod.mjs add-param <函数名> <参数签名> [默认值]');

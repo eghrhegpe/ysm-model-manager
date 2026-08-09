@@ -88,6 +88,9 @@ func TestSplitVer(t *testing.T) {
 		{"1.2.3.4", []int{1, 2, 3, 4}},
 		{"", []int{0}},
 		{"x.y.z", []int{0, 0, 0}},
+		// P3 补测：dev 语义（未注入版本号的开发构建）→ splitVer("dev") 归零 [0]，
+		// 与正常版本比较恒旧 → 更新检查恒提示新版（updater 无 dev 特判，知识卡已标注）
+		{"dev", []int{0}},
 		// 脏 tag 防御：normalize 只去一个 v（vv1.1.0 → "v1.1.0"）；splitVer 直接处理
 		// "vv1.1.0" 时首段 "vv1" Atoi 失败按 0 → [0,1,0]
 		{"v1.1.0", []int{0, 1, 0}},

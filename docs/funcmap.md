@@ -36,11 +36,11 @@
 | 前端·特性 | 13 | 61 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 29 | 101 |
+| 前端·工具 | 30 | 104 |
 | frontend/views | 54 | 147 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **173** | **798** |
+| **合计** | **174** | **801** |
 
 ## Go·头像
 
@@ -670,9 +670,9 @@
 | `directImport()` | `frontend/src/features/import-executor:76` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
 | `importFolder()` | `frontend/src/features/import-executor:107` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） |
 | `executeCollected()` | `frontend/src/features/import-executor:154` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
-| `normalizeRepoName()` | `frontend/src/features/import-queue:25` | 仓库文件名归一化为「纯名」键（⚠️ 重名预警的 repoFiles Set 与查询共用契约）： 先剥 `.ban` 再剥扩展名（顺序不可反）——`foo.ysm` 与 `foo.y |
-| `ImportQueueHost()` | `frontend/src/features/import-queue:33` | app-content 组件实例（initImportQueue 依赖的成员） |
-| `initImportQueue()` | `frontend/src/features/import-queue:39` | 初始化导入队列，返回清理函数 |
+| `normalizeRepoName()` | `frontend/src/features/import-queue:26` | 仓库文件名归一化为「纯名」键（⚠️ 重名预警的 repoFiles Set 与查询共用契约）： 先剥 `.ban` 再剥扩展名（顺序不可反）——`foo.ysm` 与 `foo.y |
+| `ImportQueueHost()` | `frontend/src/features/import-queue:34` | app-content 组件实例（initImportQueue 依赖的成员） |
+| `initImportQueue()` | `frontend/src/features/import-queue:40` | 初始化导入队列，返回清理函数 |
 | `loadOldestModel()` | `frontend/src/features/oldest-models:25` | 加载资历最深、仓库评分、热力图和每日推荐 |
 | `RecycleHost()` | `frontend/src/features/recycle-bin:11` | app-content 组件实例（initRecycleBin 依赖的成员） |
 | `isPathInRoot()` | `frontend/src/features/recycle-bin:22` | 判断条目路径是否位于资源根目录内（带路径分隔符边界，P3 修复）。 |
@@ -782,6 +782,9 @@
 | `AdvFilterValue()` | `frontend/src/utils/dom/dialogs/adv-filter` | — |
 | `AdvFilterResult()` | `frontend/src/utils/dom/dialogs/adv-filter:17` | — |
 | `modalAdvFilter()` | `frontend/src/utils/dom/dialogs/adv-filter:24` | 弹出高级筛选弹窗 |
+| `rebuildParsedName()` | `frontend/src/utils/dom/dialogs/batch-rename-util:14` | 按 YSM 命名规范重建文件名：`[作者]【作品】角色 (日期).ext(.ban)` - 作者/作品空值跳过；角色缺省回退到「剥 .ban 与扩展名后的文件名」； - 扩展名取原 |
+| `ReplaceResult()` | `frontend/src/utils/dom/dialogs/batch-rename-util:34` | — |
+| `applyReplaceToName()` | `frontend/src/utils/dom/dialogs/batch-rename-util:44` | 查找替换：分离扩展名，仅对文件名主体做替换。 |
 | `BatchRenameChange()` | `frontend/src/utils/dom/dialogs/batch-rename:18` | 应用变更载荷 |
 | `showBatchRenameDialog()` | `frontend/src/utils/dom/dialogs/batch-rename:47` | 弹出批量重命名对话框 重复打开时先结算上一个 Promise，调用方 await 不会永远悬挂 |
 | `esc()` | `frontend/src/utils/dom/dialogs/modal` | — |

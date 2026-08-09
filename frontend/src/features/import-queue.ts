@@ -14,6 +14,7 @@ import {
   importFolder as execImportFolder,
 } from "./import-executor.ts";
 import { showRenameDialog } from "../utils/dom/dialogs/rename.ts";
+import { buildRenameName } from "../utils/dom/dialogs/rename-format.ts";
 
 const extsStr = ALL_EXTS.join(" ");
 
@@ -221,14 +222,9 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       "-" +
       String(new Date().getMonth() + 1).padStart(2, "0");
     const d = manualDate || (autoOn ? autoDate : "");
-    const parts: string[] = [];
-    if (a) parts.push("[" + a + "]");
-    parts.push("【" + (w || "未知") + "】");
-    parts.push(c || "?");
-    if (v) parts.push("-" + v);
-    if (d) parts.push(" (" + d + ")");
     const ext = currentFileName?.split(".").pop() || RESOURCE_TYPES.YSM;
-    const preview = parts.join("") + "." + ext;
+    // 拼装逻辑与重命名对话框同源（单一事实来源：rename-format.ts buildRenameName）
+    const preview = buildRenameName({ author: a, work: w, chara: c, variant: v, date: d }, ext);
     (root.getElementById("dl-preview") as HTMLElement).textContent = preview;
 
     // 检查冲突（防抖）

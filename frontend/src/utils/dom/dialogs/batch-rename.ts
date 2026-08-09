@@ -5,7 +5,7 @@ import { parseModelName, type ParsedModelName } from "../../../utils/dom/display
 import { stagger } from "../../../utils/animation/stagger.ts";
 import { registerDlg, closeDlg } from "./modal.ts";
 import { esc } from "../../../utils/dom/html.ts";
-import { RESOURCE_TYPES } from "../../../utils/resource/types.ts";
+import { rebuildParsedName, applyReplaceToName } from "./batch-rename-util.ts";
 
 /** 批量条目（ModelEntry 子集） */
 interface BatchEntry {
@@ -69,21 +69,10 @@ export function showBatchRenameDialog(
 
   const updateAll = (): void => {
     items.forEach((it) => {
-      const a = it._author || it.p.author;
-      const w = it._work || it.p.work;
-      // P2 修复：剥 .ban 尾缀后再取扩展名/角色名——banned 文件 foo.ysm.ban
-      // 原实现 ext 取 "ban"、角色名残留 ".ysm"，与重命名对话框 getExt 同源缺陷
-      const isBan = /\.ban$/i.test(it.Name);
-      const clean = it.Name.replace(/\.ban$/i, "");
-      const c = it.p.chara || clean.replace(/\.\w+$/, "");
-      const d = it.p.date || "";
-      const ext = clean.match(/\.(\w+)$/)?.[1] || RESOURCE_TYPES.YSM;
-      const parts: string[] = [];
-      if (a) parts.push("[" + a + "]");
-      if (w) parts.push("【" + w + "】");
-      parts.push(c);
-      if (d) parts.push(" (" + d + ")");
-      it.newName = parts.join("") + "." + ext + (isBan ? ".ban" : "");
+      it.newName = rebuildParsedName(it.Name, it.p, {
+        author: it._author,
+        work: it._work,
+      });
       it.changed = it.newName !== it.Name;
     });
   };
@@ -97,17 +86,8 @@ export function showBatchRenameDialog(
     const cnt = document.getElementById("br-changed");
     if (cnt) delete cnt.dataset.regexErr;
     items.forEach((it) => {
-      try {
-        // 分离扩展名，只对文件名主体做替换
-        const extMatch = it.Name.match(/(\.[^.]+)$/);
-        const ext = extMatch ? extMatch[1] : "";
-        const body = extMatch ? it.Name.slice(0, -ext.length) : it.Name;
-        const newBody = isRegex
-          ? body.replace(new RegExp(findText, "g"), replaceText)
-          : body.replaceAll(findText, replaceText);
-        it.newName = (newBody || body) + ext;
-        it.changed = it.newName !== it.Name;
-      } catch {
+      const r = applyReplaceToName(it.Name, findText, replaceText, isRegex);
+      if (!r.ok) {
         // 正则无效时保持原名，提示用户
         const cnt2 = document.getElementById("br-changed");
         if (cnt2 && !cnt2.dataset.regexErr) {
@@ -118,7 +98,10 @@ export function showBatchRenameDialog(
             type: "warn",
           });
         }
+        return;
       }
+      it.newName = r.newName;
+      it.changed = it.newName !== it.Name;
     });
   };
 

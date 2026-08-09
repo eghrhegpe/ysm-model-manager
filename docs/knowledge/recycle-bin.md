@@ -53,12 +53,12 @@ use_when:
 
 ## 不变量
 
-- `_loadGen` generation 守卫：每个 `await` 后 `if (gen !== _loadGen) return`，防止快速切换资源类型时旧结果覆盖新列表
+- `_loadGen` generation 守卫：每个 `await` 后 `if (gen !== _loadGen) return`，防止快速切换资源类型时旧结果覆盖新列表（首个守卫在 GetRepoRoot/ListRecycleBin await 后；getApp await 前无守卫，语义成立）
 - 清空回收站与单条永久删除必须先过 `modalConfirm`（danger 样式）二次确认，不可直接执行
-- 列表仅显示路径前缀匹配当前类型 `GetRepoRoot` 根目录的条目（**带路径分隔符边界**：`path === root || path.startsWith(root + "/")`，防 `ysm2/` 误入 `ysm/`，P3 修复），路径分隔符统一转 `/` 再比较；`GetRepoRoot` 返回空时回退显示全量条目（回退语义属设计取舍）
+- 列表仅显示路径前缀匹配当前类型 `GetRepoRoot` 根目录的条目（**带路径分隔符边界**：`path === root || path.startsWith(root + "/")`，防 `ysm2/` 误入 `ysm/`，P3 修复），路径分隔符统一转 `/` 再比较；`GetRepoRoot` 返回空时回退显示全量条目（回退语义属设计取舍）；**空 `Path` 条目一律排除**（P3 修复：防回退全量时渲染 `data-path=""` 点击发 `model:select {path:""}`）
 - 显示名需剥离 `.ban` 后缀（`replace(/\.(ysm|zip|7z)\.ban$/i, ".$1")`）后走 `renderDisplayName`
 - 列表点击监听只在 init 绑一次并在 cleanup 成对移除；渲染时 `innerHTML` 重建的按钮用 `btn.onclick` 赋值（覆盖式，不累积）
-- 所有异常路径必须 toast 反馈（`friendlyError` 包装），恢复/删除失败需回滚条目 `leaving` 类并把按钮 `disabled` 解锁
+- 所有异常路径必须 toast 反馈（`friendlyError` 包装，`loadRecycleBin` 失败分支走列表内联错误渲染属例外——用户仍可见错误但非 toast，知识卡措辞已限定），恢复/删除失败需回滚条目 `leaving` 类并把按钮 `disabled` 解锁
 
 ## 相关
 

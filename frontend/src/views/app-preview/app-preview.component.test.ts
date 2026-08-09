@@ -21,7 +21,7 @@ vi.mock("../../wails/app.ts", () => ({
 }));
 
 // mock bindings（app-preview 全部动态 import）：DetectResourceType 用于分流断言。
-// 返回 "shaderpack"（RESOURCE_TYPES.SHADER）→ _showModelDetail 走 showShaderPack
+// 返回 "shaderpack"（RESOURCE_TYPES.SHADER）→ _showModelDetail 走 showSimplePreview
 // （仅渲染图标+名称，无 bindings 深链），避免 showModelDetail 链的 ReadFileBytes 等
 vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   DetectResourceType: vi.fn().mockResolvedValue("shaderpack"),
@@ -63,7 +63,7 @@ describe("app-preview 生命周期配对", () => {
     await sleep(50);
     bus.emit("model:select", { path: "/repo/a.ysm", isDir: false });
     await sleep(100);
-    // DetectResourceType mock 返回 "shaderpack" → showShaderPack 渲染 `📦 shaderpack`
+    // DetectResourceType mock 返回 "shaderpack" → showSimplePreview 渲染 `📦 shaderpack`
     const content = el.shadowRoot?.querySelector("#preview-content")?.textContent || "";
     expect(content).toContain("shaderpack");
     unmountElement(el);

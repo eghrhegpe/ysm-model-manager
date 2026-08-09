@@ -50,7 +50,7 @@ export const MOCK_DATA = {
   GetResourceInstanceStatus: [],
   ClearScanCache: undefined,
   GetPackInfo: null,
-  LoadWorkshopSites: [],
+  DefaultWorkshopSites: [],
   LoadWorkshopCreators: [],
   ListModelAuthors: [],
   ScanLocalAuthors: [],

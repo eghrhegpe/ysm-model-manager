@@ -127,9 +127,9 @@ func SaveAvatarData(safeName string, data []byte, mime string) string {
 	return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
 }
 
-// DecodeOneAvatar 从模型文件中提取指定所有者的头像。
+// ExtractAvatarURI 从模型文件中提取指定所有者的头像 data URI。
 // modelPath 支持 .ysm / .zip / .7z / .json（解压目录）。
-func DecodeOneAvatar(modelPath, cacheDir, safeName string) string {
+func ExtractAvatarURI(modelPath, safeName string) string {
 	ext := strings.ToLower(filepath.Ext(modelPath))
 	var authors []authorEntry
 

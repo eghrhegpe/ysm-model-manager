@@ -1,5 +1,5 @@
 // ===== 详情面板测试 =====
-// 覆盖：showShaderPack 简单类型渲染、showResourcePack 资源包信息成功/失败、
+// 覆盖：showSimplePreview 简单类型渲染、showResourcePack 资源包信息成功/失败、
 // showModelDetail YSM 详情渲染与解析失败分支
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PreviewCtx } from "./utils.ts";
@@ -21,7 +21,7 @@ vi.mock("./skeleton.ts", () => ({
   loadModel2D: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { showModelDetail, showResourcePack, showShaderPack } from "./detail.ts";
+import { showModelDetail, showResourcePack, showSimplePreview } from "./detail.ts";
 
 function makeCtx(): PreviewCtx {
   const host = document.createElement("div");
@@ -43,17 +43,17 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-describe("showShaderPack 简单类型预览", () => {
+describe("showSimplePreview 简单类型预览", () => {
   it("渲染图标、标签与文件名", async () => {
     const ctx = makeCtx();
-    await showShaderPack(ctx, "/dir/光影包.zip", { icon: "☀️", label: "光影包" });
+    await showSimplePreview(ctx, "/dir/光影包.zip", { icon: "☀️", label: "光影包" });
     expect(ctx.root.innerHTML).toContain("☀️ 光影包");
     expect(ctx.root.innerHTML).toContain("光影包.zip");
   });
 
   it("无 opts → 默认图标与标签", async () => {
     const ctx = makeCtx();
-    await showShaderPack(ctx, "/dir/x.ysm");
+    await showSimplePreview(ctx, "/dir/x.ysm");
     expect(ctx.root.innerHTML).toContain("☀️ 光影包");
   });
 });

@@ -25,7 +25,7 @@ vi.mock("./wasm.ts", () => ({ decodeYsmViaWasm }));
 const detailSpies = vi.hoisted(() => ({
   showModelDetail: vi.fn(),
   showResourcePack: vi.fn(),
-  showShaderPack: vi.fn(),
+  showSimplePreview: vi.fn(),
 }));
 vi.mock("./detail.ts", () => detailSpies);
 
@@ -141,11 +141,11 @@ describe("_showModelDetail — 类型分流", () => {
     unmountElement(el);
   });
 
-  it("其他已知类型（shaderpack）→ showShaderPack", async () => {
+  it("其他已知类型（shaderpack）→ showSimplePreview", async () => {
     const el = mountPreview();
     appObj.DetectResourceType.mockResolvedValue(RESOURCE_TYPES.SHADER);
     await el._showModelDetail("/repo/s.zip");
-    expect(detailSpies.showShaderPack).toHaveBeenCalledWith(
+    expect(detailSpies.showSimplePreview).toHaveBeenCalledWith(
       el,
       "/repo/s.zip",
       expect.objectContaining({ icon: "📦", label: "shaderpack" }),

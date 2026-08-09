@@ -9,7 +9,6 @@ const mkParsed = (over: Partial<ParsedModelName> = {}): ParsedModelName => ({
   author: "",
   work: "",
   chara: "",
-  character: "",
   date: "",
   ext: "ysm",
   ...over,

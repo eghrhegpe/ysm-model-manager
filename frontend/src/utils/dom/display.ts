@@ -9,7 +9,6 @@ export interface ParsedModelName {
   author: string;
   work: string;
   chara: string;
-  character: string;
   date: string;
   ext: string;
 }
@@ -59,7 +58,6 @@ export function parseModelName(raw: string): ParsedModelName {
     author,
     work,
     chara: chara || "",
-    character: chara || "",
     date,
     ext: extMatch ? extMatch[1] : "",
   };

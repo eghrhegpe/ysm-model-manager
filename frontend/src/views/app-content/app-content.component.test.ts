@@ -40,7 +40,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   LoadAppConfig: vi.fn().mockResolvedValue({}),
   GetMinecraftPaths: vi.fn().mockResolvedValue([]),
   GetPackInfo: vi.fn().mockResolvedValue(null),
-  LoadWorkshopSites: vi.fn().mockResolvedValue([]),
+  DefaultWorkshopSites: vi.fn().mockResolvedValue([]),
   LoadWorkshopCreators: vi.fn().mockResolvedValue([]),
   ListModelAuthors: vi.fn().mockResolvedValue([]),
   ScanLocalAuthors: vi.fn().mockResolvedValue([]),

@@ -59,7 +59,7 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 			}
 			continue
 		}
-		dataURI := avatar.DecodeOneAvatar(modelPath, cacheDir, safe)
+		dataURI := avatar.ExtractAvatarURI(modelPath, safe)
 		if dataURI != "" {
 			result[author] = dataURI
 		}
@@ -109,7 +109,7 @@ func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 	os.MkdirAll(cacheDir, 0755)
 	safe := avatar.SafeName(authorName)
 	info["step"] = "extracting"
-	dataURI := avatar.DecodeOneAvatar(foundPath, cacheDir, safe)
+	dataURI := avatar.ExtractAvatarURI(foundPath, safe)
 	if dataURI == "" {
 		info["status"] = "extract_failed"
 		return info

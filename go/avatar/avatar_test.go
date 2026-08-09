@@ -81,8 +81,8 @@ func TestReadFileFromZip(t *testing.T) {
 	}
 }
 
-func TestDecodeOneAvatarInvalidPath(t *testing.T) {
-	result := DecodeOneAvatar("/nonexistent/file.ysm", t.TempDir(), "test")
+func TestExtractAvatarURIInvalidPath(t *testing.T) {
+	result := ExtractAvatarURI("/nonexistent/file.ysm", "test")
 	if result != "" {
 		t.Fatalf("expected empty, got %q", result)
 	}
@@ -116,16 +116,16 @@ func TestToBytes(t *testing.T) {
 	}
 }
 
-// ====== DecodeOneAvatar ======
+// ====== ExtractAvatarURI ======
 
-func TestDecodeOneAvatar_NonExistent(t *testing.T) {
-	result := DecodeOneAvatar("/nonexistent/file.ysm", t.TempDir(), "test")
+func TestExtractAvatarURI_NonExistent(t *testing.T) {
+	result := ExtractAvatarURI("/nonexistent/file.ysm", "test")
 	if result != "" {
 		t.Fatalf("expected empty, got %q", result)
 	}
 }
 
-func TestDecodeOneAvatar_FromZip(t *testing.T) {
+func TestExtractAvatarURI_FromZip(t *testing.T) {
 	old := CacheDir
 	tempDir := t.TempDir()
 	CacheDir = func() string { return tempDir }
@@ -146,7 +146,7 @@ func TestDecodeOneAvatar_FromZip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := DecodeOneAvatar(zipPath, tempDir, "测试用户")
+	result := ExtractAvatarURI(zipPath, "测试用户")
 	if result == "" {
 		t.Fatal("expected non-empty data URI")
 	}
@@ -155,7 +155,7 @@ func TestDecodeOneAvatar_FromZip(t *testing.T) {
 	}
 }
 
-func TestDecodeOneAvatar_FromZipNoMatch(t *testing.T) {
+func TestExtractAvatarURI_FromZipNoMatch(t *testing.T) {
 	old := CacheDir
 	tempDir := t.TempDir()
 	CacheDir = func() string { return tempDir }
@@ -176,24 +176,24 @@ func TestDecodeOneAvatar_FromZipNoMatch(t *testing.T) {
 	}
 
 	// 请求不存在的用户 → 空
-	result := DecodeOneAvatar(zipPath, tempDir, "不存在用户")
+	result := ExtractAvatarURI(zipPath, "不存在用户")
 	if result != "" {
 		t.Errorf("不存在的用户应返回空, 得到 %q", result)
 	}
 }
 
-func TestDecodeOneAvatar_FromZipBadData(t *testing.T) {
+func TestExtractAvatarURI_FromZipBadData(t *testing.T) {
 	bad := filepath.Join(t.TempDir(), "bad.zip")
 	if err := os.WriteFile(bad, []byte("notzip"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	result := DecodeOneAvatar(bad, t.TempDir(), "test")
+	result := ExtractAvatarURI(bad, "test")
 	if result != "" {
 		t.Errorf("坏 zip 应返回空, 得到 %q", result)
 	}
 }
 
-func TestDecodeOneAvatar_FromJSON(t *testing.T) {
+func TestExtractAvatarURI_FromJSON(t *testing.T) {
 	old := CacheDir
 	tempDir := t.TempDir()
 	CacheDir = func() string { return tempDir }
@@ -210,7 +210,7 @@ func TestDecodeOneAvatar_FromJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := DecodeOneAvatar(jsonPath, tempDir, "张三")
+	result := ExtractAvatarURI(jsonPath, "张三")
 	if result == "" {
 		t.Fatal("expected non-empty data URI")
 	}
@@ -219,7 +219,7 @@ func TestDecodeOneAvatar_FromJSON(t *testing.T) {
 	}
 }
 
-func TestDecodeOneAvatar_FromJSONNoAvatarDir(t *testing.T) {
+func TestExtractAvatarURI_FromJSONNoAvatarDir(t *testing.T) {
 	old := CacheDir
 	tempDir := t.TempDir()
 	CacheDir = func() string { return tempDir }
@@ -234,7 +234,7 @@ func TestDecodeOneAvatar_FromJSONNoAvatarDir(t *testing.T) {
 	}
 	// 不创建 avatar 目录
 
-	result := DecodeOneAvatar(jsonPath, tempDir, "李四")
+	result := ExtractAvatarURI(jsonPath, "李四")
 	if result != "" {
 		t.Errorf("avatar 文件不存在应返回空, 得到 %q", result)
 	}

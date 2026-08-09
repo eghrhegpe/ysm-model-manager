@@ -49,7 +49,7 @@
 | `SafeName()` | `go/avatar/avatar:35` | SafeName 将非法文件名字符替换为下划线。 |
 | `ReadCachedAvatar()` | `go/avatar/avatar:99` | ReadCachedAvatar 读取缓存中的头像，返回 data URI。 |
 | `SaveAvatarData()` | `go/avatar/avatar:120` | SaveAvatarData 将头像数据写入缓存。 |
-| `DecodeOneAvatar()` | `go/avatar/avatar:132` | DecodeOneAvatar 从模型文件中提取指定所有者的头像。 |
+| `ExtractAvatarURI()` | `go/avatar/avatar:132` | ExtractAvatarURI 从模型文件中提取指定所有者的头像 data URI。 |
 | `CacheAvatarsFromJSON()` | `go/avatar/avatar:274` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
 | `ReadFileFromZip()` | `go/avatar/avatar:324` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
 | `SetNodeJS()` | `go/avatar/avatar:352` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
@@ -522,7 +522,7 @@
 | `App.SetModelTags()` | `internal/app/app_tags:34` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
 | `App.ListByTag()` | `internal/app/app_tags:39` | ListByTag 返回所有打了指定标签的文件路径列表 |
 | `App.AllTags()` | `internal/app/app_tags:44` | AllTags 返回所有被使用的标签（按使用次数降序） |
-| `App.LoadWorkshopSites()` | `internal/app/app_workshop:49` | — |
+| `App.DefaultWorkshopSites()` | `internal/app/app_workshop:49` | — |
 | `App.SaveWorkshopSites()` | `internal/app/app_workshop:57` | — |
 | `App.LoadWorkshopCreators()` | `internal/app/app_workshop:102` | — |
 | `App.SaveWorkshopCreators()` | `internal/app/app_workshop:110` | — |
@@ -532,7 +532,7 @@
 | `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:163` | — |
 | `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:176` | ========== CSV 导出/导入 ========== |
 | `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:188` | — |
-| `App.ImportWorkshopSitesJSONFile()` | `internal/app/app_workshop:201` | — |
+| `App.ValidateWorkshopSites()` | `internal/app/app_workshop:201` | — |
 | `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:217` | — |
 | `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:243` | — |
 | `App.BackupWorkshopCreators()` | `internal/app/app_workshop:250` | — |

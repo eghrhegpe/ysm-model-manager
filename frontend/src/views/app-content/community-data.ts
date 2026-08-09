@@ -42,7 +42,7 @@ export async function loadCommunityData(): Promise<CommunityData> {
   let localAuthors: LocalAuthorLike[] = [];
   try {
     const results = await Promise.all([
-      App.LoadWorkshopSites(),
+      App.DefaultWorkshopSites(),
       App.LoadWorkshopCreators(),
       App.ListModelAuthors(),
       App.ScanLocalAuthors().catch(() => []),

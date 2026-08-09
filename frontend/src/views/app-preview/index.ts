@@ -11,7 +11,7 @@ import {
 import { getApp } from "../../wails/app.ts";
 import { type PreviewCtx, type DecodedYsm } from "./utils.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
-import { showModelDetail, showResourcePack, showShaderPack } from "./detail.ts";
+import { showModelDetail, showResourcePack, showSimplePreview } from "./detail.ts";
 import { showLitematic, cleanupLitematic3D, invalidateLitematicPreview } from "./litematic-meta.ts";
 import { esc } from "../../utils/dom/html.ts";
 import type { BedrockGeometry } from "./geometry.ts";
@@ -178,7 +178,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
       return;
     }
     // 其他已知类型（shaderpack / mmd-skin / vrchat-avatar）
-    showShaderPack(this, path, this._typeMeta(rtype));
+    showSimplePreview(this, path, this._typeMeta(rtype));
   }
 
   private _typeMeta(rtype: string): { icon: string; label: string } {

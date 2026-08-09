@@ -46,7 +46,7 @@ func loadBundledJSON(name string, v interface{}) error {
 	return json.Unmarshal(data, v)
 }
 
-func (a *App) LoadWorkshopSites() []types.WorkshopSite {
+func (a *App) DefaultWorkshopSites() []types.WorkshopSite {
 	var sites []types.WorkshopSite
 	if err := loadBundledJSON("workshop_sites.json", &sites); err != nil {
 		return defaultWorkshopSites()
@@ -133,7 +133,7 @@ func (a *App) SaveWorkshopCreatorsBySite(siteID string, siteCreators []types.Wor
 
 // SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动
 func (a *App) SaveWorkshopPresetsBySite(siteID string, presets []types.WorkshopPresetSearch) error {
-	sites := a.LoadWorkshopSites()
+	sites := a.DefaultWorkshopSites()
 	for i, s := range sites {
 		if s.ID == siteID {
 			sites[i].PresetSearches = presets
@@ -174,7 +174,7 @@ func (a *App) ResetWorkshopConfigs() ([]types.WorkshopSite, error) {
 
 // ========== CSV 导出/导入 ==========
 func (a *App) ExportWorkshopSitesCSV() (string, error) {
-	sites := a.LoadWorkshopSites()
+	sites := a.DefaultWorkshopSites()
 	var buf strings.Builder
 	w := csv.NewWriter(&buf)
 	w.Write([]string{"id", "icon", "label", "url", "desc", "group", "searchUrl"})
@@ -186,7 +186,7 @@ func (a *App) ExportWorkshopSitesCSV() (string, error) {
 }
 
 func (a *App) ExportWorkshopSitesJSONFile() (string, error) {
-	sites := a.LoadWorkshopSites()
+	sites := a.DefaultWorkshopSites()
 	data, err := json.MarshalIndent(sites, "", "  ")
 	if err != nil {
 		return "", err
@@ -198,7 +198,7 @@ func (a *App) ExportWorkshopSitesJSONFile() (string, error) {
 	return path, nil
 }
 
-func (a *App) ImportWorkshopSitesJSONFile() (int, error) {
+func (a *App) ValidateWorkshopSites() (int, error) {
 	path := workshopSitesPath()
 	data, err := os.ReadFile(path)
 	if err != nil {

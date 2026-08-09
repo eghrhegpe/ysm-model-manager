@@ -169,6 +169,10 @@ export function DeduplicateCustomDir(customDir: string): $CancellablePromise<[nu
     return $Call.ByID(2166378965, customDir);
 }
 
+export function DefaultWorkshopSites(): $CancellablePromise<types$0.WorkshopSite[] | null> {
+    return $Call.ByID(3846649579);
+}
+
 export function DeleteFromRecycle(src: string): $CancellablePromise<void> {
     return $Call.ByID(2594824985, src);
 }
@@ -479,10 +483,6 @@ export function ImportWorkshopSitesCSV(csvContent: string): $CancellablePromise<
     return $Call.ByID(1342547047, csvContent);
 }
 
-export function ImportWorkshopSitesJSONFile(): $CancellablePromise<number> {
-    return $Call.ByID(1933238405);
-}
-
 /**
  * ========== 安装 ==========
  */
@@ -581,10 +581,6 @@ export function LoadResourceTypes(): $CancellablePromise<string> {
 
 export function LoadWorkshopCreators(): $CancellablePromise<types$0.WorkshopCreator[] | null> {
     return $Call.ByID(3429491443);
-}
-
-export function LoadWorkshopSites(): $CancellablePromise<types$0.WorkshopSite[] | null> {
-    return $Call.ByID(1402443890);
 }
 
 export function MergeWorkshopCreatorsFromJSON(jsonContent: string): $CancellablePromise<[number, number]> {
@@ -942,6 +938,11 @@ export function ToggleModelEnable(path: string): $CancellablePromise<boolean> {
 
 /**
  * ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled）
+ * P2 修复：补路径守卫——原实现 os.Rename 对任意路径可重命名（对齐 ToggleModelEnable 经 fileops
+ * 的 ysmRoot 防护；rename 目标派生自输入路径，越权路径会连带生成越权目标）。
+ * P2 修复（code_review）：额外拒绝 path == 仓库根——IsInside 对「路径等于基准」按设计返回 nil，
+ * 传入仓库根时 os.Rename(root, root+".disabled") 会把整个仓库移出配置位置（镜像 DeleteModelDir
+ * 的 rel=="." 拒绝同类输入）
  */
 export function ToggleResourcePack(path: string): $CancellablePromise<boolean> {
     return $Call.ByID(3911031138, path);
@@ -949,4 +950,8 @@ export function ToggleResourcePack(path: string): $CancellablePromise<boolean> {
 
 export function ValidateMinecraftDir(dir: string): $CancellablePromise<[string, string]> {
     return $Call.ByID(2967962547, dir);
+}
+
+export function ValidateWorkshopSites(): $CancellablePromise<number> {
+    return $Call.ByID(952603376);
 }

@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
-    LoadWorkshopSites: vi.fn(),
+    DefaultWorkshopSites: vi.fn(),
     LoadWorkshopCreators: vi.fn(),
     ListModelAuthors: vi.fn(),
     ScanLocalAuthors: vi.fn(),
@@ -14,7 +14,7 @@ const { mocks } = vi.hoisted(() => {
 
 vi.mock("../../wails/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
-    LoadWorkshopSites: mocks.LoadWorkshopSites,
+    DefaultWorkshopSites: mocks.DefaultWorkshopSites,
     LoadWorkshopCreators: mocks.LoadWorkshopCreators,
     ListModelAuthors: mocks.ListModelAuthors,
     ScanLocalAuthors: mocks.ScanLocalAuthors,
@@ -31,7 +31,7 @@ import { loadCommunityData } from "./community-data.ts";
 beforeEach(() => {
   vi.clearAllMocks();
   // 默认空数据 + 网络 fetch 失败（tryAutoMergeCommunity 静默 catch）
-  mocks.LoadWorkshopSites.mockResolvedValue([{ id: "bilibili" }]);
+  mocks.DefaultWorkshopSites.mockResolvedValue([{ id: "bilibili" }]);
   mocks.LoadWorkshopCreators.mockResolvedValue([]);
   mocks.ListModelAuthors.mockResolvedValue([]);
   mocks.ScanLocalAuthors.mockResolvedValue([]);
@@ -80,7 +80,7 @@ describe("loadCommunityData", () => {
   });
 
   it("Go 绑定失败 → 降级为空数据不抛", async () => {
-    mocks.LoadWorkshopSites.mockRejectedValue(new Error("net down"));
+    mocks.DefaultWorkshopSites.mockRejectedValue(new Error("net down"));
     const data = await loadCommunityData();
     expect(data.sites).toEqual([]);
     expect(data.creators).toEqual([]);

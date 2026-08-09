@@ -137,7 +137,7 @@ export async function showResourcePack(
 }
 
 /** 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 */
-export async function showShaderPack(
+export async function showSimplePreview(
   ctx: PreviewCtx,
   path: string,
   opts?: { icon?: string; label?: string },

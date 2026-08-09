@@ -603,9 +603,9 @@ class AppContent extends HTMLElement {
       .getElementById("ws-import-btn")
       ?.addEventListener("click", async () => {
         try {
-          const { ImportWorkshopSitesJSONFile } =
+          const { ValidateWorkshopSites } =
             await getApp();
-          const n = await ImportWorkshopSitesJSONFile();
+          const n = await ValidateWorkshopSites();
           await showCreatorsBySite("bilibili");
           bus.emit("toast:show", {
             msg: "✅ 已导入 " + n + " 个站点",

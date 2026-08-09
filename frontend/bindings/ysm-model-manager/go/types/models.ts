@@ -75,6 +75,16 @@ export interface BedrockModel {
     "textures"?: string[] | null;
 
     /**
+     * 纹理文件名（去扩展名），与 Textures 同序
+     */
+    "textureNames"?: string[] | null;
+
+    /**
+     * 组件源模型文件名（去扩展名，如 main/arm/arrow），UI 组件名用
+     */
+    "sourceName"?: string;
+
+    /**
      * "1.12.0" 等
      */
     "format"?: string;
@@ -123,6 +133,16 @@ export interface Cube2D {
      * 纹理槽（从 cube.texture 解析）
      */
     "texSlot": number;
+
+    /**
+     * Blockbench 膨胀（正=外扩，负=收缩），渲染时 origin-=i、size+=2i
+     */
+    "inflate"?: number;
+
+    /**
+     * Blockbench 镜像（沿 X 翻转几何）
+     */
+    "mirror"?: boolean;
 }
 
 /**

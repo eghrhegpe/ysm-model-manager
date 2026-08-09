@@ -31,10 +31,8 @@ func findConfigFile(candidates ...string) string {
 }
 
 func configDir() string {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		dir = "." // 兜底：仅当系统 API 异常，避免崩溃
-	}
+	// 平台差异收敛：桌面 os.UserConfigDir() / Android 沙盒（PathManager，ADR-046 P2）
+	dir := appDataRoot()
 	// 与 go/logs 的子目录保持一致（YSM-Model-Manager），用户目录下统一管理
 	return filepath.Join(dir, "YSM-Model-Manager")
 }

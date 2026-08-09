@@ -2,19 +2,12 @@
 package app
 
 import (
-	"os"
-	"path/filepath"
-
 	"ysm-model-manager/go/tags"
 )
 
-// configDir 返回应用配置目录（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application Support）
+// configDir 返回应用配置目录（跨平台：桌面 os.UserConfigDir() / Android 沙盒，PathManager 收敛）
 func (a *App) configDir() string {
-	cfgDir, err := os.UserConfigDir()
-	if err != nil {
-		cfgDir = "."
-	}
-	return filepath.Join(cfgDir, "YSM-Model-Manager")
+	return configDir()
 }
 
 // getTagsStore 初始化或获取标签存储实例（懒加载，sync.Once 保护）

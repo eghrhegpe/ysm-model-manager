@@ -517,10 +517,10 @@
 | `App.OpenFolder()` | `internal/app/app_scan:300` | — |
 | `App.OpenInstanceFolder()` | `internal/app/app_scan:317` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
 | `progressReader.Read()` | `internal/app/app_scan:340` | — |
-| `App.GetModelTags()` | `internal/app/app_tags:25` | GetModelTags 返回指定模型文件的所有标签 |
-| `App.SetModelTags()` | `internal/app/app_tags:30` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
-| `App.ListByTag()` | `internal/app/app_tags:35` | ListByTag 返回所有打了指定标签的文件路径列表 |
-| `App.AllTags()` | `internal/app/app_tags:40` | AllTags 返回所有被使用的标签（按使用次数降序） |
+| `App.GetModelTags()` | `internal/app/app_tags:22` | GetModelTags 返回指定模型文件的所有标签 |
+| `App.SetModelTags()` | `internal/app/app_tags:27` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
+| `App.ListByTag()` | `internal/app/app_tags:32` | ListByTag 返回所有打了指定标签的文件路径列表 |
+| `App.AllTags()` | `internal/app/app_tags:37` | AllTags 返回所有被使用的标签（按使用次数降序） |
 | `App.DefaultWorkshopSites()` | `internal/app/app_workshop:48` | — |
 | `App.SaveWorkshopSites()` | `internal/app/app_workshop:56` | — |
 | `App.LoadWorkshopCreators()` | `internal/app/app_workshop:101` | — |

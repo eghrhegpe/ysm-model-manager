@@ -1,0 +1,29 @@
+// ========== PathManager 平台抽象层（ADR-046 P2，参照 MikuMikuAR ADR-018）==========
+// 平台差异收敛点：配置/日志/标签的根目录在不同平台语义不同——
+//   desktop（Windows/macOS/Linux）→ os.UserConfigDir()（%APPDATA% / ~/Library/Application Support / ~/.config）
+//   android                    → 应用沙盒私有目录（/data/data/<pkg>/files 或 HOME）
+// 选择包级单例 + build tags 而非运行时 GOOS 检查的原因（同 ADR-018）：
+//   平台实现完全不同（系统 API vs 沙盒路径），build tags 让编译器保证只包含正确实现，零运行时开销。
+
+package app
+
+// pathManager 定义平台路径获取接口
+type pathManager interface {
+	// AppDataRoot 返回应用配置根目录（不含 "YSM-Model-Manager" 子目录）
+	AppDataRoot() (string, error)
+}
+
+// pathMgr 包级单例（由平台文件 init 注入实现）
+var pathMgr pathManager
+
+// appDataRoot 委托平台实现；失败兜底当前目录（仅系统 API 异常时，避免崩溃）
+func appDataRoot() string {
+	if pathMgr == nil {
+		return "."
+	}
+	dir, err := pathMgr.AppDataRoot()
+	if err != nil || dir == "" {
+		return "."
+	}
+	return dir
+}

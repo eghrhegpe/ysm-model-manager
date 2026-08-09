@@ -102,8 +102,10 @@ export async function tryFetchModels(
       const resp = await fetch(attempt.url, { signal: ctrl.signal });
       clearTimeout(tmr);
       if (!resp.ok) {
-        // 404 是确定性证据——仓库没有 index.json，立即终止
-        if (resp.status === 404) {
+        // 404 处理：仅 raw 源 404 视为确定性证据（仓库确实无 index.json）——
+        // jsd/api 404 可能是 CDN 缓存未命中/限流，误杀本可成功的在途请求
+        // （P2 修复：原实现任一源 404 即 abort 全部）
+        if (resp.status === 404 && attempt.name === "raw") {
           _earlyExitReason = "NoIndex";
           controllers.forEach(function (c): void {
             // P4：abort 在规范中不抛错，此处 try/catch 仅为防御（无需上报）

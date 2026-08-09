@@ -71,4 +71,16 @@ describe("showBatchRenameDialog — banned 文件处理", () => {
 
     expect(onApply).not.toHaveBeenCalled();
   });
+
+  it("重名冲突（两个文件规范化后同名）→ 拦截不调 onApply（P2 修复：防后端静默覆盖丢文件）", async () => {
+    const { onApply, dlg } = await open([
+      { Name: "foo2024.ysm", Path: "/dir/foo2024.ysm" },
+      { Name: "foo2024.ysm", Path: "/dir/foo2024-copy.ysm" },
+    ]);
+    // 两个条目同名 → 规范化后 newName 相同 → apply 应被冲突检测拦截
+    (dlg.querySelector("#br-apply") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(onApply).not.toHaveBeenCalled();
+  });
 });

@@ -284,6 +284,23 @@ export function showBatchRenameDialog(
       });
       return;
     }
+    // P2 修复（审核发现）：两个文件规范化后同名（如 2024foo.ysm 与 foo2024.ysm
+    // 都变 foo (2024).ysm）时直接进 onApply → 后端 os.Rename Unix 下静默覆盖丢文件、
+    // Windows 下失败；apply 前检测重复 newName 并拦截
+    const seen = new Set<string>();
+    const dup = changed.find((it) => {
+      if (seen.has(it.newName)) return true;
+      seen.add(it.newName);
+      return false;
+    });
+    if (dup) {
+      bus.emit("toast:show", {
+        msg: `❌ 重命名冲突: 「${dup.newName}」与其它文件同名，请调整后重试`,
+        duration: 4000,
+        type: "error",
+      });
+      return;
+    }
     const btn = dialogEl!.querySelector("#br-apply") as HTMLButtonElement;
     btn.textContent = "⏳ 执行中...";
     btn.disabled = true;

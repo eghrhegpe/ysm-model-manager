@@ -52,7 +52,8 @@ describe("showProgress", () => {
 });
 
 type FetchResp = { ok: boolean; status: number; json: () => Promise<unknown> };
-type FetchImpl = (url: string) => Promise<FetchResp>;
+// init 可选：混合 404 用例需读 AbortSignal（监听 abort 验证在途请求未被误杀）
+type FetchImpl = (url: string, init?: RequestInit) => Promise<FetchResp>;
 
 const okJson = (data: unknown): FetchResp => ({ ok: true, status: 200, json: async () => data });
 const errResp = (status: number): FetchResp => ({ ok: false, status, json: async () => ({}) });
@@ -154,6 +155,31 @@ describe("tryFetchModels 失败路径（全部源失败时的根因诊断）", (
     const assertion = expect(promise).rejects.toThrow("NoIndex");
     await vi.advanceTimersByTimeAsync(300);
     await assertion;
+  });
+
+  it("jsd 源 404 不误杀在途 raw（P2 修复：仅 raw 404 视为确定性证据）", async () => {
+    vi.useFakeTimers();
+    const models = [{ name: "raw-ok" }];
+    // raw 慢速在途（受 abort 控制），jsd 快速 404
+    let resolveRaw!: (r: FetchResp) => void;
+    mockFetch((url, init) =>
+      url.includes("jsdelivr.net")
+        ? Promise.resolve(errResp(404))
+        : new Promise<FetchResp>((resolve, reject) => {
+            (init?.signal as AbortSignal | undefined)?.addEventListener(
+              "abort",
+              () => reject(new Error("Aborted")),
+            );
+            resolveRaw = resolve;
+          }),
+    );
+    const promise = tryFetchModels("owner/repo", "");
+    // 推进到 jsd 发出并 404；若旧逻辑（任一源 404 abort 全部）会杀掉在途 raw
+    await vi.advanceTimersByTimeAsync(2500);
+    resolveRaw(okJson(models));
+    const result = await promise;
+    expect(result.source).toBe("raw");
+    expect(result.models).toEqual(models);
   });
 
   it("全部 403 → RateLimited", async () => {

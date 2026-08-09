@@ -9,11 +9,10 @@ import { MENU_DEFS, getMenuDef } from "./menu-defs.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 
 // getApp 是动态 import（wails/app.ts），测试用 mock 替代
+// P4（审核发现）：此处曾被重复声明两次——第一个 vi.mock 被下方完整 mock（含全部
+// bindings）覆盖为死代码；若误删下方完整 mock 所有异步 handler 测试静默失效，故删除冗余
 const { openFolderMock } = vi.hoisted(() => ({
   openFolderMock: vi.fn(),
-}));
-vi.mock("../wails/app.ts", () => ({
-  getApp: () => Promise.resolve({ OpenInstanceFolder: openFolderMock }),
 }));
 
 // 异步 handler 依赖：dialogs + bindings 均为动态 import，用 mock 拦截

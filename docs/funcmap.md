@@ -12,7 +12,7 @@
 | Go·下载 | 1 | 7 |
 | Go·错误 | 1 | 1 |
 | go/fileops | 2 | 13 |
-| Go·文件系统 | 2 | 6 |
+| Go·文件系统 | 2 | 7 |
 | Go·几何 | 2 | 8 |
 | Go·导入 | 2 | 16 |
 | Go·安装 | 1 | 6 |
@@ -40,7 +40,7 @@
 | frontend/views | 54 | 147 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **176** | **804** |
+| **合计** | **176** | **805** |
 
 ## Go·头像
 
@@ -110,19 +110,20 @@
 | `CountFiles()` | `go/fsutil/walk:70` | CountFiles 统计目录中的文件数（不限制扩展名） |
 | `CleanEmptyDirs()` | `go/fsutil/walk:75` | CleanEmptyDirs 递归删除空子目录，返回删除数 |
 | `IsRecycleDir()` | `go/fsutil/walk:91` | IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）—— dedup / scanner / sync 的回 |
-| `WriteFileAtomic()` | `go/fsutil/write:25` | WriteFileAtomic 临时文件 + rename 原子落地目标文件。 |
+| `ReadLimitedEntry()` | `go/fsutil/write:27` | ReadLimitedEntry 读取 zip/7z 单条目：limit+1 探测截断（ADR-033 修复，ADR-044 策略 A 统一口径）—— 原 `io.ReadAll( |
+| `WriteFileAtomic()` | `go/fsutil/write:40` | WriteFileAtomic 临时文件 + rename 原子落地目标文件。 |
 
 ## Go·几何
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `ExtractFirstPNGFromZip()` | `go/geometry/archive:61` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
-| `ExtractFirstPNGFrom7z()` | `go/geometry/archive:82` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
-| `ParseFromZip()` | `go/geometry/archive:297` | — |
-| `ParseFrom7z()` | `go/geometry/archive:597` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
-| `IsMainModelName()` | `go/geometry/archive:881` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
-| `ParseComponentsFromZip()` | `go/geometry/archive:893` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
-| `ParseComponentsFrom7z()` | `go/geometry/archive:987` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
+| `ExtractFirstPNGFromZip()` | `go/geometry/archive:57` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
+| `ExtractFirstPNGFrom7z()` | `go/geometry/archive:78` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
+| `ParseFromZip()` | `go/geometry/archive:293` | — |
+| `ParseFrom7z()` | `go/geometry/archive:593` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
+| `IsMainModelName()` | `go/geometry/archive:877` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
+| `ParseComponentsFromZip()` | `go/geometry/archive:889` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
+| `ParseComponentsFrom7z()` | `go/geometry/archive:983` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
 | `ParseBedrockGeometry()` | `go/geometry/parse:25` | ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式） 注意：data 大小不应超过 maxP |
 
 ## Go·导入
@@ -397,12 +398,12 @@
 | `YsmSummary()` | `go/ysm/summary:45` | YsmSummary 是前端右侧面板和 AI 搜索消费的标准摘要 |
 | `Stats()` | `go/ysm/summary:62` | — |
 | `ScanModelTexSizes()` | `go/ysm/texsize:22` | ScanModelTexSizes 扫描仓库文件读取纹理尺寸，不调用 YSMParser/WASM 仅支持 zip/7z 格式（未加密模型），加密 .ysm 返回 0,0 |
-| `ScanFiles()` | `go/ysm/texsize:146` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
+| `ScanFiles()` | `go/ysm/texsize:145` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
 | `TexInfo()` | `go/ysm/texsize:14` | TexInfo 轻量级纹理尺寸（不解析完整模型） |
 | `ModelEntry()` | `go/ysm/texsize:37` | ModelEntry 轻量级条目（仅用于纹理扫描签名，调用方传入完整路径） |
 | `IsYSMJar()` | `go/ysm/ysm:12` | IsYSMJar 检查单个 jar 是否是 YSM 模组（支持 mods.toml 和 neoforge.mods.toml） |
-| `HasYSMMod()` | `go/ysm/ysm:80` | HasYSMMod 检查 mods 目录是否有 YSM 模组（先做文件名过滤避免对每个 JAR 打开 ZIP） |
-| `HasModInDir()` | `go/ysm/ysm:109` | HasModInDir 检查 mods 目录是否有匹配指定类型关键词的 jar |
+| `HasYSMMod()` | `go/ysm/ysm:77` | HasYSMMod 检查 mods 目录是否有 YSM 模组（先做文件名过滤避免对每个 JAR 打开 ZIP） |
+| `HasModInDir()` | `go/ysm/ysm:106` | HasModInDir 检查 mods 目录是否有匹配指定类型关键词的 jar |
 
 ## Go(internal)·应用入口
 
@@ -908,9 +909,9 @@
 | `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:233` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |
 | `loadModelData()` | `frontend/src/views/app-preview/loader:13` | 加载模型几何数据 + 纹理 + 作者信息 统一路径：缓存 → WASM 解码 → Go AnalyzeBedrockModel 兜底 |
 | `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:6` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
-| `ModelSpec()` | `frontend/src/views/app-preview/model3d-loader:14` | Go 返回的 3D spec（models 数组） |
-| `loadTextures()` | `frontend/src/views/app-preview/model3d-loader:43` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组 |
-| `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:93` | 预加载：纹理 + spec 并行获取 |
+| `ModelSpec()` | `frontend/src/views/app-preview/model3d-loader:16` | Go 返回的 3D spec（models 数组） |
+| `loadTextures()` | `frontend/src/views/app-preview/model3d-loader:45` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组 |
+| `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:95` | 预加载：纹理 + spec 并行获取 |
 | `parseYsmJsonDirect()` | `frontend/src/views/app-preview/parse-ysm-json:7` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:7` | — |
 | `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:13` | — |

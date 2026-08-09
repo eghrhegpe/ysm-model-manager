@@ -8,6 +8,8 @@ export interface ModelLike {
   bones?: unknown[];
   textures?: string[];
   texture?: string;
+  /** R1 契约校验用：Go 端返回的纹理名数组 */
+  textureNames?: string[];
 }
 
 /** Go 返回的 3D spec（models 数组） */

@@ -199,11 +199,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
     return { icon: def?.icon || "📦", label: def?.name || rtype };
   }
 
-  /** 显示资源包信息（pack.mcmeta + pack.png） */
-  private async _showResourcePack(path: string): Promise<void> {
-    showResourcePack(this, path);
-  }
-
+  /** 显示资源包信息（pack.mcmeta + pack.png）——直连 showResourcePack，无包装层 */
   private async _showPackInfo(dirPath: string): Promise<void> {
     const gen = this._previewGen;
     this._root.innerHTML = `<div class="content" id="preview-content"><h3>📦 整合包</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;

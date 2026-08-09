@@ -124,7 +124,8 @@ function collect() {
 function checkReleaseNotes() {
   let tags;
   try {
-    const stdout = execFileSync('git', ['tag', '--list', 'v*'], { encoding: 'utf-8', timeout: 30000, cwd: ROOT });
+    // --sort=version:refname：版本序（v1.10.0 正确排在 v1.9.3 之后），前驱计算依赖此序
+    const stdout = execFileSync('git', ['tag', '--list', 'v*', '--sort=version:refname'], { encoding: 'utf-8', timeout: 30000, cwd: ROOT });
     tags = stdout.split('\n').map((t) => t.trim()).filter(Boolean);
   } catch (e) {
     // ADR-043 fail-closed：git 不可用 = 扫描不完整，拒绝放行（不把空 tag 清单当「无漂移」）
@@ -140,9 +141,22 @@ function checkReleaseNotes() {
       && !fs.existsSync(path.join(RELEASES_DIR, `${t}-compare.md`));
   });
   if (missing.length) {
-    console.error(`❌ ${missing.length} 个版本缺发版说明（docs/releases/<tag>.md）:`);
-    for (const t of missing) console.error(`   - ${t}.md`);
-    console.error('  补写后提交；发版契约见 docs/releases/index.md。');
+    console.error(`❌ ${missing.length} 个版本缺发版说明（docs/releases/<tag>.md）——发版契约（docs/releases/index.md）要求每个正式 tag 有说明。`);
+    console.error('');
+    console.error('  如何修（AI 可执行）：对每个缺失 tag，用下方命令收集数据后参照 docs/releases/v1.8.8.md 模板补写 vX.md，再重跑 --check 验证：');
+    // 前驱映射（版本序前一 tag，无则仓库根 commit）：补写命令的区间数据来源
+    const prevOf = (t) => {
+      const i = tags.indexOf(t);
+      return i > 0 ? tags[i - 1] : 'HEAD根commit';
+    };
+    for (const t of missing) {
+      const prev = prevOf(t);
+      console.error(`   - ${t}.md`);
+      console.error(`       git log --oneline --no-merges "${prev}..${t}"  # 提交清单`);
+      console.error(`       git diff --stat "${prev}..${t}"               # 变更范围`);
+    }
+    console.error('');
+    console.error('  补写后提交；重跑 node scripts/release-notes-gen.mjs --check 验证转绿。');
     process.exit(1);
   }
   console.log(`✅ 全部 ${tags.length} 个 git tag 均有发版说明（docs/releases/ 同步）`);

@@ -310,6 +310,14 @@ function main() {
       note: broken === null ? '输出解析失败（scripts/link-checker.mjs 缺失？）'
         : (ok ? '全部链接有效' : `${broken} 条断链`) });
     if (!ok) blocked = true;
+
+    // 发版说明漂移守护：git tag 单一事实源——每个正式 tag 必须有 docs/releases/<tag>.md
+    // （失败输出 AI 友好：--check 自带每条缺失的 git 区间补写命令）
+    const t1 = Date.now();
+    const rn = sh('node scripts/release-notes-gen.mjs --check');
+    results.push({ label: 'release-notes', ok: rn.rc === 0, time: Date.now() - t1,
+      tail: rn.rc ? rn.out.trim().split('\n').slice(-14).join('\n') : '' });
+    if (rn.rc !== 0) blocked = true;
   }
   if (plan.adr) {
     const t0 = Date.now();

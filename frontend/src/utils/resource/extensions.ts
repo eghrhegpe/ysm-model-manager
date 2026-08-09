@@ -1,8 +1,10 @@
 // ===== 前端扩展名集中定义（类型化版 — ADR-014 P2）=====
 // 静态默认值（拖拽等同步场景必须）
-// 事实来源: resource_types.json → Go 后端 types.ResourceExts 一致性测试验证
-// Go 测试 go/types/registry_test.go 自动校验与 JSON 一致
-// 修改扩展名前: 1) 改 resource_types.json 2) 改 Go 侧 ResourceExts 3) 改此处
+// 事实来源: resource_types.json（单一事实源，AGENTS.md 注册表优先）
+// Go 端运行时直读 JSON（无静态 ResourceExts 表，go/types/extensions.go 全注册表驱动）
+// 前端↔JSON 一致性由 extensions.test.ts 双向对账守护（P2 修复，替代外部 type-consistency 退出码陷阱）
+// 修改扩展名两步走: 1) 改 resource_types.json → 2) 改此处（P3 修复：原注释声称
+// 「改 Go 侧 ResourceExts」三步流程，但 Go 侧无此符号，属误导——Go 运行时直读 JSON 无需手工改）
 
 /** 每种资源类型对应的扩展名 */
 export const RESOURCE_EXTS: Record<string, string[]> = {

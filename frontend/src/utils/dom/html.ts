@@ -16,8 +16,14 @@ export function esc(s: string): string {
 export function hl(text: string, query?: string): string {
   if (!query) return esc(text);
   const lq = query.toLowerCase();
-  const idx = text.toLowerCase().indexOf(lq);
+  const lowered = text.toLowerCase();
+  const idx = lowered.indexOf(lq);
   if (idx === -1) return esc(text);
+  // P3 修复：Unicode 大小写折叠可改变串长（如土耳其语 İ → "i̇" 2 码元）——
+  // 折叠后的 idx 用于切片原始 text 会静默错切（空 mark 或截断）；
+  // text 折叠后长度变化时降级为纯转义，防错位（查 text 侧而非 query 侧——
+  // İ 折叠发生在 text；query 如 "b" 折叠长度不变）
+  if (lowered.length !== text.length) return esc(text);
   // 三个片段分别从「原始 text」切片再各自 esc()，避免双重转义，
   // 且不能用已转义串按原始索引切（&lt; 等会错位，回归测试锁定）
   const before = esc(text.substring(0, idx));

@@ -1,0 +1,18 @@
+name: CI
+
+# 方案②：main push / PR 只触发本 workflow（测试门禁），不再触发 release.yml。
+# test 门禁复用可复用 workflow test.yml，与发版（tag 触发 release.yml）共享同一份测试。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml

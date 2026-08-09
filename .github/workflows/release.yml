@@ -2,10 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [main]
     tags: ['v*']
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -13,78 +10,15 @@ permissions:
   actions: read
 
 env:
-  GO_VERSION: '1.25.0'
+  GO_VERSION: ${{ vars.GO_VERSION }}
   NODE_VERSION: ${{ vars.NODE_VERSION }}
   # 与 go.mod 对齐（wailsapp/wails/v3 v3.0.0-alpha2.105），避免 CLI 与库版本错配
-  WAILS_VERSION: 'v3.0.0-alpha2.105'
+  WAILS_VERSION: ${{ vars.WAILS_VERSION }}
 
 jobs:
-  # ── 测试门禁（保留原 CI 单 job）─────────────────────────
+  # ── 测试门禁（可复用 workflow test.yml，main/PR 由 ci.yml 调用）───
   test:
-    name: 契约测试 + Go 检查 + 前端构建
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: 缓存 Go 模块（命中免下载）
-        uses: actions/cache@v5.1.0
-        with:
-          path: ${{ runner.os == 'Windows' && '~\go\pkg\mod' || '~/go/pkg/mod' }}
-          key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
-            go-mod-${{ runner.os }}-
-
-      - name: 契约测试（tests/，Node .mjs，禁止修改测试文件）
-        shell: pwsh
-        run: |
-          $files = Get-ChildItem tests/*.mjs
-          foreach ($f in $files) { node $f.FullName }
-
-      - name: ADR 登记一致性（adr-check — G-2 治理门槛）
-        shell: pwsh
-        run: node scripts/adr-check.mjs | Out-String -Width 200
-
-      - name: 安装前端依赖
-        working-directory: frontend
-        shell: pwsh
-        run: npm ci
-
-      - name: 构建更新助手 helper（embed 前置，修复 CI 缺 ysm-updater-helper.exe）
-        shell: pwsh
-        run: go build -ldflags "-X ysm-model-manager/go/version.Version=ci" -o go/updater/ysm-updater-helper.exe ./cmd/updater
-
-      - name: Go 检查（build + vet + test）
-        shell: pwsh
-        run: |
-          go build ./go/...
-          go vet ./go/... ./internal/app/...
-          go test ./go/... ./internal/app/ -count=1 | Out-String -Width 200
-
-      - name: 前端类型检查（ADR-014 门槛）
-        working-directory: frontend
-        shell: pwsh
-        run: npx tsc --noEmit
-
-      - name: 前端测试（Vitest）
-        working-directory: frontend
-        shell: pwsh
-        run: npx vitest run | Out-String -Width 200
-
-      - name: 前端构建
-        working-directory: frontend
-        shell: pwsh
-        run: npx vite build
+    uses: ./.github/workflows/test.yml
 
   # ── 版本提取与校验 ─────────────────────────────────────
   prepare:
@@ -112,7 +46,7 @@ jobs:
   # ── Windows 构建 ───────────────────────────────────────
   build-windows:
     name: Windows
-    needs: prepare
+    needs: [prepare, test]
     runs-on: windows-latest
     timeout-minutes: 30
     defaults:
@@ -166,7 +100,7 @@ jobs:
   # ── Linux 构建 ─────────────────────────────────────────
   build-linux:
     name: Linux
-    needs: prepare
+    needs: [prepare, test]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -227,7 +161,7 @@ jobs:
   # ── macOS 构建 ─────────────────────────────────────────
   build-darwin:
     name: macOS
-    needs: prepare
+    needs: [prepare, test]
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
@@ -275,7 +209,7 @@ jobs:
   # ── Android 构建（NDK 交叉编译 + gradle APK）───────────
   build-android:
     name: Android
-    needs: prepare
+    needs: [prepare, test]
     runs-on: windows-latest
     timeout-minutes: 40
     defaults:

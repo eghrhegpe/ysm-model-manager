@@ -35,7 +35,10 @@ function makeInstances(): SidebarInstance[] {
       variantGroups: null,
       _missingPaths: [],
       _extraPaths: [],
-      items: [],
+      // 类型要求 { synced: unknown[]; missing?; extra?; disabled? } 对象（宽松兼容
+      // loader 的 {synced,disabled} 与 fallback 的 {synced,missing,extra}）——
+      // 传 [] 会触发 TS2741，破坏 typecheck 门槛
+      items: { synced: [] },
     },
   ];
 }
@@ -163,7 +166,8 @@ describe("app-sidebar — 推送所选", () => {
       bus.emit("sync:download:done", {
         token: p.token,
         instanceName: "insA",
-        rtype: (p as { rtype?: string }).rtype,
+        // 不再带 rtype：BusEvents["sync:download:done"] 无该字段（TS2353），
+        // 真实生产者 sync.ts 也从不发，组件 handler 只匹配 token——删掉恢复类型门槛
       });
     }
 

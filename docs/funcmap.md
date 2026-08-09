@@ -36,11 +36,11 @@
 | 前端·特性 | 13 | 60 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 32 | 114 |
+| 前端·工具 | 34 | 117 |
 | frontend/views | 53 | 151 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **183** | **829** |
+| **合计** | **185** | **832** |
 
 ## Go·头像
 
@@ -791,6 +791,8 @@
 | `moveItem()` | `frontend/src/utils/array:8` | 将 arr[from] 移到 arr[to]（原地修改，返回同一数组）。 |
 | `dbg()` | `frontend/src/utils/debug/debug:32` | 输出调试日志（保留 tag 用于过滤） |
 | `safeStr()` | `frontend/src/utils/debug/debug:55` | 任意值 → 可读字符串（200 字符截断；供单测导出的纯函数） |
+| `WailsAndroidBridge()` | `frontend/src/utils/dom/android-bridge:6` | — |
+| `getAndroidBridge()` | `frontend/src/utils/dom/android-bridge:12` | 返回 Android Java 桥（桌面端为 null），类型安全断言（无 as any） |
 | `btnBaseCSS()` | `frontend/src/utils/dom/css:1` | — |
 | `focusVisibleCSS()` | `frontend/src/utils/dom/css:32` | Shadow DOM 通用 focus-visible 规则（所有 button/input/select/textarea） |
 | `AdvFilterValue()` | `frontend/src/utils/dom/dialogs/adv-filter-util:6` | 筛选条件 |
@@ -825,6 +827,7 @@
 | `TagSetResult()` | `frontend/src/utils/dom/dialogs/tag-set:6` | — |
 | `MAX_TAG_LENGTH()` | `frontend/src/utils/dom/dialogs/tag-set:12` | 标签最大长度（与原 addTag 一致） |
 | `addTagToSet()` | `frontend/src/utils/dom/dialogs/tag-set:19` | 向标签集合添加一个标签（已 trim）： 空输入 → 原样返回；重复 → error「标签已存在」；超长 → error「最多 20 个字符」； 合法 → 排序后返回新数组。错误文 |
+| `pickDirectory()` | `frontend/src/utils/dom/directory-picker:14` | 选择目录：桌面走系统对话框；Android 走授权检查 + 手动输入绝对路径 |
 | `ParsedModelName()` | `frontend/src/utils/dom/display:6` | 解析后的模型文件名字段 |
 | `parseModelName()` | `frontend/src/utils/dom/display:27` | 解析模型文件名 → 结构化字段 支持格式: [作者]【作品】角色变体2023-05.ysm 也兼容: [作者]《作品》角色变体2023-05.ysm |
 | `renderDisplayName()` | `frontend/src/utils/dom/display:77` | 渲染美化文件名 HTML（通用接口） 应用 CSS 变量: --meta-author, --meta-work, --meta-date |
@@ -879,7 +882,7 @@
 | `contentCSS()` | `frontend/src/views/app-content/content-css:2` | — |
 | `initDiagnostics()` | `frontend/src/views/app-content/diagnostics/community:17` | 初始化诊断页所有功能 |
 | `startDedup()` | `frontend/src/views/app-content/diagnostics/community:252` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
-| `initSettings()` | `frontend/src/views/app-content/settings/community:19` | 初始化设置页所有事件绑定 |
+| `initSettings()` | `frontend/src/views/app-content/settings/community:20` | 初始化设置页所有事件绑定 |
 | `RepoAuthorLike()` | `frontend/src/views/app-content/site-view:11` | 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） |
 | `RenderSiteViewCtx()` | `frontend/src/views/app-content/site-view:14` | 竚点视图渲染上下文（index.ts _initWorkshop 传入） |
 | `LocalCreatorLike()` | `frontend/src/views/app-content/site-view:31` | 本地创作者（绑定 + 运行时附加字段） |
@@ -990,8 +993,8 @@
 | `bindTreeEvents()` | `frontend/src/views/app-tree/events:93` | — |
 | `setPendingTreeSearch()` | `frontend/src/views/app-tree/index:22` | — |
 | `AppTree()` | `frontend/src/views/app-tree/index:51` | — |
-| `TreeEntry()` | `frontend/src/views/app-tree/loader:10` | 树条目（loader 转换后的渲染格式） |
-| `loadEntries()` | `frontend/src/views/app-tree/loader:71` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |
+| `TreeEntry()` | `frontend/src/views/app-tree/loader:11` | 树条目（loader 转换后的渲染格式） |
+| `loadEntries()` | `frontend/src/views/app-tree/loader:64` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |
 | `TreeRow()` | `frontend/src/views/app-tree/render:21` | 扁平化行（虚拟滚动数据单元） |
 | `TreeNode()` | `frontend/src/views/app-tree/render:31` | buildTree 嵌套节点（文件夹 = 子节点对象，文件 = { _e: entry }） |
 | `RenderMode()` | `frontend/src/views/app-tree/render:37` | 渲染模式 |

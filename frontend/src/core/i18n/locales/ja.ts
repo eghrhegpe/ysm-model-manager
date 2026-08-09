@@ -316,6 +316,8 @@ export const ja: Record<string, string> = {
   "settings.path.customized": "カスタマイズ済み",
   "settings.path.default": "↩️ デフォルト",
   "settings.path.clickToChange": "クリックしてパスを変更",
+  "settings.path.needStoragePermission": "モデルライブラリを読むには「すべてのファイルへのアクセス」許可が必要です。許可画面を開きます…",
+  "settings.path.androidPathPlaceholder": "ディレクトリの絶対パスを入力（例: /sdcard/Download/YSM）",
   "settings.saveSuccess": "保存しました",
   "settings.saveFailed": "保存に失敗しました",
   "settings.resetDefault": "↩️ デフォルトに戻しました",

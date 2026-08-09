@@ -7,6 +7,7 @@ import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/res
 import { esc } from "../../../utils/dom/html.ts";
 import { safeGet, safeSet, safeRemove } from "../../../utils/dom/storage.ts";
 import { getApp } from "../../../wails/app.ts";
+import { pickDirectory } from "../../../utils/dom/directory-picker.ts";
 import { t } from "../../../core/i18n/t.ts";
 
 // 单一捕获守卫：同一时刻仅允许一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持
@@ -20,7 +21,6 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   const {
     LoadAppConfig,
     SaveAppConfig,
-    SelectDirectory,
     GetMinecraftPaths,
     SetLinkMode,
   } = await getApp();
@@ -67,7 +67,8 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       if (_busy) return; // 防连点：目录选择进行中忽略后续点击
       _busy = true;
       try {
-        const dir = await SelectDirectory();
+        // 平台分支：桌面 Wails Dialog / Android 授权检查+路径输入（ADR-046 P2）
+        const dir = await pickDirectory();
         if (!dir) return;
         await onSelect(dir);
         refresh();
@@ -80,7 +81,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
           type: "success",
         });
       } catch (e) {
-        // P2 修复：SelectDirectory/onSelect 失败要有出口，避免 unhandled rejection 静默
+        // P2 修复：pickDirectory/onSelect 失败要有出口，避免 unhandled rejection 静默
         toastError(e);
       } finally {
         _busy = false;
@@ -190,7 +191,8 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     grid.querySelectorAll(".stg-adv-set").forEach((el) => {
       el.addEventListener("click", async () => {
         const rtype = (el as HTMLElement).dataset.rtype || "";
-        const dir = await SelectDirectory();
+        // 平台分支：桌面 Wails Dialog / Android 授权检查+路径输入（ADR-046 P2）
+        const dir = await pickDirectory();
         if (!dir) return;
         try {
           const { SetResourceRoot } =

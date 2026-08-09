@@ -5,6 +5,7 @@ import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { getApp } from "../../wails/app.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
+import { getAndroidBridge } from "../../utils/dom/android-bridge.ts";
 
 /** 树条目（loader 转换后的渲染格式） */
 export interface TreeEntry {
@@ -38,22 +39,14 @@ function toastLoadError(err: unknown): void {
 // Java 桥（WailsJSBridge 以 "wails" 名注册，MainActivity addJavascriptInterface）
 // 暴露 hasStoragePermission / requestStoragePermission；桌面端无此桥。
 // 库加载失败且未授权（MANAGE_EXTERNAL_STORAGE）时，引导用户开启"所有文件访问"。
-interface WailsAndroidBridge {
-  hasStoragePermission?: () => boolean;
-  requestStoragePermission?: () => void;
-}
-
-function androidBridge(): WailsAndroidBridge | null {
-  const w = (window as unknown as { wails?: WailsAndroidBridge }).wails;
-  return w && typeof w.requestStoragePermission === "function" ? w : null;
-}
+// 桥访问复用 utils/dom/android-bridge.ts（与 directory-picker 共享，避免重复实现）。
 
 /** 节流：自动重载可能高频触发，5s 内只引导一次 */
 let _lastStoragePromptAt = 0;
 const STORAGE_PROMPT_MIN_GAP = 5000;
 
 function maybePromptAndroidStorage(): void {
-  const bridge = androidBridge();
+  const bridge = getAndroidBridge();
   if (!bridge) return; // 桌面端无此桥
   if (bridge.hasStoragePermission?.()) return; // 已授权
   const now = Date.now();

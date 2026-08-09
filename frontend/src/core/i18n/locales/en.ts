@@ -315,6 +315,8 @@ export const en: Record<string, string> = {
   "settings.path.customized": "Customized",
   "settings.path.default": "↩️ Default",
   "settings.path.clickToChange": "Click to change path",
+  "settings.path.needStoragePermission": "All files access is required to read the model library — opening grant screen…",
+  "settings.path.androidPathPlaceholder": "Enter absolute directory path, e.g. /sdcard/Download/YSM",
   "settings.saveSuccess": "Saved successfully",
   "settings.saveFailed": "Save failed",
   "settings.resetDefault": "↩️ Restored to default",

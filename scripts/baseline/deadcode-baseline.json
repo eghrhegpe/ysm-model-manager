@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-09T00:41:45.073Z",
+  "generated": "2026-08-09T02:24:25.375Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|jscpd",
@@ -35,10 +35,12 @@
     "src/core/context-menus.ts#src/core/context-menus.ts",
     "src/core/handlers/instance-ops.test.ts#src/core/handlers/sync.test.ts",
     "src/core/handlers/instance-ops.ts#src/views/app-tree/instance-actions.ts",
+    "src/features/community/download-queue.test.ts#src/features/community/download-queue.test.ts",
     "src/features/import-queue.ts#src/features/import-queue.ts",
     "src/features/recycle-bin.ts#src/features/recycle-bin.ts",
     "src/utils/3d/model2d.ts#src/utils/3d/model2d.ts",
     "src/utils/3d/model3d-spec.test.ts#src/utils/3d/model3d-spec.test.ts",
+    "src/utils/dom/dialogs/adv-filter.test.ts#src/utils/dom/dialogs/rename.test.ts",
     "src/utils/dom/dialogs/adv-filter.ts#src/utils/dom/dialogs/modal.ts",
     "src/utils/dom/dialogs/rename.ts#src/utils/dom/dialogs/tag-editor.ts",
     "src/views/app-content/site-view.ts#src/views/app-content/site/types.ts",

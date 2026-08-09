@@ -206,7 +206,17 @@ export function bindRepoEvents(
       const dlBtn = target.closest(
         '.gh-icon-btn[data-action="download"]',
       ) as HTMLElement | null;
-      if (dlBtn && !queue.isDownloading()) {
+      if (dlBtn) {
+        if (queue.isDownloading()) {
+          // P2 修复（审核发现）：队列活跃期点击单文件下载原静默吞事件（ADR-044 ③）——
+          // 用户无感知；发 toast 提示操作在途
+          bus.emit("toast:show", {
+            msg: t("workshop.downloading"),
+            duration: 2000,
+            type: "info",
+          });
+          return;
+        }
         // 匹配 .gh-row 而非 [data-name]：dlBtn 自身带 data-name 会命中自己
         const row = dlBtn.closest(".gh-row");
         await handleSingleDownload(dlBtn, row);

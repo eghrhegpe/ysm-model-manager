@@ -54,6 +54,46 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
     unmount(el);
   });
 
+  it("warn 类型 → 添加 warn CSS class（P2 修复：原样式缺 .toast.warn）", async () => {
+    const el = mountToast();
+    bus.emit("toast:show", { msg: "警告", type: "warn" });
+    const root = el.shadowRoot!;
+    await waitFor(() => getByTestId(root, "toast") !== null);
+    expect(getByTestId(root, "toast")!.classList.contains("warn")).toBe(true);
+    unmount(el);
+  });
+
+  it("click 回调 → 触发一次并移除 toast（防重入）", async () => {
+    const el = mountToast();
+    const clickFn = vi.fn();
+    bus.emit("toast:show", { msg: "可点击", click: clickFn });
+    const root = el.shadowRoot!;
+    await waitFor(() => getByTestId(root, "toast") !== null);
+    const msgEl = root.querySelector(".msg") as HTMLElement;
+    msgEl.click();
+    msgEl.click(); // 连点：pointer-events 守卫应只执行一次
+    expect(clickFn).toHaveBeenCalledTimes(1);
+    unmount(el);
+  });
+
+  it("P2 修复：click 回调抛错 → error toast 反馈且不静默", async () => {
+    const el = mountToast();
+    bus.emit("toast:show", {
+      msg: "会失败的点击",
+      click: () => {
+        throw new Error("click boom");
+      },
+    });
+    const root = el.shadowRoot!;
+    await waitFor(() => getByTestId(root, "toast") !== null);
+    (root.querySelector(".msg") as HTMLElement).click();
+    // 抛错后出现「❌ 操作失败」error toast（对齐 undo 的错误边界）
+    await waitFor(() =>
+      getAllByTestId(root, "toast").some((t) => t.innerHTML.includes("操作失败")),
+    );
+    unmount(el);
+  });
+
   it("关闭按钮 → 移除 toast", async () => {
     const el = mountToast();
     bus.emit("toast:show", { msg: "可关闭" });

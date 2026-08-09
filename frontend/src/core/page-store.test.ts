@@ -3,7 +3,12 @@
 // 页面名收窄为 PageName 联合（编译期拦截拼错，运行时信任 emit 方类型）。
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { bus } from "../bus.ts";
-import { PageStore, registerPageStore, resolveInitialPage } from "./page-store.ts";
+import {
+  PageStore,
+  registerPageStore,
+  resolveInitialPage,
+  PAGE_WHITELIST,
+} from "./page-store.ts";
 
 describe("resolveInitialPage（localStorage 恢复）", () => {
   beforeEach(() => {
@@ -39,6 +44,23 @@ describe("resolveInitialPage（localStorage 恢复）", () => {
     localStorage.setItem("nav_page", "resources");
     expect(resolveInitialPage()).toBe("repository");
   });
+
+  it("未知值回退仓库页防死页（P2 修复：遗留/损坏 localStorage）", () => {
+    localStorage.setItem("ui-default-page", "bogus");
+    expect(resolveInitialPage()).toBe("repository");
+    localStorage.clear();
+    localStorage.setItem("nav_page", "");
+    expect(resolveInitialPage()).toBe("repository");
+  });
+});
+
+describe("PAGE_WHITELIST 双源漂移防护", () => {
+  it("白名单内容与 PageName 六页一致（防新增页被内联脚本重置回 repository）", () => {
+    expect([...PAGE_WHITELIST].sort()).toEqual(
+      ["repository", "instances", "workshop", "github", "diagnostics", "settings"].sort(),
+    );
+    expect(PAGE_WHITELIST.length).toBe(6);
+  });
 });
 
 describe("PageStore 导航状态机", () => {
@@ -73,6 +95,21 @@ describe("PageStore 导航状态机", () => {
   it("退订后不再同步（生命周期配对）", () => {
     unsubs.pop()!();
     bus.emit("nav:changed", { page: "github" });
+    expect(PageStore.currentPage).toBe("repository");
+  });
+
+  it("非法页 emit → 回退仓库页（P2 修复：sanitizePage 防遗留 .js 注入）", () => {
+    bus.emit("nav:changed", { page: "bogus" as never });
+    expect(PageStore.currentPage).toBe("repository");
+  });
+
+  it("null/undefined 页 emit → 回退仓库页", () => {
+    bus.emit("nav:changed", { page: null as never });
+    expect(PageStore.currentPage).toBe("repository");
+  });
+
+  it("事件侧历史名 resources → 映射回仓库页", () => {
+    bus.emit("nav:changed", { page: "resources" as never });
     expect(PageStore.currentPage).toBe("repository");
   });
 });

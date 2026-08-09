@@ -29,6 +29,7 @@ class AppToast extends HTMLElement {
         }
         .toast.error { border-left: 3px solid var(--paid); }
         .toast.success { border-left: 3px solid var(--free); }
+        .toast.warn { border-left: 3px solid #f38ba8; }
         .toast.info { border-left: 3px solid var(--accent); }
         .toast .msg { flex: 1; white-space: pre-line; }
         .toast .undo-btn { padding: 4px 10px; border-radius: 5px; border: none; background: var(--hover); color: var(--accent); cursor: pointer; font-size: var(--fs-sm); font-family: inherit; transition: background var(--tr-fast); }
@@ -81,7 +82,21 @@ class AppToast extends HTMLElement {
         // 拦不住编程式 click()/键盘激活；handler 首行检查标记双保险
         if (t.style.pointerEvents === "none") return;
         t.style.pointerEvents = "none";
-        try { clickCallback(); } finally { this._remove(t); }
+        try {
+          clickCallback();
+        } catch (e) {
+          // P2 修复（审核发现）：click 回调无 catch 出口——抛错逃逸 onclick 成
+          // uncaught 且无反馈，与 undo 路径（L92-103 有 catch）错误边界不对称；
+          // 对齐 undo：记录并反馈，不静默
+          console.error("[toast] 点击回调失败:", e);
+          bus.emit("toast:show", {
+            msg: "❌ 操作失败",
+            duration: 3000,
+            type: "error",
+          });
+        } finally {
+          this._remove(t);
+        }
       };
     }
     if (undoCallback) {

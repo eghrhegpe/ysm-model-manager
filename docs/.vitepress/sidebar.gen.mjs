@@ -632,6 +632,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-047：Android 可用性落地规划：触屏交互 + FileAccessor 抽象（ADR-046 P2 实施）",
+        "link": "/adr/ADR-047-android-usability-plan"
+      },
+      {
         "text": "ADR-046：全平台化可行性调查（对照 MikuMikuAR）",
         "link": "/adr/ADR-046-cross-platform-feasibility"
       },

@@ -584,10 +584,10 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `normalizeTheme()` | `frontend/src/app-modules:62` | 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） |
-| `applyTheme()` | `frontend/src/app-modules:66` | — |
-| `initTheme()` | `frontend/src/app-modules:90` | — |
-| `applyUIPrefs()` | `frontend/src/app-modules:109` | 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 |
+| `normalizeTheme()` | `frontend/src/app-modules:63` | 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） |
+| `applyTheme()` | `frontend/src/app-modules:67` | — |
+| `initTheme()` | `frontend/src/app-modules:91` | — |
+| `applyUIPrefs()` | `frontend/src/app-modules:110` | 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 |
 | `bus()` | `frontend/src/bus:177` | 默认实例（组件直接使用） |
 | `ToastPayload()` | `frontend/src/bus:7` | — |
 | `MenuItem()` | `frontend/src/bus:18` | — |

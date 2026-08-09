@@ -19,7 +19,8 @@ register("loadEntries", loadEntries);
 
 // 新版 Web Component（通过 ES Module 导入以支持 shadow DOM）
 // 静态导入（浏览器加载失败时直接报错，不 try/catch 以免静默吞错）
-import "./views/app-nav/index.ts";
+// 注意：app-nav 的注册已移至 async IIFE 中，放在 initI18n() 之后，
+// 避免首帧渲染时 i18n bundle 尚未加载导致 [i18n] 缺失 key 警告。
 import "./views/context-menu/index.ts";
 import "./views/app-toast/index.ts";
 // Web Components 动态导入（使用字面量确保 Vite 能在构建时解析路径）
@@ -160,6 +161,8 @@ export function applyUIPrefs() {
 (async () => {
   registerErrorDiary();
   await initI18n();
+  // app-nav 必须在 i18n 初始化后注册，否则首帧渲染时 bundle 为空 → [i18n] 缺失 key
+  await import("./views/app-nav/index.ts");
   await initTheme();
   applyUIPrefs();
   // 静默检查更新（不阻塞界面）

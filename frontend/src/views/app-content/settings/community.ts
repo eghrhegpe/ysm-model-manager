@@ -955,7 +955,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     const { getLang, setLang } = await import("../../../core/i18n/locale.ts");
     langSelect.value = getLang();
     langSelect.addEventListener("change", async () => {
-      await setLang(langSelect.value as "zh-CN" | "en");
+      await setLang(langSelect.value as "zh-CN" | "en" | "ja");
       // 热切换（ADR-045 增强）：不再整页 reload——setLang 内部 emit lang:changed，
       // app-content 全局订阅后重渲染当前页（t() 读取新语言包），保留应用状态
     });

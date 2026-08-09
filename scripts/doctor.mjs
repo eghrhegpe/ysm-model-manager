@@ -392,7 +392,28 @@ function runStaticTools(tools, label) {
   for (const entry of tools) {
     const tool = typeof entry === 'string' ? entry : entry.tool;
     const extraArgs = typeof entry === 'string' ? [] : entry.args || [];
-    const { rc } = run(['node', path.join('scripts', tool), '--json', ...extraArgs]);
+    const { rc, out } = run(['node', path.join('scripts', tool), '--json', ...extraArgs]);
+    // P2-2（子代理审核）：i18n-check 告警可见化——此前 runStaticTools 只取 rc 不打印
+    // stdout，而 i18n-check --json 抑制人类日志、非 strict 恒 0，key 缺失/占位符漂移/
+    // 漏译在 doctor 入口全部无声；解析其 JSON 把非空告警渲染为 WARN 行（不阻断）
+    if (tool === 'i18n-check') {
+      try {
+        const j = JSON.parse(out);
+        const warns = [];
+        if (j.keyParity && j.keyParity.length) warns.push(`key 对齐 ${j.keyParity.length} 条`);
+        if (j.placeholderMismatches && j.placeholderMismatches.length) warns.push(`占位符不一致 ${j.placeholderMismatches.length} 条`);
+        if (j.untranslated && j.untranslated.length) warns.push(`zh-CN 疑似漏译 ${j.untranslated.length} 条`);
+        const drift = j.langListDrift;
+        if (drift && ((drift.inAvailNotFile && drift.inAvailNotFile.length) || (drift.inFileNotAvail && drift.inFileNotAvail.length))) {
+          warns.push(`语言清单漂移 ${drift.inAvailNotFile?.length ?? 0}/${drift.inFileNotAvail?.length ?? 0}`);
+        }
+        if (warns.length) {
+          console.log(`  ${WARN} ${tool}: ${warns.join('；')}（详情: node scripts/${tool} --json）`);
+        }
+      } catch {
+        // JSON 解析失败：保持原有 rc 判定，不额外输出
+      }
+    }
     if (rc === 0) console.log(`  ${PASS} ${tool}`);
     else {
       failed += 1;

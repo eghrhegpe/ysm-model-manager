@@ -935,14 +935,14 @@
 | `statsCardHTML()` | `frontend/src/views/app-preview/tpl:67` | 模型统计卡片 |
 | `devLog()` | `frontend/src/views/app-preview/utils:6` | DEV 模式下输出调试日志 |
 | `DecodedYsm()` | `frontend/src/views/app-preview/utils:11` | WASM 解码结果（decodeYsmViaWasm 返回） |
-| `PreviewRoot()` | `frontend/src/views/app-preview/utils:27` | 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） |
-| `YsmDecoder()` | `frontend/src/views/app-preview/utils:34` | WASM 解码能力（loader/skeleton 消费） |
-| `PreviewDebugger()` | `frontend/src/views/app-preview/utils:39` | 调试输出能力（loader/skeleton 消费） |
-| `PreviewImageLoader()` | `frontend/src/views/app-preview/utils:44` | 预览图加载能力（detail 消费） |
-| `PreviewCtx()` | `frontend/src/views/app-preview/utils:51` | 组合接口：实现方（AppPreview）与兼容旧调用方的完整视图。 |
-| `getPrefer3D()` | `frontend/src/views/app-preview/utils:55` | — |
-| `setPrefer3D()` | `frontend/src/views/app-preview/utils:58` | — |
-| `stripYsgpTextHeader()` | `frontend/src/views/app-preview/utils:125` | 剥离 YSGP 文本头部，返回标准二进制格式 |
+| `PreviewRoot()` | `frontend/src/views/app-preview/utils:26` | 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） |
+| `YsmDecoder()` | `frontend/src/views/app-preview/utils:33` | WASM 解码能力（loader/skeleton 消费） |
+| `PreviewDebugger()` | `frontend/src/views/app-preview/utils:38` | 调试输出能力（loader/skeleton 消费） |
+| `PreviewImageLoader()` | `frontend/src/views/app-preview/utils:43` | 预览图加载能力（detail 消费） |
+| `PreviewCtx()` | `frontend/src/views/app-preview/utils:50` | 组合接口：实现方（AppPreview）与兼容旧调用方的完整视图。 |
+| `getPrefer3D()` | `frontend/src/views/app-preview/utils:54` | — |
+| `setPrefer3D()` | `frontend/src/views/app-preview/utils:57` | — |
+| `stripYsgpTextHeader()` | `frontend/src/views/app-preview/utils:124` | 剥离 YSGP 文本头部，返回标准二进制格式 |
 | `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:28` | 通过前端 WASM 解码 .ysm，返回 { texture, geometry, animations } 不依赖组件实例（无 this 引用），可独立调用 |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `registerResourceManagerGlobal()` | `frontend/src/views/app-resource-manager/index:52` | 全局配置刷新监听：registerGlobalHandlers 统一收集 unsub （替代顶层无守卫注册 — ADR-008 违规点，TS 化后收敛） |

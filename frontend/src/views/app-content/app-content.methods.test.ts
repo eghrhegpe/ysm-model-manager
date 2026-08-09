@@ -321,13 +321,13 @@ describe("事件订阅", () => {
   it("lang:changed → 重渲染当前页", async () => {
     const el = mountContent();
     await sleep(50);
-    const before = el.shadowRoot.innerHTML;
-    el._current = "repository";
-    el._render();
+    // P2（子代理审核）：原测试为 no-op——before 在显式 _render() 前捕获后 void 丢弃，
+    // 断言仅 .repo-tab 存在（显式 _render 已满足），删掉 lang:changed 订阅测试照样通过。
+    // 改为 spyOn(_render) 断言 emit 后热重渲染真实触发。
+    const renderSpy = vi.spyOn(el, "_render");
     bus.emit("lang:changed", { lang: "en" });
     await sleep(10);
-    expect(el.shadowRoot.querySelector(".repo-tab")).toBeTruthy();
-    void before;
+    expect(renderSpy).toHaveBeenCalled();
     unmountElement(el);
   });
 

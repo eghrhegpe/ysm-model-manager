@@ -108,9 +108,15 @@ let phIssues = 0;
 const phReport = [];
 for (const ref of refs) {
   const refPH = extractPlaceholders(resolve(LOCALES_DIR, `${ref.lang}.ts`));
-  for (const [key, baseSet] of basePH) {
-    const refSet = refPH.get(key);
-    if (!refSet) continue; // 该 key 无占位符或缺失（缺失已在上面报）
+  // P2-1（子代理审核）：base/ref 占位符键并集遍历——原代码只迭代 basePH，
+  // ref 值「删了 {n}」或「多了 base 没有的 {xxx}」均静默漏检；并集后 refPH 缺
+  // key（undefined）→ refSet 空 → missing 全量（抓「占位符被删」），ref 独有键
+  // → extra 全量（抓「多余占位符」）。缺 key 本身仍由 parity 阶段报，不重复。
+  const allPHKeys = new Set([...basePH.keys(), ...refPH.keys()]);
+  for (const key of allPHKeys) {
+    if (!ref.keys.has(key)) continue; // 缺 key 已由 parity 报，不在此重复
+    const baseSet = basePH.get(key) ?? new Set();
+    const refSet = refPH.get(key) ?? new Set();
     const missing = [...baseSet].filter((p) => !refSet.has(p));
     const extra = [...refSet].filter((p) => !baseSet.has(p));
     if (missing.length || extra.length) {

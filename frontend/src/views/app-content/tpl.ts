@@ -140,6 +140,7 @@ export function settingsHTML(): string {
     <select id="set-lang" class="stg-select" style="width:auto">
       <option value="zh-CN">简体中文</option>
       <option value="en">English</option>
+      <option value="ja">日本語</option>
     </select>
     <span style="font-size:10px;color:var(--muted)">${t("settings.languageDesc")}</span>
   </div>

@@ -97,7 +97,7 @@
 | ysm `Taskfile.yml` / `build/` | Taskfile 仅 include windows；build/darwin/ 仅含 icons.icns 占位、无构建配置（build/ 脚手架已入仓，见 .gitignore） |
 | ysm `main.go` + `docs/architecture.md` §1/§2 | Wails v3 alpha2.105 + Go 1.25 + WebView2；单一 Service |
 | ysm grep `go:build`（go/ + internal/） | 6 组 `_windows/_other` 双文件已存在（hidewindow/isCrossDevice/isHardLink/link/updater/app_config） |
-| ysm `internal/app/app_files.go:93`、`app_scan.go:292` | `exec.Command("explorer", ...)` 硬编码 |
+| ysm `internal/app/app_files.go`(~88)、`app_scan.go`(~304) | `exec.Command("explorer", ...)` 硬编码 |
 | ysm `go/updater/update.go:265` | `runtime.GOOS != "windows"` 明确拒绝自动更新 |
 | ysm `frontend/src` grep | 零 isAndroid/platform 守卫；路径统一 `replace(/\\/g, "/")` |
 | MikuMikuAR `Taskfile.yml` + `build/` | 6 平台 includes + 各平台 build/ 目录（gradle/pbxproj/nfpm/mime） |

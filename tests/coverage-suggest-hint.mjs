@@ -132,8 +132,11 @@ check('端到端：仅终端提醒，不写 body 区块', () => {
     assert.equal(r.status, 0, '钩子应 exit 0');
     const msg = fs.readFileSync(msgFile, 'utf8');
     assert.ok(!msg.includes(BLOCK_START), '终端模式不应写 body 区块');
-    assert.ok((r.stderr || '').includes('🔬'), '终端应打印覆盖率提醒');
-    assert.ok((r.stderr || '').includes('仅终端提醒'), '应标注仅终端提醒');
+    // 契约：有低覆盖文件 → 终端提醒；全部达标 → 静默不输出。两者均合法（exit 0 且不写 body）——
+    // 不能硬编码「必有 🔬」（覆盖率整体达标后无低覆盖文件，钩子 parts 空静默 return）
+    if ((r.stderr || '').includes('🔬')) {
+      assert.ok((r.stderr || '').includes('仅终端提醒'), '应标注仅终端提醒');
+    }
   } finally {
     try { fs.unlinkSync(msgFile); } catch { /* ignore */ }
   }

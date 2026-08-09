@@ -9,6 +9,7 @@ package fsutil
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -17,6 +18,20 @@ import (
 // 调用方（如 go/importer 的 AppError 包装）可用 errors.Is 区分该阶段并映射
 // 不同的错误码（如 MKDIR_FAILED），维持既有结构化错误契约（code_review）。
 var ErrTempCreateFailed = errors.New("创建临时文件失败")
+
+// ReadLimitedEntry 读取 zip/7z 单条目：limit+1 探测截断（ADR-033 修复，ADR-044 策略 A 统一口径）——
+// 原 `io.ReadAll(io.LimitReader(rc, limit))` 截断后 err==nil 静默，超限数据会被截断后继续使用
+// （损坏数据装盘，项目头号反模式）。本函数读 limit+1 字节，len 超 limit 即判超限返回 nil；
+// 读取错误同样返回 nil（调用方跳过该条目）。rc 由本函数 Close。
+// 收敛自 go/geometry/archive.go 的 readLimitedEntry——ysm/packs 等各档上限探测统一引用本函数。
+func ReadLimitedEntry(rc io.ReadCloser, limit int64) []byte {
+	defer rc.Close()
+	buf, err := io.ReadAll(io.LimitReader(rc, limit+1))
+	if err != nil || int64(len(buf)) > limit {
+		return nil
+	}
+	return buf
+}
 
 // WriteFileAtomic 临时文件 + rename 原子落地目标文件。
 // CreateTemp 恒建 0600，落地前 chmod 0644（对齐 installer.copyFileLocked 约定，

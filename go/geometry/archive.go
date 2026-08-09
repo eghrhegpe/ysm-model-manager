@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 
 	"github.com/bodgit/sevenzip"
@@ -23,14 +24,10 @@ const maxExtractSize = 50 << 20 // 50MB
 // readLimitedEntry 读取 zip/7z 单条目：limit+1 探测截断（ADR-033 修复）——
 // 原 `io.ReadAll(io.LimitReader(rc, maxExtractSize))` 截断后 err==nil 静默，
 // 超 50MB 的 PNG/geometry 会被截断后继续使用（损坏数据装盘）。
+// ADR-044 策略 A：实现已收敛至 fsutil.ReadLimitedEntry（本处保留包内转发，调用点零改动）。
 // 读取错误或超限返回 nil，调用方跳过该条目。
 func readLimitedEntry(rc io.ReadCloser) []byte {
-	defer rc.Close()
-	buf, err := io.ReadAll(io.LimitReader(rc, int64(maxExtractSize)+1))
-	if err != nil || len(buf) > maxExtractSize {
-		return nil
-	}
-	return buf
+	return fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
 }
 
 // isArmModelName 判断模型文件是否为第一人称手臂模型（arm.json / arm.geo.json）。

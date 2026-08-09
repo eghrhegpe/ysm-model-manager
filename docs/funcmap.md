@@ -117,13 +117,13 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `ExtractFirstPNGFromZip()` | `go/geometry/archive:57` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
-| `ExtractFirstPNGFrom7z()` | `go/geometry/archive:78` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
-| `ParseFromZip()` | `go/geometry/archive:293` | — |
-| `ParseFrom7z()` | `go/geometry/archive:593` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
-| `IsMainModelName()` | `go/geometry/archive:877` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
-| `ParseComponentsFromZip()` | `go/geometry/archive:889` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
-| `ParseComponentsFrom7z()` | `go/geometry/archive:983` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
+| `ExtractFirstPNGFromZip()` | `go/geometry/archive:58` | ExtractFirstPNGFromZip 从 ZIP 中提取第一张 PNG 图片（用于快速预览） |
+| `ExtractFirstPNGFrom7z()` | `go/geometry/archive:79` | ExtractFirstPNGFrom7z 从 7z 中提取第一张 PNG 图片（用于快速预览） |
+| `ParseFromZip()` | `go/geometry/archive:294` | — |
+| `ParseFrom7z()` | `go/geometry/archive:594` | ParseFrom7z 从 7z 字节中解析 Bedrock Geometry 并提取纹理 |
+| `IsMainModelName()` | `go/geometry/archive:878` | IsMainModelName 判断模型文件是否为主组件（main.json / main.geo.json）。 |
+| `ParseComponentsFromZip()` | `go/geometry/archive:890` | ParseComponentsFromZip 多组件解析（YSMViewer 式）：zip 内每个模型文件独立组件， 含 arm/载具等组件（不合并、不排除）；main 优先排序， |
+| `ParseComponentsFrom7z()` | `go/geometry/archive:984` | ParseComponentsFrom7z 多组件解析（7z 版）：与 ParseComponentsFromZip 同构， 复用 collectArchiveFiles/buil |
 | `ParseBedrockGeometry()` | `go/geometry/parse:25` | ParseBedrockGeometry 解析标准 Bedrock geometry JSON（minecraft:geometry 格式） 注意：data 大小不应超过 maxP |
 
 ## Go·导入
@@ -387,23 +387,23 @@
 | `AnalyzeYSMHeader()` | `go/ysm/header:167` | AnalyzeYSMHeader 读取 YSM 文件的文本头部，提取元数据 |
 | `AnalyzeYSMHeaderFromBytes()` | `go/ysm/header:320` | AnalyzeYSMHeaderFromBytes 从字节数据解析 YSM 头部（适用于 base64 导入场景） |
 | `YSMHeader()` | `go/ysm/header:12` | YSMHeader 从 YSM 文件文本头部提取的元数据（适用于加密和非加密模型） |
-| `AnalyzeYSMModel()` | `go/ysm/parse:43` | AnalyzeYSMModel 解析 .ysm 文件，提取模型元数据 |
-| `YSMModelMeta()` | `go/ysm/parse:13` | YSMModelMeta 模型元数据（从 model.json 提取） |
-| `ExtractYsmSummary()` | `go/ysm/summary:131` | ExtractYsmSummary 从 .ysm / .zip 文件中提取摘要 |
-| `Author()` | `go/ysm/summary:14` | — |
-| `Link()` | `go/ysm/summary:20` | — |
-| `AnimGroup()` | `go/ysm/summary:25` | — |
-| `ConfigMenu()` | `go/ysm/summary:31` | — |
-| `PreviewInfo()` | `go/ysm/summary:37` | — |
-| `YsmSummary()` | `go/ysm/summary:45` | YsmSummary 是前端右侧面板和 AI 搜索消费的标准摘要 |
-| `Stats()` | `go/ysm/summary:62` | — |
-| `ScanModelTexSizes()` | `go/ysm/texsize:22` | ScanModelTexSizes 扫描仓库文件读取纹理尺寸，不调用 YSMParser/WASM 仅支持 zip/7z 格式（未加密模型），加密 .ysm 返回 0,0 |
-| `ScanFiles()` | `go/ysm/texsize:145` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
-| `TexInfo()` | `go/ysm/texsize:14` | TexInfo 轻量级纹理尺寸（不解析完整模型） |
-| `ModelEntry()` | `go/ysm/texsize:37` | ModelEntry 轻量级条目（仅用于纹理扫描签名，调用方传入完整路径） |
-| `IsYSMJar()` | `go/ysm/ysm:12` | IsYSMJar 检查单个 jar 是否是 YSM 模组（支持 mods.toml 和 neoforge.mods.toml） |
-| `HasYSMMod()` | `go/ysm/ysm:77` | HasYSMMod 检查 mods 目录是否有 YSM 模组（先做文件名过滤避免对每个 JAR 打开 ZIP） |
-| `HasModInDir()` | `go/ysm/ysm:106` | HasModInDir 检查 mods 目录是否有匹配指定类型关键词的 jar |
+| `AnalyzeYSMModel()` | `go/ysm/parse:44` | AnalyzeYSMModel 解析 .ysm 文件，提取模型元数据 |
+| `YSMModelMeta()` | `go/ysm/parse:14` | YSMModelMeta 模型元数据（从 model.json 提取） |
+| `ExtractYsmSummary()` | `go/ysm/summary:133` | ExtractYsmSummary 从 .ysm / .zip 文件中提取摘要 |
+| `Author()` | `go/ysm/summary:16` | — |
+| `Link()` | `go/ysm/summary:22` | — |
+| `AnimGroup()` | `go/ysm/summary:27` | — |
+| `ConfigMenu()` | `go/ysm/summary:33` | — |
+| `PreviewInfo()` | `go/ysm/summary:39` | — |
+| `YsmSummary()` | `go/ysm/summary:47` | YsmSummary 是前端右侧面板和 AI 搜索消费的标准摘要 |
+| `Stats()` | `go/ysm/summary:64` | — |
+| `ScanModelTexSizes()` | `go/ysm/texsize:24` | ScanModelTexSizes 扫描仓库文件读取纹理尺寸，不调用 YSMParser/WASM 仅支持 zip/7z 格式（未加密模型），加密 .ysm 返回 0,0 |
+| `ScanFiles()` | `go/ysm/texsize:147` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
+| `TexInfo()` | `go/ysm/texsize:16` | TexInfo 轻量级纹理尺寸（不解析完整模型） |
+| `ModelEntry()` | `go/ysm/texsize:39` | ModelEntry 轻量级条目（仅用于纹理扫描签名，调用方传入完整路径） |
+| `IsYSMJar()` | `go/ysm/ysm:13` | IsYSMJar 检查单个 jar 是否是 YSM 模组（支持 mods.toml 和 neoforge.mods.toml） |
+| `HasYSMMod()` | `go/ysm/ysm:78` | HasYSMMod 检查 mods 目录是否有 YSM 模组（先做文件名过滤避免对每个 JAR 打开 ZIP） |
+| `HasModInDir()` | `go/ysm/ysm:107` | HasModInDir 检查 mods 目录是否有匹配指定类型关键词的 jar |
 
 ## Go(internal)·应用入口
 

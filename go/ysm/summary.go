@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 type Author struct {
@@ -250,11 +252,11 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 				if err != nil {
 					continue
 				}
-				// P2 修复：limit+1 探测截断 + 不丢弃 ReadAll 错误（ADR-033 陷阱）
+				// P2 修复：limit+1 探测截断 + 不丢弃 ReadAll 错误（ADR-033 陷阱）。
+				// ADR-044 策略 A：统一走 fsutil.ReadLimitedEntry（超限/错误返回 nil → 跳过）
 				const maxGeoJSON = 5 << 20
-				buf, err := io.ReadAll(io.LimitReader(rc, maxGeoJSON+1))
-				rc.Close()
-				if err != nil || len(buf) > maxGeoJSON {
+				buf := fsutil.ReadLimitedEntry(rc, int64(maxGeoJSON))
+				if buf == nil {
 					continue // 读取失败或超过 5MB 上限，跳过该文件
 				}
 				if len(buf) > 0 && (bytes.Contains(buf, []byte(`"minecraft:geometry"`)) || bytes.Contains(buf, []byte(`"minecraft:geometry":`))) {
@@ -285,7 +287,9 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 	}
 	defer rc.Close()
 
-	// P2 修复：limit+1 探测截断（ADR-033 陷阱）——截断数据 JSON 解析会失败且报错信息误导
+	// P2 修复：limit+1 探测截断（ADR-033 陷阱）——截断数据 JSON 解析会失败且报错信息误导。
+	// 注：本处保留手写实现（未接入 fsutil.ReadLimitedEntry）——调用点需区分「读取失败」与
+	// 「超限」两种错误消息返回调用方，而 fsutil 版对两者统一返回 nil（ADR-044 策略 A 例外说明）
 	const maxYsmJSON = 50 << 20
 	data, err := io.ReadAll(io.LimitReader(rc, maxYsmJSON+1))
 	if err != nil {
@@ -412,11 +416,11 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 					if err != nil {
 						continue
 					}
-					// P2 修复：limit+1 探测截断 + 不丢弃 ReadAll 错误（ADR-033 陷阱）
+					// P2 修复：limit+1 探测截断 + 不丢弃 ReadAll 错误（ADR-033 陷阱）。
+					// ADR-044 策略 A：统一走 fsutil.ReadLimitedEntry（超限/错误返回 nil → 跳过）
 					const maxTexGeo = 50 << 20
-					data, err := io.ReadAll(io.LimitReader(rc, maxTexGeo+1))
-					rc.Close()
-					if err != nil || len(data) > maxTexGeo {
+					data := fsutil.ReadLimitedEntry(rc, int64(maxTexGeo))
+					if data == nil {
 						continue
 					}
 					if w, h := extractTexSizeFromGeometry(data); w > 0 && h > 0 {

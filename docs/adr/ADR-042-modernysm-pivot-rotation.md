@@ -30,15 +30,15 @@
 
 游戏内每帧骨骼变换以 `NativeModelRenderer.calculateBoneMatrix`（`NativeModelRenderer.java:177-249`）为权威，抽象成 Go/前端共用口径表，逐条对照审计 `go/threejs` 与 `model3d.ts`：
 
-| 要点 | 游戏内实现 | 对照对象 |
-|------|-----------|---------|
-| **pivot 平移** | `translate((pivotX - animTx), (pivotY + animTy), (pivotZ + animTz)) × 0.0625`，**X 取负** | `spec.go:528` 等 12 处 localPosition |
-| **旋转序** | `rotateZ → rotateY → rotateX`（Z→Y→X） | `eulerToQuaternion(-rx,-ry,+rz)`，ADR-041 |
-| **scale** | `scale==0 → 不可见`（`scale==0 全零才隐藏`），普通 scale 组合 | spec LocalRotation/Scale |
-| **隐藏联动** | **父不可见 → 子必不可见**（`NativeModelRenderer.java:186-189`） | `model3d.ts:801` setBoneVisible 需核对 |
-| **背面剔除** | cullable quad 做仿射投影 `det <= 0` 剔除（`det > 0 才画`） | 与 three.js 默认背面剔除口径核对 |
-| **发光骨骼** | `bone.glow` → 全亮 `LightTexture.pack(15,15)` | model3d 需补 glow 通道 |
-| **世界坐标回填** | `unk3==1` 骨骼写回 stateBuffer（`m30/m31/m32 × 16`）供 molang 读绝对位置 | 移植 `bone_position_abs` 类函数依赖 |
+| 要点 | 游戏内实现 | 对照对象 | 审计结论（2026-08-09） |
+|------|-----------|---------|------------------------|
+| **pivot 平移** | `translate((pivotX - animTx), (pivotY + animTy), (pivotZ + animTz)) × 0.0625`，**X 取负** | `spec.go:528` 等 12 处 localPosition | ✅ Go `localPos={pp.x-bp.x, bp.y-pp.y, bp.z-pp.z}` 已 X 翻转，口径一致（YSMViewer C# ConvertBones 同款） |
+| **旋转序** | `rotateZ → rotateY → rotateX`（Z→Y→X） | `eulerToQuaternion(-rx,-ry,+rz)`，ADR-041 | ⚠️ **顺序相反**：Go/C# 是 `M = Rx*Ry*Rz`（spec.go:699），Java JOML 右乘连调 `rotateZ→rotateY→rotateX` = `Rz*Ry*Rx`。同一欧拉角两套顺序结果不同——需视觉验证裁决（ADR 第 3 节双基准歧义） |
+| **scale** | `scale==0 → 不可见`（三轴全零才隐藏），普通 scale 组合 | spec LocalRotation/Scale | ❌ **未建模**：`BoneData`（spec.go:32-38）无 Scale 字段，静态 spec 不含 scale；动画 scale 由前端 animation.ts 驱动（§2.3 落地前为空） |
+| **隐藏联动** | **父不可见 → 子必不可见**（`NativeModelRenderer.java:186-189`） | `model3d.ts:801` setBoneVisible 需核对 | ❌ **未建模**：前端 setBoneVisible/toggleBone 仅按骨骼名操作自身子树，无「父隐子隐」自动联动；spec 亦无可见性传播字段（§2.3 动画驱动隐藏前不生效） |
+| **背面剔除** | cullable quad 做仿射投影 `det <= 0` 剔除（`det > 0 才画`） | 与 three.js 默认背面剔除口径核对 | ✅ 前端统一 `side: THREE.FrontSide`（model3d.ts:339/344）+ `alphaTest 0.1`，与 Java 正向剔除语义一致（y 轴向上约定下同向） |
+| **发光骨骼** | `bone.glow` → 全亮 `LightTexture.pack(15,15)` | model3d 需补 glow 通道 | ❌ **未建模**：spec 无 glow 字段、材质无发光通道；属增强项，可后置 |
+| **世界坐标回填** | `unk3==1` 骨骼写回 stateBuffer（`m30/m31/m32 × 16`）供 molang 读绝对位置 | 移植 `bone_position_abs` 类函数依赖 | ❌ **未建模**：依赖 molang 求值器（§2.3），静态 spec 无需此数据 |
 
 ### 2.2 二进制直读 pivot/rotation —— 根治反推猜错（远期攻坚项）
 

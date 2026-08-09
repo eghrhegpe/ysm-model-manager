@@ -4,9 +4,10 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"fmt"
-	"io"
 	"path/filepath"
 	"strings"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 // YSMModelMeta 模型元数据（从 model.json 提取）
@@ -97,10 +98,13 @@ func AnalyzeYSMModel(path string) YSMModelMeta {
 	}
 	defer rc.Close()
 
-	data, err := io.ReadAll(io.LimitReader(rc, 5<<20))
-	if err != nil {
+	// P2 修复 + ADR-044 策略 A：原 `io.ReadAll(io.LimitReader(rc, 5<<20))` 无 +1 探测——
+	// LimitReader 截断后 err==nil 静默，恰 5MB 的 model.json 会被截断继续解析（ADR-033 陷阱）。
+	// 统一走 fsutil.ReadLimitedEntry（limit+1 探测，超限/错误返回 nil）
+	data := fsutil.ReadLimitedEntry(rc, 5<<20)
+	if data == nil {
 		meta.HasError = true
-		meta.ErrorMsg = fmt.Sprintf("读取 model.json 失败: %v", err)
+		meta.ErrorMsg = "读取 model.json 失败或超过 5MB 上限"
 		return meta
 	}
 

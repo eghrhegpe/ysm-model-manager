@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 // TexInfo 轻量级纹理尺寸（不解析完整模型）
@@ -73,9 +75,9 @@ func readTexFromZip(path string) (int, int) {
 		if err != nil {
 			continue
 		}
-		data, err := io.ReadAll(io.LimitReader(rc, maxTexJSON+1))
-		rc.Close()
-		if err != nil || len(data) > maxTexJSON {
+		// ADR-044 策略 A：统一走 fsutil.ReadLimitedEntry（超限/错误返回 nil → 跳过）
+		data := fsutil.ReadLimitedEntry(rc, int64(maxTexJSON))
+		if data == nil {
 			continue
 		}
 		if w, h := extractTexSizeFromGeometryBytes(data); w > 0 && h > 0 {
@@ -92,9 +94,8 @@ func readTexFromZip(path string) (int, int) {
 		if err != nil {
 			continue
 		}
-		data, err := io.ReadAll(io.LimitReader(rc, maxTexJSON+1))
-		rc.Close()
-		if err != nil || len(data) > maxTexJSON {
+		data := fsutil.ReadLimitedEntry(rc, int64(maxTexJSON))
+		if data == nil {
 			continue
 		}
 		if w, h := extractTexSizeFromGeometryBytes(data); w > 0 && h > 0 {

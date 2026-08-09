@@ -2,10 +2,11 @@ package ysm
 
 import (
 	"archive/zip"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 // IsYSMJar 检查单个 jar 是否是 YSM 模组（支持 mods.toml 和 neoforge.mods.toml）
@@ -27,15 +28,12 @@ func IsYSMJar(jarPath string) bool {
 			continue
 		}
 		// P2 修复：limit+1 探测截断——LimitReader 截断后 ReadAll 返回 nil 错误（ADR-033 陷阱），
-		// >1MB 的 mods.toml 会以截断数据继续匹配，导致 IsYSMJar 误判 false
+		// >1MB 的 mods.toml 会以截断数据继续匹配，导致 IsYSMJar 误判 false。
+		// ADR-044 策略 A：统一走 fsutil.ReadLimitedEntry（超限/错误返回 nil → 跳过）
 		const maxModsToml = 1 << 20
-		data, err := io.ReadAll(io.LimitReader(rc, maxModsToml+1))
-		rc.Close()
-		if err != nil {
-			continue
-		}
-		if len(data) > maxModsToml {
-			continue // mods.toml 超过 1MB 上限，视为畸形文件跳过
+		data := fsutil.ReadLimitedEntry(rc, int64(maxModsToml))
+		if data == nil {
+			continue // 读取失败或超过 1MB 上限，视为畸形文件跳过
 		}
 
 		content := string(data)

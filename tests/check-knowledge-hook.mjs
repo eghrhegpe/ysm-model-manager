@@ -166,6 +166,22 @@ check('parseCardText：无 frontmatter 返回原文本 + offset 0', () => {
   assert.strictEqual(offset, 0);
 });
 
+check('parseCardText：UTF-8 BOM 前缀不破坏 frontmatter 解析（P4）', () => {
+  const { body, offset } = parseCardText('\uFEFF---\nkind: x\n---\n\n正文\n');
+  assert.strictEqual(body, '正文\n');
+  // BOM 与 --- 同行（第 1 行），frontmatter 块占 4 个换行 → offset 4，正文首行为第 5 行
+  assert.strictEqual(offset, 4);
+});
+
+check('findStaleSnippets：CONTEXTUAL 大小写变体不误报（Deprecated/must not）', () => {
+  const card = 'mousedown 已被 Deprecated，勿用。\ncanvas 绑定 mousedown 处理拖拽。\n';
+  const diff = '+ addEventListener("pointerdown", onDown);\n';
+  const hits = findStaleSnippets(card, diff);
+  // 第 1 行含 Deprecated → 警示语境跳过；第 2 行正常描述 → 报
+  assert.strictEqual(hits.length, 1);
+  assert.strictEqual(hits[0].line, 2);
+});
+
 if (fails.length) {
   console.error(`\n契约失败 ${fails.length} 项`);
   process.exit(1);

@@ -97,8 +97,9 @@ export function findStaleSnippets(cardText, diffText, pairs = STALE_KEYWORD_PAIR
   );
   if (introduced.size === 0) return [];
   // 警示/对照语境词：行内含其一即视为刻意提及（对照说明、禁止条款、迁移描述）。
-  // 中文词无词边界（CJK），英文词加 \b 防子串误伤（如 MUST NOT 不命中 MUST NOTICE）
-  const CONTEXTUAL = /(替代|替换|取代|迁移|不再|禁止|不得|避免|仍用|旧写法|废弃|\bdeprecated\b|\bDON'T\b|\bMUST NOT\b)/;
+  // 中文词无词边界（CJK），英文词加 \b 防子串误伤（如 MUST NOT 不命中 MUST NOTICE）；
+  // /i 统一大小写（Deprecated / MUST NOT / don't 变体均识别）
+  const CONTEXTUAL = /(替代|替换|取代|迁移|不再|禁止|不得|避免|仍用|旧写法|废弃|\bdeprecated\b|\bDON'T\b|\bMUST NOT\b)/i;
   const out = [];
   const lines = cardText.split('\n');
   lines.forEach((line, idx) => {
@@ -119,7 +120,8 @@ export function findStaleSnippets(cardText, diffText, pairs = STALE_KEYWORD_PAIR
  * 行号（frontmatter 占行数），供 findStaleSnippets 输出全文行号而非 body 相对行号。
  */
 export function parseCardText(text) {
-  const m = text.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
+  // 允许 UTF-8 BOM（\uFEFF）——Windows 编辑器可能写入，`^---` 锚定会失配
+  const m = text.match(/^\uFEFF?---\r?\n[\s\S]*?\r?\n---\r?\n?/);
   if (!m) return { body: text, offset: 0 };
   // offset = frontmatter 块内换行数（`---\n...\n---\n` 共 N 个 \n → 正文第一行为 N+1 行）
   let offset = (m[0].match(/\n/g) || []).length;

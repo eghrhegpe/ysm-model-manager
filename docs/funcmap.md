@@ -30,7 +30,7 @@
 | Go·更新器 | 1 | 10 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 23 |
-| Go(internal)·应用入口 | 17 | 171 |
+| Go(internal)·应用入口 | 16 | 168 |
 | 前端·根 (app-modules/bus) | 2 | 14 |
 | 前端·核心 | 14 | 27 |
 | 前端·特性 | 13 | 60 |
@@ -40,7 +40,7 @@
 | frontend/views | 53 | 151 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **184** | **832** |
+| **合计** | **183** | **829** |
 
 ## Go·头像
 
@@ -429,8 +429,8 @@
 | `App.SaveWindowPosition()` | `internal/app/app_config:283` | — |
 | `App.GetWindowPosition()` | `internal/app/app_config:297` | — |
 | `App.SelectDirectory()` | `internal/app/app_config:328` | ========== 目录选择 ========== |
-| `App.GetMinecraftPaths()` | `internal/app/app_config:389` | — |
-| `App.ValidateMinecraftDir()` | `internal/app/app_config:391` | — |
+| `App.GetMinecraftPaths()` | `internal/app/app_config:391` | — |
+| `App.ValidateMinecraftDir()` | `internal/app/app_config:393` | — |
 | `NewDownloadQueue()` | `internal/app/app_download:51` | NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入） |
 | `App.EnqueueDownloads()` | `internal/app/app_download:56` | — |
 | `App.CancelQueue()` | `internal/app/app_download:86` | — |
@@ -552,9 +552,6 @@
 | `Issue()` | `internal/app/cli:183` | — |
 | `androidPathManager.AppDataRoot()` | `internal/app/pathmgr_android:19` | AppDataRoot 按候选序返回第一个可写目录；全不可写返回错误—— 直接返回 HOME/Getwd 可能退化为不可写的文件系统根 "/"（P2 审核发现）， 配置/标签将静默 |
 | `desktopPathManager.AppDataRoot()` | `internal/app/pathmgr_desktop:10` | — |
-| `App.StartProxy()` | `internal/app/proxy:25` | StartProxy 启动本地反代服务器（127.0.0.1 仅本机可访问） |
-| `App.StopProxy()` | `internal/app/proxy:47` | StopProxy 关闭反代服务器 |
-| `App.IsProxyRunning()` | `internal/app/proxy:62` | IsProxyRunning 检查代理是否运行中 |
 | `App.LoadResourceTypes()` | `internal/app/resource_bindings:23` | LoadResourceTypes 加载资源类型注册表 |
 | `App.ReadPackMeta()` | `internal/app/resource_bindings:32` | ReadPackMeta 读取资源包信息（pack.mcmeta + pack.png） |
 | `App.ReadShaderpackLang()` | `internal/app/resource_bindings:57` | ReadShaderpackLang 读取光影包 lang/en_US.lang 提取显示名 |

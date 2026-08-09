@@ -109,13 +109,11 @@ if (Test-Path $assetsDir) {
 Copy-Item "frontend\dist\*" $assetsDir -Recurse -Force
 Write-Output "[build-android] Android assets 已更新"
 
-# 3. 生成 overlay.json（首次）
+# 3. 生成 overlay.json（每次强制：内含本机绝对路径，入库会致换机/CI 失败——ADR-047 P1-2）
 $overlayJson = "$androidDir\overlay.json"
-if (-not (Test-Path $overlayJson)) {
-    Write-Output "[build-android] 生成 Android overlay..."
-    & wails3 android overlay:gen -out $overlayJson -config build/config.yml
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-}
+Write-Output "[build-android] 生成 Android overlay..."
+& wails3 android overlay:gen -out $overlayJson -config build/config.yml
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # 4. 编译 .so
 $archs = if ($Arch -eq "all") { @("arm64", "amd64") } else { @($Arch) }

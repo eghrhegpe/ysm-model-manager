@@ -376,7 +376,9 @@ func scanMinecraftDirs() []string {
 		add(filepath.Join(filepath.Dir(exe), ".minecraft"))
 		add(filepath.Join(filepath.Dir(exe), "..", ".minecraft"))
 	}
-	if appData, err := os.UserConfigDir(); err == nil {
+	// P2 修复（ADR-047）：统一走 PathManager——桌面 os.UserConfigDir() / Android 沙盒，
+	// 不再直调系统 API 造成与 config/logs 落点分叉
+	if appData := appDataRoot(); appData != "" {
 		add(filepath.Join(appData, ".minecraft"))
 	}
 

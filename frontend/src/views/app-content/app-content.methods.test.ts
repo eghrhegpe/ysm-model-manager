@@ -18,7 +18,6 @@ vi.mock("../../wails/app.ts", () => ({
     LoadGitHubRepos: vi.fn().mockResolvedValue([]),
     OpenInBrowser: vi.fn().mockResolvedValue(undefined),
     BatchExtractCreatorAvatars: vi.fn().mockResolvedValue({}),
-    StartProxy: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 
@@ -368,7 +367,6 @@ describe("_initGithub / _initWorkshop 真实路径", () => {
       LoadGitHubRepos: vi.fn().mockResolvedValue([{ name: "creator/models", desc: "索引" }]),
       OpenInBrowser: vi.fn().mockResolvedValue(undefined),
       BatchExtractCreatorAvatars: vi.fn().mockResolvedValue({}),
-      StartProxy: vi.fn().mockResolvedValue(undefined),
     });
     vi.mocked(tryFetchModels).mockResolvedValue(undefined as never); // 未找到模型列表分支
     el._current = "github";
@@ -405,6 +403,44 @@ describe("_initGithub / _initWorkshop 真实路径", () => {
       expect.objectContaining({ id: "bilibili" }),
       expect.anything(),
     );
+    unmountElement(el);
+  });
+
+  it("内嵌模式直连官网（iframe.src=site.url，不再走本地代理 127.0.0.1）", async () => {
+    const el = mountCustomElement("app-content") as unknown as ContentEl;
+    await sleep(50);
+    vi.mocked(loadCommunityData).mockResolvedValue({
+      sites: [
+        { id: "bilibili", label: "B站", url: "https://bilibili.com", icon: "", desc: "", group: "" },
+      ],
+      creators: [],
+      authors: [],
+    });
+    // renderSiteView mock：渲染可交互卡片 + 模式切换按钮（真实实现内部同样绑定 ctx.openUrl）
+    vi.mocked(renderSiteView).mockImplementation((site, ctx) => {
+      ctx.searchResults.innerHTML =
+        '<button id="cr-mode-toggle"><span class="cr-mode-opt">↗ 外链</span><span class="cr-mode-opt">🔍 内嵌</span></button>' +
+        `<div class="cr-site-card">${site.label}</div>`;
+      ctx.searchResults
+        .querySelector(".cr-site-card")!
+        .addEventListener("click", () => ctx.openUrl(site.url));
+      return () => {};
+    });
+    el._current = "workshop";
+    el._render();
+    await sleep(200);
+
+    // 切到内嵌模式 → 点击卡片 → openUrl 走 openEmbedded
+    const toggle = el.shadowRoot.getElementById("cr-mode-toggle") as HTMLElement | null;
+    expect(toggle).toBeTruthy();
+    toggle!.click();
+    (el.shadowRoot.querySelector(".cr-site-card") as HTMLElement).click();
+    await sleep(20);
+
+    const iframe = el.shadowRoot.getElementById("ws-iframe") as HTMLIFrameElement | null;
+    expect(iframe).toBeTruthy();
+    expect(String(iframe!.src)).toContain("bilibili.com");
+    expect(String(iframe!.src)).not.toContain("127.0.0.1"); // 直连官网，非本地反代
     unmountElement(el);
   });
 });

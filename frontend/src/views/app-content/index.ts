@@ -545,26 +545,31 @@ class AppContent extends HTMLElement {
       }
     };
 
-    // 内嵌浏览
-    const PROXY_PORT = 18080;
-    const PROXY_BASE = "http://127.0.0.1:" + PROXY_PORT + "/proxy?url=";
-    const openEmbedded = async (site: WorkshopSite): Promise<void> => {
-      try {
-        const { StartProxy } = await getApp();
-        await StartProxy(PROXY_PORT);
-      } catch (_) {}
+    // 内嵌浏览：直连官网（参考 MikuMikuAR——本地反代拦截内嵌下载过于复杂，
+    // 最终放弃代理改直连）。被 X-Frame-Options/CSP frame-ancestors 拦截的站点
+    // iframe 会显示空白，由 URL 栏常驻的「↗ 浏览器打开」按钮兜底；
+    // 加载超时（网络/站点拒绝）15s 后显示 noEmbed 提示。
+    let wsLoadTimer: number | undefined;
+    const openEmbedded = (site: WorkshopSite): void => {
       if (urlEl) urlEl.textContent = site.url;
+      if (blockedEl) blockedEl.style.display = "none";
+      if (browserEl) browserEl.style.display = "flex";
       if (iframe) {
         iframe.style.display = "";
-        iframe.src = PROXY_BASE + encodeURIComponent(site.url);
+        iframe.src = site.url;
+        // 加载超时兜底：15s 未完成加载 → 提示「此站点不允许内嵌浏览」+ 外链打开
+        window.clearTimeout(wsLoadTimer);
+        wsLoadTimer = window.setTimeout(() => {
+          if (blockedEl) blockedEl.style.display = "flex";
+        }, 15000);
+        iframe.onload = () => window.clearTimeout(wsLoadTimer);
       }
-      if (browserEl) browserEl.style.display = "flex";
-      if (blockedEl) blockedEl.style.display = "none";
     };
 
     root.getElementById("ws-back")?.addEventListener("click", () => {
       if (iframe) iframe.src = "";
       if (browserEl) browserEl.style.display = "none";
+      window.clearTimeout(wsLoadTimer);
     });
     const openCurrent = (): void => {
       const cs = currentSite;

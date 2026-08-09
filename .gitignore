@@ -80,5 +80,10 @@ build/android/local.properties
 # Android 签名 keystore（敏感，禁止入库）
 build/android/keystore/
 
+# Android overlay 生成物（wails3 android overlay:gen 每次构建前强制重新生成，
+# 内含本机绝对路径，入库会导致换机/CI 构建失败——ADR-047 P1-2）
+build/android/overlay.json
+build/android/gen/
+
 # 本地构建产物（APK / 平台二进制，dist 目录不入库）
 /dist/

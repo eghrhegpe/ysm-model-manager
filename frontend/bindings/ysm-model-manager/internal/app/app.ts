@@ -518,13 +518,6 @@ export function IsFileBanned(path: string): $CancellablePromise<boolean> {
 }
 
 /**
- * IsProxyRunning 检查代理是否运行中
- */
-export function IsProxyRunning(): $CancellablePromise<boolean> {
-    return $Call.ByID(3002035324);
-}
-
-/**
  * IsResourcePackEnabled 检查资源包是否启用
  */
 export function IsResourcePackEnabled(path: string): $CancellablePromise<boolean> {
@@ -894,20 +887,6 @@ export function SetResourceRoot(rtype: string, path: string): $CancellablePromis
  */
 export function SetVoxelMaxBlocks(limit: number): $CancellablePromise<void> {
     return $Call.ByID(1029825393, limit);
-}
-
-/**
- * StartProxy 启动本地反代服务器（127.0.0.1 仅本机可访问）
- */
-export function StartProxy(port: number): $CancellablePromise<void> {
-    return $Call.ByID(3346937763, port);
-}
-
-/**
- * StopProxy 关闭反代服务器
- */
-export function StopProxy(): $CancellablePromise<void> {
-    return $Call.ByID(3863670921);
 }
 
 /**

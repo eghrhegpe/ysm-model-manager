@@ -30,7 +30,7 @@
 | Go·更新器 | 1 | 8 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 23 |
-| Go(internal)·应用入口 | 15 | 170 |
+| Go(internal)·应用入口 | 15 | 169 |
 | 前端·根 (app-modules/bus) | 2 | 14 |
 | 前端·核心 | 13 | 26 |
 | 前端·特性 | 13 | 61 |
@@ -40,20 +40,20 @@
 | frontend/views | 54 | 152 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **182** | **826** |
+| **合计** | **182** | **825** |
 
 ## Go·头像
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `SafeName()` | `go/avatar/avatar:35` | SafeName 将非法文件名字符替换为下划线。 |
-| `ReadCachedAvatar()` | `go/avatar/avatar:99` | ReadCachedAvatar 读取缓存中的头像，返回 data URI。 |
-| `SaveAvatarData()` | `go/avatar/avatar:120` | SaveAvatarData 将头像数据写入缓存。 |
-| `ExtractAvatarURI()` | `go/avatar/avatar:132` | ExtractAvatarURI 从模型文件中提取指定所有者的头像 data URI。 |
-| `CacheAvatarsFromJSON()` | `go/avatar/avatar:274` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
-| `ReadFileFromZip()` | `go/avatar/avatar:324` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
-| `SetNodeJS()` | `go/avatar/avatar:352` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
-| `DecodeYSMFiles()` | `go/avatar/avatar:359` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
+| `SafeName()` | `go/avatar/avatar:38` | SafeName 将非法文件名字符替换为下划线。 |
+| `ReadCachedAvatar()` | `go/avatar/avatar:102` | ReadCachedAvatar 读取缓存中的头像，返回 data URI。 |
+| `SaveAvatarData()` | `go/avatar/avatar:123` | SaveAvatarData 将头像数据写入缓存。 |
+| `ExtractAvatarURI()` | `go/avatar/avatar:135` | ExtractAvatarURI 从模型文件中提取指定所有者的头像 data URI。 |
+| `CacheAvatarsFromJSON()` | `go/avatar/avatar:277` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
+| `ReadFileFromZip()` | `go/avatar/avatar:327` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
+| `SetNodeJS()` | `go/avatar/avatar:355` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
+| `DecodeYSMFiles()` | `go/avatar/avatar:362` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
 
 ## Go·去重
 
@@ -199,9 +199,9 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `ReadPackMeta()` | `go/packs/mcmeta:18` | ReadPackMeta 从资源包文件（.zip 或目录）中读取 pack.mcmeta，返回名称和 base64 缩略图 |
-| `DetectResourceType()` | `go/packs/mcmeta:105` | DetectResourceType 检测文件属于哪种资源类型 |
-| `ReadShaderpackLang()` | `go/packs/mcmeta:211` | ReadShaderpackLang 从光影包 ZIP 中读取 lang/en_US.lang，尝试提取显示名 返回 {name, entries}，name 为空时前端用文件名兜 |
+| `ReadPackMeta()` | `go/packs/mcmeta:25` | ReadPackMeta 从资源包文件（.zip 或目录）中读取 pack.mcmeta，返回名称和 base64 缩略图 |
+| `DetectResourceType()` | `go/packs/mcmeta:111` | DetectResourceType 检测文件属于哪种资源类型 |
+| `ReadShaderpackLang()` | `go/packs/mcmeta:217` | ReadShaderpackLang 从光影包 ZIP 中读取 lang/en_US.lang，尝试提取显示名 返回 {name, entries}，name 为空时前端用文件名兜 |
 
 ## Go·路径
 
@@ -370,12 +370,12 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `New()` | `go/watcher/watcher:39` | New 创建文件监听器 |
-| `Watcher.Start()` | `go/watcher/watcher:54` | Start 开始监听 |
-| `Watcher.Stop()` | `go/watcher/watcher:99` | Stop 停止监听 |
-| `Watcher.IsRunning()` | `go/watcher/watcher:120` | IsRunning 返回是否正在运行 |
-| `ScanFunc()` | `go/watcher/watcher:17` | ScanFunc matches mdsync.ScanFunc |
-| `Watcher()` | `go/watcher/watcher:23` | Watcher 监听仓库目录的文件变更，自动同步 .ban 状态到所有整合包 |
+| `New()` | `go/watcher/watcher:40` | New 创建文件监听器 |
+| `Watcher.Start()` | `go/watcher/watcher:55` | Start 开始监听 |
+| `Watcher.Stop()` | `go/watcher/watcher:100` | Stop 停止监听 |
+| `Watcher.IsRunning()` | `go/watcher/watcher:121` | IsRunning 返回是否正在运行 |
+| `ScanFunc()` | `go/watcher/watcher:18` | ScanFunc matches mdsync.ScanFunc |
+| `Watcher()` | `go/watcher/watcher:24` | Watcher 监听仓库目录的文件变更，自动同步 .ban 状态到所有整合包 |
 
 ## Go·YSM 核心
 
@@ -397,10 +397,10 @@
 | `PreviewInfo()` | `go/ysm/summary:39` | — |
 | `YsmSummary()` | `go/ysm/summary:47` | YsmSummary 是前端右侧面板和 AI 搜索消费的标准摘要 |
 | `Stats()` | `go/ysm/summary:64` | — |
-| `ScanModelTexSizes()` | `go/ysm/texsize:24` | ScanModelTexSizes 扫描仓库文件读取纹理尺寸，不调用 YSMParser/WASM 仅支持 zip/7z 格式（未加密模型），加密 .ysm 返回 0,0 |
-| `ScanFiles()` | `go/ysm/texsize:147` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
-| `TexInfo()` | `go/ysm/texsize:16` | TexInfo 轻量级纹理尺寸（不解析完整模型） |
-| `ModelEntry()` | `go/ysm/texsize:39` | ModelEntry 轻量级条目（仅用于纹理扫描签名，调用方传入完整路径） |
+| `ScanModelTexSizes()` | `go/ysm/texsize:27` | ScanModelTexSizes 扫描仓库文件读取纹理尺寸，不调用 YSMParser/WASM 仅支持 zip/7z 格式（未加密模型），加密 .ysm 返回 0,0 |
+| `ScanFiles()` | `go/ysm/texsize:150` | ScanFiles 读取目录下所有支持的文件条目（供 ScanModelTexSizes 使用） |
+| `TexInfo()` | `go/ysm/texsize:19` | TexInfo 轻量级纹理尺寸（不解析完整模型） |
+| `ModelEntry()` | `go/ysm/texsize:42` | ModelEntry 轻量级条目（仅用于纹理扫描签名，调用方传入完整路径） |
 | `IsYSMJar()` | `go/ysm/ysm:13` | IsYSMJar 检查单个 jar 是否是 YSM 模组（支持 mods.toml 和 neoforge.mods.toml） |
 | `HasYSMMod()` | `go/ysm/ysm:78` | HasYSMMod 检查 mods 目录是否有 YSM 模组（先做文件名过滤避免对每个 JAR 打开 ZIP） |
 | `HasModInDir()` | `go/ysm/ysm:107` | HasModInDir 检查 mods 目录是否有匹配指定类型关键词的 jar |
@@ -506,18 +506,17 @@
 | `App.ScanModelEntries()` | `internal/app/app_scan:186` | ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志。 |
 | `App.ScanModelEntriesWithLabel()` | `internal/app/app_scan:197` | ScanModelEntriesWithLabel 同 ScanModelEntries，但操作日志附带资源类型标签 （如「资源包」「光影包」「模型」），便于在操作日志面板区分扫描 |
 | `App.ClearScanCache()` | `internal/app/app_scan:210` | ClearScanCache 清除扫描缓存（下载/导入后调用） |
-| `InvalidateScanCache()` | `internal/app/app_scan:215` | InvalidateScanCache 清空扫描缓存（同步完成后调用，确保下次扫描取最新数据） |
-| `App.ListModelAuthors()` | `internal/app/app_scan:220` | ListModelAuthors 统计 [作者] 前缀（走扫描缓存，不重复读磁盘） |
-| `App.GenerateRepoIndex()` | `internal/app/app_scan:229` | GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板） |
-| `App.ScanLocalAuthors()` | `internal/app/app_scan:234` | ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者 |
-| `App.ListVersionInstances()` | `internal/app/app_scan:242` | — |
-| `App.GetGlobalCustomDir()` | `internal/app/app_scan:246` | — |
-| `App.ListFileNames()` | `internal/app/app_scan:250` | — |
-| `App.ListAllFilePaths()` | `internal/app/app_scan:263` | ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名） |
-| `App.CheckFileExists()` | `internal/app/app_scan:270` | — |
-| `App.OpenFolder()` | `internal/app/app_scan:304` | — |
-| `App.OpenInstanceFolder()` | `internal/app/app_scan:311` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
-| `progressReader.Read()` | `internal/app/app_scan:334` | — |
+| `App.ListModelAuthors()` | `internal/app/app_scan:215` | ListModelAuthors 统计 [作者] 前缀（走扫描缓存，不重复读磁盘） |
+| `App.GenerateRepoIndex()` | `internal/app/app_scan:224` | GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板） |
+| `App.ScanLocalAuthors()` | `internal/app/app_scan:229` | ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者 |
+| `App.ListVersionInstances()` | `internal/app/app_scan:237` | — |
+| `App.GetGlobalCustomDir()` | `internal/app/app_scan:241` | — |
+| `App.ListFileNames()` | `internal/app/app_scan:245` | — |
+| `App.ListAllFilePaths()` | `internal/app/app_scan:258` | ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名） |
+| `App.CheckFileExists()` | `internal/app/app_scan:265` | — |
+| `App.OpenFolder()` | `internal/app/app_scan:299` | — |
+| `App.OpenInstanceFolder()` | `internal/app/app_scan:306` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
+| `progressReader.Read()` | `internal/app/app_scan:329` | — |
 | `App.GetModelTags()` | `internal/app/app_tags:29` | GetModelTags 返回指定模型文件的所有标签 |
 | `App.SetModelTags()` | `internal/app/app_tags:34` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
 | `App.ListByTag()` | `internal/app/app_tags:39` | ListByTag 返回所有打了指定标签的文件路径列表 |
@@ -576,7 +575,7 @@
 | `App.DeleteModelDir()` | `internal/app/resource_bindings:345` | DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹 路径守卫：限制在 FilesRoot 内，防止删除系统目录 |
 | `App.FindDuplicateFiles()` | `internal/app/resource_bindings:358` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串） |
 | `App.CountDuplicateFiles()` | `internal/app/resource_bindings:368` | CountDuplicateFiles 快速统计重复文件数量 |
-| `App.InvalidateScanCache()` | `internal/app/resource_bindings:378` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据 |
+| `App.InvalidateScanCache()` | `internal/app/resource_bindings:378` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache） |
 | `App.InstallResourceToInstance()` | `internal/app/resource_bindings:384` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
 | `App.GetWasmBinary()` | `internal/app/wasm_embed:5` | GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。 |
 
@@ -643,11 +642,11 @@
 | `subscribe()` | `frontend/src/features/community/download-queue:71` | 订阅 STATE 变更。返回取消订阅函数。 |
 | `getState()` | `frontend/src/features/community/download-queue:83` | 当前状态的只读快照 |
 | `resume()` | `frontend/src/features/community/download-queue:92` | 页面切回时调用，从 Go 端恢复当前队列状态。 |
-| `enqueueDownloads()` | `frontend/src/features/community/download-queue:138` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
-| `cancelDownloads()` | `frontend/src/features/community/download-queue:170` | 模块级取消 — 纯粹的 Go 调用。 |
-| `QueueControllerOptions()` | `frontend/src/features/community/download-queue:264` | createDownloadQueue 选项 |
-| `QueueController()` | `frontend/src/features/community/download-queue:273` | 队列控制器 |
-| `createDownloadQueue()` | `frontend/src/features/community/download-queue:298` | 创建一个下载队列 UI 控制器。 |
+| `enqueueDownloads()` | `frontend/src/features/community/download-queue:139` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
+| `cancelDownloads()` | `frontend/src/features/community/download-queue:171` | 模块级取消 — 纯粹的 Go 调用。 |
+| `QueueControllerOptions()` | `frontend/src/features/community/download-queue:266` | createDownloadQueue 选项 |
+| `QueueController()` | `frontend/src/features/community/download-queue:275` | 队列控制器 |
+| `createDownloadQueue()` | `frontend/src/features/community/download-queue:300` | 创建一个下载队列 UI 控制器。 |
 | `DOWNLOAD_CONFIRM_BYTES()` | `frontend/src/features/community/download-tasks:7` | 超过该大小需弹窗确认（含边界值本身直接下载） |
 | `DOWNLOAD_REJECT_BYTES()` | `frontend/src/features/community/download-tasks:9` | 超过该大小直接拒绝（含边界值本身需确认） |
 | `DownloadSizeDecision()` | `frontend/src/features/community/download-tasks:11` | — |
@@ -692,9 +691,9 @@
 | `isPathInRoot()` | `frontend/src/features/recycle-bin:23` | 判断条目路径是否位于资源根目录内（带路径分隔符边界，P3 修复）。 |
 | `initRecycleBin()` | `frontend/src/features/recycle-bin:30` | 初始化回收站管理，返回清理函数 |
 | `initResourcePacks()` | `frontend/src/features/resource-packs:13` | 初始化资源包 tab |
-| `UpdateInfo()` | `frontend/src/features/version-updater:9` | 更新信息（CheckUpdate 返回） |
-| `checkUpdateSilent()` | `frontend/src/features/version-updater:110` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
-| `initVersionUpdater()` | `frontend/src/features/version-updater:135` | 手动检查更新（设置页按钮） |
+| `UpdateInfo()` | `frontend/src/features/version-updater:10` | 更新信息（CheckUpdate 返回） |
+| `checkUpdateSilent()` | `frontend/src/features/version-updater:113` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
+| `initVersionUpdater()` | `frontend/src/features/version-updater:149` | 手动检查更新（设置页按钮） |
 
 ## 前端·服务
 
@@ -827,7 +826,7 @@
 | `renderModelName()` | `frontend/src/utils/dom/display:162` | renderModelName = renderDisplayName 别名，options.showExt 支持 |
 | `renderModelNameWithHighlight()` | `frontend/src/utils/dom/display:171` | 搜索高亮版：先对纯文本高亮，再渲染 HTML，避免 keyword 命中 HTML 标签内容破坏 DOM |
 | `friendlyError()` | `frontend/src/utils/dom/errors:11` | 将 Go 错误转换为友好提示 |
-| `fmt()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值返回空串 |
+| `formatBytes()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值返回空串 |
 | `sizeColor()` | `frontend/src/utils/dom/format:24` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
 | `fmtDate()` | `frontend/src/utils/dom/format:34` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
 | `esc()` | `frontend/src/utils/dom/html:4` | HTML 转义（治理红线：所有 innerHTML 拼接必须过 esc） |

@@ -391,6 +391,14 @@ async function runBatchToggle(
       duration: 3000,
       type: fail > 0 ? "warn" : "success",
     });
+  } catch (err) {
+    // P3（审核发现）：getApp() reject 时原实现仅 try/finally 无 catch——bus.on 回调
+    // 丢弃 Promise 变成 unhandledrejection，用户零反馈；补 catch 出口对齐 dir:* 系 handler
+    bus.emit("toast:show", {
+      msg: `❌ ${friendlyError(err)}`,
+      duration: 3000,
+      type: "error",
+    });
   } finally {
     vm._batchBusy = false;
   }

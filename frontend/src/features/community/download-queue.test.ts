@@ -94,6 +94,15 @@ describe("下载队列初始状态", () => {
     expect(s.remaining).toBe(0);
     expect(s.errorList).toEqual([]);
   });
+
+  it("模块顶层只注册一组后端事件（陷阱 #7：onMock 覆盖写入，需断言防重复注册回归）", () => {
+    // 陷阱 #7：单文件/多选/全选三入口只注册一组 EventsOn——若回归把注册移进
+    // createDownloadQueue（每控制器一组），onMock 会累积多次同名注册（覆盖写入掩盖），
+    // 此处断言 4 组事件各被注册过
+    for (const name of ["queue:status", "queue:file-start", "queue:file-done", "download:progress"]) {
+      expect(onMock).toHaveBeenCalledWith(name, expect.any(Function));
+    }
+  });
 });
 
 describe("下载队列 STATE", () => {
@@ -387,6 +396,23 @@ describe("createDownloadQueue UI 层", () => {
     ctrl.destroy();
   });
 
+  it("enqueue 入队失败 → 状态回 idle + error toast + 按钮恢复（陷阱 #3 失败回滚）", async () => {
+    loadConfigMock.mockResolvedValue({});
+    repoRootMock.mockResolvedValue("/repo");
+    enqueueMock.mockRejectedValue(new Error("disk full"));
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    const toasts: ToastPayload[] = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p));
+    // enqueue 内部 try/catch 吞掉 Go reject（转 toast + 恢复 UI），不会向外 rethrow
+    await ctrl.enqueue([{ url: "u", saveDir: "", name: "a.ysm", size: 1 }]);
+    expect(ctrl.isDownloading()).toBe(false);
+    expect((sr.querySelector(".gh-dl-selected") as HTMLButtonElement).disabled).toBe(false);
+    expect(toasts.some((t) => t.type === "error" && t.msg.includes("disk full"))).toBe(true);
+    off();
+    ctrl.destroy();
+  });
+
   it("destroy 后不再响应状态变更", async () => {
     const { sr, ctrl } = createCtrl();
     await Promise.resolve();
@@ -498,6 +524,38 @@ describe("createDownloadQueue 99% 锁定状态机（陷阱 #6）", () => {
     const { pctEl, fillEl } = progressEls(sr);
     expect(pctEl!.textContent).toBe("50%");
     expect(fillEl!.style.width).toBe("50%");
+    ctrl.destroy();
+  });
+
+  it("progress 达 100% → 3s completeTimer 后清理 UI + onAllDone + 按钮恢复（完成路径）", async () => {
+    const { sr, onAllDone, ctrl } = createCtrl();
+    await Promise.resolve();
+    const btn = sr.querySelector(".gh-dl-selected") as HTMLButtonElement;
+    btn.disabled = true; // 模拟下载中按钮禁用
+    emit("queue:status", ["enqueued", 1, undefined]); // 置 active，completeTimer 回调才生效
+    emit("queue:file-start", ["f.ysm", 1, 1]);
+    emit("download:progress", [50, 100]); // _lastPct=50
+    emit("download:progress", [100, 100]); // pct=100（_lastPct≥10 不触发锁定）→ 3s completeTimer
+    expect(onAllDone).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(3000);
+    expect(onAllDone).toHaveBeenCalledWith({ cancelled: false, errorList: [] });
+    expect(sr.querySelector("#gh-queue-status")!.classList.contains("show")).toBe(false);
+    expect(btn.disabled).toBe(false);
+    ctrl.destroy();
+  });
+
+  it("锁定期间到达 progress 不清 _stuckTimer（大文件 2s 后仍转菊花）", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    const total = 2 * 1024 * 1024;
+    emit("queue:file-start", ["f.ysm", 1, 1]);
+    emit("download:progress", [0, total]);
+    emit("download:progress", [total - 1024, total]); // pct≈100 → 大文件锁定 99%
+    emit("download:progress", [total - 512, total]); // 锁定态下第三条 progress
+    const { pctEl } = progressEls(sr);
+    expect(pctEl!.textContent).toBe("99%");
+    vi.advanceTimersByTime(2000);
+    expect(pctEl!.textContent).toBe("⏳"); // timer 未被锁定态 progress 清除
     ctrl.destroy();
   });
 });

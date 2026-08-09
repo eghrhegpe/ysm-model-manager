@@ -117,8 +117,9 @@ export async function resume(): Promise<void> {
       STATE.remaining = remaining;
       notify();
     }
-  } catch (_) {
-    /* QueueStatus 调用失败，安全忽略 */
+  } catch (e) {
+    // P3（审核发现）：不静默吞错——QueueStatus 失败会导致恢复/防重入逻辑失明
+    dbg("queue:status 解析失败:", e);
   }
 }
 
@@ -172,8 +173,9 @@ export async function cancelDownloads(): Promise<void> {
   try {
     const { CancelQueue } = await getApp();
     await CancelQueue();
-  } catch (_) {
-    /* 取消失败不影响状态 */
+  } catch (e) {
+    // P3（审核发现）：不静默吞错——取消失败时 UI 仍显示下载中，记录原因便于排查
+    dbg("cancelDownloads 失败:", e);
   }
 }
 

@@ -82,6 +82,22 @@ describe("checkUpdateSilent", () => {
     expect(localStorage.getItem(CHECK_KEY)).not.toBe("0");
   });
 
+  it("静默 toast 点击 → modalConfirm → 下载 → 重启（贯通链路）", async () => {
+    const toasts = spyToasts();
+    const { checkUpdateSilent } = await import("./version-updater.ts");
+    await checkUpdateSilent();
+
+    const t = toasts.find((x) => typeof x.click === "function");
+    expect(t).toBeTruthy();
+    t!.click!();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mocks.modalConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "发现新版本", okText: "⬇️ 下载更新" }));
+    expect(mocks.DoUpdate).toHaveBeenCalled();
+    expect(mocks.RestartApplication).toHaveBeenCalled();
+  });
+
   it("无新版本 → 不发 toast 但记录检查时间", async () => {
     mocks.CheckUpdate.mockResolvedValue({ available: false, latest: "v1", current: "v1" });
     const toasts = spyToasts();
@@ -167,6 +183,33 @@ describe("initVersionUpdater（手动检查）", () => {
 
     expect(toasts.some((t) => t.type === "error" && t.msg.includes("更新失败: 磁盘已满"))).toBe(true);
     expect(btn.textContent).toBe("🔄 检查更新");
+  });
+
+  it("DoUpdate 返回非 success 字符串 → error toast 透传 Go 错误", async () => {
+    mocks.DoUpdate.mockResolvedValue("download failed");
+    const toasts = spyToasts();
+    const { btn } = await setupRoot();
+
+    btn.click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(toasts.some((t) => t.type === "error" && t.msg.includes("download failed"))).toBe(true);
+    expect(btn.disabled).toBe(false);
+  });
+
+  it("RestartApplication reject → error toast 且按钮恢复", async () => {
+    mocks.RestartApplication.mockRejectedValue(new Error("restart fail"));
+    const toasts = spyToasts();
+    const { btn } = await setupRoot();
+
+    btn.click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(toasts.some((t) => t.type === "error" && t.msg.includes("restart fail"))).toBe(true);
+    expect(btn.textContent).toBe("🔄 检查更新");
+    expect(btn.disabled).toBe(false);
   });
 
   it("CheckUpdate 抛错 → error toast", async () => {

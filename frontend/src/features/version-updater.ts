@@ -3,6 +3,7 @@ import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
 import { esc, modalConfirm } from "../utils/dom/dialogs/modal.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
+import { safeGet, safeSet } from "../utils/dom/storage.ts";
 import { getApp } from "../wails/app.ts";
 
 /** 更新信息（CheckUpdate 返回） */
@@ -22,7 +23,9 @@ const CHECK_INTERVAL = 6 * 60 * 60 * 1000;
 
 /** 检查是否超过频次限制 */
 function canCheck(): boolean {
-  const raw = parseInt(localStorage.getItem(CHECK_KEY) || "0", 10);
+  // P3（审核发现）：裸调 localStorage 改 safeGet——隐私模式/存储禁用下 getItem 抛错
+  // 会中断启动链（ADR-044 策略 A：统一收敛至 utils/dom/storage.ts）
+  const raw = parseInt(safeGet(CHECK_KEY) || "0", 10);
   // 守卫：存储值损坏为非数字时 parseInt→NaN，NaN 比较恒 false 会永久禁用更新检查
   const last = Number.isNaN(raw) ? 0 : raw;
   return Date.now() - last > CHECK_INTERVAL;
@@ -30,7 +33,7 @@ function canCheck(): boolean {
 
 /** 记录本次检查时间 */
 function markChecked(): void {
-  localStorage.setItem(CHECK_KEY, String(Date.now()));
+  safeSet(CHECK_KEY, String(Date.now()));
 }
 
 /** 下载并应用更新（公共逻辑） */
@@ -121,7 +124,18 @@ export async function checkUpdateSilent(): Promise<void> {
         msg: `📦 ${t("update.found", { latest: info.latest, current: info.current })}`,
         duration: 10000,
         type: "info",
-        click: () => promptUpdate(info, null),
+        click: () => {
+          // P3（审核发现）：toast click 回调补 catch 出口——静默路径 modalConfirm 若
+          // reject 会成为 unhandled rejection（手动路径有外层 try/catch，静默路径没有，
+          // 错误边界不对称，ADR-044 ①）
+          promptUpdate(info, null).catch((e) => {
+            bus.emit("toast:show", {
+              msg: `❌ ${friendlyError(e)}`,
+              duration: 5000,
+              type: "error",
+            });
+          });
+        },
       });
     }
   } catch {
@@ -137,6 +151,9 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
     .getElementById("set-check-update")
     ?.addEventListener("click", async (): Promise<void> => {
       const btn = root.getElementById("set-check-update") as HTMLButtonElement;
+      // P3（审核发现）：重入守卫——编程式 .click()/异常事件流下 disabled 语义不可靠，
+      // 首行显式拦截避免双执行（真实用户连点已由 disabled 挡住，此处为防御补强）
+      if (btn.disabled) return;
       btn.textContent = "⏳ 检查中...";
       btn.disabled = true;
       try {

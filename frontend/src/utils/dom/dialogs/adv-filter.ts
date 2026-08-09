@@ -6,18 +6,13 @@
 //   不支持文件大小、排序（避免展示无效控件）
 import { esc, closeDlg, registerDlg } from "./modal.ts";
 import { getApp } from "../../../wails/app.ts";
+import {
+  parseFilterNumber,
+  validateAdvFilter,
+  type AdvFilterValue,
+} from "./adv-filter-util.ts";
 
-/** 筛选条件 */
-export interface AdvFilterValue {
-  keyword: string;
-  minBones: number | null;
-  maxBones: number | null;
-  minCubes: number | null;
-  maxCubes: number | null;
-  minTex: number | null;
-  maxTex: number | null;
-  tag: string;
-}
+export type { AdvFilterValue } from "./adv-filter-util.ts";
 
 export type AdvFilterResult = AdvFilterValue | { cleared: true } | null;
 
@@ -121,53 +116,31 @@ export function modalAdvFilter(opts: { value?: Partial<AdvFilterValue> } = {}): 
 
     const errEl = box.querySelector("#afv-err") as HTMLElement;
 
-    const collect = (): AdvFilterValue => {
-      const num = (id: string): number | null => {
-        const raw = (box.querySelector(id) as HTMLInputElement)?.value.trim();
-        if (!raw) return null;
-        const n = parseInt(raw, 10);
-        return isNaN(n) || n < 0 ? null : n;
-      };
-      return {
-        keyword: kwInput.value.trim(),
-        minBones: num("#afv-minBones"),
-        maxBones: num("#afv-maxBones"),
-        minCubes: num("#afv-minCubes"),
-        maxCubes: num("#afv-maxCubes"),
-        minTex: num("#afv-minTex"),
-        maxTex: num("#afv-maxTex"),
-        tag: tagInput.value.trim(),
-      };
-    };
+    const collect = (): AdvFilterValue => ({
+      keyword: kwInput.value.trim(),
+      minBones: parseFilterNumber(
+        (box.querySelector("#afv-minBones") as HTMLInputElement)?.value ?? "",
+      ),
+      maxBones: parseFilterNumber(
+        (box.querySelector("#afv-maxBones") as HTMLInputElement)?.value ?? "",
+      ),
+      minCubes: parseFilterNumber(
+        (box.querySelector("#afv-minCubes") as HTMLInputElement)?.value ?? "",
+      ),
+      maxCubes: parseFilterNumber(
+        (box.querySelector("#afv-maxCubes") as HTMLInputElement)?.value ?? "",
+      ),
+      minTex: parseFilterNumber(
+        (box.querySelector("#afv-minTex") as HTMLInputElement)?.value ?? "",
+      ),
+      maxTex: parseFilterNumber(
+        (box.querySelector("#afv-maxTex") as HTMLInputElement)?.value ?? "",
+      ),
+      tag: tagInput.value.trim(),
+    });
 
     const close = (result: AdvFilterResult): void =>
       closeDlg(overlay, resolve, result);
-
-    const validate = (data: AdvFilterValue): string | null => {
-      // 只在两端都填了数字时才校验（null 表示不限制）
-      if (
-        data.minBones != null &&
-        data.maxBones != null &&
-        data.minBones > data.maxBones
-      ) {
-        return "骨骼数：最小值不能大于最大值";
-      }
-      if (
-        data.minCubes != null &&
-        data.maxCubes != null &&
-        data.minCubes > data.maxCubes
-      ) {
-        return "立方体：最小值不能大于最大值";
-      }
-      if (
-        data.minTex != null &&
-        data.maxTex != null &&
-        data.minTex > data.maxTex
-      ) {
-        return "纹理尺寸：最小值不能大于最大值";
-      }
-      return null;
-    };
 
     (box.querySelector("#afv-cancel") as HTMLElement).onclick = (): void =>
       close(null);
@@ -175,7 +148,7 @@ export function modalAdvFilter(opts: { value?: Partial<AdvFilterValue> } = {}): 
       closeDlg(overlay, resolve, { cleared: true });
     (box.querySelector("#afv-ok") as HTMLElement).onclick = (): void => {
       const data = collect();
-      const err = validate(data);
+      const err = validateAdvFilter(data);
       if (err) {
         errEl.textContent = "⚠️ " + err;
         return;
@@ -189,7 +162,7 @@ export function modalAdvFilter(opts: { value?: Partial<AdvFilterValue> } = {}): 
       el.addEventListener("keydown", (e: KeyboardEvent): void => {
         if (e.key === "Enter") {
           const data = collect();
-          const err = validate(data);
+          const err = validateAdvFilter(data);
           if (err) {
             errEl.textContent = "⚠️ " + err;
             return;

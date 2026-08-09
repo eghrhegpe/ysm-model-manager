@@ -47,13 +47,33 @@ export function countMissing(
 }
 
 /**
- * 格式化文件大小
+ * 格式化文件大小（B/KB/MB，<1KB 无单位省略走 ""）
  */
-function formatSize(bytes: number): string {
+export function formatSize(bytes: number): string {
   if (!bytes) return "";
   if (bytes < 1024) return bytes + "B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + "KB";
   return (bytes / (1024 * 1024)).toFixed(1) + "MB";
+}
+
+/**
+ * 过滤模型列表：关键词匹配（模型名）+ 「仅显示缺失」开关。
+ * 从 community/events.ts 的 renderList 抽出，供单测覆盖（ADR-023 L3）。
+ */
+export function filterModels(
+  models: WorkshopModel[],
+  q: string,
+  showAll: boolean,
+  localMap: Map<string, string>,
+): WorkshopModel[] {
+  const kw = q.trim().toLowerCase();
+  let filtered = kw
+    ? models.filter((m) => m.name.toLowerCase().includes(kw))
+    : models;
+  if (!showAll) {
+    filtered = filtered.filter((m) => isModelMissing(m, localMap));
+  }
+  return filtered;
 }
 
 /**
@@ -173,6 +193,24 @@ const GROUP_LABELS: Record<string, { icon: string; label: string }> = {
   browse: { icon: "👁️", label: "浏览平台" },
 };
 
+/** 站点分组展示顺序（renderCardsHTML 使用） */
+export const SITE_GROUP_ORDER = ["search", "repo", "browse"] as const;
+
+/**
+ * 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。
+ */
+export function groupSites(
+  sites: WorkshopSite[],
+): Record<string, WorkshopSite[]> {
+  const groups: Record<string, WorkshopSite[]> = {};
+  sites.forEach((s) => {
+    const g = s.group || "browse";
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(s);
+  });
+  return groups;
+}
+
 /**
  * 生成左栏站点卡片 HTML
  * @param sites 站点数组
@@ -182,17 +220,11 @@ export function renderCardsHTML(
   sites: WorkshopSite[],
   esc: (s: string) => string,
 ): string {
-  const groups: Record<string, WorkshopSite[]> = {};
-  sites.forEach((s) => {
-    const g = s.group || "browse";
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(s);
-  });
+  const groups = groupSites(sites);
 
   let html = "";
-  const order = ["search", "repo", "browse"];
   let cardIdx = 0;
-  order.forEach((g) => {
+  SITE_GROUP_ORDER.forEach((g) => {
     if (!groups[g] || !groups[g].length) return;
     const info = GROUP_LABELS[g] || { icon: "🔗", label: g };
     html +=

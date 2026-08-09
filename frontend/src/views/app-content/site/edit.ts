@@ -2,6 +2,7 @@
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import { bus } from "../../../bus.ts";
 import { getApp } from "../../../wails/app.ts";
+import { moveItem } from "../../../utils/array.ts";
 import type { WorkshopPresetSearch } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 import type { LocalCreatorLike } from "../site-view.ts";
 import type { SiteViewState, CleanupFn } from "./types.ts";
@@ -284,8 +285,8 @@ export function bindEditEvents(state: SiteViewState, refreshView: () => void): C
           dragSrcIdx = -1;
           return;
         }
-        const [removed] = allCreators.splice(realSrc, 1);
-        allCreators.splice(realTgt, 0, removed);
+        // P2 修复（共享内存态污染）保留：在 allCreators 全量数组上重排
+        moveItem(allCreators, realSrc, realTgt);
         dragSrcIdx = -1;
         refreshView();
       });
@@ -343,8 +344,7 @@ export function bindEditEvents(state: SiteViewState, refreshView: () => void): C
         )
           return;
         syncAllEditInputs();
-        const [removed] = site.presetSearches.splice(dragPresetSrcIdx, 1);
-        site.presetSearches.splice(targetIdx, 0, removed);
+        moveItem(site.presetSearches, dragPresetSrcIdx, targetIdx);
         dragPresetSrcIdx = -1;
         refreshView();
       });

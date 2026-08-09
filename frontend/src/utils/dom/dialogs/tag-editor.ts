@@ -3,6 +3,7 @@
 import { esc } from "../../../utils/dom/html.ts";
 import { closeDlg, registerDlg } from "./modal.ts";
 import { getApp } from "../../../wails/app.ts";
+import { addTagToSet } from "./tag-set.ts";
 
 /**
  * 弹出标签编辑弹窗
@@ -143,18 +144,14 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
     }
 
     function addTag(raw: string): void {
-      const t = raw.trim();
-      if (!t) return;
-      if (tags.includes(t)) {
-        errEl.textContent = "⚠️ 标签已存在";
+      if (!raw.trim()) return; // 空输入静默（原实现行为）
+      const r = addTagToSet(tags, raw);
+      if (r.error) {
+        errEl.textContent = r.error;
         return;
       }
-      if (t.length > 20) {
-        errEl.textContent = "⚠️ 标签最多 20 个字符";
-        return;
-      }
+      tags = r.tags;
       errEl.textContent = "";
-      tags = [...tags, t].sort();
       renderTags();
       inputEl.value = "";
     }

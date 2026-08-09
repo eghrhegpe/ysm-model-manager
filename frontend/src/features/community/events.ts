@@ -2,7 +2,7 @@
 // 下载队列逻辑已拆到 download-queue.js，本文件只做事件绑定 + 协调。
 import { bus } from "../../bus.ts";
 import { modalConfirm } from "../../utils/dom/dialogs/modal.ts";
-import { renderModelList, isModelMissing, type WorkshopModel } from "./render.ts";
+import { renderModelList, filterModels, type WorkshopModel } from "./render.ts";
 import { createDownloadQueue } from "./download-queue.ts";
 import { buildDownloadTasks, classifyDownloadSize } from "./download-tasks.ts";
 import { ICONS } from "../../utils/icon/workshop-icons.ts";
@@ -52,8 +52,6 @@ export function bindRepoEvents(
   let showAll = false;
   const selectedSet = new Set<string>();
 
-  const isMissing = (m: WorkshopModel): boolean => isModelMissing(m, localMap);
-
   // ============================================================
   //  🎯 下载队列（委派给 download-queue.js）
   // ============================================================
@@ -75,13 +73,7 @@ export function bindRepoEvents(
   //  列表渲染
   // ============================================================
   const renderList = (filter = ""): DocumentFragment => {
-    const q = filter.trim().toLowerCase();
-    let filtered = q
-      ? models.filter((m) => m.name.toLowerCase().includes(q))
-      : models;
-    if (!showAll) {
-      filtered = filtered.filter((m) => isMissing(m));
-    }
+    const filtered = filterModels(models, filter, showAll, localMap);
     return renderModelList(
       filtered,
       dlPrefix,

@@ -223,7 +223,7 @@ describe("菜单项点击行为", () => {
   });
 
   it("batch 批量重命名 → batch:rename（paths 透传）", () => {
-    clickItem("batch", "批量重命名...", { paths: ["/a.ysm", "/b.ysm"] });
+    clickItem("batch", "批量重命名…", { paths: ["/a.ysm", "/b.ysm"] });
     expect(emitted).toContainEqual({
       e: "batch:rename",
       p: { paths: ["/a.ysm", "/b.ysm"] },
@@ -388,7 +388,7 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
   it("file.rename 成功 → RenameFile + 刷新", async () => {
     showRenameDialogMock.mockResolvedValue("新名字.ysm");
     RenameFileMock.mockResolvedValue(undefined);
-    await clickAsync("file", "重命名", { path: "/dir/旧.ysm" });
+    await clickAsync("file", "重命名…", { path: "/dir/旧.ysm" });
     expect(showRenameDialogMock).toHaveBeenCalledWith("/dir/旧.ysm", "旧.ysm");
     expect(RenameFileMock).toHaveBeenCalledWith("/dir/旧.ysm", "新名字.ysm");
     expect(reloaded()).toBe(true);
@@ -396,14 +396,14 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
 
   it("file.rename 取消 → 不调后端", async () => {
     showRenameDialogMock.mockResolvedValue("");
-    await clickAsync("file", "重命名", { path: "/dir/旧.ysm" });
+    await clickAsync("file", "重命名…", { path: "/dir/旧.ysm" });
     expect(RenameFileMock).not.toHaveBeenCalled();
   });
 
   it("file.rename 后端报错 → friendlyError toast", async () => {
     showRenameDialogMock.mockResolvedValue("新.ysm");
     RenameFileMock.mockRejectedValue(new Error("EACCES: permission denied"));
-    await clickAsync("file", "重命名", { path: "/dir/旧.ysm" });
+    await clickAsync("file", "重命名…", { path: "/dir/旧.ysm" });
     expect(toasts().some((t) => t.type === "error" && t.msg.includes("权限不足"))).toBe(true);
   });
 
@@ -445,7 +445,7 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
 
   // ── ADR-038 D3：ysm.json 重命名护栏 + 文件夹整组操作 ──
   it("file.rename 对 ysm.json → warn toast 且不调 RenameFile", async () => {
-    await clickAsync("file", "重命名", { path: "/models/模型A/ysm.json" });
+    await clickAsync("file", "重命名…", { path: "/models/模型A/ysm.json" });
     expect(showRenameDialogMock).not.toHaveBeenCalled();
     expect(RenameFileMock).not.toHaveBeenCalled();
     expect(toasts().some((t) => t.type === "warn" && t.msg.includes("ysm.json"))).toBe(true);

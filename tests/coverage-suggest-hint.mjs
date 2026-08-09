@@ -13,7 +13,7 @@ import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ROOT } from '../scripts/_lib/scan-files.mjs';
-import { buildBlock, MAX_SUGGEST_FILES } from '../scripts/hooks/coverage-suggest-hint.mjs';
+import { buildBlock, MAX_SUGGEST_FILES, formatCovTime, buildStaleHint } from '../scripts/hooks/coverage-suggest-hint.mjs';
 import { stripBlock } from '../scripts/hooks/knowledge-affected-hint.mjs';
 import { BLOCK_START, BLOCK_END } from '../scripts/hooks/coverage-suggest-hint.mjs';
 
@@ -59,6 +59,25 @@ check('buildBlock 超上限省略', () => {
   // 首行标记 + 20 个文件 + 1 省略行 + 尾标记
   assert.equal(lines.length, 1 + MAX_SUGGEST_FILES + 1 + 1);
   assert.ok(lines.some((l) => l.includes(`其余 5 个见 node scripts/test-coverage-report.mjs`)));
+});
+
+// ── 1.5 stale 提示：时间戳 + 刷新命令 ──
+check('formatCovTime 输出 YYYY-MM-DD HH:mm（补零）', () => {
+  const d = new Date(2026, 7, 9, 16, 9, 45); // 2026-08-09 16:09:45 本地时区
+  assert.equal(formatCovTime(d), '2026-08-09 16:09');
+});
+
+check('buildStaleHint 有 mtime：附时间戳 + 刷新命令', () => {
+  const hint = buildStaleHint(new Date(2026, 7, 9, 16, 19));
+  assert.ok(hint.includes('2026-08-09 16:19'), `应含时间戳（got: ${hint}）`);
+  assert.ok(hint.includes('npx vitest run --coverage'), '应含刷新命令');
+  assert.ok(hint.includes('frontend/coverage/coverage-final.json'), '应含产物路径');
+});
+
+check('buildStaleHint 无 mtime：提示先跑 --coverage', () => {
+  const hint = buildStaleHint(null);
+  assert.ok(hint.includes('无数据'), '应标注无数据');
+  assert.ok(hint.includes('npx vitest run --coverage'), '应提示先跑刷新命令');
 });
 
 // ── 2. stripBlock 自定义标记幂等 ──

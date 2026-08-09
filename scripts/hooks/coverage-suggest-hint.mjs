@@ -28,6 +28,7 @@
 // 纯函数（buildBlock）导出供契约测试复用，主流程用 import.meta 守卫。
 
 import path from 'node:path';
+import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { getRoot } from '../_lib/scan-files.mjs';
@@ -72,10 +73,8 @@ function getLowCoverageFiles(ROOT) {
   }
 }
 
-/**
- * 调 check-diff-coverage --suggest --staged，取本次暂存变更的「变更行覆盖率」建议区块。
- * 返回 📈 包裹的 Markdown 区块，或 null（无缺口/无数据，--suggest 永远 exit 0 不抛）。
- */
+/** 调 check-diff-coverage --suggest --staged，取本次暂存变更的「变更行覆盖率」建议区块。
+ * 返回 📈 包裹的 Markdown 区块，或 null（无缺口/无数据，--suggest 永远 exit 0 不抛）。 */
 function getDiffCoverageBlock(ROOT) {
   try {
     const out = execFileSync(
@@ -88,6 +87,23 @@ function getDiffCoverageBlock(ROOT) {
   } catch {
     return null;
   }
+}
+
+/** 格式化时间为 YYYY-MM-DD HH:mm（本地时区；不用 toLocaleString，避免跨平台 locale 漂移）。 */
+export function formatCovTime(d) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/**
+ * 构造 stale 提示：coverage-final.json 的数据时间戳 + 刷新命令。
+ * 数据只读不重跑（见头注释），附时间戳让提交者/AI 判断数据新鲜度，缺产物时提示先跑。
+ * @param {Date|null} mtime coverage-final.json 的 mtime；null 表示产物缺失
+ * @param {string} covPath 展示用相对路径（默认 frontend/coverage/coverage-final.json）
+ */
+export function buildStaleHint(mtime, covPath = 'frontend/coverage/coverage-final.json') {
+  if (!mtime) return `（${covPath} 无数据；先跑：cd frontend && npx vitest run --coverage）`;
+  return `（coverage 数据来自 ${formatCovTime(mtime)}，${covPath}；刷新：cd frontend && npx vitest run --coverage）`;
 }
 
 function main() {
@@ -119,7 +135,14 @@ function main() {
   }
   if (diffCount > 0) parts.push(`📈 ${diffCount} 个变更文件低于 diff 覆盖率阈值`);
   if (parts.length === 0) return; // 无缺口（files=[] 且 diff 无缺口）→ 不输出
-  console.error(`[prepare-commit-msg] ${parts.join('；')}（仅终端提醒，未写入 commit body）`);
+  // stale 提示：coverage-final.json 只读不重跑，附 mtime + 刷新命令，让提交者/AI 判断数据新鲜度。
+  let covMtime = null;
+  try {
+    covMtime = fs.statSync(path.join(ROOT, 'frontend', 'coverage', 'coverage-final.json')).mtime;
+  } catch {
+    /* 无 coverage 产物 → buildStaleHint(null) 提示先跑 */
+  }
+  console.error(`[prepare-commit-msg] ${parts.join('；')}${buildStaleHint(covMtime)}（仅终端提醒，未写入 commit body）`);
 }
 
 // 仅当作为入口直接执行时才跑主流程（被测试 import 时不触发）

@@ -604,6 +604,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-043：检查脚本 fail-closed 三态契约（扫描不完整必须显式暴露，禁止假绿）",
+        "link": "/adr/ADR-043-check-scripts-fail-closed-contract"
+      },
+      {
         "text": "ADR-042：渲染复现借鉴上游 ModernYSM：二进制直读 pivot/rotation 与动画纯计算移植",
         "link": "/adr/ADR-042-modernysm-pivot-rotation"
       },

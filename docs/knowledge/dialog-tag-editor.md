@@ -5,6 +5,8 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/utils/dom/dialogs/tag-editor.ts
+tests:
+  - frontend/src/utils/dom/dialogs/tag-editor.test.ts
 use_when:
   - 标签
   - 打标签

@@ -32,7 +32,7 @@
 | Go·YSM 核心 | 7 | 23 |
 | Go(internal)·应用入口 | 15 | 170 |
 | 前端·根 (app-modules/bus) | 2 | 14 |
-| 前端·核心 | 13 | 27 |
+| 前端·核心 | 13 | 26 |
 | 前端·特性 | 13 | 61 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
@@ -40,7 +40,7 @@
 | frontend/views | 54 | 152 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **181** | **824** |
+| **合计** | **181** | **823** |
 
 ## Go·头像
 
@@ -612,17 +612,16 @@
 | `registerSync()` | `frontend/src/core/handlers/sync:10` | 注册同步 handler，push 返回的取消订阅函数到 unsubs |
 | `SUPPORTED_LANGS()` | `frontend/src/core/i18n/locale:11` | 支持的语言列表（规划清单） |
 | `LangCode()` | `frontend/src/core/i18n/locale:17` | — |
-| `_warned()` | `frontend/src/core/i18n/locale:28` | 缺失 key 告警节流（每 key 只告警一次） |
+| `warnedKeys()` | `frontend/src/core/i18n/locale:28` | 缺失 key 告警节流（每 key 只告警一次；跨模块共享给 t.ts 用，故不带 _ 私有前缀） |
 | `loadLocale()` | `frontend/src/core/i18n/locale:37` | 加载指定语言的 JSON 包（幂等：已加载不重复 fetch）。 |
-| `getBundle()` | `frontend/src/core/i18n/locale:54` | 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN） |
-| `getLang()` | `frontend/src/core/i18n/locale:68` | 读取当前语言代码 |
-| `setLang()` | `frontend/src/core/i18n/locale:73` | 切换语言（异步加载语言包后触发事件） |
-| `initI18n()` | `frontend/src/core/i18n/locale:110` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
+| `getBundle()` | `frontend/src/core/i18n/locale:57` | 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN）。 |
+| `getLang()` | `frontend/src/core/i18n/locale:71` | 读取当前语言代码 |
+| `setLang()` | `frontend/src/core/i18n/locale:76` | 切换语言（异步加载语言包后触发事件） |
+| `initI18n()` | `frontend/src/core/i18n/locale:115` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
 | `en()` | `frontend/src/core/i18n/locales/en:4` | — |
 | `ja()` | `frontend/src/core/i18n/locales/ja:5` | — |
 | `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:6` | — |
 | `t()` | `frontend/src/core/i18n/t:12` | 翻译函数。 |
-| `AVAILABLE_LANGS()` | `frontend/src/core/i18n/t:33` | 可用语言列表（由构建脚本确保与 locales/ 目录对齐） |
 | `MenuDef()` | `frontend/src/core/menu-defs:19` | 单类菜单的完整声明 |
 | `MENU_DEFS()` | `frontend/src/core/menu-defs:25` | 四类右键菜单的声明式规格（唯一事实来源） |
 | `getMenuDef()` | `frontend/src/core/menu-defs:113` | 测试辅助：按 type 取声明（不存在返回 undefined） |
@@ -937,13 +936,13 @@
 | `devLog()` | `frontend/src/views/app-preview/utils:6` | DEV 模式下输出调试日志 |
 | `DecodedYsm()` | `frontend/src/views/app-preview/utils:11` | WASM 解码结果（decodeYsmViaWasm 返回） |
 | `PreviewRoot()` | `frontend/src/views/app-preview/utils:27` | 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 _root，skeleton 消费 _unsubs） |
-| `YsmDecoder()` | `frontend/src/views/app-preview/utils:34` | WASM 解码能力（loader 消费 decodeYsmViaWasm，skeleton 消费 _decodeYsmViaWasm） |
-| `PreviewDebugger()` | `frontend/src/views/app-preview/utils:40` | 调试输出能力（loader/skeleton 消费） |
-| `PreviewImageLoader()` | `frontend/src/views/app-preview/utils:45` | 预览图加载能力（detail 消费） |
-| `PreviewCtx()` | `frontend/src/views/app-preview/utils:52` | 组合接口：实现方（AppPreview）与兼容旧调用方的完整视图。 |
-| `getPrefer3D()` | `frontend/src/views/app-preview/utils:56` | — |
-| `setPrefer3D()` | `frontend/src/views/app-preview/utils:59` | — |
-| `stripYsgpTextHeader()` | `frontend/src/views/app-preview/utils:126` | 剥离 YSGP 文本头部，返回标准二进制格式 |
+| `YsmDecoder()` | `frontend/src/views/app-preview/utils:34` | WASM 解码能力（loader/skeleton 消费） |
+| `PreviewDebugger()` | `frontend/src/views/app-preview/utils:39` | 调试输出能力（loader/skeleton 消费） |
+| `PreviewImageLoader()` | `frontend/src/views/app-preview/utils:44` | 预览图加载能力（detail 消费） |
+| `PreviewCtx()` | `frontend/src/views/app-preview/utils:51` | 组合接口：实现方（AppPreview）与兼容旧调用方的完整视图。 |
+| `getPrefer3D()` | `frontend/src/views/app-preview/utils:55` | — |
+| `setPrefer3D()` | `frontend/src/views/app-preview/utils:58` | — |
+| `stripYsgpTextHeader()` | `frontend/src/views/app-preview/utils:125` | 剥离 YSGP 文本头部，返回标准二进制格式 |
 | `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:28` | 通过前端 WASM 解码 .ysm，返回 { texture, geometry, animations } 不依赖组件实例（无 this 引用），可独立调用 |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `registerResourceManagerGlobal()` | `frontend/src/views/app-resource-manager/index:52` | 全局配置刷新监听：registerGlobalHandlers 统一收集 unsub （替代顶层无守卫注册 — ADR-008 违规点，TS 化后收敛） |

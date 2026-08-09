@@ -11,6 +11,7 @@ const STORAGE_KEY = "uiLang";
 export const SUPPORTED_LANGS = [
   { code: "zh-CN", label: "简体中文", key: "lang.zh-CN" },
   { code: "en", label: "English", key: "lang.en" },
+  { code: "ja", label: "日本語", key: "lang.ja" },
 ] as const;
 
 export type LangCode = (typeof SUPPORTED_LANGS)[number]["code"];
@@ -23,8 +24,8 @@ let _currentLang: LangCode = "zh-CN";
 /** 已加载的语言包缓存 */
 const bundles: Record<string, Bundle> = {};
 
-/** 缺失 key 告警节流（每 key 只告警一次） */
-export const _warned = new Set<string>();
+/** 缺失 key 告警节流（每 key 只告警一次；跨模块共享给 t.ts 用，故不带 _ 私有前缀） */
+export const warnedKeys = new Set<string>();
 
 // ── 语言包加载 ──────────────────────────────────────
 
@@ -49,7 +50,10 @@ export async function loadLocale(lang: string): Promise<void> {
   }
 }
 
-/** 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN） */
+/**
+ * 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN）。
+ * 注意与 getLang() 区分：getBundle 返回翻译表（对象），getLang 返回语言代码（字符串）。
+ */
 export function getBundle(lang?: string): Bundle {
   const code = lang ?? _currentLang;
   const cur = bundles[code];
@@ -88,6 +92,8 @@ function detectSystemLang(): LangCode | null {
     if (/^zh-(?:hant|tw|hk|mo)$/i.test(lower)) return "zh-CN"; // 暂回落简体，繁体包就绪后改为 "zh-TW"
     // 其余中文 → 简体
     if (/^zh/i.test(lower)) return "zh-CN";
+    // 日语
+    if (/^ja/i.test(lower)) return "ja";
     // 英语
     if (/^en/i.test(lower)) return "en";
   }

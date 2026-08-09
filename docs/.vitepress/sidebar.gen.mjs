@@ -222,6 +222,10 @@ export const autoSidebar = [
         "link": "/releases/v1.11.0"
       },
       {
+        "text": "v1.11.1 — CI 基础设施加固（缓存 / 触发拆分 / actions 升级）",
+        "link": "/releases/v1.11.1"
+      },
+      {
         "text": "v1.2.0 — 开发者对比（技术细节）",
         "link": "/releases/v1.2.0-compare"
       },

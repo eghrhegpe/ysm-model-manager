@@ -43,7 +43,7 @@ function geo(over: Partial<BedrockGeometry> = {}): BedrockGeometry {
 function ctx(over: { decode?: unknown; appendDebug?: unknown } = {}) {
   return {
     decodeYsmViaWasm: over.decode ?? vi.fn(),
-    _appendDebug: over.appendDebug ?? vi.fn(),
+    appendDebug: over.appendDebug ?? vi.fn(),
   } as never;
 }
 

@@ -111,7 +111,7 @@ export async function showLitematic(
   const basename = path.split(/[/\\]/).pop() || "";
   const savedTab = localStorage.getItem("lt_previewTab") || "detail";
 
-  ctx._root.innerHTML = `<div class="content" id="preview-content">
+  ctx.root.innerHTML = `<div class="content" id="preview-content">
   <div class="ysm-tab-row">
     <button class="preview-tab ysm-tab ${savedTab === "detail" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="detail">📋 详情</button>
     <button class="preview-tab ysm-tab ${savedTab === "material" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="material">🧱 ${t("preview.materialList")}</button>
@@ -126,22 +126,22 @@ export async function showLitematic(
   // Tab 切换
   const switchTab = (tab: string): void => {
     localStorage.setItem("lt_previewTab", tab);
-    ctx._root.querySelectorAll(".preview-tab").forEach((btn) => {
+    ctx.root.querySelectorAll(".preview-tab").forEach((btn) => {
       const isActive = (btn as HTMLElement).dataset.tab === tab;
       btn.classList.toggle("ysm-tab-active", isActive);
       btn.classList.toggle("ysm-tab-inactive", !isActive);
     });
-    const detail = ctx._root.getElementById("preview-detail");
-    const material = ctx._root.getElementById("preview-material");
+    const detail = ctx.root.getElementById("preview-detail");
+    const material = ctx.root.getElementById("preview-material");
     if (detail) detail.style.display = tab === "detail" ? "" : "none";
     if (material) material.style.display = tab === "material" ? "" : "none";
   };
-  ctx._root.querySelectorAll(".preview-tab").forEach((btn) => {
+  ctx.root.querySelectorAll(".preview-tab").forEach((btn) => {
     (btn as HTMLElement).onclick = (): void => switchTab((btn as HTMLElement).dataset.tab || "");
   });
 
   // 3D tab 按钮
-  const btn3dTab = ctx._root.getElementById("btn-lt-3d-tab") as HTMLButtonElement | null;
+  const btn3dTab = ctx.root.getElementById("btn-lt-3d-tab") as HTMLButtonElement | null;
   const isNbt = /\.nbt$/i.test(path);
   const isSch = /\.schematic$/i.test(path);
   const label = isSch ? "schematic" : isNbt ? "nbt" : "litematic";
@@ -174,7 +174,7 @@ export async function showLitematic(
         : "";
     }
 
-    const detailDiv = ctx._root.getElementById("preview-detail");
+    const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) {
       // P2 修复：await Go 解析后比对代际——慢 litematic A 迟到不得污染已切换的 B
       if (gen !== litematicGen) return;
@@ -199,7 +199,7 @@ export async function showLitematic(
     </div>`;
     }
 
-    const materialDiv = ctx._root.getElementById("preview-material");
+    const materialDiv = ctx.root.getElementById("preview-material");
     if (materialDiv) {
       materialDiv.innerHTML = `<h3>🧱 ${t("preview.materialList")}</h3>
 	    <div style="padding:12px;font-size:var(--fs-sm)">
@@ -223,7 +223,7 @@ export async function showLitematic(
   } catch (e) {
     // P2 修复：catch 分支同样比对代际——失败迟到不得覆盖已切换模型
     if (gen !== litematicGen) return;
-    const detailDiv = ctx._root.getElementById("preview-detail");
+    const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) {
       detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(e instanceof Error ? e.message : String(e))}</div></div>`;
     }

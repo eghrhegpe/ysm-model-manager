@@ -27,11 +27,11 @@ function makeCtx(): PreviewCtx {
   const host = document.createElement("div");
   const root = host.attachShadow({ mode: "open" });
   return {
-    _root: root,
-    _loadPreviewImage: vi.fn().mockResolvedValue(null),
-    _unsubs: [],
+    root: root,
+    loadPreviewImage: vi.fn().mockResolvedValue(null),
+    unsubs: [],
     decodeYsmViaWasm: vi.fn(),
-    _appendDebug: vi.fn(),
+    appendDebug: vi.fn(),
   };
 }
 
@@ -47,14 +47,14 @@ describe("showShaderPack 简单类型预览", () => {
   it("渲染图标、标签与文件名", async () => {
     const ctx = makeCtx();
     await showShaderPack(ctx, "/dir/光影包.zip", { icon: "☀️", label: "光影包" });
-    expect(ctx._root.innerHTML).toContain("☀️ 光影包");
-    expect(ctx._root.innerHTML).toContain("光影包.zip");
+    expect(ctx.root.innerHTML).toContain("☀️ 光影包");
+    expect(ctx.root.innerHTML).toContain("光影包.zip");
   });
 
   it("无 opts → 默认图标与标签", async () => {
     const ctx = makeCtx();
     await showShaderPack(ctx, "/dir/x.ysm");
-    expect(ctx._root.innerHTML).toContain("☀️ 光影包");
+    expect(ctx.root.innerHTML).toContain("☀️ 光影包");
   });
 });
 
@@ -70,16 +70,16 @@ describe("showResourcePack 资源包信息", () => {
     );
     const ctx = makeCtx();
     await showResourcePack(ctx, "/packs/pack.mcmeta");
-    expect(ctx._root.innerHTML).toContain("测试资源包");
+    expect(ctx.root.innerHTML).toContain("测试资源包");
     // describeVersionRange：min_format[0] ~ max_format[last]（验证 P1 修复的 Max 不丢）
-    expect(ctx._root.innerHTML).toContain("pack_format: 8 ~ 13");
+    expect(ctx.root.innerHTML).toContain("pack_format: 8 ~ 13");
   });
 
   it("读取失败 → 错误占位", async () => {
     readPackMock.mockRejectedValue(new Error("ENOENT"));
     const ctx = makeCtx();
     await showResourcePack(ctx, "/packs/bad.mcmeta");
-    expect(ctx._root.innerHTML).toContain("读取失败");
+    expect(ctx.root.innerHTML).toContain("读取失败");
   });
 });
 
@@ -92,11 +92,11 @@ describe("showModelDetail YSM 详情", () => {
     headerMock.mockResolvedValue({ isYsm: true, version: 20 });
     const ctx = makeCtx();
     await showModelDetail(ctx, "/repo/角色A.ysm");
-    expect(ctx._root.innerHTML).toContain("preview-content");
-    expect(ctx._root.innerHTML).toContain("ysm-author-avatars");
-    expect(ctx._root.innerHTML).toContain("角色A");
+    expect(ctx.root.innerHTML).toContain("preview-content");
+    expect(ctx.root.innerHTML).toContain("ysm-author-avatars");
+    expect(ctx.root.innerHTML).toContain("角色A");
     // 占位已替换为详情卡
-    expect(ctx._root.innerHTML).not.toContain("正在解析模型文件");
+    expect(ctx.root.innerHTML).not.toContain("正在解析模型文件");
   });
 
   it("无摘要无头部 → 无法解析错误分支", async () => {
@@ -104,13 +104,13 @@ describe("showModelDetail YSM 详情", () => {
     headerMock.mockResolvedValue(null);
     const ctx = makeCtx();
     await showModelDetail(ctx, "/repo/坏.ysm");
-    expect(ctx._root.innerHTML).toContain("无法解析此文件");
+    expect(ctx.root.innerHTML).toContain("无法解析此文件");
   });
 
   it("ExtractYsmSummary 抛错 → 错误占位（gen 一致时不静默）", async () => {
     summaryMock.mockRejectedValue(new Error("boom"));
     const ctx = makeCtx();
     await showModelDetail(ctx, "/repo/err.ysm");
-    expect(ctx._root.innerHTML).toContain("解析失败");
+    expect(ctx.root.innerHTML).toContain("解析失败");
   });
 });

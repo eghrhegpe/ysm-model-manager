@@ -19,7 +19,7 @@ export async function showModelDetail(
 ): Promise<void> {
   const gen = ++_detailGen;
   const savedTab = localStorage.getItem("ysm_previewTab") || "detail";
-  ctx._root.innerHTML = `<div class="content" id="preview-content">
+  ctx.root.innerHTML = `<div class="content" id="preview-content">
   <div class="ysm-tab-row">
     <button class="preview-tab ysm-tab ${savedTab === "detail" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="detail">📄 详情</button>
     <button class="preview-tab ysm-tab ${savedTab === "skeleton" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="skeleton">🏗️ 骨骼</button>
@@ -31,22 +31,22 @@ export async function showModelDetail(
 
   const switchTab = (tab: string): void => {
     localStorage.setItem("ysm_previewTab", tab);
-    ctx._root.querySelectorAll(".preview-tab").forEach((btn) => {
+    ctx.root.querySelectorAll(".preview-tab").forEach((btn) => {
       const isActive = (btn as HTMLElement).dataset.tab === tab;
       btn.classList.toggle("ysm-tab-active", isActive);
       btn.classList.toggle("ysm-tab-inactive", !isActive);
     });
-    const detail = ctx._root.getElementById("preview-detail");
-    const skel = ctx._root.getElementById("preview-skeleton");
+    const detail = ctx.root.getElementById("preview-detail");
+    const skel = ctx.root.getElementById("preview-skeleton");
     if (detail) detail.style.display = tab === "detail" ? "" : "none";
     if (skel) skel.style.display = tab === "skeleton" ? "" : "none";
   };
-  ctx._root.querySelectorAll(".preview-tab").forEach((btn) => {
+  ctx.root.querySelectorAll(".preview-tab").forEach((btn) => {
     (btn as HTMLElement).onclick = (): void => switchTab((btn as HTMLElement).dataset.tab || "");
   });
 
   // 预热缩略图缓存（loadModel2D / 列表视图复用）
-  await ctx._loadPreviewImage(path);
+  await ctx.loadPreviewImage(path);
   if (gen !== _detailGen) return; // 用户已切换到其他预览
 
   try {
@@ -83,16 +83,16 @@ export async function showModelDetail(
       '<div class="content" id="preview-content">',
       '<div class="content" id="preview-content"><div id="ysm-author-avatars"></div>',
     );
-    const detailDiv = ctx._root.getElementById("preview-detail");
+    const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) detailDiv.innerHTML = cardHTML;
 
     // 加载 2D 模型预览（骨架 tab）；loadModel2D 内部已兜底渲染错误，此处仅防未处理拒绝
-    loadModel2D(ctx, path, ctx._root.getElementById("preview-skeleton")).catch(
+    loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton")).catch(
       (e) => console.warn("[preview] loadModel2D:", e),
     );
   } catch (err) {
     if (gen !== _detailGen) return;
-    const detailDiv = ctx._root.getElementById("preview-detail");
+    const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) {
       detailDiv.innerHTML = `${t("preview.unknownError")} ${t("preview.parseFailed")}: ${esc(err instanceof Error ? err.message : String(err))}`;
     }
@@ -121,7 +121,7 @@ export async function showResourcePack(
     const desc = renderFormattedText(meta.description || "");
     if (gen !== _detailGen) return;
     const rv = describeVersionRange(meta);
-    ctx._root.innerHTML = `<div class="content" id="preview-content">
+    ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🎨 ${t("preview.resourcePack")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${meta.thumbnail ? `<img src="${esc(meta.thumbnail)}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:6px;border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:40px;line-height:1">❌</div><div style="font-size:var(--fs-sm);color:var(--muted)">无pack.png</div></div>`}
@@ -132,7 +132,7 @@ export async function showResourcePack(
 </div>`;
   } catch (e) {
     if (gen !== _detailGen) return;
-    ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 ${t("preview.resourcePack")}</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(e instanceof Error ? e.message : String(e))}</div></div></div>`;
+    ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 ${t("preview.resourcePack")}</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(e instanceof Error ? e.message : String(e))}</div></div></div>`;
   }
 }
 
@@ -146,7 +146,7 @@ export async function showShaderPack(
   const icon = (opts && opts.icon) || "☀️";
   const label = (opts && opts.label) || t("preview.shaderPack");
   const basename = path.split(/[/\\]/).pop() || "";
-  ctx._root.innerHTML = `<div class="content" id="preview-content">
+  ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>

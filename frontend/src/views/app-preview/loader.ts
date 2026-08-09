@@ -48,7 +48,7 @@ export async function loadModelData(
         _decodedBy,
       });
     } else {
-      ctx._appendDebug(null, "[YSM] WASM 返回空或无骨骼，回退 Go");
+      ctx.appendDebug(null, "[YSM] WASM 返回空或无骨骼，回退 Go");
     }
   }
 

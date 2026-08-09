@@ -23,11 +23,11 @@ export interface DecodedYsm {
 }
 
 /** 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） */
-/** 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 _root，skeleton 消费 _unsubs） */
+/** 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） */
 export interface PreviewRoot {
-  _root: ShadowRoot;
+  root: ShadowRoot;
   /** 组件销毁清理收集（可选：子模块可挂 window/document 监听清理函数） */
-  _unsubs?: Array<() => void>;
+  unsubs?: Array<() => void>;
 }
 
 /** WASM 解码能力（loader/skeleton 消费） */
@@ -37,12 +37,12 @@ export interface YsmDecoder {
 
 /** 调试输出能力（loader/skeleton 消费） */
 export interface PreviewDebugger {
-  _appendDebug(container: HTMLElement | null, msg: string): void;
+  appendDebug(container: HTMLElement | null, msg: string): void;
 }
 
 /** 预览图加载能力（detail 消费） */
 export interface PreviewImageLoader {
-  _loadPreviewImage(path: string): Promise<string | null>;
+  loadPreviewImage(path: string): Promise<string | null>;
 }
 
 /** 组合接口：实现方（AppPreview）与兼容旧调用方的完整视图。

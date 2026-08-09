@@ -36,10 +36,10 @@ beforeEach(() => {
   localStorage.clear();
   root = document.createElement("div").attachShadow({ mode: "open" });
   ctx = {
-    _root: root,
-    _loadPreviewImage: vi.fn().mockResolvedValue(null),
+    root: root,
+    loadPreviewImage: vi.fn().mockResolvedValue(null),
     decodeYsmViaWasm: vi.fn(),
-    _appendDebug: vi.fn(),
+    appendDebug: vi.fn(),
   };
   mocks.ReadLitematicMeta.mockResolvedValue(
     JSON.stringify({

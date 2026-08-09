@@ -31,7 +31,7 @@ type Model3DHandleX = import("../../utils/3d/model3d.ts").RenderModel3DHandle & 
 
 /**
  * 加载模型 2D 骨骼线条图 + 统计面板
- * ctx = 组件实例（提供 this._root, this._appendDebug 等）
+ * ctx = 组件实例（提供 this.root, this.appendDebug 等）
  */
 export async function loadModel2D(
   ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
@@ -39,7 +39,7 @@ export async function loadModel2D(
   skelContainer: HTMLElement | null,
 ): Promise<void> {
   const content =
-    skelContainer || ctx._root.getElementById("preview-content");
+    skelContainer || ctx.root.getElementById("preview-content");
   if (!content) return;
 
   content.innerHTML = "";
@@ -53,7 +53,7 @@ export async function loadModel2D(
     // 统一加载：缓存 → WASM → Go 兜底
     const loaded = await loadModelData(modelPath, {
       decodeYsmViaWasm: (p) => ctx.decodeYsmViaWasm(p),
-      _appendDebug: (_container, msg) => ctx._appendDebug(container, msg),
+      appendDebug: (_container, msg) => ctx.appendDebug(container, msg),
     });
     const model = loaded.model;
     const _decodedBy = loaded.decodedBy;
@@ -140,7 +140,7 @@ export async function loadModel2D(
           .join("");
       card.innerHTML += authorHtml;
       // 同步填充详情页的作者头像区
-      const avatarContainer = ctx._root.getElementById("ysm-author-avatars");
+      const avatarContainer = ctx.root.getElementById("ysm-author-avatars");
       if (avatarContainer) {
         avatarContainer.innerHTML = authors
           .map(
@@ -210,7 +210,7 @@ export async function loadModel2D(
     window.addEventListener("mousemove", onWindowMove);
     window.addEventListener("mouseup", onWindowUp);
     // 组件销毁时移除 window 监听（与槽位"先移除再绑"互补：槽位管不累积，这里管销毁回收）
-    ctx._unsubs?.push(() => {
+    ctx.unsubs?.push(() => {
       window.removeEventListener("mousemove", onWindowMove);
       window.removeEventListener("mouseup", onWindowUp);
       if (_prevWindowMove === onWindowMove) _prevWindowMove = null;
@@ -487,12 +487,12 @@ export async function loadModel2D(
 
         // 统一关闭 3D：移除 resize/keydown 监听器 + 清理渲染资源（关闭按钮/ESC/切换纹理三条路径共用）
         const close3D = (): void => {
-          // P3 修复（code_review）：正常关闭时把本次 push 的 close3D 从 _unsubs 移除——
+          // P3 修复（code_review）：正常关闭时把本次 push 的 close3D 从 unsubs 移除——
           // 否则每次打开 3D/切换纹理都 push 新闭包（捕获整个模型+纹理+DOM），
-          // 组件销毁前永久累积（_unsubs 挂在 AppPreview 实例上，整个浏览会话存活）。
+          // 组件销毁前永久累积（unsubs 挂在 AppPreview 实例上，整个浏览会话存活）。
           // 配合 disconnectedCallback 的快照遍历（slice）保证销毁时全部执行、不跳项。
-          const unsubIdx = ctx._unsubs?.indexOf(close3D);
-          if (unsubIdx !== undefined && unsubIdx > -1) ctx._unsubs?.splice(unsubIdx, 1);
+          const unsubIdx = ctx.unsubs?.indexOf(close3D);
+          if (unsubIdx !== undefined && unsubIdx > -1) ctx.unsubs?.splice(unsubIdx, 1);
           document.removeEventListener("mousemove", onResizeMove);
           document.removeEventListener("mouseup", onResizeUp);
           if (_model3d) {
@@ -511,7 +511,7 @@ export async function loadModel2D(
         };
 
         // 组件销毁时自动清理 3D overlay，防止 WebGL 上下文泄漏
-        ctx._unsubs?.push(close3D);
+        ctx.unsubs?.push(close3D);
 
         // 辅助函数
         const sec = (text: string): HTMLDivElement => {
@@ -837,7 +837,7 @@ export async function loadModel2D(
     };
 
     // 接线 🎨 3D tab 按钮
-    const btn3d = ctx._root.getElementById("btn-3d-preview");
+    const btn3d = ctx.root.getElementById("btn-3d-preview");
     if (btn3d) btn3d.onclick = (): void => {
       _toggle3D();
     };

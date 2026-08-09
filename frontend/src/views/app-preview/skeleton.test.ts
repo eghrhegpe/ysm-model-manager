@@ -95,15 +95,15 @@ function makeModel(overrides: Record<string, unknown> = {}) {
 function makeCtx() {
   const root = document.createElement("div");
   root.innerHTML = `<div id="preview-content"></div><button id="btn-3d-preview"></button><div id="ysm-author-avatars"></div>`;
-  // PreviewCtx._root 需提供 getElementById（真实为组件宿主）
+  // PreviewCtx.root 需提供 getElementById（真实为组件宿主）
   (root as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
     (id: string) => root.querySelector(`#${id}`);
   const ctx = {
-    _root: root as unknown as ShadowRoot,
-    _appendDebug: vi.fn(),
+    root: root as unknown as ShadowRoot,
+    appendDebug: vi.fn(),
     decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)),
-    _loadPreviewImage: vi.fn(() => Promise.resolve(null)),
-    _unsubs: [] as Array<() => void>,
+    loadPreviewImage: vi.fn(() => Promise.resolve(null)),
+    unsubs: [] as Array<() => void>,
   };
   return ctx;
 }
@@ -146,7 +146,7 @@ beforeEach(() => {
 describe("loadModel2D — 防御路径", () => {
   it("无容器且 root 无 preview-content → 静默返回", async () => {
     const ctx = makeCtx();
-    ctx._root.innerHTML = "";
+    ctx.root.innerHTML = "";
     await loadModel2D(ctx, "/m/a.ysm", null);
     expect(loadModelData).not.toHaveBeenCalled();
   });
@@ -196,7 +196,7 @@ describe("loadModel2D — 2D 成功路径", () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
     await loadModel2D(ctx, "/m/a.ysm", container);
-    const avatars = ctx._root.querySelector("#ysm-author-avatars") as HTMLElement;
+    const avatars = ctx.root.querySelector("#ysm-author-avatars") as HTMLElement;
     expect(avatars.innerHTML).toContain("作者A");
   });
 
@@ -248,7 +248,7 @@ describe("loadModel2D — 交互", () => {
     expect(openFullPreview).not.toHaveBeenCalled();
 
     // 组件销毁 → window 监听器移除
-    for (const fn of [...ctx._unsubs]) fn();
+    for (const fn of [...ctx.unsubs]) fn();
     renderModel2D.mockClear();
     window.dispatchEvent(new MouseEvent("mousemove", { clientX: 100 }));
     expect(renderModel2D).not.toHaveBeenCalled();
@@ -322,7 +322,7 @@ describe("loadModel2D — 3D 切换", () => {
     const container = document.createElement("div");
     await loadModel2D(ctx, "/m/a.ysm", container);
 
-    (ctx._root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
+    (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
     await waitFor(() => document.getElementById("ysm-overlay-3d"));
 
     expect(preloadModel).toHaveBeenCalledTimes(1);
@@ -333,8 +333,8 @@ describe("loadModel2D — 3D 切换", () => {
     expect(panel.textContent).toContain("2 个");
     expect(panel.textContent).toContain("64×32");
 
-    // close3D 已在 _unsubs（组件销毁自动清理），执行后 renderer 释放 + overlay 移除
-    for (const fn of [...ctx._unsubs]) fn();
+    // close3D 已在 unsubs（组件销毁自动清理），执行后 renderer 释放 + overlay 移除
+    for (const fn of [...ctx.unsubs]) fn();
     expect(handle.cleanup).toHaveBeenCalledTimes(1);
     expect(document.getElementById("ysm-overlay-3d")).toBeNull();
   });
@@ -345,7 +345,7 @@ describe("loadModel2D — 3D 切换", () => {
     const container = document.createElement("div");
     await loadModel2D(ctx, "/m/a.ysm", container);
 
-    (ctx._root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
+    (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
     await waitFor(() => busEmit.mock.calls.length > 0);
 
     expect(busEmit).toHaveBeenCalledWith(
@@ -371,9 +371,9 @@ describe("loadModel2D — 3D 切换", () => {
     const container = document.createElement("div");
     await loadModel2D(ctx, "/m/a.ysm", container);
 
-    (ctx._root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
+    (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
     // 加载未完成前先关闭（触发 close3D → _model3dGen++）
-    const closeFn = ctx._unsubs.at(-1)!;
+    const closeFn = ctx.unsubs.at(-1)!;
     closeFn();
     resolveRender(handle);
     await new Promise((r) => setTimeout(r, 0));

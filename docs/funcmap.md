@@ -928,14 +928,14 @@
 | `parseYsmJsonDirect()` | `frontend/src/views/app-preview/parse-ysm-json:7` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:7` | — |
 | `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:13` | — |
-| `loadModel2D()` | `frontend/src/views/app-preview/skeleton:36` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this._root, this._appendDebug 等） |
+| `loadModel2D()` | `frontend/src/views/app-preview/skeleton:36` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this.root, this.appendDebug 等） |
 | `ModelDetailMeta()` | `frontend/src/views/app-preview/tpl:6` | 模型统计元数据（modelDetailHTML 入参） |
 | `modelDetailHTML()` | `frontend/src/views/app-preview/tpl:20` | 模型详情面板（仓库页面） |
 | `StatsCardModel()` | `frontend/src/views/app-preview/tpl:58` | 模型统计卡片（statsCardHTML 入参的几何视图） |
 | `statsCardHTML()` | `frontend/src/views/app-preview/tpl:67` | 模型统计卡片 |
 | `devLog()` | `frontend/src/views/app-preview/utils:6` | DEV 模式下输出调试日志 |
 | `DecodedYsm()` | `frontend/src/views/app-preview/utils:11` | WASM 解码结果（decodeYsmViaWasm 返回） |
-| `PreviewRoot()` | `frontend/src/views/app-preview/utils:27` | 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 _root，skeleton 消费 _unsubs） |
+| `PreviewRoot()` | `frontend/src/views/app-preview/utils:27` | 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） |
 | `YsmDecoder()` | `frontend/src/views/app-preview/utils:34` | WASM 解码能力（loader/skeleton 消费） |
 | `PreviewDebugger()` | `frontend/src/views/app-preview/utils:39` | 调试输出能力（loader/skeleton 消费） |
 | `PreviewImageLoader()` | `frontend/src/views/app-preview/utils:44` | 预览图加载能力（detail 消费） |

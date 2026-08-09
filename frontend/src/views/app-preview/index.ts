@@ -42,8 +42,8 @@ cacheSetEvictHandler((key, val) => {
 });
 
 class AppPreview extends HTMLElement implements PreviewCtx {
-  _root: ShadowRoot;
-  _unsubs: Array<() => void> = [];
+  root: ShadowRoot;
+  unsubs: Array<() => void> = [];
   private _typeCache: Array<{ id: string; name?: string; icon?: string }> = [];
   private _typeReg: Record<string, { id: string; name?: string; icon?: string }> | null = null;
   /** 预览代际计数：快速点 A（慢）→ B（快）时，丢弃过期加载的渲染，防并发覆盖 */
@@ -51,16 +51,16 @@ class AppPreview extends HTMLElement implements PreviewCtx {
 
   constructor() {
     super();
-    this._root = this.attachShadow({ mode: "open" });
-    this._root.adoptedStyleSheets = [new CSSStyleSheet()];
-    this._root.adoptedStyleSheets[0].replaceSync(previewCSS);
+    this.root = this.attachShadow({ mode: "open" });
+    this.root.adoptedStyleSheets = [new CSSStyleSheet()];
+    this.root.adoptedStyleSheets[0].replaceSync(previewCSS);
   }
 
   connectedCallback(): void {
     this._render();
 
     this._preloadTypeRegistry();
-    this._unsubs.push(
+    this.unsubs.push(
       bus.on("model:select", async ({ path, isDir }) => {
         ++this._previewGen; // 代际计数：子方法 await 后校验 gen !== _previewGen 即丢弃过期渲染
         // P2 修复（code_review）：任意新选择作废在途 litematic 解析——
@@ -75,7 +75,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
           }
         } catch (e) {
           console.error("[preview] 加载失败:", e);
-          this._root.innerHTML =
+          this.root.innerHTML =
             '<div class="content"><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">' + t("preview.loadFailed") + '</div></div></div>';
         }
       }),
@@ -85,17 +85,17 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   disconnectedCallback(): void {
     // 快照遍历：unsub 内部可能 splice 自身（如 close3D 的 P3 修复），
     // 用 slice() 防止 forEach 遍历中移除元素导致跳项
-    this._unsubs.slice().forEach((fn) => fn());
+    this.unsubs.slice().forEach((fn) => fn());
     // 清理体素 3D（WebGL renderer + rAF 循环）：防切页后 GPU 资源残留
     cleanupLitematic3D();
   }
 
   private _render(): void {
-    this._root.innerHTML = modelDetailHTML(null);
+    this.root.innerHTML = modelDetailHTML(null);
   }
 
   /** 自动匹配缩略图：查缓存 → .ysm/.json 走 WASM → Go 兜底 */
-  async _loadPreviewImage(modelPath: string): Promise<string | null> {
+  async loadPreviewImage(modelPath: string): Promise<string | null> {
     // 查缓存（模块级，跨组件生命周期持久）
     const cached = cacheGet(modelPath);
     if (cached?.texture) return cached.texture;
@@ -139,10 +139,10 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   }
 
   /** 在预览区追加调试小字 */
-  _appendDebug(container: HTMLElement | null, msg: string): void {
+  appendDebug(container: HTMLElement | null, msg: string): void {
     try {
       const el =
-        container || this._root.getElementById("preview-content") || this._root;
+        container || this.root.getElementById("preview-content") || this.root;
       const dbg = document.createElement("div");
       dbg.className = "ysm-debug";
       dbg.textContent = msg;
@@ -198,7 +198,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   /** 显示资源包信息（pack.mcmeta + pack.png）——直连 showResourcePack，无包装层 */
   private async _showPackInfo(dirPath: string): Promise<void> {
     const gen = this._previewGen;
-    this._root.innerHTML = `<div class="content" id="preview-content"><h3>📦 ${t("preview.pack")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
+    this.root.innerHTML = `<div class="content" id="preview-content"><h3>📦 ${t("preview.pack")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
     try {
       const { GetPackInfo } = await getApp();
       const pack = await GetPackInfo(dirPath);
@@ -206,10 +206,10 @@ class AppPreview extends HTMLElement implements PreviewCtx {
       if (gen !== this._previewGen) return;
       if (!pack || (!pack.name && !pack.description)) {
         const folderName = dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
-        this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 ${t("preview.folder")}</h3><div class="model-detail-title" style="font-size:13px;font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">${t("preview.folderNoInfo")}</div></div></div>`;
+        this.root.innerHTML = `<div class="content" id="preview-content"><h3>📁 ${t("preview.folder")}</h3><div class="model-detail-title" style="font-size:13px;font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">${t("preview.folderNoInfo")}</div></div></div>`;
         return;
       }
-      this._root.innerHTML = `<div class="content" id="preview-content">
+      this.root.innerHTML = `<div class="content" id="preview-content">
 <h3>📦 ${t("preview.pack")}</h3>
 ${pack.imageBase64 ? `<div class="preview-thumb"><img src="${esc(pack.imageBase64)}" alt="封面"></div>` : ""}
 <div class="model-detail-title" style="font-size:14px;font-weight:700">${esc(pack.name || "")}</div>
@@ -219,7 +219,7 @@ ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px
       // P2 修复：catch 分支同样比对代际——A 目录 GetPackInfo 失败迟到时
       // 若用户已切到 B，不得把「无法读取整合包信息」覆盖到 B 的预览
       if (gen !== this._previewGen) return;
-      this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 ${t("preview.folder")}</h3><div class="dp-placeholder"><div class="big-icon">📁</div><div class="dp-hint">${t("preview.packReadFailed")}</div></div></div>`;
+      this.root.innerHTML = `<div class="content" id="preview-content"><h3>📁 ${t("preview.folder")}</h3><div class="dp-placeholder"><div class="big-icon">📁</div><div class="dp-hint">${t("preview.packReadFailed")}</div></div></div>`;
     }
   }
 

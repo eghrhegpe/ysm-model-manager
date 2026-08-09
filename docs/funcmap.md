@@ -32,7 +32,7 @@
 | Go·YSM 核心 | 7 | 23 |
 | Go(internal)·应用入口 | 15 | 170 |
 | 前端·根 (app-modules/bus) | 2 | 14 |
-| 前端·核心 | 12 | 25 |
+| 前端·核心 | 12 | 26 |
 | 前端·特性 | 13 | 61 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
@@ -40,7 +40,7 @@
 | frontend/views | 54 | 148 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **180** | **818** |
+| **合计** | **180** | **819** |
 
 ## Go·头像
 
@@ -584,10 +584,10 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `normalizeTheme()` | `frontend/src/app-modules:61` | 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） |
-| `applyTheme()` | `frontend/src/app-modules:65` | — |
-| `initTheme()` | `frontend/src/app-modules:84` | — |
-| `applyUIPrefs()` | `frontend/src/app-modules:103` | 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 |
+| `normalizeTheme()` | `frontend/src/app-modules:62` | 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） |
+| `applyTheme()` | `frontend/src/app-modules:66` | — |
+| `initTheme()` | `frontend/src/app-modules:90` | — |
+| `applyUIPrefs()` | `frontend/src/app-modules:109` | 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 |
 | `bus()` | `frontend/src/bus:177` | 默认实例（组件直接使用） |
 | `ToastPayload()` | `frontend/src/bus:7` | — |
 | `MenuItem()` | `frontend/src/bus:18` | — |
@@ -625,9 +625,10 @@
 | `MenuDef()` | `frontend/src/core/menu-defs:19` | 单类菜单的完整声明 |
 | `MENU_DEFS()` | `frontend/src/core/menu-defs:25` | 四类右键菜单的声明式规格（唯一事实来源） |
 | `getMenuDef()` | `frontend/src/core/menu-defs:113` | 测试辅助：按 type 取声明（不存在返回 undefined） |
-| `resolveInitialPage()` | `frontend/src/core/page-store:28` | — |
-| `PageStore()` | `frontend/src/core/page-store:48` | — |
-| `registerPageStore()` | `frontend/src/core/page-store:55` | 注册页面状态同步（由 registerGlobalHandlers 统一调用，bus.on 的 unsub 收集进 unsubs 清理） |
+| `PAGE_WHITELIST()` | `frontend/src/core/page-store:27` | — |
+| `resolveInitialPage()` | `frontend/src/core/page-store:34` | — |
+| `PageStore()` | `frontend/src/core/page-store:54` | — |
+| `registerPageStore()` | `frontend/src/core/page-store:61` | 注册页面状态同步（由 registerGlobalHandlers 统一调用，bus.on 的 unsub 收集进 unsubs 清理） |
 
 ## 前端·特性
 
@@ -794,13 +795,13 @@
 | `parseFilterNumber()` | `frontend/src/utils/dom/dialogs/adv-filter-util:21` | 解析范围输入框数字：空 / 非数字 / 负数 → null（null 表示不限制）。 |
 | `validateAdvFilter()` | `frontend/src/utils/dom/dialogs/adv-filter-util:32` | 校验三组 min/max 范围（仅两端都填数字时比对），返回错误文案或 null。 |
 | `AdvFilterValue()` | `frontend/src/utils/dom/dialogs/adv-filter` | — |
-| `AdvFilterResult()` | `frontend/src/utils/dom/dialogs/adv-filter:17` | — |
-| `modalAdvFilter()` | `frontend/src/utils/dom/dialogs/adv-filter:24` | 弹出高级筛选弹窗 |
+| `AdvFilterResult()` | `frontend/src/utils/dom/dialogs/adv-filter:18` | — |
+| `modalAdvFilter()` | `frontend/src/utils/dom/dialogs/adv-filter:25` | 弹出高级筛选弹窗 |
 | `rebuildParsedName()` | `frontend/src/utils/dom/dialogs/batch-rename-util:14` | 按 YSM 命名规范重建文件名：`[作者]【作品】角色 (日期).ext(.ban)` - 作者/作品空值跳过；角色缺省回退到「剥 .ban 与扩展名后的文件名」； - 扩展名取原 |
 | `ReplaceResult()` | `frontend/src/utils/dom/dialogs/batch-rename-util:34` | — |
 | `applyReplaceToName()` | `frontend/src/utils/dom/dialogs/batch-rename-util:44` | 查找替换：分离扩展名，仅对文件名主体做替换。 |
-| `BatchRenameChange()` | `frontend/src/utils/dom/dialogs/batch-rename:18` | 应用变更载荷 |
-| `showBatchRenameDialog()` | `frontend/src/utils/dom/dialogs/batch-rename:47` | 弹出批量重命名对话框 重复打开时先结算上一个 Promise，调用方 await 不会永远悬挂 |
+| `BatchRenameChange()` | `frontend/src/utils/dom/dialogs/batch-rename:19` | 应用变更载荷 |
+| `showBatchRenameDialog()` | `frontend/src/utils/dom/dialogs/batch-rename:48` | 弹出批量重命名对话框 重复打开时先结算上一个 Promise，调用方 await 不会永远悬挂 |
 | `esc()` | `frontend/src/utils/dom/dialogs/modal` | — |
 | `trapFocus()` | `frontend/src/utils/dom/dialogs/modal:25` | 焦点陷阱：Tab 键在弹窗内可聚焦元素间循环，防止焦点逃逸到背后页面 |
 | `closeDlg()` | `frontend/src/utils/dom/dialogs/modal:53` | 带退场动画关闭对话框 |
@@ -811,13 +812,13 @@
 | `modalSelect()` | `frontend/src/utils/dom/dialogs/modal:179` | 弹出下拉选择框 |
 | `ModalConfirmOptions()` | `frontend/src/utils/dom/dialogs/modal:242` | modalConfirm 选项 |
 | `modalConfirm()` | `frontend/src/utils/dom/dialogs/modal:258` | 弹出确认对话框 |
-| `RenameFields()` | `frontend/src/utils/dom/dialogs/rename-format:6` | 重命名字段（调用方已 trim） |
-| `buildRenameName()` | `frontend/src/utils/dom/dialogs/rename-format:18` | 按 YSM 命名规范拼接新文件名：`[作者]【品牌】角色-变体 (年月).ext` 品牌缺省「未知」、角色缺省「?」，与预览一致。 |
-| `showRenameDialog()` | `frontend/src/utils/dom/dialogs/rename:15` | 弹出重命名对话框 |
-| `modalTagEditor()` | `frontend/src/utils/dom/dialogs/tag-editor:13` | 弹出标签编辑弹窗 |
-| `TagSetResult()` | `frontend/src/utils/dom/dialogs/tag-set:5` | — |
-| `MAX_TAG_LENGTH()` | `frontend/src/utils/dom/dialogs/tag-set:11` | 标签最大长度（与原 addTag 一致） |
-| `addTagToSet()` | `frontend/src/utils/dom/dialogs/tag-set:18` | 向标签集合添加一个标签（已 trim）： 空输入 → 原样返回；重复 → error「标签已存在」；超长 → error「最多 20 个字符」； 合法 → 排序后返回新数组。错误文 |
+| `RenameFields()` | `frontend/src/utils/dom/dialogs/rename-format:7` | 重命名字段（调用方已 trim） |
+| `buildRenameName()` | `frontend/src/utils/dom/dialogs/rename-format:19` | 按 YSM 命名规范拼接新文件名：`[作者]【品牌】角色-变体 (年月).ext` 品牌缺省「未知」、角色缺省「?」，与预览一致。 |
+| `showRenameDialog()` | `frontend/src/utils/dom/dialogs/rename:16` | 弹出重命名对话框 |
+| `modalTagEditor()` | `frontend/src/utils/dom/dialogs/tag-editor:14` | 弹出标签编辑弹窗 |
+| `TagSetResult()` | `frontend/src/utils/dom/dialogs/tag-set:6` | — |
+| `MAX_TAG_LENGTH()` | `frontend/src/utils/dom/dialogs/tag-set:12` | 标签最大长度（与原 addTag 一致） |
+| `addTagToSet()` | `frontend/src/utils/dom/dialogs/tag-set:19` | 向标签集合添加一个标签（已 trim）： 空输入 → 原样返回；重复 → error「标签已存在」；超长 → error「最多 20 个字符」； 合法 → 排序后返回新数组。错误文 |
 | `ParsedModelName()` | `frontend/src/utils/dom/display:6` | 解析后的模型文件名字段 |
 | `parseModelName()` | `frontend/src/utils/dom/display:28` | 解析模型文件名 → 结构化字段 支持格式: [作者]【作品】角色变体2023-05.ysm 也兼容: [作者]《作品》角色变体2023-05.ysm |
 | `renderDisplayName()` | `frontend/src/utils/dom/display:79` | 渲染美化文件名 HTML（通用接口） 应用 CSS 变量: --meta-author, --meta-work, --meta-date |

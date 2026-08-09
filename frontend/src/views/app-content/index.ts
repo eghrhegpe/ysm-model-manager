@@ -112,6 +112,13 @@ class AppContent extends HTMLElement {
         bus.emit("nav:change", { page: "repository" });
       }),
     );
+    // 语言热切换（ADR-045 增强）：lang:changed → 重渲染当前页（t() 读取新语言包），
+    // 替代整页 reload；settings 页 initSettings 会重新执行并恢复 set-lang 选中值
+    this._globalUnsubs.push(
+      bus.on("lang:changed", () => {
+        this._render();
+      }),
+    );
     this._render();
     this._globalUnsubs.push(...registerGlobalHandlers());
     // features/views 层注册归位（core handler 不依赖上层；分层债务清理）

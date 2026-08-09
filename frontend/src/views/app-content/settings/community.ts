@@ -956,8 +956,8 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     langSelect.value = getLang();
     langSelect.addEventListener("change", async () => {
       await setLang(langSelect.value as "zh-CN" | "en");
-      // 重载页面使所有组件获取新语言包
-      window.location.reload();
+      // 热切换（ADR-045 增强）：不再整页 reload——setLang 内部 emit lang:changed，
+      // app-content 全局订阅后重渲染当前页（t() 读取新语言包），保留应用状态
     });
   }
 }

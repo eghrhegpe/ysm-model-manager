@@ -12,7 +12,7 @@
 | Go·下载 | 1 | 7 |
 | Go·错误 | 1 | 1 |
 | go/fileops | 2 | 13 |
-| Go·文件系统 | 1 | 4 |
+| Go·文件系统 | 1 | 5 |
 | Go·几何 | 2 | 8 |
 | Go·导入 | 2 | 16 |
 | Go·安装 | 1 | 6 |
@@ -31,16 +31,16 @@
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 23 |
 | Go(internal)·应用入口 | 15 | 170 |
-| 前端·根 (app-modules/bus) | 2 | 16 |
+| 前端·根 (app-modules/bus) | 2 | 14 |
 | 前端·核心 | 8 | 13 |
 | 前端·特性 | 13 | 61 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 30 | 105 |
+| 前端·工具 | 31 | 107 |
 | frontend/views | 54 | 147 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **174** | **802** |
+| **合计** | **175** | **803** |
 
 ## Go·头像
 
@@ -59,11 +59,11 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `FindDuplicateFiles()` | `go/dedup/dedup:32` | FindDuplicateFiles 扫描目录，按 SHA256 哈希分组，返回包含重复的分组 skipRecycle 为 true 时跳过 .recycle 子目录 |
-| `CountDuplicates()` | `go/dedup/dedup:126` | CountDuplicates 统计重复文件数量（比 FindDuplicateFiles 轻量，只计数） |
+| `FindDuplicateFiles()` | `go/dedup/dedup:34` | FindDuplicateFiles 扫描目录，按 SHA256 哈希分组，返回包含重复的分组 skipRecycle 为 true 时跳过 .recycle 子目录 |
+| `CountDuplicates()` | `go/dedup/dedup:127` | CountDuplicates 统计重复文件数量（比 FindDuplicateFiles 轻量，只计数） |
 | `CleanEmptyDirs()` | `go/dedup/dedup:186` | CleanEmptyDirs 递归删除指定目录下的所有空子目录（不含 dir 自身）。 |
-| `FileEntry()` | `go/dedup/dedup:16` | FileEntry 文件条目 |
-| `Group()` | `go/dedup/dedup:24` | Group 重复文件分组 |
+| `FileEntry()` | `go/dedup/dedup:18` | FileEntry 文件条目 |
+| `Group()` | `go/dedup/dedup:26` | Group 重复文件分组 |
 
 ## Go·下载
 
@@ -109,6 +109,7 @@
 | `WalkAllDirs()` | `go/fsutil/walk:38` | WalkAllDirs 递归遍历目录，返回所有子目录路径（深度优先后序：子目录在前，父目录在后） 不包含根目录本身。后序便于删除类操作（先删深目录，父目录变空后可被继续删除）。 |
 | `CountFiles()` | `go/fsutil/walk:70` | CountFiles 统计目录中的文件数（不限制扩展名） |
 | `CleanEmptyDirs()` | `go/fsutil/walk:75` | CleanEmptyDirs 递归删除空子目录，返回删除数 |
+| `IsRecycleDir()` | `go/fsutil/walk:89` | IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）—— dedup / scanner / sync 的回 |
 
 ## Go·几何
 
@@ -237,14 +238,14 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `InvalidateCache()` | `go/scanner/scanner:52` | InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用） |
-| `InvalidatePath()` | `go/scanner/scanner:61` | InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用） |
-| `ScanEntries()` | `go/scanner/scanner:69` | ScanEntries 扫描目录下的模型文件（含 .recycle 排除、扩展名过滤、SHA256 哈希、30s TTL 缓存） |
-| `ScanEntriesWithHit()` | `go/scanner/scanner:76` | ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。 |
-| `ComputeFileHash()` | `go/scanner/scanner:161` | ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配） |
-| `ListModelAuthors()` | `go/scanner/scanner:179` | ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序） |
-| `ScanLocalAuthors()` | `go/scanner/scanner:211` | ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root） |
-| `GenerateRepoIndex()` | `go/scanner/scanner:270` | GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub Actions/Linux 消费，正斜杠路径） |
+| `InvalidateCache()` | `go/scanner/scanner:53` | InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用） |
+| `InvalidatePath()` | `go/scanner/scanner:62` | InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用） |
+| `ScanEntries()` | `go/scanner/scanner:70` | ScanEntries 扫描目录下的模型文件（含 .recycle 排除、扩展名过滤、SHA256 哈希、30s TTL 缓存） |
+| `ScanEntriesWithHit()` | `go/scanner/scanner:77` | ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。 |
+| `ComputeFileHash()` | `go/scanner/scanner:162` | ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配） |
+| `ListModelAuthors()` | `go/scanner/scanner:180` | ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序） |
+| `ScanLocalAuthors()` | `go/scanner/scanner:212` | ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root） |
+| `GenerateRepoIndex()` | `go/scanner/scanner:271` | GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub Actions/Linux 消费，正斜杠路径） |
 
 ## Go·同步
 
@@ -583,10 +584,8 @@
 |------|--------|------|
 | `normalizeTheme()` | `frontend/src/app-modules:60` | 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） |
 | `applyTheme()` | `frontend/src/app-modules:64` | — |
-| `safeGet()` | `frontend/src/app-modules:83` | — |
-| `safeSet()` | `frontend/src/app-modules:90` | — |
-| `initTheme()` | `frontend/src/app-modules:97` | — |
-| `applyUIPrefs()` | `frontend/src/app-modules:116` | 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 |
+| `initTheme()` | `frontend/src/app-modules:83` | — |
+| `applyUIPrefs()` | `frontend/src/app-modules:102` | 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 |
 | `bus()` | `frontend/src/bus:173` | 默认实例（组件直接使用） |
 | `ToastPayload()` | `frontend/src/bus:7` | — |
 | `MenuItem()` | `frontend/src/bus:18` | — |
@@ -815,6 +814,8 @@
 | `sizeColor()` | `frontend/src/utils/dom/format:22` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
 | `fmtDate()` | `frontend/src/utils/dom/format:32` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
 | `esc()` | `frontend/src/utils/dom/html:4` | HTML 转义（治理红线：所有 innerHTML 拼接必须过 esc） |
+| `safeGet()` | `frontend/src/utils/dom/storage:7` | 安全读：存储不可用时返回 null（调用方走默认值回退） |
+| `safeSet()` | `frontend/src/utils/dom/storage:16` | 安全写：存储不可用时静默忽略持久化（不中断调用方） |
 | `renderFormattedText()` | `frontend/src/utils/format/mc-format:45` | 将含 Minecraft § 分节符的文本渲染为带颜色的 HTML。 |
 | `PackMeta()` | `frontend/src/utils/format/pack-format:92` | ReadPackMeta 返回的 JSON 对象（仅覆盖用到的字段） |
 | `describeVersionRange()` | `frontend/src/utils/format/pack-format:105` | 根据 meta 对象生成格式号 + 版本号描述 拼接用「 / 」作分隔符，避免出现 "1.9 ~ 1.10.2 ~ 1.11" 的四段歧义串。 |
@@ -856,7 +857,7 @@
 | `contentCSS()` | `frontend/src/views/app-content/content-css:2` | — |
 | `initDiagnostics()` | `frontend/src/views/app-content/diagnostics/community:16` | 初始化诊断页所有功能 |
 | `startDedup()` | `frontend/src/views/app-content/diagnostics/community:251` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
-| `initSettings()` | `frontend/src/views/app-content/settings/community:17` | 初始化设置页所有事件绑定 |
+| `initSettings()` | `frontend/src/views/app-content/settings/community:18` | 初始化设置页所有事件绑定 |
 | `RepoAuthorLike()` | `frontend/src/views/app-content/site-view:11` | 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） |
 | `RenderSiteViewCtx()` | `frontend/src/views/app-content/site-view:14` | 竚点视图渲染上下文（index.ts _initWorkshop 传入） |
 | `LocalCreatorLike()` | `frontend/src/views/app-content/site-view:31` | 本地创作者（绑定 + 运行时附加字段） |

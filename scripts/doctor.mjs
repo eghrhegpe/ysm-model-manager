@@ -23,14 +23,22 @@ const WARN = '[WARN]';
 
 function run(cmd, cwd = ROOT, opts = {}) {
   /**
-   * 运行命令，返回 {rc, out}。统一委托 _lib/proc.mjs（超时/错误分类/cwd 契约，
-   * 共享收敛；原内联实现已并入共享层）。
-   * Windows：npx/tsc 是无扩展名 shim，原生 execFileSync 无法 CreateProcess（ENOENT），
-   * 需 opts.shell=true 经 cmd.exe 执行（与 check-deadcode-baseline 一致）；
-   * grep/go/which 是原生可执行文件，保持默认（无 shell），避免 cmd.exe 找不到 Git Bash 工具。
+   * 运行命令，返回 {rc, out}。统一委托 _lib/proc.mjs（超时/错误分类契约，共享收敛）。
+   * shell 仅在 win32 生效（P3 复核）：doctor 的 shell:true 只服务于 .cmd shim
+   * （npx/tsc 无扩展名），POSIX 下这些是原生可执行文件，直接 exec 更安全——
+   * 全平台 shell 会把含空格/元字符的 ROOT 路径交给 /bin/sh -c 拆词破坏。
+   * grep/go/which 原生可执行保持默认（无 shell），避免 cmd.exe 找不到 Git Bash 工具。
    */
-  const r = procRun(cmd[0], cmd.slice(1), { cwd, ...opts, timeout: opts.timeout ?? 120000 });
-  return { rc: r.rc, out: r.out };
+  const r = procRun(cmd[0], cmd.slice(1), {
+    cwd,
+    ...opts,
+    // shell:true 降级为 win32-only（POSIX 直接 exec 原生 bin）
+    shell: opts.shell === true ? process.platform === 'win32' : opts.shell,
+    timeout: opts.timeout ?? 120000,
+  });
+  // out 回退 err：ENOENT 时 proc.mjs 的 r.out 为空、诊断在 r.err——FAIL 输出必须保留
+  // 「command not found: go」类原因，否则检查失败但输出空白（P3 复核）
+  return { rc: r.rc, out: r.out || r.err || '' };
 }
 
 /**

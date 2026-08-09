@@ -991,7 +991,7 @@
 | `setPendingTreeSearch()` | `frontend/src/views/app-tree/index:22` | — |
 | `AppTree()` | `frontend/src/views/app-tree/index:51` | — |
 | `TreeEntry()` | `frontend/src/views/app-tree/loader:10` | 树条目（loader 转换后的渲染格式） |
-| `loadEntries()` | `frontend/src/views/app-tree/loader:38` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |
+| `loadEntries()` | `frontend/src/views/app-tree/loader:71` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |
 | `TreeRow()` | `frontend/src/views/app-tree/render:21` | 扁平化行（虚拟滚动数据单元） |
 | `TreeNode()` | `frontend/src/views/app-tree/render:31` | buildTree 嵌套节点（文件夹 = 子节点对象，文件 = { _e: entry }） |
 | `RenderMode()` | `frontend/src/views/app-tree/render:37` | 渲染模式 |

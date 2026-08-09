@@ -34,6 +34,39 @@ function toastLoadError(err: unknown): void {
   });
 }
 
+// ---- Android 存储授权引导（ADR-046 P2）----
+// Java 桥（WailsJSBridge 以 "wails" 名注册，MainActivity addJavascriptInterface）
+// 暴露 hasStoragePermission / requestStoragePermission；桌面端无此桥。
+// 库加载失败且未授权（MANAGE_EXTERNAL_STORAGE）时，引导用户开启"所有文件访问"。
+interface WailsAndroidBridge {
+  hasStoragePermission?: () => boolean;
+  requestStoragePermission?: () => void;
+}
+
+function androidBridge(): WailsAndroidBridge | null {
+  const w = (window as unknown as { wails?: WailsAndroidBridge }).wails;
+  return w && typeof w.requestStoragePermission === "function" ? w : null;
+}
+
+/** 节流：自动重载可能高频触发，5s 内只引导一次 */
+let _lastStoragePromptAt = 0;
+const STORAGE_PROMPT_MIN_GAP = 5000;
+
+function maybePromptAndroidStorage(): void {
+  const bridge = androidBridge();
+  if (!bridge) return; // 桌面端无此桥
+  if (bridge.hasStoragePermission?.()) return; // 已授权
+  const now = Date.now();
+  if (now - _lastStoragePromptAt < STORAGE_PROMPT_MIN_GAP) return;
+  _lastStoragePromptAt = now;
+  bus.emit("toast:show", {
+    msg: "需要「所有文件访问」权限才能读取模型库，正在引导授权…",
+    duration: 4000,
+    type: "warn",
+  });
+  bridge.requestStoragePermission?.();
+}
+
 /** 从 Go 后端加载仓库文件列表，返回格式化的 entries */
 export async function loadEntries(
   rtype: string,
@@ -83,6 +116,8 @@ export async function loadEntries(
   } catch (err) {
     // 失败不静默：自动重载场景用户看不到报错，明确 toast 提示（带节流防刷屏）
     toastLoadError(err);
+    // Android 未授权时引导开启"所有文件访问"（Java 弹窗跳设置页）
+    maybePromptAndroidStorage();
     return { repoRoot: "", entries: [] };
   }
 }

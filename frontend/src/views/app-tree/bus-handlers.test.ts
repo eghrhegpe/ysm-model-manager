@@ -66,10 +66,6 @@ vi.mock("../../services/registry.ts", () => ({
   get: getRegistryMock,
 }));
 
-vi.mock("./instance-actions.ts", () => ({
-  initInstanceActions: initInstanceActionsMock,
-}));
-
 vi.mock("../../utils/dom/dialogs/modal.ts", () => ({
   modalPrompt: modalPromptMock,
   modalConfirm: modalConfirmMock,
@@ -169,70 +165,6 @@ async function bind(vm: VM): Promise<void> {
   unsubs = bindBusEvents(vm as never);
   await Promise.resolve();
 }
-
-describe("bindBusEvents — 选择仓库目录", () => {
-  it("选目录成功 → SaveAppConfig + reload + stats:refresh", async () => {
-    const vm = makeVM();
-    await bind(vm);
-
-    bus.emit("dir:select-repo");
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(SelectDirectoryMock).toHaveBeenCalled();
-    expect(SaveAppConfigMock).toHaveBeenCalledWith(
-      "/pick/x",
-      "",
-      "",
-      "copy",
-      expect.any(String),
-    );
-    expect(vm._renderTree).toHaveBeenCalled();
-    expect(statsRefreshed).toHaveLength(1);
-  });
-
-  it("取消选择（空）→ 不保存不刷新", async () => {
-    const vm = makeVM();
-    await bind(vm);
-    SelectDirectoryMock.mockResolvedValue("");
-
-    bus.emit("dir:select-repo");
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(SaveAppConfigMock).not.toHaveBeenCalled();
-    expect(vm._renderTree).not.toHaveBeenCalled();
-  });
-
-  it("SaveAppConfig 失败 → error toast + 清空 entries + 渲染", async () => {
-    const vm = makeVM([makeEntry()]);
-    await bind(vm);
-    SaveAppConfigMock.mockRejectedValue(new Error("EACCES"));
-
-    bus.emit("dir:select-repo");
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(toasts.some((t) => t.type === "error" && t.msg.includes("权限不足"))).toBe(true);
-    expect(vm._entries).toEqual([]);
-    expect(vm._renderTree).toHaveBeenCalled();
-  });
-});
-
-describe("bindBusEvents — 占位事件", () => {
-  it("entries:dedup → info toast", async () => {
-    const vm = makeVM();
-    await bind(vm);
-
-    bus.emit("entries:dedup");
-    expect(toasts.some((t) => t.msg.includes("去重功能开发中"))).toBe(true);
-  });
-
-  it("recycle:open → info toast", async () => {
-    const vm = makeVM();
-    await bind(vm);
-
-    bus.emit("recycle:open");
-    expect(toasts.some((t) => t.msg.includes("回收站功能开发中"))).toBe(true);
-  });
-});
 
 describe("bindBusEvents — 批量启用/禁用", () => {
   it("batch:enable-all → 只 toggle 当前禁用的条目", async () => {
@@ -508,12 +440,5 @@ describe("bindBusEvents — 树刷新", () => {
     expect(ClearScanCacheMock).toHaveBeenCalled();
     expect(vm._repoRoot).toBe("/repo");
     expect(vm._renderTree).toHaveBeenCalled();
-  });
-
-  it("initInstanceActions 被调用并展开返回", async () => {
-    const vm = makeVM();
-    const { bindBusEvents } = await import("./bus-handlers.ts");
-    unsubs = bindBusEvents(vm as never);
-    expect(initInstanceActionsMock).toHaveBeenCalledWith(vm as never);
   });
 });

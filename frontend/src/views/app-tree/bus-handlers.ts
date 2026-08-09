@@ -5,7 +5,6 @@ import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { bus } from "../../bus.ts";
 import { get } from "../../services/registry.ts";
 import type { loadEntries } from "./loader.ts";
-import { initInstanceActions } from "./instance-actions.ts";
 import { getApp } from "../../wails/app.ts";
 import type { AppTree } from "./index.ts";
 import { modalPrompt, modalConfirm } from "../../utils/dom/dialogs/modal.ts";
@@ -15,57 +14,6 @@ import { selectState } from "./data.ts";
 export function bindBusEvents(vm: AppTree): Array<() => void> {
   const unsubs: Array<() => void> = [];
 
-  // 整合包右键操作
-  unsubs.push(...initInstanceActions(vm));
-
-  // 选择仓库目录
-  unsubs.push(
-    bus.on("dir:select-repo", async () => {
-      try {
-        const { SelectDirectory, SaveAppConfig } = await getApp();
-        const dir = await SelectDirectory();
-        if (!dir) return;
-        // 透传用户已保存的 linkMode，避免硬编码 "copy" 冹掉硬链接模式
-        const { LoadAppConfig } = await getApp();
-        const cfg = await LoadAppConfig().catch(() => null);
-        const theme = localStorage.getItem("theme") || "dark";
-        await SaveAppConfig(dir, "", "", cfg?.linkMode || "copy", theme);
-        // repoRoot 由 reload 内 loadEntries → GetRepoRoot(rtype) 按当前类型推导，
-        // 不再硬编码 "/ysm"（MMD/VRC/资源包类型的子目录各不相同）
-        await reload(vm);
-        bus.emit("stats:refresh");
-      } catch (err) {
-        console.warn("[bus] dir:select-repo 失败:", err);
-        vm._entries = [];
-        vm._renderTree();
-        bus.emit("toast:show", { msg: "❌ " + friendlyError(err, t("tree.selectDirFailed")), duration: 5000, type: "error" });
-      }
-    }),
-  );
-
-  // 去重
-  unsubs.push(
-    bus.on("entries:dedup", () => {
-      bus.emit("toast:show", {
-        msg: "🔗 " + t("tree.dedupWip"),
-        duration: 2000,
-        type: "info",
-      });
-    }),
-  );
-
-  // 回收站
-  unsubs.push(
-    bus.on("recycle:open", () => {
-      bus.emit("toast:show", {
-        msg: "♻️ " + t("tree.recycleWip"),
-        duration: 2000,
-        type: "info",
-      });
-    }),
-  );
-
-  // 批量启用/禁用全部
   unsubs.push(bus.on("batch:enable-all", () => batchToggleAll(vm, true)));
   unsubs.push(bus.on("batch:disable-all", () => batchToggleAll(vm, false)));
 

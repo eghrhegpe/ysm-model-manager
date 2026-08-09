@@ -90,8 +90,6 @@ export interface BusEvents {
   // 实例 / 导入
   "instance:export-list": { name: string; rtype?: string };
   "instance:clear": { name: string; rtype?: string };
-  "instance:install": { name: string; rtype?: string };
-  "instance:sync": { name: string; rtype?: string };
   "import:history-changed": {
     records: Array<{ name: string; time: string; isYsm?: boolean }>;
   };
@@ -109,13 +107,10 @@ export interface BusEvents {
   "dir:recycle": { dir: string };
   "dir:mkdir": { dir: string };
   "dir:batch-rename": { dir: string };
-  "dir:select-repo": void;
   // 其他
   "loading:start": void;
   "loading:end": void;
-  "recycle:open": void;
   "filter:results": Array<{ path: string }>;
-  "entries:dedup": void;
 }
 
 export type BusEventName = keyof BusEvents;

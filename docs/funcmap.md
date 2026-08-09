@@ -845,11 +845,11 @@
 | `ICONS()` | `frontend/src/utils/icon/workshop-icons:3` | — |
 | `getSiteIcon()` | `frontend/src/utils/icon/workshop-icons:46` | — |
 | `getTagIconFromRole()` | `frontend/src/utils/icon/workshop-icons:50` | — |
-| `RESOURCE_EXTS()` | `frontend/src/utils/resource/extensions:8` | 每种资源类型对应的扩展名 |
-| `ALL_EXTS()` | `frontend/src/utils/resource/extensions:19` | 所有支持的扩展名列表（去重，用于 UI 提示文案） |
-| `getExts()` | `frontend/src/utils/resource/extensions:34` | 获取某资源类型支持的扩展名 |
-| `isSupportedExt()` | `frontend/src/utils/resource/extensions:39` | 检查扩展名是否被某资源类型支持 |
-| `extBelongsTo()` | `frontend/src/utils/resource/extensions:44` | 返回扩展名所属的资源类型 ID |
+| `RESOURCE_EXTS()` | `frontend/src/utils/resource/extensions:10` | 每种资源类型对应的扩展名 |
+| `ALL_EXTS()` | `frontend/src/utils/resource/extensions:21` | 所有支持的扩展名列表（去重，用于 UI 提示文案） |
+| `getExts()` | `frontend/src/utils/resource/extensions:36` | 获取某资源类型支持的扩展名 |
+| `isSupportedExt()` | `frontend/src/utils/resource/extensions:41` | 检查扩展名是否被某资源类型支持 |
+| `extBelongsTo()` | `frontend/src/utils/resource/extensions:46` | 返回扩展名所属的资源类型 ID |
 | `ResourceTypeEntry()` | `frontend/src/utils/resource/registry:6` | 资源类型注册表条目（对应 resource_types.json 结构） |
 | `loadResourceRegistry()` | `frontend/src/utils/resource/registry:19` | 加载资源类型注册表（失败不缓存：Go 桥瞬断后下次调用重试，避免整会话降级） |
 | `RESOURCE_TYPES()` | `frontend/src/utils/resource/types:4` | 资源类型 ID（键为类型标签，值为内部 ID） |

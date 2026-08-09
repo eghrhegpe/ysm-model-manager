@@ -42,12 +42,13 @@ use_when:
 
 ## 不变量
 
-- **改扩展名两步走**：1) 改 `resource_types.json` → 2) 改本文件（Go 端运行时直读 JSON 无需手工改）；两处必须同步，禁止单独改本文件（注册表优先，AGENTS.md §4.4）
-- 一致性由 vitest 守护（`extensions.test.ts` 已 import `resource_types.json` 做双向对账——7 类型/每类型扩展名/无额外类型，P2 修复：原测试硬编码断言，三端一致性只靠退出码恒 0 陷阱的外部 type-consistency.mjs）+ Go `registry_test.go`
+- **改扩展名两步走**：1) 改 `resource_types.json` → 2) 改本文件（Go 端运行时直读 JSON 无需手工改——**无静态 ResourceExts 表**，知识卡旧文「三端一致性」表述已修正；`extensions.ts` 头部注释已同步重写，P3 修复原误导注释声称「改 Go 侧 ResourceExts」三步流程，但 Go 侧无此符号）；两处必须同步，禁止单独改本文件（注册表优先，AGENTS.md §4.4）
+- 一致性由 vitest 守护（`extensions.test.ts` 已 import `resource_types.json` 做双向对账——7 类型/每类型扩展名/无额外类型，**含前端→JSON 反向对账**（P2 修复：原测试硬编码断言，三端一致性只靠退出码恒 0 陷阱的外部 type-consistency.mjs））+ Go `registry_test.go`
 - 扩展名比较一律小写；扩展名带前导点（".ysm"）
+- **`extBelongsTo` 返回顺序为前端表插入序**（P4 观察：Go `ExtBelongsTo` 为注册表序，跨语言数组序不一致——当前前端无生产消费者，若未来 FE↔Go 精确对比需定义排序契约）
 
 ## 相关
 
 - [resource_registry](./resource-registry.md) — 单一事实源 resource_types.json
 - [utils_resource_types](./utils-resource-types.md) — 资源类型常量
-- `frontend/src/utils/resource/extensions.test.js` — 契约测试（验证入口）
+- `frontend/src/utils/resource/extensions.test.ts` — 契约测试（验证入口；知识卡旧文 .js 路径笔误已修正）

@@ -39,9 +39,10 @@ HTML 转义与搜索高亮工具。`esc()` 是全前端 HTML 转义的统一入�
 
 ## 不变量
 
-- 治理红线：**所有 innerHTML 拼接中用户可控的数据必须经 esc() 转义**（AGENTS.md §3.3）
+- 治理红线：**所有 innerHTML 拼接中用户可控的数据必须经 esc() 转义**（AGENTS.md §3.3 的 UI 安全红线——注：当前 AGENTS.md §3.3 为「注册表优先」，innerHTML 转义红线实际位于 `docs/governance-rules.md` R8，知识卡引用已修正）
 - `&` 必须最先替换，避免二次转义后续生成的实体
 - hl 只高亮首个命中（全量高亮请用 display.ts 的 renderModelNameWithHighlight）
+- **hl 在原始 text 上定位**（非先整体转义——`&lt;` 错位陷阱有判别性测试锁定：`hl("&lt;","lt")` → `&amp;<mark>lt</mark>;`，P3 补测）；**Unicode 大小写折叠长度变化（如土耳其 İ）时降级纯转义**（P3 修复：折叠后 idx 用于切片原始 text 会静默错切空 mark）
 
 ## 相关
 

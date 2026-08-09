@@ -32,7 +32,7 @@
 | Go·YSM 核心 | 7 | 23 |
 | Go(internal)·应用入口 | 15 | 170 |
 | 前端·根 (app-modules/bus) | 2 | 14 |
-| 前端·核心 | 11 | 24 |
+| 前端·核心 | 12 | 25 |
 | 前端·特性 | 13 | 61 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
@@ -40,7 +40,7 @@
 | frontend/views | 54 | 147 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **179** | **816** |
+| **合计** | **180** | **817** |
 
 ## Go·头像
 
@@ -618,6 +618,7 @@
 | `getLang()` | `frontend/src/core/i18n/locale:67` | 读取当前语言代码 |
 | `setLang()` | `frontend/src/core/i18n/locale:72` | 切换语言（异步加载语言包后触发事件） |
 | `initI18n()` | `frontend/src/core/i18n/locale:109` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
+| `en()` | `frontend/src/core/i18n/locales/en:4` | — |
 | `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:5` | — |
 | `t()` | `frontend/src/core/i18n/t:12` | 翻译函数。 |
 | `AVAILABLE_LANGS()` | `frontend/src/core/i18n/t:33` | 可用语言列表（由构建脚本确保与 locales/ 目录对齐） |
@@ -822,7 +823,7 @@
 | `renderDisplayName()` | `frontend/src/utils/dom/display:79` | 渲染美化文件名 HTML（通用接口） 应用 CSS 变量: --meta-author, --meta-work, --meta-date |
 | `renderModelName()` | `frontend/src/utils/dom/display:157` | renderModelName = renderDisplayName 别名，options.showExt 支持 |
 | `renderModelNameWithHighlight()` | `frontend/src/utils/dom/display:166` | 搜索高亮版：先对纯文本高亮，再渲染 HTML，避免 keyword 命中 HTML 标签内容破坏 DOM |
-| `friendlyError()` | `frontend/src/utils/dom/errors:9` | 将 Go 错误转换为中文友好提示 |
+| `friendlyError()` | `frontend/src/utils/dom/errors:11` | 将 Go 错误转换为友好提示 |
 | `fmt()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值返回空串 |
 | `sizeColor()` | `frontend/src/utils/dom/format:22` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
 | `fmtDate()` | `frontend/src/utils/dom/format:32` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
@@ -886,11 +887,11 @@
 | `repositoryHTML()` | `frontend/src/views/app-content/tpl:5` | — |
 | `instancesHTML()` | `frontend/src/views/app-content/tpl:45` | — |
 | `settingsHTML()` | `frontend/src/views/app-content/tpl:66` | — |
-| `downloadsHTML()` | `frontend/src/views/app-content/tpl:438` | — |
-| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:489` | — |
-| `recycleHTML()` | `frontend/src/views/app-content/tpl:548` | — |
-| `githubHTML()` | `frontend/src/views/app-content/tpl:561` | ===== GitHub 仓库页面 ===== |
-| `workshopHTML()` | `frontend/src/views/app-content/tpl:592` | — |
+| `downloadsHTML()` | `frontend/src/views/app-content/tpl:452` | — |
+| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:503` | — |
+| `recycleHTML()` | `frontend/src/views/app-content/tpl:562` | — |
+| `githubHTML()` | `frontend/src/views/app-content/tpl:575` | ===== GitHub 仓库页面 ===== |
+| `workshopHTML()` | `frontend/src/views/app-content/tpl:606` | — |
 | `CreatorIdentity()` | `frontend/src/views/app-content/workshop-data:8` | 创作者身份识别结果 |
 | `CreatorIdentityInput()` | `frontend/src/views/app-content/workshop-data:15` | 创作者输入（role/tag 可空，_fromLocal 为运行时附加字段） |
 | `getCreatorIdentity()` | `frontend/src/views/app-content/workshop-data:22` | — |

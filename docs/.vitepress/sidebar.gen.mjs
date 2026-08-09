@@ -632,6 +632,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-046：全平台化可行性调查（对照 MikuMikuAR）",
+        "link": "/adr/ADR-046-cross-platform-feasibility"
+      },
+      {
         "text": "ADR-045：前端 i18n 轻量框架",
         "link": "/adr/ADR-045-i18n-framework"
       },

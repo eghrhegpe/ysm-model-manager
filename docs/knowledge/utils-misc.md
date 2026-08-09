@@ -44,10 +44,11 @@ use_when:
 
 ## 不变量
 
-- **调试代码用完即删**（frontend/AGENTS.md）：dbg 调用属临时排查手段，提交前应清除；生产环境无控制台，用户反馈问题依赖桌面 `ysm-debug.log` 日志文件（见 `docs/guide/用户指南.md`）
-- dbg 必须带 tag 便于过滤；参数经内部 safeStr 截断（200 字符）防大对象撑爆环形缓冲，**Error 分支同样截断**（P3 修复：原直接返回 v.message 可突破上限）
+- **调试代码用完即删**（frontend/AGENTS.md）：dbg 调用属临时排查手段，提交前应清除；生产环境无控制台，用户反馈问题依赖桌面 `ysm-debug.log` 日志文件（见 `docs/guide/用户指南.md`）。**现状与约定冲突**（P3 观察 2026-08-09）：9+ 模块仍残留大量 `dbg()` 调用（core/handlers/sync、features/community/download-queue、utils/model2d、app-content、app-sidebar、app-sync-manager、app-tree 等），持续占用环形缓冲——需产品层决策「清理残留」或「分层持久日志 vs 临时排查」
+- dbg 必须带 tag 便于过滤；参数经内部 safeStr 截断（200 字符）防大对象撑爆环形缓冲，**Error 分支同样截断**（P3 修复：原直接返回 v.message 可突破上限）；**`JSON.stringify` 返回 undefined（函数/symbol）时走 String 兜底**（P3 修复：原直接 `.length` 为 strict 下 TS2532，运行时靠 catch 兜底）
 - `window._DBG_RING` / `window.debugGetSpec` 属调试豁免接口，不是 `window.__*` 状态红线（不存页面状态）
 - 环形缓冲**一次性截断**到 200 条上限（P3 修复：原 `shift()` 单条收敛，外部预置超量时长期无法回归）
+- **`?nodebug=1` 开关语义**（P4 观察）：实现为 `URLSearchParams.has("nodebug")` 存在即关闭——`?nodebug=0` 也会关闭，与文档「=1」语义不符；`RingEntry.level` 为幽灵字段（声明存在但 dbg 永不写入）
 
 ## 相关
 

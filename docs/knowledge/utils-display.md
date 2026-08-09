@@ -44,10 +44,11 @@ use_when:
 
 ## 不变量
 
-- 治理红线：**所有 UI 文件名展示必须走 renderDisplayName**（AGENTS.md §3.3），禁止把原始文件名直接拼进 innerHTML
+- 治理红线：**所有 UI 文件名展示必须走 renderDisplayName**（AGENTS.md §3.3），禁止把原始文件名直接拼进 innerHTML。**例外已记录**（P3 观察）：app-tree 搜索态（render.ts:172）走 `hl()` 而非 renderDisplayName——`hasSearch ? hl(e.name, search) : renderDisplayName(e.name)`，搜索时丢失 tag-work/tag-date 着色、§ 着色与 `.ban` 原文语义（hl 会 esc，XSS 安全）
 - 返回的 HTML 已在内部逐段转义（模块自带 esc），调用方不得再注入未转义内容
 - 着色是「原位着色」：保留原文件名的字符顺序，绝不重排字段
 - 封禁文件（.ban）不着色，只显示转义原文
+- **日期命中与括号段区间重叠时剔除日期**（P3 修复：`【2023】角色.ysm` 中 date(2023) 与 work(【2023】) 重叠，原反向替换使内部 token 泄漏到 UI）
 
 ## 相关
 

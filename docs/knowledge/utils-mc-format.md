@@ -35,7 +35,7 @@ use_when:
 
 `pack-format.ts`：
 - `PackMeta` 接口 — `{ supported_formats?, min_format?, max_format?, pack_format? }`（对应 Go ReadPackMeta 返回的 JSON）
-- `describeVersionRange(meta: PackMeta): { format, version }` — 解析优先级：supported_formats[min,max] → min_format/max_format（int 或 [n,…] 数组）→ 单体 pack_format；max ≥ 9999 显示「≥ min」；格式号 > 88 兜底「最新版本」；全缺返回 `{ "?", "" }`；内部版本映射表 FORMAT_VERSION_MAP（1→"1.6.1 ~ 1.8.9" … 88→"26.2"，含 "65.0" 类小数键）为模块私有
+- `describeVersionRange(meta: PackMeta): { format, version }` — 解析优先级：supported_formats[min,max] → min_format/max_format（int 或 [n,…] 数组）→ 单体 pack_format；max ≥ 9999 显示「≥ min」；格式号 > 88 兜底「最新版本」（**三分支口径一致，P3 修复：单体 pack_format 分支原 FORMAT_VERSION_MAP 直接索引对 >88 返回空串，现改用 fmtVer 统一**）；全缺返回 `{ "?", "" }`；内部版本映射表 FORMAT_VERSION_MAP（1→"1.6.1 ~ 1.8.9" … 88→"26.2"，**仅整数键**——知识卡旧文「含 '65.0' 类小数键」为漂移，archive 文档已自证「JS 端仅用整数 key」）为模块私有
 
 ## 与其他子系统关系
 

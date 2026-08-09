@@ -36,11 +36,11 @@
 | 前端·特性 | 13 | 61 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 30 | 104 |
+| 前端·工具 | 30 | 105 |
 | frontend/views | 54 | 147 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **174** | **801** |
+| **合计** | **174** | **802** |
 
 ## Go·头像
 
@@ -774,6 +774,7 @@
 | `stagger()` | `frontend/src/utils/animation/stagger:11` | — |
 | `moveItem()` | `frontend/src/utils/array:8` | 将 arr[from] 移到 arr[to]（原地修改，返回同一数组）。 |
 | `dbg()` | `frontend/src/utils/debug/debug:32` | 输出调试日志（保留 tag 用于过滤） |
+| `safeStr()` | `frontend/src/utils/debug/debug:55` | 任意值 → 可读字符串（200 字符截断；供单测导出的纯函数） |
 | `btnBaseCSS()` | `frontend/src/utils/dom/css:1` | — |
 | `focusVisibleCSS()` | `frontend/src/utils/dom/css:32` | Shadow DOM 通用 focus-visible 规则（所有 button/input/select/textarea） |
 | `AdvFilterValue()` | `frontend/src/utils/dom/dialogs/adv-filter-util:6` | 筛选条件 |

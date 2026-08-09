@@ -51,7 +51,8 @@ export function dbg(tag: string, ...args: unknown[]): void {
 
 
 
-function safeStr(v: unknown): string {
+/** 任意值 → 可读字符串（200 字符截断；供单测导出的纯函数） */
+export function safeStr(v: unknown): string {
   try {
     if (v == null) return String(v);
     if (typeof v === "string") return v.length > 200 ? v.slice(0, 200) + "…" : v;

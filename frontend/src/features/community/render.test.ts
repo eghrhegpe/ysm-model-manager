@@ -6,6 +6,8 @@ import {
   formatSize,
   filterModels,
   groupSites,
+  renderCardsHTML,
+  renderRepoHeaderHTML,
   type WorkshopModel,
 } from "./render.ts";
 
@@ -99,5 +101,90 @@ describe("groupSites", () => {
     expect(g.search).toHaveLength(1);
     expect(g.browse).toHaveLength(1);
     expect(g.repo).toHaveLength(1);
+  });
+});
+
+describe("renderRepoHeaderHTML", () => {
+  const base = {
+    esc: (s: string) => s,
+    repo: "repo",
+    sourceLabel: "",
+    modelsLength: 3,
+    missingCount: 0,
+  };
+
+  it("缺失数 >0 时显示 ⬇️ 徽章", () => {
+    const html = renderRepoHeaderHTML({ ...base, missingCount: 2 });
+    expect(html).toContain("⬇️ 2");
+    expect(html).toContain("模型 3");
+  });
+
+  it("缺失数 =0 时不渲染缺失徽章（下载按钮的 ⬇️ 恒常存在）", () => {
+    const html = renderRepoHeaderHTML({ ...base, missingCount: 0 });
+    expect(html).not.toContain("gh-model-badge-missing");
+  });
+
+  it("仓库名经 esc 转义", () => {
+    const html = renderRepoHeaderHTML({
+      ...base,
+      esc: (s) => s.replace(/</g, "&lt;"),
+      repo: "a<b",
+    });
+    expect(html).toContain("a&lt;b");
+    expect(html).not.toContain("a<b");
+  });
+});
+
+describe("renderCardsHTML", () => {
+  const esc = (s: string) => s;
+
+  it("按 SITE_GROUP_ORDER 顺序渲染分组标题", () => {
+    const html = renderCardsHTML(
+      [
+        { label: "S1", group: "search" },
+        { label: "B1" },
+        { label: "R1", group: "repo" },
+      ],
+      esc,
+    );
+    const si = html.indexOf("搜索平台");
+    const ri = html.indexOf("模型仓库");
+    const bi = html.indexOf("浏览平台");
+    expect(si).toBeGreaterThan(-1);
+    expect(ri).toBeGreaterThan(si);
+    expect(bi).toBeGreaterThan(ri);
+  });
+
+  it("空分组跳过（不渲染空标题）", () => {
+    const html = renderCardsHTML([{ label: "B1" }], esc);
+    expect(html).not.toContain("搜索平台");
+    expect(html).not.toContain("模型仓库");
+    expect(html).toContain("浏览平台");
+  });
+
+  it("卡片含 data-group 与 data-index 定位", () => {
+    const sites = [
+      { label: "S1", group: "search" },
+      { label: "B1" },
+    ];
+    const html = renderCardsHTML(sites, esc);
+    expect(html).toContain('data-group="search"');
+    expect(html).toContain('data-index="0"');
+    expect(html).toContain('data-index="1"');
+  });
+
+  it("label/desc 经 esc 转义", () => {
+    const html = renderCardsHTML(
+      [{ label: "a<b", desc: "d>e" }],
+      (s) => s.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+    );
+    expect(html).toContain("a&lt;b");
+    expect(html).toContain("d&gt;e");
+    expect(html).not.toContain("a<b");
+  });
+
+  it("图标缺省 🔗", () => {
+    const html = renderCardsHTML([{ label: "L" }], esc);
+    expect(html).toContain("🔗");
   });
 });

@@ -15,9 +15,9 @@ func TestBuildMulti_TwoComponents(t *testing.T) {
 		TexHeight: 64,
 		Texture:   "data:image/png;base64,x",
 		Bones: []types.Bone2D{{
-			Name:    "rootA",
-			Pivot:   [3]float64{0, 0, 0},
-			Cubes:   []types.Cube2D{{Origin: [3]float64{0, 0, 0}, Size: [3]float64{8, 8, 8}, UV: [2]float64{0, 0}}},
+			Name:  "rootA",
+			Pivot: [3]float64{0, 0, 0},
+			Cubes: []types.Cube2D{{Origin: [3]float64{0, 0, 0}, Size: [3]float64{8, 8, 8}, UV: [2]float64{0, 0}}},
 		}},
 	}
 	compB := types.BedrockModel{
@@ -25,9 +25,9 @@ func TestBuildMulti_TwoComponents(t *testing.T) {
 		TexHeight: 32,
 		Texture:   "data:image/png;base64,y",
 		Bones: []types.Bone2D{{
-			Name:    "rootB",
-			Pivot:   [3]float64{0, 0, 0},
-			Cubes:   []types.Cube2D{{Origin: [3]float64{0, 0, 0}, Size: [3]float64{4, 4, 4}, UV: [2]float64{0, 0}}},
+			Name:  "rootB",
+			Pivot: [3]float64{0, 0, 0},
+			Cubes: []types.Cube2D{{Origin: [3]float64{0, 0, 0}, Size: [3]float64{4, 4, 4}, UV: [2]float64{0, 0}}},
 		}},
 	}
 

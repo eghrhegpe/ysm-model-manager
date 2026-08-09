@@ -25,13 +25,13 @@ func TestParseComponentsFromZip(t *testing.T) {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	entries := map[string]string{
-		"ysm.json":                           `{"files":{"player":{"model":{"main":"models/main.json","arm":"models/arm.json"},"texture":["textures/skin.png"]}}}`,
-		"models/main.json":                   miniGeo,
-		"models/arm.json":                    miniGeo,
-		"models/arrow.json":                  miniGeo,
-		"textures/skin.png":                  "fake-png",
-		"textures/arrow.png":                 "fake-png",
-		"animations/main.animation.json":     `{"format_version":"1.8.0","animations":{}}`,
+		"ysm.json":                       `{"files":{"player":{"model":{"main":"models/main.json","arm":"models/arm.json"},"texture":["textures/skin.png"]}}}`,
+		"models/main.json":               miniGeo,
+		"models/arm.json":                miniGeo,
+		"models/arrow.json":              miniGeo,
+		"textures/skin.png":              "fake-png",
+		"textures/arrow.png":             "fake-png",
+		"animations/main.animation.json": `{"format_version":"1.8.0","animations":{}}`,
 	}
 	for name, content := range entries {
 		w, err := zw.Create(name)

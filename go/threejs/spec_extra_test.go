@@ -203,8 +203,12 @@ func TestBuildCubeMeshData_ZeroSize(t *testing.T) {
 		lo, hi := 1e9, -1e9
 		for i := 0; i < len(md.Positions); i += 3 {
 			v := md.Positions[i+axis]
-			if v < lo { lo = v }
-			if v > hi { hi = v }
+			if v < lo {
+				lo = v
+			}
+			if v > hi {
+				hi = v
+			}
 		}
 		if hi-lo < thicknessEpsilon {
 			t.Errorf("轴 %d 跨度 %v 应 ≥ %v", axis, hi-lo, thicknessEpsilon)

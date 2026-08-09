@@ -68,7 +68,7 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []ResourceTypeInfo, repoR
 		result := ysmsync.SyncResources(globalDir, instDir)
 
 		for _, p := range result.Synced {
-			if !extMatch(filepath.Base(p), rt.ID) {
+			if !extMatch(filepath.Base(p), rt.ID) && !isResourcePackFolder(p) {
 				continue
 			}
 			// 检测是否有 .disabled/.ban 后缀标记禁用状态
@@ -86,7 +86,7 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []ResourceTypeInfo, repoR
 			})
 		}
 		for _, p := range result.Missing {
-			if !extMatch(filepath.Base(p), rt.ID) {
+			if !extMatch(filepath.Base(p), rt.ID) && !isResourcePackFolder(p) {
 				continue
 			}
 			items = append(items, types.ResourceSyncItem{
@@ -95,7 +95,7 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []ResourceTypeInfo, repoR
 			})
 		}
 		for _, p := range result.Extra {
-			if !extMatch(filepath.Base(p), rt.ID) {
+			if !extMatch(filepath.Base(p), rt.ID) && !isResourcePackFolder(p) {
 				continue
 			}
 			// 检测是否为硬链接（来自旧仓库的遗留文件）
@@ -151,7 +151,11 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []ResourceTypeInfo, repoR
 					return nil
 				}
 				low := strings.ToLower(info.Name())
-				if !strings.HasSuffix(low, ".zip") && !strings.HasSuffix(low, ".nbt") && !strings.HasSuffix(low, ".schematic") && !strings.HasSuffix(low, ".litematic") {
+				// P2 修复：兜底过滤改用 extMatch（注册表驱动）而非硬编码后缀清单——
+				// 原硬编码含 .litematic（蓝图与 litematic 共享 schematics 目录时，
+				// .litematic 文件被蓝图兜底重复加为 optional，且 litematic 类型又产出一条）；
+				// 注册表蓝图扩展名不含 .litematic，extMatch 天然排除跨类型重复
+				if !extMatch(info.Name(), rt.ID) {
 					return nil
 				}
 				if seenNames[low] {

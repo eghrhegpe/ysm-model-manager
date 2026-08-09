@@ -107,8 +107,10 @@ async function promptUpdate(
  * 有新版本则在右下角显示可点击的 toast 通知
  */
 export async function checkUpdateSilent(): Promise<void> {
-  if (!canCheck()) return;
+  // P3 修复：canCheck 移入 try——原实现位于 try 之外，隐私模式 localStorage.getItem 抛错时
+  // promise 会 reject（靠调用方 .catch 兜底而非模块内静默），违反「静默路径绝不向启动流程抛错」
   try {
+    if (!canCheck()) return;
     const { CheckUpdate } = await getApp();
     const info = (await CheckUpdate()) as UpdateInfo;
     // 检查成功才计入频次：失败（网络/API）不阻塞下次启动重试

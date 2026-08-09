@@ -2,27 +2,27 @@ package types
 
 // BedrockModel 基岩版模型几何体摘要（用于 2D 预览）
 type BedrockModel struct {
-	BoneCount  int       `json:"boneCount"`
-	CubeCount  int       `json:"cubeCount"`
-	Texture    string    `json:"texture,omitempty"`    // 纹理图 base64 data URI（单纹理兼容）
-	Textures   []string  `json:"textures,omitempty"`   // 多纹理 base64 data URI 数组
+	BoneCount    int      `json:"boneCount"`
+	CubeCount    int      `json:"cubeCount"`
+	Texture      string   `json:"texture,omitempty"`      // 纹理图 base64 data URI（单纹理兼容）
+	Textures     []string `json:"textures,omitempty"`     // 多纹理 base64 data URI 数组
 	TextureNames []string `json:"textureNames,omitempty"` // 纹理文件名（去扩展名），与 Textures 同序
-	SourceName string    `json:"sourceName,omitempty"` // 组件源模型文件名（去扩展名，如 main/arm/arrow），UI 组件名用
-	Format     string    `json:"format,omitempty"`     // "1.12.0" 等
-	TexWidth   int       `json:"texWidth,omitempty"`
-	TexHeight  int       `json:"texHeight,omitempty"`
-	Bones      []Bone2D  `json:"bones,omitempty"`
-	Animations []string  `json:"animations,omitempty"` // 动画 JSON 字符串数组
+	SourceName   string   `json:"sourceName,omitempty"`   // 组件源模型文件名（去扩展名，如 main/arm/arrow），UI 组件名用
+	Format       string   `json:"format,omitempty"`       // "1.12.0" 等
+	TexWidth     int      `json:"texWidth,omitempty"`
+	TexHeight    int      `json:"texHeight,omitempty"`
+	Bones        []Bone2D `json:"bones,omitempty"`
+	Animations   []string `json:"animations,omitempty"` // 动画 JSON 字符串数组
 }
 
 // Bone2D 骨骼简化信息（只用于 2D 线条图）
 type Bone2D struct {
-	Name     string    `json:"name"`
-	Parent   string    `json:"parent,omitempty"`
+	Name     string     `json:"name"`
+	Parent   string     `json:"parent,omitempty"`
 	Pivot    [3]float64 `json:"pivot,omitempty"`
 	Rotation [3]float64 `json:"rotation,omitempty"`
-	Cubes    []Cube2D  `json:"cubes"`
-	GroupID  string    `json:"groupId,omitempty"` // "player" / "projectile" / "vehicle"
+	Cubes    []Cube2D   `json:"cubes"`
+	GroupID  string     `json:"groupId,omitempty"` // "player" / "projectile" / "vehicle"
 }
 
 // Cube2D 立方体信息
@@ -34,9 +34,9 @@ type Cube2D struct {
 	UV       [2]float64 `json:"uv,omitempty"`
 	FaceUV   string     `json:"faceUV,omitempty"` // 每面独立 UV（JSON 字符串）
 	Rotation [3]float64 `json:"rotation,omitempty"`
-	TexSlot  int        `json:"texSlot"`          // 纹理槽（从 cube.texture 解析）
+	TexSlot  int        `json:"texSlot"`           // 纹理槽（从 cube.texture 解析）
 	Inflate  float64    `json:"inflate,omitempty"` // Blockbench 膨胀（正=外扩，负=收缩），渲染时 origin-=i、size+=2i
 	Mirror   bool       `json:"mirror,omitempty"`  // Blockbench 镜像（沿 X 翻转几何）
-	CubeTexW int        `json:"-"`                // 来源文件 texture_width，不序列化
-	CubeTexH int        `json:"-"`                // 来源文件 texture_height，不序列化
+	CubeTexW int        `json:"-"`                 // 来源文件 texture_width，不序列化
+	CubeTexH int        `json:"-"`                 // 来源文件 texture_height，不序列化
 }

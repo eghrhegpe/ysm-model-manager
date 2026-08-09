@@ -57,6 +57,11 @@ func (s *Store) load() error {
 		s.data = make(map[string][]string)
 		return nil
 	}
+	// P3 修复：Unmarshal 成功但内容恰为 JSON `null` 时 m 为 nil map——
+	// `s.data = m` 使 data != nil 守卫失效，每次 Get/Set 都重复整文件读盘（load 单次守卫边缘破口）
+	if m == nil {
+		m = make(map[string][]string)
+	}
 	s.data = m
 	return nil
 }

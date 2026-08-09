@@ -50,7 +50,7 @@ var embeddedRegistryJSON = []byte(`{
     },
     {
       "id": "create-blueprint",
-      "name": "蓝图",
+      "name": "蓝图 / 结构",
       "icon": "⚙️",
       "extensions": [".nbt", ".schematic"],
       "storageSubDir": "create-blueprint",

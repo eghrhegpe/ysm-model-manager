@@ -55,6 +55,12 @@ func ContainsMinecraftMarker(path string) bool {
 	lower := strings.ToLower(cleaned)
 	sep := strings.ToLower(string(filepath.Separator))
 	for _, marker := range []string{".minecraft", "minecraft"} {
+		// P3 修复：相对路径首段 / 单段漏检——原只查 `sep+marker+sep`（中间段）与
+		// `sep+marker` 后缀，`minecraft/mods`、`".minecraft/mods"`（无前导分隔符的首段）
+		// 与单个 `minecraft` 段均不匹配，PrismLauncher 布局 `minecraft/mods` 会漏判
+		if lower == marker || strings.HasPrefix(lower, marker+sep) {
+			return true
+		}
 		mcMarker := sep + marker + sep
 		if strings.Contains(lower, mcMarker) {
 			return true

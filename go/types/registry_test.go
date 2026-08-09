@@ -1,6 +1,8 @@
 package types
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -193,4 +195,30 @@ func contains(slice []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// P3 补测：损坏外部 JSON 必须回退嵌入基线（不缓存空注册表、不 panic）——
+// P2 修复（resource.go:60-77）无测试钉住：原实现解析失败缓存空注册表，
+// 进程生命周期内所有扩展名查询静默失效；回退解码用全新零值变量防混合注册表
+func TestLoadRegistry_CorruptFallbackToEmbedded(t *testing.T) {
+	// 损坏 JSON 写临时文件
+	dir := t.TempDir()
+	bad := filepath.Join(dir, "resource_types.json")
+	if err := os.WriteFile(bad, []byte("{ 这不是合法 JSON !!"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	SetRegistryPath(bad)
+	defer SetRegistryPath("") // 恢复默认，避免污染其他测试
+
+	reg := LoadRegistry()
+	if reg == nil {
+		t.Fatal("损坏 JSON 应回退嵌入基线而非返回 nil")
+	}
+	// 嵌入基线含 ysm 类型 → 扩展名查询应可用（不回退成空表）
+	if !IsSupportedExt(".ysm") {
+		t.Error("损坏 JSON 回退嵌入基线后 .ysm 应仍被支持（不能缓存空注册表）")
+	}
+	if got := StorageSubDir("ysm"); got == "" {
+		t.Error("损坏 JSON 回退嵌入基线后 ysm StorageSubDir 应非空")
+	}
 }

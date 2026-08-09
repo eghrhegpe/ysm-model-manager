@@ -27,7 +27,7 @@ invariant_anchors:
 
 ## 对外 API / 入口
 
-- `Friendly(err error) error` — 入参为 nil 返回 nil；消息已含汉字直接原样返回；否则按映射表（access denied / not found / sharing violation / timeout / disk full 等 15 组模式）转成「中文提示: 原始消息」，未命中则加「操作失败: 」前缀
+- `Friendly(err error) error` — 入参为 nil 返回 nil；消息已含汉字直接原样返回；否则按映射表（access denied / not found / sharing violation / timeout / disk full 等 **16 组**模式——知识卡旧文「15 组」为过期描述，已更正）转成「中文提示: 原始消息」，未命中则加「操作失败: 」前缀；「目录为空」组已收窄为完整短语（P3 修复：裸 `"no files"` 是 `"no filesystem"` 子串，文件系统类错误曾被误分类）
 
 ## 与其他子系统关系
 

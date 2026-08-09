@@ -826,8 +826,8 @@
 | `renderModelNameWithHighlight()` | `frontend/src/utils/dom/display:173` | 搜索高亮版：先对纯文本高亮，再渲染 HTML，避免 keyword 命中 HTML 标签内容破坏 DOM |
 | `friendlyError()` | `frontend/src/utils/dom/errors:11` | 将 Go 错误转换为友好提示 |
 | `fmt()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值返回空串 |
-| `sizeColor()` | `frontend/src/utils/dom/format:22` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
-| `fmtDate()` | `frontend/src/utils/dom/format:32` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
+| `sizeColor()` | `frontend/src/utils/dom/format:24` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
+| `fmtDate()` | `frontend/src/utils/dom/format:34` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
 | `esc()` | `frontend/src/utils/dom/html:4` | HTML 转义（治理红线：所有 innerHTML 拼接必须过 esc） |
 | `safeGet()` | `frontend/src/utils/dom/storage:7` | 安全读：存储不可用时返回 null（调用方走默认值回退） |
 | `safeSet()` | `frontend/src/utils/dom/storage:16` | 安全写：存储不可用时静默忽略持久化（不中断调用方） |

@@ -31,14 +31,14 @@ invariant_anchors:
 
 ## 对外 API / 入口
 
-`resource-types.ts`（同步常量）：
+`resource-types.ts`（同步常量，知识卡旧文「resource-types.ts」文件名漂移，实际为 `types.ts`）：
 - `RESOURCE_TYPES: Record<string, string>` — 7 个 ID 常量：YSM/MMD/VRC/PACK/SHADER/BLUEPRINT/LITEMATIC → "ysm" / "mmd-skin" / "vrchat-avatar" / "resourcepack" / "shaderpack" / "create-blueprint" / "litematic"
-- `RESOURCE_TYPE_LABELS: Record<string, string>` — ID → 中文标签（模型/MMD/VRC/资源包/光影包/蓝图/投影）
+- `RESOURCE_TYPE_LABELS: Record<string, string>` — ID → 中文标签（模型/MMD/VRC/资源包/光影包/蓝图/投影；**与 JSON `name` 是不同文案**——LABELS 为缩写「模型」，JSON name 为「YSM 模型」，同一类型 UI 不同处显示不同，P4 观察）
 - `ALL_RESOURCE_TYPES: string[]` — 全部 ID 列表
 
-`resource-registry.ts`（异步加载器）：
+`registry.ts`（异步加载器，知识卡旧文「resource-registry.ts」文件名漂移，实际为 `registry.ts`）：
 - `loadResourceRegistry(): Promise<Record<string, ResourceTypeEntry>>` — 经 `getApp().LoadResourceTypes()` 加载，模块级 `_registry` 缓存；**仅当拿到非空 `resourceTypes` 数组才写缓存**（P2 修复：Go 端错误路径返回 `"{}"` 时原实现会缓存空注册表、整会话降级；现失败/空结果返回 `{}` 不缓存，Go 桥瞬断后下次调用重试）
-- `ResourceTypeEntry` 接口：`{ id, storageSubDir?, label?, [key: string]: unknown }`（`label` 为幽灵字段，JSON 无此字段、全库无消费者读 entry.label）
+- `ResourceTypeEntry` 接口：`{ id, storageSubDir?, label?, [key: string]: unknown }`（`label` 为幽灵字段，JSON 无此字段、全库无消费者读 entry.label；真实 JSON 有 13+ 字段含 `name/icon`，经索引签名读出 `unknown`，消费者需自行 `typeof` 收窄）
 - 有 vitest 覆盖（registry.test.ts：成功缓存/失败不缓存/空结果不缓存/重复调用仅一次 Go 调用，P2 补测）
 
 ## 与其他子系统关系

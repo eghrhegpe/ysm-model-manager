@@ -354,7 +354,7 @@ export async function renderModel3D(
   const _initCamPos = camera.position.clone();
   const _initCamTarget = controls.target.clone();
 
-  // RenderSession 状态对象（对象化第一阶段：8 个可变交互状态收敛，行为不变）
+  // RenderSession 状态对象（对象化第一阶段：8 个可变交互状态 + 第二阶段 3 个悬停/调试状态收敛，行为不变）
   const state = {
     rafId: null as number | null,
     keys: {} as Record<string, boolean>,
@@ -364,6 +364,9 @@ export async function renderModel3D(
     orbitMode: loadTdRotMode(),
     mouseDown: false,
     lastMouse: { x: 0, y: 0 },
+    hoveredBone: null as string | null,
+    hoveredMesh: null as THREE.Object3D | null,
+    debugGroup: null as THREE.Group | null,
   };
   const _onResize = (): void => {
     const w = container.clientWidth;
@@ -482,8 +485,6 @@ export async function renderModel3D(
   // ===== 鼠标悬停骨骼名 + 点击复制层级 =====
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
-  let _hoveredBone: string | null = null;
-  let _hoveredMesh: THREE.Object3D | null = null;
 
   // 构建骨骼层级路径映射
   const _boneParentMap = new Map<string, string | null>();
@@ -552,9 +553,9 @@ export async function renderModel3D(
         break;
       }
     }
-    if (foundBone !== _hoveredBone) {
-      _hoveredBone = foundBone;
-      _hoveredMesh = foundMesh;
+    if (foundBone !== state.hoveredBone) {
+      state.hoveredBone = foundBone;
+      state.hoveredMesh = foundMesh;
       if (foundBone) {
         renderer.domElement.style.cursor = "pointer";
       } else {
@@ -564,8 +565,8 @@ export async function renderModel3D(
   };
 
   const onPointerClick = (e: MouseEvent): void => {
-    if (!_hoveredBone) return;
-    const boneId = _hoveredBone; // 局部收窄（闭包捕获变量 TS 不做控制流收窄）
+    if (!state.hoveredBone) return;
+    const boneId = state.hoveredBone; // 局部收窄（闭包捕获变量 TS 不做控制流收窄）
     if (handle.onBoneSelect) {
       const bg = boneGroupMap.get(boneId);
       const wp = new THREE.Vector3();
@@ -578,17 +579,17 @@ export async function renderModel3D(
       // Cube（mesh）级数据
       let cq: number[] | null = null;
       let cp: number[] | null = null;
-      if (_hoveredMesh && (_hoveredMesh as THREE.Mesh).isMesh) {
+      if (state.hoveredMesh && (state.hoveredMesh as THREE.Mesh).isMesh) {
         cq = [
-          _hoveredMesh.quaternion.x,
-          _hoveredMesh.quaternion.y,
-          _hoveredMesh.quaternion.z,
-          _hoveredMesh.quaternion.w,
+          state.hoveredMesh.quaternion.x,
+          state.hoveredMesh.quaternion.y,
+          state.hoveredMesh.quaternion.z,
+          state.hoveredMesh.quaternion.w,
         ];
         cp = [
-          _hoveredMesh.position.x,
-          _hoveredMesh.position.y,
-          _hoveredMesh.position.z,
+          state.hoveredMesh.position.x,
+          state.hoveredMesh.position.y,
+          state.hoveredMesh.position.z,
         ];
       }
       handle.onBoneSelect({
@@ -620,12 +621,10 @@ export async function renderModel3D(
   _sessionCleanups.push(() => renderer.domElement.removeEventListener("click", onPointerClick));
 
   // ===== 可视化模式切换 =====
-  let _debugGroup: THREE.Group | null = null;
-
   const rebuildDebug = (): void => {
-    if (_debugGroup) {
+    if (state.debugGroup) {
       // 释放旧 debug 组内的几何体/材质/纹理，防止内存泄漏
-      _debugGroup.traverse((c) => {
+      state.debugGroup.traverse((c) => {
         const obj = c as THREE.Mesh | THREE.Line | THREE.Sprite;
         if ((obj as THREE.Mesh).isMesh) {
           (obj as THREE.Mesh).geometry?.dispose();
@@ -642,12 +641,12 @@ export async function renderModel3D(
           (obj as THREE.Sprite).material?.dispose();
         }
       });
-      scene.remove(_debugGroup);
-      _debugGroup = null;
+      scene.remove(state.debugGroup);
+      state.debugGroup = null;
     }
     if (state.debugMode === "normal") return;
-    _debugGroup = new THREE.Group();
-    scene.add(_debugGroup);
+    state.debugGroup = new THREE.Group();
+    scene.add(state.debugGroup);
 
     // 获取骨骼世界坐标
     rootGroup.updateMatrixWorld(true);
@@ -685,7 +684,7 @@ export async function renderModel3D(
             opacity: 0.25,
           }),
         );
-        _debugGroup.add(line);
+        state.debugGroup.add(line);
         // 骨骼名标签（固定像素大小，不影响缩放）
         const tex = makeTextTexture(data.name, "#88ffaa");
         const mat = new THREE.SpriteMaterial({
@@ -697,7 +696,7 @@ export async function renderModel3D(
         const label = new THREE.Sprite(mat);
         label.position.copy(top);
         label.scale.set(120, 24, 1);
-        _debugGroup.add(label);
+        state.debugGroup.add(label);
       }
     } else if (state.debugMode === "bone") {
       for (const [, data] of boneWorldPositions) {
@@ -711,7 +710,7 @@ export async function renderModel3D(
           geo,
           new THREE.LineBasicMaterial({ color: 0x44aaff }),
         );
-        _debugGroup.add(line);
+        state.debugGroup.add(line);
       }
     }
   };
@@ -821,8 +820,8 @@ export async function renderModel3D(
       document.removeEventListener("fullscreenchange", _onFSChange);
       document.removeEventListener("webkitfullscreenchange", _onFSChange);
       // 先移除 debug 组，再逐层 dispose 所有场景资源（含纹理），最后 dispose renderer
-      if (_debugGroup) {
-        _debugGroup.traverse((c) => {
+      if (state.debugGroup) {
+        state.debugGroup.traverse((c) => {
           const obj = c as THREE.Mesh | THREE.Line | THREE.Sprite;
           if ((obj as THREE.Mesh).isMesh) {
             (obj as THREE.Mesh).geometry?.dispose();
@@ -838,8 +837,8 @@ export async function renderModel3D(
             disposeMaterial((obj as THREE.Sprite).material);
           }
         });
-        scene.remove(_debugGroup);
-        _debugGroup = null;
+        scene.remove(state.debugGroup);
+        state.debugGroup = null;
       }
       scene.traverse((c) => {
         const mesh = c as THREE.Mesh;

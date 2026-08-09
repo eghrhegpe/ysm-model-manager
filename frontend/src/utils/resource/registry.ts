@@ -27,6 +27,9 @@ export async function loadResourceRegistry(): Promise<ResourceRegistry> {
     // 原实现 JSON.parse("{}") 成功 → _registry={} 被缓存（对象 truthy），
     // 整会话永远返回空注册表，违反「失败不缓存可重试」契约
     if (!Array.isArray(data.resourceTypes) || data.resourceTypes.length === 0) {
+      // P3 修复：空/畸形响应补 warn——Go 端损坏 JSON 会回退嵌入基线并告警（go/types/resource.go），
+      // 前端原静默返回 {} 无任何痕迹，消费方图标回退 📦 难排查；失败不缓存可重试语义不变
+      console.warn("[registry] LoadResourceTypes 返回空注册表（Go 端可能失败），本次不缓存可重试");
       return {};
     }
     _registry = data.resourceTypes.reduce<ResourceRegistry>((map, t) => {
@@ -34,7 +37,8 @@ export async function loadResourceRegistry(): Promise<ResourceRegistry> {
       return map;
     }, {});
     return _registry;
-  } catch {
+  } catch (e) {
+    console.warn("[registry] LoadResourceTypes 失败: %s（本次不缓存，下次调用重试）", e instanceof Error ? e.message : String(e));
     return {};
   }
 }

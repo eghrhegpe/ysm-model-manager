@@ -5,7 +5,7 @@ import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS, ALL_RESOURCE_TYPES } from "../../
 import { sidebarCSS } from "./sidebar-css.ts";
 import { headerHTML, footerHTML, listContainerHTML } from "./tpl.ts";
 import { renderVersionCards } from "./render.ts";
-import { bindCardEvents, bindFooter } from "./events.ts";
+import { bindCardEvents, bindFooter, resetSelectedEmit } from "./events.ts";
 import { get } from "../../services/registry.ts";
 import type { loadInstances } from "./loader.ts";
 import type { SidebarInstance } from "./data.ts";
@@ -353,6 +353,8 @@ class AppSidebar extends HTMLElement {
       this._debounceTimer = null;
     }
     this._pendingReload = false;
+    // P2 复核修复：组件真正卸载时复位去重标记（同组件 reload 不复位、去重跨 reload 生效）
+    resetSelectedEmit();
     // 清理 DOM 事件监听
     if (this._cardCleanup) {
       this._cardCleanup();

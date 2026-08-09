@@ -44,10 +44,11 @@ export function bindCardEvents(
     prevList.removeEventListener("click", prevClick);
     prevList.removeEventListener("contextmenu", prevCtx);
   }
-  // P2 修复（code_review）：list 被替换 = 新 sidebar 挂载（切页重建），复位去重标记——
-  // 否则 _lastEmittedPkg 沿用上一次会话的 emitKey，restoreSelectedCard 抑制重发
-  // package:selected，右侧 <app-sync-manager> 停留在占位（选择恢复回归）
-  _lastEmittedPkg = null;
+  // P2 修复（code_review）+ P2 复核修复：list 替换 = 同组件 reload（非新挂载），
+  // 不再复位 _lastEmittedPkg——原实现每次 reload 都复位，restoreSelectedCard 的
+  // emitKey 去重恒真失效，每次重发 package:selected，app-content 反复重建
+  // <app-sync-manager>（状态丢失/闪烁回归）。真正卸载（disconnectedCallback）才复位，
+  // 由 resetSelectedEmit() 显式调用。
 
   const clickHandler = (e: MouseEvent): void => {
     const target = e.target as HTMLElement | null;
@@ -123,6 +124,12 @@ export function bindCardEvents(
 
 /** 根据 localStorage 选中最匹配的整合包 */
 let _lastEmittedPkg: string | null = null; // P2 修复：模块级去重——原每次 _reload 都重发 package:selected，app-content 反复重建右侧面板
+
+/** 复位去重标记：组件真正卸载（disconnectedCallback）时调用——
+ * 同组件 reload 不复位（去重跨 reload 生效），仅新挂载会话才需重置（P2 复核修复） */
+export function resetSelectedEmit(): void {
+  _lastEmittedPkg = null;
+}
 
 function restoreSelectedCard(
   root: ShadowRoot,

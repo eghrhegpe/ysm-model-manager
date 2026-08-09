@@ -704,7 +704,13 @@ export function createDownloadQueue({
     enqueue,
     cancel,
     isDownloading: () => isActiveStatus(STATE),
-    /** 组件销毁时取消订阅，防止僵尸回调累积 */
-    destroy: unsub,
+    /** 组件销毁时取消订阅并清理全部定时器（P2 修复：原仅 unsub——视图销毁后
+     * `_dotTimer` interval（400ms 菊花动画）无限自旋、3s `completeTimer` 在死视图上
+     * 触发 cleanupProgressUI/onAllDone 副作用；stuckGuardReset 集中清 _stuckTimer/
+     * _dotTimer/completeTimer） */
+    destroy: () => {
+      stuckGuardReset();
+      unsub();
+    },
   };
 }

@@ -52,4 +52,16 @@ describe("服务注册表", () => {
     expect(typeof get("loadInstances")).toBe("function");
     expect(get("loadEntries")).toEqual({ k: 1 });
   });
+
+  it("falsy 值注册后 get 返回同值（P3 修复回归：get 用 has() 判定而非 truthiness）", () => {
+    // 0/""/false/null 均是真值守卫的误判点——has() 判定必须如实返回同值
+    register("loadInstances", 0);
+    register("loadEntries", "");
+    expect(get("loadInstances")).toBe(0);
+    expect(get("loadEntries")).toBe("");
+    register("loadInstances", false);
+    register("loadEntries", null);
+    expect(get("loadInstances")).toBe(false);
+    expect(get("loadEntries")).toBe(null);
+  });
 });

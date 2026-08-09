@@ -120,8 +120,16 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   // 非仓库页面不处理 DnD
   if (PageStore.currentPage !== "repository") return;
 
-  // P3 修复（审核发现）：drop 级互斥——上一次 drop 仍在收集/导入时忽略新 drop
-  if (_dropBusy) return;
+  // P3 修复（审核发现）：drop 级互斥——上一次 drop 仍在收集/导入时忽略新 drop。
+  // busy 命中不能静默吞掉用户手势（preventDefault 已抑制 OS 默认打开），toast 提示稍候
+  if (_dropBusy) {
+    bus.emit("toast:show", {
+      msg: "⏳ " + t("import.busyImporting"),
+      duration: 2000,
+      type: "info",
+    });
+    return;
+  }
   _dropBusy = true;
   try {
 

@@ -147,6 +147,7 @@ export const zhCN: Record<string, string> = {
   "import.files": "文件",
   "import.noModelDetected": "⛔ 未检测到模型文件",
   "import.noSupportedFiles": "未检测到支持的模型文件",
+  "import.busyImporting": "正在导入，请稍候…",
   "import.fileTooLarge": "超过 100MB，请直接放入仓库文件夹",
   "import.processError": "导入处理出错，请重试",
   "import.readFailed": "读取文件失败",

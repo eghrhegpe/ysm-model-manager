@@ -94,6 +94,35 @@ describe("DnD 守卫层", () => {
     expect(getApp).toHaveBeenCalled();
   });
 
+  it("drop 在途时二次 drop 被互斥忽略（getApp 只调一次，busy toast 提示）", async () => {
+    bus.emit("nav:changed", { page: "repository" });
+    const toastSpy = vi.fn();
+    const unsubToast = bus.on("toast:show", (p) => toastSpy(p.msg));
+    // 第一次 drop：onDrop 同步跑到 executeCollected 的 await 点，_dropBusy 已置 true
+    document.dispatchEvent(fileDropEvent());
+    // 第二次 drop：此刻 _dropBusy 仍为 true → 应被忽略，不产生第二次导入
+    document.dispatchEvent(fileDropEvent());
+    await flush();
+    await flush();
+    expect(getApp).toHaveBeenCalledTimes(1);
+    expect(toastSpy).toHaveBeenCalled();
+    expect(String(toastSpy.mock.calls[0][0])).toContain("正在导入");
+    unsubToast();
+  });
+
+  it("首次 drop 完成后释放互斥（后续 drop 仍被处理）", async () => {
+    bus.emit("nav:changed", { page: "repository" });
+    document.dispatchEvent(fileDropEvent());
+    await flush();
+    await flush();
+    expect(getApp).toHaveBeenCalledTimes(1);
+    // 第一次完全 settle（finally 已复位 _dropBusy）后，再 drop 应照常导入
+    document.dispatchEvent(fileDropEvent());
+    await flush();
+    await flush();
+    expect(getApp).toHaveBeenCalledTimes(2);
+  });
+
   it("仓库页 drop 无文件时 toast 提示", async () => {
     const toastSpy = vi.fn();
     const unsubToast = bus.on("toast:show", (p) => toastSpy(p.msg));

@@ -145,6 +145,7 @@ export const en: Record<string, string> = {
   "import.files": "files",
   "import.noModelDetected": "⛔ No model files detected",
   "import.noSupportedFiles": "No supported model files detected",
+  "import.busyImporting": "Import in progress, please wait…",
   "import.fileTooLarge": "Exceeds 100 MB, please place it directly in the repository folder",
   "import.processError": "Import processing error, please retry",
   "import.readFailed": "Failed to read file",

@@ -548,7 +548,7 @@
 | `SetEmbedded()` | `internal/app/assets:16` | SetEmbedded 由根包 main 的 init() 注入编译期嵌入的静态资产。 |
 | `CLIMain()` | `internal/app/cli:18` | — |
 | `Issue()` | `internal/app/cli:183` | — |
-| `androidPathManager.AppDataRoot()` | `internal/app/pathmgr_android:13` | — |
+| `androidPathManager.AppDataRoot()` | `internal/app/pathmgr_android:19` | AppDataRoot 按候选序返回第一个可写目录；全不可写返回错误—— 直接返回 HOME/Getwd 可能退化为不可写的文件系统根 "/"（P2 审核发现）， 配置/标签将静默 |
 | `desktopPathManager.AppDataRoot()` | `internal/app/pathmgr_desktop:10` | — |
 | `App.StartProxy()` | `internal/app/proxy:25` | StartProxy 启动本地反代服务器（127.0.0.1 仅本机可访问） |
 | `App.StopProxy()` | `internal/app/proxy:47` | StopProxy 关闭反代服务器 |
@@ -676,7 +676,7 @@
 | `CollectedEntry()` | `frontend/src/features/dnd-shared:33` | 收集条目（文件 + 相对路径） |
 | `FolderGroup()` | `frontend/src/features/dnd-shared:39` | 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） |
 | `groupCollected()` | `frontend/src/features/dnd-shared:51` | 将收集到的条目分组： - 有目录前缀的条目 → 按「顶层目录」整组（dir = 第一段路径），组内保留完整 relPath（支持多层嵌套） - 无目录前缀的散落文件 → 单文件队列 |
-| `registerDnD()` | `frontend/src/features/import-dnd:288` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
+| `registerDnD()` | `frontend/src/features/import-dnd:296` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
 | `isImportableFile()` | `frontend/src/features/import-executor` | — |
 | `ImportFile()` | `frontend/src/features/import-executor:14` | 带相对路径的 File（文件夹导入时标记 _relPath） |
 | `ImportRecord()` | `frontend/src/features/import-executor:17` | 已导入历史条目（导入 tab「已导入」列表数据源） |

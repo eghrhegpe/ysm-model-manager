@@ -307,6 +307,8 @@ export interface ModalProgressOptions {
   title: string;
   icon?: string;
   width?: string;
+  /** 是否允许 Esc/点遮罩关闭（默认 true；下载等不可中断任务传 false 防误关丢进度） */
+  closable?: boolean;
 }
 
 export interface ModalProgressHandle {
@@ -315,8 +317,8 @@ export interface ModalProgressHandle {
   close(): void;
 }
 
-/** 格式化字节为 MB（进度弹窗文案用） */
-function fmtMB(n: number): string {
+/** 格式化字节为 MB（进度弹窗/窗口标题共用） */
+export function fmtMB(n: number): string {
   return (n / 1024 / 1024).toFixed(1) + " MB";
 }
 
@@ -326,15 +328,15 @@ function fmtMB(n: number): string {
  * 用于版本更新等长任务的前端进度反馈（配合 update:progress 事件）。
  */
 export function modalProgress(opts: ModalProgressOptions): ModalProgressHandle {
-  const { title, icon, width } = opts;
+  const { title, icon, width, closable = true } = opts;
   const overlay = document.createElement("div");
   overlay.tabIndex = 0;
   overlay.className = "dlg-overlay";
   overlay.onclick = (e: MouseEvent): void => {
-    if (e.target === overlay) close();
+    if (e.target === overlay && closable) close();
   };
   overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
-    if (e.key === "Escape") close();
+    if (e.key === "Escape" && closable) close();
   });
 
   const box = document.createElement("div");

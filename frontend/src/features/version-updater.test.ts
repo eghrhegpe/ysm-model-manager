@@ -12,6 +12,7 @@ const { mocks } = vi.hoisted(() => {
     modalProgress: vi.fn(),
     progressHandle: { update: vi.fn(), close: vi.fn() },
     eventsOn: vi.fn(),
+    windowSetTitle: vi.fn().mockResolvedValue(undefined),
   };
   return { mocks };
 });
@@ -28,10 +29,12 @@ vi.mock("../utils/dom/dialogs/modal.ts", () => ({
   esc: (s: unknown): string => String(s),
   modalConfirm: mocks.modalConfirm,
   modalProgress: mocks.modalProgress,
+  fmtMB: (n: number): string => (n / 1024 / 1024).toFixed(1) + " MB",
 }));
 
 vi.mock("@wailsio/runtime", () => ({
   Events: { On: mocks.eventsOn },
+  Window: { SetTitle: mocks.windowSetTitle },
 }));
 
 vi.mock("../utils/dom/errors.ts", () => ({
@@ -174,23 +177,24 @@ describe("initVersionUpdater（手动检查）", () => {
     expect(btn.disabled).toBe(false);
   });
 
-  it("确认后打开进度弹窗并注册 update:progress 监听，完成后注销+关闭", async () => {
+  it("确认后打开进度弹窗（closable:false）并注册 update:progress 监听，完成后注销+关闭+恢复标题", async () => {
     spyToasts();
     const { btn } = await setupRoot();
 
     btn.click();
     await new Promise((r) => setTimeout(r, 0));
 
-    // 下载开始：打开只读进度弹窗 + 注册 update:progress
+    // 下载开始：打开只读进度弹窗（不可关闭）+ 注册 update:progress
     expect(mocks.modalProgress).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "正在更新" }),
+      expect.objectContaining({ title: "正在更新", closable: false }),
     );
     expect(mocks.eventsOn).toHaveBeenCalledWith("update:progress", expect.any(Function));
 
-    // 下载完成：注销监听 + 关闭弹窗
+    // 下载完成：注销监听 + 关闭弹窗 + 恢复窗口标题
     await new Promise((r) => setTimeout(r, 0));
     expect(unsubSpy).toHaveBeenCalled();
     expect(mocks.progressHandle.close).toHaveBeenCalled();
+    expect(mocks.windowSetTitle).toHaveBeenLastCalledWith("YSM 模型管理器");
   });
 
   it("update:progress 事件驱动进度弹窗更新", async () => {
@@ -210,6 +214,39 @@ describe("initVersionUpdater（手动检查）", () => {
     // Go 侧 Emit 多参打包为数组 → e.data 解构
     captured!({ data: [5242880, 10485760] });
     expect(mocks.progressHandle.update).toHaveBeenCalledWith(5242880, 10485760);
+  });
+
+  it("update:progress 驱动窗口标题全局进度（百分比/未知长度两种格式）", async () => {
+    let captured: ((e: { data: unknown[] }) => void) | null = null;
+    let resolveDoUpdate!: (v: string) => void;
+    // 模拟下载在途：DoUpdate 挂起直到测试手动放行，才能验证「完成后恢复标题」
+    mocks.DoUpdate.mockImplementation(
+      () => new Promise<string>((r) => { resolveDoUpdate = r; }),
+    );
+    mocks.eventsOn.mockImplementation(
+      (_name: string, cb: (e: { data: unknown[] }) => void) => {
+        captured = cb;
+        return unsubSpy;
+      },
+    );
+    spyToasts();
+    const { btn } = await setupRoot();
+
+    btn.click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    // 已知长度：标题显示百分比
+    captured!({ data: [5242880, 10485760] });
+    expect(mocks.windowSetTitle).toHaveBeenLastCalledWith("⬇️ 50% YSM 模型管理器");
+    // 未知长度（分块传输）：标题显示已下载字节
+    captured!({ data: [3145728, 0] });
+    expect(mocks.windowSetTitle).toHaveBeenLastCalledWith("⬇️ 3.0 MB YSM 模型管理器");
+
+    // 放行下载 → finally 恢复原标题
+    resolveDoUpdate("success");
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mocks.windowSetTitle).toHaveBeenLastCalledWith("YSM 模型管理器");
   });
 
   it("update:progress 畸形 payload → 降级为 0，不抛错不渲染 NaN", async () => {

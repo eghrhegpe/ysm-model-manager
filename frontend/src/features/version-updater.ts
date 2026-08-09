@@ -1,11 +1,11 @@
 // ===== 版本更新检查（类型化版 — ADR-014 P3 features）=====
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
-import { esc, modalConfirm, modalProgress } from "../utils/dom/dialogs/modal.ts";
+import { esc, modalConfirm, modalProgress, fmtMB } from "../utils/dom/dialogs/modal.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { safeGet, safeSet } from "../utils/dom/storage.ts";
 import { getApp } from "../wails/app.ts";
-import { Events } from "@wailsio/runtime";
+import { Events, Window } from "@wailsio/runtime";
 
 /** 更新信息（CheckUpdate 返回） */
 export interface UpdateInfo {
@@ -46,11 +46,21 @@ async function doUpdate(
     statusEl.textContent = "⬇️ 下载+安装中...";
   }
   const { DoUpdate, RestartApplication } = await getApp();
+  // 全局标题进度（用户反馈：弹窗可被误关丢进度）：下载前记录原标题，
+  // 进度事件同步 Window.SetTitle（标题栏永远可见），finally 恢复
+  const origTitle = document.title || "YSM 模型管理器";
   // P3（审核发现）：下载期界面零反馈——打开只读进度弹窗，并瞬态注册 update:progress
   // 事件（Go 侧 DoUpdate 下载时经 a.app.Event.Emit 推送 done/total 字节），
   // finally 注销监听并关闭弹窗，避免常驻 handler（与 download-queue 的模块级
   // ADR-039 豁免注册不同：本模块是瞬态生命周期，有明确的 Off 路径）
-  const progress = modalProgress({ title: "正在更新", icon: "⬇️", width: "420px" });
+  const progress = modalProgress({
+    title: "正在更新",
+    icon: "⬇️",
+    width: "420px",
+    // P3 修复（用户反馈）：下载中弹窗禁止 Esc/点遮罩关闭——误关后进度不可见，
+    // 用户无法判断是否还在下载；窗口标题进度（Window.SetTitle）作全局兜底
+    closable: false,
+  });
   const unsub = Events.On("update:progress", (e: { data: unknown[] }) => {
     // 事件 payload 防御（ADR-044 ② 数值守卫）：Go 侧 Emit(done,total) 多参打包为
     // 数组；契约漂移（单参/无参/非数组）时降级为 0，不抛 TypeError 也不渲染 NaN
@@ -58,6 +68,14 @@ async function doUpdate(
     const done = Number.isFinite(data[0]) ? (data[0] as number) : 0;
     const total = Number.isFinite(data[1]) ? (data[1] as number) : 0;
     progress.update(done, total);
+    // 窗口标题同步进度（即使弹窗被意外关闭/挤兑，标题栏仍显示下载状态）；
+    // SetTitle 失败（无窗口上下文）静默忽略，不阻断下载
+    if (total > 0) {
+      const pct = Math.min(100, Math.max(0, Math.round((done / total) * 100)));
+      Window.SetTitle(`⬇️ ${pct}% ${origTitle}`).catch(() => {});
+    } else {
+      Window.SetTitle(`⬇️ ${fmtMB(done)} ${origTitle}`).catch(() => {});
+    }
   });
   try {
     const result = await DoUpdate(info.url || "", info.expectedHash || "");
@@ -71,6 +89,7 @@ async function doUpdate(
   } finally {
     unsub();
     progress.close();
+    Window.SetTitle(origTitle).catch(() => {});
   }
 }
 

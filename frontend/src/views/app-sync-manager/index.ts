@@ -154,12 +154,16 @@ export class AppSyncManager extends HTMLElement {
   async _loadTypeConfig(): Promise<void> {
     // P2 修复（审核发现）：getApp() 原在 try 之外——import 失败/桥接异常时 reject 逸出
     // 为 unhandledrejection（connectedCallback 无 catch）；移入 try 统一兜底
+    const gen = this._gen; // P3 修复（审核发现）：捕获当前代际——await 期间 instance 可能已切换
     try {
       const { LoadResourceTypes } = await getApp();
       const raw = await LoadResourceTypes();
       const parsed = JSON.parse(raw) as { resourceTypes?: RTypeConfig[] };
+      if (gen !== this._gen) return; // 过期代际丢弃，防覆盖新代际已加载配置
       this._typeConfig = parsed.resourceTypes || [];
     } catch {
+      // 过期代际/已卸载：不作废新代际数据，也不弹误导性失败 toast（对齐 _loadData 守卫）
+      if (gen !== this._gen || !this.isConnected) return;
       this._typeConfig = [];
       // P3 修复（审核发现）：静默降级（类型标签全消失无反馈）与 _loadData 的 toast 不一致
       bus.emit("toast:show", {

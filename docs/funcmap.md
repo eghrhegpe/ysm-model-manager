@@ -619,7 +619,7 @@
 | `setLang()` | `frontend/src/core/i18n/locale:72` | 切换语言（异步加载语言包后触发事件） |
 | `initI18n()` | `frontend/src/core/i18n/locale:109` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
 | `en()` | `frontend/src/core/i18n/locales/en:4` | — |
-| `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:5` | — |
+| `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:6` | — |
 | `t()` | `frontend/src/core/i18n/t:12` | 翻译函数。 |
 | `AVAILABLE_LANGS()` | `frontend/src/core/i18n/t:33` | 可用语言列表（由构建脚本确保与 locales/ 目录对齐） |
 | `MenuDef()` | `frontend/src/core/menu-defs:19` | 单类菜单的完整声明 |

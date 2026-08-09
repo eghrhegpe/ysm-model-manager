@@ -255,6 +255,7 @@ export const ja: Record<string, string> = {
   "workshop.networkError": "ネットワークエラー",
   "workshop.parseError": "データの解析に失敗しました",
   "workshop.downloadStarted": "ダウンロードを開始しました",
+  "workshop.downloading": "ダウンロード中です",
   "workshop.downloadFailed": "ダウンロードに失敗しました",
   "workshop.allDownloaded": "すべてのダウンロードが完了しました",
 

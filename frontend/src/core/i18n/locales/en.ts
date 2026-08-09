@@ -254,6 +254,7 @@ export const en: Record<string, string> = {
   "workshop.networkError": "Network error",
   "workshop.parseError": "Data parsing failed",
   "workshop.downloadStarted": "Download started",
+  "workshop.downloading": "Download in progress",
   "workshop.downloadFailed": "Download failed",
   "workshop.allDownloaded": "All downloads complete",
 

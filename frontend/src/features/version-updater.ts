@@ -208,11 +208,14 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
       btn.disabled = true;
       try {
         const { CheckUpdate } = await getApp();
-        const info = (await CheckUpdate()) as UpdateInfo;
+        // P2 修复（审核发现）：binding 契约为 UpdateInfo | null，`as UpdateInfo` 抹掉
+        // null 后 `info.available` 在 null 时抛 TypeError 落入 catch 显示误导性错误；
+        // 与静默路径 checkUpdateSilent 的 `info?.available` 守卫对齐（边界对称，ADR-044③）
+        const info = (await CheckUpdate()) as UpdateInfo | null;
         markChecked();
-        if (!info.available) {
+        if (!info?.available) {
           bus.emit("toast:show", {
-            msg: `✅ ${t("update.latest", { version: info.current })}`,
+            msg: `✅ ${t("update.latest", { version: info?.current ?? "" })}`,
             duration: 3000,
             type: "success",
           });

@@ -212,8 +212,9 @@ export function registerSync(unsubs: Array<() => void>): void {
             "failed",
             String(err),
           );
-        } catch {
-          // 日志写入失败不阻断反馈（bus.emit 自带兜底）
+        } catch (logErr) {
+          // 日志写入失败不阻断反馈（bus.emit 自带兜底），但不静默吞错
+          dbg("sync", "AddImportLog(sync-status 失败) 写入失败:", logErr);
         }
         bus.emit("toast:show", {
           msg: `同步失败: ${String(err)}`,

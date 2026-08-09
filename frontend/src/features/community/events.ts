@@ -52,6 +52,9 @@ export function bindRepoEvents(
   } = ctx;
   let showAll = false;
   const selectedSet = new Set<string>();
+  // P2 修复（审核发现）：代际守卫——视图销毁后丢弃在途 setTimeout/await 回调，
+  // 避免下载 A 期间切到仓库 B 时 A 的 onAllDone 重写视图（ADR-044 ①）
+  let disposed = false;
 
   // ============================================================
   //  🎯 下载队列（委派给 download-queue.js）
@@ -66,7 +69,11 @@ export function bindRepoEvents(
     },
     onAllDone: () => {
       selectedSet.clear();
-      setTimeout(() => showRepoModels(), 200);
+      setTimeout(() => {
+        // ADR-044 ①：视图已销毁时丢弃刷新（queue.destroy 清不掉本 setTimeout）
+        if (disposed) return;
+        showRepoModels();
+      }, 200);
     },
   });
 
@@ -235,11 +242,18 @@ export function bindRepoEvents(
             (row as HTMLElement).dataset.name || "",
           );
           if (author) {
-            const { OpenInBrowser } = await getApp();
-            OpenInBrowser(
-              "https://search.bilibili.com/all?keyword=" +
-                encodeURIComponent(author),
-            );
+            // P3 修复（审核发现）：async handler 最外层需有 catch 出口（ADR-044 ①）——
+            // getApp/OpenInBrowser reject 原会逸出为 unhandled rejection
+            try {
+              const { OpenInBrowser } = await getApp();
+              OpenInBrowser(
+                "https://search.bilibili.com/all?keyword=" +
+                  encodeURIComponent(author),
+              );
+            } catch (openErr) {
+              // 浏览器打开失败不阻断列表交互，但记录日志不静默吞错
+              console.warn("[workshop] OpenInBrowser 失败:", openErr);
+            }
           }
         }
         return;
@@ -254,7 +268,10 @@ export function bindRepoEvents(
   ): Promise<void> {
     const cbName = btn.dataset.name || "";
     const url = btn.dataset.url || "";
-    const size = parseInt(btn.dataset.size || "", 10) || 0;
+    // P3 修复（审核发现）：`parseInt(...) || 0` 对负值/NaN 无守卫（-5 truthy 直通）；
+    // 与批量路径 buildDownloadTasks 的 `isFinite && >0` 守卫对齐（边界对称，ADR-044②）
+    const parsedSize = parseInt(btn.dataset.size || "", 10);
+    const size = Number.isFinite(parsedSize) && parsedSize > 0 ? parsedSize : 0;
     const decision = classifyDownloadSize(size);
     if (decision === "reject") {
       bus.emit("toast:show", {
@@ -278,6 +295,9 @@ export function bindRepoEvents(
       } catch {
         ok = false;
       }
+      // ADR-044 ①：await 后代际守卫（含 catch 分支）——弹窗期间视图销毁时
+      // updateSelectedUI 会命中共享容器内新绑定的按钮，用旧 selectedSet 覆盖其计数
+      if (disposed) return;
       if (!ok) return;
     }
 
@@ -300,6 +320,8 @@ export function bindRepoEvents(
 
   // 对外暴露的清理函数（供上层在视图销毁时调用）
   const externalCleanup = async (): Promise<void> => {
+    // 先置位，阻断在途 setTimeout/await 回调（ADR-044 ① 代际守卫）
+    disposed = true;
     // 移除所有 DOM 事件监听器
     sr.querySelectorAll(".gh-back-repo, #gh-repo-srch, .gh-toggle-missing, #gh-repo-list, .gh-dl-selected, .gh-select-all input[type=checkbox]").forEach((el) => {
       el.replaceWith(el.cloneNode(true));

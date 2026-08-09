@@ -256,6 +256,7 @@ export const zhCN: Record<string, string> = {
   "workshop.networkError": "网络异常",
   "workshop.parseError": "数据解析失败",
   "workshop.downloadStarted": "开始下载",
+  "workshop.downloading": "正在下载中，请稍候",
   "workshop.downloadFailed": "下载失败",
   "workshop.allDownloaded": "全部下载完成",
 

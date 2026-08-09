@@ -6,11 +6,17 @@
  * 设计意图：发布说明生成器
  * 依赖：node:child_process / node:path / node:url
  * 用法：
- *   node scripts/release-notes-gen.mjs                 # 默认行为
- * 退出码：0（无 process.exit 调用）
+ *   node scripts/release-notes-gen.mjs                 # 默认行为（输出 JSON 数据）
+ *   node scripts/release-notes-gen.mjs --check         # 漂移校验：git tag 必须有对应发版说明 md
+ * 退出码：--check 发现缺失 → 1；git 查询失败（fail-closed）→ 1；否则 0。
  */
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
+
+const CHECK = process.argv.includes('--check');
+const RELEASES_DIR = path.join(ROOT, 'docs', 'releases');
 
 
 function run(cmd) {
@@ -110,4 +116,37 @@ function collect() {
   process.stdout.write(JSON.stringify(output, null, 2) + '\n');
 }
 
-collect();
+/** --check 漂移校验：git tag 是发版清单单一事实源（docs/releases/index.md 契约），
+ * 每个 `vX.Y.Z` tag 必须有对应 `docs/releases/vX.Y.Z.md`（新版本只产出单一 md）。 */
+function checkReleaseNotes() {
+  let tags;
+  try {
+    const stdout = execFileSync('git', ['tag', '--list', 'v*'], { encoding: 'utf-8', timeout: 30000, cwd: ROOT });
+    tags = stdout.split('\n').map((t) => t.trim()).filter(Boolean);
+  } catch (e) {
+    // ADR-043 fail-closed：git 不可用 = 扫描不完整，拒绝放行（不把空 tag 清单当「无漂移」）
+    console.error(`❌ git tag 查询失败（扫描不完整，拒绝放行）: ${e.message}`);
+    process.exit(1);
+  }
+
+  const missing = tags.filter((t) => {
+    // 兼容历史 compare 双文件模式（index.md：v1.0.2~v1.7.0 早期遗留）——
+    // `vX.md` 或 `vX-compare.md` 任一存在即算已覆盖
+    return !fs.existsSync(path.join(RELEASES_DIR, `${t}.md`))
+      && !fs.existsSync(path.join(RELEASES_DIR, `${t}-compare.md`));
+  });
+  if (missing.length) {
+    console.error(`❌ ${missing.length} 个版本缺发版说明（docs/releases/<tag>.md）:`);
+    for (const t of missing) console.error(`   - ${t}.md`);
+    console.error('  补写后提交；发版契约见 docs/releases/index.md。');
+    process.exit(1);
+  }
+  console.log(`✅ 全部 ${tags.length} 个 git tag 均有发版说明（docs/releases/ 同步）`);
+  process.exit(0);
+}
+
+if (CHECK) {
+  checkReleaseNotes();
+} else {
+  collect();
+}

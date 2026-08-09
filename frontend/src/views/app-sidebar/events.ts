@@ -11,6 +11,11 @@ import { getApp } from "../../wails/app.ts";
 let _lastList: HTMLElement | null = null;
 let _clickHandler: ((e: MouseEvent) => void) | null = null;
 let _contextHandler: ((e: MouseEvent) => void) | null = null;
+// P2 修复：共享可变引用——renderVersionCards 只清 innerHTML 不替换 #vg 元素，
+// 每次 _reload 后 bindCardEvents 走 list===_lastList 早退复用旧闭包；
+// 若闭包直接捕获 instances 参数会拿到首次调用的旧数组（点击/右键数据陈旧）。
+// 统一改读 currentInstances，每次调用先更新，早退分支的旧 handler 也能读到最新数据。
+let currentInstances: SidebarInstance[] = [];
 
 export function bindCardEvents(
   root: ShadowRoot,
@@ -21,6 +26,9 @@ export function bindCardEvents(
 
   const list = root.getElementById("vg");
   if (!list) return () => {};
+
+  // 每次调用都先更新共享引用（list 复用早退时旧闭包也能读到最新实例数据）
+  currentInstances = instances;
 
   // 如果监听的 list 元素没变，用旧的 handler 引用避免重复绑定
   if (list === _lastList && _clickHandler) {
@@ -61,7 +69,7 @@ export function bindCardEvents(
     setTimeout(() => hdr.classList.remove("ripple"), 500);
     // 发送选中事件
     const idx = parseInt(vc.dataset.idx || "", 10);
-    const pkg = instances[idx];
+    const pkg = currentInstances[idx];
     if (pkg) {
       bus.emit("package:selected", pkg);
       try {
@@ -78,7 +86,7 @@ export function bindCardEvents(
     e.preventDefault();
     e.stopPropagation();
     const idx = parseInt(vc.dataset.idx || "", 10);
-    const pkg = instances[idx];
+    const pkg = currentInstances[idx];
     if (!pkg) return;
     const nameEl = vc.querySelector(".name");
     const name = nameEl ? nameEl.textContent.replace(/^📦\s*/, "") : "";

@@ -21,6 +21,8 @@ use_when:
   - 可拉取
   - 已禁用
   - 实例资源
+invariant_anchors:
+  - frontend/src/views/app-sync-manager/index.ts|_gen
 ---
 
 # 整合包同步页 app-sync-manager

@@ -13,6 +13,8 @@ use_when:
   - 状态管理
   - page store
   - currentPage
+invariant_anchors:
+  - frontend/src/core/page-store.ts|sanitizePage
 ---
 
 # 页面状态管理 page-store.ts

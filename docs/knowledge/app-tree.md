@@ -19,6 +19,8 @@ use_when:
   - 节点
   - 树
   - 目录树
+invariant_anchors:
+  - frontend/src/views/app-tree/bus-handlers.ts|selectState
 ---
 
 # 资源树 app-tree

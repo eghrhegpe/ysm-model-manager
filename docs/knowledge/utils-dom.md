@@ -12,6 +12,8 @@ use_when:
   - 搜索高亮
   - mark
   - XSS
+invariant_anchors:
+  - frontend/src/utils/dom/html.ts|export function esc
 ---
 
 # DOM 工具 dom

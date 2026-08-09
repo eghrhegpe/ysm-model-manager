@@ -37,6 +37,8 @@ use_when:
   - 创作者频道
   - 创意工坊
   - 全局 handler
+invariant_anchors:
+  - frontend/src/views/app-content/index.ts|_unsubs
 ---
 
 # 主内容页 app-content

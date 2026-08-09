@@ -12,6 +12,8 @@ use_when:
   - 日期格式化
   - 友好日期
   - 文件大小颜色
+invariant_anchors:
+  - frontend/src/utils/dom/format.ts|Number.isFinite
 ---
 
 # 格式化工具 fmt

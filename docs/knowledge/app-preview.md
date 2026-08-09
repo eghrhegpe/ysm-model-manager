@@ -39,6 +39,8 @@ use_when:
   - 缩略图
   - WASM 解码
   - 放大预览
+invariant_anchors:
+  - frontend/src/views/app-preview/index.ts|_previewGen
 ---
 
 # 预览面板 app-preview

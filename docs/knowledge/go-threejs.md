@@ -15,6 +15,8 @@ use_when:
   - UV
   - 四元数
   - 模型渲染
+invariant_anchors:
+  - go/threejs/spec.go|PivotSet
 ---
 
 # 3D 骨骼 spec go/threejs

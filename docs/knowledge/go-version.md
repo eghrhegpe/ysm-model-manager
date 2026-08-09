@@ -10,6 +10,8 @@ use_when:
   - version
   - 更新
   - ldflags
+invariant_anchors:
+  - go/version/version.go|ldflags
 ---
 
 # 版本号 go/version

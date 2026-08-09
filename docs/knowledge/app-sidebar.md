@@ -30,6 +30,8 @@ use_when:
   - 一键安装
   - 同步状态
   - 勾选
+invariant_anchors:
+  - frontend/src/views/app-sidebar/events.ts|_lastEmittedPkg
 ---
 
 # 侧边栏 app-sidebar

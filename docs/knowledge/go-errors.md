@@ -11,6 +11,8 @@ use_when:
   - friendly
   - 报错
   - toast
+invariant_anchors:
+  - go/errors/errors.go|refused
 ---
 
 # 错误包装 go/errors

@@ -12,6 +12,9 @@ use_when:
   - walk
   - 空目录
   - 文件数
+invariant_anchors:
+  - go/fsutil/walk.go|IsRecycleDir
+  - go/fsutil/write.go|WriteFileAtomic
 ---
 
 # 文件遍历 go/fsutil

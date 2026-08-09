@@ -13,6 +13,8 @@ use_when:
   - 撤销
   - 反馈
   - 报错提示
+invariant_anchors:
+  - frontend/src/views/app-toast/index.ts|防重入
 ---
 
 # Toast 通知 app-toast

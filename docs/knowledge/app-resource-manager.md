@@ -21,6 +21,8 @@ use_when:
   - 导入资源
   - 启用禁用
   - 通用资源
+invariant_anchors:
+  - frontend/src/views/app-resource-manager/index.ts|_initGen
 ---
 
 # 资源管理页 app-resource-manager

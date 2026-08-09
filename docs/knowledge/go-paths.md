@@ -10,6 +10,8 @@ use_when:
   - 安全
   - path
   - 路径校验
+invariant_anchors:
+  - go/paths/safe.go|IsInside
 ---
 
 # 路径安全 go/paths

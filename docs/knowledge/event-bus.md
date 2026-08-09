@@ -14,6 +14,8 @@ use_when:
   - emit
   - 跨组件通信
   - bus
+invariant_anchors:
+  - frontend/src/bus.ts|once
 ---
 
 # 事件总线 bus.ts

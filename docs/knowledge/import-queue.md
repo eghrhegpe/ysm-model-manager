@@ -19,6 +19,8 @@ use_when:
   - 文件夹导入
   - 覆盖导入
   - import
+invariant_anchors:
+  - frontend/src/features/import-queue.ts|normalizeRepoName
 ---
 
 # 导入队列 import-queue

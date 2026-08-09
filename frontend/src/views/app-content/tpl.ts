@@ -71,8 +71,8 @@ export function settingsHTML(): string {
 <button class="stg-tab" data-tab="about">ℹ️ ${t("settings.about")}</button>
 <button class="stg-tab" data-tab="credits">🙏 ${t("settings.credits")}</button>
 </div>
-<div class="repo-tab-body" id="stg-tab-basic">
-<div class="stg-page" style="padding:16px 20px;overflow-y:auto">
+<div class="repo-tab-body" id="stg-tab-basic" style="overflow-y:auto">
+<div class="stg-page" style="padding:16px 20px">
 
 <div class="section-title stg-title">⚙️ ${t("settings.paths.title")}</div>
 
@@ -149,8 +149,8 @@ export function settingsHTML(): string {
 </div>
 </div>
 
-<div class="repo-tab-body" id="stg-tab-ui" style="display:none">
-<div class="stg-page" style="padding:16px 20px;overflow-y:auto">
+<div class="repo-tab-body" id="stg-tab-ui" style="display:none;overflow-y:auto">
+<div class="stg-page" style="padding:16px 20px">
 
 <div class="section-title stg-title">🌙 ${t("settings.theme.title")}</div>
 
@@ -324,8 +324,8 @@ export function settingsHTML(): string {
 </div>
 </div>
 
-<div class="repo-tab-body" id="stg-tab-about" style="display:none">
-<div class="stg-page" style="padding:16px 20px;overflow-y:auto">
+<div class="repo-tab-body" id="stg-tab-about" style="display:none;overflow-y:auto">
+<div class="stg-page" style="padding:16px 20px">
 
 <div class="section-title stg-title">📦 ${t("about.title")}</div>
 
@@ -396,8 +396,8 @@ export function settingsHTML(): string {
 </div>
 </div>
 
-<div class="repo-tab-body" id="stg-tab-credits" style="display:none">
-<div class="stg-page" style="padding:16px 20px;overflow-y:auto">
+<div class="repo-tab-body" id="stg-tab-credits" style="display:none;overflow-y:auto">
+<div class="stg-page" style="padding:16px 20px">
 
 <div class="section-title stg-title">🎯 ${t("credits.inspiration")}</div>
 

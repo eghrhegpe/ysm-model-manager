@@ -32,7 +32,6 @@ export const contentCSS: string = `
 .repo-subtab:hover { color:var(--txt);background:var(--hover); }
 .repo-subtab.active { background:var(--surf);color:var(--accent); }
 .repo-tab-body { flex:1;display:flex;flex-direction:column;overflow:hidden; }
-.stg-page { flex:1;min-height:0; }
 .ins-sidebar { width:var(--sidebar-w);flex:none; }
 .ins-content { flex:1;display:flex;flex-direction:column;overflow:hidden; }
 .ins-model-list .sec-title { font-size:var(--fs-sm);color:var(--muted);padding:4px 2px 2px;text-transform:uppercase;letter-spacing:.5px;margin-top:4px; }

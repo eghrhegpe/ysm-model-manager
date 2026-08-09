@@ -395,3 +395,109 @@ describe("createDownloadQueue UI 层", () => {
     expect(sr.querySelector("#gh-queue-status")!.innerHTML).toBe("");
   });
 });
+
+// ── 陷阱 #6：Content-Length=-1 / 99% 卡进度锁定状态机 ──
+// handleProgress 的小文件 300ms 强制 100%、大文件 2s 转菊花、file-done 复位，
+// 全部依赖 _stuckLocked / _stuckTimer / _lastPct 闭包状态——用 fake timers 精确控制。
+describe("createDownloadQueue 99% 锁定状态机（陷阱 #6）", () => {
+  function createCtrl(overrides: Partial<QueueControllerOptions> = {}) {
+    const sr = document.createElement("div");
+    sr.innerHTML =
+      '<div id="gh-queue-status"></div><button class="gh-dl-selected">下载</button>';
+    document.body.appendChild(sr);
+    const localMap = new Map();
+    const onFileSuccess = vi.fn();
+    const onAllDone = vi.fn();
+    statusMock.mockResolvedValue(0); // resume 保持 idle
+    const ctrl = createDownloadQueue({
+      sr,
+      esc: (s: string) => String(s),
+      getLocalMap: () => localMap,
+      onFileSuccess,
+      onAllDone,
+      ...overrides,
+    });
+    return { sr, localMap, onFileSuccess, onAllDone, ctrl };
+  }
+
+  function progressEls(sr: HTMLElement) {
+    return {
+      pctEl: sr.querySelector(".gh-progress-pct") as HTMLElement | null,
+      fillEl: sr.querySelector(".gh-progress-fill") as HTMLElement | null,
+    };
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    document.body.innerHTML = "";
+    vi.useRealTimers();
+  });
+
+  it("小文件（≤100KB）99% → 锁定 300ms 后强制 100%", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    emit("queue:file-start", ["f.ysm", 1, 1]);
+    emit("download:progress", [0, 50000]); // pct=0，_lastPct=0
+    emit("download:progress", [49500, 50000]); // pct=99 → 小文件锁定
+    const { pctEl, fillEl } = progressEls(sr);
+    // 锁定中：进度条 99%，百分比停留在上一轮值（不显示假 100%）
+    expect(fillEl!.style.width).toBe("99%");
+    expect(pctEl!.textContent).not.toBe("100%");
+    vi.advanceTimersByTime(300);
+    expect(pctEl!.textContent).toBe("100%");
+    ctrl.destroy();
+  });
+
+  it("大文件（>1MB）99% → 2s 后转菊花 ⏳", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    emit("queue:file-start", ["f.ysm", 1, 1]);
+    const total = 2 * 1024 * 1024;
+    emit("download:progress", [0, total]); // pct=0
+    emit("download:progress", [total - 1024, total]); // pct≈100 → 大文件锁定 99%
+    const { pctEl, fillEl } = progressEls(sr);
+    expect(pctEl!.textContent).toBe("99%");
+    expect(fillEl!.style.width).toBe("99%");
+    vi.advanceTimersByTime(2000);
+    expect(pctEl!.textContent).toBe("⏳");
+    ctrl.destroy();
+  });
+
+  it("file-done ok 到达时强制 100% 并复位锁定", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    emit("queue:file-start", ["f.ysm", 1, 1]);
+    emit("download:progress", [0, 50000]);
+    emit("download:progress", [49500, 50000]); // 锁定 99%
+    emit("queue:file-done", ["f.ysm", "ok", ""]);
+    const { pctEl, fillEl } = progressEls(sr);
+    expect(pctEl!.textContent).toBe("100%");
+    expect(fillEl!.style.width).toBe("100%");
+    ctrl.destroy();
+  });
+
+  it("Content-Length=-1（total=0）不误报百分比，显示 MB", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    emit("queue:file-start", ["f.ysm", 1, 1]);
+    emit("download:progress", [2 * 1024 * 1024, 0]); // total=0 → pct=0
+    const { pctEl, fillEl } = progressEls(sr);
+    expect(pctEl!.textContent).toBe("2.0MB");
+    expect(fillEl!.style.width).toBe("0%");
+    ctrl.destroy();
+  });
+
+  it("progress 全程 <99%（有 Content-Length）不触发锁定", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    emit("queue:file-start", ["f.ysm", 1, 1]);
+    emit("download:progress", [0, 1000000]);
+    emit("download:progress", [500000, 1000000]); // 50% 正常
+    const { pctEl, fillEl } = progressEls(sr);
+    expect(pctEl!.textContent).toBe("50%");
+    expect(fillEl!.style.width).toBe("50%");
+    ctrl.destroy();
+  });
+});

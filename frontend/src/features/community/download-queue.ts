@@ -516,6 +516,10 @@ export function createDownloadQueue({
     errMsg: string;
   }): void {
     if (done.status === "ok") {
+      // P3 修复：file-done 后同一次 notify 的 progress 分支会用「旧 progress」重算，
+      // 把此处写入的 100% 覆盖回 99%（Content-Length 失真场景）——清空 progress
+      // 使 handleStateChange 的 progress 分支（dl>0||total>0）跳过重绘
+      STATE.progress = { dl: 0, total: 0 };
       // file-done 到达时强制覆盖卡在 99% 的进度条
       const pctEl = qsEl()?.querySelector(".gh-progress-pct") as PctEl | null;
       const fillEl = qsEl()?.querySelector(

@@ -550,3 +550,48 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
     expect(toasts().some((t) => t.msg.includes("路径已复制"))).toBe(true);
   });
 });
+
+describe("失败路径补强（batch.move 部分失败 / getApp reject 兜底）", () => {
+  beforeEach(() => {
+    modalPromptMock.mockReset();
+    GetRepoRootMock.mockReset();
+    MoveModelFileMock.mockReset();
+  });
+
+  function clickMove(paths: string[]) {
+    const payload = showMenu("batch", { ...payloadCtx("batch"), paths, count: paths.length });
+    const item = payload.items.find((i) => i.label === "移动到…");
+    expect(item).toBeTruthy();
+    return item!.onClick!();
+  }
+  function allToasts(): string[] {
+    return emitted
+      .filter((e) => e.e === "toast:show")
+      .map((e) => (e.p as ToastPayload).msg);
+  }
+
+  it("batch.move 部分失败 → toast 同时报告成功与失败数", async () => {
+    modalPromptMock.mockResolvedValue("作者A");
+    GetRepoRootMock.mockResolvedValue("/repo/models");
+    MoveModelFileMock.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("EACCES"));
+    await clickMove(["/a.ysm", "/b.ysm"]);
+    expect(MoveModelFileMock).toHaveBeenCalledTimes(2);
+    expect(allToasts().some((m) => m.includes("1 个已移动") && m.includes("1 失败"))).toBe(true);
+  });
+
+  it("batch.move 全部失败 → error toast", async () => {
+    modalPromptMock.mockResolvedValue("作者A");
+    GetRepoRootMock.mockResolvedValue("/repo/models");
+    MoveModelFileMock.mockRejectedValue(new Error("EACCES"));
+    await clickMove(["/a.ysm"]);
+    expect(allToasts().some((m) => m.includes("❌ 移动失败"))).toBe(true);
+  });
+
+  it("batch.move getApp 拒绝 → error toast 且 handler 不抛（P2 兜底）", async () => {
+    modalPromptMock.mockResolvedValue("作者A");
+    const { getApp } = await import("../wails/app.ts");
+    vi.mocked(getApp).mockRejectedValueOnce(new Error("boom"));
+    await clickMove(["/a.ysm"]);
+    expect(allToasts().some((m) => m.includes("❌"))).toBe(true);
+  });
+});

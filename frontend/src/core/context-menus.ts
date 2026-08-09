@@ -126,7 +126,17 @@ const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
           console.error("移动失败:", p, e);
         }
       }
-      toast(ok > 0 ? `✅ ${ok} 个文件已移动到 ${folder}` : "❌ 移动失败", 4000);
+      if (ok > 0) {
+        // P3 对齐 batch.copy：部分失败时 toast 同时报告成功与失败数
+        toast(
+          fail > 0
+            ? `✅ ${ok} 个已移动 / ❌ ${fail} 失败`
+            : `✅ ${ok} 个文件已移动到 ${folder}`,
+          4000,
+        );
+      } else {
+        toast("❌ 移动失败", 4000, "error");
+      }
       refreshUI();
     } catch (e) {
       // P2 修复：最外层补 catch——resolveDstDir/getApp 可 reject（getApp import 失败会

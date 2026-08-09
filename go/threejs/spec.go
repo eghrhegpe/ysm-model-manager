@@ -616,8 +616,9 @@ func expandBoxUV(uv [2]float64, sx, sy, sz, texW, texH float64, faces *[6][8]flo
 
 	// faceUVs[4] = {u0,v0, u1,v0, u0,v1, u1,v1} 对应顶点顺序
 	// Face order: East(0), West(1), Up(2), Down(3), South(4), North(5)
-	// fw/fh 取绝对值：负值表示纹理方向翻转已体现在面的顶点排列中，
-	// UV 坐标的宽度/高度必须为正数，否则纹理镜像
+	// P4 修复：修正注释——fw/fh 保留负值（Up 面 -x,-z），负值表示该面纹理方向
+	// 相对翻转、已体现在面的顶点排列中，直接参与 u1/v1 计算（不取绝对值；
+	// 原注释「fw/fh 取绝对值」与实现矛盾，实现与 C# 黄金参考对齐、测试锁定 UV 跨度）
 	uvData := []struct {
 		fu, fv, fw, fh float64
 		f              int

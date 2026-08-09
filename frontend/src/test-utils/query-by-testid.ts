@@ -16,10 +16,22 @@ function scope(container: QueryContainer): QueryContainer {
   return container;
 }
 
+// P3 修复：testid 入口校验（Design.md §19.1——testid 值禁止含空格或大小写混排，
+// 应为全小写 kebab-case）。本层原未做入口校验，违规 testid 静默查询失败难排查。
+const TESTID_RE = /^[a-z0-9-]+$/;
+function assertValidTestId(testid: string): void {
+  if (!testid || !TESTID_RE.test(testid)) {
+    throw new Error(
+      `非法 testid: "${testid}"——testid 必须为全小写 kebab-case（仅小写字母/数字/连字符，禁止空格与大小写混排，Design.md §19.1）`,
+    );
+  }
+}
+
 export function queryByTestId(
   container: QueryContainer,
   testid: string,
 ): Element | null {
+  assertValidTestId(testid);
   // 精确匹配（单个元素，如 data-testid="nav-item"）
   return scope(container).querySelector(`[data-testid="${testid}"]`);
 }
@@ -46,6 +58,7 @@ export function queryAllByTestId(
   container: QueryContainer,
   testid: string,
 ): Element[] {
+  assertValidTestId(testid);
   // P2 修复：前缀匹配限定「精确 testid 或 testid + '-' + 纯数字序号」——
   // 裸 `^=` 会把兄弟角色也扫进来（tree-dir 匹配到 tree-dir-toggle，row-tpl.ts:43-44），
   // 且空串会匹配全部 testid。CSS `^=` 无法表达「- 后跟数字」，故查询后 JS 过滤：

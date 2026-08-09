@@ -84,6 +84,9 @@ export async function waitForElementToBeRemoved(
   fn: () => Element | null,
   timeout = 5000,
 ): Promise<void> {
+  // P4 修复：对齐 waitFor 的 firstErr 设计——原 catch 静默吞错，超时只报通用消息，
+  // 真实根因被掩盖（fn 抛出的断言/查询错误无法定位）
+  let firstErr: unknown = null;
   return new Promise((resolve, reject) => {
     const start = Date.now();
     const tick = () => {
@@ -91,10 +94,22 @@ export async function waitForElementToBeRemoved(
         const el = fn();
         if (!el || !el.isConnected) resolve();
         else if (Date.now() - start < timeout) requestAnimationFrame(tick);
-        else reject(new Error(`waitForElementToBeRemoved timed out after ${timeout}ms`));
-      } catch {
+        else
+          reject(
+            new Error(
+              `waitForElementToBeRemoved timed out after ${timeout}ms` +
+                (firstErr !== null ? ` (first error: ${String(firstErr)})` : ""),
+            ),
+          );
+      } catch (e) {
+        if (firstErr === null) firstErr = e;
         if (Date.now() - start < timeout) requestAnimationFrame(tick);
-        else reject(new Error(`waitForElementToBeRemoved condition threw after ${timeout}ms`));
+        else
+          reject(
+            new Error(
+              `waitForElementToBeRemoved timed out after ${timeout}ms (first error: ${String(e)})`,
+            ),
+          );
       }
     };
     tick();

@@ -415,20 +415,20 @@
 | `App.CacheModelAvatars()` | `internal/app/app_avatar:124` | CacheModelAvatars 从解压目录 ysm.json 缓存头像 |
 | `App.GetConfigPath()` | `internal/app/app_config:48` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
 | `App.SaveAppConfig()` | `internal/app/app_config:109` | — |
-| `App.SetDownloadMirror()` | `internal/app/app_config:164` | — |
-| `App.LoadAppConfig()` | `internal/app/app_config:193` | — |
-| `App.GetSubDirMap()` | `internal/app/app_config:214` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
-| `App.CurrentVersion()` | `internal/app/app_config:218` | — |
-| `App.CheckUpdate()` | `internal/app/app_config:220` | — |
-| `App.DownloadUpdate()` | `internal/app/app_config:224` | — |
-| `App.ApplyUpdate()` | `internal/app/app_config:228` | — |
-| `App.DoUpdate()` | `internal/app/app_config:232` | — |
-| `App.RestartApplication()` | `internal/app/app_config:244` | — |
-| `App.SaveWindowPosition()` | `internal/app/app_config:296` | — |
-| `App.GetWindowPosition()` | `internal/app/app_config:310` | — |
-| `App.SelectDirectory()` | `internal/app/app_config:339` | ========== 目录选择 ========== |
-| `App.GetMinecraftPaths()` | `internal/app/app_config:400` | — |
-| `App.ValidateMinecraftDir()` | `internal/app/app_config:402` | — |
+| `App.SetDownloadMirror()` | `internal/app/app_config:168` | — |
+| `App.LoadAppConfig()` | `internal/app/app_config:197` | — |
+| `App.GetSubDirMap()` | `internal/app/app_config:218` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
+| `App.CurrentVersion()` | `internal/app/app_config:222` | — |
+| `App.CheckUpdate()` | `internal/app/app_config:224` | — |
+| `App.DownloadUpdate()` | `internal/app/app_config:228` | — |
+| `App.ApplyUpdate()` | `internal/app/app_config:232` | — |
+| `App.DoUpdate()` | `internal/app/app_config:236` | — |
+| `App.RestartApplication()` | `internal/app/app_config:248` | — |
+| `App.SaveWindowPosition()` | `internal/app/app_config:300` | — |
+| `App.GetWindowPosition()` | `internal/app/app_config:314` | — |
+| `App.SelectDirectory()` | `internal/app/app_config:345` | ========== 目录选择 ========== |
+| `App.GetMinecraftPaths()` | `internal/app/app_config:406` | — |
+| `App.ValidateMinecraftDir()` | `internal/app/app_config:408` | — |
 | `NewDownloadQueue()` | `internal/app/app_download:51` | NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入） |
 | `App.EnqueueDownloads()` | `internal/app/app_download:56` | — |
 | `App.CancelQueue()` | `internal/app/app_download:86` | — |
@@ -736,10 +736,10 @@
 | `waitFor()` | `frontend/src/test-utils/index:54` | 轮询等待条件满足（兼容现有测试风格，作为统一导出）。 |
 | `waitForElementToBeRemoved()` | `frontend/src/test-utils/index:83` | 轮询等待元素被移除。 |
 | `QueryContainer()` | `frontend/src/test-utils/query-by-testid:11` | — |
-| `queryByTestId()` | `frontend/src/test-utils/query-by-testid:19` | — |
-| `getByTestId()` | `frontend/src/test-utils/query-by-testid:27` | — |
-| `getAllByTestId()` | `frontend/src/test-utils/query-by-testid:36` | — |
-| `queryAllByTestId()` | `frontend/src/test-utils/query-by-testid:45` | — |
+| `queryByTestId()` | `frontend/src/test-utils/query-by-testid:30` | — |
+| `getByTestId()` | `frontend/src/test-utils/query-by-testid:39` | — |
+| `getAllByTestId()` | `frontend/src/test-utils/query-by-testid:48` | — |
+| `queryAllByTestId()` | `frontend/src/test-utils/query-by-testid:57` | — |
 | `RenderOptions()` | `frontend/src/test-utils/render:6` | 渲染配置 |
 | `RenderResult()` | `frontend/src/test-utils/render:13` | — |
 | `renderComponent()` | `frontend/src/test-utils/render:31` | 渲染一个自定义元素到 DOM。 |
@@ -771,10 +771,10 @@
 | `loadTdKeymap()` | `frontend/src/utils/3d/model3d:86` | 读取用户自定义键位（无/非法时回退默认） |
 | `loadTdCamSpeed()` | `frontend/src/utils/3d/model3d:104` | 相机移动速度（2–200），默认 20 |
 | `loadTdRotMode()` | `frontend/src/utils/3d/model3d:110` | true = 环绕（orbit），false = 自身（free） |
-| `compKey()` | `frontend/src/utils/3d/model3d:124` | 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突）。 |
-| `buildSceneMesh()` | `frontend/src/utils/3d/model3d:129` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
-| `renderModel3D()` | `frontend/src/utils/3d/model3d:189` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/src/utils/3d/model3d:882` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `compKey()` | `frontend/src/utils/3d/model3d:130` | 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突）。 |
+| `buildSceneMesh()` | `frontend/src/utils/3d/model3d:135` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
+| `renderModel3D()` | `frontend/src/utils/3d/model3d:195` | 渲染 3D 模型到容器，返回控制句柄 |
+| `screenshotPreview()` | `frontend/src/utils/3d/model3d:919` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
 | `animateNumber()` | `frontend/src/utils/animation/animate:12` | 里程表滚动进位动画 |
 | `Vec3()` | `frontend/src/utils/animation/animation:9` | 三维向量 [x, y, z] |
 | `Keyframe()` | `frontend/src/utils/animation/animation:12` | 关键帧 |

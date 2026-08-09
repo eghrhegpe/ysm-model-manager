@@ -107,13 +107,17 @@ func (a *App) loadAppConfig() {
 }
 
 func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) error {
+	oldCfg := a.LoadAppConfig()
+	// P4 修复：校验失败时 validated 置空 → 下方 orDefault 回退 oldCfg.McRoot——
+	// 原实现校验失败 errMsg 被丢弃、未校验的 mcRoot 原样写入（配置损坏路径静默生效）
 	validated := mcRoot
 	if mcRoot != "" {
 		if v, errMsg := a.ValidateMinecraftDir(mcRoot); errMsg == "" {
 			validated = v
+		} else {
+			validated = ""
 		}
 	}
-	oldCfg := a.LoadAppConfig()
 	cfg := types.AppConfig{
 		FilesRoot:        orDefault(filesRoot, oldCfg.FilesRoot),
 		ResourcepackRoot: orDefault(rpRoot, oldCfg.ResourcepackRoot),
@@ -324,9 +328,11 @@ func (a *App) GetWindowPosition() types.WindowState {
 	// 检测屏幕是否变化（双屏切换），用相对坐标重算
 	_, _, vw, vh := getVirtualScreen()
 	if cfg.WinScrW > 0 && cfg.WinScrH > 0 && (cfg.WinScrW != vw || cfg.WinScrH != vh) {
-		_, vx, _, _ := getVirtualScreen()
+		_, vx, vy, _ := getVirtualScreen()
 		state.X = vx + vw*cfg.WinRelX/100
-		state.Y = vh * cfg.WinRelY / 100
+		// P4 修复：Y 漏加 vy——多屏上下排布时相对坐标重算缺虚拟屏 Y 偏移，
+		// 窗口位置整体上移 vy 像素（X 侧一直有 vx，Y 侧对称补齐）
+		state.Y = vy + vh*cfg.WinRelY/100
 	}
 	if state.X <= 0 && state.Y <= 0 {
 		state.X = 100

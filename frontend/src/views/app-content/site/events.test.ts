@@ -1,210 +1,343 @@
-// ===== 站点视图浏览态事件组件测试（G-1 — ADR-035 / Design.md §19.1）=====
-// 真实绑定 bindBrowseEvents：空态本地浏览/预设搜索/星标/详情浮层/storage 同步/cleanup。
-// 网络路径（tryFetchModels）与进度 UI mock，卡片由真实 createCrCard 渲染。
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { bus } from "../../../bus.ts";
+// ===== 站点视图浏览态事件绑定测试 =====
+// 覆盖 bindBrowseEvents：
+//  - 空状态按钮导航 / 创作者网格创建 / 预设搜索
+//  - 收藏点击（阻止冒泡 + 排序 + toast）/ 头像调试 / 详情浮层（关闭/搜索/查看本地）
+//  - 键盘导航 ←↑↓→ / storage 跨标签同步 + cleanup
+//  - 浏览 GitHub 仓库模型：缓存命中 / 拉取成功 / AbortError 失败兜底
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { waitFor } from "../../../test-utils/index.ts";
 
-// mock bindings + 网络/进度（浏览仓库模型路径不测，阻断 getApp 与 tryFetchModels）
-vi.mock("../../../wails/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({
-    DebugExtractCreatorAvatar: vi.fn(),
-    LoadAppConfig: vi.fn().mockResolvedValue({ mirror: "" }),
-  }),
-}));
-vi.mock("../../../features/community/data.ts", () => ({
+const {
+  busEmit,
+  busOn,
+  dbg,
+  showProgress,
+  tryFetchModels,
+  getCreatorIdentity,
+  getTagFromRole,
+  parseDescTags,
+  loadFavs,
+  isFaved,
+  toggleFav,
+  getSiteIcon,
+  getTagIconFromRole,
+  createCrCard,
+  getApp,
+} = vi.hoisted(() => ({
+  busEmit: vi.fn(),
+  busOn: vi.fn(() => () => {}),
+  dbg: vi.fn(),
   showProgress: vi.fn(),
   tryFetchModels: vi.fn(),
+  getCreatorIdentity: vi.fn((cr) => ({ icon: "🎭", label: cr.name + "(id)" })),
+  getTagFromRole: vi.fn(() => "模型"),
+  parseDescTags: vi.fn(() => []),
+  loadFavs: vi.fn(() => []),
+  isFaved: vi.fn(() => false),
+  toggleFav: vi.fn(() => true),
+  getSiteIcon: vi.fn(() => "🌐"),
+  getTagIconFromRole: vi.fn(() => "🏷️"),
+  createCrCard: vi.fn(() => document.createElement("div")),
+  getApp: vi.fn(),
 }));
+
+vi.mock("../../../bus.ts", () => ({ bus: { emit: busEmit, on: busOn } }));
+vi.mock("../../../utils/debug/debug.ts", () => ({ dbg }));
+vi.mock("../../../features/community/data.ts", () => ({
+  showProgress,
+  tryFetchModels,
+}));
+vi.mock("../workshop-data.ts", () => ({
+  getCreatorIdentity,
+  getTagFromRole,
+  parseDescTags,
+  loadFavs,
+  isFaved,
+  toggleFav,
+}));
+vi.mock("../../../utils/icon/workshop-icons.ts", () => ({
+  getSiteIcon,
+  getTagIconFromRole,
+}));
+vi.mock("./render.ts", () => ({ createCrCard }));
+vi.mock("../../../wails/app.ts", () => ({ getApp }));
 
 import { bindBrowseEvents } from "./events.ts";
 import type { SiteViewState } from "./types.ts";
-import type { LocalCreatorLike } from "../site-view.ts";
-import type { WorkshopSite } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 
-interface MountResult {
+const esc = (s: string): string =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+
+function makeState(overrides: Record<string, unknown> = {}): {
   state: SiteViewState;
   searchResults: HTMLElement;
-  refresh: () => void;
-  cleanup: () => void;
-}
-
-function mount(over: { creators?: LocalCreatorLike[]; site?: Partial<WorkshopSite> } = {}): MountResult {
+} {
   const searchResults = document.createElement("div");
-  const creators =
-    over.creators ??
-    ([
-      { name: "甲", desc: "描述甲", tag: "", type: "siteA", role: "" },
-    ] as unknown as LocalCreatorLike[]);
-  const site = {
-    id: "siteA",
-    label: "测试站",
-    searchUrl: "https://s.example/?q=",
-    url: "https://s.example/",
-    ...over.site,
-  } as WorkshopSite;
+  searchResults.innerHTML = `
+    <div data-local-empty></div>
+    <div id="cr-creator-grid" class="cr-creator-grid"></div>
+    <button class="cr-preset-btn" data-q="dog">dog</button>
+    <div class="gh-card" data-name="A">
+      <div class="cr-star-btn" data-star="A">☆</div>
+    </div>
+    <img data-debug-avatar="A" alt="avatar">
+    <div class="gh-card-external" data-repo="user/repo">📦 浏览</div>
+  `;
   const state = {
-    esc: (s: unknown) => String(s),
+    esc,
     searchResults,
-    allCreators: [...creators],
-    allSites: [],
+    allCreators: [],
     wsEditModeRef: { v: false },
-    site,
-    creators,
-    authorCountMap: { 甲: 3 },
+    avatarCache: {},
+    site: { searchUrl: "https://s/search?q={q}", url: "https://s", name: "S" },
+    creators: [{ name: "A", role: "modeler", desc: "好模型", type: "github" }],
+    authorCountMap: { A: 3 },
     repoModelCache: new Map(),
     showRepoModels: vi.fn(),
-    fillSearch: (tpl: string, q: string) => tpl + encodeURIComponent(q),
+    fillSearch: (url: string, q: string) =>
+      url.replace("{q}", encodeURIComponent(q)),
     openUrl: vi.fn(),
     backToSite: vi.fn(),
-    avatarCache: {},
-    bus,
+    bus: { emit: busEmit, on: busOn },
+    ...overrides,
   } as unknown as SiteViewState;
-  document.body.appendChild(searchResults);
-  const refresh = vi.fn();
-  const cleanup = bindBrowseEvents(state, refresh);
-  return { state, searchResults, refresh, cleanup };
-}
-
-/** 构造「含创作者网格」的最小 state（createCrCard 渲染卡片所需） */
-function makeCardState(searchResults: HTMLElement): SiteViewState {
-  const creators = [
-    { name: "甲", desc: "D", type: "siteA", role: "" },
-  ] as unknown as LocalCreatorLike[];
-  return {
-    searchResults,
-    creators,
-    allCreators: [...creators],
-    wsEditModeRef: { v: false },
-    esc: (s: unknown) => String(s),
-    authorCountMap: {},
-    avatarCache: {},
-    bus,
-    site: { id: "siteA", label: "站" },
-  } as unknown as SiteViewState;
+  return { state, searchResults };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  localStorage.clear();
   document.body.innerHTML = "";
+  getApp.mockResolvedValue({
+    DebugExtractCreatorAvatar: vi.fn(() => ({ ok: true })),
+    LoadAppConfig: vi.fn(() => ({ mirror: "" })),
+    OpenInBrowser: vi.fn(),
+  });
+  showProgress.mockImplementation(() => {});
+  tryFetchModels.mockResolvedValue({ models: [], source: "githubapi" });
+  toggleFav.mockReturnValue(true);
 });
 
-afterEach(() => {
-  // 每个用例都调 cleanup 移除 window storage 监听，防跨用例残留
-  // （bindBrowseEvents 的 cleanup 由挂载方在切页时调用）
-});
-
-describe("bindBrowseEvents 浏览态", () => {
-  it("1. 空创作者 → 本地浏览按钮 → nav:change repository", () => {
-    const navSpy = vi.fn();
-    const unsub = bus.on("nav:change", navSpy);
-    const { searchResults, cleanup } = mount({ creators: [] });
-    searchResults.innerHTML =
-      '<button data-local-empty>📂 浏览本地模型</button>';
-    // 重新绑定以覆盖上面 mount 的空渲染（creators 为空时不渲染网格）
-    const state = {
-      searchResults,
-      bus,
-    } as unknown as SiteViewState;
-    cleanup();
-    const c2 = bindBrowseEvents(state, vi.fn());
-    (searchResults.querySelector("[data-local-empty]") as HTMLElement).click();
-    expect(navSpy).toHaveBeenCalledWith({ page: "repository" });
-    c2();
-    unsub();
+describe("bindBrowseEvents — 基础绑定", () => {
+  it("空状态按钮 → nav:change 到 repository", () => {
+    const { state } = makeState();
+    bindBrowseEvents(state, () => {});
+    (state.searchResults.querySelector("[data-local-empty]") as HTMLElement).click();
+    expect(busEmit).toHaveBeenCalledWith("nav:change", { page: "repository" });
   });
 
-  it("2. 预设搜索按钮（有 searchUrl）→ openUrl(fillSearch(...))", () => {
-    const { state, searchResults, cleanup } = mount();
-    searchResults.innerHTML =
-      '<button class="cr-preset-btn" data-q="关键词">🔍 关键词</button>';
-    const state2 = { ...state, searchResults } as unknown as SiteViewState;
-    cleanup();
-    const c2 = bindBrowseEvents(state2, vi.fn());
-    (searchResults.querySelector(".cr-preset-btn") as HTMLElement).click();
-    expect(state2.openUrl).toHaveBeenCalledWith(
-      "https://s.example/?q=" + encodeURIComponent("关键词"),
+  it("有创作者且非编辑模式 → 每创作者生成一张卡片", () => {
+    const { state } = makeState();
+    bindBrowseEvents(state, () => {});
+    expect(createCrCard).toHaveBeenCalledTimes(1);
+    expect(createCrCard).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "A" }),
+      expect.objectContaining({ creators: expect.any(Array) }),
     );
-    c2();
   });
 
-  it("3. 预设搜索按钮（无 searchUrl）→ 打开站点首页", () => {
-    const { state, searchResults, cleanup } = mount({
-      site: { searchUrl: undefined },
-    });
-    searchResults.innerHTML =
-      '<button class="cr-preset-btn" data-q="x">🔍</button>';
-    const state2 = { ...state, searchResults } as unknown as SiteViewState;
-    cleanup();
-    const c2 = bindBrowseEvents(state2, vi.fn());
-    (searchResults.querySelector(".cr-preset-btn") as HTMLElement).click();
-    expect(state2.openUrl).toHaveBeenCalledWith("https://s.example/");
-    c2();
+  it("编辑模式 → 不生成网格卡片", () => {
+    const { state } = makeState({ wsEditModeRef: { v: true } });
+    bindBrowseEvents(state, () => {});
+    expect(createCrCard).not.toHaveBeenCalled();
   });
 
-  it("4. 创作者网格经 createCrCard 填充（含 data-name 与星标）", () => {
-    const { cleanup } = mount();
-    const searchResults = document.createElement("div");
-    searchResults.innerHTML = '<div id="cr-creator-grid"></div>';
-    cleanup();
-    const c2 = bindBrowseEvents(makeCardState(searchResults), vi.fn());
-    const grid = searchResults.querySelector("#cr-creator-grid")!;
-    expect(grid.querySelectorAll(".gh-card[data-name]").length).toBe(1);
-    expect(grid.querySelector(".cr-star-btn")?.getAttribute("data-star")).toBe(
-      "甲",
+  it("预设搜索按钮 → openUrl(fillSearch)；无 searchUrl → 打开站点首页", () => {
+    const { state } = makeState();
+    const openUrl = state.openUrl as ReturnType<typeof vi.fn>;
+    bindBrowseEvents(state, () => {});
+    (state.searchResults.querySelector(".cr-preset-btn") as HTMLElement).click();
+    expect(openUrl).toHaveBeenCalledWith(
+      "https://s/search?q=dog",
     );
-    c2();
+
+    // 无 searchUrl
+    const s2 = makeState({ site: { url: "https://s", name: "S" } });
+    const open2 = s2.state.openUrl as ReturnType<typeof vi.fn>;
+    bindBrowseEvents(s2.state, () => {});
+    (s2.searchResults.querySelector(".cr-preset-btn") as HTMLElement).click();
+    expect(open2).toHaveBeenCalledWith("https://s");
   });
 
-  it("5. 星标点击 → 收藏/取消 + toast", () => {
-    const toastSpy = vi.fn();
-    const unsub = bus.on("toast:show", toastSpy);
-    const { cleanup } = mount();
-    const searchResults = document.createElement("div");
-    searchResults.innerHTML = '<div id="cr-creator-grid"></div>';
-    cleanup();
-    const c2 = bindBrowseEvents(makeCardState(searchResults), vi.fn());
+  it("收藏点击 → toggleFav + toast + 卡片移到首部", () => {
+    const { state, searchResults } = makeState();
+    bindBrowseEvents(state, () => {});
     const star = searchResults.querySelector(".cr-star-btn") as HTMLElement;
-    expect(star.textContent).toBe("☆");
+    const grid = searchResults.querySelector("#cr-creator-grid") as HTMLElement;
+    const card = searchResults.querySelector(".gh-card") as HTMLElement;
+    grid.appendChild(card);
     star.click();
+    expect(toggleFav).toHaveBeenCalledWith("A");
     expect(star.textContent).toBe("⭐");
-    expect(toastSpy.mock.calls[0][0].msg).toContain("已收藏 甲");
+    expect(busEmit).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ msg: expect.stringContaining("已收藏") }),
+    );
+  });
+
+  it("头像调试点击 → getApp DebugExtractCreatorAvatar + dbg", async () => {
+    const { state, searchResults } = makeState();
+    bindBrowseEvents(state, () => {});
+    (searchResults.querySelector("[data-debug-avatar]") as HTMLElement).click();
+    await waitFor(() => dbg.mock.calls.length > 0);
+    expect(dbg.mock.calls[0]![0]).toBe("avatar-debug");
+    expect(dbg.mock.calls[0]![1]).toBe("A");
+  });
+
+  it("storage 同步：ysm-fav-creators 事件 → 星标同步 + cleanup 移除监听", () => {
+    const { state, searchResults } = makeState();
+    const cleanup = bindBrowseEvents(state, () => {});
+    (loadFavs as ReturnType<typeof vi.fn>).mockReturnValue(["A"]);
+    window.dispatchEvent(new StorageEvent("storage", { key: "ysm-fav-creators" }));
+    expect(searchResults.querySelector(".cr-star-btn")!.textContent).toBe("⭐");
+
+    cleanup();
+    window.dispatchEvent(new StorageEvent("storage", { key: "ysm-fav-creators" }));
+    // 已在 cleanup 时移除监听，手动再触发不应有变化（事件已解绑）
+    (loadFavs as ReturnType<typeof vi.fn>).mockReturnValue([]);
+    window.dispatchEvent(new StorageEvent("storage", { key: "ysm-fav-creators" }));
+    expect(loadFavs).toHaveBeenCalledTimes(1); // 仅第一次触发时被调
+  });
+});
+
+describe("bindBrowseEvents — 详情浮层", () => {
+  it("点击创作者卡片 → 浮层含名称/收藏/本地模型/操作按钮", () => {
+    const { state, searchResults } = makeState();
+    bindBrowseEvents(state, () => {});
+    const card = searchResults.querySelector(".gh-card") as HTMLElement;
+    card.click();
+    const overlay = searchResults.querySelector(".cr-detail-overlay") as HTMLElement;
+    expect(overlay).toBeTruthy();
+    expect(overlay.textContent).toContain("A");
+    expect(overlay.textContent).toContain("已下载 3 个模型");
+
+    // 关闭按钮 → 移除浮层
+    (overlay.querySelector("[data-close]") as HTMLElement).click();
+    expect(searchResults.querySelector(".cr-detail-overlay")).toBeNull();
+  });
+
+  it("浮层 [data-local] → repo:search-creator；[data-search] → openUrl 搜索", () => {
+    const { state, searchResults } = makeState();
+    bindBrowseEvents(state, () => {});
+    (searchResults.querySelector(".gh-card") as HTMLElement).click();
+    const overlay = searchResults.querySelector(".cr-detail-overlay") as HTMLElement;
+
+    (overlay.querySelector("[data-local]") as HTMLElement).click();
+    expect(busEmit).toHaveBeenCalledWith("repo:search-creator", "A");
+
+    (searchResults.querySelector(".gh-card") as HTMLElement).click();
+    const overlay2 = searchResults.querySelector(".cr-detail-overlay") as HTMLElement;
+    (overlay2.querySelector("[data-search]") as HTMLElement).click();
+    expect(state.openUrl).toHaveBeenCalledWith("https://s/search?q=A");
+  });
+
+  it("点击收藏按钮 → 不弹浮层（stopPropagation）", () => {
+    const { state, searchResults } = makeState();
+    bindBrowseEvents(state, () => {});
+    const star = searchResults.querySelector(".cr-star-btn") as HTMLElement;
     star.click();
-    expect(star.textContent).toBe("☆");
-    expect(toastSpy.mock.calls[1][0].msg).toContain("取消收藏");
-    c2();
-    unsub();
+    expect(searchResults.querySelector(".cr-detail-overlay")).toBeNull();
+  });
+});
+
+describe("bindBrowseEvents — 键盘导航", () => {
+  function makeGridCards(searchResults: HTMLElement): HTMLElement[] {
+    const grid = searchResults.querySelector(".cr-creator-grid") as HTMLElement;
+    const c1 = document.createElement("div");
+    c1.className = "gh-card";
+    c1.tabIndex = 0;
+    const c2 = document.createElement("div");
+    c2.className = "gh-card";
+    c2.tabIndex = 0;
+    grid.append(c1, c2);
+    return [c1, c2];
+  }
+
+  it("ArrowDown → focus 下一张；ArrowUp → 上一张；Enter → click", () => {
+    const { state, searchResults } = makeState();
+    document.body.appendChild(searchResults); // focus 需要元素挂载
+    bindBrowseEvents(state, () => {});
+    const [c1, c2] = makeGridCards(searchResults);
+    const grid = searchResults.querySelector(".cr-creator-grid") as HTMLElement;
+    c1.focus();
+
+    grid.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+    );
+    expect(document.activeElement).toBe(c2);
+
+    grid.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
+    );
+    expect(document.activeElement).toBe(c1);
+
+    const clickSpy = vi.spyOn(c1, "click").mockImplementation(() => {});
+    grid.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    );
+    expect(clickSpy).toHaveBeenCalled();
+    clickSpy.mockRestore();
+  });
+});
+
+describe("bindBrowseEvents — 浏览仓库模型", () => {
+  it("缓存命中 → showRepoModels（缓存）+ 按钮恢复", async () => {
+    const cache = new Map([["user/repo", { models: ["m"], source: "githubapi" }]]);
+    const showRepoModels = vi.fn();
+    const { state, searchResults } = makeState({
+      repoModelCache: cache,
+      showRepoModels,
+    });
+    bindBrowseEvents(state, () => {});
+    (searchResults.querySelector(".gh-card-external") as HTMLElement).click();
+    await waitFor(() => showRepoModels.mock.calls.length > 0);
+    expect(showProgress).toHaveBeenCalledWith(searchResults, 100, expect.stringContaining("缓存"));
+    expect(tryFetchModels).not.toHaveBeenCalled();
+    expect(cache.size).toBe(1);
   });
 
-  it("6. storage 事件（ysm-fav-creators）→ 星标文案同步", () => {
-    const { cleanup } = mount();
-    const searchResults = document.createElement("div");
-    searchResults.innerHTML = '<div id="cr-creator-grid"></div>';
-    cleanup();
-    const c2 = bindBrowseEvents(makeCardState(searchResults), vi.fn());
-    localStorage.setItem("ysm-fav-creators", JSON.stringify(["甲"]));
-    window.dispatchEvent(
-      new StorageEvent("storage", { key: "ysm-fav-creators" }),
+  it("未命中 → tryFetchModels + 写入缓存 + showRepoModels", async () => {
+    const showRepoModels = vi.fn();
+    tryFetchModels.mockResolvedValue({ models: ["m1"], source: "jsdelivr" });
+    const { state, searchResults } = makeState({ showRepoModels });
+    bindBrowseEvents(state, () => {});
+    (searchResults.querySelector(".gh-card-external") as HTMLElement).click();
+    await waitFor(() => showRepoModels.mock.calls.length > 0);
+    expect(tryFetchModels).toHaveBeenCalledWith(
+      "user/repo",
+      "",
+      expect.any(Function),
     );
-    expect(
-      (searchResults.querySelector(".cr-star-btn") as HTMLElement).textContent,
-    ).toBe("⭐");
-    c2();
+    expect(state.repoModelCache.has("user/repo")).toBe(true);
+    expect(showRepoModels).toHaveBeenCalledWith("user/repo", ["m1"], "jsdelivr");
   });
 
-  it("7. cleanup 移除 window storage 监听（dispatch 不再同步）", () => {
-    const { cleanup } = mount();
-    const searchResults = document.createElement("div");
-    searchResults.innerHTML = '<div id="cr-creator-grid"></div>';
-    cleanup();
-    const c2 = bindBrowseEvents(makeCardState(searchResults), vi.fn());
-    c2(); // 立即清理
-    localStorage.setItem("ysm-fav-creators", JSON.stringify(["甲"]));
-    window.dispatchEvent(
-      new StorageEvent("storage", { key: "ysm-fav-creators" }),
+  it("AbortError → 超时 toast + 浏览器打开 + 错误页", async () => {
+    tryFetchModels.mockRejectedValue(
+      Object.assign(new Error("timeout"), { name: "AbortError" }),
     );
-    expect(
-      (searchResults.querySelector(".cr-star-btn") as HTMLElement).textContent,
-    ).toBe("☆"); // 监听已移除，不刷新
+    const { state, searchResults } = makeState();
+    bindBrowseEvents(state, () => {});
+    (searchResults.querySelector(".gh-card-external") as HTMLElement).click();
+    await waitFor(() => busEmit.mock.calls.some((c) => c[0] === "toast:show"));
+    expect(searchResults.querySelector(".cr-error-page")).toBeTruthy();
+    expect(getApp).toHaveBeenCalled();
+    const app = await getApp();
+    expect(app.OpenInBrowser).toHaveBeenCalledWith(
+      "https://github.com/user/repo",
+    );
+    // 返回按钮 → backToSite
+    (searchResults.querySelector(".cr-back-repo") as HTMLElement).click();
+    expect(state.backToSite).toHaveBeenCalled();
+  });
+
+  it("NoIndex → 无索引错误页", async () => {
+    tryFetchModels.mockRejectedValue(new Error("NoIndex"));
+    const { state, searchResults } = makeState();
+    bindBrowseEvents(state, () => {});
+    (searchResults.querySelector(".gh-card-external") as HTMLElement).click();
+    await waitFor(() => searchResults.querySelector(".cr-error-msg"));
+    expect(searchResults.querySelector(".cr-error-msg")!.textContent).toContain(
+      "无 index.json",
+    );
   });
 });

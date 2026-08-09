@@ -36,12 +36,11 @@ func TestRuntimeBuffer_RingOverflow(t *testing.T) {
 	if len(all) != 3 {
 		t.Fatalf("超容量应保留 3 条，实际 %d", len(all))
 	}
-	// 丢弃最旧：应保留后 3 条
-	for i, lg := range all {
+	// 丢弃最旧：应保留后 3 条（P3 清理：去掉未使用的循环索引）
+	for _, lg := range all {
 		if lg.Message != "msg" {
 			t.Fatalf("消息被篡改: %q", lg.Message)
 		}
-		_ = i
 	}
 }
 

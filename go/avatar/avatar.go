@@ -64,6 +64,12 @@ func SafeName(name string) string {
 // P2 修复（code_review）：接受裸文件名（"alice.png" → avatar/alice.png 归一化），
 // 兼容 ysm.json 中不带 avatar/ 前缀的旧式声明——安全目标（拒绝 .. 逃逸）不牺牲兼容。
 func isSafeAvatarPath(ap string) bool {
+	// P3 修复（code_review）：先把反斜杠归一化为正斜杠再校验——原新增守卫
+	// `strings.Contains(ap, "\\") → return false` 会把 Windows 上合法的 `avatar\alice.png`
+	// 分隔写法也拒绝（filepath.Join 在 Windows 上解析到 avatar/ 内，改动前正常工作）；
+	// 归一化后合法反斜杠路径放行，逃逸形态 `avatar\..\x` 折叠为 `avatar/../x` 被既有
+	// `..` 段检查拒绝（顺带封住 Windows 反斜杠逃逸）
+	ap = strings.ReplaceAll(ap, "\\", "/")
 	clean := path.Clean(strings.ToLower(strings.TrimSpace(ap)))
 	if clean == "avatar" {
 		return true
@@ -74,7 +80,7 @@ func isSafeAvatarPath(ap string) bool {
 		// 非 avatar/ 前缀路径归一化，`avatar/../x` 先被 path.Clean 折叠为 `x`
 		// 再归一化为 `avatar/x` 放行，而调用方 filepath.Join(dir, 原始路径)
 		// 实际读到 avatar/ 之外、模型目录内的任意文件（违反「严格 avatar/ 前缀」）
-		if strings.Contains(ap, "/") || strings.Contains(ap, "\\") {
+		if strings.Contains(ap, "/") {
 			return false
 		}
 		clean = path.Clean("avatar/" + clean)

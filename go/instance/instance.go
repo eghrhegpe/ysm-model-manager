@@ -138,16 +138,12 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []ResourceTypeInfo, repoR
 					return nil
 				}
 				if info.IsDir() {
-					// 资源包文件夹（含 pack.mcmeta）
-					if path != instDir && isResourcePackFolder(path) {
-						low := strings.ToLower(info.Name())
-						if !seenNames[low] {
-							items = append(items, types.ResourceSyncItem{
-								Path: path, Name: info.Name(),
-								Status: types.SyncStatusOptional, Type: rt.ID, Icon: rt.Icon, Size: 0,
-							})
-						}
-					}
+					// P2 修复（code_review）：文件夹分支已删除——SyncResources 已把实例目录中
+					// 所有含 pack.mcmeta 的文件夹放入 result.Synced/Missing/Extra（sync.go
+					// 按 isDir 判定），主循环（含 !isResourcePackFolder 放行）是文件夹唯一来源；
+					// 原兜底 Walk 文件夹分支会重复添加（seenNames 只记录 extMatch 通过的
+					// 文件，文件夹名不记录 → 同一 pack.mcmeta 文件夹被主循环 + 兜底各加一次，
+					// UI 显示同包双状态 Synced+Optional）
 					return nil
 				}
 				low := strings.ToLower(info.Name())

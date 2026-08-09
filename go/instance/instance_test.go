@@ -88,3 +88,41 @@ func TestIsResourcePackFolder_NonExistent(t *testing.T) {
 		t.Error("不存在的目录不应识别")
 	}
 }
+
+// P2 修复（code_review）：synced pack.mcmeta 文件夹必须恰好出现一条——
+// 主循环（含 isResourcePackFolder 放行）是文件夹唯一来源；兜底 Walk 的文件夹分支
+// 已删除，防止同一文件夹被加两次（UI 显示同包双状态 Synced+Optional）
+func TestBuildSyncItems_SyncedPackFolderExactlyOnce(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	instDir := filepath.Join(base, "inst")
+	if err := os.MkdirAll(globalDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// 实例侧与全局侧都有同一资源包文件夹（含 pack.mcmeta）→ SyncResources 判 Synced
+	instPack := filepath.Join(instDir, "PackA")
+	globalPack := filepath.Join(globalDir, "PackA")
+	if err := os.MkdirAll(instPack, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(globalPack, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(instPack, "pack.mcmeta"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(globalPack, "pack.mcmeta"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	ins := &types.VersionInstance{VersionDir: base}
+	items := BuildSyncItems(ins, []ResourceTypeInfo{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir})
+	count := 0
+	for _, it := range items {
+		if it.Name == "PackA" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("synced 资源包文件夹应恰好 1 条，实际 %d（%d 总数）", count, len(items))
+	}
+}

@@ -134,7 +134,13 @@ function setsEqual(a, b) {
 // ---------- 主流程 ----------
 
 function main() {
-  const { check: checkMode } = parseArgs(process.argv.slice(2), { bools: ['check'] });
+  const parsed = parseArgs(process.argv.slice(2), { bools: ['check'] });
+  // ADR-043 陷阱 #12：未知 flag 显式拒绝（--checkk 拼错不得静默当写模式执行）
+  if (parsed.unknown.length) {
+    console.error(`❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --check）`);
+    process.exit(1);
+  }
+  const { check: checkMode } = parsed;
   if (!fs.existsSync(KNOWLEDGE_DIR)) {
     console.log('知识卡目录不存在：' + KNOWLEDGE_DIR);
     process.exit(0);

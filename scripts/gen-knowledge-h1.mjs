@@ -40,7 +40,13 @@ function parseCard(text) {
 }
 
 function main() {
-  const { check: isCheck } = parseArgs(process.argv.slice(2), { bools: ['check'] });
+  const parsed = parseArgs(process.argv.slice(2), { bools: ['check'] });
+  // ADR-043 陷阱 #12：未知 flag 显式拒绝（--checkk 拼错不得静默当写模式执行）
+  if (parsed.unknown.length) {
+    console.error(`❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --check）`);
+    process.exit(1);
+  }
+  const { check: isCheck } = parsed;
 
   if (!fs.existsSync(KNOW_DIR)) {
     console.error('❌ docs/knowledge/ 不存在，请确认在仓库根目录运行');

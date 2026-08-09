@@ -40,9 +40,10 @@ export const DEFAULT_MAX_BUFFER = 64 * 1024 * 1024;
  */
 export function run(bin, args, { cwd = process.cwd(), timeout = DEFAULT_TIMEOUT, shell = false, allowExit1 = false, maxBuffer = DEFAULT_MAX_BUFFER, env } = {}) {
   const o = { cwd, encoding: 'utf-8', timeout, maxBuffer };
-  // Windows 下仅显式要求 shell 时才经 cmd.exe（npx/tsc shim）；其余保持无 shell，
-  // 避免 cmd.exe 解析 `2>/dev/null` 之类 POSIX 重定向出错（pre-push-gate 实证）
-  if (process.platform === 'win32' && shell) o.shell = true;
+  // 显式 shell:true 时按平台选 shell（win32 自动 cmd.exe / POSIX 自动 /bin/sh），
+  // 承载管道/重定向命令（pre-push-gate sh()）；默认无 shell，避免 cmd.exe 找不到
+  // Git Bash 工具（doctor run() 实证）与 `2>/dev/null` 类 POSIX 重定向被 cmd.exe 误解析
+  if (shell) o.shell = true;
   if (env) o.env = { ...process.env, ...env };
   try {
     const stdout = execFileSync(bin, args, o);

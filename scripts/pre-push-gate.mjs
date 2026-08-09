@@ -23,6 +23,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, toPosix } from './_lib/scan-files.mjs';
+import { run as procRun } from './_lib/proc.mjs';
 
 
 const B = { OK: '[OK]', FAIL: '[FAIL]', FIX: '[FIX]', SKIP: '[SKIP]' };
@@ -33,17 +34,11 @@ const PULL_HINT = '提示: git 报 rejected/non-fast-forward 时先 git pull 整
 /* ---------------- 工具 ---------------- */
 
 function sh(cmd, { cwd = ROOT, timeout = TIMEOUT } = {}) {
-  /** shell 执行命令（win32 兼容 .cmd），返回 { rc, out }。 */
-  try {
-    const stdout = execFileSync(cmd, [], {
-      cwd, timeout, encoding: 'utf-8', shell: true, stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    return { rc: 0, out: stdout };
-  } catch (e) {
-    const out = (e.stdout || '') + (e.stderr || '');
-    if (e.code === 'ENOENT') return { rc: -1, out: `command not found: ${cmd}` };
-    return { rc: e.status ?? -1, out };
-  }
+  /** shell 执行命令（win32 兼容 .cmd），返回 { rc, out }。
+   * 统一委托 _lib/proc.mjs（超时/错误分类契约；shell:true 时 win32 走 cmd.exe、
+   * POSIX 走 /bin/sh，承载管道/重定向命令）。 */
+  const r = procRun(cmd, [], { cwd, timeout, shell: true });
+  return { rc: r.rc, out: r.out };
 }
 
 /**

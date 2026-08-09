@@ -12,10 +12,10 @@
  *   node scripts/doctor.mjs --strict # 启用 strict
  * 退出码：任何非零检查([FAIL])均置 process.exitCode=1 阻断；仅 WARN/skip 不阻断
  */
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
+import { run as procRun } from './_lib/proc.mjs';
 
 const PASS = '[OK]';
 const FAIL = '[FAIL]';
@@ -23,20 +23,14 @@ const WARN = '[WARN]';
 
 function run(cmd, cwd = ROOT, opts = {}) {
   /**
-   * 运行命令，返回 {rc, out}。
+   * 运行命令，返回 {rc, out}。统一委托 _lib/proc.mjs（超时/错误分类/cwd 契约，
+   * 共享收敛；原内联实现已并入共享层）。
    * Windows：npx/tsc 是无扩展名 shim，原生 execFileSync 无法 CreateProcess（ENOENT），
    * 需 opts.shell=true 经 cmd.exe 执行（与 check-deadcode-baseline 一致）；
    * grep/go/which 是原生可执行文件，保持默认（无 shell），避免 cmd.exe 找不到 Git Bash 工具。
    */
-  const o = { cwd, encoding: 'utf-8', timeout: 120000 };
-  if (process.platform === 'win32' && opts.shell) o.shell = true;
-  try {
-    const stdout = execFileSync(cmd[0], cmd.slice(1), o);
-    return { rc: 0, out: stdout };
-  } catch (e) {
-    if (e.code === 'ENOENT') return { rc: -1, out: 'command not found: ' + cmd[0] };
-    return { rc: e.status ?? -1, out: (e.stdout || '') + (e.stderr || '') };
-  }
+  const r = procRun(cmd[0], cmd.slice(1), { cwd, ...opts, timeout: opts.timeout ?? 120000 });
+  return { rc: r.rc, out: r.out };
 }
 
 /**

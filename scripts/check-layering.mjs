@@ -117,7 +117,13 @@ export function matchImports(text) {
 
 /* ---------- 主流程 ---------- */
 function main() {
-  const { json, update } = parseArgs(process.argv.slice(2), { bools: ['json', 'update'] });
+  const parsed = parseArgs(process.argv.slice(2), { bools: ['json', 'update'] });
+  // ADR-043 陷阱 #12：未知 flag 显式拒绝，不静默落入默认值（此前 --foo 类误用被忽略）
+  if (parsed.unknown.length) {
+    console.error(`❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --json / --update）`);
+    process.exit(1);
+  }
+  const { json, update } = parsed;
   // ADR-043 fail-closed：SRC_ROOT 缺失 = 扫描不完整，必须显式失败而非空结果假绿
   if (!existsSync(SRC_ROOT)) {
     console.error(`❌ frontend/src 目录不存在（${SRC_ROOT}），扫描不完整，拒绝放行`);

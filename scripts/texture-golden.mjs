@@ -178,6 +178,11 @@ async function main() {
     strings: ['dir', 'limit'],
     defaults: { dir: path.join(ROOT, 'upstream') },
   });
+  // ADR-043 陷阱 #12：未知 flag 显式拒绝（--jsno 拼错不得静默忽略）
+  if (parsed.unknown.length) {
+    console.error(`[texture-golden] ❌ 未知参数: ${parsed.unknown.join(', ')}（支持 --json / --dir <目录> / --limit N）`);
+    return 1;
+  }
   const opts = {
     json: parsed.json,
     dir: parsed.dir,

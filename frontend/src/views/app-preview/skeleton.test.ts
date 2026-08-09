@@ -42,6 +42,10 @@ const {
 }));
 
 vi.mock("./utils.ts", () => ({ getPrefer3D, setPrefer3D }));
+// t 返回 key（skeleton 用 t("preview.*")，语言包无该命名空间时真实 t 也返回 key）
+vi.mock("../../core/i18n/t.ts", () => ({
+  t: (key: string) => key,
+}));
 vi.mock("./loader.ts", () => ({ loadModelData }));
 vi.mock("../../utils/3d/model2d.ts", () => ({ renderModel2D }));
 vi.mock("./zoom.ts", () => ({ openFullPreview }));
@@ -95,9 +99,11 @@ function makeCtx() {
   (root as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
     (id: string) => root.querySelector(`#${id}`);
   const ctx = {
-    _root: root,
+    _root: root as unknown as ShadowRoot,
     _appendDebug: vi.fn(),
-    _decodeYsmViaWasm: vi.fn(() => null),
+    _decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)),
+    decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)),
+    _loadPreviewImage: vi.fn(() => Promise.resolve(null)),
     _unsubs: [] as Array<() => void>,
   };
   return ctx;
@@ -122,6 +128,7 @@ function make3DHandle() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  renderModel2D.mockReset(); // 清 mockImplementation 防跨测试泄漏
   localStorage.clear();
   document.body.innerHTML = "";
   getPrefer3D.mockReturnValue(false);
@@ -159,7 +166,7 @@ describe("loadModel2D — 防御路径", () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
     await loadModel2D(ctx, "/m/a.ysm", container);
-    expect(container.textContent).toContain("未找到几何数据");
+    expect(container.textContent).toContain("noGeometry");
   });
 });
 
@@ -199,7 +206,7 @@ describe("loadModel2D — 2D 成功路径", () => {
     const container = document.createElement("div");
     await loadModel2D(ctx, "/m/a.ysm", container);
     const eyeBtn = container.querySelector("button") as HTMLButtonElement;
-    expect(eyeBtn.textContent).toContain("骨骼名");
+    expect(eyeBtn.textContent).toContain("preview.boneLabels");
 
     eyeBtn.click();
     expect(localStorage.getItem("ysm_showBoneLabels")).toBe("false");
@@ -216,9 +223,7 @@ describe("loadModel2D — 2D 成功路径", () => {
       const ctx = makeCtx();
       const container = document.createElement("div");
       await loadModel2D(ctx, "/m/a.ysm", container);
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining("[preview] 2D 渲染跳过"),
-      );
+      expect(warn.mock.calls[0]?.[0]).toContain("[preview] 2D 渲染跳过");
     } finally {
       warn.mockRestore();
     }
@@ -285,7 +290,7 @@ describe("loadModel2D — 交互", () => {
     document.body.appendChild(container);
     await loadModel2D(ctx, "/m/a.ysm", container);
     const boneBtn = [...container.querySelectorAll("button")].find(
-      (b) => b.textContent === "📋 导出骨骼名",
+      (b) => b.textContent === "📋 preview.exportBones",
     )!;
     boneBtn.click();
     expect(buildBoneNamesText).toHaveBeenCalledWith(
@@ -325,8 +330,8 @@ describe("loadModel2D — 3D 切换", () => {
     expect(renderModel3D).toHaveBeenCalledTimes(1);
     expect(handle.cleanup).not.toHaveBeenCalled();
     const panel = document.getElementById("ysm-3d-panel") as HTMLElement;
-    expect(panel.textContent).toContain("骨骼 1 根");
-    expect(panel.textContent).toContain("立方体 2 个");
+    expect(panel.textContent).toContain("1 根");
+    expect(panel.textContent).toContain("2 个");
     expect(panel.textContent).toContain("64×32");
 
     // close3D 已在 _unsubs（组件销毁自动清理），执行后 renderer 释放 + overlay 移除
@@ -347,7 +352,7 @@ describe("loadModel2D — 3D 切换", () => {
     expect(busEmit).toHaveBeenCalledWith(
       "toast:show",
       expect.objectContaining({
-        msg: expect.stringContaining("3D 预览加载失败"),
+        msg: expect.stringContaining("wasm 崩了"),
         type: "error",
       }),
     );

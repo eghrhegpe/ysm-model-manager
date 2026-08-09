@@ -14,7 +14,6 @@ source_files:
   - internal/app/app_scan.go
   - internal/app/app_tags.go
   - internal/app/app_workshop.go
-  - internal/app/proxy.go
   - internal/app/resource_bindings.go
   - internal/app/wasm_embed.go
 use_when:
@@ -55,14 +54,13 @@ use_when:
 | `app_avatar.go` | 创作者头像缓存与批量提取 |
 | `app_workshop.go` | 创作者工坊：站点/创作者/搜索预设的读写与 JSON/CSV 导入导出 |
 | `resource_bindings.go` | 资源类型注册表读取、资源包/光影/蓝图（nbt/schematic/litematic）解析、查重、资源根目录设置 |
-| `proxy.go` | 本地反代服务器（127.0.0.1）启停与状态 |
 | `wasm_embed.go` | 向内嵌 WebView2 提供 YSMParser.wasm 字节 |
 
 支撑文件（不定义 Binding）：`assets.go`（持有 main 注入的 embed 资产）、`bundled_data.go`（按 exe 同级→上级→嵌入基线读取随附数据）、`wasm_decoder.go`（WASM 解码胶水）、`cli.go`（`cli` 构建标签下的命令行子命令）。
 
 ## 对外 API（全量，按领域分组）
 
-### 窗口与系统（app.go / app_config.go / app_scan.go / proxy.go / wasm_embed.go）
+### 窗口与系统（app.go / app_config.go / app_scan.go / wasm_embed.go）
 
 - `SetApp(app) → void` — 注入 Wails 应用实例（启动框架接线，前端业务勿调）
 - `SetMainWindow(w) → void` — 注入主窗口实例，避免依赖 Window.Current()（启动框架接线，前端业务勿调）
@@ -77,9 +75,6 @@ use_when:
 - `SaveWindowPosition(x, y, width, height) → void` — 持久化窗口位置与尺寸
 - `GetWindowPosition() → types.WindowState` — 读取已持久化的窗口位置与尺寸
 - `GetWasmBinary() → string` — 返回内嵌 YSMParser.wasm 字节（供前端 WebView2 使用）
-- `StartProxy(port) → void` — 启动本地反代服务器（仅 127.0.0.1 可访问）
-- `StopProxy() → void` — 关闭反代服务器
-- `IsProxyRunning() → boolean` — 检查反代是否运行中
 
 ### 配置与环境（app_config.go）
 
@@ -280,7 +275,7 @@ use_when:
 - 所有异常路径必须有 toast 反馈；异步按钮操作在 `finally` 中恢复状态（致命陷阱 #3）。
 - **路径守卫模式**（审计发现）：所有 Wails Binding 暴露的文件操作方法（`ReadFileBytes`、`SaveScreenshotFile`、`DeleteModelDir`、`ListFileNames`、`ListAllFilePaths`、`CheckFileExists`、`CreateDir`、`RenameDir`、`RemoveDir`、`MoveModelFile`、**`RenameFile`、`ClearCustomDir`、`ToggleResourcePack`**）在操作前统一加 `paths.IsInside(a.ysmRoot(), path)` 守卫（壳层经 `isPathInRoot`），限制操作范围在 `FilesRoot` 内。原因：Wails Binding 是前端可直接调用的 API，无路径校验会导致任意文件读写（P1 安全漏洞）。`ToggleResourcePack` 为 P2 修复补加（原 `os.Rename` 对任意路径可重命名）；**`DeleteModelDir` 额外拒绝 `rel == "."`**（P1 修复：原仅查 `".."` 前缀，传入仓库根路径时 `os.RemoveAll` 可整删整个 ysm 仓库）。**2026-08-09 P1 复核修复：`isPathInRoot` 本体也拒绝 `rel == "."` 与 `rel == ".."`，并改用精确段比较（`".."+sep` 前缀）替代裸 `HasPrefix(rel,"..")`**——否则 `RemoveDir(ysmRoot)`/`RenameDir(ysmRoot)` 仍可整删/整改名仓库，且 `..foo` 合法目录被误拒。新增文件操作 Binding 时必须遵循此模式。
 - **读取类 Binding 豁免决策**（2026-08-09 威胁模型评估，技术债 #5）：解析类方法（`ReadPackMeta`/`ExtractYsmSummary`/`ExtractYSMHeader`/`AnalyzeYSMModel`/`AnalyzeBedrockModel`/`GetModel3DSpec`/`ExportModelStructureJSON`/`FindPreviewImage`/`ExtractPreviewTexture`/`GetPackInfo`/`ReadSchematic`/`ReadNbtStructure`/`ReadLitematicMeta`/`GetNbtVoxelData`/`GetSchematicVoxelData`/`GetLitematicVoxelData`）**豁免完整 `IsInside` 守卫**——预览链路临时文件（`SavePreviewTempFile` → os.TempDir）在仓库外，加守卫会破坏预览（与 go-ysm-parser 卡既有结论一致）；风险面为信息泄露非数据破坏，且各解析器对文件格式有解析校验。**`ReadFileBytes`（裸读原始字节，最危险入口）不豁免**——已改用 `isPathInRoot` 统一口径（2026-08-09 技术债 #5：原内联 Rel 裸 `HasPrefix(rel,"..")` 对 `rel=="."` 放行）
-- **URL 校验模式**（审计发现）：`EnqueueDownloads` 入队前校验 URL scheme，**仅放行 `https://`**（知识卡旧文「http:// 与 https://」为漂移，实测代码仅 https——更严但 http 镜像源会被拒）；`DownloadFromGitHub` 无 scheme 校验直通（P3 观察，前端未使用）；proxy 层另有 loopback/private IP 过滤但字面量匹配可被尾点/数字 IP 绕过（P3 观察）
+- **URL 校验模式**（审计发现）：`EnqueueDownloads` 入队前校验 URL scheme，**仅放行 `https://`**（知识卡旧文「http:// 与 https://」为漂移，实测代码仅 https——更严但 http 镜像源会被拒）；`DownloadFromGitHub` 无 scheme 校验直通（P3 观察，前端未使用）
 
 ## 相关
 

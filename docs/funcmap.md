@@ -757,7 +757,7 @@
 | `BedrockModel()` | `frontend/src/utils/3d/model2d:24` | BedrockModel（AnalyzeBedrockModel 返回） |
 | `Model2DOptions()` | `frontend/src/utils/3d/model2d:29` | renderModel2D 选项 |
 | `renderModel2D()` | `frontend/src/utils/3d/model2d:59` | 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转） |
-| `calcBoneHitZones()` | `frontend/src/utils/3d/model2d:250` | 计算骨骼在屏幕上的命中热区（2D 正交投影，供鼠标拾取；导出供测试） |
+| `calcBoneHitZones()` | `frontend/src/utils/3d/model2d:252` | 计算骨骼在屏幕上的命中热区（2D 正交投影，供鼠标拾取；导出供测试） |
 | `SpecCube()` | `frontend/src/utils/3d/model3d-spec:10` | 立方体（骨骼上的 box 元素） |
 | `SpecBone()` | `frontend/src/utils/3d/model3d-spec:22` | 骨骼 |
 | `SpecModelInput()` | `frontend/src/utils/3d/model3d-spec:30` | 模型输入（buildSpecFromModel 参数） |
@@ -776,7 +776,7 @@
 | `loadTdCamSpeed()` | `frontend/src/utils/3d/model3d:105` | 相机移动速度（2–200），默认 20 |
 | `loadTdRotMode()` | `frontend/src/utils/3d/model3d:111` | true = 环绕（orbit），false = 自身（free） |
 | `renderModel3D()` | `frontend/src/utils/3d/model3d:138` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/src/utils/3d/model3d:864` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `screenshotPreview()` | `frontend/src/utils/3d/model3d:872` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
 | `animateNumber()` | `frontend/src/utils/animation/animate:12` | 里程表滚动进位动画 |
 | `Vec3()` | `frontend/src/utils/animation/animation:9` | 三维向量 [x, y, z] |
 | `Keyframe()` | `frontend/src/utils/animation/animation:12` | 关键帧 |

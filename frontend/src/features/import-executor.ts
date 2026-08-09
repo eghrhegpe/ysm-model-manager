@@ -120,11 +120,22 @@ export const importFolder = async (
       const rel = c.relPath.startsWith(dir + "/")
         ? c.relPath.slice(dir.length + 1)
         : c.relPath;
-      const b64 = await fileToBase64(c.file);
+      // P3 修复：per-file 读取失败跳过该文件，不拖垮整组——
+      // 原实现 fileToBase64 reject 会冒泡到外层 catch，文件夹里 1 个坏文件 → 整组导入失败
+      let b64 = "";
+      try {
+        b64 = await fileToBase64(c.file);
+      } catch (e) {
+        console.warn("[import] 跳过读取失败文件:", rel, e);
+        continue;
+      }
       if (!b64) continue;
       items.push({ RelPath: rel, Base64: b64 });
     }
-    if (!items.length) return;
+    if (!items.length) {
+      toast("❌ 文件夹内没有可读取的文件", "error", 4000);
+      return;
+    }
     const { ImportModelFolder } = await getApp();
     await ImportModelFolder(folderName, subpath, items);
     ImportHistory.push({

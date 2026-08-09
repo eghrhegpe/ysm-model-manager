@@ -669,7 +669,7 @@
 | `ImportHistory()` | `frontend/src/features/import-executor:32` | — |
 | `directImport()` | `frontend/src/features/import-executor:76` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
 | `importFolder()` | `frontend/src/features/import-executor:107` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） |
-| `executeCollected()` | `frontend/src/features/import-executor:154` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
+| `executeCollected()` | `frontend/src/features/import-executor:165` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
 | `normalizeRepoName()` | `frontend/src/features/import-queue:26` | 仓库文件名归一化为「纯名」键（⚠️ 重名预警的 repoFiles Set 与查询共用契约）： 先剥 `.ban` 再剥扩展名（顺序不可反）——`foo.ysm` 与 `foo.y |
 | `ImportQueueHost()` | `frontend/src/features/import-queue:34` | app-content 组件实例（initImportQueue 依赖的成员） |
 | `initImportQueue()` | `frontend/src/features/import-queue:40` | 初始化导入队列，返回清理函数 |

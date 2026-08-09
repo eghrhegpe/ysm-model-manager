@@ -210,12 +210,23 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
       e.stopPropagation();
       const path = haCopy.dataset.path;
       const name = path?.split(/[/\\]/).pop() || "";
-      navigator.clipboard?.writeText(name).catch(() => {});
-      bus.emit("toast:show", {
-        msg: "📋 已复制: " + name,
-        duration: 1500,
-        type: "info",
-      });
+      // P3 修复：与 skeleton 复制按钮同源——剪贴板写入失败不假成功
+      navigator.clipboard
+        ?.writeText(name)
+        .then(() => {
+          bus.emit("toast:show", {
+            msg: "📋 已复制: " + name,
+            duration: 1500,
+            type: "info",
+          });
+        })
+        .catch(() => {
+          bus.emit("toast:show", {
+            msg: "❌ 复制失败",
+            duration: 2000,
+            type: "error",
+          });
+        });
       return;
     }
 

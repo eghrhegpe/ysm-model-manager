@@ -96,7 +96,8 @@ func AnalyzeYSMModel(path string) YSMModelMeta {
 		meta.ErrorMsg = fmt.Sprintf("读取 model.json 失败: %v", err)
 		return meta
 	}
-	defer rc.Close()
+	// 注：rc 由 fsutil.ReadLimitedEntry 内部 Close（其契约「rc 由本函数 Close」）——
+	// 原 defer rc.Close() 已删除，避免双关（code_review P3）
 
 	// P2 修复 + ADR-044 策略 A：原 `io.ReadAll(io.LimitReader(rc, 5<<20))` 无 +1 探测——
 	// LimitReader 截断后 err==nil 静默，恰 5MB 的 model.json 会被截断继续解析（ADR-033 陷阱）。

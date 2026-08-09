@@ -135,6 +135,9 @@ export async function showRenameDialog(
 
     /** 从当前文件名推导扩展名（无扩展名用默认资源类型） */
     const isBanned = /\.ban$/i.test(currentName);
+    // P4 修复（审核发现）：保留 banned 尾缀的原始大小写（.BAN 不归一为 .ban）——
+    // 预览与提交共用，Windows 大小写不敏感但 Linux os.Rename 敏感，保留原样最稳
+    const banTail = isBanned ? (currentName.match(/\.ban$/i)?.[0] ?? ".ban") : "";
     // P2 修复：先剥 .ban 尾缀再取扩展名——banned 文件 foo.ysm.ban 应得 "ysm" 而非 "ban"；
     // 空扩展名（如 "foo."）回退默认资源类型
     const getExt = (): string => {
@@ -147,7 +150,7 @@ export async function showRenameDialog(
 
     const update = (): void => {
       (box.querySelector("#rn-preview") as HTMLElement).textContent =
-        buildRenameName(readFields(), getExt()) + (isBanned ? ".ban" : "");
+        buildRenameName(readFields(), getExt()) + banTail;
     };
 
     ["rn-author", "rn-work", "rn-chara", "rn-variant", "rn-date"].forEach(
@@ -181,7 +184,7 @@ export async function showRenameDialog(
         return;
       }
       // P2 修复：banned 文件保留 .ban 尾缀（Go RenameFile 直接 os.Rename，不会自动补）
-      close(buildRenameName(f, ext) + (isBanned ? ".ban" : ""));
+      close(buildRenameName(f, ext) + banTail);
     };
   });
 }

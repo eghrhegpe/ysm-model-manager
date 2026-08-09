@@ -97,6 +97,9 @@ export class AppResourceManager extends HTMLElement {
   private _packsCache: PackEntry[] = []; // 完整列表缓存（供搜索过滤）
   private _initGen = 0; // generation 守卫：rtype/instance 连变时作废在途 _init 的回写
   private _detailGen = 0; // generation 守卫：快速点列表项时作废在途 _showDetail 的回写
+  // P3 修复（审核发现）：操作互斥守卫——import/openFolder/toggle 双击并发触发两次
+  // 文件对话框/复制/改名（同名文件 rename 竞争，二次调用可能 FileNotFound→toast）
+  private _opBusy = false;
 
   constructor() {
     super();
@@ -253,6 +256,9 @@ export class AppResourceManager extends HTMLElement {
       this.querySelector(".rm-import-btn")?.addEventListener(
         "click",
         async () => {
+          // P3 修复：双击并发守卫——连点两次会弹两次文件对话框/复制两遍
+          if (this._opBusy) return;
+          this._opBusy = true;
           try {
             const type = _findType(this._rtype);
             const exts = (type && type.extensions) || [".zip"];
@@ -278,6 +284,8 @@ export class AppResourceManager extends HTMLElement {
             );
           } catch (e) {
             this._toast("error", "导入失败", e instanceof Error ? e.message : String(e));
+          } finally {
+            this._opBusy = false;
           }
         },
       );
@@ -287,10 +295,15 @@ export class AppResourceManager extends HTMLElement {
       this.querySelector(".rm-open-btn")?.addEventListener(
         "click",
         async () => {
+          // P3 修复：双击并发守卫（与 import 对齐）
+          if (this._opBusy) return;
+          this._opBusy = true;
           try {
             await OpenFolder(this._rpRoot);
           } catch (e) {
             this._toast("error", "打开文件夹失败", e instanceof Error ? e.message : String(e));
+          } finally {
+            this._opBusy = false;
           }
         },
       );
@@ -305,8 +318,15 @@ export class AppResourceManager extends HTMLElement {
       try {
         // 切换
         if (this._actions.includes("toggle") && target && target.closest(".rm-toggle")) {
-          await ToggleResourcePack((item as HTMLElement).dataset.path || "");
-          await this._loadList();
+          // P3 修复：toggle 双击并发守卫——同名文件 rename 竞争，二次调用可能 FileNotFound
+          if (this._opBusy) return;
+          this._opBusy = true;
+          try {
+            await ToggleResourcePack((item as HTMLElement).dataset.path || "");
+            await this._loadList();
+          } finally {
+            this._opBusy = false;
+          }
           return;
         }
 

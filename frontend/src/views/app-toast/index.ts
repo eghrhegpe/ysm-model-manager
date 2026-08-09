@@ -106,12 +106,22 @@ class AppToast extends HTMLElement {
         t.style.pointerEvents = "none";
         try {
           undoCallback();
-          this.show("✅ 已撤销", null, 2000, "success");
+          // P3 修复（审核发现）：内部反馈统一走 bus——原 this.show 绕过 bus，
+          // error-diary 的 toast:show 监听收不到（用户可见错误漏出日记链）
+          bus.emit("toast:show", {
+            msg: "✅ 已撤销",
+            duration: 2000,
+            type: "success",
+          });
         } catch (e) {
           // P2 修复：undo 抛错不得跳过反馈——原 try/finally 无 catch，
           // 异常传播跳过「已撤销」确认且冒泡控制台无用户反馈
           console.error("[toast] 撤销回调失败:", e);
-          this.show("❌ 撤销失败", null, 3000, "error");
+          bus.emit("toast:show", {
+            msg: "❌ 撤销失败",
+            duration: 3000,
+            type: "error",
+          });
         } finally {
           this._remove(t);
         }

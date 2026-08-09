@@ -151,12 +151,17 @@ describe("summaryCardHTML header-only basename 作者/作品分行", () => {
 // P3 补测：安全红线与折叠不变量（原零测试）
 describe("summaryCardHTML 安全与折叠", () => {
   it("safeUrl 过滤 javascript:/data:/非 http 外链 → href=#", () => {
-    const header = {
+    // code_review：header 必须带 name + authorName 才能走到 authorBilibili 链接分支——
+    // 原 fixture 无 name（p 走 parseModelName else 分支）且无 authorName（链接不渲染），
+    // ftp 断言是死断言；现补 name+authorName 使三个 scheme 分支都真实执行
+    const header: Parameters<typeof summaryCardHTML>[1] = {
       isYsm: true,
+      name: "角色",
+      authorName: "作者",
       linkHome: "javascript:alert(1)",
       linkUpdate: "data:text/html,<b>x</b>",
       authorBilibili: "ftp://evil.example",
-    } as unknown as Parameters<typeof summaryCardHTML>[1];
+    };
     const html = summaryCardHTML(null, header, "角色.ysm");
     // href 属性无危险值（显示文本泄漏原始串属 P4 观感，非 XSS——href 已 safeUrl 过滤）
     expect(html).not.toContain('href="javascript:');
@@ -171,17 +176,15 @@ describe("summaryCardHTML 安全与折叠", () => {
 
   it("徽章超过 8 个折叠为 +N（第 9 个不单独出现）", () => {
     // 折叠是「单组内 items > 8」而非组数——构造 1 组 10 个 item
-    const animGroups = [
-      {
-        name: "group",
-        items: Array.from({ length: 10 }, (_, i) => "item" + i),
-      },
-    ];
-    const html = summaryCardHTML(
-      { animGroups } as unknown as Parameters<typeof summaryCardHTML>[0],
-      { isYsm: true, name: "角色" },
-      "角色.ysm",
-    );
+    const summary: Parameters<typeof summaryCardHTML>[0] = {
+      animGroups: [
+        {
+          name: "group",
+          items: Array.from({ length: 10 }, (_, i) => "item" + i),
+        },
+      ],
+    };
+    const html = summaryCardHTML(summary, { isYsm: true, name: "角色" }, "角色.ysm");
     expect(html).toContain("+2"); // 10 - 8
     expect(html).not.toContain("item8");
     expect(html).not.toContain("item9");

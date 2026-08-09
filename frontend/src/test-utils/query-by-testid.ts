@@ -46,13 +46,21 @@ export function queryAllByTestId(
   container: QueryContainer,
   testid: string,
 ): Element[] {
-  // P2 修复：前缀匹配限定「精确 testid 或 testid + '-' 序号后缀」——
+  // P2 修复：前缀匹配限定「精确 testid 或 testid + '-' + 纯数字序号」——
   // 裸 `^=` 会把兄弟角色也扫进来（tree-dir 匹配到 tree-dir-toggle，row-tpl.ts:43-44），
-  // 且空串会匹配全部 testid。复合选择器既支持 tree-file-1/2 编号实例，
-  // 又排除 tree-dir-toggle 这类「testid 是其前缀」的其他角色。
-  return Array.from(
+  // 且空串会匹配全部 testid。CSS `^=` 无法表达「- 后跟数字」，故查询后 JS 过滤：
+  // 仅保留 testid 精确匹配，或 `X-<数字>` 编号实例（tree-file-1/2 约定，Design.md §19.1）
+  const prefix = `${testid}-`;
+  const els = Array.from(
     scope(container).querySelectorAll(
       `[data-testid="${testid}"], [data-testid^="${testid}-"]`,
     ),
   );
+  return els.filter((el) => {
+    const id = el.getAttribute("data-testid") ?? "";
+    if (id === testid) return true;
+    if (!id.startsWith(prefix)) return false;
+    const suffix = id.slice(prefix.length);
+    return /^\d+$/.test(suffix); // 仅编号实例（tree-dir-toggle 后缀非数字 → 排除）
+  });
 }

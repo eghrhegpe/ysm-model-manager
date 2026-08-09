@@ -124,6 +124,9 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) e
 		LinkMode:         orDefault(linkMode, oldCfg.LinkMode),
 		Theme:            orDefault(theme, oldCfg.Theme),
 		Mirror:           oldCfg.Mirror,
+		// P2 修复：VoxelMaxBlocks 从 oldCfg 拷贝——原手工构造漏带该字段，
+		// 保存任何设置都会把用户体素上限重置为 0（默认 200000）
+		VoxelMaxBlocks: oldCfg.VoxelMaxBlocks,
 		// 保留窗口状态（SaveWindowPosition 写入的字段）
 		WinX:    oldCfg.WinX,
 		WinY:    oldCfg.WinY,

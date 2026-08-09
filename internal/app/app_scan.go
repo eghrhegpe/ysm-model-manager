@@ -283,7 +283,22 @@ func (a *App) isPathInRoot(path string) bool {
 	}
 	clean := filepath.Clean(path)
 	rel, err := filepath.Rel(root, clean)
-	return err == nil && !strings.HasPrefix(rel, "..")
+	if err != nil {
+		return false
+	}
+	// P1 修复：rel == "." 是根路径本身——RemoveDir/RenameDir 等经此守卫后
+	// os.RemoveAll/os.Rename 可整删/整改名 ysm 仓库（与 DeleteModelDir 的 rel=="."
+	// 拒绝模式对齐）；原 `!HasPrefix(rel, "..")` 对 "." 放行。
+	// 同时修 P3：裸 HasPrefix(rel, "..") 会把根内合法目录 ..foo 误判越权——
+	// 用精确段比较（对齐 go/paths 的 rel==".." || HasPrefix(rel, ".."+sep)）
+	if rel == "." || rel == ".." {
+		return false
+	}
+	sep := string(filepath.Separator)
+	if strings.HasPrefix(rel, ".."+sep) {
+		return false
+	}
+	return true
 }
 
 func (a *App) OpenFolder(dir string) error {

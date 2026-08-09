@@ -33,14 +33,14 @@
 | Go(internal)·应用入口 | 15 | 169 |
 | 前端·根 (app-modules/bus) | 2 | 14 |
 | 前端·核心 | 13 | 26 |
-| 前端·特性 | 13 | 61 |
+| 前端·特性 | 13 | 60 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 32 | 110 |
 | frontend/views | 54 | 152 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **182** | **825** |
+| **合计** | **182** | **824** |
 
 ## Go·头像
 
@@ -656,17 +656,16 @@
 | `RepoEventsContext()` | `frontend/src/features/community/events:14` | bindRepoEvents 上下文 |
 | `RepoEventsHandle()` | `frontend/src/features/community/events:26` | 绑定返回值 |
 | `bindRepoEvents()` | `frontend/src/features/community/events:39` | 绑定仓库模型页面的所有事件。 |
-| `WorkshopModel()` | `frontend/src/features/community/render:9` | 工坊模型条目（index.json 结构） |
-| `WorkshopSite()` | `frontend/src/features/community/render:17` | 工坊站点 |
-| `isModelMissing()` | `frontend/src/features/community/render:27` | 判断模型是否缺失（本地不存在） |
-| `countMissing()` | `frontend/src/features/community/render:43` | 计算缺失数量 |
-| `formatSize()` | `frontend/src/features/community/render:53` | 格式化文件大小（B/KB/MB，&lt;1KB 无单位省略走 ""） |
-| `filterModels()` | `frontend/src/features/community/render:64` | 过滤模型列表：关键词匹配（模型名）+ 「仅显示缺失」开关。 |
-| `renderModelList()` | `frontend/src/features/community/render:108` | 渲染模型列表（DocumentFragment） |
-| `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:198` | 站点分组展示顺序（renderCardsHTML 使用） |
-| `groupSites()` | `frontend/src/features/community/render:203` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
-| `renderCardsHTML()` | `frontend/src/features/community/render:220` | 生成左栏站点卡片 HTML |
-| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:268` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
+| `WorkshopModel()` | `frontend/src/features/community/render:10` | 工坊模型条目（index.json 结构） |
+| `WorkshopSite()` | `frontend/src/features/community/render:18` | 工坊站点 |
+| `isModelMissing()` | `frontend/src/features/community/render:28` | 判断模型是否缺失（本地不存在） |
+| `countMissing()` | `frontend/src/features/community/render:44` | 计算缺失数量 |
+| `filterModels()` | `frontend/src/features/community/render:55` | 过滤模型列表：关键词匹配（模型名）+ 「仅显示缺失」开关。 |
+| `renderModelList()` | `frontend/src/features/community/render:99` | 渲染模型列表（DocumentFragment） |
+| `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:189` | 站点分组展示顺序（renderCardsHTML 使用） |
+| `groupSites()` | `frontend/src/features/community/render:194` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
+| `renderCardsHTML()` | `frontend/src/features/community/render:211` | 生成左栏站点卡片 HTML |
+| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:259` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
 | `getExt()` | `frontend/src/features/dnd-shared:4` | — |
 | `isSupportedFile()` | `frontend/src/features/dnd-shared:8` | 扩展名是否在支持列表 |
 | `isImportableFile()` | `frontend/src/features/dnd-shared:14` | 是否可作为独立文件导入：.json 仅放行 ysm.json 入口清单 包内 geometry/animation/语言 json（main.json / *.animation. |
@@ -686,7 +685,7 @@
 | `normalizeRepoName()` | `frontend/src/features/import-queue:27` | 仓库文件名归一化为「纯名」键（⚠️ 重名预警的 repoFiles Set 与查询共用契约）： 先剥 `.ban` 再剥扩展名（顺序不可反）——`foo.ysm` 与 `foo.y |
 | `ImportQueueHost()` | `frontend/src/features/import-queue:35` | app-content 组件实例（initImportQueue 依赖的成员） |
 | `initImportQueue()` | `frontend/src/features/import-queue:41` | 初始化导入队列，返回清理函数 |
-| `loadOldestModel()` | `frontend/src/features/oldest-models:25` | 加载资历最深、仓库评分、热力图和每日推荐 |
+| `loadOldestModel()` | `frontend/src/features/oldest-models:26` | 加载资历最深、仓库评分、热力图和每日推荐 |
 | `RecycleHost()` | `frontend/src/features/recycle-bin:12` | app-content 组件实例（initRecycleBin 依赖的成员） |
 | `isPathInRoot()` | `frontend/src/features/recycle-bin:23` | 判断条目路径是否位于资源根目录内（带路径分隔符边界，P3 修复）。 |
 | `initRecycleBin()` | `frontend/src/features/recycle-bin:30` | 初始化回收站管理，返回清理函数 |
@@ -968,12 +967,12 @@
 | `listContainerHTML()` | `frontend/src/views/app-sidebar/tpl:58` | — |
 | `vcHeaderHTML()` | `frontend/src/views/app-sidebar/tpl:77` | 单个整合包卡片头部。 |
 | `AppSyncManager()` | `frontend/src/views/app-sync-manager/index:42` | — |
-| `SyncItem()` | `frontend/src/views/app-sync-manager/tpl:7` | 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） |
-| `containerHTML()` | `frontend/src/views/app-sync-manager/tpl:19` | 容器骨架 |
-| `statusTabHTML()` | `frontend/src/views/app-sync-manager/tpl:58` | 状态筛选标签 HTML |
-| `itemHTML()` | `frontend/src/views/app-sync-manager/tpl:87` | 列表项 HTML |
-| `emptyHTML()` | `frontend/src/views/app-sync-manager/tpl:145` | 空状态 HTML |
-| `loadingHTML()` | `frontend/src/views/app-sync-manager/tpl:159` | 加载中 |
+| `SyncItem()` | `frontend/src/views/app-sync-manager/tpl:8` | 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） |
+| `containerHTML()` | `frontend/src/views/app-sync-manager/tpl:20` | 容器骨架 |
+| `statusTabHTML()` | `frontend/src/views/app-sync-manager/tpl:59` | 状态筛选标签 HTML |
+| `itemHTML()` | `frontend/src/views/app-sync-manager/tpl:88` | 列表项 HTML |
+| `emptyHTML()` | `frontend/src/views/app-sync-manager/tpl:146` | 空状态 HTML |
+| `loadingHTML()` | `frontend/src/views/app-sync-manager/tpl:160` | 加载中 |
 | `treeCSS()` | `frontend/src/views/app-tree/app-tree-styles:3` | — |
 | `AuthorInfo()` | `frontend/src/views/app-tree/authors:5` | 作者统计（Go ListModelAuthors 返回） |
 | `loadAuthors()` | `frontend/src/views/app-tree/authors:13` | 从 Go 端加载作者列表 |

@@ -48,6 +48,8 @@
 
 > 可行性约束：WASM 导出的是反推后的 `minecraft:geometry` JSON，是否保留 bone 原始 pivot/rotation 需评估 YSMParser C++ 侧是否已保留（`upstream/YesSteveModel-Parser`）。若 C++ 侧未导出，需在解析层补充导出或在 Go 侧直接二次解析二进制字节流的 bone 段（`.000` 字节序）。本决策只锁定"优先原始值"的方向，具体取数落点排期验证。
 
+> 过渡性落地（2026-08-09 code_review P2）：在二进制直读上线前，Go 兜底侧（`go/geometry/parse.go` + `go/threejs/spec.go`）已把 cube pivot 的**缺席判定**从零值哨兵改为 `PivotSet` 标志（`*[3]float64` nil=缺席）——显式 `pivot:[0,0,0]`（绕模型原点旋转的铰接件）不再被误判为缺失、旋转中心不再漂移到 cube 中心。这与本 ADR「优先原始 pivot 值、不猜符号」的方向一致，属于反推链路上的口径修正（详见 `docs/knowledge/go-threejs.md` 不变量段、`docs/pitfalls.md` #17）。
+
 ### 2.3 动画/molang 纯计算移植 —— 复活「动画静止」链路
 
 **决策方向**：从 `geckolib3/core/` 移植可脱离 MC 的纯计算模块，替换当前 `animation.ts` 仅解析不执行的状态：

@@ -36,11 +36,11 @@
 | 前端·特性 | 13 | 60 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 32 | 113 |
+| 前端·工具 | 32 | 114 |
 | frontend/views | 53 | 151 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **184** | **831** |
+| **合计** | **184** | **832** |
 
 ## Go·头像
 
@@ -696,8 +696,8 @@
 | `initRecycleBin()` | `frontend/src/features/recycle-bin:33` | 初始化回收站管理，返回清理函数 |
 | `initResourcePacks()` | `frontend/src/features/resource-packs:13` | 初始化资源包 tab |
 | `UpdateInfo()` | `frontend/src/features/version-updater:11` | 更新信息（CheckUpdate 返回） |
-| `checkUpdateSilent()` | `frontend/src/features/version-updater:132` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
-| `initVersionUpdater()` | `frontend/src/features/version-updater:168` | 手动检查更新（设置页按钮） |
+| `checkUpdateSilent()` | `frontend/src/features/version-updater:151` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
+| `initVersionUpdater()` | `frontend/src/features/version-updater:187` | 手动检查更新（设置页按钮） |
 
 ## 前端·服务
 
@@ -818,8 +818,9 @@
 | `ModalConfirmOptions()` | `frontend/src/utils/dom/dialogs/modal:242` | modalConfirm 选项 |
 | `modalConfirm()` | `frontend/src/utils/dom/dialogs/modal:258` | 弹出确认对话框 |
 | `ModalProgressOptions()` | `frontend/src/utils/dom/dialogs/modal:306` | — |
-| `ModalProgressHandle()` | `frontend/src/utils/dom/dialogs/modal:312` | — |
-| `modalProgress()` | `frontend/src/utils/dom/dialogs/modal:328` | 只读进度弹窗（无确认/取消按钮，Esc 或点遮罩关闭）。 |
+| `ModalProgressHandle()` | `frontend/src/utils/dom/dialogs/modal:314` | — |
+| `fmtMB()` | `frontend/src/utils/dom/dialogs/modal:321` | 格式化字节为 MB（进度弹窗/窗口标题共用） |
+| `modalProgress()` | `frontend/src/utils/dom/dialogs/modal:330` | 只读进度弹窗（无确认/取消按钮，Esc 或点遮罩关闭）。 |
 | `RenameFields()` | `frontend/src/utils/dom/dialogs/rename-format:7` | 重命名字段（调用方已 trim） |
 | `buildRenameName()` | `frontend/src/utils/dom/dialogs/rename-format:19` | 按 YSM 命名规范拼接新文件名：`[作者]【品牌】角色-变体 (年月).ext` 品牌缺省「未知」、角色缺省「?」，与预览一致。 |
 | `showRenameDialog()` | `frontend/src/utils/dom/dialogs/rename:16` | 弹出重命名对话框 |

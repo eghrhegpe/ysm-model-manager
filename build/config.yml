@@ -1,4 +1,4 @@
-# Wails 3 开发配置（联邦标准摆法）
+﻿# Wails 3 开发配置（联邦标准摆法）
 # `wails3 dev` 读取 ./build/config.yml，仅使用 `dev_mode` 段落来驱动
 # 热重载引擎 (github.com/atterpac/refresh)。`executes` 中的命令统一委托给
 # `wails3 task`（Task 编排器，内置 POSIX shell），不再手写裸 cmd /C，
@@ -12,7 +12,7 @@ info:
   description: "YSM 模型管理器"
   copyright: "(c) 2025, YSM"
   comments: "Wails 3 dev config"
-  version: "v1.9.3"
+  version: "1.9.3"
 
 # Dev mode configuration
 dev_mode:

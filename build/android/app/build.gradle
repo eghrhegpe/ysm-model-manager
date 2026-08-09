@@ -11,7 +11,9 @@ def versionParts = pkgVersion.replaceFirst(/^v/, '').split('\\.')
 def computedVersionCode = (versionParts[0].toInteger() * 10000) + (versionParts[1].toInteger() * 100) + (versionParts.length > 2 ? versionParts[2].toInteger() : 0)
 
 android {
-    namespace 'com.ysm.modelmanager'
+    // namespace 必须与 Java 包一致（com.wails.app，官方模板），否则 R/BuildConfig
+    // 生成位置与 import 不匹配导致编译失败；产品标识用 applicationId 表达。
+    namespace 'com.wails.app'
     compileSdk 34
 
     buildFeatures {

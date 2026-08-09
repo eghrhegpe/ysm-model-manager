@@ -79,3 +79,6 @@ build/android/local.properties
 
 # Android 签名 keystore（敏感，禁止入库）
 build/android/keystore/
+
+# 本地构建产物（APK / 平台二进制，dist 目录不入库）
+/dist/

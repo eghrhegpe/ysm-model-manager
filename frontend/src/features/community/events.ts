@@ -168,7 +168,9 @@ export function bindRepoEvents(
   const listEl = sr.querySelector("#gh-repo-list") as HTMLElement | null;
   if (listEl) {
     listEl.addEventListener("contextmenu", (e: MouseEvent) => {
-      const row = (e.target as Element).closest("[data-name]") as HTMLElement | null;
+      // P1 修复：closest 匹配 `.gh-row` 而非 `[data-name]`——下载按钮自身带 data-name，
+      // 旧选择器命中按钮自己导致 row.querySelector(".gh-sel") 恒为 null（勾选同步从未生效）
+      const row = (e.target as Element).closest(".gh-row") as HTMLElement | null;
       if (!row) return;
       e.preventDefault();
       e.stopPropagation();
@@ -202,7 +204,8 @@ export function bindRepoEvents(
         '.gh-icon-btn[data-action="download"]',
       ) as HTMLElement | null;
       if (dlBtn && !queue.isDownloading()) {
-        const row = dlBtn.closest("[data-name]");
+        // 匹配 .gh-row 而非 [data-name]：dlBtn 自身带 data-name 会命中自己
+        const row = dlBtn.closest(".gh-row");
         await handleSingleDownload(dlBtn, row);
         return;
       }

@@ -588,22 +588,22 @@
 | `applyTheme()` | `frontend/src/app-modules:65` | — |
 | `initTheme()` | `frontend/src/app-modules:84` | — |
 | `applyUIPrefs()` | `frontend/src/app-modules:103` | 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 |
-| `bus()` | `frontend/src/bus:175` | 默认实例（组件直接使用） |
+| `bus()` | `frontend/src/bus:177` | 默认实例（组件直接使用） |
 | `ToastPayload()` | `frontend/src/bus:7` | — |
 | `MenuItem()` | `frontend/src/bus:18` | — |
-| `PageName()` | `frontend/src/bus:28` | 核心页面名（与 app-nav 导航菜单一致） |
-| `NavPagePayload()` | `frontend/src/bus:36` | — |
-| `ModelSelectPayload()` | `frontend/src/bus:40` | — |
-| `CtxShowPayload()` | `frontend/src/bus:45` | — |
-| `BusEvents()` | `frontend/src/bus:62` | — |
-| `BusEventName()` | `frontend/src/bus:120` | — |
-| `Bus()` | `frontend/src/bus:122` | — |
+| `PageName()` | `frontend/src/bus:30` | 核心页面名（与 app-nav 导航菜单一致） |
+| `NavPagePayload()` | `frontend/src/bus:38` | — |
+| `ModelSelectPayload()` | `frontend/src/bus:42` | — |
+| `CtxShowPayload()` | `frontend/src/bus:47` | — |
+| `BusEvents()` | `frontend/src/bus:64` | — |
+| `BusEventName()` | `frontend/src/bus:122` | — |
+| `Bus()` | `frontend/src/bus:124` | — |
 
 ## 前端·核心
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `registerContextMenus()` | `frontend/src/core/context-menus:491` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
+| `registerContextMenus()` | `frontend/src/core/context-menus:492` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
 | `__TEST__resetDiary()` | `frontend/src/core/error-diary:16` | 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。 |
 | `registerErrorDiary()` | `frontend/src/core/error-diary:34` | 注册 UI 报错落日记功能。 |
 | `registerGlobalHandlers()` | `frontend/src/core/handlers/global:11` | 注册所有 core 全局 handler，返回 unsub 函数数组（features/views 层注册由 app-content 编排） |
@@ -621,9 +621,9 @@
 | `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:5` | — |
 | `t()` | `frontend/src/core/i18n/t:12` | 翻译函数。 |
 | `AVAILABLE_LANGS()` | `frontend/src/core/i18n/t:33` | 可用语言列表（由构建脚本确保与 locales/ 目录对齐） |
-| `MenuDef()` | `frontend/src/core/menu-defs:18` | 单类菜单的完整声明 |
-| `MENU_DEFS()` | `frontend/src/core/menu-defs:24` | 四类右键菜单的声明式规格（唯一事实来源） |
-| `getMenuDef()` | `frontend/src/core/menu-defs:112` | 测试辅助：按 type 取声明（不存在返回 undefined） |
+| `MenuDef()` | `frontend/src/core/menu-defs:19` | 单类菜单的完整声明 |
+| `MENU_DEFS()` | `frontend/src/core/menu-defs:25` | 四类右键菜单的声明式规格（唯一事实来源） |
+| `getMenuDef()` | `frontend/src/core/menu-defs:113` | 测试辅助：按 type 取声明（不存在返回 undefined） |
 | `resolveInitialPage()` | `frontend/src/core/page-store:28` | — |
 | `PageStore()` | `frontend/src/core/page-store:48` | — |
 | `registerPageStore()` | `frontend/src/core/page-store:55` | 注册页面状态同步（由 registerGlobalHandlers 统一调用，bus.on 的 unsub 收集进 unsubs 清理） |

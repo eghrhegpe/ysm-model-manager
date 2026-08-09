@@ -30,8 +30,8 @@ type ysmModelJSON struct {
 	Author     string          `json:"author"`
 	Version    string          `json:"version"`
 	Bones      json.RawMessage `json:"bones"`      // 数组，取长度
-	Textures   json.RawMessage `json:"textures"`    // 数组或对象，取长度
-	Animations json.RawMessage `json:"animations"`  // 数组，取长度
+	Textures   json.RawMessage `json:"textures"`   // 数组或对象，取长度
+	Animations json.RawMessage `json:"animations"` // 数组，取长度
 	Model      *ysmGeometry    `json:"model"`
 }
 

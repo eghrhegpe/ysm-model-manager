@@ -19,12 +19,12 @@ ADR-046 已裁决全平台化高可行，P2 Android 为高可行但条件成立�
 
 按投入产出排序分四批落地 ADR-046 P2，每批独立可交付、独立验证：
 
-| 批次 | 范围 | 依据 |
-|------|------|------|
-| **先行小修** | overlay.json 移出 git 跟踪 + Taskfile 强制重新生成（P1-2）；PathManager 收尾：`scanMinecraftDirs` 直调改走 `appDataRoot()`（app_config.go:379）、`app_config_other.go` 拆 `!windows && !android` + android 空实现 | 审核 P1-2/P2-1/P2-2 |
-| **核心立项 A：前端 Pointer Events 统一改造** | 全部拖拽/缩放/旋转从 mouse 事件迁移 `pointerdown/move/up` + `setPointerCapture` + CSS `touch-action:none`；hover 交互（骨骼名/菜单/tooltip）补 tap 兜底；`android:back` 先关活动弹窗再退出（弹窗目前只听 Esc） | 审核前端 P1/P2 |
-| **核心立项 B：FileAccessor 抽象 + SAF 桥** | 对标 MikuMikuAR ADR-018 build-tag 双实现模式：新增第二个平台抽象接口，收敛 `os.Rename/os.Link/os.Symlink/os.RemoveAll/os.ReadDir` 等 10+ 处直调；Android 实现走 SAF document-tree URI 读/写/列目录；文件选择补 `onShowFileChooser` 验证 | 审核 P1-1/P2-4/F3/F6 |
-| **平台守卫批量** | 自动更新入口 Android 隐藏/明确拒绝（P2-3）；`RevealInExplorer`/`OpenFolder` android 分支返回明确不支持（P3-1）；`RestartApplication` 平台守卫（P2-5）；Node sidecar 解码降级说明（P3-2）；watcher FUSE 轮询或关闭明示（P3-4） | 审核 P2-3/P3-1/P2-5/P3-2/P3-4 |
+| 批次 | 范围 | 依据 | 实施 |
+|------|------|------|------|
+| **先行小修** | overlay.json 移出 git 跟踪 + Taskfile 强制重新生成（P1-2）；PathManager 收尾：`scanMinecraftDirs` 直调改走 `appDataRoot()`（app_config.go:379）、`app_config_other.go` 拆 `!windows && !android` + android 空实现 | 审核 P1-2/P2-1/P2-2 | ✅ 502d3ca7 |
+| **核心立项 A：前端 Pointer Events 统一改造** | 全部拖拽/缩放/旋转从 mouse 事件迁移 `pointerdown/move/up` + `setPointerCapture` + CSS `touch-action:none`；hover 交互（骨骼名/菜单/tooltip）补 tap 兜底；`android:back` 先关活动弹窗再退出（弹窗目前只听 Esc） | 审核前端 P1/P2 | ✅ cfa1ac0 + aca48352 |
+| **核心立项 B：FileAccessor 抽象 + SAF 桥** | 对标 MikuMikuAR ADR-018 build-tag 双实现模式：新增第二个平台抽象接口，收敛 `os.Rename/os.Link/os.Symlink/os.RemoveAll/os.ReadDir` 等 10+ 处直调；Android 实现走 SAF document-tree URI 读/写/列目录；文件选择补 `onShowFileChooser` 验证 | 审核 P1-1/P2-4/F3/F6 | ⏳ 方向修正：SAF 弃用（MikuMikuAR ADR-194 踩坑），改走 MANAGE_EXTERNAL_STORAGE 全盘授权 + 共享目录选择器桥（`frontend/src/utils/dom/directory-picker.ts`，94d24ed5）；FileAccessor 抽象延后 |
+| **平台守卫批量** | 自动更新入口 Android 隐藏/明确拒绝（P2-3）；`RevealInExplorer`/`OpenFolder` android 分支返回明确不支持（P3-1）；`RestartApplication` 平台守卫（P2-5）；Node sidecar 解码降级说明（P3-2）；watcher FUSE 轮询或关闭明示（P3-4） | 审核 P2-3/P3-1/P2-5/P3-2/P3-4 | ✅ d83d99c1 + f2165739 |
 
 决策原则沿用 ADR-044 防御范式与项目「通用化、统一、复用」偏好：优先复用既有 build-tag 双文件模式与 Wails 绑定契约，禁止引入运行时 GOOS 分支重复实现。
 

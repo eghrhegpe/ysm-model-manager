@@ -49,12 +49,14 @@ use_when:
 
 ## 不变量
 
-- 主题切换只允许经 body 的 `theme-*` class，全部视觉值走 CSS 变量，禁止组件内硬编码主题颜色（治理红线 §3.3）
+- 主题切换只允许经 body 的 `theme-*` class，全部视觉值走 CSS 变量，禁止组件内硬编码主题颜色（治理红线 §3.3；主题卡片预览 swatch 的硬编码 hex 属装饰豁免，表述已加限定）
 - 合法模式仅 6 套皮肤 + `system`，非法值一律回落 `system`，不产生无主题状态
 - `LoadAppConfig` 失败必须回退 localStorage/默认值，主题初始化失败不得阻塞启动序列
 - 系统偏好监听只在 `system` 模式下生效，手动选定主题不被系统变化覆盖
 - **写入侧也须写合法值**：设置页主题卡写 6 套皮肤名、`theme-auto="time"` 时经 `applyTimeTheme()` 把实际主题（warm/cyber）写入 `theme` 键——不允许写 `"time"`/`"dark"` 等非法值到 `theme`（否则重启 initTheme 归一化为 system，按时间段模式被静默降级，P2 修复）
+- **设置页主题读写同样走 safe 包装**（P3 修复：`themeGet`/`themeSet` 与 app-modules 的 safeGet/safeSet 同口径——原设置页裸 localStorage 在隐私模式下抛错中断 initSettings、主题卡片整页失效）
 - UI 偏好修改只操作 CSS 变量与类名（`--fs-scale`/`no-animations`），不直接改各 `--fs-*` 计算值
+- **P3 观察**：`theme-auto="time"` 按时间自动切换**仅设置页会话内生效**——启动链（app-modules）不读 `theme-auto`，重启后应用持久层的定格主题（warm/cyber）而非按当前时刻重算（白天设 time 夜间重启仍亮色）；自动模式（system/time）变更未同步 ysm_config.json（localStorage 被清理后回退 cfg 旧主题）
 
 ## 相关
 

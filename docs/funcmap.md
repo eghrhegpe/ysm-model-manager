@@ -60,8 +60,8 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `FindDuplicateFiles()` | `go/dedup/dedup:32` | FindDuplicateFiles 扫描目录，按 SHA256 哈希分组，返回包含重复的分组 skipRecycle 为 true 时跳过 .recycle 子目录 |
-| `CountDuplicates()` | `go/dedup/dedup:124` | CountDuplicates 统计重复文件数量（比 FindDuplicateFiles 轻量，只计数） |
-| `CleanEmptyDirs()` | `go/dedup/dedup:182` | CleanEmptyDirs 递归删除指定目录下的所有空子目录（不含 dir 自身）。 |
+| `CountDuplicates()` | `go/dedup/dedup:126` | CountDuplicates 统计重复文件数量（比 FindDuplicateFiles 轻量，只计数） |
+| `CleanEmptyDirs()` | `go/dedup/dedup:186` | CleanEmptyDirs 递归删除指定目录下的所有空子目录（不含 dir 自身）。 |
 | `FileEntry()` | `go/dedup/dedup:16` | FileEntry 文件条目 |
 | `Group()` | `go/dedup/dedup:24` | Group 重复文件分组 |
 

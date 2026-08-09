@@ -131,8 +131,6 @@ export function settingsHTML(): string {
     </div>
   </div>
 
-</div>
-
 <!-- 语言 -->
 <div class="section-title stg-title" style="margin-top:12px">🌐 ${t("settings.language")}</div>
 <div class="stg-card" style="animation-delay:240ms">

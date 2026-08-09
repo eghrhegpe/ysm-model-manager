@@ -889,11 +889,11 @@
 | `repositoryHTML()` | `frontend/src/views/app-content/tpl:5` | — |
 | `instancesHTML()` | `frontend/src/views/app-content/tpl:45` | — |
 | `settingsHTML()` | `frontend/src/views/app-content/tpl:66` | — |
-| `downloadsHTML()` | `frontend/src/views/app-content/tpl:453` | — |
-| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:504` | — |
-| `recycleHTML()` | `frontend/src/views/app-content/tpl:563` | — |
-| `githubHTML()` | `frontend/src/views/app-content/tpl:576` | ===== GitHub 仓库页面 ===== |
-| `workshopHTML()` | `frontend/src/views/app-content/tpl:607` | — |
+| `downloadsHTML()` | `frontend/src/views/app-content/tpl:451` | — |
+| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:502` | — |
+| `recycleHTML()` | `frontend/src/views/app-content/tpl:561` | — |
+| `githubHTML()` | `frontend/src/views/app-content/tpl:574` | ===== GitHub 仓库页面 ===== |
+| `workshopHTML()` | `frontend/src/views/app-content/tpl:605` | — |
 | `CreatorIdentity()` | `frontend/src/views/app-content/workshop-data:8` | 创作者身份识别结果 |
 | `CreatorIdentityInput()` | `frontend/src/views/app-content/workshop-data:15` | 创作者输入（role/tag 可空，_fromLocal 为运行时附加字段） |
 | `getCreatorIdentity()` | `frontend/src/views/app-content/workshop-data:22` | — |

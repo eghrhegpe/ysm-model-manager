@@ -5,6 +5,7 @@ package app
 import (
 	"errors"
 	"os"
+	"path/filepath"
 )
 
 // androidPathManager Android 实现：应用沙盒私有目录
@@ -37,10 +38,16 @@ func (androidPathManager) AppDataRoot() (string, error) {
 }
 
 // DefaultRepoRoot Android 固定公共仓库根：外部存储根 + 应用名。
+// 外部存储根运行时解析（EXTERNAL_STORAGE 环境变量，Android 多用户场景指向
+// 当前用户的 /storage/emulated/<userId>），硬编码 /storage/emulated/0 仅作兜底。
 // MANAGE_EXTERNAL_STORAGE 授权后（requestStoragePermission 引导），Go os.* 可直读
 // 该路径；用户把模型放入该目录即可当查看器使用——无需目录选择器（Wails 官方拒绝
 // Android 目录对话框，见 ADR-046 §2 中阻方案修正）。
 func (androidPathManager) DefaultRepoRoot() string {
+	// Android 系统注入的外部存储根（多用户下为当前用户路径）；空时回退主用户路径
+	if ext := os.Getenv("EXTERNAL_STORAGE"); ext != "" {
+		return filepath.Join(ext, "YSM-Model-Manager")
+	}
 	return "/storage/emulated/0/YSM-Model-Manager"
 }
 

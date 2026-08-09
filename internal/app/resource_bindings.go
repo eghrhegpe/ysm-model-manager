@@ -146,8 +146,20 @@ func (a *App) DetectResourceType(path string) string {
 // Android：固定公共路径（如 /storage/emulated/0/YSM-Model-Manager，授权
 // MANAGE_EXTERNAL_STORAGE 后直读，查看器模式）；desktop：空串。
 // 供前端 Android 分支「自动定位公共目录」使用（ADR-046 P2）。
+// 会尝试 MkdirAll 创建目录；创建后目录仍不可读（未授权）则返回空串，
+// 避免前端 toast 假成功（review 修复）。
 func (a *App) GetDefaultRepoRoot() string {
-	return defaultRepoRoot()
+	root := defaultRepoRoot()
+	if root == "" {
+		return ""
+	}
+	// 尝试创建（查看器模式：定位即创建）；失败不影响返回（可能已存在只读场景）
+	_ = os.MkdirAll(root, 0755)
+	// 目录存在且可读才返回（未授权时 os.Open 失败 → 空串，前端走引导）
+	if !repoDirAccessible(root) {
+		return ""
+	}
+	return root
 }
 
 // GetRepoRoot 根据资源类型返回对应的仓库根目录
@@ -169,14 +181,31 @@ func (a *App) GetRepoRoot(rtype string) (string, error) {
 		}
 	}
 	// 3. 平台默认公共仓库根（Android：固定路径，授权 MANAGE_EXTERNAL_STORAGE 后直读，
-	//    查看器模式；desktop：空串不介入，用户需在设置页配置）
-	if root := defaultRepoRoot(); root != "" {
+	//    查看器模式；desktop：空串不介入，用户需在设置页配置）。
+	//    ⚠️ 仅在目录真实存在且可读时回退——未授权/目录不存在时返回空串，
+	//    保留「未配置」信号，让调用方走「请先配置仓库目录」引导而非裸文件错误。
+	if root := defaultRepoRoot(); root != "" && repoDirAccessible(root) {
 		if subDir != "" {
 			return filepath.Join(root, subDir), nil
 		}
 		return root, nil
 	}
 	return "", nil
+}
+
+// repoDirAccessible 校验目录真实存在且可读（防未授权/未创建时静默假成功）。
+// 与 writableDir 不同：仓库目录只读即可（查看器模式），不做可写性探针。
+func repoDirAccessible(dir string) bool {
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+	f, err := os.Open(dir)
+	if err != nil {
+		return false
+	}
+	_ = f.Close()
+	return true
 }
 
 // specificRoot 返回资源类型的专属覆写路径，从 resource_types.json 注册表驱动

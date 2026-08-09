@@ -55,6 +55,7 @@ use_when:
 - 组件拆分遵循 app-xxx 规范（index/tpl/row-tpl/data/render/events）
 - 动态 import 链路带 `.catch` 兜底（如 ha-preview 解析模块加载失败以 toast 提示，见 events.ts:196）
 - **选中态在数据变更链路（回收/重命名）成功后必须清空**（P2 修复：`selectState` 是模块级单例，bus-handlers 的 dir:recycle / batch:rename / dir:batch-rename 成功后清 keys+lastKey——原旧路径滞留会显示「已选 N 个文件」并对已不存在路径误删）
+- **instance-actions 契约口径**（2026-08-09 收敛）：① 同步键口径 = Go `sync_push.go` `SyncCustomToRepo` 的去重规则（Hash 优先 + 原始 Name 兜底、复制保留相对路径）——前端**不**自行按 `.ban` 剥离裸名 Set 计数，`uploaded` 直接信任 Go 返回值（单一事实来源，防「📤 N」撒谎/漏同步）；② `addImportLog` 参数契约 = Go `Logger.Add` 签名（modelName/sourcePath/targetDir/fileSize/status/errMsg），sourcePath=源、targetDir=目标，调用方不得装反/漏传
 
 ## 相关
 

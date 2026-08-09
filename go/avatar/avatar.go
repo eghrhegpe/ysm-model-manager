@@ -69,7 +69,14 @@ func isSafeAvatarPath(ap string) bool {
 		return true
 	}
 	if !strings.HasPrefix(clean, "avatar/") {
-		// 裸文件名：归一化为 avatar/ 前缀再校验（旧式 ysm.json 声明兼容）
+		// 裸文件名：归一化为 avatar/ 前缀再校验（旧式 ysm.json 声明兼容）。
+		// P3 修复：仅当原始串不含 `/`（确为纯文件名）时才归一化——原实现对任意
+		// 非 avatar/ 前缀路径归一化，`avatar/../x` 先被 path.Clean 折叠为 `x`
+		// 再归一化为 `avatar/x` 放行，而调用方 filepath.Join(dir, 原始路径)
+		// 实际读到 avatar/ 之外、模型目录内的任意文件（违反「严格 avatar/ 前缀」）
+		if strings.Contains(ap, "/") || strings.Contains(ap, "\\") {
+			return false
+		}
 		clean = path.Clean("avatar/" + clean)
 	}
 	// 拒绝任何 ".." 段（Clean 后仍含则说明原路径有逃逸意图）
@@ -93,7 +100,14 @@ func ReadCachedAvatar(authorName string) (string, error) {
 		}
 		return "", err // IO 错误（权限/磁盘故障等）
 	}
-	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(data), nil
+	// P3 修复：按文件头嗅探 mime——原硬编码 `data:image/png`，JPEG 头像以 .png 落盘
+	// （SaveAvatarData 恒用 safeName+".png"）读回时 MIME 错误（前端 <img> 仍可显示，
+	// 但导出/复制 data URI 给其他工具时 type 不匹配）
+	mime := "image/png"
+	if len(data) >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF {
+		mime = "image/jpeg"
+	}
+	return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
 // SaveAvatarData 将头像数据写入缓存。

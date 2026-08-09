@@ -30,6 +30,14 @@ export const en: Record<string, string> = {
   "settings.language": "Language",
   "settings.languageDesc": "Switch UI language. Page will reload.",
 
+  // ── Main content area ──
+  "content.pageLoadFailed": "Page load failed",
+  "content.siteExported": "Sites exported",
+  "content.exportFailed": "Export failed",
+  "content.imported": "Imported {n} sites",
+  "content.importFailed": "Import failed",
+  "content.settingsInitFailed": "Settings init failed",
+
   // ── 错误 ──
   "error.fallback": "Operation failed",
   "error.unknown": "Unknown error",

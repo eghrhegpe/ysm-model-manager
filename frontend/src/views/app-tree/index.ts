@@ -1,4 +1,5 @@
 // ===== <app-tree> 入口 — 生命周期编排 =====
+import { t } from "../../core/i18n/t.ts";
 import { treeCSS } from "./app-tree-styles.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
@@ -293,7 +294,7 @@ export class AppTree extends HTMLElement {
         const paths = [...(selectState?.keys || [])];
         if (!paths.length) {
           bus.emit("toast:show", {
-            msg: "请先选中要删除的文件",
+            msg: t("tree.selectFilesFirst"),
             duration: 2000,
             type: "warn",
           });
@@ -339,7 +340,7 @@ export class AppTree extends HTMLElement {
       await this._load();
       this._renderTree();
       bus.emit("toast:show", {
-        msg: "✅ 已删除 " + ok + " 个" + (fail ? "，失败 " + fail : ""),
+        msg: `✅ ${t("tree.deleted", { ok, fail: fail || 0 })}`,
         duration: 3000,
         type: "success",
       });

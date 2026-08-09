@@ -1,4 +1,5 @@
 // ===== Go 数据加载层 =====
+import { t } from "../../core/i18n/t.ts";
 import { getExts } from "../../utils/resource/extensions.ts";
 import { RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { getApp } from "../../wails/app.ts";
@@ -27,7 +28,7 @@ function toastLoadError(err: unknown): void {
   if (now - _lastErrorToastAt < ERROR_TOAST_MIN_GAP) return;
   _lastErrorToastAt = now;
   bus.emit("toast:show", {
-    msg: "❌ 文件树加载失败: " + friendlyError(err, "读取仓库失败"),
+    msg: "❌ " + t("tree.loadFailed") + ": " + friendlyError(err, t("tree.repoLoadFailed")),
     duration: 5000,
     type: "error",
   });

@@ -1,4 +1,5 @@
 // ===== 整合包右键操作实现 =====
+import { t } from "../../core/i18n/t.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { bus } from "../../bus.ts";
@@ -39,7 +40,7 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
         const mcRoot = cfg.mcRoot || "";
         if (!mcRoot) {
           bus.emit("toast:show", {
-            msg: "请先配置游戏目录",
+            msg: t("tree.configGameDirFirst"),
             duration: 3000,
             type: "warn",
           });
@@ -122,7 +123,7 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
         const uploaded = await SyncCustomToRepo(ins.CustomDir, repoRoot);
         bus.emit("stats:refresh");
         bus.emit("toast:show", {
-          msg: `🔄 ${insName} 同步完成 | 📤 ${uploaded}`,
+          msg: `🔄 ${t("tree.syncDone", { name: insName, uploaded })}`,
           duration: 3000,
           type: "success",
         });

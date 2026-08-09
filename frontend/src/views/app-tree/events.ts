@@ -1,4 +1,5 @@
 // ===== 树事件层（事件委托版，兼容虚拟滚动） =====
+import { t } from "../../core/i18n/t.ts";
 import { bus } from "../../bus.ts";
 import { selectState, toggleSelect, selectSingle } from "./data.ts";
 import type { AppTree } from "./index.ts";
@@ -222,7 +223,7 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
         })
         .catch(() => {
           bus.emit("toast:show", {
-            msg: "❌ 复制失败",
+            msg: "❌ " + t("tree.copyFailed"),
             duration: 2000,
             type: "error",
           });

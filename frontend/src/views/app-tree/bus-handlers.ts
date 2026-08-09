@@ -1,4 +1,5 @@
 // ===== app-tree bus 事件处理 =====
+import { t } from "../../core/i18n/t.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { bus } from "../../bus.ts";
@@ -37,7 +38,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
         console.warn("[bus] dir:select-repo 失败:", err);
         vm._entries = [];
         vm._renderTree();
-        bus.emit("toast:show", { msg: "❌ " + friendlyError(err, "选择仓库目录失败"), duration: 5000, type: "error" });
+        bus.emit("toast:show", { msg: "❌ " + friendlyError(err, t("tree.selectDirFailed")), duration: 5000, type: "error" });
       }
     }),
   );
@@ -46,7 +47,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
   unsubs.push(
     bus.on("entries:dedup", () => {
       bus.emit("toast:show", {
-        msg: "🔗 去重功能开发中",
+        msg: "🔗 " + t("tree.dedupWip"),
         duration: 2000,
         type: "info",
       });
@@ -57,7 +58,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
   unsubs.push(
     bus.on("recycle:open", () => {
       bus.emit("toast:show", {
-        msg: "♻️ 回收站功能开发中",
+        msg: "♻️ " + t("tree.recycleWip"),
         duration: 2000,
         type: "info",
       });
@@ -118,7 +119,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       const name = await modalPrompt({
         title: "新建文件夹",
         icon: "📁",
-        placeholder: "输入文件夹名称",
+        placeholder: t("tree.inputFolderName"),
         okText: "📁 创建",
       });
       if (!name) return;
@@ -240,7 +241,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
           await reload(vm);
           bus.emit("stats:refresh");
           bus.emit("toast:show", {
-            msg: `✅ 批量重命名完成：${ok} 成功${fail ? "，失败 " + fail : ""}`,
+            msg: `✅ ${t("tree.batchRenameDone", { ok, fail: fail || 0 })}`,
             duration: 3000,
             type: fail > 0 ? "warn" : "success",
           });
@@ -283,7 +284,7 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
           await reload(vm);
           bus.emit("stats:refresh");
           bus.emit("toast:show", {
-            msg: `✅ 批量重命名完成：${ok} 成功${fail ? "，失败 " + fail : ""}`,
+            msg: `✅ ${t("tree.batchRenameDone", { ok, fail: fail || 0 })}`,
             duration: 3000,
             type: fail > 0 ? "warn" : "success",
           });
@@ -330,7 +331,7 @@ async function reload(vm: AppTree): Promise<void> {
   } catch (err) {
     console.warn("[bus] reload 失败:", err);
     vm._entries = [];
-    bus.emit("toast:show", { msg: "❌ " + friendlyError(err, "重新加载失败"), duration: 5000, type: "error" });
+    bus.emit("toast:show", { msg: "❌ " + friendlyError(err, t("tree.reloadFailed")), duration: 5000, type: "error" });
   }
   vm._renderTree();
 }
@@ -374,7 +375,7 @@ async function runBatchToggle(
       bus.emit("sync:toggle:status");
     }
     bus.emit("toast:show", {
-      msg: `${opts.label}: ${ok} 成功, ${fail} 失败`,
+      msg: `${opts.label}: ${ok} ${t("tree.success")}, ${fail} ${t("tree.failed")}`,
       duration: 3000,
       type: fail > 0 ? "warn" : "success",
     });
@@ -391,12 +392,12 @@ async function batchToggle(
   if (!vm._entries.some((e) => e.banned === enable)) return;
   return runBatchToggle(vm, enable, {
     prefix: dir,
-    label: `批量${enable ? "启用" : "禁用"}`,
+    label: t("tree.batchToggle", { action: enable ? t("tree.enable") : t("tree.disable") }),
   });
 }
 
 async function batchToggleAll(vm: AppTree, enable: boolean): Promise<void> {
   return runBatchToggle(vm, enable, {
-    label: `全部${enable ? "启用" : "禁用"}`,
+    label: t("tree.allToggle", { action: enable ? t("tree.enable") : t("tree.disable") }),
   });
 }

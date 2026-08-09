@@ -30,7 +30,8 @@ import { initDiagnostics, startDedup } from "./diagnostics/community.ts";
 import { initImportQueue } from "../../features/import-queue.ts";
 import { initRecycleBin } from "../../features/recycle-bin.ts";
 import { loadOldestModel } from "../../features/oldest-models.ts";
-import { initResourcePacks } from "../../features/resource-packs.ts";
+// 注意：initResourcePacks 导入已移除（P2 审计：六调用分支双重复死已删，
+// wrapper features/resource-packs.ts 保留作兼容层，见 resource-packs 知识卡）
 import { tryFetchModels } from "../../features/community/data.ts";
 // 副作用导入：注册 <app-preview> 组件（原动态 import 预加载的静态化替代）
 import "../app-preview/index.ts";
@@ -46,6 +47,7 @@ import { renderSiteView, type RenderSiteViewCtx, type RepoAuthorLike } from "./s
 import { getSiteIcon } from "../../utils/icon/workshop-icons.ts";
 import { loadCommunityData, fillSearch, type LocalCreator } from "./community-data.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
+import { t } from "../../core/i18n/t.ts";
 import type { WorkshopModel } from "../../features/community/render.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 
@@ -217,7 +219,7 @@ class AppContent extends HTMLElement {
       // 页 init 抛错不中断 _render 调用方，反馈给用户而非静默
       console.error("[app-content] 页面初始化失败:", e);
       bus.emit("toast:show", {
-        msg: "❌ 页面加载失败: " + friendlyError(e),
+        msg: "❌ " + t("content.pageLoadFailed") + ": " + friendlyError(e),
         duration: 5000,
         type: "error",
       });
@@ -402,51 +404,11 @@ class AppContent extends HTMLElement {
             );
             this._unsubs = this._unsubs || [];
             if (oldestCleanup) this._unsubs.push(oldestCleanup);
-          } else if (tab === "resourcepacks") {
-            const rpCleanup = await initResourcePacks(container, this);
-            this._unsubs = this._unsubs || [];
-            if (rpCleanup) this._unsubs.push(rpCleanup);
-          } else if (tab === "shaderpacks") {
-            const spCleanup = await initResourcePacks(
-              container,
-              this,
-              RESOURCE_TYPES.SHADER,
-            );
-            this._unsubs = this._unsubs || [];
-            if (spCleanup) this._unsubs.push(spCleanup);
-          } else if (tab === RESOURCE_TYPES.BLUEPRINT) {
-            const cbCleanup = await initResourcePacks(
-              container,
-              this,
-              RESOURCE_TYPES.BLUEPRINT,
-            );
-            this._unsubs = this._unsubs || [];
-            if (cbCleanup) this._unsubs.push(cbCleanup);
-          } else if (tab === RESOURCE_TYPES.MMD) {
-            const msCleanup = await initResourcePacks(
-              container,
-              this,
-              RESOURCE_TYPES.MMD,
-            );
-            this._unsubs = this._unsubs || [];
-            if (msCleanup) this._unsubs.push(msCleanup);
-          } else if (tab === RESOURCE_TYPES.VRC) {
-            const vaCleanup = await initResourcePacks(
-              container,
-              this,
-              RESOURCE_TYPES.VRC,
-            );
-            this._unsubs = this._unsubs || [];
-            if (vaCleanup) this._unsubs.push(vaCleanup);
-          } else if (tab === RESOURCE_TYPES.LITEMATIC) {
-            const lmCleanup = await initResourcePacks(
-              container,
-              this,
-              RESOURCE_TYPES.LITEMATIC,
-            );
-            this._unsubs = this._unsubs || [];
-            if (lmCleanup) this._unsubs.push(lmCleanup);
           }
+          // 注意：resourcepacks/shaderpacks/blueprint/MMD/VRC/LITEMATIC 六个
+          // initResourcePacks 分支已删除（P2 审计：tpl 无对应 repo-tab 按钮与容器 id，
+          // 双重复死不可达；资源类型切换改由 .repo-subtab 重渲染 <app-tree>）。
+          // wrapper（features/resource-packs.ts）保留作兼容层，见 resource-packs 知识卡。
         }
       });
     });
@@ -638,7 +600,7 @@ class AppContent extends HTMLElement {
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ " + friendlyError(e, "导入失败"),
+            msg: "❌ " + friendlyError(e, t("content.importFailed")),
             duration: 4000,
             type: "error",
           });

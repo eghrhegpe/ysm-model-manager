@@ -1,4 +1,5 @@
 // ===== 树节点行 HTML 模板（grid 模式）=====
+import { t } from "../../core/i18n/t.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { fmt, sizeColor } from "../../utils/dom/format.ts";
 import type { TreeEntry } from "./loader.ts";
@@ -15,14 +16,14 @@ export function fileRowHTML(
   rowCls = "",
 ): string {
   const { p, fp, checked, ban, typeIcon, pad } = fileRowCommon(e, icon, indent);
-  const tagMark = e.HasTags ? '<span class="tag-dot" title="有标签">🏷️</span>' : "";
+  const tagMark = e.HasTags ? `<span class="tag-dot" title="${t("tree.hasTags")}">🏷️</span>` : "";
   return `<div class="fl${ban}${rowCls}" data-testid="tree-file" data-path="${p}" data-fullpath="${fp}"${pad}>
 <span class="ck${checked}" data-testid="tree-toggle" data-path="${p}" data-fullpath="${fp}"></span>
 <span class="ficon">${typeIcon}</span>
 <span class="nm${nmCls}">${tagMark}${nmHtml}</span>
 <span class="hover-actions">
-  <span class="ha-btn ha-preview" data-path="${fp}" title="B站搜索作者">🔍</span>
-  <span class="ha-btn ha-copy" data-path="${fp}" title="复制文件名">📋</span>
+  <span class="ha-btn ha-preview" data-path="${fp}" title="${t("tree.bilibiliSearch")}">🔍</span>
+  <span class="ha-btn ha-copy" data-path="${fp}" title="${t("tree.copyFilename")}">📋</span>
 </span>
 <span class="sz ${sizeColor(e.size)}">${fmt(e.size)}</span>${dateStr ? `<span class="dt">${dateStr}</span>` : ""}</div>`;
 }

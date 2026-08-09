@@ -79,6 +79,9 @@ describe("executeCollected — 静默导入入口", () => {
     expect(r.folders).toBe(0);
     expect(mocks.ImportModelFile).toHaveBeenCalledWith("模型.ysm", "QUJD");
     expect(ImportHistory.records.length).toBe(1);
+    // P2 修复（审核发现）：isYsm 不得硬编码 false——.ysm 单文件须为 true，
+    // 否则已导入列表缺「✂️ 重命名」按钮（与表单路径行为不一致）
+    expect(ImportHistory.records[0].isYsm).toBe(true);
   });
 
   it("普通文件夹装 ysm → 整组导入（保留层级）", async () => {
@@ -96,6 +99,8 @@ describe("executeCollected — 静默导入入口", () => {
       { RelPath: "模型A.ysm", Base64: "QUJD" },
       { RelPath: "模型B.ysm", Base64: "QUJD" },
     ]);
+    // 文件夹条目 isYsm 保持 false（重命名按钮按单文件展示）
+    expect(ImportHistory.records[0].isYsm).toBe(false);
   });
 
   it("多层嵌套 → 顶层目录整组，深层 relPath 保留", async () => {

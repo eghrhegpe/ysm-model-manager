@@ -662,10 +662,10 @@
 | `countMissing()` | `frontend/src/features/community/render:44` | 计算缺失数量 |
 | `filterModels()` | `frontend/src/features/community/render:55` | 过滤模型列表：关键词匹配（模型名）+ 「仅显示缺失」开关。 |
 | `renderModelList()` | `frontend/src/features/community/render:99` | 渲染模型列表（DocumentFragment） |
-| `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:189` | 站点分组展示顺序（renderCardsHTML 使用） |
-| `groupSites()` | `frontend/src/features/community/render:194` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
-| `renderCardsHTML()` | `frontend/src/features/community/render:211` | 生成左栏站点卡片 HTML |
-| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:259` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
+| `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:190` | 站点分组展示顺序（renderCardsHTML 使用） |
+| `groupSites()` | `frontend/src/features/community/render:195` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
+| `renderCardsHTML()` | `frontend/src/features/community/render:212` | 生成左栏站点卡片 HTML |
+| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:262` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
 | `getExt()` | `frontend/src/features/dnd-shared:4` | — |
 | `isSupportedFile()` | `frontend/src/features/dnd-shared:8` | 扩展名是否在支持列表 |
 | `isImportableFile()` | `frontend/src/features/dnd-shared:14` | 是否可作为独立文件导入：.json 仅放行 ysm.json 入口清单 包内 geometry/animation/语言 json（main.json / *.animation. |
@@ -675,13 +675,13 @@
 | `groupCollected()` | `frontend/src/features/dnd-shared:51` | 将收集到的条目分组： - 有目录前缀的条目 → 按「顶层目录」整组（dir = 第一段路径），组内保留完整 relPath（支持多层嵌套） - 无目录前缀的散落文件 → 单文件队列 |
 | `registerDnD()` | `frontend/src/features/import-dnd:266` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
 | `isImportableFile()` | `frontend/src/features/import-executor` | — |
-| `ImportFile()` | `frontend/src/features/import-executor:13` | 带相对路径的 File（文件夹导入时标记 _relPath） |
-| `ImportRecord()` | `frontend/src/features/import-executor:16` | 已导入历史条目（导入 tab「已导入」列表数据源） |
-| `CollectedEntry()` | `frontend/src/features/import-executor:24` | 收集条目（文件 + 相对路径） |
-| `ImportHistory()` | `frontend/src/features/import-executor:33` | — |
-| `directImport()` | `frontend/src/features/import-executor:77` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
-| `importFolder()` | `frontend/src/features/import-executor:108` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） |
-| `executeCollected()` | `frontend/src/features/import-executor:166` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
+| `ImportFile()` | `frontend/src/features/import-executor:14` | 带相对路径的 File（文件夹导入时标记 _relPath） |
+| `ImportRecord()` | `frontend/src/features/import-executor:17` | 已导入历史条目（导入 tab「已导入」列表数据源） |
+| `CollectedEntry()` | `frontend/src/features/import-executor:25` | 收集条目（文件 + 相对路径） |
+| `ImportHistory()` | `frontend/src/features/import-executor:34` | — |
+| `directImport()` | `frontend/src/features/import-executor:78` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
+| `importFolder()` | `frontend/src/features/import-executor:111` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） |
+| `executeCollected()` | `frontend/src/features/import-executor:169` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
 | `normalizeRepoName()` | `frontend/src/features/import-queue:27` | 仓库文件名归一化为「纯名」键（⚠️ 重名预警的 repoFiles Set 与查询共用契约）： 先剥 `.ban` 再剥扩展名（顺序不可反）——`foo.ysm` 与 `foo.y |
 | `ImportQueueHost()` | `frontend/src/features/import-queue:35` | app-content 组件实例（initImportQueue 依赖的成员） |
 | `initImportQueue()` | `frontend/src/features/import-queue:41` | 初始化导入队列，返回清理函数 |

@@ -142,7 +142,8 @@ export function renderModelList(
     metaCell.className = "gh-meta";
     const sizeSpan = document.createElement("span");
     sizeSpan.className = "gh-size";
-    sizeSpan.textContent = formatBytes(m.size || 0);
+    // P4（审核发现）：`m.size || 0` 属 truthiness 数值判断，按数值守卫范式用 ?? 0
+    sizeSpan.textContent = formatBytes(m.size ?? 0);
     metaCell.appendChild(sizeSpan);
     const searchBtn = createIconBtn(
       ICONS.SEARCH,
@@ -219,11 +220,13 @@ export function renderCardsHTML(
   SITE_GROUP_ORDER.forEach((g) => {
     if (!groups[g] || !groups[g].length) return;
     const info = GROUP_LABELS[g] || { icon: "🔗", label: g };
+    // P3（审核发现）：未知分组回退 label/icon 未经 esc 直接拼入 HTML——已知分组是
+    // i18n 常量安全，未知分组若含 <script> 即注入；统一转义（已知分组 esc 无副作用）
     html +=
       '<div class="gh-section-title">' +
-      info.icon +
+      esc(info.icon) +
       " " +
-      info.label +
+      esc(info.label) +
       "</div>";
     groups[g].forEach((s) => {
       html +=
@@ -286,7 +289,8 @@ export function renderRepoHeaderHTML(params: {
     " " +
     esc(repo) +
     "</span>" +
-    sourceLabel +
+    // P3（审核发现）：sourceLabel 契约上可能含用户数据，统一转义防注入
+    esc(sourceLabel) +
     "</div>" +
     // 行3: 搜索
     '<div class="gh-search-wrap">' +

@@ -8,6 +8,7 @@ import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
 import { getApp } from "../wails/app.ts";
 import { groupCollected, isImportableFile } from "./dnd-shared.ts";
+import { isYsmName } from "../utils/icon/icon.ts";
 
 /** 带相对路径的 File（文件夹导入时标记 _relPath） */
 export type ImportFile = File & { _relPath?: string };
@@ -93,7 +94,9 @@ export const directImport = async (file: File): Promise<void> => {
     ImportHistory.push({
       name: file.name,
       time: new Date().toLocaleTimeString(),
-      isYsm: false,
+      // P2 修复（审核发现）：isYsm 硬编码 false 导致 .ysm 单文件静默导入后
+      // 已导入列表无「✂️ 重命名」按钮（表单路径 isYsm:true 有按钮，行为不一致）
+      isYsm: isYsmName(file.name),
     });
     refreshRepo();
     toast(t("import.success") + ": " + file.name, "success", 2000);

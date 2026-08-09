@@ -178,7 +178,9 @@ export function bindRepoEvents(
       const name = row.dataset.name || "";
       const m = models.find((x) => x.name === name);
       if (!m) return;
-      const sizeStr = m.size ? (m.size / 1024).toFixed(0) + "KB" : "?KB";
+      // P4 修复（审核发现）：`m.size ? ...` truthiness 把 0 字节折叠为 "?KB"；`m.size`
+      // 可选需先 ?? 0 窄化再比较，避免 TS18048 与语义歧义
+      const sizeStr = (m.size ?? 0) > 0 ? (m.size! / 1024).toFixed(0) + "KB" : "?KB";
       bus.emit("menu:show", {
         x: e.clientX,
         y: e.clientY,

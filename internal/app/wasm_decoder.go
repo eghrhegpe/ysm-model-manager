@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -23,6 +24,11 @@ func init() {
 }
 
 func findNodeJS() string {
+	// ADR-047 明示：Android 无 Node.js 运行时，nodeJSPath 恒为空 → runYSMNodeJSDecode
+	// 返回 nil（.ysm 预览走 WASM 内嵌解码或不可用），不尝试 exec 避免静默失败
+	if runtime.GOOS == "android" {
+		return ""
+	}
 	// PATH 查找（跨平台：Linux/macOS 命中 "node"，Windows 命中 "node.exe"）
 	if p, err := exec.LookPath("node"); err == nil {
 		return p

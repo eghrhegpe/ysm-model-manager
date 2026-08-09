@@ -90,6 +90,8 @@ func (w *Watcher) Start() error {
 	// 项目默认 Windows 部署（ReadDirectoryChangesW 无此限制），故暂不实现定期全量扫描回退；
 	// 若未来支持 Linux 且仓库过深导致 fw.Add 失败，再考虑全量扫描兜底。
 	// 失败已 log.Printf 记录，便于诊断。
+	// ADR-047 明示：Android 依赖 fsnotify 对 FUSE/外置存储的兼容性（inotify 经 sdcardfs
+	// 事件可能不完整），仓库根变更可能漏报；Android 上以手动刷新/重扫为准，不做轮询兜底。
 
 	go w.loop()
 	log.Printf("[watcher] 已启动: %s", w.repoRoot)

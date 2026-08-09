@@ -4,6 +4,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -97,6 +98,10 @@ func (a *App) RevealInExplorer(path string) error {
 	case "darwin":
 		// macOS: Finder 中选中并显示文件
 		cmd = exec.Command("open", "-R", filepath.FromSlash(path))
+	case "android":
+		// ADR-047 平台守卫：Android 无桌面资源管理器，SAF 打开需要 content:// URI 桥
+		// （MikuMikuAR ADR-194 已弃用 SAF），明确返回不支持避免 xdg-open 静默失败
+		return errors.New("RevealInExplorer: Android 不支持在资源管理器中显示，请在文件管理器中手动查找")
 	default:
 		// Linux: 无"选中文件"命令，退化为打开所在目录
 		cmd = exec.Command("xdg-open", filepath.Dir(filepath.FromSlash(path)))

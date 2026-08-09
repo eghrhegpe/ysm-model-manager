@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
@@ -251,6 +252,11 @@ func (a *App) DoUpdate(url string, expectedHash string) string {
 }
 
 func (a *App) RestartApplication() error {
+	// ADR-047 平台守卫：Android 进程模型不同（Activity 生命周期），
+	// os.Executable + exec.Command 重启链不适用，明确拒绝
+	if runtime.GOOS == "android" {
+		return fmt.Errorf("RestartApplication: Android 不支持进程重启，请手动重新打开应用")
+	}
 	exe, err := os.Executable()
 	if err != nil {
 		return err

@@ -300,6 +300,11 @@ func (a *App) isPathInRoot(path string) bool {
 func (a *App) OpenFolder(dir string) error {
 	// 统一路径分隔符（Windows explorer 不接受混合斜杠）
 	dir = filepath.Clean(dir)
+	// ADR-047 平台守卫：Android 无 xdg-open，SAF 打开需 content:// URI 桥
+	// （MikuMikuAR ADR-194 已弃用 SAF），明确返回不支持避免命令静默失败
+	if runtime.GOOS == "android" {
+		return fmt.Errorf("OpenFolder: Android 不支持打开文件夹，请在文件管理器中手动查找")
+	}
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":

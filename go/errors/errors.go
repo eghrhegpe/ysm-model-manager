@@ -32,8 +32,11 @@ func Friendly(err error) error {
 		// 语义无歧义，收窄会导致这些消息掉进「操作失败:」兜底。P2/P3 修复。
 		{[]string{"sharing violation", "used by another process", "is locked", "device or resource busy", "resource busy"}, "文件被其他程序占用"},
 		{[]string{"file already exists", "file exists", "already exists"}, "文件已存在"},
-		// "empty" 过于宽泛（如 "empty response body" 会被误分类），只匹配目录/文件为空的具体短语
-		{[]string{"directory is empty", "no files", "folder is empty"}, "目录为空，没有可操作的文件"},
+		// "empty" 过于宽泛（如 "empty response body" 会被误分类），只匹配目录/文件为空的具体短语。
+		// P3 修复：裸 "no files" 是 "no filesystem"/"no filesystems" 的子串——
+		// 文件系统类错误会被误分类为「目录为空」（注释自称「只匹配具体短语」与实情不符），
+		// 收窄为目录/文件夹场景的完整短语
+		{[]string{"directory is empty", "folder is empty", "no files found", "no files in directory", "no files in folder"}, "目录为空，没有可操作的文件"},
 		{[]string{"timeout", "timed out"}, "连接超时，请检查网络"},
 		{[]string{"refused", "connection refused"}, "连接被拒绝，请检查网络或防火墙"},
 		{[]string{"connection reset", "broken pipe", "reset by peer"}, "网络连接中断"},

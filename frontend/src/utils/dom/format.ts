@@ -10,8 +10,10 @@ const RED_BOUND = 3 * MB;
 /** 字节数 → 可读大小（B/KB/MB/GB），非法值返回空串 */
 export function fmt(b: number): string {
   // P2 修复：±Infinity 是 truthy，`!b && b !== 0` 挡不住 → 输出 "Infinity GB"。
-  // 用 Number.isFinite 一并拦截 NaN/±Infinity，落实「非法输入一律返回空串」不变量
-  if (!Number.isFinite(b)) return "";
+  // 用 Number.isFinite 一并拦截 NaN/±Infinity，落实「非法输入一律返回空串」不变量。
+  // P3 修复：负值同样非法（文件大小不可能为负，`fmt(-5)` 原输出 "-5 B"）——
+  // Number.isFinite 对负值返回 true，需显式拒绝
+  if (!Number.isFinite(b) || b < 0) return "";
   if (b < KB) return b + " B";
   if (b < MB) return (b / KB).toFixed(1) + " KB";
   if (b < GB) return (b / MB).toFixed(1) + " MB";
@@ -20,7 +22,7 @@ export function fmt(b: number): string {
 
 /** 文件大小颜色 class：<1MB 绿色，1-3MB 正常，≥3MB 红色 */
 export function sizeColor(b: number): string {
-  if (!Number.isFinite(b)) return "";
+  if (!Number.isFinite(b) || b < 0) return "";
   if (b < MB) return "sz-green";
   if (b < RED_BOUND) return "";
   return "sz-red";

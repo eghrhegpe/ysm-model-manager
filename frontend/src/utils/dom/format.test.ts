@@ -10,6 +10,18 @@ describe("fmt — 文件大小格式化", () => {
     expect(fmt(null as unknown as number)).toBe("");
   });
 
+  // P3 补测：±Infinity 与负值——原 P2 修复（Number.isFinite）无回归锁定，
+  // 且负值经 Number.isFinite 放行输出 "-5 B"（文件大小不可能为负，违反「非法输入一律返回空串」）
+  it("±Infinity → 空串（P2 回归锁定）", () => {
+    expect(fmt(Infinity)).toBe("");
+    expect(fmt(-Infinity)).toBe("");
+  });
+
+  it("负值 → 空串（P3 修复）", () => {
+    expect(fmt(-5)).toBe("");
+    expect(fmt(-1048576)).toBe("");
+  });
+
   it("0 → '0 B'", () => {
     expect(fmt(0)).toBe("0 B");
   });
@@ -39,6 +51,17 @@ describe("fmt — 文件大小格式化", () => {
 describe("sizeColor — 大小颜色分区", () => {
   it("非法值 → 空串", () => {
     expect(sizeColor(NaN)).toBe("");
+  });
+
+  // P3 补测：±Infinity 与负值——与 fmt 同守卫（Number.isFinite + 负值拒绝）
+  it("±Infinity → 空串（P2 回归锁定）", () => {
+    expect(sizeColor(Infinity)).toBe("");
+    expect(sizeColor(-Infinity)).toBe("");
+  });
+
+  it("负值 → 空串（P3 修复）", () => {
+    expect(sizeColor(-5)).toBe("");
+    expect(sizeColor(-1048576)).toBe("");
   });
 
   it("< 1MB → sz-green", () => {

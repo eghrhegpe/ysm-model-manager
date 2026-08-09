@@ -472,14 +472,21 @@ func ToggleModelEnable(root, path string) (bool, error) {
 	}
 	// P2 修复（根级守卫对齐）：path 等于仓库根本身时拒绝——原 root 守卫仅覆盖 ysm.json
 	// 提升分支，非 ysm.json 输入（普通文件/目录禁用段 os.Rename(path, path+".ban")）无守卫，
-	// path==root 时整个仓库根被改名成 ysm.ban 隔离（与 MoveToRecycle/DeleteModelFile 根拒绝对齐）
+	// path==root 时整个仓库根被改名成 ysm.ban 隔离（与 MoveToRecycle/DeleteModelFile 根拒绝对齐）。
+	// P3 修复（code_review）：① Abs 错误必须传播（对齐 DeleteModelFile 的 return err 模式——
+	// 原 if err==nil 静默跳过守卫 = fail-open，Abs 失败时根保护静默丢失）；
+	// ② 比较用 EqualFold 大小写不敏感（对齐 paths.IsInside 的 Windows 语义，防大小写绕过）
 	if root != "" {
 		absRoot, err := filepath.Abs(root)
-		if err == nil {
-			absPath, err2 := filepath.Abs(path)
-			if err2 == nil && filepath.Clean(absPath) == filepath.Clean(absRoot) {
-				return false, fmt.Errorf("不能对资源根目录执行启用/禁用操作")
-			}
+		if err != nil {
+			return false, err
+		}
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return false, err
+		}
+		if strings.EqualFold(filepath.Clean(absPath), filepath.Clean(absRoot)) {
+			return false, fmt.Errorf("不能对资源根目录执行启用/禁用操作")
 		}
 	}
 	// 目录级 .ban 识别（与 IsFileBanned 对称）：父目录名以 .ban 结尾 = 整组禁用态。

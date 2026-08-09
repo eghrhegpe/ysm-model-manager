@@ -9,7 +9,7 @@
 
 ## 1. 背景（Context）
 
-本项目当前目标平台仅 Windows（`Taskfile.yml` 仅 include `common` + `windows`，注释自认「本项目当前目标平台为 Windows」；build/ 下无 darwin/linux/android/ios 目录）。用户提出调查**全平台化可行性**，参考同仓库体系下已完成六平台构建 + Android 真机适配的姊妹项目 **MikuMikuAR**（`C:\Users\zhujieling11\MikuMikuAR`）。
+本项目当前目标平台仅 Windows（`Taskfile.yml` 仅 include `common` + `windows`，注释自认「本项目当前目标平台为 Windows」；build/darwin/ 仅有图标占位（icons.icns），无 Taskfile 构建配置）。用户提出调查**全平台化可行性**，参考同仓库体系下已完成六平台构建 + Android 真机适配的姊妹项目 **MikuMikuAR**（`C:\Users\zhujieling11\MikuMikuAR`）。
 
 调查动机：确认 ysm-model-manager 是否可低成本复制 MikuMikuAR 的跨平台路径，识别真正的阻碍点，为后续立项（桌面三平台 / Android / iOS）提供决策依据。
 
@@ -18,10 +18,10 @@
 | 维度 | ysm-model-manager | MikuMikuAR（参考基准） |
 |------|-------------------|------------------------|
 | 桌面壳 | Wails v3 alpha2.105（Go 1.25 + WebView2） | Wails v3（同版本体系，ADR-011 因 Android 需求迁 v3） |
-| 构建管线 | **仅 include `windows`**；build/ 下只有 windows | **6 平台 includes**：common/windows/darwin/linux/ios/android，各平台 build/ 目录齐全（gradle 工程、pbxproj、nfpm、mime） |
+| 构建管线 | **Taskfile 仅 include `windows`**；build/darwin/ 仅有图标占位（icons.icns），无 Taskfile 构建配置 | **6 平台 includes**：common/windows/darwin/linux/ios/android，各平台 build/ 目录齐全（gradle 工程、pbxproj、nfpm、mime） |
 | 绑定 | `wails3 generate bindings -clean=true -ts -i`（.ts + vite 重定向） | 同款 `-ts -d frontend/bindings` 自动生成 + FNV-1a ID 契约测试 |
 | 前端架构 | Web Components + Shadow DOM，**零平台守卫**（无 isAndroid），路径统一正斜杠 | 原生 DOM（无 Web Components），**53 处 `isAndroid` 守卫**，小步迭代策略 |
-| Go 平台隔离 | **已有雏形**：`hidewindow`/`isCrossDevice`/`isHardLink`/`link`/`updater`/`app_config` 均有 `_windows.go` + `_other.go` build tag 双版本 | PathManager 接口 + build tags 平台实现（`pathmgr_desktop.go`/`pathmgr_android.go`）、FileAccessor 抽象（10 处 `os.*` 收拢） |
+| Go 平台隔离 | **已有雏形**：`hidewindow`(avatar+fileops)/`isCrossDevice`/`isHardLink`/`link`(windows/unix)/`updater`/`app_config` 均有 build tag 平台双文件（`_windows/_other`，link 用 `_windows/_unix`） | PathManager 接口 + build tags 平台实现（`pathmgr_desktop.go`/`pathmgr_android.go`）、FileAccessor 抽象（10 处 `os.*` 收拢） |
 | 3D | Three.js + 内嵌 YSMParser WASM（WebView 内解码，无 exe sidecar） | Babylon.js + babylon-mmd + WASM Bullet 物理 |
 | 更新 | 自更新**仅 Windows**（.exe 替换 + ysm-updater-helper.exe） | 未作重点 |
 | 文件访问 | `os.*` 直读 + HTTP 文件服务器（127.0.0.1） | 同款 + Android 端 `readFileBytes`+Blob URL（ADR-017 A0-01 根治） |
@@ -29,6 +29,8 @@
 ## 2. 决策（Decision）
 
 **结论：全平台化高可行，且阻力低于预期。** MikuMikuAR 已把全路径（Windows/macOS/Linux/Android/iOS 六平台构建 + Android 真机适配）完整趟过一遍，ysM 与其技术栈同源，可按同一套路低成本复制。
+
+> **置信度分级**：P1 桌面三平台为**确定可行**（不依赖 WASM，前端零改动）；P2 Android 为**高可行但条件成立**——须先通过 YSMParser WASM 的 SharedArrayBuffer 依赖审计（🔴 红线前置），未过审则 Android 路径需降级方案。
 
 ### 阻碍点分级
 
@@ -92,7 +94,7 @@
 
 | 来源 | 结论 |
 |------|------|
-| ysm `Taskfile.yml` / `build/` | 仅 Windows；build/ 下无其他平台目录 |
+| ysm `Taskfile.yml` / `build/` | Taskfile 仅 include windows；build/darwin/ 仅含 icons.icns 占位、无构建配置（build/ 脚手架已入仓，见 .gitignore） |
 | ysm `main.go` + `docs/architecture.md` §1/§2 | Wails v3 alpha2.105 + Go 1.25 + WebView2；单一 Service |
 | ysm grep `go:build`（go/ + internal/） | 6 组 `_windows/_other` 双文件已存在（hidewindow/isCrossDevice/isHardLink/link/updater/app_config） |
 | ysm `internal/app/app_files.go:93`、`app_scan.go:292` | `exec.Command("explorer", ...)` 硬编码 |

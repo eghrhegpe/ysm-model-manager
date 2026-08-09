@@ -157,8 +157,10 @@ func (a *App) MoveToRecycle(src string) error {
 	}
 	// P2 修复（根级守卫对齐）：src 等于资源根本身时拒绝——findRecycleRoot 对 rel=="."
 	// 判命中 + recycle.IsInside 对 path==root 放行 → 整仓库移入 .recycle（可恢复但误操作面大）；
-	// fallback 到 ysmRoot 后 Clean 相等同样拒绝
-	if filepath.Clean(src) == filepath.Clean(root) {
+	// fallback 到 ysmRoot 后 Clean 相等同样拒绝。
+	// P3 修复（code_review）：EqualFold 大小写不敏感比较（对齐 paths.IsInside 的 Windows 语义，
+	// 防大小写不同的根输入绕过守卫）
+	if strings.EqualFold(filepath.Clean(src), filepath.Clean(root)) {
 		return fmt.Errorf("不能把资源根目录整体移入回收站")
 	}
 	return recycle.Move(src, root)

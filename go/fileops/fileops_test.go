@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -128,6 +129,42 @@ func TestIsFileBanned(t *testing.T) {
 	}
 	if !IsFileBanned("X.YSM.BAN") {
 		t.Fatal("大小写不敏感")
+	}
+}
+
+// P3 补测（code_review）：ToggleModelEnable 根级守卫——path==root 必须拒绝且
+// root 未被改名成 .ban（原仅 ysm.json 分支有守卫，非 ysm.json 输入可整仓库隔离）
+func TestToggleModelEnable_RootRejected(t *testing.T) {
+	dir := t.TempDir()
+	_, err := ToggleModelEnable(dir, dir)
+	if err == nil {
+		t.Fatal("path==root 应拒绝")
+	}
+	// 断言用 os.Stat 检查 dir.ban 是否实际存在——IsFileBanned 只查路径后缀、
+	// 对 dir+".ban" 这类以 .ban 结尾的路径恒返回 true，不能用于验证「未改名」
+	if _, err := os.Stat(dir + ".ban"); err == nil {
+		t.Fatal("根目录不得被改名成 .ban")
+	}
+	if _, err := os.Stat(dir); err != nil {
+		t.Fatalf("根目录应原样保留: %v", err)
+	}
+}
+
+// P3 补测（code_review）：Windows 大小写不同的根输入经 EqualFold 比较仍拒绝
+func TestToggleModelEnable_RootRejectedCaseInsensitive(t *testing.T) {
+	dir := t.TempDir()
+	mixed := strings.ToUpper(dir)
+	if runtime.GOOS == "windows" {
+		_, err := ToggleModelEnable(dir, mixed)
+		if err == nil {
+			t.Fatal("Windows 大小写不同的根应拒绝")
+		}
+	} else {
+		// POSIX 大小写敏感：不同路径视为正常输入（可能报其他错，但不能改名根目录）
+		_, err := ToggleModelEnable(dir, mixed)
+		if err != nil && IsFileBanned(dir+".ban") {
+			t.Fatal("POSIX 上根目录不得被改名")
+		}
 	}
 }
 

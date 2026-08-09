@@ -1,5 +1,6 @@
 // ===== preview HTML 模板 =====
 import { esc } from "../../utils/dom/html.ts";
+import { t } from "../../core/i18n/t.ts";
 
 /** 模型统计元数据（modelDetailHTML 入参） */
 export interface ModelDetailMeta {
@@ -19,37 +20,37 @@ export interface ModelDetailMeta {
 export function modelDetailHTML(meta: ModelDetailMeta | null): string {
   if (!meta) {
     return `<div class="content" id="preview-content">
-<h3>📄 模型信息</h3>
+<h3>📄 ${t("preview.modelInfo")}</h3>
 <div class="dp-placeholder">
   <div class="big-icon"></div>
-  <div class="dp-hint">点击左侧仓库文件查看详情</div>
+  <div class="dp-hint">${t("preview.clickFileHint")}</div>
   <div class="dp-hints">
-    <span>💎 YSM 模型</span>
-    <span> MMD 皮肤</span>
-    <span>🥽 VRC 头像</span>
-    <span>🎨 资源包</span>
+    <span>💎 ${t("preview.ysmModel")}</span>
+    <span> ${t("preview.mmdSkin")}</span>
+    <span>🥽 ${t("preview.vrcAvatar")}</span>
+    <span>🎨 ${t("preview.resourcePack")}</span>
   </div>
 </div>
 </div>`;
   }
   if (meta.hasError) {
-    const errMsg = meta.errorMsg || "未知错误";
+    const errMsg = meta.errorMsg || t("preview.unknownError");
     return `<div class="content" id="preview-content">
-<h3>📄 模型信息</h3>
+<h3>📄 ${t("preview.modelInfo")}</h3>
 <div class="err">⚠️ ${errMsg}</div>
 </div>`;
   }
   return `<div class="content" id="preview-content">
-<h3>📄 模型信息</h3>
-<div class="md-row"><span class="md-label">名称</span><span class="md-value">${esc(meta.name || "-")}</span></div>
-<div class="md-row"><span class="md-label">作者</span><span class="md-value">${esc(meta.author || "-")}</span></div>
-<div class="md-row"><span class="md-label">版本</span><span class="md-value">${esc(meta.version || "-")}</span></div>
+<h3>📄 ${t("preview.modelInfo")}</h3>
+<div class="md-row"><span class="md-label">${t("preview.nameLabel")}</span><span class="md-value">${esc(meta.name || "-")}</span></div>
+<div class="md-row"><span class="md-label">${t("preview.authorLabel")}</span><span class="md-value">${esc(meta.author || "-")}</span></div>
+<div class="md-row"><span class="md-label">${t("preview.versionLabel")}</span><span class="md-value">${esc(meta.version || "-")}</span></div>
 <div class="md-divider"></div>
-<div class="md-row"><span class="md-label">🦴 骨骼</span><span class="md-value">${meta.bones || 0}</span></div>
-<div class="md-row"><span class="md-label">🖼️ 贴图</span><span class="md-value">${meta.textures || 0}</span></div>
-<div class="md-row"><span class="md-label">🎬 动画</span><span class="md-value">${meta.animations || 0}</span></div>
-<div class="md-row"><span class="md-label">🔺 顶点</span><span class="md-value">${(meta.vertices || 0).toLocaleString()}</span></div>
-<div class="md-row"><span class="md-label">◻️ 面</span><span class="md-value">${(meta.faces || 0).toLocaleString()}</span></div>
+<div class="md-row"><span class="md-label">🦴 ${t("preview.bonesLabel")}</span><span class="md-value">${meta.bones || 0}</span></div>
+<div class="md-row"><span class="md-label">🖼️ ${t("preview.texturesLabel")}</span><span class="md-value">${meta.textures || 0}</span></div>
+<div class="md-row"><span class="md-label">🎬 ${t("preview.animationsLabel")}</span><span class="md-value">${meta.animations || 0}</span></div>
+<div class="md-row"><span class="md-label">🔺 ${t("preview.verticesLabel")}</span><span class="md-value">${(meta.vertices || 0).toLocaleString()}</span></div>
+<div class="md-row"><span class="md-label">◻️ ${t("preview.facesLabel")}</span><span class="md-value">${(meta.faces || 0).toLocaleString()}</span></div>
 </div>`;
 }
 

@@ -4,6 +4,7 @@ import { esc } from "../../utils/dom/html.ts";
 import { getApp } from "../../wails/app.ts";
 import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
+import { t } from "../../core/i18n/t.ts";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
@@ -45,7 +46,7 @@ export async function createLitematic3D(
     "display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,0.3);flex-shrink:0;position:relative;z-index:10;color:#fff;font-size:13px;pointer-events:auto";
 
   const closeBtn = document.createElement("button");
-  closeBtn.textContent = "✕ 关闭 3D";
+  closeBtn.textContent = "✕ " + t("preview.close3d");
   closeBtn.style.cssText =
     "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
   topBar.appendChild(closeBtn);
@@ -56,7 +57,7 @@ export async function createLitematic3D(
 
   const rotLabel = document.createElement("span");
   rotLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
-  rotLabel.textContent = "摄像机旋转:";
+  rotLabel.textContent = t("preview.cameraRotation") + ":";
   topBar.appendChild(rotLabel);
 
   const rotSel = document.createElement("select");
@@ -71,7 +72,7 @@ export async function createLitematic3D(
 
   const spdLabel = document.createElement("span");
   spdLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
-  spdLabel.textContent = "摄像机速度:";
+  spdLabel.textContent = t("preview.cameraSpeed") + ":";
   topBar.appendChild(spdLabel);
 
   const spdSlider = document.createElement("input");
@@ -94,7 +95,7 @@ export async function createLitematic3D(
 
   const axisLabel = document.createElement("span");
   axisLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
-  axisLabel.textContent = "分层轴:";
+  axisLabel.textContent = t("preview.sliceAxis") + ":";
   topBar.appendChild(axisLabel);
 
   const axisSel = document.createElement("select");
@@ -191,7 +192,7 @@ export async function createLitematic3D(
     const data = JSON.parse(jsonStr) as VoxelData;
 
     if (!data || !data.groups || !data.groups.length) {
-      loadingEl.innerHTML = '<div style="font-size:32px">⚠️</div><div>体素数据为空</div>';
+      loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>${t("preview.voxelEmpty")}</div>`;
       return;
     }
     loadingEl.remove();
@@ -405,7 +406,7 @@ export async function createLitematic3D(
       const w = document.createElement("div");
       w.style.cssText = "padding:6px 12px;background:rgba(207,83,0,0.3);color:#ffa64d;font-size:12px;text-align:center;flex-shrink:0";
       const max = data.maxBlocks || 200000;
-      w.textContent = "⚠️ 方块数量超过上限（" + max.toLocaleString() + "），仅显示部分内容";
+      w.textContent = "⚠️ " + t("preview.blockLimit", { max: max.toLocaleString() });
       overlay.insertBefore(w, overlay.children[1]);
     }
 

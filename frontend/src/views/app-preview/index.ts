@@ -15,6 +15,7 @@ import { showModelDetail, showResourcePack, showShaderPack } from "./detail.ts";
 import { showLitematic, cleanupLitematic3D, invalidateLitematicPreview } from "./litematic-meta.ts";
 import { esc } from "../../utils/dom/html.ts";
 import type { BedrockGeometry } from "./geometry.ts";
+import { t } from "../../core/i18n/t.ts";
 
 // 注册缓存淘汰回调：释放 blob URL
 cacheSetEvictHandler((key, val) => {
@@ -75,7 +76,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
         } catch (e) {
           console.error("[preview] 加载失败:", e);
           this._root.innerHTML =
-            '<div class="content"><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">加载失败</div></div></div>';
+            '<div class="content"><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">' + t("preview.loadFailed") + '</div></div></div>';
         }
       }),
     );
@@ -202,7 +203,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   /** 显示资源包信息（pack.mcmeta + pack.png）——直连 showResourcePack，无包装层 */
   private async _showPackInfo(dirPath: string): Promise<void> {
     const gen = this._previewGen;
-    this._root.innerHTML = `<div class="content" id="preview-content"><h3>📦 整合包</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
+    this._root.innerHTML = `<div class="content" id="preview-content"><h3>📦 ${t("preview.pack")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
     try {
       const { GetPackInfo } = await getApp();
       const pack = await GetPackInfo(dirPath);
@@ -210,11 +211,11 @@ class AppPreview extends HTMLElement implements PreviewCtx {
       if (gen !== this._previewGen) return;
       if (!pack || (!pack.name && !pack.description)) {
         const folderName = dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
-        this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 文件夹</h3><div class="model-detail-title" style="font-size:13px;font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">该文件夹暂无整合包信息</div></div></div>`;
+        this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 ${t("preview.folder")}</h3><div class="model-detail-title" style="font-size:13px;font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">${t("preview.folderNoInfo")}</div></div></div>`;
         return;
       }
       this._root.innerHTML = `<div class="content" id="preview-content">
-<h3>📦 整合包</h3>
+<h3>📦 ${t("preview.pack")}</h3>
 ${pack.imageBase64 ? `<div class="preview-thumb"><img src="${esc(pack.imageBase64)}" alt="封面"></div>` : ""}
 <div class="model-detail-title" style="font-size:14px;font-weight:700">${esc(pack.name || "")}</div>
 ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px;line-height:1.6">${esc(pack.description)}</div>` : ""}
@@ -223,7 +224,7 @@ ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px
       // P2 修复：catch 分支同样比对代际——A 目录 GetPackInfo 失败迟到时
       // 若用户已切到 B，不得把「无法读取整合包信息」覆盖到 B 的预览
       if (gen !== this._previewGen) return;
-      this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 文件夹</h3><div class="dp-placeholder"><div class="big-icon">📁</div><div class="dp-hint">无法读取整合包信息</div></div></div>`;
+      this._root.innerHTML = `<div class="content" id="preview-content"><h3>📁 ${t("preview.folder")}</h3><div class="dp-placeholder"><div class="big-icon">📁</div><div class="dp-hint">${t("preview.packReadFailed")}</div></div></div>`;
     }
   }
 

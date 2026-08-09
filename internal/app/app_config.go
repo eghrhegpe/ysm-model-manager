@@ -137,7 +137,19 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) e
 		WinScrW: oldCfg.WinScrW,
 		WinScrH: oldCfg.WinScrH,
 	}
-	return a.saveConfig(cfg)
+	if err := a.saveConfig(cfg); err != nil {
+		return err
+	}
+	// 技术债 #4：保存成功后同步内存 LinkMode（与 SetLinkMode 同模式）——
+	// 原实现写盘后 installer 安装仍用旧链接模式直到重启（GetLinkMode 读 a.LinkMode）
+	a.LinkMode = cfg.LinkMode
+	// 技术债 #4：FilesRoot/McRoot 变化后重启 watcher——原 restartWatcher 是无调用点死代码，
+	// 保存后 watcher 仍监听旧目录（文件变更不再触发自动同步）；saveConfig 已更新 configCache，
+	// 故 GetRepoRoot 返回新 FilesRoot 推导的 ysm 根
+	if ysmRoot, err := a.GetRepoRoot("ysm"); err == nil {
+		a.restartWatcher(ysmRoot, cfg.McRoot)
+	}
+	return nil
 }
 
 func (a *App) SetDownloadMirror(mirror string) error {

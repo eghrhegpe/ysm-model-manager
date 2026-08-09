@@ -253,6 +253,12 @@ func (a *App) emitDownloadProgress(downloaded, total int64) {
 }
 
 func (a *App) DownloadFromGitHub(rawURL string, saveDir string) (string, error) {
+	// P3 修复（技术债 #6）：复用 EnqueueDownloads 的 scheme 校验——原实现无校验直通
+	// downloadFileWithQueue，http/ftp/任意主机可拉取（与入队路径的安全口径不一致，
+	// 前端未使用但已暴露为 Binding API）
+	if !strings.HasPrefix(rawURL, "https://") {
+		return "", fmt.Errorf("不支持的 URL scheme: %s（仅支持 https）", rawURL)
+	}
 	return a.downloadFileWithQueue(context.Background(), rawURL, saveDir)
 }
 

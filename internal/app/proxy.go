@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -63,6 +64,31 @@ func (a *App) IsProxyRunning() bool {
 	return proxyRunning
 }
 
+// isBlockedIP 判断 IP 是否为内网/本机形态（SSRF 防护共用）
+func isBlockedIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsUnspecified()
+}
+
+// isNumericIPNotation 判断主机名是否为十进制/十六进制整数形态 IP——
+// net.ParseIP 不识别「2130706433」（=127.0.0.1）与「0x7f000001」，可绕过字面量 IP 校验。
+// 仅当主机名不含点（纯数字整数形态）且能整体解析为数字时才判定；普通域名/含点 IP 不受影响。
+func isNumericIPNotation(host string) bool {
+	if strings.Contains(host, ".") || host == "" {
+		return false
+	}
+	// 十进制纯数字
+	if _, err := strconv.ParseUint(host, 10, 64); err == nil {
+		return true
+	}
+	// 十六进制 0x 前缀
+	if strings.HasPrefix(strings.ToLower(host), "0x") {
+		if _, err := strconv.ParseUint(host[2:], 16, 64); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
 func handleProxy(w http.ResponseWriter, r *http.Request) {
 	targetURL := r.URL.Query().Get("url")
 	if targetURL == "" {
@@ -86,13 +112,36 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	// SSRF 防护（第二层）：拒绝 loopback/private/link-local 主机
 	// （169.254.169.254 metadata、127.0.0.1 本地端口等走 http 也能命中）
-	if host := parsed.Hostname(); host == "localhost" {
+	host := parsed.Hostname()
+	if host == "" {
 		http.Error(w, "Blocked host", http.StatusBadRequest)
 		return
-	} else if ip := net.ParseIP(host); ip != nil &&
-		(ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsUnspecified()) {
+	}
+	// 技术债 #7：拒绝尾点主机名（"localhost." 与 "localhost" 同义，字面量匹配可绕过）
+	if strings.HasSuffix(host, ".") {
 		http.Error(w, "Blocked host", http.StatusBadRequest)
 		return
+	}
+	// 技术债 #7：拒绝十进制/十六进制整数形态 IP（2130706433 / 0x7f000001 等——
+	// net.ParseIP 不识别，可绕过字面量 IP 校验）
+	if isNumericIPNotation(host) {
+		http.Error(w, "Blocked host", http.StatusBadRequest)
+		return
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if isBlockedIP(ip) {
+			http.Error(w, "Blocked host", http.StatusBadRequest)
+			return
+		}
+	} else if resolved, err := net.LookupHost(host); err == nil {
+		// 技术债 #7：非 IP 主机名解析后校验全部结果（DNS rebinding 防御——
+		// 主机名可解析到内网 IP，仅查字面量 localhost 会绕过）
+		for _, h := range resolved {
+			if ip := net.ParseIP(h); ip != nil && isBlockedIP(ip) {
+				http.Error(w, "Blocked host", http.StatusBadRequest)
+				return
+			}
+		}
 	}
 
 	proxy := &httputil.ReverseProxy{

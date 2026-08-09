@@ -70,14 +70,10 @@ func (a *App) SavePreviewTempFile(base64Data string) (string, error) {
 }
 
 func (a *App) ReadFileBytes(path string) []byte {
-	// 路径守卫：限制在 FilesRoot 内，防止读取系统任意文件
-	root := a.ysmRoot()
-	if root == "" {
-		return nil
-	}
-	clean := filepath.Clean(path)
-	rel, err := filepath.Rel(root, clean)
-	if err != nil || strings.HasPrefix(rel, "..") {
+	// 路径守卫：限制在 FilesRoot 内，防止读取系统任意文件。
+	// 技术债 #5：改用 isPathInRoot 统一口径（rel=="." 拒绝 + 精确段比较）——
+	// 原内联 Rel 裸 HasPrefix(rel,"..") 对 rel=="." 放行（可读仓库根本身）、..foo 误拒
+	if !a.isPathInRoot(path) {
 		return nil
 	}
 	data, err := os.ReadFile(path)

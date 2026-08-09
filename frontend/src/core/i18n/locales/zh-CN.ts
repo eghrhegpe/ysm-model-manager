@@ -10,6 +10,7 @@ export const zhCN: Record<string, string> = {
   "nav.workshop": "创意工坊",
   "nav.diagnostics": "诊断与冲突",
   "nav.settings": "设置",
+  "nav.preview": "预告版",
 
   // ── 通用 ──
   "common.loading": "加载中…",
@@ -124,6 +125,7 @@ export const zhCN: Record<string, string> = {
   "workshop.activeCreators": "活跃创作者",
   "workshop.noEmbed": "此站点不允许内嵌浏览",
   "workshop.openExternal": "在系统浏览器中打开",
+  "workshop.github": "GitHub仓库",
 
   // ── 错误消息 ──
   "error.networkOffline": "🌐 无网络连接，请检查网络后重试",

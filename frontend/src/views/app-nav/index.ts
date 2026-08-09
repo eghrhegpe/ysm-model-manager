@@ -2,11 +2,13 @@
 // 事件：nav:change — 切换页面
 import { bus, type PageName } from "../../bus.ts";
 import { resolveInitialPage } from "../../core/page-store.ts";
+import { t } from "../../core/i18n/t.ts";
 import { getApp } from "../../wails/app.ts";
 
 class AppNav extends HTMLElement {
   _current: string;
   _unsub: (() => void) | undefined;
+  _unsubLang: (() => void) | undefined;
 
   constructor() {
     super();
@@ -26,6 +28,8 @@ class AppNav extends HTMLElement {
         el.classList.toggle("active", (el as HTMLElement).dataset.page === page);
       });
     });
+    // 语言切换时重渲染导航标签
+    this._unsubLang = bus.on("lang:changed", () => this.render());
     this.render();
     // 恢复上次保存的页面（首次使用或仓库页也需发射，确保导航栏高亮和 app-content 渲染）
     // 用 queueMicrotask 确保其他组件的 connectedCallback 先完成注册
@@ -35,17 +39,18 @@ class AppNav extends HTMLElement {
   }
 
   disconnectedCallback(): void {
-    if (this._unsub) this._unsub();
+    this._unsub?.();
+    this._unsubLang?.();
   }
 
   render(): void {
     const items = [
-      { id: "repository", icon: "📚", label: "模型仓库" },
-      { id: "instances", icon: "🎮", label: "整合包管理" },
-      { id: "workshop", icon: "🎨", label: "创作者频道" },
-      { id: "github", icon: "🧩", label: "创意工坊" },
-      { id: "diagnostics", icon: "🛠️", label: "诊断与冲突" },
-      { id: "settings", icon: "⚙️", label: "设置" },
+      { id: "repository", icon: "📚", key: "nav.repository" },
+      { id: "instances", icon: "🎮", key: "nav.instances" },
+      { id: "workshop", icon: "🎨", key: "nav.community" },
+      { id: "github", icon: "🧩", key: "nav.workshop" },
+      { id: "diagnostics", icon: "🛠️", key: "nav.diagnostics" },
+      { id: "settings", icon: "⚙️", key: "nav.settings" },
     ];
 
     this.shadowRoot!.innerHTML = `
@@ -117,13 +122,13 @@ class AppNav extends HTMLElement {
             (item) => `
           <div class="nav-item ${item.id === this._current ? "active" : ""}" data-testid="nav-item" data-page="${item.id}">
             <span class="icon">${item.icon}</span>
-            <span>${item.label}</span>
+            <span>${t(item.key)}</span>
           </div>
         `,
           )
           .join("")}
       </div>
-      <div class="version" id="nav-version">加载中…</div>
+      <div class="version" id="nav-version">${t("common.loading")}</div>
     `;
 
     this.shadowRoot!.querySelectorAll(".nav-item").forEach((el) => {
@@ -135,12 +140,12 @@ class AppNav extends HTMLElement {
       .then((App) =>
         App.GetAppVersion().then((v) => {
           const el = this.shadowRoot!.getElementById("nav-version");
-          if (el) el.textContent = (v || "dev") + " \u2022 预告版";
+          if (el) el.textContent = (v || "dev") + " \u2022 " + t("nav.preview");
         }),
       )
       .catch(() => {
         const el = this.shadowRoot!.getElementById("nav-version");
-        if (el) el.textContent = "v1.0.0 \u2022 预告版";
+        if (el) el.textContent = "v1.0.0 \u2022 " + t("nav.preview");
       });
   }
 }

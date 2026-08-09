@@ -20,7 +20,7 @@ describe("app-content 模板", () => {
   it("instancesHTML 挂载 app-sidebar 与占位提示", () => {
     const html = instancesHTML();
     expect(html).toContain('<app-sidebar class="ins-sidebar"></app-sidebar>');
-    expect(html).toContain("点击左侧整合包查看模型");
+    expect(html).toContain("instances.emptyHint");
   });
 
   it("settingsHTML 包含设置面板骨架", () => {
@@ -44,7 +44,7 @@ describe("app-content 模板", () => {
   it("recycleHTML 包含清空回收站按钮", () => {
     const html = recycleHTML();
     expect(html).toContain('id="recy-empty"');
-    expect(html).toContain("清空回收站");
+    expect(html).toContain("recycle.empty");
   });
 
   it("githubHTML 包含仓库网格与提示", () => {

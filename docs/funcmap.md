@@ -883,14 +883,14 @@
 | `createCrCard()` | `frontend/src/views/app-content/site/render:35` | 创作者卡片工厂 |
 | `SiteViewState()` | `frontend/src/views/app-content/site/types:12` | SiteViewState —— renderSiteView 内部闭包共享变量的显式收拢。 |
 | `CleanupFn()` | `frontend/src/views/app-content/site/types:39` | bindXxxEvents 函数的统一返回：清理函数，主入口聚合成单一 cleanup |
-| `repositoryHTML()` | `frontend/src/views/app-content/tpl:4` | — |
-| `instancesHTML()` | `frontend/src/views/app-content/tpl:44` | — |
-| `settingsHTML()` | `frontend/src/views/app-content/tpl:65` | — |
-| `downloadsHTML()` | `frontend/src/views/app-content/tpl:437` | — |
-| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:488` | — |
-| `recycleHTML()` | `frontend/src/views/app-content/tpl:547` | — |
-| `githubHTML()` | `frontend/src/views/app-content/tpl:560` | ===== GitHub 仓库页面 ===== |
-| `workshopHTML()` | `frontend/src/views/app-content/tpl:591` | — |
+| `repositoryHTML()` | `frontend/src/views/app-content/tpl:5` | — |
+| `instancesHTML()` | `frontend/src/views/app-content/tpl:45` | — |
+| `settingsHTML()` | `frontend/src/views/app-content/tpl:66` | — |
+| `downloadsHTML()` | `frontend/src/views/app-content/tpl:438` | — |
+| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:489` | — |
+| `recycleHTML()` | `frontend/src/views/app-content/tpl:548` | — |
+| `githubHTML()` | `frontend/src/views/app-content/tpl:561` | ===== GitHub 仓库页面 ===== |
+| `workshopHTML()` | `frontend/src/views/app-content/tpl:592` | — |
 | `CreatorIdentity()` | `frontend/src/views/app-content/workshop-data:8` | 创作者身份识别结果 |
 | `CreatorIdentityInput()` | `frontend/src/views/app-content/workshop-data:15` | 创作者输入（role/tag 可空，_fromLocal 为运行时附加字段） |
 | `getCreatorIdentity()` | `frontend/src/views/app-content/workshop-data:22` | — |

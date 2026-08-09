@@ -1,16 +1,17 @@
 // ===== app-content 页面模板 =====
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { t } from "../../core/i18n/t.ts";
 
 export function repositoryHTML(): string {
   return (
     '<div class="repo-wrap">' +
     // 第一栏：操作
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-testid="content-tab" data-tab="tree">📁 文件树</button>' +
-    '<button class="repo-tab" data-testid="content-tab" data-tab="import">📥 导入</button>' +
-    '<button class="repo-tab" data-testid="content-tab" data-tab="recycle">♻️ 回收站</button>' +
-    '<button class="repo-tab" data-testid="content-tab" data-tab="dedup">🔗 去重</button>' +
-    '<button class="repo-tab" data-testid="content-tab" data-tab="oldest">👴 资历最深</button>' +
+    '<button class="repo-tab active" data-testid="content-tab" data-tab="tree">📁 ' + t("repo.tab.tree") + '</button>' +
+    '<button class="repo-tab" data-testid="content-tab" data-tab="import">📥 ' + t("import.tab") + '</button>' +
+    '<button class="repo-tab" data-testid="content-tab" data-tab="recycle">♻️ ' + t("recycle.tab") + '</button>' +
+    '<button class="repo-tab" data-testid="content-tab" data-tab="dedup">🔗 ' + t("repo.tab.dedup") + '</button>' +
+    '<button class="repo-tab" data-testid="content-tab" data-tab="oldest">👴 ' + t("repo.tab.oldest") + '</button>' +
     "</div>" +
     // 第二栏：资源类型（仅在文件树 tab 可见）
     '<div class="repo-subtabs" id="repo-subtabs" style="display:flex;gap:2px;padding:2px 8px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
@@ -45,7 +46,7 @@ export function instancesHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-tab="versions">🎮 版本列表</button>' +
+    '<button class="repo-tab active" data-tab="versions">🎮 ' + t("instances.tab.versions") + '</button>' +
     "</div>" +
     '<div class="repo-tab-body" id="ins-tab-versions">' +
     '<div class="repo-layout">' +
@@ -53,7 +54,7 @@ export function instancesHTML(): string {
     '<div class="ins-content" id="ins-content" style="display:flex;flex-direction:column;overflow:hidden">' +
     '<div class="dp-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:12px;gap:8px">' +
     '<div style="font-size:24px">👈</div>' +
-    "<div>点击左侧整合包查看模型</div>" +
+    "<div>" + t("instances.emptyHint") + "</div>" +
     "</div>" +
     "</div>" +
     "</div>" +
@@ -65,35 +66,35 @@ export function instancesHTML(): string {
 export function settingsHTML(): string {
   return `<div class="repo-wrap">
 <div class="repo-tabs">
-<button class="stg-tab active" data-tab="basic">⚙️ 基础设置</button>
-<button class="stg-tab" data-tab="ui">⚙️ 界面与体验</button>
-<button class="stg-tab" data-tab="about">ℹ️ 关于</button>
-<button class="stg-tab" data-tab="credits">🙏 鸣谢</button>
+<button class="stg-tab active" data-tab="basic">⚙️ ${t("settings.basic")}</button>
+<button class="stg-tab" data-tab="ui">⚙️ ${t("settings.appearance")}</button>
+<button class="stg-tab" data-tab="about">ℹ️ ${t("settings.about")}</button>
+<button class="stg-tab" data-tab="credits">🙏 ${t("settings.credits")}</button>
 </div>
 <div class="repo-tab-body" id="stg-tab-basic">
 <div class="stg-page" style="padding:16px 20px;overflow-y:auto">
 
-<div class="section-title stg-title">⚙️ 路径配置</div>
+<div class="section-title stg-title">⚙️ ${t("settings.paths.title")}</div>
 
 <div class="stg-grid">
     <!-- Row 1: 三栏 — 游戏根目录 + 链接模式 + 下载镜像源 -->
     <div class="stg-card" style="animation-delay:0ms">
-      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🎮 游戏根目录<button class="btn-base sm" id="set-mc-detect">🔍 自动搜索</button></div>
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🎮 ${t("settings.paths.gameRoot")}<button class="btn-base sm" id="set-mc-detect">🔍 ${t("settings.paths.autoSearch")}</button></div>
       <div class="stg-card-body">
-        <div class="stg-card-val" id="set-mc-path">加载中...</div>
-        <div class="stg-card-desc">用于整合包同步，不影响文件存储位置</div>
+        <div class="stg-card-val" id="set-mc-path">${t("common.loading")}</div>
+        <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>
       </div>
     </div>
     <div class="stg-card" style="animation-delay:60ms">
       <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">
-        <span class="label" style="font-size:13px;font-weight:600">🔗 链接模式</span>
-        <button id="set-relink" class="btn-base sm">🔄 重新应用</button>
+        <span class="label" style="font-size:13px;font-weight:600">🔗 ${t("settings.links.title")}</span>
+        <button id="set-relink" class="btn-base sm">🔄 ${t("settings.links.reapply")}</button>
       </div>
       <div class="stg-card-body">
         <select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
-          <option value="copy">📋 复制</option>
-          <option value="hardlink" selected>🔗 硬链接 ✅</option>
-          <option value="symlink">🔗 符号链接</option>
+          <option value="copy">📋 ${t("settings.links.copy")}</option>
+          <option value="hardlink" selected>🔗 ${t("settings.links.hardlink")} ✅</option>
+          <option value="symlink">🔗 ${t("settings.links.symlink")}</option>
         </select>
         <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">每个整合包独立占用磁盘空间，最兼容</div>
         <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">✅ 推荐：省磁盘空间，支持实时开关模型<br>📌 需与游戏同分区</div>
@@ -102,7 +103,7 @@ export function settingsHTML(): string {
     </div>
     <div class="stg-card" style="animation-delay:120ms">
       <div class="stg-card-hdr">
-        <span class="label" style="font-size:13px;font-weight:600">🌐 下载镜像源</span>
+        <span class="label" style="font-size:13px;font-weight:600">🌐 ${t("settings.mirror.title")}</span>
       </div>
       <div class="stg-card-body">
         <select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
@@ -119,10 +120,10 @@ export function settingsHTML(): string {
 
   <!-- Row 2: 文件存储路径（居左，宽度=1fr，展开后占全宽） -->
   <div class="stg-card" id="stg-files-card" style="margin-top:8px;animation-delay:180ms">
-    <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">📁 文件存储路径<button class="btn" id="set-advanced-toggle" style="font-size:9px;padding:2px 8px">📂 展开 ▸</button></div>
+    <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">📁 ${t("settings.storage.title")}<button class="btn" id="set-advanced-toggle" style="font-size:9px;padding:2px 8px">📂 ${t("settings.storage.expand")} ▸</button></div>
     <div class="stg-card-body">
-      <div class="stg-card-val" id="set-files-root">加载中...</div>
-      <div class="stg-card-desc">所有资源文件统一存放于此，按类型分子目录</div>
+      <div class="stg-card-val" id="set-files-root">${t("common.loading")}</div>
+      <div class="stg-card-desc">${t("settings.storage.desc")}</div>
       <div id="set-advanced-panel" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
         <div style="font-size:10px;color:var(--muted);margin-bottom:6px">各类型独立路径（留空则使用统一存储路径）</div>
         <div class="stg-grid" id="set-advanced-grid"></div>
@@ -136,12 +137,12 @@ export function settingsHTML(): string {
 <div class="repo-tab-body" id="stg-tab-ui" style="display:none">
 <div class="stg-page" style="padding:16px 20px;overflow-y:auto">
 
-<div class="section-title stg-title">🌙 主题与外观</div>
+<div class="section-title stg-title">🌙 ${t("settings.theme.title")}</div>
 
 <!-- 主题卡片：直接展示 -->
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:0ms">
   <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
-    <span class="label">🎨 选择主题</span>
+    <span class="label">🎨 ${t("settings.theme.select")}</span>
     <div class="theme-picker" id="theme-picker">
       <div class="theme-card" data-theme="warm">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -207,12 +208,12 @@ export function settingsHTML(): string {
   </div>
 </div>
 
-<div class="section-title stg-title stg-sub-title">📐 字体与布局</div>
+<div class="section-title stg-title stg-sub-title">📐 ${t("settings.font.title")}</div>
 
 <div style="display:flex;gap:12px">
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <span class="label" style="font-size:13px;font-weight:600">📏 基准字号</span>
+      <span class="label" style="font-size:13px;font-weight:600">📏 ${t("settings.fontSize")}</span>
     </div>
     <select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
       <option value="small">🔹 小（−1px）</option>
@@ -240,7 +241,7 @@ export function settingsHTML(): string {
 
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:120ms">
     <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <span class="label" style="font-size:13px;font-weight:600">💳 卡片密度</span>
+      <span class="label" style="font-size:13px;font-weight:600">💳 ${t("settings.density")}</span>
     </div>
     <select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="compact" selected>📦 紧凑（信息密集）</option>
@@ -250,7 +251,7 @@ export function settingsHTML(): string {
   </div>
 </div>
 
-<div class="section-title stg-title stg-sub-title">⚡ 行为与动画</div>
+<div class="section-title stg-title stg-sub-title">⚡ ${t("settings.animation.title")}</div>
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:180ms">
   <div class="setting-row">
@@ -264,7 +265,7 @@ export function settingsHTML(): string {
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:210ms">
   <div class="setting-row">
-    <span class="label">🏠 启动默认页面</span>
+    <span class="label">🏠 ${t("settings.defaultPage")}</span>
     <select id="set-default-page" class="stg-select">
       <option value="instances">🎮 整合包管理</option>
       <option value="workshop">🎨 创作者频道</option>
@@ -311,24 +312,24 @@ export function settingsHTML(): string {
 <div class="repo-tab-body" id="stg-tab-about" style="display:none">
 <div class="stg-page" style="padding:16px 20px;overflow-y:auto">
 
-<div class="section-title stg-title">📦 关于 YSM 模型管理器</div>
+<div class="section-title stg-title">📦 ${t("about.title")}</div>
 
 <div class="stg-grid" style="margin-bottom:12px">
   <div class="stg-card">
     <div class="stg-card-hdr" style="display:flex;align-items:center;gap:8px">
-      <span>📦 当前版本</span>
-      <span id="set-version" style="font-size:var(--fs-lg);font-weight:700;color:var(--accent)">加载中...</span>
+      <span>📦 ${t("about.version")}</span>
+      <span id="set-version" style="font-size:var(--fs-lg);font-weight:700;color:var(--accent)">${t("common.loading")}</span>
     </div>
     <div class="stg-card-body" style="display:flex;align-items:center;gap:8px">
-      <button class="btn-base sm stg-btn" id="set-check-update">🔄 检查更新</button>
-      <button class="btn-base sm" id="set-releases" title="打开 GitHub Releases">📋 发布页</button>
+      <button class="btn-base sm stg-btn" id="set-check-update">🔄 ${t("about.checkUpdate")}</button>
+      <button class="btn-base sm" id="set-releases" title="打开 GitHub Releases">📋 ${t("about.releasePage")}</button>
     </div>
   </div>
 </div>
 
 <div style="display:flex;gap:12px;margin-bottom:12px">
   <div style="flex:2;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
-    <div style="font-size:13px;font-weight:600;margin-bottom:6px">🛠️ 这是什么？</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">🛠️ ${t("about.features")}</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
       <b>YSM 模型管理器</b> 是一款面向 Minecraft YSM 模组的模型管理工具，帮你像 Steam 创意工坊一样管理你的模型收藏。
       <br><br>
@@ -342,7 +343,7 @@ export function settingsHTML(): string {
   </div>
 
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:90ms">
-    <div style="font-size:13px;font-weight:600;margin-bottom:6px">💎 技术栈</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">💎 ${t("about.techStack")}</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
       <div>🔹 Go + Wails v3（后端）</div>
       <div>🔹 原生 HTML/CSS/JS（前端）</div>
@@ -356,7 +357,7 @@ export function settingsHTML(): string {
 
 <div style="display:flex;gap:12px;margin-bottom:12px">
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:120ms">
-    <div style="font-size:13px;font-weight:600;margin-bottom:6px">📦 资源链接</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">📦 ${t("about.links")}</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.8">
       <div>🐙 GitHub：<a href="https://github.com/eghrhegpe/ysm-model-manager" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
       <div>📋 发布页：<a href="https://github.com/eghrhegpe/ysm-model-manager/releases" target="_blank" style="color:var(--accent)">查看所有版本</a></div>
@@ -366,7 +367,7 @@ export function settingsHTML(): string {
   </div>
 
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:150ms">
-    <div style="font-size:13px;font-weight:600;margin-bottom:6px">💡 快速上手</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">💡 ${t("about.quickStart")}</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
       <div>1. 设置游戏目录和仓库路径</div>
       <div>2. 将模型文件拖入「导入」页</div>
@@ -383,7 +384,7 @@ export function settingsHTML(): string {
 <div class="repo-tab-body" id="stg-tab-credits" style="display:none">
 <div class="stg-page" style="padding:16px 20px;overflow-y:auto">
 
-<div class="section-title stg-title">🎯 灵感来源</div>
+<div class="section-title stg-title">🎯 ${t("credits.inspiration")}</div>
 
 <div style="display:flex;gap:12px">
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
@@ -416,7 +417,7 @@ export function settingsHTML(): string {
   </div>
 </div>
 
-<div class="section-title stg-title stg-sub-title">🙏 特别鸣谢</div>
+<div class="section-title stg-title stg-sub-title">🙏 ${t("credits.special")}</div>
 
 <div style="display:flex;gap:12px">
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px">
@@ -438,7 +439,7 @@ export function downloadsHTML(): string {
   return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
 <div id="dl-form" style="margin:4px 12px;display:none;flex-direction:column;gap:4px">
   <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-    <span>导入仓库前，先重命名一下吧：</span>
+    <span>${t("import.renameGuide")}</span>
     <label style="display:flex;align-items:center;gap:2px;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap">
       <input type="checkbox" id="dl-from-header"> 读取作者
     </label>
@@ -447,27 +448,27 @@ export function downloadsHTML(): string {
     </label>
   </div>
   <div style="display:flex;gap:4px">
-    <input id="dl-author" placeholder="作者" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-    <input id="dl-work" placeholder="品牌" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-    <input id="dl-chara" placeholder="角色名" style="width:80px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-    <input id="dl-variant" placeholder="变体" style="width:60px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-    <input id="dl-date" placeholder="年月" style="width:64px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+    <input id="dl-author" placeholder="${t("import.author")}" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+    <input id="dl-work" placeholder="${t("import.brand")}" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+    <input id="dl-chara" placeholder="${t("import.character")}" style="width:80px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+    <input id="dl-variant" placeholder="${t("import.variant")}" style="width:60px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+    <input id="dl-date" placeholder="${t("import.date")}" style="width:64px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
   </div>
   <div id="dl-tips" style="display:none;font-size:10px;color:var(--muted);padding:4px 8px;margin:2px 0;border-radius:4px;border-left:3px solid var(--accent);background:var(--surf);line-height:1.5;max-height:60px;overflow-y:auto"></div>
   <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;background:var(--surf);overflow:hidden">
-    <span style="color:var(--muted);font-size:9px;white-space:nowrap">最终命名</span>
+    <span style="color:var(--muted);font-size:9px;white-space:nowrap">${t("import.preview")}</span>
     <span id="dl-preview" style="font-weight:600;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">-</span>
     <span id="dl-conflict" style="display:none;font-size:9px;color:#f9a826;white-space:nowrap">⚠️</span>
-    <button class="btn-base accent sm" id="dl-import" style="white-space:nowrap">📥 导入</button>
-    <span style="font-size:9px;color:var(--muted);white-space:nowrap">队列 <span id="dl-queue-count">0</span></span>
+    <button class="btn-base accent sm" id="dl-import" style="white-space:nowrap">📥 ${t("import.importBtn")}</button>
+    <span style="font-size:9px;color:var(--muted);white-space:nowrap">${t("import.queue")} <span id="dl-queue-count">0</span></span>
     <button class="btn-base sm" id="dl-cancel" style="white-space:nowrap">✕</button>
   </div>
 </div>
 <div style="margin:0 12px 4px;border-top:1px solid var(--bd);padding-top:4px">
   <div style="display:flex;align-items:center;gap:6px;font-weight:600;color:var(--txt);padding:2px 0">
-    <span style="font-size:var(--fs-md)">📋 已导入</span>
+    <span style="font-size:var(--fs-md)">📋 ${t("import.imported")}</span>
     <span id="dl-count" style="font-size:10px;color:var(--muted);font-weight:400">0 个文件</span>
-    <button class="btn-base sm" id="dl-clear-list" style="margin-left:auto">🗑️ 清空</button>
+    <button class="btn-base sm" id="dl-clear-list" style="margin-left:auto">🗑️ ${t("common.clear")}</button>
   </div>
   <div id="dl-imported-list" style="display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto"></div>
 </div>
@@ -488,22 +489,22 @@ export function downloadsHTML(): string {
 export function diagnosticsHTML(): string {
   return `<div class="repo-wrap">
 <div class="repo-tabs">
-<button class="repo-tab active" data-tab="diagnostics">🛠️ 诊断与冲突</button>
+<button class="repo-tab active" data-tab="diagnostics">🛠️ ${t("diagnostics.title")}</button>
 </div>
 <div class="repo-tab-body">
 <div class="diag-wrapper">
 <div class="diag-left">
 <button class="diag-btn active" data-diag="log">
 <span class="diag-btn-icon">📋</span>
-<span>操作日志</span>
+<span>${t("diagnostics.opsLog")}</span>
 </button>
 <button class="diag-btn" data-diag="runtime">
 <span class="diag-btn-icon">🕹️</span>
-<span>运行时日志</span>
+<span>${t("diagnostics.runtimeLog")}</span>
 </button>
 <button class="diag-btn" data-diag="conflict">
 <span class="diag-btn-icon">⚡</span>
-<span>冲突检测</span>
+<span>${t("diagnostics.conflict")}</span>
 </button>
 <div class="diag-left-spacer"></div>
 <button class="diag-btn diag-btn-action" id="diag-refresh">
@@ -516,24 +517,24 @@ export function diagnosticsHTML(): string {
 <div class="diag-right">
 <div class="diag-panel" id="diag-log">
 <div class="diag-log-filter" style="display:flex;gap:4px;padding:3px 12px;overflow:hidden">
-<button class="diag-log-fbtn active" data-status="all">全部</button>
-<button class="diag-log-fbtn" data-status="success">✅ 成功</button>
-<button class="diag-log-fbtn" data-status="failed">❌ 失败</button>
-<button class="diag-log-fbtn" data-status="skipped">⏭️ 跳过</button>
+<button class="diag-log-fbtn active" data-status="all">${t("diagnostics.all")}</button>
+<button class="diag-log-fbtn" data-status="success">✅ ${t("diagnostics.success")}</button>
+<button class="diag-log-fbtn" data-status="failed">❌ ${t("diagnostics.failed")}</button>
+<button class="diag-log-fbtn" data-status="skipped">⏭️ ${t("diagnostics.skipped")}</button>
 <input id="diag-log-search" placeholder="🔍 搜索模型名..." style="width:130px;font-size:var(--fs-sm);padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);margin-left:auto">
 </div>
-<div id="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">暂无日志</div></div>
+<div id="diag-log-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.noLogs")}</div></div>
 </div>
 <div class="diag-panel" id="diag-runtime" style="display:none">
-<div id="diag-runtime-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">暂无运行时日志</div></div>
+<div id="diag-runtime-list" style="overflow-y:auto;flex:1"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.noRuntimeLogs")}</div></div>
 </div>
 <div class="diag-panel" id="diag-conflict" style="display:none">
 <div id="diag-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">点击「开始扫描」检测整合包冲突
-<button class="btn-base accent" id="diag-scan-conflict" style="margin-top:4px">⚡ 开始扫描</button>
+<button class="btn-base accent" id="diag-scan-conflict" style="margin-top:4px">⚡ ${t("diagnostics.startScan")}</button>
 </div></div></div>
 <div class="diag-panel" id="diag-oldest" style="display:none">
 <div class="diag-panel-header">
-<span>👴 资历最深</span>
+<span>👴 ${t("repo.tab.oldest")}</span>
 <button class="btn-base" id="diag-oldest-refresh">🔄</button>
 </div>
 <div id="diag-oldest-list"><div class="stat-row" style="padding:12px;color:var(--muted);font-size:var(--fs-sm)">点击「🔄」刷新</div></div>
@@ -547,9 +548,9 @@ export function diagnosticsHTML(): string {
 export function recycleHTML(): string {
   return `<div class="recy-page" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px">
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-<span id="recy-count" style="font-size:11px;color:#6c7086">加载中...</span>
-<button class="btn-base sm" id="recy-refresh" style="margin-left:auto">🔄 刷新</button>
-<button class="btn-base danger sm" id="recy-empty">♻️ 清空回收站</button>
+<span id="recy-count" style="font-size:11px;color:#6c7086">${t("common.loading")}</span>
+<button class="btn-base sm" id="recy-refresh" style="margin-left:auto">🔄 ${t("common.refresh")}</button>
+<button class="btn-base danger sm" id="recy-empty">♻️ ${t("recycle.empty")}</button>
 </div>
 <div id="recy-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
 </div>`;
@@ -571,7 +572,7 @@ export function githubHTML(): string {
     '<span class="gh-left-head-spacer"></span>' +
     "</div>" +
     '<div class="gh-grid" id="gh-grid">' +
-    '<div class="gh-loading-placeholder">⏳ 加载中...</div>' +
+    '<div class="gh-loading-placeholder">⏳ ' + t("common.loading") + '</div>' +
     "</div>" +
     '<div class="gh-left-foot">' +
     '仓库：<span id="gh-source-info">-</span>' +
@@ -593,12 +594,12 @@ export function workshopHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs" id="ws-tabs">' +
-    '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">⏳ 加载中...</span>' +
+    '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">⏳ ' + t("common.loading") + '</span>' +
     "</div>" +
     // 站点配置导入/导出工具栏（index.ts ws-export-btn / ws-import-btn 绑定）
     '<div style="display:flex;gap:6px;padding:4px 12px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
-    '<button class="btn-base sm" id="ws-export-btn" title="导出全部站点配置为 JSON 文件">📤 导出站点</button>' +
-    '<button class="btn-base sm" id="ws-import-btn" title="从 JSON 文件导入站点配置">📥 导入站点</button>' +
+    '<button class="btn-base sm" id="ws-export-btn" title="导出全部站点配置为 JSON 文件">📤 ' + t("workshop.exportSite") + '</button>' +
+    '<button class="btn-base sm" id="ws-import-btn" title="从 JSON 文件导入站点配置">📥 ' + t("workshop.importSite") + '</button>' +
     "</div>" +
     '<div class="repo-tab-body" id="cr-tab-creators">' +
     '<div class="cr-page" id="ws-page">' +
@@ -606,12 +607,12 @@ export function workshopHTML(): string {
     '<div class="cr-right-inner" id="ws-right-inner">' +
     '<div id="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
     '<div id="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +
-    '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">加载中...</div>' +
+    '<div style="color:var(--muted);font-size:10px;padding:12px 0;text-align:center">' + t("common.loading") + '</div>' +
     "</div>" +
     "</div>" +
     '<div id="ws-creator-view" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden">' +
     '<div style="padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
-    '<span style="font-size:12px;font-weight:600;color:var(--txt)" id="ws-cr-title">🎨 活跃创作者</span>' +
+    '<span style="font-size:12px;font-weight:600;color:var(--txt)" id="ws-cr-title">🎨 ' + t("workshop.activeCreators") + '</span>' +
     '<span style="font-size:9px;color:var(--muted);margin-left:auto">creators/</span>' +
     "</div>" +
     '<div class="ws-creators-list" id="ws-cr-list"></div>' +
@@ -620,15 +621,15 @@ export function workshopHTML(): string {
     "</div>" +
     '<div id="ws-browser" style="display:none;flex:1;flex-direction:column;overflow:hidden;position:absolute;inset:0;z-index:10;background:var(--bg)">' +
     '<div class="ws-browser-bar">' +
-    '<button class="btn-base sm ws-back" id="ws-back">← 返回</button>' +
+    '<button class="btn-base sm ws-back" id="ws-back">← ' + t("common.back") + '</button>' +
     '<span class="ws-url" id="ws-url"></span>' +
     '<button class="btn-base sm ws-open-btn" id="ws-open">↗ 浏览器打开</button>' +
     "</div>" +
     '<iframe id="ws-iframe" style="flex:1;border:none;background:var(--bg)" sandbox="allow-scripts allow-forms allow-popups"></iframe>' +
     '<div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:12px">' +
     '<div style="font-size:32px">🚫</div>' +
-    "<div>此站点不允许内嵌浏览</div>" +
-    '<button class="btn-base accent" id="ws-open-fallback">↗ 在系统浏览器中打开</button>' +
+    "<div>" + t("workshop.noEmbed") + "</div>" +
+    '<button class="btn-base accent" id="ws-open-fallback">↗ ' + t("workshop.openExternal") + '</button>' +
     "</div>" +
     "</div>" +
     "</div>" +

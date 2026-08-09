@@ -42,7 +42,7 @@ invariant_anchors:
 
 ## 不变量
 
-- 骨骼局部坐标 = `bone.pivot - parent.pivot`；Blockbench 欧拉角取反后转四元数（`eulerToQuaternion(-rx, -ry, -rz)`），口径对齐 YSMViewer
+- 骨骼局部坐标 = `bone.pivot - parent.pivot`；Blockbench 欧拉角取反后转四元数（`eulerToQuaternion(-rx, -ry, +rz)`——**Z 轴不取反**，源码 spec.go:170/533，知识卡旧文「(-rx,-ry,-rz)」为漂移；历史注记 spec.go:691-692 说明曾三轴取反与 C# 在 Z 轴符号相反，已改为 Z 不取反），口径对齐 YSMViewer
 - 纹理尺寸为 0 时兜底 64×64
 - **cube inflate/mirror 消费**（2026-08-09 补齐，对齐 Java GeoCube/GeoQuad 口径）：`inflate` 时几何 origin 各轴 -i、size 各轴 +2i（Go 端像素坐标直接算，无需 /16）；`mirror` 时 UV 水平翻转（u 交换，几何不翻转）。box UV 展开（`parseUV`/`expandBoxUV`）**必须基于未膨胀的原始尺寸 `c.Size`**——对齐 C# 黄金参考 `csharp-builder.mjs`（先 `expandBoxUV(原始 sz)` 再 inflate 几何），若用膨胀后尺寸 UV 范围漂移 → 贴图拉伸/塌缩成色块（P2）
 - **负 inflate 下限防护**：inflate 超过半尺寸会把 cube 缩成负宽 → `hx2<0` 面翻转（法线反、正面剔除后不可见）；各轴 clamp 到 `thicknessEpsilon`（C# 黄金参考同缺陷，此为改进不背离）

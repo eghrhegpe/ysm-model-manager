@@ -415,20 +415,20 @@
 | `App.CacheModelAvatars()` | `internal/app/app_avatar:124` | CacheModelAvatars 从解压目录 ysm.json 缓存头像 |
 | `App.GetConfigPath()` | `internal/app/app_config:47` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
 | `App.SaveAppConfig()` | `internal/app/app_config:108` | — |
-| `App.SetDownloadMirror()` | `internal/app/app_config:140` | — |
-| `App.LoadAppConfig()` | `internal/app/app_config:166` | — |
-| `App.GetSubDirMap()` | `internal/app/app_config:187` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
-| `App.CurrentVersion()` | `internal/app/app_config:191` | — |
-| `App.CheckUpdate()` | `internal/app/app_config:193` | — |
-| `App.DownloadUpdate()` | `internal/app/app_config:197` | — |
-| `App.ApplyUpdate()` | `internal/app/app_config:201` | — |
-| `App.DoUpdate()` | `internal/app/app_config:205` | — |
-| `App.RestartApplication()` | `internal/app/app_config:217` | — |
-| `App.SaveWindowPosition()` | `internal/app/app_config:269` | — |
-| `App.GetWindowPosition()` | `internal/app/app_config:283` | — |
-| `App.SelectDirectory()` | `internal/app/app_config:312` | ========== 目录选择 ========== |
-| `App.GetMinecraftPaths()` | `internal/app/app_config:373` | — |
-| `App.ValidateMinecraftDir()` | `internal/app/app_config:375` | — |
+| `App.SetDownloadMirror()` | `internal/app/app_config:143` | — |
+| `App.LoadAppConfig()` | `internal/app/app_config:169` | — |
+| `App.GetSubDirMap()` | `internal/app/app_config:190` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
+| `App.CurrentVersion()` | `internal/app/app_config:194` | — |
+| `App.CheckUpdate()` | `internal/app/app_config:196` | — |
+| `App.DownloadUpdate()` | `internal/app/app_config:200` | — |
+| `App.ApplyUpdate()` | `internal/app/app_config:204` | — |
+| `App.DoUpdate()` | `internal/app/app_config:208` | — |
+| `App.RestartApplication()` | `internal/app/app_config:220` | — |
+| `App.SaveWindowPosition()` | `internal/app/app_config:272` | — |
+| `App.GetWindowPosition()` | `internal/app/app_config:286` | — |
+| `App.SelectDirectory()` | `internal/app/app_config:315` | ========== 目录选择 ========== |
+| `App.GetMinecraftPaths()` | `internal/app/app_config:376` | — |
+| `App.ValidateMinecraftDir()` | `internal/app/app_config:378` | — |
 | `NewDownloadQueue()` | `internal/app/app_download:51` | NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入） |
 | `App.EnqueueDownloads()` | `internal/app/app_download:56` | — |
 | `App.CancelQueue()` | `internal/app/app_download:86` | — |
@@ -515,9 +515,9 @@
 | `App.ListFileNames()` | `internal/app/app_scan:250` | — |
 | `App.ListAllFilePaths()` | `internal/app/app_scan:263` | ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名） |
 | `App.CheckFileExists()` | `internal/app/app_scan:270` | — |
-| `App.OpenFolder()` | `internal/app/app_scan:289` | — |
-| `App.OpenInstanceFolder()` | `internal/app/app_scan:296` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
-| `progressReader.Read()` | `internal/app/app_scan:319` | — |
+| `App.OpenFolder()` | `internal/app/app_scan:304` | — |
+| `App.OpenInstanceFolder()` | `internal/app/app_scan:311` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
+| `progressReader.Read()` | `internal/app/app_scan:334` | — |
 | `App.GetModelTags()` | `internal/app/app_tags:29` | GetModelTags 返回指定模型文件的所有标签 |
 | `App.SetModelTags()` | `internal/app/app_tags:34` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
 | `App.ListByTag()` | `internal/app/app_tags:39` | ListByTag 返回所有打了指定标签的文件路径列表 |

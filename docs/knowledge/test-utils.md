@@ -34,8 +34,8 @@ use_when:
 ## 对外 API / 入口
 
 - `getByTestId(root, testid)` — 按 `data-testid` **精确**查询（root 可为 document / ShadowRoot / 元素）
-- `getAllByTestId(root, prefix)` — 按 testid **前缀**查询全部（P2 修复：`[data-testid^=...]`，对齐 Design.md §19.1 前缀命名空间，如 `tree-file-1/2` → `getAllByTestId(root,"tree-file")` 一次取全；原实现精确匹配导致带序号 testid 返回 0 抛错）
-- `waitFor(fn, timeout?, interval?)` — 轮询等待条件成立（超时抛错，替代固定 sleep；**超时/异常 reject 携带原始错误**——P2 修复：原 catch 静默吞错，真实根因被通用消息掩盖）
+- `getAllByTestId(root, prefix)` — 按 testid **前缀**查询全部（P2 修复：前缀限定「精确 testid 或 `X-<纯数字序号>`」——CSS `^=` 无法表达「- 后跟数字」，查询后 JS 过滤后缀段为纯数字的编号实例；`tree-dir` 查询不会命中 `tree-dir-toggle`（后缀非数字），`tree-file-1/2` 编号实例可取全；原实现精确匹配导致带序号 testid 返回 0 抛错）
+- `waitFor(fn, timeout?)` — 轮询等待条件成立（默认 5s 超时抛错，替代固定 sleep；**超时/异常 reject 携带原始错误**——P2 修复：原 catch 静默吞错，真实根因被通用消息掩盖；知识卡旧文「timeout?, interval?」的 interval 参数不存在，已修正签名）
 - `sleep(ms)` / `mountCustomElement(tag)` / `unmountElement(el)` — 组件编排测试公共辅助
 - `events.ts` / `query-by-testid.ts` / `render.ts` — 事件派发 / testid 查询 / 组件渲染辅助（拆分自 index.ts）
 

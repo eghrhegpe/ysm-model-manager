@@ -587,7 +587,7 @@
 | `applyTheme()` | `frontend/src/app-modules:67` | — |
 | `initTheme()` | `frontend/src/app-modules:91` | — |
 | `applyUIPrefs()` | `frontend/src/app-modules:110` | 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 |
-| `bus()` | `frontend/src/bus:177` | 默认实例（组件直接使用） |
+| `bus()` | `frontend/src/bus:176` | 默认实例（组件直接使用） |
 | `ToastPayload()` | `frontend/src/bus:7` | — |
 | `MenuItem()` | `frontend/src/bus:18` | — |
 | `PageName()` | `frontend/src/bus:30` | 核心页面名（与 app-nav 导航菜单一致） |
@@ -595,8 +595,8 @@
 | `ModelSelectPayload()` | `frontend/src/bus:42` | — |
 | `CtxShowPayload()` | `frontend/src/bus:47` | — |
 | `BusEvents()` | `frontend/src/bus:64` | — |
-| `BusEventName()` | `frontend/src/bus:122` | — |
-| `Bus()` | `frontend/src/bus:124` | — |
+| `BusEventName()` | `frontend/src/bus:121` | — |
+| `Bus()` | `frontend/src/bus:123` | — |
 
 ## 前端·核心
 
@@ -825,9 +825,9 @@
 | `renderModelName()` | `frontend/src/utils/dom/display:162` | renderModelName = renderDisplayName 别名，options.showExt 支持 |
 | `renderModelNameWithHighlight()` | `frontend/src/utils/dom/display:171` | 搜索高亮版：先对纯文本高亮，再渲染 HTML，避免 keyword 命中 HTML 标签内容破坏 DOM |
 | `friendlyError()` | `frontend/src/utils/dom/errors:11` | 将 Go 错误转换为友好提示 |
-| `formatBytes()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值返回空串 |
-| `sizeColor()` | `frontend/src/utils/dom/format:24` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
-| `fmtDate()` | `frontend/src/utils/dom/format:34` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
+| `formatBytes()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值或 0 返回空串 |
+| `sizeColor()` | `frontend/src/utils/dom/format:23` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |
+| `fmtDate()` | `frontend/src/utils/dom/format:33` | 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D |
 | `esc()` | `frontend/src/utils/dom/html:4` | HTML 转义（治理红线：所有 innerHTML 拼接必须过 esc） |
 | `safeGet()` | `frontend/src/utils/dom/storage:7` | 安全读：存储不可用时返回 null（调用方走默认值回退） |
 | `safeSet()` | `frontend/src/utils/dom/storage:16` | 安全写：存储不可用时静默忽略持久化（不中断调用方） |

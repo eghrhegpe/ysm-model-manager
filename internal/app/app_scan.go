@@ -211,11 +211,6 @@ func (a *App) ClearScanCache() {
 	scanner.InvalidateCache()
 }
 
-// InvalidateScanCache 清空扫描缓存（同步完成后调用，确保下次扫描取最新数据）
-func InvalidateScanCache() {
-	scanner.InvalidateCache()
-}
-
 // ListModelAuthors 统计 [作者] 前缀（走扫描缓存，不重复读磁盘）
 func (a *App) ListModelAuthors() []types.AuthorInfo {
 	if a.ysmRoot() == "" {

@@ -1,6 +1,6 @@
 // ===== 紧凑列表行 HTML 模板（24px 高度）=====
 import { esc } from "../../utils/dom/html.ts";
-import { fmt, sizeColor } from "../../utils/dom/format.ts";
+import { formatBytes, sizeColor } from "../../utils/dom/format.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowCommon, folderRowCommon } from "./row-common.ts";
 
@@ -18,7 +18,7 @@ export function listFileRowHTML(
 <span class="ck${checked}" data-path="${p}" data-fullpath="${fp}"></span>
 <span class="ficon">${typeIcon}</span>
 <span class="nm${nmCls}">${nmHtml}</span>
-<span class="sz ${sizeColor(e.size)}">${fmt(e.size)}</span></div>`;
+<span class="sz ${sizeColor(e.size)}">${formatBytes(e.size)}</span></div>`;
 }
 
 /** 文件夹行 HTML（紧凑列表模式：arrow + folder icon + name） */

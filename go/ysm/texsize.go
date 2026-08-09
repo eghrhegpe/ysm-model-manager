@@ -12,6 +12,9 @@ import (
 	"ysm-model-manager/go/fsutil"
 )
 
+// 7z 文件前缀扫描上限（仅读取头部判断格式）
+const max7zScanSize = 64 << 10 // 64KB
+
 // TexInfo 轻量级纹理尺寸（不解析完整模型）
 type TexInfo struct {
 	Path      string `json:"path"`
@@ -113,7 +116,7 @@ func readTexFrom7z(path string) (int, int) {
 		return 0, 0
 	}
 	defer f.Close()
-	data, err := io.ReadAll(io.LimitReader(f, 65536))
+	data, err := io.ReadAll(io.LimitReader(f, max7zScanSize))
 	if err != nil {
 		return 0, 0
 	}

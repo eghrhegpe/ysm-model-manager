@@ -2,6 +2,7 @@
 import { renderFormattedText } from "../../utils/format/mc-format.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
 import { esc } from "../../utils/dom/html.ts";
+import { formatBytes } from "../../utils/dom/format.ts";
 
 /** 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） */
 export interface SyncItem {
@@ -95,7 +96,7 @@ export function itemHTML(item: SyncItem, index: number): string {
         : item.status === "legacy"
           ? "var(--muted)"
           : "var(--sm-optional)";
-  const sizeStr = item.size > 0 ? formatSize(item.size) : "";
+  const sizeStr = item.size > 0 ? formatBytes(item.size) : "";
   let actionBtn = "";
   if (item.status === "missing") {
     actionBtn =
@@ -166,8 +167,4 @@ export function loadingHTML(): string {
   );
 }
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return bytes + "B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + "KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + "MB";
-}
+

@@ -18,6 +18,9 @@ import (
 	"time"
 )
 
+// WASM 解码子进程超时上限
+const decodeTimeout = 60 * time.Second
+
 // CacheDir 返回头像缓存目录（exe 同目录下的 creators_cache/）。
 // 外部可覆盖此函数（测试时可设置临时目录）。
 var CacheDir = func() string {
@@ -413,7 +416,7 @@ main().catch(e=>{console.error(e);process.exit(1)});
 		return nil
 	}
 	// P2 修复：子进程加超时护栏（WASM 死循环/Node 卡死时防永久挂起冻结 UI 线程）
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), decodeTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, nodeJSPath, scriptPath)
 	hideWindow(cmd)
@@ -421,7 +424,7 @@ main().catch(e=>{console.error(e);process.exit(1)});
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
-			fmt.Fprintln(os.Stderr, "[ysm-avatar] decode timed out after 60s")
+			fmt.Fprintf(os.Stderr, "[ysm-avatar] decode timed out after %v\n", decodeTimeout)
 			return nil
 		}
 		fmt.Fprintln(os.Stderr, "[ysm-avatar] decode failed:", string(output))

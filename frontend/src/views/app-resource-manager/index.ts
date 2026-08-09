@@ -51,7 +51,7 @@ async function _loadConfig(forceRefresh?: boolean): Promise<ResourceTypeConfig[]
  */
 export function registerResourceManagerGlobal(unsubs: Array<() => void>): void {
   unsubs.push(
-    bus.on("config:resource-types-changed", () => {
+    bus.on("config:updated", () => {
       STORE._config = null;
       // 通知所有已创建的组件实例重新初始化
       document.querySelectorAll("app-resource-manager").forEach((el) => {

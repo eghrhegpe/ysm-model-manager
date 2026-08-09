@@ -1,6 +1,6 @@
 // ===== 树渲染层（虚拟滚动版）=====
 import { hl } from "../../utils/dom/html.ts";
-import { fmt, fmtDate } from "../../utils/dom/format.ts";
+import { formatBytes, fmtDate } from "../../utils/dom/format.ts";
 import { fileIcon, isYsmName } from "../../utils/icon/icon.ts";
 import { emptyHTML } from "./tpl.ts";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";
@@ -362,7 +362,7 @@ export function updateStat(el: HTMLElement | null, entries: TreeEntry[]): void {
     totalSize += e.size || 0;
   });
   const newText =
-    "共 " + total + " 项 (已启用 " + enabled + ") · " + fmt(totalSize);
+    "共 " + total + " 项 (已启用 " + enabled + ") · " + formatBytes(totalSize);
   if (el.textContent !== newText) {
     const oldTotal = parseInt(el.textContent.match(/(\d+)\s*项/)?.[1] || "", 10) || 0;
     if (oldTotal > 0 && oldTotal !== total && total > 0) {

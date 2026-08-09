@@ -2,6 +2,7 @@
 // 响应全局类型切换
 import { bus } from "../bus.ts";
 import { renderDisplayName } from "../utils/dom/display.ts";
+import { formatBytes } from "../utils/dom/format.ts";
 import { loadResourceRegistry } from "../utils/resource/registry.ts";
 import { getApp } from "../wails/app.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../utils/resource/types.ts";
@@ -167,7 +168,7 @@ export async function loadOldestModel(
                 renderDisplayName(e.Name) +
                 "</div>" +
                 '<div class="oldest-card-meta"><span>📏 ' +
-                fmtSize(e.Size) +
+                formatBytes(e.Size) +
                 "</span><span>📅 " +
                 dateStr +
                 "</span><span> " +
@@ -192,7 +193,7 @@ export async function loadOldestModel(
         for (let i = 0; i < total; i++) {
           const p = shuffled[i];
           if (!p) continue;
-          const sizeStr = fmtSize(p.Size);
+          const sizeStr = formatBytes(p.Size);
           const dateStr = p.ModTime
             ? new Date(p.ModTime).toLocaleDateString("zh-CN", {
                 year: "numeric",
@@ -259,7 +260,7 @@ export async function loadOldestModel(
         entries.length +
         "</span>" +
         '<span class="oldest-stat-pill">📏 ' +
-        fmtSize(totalSize) +
+        formatBytes(totalSize) +
         "</span>" +
         '<span class="oldest-stat-pill"> ' +
         banned +
@@ -327,14 +328,3 @@ function buildMonthHeatmap(entries: ModelEntry[]): number[] {
   return months;
 }
 
-function fmtSize(bytes: number): string {
-  if (!bytes || bytes <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  let u = 0;
-  let size = bytes;
-  while (size >= 1024 && u < units.length - 1) {
-    size /= 1024;
-    u++;
-  }
-  return size.toFixed(u > 0 ? 1 : 0) + " " + units[u];
-}

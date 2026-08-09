@@ -1,7 +1,7 @@
 // ===== 树节点行 HTML 模板（grid 模式）=====
 import { t } from "../../core/i18n/t.ts";
 import { esc } from "../../utils/dom/html.ts";
-import { fmt, sizeColor } from "../../utils/dom/format.ts";
+import { formatBytes, sizeColor } from "../../utils/dom/format.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowCommon, folderRowCommon } from "./row-common.ts";
 
@@ -25,7 +25,7 @@ export function fileRowHTML(
   <span class="ha-btn ha-preview" data-path="${fp}" title="${t("tree.bilibiliSearch")}">🔍</span>
   <span class="ha-btn ha-copy" data-path="${fp}" title="${t("tree.copyFilename")}">📋</span>
 </span>
-<span class="sz ${sizeColor(e.size)}">${fmt(e.size)}</span>${dateStr ? `<span class="dt">${dateStr}</span>` : ""}</div>`;
+<span class="sz ${sizeColor(e.size)}">${formatBytes(e.size)}</span>${dateStr ? `<span class="dt">${dateStr}</span>` : ""}</div>`;
 }
 
 /** 文件夹行 HTML（indent = padding-left，扁平化无 .ch 容器） */

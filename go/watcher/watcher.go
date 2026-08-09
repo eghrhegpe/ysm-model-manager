@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"ysm-model-manager/go/fsutil"
 	mdsync "ysm-model-manager/go/sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -75,7 +76,7 @@ func (w *Watcher) Start() error {
 		}
 		if d.IsDir() {
 			// 跳过 .recycle 目录
-			if d.Name() == ".recycle" {
+			if fsutil.IsRecycleDir(d.Name()) {
 				return filepath.SkipDir
 			}
 			if err := fw.Add(path); err != nil {

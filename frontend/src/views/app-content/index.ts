@@ -3,6 +3,7 @@ import { bus } from "../../bus.ts";
 import { resolveInitialPage } from "../../core/page-store.ts";
 import { setPendingTreeSearch } from "../app-tree/index.ts";
 import { esc as escUtil } from "../../utils/dom/html.ts";
+import { formatBytes } from "../../utils/dom/format.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { contentCSS } from "./content-css.ts";
@@ -1004,11 +1005,7 @@ class AppContent extends HTMLElement {
   }
 
   _fmtSize(bytes: number): string {
-    // ADR-044 ②数值守卫：truthiness 挡不住 Infinity，统一 Number.isFinite 拦截
-    if (!Number.isFinite(bytes) || bytes <= 0) return "";
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / 1048576).toFixed(1) + " MB";
+    return formatBytes(bytes);
   }
 
   _esc(s: unknown): string {

@@ -39,19 +39,19 @@ func IsYSMJar(jarPath string) bool {
 		content := string(data)
 		lines := strings.Split(content, "\n")
 		inModsBlock := false
-		foundModId := false
+		foundModID := false
 		foundDisplayName := false
 		for _, line := range lines {
 			trimmed := strings.TrimSpace(line)
 			if trimmed == "[[mods]]" {
 				inModsBlock = true
-				foundModId = false
+				foundModID = false
 				foundDisplayName = false
 				continue
 			}
 			if inModsBlock {
 				if strings.HasPrefix(trimmed, "[[") || strings.HasPrefix(trimmed, "[") {
-					if foundModId && foundDisplayName {
+					if foundModID && foundDisplayName {
 						return true
 					}
 					inModsBlock = false
@@ -59,7 +59,7 @@ func IsYSMJar(jarPath string) bool {
 				}
 				if strings.HasPrefix(trimmed, `modId="yes_steve_model"`) ||
 					strings.HasPrefix(trimmed, `modId = "yes_steve_model"`) {
-					foundModId = true
+					foundModID = true
 				}
 				if strings.HasPrefix(trimmed, `displayName="Yes Steve Model"`) ||
 					strings.HasPrefix(trimmed, `displayName = "Yes Steve Model"`) {
@@ -67,7 +67,7 @@ func IsYSMJar(jarPath string) bool {
 				}
 			}
 		}
-		if inModsBlock && foundModId && foundDisplayName {
+		if inModsBlock && foundModID && foundDisplayName {
 			return true
 		}
 	}

@@ -98,7 +98,6 @@ export interface BusEvents {
   "dnd:lock-changed": { locked: boolean };
   // 配置
   "config:updated": void;
-  "config:resource-types-changed": void;
   // 批量操作
   "batch:rename": { paths: string[] };
   "batch:enable-all": void;

@@ -14,6 +14,13 @@ import (
 	"ysm-model-manager/go/types"
 )
 
+// 资源包文件大小上限
+const (
+	maxMcmetaSize = 1 << 20 // pack.mcmeta 1MB（合法文件通常 < 1KB）
+	maxPackPng    = 10 << 20 // pack.png 10MB
+	maxLangSize   = 1 << 20 // lang 文件 1MB（合法文件通常 < 10KB）
+)
+
 // ReadPackMeta 从资源包文件（.zip 或目录）中读取 pack.mcmeta，返回名称和 base64 缩略图
 func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 	var data []byte
@@ -30,7 +37,7 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 		if meta, err := os.Open(metaPath); err == nil {
 			// 限制 pack.mcmeta 大小（1MB，合法文件通常 < 1KB），防畸形大文件读入内存
 			var readErr error
-			data, readErr = io.ReadAll(io.LimitReader(meta, 1<<20))
+			data, readErr = io.ReadAll(io.LimitReader(meta, maxMcmetaSize))
 			meta.Close()
 			if readErr != nil {
 				return nil, "", fmt.Errorf("读取 pack.mcmeta 失败: %w", readErr)
@@ -38,7 +45,7 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 		}
 		pngPath := filepath.Join(path, "pack.png")
 		// P2 修复：目录形态 pack.png 与 ZIP 分支对齐 10MB 上限（stat 预检防超大图整读内存）
-		if st, err := os.Stat(pngPath); err == nil && st.Size() <= (10<<20) {
+		if st, err := os.Stat(pngPath); err == nil && st.Size() <= maxPackPng {
 			if png, err := os.ReadFile(pngPath); err == nil {
 				packPng = png
 			}
@@ -58,7 +65,7 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 					continue
 				}
 				// 限制 pack.mcmeta 大小（1MB），与 pack.png 的 LimitReader 保护对齐
-				readData, readErr := io.ReadAll(io.LimitReader(rc, 1<<20))
+				readData, readErr := io.ReadAll(io.LimitReader(rc, maxMcmetaSize))
 				rc.Close()
 				if readErr == nil {
 					data = readData
@@ -71,7 +78,6 @@ func ReadPackMeta(path string) (*types.PackMeta, string, error) {
 				}
 				// P2 修复：limit+1 探测截断（ADR-033 陷阱）——超 10MB 的 pack.png 被截断后
 				// readErr==nil，损坏 PNG 会被 base64 包装展示。超限时置空跳过
-				const maxPackPng = 10 << 20
 				readData, readErr := io.ReadAll(io.LimitReader(rc, maxPackPng+1))
 				rc.Close()
 				if readErr == nil && len(readData) <= maxPackPng {
@@ -228,7 +234,6 @@ func ReadShaderpackLang(path string) string {
 		// 原 os.Stat 预检 + os.ReadFile 是 check-then-act TOCTOU：并发修改时 ReadFile 整读
 		// 当前文件绕过大小时限；FIFO/设备文件 Stat.Size()==0 通过预检后 ReadFile 阻塞或无限读。
 		// LimitReader 的界在「实际读取」上生效，特殊文件也无法挂起读取。
-		const maxLangSize = 1 << 20 // 1MB（合法 lang 通常 < 10KB）
 		if lf, err := os.Open(langPath); err == nil {
 			langData, _ = io.ReadAll(io.LimitReader(lf, maxLangSize+1))
 			lf.Close()
@@ -252,7 +257,6 @@ func ReadShaderpackLang(path string) string {
 				}
 				// P3 修复：lang 文件设大小上限（limit+1 截断探测，对齐 ADR-033）——
 				// 原 io.ReadAll 全量读入，畸形/超大 lang 可拖垮内存，与包内其余 LimitReader 防护不统一
-				const maxLangSize = 1 << 20 // 1MB（合法 lang 通常 < 10KB）
 				langData, _ = io.ReadAll(io.LimitReader(rc, maxLangSize+1))
 				if len(langData) > maxLangSize {
 					langData = nil // 超限视为无效，返回空 name（前端用文件名兜底）

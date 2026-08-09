@@ -7,13 +7,12 @@ const GB = MB * 1024;
 /** 红色阈值：≥3MB（含边界，sizeColor 语义「≥」） */
 const RED_BOUND = 3 * MB;
 
-/** 字节数 → 可读大小（B/KB/MB/GB），非法值返回空串 */
-export function fmt(b: number): string {
+/** 字节数 → 可读大小（B/KB/MB/GB），非法值或 0 返回空串 */
+export function formatBytes(b: number): string {
   // P2 修复：±Infinity 是 truthy，`!b && b !== 0` 挡不住 → 输出 "Infinity GB"。
   // 用 Number.isFinite 一并拦截 NaN/±Infinity，落实「非法输入一律返回空串」不变量。
-  // P3 修复：负值同样非法（文件大小不可能为负，`fmt(-5)` 原输出 "-5 B"）——
-  // Number.isFinite 对负值返回 true，需显式拒绝
-  if (!Number.isFinite(b) || b < 0) return "";
+  // P3 修复：负值/零值同样无效（文件大小不可能为 0——0 通常表示未知）
+  if (!Number.isFinite(b) || b <= 0) return "";
   if (b < KB) return b + " B";
   if (b < MB) return (b / KB).toFixed(1) + " KB";
   if (b < GB) return (b / MB).toFixed(1) + " MB";

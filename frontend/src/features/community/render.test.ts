@@ -1,9 +1,9 @@
 // ===== 创意工坊渲染层纯函数测试（ADR-023 L3）=====
+import { formatBytes } from "../../utils/dom/format.ts";
 import { describe, it, expect } from "vitest";
 import {
   isModelMissing,
   countMissing,
-  formatSize,
   filterModels,
   groupSites,
   renderCardsHTML,
@@ -54,11 +54,11 @@ describe("countMissing", () => {
   });
 });
 
-describe("formatSize", () => {
-  it("0 → 空串", () => expect(formatSize(0)).toBe(""));
-  it("字节", () => expect(formatSize(512)).toBe("512B"));
-  it("KB", () => expect(formatSize(2048)).toBe("2KB"));
-  it("MB 保留一位", () => expect(formatSize(5 * 1024 * 1024)).toBe("5.0MB"));
+describe("formatBytes (community)", () => {
+  it("0 → 空串", () => expect(formatBytes(0)).toBe(""));
+  it("字节", () => expect(formatBytes(512)).toBe("512 B"));
+  it("KB", () => expect(formatBytes(2048)).toBe("2.0 KB"));
+  it("MB 保留一位", () => expect(formatBytes(5 * 1024 * 1024)).toBe("5.0 MB"));
 });
 
 describe("filterModels", () => {

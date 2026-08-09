@@ -374,9 +374,9 @@ func (a *App) CountDuplicateFiles(dir string) string {
 	return string(data)
 }
 
-// InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据
+// InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache）
 func (a *App) InvalidateScanCache() {
-	InvalidateScanCache()
+	a.ClearScanCache()
 }
 
 // InstallResourceToInstance 将资源文件安装到指定整合包

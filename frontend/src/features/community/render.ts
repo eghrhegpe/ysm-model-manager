@@ -2,6 +2,7 @@
 // DOM API，非字符串拼接
 import { t } from "../../core/i18n/t.ts";
 import { renderDisplayName } from "../../utils/dom/display.ts";
+import { formatBytes } from "../../utils/dom/format.ts";
 import { ICONS } from "../../utils/icon/workshop-icons.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
 
@@ -45,16 +46,6 @@ export function countMissing(
   localMap: Map<string, string>,
 ): number {
   return models.filter((m) => isModelMissing(m, localMap)).length;
-}
-
-/**
- * 格式化文件大小（B/KB/MB，<1KB 无单位省略走 ""）
- */
-export function formatSize(bytes: number): string {
-  if (!bytes) return "";
-  if (bytes < 1024) return bytes + "B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + "KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + "MB";
 }
 
 /**
@@ -151,7 +142,7 @@ export function renderModelList(
     metaCell.className = "gh-meta";
     const sizeSpan = document.createElement("span");
     sizeSpan.className = "gh-size";
-    sizeSpan.textContent = formatSize(m.size || 0);
+    sizeSpan.textContent = formatBytes(m.size || 0);
     metaCell.appendChild(sizeSpan);
     const searchBtn = createIconBtn(
       ICONS.SEARCH,

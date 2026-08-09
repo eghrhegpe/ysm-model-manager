@@ -65,6 +65,9 @@ import { initRecycleBin } from "../../features/recycle-bin.ts";
 import { loadOldestModel } from "../../features/oldest-models.ts";
 import { startDedup } from "./diagnostics/community.ts";
 import { setPendingTreeSearch } from "../app-tree/index.ts";
+import { loadCommunityData } from "./community-data.ts";
+import { tryFetchModels } from "../../features/community/data.ts";
+import { renderSiteView } from "./site-view.ts";
 import "./index.ts"; // 触发 customElements.define("app-content")
 import { sleep, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
 
@@ -338,6 +341,70 @@ describe("事件订阅", () => {
     const content = el.shadowRoot.getElementById("ins-content");
     expect(content?.innerHTML).toContain("app-sync-manager");
     expect(content?.innerHTML).toContain('instance="MyPack"');
+    unmountElement(el);
+  });
+});
+
+describe("_initGithub / _initWorkshop 真实路径", () => {
+  it("github 无仓库 → 「暂无 GitHub 仓库」占位", async () => {
+    const el = mountCustomElement("app-content") as unknown as ContentEl;
+    await sleep(50);
+    el._current = "github";
+    el._render(); // 真实 _initGithub → loadRepos → LoadGitHubRepos(mock [])
+    await sleep(20);
+    const grid = el.shadowRoot.getElementById("gh-grid");
+    expect(grid?.textContent).toContain("暂无 GitHub 仓库");
+    unmountElement(el);
+  });
+
+  it("github 有仓库 → 卡片渲染 + 点击走 showRepo（未找到模型列表）", async () => {
+    const el = mountCustomElement("app-content") as unknown as ContentEl;
+    await sleep(50);
+    const appMock = (await import("../../wails/app.ts")).getApp as unknown as ReturnType<typeof vi.fn>;
+    appMock.mockResolvedValue({
+      LoadAppConfig: vi.fn().mockResolvedValue({}),
+      GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
+      ScanModelEntriesWithLabel: vi.fn().mockResolvedValue([]),
+      LoadGitHubRepos: vi.fn().mockResolvedValue([{ name: "creator/models", desc: "索引" }]),
+      OpenInBrowser: vi.fn().mockResolvedValue(undefined),
+      BatchExtractCreatorAvatars: vi.fn().mockResolvedValue({}),
+      StartProxy: vi.fn().mockResolvedValue(undefined),
+    });
+    vi.mocked(tryFetchModels).mockResolvedValue(undefined as never); // 未找到模型列表分支
+    el._current = "github";
+    el._render();
+    await sleep(50);
+    const card = el.shadowRoot.querySelector(".gh-repo-card") as HTMLElement | null;
+    expect(card).toBeTruthy();
+    card!.click();
+    await sleep(30);
+    const body = el.shadowRoot.getElementById("gh-results-body");
+    expect(body?.textContent).toContain("未找到模型列表");
+    unmountElement(el);
+  });
+
+  it("workshop 空站点 → 不生成 tab；有站点 → 生成 tab + 默认显示第一个", async () => {
+    const el = mountCustomElement("app-content") as unknown as ContentEl;
+    await sleep(50);
+    vi.mocked(loadCommunityData).mockResolvedValue({
+      sites: [
+        { id: "bilibili", label: "B站", url: "https://bilibili.com", icon: "", desc: "", group: "" },
+        { id: "afdian", label: "爱发电", url: "https://afdian.com", icon: "", desc: "", group: "" },
+      ],
+      creators: [],
+      authors: [],
+    });
+    el._current = "workshop";
+    el._render();
+    // _initWorkshop 用 setTimeout(100) 延迟加载站点
+    await sleep(200);
+    const tabs = el.shadowRoot.getElementById("ws-tabs");
+    expect(tabs?.querySelectorAll("button").length).toBe(2);
+    // 默认站点（bilibili）触发 showSiteView → renderSiteView（mock 内联）
+    expect(renderSiteView).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "bilibili" }),
+      expect.anything(),
+    );
     unmountElement(el);
   });
 });

@@ -5,6 +5,7 @@ import { initVersionUpdater } from "../../../features/version-updater.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/resource/registry.ts";
 import { esc } from "../../../utils/dom/html.ts";
+import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
 import { getApp } from "../../../wails/app.ts";
 
 // 单一捕获守卫：同一时刻仅允许一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持
@@ -420,25 +421,12 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     return esc(String(s ?? ""));
   }
 
-  // P3 修复：主题段读写在隐私模式（存储禁用）下抛错会中断 initSettings、整页失效——
-  // 与 app-modules 的 safeGet/safeSet 同口径（启动链已封口、写入侧未封口，此处补齐）
-  const themeGet = (key: string): string | null => {
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  };
-  const themeSet = (key: string, val: string): void => {
-    try {
-      localStorage.setItem(key, val);
-    } catch {
-      /* 隐私模式：忽略持久化 */
-    }
-  };
+  // ADR-044 策略 A：主题段读写统一走 utils/dom/storage.ts 的 safeGet/safeSet——
+  // 隐私模式（存储禁用）下 localStorage 抛错会中断 initSettings、整页失效。
+  // 原局部 themeGet/themeSet 收敛为共享工具（app-modules 启动链同源实现）。
 
   // 主题卡片：直接点击切换
-  const savedTheme = themeGet("theme") || "cyber";
+  const savedTheme = safeGet("theme") || "cyber";
   const themePicker = root.getElementById("theme-picker");
   if (themePicker) {
     themePicker.querySelectorAll(".theme-card").forEach((card) => {
@@ -448,7 +436,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         card.classList.add("active");
         const themeName = (card as HTMLElement).dataset.theme || "";
         window.applyTheme?.(themeName);
-        themeSet("theme", themeName);
+        safeSet("theme", themeName);
         // P2 修复：主题切后同步到 ysm_config.json，保持 localStorage ↔ JSON 一致
         void (async () => {
           try { await SaveAppConfig(cfg.filesRoot || "", cfg.resourcepackRoot || "", cfg.mcRoot || "", linkMode, themeName); } catch { /* 保存失败不影响 UI 主题 */ }
@@ -456,7 +444,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         // 关闭自动切换
         const autoSelect = root.getElementById("theme-auto") as HTMLSelectElement | null;
         if (autoSelect) autoSelect.value = "off";
-        themeSet("theme-auto", "off");
+        safeSet("theme-auto", "off");
       });
     });
   }
@@ -464,23 +452,23 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   // 自动切换下拉框
   // P2 修复（code_review）：theme-auto 段同样走 safe 包装——原裸 getItem 在隐私模式
   // 下抛错中断 initSettings（与主题卡片段同源），且 setItem 三处未封口
-  const savedAuto = themeGet("theme-auto") || "off";
+  const savedAuto = safeGet("theme-auto") || "off";
   const autoSelect = root.getElementById("theme-auto") as HTMLSelectElement | null;
   if (autoSelect) {
     autoSelect.value = savedAuto;
     autoSelect.addEventListener("change", () => {
       const mode = autoSelect.value;
-      themeSet("theme-auto", mode);
+      safeSet("theme-auto", mode);
       if (mode === "system") {
         window.applyTheme?.("system");
-        themeSet("theme", "system");
+        safeSet("theme", "system");
         // 更新卡片选中态
         if (themePicker) themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
       } else if (mode === "time") {
         // P2 修复：applyTimeTheme 返回实际主题（warm/cyber）并写入 theme 键——
         // 原实现写 "time" 非法值，重启后 initTheme 归一化为 system，按时间段模式被静默降级
         const themeName = applyTimeTheme();
-        themeSet("theme", themeName);
+        safeSet("theme", themeName);
         if (themePicker) themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
       }
       // "off" 时不改变当前主题，等用户手动点卡片
@@ -490,7 +478,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       window.applyTheme?.("system");
     } else if (savedAuto === "time") {
       const themeName = applyTimeTheme();
-      themeSet("theme", themeName);
+      safeSet("theme", themeName);
     } else {
       window.applyTheme?.(savedTheme);
     }
@@ -663,10 +651,10 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   // P2 修复（code_review）：UI 偏好读取同样走 themeGet——原裸 getItem 在隐私模式下
   // 抛错中断 initSettings（applyUIPref 是 initSettings 同步执行的一部分）
   const applyUIPref = (): void => {
-    const fontSize = themeGet("ui-font-size") || "normal";
-    const displayFont = themeGet("ui-display-font") || "kaiti";
-    const density = themeGet("ui-card-density") || "compact";
-    const anim = themeGet("ui-animations") !== "off";
+    const fontSize = safeGet("ui-font-size") || "normal";
+    const displayFont = safeGet("ui-display-font") || "kaiti";
+    const density = safeGet("ui-card-density") || "compact";
+    const anim = safeGet("ui-animations") !== "off";
 
     // 基准字号 — 通过 --fs-scale 控制，CSS 自动缩放所有 --fs-* 和 --space-*
     // 先清除旧版直接设 --fs-* 的内联值（避免覆盖 calc()）

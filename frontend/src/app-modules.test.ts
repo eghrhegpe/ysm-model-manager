@@ -3,15 +3,15 @@
 // initTheme 白名单归一化+回写、applyUIPrefs 默认值兜底、_devtools 隐私模式降级。
 // 顶层副作用（视图注册/启动 IIFE/checkUpdateSilent）用 vi.mock 隔离，
 // 只测导出的纯逻辑函数（不 import 整模块触发 IIFE）。
+// ADR-044 策略 A：safeGet/safeSet 已收敛至 utils/dom/storage.ts（app-modules 不再导出）。
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
 import {
   normalizeTheme,
   applyTheme,
-  safeGet,
-  safeSet,
   initTheme,
   applyUIPrefs,
 } from "./app-modules.ts";
+import { safeGet, safeSet } from "./utils/dom/storage.ts";
 
 /** 隐私模式模拟：让 localStorage 读写抛错（happy-dom 的 localStorage 是 getter 保护，必须 vi.spyOn） */
 function breakLocalStorage() {

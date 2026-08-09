@@ -12,7 +12,7 @@
 | Go·下载 | 1 | 7 |
 | Go·错误 | 1 | 1 |
 | go/fileops | 2 | 13 |
-| Go·文件系统 | 1 | 5 |
+| Go·文件系统 | 2 | 6 |
 | Go·几何 | 2 | 8 |
 | Go·导入 | 2 | 16 |
 | Go·安装 | 1 | 6 |
@@ -40,7 +40,7 @@
 | frontend/views | 54 | 147 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **175** | **803** |
+| **合计** | **176** | **804** |
 
 ## Go·头像
 
@@ -110,6 +110,7 @@
 | `CountFiles()` | `go/fsutil/walk:70` | CountFiles 统计目录中的文件数（不限制扩展名） |
 | `CleanEmptyDirs()` | `go/fsutil/walk:75` | CleanEmptyDirs 递归删除空子目录，返回删除数 |
 | `IsRecycleDir()` | `go/fsutil/walk:89` | IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）—— dedup / scanner / sync 的回 |
+| `WriteFileAtomic()` | `go/fsutil/write:19` | WriteFileAtomic 临时文件 + rename 原子落地目标文件。 |
 
 ## Go·几何
 
@@ -128,11 +129,11 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `ImportFromBase64()` | `go/importer/importer_file:28` | ImportFromBase64 从 base64 导入模型文件（校验 + 类型检测 + 写文件） rootFn 按资源类型返回仓库根目录（薄壳注入 a.GetRepoRoot） |
-| `WriteFileAtomic()` | `go/importer/importer_file:105` | WriteFileAtomic 临时文件 + rename 原子落地（P2 修复，importer 与 app_install.go 的 subpath 导入路径共享）：原 `os |
-| `DetectZipType()` | `go/importer/importer_file:135` | DetectZipType 扫描 ZIP local file header 中的文件名识别资源类型 |
-| `ImportOptions()` | `go/importer/importer_file:18` | ImportOptions 导入选项 |
-| `ImportLogger()` | `go/importer/importer_file:24` | ImportLogger 导入日志回调（薄壳注入 App.logger.Add） |
+| `ImportFromBase64()` | `go/importer/importer_file:29` | ImportFromBase64 从 base64 导入模型文件（校验 + 类型检测 + 写文件） rootFn 按资源类型返回仓库根目录（薄壳注入 a.GetRepoRoot） |
+| `WriteFileAtomic()` | `go/importer/importer_file:103` | WriteFileAtomic 已提升至 go/fsutil（ADR-044 策略 A：基础设施工具收敛，tags/logs/fileops 共用）。 |
+| `DetectZipType()` | `go/importer/importer_file:111` | DetectZipType 扫描 ZIP local file header 中的文件名识别资源类型 |
+| `ImportOptions()` | `go/importer/importer_file:19` | ImportOptions 导入选项 |
+| `ImportLogger()` | `go/importer/importer_file:25` | ImportLogger 导入日志回调（薄壳注入 App.logger.Add） |
 | `Register()` | `go/importer/importer:31` | Register 注册导入策略 |
 | `Get()` | `go/importer/importer:36` | Get 获取指定类型的导入策略 |
 | `NewSimpleCopy()` | `go/importer/importer:62` | NewSimpleCopy 创建简单文件复制导入器 |
@@ -181,12 +182,12 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `NewLogger()` | `go/logs/logs:22` | NewLogger 创建日志管理器 使用系统标准的应用配置目录（Windows: %APPDATA%, Linux: ~/.config, macOS: ~/Library/App |
-| `Logger.Add()` | `go/logs/logs:96` | Add 添加一条导入日志（兼容旧调用） |
-| `Logger.AddOp()` | `go/logs/logs:101` | AddOp 添加一条指定操作类型的日志 |
-| `Logger.GetAll()` | `go/logs/logs:125` | GetAll 获取所有日志 |
-| `Logger.Clear()` | `go/logs/logs:134` | Clear 清空日志 |
-| `Logger()` | `go/logs/logs:14` | Logger 导入日志管理器 |
+| `NewLogger()` | `go/logs/logs:24` | NewLogger 创建日志管理器 使用系统标准的应用配置目录（Windows: %APPDATA%, Linux: ~/.config, macOS: ~/Library/App |
+| `Logger.Add()` | `go/logs/logs:93` | Add 添加一条导入日志（兼容旧调用） |
+| `Logger.AddOp()` | `go/logs/logs:98` | AddOp 添加一条指定操作类型的日志 |
+| `Logger.GetAll()` | `go/logs/logs:122` | GetAll 获取所有日志 |
+| `Logger.Clear()` | `go/logs/logs:131` | Clear 清空日志 |
+| `Logger()` | `go/logs/logs:16` | Logger 导入日志管理器 |
 | `NewRuntimeBuffer()` | `go/logs/runtime:19` | NewRuntimeBuffer 创建环形缓冲 |
 | `RuntimeBuffer.Write()` | `go/logs/runtime:27` | Write 实现 io.Writer：每次调用记录一条运行时日志（标准库 log 一行即一次 Write） |
 | `RuntimeBuffer.GetAll()` | `go/logs/runtime:41` | GetAll 返回全部日志的副本 |
@@ -277,14 +278,14 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `NewStore()` | `go/tags/tags:24` | NewStore 创建标签存储（懒加载：首次 Get/Set 时自动读取） |
-| `Store.GetTags()` | `go/tags/tags:93` | GetTags 返回指定路径的所有标签（已排序） |
-| `Store.SetTags()` | `go/tags/tags:110` | SetTags 设置指定路径的标签列表（覆盖写入） |
-| `Store.AddTag()` | `go/tags/tags:142` | AddTag 追加单个标签（不会重复） |
-| `Store.RemoveTag()` | `go/tags/tags:165` | RemoveTag 移除单个标签 |
-| `Store.ListByTag()` | `go/tags/tags:194` | ListByTag 返回所有打了指定标签的文件路径列表 |
-| `Store.AllTags()` | `go/tags/tags:218` | AllTags 返回所有被使用的标签（按使用次数降序） |
-| `Store()` | `go/tags/tags:17` | Store 是标签存储，线程安全 |
+| `NewStore()` | `go/tags/tags:26` | NewStore 创建标签存储（懒加载：首次 Get/Set 时自动读取） |
+| `Store.GetTags()` | `go/tags/tags:91` | GetTags 返回指定路径的所有标签（已排序） |
+| `Store.SetTags()` | `go/tags/tags:108` | SetTags 设置指定路径的标签列表（覆盖写入） |
+| `Store.AddTag()` | `go/tags/tags:140` | AddTag 追加单个标签（不会重复） |
+| `Store.RemoveTag()` | `go/tags/tags:163` | RemoveTag 移除单个标签 |
+| `Store.ListByTag()` | `go/tags/tags:192` | ListByTag 返回所有打了指定标签的文件路径列表 |
+| `Store.AllTags()` | `go/tags/tags:216` | AllTags 返回所有被使用的标签（按使用次数降序） |
+| `Store()` | `go/tags/tags:19` | Store 是标签存储，线程安全 |
 
 ## Go·Three.js
 

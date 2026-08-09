@@ -3,12 +3,12 @@
  * i18n-check.mjs — i18n 国际化检查（key parity/占位符/漏译/语言清单漂移）
  *
  * 移植自联邦项目 MikuMikuAR scripts/i18n-check.mjs（ADR-045 落地配套）。
- * 适配点：REFERENCE_LANGS 仅 en；AVAILABLE_LANGS 正则兼容 `as const` 声明。
+ * 适配点：语言清单注册处为 locale.ts SUPPORTED_LANGS（对象数组）；REFERENCE_LANGS 含 en/ja。
  *
- * 设计意图：i18n 化后 en 包覆盖不足，缺失 key 静默回退 zh-CN（t.ts 回退链），
- * 无任何报错线索——en 用户会看到中文界面却不自知。本脚本把三类缺口提前暴露：
- * key parity（en vs zh-CN）、占位符一致性（{n} 跨包必须一致）、zh-CN 漏译、
- * AVAILABLE_LANGS 与 locales/ 文件集漂移。warning 模式只报不阻断，--strict 供 CI。
+ * 设计意图：i18n 化后翻译包覆盖不足，缺失 key 静默回退 zh-CN（t.ts 回退链），
+ * 无任何报错线索——en/ja 用户会看到中文界面却不自知。本脚本把三类缺口提前暴露：
+ * key parity（en/ja vs zh-CN）、占位符一致性（{n} 跨包必须一致）、zh-CN 漏译、
+ * SUPPORTED_LANGS 与 locales/ 文件集漂移。warning 模式只报不阻断，--strict 供 CI。
  *
  * 零依赖（仅 node:fs / node:path / node:url + 仓库内 _lib/parse-args.mjs）。
  *
@@ -27,7 +27,7 @@ import { parseArgs } from './_lib/parse-args.mjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOCALES_DIR = resolve(__dirname, '..', 'frontend', 'src', 'core', 'i18n', 'locales');
 const BASE_LANG = 'zh-CN';
-const REFERENCE_LANGS = ['en'];
+const REFERENCE_LANGS = ['en', 'ja'];
 
 const { strict, json, help, unknown } = parseArgs(process.argv.slice(2), {
   bools: ['strict', 'json'],
@@ -200,15 +200,12 @@ if (untranslated.length > 0) {
   log('\n✅ zh-CN 基准包无漏译（所有条目均含中文字符）。');
 }
 
-const T_TS_PATH = resolve(__dirname, '..', 'frontend', 'src', 'core', 'i18n', 't.ts');
-const T_TS = readFileSync(T_TS_PATH, 'utf8');
-// 兼容 `export const AVAILABLE_LANGS = ["zh-CN", "en"] as const;`（本项目为 as const，非 string[]）
-const availMatch = T_TS.match(/AVAILABLE_LANGS\s*:?[^=]*=\s*\[([^\]]*)\]/);
-const availableLangs = availMatch
-  ? availMatch[1]
-      .split(',')
-      .map((s) => s.trim().replace(/['"]/g, ''))
-      .filter(Boolean)
+const LOCALE_TS_PATH = resolve(__dirname, '..', 'frontend', 'src', 'core', 'i18n', 'locale.ts');
+const LOCALE_TS = readFileSync(LOCALE_TS_PATH, 'utf8');
+// 语言清单从 t.ts AVAILABLE_LANGS 迁到 locale.ts SUPPORTED_LANGS（对象数组 `{ code, label, key }`）
+const langsMatch = LOCALE_TS.match(/SUPPORTED_LANGS\s*=\s*\[([\s\S]*?)\]\s*(?:as\s+const)?\s*;/);
+const availableLangs = langsMatch
+  ? [...langsMatch[1].matchAll(/code\s*:\s*['"]([^'"]+)['"]/g)].map((m) => m[1])
   : [];
 const langFiles = readdirSync(LOCALES_DIR)
   .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts')) // 排除测试文件 zh-CN.test.ts
@@ -219,17 +216,17 @@ const inAvailNotFile = availableLangs.filter((l) => !fileSet.has(l));
 const inFileNotAvail = langFiles.filter((f) => !availSet.has(f));
 
 if (inAvailNotFile.length || inFileNotAvail.length) {
-  log('\n⚠ AVAILABLE_LANGS (t.ts) 与 locales/*.ts 文件集不一致:');
-  if (inAvailNotFile.length) log('  仅声明于 AVAILABLE_LANGS 但无 bundle 文件: ' + inAvailNotFile.join(', '));
-  if (inFileNotAvail.length) log('  存在 bundle 文件但未列入 AVAILABLE_LANGS: ' + inFileNotAvail.join(', '));
-  log('  请同步 frontend/src/core/i18n/t.ts 与 frontend/src/core/i18n/locales/。');
+  log('\n⚠ SUPPORTED_LANGS (locale.ts) 与 locales/*.ts 文件集不一致:');
+  if (inAvailNotFile.length) log('  仅声明于 SUPPORTED_LANGS 但无 bundle 文件: ' + inAvailNotFile.join(', '));
+  if (inFileNotAvail.length) log('  存在 bundle 文件但未列入 SUPPORTED_LANGS: ' + inFileNotAvail.join(', '));
+  log('  请同步 frontend/src/core/i18n/locale.ts 与 frontend/src/core/i18n/locales/。');
   if (strict && !json) {
-    console.error('\n[i18n-check] --strict: AVAILABLE_LANGS 与文件集不一致 → CI fails.');
+    console.error('\n[i18n-check] --strict: SUPPORTED_LANGS 与文件集不一致 → CI fails.');
     process.exit(1);
   }
   log('  (warning mode — non-blocking.)');
 } else {
-  log(`\n✅ AVAILABLE_LANGS (${availableLangs.length}) 与 locales/*.ts 文件集完全一致。`);
+  log(`\n✅ SUPPORTED_LANGS (${availableLangs.length}) 与 locales/*.ts 文件集完全一致。`);
 }
 if (json) {
   const failed =

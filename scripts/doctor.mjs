@@ -400,7 +400,9 @@ function runStaticTools(tools, label) {
       try {
         const j = JSON.parse(out);
         const warns = [];
-        if (j.keyParity && j.keyParity.length) warns.push(`key 对齐 ${j.keyParity.length} 条`);
+        // keyParity.length 按语言计数恒为 REFERENCE_LANGS 数（与问题无关），
+        // 须用 totalMissing（实际缺失 key 数）判据（code_review P3）
+        if (j.totalMissing > 0) warns.push(`key 缺失 ${j.totalMissing} 条`);
         if (j.placeholderMismatches && j.placeholderMismatches.length) warns.push(`占位符不一致 ${j.placeholderMismatches.length} 条`);
         if (j.untranslated && j.untranslated.length) warns.push(`zh-CN 疑似漏译 ${j.untranslated.length} 条`);
         const drift = j.langListDrift;

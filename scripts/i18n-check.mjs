@@ -246,6 +246,7 @@ if (json) {
       {
         baseLang: BASE_LANG,
         baseKeys: base.keys.size,
+        totalMissing, // 实际缺失 key 总数（doctor 侧告警判据，keyParity.length 恒为语言数）
         keyParity: report,
         placeholderMismatches: phReport,
         untranslated,

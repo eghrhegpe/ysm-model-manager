@@ -1,4 +1,14 @@
 #!/usr/bin/env node
+/**
+ * 统一 YSMParser WASM 构建（一份 web 产物服务前后端）。
+ * build-ysm-wasm.mjs — 构建 YSMParser WASM web 产物
+ * 设计意图：原「前端版 / Go 版」两份二进制统一为单一 web 产物（Node 能 require web glue，WebView2 反之不行，故保留 web 弃 node）。
+ * 依赖：node:child_process / node:fs / node:path / node:url
+ * 用法：
+ *   node scripts/build-ysm-wasm.mjs
+ * 退出码：
+ *   0 成功 / 1 失败
+ */
 // build-ysm-wasm.mjs — 统一 YSMParser WASM 构建（一份 web 产物服务前后端）
 //
 // 背景（2026-08-08 统一）：原「前端版 / Go 版」两份不同二进制（导出面不同）已统一为

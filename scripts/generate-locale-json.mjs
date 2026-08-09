@@ -1,4 +1,14 @@
 #!/usr/bin/env node
+/**
+ * 语言包 TS → JSON 构建脚本（ADR-045）。
+ * generate-locale-json.mjs — 编译 locales TS 导出为运行时 JSON
+ * 设计意图：以 frontend/src/core/i18n/locales/*.ts 为单一事实源，产出 frontend/public/locales/*.json 供运行时 fetch 消费。
+ * 依赖：node:fs / node:path / node:url
+ * 用法：
+ *   node scripts/generate-locale-json.mjs
+ * 退出码：
+ *   0 成功 / 1 未捕获异常（非零退出）
+ */
 // ===== 语言包 TS → JSON 构建脚本（ADR-045）=====
 // 用法：node scripts/generate-locale-json.mjs
 // 从 frontend/src/core/i18n/locales/*.ts 编译提取导出对象，

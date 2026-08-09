@@ -1,3 +1,13 @@
+/**
+ * 用 Node.js + WASM 解码 .ysm 文件（callMain + MEMFS 路径）。
+ * test-decode-from-memory.mjs — YSMParser WASM 解码冒烟测试
+ * 设计意图：与 internal/app/wasm_decoder.go 的 decodeYSMViaNodeJS 保持同一调用方式，本地验证 web 产物可解码。
+ * 依赖：fs / path / os / child_process（+ 外部 YSMParser glue）
+ * 用法：
+ *   node scripts/test-decode-from-memory.mjs
+ * 退出码：
+ *   0 成功 / 1 FATAL
+ */
 // 用 Node.js + WASM 解码 .ysm 文件（callMain + MEMFS 路径）
 // 与 internal/app/wasm_decoder.go 的 decodeYSMViaNodeJS 保持同一调用方式。
 //

@@ -18,7 +18,7 @@ const OUT_DIR = join(ROOT, "frontend", "public", "locales");
 const esbuildPath = join(ROOT, "frontend", "node_modules", "esbuild", "lib", "main.js");
 const esbuild = await import(pathToFileURL(esbuildPath).href);
 
-const tsFiles = readdirSync(SRC_DIR).filter((f) => f.endsWith(".ts"));
+const tsFiles = readdirSync(SRC_DIR).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"));
 
 if (tsFiles.length === 0) {
   console.warn("[locale-gen] 未找到语言包 .ts 文件");

@@ -6,6 +6,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import {
   closeDlg,
   registerDlg,
+  closeActiveDialog,
   modalConfirm,
   modalPrompt,
   modalSelect,
@@ -67,6 +68,38 @@ describe("registerDlg — 活动弹窗单例", () => {
     // 旧弹窗应被关闭
     expect(oldClose).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(120);
+  });
+});
+
+describe("closeActiveDialog — android:back 先关弹窗（ADR-047）", () => {
+  it("有活动弹窗 → 关闭并返回 true", () => {
+    const overlay = document.createElement("div");
+    document.body.appendChild(overlay);
+    const cancelClose = vi.fn();
+    registerDlg(overlay, cancelClose);
+    expect(closeActiveDialog()).toBe(true);
+    expect(cancelClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("无活动弹窗 → 返回 false", () => {
+    expect(closeActiveDialog()).toBe(false);
+  });
+
+  it("closable=false 的进度弹窗 → 不强关，返回 false", () => {
+    const overlay = document.createElement("div");
+    document.body.appendChild(overlay);
+    const cancelClose = vi.fn();
+    registerDlg(overlay, cancelClose, false);
+    expect(closeActiveDialog()).toBe(false);
+    expect(cancelClose).not.toHaveBeenCalled();
+  });
+
+  it("关闭后再次调用返回 false（槽位已清空）", () => {
+    const overlay = document.createElement("div");
+    document.body.appendChild(overlay);
+    registerDlg(overlay, vi.fn());
+    expect(closeActiveDialog()).toBe(true);
+    expect(closeActiveDialog()).toBe(false);
   });
 });
 

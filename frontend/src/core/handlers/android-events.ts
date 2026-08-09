@@ -7,12 +7,14 @@
 // 生命周期：由 registerGlobalHandlers 聚合，unsubs 随 app-content 卸载清理（非顶层豁免）。
 import { Events } from "@wailsio/runtime";
 import { bus } from "../../bus.ts";
+import { closeActiveDialog } from "../../utils/dom/dialogs/modal.ts";
 
 /** 注册 Android 系统事件消费，push 取消订阅函数到 unsubs */
 export function registerAndroidEvents(unsubs: Array<() => void>): void {
-  // 双击返回退出：首次按下 Java 发 android:back，前端提示"再按一次退出"
+  // 返回键：先关活动弹窗（触屏无 Esc，ADR-047 桥接），无弹窗时提示"再按一次退出"
   unsubs.push(
     Events.On("android:back", () => {
+      if (closeActiveDialog()) return; // 已关闭弹窗，本次返回被消费，不触发退出提示
       bus.emit("toast:show", {
         msg: "再按一次返回退出应用",
         duration: 2000,

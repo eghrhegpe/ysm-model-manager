@@ -632,6 +632,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-045：前端 i18n 轻量框架",
+        "link": "/adr/ADR-045-i18n-framework"
+      },
+      {
         "text": "ADR-044：代码写法治理范式：31 批审核反推的系统性不足与收敛策略",
         "link": "/adr/ADR-044-code-writing-governance"
       },

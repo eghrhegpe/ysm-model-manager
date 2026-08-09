@@ -148,12 +148,15 @@ for (const [absPath, entry] of Object.entries(raw)) {
     file: toPosix(rel),
     stmts: total ? Number(stmtPct.toFixed(2)) : 100,
     stmtsRaw: total ? stmtPct : 100, // P3-1：未舍入值参与阈值比较（44.996% 不得漏报为达标）
+    totalStmts: total, // 文件体量（语句总数）：排序主键——小文件优先提示，AI 先补容易的
     uncoveredLines: uncoveredLines.sort((a, b) => a - b),
     uncoveredFns,
   });
 }
 
-rows.sort((a, b) => a.stmts - b.stmts);
+// 按文件体量升序（小文件优先）为主，同体量按覆盖率升序（最差在前）——
+// 覆盖率建议的前 3 给「容易补的小文件」，避免大型复杂文件（AI 难补）堵住位置
+rows.sort((a, b) => a.totalStmts - b.totalStmts || a.stmts - b.stmts);
 
 const totalFiles = rows.length;
 const sumStmts = rows.reduce((acc, r) => acc + r.stmts, 0);

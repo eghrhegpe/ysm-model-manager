@@ -604,6 +604,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-044：代码写法治理范式：31 批审核反推的系统性不足与收敛策略",
+        "link": "/adr/ADR-044-code-writing-governance"
+      },
+      {
         "text": "ADR-043：检查脚本 fail-closed 三态契约（扫描不完整必须显式暴露，禁止假绿）",
         "link": "/adr/ADR-043-check-scripts-fail-closed-contract"
       },

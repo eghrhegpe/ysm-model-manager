@@ -90,6 +90,9 @@ export async function showRenameDialog(
           btn.disabled = true;
           const App = await getApp();
           const header = await App.ExtractYSMHeader(filePath);
+          // P2 修复（审核发现）：await 后无代际校验——弹窗在读头期间被 Esc/单例替换
+          // 关闭后，结果写入已脱离 DOM 的节点（ADR-044 ①「await 后落 DOM 前必校验」）
+          if (!overlay.isConnected) return;
           if (header?.isYsm) {
             const authorEl = box.querySelector("#rn-author") as HTMLInputElement;
             const tipsEl = box.querySelector("#rn-tips") as HTMLElement;

@@ -63,7 +63,12 @@ async function logUiMsg(msg: string, status: string): Promise<void> {
     const { AddOpLog } = await getApp();
     // 净化：去掉 ❌/⚠️ 前缀（含 U+FE0F 变体选择器）+ 截断
     const clean = msg.replace(/^[❌❎⚠]️?\s*/, "").slice(0, 200);
-    void AddOpLog("ui", clean, "", "", 0, status, msg.slice(0, 500));
+    // P2 修复（审核发现）：原 `void AddOpLog(...)` 浮空 Promise 未 catch——Wails 调用
+    // 失败会 reject → unhandledrejection → 触发本模块 onRejection → 再 logUiMsg →
+    // 再 AddOpLog → 拒绝 → 死循环；补 .catch 截断错误链
+    AddOpLog("ui", clean, "", "", 0, status, msg.slice(0, 500)).catch((e) => {
+      console.warn("[error-diary] AddOpLog 失败:", e);
+    });
   } catch {
     // 日记写入失败不影响调用方
   }

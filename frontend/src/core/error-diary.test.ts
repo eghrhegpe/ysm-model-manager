@@ -62,6 +62,28 @@ describe("registerErrorDiary", () => {
     expect(call[5]).toBe("warn");         // status
   });
 
+  it("P2 修复：AddOpLog reject 不产生未处理拒绝（防日志死循环）", async () => {
+    // 原 `void AddOpLog(...)` 浮空 Promise——Wails 调用失败 reject → unhandledrejection
+    // → 触发本模块 onRejection → 再 logUiMsg → 再 AddOpLog → 拒绝 → 死循环；
+    // 补 .catch 后拒绝被截断，onRejection 不应被二次触发
+    addOpLogMock.mockRejectedValueOnce(new Error("bridge down"));
+    const rejectionSpy = vi.fn();
+    const onRejection = (e: PromiseRejectionEvent): void => rejectionSpy(e.reason);
+    window.addEventListener("unhandledrejection", onRejection);
+    try {
+      registerErrorDiary();
+      bus.emit("toast:show", { msg: "❌ 会失败的日志", type: "error" });
+      await flush();
+      await flush();
+      // AddOpLog 已被调用（尝试写入），且拒绝被 .catch 吞掉，无 unhandledrejection 逸出
+      expect(addOpLogMock).toHaveBeenCalledTimes(1);
+      expect(rejectionSpy).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("unhandledrejection", onRejection);
+      __TEST__resetDiary();
+    }
+  });
+
   it("success toast → AddOpLog NOT called", async () => {
     registerErrorDiary();
     bus.emit("toast:show", {

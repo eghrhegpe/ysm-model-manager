@@ -399,6 +399,10 @@ export class AppResourceManager extends HTMLElement {
 
   _applyFilter(value: string): void {
     const q = value.toLowerCase().trim();
+    // P2 修复（审核发现）：过滤/搜索时递增 _detailGen——否则在途 _showDetail 完成后
+    // 越过 gen 比对（gen 未变）覆盖「搜索中...」为已被过滤掉条目的过期详情
+    // （stale-async-overwrites-newer 同类，本文件其它处已显式防）
+    this._detailGen++;
     this._renderList(q);
     // 清除选中高亮
     this._listEl

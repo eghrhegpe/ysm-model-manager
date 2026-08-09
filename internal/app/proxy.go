@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -142,9 +143,39 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+	} else {
+		// P3 修复（code_review）：解析失败必须硬阻断（400）——原 fail-open 放行，
+		// 且 dial 时 ReverseProxy 独立再解析仍可能命中内网（TOCTOU 双保险缺失）
+		http.Error(w, "Blocked host (resolution failed)", http.StatusBadRequest)
+		return
 	}
 
 	proxy := &httputil.ReverseProxy{
+		// P3 修复（code_review）：DialContext 在连接建立时重新解析校验——请求处理期的
+		// LookupHost 检查与 dial 是两次独立解析，攻击者可控 DNS 时检查给公网 IP、dial 给
+		// 内网 IP（经典 DNS rebinding 序列）即可绕过；dial 期校验堵住该 TOCTOU
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				dialer := &net.Dialer{}
+				host, _, err := net.SplitHostPort(addr)
+				if err != nil {
+					return nil, err
+				}
+				// 直接 IP：校验形态；主机名：解析后校验全部结果，任一内网即拒绝
+				if ip := net.ParseIP(host); ip != nil {
+					if isBlockedIP(ip) {
+						return nil, fmt.Errorf("blocked host at dial: %s", host)
+					}
+				} else if resolved, err := net.LookupHost(host); err == nil {
+					for _, h := range resolved {
+						if ip := net.ParseIP(h); ip != nil && isBlockedIP(ip) {
+							return nil, fmt.Errorf("blocked host at dial: %s", host)
+						}
+					}
+				}
+				return dialer.DialContext(ctx, network, addr)
+			},
+		},
 		Director: func(req *http.Request) {
 			req.URL = parsed
 			req.Host = parsed.Host

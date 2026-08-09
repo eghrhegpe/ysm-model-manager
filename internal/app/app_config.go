@@ -4,6 +4,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -145,9 +146,17 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) e
 	a.LinkMode = cfg.LinkMode
 	// 技术债 #4：FilesRoot/McRoot 变化后重启 watcher——原 restartWatcher 是无调用点死代码，
 	// 保存后 watcher 仍监听旧目录（文件变更不再触发自动同步）；saveConfig 已更新 configCache，
-	// 故 GetRepoRoot 返回新 FilesRoot 推导的 ysm 根
-	if ysmRoot, err := a.GetRepoRoot("ysm"); err == nil {
-		a.restartWatcher(ysmRoot, cfg.McRoot)
+	// 故 GetRepoRoot 返回新 FilesRoot 推导的 ysm 根。
+	// P3 修复（code_review）：仅当 ysm root 或 McRoot 实际变化才重启——原无条件重启使
+	// theme-only/link-mode-only 保存（前端 settings 每次保存都调）拆除重建 watcher（全仓
+	// WalkDir 同步 + 自动同步窗口）；Start 失败返回错误而非 println 静默假成功
+	rootChanged := cfg.FilesRoot != oldCfg.FilesRoot || cfg.McRoot != oldCfg.McRoot
+	if rootChanged {
+		if ysmRoot, err := a.GetRepoRoot("ysm"); err == nil {
+			if err := a.restartWatcher(ysmRoot, cfg.McRoot); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -158,7 +167,7 @@ func (a *App) SetDownloadMirror(mirror string) error {
 	return a.saveConfig(cfg)
 }
 
-func (a *App) restartWatcher(repoRoot, mcRoot string) {
+func (a *App) restartWatcher(repoRoot, mcRoot string) error {
 	if a.watcher != nil {
 		a.watcher.Stop()
 		a.watcher = nil
@@ -166,9 +175,12 @@ func (a *App) restartWatcher(repoRoot, mcRoot string) {
 	if repoRoot != "" && mcRoot != "" {
 		a.watcher = watcher.New(repoRoot, mcRoot, a.scanModelEntries, a.ClearScanCache)
 		if err := a.watcher.Start(); err != nil {
-			println("[watcher] 重启失败:", err.Error())
+			// P3 修复（code_review）：Start 失败必须向上传播——原 println 静默 + SaveAppConfig
+			// 返回 nil，旧 watcher 已停而新 watcher 未起 → 自动同步静默永久丢失（假成功）
+			return fmt.Errorf("重启文件监听失败: %w", err)
 		}
 	}
+	return nil
 }
 
 func orDefault(val, fallback string) string {

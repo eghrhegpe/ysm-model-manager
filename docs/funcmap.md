@@ -413,22 +413,22 @@
 | `App.BatchExtractCreatorAvatars()` | `internal/app/app_avatar:21` | BatchExtractCreatorAvatars 批量提取所有有本地模型的创作者头像 |
 | `App.DebugExtractCreatorAvatar()` | `internal/app/app_avatar:71` | DebugExtractCreatorAvatar 调试版：提取指定作者头像 |
 | `App.CacheModelAvatars()` | `internal/app/app_avatar:124` | CacheModelAvatars 从解压目录 ysm.json 缓存头像 |
-| `App.GetConfigPath()` | `internal/app/app_config:47` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
-| `App.SaveAppConfig()` | `internal/app/app_config:108` | — |
-| `App.SetDownloadMirror()` | `internal/app/app_config:155` | — |
-| `App.LoadAppConfig()` | `internal/app/app_config:181` | — |
-| `App.GetSubDirMap()` | `internal/app/app_config:202` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
-| `App.CurrentVersion()` | `internal/app/app_config:206` | — |
-| `App.CheckUpdate()` | `internal/app/app_config:208` | — |
-| `App.DownloadUpdate()` | `internal/app/app_config:212` | — |
-| `App.ApplyUpdate()` | `internal/app/app_config:216` | — |
-| `App.DoUpdate()` | `internal/app/app_config:220` | — |
-| `App.RestartApplication()` | `internal/app/app_config:232` | — |
-| `App.SaveWindowPosition()` | `internal/app/app_config:284` | — |
-| `App.GetWindowPosition()` | `internal/app/app_config:298` | — |
-| `App.SelectDirectory()` | `internal/app/app_config:327` | ========== 目录选择 ========== |
-| `App.GetMinecraftPaths()` | `internal/app/app_config:388` | — |
-| `App.ValidateMinecraftDir()` | `internal/app/app_config:390` | — |
+| `App.GetConfigPath()` | `internal/app/app_config:48` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
+| `App.SaveAppConfig()` | `internal/app/app_config:109` | — |
+| `App.SetDownloadMirror()` | `internal/app/app_config:164` | — |
+| `App.LoadAppConfig()` | `internal/app/app_config:193` | — |
+| `App.GetSubDirMap()` | `internal/app/app_config:214` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
+| `App.CurrentVersion()` | `internal/app/app_config:218` | — |
+| `App.CheckUpdate()` | `internal/app/app_config:220` | — |
+| `App.DownloadUpdate()` | `internal/app/app_config:224` | — |
+| `App.ApplyUpdate()` | `internal/app/app_config:228` | — |
+| `App.DoUpdate()` | `internal/app/app_config:232` | — |
+| `App.RestartApplication()` | `internal/app/app_config:244` | — |
+| `App.SaveWindowPosition()` | `internal/app/app_config:296` | — |
+| `App.GetWindowPosition()` | `internal/app/app_config:310` | — |
+| `App.SelectDirectory()` | `internal/app/app_config:339` | ========== 目录选择 ========== |
+| `App.GetMinecraftPaths()` | `internal/app/app_config:400` | — |
+| `App.ValidateMinecraftDir()` | `internal/app/app_config:402` | — |
 | `NewDownloadQueue()` | `internal/app/app_download:51` | NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入） |
 | `App.EnqueueDownloads()` | `internal/app/app_download:56` | — |
 | `App.CancelQueue()` | `internal/app/app_download:86` | — |
@@ -549,9 +549,9 @@
 | `SetEmbedded()` | `internal/app/assets:16` | SetEmbedded 由根包 main 的 init() 注入编译期嵌入的静态资产。 |
 | `CLIMain()` | `internal/app/cli:18` | — |
 | `Issue()` | `internal/app/cli:183` | — |
-| `App.StartProxy()` | `internal/app/proxy:24` | StartProxy 启动本地反代服务器（127.0.0.1 仅本机可访问） |
-| `App.StopProxy()` | `internal/app/proxy:46` | StopProxy 关闭反代服务器 |
-| `App.IsProxyRunning()` | `internal/app/proxy:61` | IsProxyRunning 检查代理是否运行中 |
+| `App.StartProxy()` | `internal/app/proxy:25` | StartProxy 启动本地反代服务器（127.0.0.1 仅本机可访问） |
+| `App.StopProxy()` | `internal/app/proxy:47` | StopProxy 关闭反代服务器 |
+| `App.IsProxyRunning()` | `internal/app/proxy:62` | IsProxyRunning 检查代理是否运行中 |
 | `App.LoadResourceTypes()` | `internal/app/resource_bindings:23` | LoadResourceTypes 加载资源类型注册表 |
 | `App.ReadPackMeta()` | `internal/app/resource_bindings:32` | ReadPackMeta 读取资源包信息（pack.mcmeta + pack.png） |
 | `App.ReadShaderpackLang()` | `internal/app/resource_bindings:57` | ReadShaderpackLang 读取光影包 lang/en_US.lang 提取显示名 |

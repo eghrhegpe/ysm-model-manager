@@ -218,6 +218,10 @@ export const autoSidebar = [
         "link": "/releases/v1.10.0"
       },
       {
+        "text": "v1.11.0 — Android 全平台支持 + 触屏交互 + 更新体验升级",
+        "link": "/releases/v1.11.0"
+      },
+      {
         "text": "v1.2.0 — 开发者对比（技术细节）",
         "link": "/releases/v1.2.0-compare"
       },
@@ -827,6 +831,14 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
+            "text": "Android 桥接层：存储授权 + 目录选择器",
+            "link": "/knowledge/android_bridge"
+          },
+          {
+            "text": "Android 系统事件消费（back/网络/存储授权）",
+            "link": "/knowledge/android_events"
+          },
+          {
             "text": "事件总线 bus.ts",
             "link": "/knowledge/event-bus"
           },
@@ -837,6 +849,10 @@ export const autoSidebar = [
           {
             "text": "页面状态管理 page-store.ts",
             "link": "/knowledge/page-store"
+          },
+          {
+            "text": "Pointer Events 统一交互（触屏 + 桌面）",
+            "link": "/knowledge/pointer_events"
           },
           {
             "text": "主题系统 theme",
@@ -856,6 +872,10 @@ export const autoSidebar = [
         "text": "go",
         "collapsed": true,
         "items": [
+          {
+            "text": "Android 平台守卫（Go 侧）",
+            "link": "/knowledge/android_platform_guard"
+          },
           {
             "text": "头像 go/avatar",
             "link": "/knowledge/go-avatar"

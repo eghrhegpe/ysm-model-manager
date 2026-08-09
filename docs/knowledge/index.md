@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 70 张知识卡
+> 总计: 74 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -18,24 +18,30 @@
 
 - **resource-registry**（资源注册表 registry）：`resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。
 
-## core（6 张）
+## core（9 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
 | 标识 | 名称 | tier | 关键词 |
 |------|------|------|--------|
+| 🏗 android_bridge | Android 桥接层：存储授权 + 目录选择器 | architecture | Android, 存储授权, 目录选择, MANAGE_EXTERNAL_STORAGE, 权限, 选择目录, SAF, android-bridge, pickDirectory |
+| 🏗 android_events | Android 系统事件消费（back/网络/存储授权） | architecture | android:back, 返回键, 弹窗, 退出, 系统事件, ScreenLocked, NetworkChanged, permissionGranted, closeActiveDialog, registerAndroidEvents |
 | 🏗 event-bus | 事件总线 bus.ts | architecture | 事件, 事件总线, 通信, emit, 跨组件通信, bus |
 | 🏗 global-handlers | 全局事件处理 global-handlers | architecture | 全局事件, 拖拽导入, 拖拽遮罩, 同步缺失, 清空整合包, 导出清单 |
 | 🏗 page-store | 页面状态管理 page-store.ts | architecture | 页面, 当前页, 状态管理, page store, currentPage |
+| 🏗 pointer_events | Pointer Events 统一交互（触屏 + 桌面） | architecture | pointerdown, pointermove, pointerup, setPointerCapture, touch-action, 触屏, 拖拽, 旋转, hover, mouseenter, 全窗预览 |
 | 🍃 theme | 主题系统 theme | leaf | 主题, 换肤, 深色, 浅色, 跟随系统, 动画开关, 字号, 界面偏好 |
 | 🏗 wails-bridge | Wails 桥接 app.ts | architecture | Wails, 桥接, getApp, Go 调用, Binding, window.go.main.App |
 | 🏗 ysm_baked | YSM 烘焙与几何反推 | architecture | 烘焙, 几何反推, pivot, 骨骼错位, 模型错位, UV 对不上, 贴图错位, RawYsmModel, RawFace, YSM 导出, BlockBench |
 
 ### 摘要
 
+- **android_bridge**（Android 桥接层：存储授权 + 目录选择器）：Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 WebView，桌面端无此桥返回 `null`）与跨平台目录选择器。解决 Android 上 Wails 官方**拒绝目录选择**（…
+- **android_events**（Android 系统事件消费（back/网络/存储授权））：前端消费 Java 层经 Wails 事件总线转发的 `android:*` 系统事件（ADR-046 P2，参照 MikuMikuAR ADR-017 A3-04）。桌面端无 Java 层，这些事件永不触发，注册无害。生命周期由 `reg…
 - **event-bus**（事件总线 bus.ts）：`bus.ts` 是 YSM 前端的唯一事件中枢，基于发布/订阅模式。所有跨组件、跨页面的异步通信都经过此总线，避免组件间直接耦合。
 - **global-handlers**（全局事件处理 global-handlers）：`core/handlers/global.ts` 是全应用唯一的全局 handler 注册入口（致命陷阱 #2 的解法）：app-content 的 `connectedCallback` 调一次 `registerGlobalHandl…
 - **page-store**（页面状态管理 page-store.ts）：`page-store.ts` 管理 YSM 的前端页面导航状态，是 `PageStore.currentPage` 的唯一数据源，替代了旧版 `window.__currentPage`。核心职责是维护只读当前页状态与启动初始页解析——*…
+- **pointer_events**（Pointer Events 统一交互（触屏 + 桌面））：ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `…
 - **theme**（主题系统 theme）：主题系统的实现在组件入口 `app-modules.ts`（无独立 theme.ts 文件）：提供 6 套主题皮肤（cyber/warm/pro/sakura/ocean/mint）+ `system` 跟随系统模式，全部通过在 `<bod…
 - **wails-bridge**（Wails 桥接 app.ts）：`wails/app.ts` 是前端调用 Go Binding 的唯一入口。所有 Go 端方法通过 `getApp()` 获取，禁止直接通过 `window.go.main.App` 访问。
 - **ysm_baked**（YSM 烘焙与几何反推）：YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。…
@@ -62,12 +68,13 @@
 - **resource-packs**（资源包功能 resource-packs）：`resource-packs.ts` 是一个薄 wrapper：把仓库页的各类资源包 tab（资源包/光影包/蓝图/MMD/VRC/投影）统一委托给 `<app-resource-manager>` 组件渲染。文件本身不含业务逻辑，仅负责…
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（25 张）
+## go（26 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
 | 标识 | 名称 | tier | 关键词 |
 |------|------|------|--------|
+| 🏗 android_platform_guard | Android 平台守卫（Go 侧） | architecture | Android, 平台守卫, RevealInExplorer, OpenFolder, RestartApplication, xdg-open, 重启, Node.js, sidecar, watcher, 平台隔离, build tag |
 | 🏗 go-avatar | 头像 go/avatar | architecture | 头像, 作者, 创作者, avatar, 缓存, 缩略图 |
 | 🏗 go-dedup | 去重 go/dedup | architecture | 去重, 重复检测, dedup |
 | 🏗 go-download | 下载器 go/download | architecture | 下载, 进度, download, 进度条, 下载进度 |
@@ -96,6 +103,7 @@
 
 ### 摘要
 
+- **android_platform_guard**（Android 平台守卫（Go 侧））：ADR-047「平台守卫批量」：Go 侧对 Android 上**无效或不适用的桌面能力**显式拒绝/降级，避免 `xdg-open`/`exec` 链静默失败（错误分类反模式——失败要可见）。结合既有的 build-tag 平台双文件（`…
 - **go-avatar**（头像 go/avatar）：`go/avatar/` 包负责创作者头像的提取与缓存：从模型文件（.ysm 二进制 / .zip / 解压目录 .json）的 `metadata.authors[].avatar` 声明中取出头像图片，缓存到 exe 同目录 `crea…
 - **go-dedup**（去重 go/dedup）：`go/dedup/` 包提供资源去重检测，避免重复导入相同资源。
 - **go-download**（下载器 go/download）：`go/download/` 包负责模型资源的纯 HTTP 下载（不依赖 Wails runtime），支持 ctx 取消中断、进度回调与失败半文件清理。镜像回退策略（raw/jsd/api 排序）在 `internal/app/app_d…

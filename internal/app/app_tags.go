@@ -5,15 +5,10 @@ import (
 	"ysm-model-manager/go/tags"
 )
 
-// configDir 返回应用配置目录（跨平台：桌面 os.UserConfigDir() / Android 沙盒，PathManager 收敛）
-func (a *App) configDir() string {
-	return configDir()
-}
-
 // getTagsStore 初始化或获取标签存储实例（懒加载，sync.Once 保护）
 func (a *App) getTagsStore() *tags.Store {
 	a.tagsStoreOnce.Do(func() {
-		a.tagsStore = tags.NewStore(a.configDir())
+		a.tagsStore = tags.NewStore(configDir())
 	})
 	return a.tagsStore
 }

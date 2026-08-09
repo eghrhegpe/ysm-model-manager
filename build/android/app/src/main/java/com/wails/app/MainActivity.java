@@ -62,6 +62,9 @@ public class MainActivity extends AppCompatActivity {
     // network/screen broadcasts don't wake the app.
     private boolean systemReceiversRegistered = false;
     private WebViewAssetLoader assetLoader;
+    // Double-press back to exit (single press notifies JS via android:back)
+    private long lastBackPressTime = 0;
+    private static final long BACK_PRESS_EXIT_WINDOW_MS = 2000;
 
     // The Go-side dialog ID of the in-flight file picker (-1 when idle)
     private int pendingFilePickerCallbackID = -1;
@@ -799,8 +802,18 @@ public class MainActivity extends AppCompatActivity {
     public void onBackPressed() {
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
-        } else {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastBackPressTime < BACK_PRESS_EXIT_WINDOW_MS) {
+            // Double-press within the window: exit for real
             super.onBackPressed();
+            return;
+        }
+        // First press: notify JS (double-press to exit), keep the activity alive
+        lastBackPressTime = now;
+        if (bridge != null) {
+            bridge.emitSystemEvent("android:back", "{}");
         }
     }
 }

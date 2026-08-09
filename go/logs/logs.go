@@ -20,14 +20,11 @@ type Logger struct {
 }
 
 // NewLogger 创建日志管理器
-// 使用系统标准的应用配置目录（Windows: %APPDATA%, Linux: ~/.config, macOS: ~/Library/Application Support）
-func NewLogger() *Logger {
-	cfgDir, err := os.UserConfigDir()
-	if err != nil {
-		log.Printf("[logs] 获取用户配置目录失败: %v, 降级使用当前目录", err)
-		cfgDir = "."
-	}
-	dir := filepath.Join(cfgDir, "YSM-Model-Manager")
+// configDir 为应用配置根目录（含 "YSM-Model-Manager" 子目录）——
+// 由调用方（internal/app）注入，与 config/tags 共用同一根目录（ADR-046 P2，
+// 避免 Android 上 os.UserConfigDir() 与 PathManager 落点分叉）
+func NewLogger(configDir string) *Logger {
+	dir := configDir
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		log.Printf("[logs] 创建配置目录失败: %v, 降级使用当前目录", err)
 		dir = "."

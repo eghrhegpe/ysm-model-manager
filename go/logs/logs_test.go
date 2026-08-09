@@ -118,9 +118,9 @@ func TestLogger_CapAt500(t *testing.T) {
 }
 
 func TestLogger_NewLogger(t *testing.T) {
-	// NewLogger 使用用户配置目录，不能保证写入成功
+	// NewLogger 使用注入的配置目录，不能保证写入成功
 	// 只验证不 panic
-	l := NewLogger()
+	l := NewLogger(t.TempDir())
 	if l == nil {
 		t.Fatal("NewLogger 应返回非 nil")
 	}

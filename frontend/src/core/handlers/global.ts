@@ -6,6 +6,7 @@ import { registerPageStore } from "../page-store.ts";
 import { registerContextMenus } from "../context-menus.ts";
 import { registerSync } from "./sync.ts";
 import { registerInstanceOps } from "./instance-ops.ts";
+import { registerAndroidEvents } from "./android-events.ts";
 
 /** 注册所有 core 全局 handler，返回 unsub 函数数组（features/views 层注册由 app-content 编排） */
 export function registerGlobalHandlers(): Array<() => void> {
@@ -14,5 +15,6 @@ export function registerGlobalHandlers(): Array<() => void> {
   registerContextMenus(unsubs);
   registerSync(unsubs);
   registerInstanceOps(unsubs);
+  registerAndroidEvents(unsubs);
   return unsubs;
 }

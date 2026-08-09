@@ -1,4 +1,4 @@
-# YSM Model Manager Android 一键构建脚本 (Windows PowerShell)
+﻿# YSM Model Manager Android 一键构建脚本 (Windows PowerShell)
 # 用法: .\cmd\build-android.ps1 v1.0.0 [-Arch arm64|amd64|all] [-Production] [-Clean]
 # 结构参照 MikuMikuAR scripts/build-android.ps1（已验证的 Android 全链路），
 # 适配 ysm：版本传参（同 build-release.ps1）、绑定生成前置、无 MPR tag、version 包注入。

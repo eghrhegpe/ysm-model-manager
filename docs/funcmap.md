@@ -183,11 +183,11 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `NewLogger()` | `go/logs/logs:24` | NewLogger 创建日志管理器 使用系统标准的应用配置目录（Windows: %APPDATA%, Linux: ~/.config, macOS: ~/Library/App |
-| `Logger.Add()` | `go/logs/logs:93` | Add 添加一条导入日志（兼容旧调用） |
-| `Logger.AddOp()` | `go/logs/logs:98` | AddOp 添加一条指定操作类型的日志 |
-| `Logger.GetAll()` | `go/logs/logs:122` | GetAll 获取所有日志 |
-| `Logger.Clear()` | `go/logs/logs:131` | Clear 清空日志 |
+| `NewLogger()` | `go/logs/logs:26` | NewLogger 创建日志管理器 configDir 为应用配置根目录（含 "YSM-Model-Manager" 子目录）—— 由调用方（internal/app）注入，与 c |
+| `Logger.Add()` | `go/logs/logs:90` | Add 添加一条导入日志（兼容旧调用） |
+| `Logger.AddOp()` | `go/logs/logs:95` | AddOp 添加一条指定操作类型的日志 |
+| `Logger.GetAll()` | `go/logs/logs:119` | GetAll 获取所有日志 |
+| `Logger.Clear()` | `go/logs/logs:128` | Clear 清空日志 |
 | `Logger()` | `go/logs/logs:16` | Logger 导入日志管理器 |
 | `NewRuntimeBuffer()` | `go/logs/runtime:19` | NewRuntimeBuffer 创建环形缓冲 |
 | `RuntimeBuffer.Write()` | `go/logs/runtime:27` | Write 实现 io.Writer：每次调用记录一条运行时日志（标准库 log 一行即一次 Write） |
@@ -517,10 +517,10 @@
 | `App.OpenFolder()` | `internal/app/app_scan:300` | — |
 | `App.OpenInstanceFolder()` | `internal/app/app_scan:317` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
 | `progressReader.Read()` | `internal/app/app_scan:340` | — |
-| `App.GetModelTags()` | `internal/app/app_tags:22` | GetModelTags 返回指定模型文件的所有标签 |
-| `App.SetModelTags()` | `internal/app/app_tags:27` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
-| `App.ListByTag()` | `internal/app/app_tags:32` | ListByTag 返回所有打了指定标签的文件路径列表 |
-| `App.AllTags()` | `internal/app/app_tags:37` | AllTags 返回所有被使用的标签（按使用次数降序） |
+| `App.GetModelTags()` | `internal/app/app_tags:17` | GetModelTags 返回指定模型文件的所有标签 |
+| `App.SetModelTags()` | `internal/app/app_tags:22` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
+| `App.ListByTag()` | `internal/app/app_tags:27` | ListByTag 返回所有打了指定标签的文件路径列表 |
+| `App.AllTags()` | `internal/app/app_tags:32` | AllTags 返回所有被使用的标签（按使用次数降序） |
 | `App.DefaultWorkshopSites()` | `internal/app/app_workshop:48` | — |
 | `App.SaveWorkshopSites()` | `internal/app/app_workshop:56` | — |
 | `App.LoadWorkshopCreators()` | `internal/app/app_workshop:101` | — |

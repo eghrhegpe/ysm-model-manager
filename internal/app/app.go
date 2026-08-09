@@ -38,7 +38,7 @@ func (a *App) ysmRoot() string { dir, _ := a.GetRepoRoot("ysm"); return dir }
 
 func NewApp() *App {
 	a := &App{
-		logger:      logs.NewLogger(),
+		logger:      logs.NewLogger(configDir()),
 		runtimeLogs: logs.NewRuntimeBuffer(200),
 	}
 	// 回调注入：打破 DownloadQueue ↔ App 循环（ADR-002 P1）

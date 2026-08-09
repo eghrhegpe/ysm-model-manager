@@ -68,3 +68,9 @@ upstream/
 # 解码落盘产物（渲染对齐验证工具的输出，20MB 级）
 tests/ysm-reference/
 .cov-hint-e2e.txt
+
+# Android 构建产物（NDK 交叉编译输出，不入库）
+build/android/app/src/main/jniLibs/
+build/android/.gradle/
+build/android/app/build/
+build/android/local.properties

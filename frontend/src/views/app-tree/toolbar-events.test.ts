@@ -549,7 +549,7 @@ describe("bindToolbarEvents — 作者菜单", () => {
     bindToolbarEvents(root, vm as never);
 
     const ddWrap = root.getElementById("dd-authors")!;
-    ddWrap.dispatchEvent(new MouseEvent("mouseenter"));
+    ddWrap.dispatchEvent(new PointerEvent("pointerenter"));
 
     const menu = get("menu-authors")!;
     expect(menu.children.length).toBe(2);
@@ -563,7 +563,7 @@ describe("bindToolbarEvents — 作者菜单", () => {
     vm._authors = [];
     bindToolbarEvents(root, vm as never);
 
-    root.getElementById("dd-authors")!.dispatchEvent(new MouseEvent("mouseenter"));
+    root.getElementById("dd-authors")!.dispatchEvent(new PointerEvent("pointerenter"));
 
     expect(get("menu-authors")!.textContent).toContain("暂无作者");
   });

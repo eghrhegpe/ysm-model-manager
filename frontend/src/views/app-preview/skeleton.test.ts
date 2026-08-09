@@ -257,7 +257,7 @@ describe("loadModel2D — 2D 成功路径", () => {
 });
 
 describe("loadModel2D — 交互", () => {
-  it("拖拽旋转：mousedown + window mousemove → 重渲染 + click 被拦截", async () => {
+  it("拖拽旋转：pointerdown + window pointermove → 重渲染 + click 被拦截", async () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
     document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
@@ -266,10 +266,10 @@ describe("loadModel2D — 交互", () => {
     renderModel2D.mockClear();
 
     canvas.dispatchEvent(
-      new MouseEvent("mousedown", { clientX: 10, bubbles: true }),
+      new PointerEvent("pointerdown", { clientX: 10, bubbles: true }),
     );
-    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 30 }));
-    window.dispatchEvent(new MouseEvent("mouseup"));
+    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 30 }));
+    window.dispatchEvent(new PointerEvent("pointerup"));
 
     expect(renderModel2D).toHaveBeenCalledTimes(1);
     expect(renderModel2D.mock.calls[0]![3]).toMatchObject({ rotation: 10 });
@@ -278,7 +278,7 @@ describe("loadModel2D — 交互", () => {
     // 组件销毁 → window 监听器移除
     for (const fn of [...ctx.unsubs]) fn();
     renderModel2D.mockClear();
-    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 100 }));
+    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 100 }));
     expect(renderModel2D).not.toHaveBeenCalled();
   });
 

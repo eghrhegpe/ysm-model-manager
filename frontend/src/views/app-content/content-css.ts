@@ -902,6 +902,7 @@ ${focusVisibleCSS}
 @keyframes rmContentIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
 
 /* ===== 预览面板拖拽调整宽度 ===== */
+.preview-resize-handle { touch-action:none; }
 .preview-resize-handle:hover { background:var(--accent) !important; }
 
 /* ===== 主题选择器 ===== */

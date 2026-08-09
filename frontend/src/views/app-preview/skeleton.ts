@@ -19,8 +19,8 @@ import { t } from "../../core/i18n/t.ts";
 
 // 2D 拖拽的 window 监听器槽位：loadModel2D 每次渲染模型都会绑定，
 // 先移除上一轮处理器再绑定，防止 window 级监听器累积泄漏
-let _prevWindowMove: ((e: MouseEvent) => void) | null = null;
-let _prevWindowUp: (() => void) | null = null;
+let _prevWindowMove: ((e: PointerEvent) => void) | null = null;
+let _prevWindowUp: ((e: PointerEvent) => void) | null = null;
 
 /** RenderModel3DHandle 运行时扩展（_keyHandler/_timeTimer/_boneDetailEl 为 JS 时代附加字段） */
 type Model3DHandleX = import("../../utils/3d/model3d.ts").RenderModel3DHandle & {
@@ -189,19 +189,20 @@ export async function loadModel2D(
     canvas.classList.add("ysm-grab");
     canvas.title = "左键全窗放大 · 滚轮缩放 · 左右拖拽旋转";
 
-    // 区分点击和拖拽：拖拽时 mouse 移动过则不触发 click
+    // 区分点击和拖拽：拖拽时 pointer 移动过则不触发 click
     let _dragging = false,
       _dragged = false,
       _lastX = 0;
-    canvas.addEventListener("mousedown", (e) => {
+    canvas.addEventListener("pointerdown", (e) => {
       _dragging = true;
       _dragged = false;
       _lastX = e.clientX;
+      canvas.setPointerCapture(e.pointerId);
     });
     // 幂等绑定：先移除上一轮处理器（每次 loadModel2D 都执行，防 window 监听器累积）
-    if (_prevWindowMove) window.removeEventListener("mousemove", _prevWindowMove);
-    if (_prevWindowUp) window.removeEventListener("mouseup", _prevWindowUp);
-    const onWindowMove = (e: MouseEvent): void => {
+    if (_prevWindowMove) window.removeEventListener("pointermove", _prevWindowMove);
+    if (_prevWindowUp) window.removeEventListener("pointerup", _prevWindowUp);
+    const onWindowMove = (e: PointerEvent): void => {
       if (!_dragging) return;
       const dx = e.clientX - _lastX;
       if (Math.abs(dx) > 3) _dragged = true; // 移动超过 3px 判定为拖拽
@@ -209,17 +210,20 @@ export async function loadModel2D(
       _rotation = (_rotation + dx * 0.5) % 360;
       doRender();
     };
-    const onWindowUp = (): void => {
+    const onWindowUp = (e: PointerEvent): void => {
       _dragging = false;
+      if (canvas.hasPointerCapture(e.pointerId)) {
+        canvas.releasePointerCapture(e.pointerId);
+      }
     };
     _prevWindowMove = onWindowMove;
     _prevWindowUp = onWindowUp;
-    window.addEventListener("mousemove", onWindowMove);
-    window.addEventListener("mouseup", onWindowUp);
+    window.addEventListener("pointermove", onWindowMove);
+    window.addEventListener("pointerup", onWindowUp);
     // 组件销毁时移除 window 监听（与槽位"先移除再绑"互补：槽位管不累积，这里管销毁回收）
     ctx.unsubs?.push(() => {
-      window.removeEventListener("mousemove", onWindowMove);
-      window.removeEventListener("mouseup", onWindowUp);
+      window.removeEventListener("pointermove", onWindowMove);
+      window.removeEventListener("pointerup", onWindowUp);
       if (_prevWindowMove === onWindowMove) _prevWindowMove = null;
       if (_prevWindowUp === onWindowUp) _prevWindowUp = null;
     });
@@ -391,10 +395,10 @@ export async function loadModel2D(
           const el = document.createElement("div");
           el.textContent = item.label;
           el.style.cssText = "padding:4px 12px;font-size:11px;color:rgba(255,255,255,0.85);cursor:pointer;white-space:nowrap";
-          el.addEventListener("mouseenter", () => {
+          el.addEventListener("pointerenter", () => {
             el.style.background = "rgba(124,131,255,0.3)";
           });
-          el.addEventListener("mouseleave", () => {
+          el.addEventListener("pointerleave", () => {
             el.style.background = "transparent";
           });
           el.onclick = (): void => {
@@ -403,10 +407,15 @@ export async function loadModel2D(
           };
           shotMenu.appendChild(el);
         });
-        shotBtn.addEventListener("mouseenter", () => {
+        shotBtn.addEventListener("pointerenter", () => {
           shotMenu.style.display = "block";
         });
-        shotWrap.addEventListener("mouseleave", () => {
+        // ADR-047：hover 菜单补 tap 兜底——触屏无 hover，点击按钮切换展开/收起
+        shotBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          shotMenu.style.display = shotMenu.style.display === "block" ? "none" : "block";
+        });
+        shotWrap.addEventListener("pointerleave", () => {
           shotMenu.style.display = "none";
         });
         shotWrap.appendChild(shotBtn);
@@ -475,22 +484,26 @@ export async function loadModel2D(
 
         // 面板宽度拖拽柄
         const resizeHandle = document.createElement("div");
-        resizeHandle.style.cssText = "position:absolute;top:0;left:0;width:4px;height:100%;cursor:col-resize;z-index:5";
+        resizeHandle.style.cssText = "position:absolute;top:0;left:0;width:4px;height:100%;cursor:col-resize;z-index:5;touch-action:none";
         let _resizing = false;
-        const onResizeMove = (e: MouseEvent): void => {
+        const onResizeMove = (e: PointerEvent): void => {
           if (!_resizing) return;
           const rect = body.getBoundingClientRect();
           panel.style.width = Math.max(160, Math.min(500, rect.right - e.clientX)) + "px";
         };
-        const onResizeUp = (): void => {
+        const onResizeUp = (e: PointerEvent): void => {
           _resizing = false;
+          if (resizeHandle.hasPointerCapture(e.pointerId)) {
+            resizeHandle.releasePointerCapture(e.pointerId);
+          }
         };
-        resizeHandle.addEventListener("mousedown", (e) => {
+        resizeHandle.addEventListener("pointerdown", (e) => {
           _resizing = true;
           e.preventDefault();
+          resizeHandle.setPointerCapture(e.pointerId);
         });
-        document.addEventListener("mousemove", onResizeMove);
-        document.addEventListener("mouseup", onResizeUp);
+        document.addEventListener("pointermove", onResizeMove);
+        document.addEventListener("pointerup", onResizeUp);
 
         // 统一关闭 3D：移除 resize/keydown 监听器 + 清理渲染资源（关闭按钮/ESC/切换纹理三条路径共用）
         const close3D = (): void => {
@@ -500,8 +513,8 @@ export async function loadModel2D(
           // 配合 disconnectedCallback 的快照遍历（slice）保证销毁时全部执行、不跳项。
           const unsubIdx = ctx.unsubs?.indexOf(close3D);
           if (unsubIdx !== undefined && unsubIdx > -1) ctx.unsubs?.splice(unsubIdx, 1);
-          document.removeEventListener("mousemove", onResizeMove);
-          document.removeEventListener("mouseup", onResizeUp);
+          document.removeEventListener("pointermove", onResizeMove);
+          document.removeEventListener("pointerup", onResizeUp);
           if (_model3d) {
             if (_model3d._timeTimer) clearInterval(_model3d._timeTimer);
             if (_model3d._keyHandler)

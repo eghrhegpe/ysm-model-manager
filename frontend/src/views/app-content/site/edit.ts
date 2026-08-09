@@ -235,7 +235,7 @@ export function bindEditEvents(state: SiteViewState, refreshView: () => void): C
       const handle = card.querySelector(".cr-drag-handle");
       if (!handle) return;
       // 点拖拽柄时暂时让卡片可拖拽
-      handle.addEventListener("mousedown", () => {
+      handle.addEventListener("pointerdown", () => {
         (card as HTMLElement).draggable = true;
       });
       card.addEventListener("dragstart", (e: Event) => {
@@ -299,7 +299,7 @@ export function bindEditEvents(state: SiteViewState, refreshView: () => void): C
     .forEach((card) => {
       const handle = card.querySelector(".cr-drag-handle");
       if (!handle) return;
-      handle.addEventListener("mousedown", () => {
+      handle.addEventListener("pointerdown", () => {
         (card as HTMLElement).draggable = true;
       });
       card.addEventListener("dragstart", (e: Event) => {

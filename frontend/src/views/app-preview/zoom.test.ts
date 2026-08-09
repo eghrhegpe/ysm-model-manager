@@ -32,7 +32,7 @@ beforeEach(() => {
 afterEach(() => {
   // 关闭残留 overlay，移除 window/document 监听，避免跨测试泄漏
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-  window.dispatchEvent(new MouseEvent("mouseup"));
+  window.dispatchEvent(new PointerEvent("pointerup"));
   document.body.innerHTML = "";
 });
 
@@ -65,24 +65,24 @@ describe("openFullPreview", () => {
     expect(lastZoom).toBeCloseTo(Math.exp(0.1), 4);
   });
 
-  it("拖拽旋转：mousedown + mousemove 更新 rotation", async () => {
+  it("拖拽旋转：pointerdown + pointermove 更新 rotation", async () => {
     const src = document.createElement("canvas");
     await openFullPreview(src, model, null, false);
     const overlay = findOverlay()!;
     const big = overlay.querySelector("canvas")!;
 
-    big.dispatchEvent(new MouseEvent("mousedown", { clientX: 100 }));
-    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 220 }));
+    big.dispatchEvent(new PointerEvent("pointerdown", { clientX: 100 }));
+    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 220 }));
 
     const lastRotation = renderModel2D.mock.calls.at(-1)?.[3].rotation;
     expect(lastRotation).toBe((220 - 100) * 0.5 % 360);
   });
 
-  it("未拖拽时 mousemove 不旋转", async () => {
+  it("未拖拽时 pointermove 不旋转", async () => {
     const src = document.createElement("canvas");
     await openFullPreview(src, model, null, false);
 
-    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 500 }));
+    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 500 }));
     expect(renderModel2D).toHaveBeenCalledTimes(1); // 仅初始渲染
   });
 
@@ -96,7 +96,7 @@ describe("openFullPreview", () => {
 
     // 再次 ESC / 再次点击不抛错
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 1 }));
+    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 1 }));
   });
 
   it("点击 overlay 空白区域关闭", async () => {

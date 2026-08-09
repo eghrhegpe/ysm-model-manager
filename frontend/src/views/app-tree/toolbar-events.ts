@@ -332,7 +332,7 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
   if (menuAuthors) {
     const ddWrap = menuAuthors.closest(".dd-wrap");
     if (ddWrap) {
-      ddWrap.addEventListener("mouseenter", () =>
+      ddWrap.addEventListener("pointerenter", () =>
         fillAuthorMenu(menuAuthors, vm, $),
       );
       ddWrap.addEventListener("click", () =>

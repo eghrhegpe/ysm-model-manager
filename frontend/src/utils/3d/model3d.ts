@@ -190,6 +190,8 @@ export async function renderModel3D(
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  // ADR-047：触屏拖拽旋转需禁用浏览器手势默认（滚动/缩放），pointer 事件才完整
+  renderer.domElement.style.touchAction = "none";
   container.innerHTML = "";
   container.appendChild(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -418,16 +420,22 @@ export async function renderModel3D(
   _sessionCleanups.push(() => document.removeEventListener("keyup", _onKeyUp));
   const _orbitTarget = controls.target.clone();
   const _euler = new THREE.Euler(0, 0, 0, "YXZ");
-  const onMouseDown = (e: MouseEvent): void => {
+  // Pointer Events（ADR-047）：拖拽旋转统一 pointer 事件，触屏可拖；
+  // 桌面零回归（pointer 事件兼容 mouse，ADR-047 决策）
+  const onDragPointerDown = (e: PointerEvent): void => {
     if (!state.orbitMode && e.button === 0) {
       state.mouseDown = true;
       state.lastMouse = { x: e.clientX, y: e.clientY };
+      renderer.domElement.setPointerCapture(e.pointerId);
     }
   };
-  const onMouseUp = (): void => {
+  const onDragPointerUp = (e: PointerEvent): void => {
     state.mouseDown = false;
+    if (renderer.domElement.hasPointerCapture(e.pointerId)) {
+      renderer.domElement.releasePointerCapture(e.pointerId);
+    }
   };
-  const onMouseMove = (e: MouseEvent): void => {
+  const onDragPointerMove = (e: PointerEvent): void => {
     if (state.orbitMode || !state.mouseDown) return;
     _euler.setFromQuaternion(camera.quaternion);
     _euler.y -= (e.clientX - state.lastMouse.x) * 0.003;
@@ -436,12 +444,12 @@ export async function renderModel3D(
     camera.quaternion.setFromEuler(_euler);
     state.lastMouse = { x: e.clientX, y: e.clientY };
   };
-  renderer.domElement.addEventListener("mousedown", onMouseDown);
-  _sessionCleanups.push(() => renderer.domElement.removeEventListener("mousedown", onMouseDown));
-  window.addEventListener("mouseup", onMouseUp);
-  _sessionCleanups.push(() => window.removeEventListener("mouseup", onMouseUp));
-  window.addEventListener("mousemove", onMouseMove);
-  _sessionCleanups.push(() => window.removeEventListener("mousemove", onMouseMove));
+  renderer.domElement.addEventListener("pointerdown", onDragPointerDown);
+  _sessionCleanups.push(() => renderer.domElement.removeEventListener("pointerdown", onDragPointerDown));
+  window.addEventListener("pointerup", onDragPointerUp);
+  _sessionCleanups.push(() => window.removeEventListener("pointerup", onDragPointerUp));
+  window.addEventListener("pointermove", onDragPointerMove);
+  _sessionCleanups.push(() => window.removeEventListener("pointermove", onDragPointerMove));
   controls.enableRotate = true;
   const loop = (): void => {
     state.rafId = requestAnimationFrame(loop);
@@ -810,9 +818,9 @@ export async function renderModel3D(
       _sessionCleanups = [];
       document.removeEventListener("keydown", _onKeyDown);
       document.removeEventListener("keyup", _onKeyUp);
-      renderer.domElement.removeEventListener("mousedown", onMouseDown);
-      window.removeEventListener("mouseup", onMouseUp);
-      window.removeEventListener("mousemove", onMouseMove);
+      renderer.domElement.removeEventListener("pointerdown", onDragPointerDown);
+      window.removeEventListener("pointerup", onDragPointerUp);
+      window.removeEventListener("pointermove", onDragPointerMove);
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
       renderer.domElement.removeEventListener("click", onPointerClick);
       controls.dispose();

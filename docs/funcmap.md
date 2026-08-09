@@ -30,17 +30,17 @@
 | Go·更新器 | 1 | 10 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 23 |
-| Go(internal)·应用入口 | 16 | 168 |
+| Go(internal)·应用入口 | 16 | 170 |
 | 前端·根 (app-modules/bus) | 2 | 14 |
 | 前端·核心 | 14 | 27 |
 | 前端·特性 | 13 | 60 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 34 | 117 |
+| 前端·工具 | 34 | 118 |
 | frontend/views | 53 | 151 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **185** | **832** |
+| **合计** | **185** | **835** |
 
 ## Go·头像
 
@@ -374,8 +374,8 @@
 |------|--------|------|
 | `New()` | `go/watcher/watcher:40` | New 创建文件监听器 |
 | `Watcher.Start()` | `go/watcher/watcher:55` | Start 开始监听 |
-| `Watcher.Stop()` | `go/watcher/watcher:100` | Stop 停止监听 |
-| `Watcher.IsRunning()` | `go/watcher/watcher:121` | IsRunning 返回是否正在运行 |
+| `Watcher.Stop()` | `go/watcher/watcher:102` | Stop 停止监听 |
+| `Watcher.IsRunning()` | `go/watcher/watcher:123` | IsRunning 返回是否正在运行 |
 | `ScanFunc()` | `go/watcher/watcher:18` | ScanFunc matches mdsync.ScanFunc |
 | `Watcher()` | `go/watcher/watcher:24` | Watcher 监听仓库目录的文件变更，自动同步 .ban 状态到所有整合包 |
 
@@ -415,22 +415,22 @@
 | `App.BatchExtractCreatorAvatars()` | `internal/app/app_avatar:21` | BatchExtractCreatorAvatars 批量提取所有有本地模型的创作者头像 |
 | `App.DebugExtractCreatorAvatar()` | `internal/app/app_avatar:71` | DebugExtractCreatorAvatar 调试版：提取指定作者头像 |
 | `App.CacheModelAvatars()` | `internal/app/app_avatar:124` | CacheModelAvatars 从解压目录 ysm.json 缓存头像 |
-| `App.GetConfigPath()` | `internal/app/app_config:45` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
-| `App.SaveAppConfig()` | `internal/app/app_config:106` | — |
-| `App.SetDownloadMirror()` | `internal/app/app_config:170` | — |
-| `App.LoadAppConfig()` | `internal/app/app_config:199` | — |
-| `App.GetSubDirMap()` | `internal/app/app_config:220` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
-| `App.CurrentVersion()` | `internal/app/app_config:224` | — |
-| `App.CheckUpdate()` | `internal/app/app_config:226` | — |
-| `App.DownloadUpdate()` | `internal/app/app_config:230` | — |
-| `App.ApplyUpdate()` | `internal/app/app_config:234` | — |
-| `App.DoUpdate()` | `internal/app/app_config:238` | — |
-| `App.RestartApplication()` | `internal/app/app_config:253` | — |
-| `App.SaveWindowPosition()` | `internal/app/app_config:283` | — |
-| `App.GetWindowPosition()` | `internal/app/app_config:297` | — |
-| `App.SelectDirectory()` | `internal/app/app_config:328` | ========== 目录选择 ========== |
-| `App.GetMinecraftPaths()` | `internal/app/app_config:391` | — |
-| `App.ValidateMinecraftDir()` | `internal/app/app_config:393` | — |
+| `App.GetConfigPath()` | `internal/app/app_config:46` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
+| `App.SaveAppConfig()` | `internal/app/app_config:107` | — |
+| `App.SetDownloadMirror()` | `internal/app/app_config:171` | — |
+| `App.LoadAppConfig()` | `internal/app/app_config:200` | — |
+| `App.GetSubDirMap()` | `internal/app/app_config:221` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
+| `App.CurrentVersion()` | `internal/app/app_config:225` | — |
+| `App.CheckUpdate()` | `internal/app/app_config:227` | — |
+| `App.DownloadUpdate()` | `internal/app/app_config:231` | — |
+| `App.ApplyUpdate()` | `internal/app/app_config:235` | — |
+| `App.DoUpdate()` | `internal/app/app_config:239` | — |
+| `App.RestartApplication()` | `internal/app/app_config:254` | — |
+| `App.SaveWindowPosition()` | `internal/app/app_config:289` | — |
+| `App.GetWindowPosition()` | `internal/app/app_config:303` | — |
+| `App.SelectDirectory()` | `internal/app/app_config:334` | ========== 目录选择 ========== |
+| `App.GetMinecraftPaths()` | `internal/app/app_config:397` | — |
+| `App.ValidateMinecraftDir()` | `internal/app/app_config:399` | — |
 | `NewDownloadQueue()` | `internal/app/app_download:51` | NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入） |
 | `App.EnqueueDownloads()` | `internal/app/app_download:56` | — |
 | `App.CancelQueue()` | `internal/app/app_download:86` | — |
@@ -440,19 +440,19 @@
 | `QueueStatusInfo()` | `internal/app/app_download:18` | QueueStatusInfo 队列状态（替代多返回值，Wails 自动映射为 JS object） |
 | `DownloadTask()` | `internal/app/app_download:24` | DownloadTask 下载队列任务 |
 | `DownloadQueue()` | `internal/app/app_download:33` | DownloadQueue 串行下载队列 回调注入替代 *App 反向引用（ADR-002 P1：打破 DownloadQueue ↔ App 循环，解锁独立测试） |
-| `App.CreateDir()` | `internal/app/app_files:19` | ========== 目录操作 ========== |
-| `App.RenameDir()` | `internal/app/app_files:23` | — |
-| `App.RemoveDir()` | `internal/app/app_files:30` | — |
-| `App.RenameFile()` | `internal/app/app_files:37` | — |
-| `App.FindPreviewImage()` | `internal/app/app_files:46` | ========== 预览提取 ========== |
-| `App.ExtractPreviewTexture()` | `internal/app/app_files:50` | — |
-| `App.GetPackInfo()` | `internal/app/app_files:55` | ========== 包信息 ========== |
-| `App.MoveModelFile()` | `internal/app/app_files:60` | ========== 模型移动/复制 ========== |
-| `App.CopyModelFile()` | `internal/app/app_files:68` | CopyModelFile 复制（root 传 FilesRoot 做路径安全校验） |
-| `App.ImportModelFolder()` | `internal/app/app_files:75` | ImportModelFolder 文件夹型模型整组导入（YSM 解压目录，保留子目录层级，ADR-038 关联） folderName = 仓库文件夹名（模型名）；files = |
-| `App.RevealInExplorer()` | `internal/app/app_files:88` | ========== 在资源管理器中显示 ========== |
-| `App.ToggleModelEnable()` | `internal/app/app_files:110` | ========== 启用/禁用 ========== ToggleModelEnable 切换 .ban 状态（fileops 纯逻辑 + 薄壳缓存失效） |
-| `App.IsFileBanned()` | `internal/app/app_files:118` | — |
+| `App.CreateDir()` | `internal/app/app_files:20` | ========== 目录操作 ========== |
+| `App.RenameDir()` | `internal/app/app_files:24` | — |
+| `App.RemoveDir()` | `internal/app/app_files:31` | — |
+| `App.RenameFile()` | `internal/app/app_files:38` | — |
+| `App.FindPreviewImage()` | `internal/app/app_files:47` | ========== 预览提取 ========== |
+| `App.ExtractPreviewTexture()` | `internal/app/app_files:51` | — |
+| `App.GetPackInfo()` | `internal/app/app_files:56` | ========== 包信息 ========== |
+| `App.MoveModelFile()` | `internal/app/app_files:61` | ========== 模型移动/复制 ========== |
+| `App.CopyModelFile()` | `internal/app/app_files:69` | CopyModelFile 复制（root 传 FilesRoot 做路径安全校验） |
+| `App.ImportModelFolder()` | `internal/app/app_files:76` | ImportModelFolder 文件夹型模型整组导入（YSM 解压目录，保留子目录层级，ADR-038 关联） folderName = 仓库文件夹名（模型名）；files = |
+| `App.RevealInExplorer()` | `internal/app/app_files:89` | ========== 在资源管理器中显示 ========== |
+| `App.ToggleModelEnable()` | `internal/app/app_files:115` | ========== 启用/禁用 ========== ToggleModelEnable 切换 .ban 状态（fileops 纯逻辑 + 薄壳缓存失效） |
+| `App.IsFileBanned()` | `internal/app/app_files:123` | — |
 | `App.InstallModelFile()` | `internal/app/app_install:24` | ========== 安装 ========== |
 | `App.InstallModelTo()` | `internal/app/app_install:28` | — |
 | `App.InstallModelWithOverlay()` | `internal/app/app_install:38` | — |
@@ -517,8 +517,8 @@
 | `App.ListAllFilePaths()` | `internal/app/app_scan:259` | ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名） |
 | `App.CheckFileExists()` | `internal/app/app_scan:266` | — |
 | `App.OpenFolder()` | `internal/app/app_scan:300` | — |
-| `App.OpenInstanceFolder()` | `internal/app/app_scan:317` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
-| `progressReader.Read()` | `internal/app/app_scan:340` | — |
+| `App.OpenInstanceFolder()` | `internal/app/app_scan:322` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
+| `progressReader.Read()` | `internal/app/app_scan:345` | — |
 | `App.GetModelTags()` | `internal/app/app_tags:17` | GetModelTags 返回指定模型文件的所有标签 |
 | `App.SetModelTags()` | `internal/app/app_tags:22` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
 | `App.ListByTag()` | `internal/app/app_tags:27` | ListByTag 返回所有打了指定标签的文件路径列表 |
@@ -550,8 +550,10 @@
 | `SetEmbedded()` | `internal/app/assets:16` | SetEmbedded 由根包 main 的 init() 注入编译期嵌入的静态资产。 |
 | `CLIMain()` | `internal/app/cli:18` | — |
 | `Issue()` | `internal/app/cli:183` | — |
-| `androidPathManager.AppDataRoot()` | `internal/app/pathmgr_android:19` | AppDataRoot 按候选序返回第一个可写目录；全不可写返回错误—— 直接返回 HOME/Getwd 可能退化为不可写的文件系统根 "/"（P2 审核发现）， 配置/标签将静默 |
+| `androidPathManager.AppDataRoot()` | `internal/app/pathmgr_android:20` | AppDataRoot 按候选序返回第一个可写目录；全不可写返回错误—— 直接返回 HOME/Getwd 可能退化为不可写的文件系统根 "/"（P2 审核发现）， 配置/标签将静默 |
+| `androidPathManager.DefaultRepoRoot()` | `internal/app/pathmgr_android:43` | DefaultRepoRoot Android 固定公共仓库根：外部存储根 + 应用名。 |
 | `desktopPathManager.AppDataRoot()` | `internal/app/pathmgr_desktop:10` | — |
+| `desktopPathManager.DefaultRepoRoot()` | `internal/app/pathmgr_desktop:15` | DefaultRepoRoot 桌面无默认公共仓库——路径由用户在设置页配置（GetRepoRoot 走 FilesRoot） |
 | `App.LoadResourceTypes()` | `internal/app/resource_bindings:23` | LoadResourceTypes 加载资源类型注册表 |
 | `App.ReadPackMeta()` | `internal/app/resource_bindings:32` | ReadPackMeta 读取资源包信息（pack.mcmeta + pack.png） |
 | `App.ReadShaderpackLang()` | `internal/app/resource_bindings:57` | ReadShaderpackLang 读取光影包 lang/en_US.lang 提取显示名 |
@@ -564,20 +566,20 @@
 | `App.SetVoxelMaxBlocks()` | `internal/app/resource_bindings:130` | SetVoxelMaxBlocks 设置 3D 体素渲染上限，0=恢复默认 200000 |
 | `App.DetectResourceType()` | `internal/app/resource_bindings:137` | DetectResourceType 检测指定文件的资源类型 |
 | `App.GetRepoRoot()` | `internal/app/resource_bindings:146` | GetRepoRoot 根据资源类型返回对应的仓库根目录 |
-| `App.ToggleResourcePack()` | `internal/app/resource_bindings:190` | ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled） P2 修复：补路径守卫——原实现 os.Rename 对任意路径可重命 |
-| `App.IsResourcePackEnabled()` | `internal/app/resource_bindings:213` | IsResourcePackEnabled 检查资源包是否启用 |
-| `App.SelectImportZip()` | `internal/app/resource_bindings:218` | SelectImportZip 打开文件选择器选取 .zip 文件 |
-| `App.SelectImportFile()` | `internal/app/resource_bindings:231` | SelectImportFile 打开文件选择器，按给定扩展名过滤 filter 格式: "显示名|*.ext1;*.ext2" |
-| `App.SetResourceRoot()` | `internal/app/resource_bindings:252` | SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认） P1 修复：非空入参经 filepath.Abs(filepath.Clean()) 规范化，防止含 |
-| `App.ResetResourceRoot()` | `internal/app/resource_bindings:283` | ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值） |
-| `App.ImportResourcePack()` | `internal/app/resource_bindings:309` | ImportResourcePack 使用策略模式导入资源包 |
-| `App.ImportByType()` | `internal/app/resource_bindings:322` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
-| `App.DeleteResourcePack()` | `internal/app/resource_bindings:339` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： src 为 ysm.json 时整组删除父目录（文件夹型模型），否则删除单文件。 |
-| `App.DeleteModelDir()` | `internal/app/resource_bindings:345` | DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹 路径守卫：限制在 FilesRoot 内，防止删除系统目录 |
-| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:358` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串） |
-| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:368` | CountDuplicateFiles 快速统计重复文件数量 |
-| `App.InvalidateScanCache()` | `internal/app/resource_bindings:378` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache） |
-| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:384` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
+| `App.ToggleResourcePack()` | `internal/app/resource_bindings:194` | ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled） P2 修复：补路径守卫——原实现 os.Rename 对任意路径可重命 |
+| `App.IsResourcePackEnabled()` | `internal/app/resource_bindings:217` | IsResourcePackEnabled 检查资源包是否启用 |
+| `App.SelectImportZip()` | `internal/app/resource_bindings:222` | SelectImportZip 打开文件选择器选取 .zip 文件 |
+| `App.SelectImportFile()` | `internal/app/resource_bindings:235` | SelectImportFile 打开文件选择器，按给定扩展名过滤 filter 格式: "显示名|*.ext1;*.ext2" |
+| `App.SetResourceRoot()` | `internal/app/resource_bindings:256` | SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认） P1 修复：非空入参经 filepath.Abs(filepath.Clean()) 规范化，防止含 |
+| `App.ResetResourceRoot()` | `internal/app/resource_bindings:287` | ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值） |
+| `App.ImportResourcePack()` | `internal/app/resource_bindings:313` | ImportResourcePack 使用策略模式导入资源包 |
+| `App.ImportByType()` | `internal/app/resource_bindings:326` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
+| `App.DeleteResourcePack()` | `internal/app/resource_bindings:343` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： src 为 ysm.json 时整组删除父目录（文件夹型模型），否则删除单文件。 |
+| `App.DeleteModelDir()` | `internal/app/resource_bindings:349` | DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹 路径守卫：限制在 FilesRoot 内，防止删除系统目录 |
+| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:362` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串） |
+| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:372` | CountDuplicateFiles 快速统计重复文件数量 |
+| `App.InvalidateScanCache()` | `internal/app/resource_bindings:382` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache） |
+| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:388` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
 | `App.GetWasmBinary()` | `internal/app/wasm_embed:5` | GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。 |
 
 ## 前端·根 (app-modules/bus)
@@ -606,7 +608,7 @@
 | `registerContextMenus()` | `frontend/src/core/context-menus:515` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
 | `__TEST__resetDiary()` | `frontend/src/core/error-diary:16` | 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。 |
 | `registerErrorDiary()` | `frontend/src/core/error-diary:34` | 注册 UI 报错落日记功能。 |
-| `registerAndroidEvents()` | `frontend/src/core/handlers/android-events:12` | 注册 Android 系统事件消费，push 取消订阅函数到 unsubs |
+| `registerAndroidEvents()` | `frontend/src/core/handlers/android-events:13` | 注册 Android 系统事件消费，push 取消订阅函数到 unsubs |
 | `registerGlobalHandlers()` | `frontend/src/core/handlers/global:12` | 注册所有 core 全局 handler，返回 unsub 函数数组（features/views 层注册由 app-content 编排） |
 | `registerInstanceOps()` | `frontend/src/core/handlers/instance-ops:10` | 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs |
 | `requireMcRoot()` | `frontend/src/core/handlers/require-mcroot:12` | 读取游戏根目录（mcRoot），空时发 warn toast 并返回 null。 |
@@ -692,9 +694,9 @@
 | `isPathInRoot()` | `frontend/src/features/recycle-bin:23` | 判断条目路径是否位于资源根目录内（带路径分隔符边界，P3 修复）。 |
 | `initRecycleBin()` | `frontend/src/features/recycle-bin:33` | 初始化回收站管理，返回清理函数 |
 | `initResourcePacks()` | `frontend/src/features/resource-packs:13` | 初始化资源包 tab |
-| `UpdateInfo()` | `frontend/src/features/version-updater:11` | 更新信息（CheckUpdate 返回） |
-| `checkUpdateSilent()` | `frontend/src/features/version-updater:151` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
-| `initVersionUpdater()` | `frontend/src/features/version-updater:187` | 手动检查更新（设置页按钮） |
+| `UpdateInfo()` | `frontend/src/features/version-updater:12` | 更新信息（CheckUpdate 返回） |
+| `checkUpdateSilent()` | `frontend/src/features/version-updater:152` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
+| `initVersionUpdater()` | `frontend/src/features/version-updater:190` | 手动检查更新（设置页按钮） |
 
 ## 前端·服务
 
@@ -809,17 +811,18 @@
 | `esc()` | `frontend/src/utils/dom/dialogs/modal` | — |
 | `trapFocus()` | `frontend/src/utils/dom/dialogs/modal:25` | 焦点陷阱：Tab 键在弹窗内可聚焦元素间循环，防止焦点逃逸到背后页面 |
 | `closeDlg()` | `frontend/src/utils/dom/dialogs/modal:53` | 带退场动画关闭对话框 |
-| `registerDlg()` | `frontend/src/utils/dom/dialogs/modal:77` | 弹窗 append 到 body 后调用，登记为当前活动弹窗 |
-| `ModalPromptOptions()` | `frontend/src/utils/dom/dialogs/modal:84` | modalPrompt 选项 |
-| `modalPrompt()` | `frontend/src/utils/dom/dialogs/modal:97` | 弹出带输入框的模态框，类似 styled prompt() |
-| `ModalSelectOptions()` | `frontend/src/utils/dom/dialogs/modal:166` | modalSelect 选项 |
-| `modalSelect()` | `frontend/src/utils/dom/dialogs/modal:179` | 弹出下拉选择框 |
-| `ModalConfirmOptions()` | `frontend/src/utils/dom/dialogs/modal:242` | modalConfirm 选项 |
-| `modalConfirm()` | `frontend/src/utils/dom/dialogs/modal:258` | 弹出确认对话框 |
-| `ModalProgressOptions()` | `frontend/src/utils/dom/dialogs/modal:306` | — |
-| `ModalProgressHandle()` | `frontend/src/utils/dom/dialogs/modal:314` | — |
-| `fmtMB()` | `frontend/src/utils/dom/dialogs/modal:321` | 格式化字节为 MB（进度弹窗/窗口标题共用） |
-| `modalProgress()` | `frontend/src/utils/dom/dialogs/modal:330` | 只读进度弹窗（无确认/取消按钮，Esc 或点遮罩关闭）。 |
+| `registerDlg()` | `frontend/src/utils/dom/dialogs/modal:80` | 弹窗 append 到 body 后调用，登记为当前活动弹窗 |
+| `closeActiveDialog()` | `frontend/src/utils/dom/dialogs/modal:96` | 关闭当前活动弹窗（按取消值结算）。返回是否关闭了弹窗。 |
+| `ModalPromptOptions()` | `frontend/src/utils/dom/dialogs/modal:107` | modalPrompt 选项 |
+| `modalPrompt()` | `frontend/src/utils/dom/dialogs/modal:120` | 弹出带输入框的模态框，类似 styled prompt() |
+| `ModalSelectOptions()` | `frontend/src/utils/dom/dialogs/modal:189` | modalSelect 选项 |
+| `modalSelect()` | `frontend/src/utils/dom/dialogs/modal:202` | 弹出下拉选择框 |
+| `ModalConfirmOptions()` | `frontend/src/utils/dom/dialogs/modal:265` | modalConfirm 选项 |
+| `modalConfirm()` | `frontend/src/utils/dom/dialogs/modal:281` | 弹出确认对话框 |
+| `ModalProgressOptions()` | `frontend/src/utils/dom/dialogs/modal:329` | — |
+| `ModalProgressHandle()` | `frontend/src/utils/dom/dialogs/modal:337` | — |
+| `fmtMB()` | `frontend/src/utils/dom/dialogs/modal:344` | 格式化字节为 MB（进度弹窗/窗口标题共用） |
+| `modalProgress()` | `frontend/src/utils/dom/dialogs/modal:353` | 只读进度弹窗（无确认/取消按钮，Esc 或点遮罩关闭）。 |
 | `RenameFields()` | `frontend/src/utils/dom/dialogs/rename-format:7` | 重命名字段（调用方已 trim） |
 | `buildRenameName()` | `frontend/src/utils/dom/dialogs/rename-format:19` | 按 YSM 命名规范拼接新文件名：`[作者]【品牌】角色-变体 (年月).ext` 品牌缺省「未知」、角色缺省「?」，与预览一致。 |
 | `showRenameDialog()` | `frontend/src/utils/dom/dialogs/rename:16` | 弹出重命名对话框 |

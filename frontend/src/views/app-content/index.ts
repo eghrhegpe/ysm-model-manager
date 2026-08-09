@@ -66,8 +66,8 @@ class AppContent extends HTMLElement {
   _repoEventsCleanup: (() => Promise<void>) | null;
   _unsub: (() => void) | null = null;
   _unsubs: Array<() => void> = [];
-  _resizeMove: ((e: MouseEvent) => void) | null = null;
-  _resizeUp: (() => void) | null = null;
+  _resizeMove: ((e: PointerEvent) => void) | null = null;
+  _resizeUp: ((e: PointerEvent) => void) | null = null;
   _insListenerReg = false;
   _avatarRefreshRegistered = false;
   _workshopCache: Map<string, RepoCacheEntry> | null = null;
@@ -134,8 +134,8 @@ class AppContent extends HTMLElement {
     }
     this._globalUnsubs.forEach((fn) => fn());
     this._globalUnsubs = [];
-    if (this._resizeMove) document.removeEventListener("mousemove", this._resizeMove);
-    if (this._resizeUp) document.removeEventListener("mouseup", this._resizeUp);
+    if (this._resizeMove) document.removeEventListener("pointermove", this._resizeMove);
+    if (this._resizeUp) document.removeEventListener("pointerup", this._resizeUp);
     this._resizeMove = null;
     this._resizeUp = null;
     this._avatarRefreshRegistered = false;
@@ -254,36 +254,40 @@ class AppContent extends HTMLElement {
     }
 
     // 先移除上一轮 _render 遗留的 document 监听器，防止切页累积泄漏
-    if (this._resizeMove) document.removeEventListener("mousemove", this._resizeMove);
-    if (this._resizeUp) document.removeEventListener("mouseup", this._resizeUp);
+    if (this._resizeMove) document.removeEventListener("pointermove", this._resizeMove);
+    if (this._resizeUp) document.removeEventListener("pointerup", this._resizeUp);
 
     let resizing = false;
-    handle.addEventListener("mousedown", (e) => {
+    handle.addEventListener("pointerdown", (e) => {
       resizing = true;
       e.preventDefault();
       handle.style.background = "var(--accent)";
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
+      handle.setPointerCapture(e.pointerId);
     });
-    const onMove = (e: MouseEvent): void => {
+    const onMove = (e: PointerEvent): void => {
       if (!resizing) return;
       const rect = preview.getBoundingClientRect();
       const newW = Math.max(160, Math.min(500, rect.right - e.clientX));
       preview.style.width = newW + "px";
     };
-    const onUp = (): void => {
+    const onUp = (e: PointerEvent): void => {
       if (!resizing) return;
       resizing = false;
       handle.style.background = "transparent";
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
+      if (handle.hasPointerCapture(e.pointerId)) {
+        handle.releasePointerCapture(e.pointerId);
+      }
       // 保存宽度到 localStorage
       localStorage.setItem("preview-width", preview.style.width);
     };
     this._resizeMove = onMove;
     this._resizeUp = onUp;
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
   }
 
   _initDiagnostics(): void {

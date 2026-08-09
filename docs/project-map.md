@@ -44,7 +44,6 @@
 | 包 | 用途 |
 |----|------|
 | `app/` | Wails Binding 入口（app.go / resource_bindings.go） |
-| `embedded/` | 内嵌资源（updater helper 等） |
 
 <!-- /GEN: internal-structure -->
 
@@ -55,7 +54,6 @@
 | 路径 | 用途 |
 |------|------|
 | `core/` | 基础设施（buttons / global-handlers / theme / context-menus） |
-| `css/` | 共享样式（shared-styles） |
 | `features/` | 业务功能（import-queue / recycle-bin / version-updater / community） |
 | `services/` | 服务注册（registry.ts） |
 | `test-utils/` | 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor） |

@@ -267,9 +267,9 @@ describe("_initPreviewResize — 拖拽调宽", () => {
     expect(handle).toBeTruthy();
     expect(preview).toBeTruthy();
     // happy-dom 无布局，getBoundingClientRect 返回 0 → newW 取 max(160, ...) 下限
-    handle!.dispatchEvent(new MouseEvent("mousedown", { cancelable: true }));
-    document.dispatchEvent(new MouseEvent("mousemove", { clientX: 50 }));
-    document.dispatchEvent(new MouseEvent("mouseup"));
+    handle!.dispatchEvent(new PointerEvent("pointerdown", { cancelable: true }));
+    document.dispatchEvent(new PointerEvent("pointermove", { clientX: 50 }));
+    document.dispatchEvent(new PointerEvent("pointerup"));
     expect(preview!.style.width).toContain("px");
     expect(localStorage.getItem("preview-width")).toContain("px");
     unmountElement(el);

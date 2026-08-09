@@ -63,6 +63,8 @@ export function renderModel2D(
   opts: Model2DOptions = {},
 ): void {
   if (!canvas || !model?.bones?.length) return;
+  // ADR-047：2D hover 用 pointer 事件 + 禁触屏手势默认，桌面零回归
+  if (canvas.style) canvas.style.touchAction = "none";
 
   // 调试：检查是否有 cube rotation
   const cubesWithRotation: Array<{
@@ -190,7 +192,7 @@ export function renderModel2D(
 
   // ---- 鼠标交互高亮 ----
   let _highlightBone: string | null = null;
-  const onMove = (e: MouseEvent): void => {
+  const onMove = (e: PointerEvent): void => {
     const rect = canvas.getBoundingClientRect();
     const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
     const my = (e.clientY - rect.top) * (canvas.height / rect.height);
@@ -236,13 +238,13 @@ export function renderModel2D(
       drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
     }
   };
-  canvas.addEventListener("mousemove", onMove);
-  canvas.addEventListener("mouseleave", onLeave);
+  canvas.addEventListener("pointermove", onMove);
+  canvas.addEventListener("pointerleave", onLeave);
   // 清理旧监听（防止重复绑定）
   canvas._hoverCleanup?.();
   canvas._hoverCleanup = (): void => {
-    canvas.removeEventListener("mousemove", onMove);
-    canvas.removeEventListener("mouseleave", onLeave);
+    canvas.removeEventListener("pointermove", onMove);
+    canvas.removeEventListener("pointerleave", onLeave);
   };
 }
 

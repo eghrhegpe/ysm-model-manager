@@ -48,30 +48,34 @@ export async function openFullPreview(
   );
   let dragging = false,
     lastX = 0;
-  bigCanvas.addEventListener("mousedown", (e) => {
+  bigCanvas.addEventListener("pointerdown", (e) => {
     dragging = true;
     lastX = e.clientX;
+    bigCanvas.setPointerCapture(e.pointerId);
   });
-  const onWindowMove = (e: MouseEvent): void => {
+  const onWindowMove = (e: PointerEvent): void => {
     if (!dragging) return;
     rotation = (rotation + (e.clientX - lastX) * 0.5) % 360;
     lastX = e.clientX;
     doRender();
   };
-  const onWindowUp = (): void => {
+  const onWindowUp = (e: PointerEvent): void => {
     dragging = false;
+    if (bigCanvas.hasPointerCapture(e.pointerId)) {
+      bigCanvas.releasePointerCapture(e.pointerId);
+    }
   };
   const onKey = (e: KeyboardEvent): void => {
     if (e.key === "Escape") close();
   };
-  window.addEventListener("mousemove", onWindowMove);
-  window.addEventListener("mouseup", onWindowUp);
+  window.addEventListener("pointermove", onWindowMove);
+  window.addEventListener("pointerup", onWindowUp);
   let closed = false;
   const close = (): void => {
     if (closed) return;
     closed = true;
-    window.removeEventListener("mousemove", onWindowMove);
-    window.removeEventListener("mouseup", onWindowUp);
+    window.removeEventListener("pointermove", onWindowMove);
+    window.removeEventListener("pointerup", onWindowUp);
     document.removeEventListener("keydown", onKey);
     if (overlay.parentNode) document.body.removeChild(overlay);
   };

@@ -222,6 +222,8 @@ export async function createLitematic3D(
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(viewContainer.clientWidth, viewContainer.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // ADR-047：触屏拖拽旋转需禁手势默认
+    renderer.domElement.style.touchAction = "none";
     viewContainer.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -439,17 +441,21 @@ export async function createLitematic3D(
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
 
-    function onMouseDown(e: MouseEvent): void {
+    function onDragPointerDown(e: PointerEvent): void {
       if (!orbitMode && e.button === 0) {
         mouseDown = true;
         lastMouse.x = e.clientX;
         lastMouse.y = e.clientY;
+        renderer.domElement.setPointerCapture(e.pointerId);
       }
     }
-    function onMouseUp(): void {
+    function onDragPointerUp(e: PointerEvent): void {
       mouseDown = false;
+      if (renderer.domElement.hasPointerCapture(e.pointerId)) {
+        renderer.domElement.releasePointerCapture(e.pointerId);
+      }
     }
-    function onMouseMove(e: MouseEvent): void {
+    function onDragPointerMove(e: PointerEvent): void {
       if (orbitMode || !mouseDown) return;
       const dx = e.clientX - lastMouse.x,
         dy = e.clientY - lastMouse.y;
@@ -461,9 +467,9 @@ export async function createLitematic3D(
       euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
       camera.quaternion.setFromEuler(euler);
     }
-    renderer.domElement.addEventListener("mousedown", onMouseDown);
-    window.addEventListener("mouseup", onMouseUp);
-    window.addEventListener("mousemove", onMouseMove);
+    renderer.domElement.addEventListener("pointerdown", onDragPointerDown);
+    window.addEventListener("pointerup", onDragPointerUp);
+    window.addEventListener("pointermove", onDragPointerMove);
 
     controls.enableRotate = true;
 
@@ -554,8 +560,8 @@ export async function createLitematic3D(
       boxGeo.dispose();
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("mouseup", onMouseUp);
-      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("pointerup", onDragPointerUp);
+      window.removeEventListener("pointermove", onDragPointerMove);
       window.removeEventListener("resize", onResize);
       // 统一移除 escH（初始注册于 L183）；escHandler 是 fullCleanup 内新注册的后继，无需再移
       document.removeEventListener("keydown", escH);

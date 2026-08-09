@@ -74,3 +74,6 @@ build/android/app/src/main/jniLibs/
 build/android/.gradle/
 build/android/app/build/
 build/android/local.properties
+
+# Android 签名 keystore（敏感，禁止入库）
+build/android/keystore/

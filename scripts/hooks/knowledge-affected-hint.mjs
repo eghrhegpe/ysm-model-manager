@@ -25,6 +25,7 @@
 // 纯函数（stripBlock / buildBlock）导出供契约测试复用，主流程用 import.meta 守卫。
 
 import path from 'node:path';
+import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { getRoot } from '../_lib/scan-files.mjs';
@@ -49,6 +50,50 @@ export function stripBlock(msg, start = BLOCK_START, end = BLOCK_END) {
 /** 构造待追加区块（卡片 stem → docs/knowledge/<stem>.md）。 */
 export function buildBlock(cards, start = BLOCK_START, end = BLOCK_END) {
   return [BLOCK_START, ...cards.map((c) => `- docs/knowledge/${c}.md`), end].join('\n');
+}
+
+/**
+ * 旧→新关键词迁移对（ADR-047 Pointer Events 迁移 + 历史平台演进）。
+ * 卡内容仍含 old 而本次 staged diff 引入了 new → 疑似过时句。
+ * 词边界用正则：避免 mousedown 命中 mousemove 的误判。
+ */
+export const STALE_KEYWORD_PAIRS = [
+  { old: /\bmousedown\b/, new: 'pointerdown' },
+  { old: /\bmousemove\b/, new: 'pointermove' },
+  { old: /\bmouseup\b/, new: 'pointerup' },
+  { old: /\bmouseenter\b/, new: 'pointerenter' },
+  { old: /\bmouseleave\b/, new: 'pointerleave' },
+];
+
+/** 检测 diff 是否引入任一 new 关键词（命中返回 true）。 */
+export function diffIntroducesNew(diffText, pairs = STALE_KEYWORD_PAIRS) {
+  return pairs.some((p) => diffText.includes(p.new));
+}
+
+/**
+ * 扫描卡文本，找出「本次 diff 已引入 new、卡里仍写过时 old」的疑似过时句。
+ * 跳过对照/警示语境：行内已含对应新词（如「替代 mouseenter/mouseleave」）、
+ * 或含禁止/迁移类警示词（如「不得出现 mousedown」）——这些是刻意提及而非过时。
+ * @returns Array<{ line: number; text: string; pair: {old,new} }>
+ */
+export function findStaleSnippets(cardText, diffText, pairs = STALE_KEYWORD_PAIRS) {
+  const introduced = new Set(pairs.filter((p) => diffText.includes(p.new)).map((p) => p.new));
+  if (introduced.size === 0) return [];
+  // 警示/对照语境词：行内含其一即视为刻意提及（对照说明、禁止条款、迁移描述）。
+  // 中文词不加 \b（CJK 无词边界），英文词加 \b 防误伤（如「不再」不会命中「once」）
+  const CONTEXTUAL = /(替代|替换|取代|迁移|不再|禁止|不得|避免|仍用|旧写法|废弃|deprecated|DON'T|MUST NOT)/;
+  const out = [];
+  const lines = cardText.split('\n');
+  lines.forEach((line, idx) => {
+    for (const p of pairs) {
+      if (!introduced.has(p.new)) continue;
+      if (!p.old.test(line)) continue;
+      if (CONTEXTUAL.test(line) || line.includes(p.new)) break; // 对照/警示语境不报
+      out.push({ line: idx + 1, text: line.trim(), pair: p });
+      break; // 同一行多个旧词只报一次
+    }
+  });
+  return out;
 }
 
 function getStagedChanged() {
@@ -80,6 +125,27 @@ function getAffectedCards(ROOT, changed) {
   }
 }
 
+/** 获取 staged 变更的 diff 内容（供疑似过时句检测）。失败返回空串。 */
+function getStagedDiff() {
+  try {
+    return execFileSync('git', ['diff', '--cached'], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  } catch {
+    return '';
+  }
+}
+
+/** 读取知识卡正文（跳过 frontmatter），失败返回空串。 */
+function readCardBody(ROOT, card) {
+  try {
+    const text = fs.readFileSync(path.join(ROOT, 'docs', 'knowledge', `${card}.md`), 'utf8');
+    // 剥离 frontmatter（--- ... ---），只扫正文——frontmatter 的 use_when 关键词不算过时
+    const m = text.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
+    return m ? m[1] : text;
+  } catch {
+    return '';
+  }
+}
+
 function main() {
   const msgFile = process.argv[2];
   const source = process.argv[3] || '';
@@ -97,14 +163,34 @@ function main() {
   const cards = getAffectedCards(ROOT, changed);
   if (cards.length === 0) return;
 
+  // 疑似过时句检测：diff 引入了新关键词（如 pointerdown）而卡正文仍写旧词（如 mousedown）
+  const diffText = getStagedDiff();
+  const staleByCard = new Map();
+  for (const card of cards) {
+    const body = readCardBody(ROOT, card);
+    if (!body) continue;
+    const hits = findStaleSnippets(body, diffText);
+    if (hits.length) staleByCard.set(card, hits);
+  }
+
   // 仅终端提醒：不写 commit body。
   // 原设计把受影响知识卡写进 body 供 PR reviewer 复核文档，但 code review 不核验文档，
   // body 追加无受益方；终端 stderr 摘要已能即时提醒提交者/AI，故改为仅终端输出。
-  console.error(
-    `[prepare-commit-msg] 📚 ${cards.length} 张知识卡受影响，建议复核：` +
-      cards.map((c) => `docs/knowledge/${c}.md`).join('、') +
-      `（仅终端提醒）`,
-  );
+  const lines = [`[prepare-commit-msg] 📚 ${cards.length} 张知识卡受影响，建议复核：`];
+  for (const card of cards) {
+    const stale = staleByCard.get(card);
+    if (stale?.length) {
+      // 有疑似过时句：精确指行，收件人可直接改（ADR-047 增强）
+      lines.push(`  - docs/knowledge/${card}.md ⚠️ 疑似过时（本次 diff 已引入新写法）:`);
+      for (const s of stale) {
+        lines.push(`      L${s.line} ${s.text.slice(0, 60)}（仍用 ${s.pair.old.source}，建议 ${s.pair.new}）`);
+      }
+    } else {
+      lines.push(`  - docs/knowledge/${card}.md`);
+    }
+  }
+  lines.push('（仅终端提醒）');
+  console.error(lines.join('\n'));
 }
 
 // 仅当作为入口直接执行时才跑主流程（被测试 import 时不触发）

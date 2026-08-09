@@ -85,7 +85,7 @@
 |------|------|
 | `gen-knowledge-index.mjs` | 知识卡索引生成（docs/knowledge/index.md） |
 | `check-knowledge-drift.mjs` | 知识卡漂移检查（含代码→卡片覆盖盲区 WARN；`--affected <文件...>` 主动列出受源码变更影响的知识卡；`--affected --quiet` 机读模式供钩子消费） |
-| `hooks/knowledge-affected-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：把受影响知识卡写入 commit message body + stderr 摘要提示（非阻断、幂等，AI 终端可见），归一化 Git Bash msys 路径 |
+| `hooks/knowledge-affected-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：stderr 摘要提示受影响知识卡（非阻断、幂等，AI 终端可见），并检测「本次 diff 已引入新写法而卡仍写过时旧词」的疑似过时句精确指行（ADR-047 增强，迁移对表 STALE_KEYWORD_PAIRS），归一化 Git Bash msys 路径 |
 | `hooks/coverage-suggest-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：低于语句覆盖率阈值的源文件写入 commit message body，随 commit 进 PR 供 review 参考补测方向（非阻断、幂等；逃生阀 `YSM_SKIP_COVERAGE_HINT=1`）；v2：并入 **check-diff-coverage --suggest --staged** 的「📈 变更行覆盖率建议」区块（本次暂存变更文件，双区块幂等剥离） |
 | `gen-knowledge-symbols.mjs` | 知识卡 `symbols:` 字段同步（源码导出符号提取，JS/TS + Go 双栈，gen/--check） |
 | `gen-knowledge-h1.mjs` | 知识卡正文补 `# <name>` 标题（frontmatter 后插入，已有 h1 跳过） |

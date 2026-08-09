@@ -7,7 +7,7 @@ import assert from 'node:assert';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stripBlock, buildBlock, BLOCK_START, BLOCK_END } from '../scripts/hooks/knowledge-affected-hint.mjs';
+import { stripBlock, buildBlock, BLOCK_START, BLOCK_END, findStaleSnippets, diffIntroducesNew } from '../scripts/hooks/knowledge-affected-hint.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
@@ -72,6 +72,60 @@ check('--quiet 无命中输出空', () => {
     { encoding: 'utf8' },
   );
   assert.strictEqual(out.trim(), '');
+});
+
+// ── 疑似过时句检测（ADR-047 增强）──
+
+check('diffIntroducesNew：diff 引入 pointerdown → true', () => {
+  const diff = 'addEventListener("pointerdown", onDown)';
+  assert.strictEqual(diffIntroducesNew(diff), true);
+});
+
+check('diffIntroducesNew：diff 无新写法 → false', () => {
+  const diff = 'addEventListener("click", onDown)';
+  assert.strictEqual(diffIntroducesNew(diff), false);
+});
+
+check('findStaleSnippets：卡仍写 mousedown 且 diff 引入 pointerdown → 报行', () => {
+  const card = '## 交互\ncanvas 绑定 mousedown 处理拖拽。\n';
+  const diff = 'canvas.addEventListener("pointerdown", onDown);\n- canvas.addEventListener("mousedown", onDown);';
+  const hits = findStaleSnippets(card, diff);
+  assert.strictEqual(hits.length, 1);
+  assert.strictEqual(hits[0].line, 2);
+  assert.ok(hits[0].text.includes('mousedown'));
+});
+
+check('findStaleSnippets：diff 未引入新写法 → 零命中（不误报）', () => {
+  const card = 'canvas 绑定 mousedown 处理拖拽。\n';
+  const diff = '仅改文案。';
+  assert.deepStrictEqual(findStaleSnippets(card, diff), []);
+});
+
+check('findStaleSnippets：卡已是新写法 → 零命中', () => {
+  const card = 'canvas 绑定 pointerdown 处理拖拽。\n';
+  const diff = 'canvas.addEventListener("pointerdown", onDown);';
+  assert.deepStrictEqual(findStaleSnippets(card, diff), []);
+});
+
+check('findStaleSnippets：词边界（mouseup 不命中 mousemove 行）', () => {
+  const card = 'canvas 绑定 mousemove 跟踪位置。\n';
+  const diff = 'window.addEventListener("pointerup", onUp);';
+  // diff 引入 pointerup，卡里是 mousemove（不同迁移对）→ 不报
+  assert.deepStrictEqual(findStaleSnippets(card, diff), []);
+});
+
+check('findStaleSnippets：对照/警示语境不误报（不得出现 mousedown）', () => {
+  const card = '- **零残留 mouse 事件**：不得出现 `mousedown/mousemove` 注册（红线）\n';
+  const diff = 'canvas.addEventListener("pointerdown", onDown);';
+  // 卡是在说「禁止旧写法」，刻意提及 → 不报
+  assert.deepStrictEqual(findStaleSnippets(card, diff), []);
+});
+
+check('findStaleSnippets：对照/警示语境不误报（替代 mouseenter）', () => {
+  const card = '- **菜单 hover**：`pointerenter/pointerleave`（替代 `mouseenter/mouseleave`）\n';
+  const diff = 'ddWrap.addEventListener("pointerenter", fn);';
+  // 行内含 pointerenter（新词）+ 替代 → 不报
+  assert.deepStrictEqual(findStaleSnippets(card, diff), []);
 });
 
 if (fails.length) {

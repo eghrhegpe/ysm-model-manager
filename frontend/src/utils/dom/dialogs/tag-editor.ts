@@ -63,6 +63,10 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
     // 否则 tags 仍为初始 [] 时点保存会 SetModelTags(path, [])，
     // 后端把空列表当「删除条目」→ 该模型全部标签被永久清除（数据丢失）
     let loading = true;
+    // P2 修复：加载失败标志——GetModelTags/AllTags 抛错后 tags 仍是 []，
+    // 若此时恢复保存按钮，点保存同样 SetModelTags(path, []) 清空标签（数据丢失）。
+    // 失败路径必须保持保存禁用，直到重新打开对话框。
+    let loadFailed = false;
 
     // === 加载 ===
     (async () => {
@@ -80,12 +84,14 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
         const allTags = (await App.AllTags()) || [];
         renderSuggestions(allTags);
       } catch (e) {
+        loadFailed = true;
         errEl.textContent = "⚠️ 加载标签失败: " + (e as Error).message;
       } finally {
         loading = false;
         inputEl.disabled = false;
         if (addBtn) addBtn.disabled = false;
-        if (saveBtn) saveBtn.disabled = false;
+        // P2：加载失败不恢复保存按钮——空 tags 保存 = 清空该模型标签
+        if (!loadFailed && saveBtn) saveBtn.disabled = false;
         inputEl.focus();
       }
     })();
@@ -167,6 +173,11 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
     (box.querySelector("#te-cancel") as HTMLElement).onclick = (): void =>
       close(null);
     (box.querySelector("#te-save") as HTMLElement).onclick = async (): Promise<void> => {
+      // P2 双保险：即使按钮状态被绕过，加载失败也拒绝保存（空列表写回 = 清空标签）
+      if (loadFailed) {
+        errEl.textContent = "⚠️ 标签加载失败，请重新打开对话框再保存";
+        return;
+      }
       try {
         const App = await getApp();
         await App.SetModelTags(modelPath, tags);

@@ -33,14 +33,14 @@
 | Go(internal)·应用入口 | 15 | 170 |
 | 前端·根 (app-modules/bus) | 2 | 16 |
 | 前端·核心 | 8 | 13 |
-| 前端·特性 | 13 | 59 |
+| 前端·特性 | 13 | 61 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 26 | 94 |
 | frontend/views | 54 | 147 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **170** | **789** |
+| **合计** | **170** | **791** |
 
 ## Go·头像
 
@@ -650,8 +650,10 @@
 | `formatSize()` | `frontend/src/features/community/render:52` | 格式化文件大小（B/KB/MB，&lt;1KB 无单位省略走 ""） |
 | `filterModels()` | `frontend/src/features/community/render:63` | 过滤模型列表：关键词匹配（模型名）+ 「仅显示缺失」开关。 |
 | `renderModelList()` | `frontend/src/features/community/render:107` | 渲染模型列表（DocumentFragment） |
-| `renderCardsHTML()` | `frontend/src/features/community/render:201` | 生成左栏站点卡片 HTML |
-| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:255` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
+| `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:197` | 站点分组展示顺序（renderCardsHTML 使用） |
+| `groupSites()` | `frontend/src/features/community/render:202` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
+| `renderCardsHTML()` | `frontend/src/features/community/render:219` | 生成左栏站点卡片 HTML |
+| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:267` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
 | `getExt()` | `frontend/src/features/dnd-shared:4` | — |
 | `isSupportedFile()` | `frontend/src/features/dnd-shared:8` | 扩展名是否在支持列表 |
 | `isImportableFile()` | `frontend/src/features/dnd-shared:14` | 是否可作为独立文件导入：.json 仅放行 ysm.json 入口清单 包内 geometry/animation/语言 json（main.json / *.animation. |

@@ -5,6 +5,7 @@ import { closeDlg, registerDlg, esc } from "./modal.ts";
 import { getApp } from "../../../wails/app.ts";
 import { RESOURCE_TYPES } from "../../../utils/resource/types.ts";
 import { buildRenameName, validateRenameFields, type RenameFields } from "./rename-format.ts";
+import { t } from "../../../core/i18n/t.ts";
 
 /**
  * 弹出重命名对话框
@@ -85,7 +86,7 @@ export async function showRenameDialog(
         }
         try {
           const btn = box.querySelector("#rn-from-header") as HTMLButtonElement;
-          btn.textContent = "⏳ 读取中...";
+          btn.textContent = "⏳ " + t("dialog.reading");
           btn.disabled = true;
           const App = await getApp();
           const header = await App.ExtractYSMHeader(filePath);
@@ -114,7 +115,7 @@ export async function showRenameDialog(
         } finally {
           const btn = box.querySelector("#rn-from-header") as HTMLButtonElement | null;
           if (btn) {
-            btn.textContent = "📖 读取头部";
+            btn.textContent = "📖 " + t("dialog.readHeader");
             btn.disabled = false;
           }
         }

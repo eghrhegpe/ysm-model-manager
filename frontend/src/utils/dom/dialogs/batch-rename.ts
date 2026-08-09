@@ -6,6 +6,7 @@ import { stagger } from "../../../utils/animation/stagger.ts";
 import { registerDlg, closeDlg } from "./modal.ts";
 import { esc } from "../../../utils/dom/html.ts";
 import { rebuildParsedName, applyReplaceToName } from "./batch-rename-util.ts";
+import { t } from "../../../core/i18n/t.ts";
 
 /** 批量条目（ModelEntry 子集） */
 interface BatchEntry {
@@ -237,7 +238,7 @@ export function showBatchRenameDialog(
   presetsBtn?.addEventListener("click", (): void => {
     const show = presetsMenu?.style.display !== "flex";
     if (presetsMenu) presetsMenu.style.display = show ? "flex" : "none";
-    presetsBtn.textContent = show ? "📋 收起预设" : "📋 预设";
+    presetsBtn.textContent = show ? "📋 " + t("dialog.collapse") : "📋 预设";
   });
   presetsMenu?.querySelectorAll(".br-preset").forEach((el) => {
     el.addEventListener("click", (): void => {
@@ -261,7 +262,7 @@ export function showBatchRenameDialog(
     const changed = items.filter((it) => it.selected && it.changed);
     if (!changed.length) {
       bus.emit("toast:show", {
-        msg: "没有需要重命名的文件",
+        msg: t("dialog.noFilesToRename"),
         duration: 2000,
         type: "info",
       });
@@ -304,26 +305,26 @@ function genHTML(dir: string, items: BatchItem[]): string {
   <span class="dlg-header-count">${items.length} 个文件 · <span id="br-changed">${changed}</span> 个变更</span>
 </div>
 <div class="dlg-section">
-  <span class="dlg-section-label">模式：</span>
+  <span class="dlg-section-label">${t("dialog.pattern")}：</span>
   <select id="br-mode" class="dlg-input">
     <option value="parse">📋 解析格式</option>
     <option value="replace">🔍 查找替换</option>
   </select>
 </div>
 <div id="br-parse-mode" class="dlg-section">
-  <span class="dlg-section-label">统一作者：</span>
-  <input id="br-batch-author" class="dlg-input-sm" placeholder="留空不变">
-  <span class="dlg-section-label">作品：</span>
-  <input id="br-batch-work" class="dlg-input-sm" placeholder="留空不变">
+  <span class="dlg-section-label">${t("dialog.author")}：</span>
+  <input id="br-batch-author" class="dlg-input-sm" placeholder="${t("dialog.keepEmpty")}">
+  <span class="dlg-section-label">${t("dialog.work")}：</span>
+  <input id="br-batch-work" class="dlg-input-sm" placeholder="${t("dialog.keepEmpty")}">
   <span class="dlg-header-count" style="font-size:9px">回车生效</span>
 </div>
 <div id="br-replace-mode" class="dlg-section" style="display:none">
-  <span class="dlg-section-label">查找：</span>
-  <input id="br-find" class="dlg-input-flex" placeholder="输入要查找的内容">
-  <span class="dlg-section-label">替换为：</span>
-  <input id="br-replace" class="dlg-input-flex" placeholder="留空为删除">
+  <span class="dlg-section-label">${t("dialog.find")}：</span>
+  <input id="br-find" class="dlg-input-flex" placeholder="${t("dialog.findPlaceholder")}">
+  <span class="dlg-section-label">${t("dialog.replace")}：</span>
+  <input id="br-replace" class="dlg-input-flex" placeholder="${t("dialog.replaceEmptyDelete")}">
   <label class="dlg-label-check">
-    <input type="checkbox" id="br-regex"> 正则
+    <input type="checkbox" id="br-regex"> ${t("dialog.regex")}
   </label>
   <button id="br-presets" class="dlg-btn-accent">📋 预设</button>
   <div id="br-presets-menu" class="dlg-presets-menu">

@@ -4,6 +4,7 @@ import { esc } from "../../../utils/dom/html.ts";
 import { closeDlg, registerDlg } from "./modal.ts";
 import { getApp } from "../../../wails/app.ts";
 import { addTagToSet } from "./tag-set.ts";
+import { t } from "../../../core/i18n/t.ts";
 
 /**
  * 弹出标签编辑弹窗
@@ -27,7 +28,7 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
       "gap:10px;width:380px;max-height:80vh;display:flex;flex-direction:column";
 
     box.innerHTML = `
-      <div class="dlg-title" style="margin:0">🏷️ 编辑标签</div>
+      <div class="dlg-title" style="margin:0">🏷️ ${t("dialog.editTags")}</div>
       <div style="font-size:10px;color:var(--muted);word-break:break-all">${esc(modelPath)}</div>
 
       <div id="te-tags" style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px;padding:4px;border:1px solid var(--bd);border-radius:5px;background:var(--bg);align-content:flex-start"></div>
@@ -86,7 +87,7 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
         renderSuggestions(allTags);
       } catch (e) {
         loadFailed = true;
-        errEl.textContent = "⚠️ 加载标签失败: " + (e as Error).message;
+        errEl.textContent = "⚠️ " + t("dialog.tagsLoadFailed") + ": " + (e as Error).message;
       } finally {
         loading = false;
         inputEl.disabled = false;
@@ -180,7 +181,7 @@ export function modalTagEditor(modelPath: string): Promise<string[] | null> {
         await App.SetModelTags(modelPath, tags);
         close(tags);
       } catch (e) {
-        errEl.textContent = "⚠️ 保存失败: " + (e as Error).message;
+        errEl.textContent = "⚠️ " + t("dialog.tagsSaveFailed") + ": " + (e as Error).message;
       }
     };
   });

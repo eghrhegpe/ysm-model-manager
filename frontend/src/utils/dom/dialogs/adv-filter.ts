@@ -6,6 +6,7 @@
 //   不支持文件大小、排序（避免展示无效控件）
 import { esc, closeDlg, registerDlg } from "./modal.ts";
 import { getApp } from "../../../wails/app.ts";
+import { t } from "../../../core/i18n/t.ts";
 import {
   parseFilterNumber,
   validateAdvFilter,
@@ -43,8 +44,8 @@ export function modalAdvFilter(opts: { value?: Partial<AdvFilterValue> } = {}): 
 
       <div style="display:flex;flex-direction:column;gap:8px;font-size:11px">
         <div>
-          <label style="display:block;color:var(--muted);margin-bottom:3px">🔍 关键字（模型名）</label>
-          <input id="afv-kw" maxlength="100" value="${esc(v.keyword || "")}" placeholder="留空匹配所有" style="width:100%;padding:5px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px;box-sizing:border-box">
+          <label style="display:block;color:var(--muted);margin-bottom:3px">🔍 ${t("dialog.keyword")}</label>
+          <input id="afv-kw" maxlength="100" value="${esc(v.keyword || "")}" placeholder="${t("dialog.matchAll")}" style="width:100%;padding:5px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:11px;box-sizing:border-box">
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -67,18 +68,18 @@ export function modalAdvFilter(opts: { value?: Partial<AdvFilterValue> } = {}): 
         </div>
 
         <div>
-          <label style="display:block;color:var(--muted);margin-bottom:3px">🖼 纹理尺寸 (px)</label>
+          <label style="display:block;color:var(--muted);margin-bottom:3px">🖼 ${t("dialog.textureSize")}</label>
           <div style="display:flex;gap:4px;align-items:center">
-            <input id="afv-minTex" type="number" min="0" value="${esc(String(v.minTex ?? ""))}" placeholder="最小" class="afv-inp" style="flex:1;width:0;min-width:0">
+            <input id="afv-minTex" type="number" min="0" value="${esc(String(v.minTex ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp" style="flex:1;width:0;min-width:0">
             <span style="color:var(--muted)">—</span>
-            <input id="afv-maxTex" type="number" min="0" value="${esc(String(v.maxTex ?? ""))}" placeholder="最大" class="afv-inp" style="flex:1;width:0;min-width:0">
+            <input id="afv-maxTex" type="number" min="0" value="${esc(String(v.maxTex ?? ""))}" placeholder="${t("dialog.max")}" class="afv-inp" style="flex:1;width:0;min-width:0">
           </div>
         </div>
 
         <div>
-          <label style="display:block;color:var(--muted);margin-bottom:3px">🏷️ 标签（留空不限）</label>
+          <label style="display:block;color:var(--muted);margin-bottom:3px">🏷️ ${t("dialog.tags")}</label>
           <div style="display:flex;gap:4px;align-items:center">
-            <input id="afv-tag" maxlength="30" value="${esc(v.tag || "")}" placeholder="输入标签名" class="afv-inp" style="flex:1;width:0;min-width:0">
+            <input id="afv-tag" maxlength="30" value="${esc(v.tag || "")}" placeholder="${t("dialog.tagPlaceholder")}" class="afv-inp" style="flex:1;width:0;min-width:0">
             <span id="afv-tag-hint" style="font-size:9px;color:var(--muted);white-space:nowrap"></span>
           </div>
         </div>

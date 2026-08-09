@@ -1,6 +1,7 @@
 // ===== 重命名文件名构建 + 字段校验（纯函数层）=====
 // 从 utils/dom/dialogs/rename.ts 抽出：文件名拼接与校验逻辑，供单测覆盖（ADR-023 L3）。
 // 原实现中拼接逻辑在 update() 预览与提交按钮里重复两份，此处收敛为单一事实来源。
+import { t } from "../../../core/i18n/t.ts";
 
 /** 重命名字段（调用方已 trim） */
 export interface RenameFields {
@@ -36,9 +37,9 @@ export function validateRenameFields(f: RenameFields, ext: string): string | nul
   if (!f.author || !f.chara) return "⚠️ 作者、角色名不能为空";
   const allFields = [f.author, f.work, f.chara, f.variant, f.date].filter(Boolean);
   if (allFields.some((x) => ILLEGAL_CHARS.test(x)))
-    return '⚠️ 文件名不能包含 < > : " / \\ | ? * 等字符';
+    return "⚠️ " + t("dialog.fileNameIllegal");
   const newName = buildRenameName(f, ext);
   if (newName.length > 255)
-    return "⚠️ 文件名过长（" + newName.length + " 字符），请精简";
+    return "⚠️ " + t("dialog.fileNameTooLong");
   return null;
 }

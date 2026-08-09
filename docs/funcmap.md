@@ -37,10 +37,10 @@
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 31 | 107 |
-| frontend/views | 54 | 147 |
+| frontend/views | 54 | 148 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **180** | **817** |
+| **合计** | **180** | **818** |
 
 ## Go·头像
 
@@ -949,7 +949,8 @@
 | `placeholderHTML()` | `frontend/src/views/app-resource-manager/tpl:154` | 空状态占位 |
 | `SidebarInstance()` | `frontend/src/views/app-sidebar/data:4` | sidebar 整合包实例（loader 转换后的渲染格式） |
 | `bindCardEvents()` | `frontend/src/views/app-sidebar/events:20` | — |
-| `bindFooter()` | `frontend/src/views/app-sidebar/events:157` | — |
+| `resetSelectedEmit()` | `frontend/src/views/app-sidebar/events:130` | 复位去重标记：组件真正卸载（disconnectedCallback）时调用—— 同组件 reload 不复位（去重跨 reload 生效），仅新挂载会话才需重置（P2 复核修复） |
+| `bindFooter()` | `frontend/src/views/app-sidebar/events:163` | — |
 | `MmdVariantGroups()` | `frontend/src/views/app-sidebar/loader:19` | MMD 变体聚合结果 |
 | `loadInstances()` | `frontend/src/views/app-sidebar/loader:26` | 从 Go 加载整合包实例列表，转换为 render 需要的格式 |
 | `groupMmdVariants()` | `frontend/src/views/app-sidebar/loader:149` | 对 MMD 类型，按父文件夹聚合 .pmx 变体文件。 |

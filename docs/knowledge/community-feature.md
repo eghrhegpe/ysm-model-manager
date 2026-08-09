@@ -6,11 +6,13 @@ category: feature
 source_files:
   - frontend/src/features/community/data.ts
   - frontend/src/features/community/download-queue.ts
+  - frontend/src/features/community/download-tasks.ts
   - frontend/src/features/community/events.ts
   - frontend/src/features/community/render.ts
 tests:
   - frontend/src/features/community/data.test.ts
   - frontend/src/features/community/download-queue.test.ts
+  - frontend/src/features/community/download-tasks.test.ts
   - frontend/src/views/app-tree/data.test.ts
   - frontend/src/views/app-tree/render.test.ts
 use_when:
@@ -39,7 +41,9 @@ invariant_anchors:
 - `render.ts` — `isModelMissing`/`countMissing`（按 hash 或名称比对本地 `localMap`）、`renderModelList`（DOM API 构建行，非字符串拼接）、`renderCardsHTML`（站点卡片按 search/repo/browse 分组）、`renderRepoHeaderHTML`（仓库页头部）
 - `events.ts` — `bindRepoEvents(sr, ctx)`：内部维护 `showAll`/`selectedSet`，返回 `{ renderList, updateSelectedUI, cleanup }`；三个下载入口（单行下载按钮 `handleSingleDownload`、「下载选中」按钮、全选后「下载选中」）全部汇入 `queue.enqueue(tasks)`；单文件 >10MB 拒载、>4MB `modalConfirm` 确认；右键行 → `bus.emit("menu:show")` 展示索引信息；B 站搜索作者走 `parseModelName` 取作者 + `OpenInBrowser`（`parseModelName` 已由动态导入改为顶层静态导入，提交 7bb9f7c）
 - `download-queue.ts` — 双层结构：
+  - **`download-tasks.ts`（独立文件，ADR-044 后拆分）**：`buildDownloadTasks`（下载任务构造，含 URL 拼接——**未 encodeURIComponent，文件名含 `#`/`?` 时 URL 截断**，P3 观察）、`classifyDownloadSize`（`DOWNLOAD_CONFIRM_BYTES` 4MB 确认阈值 / `DOWNLOAD_REJECT_BYTES` 10MB 拒载阈值）
   - 模块级持久层：`STATE`（status/total/remaining/currentFile/progress/errorList/_lastDone/_lastDoneSeq）+ `subscribe`/`getState`/`resume`/`enqueueDownloads`/`cancelDownloads`；脚本加载时一次性 `Events.On` 注册 `queue:status`、`queue:file-start`、`queue:file-done`、`download:progress`（`_registered` 守卫，页面切换不丢事件，致命陷阱 #7 的解法）；`.ysm` 下载成功且文件名含 `[作者]` 前缀时，异步 `CachedCreatorAvatar` →（未命中则 `DebugExtractCreatorAvatar` 后重取）→ 广播 `avatar:refresh`
+  - **`destroy()` 清理全部定时器**（P2 修复：原仅 unsub——视图销毁后 `_dotTimer` interval 无限自旋、3s `completeTimer` 在死视图上触发副作用；现 `stuckGuardReset()` 集中清 `_stuckTimer`/`_dotTimer`/`completeTimer` 后再退订）
   - `resume()`：切回页面时调 `QueueStatus()` 恢复状态，对 Wails 多返回值的三种映射形态（数组 / `{Remaining,Running}` 对象 / 裸数字）都做兜底解析，仅在 `running` 为真时把 STATE 置回 `downloading`
   - UI 层 `createDownloadQueue(options)`：订阅 STATE 渲染 `#gh-queue-status` 进度行；`stuckGuardReset()` 集中清理定时器；`file-done` 到达时强制把卡在 `99%` 的进度覆盖为 100%；队列结束经 `cleanupProgressUI` 统一恢复按钮、发 `tree:reload` + `stats:refresh`、清 `ClearScanCache`
   - 99% 卡死守护分两档：小文件（`total ≤ 100KB`）从 `<10%` 直跳 `≥99%` → 锁 99%，**300ms** 后补写 100%；大文件（`total > 1MB`）同样条件 → 锁 99%，**2s** 后转「⏳…」菊花动画（`_dotTimer` 每 400ms 加一个点）

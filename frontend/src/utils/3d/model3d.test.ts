@@ -158,13 +158,12 @@ vi.mock("three/addons/controls/OrbitControls.js", () => ({
   },
 }));
 
+import { compKey, buildSceneMesh } from "./mesh.ts";
 import {
   loadTdKeymap,
   loadTdCamSpeed,
   loadTdRotMode,
-  compKey,
   DEFAULT_TD_KEYMAP,
-  buildSceneMesh,
   renderModel3D,
   type RenderModel3DHandle,
 } from "./model3d.ts";

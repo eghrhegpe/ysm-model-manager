@@ -36,11 +36,11 @@
 | 前端·特性 | 13 | 61 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 31 | 107 |
+| 前端·工具 | 32 | 109 |
 | frontend/views | 54 | 152 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **181** | **823** |
+| **合计** | **182** | **825** |
 
 ## Go·头像
 
@@ -748,6 +748,10 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
+| `compKey()` | `frontend/src/utils/3d/mesh:13` | 组件内骨骼 key（mi: 组件下标, id: 骨骼 id）。renderModel3D 与 buildSceneMesh 共用，随 mesh 迁移。 |
+| `MaterialWithMap()` | `frontend/src/utils/3d/mesh:18` | 带贴图的材质（disposeMaterial 需释放 .map 位图） |
+| `disposeMaterial()` | `frontend/src/utils/3d/mesh:23` | 释放材质（含位图 .map），null/undefined 安全。 |
+| `buildSceneMesh()` | `frontend/src/utils/3d/mesh:31` | 构建 3D 场景网格（组件分组 + 骨骼树），返回供渲染/交互使用的组结构。 |
 | `BedrockCube()` | `frontend/src/utils/3d/model2d:8` | Bedrock cube（AnalyzeBedrockModel 结构） |
 | `BedrockBone()` | `frontend/src/utils/3d/model2d:18` | Bedrock bone |
 | `BedrockModel()` | `frontend/src/utils/3d/model2d:24` | BedrockModel（AnalyzeBedrockModel 返回） |
@@ -760,21 +764,19 @@
 | `SpecBuildResult()` | `frontend/src/utils/3d/model3d-spec:37` | 构建产物：mesh data + bones |
 | `SpecMeshData()` | `frontend/src/utils/3d/model3d-spec:45` | 单 mesh 数据（Go spec meshGroups 结构近似） |
 | `buildSpecFromModel()` | `frontend/src/utils/3d/model3d-spec:66` | 构建 Three.js 可消费的 spec 结构 { bones[], meshes[] } |
-| `SpecBone3D()` | `frontend/src/utils/3d/model3d:7` | — |
-| `SpecMeshGroup3D()` | `frontend/src/utils/3d/model3d:15` | — |
-| `SpecModelGroup3D()` | `frontend/src/utils/3d/model3d:27` | — |
-| `Spec3D()` | `frontend/src/utils/3d/model3d:35` | — |
-| `BoneSelectInfo()` | `frontend/src/utils/3d/model3d:40` | 骨骼选中信息（window._3dOnBoneSelect 回调参数） |
-| `RenderModel3DHandle()` | `frontend/src/utils/3d/model3d:54` | renderModel3D 返回的渲染句柄 |
-| `TdKeyAction()` | `frontend/src/utils/3d/model3d:69` | — |
-| `DEFAULT_TD_KEYMAP()` | `frontend/src/utils/3d/model3d:72` | 默认键位以 KeyboardEvent.code 存储（物理键，跨键盘布局一致） |
-| `loadTdKeymap()` | `frontend/src/utils/3d/model3d:86` | 读取用户自定义键位（无/非法时回退默认） |
-| `loadTdCamSpeed()` | `frontend/src/utils/3d/model3d:104` | 相机移动速度（2–200），默认 20 |
-| `loadTdRotMode()` | `frontend/src/utils/3d/model3d:110` | true = 环绕（orbit），false = 自身（free） |
-| `compKey()` | `frontend/src/utils/3d/model3d:130` | 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突）。 |
-| `buildSceneMesh()` | `frontend/src/utils/3d/model3d:135` | 构建骨骼层级场景（bone group 树），返回组映射与根节点 |
-| `renderModel3D()` | `frontend/src/utils/3d/model3d:195` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/src/utils/3d/model3d:919` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `SpecBone3D()` | `frontend/src/utils/3d/model3d:8` | — |
+| `SpecMeshGroup3D()` | `frontend/src/utils/3d/model3d:16` | — |
+| `SpecModelGroup3D()` | `frontend/src/utils/3d/model3d:28` | — |
+| `Spec3D()` | `frontend/src/utils/3d/model3d:36` | — |
+| `BoneSelectInfo()` | `frontend/src/utils/3d/model3d:41` | 骨骼选中信息（window._3dOnBoneSelect 回调参数） |
+| `RenderModel3DHandle()` | `frontend/src/utils/3d/model3d:55` | renderModel3D 返回的渲染句柄 |
+| `TdKeyAction()` | `frontend/src/utils/3d/model3d:70` | — |
+| `DEFAULT_TD_KEYMAP()` | `frontend/src/utils/3d/model3d:73` | 默认键位以 KeyboardEvent.code 存储（物理键，跨键盘布局一致） |
+| `loadTdKeymap()` | `frontend/src/utils/3d/model3d:87` | 读取用户自定义键位（无/非法时回退默认） |
+| `loadTdCamSpeed()` | `frontend/src/utils/3d/model3d:105` | 相机移动速度（2–200），默认 20 |
+| `loadTdRotMode()` | `frontend/src/utils/3d/model3d:111` | true = 环绕（orbit），false = 自身（free） |
+| `renderModel3D()` | `frontend/src/utils/3d/model3d:138` | 渲染 3D 模型到容器，返回控制句柄 |
+| `screenshotPreview()` | `frontend/src/utils/3d/model3d:862` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
 | `animateNumber()` | `frontend/src/utils/animation/animate:12` | 里程表滚动进位动画 |
 | `Vec3()` | `frontend/src/utils/animation/animation:9` | 三维向量 [x, y, z] |
 | `Keyframe()` | `frontend/src/utils/animation/animation:12` | 关键帧 |
@@ -926,8 +928,8 @@
 | `loadTextures()` | `frontend/src/views/app-preview/model3d-loader:45` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组 |
 | `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:95` | 预加载：纹理 + spec 并行获取 |
 | `parseYsmJsonDirect()` | `frontend/src/views/app-preview/parse-ysm-json:7` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
-| `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:7` | — |
-| `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:13` | — |
+| `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:8` | — |
+| `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:14` | — |
 | `loadModel2D()` | `frontend/src/views/app-preview/skeleton:36` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this.root, this.appendDebug 等） |
 | `ModelDetailMeta()` | `frontend/src/views/app-preview/tpl:6` | 模型统计元数据（modelDetailHTML 入参） |
 | `modelDetailHTML()` | `frontend/src/views/app-preview/tpl:20` | 模型详情面板（仓库页面） |

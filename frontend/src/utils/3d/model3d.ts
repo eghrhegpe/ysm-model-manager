@@ -1,6 +1,7 @@
 // ===== 3D 模型渲染器（类型化版 — ADR-014 P2 大件收尾）=====
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { buildSceneMesh, disposeMaterial, compKey } from "./mesh.ts"; // 网格构建/材质释放（拆分）
 
 // ── Spec 结构（Go 返回的 models 结构）────────────────
 
@@ -125,71 +126,13 @@ let _rafIdGuard: number | null = null;
  */
 let _sessionCleanups: Array<() => void> = [];
 
-/** 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突）。
- * 导出供截图渲染器（screenshot-renderer）与 buildSceneMesh 消费方共用，防 key 口径漂移。 */
-export function compKey(mi: number, id: string) {
-  return mi + ":" + id;
-}
+/** 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突）。 */
+// （已迁至 ./mesh.ts，model3d.ts 经 import 复用，防 key 口径漂移）
 
 /** 构建骨骼层级场景（bone group 树），返回组映射与根节点 */
-export function buildSceneMesh(spec: Spec3D): {
-  boneGroupMap: Map<string, THREE.Group>;
-  rootGroup: THREE.Group;
-  modelScale: number;
-  modelGroups: THREE.Group[];
-} {
-  // 显示尺寸：固定 1/16（基岩标准：16 像素 = 1 米），严格对齐 YSMViewer ExportScale。
-  // 历史：曾动态 scale（>32→1/16、>4→1/4、else→1）把小模型放大，渲染对齐裁决后移除。
-  const modelScale = 1 / 16;
-  const rootGroup = new THREE.Group();
-  rootGroup.scale.set(modelScale, modelScale, modelScale);
-  // 组件级 modelGroup（YSMViewer 式多组件同屏）：每个 spec.model 一个组，
-  // bone 树挂各自 modelGroup，可见性由 defaultVisible 控制（arm 等组件独立渲染）。
-  const modelGroups = (spec.models || []).map((mg) => {
-    const g = new THREE.Group();
-    g.name = mg.id || "comp";
-    g.visible = mg.defaultVisible !== false;
-    return g;
-  });
-  for (const g of modelGroups) rootGroup.add(g);
-  const boneGroupMap = new Map<string, THREE.Group>();
-  for (const [mi, mg] of (spec.models || []).entries())
-    for (const bd of mg.bones || []) {
-      const g = new THREE.Group();
-      g.name = bd.name;
-      const pos = bd.localPosition || [0, 0, 0];
-      g.position.set(
-        pos[0] ?? 0,
-        pos[1] ?? 0,
-        pos[2] ?? 0,
-      );
-      const rot = bd.localRotation;
-      if (
-        rot?.[3] !== 1 ||
-        rot?.[0] !== 0 ||
-        rot?.[1] !== 0 ||
-        rot?.[2] !== 0
-      )
-        g.quaternion.set(
-          rot?.[0] ?? 0,
-          rot?.[1] ?? 0,
-          rot?.[2] ?? 0,
-          rot?.[3] ?? 1,
-        );
-      boneGroupMap.set(compKey(mi, bd.id), g);
-      // 全局 key：main 组件优先（先到先得），供 hover/UI/动画（v1 单组件语义）
-      if (!boneGroupMap.has(bd.id)) boneGroupMap.set(bd.id, g);
-    }
-  for (const [mi, mg] of (spec.models || []).entries())
-    for (const bd of mg.bones || []) {
-      const g = boneGroupMap.get(compKey(mi, bd.id));
-      if (!g) continue;
-      if (bd.parentId && boneGroupMap.has(compKey(mi, bd.parentId)))
-        boneGroupMap.get(compKey(mi, bd.parentId))!.add(g);
-      else modelGroups[mi].add(g);
-    }
-  return { boneGroupMap, rootGroup, modelScale, modelGroups };
-}
+// （已迁至 ./mesh.ts，model3d.ts 经 import 复用）
+
+// ── 渲染器状态 / 会话 ─────────────────────────────
 
 /** 渲染 3D 模型到容器，返回控制句柄 */
 export async function renderModel3D(
@@ -926,18 +869,7 @@ export function screenshotPreview(): string | null {
 }
 
 /** 带 map 纹理的材质接口（MeshStandardMaterial/MeshPhongMaterial 等共有） */
-interface MaterialWithMap {
-  map: { dispose(): void } | null;
-  dispose(): void;
-}
+// （已迁至 ./mesh.ts，disposeMaterial 随迁）
 
-/**
- * 释放材质及其 map 纹理。
- * Material 基类无 map 属性，需运行时探测（类型层面用 MaterialWithMap 收窄）。
- */
-function disposeMaterial(m: THREE.Material | null | undefined): void {
-  if (!m) return;
-  const withMap = m as THREE.Material & Partial<MaterialWithMap>;
-  if (withMap.map) withMap.map.dispose();
-  m.dispose();
-}
+/** 释放材质及其 map 纹理。 */
+// （已迁至 ./mesh.ts，model3d.ts 经 import 复用）

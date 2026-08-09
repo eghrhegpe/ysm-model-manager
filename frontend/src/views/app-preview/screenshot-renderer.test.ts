@@ -114,7 +114,9 @@ const { getAppMock, specMock, loadTexturesMock, buildSceneMeshMock, threeStub } 
 
 vi.mock("../../wails/app.ts", () => ({ getApp: getAppMock }));
 vi.mock("./model3d-loader.ts", () => ({ loadTextures: loadTexturesMock }));
-vi.mock("../../utils/3d/model3d.ts", () => ({
+// buildSceneMesh/compKey 已从 model3d.ts 迁至 mesh.ts（model3d 拆分）——mock 目标同步迁移，
+// 否则 mock 失效会跑真实实现（three 被 mock 成 Fake 类，行为不符 → renderMultiAngle 返回 null）
+vi.mock("../../utils/3d/mesh.ts", () => ({
   buildSceneMesh: buildSceneMeshMock,
   compKey: (mi: number, boneId: string) => `${mi}:${boneId}`,
 }));

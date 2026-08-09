@@ -18,11 +18,18 @@ export const getApp = async (): Promise<AppBindings> => {
   // 优先检查 window.go.main.App（E2E/vite dev 环境，mock bridge 注入点）
   const winApp = (window as unknown as { go?: { main?: { App?: unknown } } }).go?.main?.App;
   if (winApp) {
-    // P3 修复：mock bridge 运行时形态 ≠ 生成模块命名空间，直接 `as AppBindings` 是类型造假——
-    // 缺失方法可穿透类型系统到运行时 undefined（陷阱 #5）。这里仅缓存原始句柄，
-    // 调用方经解构取方法仍受 TS 类型约束（缺失方法在 import 路径下编译期报错）。
-    _App = winApp as AppBindings;
-    return _App;
+    // P3 修复：空对象（truthy）不得缓存为 _App——原守卫仅检查 truthiness，
+    // `window.go.main.App = {}`（未注入/partial mock）会被缓存，缺失方法运行时穿透
+    // undefined（陷阱 #5）且粘滞整个会话（后续真实 import 永不走）
+    if (typeof winApp === "object" && Object.keys(winApp).length === 0) {
+      // 空对象视为未注入，回退动态 import
+    } else {
+      // P3 修复：mock bridge 运行时形态 ≠ 生成模块命名空间，直接 `as AppBindings` 是类型造假——
+      // 缺失方法可穿透类型系统到运行时 undefined（陷阱 #5）。这里仅缓存原始句柄，
+      // 调用方经解构取方法仍受 TS 类型约束（缺失方法在 import 路径下编译期报错）。
+      _App = winApp as AppBindings;
+      return _App;
+    }
   }
 
   // 生产环境：动态 import Wails 生成的 bindings，通过 Promise 缓存避免并发重复 import

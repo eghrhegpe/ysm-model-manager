@@ -112,10 +112,9 @@ export function initRecycleBin(app: RecycleHost): () => void {
       const allEntries = (await ListRecycleBin("")) || [];
       if (gen !== _loadGen) return; // 已有更新的加载，丢弃过期结果
 
-      // 过滤：只显示路径在当前类型根目录下的文件
-      const entries = currentRoot
-        ? allEntries.filter((e) => e.Path && isPathInRoot(e.Path, currentRoot))
-        : allEntries;
+      // 过滤：只显示路径在当前类型根目录下的条目；空 Path 一律排除（防渲染 data-path=""
+      // 点击发 model:select {path:""}——原仅 currentRoot 非空时要求 Path，回退全量时漏网）
+      const entries = allEntries.filter((e) => e.Path && (currentRoot ? isPathInRoot(e.Path, currentRoot) : true));
 
       if (!entries || !entries.length) {
         list.innerHTML = "";

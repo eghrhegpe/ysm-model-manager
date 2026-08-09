@@ -224,8 +224,17 @@ func buildRegionInfo(region map[string]any) *regionInfo {
 	// 直接 `int64(sx)*int64(sy)*int64(sz)` 会回绕（负值使 total > capacity 恒假，守卫失效）。
 	// 真实 litematic region 每轴远小于 2^21，超限直接丢弃该 region（同时收紧 DoS 扫描上界）。
 	const maxRegionAxis = 1 << 21
+	const maxCoord = 32767 // int16 表示上限（体素输出坐标 [3]int16 的容纳范围）
 	if sx > maxRegionAxis || sy > maxRegionAxis || sz > maxRegionAxis {
 		log.Printf("[litematic] region Size 超出合理范围，跳过: %d×%d×%d", sx, sy, sz)
+		return nil
+	}
+	// P3 修复：origin+size 超 int16 范围的 region 丢弃——坐标源是 int32（origin/px/py/pz），
+	// 体素输出 `[3]int16`（voxel.go:30 / types.VoxelGroup.Positions）会静默回绕
+	// （±32767 外坐标 3D 渲染位置错乱）。与 maxRegionAxis 口径一致：合理 litematic
+	// 坐标远在 int16 内，超限属损坏/畸形文件，丢弃并记录
+	if ox > maxCoord || ox+sx > maxCoord || oy > maxCoord || oy+sy > maxCoord || oz > maxCoord || oz+sz > maxCoord {
+		log.Printf("[litematic] region 坐标超出 int16 表示范围，跳过: origin=(%d,%d,%d) size=%d×%d×%d", ox, oy, oz, sx, sy, sz)
 		return nil
 	}
 	total := int64(sx) * int64(sy) * int64(sz)

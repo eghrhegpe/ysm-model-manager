@@ -71,15 +71,19 @@ export function showBatchRenameDialog(
     items.forEach((it) => {
       const a = it._author || it.p.author;
       const w = it._work || it.p.work;
-      const c = it.p.chara || it.Name.replace(/\.\w+$/, "");
+      // P2 修复：剥 .ban 尾缀后再取扩展名/角色名——banned 文件 foo.ysm.ban
+      // 原实现 ext 取 "ban"、角色名残留 ".ysm"，与重命名对话框 getExt 同源缺陷
+      const isBan = /\.ban$/i.test(it.Name);
+      const clean = it.Name.replace(/\.ban$/i, "");
+      const c = it.p.chara || clean.replace(/\.\w+$/, "");
       const d = it.p.date || "";
-      const ext = it.Name.match(/\.(\w+)$/)?.[1] || RESOURCE_TYPES.YSM;
+      const ext = clean.match(/\.(\w+)$/)?.[1] || RESOURCE_TYPES.YSM;
       const parts: string[] = [];
       if (a) parts.push("[" + a + "]");
       if (w) parts.push("【" + w + "】");
       parts.push(c);
       if (d) parts.push(" (" + d + ")");
-      it.newName = parts.join("") + "." + ext;
+      it.newName = parts.join("") + "." + ext + (isBan ? ".ban" : "");
       it.changed = it.newName !== it.Name;
     });
   };

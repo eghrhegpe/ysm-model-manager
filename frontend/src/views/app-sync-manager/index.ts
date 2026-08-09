@@ -96,8 +96,10 @@ export class AppSyncManager extends HTMLElement {
     await this._loadTypeConfig();
     await this._loadData();
 
-    // 期间有更新的 _init 启动（instance 切换）：丢弃本次过期加载的渲染与订阅
-    if (gen !== this._gen) return;
+    // 期间有更新的 _init 启动（instance 切换）：丢弃本次过期加载的渲染与订阅；
+    // P2 修复（审核发现）：无 isConnected 检查——组件在 await 期间被卸载（快速切包），
+    // gen 未变仍会注册 stats:refresh 订阅并闭包持有已卸载元素（监听器泄漏竞态）
+    if (gen !== this._gen || !this.isConnected) return;
 
     this._loading = false;
     try {
@@ -150,14 +152,21 @@ export class AppSyncManager extends HTMLElement {
   }
 
   async _loadTypeConfig(): Promise<void> {
-    const { LoadResourceTypes } =
-      await getApp();
+    // P2 修复（审核发现）：getApp() 原在 try 之外——import 失败/桥接异常时 reject 逸出
+    // 为 unhandledrejection（connectedCallback 无 catch）；移入 try 统一兜底
     try {
+      const { LoadResourceTypes } = await getApp();
       const raw = await LoadResourceTypes();
       const parsed = JSON.parse(raw) as { resourceTypes?: RTypeConfig[] };
       this._typeConfig = parsed.resourceTypes || [];
     } catch {
       this._typeConfig = [];
+      // P3 修复（审核发现）：静默降级（类型标签全消失无反馈）与 _loadData 的 toast 不一致
+      bus.emit("toast:show", {
+        msg: "⚠️ 资源类型配置加载失败",
+        duration: 3000,
+        type: "warn",
+      });
     }
   }
 
@@ -165,9 +174,9 @@ export class AppSyncManager extends HTMLElement {
     // P2 修复：捕获当前代际——await getApp 期间 instance 可能已切换，
     // 旧代际晚到的 _allItems 写入不得覆盖新代际数据（后续过滤交互基于错误数据）
     const gen = this._gen;
-    const { GetInstanceSyncStatus } =
-      await getApp();
     try {
+      // P2 修复（审核发现）：getApp() 原在 try 之外，reject 会逸出为 unhandledrejection
+      const { GetInstanceSyncStatus } = await getApp();
       const json = await GetInstanceSyncStatus(this._instance);
       if (gen !== this._gen) return; // 过期代际丢弃
       this._allItems = (JSON.parse(json) as SyncItem[]) || [];

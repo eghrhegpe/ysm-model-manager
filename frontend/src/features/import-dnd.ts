@@ -177,7 +177,11 @@ const onDrop = async (e: DragEvent): Promise<void> => {
             file: await getFileFromEntry(entry as FileSystemFileEntry),
             relPath,
           });
-        } catch (_) {}
+        } catch (e) {
+          // P2 修复（审核发现）：原 catch (_) {} 静默吞错——单文件读取失败/超时
+          // 无声丢弃，无日志无提示；记录原因便于排查（与 import-executor 的 console.warn 对齐）
+          console.warn("[dnd] 单文件读取失败，已跳过:", relPath, e);
+        }
       } else if ((item as DataTransferItem).getAsFile) {
         // fallback: 浏览器不支持 webkitGetAsEntry 时用 getAsFile
         const f = (item as DataTransferItem).getAsFile();

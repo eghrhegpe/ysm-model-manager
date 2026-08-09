@@ -39,7 +39,10 @@ import "./index.ts"; // 触发 customElements.define("app-sync-manager")
 describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
-    localStorage.removeItem("ysm-sm-last-type");
+    // P2 修复（审核发现）：原键名 "ysm-sm-last-type" 写错——源码实际键是
+    // "ysm_syncLastType"（LAST_TYPE_KEY，index.ts:39），清理无效导致测试隔离
+    // 完全依赖文件内执行顺序
+    localStorage.removeItem("ysm_syncLastType");
   });
 
   afterEach(() => {

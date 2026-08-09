@@ -222,6 +222,9 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
         if (allSelected) selectState.keys.delete(k);
         else selectState.keys.add(k);
       });
+      // P2 修复（审核发现）：全选/反选只写 selectState 不重渲染——行高亮 .selected 由
+      // renderTree 渲染期生成，状态变了 UI 不刷新（幽灵路径，陷阱 #13）；补 _renderTree
+      vm._renderTree();
       // 复用 events.ts 里的实现（避免重复定义）
       updateSelectCount(root);
       flashBtn(selAllBtn);

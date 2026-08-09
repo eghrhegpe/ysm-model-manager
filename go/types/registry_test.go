@@ -74,9 +74,12 @@ func TestExtBelongsTo(t *testing.T) {
 	hasSP := false
 	for _, id := range ids {
 		switch id {
-		case "ysm": hasYSM = true
-		case "resourcepack": hasRP = true
-		case "shaderpack": hasSP = true
+		case "ysm":
+			hasYSM = true
+		case "resourcepack":
+			hasRP = true
+		case "shaderpack":
+			hasSP = true
 		}
 	}
 	if !hasYSM || !hasRP || !hasSP {

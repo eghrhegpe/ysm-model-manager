@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -79,16 +81,11 @@ func (l *Logger) save() {
 			return
 		}
 	}
-	// P1 修复：写临时文件 + rename 原子替换（对齐 go/tags 已修模式）——
-	// 原 os.WriteFile 直接覆盖，崩溃/断电留半截 JSON，下次 load 解析失败全部历史丢失
-	tmp := l.path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0644); err != nil {
+	// ADR-044 策略 A：落盘统一走 fsutil.WriteFileAtomic（CreateTemp + rename 原子替换）——
+	// 原固定 `l.path + ".tmp"` 路径并发写时互相覆盖，且崩溃/断电留半截 JSON
+	// 下次 load 解析失败全部历史丢失；CreateTemp 唯一临时文件消除竞争（对齐 go/tags 已修模式）
+	if err := fsutil.WriteFileAtomic(l.path, data); err != nil {
 		log.Printf("[logs] 写入日志文件失败: %v", err)
-		return
-	}
-	if err := os.Rename(tmp, l.path); err != nil {
-		_ = os.Remove(tmp)
-		log.Printf("[logs] 替换日志文件失败: %v", err)
 	}
 }
 

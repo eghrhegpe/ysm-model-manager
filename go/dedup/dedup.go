@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 // FileEntry 文件条目
@@ -49,9 +51,8 @@ func FindDuplicateFiles(dir string, skipRecycle bool) ([]Group, error) {
 			return nil
 		}
 		if d.IsDir() {
-			// P3 修复：大小写不敏感（对齐 fsutil.isRecycleDir 的 EqualFold 语义）——
-			// 原 `filepath.Base(p) == ".recycle"` 大小写敏感，Windows `.RECYCLE` 目录会漏排
-			if skipRecycle && strings.EqualFold(filepath.Base(p), ".recycle") {
+			// ADR-044 策略 A：回收站排除统一走 fsutil.IsRecycleDir（EqualFold 大小写不敏感）
+			if skipRecycle && fsutil.IsRecycleDir(p) {
 				return filepath.SkipDir
 			}
 			return nil
@@ -137,9 +138,8 @@ func CountDuplicates(dir string, skipRecycle bool) (groups int, extraFiles int, 
 			return nil
 		}
 		if d.IsDir() {
-			// P3 修复：大小写不敏感（对齐 fsutil.isRecycleDir 的 EqualFold 语义）——
-			// 原 `filepath.Base(p) == ".recycle"` 大小写敏感，Windows `.RECYCLE` 目录会漏排
-			if skipRecycle && strings.EqualFold(filepath.Base(p), ".recycle") {
+			// ADR-044 策略 A：回收站排除统一走 fsutil.IsRecycleDir（EqualFold 大小写不敏感）
+			if skipRecycle && fsutil.IsRecycleDir(p) {
 				return filepath.SkipDir
 			}
 			return nil

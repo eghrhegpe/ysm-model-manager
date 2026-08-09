@@ -18,6 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -98,9 +99,9 @@ func ScanEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 			return nil
 		}
 		if d.IsDir() {
-			// P2 修复：用 d.Name() + EqualFold 精确匹配 .recycle 目录，
-			// 与 go/sync 排除口径一致，避免子串误杀 foo.recycle.ysm 等合法文件
-			if strings.EqualFold(d.Name(), ".recycle") {
+			// ADR-044 策略 A：回收站排除统一走 fsutil.IsRecycleDir（EqualFold 大小写不敏感、
+			// 精确匹配基名，避免子串误杀 foo.recycle.ysm 等合法文件——与 go/sync/dedup 同口径）
+			if fsutil.IsRecycleDir(p) {
 				return filepath.SkipDir
 			}
 			// P2 修复：目录级 .ban（fileops.ToggleModelEnable 对文件夹模型整组禁用时

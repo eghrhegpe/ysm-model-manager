@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -97,36 +98,11 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 	return WriteFileAtomic(destPath, data)
 }
 
-// WriteFileAtomic 临时文件 + rename 原子落地（P2 修复，importer 与 app_install.go 的
-// subpath 导入路径共享）：原 `os.WriteFile` 直写目标，磁盘满/IO 中断时半截损坏文件留盘
-// 且非覆盖模式再次导入命中 FILE_EXISTS 形成「损坏文件阻塞重导」死锁（项目头号反模式）。
-// CreateTemp 恒建 0600，落地前 chmod 0644（对齐 installer.copyFileLocked 约定）；
-// 任一失败分支删除临时文件，不留 .import-*.tmp 残渣。
+// WriteFileAtomic 已提升至 go/fsutil（ADR-044 策略 A：基础设施工具收敛，tags/logs/fileops 共用）。
+// 本处保留 AppError 包装以维持 importer 的结构化错误契约（Code: MKDIR_FAILED/WRITE_FAILED）。
 func WriteFileAtomic(destPath string, data []byte) error {
-	destDir := filepath.Dir(destPath)
-	tmp, err := os.CreateTemp(destDir, ".import-*.tmp")
-	if err != nil {
-		return types.AppError{Code: "MKDIR_FAILED", Operation: "导入模型", TargetPath: destDir, Reason: "无法创建临时文件", Suggestion: "请检查磁盘权限或空间"}
-	}
-	tmpName := tmp.Name()
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
-		return types.AppError{Code: "WRITE_FAILED", Operation: "导入模型", TargetPath: destPath, Reason: "写入失败: " + err.Error(), Suggestion: "请检查磁盘空间"}
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmpName)
-		return types.AppError{Code: "WRITE_FAILED", Operation: "导入模型", TargetPath: destPath, Reason: "关闭失败: " + err.Error()}
-	}
-	// code_review：os.CreateTemp 恒建 0600，rename 不改权限 → 导入文件从 0644 退化为
-	// 0600（多用户/共享目录下其他进程不可读、导入成功但模型加载失败）；对齐 copyFileLocked 约定
-	if err := os.Chmod(tmpName, 0644); err != nil {
-		os.Remove(tmpName)
-		return types.AppError{Code: "WRITE_FAILED", Operation: "导入模型", TargetPath: destPath, Reason: "权限设置失败: " + err.Error()}
-	}
-	if err := os.Rename(tmpName, destPath); err != nil {
-		os.Remove(tmpName)
-		return types.AppError{Code: "WRITE_FAILED", Operation: "导入模型", TargetPath: destPath, Reason: "落地失败: " + err.Error()}
+	if err := fsutil.WriteFileAtomic(destPath, data); err != nil {
+		return types.AppError{Code: "WRITE_FAILED", Operation: "导入模型", TargetPath: destPath, Reason: "写入失败: " + err.Error(), Suggestion: "请检查磁盘权限或空间"}
 	}
 	return nil
 }

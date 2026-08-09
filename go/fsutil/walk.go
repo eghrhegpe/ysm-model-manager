@@ -22,7 +22,7 @@ func WalkAllFiles(dir string, skipRecycle bool) []string {
 			return nil
 		}
 		if d.IsDir() {
-			if skipRecycle && isRecycleDir(p) {
+			if skipRecycle && IsRecycleDir(p) {
 				return filepath.SkipDir
 			}
 			return nil
@@ -58,7 +58,7 @@ func walkAllDirs(dir string, skipRecycle bool, out *[]string) {
 			continue
 		}
 		sub := filepath.Join(dir, e.Name())
-		if skipRecycle && isRecycleDir(sub) {
+		if skipRecycle && IsRecycleDir(sub) {
 			continue
 		}
 		walkAllDirs(sub, skipRecycle, out)
@@ -84,7 +84,9 @@ func CleanEmptyDirs(dir string, skipRecycle bool) int {
 	return count
 }
 
-func isRecycleDir(path string) bool {
+// IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）——
+// dedup / scanner / sync 的回收站排除判定统一引用本函数，禁止各自内联 EqualFold 判定。
+func IsRecycleDir(path string) bool {
 	lower := strings.ToLower(path)
 	base := filepath.Base(lower)
 	return base == ".recycle"

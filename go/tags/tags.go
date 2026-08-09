@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 // Store 是标签存储，线程安全
@@ -76,15 +78,11 @@ func (s *Store) save() error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("创建标签目录失败: %w", err)
 	}
-	// P2 修复：写临时文件 + rename 原子替换，避免崩溃/断电留下半截 tags.json
-	// （原 os.WriteFile 直接覆盖，下次 load 报解析失败且无恢复路径）
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0644); err != nil {
+	// ADR-044 策略 A：落盘统一走 fsutil.WriteFileAtomic（CreateTemp + rename 原子替换）——
+	// 原固定 `s.path + ".tmp"` 路径并发 save 时互相覆盖（两个 goroutine 写同一 tmp），
+	// 且崩溃/断电留半截 JSON 下次 load 报解析失败；CreateTemp 唯一临时文件消除竞争
+	if err := fsutil.WriteFileAtomic(s.path, data); err != nil {
 		return fmt.Errorf("写入标签文件失败: %w", err)
-	}
-	if err := os.Rename(tmp, s.path); err != nil {
-		_ = os.Remove(tmp)
-		return fmt.Errorf("替换标签文件失败: %w", err)
 	}
 	return nil
 }

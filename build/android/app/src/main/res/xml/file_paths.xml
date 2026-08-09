@@ -3,7 +3,4 @@
     <!-- Camera captures are written here and shared with the camera app via the
          FileProvider. -->
     <cache-path name="captures" path="captures/" />
-    <!-- [doc:adr-179] Downloaded APK updates live in cache/MikuMikuAR/updates/;
-         FileProvider exposes them as content:// URIs for the system installer. -->
-    <cache-path name="updates" path="MikuMikuAR/updates/" />
 </paths>

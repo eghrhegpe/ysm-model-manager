@@ -10,7 +10,3 @@
 # Keep Wails bridge classes
 -keep class com.wails.app.WailsBridge { *; }
 -keep class com.wails.app.WailsJSBridge { *; }
-
-# JSR-305 annotations (Tink / Guava 引用)
--dontwarn javax.annotation.**
--keep class javax.annotation.** { *; }

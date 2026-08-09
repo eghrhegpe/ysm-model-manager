@@ -10,14 +10,16 @@ vars:
   BUILD_TIME: '{{.BUILD_TIME | default "unknown"}}'
   COMMIT_HASH: '{{.COMMIT_HASH | default "unknown"}}'
 
-# 平台 includes：windows 为主力，darwin/linux 桌面三平台（ADR-046 P1）。
-# ios/android 等联邦标准分支在本仓库尚不存在对应 build/<os>/ 目录，
+# 平台 includes：windows 为主力，darwin/linux 桌面三平台（ADR-046 P1），
+# android 为移动端（ADR-046 P2，工程资产已搬运，需 NDK 环境）。
+# ios 联邦标准分支在本仓库尚不存在对应 build/<os>/ 目录，
 # 若未来扩展移动端再补 includes 即可。
 includes:
   common: ./build/Taskfile.yml
   windows: ./build/windows/Taskfile.yml
   darwin: ./build/darwin/Taskfile.yml
   linux: ./build/linux/Taskfile.yml
+  android: ./build/android/Taskfile.yml
 
 tasks:
   build:

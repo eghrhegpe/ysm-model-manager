@@ -11,8 +11,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // Vuforia Engine SDK
-        maven { url 'https://artifactory.ptc.com/artifactory/vuforia-engine-maven' }
     }
 }
 

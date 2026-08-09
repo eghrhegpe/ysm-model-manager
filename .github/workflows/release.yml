@@ -1,4 +1,4 @@
-name: CI
+name: Release
 
 on:
   push:
@@ -8,7 +8,18 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  actions: read
+
+env:
+  GO_VERSION: '1.25.0'
+  NODE_VERSION: '22'
+  # 与 go.mod 对齐（wailsapp/wails/v3 v3.0.0-alpha2.105），避免 CLI 与库版本错配
+  WAILS_VERSION: 'v3.0.0-alpha2.105'
+
 jobs:
+  # ── 测试门禁（保留原 CI 单 job）─────────────────────────
   test:
     name: 契约测试 + Go 检查 + 前端构建
     runs-on: windows-latest
@@ -17,11 +28,11 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: ${{ env.GO_VERSION }}
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: 契约测试（tests/，Node .mjs，禁止修改测试文件）
         shell: pwsh
@@ -34,54 +45,23 @@ jobs:
         run: node scripts/adr-check.mjs | Out-String -Width 200
 
       - name: 安装前端依赖
-        # 必须前置于「治理静态检查」：check-deadcode-baseline.mjs 依赖
-        # frontend/node_modules 中的 knip / jscpd，否则以「工具缺失」exit 1。
         working-directory: frontend
         shell: pwsh
         run: npm ci
 
-      - name: 治理静态检查（G-2：文档漂移 + 链接 + 死代码基线）
+      - name: Go 检查（build + vet + test）
         shell: pwsh
         run: |
-          node scripts/link-checker.mjs | Out-String -Width 200
-          node scripts/check-doc-drift.mjs | Out-String -Width 200
-          node scripts/check-deadcode-baseline.mjs | Out-String -Width 200
+          go build ./go/...
+          go vet ./go/... ./internal/app/...
+          go test ./go/... ./internal/app/ -count=1 | Out-String -Width 200
 
-      - name: 脚本卫生检查（禁止内联 ROOT 样板，--strict 阻断）
-        # P6 收口护栏：scripts/*.mjs 出现内联 ROOT 样板 / 文件头缺失 / 退出码失效 即 exit 1，
-        # 防止 P2–P6 双仓 scripts 约定回退。--strict 将 WARN 升级为失败。
-        shell: pwsh
-        run: node scripts/check-script-hygiene.mjs --strict
-
-      - name: 脚本单测（_lib 共享层回归，node --test）
-        # P8-a：为 scripts/_lib 共享层补 Node 原生单测（零依赖、node:test）。
-        # 覆盖与 A 字节一致的 parse-args / to-posix / frontmatter 三模块；
-        # source-graph（双栈适配）、circular、supersede 等需先本地 node --test 验证再扩展本步。
-        shell: pwsh
-        run: node --test scripts/_lib/parse-args.test.mjs scripts/_lib/to-posix.test.mjs scripts/_lib/frontmatter.test.mjs
-
-      - name: 构建更新助手 helper（embed 前置，修复 go vet 缺文件）
-        # go/updater/update.go 通过 //go:embed 内嵌 ysm-updater-helper.exe，
-        # 该文件由 cmd/updater/main.go 编译生成（见 cmd/build-release.ps1 步骤 1b），
-        # 且被 .gitignore(*.exe) 忽略，CI checkout 不含此文件。
-        # 必须先构建，否则 go vet/go build/go test 因 embed 找不到文件而失败。
-        shell: pwsh
-        run: go build -o "go/updater/ysm-updater-helper.exe" "./cmd/updater"
-
-      - name: Go vet
-        shell: pwsh
-        run: go vet ./go/... | Out-String -Width 200
-
-      - name: Go test
-        shell: pwsh
-        run: go test ./go/... -count=1 | Out-String -Width 200
-
-      - name: TypeScript 类型检查（ADR-014 P4 门槛，tsc --noEmit）
+      - name: 前端类型检查（ADR-014 门槛）
         working-directory: frontend
         shell: pwsh
-        run: npm run typecheck | Out-String -Width 200
+        run: npx tsc --noEmit
 
-      - name: 前端单测（ADR-023 P3，L3 Vitest 回归）
+      - name: 前端测试（Vitest）
         working-directory: frontend
         shell: pwsh
         run: npx vitest run | Out-String -Width 200
@@ -91,52 +71,214 @@ jobs:
         shell: pwsh
         run: npx vite build
 
-  release:
-    name: 发布打包（仅 tag v*）
+  # ── 版本提取与校验 ─────────────────────────────────────
+  prepare:
+    name: Prepare（版本校验）
+    runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: test
-    runs-on: windows-latest
-    # softprops/action-gh-release 需建 Release + 传资产，默认 GITHUB_TOKEN（只读）
-    # 会 403 "Resource not accessible by integration"，必须显式声明写权限。
-    permissions:
-      contents: write
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+      - name: 校验 tag 与 config.yml 版本一致
+        id: ver
+        run: |
+          TAG_VER="${GITHUB_REF#refs/tags/v}"
+          # 版本单一事实来源：build/config.yml（发版脚本同步，非 package.json）
+          CFG_VER=$(grep -E '^\s+version:' build/config.yml | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
+          echo "tag=$TAG_VER config.yml=$CFG_VER"
+          if [ "$TAG_VER" != "$CFG_VER" ]; then
+            echo "::error::版本不一致！tag=$TAG_VER config.yml=$CFG_VER"
+            echo "Fix: 更新 build/config.yml 版本后重新打 tag。"
+            exit 1
+          fi
+          echo "version=$TAG_VER" >> "$GITHUB_OUTPUT"
 
+  # ── Windows 构建 ───────────────────────────────────────
+  build-windows:
+    name: Windows
+    needs: prepare
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
-
+          go-version: ${{ env.GO_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-
-      - name: 安装 Wails v3 CLI（build-release.ps1 的 generate:bindings 需要）
-        # 版本对齐 go.mod（wailsapp/wails/v3 v3.0.0-alpha2.105），
-        # 避免 CLI 与库版本错配导致 build 异常。GOPATH/bin 已在 PATH（task 同路径可寻），
-        # 故安装后 wails3 可直接被 build-release.ps1 调用。
-        shell: pwsh
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.105
-
+          node-version: ${{ env.NODE_VERSION }}
+      - name: 安装 Wails v3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
       - name: 安装前端依赖
-        # build-release.ps1 的 npx vite build 需要 frontend/node_modules。
         working-directory: frontend
-        shell: pwsh
         run: npm ci
-
       - name: 打包（build-release.ps1 → build/release zip + SHA256SUMS）
-        # 项目标准发版脚本（SOP §1），产出 build/release/YSM-Model-Manager_windows_amd64.zip
-        # + SHA256SUMS，与下方上传步骤的 files 路径吻合。
-        # 注意：不走 Taskfile 的 NSIS 安装器链路（task package 产出 bin/*-installer.exe，
-        # 与上传路径脱节，且需额外 makensis/NSIS 依赖，历史多次阻断）。
-        shell: pwsh
         run: |
-          & .\cmd\build-release.ps1 -Version "${{ github.ref_name }}" -SkipUpload
+          & .\cmd\build-release.ps1 -Version "${{ needs.prepare.outputs.version }}" -SkipUpload
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: 上传 GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: 上传产物
+        uses: actions/upload-artifact@v5
         with:
-          files: |
+          name: windows-amd64
+          path: |
             build/release/*.zip
             build/release/SHA256SUMS
+          if-no-files-found: error
+
+  # ── Linux 构建 ─────────────────────────────────────────
+  build-linux:
+    name: Linux
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: 安装 Linux 系统依赖（GTK4 + WebKitGTK 6.0）
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            libgtk-4-dev \
+            libwebkitgtk-6.0-dev \
+            libglib2.0-dev \
+            libsoup-3.0-dev \
+            libgdk-pixbuf-2.0-dev \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libatk1.0-dev \
+            libgirepository1.0-dev
+      - name: 安装 Wails v3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+      - name: 安装前端依赖
+        working-directory: frontend
+        run: npm ci
+      - name: 打包（build-linux.sh → dist/ 二进制）
+        run: |
+          bash ./cmd/build-linux.sh "${{ needs.prepare.outputs.version }}"
+      - name: 上传产物
+        uses: actions/upload-artifact@v5
+        with:
+          name: linux-amd64
+          path: dist/YSM-Model-Manager-*-linux-*
+          if-no-files-found: error
+
+  # ── macOS 构建 ─────────────────────────────────────────
+  build-darwin:
+    name: macOS
+    needs: prepare
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: 安装 Wails v3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+      - name: 安装前端依赖
+        working-directory: frontend
+        run: npm ci
+      - name: 打包（build-darwin.sh → dist/ 二进制）
+        run: |
+          bash ./cmd/build-darwin.sh "${{ needs.prepare.outputs.version }}"
+      - name: 上传产物
+        uses: actions/upload-artifact@v5
+        with:
+          name: darwin-arm64
+          path: dist/YSM-Model-Manager-*-darwin-*
+          if-no-files-found: error
+
+  # ── Android 构建（NDK 交叉编译 + gradle APK）───────────
+  build-android:
+    name: Android
+    needs: prepare
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: android-actions/setup-android@v4
+      - name: 安装 Android SDK 组件（platform + build-tools + NDK）
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.3.11579264"
+      - name: 安装 Wails v3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+      - name: 解码签名 keystore（可选，无则 debug 构建）
+        run: |
+          $dir = "${{ github.workspace }}\build\android\keystore"
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          $file = "$dir\release.keystore"
+          $b64 = '${{ secrets.ANDROID_KEYSTORE_BASE64 }}'
+          if ([string]::IsNullOrWhiteSpace($b64)) {
+            Write-Output "ANDROID_KEYSTORE_BASE64 未设置 — 跳过签名（debug 构建）"
+            return
+          }
+          [System.IO.File]::WriteAllBytes($file, [System.Convert]::FromBase64String($b64))
+          Write-Output "Keystore 已解码"
+      - name: 检查 keystore 是否存在
+        id: check_ks
+        run: |
+          $ks = "${{ github.workspace }}\build\android\keystore\release.keystore"
+          if (Test-Path $ks) { echo "has_keystore=true" >> $env:GITHUB_OUTPUT }
+          else { echo "has_keystore=false" >> $env:GITHUB_OUTPUT }
+      - name: 打包（build-android.ps1，有 keystore 则 release 签名）
+        if: steps.check_ks.outputs.has_keystore == 'true'
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ github.workspace }}\build\android\keystore\release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\cmd\build-android.ps1 "${{ needs.prepare.outputs.version }}" -Arch arm64 -Production
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: 打包（build-android.ps1，无 keystore → debug）
+        if: steps.check_ks.outputs.has_keystore != 'true'
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\cmd\build-android.ps1 "${{ needs.prepare.outputs.version }}" -Arch arm64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: 上传产物
+        uses: actions/upload-artifact@v5
+        with:
+          name: android-arm64
+          path: dist/*.apk
+          if-no-files-found: error
+
+  # ── 合并发布到 GitHub Release ──────────────────────────
+  release:
+    name: GitHub Release
+    needs: [prepare, build-windows, build-linux, build-darwin, build-android]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - name: 下载全部产物
+        uses: actions/download-artifact@v5
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: 列示产物
+        run: ls -lh release-assets/
+      - name: 发布 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*

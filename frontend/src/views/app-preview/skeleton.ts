@@ -226,7 +226,8 @@ export async function loadModel2D(
       "wheel",
       (e) => {
         e.preventDefault();
-        _zoom = Math.max(0.2, Math.min(10, _zoom + (e.deltaY > 0 ? -0.2 : 0.2)));
+        // 与 zoom.ts 同口径：比例式缩放，避免固定步长在高倍率下失真
+        _zoom = Math.max(0.2, Math.min(10, _zoom * Math.exp(-e.deltaY * 0.002)));
         doRender();
       },
       { passive: false },
@@ -780,11 +781,18 @@ export async function loadModel2D(
             "font-size:10px;padding:1px 6px;border:none;background:rgba(124,131,255,0.3);color:#fff;cursor:pointer;border-radius:0 0 3px 3px;width:100%;font-family:inherit";
           boneDetailCopy.onclick = function (): void {
             const txt = boneDetailText.textContent || "";
-            navigator.clipboard.writeText(txt).catch(function () {});
-            boneDetailCopy.textContent = "✅ 已复制";
-            setTimeout(function () {
-              boneDetailCopy.textContent = "📋 复制";
-            }, 1500);
+            navigator.clipboard
+              .writeText(txt)
+              .then(function () {
+                boneDetailCopy.textContent = "✅ 已复制";
+                setTimeout(function () {
+                  boneDetailCopy.textContent = "📋 复制";
+                }, 1500);
+              })
+              .catch(function () {
+                // 剪贴板写入失败（权限/焦点）→ 恢复按钮，不假成功
+                boneDetailCopy.textContent = "📋 复制";
+              });
           };
           boneDetail.appendChild(boneDetailText);
           boneDetail.appendChild(boneDetailCopy);

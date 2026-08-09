@@ -118,6 +118,11 @@ export function matchImports(text) {
 /* ---------- 主流程 ---------- */
 function main() {
   const { json, update } = parseArgs(process.argv.slice(2), { bools: ['json', 'update'] });
+  // ADR-043 fail-closed：SRC_ROOT 缺失 = 扫描不完整，必须显式失败而非空结果假绿
+  if (!existsSync(SRC_ROOT)) {
+    console.error(`❌ frontend/src 目录不存在（${SRC_ROOT}），扫描不完整，拒绝放行`);
+    process.exit(1);
+  }
   const violations = [];
 
   for (const abs of walk(SRC_ROOT, SCAN_OPTS)) {

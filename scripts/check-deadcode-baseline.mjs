@@ -169,7 +169,9 @@ function main() {
     for (const k of goneK.slice(0, 10)) infos.push(`[已清理] knip 基线项消失: ${k}`);
     for (const k of goneJ.slice(0, 10)) infos.push(`[已清理] jscpd 基线项消失: ${k}`);
   } else {
-    infos.push('无基线文件——首次运行请执行 --update-baseline 建立基线');
+    // ADR-043 fail-closed：无基线文件 = 无法比对 = 扫描不完整，必须 ERROR 而非 INFO——
+    // 此前仅提示「首次运行请建基线」后 exit 0，门禁把「未建立基线」误当「无新增死代码」放行
+    errors.push('无基线文件（deadcode-baseline.json 不存在）——无法比对死代码/重复代码，请先运行 node scripts/check-deadcode-baseline.mjs --update-baseline 建立基线');
   }
 
   if (JSON_OUT) {

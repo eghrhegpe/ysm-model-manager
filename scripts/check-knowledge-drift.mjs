@@ -321,6 +321,11 @@ function main() {
     runAffected(AFFECTED_PATHS);
     return;
   }
+  // ADR-043 fail-closed：KC_DIR 缺失 = 扫描不完整，必须显式失败而非空结果假绿
+  //（此前各 check 函数对缺失目录静默 return，errors 恒 0 → --check 假绿）
+  if (!fs.existsSync(KC_DIR)) {
+    errors.push('docs/knowledge/ 目录不存在，扫描不完整');
+  }
   checkKnowledgeMeta();
   checkKnowledgeSources();
   checkIndexLinks();

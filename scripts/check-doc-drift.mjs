@@ -145,7 +145,13 @@ const CODE_PATH_RE = /`((?:frontend|go|internal|scripts)\/[a-zA-Z0-9_./-]+)`/g;
 function checkArchRefs() {
   let baseline = { staleRefs: [] };
   if (fs.existsSync(BASELINE_FILE)) {
-    try { baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf-8')); } catch { baseline = { staleRefs: [] }; }
+    // ADR-043 fail-closed：基线 JSON 损坏不得静默当空——staleRefs 清空会让此前
+    // 登记为 stale 的引用全部重新报 ERROR（假阳性淹没真问题）
+    try { baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf-8')); }
+    catch (e) {
+      errors.push(`[架构树] 基线文件损坏（${BASELINE_FILE}）：${e.message}——请修复或删除后重跑，切勿静默放行`);
+      baseline = { staleRefs: [] };
+    }
   }
   const staleRefs = new Set(baseline.staleRefs || []);
   for (const doc of ARCH_DOCS) {
@@ -213,7 +219,12 @@ function checkArchCoverage() {
 
   let baseline = { unregistered: [] };
   if (fs.existsSync(BASELINE_FILE)) {
-    try { baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf-8')); } catch { baseline = { unregistered: [] }; }
+    // ADR-043 fail-closed：同上——损坏基线不得静默当空（--fix 前无法正确比对）
+    try { baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf-8')); }
+    catch (e) {
+      errors.push(`[架构树] 基线文件损坏（${BASELINE_FILE}）：${e.message}——请修复或删除后重跑 --fix`);
+      baseline = { unregistered: [] };
+    }
   }
   const known = new Set(baseline.unregistered || []);
 

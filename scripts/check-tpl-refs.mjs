@@ -53,6 +53,11 @@ function collectRefs(text) {
 }
 
 function main() {
+  // ADR-043 fail-closed：SRC_DIR 缺失 = 扫描不完整，必须显式失败而非空结果假绿
+  if (!fs.existsSync(SRC_DIR)) {
+    console.error(`❌ frontend/src 目录不存在（${SRC_DIR}），扫描不完整，拒绝放行`);
+    return 1;
+  }
   const files = walk(SRC_DIR, { exts: ['.ts', '.js'] }).filter(
     (f) => !/\.test\./.test(f) && !/\.spec\./.test(f),
   );

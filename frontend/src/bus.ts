@@ -63,6 +63,8 @@ export interface BusEvents {
   // 导航
   "nav:change": NavPagePayload;
   "nav:changed": NavPagePayload;
+  // i18n
+  "lang:changed": { lang: string };
   // 反馈
   "toast:show": ToastPayload;
   // 数据刷新

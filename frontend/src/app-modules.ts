@@ -4,6 +4,7 @@ import { register } from "./services/registry.ts";
 import { Window } from "@wailsio/runtime";
 import { getApp } from "./wails/app.ts";
 import { registerErrorDiary } from "./core/error-diary.ts";
+import { initI18n } from "./core/i18n/locale.ts";
 import { friendlyError } from "./utils/dom/errors.ts";
 import { checkUpdateSilent } from "./features/version-updater.ts";
 
@@ -152,6 +153,7 @@ export function applyUIPrefs() {
 // 启动初始化
 (async () => {
   registerErrorDiary();
+  await initI18n();
   await initTheme();
   applyUIPrefs();
   // 静默检查更新（不阻塞界面）

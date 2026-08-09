@@ -49,6 +49,15 @@ export function registerAndroidEvents(unsubs: Array<() => void>): void {
     }),
   );
 
+  // 存储授权：用户在设置页开启"所有文件访问"后返回，重扫模型库
+  // （MainActivity onResume / onActivityResult 检测到新授权时发此事件）
+  unsubs.push(
+    Events.On("storage:permissionGranted", () => {
+      bus.emit("tree:reload");
+      bus.emit("stats:refresh");
+    }),
+  );
+
   // 电池/主题：预留扩展点（与 MikuMikuAR A3-04 对齐，注册即未来可消费）
   unsubs.push(Events.On("android:BatteryChanged", () => {}));
   unsubs.push(Events.On("android:ThemeChanged", () => {}));

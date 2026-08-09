@@ -116,6 +116,38 @@ public class WailsJSBridge {
     }
 
     /**
+     * Check whether MANAGE_EXTERNAL_STORAGE (Android 11+) or legacy
+     * READ/WRITE_EXTERNAL_STORAGE (Android 10-) is currently granted.
+     *
+     * Called from JavaScript: wails.hasStoragePermission()
+     */
+    @JavascriptInterface
+    public boolean hasStoragePermission() {
+        android.app.Activity activity = bridge.getActivity();
+        if (activity instanceof MainActivity) {
+            return ((MainActivity) activity).hasManageStoragePermission();
+        }
+        return false;
+    }
+
+    /**
+     * Prompt the user to grant "All files access" in Settings (storage
+     * permission for the model library). Called from JS when the library
+     * can't read the user-selected repo path.
+     *
+     * Called from JavaScript: wails.requestStoragePermission()
+     */
+    @JavascriptInterface
+    public void requestStoragePermission() {
+        android.app.Activity activity = bridge.getActivity();
+        if (activity instanceof MainActivity) {
+            ((MainActivity) activity).requestStoragePermission();
+        } else {
+            Log.w(TAG, "requestStoragePermission: activity is not MainActivity");
+        }
+    }
+
+    /**
      * Send a callback response to JavaScript
      */
     private void sendCallback(String callbackId, String result, String error) {

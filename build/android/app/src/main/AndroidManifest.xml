@@ -15,6 +15,17 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+    <!-- 外部存储访问（模型库授权，ADR-046 P2，对齐 MikuMikuAR ADR-017）
+         Android 13+ READ_EXTERNAL_STORAGE 已废弃；MANAGE_EXTERNAL_STORAGE 是
+         读取任意用户路径（模型仓库）的唯一途径，用户需在设置中授予
+         "所有文件访问权限"（requestStoragePermission 引导）。 -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
     <queries>
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />

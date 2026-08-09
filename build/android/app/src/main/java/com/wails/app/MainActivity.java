@@ -1,8 +1,10 @@
 package com.wails.app;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
@@ -14,12 +16,14 @@ import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.PowerManager;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
 import android.webkit.WebResourceRequest;
@@ -27,6 +31,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -54,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String WAILS_SCHEME = "https";
     private static final String WAILS_HOST = "wails.localhost";
     private static final int FILE_PICKER_REQUEST = 7001;
+    private static final int MANAGE_STORAGE_REQUEST = 7011;
 
     private WebView webView;
     private WailsBridge bridge;
@@ -73,6 +79,10 @@ public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_REQUEST = 7010;
     private File pendingCaptureFile;
     private boolean pendingCaptureIsVideo;
+    // Tracks whether MANAGE_EXTERNAL_STORAGE was granted the last time we
+    // checked. onResume compares against this to detect a fresh grant and
+    // fires a "storage:permissionGranted" event so JS can rescan the library.
+    private boolean lastStorageGranted = false;
 
     // System-event sources (battery/power, screen lock, network). Registered in
     // onCreate, torn down in onDestroy. Each forwards a "system:*" event to JS
@@ -435,6 +445,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == MANAGE_STORAGE_REQUEST) {
+            // Returned from "All files access" Settings screen. A grant is
+            // detected here (and also in onResume for backgrounded returns);
+            // fire the event so JS can rescan the model library.
+            if (hasManageStoragePermission() && bridge != null) {
+                bridge.emitSystemEvent("storage:permissionGranted", "{}");
+            }
+            return;
+        }
         if (requestCode == PHOTO_CAPTURE_REQUEST || requestCode == VIDEO_CAPTURE_REQUEST) {
             handleCaptureResult(resultCode, data);
             return;
@@ -755,6 +774,85 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (bridge != null) {
             bridge.onResume();
+        }
+        // Detect a fresh MANAGE_EXTERNAL_STORAGE grant while the app was
+        // backgrounded (user just toggled it in Settings). Fire an event so
+        // JS can rescan the model library.
+        boolean nowGranted = hasManageStoragePermission();
+        if (nowGranted && !lastStorageGranted) {
+            if (bridge != null) {
+                bridge.emitSystemEvent("storage:permissionGranted", "{}");
+            }
+        }
+        lastStorageGranted = nowGranted;
+    }
+
+    // ── 外部存储授权（模型库 MANAGE_EXTERNAL_STORAGE，ADR-046 P2）──
+
+    /** Returns true if the app holds MANAGE_EXTERNAL_STORAGE (Android 11+)
+     *  or READ/WRITE_EXTERNAL_STORAGE (Android 10 and below). */
+    public boolean hasManageStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return Environment.isExternalStorageManager();
+        }
+        // Android 10 and below: legacy READ/WRITE_EXTERNAL_STORAGE
+        return checkSelfPermission("android.permission.READ_EXTERNAL_STORAGE")
+                == PackageManager.PERMISSION_GRANTED
+            && checkSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE")
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** Prompts the user to grant "All files access" in Settings.
+     *  Called from JS via WailsBridge when the model library finds itself
+     *  unable to read the user-selected repo path. */
+    public void requestStoragePermission() {
+        if (hasManageStoragePermission()) {
+            if (bridge != null) {
+                bridge.emitSystemEvent("storage:permissionGranted", "{}");
+            }
+            return;
+        }
+        runOnUiThread(() -> {
+            new AlertDialog.Builder(this)
+                .setTitle("需要文件访问权限")
+                .setMessage("YSM 模型管理器需要读取模型仓库目录中的模型与资源文件。\n\n" +
+                            "请在接下来的设置页面中，开启「允许管理所有文件」权限，然后返回应用。")
+                .setPositiveButton("去设置", (DialogInterface d, int which) -> {
+                    launchAllFilesAccessSettings();
+                })
+                .setNegativeButton("稍后", (DialogInterface d, int which) -> {
+                    Toast.makeText(this, "未授权，模型库将无法读取仓库目录", Toast.LENGTH_LONG).show();
+                    d.dismiss();
+                })
+                .setCancelable(false)
+                .show();
+        });
+    }
+
+    private void launchAllFilesAccessSettings() {
+        try {
+            Intent intent;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+            } else {
+                intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+            }
+            intent.addCategory(Intent.CATEGORY_DEFAULT);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivityForResult(intent, MANAGE_STORAGE_REQUEST);
+        } catch (Exception e) {
+            Log.e(TAG, "launchAllFilesAccessSettings failed", e);
+            // Fallback: open generic settings
+            try {
+                Intent fallback = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                fallback.setData(Uri.parse("package:" + getPackageName()));
+                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivityForResult(fallback, MANAGE_STORAGE_REQUEST);
+            } catch (Exception e2) {
+                Log.e(TAG, "fallback settings intent also failed", e2);
+            }
         }
     }
 

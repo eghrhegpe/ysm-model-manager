@@ -122,6 +122,11 @@ public class WailsBridge {
         this.activity = activity;
     }
 
+    /** Returns the host Activity (used by WailsJSBridge for Android-specific APIs). */
+    public Activity getActivity() {
+        return activity;
+    }
+
     /**
      * Initialize the native Go library
      */

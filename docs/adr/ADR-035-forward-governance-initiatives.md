@@ -1,6 +1,6 @@
 # ADR-035：远期治理立项：组件测试与 CI 门槛
 
-- **状态**：✅ 已采纳（立项登记，实施排期中）
+- **状态**：✅ 已采纳（立项登记，实施排期中；2026-08-09 增补 G-4 E2E 覆盖广度报告）
 - **日期**：2026-08-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/components` / `.github/workflows/release.yml` / `scripts/ai-mistake-tracker.mjs`
@@ -13,13 +13,16 @@
 
 ## 2. 决策（Decision）
 
-统一登记三项立项（开放 backlog，实施时按优先级排期）：
+统一登记四项立项（开放 backlog，实施时按优先级排期）：
 
 | 编号 | 立项 | 优先级 | 范围 | 验收标准 |
 |------|------|--------|------|---------|
 | G-1 | 前端组件级测试 | P2 | app-tree / app-content 交互路径组件测试（连点/多选/tab 切换等），**前置：抗脆弱测试基础设施**（见下） | 抗脆弱基础设施落地（testid 规范 + 状态可查询 + helper 抽象 + 契约守护）后，组件测试 ≥10 用例且 `vitest run` 全绿 |
 | G-2 | CI 门槛增强 | P2 | `release.yml` 主 CI 增加 `go vet` / `adr-check` / doctor 静态组件为 PR 门槛（防治理规则回潮） | PR 门槛生效，违规即红 |
 | G-3 | ai-mistake-tracker 反哺 | P3 | `ai-mistake-tracker.mjs` 的 `RULE_VIOLATIONS` 增加反模式关键词检测（先删后建/静默降级/无守卫注册/无 generation 等），让修复链数据反哺陷阱清单 | 运行输出可统计反模式修复 |
+| G-4 | E2E 覆盖广度报告 | P3 | `frontend/e2e/`（Playwright + vite dev 纯前端 + mock bridge）按需采集 `page.coverage`，输出「端到端广度报告」（哪些源文件被真实交互走到），与 `scripts/test-coverage-report.mjs` 并列供人工查看；**不并入 vitest 覆盖率门禁、不做 CI 红线**——浏览器行覆盖按帧采样易抖动，并入会污染确定性防回退地基；E2E 进 CI 属 ADR-037 决策范围 | 脚本可跑通并输出广度报告；`vitest.config.ts` 的阈值与 exclude 不变；脚本注释说明用途与边界 |
+
+**G-4 背景**：29 个组件级低覆盖文件（骨架/3D/弹窗等）按分层决策归 G-1 组件测试 / ADR-037 E2E / 人工验证，行覆盖不是其正确度量；E2E 覆盖仅作「真实交互走到了哪些代码」的人工观察面，门槛仍由确定性层（Go 单测 + vitest）承担。
 
 ### G-1 抗脆弱测试基础设施（前置规划）
 
@@ -59,8 +62,8 @@
 
 ## 4. 数据溯源
 
-- **来源**：审核收官后远期方向评估（2026-08-04）——用户确认立项三方向（组件测试 / CI 门槛 / mistake-tracker 反哺）；
-- **关联**：ADR-013（治理收敛 Phase 2 CI）、ADR-017（前端增强台账）、ADR-020（脚本工具链）、ADR-023（测试体系）；
+- **来源**：审核收官后远期方向评估（2026-08-04）——用户确认立项三方向（组件测试 / CI 门槛 / mistake-tracker 反哺）；2026-08-09 用户确认增补 G-4（E2E 覆盖广度报告，不进门禁）；
+- **关联**：ADR-013（治理收敛 Phase 2 CI）、ADR-017（前端增强台账）、ADR-020（脚本工具链）、ADR-023（测试体系）、ADR-037（E2E 引入）；
 - **验证**：`node scripts/new-adr.mjs` 占号 + `adr-check` 登记一致（34 文件/34 条）。
 
 <!-- 文件名: forward-governance-initiatives.md → 实际文件 ADR-035-forward-governance-initiatives.md -->

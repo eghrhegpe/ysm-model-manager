@@ -2,15 +2,15 @@
 // 桌面：Wails Dialog（CanChooseDirectories，官方支持）
 // Android：Wails v3 官方明确拒绝目录选择（dialogs_android.go 报错，SAF 返回
 //   content:// URI 而非文件系统路径，Go os.* 不可读；MikuMikuAR ADR-194 亦废弃 SAF）
-//   → 改为「授权检查 → modalPrompt 输入绝对路径」（MANAGE_EXTERNAL_STORAGE
-//   授权后 Go os.* 可直读任意路径）。
+//   → 改为「授权检查 → 自动定位公共仓库目录」（查看器模式：固定路径
+//   /storage/emulated/0/YSM-Model-Manager，授权 MANAGE_EXTERNAL_STORAGE 后 Go os.*
+//   直读，用户把模型放入该目录即可使用，无需选择器）。
 import { getApp } from "../../wails/app.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { getAndroidBridge } from "./android-bridge.ts";
-import { modalPrompt } from "./dialogs/modal.ts";
 
-/** 选择目录：桌面走系统对话框；Android 走授权检查 + 手动输入绝对路径 */
+/** 选择目录：桌面走系统对话框；Android 走授权检查 + 自动定位公共目录 */
 export async function pickDirectory(): Promise<string | null> {
   const bridge = getAndroidBridge();
   if (!bridge) {
@@ -30,11 +30,14 @@ export async function pickDirectory(): Promise<string | null> {
     return null;
   }
 
-  // 已授权：手动输入绝对路径（MANAGE_EXTERNAL_STORAGE 授权后 os.* 可直读）
-  const dir = await modalPrompt({
-    title: t("settings.path.selectDir"),
-    placeholder: t("settings.path.androidPathPlaceholder"),
-    okText: t("common.confirm"),
+  // 已授权：自动定位公共仓库目录（固定路径，查看器模式）
+  const { GetDefaultRepoRoot } = await getApp();
+  const dir = await GetDefaultRepoRoot();
+  if (!dir) return null;
+  bus.emit("toast:show", {
+    msg: t("settings.path.autoRepoRoot") + " " + dir,
+    duration: 4000,
+    type: "info",
   });
-  return dir && dir.trim() ? dir.trim() : null;
+  return dir;
 }

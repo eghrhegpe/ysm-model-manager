@@ -142,6 +142,14 @@ func (a *App) DetectResourceType(path string) string {
 	return packs.DetectResourceType(path, &registry)
 }
 
+// GetDefaultRepoRoot 返回平台默认公共仓库根目录（不含类型子目录）。
+// Android：固定公共路径（如 /storage/emulated/0/YSM-Model-Manager，授权
+// MANAGE_EXTERNAL_STORAGE 后直读，查看器模式）；desktop：空串。
+// 供前端 Android 分支「自动定位公共目录」使用（ADR-046 P2）。
+func (a *App) GetDefaultRepoRoot() string {
+	return defaultRepoRoot()
+}
+
 // GetRepoRoot 根据资源类型返回对应的仓库根目录
 func (a *App) GetRepoRoot(rtype string) (string, error) {
 	cfg := a.LoadAppConfig()
@@ -149,9 +157,9 @@ func (a *App) GetRepoRoot(rtype string) (string, error) {
 	if root := specificRoot(cfg, rtype); root != "" {
 		return root, nil
 	}
+	subDir := types.StorageSubDir(rtype)
 	// 2. FilesRoot + 存储子目录
 	if cfg.FilesRoot != "" {
-		subDir := types.StorageSubDir(rtype)
 		if subDir != "" {
 			return filepath.Join(cfg.FilesRoot, subDir), nil
 		}
@@ -159,6 +167,14 @@ func (a *App) GetRepoRoot(rtype string) (string, error) {
 		if rtype == "" {
 			return cfg.FilesRoot, nil
 		}
+	}
+	// 3. 平台默认公共仓库根（Android：固定路径，授权 MANAGE_EXTERNAL_STORAGE 后直读，
+	//    查看器模式；desktop：空串不介入，用户需在设置页配置）
+	if root := defaultRepoRoot(); root != "" {
+		if subDir != "" {
+			return filepath.Join(root, subDir), nil
+		}
+		return root, nil
 	}
 	return "", nil
 }

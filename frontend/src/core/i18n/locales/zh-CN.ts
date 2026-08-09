@@ -319,7 +319,7 @@ export const zhCN: Record<string, string> = {
   "settings.path.default": "↩️ 默认",
   "settings.path.clickToChange": "点击更改路径",
   "settings.path.needStoragePermission": "需要「所有文件访问」权限才能读取模型库，正在引导授权…",
-  "settings.path.androidPathPlaceholder": "输入目录绝对路径，如 /sdcard/Download/YSM",
+  "settings.path.autoRepoRoot": "✅ 模型库已定位到公共目录：",
   "settings.saveSuccess": "保存成功",
   "settings.saveFailed": "保存失败",
   "settings.resetDefault": "↩️ 已恢复默认",

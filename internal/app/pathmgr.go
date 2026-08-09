@@ -11,6 +11,11 @@ package app
 type pathManager interface {
 	// AppDataRoot 返回应用配置根目录（不含 "YSM-Model-Manager" 子目录）
 	AppDataRoot() (string, error)
+	// DefaultRepoRoot 返回默认公共仓库根目录（不含类型子目录）。
+	// desktop：空串（仓库路径由用户在设置页配置，不自动拼接）；
+	// android：固定公共路径（如 /storage/emulated/0/YSM-Model-Manager），
+	// 授权 MANAGE_EXTERNAL_STORAGE 后 os.* 直读（对齐 MikuMikuAR /sdcard/MMD 模式）
+	DefaultRepoRoot() string
 }
 
 // pathMgr 包级单例（由平台文件 init 注入实现）
@@ -26,4 +31,12 @@ func appDataRoot() string {
 		return "."
 	}
 	return dir
+}
+
+// defaultRepoRoot 返回平台默认公共仓库根（无平台实现时为空）
+func defaultRepoRoot() string {
+	if pathMgr == nil {
+		return ""
+	}
+	return pathMgr.DefaultRepoRoot()
 }

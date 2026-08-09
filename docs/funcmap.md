@@ -30,7 +30,7 @@
 | Go·更新器 | 1 | 10 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 23 |
-| Go(internal)·应用入口 | 16 | 170 |
+| Go(internal)·应用入口 | 16 | 171 |
 | 前端·根 (app-modules/bus) | 2 | 14 |
 | 前端·核心 | 14 | 27 |
 | 前端·特性 | 13 | 60 |
@@ -40,7 +40,7 @@
 | frontend/views | 53 | 151 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **185** | **835** |
+| **合计** | **185** | **836** |
 
 ## Go·头像
 
@@ -565,21 +565,22 @@
 | `App.GetLitematicVoxelData()` | `internal/app/resource_bindings:125` | GetLitematicVoxelData 读取投影文件体素数据（按颜色分组的方块位置） |
 | `App.SetVoxelMaxBlocks()` | `internal/app/resource_bindings:130` | SetVoxelMaxBlocks 设置 3D 体素渲染上限，0=恢复默认 200000 |
 | `App.DetectResourceType()` | `internal/app/resource_bindings:137` | DetectResourceType 检测指定文件的资源类型 |
-| `App.GetRepoRoot()` | `internal/app/resource_bindings:146` | GetRepoRoot 根据资源类型返回对应的仓库根目录 |
-| `App.ToggleResourcePack()` | `internal/app/resource_bindings:194` | ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled） P2 修复：补路径守卫——原实现 os.Rename 对任意路径可重命 |
-| `App.IsResourcePackEnabled()` | `internal/app/resource_bindings:217` | IsResourcePackEnabled 检查资源包是否启用 |
-| `App.SelectImportZip()` | `internal/app/resource_bindings:222` | SelectImportZip 打开文件选择器选取 .zip 文件 |
-| `App.SelectImportFile()` | `internal/app/resource_bindings:235` | SelectImportFile 打开文件选择器，按给定扩展名过滤 filter 格式: "显示名|*.ext1;*.ext2" |
-| `App.SetResourceRoot()` | `internal/app/resource_bindings:256` | SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认） P1 修复：非空入参经 filepath.Abs(filepath.Clean()) 规范化，防止含 |
-| `App.ResetResourceRoot()` | `internal/app/resource_bindings:287` | ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值） |
-| `App.ImportResourcePack()` | `internal/app/resource_bindings:313` | ImportResourcePack 使用策略模式导入资源包 |
-| `App.ImportByType()` | `internal/app/resource_bindings:326` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
-| `App.DeleteResourcePack()` | `internal/app/resource_bindings:343` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： src 为 ysm.json 时整组删除父目录（文件夹型模型），否则删除单文件。 |
-| `App.DeleteModelDir()` | `internal/app/resource_bindings:349` | DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹 路径守卫：限制在 FilesRoot 内，防止删除系统目录 |
-| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:362` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串） |
-| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:372` | CountDuplicateFiles 快速统计重复文件数量 |
-| `App.InvalidateScanCache()` | `internal/app/resource_bindings:382` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache） |
-| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:388` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
+| `App.GetDefaultRepoRoot()` | `internal/app/resource_bindings:149` | GetDefaultRepoRoot 返回平台默认公共仓库根目录（不含类型子目录）。 |
+| `App.GetRepoRoot()` | `internal/app/resource_bindings:154` | GetRepoRoot 根据资源类型返回对应的仓库根目录 |
+| `App.ToggleResourcePack()` | `internal/app/resource_bindings:206` | ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled） P2 修复：补路径守卫——原实现 os.Rename 对任意路径可重命 |
+| `App.IsResourcePackEnabled()` | `internal/app/resource_bindings:229` | IsResourcePackEnabled 检查资源包是否启用 |
+| `App.SelectImportZip()` | `internal/app/resource_bindings:234` | SelectImportZip 打开文件选择器选取 .zip 文件 |
+| `App.SelectImportFile()` | `internal/app/resource_bindings:247` | SelectImportFile 打开文件选择器，按给定扩展名过滤 filter 格式: "显示名|*.ext1;*.ext2" |
+| `App.SetResourceRoot()` | `internal/app/resource_bindings:268` | SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认） P1 修复：非空入参经 filepath.Abs(filepath.Clean()) 规范化，防止含 |
+| `App.ResetResourceRoot()` | `internal/app/resource_bindings:299` | ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值） |
+| `App.ImportResourcePack()` | `internal/app/resource_bindings:325` | ImportResourcePack 使用策略模式导入资源包 |
+| `App.ImportByType()` | `internal/app/resource_bindings:338` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
+| `App.DeleteResourcePack()` | `internal/app/resource_bindings:355` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： src 为 ysm.json 时整组删除父目录（文件夹型模型），否则删除单文件。 |
+| `App.DeleteModelDir()` | `internal/app/resource_bindings:361` | DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹 路径守卫：限制在 FilesRoot 内，防止删除系统目录 |
+| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:374` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串） |
+| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:384` | CountDuplicateFiles 快速统计重复文件数量 |
+| `App.InvalidateScanCache()` | `internal/app/resource_bindings:394` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache） |
+| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:400` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
 | `App.GetWasmBinary()` | `internal/app/wasm_embed:5` | GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。 |
 
 ## 前端·根 (app-modules/bus)
@@ -830,7 +831,7 @@
 | `TagSetResult()` | `frontend/src/utils/dom/dialogs/tag-set:6` | — |
 | `MAX_TAG_LENGTH()` | `frontend/src/utils/dom/dialogs/tag-set:12` | 标签最大长度（与原 addTag 一致） |
 | `addTagToSet()` | `frontend/src/utils/dom/dialogs/tag-set:19` | 向标签集合添加一个标签（已 trim）： 空输入 → 原样返回；重复 → error「标签已存在」；超长 → error「最多 20 个字符」； 合法 → 排序后返回新数组。错误文 |
-| `pickDirectory()` | `frontend/src/utils/dom/directory-picker:14` | 选择目录：桌面走系统对话框；Android 走授权检查 + 手动输入绝对路径 |
+| `pickDirectory()` | `frontend/src/utils/dom/directory-picker:14` | 选择目录：桌面走系统对话框；Android 走授权检查 + 自动定位公共目录 |
 | `ParsedModelName()` | `frontend/src/utils/dom/display:6` | 解析后的模型文件名字段 |
 | `parseModelName()` | `frontend/src/utils/dom/display:27` | 解析模型文件名 → 结构化字段 支持格式: [作者]【作品】角色变体2023-05.ysm 也兼容: [作者]《作品》角色变体2023-05.ysm |
 | `renderDisplayName()` | `frontend/src/utils/dom/display:77` | 渲染美化文件名 HTML（通用接口） 应用 CSS 变量: --meta-author, --meta-work, --meta-date |

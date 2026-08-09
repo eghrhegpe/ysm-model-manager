@@ -317,7 +317,7 @@ export const en: Record<string, string> = {
   "settings.path.default": "↩️ Default",
   "settings.path.clickToChange": "Click to change path",
   "settings.path.needStoragePermission": "All files access is required to read the model library — opening grant screen…",
-  "settings.path.androidPathPlaceholder": "Enter absolute directory path, e.g. /sdcard/Download/YSM",
+  "settings.path.autoRepoRoot": "✅ Model library located at shared directory: ",
   "settings.saveSuccess": "Saved successfully",
   "settings.saveFailed": "Save failed",
   "settings.resetDefault": "↩️ Restored to default",

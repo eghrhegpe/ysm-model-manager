@@ -311,6 +311,16 @@ export function GetConfigPath(): $CancellablePromise<string> {
     return $Call.ByID(3095584372);
 }
 
+/**
+ * GetDefaultRepoRoot 返回平台默认公共仓库根目录（不含类型子目录）。
+ * Android：固定公共路径（如 /storage/emulated/0/YSM-Model-Manager，授权
+ * MANAGE_EXTERNAL_STORAGE 后直读，查看器模式）；desktop：空串。
+ * 供前端 Android 分支「自动定位公共目录」使用（ADR-046 P2）。
+ */
+export function GetDefaultRepoRoot(): $CancellablePromise<string> {
+    return $Call.ByID(2892280306);
+}
+
 export function GetGlobalCustomDir(mcRoot: string): $CancellablePromise<string> {
     return $Call.ByID(4119708496, mcRoot);
 }

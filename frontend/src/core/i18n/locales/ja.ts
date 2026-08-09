@@ -70,7 +70,7 @@ export const ja: Record<string, string> = {
   "dialog.tagTooLong": "タグは20文字以内で入力してください",
   "dialog.renameModel": "モデルの名前を変更",
   "dialog.readHeaderTitle": "YSMファイルのヘッダーから作者／説明を読み取り",
-  "dialog.readHeader": "ヘッダーを読取",
+  "dialog.readHeader": "ヘッダーを読み取る",
   "dialog.notImported": "ファイルがまだインポートされていないため、ヘッダーを読み取れません",
   "dialog.reading": "読み取り中…",
   "dialog.readFailed": "読み取りに失敗しました。ファイルが有効なYSMではない可能性があります",
@@ -347,7 +347,7 @@ export const ja: Record<string, string> = {
   "settings.relink.error": "❌ {error}",
 
   // ── Settings - Link Mode ──
-  "settings.link.changed": "✅ リンクモードを次に切り替えました：{mode}",
+  "settings.link.changed": "✅ リンクモードを {mode} に切り替えました",
   "settings.linkModeChanged": "リンクモードを切り替えました",
   "settings.reapplyLinks": "リンクモードを再適用",
   "settings.reapplyDone": "再適用が完了しました",

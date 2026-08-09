@@ -69,8 +69,10 @@ upstream/
 tests/ysm-reference/
 .cov-hint-e2e.txt
 
-# Android 构建产物（NDK 交叉编译输出，不入库）
+# Android 构建产物（NDK .so / gradle 输出 / wails 前端资源打包，不入库）
 build/android/app/src/main/jniLibs/
+build/android/app/src/main/assets/
+build/android/build/
 build/android/.gradle/
 build/android/app/build/
 build/android/local.properties

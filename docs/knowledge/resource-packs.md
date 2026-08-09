@@ -23,7 +23,7 @@ use_when:
 
 `resource-packs.ts` 是一个薄 wrapper：把仓库页的各类资源包 tab（资源包/光影包/蓝图/MMD/VRC/投影）统一委托给 `<app-resource-manager>` 组件渲染。文件本身不含业务逻辑，仅负责挂载组件、以 `rtype` 属性区分资源类型，是「tab 页 → 通用资源管理组件」的适配层。
 
-> **⚠️ 幽灵路径状态（审计发现 2026-08-08）**：当前 UI 的 repo 模板（tpl.ts:9-13）只有 tree/import/recycle/dedup/oldest 五个 `.repo-tab` 按钮，**无 resourcepacks/shaderpacks 等 tab 按钮**——资源类型切换改由 `.repo-subtab`（data-rtab）重渲染 `<app-tree>`（tpl.ts:16-25）。因此 `initResourcePacks` 的六个调用分支全部不可达（app-content/index.ts:395-438 为死分支）。若为 UI 重构有意移除，后续可删除死分支；wrapper 保留作兼容层。
+> **⚠️ 幽灵路径状态（审计 2026-08-08 → 2026-08-09 收敛）**：repo 模板（tpl.ts:10-14）只有 tree/import/recycle/dedup/oldest 五个 `.repo-tab` 按钮，无 resourcepacks 等 tab 按钮；资源类型切换改由 `.repo-subtab`（data-rtab）重渲染 `<app-tree>`（tpl.ts:17-25）。**2026-08-09 已删除 `initResourcePacks` 的六个调用分支与 app-content/index.ts:33 的导入**（P2 审计：tpl 无按钮 + 无容器 id 双重复死不可达；改由 .repo-subtab 重渲染 `<app-tree>` 承担资源类型切换）。wrapper 保留作兼容层（有测试守护），若未来恢复资源包 tab 需补 tpl 按钮/容器与调用分支。
 
 ## 核心职责
 

@@ -40,5 +40,5 @@ invariant_anchors:
 
 ## 相关
 
-- [go_updater](./go-updater.md) — 以 Version 为基准检查新版本
-- [wails_bridge](./wails-bridge.md) — GetVersion binding
+- [go_updater](./go-updater.md) — 以 Version 为基准检查新版本（`splitVer("dev")` 归零 → dev 构建恒提示新版，已补单测钉住，P3 观察）
+- [wails_bindings](./wails-bindings.md) — `GetAppVersion` / `CurrentVersion` binding（知识卡旧文引 wails_bridge 为幽灵链接，已修正；两入口双源冗余 P4 观察待收敛）

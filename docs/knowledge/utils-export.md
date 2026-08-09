@@ -8,6 +8,7 @@ source_files:
   - frontend/src/views/app-preview/cache.ts
 tests:
   - frontend/src/views/app-preview/cache.test.ts
+  - frontend/src/views/app-preview/screenshot-renderer.test.ts
 use_when:
   - 截图
   - 导出 PNG

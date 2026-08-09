@@ -905,7 +905,7 @@
 | `CacheValue()` | `frontend/src/views/app-preview/cache:10` | 缓存条目值 |
 | `cacheSetEvictHandler()` | `frontend/src/views/app-preview/cache:39` | 注册 evict 回调，淘汰条目时调用 |
 | `cacheGet()` | `frontend/src/views/app-preview/cache:43` | — |
-| `cacheSet()` | `frontend/src/views/app-preview/cache:63` | — |
+| `cacheSet()` | `frontend/src/views/app-preview/cache:65` | — |
 | `previewCSS()` | `frontend/src/views/app-preview/css:2` | — |
 | `showModelDetail()` | `frontend/src/views/app-preview/detail:15` | 显示模型详情（YSM 模型） |
 | `showResourcePack()` | `frontend/src/views/app-preview/detail:102` | 显示资源包信息（pack.mcmeta + pack.png） |
@@ -970,17 +970,17 @@
 | `treeCSS()` | `frontend/src/views/app-tree/app-tree-styles:3` | — |
 | `AuthorInfo()` | `frontend/src/views/app-tree/authors:5` | 作者统计（Go ListModelAuthors 返回） |
 | `loadAuthors()` | `frontend/src/views/app-tree/authors:13` | 从 Go 端加载作者列表 |
-| `bindBusEvents()` | `frontend/src/views/app-tree/bus-handlers:14` | — |
+| `bindBusEvents()` | `frontend/src/views/app-tree/bus-handlers:15` | — |
 | `selectState()` | `frontend/src/views/app-tree/data:4` | 多选状态 |
 | `toggleSelect()` | `frontend/src/views/app-tree/data:16` | 切换选中状态 |
 | `selectSingle()` | `frontend/src/views/app-tree/data:31` | 单选：清空后选中单个并设为 lastKey（用于单击选中，避免外部直接写 selectState） |
-| `updateSelectCount()` | `frontend/src/views/app-tree/events:11` | — |
-| `bindTreeEvents()` | `frontend/src/views/app-tree/events:92` | — |
-| `setPendingTreeSearch()` | `frontend/src/views/app-tree/index:20` | — |
-| `AppTree()` | `frontend/src/views/app-tree/index:49` | — |
-| `initInstanceActions()` | `frontend/src/views/app-tree/instance-actions:26` | — |
-| `TreeEntry()` | `frontend/src/views/app-tree/loader:9` | 树条目（loader 转换后的渲染格式） |
-| `loadEntries()` | `frontend/src/views/app-tree/loader:37` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |
+| `updateSelectCount()` | `frontend/src/views/app-tree/events:12` | — |
+| `bindTreeEvents()` | `frontend/src/views/app-tree/events:93` | — |
+| `setPendingTreeSearch()` | `frontend/src/views/app-tree/index:21` | — |
+| `AppTree()` | `frontend/src/views/app-tree/index:50` | — |
+| `initInstanceActions()` | `frontend/src/views/app-tree/instance-actions:27` | — |
+| `TreeEntry()` | `frontend/src/views/app-tree/loader:10` | 树条目（loader 转换后的渲染格式） |
+| `loadEntries()` | `frontend/src/views/app-tree/loader:38` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |
 | `TreeRow()` | `frontend/src/views/app-tree/render:21` | 扁平化行（虚拟滚动数据单元） |
 | `TreeNode()` | `frontend/src/views/app-tree/render:31` | buildTree 嵌套节点（文件夹 = 子节点对象，文件 = { _e: entry }） |
 | `RenderMode()` | `frontend/src/views/app-tree/render:37` | 渲染模式 |
@@ -995,8 +995,8 @@
 | `folderRowCommon()` | `frontend/src/views/app-tree/row-common:34` | 文件夹行公共计算：图标、颜色、箭头、开关 class、显示名、缩进 |
 | `listFileRowHTML()` | `frontend/src/views/app-tree/row-tpl-list:8` | 文件行 HTML（紧凑列表模式：icon + name + size，无 hover actions、无 date、无 tag dot） |
 | `listFolderRowHTML()` | `frontend/src/views/app-tree/row-tpl-list:25` | 文件夹行 HTML（紧凑列表模式：arrow + folder icon + name） |
-| `fileRowHTML()` | `frontend/src/views/app-tree/row-tpl:8` | 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） |
-| `folderRowHTML()` | `frontend/src/views/app-tree/row-tpl:31` | 文件夹行 HTML（indent = padding-left，扁平化无 .ch 容器） |
+| `fileRowHTML()` | `frontend/src/views/app-tree/row-tpl:9` | 文件行 HTML（indent = padding-left，rowCls 用于选中高亮等行级类） |
+| `folderRowHTML()` | `frontend/src/views/app-tree/row-tpl:32` | 文件夹行 HTML（indent = padding-left，扁平化无 .ch 容器） |
 | `bindToolbarEvents()` | `frontend/src/views/app-tree/toolbar-events:209` | — |
 | `headerHTML()` | `frontend/src/views/app-tree/tpl:3` | — |
 | `footerHTML()` | `frontend/src/views/app-tree/tpl:27` | — |

@@ -1,21 +1,23 @@
 // ===== 整合包右键操作实现 =====
 import { friendlyError } from "../../utils/dom/errors.ts";
-import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { bus } from "../../bus.ts";
 import type { AppTree } from "./index.ts";
 import { getApp } from "../../wails/app.ts";
 import { requireMcRoot } from "../../core/handlers/require-mcroot.ts";
 
+// 参数契约对齐 Go 侧 logs.go Logger.Add 签名：AddImportLog(modelName, sourcePath, targetDir, fileSize, status, errMsg)。
+// Operation 恒为 "import"（诊断页按此分组）；sourcePath = 源，targetDir = 目标——调用方务必按此口径传参。
 function addImportLog(
-  type: string,
-  name: string,
-  path: string,
-  size: number,
+  modelName: string,
+  sourcePath: string,
+  targetDir: string,
+  fileSize: number,
   status: string,
-  msg: string,
+  errMsg: string,
 ): void {
   getApp().then((mod) => {
-      mod.AddImportLog?.(type, name, path, size, status, msg);
+      mod.AddImportLog?.(modelName, sourcePath, targetDir, fileSize, status, errMsg);
     })
     .catch(() => {});
 }
@@ -61,10 +63,11 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
           filePaths,
           ins.CustomDir,
         );
+        // 口径：modelName=整合包名，sourcePath=用户选择的源目录，targetDir=目标整合包目录
         addImportLog(
-          "install",
           insName,
           filePaths,
+          ins.CustomDir,
           0,
           result ? "success" : "skipped",
           result ? "安装成功" : "文件已存在",
@@ -91,7 +94,6 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
         const {
           GetRepoRoot,
           ListVersionInstances,
-          ScanModelEntriesWithLabel,
           SyncCustomToRepo,
         } = await getApp();
         const mcRoot = await requireMcRoot();
@@ -114,18 +116,10 @@ export function initInstanceActions(vm: AppTree): Array<() => void> {
           });
           return;
         }
-        const repoEntries = await ScanModelEntriesWithLabel(repoRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM]);
-        const repoNames = new Set(
-          (repoEntries || []).map((e) => e.Name.replace(/\.ban$/i, "")),
-        );
-        const insEntries = await ScanModelEntriesWithLabel(ins.CustomDir, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM]);
-        let uploaded = 0;
-        // 上传整合包特有 -> 仓库
-        (insEntries || []).forEach((e) => {
-          const base = e.Name.replace(/\.ban$/i, "");
-          if (!repoNames.has(base)) uploaded++;
-        });
-        if (uploaded > 0) await SyncCustomToRepo(ins.CustomDir, repoRoot);
+        // 同步键口径对齐 Go 侧 sync_push.go SyncCustomToRepo：去重 = Hash 优先 + 原始 Name 兜底，
+        // 复制保留相对路径。前端不再自行按 .ban 剥离的裸名 Set 计数，直接信任 Go 返回值
+        // （单一事实来源），避免前端口径与 Go 不一致导致「📤 N」撒谎或漏同步。
+        const uploaded = await SyncCustomToRepo(ins.CustomDir, repoRoot);
         bus.emit("stats:refresh");
         bus.emit("toast:show", {
           msg: `🔄 ${insName} 同步完成 | 📤 ${uploaded}`,

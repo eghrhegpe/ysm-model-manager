@@ -550,8 +550,8 @@
 | `SetEmbedded()` | `internal/app/assets:16` | SetEmbedded 由根包 main 的 init() 注入编译期嵌入的静态资产。 |
 | `CLIMain()` | `internal/app/cli:18` | — |
 | `Issue()` | `internal/app/cli:183` | — |
-| `androidPathManager.AppDataRoot()` | `internal/app/pathmgr_android:20` | AppDataRoot 按候选序返回第一个可写目录；全不可写返回错误—— 直接返回 HOME/Getwd 可能退化为不可写的文件系统根 "/"（P2 审核发现）， 配置/标签将静默 |
-| `androidPathManager.DefaultRepoRoot()` | `internal/app/pathmgr_android:43` | DefaultRepoRoot Android 固定公共仓库根：外部存储根 + 应用名。 |
+| `androidPathManager.AppDataRoot()` | `internal/app/pathmgr_android:21` | AppDataRoot 按候选序返回第一个可写目录；全不可写返回错误—— 直接返回 HOME/Getwd 可能退化为不可写的文件系统根 "/"（P2 审核发现）， 配置/标签将静默 |
+| `androidPathManager.DefaultRepoRoot()` | `internal/app/pathmgr_android:46` | DefaultRepoRoot Android 固定公共仓库根：外部存储根 + 应用名。 |
 | `desktopPathManager.AppDataRoot()` | `internal/app/pathmgr_desktop:10` | — |
 | `desktopPathManager.DefaultRepoRoot()` | `internal/app/pathmgr_desktop:15` | DefaultRepoRoot 桌面无默认公共仓库——路径由用户在设置页配置（GetRepoRoot 走 FilesRoot） |
 | `App.LoadResourceTypes()` | `internal/app/resource_bindings:23` | LoadResourceTypes 加载资源类型注册表 |
@@ -567,20 +567,20 @@
 | `App.DetectResourceType()` | `internal/app/resource_bindings:137` | DetectResourceType 检测指定文件的资源类型 |
 | `App.GetDefaultRepoRoot()` | `internal/app/resource_bindings:149` | GetDefaultRepoRoot 返回平台默认公共仓库根目录（不含类型子目录）。 |
 | `App.GetRepoRoot()` | `internal/app/resource_bindings:154` | GetRepoRoot 根据资源类型返回对应的仓库根目录 |
-| `App.ToggleResourcePack()` | `internal/app/resource_bindings:206` | ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled） P2 修复：补路径守卫——原实现 os.Rename 对任意路径可重命 |
-| `App.IsResourcePackEnabled()` | `internal/app/resource_bindings:229` | IsResourcePackEnabled 检查资源包是否启用 |
-| `App.SelectImportZip()` | `internal/app/resource_bindings:234` | SelectImportZip 打开文件选择器选取 .zip 文件 |
-| `App.SelectImportFile()` | `internal/app/resource_bindings:247` | SelectImportFile 打开文件选择器，按给定扩展名过滤 filter 格式: "显示名|*.ext1;*.ext2" |
-| `App.SetResourceRoot()` | `internal/app/resource_bindings:268` | SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认） P1 修复：非空入参经 filepath.Abs(filepath.Clean()) 规范化，防止含 |
-| `App.ResetResourceRoot()` | `internal/app/resource_bindings:299` | ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值） |
-| `App.ImportResourcePack()` | `internal/app/resource_bindings:325` | ImportResourcePack 使用策略模式导入资源包 |
-| `App.ImportByType()` | `internal/app/resource_bindings:338` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
-| `App.DeleteResourcePack()` | `internal/app/resource_bindings:355` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： src 为 ysm.json 时整组删除父目录（文件夹型模型），否则删除单文件。 |
-| `App.DeleteModelDir()` | `internal/app/resource_bindings:361` | DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹 路径守卫：限制在 FilesRoot 内，防止删除系统目录 |
-| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:374` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串） |
-| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:384` | CountDuplicateFiles 快速统计重复文件数量 |
-| `App.InvalidateScanCache()` | `internal/app/resource_bindings:394` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache） |
-| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:400` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
+| `App.ToggleResourcePack()` | `internal/app/resource_bindings:223` | ToggleResourcePack 切换资源包的启用/禁用状态（.zip ↔ .zip.disabled） P2 修复：补路径守卫——原实现 os.Rename 对任意路径可重命 |
+| `App.IsResourcePackEnabled()` | `internal/app/resource_bindings:246` | IsResourcePackEnabled 检查资源包是否启用 |
+| `App.SelectImportZip()` | `internal/app/resource_bindings:251` | SelectImportZip 打开文件选择器选取 .zip 文件 |
+| `App.SelectImportFile()` | `internal/app/resource_bindings:264` | SelectImportFile 打开文件选择器，按给定扩展名过滤 filter 格式: "显示名|*.ext1;*.ext2" |
+| `App.SetResourceRoot()` | `internal/app/resource_bindings:285` | SetResourceRoot 设置指定资源类型的自定义根路径（空=恢复默认） P1 修复：非空入参经 filepath.Abs(filepath.Clean()) 规范化，防止含 |
+| `App.ResetResourceRoot()` | `internal/app/resource_bindings:316` | ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值） |
+| `App.ImportResourcePack()` | `internal/app/resource_bindings:342` | ImportResourcePack 使用策略模式导入资源包 |
+| `App.ImportByType()` | `internal/app/resource_bindings:355` | ImportByType 统一导入入口——根据资源类型自动选择导入策略 |
+| `App.DeleteResourcePack()` | `internal/app/resource_bindings:372` | DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）： src 为 ysm.json 时整组删除父目录（文件夹型模型），否则删除单文件。 |
+| `App.DeleteModelDir()` | `internal/app/resource_bindings:378` | DeleteModelDir 删除文件夹型资源（MMD 模型等），删除文件所在父文件夹 路径守卫：限制在 FilesRoot 内，防止删除系统目录 |
+| `App.FindDuplicateFiles()` | `internal/app/resource_bindings:391` | FindDuplicateFiles 扫描目录返回所有重复文件分组（JSON 字符串） |
+| `App.CountDuplicateFiles()` | `internal/app/resource_bindings:401` | CountDuplicateFiles 快速统计重复文件数量 |
+| `App.InvalidateScanCache()` | `internal/app/resource_bindings:411` | InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache） |
+| `App.InstallResourceToInstance()` | `internal/app/resource_bindings:417` | InstallResourceToInstance 将资源文件安装到指定整合包 rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文 |
 | `App.GetWasmBinary()` | `internal/app/wasm_embed:5` | GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。 |
 
 ## 前端·根 (app-modules/bus)

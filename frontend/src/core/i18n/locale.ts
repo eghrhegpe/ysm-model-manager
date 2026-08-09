@@ -110,7 +110,9 @@ function applyHtmlLang(code: string): void {
 
 /**
  * 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。
- * 必须在组件渲染前完成，否则首帧会闪烁。
+ * 组件渲染可能早于语言包就绪（customElements.define 在模块顶层同步执行，
+ * 而 fetch 异步），故加载成功后补发一次 lang:changed，让 app-nav / app-content
+ * 等首帧渲染时拿到空 bundle 的组件重渲染（与 setLang 热切换走同一通道）。
  */
 export async function initI18n(): Promise<void> {
   const saved = safeGet(STORAGE_KEY) as LangCode | null;
@@ -122,4 +124,9 @@ export async function initI18n(): Promise<void> {
 
   applyHtmlLang(_currentLang);
   await loadLocale(_currentLang);
+  // 仅当语言包确实加载成功（非空）才通知重渲染；失败留待重试，不污染订阅通道
+  const loaded = bundles[_currentLang];
+  if (loaded && Object.keys(loaded).length > 0) {
+    bus.emit("lang:changed", { lang: _currentLang });
+  }
 }

@@ -38,8 +38,13 @@ export async function loadModelData(
       model._authors = _wasmAuthors;
       model._avatars = _wasmAvatars;
       _decodedBy = "🧠 WASM 内置解码";
-      const cur = cacheGet(modelPath);
-      if (cur) cacheSet(modelPath, { ...cur, _decodedBy });
+      // P3 修复：WASM 解码结果直接写回缓存 geometry——原实现仅补 _decodedBy 标记，
+      // geometry 依赖 wasm.ts/index.ts 的外部补写，缺路径时缓存丢失 WASM 更优结果
+      cacheSet(modelPath, {
+        ...(cacheGet(modelPath) || {}),
+        geometry: model,
+        _decodedBy,
+      });
     } else {
       ctx._appendDebug(null, "[YSM] WASM 返回空或无骨骼，回退 Go");
     }

@@ -45,11 +45,15 @@ describe("showRenameDialog — 扩展名推导（getExt）", () => {
     await expect(p).resolves.toBe("[作者]【未知】角色.ysm");
   });
 
-  it("banned 文件 foo.ysm.ban → 预览应保留 .ysm.ban（暴露 getExt 误判为 .ban）", async () => {
-    const { preview } = await openDlg("foo.ysm.ban");
-    // 当前实现 split(".").pop() → "ban"，预览退化为 .ban 尾缀
-    expect(preview.textContent).not.toMatch(/\.ysm\.ban$/);
-    expect(preview.textContent).toMatch(/\.ban$/);
+  it("banned 文件 foo.ysm.ban → 扩展名取 ysm 且保留 .ban 尾缀", async () => {
+    const { preview, box, p } = await openDlg("foo.ysm.ban");
+    // 修复后：剥 .ban 取扩展名 → .ysm，且预览/提交保留 .ban 标记
+    expect(preview.textContent).toMatch(/\.ysm\.ban$/);
+
+    (box.querySelector("#rn-author") as HTMLInputElement).value = "作者";
+    (box.querySelector("#rn-chara") as HTMLInputElement).value = "角色";
+    (box.querySelector("#rn-ok") as HTMLElement).click();
+    await expect(p).resolves.toBe("[作者]【未知】角色.ysm.ban");
   });
 
   it("无扩展名文件 → 回退默认资源类型 ysm", async () => {

@@ -62,8 +62,12 @@ export async function loadCommunityData(): Promise<CommunityData> {
     for (const la of localAuthorsList) {
       if (la && la.name && existingNames.has(la.name)) {
         const found = merged.find((c) => c.name === la.name);
-        if (found && la.type && !found.type?.includes(la.type)) {
-          found.type = found.type ? found.type + ";" + la.type : la.type;
+        // P4 修复：按分号分段比较 type，避免子串误判（"bilibili" 包含 "bili" 时丢类型）
+        if (found && la.type) {
+          const hasType = (found.type || "").split(";").some((t) => t.trim() === la.type);
+          if (!hasType) {
+            found.type = found.type ? found.type + ";" + la.type : la.type;
+          }
         }
         if (found) found._fromLocal = true;
       } else if (la && la.name) {
@@ -132,12 +136,14 @@ async function fetchWithFallback<T>(
   mirror?: string,
   dbgTag = "community",
 ): Promise<T[]> {
-  const sorted =
-    mirror === "jsdelivr"
-      ? [attempts[1], attempts[0], attempts[2]]
-      : mirror === "githubapi"
-        ? [attempts[2], attempts[0], attempts[1]]
-        : attempts;
+  // 防御：attempts 可能不足 3 项（本地 URL 场景），重排后滤掉缺失项，避免 undefined.url
+  const order =
+    mirror === "jsdelivr" ? [1, 0, 2]
+      : mirror === "githubapi" ? [2, 0, 1]
+        : null;
+  const sorted = order
+    ? order.map((i) => attempts[i]).filter((a): a is (typeof attempts)[number] => !!a)
+    : attempts;
 
   for (const a of sorted) {
     const ctrl = new AbortController();

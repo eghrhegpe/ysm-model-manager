@@ -91,7 +91,15 @@ export function initImportQueue(app: ImportQueueHost): () => void {
           onDone?.();
         }
       };
-      reader.onerror = () => onDone?.();
+      reader.onerror = (): void => {
+        // P3 修复：读取失败需可见（原实现仅 onDone?.() 静默推进队列）
+        bus.emit("toast:show", {
+          msg: "❌ 读取文件失败",
+          duration: 5000,
+          type: "error",
+        });
+        onDone?.();
+      };
       reader.readAsDataURL(file);
     } else {
       // 直导：执行器内部自行读 base64（历史/去重/toast 单点）

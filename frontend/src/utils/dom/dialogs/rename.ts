@@ -130,14 +130,20 @@ export async function showRenameDialog(
     });
 
     /** 从当前文件名推导扩展名（无扩展名用默认资源类型） */
-    const getExt = (): string =>
-      currentName.includes(".")
-        ? currentName.split(".").pop() || ""
-        : RESOURCE_TYPES.YSM;
+    const isBanned = /\.ban$/i.test(currentName);
+    // P2 修复：先剥 .ban 尾缀再取扩展名——banned 文件 foo.ysm.ban 应得 "ysm" 而非 "ban"；
+    // 空扩展名（如 "foo."）回退默认资源类型
+    const getExt = (): string => {
+      const clean = currentName.replace(/\.ban$/i, "");
+      const ext = clean.includes(".")
+        ? clean.split(".").pop() || ""
+        : "";
+      return ext || RESOURCE_TYPES.YSM;
+    };
 
     const update = (): void => {
       (box.querySelector("#rn-preview") as HTMLElement).textContent =
-        buildRenameName(readFields(), getExt());
+        buildRenameName(readFields(), getExt()) + (isBanned ? ".ban" : "");
     };
 
     ["rn-author", "rn-work", "rn-chara", "rn-variant", "rn-date"].forEach(
@@ -170,7 +176,8 @@ export async function showRenameDialog(
         }
         return;
       }
-      close(buildRenameName(f, ext));
+      // P2 修复：banned 文件保留 .ban 尾缀（Go RenameFile 直接 os.Rename，不会自动补）
+      close(buildRenameName(f, ext) + (isBanned ? ".ban" : ""));
     };
   });
 }

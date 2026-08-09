@@ -12,7 +12,7 @@ info:
   description: "YSM 模型管理器"
   copyright: "(c) 2025, YSM"
   comments: "Wails 3 dev config"
-  version: "1.9.3"
+  version: "v1.9.3"
 
 # Dev mode configuration
 dev_mode:

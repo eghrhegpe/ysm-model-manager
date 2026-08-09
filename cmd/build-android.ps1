@@ -11,7 +11,9 @@ param(
     [switch]$Clean
 )
 
-$ErrorActionPreference = "Stop"
+# 成败统一用 $LASTEXITCODE 判断（MikuMikuAR 原版风格）。
+# 不要设置 $ErrorActionPreference="Stop"：会把原生命令 stderr（如 npm warn
+# "Unknown env config safe-delete"）转成 NativeCommandError 终止脚本。
 
 # 统一版本号格式
 $VerTag = if ($Version -match '^v') { $Version } else { "v$Version" }
@@ -55,7 +57,7 @@ if ($Clean) {
 # 0. 生成 Wails 3 绑定（前端源，必须在 vite build 之前生成）
 Write-Output "[build-android] 🧬 生成 Wails 3 绑定..."
 Set-Location "$projectDir\frontend"
-& npm run generate:bindings 2>&1
+& npm run generate:bindings
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ 绑定生成失败（请确认 wails3 CLI 已安装且在 PATH 中）" -ForegroundColor Red
     exit 1
@@ -76,7 +78,10 @@ if ($lockedProcess) {
 # 防呆: npm 11+ 在非交互/管道环境下因 safe-delete 确认直接 abort
 $env:npm_config_safe_delete = "false"
 
-if (-not (Test-Path "node_modules\vite\index.js")) {
+# 防呆: 依赖就绪判定用 vite 包真实存在路径（package.json），
+# 原 `node_modules\vite\index.js` 不存在（vite 入口为 bin/vite.js + dist/node/index.js），
+# 导致每次构建都误判 node_modules 缺失而重复 npm ci（浪费 5s+ 且干扰日志）。
+if (-not (Test-Path "node_modules\vite\package.json")) {
     Write-Output "[build-android] node_modules 不存在，执行 npm ci..."
     npm ci --quiet --yes
     if ($LASTEXITCODE -ne 0) {
@@ -90,7 +95,7 @@ if (-not (Test-Path "node_modules\vite\index.js")) {
 } else {
     Write-Output "[build-android] node_modules 已就绪，跳过 npm ci"
 }
-& npx vite build 2>&1
+& npx vite build
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Set-Location $projectDir
 
@@ -130,12 +135,18 @@ if ($Production) {
         exit 1
     }
 
+    # 签名密码读取：先进程级（CI 经 env: 注入 / 手动 $env: 设置），
+    # 再回退 User 级（本地 setx / [Environment]::SetEnvironmentVariable 持久化），
+    # 新开终端进程不继承 User 级新值，进程级读不到是预期行为。
     $storePass = [Environment]::GetEnvironmentVariable("ANDROID_KEYSTORE_PASSWORD")
+    if (-not $storePass) { $storePass = [Environment]::GetEnvironmentVariable("ANDROID_KEYSTORE_PASSWORD", "User") }
     $keyAlias = [Environment]::GetEnvironmentVariable("ANDROID_KEY_ALIAS")
+    if (-not $keyAlias) { $keyAlias = [Environment]::GetEnvironmentVariable("ANDROID_KEY_ALIAS", "User") }
     $keyPass = [Environment]::GetEnvironmentVariable("ANDROID_KEY_PASSWORD")
+    if (-not $keyPass) { $keyPass = [Environment]::GetEnvironmentVariable("ANDROID_KEY_PASSWORD", "User") }
 
     if (-not $storePass -or -not $keyAlias -or -not $keyPass) {
-        Write-Error "Release 构建需要环境变量: ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD"
+        Write-Error "Release 构建需要环境变量: ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD（进程级或 User 级均可）"
         exit 1
     }
 
@@ -147,7 +158,7 @@ if ($Production) {
 }
 
 Set-Location $androidDir
-& .\gradlew.bat $gradleTask 2>&1
+& .\gradlew.bat $gradleTask
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # 6. 产物重命名

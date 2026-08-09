@@ -38,7 +38,7 @@ jobs:
       - name: 安装 Node
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: ${{ vars.NODE_VERSION }}
 
       - name: 安装依赖 + VitePress 构建（srcDir = docs/）
         run: |

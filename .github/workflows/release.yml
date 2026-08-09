@@ -14,7 +14,7 @@ permissions:
 
 env:
   GO_VERSION: '1.25.0'
-  NODE_VERSION: '22'
+  NODE_VERSION: ${{ vars.NODE_VERSION }}
   # 与 go.mod 对齐（wailsapp/wails/v3 v3.0.0-alpha2.105），避免 CLI 与库版本错配
   WAILS_VERSION: 'v3.0.0-alpha2.105'
 

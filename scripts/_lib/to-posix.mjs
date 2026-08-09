@@ -13,12 +13,16 @@
  */
 import path from 'node:path';
 
-/** 归一化为 posix 风格（`\` → `/`）。幂等：已含 `/` 的输入原样返回。 */
+/** 归一化为 posix 风格（`\` → `/`）。幂等：已含 `/` 的输入原样返回。
+ * P2-1（code_review）：null/undefined 返回 ''——String(p) 会产出字面量 'undefined'/'null'
+ * 伪路径（source_file 不存在: undefined 之类困惑报错），与 posix-gitpath 的 `if (!p) return p` 契约对齐。 */
 export function toPosix(p) {
+  if (p == null) return '';
   return String(p).replace(/\\/g, '/');
 }
 
-/** 反向：posix 风格 → 平台分隔符（win32 为 `\`，其余为 `/`）。 */
+/** 反向：posix 风格 → 平台分隔符（win32 为 `\`，其余为 `/`）。null/undefined 同样返回 ''。 */
 export function toNative(p) {
+  if (p == null) return '';
   return String(p).replace(/\//g, path.sep);
 }

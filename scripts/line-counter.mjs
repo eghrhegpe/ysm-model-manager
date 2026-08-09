@@ -26,7 +26,9 @@ function walkFiles(dir, patterns, skip = () => false) {
     } else if (entry.isFile()) {
       if (skip(full)) continue;
       const rel = relPosix(full);
-      if (list.some((p) => new RegExp(p.replace(/\*/g, '.*') + '$').test(rel) || rel.endsWith(p.replace('*', '')))) {
+      // F3（code_review）：glob 展开修正——`.replace(/\*/g, '.*')` 未转义 `.`（会匹配 foo.xgo），
+      // 且与 `rel.endsWith` 完全冗余；仅保留后缀匹配即可
+      if (list.some((p) => rel.endsWith(p.replace('*', '')))) {
         out.push(full);
       }
     }
@@ -45,9 +47,15 @@ function countLines(paths) {
   let total = 0;
   for (const p of paths) {
     for (const f of p) {
-      const st = fs.statSync(f);
-      if (st.size > 0) {
-        total += pyLineCount(fs.readFileSync(f, 'utf-8'));
+      // F4（code_review）：statSync/readFileSync 加 try/catch——单文件权限/瞬时失败
+      // 不应让整脚本崩溃（此前裸抛，一个坏文件毁掉全量统计）
+      try {
+        const st = fs.statSync(f);
+        if (st.size > 0) {
+          total += pyLineCount(fs.readFileSync(f, 'utf-8'));
+        }
+      } catch (e) {
+        console.warn(`[line-counter] 跳过 ${relPosix(f)}: ${e.message}`);
       }
     }
   }
@@ -87,19 +95,17 @@ function packageLines(base, pattern) {
 }
 
 function main() {
-  const goDirs = [path.join(ROOT, 'go')];
+  const goDirs = [path.join(ROOT, 'go'), path.join(ROOT, 'internal'), path.join(ROOT, 'cmd')];
   const jsDir = path.join(ROOT, 'frontend', 'src');
   const cssDir = path.join(ROOT, 'frontend', 'css');
 
   // === 项目总览 ===
   console.log('=== 项目代码统计 ===');
   let goLines = countLines(goDirs.map((d) => walkFiles(d, '*.go')));
-  // 根目录 Go
-  for (const fn of ['app.go', 'main.go', 'resource_bindings.go']) {
-    const f = path.join(ROOT, fn);
-    if (fs.existsSync(f)) {
-      goLines += pyLineCount(fs.readFileSync(f, 'utf-8'));
-    }
+  // 根目录 Go（F1/F7：动态扫描，不再硬编码 app.go/main.go/resource_bindings.go——
+  // 列表已迁走 app.go/resource_bindings.go，且漏掉 embed.go/cli_export.go）
+  for (const f of walkFiles(ROOT, '*.go', (p) => path.dirname(p) !== ROOT)) {
+    goLines += pyLineCount(fs.readFileSync(f, 'utf-8'));
   }
   console.log(`Go:         ${goLines} 行`);
 

@@ -1,5 +1,6 @@
 // ===== 全局拖拽导入（类型化版 — ADR-014 P3）=====
 import { bus } from "../bus.ts";
+import { t } from "../core/i18n/t.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { PageStore } from "../core/page-store.ts";
 import { getApp } from "../wails/app.ts";
@@ -22,9 +23,9 @@ const showDropOverlay = (hasModel?: boolean): void => {
     dropOverlay.style.cssText =
       "position:fixed;inset:0;z-index:var(--z-fullscreen);display:none;align-items:center;justify-content:center;pointer-events:none;transition:opacity var(--tr-fast)";
     dropOverlay.innerHTML =
-      '<div style="background:var(--surf,#1a1b2e);border:2px dashed var(--accent,#66d9ef);border-radius:12px;padding:30px 50px;text-align:center"><div style="font-size:30px;margin-bottom:8px">📥</div><div style="font-size:16px;font-weight:600;color:var(--accent,#66d9ef)">放开以导入模型</div><div style="font-size:11px;color:var(--muted,#888);margin-top:4px">支持 ' +
+      '<div style="background:var(--surf,#1a1b2e);border:2px dashed var(--accent,#66d9ef);border-radius:12px;padding:30px 50px;text-align:center"><div style="font-size:30px;margin-bottom:8px">📥</div><div style="font-size:16px;font-weight:600;color:var(--accent,#66d9ef)">' + t("import.dropHint2") + '</div><div style="font-size:11px;color:var(--muted,#888);margin-top:4px">' + t("import.supportedFiles") + ' ' +
       DROP_EXTS_STR +
-      " 文件</div></div>";
+      ' ' + t("import.files") + "</div></div>";
     document.body.appendChild(dropOverlay);
   }
   if (hasModel === false) {
@@ -34,7 +35,7 @@ const showDropOverlay = (hasModel?: boolean): void => {
       inner.style.background =
         "color-mix(in srgb, #f38ba8 8%, var(--surf,#1a1b2e))";
       const msg = inner.querySelector("div:nth-child(3)");
-      if (msg) msg.textContent = "⛔ 未检测到模型文件";
+      if (msg) msg.textContent = t("import.noModelDetected");
     }
   }
   dropOverlay.style.display = "flex";
@@ -210,7 +211,7 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   }
   if (collected.length === 0) {
     bus.emit("toast:show", {
-      msg: "📂 未检测到支持的模型文件" + "（" + DROP_EXTS_STR + "）",
+      msg: "📂 " + t("import.noSupportedFiles") + "（" + DROP_EXTS_STR + "）",
       duration: 3000,
       type: "info",
     });
@@ -219,7 +220,7 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   const oversized = collected.filter((c) => c.file.size > MAX_FILE_SIZE);
   if (oversized.length > 0) {
     bus.emit("toast:show", {
-      msg: `⚠️ ${oversized[0].file.name} 超过 100MB，请直接放入仓库文件夹`,
+      msg: `⚠️ ${oversized[0].file.name} ${t("import.fileTooLarge")}`,
       duration: 5000,
       type: "warn",
     });
@@ -235,7 +236,7 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   );
   if (r.folders === 0 && r.singles === 0 && total > 0) {
     bus.emit("toast:show", {
-      msg: "📂 未检测到支持的模型文件" + "（" + DROP_EXTS_STR + "）",
+      msg: "📂 " + t("import.noSupportedFiles") + "（" + DROP_EXTS_STR + "）",
       duration: 3000,
       type: "info",
     });
@@ -248,7 +249,7 @@ const onDropSafe = (e: DragEvent): void => {
   onDrop(e).catch((err) => {
     console.error("[dnd] 拖放处理失败:", err);
     bus.emit("toast:show", {
-      msg: "❌ 导入处理出错，请重试",
+      msg: `❌ ${t("import.processError")}`,
       duration: 4000,
       type: "error",
     });

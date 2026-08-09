@@ -1,5 +1,6 @@
 // ===== 版本更新检查（类型化版 — ADR-014 P3 features）=====
 import { bus } from "../bus.ts";
+import { t } from "../core/i18n/t.ts";
 import { esc, modalConfirm } from "../utils/dom/dialogs/modal.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { getApp } from "../wails/app.ts";
@@ -85,7 +86,7 @@ async function promptUpdate(
   // P3 修复（code_review）：10s 对慢网大文件不够，拉到 60s，保证覆盖整个下载窗口
   if (!statusEl) {
     bus.emit("toast:show", {
-      msg: `⬇️ 正在下载 ${info.latest}… 下载完成将自动重启应用`,
+      msg: `⬇️ ${t("update.downloading", { version: info.latest })}`,
       duration: 60000,
       type: "info",
     });
@@ -94,7 +95,7 @@ async function promptUpdate(
     await doUpdate(info, statusEl);
   } catch (e) {
     bus.emit("toast:show", {
-      msg: `❌ 更新失败: ${friendlyError(e)}`,
+      msg: `❌ ${t("update.failed")}: ${friendlyError(e)}`,
       duration: 5000,
       type: "error",
     });
@@ -117,7 +118,7 @@ export async function checkUpdateSilent(): Promise<void> {
     markChecked();
     if (info?.available) {
       bus.emit("toast:show", {
-        msg: `📦 发现新版本 ${info.latest}（当前 ${info.current}）— 点击查看`,
+        msg: `📦 ${t("update.found", { latest: info.latest, current: info.current })}`,
         duration: 10000,
         type: "info",
         click: () => promptUpdate(info, null),
@@ -144,7 +145,7 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
         markChecked();
         if (!info.available) {
           bus.emit("toast:show", {
-            msg: `✅ 已是最新版本 (${info.current})`,
+            msg: `✅ ${t("update.latest", { version: info.current })}`,
             duration: 3000,
             type: "success",
           });

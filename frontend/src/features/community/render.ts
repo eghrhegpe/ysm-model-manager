@@ -1,5 +1,6 @@
 // ===== 创意工坊模型列表渲染（类型化版 — ADR-014 P3 features）=====
 // DOM API，非字符串拼接
+import { t } from "../../core/i18n/t.ts";
 import { renderDisplayName } from "../../utils/dom/display.ts";
 import { ICONS } from "../../utils/icon/workshop-icons.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
@@ -155,7 +156,7 @@ export function renderModelList(
     const searchBtn = createIconBtn(
       ICONS.SEARCH,
       "search-bili",
-      "B站搜索作者",
+      t("workshop.bilibiliSearch"),
     );
     metaCell.appendChild(searchBtn);
     row.appendChild(metaCell);
@@ -166,7 +167,7 @@ export function renderModelList(
     if (exists) {
       const badge = document.createElement("span");
       badge.className = "gh-badge";
-      badge.innerHTML = ICONS.CHECKMARK + " 已有";
+      badge.innerHTML = ICONS.CHECKMARK + " " + t("workshop.exists");
       actionsCell.appendChild(badge);
     } else {
       const dlBtn = createIconBtn(ICONS.DOWNLOAD, "download");
@@ -188,9 +189,9 @@ export function renderModelList(
  * 分组标签映射
  */
 const GROUP_LABELS: Record<string, { icon: string; label: string }> = {
-  search: { icon: "🔍", label: "搜索平台" },
-  repo: { icon: "📦", label: "模型仓库" },
-  browse: { icon: "👁️", label: "浏览平台" },
+  search: { icon: "🔍", label: t("workshop.platformSearch") },
+  repo: { icon: "📦", label: t("workshop.modelRepo") },
+  browse: { icon: "👁️", label: t("workshop.platformBrowse") },
 };
 
 /** 站点分组展示顺序（renderCardsHTML 使用） */
@@ -253,7 +254,7 @@ export function renderCardsHTML(
         esc(s.desc || "") +
         "</div>" +
         "</div>" +
-        '<div class="gh-card-external" title="系统浏览器打开">↗</div>' +
+        '<div class="gh-card-external" title="' + t("workshop.openExternal") + '">↗</div>' +
         "</div>";
       cardIdx++;
     });

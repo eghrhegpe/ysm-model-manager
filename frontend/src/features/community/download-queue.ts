@@ -8,6 +8,7 @@
 // 生命周期等于应用生命周期，与 registerErrorDiary / matchMedia 监听同类。
 // 禁止非 app 级模块复制此模式；若未来社区页支持卸载/热重载，再补 Events.Off。
 import { bus } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { renderDisplayName } from "../../utils/dom/display.ts";
 import { dbg } from "../../utils/debug/debug.ts";
@@ -662,7 +663,7 @@ export function createDownloadQueue({
       const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
       if (!repoRoot) {
         bus.emit("toast:show", {
-          msg: "请先配置仓库目录",
+          msg: t("workshop.configureRepo"),
           duration: 3000,
           type: "warn",
         });
@@ -688,7 +689,7 @@ export function createDownloadQueue({
       STATE.status = "idle";
       notify();
       bus.emit("toast:show", {
-        msg: "❌ 入队失败: " + (e instanceof Error ? e.message : String(e)),
+        msg: `❌ ${t("workshop.enqueueFailed")}: ` + (e instanceof Error ? e.message : String(e)),
         duration: 4000,
         type: "error",
       });

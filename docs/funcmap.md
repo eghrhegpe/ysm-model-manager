@@ -636,37 +636,37 @@
 | `showProgress()` | `frontend/src/features/community/data:7` | 创建进度条 UI（插入到 searchResults 容器） |
 | `FetchModelsResult()` | `frontend/src/features/community/data:31` | 抓取结果 |
 | `tryFetchModels()` | `frontend/src/features/community/data:44` | 从 GitHub 获取 index.json（并发竞速：同时请求所有镜像源，取最快响应） |
-| `DownloadTask()` | `frontend/src/features/community/download-queue:22` | 下载任务 |
-| `QueueError()` | `frontend/src/features/community/download-queue:30` | 队列错误项 |
-| `DownloadState()` | `frontend/src/features/community/download-queue:36` | 队列状态快照 |
-| `subscribe()` | `frontend/src/features/community/download-queue:70` | 订阅 STATE 变更。返回取消订阅函数。 |
-| `getState()` | `frontend/src/features/community/download-queue:82` | 当前状态的只读快照 |
-| `resume()` | `frontend/src/features/community/download-queue:91` | 页面切回时调用，从 Go 端恢复当前队列状态。 |
-| `enqueueDownloads()` | `frontend/src/features/community/download-queue:137` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
-| `cancelDownloads()` | `frontend/src/features/community/download-queue:169` | 模块级取消 — 纯粹的 Go 调用。 |
-| `QueueControllerOptions()` | `frontend/src/features/community/download-queue:263` | createDownloadQueue 选项 |
-| `QueueController()` | `frontend/src/features/community/download-queue:272` | 队列控制器 |
-| `createDownloadQueue()` | `frontend/src/features/community/download-queue:297` | 创建一个下载队列 UI 控制器。 |
+| `DownloadTask()` | `frontend/src/features/community/download-queue:23` | 下载任务 |
+| `QueueError()` | `frontend/src/features/community/download-queue:31` | 队列错误项 |
+| `DownloadState()` | `frontend/src/features/community/download-queue:37` | 队列状态快照 |
+| `subscribe()` | `frontend/src/features/community/download-queue:71` | 订阅 STATE 变更。返回取消订阅函数。 |
+| `getState()` | `frontend/src/features/community/download-queue:83` | 当前状态的只读快照 |
+| `resume()` | `frontend/src/features/community/download-queue:92` | 页面切回时调用，从 Go 端恢复当前队列状态。 |
+| `enqueueDownloads()` | `frontend/src/features/community/download-queue:138` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
+| `cancelDownloads()` | `frontend/src/features/community/download-queue:170` | 模块级取消 — 纯粹的 Go 调用。 |
+| `QueueControllerOptions()` | `frontend/src/features/community/download-queue:264` | createDownloadQueue 选项 |
+| `QueueController()` | `frontend/src/features/community/download-queue:273` | 队列控制器 |
+| `createDownloadQueue()` | `frontend/src/features/community/download-queue:298` | 创建一个下载队列 UI 控制器。 |
 | `DOWNLOAD_CONFIRM_BYTES()` | `frontend/src/features/community/download-tasks:7` | 超过该大小需弹窗确认（含边界值本身直接下载） |
 | `DOWNLOAD_REJECT_BYTES()` | `frontend/src/features/community/download-tasks:9` | 超过该大小直接拒绝（含边界值本身需确认） |
 | `DownloadSizeDecision()` | `frontend/src/features/community/download-tasks:11` | — |
 | `classifyDownloadSize()` | `frontend/src/features/community/download-tasks:14` | 下载大小策略：≤4MB 直接下；4–10MB 需确认；&gt;10MB 拒绝 |
 | `DownloadCandidate()` | `frontend/src/features/community/download-tasks:21` | 下载候选（结构类型，兼容 WorkshopModel） |
 | `buildDownloadTasks()` | `frontend/src/features/community/download-tasks:28` | 选中集 → 下载任务列表（路径统一转正斜杠；未匹配的选中项静默跳过） |
-| `RepoEventsContext()` | `frontend/src/features/community/events:13` | bindRepoEvents 上下文 |
-| `RepoEventsHandle()` | `frontend/src/features/community/events:25` | 绑定返回值 |
-| `bindRepoEvents()` | `frontend/src/features/community/events:38` | 绑定仓库模型页面的所有事件。 |
-| `WorkshopModel()` | `frontend/src/features/community/render:8` | 工坊模型条目（index.json 结构） |
-| `WorkshopSite()` | `frontend/src/features/community/render:16` | 工坊站点 |
-| `isModelMissing()` | `frontend/src/features/community/render:26` | 判断模型是否缺失（本地不存在） |
-| `countMissing()` | `frontend/src/features/community/render:42` | 计算缺失数量 |
-| `formatSize()` | `frontend/src/features/community/render:52` | 格式化文件大小（B/KB/MB，&lt;1KB 无单位省略走 ""） |
-| `filterModels()` | `frontend/src/features/community/render:63` | 过滤模型列表：关键词匹配（模型名）+ 「仅显示缺失」开关。 |
-| `renderModelList()` | `frontend/src/features/community/render:107` | 渲染模型列表（DocumentFragment） |
-| `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:197` | 站点分组展示顺序（renderCardsHTML 使用） |
-| `groupSites()` | `frontend/src/features/community/render:202` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
-| `renderCardsHTML()` | `frontend/src/features/community/render:219` | 生成左栏站点卡片 HTML |
-| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:267` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
+| `RepoEventsContext()` | `frontend/src/features/community/events:14` | bindRepoEvents 上下文 |
+| `RepoEventsHandle()` | `frontend/src/features/community/events:26` | 绑定返回值 |
+| `bindRepoEvents()` | `frontend/src/features/community/events:39` | 绑定仓库模型页面的所有事件。 |
+| `WorkshopModel()` | `frontend/src/features/community/render:9` | 工坊模型条目（index.json 结构） |
+| `WorkshopSite()` | `frontend/src/features/community/render:17` | 工坊站点 |
+| `isModelMissing()` | `frontend/src/features/community/render:27` | 判断模型是否缺失（本地不存在） |
+| `countMissing()` | `frontend/src/features/community/render:43` | 计算缺失数量 |
+| `formatSize()` | `frontend/src/features/community/render:53` | 格式化文件大小（B/KB/MB，&lt;1KB 无单位省略走 ""） |
+| `filterModels()` | `frontend/src/features/community/render:64` | 过滤模型列表：关键词匹配（模型名）+ 「仅显示缺失」开关。 |
+| `renderModelList()` | `frontend/src/features/community/render:108` | 渲染模型列表（DocumentFragment） |
+| `SITE_GROUP_ORDER()` | `frontend/src/features/community/render:198` | 站点分组展示顺序（renderCardsHTML 使用） |
+| `groupSites()` | `frontend/src/features/community/render:203` | 按 group 分组站点（缺省 browse）。纯函数，供单测覆盖（ADR-023 L3）。 |
+| `renderCardsHTML()` | `frontend/src/features/community/render:220` | 生成左栏站点卡片 HTML |
+| `renderRepoHeaderHTML()` | `frontend/src/features/community/render:268` | 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等） |
 | `getExt()` | `frontend/src/features/dnd-shared:4` | — |
 | `isSupportedFile()` | `frontend/src/features/dnd-shared:8` | 扩展名是否在支持列表 |
 | `isImportableFile()` | `frontend/src/features/dnd-shared:14` | 是否可作为独立文件导入：.json 仅放行 ysm.json 入口清单 包内 geometry/animation/语言 json（main.json / *.animation. |
@@ -674,22 +674,22 @@
 | `CollectedEntry()` | `frontend/src/features/dnd-shared:33` | 收集条目（文件 + 相对路径） |
 | `FolderGroup()` | `frontend/src/features/dnd-shared:39` | 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） |
 | `groupCollected()` | `frontend/src/features/dnd-shared:51` | 将收集到的条目分组： - 有目录前缀的条目 → 按「顶层目录」整组（dir = 第一段路径），组内保留完整 relPath（支持多层嵌套） - 无目录前缀的散落文件 → 单文件队列 |
-| `registerDnD()` | `frontend/src/features/import-dnd:265` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
+| `registerDnD()` | `frontend/src/features/import-dnd:266` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
 | `isImportableFile()` | `frontend/src/features/import-executor` | — |
-| `ImportFile()` | `frontend/src/features/import-executor:12` | 带相对路径的 File（文件夹导入时标记 _relPath） |
-| `ImportRecord()` | `frontend/src/features/import-executor:15` | 已导入历史条目（导入 tab「已导入」列表数据源） |
-| `CollectedEntry()` | `frontend/src/features/import-executor:23` | 收集条目（文件 + 相对路径） |
-| `ImportHistory()` | `frontend/src/features/import-executor:32` | — |
-| `directImport()` | `frontend/src/features/import-executor:76` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
-| `importFolder()` | `frontend/src/features/import-executor:107` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） |
-| `executeCollected()` | `frontend/src/features/import-executor:165` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
-| `normalizeRepoName()` | `frontend/src/features/import-queue:26` | 仓库文件名归一化为「纯名」键（⚠️ 重名预警的 repoFiles Set 与查询共用契约）： 先剥 `.ban` 再剥扩展名（顺序不可反）——`foo.ysm` 与 `foo.y |
-| `ImportQueueHost()` | `frontend/src/features/import-queue:34` | app-content 组件实例（initImportQueue 依赖的成员） |
-| `initImportQueue()` | `frontend/src/features/import-queue:40` | 初始化导入队列，返回清理函数 |
+| `ImportFile()` | `frontend/src/features/import-executor:13` | 带相对路径的 File（文件夹导入时标记 _relPath） |
+| `ImportRecord()` | `frontend/src/features/import-executor:16` | 已导入历史条目（导入 tab「已导入」列表数据源） |
+| `CollectedEntry()` | `frontend/src/features/import-executor:24` | 收集条目（文件 + 相对路径） |
+| `ImportHistory()` | `frontend/src/features/import-executor:33` | — |
+| `directImport()` | `frontend/src/features/import-executor:77` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
+| `importFolder()` | `frontend/src/features/import-executor:108` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） |
+| `executeCollected()` | `frontend/src/features/import-executor:166` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
+| `normalizeRepoName()` | `frontend/src/features/import-queue:27` | 仓库文件名归一化为「纯名」键（⚠️ 重名预警的 repoFiles Set 与查询共用契约）： 先剥 `.ban` 再剥扩展名（顺序不可反）——`foo.ysm` 与 `foo.y |
+| `ImportQueueHost()` | `frontend/src/features/import-queue:35` | app-content 组件实例（initImportQueue 依赖的成员） |
+| `initImportQueue()` | `frontend/src/features/import-queue:41` | 初始化导入队列，返回清理函数 |
 | `loadOldestModel()` | `frontend/src/features/oldest-models:25` | 加载资历最深、仓库评分、热力图和每日推荐 |
-| `RecycleHost()` | `frontend/src/features/recycle-bin:11` | app-content 组件实例（initRecycleBin 依赖的成员） |
-| `isPathInRoot()` | `frontend/src/features/recycle-bin:22` | 判断条目路径是否位于资源根目录内（带路径分隔符边界，P3 修复）。 |
-| `initRecycleBin()` | `frontend/src/features/recycle-bin:29` | 初始化回收站管理，返回清理函数 |
+| `RecycleHost()` | `frontend/src/features/recycle-bin:12` | app-content 组件实例（initRecycleBin 依赖的成员） |
+| `isPathInRoot()` | `frontend/src/features/recycle-bin:23` | 判断条目路径是否位于资源根目录内（带路径分隔符边界，P3 修复）。 |
+| `initRecycleBin()` | `frontend/src/features/recycle-bin:30` | 初始化回收站管理，返回清理函数 |
 | `initResourcePacks()` | `frontend/src/features/resource-packs:13` | 初始化资源包 tab |
 | `UpdateInfo()` | `frontend/src/features/version-updater:9` | 更新信息（CheckUpdate 返回） |
 | `checkUpdateSilent()` | `frontend/src/features/version-updater:110` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |

@@ -5,6 +5,7 @@
 // - 内存历史（导入 tab 渲染数据源）+ inFlight 去重 + toast/stats/tree 广播
 // 与 go/importer + go/fileops.WriteModelFolder 后端对齐。
 import { bus } from "../bus.ts";
+import { t } from "../core/i18n/t.ts";
 import { getApp } from "../wails/app.ts";
 import { groupCollected, isImportableFile } from "./dnd-shared.ts";
 
@@ -77,7 +78,7 @@ export const directImport = async (file: File): Promise<void> => {
   // ysm.json 单文件 = 光杆清单（geometry/纹理全丢），引导拖整个文件夹
   if (file.name.toLowerCase() === "ysm.json") {
     toast(
-      "ysm.json 是模型清单，请拖入整个模型文件夹（含 geometry/动画/纹理，将整组导入）",
+      t("import.ysmJsonHint"),
       "warn",
       4000,
     );
@@ -95,9 +96,9 @@ export const directImport = async (file: File): Promise<void> => {
       isYsm: false,
     });
     refreshRepo();
-    toast("✅ 已导入: " + file.name, "success", 2000);
+    toast(t("import.success") + ": " + file.name, "success", 2000);
   } catch (e) {
-    toast("❌ 导入失败: " + String(e), "error", 4000);
+    toast("❌ " + t("import.failed") + ": " + String(e), "error", 4000);
   } finally {
     _inFlight.delete(file.name);
   }
@@ -133,7 +134,7 @@ export const importFolder = async (
       items.push({ RelPath: rel, Base64: b64 });
     }
     if (!items.length) {
-      toast("❌ 文件夹内没有可读取的文件", "error", 4000);
+      toast("❌ " + t("import.emptyFolder"), "error", 4000);
       return;
     }
     const { ImportModelFolder } = await getApp();
@@ -144,13 +145,13 @@ export const importFolder = async (
       isYsm: false,
     });
     refreshRepo();
-    toast("✅ 已整组导入: " + folderName, "success", 2500);
+    toast(t("import.success") + ": " + folderName, "success", 2500);
   } catch (e) {
     const msg = String(e);
     if (msg.includes("FILE_EXISTS") || msg.includes("目标已存在")) {
-      toast(`❌ ${folderName} 已存在，请重命名文件夹后再导入`, "error", 4000);
+      toast(`❌ ${folderName} ${t("import.alreadyExists")}`, "error", 4000);
     } else {
-      toast("❌ 整组导入失败: " + msg, "error", 4000);
+      toast("❌ " + t("import.failed") + ": " + msg, "error", 4000);
     }
   } finally {
     _inFlight.delete(dir);

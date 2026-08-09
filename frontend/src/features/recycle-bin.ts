@@ -1,5 +1,6 @@
 // ===== 回收站管理（类型化版 — ADR-014 P3 features）=====
 import { bus } from "../bus.ts";
+import { t } from "../core/i18n/t.ts";
 import { modalConfirm } from "../utils/dom/dialogs/modal.ts";
 import { renderDisplayName } from "../utils/dom/display.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
@@ -49,7 +50,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
       const { EmptyRecycleBin } = await getApp();
       const n = await EmptyRecycleBin("");
       bus.emit("toast:show", {
-        msg: `♻️ 已清空 ${n} 个文件`,
+        msg: `♻️ ${t("recycle.cleared", { n })}`,
         duration: 3000,
         type: "success",
       });
@@ -155,7 +156,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
           try {
             await RestoreFromRecycle(btn.dataset.path || "", "");
             bus.emit("toast:show", {
-              msg: "✅ 已恢复",
+              msg: t("recycle.restored"),
               duration: 2000,
               type: "success",
             });
@@ -200,7 +201,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
             bus.emit("stats:refresh");
             bus.emit("tree:reload");
             bus.emit("toast:show", {
-              msg: "✅ 已删除",
+              msg: t("recycle.deleted"),
               duration: 2000,
               type: "success",
             });

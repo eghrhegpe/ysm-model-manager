@@ -1,5 +1,6 @@
 // ===== 导入队列 + 拖拽 + 重命名流程（类型化版 — ADR-014 P3 features 收官）=====
 import { bus } from "../bus.ts";
+import { t } from "../core/i18n/t.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../utils/resource/types.ts";
 import { parseModelName, renderDisplayName } from "../utils/dom/display.ts";
@@ -95,7 +96,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       reader.onerror = (): void => {
         // P3 修复：读取失败需可见（原实现仅 onDone?.() 静默推进队列）
         bus.emit("toast:show", {
-          msg: "❌ 读取文件失败",
+          msg: "❌ " + t("import.readFailed"),
           duration: 5000,
           type: "error",
         });
@@ -318,7 +319,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       });
       if (ok === 0 && skip > 0) {
         bus.emit("toast:show", {
-          msg: "⚠️ 不支持的格式，仅支持 " + extsStr,
+          msg: "⚠️ " + t("import.unsupportedFormat") + " " + extsStr,
           duration: 4000,
           type: "warn",
         });
@@ -357,7 +358,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     updateQueueCount();
     if (ok === 0 && skip > 0) {
       bus.emit("toast:show", {
-        msg: "⚠️ 不支持的格式，仅支持 " + extsStr,
+        msg: "⚠️ " + t("import.unsupportedFormat") + " " + extsStr,
         duration: 4000,
         type: "warn",
       });
@@ -377,14 +378,14 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       updateQueueCount();
       if (fileQueue.length > 0) {
         bus.emit("toast:show", {
-          msg: `📁 已加入队列: ${fileQueue.length} 个模型文件`,
+          msg: `📁 ${t("import.addedToQueue", { n: fileQueue.length })}`,
           duration: 2000,
           type: "success",
         });
       }
     }).catch((e) => {
       bus.emit("toast:show", {
-        msg: "❌ 文件夹导入失败: " + String(e),
+        msg: "❌ " + t("import.folderImportFailed") + ": " + String(e),
         duration: 4000,
         type: "error",
       });
@@ -427,7 +428,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       const cfg = await LoadAppConfig();
       if (!cfg.filesRoot) {
         bus.emit("toast:show", {
-          msg: "请先配置存储路径",
+          msg: t("import.configureStorage"),
           duration: 4000,
           type: "warn",
         });
@@ -441,7 +442,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       const renameTo = await showRenameDialog(null, newName);
       if (!renameTo) {
         bus.emit("toast:show", {
-          msg: "已取消导入",
+          msg: t("import.cancelled"),
           duration: 2000,
           type: "info",
         });
@@ -454,7 +455,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       bus.emit("tree:reload");
 
       bus.emit("toast:show", {
-        msg: "✅ 已导入: " + finalName,
+        msg: `✅ ${t("import.imported")}: ` + finalName,
         duration: 3000,
         type: "success",
       });
@@ -500,7 +501,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
             bus.emit("stats:refresh");
             bus.emit("tree:reload");
             bus.emit("toast:show", {
-              msg: "✅ 已覆盖: " + finalName,
+              msg: `✅ ${t("import.overwritten")}: ` + finalName,
               duration: 2000,
               type: "success",
             });
@@ -527,7 +528,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
             return;
           } catch (e2) {
             bus.emit("toast:show", {
-              msg: "❌ 覆盖失败: " + String(e2),
+              msg: `❌ ${t("import.overwriteFailed")}: ` + String(e2),
               duration: 4000,
               type: "error",
             });
@@ -536,7 +537,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         }
       }
       bus.emit("toast:show", {
-        msg: "❌ 导入失败: " + errMsg,
+        msg: `❌ ${t("import.failed")}: ` + errMsg,
         duration: 5000,
         type: "error",
       });
@@ -710,7 +711,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       updateQueueCount();
       if (ok > 0) {
         bus.emit("toast:show", {
-          msg: `📥 已加入队列: ${ok} 个文件`,
+          msg: `📥 ${t("import.addedToQueue", { n: ok })}`,
           duration: 2000,
           type: "success",
         });
@@ -724,7 +725,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         updateQueueCount();
         if (fileQueue.length > 0) {
           bus.emit("toast:show", {
-            msg: `📥 已加入队列: ${fileQueue.length} 个文件`,
+            msg: `📥 ${t("import.addedToQueue", { n: fileQueue.length })}`,
             duration: 2000,
             type: "success",
           });
@@ -733,7 +734,7 @@ export function initImportQueue(app: ImportQueueHost): () => void {
       .catch((err) => {
         console.warn("[import-queue] 读取拖入项失败:", err);
         bus.emit("toast:show", {
-          msg: "❌ 读取拖入文件失败",
+          msg: "❌ " + t("import.readDropFailed"),
           duration: 3000,
           type: "error",
         });

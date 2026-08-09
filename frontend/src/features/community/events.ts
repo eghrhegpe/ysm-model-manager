@@ -1,6 +1,7 @@
 // ===== 创意工坊事件绑定（类型化版 — ADR-014 P3 features）=====
 // 下载队列逻辑已拆到 download-queue.js，本文件只做事件绑定 + 协调。
 import { bus } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
 import { modalConfirm } from "../../utils/dom/dialogs/modal.ts";
 import { renderModelList, filterModels, type WorkshopModel } from "./render.ts";
 import { createDownloadQueue } from "./download-queue.ts";
@@ -88,7 +89,7 @@ export function bindRepoEvents(
     const checked = selectedSet.size;
     const btn = sr.querySelector(".gh-dl-selected") as HTMLButtonElement | null;
     if (btn) {
-      btn.textContent = "⬇️ 下载选中 (" + checked + ")";
+      btn.textContent = "⬇️ " + t("workshop.downloadSelected", { n: checked });
       btn.disabled = checked === 0;
     }
   };
@@ -116,7 +117,7 @@ export function bindRepoEvents(
   if (toggleBtn) {
     toggleBtn.addEventListener("click", () => {
       showAll = !showAll;
-      toggleBtn.textContent = showAll ? "📁 显示全部" : "📁 仅显示缺失";
+      toggleBtn.textContent = showAll ? t("workshop.showAll") : t("workshop.showMissing");
       toggleBtn.classList.toggle("active", showAll);
       const list = sr.querySelector("#gh-repo-list");
       const inp = sr.querySelector("#gh-repo-srch") as HTMLInputElement | null;
@@ -245,7 +246,7 @@ export function bindRepoEvents(
     const decision = classifyDownloadSize(size);
     if (decision === "reject") {
       bus.emit("toast:show", {
-        msg: "📏 文件超过 10MB，已拒绝下载",
+        msg: `📏 ${t("workshop.fileTooLarge")}`,
         duration: 3000,
         type: "warn",
       });
@@ -253,10 +254,10 @@ export function bindRepoEvents(
     }
     if (decision === "confirm") {
       const ok = await modalConfirm({
-        title: "文件较大",
+        title: t("workshop.largeFile"),
         icon: "📏",
-        message: (size / 1024 / 1024).toFixed(1) + "MB，确定要下载吗？",
-        okText: "下载",
+        message: (size / 1024 / 1024).toFixed(1) + "MB，" + t("workshop.confirmDownload"),
+        okText: t("workshop.download"),
       });
       if (!ok) return;
     }

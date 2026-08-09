@@ -302,3 +302,86 @@ export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
     });
   });
 }
+
+export interface ModalProgressOptions {
+  title: string;
+  icon?: string;
+  width?: string;
+}
+
+export interface ModalProgressHandle {
+  /** 更新进度（done/total 字节；total<=0 表示大小未知，显示已下载字节） */
+  update(done: number, total: number): void;
+  close(): void;
+}
+
+/** 格式化字节为 MB（进度弹窗文案用） */
+function fmtMB(n: number): string {
+  return (n / 1024 / 1024).toFixed(1) + " MB";
+}
+
+/**
+ * 只读进度弹窗（无确认/取消按钮，Esc 或点遮罩关闭）。
+ * 返回句柄：update() 驱动进度条，close() 关闭。
+ * 用于版本更新等长任务的前端进度反馈（配合 update:progress 事件）。
+ */
+export function modalProgress(opts: ModalProgressOptions): ModalProgressHandle {
+  const { title, icon, width } = opts;
+  const overlay = document.createElement("div");
+  overlay.tabIndex = 0;
+  overlay.className = "dlg-overlay";
+  overlay.onclick = (e: MouseEvent): void => {
+    if (e.target === overlay) close();
+  };
+  overlay.addEventListener("keydown", (e: KeyboardEvent): void => {
+    if (e.key === "Escape") close();
+  });
+
+  const box = document.createElement("div");
+  box.className = "dlg-box dlg-pad";
+  box.style.gap = "10px";
+  if (width) box.style.width = width;
+
+  const pctEl = document.createElement("div");
+  pctEl.style.cssText = "font-size:11px;color:var(--txt);text-align:right";
+  const track = document.createElement("div");
+  track.style.cssText =
+    "height:8px;border-radius:4px;background:var(--bd);overflow:hidden";
+  const fill = document.createElement("div");
+  fill.style.cssText =
+    "height:100%;width:0%;background:var(--accent,#66d9ef);transition:width .2s";
+  track.appendChild(fill);
+
+  box.innerHTML = `<div class="dlg-title" style="margin:0">${esc(icon || "")} ${esc(title)}</div>`;
+  box.appendChild(track);
+  box.appendChild(pctEl);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  registerDlg(overlay, () => close());
+  overlay.focus();
+  trapFocus(overlay);
+
+  let closed = false;
+  function close(): void {
+    if (closed) return;
+    closed = true;
+    closeDlg(overlay, () => {}, undefined);
+  }
+
+  return {
+    update(done, total) {
+      if (closed) return;
+      if (total > 0) {
+        // 钳制 [0,100]（ADR-044 ② 数值守卫：NaN/负值/超 100 不允许进入样式）
+        const pct = Math.min(100, Math.max(0, Math.round((done / total) * 100)));
+        fill.style.width = pct + "%";
+        pctEl.textContent = `${pct}%（${fmtMB(done)} / ${fmtMB(total)}）`;
+      } else {
+        // 未知大小（分块传输）：显示已下载字节 + 不确定态条幅
+        fill.style.width = "60%";
+        pctEl.textContent = `已下载 ${fmtMB(done)}`;
+      }
+    },
+    close,
+  };
+}

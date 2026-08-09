@@ -1,10 +1,11 @@
 // ===== 版本更新检查（类型化版 — ADR-014 P3 features）=====
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
-import { esc, modalConfirm } from "../utils/dom/dialogs/modal.ts";
+import { esc, modalConfirm, modalProgress } from "../utils/dom/dialogs/modal.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { safeGet, safeSet } from "../utils/dom/storage.ts";
 import { getApp } from "../wails/app.ts";
+import { Events } from "@wailsio/runtime";
 
 /** 更新信息（CheckUpdate 返回） */
 export interface UpdateInfo {
@@ -45,14 +46,28 @@ async function doUpdate(
     statusEl.textContent = "⬇️ 下载+安装中...";
   }
   const { DoUpdate, RestartApplication } = await getApp();
-  const result = await DoUpdate(info.url || "", info.expectedHash || "");
-  if (result !== "success") {
-    throw new Error(result);
+  // P3（审核发现）：下载期界面零反馈——打开只读进度弹窗，并瞬态注册 update:progress
+  // 事件（Go 侧 DoUpdate 下载时经 a.app.Event.Emit 推送 done/total 字节），
+  // finally 注销监听并关闭弹窗，避免常驻 handler（与 download-queue 的模块级
+  // ADR-039 豁免注册不同：本模块是瞬态生命周期，有明确的 Off 路径）
+  const progress = modalProgress({ title: "正在更新", icon: "⬇️", width: "420px" });
+  const unsub = Events.On("update:progress", (e: { data: unknown[] }) => {
+    const [done, total] = e.data as [number, number];
+    progress.update(done, total);
+  });
+  try {
+    const result = await DoUpdate(info.url || "", info.expectedHash || "");
+    if (result !== "success") {
+      throw new Error(result);
+    }
+    // 说明：Go 侧 InstallUpdate 在替换完成后 os.Exit(0) 终止主进程，下面这段实际
+    // 不可达（更新助手 ysm-updater-helper.exe 负责替换 exe 并重启新进程）；
+    // 保留作防御——若未来 InstallUpdate 改为返回而非退出，可在此启动新进程
+    await RestartApplication();
+  } finally {
+    unsub();
+    progress.close();
   }
-  // 说明：Go 侧 InstallUpdate 在替换完成后 os.Exit(0) 终止主进程，下面这段实际
-  // 不可达（更新助手 ysm-updater-helper.exe 负责替换 exe 并重启新进程）；
-  // 保留作防御——若未来 InstallUpdate 改为返回而非退出，可在此启动新进程
-  await RestartApplication();
 }
 
 /** 弹出更新确认对话框（手动/静默共用） — 含格式化的更新日志区域 */

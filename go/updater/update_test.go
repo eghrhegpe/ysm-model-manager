@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -201,6 +202,76 @@ func TestDownload_OK(t *testing.T) {
 	data, err := os.ReadFile(path)
 	if err != nil || !bytes.Equal(data, body) {
 		t.Errorf("下载内容不符: err=%v", err)
+	}
+}
+
+func TestDownloadWithProgress_KnownLength(t *testing.T) {
+	body := bytes.Repeat([]byte("x"), 1024*1024) // 1MB，足够触发多次 1% 步进回调
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 显式 Content-Length：Go server 对 >4KB 单次 Write 会自动转 chunked（resp.ContentLength=-1），
+		// 无法测「已知长度」分支
+		w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+		w.Write(body)
+	}))
+	defer server.Close()
+
+	var calls []struct{ done, total int64 }
+	path, err := DownloadWithProgress(server.URL+"/pkg.zip", "", func(done, total int64) {
+		calls = append(calls, struct{ done, total int64 }{done, total})
+	})
+	if err != nil {
+		t.Fatalf("DownloadWithProgress() = %v", err)
+	}
+	defer os.Remove(path)
+
+	if len(calls) == 0 {
+		t.Fatal("进度回调未被调用")
+	}
+	// 最终回调必须覆盖 100%（done==total==len(body)）
+	last := calls[len(calls)-1]
+	if last.done != int64(len(body)) || last.total != int64(len(body)) {
+		t.Errorf("最终回调 = %d/%d，期望 %d/%d", last.done, last.total, len(body), len(body))
+	}
+	// 回调单调递增且 total 恒定
+	var prev int64
+	for i, c := range calls {
+		if c.done < prev {
+			t.Fatalf("回调 %d 回退: done=%d < prev=%d", i, c.done, prev)
+		}
+		prev = c.done
+		if c.total != int64(len(body)) {
+			t.Errorf("回调 %d total=%d，期望 %d", i, c.total, len(body))
+		}
+	}
+}
+
+func TestDownloadWithProgress_UnknownLength(t *testing.T) {
+	// 分块传输（Flush 强制无 Content-Length）：total 应为 0，回调仍按字节节流发生
+	body := bytes.Repeat([]byte("y"), 600<<10) // 600KB > 512KB 节流阈值
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush() // 先发 header → 无法再设 Content-Length → chunked
+		w.Write(body)
+	}))
+	defer server.Close()
+
+	var calls int
+	path, err := DownloadWithProgress(server.URL+"/pkg.zip", "", func(done, total int64) {
+		calls++
+		if total != 0 {
+			t.Errorf("total = %d，期望 0（未知长度）", total)
+		}
+		if done < 0 {
+			t.Errorf("done = %d，不可为负", done)
+		}
+	})
+	if err != nil {
+		t.Fatalf("DownloadWithProgress() = %v", err)
+	}
+	defer os.Remove(path)
+
+	if calls == 0 {
+		t.Fatal("分块传输下进度回调未被调用")
 	}
 }
 

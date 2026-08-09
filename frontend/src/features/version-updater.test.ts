@@ -9,6 +9,9 @@ const { mocks } = vi.hoisted(() => {
     DoUpdate: vi.fn(),
     RestartApplication: vi.fn(),
     modalConfirm: vi.fn(),
+    modalProgress: vi.fn(),
+    progressHandle: { update: vi.fn(), close: vi.fn() },
+    eventsOn: vi.fn(),
   };
   return { mocks };
 });
@@ -24,6 +27,11 @@ vi.mock("../wails/app.ts", () => ({
 vi.mock("../utils/dom/dialogs/modal.ts", () => ({
   esc: (s: unknown): string => String(s),
   modalConfirm: mocks.modalConfirm,
+  modalProgress: mocks.modalProgress,
+}));
+
+vi.mock("@wailsio/runtime", () => ({
+  Events: { On: mocks.eventsOn },
 }));
 
 vi.mock("../utils/dom/errors.ts", () => ({
@@ -34,6 +42,7 @@ vi.mock("../utils/dom/errors.ts", () => ({
 const CHECK_KEY = "ysm_lastUpdateCheck";
 
 let cleanups: Array<() => void> = [];
+let unsubSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   cleanups = [];
@@ -46,6 +55,10 @@ beforeEach(() => {
   });
   mocks.DoUpdate.mockResolvedValue("success");
   mocks.modalConfirm.mockResolvedValue(true);
+  // 进度弹窗默认返回句柄；update:progress 监听默认返回注销函数
+  unsubSpy = vi.fn();
+  mocks.modalProgress.mockReturnValue(mocks.progressHandle);
+  mocks.eventsOn.mockReturnValue(unsubSpy);
   // 默认超过 6h 频次限制
   localStorage.setItem(CHECK_KEY, "0");
 });
@@ -159,6 +172,44 @@ describe("initVersionUpdater（手动检查）", () => {
     expect(mocks.DoUpdate).toHaveBeenCalledWith("", "");
     expect(mocks.RestartApplication).toHaveBeenCalled();
     expect(btn.disabled).toBe(false);
+  });
+
+  it("确认后打开进度弹窗并注册 update:progress 监听，完成后注销+关闭", async () => {
+    spyToasts();
+    const { btn } = await setupRoot();
+
+    btn.click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    // 下载开始：打开只读进度弹窗 + 注册 update:progress
+    expect(mocks.modalProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "正在更新" }),
+    );
+    expect(mocks.eventsOn).toHaveBeenCalledWith("update:progress", expect.any(Function));
+
+    // 下载完成：注销监听 + 关闭弹窗
+    await new Promise((r) => setTimeout(r, 0));
+    expect(unsubSpy).toHaveBeenCalled();
+    expect(mocks.progressHandle.close).toHaveBeenCalled();
+  });
+
+  it("update:progress 事件驱动进度弹窗更新", async () => {
+    let captured: ((e: { data: unknown[] }) => void) | null = null;
+    mocks.eventsOn.mockImplementation(
+      (_name: string, cb: (e: { data: unknown[] }) => void) => {
+        captured = cb;
+        return unsubSpy;
+      },
+    );
+    spyToasts();
+    const { btn } = await setupRoot();
+
+    btn.click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Go 侧 Emit 多参打包为数组 → e.data 解构
+    captured!({ data: [5242880, 10485760] });
+    expect(mocks.progressHandle.update).toHaveBeenCalledWith(5242880, 10485760);
   });
 
   it("有可用更新但用户取消 → 不下载", async () => {

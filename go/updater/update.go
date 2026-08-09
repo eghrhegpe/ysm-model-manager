@@ -30,6 +30,35 @@ var updateLock sync.Mutex
 // maxDownloadSize 更新包下载大小上限（500MB）
 const maxDownloadSize = 500 << 20
 
+// progressWriter 下载进度计数器：按 1% 步进（大小已知）或每 512KB（分块传输）节流回调，
+// 避免高频事件冲刷前端；写满时强制补一次 100% 回调（done==total）
+type progressWriter struct {
+	total      int64
+	written    int64
+	lastPct    int64
+	lastBytes  int64
+	onProgress func(done, total int64)
+}
+
+func (w *progressWriter) Write(p []byte) (int, error) {
+	n := len(p)
+	w.written += int64(n)
+	if w.onProgress != nil {
+		if w.total > 0 {
+			pct := w.written * 100 / w.total
+			if pct > w.lastPct || w.written >= w.total {
+				w.lastPct = pct
+				w.onProgress(w.written, w.total)
+			}
+		} else if w.written-w.lastBytes >= 512<<10 {
+			// Content-Length 未知（分块传输）：按 512KB 节流，前端显示已下载字节
+			w.lastBytes = w.written
+			w.onProgress(w.written, 0)
+		}
+	}
+	return n, nil
+}
+
 // ReleaseAsset GitHub Release 中的文件
 type ReleaseAsset struct {
 	Name               string `json:"name"`
@@ -169,9 +198,15 @@ func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, 
 	}, nil
 }
 
-// Download 下载更新包到临时目录，返回 zip 路径。
+// Download 下载更新包到临时目录，返回 zip 路径（无进度回调，兼容旧调用方）。
 // 若 expectedHash 非空，下载完成后校验 SHA256，不匹配则删除文件并报错。
 func Download(assetURL string, expectedHash string) (string, error) {
+	return DownloadWithProgress(assetURL, expectedHash, nil)
+}
+
+// DownloadWithProgress 下载更新包；onProgress 在下载过程中节流回调 (done, total) 字节数
+// （total<=0 表示 Content-Length 未知，分块传输场景）
+func DownloadWithProgress(assetURL string, expectedHash string, onProgress func(done, total int64)) (string, error) {
 	updateLock.Lock()
 	defer updateLock.Unlock()
 
@@ -206,8 +241,16 @@ func Download(assetURL string, expectedHash string) (string, error) {
 		os.Remove(tmp)
 		return "", fmt.Errorf("更新包过大（%d 字节），超过 %d 字节上限", resp.ContentLength, maxDownloadSize)
 	}
+	total := resp.ContentLength
+	if total < 0 {
+		total = 0 // 分块传输：大小未知，进度按字节节流回调
+	}
 	hasher := sha256.New()
-	n, err := io.Copy(f, io.TeeReader(io.LimitReader(resp.Body, maxDownloadSize), hasher))
+	prog := &progressWriter{total: total, onProgress: onProgress}
+	n, err := io.Copy(
+		io.MultiWriter(f, prog),
+		io.TeeReader(io.LimitReader(resp.Body, maxDownloadSize), hasher),
+	)
 	// 截断检测：读到上限后再读 1 字节，若仍有数据说明更新包超限被截断
 	// （无 Content-Length 的分块传输场景兜底，防止截断包被装盘）
 	if n >= maxDownloadSize {

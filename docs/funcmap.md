@@ -27,7 +27,7 @@
 | Go·标签 | 1 | 8 |
 | Go·Three.js | 1 | 6 |
 | Go·类型 | 5 | 49 |
-| Go·更新器 | 1 | 8 |
+| Go·更新器 | 1 | 10 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 23 |
 | Go(internal)·应用入口 | 17 | 171 |
@@ -36,11 +36,11 @@
 | 前端·特性 | 13 | 60 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 32 | 110 |
+| 前端·工具 | 32 | 113 |
 | frontend/views | 53 | 151 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **184** | **826** |
+| **合计** | **184** | **831** |
 
 ## Go·头像
 
@@ -357,14 +357,16 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `Check()` | `go/updater/update:72` | Check 检查 GitHub 是否有新版本（聚合所有未读版本的更新日志） |
-| `CheckWithClient()` | `go/updater/update:78` | CheckWithClient 可注入 client 与 API URL 的测试变体（Check 的内部实现） |
-| `Download()` | `go/updater/update:174` | Download 下载更新包到临时目录，返回 zip 路径。 |
-| `CleanupOldVersion()` | `go/updater/update:244` | CleanupOldVersion 启动时清理上一次更新留下的 .old 文件 |
-| `InstallUpdate()` | `go/updater/update:259` | InstallUpdate 解压更新包并通过 helper 进程替换当前 exe。 |
-| `ReleaseAsset()` | `go/updater/update:34` | ReleaseAsset GitHub Release 中的文件 |
-| `Release()` | `go/updater/update:40` | Release GitHub Release 信息 |
-| `UpdateInfo()` | `go/updater/update:49` | UpdateInfo 更新信息（序列化给前端） |
+| `progressWriter.Write()` | `go/updater/update:43` | — |
+| `Check()` | `go/updater/update:101` | Check 检查 GitHub 是否有新版本（聚合所有未读版本的更新日志） |
+| `CheckWithClient()` | `go/updater/update:107` | CheckWithClient 可注入 client 与 API URL 的测试变体（Check 的内部实现） |
+| `Download()` | `go/updater/update:203` | Download 下载更新包到临时目录，返回 zip 路径（无进度回调，兼容旧调用方）。 |
+| `DownloadWithProgress()` | `go/updater/update:209` | DownloadWithProgress 下载更新包；onProgress 在下载过程中节流回调 (done, total) 字节数 （total&lt;=0 表示 Content-Le |
+| `CleanupOldVersion()` | `go/updater/update:287` | CleanupOldVersion 启动时清理上一次更新留下的 .old 文件 |
+| `InstallUpdate()` | `go/updater/update:302` | InstallUpdate 解压更新包并通过 helper 进程替换当前 exe。 |
+| `ReleaseAsset()` | `go/updater/update:63` | ReleaseAsset GitHub Release 中的文件 |
+| `Release()` | `go/updater/update:69` | Release GitHub Release 信息 |
+| `UpdateInfo()` | `go/updater/update:78` | UpdateInfo 更新信息（序列化给前端） |
 
 ## Go·监听
 
@@ -423,12 +425,12 @@
 | `App.DownloadUpdate()` | `internal/app/app_config:230` | — |
 | `App.ApplyUpdate()` | `internal/app/app_config:234` | — |
 | `App.DoUpdate()` | `internal/app/app_config:238` | — |
-| `App.RestartApplication()` | `internal/app/app_config:250` | — |
-| `App.SaveWindowPosition()` | `internal/app/app_config:280` | — |
-| `App.GetWindowPosition()` | `internal/app/app_config:294` | — |
-| `App.SelectDirectory()` | `internal/app/app_config:325` | ========== 目录选择 ========== |
-| `App.GetMinecraftPaths()` | `internal/app/app_config:386` | — |
-| `App.ValidateMinecraftDir()` | `internal/app/app_config:388` | — |
+| `App.RestartApplication()` | `internal/app/app_config:253` | — |
+| `App.SaveWindowPosition()` | `internal/app/app_config:283` | — |
+| `App.GetWindowPosition()` | `internal/app/app_config:297` | — |
+| `App.SelectDirectory()` | `internal/app/app_config:328` | ========== 目录选择 ========== |
+| `App.GetMinecraftPaths()` | `internal/app/app_config:389` | — |
+| `App.ValidateMinecraftDir()` | `internal/app/app_config:391` | — |
 | `NewDownloadQueue()` | `internal/app/app_download:51` | NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入） |
 | `App.EnqueueDownloads()` | `internal/app/app_download:56` | — |
 | `App.CancelQueue()` | `internal/app/app_download:86` | — |
@@ -693,9 +695,9 @@
 | `isPathInRoot()` | `frontend/src/features/recycle-bin:23` | 判断条目路径是否位于资源根目录内（带路径分隔符边界，P3 修复）。 |
 | `initRecycleBin()` | `frontend/src/features/recycle-bin:33` | 初始化回收站管理，返回清理函数 |
 | `initResourcePacks()` | `frontend/src/features/resource-packs:13` | 初始化资源包 tab |
-| `UpdateInfo()` | `frontend/src/features/version-updater:10` | 更新信息（CheckUpdate 返回） |
-| `checkUpdateSilent()` | `frontend/src/features/version-updater:113` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
-| `initVersionUpdater()` | `frontend/src/features/version-updater:149` | 手动检查更新（设置页按钮） |
+| `UpdateInfo()` | `frontend/src/features/version-updater:11` | 更新信息（CheckUpdate 返回） |
+| `checkUpdateSilent()` | `frontend/src/features/version-updater:128` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
+| `initVersionUpdater()` | `frontend/src/features/version-updater:164` | 手动检查更新（设置页按钮） |
 
 ## 前端·服务
 
@@ -815,6 +817,9 @@
 | `modalSelect()` | `frontend/src/utils/dom/dialogs/modal:179` | 弹出下拉选择框 |
 | `ModalConfirmOptions()` | `frontend/src/utils/dom/dialogs/modal:242` | modalConfirm 选项 |
 | `modalConfirm()` | `frontend/src/utils/dom/dialogs/modal:258` | 弹出确认对话框 |
+| `ModalProgressOptions()` | `frontend/src/utils/dom/dialogs/modal:306` | — |
+| `ModalProgressHandle()` | `frontend/src/utils/dom/dialogs/modal:312` | — |
+| `modalProgress()` | `frontend/src/utils/dom/dialogs/modal:328` | 只读进度弹窗（无确认/取消按钮，Esc 或点遮罩关闭）。 |
 | `RenameFields()` | `frontend/src/utils/dom/dialogs/rename-format:7` | 重命名字段（调用方已 trim） |
 | `buildRenameName()` | `frontend/src/utils/dom/dialogs/rename-format:19` | 按 YSM 命名规范拼接新文件名：`[作者]【品牌】角色-变体 (年月).ext` 品牌缺省「未知」、角色缺省「?」，与预览一致。 |
 | `showRenameDialog()` | `frontend/src/utils/dom/dialogs/rename:16` | 弹出重命名对话框 |

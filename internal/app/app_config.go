@@ -236,7 +236,10 @@ func (a *App) ApplyUpdate(zipPath string) error {
 }
 
 func (a *App) DoUpdate(url string, expectedHash string) string {
-	zipPath, err := updater.Download(url, expectedHash)
+	zipPath, err := updater.DownloadWithProgress(url, expectedHash, func(done, total int64) {
+		// 下载进度事件：与前端 download-queue 的 download:progress 同构，多参打包为数组
+		a.app.Event.Emit("update:progress", done, total)
+	})
 	if err != nil {
 		return "下载失败: " + err.Error()
 	}

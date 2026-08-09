@@ -31,7 +31,7 @@ use_when:
 
 ## 与其他子系统关系
 
-- 依赖 `utils/resource-types.ts` 的 `RESOURCE_TYPES.YSM` 常量（不硬编码字符串）
+- 依赖 `utils/resource/types.ts` 的 `RESOURCE_TYPES` 常量（不硬编码字符串；知识卡旧文 `resource-types.ts` 为不存在的路径，已修正）
 - 被 `app-tree/render.ts` 消费（行图标与 YSM 判断）
 
 ## 不变量

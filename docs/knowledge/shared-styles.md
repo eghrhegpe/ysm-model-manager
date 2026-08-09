@@ -43,10 +43,11 @@ use_when:
 
 ## 不变量
 
-- 所有颜色/尺寸必须走 CSS 变量（`var(--txt)`/`var(--bd)`/`var(--btn-*)` 等），禁止引入硬编码主题色（治理红线 §3.3；`#a6e3a1` 等少量状态色为历史存量）
+- 所有颜色/尺寸必须走 CSS 变量（`var(--txt)`/`var(--bd)`/`var(--btn-*)` 等），禁止引入硬编码主题色（治理红线 §3.3；`#a6e3a1` 等少量状态色为历史存量）。**`--accent-btn-*` 三变量已补入默认 cyber 主题**（P2 修复：原仅在 warm/pro/sakura/ocean/mint 定义，默认暗色主题下 `.btn-base.accent` 主操作按钮静默失去 accent 样式）
 - 新增按钮样式必须扩展 `.btn-base` 变体，禁止另起一套按钮类（Design.md 唯一设计规范）；`components.css` 存在 `.btn-base` 平行副本（light DOM 用，primary:hover 混色与 css.ts 分叉，P3 观察待统一）
 - `treeCSS` 内联 `${btnBaseCSS}` **与 `${focusVisibleCSS}`**（P2 修复：原仅内联按钮体系，`.srch-inp`/`.sort-sel` 显式 `outline:none` 导致键盘聚焦无可见焦点环，a11y 缺口）；保持按钮体系单一来源，不得复制改写
-- 动画必须可被 `no-animations` 类关闭——**Shadow DOM 内必须用 `:host-context(.no-animations)`**（P2 修复：该类挂在 documentElement 上，后代选择器不能跨界上溯 shadow 边界，原 `.no-animations .fl` 永不命中）
+- 动画必须可被 `no-animations` 类关闭——**Shadow DOM 内必须用 `:host-context(.no-animations)`**（P2 修复：该类挂在 documentElement 上，后代选择器不能跨界上溯 shadow 边界）。**2026-08-09 已把 content-css.ts（4 处）/app-nav（logo-icon）/app-preview（css.ts）的 `.no-animations` 后代选择器全部改为 `:host-context`**——原仅 app-tree 一处收口，其余 6 处跨 shadow 永不生效（P2 修复扩大）
+- **`--bg2` 幽灵变量**（P3 观察）：`app-tree-styles.ts:22` `.adv-filter` 消费 `var(--bg2)` 全库无定义（content-css.ts:96 已用 `var(--bg2,transparent)` fallback 佐证）——计算值失效静默降级，待定义或补 fallback
 
 ## 相关
 

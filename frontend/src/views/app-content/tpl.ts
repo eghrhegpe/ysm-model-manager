@@ -71,6 +71,7 @@ export function settingsHTML(): string {
 <button class="stg-tab" data-tab="about">ℹ️ ${t("settings.about")}</button>
 <button class="stg-tab" data-tab="credits">🙏 ${t("settings.credits")}</button>
 </div>
+<!-- stg-tab-basic -->
 <div class="repo-tab-body" id="stg-tab-basic" style="overflow-y:auto">
 <div class="stg-page" style="padding:16px 20px">
 
@@ -146,7 +147,9 @@ export function settingsHTML(): string {
 
 </div>
 </div>
+<!-- /stg-tab-basic -->
 
+<!-- stg-tab-ui -->
 <div class="repo-tab-body" id="stg-tab-ui" style="display:none;overflow-y:auto">
 <div class="stg-page" style="padding:16px 20px">
 
@@ -321,7 +324,9 @@ export function settingsHTML(): string {
 
 </div>
 </div>
+<!-- /stg-tab-ui -->
 
+<!-- stg-tab-about -->
 <div class="repo-tab-body" id="stg-tab-about" style="display:none;overflow-y:auto">
 <div class="stg-page" style="padding:16px 20px">
 
@@ -393,7 +398,9 @@ export function settingsHTML(): string {
 
 </div>
 </div>
+<!-- /stg-tab-about -->
 
+<!-- stg-tab-credits -->
 <div class="repo-tab-body" id="stg-tab-credits" style="display:none;overflow-y:auto">
 <div class="stg-page" style="padding:16px 20px">
 
@@ -444,6 +451,7 @@ export function settingsHTML(): string {
 
 </div>
 </div>
+<!-- /stg-tab-credits -->
 
 </div>`;
 }

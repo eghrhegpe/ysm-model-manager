@@ -29,7 +29,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './_lib/scan-files.mjs';
 import { toPosix } from './_lib/to-posix.mjs';
-import { parseFrontmatter, getScalar, parseSourceFiles } from './_lib/frontmatter.mjs';
+import { parseFrontmatter, getScalar, getList, parseSourceFiles } from './_lib/frontmatter.mjs';
 
 const KC_DIR = path.join(ROOT, 'docs', 'knowledge');
 
@@ -158,6 +158,55 @@ function checkKnowledgeSources() {
       // [WARN] 指向测试文件 → 卡片事实源应是实现，测试应放 tests: 字段
       if (TEST_RE.test(norm)) {
         warns.push(`知识卡 ${cf} 的 source_files 指向测试文件: ${norm}（实现放 source_files，测试放 tests:）`);
+      }
+    }
+  }
+}
+
+// ── 检查 2.5：机制锚核对（ADR-044 策略 C）──
+// 存在性对账无法发现「机制描述错误」（sync.Once→registryMu、sort.Strings→json.Decoder、
+// GetVersion→GetAppVersion 等重构后知识卡正文失效）。知识卡 frontmatter 可声明
+// `invariant_anchors:`（list），每项 `文件相对路径|应含模式`（| 分隔，模式为字面子串或
+// `re:` 前缀正则）。锚不命中 → ERROR（机制描述漂移即红，纳入 ADR-043 fail-closed 契约）。
+function checkKnowledgeAnchors() {
+  if (!fs.existsSync(KC_DIR)) return;
+  const files = fs.readdirSync(KC_DIR).filter((f) => f.endsWith('.md') && f.toLowerCase() !== 'readme.md' && f.toLowerCase() !== 'agents.md');
+  for (const cf of files) {
+    const text = fs.readFileSync(path.join(KC_DIR, cf), 'utf8');
+    const fm = parseFrontmatter(text);
+    if (!fm) continue;
+    const anchors = getList(fm, 'invariant_anchors');
+    for (const raw of anchors) {
+      const sep = raw.lastIndexOf('|');
+      if (sep < 0) {
+        errors.push(`知识卡 ${cf} 的 invariant_anchors 格式非法: ${raw}（应为「文件相对路径|应含模式」）`);
+        continue;
+      }
+      const file = toPosix(raw.slice(0, sep).trim());
+      const pat = raw.slice(sep + 1).trim();
+      if (!file || !pat) {
+        errors.push(`知识卡 ${cf} 的 invariant_anchors 格式非法: ${raw}（文件或模式为空）`);
+        continue;
+      }
+      const full = path.join(ROOT, file);
+      if (!fs.existsSync(full)) {
+        errors.push(`知识卡 ${cf} 的机制锚文件不存在: ${file}`);
+        continue;
+      }
+      const content = fs.readFileSync(full, 'utf8');
+      let hit = false;
+      if (pat.startsWith('re:')) {
+        try {
+          hit = new RegExp(pat.slice(3)).test(content);
+        } catch (e) {
+          errors.push(`知识卡 ${cf} 的机制锚正则非法: ${pat}（${e.message}）`);
+          continue;
+        }
+      } else {
+        hit = content.includes(pat);
+      }
+      if (!hit) {
+        errors.push(`知识卡 ${cf} 的机制锚失效: 声称 ${file} 含「${pat}」，实际不存在（机制描述漂移——重构触及锚即红，请同步知识卡正文）`);
       }
     }
   }
@@ -328,6 +377,7 @@ function main() {
   }
   checkKnowledgeMeta();
   checkKnowledgeSources();
+  checkKnowledgeAnchors();
   checkIndexLinks();
   checkAgentsNoHandcraftedIndex();
   checkKnowledgeCoverage();

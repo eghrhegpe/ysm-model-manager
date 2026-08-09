@@ -18,6 +18,8 @@ use_when:
   - Go 调用
   - Binding
   - window.go.main.App
+invariant_anchors:
+  - frontend/src/wails/app.ts|_appPromise = null
 ---
 
 # Wails 桥接 app.ts

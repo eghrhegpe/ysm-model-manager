@@ -12,6 +12,8 @@ use_when:
   - 日志
   - import log
   - 历史
+invariant_anchors:
+  - go/logs/logs.go|fsutil.WriteFileAtomic
 ---
 
 # 导入日志 go/logs

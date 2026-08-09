@@ -9,6 +9,8 @@ use_when:
   - 去重
   - 重复检测
   - dedup
+invariant_anchors:
+  - go/dedup/dedup.go|fsutil.IsRecycleDir
 ---
 
 # 去重 go/dedup

@@ -15,6 +15,9 @@ use_when:
   - 7z
   - 纹理
   - 动画
+invariant_anchors:
+  - go/geometry/archive.go|fsutil.ReadLimitedEntry
+  - go/geometry/archive.go|json.Decoder
 ---
 
 # Geometry 存档 go/geometry

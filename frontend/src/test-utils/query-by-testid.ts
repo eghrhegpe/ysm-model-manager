@@ -59,8 +59,9 @@ export function queryAllByTestId(
   return els.filter((el) => {
     const id = el.getAttribute("data-testid") ?? "";
     if (id === testid) return true;
-    if (!id.startsWith(prefix)) return false;
+    // code_review：CSS `[data-testid^="${testid}-"]` 已保证此处 id 以 prefix 开头，
+    // 无需重复 startsWith 守卫；仅数字后缀正则做实际过滤（tree-dir-toggle 后缀非数字 → 排除）
     const suffix = id.slice(prefix.length);
-    return /^\d+$/.test(suffix); // 仅编号实例（tree-dir-toggle 后缀非数字 → 排除）
+    return /^\d+$/.test(suffix); // 仅编号实例（tree-file-1/2 约定，Design.md §19.1）
   });
 }

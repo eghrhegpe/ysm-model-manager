@@ -36,24 +36,24 @@
 | 前端·特性 | 13 | 61 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
-| 前端·工具 | 26 | 94 |
+| 前端·工具 | 29 | 101 |
 | frontend/views | 54 | 147 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **170** | **791** |
+| **合计** | **173** | **798** |
 
 ## Go·头像
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `SafeName()` | `go/avatar/avatar:35` | SafeName 将非法文件名字符替换为下划线。 |
-| `ReadCachedAvatar()` | `go/avatar/avatar:86` | ReadCachedAvatar 读取缓存中的头像，返回 data URI。 |
-| `SaveAvatarData()` | `go/avatar/avatar:100` | SaveAvatarData 将头像数据写入缓存。 |
-| `DecodeOneAvatar()` | `go/avatar/avatar:112` | DecodeOneAvatar 从模型文件中提取指定所有者的头像。 |
-| `CacheAvatarsFromJSON()` | `go/avatar/avatar:254` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
-| `ReadFileFromZip()` | `go/avatar/avatar:304` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
-| `SetNodeJS()` | `go/avatar/avatar:332` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
-| `DecodeYSMFiles()` | `go/avatar/avatar:339` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
+| `ReadCachedAvatar()` | `go/avatar/avatar:93` | ReadCachedAvatar 读取缓存中的头像，返回 data URI。 |
+| `SaveAvatarData()` | `go/avatar/avatar:114` | SaveAvatarData 将头像数据写入缓存。 |
+| `DecodeOneAvatar()` | `go/avatar/avatar:126` | DecodeOneAvatar 从模型文件中提取指定所有者的头像。 |
+| `CacheAvatarsFromJSON()` | `go/avatar/avatar:268` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
+| `ReadFileFromZip()` | `go/avatar/avatar:318` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
+| `SetNodeJS()` | `go/avatar/avatar:346` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
+| `DecodeYSMFiles()` | `go/avatar/avatar:353` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
 
 ## Go·去重
 
@@ -772,12 +772,16 @@
 | `evaluateKeyframes()` | `frontend/src/utils/animation/animation:290` | 在指定时间 t 对一组关键帧求值 |
 | `evaluateClip()` | `frontend/src/utils/animation/animation:334` | 对整个动画 clip 在指定时间求值（支持骨骼层级） |
 | `stagger()` | `frontend/src/utils/animation/stagger:11` | — |
+| `moveItem()` | `frontend/src/utils/array:8` | 将 arr[from] 移到 arr[to]（原地修改，返回同一数组）。 |
 | `dbg()` | `frontend/src/utils/debug/debug:32` | 输出调试日志（保留 tag 用于过滤） |
 | `btnBaseCSS()` | `frontend/src/utils/dom/css:1` | — |
 | `focusVisibleCSS()` | `frontend/src/utils/dom/css:32` | Shadow DOM 通用 focus-visible 规则（所有 button/input/select/textarea） |
-| `AdvFilterValue()` | `frontend/src/utils/dom/dialogs/adv-filter:11` | 筛选条件 |
-| `AdvFilterResult()` | `frontend/src/utils/dom/dialogs/adv-filter:22` | — |
-| `modalAdvFilter()` | `frontend/src/utils/dom/dialogs/adv-filter:29` | 弹出高级筛选弹窗 |
+| `AdvFilterValue()` | `frontend/src/utils/dom/dialogs/adv-filter-util:6` | 筛选条件 |
+| `parseFilterNumber()` | `frontend/src/utils/dom/dialogs/adv-filter-util:21` | 解析范围输入框数字：空 / 非数字 / 负数 → null（null 表示不限制）。 |
+| `validateAdvFilter()` | `frontend/src/utils/dom/dialogs/adv-filter-util:32` | 校验三组 min/max 范围（仅两端都填数字时比对），返回错误文案或 null。 |
+| `AdvFilterValue()` | `frontend/src/utils/dom/dialogs/adv-filter` | — |
+| `AdvFilterResult()` | `frontend/src/utils/dom/dialogs/adv-filter:17` | — |
+| `modalAdvFilter()` | `frontend/src/utils/dom/dialogs/adv-filter:24` | 弹出高级筛选弹窗 |
 | `BatchRenameChange()` | `frontend/src/utils/dom/dialogs/batch-rename:18` | 应用变更载荷 |
 | `showBatchRenameDialog()` | `frontend/src/utils/dom/dialogs/batch-rename:47` | 弹出批量重命名对话框 重复打开时先结算上一个 Promise，调用方 await 不会永远悬挂 |
 | `esc()` | `frontend/src/utils/dom/dialogs/modal` | — |
@@ -793,7 +797,10 @@
 | `RenameFields()` | `frontend/src/utils/dom/dialogs/rename-format:6` | 重命名字段（调用方已 trim） |
 | `buildRenameName()` | `frontend/src/utils/dom/dialogs/rename-format:18` | 按 YSM 命名规范拼接新文件名：`[作者]【品牌】角色-变体 (年月).ext` 品牌缺省「未知」、角色缺省「?」，与预览一致。 |
 | `showRenameDialog()` | `frontend/src/utils/dom/dialogs/rename:15` | 弹出重命名对话框 |
-| `modalTagEditor()` | `frontend/src/utils/dom/dialogs/tag-editor:12` | 弹出标签编辑弹窗 |
+| `modalTagEditor()` | `frontend/src/utils/dom/dialogs/tag-editor:13` | 弹出标签编辑弹窗 |
+| `TagSetResult()` | `frontend/src/utils/dom/dialogs/tag-set:5` | — |
+| `MAX_TAG_LENGTH()` | `frontend/src/utils/dom/dialogs/tag-set:11` | 标签最大长度（与原 addTag 一致） |
+| `addTagToSet()` | `frontend/src/utils/dom/dialogs/tag-set:18` | 向标签集合添加一个标签（已 trim）： 空输入 → 原样返回；重复 → error「标签已存在」；超长 → error「最多 20 个字符」； 合法 → 排序后返回新数组。错误文 |
 | `ParsedModelName()` | `frontend/src/utils/dom/display:6` | 解析后的模型文件名字段 |
 | `parseModelName()` | `frontend/src/utils/dom/display:28` | 解析模型文件名 → 结构化字段 支持格式: [作者]【作品】角色变体2023-05.ysm 也兼容: [作者]《作品》角色变体2023-05.ysm |
 | `renderDisplayName()` | `frontend/src/utils/dom/display:79` | 渲染美化文件名 HTML（通用接口） 应用 CSS 变量: --meta-author, --meta-work, --meta-date |
@@ -851,7 +858,7 @@
 | `LocalCreatorLike()` | `frontend/src/views/app-content/site-view:31` | 本地创作者（绑定 + 运行时附加字段） |
 | `renderSiteView()` | `frontend/src/views/app-content/site-view:42` | 站点视图渲染主入口 — 编排壳：构造数据 → 构 HTML → 绑事件 → 聚 cleanup。 |
 | `bindDragEvents()` | `frontend/src/views/app-content/site/drag:13` | 绑定拖拽 JSON 导入事件：创作者 JSON / 站点 JSON 识别 + 合并。 |
-| `bindEditEvents()` | `frontend/src/views/app-content/site/edit:15` | 绑定编辑模式事件：编辑入口 / 拉取配置 / 取消 / 保存 / 行内编辑 / 删除创作者 / 拖拽排序 / 增删搜索词 / 搜索过滤。 |
+| `bindEditEvents()` | `frontend/src/views/app-content/site/edit:16` | 绑定编辑模式事件：编辑入口 / 拉取配置 / 取消 / 保存 / 行内编辑 / 删除创作者 / 拖拽排序 / 增删搜索词 / 搜索过滤。 |
 | `bindBrowseEvents()` | `frontend/src/views/app-content/site/events:27` | 绑定浏览态事件：空状态按钮 / 创作者卡片网格 / 预设搜索 / 收藏 / 头像调试 / 卡片点击详情浮层 / 键盘导航 / storage 同步 / 浏览仓库模型。 |
 | `CrCardCtx()` | `frontend/src/views/app-content/site/render:12` | 创作者卡片工厂上下文 |
 | `BuildSiteHtmlCtx()` | `frontend/src/views/app-content/site/render:23` | buildSiteHtml 依赖的渲染上下文 |

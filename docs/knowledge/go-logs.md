@@ -53,6 +53,8 @@ use_when:
 - **分组纯属前端呈现**：后端 `GetAll()` 只按写入顺序平铺返回，不排序不分组；前端先 `slice(-500).reverse()` 取最近 500 条转时间倒序，再用 `Map` 按 op 归组，故组的先后 = 该 op 最新一条出现的先后，组内保持时间倒序。后端改变返回顺序会直接改变诊断页组序
 - 运行时日志只在内存，不落盘、重启即失；操作日志落盘失败只记系统 log、不向上抛错（日志不阻塞主流程）
 - `RuntimeBuffer.Write` 按调用次数分条（标准库 log 一行一次 Write），不解析日志级别，消息保留原始换行
+- **落盘原子性 + 损坏恢复**：tmp+rename 原子替换（rename 失败清理 tmp）；损坏 `ysm-import-logs.json` 备份 `.corrupt` 后重建空存储（对齐 tags.go 模式）；JSON `null` 内容守卫已封（`logs.go:58-60`）
+- **RuntimeBuffer 已有测试覆盖**（P3 补测：`runtime_test.go` 覆盖 Write 分条/环形丢弃最旧/cap≤0 回退 200/GetAll 副本/Clear；损坏恢复的 `.corrupt` 备份断言与 load 端 500 裁剪为 P4 待补）
 
 ## 相关
 

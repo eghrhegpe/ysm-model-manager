@@ -168,7 +168,9 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         if (tmpPath) {
           bus.emit("model:select", { path: tmpPath });
         }
-      } catch (_) {}
+      } catch (e) {
+        console.warn("[import-queue] 预览临时文件保存失败:", e);
+      }
     })();
 
     // "读取作者"已勾选时，自动为新文件读取 YSM 头部
@@ -198,7 +200,9 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         const exists = await CheckFileExists(fullPath);
         const el = root.getElementById("dl-conflict") as HTMLElement | null;
         if (el) el.style.display = exists ? "" : "none";
-      } catch {}
+      } catch (e) {
+        console.warn("[import-queue] 冲突检查失败:", e);
+      }
     }, 400);
   };
 

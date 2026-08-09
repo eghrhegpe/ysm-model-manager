@@ -947,4 +947,16 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       localStorage.setItem("td-rot-mode", rmEl.value);
     });
   }
+
+  // ── 语言切换（ADR-045）──
+  const langSelect = root.getElementById("set-lang") as HTMLSelectElement | null;
+  if (langSelect) {
+    const { getLang, setLang } = await import("../../../core/i18n/locale.ts");
+    langSelect.value = getLang();
+    langSelect.addEventListener("change", async () => {
+      await setLang(langSelect.value as "zh-CN" | "en");
+      // 重载页面使所有组件获取新语言包
+      window.location.reload();
+    });
+  }
 }

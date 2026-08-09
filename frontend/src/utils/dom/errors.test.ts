@@ -1,5 +1,6 @@
-// ===== friendlyError 错误友好化测试（ADR-014 P2）=====
-// Go 原始错误 → 中文友好提示；覆盖空值/中文直通/模式匹配/兜底四类路径。
+﻿// ===== friendlyError 错误友好化测试（ADR-014 P2 + ADR-045 i18n）=====
+// Go 原始错误 → 友好提示；覆盖空值/中文直通/模式匹配/兜底四类路径。
+// i18n t() 已由 test-setup.ts 全局 mock，无需重复。
 import { describe, it, expect } from "vitest";
 import { friendlyError } from "./errors.ts";
 
@@ -21,9 +22,9 @@ describe("friendlyError 空值与中文直通", () => {
 
 describe("friendlyError 社区高频错误", () => {
   it("429 / rate limit → GitHub 频率受限", () => {
-    expect(friendlyError("HTTP 429")).toBe("GitHub API 访问频率受限，请稍后重试");
+    expect(friendlyError("HTTP 429")).toBe("⏱️ GitHub API 频率限制，请稍后重试或改用浏览器打开");
     expect(friendlyError("rate limit exceeded")).toBe(
-      "GitHub API 访问频率受限，请稍后重试",
+      "⏱️ GitHub API 频率限制，请稍后重试或改用浏览器打开",
     );
   });
 

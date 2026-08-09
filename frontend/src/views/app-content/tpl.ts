@@ -132,6 +132,20 @@ export function settingsHTML(): string {
   </div>
 
 </div>
+
+<!-- 语言 -->
+<div class="section-title stg-title" style="margin-top:12px">🌐 ${t("settings.language")}</div>
+<div class="stg-card" style="animation-delay:240ms">
+  <div class="stg-card-body" style="display:flex;align-items:center;gap:8px">
+    <select id="set-lang" class="stg-select" style="width:auto">
+      <option value="zh-CN">简体中文</option>
+      <option value="en">English</option>
+    </select>
+    <span style="font-size:10px;color:var(--muted)">${t("settings.languageDesc")}</span>
+  </div>
+</div>
+
+</div>
 </div>
 
 <div class="repo-tab-body" id="stg-tab-ui" style="display:none">

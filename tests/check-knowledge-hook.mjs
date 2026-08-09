@@ -7,7 +7,7 @@ import assert from 'node:assert';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stripBlock, buildBlock, BLOCK_START, BLOCK_END, findStaleSnippets, diffIntroducesNew } from '../scripts/hooks/knowledge-affected-hint.mjs';
+import { stripBlock, buildBlock, BLOCK_START, BLOCK_END, findStaleSnippets, diffIntroducesNew, parseCardText } from '../scripts/hooks/knowledge-affected-hint.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fails = [];
@@ -77,18 +77,18 @@ check('--quiet 无命中输出空', () => {
 // ── 疑似过时句检测（ADR-047 增强）──
 
 check('diffIntroducesNew：diff 引入 pointerdown → true', () => {
-  const diff = 'addEventListener("pointerdown", onDown)';
+  const diff = '+ addEventListener("pointerdown", onDown)';
   assert.strictEqual(diffIntroducesNew(diff), true);
 });
 
 check('diffIntroducesNew：diff 无新写法 → false', () => {
-  const diff = 'addEventListener("click", onDown)';
+  const diff = '+ addEventListener("click", onDown)';
   assert.strictEqual(diffIntroducesNew(diff), false);
 });
 
 check('findStaleSnippets：卡仍写 mousedown 且 diff 引入 pointerdown → 报行', () => {
   const card = '## 交互\ncanvas 绑定 mousedown 处理拖拽。\n';
-  const diff = 'canvas.addEventListener("pointerdown", onDown);\n- canvas.addEventListener("mousedown", onDown);';
+  const diff = '+ canvas.addEventListener("pointerdown", onDown);\n- canvas.addEventListener("mousedown", onDown);';
   const hits = findStaleSnippets(card, diff);
   assert.strictEqual(hits.length, 1);
   assert.strictEqual(hits[0].line, 2);
@@ -103,13 +103,13 @@ check('findStaleSnippets：diff 未引入新写法 → 零命中（不误报）'
 
 check('findStaleSnippets：卡已是新写法 → 零命中', () => {
   const card = 'canvas 绑定 pointerdown 处理拖拽。\n';
-  const diff = 'canvas.addEventListener("pointerdown", onDown);';
+  const diff = '+ canvas.addEventListener("pointerdown", onDown);';
   assert.deepStrictEqual(findStaleSnippets(card, diff), []);
 });
 
 check('findStaleSnippets：词边界（mouseup 不命中 mousemove 行）', () => {
   const card = 'canvas 绑定 mousemove 跟踪位置。\n';
-  const diff = 'window.addEventListener("pointerup", onUp);';
+  const diff = '+ window.addEventListener("pointerup", onUp);';
   // diff 引入 pointerup，卡里是 mousemove（不同迁移对）→ 不报
   assert.deepStrictEqual(findStaleSnippets(card, diff), []);
 });
@@ -126,6 +126,44 @@ check('findStaleSnippets：对照/警示语境不误报（替代 mouseenter）',
   const diff = 'ddWrap.addEventListener("pointerenter", fn);';
   // 行内含 pointerenter（新词）+ 替代 → 不报
   assert.deepStrictEqual(findStaleSnippets(card, diff), []);
+});
+
+check('findStaleSnippets：删除行含新词不报（diff 移除 pointerdown 而非引入）', () => {
+  const card = 'canvas 绑定 mousedown 处理拖拽。\n';
+  // 只有 - 行（删除）含 pointerdown，无 + 行 → 未引入新写法，不报
+  const diff = '- renderer.addEventListener("pointerdown", onDown);\n';
+  assert.deepStrictEqual(findStaleSnippets(card, diff), []);
+});
+
+check('findStaleSnippets：大小写不敏感（卡写 MouseDown / diff 写 PointerDown）', () => {
+  const card = 'canvas 绑定 MouseDown 处理拖拽。\n';
+  const diff = '+ canvas.addEventListener("PointerDown", onDown);\n';
+  const hits = findStaleSnippets(card, diff);
+  assert.strictEqual(hits.length, 1);
+  assert.strictEqual(hits[0].line, 1);
+  assert.ok(hits[0].pair.oldWord, 'mousedown'); // 展示用纯词
+});
+
+check('findStaleSnippets：lineOffset 补偿 frontmatter 行号（P2 修复）', () => {
+  // frontmatter 4 行（--- / kind / --- / 空行），正文第 1 行 = 全文第 5 行
+  const card = '---\nkind: x\n---\n\ncanvas 绑定 mousedown 处理拖拽。\n';
+  const diff = '+ addEventListener("pointerdown", onDown);\n';
+  const hits = findStaleSnippets(card, diff);
+  assert.strictEqual(hits.length, 1);
+  assert.strictEqual(hits[0].line, 5); // 而非 body 相对行号 1
+});
+
+check('parseCardText：剥离 frontmatter 并返回正确 offset', () => {
+  const text = '---\nkind: x\nname: y\n---\n\n正文内容\n';
+  const { body, offset } = parseCardText(text);
+  assert.strictEqual(body, '正文内容\n');
+  assert.strictEqual(offset, 5); // frontmatter 4 行 + 分隔空行 1 行 = 5 行
+});
+
+check('parseCardText：无 frontmatter 返回原文本 + offset 0', () => {
+  const { body, offset } = parseCardText('纯正文\n');
+  assert.strictEqual(body, '纯正文\n');
+  assert.strictEqual(offset, 0);
 });
 
 if (fails.length) {

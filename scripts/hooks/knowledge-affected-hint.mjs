@@ -54,46 +54,82 @@ export function buildBlock(cards, start = BLOCK_START, end = BLOCK_END) {
 
 /**
  * 旧→新关键词迁移对（ADR-047 Pointer Events 迁移 + 历史平台演进）。
- * 卡内容仍含 old 而本次 staged diff 引入了 new → 疑似过时句。
- * 词边界用正则：避免 mousedown 命中 mousemove 的误判。
+ * 卡内容仍含 old（正则，`i` 大小写不敏感：`MouseDown`/`mouseDown` 均命中）而本次
+ * staged diff 的新增行引入了 new → 疑似过时句。oldWord 为纯词展示用（避免暴露正则源码）。
+ * 词边界 \b：避免 mousedown 命中 mousemove 的误判（JS 中 CJK 属 \W，与 \w 构成边界）。
  */
 export const STALE_KEYWORD_PAIRS = [
-  { old: /\bmousedown\b/, new: 'pointerdown' },
-  { old: /\bmousemove\b/, new: 'pointermove' },
-  { old: /\bmouseup\b/, new: 'pointerup' },
-  { old: /\bmouseenter\b/, new: 'pointerenter' },
-  { old: /\bmouseleave\b/, new: 'pointerleave' },
+  { old: /\bmousedown\b/i, new: 'pointerdown', oldWord: 'mousedown' },
+  { old: /\bmousemove\b/i, new: 'pointermove', oldWord: 'mousemove' },
+  { old: /\bmouseup\b/i, new: 'pointerup', oldWord: 'mouseup' },
+  { old: /\bmouseenter\b/i, new: 'pointerenter', oldWord: 'mouseenter' },
+  { old: /\bmouseleave\b/i, new: 'pointerleave', oldWord: 'mouseleave' },
 ];
 
-/** 检测 diff 是否引入任一 new 关键词（命中返回 true）。 */
+/** 提取 diff 的新增行（`+` 开头且非 `+++` 文件头），删除行/上下文行不计。 */
+export function addedLinesOf(diffText) {
+  return diffText.split('\n').filter((l) => l.startsWith('+') && !l.startsWith('+++'));
+}
+
+/** 检测 diff 新增行是否引入任一 new 关键词（命中返回 true）。 */
 export function diffIntroducesNew(diffText, pairs = STALE_KEYWORD_PAIRS) {
-  return pairs.some((p) => diffText.includes(p.new));
+  const added = addedLinesOf(diffText);
+  return pairs.some((p) => added.some((l) => l.toLowerCase().includes(p.new)));
+}
+
+/** 行内是否含某关键词（大小写不敏感）。 */
+function hasWord(line, word) {
+  return line.toLowerCase().includes(word.toLowerCase());
 }
 
 /**
- * 扫描卡文本，找出「本次 diff 已引入 new、卡里仍写过时 old」的疑似过时句。
+ * 扫描卡文本（正文，不含 frontmatter），找出「本次 diff 已引入 new、卡里仍写过时 old」
+ * 的疑似过时句。
  * 跳过对照/警示语境：行内已含对应新词（如「替代 mouseenter/mouseleave」）、
  * 或含禁止/迁移类警示词（如「不得出现 mousedown」）——这些是刻意提及而非过时。
- * @returns Array<{ line: number; text: string; pair: {old,new} }>
+ * @param lineOffset 正文在完整文件中的起始行号（frontmatter 行数），输出 line 为全文行号
+ * @returns Array<{ line: number; text: string; pair: {old,new,oldWord} }>
  */
-export function findStaleSnippets(cardText, diffText, pairs = STALE_KEYWORD_PAIRS) {
-  const introduced = new Set(pairs.filter((p) => diffText.includes(p.new)).map((p) => p.new));
+export function findStaleSnippets(cardText, diffText, pairs = STALE_KEYWORD_PAIRS, lineOffset = 0) {
+  const added = addedLinesOf(diffText);
+  const introduced = new Set(
+    pairs.filter((p) => added.some((l) => hasWord(l, p.new))).map((p) => p.new),
+  );
   if (introduced.size === 0) return [];
   // 警示/对照语境词：行内含其一即视为刻意提及（对照说明、禁止条款、迁移描述）。
-  // 中文词不加 \b（CJK 无词边界），英文词加 \b 防误伤（如「不再」不会命中「once」）
-  const CONTEXTUAL = /(替代|替换|取代|迁移|不再|禁止|不得|避免|仍用|旧写法|废弃|deprecated|DON'T|MUST NOT)/;
+  // 中文词无词边界（CJK），英文词加 \b 防子串误伤（如 MUST NOT 不命中 MUST NOTICE）
+  const CONTEXTUAL = /(替代|替换|取代|迁移|不再|禁止|不得|避免|仍用|旧写法|废弃|\bdeprecated\b|\bDON'T\b|\bMUST NOT\b)/;
   const out = [];
   const lines = cardText.split('\n');
   lines.forEach((line, idx) => {
     for (const p of pairs) {
       if (!introduced.has(p.new)) continue;
       if (!p.old.test(line)) continue;
-      if (CONTEXTUAL.test(line) || line.includes(p.new)) break; // 对照/警示语境不报
-      out.push({ line: idx + 1, text: line.trim(), pair: p });
+      if (CONTEXTUAL.test(line) || hasWord(line, p.new)) break; // 对照/警示语境不报
+      out.push({ line: idx + 1 + lineOffset, text: line.trim(), pair: p });
       break; // 同一行多个旧词只报一次
     }
   });
   return out;
+}
+
+/**
+ * 解析知识卡文件文本 → { body, offset }。
+ * body 为剥离 frontmatter（--- ... ---，含 \r?\n 容错）后的正文；offset 为正文起始
+ * 行号（frontmatter 占行数），供 findStaleSnippets 输出全文行号而非 body 相对行号。
+ */
+export function parseCardText(text) {
+  const m = text.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
+  if (!m) return { body: text, offset: 0 };
+  // offset = frontmatter 块内换行数（`---\n...\n---\n` 共 N 个 \n → 正文第一行为 N+1 行）
+  let offset = (m[0].match(/\n/g) || []).length;
+  let body = text.slice(m[0].length);
+  // 剥离 frontmatter 与正文之间的分隔空行（若有），offset 同步 +1 保持行号准确
+  if (body.startsWith('\n')) {
+    body = body.slice(1);
+    offset += 1;
+  }
+  return { body, offset };
 }
 
 function getStagedChanged() {
@@ -134,15 +170,15 @@ function getStagedDiff() {
   }
 }
 
-/** 读取知识卡正文（跳过 frontmatter），失败返回空串。 */
+/** 读取知识卡正文（跳过 frontmatter），失败返回空串。返回 { body, offset }。 */
 function readCardBody(ROOT, card) {
   try {
     const text = fs.readFileSync(path.join(ROOT, 'docs', 'knowledge', `${card}.md`), 'utf8');
-    // 剥离 frontmatter（--- ... ---），只扫正文——frontmatter 的 use_when 关键词不算过时
-    const m = text.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
-    return m ? m[1] : text;
+    // 剥离 frontmatter（--- ... ---，_lib 容错 \r?\n），只扫正文——frontmatter 的
+    // use_when 关键词不算过时；offset 补偿正文相对行号 → 全文行号（P2 修复）
+    return parseCardText(text);
   } catch {
-    return '';
+    return { body: '', offset: 0 };
   }
 }
 
@@ -163,13 +199,13 @@ function main() {
   const cards = getAffectedCards(ROOT, changed);
   if (cards.length === 0) return;
 
-  // 疑似过时句检测：diff 引入了新关键词（如 pointerdown）而卡正文仍写旧词（如 mousedown）
+  // 疑似过时句检测：diff 新增行引入了新关键词（如 pointerdown）而卡正文仍写旧词（如 mousedown）
   const diffText = getStagedDiff();
   const staleByCard = new Map();
   for (const card of cards) {
-    const body = readCardBody(ROOT, card);
+    const { body, offset } = readCardBody(ROOT, card);
     if (!body) continue;
-    const hits = findStaleSnippets(body, diffText);
+    const hits = findStaleSnippets(body, diffText, STALE_KEYWORD_PAIRS, offset);
     if (hits.length) staleByCard.set(card, hits);
   }
 
@@ -180,10 +216,10 @@ function main() {
   for (const card of cards) {
     const stale = staleByCard.get(card);
     if (stale?.length) {
-      // 有疑似过时句：精确指行，收件人可直接改（ADR-047 增强）
+      // 有疑似过时句：精确指行（全文行号），收件人可直接改（ADR-047 增强）
       lines.push(`  - docs/knowledge/${card}.md ⚠️ 疑似过时（本次 diff 已引入新写法）:`);
       for (const s of stale) {
-        lines.push(`      L${s.line} ${s.text.slice(0, 60)}（仍用 ${s.pair.old.source}，建议 ${s.pair.new}）`);
+        lines.push(`      L${s.line} ${s.text.slice(0, 60)}（仍用 ${s.pair.oldWord}，建议 ${s.pair.new}）`);
       }
     } else {
       lines.push(`  - docs/knowledge/${card}.md`);

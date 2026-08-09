@@ -37,10 +37,10 @@
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 32 | 110 |
-| frontend/views | 54 | 152 |
+| frontend/views | 53 | 151 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **182** | **824** |
+| **合计** | **181** | **823** |
 
 ## Go·头像
 
@@ -587,7 +587,7 @@
 | `applyTheme()` | `frontend/src/app-modules:67` | — |
 | `initTheme()` | `frontend/src/app-modules:91` | — |
 | `applyUIPrefs()` | `frontend/src/app-modules:110` | 应用 UI 偏好（字号/字体/密度/动画），不依赖设置页打开 |
-| `bus()` | `frontend/src/bus:176` | 默认实例（组件直接使用） |
+| `bus()` | `frontend/src/bus:171` | 默认实例（组件直接使用） |
 | `ToastPayload()` | `frontend/src/bus:7` | — |
 | `MenuItem()` | `frontend/src/bus:18` | — |
 | `PageName()` | `frontend/src/bus:30` | 核心页面名（与 app-nav 导航菜单一致） |
@@ -595,8 +595,8 @@
 | `ModelSelectPayload()` | `frontend/src/bus:42` | — |
 | `CtxShowPayload()` | `frontend/src/bus:47` | — |
 | `BusEvents()` | `frontend/src/bus:64` | — |
-| `BusEventName()` | `frontend/src/bus:121` | — |
-| `Bus()` | `frontend/src/bus:123` | — |
+| `BusEventName()` | `frontend/src/bus:116` | — |
+| `Bus()` | `frontend/src/bus:118` | — |
 
 ## 前端·核心
 
@@ -976,7 +976,7 @@
 | `treeCSS()` | `frontend/src/views/app-tree/app-tree-styles:3` | — |
 | `AuthorInfo()` | `frontend/src/views/app-tree/authors:5` | 作者统计（Go ListModelAuthors 返回） |
 | `loadAuthors()` | `frontend/src/views/app-tree/authors:13` | 从 Go 端加载作者列表 |
-| `bindBusEvents()` | `frontend/src/views/app-tree/bus-handlers:15` | — |
+| `bindBusEvents()` | `frontend/src/views/app-tree/bus-handlers:14` | — |
 | `selectState()` | `frontend/src/views/app-tree/data:4` | 多选状态 |
 | `toggleSelect()` | `frontend/src/views/app-tree/data:16` | 切换选中状态 |
 | `selectSingle()` | `frontend/src/views/app-tree/data:31` | 单选：清空后选中单个并设为 lastKey（用于单击选中，避免外部直接写 selectState） |
@@ -984,7 +984,6 @@
 | `bindTreeEvents()` | `frontend/src/views/app-tree/events:93` | — |
 | `setPendingTreeSearch()` | `frontend/src/views/app-tree/index:22` | — |
 | `AppTree()` | `frontend/src/views/app-tree/index:51` | — |
-| `initInstanceActions()` | `frontend/src/views/app-tree/instance-actions:27` | — |
 | `TreeEntry()` | `frontend/src/views/app-tree/loader:10` | 树条目（loader 转换后的渲染格式） |
 | `loadEntries()` | `frontend/src/views/app-tree/loader:38` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |
 | `TreeRow()` | `frontend/src/views/app-tree/render:21` | 扁平化行（虚拟滚动数据单元） |

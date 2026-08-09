@@ -1,0 +1,20 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        // Vuforia Engine SDK
+        maven { url 'https://artifactory.ptc.com/artifactory/vuforia-engine-maven' }
+    }
+}
+
+rootProject.name = "WailsApp"
+include ':app'

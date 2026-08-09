@@ -507,7 +507,7 @@ export function InstallResourceToInstance(rtype: string, srcPath: string, instan
 }
 
 /**
- * InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据
+ * InvalidateScanCache 清空扫描缓存，下次扫描获取最新数据（委托 ClearScanCache）
  */
 export function InvalidateScanCache(): $CancellablePromise<void> {
     return $Call.ByID(2605564787);

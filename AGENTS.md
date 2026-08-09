@@ -245,3 +245,31 @@ const { SomeBinding } = window.go.main.App;
 
 所有资源类型定义以 `resource_types.json` 为单一事实来源。**不要在 Go/Frontend 中手写 `StorageSubDir` / `specificRoot` / `ResourceExts` 的新条目**。先在 `resource_types.json` 加，一致性测试会自动校验。
 
+### 3.4 防御范式（ADR-044）
+
+> 31 批审核反推的「防御补丁式而非范式式」教训：同类缺陷（代际守卫遗漏、catch 缺失、truthiness 吞合法值、边界校验不对称）在 5~10+ 批中反复暴露。新代码必须按以下三条范式写，审查发现违规可直接判 P1/P2。
+
+**① 异步范式**（每个 async 路径必须闭环）：
+
+| 范式 | 反例（违规） | 正例 |
+|------|------------|------|
+| `await` 后落 DOM / 写状态前**必校验代际**（含 catch 分支） | `const data = await load(); render(data)` 无代际比对 | `if (gen !== _loadGen) return; render(data)`；catch 内同样比对 |
+| async 事件 handler 最外层**必有 catch 出口**（转 `friendlyError` toast） | `btn.onclick = async () => { await save(); }` 无 catch | `btn.onclick = async () => { try { ... } catch (e) { toast(friendlyError(e)) } }` |
+| busy 命中**必回完成事件**（带 `skipped` 标记），禁止静默吞事件 | `if (_downloadBusy) return;` 不发任何事件 | `if (busy) { emit(done, {skipped:true}); return; }` |
+
+**② 数值守卫范式**（truthiness 判断只用于布尔）：
+
+| 范式 | 反例（违规） | 正例 |
+|------|------------|------|
+| 数值守卫用 `Number.isFinite` 拦截 NaN/±Infinity | `if (!x && x !== 0)` 挡不住 Infinity | `if (!Number.isFinite(x)) fallback` |
+| 数字回填用 `?? ""` 不用 `|| ""` | `v.x \|\| ""` 把 0 折叠成空 | `v.x ?? ""` |
+| `!x` 只用于布尔，数值/字符串用显式 null/undefined 判断 | `if (!cosA) cosA = 1` 吞合法 0 | `if (cosA === undefined \|\| Number.isNaN(cosA)) cosA = 1` |
+
+**③ 边界对称范式**（校验必须覆盖对称边界）：
+
+| 范式 | 反例（违规） | 正例 |
+|------|------------|------|
+| 范围校验覆盖上下界 | int16 只查正上界、负 origin 静默回绕 | `origin < minCoord \|\| origin+size-1 > maxCoord` 双侧 |
+| 路径校验覆盖 `.` 与 `..` 两个逃逸段 | 只查 `rel==".."`，`rel=="."`（根级）放行 | `rel==".." \|\| rel=="."` 都拒绝；`IsInside` 相等放行时额外 `Clean()==Clean(root)` 拒绝 |
+| 字符串比较统一 EqualFold / 规范化 / 词边界 | 大小写敏感 `.recycle`、`HasPrefix("..")` 误判 `..foo`、裸子串 `contains("refused")` | `fsutil.IsRecycleDir`（EqualFold 基名）、`\b` 词边界或精确段比较 |
+

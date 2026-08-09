@@ -5,9 +5,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { getByTestId, getAllByTestId, waitFor, sleep, mountCustomElement, unmountElement } from "../../test-utils/index.ts";
 import { bus } from "../../bus.ts";
 
-// getApp 全绑定 mock
-vi.mock("../../wails/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({
+// getApp 全绑定 mock（P1 修复：mocks 提为 vi.hoisted 可引用，原内联 vi.fn 无法精确断言）
+const { mocks } = vi.hoisted(() => {
+  const mocks = {
     LoadResourceTypes: vi.fn().mockResolvedValue(
       JSON.stringify({
         resourceTypes: [
@@ -31,6 +31,16 @@ vi.mock("../../wails/app.ts", () => ({
     ),
     PushSingleResourceToInstance: vi.fn().mockResolvedValue(undefined),
     PullSingleResourceFromInstance: vi.fn().mockResolvedValue(undefined),
+  };
+  return { mocks };
+});
+
+vi.mock("../../wails/app.ts", () => ({
+  getApp: vi.fn().mockResolvedValue({
+    LoadResourceTypes: mocks.LoadResourceTypes,
+    GetInstanceSyncStatus: mocks.GetInstanceSyncStatus,
+    PushSingleResourceToInstance: mocks.PushSingleResourceToInstance,
+    PullSingleResourceFromInstance: mocks.PullSingleResourceFromInstance,
   }),
 }));
 
@@ -66,71 +76,97 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     unmountElement(el);
   });
 
-  it("推送按钮 → 调用 PushSingleResourceToInstance", async () => {
+  it("推送按钮 → 调用 PushSingleResourceToInstance（P1 修复：原断言 getApp 恒真）", async () => {
     const el = document.createElement("app-sync-manager");
     el.setAttribute("instance", "test");
     document.body.appendChild(el);
     await waitFor(() => el.querySelector('[data-testid="sm-push"]') !== null, 5000);
     const pushBtn = el.querySelector('[data-testid="sm-push"]') as HTMLElement;
     pushBtn.click();
-    await sleep(500);
-    const { getApp } = await import("../../wails/app.ts");
-    expect(getApp).toHaveBeenCalled();
+    await waitFor(() => mocks.PushSingleResourceToInstance.mock.calls.length > 0, 5000);
+    // 精确断言：参数序 (selectedType, instanceName, filePath)，selectedType 默认 YSM
+    expect(mocks.PushSingleResourceToInstance).toHaveBeenCalledWith(
+      "ysm",
+      "test",
+      expect.any(String),
+    );
     unmountElement(el);
   });
 
-  it("stats:refresh → 重新加载数据", async () => {
+  it("stats:refresh → 重新加载数据（P2 修复：原只断言元素存在，handler 被移除也通过）", async () => {
     const el = document.createElement("app-sync-manager");
     el.setAttribute("instance", "test");
     document.body.appendChild(el);
     await waitFor(() => el.querySelector(".sm-item") !== null, 5000);
+    const callsBefore = mocks.GetInstanceSyncStatus.mock.calls.length;
     bus.emit("stats:refresh");
     await sleep(500);
-    // 发射后列表应仍存在（数据重新加载后重渲染）
-    expect(el.querySelector(".sm-item")).toBeTruthy();
+    // 订阅有效 → 重新加载（GetInstanceSyncStatus 调用次数 +1）
+    expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(callsBefore + 1);
     unmountElement(el);
   });
 
-  it("disconnected → 清理订阅", async () => {
+  it("disconnected → 清理订阅（P1 修复：原 expect(true) 恒真）", async () => {
     const el = document.createElement("app-sync-manager");
     el.setAttribute("instance", "test");
     document.body.appendChild(el);
     await waitFor(() => el.querySelector(".sm-item") !== null, 5000);
+    // 记录卸载前的加载次数，断开后 emit 不应再触发 GetInstanceSyncStatus
+    const callsBefore = mocks.GetInstanceSyncStatus.mock.calls.length;
     unmountElement(el);
-    // 断开后发射 stats:refresh 不应抛错
+    // 断开后发射 stats:refresh，订阅应已清理 → 调用次数不变
     bus.emit("stats:refresh");
-    expect(true).toBe(true);
+    await sleep(100);
+    expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(callsBefore);
   });
 
-  it("类型标签切换 → 数据过滤", async () => {
+  it("类型标签切换 → 数据过滤（P2 修复：原 if 包裹空洞通过）", async () => {
     const el = document.createElement("app-sync-manager");
     el.setAttribute("instance", "test");
     document.body.appendChild(el);
     await waitFor(() => el.querySelector(".sm-tab") !== null, 5000);
     const tabs = el.querySelectorAll(".sm-tab");
     expect(tabs.length).toBeGreaterThanOrEqual(3);
-    if (tabs[1]) (tabs[1] as HTMLElement).click();
+    const target = tabs[1] as HTMLElement;
+    target.click();
     await sleep(100);
-    const activeTab = el.querySelector(".sm-tab.active");
-    expect(activeTab).toBeTruthy();
+    // 点击后 active 标签与目标 data-type 一致（不再空洞通过）
+    const activeTab = el.querySelector(".sm-tab.active") as HTMLElement;
+    expect(activeTab).not.toBeNull();
+    expect(activeTab.dataset.type).toBe(target.dataset.type);
     unmountElement(el);
   });
 
-  it("状态筛选标签 → 切换后列表变化", async () => {
+  it("状态筛选标签 → 切换后列表变化（P2 修复：原 if 包裹可空洞通过）", async () => {
     const el = document.createElement("app-sync-manager");
     el.setAttribute("instance", "test");
     document.body.appendChild(el);
+    await waitFor(() => el.querySelector(".sm-tab") !== null, 5000);
+    // 类型切换用例会改变模块级 _lastSelectedType（泄漏到本用例）——先显式切回 ysm，
+    // 否则 _applyFilter 先按残留类型过滤，missing 列表为空
+    const ysmTab = Array.from(el.querySelectorAll(".sm-tab")).find(
+      (t) => (t as HTMLElement).dataset.type === "ysm",
+    ) as HTMLElement;
+    expect(ysmTab).toBeTruthy();
+    ysmTab.click();
+    await sleep(50);
     await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
     const statusTabs = el.querySelectorAll(".sm-status-tab");
     const missingTab = Array.from(statusTabs).find(
       (t) => (t as HTMLElement).dataset.status === "missing",
     ) as HTMLElement;
-    if (missingTab) {
-      missingTab.click();
-      await sleep(100);
-      const active = el.querySelector('.sm-status-tab.active') as HTMLElement;
-      expect(active.dataset.status).toBe("missing");
-    }
+    // 直接断言存在（去掉 if 空洞包裹）
+    expect(missingTab).toBeTruthy();
+    missingTab.click();
+    await sleep(100);
+    const active = el.querySelector('.sm-status-tab.active') as HTMLElement;
+    expect(active.dataset.status).toBe("missing");
+    // 过滤后列表全部为 missing 状态
+    const items = el.querySelectorAll(".sm-item[data-status]");
+    expect(items.length).toBeGreaterThan(0);
+    items.forEach((it) => {
+      expect((it as HTMLElement).dataset.status).toBe("missing");
+    });
     unmountElement(el);
   });
 });

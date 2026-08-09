@@ -30,7 +30,7 @@
 | Go·更新器 | 1 | 8 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 23 |
-| Go(internal)·应用入口 | 15 | 169 |
+| Go(internal)·应用入口 | 17 | 171 |
 | 前端·根 (app-modules/bus) | 2 | 14 |
 | 前端·核心 | 13 | 26 |
 | 前端·特性 | 13 | 60 |
@@ -40,7 +40,7 @@
 | frontend/views | 53 | 151 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **181** | **823** |
+| **合计** | **183** | **825** |
 
 ## Go·头像
 
@@ -413,22 +413,22 @@
 | `App.BatchExtractCreatorAvatars()` | `internal/app/app_avatar:21` | BatchExtractCreatorAvatars 批量提取所有有本地模型的创作者头像 |
 | `App.DebugExtractCreatorAvatar()` | `internal/app/app_avatar:71` | DebugExtractCreatorAvatar 调试版：提取指定作者头像 |
 | `App.CacheModelAvatars()` | `internal/app/app_avatar:124` | CacheModelAvatars 从解压目录 ysm.json 缓存头像 |
-| `App.GetConfigPath()` | `internal/app/app_config:48` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
-| `App.SaveAppConfig()` | `internal/app/app_config:109` | — |
-| `App.SetDownloadMirror()` | `internal/app/app_config:173` | — |
-| `App.LoadAppConfig()` | `internal/app/app_config:202` | — |
-| `App.GetSubDirMap()` | `internal/app/app_config:223` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
-| `App.CurrentVersion()` | `internal/app/app_config:227` | — |
-| `App.CheckUpdate()` | `internal/app/app_config:229` | — |
-| `App.DownloadUpdate()` | `internal/app/app_config:233` | — |
-| `App.ApplyUpdate()` | `internal/app/app_config:237` | — |
-| `App.DoUpdate()` | `internal/app/app_config:241` | — |
-| `App.RestartApplication()` | `internal/app/app_config:253` | — |
-| `App.SaveWindowPosition()` | `internal/app/app_config:305` | — |
-| `App.GetWindowPosition()` | `internal/app/app_config:319` | — |
-| `App.SelectDirectory()` | `internal/app/app_config:350` | ========== 目录选择 ========== |
-| `App.GetMinecraftPaths()` | `internal/app/app_config:411` | — |
-| `App.ValidateMinecraftDir()` | `internal/app/app_config:413` | — |
+| `App.GetConfigPath()` | `internal/app/app_config:46` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
+| `App.SaveAppConfig()` | `internal/app/app_config:107` | — |
+| `App.SetDownloadMirror()` | `internal/app/app_config:171` | — |
+| `App.LoadAppConfig()` | `internal/app/app_config:200` | — |
+| `App.GetSubDirMap()` | `internal/app/app_config:221` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
+| `App.CurrentVersion()` | `internal/app/app_config:225` | — |
+| `App.CheckUpdate()` | `internal/app/app_config:227` | — |
+| `App.DownloadUpdate()` | `internal/app/app_config:231` | — |
+| `App.ApplyUpdate()` | `internal/app/app_config:235` | — |
+| `App.DoUpdate()` | `internal/app/app_config:239` | — |
+| `App.RestartApplication()` | `internal/app/app_config:251` | — |
+| `App.SaveWindowPosition()` | `internal/app/app_config:303` | — |
+| `App.GetWindowPosition()` | `internal/app/app_config:317` | — |
+| `App.SelectDirectory()` | `internal/app/app_config:348` | ========== 目录选择 ========== |
+| `App.GetMinecraftPaths()` | `internal/app/app_config:409` | — |
+| `App.ValidateMinecraftDir()` | `internal/app/app_config:411` | — |
 | `NewDownloadQueue()` | `internal/app/app_download:51` | NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入） |
 | `App.EnqueueDownloads()` | `internal/app/app_download:56` | — |
 | `App.CancelQueue()` | `internal/app/app_download:86` | — |
@@ -517,10 +517,10 @@
 | `App.OpenFolder()` | `internal/app/app_scan:300` | — |
 | `App.OpenInstanceFolder()` | `internal/app/app_scan:317` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
 | `progressReader.Read()` | `internal/app/app_scan:340` | — |
-| `App.GetModelTags()` | `internal/app/app_tags:29` | GetModelTags 返回指定模型文件的所有标签 |
-| `App.SetModelTags()` | `internal/app/app_tags:34` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
-| `App.ListByTag()` | `internal/app/app_tags:39` | ListByTag 返回所有打了指定标签的文件路径列表 |
-| `App.AllTags()` | `internal/app/app_tags:44` | AllTags 返回所有被使用的标签（按使用次数降序） |
+| `App.GetModelTags()` | `internal/app/app_tags:25` | GetModelTags 返回指定模型文件的所有标签 |
+| `App.SetModelTags()` | `internal/app/app_tags:30` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
+| `App.ListByTag()` | `internal/app/app_tags:35` | ListByTag 返回所有打了指定标签的文件路径列表 |
+| `App.AllTags()` | `internal/app/app_tags:40` | AllTags 返回所有被使用的标签（按使用次数降序） |
 | `App.DefaultWorkshopSites()` | `internal/app/app_workshop:48` | — |
 | `App.SaveWorkshopSites()` | `internal/app/app_workshop:56` | — |
 | `App.LoadWorkshopCreators()` | `internal/app/app_workshop:101` | — |
@@ -548,6 +548,8 @@
 | `SetEmbedded()` | `internal/app/assets:16` | SetEmbedded 由根包 main 的 init() 注入编译期嵌入的静态资产。 |
 | `CLIMain()` | `internal/app/cli:18` | — |
 | `Issue()` | `internal/app/cli:183` | — |
+| `androidPathManager.AppDataRoot()` | `internal/app/pathmgr_android:13` | — |
+| `desktopPathManager.AppDataRoot()` | `internal/app/pathmgr_desktop:10` | — |
 | `App.StartProxy()` | `internal/app/proxy:25` | StartProxy 启动本地反代服务器（127.0.0.1 仅本机可访问） |
 | `App.StopProxy()` | `internal/app/proxy:47` | StopProxy 关闭反代服务器 |
 | `App.IsProxyRunning()` | `internal/app/proxy:62` | IsProxyRunning 检查代理是否运行中 |
@@ -673,7 +675,7 @@
 | `CollectedEntry()` | `frontend/src/features/dnd-shared:33` | 收集条目（文件 + 相对路径） |
 | `FolderGroup()` | `frontend/src/features/dnd-shared:39` | 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） |
 | `groupCollected()` | `frontend/src/features/dnd-shared:51` | 将收集到的条目分组： - 有目录前缀的条目 → 按「顶层目录」整组（dir = 第一段路径），组内保留完整 relPath（支持多层嵌套） - 无目录前缀的散落文件 → 单文件队列 |
-| `registerDnD()` | `frontend/src/features/import-dnd:270` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
+| `registerDnD()` | `frontend/src/features/import-dnd:288` | 注册 DnD 全局事件，push 返回的取消订阅函数到 unsubs |
 | `isImportableFile()` | `frontend/src/features/import-executor` | — |
 | `ImportFile()` | `frontend/src/features/import-executor:14` | 带相对路径的 File（文件夹导入时标记 _relPath） |
 | `ImportRecord()` | `frontend/src/features/import-executor:17` | 已导入历史条目（导入 tab「已导入」列表数据源） |

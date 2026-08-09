@@ -13,6 +13,10 @@ let dropOverlay: HTMLElement | null = null;
 // 深度计数器：dragenter 进入子元素 +1、dragleave 离开子元素 -1；归零即真正离开窗口。
 // 这是窗口级拖拽遮罩「显示/隐藏」唯一可靠的状态来源（单独依赖 dragleave 易误判/漏触发）。
 let dragDepth = 0;
+// P3 修复（审核发现）：drop 级并发守卫——连续两次快速 drop 会并发跑两套
+// collectFiles + executeCollected；执行器内 _inFlight 仅按文件名/目录名短暂守护，
+// 异名文件可并行，drop 入口需整体互斥
+let _dropBusy = false;
 const DROP_EXTS_STR = ALL_EXTS.join(" ");
 
 const showDropOverlay = (hasModel?: boolean): void => {
@@ -116,6 +120,11 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   // 非仓库页面不处理 DnD
   if (PageStore.currentPage !== "repository") return;
 
+  // P3 修复（审核发现）：drop 级互斥——上一次 drop 仍在收集/导入时忽略新 drop
+  if (_dropBusy) return;
+  _dropBusy = true;
+  try {
+
   const getFileFromEntry = (entry: FileSystemFileEntry): Promise<File> =>
     new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -158,7 +167,12 @@ const onDrop = async (e: DragEvent): Promise<void> => {
             };
             reader.readEntries(
               (entries) => done(entries || []),
-              () => done([]),
+              () => {
+                // P3 修复（审核发现）：目录读取失败静默 done([]) 整目录无声跳过——
+                // 保持 WebView2 兼容的空数组兜底，但记录原因便于排查
+                console.warn("[dnd] 目录读取失败，跳过:", entry.name);
+                done([]);
+              },
             );
             setTimeout(() => done([]), 3000);
           });
@@ -244,6 +258,10 @@ const onDrop = async (e: DragEvent): Promise<void> => {
       duration: 3000,
       type: "info",
     });
+  }
+  } finally {
+    // 任何出口（含异常）都释放 drop 互斥，防连点后永久锁死
+    _dropBusy = false;
   }
 };
 

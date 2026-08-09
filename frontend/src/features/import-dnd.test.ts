@@ -20,6 +20,21 @@ const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 // jsdom 无 DragEvent 构造器：用 Event + cast（守卫层测试不依赖 dataTransfer 细节）
 const dropEvent = (): DragEvent => new Event("drop", { cancelable: true }) as DragEvent;
 
+// P2 修复（审核发现）：原守卫测试用无 dataTransfer 的 drop——删除守卫断言也恒真；
+// 注入带 files 的 drop 才能真正验证「非仓库页拦截 + 仓库页放行」双向语义
+const fileDropEvent = (): DragEvent => {
+  const ev = new Event("drop", { cancelable: true }) as DragEvent;
+  Object.defineProperty(ev, "dataTransfer", {
+    value: {
+      items: [],
+      files: [new File(["a"], "model.ysm", { type: "application/octet-stream" })],
+      types: ["Files"],
+    },
+    configurable: true,
+  });
+  return ev;
+};
+
 describe("registerDnD 资源配对", () => {
   const unsubs: Array<() => void> = [];
 
@@ -63,11 +78,20 @@ describe("DnD 守卫层", () => {
     dndUnsubs.forEach((fn) => fn());
   });
 
-  it("非仓库页 drop 被页面守卫拦截（getApp 零调用）", async () => {
+  it("非仓库页 drop 带文件 → 页面守卫拦截（getApp 零调用）", async () => {
     bus.emit("nav:changed", { page: "settings" });
-    document.dispatchEvent(dropEvent());
+    document.dispatchEvent(fileDropEvent());
+    await flush();
     await flush();
     expect(getApp).not.toHaveBeenCalled();
+  });
+
+  it("仓库页 drop 带文件 → 放行触发导入（getApp 被调用，对照组）", async () => {
+    bus.emit("nav:changed", { page: "repository" });
+    document.dispatchEvent(fileDropEvent());
+    await flush();
+    await flush();
+    expect(getApp).toHaveBeenCalled();
   });
 
   it("仓库页 drop 无文件时 toast 提示", async () => {

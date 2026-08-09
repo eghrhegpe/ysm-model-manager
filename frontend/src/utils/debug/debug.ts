@@ -70,7 +70,10 @@ export function safeStr(v: unknown): string {
         "]"
       );
     if (Array.isArray(v)) return "Array(" + v.length + ")";
+    // P3 修复：JSON.stringify 对函数/symbol 返回 undefined——原直接 `s.length` 在
+    // strict 下为 TS2532（运行时靠 catch 兜底不崩，类型层不过关）；先判空走 String 兜底
     const s = JSON.stringify(v);
+    if (s === undefined) return String(v);
     return s.length > 200 ? s.slice(0, 200) + "…" : s;
   } catch (_) {
     return String(v);

@@ -124,6 +124,13 @@ export function renderDisplayName(raw: string, opts?: unknown): string {
     const re4 = new RegExp(escRegex(p.date), "g");
     let m4: RegExpExecArray | null;
     while ((m4 = re4.exec(name)) !== null) {
+      // P3 修复：剔除与既有括号段（[ ]/【 】/《 》）区间重叠的日期命中——
+      // `【2023】角色.ysm` 中 date(2023) 与 work(【2023】) 区间重叠，反向替换后
+      // 内部 token 泄漏到 UI（输出 `KEN%%】角色` 残渣）。日期在括号内时括号段已包含它。
+      const overlaps = matches.some(
+        (m) => m4!.index < m.idx + m.len && m4!.index + m4![0].length > m.idx,
+      );
+      if (overlaps) continue;
       matches.push({
         idx: m4.index,
         html: '<span class="tag-date">' + esc(m4[0]) + "</span>",

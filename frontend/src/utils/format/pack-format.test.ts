@@ -55,9 +55,11 @@ describe("describeVersionRange", () => {
   });
 
   it("单体 pack_format 兜底（未知编号 → 空版本）", () => {
+    // P3 修复：原「未知编号 → 空版本」已被 fmtVer 统一（>88 → 最新版本），
+    // 与 supported/min/max 分支口径一致——此用例现锁定 fmtVer 兜底行为
     expect(describeVersionRange({ pack_format: 90 })).toEqual({
       format: "90",
-      version: "",
+      version: "最新版本",
     });
   });
 

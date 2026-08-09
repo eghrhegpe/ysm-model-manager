@@ -93,4 +93,17 @@ describe("renderFormattedText", () => {
   it("\\r\\n → 归一化为换行", () => {
     expect(renderFormattedText("a\r\nb")).toBe("a<br>b");
   });
+
+  // P3 补测：行尾孤立 § 原样保留（原实现 if(!part) continue 丢弃，修复无测试锁定）
+  it("行尾孤立 § 原样保留", () => {
+    expect(renderFormattedText("abc§")).toBe("abc§");
+  });
+
+  it("整行孤立 § 原样保留", () => {
+    expect(renderFormattedText("§")).toBe("§");
+  });
+
+  it("换行后行尾孤立 § 原样保留", () => {
+    expect(renderFormattedText("a\n§\nb")).toBe("a<br>§<br>b");
+  });
 });

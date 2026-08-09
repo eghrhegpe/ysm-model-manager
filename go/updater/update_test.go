@@ -255,23 +255,59 @@ func TestDownloadWithProgress_UnknownLength(t *testing.T) {
 	}))
 	defer server.Close()
 
-	var calls int
+	var calls []struct{ done, total int64 }
 	path, err := DownloadWithProgress(server.URL+"/pkg.zip", "", func(done, total int64) {
-		calls++
-		if total != 0 {
-			t.Errorf("total = %d，期望 0（未知长度）", total)
-		}
-		if done < 0 {
-			t.Errorf("done = %d，不可为负", done)
-		}
+		calls = append(calls, struct{ done, total int64 }{done, total})
 	})
 	if err != nil {
 		t.Fatalf("DownloadWithProgress() = %v", err)
 	}
 	defer os.Remove(path)
 
-	if calls == 0 {
+	if len(calls) == 0 {
 		t.Fatal("分块传输下进度回调未被调用")
+	}
+	// 尾块补发（P3 修复）：最终回调必须覆盖完整字节数（600KB，非 512KB 整数倍）
+	last := calls[len(calls)-1]
+	if last.done != int64(len(body)) {
+		t.Errorf("最终回调 done=%d，期望 %d（尾块补发）", last.done, len(body))
+	}
+	for i, c := range calls {
+		if c.total != 0 {
+			t.Errorf("回调 %d total=%d，期望 0（未知长度）", i, c.total)
+		}
+		if c.done < 0 {
+			t.Errorf("回调 %d done=%d，不可为负", i, c.done)
+		}
+	}
+}
+
+func TestDownloadWithProgress_ChunkedShortBody(t *testing.T) {
+	// <512KB 的 chunked 短包：progressWriter 节流阈值内零回调，必须靠 Copy 后
+	// 的尾块补发至少回调一次，且 done 覆盖完整字节数（P3 修复核心场景）
+	body := bytes.Repeat([]byte("z"), 200<<10) // 200KB < 512KB 节流阈值
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		w.Write(body)
+	}))
+	defer server.Close()
+
+	var calls []struct{ done, total int64 }
+	path, err := DownloadWithProgress(server.URL+"/pkg.zip", "", func(done, total int64) {
+		calls = append(calls, struct{ done, total int64 }{done, total})
+	})
+	if err != nil {
+		t.Fatalf("DownloadWithProgress() = %v", err)
+	}
+	defer os.Remove(path)
+
+	if len(calls) == 0 {
+		t.Fatal("短包也应收到至少一次进度回调（尾块补发）")
+	}
+	last := calls[len(calls)-1]
+	if last.done != int64(len(body)) {
+		t.Errorf("最终回调 done=%d，期望 %d", last.done, len(body))
 	}
 }
 

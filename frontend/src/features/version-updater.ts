@@ -52,7 +52,11 @@ async function doUpdate(
   // ADR-039 豁免注册不同：本模块是瞬态生命周期，有明确的 Off 路径）
   const progress = modalProgress({ title: "正在更新", icon: "⬇️", width: "420px" });
   const unsub = Events.On("update:progress", (e: { data: unknown[] }) => {
-    const [done, total] = e.data as [number, number];
+    // 事件 payload 防御（ADR-044 ② 数值守卫）：Go 侧 Emit(done,total) 多参打包为
+    // 数组；契约漂移（单参/无参/非数组）时降级为 0，不抛 TypeError 也不渲染 NaN
+    const data = Array.isArray(e?.data) ? e.data : [];
+    const done = Number.isFinite(data[0]) ? (data[0] as number) : 0;
+    const total = Number.isFinite(data[1]) ? (data[1] as number) : 0;
     progress.update(done, total);
   });
   try {

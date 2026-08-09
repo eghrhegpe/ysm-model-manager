@@ -271,6 +271,14 @@ func DownloadWithProgress(assetURL string, expectedHash string, onProgress func(
 		return "", closeErr
 	}
 
+	// P3 修复（code_review）：未知长度（chunked）下载的尾块补发——progressWriter 按
+	// 512KB 节流，最后不足 512KB 的尾块与 <512KB 的短包全程零回调，前端进度条
+	// 停在陈旧字节数；补发最终 (n, 0) 保证进度弹窗显示真实最终字节数。
+	// 已知长度分支在 Copy 内已由 written>=total 触发 100% 回调，无需补发
+	if onProgress != nil && total <= 0 && n > prog.lastBytes {
+		onProgress(n, 0)
+	}
+
 	// 校验 SHA256
 	if expectedHash != "" {
 		actual := hex.EncodeToString(hasher.Sum(nil))

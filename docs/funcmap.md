@@ -362,8 +362,8 @@
 | `CheckWithClient()` | `go/updater/update:107` | CheckWithClient 可注入 client 与 API URL 的测试变体（Check 的内部实现） |
 | `Download()` | `go/updater/update:203` | Download 下载更新包到临时目录，返回 zip 路径（无进度回调，兼容旧调用方）。 |
 | `DownloadWithProgress()` | `go/updater/update:209` | DownloadWithProgress 下载更新包；onProgress 在下载过程中节流回调 (done, total) 字节数 （total&lt;=0 表示 Content-Le |
-| `CleanupOldVersion()` | `go/updater/update:287` | CleanupOldVersion 启动时清理上一次更新留下的 .old 文件 |
-| `InstallUpdate()` | `go/updater/update:302` | InstallUpdate 解压更新包并通过 helper 进程替换当前 exe。 |
+| `CleanupOldVersion()` | `go/updater/update:295` | CleanupOldVersion 启动时清理上一次更新留下的 .old 文件 |
+| `InstallUpdate()` | `go/updater/update:310` | InstallUpdate 解压更新包并通过 helper 进程替换当前 exe。 |
 | `ReleaseAsset()` | `go/updater/update:63` | ReleaseAsset GitHub Release 中的文件 |
 | `Release()` | `go/updater/update:69` | Release GitHub Release 信息 |
 | `UpdateInfo()` | `go/updater/update:78` | UpdateInfo 更新信息（序列化给前端） |
@@ -696,8 +696,8 @@
 | `initRecycleBin()` | `frontend/src/features/recycle-bin:33` | 初始化回收站管理，返回清理函数 |
 | `initResourcePacks()` | `frontend/src/features/resource-packs:13` | 初始化资源包 tab |
 | `UpdateInfo()` | `frontend/src/features/version-updater:11` | 更新信息（CheckUpdate 返回） |
-| `checkUpdateSilent()` | `frontend/src/features/version-updater:128` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
-| `initVersionUpdater()` | `frontend/src/features/version-updater:164` | 手动检查更新（设置页按钮） |
+| `checkUpdateSilent()` | `frontend/src/features/version-updater:132` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
+| `initVersionUpdater()` | `frontend/src/features/version-updater:168` | 手动检查更新（设置页按钮） |
 
 ## 前端·服务
 

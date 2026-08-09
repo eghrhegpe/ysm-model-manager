@@ -212,6 +212,29 @@ describe("initVersionUpdater（手动检查）", () => {
     expect(mocks.progressHandle.update).toHaveBeenCalledWith(5242880, 10485760);
   });
 
+  it("update:progress 畸形 payload → 降级为 0，不抛错不渲染 NaN", async () => {
+    let captured: ((e: { data: unknown[] }) => void) | null = null;
+    mocks.eventsOn.mockImplementation(
+      (_name: string, cb: (e: { data: unknown[] }) => void) => {
+        captured = cb;
+        return unsubSpy;
+      },
+    );
+    spyToasts();
+    const { btn } = await setupRoot();
+
+    btn.click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    // 空数组 / 单元素 / e 为 undefined：handler 不抛，update 收到 0 兜底
+    expect(() => captured!({ data: [] })).not.toThrow();
+    expect(mocks.progressHandle.update).toHaveBeenLastCalledWith(0, 0);
+    expect(() => captured!({ data: ["x"] })).not.toThrow();
+    expect(mocks.progressHandle.update).toHaveBeenLastCalledWith(0, 0);
+    expect(() => captured!(undefined as unknown as { data: unknown[] })).not.toThrow();
+    expect(mocks.progressHandle.update).toHaveBeenLastCalledWith(0, 0);
+  });
+
   it("有可用更新但用户取消 → 不下载", async () => {
     mocks.modalConfirm.mockResolvedValue(false);
     spyToasts();

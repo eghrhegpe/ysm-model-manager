@@ -7,6 +7,7 @@ link-checker-out.json
 *.out
 build/bin/
 bin/
+build/release/
 build/ysmparser-cache/
 cmd/*/genindex.exe
 cmd/*/*.exe
@@ -52,8 +53,8 @@ tests/python/__pycache__/
 .workbuddy/
 .codebuddy/
 
-# 构建产物
-build/
+# 构建产物：build/ 脚手架（Taskfile/config/图标/manifest）入仓；
+# 仅生成的 bin/、release/、ysmparser-cache/ 被忽略（见上方规则）
 
 # 签名密钥（机密，永不入库；未来移动端签名用）
 *.keystore

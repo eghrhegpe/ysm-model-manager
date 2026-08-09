@@ -199,6 +199,31 @@ export const zhCN: Record<string, string> = {
   "workshop.downloadFailed": "下载失败",
   "workshop.allDownloaded": "全部下载完成",
 
+  // ── 侧边栏 ──
+  "sidebar.loadFailed": "整合包列表加载失败",
+  "sidebar.loadFailedDetail": "读取整合包失败",
+
+  // ── 资源管理器 ──
+  "resource.initFailed": "初始化失败",
+  "resource.loadFailed": "加载失败",
+
+  // ── 同步管理器 ──
+  "sync.noInstance": "未指定整合包",
+  "sync.renderFailed": "渲染失败",
+
+  // ── 诊断操作类型 ──
+  "diagnostics.logsCleared": "日志已清空",
+  "diagnostics.opImport": "导入",
+  "diagnostics.opScan": "扫描",
+  "diagnostics.opDownload": "下载",
+  "diagnostics.opSync": "同步",
+  "diagnostics.opRename": "重命名",
+  "diagnostics.opDelete": "删除",
+  "diagnostics.opUI": "界面",
+
+  // ── 创作者频道 ──
+  "community.fromLocal": "来自本地仓库",
+
   // ── 错误消息 ──
   "error.fallback": "操作失败",
   "error.unknown": "未知错误",
@@ -224,4 +249,82 @@ export const zhCN: Record<string, string> = {
   "error.tooMany": "操作过于频繁，请稍后重试",
   "error.notADir": "路径不是目录",
   "error.isADir": "路径是目录，不是文件",
+
+  // ── 设置页 - 路径与链接 ──
+  "settings.path.selectDir": "📂 选择目录",
+  "settings.path.updated": "✅ 路径已更新",
+  "settings.path.set": "✅ 路径已设置",
+  "settings.path.notSetStorage": "未设置文件存储路径",
+  "settings.path.customized": "已自定义",
+  "settings.path.default": "↩️ 默认",
+  "settings.path.clickToChange": "点击更改路径",
+  "settings.saveSuccess": "保存成功",
+  "settings.saveFailed": "保存失败",
+  "settings.resetDefault": "↩️ 已恢复默认",
+  "settings.resetFailed": "重置失败",
+  "settings.expand": "📂 展开 ▸",
+  "settings.collapse": "📂 收起 ▾",
+
+  // ── 设置页 - 游戏路径 ──
+  "settings.mc.noFound": "未找到已存在的游戏目录，请手动选择",
+  "settings.mc.set": "✅ 已设置: {path}",
+  "settings.mc.pickerTitle": "🔍 选择游戏目录",
+  "settings.mc.pickerDesc": "扫描到多个游戏目录，请选择要使用的：",
+  "settings.mc.pickerCancel": "取消",
+  "settings.mc.scanScope": "🔍 扫描范围",
+  "settings.mc.scanScopeDesc": "C 盘 ~ Z 盘 · 根目录 .minecraft / 各启动器目录<br>ProgramFiles · Games · 用户配置目录 · EXE 同目录",
+  "settings.mc.notFound": "未找到已存在的游戏目录",
+  "settings.mc.notFoundHint": "💡 如果装了启动器但没扫到，可能是非常规路径，请手动选择",
+  "settings.mc.found": "✅ 找到 {n} 个",
+
+  // ── 设置页 - 镜像源 ──
+  "settings.mirror.changed": "✅ 下载源已切换为 {mirror}",
+  "settings.mirror.direct": "直连",
+
+  // ── 设置页 - 重新链接 ──
+  "settings.relink.needGameRoot": "请先设置游戏根目录",
+  "settings.relink.someFailed": "⚠️ {n} 个整合包重新链接失败",
+  "settings.relink.noneNeeded": "没有需要重新链接的文件",
+  "settings.relink.doneWithFail": "🔄 已重新链接 {total} 个文件（{failed} 个失败）",
+  "settings.relink.done": "🔄 已重新链接 {total} 个文件",
+  "settings.relink.error": "❌ {error}",
+
+  // ── 设置页 - 链接模式 ──
+  "settings.link.changed": "✅ 链接模式已切换至: {mode}",
+  "settings.linkModeChanged": "链接模式已切换至",
+  "settings.reapplyLinks": "重新应用链接模式",
+  "settings.reapplyDone": "重新应用完成",
+  "settings.reapplyFailed": "重新应用失败",
+  "settings.mirrorChanged": "镜像源已切换至",
+  "settings.storageUpdated": "文件存储路径已更新",
+  "settings.gameRootUpdated": "游戏根目录已更新",
+  "settings.noDirectory": "未选择目录",
+  "settings.autoSearching": "自动搜索中…",
+  "settings.autoSearchDone": "自动搜索完成",
+  "settings.mcNotFound": "未找到 Minecraft 路径",
+  "settings.mcMultipleFound": "检测到多个 Minecraft 路径",
+
+  // ── 设置页 - 界面与体验 ──
+  "settings.ui.fontSizeUpdated": "✅ 字号已更新",
+  "settings.ui.fontUpdated": "✅ 字体已更新",
+  "settings.ui.densityUpdated": "✅ 卡片密度已更新",
+  "settings.ui.animOn": "✅ 动画已开启",
+  "settings.ui.animOff": "✅ 动画已关闭",
+  "settings.ui.defaultPageSaved": "✅ 默认页面已保存",
+
+  // ── 设置页 - 3D 预览键位 ──
+  "settings.td.forward": "前移",
+  "settings.td.back": "后移",
+  "settings.td.left": "左移",
+  "settings.td.right": "右移",
+  "settings.td.up": "上升",
+  "settings.td.down": "下降",
+  "settings.td.space": "空格",
+  "settings.td.shiftRight": "Shift(右)",
+  "settings.td.ctrlRight": "Ctrl(右)",
+  "settings.td.altRight": "Alt(右)",
+  "settings.td.pressing": "按键…",
+  "settings.td.conflict": "⚠️ {key} 已被「{action}」占用",
+  "settings.td.bound": "✅ {action} → {key}",
+  "settings.td.resetKeys": "↩️ 已恢复默认键位",
 };

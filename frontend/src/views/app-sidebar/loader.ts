@@ -1,5 +1,6 @@
 // ===== sidebar 数据加载层 =====
 import { bus } from "../../bus.ts";
+import { t } from "../../core/i18n/t.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import type { SidebarInstance } from "./data.ts";

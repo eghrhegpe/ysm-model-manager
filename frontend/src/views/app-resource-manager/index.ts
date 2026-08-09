@@ -3,6 +3,7 @@
 // 使用: <app-resource-manager rtype="resourcepack"></app-resource-manager>
 
 import { sidebarHTML, itemHTML, detailHTML, placeholderHTML, type PackMetaDetail } from "./tpl.ts";
+import { t } from "../../core/i18n/t.ts";
 import { bus } from "../../bus.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { getApp } from "../../wails/app.ts";
@@ -61,7 +62,8 @@ export function registerResourceManagerGlobal(unsubs: Array<() => void>): void {
           rm._init().catch((e) => {
             console.error("[app-resource-manager] 配置刷新 _init 失败:", e);
             rm.innerHTML =
-              '<div style="padding:12px;color:var(--paid)">⚠️ 初始化失败: ' +
+              '<div style="padding:12px;color:var(--paid)">⚠️ ' +
+              t("resource.initFailed") + ": " +
               _esc(String(e?.message || e)) +
               "</div>";
           });
@@ -106,7 +108,8 @@ export class AppResourceManager extends HTMLElement {
     this._init().catch((e) => {
       console.error("[app-resource-manager] _init 失败:", e);
       this.innerHTML =
-        '<div style="padding:12px;color:var(--paid)">⚠️ 初始化失败: ' +
+        '<div style="padding:12px;color:var(--paid)">⚠️ ' +
+        t("resource.initFailed") + ": " +
         _esc(String(e?.message || e)) +
         "</div>";
     });
@@ -121,7 +124,8 @@ export class AppResourceManager extends HTMLElement {
       this._init().catch((e) => {
         console.error("[app-resource-manager] rtype 变更 _init 失败:", e);
         this.innerHTML =
-          '<div style="padding:12px;color:var(--paid)">⚠️ 初始化失败: ' +
+          '<div style="padding:12px;color:var(--paid)">⚠️ ' +
+          t("resource.initFailed") + ": " +
           _esc(String(e?.message || e)) +
           "</div>";
       });
@@ -130,7 +134,8 @@ export class AppResourceManager extends HTMLElement {
       this._init().catch((e) => {
         console.error("[app-resource-manager] instance 变更 _init 失败:", e);
         this.innerHTML =
-          '<div style="padding:12px;color:var(--paid)">⚠️ 初始化失败: ' +
+          '<div style="padding:12px;color:var(--paid)">⚠️ ' +
+          t("resource.initFailed") + ": " +
           _esc(String(e?.message || e)) +
           "</div>";
       });
@@ -148,7 +153,8 @@ export class AppResourceManager extends HTMLElement {
       console.error("[app-resource-manager] _init 失败:", e);
       if (gen === this._initGen) {
         this.innerHTML =
-          '<div style="padding:12px;color:var(--paid)">⚠️ 初始化失败: ' +
+          '<div style="padding:12px;color:var(--paid)">⚠️ ' +
+          t("resource.initFailed") + ": " +
           _esc(String((e as { message?: unknown })?.message || e)) +
           "</div>";
       }
@@ -505,7 +511,8 @@ export class AppResourceManager extends HTMLElement {
       if (gen !== this._detailGen) return; // 过期：不覆盖新条目的详情
       if (this._contentEl) {
         this._contentEl.innerHTML =
-          '<div style="padding:12px;color:var(--paid)">⚠️ 读取失败: ' +
+          '<div style="padding:12px;color:var(--paid)">⚠️ ' +
+          t("resource.loadFailed") + ": " +
           _esc(e instanceof Error ? e.message : e) +
           "</div>";
       }

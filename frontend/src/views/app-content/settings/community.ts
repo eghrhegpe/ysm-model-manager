@@ -7,6 +7,7 @@ import { loadResourceRegistry, type ResourceTypeEntry } from "../../../utils/res
 import { esc } from "../../../utils/dom/html.ts";
 import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
 import { getApp } from "../../../wails/app.ts";
+import { t } from "../../../core/i18n/t.ts";
 
 // 单一捕获守卫：同一时刻仅允许一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持
 let _activeCapture: ((e: KeyboardEvent) => void) | null = null;
@@ -49,7 +50,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     if (!el) return;
     const refresh = (): void => {
       const p = getPath();
-      el.textContent = p || "📂 选择目录";
+      el.textContent = p || t("settings.path.selectDir");
       el.style.color = p ? "" : "var(--accent)";
     };
     _cardRefreshers.push(refresh);
@@ -65,7 +66,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         bus.emit("config:updated");
         bus.emit("stats:refresh");
         bus.emit("toast:show", {
-          msg: "✅ 路径已更新",
+          msg: t("settings.path.updated"),
           duration: 2000,
           type: "success",
         });
@@ -123,12 +124,12 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     name: string;
     cfgKey: string;
   }
-  const advancedTypes: AdvancedType[] = Object.values(reg).map((t: ResourceTypeEntry) => ({
-    rtype: t.id,
-    icon: t.icon as string,
-    name: (t.name as string) || t.id,
-    cfgKey: t.configField
-      ? String(t.configField).charAt(0).toLowerCase() + String(t.configField).slice(1)
+  const advancedTypes: AdvancedType[] = Object.values(reg).map((entry: ResourceTypeEntry) => ({
+    rtype: entry.id,
+    icon: entry.icon as string,
+    name: (entry.name as string) || entry.id,
+    cfgKey: entry.configField
+      ? String(entry.configField).charAt(0).toLowerCase() + String(entry.configField).slice(1)
       : "",
   }));
 
@@ -136,12 +137,12 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     const grid = root.getElementById("set-advanced-grid");
     if (!grid) return;
     let html = "";
-    for (const t of advancedTypes) {
-      const canOverride = !!t.cfgKey;
-      const overridePath = canOverride ? cfgStr(t.cfgKey) : "";
+    for (const at of advancedTypes) {
+      const canOverride = !!at.cfgKey;
+      const overridePath = canOverride ? cfgStr(at.cfgKey) : "";
       const defaultPath = cfg.filesRoot
-        ? cfg.filesRoot + "/" + (reg[t.rtype]?.storageSubDir || t.rtype || "")
-        : "未设置文件存储路径";
+        ? cfg.filesRoot + "/" + (reg[at.rtype]?.storageSubDir || at.rtype || "")
+        : t("settings.path.notSetStorage");
       const currentPath = overridePath || defaultPath;
       const isOverridden = !!overridePath;
       html +=
@@ -150,23 +151,23 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         '">' +
         '<div class="stg-card-hdr">' +
         "<span>" +
-        t.icon +
+        at.icon +
         "</span><span>" +
-        t.name +
+        at.name +
         "</span>" +
         (isOverridden
-          ? '<span class="stg-custom-badge">已自定义</span>'
+          ? '<span class="stg-custom-badge">' + t("settings.path.customized") + '</span>'
           : "") +
         (isOverridden
           ? '<button class="btn stg-adv-reset" data-rtype="' +
-            t.rtype +
-            '" style="font-size:var(--fs-btn-tool);padding:2px 6px">↩️ 默认</button>'
+            at.rtype +
+            '" style="font-size:var(--fs-btn-tool);padding:2px 6px">↩️ ' + t("settings.path.default") + '</button>'
           : "") +
         "</div>" +
         '<div class="stg-card-body">' +
         '<div class="stg-card-val stg-adv-set stg-path-text" data-rtype="' +
-        t.rtype +
-        '" title="点击更改路径">' +
+        at.rtype +
+        '" title="' + t("settings.path.clickToChange") + '">' +
         escHtml(currentPath) +
         "</div>" +
         "</div></div>";
@@ -183,18 +184,18 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
           const { SetResourceRoot } =
             await getApp();
           await SetResourceRoot(rtype, dir);
-          const entry = advancedTypes.find((t) => t.rtype === rtype);
-          if (entry && entry.cfgKey) cfgAny[entry.cfgKey] = dir;
+          const found = advancedTypes.find((a) => a.rtype === rtype);
+          if (found && found.cfgKey) cfgAny[found.cfgKey] = dir;
           refreshAdvanced();
           bus.emit("config:updated");
           bus.emit("toast:show", {
-            msg: "✅ 路径已设置",
+            msg: t("settings.path.set"),
             duration: 2000,
             type: "success",
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ " + friendlyError((e as Error)?.message || e, "保存失败"),
+            msg: "❌ " + friendlyError((e as Error)?.message || e, t("settings.saveFailed")),
             duration: 4000,
             type: "error",
           });
@@ -210,19 +211,19 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
           const { ResetResourceRoot } =
             await getApp();
           await ResetResourceRoot(rtype);
-          const entry = advancedTypes.find((t) => t.rtype === rtype);
-          if (entry && entry.cfgKey) cfgAny[entry.cfgKey] = "";
+          const found = advancedTypes.find((a) => a.rtype === rtype);
+          if (found && found.cfgKey) cfgAny[found.cfgKey] = "";
           refreshAdvanced();
           _cardRefreshers.forEach((fn) => fn());
           bus.emit("config:updated");
           bus.emit("toast:show", {
-            msg: "↩️ 已恢复默认",
+            msg: t("settings.resetDefault"),
             duration: 2000,
             type: "success",
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: "❌ " + friendlyError((e as Error)?.message || e, "重置失败"),
+            msg: "❌ " + friendlyError((e as Error)?.message || e, t("settings.resetFailed")),
             duration: 4000,
             type: "error",
           });
@@ -243,7 +244,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       if (isOpen) {
         panel.classList.remove("adv-open");
         panel.classList.add("adv-closing");
-        btn.textContent = "📂 展开 ▸";
+        btn.textContent = t("settings.expand");
         card.style.gridColumn = "";
         setTimeout(() => {
           panel.classList.remove("adv-closing");
@@ -254,7 +255,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         panel.style.display = "block";
         panel.classList.remove("adv-closing");
         panel.classList.add("adv-open");
-        btn.textContent = "📂 收起 ▾";
+        btn.textContent = t("settings.collapse");
         card.style.gridColumn = "1 / -1";
       }
     });
@@ -271,7 +272,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       const paths = await GetMinecraftPaths();
       if (!paths?.length) {
         bus.emit("toast:show", {
-          msg: "未找到已存在的游戏目录，请手动选择",
+          msg: t("settings.mc.noFound"),
           duration: 3000,
           type: "warn",
         });

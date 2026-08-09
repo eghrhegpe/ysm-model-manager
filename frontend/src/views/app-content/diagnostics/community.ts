@@ -1,4 +1,5 @@
 // ===== 诊断页初始化（为 _initDiagnostics 减负） =====
+import { t } from "../../../core/i18n/t.ts";
 import { bus } from "../../../bus.ts";
 import { renderDisplayName } from "../../../utils/dom/display.ts";
 import { getApp } from "../../../wails/app.ts";
@@ -99,13 +100,13 @@ interface ImportLogLike {
 
 /** 操作类型 → 中文标签 + 图标（分组标题与行内徽标共用） */
 const OP_META: Record<string, { label: string; icon: string }> = {
-  import: { label: "导入", icon: "📥" },
-  scan: { label: "扫描", icon: "🔍" },
-  download: { label: "下载", icon: "⬇️" },
-  sync: { label: "同步", icon: "🔄" },
-  rename: { label: "重命名", icon: "✏️" },
-  delete: { label: "删除", icon: "🗑️" },
-  ui: { label: "界面", icon: "⚠️" },
+  import: { label: t("diagnostics.opImport"), icon: "📥" },
+  scan: { label: t("diagnostics.opScan"), icon: "🔍" },
+  download: { label: t("diagnostics.opDownload"), icon: "⬇️" },
+  sync: { label: t("diagnostics.opSync"), icon: "🔄" },
+  rename: { label: t("diagnostics.opRename"), icon: "✏️" },
+  delete: { label: t("diagnostics.opDelete"), icon: "🗑️" },
+  ui: { label: t("diagnostics.opUI"), icon: "⚠️" },
 };
 
 /** 未知 op 回退到通用标签，避免显示裸英文 */

@@ -1,4 +1,5 @@
 // ===== 创意工坊纯数据层 =====
+import { t } from "../../core/i18n/t.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { getApp } from "../../wails/app.ts";
 import type { WorkshopSite, WorkshopCreator } from "../../../bindings/ysm-model-manager/go/types/models.ts";
@@ -73,7 +74,7 @@ export async function loadCommunityData(): Promise<CommunityData> {
       } else if (la && la.name) {
         merged.push({
           name: la.name,
-          desc: la.desc || "来自本地仓库",
+          desc: la.desc || t("community.fromLocal"),
           type: la.type || "",
           _fromLocal: true,
         });

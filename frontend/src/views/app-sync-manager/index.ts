@@ -2,6 +2,7 @@
 // 展示整合包内所有资源类型的同步状态（扁平列表，一次加载，前端过滤）
 // 使用: <app-sync-manager instance="1.20.1-Fabric"></app-sync-manager>
 
+import { t } from "../../core/i18n/t.ts";
 import { bus } from "../../bus.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
@@ -63,7 +64,7 @@ export class AppSyncManager extends HTMLElement {
     this._selectedType = _lastSelectedType || this._defaultType;
     if (!this._instance) {
       this.innerHTML =
-        '<div style="padding:12px;color:var(--err)">⚠️ 未指定整合包</div>';
+        '<div style="padding:12px;color:var(--err)">⚠️ ' + t("sync.noInstance") + '</div>';
       return;
     }
     this._init();
@@ -105,10 +106,11 @@ export class AppSyncManager extends HTMLElement {
       console.error("[sync-manager] _render 出错:", e);
       // 保留加载界面不消失也至少显示错误提示
       this.innerHTML +=
-        '<div style="padding:12px;color:var(--err)">渲染失败: ' +
+        '<div style="padding:12px;color:var(--err)">' +
+        t("sync.renderFailed") + ": " +
         esc(String(e)) +
         "</div>";
-      bus.emit("toast:show", { msg: "❌ " + friendlyError(e, "同步管理器渲染失败"), duration: 5000, type: "error" });
+      bus.emit("toast:show", { msg: "❌ " + friendlyError(e, t("sync.renderFailed")), duration: 5000, type: "error" });
     }
 
     const unsub = bus.on("stats:refresh", () => {

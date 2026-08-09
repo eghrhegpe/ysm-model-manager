@@ -33,6 +33,17 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 缓存 Go 模块（命中免下载）
+        uses: actions/cache@v5.1.0
+        with:
+          path: ${{ runner.os == 'Windows' && '~\go\pkg\mod' || '~/go/pkg/mod' }}
+          key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
+            go-mod-${{ runner.os }}-
 
       - name: 契约测试（tests/，Node .mjs，禁止修改测试文件）
         shell: pwsh
@@ -115,8 +126,27 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: 安装 Wails v3 CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 缓存 Go 模块（含 wails3，命中免下载）
+        uses: actions/cache@v5.1.0
+        with:
+          path: ${{ runner.os == 'Windows' && '~\go\pkg\mod' || '~/go/pkg/mod' }}
+          key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
+            go-mod-${{ runner.os }}-
+      - name: 缓存 wails3 CLI 二进制（命中免编译）
+        uses: actions/cache@v5.1.0
+        with:
+          path: ${{ runner.os == 'Windows' && '~\go\bin' || '~/go/bin' }}
+          key: wails3-${{ runner.os }}-${{ env.WAILS_VERSION }}
+      - name: 安装 Wails v3 CLI（缓存命中则跳过）
+        shell: bash
+        run: |
+          if ! command -v wails3 >/dev/null 2>&1; then
+            go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+          fi
       - name: 安装前端依赖
         working-directory: frontend
         run: npm ci
@@ -147,6 +177,21 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 缓存 Go 模块（含 wails3，命中免下载）
+        uses: actions/cache@v5.1.0
+        with:
+          path: ${{ runner.os == 'Windows' && '~\go\pkg\mod' || '~/go/pkg/mod' }}
+          key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
+            go-mod-${{ runner.os }}-
+      - name: 缓存 wails3 CLI 二进制（命中免编译）
+        uses: actions/cache@v5.1.0
+        with:
+          path: ${{ runner.os == 'Windows' && '~\go\bin' || '~/go/bin' }}
+          key: wails3-${{ runner.os }}-${{ env.WAILS_VERSION }}
       - name: 安装 Linux 系统依赖（GTK4 + WebKitGTK 6.0）
         run: |
           sudo apt-get update -qq
@@ -160,8 +205,12 @@ jobs:
             libcairo2-dev \
             libatk1.0-dev \
             libgirepository1.0-dev
-      - name: 安装 Wails v3 CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+      - name: 安装 Wails v3 CLI（缓存命中则跳过）
+        shell: bash
+        run: |
+          if ! command -v wails3 >/dev/null 2>&1; then
+            go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+          fi
       - name: 安装前端依赖
         working-directory: frontend
         run: npm ci
@@ -189,8 +238,27 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: 安装 Wails v3 CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 缓存 Go 模块（含 wails3，命中免下载）
+        uses: actions/cache@v5.1.0
+        with:
+          path: ${{ runner.os == 'Windows' && '~\go\pkg\mod' || '~/go/pkg/mod' }}
+          key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
+            go-mod-${{ runner.os }}-
+      - name: 缓存 wails3 CLI 二进制（命中免编译）
+        uses: actions/cache@v5.1.0
+        with:
+          path: ${{ runner.os == 'Windows' && '~\go\bin' || '~/go/bin' }}
+          key: wails3-${{ runner.os }}-${{ env.WAILS_VERSION }}
+      - name: 安装 Wails v3 CLI（缓存命中则跳过）
+        shell: bash
+        run: |
+          if ! command -v wails3 >/dev/null 2>&1; then
+            go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+          fi
       - name: 安装前端依赖
         working-directory: frontend
         run: npm ci
@@ -221,12 +289,31 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 缓存 Go 模块（含 wails3，命中免下载）
+        uses: actions/cache@v5.1.0
+        with:
+          path: ${{ runner.os == 'Windows' && '~\go\pkg\mod' || '~/go/pkg/mod' }}
+          key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
+            go-mod-${{ runner.os }}-
+      - name: 缓存 wails3 CLI 二进制（命中免编译）
+        uses: actions/cache@v5.1.0
+        with:
+          path: ${{ runner.os == 'Windows' && '~\go\bin' || '~/go/bin' }}
+          key: wails3-${{ runner.os }}-${{ env.WAILS_VERSION }}
       - uses: android-actions/setup-android@v4
       - name: 安装 Android SDK 组件（platform + build-tools + NDK）
         run: |
           sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.3.11579264"
-      - name: 安装 Wails v3 CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+      - name: 安装 Wails v3 CLI（缓存命中则跳过）
+        shell: bash
+        run: |
+          if ! command -v wails3 >/dev/null 2>&1; then
+            go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+          fi
       - name: 解码签名 keystore（可选，无则 debug 构建）
         run: |
           $dir = "${{ github.workspace }}\build\android\keystore"

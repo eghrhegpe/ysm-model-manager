@@ -462,23 +462,25 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   }
 
   // 自动切换下拉框
-  const savedAuto = localStorage.getItem("theme-auto") || "off";
+  // P2 修复（code_review）：theme-auto 段同样走 safe 包装——原裸 getItem 在隐私模式
+  // 下抛错中断 initSettings（与主题卡片段同源），且 setItem 三处未封口
+  const savedAuto = themeGet("theme-auto") || "off";
   const autoSelect = root.getElementById("theme-auto") as HTMLSelectElement | null;
   if (autoSelect) {
     autoSelect.value = savedAuto;
     autoSelect.addEventListener("change", () => {
       const mode = autoSelect.value;
-      localStorage.setItem("theme-auto", mode);
+      themeSet("theme-auto", mode);
       if (mode === "system") {
         window.applyTheme?.("system");
-        localStorage.setItem("theme", "system");
+        themeSet("theme", "system");
         // 更新卡片选中态
         if (themePicker) themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
       } else if (mode === "time") {
         // P2 修复：applyTimeTheme 返回实际主题（warm/cyber）并写入 theme 键——
         // 原实现写 "time" 非法值，重启后 initTheme 归一化为 system，按时间段模式被静默降级
         const themeName = applyTimeTheme();
-        localStorage.setItem("theme", themeName);
+        themeSet("theme", themeName);
         if (themePicker) themePicker.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("active"));
       }
       // "off" 时不改变当前主题，等用户手动点卡片
@@ -488,7 +490,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       window.applyTheme?.("system");
     } else if (savedAuto === "time") {
       const themeName = applyTimeTheme();
-      localStorage.setItem("theme", themeName);
+      themeSet("theme", themeName);
     } else {
       window.applyTheme?.(savedTheme);
     }
@@ -658,11 +660,13 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   // ===== 界面与体验设置 =====
 
   // 读取/应用 UI 偏好（localStorage）
+  // P2 修复（code_review）：UI 偏好读取同样走 themeGet——原裸 getItem 在隐私模式下
+  // 抛错中断 initSettings（applyUIPref 是 initSettings 同步执行的一部分）
   const applyUIPref = (): void => {
-    const fontSize = localStorage.getItem("ui-font-size") || "normal";
-    const displayFont = localStorage.getItem("ui-display-font") || "kaiti";
-    const density = localStorage.getItem("ui-card-density") || "compact";
-    const anim = localStorage.getItem("ui-animations") !== "off";
+    const fontSize = themeGet("ui-font-size") || "normal";
+    const displayFont = themeGet("ui-display-font") || "kaiti";
+    const density = themeGet("ui-card-density") || "compact";
+    const anim = themeGet("ui-animations") !== "off";
 
     // 基准字号 — 通过 --fs-scale 控制，CSS 自动缩放所有 --fs-* 和 --space-*
     // 先清除旧版直接设 --fs-* 的内联值（避免覆盖 calc()）

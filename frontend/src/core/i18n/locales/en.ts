@@ -213,6 +213,7 @@ export const en: Record<string, string> = {
   "update.failed": "Update failed",
   "update.found": "New version {latest} found (current {current}) — click to view",
   "update.latest": "Already up to date ({version})",
+  "update.windowsOnly": "Auto-update is only supported on Windows",
 
   // ── Credits ──
   "credits.inspiration": "Inspiration",

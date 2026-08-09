@@ -88,6 +88,22 @@ describe("checkUpdateSilent", () => {
     expect(toasts).toHaveLength(0);
   });
 
+  it("Android（存在 wails 桥）→ 跳过更新检查（ADR-047 平台守卫）", async () => {
+    const original = (window as unknown as { wails?: unknown }).wails;
+    (window as unknown as { wails?: unknown }).wails = {
+      requestStoragePermission: vi.fn(),
+    };
+    try {
+      const { checkUpdateSilent } = await import("./version-updater.ts");
+      await checkUpdateSilent();
+      expect(mocks.CheckUpdate).not.toHaveBeenCalled();
+      // 不记录检查频次（未真正检查）
+      expect(localStorage.getItem(CHECK_KEY)).toBe("0");
+    } finally {
+      (window as unknown as { wails?: unknown }).wails = original;
+    }
+  });
+
   it("有新版本 → 发可点击 toast 并记录检查时间", async () => {
     const toasts = spyToasts();
     const { checkUpdateSilent } = await import("./version-updater.ts");

@@ -4,6 +4,7 @@ import { t } from "../core/i18n/t.ts";
 import { esc, modalConfirm, modalProgress, fmtMB } from "../utils/dom/dialogs/modal.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { safeGet, safeSet } from "../utils/dom/storage.ts";
+import { getAndroidBridge } from "../utils/dom/android-bridge.ts";
 import { getApp } from "../wails/app.ts";
 import { Events, Window } from "@wailsio/runtime";
 
@@ -149,6 +150,8 @@ async function promptUpdate(
  * 有新版本则在右下角显示可点击的 toast 通知
  */
 export async function checkUpdateSilent(): Promise<void> {
+  // ADR-047 平台守卫：自动更新 Windows-only（ADR-033），Android 无 exe 替换链路，跳过
+  if (getAndroidBridge()) return;
   // P3 修复：canCheck 移入 try——原实现位于 try 之外，隐私模式 localStorage.getItem 抛错时
   // promise 会 reject（靠调用方 .catch 兜底而非模块内静默），违反「静默路径绝不向启动流程抛错」
   try {
@@ -188,6 +191,15 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
   root
     .getElementById("set-check-update")
     ?.addEventListener("click", async (): Promise<void> => {
+      // ADR-047 平台守卫：Android 无更新链路，点击明确拒绝而非走到下载失败
+      if (getAndroidBridge()) {
+        bus.emit("toast:show", {
+          msg: t("update.windowsOnly"),
+          duration: 3000,
+          type: "info",
+        });
+        return;
+      }
       const btn = root.getElementById("set-check-update") as HTMLButtonElement;
       // P3（审核发现）：重入守卫——编程式 .click()/异常事件流下 disabled 语义不可靠，
       // 首行显式拦截避免双执行（真实用户连点已由 disabled 挡住，此处为防御补强）

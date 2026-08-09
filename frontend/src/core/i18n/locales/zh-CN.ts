@@ -215,6 +215,7 @@ export const zhCN: Record<string, string> = {
   "update.failed": "更新失败",
   "update.found": "发现新版本 {latest}（当前 {current}）— 点击查看",
   "update.latest": "已是最新版本 ({version})",
+  "update.windowsOnly": "自动更新仅支持 Windows 平台",
 
   // ── 鸣谢 ──
   "credits.inspiration": "灵感来源",

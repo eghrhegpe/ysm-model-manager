@@ -214,6 +214,7 @@ export const ja: Record<string, string> = {
   "update.failed": "アップデートに失敗しました",
   "update.found": "新しいバージョン {latest} が見つかりました（現在 {current}）— クリックして表示",
   "update.latest": "最新バージョンです（{version}）",
+  "update.windowsOnly": "自動更新は Windows のみ対応しています",
 
   // ── Credits ──
   "credits.inspiration": "インスピレーション",

@@ -131,3 +131,21 @@ describe("renderModelNameWithHighlight", () => {
     expect(renderModelNameWithHighlight("文件ABC", "abc")).toBe("文件<mark>ABC</mark>");
   });
 });
+
+// P3 补测（code_review）：日期命中与括号段区间重叠谓词——括号内日期不得产 tag-date
+// span 且不得泄漏 %%TOKEN%% 残渣；括号外日期仍须高亮
+describe("renderDisplayName — 日期括号重叠守卫", () => {
+  it("括号内日期不产 tag-date（且无 token 残渣）", () => {
+    const html = renderDisplayName("【2023】角色.ysm");
+    // 注：renderDisplayName 剥离扩展名（parseModelName.ext），输出不含 .ysm
+    expect(html).toBe('<span class="tag-work">【2023】</span>角色');
+    expect(html).not.toContain("tag-date");
+    expect(html).not.toContain("%%TOKEN%%");
+    expect(html).not.toContain("KEN%%");
+  });
+
+  it("括号外日期仍高亮", () => {
+    const html = renderDisplayName("【作品】2023角色.ysm");
+    expect(html).toContain('<span class="tag-date">2023</span>');
+  });
+});

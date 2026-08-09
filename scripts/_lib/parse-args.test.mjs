@@ -80,6 +80,48 @@ test('parseArgs unknown flag warns and continues', () => {
   assert.deepEqual(args._, []);
 });
 
+// ── new semantics（code_review P3 复核补充）──
+
+test('parseArgs unknown flags collected in unknown array', () => {
+  const args = parseArgs(['--checkk', '--strict'], {
+    bools: ['strict'], strings: [], defaults: {},
+  });
+  assert.deepEqual(args.unknown, ['--checkk']);
+});
+
+test('parseArgs --flag=value inline string', () => {
+  const args = parseArgs(['--dir=X'], {
+    bools: [], strings: ['dir'], defaults: { dir: null },
+  });
+  assert.equal(args.dir, 'X');
+});
+
+test('parseArgs --check=true / false / 0 bool inline', () => {
+  const t = parseArgs(['--check=true'], { bools: ['check'], strings: [], defaults: {} });
+  assert.equal(t.check, true);
+  const f = parseArgs(['--check=false'], { bools: ['check'], strings: [], defaults: {} });
+  assert.equal(f.check, false);
+  const z = parseArgs(['--check=0'], { bools: ['check'], strings: [], defaults: {} });
+  assert.equal(z.check, false);
+  const y = parseArgs(['--check=yes'], { bools: ['check'], strings: [], defaults: {} });
+  assert.equal(y.check, true);
+});
+
+test('parseArgs --help / -h set help=true, not positional', () => {
+  const h = parseArgs(['--help']);
+  assert.equal(h.help, true);
+  assert.deepEqual(h._, []);
+  const s = parseArgs(['-h', '--strict'], { bools: ['strict'], strings: [], defaults: {} });
+  assert.equal(s.help, true);
+  assert.equal(s.strict, true);
+});
+
+test('parseArgs -- separator: --help after -- is positional', () => {
+  const args = parseArgs(['--', '--help'], { bools: [], strings: [], defaults: {} });
+  assert.equal(args.help, false);
+  assert.deepEqual(args._, ['--', '--help']);
+});
+
 // ── -- separator ──
 
 test('parseArgs -- is treated as positional arg', () => {

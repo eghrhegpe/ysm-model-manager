@@ -103,9 +103,17 @@ function main() {
   console.log('=== 项目代码统计 ===');
   let goLines = countLines(goDirs.map((d) => walkFiles(d, '*.go')));
   // 根目录 Go（F1/F7：动态扫描，不再硬编码 app.go/main.go/resource_bindings.go——
-  // 列表已迁走 app.go/resource_bindings.go，且漏掉 embed.go/cli_export.go）
-  for (const f of walkFiles(ROOT, '*.go', (p) => path.dirname(p) !== ROOT)) {
-    goLines += pyLineCount(fs.readFileSync(f, 'utf-8'));
+  // 列表已迁走 app.go/resource_bindings.go，且漏掉 embed.go/cli_export.go）。
+  // 浅层扫描（code_review P2）：只取 ROOT 顶层 .go——walkFiles(ROOT) 会递归整个仓库
+  // （node_modules/.git/dist 等海量目录，性能回归 + 不可读目录崩溃面）
+  for (const n of fs.readdirSync(ROOT).filter((n) => n.endsWith('.go'))) {
+    const f = path.join(ROOT, n);
+    // P3（code_review）：与 countLines 同款 try/catch——单文件读取失败不再毁整脚本
+    try {
+      goLines += pyLineCount(fs.readFileSync(f, 'utf-8'));
+    } catch (e) {
+      console.warn(`[line-counter] 跳过 ${relPosix(f)}: ${e.message}`);
+    }
   }
   console.log(`Go:         ${goLines} 行`);
 

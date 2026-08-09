@@ -218,7 +218,7 @@
 |------|--------|------|
 | `CleanInstanceDir()` | `go/recycle/recycle_clean:21` | CleanInstanceDir 清理整合包子目录中仓库已有的文件： 在 recycleRoot 内的移入回收站（可恢复），否则直接删除（仓库侧无损可重推） |
 | `DeduplicateEntries()` | `go/recycle/recycle_clean:58` | DeduplicateEntries 按 SHA256 哈希分组去重：保留每组第一个，其余移入回收站 |
-| `CleanLogger()` | `go/recycle/recycle_clean:17` | CleanLogger 清理操作日志回调（薄壳注入 App.logger.Add） |
+| `CleanOpLogger()` | `go/recycle/recycle_clean:17` | CleanOpLogger 清理操作日志回调（薄壳注入 App.logger.Add） |
 | `New()` | `go/recycle/recycle:32` | New 创建回收站管理器，root 是资源根目录，回收站为 root/.recycle |
 | `TrashManager.RecycleDir()` | `go/recycle/recycle:41` | RecycleDir 返回回收站目录路径 |
 | `TrashManager.Move()` | `go/recycle/recycle:46` | Move 移动文件到回收站 |

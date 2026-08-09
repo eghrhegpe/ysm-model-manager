@@ -48,6 +48,7 @@ tests/python/__pycache__/
 
 # IDE / AI 工具缓存
 .reasonix/
+.atomcode/
 .rg-test-tmp/
 .qoder/
 .workbuddy/

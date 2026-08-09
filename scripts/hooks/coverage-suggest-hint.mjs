@@ -142,7 +142,7 @@ function main() {
   } catch {
     /* 无 coverage 产物 → buildStaleHint(null) 提示先跑 */
   }
-  console.error(`[prepare-commit-msg] ${parts.join('；')}${buildStaleHint(covMtime)}（仅终端提醒，未写入 commit body）`);
+  console.error(`[prepare-commit-msg] ${parts.join('；')}${buildStaleHint(covMtime)}（仅终端提醒）`);
 }
 
 // 仅当作为入口直接执行时才跑主流程（被测试 import 时不触发）

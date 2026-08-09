@@ -3,9 +3,9 @@
 
 export const en: Record<string, string> = {
   // ── Navigation ──
-  "nav.repository": "Repository",
+  "nav.repository": "Model Repository",
   "nav.instances": "Modpacks",
-  "nav.community": "Creators",
+  "nav.community": "Creators Channel",
   "nav.workshop": "Workshop",
   "nav.diagnostics": "Diagnostics",
   "nav.settings": "Settings",
@@ -23,7 +23,7 @@ export const en: Record<string, string> = {
   "common.cancel": "Cancel",
   "common.confirm": "Confirm",
   "common.search": "Search",
-  "common.empty": "No data",
+  "common.empty": "No data yet",
   "common.back": "Back",
   "common.close": "Close",
   "common.clear": "Clear",
@@ -133,7 +133,7 @@ export const en: Record<string, string> = {
   "import.brand": "Brand",
   "import.character": "Character",
   "import.variant": "Variant",
-  "import.date": "Date",
+  "import.date": "Year/Month",
   "import.preview": "Final Name",
   "import.importBtn": "Import",
   "import.queue": "Queue",
@@ -219,7 +219,7 @@ export const en: Record<string, string> = {
 
   // ── Main Content Area ──
   "content.pageLoadFailed": "Page load failed",
-  "content.siteExported": "Sites exported",
+  "content.siteExported": "Site exported",
   "content.exportFailed": "Export failed",
   "content.imported": "Imported {n} sites",
   "content.importFailed": "Import failed",
@@ -437,7 +437,7 @@ export const en: Record<string, string> = {
   "preview.packReadFailed": "Failed to read modpack info",
   "preview.loadingStructure": "Model Structure (loading…)",
   "preview.noGeometry": "No geometry data found",
-  "preview.boneLabels": "Bone Name",
+  "preview.boneLabels": "Bone Names",
   "preview.on": "On",
   "preview.off": "Off",
   "preview.zoom": "Zoom In",

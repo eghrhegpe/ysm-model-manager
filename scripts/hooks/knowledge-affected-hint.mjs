@@ -103,7 +103,7 @@ function main() {
   console.error(
     `[prepare-commit-msg] 📚 ${cards.length} 张知识卡受影响，建议复核：` +
       cards.map((c) => `docs/knowledge/${c}.md`).join('、') +
-      `（仅终端提醒，未写入 commit body）`,
+      `（仅终端提醒）`,
   );
 }
 

@@ -98,7 +98,7 @@
 | `CopyModelFile()` | `go/fileops/fileops:311` | CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验） ADR-038 D3：支持目录递归复制（含 .ban 状态文件）；src 为 |
 | `DeleteModelFile()` | `go/fileops/fileops:431` | DeleteModelFile 删除模型（目录感知，ADR-038 D3.6）： src 为 ysm.json 时删除整个模型目录（整组语义——包内 geometry/animat |
 | `ToggleModelEnable()` | `go/fileops/fileops:468` | ToggleModelEnable 切换 .ban 状态文件（返回是否处于启用态；缓存失效由薄壳处理） ADR-038 D3.7：src 为 ysm.json 时提升为父目录级 . |
-| `IsFileBanned()` | `go/fileops/fileops:537` | IsFileBanned 判断路径是否被 .ban 标记（文件级或目录级，ADR-038 D3.7） |
+| `IsFileBanned()` | `go/fileops/fileops:549` | IsFileBanned 判断路径是否被 .ban 标记（文件级或目录级，ADR-038 D3.7） |
 | `WriteModelFolder()` | `go/fileops/folder_import:19` | WriteModelFolder 写入文件夹整组到仓库（YSM 解压目录或普通模型文件夹）。 |
 
 ## Go·文件系统
@@ -462,35 +462,35 @@
 | `App.ImportModelFileTo()` | `internal/app/app_install:88` | — |
 | `App.ImportModelFileOverwriteTo()` | `internal/app/app_install:92` | — |
 | `App.MoveToRecycle()` | `internal/app/app_install:152` | ========== 回收站 ========== |
-| `App.MoveToRecycleEx()` | `internal/app/app_install:161` | — |
-| `App.ClearCustomDir()` | `internal/app/app_install:193` | — |
-| `App.CountInstanceResources()` | `internal/app/app_install:253` | CountInstanceResources 统计指定整合包中可清空的资源文件数 只统计仓库中已有的文件（同 clearInstanceDir 逻辑） rtype 为空时统计全部类 |
-| `App.ClearInstanceResources()` | `internal/app/app_install:293` | ClearInstanceResources 清空指定整合包中已同步的文件 insName: 整合包名, rtype: 资源类型（空=全部, 非空=只清此类型） 返回清除的文件数量 |
-| `App.DeduplicateCustomDir()` | `internal/app/app_install:373` | DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle） |
-| `App.ListRecycleBin()` | `internal/app/app_install:388` | — |
-| `App.RestoreFromRecycle()` | `internal/app/app_install:405` | — |
-| `App.DeleteFromRecycle()` | `internal/app/app_install:419` | — |
-| `App.EmptyRecycleBin()` | `internal/app/app_install:432` | — |
-| `App.GetInstanceStatus()` | `internal/app/app_install:471` | ========== 状态同步 ========== |
-| `App.GetResourceInstanceStatus()` | `internal/app/app_install:483` | GetResourceInstanceStatus 按资源类型获取整合包同步状态 repoDir 仅对 YSM 类型生效（其他类型从全局资源目录推导） |
-| `App.SyncModelToggleStatus()` | `internal/app/app_install:523` | — |
-| `App.RelinkCustomDir()` | `internal/app/app_install:528` | RelinkCustomDir 重新应用链接模式到指定目录（兼容旧版） |
-| `App.RelinkAllInstanceResources()` | `internal/app/app_install:548` | RelinkAllInstanceResources 重新应用链接模式到整合包所有资源类型目录 |
-| `App.SyncResources()` | `internal/app/app_install:583` | SyncResources 获取全局 ↔ 整合包的资源同步状态 |
-| `App.PushResourceToInstance()` | `internal/app/app_install:617` | PushResourceToInstance 将全局中缺失的资源推送到整合包 PushResourceToInstance 推送缺失资源到整合包（执行循环下沉 go/sync） |
-| `App.PullResourceFromInstance()` | `internal/app/app_install:635` | PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync） |
-| `App.PullSingleResourceFromInstance()` | `internal/app/app_install:669` | PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库 PullSingleResourceFromInstance 从 |
-| `App.PushSingleResourceToInstance()` | `internal/app/app_install:686` | PushSingleResourceToInstance 推送单个资源到整合包（分派核心下沉 go/sync） |
-| `App.GetInstanceSyncStatus()` | `internal/app/app_install:706` | GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表） GetInstanceSyncStatus 整合包同步状态（组装逻辑已下沉 go/ins |
-| `App.HasYSMMod()` | `internal/app/app_install:745` | ========== YSM 检测 ========== |
-| `App.SetLinkMode()` | `internal/app/app_install:763` | ========== 链接模式 ========== |
-| `App.GetLinkMode()` | `internal/app/app_install:780` | — |
-| `App.AddImportLog()` | `internal/app/app_install:785` | ========== 日志 ========== |
-| `App.AddOpLog()` | `internal/app/app_install:789` | — |
-| `App.GetImportLogs()` | `internal/app/app_install:793` | — |
-| `App.ClearImportLogs()` | `internal/app/app_install:797` | — |
-| `App.GetRuntimeLogs()` | `internal/app/app_install:802` | GetRuntimeLogs 获取运行时日志（watcher/sync 等标准库 log 输出） |
-| `App.ClearRuntimeLogs()` | `internal/app/app_install:807` | ClearRuntimeLogs 清空运行时日志缓冲 |
+| `App.MoveToRecycleEx()` | `internal/app/app_install:167` | — |
+| `App.ClearCustomDir()` | `internal/app/app_install:209` | — |
+| `App.CountInstanceResources()` | `internal/app/app_install:271` | CountInstanceResources 统计指定整合包中可清空的资源文件数 只统计仓库中已有的文件（同 clearInstanceDir 逻辑） rtype 为空时统计全部类 |
+| `App.ClearInstanceResources()` | `internal/app/app_install:311` | ClearInstanceResources 清空指定整合包中已同步的文件 insName: 整合包名, rtype: 资源类型（空=全部, 非空=只清此类型） 返回清除的文件数量 |
+| `App.DeduplicateCustomDir()` | `internal/app/app_install:391` | DeduplicateCustomDir 按 SHA256 哈希去重（执行逻辑下沉 go/recycle） |
+| `App.ListRecycleBin()` | `internal/app/app_install:406` | — |
+| `App.RestoreFromRecycle()` | `internal/app/app_install:423` | — |
+| `App.DeleteFromRecycle()` | `internal/app/app_install:437` | — |
+| `App.EmptyRecycleBin()` | `internal/app/app_install:450` | — |
+| `App.GetInstanceStatus()` | `internal/app/app_install:489` | ========== 状态同步 ========== |
+| `App.GetResourceInstanceStatus()` | `internal/app/app_install:501` | GetResourceInstanceStatus 按资源类型获取整合包同步状态 repoDir 仅对 YSM 类型生效（其他类型从全局资源目录推导） |
+| `App.SyncModelToggleStatus()` | `internal/app/app_install:541` | — |
+| `App.RelinkCustomDir()` | `internal/app/app_install:546` | RelinkCustomDir 重新应用链接模式到指定目录（兼容旧版） |
+| `App.RelinkAllInstanceResources()` | `internal/app/app_install:566` | RelinkAllInstanceResources 重新应用链接模式到整合包所有资源类型目录 |
+| `App.SyncResources()` | `internal/app/app_install:601` | SyncResources 获取全局 ↔ 整合包的资源同步状态 |
+| `App.PushResourceToInstance()` | `internal/app/app_install:635` | PushResourceToInstance 将全局中缺失的资源推送到整合包 PushResourceToInstance 推送缺失资源到整合包（执行循环下沉 go/sync） |
+| `App.PullResourceFromInstance()` | `internal/app/app_install:653` | PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync） |
+| `App.PullSingleResourceFromInstance()` | `internal/app/app_install:687` | PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库 PullSingleResourceFromInstance 从 |
+| `App.PushSingleResourceToInstance()` | `internal/app/app_install:704` | PushSingleResourceToInstance 推送单个资源到整合包（分派核心下沉 go/sync） |
+| `App.GetInstanceSyncStatus()` | `internal/app/app_install:724` | GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表） GetInstanceSyncStatus 整合包同步状态（组装逻辑已下沉 go/ins |
+| `App.HasYSMMod()` | `internal/app/app_install:763` | ========== YSM 检测 ========== |
+| `App.SetLinkMode()` | `internal/app/app_install:781` | ========== 链接模式 ========== |
+| `App.GetLinkMode()` | `internal/app/app_install:798` | — |
+| `App.AddImportLog()` | `internal/app/app_install:803` | ========== 日志 ========== |
+| `App.AddOpLog()` | `internal/app/app_install:807` | — |
+| `App.GetImportLogs()` | `internal/app/app_install:811` | — |
+| `App.ClearImportLogs()` | `internal/app/app_install:815` | — |
+| `App.GetRuntimeLogs()` | `internal/app/app_install:820` | GetRuntimeLogs 获取运行时日志（watcher/sync 等标准库 log 输出） |
+| `App.ClearRuntimeLogs()` | `internal/app/app_install:825` | ClearRuntimeLogs 清空运行时日志缓冲 |
 | `App.AnalyzeYSMModel()` | `internal/app/app_model:23` | — |
 | `App.ExtractYsmSummary()` | `internal/app/app_model:27` | — |
 | `App.ExtractYSMHeader()` | `internal/app/app_model:41` | — |

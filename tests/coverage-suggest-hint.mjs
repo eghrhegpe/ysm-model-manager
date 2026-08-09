@@ -133,7 +133,7 @@ check('端到端：仅终端提醒，不写 body 区块', () => {
     const msg = fs.readFileSync(msgFile, 'utf8');
     assert.ok(!msg.includes(BLOCK_START), '终端模式不应写 body 区块');
     assert.ok((r.stderr || '').includes('🔬'), '终端应打印覆盖率提醒');
-    assert.ok((r.stderr || '').includes('未写入 commit body'), '应标注仅终端提醒');
+    assert.ok((r.stderr || '').includes('仅终端提醒'), '应标注仅终端提醒');
   } finally {
     try { fs.unlinkSync(msgFile); } catch { /* ignore */ }
   }

@@ -33,7 +33,9 @@ export function friendlyError(err: unknown, fallback?: string): string {
     [/access is denied|permission denied|eacces|access refused/i, "error.permissionDenied"],
     [/no such file|not found|cannot find|does not exist/i, "error.notFound"],
     [/sharing violation|used by another process|is locked|file exists/i, "error.fileLocked"],
-    [/(?:directory|folder) is empty|no files/i, "error.dirEmpty"],
+    // P3 修复（code_review）：与 go/errors 收窄对齐——裸 `no files` 是 "no filesystem"
+    // 子串会误分类；只匹配目录/文件夹场景的完整短语
+    [/(?:directory|folder) is empty|no files found|no files in (?:directory|folder)/i, "error.dirEmpty"],
     [/timeout|timed out/i, "error.timeout"],
     [/network|proxy|fetch/i, "error.networkError"],
     [/invalid argument/i, "error.invalidArg"],

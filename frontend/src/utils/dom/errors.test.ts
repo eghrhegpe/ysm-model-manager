@@ -82,7 +82,10 @@ describe("friendlyError 通用文件/网络错误", () => {
 
   it("empty / no files → 目录为空", () => {
     expect(friendlyError("directory is empty")).toBe("目录为空，没有可操作的文件");
-    expect(friendlyError("no files to process")).toBe("目录为空，没有可操作的文件");
+    // P3 修复（code_review）：与 go/errors 收窄对齐——裸 "no files" 是 "no filesystem"
+    // 子串会误分类，仅完整短语命中；"no files to process" 现落兜底前缀
+    expect(friendlyError("no files found in directory")).toBe("目录为空，没有可操作的文件");
+    expect(friendlyError("no files to process")).toBe("操作失败: no files to process");
   });
 
   it("timeout → 连接超时", () => {

@@ -12,7 +12,7 @@ export const previewCSS: string = `
 .content { padding: 10px; overflow-y: auto; flex: 1; }
 @keyframes previewIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
 .content > * { animation: previewIn .2s ease; }
-.no-animations .content > * { animation: none !important; }
+:host-context(.no-animations) .content > * { animation: none !important; }
 h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
 .dp-placeholder { text-align: center; padding: 24px 0; color: var(--muted); }
 .dp-placeholder .big-icon { font-size: var(--fs-xl); margin-bottom: 8px; }

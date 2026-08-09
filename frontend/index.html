@@ -67,7 +67,12 @@
         // 发射与 loading 监听注册全部丢失
         let defaultPage = "repository";
         try {
-          defaultPage = localStorage.getItem("ui-default-page") || "repository";
+          // P2 修复（审计）：内联源与 resolveInitialPage 三优先级对齐——
+          // 原仅读 ui-default-page，忽略 nav_page 记忆且无白名单校验，
+          // 非法 page 可经此注入 nav:change 链路（page-store 白名单外）
+          defaultPage = localStorage.getItem("ui-default-page") || localStorage.getItem("nav_page") || "repository";
+          const VALID_PAGES = ["repository", "instances", "workshop", "github", "diagnostics", "settings"];
+          if (!VALID_PAGES.includes(defaultPage)) defaultPage = "repository";
         } catch {
           /* 隐私模式：localStorage 不可用，回退默认页 */
         }

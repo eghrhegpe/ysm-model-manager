@@ -10,7 +10,7 @@ export const contentCSS: string = `
 #dl-imported-list > div { animation:dl-slide-up .25s ease-out both; }
 @keyframes pageIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
 .page { flex:1; display:flex; flex-direction:column; overflow:hidden; animation: pageIn .2s ease; }
-.no-animations .page { animation: none !important; }
+:host-context(.no-animations) .page { animation: none !important; }
 .section-title { font-size:var(--fs-lg); font-weight:600; color:var(--txt); padding:16px 16px 8px; }
 .card-row { display:flex; gap:12px; padding:0 16px; }
 .stat-card { flex:1; background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-xl); padding:16px; }
@@ -127,8 +127,8 @@ ${focusVisibleCSS}
   75%  { top:50%; left:4px; transform:translateY(-50%); }
   100% { top:4px; left:50%; transform:translateX(-50%); }
 }
-.no-animations .log-row, .no-animations .conflict-row, .no-animations .conflict-ins { animation: none !important; }
-.no-animations .btn-base.accent.scanning { animation: none !important; }
+:host-context(.no-animations) .log-row, :host-context(.no-animations) .conflict-row, :host-context(.no-animations) .conflict-ins { animation: none !important; }
+:host-context(.no-animations) .btn-base.accent.scanning { animation: none !important; }
 .diag-wrapper { flex:1; display:flex; overflow:hidden; }
 .diag-left { width:var(--diag-left-w); flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); padding:8px; gap:4px; background:var(--surf); }
 .diag-btn { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:var(--radius-md); border:none; background:transparent; color:var(--muted); font-size:var(--fs-md); cursor:pointer; font-family:inherit; transition:var(--tr-fast); width:100%; text-align:left; }
@@ -802,7 +802,7 @@ ${focusVisibleCSS}
 #set-advanced-panel { overflow:hidden; }
 #set-advanced-panel.adv-open { animation: advPanelIn .25s ease forwards; }
 #set-advanced-panel.adv-closing { animation: advPanelOut .2s ease forwards; }
-.no-animations #set-advanced-panel { animation: none !important; }
+:host-context(.no-animations) #set-advanced-panel { animation: none !important; }
 .cr-error-page .cr-back-repo { margin-bottom:12px; }
 
 /* Edit card inputs */

@@ -9,6 +9,7 @@ describe("fileIcon", () => {
   it("pmx returns 🎭", () => expect(fileIcon("model.pmx")).toBe("🎭"));
   it("pmd returns 🎭", () => expect(fileIcon("model.pmd")).toBe("🎭"));
   it("vrca returns 🥽", () => expect(fileIcon("avatar.vrca")).toBe("🥽"));
+  it("vrm returns 🥽", () => expect(fileIcon("avatar.vrm")).toBe("🥽")); // P3 补测：注册表支持 .vrm，原映射缺失落 🧊 兜底
   it("litematic returns 📐", () => expect(fileIcon("build.litematic")).toBe("📐"));
   it("schematic returns ⚙️", () => expect(fileIcon("build.schematic")).toBe("⚙️"));
   it("png returns 🖼️", () => expect(fileIcon("image.png")).toBe("🖼️"));

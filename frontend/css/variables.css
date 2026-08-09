@@ -40,6 +40,11 @@
   --status-error: #f38ba8;
   --size-ok: #a6e3a1;
   --size-large: #f38ba8;
+  /* P2 修复：默认 cyber 主题补 --accent-btn-*（.btn-base.accent 消费，与 pro 主题同值口径）——
+     原缺失导致默认暗色主题下 accent 主操作按钮静默失去样式（var 无 fallback → background 归初始） */
+  --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);
+  --accent-btn-color: var(--accent);
+  --accent-btn-border: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 /* ===== 温暖木纹（明亮模式） ===== */

@@ -81,7 +81,7 @@ class AppNav extends HTMLElement {
           50% { text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent); }
         }
         .logo-icon { animation: logoBreathe 3s ease-in-out infinite; }
-        .no-animations .logo-icon { animation: none !important; }
+        :host-context(.no-animations) .logo-icon { animation: none !important; }
         .menu { padding: 4px 8px 8px; flex: 1; }
         .menu-label { font-size: var(--fs-xs); color: var(--muted); padding: 8px 10px 4px; text-transform: uppercase; letter-spacing: .5px; }
         .nav-item {

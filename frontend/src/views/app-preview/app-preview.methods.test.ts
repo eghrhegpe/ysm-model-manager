@@ -86,7 +86,7 @@ describe("loadPreviewImage", () => {
     unmountElement(el);
   });
 
-  it("WASM 只有 geometry 无纹理 → 标记 _wasmTried 后走 Go 兜底", async () => {
+  it("WASM 只有 geometry 无纹理 → 缓存 geometry 后走 Go 兜底", async () => {
     const el = mountPreview();
     decodeYsmViaWasm.mockResolvedValue({ geometry: { positions: [] } });
     appObj.FindPreviewImage.mockResolvedValue("blob:loose");
@@ -99,7 +99,7 @@ describe("loadPreviewImage", () => {
     const el = mountPreview();
     appObj.ExtractPreviewTexture.mockResolvedValue("blob:go-tex");
     expect(await el.loadPreviewImage("/repo/c.ysm")).toBe("blob:go-tex");
-    // Go 兜底命中后覆盖缓存（_wasmTried 标记被成功纹理替换）
+    // Go 兜底命中后落缓存
     expect(cacheGet("/repo/c.ysm")).toMatchObject({ texture: "blob:go-tex" });
     unmountElement(el);
   });
@@ -228,8 +228,8 @@ describe("顶层 evict handler — blob URL 释放", () => {
       expect(revoke).toHaveBeenCalledWith("blob:author");
       expect(revoke).toHaveBeenCalledWith("blob:avatar");
       expect(revoke).toHaveBeenCalledWith("blob:new-tex");
-      // revoke 幂等：重复 URL 可能被多次调用（index.ts handler 数组不去重），只验证有释放
-      expect(revoke.mock.calls.filter((c) => c[0] === "blob:geo-tex").length).toBeGreaterThanOrEqual(1);
+      // Set 去重：geometry.textures 里的重复 URL 只 revoke 一次
+      expect(revoke.mock.calls.filter((c) => c[0] === "blob:geo-tex")).toHaveLength(1);
       // 非 blob URL 不误伤
       expect(revoke).not.toHaveBeenCalledWith("data:image/png;base64,x");
     } finally {

@@ -17,25 +17,21 @@ import { esc } from "../../utils/dom/html.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import { t } from "../../core/i18n/t.ts";
 
-// 注册缓存淘汰回调：释放 blob URL
+// 注册缓存淘汰回调：释放 blob URL（Set 去重：重复 URL 只 revoke 一次，revoke 幂等无害）
 cacheSetEvictHandler((key, val) => {
   if (!val) return;
+  const urls = new Set<string>();
   // geometry.textures 数组中的 blob URL
-  const urls: string[] = [];
   const geo = val.geometry as BedrockGeometry | undefined;
-  if (geo?.textures) urls.push(...geo.textures);
-  if (geo?.texture && !urls.includes(geo.texture)) urls.push(geo.texture);
-  if (val.texture && !urls.includes(val.texture)) urls.push(val.texture);
+  if (geo?.textures) for (const u of geo.textures) urls.add(u);
+  if (geo?.texture) urls.add(geo.texture);
+  if (val.texture) urls.add(val.texture);
   // 作者头像 blob URL（preview-wasm 为头像 createObjectURL）：
-  // authors[].avatarUrl 与 avatars 记录可能指向同一 URL，去重后 revoke
+  // authors[].avatarUrl 与 avatars 记录可能指向同一 URL，Set 天然去重
   for (const au of val.authors || []) {
-    if (typeof au === "object" && au.avatarUrl && !urls.includes(au.avatarUrl)) {
-      urls.push(au.avatarUrl);
-    }
+    if (typeof au === "object" && au.avatarUrl) urls.add(au.avatarUrl);
   }
-  for (const u of Object.values(val.avatars || {})) {
-    if (u && !urls.includes(u)) urls.push(u);
-  }
+  for (const u of Object.values(val.avatars || {})) urls.add(u);
   for (const u of urls) {
     if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
   }
@@ -111,11 +107,10 @@ class AppPreview extends HTMLElement implements PreviewCtx {
       }
       if (decoded?.geometry) {
         // 有 geometry 数据（含 _ysmMeta）但无纹理，缓存以备 _loadModel2D 使用
-        cacheSet(modelPath, { ...decoded, _wasmTried: true });
-      } else {
-        // WASM 完全失败，标记已尝试过
-        cacheSet(modelPath, { _wasmTried: true });
+        // （无 _wasmTried 标记：Go 兜底成功会覆盖缓存，标记无消费方——P4 清理）
+        cacheSet(modelPath, { ...decoded });
       }
+      // WASM 完全失败 → 不缓存空条目，直接走 Go 兜底（兜底结果由下方 cacheSet 落缓存）
     }
     try {
       const { FindPreviewImage, ExtractPreviewTexture } =

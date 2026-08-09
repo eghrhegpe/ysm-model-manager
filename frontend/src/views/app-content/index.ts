@@ -212,7 +212,9 @@ class AppContent extends HTMLElement {
       if (this._current === "diagnostics") {
         this._initDiagnostics();
       } else if (this._current === "settings") {
-        this._initSettings();
+        // _initSettings 是 async：外层 try/catch 抓不到 reject，必须显式挂 catch 出口
+        // （ADR-044 ①异步范式：async 调用最外层必有 catch，reject 转 toast 而非 unhandled）
+        void this._initSettings().catch((e) => this._pageInitFailed(e));
       } else if (this._current === "workshop") {
         this._initWorkshop();
       } else if (this._current === "github") {
@@ -224,13 +226,18 @@ class AppContent extends HTMLElement {
       }
     } catch (e) {
       // 页 init 抛错不中断 _render 调用方，反馈给用户而非静默
-      console.error("[app-content] 页面初始化失败:", e);
-      bus.emit("toast:show", {
-        msg: "❌ " + t("content.pageLoadFailed") + ": " + friendlyError(e),
-        duration: 5000,
-        type: "error",
-      });
+      this._pageInitFailed(e);
     }
+  }
+
+  /** 页面初始化失败统一出口（同步 throw 与 async reject 共用） */
+  private _pageInitFailed(e: unknown): void {
+    console.error("[app-content] 页面初始化失败:", e);
+    bus.emit("toast:show", {
+      msg: "❌ " + t("content.pageLoadFailed") + ": " + friendlyError(e),
+      duration: 5000,
+      type: "error",
+    });
   }
 
   _initPreviewResize(): void {
@@ -997,7 +1004,8 @@ class AppContent extends HTMLElement {
   }
 
   _fmtSize(bytes: number): string {
-    if (!bytes) return "";
+    // ADR-044 ②数值守卫：truthiness 挡不住 Infinity，统一 Number.isFinite 拦截
+    if (!Number.isFinite(bytes) || bytes <= 0) return "";
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
     return (bytes / 1048576).toFixed(1) + " MB";

@@ -19,7 +19,6 @@ export interface DecodedYsm {
     avatarUrl?: string | null;
     avatarPath?: string;
   }>;
-  _wasmTried?: boolean;
 }
 
 /** 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） */

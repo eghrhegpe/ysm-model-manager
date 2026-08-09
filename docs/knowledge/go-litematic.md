@@ -16,6 +16,9 @@ use_when:
   - 蓝图
   - 体素
   - 方块
+invariant_anchors:
+  - go/litematic/nbt.go|extractBits
+  - go/litematic/voxel.go|maxRegionAxis
 ---
 
 # Litematic 解析 go/litematic

@@ -14,6 +14,9 @@ use_when:
   - 软删除
   - recycle
   - 还原
+invariant_anchors:
+  - frontend/src/features/recycle-bin.ts|isPathInRoot
+  - frontend/src/features/recycle-bin.ts|_loadGen
 ---
 
 # 回收站界面 recycle-bin

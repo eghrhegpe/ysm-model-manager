@@ -13,6 +13,9 @@ use_when:
   - avatar
   - 缓存
   - 缩略图
+invariant_anchors:
+  - go/avatar/avatar.go|isSafeAvatarPath
+  - go/avatar/avatar.go|strings.ReplaceAll
 ---
 
 # 头像 go/avatar

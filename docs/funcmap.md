@@ -652,8 +652,8 @@
 | `DOWNLOAD_REJECT_BYTES()` | `frontend/src/features/community/download-tasks:9` | 超过该大小直接拒绝（含边界值本身需确认） |
 | `DownloadSizeDecision()` | `frontend/src/features/community/download-tasks:11` | — |
 | `classifyDownloadSize()` | `frontend/src/features/community/download-tasks:14` | 下载大小策略：≤4MB 直接下；4–10MB 需确认；&gt;10MB 拒绝 |
-| `DownloadCandidate()` | `frontend/src/features/community/download-tasks:21` | 下载候选（结构类型，兼容 WorkshopModel） |
-| `buildDownloadTasks()` | `frontend/src/features/community/download-tasks:28` | 选中集 → 下载任务列表（路径统一转正斜杠；未匹配的选中项静默跳过） |
+| `DownloadCandidate()` | `frontend/src/features/community/download-tasks:24` | 下载候选（结构类型，兼容 WorkshopModel） |
+| `buildDownloadTasks()` | `frontend/src/features/community/download-tasks:31` | 选中集 → 下载任务列表（路径统一转正斜杠；未匹配的选中项静默跳过） |
 | `RepoEventsContext()` | `frontend/src/features/community/events:14` | bindRepoEvents 上下文 |
 | `RepoEventsHandle()` | `frontend/src/features/community/events:26` | 绑定返回值 |
 | `bindRepoEvents()` | `frontend/src/features/community/events:39` | 绑定仓库模型页面的所有事件。 |
@@ -913,7 +913,7 @@
 | `previewCSS()` | `frontend/src/views/app-preview/css:2` | — |
 | `showModelDetail()` | `frontend/src/views/app-preview/detail:16` | 显示模型详情（YSM 模型） |
 | `showResourcePack()` | `frontend/src/views/app-preview/detail:103` | 显示资源包信息（pack.mcmeta + pack.png） |
-| `showShaderPack()` | `frontend/src/views/app-preview/detail:140` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
+| `showSimplePreview()` | `frontend/src/views/app-preview/detail:140` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
 | `BedrockCube()` | `frontend/src/views/app-preview/geometry:4` | Bedrock 方块 |
 | `BedrockBone()` | `frontend/src/views/app-preview/geometry:15` | Bedrock 骨骼 |
 | `BedrockGeometry()` | `frontend/src/views/app-preview/geometry:30` | 解析后的 Bedrock geometry |

@@ -73,7 +73,7 @@
           // P3 修复（code_review）：白名单读 window.PAGE_WHITELIST（app-modules 桥接，
           // page-store 单一来源）——不再硬编码第二份六页列表防双源漂移
           defaultPage = localStorage.getItem("ui-default-page") || localStorage.getItem("nav_page") || "repository";
-          const valid = (window as unknown as { PAGE_WHITELIST?: readonly string[] }).PAGE_WHITELIST;
+          const valid = window.PAGE_WHITELIST;
           if (!valid || !valid.includes(defaultPage)) defaultPage = "repository";
         } catch {
           /* 隐私模式：localStorage 不可用，回退默认页 */

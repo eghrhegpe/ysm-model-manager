@@ -31,7 +31,6 @@ function makeCtx(): PreviewCtx {
     _loadPreviewImage: vi.fn().mockResolvedValue(null),
     _unsubs: [],
     decodeYsmViaWasm: vi.fn(),
-    _decodeYsmViaWasm: vi.fn(),
     _appendDebug: vi.fn(),
   };
 }

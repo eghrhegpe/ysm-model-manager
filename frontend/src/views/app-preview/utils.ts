@@ -30,10 +30,9 @@ export interface PreviewRoot {
   _unsubs?: Array<() => void>;
 }
 
-/** WASM 解码能力（loader 消费 decodeYsmViaWasm，skeleton 消费 _decodeYsmViaWasm） */
+/** WASM 解码能力（loader/skeleton 消费） */
 export interface YsmDecoder {
   decodeYsmViaWasm(path: string): Promise<DecodedYsm | null>;
-  _decodeYsmViaWasm(path: string): Promise<DecodedYsm | null>;
 }
 
 /** 调试输出能力（loader/skeleton 消费） */

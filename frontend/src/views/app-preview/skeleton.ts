@@ -52,8 +52,7 @@ export async function loadModel2D(
   try {
     // 统一加载：缓存 → WASM → Go 兜底
     const loaded = await loadModelData(modelPath, {
-      decodeYsmViaWasm: (p) => ctx._decodeYsmViaWasm(p),
-      _decodeYsmViaWasm: (p) => ctx._decodeYsmViaWasm(p), // YsmDecoder 双方法契约
+      decodeYsmViaWasm: (p) => ctx.decodeYsmViaWasm(p),
       _appendDebug: (_container, msg) => ctx._appendDebug(container, msg),
     });
     const model = loaded.model;

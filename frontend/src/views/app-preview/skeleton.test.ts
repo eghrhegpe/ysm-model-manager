@@ -101,7 +101,6 @@ function makeCtx() {
   const ctx = {
     _root: root as unknown as ShadowRoot,
     _appendDebug: vi.fn(),
-    _decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)),
     decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)),
     _loadPreviewImage: vi.fn(() => Promise.resolve(null)),
     _unsubs: [] as Array<() => void>,

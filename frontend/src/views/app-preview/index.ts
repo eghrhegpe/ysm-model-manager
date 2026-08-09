@@ -104,7 +104,7 @@ class AppPreview extends HTMLElement implements PreviewCtx {
 
     // .ysm 或 .json（解压的 ysm.json）都走 WASM 解码
     if (/\.(ysm|json)$/i.test(modelPath)) {
-      const decoded = await this._decodeYsmViaWasm(modelPath);
+      const decoded = await this.decodeYsmViaWasm(modelPath);
       if (decoded?.texture) {
         cacheSet(modelPath, { ...decoded, _decodedBy: "🧠 WASM 内置解码" });
         return decoded.texture;
@@ -134,11 +134,6 @@ class AppPreview extends HTMLElement implements PreviewCtx {
   }
 
   /** 通过前端 WASM 解码 .ysm，返回 { texture, geometry }（缓存复用） */
-  async _decodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null> {
-    return decodeYsmViaWasm(modelPath);
-  }
-
-  /** 通过前端 WASM 解码（PreviewCtx 别名，preview-loader 用） */
   async decodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null> {
     return decodeYsmViaWasm(modelPath);
   }

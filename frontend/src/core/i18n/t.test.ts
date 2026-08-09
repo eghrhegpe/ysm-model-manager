@@ -9,10 +9,14 @@ const { getBundle } = vi.hoisted(() => ({
   getBundle: vi.fn(),
 }));
 
-vi.mock("../../core/i18n/locale.ts", () => ({
-  getBundle,
-  _warned: new Set<string>(),
-}));
+vi.mock("../../core/i18n/locale.ts", async () => {
+  const actual = await vi.importActual<typeof import("../../core/i18n/locale.ts")>("../../core/i18n/locale.ts");
+  return {
+    ...actual, // 保留 SUPPORTED_LANGS 等真实导出（断言用）
+    getBundle, // 覆盖为 mock（控制翻译表）
+    warnedKeys: new Set<string>(), // 改名同步（原 _warned，节流测试用）
+  };
+});
 
 import { t } from "../../core/i18n/t.ts";
 import { SUPPORTED_LANGS } from "../../core/i18n/locale.ts";

@@ -65,14 +65,20 @@ describe("app-nav（testid 钩子 + 导航交互）", () => {
     unmountElement(el);
   });
 
-  it("disconnected → 清理 nav:changed 订阅", async () => {
+  it("disconnected → 清理 nav:changed 订阅（P3 修复：原 expect(true) 恒真）", async () => {
     const el = mountCustomElement("app-nav");
     const root = el.shadowRoot!;
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    // 卸载前初始 active 为 repository
     unmountElement(el);
-    // 断开后发射事件不应抛错
+    // 断开后发射：若订阅已清理，已卸载元素的高亮不应被更新（仍为 repository）
     bus.emit("nav:changed", { page: "settings" });
-    expect(true).toBe(true);
+    await sleep(50);
+    const active = getAllByTestId(root, "nav-item").filter((i) =>
+      i.classList.contains("active"),
+    );
+    expect(active.length).toBe(1);
+    expect((active[0] as HTMLElement).dataset.page).toBe("repository");
   });
 
   it("版本号最终渲染", async () => {

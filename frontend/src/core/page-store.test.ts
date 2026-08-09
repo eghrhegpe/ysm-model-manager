@@ -1,7 +1,7 @@
 // ===== page-store 导航状态机测试（陷阱 #13 幽灵路径守护）=====
 // 唯一写入点：registerPageStore 的 nav:changed listener；
 // 页面名收窄为 PageName 联合（编译期拦截拼错，运行时信任 emit 方类型）。
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "../bus.ts";
 import {
   PageStore,
@@ -9,6 +9,14 @@ import {
   resolveInitialPage,
   PAGE_WHITELIST,
 } from "./page-store.ts";
+
+/** 隐私模式模拟：localStorage 读抛错（复用 app-modules.test.ts 的 breakLocalStorage 模式） */
+function breakLocalStorageRead(): () => void {
+  const getSpy = vi.spyOn(window.localStorage, "getItem").mockImplementation(() => {
+    throw new Error("denied");
+  });
+  return () => getSpy.mockRestore();
+}
 
 describe("resolveInitialPage（localStorage 恢复）", () => {
   beforeEach(() => {
@@ -51,6 +59,15 @@ describe("resolveInitialPage（localStorage 恢复）", () => {
     localStorage.clear();
     localStorage.setItem("nav_page", "");
     expect(resolveInitialPage()).toBe("repository");
+  });
+
+  it("隐私模式 localStorage 读抛错 → 回退仓库页（P3 修复：读路径 try/catch 防组件起不来）", () => {
+    const restore = breakLocalStorageRead();
+    try {
+      expect(resolveInitialPage()).toBe("repository");
+    } finally {
+      restore();
+    }
   });
 });
 

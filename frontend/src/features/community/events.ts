@@ -265,12 +265,19 @@ export function bindRepoEvents(
       return;
     }
     if (decision === "confirm") {
-      const ok = await modalConfirm({
-        title: t("workshop.largeFile"),
-        icon: "📏",
-        message: (size / 1024 / 1024).toFixed(1) + "MB，" + t("workshop.confirmDownload"),
-        okText: t("workshop.download"),
-      });
+      // P3 修复（审核发现）：modalConfirm await 原在 try 外——弹窗渲染失败 reject 会
+      // 逸出为未处理 rejection（async click handler 无外层 catch）；转 try/catch 兜底
+      let ok: boolean;
+      try {
+        ok = await modalConfirm({
+          title: t("workshop.largeFile"),
+          icon: "📏",
+          message: (size / 1024 / 1024).toFixed(1) + "MB，" + t("workshop.confirmDownload"),
+          okText: t("workshop.download"),
+        });
+      } catch {
+        ok = false;
+      }
       if (!ok) return;
     }
 

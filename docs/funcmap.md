@@ -109,8 +109,8 @@
 | `WalkAllDirs()` | `go/fsutil/walk:38` | WalkAllDirs 递归遍历目录，返回所有子目录路径（深度优先后序：子目录在前，父目录在后） 不包含根目录本身。后序便于删除类操作（先删深目录，父目录变空后可被继续删除）。 |
 | `CountFiles()` | `go/fsutil/walk:70` | CountFiles 统计目录中的文件数（不限制扩展名） |
 | `CleanEmptyDirs()` | `go/fsutil/walk:75` | CleanEmptyDirs 递归删除空子目录，返回删除数 |
-| `IsRecycleDir()` | `go/fsutil/walk:89` | IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）—— dedup / scanner / sync 的回 |
-| `WriteFileAtomic()` | `go/fsutil/write:19` | WriteFileAtomic 临时文件 + rename 原子落地目标文件。 |
+| `IsRecycleDir()` | `go/fsutil/walk:91` | IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）—— dedup / scanner / sync 的回 |
+| `WriteFileAtomic()` | `go/fsutil/write:25` | WriteFileAtomic 临时文件 + rename 原子落地目标文件。 |
 
 ## Go·几何
 
@@ -129,11 +129,11 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `ImportFromBase64()` | `go/importer/importer_file:29` | ImportFromBase64 从 base64 导入模型文件（校验 + 类型检测 + 写文件） rootFn 按资源类型返回仓库根目录（薄壳注入 a.GetRepoRoot） |
-| `WriteFileAtomic()` | `go/importer/importer_file:103` | WriteFileAtomic 已提升至 go/fsutil（ADR-044 策略 A：基础设施工具收敛，tags/logs/fileops 共用）。 |
-| `DetectZipType()` | `go/importer/importer_file:111` | DetectZipType 扫描 ZIP local file header 中的文件名识别资源类型 |
-| `ImportOptions()` | `go/importer/importer_file:19` | ImportOptions 导入选项 |
-| `ImportLogger()` | `go/importer/importer_file:25` | ImportLogger 导入日志回调（薄壳注入 App.logger.Add） |
+| `ImportFromBase64()` | `go/importer/importer_file:30` | ImportFromBase64 从 base64 导入模型文件（校验 + 类型检测 + 写文件） rootFn 按资源类型返回仓库根目录（薄壳注入 a.GetRepoRoot） |
+| `WriteFileAtomic()` | `go/importer/importer_file:106` | WriteFileAtomic 已提升至 go/fsutil（ADR-044 策略 A：基础设施工具收敛，tags/logs/fileops 共用）。 |
+| `DetectZipType()` | `go/importer/importer_file:117` | DetectZipType 扫描 ZIP local file header 中的文件名识别资源类型 |
+| `ImportOptions()` | `go/importer/importer_file:20` | ImportOptions 导入选项 |
+| `ImportLogger()` | `go/importer/importer_file:26` | ImportLogger 导入日志回调（薄壳注入 App.logger.Add） |
 | `Register()` | `go/importer/importer:31` | Register 注册导入策略 |
 | `Get()` | `go/importer/importer:36` | Get 获取指定类型的导入策略 |
 | `NewSimpleCopy()` | `go/importer/importer:62` | NewSimpleCopy 创建简单文件复制导入器 |
@@ -259,20 +259,20 @@
 | `SyncCustomToRepo()` | `go/sync/sync_push:170` | SyncCustomToRepo 同步整合包自定义目录的模型到仓库（哈希/名称去重） |
 | `Logger()` | `go/sync/sync_push:19` | Logger 导入日志回调（薄壳注入 App.logger.Add） |
 | `RelinkDir()` | `go/sync/sync_relink:18` | RelinkDir 按哈希比对重链接实例目录与仓库（原子替换，失败回滚） |
-| `GetInstanceStatus()` | `go/sync/sync:29` | GetInstanceStatus 获取整合包状态（使用真实 ListVersions） |
-| `GetInstanceStatusWith()` | `go/sync/sync:34` | GetInstanceStatusWith 可注入的整合包状态获取（测试用） |
-| `SyncToggleStatus()` | `go/sync/sync:137` | SyncToggleStatus 同步启用/禁用状态 |
-| `ListVersions()` | `go/sync/sync:250` | — |
-| `HasDotMinecraftSubdirs()` | `go/sync/sync:265` | HasDotMinecraftSubdirs 检测目录的子目录中是否包含 .minecraft/ 或 minecraft/（用于识别 instances 目录） |
-| `FindMinecraftDir()` | `go/sync/sync:282` | FindMinecraftDir 在给定目录下查找 .minecraft 或 minecraft 子目录，返回找到的路径 |
-| `SyncResources()` | `go/sync/sync:396` | SyncResources 对比两个目录的资源文件差异，按文件名匹配 用于资源库（资源包/光影包等）的全局 ↔ 整合包同步 只统计模型/资源相关扩展名的文件，忽略无关文件 |
-| `SyncResourcesDirLevel()` | `go/sync/sync:524` | SyncResourcesDirLevel 按文件夹名对比资源（用于 YSM 的 ysm.json 文件夹和 MMD 的 .pmx/.pmd 文件夹） 以文件夹名为单位，一个文件夹 |
-| `SortEntries()` | `go/sync/sync:594` | SortEntries 按名称排序模型条目 |
-| `GetLinkType()` | `go/sync/sync:602` | getLinkType 判断文件的链接类型 GetLinkType 判断文件的链接类型 |
-| `CompareGlobalInstanceHashes()` | `go/sync/sync:656` | CompareGlobalInstanceHashes 对比全局目录和整合包实例子目录的哈希， 返回每个实例的 Missing / Extra / Synced 状态。 |
-| `ScanFunc()` | `go/sync/sync:23` | ScanFunc 扫描模型（函数类型，由 app.go 注入） |
-| `ListVersionsFunc()` | `go/sync/sync:26` | ListVersionsFunc 列出版本实例（函数类型，测试时可注入 mock） |
-| `HasModInDirFn()` | `go/sync/sync:651` | HasModInDirFn 判断 mods 目录是否含有指定类型 mod 的函数类型。 |
+| `GetInstanceStatus()` | `go/sync/sync:31` | GetInstanceStatus 获取整合包状态（使用真实 ListVersions） |
+| `GetInstanceStatusWith()` | `go/sync/sync:36` | GetInstanceStatusWith 可注入的整合包状态获取（测试用） |
+| `SyncToggleStatus()` | `go/sync/sync:139` | SyncToggleStatus 同步启用/禁用状态 |
+| `ListVersions()` | `go/sync/sync:252` | — |
+| `HasDotMinecraftSubdirs()` | `go/sync/sync:267` | HasDotMinecraftSubdirs 检测目录的子目录中是否包含 .minecraft/ 或 minecraft/（用于识别 instances 目录） |
+| `FindMinecraftDir()` | `go/sync/sync:284` | FindMinecraftDir 在给定目录下查找 .minecraft 或 minecraft 子目录，返回找到的路径 |
+| `SyncResources()` | `go/sync/sync:398` | SyncResources 对比两个目录的资源文件差异，按文件名匹配 用于资源库（资源包/光影包等）的全局 ↔ 整合包同步 只统计模型/资源相关扩展名的文件，忽略无关文件 |
+| `SyncResourcesDirLevel()` | `go/sync/sync:526` | SyncResourcesDirLevel 按文件夹名对比资源（用于 YSM 的 ysm.json 文件夹和 MMD 的 .pmx/.pmd 文件夹） 以文件夹名为单位，一个文件夹 |
+| `SortEntries()` | `go/sync/sync:596` | SortEntries 按名称排序模型条目 |
+| `GetLinkType()` | `go/sync/sync:604` | getLinkType 判断文件的链接类型 GetLinkType 判断文件的链接类型 |
+| `CompareGlobalInstanceHashes()` | `go/sync/sync:658` | CompareGlobalInstanceHashes 对比全局目录和整合包实例子目录的哈希， 返回每个实例的 Missing / Extra / Synced 状态。 |
+| `ScanFunc()` | `go/sync/sync:25` | ScanFunc 扫描模型（函数类型，由 app.go 注入） |
+| `ListVersionsFunc()` | `go/sync/sync:28` | ListVersionsFunc 列出版本实例（函数类型，测试时可注入 mock） |
+| `HasModInDirFn()` | `go/sync/sync:653` | HasModInDirFn 判断 mods 目录是否含有指定类型 mod 的函数类型。 |
 
 ## Go·标签
 

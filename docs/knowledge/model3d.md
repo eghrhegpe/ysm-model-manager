@@ -49,6 +49,7 @@ use_when:
 
 `model3d-spec.ts`：
 - `buildSpecFromModel(model: SpecModelInput): SpecBuildResult` — JS 兜底算法，与 Go `threejs.Build()` 一致：同名骨骼去重（首次无 parent、后续带 parent → cube 整体替换；否则 mergeCubes 重叠替换/非重叠保留）、cube 坐标转骨骼局部系、box UV / faceUV JSON 解析
+- **inflate/mirror 已同步**（2026-08-09，对齐 Go buildCubeMeshData）：SpecCube 含 inflate/mirror 字段，JS 构建几何膨胀（origin -i、size +2i）、UV 用原始尺寸、mirror u 交换——与 Go 双边锁定（model3d-spec.test.ts 有镜像用例）
 
 ## 渲染循环与交互
 

@@ -42,6 +42,9 @@ use_when:
 
 - 骨骼局部坐标 = `bone.pivot - parent.pivot`；Blockbench 欧拉角取反后转四元数（`eulerToQuaternion(-rx, -ry, -rz)`），口径对齐 YSMViewer
 - 纹理尺寸为 0 时兜底 64×64
+- **cube inflate/mirror 消费**（2026-08-09 补齐，对齐 Java GeoCube/GeoQuad 口径）：`inflate` 时几何 origin 各轴 -i、size 各轴 +2i（Go 端像素坐标直接算，无需 /16）；`mirror` 时 UV 水平翻转（u 交换，几何不翻转）。box UV 展开（`parseUV`/`expandBoxUV`）**必须基于未膨胀的原始尺寸 `c.Size`**——对齐 C# 黄金参考 `csharp-builder.mjs`（先 `expandBoxUV(原始 sz)` 再 inflate 几何），若用膨胀后尺寸 UV 范围漂移 → 贴图拉伸/塌缩成色块（P2）
+- **负 inflate 下限防护**：inflate 超过半尺寸会把 cube 缩成负宽 → `hx2<0` 面翻转（法线反、正面剔除后不可见）；各轴 clamp 到 `thicknessEpsilon`（C# 黄金参考同缺陷，此为改进不背离）
+- **cube pivot 缺席 fallback（PivotSet 语义，2026-08-09 code_review P2）**：cube 未显式声明 pivot（Blockbench 缺省）时，spec 用 cube 中心作为旋转中心（对齐 YSMViewer，修复 fox 解压目录模型 main 手臂消失 P1）；**判定必须用 `types.Cube2D.PivotSet`（解析层 `*[3]float64` nil=缺席）而非 `cp==[0,0,0]`**——显式 `pivot:[0,0,0]` 是绕模型原点旋转的合法铰接件，误判会漂移旋转中心。手工构造 Cube2D 的测试 fixture 须同步设 `PivotSet: true`（致命陷阱 #17）
 - 同名骨骼合并：优先保留有 parent/有旋转的完整层级（main.json 覆盖 arm.json 的扁平版），cube 用 `mergeCubes` 重叠替换、非重叠保留
 - 坐标变换是高危区：前端 model3d.ts 历史 fix 次数全项目第一（致命陷阱 #11），改本包坐标/UV 前先 grep `bug-chronicle`，改完用自由相机近距验证
 

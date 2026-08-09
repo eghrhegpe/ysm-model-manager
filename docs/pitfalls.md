@@ -97,6 +97,13 @@ description: 项目历史事故浓缩的 16 条避坑教训 — 现象 × 根因
 
 ---
 
+## 17. 零值哨兵：用 [0,0,0] 当"缺失"标志
+
+- **现象**：JSON 缺席字段解析为零值，若用零值当"未声明"哨兵，**显式声明的零值**会被误判（实证：`types.Cube2D.Pivot`，2026-08-09 code_review——`pivot:[0,0,0]` 是绕模型原点旋转的合法 Blockbench 铰接件，此前 `cp==[0,0,0]` 判定缺失 → 旋转中心被 fallback 到 cube 中心，模型错位；修复后 `ParseBedrockGeometry` 用 `*[3]float64` 区分缺席 nil 与显式零值 + `PivotSet` 标志）。连带成本：手工构造 `Cube2D{}` 的测试 fixture 必须同步设 `PivotSet: true`，否则静默走 fallback 分支（`TestBuildDuplicateBoneMerge` 踩坑）。
+- **规则**：凡需区分「JSON 缺席」与「显式零值」的字段，解析层用指针（nil=缺席）或显式存在标志（`PivotSet`），禁止用零值当哨兵；`json:"-"` 的存在标志不参与序列化，若结构体可能走 JSON 往返需另行持久化；新增此类字段时全仓 grep 手工构造点（测试 fixture / 合成路径）同步设置。
+
+---
+
 ## 维护约定
 
 - 新增陷阱：`ai-mistake-tracker.mjs` 发现连续修复链 / 高频 fix 文件时，提炼后追加本手册 + 同步 `AGENTS.md` §二 摘要表。

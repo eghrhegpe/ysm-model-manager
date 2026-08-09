@@ -7,10 +7,16 @@
 package fsutil
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 )
+
+// ErrTempCreateFailed 标记「创建临时文件」阶段失败（目录只读/磁盘满/配额）。
+// 调用方（如 go/importer 的 AppError 包装）可用 errors.Is 区分该阶段并映射
+// 不同的错误码（如 MKDIR_FAILED），维持既有结构化错误契约（code_review）。
+var ErrTempCreateFailed = errors.New("创建临时文件失败")
 
 // WriteFileAtomic 临时文件 + rename 原子落地目标文件。
 // CreateTemp 恒建 0600，落地前 chmod 0644（对齐 installer.copyFileLocked 约定，
@@ -20,7 +26,7 @@ func WriteFileAtomic(destPath string, data []byte) error {
 	destDir := filepath.Dir(destPath)
 	tmp, err := os.CreateTemp(destDir, ".atomic-*.tmp")
 	if err != nil {
-		return fmt.Errorf("创建临时文件失败: %w", err)
+		return fmt.Errorf("%w: %v", ErrTempCreateFailed, err)
 	}
 	tmpName := tmp.Name()
 	if _, err := tmp.Write(data); err != nil {

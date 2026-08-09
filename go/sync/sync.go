@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/ysm"
 )
@@ -412,7 +414,7 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 		}
 		if info.IsDir() {
 			// 跳过回收站目录（与 scanner.ScanEntries 对齐）：回收站内模型不是仓库活跃模型
-			if path != globalDir && strings.EqualFold(info.Name(), ".recycle") {
+			if path != globalDir && fsutil.IsRecycleDir(path) {
 				return filepath.SkipDir
 			}
 			// 资源包文件夹：扫描其本身但不递归
@@ -440,7 +442,7 @@ func SyncResources(globalDir, instanceDir string) types.ResourceSyncResult {
 		}
 		if info.IsDir() {
 			// 跳过回收站目录（防御：整合包路径下历史遗留 .recycle 不应参与同步）
-			if path != instanceDir && strings.EqualFold(info.Name(), ".recycle") {
+			if path != instanceDir && fsutil.IsRecycleDir(path) {
 				return filepath.SkipDir
 			}
 			// 资源包文件夹：扫描其本身但不递归
@@ -551,7 +553,7 @@ func SyncResourcesDirLevel(globalDir, instanceDir, rtype string) types.ResourceS
 				return nil
 			}
 			// 跳过回收站目录（与 scanner.ScanEntries 对齐）
-			if strings.EqualFold(info.Name(), ".recycle") {
+			if fsutil.IsRecycleDir(path) {
 				return filepath.SkipDir
 			}
 			if isDirTypeModelFolder(path, rtype) {

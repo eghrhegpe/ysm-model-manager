@@ -6,6 +6,7 @@ package importer
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -99,9 +100,14 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 }
 
 // WriteFileAtomic 已提升至 go/fsutil（ADR-044 策略 A：基础设施工具收敛，tags/logs/fileops 共用）。
-// 本处保留 AppError 包装以维持 importer 的结构化错误契约（Code: MKDIR_FAILED/WRITE_FAILED）。
+// 本处保留 AppError 包装以维持 importer 的结构化错误契约：
+// 临时文件创建阶段失败（目录只读/磁盘满）→ MKDIR_FAILED（与 app_install.go:138 兄弟路径一致），
+// 其余（写入/关闭/权限/落地）→ WRITE_FAILED。
 func WriteFileAtomic(destPath string, data []byte) error {
 	if err := fsutil.WriteFileAtomic(destPath, data); err != nil {
+		if errors.Is(err, fsutil.ErrTempCreateFailed) {
+			return types.AppError{Code: "MKDIR_FAILED", Operation: "导入模型", TargetPath: filepath.Dir(destPath), Reason: "无法创建临时文件: " + err.Error(), Suggestion: "请检查磁盘权限或空间"}
+		}
 		return types.AppError{Code: "WRITE_FAILED", Operation: "导入模型", TargetPath: destPath, Reason: "写入失败: " + err.Error(), Suggestion: "请检查磁盘权限或空间"}
 	}
 	return nil

@@ -45,6 +45,7 @@ use_when:
 
 - 存档内单文件读取上限 50MB（`readLimitedEntry`：`LimitReader(limit+1)` 探测截断，超限/读错拒绝并跳过，ADR-033 修复——不再静默截断装盘）
 - `ParseBedrockGeometry` 输入上限 100MB（`maxParseSize`），超限拒绝并记日志
+- **cube 字段覆盖**：解析 origin/size/pivot/uv（数组或 per-face 对象）/rotation/texture/inflate/mirror。`inflate`（Blockbench 膨胀）与 `mirror`（镜像）2026-08-09 补齐（P2）——此前 .ysm 走 wasm 解码时 YSMParser 已把 inflate 烘焙进几何尺寸，Go 原生解析 zip/7z/json 却丢弃字段导致老模型（1.10+ 导出）尺寸偏小/纹理方向错；现在两条路径口径一致
 - `ysm.json` 是清单不是模型文件，不参与 geometry 解析；文件名含 animation/controller 的 JSON 归入动画而非模型（仅 ZIP 路径分流）
 - `ysm.json` 的 `files.player.model` 支持 4 种形态：字符串 / 字符串数组 / `{path|name}` 对象数组 / `map[string]string` 对象。**对象形态按声明顺序展开**（P2 修复实际实现为 `json.Decoder` Token 流式保写入序——Go map 遍历随机，若按 key 排序会把 main 排到 arm 后导致 texSlot 绑定错位；知识卡旧文「sort.Strings 键排序对齐」记录的是已废弃方案，机制描述已修正，行为目标确定性一致）
 - 模型文件与纹理排序一律用 `sort.SliceStable`：清单声明过的条目按声明顺序在前，未声明的保持存档内原始顺序排在其后；纹理排序的 orderMap key 与查询 key 同口径（小写 basename 去扩展名，P2 修复——原 key 带扩展名永不命中，排序形同死代码）

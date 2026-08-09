@@ -86,6 +86,8 @@ func CleanEmptyDirs(dir string, skipRecycle bool) int {
 
 // IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）——
 // dedup / scanner / sync 的回收站排除判定统一引用本函数，禁止各自内联 EqualFold 判定。
+// 例外：sync.go:180 的 SyncToggleStatus 对「路径含 .recycle」子串跳过（覆盖 .recycle 子树内
+// 已遍历文件），语义与基名精确匹配不同，属有意保留的兜底（code_review）。
 func IsRecycleDir(path string) bool {
 	lower := strings.ToLower(path)
 	base := filepath.Base(lower)

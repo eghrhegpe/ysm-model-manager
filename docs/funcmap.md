@@ -776,7 +776,7 @@
 | `loadTdCamSpeed()` | `frontend/src/utils/3d/model3d:105` | 相机移动速度（2–200），默认 20 |
 | `loadTdRotMode()` | `frontend/src/utils/3d/model3d:111` | true = 环绕（orbit），false = 自身（free） |
 | `renderModel3D()` | `frontend/src/utils/3d/model3d:138` | 渲染 3D 模型到容器，返回控制句柄 |
-| `screenshotPreview()` | `frontend/src/utils/3d/model3d:862` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
+| `screenshotPreview()` | `frontend/src/utils/3d/model3d:865` | 截取当前 3D 预览画面（PNG base64，无 data: 前缀），无渲染器时返回 null |
 | `animateNumber()` | `frontend/src/utils/animation/animate:12` | 里程表滚动进位动画 |
 | `Vec3()` | `frontend/src/utils/animation/animation:9` | 三维向量 [x, y, z] |
 | `Keyframe()` | `frontend/src/utils/animation/animation:12` | 关键帧 |
@@ -983,8 +983,8 @@
 | `selectSingle()` | `frontend/src/views/app-tree/data:31` | 单选：清空后选中单个并设为 lastKey（用于单击选中，避免外部直接写 selectState） |
 | `updateSelectCount()` | `frontend/src/views/app-tree/events:12` | — |
 | `bindTreeEvents()` | `frontend/src/views/app-tree/events:93` | — |
-| `setPendingTreeSearch()` | `frontend/src/views/app-tree/index:21` | — |
-| `AppTree()` | `frontend/src/views/app-tree/index:50` | — |
+| `setPendingTreeSearch()` | `frontend/src/views/app-tree/index:22` | — |
+| `AppTree()` | `frontend/src/views/app-tree/index:51` | — |
 | `initInstanceActions()` | `frontend/src/views/app-tree/instance-actions:27` | — |
 | `TreeEntry()` | `frontend/src/views/app-tree/loader:10` | 树条目（loader 转换后的渲染格式） |
 | `loadEntries()` | `frontend/src/views/app-tree/loader:38` | 从 Go 后端加载仓库文件列表，返回格式化的 entries |

@@ -354,7 +354,17 @@ export async function renderModel3D(
   const _initCamPos = camera.position.clone();
   const _initCamTarget = controls.target.clone();
 
-  let _rafId: number | null = null;
+  // RenderSession 状态对象（对象化第一阶段：8 个可变交互状态收敛，行为不变）
+  const state = {
+    rafId: null as number | null,
+    keys: {} as Record<string, boolean>,
+    debugMode: "normal" as "normal" | "pivot" | "bone",
+    lastTime: performance.now(),
+    camSpeed: loadTdCamSpeed(),
+    orbitMode: loadTdRotMode(),
+    mouseDown: false,
+    lastMouse: { x: 0, y: 0 },
+  };
   const _onResize = (): void => {
     const w = container.clientWidth;
     const h = container.clientHeight;
@@ -373,8 +383,6 @@ export async function renderModel3D(
   _sessionCleanups.push(() => document.removeEventListener("fullscreenchange", _onFSChange));
   document.addEventListener("webkitfullscreenchange", _onFSChange);
   _sessionCleanups.push(() => document.removeEventListener("webkitfullscreenchange", _onFSChange));
-  const _keys: Record<string, boolean> = {};
-  let _debugMode: "normal" | "pivot" | "bone" = "normal";
   // 用户自定义键位（物理键 code，跨键盘布局一致）；方向键保留为通用兜底
   const _keymap = loadTdKeymap();
   const _isShift = (code: string): boolean => code === "ShiftLeft" || code === "ShiftRight";
@@ -388,47 +396,42 @@ export async function renderModel3D(
   };
   const _onKeyDown = (e: KeyboardEvent): void => {
     if (_isEditable(e.target)) return; // 弹窗输入框打字时不吞键
-    _keys[e.code] = true;
+    state.keys[e.code] = true;
     // 吞掉移动键默认行为（空格滚动/方向键滚动）；Shift 作为修饰键不阻止默认
     if (_movementCodes.has(e.code) && !_isShift(e.code)) e.preventDefault();
     if (e.key.toLowerCase() === "f") {
       const modes: Array<"normal" | "pivot" | "bone"> = ["normal", "pivot", "bone"];
-      const next = (modes.indexOf(_debugMode) + 1) % modes.length;
-      _debugMode = modes[next];
+      const next = (modes.indexOf(state.debugMode) + 1) % modes.length;
+      state.debugMode = modes[next];
       rebuildDebug();
     }
   };
   const _onKeyUp = (e: KeyboardEvent): void => {
-    _keys[e.code] = false;
+    state.keys[e.code] = false;
   };
   document.addEventListener("keydown", _onKeyDown);
   _sessionCleanups.push(() => document.removeEventListener("keydown", _onKeyDown));
   document.addEventListener("keyup", _onKeyUp);
   _sessionCleanups.push(() => document.removeEventListener("keyup", _onKeyUp));
-  let _lastTime = performance.now();
-  let _camSpeed = loadTdCamSpeed();
-  let _orbitMode = loadTdRotMode();
   const _orbitTarget = controls.target.clone();
   const _euler = new THREE.Euler(0, 0, 0, "YXZ");
-  let _mouseDown = false;
-  let _lastMouse = { x: 0, y: 0 };
   const onMouseDown = (e: MouseEvent): void => {
-    if (!_orbitMode && e.button === 0) {
-      _mouseDown = true;
-      _lastMouse = { x: e.clientX, y: e.clientY };
+    if (!state.orbitMode && e.button === 0) {
+      state.mouseDown = true;
+      state.lastMouse = { x: e.clientX, y: e.clientY };
     }
   };
   const onMouseUp = (): void => {
-    _mouseDown = false;
+    state.mouseDown = false;
   };
   const onMouseMove = (e: MouseEvent): void => {
-    if (_orbitMode || !_mouseDown) return;
+    if (state.orbitMode || !state.mouseDown) return;
     _euler.setFromQuaternion(camera.quaternion);
-    _euler.y -= (e.clientX - _lastMouse.x) * 0.003;
-    _euler.x -= (e.clientY - _lastMouse.y) * 0.003;
+    _euler.y -= (e.clientX - state.lastMouse.x) * 0.003;
+    _euler.x -= (e.clientY - state.lastMouse.y) * 0.003;
     _euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, _euler.x));
     camera.quaternion.setFromEuler(_euler);
-    _lastMouse = { x: e.clientX, y: e.clientY };
+    state.lastMouse = { x: e.clientX, y: e.clientY };
   };
   renderer.domElement.addEventListener("mousedown", onMouseDown);
   _sessionCleanups.push(() => renderer.domElement.removeEventListener("mousedown", onMouseDown));
@@ -438,10 +441,10 @@ export async function renderModel3D(
   _sessionCleanups.push(() => window.removeEventListener("mousemove", onMouseMove));
   controls.enableRotate = true;
   const loop = (): void => {
-    _rafId = requestAnimationFrame(loop);
-    _rafIdGuard = _rafId;
-    const dt = Math.min((performance.now() - _lastTime) / 1000, 0.1);
-    _lastTime = performance.now();
+    state.rafId = requestAnimationFrame(loop);
+    _rafIdGuard = state.rafId;
+    const dt = Math.min((performance.now() - state.lastTime) / 1000, 0.1);
+    state.lastTime = performance.now();
     const cd = new THREE.Vector3();
     camera.getWorldDirection(cd);
     const fwd = new THREE.Vector3(cd.x, 0, cd.z).normalize();
@@ -449,18 +452,18 @@ export async function renderModel3D(
       .crossVectors(fwd, new THREE.Vector3(0, 1, 0))
       .normalize();
     const mv = new THREE.Vector3();
-    if (_keys[_keymap.forward] || _keys["ArrowUp"]) mv.add(fwd);
-    if (_keys[_keymap.back] || _keys["ArrowDown"]) mv.sub(fwd);
-    if (_keys[_keymap.left] || _keys["ArrowLeft"]) mv.sub(right);
-    if (_keys[_keymap.right] || _keys["ArrowRight"]) mv.add(right);
-    if (_keys[_keymap.up]) mv.y += 1;
-    if (_keys[_keymap.down]) mv.y -= 1;
+    if (state.keys[_keymap.forward] || state.keys["ArrowUp"]) mv.add(fwd);
+    if (state.keys[_keymap.back] || state.keys["ArrowDown"]) mv.sub(fwd);
+    if (state.keys[_keymap.left] || state.keys["ArrowLeft"]) mv.sub(right);
+    if (state.keys[_keymap.right] || state.keys["ArrowRight"]) mv.add(right);
+    if (state.keys[_keymap.up]) mv.y += 1;
+    if (state.keys[_keymap.down]) mv.y -= 1;
     if (mv.length() > 0) {
-      mv.normalize().multiplyScalar(_camSpeed * dt);
+      mv.normalize().multiplyScalar(state.camSpeed * dt);
       camera.position.add(mv);
-      if (_orbitMode) _orbitTarget.add(mv);
+      if (state.orbitMode) _orbitTarget.add(mv);
     }
-    if (_orbitMode) {
+    if (state.orbitMode) {
       controls.target.copy(_orbitTarget);
       controls.update();
       _orbitTarget.copy(controls.target);
@@ -470,10 +473,10 @@ export async function renderModel3D(
     }
     renderer.render(scene, camera);
   };
-  _rafId = requestAnimationFrame(loop);
+  state.rafId = requestAnimationFrame(loop);
   // P3 修复（审核反推）：调度后同步记录 guard——loop 首帧执行前 _rafIdGuard 仍为旧值，
   // 若此时复用入口触发，guard != null 为假会漏 cancel 首帧 pending → 僵尸循环
-  _rafIdGuard = _rafId;
+  _rafIdGuard = state.rafId;
   renderer.render(scene, camera);
 
   // ===== 鼠标悬停骨骼名 + 点击复制层级 =====
@@ -642,7 +645,7 @@ export async function renderModel3D(
       scene.remove(_debugGroup);
       _debugGroup = null;
     }
-    if (_debugMode === "normal") return;
+    if (state.debugMode === "normal") return;
     _debugGroup = new THREE.Group();
     scene.add(_debugGroup);
 
@@ -666,7 +669,7 @@ export async function renderModel3D(
       });
     }
 
-    if (_debugMode === "pivot") {
+    if (state.debugMode === "pivot") {
       for (const [, data] of boneWorldPositions) {
         const top = data.pos.clone();
         top.y += 4;
@@ -696,7 +699,7 @@ export async function renderModel3D(
         label.scale.set(120, 24, 1);
         _debugGroup.add(label);
       }
-    } else if (_debugMode === "bone") {
+    } else if (state.debugMode === "bone") {
       for (const [, data] of boneWorldPositions) {
         const parentPos = data.parentId
           ? boneWorldPositions.get(data.parentId)?.pos
@@ -741,7 +744,7 @@ export async function renderModel3D(
       camera.position.copy(_initCamPos);
       controls.target.copy(_initCamTarget);
       _orbitTarget.copy(_initCamTarget);
-      if (_orbitMode) controls.enableRotate = true;
+      if (state.orbitMode) controls.enableRotate = true;
       else {
         controls.enableRotate = false;
         const d = new THREE.Vector3();
@@ -750,20 +753,20 @@ export async function renderModel3D(
       }
       camera.quaternion.set(0, 0, 0, 1);
       _euler.set(0, 0, 0);
-      _camSpeed = 20;
-      _mouseDown = false;
-      Object.keys(_keys).forEach((k) => (_keys[k] = false));
+      state.camSpeed = 20;
+      state.mouseDown = false;
+      Object.keys(state.keys).forEach((k) => (state.keys[k] = false));
       controls.update();
     },
     setSpeed: (v: number) => {
-      _camSpeed = v;
+      state.camSpeed = v;
     },
     setRotationMode: (orbit: boolean) => {
-      _orbitMode = orbit;
+      state.orbitMode = orbit;
       if (orbit) {
         controls.enableRotate = true;
         if (_orbitTarget) controls.target.copy(_orbitTarget);
-        _mouseDown = false;
+        state.mouseDown = false;
       } else {
         _euler.setFromQuaternion(camera.quaternion);
         controls.enableRotate = false;
@@ -771,7 +774,7 @@ export async function renderModel3D(
         camera.getWorldDirection(d);
         controls.target.copy(camera.position).addScaledVector(d, 10);
         controls.update();
-        _mouseDown = false;
+        state.mouseDown = false;
       }
     },
     setBoneVisible: (name: string, visible: boolean) => {
@@ -798,11 +801,11 @@ export async function renderModel3D(
     getModelGroupCount: () => spec.models?.length || 0,
     onBoneSelect: null, // 外部设置的回调: (boneInfo) => void
     setDebugMode: (mode: "normal" | "pivot" | "bone") => {
-      _debugMode = mode;
+      state.debugMode = mode;
       rebuildDebug();
     },
     cleanup: () => {
-      if (_rafId != null) cancelAnimationFrame(_rafId);
+      if (state.rafId != null) cancelAnimationFrame(state.rafId);
       _rafIdGuard = null;
       // 显式解绑在下方逐条执行；会话数组清空避免下次入口守卫重复执行（幂等无害）
       _sessionCleanups = [];

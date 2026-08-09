@@ -89,7 +89,10 @@ export function registerSync(unsubs: Array<() => void>): void {
           try {
             const { InvalidateScanCache } = await getApp();
             await InvalidateScanCache();
-          } catch {}
+          } catch (e) {
+            // P3（审核发现）：不静默吞错——缓存失效失败会让新导入最长 30s 不出现
+            dbg("sync", "InvalidateScanCache 失败:", e);
+          }
           dbg(
             "sync",
             "同步完成, 发出 stats:refresh, 成功:",
@@ -127,7 +130,16 @@ export function registerSync(unsubs: Array<() => void>): void {
   let _toggleBusy = false;
   unsubs.push(
     bus.on("sync:toggle:status", async () => {
-      if (_toggleBusy) return;
+      if (_toggleBusy) {
+        // P2（审核发现）：与 download 分支（L19-24）对齐——busy 命中不再静默吞事件，
+        // 发 toast 让调用方（app-tree 批量/单文件）感知被跳过，避免 UI 乐观更新后无反馈
+        bus.emit("toast:show", {
+          msg: "同步进行中，已跳过本次",
+          duration: 2000,
+          type: "info",
+        });
+        return;
+      }
       _toggleBusy = true;
       dbg("sync", "toggle-status");
       try {
@@ -184,10 +196,9 @@ export function registerSync(unsubs: Array<() => void>): void {
         bus.emit("toast:show", {
           msg: `✅ 同步完成：${parts.join("，")}`,
           duration: 4000,
-          type:
-            totalDisable + totalEnable > 0 || errors.length === 0
-              ? "success"
-              : "warn",
+          // P3（审核发现）：有错误但存在成功项时旧逻辑仍报 success，与 AddImportLog 的
+          // "failed" 自相矛盾（同一操作对用户 ✅、对日志 ✗）——统一按 errors 判定
+          type: errors.length === 0 ? "success" : "warn",
         });
         bus.emit("stats:refresh");
       } catch (err) {

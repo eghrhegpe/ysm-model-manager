@@ -12,6 +12,9 @@ export type DownloadSizeDecision = "ok" | "confirm" | "reject";
 
 /** 下载大小策略：≤4MB 直接下；4–10MB 需确认；>10MB 拒绝 */
 export function classifyDownloadSize(size: number): DownloadSizeDecision {
+  // P3（审核发现）：数值守卫范式（AGENTS.md §3.4）——NaN 不比任何阈值大会误判 "ok"
+  // 直接下载；Infinity 误判 reject。未知大小（NaN/±Infinity）一律拒绝，交由调用方兜底
+  if (!Number.isFinite(size)) return "reject";
   if (size > DOWNLOAD_REJECT_BYTES) return "reject";
   if (size > DOWNLOAD_CONFIRM_BYTES) return "confirm";
   return "ok";
@@ -37,6 +40,7 @@ export function buildDownloadTasks(
       url: dlPrefix + m.path.replace(/\\/g, "/"),
       saveDir: "",
       name: m.name,
-      size: m.size || 0,
+      // P4（审核发现）：`m.size || 0` 会把 -1（Content-Length=-1 哨兵）当真值原样写入
+      size: typeof m.size === "number" && Number.isFinite(m.size) && m.size > 0 ? m.size : 0,
     }));
 }

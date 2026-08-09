@@ -38,6 +38,14 @@ describe("服务注册表", () => {
     expect(() => unregister("loadEntries")).not.toThrow();
   });
 
+  it("unregister 后 get 抛错、重新 register 可用（生命周期闭环）", () => {
+    register("loadInstances", "v1");
+    unregister("loadInstances");
+    expect(() => get("loadInstances")).toThrow(/loadInstances/);
+    register("loadInstances", "v2");
+    expect(get("loadInstances")).toBe("v2");
+  });
+
   it("clear 清空全部服务", () => {
     register("loadInstances", 1);
     register("loadEntries", 2);

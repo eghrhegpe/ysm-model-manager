@@ -22,6 +22,12 @@ describe("classifyDownloadSize", () => {
     expect(classifyDownloadSize(DOWNLOAD_REJECT_BYTES + 1)).toBe("reject");
   });
 
+  it("非有限数值（NaN/±Infinity）一律拒绝（P3 数值守卫范式）", () => {
+    expect(classifyDownloadSize(NaN)).toBe("reject");
+    expect(classifyDownloadSize(Infinity)).toBe("reject");
+    expect(classifyDownloadSize(-Infinity)).toBe("reject");
+  });
+
   it("阈值常量与文案口径一致（4MB / 10MB）", () => {
     expect(DOWNLOAD_CONFIRM_BYTES).toBe(4 * 1024 * 1024);
     expect(DOWNLOAD_REJECT_BYTES).toBe(10 * 1024 * 1024);
@@ -50,5 +56,15 @@ describe("buildDownloadTasks", () => {
 
   it("空选中集返回空数组", () => {
     expect(buildDownloadTasks(models, [], "https://dl/")).toEqual([]);
+  });
+
+  it("size 缺失/非法（NaN/-1）归一为 0（P4 守卫：-1 哨兵不当真值原样写入）", () => {
+    const withIllegal = [
+      { name: "c.ysm", path: "mods/c.ysm", size: -1 },
+      { name: "d.ysm", path: "mods/d.ysm", size: Number.NaN },
+    ];
+    const tasks = buildDownloadTasks(withIllegal, ["c.ysm", "d.ysm"], "https://dl/");
+    expect(tasks[0].size).toBe(0);
+    expect(tasks[1].size).toBe(0);
   });
 });

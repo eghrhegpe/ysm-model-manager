@@ -822,10 +822,10 @@
 | `MAX_TAG_LENGTH()` | `frontend/src/utils/dom/dialogs/tag-set:12` | 标签最大长度（与原 addTag 一致） |
 | `addTagToSet()` | `frontend/src/utils/dom/dialogs/tag-set:19` | 向标签集合添加一个标签（已 trim）： 空输入 → 原样返回；重复 → error「标签已存在」；超长 → error「最多 20 个字符」； 合法 → 排序后返回新数组。错误文 |
 | `ParsedModelName()` | `frontend/src/utils/dom/display:6` | 解析后的模型文件名字段 |
-| `parseModelName()` | `frontend/src/utils/dom/display:28` | 解析模型文件名 → 结构化字段 支持格式: [作者]【作品】角色变体2023-05.ysm 也兼容: [作者]《作品》角色变体2023-05.ysm |
-| `renderDisplayName()` | `frontend/src/utils/dom/display:79` | 渲染美化文件名 HTML（通用接口） 应用 CSS 变量: --meta-author, --meta-work, --meta-date |
-| `renderModelName()` | `frontend/src/utils/dom/display:164` | renderModelName = renderDisplayName 别名，options.showExt 支持 |
-| `renderModelNameWithHighlight()` | `frontend/src/utils/dom/display:173` | 搜索高亮版：先对纯文本高亮，再渲染 HTML，避免 keyword 命中 HTML 标签内容破坏 DOM |
+| `parseModelName()` | `frontend/src/utils/dom/display:27` | 解析模型文件名 → 结构化字段 支持格式: [作者]【作品】角色变体2023-05.ysm 也兼容: [作者]《作品》角色变体2023-05.ysm |
+| `renderDisplayName()` | `frontend/src/utils/dom/display:77` | 渲染美化文件名 HTML（通用接口） 应用 CSS 变量: --meta-author, --meta-work, --meta-date |
+| `renderModelName()` | `frontend/src/utils/dom/display:162` | renderModelName = renderDisplayName 别名，options.showExt 支持 |
+| `renderModelNameWithHighlight()` | `frontend/src/utils/dom/display:171` | 搜索高亮版：先对纯文本高亮，再渲染 HTML，避免 keyword 命中 HTML 标签内容破坏 DOM |
 | `friendlyError()` | `frontend/src/utils/dom/errors:11` | 将 Go 错误转换为友好提示 |
 | `fmt()` | `frontend/src/utils/dom/format:11` | 字节数 → 可读大小（B/KB/MB/GB），非法值返回空串 |
 | `sizeColor()` | `frontend/src/utils/dom/format:24` | 文件大小颜色 class：&lt;1MB 绿色，1-3MB 正常，≥3MB 红色 |

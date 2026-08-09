@@ -242,8 +242,9 @@ describe("registerSync — sync:toggle:status", () => {
       "failed",
       expect.stringContaining("locked"),
     );
-    // 有成功项（禁用 1 项）→ toast 仍为 success；错误已在 AddImportLog 中记录
-    expect(toasts.some((t) => t.type === "success")).toBe(true);
+    // P3 修复（审核发现）：有成功项（禁用 1 项）但存在错误 → toast 应为 warn，
+    // 与 AddImportLog 的 "failed" 一致（旧断言固化了「有错误仍报 success」的矛盾行为）
+    expect(toasts.some((t) => t.type === "warn" && t.msg.includes("同步完成"))).toBe(true);
   });
 
   it("repoRoot/mcRoot 未配置 → warn toast", async () => {
@@ -255,5 +256,31 @@ describe("registerSync — sync:toggle:status", () => {
     await flush();
 
     expect(toasts.some((t) => t.msg === "请先配置目录" && t.type === "warn")).toBe(true);
+  });
+
+  it("并发守卫：busy 命中时发 info toast 提示，不静默吞事件", async () => {
+    await register();
+    const { toasts } = spyEvents();
+
+    // 第一个请求挂起（SyncModelToggleStatus 未立即 resolve）
+    let resolveToggle: () => void = () => {};
+    mocks.SyncModelToggleStatus.mockImplementationOnce(
+      () => new Promise<void>((r) => { resolveToggle = r; }),
+    );
+    bus.emit("sync:toggle:status");
+    await flush();
+
+    // 第二次触发（此时 busy=true）→ 应发提示 toast 而非静默 return
+    // 挂起的是第一个实例的调用，循环阻塞中；记录当前调用数，第二次 emit 不应新增
+    const callsBeforeSecond = mocks.SyncModelToggleStatus.mock.calls.length;
+    bus.emit("sync:toggle:status");
+    await flush();
+
+    expect(toasts.some((t) => t.msg === "同步进行中，已跳过本次" && t.type === "info")).toBe(true);
+    expect(mocks.SyncModelToggleStatus.mock.calls.length).toBe(callsBeforeSecond);
+
+    resolveToggle();
+    await flush();
+    await flush();
   });
 });

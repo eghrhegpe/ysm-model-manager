@@ -37,10 +37,10 @@
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
 | 前端·工具 | 26 | 94 |
-| frontend/views | 53 | 146 |
+| frontend/views | 54 | 147 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **169** | **786** |
+| **合计** | **170** | **787** |
 
 ## Go·头像
 
@@ -894,6 +894,7 @@
 | `ModelSpec()` | `frontend/src/views/app-preview/model3d-loader:14` | Go 返回的 3D spec（models 数组） |
 | `loadTextures()` | `frontend/src/views/app-preview/model3d-loader:43` | 并行加载纹理 URL 列表，返回 THREE.Texture 数组 |
 | `preloadModel()` | `frontend/src/views/app-preview/model3d-loader:93` | 预加载：纹理 + spec 并行获取 |
+| `parseYsmJsonDirect()` | `frontend/src/views/app-preview/parse-ysm-json:7` | 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） |
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:7` | — |
 | `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:13` | — |
 | `loadModel2D()` | `frontend/src/views/app-preview/skeleton:35` | 加载模型 2D 骨骼线条图 + 统计面板 ctx = 组件实例（提供 this._root, this._appendDebug 等） |
@@ -907,7 +908,7 @@
 | `getPrefer3D()` | `frontend/src/views/app-preview/utils:38` | — |
 | `setPrefer3D()` | `frontend/src/views/app-preview/utils:41` | — |
 | `stripYsgpTextHeader()` | `frontend/src/views/app-preview/utils:108` | 剥离 YSGP 文本头部，返回标准二进制格式 |
-| `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:27` | 通过前端 WASM 解码 .ysm，返回 { texture, geometry, animations } 不依赖组件实例（无 this 引用），可独立调用 |
+| `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:28` | 通过前端 WASM 解码 .ysm，返回 { texture, geometry, animations } 不依赖组件实例（无 this 引用），可独立调用 |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `registerResourceManagerGlobal()` | `frontend/src/views/app-resource-manager/index:51` | 全局配置刷新监听：registerGlobalHandlers 统一收集 unsub （替代顶层无守卫注册 — ADR-008 违规点，TS 化后收敛） |
 | `AppResourceManager()` | `frontend/src/views/app-resource-manager/index:82` | — |

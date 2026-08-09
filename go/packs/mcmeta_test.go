@@ -238,3 +238,81 @@ func TestReadShaderpackLang_SupportedFormats(t *testing.T) {
 		t.Errorf("对象 → Min=%d Max=%d, want 1,2", fr.Min, fr.Max)
 	}
 }
+
+// P3 修复（code_review）：lang 1MB 上限回归测试——镜像 pack.png 超限模式
+// （>1MB 置空返回空 name；恰好 1MB 仍解析；dir/zip 两分支）
+
+func TestReadShaderpackLang_DirOverLimit(t *testing.T) {
+	dir := t.TempDir()
+	langDir := filepath.Join(dir, "lang")
+	if err := os.MkdirAll(langDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// >1MB lang 文件
+	big := make([]byte, (1<<20)+1024)
+	for i := range big {
+		big[i] = 'a'
+	}
+	if err := os.WriteFile(filepath.Join(langDir, "en_US.lang"), big, 0644); err != nil {
+		t.Fatal(err)
+	}
+	resultStr := ReadShaderpackLang(dir)
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
+		t.Fatalf("返回数据非 JSON: %v", err)
+	}
+	if name, _ := result["name"].(string); name != "" {
+		t.Errorf(">1MB dir lang 应置空 name，实际 %q", name)
+	}
+}
+
+func TestReadShaderpackLang_DirExactLimit(t *testing.T) {
+	dir := t.TempDir()
+	langDir := filepath.Join(dir, "lang")
+	if err := os.MkdirAll(langDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// 恰好 1MB（含 title 行）仍应解析成功
+	exact := make([]byte, (1<<20)-len("title=ok\n"))
+	copy(exact, "title=ok\n")
+	for i := len("title=ok\n"); i < len(exact); i++ {
+		exact[i] = 'b'
+	}
+	if err := os.WriteFile(filepath.Join(langDir, "en_US.lang"), exact, 0644); err != nil {
+		t.Fatal(err)
+	}
+	resultStr := ReadShaderpackLang(dir)
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
+		t.Fatalf("返回数据非 JSON: %v", err)
+	}
+	if name, _ := result["name"].(string); name == "" {
+		t.Error("恰好 1MB dir lang 应解析出 name")
+	}
+}
+
+func TestReadShaderpackLang_ZipOverLimit(t *testing.T) {
+	dir := t.TempDir()
+	zipPath := filepath.Join(dir, "shader.zip")
+	big := make([]byte, (1<<20)+1024)
+	for i := range big {
+		big[i] = 'a'
+	}
+	// 构造含 >1MB lang 的 zip
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	fw, _ := zw.Create("lang/en_US.lang")
+	fw.Write(big)
+	zw.Close()
+	if err := os.WriteFile(zipPath, buf.Bytes(), 0644); err != nil {
+		t.Fatal(err)
+	}
+	resultStr := ReadShaderpackLang(zipPath)
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
+		t.Fatalf("返回数据非 JSON: %v", err)
+	}
+	if name, _ := result["name"].(string); name != "" {
+		t.Errorf(">1MB zip lang 应置空 name，实际 %q", name)
+	}
+}

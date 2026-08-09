@@ -224,10 +224,16 @@ func ReadShaderpackLang(path string) string {
 	if info.IsDir() {
 		// 已解压的目录格式
 		langPath := filepath.Join(path, "lang", "en_US.lang")
+		// P3 修复（code_review）：dir 分支与 zip 分支同用「Open + LimitReader + 截断探测」——
+		// 原 os.Stat 预检 + os.ReadFile 是 check-then-act TOCTOU：并发修改时 ReadFile 整读
+		// 当前文件绕过大小时限；FIFO/设备文件 Stat.Size()==0 通过预检后 ReadFile 阻塞或无限读。
+		// LimitReader 的界在「实际读取」上生效，特殊文件也无法挂起读取。
 		const maxLangSize = 1 << 20 // 1MB（合法 lang 通常 < 10KB）
-		if fi, err := os.Stat(langPath); err == nil && fi.Size() <= maxLangSize {
-			if data, err := os.ReadFile(langPath); err == nil {
-				langData = data
+		if lf, err := os.Open(langPath); err == nil {
+			langData, _ = io.ReadAll(io.LimitReader(lf, maxLangSize+1))
+			lf.Close()
+			if len(langData) > maxLangSize {
+				langData = nil // 超限视为无效，返回空 name（前端用文件名兜底）
 			}
 		}
 	} else if strings.HasSuffix(strings.ToLower(path), ".zip") {

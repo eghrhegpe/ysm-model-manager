@@ -305,7 +305,7 @@ export function renderRepoHeaderHTML(params: {
     '<label class="btn-base sm gh-select-all"><input type="checkbox"> ☐ 全选</label>' +
     '<button class="btn-base sm gh-toggle-missing">📁 仅显示缺失</button>' +
     '<span class="gh-section-fill"></span>' +
-    '<button class="btn-base sm gh-dl-selected" disabled>⬇️ 选中 (0)</button>' +
+    '<button class="btn-base sm gh-dl-selected" disabled>⬇️ 下载选中 (0)</button>' +
     "</div>" +
     '<div id="gh-queue-status" class="gh-queue-status"></div>' +
     '<div id="gh-repo-list"></div>' +

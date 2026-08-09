@@ -28,7 +28,7 @@ export function toggleSelect(key: string): void {
 /**
  * 单选：清空后选中单个并设为 lastKey（用于单击选中，避免外部直接写 selectState）
  */
-export function selectOnly(key: string): void {
+export function selectSingle(key: string): void {
   selectState.keys.clear();
   selectState.keys.add(key);
   selectState.lastKey = key;

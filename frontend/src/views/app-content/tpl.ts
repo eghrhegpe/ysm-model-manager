@@ -448,7 +448,7 @@ export function downloadsHTML(): string {
   </div>
   <div style="display:flex;gap:4px">
     <input id="dl-author" placeholder="作者" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
-    <input id="dl-work" placeholder="作品品牌" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
+    <input id="dl-work" placeholder="品牌" style="width:90px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
     <input id="dl-chara" placeholder="角色名" style="width:80px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
     <input id="dl-variant" placeholder="变体" style="width:60px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
     <input id="dl-date" placeholder="年月" style="width:64px;padding:4px 5px;border-radius:4px;border:1px solid var(--bd);background:var(--surf);color:var(--txt);font-size:11px">
@@ -561,7 +561,7 @@ export function githubHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-tab="github">🐙 GitHub仓库</button>' +
+    '<button class="repo-tab active" data-tab="github">🐙 创意工坊</button>' +
     "</div>" +
     '<div class="repo-tab-body" id="gh-tab-repos">' +
     '<div class="gh-page" id="gh-page">' +

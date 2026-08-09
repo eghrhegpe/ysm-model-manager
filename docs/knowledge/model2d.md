@@ -15,6 +15,8 @@ use_when:
   - 骨骼热区
   - 鼠标拾取
   - 线框图
+invariant_anchors:
+  - frontend/src/utils/3d/model2d.ts|Number.isNaN(cosA)
 ---
 
 # 2D 预览渲染 model2d

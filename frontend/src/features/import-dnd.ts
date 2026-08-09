@@ -210,7 +210,7 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   }
   if (collected.length === 0) {
     bus.emit("toast:show", {
-      msg: "📂 未检测到支持的资源文件" + "（" + DROP_EXTS_STR + "）",
+      msg: "📂 未检测到支持的模型文件" + "（" + DROP_EXTS_STR + "）",
       duration: 3000,
       type: "info",
     });
@@ -235,7 +235,7 @@ const onDrop = async (e: DragEvent): Promise<void> => {
   );
   if (r.folders === 0 && r.singles === 0 && total > 0) {
     bus.emit("toast:show", {
-      msg: "📂 未检测到支持的资源文件" + "（" + DROP_EXTS_STR + "）",
+      msg: "📂 未检测到支持的模型文件" + "（" + DROP_EXTS_STR + "）",
       duration: 3000,
       type: "info",
     });

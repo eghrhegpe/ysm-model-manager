@@ -19,6 +19,9 @@ use_when:
   - 纹理加载
   - spec 兜底
   - OrbitControls
+invariant_anchors:
+  - frontend/src/utils/3d/model3d.ts|modelGroups
+  - frontend/src/views/app-preview/model3d-loader.ts|specCache
 ---
 
 # 3D 预览渲染 model3d

@@ -20,6 +20,9 @@ use_when:
   - 多余
   - .ban
   - PrismLauncher
+invariant_anchors:
+  - go/sync/sync.go|fsutil.IsRecycleDir
+  - go/sync/sync_relink.go|installer.CopyFile
 ---
 
 # 整合包同步 go/sync

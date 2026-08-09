@@ -10,6 +10,9 @@ use_when:
   - 自动更新
   - 版本升级
   - updater
+invariant_anchors:
+  - go/updater/update.go|fetchExpectedHash
+  - go/updater/update.go|StatusCode
 ---
 
 # 自动更新 go/updater

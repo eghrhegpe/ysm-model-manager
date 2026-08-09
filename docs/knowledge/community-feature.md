@@ -22,6 +22,9 @@ use_when:
   - github 仓库
   - 下载进度
   - workshop
+invariant_anchors:
+  - frontend/src/features/community/download-queue.ts|isActiveStatus
+  - frontend/src/features/community/data.ts|Promise.any
 ---
 
 # 社区下载 community

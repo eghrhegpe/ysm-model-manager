@@ -14,6 +14,9 @@ use_when:
   - 启用禁用
   - .ban
   - ysm.json 整组操作
+invariant_anchors:
+  - go/fileops/folder_import.go|IsYsmEntryJSON
+  - go/fileops/fileops.go|WriteModelFolder
 ---
 
 # 文件操作 go/fileops

@@ -11,6 +11,9 @@ use_when:
   - 恢复
   - recycle
   - 软删除
+invariant_anchors:
+  - go/recycle/recycle.go|isCrossDeviceErr
+  - go/recycle/recycle.go|deleted_link
 ---
 
 # 回收站 go/recycle

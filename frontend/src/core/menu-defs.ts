@@ -1,4 +1,4 @@
-// ===== 声明式菜单规格（ADR-021 B 层）=====
+﻿// ===== 声明式菜单规格（ADR-021 B 层）=====
 // 唯一事实来源：context-menus.ts 从本表生成 menu:show 载荷；
 // 测试遍历本表断言结构与行为，加菜单项只改这里，测试自动覆盖。
 import type { CtxShowPayload } from "../bus";
@@ -51,7 +51,7 @@ export const MENU_DEFS: MenuDef[] = [
         label: (ctx) => `📦 已选 ${ctx.count || 0} 个文件`,
       },
       { divider: true },
-      { action: "batch.rename", label: "批量重命名...", icon: "✂️" },
+      { action: "batch.rename", label: "批量重命名…", icon: "✂️" },
       { action: "batch.move", label: "移动到…", icon: "📂" },
       { action: "batch.copy", label: "复制到…", icon: "📋" },
       { divider: true },
@@ -69,12 +69,12 @@ export const MENU_DEFS: MenuDef[] = [
   {
     type: "file",
     items: [
-      { action: "file.rename", label: "重命名", icon: "✂️" },
+      { action: "file.rename", label: "重命名…", icon: "✂️" },
       { action: "file.move", label: "移动到…", icon: "📂" },
       { action: "file.copy", label: "复制到…", icon: "📋" },
       { action: "file.push-to-pack", label: "推送到整合包…", icon: "📦" },
       { divider: true },
-      { action: "file.edit-tags", label: "🏷️ 编辑标签" },
+      { action: "file.edit-tags", label: "编辑标签", icon: "🏷️" },
       { divider: true },
       {
         action: "file.recycle",

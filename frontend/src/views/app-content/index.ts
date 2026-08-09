@@ -936,10 +936,10 @@ class AppContent extends HTMLElement {
           if (resultsBody) {
             resultsBody.innerHTML =
               '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">❌ 未找到模型列表</div>' +
-              '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">↗ 在 GitHub 中打开</button></div>';
-          }
+              '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo-dl">↗ 在 GitHub 中打开</button></div>';
         }
-      } catch (e) {
+      }
+    } catch (e) {
         const err = e as Error;
         if (_currentRepo !== repo) return;
         const msg =
@@ -959,7 +959,7 @@ class AppContent extends HTMLElement {
         }
       }
       // 绑定打开 GitHub 按钮
-      const openBtn = resultsBody?.querySelector("#gh-open-repo");
+      const openBtn = resultsBody?.querySelector("#gh-open-repo, #gh-open-repo-dl");
       if (openBtn)
         openBtn.addEventListener("click", () => {
           getApp().then(({ OpenInBrowser }) =>

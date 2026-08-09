@@ -1,4 +1,4 @@
-// ===== context-menus 映射测试（ADR-021 A 层）=====
+﻿// ===== context-menus 映射测试（ADR-021 A 层）=====
 // 触发 ctx:show → 断言 menu:show 载荷与 menu-defs.ts 声明一致；
 // 点击 item → 断言 handler 发出正确的 bus 事件 / getApp 调用。
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
@@ -509,7 +509,7 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
   // ── file.edit-tags ──
   it("file.edit-tags 保存 → toast 显示标签数", async () => {
     modalTagEditorMock.mockResolvedValue(["tag1", "tag2"]);
-    await clickAsync("file", "🏷️ 编辑标签", { path: "/a.ysm" });
+    await clickAsync("file", "编辑标签", { path: "/a.ysm" });
     expect(modalTagEditorMock).toHaveBeenCalledWith("/a.ysm");
     expect(toasts().some((t) => t.msg.includes("已保存 2 个标签"))).toBe(true);
   });

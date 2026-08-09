@@ -12,6 +12,9 @@ use_when:
   - 分类
   - 筛选
   - tag-editor
+invariant_anchors:
+  - go/tags/tags.go|fsutil.WriteFileAtomic
+  - go/tags/tags.go|.corrupt
 ---
 
 # 标签系统 go/tags

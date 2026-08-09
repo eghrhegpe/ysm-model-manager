@@ -1,6 +1,6 @@
 // ===== 树事件层（事件委托版，兼容虚拟滚动） =====
 import { bus } from "../../bus.ts";
-import { selectState, toggleSelect, selectOnly } from "./data.ts";
+import { selectState, toggleSelect, selectSingle } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
 import { getApp } from "../../wails/app.ts";
@@ -272,7 +272,7 @@ export function bindTreeEvents(container: HTMLElement, vm: AppTree): void {
       }
 
       // 纯单击（收敛到 data.ts 的方法，避免外部直接写 selectState）
-      selectOnly(fullPath);
+      selectSingle(fullPath);
       vm._renderTree();
       updateSelectCount(vm._root);
       bus.emit("model:select", { path: fullPath });

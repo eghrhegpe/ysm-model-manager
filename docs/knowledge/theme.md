@@ -15,6 +15,9 @@ use_when:
   - 动画开关
   - 字号
   - 界面偏好
+invariant_anchors:
+  - frontend/src/app-modules.ts|normalizeTheme
+  - frontend/src/utils/dom/storage.ts|safeGet
 ---
 
 # 主题系统 theme

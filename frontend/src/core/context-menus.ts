@@ -478,6 +478,7 @@ function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
       console.warn(`[context-menus] 未注册 action: ${action}（见 menu-defs.ts）`);
     }
     const out: MenuItem = {
+      action,
       label,
       onClick: handler ? () => handler(norm) : undefined,
     };

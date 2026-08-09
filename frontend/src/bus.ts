@@ -16,6 +16,8 @@ export interface ToastPayload {
 }
 
 export interface MenuItem {
+  /** 行为标识（来自 menu-defs.ts，测试按此匹配） */
+  action?: string;
   label?: string;
   divider?: boolean;
   icon?: string;

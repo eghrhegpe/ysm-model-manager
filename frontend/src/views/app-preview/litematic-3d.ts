@@ -253,7 +253,14 @@ export async function createLitematic3D(
     const boxGeo = new THREE.BoxGeometry(1, 1, 1);
     const instancedMeshes: Array<import("three").InstancedMesh> = [];
     const materials: Array<import("three").MeshLambertMaterial> = [];
+    // P2 修复（审核反推）：分层渲染需按 (group, chunk) 寻址——instancedMeshes 是拍平数组，
+    // 空 group 会使索引漂移、多 chunk 组的其余 chunk 网格永远收不到分层过滤（且 mesh.count
+    // 可写超 chunk 容量触发 GPU 越界读）。groupMeshes 与 data.groups 平行：空 group 占空数组
+    // 保持对齐，chunk 网格携带自身 chunk key 供 applyLayer 精确过滤。
+    const groupMeshes: Array<Array<{ mesh: import("three").InstancedMesh; ck: number }>> = [];
     for (const group of data.groups) {
+      const gMeshes: Array<{ mesh: import("three").InstancedMesh; ck: number }> = [];
+      groupMeshes.push(gMeshes); // 空 group 也占位（对齐 rawGroups 索引）
       if (!group.positions || !group.positions.length) continue;
       // 按空间分块：同色方块分散到各 chunk，每个 chunk 独立 InstancedMesh
       const chunkMap = new Map<number, number[][]>();
@@ -273,7 +280,7 @@ export async function createLitematic3D(
       const mat = new THREE.MeshLambertMaterial({ color: group.color || "#7F7F7F" });
       materials.push(mat);
       const dummy = new THREE.Object3D();
-      for (const chunkPositions of chunkMap.values()) {
+      for (const [ck, chunkPositions] of chunkMap) {
         const mesh = new THREE.InstancedMesh(boxGeo, mat, chunkPositions.length);
         for (let i = 0; i < chunkPositions.length; i++) {
           const p = chunkPositions[i];
@@ -284,6 +291,7 @@ export async function createLitematic3D(
         mesh.instanceMatrix.needsUpdate = true;
         scene.add(mesh);
         instancedMeshes.push(mesh);
+        gMeshes.push({ mesh, ck });
       }
     }
 
@@ -355,44 +363,32 @@ export async function createLitematic3D(
     function applyLayer(): void {
       const dummy = new THREE.Object3D();
       const m = layerMode.value;
+      const target = layerVal - 1;
+      const lo = layerVal - 1;
+      const hi = layerVal2 > layerVal ? layerVal2 : layerVal; // P4：lo>hi 时钳到空区而不是翻转
       for (let g = 0; g < rawGroups.length; g++) {
-        const mesh = instancedMeshes[g];
         const positions = rawGroups[g].positions;
-        let count = 0;
-        if (m === "all") {
-          while (count < positions.length) {
-            const p = positions[count];
+        const meshes = groupMeshes[g] ?? [];
+        // 每个 (group, chunk) 网格独立过滤：只写本 chunk 的位置，
+        // count 不会超该 chunk 网格容量（32³），杜绝 GPU 越界读。
+        for (const { mesh, ck } of meshes) {
+          let count = 0;
+          for (let i = 0; i < positions.length; i++) {
+            const p = positions[i];
+            const cx = Math.floor((p[0] || 0) / CHUNK);
+            const cy = Math.floor((p[1] || 0) / CHUNK);
+            const cz = Math.floor((p[2] || 0) / CHUNK);
+            if (cx + cy * xChunks + cz * xChunks * yChunks !== ck) continue;
+            if (m === "single" && p[layerAxis] !== target) continue;
+            if (m !== "all" && m !== "single" && !(p[layerAxis] >= lo && p[layerAxis] < hi)) continue;
             dummy.position.set(p[0], p[1], p[2]);
             dummy.updateMatrix();
             mesh.setMatrixAt(count, dummy.matrix);
             count++;
           }
-        } else if (m === "single") {
-          const target = layerVal - 1;
-          for (let i = 0; i < positions.length; i++) {
-            if (positions[i][layerAxis] === target) {
-              const p = positions[i];
-              dummy.position.set(p[0], p[1], p[2]);
-              dummy.updateMatrix();
-              mesh.setMatrixAt(count, dummy.matrix);
-              count++;
-            }
-          }
-        } else {
-          const lo = layerVal - 1;
-          const hi = layerVal2;
-          for (let i = 0; i < positions.length; i++) {
-            if (positions[i][layerAxis] >= lo && positions[i][layerAxis] < hi) {
-              const p = positions[i];
-              dummy.position.set(p[0], p[1], p[2]);
-              dummy.updateMatrix();
-              mesh.setMatrixAt(count, dummy.matrix);
-              count++;
-            }
-          }
+          mesh.count = count;
+          mesh.instanceMatrix.needsUpdate = true;
         }
-        mesh.count = count;
-        mesh.instanceMatrix.needsUpdate = true;
       }
     }
 

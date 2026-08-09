@@ -100,6 +100,11 @@ export async function loadModelData(
         });
       }
       cacheSet(modelPath, {
+        // P2 修复（审核反推）：必须 spread 旧值保留 avatars/authors——Go 兜底成功时若
+        // 只写 texture/geometry，cache.ts 同 key re-set 差异检测发现旧值 blob URL 不在新值，
+        // 会把 WASM 解析出的头像 blob URL revoke 掉（详情页 <img> 裂图）。与 L45-49 的
+        // WASM 分支口径一致。
+        ...(cacheGet(modelPath) || {}),
         texture: model.texture as string | undefined,
         geometry: model,
         animations: goClips.length > 0 ? goClips : undefined,

@@ -118,6 +118,12 @@ let _renderer3d: THREE.WebGLRenderer | null = null;
 let _rootGroup3d: THREE.Group | null = null;
 /** 当前活跃的 RAF ID（入口复用守卫 + cleanup 共享） */
 let _rafIdGuard: number | null = null;
+/**
+ * 会话级解绑器收集（P2 修复，审核反推）：入口复用守卫在函数开头同步执行，
+ * 拿不到本次/上次会话的闭包监听器引用——必须由各会话自己注册解绑器，
+ * 守卫统一执行，否则旧会话的 document/window 监听器（keydown preventDefault 等）永久泄漏。
+ */
+let _sessionCleanups: Array<() => void> = [];
 
 /** 组件作用域骨骼 key（YSMViewer 式多组件：同名骨骼跨组件不冲突）。
  * 导出供截图渲染器（screenshot-renderer）与 buildSceneMesh 消费方共用，防 key 口径漂移。 */
@@ -195,6 +201,22 @@ export async function renderModel3D(
   // P1 修复：入口复用守卫——若上一场景未 cleanup，先主动清理旧 RAF/renderer，避免僵尸循环
   if (_renderer3d) {
     if (_rafIdGuard != null) cancelAnimationFrame(_rafIdGuard);
+    // P2 修复（审核反推）：旧会话的 document/window 监听器也必须解绑——
+    // 否则 keydown 会对 WASD/方向键永久 preventDefault（死会话劫持键盘），
+    // 且旧场景 BufferGeometry/Material 未 dispose 造成 GPU 缓冲泄漏。
+    _sessionCleanups.forEach((fn) => fn());
+    _sessionCleanups = [];
+    if (_scene3d) {
+      _scene3d.traverse((c) => {
+        const mesh = c as THREE.Mesh;
+        if (mesh.isMesh) {
+          mesh.geometry?.dispose();
+          if (Array.isArray(mesh.material))
+            mesh.material.forEach((m) => disposeMaterial(m));
+          else disposeMaterial(mesh.material);
+        }
+      });
+    }
     try {
       _renderer3d.dispose();
     } catch { /* renderer 已被 dispose 则忽略 */ }
@@ -400,11 +422,14 @@ export async function renderModel3D(
     }
   };
   window.addEventListener("resize", _onResize);
+  _sessionCleanups.push(() => window.removeEventListener("resize", _onResize));
   const _onFSChange = (): void => {
     setTimeout(_onResize, 50);
   };
   document.addEventListener("fullscreenchange", _onFSChange);
+  _sessionCleanups.push(() => document.removeEventListener("fullscreenchange", _onFSChange));
   document.addEventListener("webkitfullscreenchange", _onFSChange);
+  _sessionCleanups.push(() => document.removeEventListener("webkitfullscreenchange", _onFSChange));
   const _keys: Record<string, boolean> = {};
   let _debugMode: "normal" | "pivot" | "bone" = "normal";
   // 用户自定义键位（物理键 code，跨键盘布局一致）；方向键保留为通用兜底
@@ -434,7 +459,9 @@ export async function renderModel3D(
     _keys[e.code] = false;
   };
   document.addEventListener("keydown", _onKeyDown);
+  _sessionCleanups.push(() => document.removeEventListener("keydown", _onKeyDown));
   document.addEventListener("keyup", _onKeyUp);
+  _sessionCleanups.push(() => document.removeEventListener("keyup", _onKeyUp));
   let _lastTime = performance.now();
   let _camSpeed = loadTdCamSpeed();
   let _orbitMode = loadTdRotMode();
@@ -461,8 +488,11 @@ export async function renderModel3D(
     _lastMouse = { x: e.clientX, y: e.clientY };
   };
   renderer.domElement.addEventListener("mousedown", onMouseDown);
+  _sessionCleanups.push(() => renderer.domElement.removeEventListener("mousedown", onMouseDown));
   window.addEventListener("mouseup", onMouseUp);
+  _sessionCleanups.push(() => window.removeEventListener("mouseup", onMouseUp));
   window.addEventListener("mousemove", onMouseMove);
+  _sessionCleanups.push(() => window.removeEventListener("mousemove", onMouseMove));
   controls.enableRotate = true;
   const loop = (): void => {
     _rafId = requestAnimationFrame(loop);
@@ -498,6 +528,9 @@ export async function renderModel3D(
     renderer.render(scene, camera);
   };
   _rafId = requestAnimationFrame(loop);
+  // P3 修复（审核反推）：调度后同步记录 guard——loop 首帧执行前 _rafIdGuard 仍为旧值，
+  // 若此时复用入口触发，guard != null 为假会漏 cancel 首帧 pending → 僵尸循环
+  _rafIdGuard = _rafId;
   renderer.render(scene, camera);
 
   // ===== 鼠标悬停骨骼名 + 点击复制层级 =====
@@ -636,7 +669,9 @@ export async function renderModel3D(
   };
 
   renderer.domElement.addEventListener("pointermove", onPointerMove);
+  _sessionCleanups.push(() => renderer.domElement.removeEventListener("pointermove", onPointerMove));
   renderer.domElement.addEventListener("click", onPointerClick);
+  _sessionCleanups.push(() => renderer.domElement.removeEventListener("click", onPointerClick));
 
   // ===== 可视化模式切换 =====
   let _debugGroup: THREE.Group | null = null;
@@ -826,6 +861,8 @@ export async function renderModel3D(
     cleanup: () => {
       if (_rafId != null) cancelAnimationFrame(_rafId);
       _rafIdGuard = null;
+      // 显式解绑在下方逐条执行；会话数组清空避免下次入口守卫重复执行（幂等无害）
+      _sessionCleanups = [];
       document.removeEventListener("keydown", _onKeyDown);
       document.removeEventListener("keyup", _onKeyUp);
       renderer.domElement.removeEventListener("mousedown", onMouseDown);

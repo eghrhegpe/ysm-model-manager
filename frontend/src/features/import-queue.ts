@@ -484,13 +484,15 @@ export function initImportQueue(app: ImportQueueHost): () => void {
     } catch (e) {
       const errMsg = String(e);
       if (errMsg.includes("FILE_EXISTS") || errMsg.includes("文件已存在")) {
+        // P3 修复（审核反推）：modalConfirm 在 catch 块内 await，若弹窗本身 reject
+        // （未在下方内层 try 覆盖范围内）会逃出 handler 成 unhandled——reject 视为取消
         const confirmed = await modalConfirm({
           title: "文件已存在",
           icon: "📦",
           message: `"${finalName}" 已存在，是否覆盖？`,
           okText: "覆盖",
           danger: true,
-        });
+        }).catch(() => false);
         if (confirmed) {
           try {
             const { ImportModelFileOverwriteTo } = await getApp();
@@ -802,26 +804,34 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         if (_importing) return; // 并发守卫：与 dl-import 共用槽位
         _importing = true;
         try {
-        const name = (btn as HTMLElement).dataset.name || "";
-        const { RenameFile, LoadAppConfig, GetRepoRoot } = await getApp();
-        void LoadAppConfig;
-        const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-        const fullPath = repoRoot + "/" + name;
-        const newName = await showRenameDialog(fullPath, name);
-        if (!newName) return;
-        try {
-          await RenameFile(fullPath, newName);
-          ImportHistory.rename(name, newName);
-          renderImportedList();
-          bus.emit("stats:refresh");
-          bus.emit("tree:reload");
+          const name = (btn as HTMLElement).dataset.name || "";
+          const { RenameFile, LoadAppConfig, GetRepoRoot } = await getApp();
+          void LoadAppConfig;
+          const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
+          const fullPath = repoRoot + "/" + name;
+          const newName = await showRenameDialog(fullPath, name);
+          if (!newName) return;
+          try {
+            await RenameFile(fullPath, newName);
+            ImportHistory.rename(name, newName);
+            renderImportedList();
+            bus.emit("stats:refresh");
+            bus.emit("tree:reload");
+          } catch (e) {
+            bus.emit("toast:show", {
+              msg: "❌ " + friendlyError(e),
+              duration: 3000,
+              type: "error",
+            });
+          }
         } catch (e) {
+          // P3 修复（审核反推）：原 try/finally 无 catch——getApp/GetRepoRoot/showRenameDialog
+          // reject 时 _importing 虽复位但 rejection 逃逸为 unhandled，用户无感知（ADR-044①）
           bus.emit("toast:show", {
             msg: "❌ " + friendlyError(e),
-            duration: 3000,
+            duration: 4000,
             type: "error",
           });
-        }
         } finally {
           _importing = false;
         }

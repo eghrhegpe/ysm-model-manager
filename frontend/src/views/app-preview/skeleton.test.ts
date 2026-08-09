@@ -164,8 +164,32 @@ describe("loadModel2D — 防御路径", () => {
     loadModelData.mockResolvedValue({ model: { bones: [] }, decodedBy: "go" });
     const ctx = makeCtx();
     const container = document.createElement("div");
+    document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
     await loadModel2D(ctx, "/m/a.ysm", container);
     expect(container.textContent).toContain("noGeometry");
+  });
+
+  it("P1 守卫：容器被移除（切页重建）后迟到的渲染不再写 ctx.root（防跨文件污染）", async () => {
+    const ctx = makeCtx();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    let resolveData: (v: unknown) => void = () => {};
+    loadModelData.mockReturnValue(
+      new Promise((r) => {
+        resolveData = r;
+      }),
+    );
+    const p = loadModel2D(ctx, "/m/a.ysm", container);
+    // 模拟用户切到 B：showModelDetail 重建 ctx.root.innerHTML，A 的 container 被移除
+    ctx.root.innerHTML = `<div id="preview-content"></div><button id="btn-3d-preview"></button><div id="ysm-author-avatars"></div>`;
+    container.remove();
+    resolveData({ model: makeModel(), decodedBy: "go" });
+    await p;
+    // A 不再把作者头像写进 B 的详情页、不再把 _toggle3D 绑到 B 的按钮
+    const avatars = ctx.root.querySelector("#ysm-author-avatars") as HTMLElement;
+    expect(avatars.innerHTML).not.toContain("作者A");
+    const btn3d = ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement;
+    expect(btn3d.onclick).toBeNull();
   });
 });
 
@@ -195,6 +219,7 @@ describe("loadModel2D — 2D 成功路径", () => {
   it("作者区同步填充详情页头像容器", async () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
+    document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
     await loadModel2D(ctx, "/m/a.ysm", container);
     const avatars = ctx.root.querySelector("#ysm-author-avatars") as HTMLElement;
     expect(avatars.innerHTML).toContain("作者A");
@@ -203,6 +228,7 @@ describe("loadModel2D — 2D 成功路径", () => {
   it("骨骼名开关：点击 → localStorage 持久化 + 重渲染", async () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
+    document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
     await loadModel2D(ctx, "/m/a.ysm", container);
     const eyeBtn = container.querySelector("button") as HTMLButtonElement;
     expect(eyeBtn.textContent).toContain("preview.boneLabels");
@@ -221,6 +247,7 @@ describe("loadModel2D — 2D 成功路径", () => {
     try {
       const ctx = makeCtx();
       const container = document.createElement("div");
+      document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
       await loadModel2D(ctx, "/m/a.ysm", container);
       expect(warn.mock.calls[0]?.[0]).toContain("[preview] 2D 渲染跳过");
     } finally {
@@ -233,6 +260,7 @@ describe("loadModel2D — 交互", () => {
   it("拖拽旋转：mousedown + window mousemove → 重渲染 + click 被拦截", async () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
+    document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
     await loadModel2D(ctx, "/m/a.ysm", container);
     const canvas = container.querySelector(".ysm-canvas") as HTMLCanvasElement;
     renderModel2D.mockClear();
@@ -257,6 +285,7 @@ describe("loadModel2D — 交互", () => {
   it("滚轮缩放：缩放有界 [0.2, 10]", async () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
+    document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
     await loadModel2D(ctx, "/m/a.ysm", container);
     const canvas = container.querySelector(".ysm-canvas") as HTMLCanvasElement;
     renderModel2D.mockClear();
@@ -320,6 +349,7 @@ describe("loadModel2D — 3D 切换", () => {
     });
     const ctx = makeCtx();
     const container = document.createElement("div");
+    document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
     await loadModel2D(ctx, "/m/a.ysm", container);
 
     (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
@@ -343,6 +373,7 @@ describe("loadModel2D — 3D 切换", () => {
     preloadModel.mockRejectedValue(new Error("wasm 崩了"));
     const ctx = makeCtx();
     const container = document.createElement("div");
+    document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
     await loadModel2D(ctx, "/m/a.ysm", container);
 
     (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
@@ -369,6 +400,7 @@ describe("loadModel2D — 3D 切换", () => {
     preloadModel.mockResolvedValue({ texArr: [], spec: { models: [] } });
     const ctx = makeCtx();
     const container = document.createElement("div");
+    document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
     await loadModel2D(ctx, "/m/a.ysm", container);
 
     (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();

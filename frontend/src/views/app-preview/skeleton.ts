@@ -58,6 +58,13 @@ export async function loadModel2D(
     const model = loaded.model;
     const _decodedBy = loaded.decodedBy;
 
+    // P1 守卫（审核反推）：loadModelData 是 fire-and-forget（detail.ts:90），await 期间
+    // 用户可能已切到其他文件——showModelDetail 每次重建 ctx.root.innerHTML，本容器的
+    // container 会被 detached。此时继续执行会把 A 的作者头像写进 B 的详情页（L143）、
+    // 把 A 的 _toggle3D 绑到 B 的 3D 按钮（L840）、_prefer3D 时在 B 页自动弹 A 的 3D（L844）。
+    // container.isConnected 是最通用的过期信号：detached 即放弃本次渲染。
+    if (!container.isConnected) return;
+
     if (!model?.bones?.length) {
       container.innerHTML = `<div class="ysm-error-title">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ ${t("preview.noGeometry")}</div>`;
       return;

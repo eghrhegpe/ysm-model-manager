@@ -32,7 +32,7 @@
 | Go·YSM 核心 | 7 | 23 |
 | Go(internal)·应用入口 | 15 | 170 |
 | 前端·根 (app-modules/bus) | 2 | 14 |
-| 前端·核心 | 12 | 26 |
+| 前端·核心 | 13 | 27 |
 | 前端·特性 | 13 | 61 |
 | 前端·服务 | 1 | 6 |
 | frontend/test-utils | 4 | 32 |
@@ -40,7 +40,7 @@
 | frontend/views | 54 | 152 |
 | 前端·Wails 桥接 | 1 | 1 |
 | 前端·WASM | 3 | 6 |
-| **合计** | **180** | **823** |
+| **合计** | **181** | **824** |
 
 ## Go·头像
 
@@ -611,14 +611,15 @@
 | `requireMcRoot()` | `frontend/src/core/handlers/require-mcroot:12` | 读取游戏根目录（mcRoot），空时发 warn toast 并返回 null。 |
 | `registerSync()` | `frontend/src/core/handlers/sync:10` | 注册同步 handler，push 返回的取消订阅函数到 unsubs |
 | `SUPPORTED_LANGS()` | `frontend/src/core/i18n/locale:11` | 支持的语言列表（规划清单） |
-| `LangCode()` | `frontend/src/core/i18n/locale:16` | — |
-| `_warned()` | `frontend/src/core/i18n/locale:27` | 缺失 key 告警节流（每 key 只告警一次） |
-| `loadLocale()` | `frontend/src/core/i18n/locale:36` | 加载指定语言的 JSON 包（幂等：已加载不重复 fetch）。 |
-| `getBundle()` | `frontend/src/core/i18n/locale:53` | 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN） |
-| `getLang()` | `frontend/src/core/i18n/locale:67` | 读取当前语言代码 |
-| `setLang()` | `frontend/src/core/i18n/locale:72` | 切换语言（异步加载语言包后触发事件） |
-| `initI18n()` | `frontend/src/core/i18n/locale:109` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
+| `LangCode()` | `frontend/src/core/i18n/locale:17` | — |
+| `_warned()` | `frontend/src/core/i18n/locale:28` | 缺失 key 告警节流（每 key 只告警一次） |
+| `loadLocale()` | `frontend/src/core/i18n/locale:37` | 加载指定语言的 JSON 包（幂等：已加载不重复 fetch）。 |
+| `getBundle()` | `frontend/src/core/i18n/locale:54` | 获取指定语言的翻译包（已加载时直接读缓存，空包/未加载回落非空基准 zh-CN） |
+| `getLang()` | `frontend/src/core/i18n/locale:68` | 读取当前语言代码 |
+| `setLang()` | `frontend/src/core/i18n/locale:73` | 切换语言（异步加载语言包后触发事件） |
+| `initI18n()` | `frontend/src/core/i18n/locale:110` | 启动时调用：读取持久化/系统语言 → 预加载语言包 → 同步 HTML 属性。 |
 | `en()` | `frontend/src/core/i18n/locales/en:4` | — |
+| `ja()` | `frontend/src/core/i18n/locales/ja:5` | — |
 | `zhCN()` | `frontend/src/core/i18n/locales/zh-CN:6` | — |
 | `t()` | `frontend/src/core/i18n/t:12` | 翻译函数。 |
 | `AVAILABLE_LANGS()` | `frontend/src/core/i18n/t:33` | 可用语言列表（由构建脚本确保与 locales/ 目录对齐） |

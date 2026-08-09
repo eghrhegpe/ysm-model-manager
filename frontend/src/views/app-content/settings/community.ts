@@ -420,8 +420,25 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     return esc(String(s ?? ""));
   }
 
+  // P3 修复：主题段读写在隐私模式（存储禁用）下抛错会中断 initSettings、整页失效——
+  // 与 app-modules 的 safeGet/safeSet 同口径（启动链已封口、写入侧未封口，此处补齐）
+  const themeGet = (key: string): string | null => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  };
+  const themeSet = (key: string, val: string): void => {
+    try {
+      localStorage.setItem(key, val);
+    } catch {
+      /* 隐私模式：忽略持久化 */
+    }
+  };
+
   // 主题卡片：直接点击切换
-  const savedTheme = localStorage.getItem("theme") || "cyber";
+  const savedTheme = themeGet("theme") || "cyber";
   const themePicker = root.getElementById("theme-picker");
   if (themePicker) {
     themePicker.querySelectorAll(".theme-card").forEach((card) => {
@@ -431,7 +448,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         card.classList.add("active");
         const themeName = (card as HTMLElement).dataset.theme || "";
         window.applyTheme?.(themeName);
-        localStorage.setItem("theme", themeName);
+        themeSet("theme", themeName);
         // P2 修复：主题切后同步到 ysm_config.json，保持 localStorage ↔ JSON 一致
         void (async () => {
           try { await SaveAppConfig(cfg.filesRoot || "", cfg.resourcepackRoot || "", cfg.mcRoot || "", linkMode, themeName); } catch { /* 保存失败不影响 UI 主题 */ }
@@ -439,7 +456,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
         // 关闭自动切换
         const autoSelect = root.getElementById("theme-auto") as HTMLSelectElement | null;
         if (autoSelect) autoSelect.value = "off";
-        localStorage.setItem("theme-auto", "off");
+        themeSet("theme-auto", "off");
       });
     });
   }

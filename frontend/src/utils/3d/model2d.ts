@@ -601,8 +601,10 @@ function drawMiniView(
   cosA: number,
   sinA: number,
 ): void {
-  if (!cosA) cosA = 1;
-  if (!sinA) sinA = 0;
+  // P2 修复：`!cosA` 会吞掉合法 0（90° 视图角时 cos=0 被强制替换为 1，制造非法旋转对
+  // 导致小地图失真）——改为仅对 undefined/NaN 兜底
+  if (cosA === undefined || Number.isNaN(cosA)) cosA = 1;
+  if (sinA === undefined || Number.isNaN(sinA)) sinA = 0;
   const size = 60;
   const margin = 8;
   const mx = ctx.canvas.width - size - margin;

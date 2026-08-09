@@ -49,7 +49,9 @@ func FindDuplicateFiles(dir string, skipRecycle bool) ([]Group, error) {
 			return nil
 		}
 		if d.IsDir() {
-			if skipRecycle && filepath.Base(p) == ".recycle" {
+			// P3 修复：大小写不敏感（对齐 fsutil.isRecycleDir 的 EqualFold 语义）——
+			// 原 `filepath.Base(p) == ".recycle"` 大小写敏感，Windows `.RECYCLE` 目录会漏排
+			if skipRecycle && strings.EqualFold(filepath.Base(p), ".recycle") {
 				return filepath.SkipDir
 			}
 			return nil
@@ -135,7 +137,9 @@ func CountDuplicates(dir string, skipRecycle bool) (groups int, extraFiles int, 
 			return nil
 		}
 		if d.IsDir() {
-			if skipRecycle && filepath.Base(p) == ".recycle" {
+			// P3 修复：大小写不敏感（对齐 fsutil.isRecycleDir 的 EqualFold 语义）——
+			// 原 `filepath.Base(p) == ".recycle"` 大小写敏感，Windows `.RECYCLE` 目录会漏排
+			if skipRecycle && strings.EqualFold(filepath.Base(p), ".recycle") {
 				return filepath.SkipDir
 			}
 			return nil

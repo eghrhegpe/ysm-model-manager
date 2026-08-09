@@ -3,7 +3,7 @@
 import { cacheGet, cacheSet } from "./cache.ts";
 import { getApp } from "../../wails/app.ts";
 import { parseBedrockAnimationJSON } from "../../utils/animation/animation.ts";
-import type { PreviewCtx } from "./utils.ts";
+import type { YsmDecoder, PreviewDebugger } from "./utils.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 
 /**
@@ -12,7 +12,7 @@ import type { BedrockGeometry } from "./geometry.ts";
  */
 export async function loadModelData(
   modelPath: string,
-  ctx: Pick<PreviewCtx, "decodeYsmViaWasm" | "_appendDebug">,
+  ctx: YsmDecoder & PreviewDebugger,
 ): Promise<{ model: BedrockGeometry | null; decodedBy: string }> {
   let model: BedrockGeometry | null = null;
   let _decodedBy = "";

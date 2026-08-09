@@ -1,6 +1,6 @@
 // ===== 2D 骨骼渲染层 =====
 // 加载统一走 loadModelData，本文件只做 2D 骨骼渲染编排
-import { getPrefer3D, setPrefer3D, type PreviewCtx } from "./utils.ts";
+import { getPrefer3D, setPrefer3D, type PreviewRoot, type YsmDecoder, type PreviewDebugger } from "./utils.ts";
 import { loadModelData } from "./loader.ts";
 import { renderModel2D } from "../../utils/3d/model2d.ts";
 import { openFullPreview } from "./zoom.ts";
@@ -15,6 +15,7 @@ import { buildBoneNamesText } from "./bone-names.ts";
 import { screenshotPreview, renderModel3D } from "../../utils/3d/model3d.ts";
 import { renderMultiAngle } from "./screenshot-renderer.ts";
 import { preloadModel } from "./model3d-loader.ts";
+import { t } from "../../core/i18n/t.ts";
 
 // 2D 拖拽的 window 监听器槽位：loadModel2D 每次渲染模型都会绑定，
 // 先移除上一轮处理器再绑定，防止 window 级监听器累积泄漏
@@ -33,7 +34,7 @@ type Model3DHandleX = import("../../utils/3d/model3d.ts").RenderModel3DHandle & 
  * ctx = 组件实例（提供 this._root, this._appendDebug 等）
  */
 export async function loadModel2D(
-  ctx: PreviewCtx,
+  ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
   modelPath: string,
   skelContainer: HTMLElement | null,
 ): Promise<void> {
@@ -45,20 +46,21 @@ export async function loadModel2D(
 
   const container = document.createElement("div");
   container.style.cssText = "margin-bottom:8px;opacity:0.6";
-  container.innerHTML = `<div class="ysm-loading-title">🏗️ 模型结构（读取中...）</div><div class="ysm-loading-bar"></div>`;
+  container.innerHTML = `<div class="ysm-loading-title">🏗️ ${t("preview.loadingStructure")}</div><div class="ysm-loading-bar"></div>`;
   content.appendChild(container);
 
   try {
     // 统一加载：缓存 → WASM → Go 兜底
     const loaded = await loadModelData(modelPath, {
       decodeYsmViaWasm: (p) => ctx._decodeYsmViaWasm(p),
+      _decodeYsmViaWasm: (p) => ctx._decodeYsmViaWasm(p), // YsmDecoder 双方法契约
       _appendDebug: (_container, msg) => ctx._appendDebug(container, msg),
     });
     const model = loaded.model;
     const _decodedBy = loaded.decodedBy;
 
     if (!model?.bones?.length) {
-      container.innerHTML = `<div class="ysm-error-title">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ 未找到几何数据</div>`;
+      container.innerHTML = `<div class="ysm-error-title">🏗️ 模型结构</div><div class="ysm-error-body">⚠️ ${t("preview.noGeometry")}</div>`;
       return;
     }
 
@@ -90,18 +92,18 @@ export async function loadModel2D(
     eyeBtn.className = "ysm-btn";
     const savedState = localStorage.getItem("ysm_showBoneLabels") !== "false";
     let _labelsOn = savedState;
-    eyeBtn.innerHTML = _labelsOn ? "👁 骨骼名" : "👁‍🗨 骨骼名";
+    eyeBtn.innerHTML = _labelsOn ? `👁 ${t("preview.boneLabels")}` : `👁‍🗨 ${t("preview.boneLabels")}`;
     eyeBtn.title = "切换骨骼名称显示";
     const eyeHint = document.createElement("span");
     eyeHint.className = "ysm-hint";
-    eyeHint.textContent = _labelsOn ? "开启" : "关闭";
+    eyeHint.textContent = _labelsOn ? t("preview.on") : t("preview.off");
     toggleRow.appendChild(eyeBtn);
     toggleRow.appendChild(eyeHint);
 
     // 放大按钮
     const zoomBtn = document.createElement("button");
     zoomBtn.className = "ysm-btn";
-    zoomBtn.innerHTML = "🔍 放大";
+    zoomBtn.innerHTML = "🔍 " + t("preview.zoom");
     zoomBtn.title = "全窗口查看模型";
     zoomBtn.onclick = (): void => {
       openFullPreview(canvas, model, textureImg, _labelsOn);
@@ -172,8 +174,8 @@ export async function loadModel2D(
     eyeBtn.onclick = (): void => {
       _labelsOn = !_labelsOn;
       localStorage.setItem("ysm_showBoneLabels", String(_labelsOn));
-      eyeBtn.innerHTML = _labelsOn ? "👁 骨骼名" : "👁‍🗨 骨骼名";
-      eyeHint.textContent = _labelsOn ? "开启" : "关闭";
+      eyeBtn.innerHTML = _labelsOn ? `👁 ${t("preview.boneLabels")}` : `👁‍🗨 ${t("preview.boneLabels")}`;
+      eyeHint.textContent = _labelsOn ? t("preview.on") : t("preview.off");
       doRender();
     };
 
@@ -238,11 +240,11 @@ export async function loadModel2D(
     boneRow.className = "ysm-toggle-row";
     const boneBtn = document.createElement("button");
     boneBtn.className = "ysm-btn";
-    boneBtn.textContent = "📋 导出骨骼名";
+    boneBtn.textContent = "📋 " + t("preview.exportBones");
     boneBtn.title = "导出骨骼名称为文本文件";
     const boneHint = document.createElement("span");
     boneHint.className = "ysm-hint";
-    boneHint.textContent = `${model.boneCount} 骨骼`;
+    boneHint.textContent = `${model.boneCount} ${t("preview.bones")}`;
     boneBtn.onclick = (): void => {
       const lines = buildBoneNamesText(modelPath, model.boneCount, model.bones || []);
       const blob = new Blob([lines.join("\n")], { type: "text/plain" });
@@ -288,7 +290,7 @@ export async function loadModel2D(
           "display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,0.3);flex-shrink:0;pointer-events:auto;position:relative;z-index:10";
         const closeBtn = document.createElement("button");
         closeBtn.id = "ysm-close-3d";
-        closeBtn.textContent = "✕ 关闭 3D";
+        closeBtn.textContent = "✕ " + t("preview.close3d");
         closeBtn.style.cssText = "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
         closeBtn.onclick = (): void => {
           close3D();
@@ -302,7 +304,7 @@ export async function loadModel2D(
           model.textures!.forEach((_, i) => {
             const opt = document.createElement("option");
             opt.value = String(i);
-            opt.textContent = `纹理 ${i + 1}`;
+            opt.textContent = `${t("preview.texture")} ${i + 1}`;
             texSel.appendChild(opt);
           });
           texSel.onchange = (): void => {
@@ -320,7 +322,7 @@ export async function loadModel2D(
         const shotWrap = document.createElement("div");
         shotWrap.style.cssText = "position:relative;display:inline-block;margin-right:8px";
         const shotBtn = document.createElement("button");
-        shotBtn.textContent = "📷 截图 ▾";
+        shotBtn.textContent = "📷 " + t("preview.screenshot") + " ▾";
         shotBtn.style.cssText = "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
         const shotMenu = document.createElement("div");
         shotMenu.style.cssText = "display:none;position:absolute;top:100%;left:0;z-index:100;background:#2a2b3e;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:4px 0;min-width:120px;box-shadow:0 4px 16px rgba(0,0,0,0.4)";
@@ -376,7 +378,7 @@ export async function loadModel2D(
           }
           shotBtn.textContent = "✅";
           setTimeout(() => {
-            shotBtn.textContent = "📷 截图 ▾";
+            shotBtn.textContent = "📷 " + t("preview.screenshot") + " ▾";
           }, 2000);
         };
         items.forEach((item) => {
@@ -407,7 +409,7 @@ export async function loadModel2D(
 
         // 重置视角按钮
         const resetBtn = document.createElement("button");
-        resetBtn.textContent = "⟲ 重置视角";
+        resetBtn.textContent = "⟲ " + t("preview.resetView");
         resetBtn.style.cssText = "font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);cursor:pointer;font-family:inherit";
         resetBtn.title = "重置相机视角到初始位置";
         topBar.appendChild(resetBtn);
@@ -420,7 +422,7 @@ export async function loadModel2D(
 
         const rotLabel = document.createElement("span");
         rotLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
-        rotLabel.textContent = "摄像机旋转:";
+        rotLabel.textContent = t("preview.cameraRotation") + ":";
         topBar.appendChild(rotLabel);
 
         const rotSel = document.createElement("select");
@@ -436,7 +438,7 @@ export async function loadModel2D(
 
         const spdLabel = document.createElement("span");
         spdLabel.style.cssText = "font-size:11px;color:rgba(255,255,255,0.5)";
-        spdLabel.textContent = "摄像机速度:";
+        spdLabel.textContent = t("preview.cameraSpeed") + ":";
         topBar.appendChild(spdLabel);
 
         const spdSlider = document.createElement("input");
@@ -663,7 +665,7 @@ export async function loadModel2D(
             modelSel.style.display = "";
             const allOpt = document.createElement("option");
             allOpt.value = "-1";
-            allOpt.textContent = "全部组件";
+            allOpt.textContent = t("preview.allComponents");
             allOpt.selected = true;
             modelSel.appendChild(allOpt);
             for (let i = 0; i < mgCount; i++) {
@@ -776,7 +778,7 @@ export async function loadModel2D(
           boneDetailText.style.cssText =
             "padding:4px 6px;background:rgba(255,255,255,0.05);border-radius:3px 3px 0 0;white-space:pre;max-height:100px;overflow-y:auto";
           const boneDetailCopy = document.createElement("button");
-          boneDetailCopy.textContent = "📋 复制";
+          boneDetailCopy.textContent = "📋 " + t("common.copy");
           boneDetailCopy.style.cssText =
             "font-size:10px;padding:1px 6px;border:none;background:rgba(124,131,255,0.3);color:#fff;cursor:pointer;border-radius:0 0 3px 3px;width:100%;font-family:inherit";
           boneDetailCopy.onclick = function (): void {
@@ -784,14 +786,14 @@ export async function loadModel2D(
             navigator.clipboard
               .writeText(txt)
               .then(function () {
-                boneDetailCopy.textContent = "✅ 已复制";
+                boneDetailCopy.textContent = "✅ " + t("preview.copied");
                 setTimeout(function () {
-                  boneDetailCopy.textContent = "📋 复制";
+                  boneDetailCopy.textContent = "📋 " + t("common.copy");
                 }, 1500);
               })
               .catch(function () {
                 // 剪贴板写入失败（权限/焦点）→ 恢复按钮，不假成功
-                boneDetailCopy.textContent = "📋 复制";
+                boneDetailCopy.textContent = "📋 " + t("common.copy");
               });
           };
           boneDetail.appendChild(boneDetailText);

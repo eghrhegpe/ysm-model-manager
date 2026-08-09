@@ -1,8 +1,9 @@
 import { renderFormattedText } from "../../utils/format/mc-format.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { getApp } from "../../wails/app.ts";
-import type { PreviewCtx } from "./utils.ts";
+import type { PreviewRoot } from "./utils.ts";
 import { createLitematic3D, cleanupVoxel3D } from "./litematic-3d.ts";
+import { t } from "../../core/i18n/t.ts";
 
 function fmtTime(ms: number): string {
   if (!ms || ms <= 0) return "未知";
@@ -65,7 +66,7 @@ interface BlockStat {
 }
 
 function renderBlockList(stats: BlockStat[] | undefined): string {
-  if (!stats || !stats.length) return '<div style="color:var(--muted);font-size:var(--fs-sm)">无方块数据</div>';
+  if (!stats || !stats.length) return `<div style="color:var(--muted);font-size:var(--fs-sm)">${t("preview.noBlockData")}</div>`;
   let total = 0;
   for (const s of stats) total += s.count;
   const rows = stats
@@ -103,7 +104,7 @@ interface LitematicMeta {
 
 /** 显示投影文件详情面板（tab 布局） */
 export async function showLitematic(
-  ctx: PreviewCtx,
+  ctx: PreviewRoot,
   path: string,
 ): Promise<void> {
   const gen = ++litematicGen;
@@ -113,11 +114,11 @@ export async function showLitematic(
   ctx._root.innerHTML = `<div class="content" id="preview-content">
   <div class="ysm-tab-row">
     <button class="preview-tab ysm-tab ${savedTab === "detail" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="detail">📋 详情</button>
-    <button class="preview-tab ysm-tab ${savedTab === "material" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="material">🧱 材料列表</button>
-    <button class="ysm-tab ysm-tab-inactive" id="btn-lt-3d-tab" title="3D 预览">🎨 3D</button>
+    <button class="preview-tab ysm-tab ${savedTab === "material" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="material">🧱 ${t("preview.materialList")}</button>
+    <button class="ysm-tab ysm-tab-inactive" id="btn-lt-3d-tab" title="${t("preview.title3d")}">🎨 3D</button>
   </div>
   <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}>
-    <div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">正在解析投影文件...</div></div>
+    <div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsingLitematica")}...</div></div>
   </div>
   <div id="preview-material"${savedTab !== "material" ? ' style="display:none"' : ""}></div>
 </div>`;
@@ -179,28 +180,28 @@ export async function showLitematic(
       if (gen !== litematicGen) return;
       let extra = "";
       if (isNbt || isSch) {
-        extra = `${field("数据版本", meta.dataVersion)}${field("格式版本", meta.version)}${field("名称", meta.name)}${field("作者", meta.author)}`;
+        extra = `${field("数据版本", meta.dataVersion)}${field(t("preview.formatVersion"), meta.version)}${field(t("preview.nameLabel"), meta.name)}${field(t("preview.authorLabel"), meta.author)}`;
       } else {
-        extra = `${field("名称", meta.name)}${field("作者", meta.author)}${field("创建时间", meta.timeCreated ? fmtTime(meta.timeCreated) : "")}${field("修改时间", meta.timeModified ? fmtTime(meta.timeModified) : "")}<div class="lt-meta-row"><span class="lt-meta-label">格式版本</span><span>Litematica v${meta.version || "?"} · MC Data v${meta.minecraftDataVersion || "?"}</span></div>${field("描述", meta.description)}`;
+        extra = `${field(t("preview.nameLabel"), meta.name)}${field(t("preview.authorLabel"), meta.author)}${field("创建时间", meta.timeCreated ? fmtTime(meta.timeCreated) : "")}${field("修改时间", meta.timeModified ? fmtTime(meta.timeModified) : "")}<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.formatVersion")}</span><span>Litematica v${meta.version || "?"} · MC Data v${meta.minecraftDataVersion || "?"}</span></div>${field("描述", meta.description)}`;
       }
-      detailDiv.innerHTML = `<h3>📋 蓝图详情</h3>
+      detailDiv.innerHTML = `<h3>📋 ${t("preview.blueprintDetail")}</h3>
     <div style="padding:12px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm)">
       ${previewImgHTML}
       <div><strong>${renderFormattedText(basename || "")}</strong></div>
       ${extra}
       <div style="margin:4px 0;border-top:1px solid var(--bd)"></div>
-      <div class="lt-meta-row"><span class="lt-meta-label">非空气方块</span><span>${(meta.totalBlocks || meta.blockCount || 0).toLocaleString()} 个</span></div>
-      <div class="lt-meta-row"><span class="lt-meta-label">总体积</span><span>${(meta.totalVolume || 0).toLocaleString()} 方块</span></div>
-      <div class="lt-meta-row"><span class="lt-meta-label">包围盒</span><span>${sizeStr}</span></div>
-      ${!isNbt && !isSch ? `<div class="lt-meta-row"><span class="lt-meta-label">区域数</span><span>${meta.regionCount || 0}</span></div>` : ""}
-      ${meta.entityCount !== undefined ? `<div class="lt-meta-row"><span class="lt-meta-label">实体数量</span><span>${meta.entityCount}</span></div>` : ""}
-      ${meta.tileEntityCount !== undefined ? `<div class="lt-meta-row"><span class="lt-meta-label">方块实体</span><span>${meta.tileEntityCount}</span></div>` : ""}
+      <div class="lt-meta-row"><span class="lt-meta-label">${t("preview.nonAirBlocks")}</span><span>${(meta.totalBlocks || meta.blockCount || 0).toLocaleString()} 个</span></div>
+      <div class="lt-meta-row"><span class="lt-meta-label">${t("preview.totalVolume")}</span><span>${(meta.totalVolume || 0).toLocaleString()} 方块</span></div>
+      <div class="lt-meta-row"><span class="lt-meta-label">${t("preview.boundingBox")}</span><span>${sizeStr}</span></div>
+      ${!isNbt && !isSch ? `<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.regionCount")}</span><span>${meta.regionCount || 0}</span></div>` : ""}
+      ${meta.entityCount !== undefined ? `<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.entityCount")}</span><span>${meta.entityCount}</span></div>` : ""}
+      ${meta.tileEntityCount !== undefined ? `<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.blockEntity")}</span><span>${meta.tileEntityCount}</span></div>` : ""}
     </div>`;
     }
 
     const materialDiv = ctx._root.getElementById("preview-material");
     if (materialDiv) {
-      materialDiv.innerHTML = `<h3>🧱 材料列表</h3>
+      materialDiv.innerHTML = `<h3>🧱 ${t("preview.materialList")}</h3>
 	    <div style="padding:12px;font-size:var(--fs-sm)">
 	      ${renderBlockList(blockStats)}
 	    </div>`;
@@ -224,7 +225,7 @@ export async function showLitematic(
     if (gen !== litematicGen) return;
     const detailDiv = ctx._root.getElementById("preview-detail");
     if (detailDiv) {
-      detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e instanceof Error ? e.message : String(e))}</div></div>`;
+      detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(e instanceof Error ? e.message : String(e))}</div></div>`;
     }
   }
 }

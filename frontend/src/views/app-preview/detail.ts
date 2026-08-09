@@ -7,6 +7,7 @@ import { getApp } from "../../wails/app.ts";
 import type { PreviewCtx } from "./utils.ts";
 import { loadModel2D } from "./skeleton.ts";
 import { describeVersionRange } from "../../utils/format/pack-format.ts";
+import { t } from "../../core/i18n/t.ts";
 
 /** 详情面板 generation：每次展示新预览自增，慢请求返回后比对，过期结果不回写 DOM */
 let _detailGen = 0;
@@ -22,9 +23,9 @@ export async function showModelDetail(
   <div class="ysm-tab-row">
     <button class="preview-tab ysm-tab ${savedTab === "detail" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="detail">📄 详情</button>
     <button class="preview-tab ysm-tab ${savedTab === "skeleton" ? "ysm-tab-active" : "ysm-tab-inactive"}" data-tab="skeleton">🏗️ 骨骼</button>
-    <button class="ysm-tab ysm-tab-inactive" id="btn-3d-preview" title="3D 预览">🎨 3D</button>
+    <button class="ysm-tab ysm-tab-inactive" id="btn-3d-preview" title="${t("preview.title3d")}">🎨 3D</button>
   </div>
-  <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>📄 模型信息</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">正在解析模型文件...</div></div></div>
+  <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>📄 ${t("preview.modelInfo")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsing")}...</div></div></div>
   <div id="preview-skeleton"${savedTab !== "skeleton" ? ' style="display:none"' : ""}></div>
 </div>`;
 
@@ -76,7 +77,7 @@ export async function showModelDetail(
         basename || "",
       );
     } else {
-      throw new Error("无法解析此文件");
+      throw new Error(t("preview.cannotParse"));
     }
     cardHTML = cardHTML.replace(
       '<div class="content" id="preview-content">',
@@ -93,7 +94,7 @@ export async function showModelDetail(
     if (gen !== _detailGen) return;
     const detailDiv = ctx._root.getElementById("preview-detail");
     if (detailDiv) {
-      detailDiv.innerHTML = `未知错误解析失败: ${esc(err instanceof Error ? err.message : String(err))}`;
+      detailDiv.innerHTML = `${t("preview.unknownError")} ${t("preview.parseFailed")}: ${esc(err instanceof Error ? err.message : String(err))}`;
     }
   }
 }
@@ -121,7 +122,7 @@ export async function showResourcePack(
     if (gen !== _detailGen) return;
     const rv = describeVersionRange(meta);
     ctx._root.innerHTML = `<div class="content" id="preview-content">
-  <h3>🎨 资源包</h3>
+  <h3>🎨 ${t("preview.resourcePack")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${meta.thumbnail ? `<img src="${esc(meta.thumbnail)}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:6px;border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:6px;border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:40px;line-height:1">❌</div><div style="font-size:var(--fs-sm);color:var(--muted)">无pack.png</div></div>`}
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
@@ -131,7 +132,7 @@ export async function showResourcePack(
 </div>`;
   } catch (e) {
     if (gen !== _detailGen) return;
-    ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 资源包</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">读取失败: ${esc(e instanceof Error ? e.message : String(e))}</div></div></div>`;
+    ctx._root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 ${t("preview.resourcePack")}</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(e instanceof Error ? e.message : String(e))}</div></div></div>`;
   }
 }
 
@@ -143,7 +144,7 @@ export async function showShaderPack(
 ): Promise<void> {
   ++_detailGen; // 无 await 也要作废在途的慢请求回写
   const icon = (opts && opts.icon) || "☀️";
-  const label = (opts && opts.label) || "光影包";
+  const label = (opts && opts.label) || t("preview.shaderPack");
   const basename = path.split(/[/\\]/).pop() || "";
   ctx._root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>

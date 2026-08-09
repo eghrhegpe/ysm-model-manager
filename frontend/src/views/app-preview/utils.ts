@@ -23,15 +23,33 @@ export interface DecodedYsm {
 }
 
 /** 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） */
-export interface PreviewCtx {
+/** 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 _root，skeleton 消费 _unsubs） */
+export interface PreviewRoot {
   _root: ShadowRoot;
   /** 组件销毁清理收集（可选：子模块可挂 window/document 监听清理函数） */
   _unsubs?: Array<() => void>;
-  _loadPreviewImage(path: string): Promise<string | null>;
+}
+
+/** WASM 解码能力（loader 消费 decodeYsmViaWasm，skeleton 消费 _decodeYsmViaWasm） */
+export interface YsmDecoder {
   decodeYsmViaWasm(path: string): Promise<DecodedYsm | null>;
   _decodeYsmViaWasm(path: string): Promise<DecodedYsm | null>;
+}
+
+/** 调试输出能力（loader/skeleton 消费） */
+export interface PreviewDebugger {
   _appendDebug(container: HTMLElement | null, msg: string): void;
 }
+
+/** 预览图加载能力（detail 消费） */
+export interface PreviewImageLoader {
+  _loadPreviewImage(path: string): Promise<string | null>;
+}
+
+/** 组合接口：实现方（AppPreview）与兼容旧调用方的完整视图。
+ * 消费方按需收窄参数到小接口（见 detail/litematic-meta/loader/skeleton），
+ * 测试 mock 只需提供被测字段，消除「mock 全套」压力。 */
+export interface PreviewCtx extends PreviewRoot, YsmDecoder, PreviewDebugger, PreviewImageLoader {}
 
 /** 3D 偏好状态（跨模型切换保留） */
 let _prefer3D = false;

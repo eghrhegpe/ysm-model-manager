@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"syscall"
 
 	"ysm-model-manager/go/avatar"
 	"ysm-model-manager/go/geometry"
@@ -106,7 +105,7 @@ main().catch(e=>{console.error(e);process.exit(1)});
 
 	// 执行
 	cmd := exec.Command(nodeJSPath, scriptPath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	hideWindow(cmd)
 	cmd.Dir = tmpDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {

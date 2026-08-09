@@ -449,8 +449,8 @@
 | `App.CopyModelFile()` | `internal/app/app_files:68` | CopyModelFile 复制（root 传 FilesRoot 做路径安全校验） |
 | `App.ImportModelFolder()` | `internal/app/app_files:75` | ImportModelFolder 文件夹型模型整组导入（YSM 解压目录，保留子目录层级，ADR-038 关联） folderName = 仓库文件夹名（模型名）；files = |
 | `App.RevealInExplorer()` | `internal/app/app_files:88` | ========== 在资源管理器中显示 ========== |
-| `App.ToggleModelEnable()` | `internal/app/app_files:100` | ========== 启用/禁用 ========== ToggleModelEnable 切换 .ban 状态（fileops 纯逻辑 + 薄壳缓存失效） |
-| `App.IsFileBanned()` | `internal/app/app_files:108` | — |
+| `App.ToggleModelEnable()` | `internal/app/app_files:110` | ========== 启用/禁用 ========== ToggleModelEnable 切换 .ban 状态（fileops 纯逻辑 + 薄壳缓存失效） |
+| `App.IsFileBanned()` | `internal/app/app_files:118` | — |
 | `App.InstallModelFile()` | `internal/app/app_install:24` | ========== 安装 ========== |
 | `App.InstallModelTo()` | `internal/app/app_install:28` | — |
 | `App.InstallModelWithOverlay()` | `internal/app/app_install:38` | — |
@@ -491,32 +491,32 @@
 | `App.ClearImportLogs()` | `internal/app/app_install:817` | — |
 | `App.GetRuntimeLogs()` | `internal/app/app_install:822` | GetRuntimeLogs 获取运行时日志（watcher/sync 等标准库 log 输出） |
 | `App.ClearRuntimeLogs()` | `internal/app/app_install:827` | ClearRuntimeLogs 清空运行时日志缓冲 |
-| `App.AnalyzeYSMModel()` | `internal/app/app_model:23` | — |
-| `App.ExtractYsmSummary()` | `internal/app/app_model:27` | — |
-| `App.ExtractYSMHeader()` | `internal/app/app_model:41` | — |
-| `App.ExtractYSMHeaderFromBase64()` | `internal/app/app_model:45` | — |
-| `App.SavePreviewTempFile()` | `internal/app/app_model:53` | — |
-| `App.ReadFileBytes()` | `internal/app/app_model:72` | — |
-| `App.AnalyzeBedrockModel()` | `internal/app/app_model:86` | — |
-| `App.GetModel3DSpec()` | `internal/app/app_model:131` | — |
-| `App.SaveScreenshotFile()` | `internal/app/app_model:202` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
-| `App.ExportBoneStructures()` | `internal/app/app_scan:23` | ========== 批量导出骨骼结构 ========== |
-| `App.ExportModelStructureJSON()` | `internal/app/app_scan:79` | ExportModelStructureJSON 导出单模型骨骼结构 |
-| `App.SearchModels()` | `internal/app/app_scan:116` | ========== 高级搜索 ========== |
-| `App.ScanModelEntries()` | `internal/app/app_scan:186` | ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志。 |
-| `App.ScanModelEntriesWithLabel()` | `internal/app/app_scan:197` | ScanModelEntriesWithLabel 同 ScanModelEntries，但操作日志附带资源类型标签 （如「资源包」「光影包」「模型」），便于在操作日志面板区分扫描 |
-| `App.ClearScanCache()` | `internal/app/app_scan:210` | ClearScanCache 清除扫描缓存（下载/导入后调用） |
-| `App.ListModelAuthors()` | `internal/app/app_scan:215` | ListModelAuthors 统计 [作者] 前缀（走扫描缓存，不重复读磁盘） |
-| `App.GenerateRepoIndex()` | `internal/app/app_scan:224` | GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板） |
-| `App.ScanLocalAuthors()` | `internal/app/app_scan:229` | ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者 |
-| `App.ListVersionInstances()` | `internal/app/app_scan:237` | — |
-| `App.GetGlobalCustomDir()` | `internal/app/app_scan:241` | — |
-| `App.ListFileNames()` | `internal/app/app_scan:245` | — |
-| `App.ListAllFilePaths()` | `internal/app/app_scan:258` | ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名） |
-| `App.CheckFileExists()` | `internal/app/app_scan:265` | — |
-| `App.OpenFolder()` | `internal/app/app_scan:299` | — |
-| `App.OpenInstanceFolder()` | `internal/app/app_scan:306` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
-| `progressReader.Read()` | `internal/app/app_scan:329` | — |
+| `App.AnalyzeYSMModel()` | `internal/app/app_model:22` | — |
+| `App.ExtractYsmSummary()` | `internal/app/app_model:26` | — |
+| `App.ExtractYSMHeader()` | `internal/app/app_model:40` | — |
+| `App.ExtractYSMHeaderFromBase64()` | `internal/app/app_model:44` | — |
+| `App.SavePreviewTempFile()` | `internal/app/app_model:52` | — |
+| `App.ReadFileBytes()` | `internal/app/app_model:71` | — |
+| `App.AnalyzeBedrockModel()` | `internal/app/app_model:85` | — |
+| `App.GetModel3DSpec()` | `internal/app/app_model:130` | — |
+| `App.SaveScreenshotFile()` | `internal/app/app_model:201` | SaveScreenshotFile 保存 base64 PNG 到磁盘（供 JS 批量截图用） 路径守卫：限制在 os.TempDir()/ysm-preview 内，禁止绝对路 |
+| `App.ExportBoneStructures()` | `internal/app/app_scan:24` | ========== 批量导出骨骼结构 ========== |
+| `App.ExportModelStructureJSON()` | `internal/app/app_scan:80` | ExportModelStructureJSON 导出单模型骨骼结构 |
+| `App.SearchModels()` | `internal/app/app_scan:117` | ========== 高级搜索 ========== |
+| `App.ScanModelEntries()` | `internal/app/app_scan:187` | ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志。 |
+| `App.ScanModelEntriesWithLabel()` | `internal/app/app_scan:198` | ScanModelEntriesWithLabel 同 ScanModelEntries，但操作日志附带资源类型标签 （如「资源包」「光影包」「模型」），便于在操作日志面板区分扫描 |
+| `App.ClearScanCache()` | `internal/app/app_scan:211` | ClearScanCache 清除扫描缓存（下载/导入后调用） |
+| `App.ListModelAuthors()` | `internal/app/app_scan:216` | ListModelAuthors 统计 [作者] 前缀（走扫描缓存，不重复读磁盘） |
+| `App.GenerateRepoIndex()` | `internal/app/app_scan:225` | GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板） |
+| `App.ScanLocalAuthors()` | `internal/app/app_scan:230` | ScanLocalAuthors 扫描所有本地资源目录，从文件名提取作者 |
+| `App.ListVersionInstances()` | `internal/app/app_scan:238` | — |
+| `App.GetGlobalCustomDir()` | `internal/app/app_scan:242` | — |
+| `App.ListFileNames()` | `internal/app/app_scan:246` | — |
+| `App.ListAllFilePaths()` | `internal/app/app_scan:259` | ListAllFilePaths 递归列出指定目录下的所有文件完整路径（不限制扩展名） |
+| `App.CheckFileExists()` | `internal/app/app_scan:266` | — |
+| `App.OpenFolder()` | `internal/app/app_scan:300` | — |
+| `App.OpenInstanceFolder()` | `internal/app/app_scan:317` | OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录 |
+| `progressReader.Read()` | `internal/app/app_scan:340` | — |
 | `App.GetModelTags()` | `internal/app/app_tags:29` | GetModelTags 返回指定模型文件的所有标签 |
 | `App.SetModelTags()` | `internal/app/app_tags:34` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
 | `App.ListByTag()` | `internal/app/app_tags:39` | ListByTag 返回所有打了指定标签的文件路径列表 |
@@ -889,11 +889,11 @@
 | `repositoryHTML()` | `frontend/src/views/app-content/tpl:5` | — |
 | `instancesHTML()` | `frontend/src/views/app-content/tpl:45` | — |
 | `settingsHTML()` | `frontend/src/views/app-content/tpl:66` | — |
-| `downloadsHTML()` | `frontend/src/views/app-content/tpl:451` | — |
-| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:502` | — |
-| `recycleHTML()` | `frontend/src/views/app-content/tpl:561` | — |
-| `githubHTML()` | `frontend/src/views/app-content/tpl:574` | ===== GitHub 仓库页面 ===== |
-| `workshopHTML()` | `frontend/src/views/app-content/tpl:605` | — |
+| `downloadsHTML()` | `frontend/src/views/app-content/tpl:459` | — |
+| `diagnosticsHTML()` | `frontend/src/views/app-content/tpl:510` | — |
+| `recycleHTML()` | `frontend/src/views/app-content/tpl:569` | — |
+| `githubHTML()` | `frontend/src/views/app-content/tpl:582` | ===== GitHub 仓库页面 ===== |
+| `workshopHTML()` | `frontend/src/views/app-content/tpl:613` | — |
 | `CreatorIdentity()` | `frontend/src/views/app-content/workshop-data:8` | 创作者身份识别结果 |
 | `CreatorIdentityInput()` | `frontend/src/views/app-content/workshop-data:15` | 创作者输入（role/tag 可空，_fromLocal 为运行时附加字段） |
 | `getCreatorIdentity()` | `frontend/src/views/app-content/workshop-data:22` | — |

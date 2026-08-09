@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -299,7 +300,17 @@ func (a *App) isPathInRoot(path string) bool {
 func (a *App) OpenFolder(dir string) error {
 	// 统一路径分隔符（Windows explorer 不接受混合斜杠）
 	dir = filepath.Clean(dir)
-	return exec.Command("explorer", dir).Start()
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", dir)
+	case "darwin":
+		cmd = exec.Command("open", dir)
+	default:
+		cmd = exec.Command("xdg-open", dir)
+	}
+	hideWindow(cmd)
+	return cmd.Start()
 }
 
 // OpenInstanceFolder 按资源类型打开整合包子目录；目录不存在时回退到实例根目录

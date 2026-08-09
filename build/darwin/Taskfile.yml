@@ -1,0 +1,52 @@
+version: '3'
+
+includes:
+  common: ../Taskfile.yml
+
+tasks:
+  build:
+    summary: Builds the application for macOS
+    deps:
+      - task: common:go:mod:tidy
+      - task: common:build:frontend
+    cmds:
+      - mkdir -p "{{.BIN_DIR}}"
+      - go build -tags production -trimpath -buildvcs=false -ldflags="-w -s -X ysm-model-manager/go/version.Version={{.APP_VERSION}}" -o "{{.BIN_DIR}}/{{.APP_NAME}}" .
+    env:
+      GOOS: darwin
+      CGO_ENABLED: '{{.CGO_ENABLED | default "1"}}'
+
+  build:dev:
+    summary: Dev build (no production tag; asset server proxies to vite)
+    deps:
+      - task: common:go:mod:tidy
+    cmds:
+      - mkdir -p "{{.BIN_DIR}}"
+      - go build -buildvcs=false -gcflags=all="-l" -o "{{.BIN_DIR}}/{{.APP_NAME}}" .
+    env:
+      GOOS: darwin
+      CGO_ENABLED: '{{.CGO_ENABLED | default "1"}}'
+
+  run:
+    preconditions:
+      - sh: test -x "{{.BIN_DIR}}/{{.APP_NAME}}"
+        msg: "Binary not found. Run 'task build' first."
+    cmds:
+      - '{{.BIN_DIR}}/{{.APP_NAME}}'
+
+  package:
+    summary: Packages the application as a macOS .app bundle
+    deps:
+      - task: build
+    preconditions:
+      - sh: test -f "build/darwin/Info.plist"
+        msg: "build/darwin/Info.plist not found"
+    cmds:
+      - |
+        APP_DIR="{{.BIN_DIR}}/{{.APP_NAME}}.app"
+        mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
+        cp "{{.BIN_DIR}}/{{.APP_NAME}}" "$APP_DIR/Contents/MacOS/"
+        cp build/darwin/Info.plist "$APP_DIR/Contents/Info.plist"
+        cp build/darwin/icons.icns "$APP_DIR/Contents/Resources/appicon.icns"
+        cp build/appicon.png "$APP_DIR/Contents/Resources/appicon.png"
+        echo "✅ .app bundle: $APP_DIR"

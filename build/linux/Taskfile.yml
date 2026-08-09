@@ -1,0 +1,76 @@
+version: '3'
+
+includes:
+  common: ../Taskfile.yml
+
+tasks:
+  check:deps:
+    summary: Verifies Linux build prerequisites
+    cmds:
+      - |
+        set -euo pipefail
+        echo "Checking Linux build prerequisites..."
+        missing=0
+        for cmd in go; do
+          if ! command -v "$cmd" >/dev/null 2>&1; then
+            echo "ERROR: $cmd not found. Please install Go 1.25+." >&2
+            missing=1
+          fi
+        done
+        if [ "${CGO_ENABLED:-}" = "0" ]; then
+          echo "WARNING: CGO_ENABLED=0. GTK/WebKit bindings will be statically linked." >&2
+        fi
+        if [ "$missing" -ne 0 ]; then
+          exit 1
+        fi
+        echo "All prerequisites satisfied."
+
+  build:
+    summary: Builds the application for Linux
+    deps:
+      - task: check:deps
+      - task: common:go:mod:tidy
+      - task: common:build:frontend
+    cmds:
+      - mkdir -p "{{.BIN_DIR}}"
+      - go build -tags production -trimpath -buildvcs=false -ldflags="-w -s -X ysm-model-manager/go/version.Version={{.APP_VERSION}}" -o "{{.BIN_DIR}}/{{.APP_NAME}}" .
+    env:
+      GOOS: linux
+      CGO_ENABLED: '{{.CGO_ENABLED | default "1"}}'
+
+  build:dev:
+    summary: Dev build (no production tag; asset server proxies to vite)
+    deps:
+      - task: common:go:mod:tidy
+    cmds:
+      - mkdir -p "{{.BIN_DIR}}"
+      - go build -buildvcs=false -gcflags=all="-l" -o "{{.BIN_DIR}}/{{.APP_NAME}}" .
+    env:
+      GOOS: linux
+      CGO_ENABLED: '{{.CGO_ENABLED | default "1"}}'
+
+  run:
+    preconditions:
+      - sh: test -x "{{.BIN_DIR}}/{{.APP_NAME}}"
+        msg: "Binary not found. Run 'task build' first."
+    cmds:
+      - '{{.BIN_DIR}}/{{.APP_NAME}}'
+
+  package:
+    summary: Builds and packages as deb/rpm via nfpm
+    cmds:
+      - task: build
+      - task: package:nfpm
+
+  package:nfpm:
+    summary: Runs nfpm to produce .deb / .rpm packages
+    preconditions:
+      - sh: command -v nfpm
+        msg: "nfpm not found. Install: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
+      - sh: test -f "{{.BIN_DIR}}/{{.APP_NAME}}"
+        msg: "Binary not found at {{.BIN_DIR}}/{{.APP_NAME}}. Run 'task build' first."
+      - sh: test -f "build/linux/nfpm/nfpm.yaml"
+        msg: "nfpm config not found at build/linux/nfpm/nfpm.yaml"
+    cmds:
+      - nfpm package --packager deb -f build/linux/nfpm/nfpm.yaml
+      - nfpm package --packager rpm -f build/linux/nfpm/nfpm.yaml

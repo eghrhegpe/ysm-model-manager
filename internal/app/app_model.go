@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/threejs"
@@ -246,7 +245,7 @@ func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 	}
 
 	cmd := exec.Command(parserPath, "-i", inDir, "-o", outDir)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	hideWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		return types.BedrockModel{}
 	}

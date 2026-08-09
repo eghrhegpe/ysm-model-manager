@@ -10,12 +10,14 @@ vars:
   BUILD_TIME: '{{.BUILD_TIME | default "unknown"}}'
   COMMIT_HASH: '{{.COMMIT_HASH | default "unknown"}}'
 
-# 仅引入 common + windows：本项目当前目标平台为 Windows。
-# （darwin/linux/ios/android 等联邦标准分支在本仓库尚不存在对应 build/<os>/ 目录，
-#  若未来扩展平台再补 includes 即可。）
+# 平台 includes：windows 为主力，darwin/linux 桌面三平台（ADR-046 P1）。
+# ios/android 等联邦标准分支在本仓库尚不存在对应 build/<os>/ 目录，
+# 若未来扩展移动端再补 includes 即可。
 includes:
   common: ./build/Taskfile.yml
   windows: ./build/windows/Taskfile.yml
+  darwin: ./build/darwin/Taskfile.yml
+  linux: ./build/linux/Taskfile.yml
 
 tasks:
   build:

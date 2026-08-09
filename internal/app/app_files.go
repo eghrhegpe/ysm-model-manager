@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
-	"syscall"
 
 	"ysm-model-manager/go/fileops"
 	"ysm-model-manager/go/scanner"
@@ -90,8 +90,18 @@ func (a *App) RevealInExplorer(path string) error {
 	if path == "" {
 		return fmt.Errorf("路径为空")
 	}
-	cmd := exec.Command("explorer", "/select,", filepath.FromSlash(path))
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", "/select,", filepath.FromSlash(path))
+	case "darwin":
+		// macOS: Finder 中选中并显示文件
+		cmd = exec.Command("open", "-R", filepath.FromSlash(path))
+	default:
+		// Linux: 无"选中文件"命令，退化为打开所在目录
+		cmd = exec.Command("xdg-open", filepath.Dir(filepath.FromSlash(path)))
+	}
+	hideWindow(cmd)
 	return cmd.Start()
 }
 

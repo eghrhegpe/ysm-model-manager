@@ -157,7 +157,7 @@ export async function checkUpdateSilent(): Promise<void> {
   try {
     if (!canCheck()) return;
     const { CheckUpdate } = await getApp();
-    const info = (await CheckUpdate()) as UpdateInfo;
+    const info = (await CheckUpdate()) as UpdateInfo | null;
     // 检查成功才计入频次：失败（网络/API）不阻塞下次启动重试
     markChecked();
     if (info?.available) {
@@ -215,6 +215,7 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
         markChecked();
         if (!info?.available) {
           bus.emit("toast:show", {
+            // null（绑定契约允许）视为不可用；info?.current ?? "" 兜底避免空括号
             msg: `✅ ${t("update.latest", { version: info?.current ?? "" })}`,
             duration: 3000,
             type: "success",

@@ -21,7 +21,7 @@ jobs:
     name: 构建站点（VitePress · docs/）
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: 安装 ripgrep（契约测试依赖 rg 二进制；ubuntu-latest 默认未预装）
         run: sudo apt-get update -y && sudo apt-get install -y ripgrep
@@ -36,7 +36,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: 安装 Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
 

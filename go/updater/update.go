@@ -30,6 +30,13 @@ var updateLock sync.Mutex
 // maxDownloadSize 更新包下载大小上限（500MB）
 const maxDownloadSize = 500 << 20
 
+// ghProxyPrefixes GitHub Release 下载加速代理前缀（第三方公开服务，域名可能变动）。
+// 更新包多源回退：直连 asset URL 失败/超时后按序拼接重试；测试可整体替换为本地 server。
+var ghProxyPrefixes = []string{
+	"https://ghfast.top/",
+	"https://gh-proxy.com/",
+}
+
 // progressWriter 下载进度计数器：按 1% 步进（大小已知）或每 512KB（分块传输）节流回调，
 // 避免高频事件冲刷前端；写满时强制补一次 100% 回调（done==total）
 type progressWriter struct {
@@ -205,17 +212,38 @@ func Download(assetURL string, expectedHash string) (string, error) {
 }
 
 // DownloadWithProgress 下载更新包；onProgress 在下载过程中节流回调 (done, total) 字节数
-// （total<=0 表示 Content-Length 未知，分块传输场景）
+// （total<=0 表示 Content-Length 未知，分块传输场景）。
+// 多源回退（用户反馈：直连 GitHub Release 20MB 包 7 分钟仅 17%）：
+// 直连 asset URL 失败/超时后，按 ghProxyPrefixes 依次拼代理前缀重试，任一成功即返回；
+// 全部失败时聚合各源错误返回（含源标识，便于用户判断是直连还是镜像问题）。
 func DownloadWithProgress(assetURL string, expectedHash string, onProgress func(done, total int64)) (string, error) {
 	updateLock.Lock()
 	defer updateLock.Unlock()
 
+	sources := []string{assetURL}
+	for _, prefix := range ghProxyPrefixes {
+		sources = append(sources, prefix+assetURL)
+	}
+	var errs []string
+	for _, src := range sources {
+		path, err := downloadOnce(src, expectedHash, onProgress)
+		if err == nil {
+			return path, nil
+		}
+		errs = append(errs, fmt.Sprintf("%s: %v", src, err))
+	}
+	return "", fmt.Errorf("更新包下载失败（%d 个源均失败）：\n%s", len(sources), strings.Join(errs, "\n"))
+}
+
+// downloadOnce 单源下载尝试：HTTP GET + 大小截断防护 + SHA256 校验
+func downloadOnce(assetURL string, expectedHash string, onProgress func(done, total int64)) (string, error) {
 	req, err := http.NewRequest("GET", assetURL, nil)
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("User-Agent", "YSM-Model-Manager/")
-	client := &http.Client{Timeout: 5 * time.Minute}
+	// 每源独立 90s 超时：直连慢/卡时快速切镜像，避免「硬卡 7 分钟」
+	client := &http.Client{Timeout: 90 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err

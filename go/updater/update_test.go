@@ -317,6 +317,11 @@ func TestDownload_HashMismatch(t *testing.T) {
 	}))
 	defer server.Close()
 
+	// 多源回退隔离：hash 失败路径不得回退到真实 ghProxyPrefixes（避免真实网络请求）
+	oldPrefixes := ghProxyPrefixes
+	ghProxyPrefixes = []string{}
+	defer func() { ghProxyPrefixes = oldPrefixes }()
+
 	path, err := Download(server.URL+"/pkg.zip", "deadbeef")
 	if err == nil {
 		t.Fatal("hash 不匹配应报错")
@@ -332,6 +337,11 @@ func TestDownload_RejectsOversized(t *testing.T) {
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", 600<<20))
 	}))
 	defer server.Close()
+
+	// 多源回退隔离：Content-Length 超限失败路径不得回退到真实 ghProxyPrefixes
+	oldPrefixes := ghProxyPrefixes
+	ghProxyPrefixes = []string{}
+	defer func() { ghProxyPrefixes = oldPrefixes }()
 
 	// P3 修复（code_review）：加路径段——原 `server.URL` 的 filepath.Base 在 Windows 上
 	// 是含冒号的非法文件名，os.Create 在 Content-Length 预检前失败 → 超限分支在
@@ -349,12 +359,96 @@ func TestDownload_HTTPError(t *testing.T) {
 	}))
 	defer server.Close()
 
+	// 多源回退隔离：404 失败路径不得回退到真实 ghProxyPrefixes
+	oldPrefixes := ghProxyPrefixes
+	ghProxyPrefixes = []string{}
+	defer func() { ghProxyPrefixes = oldPrefixes }()
+
 	path, err := Download(server.URL+"/pkg.zip", "")
 	if err == nil {
 		t.Fatal("404 应返回错误（错误页不得当更新包）")
 	}
 	if path != "" {
 		t.Errorf("失败时不应返回临时文件路径，得到 %q", path)
+	}
+}
+
+// TestDownload_MultiSource_DirectFirst 直连成功 → 代理不被请求
+func TestDownload_MultiSource_DirectFirst(t *testing.T) {
+	body := []byte("direct ok")
+	direct := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(body)
+	}))
+	defer direct.Close()
+	var proxyHits int
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		proxyHits++
+		http.Error(w, "should not hit", http.StatusInternalServerError)
+	}))
+	defer proxy.Close()
+
+	oldPrefixes := ghProxyPrefixes
+	ghProxyPrefixes = []string{proxy.URL + "/"}
+	defer func() { ghProxyPrefixes = oldPrefixes }()
+
+	path, err := Download(direct.URL+"/pkg.zip", "")
+	if err != nil {
+		t.Fatalf("Download() = %v", err)
+	}
+	defer os.Remove(path)
+	if proxyHits != 0 {
+		t.Errorf("直连成功时代理不应被请求，实际 %d 次", proxyHits)
+	}
+}
+
+// TestDownload_MultiSource_FallbackToProxy 直连失败（403）→ 回退代理成功
+func TestDownload_MultiSource_FallbackToProxy(t *testing.T) {
+	body := []byte("update package via proxy")
+	direct := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "blocked", http.StatusForbidden)
+	}))
+	defer direct.Close()
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(body)
+	}))
+	defer proxy.Close()
+
+	oldPrefixes := ghProxyPrefixes
+	ghProxyPrefixes = []string{proxy.URL + "/"}
+	defer func() { ghProxyPrefixes = oldPrefixes }()
+
+	path, err := Download(direct.URL+"/pkg.zip", "")
+	if err != nil {
+		t.Fatalf("Download() = %v", err)
+	}
+	defer os.Remove(path)
+	data, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(data, body) {
+		t.Errorf("回退代理内容不符: err=%v", err)
+	}
+}
+
+// TestDownload_MultiSource_AllFail 全部源失败 → 错误信息聚合各源
+func TestDownload_MultiSource_AllFail(t *testing.T) {
+	direct := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "blocked", http.StatusForbidden)
+	}))
+	defer direct.Close()
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "proxy down", http.StatusBadGateway)
+	}))
+	defer proxy.Close()
+
+	oldPrefixes := ghProxyPrefixes
+	ghProxyPrefixes = []string{proxy.URL + "/"}
+	defer func() { ghProxyPrefixes = oldPrefixes }()
+
+	_, err := Download(direct.URL+"/pkg.zip", "")
+	if err == nil {
+		t.Fatal("全部源失败应报错")
+	}
+	if !strings.Contains(err.Error(), "个源均失败") {
+		t.Errorf("错误信息应聚合源数: %v", err)
 	}
 }
 

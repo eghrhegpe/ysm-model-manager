@@ -60,8 +60,8 @@
 
 **YSMParser WASM 在 Android WebView 的可用性**——MikuMikuAR 的实证教训（ADR-133）：Android WebView `crossOriginIsolated` 恒为 false，**依赖 SharedArrayBuffer 的多线程 WASM 在 Android 直接不可用**。MikuMikuAR 为此把物理降级为 SPR 单线程。需验证：
 
-1. YSMParser WASM 是否依赖 `SharedArrayBuffer` / `Atomics`（若仅单线程解码则无碍）；
-2. WebView2 → Android WebView 的渲染性能差距（低端机初始化慢，MikuMikuAR 用 `isAndroid` 守卫降级质量）。
+1. ~~YSMParser WASM 是否依赖 `SharedArrayBuffer` / `Atomics`~~ → **✅ 已审计（2026-08-09）**：二进制 memory 段为 defined memory（flags=1 非共享，min=259/max=32768），glue `YSMParser.js` 零 `SharedArrayBuffer`/`Atomics` 引用——**单线程纯计算，Android WebView 可直接运行，无需 WASM 降级**。审计方法：node 解析 wasm 段结构（LEB128）+ glue 源码 grep。
+2. WebView2 → Android WebView 的渲染性能差距（低端机初始化慢，MikuMikuAR 用 `isAndroid` 守卫降级质量）——留待真机验证，非阻塞。
 
 ### 建议路径（三阶段，每阶段独立可交付）
 
@@ -87,8 +87,9 @@
 
 **已知遗留**
 - 自动更新维持 Windows-only（ADR-033 已明确拒绝非 Windows，需跨平台需求信号再立项）。
-- 前端 `prompt()`/`confirm()` 残留未审计（P2 Android 前置项）。
-- YSMParser WASM 的 SharedArrayBuffer 依赖未审计（P2 红线前置项）。
+- ~~前端 `prompt()`/`confirm()` 残留未审计~~ → **✅ 已审计（2026-08-09）**：`grep prompt(/confirm(` 全前端仅命中 `modal.ts:93` 注释；已统一走 `modalPrompt/modalConfirm/modalSelect`（ADR-014 治理成果），**Android WebView 对话框兼容无需改动**。
+- ~~YSMParser WASM 的 SharedArrayBuffer 依赖未审计~~ → **✅ 已审计（2026-08-09）**：单线程无共享内存（见 §2 高阻），Android 直接可用。
+- P2 Android 的 PathManager/SAF/事件总线适配尚未实施（工程资产已搬运，见 `build/android/`，Java 层为 Wails 官方模板）。
 
 ## 4. 数据溯源
 
@@ -105,5 +106,8 @@
 | MikuMikuAR `docs/adr/adr-017` | Android 适配主体完成（SAF/cleartext/事件总线/readFileBytes+Blob URL） |
 | MikuMikuAR `docs/adr/adr-018` | PathManager build-tags 平台抽象 |
 | MikuMikuAR `docs/adr/adr-133` | Android `crossOriginIsolated` 恒 false，MPR 多线程不可用 |
+| ysm `frontend/public/wasm/YSMParser.wasm`（node 解析 memory 段） | defined memory flags=1 非共享、min=259/max=32768 → **单线程** |
+| ysm `frontend/public/wasm/YSMParser.js`（grep） | 零 `SharedArrayBuffer`/`Atomics` 引用 |
+| ysm `frontend/src` grep `prompt(/confirm(` | 仅命中 `modal.ts:93` 注释；统一 `modalPrompt/modalConfirm/modalSelect` |
 
 <!-- 文件名: cross-platform-feasibility.md → 实际文件 ADR-046-cross-platform-feasibility.md -->

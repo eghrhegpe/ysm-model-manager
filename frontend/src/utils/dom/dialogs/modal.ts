@@ -112,7 +112,7 @@ export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
     box.style.gap = "10px";
 
     box.innerHTML = `
-      <div class="dlg-title" style="margin:0">${icon || ""} ${esc(title)}</div>
+      <div class="dlg-title" style="margin:0">${esc(icon || "")} ${esc(title)}</div>
       <input id="mp-input" maxlength="255" value="${esc(value || "")}" placeholder="${esc(placeholder || "")}" style="width:100%;padding:6px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:12px;box-sizing:border-box">
       <div id="mp-err" class="dlg-err"></div>
       <div class="dlg-footer" style="padding:0">
@@ -196,7 +196,7 @@ export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
 
     box.innerHTML =
       '<div class="dlg-title" style="margin:0">' +
-      (icon || "") +
+      esc(icon || "") +
       " " +
       esc(title) +
       "</div>" +
@@ -274,7 +274,7 @@ export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
     if (width) box.style.width = width;
 
     box.innerHTML = `
-      <div class="dlg-title" style="margin:0">${icon || ""} ${esc(title)}</div>
+      <div class="dlg-title" style="margin:0">${esc(icon || "")} ${esc(title)}</div>
       ${opts.bodyHTML ?? `<div style="font-size:11px;color:var(--txt);line-height:1.5;white-space:pre-wrap;max-height:55vh;overflow-y:auto">${esc(message)}</div>`}
       <div class="dlg-footer" style="padding:0">
         <button id="mc-cancel" class="dlg-btn">取消 (Esc)</button>
@@ -294,5 +294,11 @@ export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
       close(false);
     (box.querySelector("#mc-ok") as HTMLElement).onclick = (): void =>
       close(true);
+    // P3 修复（审核发现）：按钮文案声明「确定 (Enter)」但实现只有 Esc——prompt/select
+    // 都有 Enter 处理器，confirm 唯独缺失，焦点在 overlay 时按 Enter 无反应
+    box.addEventListener("keydown", (e: KeyboardEvent): void => {
+      if (e.key === "Enter") close(true);
+      if (e.key === "Escape") close(false);
+    });
   });
 }

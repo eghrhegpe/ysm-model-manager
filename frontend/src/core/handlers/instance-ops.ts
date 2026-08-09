@@ -36,9 +36,14 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
 
         let dirs: string[] = [];
         let labels: string[] = [];
-        if (rtype && subDirAll[rtype]) {
-          dirs = [ins.VersionDir + "/" + subDirAll[rtype]];
-          labels = [rtype];
+        if (rtype) {
+          if (subDirAll[rtype]) {
+            dirs = [ins.VersionDir + "/" + subDirAll[rtype]];
+            labels = [rtype];
+          }
+          // P3 修复（审核发现）：rtype 指定但未命中映射时，原实现静默遍历全部类型——
+          // 用户选「导出 MMD」却把整合包所有类型都复制出来；现保持 dirs 为空，
+          // 走下方 totalFiles===0 的「没有资源文件」info toast，不静默扩大范围
         } else {
           for (const [rt, sub] of Object.entries(subDirAll)) {
             dirs.push(ins.VersionDir + "/" + sub);

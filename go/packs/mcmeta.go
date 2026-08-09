@@ -16,9 +16,9 @@ import (
 
 // 资源包文件大小上限
 const (
-	maxMcmetaSize = 1 << 20 // pack.mcmeta 1MB（合法文件通常 < 1KB）
+	maxMcmetaSize = 1 << 20  // pack.mcmeta 1MB（合法文件通常 < 1KB）
 	maxPackPng    = 10 << 20 // pack.png 10MB
-	maxLangSize   = 1 << 20 // lang 文件 1MB（合法文件通常 < 10KB）
+	maxLangSize   = 1 << 20  // lang 文件 1MB（合法文件通常 < 10KB）
 )
 
 // ReadPackMeta 从资源包文件（.zip 或目录）中读取 pack.mcmeta，返回名称和 base64 缩略图

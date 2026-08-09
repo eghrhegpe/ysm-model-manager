@@ -117,6 +117,28 @@ describe("modalConfirm — 确认框", () => {
     overlay.click();
     await expect(promise).resolves.toBe(false);
   });
+
+  it("Enter 键确认返回 true（P3 修复：文案声明 (Enter) 但原实现只有 Esc）", async () => {
+    const promise = modalConfirm({ title: "确认?", message: "继续?" });
+    const box = document.querySelector(".dlg-box") as HTMLElement;
+    box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    await expect(promise).resolves.toBe(true);
+  });
+
+  it("Escape 键取消返回 false", async () => {
+    const promise = modalConfirm({ title: "确认?", message: "继续?" });
+    const box = document.querySelector(".dlg-box") as HTMLElement;
+    box.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await expect(promise).resolves.toBe(false);
+  });
+
+  it("icon 经 esc 转义（P3 修复：标题 icon 裸插 innerHTML 会注入）", async () => {
+    modalConfirm({ title: "确认", icon: '<img src=x onerror="alert(1)">', message: "m" });
+    const titleEl = document.querySelector(".dlg-title") as HTMLElement;
+    expect(titleEl.querySelector("img")).toBeNull(); // 未生成 img 元素
+    expect(titleEl.innerHTML).toContain("&lt;img"); // 原文以转义形式保留
+    closeActiveDlg();
+  });
 });
 
 describe("modalPrompt — 输入框", () => {

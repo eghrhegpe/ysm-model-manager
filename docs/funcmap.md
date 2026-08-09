@@ -521,22 +521,22 @@
 | `App.SetModelTags()` | `internal/app/app_tags:34` | SetModelTags 设置指定模型文件的标签列表（覆盖写入） |
 | `App.ListByTag()` | `internal/app/app_tags:39` | ListByTag 返回所有打了指定标签的文件路径列表 |
 | `App.AllTags()` | `internal/app/app_tags:44` | AllTags 返回所有被使用的标签（按使用次数降序） |
-| `App.DefaultWorkshopSites()` | `internal/app/app_workshop:49` | — |
-| `App.SaveWorkshopSites()` | `internal/app/app_workshop:57` | — |
-| `App.LoadWorkshopCreators()` | `internal/app/app_workshop:102` | — |
-| `App.SaveWorkshopCreators()` | `internal/app/app_workshop:110` | — |
-| `App.SaveWorkshopCreatorsBySite()` | `internal/app/app_workshop:119` | SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动 |
-| `App.SaveWorkshopPresetsBySite()` | `internal/app/app_workshop:135` | SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动 |
-| `App.LoadGitHubRepos()` | `internal/app/app_workshop:155` | — |
-| `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:163` | — |
-| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:176` | ========== CSV 导出/导入 ========== |
-| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:188` | — |
-| `App.ValidateWorkshopSites()` | `internal/app/app_workshop:201` | — |
-| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:217` | — |
-| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:243` | — |
-| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:250` | — |
-| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:263` | — |
-| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:301` | — |
+| `App.DefaultWorkshopSites()` | `internal/app/app_workshop:48` | — |
+| `App.SaveWorkshopSites()` | `internal/app/app_workshop:56` | — |
+| `App.LoadWorkshopCreators()` | `internal/app/app_workshop:101` | — |
+| `App.SaveWorkshopCreators()` | `internal/app/app_workshop:109` | — |
+| `App.SaveWorkshopCreatorsBySite()` | `internal/app/app_workshop:118` | SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动 |
+| `App.SaveWorkshopPresetsBySite()` | `internal/app/app_workshop:134` | SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动 |
+| `App.LoadGitHubRepos()` | `internal/app/app_workshop:154` | — |
+| `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:162` | — |
+| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:175` | ========== CSV 导出/导入 ========== |
+| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:187` | — |
+| `App.ValidateWorkshopSites()` | `internal/app/app_workshop:200` | — |
+| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:216` | — |
+| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:242` | — |
+| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:249` | — |
+| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:262` | — |
+| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:300` | — |
 | `NewApp()` | `internal/app/app:39` | — |
 | `App.SetApp()` | `internal/app/app:55` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
 | `App.SetMainWindow()` | `internal/app/app:60` | SetMainWindow 注入主窗口实例，避免依赖 Window.Current()。 |

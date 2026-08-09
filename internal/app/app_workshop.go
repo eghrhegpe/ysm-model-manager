@@ -16,7 +16,6 @@ import (
 	"ysm-model-manager/go/types"
 )
 
-
 // ========== 创意工坊站点配置 ==========
 func workshopSitesPath() string {
 	exe, _ := os.Executable()

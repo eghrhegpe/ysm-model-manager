@@ -141,7 +141,9 @@ export async function loadOldestModel(
 
       // 资历最深
       const sorted = [...entries]
-        .filter((e) => e.ModTime)
+        // P4（审核发现）：`filter(e => e.ModTime)` truthiness 把合法 ModTime=0（epoch）
+        // 与 NaN 一并剔出资历最深——显式守卫，语义与热力图/推荐分支一致
+        .filter((e) => Number.isFinite(e.ModTime) && e.ModTime > 0)
         .sort((a, b) => a.ModTime - b.ModTime);
       const oldest4 = sorted.slice(0, 4);
       let oldestHtml = "";
@@ -295,7 +297,7 @@ export async function loadOldestModel(
     }
   }
 
-  // 监听全局类型切换（unsub 为局部变量，此处恒 null——死代码已随迁移清除）
+  // 监听全局类型切换
   unsub = bus.on("repo:rtype-changed", (rtype) => {
     if (rtype && rtype !== currentType) {
       currentType = rtype;
@@ -309,6 +311,10 @@ export async function loadOldestModel(
   return () => {
     container.removeEventListener("click", handleContainerClick);
     if (unsub) unsub();
+    // P3 修复（审核发现）：cleanup 后递增代数——若 render 在清理后完成（迟到响应），
+    // 仍会向容器写 innerHTML 并重新 addEventListener；容器若被复用则残留点击监听
+    // （幽灵路径/泄漏）。递增后任何在途 render 的 gen 比对都会丢弃结果。
+    _loadGen++;
   };
 }
 

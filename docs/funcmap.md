@@ -415,20 +415,20 @@
 | `App.CacheModelAvatars()` | `internal/app/app_avatar:124` | CacheModelAvatars 从解压目录 ysm.json 缓存头像 |
 | `App.GetConfigPath()` | `internal/app/app_config:48` | GetConfigPath 返回应用配置文件路径（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application |
 | `App.SaveAppConfig()` | `internal/app/app_config:109` | — |
-| `App.SetDownloadMirror()` | `internal/app/app_config:168` | — |
-| `App.LoadAppConfig()` | `internal/app/app_config:197` | — |
-| `App.GetSubDirMap()` | `internal/app/app_config:218` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
-| `App.CurrentVersion()` | `internal/app/app_config:222` | — |
-| `App.CheckUpdate()` | `internal/app/app_config:224` | — |
-| `App.DownloadUpdate()` | `internal/app/app_config:228` | — |
-| `App.ApplyUpdate()` | `internal/app/app_config:232` | — |
-| `App.DoUpdate()` | `internal/app/app_config:236` | — |
-| `App.RestartApplication()` | `internal/app/app_config:248` | — |
-| `App.SaveWindowPosition()` | `internal/app/app_config:300` | — |
-| `App.GetWindowPosition()` | `internal/app/app_config:314` | — |
-| `App.SelectDirectory()` | `internal/app/app_config:345` | ========== 目录选择 ========== |
-| `App.GetMinecraftPaths()` | `internal/app/app_config:406` | — |
-| `App.ValidateMinecraftDir()` | `internal/app/app_config:408` | — |
+| `App.SetDownloadMirror()` | `internal/app/app_config:173` | — |
+| `App.LoadAppConfig()` | `internal/app/app_config:202` | — |
+| `App.GetSubDirMap()` | `internal/app/app_config:223` | ========== 自动更新 ========== GetSubDirMap 返回资源类型→子目录映射表（前端右键菜单等场景使用） |
+| `App.CurrentVersion()` | `internal/app/app_config:227` | — |
+| `App.CheckUpdate()` | `internal/app/app_config:229` | — |
+| `App.DownloadUpdate()` | `internal/app/app_config:233` | — |
+| `App.ApplyUpdate()` | `internal/app/app_config:237` | — |
+| `App.DoUpdate()` | `internal/app/app_config:241` | — |
+| `App.RestartApplication()` | `internal/app/app_config:253` | — |
+| `App.SaveWindowPosition()` | `internal/app/app_config:305` | — |
+| `App.GetWindowPosition()` | `internal/app/app_config:319` | — |
+| `App.SelectDirectory()` | `internal/app/app_config:350` | ========== 目录选择 ========== |
+| `App.GetMinecraftPaths()` | `internal/app/app_config:411` | — |
+| `App.ValidateMinecraftDir()` | `internal/app/app_config:413` | — |
 | `NewDownloadQueue()` | `internal/app/app_download:51` | NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入） |
 | `App.EnqueueDownloads()` | `internal/app/app_download:56` | — |
 | `App.CancelQueue()` | `internal/app/app_download:86` | — |

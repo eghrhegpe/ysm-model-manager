@@ -109,13 +109,18 @@ func (a *App) loadAppConfig() {
 func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) error {
 	oldCfg := a.LoadAppConfig()
 	// P4 修复：校验失败时 validated 置空 → 下方 orDefault 回退 oldCfg.McRoot——
-	// 原实现校验失败 errMsg 被丢弃、未校验的 mcRoot 原样写入（配置损坏路径静默生效）
+	// 原实现校验失败 errMsg 被丢弃、未校验的 mcRoot 原样写入（配置损坏路径静默生效）。
+	// P2 修正（code_review）：不得静默回退并返回 nil（假成功）——回退旧值但 SaveAppConfig
+	// 返回 nil 会使前端发成功 toast、内存 cfg.mcRoot 更新为新路径而磁盘保留旧路径（UI/磁盘
+	// 分叉、重启后设置静默消失）。校验失败必须返回错误让 Wails binding reject；
+	// 注意 v1.3.2 历史约束（写盘前返回错误阻塞配置创建）——此处 fallback 写盘已就绪，
+	// 返回错误不重蹈覆辙
 	validated := mcRoot
 	if mcRoot != "" {
 		if v, errMsg := a.ValidateMinecraftDir(mcRoot); errMsg == "" {
 			validated = v
 		} else {
-			validated = ""
+			return fmt.Errorf("游戏目录校验失败: %s", errMsg)
 		}
 	}
 	cfg := types.AppConfig{

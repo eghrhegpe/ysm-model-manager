@@ -229,11 +229,18 @@ func buildRegionInfo(region map[string]any) *regionInfo {
 		log.Printf("[litematic] region Size 超出合理范围，跳过: %d×%d×%d", sx, sy, sz)
 		return nil
 	}
-	// P3 修复：origin+size 超 int16 范围的 region 丢弃——坐标源是 int32（origin/px/py/pz），
+	// P3 修复：origin+size 超出 int16 表示范围的 region 丢弃——坐标源是 int32（origin/px/py/pz），
 	// 体素输出 `[3]int16`（voxel.go:30 / types.VoxelGroup.Positions）会静默回绕
-	// （±32767 外坐标 3D 渲染位置错乱）。与 maxRegionAxis 口径一致：合理 litematic
-	// 坐标远在 int16 内，超限属损坏/畸形文件，丢弃并记录
-	if ox > maxCoord || ox+sx > maxCoord || oy > maxCoord || oy+sy > maxCoord || oz > maxCoord || oz+sz > maxCoord {
+	// （±32768 外坐标 3D 渲染位置错乱）。与 maxRegionAxis 口径一致：合理 litematic
+	// 坐标远在 int16 内，超限属损坏/畸形文件，丢弃并记录。
+	// P2 修复（code_review）：双侧校验 + 上界 off-by-one——原仅查正上界 `ox > maxCoord`，
+	// 负 origin（如 -40000）会回绕成 25536 产生错误渲染位；且 `ox+sx > maxCoord` 会拒绝
+	// `ox+sx-1 == 32767` 的可表示坐标（origin 0 + size 32768 含 x=32767 合法）。
+	// int16 范围是 [-32768, 32767]，故拒绝 `origin < -32768` 或 `origin+size-1 > 32767`。
+	const minCoord = -32768 // int16 表示下限
+	if ox < minCoord || ox+sx-1 > maxCoord ||
+		oy < minCoord || oy+sy-1 > maxCoord ||
+		oz < minCoord || oz+sz-1 > maxCoord {
 		log.Printf("[litematic] region 坐标超出 int16 表示范围，跳过: origin=(%d,%d,%d) size=%d×%d×%d", ox, oy, oz, sx, sy, sz)
 		return nil
 	}

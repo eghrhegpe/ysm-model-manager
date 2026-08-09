@@ -20,8 +20,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export function getRoot() {
   return path.resolve(__dirname, '..', '..');
 }
-
-const ROOT = getRoot();
+// 注：ROOT 由 execFileSync 的 cwd 选项使用（见 rg()），不再单独存模块级常量
 
 /**
  * 运行 ripgrep，返回匹配行数组（无匹配 → []）。
@@ -48,7 +47,10 @@ export function rg(pattern, paths, globs = null) {
     cmd.push(p);
   }
   try {
-    const out = execFileSync('rg', cmd, { encoding: 'utf-8', timeout: 30000, maxBuffer: 64 * 1024 * 1024 });
+    // cwd 用 getRoot()（code_review P2）：paths 按文档契约相对仓库根——若不设 cwd，
+    // rg 会按调用方 process.cwd() 解析相对路径，非 ROOT 目录调用会扫错树 → rgSafe 假绿。
+    // 注意不能引用已删除的模块级 ROOT 常量（ReferenceError 会被 catch 成 status=unknown）
+    const out = execFileSync('rg', cmd, { cwd: getRoot(), encoding: 'utf-8', timeout: 30000, maxBuffer: 64 * 1024 * 1024 });
     if (out.trim()) return out.trim().split('\n').filter((l) => l.trim());
     return []; // rg 退出码 1：无匹配
   } catch (err) {

@@ -90,7 +90,11 @@ check('--suggest 解析真实 coverage（低覆盖率文件 > 0）', () => {
   const j = JSON.parse(out);
   assert.ok(Array.isArray(j.files));
   assert.ok(j._summary.files > 0, `应有源文件（实际 ${j._summary.files}）`);
-  assert.ok(j._summary.thresholdStmts === 45, `阈值应读 vite.config.js（实际 ${j._summary.thresholdStmts}）`);
+  // 阈值断言与配置源 vitest.config.ts 一致（code_review P3：此前硬编码 45，阈值调整后测试漂移）
+  const vitestCfg = fs.readFileSync(path.join(ROOT, 'frontend/vitest.config.ts'), 'utf8');
+  const cfgStmts = Number((vitestCfg.match(/statements\s*:\s*(\d+)/) || [])[1]);
+  assert.ok(Number.isFinite(cfgStmts), 'vitest.config.ts 应有 statements 阈值');
+  assert.ok(j._summary.thresholdStmts === cfgStmts, `阈值应读 vitest.config.ts（配置 ${cfgStmts}，实际 ${j._summary.thresholdStmts}）`);
   for (const f of j.files) {
     assert.ok(f.stmts < j._summary.thresholdStmts, `${f.file} 应低于阈值`);
   }

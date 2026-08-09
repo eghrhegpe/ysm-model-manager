@@ -172,7 +172,8 @@ describe("app-sidebar — 推送所选", () => {
     }
 
     await waitFor(() => toasts.some((t) => t.msg.includes("推送完成")));
-    expect(toasts.some((t) => t.type !== "warn" && t.msg.includes("推送完成：1 个整合包"))).toBe(true);
+    // 成功 toast 不带 type（默认 success），用 `!t.type || success` 精确锁定
+    expect(toasts.some((t) => (!t.type || t.type === "success") && t.msg.includes("推送完成：1 个整合包"))).toBe(true);
     expect(pushBtn.disabled).toBe(false);
     expect(pushBtn.textContent).toBe("⬆️ 推送所选 ▾");
   });
@@ -194,8 +195,36 @@ describe("app-sidebar — 推送所选", () => {
     }
 
     await waitFor(() => toasts.some((t) => t.type === "warn" && t.msg.includes("推送完成")));
-    expect(toasts.some((t) => t.msg.includes("操作超时"))).toBe(true);
+    // P3 修复（审核发现）：skipped 与超时分别计数——文案为「被跳过」而非「超时」
+    expect(toasts.some((t) => t.msg.includes("被跳过"))).toBe(true);
     expect(pushBtn.disabled).toBe(false);
+    expect(pushBtn.textContent).toBe("⬆️ 推送所选 ▾");
+  });
+
+  it("错误 token 的 done 不解锁（P2 修复防线负向验证）", async () => {
+    const el = await mountSidebar();
+    checkFirst(el);
+
+    const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
+    pushBtn.click();
+    const menu = $<HTMLElement>(el, "#sidebar-push-menu");
+    menu.querySelector('.dd-item[data-sync-type="all"]')!.dispatchEvent(
+      new MouseEvent("click", { bubbles: true }),
+    );
+    await waitFor(() => missingPayloads.length > 0);
+
+    // 发错误 token + 匹配 instanceName——旧实现 `|| payload?.instanceName === insName`
+    // 会误判成功（P1 bug 回退防线）；负向验证：按钮保持锁定、无完成 toast
+    bus.emit("sync:download:done", { token: "WRONG-TOKEN", instanceName: "insA" });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(pushBtn.disabled).toBe(true);
+    expect(toasts.some((t) => t.msg.includes("推送完成"))).toBe(false);
+
+    // 清理：补发正确 token 让 promise settle，避免挂起 30s timer
+    for (const p of missingPayloads) {
+      bus.emit("sync:download:done", { token: p.token });
+    }
+    await waitFor(() => pushBtn.disabled === false);
   });
 });
 

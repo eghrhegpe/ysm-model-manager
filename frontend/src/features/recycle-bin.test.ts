@@ -28,4 +28,11 @@ describe("isPathInRoot — 回收站路径前缀过滤", () => {
     expect(isPathInRoot("D:\\games\\ysm\\a.ysm", "D:/games/ysm")).toBe(true);
     expect(isPathInRoot("D:\\games\\ysm2\\a.ysm", "D:/games/ysm")).toBe(false);
   });
+
+  it("大小写不敏感（P3 修复：与 Go 侧 fsutil.IsRecycleDir EqualFold 对齐）", () => {
+    // Windows 文件系统大小写不敏感——GetRepoRoot 与条目 Path 大小写不一致时
+    // 不得误过滤合法条目（假阴性）
+    expect(isPathInRoot("D:/Games/YSM/a.ysm", "D:/games/ysm")).toBe(true);
+    expect(isPathInRoot("D:/games/ysm/a.ysm", "D:/GAMES/ysm/")).toBe(true);
+  });
 });

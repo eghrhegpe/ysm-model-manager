@@ -192,14 +192,19 @@ export function initImportQueue(app: ImportQueueHost): () => void {
 
   // 检查文件是否已存在（防抖）
   let conflictTimer: ReturnType<typeof setTimeout> | null = null;
+  // P3（审核发现，ADR-031）：防抖只 clearTimeout 合并调度，执行体可并发——timer1 在
+  // await CheckFileExists 期间 timer2 已启动，旧结果后到会覆盖新结果；用 gen 比对丢弃过期结果
+  let conflictCheckGen = 0;
   const checkConflictDebounced = (name: string): void => {
     if (conflictTimer) clearTimeout(conflictTimer);
     conflictTimer = setTimeout(async () => {
+      const gen = ++conflictCheckGen;
       try {
         const { CheckFileExists, GetRepoRoot } = await getApp();
         const repoRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
         const fullPath = (repoRoot || "") + "/" + name;
         const exists = await CheckFileExists(fullPath);
+        if (gen !== conflictCheckGen) return; // 新请求已发出，丢弃过期结果
         const el = root.getElementById("dl-conflict") as HTMLElement | null;
         if (el) el.style.display = exists ? "" : "none";
       } catch (e) {
@@ -259,7 +264,10 @@ export function initImportQueue(app: ImportQueueHost): () => void {
         }
       }
       updatePreview();
-    } catch (_) {}
+    } catch (e) {
+      // P3（审核发现）：不静默吞错——ExtractYSMHeaderFromBase64 失败用户零感知
+      console.warn("[import-queue] 读取头部失败:", e);
+    }
   };
 
   const fromHeaderChk = root.getElementById(

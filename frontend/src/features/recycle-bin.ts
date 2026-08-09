@@ -21,8 +21,11 @@ export interface RecycleHost {
  * - root 尾部可能带分隔符（specificRoot 返回用户配置原值）→ 先剥尾部分隔符
  */
 export function isPathInRoot(path: string, root: string): boolean {
-  const p = path.replace(/\\/g, "/");
-  const r = root.replace(/\\/g, "/").replace(/\/+$/, "");
+  // P3（审核发现）：Windows 文件系统大小写不敏感——与 Go 侧 fsutil.IsRecycleDir 的
+  // EqualFold 对齐（AGENTS.md 边界对称③），避免 GetRepoRoot 与条目 Path 大小写不一致
+  // 时合法条目被过滤（假阴性）
+  const p = path.replace(/\\/g, "/").toLowerCase();
+  const r = root.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
   return p === r || p.startsWith(r + "/");
 }
 
@@ -37,7 +40,11 @@ export function initRecycleBin(app: RecycleHost): () => void {
   root
     .getElementById("recy-refresh")
     ?.addEventListener("click", onRefreshClick);
+  // P3（审核发现）：清空按钮无 busy 守卫——restore/delete 有 btn.disabled，empty 没有。
+  // modal 单例防住弹窗叠加，但确认后 EmptyRecycleBin 在途期间按钮仍可再点 → 并发清空
+  let _emptyBusy = false;
   const onEmptyClick = async (): Promise<void> => {
+    if (_emptyBusy) return;
     const confirmed = await modalConfirm({
       title: "清空回收站",
       icon: "♻️",
@@ -46,6 +53,7 @@ export function initRecycleBin(app: RecycleHost): () => void {
       danger: true,
     });
     if (!confirmed) return;
+    _emptyBusy = true;
     try {
       const { EmptyRecycleBin } = await getApp();
       const n = await EmptyRecycleBin("");
@@ -63,6 +71,8 @@ export function initRecycleBin(app: RecycleHost): () => void {
         duration: 5000,
         type: "error",
       });
+    } finally {
+      _emptyBusy = false;
     }
   };
   root.getElementById("recy-empty")?.addEventListener("click", onEmptyClick);

@@ -191,7 +191,8 @@ class AppSidebar extends HTMLElement {
       pushBtn.textContent = "⏳";
       pushBtn.disabled = true;
       (async () => {
-        let failed = 0;
+        let skipped = 0;
+        let timedOut = 0;
         try {
         const types = resolveTypes((item as HTMLElement).dataset.syncType || "all");
         for (const insName of selected) {
@@ -208,7 +209,11 @@ class AppSidebar extends HTMLElement {
                   unsub();
                   if (timer) clearTimeout(timer);
                   if (payload.skipped) {
-                    reject(new Error(`推送被跳过（已有同步进行中）: ${insName}/${rt}`));
+                    // P3 修复（审核发现）：skipped 与超时混报——附 kind 标记供结果分类，
+                    // 避免 toast 把「被跳过」误报为「超时」
+                    const err = new Error(`推送被跳过（已有同步进行中）: ${insName}/${rt}`);
+                    (err as Error & { kind?: string }).kind = "skipped";
+                    reject(err);
                   } else {
                     resolve(payload);
                   }
@@ -216,15 +221,27 @@ class AppSidebar extends HTMLElement {
               });
               timer = setTimeout(() => {
                 unsub();
-                reject(new Error(`推送超时: ${insName}/${rt}`));
+                const err = new Error(`推送超时: ${insName}/${rt}`);
+                (err as Error & { kind?: string }).kind = "timeout";
+                reject(err);
               }, 30000);
               bus.emit("sync:download:missing", { instanceName: insName, rtype: rt, token });
             })),
           );
-          results.forEach((r) => { if (r.status === "rejected") failed++; });
+          results.forEach((r) => {
+            if (r.status !== "rejected") return;
+            const kind = (r.reason as Error & { kind?: string })?.kind;
+            if (kind === "skipped") skipped++;
+            else timedOut++;
+          });
         }
-        if (failed > 0) {
-          bus.emit("toast:show", { msg: `⚠️ 推送完成，${failed} 个操作超时`, duration: 3000, type: "warn" });
+        if (skipped > 0 || timedOut > 0) {
+          // P3 修复（审核发现）：skipped 与超时分别计数——原统一报「操作超时」，
+          // 被 busy 跳过的请求被误报为超时（真实原因是同步进行中）
+          const parts: string[] = [];
+          if (skipped > 0) parts.push(`${skipped} 个被跳过（同步进行中）`);
+          if (timedOut > 0) parts.push(`${timedOut} 个超时`);
+          bus.emit("toast:show", { msg: `⚠️ 推送完成，${parts.join("，")}`, duration: 3000, type: "warn" });
         } else {
           bus.emit("toast:show", { msg: `✅ 推送完成：${selected.length} 个整合包`, duration: 2500 });
         }

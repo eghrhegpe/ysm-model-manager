@@ -688,7 +688,7 @@
 | `loadOldestModel()` | `frontend/src/features/oldest-models:26` | 加载资历最深、仓库评分、热力图和每日推荐 |
 | `RecycleHost()` | `frontend/src/features/recycle-bin:12` | app-content 组件实例（initRecycleBin 依赖的成员） |
 | `isPathInRoot()` | `frontend/src/features/recycle-bin:23` | 判断条目路径是否位于资源根目录内（带路径分隔符边界，P3 修复）。 |
-| `initRecycleBin()` | `frontend/src/features/recycle-bin:30` | 初始化回收站管理，返回清理函数 |
+| `initRecycleBin()` | `frontend/src/features/recycle-bin:33` | 初始化回收站管理，返回清理函数 |
 | `initResourcePacks()` | `frontend/src/features/resource-packs:13` | 初始化资源包 tab |
 | `UpdateInfo()` | `frontend/src/features/version-updater:10` | 更新信息（CheckUpdate 返回） |
 | `checkUpdateSilent()` | `frontend/src/features/version-updater:113` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |

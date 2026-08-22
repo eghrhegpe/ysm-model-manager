@@ -16,7 +16,7 @@ _ysm() {
     creator) _values 'creator 子命令' scan list export backup ;;
     dedup) _values 'dedup 子命令' scan count clean ;;
     download) _values 'download 子命令' enqueue status cancel github ;;
-    hub) _values 'hub 子命令' models search model ;;
+    hub) _values 'hub 子命令' models search model download login logout me ;;
     instance) _values 'instance 子命令' list sync push pull ;;
     recycle) _values 'recycle 子命令' list restore empty ;;
     scan) _values 'scan 子命令' models authors resources ;;

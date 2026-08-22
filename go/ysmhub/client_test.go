@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -82,4 +84,46 @@ func TestClientGetModelEscapesSlugAndSurfacesHTTPError(t *testing.T) {
 	if _, err := client.GetModel(context.Background(), "a/b"); err == nil {
 		t.Fatal("expected HTTP error")
 	}
+}
+
+func TestDownloadModelToFileUsesProxyPathAndSafeFilename(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/models/42/download":
+			if r.Method != http.MethodPost || r.URL.Query().Get("version_id") != "7" { t.Fatalf("unexpected download request: %s %s", r.Method, r.URL.String()) }
+			if r.Header.Get("Authorization") != "Bearer at" { t.Fatalf("missing bearer token") }
+			_, _ = w.Write([]byte(`{"proxy":true,"path":"/download-proxy/one-time","fileName":"../player.ysm","expires_in":60}`))
+		case "/download-proxy/one-time":
+			_, _ = w.Write([]byte("ysm-data"))
+		default:
+			http.NotFound(w, r)
+		}
+	}));
+	defer server.Close()
+	client, err := NewClient(server.URL+"/api/v1", "at")
+	if err != nil { t.Fatal(err) }
+	dir := t.TempDir()
+	path, result, err := client.DownloadModelToFile(context.Background(), "42", "7", dir)
+	if err != nil { t.Fatal(err) }
+	if result.ExpiresIn != 60 || filepath.Base(path) != "player.ysm" { t.Fatalf("unexpected result: %q %#v", path, result) }
+	data, err := os.ReadFile(path)
+	if err != nil { t.Fatal(err) }
+	if string(data) != "ysm-data" { t.Fatalf("data = %q", data) }
+}
+
+func TestDownloadModelToFileDoesNotForwardBearerToExternalSignedURL(t *testing.T) {
+	var authHeader string
+	external := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader = r.Header.Get("Authorization")
+		_, _ = w.Write([]byte("signed-data"))
+	}))
+	defer external.Close()
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"url":"` + external.URL + `/signed","fileName":"model.ysm"}`))
+	}))
+	defer api.Close()
+	client, err := NewClient(api.URL+"/api/v1", "at")
+	if err != nil { t.Fatal(err) }
+	if _, _, err := client.DownloadModelToFile(context.Background(), "42", "", t.TempDir()); err != nil { t.Fatal(err) }
+	if authHeader != "" { t.Fatalf("external signed URL received bearer token %q", authHeader) }
 }

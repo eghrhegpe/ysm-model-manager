@@ -421,7 +421,7 @@ app --cli --files-root <路径> health-report [选项...]
 
 
 ### `hub`
-浏览 YSM Hub 公共 API（models/search/model）
+YSM Hub public API (models/search/model/download/login)
 
 ```bash
 app --cli --files-root <路径> hub [选项...]
@@ -431,9 +431,13 @@ app --cli --files-root <路径> hub [选项...]
 
 | 子命令 | 说明 |
 |--------|------|
-| `models` | 列出公开模型 |
-| `search` | 搜索公开模型 |
-| `model` | 查看模型详情 |
+| `models` | list public models |
+| `search` | search public models |
+| `model` | show model details |
+| `download` | download a model (requires download scope) |
+| `login` | browser OAuth 2.1 + PKCE login |
+| `logout` | 闂侀€涘嫎閸婃繈寮ㄩ姀銈囧祦閻犲搫鎼悘鈺呮⒒閸曗晛鈧牕锕㈡导鏉戞嵍?Token |
+| `me` | show current user |
 
 
 

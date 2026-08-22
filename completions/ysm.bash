@@ -21,7 +21,7 @@ _ysm_complete() {
     creator) COMPREPLY=( $(compgen -W "scan list export backup" -- "$cur") ); return ;;
     dedup) COMPREPLY=( $(compgen -W "scan count clean" -- "$cur") ); return ;;
     download) COMPREPLY=( $(compgen -W "enqueue status cancel github" -- "$cur") ); return ;;
-    hub) COMPREPLY=( $(compgen -W "models search model" -- "$cur") ); return ;;
+    hub) COMPREPLY=( $(compgen -W "models search model download login logout me" -- "$cur") ); return ;;
     instance) COMPREPLY=( $(compgen -W "list sync push pull" -- "$cur") ); return ;;
     recycle) COMPREPLY=( $(compgen -W "list restore empty" -- "$cur") ); return ;;
     scan) COMPREPLY=( $(compgen -W "models authors resources" -- "$cur") ); return ;;

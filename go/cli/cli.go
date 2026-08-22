@@ -145,6 +145,7 @@ func printCLIHelp() {
 	fmt.Println("  app --cli --files-root ./models analyze --model ./models/player/ysm.json")
 	fmt.Println("  app --cli --files-root ./models single-bench --model ./models/player.ysm")
 	fmt.Println("  app --cli --files-root ./models concurrent-bench --workers 4")
+	fmt.Println("  app --cli --files-root ./models hub models --format json")
 }
 
 // printCommandHelp 打印子命令帮助信息

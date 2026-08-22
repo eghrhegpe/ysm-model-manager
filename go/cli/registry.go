@@ -22,7 +22,6 @@ type CliCommand struct {
 	Run         func(ctx *CmdContext) error
 }
 
-// 命令分类常量
 const (
 	CatModel    = "模型管理"
 	CatPerf     = "性能诊断"
@@ -35,7 +34,6 @@ const (
 var cliCommands = map[string]CliCommand{}
 
 // RegisterCommand 注册一个 CLI 子命令（默认归入 CatOther）
-// 重复注册会输出警告并跳过，不再 panic（init() 阶段 panic 无法 recover）
 func RegisterCommand(name, description string, run func(ctx *CmdContext) error) {
 	RegisterCommandC(name, CatOther, description, run)
 }
@@ -54,13 +52,11 @@ func RegisterCommandC(name, category, description string, run func(ctx *CmdConte
 	}
 }
 
-// GetCommand 获取已注册的命令
 func GetCommand(name string) (CliCommand, bool) {
 	cmd, exists := cliCommands[name]
 	return cmd, exists
 }
 
-// GetAllCommands 获取所有已注册命令
 func GetAllCommands() []CliCommand {
 	var cmds []CliCommand
 	for _, cmd := range cliCommands {

@@ -1,13 +1,14 @@
 # ysm CLI — PowerShell 补全（自动生成，勿手改；来源：go/cli 注册表）
-# 生成：node scripts/gen-cli-completion.mjs（顶层命令 38 个）
+# 生成：node scripts/gen-cli-completion.mjs（顶层命令 39 个）
 # 启用：Add-Content $PROFILE ". $(Resolve-Path ./completions/_ysm.ps1)"
-$ysmTopCommands = @('analyze', 'analyze-mmd', 'avatar', 'benchmark', 'cache-clear', 'cache-diag', 'cache-status', 'cache-verify', 'concurrent-bench', 'config', 'config-show', 'copy', 'creator', 'dedup', 'download', 'export', 'file-bench', 'gui-flow', 'health-report', 'install', 'instance', 'link-mode', 'list', 'move', 'perf-log', 'perf-snapshot', 'recycle', 'rename', 'repo-audit', 'resource-scan', 'scan', 'scan-dir', 'search', 'single-bench', 'tags', 'toggle', 'verify', 'workshop')
+$ysmTopCommands = @('analyze', 'analyze-mmd', 'avatar', 'benchmark', 'cache-clear', 'cache-diag', 'cache-status', 'cache-verify', 'concurrent-bench', 'config', 'config-show', 'copy', 'creator', 'dedup', 'download', 'export', 'file-bench', 'gui-flow', 'health-report', 'hub', 'install', 'instance', 'link-mode', 'list', 'move', 'perf-log', 'perf-snapshot', 'recycle', 'rename', 'repo-audit', 'resource-scan', 'scan', 'scan-dir', 'search', 'single-bench', 'tags', 'toggle', 'verify', 'workshop')
 $ysmSubs = @{
   'avatar' = @('batch', 'cached', 'cache')
   'config' = @('show', 'path', 'mc-paths', 'mirror', 'link-mode')
   'creator' = @('scan', 'list', 'export', 'backup')
   'dedup' = @('scan', 'count', 'clean')
   'download' = @('enqueue', 'status', 'cancel', 'github')
+  'hub' = @('models', 'search', 'model')
   'instance' = @('list', 'sync', 'push', 'pull')
   'recycle' = @('list', 'restore', 'empty')
   'scan' = @('models', 'authors', 'resources')
@@ -34,6 +35,7 @@ $ysmFlags = @{
   'file-bench' = @('--help', '--dir', '--file', '--iterations', '--output', '--compare')
   'gui-flow' = @('--help', '--model', '--verbose')
   'health-report' = @('--help', '--dir', '--output', '--bench')
+  'hub' = @('--help')
   'install' = @('--help', '--model', '--mc-root', '--custom-dir')
   'instance' = @('--help')
   'link-mode' = @('--help', '--mode')

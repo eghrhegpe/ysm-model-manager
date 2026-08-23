@@ -436,7 +436,7 @@ app --cli --files-root <路径> hub [选项...]
 | `model` | show model details |
 | `download` | download a model (requires download scope) |
 | `login` | browser OAuth 2.1 + PKCE login |
-| `logout` | 闂侀€涘嫎閸婃繈寮ㄩ姀銈囧祦閻犲搫鎼悘鈺呮⒒閸曗晛鈧牕锕㈡导鏉戞嵍?Token |
+| `logout` | 撤销并删除已保存的 Token |
 | `me` | show current user |
 
 

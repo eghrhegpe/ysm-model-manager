@@ -382,7 +382,7 @@ func runHubLogin(ctx *CmdContext) error {
 		return newParamErrf("hub login: redirect-uri must be a valid http(s) URL")
 	}
 	if u.Scheme != "http" || (u.Hostname() != "127.0.0.1" && u.Hostname() != "localhost") {
-		return newParamErrf("hub login: CLI 回调地址必须使用 http://127.0.0.1 或 localhost")
+		return newParamErrf("hub login: --redirect-uri 必须使用 http://127.0.0.1 或 localhost")
 	}
 	listener, err := net.Listen("tcp", u.Host)
 	if err != nil {

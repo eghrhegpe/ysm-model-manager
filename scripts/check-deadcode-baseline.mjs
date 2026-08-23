@@ -55,7 +55,15 @@ function run(name, args, opts = {}) {
     errors.push(`[工具缺失] ${name} 未安装：cd frontend && npm i -D ${name}`);
     return null;
   }
-  const r = spawnSync(exe, args, { cwd: FRONTEND, encoding: 'utf-8', shell: process.platform === 'win32' });
+  // Windows npm shims are .cmd files and therefore need cmd.exe, but passing
+  // an executable path containing spaces through spawnSync(..., {shell:true})
+  // loses the quoting before cmd.exe sees it. Build one explicitly quoted
+  // command string so repositories below paths such as "New project" work.
+  const command = process.platform === 'win32'
+    ? [exe, ...args].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(' ')
+    : exe;
+  const commandArgs = process.platform === 'win32' ? [] : args;
+  const r = spawnSync(command, commandArgs, { cwd: FRONTEND, encoding: 'utf-8', shell: process.platform === 'win32' });
   // knip 发现死代码时 exit 1（正常报告行为），允许此类退出码
   const ok = r.status === 0 || (opts.allowExit1 && r.status === 1);
   if (!ok) {

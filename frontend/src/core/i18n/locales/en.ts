@@ -62,6 +62,8 @@ export const en: Record<string, string> = {
   "hub.downloading": "Downloading…",
   "hub.noVersions": "No downloadable versions",
   "hub.versions": "Versions and downloads",
+  "hub.tags": "Tags",
+  "hub.links": "Related links",
   "hub.author": "Author: {name}",
   "hub.unknown": "Unknown",
   "hub.modelAlt": "YSM Hub model",

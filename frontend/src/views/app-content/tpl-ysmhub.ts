@@ -29,6 +29,9 @@ export function ysmHubHTML(): string {
       .ysmhub-section-title { color:var(--txt); font-size:13px; font-weight:600; margin-bottom:4px; }
       .ysmhub-version { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent); }
       .ysmhub-version-name { flex:1; color:var(--txt); font-size:12px; }
+      .ysmhub-tags,.ysmhub-links { display:flex; flex-wrap:wrap; gap:6px; color:var(--muted); font-size:11px; }
+      .ysmhub-tags span { border:1px solid var(--bd); border-radius:999px; padding:2px 7px; }
+      .ysmhub-links a { color:var(--accent); }
       .ysmhub-back { margin-right:2px; }
       @media (max-width:700px) { .ysmhub-toolbar { flex-wrap:wrap; } .ysmhub-title { width:100%; } .ysmhub-detail-head { flex-direction:column; } .ysmhub-detail-cover { max-width:none; width:100%; } }
     </style>

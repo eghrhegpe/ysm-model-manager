@@ -26,6 +26,30 @@ function errorMessage(error: unknown): string {
   return text((error as Error)?.message || error);
 }
 
+function descriptionText(model: YSMHubModel): string {
+  const raw = text(model.short_description || model.description || model.description_html || t("hub.noDescription"));
+  return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function labelOf(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    const item = value as Record<string, unknown>;
+    return text(item.name || item.label || item.title || item.url);
+  }
+  return "";
+}
+
+function safeExternalURL(value: unknown): string {
+  const raw = text(value).trim();
+  try {
+    const url = new URL(raw);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
 function coverHTML(model: YSMHubModel, cls: string): string {
   const url = text(model.cover_image_url).trim();
   if (!url) return `<div class="${cls}" aria-label="${esc(t("hub.noCover"))}"></div>`;
@@ -34,7 +58,7 @@ function coverHTML(model: YSMHubModel, cls: string): string {
 
 function modelCard(model: YSMHubModel, index: number): string {
   const title = text(model.title || model.slug || model.id);
-  const desc = text(model.short_description || model.description || t("hub.noDescription"));
+  const desc = descriptionText(model);
   return `<article class="ysmhub-card" data-hub-slug="${esc(model.slug)}" style="animation-delay:${Math.min(index * 25, 300)}ms">
     ${coverHTML(model, "ysmhub-cover")}
     <div class="ysmhub-card-body">
@@ -109,6 +133,14 @@ export function initYSMHubPage(host: HubHost): void {
       const model = detail.model;
       detailModel = model;
       const versions = detail.versions || [];
+      const tags = (detail.tags || []).map(labelOf).filter(Boolean);
+      const links = (detail.links || []).map((link) => {
+        const label = labelOf(link);
+        const url = safeExternalURL(typeof link === "object" && link !== null ? (link as Record<string, unknown>).url : link);
+        return url ? `<a href="${esc(url)}" target="_blank" rel="noreferrer">${esc(label || url)}</a>` : "";
+      }).filter(Boolean);
+      const tagsHTML = tags.length ? `<div class="ysmhub-detail-section"><div class="ysmhub-section-title">${esc(t("hub.tags"))}</div><div class="ysmhub-tags">${tags.map((tag) => `<span>${esc(tag)}</span>`).join("")}</div></div>` : "";
+      const linksHTML = links.length ? `<div class="ysmhub-detail-section"><div class="ysmhub-section-title">${esc(t("hub.links"))}</div><div class="ysmhub-links">${links.join("")}</div></div>` : "";
       const versionRows = versions.length
         ? versions.map((version: YSMHubVersion) => `<div class="ysmhub-version">
             <span class="ysmhub-version-name">${esc(text(version.version_name || t("hub.unnamedVersion")))}${version.is_recommended ? ` · ${esc(t("hub.recommended"))}` : ""}</span>
@@ -121,11 +153,11 @@ export function initYSMHubPage(host: HubHost): void {
           <div class="ysmhub-detail-copy">
             <button class="btn-base sm ysmhub-back" id="ysmhub-back">← ${esc(t("common.back"))}</button>
             <div class="ysmhub-detail-title">${esc(text(model.title || model.slug))}</div>
-            <div class="ysmhub-detail-desc">${esc(text(model.short_description || model.description || t("hub.noDescription")))}</div>
+            <div class="ysmhub-detail-desc">${esc(descriptionText(model))}</div>
             <div class="ysmhub-card-meta"><span>${esc(t("hub.author", { name: text(model.owner_name || t("hub.unknown")) }))}</span><span>↓ ${Number(model.download_count || 0)}</span></div>
           </div>
         </div>
-        <div class="ysmhub-detail-section"><div class="ysmhub-section-title">${esc(t("hub.versions"))}</div>${versionRows}</div>
+        <div class="ysmhub-detail-section"><div class="ysmhub-section-title">${esc(t("hub.versions"))}</div>${versionRows}</div>${tagsHTML}${linksHTML}
       </div>`;
     } catch (error) {
       showStatus(t("hub.detailFailed", { error: errorMessage(error) }));

@@ -63,6 +63,8 @@ export const ja: Record<string, string> = {
   "hub.downloading": "ダウンロード中…",
   "hub.noVersions": "ダウンロード可能なバージョンがありません",
   "hub.versions": "バージョンとダウンロード",
+  "hub.tags": "タグ",
+  "hub.links": "関連リンク",
   "hub.author": "作者：{name}",
   "hub.unknown": "不明",
   "hub.modelAlt": "YSM Hub モデル",

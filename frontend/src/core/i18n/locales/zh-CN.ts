@@ -39,6 +39,8 @@ export const zhCN: Record<string, string> = {
   "hub.unknown": "未知",
   "hub.modelAlt": "YSM Hub 模型",
   "hub.versions": "版本与下载",
+  "hub.tags": "标签",
+  "hub.links": "相关链接",
   "hub.detailFailed": "YSM Hub 详情加载失败：{error}",
   "hub.downloading": "下载中…",
   "hub.repoNotConfigured": "尚未配置 YSM 本地仓库目录",

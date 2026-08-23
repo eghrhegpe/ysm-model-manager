@@ -172,7 +172,7 @@ func (c *Client) DownloadModelToFile(ctx context.Context, modelID, versionID, sa
 	if err != nil {
 		return "", DownloadResponse{}, fmt.Errorf("resolve download directory: %w", err)
 	}
-	target := filepath.Join(saveDir, name)
+	target := availableDownloadPath(saveDir, name)
 	targetAbs, err := filepath.Abs(target)
 	if err != nil {
 		return "", DownloadResponse{}, fmt.Errorf("resolve download path: %w", err)
@@ -222,6 +222,26 @@ func (c *Client) DownloadModelToFile(ctx context.Context, modelID, versionID, sa
 		return "", DownloadResponse{}, fmt.Errorf("finalize downloaded model: %w", err)
 	}
 	return target, result, nil
+}
+
+// availableDownloadPath avoids replacing an existing local model when the Hub
+// reuses a filename for a newer version. The final rename remains atomic; a
+// concurrent creator can still win the same candidate, in which case the
+// caller receives the normal rename error instead of silently overwriting it.
+func availableDownloadPath(saveDir, name string) string {
+	target := filepath.Join(saveDir, name)
+	if _, err := os.Lstat(target); os.IsNotExist(err) {
+		return target
+	}
+	ext := filepath.Ext(name)
+	stem := strings.TrimSuffix(name, ext)
+	for i := 1; i <= 9999; i++ {
+		candidate := filepath.Join(saveDir, fmt.Sprintf("%s (%d)%s", stem, i, ext))
+		if _, err := os.Lstat(candidate); os.IsNotExist(err) {
+			return candidate
+		}
+	}
+	return target
 }
 
 func valuesForList(opts ListOptions) url.Values {

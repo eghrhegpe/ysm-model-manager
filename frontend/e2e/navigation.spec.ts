@@ -5,11 +5,11 @@ import { test, expect } from "./fixture.ts";
 import { gotoApp } from "./helpers.ts";
 
 test.describe("导航切换", () => {
-  test("首页加载 → 渲染导航栏 6 项", async ({ page }) => {
+  test("首页加载 → 渲染导航栏 7 项", async ({ page }) => {
     await gotoApp(page);
     // 等待导航栏渲染
     const navItems = page.locator('[data-testid="nav-item"]');
-    await expect(navItems).toHaveCount(6);
+    await expect(navItems).toHaveCount(7);
   });
 
   test("点击「整合包管理」→ 页内容切换", async ({ page }) => {

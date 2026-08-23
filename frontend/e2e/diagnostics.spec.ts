@@ -28,9 +28,10 @@ async function panelVisible(page: Page, name: string): Promise<boolean> {
 test.describe("诊断页", () => {
   test.beforeEach(async ({ page }) => {
     await gotoApp(page);
-    const navItems = page.locator('[data-testid="nav-item"]');
-    // 导航到诊断页（nav 顺序 repository/instances/workshop/github/diagnostics → nth(4)）
-    await navItems.nth(4).click();
+    const diagnosticsNav = page.locator(
+      '[data-testid="nav-item"][data-page="diagnostics"]',
+    );
+    await diagnosticsNav.click();
     await page.waitForFunction(
       () => {
         const content = document.querySelector("app-content");

@@ -29,7 +29,7 @@ func RunCLI(args []string) error {
 		return nil
 	}
 
-	if filesRoot == "" {
+	if filesRoot == "" && commandRequiresFilesRoot(commandArgs) {
 		printCLIHelp()
 		if jsonMode {
 			resp := NewJsonError(commandArgs[0], &ErrParam{Err: fmt.Errorf("--files-root 参数不能为空")}, 0)
@@ -45,7 +45,7 @@ func RunCLI(args []string) error {
 		start := time.Now()
 		outputBuf, restoreStdout := captureStdout()
 		defer restoreStdout() // panic 兜底：确保 stdout 一定恢复
-		err := DispatchCommand(a, a.SaveAppConfig, filesRoot, commandArgs, true)
+		err := DispatchCommand(a, a.SaveAppConfig, filesRoot, commandArgs, commandRequiresFilesRoot(commandArgs))
 		restoreStdout() // 显式关闭 pipe，确保 outputBuf.String() 不死锁
 
 		cmdName := commandArgs[0]
@@ -65,7 +65,22 @@ func RunCLI(args []string) error {
 		return err
 	}
 
-	return DispatchCommand(a, a.SaveAppConfig, filesRoot, commandArgs, true)
+	return DispatchCommand(a, a.SaveAppConfig, filesRoot, commandArgs, commandRequiresFilesRoot(commandArgs))
+}
+
+// Hub browsing/authentication receives its own destination (or no destination
+// at all), so it must remain usable before the user configures a local model
+// repository. Other commands still retain the historical --files-root guard.
+func commandRequiresFilesRoot(commandArgs []string) bool {
+	if len(commandArgs) == 0 {
+		return true
+	}
+	switch commandArgs[0] {
+	case "hub", "hub-models", "hub-search", "hub-model", "hub-download", "hub-login":
+		return false
+	default:
+		return true
+	}
 }
 
 // ExecuteCLIWithApp 执行 CLI 命令

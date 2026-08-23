@@ -19,7 +19,31 @@ import (
 
 func init() {
 	RegisterCommandC("hub", CatResource, "YSM Hub public API (models/search/model/download/login)", runHub)
+	// Frontend-facing aliases keep ExecuteCLI's flat command contract while
+	// reusing the same Hub implementation and authentication/token store.
+	RegisterCommandC("hub-models", CatResource, "YSM Hub model list for the desktop UI", runHubModelsCommand)
+	RegisterCommandC("hub-search", CatResource, "YSM Hub model search for the desktop UI", runHubSearchCommand)
+	RegisterCommandC("hub-model", CatResource, "YSM Hub model details for the desktop UI", runHubModelCommand)
+	RegisterCommandC("hub-download", CatResource, "Download a YSM Hub model into the local repository", runHubDownloadCommand)
+	RegisterCommandC("hub-login", CatResource, "Sign in to YSM Hub from the desktop UI", runHubLoginCommand)
 }
+
+// The public OAuth client id is not a secret. Keep an environment override for
+// forks/development while allowing the packaged desktop app to work out of the box.
+const defaultHubOAuthClientID = "ysm_client_a69879a91e7c52020b7ec7ecbb0d17f24bd82da0442e9d28"
+
+func hubOAuthClientID() string {
+	if id := strings.TrimSpace(os.Getenv("YSMHUB_CLIENT_ID")); id != "" {
+		return id
+	}
+	return defaultHubOAuthClientID
+}
+
+func runHubModelsCommand(ctx *CmdContext) error   { return runHubModels(ctx) }
+func runHubSearchCommand(ctx *CmdContext) error   { return runHubSearch(ctx) }
+func runHubModelCommand(ctx *CmdContext) error    { return runHubModel(ctx) }
+func runHubDownloadCommand(ctx *CmdContext) error { return runHubDownload(ctx) }
+func runHubLoginCommand(ctx *CmdContext) error    { return runHubLogin(ctx) }
 
 // runHub exposes the public browsing flow plus explicit OAuth/download actions.
 func runHub(ctx *CmdContext) error {
@@ -45,14 +69,14 @@ func runHub(ctx *CmdContext) error {
 	case "me":
 		return runHubMe(subCtx)
 	default:
-		return newParamErrf("hub: 闂佸搫鐗滄禍鐐烘偂閿涘嫧鍋撳☉娆忓闁规枼鍓濈粋?%q", ctx.Args[0])
+		return newParamErrf("hub: 未知子命令 %q", ctx.Args[0])
 	}
 }
 
 func printHubUsage() {
 	fmt.Println("YSM Hub - public API trial")
 	fmt.Println()
-	fmt.Println("闂佹椿娼块崝宥囨兜?")
+	fmt.Println("用法：")
 	fmt.Println("  app --cli --files-root ./models hub models [options]")
 	fmt.Println("  app --cli --files-root ./models hub search --q <query> [options]")
 	fmt.Println("  app --cli --files-root ./models hub model --slug <slug> [options]")
@@ -61,17 +85,17 @@ func printHubUsage() {
 	fmt.Println("  model               show model details")
 	fmt.Println("  download            download a model (requires download scope)")
 	fmt.Println("  login               browser OAuth 2.1 + PKCE login")
-	fmt.Println("  logout              闂侀€涘嫎閸婃繈寮ㄩ姀銈囧祦閻犲搫鎼悘鈺呮⒒閸曗晛鈧牕锕㈡导鏉戞嵍?Token")
+	fmt.Println("  logout              撤销并删除已保存的 Token")
 	fmt.Println("  me                  show current user")
 	fmt.Println()
-	fmt.Println("闂備緡鍋勯ˇ鐢稿Υ?")
+	fmt.Println("常用选项：")
 	fmt.Println("  --format table|json     output format (default table)")
 	fmt.Println("  --base-url <url>        API base URL (default https://ysmhub.top/api/v1)")
 	fmt.Println("  --page <n>              page number")
 	fmt.Println("  --page-size <n>         page size (maximum 60)")
 	fmt.Println("  --sort <sort>           newest/recently_updated/most_downloaded/most_liked/most_favorited")
 	fmt.Println()
-	fmt.Println("闂佺粯绮犻崹浼淬€傞妸鈺佺煑婵せ鍋撻柛?")
+	fmt.Println("环境变量：")
 	fmt.Println("  YSMHUB_API_BASE_URL     override default API base URL")
 	fmt.Println("  YSMHUB_API_KEY          optional Bearer token")
 	fmt.Println("  Login downloads: hub login --scope \"read download\"")
@@ -100,7 +124,7 @@ func parseHubFlags(name string, args []string) (hubFlags, error) {
 	}
 	flags.format = strings.ToLower(strings.TrimSpace(flags.format))
 	if flags.format != "table" && flags.format != "json" {
-		return hubFlags{}, newParamErrf("%s: --format 闂佸憡鐟禍锝夊礂濮椻偓瀵?table 闂?json", name)
+		return hubFlags{}, newParamErrf("%s: --format 必须是 table 或 json", name)
 	}
 	if flags.page < 0 || flags.pageSize < 0 || flags.pageSize > 60 {
 		return hubFlags{}, newParamErrf("%s: invalid --page/--page-size", name)
@@ -110,22 +134,34 @@ func parseHubFlags(name string, args []string) (hubFlags, error) {
 
 func newHubClient(flags hubFlags) (*ysmhub.Client, error) {
 	key, err := loadHubAccessToken()
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	return ysmhub.NewClient(flags.baseURL, key)
 }
 
 func loadHubAccessToken() (string, error) {
-	if key := strings.TrimSpace(os.Getenv("YSMHUB_API_KEY")); key != "" { return key, nil }
+	if key := strings.TrimSpace(os.Getenv("YSMHUB_API_KEY")); key != "" {
+		return key, nil
+	}
 	token, err := ysmhub.LoadStoredToken()
-	if err != nil { return "", err }
-	if token == nil { return "", nil }
+	if err != nil {
+		return "", err
+	}
+	if token == nil {
+		return "", nil
+	}
 	if token.RefreshToken != "" && token.ExpiresIn > 0 && !token.ObtainedAt.IsZero() && time.Now().UTC().After(token.ObtainedAt.Add(time.Duration(token.ExpiresIn-60)*time.Second)) {
-		clientID := strings.TrimSpace(os.Getenv("YSMHUB_CLIENT_ID"))
+		clientID := hubOAuthClientID()
 		if clientID != "" {
 			fresh, refreshErr := (ysmhub.OAuthConfig{ClientID: clientID}).Refresh(context.Background(), token.RefreshToken)
 			if refreshErr == nil {
-				if fresh.RefreshToken == "" { fresh.RefreshToken = token.RefreshToken }
-				if saveErr := ysmhub.SaveStoredToken(fresh); saveErr == nil { token = &fresh }
+				if fresh.RefreshToken == "" {
+					fresh.RefreshToken = token.RefreshToken
+				}
+				if saveErr := ysmhub.SaveStoredToken(fresh); saveErr == nil {
+					token = &fresh
+				}
 			}
 		}
 	}
@@ -186,7 +222,7 @@ func runHubModel(ctx *CmdContext) error {
 	}
 	format = strings.ToLower(strings.TrimSpace(format))
 	if format != "table" && format != "json" {
-		return newParamErrf("hub model: --format 闂佸憡鐟禍锝夊礂濮椻偓瀵?table 闂?json")
+		return newParamErrf("hub model: --format 必须是 table 或 json")
 	}
 	client, err := newHubClient(hubFlags{baseURL: baseURL})
 	if err != nil {
@@ -218,7 +254,7 @@ func printHubPage(page ysmhub.Page, format string) error {
 	}
 	fmt.Printf("YSM Hub models (page %s, total %d)\n", pageLabel, page.Total)
 	if len(page.Items) == 0 {
-		fmt.Println("  (闂佸搫鍟版慨椋庡垝閵娾晛鍑?")
+		fmt.Println("  (没有模型)")
 		return nil
 	}
 	for _, item := range page.Items {
@@ -262,60 +298,96 @@ func firstHubString(model map[string]any, keys ...string) string {
 
 func runHubMe(ctx *CmdContext) error {
 	flags, err := parseHubFlags("hub me", ctx.Args)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	client, err := newHubClient(flags)
-	if err != nil { return newParamErrf("hub me: %v", err) }
+	if err != nil {
+		return newParamErrf("hub me: %v", err)
+	}
 	me, err := client.GetMe(context.Background())
-	if err != nil { return newRuntimeErrf("hub me: %w", err) }
+	if err != nil {
+		return newRuntimeErrf("hub me: %w", err)
+	}
 	return printHubJSON(me)
 }
 
 func runHubDownload(ctx *CmdContext) error {
 	fs := newCmdFlagSet("hub download")
-	var baseURL, modelID, versionID, saveDir string
+	var baseURL, modelID, versionID, saveDir, format string
 	fs.StringVar(&baseURL, "base-url", os.Getenv("YSMHUB_API_BASE_URL"), "YSM Hub API base URL")
 	fs.StringVar(&modelID, "id", "", "model id")
 	fs.StringVar(&versionID, "version-id", "", "optional version id")
 	fs.StringVar(&saveDir, "save-dir", "", "destination directory")
-	if _, err := parseFlags(fs, ctx.Args); err != nil { return err }
-	if strings.TrimSpace(modelID) == "" { return newParamErrf("hub download: --id is required") }
-	if strings.TrimSpace(saveDir) == "" { return newParamErrf("hub download: --save-dir is required") }
+	fs.StringVar(&format, "format", "table", "table or json")
+	if _, err := parseFlags(fs, ctx.Args); err != nil {
+		return err
+	}
+	format = strings.ToLower(strings.TrimSpace(format))
+	if format != "table" && format != "json" {
+		return newParamErrf("hub download: --format must be table or json")
+	}
+	if strings.TrimSpace(modelID) == "" {
+		return newParamErrf("hub download: --id is required")
+	}
+	if strings.TrimSpace(saveDir) == "" {
+		return newParamErrf("hub download: --save-dir is required")
+	}
 	key, err := loadHubAccessToken()
-	if err != nil { return newRuntimeErrf("hub download: 闁荤姴娲╅褑銇愰崶顒佸剬閻犲洩灏欑粔鍧楁煟濡灝鐓愰柍褜鍏涚粈渚€濡甸幋鐘冲? %w", err) }
+	if err != nil {
+		return newRuntimeErrf("hub download: 读取登录令牌失败: %w", err)
+	}
 	client, err := ysmhub.NewClient(baseURL, key)
-	if err != nil { return newParamErrf("hub download: %v", err) }
+	if err != nil {
+		return newParamErrf("hub download: %v", err)
+	}
 	path, result, err := client.DownloadModelToFile(context.Background(), modelID, versionID, saveDir)
 	if err != nil {
 		return newRuntimeErrf("hub download: %w (anonymous download is attempted first; run hub login when authorization is required)", err)
 	}
-	fmt.Printf("閻庤鐡曞鎾剁箔閸涱喗濮? %s\n", path)
-	if result.ExpiresIn > 0 { fmt.Printf("婵炴垶鎸搁悺銊ヮ渻閸岀偛鎹堕柡澶嬪缁插鏌￠崼婵愭Ч闁哄懌鍎靛? %ds\n", result.ExpiresIn) }
+	if strings.EqualFold(strings.TrimSpace(format), "json") {
+		return printHubJSON(map[string]any{"path": path, "file_name": result.FileName, "file_size": result.FileSize})
+	}
+	fmt.Printf("下载完成: %s\n", path)
+	if result.ExpiresIn > 0 {
+		fmt.Printf("临时下载地址有效期: %ds\n", result.ExpiresIn)
+	}
 	return nil
 }
 
 func runHubLogin(ctx *CmdContext) error {
 	fs := newCmdFlagSet("hub login")
-	clientID := os.Getenv("YSMHUB_CLIENT_ID")
+	clientID := hubOAuthClientID()
 	redirectURI := os.Getenv("YSMHUB_REDIRECT_URI")
 	scope := os.Getenv("YSMHUB_SCOPE")
 	fs.StringVar(&clientID, "client-id", clientID, "OAuth client_id (used to revoke the token)")
 	fs.StringVar(&redirectURI, "redirect-uri", redirectURI, "registered callback URL")
 	fs.StringVar(&scope, "scope", scope, "OAuth scopes")
-	if _, err := parseFlags(fs, ctx.Args); err != nil { return err }
-	if redirectURI == "" { redirectURI = "http://127.0.0.1:8765/callback" }
-	if scope == "" { scope = "read" }
+	if _, err := parseFlags(fs, ctx.Args); err != nil {
+		return err
+	}
+	if redirectURI == "" {
+		redirectURI = "http://127.0.0.1:8765/callback"
+	}
+	if scope == "" {
+		scope = "read"
+	}
 	cfg := ysmhub.OAuthConfig{ClientID: clientID, RedirectURI: redirectURI, Scope: scope}
 	authURL, state, verifier, err := cfg.BeginAuthorization()
-	if err != nil { return newParamErrf("hub login: %w", err) }
+	if err != nil {
+		return newParamErrf("hub login: %w", err)
+	}
 	u, err := url.Parse(redirectURI)
 	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
 		return newParamErrf("hub login: redirect-uri must be a valid http(s) URL")
 	}
 	if u.Scheme != "http" || (u.Hostname() != "127.0.0.1" && u.Hostname() != "localhost") {
-		return newParamErrf("hub login: CLI 闂佹悶鍎抽崑鐘绘儍閻旇崵鐤€闁告稒鐣埀顒€绻戦幏鍛崉閵婏附娈㈤梺鍝勭墱閸撴艾鈹冮埀?http://127.0.0.1 闂?localhost")
+		return newParamErrf("hub login: CLI 回调地址必须使用 http://127.0.0.1 或 localhost")
 	}
 	listener, err := net.Listen("tcp", u.Host)
-	if err != nil { return newRuntimeErrf("hub login: 闂佺儵鏅滈崹鐢稿箚婢舵劕鐐婇柣鎰濞堝爼鏌涢敂鑺ョ凡婵炵厧鍟鍕綇椤愩儛? %w", err) }
+	if err != nil {
+		return newRuntimeErrf("hub login: 无法监听本地回调地址: %w", err)
+	}
 	defer listener.Close()
 	callback := make(chan oauthCallback, 1)
 	var callbackOnce sync.Once
@@ -333,7 +405,7 @@ func runHubLogin(ctx *CmdContext) error {
 			return
 		}
 		if oauthErr := q.Get("error"); oauthErr != "" {
-			deliver(oauthCallback{err: fmt.Errorf("OAuth 闂佺懓鎼悧濠傤焽閸垺鍋栨い鎰剁到閻濇洜绱? %s", oauthErr)})
+			deliver(oauthCallback{err: fmt.Errorf("OAuth 授权失败: %s", oauthErr)})
 			_, _ = w.Write([]byte("Login cancelled"))
 			return
 		}
@@ -342,15 +414,27 @@ func runHubLogin(ctx *CmdContext) error {
 	})}
 	go func() { _ = server.Serve(listener) }()
 	defer server.Shutdown(context.Background())
-	fmt.Printf("濠殿喗绻愮徊钘夛耿椤忓牆绠ラ柟鎯х－绾?YSM Hub 闂佽皫鍡╁殭缂傚秴绉甸妵鍕偨閸涘﹥銆冮梺鎸庣☉閻楀棗煤閺嶎偅瀚?%s闂?..\n", redirectURI)
-	if ctx.App != nil { ctx.App.OpenInBrowser(authURL) } else { fmt.Printf("闁荤姴娲弨杈ㄦ櫠濠婂牆绀夐柕濠忕畱閳數鈧鍠掗崑? %s\n", authURL) }
+	fmt.Printf("正在等待 YSM Hub 授权回调（%s）...\n", redirectURI)
+	if ctx.App != nil {
+		ctx.App.OpenInBrowser(authURL)
+	} else {
+		fmt.Printf("请在浏览器打开: %s\n", authURL)
+	}
 	select {
 	case result := <-callback:
-		if result.err != nil { return newRuntimeErrf("hub login: %w", result.err) }
-		if result.code == "" { return newRuntimeErrf("hub login: 闂佹悶鍎抽崑鐘绘儍閻旇櫣纾介柛婵嗗濮?code") }
+		if result.err != nil {
+			return newRuntimeErrf("hub login: %w", result.err)
+		}
+		if result.code == "" {
+			return newRuntimeErrf("hub login: 回调缺少 code")
+		}
 		token, err := cfg.ExchangeCode(context.Background(), result.code, verifier)
-		if err != nil { return newRuntimeErrf("hub login: 闂佺懓绠嶉崹纭呫亹?Token 婵犮垺鍎肩划鍓ф喆? %w", err) }
-		if err := ysmhub.SaveStoredToken(token); err != nil { return newRuntimeErrf("hub login: 婵烇絽娲︾换鍌炴偤?Token 婵犮垺鍎肩划鍓ф喆? %w", err) }
+		if err != nil {
+			return newRuntimeErrf("hub login: 交换 Token 失败: %w", err)
+		}
+		if err := ysmhub.SaveStoredToken(token); err != nil {
+			return newRuntimeErrf("hub login: 保存 Token 失败: %w", err)
+		}
 		fmt.Println("YSM Hub login succeeded; the token was saved in the local protected config directory.")
 		return nil
 	case <-time.After(5 * time.Minute):
@@ -358,26 +442,35 @@ func runHubLogin(ctx *CmdContext) error {
 	}
 }
 
-type oauthCallback struct { code string; err error }
+type oauthCallback struct {
+	code string
+	err  error
+}
 
 func runHubLogout(ctx *CmdContext) error {
 	fs := newCmdFlagSet("hub logout")
-	clientID := os.Getenv("YSMHUB_CLIENT_ID")
+	clientID := hubOAuthClientID()
 	fs.StringVar(&clientID, "client-id", clientID, "OAuth client_id (used to revoke the token)")
-	if _, err := parseFlags(fs, ctx.Args); err != nil { return err }
+	if _, err := parseFlags(fs, ctx.Args); err != nil {
+		return err
+	}
 	token, err := ysmhub.LoadStoredToken()
-	if err != nil { return newRuntimeErrf("hub logout: 闁荤姴娲╅褑銇愰崶顒佸剬閻犲洩灏欑粔鍧楁煟濡灝鐓愰柍褜鍏涚粈渚€濡甸幋鐘冲? %w", err) }
+	if err != nil {
+		return newRuntimeErrf("hub logout: 读取登录令牌失败: %w", err)
+	}
 	clientID = strings.TrimSpace(clientID)
 	if token != nil && clientID == "" {
-		return newParamErrf("hub logout: 闂侀€涘嫎閸婃繈寮?Token 闂傚倸娲犻崑鎾绘偡?--client-id 闂?YSMHUB_CLIENT_ID")
+		return newParamErrf("hub logout: 撤销 Token 需要 --client-id 或 YSMHUB_CLIENT_ID")
 	}
 	if token != nil {
 		cfg := ysmhub.OAuthConfig{ClientID: clientID}
 		if err := cfg.Revoke(context.Background(), token.AccessToken); err != nil {
-			return newRuntimeErrf("hub logout: 闂侀€涘嫎閸婃繈寮?Token 婵犮垺鍎肩划鍓ф喆? %w", err)
+			return newRuntimeErrf("hub logout: 撤销 Token 失败: %w", err)
 		}
 	}
-	if err := ysmhub.DeleteStoredToken(); err != nil { return newRuntimeErrf("hub logout: 闂佸憡甯炴繛鈧繛鍛叄瀵敻顢楅埀顒€锕?Token 婵犮垺鍎肩划鍓ф喆? %w", err) }
+	if err := ysmhub.DeleteStoredToken(); err != nil {
+		return newRuntimeErrf("hub logout: 删除本地 Token 失败: %w", err)
+	}
 	fmt.Println("YSM Hub logout complete.")
 	return nil
 }

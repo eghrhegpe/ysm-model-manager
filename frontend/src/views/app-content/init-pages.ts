@@ -12,6 +12,7 @@ import { t } from "../../core/i18n/t.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { initWorkshopPage as _initWorkshopPage } from "./init-workshop.ts";
 import { initGithubPage as _initGithubPage } from "./init-github.ts";
+import { initYSMHubPage as _initYSMHubPage } from "./init-ysmhub.ts";
 
 /** app-content 组件接口（供页面初始化函数访问） */
 export interface AppContentHost {
@@ -271,6 +272,11 @@ export function initWorkshopPage(host: never): void {
  */
 export function initGithubPage(host: never): void {
   _initGithubPage(host as never);
+}
+
+/** 初始化 YSM Hub 模型页 */
+export function initYSMHubPage(host: never): void {
+  _initYSMHubPage(host as never);
 }
 
 // ===== 最近选中模型（供导航栏 3D 一键跳转复用；app-tree 在 model:select 时写入）=====

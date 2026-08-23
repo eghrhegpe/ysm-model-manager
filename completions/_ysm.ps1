@@ -1,7 +1,7 @@
 # ysm CLI — PowerShell 补全（自动生成，勿手改；来源：go/cli 注册表）
-# 生成：node scripts/gen-cli-completion.mjs（顶层命令 39 个）
+# 生成：node scripts/gen-cli-completion.mjs（顶层命令 44 个）
 # 启用：Add-Content $PROFILE ". $(Resolve-Path ./completions/_ysm.ps1)"
-$ysmTopCommands = @('analyze', 'analyze-mmd', 'avatar', 'benchmark', 'cache-clear', 'cache-diag', 'cache-status', 'cache-verify', 'concurrent-bench', 'config', 'config-show', 'copy', 'creator', 'dedup', 'download', 'export', 'file-bench', 'gui-flow', 'health-report', 'hub', 'install', 'instance', 'link-mode', 'list', 'move', 'perf-log', 'perf-snapshot', 'recycle', 'rename', 'repo-audit', 'resource-scan', 'scan', 'scan-dir', 'search', 'single-bench', 'tags', 'toggle', 'verify', 'workshop')
+$ysmTopCommands = @('analyze', 'analyze-mmd', 'avatar', 'benchmark', 'cache-clear', 'cache-diag', 'cache-status', 'cache-verify', 'concurrent-bench', 'config', 'config-show', 'copy', 'creator', 'dedup', 'download', 'export', 'file-bench', 'gui-flow', 'health-report', 'hub', 'hub-download', 'hub-login', 'hub-model', 'hub-models', 'hub-search', 'install', 'instance', 'link-mode', 'list', 'move', 'perf-log', 'perf-snapshot', 'recycle', 'rename', 'repo-audit', 'resource-scan', 'scan', 'scan-dir', 'search', 'single-bench', 'tags', 'toggle', 'verify', 'workshop')
 $ysmSubs = @{
   'avatar' = @('batch', 'cached', 'cache')
   'config' = @('show', 'path', 'mc-paths', 'mirror', 'link-mode')
@@ -36,6 +36,11 @@ $ysmFlags = @{
   'gui-flow' = @('--help', '--model', '--verbose')
   'health-report' = @('--help', '--dir', '--output', '--bench')
   'hub' = @('--help')
+  'hub-download' = @('--help')
+  'hub-login' = @('--help')
+  'hub-model' = @('--help')
+  'hub-models' = @('--help')
+  'hub-search' = @('--help')
   'install' = @('--help', '--model', '--mc-root', '--custom-dir')
   'instance' = @('--help')
   'link-mode' = @('--help', '--mode')

@@ -391,7 +391,7 @@ describe("CLI Bridge - 白名单常量", () => {
   });
 
   it("数量正确", () => {
-    expect(ALLOWED_CLI_COMMANDS).toHaveLength(20);
+    expect(ALLOWED_CLI_COMMANDS).toHaveLength(25);
   });
 
   it("类型安全：只能传入白名单中的命令", () => {

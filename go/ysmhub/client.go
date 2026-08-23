@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	DefaultBaseURL = "https://ysmhub.top/api/v1"
+	DefaultBaseURL  = "https://ysmhub.top/api/v1"
 	maxResponseSize = 8 << 20
 	maxDownloadSize = int64(8) << 30
 )
@@ -56,14 +56,14 @@ type DownloadResponse struct {
 
 // ListOptions controls /models and /search requests.
 type ListOptions struct {
-	Query    string
-	ThemeID  string
+	Query      string
+	ThemeID    string
 	CategoryID string
-	Tag      string
-	OwnerID  string
-	Sort     string
-	Page     int
-	PageSize int
+	Tag        string
+	OwnerID    string
+	Sort       string
+	Page       int
+	PageSize   int
 }
 
 // NewClient validates baseURL and applies a bounded default timeout.
@@ -169,10 +169,14 @@ func (c *Client) DownloadModelToFile(ctx context.Context, modelID, versionID, sa
 		name = "model-download.bin"
 	}
 	root, err := filepath.Abs(saveDir)
-	if err != nil { return "", DownloadResponse{}, fmt.Errorf("resolve download directory: %w", err) }
+	if err != nil {
+		return "", DownloadResponse{}, fmt.Errorf("resolve download directory: %w", err)
+	}
 	target := filepath.Join(saveDir, name)
 	targetAbs, err := filepath.Abs(target)
-	if err != nil { return "", DownloadResponse{}, fmt.Errorf("resolve download path: %w", err) }
+	if err != nil {
+		return "", DownloadResponse{}, fmt.Errorf("resolve download path: %w", err)
+	}
 	rel, err := filepath.Rel(root, targetAbs)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", DownloadResponse{}, errors.New("download filename escapes destination directory")
@@ -194,7 +198,9 @@ func (c *Client) DownloadModelToFile(ctx context.Context, modelID, versionID, sa
 		return "", DownloadResponse{}, err
 	}
 	limit := maxDownloadSize
-	if result.FileSize > 0 && result.FileSize < limit { limit = result.FileSize }
+	if result.FileSize > 0 && result.FileSize < limit {
+		limit = result.FileSize
+	}
 	n, copyErr := io.Copy(tmp, io.LimitReader(resp.Body, limit+1))
 	closeErr := resp.Body.Close()
 	if copyErr != nil {
@@ -310,21 +316,21 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query url.Valu
 		return nil, nil, fmt.Errorf("YSM Hub request failed: %w", err)
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize+1))
+	responseBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize+1))
 	if err != nil {
 		return nil, nil, fmt.Errorf("read YSM Hub response: %w", err)
 	}
-	if len(body) > maxResponseSize {
+	if len(responseBody) > maxResponseSize {
 		return nil, nil, fmt.Errorf("YSM Hub response exceeds %d bytes", maxResponseSize)
 	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		message := strings.TrimSpace(string(body))
+		message := strings.TrimSpace(string(responseBody))
 		if len(message) > 512 {
 			message = message[:512] + "..."
 		}
 		return nil, nil, fmt.Errorf("YSM Hub returned HTTP %d: %s", resp.StatusCode, message)
 	}
-	return resp, body, nil
+	return resp, responseBody, nil
 }
 
 func sameOrigin(left, right string) bool {

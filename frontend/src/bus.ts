@@ -31,6 +31,7 @@ export type PageName =
   | "repository"
   | "instances"
   | "workshop"
+  | "ysmhub"
   | "github"
   | "diagnostics"
   | "settings";

@@ -82,15 +82,17 @@ export function initYSMHubPage(host: HubHost): void {
   const search = root.getElementById("ysmhub-search") as HTMLInputElement | null;
   const sort = root.getElementById("ysmhub-sort") as HTMLSelectElement | null;
   const author = root.getElementById("ysmhub-author") as HTMLSelectElement | null;
+  const authorViewBtn = root.getElementById("ysmhub-author-view");
   const searchBtn = root.getElementById("ysmhub-search-btn");
   const loginBtn = root.getElementById("ysmhub-login-btn");
-  if (!content || !search || !sort || !author || !searchBtn || !loginBtn) return;
+  if (!content || !search || !sort || !author || !authorViewBtn || !searchBtn || !loginBtn) return;
 
   let disposed = false;
   let loading = false;
   let pageNumber = 1;
   let hasMore = false;
   let models: YSMHubModel[] = [];
+  let authorItems: YSMHubAuthor[] = [];
   let detailModel: YSMHubModel | null = null;
 
   const showStatus = (message: string): void => {
@@ -102,6 +104,14 @@ export function initYSMHubPage(host: HubHost): void {
       ? `<div class="ysmhub-more"><button class="btn-base sm" data-hub-more="1">${esc(t("hub.loadMore"))}</button></div>`
       : "";
     content.innerHTML = `<div class="ysmhub-grid">${models.map(modelCard).join("")}</div>${more}`;
+  };
+
+  const renderAuthorCategories = (): void => {
+    if (!authorItems.length) {
+      showStatus(t("hub.noModels"));
+      return;
+    }
+    content.innerHTML = `<div class="ysmhub-detail-section" style="margin-top:0;border-top:0;padding-top:0"><div class="ysmhub-section-title">${esc(t("hub.authorCategories"))}</div><div class="ysmhub-author-grid">${authorItems.map((item) => `<button type="button" class="ysmhub-author-card" data-hub-author-name="${esc(item.name)}"><span class="ysmhub-author-name">${esc(item.name)}</span><span class="ysmhub-author-count">${Number(item.model_count || 0)}</span></button>`).join("")}</div></div>`;
   };
 
   const load = async (reset = true): Promise<void> => {
@@ -198,6 +208,13 @@ export function initYSMHubPage(host: HubHost): void {
 
   listen(content, "click", (event) => {
     const target = event.target as Element | null;
+    const authorCard = target?.closest<HTMLButtonElement>("[data-hub-author-name]");
+    if (authorCard) {
+      author.value = authorCard.dataset.hubAuthorName || "";
+      sort.value = "author";
+      void load(true);
+      return;
+    }
     const card = target?.closest<HTMLElement>("[data-hub-slug]");
     if (card) {
       void openDetail(card.dataset.hubSlug || "");
@@ -219,6 +236,7 @@ export function initYSMHubPage(host: HubHost): void {
     }
   }, host._unsubs);
   listen(searchBtn, "click", () => { void load(true); }, host._unsubs);
+  listen(authorViewBtn, "click", () => { renderAuthorCategories(); }, host._unsubs);
   listen(search, "keydown", (event) => { if ((event as KeyboardEvent).key === "Enter") void load(true); }, host._unsubs);
   listen(sort, "change", () => { void load(true); }, host._unsubs);
   listen(author, "change", () => { void load(true); }, host._unsubs);
@@ -241,6 +259,7 @@ export function initYSMHubPage(host: HubHost): void {
   void listYSMHubAuthors().then((page) => {
     if (disposed) return;
     const items = Array.isArray(page.items) ? page.items : [];
+    authorItems = items;
     author.innerHTML = `<option value="">${esc(t("hub.allAuthors"))}</option>${items.map((item: YSMHubAuthor) => `<option value="${esc(item.name)}">${esc(item.name)} (${Number(item.model_count || 0)})</option>`).join("")}`;
   }).catch(() => { /* 作者列表失败不影响模型浏览 */ });
   void load();

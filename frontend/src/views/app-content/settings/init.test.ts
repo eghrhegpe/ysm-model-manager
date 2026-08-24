@@ -62,6 +62,7 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
   el.innerHTML = `
     <div id="set-mc-path"></div>
     <div id="set-files-root"></div>
+    <div id="set-ysm-storage-root"></div>
     <div id="set-advanced-toggle"></div>
     <div id="set-advanced-panel"></div>
     <div id="set-advanced-grid"></div>
@@ -131,6 +132,7 @@ function mockApp(overrides: Record<string, unknown> = {}) {
     GetMinecraftPaths: vi.fn(() => []),
     SetLinkMode: vi.fn(),
     SetResourceRoot: vi.fn(),
+    EnsureStorageDirs: vi.fn(),
     ResetResourceRoot: vi.fn(),
     CurrentVersion: vi.fn(() => "v1.2.3"),
     OpenInBrowser: vi.fn(),
@@ -150,6 +152,56 @@ beforeEach(() => {
     ysm: { id: "ysm", name: "模型", icon: "🧊", storageSubDir: "ysm", configField: "YsmRoot" },
   });
   mockApp();
+});
+
+describe("YSM storage path", () => {
+  it("sets the YSM resource root from the storage path picker", async () => {
+    const setRootFn = vi.fn();
+    const ensureFn = vi.fn();
+    mockApp({ SetResourceRoot: setRootFn, EnsureStorageDirs: ensureFn });
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("set-ysm-storage-root") as HTMLElement).click();
+    await waitFor(() => setRootFn.mock.calls.length > 0);
+    expect(setRootFn).toHaveBeenCalledWith("ysm", "/pick");
+    expect(ensureFn).toHaveBeenCalled();
+  });
+
+  it("shows customRoots.ysm in the expanded manager path panel", async () => {
+    const selected = "C:/Games/.minecraft/config/yes_steve_model/custom";
+    mockApp({
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        customRoots: { ysm: selected },
+        resourcepackRoot: "",
+        mcRoot: "",
+        linkMode: "copy",
+        mirror: "",
+      })),
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("set-advanced-toggle") as HTMLElement).click();
+    const panel = root.getElementById("set-advanced-panel") as HTMLElement;
+    await waitFor(() => panel.style.display === "block");
+    expect(root.getElementById("set-advanced-grid")!.textContent).toContain(selected);
+  });
+
+  it("opens and closes the storage path details on consecutive clicks", async () => {
+    vi.useFakeTimers();
+    const { root } = makeRoot();
+    await initSettings(root);
+    const toggle = root.getElementById("set-advanced-toggle") as HTMLElement;
+    const panel = root.getElementById("set-advanced-panel") as HTMLElement;
+    toggle.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(panel.style.display).toBe("block");
+    toggle.click();
+    await vi.advanceTimersByTimeAsync(200);
+    expect(panel.style.display).toBe("none");
+    expect(panel.classList.contains("adv-open")).toBe(false);
+    vi.useRealTimers();
+  });
 });
 
 /** 挂载 theme:change bus 监听 spy（theme.ts 经 bus.emit("theme:change") 调用，直接断言） */

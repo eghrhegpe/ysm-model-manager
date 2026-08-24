@@ -1,4 +1,8 @@
 {
+  "hub.browseByAuthor": "作者別に表示",
+  "hub.authorCategories": "作者カテゴリ",
+  "settings.storage.ysmPath": "YSM モデル保存パス",
+  "settings.storage.ysmPathDesc": "ランチャーのバージョンを選ぶと、モデルは config/yes_steve_model/custom に直接保存されます",
   "settings.launcher.title": "ランチャーと YSM ディレクトリ",
   "settings.launcher.detect": "ディレクトリを検出",
   "settings.launcher.notConfigured": "ランチャーディレクトリ未選択",

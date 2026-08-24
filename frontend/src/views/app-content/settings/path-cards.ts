@@ -75,6 +75,7 @@ export function bindPathClick(
       await onSelect(dir);
       refresh();
       refreshAdvanced();
+      cardRefreshers.forEach((fn) => fn());
       bus.emit("config:updated");
       bus.emit("stats:refresh");
       bus.emit("toast:show", {
@@ -201,28 +202,19 @@ export function initAdvancedGrid(
     rtype: string;
     icon: string;
     name: string;
-    cfgKey: string;
   }
   const advancedTypes: AdvancedType[] = Object.values(reg).map((entry: ResourceTypeEntry) => ({
     rtype: entry.id,
     icon: entry.icon as string,
     name: (entry.name as string) || entry.id,
-    cfgKey: entry.configField
-      ? String(entry.configField).charAt(0).toLowerCase() + String(entry.configField).slice(1)
-      : "",
   }));
-
-  // cfg 动态索引辅助（cfgKey 来自配置字段，类型收窄为字符串索引）
-  const cfgAny = cfg as unknown as Record<string, unknown>;
-  const cfgStr = (key: string): string => (typeof cfgAny[key] === "string" ? (cfgAny[key] as string) : "");
 
   const refreshAdvanced = async (): Promise<void> => {
     const grid = root.getElementById("set-advanced-grid");
     if (!grid) return;
     let html = "";
     for (const at of advancedTypes) {
-      const canOverride = !!at.cfgKey;
-      const overridePath = canOverride ? cfgStr(at.cfgKey) : "";
+      const overridePath = cfg.customRoots?.[at.rtype] || "";
       const defaultPath = cfg.filesRoot
         ? cfg.filesRoot + "/" + (groupStorageRootOf(at.rtype) || at.rtype || "")
         : t("settings.path.notSetStorage");
@@ -268,9 +260,9 @@ export function initAdvancedGrid(
           const { SetResourceRoot } =
             await getApp();
           await SetResourceRoot(rtype, dir);
-          const found = advancedTypes.find((a) => a.rtype === rtype);
-          if (found && found.cfgKey) cfgAny[found.cfgKey] = dir;
+          cfg.customRoots = { ...(cfg.customRoots || {}), [rtype]: dir };
           refreshAdvanced();
+          cardRefreshers.forEach((fn) => fn());
           bus.emit("config:updated");
           bus.emit("toast:show", {
             msg: t("settings.path.set"),
@@ -295,8 +287,7 @@ export function initAdvancedGrid(
           const { ResetResourceRoot } =
             await getApp();
           await ResetResourceRoot(rtype);
-          const found = advancedTypes.find((a) => a.rtype === rtype);
-          if (found && found.cfgKey) cfgAny[found.cfgKey] = "";
+          cfg.customRoots = { ...(cfg.customRoots || {}), [rtype]: "" };
           refreshAdvanced();
           cardRefreshers.forEach((fn) => fn());
           bus.emit("config:updated");
@@ -415,16 +406,27 @@ export function launcherChoicesOf(launchers: LauncherInfo[]): LauncherChoice[] {
 
 /** HMCL/PCL 目录识别：结果只读展示，点击版本后把 YSM custom 目录设为下载根。 */
 export function initLauncherDetect(root: ShadowRoot): void {
-  const detectBtn = root.getElementById("set-launcher-detect") as HTMLElement | null;
-  const pathEl = root.getElementById("set-launcher-path");
-  const resultsEl = root.getElementById("set-launcher-results");
-  if (!detectBtn || !pathEl || !resultsEl) return;
+  const detectButtons = [
+    root.getElementById("set-launcher-detect"),
+    root.getElementById("set-storage-launcher-detect"),
+  ].filter((el): el is HTMLElement => el instanceof HTMLElement);
+  const pathElements = [
+    root.getElementById("set-launcher-path"),
+    root.getElementById("set-ysm-storage-root"),
+  ].filter((el): el is HTMLElement => el instanceof HTMLElement);
+  const resultElements = [
+    root.getElementById("set-launcher-results"),
+    root.getElementById("set-storage-launcher-results"),
+  ].filter((el): el is HTMLElement => el instanceof HTMLElement);
+  if (!detectButtons.length || !resultElements.length) return;
 
   const refresh = (): void => {
     const customRoots = cfg.customRoots || {};
     const current = customRoots.ysm || "";
-    pathEl.textContent = current || t("settings.launcher.notConfigured");
-    pathEl.style.color = current ? "" : "var(--accent)";
+    pathElements.forEach((el) => {
+      el.textContent = current || t("settings.launcher.notConfigured");
+      el.style.color = current ? "" : "var(--accent)";
+    });
   };
   cardRefreshers.push(refresh);
   refresh();
@@ -433,17 +435,22 @@ export function initLauncherDetect(root: ShadowRoot): void {
   const renderResults = (launchers: LauncherInfo[]): void => {
     choices = launcherChoicesOf(launchers);
     if (!choices.length) {
-      resultsEl.textContent = t("settings.launcher.noFound");
+      resultElements.forEach((el) => {
+        el.textContent = t("settings.launcher.noFound");
+      });
       return;
     }
-    resultsEl.innerHTML = `<div style="margin-bottom:5px">${escHtml(t("settings.launcher.detected"))}</div>${choices.map((choice, index) => {
+    const html = `<div style="margin-bottom:5px">${escHtml(t("settings.launcher.detected"))}</div>${choices.map((choice, index) => {
       const instanceName = choice.instance.version || choice.instance.name || t("settings.launcher.detected");
       const exists = choice.instance.ysm_custom_exists ? " ✓" : "";
       return `<button type="button" class="stg-launcher-choice" data-launcher-index="${index}" style="display:block;width:100%;text-align:left;margin:4px 0;padding:6px 8px;border:1px solid var(--bd);border-radius:5px;background:var(--surf);color:var(--txt);cursor:pointer;font:inherit"><span style="font-weight:600">${escHtml(`${choice.launcher.name} · ${instanceName}${exists}`)}</span><br><span style="font-size:10px;color:var(--muted)">${escHtml(choice.instance.ysm_custom_dir)}</span></button>`;
     }).join("")}`;
+    resultElements.forEach((el) => {
+      el.innerHTML = html;
+    });
   };
 
-  resultsEl.addEventListener("click", async (event) => {
+  const onChoiceClick = async (event: Event): Promise<void> => {
     const button = (event.target as Element | null)?.closest<HTMLButtonElement>("[data-launcher-index]");
     if (!button || isBusy()) return;
     const index = Number(button.dataset.launcherIndex);
@@ -455,7 +462,7 @@ export function initLauncherDetect(root: ShadowRoot): void {
       await SetResourceRoot("ysm", choice.instance.ysm_custom_dir);
       await EnsureStorageDirs();
       cfg.customRoots = { ...(cfg.customRoots || {}), ysm: choice.instance.ysm_custom_dir };
-      refresh();
+      cardRefreshers.forEach((fn) => fn());
       bus.emit("config:updated");
       bus.emit("stats:refresh");
       bus.emit("toast:show", { msg: t("settings.path.updated"), duration: 2500, type: "success" });
@@ -464,9 +471,10 @@ export function initLauncherDetect(root: ShadowRoot): void {
     } finally {
       setBusy(false);
     }
-  });
+  };
+  resultElements.forEach((el) => el.addEventListener("click", onChoiceClick));
 
-  detectBtn.addEventListener("click", async () => {
+  const detect = async (): Promise<void> => {
     if (isBusy()) return;
     setBusy(true);
     try {
@@ -476,9 +484,12 @@ export function initLauncherDetect(root: ShadowRoot): void {
       const launchers = await DetectLaunchers(dir);
       renderResults(launchers || []);
     } catch (e) {
-      resultsEl.textContent = friendlyError(e);
+      resultElements.forEach((el) => {
+        el.textContent = friendlyError(e);
+      });
     } finally {
       setBusy(false);
     }
-  });
+  };
+  detectButtons.forEach((button) => button.addEventListener("click", detect));
 }

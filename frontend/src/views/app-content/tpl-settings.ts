@@ -105,6 +105,15 @@ export function settingsHTML(): string {
         <div style="font-size:10px;color:var(--muted);margin-bottom:6px">${t("settings.path.customHint")}</div>
         <div class="stg-grid" id="set-advanced-grid"></div>
       </div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span class="label" style="font-size:11px;font-weight:600">${t("settings.storage.ysmPath")}</span>
+          <button class="btn-base sm" id="set-storage-launcher-detect">🔍 ${t("settings.launcher.detect")}</button>
+        </div>
+        <div class="stg-card-val" id="set-ysm-storage-root">${t("common.loading")}</div>
+        <div class="stg-card-desc">${t("settings.storage.ysmPathDesc")}</div>
+        <div id="set-storage-launcher-results" style="margin-top:7px;font-size:var(--fs-sm);color:var(--muted)"></div>
+      </div>
     </div>
   </div>
   `}

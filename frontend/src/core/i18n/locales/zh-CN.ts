@@ -4,6 +4,10 @@
 // ⚠️ 本目录是纯数据目录，禁止放 .test.ts（会被构建脚本扫描）。
 
 export const zhCN: Record<string, string> = {
+  "hub.browseByAuthor": "按作者分类",
+  "hub.authorCategories": "作者分类",
+  "settings.storage.ysmPath": "YSM 模型存储路径",
+  "settings.storage.ysmPathDesc": "选择启动器版本后，模型会直接下载到 config/yes_steve_model/custom",
   "settings.launcher.title": "启动器与 YSM 目录",
   "settings.launcher.detect": "识别目录",
   "settings.launcher.notConfigured": "尚未选择启动器目录",

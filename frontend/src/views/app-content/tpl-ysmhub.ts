@@ -13,6 +13,11 @@ export function ysmHubHTML(): string {
       .ysmhub-content { flex:1; min-height:0; overflow:auto; padding:14px; }
       .ysmhub-status { color:var(--muted); font-size:12px; padding:24px; text-align:center; }
       .ysmhub-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px; }
+      .ysmhub-author-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; }
+      .ysmhub-author-card { text-align:left; padding:12px; border:1px solid var(--bd); border-radius:8px; background:var(--surf); color:var(--txt); cursor:pointer; font:inherit; }
+      .ysmhub-author-card:hover { border-color:var(--accent); background:var(--hover); }
+      .ysmhub-author-name { display:block; font-size:13px; font-weight:600; }
+      .ysmhub-author-count { display:block; margin-top:4px; color:var(--muted); font-size:10px; }
       .ysmhub-card { overflow:hidden; cursor:pointer; border:1px solid var(--bd); border-radius:8px; background:var(--surf); transition:transform .15s ease,border-color .15s ease; }
       .ysmhub-card:hover { transform:translateY(-2px); border-color:var(--accent); }
       .ysmhub-cover { width:100%; aspect-ratio:16/10; display:block; object-fit:cover; background:linear-gradient(135deg,var(--hover),var(--surf)); }
@@ -50,6 +55,7 @@ export function ysmHubHTML(): string {
         <select id="ysmhub-author" class="ysmhub-author" aria-label="${esc(t("hub.authorFilter"))}">
           <option value="">${esc(t("hub.allAuthors"))}</option>
         </select>
+        <button id="ysmhub-author-view" class="btn-base sm">${esc(t("hub.browseByAuthor"))}</button>
         <button id="ysmhub-search-btn" class="btn-base accent">${esc(t("common.search"))}</button>
         <button id="ysmhub-login-btn" class="btn-base sm">${esc(t("hub.login"))}</button>
       </div>

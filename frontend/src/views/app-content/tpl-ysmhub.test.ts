@@ -9,6 +9,7 @@ describe("YSM Hub page template", () => {
     expect(html).toContain('id="ysmhub-search"');
     expect(html).toContain('id="ysmhub-sort"');
     expect(html).toContain('id="ysmhub-author"');
+    expect(html).toContain('id="ysmhub-author-view"');
     expect(html).toContain('id="ysmhub-search-btn"');
     expect(html).toContain('id="ysmhub-login-btn"');
     expect(html).toContain('id="ysmhub-content"');

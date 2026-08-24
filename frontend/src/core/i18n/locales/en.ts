@@ -2,6 +2,10 @@
 // Complete translation matching all keys in zh-CN.ts.
 
 export const en: Record<string, string> = {
+  "hub.browseByAuthor": "Browse by author",
+  "hub.authorCategories": "Author categories",
+  "settings.storage.ysmPath": "YSM model storage path",
+  "settings.storage.ysmPathDesc": "After choosing a launcher instance, models download directly to config/yes_steve_model/custom",
   "settings.launcher.title": "Launcher and YSM directory",
   "settings.launcher.detect": "Detect directory",
   "settings.launcher.notConfigured": "No launcher directory selected",

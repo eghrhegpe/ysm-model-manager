@@ -6,6 +6,7 @@ import { WebComponentBase } from "../../utils/dom/web-component-base.ts";
 import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import { t } from "../../core/i18n/t.ts";
 import { getApp } from "../../backend/app.ts";
+import { resolveWebMode } from "../../backend/platform.ts";
 import { can } from "../../utils/dom/capabilities.ts";
 import { RESOURCE_TYPES, GROUP_META, GROUP_OF, GROUP_TYPE_OPTIONS, type GroupTypeOption } from "../../utils/resource/types.ts";
 import { shortLabelOf } from "../../utils/resource/short-label.ts";
@@ -89,10 +90,12 @@ class AppNav extends WebComponentBase {
     // ListVersionInstances（未桥接），用 can(binding) 能力门控精确判定——
     // 替代 isViewerMode() 复合判定（平台检测收敛到 capabilities 抽象，债务 #2）。
     const isViewer = !can("ListVersionInstances");
+    const canYSMHub = can("ExecuteCLI") && !resolveWebMode();
     const items = [
       { id: "repository", icon: "📚", key: "nav.repository" },
       ...(isViewer ? [] : [{ id: "instances", icon: "🎮", key: "nav.instances" }]),
       { id: "workshop", icon: "🎨", key: "nav.community" },
+      ...(canYSMHub ? [{ id: "ysmhub", icon: "🌐", key: "nav.ysmhub" }] : []),
       { id: "github", icon: "🧩", key: "nav.workshop" },
       { id: "diagnostics", icon: "🛠️", key: "nav.diagnostics" },
       { id: "settings", icon: "⚙️", key: "nav.settings" },

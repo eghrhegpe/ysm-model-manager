@@ -63,6 +63,12 @@ export const ALLOWED_CLI_COMMANDS = [
   "gui-flow",
   "resource-scan",
   "repo-audit",
+  "hub-models",
+  "hub-authors",
+  "hub-search",
+  "hub-model",
+  "hub-download",
+  "hub-login",
 ] as const;
 
 /** 动态白名单缓存（从后端 GetAllowedCLICommands 拉取，null=未拉取） */

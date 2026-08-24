@@ -65,6 +65,11 @@ describe("app-content 模板", () => {
     expect(html).toContain("set-mc-path");
     expect(html).toContain("set-link-mode");
     expect(html).toContain("set-files-root");
+    expect(html).toContain("set-ysm-storage-root");
+    expect(html).toContain("set-storage-launcher-detect");
+    expect(html.indexOf('id="set-advanced-panel"')).toBeLessThan(
+      html.indexOf('id="set-storage-launcher-results"'),
+    );
   });
 
   it("settingsHTML Android 查看器模式隐藏游戏根目录/链接模式/下载镜像源卡片，保留本地文件存储卡", () => {

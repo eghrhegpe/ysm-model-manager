@@ -4,7 +4,7 @@
 > 静态提取生成，**单一事实来源 = 源码注册**。新增命令/子命令/选项只改 `go/cli/` 源码，
 > 重跑本脚本即同步；`--check` 已接入 `doctor.mjs` 防漂移。
 >
-> 顶层命令共 **39** 个。入口姿势与常用场景见根 `AGENTS.md`「CLI 模式使用说明」。
+> 顶层命令共 **45** 个。入口姿势与常用场景见根 `AGENTS.md`「CLI 模式使用说明」。
 
 <!-- GEN: cli-commands -->
 ## 模型管理
@@ -418,6 +418,82 @@ app --cli --files-root <路径> health-report [选项...]
 | `--dir` | string — 仓库目录（默认使用 --files-root） |
 | `--output` | string — 输出文件路径（JSON 格式） |
 | `--bench` | bool — 追加首个模型的 single-bench 性能基线（默认关闭，耗时高） |
+
+
+### `hub`
+YSM Hub public API (models/authors/search/model/download/login)
+
+```bash
+app --cli --files-root <路径> hub [选项...]
+```
+
+**子命令**（用法：`app --cli --files-root <路径> hub <子命令> [选项...]`）：
+
+| 子命令 | 说明 |
+|--------|------|
+| `models` | list public models |
+| `authors` | list model author categories |
+| `search` | search public models |
+| `model` | show model details |
+| `download` | download a model (requires download scope) |
+| `login` | browser OAuth 2.1 + PKCE login |
+| `logout` | 撤销并删除已保存的 Token |
+| `me` | show current user |
+
+
+
+### `hub-authors`
+YSM Hub author categories for the desktop UI
+
+```bash
+app --cli --files-root <路径> hub-authors [选项...]
+```
+
+
+
+### `hub-download`
+Download a YSM Hub model into the local repository
+
+```bash
+app --cli --files-root <路径> hub-download [选项...]
+```
+
+
+
+### `hub-login`
+Sign in to YSM Hub from the desktop UI
+
+```bash
+app --cli --files-root <路径> hub-login [选项...]
+```
+
+
+
+### `hub-model`
+YSM Hub model details for the desktop UI
+
+```bash
+app --cli --files-root <路径> hub-model [选项...]
+```
+
+
+
+### `hub-models`
+YSM Hub model list for the desktop UI
+
+```bash
+app --cli --files-root <路径> hub-models [选项...]
+```
+
+
+
+### `hub-search`
+YSM Hub model search for the desktop UI
+
+```bash
+app --cli --files-root <路径> hub-search [选项...]
+```
+
 
 
 ### `instance`

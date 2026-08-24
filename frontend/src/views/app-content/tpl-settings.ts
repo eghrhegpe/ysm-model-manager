@@ -24,6 +24,16 @@ export function settingsHTML(): string {
         <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>
       </div>
     </div>`;
+  const launcherCard = isViewer
+    ? ""
+    : `<div class="stg-card" style="animation-delay:30ms">
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🚀 ${t("settings.launcher.title")}<button class="btn-base sm" id="set-launcher-detect">🔍 ${t("settings.launcher.detect")}</button></div>
+      <div class="stg-card-body">
+        <div class="stg-card-val" id="set-launcher-path">${t("settings.launcher.notConfigured")}</div>
+        <div class="stg-card-desc">${t("settings.launcher.desc")}</div>
+        <div id="set-launcher-results" style="margin-top:7px;font-size:var(--fs-sm);color:var(--muted)"></div>
+      </div>
+    </div>`;
   const linkCard = isViewer
     ? ""
     : `<div class="stg-card" style="animation-delay:60ms">
@@ -59,6 +69,7 @@ export function settingsHTML(): string {
 <div class="stg-grid">
     <!-- Row 1: 三栏 — 游戏根目录 + 链接模式 + 下载镜像源（查看器模式隐藏全部） -->
     ${gameRootCard}
+    ${launcherCard}
     ${linkCard}
     ${isViewer ? "" : `
     <div class="stg-card" style="animation-delay:120ms">
@@ -100,6 +111,15 @@ export function settingsHTML(): string {
       <div id="set-advanced-panel" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
         <div style="font-size:10px;color:var(--muted);margin-bottom:6px">${t("settings.path.customHint")}</div>
         <div class="stg-grid" id="set-advanced-grid"></div>
+      </div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span class="label" style="font-size:11px;font-weight:600">${t("settings.storage.ysmPath")}</span>
+          <button class="btn-base sm" id="set-storage-launcher-detect">🔍 ${t("settings.launcher.detect")}</button>
+        </div>
+        <div class="stg-card-val" id="set-ysm-storage-root">${t("common.loading")}</div>
+        <div class="stg-card-desc">${t("settings.storage.ysmPathDesc")}</div>
+        <div id="set-storage-launcher-results" style="margin-top:7px;font-size:var(--fs-sm);color:var(--muted)"></div>
       </div>
     </div>
   </div>

@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { PreviewMenuHandle } from "./preview-menu.ts";
+import type { PreviewMenuItemDef } from "./preview-menu-defs.ts";
 
 // ---- DOM mock（vitest 无默认 document）----
 const mockElements: Map<string, HTMLElement> = new Map();
@@ -219,14 +220,8 @@ function makeCtx() {
   };
 }
 
-function registeredItems(ctx: ReturnType<typeof makeCtx>["ctx"]) {
-  return (ctx.menu as unknown as { setAdapterItems: ReturnType<typeof vi.fn> }).setAdapterItems.mock
-    .calls[0][0] as Array<{
-    id: string;
-    kind: string;
-    dockGroup?: string;
-    render?: (list: HTMLElement) => void;
-  }>;
+function registeredItems(built: { menuItems?: PreviewMenuItemDef[] | null }): PreviewMenuItemDef[] {
+  return built.menuItems ?? [];
 }
 
 function makePanels(): VrmPanelHooks {
@@ -275,7 +270,7 @@ describe("buildVrmScene 主路径", () => {
     expect(loadingEl.parentNode).toBeNull();
 
     // 菜单项注入
-    const items = registeredItems(ctx);
+    const items = registeredItems(built);
     const ids = items.map((i) => i.id);
     expect(ids).toContain("model");
     expect(ids).toContain("shot");
@@ -405,7 +400,7 @@ describe("VRMA 动作加载", () => {
       hoisted.listPathsMock,
     );
 
-    const items = registeredItems(ctx);
+    const items = registeredItems(built);
     expect(items.find((i) => i.id === "vrma-play")).toBeUndefined();
     built.dispose();
   });
@@ -494,7 +489,7 @@ describe("VRMA 多动作切换", () => {
     );
 
     // 菜单项含 vrma-play
-    const items = registeredItems(ctx);
+    const items = registeredItems(built);
     const playItem = items.find((i: { id: string; dockGroup?: string }) => i.id === "vrma-play");
     expect(playItem).toBeDefined();
     expect(playItem?.dockGroup).toBe("motion");
@@ -527,13 +522,13 @@ describe("VRMA 多动作切换", () => {
     );
 
     // 菜单项含 vrma-play，且 render 会调用 fillPlayPanel
-    const items2 = registeredItems(ctx2);
+    const items2 = registeredItems(built2);
     const playItem2 = items2.find((i: { id: string }) => i.id === "vrma-play");
     expect(playItem2).toBeDefined();
 
     // 调用 render 触发 fillPlayPanel
     const list = document.createElement("div");
-    playItem2!.render!(list);
+    playItem2!.render!(list, () => {});
     expect(fillPlayPanel).toHaveBeenCalled();
 
     built2.dispose();
@@ -562,7 +557,7 @@ describe("VRMA 多动作切换", () => {
     expect(scene.children).toContain(vrm.scene);
     expect(built.update).toBeDefined();
     // 无动作
-    const items = registeredItems(ctx);
+    const items = registeredItems(built);
     expect(items.find((i: { id: string }) => i.id === "vrma-play")).toBeUndefined();
     built.dispose();
   });

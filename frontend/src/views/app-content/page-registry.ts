@@ -8,6 +8,7 @@ import {
   settingsHTML,
   diagnosticsHTML,
   workshopHTML,
+  ysmHubHTML,
   githubHTML,
 } from "./tpl.ts";
 import {
@@ -15,6 +16,7 @@ import {
   initInstancesPage,
   initSettingsPage,
   initWorkshopPage,
+  initYSMHubPage,
   initGithubPage,
   initDiagnosticsPage,
 } from "./init-pages.ts";
@@ -30,6 +32,7 @@ export const PAGE_REGISTRY: Record<string, PageDefinition> = {
   repository:   { html: repositoryHTML,  init: initRepositoryPage },
   instances:    { html: instancesHTML,   init: initInstancesPage },
   workshop:     { html: workshopHTML,    init: initWorkshopPage },
+  ysmhub:       { html: ysmHubHTML,       init: initYSMHubPage },
   github:       { html: githubHTML,      init: initGithubPage },
   diagnostics:  { html: diagnosticsHTML, init: initDiagnosticsPage },
   oldest:       { html: diagnosticsHTML, init: initDiagnosticsPage }, // 复用诊断页

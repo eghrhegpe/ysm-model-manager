@@ -201,6 +201,31 @@ func TestWorkshopConfigWriteToConfigDir(t *testing.T) {
 	}
 }
 
+func TestDefaultWorkshopSitesRemovesLegacyYSMHubEntry(t *testing.T) {
+	dir := t.TempDir()
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: dir}
+	defer func() { pathMgr = orig }()
+
+	configDirPath := filepath.Join(dir, "YSM-Model-Manager")
+	if err := os.MkdirAll(configDirPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	data := []byte(`[{"id":"ysmhub","label":"YSM Hub","url":"https://ysmhub.top/"},{"id":"bilibili","label":"B站","url":"https://bilibili.com/"}]`)
+	if err := os.WriteFile(filepath.Join(configDirPath, "workshop_sites.json"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sites := (&App{}).DefaultWorkshopSites()
+	for _, site := range sites {
+		if site.ID == "ysmhub" {
+			t.Fatal("legacy ysmhub entry should not appear in creator channel")
+		}
+	}
+	if len(sites) != 1 || sites[0].ID != "bilibili" {
+		t.Fatalf("unexpected filtered workshop sites: %+v", sites)
+	}
+}
+
 // 旧 exe 旁配置应迁移到 configDir，且旧文件被清理。
 func TestWorkshopConfigMigrateFromExe(t *testing.T) {
 	dir := t.TempDir()

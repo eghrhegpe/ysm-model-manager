@@ -36,12 +36,13 @@
 | Go·更新器 | 1 | 10 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 26 |
+| go/ysmhub | 3 | 21 |
 | Go(internal)·应用入口 | 28 | 212 |
 | 前端·根 (app-modules/bus) | 4 | 18 |
 | frontend/backend | 18 | 97 |
 | 前端·核心 | 18 | 36 |
 | 前端·特性 | 17 | 82 |
-| 前端·服务 | 2 | 18 |
+| 前端·服务 | 3 | 26 |
 | frontend/test-utils | 5 | 43 |
 | frontend/ui | 18 | 77 |
 | 前端·工具 | 149 | 594 |
@@ -71,7 +72,7 @@
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
 | `RunCLI()` | `go/cli/cli:14` | RunCLI 执行 CLI 模式 |
-| `ExecuteCLIWithApp()` | `go/cli/cli:72` | ExecuteCLIWithApp 执行 CLI 命令 |
+| `ExecuteCLIWithApp()` | `go/cli/cli:87` | ExecuteCLIWithApp 执行 CLI 命令 |
 | `NewJsonSuccess()` | `go/cli/json:39` | NewJsonSuccess 创建成功响应 |
 | `NewJsonError()` | `go/cli/json:50` | NewJsonError 创建错误响应 |
 | `NewJsonNotSupported()` | `go/cli/json:81` | NewJsonNotSupported 创建平台不支持响应 |
@@ -639,6 +640,32 @@
 | `HasYSMMod()` | `go/ysm/ysm:86` | HasYSMMod 检查 mods 目录是否有 YSM 模组（先做文件名过滤避免对每个 JAR 打开 ZIP） |
 | `HasModInDir()` | `go/ysm/ysm:110` | HasModInDir 检查 mods 目录是否有匹配指定类型关键词的 jar ADR-110：mod 依赖从注册表查询（types.ModKeywordsFor / types. |
 
+## go/ysmhub
+
+| 符号 | 文件:行 | 说明 |
+|------|--------|------|
+| `NewClient()` | `go/ysmhub/client:70` | NewClient validates baseURL and applies a bounded default timeout. |
+| `Client.ListModels()` | `go/ysmhub/client:86` | ListModels calls GET /models. |
+| `Client.Search()` | `go/ysmhub/client:97` | Search calls GET /search. |
+| `Client.GetModel()` | `go/ysmhub/client:112` | GetModel calls GET /models/:slug and returns the server's model object. |
+| `Client.GetMe()` | `go/ysmhub/client:125` | GetMe calls GET /me using the configured bearer token. |
+| `Client.DownloadModel()` | `go/ysmhub/client:135` | DownloadModel requests a model file. |
+| `Client.DownloadModelToFile()` | `go/ysmhub/client:156` | DownloadModelToFile resolves the short-lived response and atomically writes it below saveD |
+| `Client()` | `go/ysmhub/client:31` | Client calls the public YSM Hub v1 API. |
+| `Page()` | `go/ysmhub/client:38` | Page is the common paging envelope returned by list/search endpoints. |
+| `DownloadResponse()` | `go/ysmhub/client:48` | DownloadResponse is returned by the Hub download endpoint. |
+| `ListOptions()` | `go/ysmhub/client:58` | ListOptions controls /models and /search requests. |
+| `OAuthConfig.BeginAuthorization()` | `go/ysmhub/oauth:71` | BeginAuthorization creates a one-time state/verifier pair and authorization URL. |
+| `OAuthConfig.ExchangeCode()` | `go/ysmhub/oauth:95` | — |
+| `OAuthConfig.Refresh()` | `go/ysmhub/oauth:108` | — |
+| `OAuthConfig.Revoke()` | `go/ysmhub/oauth:118` | — |
+| `OAuthConfig()` | `go/ysmhub/oauth:24` | — |
+| `Token()` | `go/ysmhub/oauth:34` | — |
+| `TokenPath()` | `go/ysmhub/token_store:13` | — |
+| `LoadStoredToken()` | `go/ysmhub/token_store:22` | — |
+| `SaveStoredToken()` | `go/ysmhub/token_store:34` | — |
+| `DeleteStoredToken()` | `go/ysmhub/token_store:57` | — |
+
 ## Go(internal)·应用入口
 
 | 符号 | 文件:行 | 说明 |
@@ -774,30 +801,30 @@
 | `App.HasCachedTextures()` | `internal/app/app_texture_cache:105` | HasCachedTextures 批量检查多个哈希是否已有 KTX2 缓存。 |
 | `CachedTextureResult()` | `internal/app/app_texture_cache:16` | CachedTextureResult 是 GetCachedTexture 的返回值。 |
 | `App.DefaultWorkshopSites()` | `internal/app/app_workshop:103` | — |
-| `App.SaveWorkshopSites()` | `internal/app/app_workshop:114` | — |
-| `App.LoadWorkshopCreators()` | `internal/app/app_workshop:156` | — |
-| `App.SaveWorkshopCreators()` | `internal/app/app_workshop:167` | — |
-| `App.SaveWorkshopCreatorsBySite()` | `internal/app/app_workshop:176` | SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动 |
-| `App.SaveWorkshopPresetsBySite()` | `internal/app/app_workshop:192` | SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动 |
-| `App.LoadGitHubRepos()` | `internal/app/app_workshop:205` | — |
-| `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:216` | — |
-| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:237` | ========== CSV 导出/导入 ========== |
-| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:249` | — |
-| `App.ValidateWorkshopSites()` | `internal/app/app_workshop:262` | — |
-| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:278` | — |
-| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:304` | — |
-| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:311` | — |
-| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:326` | — |
-| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:368` | — |
-| `NewApp()` | `internal/app/app:62` | — |
-| `App.SetApp()` | `internal/app/app:88` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
-| `App.GetYSMRepoRoot()` | `internal/app/app:91` | GetYSMRepoRoot 返回当前配置的 YSM 仓库根目录 |
-| `App.SetMainWindow()` | `internal/app/app:103` | SetMainWindow 注入主窗口实例，避免依赖 Window.Current()。 |
-| `App.ServiceStartup()` | `internal/app/app:106` | ServiceStartup 对应 v2 的 startup，在 app.Run() 期间由框架调用 |
-| `App.ServiceShutdown()` | `internal/app/app:202` | ServiceShutdown 对应 v2 的 shutdown，在应用退出前由框架调用 |
-| `App.OpenInBrowser()` | `internal/app/app:237` | OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌） |
-| `App.GetAppVersion()` | `internal/app/app:242` | GetAppVersion 返回当前版本号 |
-| `App()` | `internal/app/app:29` | — |
+| `App.SaveWorkshopSites()` | `internal/app/app_workshop:127` | — |
+| `App.LoadWorkshopCreators()` | `internal/app/app_workshop:169` | — |
+| `App.SaveWorkshopCreators()` | `internal/app/app_workshop:180` | — |
+| `App.SaveWorkshopCreatorsBySite()` | `internal/app/app_workshop:189` | SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动 |
+| `App.SaveWorkshopPresetsBySite()` | `internal/app/app_workshop:205` | SaveWorkshopPresetsBySite 只替换指定站点的搜索词，其他站点不动 |
+| `App.LoadGitHubRepos()` | `internal/app/app_workshop:218` | — |
+| `App.ResetWorkshopConfigs()` | `internal/app/app_workshop:229` | — |
+| `App.ExportWorkshopSitesCSV()` | `internal/app/app_workshop:250` | ========== CSV 导出/导入 ========== |
+| `App.ExportWorkshopSitesJSONFile()` | `internal/app/app_workshop:262` | — |
+| `App.ValidateWorkshopSites()` | `internal/app/app_workshop:275` | — |
+| `App.ImportWorkshopSitesCSV()` | `internal/app/app_workshop:291` | — |
+| `App.ExportWorkshopCreatorsJSONFile()` | `internal/app/app_workshop:317` | — |
+| `App.BackupWorkshopCreators()` | `internal/app/app_workshop:324` | — |
+| `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:339` | — |
+| `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:381` | — |
+| `NewApp()` | `internal/app/app:63` | — |
+| `App.SetApp()` | `internal/app/app:89` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
+| `App.GetYSMRepoRoot()` | `internal/app/app:92` | GetYSMRepoRoot 返回当前配置的 YSM 仓库根目录 |
+| `App.SetMainWindow()` | `internal/app/app:104` | SetMainWindow 注入主窗口实例，避免依赖 Window.Current()。 |
+| `App.ServiceStartup()` | `internal/app/app:107` | ServiceStartup 对应 v2 的 startup，在 app.Run() 期间由框架调用 |
+| `App.ServiceShutdown()` | `internal/app/app:203` | ServiceShutdown 对应 v2 的 shutdown，在应用退出前由框架调用 |
+| `App.OpenInBrowser()` | `internal/app/app:238` | OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌） |
+| `App.GetAppVersion()` | `internal/app/app:259` | GetAppVersion 返回当前版本号 |
+| `App()` | `internal/app/app:30` | — |
 | `SetEmbedded()` | `internal/app/assets:16` | SetEmbedded 由根包 main 的 init() 注入编译期嵌入的静态资产。 |
 | `App.SetAllowedCommands()` | `internal/app/cli_bridge:15` | SetAllowedCommands 注入可用 CLI 命令列表（由 main.go 调用 cli.GetAllowedCommands() 提供） 避免 app→cli 循环依赖 |
 | `App.ExecuteCLI()` | `internal/app/cli_bridge:31` | ExecuteCLI 执行 CLI 命令并返回 JSON 响应（Wails 绑定） |
@@ -863,17 +890,17 @@
 | `normalizeTheme()` | `frontend/src/app-modules` | — |
 | `applyTheme()` | `frontend/src/app-modules` | — |
 | `initTheme()` | `frontend/src/app-modules` | — |
-| `bus()` | `frontend/src/bus:210` | 默认实例（组件直接使用） |
+| `bus()` | `frontend/src/bus:211` | 默认实例（组件直接使用） |
 | `ToastPayload()` | `frontend/src/bus:7` | — |
 | `MenuItem()` | `frontend/src/bus:18` | — |
 | `PageName()` | `frontend/src/bus:30` | 核心页面名（与 app-nav 导航菜单一致） |
-| `NavPagePayload()` | `frontend/src/bus:38` | — |
-| `ThemeChangePayload()` | `frontend/src/bus:42` | — |
-| `ModelSelectPayload()` | `frontend/src/bus:46` | — |
-| `CtxShowPayload()` | `frontend/src/bus:51` | — |
-| `BusEvents()` | `frontend/src/bus:70` | — |
-| `BusEventName()` | `frontend/src/bus:121` | — |
-| `Bus()` | `frontend/src/bus:147` | — |
+| `NavPagePayload()` | `frontend/src/bus:39` | — |
+| `ThemeChangePayload()` | `frontend/src/bus:43` | — |
+| `ModelSelectPayload()` | `frontend/src/bus:47` | — |
+| `CtxShowPayload()` | `frontend/src/bus:52` | — |
+| `BusEvents()` | `frontend/src/bus:71` | — |
+| `BusEventName()` | `frontend/src/bus:122` | — |
+| `Bus()` | `frontend/src/bus:148` | — |
 | `revealMainWindow()` | `frontend/src/startup-reveal:2` | Wait until the DOM has been upgraded and painted before exposing the native window. |
 | `normalizeTheme()` | `frontend/src/theme-core:18` | 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） |
 | `applyTheme()` | `frontend/src/theme-core:22` | — |
@@ -1116,21 +1143,29 @@
 | `CLIArgs()` | `frontend/src/services/cli-bridge:13` | CLI 命令参数（统一格式：key-value map） |
 | `CLIResponse()` | `frontend/src/services/cli-bridge:35` | CLI 统一响应 |
 | `ALLOWED_CLI_COMMANDS()` | `frontend/src/services/cli-bridge:45` | 允许的 CLI 命令默认白名单（网页版降级 + 首次加载缓存用） |
-| `resetDynamicCommandsCache()` | `frontend/src/services/cli-bridge:73` | 重置动态白名单缓存（供测试使用） |
-| `executeCLI()` | `frontend/src/services/cli-bridge:120` | 执行 CLI 命令（核心入口） |
-| `getAllowedCLICommands()` | `frontend/src/services/cli-bridge:169` | 获取允许的 CLI 命令列表（优先使用动态缓存） |
-| `cliSearch()` | `frontend/src/services/cli-bridge:184` | 搜索模型 |
-| `cliList()` | `frontend/src/services/cli-bridge:193` | 列出所有模型 |
-| `cliAnalyze()` | `frontend/src/services/cli-bridge:198` | 分析模型 |
-| `cliCacheStatus()` | `frontend/src/services/cli-bridge:203` | 缓存状态查询 |
-| `buildArgsMap()` | `frontend/src/services/cli-bridge:210` | 构建参数 map（过滤 undefined 和 null） |
-| `parseCLIResponse()` | `frontend/src/services/cli-bridge:221` | 解析 CLI JSON 响应 |
+| `resetDynamicCommandsCache()` | `frontend/src/services/cli-bridge:78` | 重置动态白名单缓存（供测试使用） |
+| `executeCLI()` | `frontend/src/services/cli-bridge:125` | 执行 CLI 命令（核心入口） |
+| `getAllowedCLICommands()` | `frontend/src/services/cli-bridge:174` | 获取允许的 CLI 命令列表（优先使用动态缓存） |
+| `cliSearch()` | `frontend/src/services/cli-bridge:189` | 搜索模型 |
+| `cliList()` | `frontend/src/services/cli-bridge:198` | 列出所有模型 |
+| `cliAnalyze()` | `frontend/src/services/cli-bridge:203` | 分析模型 |
+| `cliCacheStatus()` | `frontend/src/services/cli-bridge:208` | 缓存状态查询 |
+| `buildArgsMap()` | `frontend/src/services/cli-bridge:215` | 构建参数 map（过滤 undefined 和 null） |
+| `parseCLIResponse()` | `frontend/src/services/cli-bridge:226` | 解析 CLI JSON 响应 |
 | `ServiceName()` | `frontend/src/services/registry:11` | 已知服务名（新服务先在 app-modules.ts 注册，再在此登记） |
 | `register()` | `frontend/src/services/registry:18` | 注册一个服务（.ts 调用方：register("name", impl as X) 声明类型；重复注册覆盖旧实例并告警） |
 | `get()` | `frontend/src/services/registry:24` | 获取一个服务（.ts 调用方：get&lt;X&gt;("name") 断言期望类型；未注册抛错，错误含服务名） |
 | `has()` | `frontend/src/services/registry:32` | 检查服务是否已注册 |
 | `unregister()` | `frontend/src/services/registry:37` | 注销（测试用） |
 | `clear()` | `frontend/src/services/registry:42` | 清空所有（测试用） |
+| `YSMHubModel()` | `frontend/src/services/ysmhub:3` | — |
+| `YSMHubVersion()` | `frontend/src/services/ysmhub:22` | — |
+| `YSMHubPage()` | `frontend/src/services/ysmhub:32` | — |
+| `YSMHubDetail()` | `frontend/src/services/ysmhub:40` | — |
+| `listYSMHubModels()` | `frontend/src/services/ysmhub:62` | — |
+| `getYSMHubModel()` | `frontend/src/services/ysmhub:78` | — |
+| `downloadYSMHubModel()` | `frontend/src/services/ysmhub:87` | — |
+| `loginYSMHub()` | `frontend/src/services/ysmhub:101` | — |
 
 ## frontend/test-utils
 
@@ -1907,20 +1942,22 @@
 | `appContentStyle()` | `frontend/src/views/app-content/index:10` | — |
 | `AppContentHost()` | `frontend/src/views/app-content/init-github:17` | app-content 组件接口（供 github 初始化函数访问） |
 | `initGithubPage()` | `frontend/src/views/app-content/init-github:30` | 初始化 GitHub 页 |
-| `AppContentHost()` | `frontend/src/views/app-content/init-pages:17` | app-content 组件接口（供页面初始化函数访问） |
-| `initDiagnosticsPage()` | `frontend/src/views/app-content/init-pages:25` | 初始化诊断页 |
-| `initInstancesPage()` | `frontend/src/views/app-content/init-pages:32` | 初始化实例页 |
-| `initWorkshopPage()` | `frontend/src/views/app-content/init-pages:272` | 初始化创意工坊页（委托到 init-workshop.ts） |
-| `initGithubPage()` | `frontend/src/views/app-content/init-pages:279` | 初始化 GitHub 页（委托到 init-github.ts） |
-| `rememberModelPath()` | `frontend/src/views/app-content/init-pages:287` | 记住最后选中的模型路径（供文件树等外部调用） |
-| `getLastModelPath()` | `frontend/src/views/app-content/init-pages:291` | — |
+| `AppContentHost()` | `frontend/src/views/app-content/init-pages:18` | app-content 组件接口（供页面初始化函数访问） |
+| `initDiagnosticsPage()` | `frontend/src/views/app-content/init-pages:26` | 初始化诊断页 |
+| `initInstancesPage()` | `frontend/src/views/app-content/init-pages:33` | 初始化实例页 |
+| `initWorkshopPage()` | `frontend/src/views/app-content/init-pages:266` | 初始化创意工坊页（委托到 init-workshop.ts） |
+| `initGithubPage()` | `frontend/src/views/app-content/init-pages:273` | 初始化 GitHub 页（委托到 init-github.ts） |
+| `initYSMHubPage()` | `frontend/src/views/app-content/init-pages:278` | 初始化 YSM Hub 模型页 |
+| `rememberModelPath()` | `frontend/src/views/app-content/init-pages:286` | 记住最后选中的模型路径（供文件树等外部调用） |
+| `getLastModelPath()` | `frontend/src/views/app-content/init-pages:290` | — |
 | `initPreviewResize()` | `frontend/src/views/app-content/init-preview:8` | 初始化预览面板拖拽调整宽度 |
 | `initWorkshopPage()` | `frontend/src/views/app-content/init-workshop:37` | 初始化创意工坊页（编排入口） |
 | `resetAvatarConfigLoaded()` | `frontend/src/views/app-content/init-workshop:143` | 供 app-content disconnectedCallback 调用：回收 config-loaded 订阅并复位注册 flag |
 | `AppContentHost()` | `frontend/src/views/app-content/init-workshop:154` | app-content 组件接口（供 workshop/github 初始化函数访问） |
-| `PageDefinition()` | `frontend/src/views/app-content/page-registry:22` | — |
-| `PAGE_REGISTRY()` | `frontend/src/views/app-content/page-registry:29` | — |
-| `initSettings()` | `frontend/src/views/app-content/settings/init:31` | 初始化设置页所有事件绑定 |
+| `initYSMHubPage()` | `frontend/src/views/app-content/init-ysmhub:72` | — |
+| `PageDefinition()` | `frontend/src/views/app-content/page-registry:24` | — |
+| `PAGE_REGISTRY()` | `frontend/src/views/app-content/page-registry:31` | — |
+| `initSettings()` | `frontend/src/views/app-content/settings/init:30` | 初始化设置页所有事件绑定 |
 | `initKeymap()` | `frontend/src/views/app-content/settings/keymap:130` | 初始化 3D 预览操作：键位网格 + 恢复默认 + 相机速度 + 默认旋转模式 |
 | `saveCfg()` | `frontend/src/views/app-content/settings/path-cards:24` | — |
 | `bindPathClick()` | `frontend/src/views/app-content/settings/path-cards:52` | — |
@@ -1936,7 +1973,7 @@
 | `initTheme()` | `frontend/src/views/app-content/settings/theme:24` | 初始化主题段：主题卡片点击切换 + 自动切换下拉框 |
 | `applyUIPrefs()` | `frontend/src/views/app-content/settings/ui-prefs:12` | 应用 UI 偏好到 CSS 变量（字号/字体/密度/动画）——启动链与设置页共用（ADR-040 拆分去重） |
 | `initUiPrefs()` | `frontend/src/views/app-content/settings/ui-prefs:52` | 初始化界面与体验设置：应用偏好 + 绑定字号/字体/密度/动画/默认页变更 |
-| `initWorkerPrefs()` | `frontend/src/views/app-content/settings/worker-prefs:35` | 初始化 3D 解析 worker 开关：读取现有偏好回填 + 绑定变更 |
+| `initWorkerPrefs()` | `frontend/src/views/app-content/settings/worker-prefs:44` | 初始化 3D 解析 worker 开关：读取现有偏好回填 + 绑定变更 |
 | `RepoAuthorLike()` | `frontend/src/views/app-content/site-view:12` | 作者计数条目（绑定 ListModelAuthors 元素：string 或 {Name, Count}） |
 | `RenderSiteViewCtx()` | `frontend/src/views/app-content/site-view:15` | 竚点视图渲染上下文（index.ts _initWorkshop 传入） |
 | `LocalCreatorLike()` | `frontend/src/views/app-content/site-view:38` | 本地创作者（绑定 + 运行时附加字段） |
@@ -1956,7 +1993,9 @@
 | `aboutHTML()` | `frontend/src/views/app-content/tpl-settings-about:6` | About 标签页（版本/特性/技术栈/链接/快速上手） |
 | `creditsHTML()` | `frontend/src/views/app-content/tpl-settings-about:95` | Credits 标签页（灵感来源/特别感谢） |
 | `settingsHTML()` | `frontend/src/views/app-content/tpl-settings:8` | — |
+| `ysmHubHTML()` | `frontend/src/views/app-content/tpl-ysmhub:4` | — |
 | `settingsHTML()` | `frontend/src/views/app-content/tpl` | — |
+| `ysmHubHTML()` | `frontend/src/views/app-content/tpl` | — |
 | `recycleHTML()` | `frontend/src/views/app-content/tpl` | — |
 | `repositoryHTML()` | `frontend/src/views/app-content/tpl:9` | — |
 | `instancesHTML()` | `frontend/src/views/app-content/tpl:47` | — |

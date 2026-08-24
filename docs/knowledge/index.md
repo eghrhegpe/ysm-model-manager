@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 102 张知识卡
+> 总计: 104 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -55,7 +55,7 @@
 - **wails-bridge**（Wails 桥接 app.ts）：`backend/app.ts` 是前端调用后端 Binding 的唯一入口。所有 Go 端方法通过 `getApp()` 获取，禁止直接通过 `window.go.main.App` 访问。**ADR-049 平台双路由**：网页版（无 …
 - **ysm-baked**（YSM 烘焙与几何反推）：YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。…
 
-## feature（6 张）
+## feature（8 张）
 
 *业务功能（导入队列、同步、社区）*
 
@@ -63,19 +63,24 @@
 |------|------|------|------|--------|
 | 🏗 community-feature | 社区下载 community | architecture | — | 创意工坊, 社区, 下载队列, 镜像源, 批量下载, github 仓库, 下载进度, workshop |
 | 🏗 import-queue | 导入队列 import-queue | architecture | — | 导入, 导入队列, 拖拽导入, 命名表单, 文件夹导入, 覆盖导入, import |
+| 🍃 launcher_discovery | HMCL/PCL 启动器目录识别 | leaf | — | 需要识别 HMCL/PCL 版本目录并设置 YSM 默认下载目录, 排查 config/yes_steve_model/custom 的版本隔离路径 |
 | 🍃 oldest-models | 资历最深模型 oldest-models | leaf | — | 资历最深, 老模型, 仓库评分, 每日推荐, 月度活动, 热力图, 仓库健康 |
 | 🏗 recycle-bin | 回收站界面 recycle-bin | architecture | — | 回收站, 恢复文件, 清空回收站, 软删除, recycle, 还原 |
 | 🏗 resource-packs | 资源包功能 resource-packs | architecture | — | 资源包, 光影包, 蓝图, 投影, resourcepack, shaderpack, 资源管理 |
 | 🏗 version-updater | 版本更新 version-updater | architecture | — | 更新, 升级, 检查更新, 新版本, 静默检查, updater, 版本 |
+| 🍃 ysmhub_author_api | YSM Hub 作者分类与归属 | leaf | 接入 YSM Hub 作者分类、作者筛选或模型归属信息, 排查作者接口和公开模型浏览的凭据边界 |
+| 🍃 ysmhub_author_api | YSM Hub 作者分类与归属 | leaf | — | 接入 YSM Hub 作者分类、作者筛选或模型归属信息, 排查作者接口和公开模型浏览的凭据边界 |
 
 ### 摘要
 
 - **community-feature**（社区下载 community）：`features/community/` 是创意工坊（GitHub 模型仓库）浏览与批量下载的前端业务层，五个文件分工：`data.ts` 抓取远端 index.json（多镜像竞速）、`render.ts` 渲染站点卡片与模型列表、`e…
 - **import-queue**（导入队列 import-queue）：导入分两层：**全局导入执行器 `import-executor.ts`（一等公民）** 负责真正的落盘（`directImport` 单文件直导 / `importFolder` 文件夹整组 / `executeCollected` 批量…
+- **launcher_discovery**（HMCL/PCL 启动器目录识别）：`App.DetectLaunchers` 对用户选择的目录做有限深度探测，识别 HMCL、PCL 或普通 Minecraft 游戏根目录，并列出全局目录、`versions/<version>` 目录及对应的 YSM custom 路径。
 - **oldest-models**（资历最深模型 oldest-models）：`oldest-models.ts` 实现仓库页「资历」tab（diagnostics/oldest 页面）的仪表盘：围绕 `ScanModelEntries` 扫描结果做本地统计，渲染四大板块——仓库评分（健康环）、资历最深 Top4（按…
 - **recycle-bin**（回收站界面 recycle-bin）：`recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调…
 - **resource-packs**（资源包功能 resource-packs）：**已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager…
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
+- **ysmhub_author_api**（YSM Hub 作者分类与归属）：YSM Hub 客户端支持作者分类接口和模型列表的作者筛选。公开浏览继续使用无凭据的列表客户端；OAuth 或运行时 Key 只在明确配置时转发。
 
 ## go（34 张）
 

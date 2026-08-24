@@ -10,34 +10,35 @@ test.describe("设置页", () => {
   });
 
   test("导航到设置页", async ({ page }) => {
-    const navItems = page.locator('[data-testid="nav-item"]');
-    // 导航项第 6 个是"设置"
-    const count = await navItems.count();
-    expect(count).toBe(6);
-    // 点击最后一个（设置），等待 active 高亮切换（实断言替代裸等待）
-    await navItems.nth(5).click();
-    await expect(navItems.nth(5)).toHaveClass(/active/, { timeout: 5000 });
+    const settingsNav = page.locator(
+      '[data-testid="nav-item"][data-page="settings"]',
+    );
+    await settingsNav.click();
+    await expect(settingsNav).toHaveClass(/active/, { timeout: 5000 });
   });
 
   test("导航到创作者频道页", async ({ page }) => {
-    const navItems = page.locator('[data-testid="nav-item"]');
-    // 第 3 个是"创作者频道"
-    await navItems.nth(2).click();
-    await expect(navItems.nth(2)).toHaveClass(/active/, { timeout: 5000 });
+    const workshopNav = page.locator(
+      '[data-testid="nav-item"][data-page="workshop"]',
+    );
+    await workshopNav.click();
+    await expect(workshopNav).toHaveClass(/active/, { timeout: 5000 });
   });
 
   test("导航到创意工坊页", async ({ page }) => {
-    const navItems = page.locator('[data-testid="nav-item"]');
-    // 第 4 个是"创意工坊"
-    await navItems.nth(3).click();
-    await expect(navItems.nth(3)).toHaveClass(/active/, { timeout: 5000 });
+    const githubNav = page.locator(
+      '[data-testid="nav-item"][data-page="github"]',
+    );
+    await githubNav.click();
+    await expect(githubNav).toHaveClass(/active/, { timeout: 5000 });
   });
 
   test("导航到诊断页", async ({ page }) => {
-    const navItems = page.locator('[data-testid="nav-item"]');
-    // 第 5 个是"诊断与冲突"
-    await navItems.nth(4).click();
-    await expect(navItems.nth(4)).toHaveClass(/active/, { timeout: 5000 });
+    const diagnosticsNav = page.locator(
+      '[data-testid="nav-item"][data-page="diagnostics"]',
+    );
+    await diagnosticsNav.click();
+    await expect(diagnosticsNav).toHaveClass(/active/, { timeout: 5000 });
   });
 
   test("设置页点击游戏根目录 → SelectDirectory → SaveAppConfig + toast", async ({ page }) => {
@@ -48,8 +49,10 @@ test.describe("设置页", () => {
       undefined,
       { timeout: 10000, polling: 200 },
     );
-    const navItems = page.locator('[data-testid="nav-item"]');
-    await navItems.nth(5).click(); // 设置
+    const settingsNav = page.locator(
+      '[data-testid="nav-item"][data-page="settings"]',
+    );
+    await settingsNav.click();
     // 等待设置页渲染（shadow DOM 内路径卡片出现；诊断证实点击后约 2s 就绪）
     await page.waitForFunction(
       () => {

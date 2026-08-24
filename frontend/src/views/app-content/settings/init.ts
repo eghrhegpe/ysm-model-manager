@@ -14,7 +14,7 @@ import { selectLocalRepo, getFsaAuthState, rescanFsaRoot } from "../../../backen
 import { RESOURCE_TYPES } from "../../../utils/resource/types.ts";
 import { initVersionUpdater } from "../../../features/version-updater.ts";
 import { GH_RELEASES } from "../../../utils/gh-links.ts";
-import { bindPathClick, saveCfg, initAdvancedGrid, initMcDetect } from "./path-cards.ts";
+import { bindPathClick, saveCfg, initAdvancedGrid, initMcDetect, initLauncherDetect } from "./path-cards.ts";
 import { initTheme } from "./theme.ts";
 import { initUiPrefs } from "./ui-prefs.ts";
 import { initWorkerPrefs } from "./worker-prefs.ts";
@@ -64,6 +64,20 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     refreshAdvanced,
   );
 
+  // YSM 模型实际存储目录：可从启动器扫描结果中选择，也支持手动点选目录。
+  // 该路径使用资源类型专属根，不改变其他资源的统一存储根。
+  bindPathClick(
+    root, "set-ysm-storage-root",
+    () => cfg.customRoots?.ysm || "",
+    async (dir) => {
+      const { SetResourceRoot, EnsureStorageDirs } = await getApp();
+      await SetResourceRoot("ysm", dir);
+      await EnsureStorageDirs();
+      cfg.customRoots = { ...(cfg.customRoots || {}), ysm: dir };
+    },
+    refreshAdvanced,
+  );
+
   // 展开/折叠
   root
     .getElementById("set-advanced-toggle")
@@ -83,12 +97,13 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
           panel.style.display = "none";
         }, ADV_COLLAPSE_MS);
       } else {
-        await refreshAdvanced();
         panel.style.display = "block";
         panel.classList.remove("adv-closing");
         panel.classList.add("adv-open");
         btn.textContent = t("settings.collapse");
         card.style.gridColumn = "1 / -1";
+        // 先完成展开反馈，再刷新内容；即使路径读取较慢，按钮也不会像失效。
+        await refreshAdvanced();
       }
     });
 
@@ -97,6 +112,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   // 游戏路径 - 自动搜索 + hover 扫描提示
   initMcDetect(root);
+  initLauncherDetect(root);
 
   // 主题段（卡片点击 / 自动切换）
   initTheme(root);

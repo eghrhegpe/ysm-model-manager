@@ -50,6 +50,26 @@ type VersionInstance struct {
 	Exists     bool   `json:"Exists"`
 }
 
+// LauncherInfo describes a detected HMCL/PCL (or generic Minecraft) layout.
+// It is read-only discovery data; the manager never edits launcher metadata.
+type LauncherInfo struct {
+	Type      string             `json:"type"`
+	Name      string             `json:"name"`
+	RootDir   string             `json:"root_dir"`
+	Instances []LauncherInstance `json:"instances"`
+}
+
+// LauncherInstance is a game/version directory and its YSM configuration path.
+type LauncherInstance struct {
+	Name                string   `json:"name"`
+	Version             string   `json:"version"`
+	Path                string   `json:"path"`
+	YSMCustomDir        string   `json:"ysm_custom_dir"`
+	YSMCustomExists     bool     `json:"ysm_custom_exists"`
+	YSMConfigFiles      []string `json:"ysm_config_files"`
+	LauncherConfigFiles []string `json:"launcher_config_files"`
+}
+
 // SearchResult 模型搜索结果
 type SearchResult struct {
 	Name      string `json:"name"`

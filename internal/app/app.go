@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -235,7 +236,23 @@ func (a *App) ServiceShutdown() error {
 
 // OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌）
 func (a *App) OpenInBrowser(url string) {
-	_ = a.app.Browser.OpenURL(url)
+	if a != nil && a.app != nil {
+		_ = a.app.Browser.OpenURL(url)
+		return
+	}
+	// CLI mode has no Wails application instance; fall back to the platform browser.
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("rundll32.exe", "url.dll,FileProtocolHandler", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	if err := cmd.Start(); err != nil {
+		log.Printf("[browser] 打开系统浏览器失败: %v", err)
+	}
 }
 
 // GetAppVersion 返回当前版本号

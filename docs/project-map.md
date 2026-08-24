@@ -42,6 +42,7 @@
 | `version/` | 版本号 〔源码 1: version.go · 测试 1〕 |
 | `watcher/` | 文件监听 〔源码 1: watcher.go · 测试 2〕 |
 | `ysm/` | YSM 解析 + 摘要 〔源码 8: cli.go decode_inject.go extracted.go header.go parse.go summary.go texsize.go ysm.go · 测试 15〕 |
+| `ysmhub/` | YSM Hub 公开模型浏览、OAuth PKCE 登录、令牌存储与安全下载 〔源码 3: client.go oauth.go token_store.go · 测试 2〕 |
 
 <!-- /GEN: go-structure -->
 
@@ -64,7 +65,7 @@
 | `backend/` | 后端适配层：Wails 绑定入口（app.ts）+ 平台判定（platform.ts）+ 浏览器适配（browser-adapter.ts）+ IndexedDB 模型库（idb.ts） 〔源码 18 · 测试 15〕 |
 | `core/` | 基础设施（buttons / global-handlers / theme / context-menus） 〔源码 8: context-menu-dir-handlers.ts context-menu-file-handlers.ts context-menu-handlers.ts context-menu-… · 测试 3 · 子目录 2: handlers/ i18n/〕 |
 | `features/` | 业务功能（import-queue / recycle-bin / version-updater / community） 〔源码 8: dnd-collector.ts dnd-shared.ts import-dnd.ts import-executor.ts oldest-models.ts recycle-bin.ts r… · 测试 8 · 子目录 1: community/〕 |
-| `services/` | 服务注册（registry.ts） 〔源码 2: cli-bridge.ts registry.ts · 测试 2〕 |
+| `services/` | 服务注册（registry.ts） 〔源码 3: cli-bridge.ts registry.ts ysmhub.ts · 测试 3〕 |
 | `test-utils/` | 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor） 〔源码 5: events.ts index.ts query-by-testid.ts render.ts self-healing.ts · 测试 4〕 |
 | `ui/` | 🥉 ui-helpers 原生 DOM 组件库（自 MikuMikuAR 迁移：slide-row / rows / header-toggle / advanced-rows / collapsible / preset / card / loading + 自包含 CSS 模块 `ui-components-styles.ts`，经 `installUiComponentsStyles()` / `uiComponentsStyleSheet` 接入） 〔源码 18 · 子目录 1: __tests__/〕 |
 | `utils/` | 工具函数（display / fmt / dom / icon / summarize / model3d） 〔源码 6: array.ts gh-links.ts main-thread-watch.ts module-loader.ts safe-error-msg.ts types-re-export.ts · 测试 3 · 子目录 8: 3d/ animation/ core/ debug/ dom/ format/ icon/ resource/〕 |

@@ -73,11 +73,11 @@ describe("resolveInitialPage（localStorage 恢复）", () => {
 });
 
 describe("PAGE_WHITELIST 双源漂移防护", () => {
-  it("白名单内容与 PageName 六页一致（防新增页被内联脚本重置回 repository）", () => {
+  it("白名单内容与 PageName 七页一致（防新增页被内联脚本重置回 repository）", () => {
     expect([...PAGE_WHITELIST].sort()).toEqual(
-      ["repository", "instances", "workshop", "github", "diagnostics", "settings"].sort(),
+      ["repository", "instances", "workshop", "ysmhub", "github", "diagnostics", "settings"].sort(),
     );
-    expect(PAGE_WHITELIST.length).toBe(6);
+    expect(PAGE_WHITELIST.length).toBe(7);
   });
 });
 

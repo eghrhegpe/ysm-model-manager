@@ -383,6 +383,7 @@ describe("CLI Bridge - 白名单常量", () => {
       "cache-status", "cache-verify", "cache-clear", "cache-diag",
       "config-show", "gui-flow",
       "resource-scan", "repo-audit",
+      "hub-models", "hub-authors", "hub-search", "hub-model", "hub-download", "hub-login",
     ];
 
     for (const cmd of expected) {
@@ -391,7 +392,7 @@ describe("CLI Bridge - 白名单常量", () => {
   });
 
   it("数量正确", () => {
-    expect(ALLOWED_CLI_COMMANDS).toHaveLength(20);
+    expect(ALLOWED_CLI_COMMANDS).toHaveLength(26);
   });
 
   it("类型安全：只能传入白名单中的命令", () => {

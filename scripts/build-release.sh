@@ -93,7 +93,13 @@ fi
 # 3. 主程序编译（go build 直接注入版本号并嵌入前端资源）
 echo -e "\033[33m🦫 编译主程序 $VER_TAG ...\033[0m"
 cd "$PROJECT_ROOT"
-if ! go build -ldflags "-X ysm-model-manager/go/version.Version=$VER_TAG" -o "$OUTPUT_DIR/$EXE_NAME" . 2>&1; then
+MAIN_LDFLAGS="-X ysm-model-manager/go/version.Version=$VER_TAG"
+if [ -n "${YSMHUB_API_KEY:-}" ]; then
+  # Read the key only from the build environment; never print or commit it.
+  MAIN_LDFLAGS="$MAIN_LDFLAGS -X ysm-model-manager/go/cli.embeddedHubAPIKey=$YSMHUB_API_KEY"
+  echo "YSM Hub read/download key injected (credential value hidden)"
+fi
+if ! go build -ldflags "$MAIN_LDFLAGS" -o "$OUTPUT_DIR/$EXE_NAME" . 2>&1; then
   echo -e "\033[31m❌ go build 失败\033[0m" >&2
   exit 1
 fi

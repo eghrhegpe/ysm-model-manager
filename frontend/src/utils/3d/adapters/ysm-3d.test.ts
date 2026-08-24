@@ -88,14 +88,13 @@ function makeCtx() {
   };
 }
 
-/** 最近一次 setAdapterItems 收到的适配器项 */
-function registeredItems(menu: unknown) {
-  return (menu as { setAdapterItems: ReturnType<typeof vi.fn> }).setAdapterItems.mock
-    .calls[0][0] as Array<{
+/** 适配器通过 PreviewScene.menuItems 声明式注册的菜单项 */
+function registeredItems(preview: { menuItems?: Array<{
     id: string;
     kind: string;
     render?: (list: HTMLElement, close: () => void) => void;
-  }>;
+  }> | null }) {
+  return preview.menuItems ?? [];
 }
 
 describe("buildYsmScene（shared 装配）", () => {
@@ -113,8 +112,8 @@ describe("buildYsmScene（shared 装配）", () => {
     expect(mocks.buildYsmObject).toHaveBeenCalledTimes(1);
     expect(ctx.scene.add).toHaveBeenCalledWith(rootGroup);
 
-    // ADR-076 v2 Phase 2：适配器经 ctx.menu.setAdapterItems 注入 model / 截图 / 骨骼 / 感知 四项
-    const items = registeredItems(ctx.menu);
+    // ADR-076 v2 Phase 2：适配器通过 PreviewScene.menuItems 声明 model / 截图 / 骨骼 / 感知四项
+    const items = registeredItems(preview);
     expect(items.map((i) => i.id)).toEqual(["model", "shot", "bones", "perception"]);
     items.forEach((i) => expect(i.kind).toBe("panel"));
     items.forEach((i) => expect(typeof i.render).toBe("function"));
@@ -169,7 +168,7 @@ describe("buildYsmScene 面板填充与骨骼拾取", () => {
       panels: fakePanels,
     });
 
-    const items = registeredItems(ctx.menu);
+    const items = registeredItems(preview);
     const modelItem = items.find((i) => i.id === "model")!;
     const list = document.createElement("div");
     modelItem.render!(list, () => {});
@@ -187,7 +186,7 @@ describe("buildYsmScene 面板填充与骨骼拾取", () => {
       panels: fakePanels,
     });
 
-    const items = registeredItems(ctx.menu);
+    const items = registeredItems(preview);
     const shotItem = items.find((i) => i.id === "shot")!;
     const list = document.createElement("div");
     shotItem.render!(list, () => {});
@@ -262,7 +261,7 @@ describe("buildYsmScene dispose 清理行为", () => {
     });
 
     // 无 panels → 菜单项 render 退化为 no-op
-    const items = registeredItems(ctx.menu);
+    const items = registeredItems(preview);
     const modelItem = items.find((i) => i.id === "model")!;
     const list = document.createElement("div");
     expect(() => modelItem.render!(list, () => {})).not.toThrow();
@@ -310,7 +309,7 @@ describe("buildYsmScene 动画播放器集成（ADR-100）", () => {
       readTextFile,
     });
 
-    const items = registeredItems(ctx.menu);
+    const items = registeredItems(preview);
     const playItem = items.find((i) => i.id === "ysm-play");
     expect(playItem).toBeUndefined();
 
@@ -357,7 +356,7 @@ describe("buildYsmScene 动画播放器集成（ADR-100）", () => {
       preload: mocks.preloadModel,
     });
 
-    const items = registeredItems(ctx.menu);
+    const items = registeredItems(preview);
     expect(items.find((i) => i.id === "ysm-play")).toBeDefined();
 
     preview.dispose();
@@ -387,7 +386,7 @@ describe("buildYsmScene 动画播放器集成（ADR-100）", () => {
       },
     });
 
-    const items = registeredItems(ctx.menu);
+    const items = registeredItems(preview);
     const playItem = items.find((i) => i.id === "ysm-play");
     expect(playItem).toBeDefined();
     playItem!.render!(document.createElement("div"), () => {});

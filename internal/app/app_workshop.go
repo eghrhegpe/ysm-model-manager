@@ -103,12 +103,25 @@ func loadBundledJSON(name string, v interface{}) error {
 func (a *App) DefaultWorkshopSites() []types.WorkshopSite {
 	var sites []types.WorkshopSite
 	if migrateAndLoadWorkshop("workshop_sites.json", &sites) {
-		return sites
+		return withoutLegacyYSMHubSite(sites)
 	}
 	if err := loadBundledJSON("workshop_sites.json", &sites); err != nil {
 		return defaultWorkshopSites()
 	}
-	return sites
+	return withoutLegacyYSMHubSite(sites)
+}
+
+// withoutLegacyYSMHubSite removes the old creator-channel entry after YSM Hub
+// moved to its dedicated page. This also handles user configs created by an
+// older build; the bundled workshop list no longer contains that entry.
+func withoutLegacyYSMHubSite(sites []types.WorkshopSite) []types.WorkshopSite {
+	filtered := make([]types.WorkshopSite, 0, len(sites))
+	for _, site := range sites {
+		if site.ID != "ysmhub" {
+			filtered = append(filtered, site)
+		}
+	}
+	return filtered
 }
 
 func (a *App) SaveWorkshopSites(sites []types.WorkshopSite) error {

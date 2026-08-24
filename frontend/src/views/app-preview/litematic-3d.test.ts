@@ -479,10 +479,12 @@ describe("控件交互", () => {
     await createLitematic3D("/a.litematic", "GetLitematicVoxelData");
     const overlay = lastOverlay();
     // 旋转模式 / 速度滑块由 buildCameraControls 挂在 camera 面板（SlideMenu 弹层内，
-    // 懒渲染），需先 dock-motion 下钻才生成。motion 组仅 camera 一个 panel，
-    // dock-motion 走「快捷直达」直接渲染相机面板（无 preview-camera 中间行）。
-    const dock = overlay.querySelector('[data-testid="dock-motion"]') as HTMLElement;
+    // 懒渲染），需先打开场景组，再进入 camera 行。
+    const dock = overlay.querySelector('[data-testid="dock-scene"]') as HTMLElement;
     dock.click();
+    const cameraRow = overlay.querySelector('[data-testid="preview-camera"]') as HTMLElement;
+    expect(cameraRow).toBeTruthy();
+    cameraRow.click();
     const sel = overlay.querySelector('[data-testid="mmd-rot-mode"]') as HTMLSelectElement;
     expect(sel).toBeTruthy();
     // 相机面板 list 是 buildCameraControls 的挂载点，速度滑块/值标签均在其内，
@@ -752,10 +754,12 @@ describe("审核补充：边界与异步路径", () => {
   it("自身旋转模式拖拽：pointerdown + pointermove → quaternion 更新", async () => {
     await createLitematic3D("/drag.litematic", "GetLitematicVoxelData");
     const overlay = lastOverlay();
-    // 下钻 camera 面板，切「自身」模式（非 orbit）。dock-motion 快捷直达相机面板
-    // （motion 组仅 camera 一个 panel，无 preview-camera 中间行）。
-    const dock = overlay.querySelector('[data-testid="dock-motion"]') as HTMLElement;
+    // 下钻 camera 面板，切「自身」模式（非 orbit）。相机控件属于场景组。
+    const dock = overlay.querySelector('[data-testid="dock-scene"]') as HTMLElement;
     dock.click();
+    const cameraRow = overlay.querySelector('[data-testid="preview-camera"]') as HTMLElement;
+    expect(cameraRow).toBeTruthy();
+    cameraRow.click();
     const sel = overlay.querySelector('[data-testid="mmd-rot-mode"]') as HTMLSelectElement;
     expect(sel).toBeTruthy();
     sel.value = "false";
@@ -817,6 +821,8 @@ function openSlicePanel(overlay: HTMLElement): void {
   const modelBtn = overlay.querySelector('[data-testid="dock-model"]') as HTMLElement;
   if (!modelBtn) throw new Error("dock-model button not found");
   modelBtn.click();
-  // 快捷直达：dock-model 点击后直接打开 slice 面板（model 组仅 1 个 panel 项）
-  // 不需要再查 preview-slice 行——面板已渲染在 popup 中
+  // 角色详情中仍保留切换角色入口，因此模型组不是单一面板，需点击分层切片行。
+  const sliceRow = overlay.querySelector('[data-testid="preview-slice"]') as HTMLElement;
+  if (!sliceRow) throw new Error("preview-slice row not found");
+  sliceRow.click();
 }

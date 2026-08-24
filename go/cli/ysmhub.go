@@ -342,7 +342,14 @@ func runHubMe(ctx *CmdContext) error {
 	if err != nil {
 		return err
 	}
-	client, err := newHubClient(flags)
+	key, source, err := loadHubCredential()
+	if err != nil {
+		return newParamErrf("hub me: %v", err)
+	}
+	if source == hubCredentialEmbedded {
+		return newParamErrf("hub me: the embedded public key only supports browsing/downloads; set YSMHUB_API_KEY or run hub login")
+	}
+	client, err := ysmhub.NewClient(flags.baseURL, key)
 	if err != nil {
 		return newParamErrf("hub me: %v", err)
 	}

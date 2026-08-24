@@ -5,6 +5,7 @@ tier: leaf
 category: go
 source_files:
   - go/version/version.go
+  - go/cli/ysmhub.go
 use_when:
   - 版本
   - version
@@ -27,6 +28,7 @@ invariant_anchors:
 ## 对外 API / 入口
 
 - `Version` — `var Version = "dev"`；注入方式：`go build -ldflags "-X ysm-model-manager/go/version.Version=v1.0.0" .`
+- YSM Hub 桌面测试/发布包可在构建环境设置 `YSMHUB_API_KEY`，由 `scripts/build-release.ps1` / `scripts/build-release.sh` 通过 `-X ysm-model-manager/go/cli.embeddedHubAPIKey` 注入只读/下载 Key。运行时优先级为环境变量 → 已保存 OAuth → 构建注入 Key；公开列表/详情请求不会发送构建注入 Key。
 
 ## 与其他子系统关系
 

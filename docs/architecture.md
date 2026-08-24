@@ -628,9 +628,9 @@ MMD 适配器通过 `MMDAmmoPlugin` 一行注册：`new MMDLoader(manager).regis
 ### 10.2 发布流水线
 
 **桌面（Windows）**：`scripts/build-release.ps1`：
-1. `wails3 generate bindings` → 2. `npm run build`（vite）→ 3. 构建 `ysm-updater-helper.exe`（embed 前置）→ 4. `go generate`（litematic block_ids）→ 5. `go build -ldflags "-X ysm-model-manager/go/version.Version=$VerTag"` → 6. 生成 SHA256SUMS → GitHub Release 上传裸 exe（v1.13.0 起，不再打包 zip）。
+1. `wails3 generate bindings` → 2. `npm run build`（vite）→ 3. 构建 `ysm-updater-helper.exe`（embed 前置）→ 4. `go generate`（litematic block_ids）→ 5. `go build -ldflags "-X ysm-model-manager/go/version.Version=$VerTag"`；若构建环境设置 `YSMHUB_API_KEY`，同一步额外注入 `ysm-model-manager/go/cli.embeddedHubAPIKey`（只读/下载 Key，不写入源码且不输出值）→ 6. 生成 SHA256SUMS → GitHub Release 上传裸 exe（v1.13.0 起，不再打包 zip）。
 
-**桌面（macOS/Linux）**：`scripts/build-release.sh` → `scripts/build-darwin.sh` / `scripts/build-linux.sh`（NSIS/fpm 打包）。
+**桌面（macOS/Linux）**：`scripts/build-release.sh` → `scripts/build-darwin.sh` / `scripts/build-linux.sh`（NSIS/fpm 打包）；设置 `YSMHUB_API_KEY` 时同样注入只读/下载 Key。
 
 **Android**：`node scripts/android-build.mjs`（一键）或 `Taskfile.yml` `android` include：
 1. `wails3 android overlay:gen` → 2. `npm run build` → 3. `go build -buildmode=c-shared -tags android -overlay overlay.json` → 4. Gradle `assembleRelease` → APK（keystore 经 GitHub Secrets 注入）。

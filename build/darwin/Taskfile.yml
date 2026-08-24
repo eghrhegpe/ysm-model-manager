@@ -11,7 +11,7 @@ tasks:
       - task: common:build:frontend
     cmds:
       - mkdir -p "{{.BIN_DIR}}"
-      - go build -tags production -trimpath -buildvcs=false -ldflags="-w -s -X ysm-model-manager/go/version.Version={{.APP_VERSION}}" -o "{{.BIN_DIR}}/{{.APP_NAME}}" .
+      - go build -tags production -trimpath -buildvcs=false -ldflags="-w -s -X ysm-model-manager/go/version.Version={{.APP_VERSION}}{{if .YSMHUB_API_KEY}} -X ysm-model-manager/go/cli.embeddedHubAPIKey={{.YSMHUB_API_KEY}}{{end}}" -o "{{.BIN_DIR}}/{{.APP_NAME}}" .
     env:
       GOOS: darwin
       CGO_ENABLED: '{{.CGO_ENABLED | default "1"}}'

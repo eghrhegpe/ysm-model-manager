@@ -99,6 +99,35 @@ func TestLoadHubAccessTokenUsesEmbeddedKeyAfterRuntimeOverride(t *testing.T) {
 	}
 }
 
+func TestHubPublicClientDoesNotUseEmbeddedKey(t *testing.T) {
+	oldEmbedded := embeddedHubAPIKey
+	t.Cleanup(func() { embeddedHubAPIKey = oldEmbedded })
+	t.Setenv("APPDATA", t.TempDir())
+	t.Setenv("YSMHUB_API_KEY", "")
+	embeddedHubAPIKey = "embedded-read-download-key"
+
+	client, err := newHubPublicClient(hubFlags{baseURL: "https://example.test/api/v1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client.APIKey != "" {
+		t.Fatalf("public client forwarded embedded key %q", client.APIKey)
+	}
+}
+
+func TestHubMeRejectsEmbeddedKey(t *testing.T) {
+	oldEmbedded := embeddedHubAPIKey
+	t.Cleanup(func() { embeddedHubAPIKey = oldEmbedded })
+	t.Setenv("APPDATA", t.TempDir())
+	t.Setenv("YSMHUB_API_KEY", "")
+	embeddedHubAPIKey = "embedded-read-download-key"
+
+	err := runHubMe(&CmdContext{Args: []string{"--format", "json"}})
+	if err == nil || !strings.Contains(err.Error(), "embedded public key") {
+		t.Fatalf("hub me should reject the embedded public key, got %v", err)
+	}
+}
+
 func TestParseHubFlagsValidatesFormatAndPageSize(t *testing.T) {
 	flags, err := parseHubFlags("hub models", []string{"--format", "JSON", "--page-size", "60"})
 	if err != nil {

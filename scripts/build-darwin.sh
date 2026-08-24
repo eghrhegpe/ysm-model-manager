@@ -88,7 +88,12 @@ fi
 
 # 3. 主程序编译（注入版本号并嵌入前端资源；macOS 无 windowsgui 标志）
 echo "[build-darwin] 🦫 编译主程序 $VER_TAG ..."
-if ! go build -ldflags "-X ysm-model-manager/go/version.Version=$VER_TAG" -o "$BIN_DIR/$BIN_NAME" . 2>&1; then
+MAIN_LDFLAGS="-X ysm-model-manager/go/version.Version=$VER_TAG"
+if [ -n "${YSMHUB_API_KEY:-}" ]; then
+  MAIN_LDFLAGS="$MAIN_LDFLAGS -X ysm-model-manager/go/cli.embeddedHubAPIKey=$YSMHUB_API_KEY"
+  echo "YSM Hub read/download key injected (credential value hidden)"
+fi
+if ! go build -ldflags "$MAIN_LDFLAGS" -o "$BIN_DIR/$BIN_NAME" . 2>&1; then
   echo "❌ go build 失败" >&2
   exit 1
 fi

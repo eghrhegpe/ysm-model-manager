@@ -64,6 +64,19 @@ func TestLoadHubAccessTokenUsesEmbeddedKeyAfterRuntimeOverride(t *testing.T) {
 		}
 	})
 
+	// Keep a developer's real OAuth token out of this precedence test.
+	oldAppData, hadAppData := os.LookupEnv("APPDATA")
+	if err := os.Setenv("APPDATA", t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if hadAppData {
+			_ = os.Setenv("APPDATA", oldAppData)
+		} else {
+			_ = os.Unsetenv("APPDATA")
+		}
+	})
+
 	embeddedHubAPIKey = "embedded-read-download-key"
 	_ = os.Unsetenv("YSMHUB_API_KEY")
 	got, err := loadHubAccessToken()

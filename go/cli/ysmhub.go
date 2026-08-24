@@ -147,35 +147,66 @@ func newHubClient(flags hubFlags) (*ysmhub.Client, error) {
 	return ysmhub.NewClient(flags.baseURL, key)
 }
 
-func loadHubAccessToken() (string, error) {
-	if key := strings.TrimSpace(os.Getenv("YSMHUB_API_KEY")); key != "" {
-		return key, nil
+// newHubPublicClient keeps the build-injected public key out of list/detail
+// requests. Public browsing does not need credentials; a runtime key or a
+// stored OAuth token is still forwarded so an authenticated user can see
+// models that require login.
+func newHubPublicClient(flags hubFlags) (*ysmhub.Client, error) {
+	key, source, err := loadHubCredential()
+	if err != nil {
+		return nil, err
 	}
-	if key := strings.TrimSpace(embeddedHubAPIKey); key != "" {
-		return key, nil
+	if source == hubCredentialEmbedded {
+		key = ""
+	}
+	return ysmhub.NewClient(flags.baseURL, key)
+}
+
+type hubCredentialSource uint8
+
+const (
+	hubCredentialNone hubCredentialSource = iota
+	hubCredentialRuntime
+	hubCredentialOAuth
+	hubCredentialEmbedded
+)
+
+func loadHubCredential() (string, hubCredentialSource, error) {
+	if key := strings.TrimSpace(os.Getenv("YSMHUB_API_KEY")); key != "" {
+		return key, hubCredentialRuntime, nil
 	}
 	token, err := ysmhub.LoadStoredToken()
 	if err != nil {
-		return "", err
+		return "", hubCredentialNone, err
 	}
-	if token == nil {
-		return "", nil
-	}
-	if token.RefreshToken != "" && token.ExpiresIn > 0 && !token.ObtainedAt.IsZero() && time.Now().UTC().After(token.ObtainedAt.Add(time.Duration(token.ExpiresIn-60)*time.Second)) {
-		clientID := hubOAuthClientID()
-		if clientID != "" {
-			fresh, refreshErr := (ysmhub.OAuthConfig{ClientID: clientID}).Refresh(context.Background(), token.RefreshToken)
-			if refreshErr == nil {
-				if fresh.RefreshToken == "" {
-					fresh.RefreshToken = token.RefreshToken
-				}
-				if saveErr := ysmhub.SaveStoredToken(fresh); saveErr == nil {
-					token = &fresh
+	if token != nil {
+		if token.RefreshToken != "" && token.ExpiresIn > 0 && !token.ObtainedAt.IsZero() && time.Now().UTC().After(token.ObtainedAt.Add(time.Duration(token.ExpiresIn-60)*time.Second)) {
+			clientID := hubOAuthClientID()
+			if clientID != "" {
+				fresh, refreshErr := (ysmhub.OAuthConfig{ClientID: clientID}).Refresh(context.Background(), token.RefreshToken)
+				if refreshErr == nil {
+					if fresh.RefreshToken == "" {
+						fresh.RefreshToken = token.RefreshToken
+					}
+					if saveErr := ysmhub.SaveStoredToken(fresh); saveErr == nil {
+						token = &fresh
+					}
 				}
 			}
 		}
+		if accessToken := strings.TrimSpace(token.AccessToken); accessToken != "" {
+			return accessToken, hubCredentialOAuth, nil
+		}
 	}
-	return token.AccessToken, nil
+	if key := strings.TrimSpace(embeddedHubAPIKey); key != "" {
+		return key, hubCredentialEmbedded, nil
+	}
+	return "", hubCredentialNone, nil
+}
+
+func loadHubAccessToken() (string, error) {
+	key, _, err := loadHubCredential()
+	return key, err
 }
 
 func runHubModels(ctx *CmdContext) error {
@@ -183,7 +214,7 @@ func runHubModels(ctx *CmdContext) error {
 	if err != nil {
 		return err
 	}
-	client, err := newHubClient(flags)
+	client, err := newHubPublicClient(flags)
 	if err != nil {
 		return newParamErrf("hub models: %v", err)
 	}
@@ -204,7 +235,7 @@ func runHubSearch(ctx *CmdContext) error {
 	if strings.TrimSpace(flags.query) == "" {
 		return newParamErrf("hub search: --q is required")
 	}
-	client, err := newHubClient(flags)
+	client, err := newHubPublicClient(flags)
 	if err != nil {
 		return newParamErrf("hub search: %v", err)
 	}
@@ -234,7 +265,7 @@ func runHubModel(ctx *CmdContext) error {
 	if format != "table" && format != "json" {
 		return newParamErrf("hub model: --format 必须是 table 或 json")
 	}
-	client, err := newHubClient(hubFlags{baseURL: baseURL})
+	client, err := newHubPublicClient(hubFlags{baseURL: baseURL})
 	if err != nil {
 		return newParamErrf("hub model: %v", err)
 	}

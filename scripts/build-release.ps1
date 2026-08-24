@@ -91,7 +91,15 @@ if ($LASTEXITCODE -ne 0) {
 #          将前端资源打包进单文件 exe；更新助手 ysm-updater-helper.exe 已在步骤 1b 构建。
 Write-Host "🦫 编译主程序 $VerTag ..." -ForegroundColor Yellow
 Set-Location $ProjectRoot
-go build -tags "rust_backend" -ldflags "-X ysm-model-manager/go/version.Version=$VerTag" -o "$OutputDir\$ExeName" . 2>&1
+$MainLdflags = "-X ysm-model-manager/go/version.Version=$VerTag"
+if (-not [string]::IsNullOrWhiteSpace($env:YSMHUB_API_KEY)) {
+    # The key is intentionally read from the build environment and never
+    # printed or committed. This makes an explicitly configured test/release
+    # package usable out of the box while source builds remain credential-free.
+    $MainLdflags += " -X ysm-model-manager/go/cli.embeddedHubAPIKey=$($env:YSMHUB_API_KEY)"
+    Write-Host "   ✅ 已注入 YSM Hub 只读 Key（未输出凭据）" -ForegroundColor Gray
+}
+go build -tags "rust_backend" -ldflags $MainLdflags -o "$OutputDir\$ExeName" . 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ go build 失败" -ForegroundColor Red
     exit 1

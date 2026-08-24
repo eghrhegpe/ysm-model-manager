@@ -32,6 +32,13 @@ func init() {
 // forks/development while allowing the packaged desktop app to work out of the box.
 const defaultHubOAuthClientID = "ysm_client_a69879a91e7c52020b7ec7ecbb0d17f24bd82da0442e9d28"
 
+// embeddedHubAPIKey is intentionally empty in source control. A desktop
+// build may inject the public read/download key with Go's -ldflags -X so the
+// packaged app can browse and download without requiring a shell environment
+// variable. Runtime configuration still takes precedence, which keeps local
+// development and key rotation straightforward.
+var embeddedHubAPIKey string
+
 func hubOAuthClientID() string {
 	if id := strings.TrimSpace(os.Getenv("YSMHUB_CLIENT_ID")); id != "" {
 		return id
@@ -142,6 +149,9 @@ func newHubClient(flags hubFlags) (*ysmhub.Client, error) {
 
 func loadHubAccessToken() (string, error) {
 	if key := strings.TrimSpace(os.Getenv("YSMHUB_API_KEY")); key != "" {
+		return key, nil
+	}
+	if key := strings.TrimSpace(embeddedHubAPIKey); key != "" {
 		return key, nil
 	}
 	token, err := ysmhub.LoadStoredToken()

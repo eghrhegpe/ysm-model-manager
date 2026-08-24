@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -48,6 +49,40 @@ func TestHubDownloadValidatesFormatBeforeNetwork(t *testing.T) {
 	}})
 	if err == nil || !strings.Contains(err.Error(), "format") {
 		t.Fatalf("invalid download format should fail before network, got %v", err)
+	}
+}
+
+func TestLoadHubAccessTokenUsesEmbeddedKeyAfterRuntimeOverride(t *testing.T) {
+	oldEmbedded := embeddedHubAPIKey
+	oldRuntime, hadRuntime := os.LookupEnv("YSMHUB_API_KEY")
+	t.Cleanup(func() {
+		embeddedHubAPIKey = oldEmbedded
+		if hadRuntime {
+			_ = os.Setenv("YSMHUB_API_KEY", oldRuntime)
+		} else {
+			_ = os.Unsetenv("YSMHUB_API_KEY")
+		}
+	})
+
+	embeddedHubAPIKey = "embedded-read-download-key"
+	_ = os.Unsetenv("YSMHUB_API_KEY")
+	got, err := loadHubAccessToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != embeddedHubAPIKey {
+		t.Fatalf("loadHubAccessToken() = %q, want embedded key", got)
+	}
+
+	if err := os.Setenv("YSMHUB_API_KEY", "runtime-key"); err != nil {
+		t.Fatal(err)
+	}
+	got, err = loadHubAccessToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "runtime-key" {
+		t.Fatalf("runtime key did not take precedence: %q", got)
 	}
 }
 

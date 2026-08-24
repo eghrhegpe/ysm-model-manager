@@ -10,6 +10,8 @@ export interface YSMHubModel {
   cover_image_url?: string | null;
   background_image_url?: string | null;
   owner_name?: string | null;
+  author?: YSMHubAuthorInfo | null;
+  uploader?: YSMHubUploader | null;
   download_count?: number;
   view_count?: number;
   favorite_count?: number;
@@ -17,6 +19,28 @@ export interface YSMHubModel {
   updated_at?: string;
   download_visibility?: string;
   [key: string]: unknown;
+}
+
+export interface YSMHubAuthorInfo {
+  name?: string | null;
+  requirements?: string | null;
+  homepage?: string | null;
+}
+
+export interface YSMHubUploader {
+  user_id?: number | string;
+  name?: string | null;
+  avatar_url?: string | null;
+}
+
+export interface YSMHubAuthor {
+  name: string;
+  model_count: number;
+}
+
+export interface YSMHubAuthorsPage {
+  items: YSMHubAuthor[];
+  site?: Record<string, unknown>;
 }
 
 export interface YSMHubVersion {
@@ -61,6 +85,7 @@ function parseOutput<T>(response: CLIResponse): T {
 
 export async function listYSMHubModels(options: {
   query?: string;
+  author?: string;
   sort?: string;
   page?: number;
   pageSize?: number;
@@ -68,11 +93,17 @@ export async function listYSMHubModels(options: {
   const response = await executeCLI("hub-models", {
     format: "json",
     q: options.query || undefined,
+    author: options.author || undefined,
     sort: options.sort || undefined,
     page: options.page || 1,
     "page-size": options.pageSize || 24,
   });
   return parseOutput<YSMHubPage>(response);
+}
+
+export async function listYSMHubAuthors(): Promise<YSMHubAuthorsPage> {
+  const response = await executeCLI("hub-authors", { format: "json" });
+  return parseOutput<YSMHubAuthorsPage>(response);
 }
 
 export async function getYSMHubModel(slug: string): Promise<YSMHubDetail> {

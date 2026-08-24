@@ -17,7 +17,7 @@ func TestHubCommandIsRegistered(t *testing.T) {
 }
 
 func TestHubFrontendCommandsAreRegistered(t *testing.T) {
-	for _, name := range []string{"hub-models", "hub-search", "hub-model", "hub-download", "hub-login"} {
+	for _, name := range []string{"hub-models", "hub-authors", "hub-search", "hub-model", "hub-download", "hub-login"} {
 		cmd, ok := GetCommand(name)
 		if !ok || cmd.Name != name {
 			t.Fatalf("%s command was not registered: %#v", name, cmd)
@@ -26,7 +26,7 @@ func TestHubFrontendCommandsAreRegistered(t *testing.T) {
 }
 
 func TestHubCommandsDoNotRequireFilesRoot(t *testing.T) {
-	for _, name := range []string{"hub", "hub-models", "hub-search", "hub-model", "hub-download", "hub-login"} {
+	for _, name := range []string{"hub", "hub-models", "hub-authors", "hub-search", "hub-model", "hub-download", "hub-login"} {
 		if commandRequiresFilesRoot([]string{name}) {
 			t.Errorf("%s should work before a local repository is configured", name)
 		}
@@ -129,11 +129,11 @@ func TestHubMeRejectsEmbeddedKey(t *testing.T) {
 }
 
 func TestParseHubFlagsValidatesFormatAndPageSize(t *testing.T) {
-	flags, err := parseHubFlags("hub models", []string{"--format", "JSON", "--page-size", "60"})
+	flags, err := parseHubFlags("hub models", []string{"--format", "JSON", "--author", "Alex", "--page-size", "60"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if flags.format != "json" || flags.pageSize != 60 {
+	if flags.format != "json" || flags.author != "Alex" || flags.pageSize != 60 {
 		t.Fatalf("unexpected flags: %#v", flags)
 	}
 	if _, err := parseHubFlags("hub models", []string{"--format", "xml"}); err == nil {
@@ -141,5 +141,12 @@ func TestParseHubFlagsValidatesFormatAndPageSize(t *testing.T) {
 	}
 	if _, err := parseHubFlags("hub models", []string{"--page-size", "61"}); err == nil {
 		t.Fatal("page size above documented maximum should fail")
+	}
+}
+
+func TestHubSearchRejectsModelOnlyAuthorFilter(t *testing.T) {
+	err := runHubSearch(&CmdContext{Args: []string{"--q", "fox", "--author", "Alex"}})
+	if err == nil || !strings.Contains(err.Error(), "only supported by hub models") {
+		t.Fatalf("hub search should reject the model-only author filter, got %v", err)
 	}
 }

@@ -13,7 +13,7 @@ import { selectLocalRepo, getFsaAuthState, rescanFsaRoot } from "../../../backen
 import { RESOURCE_TYPES } from "../../../utils/resource/types.ts";
 import { initVersionUpdater } from "../../../features/version-updater.ts";
 import { GH_RELEASES } from "../../../utils/gh-links.ts";
-import { bindPathClick, saveCfg, initAdvancedGrid, initMcDetect } from "./path-cards.ts";
+import { bindPathClick, saveCfg, initAdvancedGrid, initMcDetect, initLauncherDetect } from "./path-cards.ts";
 import { initTheme } from "./theme.ts";
 import { initUiPrefs } from "./ui-prefs.ts";
 import { initWorkerPrefs } from "./worker-prefs.ts";
@@ -96,6 +96,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   // 游戏路径 - 自动搜索 + hover 扫描提示
   initMcDetect(root);
+  initLauncherDetect(root);
 
   // 主题段（卡片点击 / 自动切换）
   initTheme(root);

@@ -340,6 +340,30 @@ export interface InstanceStatus {
 }
 
 /**
+ * LauncherInfo describes a detected HMCL/PCL (or generic Minecraft) layout.
+ * It is read-only discovery data; the manager never edits launcher metadata.
+ */
+export interface LauncherInfo {
+    "type": string;
+    "name": string;
+    "root_dir": string;
+    "instances": LauncherInstance[] | null;
+}
+
+/**
+ * LauncherInstance is a game/version directory and its YSM configuration path.
+ */
+export interface LauncherInstance {
+    "name": string;
+    "version": string;
+    "path": string;
+    "ysm_custom_dir": string;
+    "ysm_custom_exists": boolean;
+    "ysm_config_files": string[] | null;
+    "launcher_config_files": string[] | null;
+}
+
+/**
  * LinkType 链接类型
  */
 export enum LinkType {

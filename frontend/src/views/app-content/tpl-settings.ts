@@ -18,6 +18,16 @@ export function settingsHTML(): string {
         <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>
       </div>
     </div>`;
+  const launcherCard = isViewer
+    ? ""
+    : `<div class="stg-card" style="animation-delay:30ms">
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🚀 ${t("settings.launcher.title")}<button class="btn-base sm" id="set-launcher-detect">🔍 ${t("settings.launcher.detect")}</button></div>
+      <div class="stg-card-body">
+        <div class="stg-card-val" id="set-launcher-path">${t("settings.launcher.notConfigured")}</div>
+        <div class="stg-card-desc">${t("settings.launcher.desc")}</div>
+        <div id="set-launcher-results" style="margin-top:7px;font-size:var(--fs-sm);color:var(--muted)"></div>
+      </div>
+    </div>`;
   const linkCard = isViewer
     ? ""
     : `<div class="stg-card" style="animation-delay:60ms">
@@ -53,6 +63,7 @@ export function settingsHTML(): string {
 <div class="stg-grid">
     <!-- Row 1: 三栏 — 游戏根目录 + 链接模式 + 下载镜像源（查看器模式隐藏全部） -->
     ${gameRootCard}
+    ${launcherCard}
     ${linkCard}
     ${isViewer ? "" : `
     <div class="stg-card" style="animation-delay:120ms">

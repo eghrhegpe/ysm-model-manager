@@ -2,6 +2,20 @@
 // Complete translation matching all keys in zh-CN.ts.
 
 export const en: Record<string, string> = {
+  "settings.launcher.title": "Launcher and YSM directory",
+  "settings.launcher.detect": "Detect directory",
+  "settings.launcher.notConfigured": "No launcher directory selected",
+  "settings.launcher.desc": "Choose an HMCL/PCL directory to list versions and config/yes_steve_model/custom. The selected directory becomes the default YSM download folder.",
+  "settings.launcher.detected": "Detected versions",
+  "settings.launcher.use": "Use as default download folder",
+  "settings.launcher.noFound": "No usable HMCL/PCL/Minecraft directory found",
+  "hub.authorFilter": "Author",
+  "hub.allAuthors": "All authors",
+  "hub.attribution": "Attribution",
+  "hub.requirements": "Author requirements: {requirements}",
+  "hub.authorHomepage": "Author homepage",
+  "hub.uploader": "Uploaded by: {name}",
+  "hub.sortAuthor": "By author",
   // ── Language self-names（SUPPORTED_LANGS.key；P2 fix：keys were missing）──
   "lang.zh-CN": "简体中文",
   "lang.en": "English",

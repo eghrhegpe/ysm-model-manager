@@ -226,6 +226,15 @@ export function DeleteResourcePack(path: string, rtype: string): $CancellablePro
 }
 
 /**
+ * DetectLaunchers inspects a selected directory, or a small set of known
+ * Minecraft locations when root is empty. Discovery is deliberately bounded:
+ * it never walks an entire drive and it never writes launcher files.
+ */
+export function DetectLaunchers(root: string): $CancellablePromise<types$0.LauncherInfo[] | null> {
+    return $Call.ByID(88398009, root);
+}
+
+/**
  * DetectResourceType 检测指定文件的资源类型
  */
 export function DetectResourceType(path: string): $CancellablePromise<string> {

@@ -3,6 +3,20 @@
 // Placeholders like {n} / {path} / {mirror} must be kept verbatim.
 
 export const ja: Record<string, string> = {
+  "settings.launcher.title": "ランチャーと YSM ディレクトリ",
+  "settings.launcher.detect": "ディレクトリを検出",
+  "settings.launcher.notConfigured": "ランチャーディレクトリ未選択",
+  "settings.launcher.desc": "HMCL/PCL のディレクトリを選ぶと、バージョンと config/yes_steve_model/custom を自動検出します。選択したディレクトリを YSM の既定ダウンロード先にします。",
+  "settings.launcher.detected": "検出したバージョン",
+  "settings.launcher.use": "既定のダウンロード先にする",
+  "settings.launcher.noFound": "利用可能な HMCL/PCL/Minecraft ディレクトリが見つかりません",
+  "hub.authorFilter": "作者",
+  "hub.allAuthors": "すべての作者",
+  "hub.attribution": "作者と出典",
+  "hub.requirements": "作者の要件：{requirements}",
+  "hub.authorHomepage": "作者ホームページ",
+  "hub.uploader": "アップロード者：{name}",
+  "hub.sortAuthor": "作者順",
   // ── 言語の自称（SUPPORTED_LANGS.key；P2 修正：キーが欠落していた）──
   "lang.zh-CN": "簡体中文",
   "lang.en": "English",

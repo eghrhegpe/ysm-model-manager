@@ -64,6 +64,7 @@ export const ALLOWED_CLI_COMMANDS = [
   "resource-scan",
   "repo-audit",
   "hub-models",
+  "hub-authors",
   "hub-search",
   "hub-model",
   "hub-download",

@@ -16,7 +16,7 @@ func TestClientListModelsBuildsDocumentedQuery(t *testing.T) {
 		}
 		for key, want := range map[string]string{
 			"q": "alex", "theme_id": "2", "category_id": "3", "tag": "cute",
-			"owner_id": "9", "sort": "most_downloaded", "page": "2", "page_size": "12",
+			"owner_id": "9", "author": "Alex", "sort": "most_downloaded", "page": "2", "page_size": "12",
 		} {
 			if got := r.URL.Query().Get(key); got != want {
 				t.Errorf("query %s = %q, want %q", key, got, want)
@@ -33,13 +33,37 @@ func TestClientListModelsBuildsDocumentedQuery(t *testing.T) {
 	}
 	page, err := client.ListModels(context.Background(), ListOptions{
 		Query: "alex", ThemeID: "2", CategoryID: "3", Tag: "cute", OwnerID: "9",
-		Sort: "most_downloaded", Page: 2, PageSize: 12,
+		Author: "Alex", Sort: "most_downloaded", Page: 2, PageSize: 12,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if page.Total != 1 || len(page.Items) != 1 || page.Items[0]["slug"] != "alex" {
 		t.Fatalf("unexpected page: %#v", page)
+	}
+}
+
+func TestClientListAuthors(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/authors" {
+			t.Fatalf("path = %q", r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"items":[{"name":"Alex","model_count":3}],"site":{"owner":"JiangKaslana"}}`))
+	}))
+	defer server.Close()
+	client, err := NewClient(server.URL+"/api", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	page, err := client.ListAuthors(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Items) != 1 || page.Items[0].Name != "Alex" || page.Items[0].ModelCount != 3 {
+		t.Fatalf("unexpected authors response: %#v", page)
+	}
+	if page.Site["owner"] != "JiangKaslana" {
+		t.Fatalf("unexpected site attribution: %#v", page.Site)
 	}
 }
 

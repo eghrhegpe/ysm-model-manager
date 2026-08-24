@@ -4,7 +4,7 @@
 > 静态提取生成，**单一事实来源 = 源码注册**。新增命令/子命令/选项只改 `go/cli/` 源码，
 > 重跑本脚本即同步；`--check` 已接入 `doctor.mjs` 防漂移。
 >
-> 顶层命令共 **44** 个。入口姿势与常用场景见根 `AGENTS.md`「CLI 模式使用说明」。
+> 顶层命令共 **45** 个。入口姿势与常用场景见根 `AGENTS.md`「CLI 模式使用说明」。
 
 <!-- GEN: cli-commands -->
 ## 模型管理
@@ -421,7 +421,7 @@ app --cli --files-root <路径> health-report [选项...]
 
 
 ### `hub`
-YSM Hub public API (models/search/model/download/login)
+YSM Hub public API (models/authors/search/model/download/login)
 
 ```bash
 app --cli --files-root <路径> hub [选项...]
@@ -432,12 +432,22 @@ app --cli --files-root <路径> hub [选项...]
 | 子命令 | 说明 |
 |--------|------|
 | `models` | list public models |
+| `authors` | list model author categories |
 | `search` | search public models |
 | `model` | show model details |
 | `download` | download a model (requires download scope) |
 | `login` | browser OAuth 2.1 + PKCE login |
 | `logout` | 撤销并删除已保存的 Token |
 | `me` | show current user |
+
+
+
+### `hub-authors`
+YSM Hub author categories for the desktop UI
+
+```bash
+app --cli --files-root <路径> hub-authors [选项...]
+```
 
 
 

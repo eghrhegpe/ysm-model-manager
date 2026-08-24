@@ -9,6 +9,7 @@ export function ysmHubHTML(): string {
       .ysmhub-title { font-size:16px; font-weight:600; color:var(--txt); margin-right:4px; white-space:nowrap; }
       .ysmhub-search { flex:1; min-width:120px; background:var(--surf); color:var(--txt); border:1px solid var(--bd); border-radius:5px; padding:7px 9px; font:inherit; }
       .ysmhub-sort { background:var(--surf); color:var(--txt); border:1px solid var(--bd); border-radius:5px; padding:7px 6px; font:inherit; }
+      .ysmhub-author { background:var(--surf); color:var(--txt); border:1px solid var(--bd); border-radius:5px; padding:7px 6px; font:inherit; max-width:180px; }
       .ysmhub-content { flex:1; min-height:0; overflow:auto; padding:14px; }
       .ysmhub-status { color:var(--muted); font-size:12px; padding:24px; text-align:center; }
       .ysmhub-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px; }
@@ -44,6 +45,10 @@ export function ysmHubHTML(): string {
           <option value="recently_updated">${esc(t("hub.sortUpdated"))}</option>
           <option value="most_downloaded">${esc(t("hub.sortDownloaded"))}</option>
           <option value="most_liked">${esc(t("hub.sortLiked"))}</option>
+          <option value="author">${esc(t("hub.sortAuthor"))}</option>
+        </select>
+        <select id="ysmhub-author" class="ysmhub-author" aria-label="${esc(t("hub.authorFilter"))}">
+          <option value="">${esc(t("hub.allAuthors"))}</option>
         </select>
         <button id="ysmhub-search-btn" class="btn-base accent">${esc(t("common.search"))}</button>
         <button id="ysmhub-login-btn" class="btn-base sm">${esc(t("hub.login"))}</button>

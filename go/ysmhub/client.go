@@ -43,6 +43,19 @@ type Page struct {
 	TotalPages int              `json:"total_pages"`
 }
 
+// Author is an author/category entry returned by GET /authors.
+type Author struct {
+	Name       string `json:"name"`
+	ModelCount int    `json:"model_count"`
+}
+
+// AuthorsPage is the response envelope returned by GET /authors. Site is
+// intentionally flexible because attribution links may grow over time.
+type AuthorsPage struct {
+	Items []Author       `json:"items"`
+	Site  map[string]any `json:"site"`
+}
+
 // DownloadResponse is returned by the Hub download endpoint. Public models
 // may return a signed URL, while proxy downloads return a short-lived path.
 type DownloadResponse struct {
@@ -61,6 +74,7 @@ type ListOptions struct {
 	CategoryID string
 	Tag        string
 	OwnerID    string
+	Author     string
 	Sort       string
 	Page       int
 	PageSize   int
@@ -88,6 +102,15 @@ func (c *Client) ListModels(ctx context.Context, opts ListOptions) (Page, error)
 	var page Page
 	if err := c.getJSON(ctx, "/models", query, &page); err != nil {
 		return Page{}, err
+	}
+	return page, nil
+}
+
+// ListAuthors calls GET /authors.
+func (c *Client) ListAuthors(ctx context.Context) (AuthorsPage, error) {
+	var page AuthorsPage
+	if err := c.getJSON(ctx, "/authors", nil, &page); err != nil {
+		return AuthorsPage{}, err
 	}
 	return page, nil
 }
@@ -260,6 +283,9 @@ func valuesForList(opts ListOptions) url.Values {
 	}
 	if opts.OwnerID != "" {
 		query.Set("owner_id", opts.OwnerID)
+	}
+	if opts.Author != "" {
+		query.Set("author", opts.Author)
 	}
 	if opts.Sort != "" {
 		query.Set("sort", opts.Sort)

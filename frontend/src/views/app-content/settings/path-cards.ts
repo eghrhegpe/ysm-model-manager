@@ -10,6 +10,7 @@ import { pickDirectory } from "../../../utils/dom/directory-picker.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import type { ResourceTypeEntry } from "../../../utils/resource/registry.ts";
 import { groupStorageRootOf } from "../../../utils/resource/types.ts";
+import type { LauncherInfo, LauncherInstance } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 import { cfg, cardRefreshers, isBusy, setBusy, toastError } from "./store.ts";
 
 /** HTML 转义（高级面板路径/路径选择器/扫描提示共用） */
@@ -394,6 +395,90 @@ export function initMcDetect(root: ShadowRoot): void {
     if (_scanTooltip) {
       _scanTooltip.remove();
       _scanTooltip = null;
+    }
+  });
+}
+
+export interface LauncherChoice {
+  launcher: LauncherInfo;
+  instance: LauncherInstance;
+}
+
+/** Keep only detected game instances that can receive YSM downloads. */
+export function launcherChoicesOf(launchers: LauncherInfo[]): LauncherChoice[] {
+  return launchers.flatMap((launcher) =>
+    (launcher.instances ?? [])
+      .filter((instance) => Boolean(instance.ysm_custom_dir))
+      .map((instance) => ({ launcher, instance })),
+  );
+}
+
+/** HMCL/PCL 目录识别：结果只读展示，点击版本后把 YSM custom 目录设为下载根。 */
+export function initLauncherDetect(root: ShadowRoot): void {
+  const detectBtn = root.getElementById("set-launcher-detect") as HTMLElement | null;
+  const pathEl = root.getElementById("set-launcher-path");
+  const resultsEl = root.getElementById("set-launcher-results");
+  if (!detectBtn || !pathEl || !resultsEl) return;
+
+  const refresh = (): void => {
+    const customRoots = cfg.customRoots || {};
+    const current = customRoots.ysm || "";
+    pathEl.textContent = current || t("settings.launcher.notConfigured");
+    pathEl.style.color = current ? "" : "var(--accent)";
+  };
+  cardRefreshers.push(refresh);
+  refresh();
+
+  let choices: LauncherChoice[] = [];
+  const renderResults = (launchers: LauncherInfo[]): void => {
+    choices = launcherChoicesOf(launchers);
+    if (!choices.length) {
+      resultsEl.textContent = t("settings.launcher.noFound");
+      return;
+    }
+    resultsEl.innerHTML = `<div style="margin-bottom:5px">${escHtml(t("settings.launcher.detected"))}</div>${choices.map((choice, index) => {
+      const instanceName = choice.instance.version || choice.instance.name || t("settings.launcher.detected");
+      const exists = choice.instance.ysm_custom_exists ? " ✓" : "";
+      return `<button type="button" class="stg-launcher-choice" data-launcher-index="${index}" style="display:block;width:100%;text-align:left;margin:4px 0;padding:6px 8px;border:1px solid var(--bd);border-radius:5px;background:var(--surf);color:var(--txt);cursor:pointer;font:inherit"><span style="font-weight:600">${escHtml(`${choice.launcher.name} · ${instanceName}${exists}`)}</span><br><span style="font-size:10px;color:var(--muted)">${escHtml(choice.instance.ysm_custom_dir)}</span></button>`;
+    }).join("")}`;
+  };
+
+  resultsEl.addEventListener("click", async (event) => {
+    const button = (event.target as Element | null)?.closest<HTMLButtonElement>("[data-launcher-index]");
+    if (!button || isBusy()) return;
+    const index = Number(button.dataset.launcherIndex);
+    const choice = choices[index];
+    if (!choice) return;
+    setBusy(true);
+    try {
+      const { SetResourceRoot, EnsureStorageDirs } = await getApp();
+      await SetResourceRoot("ysm", choice.instance.ysm_custom_dir);
+      await EnsureStorageDirs();
+      cfg.customRoots = { ...(cfg.customRoots || {}), ysm: choice.instance.ysm_custom_dir };
+      refresh();
+      bus.emit("config:updated");
+      bus.emit("stats:refresh");
+      bus.emit("toast:show", { msg: t("settings.path.updated"), duration: 2500, type: "success" });
+    } catch (e) {
+      toastError(e);
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  detectBtn.addEventListener("click", async () => {
+    if (isBusy()) return;
+    setBusy(true);
+    try {
+      const dir = await pickDirectory();
+      if (!dir) return;
+      const { DetectLaunchers } = await getApp();
+      const launchers = await DetectLaunchers(dir);
+      renderResults(launchers || []);
+    } catch (e) {
+      resultsEl.textContent = friendlyError(e);
+    } finally {
+      setBusy(false);
     }
   });
 }

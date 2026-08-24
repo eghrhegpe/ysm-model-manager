@@ -18,10 +18,11 @@ import (
 )
 
 func init() {
-	RegisterCommandC("hub", CatResource, "YSM Hub public API (models/search/model/download/login)", runHub)
+	RegisterCommandC("hub", CatResource, "YSM Hub public API (models/authors/search/model/download/login)", runHub)
 	// Frontend-facing aliases keep ExecuteCLI's flat command contract while
 	// reusing the same Hub implementation and authentication/token store.
 	RegisterCommandC("hub-models", CatResource, "YSM Hub model list for the desktop UI", runHubModelsCommand)
+	RegisterCommandC("hub-authors", CatResource, "YSM Hub author categories for the desktop UI", runHubAuthorsCommand)
 	RegisterCommandC("hub-search", CatResource, "YSM Hub model search for the desktop UI", runHubSearchCommand)
 	RegisterCommandC("hub-model", CatResource, "YSM Hub model details for the desktop UI", runHubModelCommand)
 	RegisterCommandC("hub-download", CatResource, "Download a YSM Hub model into the local repository", runHubDownloadCommand)
@@ -47,6 +48,7 @@ func hubOAuthClientID() string {
 }
 
 func runHubModelsCommand(ctx *CmdContext) error   { return runHubModels(ctx) }
+func runHubAuthorsCommand(ctx *CmdContext) error  { return runHubAuthors(ctx) }
 func runHubSearchCommand(ctx *CmdContext) error   { return runHubSearch(ctx) }
 func runHubModelCommand(ctx *CmdContext) error    { return runHubModel(ctx) }
 func runHubDownloadCommand(ctx *CmdContext) error { return runHubDownload(ctx) }
@@ -63,6 +65,8 @@ func runHub(ctx *CmdContext) error {
 	switch sub {
 	case "models":
 		return runHubModels(subCtx)
+	case "authors":
+		return runHubAuthors(subCtx)
 	case "search":
 		return runHubSearch(subCtx)
 	case "model":
@@ -85,9 +89,11 @@ func printHubUsage() {
 	fmt.Println()
 	fmt.Println("用法：")
 	fmt.Println("  app --cli --files-root ./models hub models [options]")
+	fmt.Println("  app --cli --files-root ./models hub authors [options]")
 	fmt.Println("  app --cli --files-root ./models hub search --q <query> [options]")
 	fmt.Println("  app --cli --files-root ./models hub model --slug <slug> [options]")
 	fmt.Println("  models              list public models")
+	fmt.Println("  authors             list model author categories")
 	fmt.Println("  search              search public models")
 	fmt.Println("  model               show model details")
 	fmt.Println("  download            download a model (requires download scope)")
@@ -100,7 +106,7 @@ func printHubUsage() {
 	fmt.Println("  --base-url <url>        API base URL (default https://ysmhub.top/api/v1)")
 	fmt.Println("  --page <n>              page number")
 	fmt.Println("  --page-size <n>         page size (maximum 60)")
-	fmt.Println("  --sort <sort>           newest/recently_updated/most_downloaded/most_liked/most_favorited")
+	fmt.Println("  --sort <sort>           newest/recently_updated/most_downloaded/most_liked/most_favorited/author")
 	fmt.Println()
 	fmt.Println("环境变量：")
 	fmt.Println("  YSMHUB_API_BASE_URL     override default API base URL")
@@ -112,6 +118,7 @@ type hubFlags struct {
 	baseURL  string
 	format   string
 	query    string
+	author   string
 	sort     string
 	page     int
 	pageSize int
@@ -123,6 +130,7 @@ func parseHubFlags(name string, args []string) (hubFlags, error) {
 	fs.StringVar(&flags.baseURL, "base-url", os.Getenv("YSMHUB_API_BASE_URL"), "YSM Hub API base URL")
 	fs.StringVar(&flags.format, "format", "table", "table or json")
 	fs.StringVar(&flags.query, "q", "", "search query")
+	fs.StringVar(&flags.author, "author", "", "model author name")
 	fs.StringVar(&flags.sort, "sort", "", "model sort order")
 	fs.IntVar(&flags.page, "page", 0, "page number")
 	fs.IntVar(&flags.pageSize, "page-size", 0, "page size")
@@ -211,12 +219,35 @@ func runHubModels(ctx *CmdContext) error {
 		return newParamErrf("hub models: %v", err)
 	}
 	page, err := client.ListModels(context.Background(), ysmhub.ListOptions{
-		Query: flags.query, Sort: flags.sort, Page: flags.page, PageSize: flags.pageSize,
+		Query: flags.query, Author: flags.author, Sort: flags.sort, Page: flags.page, PageSize: flags.pageSize,
 	})
 	if err != nil {
 		return newRuntimeErrf("hub models: %w", err)
 	}
 	return printHubPage(page, flags.format)
+}
+
+func runHubAuthors(ctx *CmdContext) error {
+	flags, err := parseHubFlags("hub authors", ctx.Args)
+	if err != nil {
+		return err
+	}
+	client, err := newHubPublicClient(flags)
+	if err != nil {
+		return newParamErrf("hub authors: %v", err)
+	}
+	authors, err := client.ListAuthors(context.Background())
+	if err != nil {
+		return newRuntimeErrf("hub authors: %w", err)
+	}
+	if flags.format == "json" {
+		return printHubJSON(authors)
+	}
+	fmt.Printf("YSM Hub authors (%d)\n", len(authors.Items))
+	for _, author := range authors.Items {
+		fmt.Printf("  %s (%d)\n", author.Name, author.ModelCount)
+	}
+	return nil
 }
 
 func runHubSearch(ctx *CmdContext) error {
@@ -226,6 +257,12 @@ func runHubSearch(ctx *CmdContext) error {
 	}
 	if strings.TrimSpace(flags.query) == "" {
 		return newParamErrf("hub search: --q is required")
+	}
+	// The documented author filter belongs to GET /models. Do not silently
+	// accept it on the legacy /search endpoint, which only guarantees q and
+	// paging parameters.
+	if strings.TrimSpace(flags.author) != "" {
+		return newParamErrf("hub search: --author is only supported by hub models")
 	}
 	client, err := newHubPublicClient(flags)
 	if err != nil {

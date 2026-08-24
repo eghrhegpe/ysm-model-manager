@@ -85,6 +85,7 @@ export const MOCK_DATA = {
   PushSingleResourceToInstance: undefined,
   PullSingleResourceFromInstance: undefined,
   GetMinecraftPaths: [],
+  DetectLaunchers: [],
   ClearScanCache: undefined,
   EnsureStorageDirs: undefined,
   // P2 修复（子代理审计）：github 页 _initGithub→loadRepos 调用 LoadGitHubRepos，

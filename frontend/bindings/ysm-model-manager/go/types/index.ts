@@ -17,6 +17,8 @@ export type {
     ImportFileItem,
     ImportLog,
     InstanceStatus,
+    LauncherInfo,
+    LauncherInstance,
     ModelEntry,
     PackInfo,
     RuntimeLog,

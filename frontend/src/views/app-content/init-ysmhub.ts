@@ -5,7 +5,9 @@ import { esc } from "../../utils/dom/html.ts";
 import {
   downloadYSMHubModel,
   getYSMHubModel,
+  listYSMHubAuthors,
   listYSMHubModels,
+  type YSMHubAuthor,
   loginYSMHub,
   type YSMHubModel,
   type YSMHubVersion,
@@ -50,6 +52,10 @@ function safeExternalURL(value: unknown): string {
   }
 }
 
+function authorNameOf(model: YSMHubModel): string {
+  return text(model.author?.name || model.owner_name || "").trim();
+}
+
 function coverHTML(model: YSMHubModel, cls: string): string {
   const url = text(model.cover_image_url).trim();
   if (!url) return `<div class="${cls}" aria-label="${esc(t("hub.noCover"))}"></div>`;
@@ -59,12 +65,13 @@ function coverHTML(model: YSMHubModel, cls: string): string {
 function modelCard(model: YSMHubModel, index: number): string {
   const title = text(model.title || model.slug || model.id);
   const desc = descriptionText(model);
+  const authorName = authorNameOf(model);
   return `<article class="ysmhub-card" data-hub-slug="${esc(model.slug)}" style="animation-delay:${Math.min(index * 25, 300)}ms">
     ${coverHTML(model, "ysmhub-cover")}
     <div class="ysmhub-card-body">
       <div class="ysmhub-card-title" title="${esc(title)}">${esc(title)}</div>
       <div class="ysmhub-card-desc">${esc(desc)}</div>
-      <div class="ysmhub-card-meta"><span>↓ ${Number(model.download_count || 0)}</span><span>◉ ${Number(model.view_count || 0)}</span>${model.owner_name ? `<span>${esc(model.owner_name)}</span>` : ""}</div>
+      <div class="ysmhub-card-meta"><span>↓ ${Number(model.download_count || 0)}</span><span>◉ ${Number(model.view_count || 0)}</span>${authorName ? `<span>${esc(authorName)}</span>` : ""}</div>
     </div>
   </article>`;
 }
@@ -74,9 +81,10 @@ export function initYSMHubPage(host: HubHost): void {
   const content = root.getElementById("ysmhub-content");
   const search = root.getElementById("ysmhub-search") as HTMLInputElement | null;
   const sort = root.getElementById("ysmhub-sort") as HTMLSelectElement | null;
+  const author = root.getElementById("ysmhub-author") as HTMLSelectElement | null;
   const searchBtn = root.getElementById("ysmhub-search-btn");
   const loginBtn = root.getElementById("ysmhub-login-btn");
-  if (!content || !search || !sort || !searchBtn || !loginBtn) return;
+  if (!content || !search || !sort || !author || !searchBtn || !loginBtn) return;
 
   let disposed = false;
   let loading = false;
@@ -106,7 +114,7 @@ export function initYSMHubPage(host: HubHost): void {
     loading = true;
     showStatus(t("hub.loading"));
     try {
-      const page = await listYSMHubModels({ query: search.value.trim(), sort: sort.value, page: pageNumber, pageSize: 24 });
+      const page = await listYSMHubModels({ query: search.value.trim(), author: author.value, sort: sort.value, page: pageNumber, pageSize: 24 });
       if (disposed) return;
       if (reset) models = [];
       models.push(...page.items);
@@ -141,6 +149,11 @@ export function initYSMHubPage(host: HubHost): void {
       }).filter(Boolean);
       const tagsHTML = tags.length ? `<div class="ysmhub-detail-section"><div class="ysmhub-section-title">${esc(t("hub.tags"))}</div><div class="ysmhub-tags">${tags.map((tag) => `<span>${esc(tag)}</span>`).join("")}</div></div>` : "";
       const linksHTML = links.length ? `<div class="ysmhub-detail-section"><div class="ysmhub-section-title">${esc(t("hub.links"))}</div><div class="ysmhub-links">${links.join("")}</div></div>` : "";
+      const authorName = authorNameOf(model) || t("hub.unknown");
+      const requirements = text(model.author?.requirements).trim();
+      const homepage = safeExternalURL(model.author?.homepage);
+      const uploaderName = text(model.uploader?.name).trim();
+      const attributionHTML = `<div class="ysmhub-detail-section"><div class="ysmhub-section-title">${esc(t("hub.attribution"))}</div><div class="ysmhub-links"><span>${esc(t("hub.author", { name: authorName }))}</span>${requirements ? `<span>${esc(t("hub.requirements", { requirements }))}</span>` : ""}${homepage ? `<a href="${esc(homepage)}" target="_blank" rel="noreferrer">${esc(t("hub.authorHomepage"))}</a>` : ""}${uploaderName ? `<span>${esc(t("hub.uploader", { name: uploaderName }))}</span>` : ""}</div></div>`;
       const versionRows = versions.length
         ? versions.map((version: YSMHubVersion) => `<div class="ysmhub-version">
             <span class="ysmhub-version-name">${esc(text(version.version_name || t("hub.unnamedVersion")))}${version.is_recommended ? ` · ${esc(t("hub.recommended"))}` : ""}</span>
@@ -154,10 +167,10 @@ export function initYSMHubPage(host: HubHost): void {
             <button class="btn-base sm ysmhub-back" id="ysmhub-back">← ${esc(t("common.back"))}</button>
             <div class="ysmhub-detail-title">${esc(text(model.title || model.slug))}</div>
             <div class="ysmhub-detail-desc">${esc(descriptionText(model))}</div>
-            <div class="ysmhub-card-meta"><span>${esc(t("hub.author", { name: text(model.owner_name || t("hub.unknown")) }))}</span><span>↓ ${Number(model.download_count || 0)}</span></div>
+            <div class="ysmhub-card-meta"><span>${esc(t("hub.author", { name: authorName }))}</span><span>↓ ${Number(model.download_count || 0)}</span></div>
           </div>
         </div>
-        <div class="ysmhub-detail-section"><div class="ysmhub-section-title">${esc(t("hub.versions"))}</div>${versionRows}</div>${tagsHTML}${linksHTML}
+        <div class="ysmhub-detail-section"><div class="ysmhub-section-title">${esc(t("hub.versions"))}</div>${versionRows}</div>${attributionHTML}${tagsHTML}${linksHTML}
       </div>`;
     } catch (error) {
       showStatus(t("hub.detailFailed", { error: errorMessage(error) }));
@@ -208,6 +221,7 @@ export function initYSMHubPage(host: HubHost): void {
   listen(searchBtn, "click", () => { void load(true); }, host._unsubs);
   listen(search, "keydown", (event) => { if ((event as KeyboardEvent).key === "Enter") void load(true); }, host._unsubs);
   listen(sort, "change", () => { void load(true); }, host._unsubs);
+  listen(author, "change", () => { void load(true); }, host._unsubs);
   listen(loginBtn, "click", async () => {
     loginBtn.setAttribute("disabled", "true");
     loginBtn.textContent = t("hub.authorizing");
@@ -224,5 +238,10 @@ export function initYSMHubPage(host: HubHost): void {
   }, host._unsubs);
 
   host._unsubs.push(() => { disposed = true; });
+  void listYSMHubAuthors().then((page) => {
+    if (disposed) return;
+    const items = Array.isArray(page.items) ? page.items : [];
+    author.innerHTML = `<option value="">${esc(t("hub.allAuthors"))}</option>${items.map((item: YSMHubAuthor) => `<option value="${esc(item.name)}">${esc(item.name)} (${Number(item.model_count || 0)})</option>`).join("")}`;
+  }).catch(() => { /* 作者列表失败不影响模型浏览 */ });
   void load();
 }

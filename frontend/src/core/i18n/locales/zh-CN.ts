@@ -4,6 +4,20 @@
 // ⚠️ 本目录是纯数据目录，禁止放 .test.ts（会被构建脚本扫描）。
 
 export const zhCN: Record<string, string> = {
+  "settings.launcher.title": "启动器与 YSM 目录",
+  "settings.launcher.detect": "识别目录",
+  "settings.launcher.notConfigured": "尚未选择启动器目录",
+  "settings.launcher.desc": "选择 HMCL/PCL 目录后，自动列出版本及 config/yes_steve_model/custom；选中的目录会作为 YSM 默认下载目录。",
+  "settings.launcher.detected": "识别到的版本",
+  "settings.launcher.use": "设为默认下载目录",
+  "settings.launcher.noFound": "没有找到可用的 HMCL/PCL/Minecraft 目录",
+  "hub.authorFilter": "作者",
+  "hub.allAuthors": "全部作者",
+  "hub.attribution": "作者与来源",
+  "hub.requirements": "作者要求：{requirements}",
+  "hub.authorHomepage": "作者主页",
+  "hub.uploader": "上传者：{name}",
+  "hub.sortAuthor": "按作者",
   // ── 语言自名（SUPPORTED_LANGS.key 引用；P2 修复：原 key 缺失 → 设置页下拉若
   // 按 key 渲染会裸奔，i18n-check KNOWN_INTENTIONAL 期望存在）──
   "lang.zh-CN": "简体中文",

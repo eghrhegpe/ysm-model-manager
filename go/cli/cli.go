@@ -76,7 +76,7 @@ func commandRequiresFilesRoot(commandArgs []string) bool {
 		return true
 	}
 	switch commandArgs[0] {
-	case "hub", "hub-models", "hub-search", "hub-model", "hub-download", "hub-login":
+	case "hub", "hub-models", "hub-authors", "hub-search", "hub-model", "hub-download", "hub-login":
 		return false
 	default:
 		return true

@@ -139,14 +139,6 @@ func parseHubFlags(name string, args []string) (hubFlags, error) {
 	return flags, nil
 }
 
-func newHubClient(flags hubFlags) (*ysmhub.Client, error) {
-	key, err := loadHubAccessToken()
-	if err != nil {
-		return nil, err
-	}
-	return ysmhub.NewClient(flags.baseURL, key)
-}
-
 // newHubPublicClient keeps the build-injected public key out of list/detail
 // requests. Public browsing does not need credentials; a runtime key or a
 // stored OAuth token is still forwarded so an authenticated user can see

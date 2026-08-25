@@ -15,6 +15,12 @@ import (
 
 const ysmCustomSubdir = "config/yes_steve_model/custom"
 
+const (
+	launcherHMCL      = "HMCL"
+	launcherPCL       = "PCL"
+	launcherMinecraft = "Minecraft"
+)
+
 // Detect identifies the launcher selected by the user and resolves every
 // Minecraft version to its actual run directory and YSM custom directory.
 func Detect(selectedDir string) ([]types.LauncherInstance, error) {
@@ -38,8 +44,11 @@ func Detect(selectedDir string) ([]types.LauncherInstance, error) {
 	result := make([]types.LauncherInstance, 0)
 	for _, gameRoot := range gameRoots {
 		name := launcherName
-		if detected := identifyLauncher(gameRoot); detected != "Minecraft" {
+		if detected := identifyLauncher(gameRoot); detected != launcherMinecraft {
 			name = detected
+		}
+		if name == launcherMinecraft {
+			continue
 		}
 		result = append(result, scanVersions(name, root, gameRoot)...)
 	}
@@ -59,13 +68,13 @@ func identifyLauncher(root string) string {
 	if fileExists(filepath.Join(root, "config", "user-game-directories.json")) ||
 		globExists(filepath.Join(root, "HMCL*.jar")) ||
 		fileExists(filepath.Join(root, "hmcl.json")) {
-		return "HMCL"
+		return launcherHMCL
 	}
 	if globExists(filepath.Join(root, "PCL*.exe")) ||
 		fileExists(filepath.Join(root, "PCL.ini")) {
-		return "PCL"
+		return launcherPCL
 	}
-	return "Minecraft"
+	return launcherMinecraft
 }
 
 func collectGameRoots(launcherRoot string) []string {
@@ -189,11 +198,11 @@ func resolveRunDirectory(launcherName, launcherRoot, gameRoot, versionDir string
 		return versionDir
 	}
 	switch launcherName {
-	case "PCL":
-		if pclInstanceIsolated(filepath.Join(versionDir, "PCL", "Setup.ini")) {
+	case launcherPCL:
+		if isolated, configured := pclInstanceIsolation(filepath.Join(versionDir, "PCL", "Setup.ini")); isolated || !configured {
 			return versionDir
 		}
-	case "HMCL":
+	case launcherHMCL:
 		if fileExists(filepath.Join(versionDir, "modpack.cfg")) {
 			return versionDir
 		}
@@ -213,10 +222,10 @@ func resolveRunDirectory(launcherName, launcherRoot, gameRoot, versionDir string
 	return gameRoot
 }
 
-func pclInstanceIsolated(path string) bool {
+func pclInstanceIsolation(path string) (isolated bool, configured bool) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return false
+		return false, false
 	}
 	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r", ""), "\n") {
 		parts := strings.SplitN(strings.TrimSpace(line), "=", 2)
@@ -226,13 +235,13 @@ func pclInstanceIsolated(path string) bool {
 		key := strings.ToLower(strings.TrimSpace(parts[0]))
 		value := strings.ToLower(strings.TrimSpace(parts[1]))
 		if key == "versionargumentindiev2" {
-			return value == "true" || value == "1"
+			return value == "true" || value == "1", true
 		}
-		if key == "versionargumentindie" && value == "1" {
-			return true
+		if key == "versionargumentindie" && (value == "1" || value == "2") {
+			return value == "1", true
 		}
 	}
-	return false
+	return false, false
 }
 
 func hmclRunningDirectory(path string) (string, bool) {

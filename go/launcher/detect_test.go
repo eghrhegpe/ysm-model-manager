@@ -50,6 +50,7 @@ func TestDetectPCLSharedInstance(t *testing.T) {
 	gameRoot := filepath.Join(root, ".minecraft")
 	writeFile(t, filepath.Join(gameRoot, "PCL.ini"), "Version=Forge-1.19.2\n")
 	writeFile(t, filepath.Join(gameRoot, "versions", "Forge-1.19.2", "Forge-1.19.2.json"), `{"id":"1.19.2-forge","inheritsFrom":"1.19.2"}`)
+	writeFile(t, filepath.Join(gameRoot, "versions", "Forge-1.19.2", "PCL", "Setup.ini"), "VersionArgumentIndieV2=False\n")
 
 	got, err := Detect(root)
 	if err != nil {
@@ -60,6 +61,18 @@ func TestDetectPCLSharedInstance(t *testing.T) {
 	}
 	if got[0].GameDir != gameRoot {
 		t.Errorf("GameDir = %q, want shared root %q", got[0].GameDir, gameRoot)
+	}
+}
+
+func TestDetectRejectsPlainMinecraftDirectory(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, ".minecraft", "versions", "1.20.1", "1.20.1.json"), `{"id":"1.20.1"}`)
+	got, err := Detect(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("plain Minecraft directory must not be reported as HMCL/PCL: %#v", got)
 	}
 }
 

@@ -206,13 +206,42 @@ describe("initSettings — 游戏目录检测", () => {
     const { root } = makeRoot();
     await initSettings(root);
     (root.getElementById("set-launcher-detect") as HTMLElement).click();
-    await waitFor(() => document.querySelector(".launcher-pick-item"));
-    (document.querySelector(".launcher-pick-item") as HTMLElement).click();
+    await waitFor(() => document.querySelector('[data-testid="launcher-instance-0"]'));
+    (document.querySelector('[data-testid="launcher-instance-0"]') as HTMLElement).click();
     await waitFor(() => setRootFn.mock.calls.length > 0);
     expect(saveFn.mock.calls.at(-1)?.[2]).toBe("/pcl/.minecraft");
     expect(setRootFn).toHaveBeenCalledWith(
       "ysm",
       "/pcl/.minecraft/versions/Fabric 1.20.1/config/yes_steve_model/custom",
+    );
+  });
+
+  it("设置 YSM 默认目录失败 → 回滚游戏根目录", async () => {
+    const saveFn = vi.fn();
+    mockApp({
+      SaveAppConfig: saveFn,
+      SetResourceRoot: vi.fn(() => Promise.reject(new Error("root write failed"))),
+      DetectLauncherInstances: vi.fn(() => [{
+        launcher: "HMCL",
+        name: "1.21.1",
+        gameVersion: "1.21.1",
+        gameRoot: "/hmcl/.minecraft",
+        gameDir: "/hmcl/.minecraft/versions/1.21.1",
+        customDir: "/hmcl/.minecraft/versions/1.21.1/config/yes_steve_model/custom",
+        exists: false,
+      }]),
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("set-launcher-detect") as HTMLElement).click();
+    await waitFor(() => document.querySelector('[data-testid="launcher-instance-0"]'));
+    (document.querySelector('[data-testid="launcher-instance-0"]') as HTMLElement).click();
+    await waitFor(() => saveFn.mock.calls.length >= 2);
+    expect(saveFn.mock.calls[0]![2]).toBe("/hmcl/.minecraft");
+    expect(saveFn.mock.calls.at(-1)?.[2]).toBe("");
+    expect(busEmit).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ msg: expect.stringContaining("root write failed") }),
     );
   });
 

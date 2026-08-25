@@ -698,6 +698,7 @@
   "settings.launcher.useDefault": "同时设为 YSM 默认下载目录",
   "settings.launcher.none": "未在所选目录中识别到 HMCL/PCL 的 Minecraft 实例",
   "settings.launcher.applied": "✅ 已选择 {launcher} · Minecraft {version}",
+  "settings.launcher.pendingPath": "预计目录（首次下载时创建）",
   "settings.mirror.changed": "✅ 下载源已切换为 {mirror}",
   "settings.updateCheck.title": "版本检查间隔",
   "settings.updateCheck.option6h": "6 小时",

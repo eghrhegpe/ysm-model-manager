@@ -755,6 +755,7 @@ export const zhCN: Record<string, string> = {
   "settings.launcher.useDefault": "同时设为 YSM 默认下载目录",
   "settings.launcher.none": "未在所选目录中识别到 HMCL/PCL 的 Minecraft 实例",
   "settings.launcher.applied": "✅ 已选择 {launcher} · Minecraft {version}",
+  "settings.launcher.pendingPath": "预计目录（首次下载时创建）",
 
   // ── 设置页 - 镜像源 ──
   "settings.mirror.changed": "✅ 下载源已切换为 {mirror}",

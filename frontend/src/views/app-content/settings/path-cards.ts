@@ -9,6 +9,7 @@ import { safeGet } from "../../../utils/dom/storage.ts";
 import { pickDirectory } from "../../../utils/dom/directory-picker.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import type { ResourceTypeEntry } from "../../../utils/resource/registry.ts";
+import type { LauncherInstance as DetectedLauncherInstance } from "../../../../bindings/ysm-model-manager/go/types/models.ts";
 import { groupStorageRootOf } from "../../../utils/resource/types.ts";
 import { cfg, cardRefreshers, isBusy, setBusy, toastError } from "./store.ts";
 
@@ -398,16 +399,6 @@ export function initMcDetect(root: ShadowRoot): void {
   });
 }
 
-interface DetectedLauncherInstance {
-  launcher: string;
-  name: string;
-  gameVersion: string;
-  gameRoot: string;
-  gameDir: string;
-  customDir: string;
-  exists: boolean;
-}
-
 interface LauncherSelection {
   instance: DetectedLauncherInstance;
   useAsYsmRoot: boolean;
@@ -428,13 +419,13 @@ function showLauncherInstancePicker(
 
     const rows = instances
       .map(
-        (instance, index) => `<button class="launcher-pick-item" data-idx="${index}" style="display:block;width:100%;text-align:left;margin:6px 0;padding:10px;border:1px solid var(--bd,#444);border-radius:8px;background:transparent;color:var(--txt,#cdd6f4);cursor:pointer;font-family:inherit">
+        (instance, index) => `<button class="launcher-pick-item" data-testid="launcher-instance-${index}" data-idx="${index}" style="display:block;width:100%;text-align:left;margin:6px 0;padding:10px;border:1px solid var(--bd,#444);border-radius:8px;background:transparent;color:var(--txt,#cdd6f4);cursor:pointer;font-family:inherit">
           <div style="display:flex;justify-content:space-between;gap:8px;font-weight:600">
             <span>${escHtml(instance.launcher)} · ${escHtml(instance.name)}</span>
             <span style="color:var(--accent,#89b4fa)">${escHtml(instance.gameVersion)}</span>
           </div>
           <div style="font-size:10px;color:var(--muted,#888);margin-top:5px">${t("settings.launcher.gameDir")}: ${escHtml(instance.gameDir)}</div>
-          <div style="font-size:10px;color:${instance.exists ? "var(--status-success,#a6e3a1)" : "var(--muted,#888)"};margin-top:2px">YSM: ${escHtml(instance.customDir)}</div>
+          <div style="font-size:10px;color:${instance.exists ? "var(--status-success,#a6e3a1)" : "var(--muted,#888)"};margin-top:2px">YSM: ${escHtml(instance.customDir)}${instance.exists ? "" : ` · ${t("settings.launcher.pendingPath")}`}</div>
         </button>`,
       )
       .join("");
@@ -490,9 +481,16 @@ export function initLauncherDetect(
       }
       const selection = await showLauncherInstancePicker(root, instances);
       if (!selection) return;
+      const previousMcRoot = cfg.mcRoot || "";
       await saveCfg({ mcRoot: selection.instance.gameRoot });
       if (selection.useAsYsmRoot) {
-        await SetResourceRoot("ysm", selection.instance.customDir);
+        try {
+          await SetResourceRoot("ysm", selection.instance.customDir);
+        } catch (error) {
+          // Keep the two related settings consistent when the second write fails.
+          await saveCfg({ mcRoot: previousMcRoot });
+          throw error;
+        }
         const mutableCfg = cfg as unknown as Record<string, unknown>;
         mutableCfg.ysmRoot = selection.instance.customDir;
         const customRoots = (mutableCfg.customRoots as Record<string, string> | undefined) || {};

@@ -752,6 +752,7 @@ export const en: Record<string, string> = {
   "settings.launcher.useDefault": "Also use as the default YSM download directory",
   "settings.launcher.none": "No HMCL/PCL Minecraft instance was found in the selected directory",
   "settings.launcher.applied": "✅ Selected {launcher} · Minecraft {version}",
+  "settings.launcher.pendingPath": "Expected path (created on first download)",
 
   // ── Settings - Mirror ──
   "settings.mirror.changed": "✅ Download mirror switched to {mirror}",

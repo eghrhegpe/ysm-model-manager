@@ -753,6 +753,7 @@ export const ja: Record<string, string> = {
   "settings.launcher.useDefault": "YSM の既定ダウンロード先にも設定する",
   "settings.launcher.none": "選択したディレクトリに HMCL/PCL の Minecraft インスタンスが見つかりません",
   "settings.launcher.applied": "✅ {launcher} · Minecraft {version} を選択しました",
+  "settings.launcher.pendingPath": "予定パス（初回ダウンロード時に作成）",
 
   // ── Settings - Mirror ──
   "settings.mirror.changed": "✅ ダウンロードミラーを {mirror} に切り替えました",

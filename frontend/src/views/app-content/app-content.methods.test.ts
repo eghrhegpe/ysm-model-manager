@@ -36,6 +36,9 @@ vi.mock("../../core/handlers/global.ts", () => ({
 }));
 vi.mock("./diagnostics/init.ts", () => ({
   initDiagnostics: vi.fn(),
+}));
+vi.mock("./diagnostics/dedup.ts", () => ({
+  initDedupConfig: vi.fn(),
   startDedup: vi.fn(),
 }));
 vi.mock("../../features/recycle-bin.ts", () => ({ initRecycleBin: vi.fn() }));
@@ -57,7 +60,7 @@ vi.mock("../../utils/icon/workshop-icons.ts", () => ({ getSiteIcon: vi.fn(() => 
 import { bus } from "../../bus.ts";
 import { initRecycleBin } from "../../features/recycle-bin.ts";
 import { loadOldestModel } from "../../features/oldest-models.ts";
-import { startDedup } from "./diagnostics/init.ts";
+import { startDedup } from "./diagnostics/dedup.ts";
 import { PAGE_REGISTRY } from "./page-registry.ts";
 import { loadCommunityData } from "./community-data.ts";
 import { tryFetchModels } from "../../features/community/data.ts";

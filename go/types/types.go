@@ -50,6 +50,19 @@ type VersionInstance struct {
 	Exists     bool   `json:"Exists"`
 }
 
+// LauncherInstance is a Minecraft instance discovered from a launcher directory.
+// GameRoot is the shared .minecraft directory; GameDir is the actual run directory
+// after applying the launcher's per-instance isolation setting.
+type LauncherInstance struct {
+	Launcher    string `json:"launcher"`
+	Name        string `json:"name"`
+	GameVersion string `json:"gameVersion"`
+	GameRoot    string `json:"gameRoot"`
+	GameDir     string `json:"gameDir"`
+	CustomDir   string `json:"customDir"`
+	Exists      bool   `json:"exists"`
+}
+
 // SearchResult 模型搜索结果
 type SearchResult struct {
 	Name      string `json:"name"`

@@ -67,6 +67,7 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <div id="set-advanced-grid"></div>
     <div id="stg-files-card"></div>
     <button id="set-mc-detect"></button>
+    <button id="set-launcher-detect"></button>
     <div id="theme-picker">
       <div class="theme-card" data-theme="cyber"></div>
       <div class="theme-card" data-theme="dark"></div>
@@ -129,6 +130,7 @@ function mockApp(overrides: Record<string, unknown> = {}) {
     SaveAppConfig: vi.fn(),
     SelectDirectory: vi.fn(() => "/pick"),
     GetMinecraftPaths: vi.fn(() => []),
+    DetectLauncherInstances: vi.fn(() => []),
     SetLinkMode: vi.fn(),
     SetResourceRoot: vi.fn(),
     ResetResourceRoot: vi.fn(),
@@ -185,6 +187,35 @@ describe("initSettings — 初始化", () => {
 });
 
 describe("initSettings — 游戏目录检测", () => {
+  it("选择 PCL 实例 → 保存游戏根目录并将 custom 设为 YSM 默认下载目录", async () => {
+    const saveFn = vi.fn();
+    const setRootFn = vi.fn();
+    mockApp({
+      SaveAppConfig: saveFn,
+      SetResourceRoot: setRootFn,
+      DetectLauncherInstances: vi.fn(() => [{
+        launcher: "PCL",
+        name: "Fabric 1.20.1",
+        gameVersion: "1.20.1",
+        gameRoot: "/pcl/.minecraft",
+        gameDir: "/pcl/.minecraft/versions/Fabric 1.20.1",
+        customDir: "/pcl/.minecraft/versions/Fabric 1.20.1/config/yes_steve_model/custom",
+        exists: true,
+      }]),
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("set-launcher-detect") as HTMLElement).click();
+    await waitFor(() => document.querySelector(".launcher-pick-item"));
+    (document.querySelector(".launcher-pick-item") as HTMLElement).click();
+    await waitFor(() => setRootFn.mock.calls.length > 0);
+    expect(saveFn.mock.calls.at(-1)?.[2]).toBe("/pcl/.minecraft");
+    expect(setRootFn).toHaveBeenCalledWith(
+      "ysm",
+      "/pcl/.minecraft/versions/Fabric 1.20.1/config/yes_steve_model/custom",
+    );
+  });
+
   it("单路径 → 直接设置 + toast", async () => {
     const saveFn = vi.fn();
     mockApp({ GetMinecraftPaths: vi.fn(() => ["/mc"]), SaveAppConfig: saveFn });

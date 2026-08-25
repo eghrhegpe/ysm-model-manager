@@ -397,3 +397,124 @@ export function initMcDetect(root: ShadowRoot): void {
     }
   });
 }
+
+interface DetectedLauncherInstance {
+  launcher: string;
+  name: string;
+  gameVersion: string;
+  gameRoot: string;
+  gameDir: string;
+  customDir: string;
+  exists: boolean;
+}
+
+interface LauncherSelection {
+  instance: DetectedLauncherInstance;
+  useAsYsmRoot: boolean;
+}
+
+function showLauncherInstancePicker(
+  root: ShadowRoot,
+  instances: DetectedLauncherInstance[],
+): Promise<LauncherSelection | null> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "launcher-pick-overlay";
+    overlay.style.cssText =
+      "position:fixed;z-index:var(--z-modal);inset:0;background:rgba(0,0,0,.48);display:flex;align-items:center;justify-content:center";
+    const box = document.createElement("div");
+    box.style.cssText =
+      "background:var(--surf,#2a2a3a);border:1px solid var(--bd,#444);border-radius:12px;padding:16px;max-width:720px;width:92%;max-height:78vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,.4)";
+
+    const rows = instances
+      .map(
+        (instance, index) => `<button class="launcher-pick-item" data-idx="${index}" style="display:block;width:100%;text-align:left;margin:6px 0;padding:10px;border:1px solid var(--bd,#444);border-radius:8px;background:transparent;color:var(--txt,#cdd6f4);cursor:pointer;font-family:inherit">
+          <div style="display:flex;justify-content:space-between;gap:8px;font-weight:600">
+            <span>${escHtml(instance.launcher)} · ${escHtml(instance.name)}</span>
+            <span style="color:var(--accent,#89b4fa)">${escHtml(instance.gameVersion)}</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted,#888);margin-top:5px">${t("settings.launcher.gameDir")}: ${escHtml(instance.gameDir)}</div>
+          <div style="font-size:10px;color:${instance.exists ? "var(--status-success,#a6e3a1)" : "var(--muted,#888)"};margin-top:2px">YSM: ${escHtml(instance.customDir)}</div>
+        </button>`,
+      )
+      .join("");
+
+    box.innerHTML = `<div style="font-weight:650;font-size:14px">${t("settings.launcher.title")}</div>
+      <div style="font-size:10px;color:var(--muted,#888);margin:5px 0 10px">${t("settings.launcher.desc")}</div>
+      ${rows}
+      <label style="display:flex;align-items:center;gap:7px;margin-top:10px;font-size:11px;color:var(--txt,#cdd6f4)">
+        <input class="launcher-use-default" type="checkbox" checked>
+        ${t("settings.launcher.useDefault")}
+      </label>
+      <div style="margin-top:12px;text-align:right"><button class="btn-base sm launcher-pick-cancel">${t("common.cancel")}</button></div>`;
+    overlay.appendChild(box);
+    (root.host?.parentElement || document.body).appendChild(overlay);
+
+    box.querySelectorAll(".launcher-pick-item").forEach((row) => {
+      row.addEventListener("click", () => {
+        const index = Number((row as HTMLElement).dataset.idx || "0");
+        const useAsYsmRoot = !!(box.querySelector(".launcher-use-default") as HTMLInputElement | null)?.checked;
+        overlay.remove();
+        resolve(instances[index] ? { instance: instances[index], useAsYsmRoot } : null);
+      });
+    });
+    box.querySelector(".launcher-pick-cancel")?.addEventListener("click", () => {
+      overlay.remove();
+      resolve(null);
+    });
+  });
+}
+
+/** Select an HMCL/PCL directory and optionally use its YSM custom directory
+ * as the default YSM download root. */
+export function initLauncherDetect(
+  root: ShadowRoot,
+  refreshAdvanced: () => Promise<void>,
+): void {
+  const button = root.getElementById("set-launcher-detect") as HTMLButtonElement | null;
+  button?.addEventListener("click", async () => {
+    if (isBusy()) return;
+    setBusy(true);
+    try {
+      const launcherDir = await pickDirectory();
+      if (!launcherDir) return;
+      const { DetectLauncherInstances, SetResourceRoot } = await getApp();
+      const instances = (await DetectLauncherInstances(launcherDir)) as DetectedLauncherInstance[] | null;
+      if (!instances?.length) {
+        bus.emit("toast:show", {
+          msg: t("settings.launcher.none"),
+          duration: 3500,
+          type: "warn",
+        });
+        return;
+      }
+      const selection = await showLauncherInstancePicker(root, instances);
+      if (!selection) return;
+      await saveCfg({ mcRoot: selection.instance.gameRoot });
+      if (selection.useAsYsmRoot) {
+        await SetResourceRoot("ysm", selection.instance.customDir);
+        const mutableCfg = cfg as unknown as Record<string, unknown>;
+        mutableCfg.ysmRoot = selection.instance.customDir;
+        const customRoots = (mutableCfg.customRoots as Record<string, string> | undefined) || {};
+        customRoots.ysm = selection.instance.customDir;
+        mutableCfg.customRoots = customRoots;
+        await refreshAdvanced();
+      }
+      cardRefreshers.forEach((refresh) => refresh());
+      bus.emit("config:updated");
+      bus.emit("stats:refresh");
+      bus.emit("toast:show", {
+        msg: t("settings.launcher.applied", {
+          launcher: selection.instance.launcher,
+          version: selection.instance.gameVersion,
+        }),
+        duration: 3000,
+        type: "success",
+      });
+    } catch (error) {
+      toastError(error);
+    } finally {
+      setBusy(false);
+    }
+  });
+}

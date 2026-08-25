@@ -748,6 +748,13 @@ export const zhCN: Record<string, string> = {
   "settings.mc.notFound": "未找到已存在的游戏目录",
   "settings.mc.notFoundHint": "💡 如果装了启动器但没扫到，可能是非常规路径，请手动选择",
   "settings.mc.found": "✅ 找到 {n} 个",
+  "settings.launcher.detect": "🎮 识别 HMCL / PCL",
+  "settings.launcher.title": "选择启动器实例",
+  "settings.launcher.desc": "已解析启动器、Minecraft 版本、实际游戏目录与 YSM 模型目录。",
+  "settings.launcher.gameDir": "游戏目录",
+  "settings.launcher.useDefault": "同时设为 YSM 默认下载目录",
+  "settings.launcher.none": "未在所选目录中识别到 HMCL/PCL 的 Minecraft 实例",
+  "settings.launcher.applied": "✅ 已选择 {launcher} · Minecraft {version}",
 
   // ── 设置页 - 镜像源 ──
   "settings.mirror.changed": "✅ 下载源已切换为 {mirror}",

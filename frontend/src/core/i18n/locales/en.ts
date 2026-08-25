@@ -745,6 +745,13 @@ export const en: Record<string, string> = {
   "settings.mc.notFound": "No existing game directory found",
   "settings.mc.notFoundHint": "💡 If a launcher is installed but not found, it may be in a non-standard path. Please select manually",
   "settings.mc.found": "✅ Found {n}",
+  "settings.launcher.detect": "🎮 Detect HMCL / PCL",
+  "settings.launcher.title": "Select Launcher Instance",
+  "settings.launcher.desc": "Launcher, Minecraft version, actual game directory, and YSM model directory were resolved.",
+  "settings.launcher.gameDir": "Game directory",
+  "settings.launcher.useDefault": "Also use as the default YSM download directory",
+  "settings.launcher.none": "No HMCL/PCL Minecraft instance was found in the selected directory",
+  "settings.launcher.applied": "✅ Selected {launcher} · Minecraft {version}",
 
   // ── Settings - Mirror ──
   "settings.mirror.changed": "✅ Download mirror switched to {mirror}",

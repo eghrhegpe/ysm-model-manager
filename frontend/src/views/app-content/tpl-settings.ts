@@ -18,7 +18,13 @@ export function settingsHTML(): string {
   const gameRootCard = isViewer
     ? ""
     : `<div class="stg-card" style="animation-delay:0ms">
-      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">🎮 ${t("settings.paths.gameRoot")}<button class="btn-base sm" id="set-mc-detect">🔍 ${t("settings.paths.autoSearch")}</button></div>
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <span>🎮 ${t("settings.paths.gameRoot")}</span>
+        <span style="display:flex;gap:5px">
+          <button class="btn-base sm" id="set-launcher-detect">${t("settings.launcher.detect")}</button>
+          <button class="btn-base sm" id="set-mc-detect">🔍 ${t("settings.paths.autoSearch")}</button>
+        </span>
+      </div>
       <div class="stg-card-body">
         <div class="stg-path-val" id="set-mc-path">${t("common.loading")}</div>
         <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>

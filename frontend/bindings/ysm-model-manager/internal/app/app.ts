@@ -236,6 +236,14 @@ export function DetectConflicts(rtype: string, instanceName: string): $Cancellab
 }
 
 /**
+ * DetectLauncherInstances inspects a user-selected HMCL/PCL directory and
+ * returns the resolved YSM directory for each Minecraft instance.
+ */
+export function DetectLauncherInstances(launcherDir: string): $CancellablePromise<types$0.LauncherInstance[] | null> {
+    return $Call.ByID(2842612456, launcherDir);
+}
+
+/**
  * DetectResourceType 检测指定文件的资源类型
  */
 export function DetectResourceType(path: string): $CancellablePromise<string> {

@@ -66,6 +66,16 @@ check('binding-check 模块名从 go.mod 推导且 -ts 产物存在', () => {
   if (!fs.existsSync(bindingsFile)) throw new Error(`-ts 绑定产物缺失: ${path.relative(ROOT, bindingsFile)}`);
 });
 
+check('binding-check accepts generated variadic bindings', () => {
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'binding-check.mjs')], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  if (r.status !== 0) {
+    throw new Error(`binding-check should accept generated variadic bindings:\n${r.stdout}\n${r.stderr}`);
+  }
+});
+
 if (fails.length) {
   console.error(`\n❌ ${fails.length} 个用例失败：`);
   for (const f of fails) console.error(`  - ${f}`);

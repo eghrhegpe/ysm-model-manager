@@ -12,7 +12,7 @@
 //
 // 锚点依据（data-testid / id 钩子，源码直读确认）：
 //   - modelDetailHTML(null)（tpl.ts:22）→ #preview-content + .dp-placeholder + .dp-hint
-//   - showModelDetail（detail.ts:39-47）→ .preview-tab[data-tab="detail"/"skeleton"]
+//   - showModelDetail（detail.ts:39-47）→ .pv-tab[data-tab="detail"/"skeleton"]
 //     + #preview-detail + #preview-skeleton + .preview-fab#btn-3d-preview
 //   - showResourcePack（detail.ts:165-174）→ .preview-fab#btn-pack-model-3d
 //   - catch 分支（detail.ts:135-139）→ #preview-detail 写入 unknownError + parseFailed 文案
@@ -158,7 +158,7 @@ test.describe("模型详情预览页（app-preview）", () => {
     //
     // 断言层次（均硬断言）：
     //   1. #preview-content 存在（showModelDetail 初始 innerHTML 即设置）
-    //   2. .preview-tab[data-tab="detail"] 出现（证明 showModelDetail 确实执行，
+    //   2. .pv-tab[data-tab="detail"] 出现（证明 showModelDetail 确实执行，
     //      区别于初始 modelDetailHTML(null) 占位——后者无 tab 按钮）
     //
     // 不依赖 WebGL：仅断言 DOM 渲染，3D 挂载另测。
@@ -175,7 +175,7 @@ test.describe("模型详情预览页（app-preview）", () => {
     // 硬断言 2：tab 按钮出现——证明 showModelDetail 已执行（初始占位无 tab 按钮）
     const tabFound = await waitForPreviewEl(
       page,
-      '.preview-tab[data-tab="detail"]',
+      '.pv-tab[data-tab="detail"]',
       5000,
     );
     expect(tabFound).toBe(true);
@@ -183,12 +183,12 @@ test.describe("模型详情预览页（app-preview）", () => {
 
   test("tab 切换：detail ↔ skeleton 按钮切换，断言 active class 与面板可见性", async ({ page }) => {
     // 覆盖 showModelDetail（detail.ts:39-47）渲染的 tab 按钮：
-    //   .preview-tab[data-tab="detail"] / .preview-tab[data-tab="skeleton"]
+    //   .pv-tab[data-tab="detail"] / .pv-tab[data-tab="skeleton"]
     // switchTab（detail.ts:49-60）切换 active class + display 面板。
     //
     // 锚点依据：
-    //   - tab 按钮选择器：.preview-tab[data-tab="detail"] / [data-tab="skeleton"]
-    //   - active class：ysm-tab-active（detail.ts:41-42）
+    //   - tab 按钮选择器：.pv-tab[data-tab="detail"] / [data-tab="skeleton"]
+    //   - active class：pv-tab-active（detail.ts:41-42）
     //   - 面板可见性：#preview-detail / #preview-skeleton 的 style.display
     //
     // 不依赖 WebGL：tab 切换是纯 DOM 操作。
@@ -200,7 +200,7 @@ test.describe("模型详情预览页（app-preview）", () => {
     // 等待 tab 按钮渲染
     const tabFound = await waitForPreviewEl(
       page,
-      '.preview-tab[data-tab="detail"]',
+      '.pv-tab[data-tab="detail"]',
       8000,
     );
     expect(tabFound).toBe(true);
@@ -208,16 +208,16 @@ test.describe("模型详情预览页（app-preview）", () => {
     // 初始状态：detail tab 应为 active（savedTab 默认 "detail"，detail.ts:38）
     const detailActive = await previewHasClass(
       page,
-      '.preview-tab[data-tab="detail"]',
-      "ysm-tab-active",
+      '.pv-tab[data-tab="detail"]',
+      "pv-tab-active",
     );
     expect(detailActive).toBe(true);
 
     // 初始状态：skeleton tab 应为 inactive
     const skelInactive = await previewHasClass(
       page,
-      '.preview-tab[data-tab="skeleton"]',
-      "ysm-tab-inactive",
+      '.pv-tab[data-tab="skeleton"]',
+      "pv-tab-inactive",
     );
     expect(skelInactive).toBe(true);
 
@@ -229,21 +229,21 @@ test.describe("模型详情预览页（app-preview）", () => {
     expect(skelDisplayBefore).toBe("none");
 
     // 点击 skeleton tab
-    await clickPreviewEl(page, '.preview-tab[data-tab="skeleton"]');
+    await clickPreviewEl(page, '.pv-tab[data-tab="skeleton"]');
 
     // 切换后：skeleton tab 应为 active
     const skelActive = await previewHasClass(
       page,
-      '.preview-tab[data-tab="skeleton"]',
-      "ysm-tab-active",
+      '.pv-tab[data-tab="skeleton"]',
+      "pv-tab-active",
     );
     expect(skelActive).toBe(true);
 
     // 切换后：detail tab 应为 inactive
     const detailInactive = await previewHasClass(
       page,
-      '.preview-tab[data-tab="detail"]',
-      "ysm-tab-inactive",
+      '.pv-tab[data-tab="detail"]',
+      "pv-tab-inactive",
     );
     expect(detailInactive).toBe(true);
 
@@ -255,12 +255,12 @@ test.describe("模型详情预览页（app-preview）", () => {
     expect(detailDisplayAfter).toBe("none");
 
     // 切回 detail tab 验证往返
-    await clickPreviewEl(page, '.preview-tab[data-tab="detail"]');
+    await clickPreviewEl(page, '.pv-tab[data-tab="detail"]');
 
     const detailActiveAgain = await previewHasClass(
       page,
-      '.preview-tab[data-tab="detail"]',
-      "ysm-tab-active",
+      '.pv-tab[data-tab="detail"]',
+      "pv-tab-active",
     );
     expect(detailActiveAgain).toBe(true);
 

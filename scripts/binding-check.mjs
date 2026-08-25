@@ -69,9 +69,9 @@ function goParamTypes(body) {
   return body.split(',').map((seg) => {
     const toks = seg.trim().split(/\s+/);
     if (toks.length < 2) return null;
-    let t = toks[toks.length - 1];
-    if (t.startsWith('...')) t = t.slice(3);
-    return t;
+    // Keep the variadic marker so the TS rest-array representation can be
+    // compared separately from a regular slice type.
+    return toks[toks.length - 1];
   });
 }
 
@@ -126,9 +126,17 @@ function matchParamTypes(goTypes, tsTypes) {
     const g = goTypes[i];
     const t = tsTypes[i];
     if (g == null || t == null) continue;
-    const exp = goTypeToExpected(g);
+    const variadic = typeof g === 'string' && g.startsWith('...');
+    const goType = variadic ? g.slice(3) : g;
+    const exp = goTypeToExpected(goType);
     if (exp == null) continue;
-    if (tsTypeNormalize(t) !== tsTypeNormalize(exp)) {
+    const actual = tsTypeNormalize(t);
+    const expected = tsTypeNormalize(exp);
+    // Wails exposes a Go variadic parameter as a TypeScript rest array
+    // (`...values: string[]`). Accept that representation while still
+    // rejecting a wrong element type.
+    const variadicExpected = variadic ? `${expected}[]` : expected;
+    if (actual !== expected && actual !== variadicExpected) {
       drift.push(`#${i + 1} ${g} → ${exp}，绑定为 ${t}`);
     }
   }

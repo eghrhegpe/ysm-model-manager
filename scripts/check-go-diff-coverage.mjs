@@ -1,0 +1,362 @@
+#!/usr/bin/env node
+/**
+ * check-go-diff-coverage.mjs — Go 变更文件覆盖率门禁（diff-coverage gate，Go 版）。
+ *
+ * 设计意图：前端已有 check-diff-coverage.mjs（只认 frontend/src/*.ts），Go 重构
+ * （最近大量抽出纯函数）落在盲区——pre-push 只跑 `go test -race` 验"测试通过"，
+ * 不验"新代码有测试"。本脚本仅检查「本次 git 变更的 Go 非测试源码」的变更行覆盖率，
+ * 低于阈值即阻断；保护新增/重构逻辑不裸奔。
+ *
+ * 用法（仓库根运行，命令统一 node scripts/<name>.mjs）：
+ *   node scripts/check-go-diff-coverage.mjs                          # base=origin/main, threshold=60
+ *   node scripts/check-go-diff-coverage.mjs --threshold 70           # 提高阈值
+ *   node scripts/check-go-diff-coverage.mjs --staged                 # 仅本次暂存区（commit-with-check / prepare-commit-msg 场景）
+ *   node scripts/check-go-diff-coverage.mjs --uncommitted            # 纳入工作区+暂存区（本地预检）
+ *   node scripts/check-go-diff-coverage.mjs --files a.go,b.go        # 跳过 git，直接给文件列表（调试）
+ *   node scripts/check-go-diff-coverage.mjs --suggest                # 非阻断建议（输出 commit message 建议区块，永远 exit 0）
+ *   node scripts/check-go-diff-coverage.mjs --json                   # JSON（CI / 子代理消费）
+ *
+ * 退出码：0 = 全部达标；1 = 存在未达标文件；2 = 配置/用法错误（git 失败或 go 不可用）。
+ * 说明：Go 无持久覆盖率产物，本脚本对受影响包现跑 `go test -coverprofile`（单包 ~0.5s），
+ *   数据新鲜但比前端慢——故默认只对「变更文件所在包」跑，不跑全量。
+ * 依赖：node:child_process / node:fs / node:path / node:os / node:url / 本地模块
+ */
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
+import { ROOT } from './_lib/scan-files.mjs';
+
+const USAGE_ERROR = 2;
+const COVERAGE_FAILURE = 1;
+
+function parseArgs(argv) {
+  const out = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (!a.startsWith('--')) continue;
+    const eq = a.indexOf('=');
+    if (eq >= 0) {
+      out[a.slice(2, eq)] = a.slice(eq + 1);
+    } else if (a === '--uncommitted' || a === '--json' || a === '--suggest' || a === '--staged') {
+      out[a.slice(2)] = true;
+    } else if (i + 1 < argv.length) {
+      out[a.slice(2)] = argv[++i];
+    }
+  }
+  return out;
+}
+
+function git(args) {
+  try {
+    return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
+  } catch {
+    return null;
+  }
+}
+
+/** 本次改动的非测试 Go 源码文件（repo-root 相对路径）。 */
+export function getChangedGoFiles(base, head, uncommitted, staged) {
+  const out = new Set();
+  if (staged) {
+    const g = git(['diff', '--cached', '--find-renames=30', '--name-only']);
+    if (g === null) return null;
+    g.split('\n').forEach((l) => l && out.add(l));
+    return [...out].filter(isGoSource);
+  }
+  const g1 = git(['diff', '--diff-filter=ACMR', '--find-renames=30', '--name-only', `${base}...${head}`]);
+  if (g1 === null) return null;
+  g1.split('\n').forEach((l) => l && out.add(l));
+  if (out.size === 0) {
+    const g2 = git(['diff', '--diff-filter=ACMR', '--find-renames=30', '--name-only', `${head}~1...${head}`]);
+    if (g2 === null) return null;
+    g2.split('\n').forEach((l) => l && out.add(l));
+  }
+  if (uncommitted) {
+    const g3 = git(['diff', '--find-renames=30', '--name-only']);
+    if (g3 === null) return null;
+    g3.split('\n').forEach((l) => l && out.add(l));
+    const g4 = git(['diff', '--cached', '--find-renames=30', '--name-only']);
+    if (g4 === null) return null;
+    g4.split('\n').forEach((l) => l && out.add(l));
+  }
+  return [...out].filter(isGoSource);
+}
+
+/** 仅保留应纳入 Go diff 门禁的源码：.go 且非 _test.go、非根覆盖产物 go-cover。 */
+function isGoSource(f) {
+  return (
+    f.endsWith('.go') &&
+    !f.endsWith('_test.go') &&
+    f !== 'go-cover' &&
+    !f.includes('/testdata/')
+  );
+}
+
+/** 解析 `--unified=0` diff 输出，提取新增行号（与前端版同逻辑）。 */
+export function addLinesFromDiff(out, diff) {
+  if (!diff) return;
+  const lines = diff.split('\n');
+  let currentLine = 0;
+  for (const line of lines) {
+    const hdr = line.match(/^@@\s+-\d+(?:,\d+)?\s+\+(\d+)(?:,(\d+))?\s+@@/);
+    if (hdr) {
+      currentLine = parseInt(hdr[1], 10);
+      continue;
+    }
+    if (currentLine === 0) continue;
+    if (line.startsWith('+')) {
+      out.add(currentLine);
+      currentLine++;
+    } else if (line.startsWith(' ')) {
+      currentLine++;
+    }
+  }
+}
+
+export function parseRenameStatus(out) {
+  const map = new Map();
+  out.split('\n').forEach((l) => {
+    const m = l.match(/^R(\d+)\t(.+?)\t(.+)$/);
+    if (m) map.set(m[3], { from: m[2], sim: Number(m[1]) });
+  });
+  return map;
+}
+
+export function detectRenames(base, head, staged) {
+  if (staged) {
+    return parseRenameStatus(git(['diff', '--cached', '--name-status', '--find-renames=30']));
+  }
+  const map = parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', `${base}...${head}`]));
+  if (map.size === 0) {
+    return parseRenameStatus(git(['diff', '--name-status', '--find-renames=30', base, head]));
+  }
+  return map;
+}
+
+/** 取变更文件的具体新增行号集合（新文件行号）。 */
+export function getChangedLines(file, base, head, uncommitted, renameOld, staged) {
+  const out = new Set();
+  if (staged) {
+    if (renameOld) {
+      addLinesFromDiff(out, git(['diff', '--unified=0', `HEAD:${renameOld}`, `:${file}`]));
+      return out;
+    }
+    addLinesFromDiff(out, git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', file]));
+    return out;
+  }
+  if (renameOld) {
+    addLinesFromDiff(out, git(['diff', '--unified=0', `${base}:${renameOld}`, `${head}:${file}`]));
+    if (out.size > 0) return out;
+  }
+  addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', `${base}...${head}`, '--', file]));
+  if (out.size === 0) {
+    addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', `${head}~1...${head}`, '--', file]));
+  }
+  if (uncommitted) {
+    addLinesFromDiff(out, git(['diff', '--unified=0', '--find-renames=30', '--', file]));
+    addLinesFromDiff(out, git(['diff', '--cached', '--unified=0', '--find-renames=30', '--', file]));
+  }
+  return out;
+}
+
+/** 把改动文件映射到 go test 包模式（模块根相对，如 go/scanner → ./go/scanner/...）。 */
+export function packagePatternFor(file) {
+  const dir = path.posix.dirname(file);
+  if (dir === '.') return '.';
+  return `./${dir}/...`;
+}
+
+/** 跑 `go test -coverprofile` 解析出的文件→语句块映射。 */
+export function runCoverProfile(packagePattern, tmp) {
+  try {
+    execFileSync('go', ['test', '-coverprofile=' + tmp, packagePattern, '-count=1'], {
+      cwd: ROOT, encoding: 'utf8', stdio: 'ignore', timeout: 30000,
+    });
+  } catch {
+    return null; // 编译失败/测试失败 → 该包无数据
+  }
+  try {
+    return fs.readFileSync(tmp, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+/** 解析 Go coverprofile 文本 → Map<repoRootRelPath, Array<{sl,el,n,count}>>。导出供单测。 */
+export function parseGoCover(profileText) {
+  const byFile = new Map();
+  for (const line of profileText.split('\n')) {
+    if (line.startsWith('mode:')) continue;
+    if (!line.trim()) continue;
+    const m = line.match(/^(.+?):(\d+)\.(\d+),(\d+)\.(\d+)\s+(\d+)\s+(\d+)$/);
+    if (!m) continue;
+    const rel = stripModulePrefix(m[1]);
+    if (!rel) continue;
+    const block = {
+      sl: Number(m[2]),
+      el: Number(m[4]),
+      n: Number(m[6]),
+      count: Number(m[7]),
+    };
+    if (!byFile.has(rel)) byFile.set(rel, []);
+    byFile.get(rel).push(block);
+  }
+  return byFile;
+}
+
+/** 去掉模块根前缀（ysm-model-manager/... → repo-root 相对）。 */
+export function stripModulePrefix(fullPath) {
+  const idx = fullPath.indexOf('/go/');
+  if (idx >= 0) return fullPath.slice(idx + 1);
+  const i2 = fullPath.indexOf('/internal/');
+  if (i2 >= 0) return fullPath.slice(i2 + 1);
+  const i3 = fullPath.indexOf('/main.go');
+  if (i3 >= 0) return fullPath.slice(i3 + 1);
+  return fullPath;
+}
+
+/** 变更行相关的语句覆盖率百分比（按语句块数加权，count>0 记覆盖）。 */
+export function stmtPctForChangedLines(blocks, changedLines) {
+  if (!blocks || blocks.length === 0) return 100;
+  const relevant = blocks.filter((b) => {
+    for (let line = b.sl; line <= b.el; line++) {
+      if (changedLines.has(line)) return true;
+    }
+    return false;
+  });
+  if (relevant.length === 0) return 100; // 变更行上无语句（纯注释/格式）
+  let total = 0;
+  let covered = 0;
+  for (const b of relevant) {
+    total += b.n;
+    if (b.count > 0) covered += b.n;
+  }
+  return total === 0 ? 100 : (covered / total) * 100;
+}
+
+export function buildSuggestBlock(failures, threshold) {
+  const lines = failures.map((f) => `- \`${f.file}\` — ${f.pct.toFixed(1)}%`);
+  return [
+    '## Go 覆盖率建议（非阻断）',
+    '',
+    `以下改动 Go 文件变更行覆盖率低于 ${threshold}%，建议后续补测试（不阻塞提交/合并）：`,
+    '',
+    ...lines,
+    '',
+    '提示：本建议基于本次改动包 `go test -coverprofile` 实跑结果。',
+  ].join('\n');
+}
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  const base = args.base ?? 'origin/main';
+  const head = args.head ?? 'HEAD';
+  const threshold = Number(args.threshold ?? '60');
+  const uncommitted = Boolean(args.uncommitted);
+  const staged = Boolean(args.staged);
+  const json = Boolean(args.json);
+  const suggest = Boolean(args.suggest);
+
+  if (!Number.isFinite(threshold)) {
+    console.error(`[check-go-diff-coverage] --threshold 需为数字，收到：${args.threshold ?? '60'}`);
+    process.exit(USAGE_ERROR);
+  }
+
+  const failOrWarn = (msg) => {
+    if (suggest) {
+      console.error(`[check-go-diff-coverage] ${msg}（建议模式：跳过）`);
+      process.exit(0);
+    }
+    console.error(`[check-go-diff-coverage] ${msg}`);
+    process.exit(USAGE_ERROR);
+  };
+  if (!args.files) {
+    if (!git(['rev-parse', 'HEAD'])) failOrWarn('无法解析 HEAD（git 环境异常）');
+    if (!staged && !git(['rev-parse', '--verify', base])) {
+      failOrWarn(`基准分支不可达：${base}（请先 git fetch 或 --base 指向本地分支）`);
+    }
+  }
+
+  const changed = args.files
+    ? args.files.split(',').map((s) => s.trim()).filter(Boolean).filter(isGoSource)
+    : getChangedGoFiles(base, head, uncommitted, staged);
+
+  if (changed === null) failOrWarn('git diff 执行失败，拒绝空跑放行');
+
+  const renameMap = detectRenames(base, head, staged);
+  if (changed.length === 0) {
+    const msg = `[check-go-diff-coverage] 本次无改动 Go 源码需要检查（阈值 ${threshold}%）。通过。`;
+    if (suggest) console.error(msg);
+    else console.log(msg);
+    process.exit(0);
+  }
+
+  // 按包分组，一次 coverprofile 覆盖包内所有变更文件
+  const pkgFiles = new Map();
+  for (const f of changed) {
+    const pat = packagePatternFor(f);
+    if (!pkgFiles.has(pat)) pkgFiles.set(pat, []);
+    pkgFiles.get(pat).push(f);
+  }
+
+  const tmp = path.join(os.tmpdir(), `go-diffcov-${process.pid}-${Date.now()}.out`);
+  const rows = [];
+  const failures = [];
+  try {
+    for (const [pat, files] of pkgFiles) {
+      const profileText = runCoverProfile(pat, tmp);
+      const blocksByFile = profileText ? parseGoCover(profileText) : new Map();
+      for (const f of files) {
+        let pct;
+        if (!profileText || !blocksByFile.has(f)) {
+          pct = 0; // 无覆盖率数据 → 视为 0% 未覆盖
+        } else {
+          const renameOld = renameMap.get(f)?.from;
+          const changedLines = getChangedLines(f, base, head, uncommitted, renameOld, staged);
+          pct = stmtPctForChangedLines(blocksByFile.get(f), changedLines);
+        }
+        const missing = !profileText || !blocksByFile.has(f);
+        const renamed = renameMap.has(f);
+        rows.push({ file: f, pct, missing, renamed });
+        if (pct < threshold) failures.push({ file: f, pct, renamed });
+      }
+    }
+  } finally {
+    try { fs.unlinkSync(tmp); } catch { /* 忽略 */ }
+  }
+
+  if (suggest) {
+    if (failures.length > 0) console.log(buildSuggestBlock(failures, threshold));
+    process.exit(0);
+  }
+
+  if (json) {
+    console.log(JSON.stringify({
+      _summary: { threshold, files: rows.length, failed: failures.length },
+      rows,
+      failures,
+    }, null, 2));
+    process.exit(failures.length > 0 ? COVERAGE_FAILURE : 0);
+  }
+
+  console.log(`\n[check-go-diff-coverage] 变更 Go 源码 ${rows.length} 个，阈值 ${threshold}%（变更行覆盖率）：`);
+  console.log('  ' + '文件'.padEnd(68) + '覆盖%');
+  console.log('  ' + '-'.repeat(68) + '------');
+  for (const r of rows) {
+    const flag = r.pct < threshold ? 'X' : 'OK';
+    const tag = r.renamed ? 'R' : ' ';
+    console.log(`  [${flag}] [${tag}] ${r.file.padEnd(60)} ${r.pct.toFixed(1)}`);
+  }
+  if (failures.length > 0) {
+    console.error(`\n[check-go-diff-coverage] 失败：${failures.length} 个改动 Go 文件覆盖率低于 ${threshold}%。请为新增/重构逻辑补测试。`);
+    process.exit(COVERAGE_FAILURE);
+  }
+  console.log(`\n[check-go-diff-coverage] 全部达标（>= ${threshold}%）。通过。`);
+  process.exit(0);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}

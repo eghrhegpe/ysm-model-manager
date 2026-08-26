@@ -156,6 +156,20 @@ export function collectLowCoverage(root, changedFiles, threshold = GO_FUNC_COVER
   return out;
 }
 
+/** 调 check-go-diff-coverage --suggest --staged，取本次暂存 Go 变更行覆盖率建议的函数数（非阻断）。 */
+function getDiffCoverageFuncCount(ROOT) {
+  try {
+    const out = execFileSync(
+      process.execPath,
+      [path.join(ROOT, 'scripts', 'check-go-diff-coverage.mjs'), '--suggest', '--staged', '--threshold', String(GO_FUNC_COVERAGE_THRESHOLD)],
+      { encoding: 'utf8' },
+    );
+    return (out.split('\n').filter((l) => l.startsWith('- `')).length);
+  } catch {
+    return 0;
+  }
+}
+
 function main() {
   if (process.env.YSM_SKIP_GO_COVERAGE_HINT === '1') return;
   const source = process.argv[3] || '';
@@ -168,15 +182,22 @@ function main() {
   if (changed.length === 0) return; // 本次无 Go 改动 → 不输出
 
   const low = collectLowCoverage(ROOT, changed);
-  if (low.length === 0) return;
+  const diffCount = getDiffCoverageFuncCount(ROOT);
 
   // 只终端提醒，不写 commit body（同前端 coverage 提示口径）
-  const preview = low.slice(0, 3)
-    .map((x) => `${x.file} ${x.fn} ${x.pct.toFixed(1)}%`)
-    .join('；');
-  const extra = low.length > 3 ? `（前 3：${preview}…）` : `：${preview}`;
+  const parts = [];
+  if (low.length > 0) {
+    const preview = low.slice(0, 3)
+      .map((x) => `${x.file} ${x.fn} ${x.pct.toFixed(1)}%`)
+      .join('；');
+    parts.push(`🧪 Go ${low.length} 个本次改动函数低于 ${GO_FUNC_COVERAGE_THRESHOLD}%${low.length > 3 ? `（前 3：${preview}…）` : `：${preview}`}`);
+  }
+  if (diffCount > 0) {
+    parts.push(`📈 ${diffCount} 个改动 Go 文件低于变更行覆盖率阈值`);
+  }
+  if (parts.length === 0) return;
   console.error(
-    `[prepare-commit-msg] 🧪 Go ${low.length} 个本次改动函数低于 ${GO_FUNC_COVERAGE_THRESHOLD}% 覆盖率${extra}` +
+    `[prepare-commit-msg] ${parts.join('；')}` +
       '（跑 go test -coverprofile 实测，仅终端提醒；刷新阈值见 scripts/hooks/go-coverage-hint.mjs）',
   );
 }

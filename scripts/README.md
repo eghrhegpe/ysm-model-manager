@@ -88,6 +88,7 @@
 | `i18n-check.mjs` | `node scripts/i18n-check.mjs` / `--strict` / `--json` | i18n 语言包一致性：key parity（en/ja vs zh-CN）/ 占位符一致性 / zh-CN 漏译 / SUPPORTED_LANGS 与 locales/ 文件集漂移；warning 模式恒 0，`--strict` 缺口时 exit 1 |
 | `i18n-ui-check.mjs` | `node scripts/i18n-ui-check.mjs` / `--strict` / `--json` | i18n UI 漂移检查（治本：堵住"动态菜单漏译"盲区）：扫描 frontend/src 下 .ts 文件，命中「含 HTML 标记 + 含中文 + 未包 t()」的字符串即判为漂移；warning 模式恒 0，`--strict` 有漂移时 exit 1 |
 | `check-diff-coverage.mjs` | `node scripts/check-diff-coverage.mjs` / `--json` / `--suggest` / `--staged` / `--uncommitted` / `--threshold N` | 变更文件覆盖率门禁（diff-coverage gate）：只查本次 git 变更的非测试源码「变更行覆盖率」，低于阈值阻断（保护新代码有测试）；`--suggest` 非阻断建议（输出 commit message 区块）；源自 MikuMikuAR P8-A 适配，配套 `tests/test_check_diff_coverage.mjs` |
+| `check-go-diff-coverage.mjs` | `node scripts/check-go-diff-coverage.mjs` / `--json` / `--suggest` / `--staged` / `--uncommitted` / `--threshold N` | **Go 变更文件覆盖率门禁**（前端 check-diff-coverage 的 Go 镜像）：只查本次 git 变更的 Go 非测试源码「变更行覆盖率」，低于阈值阻断；对受影响包现跑 `go test -coverprofile`（无持久产物，单包 ~0.5s）；`--suggest` 非阻断建议；配套 `tests/test_check_go_diff_coverage.mjs` |
 
 > 基线文件位于 `scripts/baseline/`（`deadcode-baseline.json` / `doc-drift-baseline.json`），刷新基线用对应脚本的 `--update-baseline` / `--fix`。
 
@@ -99,6 +100,7 @@
 | `check-knowledge-drift.mjs` | 知识卡漂移检查（含代码→卡片覆盖盲区 WARN；`--affected <文件...>` 主动列出受源码变更影响的知识卡；`--affected --quiet` 机读模式供钩子消费） |
 | `hooks/knowledge-affected-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：stderr 摘要提示受影响知识卡（非阻断、幂等，AI 终端可见），并检测「本次 diff 已引入新写法而卡仍写过时旧词」的疑似过时句精确指行（ADR-047 增强，迁移对表 STALE_KEYWORD_PAIRS），归一化 Git Bash msys 路径 |
 | `hooks/coverage-suggest-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本：低于语句覆盖率阈值的源文件写入 commit message body，随 commit 进 PR 供 review 参考补测方向（非阻断、幂等；逃生阀 `YSM_SKIP_COVERAGE_HINT=1`）；v2：并入 **check-diff-coverage --suggest --staged** 的「📈 变更行覆盖率建议」区块（本次暂存变更文件，双区块幂等剥离） |
+| `hooks/go-coverage-hint.mjs` | `prepare-commit-msg` 钩子辅助脚本（**Go 版**，逃生阀 `YSM_SKIP_GO_COVERAGE_HINT=1`）：仅本次 staged 改动 Go 包实跑 `go test -coverprofile`，终端提示「🧪 低于 80% 的函数」+「📈 check-go-diff-coverage --suggest --staged 的变更行覆盖率」双区块，非阻断 |
 | `gen-knowledge-symbols.mjs` | 知识卡 `symbols:` 字段同步（源码导出符号提取，JS/TS + Go 双栈，gen/--check） |
 | `gen-knowledge-h1.mjs` | 知识卡正文补 `# <name>` 标题（frontmatter 后插入，已有 h1 跳过） |
 | `gen-knowledge-adr.mjs` | 知识卡 `adr:` 关联补全（扫描源码 `[doc:adr-NNN]` 标记，仅 architecture 卡） |

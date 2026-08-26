@@ -22,4 +22,9 @@ fi
 if [ "${YSM_SKIP_COVERAGE_HINT:-0}" != "1" ]; then
   "$NODE" "$ROOT/scripts/hooks/coverage-suggest-hint.mjs" "${1:-}" "${2:-}" || true
 fi
+# Go 函数覆盖率建议（非阻断）：仅本次 staged 改动包跑 coverprofile，指出低覆盖函数。
+# 逃生阀：YSM_SKIP_GO_COVERAGE_HINT=1 git commit
+if [ "${YSM_SKIP_GO_COVERAGE_HINT:-0}" != "1" ]; then
+  "$NODE" "$ROOT/scripts/hooks/go-coverage-hint.mjs" "${1:-}" "${2:-}" || true
+fi
 exit 0

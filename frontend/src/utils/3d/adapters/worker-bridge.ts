@@ -65,6 +65,15 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
     onPoolTerminated,
   } = opts;
 
+  // 入口契约：resolveAllError 模式必须传 makeErrorResponse，
+  // 否则 settleError 兜底 reject → resolve-mode 静默变 reject-mode
+  if (onWorkerError === "resolveAllError" && !makeErrorResponse) {
+    throw new Error(
+      "createWorkerBridge: resolveAllError 模式必须传 makeErrorResponse，" +
+        "否则 worker 错误/超时静默走 reject（resolve-mode 语义反转）",
+    );
+  }
+
   let nextId = 0;
   let rr = 0;
   const pending = new Map<number, {

@@ -11,7 +11,7 @@ const webEvents = {
   On: () => () => {},
   OnMultiple: () => () => {},
   Off: () => {},
-  Emit: () => {},
+  Emit: () => Promise.resolve(),
 };
 
 const webWindow = new Proxy({} as Record<string, () => Promise<void>>, {

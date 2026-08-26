@@ -1461,8 +1461,8 @@
 | `WorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:24` | — |
 | `CreateWorkerBridgeOpts()` | `frontend/src/utils/3d/adapters/worker-bridge:39` | — |
 | `createWorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:54` | — |
-| `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:138` | — |
-| `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:145` | — |
+| `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:147` | — |
+| `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:154` | — |
 | `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:43` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
 | `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:472` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
 | `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:502` | 工厂：构造统一 PreviewAdapter（shared 模式） |

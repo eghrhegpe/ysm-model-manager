@@ -43,13 +43,13 @@
 | 前端·核心 | 18 | 36 |
 | 前端·特性 | 17 | 82 |
 | 前端·服务 | 2 | 18 |
-| frontend/test-utils | 5 | 34 |
+| frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
 | 前端·工具 | 163 | 644 |
 | frontend/views | 115 | 333 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **487** | **2060** |
+| **合计** | **487** | **2061** |
 
 ## Go·头像
 
@@ -1203,8 +1203,9 @@
 | `mountCustomElement()` | `frontend/src/test-utils/index:30` | 同步渲染自定义元素到 body，返回已创建元素。 |
 | `unmountElement()` | `frontend/src/test-utils/index:42` | 卸载元素：从 DOM 移除。 |
 | `sleep()` | `frontend/src/test-utils/index:49` | 简单睡眠（测试中等待异步渲染）。 |
-| `waitFor()` | `frontend/src/test-utils/index:58` | 轮询等待条件满足（兼容现有测试风格，作为统一导出）。 |
-| `waitForElementToBeRemoved()` | `frontend/src/test-utils/index:87` | 轮询等待元素被移除。 |
+| `flushPromises()` | `frontend/src/test-utils/index:63` | 刷新微任务队列——让 async 函数链路的全部 await 解包。 |
+| `waitFor()` | `frontend/src/test-utils/index:72` | 轮询等待条件满足（兼容现有测试风格，作为统一导出）。 |
+| `waitForElementToBeRemoved()` | `frontend/src/test-utils/index:101` | 轮询等待元素被移除。 |
 | `QueryContainer()` | `frontend/src/test-utils/query-by-testid:11` | — |
 | `queryByTestId()` | `frontend/src/test-utils/query-by-testid:30` | — |
 | `getByTestId()` | `frontend/src/test-utils/query-by-testid:39` | — |

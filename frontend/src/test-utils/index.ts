@@ -51,6 +51,20 @@ export function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * 刷新微任务队列——让 async 函数链路的全部 await 解包。
+ *
+ * `await Promise.resolve()` 只让 1 个微任务跑，多层 async 链（如
+ * `openAdvFilterDialog` 内部 `await modalAdvFilter(...)`）需要多个微任务
+ * 才能完成。本函数用 `setTimeout(0)` 把回调排到宏任务队列，此时所有
+ * pending 微任务已跑完。
+ *
+ * 使用场景：点击触发 async handler 后，断言前等 handler 完成。
+ */
+export function flushPromises(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
  * 轮询等待条件满足（兼容现有测试风格，作为统一导出）。
  * @param fn 条件函数，返回 truthy 即通过
  * @param timeout 超时毫秒

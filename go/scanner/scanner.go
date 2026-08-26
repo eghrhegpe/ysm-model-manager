@@ -60,6 +60,10 @@ var flightJoins atomic.Int64
 // walkStartHook 走盘开始钩子（仅测试注入：制造确定性在途重叠；生产恒 nil）
 var walkStartHook func()
 
+// rustScanHook 仅测试注入：覆盖 Rust 扫描快路径结果，制造 tryRustScan 的 handled 分支；
+// 生产恒 nil（Rust 后端仅在 -tags rust_backend 下编译，普通单测走 stub 返回 handled=false）。
+var rustScanHook func(dir string) ([]types.ModelEntry, bool, bool)
+
 type scanFlight struct {
 	wg         sync.WaitGroup
 	entries    []types.ModelEntry
@@ -346,7 +350,15 @@ func joinInFlightWaiter(dir string, fl *scanFlight) ([]types.ModelEntry, bool, b
 // （版本守卫通过时）并把结果写入航班 fl.entries 供 waiter 取。
 // 返回 (entries, true) 表示 Rust 已处理，调用方可直接返回；(nil, false) 走 Go 路径。
 func tryRustScan(dir string, gen, keyVersion uint64, startTime time.Time, fl *scanFlight) ([]types.ModelEntry, bool) {
-	rustEntries, cacheable, handled := scanEntriesWithRust(dir)
+	// 测试注入优先：rustScanHook 非空时替代真实后端（普通单测走 stub 恒 handled=false，
+	// 无法触达 Rust handled 分支，故用钩子制造该路径）。
+	var rustEntries []types.ModelEntry
+	var cacheable, handled bool
+	if rustScanHook != nil {
+		rustEntries, cacheable, handled = rustScanHook(dir)
+	} else {
+		rustEntries, cacheable, handled = scanEntriesWithRust(dir)
+	}
 	if !handled {
 		return nil, false
 	}

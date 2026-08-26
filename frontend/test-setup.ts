@@ -55,6 +55,15 @@ vi.mock("@wailsio/runtime", () => ({
   Events: {
     On: () => () => {},
   },
+  Window: {
+    SetTitle: () => {},
+    Show: () => {},
+    Hide: () => {},
+    OpenDevTools: () => {},
+    Reload: () => {},
+  },
+  Call: () => Promise.resolve(),
+  CancellablePromise: class { cancel() {} },
 }));
 
 // 2. i18n t() 全局 mock —— 直接查表 zhCN，无需 fetch

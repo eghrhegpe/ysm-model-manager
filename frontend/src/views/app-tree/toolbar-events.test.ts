@@ -227,7 +227,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     bindToolbarEvents(root, vm as never);
 
     getByTestId("tree-adv-filter")!.click();
-    await Promise.resolve();
+    await new Promise((r) => setTimeout(r, 0));
 
     expect(vm._filterPaths).toBeNull();
     expect(vm._renderTree).toHaveBeenCalled();

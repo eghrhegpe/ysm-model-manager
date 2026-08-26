@@ -169,6 +169,7 @@ export function mergeLocalAuthorsInto(
         type: la.type || "",
         _fromLocal: true,
       });
+      existingNames.add(la.name);
     }
   }
   return creators;

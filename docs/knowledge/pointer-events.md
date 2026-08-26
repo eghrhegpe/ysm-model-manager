@@ -33,7 +33,6 @@ use_when:
   - mouseenter
   - 全窗预览
 invariant_anchors:
-setPointerCapture
   - frontend/src/utils/3d/adapters/input-and-animation.ts|setPointerCapture
 ---
 

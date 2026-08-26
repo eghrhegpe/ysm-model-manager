@@ -1951,12 +1951,12 @@
 | `loadCommunityData()` | `frontend/src/views/app-content/community-data:90` | 加载站点 + 创作者数据（纯数据，不碰 DOM）——首屏快路径。 |
 | `loadLocalAuthors()` | `frontend/src/views/app-content/community-data:133` | 本地作者扫描（后台补充路径）：withCached STALE——过期先返旧值再后台刷新， 不阻塞调用方；冷缓存时才真等扫描（Go 侧已轻量化为纯目录枚举）。 |
 | `mergeLocalAuthorsInto()` | `frontend/src/views/app-content/community-data:149` | 把本地扫描提取的作者合并进创作者列表（原地合并，返回同一引用）。 |
-| `fillSearch()` | `frontend/src/views/app-content/community-data:225` | 替换 &#123;&#123;q&#125;&#125; 为查询词 |
-| `fetchCommunityCreators()` | `frontend/src/views/app-content/community-data:279` | 从 GitHub 拉取 creators.json（三路回退） |
-| `mergeCommunityCreators()` | `frontend/src/views/app-content/community-data:308` | 合并社区索引到本地 creators.json |
-| `fetchCommunitySites()` | `frontend/src/views/app-content/community-data:345` | 从 GitHub 拉取 workshop_sites.json（三路回退，withCached 30min TTL） |
-| `mergeCommunitySites()` | `frontend/src/views/app-content/community-data:380` | 合并社区站点到本地 workshop_sites.json |
-| `DEFAULT_COMMUNITY_URL()` | `frontend/src/views/app-content/community-data:401` | 社区索引的默认 URL（可配置为社区维护的独立 creators JSON） 贡献通道：https://github.com/eghrhegpe/ysm-model-manager |
+| `fillSearch()` | `frontend/src/views/app-content/community-data:226` | 替换 &#123;&#123;q&#125;&#125; 为查询词 |
+| `fetchCommunityCreators()` | `frontend/src/views/app-content/community-data:280` | 从 GitHub 拉取 creators.json（三路回退） |
+| `mergeCommunityCreators()` | `frontend/src/views/app-content/community-data:309` | 合并社区索引到本地 creators.json |
+| `fetchCommunitySites()` | `frontend/src/views/app-content/community-data:346` | 从 GitHub 拉取 workshop_sites.json（三路回退，withCached 30min TTL） |
+| `mergeCommunitySites()` | `frontend/src/views/app-content/community-data:381` | 合并社区站点到本地 workshop_sites.json |
+| `DEFAULT_COMMUNITY_URL()` | `frontend/src/views/app-content/community-data:402` | 社区索引的默认 URL（可配置为社区维护的独立 creators JSON） 贡献通道：https://github.com/eghrhegpe/ysm-model-manager |
 | `contentCreatorCSS()` | `frontend/src/views/app-content/content-creator:2` | — |
 | `contentCSS()` | `frontend/src/views/app-content/content-css:14` | — |
 | `contentDiagCSS()` | `frontend/src/views/app-content/content-diag:4` | — |

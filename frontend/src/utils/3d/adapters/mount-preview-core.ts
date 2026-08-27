@@ -307,7 +307,8 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   const camBridge: CameraControlBridge = {
     getOrbit: () => session.orbitMode,
     setOrbit: (v: boolean) => {
-      const i = infra!; // camBridge 仅经 cameraControls 在 build 后使用，infra 恒已建
+      const i = infra; // camBridge 仅经 cameraControls 在 build 后使用；self 模式不调用
+      if (!i) return;
       session.orbitMode = v;
       i.controls.enableRotate = v;
       if (v) {
@@ -644,14 +645,14 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     // 代际守卫：await 期间用户已点其他文件 / 被 invalidate，丢弃本次挂载
     if (myGen !== _gen) return;
 
-    const i = infra!; // 本段在 mpBuildSharedInfra（:416）之后执行，infra 恒非空
-    session.sceneBaseline = new Set(i.scene.children);
+    const i = infra; // self 模式 infra=null，跳过 sceneBaseline；shared 模式恒非空
+    if (i) session.sceneBaseline = new Set(i.scene.children);
     session.built = await adapter.build(
       {
-        scene: i.scene,
-        camera: i.camera,
-        controls: i.controls,
-        renderer: i.renderer,
+        scene: i?.scene,
+        camera: i?.camera,
+        controls: i?.controls,
+        renderer: i?.renderer,
         cameraControls: selfMode ? undefined : camBridge,
         viewContainer,
         loadingEl,
@@ -677,23 +678,25 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     // 并保留它，核心不在此强制移除。
 
     // 同步通用相机状态到适配器已设定的取景（包围盒/尺寸定相机）——仅 shared 模式
-    i.orbitTarget.copy(i.controls.target);
-    session.euler.setFromQuaternion(i.camera.quaternion);
-    // ADR-081 L1：内容层包围盒 -> 聚光灯/体积光锥瞄准对象上方
-    syncLightTargetFromContent(i.scene, session.sceneBaseline, i.lightCap ?? null);
-    // 首模型 mesh castShadow / receiveShadow（内容层根节点 = 刚注册的 added）
-    if (i.shadowCap && session.built) {
-      const roots = session.sceneBaseline
-        ? i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
-        : [];
-      i.shadowCap.applyMeshCasts(roots);
-    }
-    // 首模型 mesh envMapIntensity 同步
-    if (i.environmentCap && session.built) {
-      const roots = session.sceneBaseline
-        ? i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
-        : [];
-      i.environmentCap.syncMeshIntensity(roots);
+    if (i) {
+      i.orbitTarget.copy(i.controls.target);
+      session.euler.setFromQuaternion(i.camera.quaternion);
+      // ADR-081 L1：内容层包围盒 -> 聚光灯/体积光锥瞄准对象上方
+      syncLightTargetFromContent(i.scene, session.sceneBaseline, i.lightCap ?? null);
+      // 首模型 mesh castShadow / receiveShadow（内容层根节点 = 刚注册的 added）
+      if (i.shadowCap && session.built) {
+        const roots = session.sceneBaseline
+          ? i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
+          : [];
+        i.shadowCap.applyMeshCasts(roots);
+      }
+      // 首模型 mesh envMapIntensity 同步
+      if (i.environmentCap && session.built) {
+        const roots = session.sceneBaseline
+          ? i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
+          : [];
+        i.environmentCap.syncMeshIntensity(roots);
+      }
     }
     switchCtx.setPerFrame(session.built.update ?? null);
   // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====

@@ -619,7 +619,7 @@ describe("fill3DPanel", () => {
     } as never;
     const texArr = [makeFakeTex()] as unknown as import("three").Texture[];
     fill3DPanel(panel, model, texArr, spec, handle, modelSel);
-    expect(panel.textContent).toContain("当前组件绑定");
+    expect(panel.textContent).toContain("skeleton.currentBinding");
     // 切到 arrow（perComponent 组件）→ 绑定行须显示组件专属纹理，不得吞成 全量
     modelSel.value = "1";
     modelSel.dispatchEvent(new Event("change"));

@@ -17,25 +17,25 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 2 |
-| [✅ 已采纳](#已采纳) | 116 |
+| [🔄 部分采纳](#部分采纳) | 1 |
+| [✅ 已采纳](#已采纳) | 117 |
 | [❌ 已取代](#已取代) | 2 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 🔄 部分采纳（2）
+### 🔄 部分采纳（1）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-123](./ADR-123-cross-environment-downgrade-strategy.md) | 跨环境降级策略统一 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（116）
+### ✅ 已采纳（117）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-123](./ADR-123-cross-environment-downgrade-strategy.md) | 跨环境降级策略统一 | ✅ 已采纳 |
 | [ADR-121](./ADR-121-shadow-dom.md) | Shadow DOM 样式隔离铁律 | ✅ 已采纳 |
 | [ADR-120](./ADR-120-go-rust-manifest-jwalk.md) | Go/Rust 共享已扫描状态：manifest 注入跳过 jwalk | ✅ 已采纳 |
 | [ADR-119](./ADR-119-dedup-parallel-hash.md) | dedup 并行化：共享并行哈希管道（串行收集+并行哈希+序号还原） | ✅ 已采纳 |
@@ -164,7 +164,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-123 | 跨环境降级策略统一 | 🔄 部分采纳 | 2026-08-27 |
+| ADR-123 | 跨环境降级策略统一 | ✅ 已采纳 | 2026-08-27 |
 | ADR-122 | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 | 2026-08-26 |
 | ADR-121 | Shadow DOM 样式隔离铁律 | ✅ 已采纳 | 2026-08-24 |
 | ADR-120 | Go/Rust 共享已扫描状态：manifest 注入跳过 jwalk | ✅ 已采纳 | 2026-08-24 |

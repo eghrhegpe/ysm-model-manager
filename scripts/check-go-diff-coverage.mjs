@@ -10,6 +10,10 @@
  * 用法（仓库根运行，命令统一 node scripts/<name>.mjs）：
  *   node scripts/check-go-diff-coverage.mjs                          # base=origin/main, threshold=60
  *   node scripts/check-go-diff-coverage.mjs --threshold 70           # 提高阈值
+ *   阈值语义（2026-08-27 文档化）：60% = 硬门禁（pre-push-gate GO_STATIC_TOOLS /
+ *   commit-with-check --files 默认）；80% = 软建议（go-coverage-hint 显式
+ *   --threshold 80，prepare-commit-msg 非阻断提示）。两档分工有意为之：门禁宽松、
+ *   建议从严，避免「新逻辑必测 80%」的硬性门槛在 push 时误伤重构型变更。
  *   node scripts/check-go-diff-coverage.mjs --staged                 # 仅本次暂存区（commit-with-check / prepare-commit-msg 场景）
  *   node scripts/check-go-diff-coverage.mjs --uncommitted            # 纳入工作区+暂存区（本地预检）
  *   node scripts/check-go-diff-coverage.mjs --files a.go,b.go        # 跳过 git，直接给文件列表（调试）

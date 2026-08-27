@@ -220,6 +220,10 @@ const FRONTEND_STATIC_TOOLS = [
 /** push 模式按变更域补挂的 Go 静态工具 */
 const GO_STATIC_TOOLS = [
   'check-circular-go.mjs',
+  // Go 变更行覆盖率门禁（2026-08-27 集成，默认 threshold=60 硬门禁）：
+  // --json 模式 exit 0/1/2，runTools 退 rc 判定可靠（_summary 无 ok/errors 字段）。
+  // 软建议 80% 由 go-coverage-hint 显式 --threshold 80 承担（prepare-commit-msg）。
+  'check-go-diff-coverage.mjs',
 ];
 
 /* ---------------- 主流程 ---------------- */

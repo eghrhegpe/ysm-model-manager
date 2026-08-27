@@ -761,7 +761,55 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
     expect(model.textures).toHaveLength(1);
   });
 
-  it("AnalyzeBedrockModelEntry：按 subPath 解析 zip 内单角色 geometry", async () => {
+  it("AnalyzeBedrockModel：.json 目录含 ysm.json manifest 时按声明序合并多角色", async () => {
+      const manifest = {
+        spec: 1,
+        properties: { texture_width: 64, texture_height: 64, default_texture: "red" },
+        files: {
+          player: {
+            model: ["main", "arm"],
+            texture: ["red.png", "blue.png"],
+          },
+        },
+      };
+      const geoMain = {
+        "minecraft:geometry": [{
+          description: { texture_width: 32, texture_height: 32 },
+          bones: [{ name: "main", cubes: [] }],
+        }],
+      };
+      const geoArm = {
+        "minecraft:geometry": [{
+          description: { texture_width: 32, texture_height: 32 },
+          bones: [{ name: "arm", cubes: [] }],
+        }],
+      };
+      const files = [
+        ["多角色/ysm.json", JSON.stringify(manifest)],
+        ["多角色/models/main.json", JSON.stringify(geoMain)],
+        ["多角色/models/arm.json", JSON.stringify(geoArm)],
+        ["多角色/textures/red.png", "RED"],
+        ["多角色/textures/blue.png", "BLUE"],
+      ] as const;
+      const inputs = files.map(([rel, body]) => {
+        const f = new File([enc2.encode(body)], rel.split("/").pop()!);
+        Object.defineProperty(f, "webkitRelativePath", { value: rel });
+        return f;
+      });
+      await importWebFiles([...inputs], "ysm");
+      const model = (await browserAdapter.AnalyzeBedrockModel("/web/ysm/多角色/ysm.json")) as {
+        boneCount: number;
+        bones: unknown[];
+        textures?: string[];
+        textureNames?: string[];
+      };
+      expect(model.boneCount).toBe(2);
+      expect(model.bones).toHaveLength(2);
+      expect(model.textures).toHaveLength(2);
+      expect(model.textureNames).toEqual(["red", "blue"]);
+    });
+
+    it("AnalyzeBedrockModelEntry：按 subPath 解析 zip 内单角色 geometry", async () => {
     const geoA = {
       "minecraft:geometry": [{
         description: {},

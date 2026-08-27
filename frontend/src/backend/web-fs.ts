@@ -48,6 +48,7 @@ import { litematicVoxelView, nbtVoxelView, schematicVoxelView, decodeVoxelNbt, t
 import { findZipEntry, parsePackMetaJson, parseShaderpackLang, packPngToThumbnail } from "./pack-meta.ts";
 // #5：Bedrock 纯解析复用（geometry.ts 是完全前端的 JSON→BedrockGeometry 解析器）
 import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "../views/app-preview/geometry.ts";
+import { parseYsmJsonDirect } from "../views/app-preview/parse-ysm-json.ts";
 // YSM 头部/摘要 binding web 实现（TS 平移 go/ysm/header.go + summary.go；纯解析在
 // ysm-header.ts，本文件只做 IDB 读取装配。消费方：import-queue-data.ts:278 作者/tips
 // 预填、rename.ts:92 重命名 tips、detail.ts:58-62 详情 stats/license、loader.ts:140 作者兜底）
@@ -349,6 +350,106 @@ async function readImageDataUri(p: string): Promise<string> {
   if (!bytes) return "";
   return imageDataUri(bytes, imageMimeOfPath(p));
 }
+/** ysm.json manifest 元数据（parseYsmJsonDirect 塞在 BedrockGeometry._ysmMeta） */
+interface YsmManifestMeta {
+  modelFiles?: unknown[];
+  texFiles?: unknown[];
+  defaultTexture?: string | null;
+}
+
+/** 按相对路径（可带反斜杠/大小写差异）在 zip entries 中找字节 */
+function findEntryByRel(entries: Record<string, Uint8Array>, rel: string): Uint8Array | null {
+  const norm = rel.replace(/\\/g, "/").toLowerCase();
+  for (const key of Object.keys(entries)) {
+    if (key.replace(/\\/g, "/").toLowerCase() === norm) return entries[key];
+  }
+  return null;
+}
+
+/** 解析 ysm.json 字节 → manifest 元数据（没有 ysm.json 规范结构返回 null） */
+function parseYsmManifestMeta(bytes: Uint8Array): YsmManifestMeta | null {
+  try {
+    const json = JSON.parse(new TextDecoder("utf-8").decode(bytes)) as unknown;
+    const decoded = parseYsmJsonDirect(json);
+    if (!decoded?.geometry) return null;
+    const meta = (decoded.geometry as { _ysmMeta?: YsmManifestMeta })._ysmMeta;
+    return meta && meta.modelFiles?.length ? meta : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 按 ysm.json manifest 声明序合并多 geometry（对齐 wasm.ts mdWsHandleYsmJsonSpec 的合并规则）。
+ * @param meta parseYsmJsonDirect 输出的 _ysmMeta（texFiles 已按 default_texture 置首）
+ * @param readFile 相对路径读取器；zip 用 entries 查表，解压目录用 IDB 读文件
+ */
+async function mergeBedrockFromManifest(
+  meta: YsmManifestMeta,
+  readFile: (rel: string) => Promise<Uint8Array | null>,
+): Promise<BedrockGeometry | null> {
+  const allBones: BedrockGeometry["bones"] = [];
+  let boneCount = 0;
+  let cubeCount = 0;
+  let maxTexW = 0;
+  let maxTexH = 0;
+  const processed = new Set<string>();
+
+  for (const mf of meta.modelFiles || []) {
+    const raw = typeof mf === "string" ? mf : (mf as { path?: string })?.path || "";
+    if (!raw || processed.has(raw)) continue;
+    processed.add(raw);
+    const rel = raw.startsWith("models/") || raw.startsWith("models\\")
+      ? raw
+      : "models/" + raw;
+    // 兼容 manifest 里只写 baseName（如 "main"）而磁盘上是 main.json / main.geo.json
+    const candidates = [rel, raw, rel + ".json", rel + ".geo.json", raw + ".json", raw + ".geo.json"];
+    let bytes: Uint8Array | null = null;
+    for (const c of candidates) {
+      bytes = await readFile(c);
+      if (bytes) break;
+    }
+    if (!bytes) continue;
+    const parsed = parseBedrockGeometryFromJSON(new TextDecoder("utf-8").decode(bytes));
+    if (!parsed?.bones?.length) continue;
+    allBones.push(...parsed.bones);
+    boneCount += parsed.boneCount;
+    cubeCount += parsed.cubeCount;
+    maxTexW = Math.max(maxTexW, parsed.texWidth);
+    maxTexH = Math.max(maxTexH, parsed.texHeight);
+  }
+
+  if (!allBones.length) return null;
+
+  const textures: string[] = [];
+  const textureNames: string[] = [];
+  for (const tf of meta.texFiles || []) {
+    const raw = typeof tf === "string" ? tf : (tf as { uv?: string })?.uv || "";
+    if (!raw) continue;
+    const rel = raw.startsWith("textures/") || raw.startsWith("textures\\")
+      ? raw
+      : "textures/" + raw;
+    const candidates = [rel, raw, rel + ".png", rel + ".jpg", raw + ".png", raw + ".jpg"];
+    let bytes: Uint8Array | null = null;
+    for (const c of candidates) {
+      bytes = await readFile(c);
+      if (bytes) break;
+    }
+    if (!bytes) continue;
+    textures.push(imageDataUri(bytes, imageMimeOfPath(raw)));
+    textureNames.push(raw.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || "");
+  }
+
+  return {
+    bones: allBones,
+    boneCount,
+    cubeCount,
+    texWidth: maxTexW,
+    texHeight: maxTexH,
+    textures,
+    textureNames,
+  };
+}
 
 /** 找模型同目录候选预览图（对齐 fileops.FindPreviewImage 的候选顺序） */
 async function webFindPreviewImage(modelPath: string): Promise<string> {
@@ -479,41 +580,70 @@ async function webAnalyzeBedrockModel(modelPath: string): Promise<Record<string,
   try {
     if (ext === ".zip") {
       const { entries } = extractZip(bytes);
-      const geoKey = findGeometryEntryKey(entries);
-      if (geoKey) geo = parseBedrockGeometryFromJSON(new TextDecoder().decode(entries[geoKey]));
-      const tex = collectTexturesFromEntries(entries);
-      textures = tex.textures;
-      textureNames = tex.textureNames;
+      // 先尝试 ysm.json manifest：按声明序合并多角色 geometry + 纹理
+      const ysmBytes = findEntryByRel(entries, "ysm.json");
+      const manifestMeta = ysmBytes ? parseYsmManifestMeta(ysmBytes) : null;
+      if (manifestMeta) {
+        geo = await mergeBedrockFromManifest(manifestMeta, async (rel) => findEntryByRel(entries, rel));
+        if (geo) {
+          textures = geo.textures || [];
+          textureNames = geo.textureNames || [];
+        }
+      }
+      if (!geo?.bones?.length) {
+        const geoKey = findGeometryEntryKey(entries);
+        if (geoKey) geo = parseBedrockGeometryFromJSON(new TextDecoder().decode(entries[geoKey]));
+        const tex = collectTexturesFromEntries(entries);
+        textures = tex.textures;
+        textureNames = tex.textureNames;
+      }
       animations = Object.keys(entries)
         .filter((k) => /\.animation\.json$/i.test(k))
         .map((k) => new TextDecoder().decode(entries[k]));
     } else if (ext === ".json") {
-      // 解压后的目录模型：在同一个 IDB 模型组里找 geometry JSON + textures/
       const slash = modelPath.lastIndexOf("/");
       const dir = slash > 0 ? modelPath.slice(0, slash) : "";
       const files = dir ? await listWebModelDirFiles(dir) : [];
-      for (const p of files) {
-        if (!/\.json$/i.test(p)) continue;
-        const fb64 = await readWebFile(p);
-        if (!fb64) continue;
-        const fbytes = base64ToBytes(fb64);
-        if (!fbytes) continue;
-        try {
-          const text = new TextDecoder().decode(fbytes.subarray(0, 1 << 20));
-          if (text.includes('"minecraft:geometry"')) {
-            const parsed = parseBedrockGeometryFromJSON(text);
-            if (parsed?.bones?.length) { geo = parsed; break; }
-          }
-        } catch {
-          continue;
+      // 当前文件若是 ysm.json 且带 manifest → 按声明序合并
+      const manifestMeta = parseYsmManifestMeta(bytes);
+      if (manifestMeta) {
+        geo = await mergeBedrockFromManifest(manifestMeta, async (rel) => {
+          const p = `${dir}/${rel}`;
+          const b64 = await readWebFile(p);
+          return b64 ? base64ToBytes(b64) : null;
+        });
+        if (geo) {
+          textures = geo.textures || [];
+          textureNames = geo.textureNames || [];
         }
       }
-      for (const p of files) {
-        if (!/\.png$/i.test(p)) continue;
-        const uri = await readImageDataUri(p);
-        if (uri) {
-          textures.push(uri);
-          textureNames.push(p.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") ?? "");
+      // 无 manifest 或 manifest 未命中 → 回退“找第一个 geometry”
+      if (!geo?.bones?.length) {
+        for (const p of files) {
+          if (!/\.json$/i.test(p)) continue;
+          const fb64 = await readWebFile(p);
+          if (!fb64) continue;
+          const fbytes = base64ToBytes(fb64);
+          if (!fbytes) continue;
+          try {
+            const text = new TextDecoder().decode(fbytes.subarray(0, 1 << 20));
+            if (text.includes('"minecraft:geometry"')) {
+              const parsed = parseBedrockGeometryFromJSON(text);
+              if (parsed?.bones?.length) { geo = parsed; break; }
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+      if (textures.length === 0) {
+        for (const p of files) {
+          if (!/\.png$/i.test(p)) continue;
+          const uri = await readImageDataUri(p);
+          if (uri) {
+            textures.push(uri);
+            textureNames.push(p.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") ?? "");
+          }
         }
       }
     }

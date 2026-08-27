@@ -57,6 +57,23 @@ invariant_anchors:
 | YSM 头 | `ysm-header.ts` | 网页版 YSM 文件头解析 |
 | 类型 | `types.ts` | 网页版后端共享类型 |
 
+## 已补齐的关键 binding / fallback 链
+
+以下 binding 过去在 `browserAdapter` 里 fail-fast，导致前端 UI“可见但不可用”；现已由 `web-fs.ts` 接管实现（统一读 IDB → 解字节 → 纯解析 → 返回与 Go 契约一致的对象）：
+
+| Binding | 网页版实现要点 |
+|--------|--------------|
+| `ScanModelEntriesFiltered` | 根目录按模型组返回主文件；非根目录按前缀列出目录内主文件，修复目录批量重命名误扫全库 |
+| `ReadFileBytesBatch` / `ReadFileBytesBatchWithMeta` | 并发读 IDB，MMD/Scene 3D 纹理加载不再静默丢贴图 |
+| `GetPackInfo` | 返回最小 `PackInfo`，展开目录不再“无法读取整合包信息” |
+| `ListPackModels` / `ReadPackEntry` | 基于 `extractZip` 枚举/读取资源包模型条目，解锁资源包 3D |
+| `FindPreviewImage` / `ExtractPreviewTexture` | 模型同目录预览图 / zip 首张 PNG / `.json` 解压目录纹理 → `data:` URI |
+| `AnalyzeBedrockModel` | `ysm.json` manifest 驱动多角色 geometry 合并（bones 合并、纹理声明序、默认纹理置首）；无 manifest 时回退第一个 `minecraft:geometry` |
+| `AnalyzeBedrockModelEntry` | 按 `subPath` 从 zip 定位单角色 geometry，供多角色包内切换 |
+| `SaveScreenshotFile` | web 模式用 `<a download>` 触发浏览器下载 |
+
+> 边界：`.7z` 仍不支持（与导入层一致）；复杂 `ysm.json` 的 L0/L1 `subModels`、`metadata`、`fileInventory`、`textureCategories` 尚未完全移植。
+
 ## 对外 API / 入口
 
 ```ts

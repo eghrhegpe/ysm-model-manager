@@ -81,7 +81,7 @@
 | ExtractYSMHeader / ExtractYsmSummary / ExtractYSMHeaderFromBase64 | 高频调用（重命名 tips、导入队列预填、预览详情） | P0：WASM 内存解析直接可复现 |
 | 几何/纹理数值分析（SearchModels 数值条件、GetModelTexSizes） | 数值条件被忽略降级 | R1 树层级打通后可解锁 |
 | 周边格式（litematic/schematic/nbt/pack/shaderpack） | 未复刻 | P2：依赖 DetectResourceType 先通 |
-| 预览图（FindPreviewImage / ExtractPreviewTexture） | 未复刻 | P1：WASM 主路径兜底 |
+| 预览图（FindPreviewImage / ExtractPreviewTexture） | ✅ 已复刻：模型同目录 preview.png / zip 首张 PNG / `.json` 解压目录纹理 → data URI | 已落地（web-fs.ts） |
 
 ### 2.4 决策修订：Move/Copy 推翻 ADR-053 的 C 类判定【重要】
 
@@ -152,10 +152,10 @@ ADR-053 将 `MoveModelFile` / `CopyModelFile` 归 C 类（理由：「依赖桌�
 **第二批 P1（21 项）**
 - 导入落库 6：`ImportModelFile` 五变体 + `ImportModelFolder`（映射 `importWebFiles`）
 - 资源包 4：`DeleteResourcePack` / `IsResourcePackEnabled` / `ToggleResourcePack` / `ReadPackMeta`
-- 预览兜底 5：`GetPackInfo` / `FindPreviewImage` / `ExtractPreviewTexture` / `SaveScreenshotFile`（`<a download>`）/ `SavePreviewTempFile`（objectURL）
-- 目录 2：`CreateDir` / `ListAllFilePaths`
+- 预览兜底 5：`GetPackInfo` / `FindPreviewImage` / `ExtractPreviewTexture` / `SaveScreenshotFile`（`<a download>`）/ `SavePreviewTempFile`（objectURL）——前 4 项已落地
+- 目录 2：`CreateDir` / `ListAllFilePaths`（`ListAllFilePaths` 已落地；`CreateDir` 网页版仍隐藏）
 - 社区 3：`MergeWorkshopCreatorsFromJSON`（拖 JSON 合并，真实调用）/ `ExportWorkshopSitesJSONFile` / `SetLinkMode`
-- 可选：`AnalyzeBedrockModel`（WASM 失败兜底）
+- **AnalyzeBedrockModel / AnalyzeBedrockModelEntry（已落地，非“可选”）**：网页版 `.zip` / `.json` 3D 预览承重主路径，支持 `ysm.json` manifest 多角色合并；roadmap 曾误标为“WASM 失败兜底”
 
 **第三批 P2（27 项）**
 - 导出下载 8：`ExportBoneStructures`（门控→下载）/ `ExportModelStructureJSON` / `ExportWorkshopCreatorsJSONFile` / `ExportWorkshopSitesCSV` / `ImportWorkshopSitesCSV` / `BackupWorkshopCreators` / `ValidateWorkshopSites` / `ResetWorkshopConfigs`

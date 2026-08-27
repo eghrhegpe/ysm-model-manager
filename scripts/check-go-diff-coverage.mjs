@@ -7,6 +7,10 @@
  * 不验"新代码有测试"。本脚本仅检查「本次 git 变更的 Go 非测试源码」的变更行覆盖率，
  * 低于阈值即阻断；保护新增/重构逻辑不裸奔。
  *
+ * 豁免：平台/标签专属文件（如 `//go:build <os> && rust_backend` 的跨平台桥接文件）在
+ *   当前宿主裸 `go test`（不带对应 build tags）下不被编译，coverprofile 无数据属「环境
+ *   不匹配」而非「裸奔」，按 `go list` 编译集自动豁免，避免跨平台改一次桥接误报 0%。
+ *
  * 用法（仓库根运行，命令统一 node scripts/<name>.mjs）：
  *   node scripts/check-go-diff-coverage.mjs                          # base=origin/main, threshold=60
  *   node scripts/check-go-diff-coverage.mjs --threshold 70           # 提高阈值
@@ -188,6 +192,28 @@ export function runCoverProfile(packagePattern, tmp) {
   }
 }
 
+/**
+ * 当前测试编译环境（裸 `go test`，不带额外 build tags，与 runCoverProfile 同 context）
+ * 会编译进该包的 Go 源文件名集合（basename）。
+ *
+ * 用途：区分「平台/标签专属文件不被编译」（环境不匹配，应豁免，非真裸奔）与
+ *       「被编译但变更行 0 覆盖」（真裸奔，应拦截）。直接问 Go 工具链，不手写解析
+ *       build constraint，避免 `&&/||/!` 语法误判。
+ * 失败返回 null（保守：不豁免，沿用旧 0% 行为）。
+ */
+export function goListGoFiles(packagePattern) {
+  try {
+    const out = execFileSync('go', ['list', '-f', '{{.GoFiles}}', packagePattern], {
+      cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 30000,
+    });
+    const names = new Set();
+    for (const m of out.matchAll(/([^\/\s]+\.go)/g)) names.add(m[1]);
+    return names;
+  } catch {
+    return null;
+  }
+}
+
 /** 解析 Go coverprofile 文本 → Map<repoRootRelPath, Array<{sl,el,n,count}>>。导出供单测。 */
 export function parseGoCover(profileText) {
   const byFile = new Map();
@@ -262,6 +288,10 @@ function main() {
   const staged = Boolean(args.staged);
   const json = Boolean(args.json);
   const suggest = Boolean(args.suggest);
+  const hostGOOS = (() => {
+    try { return execFileSync('go', ['env', 'GOOS'], { cwd: ROOT, encoding: 'utf8' }).trim(); }
+    catch { return os.platform(); }
+  })();
 
   if (!Number.isFinite(threshold)) {
     console.error(`[check-go-diff-coverage] --threshold 需为数字，收到：${args.threshold ?? '60'}`);
@@ -312,10 +342,20 @@ function main() {
     for (const [pat, files] of pkgFiles) {
       const profileText = runCoverProfile(pat, tmp);
       const blocksByFile = profileText ? parseGoCover(profileText) : new Map();
+      // 编译集 oracle：仅当测试编译成功时才查询；编译失败则不豁免（保守沿用旧行为）。
+      const compiled = profileText ? goListGoFiles(pat) : null;
       for (const f of files) {
+        const fname = path.posix.basename(f);
         let pct;
+        let envMismatch = false;
         if (!profileText || !blocksByFile.has(f)) {
-          pct = 0; // 无覆盖率数据 → 视为 0% 未覆盖
+          // 当前测试环境未编出该文件：区分「平台/标签专属文件不编译」(豁免) 与「真 0 覆盖」(拦截)。
+          if (compiled && !compiled.has(fname)) {
+            pct = 100; // 环境不匹配，豁免（非真裸奔）
+            envMismatch = true;
+          } else {
+            pct = 0; // 真未覆盖
+          }
         } else {
           const renameOld = renameMap.get(f)?.from;
           const changedLines = getChangedLines(f, base, head, uncommitted, renameOld, staged);
@@ -323,8 +363,8 @@ function main() {
         }
         const missing = !profileText || !blocksByFile.has(f);
         const renamed = renameMap.has(f);
-        rows.push({ file: f, pct, missing, renamed });
-        if (pct < threshold) failures.push({ file: f, pct, renamed });
+        rows.push({ file: f, pct, missing, renamed, envMismatch });
+        if (!envMismatch && pct < threshold) failures.push({ file: f, pct, renamed });
       }
     }
   } finally {
@@ -349,9 +389,15 @@ function main() {
   console.log('  ' + '文件'.padEnd(68) + '覆盖%');
   console.log('  ' + '-'.repeat(68) + '------');
   for (const r of rows) {
-    const flag = r.pct < threshold ? 'X' : 'OK';
-    const tag = r.renamed ? 'R' : ' ';
-    console.log(`  [${flag}] [${tag}] ${r.file.padEnd(60)} ${r.pct.toFixed(1)}`);
+    const flag = r.envMismatch ? 'SKIP' : (r.pct < threshold ? 'X' : 'OK');
+    const tag = (r.renamed ? 'R' : ' ') + (r.envMismatch ? '~' : ' ');
+    console.log(`  [${flag}] [${tag.trim()}] ${r.file.padEnd(60)} ${r.pct.toFixed(1)}`);
+  }
+  // 平台/标签专属文件豁免说明（非真裸奔，当前 GOOS=<x> 裸 go test 不带 rust_backend 不编译）
+  const skipped = rows.filter((r) => r.envMismatch);
+  if (skipped.length > 0) {
+    console.log(`\n[check-go-diff-coverage] 跳过 ${skipped.length} 个平台/标签专属文件（GOOS=${hostGOOS} 裸测试不编译，非覆盖率缺口）：`);
+    for (const s of skipped) console.log(`  ~ ${s.file}`);
   }
   if (failures.length > 0) {
     console.error(`\n[check-go-diff-coverage] 失败：${failures.length} 个改动 Go 文件覆盖率低于 ${threshold}%。请为新增/重构逻辑补测试。`);

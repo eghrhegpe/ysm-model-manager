@@ -10,12 +10,17 @@ tests:
   - frontend/src/views/app-sync-manager/index.test.ts
   - frontend/src/views/app-toast/index.test.ts
   - frontend/src/views/app-tree/render.test.ts
+  - frontend/src/views/app-content/app-content.methods.test.ts
+  - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
   - frontend/src/views/context-menu/index.test.ts
 use_when:
   - 测试工具
   - testid
   - getByTestId
   - waitFor
+  - sleep
+  - flaky
+  - 异步等待
   - 组件测试
   - mock
   - G-1
@@ -45,10 +50,30 @@ invariant_anchors:
 - Design.md §19.1：testid 命名规范（`<域>-<角色>` kebab-case 前缀命名空间）
 - E2E（ADR-037）：`frontend/e2e/` 14 spec / 51 用例共享本层 testid 钩子与 mock 契约（覆盖现状见 ADR-037 §2.5）
 
+## 异步等待三分法（审计替换 sleep 的决策树，b2a0d079）
+
+固定 sleep 是墙钟等待：慢机（CI/低配）上「不够 50ms 完成渲染」即假红。审计发现全仓
+98 处 sleep / 192 处 waitFor，热点集中在少数文件（P1 案例：单文件 37 处）。替换按
+**等待性质**三分类：
+
+| 等待性质 | 判据 | 解法 | 样板 |
+|----------|------|------|------|
+| 正等结果 | 断言某事**终将发生**（mock 被调到 / DOM 内容出现） | `waitFor(条件)` 轮询到目标状态即返回 | `app-sync-manager/index.test.ts` |
+| 等 init 落定 | 挂载后等初始化链结束，但**无业务可观察条件**（mock 全部微任务级 resolve） | 排空调度轮次：`setTimeout(0)`+rAF 各 2 轮循环（确定性 drain，非概率性墙钟）；各测试文件内定义局部 `flushAsyncTurns()` 即可，不必进公共层 | `app-content.methods.test.ts` |
+| 负向定时器窗口 | 断言**不再发生**（防抖合并恰好 1 次 / disconnect 后订阅已清理） | **保留真实 sleep** 走满定时器窗口——「不会到来的调用」waitFor 永远轮询不到，语义必需；注释标明原因 | `app-sidebar.component.test.ts` |
+
+错误姿势：
+- 正等结果用 sleep → 真 flaky（2026-08 审计 P1 案例：`app-content.methods.test.ts` 37 处集中单文件）
+- init 落定硬凑 waitFor 条件 → 与组件内部实现耦合，条件易碎
+- 负向窗口换成短 sleep → 窗口没走满就断言「没被调」，防抖真坏了也可能漏报
+
+动手前先核查该等待到底在等什么（点击 handler 是否同步、延迟是 setTimeout 还是微任务链），
+grep 生产代码确认，勿凭 sleep 时长猜。
+
 ## 不变量
 
 - 查询只认 `data-testid`，不绑定 CSS 类 / 文案 / DOM 结构（抗脆弱核心）
-- 等待用轮询不用固定 sleep（防竞态误报）
+- 等待按「异步等待三分法」选型（正等结果→waitFor / init 落定→排空轮次 / 负向定时器窗口→保留 sleep 并注释）——不是无脑全换 waitFor
 - testid 值禁止含空格或大小写混排（Design.md §19.1；本层未做入口校验，P3 观察）
 
 ## 相关

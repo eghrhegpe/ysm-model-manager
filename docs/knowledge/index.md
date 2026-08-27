@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 114 张知识卡
+> 总计: 115 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -82,7 +82,7 @@
 - **resource-packs**（资源包功能 resource-packs）：**已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager…
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（36 张）
+## go（37 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -95,6 +95,7 @@
 | 🏗 go-android-platform-guard | Android 平台守卫（Go 侧） | architecture | — | Android, 平台守卫, RevealInExplorer, OpenFolder, RestartApplication, xdg-open, 重启, Node.js, sidecar, watcher, 平台隔离, build tag |
 | 🏗 go-avatar | 头像 go/avatar | architecture | — | 头像, 作者, 创作者, avatar, 缓存, 缩略图 |
 | 🍃 go-cli-search | CLI 搜索命令 search | leaf | — | CLI 搜索, 命令行搜索, search 命令, 关键词搜索, 数值范围搜索, 模型搜索, go run search, runSearch |
+| 🍃 go-config | Go 配置单持有点 go/config | leaf | — | 改配置注入/阈值逻辑，或消费包读阈值时 |
 | 🏗 go-container | 统一容器桥接层 go/container | architecture | — | 容器, 解包, zip, 7z, ContainerReader, 归档, 压缩包, 目录容器 |
 | 🏗 go-dedup | 去重 go/dedup | architecture | — | 去重, 重复检测, dedup |
 | 🏗 go-download | 下载器 go/download | architecture | io-bound, single-thread | 下载, 进度, download, 进度条, 下载进度 |
@@ -105,6 +106,7 @@
 | 🏗 go-importer | 导入策略 go/importer | architecture | — | 导入, 策略, 导入队列, importer |
 | 🏗 go-installer | 模型安装 go/installer | architecture | — | 安装, installer, 模型导入, 下载模型 |
 | 🏗 go-instance | 整合包实例 go/instance | architecture | — | 整合包, 实例, 版本实例, VersionInstance, 同步项, BuildSyncItems, 资源同步 |
+| 🍃 go-launcher | 启动器实例发现 go/launcher | leaf | — | 改启动器发现/实例目录解析逻辑时 |
 | 🏗 go-litematic | Litematic 解析 go/litematic | architecture | — | 投影, litematic, schematic, nbt, 蓝图, 体素, 方块 |
 | 🏗 go-logs | 导入日志 go/logs | architecture | — | 导入日志, 操作记录, 日志, import log, 历史 |
 | 🏗 go-packs | 资源包 mcmeta go/packs | architecture | — | 资源包, 光影包, mcmeta, pack_format, 缩略图, 类型检测 |
@@ -120,7 +122,6 @@
 | 🍃 go-version | 版本号 go/version | leaf | — | 版本, version, 更新, ldflags |
 | 🏗 go-watcher | 文件监听 go/watcher | architecture | — | 监听, 文件变化, 刷新, watcher |
 | 🏗 go-ysm-parser | YSM 解析 go/ysm | architecture | — | YSM, 解析, 摘要, ysm 文件, 元数据 |
-| 🍃 go_config | Go 配置单持有点 go/config | leaf | — | TODO |
 | 🏗 go_repoaudit | 仓库审计 go/repoaudit | architecture | — | 仓库审计, 健康分数, 完整性检查, 缓存命中率, repoaudit, health-report, 去重 |
 | 🏗 rustbridge | Rust 桥 rustbridge | architecture | io-bound, concurrent | Rust 扫描器, rust_backend, 桥 DLL, Wails 后端迁移 Rust |
 | 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture | — | API, Binding, 接口, Go 方法, 调用后端, 有哪些方法, App 方法, getApp, 方法签名, app.ts 绑定 |
@@ -134,6 +135,7 @@
 - **go-android-platform-guard**（Android 平台守卫（Go 侧））：ADR-047「平台守卫批量」：Go 侧对 Android 上**无效或不适用的桌面能力**显式拒绝/降级，避免 `xdg-open`/`exec` 链静默失败（错误分类反模式——失败要可见）。结合既有的 build-tag 平台双文件（`…
 - **go-avatar**（头像 go/avatar）：`go/avatar/` 包负责创作者头像的提取与缓存：从模型文件（.ysm 二进制 / .zip / 解压目录 .json）的 `metadata.authors[].avatar` 声明中取出头像图片，缓存到**平台配置根 `os.Us…
 - **go-cli-search**（CLI 搜索命令 search）：`go/cli/model.go` 的 `search` 命令是 YSM CLI 模式的模型搜索入口，注册为 `RegisterCommandC("search", CatModel, "搜索模型（支持关键词过滤）", runSearch)…
+- **go-config**（Go 配置单持有点 go/config）：运行阈值配置的共享单持有点（ADR-091 D12 收敛）：fileops/logs/download/scanner 原各持一份 `var configFunc func() types.AppConfig` 全局变量（写读无同步、仅靠启…
 - **go-container**（统一容器桥接层 go/container）：`go/container/` 包是统一容器桥接层（ADR-068）：收敛 ysm/geometry/avatar/packs 各自独立的「打开容器→找条目」实现（调研实测 zip.OpenReader 10 处 / zip.NewRead…
 - **go-dedup**（去重 go/dedup）：`go/dedup/` 包提供资源去重检测，避免重复导入相同资源。
 - **go-download**（下载器 go/download）：`go/download/` 包负责模型资源的纯 HTTP 下载（不依赖 Wails runtime），支持 ctx 取消中断、进度回调与失败半文件清理。镜像回退策略（raw/jsd/api 排序）在 `internal/app/app_d…
@@ -144,6 +146,7 @@
 - **go-importer**（导入策略 go/importer）：`go/importer/` 包分两块：`importer.go` 的**按资源类型注册的复制策略表**（`Handler` 接口，供本地路径导入/安装复用），以及 `importer_file.go` 的 **base64 单文件导入核心…
 - **go-installer**（模型安装 go/installer）：`go/installer/`（单文件 `installer.go`）负责把仓库中的模型/资源文件**落地**到 Minecraft 整合包实例目录：按 `LinkMode`（`copy` / `hardlink` / `symlink`）…
 - **go-instance**（整合包实例 go/instance）：`go/instance/` 包处理整合包（Minecraft 版本实例）的资源同步项构建，是 `app_install.go` 中 `GetInstanceSyncStatus` Binding 的下沉逻辑（知识卡旧文称 `GetReso…
+- **go-launcher**（启动器实例发现 go/launcher）：桌面启动器 Minecraft 实例发现：识别用户所选启动器（HMCL / PCL / Minecraft 官方），并把每个 MC 版本解析到实际运行目录与 YSM 自定义目录（`config/yes_steve_model/custom`…
 - **go-litematic**（Litematic 解析 go/litematic）：`go/litematic/` 包解析 Minecraft 建筑蓝图文件：Litematica 投影（`.litematic`，NBT gzip）、MCEdit 旧版 `.schematic`、原版结构 `.nbt`，产出元数据、方块统计（…
 - **go-logs**（导入日志 go/logs）：`go/logs/` 包提供两套互不相干的日志设施：**操作日志**（`Logger`，持久化）把导入/扫描/下载/同步/重命名/删除/UI 报错等操作的成败结果写入用户配置目录下的 `ysm-import-logs.json`；**运行时…
 - **go-packs**（资源包 mcmeta go/packs）：`go/packs/` 包解析 Minecraft 资源包/光影包的 `pack.mcmeta`（目录或 ZIP 两种形态），提取 pack_format 版本信息与 pack.png 缩略图，并承担「一个文件到底属于哪种资源类型」的内容级…
@@ -159,7 +162,6 @@
 - **go-version**（版本号 go/version）：`go/version/` 只有一件事：持有应用版本号。默认 `"dev"`，发版构建时通过 `-ldflags -X` 注入正式版本，供界面展示与自动更新的版本比较。
 - **go-watcher**（文件监听 go/watcher）：`go/watcher/` 包监听资源目录的文件系统变化，触发前端资源树刷新。
 - **go-ysm-parser**（YSM 解析 go/ysm）：`go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。
-- **go_config**（Go 配置单持有点 go/config）：TODO
 - **go_repoaudit**（仓库审计 go/repoaudit）：`go/repoaudit/` 包提供仓库健康审计核心逻辑——资源扫描、完整性校验、缓存状态、健康分数、警告生成、去重汇总。从 `go/cli`（原 `resource.go` 的 `collectRepoHealth`）提取为独立包，CL…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
 

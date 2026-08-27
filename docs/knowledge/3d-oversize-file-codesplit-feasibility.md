@@ -1,6 +1,6 @@
 ---
 kind: 3d-oversize-file-codesplit-feasibility
-name: 3d-超大文件-code-split-可行性
+name: 3D 层超大文件 code-split 可行性
 tier: leaf
 category: ui
 source_files:

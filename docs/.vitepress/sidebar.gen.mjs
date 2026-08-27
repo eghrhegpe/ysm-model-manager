@@ -1426,6 +1426,10 @@ export const autoSidebar = [
             "link": "/knowledge/go-cli-search"
           },
           {
+            "text": "Go 配置单持有点 go/config",
+            "link": "/knowledge/go-config"
+          },
+          {
             "text": "统一容器桥接层 go/container",
             "link": "/knowledge/go-container"
           },
@@ -1464,6 +1468,10 @@ export const autoSidebar = [
           {
             "text": "整合包实例 go/instance",
             "link": "/knowledge/go-instance"
+          },
+          {
+            "text": "启动器实例发现 go/launcher",
+            "link": "/knowledge/go-launcher"
           },
           {
             "text": "Litematic 解析 go/litematic",

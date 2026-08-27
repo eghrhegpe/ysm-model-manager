@@ -12,6 +12,7 @@ source_files:
   - go/sync/sync_push.go
   - go/sync/sync_relink.go
   - go/sync/conflict.go
+  - go/sync/sync_cache.go
   - go/fsutil/hardlink_windows.go
   - go/fsutil/hardlink_other.go
 use_when:

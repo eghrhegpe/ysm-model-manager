@@ -208,6 +208,28 @@ describe("enqueueDownloads", () => {
     expect(getState().errorList).toEqual([]);
   });
 
+  it("网页版 saveDir 边界：webType 反解空串/多级路径/不足三段回退", async () => {
+    resolveWebModeMock.mockReturnValue(true);
+    importWebFilesMock.mockResolvedValue({ imported: 1, failed: 0 });
+    fetchMock.mockResolvedValue(new Response("ok"));
+    // 多级路径仍取 [2] 段（GetRepoRoot 恒 /web/<type>，防御性验证）
+    await enqueueDownloads([{ url: "https://x/m.ysm", saveDir: "/web/ysm/sub/dir", name: "m.ysm", size: 10 }]);
+    expect(importWebFilesMock).toHaveBeenCalledTimes(1);
+    expect(importWebFilesMock.mock.calls[0][1]).toBe("ysm");
+    importWebFilesMock.mockClear();
+    fetchMock.mockResolvedValue(new Response("ok"));
+    // 空 saveDir → webType 空串（importWebFiles 走默认类型分支）
+    await enqueueDownloads([{ url: "https://x/e.ysm", saveDir: "", name: "e.ysm", size: 10 }]);
+    expect(importWebFilesMock).toHaveBeenCalledTimes(1);
+    expect(importWebFilesMock.mock.calls[0][1]).toBe("");
+    importWebFilesMock.mockClear();
+    fetchMock.mockResolvedValue(new Response("ok"));
+    // 不足三段 → split("/")[2] 越界，回退空串（importWebFiles 走默认类型分支）
+    await enqueueDownloads([{ url: "https://x/o.ysm", saveDir: "/odd", name: "o.ysm", size: 10 }]);
+    expect(importWebFilesMock).toHaveBeenCalledTimes(1);
+    expect(importWebFilesMock.mock.calls[0][1]).toBe("");
+  });
+
   it("网页版大文件（>50MB）：不 fetch，回退浏览器直链（ADR-123 P1 回退分支）", async () => {
     resolveWebModeMock.mockReturnValue(true);
     await enqueueDownloads([

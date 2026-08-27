@@ -8,6 +8,7 @@ source_files:
   - go/rustbridge/doc.go
   - go/rustbridge/embedded_windows.go
   - go/rustbridge/types_windows.go
+  - go/rustbridge/common.go
   - rust-core/src/model.rs
   - rust-core/src/policy.rs
   - rust-core/src/scan.rs

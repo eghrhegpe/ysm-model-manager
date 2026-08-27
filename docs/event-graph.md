@@ -30,12 +30,12 @@
 | `repo:rtype-changed` | 3 | 6 | 0 | 0 | ✅ |
 | `repo:search-creator` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:subdir-changed` | 1 | 1 | 0 | 0 | ✅ |
-| `stats:refresh` | 23 | 2 | 0 | 0 | ✅ |
+| `stats:refresh` | 24 | 2 | 0 | 0 | ✅ |
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 200 | 2 | 0 | 0 | ✅ |
-| `tree:reload` | 11 | 1 | 0 | 0 | ✅ |
+| `toast:show` | 201 | 2 | 0 | 0 | ✅ |
+| `tree:reload` | 12 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
 ## 调用详情
@@ -45,7 +45,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/features/community/download-queue-store.ts` | 290 |
+| `frontend/src/features/community/download-queue-store.ts` | 346 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -308,6 +308,7 @@
 | `frontend/src/core/handlers/instance-ops.ts` | 159 |
 | `frontend/src/core/handlers/sync.ts` | 86 |
 | `frontend/src/core/handlers/sync.ts` | 207 |
+| `frontend/src/features/community/download-queue-store.ts` | 248 |
 | `frontend/src/features/community/download-queue.ts` | 112 |
 | `frontend/src/features/import-executor.ts` | 33 |
 | `frontend/src/features/import-executor.ts` | 218 |
@@ -407,6 +408,7 @@
 | `frontend/src/core/handlers/sync.ts` | 200 |
 | `frontend/src/core/handlers/sync.ts` | 215 |
 | `frontend/src/core/handlers/sync.ts` | 240 |
+| `frontend/src/features/community/download-queue-store.ts` | 237 |
 | `frontend/src/features/community/download-queue.ts` | 270 |
 | `frontend/src/features/community/download-queue.ts` | 296 |
 | `frontend/src/features/community/events.ts` | 141 |
@@ -594,6 +596,7 @@
 | `frontend/src/core/handlers/android-events.ts` | 65 |
 | `frontend/src/core/handlers/sync.ts` | 134 |
 | `frontend/src/core/handlers/sync.ts` | 247 |
+| `frontend/src/features/community/download-queue-store.ts` | 247 |
 | `frontend/src/features/community/download-queue.ts` | 111 |
 | `frontend/src/features/import-executor.ts` | 34 |
 | `frontend/src/features/import-executor.ts` | 217 |

@@ -33,6 +33,21 @@ export default defineConfig({
         "src/views/app-preview/wasm.ts",
         // 实验/spike 入口（非生产代码，无导出符号；知识卡侧已由 7cb1a0da 排除）
         "src/web-spike/**",
+        // Web Worker 线程（happy-dom 无真实 Worker 环境）：统计/编码/纹理解码依赖
+        // postMessage + 线程生命周期，单测不可运行；协议与纯逻辑已抽到可测模块
+        // （workers/stats-core.ts、mmd-ktx2-basis.ts 等，均有测试）。
+        "src/workers/stats.worker.ts",
+        "src/utils/3d/adapters/mmd-ktx2-worker.ts",
+        "src/utils/3d/adapters/mmd-texture-decode.worker.ts",
+        // FBX/PMX 解析 Worker（ADR-112）：worker 内无 DOM，FBXLoader/PmxReader 解析
+        // 仅能在真实 Worker 线程运行；纯逻辑已抽到 fbx-scene-to-data / mmd-pmx-convert
+        "src/utils/3d/adapters/fbx-parser.worker.ts",
+        "src/utils/3d/adapters/mmd-pmx-parser.worker.ts",
+        // MMD 纹理解码 Worker 池管理器：new Worker 创建真实线程，池生命周期不可单测
+        "src/utils/3d/adapters/mmd-texture-decoder.ts",
+        // 3D 预览装配入口（mount3D 完整渲染管线 + WebGL/rAF）：happy-dom 无法运行
+        "src/views/app-preview/maid-3d.ts",
+        "src/views/app-preview/ysm-3d.ts",
       ],
       thresholds: {
         // 2026-08-18 校准：降低阈值以豁免高成本/低收益的 DOM 依赖模块

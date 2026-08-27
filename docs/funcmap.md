@@ -989,7 +989,7 @@
 | `nbtVoxelView()` | `frontend/src/backend/voxel-parse:402` | 对齐 voxel.go:286-382 BuildNbtVoxelData：structure NBT 体素视图。 |
 | `schematicVoxelView()` | `frontend/src/backend/voxel-parse:570` | 对齐 voxel.go:384-491 BuildSchematicVoxelData：schematic 体素视图。 |
 | `decodeVoxelNbt()` | `frontend/src/backend/voxel-parse:665` | 纯函数：base64 字节 → NBT root（IO 与解码解耦——本函数无任何 IO，输入 b64 字符串 输出解析后的 root 对象；readVoxelJson 等装配层只 |
-| `webCliBindings()` | `frontend/src/backend/web-cli:34` | 网页版 CLI 绑定 |
+| `webCliBindings()` | `frontend/src/backend/web-cli:33` | 网页版 CLI 绑定 |
 | `WebUnsupportedError()` | `frontend/src/backend/web-common:8` | 网页版专属错误：binding 浏览器端未实现（Phase 3 能力门控隐藏对应 UI） |
 | `WEB_ROOT()` | `frontend/src/backend/web-common:16` | 网页版虚拟仓库根（路径语义与桌面一致：/web/&lt;type&gt;/&lt;name&gt;/&lt;rel&gt;） |
 | `isWebPath()` | `frontend/src/backend/web-common:27` | 校验是否为 /web/ 虚拟仓库路径（含 type 段与至少一个后续段） |
@@ -1092,18 +1092,18 @@
 | `ProgressGuardHooks()` | `frontend/src/features/community/download-queue-progress:16` | createProgressGuard 依赖注入（controller 提供查找与收口回调） |
 | `ProgressGuard()` | `frontend/src/features/community/download-queue-progress:24` | 进度条守卫控制器 |
 | `createProgressGuard()` | `frontend/src/features/community/download-queue-progress:267` | — |
-| `DownloadTask()` | `frontend/src/features/community/download-queue-store:27` | 下载任务 |
-| `QueueError()` | `frontend/src/features/community/download-queue-store:35` | 队列错误项 |
-| `DownloadState()` | `frontend/src/features/community/download-queue-store:41` | 队列状态快照 |
-| `STATE()` | `frontend/src/features/community/download-queue-store:53` | 模块级共享状态（progress guard / UI 控制器 import 协作，不对外 re-export） |
-| `subscribe()` | `frontend/src/features/community/download-queue-store:75` | 订阅 STATE 变更。返回取消订阅函数。 |
-| `notify()` | `frontend/src/features/community/download-queue-store:83` | 广播 STATE 变更（UI 控制器 enqueue 失败回滚等场景也经此通知） |
-| `getStateSnapshot()` | `frontend/src/features/community/download-queue-store:97` | 当前状态的只读快照（浅拷贝，不返回模块级 STATE 的原始引用）。 |
-| `getState()` | `frontend/src/features/community/download-queue-store:102` | 当前状态的只读快照（浅拷贝，不返回模块级 STATE 的原始引用）。 |
-| `resume()` | `frontend/src/features/community/download-queue-store:111` | 页面切回时调用，从 Go 端恢复当前队列状态。 |
-| `isActiveStatus()` | `frontend/src/features/community/download-queue-store:150` | 队列是否处于活跃下载中（downloading 或 enqueued）。 |
-| `enqueueDownloads()` | `frontend/src/features/community/download-queue-store:158` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
-| `cancelDownloads()` | `frontend/src/features/community/download-queue-store:214` | 模块级取消 — 纯粹的 Go 调用。 |
+| `DownloadTask()` | `frontend/src/features/community/download-queue-store:28` | 下载任务 |
+| `QueueError()` | `frontend/src/features/community/download-queue-store:36` | 队列错误项 |
+| `DownloadState()` | `frontend/src/features/community/download-queue-store:42` | 队列状态快照 |
+| `STATE()` | `frontend/src/features/community/download-queue-store:54` | 模块级共享状态（progress guard / UI 控制器 import 协作，不对外 re-export） |
+| `subscribe()` | `frontend/src/features/community/download-queue-store:76` | 订阅 STATE 变更。返回取消订阅函数。 |
+| `notify()` | `frontend/src/features/community/download-queue-store:84` | 广播 STATE 变更（UI 控制器 enqueue 失败回滚等场景也经此通知） |
+| `getStateSnapshot()` | `frontend/src/features/community/download-queue-store:98` | 当前状态的只读快照（浅拷贝，不返回模块级 STATE 的原始引用）。 |
+| `getState()` | `frontend/src/features/community/download-queue-store:103` | 当前状态的只读快照（浅拷贝，不返回模块级 STATE 的原始引用）。 |
+| `resume()` | `frontend/src/features/community/download-queue-store:112` | 页面切回时调用，从 Go 端恢复当前队列状态。 |
+| `isActiveStatus()` | `frontend/src/features/community/download-queue-store:151` | 队列是否处于活跃下载中（downloading 或 enqueued）。 |
+| `enqueueDownloads()` | `frontend/src/features/community/download-queue-store:176` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
+| `cancelDownloads()` | `frontend/src/features/community/download-queue-store:270` | 模块级取消 — 纯粹的 Go 调用。 |
 | `subscribe()` | `frontend/src/features/community/download-queue` | — |
 | `getStateSnapshot()` | `frontend/src/features/community/download-queue` | — |
 | `getState()` | `frontend/src/features/community/download-queue` | — |

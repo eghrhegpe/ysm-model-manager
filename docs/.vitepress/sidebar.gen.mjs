@@ -1540,7 +1540,7 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "3d-超大文件-code-split-可行性",
+            "text": "3D 层超大文件 code-split 可行性",
             "link": "/knowledge/3d-oversize-file-codesplit-feasibility"
           },
           {

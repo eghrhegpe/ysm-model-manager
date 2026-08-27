@@ -186,7 +186,7 @@
 | 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, 3D 预览, overlay, ADR-057 |
 | 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
 | 🍃 shared-styles | 共享样式 shared-styles | leaf | — | 共享样式, 按钮样式, btn-base, focus-visible, tree 样式, Shadow DOM 样式, CSS 变量 |
-| 🏗 test-utils | 测试工具 test-utils（G-1 抗脆弱测试基础设施） | architecture | — | 测试工具, testid, getByTestId, waitFor, 组件测试, mock, G-1 |
+| 🏗 test-utils | 测试工具 test-utils（G-1 抗脆弱测试基础设施） | architecture | — | 测试工具, testid, getByTestId, waitFor, sleep, flaky, 异步等待, 组件测试, mock, G-1 |
 | 🍃 toolbar-search | 工具栏搜索编排 toolbar-search | leaf | — | 搜索编排, 高级筛选, 关键词搜索, 数值范围搜索, 标签过滤, 多线程统计角标, 网页版导入, tool-bar-search, 工具栏搜索, 降级提示, consumeWebSearchDegraded |
 | 🍃 ui-slide-menu | ADR 去桶化 slide-menu 外壳组件 | leaf | — | slide-menu, slide 菜单, 去桶化, ADR 卡片, 两级菜单, 轻量导航栈, createSlideMenu, slideRow, 行组件 |
 | 🏗 ui_components | UI 组件库 ui-components | architecture | — | UI 组件, UI 组件库, 卡片组件, 折叠面板, 加载动画, 滑块, 行组件, 预设, 图标, 幻灯片菜单, 组件样式 |

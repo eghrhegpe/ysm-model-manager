@@ -1,6 +1,7 @@
 // ===== 创意工坊站点打开器 =====
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { getApp } from "../../backend/app.ts";
+import { swallowError } from "../../utils/core/async.ts";
 import { resolveWebMode } from "../../backend/platform.ts";
 import { safeSet } from "../../utils/dom/storage.ts";
 import { bus } from "../../bus.ts";
@@ -29,13 +30,13 @@ export function openSite(
     openEmbedded(host, site, url);
   } else if (browseMode === "window") {
     // 窗口模式直连（独立 WebView2 窗口，非 iframe，无需反代绕 X-Frame-Options）
-    getApp().then(({ NavigatePlazaWindow }) =>
+    swallowError(getApp().then(({ NavigatePlazaWindow }) =>
       NavigatePlazaWindow(url, true),
-    ).catch(() => {});
+    ));
   } else {
-    getApp().then(({ OpenInBrowser }) =>
+    swallowError(getApp().then(({ OpenInBrowser }) =>
       OpenInBrowser(url),
-    ).catch(() => {});
+    ));
   }
 }
 
@@ -88,9 +89,9 @@ export function bindSiteEvents(
   const openCurrent = (): void => {
     const cs = host._currentSite;
     if (cs) {
-      getApp().then(({ OpenInBrowser }) =>
+      swallowError(getApp().then(({ OpenInBrowser }) =>
         OpenInBrowser(cs.url),
-      ).catch(() => {});
+      ));
     }
   };
   root.getElementById("ws-open")?.addEventListener("click", openCurrent);
@@ -102,9 +103,9 @@ export function bindSiteEvents(
   root.getElementById("ws-win-open")?.addEventListener("click", () => {
     const cs = host._currentSite;
     if (cs) {
-      getApp().then(({ NavigatePlazaWindow }) =>
+      swallowError(getApp().then(({ NavigatePlazaWindow }) =>
         NavigatePlazaWindow(cs.url, true),
-      ).catch(() => {});
+      ));
     }
   });
 

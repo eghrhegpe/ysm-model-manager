@@ -1,5 +1,6 @@
 // ===== GitHub 页初始化（为 app-content/index.ts 减负，ADR-040）=====
 import { getApp } from "../../backend/app.ts";
+import { swallowError } from "../../utils/core/async.ts";
 import { safeGet } from "../../utils/dom/storage.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { stagger } from "../../utils/animation/stagger.ts";
@@ -203,9 +204,9 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
   const openBtn = resultsBody?.querySelector("#gh-open-repo, #gh-open-repo-dl");
   if (openBtn)
     openBtn.addEventListener("click", () => {
-      getApp().then(({ OpenInBrowser }) =>
+      swallowError(getApp().then(({ OpenInBrowser }) =>
         OpenInBrowser("https://github.com/" + repo),
-      ).catch(() => {});
+      ));
     });
 }
 

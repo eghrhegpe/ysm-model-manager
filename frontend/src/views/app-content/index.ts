@@ -18,6 +18,7 @@ const appContentStyle: CSSStyleSheet = (() => {
 })();
 export { appContentStyle };
 import { getApp } from "../../backend/app.ts";
+import { swallowError } from "../../utils/core/async.ts";
 import { registerGlobalHandlers } from "../../core/handlers/global.ts";
 // 副作用导入：注册 <app-preview> 组件
 import "../app-preview/index.ts";
@@ -127,7 +128,7 @@ class AppContent extends WebComponentBase {
     resetAvatarConfigLoaded();
     // 清理 repo 视图事件
     if (this.state.repoEventsCleanup) {
-      this.state.repoEventsCleanup().catch(() => {});
+      swallowError(this.state.repoEventsCleanup());
       this.state.setRepoEventsCleanup(null);
     }
   }

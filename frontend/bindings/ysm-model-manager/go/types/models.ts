@@ -348,21 +348,6 @@ export interface InstanceStatus {
 }
 
 /**
- * LauncherInstance is a Minecraft instance discovered from a launcher directory.
- * GameRoot is the shared .minecraft directory; GameDir is the actual run directory
- * after applying the launcher's per-instance isolation setting.
- */
-export interface LauncherInstance {
-    "launcher": string;
-    "name": string;
-    "gameVersion": string;
-    "gameRoot": string;
-    "gameDir": string;
-    "customDir": string;
-    "exists": boolean;
-}
-
-/**
  * LinkType 链接类型
  */
 export enum LinkType {

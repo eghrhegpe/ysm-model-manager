@@ -68,7 +68,6 @@ export const MOCK_DATA = {
   ToggleResourcePack: true,
   SaveAppConfig: undefined,
   DetectResourceType: "ysm",
-  DetectLauncherInstances: [],
   // ReadPackMeta 返回 JSON 字符串（对齐 Go binding 契约，代码侧 JSON.parse 消费）
   ReadPackMeta: JSON.stringify({
     name: "测试资源包",

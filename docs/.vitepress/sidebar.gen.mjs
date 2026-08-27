@@ -1537,7 +1537,7 @@ export const autoSidebar = [
         "items": [
           {
             "text": "3d-超大文件-code-split-可行性",
-            "link": "/knowledge/3d-超大文件-code-split-可行性"
+            "link": "/knowledge/3d-oversize-file-codesplit-feasibility"
           },
           {
             "text": "3D 区审核与修复模式提炼",
@@ -1692,6 +1692,10 @@ export const autoSidebar = [
             "link": "/knowledge/ground_surface_spec"
           },
           {
+            "text": "ground-cap-gcBuildMaterialGroup-133",
+            "link": "/knowledge/ground-cap-gcbuildmaterialgroup-133"
+          },
+          {
             "text": "MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现",
             "link": "/knowledge/mc-ao-tint"
           },
@@ -1702,6 +1706,14 @@ export const autoSidebar = [
           {
             "text": "3D 预览渲染 model3d",
             "link": "/knowledge/model3d"
+          },
+          {
+            "text": "mount-preview-module-singleton-race",
+            "link": "/knowledge/mount-preview-module-singleton-race"
+          },
+          {
+            "text": "mount3D-584-giant",
+            "link": "/knowledge/mount3d-584-giant"
           },
           {
             "text": "3D 感知系统 perception",
@@ -1766,6 +1778,10 @@ export const autoSidebar = [
           {
             "text": "摘要生成 summarize",
             "link": "/knowledge/utils-summarize"
+          },
+          {
+            "text": "worker-bridge-settleError-fallback",
+            "link": "/knowledge/worker-bridge-settleerror-fallback"
           },
           {
             "text": "WASM 解析器 ysm-parser",

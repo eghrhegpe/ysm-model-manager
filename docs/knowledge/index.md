@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 109 张知识卡
+> 总计: 113 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -167,8 +167,8 @@
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
+| 🍃 3d-oversize-file-codesplit-feasibility | 3d-超大文件-code-split-可行性 | leaf | — | — |
 | 🍃 3d-patterns | 3D 区审核与修复模式提炼 | leaf | — | 3D 渲染循环优化, Vector3 复用, 纹理缓存, AbortController 事件管理, 资源生命周期 dispose, 循环依赖破壁, 审核驱动开发, 并发防护 gen 守卫 |
-| 🏗 decision | 3d-超大文件-code-split-可行性 | architecture | — | — |
 | 🏗 app-content | 主内容页 app-content | architecture | — | 主内容区, 页面切换, nav:change, 仓库页, 诊断页, 设置页, 创作者频道, 创意工坊, 全局 handler |
 | 🏗 app-modules | 组件入口 app-modules | architecture | — | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新, import 组件, 新组件注册, 窗口显示, startup reveal |
 | 🍃 app-nav | 顶部导航 app-nav | leaf | — | 导航栏, 导航, 切页, nav:change, 菜单, 页面记忆, 版本号 |
@@ -215,7 +215,7 @@
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/ui/ui-slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 slide-menu 视觉卡片（m…
 - **ui_components**（UI 组件库 ui-components）：`frontend/src/ui/` 是前端通用 UI **helper 函数库**（自 MikuMikuAR 迁移，ADR-191 去桶化）：提供卡片、折叠面板、加载遮罩、行排列、滑块、幻灯片菜单、预设 chip、图标工厂等无业务逻辑的 …
 
-## utils（27 张）
+## utils（31 张）
 
 *工具函数（display、fmt、dom、animation）*
 
@@ -227,10 +227,13 @@
 | 🍃 dom-storage | localStorage 安全读写 safeGet/safeSet | leaf | — | localStorage, 隐私模式, safeGet, safeSet, storage |
 | 🍃 dom_tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
 | 🍃 format-ysm-anim-config | YSM 动画分组与配置菜单提取 | leaf | — | 动画分组, 配置菜单, ysm.json, extra_animation, summarize |
+| 🍃 ground-cap-gcbuildmaterialgroup-133 | ground-cap-gcBuildMaterialGroup-133 | leaf | — | 拆 gcBuildMaterialGroup 长函数, 评审 ground-capability.ts 菜单构建 |
 | 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | — | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（grid/checker/solid 像素）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | — | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture | — | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
 | 🏗 model3d | 3D 预览渲染 model3d | architecture | — | 3D 预览, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底, OrbitControls |
+| 🍃 mount-preview-module-singleton-race | mount-preview-module-singleton-race | leaf | — | 修 mount3D 并发竞态, 评审模块级单例守卫 |
+| 🍃 mount3d-584-giant | mount3D-584-giant | leaf | — | 拆 mount3D 巨函数, 评审 mount-preview-core.ts |
 | 🏗 perception | 3D 感知系统 perception | architecture | — | 自主动画, 自动跳舞, 眨眼, 呼吸, 视线追踪, 口型同步, 节拍检测, 模型感知, 自动运动 |
 | 🏗 preview_core | 统一 3D 预览核心 preview-core | architecture | — | 3D 预览, 统一预览外壳, 程序化天空 / sky / 背景 / scene.background, PreviewAdapter 适配器, 全模型预览（YSM / VRM / MMD / Litematic）, mount3D |
 | 🍃 safe_error_msg | 安全错误消息提取 utils | leaf | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
@@ -247,6 +250,7 @@
 | 🍃 utils-misc | 常量与调试 constants/debug | leaf | — | 调试日志, dbg, 调试开关, 环形日志, debugGetSpec, 全局常量 |
 | 🍃 utils-resource-types | 资源类型工具 resource-types | leaf | — | 资源类型, RESOURCE_TYPES, 类型标签, 存储子目录, storageSubDir, LoadResourceTypes, 注册表加载 |
 | 🍃 utils-summarize | 摘要生成 summarize | leaf | — | 模型详情, 摘要卡片, summaryCardHTML, 预览卡片, 加密模型, 作者信息, 动画分组, 免费付费 |
+| 🍃 worker-bridge-settleerror-fallback | worker-bridge-settleError-fallback | leaf | — | 扩展 WorkerErrorStrategy 策略, 评审 worker-bridge settleError 分支 |
 | 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM, YSMParser, ysm 解码, 加密模型, wasm 加载, Emscripten, MEMFS, node 解码, callMain |
 
 ### 摘要
@@ -257,9 +261,12 @@
 - **dom-storage**（localStorage 安全读写 safeGet/safeSet）：`localStorage` 安全读写工具层（ADR-044 策略 A），收敛项目内所有 `localStorage` 调用，避免隐私模式/存储禁用下裸调抛错中断启动链（`initTheme`/`applyUIPrefs`/`setting…
 - **dom_tooltip**（悬浮提示 tooltip）：3D 预览控制层的自定义悬浮提示组件（单例 light DOM），替代原生 `title` 的迟缓黄气泡（~1s 延迟、样式不可控）。毛玻璃风格对齐 3D HUD（`fab.ts` `.ysm-3d-popup` 同族）；tooltip 节…
 - **format-ysm-anim-config**（YSM 动画分组与配置菜单提取）：前端镜像 Go 端 `appendAnimGroupsAndConfigs` 逻辑的纯函数模块（`summary.go`）。加密 `.ysm` 经 WASM 解码后，`ysm.json` 的 `properties` 字段可读，但原 `wa…
+- **ground-cap-gcbuildmaterialgroup-133**（ground-cap-gcBuildMaterialGroup-133）：`ground-capability.ts:613-745` `gcBuildMaterialGroup` 133 行，超 100 行红线。11 个 `MenuControlDef` 字面量堆叠（mat-source/color/line-…
 - **ground_surface_spec**（地面材质 spec 单一事实源 ground-surface-spec）：ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 介于网格 y=0 与水面 y=0.01）。架构移植自 MikuMikuAR ADR-226「GroundMateria…
 - **model2d**（2D 预览渲染 model2d）：Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。
 - **model3d**（3D 预览渲染 model3d）：前端 Three.js 3D 渲染层（`frontend/src/utils/3d/`），**单会话架构**：场景/相机/渲染器/控制器由统一预览核心 `mount3D`（ADR-066）持有单实例，模型内容经适配器（ysm/vrm/mmd…
+- **mount-preview-module-singleton-race**（mount-preview-module-singleton-race）：`mount-preview-core.ts:155-170` 模块级 `let _singletonOverlay/_singletonBody/_singletonViewContainer/_singletonScene/_singl…
+- **mount3d-584-giant**（mount3D-584-giant）：`mount3D`（mount-preview-core.ts:240-823）584 行真·巨鲸，内部 12+ 内联闭包，是今日 3D 层审核（ts-package-review）的头号坏味道。今日 commits（1f1b60d4/fd…
 - **perception**（3D 感知系统 perception）：`utils/3d/perception/` 是实现模型「自主生命感」的感知层子系统：让 Minecraft 角色自动眨眼、呼吸、注视、对口型、随音乐律动。
 - **preview_core**（统一 3D 预览核心 preview-core）：ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚手架（旧实现各内联 ~250 行同构），成为所有富格式 3D 预览的**单一事实来源外壳**。内容差异经 `PreviewAdapter.bui…
 - **safe_error_msg**（安全错误消息提取 utils）：`frontend/src/utils/safe-error-msg.ts` 提供轻量级错误消息提取函数 `safeErrorMessage`，从任意错误对象中安全提取可读消息字符串。与 `errors.ts` 的 `friendlyErr…
@@ -276,6 +283,7 @@
 - **utils-misc**（常量与调试 constants/debug）：前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。原 `constants.ts`（预览画布/缩放/下载守护等全局数值常量）因长期无消费方已在死代码清理中移除，本卡同时承接「常量治理」的约定说明。
 - **utils-resource-types**（资源类型工具 resource-types）：前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/registry.t…
 - **utils-summarize**（摘要生成 summarize）：把 Go 端解析出的模型摘要（YsmSummary）与头部信息（YSMHeader）渲染为预览面板的「模型详情」卡片 HTML。
+- **worker-bridge-settleerror-fallback**（worker-bridge-settleError-fallback）：`worker-bridge.ts:89-97` `settleError` 三分支结算：`terminatePool` → reject；`makeErrorResponse` 存在 → resolve 错误响应；else → rejec…
 - **ysm-wasm**（WASM 解析器 ysm-parser）：YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64…
 
 ## 性能画像（perf 标签）

@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLI_BRIDGE = path.join(ROOT, 'frontend/src/services/cli-bridge.ts');
+const CLI_ALLOWLIST = path.join(ROOT, 'frontend/src/backend/cli-allowlist.ts');
 const FLOW_GO = path.join(ROOT, 'go/cli/flow.go');
 const CONCURRENT_GO = path.join(ROOT, 'go/cli/concurrent.go');
 
@@ -36,16 +37,18 @@ function readOrDie(rel) {
 }
 
 const bridge = readOrDie('frontend/src/services/cli-bridge.ts');
+const allowlist = readOrDie('frontend/src/backend/cli-allowlist.ts');
 const flowGo = readOrDie('go/cli/flow.go');
 const concurrentGo = readOrDie('go/cli/concurrent.go');
 
-// ── 1) 命令白名单契约（前端 cli-bridge）────────────────────────
+// ── 1) 命令白名单契约（前端 cli-allowlist 单一事实源）────────────
+// 白名单字符串字面量从 cli-allowlist.ts 找（cli-bridge.ts 仅 re-export，无字面量）。
 const PERF_COMMANDS = ['gui-flow', 'single-bench', 'perf-log', 'concurrent-bench', 'benchmark'];
-if (bridge) {
+if (allowlist) {
   for (const cmd of PERF_COMMANDS) {
     must(
-      bridge.includes(`"${cmd}"`),
-      `CLI 命令 ${cmd} 未在前端 cli-bridge 白名单（ALLOWED_CLI_COMMANDS）`,
+      allowlist.includes(`"${cmd}"`),
+      `CLI 命令 ${cmd} 未在前端 cli-allowlist 白名单（CLI_ALLOWLIST）`,
     );
   }
 }

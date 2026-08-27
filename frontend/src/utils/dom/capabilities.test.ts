@@ -44,7 +44,7 @@ describe("can() — 三级能力门控", () => {
     }
     // 未实现（fail-fast）→ false
     expect(can("MoveModelFile")).toBe(true); // 已实现（57f6d84f）
-    expect(can("GetPackInfo")).toBe(false);
+    expect(can("GetPackInfo")).toBe(true); // web-fs.ts 实现，返回最小 PackInfo
     expect(can("CheckUpdate")).toBe(false);
     expect(can("OpenFolder")).toBe(false);
   });

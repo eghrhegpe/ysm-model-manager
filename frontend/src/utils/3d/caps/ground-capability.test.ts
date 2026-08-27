@@ -41,7 +41,7 @@ describe("GroundCapability", () => {
     const grid = scene.getObjectByName("ysm-ground") as THREE.GridHelper;
     expect(grid).toBeDefined();
     expect(grid.visible).toBe(false); // params.visible 覆盖
-    expect(DEFAULT_GROUND_PARAMS.size).toBe(50); // 默认参数基线
+    expect(DEFAULT_GROUND_PARAMS.size).toBe(80); // 默认参数基线
   });
 
   it("dispose 移除网格并释放几何/材质（重复 dispose 幂等）", () => {
@@ -92,7 +92,7 @@ describe("GroundCapability — getMenuControls 分组", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
-    expect(cap.getNormalStrength()).toBe(0.3);
+    expect(cap.getNormalStrength()).toBe(0.08);
     cap.setNormalStrength(0.8);
     expect(cap.getNormalStrength()).toBe(0.8);
     const mat = cap["water"].material as THREE.MeshStandardMaterial;
@@ -162,7 +162,7 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(surf.visible).toBe(true);
     const mat = surf.material as THREE.MeshStandardMaterial;
     expect(mat.map).toBeInstanceOf(THREE.DataTexture);
-    expect(mat.map!.repeat.x).toBeCloseTo(5); // textureRepeat(50,1)
+    expect(mat.map!.repeat.x).toBeCloseTo(8); // textureRepeat(80,1)=8
   });
 
   it("structural 变化重建（map 新实例）；appearance 变化原地（map 引用不变）", () => {
@@ -177,7 +177,7 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     cap.setMatScale(2.5);
     const mat1 = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(mat1.map).toBe(map0); // 同一纹理实例
-    expect(mat1.map!.repeat.x).toBeCloseTo(2); // textureRepeat(50,2.5)=50/10/2.5
+    expect(mat1.map!.repeat.x).toBeCloseTo(3.2); // textureRepeat(80,2.5)=80/10/2.5=3.2
     expect(mat1.opacity).toBe(1);
     // 结构：换底色触发重建
     cap.setMatColor(0xff0000);

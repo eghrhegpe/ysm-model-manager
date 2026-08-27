@@ -342,13 +342,15 @@ export const POSTPROC_PRESETS: Record<string, Partial<PostprocessingParams>> = {
   },
   vrm: {
     // PBR 角色：Bloom 柔光 + SSAO 中档 + SSR 默认开（金属皮肤反射明显）
-    enabled: false, bloomStrength: 0.7, bloomThreshold: 0.65, bloomRadius: 0.6,
+    // ✨ v1.14 调优：默认开启后处理，Bloom 更柔和自然
+    enabled: true, bloomStrength: 0.6, bloomThreshold: 0.7, bloomRadius: 0.5,
     ssaoEnabled: false, ssaoRadius: 10, toneMapping: "aces", exposure: 1.05,
     reflectionMode: "envmap-only", ssrOpacity: 0.5, ssrMaxDistance: 180, reflectorDisableWhenSSR: true,
   },
   mmd: {
     // toon：Bloom 稍强出画面空气感，SSAO 弱开；SSR 关（toon 角色几乎没 PBR 金属度）
-    enabled: false, bloomStrength: 0.8, bloomThreshold: 0.6, bloomRadius: 0.8,
+    // ✨ v1.14 调优：Bloom 阈值降至 0.5，强度提到 1.0，让 Mtoon 自发光材质溢出更自然
+    enabled: true, bloomStrength: 1.0, bloomThreshold: 0.5, bloomRadius: 0.9,
     ssaoEnabled: false, ssaoRadius: 6, toneMapping: "aces", exposure: 1.05,
     reflectionMode: "envmap-only",
   },

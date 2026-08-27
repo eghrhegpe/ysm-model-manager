@@ -57,15 +57,15 @@ export interface GroundParams extends GroundMaterialParams {
 
 export const DEFAULT_GROUND_PARAMS: GroundParams = {
   ...DEFAULT_GROUND_SURFACE_PARAMS, // mat* 材质字段（matSource 默认 none）
-  size: 50,
-  divisions: 50,
-  colorCenter: 0x444466,
-  colorGrid: 0x333355,
+  size: 80,       // ✨ v1.14：更大覆盖范围，减少模型边缘"踩空"感
+  divisions: 60,   // ✨ 更密的网格分段
+  colorCenter: 0x555577, // ✨ 中心轴线稍微亮一点
+  colorGrid: 0x2a2a3a,    // ✨ 网格线加深，对比更细腻
   visible: true,
-  wetness: 0,
+  wetness: 0.15,    // ✨ v1.14：微湿效果，让地面有一层薄水膜光泽
   waterColor: 0x335577,
-  waterOpacity: 0.6,
-  normalStrength: 0.3,
+  waterOpacity: 0.25, // ✨ 水面不透明度降低，更通透
+  normalStrength: 0.08, // ✨ 波浪法线强度大幅降低，几乎看不出水波但增强光泽
 };
 
 export class GroundCapability implements SceneCapability {

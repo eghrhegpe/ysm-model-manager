@@ -71,10 +71,10 @@ export type SkyModelType = typeof RESOURCE_TYPES.YSM | "vrm" | "mmd" | "litemati
  */
 export const MODEL_SKY_PRESETS: Record<string, Partial<SkyParams>> = {
   default: { turbidity: 10, rayleigh: 2, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5 },
-  vrm: { turbidity: 8, rayleigh: 2.2, mieCoefficient: 0.004, mieDirectionalG: 0.85, exposure: 0.55 },
-  mmd: { turbidity: 10, rayleigh: 1.8, mieCoefficient: 0.006, mieDirectionalG: 0.8, exposure: 0.42 },
+  vrm: { turbidity: 7, rayleigh: 2, mieCoefficient: 0.004, mieDirectionalG: 0.85, exposure: 0.55 },
+  mmd: { turbidity: 9, rayleigh: 1.8, mieCoefficient: 0.006, mieDirectionalG: 0.8, exposure: 0.55 }, // v1.14: brighter sky to match Bloom
   "mmd-scene": { turbidity: 14, rayleigh: 1.2, mieCoefficient: 0.008, mieDirectionalG: 0.75, exposure: 0.55 },
-  ysm: { turbidity: 12, rayleigh: 2.5, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.6 },
+  ysm: { turbidity: 11, rayleigh: 2.2, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.6 },
   litematic: { turbidity: 10, rayleigh: 2, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5 },
 };
 

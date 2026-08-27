@@ -1466,11 +1466,11 @@
 | `buildVrmBoneTree()` | `frontend/src/utils/3d/adapters/vrm-bone:52` | 从 vrm.humanoid 直接构建通用骨骼树（buildBoneNodes → buildBoneTree 一步到位） |
 | `ResolveModeResponse()` | `frontend/src/utils/3d/adapters/worker-bridge:15` | 响应必须携带 id；resolve-mode 还需 ok 标志（错误以响应形式回传，不 reject） |
 | `WorkerErrorStrategy()` | `frontend/src/utils/3d/adapters/worker-bridge:22` | 崩溃/终止时的结算策略 |
-| `WorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:24` | — |
-| `CreateWorkerBridgeOpts()` | `frontend/src/utils/3d/adapters/worker-bridge:39` | — |
-| `createWorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:60` | — |
-| `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:148` | — |
-| `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:155` | — |
+| `WorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:29` | — |
+| `CreateWorkerBridgeOpts()` | `frontend/src/utils/3d/adapters/worker-bridge:44` | — |
+| `createWorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:65` | — |
+| `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:158` | — |
+| `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:165` | — |
 | `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:43` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
 | `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:472` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
 | `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:502` | 工厂：构造统一 PreviewAdapter（shared 模式） |

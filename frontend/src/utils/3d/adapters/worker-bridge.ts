@@ -21,6 +21,11 @@ export interface ResolveModeResponse {
 /** 崩溃/终止时的结算策略 */
 export type WorkerErrorStrategy = "resolveAllError" | "terminatePool";
 
+/** 编译期穷尽性检查：未来新增策略未覆盖时 TS 报错 */
+function assertNever(x: never): never {
+  throw new Error(`Unexpected value: ${String(x)}`);
+}
+
 export interface WorkerBridge<Req extends { id: number }, Resp, Ok> {
   /** 发请求（内部注入 id 并 round-robin 选 worker），返回结算 Promise */
   request: (reqWithoutId: Omit<Req, "id">, transfer?: Transferable[]) => Promise<Ok>;
@@ -93,7 +98,12 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
     pending.delete(id);
     if (onWorkerError === "terminatePool") entry.reject(new Error(msg));
     else if (makeErrorResponse) entry.resolve(makeErrorResponse(id, msg) as unknown as Ok);
-    else entry.reject(new Error(msg));
+    else {
+      // onWorkerError === "resolveAllError" 但 makeErrorResponse 缺失——
+      // 入口契约（L71）已拦截，此处理论不可达；先 reject 兜底，再 assertNever 编译期穷尽
+      entry.reject(new Error(msg));
+      assertNever(onWorkerError as never);
+    }
   }
 
   function handleMessage(resp: Resp): void {

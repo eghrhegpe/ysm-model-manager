@@ -57,11 +57,13 @@ var walkCount atomic.Int64
 // flightJoins 并入在途航班的等待方计数（诊断/测试用）
 var flightJoins atomic.Int64
 
-// walkStartHook 走盘开始钩子（仅测试注入：制造确定性在途重叠；生产恒 nil）
+// walkStartHook 走盘开始钩子（仅测试注入：制造确定性在途重叠；生产恒 nil）。
+// ⚠️ 禁止生产调用——测试钩子，生产路径不得读写。
 var walkStartHook func()
 
 // rustScanHook 仅测试注入：覆盖 Rust 扫描快路径结果，制造 tryRustScan 的 handled 分支；
 // 生产恒 nil（Rust 后端仅在 -tags rust_backend 下编译，普通单测走 stub 返回 handled=false）。
+// ⚠️ 禁止生产调用——测试钩子，生产路径不得读写。
 var rustScanHook func(dir string) ([]types.ModelEntry, bool, bool)
 
 type scanFlight struct {

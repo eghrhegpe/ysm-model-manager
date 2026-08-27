@@ -22,7 +22,7 @@ type MoveResult struct {
 // TrashManager 可配置的回收站管理器
 type TrashManager struct {
 	recycleDir string
-	// 跨设备回退的 rename/目录复制/文件复制实现（测试注入点：模拟 EXDEV 与复制中途失败），
+	// ⚠️ 跨设备回退的 rename/目录复制/文件复制实现（测试注入点，禁止生产调用：模拟 EXDEV 与复制中途失败），
 	// 生产恒为真实实现（New 中初始化）；moveEx 与 Restore 共用同一组注入点，
 	// 保证跨设备回退分支（含复制失败清理）在单测中可确定性覆盖
 	renameForMove   func(src, dst string) error

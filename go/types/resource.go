@@ -150,7 +150,7 @@ var (
 	registryPath = "resource_types.json" // 可被 tests 替换
 )
 
-// SetRegistryPath 设置注册表文件路径（仅测试用）
+// SetRegistryPath 设置注册表文件路径（仅测试用；⚠️ 禁止生产调用——生产路径不得改注册表源）
 // 加锁保护：并发调用 LoadRegistry + SetRegistryPath 触发数据竞争（审计 P1 #2）。
 func SetRegistryPath(path string) {
 	registryMu.Lock()

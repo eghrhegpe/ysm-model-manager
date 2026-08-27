@@ -277,7 +277,7 @@ func DownloadWithProgress(assetURL string, expectedHash string, onProgress func(
 }
 
 // newDownloadClient 构建下载用 HTTP 客户端（每源独立 90s 超时：直连慢/卡时快速切镜像）。
-// 包级变量便于测试注入自定义 RoundTripper 覆盖完整性校验等不可由真实网络触达的分支。
+// ⚠️ 包级变量便于测试注入自定义 RoundTripper（仅测试注入，禁止生产调用），覆盖完整性校验等不可由真实网络触达的分支。
 var newDownloadClient = func() *http.Client {
 	return &http.Client{Timeout: downloadTimeout}
 }

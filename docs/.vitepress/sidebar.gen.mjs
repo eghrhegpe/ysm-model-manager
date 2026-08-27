@@ -1536,6 +1536,10 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
+            "text": "3d-超大文件-code-split-可行性",
+            "link": "/knowledge/3d-超大文件-code-split-可行性"
+          },
+          {
             "text": "3D 区审核与修复模式提炼",
             "link": "/knowledge/3d-patterns"
           },

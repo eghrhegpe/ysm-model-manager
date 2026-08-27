@@ -123,6 +123,18 @@ describe("browserAdapter — Phase 2 模型库（IndexedDB）", () => {
     // 未实现前 browserAdapter 会抛 WebUnsupportedError——本测试锁死该入口可用
   });
 
+  it("ScanModelEntriesFiltered 非根目录只返回该目录条目（目录批量重命名防全库）", async () => {
+    await importWebFiles([new File([enc.encode("YSM")], "狐狸.ysm")], "ysm");
+    await importWebFiles([new File([enc.encode("YSM")], "小猫.ysm")], "ysm");
+    const entries = (await browserAdapter.ScanModelEntriesFiltered("/web/ysm/狐狸", "ysm", "", "YSM 模型")) as Array<{
+      Name: string;
+      Path: string;
+    }>;
+    expect(entries).toHaveLength(1);
+    expect(entries[0].Name).toBe("狐狸.ysm");
+    expect(entries[0].Path).toBe("/web/ysm/狐狸/狐狸.ysm");
+  });
+
   it("ReadFileBytes 读回 base64（wasm.ts 解码链零改动复用）", async () => {
     await importWebFiles([new File([enc.encode("YSM")], "狐狸.ysm")], "ysm");
     const b64 = await browserAdapter.ReadFileBytes("/web/ysm/狐狸/狐狸.ysm");
@@ -132,6 +144,25 @@ describe("browserAdapter — Phase 2 模型库（IndexedDB）", () => {
   it("ReadFileBytes：不存在/非 /web/ 路径 → null（不抛错）", async () => {
     expect(await browserAdapter.ReadFileBytes("/web/ysm/不存在/a.ysm")).toBeNull();
     expect(await browserAdapter.ReadFileBytes("/repo/ysm/a.ysm")).toBeNull();
+  });
+
+  it("ReadFileBytesBatch 批量返回 base64 / null（MMD 贴图加载链路）", async () => {
+    await importWebFiles([new File([enc.encode("YSM")], "狐狸.ysm")], "ysm");
+    const batch = (await browserAdapter.ReadFileBytesBatch([
+      "/web/ysm/狐狸/狐狸.ysm",
+      "/web/ysm/不存在/a.ysm",
+    ])) as Record<string, string | null>;
+    expect(batch["/web/ysm/狐狸/狐狸.ysm"]).toBe(btoa("YSM"));
+    expect(batch["/web/ysm/不存在/a.ysm"]).toBeNull();
+  });
+
+  it("ReadFileBytesBatchWithMeta 批量返回 data+hash（hash 空串不阻断纹理加载）", async () => {
+    await importWebFiles([new File([enc.encode("YSM")], "小猫.ysm")], "ysm");
+    const batch = (await browserAdapter.ReadFileBytesBatchWithMeta([
+      "/web/ysm/小猫/小猫.ysm",
+    ])) as Record<string, { data: string | null; hash: string }>;
+    expect(batch["/web/ysm/小猫/小猫.ysm"].data).toBe(btoa("YSM"));
+    expect(typeof batch["/web/ysm/小猫/小猫.ysm"].hash).toBe("string");
   });
 });
 
@@ -627,6 +658,30 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
     expect(map.ysm).toBeDefined();
     expect(typeof map.ysm).toBe("string");
     expect(Object.keys(map).length).toBeGreaterThanOrEqual(7);
+  });
+
+  it("GetPackInfo：网页版返回最小 PackInfo，展开目录不再 fail-fast", async () => {
+    await importWebFiles([new File([enc2.encode("YSM")], "狐狸.ysm")], "ysm");
+    const info = (await browserAdapter.GetPackInfo("/web/ysm/狐狸")) as { name: string; description: string };
+    expect(info.name).toBe("狐狸");
+    expect(info.description).toBe("");
+  });
+
+  it("ListPackModels / ReadPackEntry：资源包 zip 枚举与条目读取", async () => {
+    const zipBytes = zipSync({
+      "pack.mcmeta": strToU8("{}"),
+      "assets/minecraft/models/block/cube.json": strToU8("{\"textures\":{\"all\":\"block/stone\"}}"),
+    });
+    const zipFile = new File([zipBytes], "材质包.zip");
+    await importWebFiles([zipFile], "resourcepack");
+    const raw = (await browserAdapter.ListPackModels("/web/resourcepack/材质包/材质包.zip")) as string;
+    const entries = JSON.parse(raw) as string[];
+    expect(entries).toContain("assets/minecraft/models/block/cube.json");
+    const b64 = (await browserAdapter.ReadPackEntry(
+      "/web/resourcepack/材质包/材质包.zip",
+      "assets/minecraft/models/block/cube.json",
+    )) as string;
+    expect(b64).toBe(btoa("{\"textures\":{\"all\":\"block/stone\"}}"));
   });
 });
 

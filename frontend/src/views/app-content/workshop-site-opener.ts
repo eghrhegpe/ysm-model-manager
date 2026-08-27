@@ -30,9 +30,14 @@ export function openSite(
     openEmbedded(host, site, url);
   } else if (browseMode === "window") {
     // 窗口模式直连（独立 WebView2 窗口，非 iframe，无需反代绕 X-Frame-Options）
-    swallowError(getApp().then(({ NavigatePlazaWindow }) =>
-      NavigatePlazaWindow(url, true),
-    ));
+    // 网页版没有预热窗口，回退系统浏览器打开，避免 NavigatePlazaWindow fail-fast 静默无反应
+    if (resolveWebMode()) {
+      swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(url)));
+    } else {
+      swallowError(getApp().then(({ NavigatePlazaWindow }) =>
+        NavigatePlazaWindow(url, true),
+      ));
+    }
   } else {
     swallowError(getApp().then(({ OpenInBrowser }) =>
       OpenInBrowser(url),
@@ -103,9 +108,14 @@ export function bindSiteEvents(
   root.getElementById("ws-win-open")?.addEventListener("click", () => {
     const cs = host._currentSite;
     if (cs) {
-      swallowError(getApp().then(({ NavigatePlazaWindow }) =>
-        NavigatePlazaWindow(cs.url, true),
-      ));
+      // 网页版无 WebView2 预热窗口，回退系统浏览器打开
+      if (resolveWebMode()) {
+        swallowError(getApp().then(({ OpenInBrowser }) => OpenInBrowser(cs.url)));
+      } else {
+        swallowError(getApp().then(({ NavigatePlazaWindow }) =>
+          NavigatePlazaWindow(cs.url, true),
+        ));
+      }
     }
   });
 

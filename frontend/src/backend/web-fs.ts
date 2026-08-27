@@ -76,8 +76,20 @@ export function typeFromWebDir(dir: string): string {
 
 // ===== §4 模型库扫描 =====
 // --- 模型库扫描（IDB dir: 前缀 → ModelEntry 列表）---
+// 与 Go ScanModelEntries 对齐：dir 可以是仓库根（/web/<type>），也可以是仓库内的
+// 子目录/模型组目录。根目录按模型组返回主文件条目（网页版既有语义）；非根目录
+// 递归列出该目录下主文件，避免批量重命名等消费方拿到全库条目。
 export async function scanWebModels(dir: string): Promise<ModelEntry[]> {
   const type = typeFromWebDir(dir);
+  const normalized = dir.replace(/\/+$/, "") || dir;
+  if (normalized === `${WEB_ROOT}/${type}`) {
+    return scanWebModelGroups(type, normalized);
+  }
+  return scanWebModelFilesInDir(normalized);
+}
+
+/** 根目录扫描：每个模型组收敛为一条主文件 ModelEntry */
+async function scanWebModelGroups(type: string, root: string): Promise<ModelEntry[]> {
   const keys = await idbKeys("files", `dir:${type}/`);
   const entries: ModelEntry[] = [];
   for (const k of keys) {
@@ -117,7 +129,7 @@ export async function scanWebModels(dir: string): Promise<ModelEntry[]> {
     entries.push({
       Name: mainRel,
       Size: size,
-      Path: `${dir}/${name}/${mainRel}`,
+      Path: `${root}/${name}/${mainRel}`,
       Ext: ext,
       Hash: "",
       ModTime: meta?.addedAt ?? Date.now(),
@@ -126,6 +138,33 @@ export async function scanWebModels(dir: string): Promise<ModelEntry[]> {
     });
   }
   // 与桌面扫描一致：按名称排序，稳定输出
+  entries.sort((a, b) => a.Name.localeCompare(b.Name, "zh-CN"));
+  return entries;
+}
+
+/** 非根目录扫描：列出该目录内（含子目录）主文件条目，供子目录/批量重命名等场景使用 */
+async function scanWebModelFilesInDir(dir: string): Promise<ModelEntry[]> {
+  const files = await listWebModelDirFiles(dir);
+  const entries: ModelEntry[] = [];
+  for (const p of files) {
+    const pm = await parseWebModelPath(p);
+    if (!pm) continue;
+    const fk = fileKey(pm.type, pm.name, pm.rel);
+    const f = await idbGet<{ size: number }>("files", fk);
+    if (mainFileRank(pm.rel) < MAIN_FILE_RANK_TYPE) continue;
+    const dot = pm.rel.lastIndexOf(".");
+    const ext = dot > 0 ? pm.rel.slice(dot).toLowerCase() : "";
+    const meta = await idbGet<{ addedAt: number }>("files", dirKey(pm.type, pm.name));
+    entries.push({
+      Name: p.split(/[/\\]/).pop() || pm.rel,
+      Size: f?.size ?? 0,
+      Path: p,
+      Ext: ext,
+      Hash: "",
+      ModTime: meta?.addedAt ?? Date.now(),
+      HasTags: false,
+    });
+  }
   entries.sort((a, b) => a.Name.localeCompare(b.Name, "zh-CN"));
   return entries;
 }
@@ -253,6 +292,41 @@ async function readShaderpackLangJson(path: string): Promise<string> {
     return parseShaderpackLang(lang);
   } catch {
     return '{"name":"","entries":{}}';
+  }
+}
+/** Uint8Array → base64（fllate entry 可能共享底层 buffer，先拷贝再编码） */
+function zipEntryToBase64(bytes: Uint8Array): string {
+  const copy = new Uint8Array(bytes.length);
+  copy.set(bytes);
+  return arrayBufferToBase64(copy.buffer);
+}
+
+/** 资源包 3D：ListPackModels 枚举 zip 内条目 JSON 字符串（对齐 Go ListPackModels 契约） */
+async function listWebPackModels(path: string): Promise<string> {
+  try {
+    const b64 = await readWebFile(path);
+    if (!b64) return "[]";
+    const bytes = base64ToBytes(b64);
+    if (!bytes) return "[]";
+    const { entries } = extractZip(bytes);
+    return JSON.stringify(Object.keys(entries));
+  } catch {
+    return "[]";
+  }
+}
+
+/** 资源包 3D：ReadPackEntry 读取 zip 内指定条目并返回 base64（对齐 Go 契约） */
+async function readWebPackEntry(path: string, entry: string): Promise<string> {
+  try {
+    const b64 = await readWebFile(path);
+    if (!b64) return "";
+    const bytes = base64ToBytes(b64);
+    if (!bytes) return "";
+    const { entries } = extractZip(bytes);
+    const raw = findZipEntry(entries, entry);
+    return raw ? zipEntryToBase64(raw) : "";
+  } catch {
+    return "";
   }
 }
 
@@ -668,9 +742,24 @@ export const webFsBindings = {
   // 真实列表入口（loader/import-queue/resource-manager 等 6 处均调 WithLabel 版本）
   ScanModelEntriesWithLabel: (dir: string, _label: string) => scanWebModels(dir),
   // app-tree/loader、preview-library/siblings 等按 rtype 扫描候选列表；网页版虚拟根
-  // /web/<rtype> 本身已按类型分区，scanWebModels(dir) 即等效“按 rtype 过滤”
+  // /web/<rtype> 本身已按类型分区，scanWebModels 根目录即等效“按 rtype 过滤”，
+  // 非根目录则按目录前缀收敛，供目录批量重命名等场景使用
   ScanModelEntriesFiltered: (dir: string, _rtype: string, _subtype: string, _label: string) => scanWebModels(dir),
   ReadFileBytes: (path: string) => readWebFile(path),
+  // MMD/Scene 3D 批量读取（原缺失被 mmd-data-port catch 成空对象 → 贴图静默丢失）
+  ReadFileBytesBatch: async (paths: string[] | null) => {
+    if (!paths) return null;
+    const out: Record<string, string | null> = {};
+    await Promise.all(paths.map(async (p) => { out[p] = await readWebFile(p); }));
+    return out;
+  },
+  ReadFileBytesBatchWithMeta: async (paths: string[] | null) => {
+    if (!paths) return null;
+    const out: Record<string, { data: string | null; hash: string }> = {};
+    // hash 暂置空：网页版不为纹理缓存做 SHA256 批量预算，MMD 贴图加载不受影响
+    await Promise.all(paths.map(async (p) => { out[p] = { data: await readWebFile(p), hash: "" }; }));
+    return out;
+  },
   // CheckFileExists：IDB 虚拟库路径是否存在（file: 或 dir: key，对齐 Go os.Stat 语义）
   CheckFileExists: async (path: string) => {
     const pm = parseWebPath(path);
@@ -764,6 +853,9 @@ export const webFsBindings = {
   // 失败返回 "{}"/{"name":"","entries":{}} 对齐 Go binding 契约（resource_bindings.go:34/59）
   ReadPackMeta: (path: string) => readPackMetaJson(path),
   ReadShaderpackLang: (path: string) => readShaderpackLangJson(path),
+  // 资源包 3D：ListPackModels/ReadPackEntry（原缺失 → pack-3d FAB 静默 no-op）
+  ListPackModels: (path: string) => listWebPackModels(path),
+  ReadPackEntry: (path: string, entry: string) => readWebPackEntry(path, entry),
   // rtype 含 / 时替换为 _，避免 /web/a/b 破坏 readWebFile 三段解析
   GetRepoRoot: (rtype: string) => Promise.resolve(`${WEB_ROOT}/${rtype.replace(/\//g, "_")}`),
   GetDefaultRepoRoot: () => Promise.resolve(WEB_ROOT),
@@ -802,6 +894,13 @@ export const webFsBindings = {
   CopyModelFile: (src: string, dstDir: string) => moveOrCopyWebModel(src, dstDir, false),
   // 子目录映射（resource_types.json 派生）
   GetSubDirMap: () => getWebSubDirMap(),
+  // 目录/整合包信息：web 没有 ysm-pack.json，返回最小 PackInfo 避免展开目录时
+  // GetPackInfo fail-fast 把预览区染成“无法读取整合包信息”
+  GetPackInfo: async (dirPath: string) => {
+    const di = parseWebDirPath(dirPath);
+    const name = di?.name?.split("/").pop() || dirPath.split(/[/\\]/).filter(Boolean).pop() || "";
+    return { name, description: "" };
+  },
   // R1 文件层级读取：递归列出 /web 目录下全部文件完整路径（对齐桌面 ListAllFilePaths，
   // 递归完整路径、不限制扩展名；bus-handlers 删除目录移入回收站联动依赖）
   ListAllFilePaths: (dir: string) => listWebModelDirFiles(dir),
@@ -814,4 +913,13 @@ export const webFsBindings = {
   SelectLocalRepo: () => selectLocalRepo(),
   // R2 FSA 授权状态查询（供 settings UI 启动引导；不触发权限弹窗）
   GetFsaAuthState: () => getFsaAuthState(),
+  // 3D 截图：网页版直接触发浏览器下载（对齐 Go SaveScreenshotFile 的“保存截图”语义）
+  SaveScreenshotFile: async (filename: string, base64Data: string) => {
+    const a = document.createElement("a");
+    a.download = filename;
+    a.href = `data:image/png;base64,${base64Data}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  },
 } satisfies Record<string, (...args: never[]) => Promise<unknown>>;

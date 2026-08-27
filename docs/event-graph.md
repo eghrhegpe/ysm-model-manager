@@ -497,12 +497,12 @@
 | `frontend/src/views/app-content/site/edit.ts` | 245 |
 | `frontend/src/views/app-content/site/events.ts` | 146 |
 | `frontend/src/views/app-content/site/events.ts` | 271 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 118 |
 | `frontend/src/views/app-content/workshop-site-opener.ts` | 128 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 134 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 146 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 157 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 163 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 138 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 144 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 156 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 167 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 173 |
 | `frontend/src/views/app-content/workshop-tabs.ts` | 90 |
 | `frontend/src/views/app-content/workshop-tabs.ts` | 138 |
 | `frontend/src/views/app-nav/index.ts` | 102 |

@@ -683,6 +683,110 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
     )) as string;
     expect(b64).toBe(btoa("{\"textures\":{\"all\":\"block/stone\"}}"));
   });
+
+  it("FindPreviewImage：模型同目录 preview.png 转 data URI", async () => {
+    const f1 = new File([enc2.encode("YSM")], "狐狸.ysm");
+    const f2 = new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], "preview.png");
+    Object.defineProperty(f1, "webkitRelativePath", { value: "狐狸/狐狸.ysm" });
+    Object.defineProperty(f2, "webkitRelativePath", { value: "狐狸/preview.png" });
+    await importWebFiles([f1, f2], "ysm");
+    const uri = (await browserAdapter.FindPreviewImage("/web/ysm/狐狸/狐狸.ysm")) as string;
+    expect(uri).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it("ExtractPreviewTexture：zip 内首张 PNG 转 data URI", async () => {
+    const zipBytes = zipSync({
+      "pack.mcmeta": strToU8("{}"),
+      "textures/skin.png": strToU8("PNG"),
+    });
+    const zipFile = new File([zipBytes], "材质包.zip");
+    await importWebFiles([zipFile], "resourcepack");
+    const uri = (await browserAdapter.ExtractPreviewTexture("/web/resourcepack/材质包/材质包.zip")) as string;
+    expect(uri).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it("AnalyzeBedrockModel：zip 内 Bedrock geometry JSON 解析出模型 + 纹理", async () => {
+    const geo = {
+      "minecraft:geometry": [{
+        description: { texture_width: 64, texture_height: 64 },
+        bones: [{
+          name: "root",
+          pivot: [0, 0, 0],
+          rotation: [0, 0, 0],
+          cubes: [{ origin: [0, 0, 0], size: [1, 1, 1], uv: [0, 0] }],
+        }],
+      }],
+    };
+    const zipBytes = zipSync({
+      "models/main.json": strToU8(JSON.stringify(geo)),
+      "textures/skin.png": strToU8("PNG"),
+    });
+    const zipFile = new File([zipBytes], "角色.zip");
+    await importWebFiles([zipFile], "ysm");
+    const model = (await browserAdapter.AnalyzeBedrockModel("/web/ysm/角色/角色.zip")) as {
+      boneCount: number;
+      cubeCount: number;
+      bones: unknown[];
+      textures?: string[];
+      texture?: string;
+    };
+    expect(model.boneCount).toBe(1);
+    expect(model.cubeCount).toBe(1);
+    expect(model.bones).toHaveLength(1);
+    expect(model.textures).toHaveLength(1);
+    expect(model.texture).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it("AnalyzeBedrockModel：.json 解压目录模型从同组 geometry/纹理解析", async () => {
+    const geo = {
+      "minecraft:geometry": [{
+        description: { texture_width: 16, texture_height: 16 },
+        bones: [{ name: "cat", cubes: [] }],
+      }],
+    };
+    const f1 = new File([enc2.encode(JSON.stringify({}))], "ysm.json");
+    const f2 = new File([enc2.encode(JSON.stringify(geo))], "main.json");
+    const f3 = new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], "skin.png");
+    Object.defineProperty(f1, "webkitRelativePath", { value: "狐狸/ysm.json" });
+    Object.defineProperty(f2, "webkitRelativePath", { value: "狐狸/models/main.json" });
+    Object.defineProperty(f3, "webkitRelativePath", { value: "狐狸/textures/skin.png" });
+    await importWebFiles([f1, f2, f3], "ysm");
+    const model = (await browserAdapter.AnalyzeBedrockModel("/web/ysm/狐狸/ysm.json")) as {
+      boneCount: number;
+      bones: unknown[];
+      textures?: string[];
+    };
+    expect(model.boneCount).toBe(1);
+    expect(model.bones).toHaveLength(1);
+    expect(model.textures).toHaveLength(1);
+  });
+
+  it("AnalyzeBedrockModelEntry：按 subPath 解析 zip 内单角色 geometry", async () => {
+    const geoA = {
+      "minecraft:geometry": [{
+        description: {},
+        bones: [{ name: "a", cubes: [] }],
+      }],
+    };
+    const geoB = {
+      "minecraft:geometry": [{
+        description: {},
+        bones: [{ name: "b", cubes: [] }, { name: "b2", cubes: [] }],
+      }],
+    };
+    const zipBytes = zipSync({
+      "models/a.json": strToU8(JSON.stringify(geoA)),
+      "models/b.json": strToU8(JSON.stringify(geoB)),
+    });
+    const zipFile = new File([zipBytes], "角色.zip");
+    await importWebFiles([zipFile], "ysm");
+    const model = (await browserAdapter.AnalyzeBedrockModelEntry("/web/ysm/角色/角色.zip", "models/a.json")) as {
+      boneCount: number;
+      bones: unknown[];
+    };
+    expect(model.boneCount).toBe(1);
+    expect(model.bones).toHaveLength(1);
+  });
 });
 
 describe("browserAdapter — Proxy 原型成员（P3：Object 原型成员不路由 fail-fast）", () => {

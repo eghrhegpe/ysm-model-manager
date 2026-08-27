@@ -46,6 +46,8 @@ import { litematicVoxelView, nbtVoxelView, schematicVoxelView, decodeVoxelNbt, t
 // 资源包/光影包详情 meta 读取（TS 平移 go/packs/mcmeta.go 的解析层；binding 装配见下方
 // webFsBindings 的 ReadPackMeta/ReadShaderpackLang 条目——读 IDB → 解 zip → 本文件纯解析）
 import { findZipEntry, parsePackMetaJson, parseShaderpackLang, packPngToThumbnail } from "./pack-meta.ts";
+// #5：Bedrock 纯解析复用（geometry.ts 是完全前端的 JSON→BedrockGeometry 解析器）
+import { parseBedrockGeometryFromJSON, type BedrockGeometry } from "../views/app-preview/geometry.ts";
 // YSM 头部/摘要 binding web 实现（TS 平移 go/ysm/header.go + summary.go；纯解析在
 // ysm-header.ts，本文件只做 IDB 读取装配。消费方：import-queue-data.ts:278 作者/tips
 // 预填、rename.ts:92 重命名 tips、detail.ts:58-62 详情 stats/license、loader.ts:140 作者兜底）
@@ -327,6 +329,236 @@ async function readWebPackEntry(path: string, entry: string): Promise<string> {
     return raw ? zipEntryToBase64(raw) : "";
   } catch {
     return "";
+  }
+}
+// ===== #5 Bedrock 预览 fallback 链（FindPreviewImage / ExtractPreviewTexture / AnalyzeBedrockModel）=====
+
+function imageMimeOfPath(p: string): string {
+  return /\.jpe?g$/i.test(p) ? "image/jpeg" : "image/png";
+}
+
+function imageDataUri(bytes: Uint8Array, mime = "image/png"): string {
+  return `data:${mime};base64,${zipEntryToBase64(bytes)}`;
+}
+
+/** 从 IDB 读一个图片文件并转 data URI；不存在/读取失败返回 "" */
+async function readImageDataUri(p: string): Promise<string> {
+  const b64 = await readWebFile(p);
+  if (!b64) return "";
+  const bytes = base64ToBytes(b64);
+  if (!bytes) return "";
+  return imageDataUri(bytes, imageMimeOfPath(p));
+}
+
+/** 找模型同目录候选预览图（对齐 fileops.FindPreviewImage 的候选顺序） */
+async function webFindPreviewImage(modelPath: string): Promise<string> {
+  const slash = modelPath.lastIndexOf("/");
+  if (slash <= 0) return "";
+  const dir = modelPath.slice(0, slash);
+  const files = await listWebModelDirFiles(dir);
+  if (!files.length) return "";
+  const base = modelPath.slice(slash + 1).replace(/\.[^.]+$/, "") || "";
+  const candidates = [
+    `${base}.png`,
+    `${base}.jpg`,
+    "preview.png",
+    "cover.png",
+    "thumbnail.png",
+  ];
+  for (const c of candidates) {
+    const low = c.toLowerCase();
+    const hit = files.find((p) => p.split(/[/\\]/).pop()?.toLowerCase() === low);
+    if (hit) {
+      const uri = await readImageDataUri(hit);
+      if (uri) return uri;
+    }
+  }
+  return "";
+}
+
+/** 从 zip entries 中取首个 PNG（偏好 textures/ 目录，再回退任意根层 PNG） */
+function firstPngFromEntries(entries: Record<string, Uint8Array>): { key: string; data: Uint8Array } | null {
+  const keys = Object.keys(entries);
+  const tex = keys.find((k) => /^textures\//i.test(k) && /\.png$/i.test(k));
+  const any = keys.find((k) => /\.png$/i.test(k));
+  const hit = tex ?? any;
+  return hit ? { key: hit, data: entries[hit] } : null;
+}
+
+/** 提取 zip/7z/json 的首张预览纹理（对齐 fileops.ExtractPreviewTexture 语义，7z 网页版不支持） */
+async function webExtractPreviewTexture(modelPath: string): Promise<string> {
+  const dot = modelPath.lastIndexOf(".");
+  const ext = dot >= 0 ? modelPath.slice(dot).toLowerCase() : "";
+  if (ext === ".zip") {
+    const b64 = await readWebFile(modelPath);
+    if (!b64) return "";
+    const bytes = base64ToBytes(b64);
+    if (!bytes) return "";
+    try {
+      const { entries } = extractZip(bytes);
+      const hit = firstPngFromEntries(entries);
+      return hit ? imageDataUri(hit.data, imageMimeOfPath(hit.key)) : "";
+    } catch {
+      return "";
+    }
+  }
+  if (ext === ".json") {
+    const slash = modelPath.lastIndexOf("/");
+    const dir = slash > 0 ? modelPath.slice(0, slash) : "";
+    const files = dir ? await listWebModelDirFiles(dir) : [];
+    for (const p of files) {
+      if (!/\.png$/i.test(p)) continue;
+      const uri = await readImageDataUri(p);
+      if (uri) return uri;
+    }
+  }
+  return "";
+}
+
+/** 从 zip entries 挑第一个含 minecraft:geometry 的 JSON key */
+function findGeometryEntryKey(entries: Record<string, Uint8Array>): string | null {
+  const maxProbe = 1 << 20; // 1MB 探测上限，避免超大 JSON 全量解码
+  for (const key of Object.keys(entries)) {
+    if (!/\.json$/i.test(key)) continue;
+    const data = entries[key].subarray(0, maxProbe);
+    try {
+      if (new TextDecoder().decode(data).includes('"minecraft:geometry"')) return key;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+/** 收集 zip entries 里的全部纹理 data URI + 文件名（按 key 排序，对齐“同序”消费） */
+function collectTexturesFromEntries(entries: Record<string, Uint8Array>): { textures: string[]; textureNames: string[] } {
+  const keys = Object.keys(entries).filter((k) => /\.png$/i.test(k)).sort((a, b) => a.localeCompare(b));
+  const textures: string[] = [];
+  const textureNames: string[] = [];
+  for (const k of keys) {
+    textures.push(imageDataUri(entries[k], imageMimeOfPath(k)));
+    textureNames.push(k.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") ?? "");
+  }
+  return { textures, textureNames };
+}
+
+/** 从 BedrockGeometry 组装 Go 契约形状的 BedrockModel（公共字段） */
+function toBedrockModelContract(
+  geo: BedrockGeometry,
+  extras: { textures?: string[]; textureNames?: string[]; animations?: string[] } = {},
+): Record<string, unknown> {
+  const textures = extras.textures?.length ? extras.textures : undefined;
+  return {
+    boneCount: geo.boneCount,
+    cubeCount: geo.cubeCount,
+    texWidth: geo.texWidth,
+    texHeight: geo.texHeight,
+    bones: geo.bones,
+    texture: textures?.[0],
+    textures,
+    textureNames: extras.textureNames?.length ? extras.textureNames : undefined,
+    animations: extras.animations?.length ? extras.animations : undefined,
+  };
+}
+
+/** web AnalyzeBedrockModel：.zip 读 IDB→解包→找 geometry JSON→复用户内解析器；.json 扫模型组文件 */
+async function webAnalyzeBedrockModel(modelPath: string): Promise<Record<string, unknown>> {
+  const dot = modelPath.lastIndexOf(".");
+  const ext = dot >= 0 ? modelPath.slice(dot).toLowerCase() : "";
+  if (ext === ".ysm") return {}; // .ysm 仍由前端 WASM 主路径负责，不重复实现二进制解析
+  const b64 = await readWebFile(modelPath);
+  if (!b64) return {};
+  const bytes = base64ToBytes(b64);
+  if (!bytes) return {};
+
+  let geo: BedrockGeometry | null = null;
+  let textures: string[] = [];
+  let textureNames: string[] = [];
+  let animations: string[] = [];
+
+  try {
+    if (ext === ".zip") {
+      const { entries } = extractZip(bytes);
+      const geoKey = findGeometryEntryKey(entries);
+      if (geoKey) geo = parseBedrockGeometryFromJSON(new TextDecoder().decode(entries[geoKey]));
+      const tex = collectTexturesFromEntries(entries);
+      textures = tex.textures;
+      textureNames = tex.textureNames;
+      animations = Object.keys(entries)
+        .filter((k) => /\.animation\.json$/i.test(k))
+        .map((k) => new TextDecoder().decode(entries[k]));
+    } else if (ext === ".json") {
+      // 解压后的目录模型：在同一个 IDB 模型组里找 geometry JSON + textures/
+      const slash = modelPath.lastIndexOf("/");
+      const dir = slash > 0 ? modelPath.slice(0, slash) : "";
+      const files = dir ? await listWebModelDirFiles(dir) : [];
+      for (const p of files) {
+        if (!/\.json$/i.test(p)) continue;
+        const fb64 = await readWebFile(p);
+        if (!fb64) continue;
+        const fbytes = base64ToBytes(fb64);
+        if (!fbytes) continue;
+        try {
+          const text = new TextDecoder().decode(fbytes.subarray(0, 1 << 20));
+          if (text.includes('"minecraft:geometry"')) {
+            const parsed = parseBedrockGeometryFromJSON(text);
+            if (parsed?.bones?.length) { geo = parsed; break; }
+          }
+        } catch {
+          continue;
+        }
+      }
+      for (const p of files) {
+        if (!/\.png$/i.test(p)) continue;
+        const uri = await readImageDataUri(p);
+        if (uri) {
+          textures.push(uri);
+          textureNames.push(p.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") ?? "");
+        }
+      }
+    }
+  } catch {
+    return {};
+  }
+
+  if (!geo?.bones?.length) return {};
+  return toBedrockModelContract(geo, {
+    textures,
+    textureNames,
+    animations,
+  });
+}
+
+/** web AnalyzeBedrockModelEntry：按 subPath 从 zip 中定位单角色 geometry（未命中返回空模型） */
+async function webAnalyzeBedrockModelEntry(
+  modelPath: string,
+  subPath: string,
+): Promise<Record<string, unknown>> {
+  if (!subPath) return {};
+  const dot = modelPath.lastIndexOf(".");
+  const ext = dot >= 0 ? modelPath.slice(dot).toLowerCase() : "";
+  if (ext !== ".zip") return {};
+  const b64 = await readWebFile(modelPath);
+  if (!b64) return {};
+  const bytes = base64ToBytes(b64);
+  if (!bytes) return {};
+  try {
+    const { entries } = extractZip(bytes);
+    const sp = subPath.toLowerCase().replace(/\\/g, "/");
+    const hitKey = Object.keys(entries).find((k) => k.toLowerCase().replace(/\\/g, "/") === sp)
+      ?? Object.keys(entries).find((k) => k.toLowerCase().replace(/\\/g, "/").endsWith("/" + sp))
+      ?? Object.keys(entries).find((k) => {
+          const base = k.split(/[/\\]/).pop()?.toLowerCase() ?? "";
+          const want = sp.split("/").pop() ?? "";
+          return base === want || base.replace(/\.geo\.json$/, "").replace(/\.json$/, "") === want.replace(/\.geo\.json$/, "").replace(/\.json$/, "");
+        });
+    if (!hitKey || !/\.json$/i.test(hitKey)) return {};
+    const geo = parseBedrockGeometryFromJSON(new TextDecoder().decode(entries[hitKey]));
+    if (!geo?.bones?.length) return {};
+    const tex = collectTexturesFromEntries(entries);
+    return toBedrockModelContract(geo, { textures: tex.textures, textureNames: tex.textureNames });
+  } catch {
+    return {};
   }
 }
 
@@ -856,6 +1088,11 @@ export const webFsBindings = {
   // 资源包 3D：ListPackModels/ReadPackEntry（原缺失 → pack-3d FAB 静默 no-op）
   ListPackModels: (path: string) => listWebPackModels(path),
   ReadPackEntry: (path: string, entry: string) => readWebPackEntry(path, entry),
+  // #5：Bedrock 预览/缩略图 fallback（原缺失 → .zip/.json 3D 预览整体断链）
+  FindPreviewImage: (path: string) => webFindPreviewImage(path),
+  ExtractPreviewTexture: (path: string) => webExtractPreviewTexture(path),
+  AnalyzeBedrockModel: (path: string) => webAnalyzeBedrockModel(path),
+  AnalyzeBedrockModelEntry: (path: string, subPath: string) => webAnalyzeBedrockModelEntry(path, subPath),
   // rtype 含 / 时替换为 _，避免 /web/a/b 破坏 readWebFile 三段解析
   GetRepoRoot: (rtype: string) => Promise.resolve(`${WEB_ROOT}/${rtype.replace(/\//g, "_")}`),
   GetDefaultRepoRoot: () => Promise.resolve(WEB_ROOT),

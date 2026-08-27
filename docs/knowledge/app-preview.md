@@ -25,8 +25,9 @@ use_when:
   - WASM 解码
   - 放大预览
 invariant_anchors:
-  - frontend/src/views/app-preview/index.ts|_previewGen
-  - frontend/src/views/app-preview/detail.ts|nextDetailGen
+  - frontend/src/views/app-preview/index.ts|_previewGuard
+  - frontend/src/views/app-preview/detail.ts|detailGen
+  - frontend/src/views/app-preview/gen-guard.ts|GenGuard
   - frontend/src/views/app-preview/skeleton.ts|closeActive3DOverlay
   - frontend/src/views/app-preview/loader.ts|loadModelData
 ---
@@ -39,10 +40,10 @@ invariant_anchors:
 
 ## 核心职责
 
-- `index.ts` — `<app-preview>` 生命周期编排：监听 `model:select`（回调开头 `++this._previewGen`）、目录走 `_showPackInfo`、文件走 `_showModelDetail` 并按 `DetectResourceType` 结果分流（pack → `showResourcePack`；ysm/空 → `showModelDetail`；litematic/blueprint → `showLitematic`；**MMD 角色模型 EntityPlayer → `PREVIEW_HANDLERS` 查表注册，按 variants 分发（ADR-111）**：`.vrm` → `showVrmMeta`（meta 卡 + FAB 进 3D，对齐 YSM 模式）、`.pmx/.pmd` → `showMmdPreview`（ADR-072 D2）；SceneModel/CustomMorph/StageAnim 等 MMD 子类型 → 各自 preview handler；shaderpack → `showShaderpack`（`ReadShaderpackLang` 提显示名+配置简介）；其他已知类型 → `showSimplePreview`）；类型元信息经 `_typeMeta` 查 `LoadResourceTypes` 预载表；`_loadPreviewImage` 缩略图三级加载；`cacheSetEvictHandler` 注册缓存淘汰时回收 blob URL（含 `geometry.textures` / `authors[].avatarUrl` / `avatars` 去重后 revoke）
+- `index.ts` — `<app-preview>` 生命周期编排：监听 `model:select`（回调开头 `this._previewGuard.invalidate()`）、目录走 `_showPackInfo`、文件走 `_showModelDetail` 并按 `DetectResourceType` 结果分流（pack → `showResourcePack`；ysm/空 → `showModelDetail`；litematic/blueprint → `showLitematic`；**MMD 角色模型 EntityPlayer → `PREVIEW_HANDLERS` 查表注册，按 variants 分发（ADR-111）**：`.vrm` → `showVrmMeta`（meta 卡 + FAB 进 3D，对齐 YSM 模式）、`.pmx/.pmd` → `showMmdPreview`（ADR-072 D2）；SceneModel/CustomMorph/StageAnim 等 MMD 子类型 → 各自 preview handler；shaderpack → `showShaderpack`（`ReadShaderpackLang` 提显示名+配置简介）；其他已知类型 → `showSimplePreview`）；类型元信息经 `_typeMeta` 查 `LoadResourceTypes` 预载表；`_loadPreviewImage` 缩略图三级加载；`cacheSetEvictHandler` 注册缓存淘汰时回收 blob URL（含 `geometry.textures` / `authors[].avatarUrl` / `avatars` 去重后 revoke）
 - `loader.ts` — `loadModelData`：统一模型加载（缓存 → WASM → Go `AnalyzeBedrockModel` 兜底）；**ADR-066 P0 解硬编码墙**：WASM 能力判定由内联正则 `/\.(ysm|zip|json)$/i` 改为 `matchTypeByExt(modelPath, RESOURCE_TYPES.YSM)`（注册表驱动，附带修复原正则漏判 `.7z`）
 - `detail.ts` — `showModelDetail` / `showResourcePack` / `showShaderpack` / `showSimplePreview`：详情面板渲染（Go 侧 `ExtractYsmSummary` / `ExtractYSMHeader` / `ReadPackMeta` / `ReadShaderpackLang`）——**ADR-072 D3 按资源域拆分**：`showVrmMeta`（VRM meta 卡 + FAB 进 3D，`vrm-adapter.readVrmMeta` 取 three-vrm `vrm.meta`：VRM0 `title/author/licenseName` ↔ VRM1 `name/authors/licenseUrl` 归一化）与 `showMmdPreview`（MMD 专属详情入口）已迁出至 `detail-3d.ts`，`detail.ts` 现仅 4 个 show 函数
-- `skeleton.ts` — `loadModel2D`：2D/3D 骨骼渲染编排，委托 `utils/3d/model2d.ts` 的 `renderModel2D` 与 `utils/3d/model3d.ts` 的 `renderModel3D`；window 级拖拽监听存模块级 `_prevWindowMove` / `_prevWindowUp` 槽位（`skeleton.ts` 模块级变量），先移除上一轮再绑定并把移除逻辑 push 进 `ctx._unsubs`（`skeleton.ts` 绑定逻辑）；`_model3dGen` 作废在途 3D 渲染；截图走 `SaveScreenshotFile`。**ADR-057 控制层重构**：3D overlay 顶/底控制栏原内联 `style.cssText` 抽为全局 CSS 类（`utils/dom/fab.ts` 的 `ensureFabStyles()` 注入 head——overlay 挂 `document.body` 为 light DOM，全局 CSS 直接生效）；触发键 `🎨3D` 由面板内普通 tab 改为右下角悬浮 FAB（`.ysm-fab`，Shadow DOM 内样式在 `css.ts`，隔离不继承 head）；并接入 `registerAndroidBackHandler` 在 overlay 打开时消费安卓返回键关层。**async 窗口期守卫约定**（P2 修复）：每个 `await` 前后及 DOM 创建后立即检查 `container.isConnected`，防组件卸载后异步回调写入已卸载 DOM（`skeleton.ts` 三处守卫）
+- `skeleton.ts` — `loadModel2D`：2D/3D 骨骼渲染编排，委托 `utils/3d/model2d.ts` 的 `renderModel2D` 与 `utils/3d/model3d.ts` 的 `renderModel3D`；window 级拖拽监听存模块级 `_prevWindowMove` / `_prevWindowUp` 槽位（`skeleton.ts` 模块级变量），先移除上一轮再绑定并把移除逻辑 push 进 `ctx._unsubs`（`skeleton.ts` 绑定逻辑）；`model3dGuard`（GenGuard）作废在途 3D 渲染；截图走 `SaveScreenshotFile`。**ADR-057 控制层重构**：3D overlay 顶/底控制栏原内联 `style.cssText` 抽为全局 CSS 类（`utils/dom/fab.ts` 的 `ensureFabStyles()` 注入 head——overlay 挂 `document.body` 为 light DOM，全局 CSS 直接生效）；触发键 `🎨3D` 由面板内普通 tab 改为右下角悬浮 FAB（`.ysm-fab`，Shadow DOM 内样式在 `css.ts`，隔离不继承 head）；并接入 `registerAndroidBackHandler` 在 overlay 打开时消费安卓返回键关层。**async 窗口期守卫约定**（P2 修复）：每个 `await` 前后及 DOM 创建后立即检查 `container.isConnected`，防组件卸载后异步回调写入已卸载 DOM（`skeleton.ts` 三处守卫）
 - `zoom.ts` — `openFullPreview`：全屏放大预览
 - `mmd-adapter.ts` — **MMD 3D 预览适配器（ADR-066 P2，2026-08-16 落地）**：`ReadFileBytes` 读 PMX/PMD 字节 + `ScanModelEntries` 同目录纹理预读 → `LoadingManager.setURLModifier` 把模型/纹理 URL 映射为 blob URL（WebView2 读不了磁盘路径）→ 挂场景 + 灯光 + 包围盒定相机；`MMD.update` 每帧驱动 IK/追加变换，`dispose` 回收 GPU + blob URL；**shared 模式**（复用核心 renderer/rAF/controls），33 项测试全过
 - `mmd-controls.ts` / `mmd-siblings.ts` / `mmd-3d.ts` — **MMD 根菜单两级层级导航（ADR-077 落地）**：旧 `buildMmdBottomNav` / slide-menu 弹窗删除，改 `fillMmdModelPanel` / `fillMmdPlayPanel` / `buildMaterialControls`，经 `ctx.menu.setAdapterItems` 收编进根菜单（模型 / 材质 / 播放 / 骨骼四面板）；`mmd-siblings.ts` 的 `resolveMmdSiblings` 归位 views 层防与 `mmd-adapter` 循环依赖；`mmd-3d.ts` 的 `createMmd3D` 为薄包装（同构 YSM/VRM/Litematic 模式）
@@ -80,7 +81,7 @@ invariant_anchors:
 
 ## 不变量
 
-- `model:select` 回调进入即 `++_previewGen`；`_showModelDetail` / `_showPackInfo` 在每个 `await` 之后必须 `if (gen !== this._previewGen) return`（`index.ts` 两处守卫），**catch 分支同样必须比对**——P2 修复：`_showPackInfo` 的 catch 原无守卫，A 目录失败迟到会覆盖已切换的 B 预览），否则慢条目 A 的迟到结果会覆盖已切换的 B 的预览（与 `app-sidebar._reloadGen`、`app-sync-manager._gen` 同模式）
+- `model:select` 回调进入即 `_previewGuard.invalidate()`；`_showModelDetail` / `_showPackInfo` 在每个 `await` 之后必须 `if (this._previewGuard.stale(gen)) return`（`index.ts` 两处守卫），**catch 分支同样必须比对**——P2 修复：`_showPackInfo` 的 catch 原无守卫，A 目录失败迟到会覆盖已切换的 B 预览），否则慢条目 A 的迟到结果会覆盖已切换的 B 的预览（与 `app-sidebar._reloadGen`、`app-sync-manager._gen` 同模式）。**代际守卫统一为 `gen-guard.ts` 的 `GenGuard` 类**（bug-chronicle #18 治理）：`next()` 捕获 / `stale(gen)` 检查点 / `invalidate()` 跨域作废；detail.ts 导出共享单例 `detailGen`（detail-3d 复用），litematic/skeleton/maid-3d 各持独立实例
 - **`showLitematic` 有独立模块级代际 `litematicGen`**（P2 修复：原无任何守卫，await Go 解析期间切模型时慢结果写进新模型的 `#preview-detail` 跨污染；现 await 后与 catch 分支均比对）
 - `_unsubs` 中的 `bus.on` 订阅必须在 `disconnectedCallback` 清理；拖拽 window 监听经 `PreviewCtx._unsubs` 挂销毁清理；Litematic 3D 经 `cleanupLitematic3D`（转发 `cleanupVoxel3D`）终止 WebGL renderer + rAF 循环（防切页 GPU 残留）
 - 2D 拖拽的 window 监听先移除上一轮再绑定（模块级槽位 `_prevWindowMove` / `_prevWindowUp`），禁止累积

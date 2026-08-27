@@ -1,6 +1,6 @@
 // ===== 3D 入口详情（ADR-072 D3：detail.ts 按资源域拆分）=====
 // showVrmMeta / showMmdPreview 是「3D 入口卡」（meta 信息 + FAB 进 3D），与 2D 详情
-// （showModelDetail/showResourcePack/showShaderpack）分离；共享代际 _detailGen 从
+// （showModelDetail/showResourcePack/showShaderpack）分离；共享代际 detailGen 从
 // detail.ts 导出复用，保证跨文件快速切换时在途请求互相作废。
 
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
@@ -19,7 +19,7 @@ import { resolveMmdSiblings } from "./mmd-siblings.ts";
 import { resolveSceneSiblings } from "./scene-siblings.ts";
 import { resolveMorphSiblings } from "./morph-siblings.ts";
 import { resolveStageSiblings } from "./stage-siblings.ts";
-import { nextDetailGen, getDetailGen } from "./detail.ts";
+import { detailGen } from "./detail.ts";
 import { t } from "../../core/i18n/t.ts";
 import { bus } from "../../bus.ts";
 import type { PreviewCtx } from "./utils.ts";
@@ -30,7 +30,7 @@ export async function showVrmMeta(
   path: string,
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
-  const gen = nextDetailGen();
+  const gen = detailGen.next();
   const icon = (opts && opts.icon) || "🥽";
   const label = (opts && opts.label) || t("preview.vrcAvatar");
   const basename = path.split(/[/\\]/).pop() || "";
@@ -42,7 +42,7 @@ export async function showVrmMeta(
     const App = await getApp();
     const readFn = (App as unknown as Record<string, (p: string) => Promise<string | null>>)["ReadFileBytes"];
     const meta = await readVrmMeta(path, readFn);
-    if (gen !== getDetailGen()) return; // 过期守卫：await 期间用户已切走
+    if (detailGen.stale(gen)) return; // 过期守卫：await 期间用户已切走
     if (!meta || (!meta.name && !meta.authors?.length)) {
       // 无 meta（非标准 VRM 或解析失败）→ 仅名称 + FAB
       ctx.root.innerHTML = `<div class="content" id="preview-content">
@@ -89,7 +89,7 @@ export async function showVrmMeta(
       };
     }
   } catch (e) {
-    if (gen !== getDetailGen()) return;
+    if (detailGen.stale(gen)) return;
     ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
   <div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>
@@ -103,7 +103,7 @@ export async function showMmdPreview(
   path: string,
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
-  nextDetailGen(); // 无 await 也要作废在途的慢请求回写
+  detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
   const icon = (opts && opts.icon) || "🎭";
   const label = (opts && opts.label) || t("preview.mmdSkin");
   const basename = path.split(/[/\\]/).pop() || "";
@@ -133,7 +133,7 @@ export async function showFbxPreview(
   path: string,
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
-  nextDetailGen(); // 无 await 也要作废在途的慢请求回写
+  detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
   const icon = (opts && opts.icon) || "🦴";
   const label = (opts && opts.label) || "FBX 模型/动画";
   const basename = path.split(/[/\\]/).pop() || "";
@@ -162,7 +162,7 @@ export async function showScenePreview(
   ctx: PreviewCtx,
   path: string,
 ): Promise<void> {
-  nextDetailGen();
+  detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🏗️ ${t("preview.sceneModel") || "场景"}</h3>
@@ -192,7 +192,7 @@ export async function showMorphPreview(
   ctx: PreviewCtx,
   path: string,
 ): Promise<void> {
-  nextDetailGen();
+  detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>😊 ${t("preview.customMorph") || "自定义表情"}</h3>
@@ -252,7 +252,7 @@ export async function showStagePreview(
   ctx: PreviewCtx,
   path: string,
 ): Promise<void> {
-  nextDetailGen();
+  detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🎤 ${t("preview.stageAnim") || "舞台"}</h3>

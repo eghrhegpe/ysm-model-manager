@@ -2,7 +2,7 @@
 // 从 index.ts 拆分：详情面板渲染逻辑。
 // ADR-072 D3：3D 入口（showVrmMeta/showMmdPreview）已拆至 detail-3d.ts，
 // 本文件保留 2D 详情（showModelDetail/showResourcePack/showSimplePreview/showShaderpack）；
-// _detailGen 导出供 detail-3d.ts 共享（跨文件快速切换时在途请求互相作废）。
+// detailGen 导出供 detail-3d.ts 共享（跨文件快速切换时在途请求互相作废）。
 import { summaryCardHTML, type YsmSummary } from "../../utils/format/summarize.ts";
 import { renderFormattedText } from "../../utils/format/mc-format.ts";
 import { esc } from "../../utils/dom/html.ts";
@@ -17,26 +17,17 @@ import { loadModel2D } from "./skeleton.ts";
 import { describeVersionRange } from "../../utils/format/pack-format.ts";
 import { t } from "../../core/i18n/t.ts";
 import { createPack3D } from "./pack-3d.ts";
+import { GenGuard } from "./gen-guard.ts";
 
-/** 详情面板 generation：每次展示新预览自增，慢请求返回后比对，过期结果不回写 DOM */
-let _detailGen = 0;
-
-/** 跨文件共享代际：自增并返回（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） */
-export function nextDetailGen(): number {
-  return ++_detailGen;
-}
-
-/** 跨文件共享代际：读取当前值（detail-3d.ts 过期守卫用） */
-export function getDetailGen(): number {
-  return _detailGen;
-}
+/** 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） */
+export const detailGen = new GenGuard();
 
 /** 显示模型详情（YSM 模型） */
 export async function showModelDetail(
   ctx: PreviewCtx,
   path: string,
 ): Promise<void> {
-  const gen = ++_detailGen;
+  const gen = detailGen.next();
   const savedTab = safeGet("ysm_previewTab") || "detail";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <div class="pv-tab-row">
@@ -66,7 +57,7 @@ export async function showModelDetail(
 
   // 预热缩略图缓存（loadModel2D / 列表视图复用）
   await ctx.loadPreviewImage(path);
-  if (gen !== _detailGen) return; // 用户已切换到其他预览
+  if (detailGen.stale(gen)) return; // 用户已切换到其他预览
 
   try {
     const { ExtractYsmSummary, ExtractYSMHeader } =
@@ -75,7 +66,7 @@ export async function showModelDetail(
       ExtractYsmSummary(path),
       ExtractYSMHeader(path),
     ]);
-    if (gen !== _detailGen) return; // 解析期间用户已切换
+    if (detailGen.stale(gen)) return; // 解析期间用户已切换
     const summary = results[0].status === "fulfilled" ? results[0].value : null;
     const header = results[1].status === "fulfilled" ? results[1].value : null;
     const basename = path.split(/[/\\]/).pop() || "";
@@ -93,7 +84,7 @@ export async function showModelDetail(
     let enriched: YsmSummary | null = summary;
     if (!hasRealSummary) {
       const dec = await decodeYsmViaWasm(path);
-      if (gen !== _detailGen) return;
+      if (detailGen.stale(gen)) return;
       const decHasInfo = !!(
         dec?.animGroups?.length ||
         dec?.configMenus?.length ||
@@ -134,7 +125,7 @@ export async function showModelDetail(
       (e) => console.warn("[preview] loadModel2D:", e),
     );
   } catch (err) {
-    if (gen !== _detailGen) return;
+    if (detailGen.stale(gen)) return;
     const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) {
       detailDiv.innerHTML = `${t("preview.unknownError")} ${t("preview.parseFailed")}: ${esc(friendlyError(err))}`;
@@ -147,11 +138,11 @@ export async function showResourcePack(
   ctx: PreviewCtx,
   path: string,
 ): Promise<void> {
-  const gen = ++_detailGen;
+  const gen = detailGen.next();
   try {
     const { ReadPackMeta } = await getApp();
     const jsonStr = await ReadPackMeta(path);
-    if (gen !== _detailGen) return;
+    if (detailGen.stale(gen)) return;
     const meta = JSON.parse(jsonStr) as {
       description?: string;
       thumbnail?: string;
@@ -162,7 +153,7 @@ export async function showResourcePack(
     };
     const basename = path.split(/[/\\]/).pop() || "";
     const desc = renderFormattedText(meta.description || "");
-    if (gen !== _detailGen) return;
+    if (detailGen.stale(gen)) return;
     const rv = describeVersionRange(meta);
     ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>🎨 ${t("preview.resourcePack")}</h3>
@@ -180,7 +171,7 @@ export async function showResourcePack(
       fab.onclick = (): void => { createPack3D(path).catch((e) => console.warn("[preview] pack3D:", e)); };
     }
   } catch (e) {
-    if (gen !== _detailGen) return;
+    if (detailGen.stale(gen)) return;
     ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>🎨 ${t("preview.resourcePack")}</h3><div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div></div>`;
   }
 }
@@ -191,7 +182,7 @@ export async function showSimplePreview(
   path: string,
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
-  ++_detailGen; // 无 await 也要作废在途的慢请求回写
+  detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
   const icon = (opts && opts.icon) || "☀️";
   const label = (opts && opts.label) || t("preview.shaderPack");
   const basename = path.split(/[/\\]/).pop() || "";
@@ -209,7 +200,7 @@ export async function showShaderpack(
   path: string,
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
-  const gen = ++_detailGen;
+  const gen = detailGen.next();
   const icon = (opts && opts.icon) || "☀️";
   const label = (opts && opts.label) || t("preview.shaderPack");
   const basename = path.split(/[/\\]/).pop() || "";
@@ -220,7 +211,7 @@ export async function showShaderpack(
   try {
     const { ReadShaderpackLang } = await getApp();
     const jsonStr = await ReadShaderpackLang(path);
-    if (gen !== _detailGen) return; // 过期守卫：await 期间用户已切走
+    if (detailGen.stale(gen)) return; // 过期守卫：await 期间用户已切走
     const spMeta = JSON.parse(jsonStr || "{}") as { name?: string; entries?: Record<string, string> };
     const displayName = spMeta.name || basename;
     const entries = spMeta.entries || {};
@@ -241,7 +232,7 @@ export async function showShaderpack(
   </div>
 </div>`;
   } catch (e) {
-    if (gen !== _detailGen) return;
+    if (detailGen.stale(gen)) return;
     ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
   <div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>

@@ -20,6 +20,7 @@ import { registerAndroidBackHandler } from "../../utils/dom/android-bridge.ts";
 import type { PreviewCtx } from "./utils.ts";
 import type { BedrockSubModel } from "./geometry.ts";
 import type { YsmMetadata } from "../../../bindings/ysm-model-manager/go/types/models.ts";
+import { GenGuard } from "./gen-guard.ts";
 
 /** 数据读取注入 */
 async function readFileBytes(path: string): Promise<string | null> {
@@ -98,7 +99,7 @@ export function invalidateMaidPreview(): void {
 interface MaidPreviewState {
   selSubIdx: number;
   loading3D: boolean;
-  model3dGen: number;
+  model3dGuard: GenGuard;
 }
 
 /** AnalyzeBedrockModel 返回的模型信息快照 */
@@ -218,7 +219,7 @@ function dpRenderPanel(
   }
 }
 
-/** 进入 3D 预览（并发防护：loading3D/model3dGen 放 state 随预览实例隔离） */
+/** 进入 3D 预览（并发防护：loading3D/model3dGuard 放 state 随预览实例隔离） */
 async function dpToggle3D(
   state: MaidPreviewState,
   ctx: PreviewCtx,
@@ -229,11 +230,11 @@ async function dpToggle3D(
 ): Promise<void> {
   if (state.loading3D) return;
   state.loading3D = true;
-  const gen = ++state.model3dGen;
+  const gen = state.model3dGuard.next();
   let unsubAndroidBack: (() => void) | null = null;
   const close3D = (): void => {
     cleanupMaid3D();
-    state.model3dGen++;
+    state.model3dGuard.invalidate();
     setActive3DClose(null);
     if (unsubAndroidBack) { unsubAndroidBack(); unsubAndroidBack = null; }
     const idx = ctx.unsubs?.indexOf(close3D);
@@ -268,7 +269,7 @@ async function dpToggle3D(
       subPath,
     });
   } catch (e) {
-    if (gen !== state.model3dGen) return;
+    if (state.model3dGuard.stale(gen)) return;
     console.error("[maid-3d] 加载失败:", e);
   }
   state.loading3D = false;
@@ -319,7 +320,7 @@ export async function showMaidPreview(
 
   const subs = modelInfo?.subModels && modelInfo.subModels.length > 0 ? modelInfo.subModels : [];
   // 共享局域 state：选中子模型索引 + 3D 打开并发防护
-  const state: MaidPreviewState = { selSubIdx: 0, loading3D: false, model3dGen: 0 };
+  const state: MaidPreviewState = { selSubIdx: 0, loading3D: false, model3dGuard: new GenGuard() };
   const render = (): void => {
     dpRenderPanel(
       ctx,

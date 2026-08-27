@@ -27,6 +27,7 @@ import { getApp } from "../../backend/app.ts";
 import { resolveWebMode } from "../../backend/platform.ts";
 import { t } from "../../core/i18n/t.ts";
 import { type PreviewCtx, type DecodedYsm } from "./utils.ts";
+import { GenGuard } from "./gen-guard.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
 import { showModelDetail, showResourcePack, showShaderpack, showSimplePreview } from "./detail.ts";
 import { showVrmMeta, showMmdPreview, showScenePreview, showMorphPreview, showStagePreview, showFbxPreview } from "./detail-3d.ts";
@@ -98,8 +99,8 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   unsubs: Array<() => void> = [];
   private _typeCache: Array<{ id: string; name?: string; icon?: string }> = [];
   private _typeReg: Record<string, { id: string; name?: string; icon?: string }> | null = null;
-  /** 预览代际计数：快速点 A（慢）→ B（快）时，丢弃过期加载的渲染，防并发覆盖 */
-  private _previewGen = 0;
+  /** 预览代际守卫：快速点 A（慢）→ B（快）时，丢弃过期加载的渲染，防并发覆盖 */
+  private _previewGuard = new GenGuard();
 
   constructor() {
     super();
@@ -113,7 +114,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     this._preloadTypeRegistry();
     this.unsubs.push(
       bus.on("model:select", async ({ path, isDir }) => {
-        ++this._previewGen; // 代际计数：子方法 await 后校验 gen !== _previewGen 即丢弃过期渲染
+        this._previewGuard.invalidate(); // 代际计数：子方法 await 后校验 gen !== _previewGen 即丢弃过期渲染
         // P2 修复（审核）：切换模型前关闭活跃的 3D 全屏 overlay（挂 body、不随 shadow
         // DOM 重建消失）。后台 model:select（导入队列/回收站自动选择）触发时不清旧层会
         // 双全屏叠加 + 旧 renderer 死屏残留。closeActive3DOverlay 保留 _prefer3D，
@@ -227,7 +228,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   }
 
   private async _showModelDetail(path: string): Promise<void> {
-    const gen = this._previewGen;
+    const gen = this._previewGuard.current;
     // ADR-071 M1：web 端 .7z 明确"暂不支持"（识别为 ysm 但 WASM/解压均无法处理——
     // 显示文件名即可，不尝试解析报错；替代原"点击预览必失败"）
     if (extOf(path) === ".7z" && resolveWebMode()) {
@@ -246,7 +247,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       rtype = (await DetectResourceType(path)) || "";
     } catch (e) { console.warn("[preview] DetectResourceType:", e); }
     // 过期守卫：await 期间用户已点其他文件，丢弃本次分流
-    if (gen !== this._previewGen) return;
+    if (this._previewGuard.stale(gen)) return;
     // ADR-072 D2：注册表驱动查表派发——新增格式 = 注册表一条目 + PREVIEW_HANDLERS 一行，
     // 不再改 if 链。识别不出（空 rtype）不再假装 YSM（ADR-082 续）：toast 提示 + 简单预览，
     // 让用户知道文件类型未被识别，而非静默走 YSM 解析路径。
@@ -278,13 +279,13 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
 
   /** 显示资源包信息（pack.mcmeta + pack.png）——直连 showResourcePack，无包装层 */
   private async _showPackInfo(dirPath: string): Promise<void> {
-    const gen = this._previewGen;
+    const gen = this._previewGuard.current;
     this.root.innerHTML = `<div class="content" id="preview-content"><h3>📦 ${t("preview.pack")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
     try {
       const { GetPackInfo } = await getApp();
       const pack = await GetPackInfo(dirPath);
       // 过期守卫：await 期间用户已点其他文件，丢弃本次渲染
-      if (gen !== this._previewGen) return;
+      if (this._previewGuard.stale(gen)) return;
       if (!pack || (!pack.name && !pack.description)) {
         const folderName = dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
         this.root.innerHTML = `<div class="content" id="preview-content"><h3>📁 ${t("preview.folder")}</h3><div class="model-detail-title" style="font-size:13px;font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">${t("preview.folderNoInfo")}</div></div></div>`;
@@ -299,7 +300,7 @@ ${pack.description ? `<div style="font-size:11px;color:var(--txt);margin-top:6px
     } catch (err) {
       // P2 修复：catch 分支同样比对代际——A 目录 GetPackInfo 失败迟到时
       // 若用户已切到 B，不得把「无法读取整合包信息」覆盖到 B 的预览
-      if (gen !== this._previewGen) return;
+      if (this._previewGuard.stale(gen)) return;
       this.root.innerHTML = `<div class="content" id="preview-content"><h3>📁 ${t("preview.folder")}</h3><div class="dp-placeholder"><div class="big-icon">📁</div><div class="dp-hint">${t("preview.packReadFailed")}</div></div></div>`;
     }
   }

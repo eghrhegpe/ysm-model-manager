@@ -126,6 +126,11 @@ const DISPOSE_TEX_KEYS = [
   "sphereMap", "toonMap", "displacementMap", "bumpMap",
 ] as const;
 
+// 材质纹理槽位读写：Three.js Material 类型不含 MMD 扩展贴图 key，
+// 断言收敛到此处（原 3 处散落的 mat as unknown as Record<string, unknown>）
+type MatTexSlots = Record<string, unknown>;
+const matTexSlots = (mat: THREE.Material): MatTexSlots => mat as unknown as MatTexSlots;
+
 /** 估算纹理 GPU 内存（字节），只计 RGBA 全尺寸；压缩纹理格式不在此列 */
 function estimateTexGpuBytes(tex: THREE.Texture): number {
   const img = tex.image as HTMLImageElement | undefined;
@@ -151,7 +156,7 @@ async function disposeMmdMesh(
   let totalGpuBytes = 0;
   for (const mat of allMats) {
     for (const key of DISPOSE_TEX_KEYS) {
-      const tex = (mat as unknown as Record<string, unknown>)[key];
+      const tex = matTexSlots(mat)[key];
       if (tex instanceof THREE.Texture) {
         totalGpuBytes += estimateTexGpuBytes(tex);
         texCount++;
@@ -739,7 +744,7 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
         const replaceTasks: Array<Promise<void>> = [];
         for (const mat of allMats) {
           for (const key of DISPOSE_TEX_KEYS) {
-            const tex = (mat as unknown as Record<string, unknown>)[key];
+            const tex = matTexSlots(mat)[key];
             if (!(tex instanceof THREE.Texture)) continue;
             const img = tex.image as HTMLImageElement | undefined;
             if (!img?.src?.startsWith("blob:")) continue;
@@ -753,7 +758,7 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
                 const ktxUrl = URL.createObjectURL(ktxBlob);
                 c.blobUrls.push(ktxUrl);
                 return ktx2Loader.loadAsync(ktxUrl).then((compressedTex) => {
-                  (mat as unknown as Record<string, unknown>)[key] = compressedTex;
+                  matTexSlots(mat)[key] = compressedTex;
                   tex.dispose();
                   mat.needsUpdate = true;
                 })

@@ -412,7 +412,7 @@ describe("loadModel2D — 3D 切换（§5.7 编排层：ys m-3d 已 mock，share
 
     (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
     await waitFor(() => expect(createYsm3D).toHaveBeenCalled());
-    // 加载未完成前先关闭（触发 close3D → _model3dGen++）
+    // 加载未完成前先关闭（触发 close3D → model3dGuard.invalidate()）
     const closeFn = ctx.unsubs.at(-1)!;
     closeFn();
     resolve3D();
@@ -426,7 +426,7 @@ describe("loadModel2D — 3D 切换（§5.7 编排层：ys m-3d 已 mock，share
     const { ctx } = await setupCtx();
 
     (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
-    // 在 createYsm3D reject 之前先关闭 → _model3dGen++，使在途失败过期
+    // 在 createYsm3D reject 之前先关闭 → model3dGuard.invalidate()，使在途失败过期
     const closeFn = ctx.unsubs.at(-1)!;
     closeFn();
     await new Promise((r) => setTimeout(r, 0));

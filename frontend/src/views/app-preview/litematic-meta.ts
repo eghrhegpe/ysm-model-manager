@@ -7,6 +7,7 @@ import { safeGet, safeSet } from "../../utils/dom/storage.ts";
 import type { PreviewRoot } from "./utils.ts";
 import { createLitematic3D, cleanupVoxel3D } from "./litematic-3d.ts";
 import { t } from "../../core/i18n/t.ts";
+import { GenGuard } from "./gen-guard.ts";
 
 function fmtTime(ms: number): string {
   if (!ms || ms <= 0) return "未知";
@@ -15,18 +16,18 @@ function fmtTime(ms: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// P2 修复：模块级代际计数——showLitematic 独立于 app-preview 的 _previewGen，
+// P2 修复：模块级代际守卫——showLitematic 独立于 app-preview 的 _previewGen，
 // await Go 解析期间用户切到别的模型时，慢结果不得写进新模型的 #preview-detail
-let litematicGen = 0;
+const litematicGuard = new GenGuard();
 
 /**
- * P2 修复（code_review）：任意新预览派发时推进代际——原 litematicGen 只在
- * showLitematic 自身递增，litematic A 解析中切到 YSM B（走 detail.ts 的 _detailGen）
+ * P2 修复（code_review）：任意新预览派发时推进代际——原守卫只在
+ * showLitematic 自身递增，litematic A 解析中切到 YSM B（走 detailGen）
  * 不触碰它 → A 迟到仍写进 B 的 #preview-detail（跨类型污染）。index.ts 的
  * model:select 回调开头调用本函数，使所有新选择都作废在途 litematic 结果。
  */
 export function invalidateLitematicPreview(): void {
-  litematicGen++;
+  litematicGuard.invalidate();
 }
 
 function shortName(name: string): string {
@@ -146,7 +147,7 @@ function renderLitematicDetail(
   const detailDiv = ctx.root.getElementById("preview-detail");
   if (!detailDiv) return;
   // P2 修复：await Go 解析后比对代际——慢 litematic A 迟到不得污染已切换的 B
-  if (gen !== litematicGen) return;
+  if (litematicGuard.stale(gen)) return;
   let extra = "";
   if (ext === ".nbt" || ext === ".schematic") {
     extra = `${field(t("preview.dataVersion"), meta.dataVersion)}${field(t("preview.formatVersion"), meta.version)}${field(t("preview.nameLabel"), meta.name)}${field(t("preview.authorLabel"), meta.author)}`;
@@ -184,7 +185,7 @@ export async function showLitematic(
   ctx: PreviewRoot,
   path: string,
 ): Promise<void> {
-  const gen = ++litematicGen;
+  const gen = litematicGuard.next();
   const basename = path.split(/[/\\]/).pop() || "";
   const savedTab = safeGet("lt_previewTab") || "detail";
 
@@ -239,7 +240,7 @@ export async function showLitematic(
     }
   } catch (e) {
     // P2 修复：catch 分支同样比对代际——失败迟到不得覆盖已切换模型
-    if (gen !== litematicGen) return;
+    if (litematicGuard.stale(gen)) return;
     const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) {
       detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">⚠️</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>`;

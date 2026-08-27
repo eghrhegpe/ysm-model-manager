@@ -18,6 +18,7 @@ import {
   setup2DCanvas, buildToggleRow, buildStatsCard, buildBoneExportRow,
 } from "./skeleton-render.ts";
 import { createYsm3D, cleanupYsm3D } from "./ysm-3d.ts";
+import { GenGuard } from "./gen-guard.ts";
 
 // 2D 拖拽的 window 监听器使用 AbortController 管理，避免模块级单例竞态（审核 P3）
 let _prevAbort: AbortController | null = null;
@@ -118,13 +119,14 @@ export async function loadModel2D(
     if (model) await fillAuthorsAsync(modelPath, model);
     buildStatsCard(container, model, modelPath, _decodedBy, ctx);
     buildBoneExportRow(container, model as BedrockGeometry & { boneCount?: number; bones?: Array<{ id: string; name: string; parentId?: string }> }, modelPath);
-    let _is3D = false, _prefer3D = getPrefer3D(), _loading3D = false, _model3dGen = 0;
+    let _is3D = false, _prefer3D = getPrefer3D(), _loading3D = false;
+    const model3dGuard = new GenGuard();
     const _toggle3D = async (): Promise<void> => {
       if (_loading3D) return;
       _is3D = !_is3D; _prefer3D = _is3D; setPrefer3D(_prefer3D);
       if (!_is3D) return;
       _loading3D = true;
-      const gen = ++_model3dGen;
+      const gen = model3dGuard.next();
       let unsubAndroidBack: (() => void) | null = null;
       // 关闭当前 3D 会话：core 经 adapter.onClose 复位 _is3D/_active3DClose/android-back，
       // 这里额外处理 ctx.unsubs 注销。
@@ -132,7 +134,7 @@ export async function loadModel2D(
         const idx = ctx.unsubs?.indexOf(close3D);
         if (idx !== undefined && idx > -1) ctx.unsubs?.splice(idx, 1);
         cleanupYsm3D();
-        _model3dGen++;
+        model3dGuard.invalidate();
         _is3D = false;
         if (!keepPrefer) {
           _prefer3D = false;
@@ -175,7 +177,7 @@ export async function loadModel2D(
         _loading3D = false;
         // P2 修复：用户已关闭 3D（ESC/切模型）后迟到的加载失败不得再弹错——
         // 否则关闭后 1~2s 突然冒「加载失败」toast，掩盖用户主动关闭的意图。
-        if (gen !== _model3dGen) return;
+        if (model3dGuard.stale(gen)) return;
         // 3D 渲染错误已由 core 统一 toast（t("preview.loadFailed")），此处仅防御性日志
         console.error("[3D] 加载失败（core 已处理提示）:", e);
       }

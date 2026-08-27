@@ -955,13 +955,13 @@
 | `extractZip()` | `frontend/src/backend/extract:142` | 解压 ZIP 数据，返回 {entries, metas}。 |
 | `gbkDecodeEntry()` | `frontend/src/backend/extract:178` | 尝试 GBK 解码 fflateKey 的原始字节（当 gpf bit 11 未设时）。 |
 | `detectZipType()` | `frontend/src/backend/extract:196` | detectZipType：扫描 ZIP local file header 文件名段（不解压数据）， 识别资源类型。Go DetectZipType 的 1:1 TS 平移 （g |
-| `Store()` | `frontend/src/backend/idb:17` | — |
-| `openDB()` | `frontend/src/backend/idb:21` | — |
-| `__resetDBForTest()` | `frontend/src/backend/idb:139` | 仅测试用：重置单例连接 + 降级标志（避免用例间共享状态） |
-| `idbGet()` | `frontend/src/backend/idb:156` | 读取单 key |
-| `idbSet()` | `frontend/src/backend/idb:167` | 写入单 key（QuotaExceededError 走 onabort，必须监听否则 Promise 永不 settle） |
-| `idbDel()` | `frontend/src/backend/idb:184` | 删除单 key |
-| `idbKeys()` | `frontend/src/backend/idb:205` | 前缀扫描（MikuMikuAR 模式：dir:&lt;stem&gt;: / file:&lt;stem&gt;: 遍历模型库） 性能优化（R1 万级 key 门槛）：真实浏览器用 IDBKeyRange |
+| `Store()` | `frontend/src/backend/idb:19` | — |
+| `openDB()` | `frontend/src/backend/idb:23` | — |
+| `__resetDBForTest()` | `frontend/src/backend/idb:141` | 仅测试用：重置单例连接 + 降级标志（避免用例间共享状态） |
+| `idbGet()` | `frontend/src/backend/idb:158` | 读取单 key |
+| `idbSet()` | `frontend/src/backend/idb:169` | 写入单 key（QuotaExceededError 走 onabort，必须监听否则 Promise 永不 settle） |
+| `idbDel()` | `frontend/src/backend/idb:186` | 删除单 key |
+| `idbKeys()` | `frontend/src/backend/idb:207` | 前缀扫描（MikuMikuAR 模式：dir:&lt;stem&gt;: / file:&lt;stem&gt;: 遍历模型库） 性能优化（R1 万级 key 门槛）：真实浏览器用 IDBKeyRange |
 | `parseNbtRoot()` | `frontend/src/backend/nbt-parse:253` | 解析 NBT 根 compound，返回全部顶层标签。 |
 | `parseNbtRootExact()` | `frontend/src/backend/nbt-parse:276` | ADR-070 M2：精确 LongArray 变体——LongArray 输出 bigint[]（精确 64 位）， 供 voxel 打包位解码（BlockStates）使用。其 |
 | `litematicMetaView()` | `frontend/src/backend/nbt-parse:328` | .litematic 视图：根 Version/MinecraftDataVersion + Metadata compound → LitematicMeta JSON 形状。 |
@@ -1037,8 +1037,8 @@
 | `getStatsPoolSize()` | `frontend/src/backend/web-stats:91` | 当前池大小（Worker 池并行线程数，供 UI 角标显示 🧵×N） |
 | `prefetchStatsWorker()` | `frontend/src/backend/web-stats:113` | 预加载 stats.worker chunk（页面加载后后台静默下载，让首次搜索秒开）。 |
 | `batchStatsWebModels()` | `frontend/src/backend/web-stats:173` | 批量统计模型（骨骼/立方体/纹理尺寸）。返回数组与输入 paths 一一对应； Worker 池不可用 / 任一片失败 / 超时 → 返回 null（整体降级）。 |
-| `__resetWebLogStateForTest()` | `frontend/src/backend/web-store:117` | 测试钩子：重置日志环状态与 hydrated 标记（防模块级状态测试间污染） |
-| `webStoreBindings()` | `frontend/src/backend/web-store:190` | — |
+| `__resetWebLogStateForTest()` | `frontend/src/backend/web-store:118` | 测试钩子：重置日志环状态与 hydrated 标记（防模块级状态测试间污染） |
+| `webStoreBindings()` | `frontend/src/backend/web-store:191` | — |
 | `YsmHeaderShape()` | `frontend/src/backend/ysm-header:37` | YSMHeader（对齐 go/ysm/header.go:17 YSMHeader json tag） |
 | `YsmSummaryShape()` | `frontend/src/backend/ysm-header:56` | YsmSummary（对齐 go/ysm/summary.go:48 YsmSummary json tag；animGroups/configMenus 一并平移） |
 | `emptyYsmHeader()` | `frontend/src/backend/ysm-header:74` | 空 YSMHeader（对齐 Go YSMHeader{} JSON 形状：isYsm/isFree/hasFree/name 恒输出） |
@@ -1173,9 +1173,9 @@
 | `initRecycleBin()` | `frontend/src/features/recycle-bin:235` | — |
 | `currentRepoType()` | `frontend/src/features/repo-rtype:18` | 读取当前仓库资源类型（时刻值）。 |
 | `useCurrentResourceType()` | `frontend/src/features/repo-rtype:28` | 订阅当前仓库资源类型。 |
-| `UpdateInfo()` | `frontend/src/features/version-updater:14` | 更新信息（CheckUpdate 返回） |
-| `checkUpdateSilent()` | `frontend/src/features/version-updater:170` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
-| `initVersionUpdater()` | `frontend/src/features/version-updater:209` | 手动检查更新（设置页按钮） |
+| `UpdateInfo()` | `frontend/src/features/version-updater:15` | 更新信息（CheckUpdate 返回） |
+| `checkUpdateSilent()` | `frontend/src/features/version-updater:171` | 启动时静默检查更新（受 6h 频次限制） 有新版本则在右下角显示可点击的 toast 通知 |
+| `initVersionUpdater()` | `frontend/src/features/version-updater:210` | 手动检查更新（设置页按钮） |
 
 ## 前端·服务
 

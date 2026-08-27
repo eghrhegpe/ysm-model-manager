@@ -246,7 +246,7 @@ export class AppTree extends WebComponentBase {
   _renderLayout(): void {
     this._root.innerHTML =
       headerHTML() +
-      '<div class="list" id="tree" role="tree" aria-label="模型文件列表">' +
+      '<div class="list" id="tree" role="tree" aria-label="' + t("tree.fileList") + '">' +
       spinnerHTML() +
       "</div>" +
       '<div class="tree-drop-hint" id="tree-drop-hint"><span class="dot"></span><span id="tree-drop-text"></span></div>' +

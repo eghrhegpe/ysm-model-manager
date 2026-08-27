@@ -205,7 +205,7 @@ function fillPanelComponent(
   // 组件专属纹理（componentTextures 命中 → 本地槽，不占全局切换）
   const ex = mg ? compTex?.[compName] : undefined;
   if (mg && ex?.length) {
-    cap.innerHTML = `<span>当前组件绑定：${esc(compName)}</span><span style="color:rgba(255,255,255,0.9)">组件专属</span>`;
+    cap.innerHTML = `<span>${t("skeleton.currentBinding", { name: esc(compName) })}</span><span style="color:rgba(255,255,255,0.9)">${t("skeleton.componentExclusive")}</span>`;
     const secEl = sec(`🎨 专属纹理 (${ex.length})`);
     secEl.dataset.testid = "tex-section";
     texBox.appendChild(secEl);
@@ -225,7 +225,7 @@ function fillPanelComponent(
   if (mg && slots.length === 0 && texArr.length > 0) {
     for (let i = 0; i < texArr.length; i++) slots.push(i);
   }
-  cap.innerHTML = `<span>当前组件绑定：${esc(compName)}</span><span style="color:rgba(255,255,255,0.9)">槽 ${slots.map((s) => "[" + s + "]").join(" ") || "—"}</span>`;
+  cap.innerHTML = `<span>${t("skeleton.currentBinding", { name: esc(compName) })}</span><span style="color:rgba(255,255,255,0.9)">${t("skeleton.slots", { slots: slots.map((s) => "[" + s + "]").join(" ") || "—" })}</span>`;
   const secEl = sec(`🎨 纹理 (${slots.length})`);
   secEl.dataset.testid = "tex-section";
   texBox.appendChild(secEl);

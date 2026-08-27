@@ -121,27 +121,27 @@ function dpRenderDetail(
   selSubIdx: number,
 ): string {
   const rows: string[] = [];
-  if (modelInfo?.format) rows.push(`<div class="dp-hint">📐 格式版本: ${esc(modelInfo.format)}</div>`);
+  if (modelInfo?.format) rows.push(`<div class="dp-hint">📐 ${t("preview.formatVersion")}: ${esc(modelInfo.format)}</div>`);
   const sel = subs[selSubIdx];
   if (subs.length > 1 && sel) {
-    rows.push(`<div class="dp-hint">🧸 选中角色: <b>${esc(sel.name)}</b></div>`);
+    rows.push(`<div class="dp-hint">🧸 ${t("preview.selectedModel")}: <b>${esc(sel.name)}</b></div>`);
   }
-  if (modelInfo?.boneCount !== undefined) rows.push(`<div class="dp-hint">🦴 骨骼数: ${modelInfo.boneCount}</div>`);
-  if (modelInfo?.cubeCount !== undefined) rows.push(`<div class="dp-hint">📦 方块数: ${modelInfo.cubeCount}</div>`);
+  if (modelInfo?.boneCount !== undefined) rows.push(`<div class="dp-hint">🦴 ${t("preview.boneCount")}: ${modelInfo.boneCount}</div>`);
+  if (modelInfo?.cubeCount !== undefined) rows.push(`<div class="dp-hint">📦 ${t("preview.cubeCount")}: ${modelInfo.cubeCount}</div>`);
   if (modelInfo?.textureCount !== undefined && modelInfo.textureCount > 0) {
-    rows.push(`<div class="dp-hint">🎨 纹理数: ${modelInfo.textureCount}</div>`);
+    rows.push(`<div class="dp-hint">🎨 ${t("preview.textureCount")}: ${modelInfo.textureCount}</div>`);
     if (modelInfo.texWidth && modelInfo.texHeight) {
-      rows.push(`<div class="dp-hint">📏 纹理尺寸: ${modelInfo.texWidth}×${modelInfo.texHeight}</div>`);
+      rows.push(`<div class="dp-hint">📏 ${t("preview.textureSize")}: ${modelInfo.texWidth}×${modelInfo.texHeight}</div>`);
     }
   }
   // ysm.json metadata 段（name/license/tips/authors，Modern YSM RawMetadata 对齐）
   const md = modelInfo?.metadata;
   if (md) {
     if (md.name) rows.push(`<div class="dp-hint" style="font-weight:600">🏷️ ${esc(md.name)}</div>`);
-    if (md.license?.type) rows.push(`<div class="dp-hint">📜 许可: ${esc(md.license.type)}</div>`);
+    if (md.license?.type) rows.push(`<div class="dp-hint">📜 ${t("preview.license")}: ${esc(md.license.type)}</div>`);
     if (md.tips) rows.push(`<div class="dp-hint" style="white-space:pre-line;font-size:11px">💬 ${esc(md.tips ?? "")}</div>`);
     if (md.authors && md.authors.length > 0) {
-      rows.push(`<div class="dp-hint" style="font-weight:600;margin-top:6px">✒️ 作者 (${md.authors.length})</div>`);
+      rows.push(`<div class="dp-hint" style="font-weight:600;margin-top:6px">✒️ ${t("preview.authors")} (${md.authors.length})</div>`);
       for (const a of md.authors) {
         const contact =
           a.contact && Object.keys(a.contact).length > 0
@@ -174,7 +174,7 @@ function dpRenderSubList(subs: BedrockSubModel[], selSubIdx: number): string {
     })
     .join("");
   return `<div class="dp-submodels">
-    <div class="dp-hint" style="font-weight:600;margin-bottom:8px">🧩 L0 清单角色 (${subs.length})</div>
+    <div class="dp-hint" style="font-weight:600;margin-bottom:8px">🧩 ${t("preview.l0Roles")} (${subs.length})</div>
     <ul class="dp-sublist" role="listbox">${chips}</ul>
   </div>`;
 }
@@ -291,8 +291,8 @@ export async function showMaidPreview(
   <div class="dp-placeholder">
     <div class="big-icon">🧸</div>
     <div class="dp-hint">${esc(basename)}</div>
-    <div class="dp-hint">Bedrock Edition Model</div>
-    <div class="dp-hint" style="margin-top:8px;font-size:11px;color:var(--txt-dim)">⏳ 分析模型数据...</div>
+    <div class="dp-hint">${t("preview.bedrockModel")}</div>
+    <div class="dp-hint" style="margin-top:8px;font-size:11px;color:var(--txt-dim)">⏳ ${t("preview.analyzingModel")}</div>
   </div>
 </div>
 <button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;

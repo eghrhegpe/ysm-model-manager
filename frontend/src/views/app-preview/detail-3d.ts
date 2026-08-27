@@ -64,7 +64,7 @@ export async function showVrmMeta(
         return `<span style="display:inline-flex;align-items:center;gap:2px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.06);font-size:11px;margin-right:4px"><span>${icon}</span>${label}:${v}</span>`;
       };
       const refBadge = r?.reference
-        ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">📎 参考: ${esc(r.reference)}</div>`
+        ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">📎 ${t("preview.reference")}: ${esc(r.reference)}</div>`
         : "";
       ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
@@ -170,7 +170,7 @@ export async function showScenePreview(
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center">
       <span style="background:rgba(124,131,255,0.2);color:#7c83ff;padding:1px 6px;border-radius:4px;font-weight:500">SceneModel</span>
-      <span>场景模型</span>
+      <span>${t("preview.sceneModelLabel")}</span>
     </div>
     <button class="preview-fab" id="btn-scene-3d" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}" style="background:linear-gradient(135deg,#7c83ff 0%,#4a55d6 100%)"><span class="preview-ic">🏗️</span></button>
   </div>
@@ -220,7 +220,7 @@ export async function showMorphPreview(
           <span>${esc(name)}</span>
         </div>`;
       }).join("");
-      container.innerHTML = `<div style="color:var(--muted);font-size:11px;margin-bottom:4px">全部 ${siblings.length} 个表情姿势</div>${items}`;
+      container.innerHTML = `<div style="color:var(--muted);font-size:11px;margin-bottom:4px">${t("preview.allMorphCount", { n: siblings.length })}</div>${items}`;
       // 点击兄弟列表项切换
       container.querySelectorAll<HTMLElement>(".morph-item").forEach((el) => {
         el.onclick = () => {
@@ -229,7 +229,7 @@ export async function showMorphPreview(
         };
       });
     } else if (container) {
-      container.innerHTML = `<div style="color:var(--muted);font-size:11px;padding:4px">暂无其他表情姿势</div>`;
+      container.innerHTML = `<div style="color:var(--muted);font-size:11px;padding:4px">${t("preview.noOtherMorph")}</div>`;
     }
   } catch { /* 兄弟列表加载失败不阻断 */ }
   // 应用 FAB
@@ -260,10 +260,10 @@ export async function showStagePreview(
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
       <span style="background:rgba(255,160,80,0.2);color:#ffa050;padding:1px 6px;border-radius:4px;font-weight:500">StageAnim</span>
-      <span>舞台表演包</span>
+      <span>${t("preview.stagePerfLabel")}</span>
     </div>
     <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;padding:6px;margin-top:4px"></div>
-    <button class="preview-fab" id="btn-stage-load" title="加载舞台" aria-label="加载舞台" style="background:linear-gradient(135deg,#ffa050 0%,#e67e22 100%)"><span class="preview-ic">🎤</span></button>
+    <button class="preview-fab" id="btn-stage-load" title="${t("preview.loadStage")}" aria-label="${t("preview.loadStage")}" style="background:linear-gradient(135deg,#ffa050 0%,#e67e22 100%)"><span class="preview-ic">🎤</span></button>
   </div>
 </div>`;
   // 加载舞台内容
@@ -272,12 +272,12 @@ export async function showStagePreview(
     const container = ctx.root.querySelector<HTMLElement>("#stage-contents");
     if (container) {
       if (contents.length === 0) {
-        container.innerHTML = `<div style="color:var(--muted);font-size:11px;padding:4px">舞台包为空或目录不存在</div>`;
+        container.innerHTML = `<div style="color:var(--muted);font-size:11px;padding:4px">${t("preview.stageEmpty")}</div>`;
       } else {
         const vmdCount = contents.filter((c) => c.kind === "vmd").length;
         const audioCount = contents.filter((c) => c.kind === "audio").length;
         const configCount = contents.filter((c) => c.kind === "config").length;
-        container.innerHTML = `<div style="color:var(--muted);font-size:11px;margin-bottom:6px">📊 包含: ${vmdCount} 动作 / ${audioCount} 音频 / ${configCount} 配置</div>` +
+        container.innerHTML = `<div style="color:var(--muted);font-size:11px;margin-bottom:6px">📊 ${t("preview.stageContents", { vmd: vmdCount, audio: audioCount, config: configCount })}</div>` +
           contents.map((c) => {
             const name = c.path.split(/[/\\]/).pop() || c.path;
             const icon = c.kind === "vmd" ? "🎬" : c.kind === "audio" ? "🎵" : c.kind === "config" ? "⚙️" : "📄";

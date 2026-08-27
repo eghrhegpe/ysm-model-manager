@@ -20,6 +20,8 @@ export const ja: Record<string, string> = {
   "nav.preview": "プレビュー",
   "nav.collapse": "ナビを畳む",
   "nav.expand": "ナビを展開",
+  "nav.resourceCategory": "リソース大分類",
+  "nav.resourceType": "リソース種別",
 
   // ── Common ──
   "common.loading": "読み込み中…",
@@ -1106,6 +1108,24 @@ export const ja: Record<string, string> = {
   "preview.blockEntity": "ブロックエンティティ",
   "preview.materialList": "マテリアルリスト",
   "preview.formatVersion": "フォーマットバージョン",
+  "preview.selectedModel": "選択キャラクター",
+  "preview.boneCount": "ボーン数",
+  "preview.cubeCount": "ブロック数",
+  "preview.textureCount": "テクスチャ数",
+  "preview.license": "ライセンス",
+  "preview.l0Roles": "L0 リストキャラクター",
+  "preview.analyzingModel": "モデルデータを分析中...",
+  "preview.bedrockModel": "Bedrock Edition Model",
+  "preview.reference": "参照",
+  "preview.sceneModelLabel": "シーンモデル",
+  "preview.noOtherMorph": "他のモーフはありません",
+  "preview.allMorphCount": "全 {n} モーフ",
+  "preview.stagePerfLabel": "ステージパフォーマンスパック",
+  "preview.loadStage": "ステージを読み込む",
+  "preview.stageEmpty": "ステージパックが空かディレクトリが存在しません",
+  "preview.stageContents": "含む: {vmd} モーション / {audio} 音声 / {config} 設定",
+  "preview.noPackPng": "pack.png なし",
+  "preview.blockItemModel3d": "ブロック/アイテムモデル 3D プレビュー",
   "preview.noBlockData": "ブロックデータなし",
   "preview.sliceAxis": "スライス軸",
   "preview.sliceControl": "スライス制御",
@@ -1138,6 +1158,16 @@ export const ja: Record<string, string> = {
   "preview.facesLabel": "面",
   "preview.hidePanel": "◀ 情報を隠す",
   "preview.showPanel": "▶ 情報を表示",
+
+  // ── パフォーマンス診断（perf-cli）──
+  "perf.copyRaw": "生の出力をクリップボードにコピー",
+  "perf.copy": "コピー",
+
+  // ── スケルトン填充パネル（skeleton-fill-panel）──
+  "skeleton.currentBinding": "現在のコンポーネントバインド: {name}",
+  "skeleton.componentExclusive": "コンポーネント専用",
+  "skeleton.slots": "スロット {slots}",
+
   "android.backExit": "もう一度戻るキーで終了します",
   "android.networkOffline": "⚠️ ネットワークが切断されました",
 
@@ -1170,6 +1200,7 @@ export const ja: Record<string, string> = {
   "tree.treeLoadFailed": "<div class=\"empty\"><div class=\"big\">⚠️</div>読み込み失敗</div>",
   "tree.scanning": "<div class=\"empty\"><div class=\"big\">⏳</div><div>スキャン中...</div></div>",
   "tree.dropHint": "モデルファイルをドロップしてインポート",
+  "tree.fileList": "モデルファイルリスト",
 
   // ── モデル詳細の整形（summarize）──
   "format.modelDetail": "モデル詳細",

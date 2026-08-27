@@ -34,7 +34,7 @@ function errorHTML(msg: string, esc: EscFn): string {
 export function sectionHeader(icon: string, label: string, rawText?: string): string {
   const copyBtn =
     rawText !== undefined
-      ? `<button type="button" data-perf-copy class="btn-base perf-copy-btn" style="margin-left:auto;padding:2px 8px;font-size:var(--fs-xs);line-height:1.4" title="复制原始输出到剪贴板">📋 复制</button>`
+      ? `<button type="button" data-perf-copy class="btn-base perf-copy-btn" style="margin-left:auto;padding:2px 8px;font-size:var(--fs-xs);line-height:1.4" title="${t("perf.copyRaw")}">📋 ${t("perf.copy")}</button>`
       : "";
   const wrapper =
     rawText !== undefined

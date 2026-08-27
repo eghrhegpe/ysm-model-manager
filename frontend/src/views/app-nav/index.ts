@@ -211,8 +211,8 @@ class AppNav extends WebComponentBase {
           <button class="nav-toggle" data-testid="nav-toggle" title="${this._collapsed ? t("nav.expand") : t("nav.collapse")}">${this._collapsed ? "»" : "«"}</button>
         </div>
         <div class="nav-repo-sel" data-testid="nav-repo-sel">
-          <select id="nav-group-select" data-testid="nav-group-select" title="资源大类"></select>
-          <select id="nav-subtype-select" data-testid="nav-subtype-select" title="资源类型"></select>
+          <select id="nav-group-select" data-testid="nav-group-select" title="${t("nav.resourceCategory")}"></select>
+          <select id="nav-subtype-select" data-testid="nav-subtype-select" title="${t("nav.resourceType")}"></select>
         </div>
         ${items
           .map(

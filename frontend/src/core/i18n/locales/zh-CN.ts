@@ -22,6 +22,8 @@ export const zhCN: Record<string, string> = {
   "nav.preview": "预告版",
   "nav.collapse": "收起导航",
   "nav.expand": "展开导航",
+  "nav.resourceCategory": "资源大类",
+  "nav.resourceType": "资源类型",
 
   // ── 通用 ──
   "common.loading": "加载中…",
@@ -1108,6 +1110,24 @@ export const zhCN: Record<string, string> = {
   "preview.blockEntity": "方块实体",
   "preview.materialList": "材料列表",
   "preview.formatVersion": "格式版本",
+  "preview.selectedModel": "选中角色",
+  "preview.boneCount": "骨骼数",
+  "preview.cubeCount": "方块数",
+  "preview.textureCount": "纹理数",
+  "preview.license": "许可",
+  "preview.l0Roles": "L0 清单角色",
+  "preview.analyzingModel": "分析模型数据...",
+  "preview.bedrockModel": "Bedrock Edition Model",
+  "preview.reference": "参考",
+  "preview.sceneModelLabel": "场景模型",
+  "preview.noOtherMorph": "暂无其他表情姿势",
+  "preview.allMorphCount": "全部 {n} 个表情姿势",
+  "preview.stagePerfLabel": "舞台表演包",
+  "preview.loadStage": "加载舞台",
+  "preview.stageEmpty": "舞台包为空或目录不存在",
+  "preview.stageContents": "包含: {vmd} 动作 / {audio} 音频 / {config} 配置",
+  "preview.noPackPng": "无pack.png",
+  "preview.blockItemModel3d": "方块/物品模型 3D 预览",
   "preview.noBlockData": "无方块数据",
   "preview.sliceAxis": "分层轴",
   "preview.sliceControl": "分层切片",
@@ -1140,6 +1160,16 @@ export const zhCN: Record<string, string> = {
   "preview.facesLabel": "面",
   "preview.hidePanel": "◀ 隐藏信息",
   "preview.showPanel": "▶ 显示信息",
+
+  // ── 性能诊断（perf-cli）──
+  "perf.copyRaw": "复制原始输出到剪贴板",
+  "perf.copy": "复制",
+
+  // ── 骨骼填充面板（skeleton-fill-panel）──
+  "skeleton.currentBinding": "当前组件绑定：{name}",
+  "skeleton.componentExclusive": "组件专属",
+  "skeleton.slots": "槽 {slots}",
+
   "android.backExit": "再按一次返回退出应用",
   "android.networkOffline": "⚠️ 网络已断开",
 
@@ -1172,6 +1202,7 @@ export const zhCN: Record<string, string> = {
   "tree.treeLoadFailed": "<div class=\"empty\"><div class=\"big\">⚠️</div>加载失败</div>",
   "tree.scanning": "<div class=\"empty\"><div class=\"big\">⏳</div><div>扫描中...</div></div>",
   "tree.dropHint": "拖入模型文件快速导入",
+  "tree.fileList": "模型文件列表",
 
   // ── 模型详情格式化（summarize）──
   "format.modelDetail": "模型详情",

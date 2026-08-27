@@ -374,7 +374,10 @@ function parseYsmManifestMeta(bytes: Uint8Array): YsmManifestMeta | null {
     if (!decoded?.geometry) return null;
     const meta = (decoded.geometry as { _ysmMeta?: YsmManifestMeta })._ysmMeta;
     return meta && meta.modelFiles?.length ? meta : null;
-  } catch {
+  } catch (err) {
+    // 静默吞异常曾导致 ysm.json 结构不符时无任何线索（69ab1f03 code review）；
+    // 此处留 warn 便于排查，null 语义不变（降级走单 geometry 路径）
+    console.warn("[web-fs] parseYsmManifestMeta 解析失败，降级单 geometry:", safeErrorMessage(err));
     return null;
   }
 }

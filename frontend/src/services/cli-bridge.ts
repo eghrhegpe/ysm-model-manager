@@ -3,9 +3,13 @@
 // 网页版（browserAdapter）走 web 降级实现，桌面/Android 走 Wails 原逻辑。
 
 import { getApp } from "../backend/app.ts";
+import { CLI_ALLOWLIST, type CLIAllowlistCommand } from "../backend/cli-allowlist.ts";
 import { resolveWebMode } from "../backend/platform.ts";
 import { WebUnsupportedError } from "../backend/web-common.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
+
+// 兼容旧导出名（tests 仍 import ALLOWED_CLI_COMMANDS）
+export const ALLOWED_CLI_COMMANDS = CLI_ALLOWLIST;
 
 // ===== 类型定义 =====
 
@@ -40,30 +44,6 @@ export interface CLIResponse {
   timing?: { total_ms: number };
   meta?: { platform: string };
 }
-
-/** 允许的 CLI 命令默认白名单（网页版降级 + 首次加载缓存用） */
-export const ALLOWED_CLI_COMMANDS = [
-  "search",
-  "analyze",
-  "list",
-  "verify",
-  "benchmark",
-  "export",
-  "file-bench",
-  "single-bench",
-  "concurrent-bench",
-  "scan-dir",
-  "analyze-mmd",
-  "perf-log",
-  "cache-status",
-  "cache-verify",
-  "cache-clear",
-  "cache-diag",
-  "config-show",
-  "gui-flow",
-  "resource-scan",
-  "repo-audit",
-] as const;
 
 /** 动态白名单缓存（从后端 GetAllowedCLICommands 拉取，null=未拉取） */
 let cachedDynamicCommands: Set<string> | null = null;
@@ -101,13 +81,12 @@ async function fetchDynamicCommands(): Promise<Set<string>> {
 /** 检查命令是否在白名单中（优先使用动态列表） */
 async function isCommandAllowed(command: string): Promise<boolean> {
   if (resolveWebMode()) {
-    return ALLOWED_CLI_COMMANDS.includes(command as AllowedCLICommand);
+    return ALLOWED_CLI_COMMANDS.includes(command as CLIAllowlistCommand);
   }
   const allowed = await fetchDynamicCommands();
   return allowed.has(command);
 }
 
-type AllowedCLICommand = (typeof ALLOWED_CLI_COMMANDS)[number];
 
 // ===== 核心 API =====
 

@@ -1557,14 +1557,14 @@
 | `generateSurfacePixels()` | `frontend/src/utils/3d/caps/ground-surface-spec:129` | ============ 程序化像素生成（RGBA，node 可测）============ |
 | `applyGroundSurfaceStructural()` | `frontend/src/utils/3d/caps/ground-surface-spec:170` | 重建路径专用：把 structural 落到新材质上。 |
 | `applyGroundSurfaceAppearance()` | `frontend/src/utils/3d/caps/ground-surface-spec:189` | 原地/重建通用：appearance 字段统一落地（唯一入口）。 |
-| `DirectionalLightParams()` | `frontend/src/utils/3d/caps/light-capability:33` | ============ 参数类型 ============ |
-| `AmbientLightParams()` | `frontend/src/utils/3d/caps/light-capability:43` | — |
-| `SpotlightParams()` | `frontend/src/utils/3d/caps/light-capability:48` | — |
-| `VolumetricParams()` | `frontend/src/utils/3d/caps/light-capability:62` | — |
-| `LightParams()` | `frontend/src/utils/3d/caps/light-capability:76` | — |
-| `DEFAULT_LIGHT_PARAMS()` | `frontend/src/utils/3d/caps/light-capability:104` | — |
-| `LIGHT_PRESETS()` | `frontend/src/utils/3d/caps/light-capability:114` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
-| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:344` | — |
+| `DirectionalLightParams()` | `frontend/src/utils/3d/caps/light-capability:35` | ============ 参数类型 ============ |
+| `AmbientLightParams()` | `frontend/src/utils/3d/caps/light-capability:45` | — |
+| `SpotlightParams()` | `frontend/src/utils/3d/caps/light-capability:50` | — |
+| `VolumetricParams()` | `frontend/src/utils/3d/caps/light-capability:64` | — |
+| `LightParams()` | `frontend/src/utils/3d/caps/light-capability:78` | — |
+| `DEFAULT_LIGHT_PARAMS()` | `frontend/src/utils/3d/caps/light-capability:106` | — |
+| `LIGHT_PRESETS()` | `frontend/src/utils/3d/caps/light-capability:116` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
+| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:346` | — |
 | `ReflectionMode()` | `frontend/src/utils/3d/caps/postprocessing-capability:33` | 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） |
 | `PostprocessingParams()` | `frontend/src/utils/3d/caps/postprocessing-capability:35` | — |
 | `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/utils/3d/caps/postprocessing-capability:85` | — |

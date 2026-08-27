@@ -9,7 +9,7 @@ import (
 	"unsafe"
 )
 
-// Darwin 使用 CGO 静态链接：Rust .a 由 build/darwin/compile-rust.mjs 编译，
+// Darwin 使用 CGO 静态链接：Rust .a 由 scripts/compile-rust-static.mjs 编译，
 // 链接进可执行文件。
 
 /*

@@ -9,7 +9,7 @@ import (
 	"unsafe"
 )
 
-// Linux 使用 CGO 静态链接：Rust .a 由 build/linux/compile-rust.mjs 编译，
+// Linux 使用 CGO 静态链接：Rust .a 由 scripts/compile-rust-static.mjs 编译，
 // 链接进可执行文件。
 
 /*

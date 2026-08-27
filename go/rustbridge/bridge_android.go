@@ -9,7 +9,7 @@ import (
 	"unsafe"
 )
 
-// Android 使用 CGO 静态链接：Rust .a 由 build/android/compile-rust.mjs 编译，
+// Android 使用 CGO 静态链接：Rust .a 由 scripts/compile-android-rust.mjs 编译，
 // 链接进 libwails.so。本文件通过 cgo extern 声明直接调用 Rust ABI 函数。
 
 /*

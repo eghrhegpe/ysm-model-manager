@@ -1,13 +1,16 @@
 frontend/dist
 # 构建验证产物（verify 模式本地构建输出，非发布产物）
 frontend/dist-verify/
+
 # check-layering 运行时引用快照（BASELINE_FILE 产物，非源码）
 .pv-ref/
 frontend/coverage/
+
 # Playwright E2E 运行产物（.last-run.json / 失败截图 / HTML 报告 / G-4 覆盖采集）
 frontend/test-results/
 frontend/e2e-report/
 frontend/e2e-coverage/
+
 # link-checker 输出报告（工具产物，不入库）
 link-checker-out.json
 *.out
@@ -18,31 +21,22 @@ build/ysmparser-cache/
 cmd/*/*.exe
 *.exe
 node_modules/
+
 # VitePress 构建产物（docs 站点，迁移自 Jekyll）
 docs/.vitepress/dist/
 docs/.vitepress/cache/
 .DS_Store
 *.log
 *.tmp
+tmp/
 *.bak
 _wails_test/
-
 project_tree.txt
 project_tree_lite.txt
-
 commit_msg.txt
-
 _binding_add.txt
 _fix_decode.js
-
 tool-test.md
-
-CLAUDE.md
-.claude/
-
-# 个人 AI 工具配置（非项目配置，不入库）
-opencode.json
-reasonix.toml
 
 # Wails 3 task 引擎运行时缓存（wails3 task / wails3 dev 生成）
 .task/
@@ -61,9 +55,13 @@ tests/python/__pycache__/
 .workbuddy/
 .codebuddy/
 .mimosa/
+.trae/
+.claude/
 
-# 构建产物：build/ 脚手架（Taskfile/config/图标/manifest）入仓；
-# 仅生成的 bin/、release/、ysmparser-cache/ 被忽略（见上方规则）
+# 个人 AI 工具配置（非项目配置，不入库）
+opencode.json
+reasonix.toml
+CLAUDE.md
 
 # 签名密钥（机密，永不入库；未来移动端签名用）
 *.keystore

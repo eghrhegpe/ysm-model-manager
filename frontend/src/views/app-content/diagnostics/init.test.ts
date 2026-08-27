@@ -392,10 +392,11 @@ describe("dedup config（getDedupConfig / resetDedupConfig）", () => {
     expect(cfg.keepPolicy).toBe("oldest");
     expect(cfg.priorityPath).toBe("");
 
-    // 快照是 Object.freeze，篡改会抛 TypeError
+    // 快照是 Object.freeze，篡改抛 TypeError（V8 消息为 "Cannot assign to read only property"，
+    // 不含 "frozen" 子串，断言按错误类匹配而非引擎文本）
     expect(() => {
       (cfg as { strategy: string }).strategy = "quick_hash";
-    }).toThrow("frozen");
+    }).toThrow(TypeError);
 
     // 内部状态不受影响
     expect(getDedupConfig().strategy).toBe("deep_hash");

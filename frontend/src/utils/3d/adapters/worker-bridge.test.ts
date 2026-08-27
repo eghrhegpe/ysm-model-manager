@@ -60,10 +60,10 @@ function makeRejectBridge(workers: FakeWorker[], overrides?: Partial<CreateWorke
     getId: respId,
     timeoutMs: 100,
     timeoutMsg: "Worker 超时",
-    settle: (resp, { resolve }) => resolve(resp),
+    settle: (resp: FakeResp, { resolve }: { resolve: (v: FakeResp) => void }) => resolve(resp),
     onWorkerError: "terminatePool",
     ...overrides,
-  });
+  } as unknown as CreateWorkerBridgeOpts<FakeReq, FakeResp, FakeResp>);
   // 真实场景：worker.onmessage = (e) => bridge.handleMessage(e.data)
   for (const w of workers) {
     w.onmessage = (e) => bridge.handleMessage(e.data as unknown as BridgeResp);
@@ -77,11 +77,11 @@ function makeResolveBridge(workers: FakeWorker[], overrides?: Partial<CreateWork
     getId: respId,
     timeoutMs: 100,
     timeoutMsg: "Worker 超时",
-    settle: (resp, { resolve }) => resolve(resp as BridgeResp),
+    settle: (resp: FakeResp, { resolve }: { resolve: (v: BridgeResp) => void }) => resolve(resp as BridgeResp),
     onWorkerError: "resolveAllError",
-    makeErrorResponse: (id, msg) => ({ id, ok: false, error: msg }),
+    makeErrorResponse: (id: number, msg: string) => ({ id, ok: false, error: msg }),
     ...overrides,
-  });
+  } as unknown as CreateWorkerBridgeOpts<FakeReq, FakeResp, BridgeResp>);
   for (const w of workers) {
     w.onmessage = (e) => bridge.handleMessage(e.data as unknown as BridgeResp);
   }
@@ -199,10 +199,10 @@ describe("创建契约（resolveAllError 必须传 makeErrorResponse）", () => 
         getId: respId,
         timeoutMs: 100,
         timeoutMsg: "Worker 超时",
-        settle: (resp, { resolve }) => resolve(resp),
+        settle: (resp: FakeResp, { resolve }: { resolve: (v: FakeResp) => void }) => resolve(resp),
         onWorkerError: "resolveAllError",
         // makeErrorResponse 故意缺省
-      }),
+      } as any),
     ).toThrow(/resolveAllError 模式必须传 makeErrorResponse/);
   });
 
@@ -445,7 +445,7 @@ describe("resolve-mode 入参契约（belt-and-suspenders 运行时守卫）", (
         getId: respId,
         timeoutMs: 100,
         timeoutMsg: "超时",
-        settle: (resp, { resolve }) => resolve(resp),
+        settle: (resp: FakeResp, { resolve }: { resolve: (v: FakeResp) => void }) => resolve(resp),
         onWorkerError: "resolveAllError",
       } as any),
     ).toThrow("resolveAllError 模式必须传 makeErrorResponse");
@@ -459,10 +459,14 @@ describe("resolve-mode 入参契约（belt-and-suspenders 运行时守卫）", (
       getId: respId,
       timeoutMs: 100,
       timeoutMsg: "超时",
-      settle: (resp, { resolve }) => resolve(resp),
+      settle: (resp: FakeResp, { resolve }: { resolve: (v: FakeResp) => void }) => resolve(resp),
       onWorkerError: "terminatePool",
-      makeErrorResponse: (id, msg) => ({ id, ok: false, error: msg }),
+      makeErrorResponse: (id: number, msg: string) => ({ id, ok: false, error: msg }),
     } as any);
+
+    // 委托 onmessage（对齐 makeRejectBridge 辅助函数）：直接 createWorkerBridge 未设置委托，
+    // 漏了则 respond 触发不了 handleMessage，request 永不 resolve
+    w.onmessage = (e) => bridge.handleMessage(e.data as unknown as BridgeResp);
 
     const p = bridge.request({ type: "encode" });
     w.respond({ id: 0, ok: true });

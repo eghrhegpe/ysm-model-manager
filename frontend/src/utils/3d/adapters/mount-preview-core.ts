@@ -39,7 +39,6 @@ import type { PostprocessingCapability } from "../caps/postprocessing-capability
 import { runFullCleanup, type CleanupContext } from "./cleanup-3d.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import type { SwitchContext } from "./switch-preview.ts";
-import { safeErrorMessage } from "../../safe-error-msg.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { showLoadFailure } from "./preview-loading.ts";
 import { sceneRegistry } from "./scene-registry.ts";
@@ -51,9 +50,6 @@ import { bindInputHandlers } from "./input-and-animation.ts";
 import type { InputOptions } from "./input-and-animation.ts";
 import { type SemanticBoneMap } from "../semantic-bones.ts";
 import { bus } from "../../../bus.ts";
-import { friendlyError } from "../../../utils/dom/errors.ts";
-import { t } from "../../../core/i18n/t.ts";
-import { esc } from "../../../utils/dom/html.ts";
 import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
 import { createIconButton } from "../../../utils/dom/fab.ts";
 import { installUiComponentsStyles } from "../../../ui/ui-components-styles.ts";

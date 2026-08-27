@@ -36,7 +36,7 @@ export interface WorkerBridge<Req extends { id: number }, Resp, Ok> {
   clearPending: () => void;
 }
 
-export interface CreateWorkerBridgeOpts<Req extends { id: number }, Resp, Ok> {
+export type CreateWorkerBridgeOpts<Req extends { id: number }, Resp, Ok> = {
   workers: Worker[];
   getId: (resp: Resp) => number;
   timeoutMs: number;
@@ -60,16 +60,11 @@ export interface CreateWorkerBridgeOpts<Req extends { id: number }, Resp, Ok> {
 export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
   opts: CreateWorkerBridgeOpts<Req, Resp, Ok>,
 ): WorkerBridge<Req, Resp, Ok> {
-  const {
-    workers,
-    getId,
-    timeoutMs,
-    timeoutMsg,
-    settle,
-    onWorkerError = "resolveAllError",
-    makeErrorResponse,
-    onPoolTerminated,
-  } = opts;
+  const { workers, getId, timeoutMs, timeoutMsg, settle } = opts;
+  // union 分支专属字段经 in-narrowing 读取（解构会 TS2339——属性不在所有分支存在）
+  const onWorkerError = opts.onWorkerError ?? "resolveAllError";
+  const makeErrorResponse = "makeErrorResponse" in opts ? opts.makeErrorResponse : undefined;
+  const onPoolTerminated = "onPoolTerminated" in opts ? opts.onPoolTerminated : undefined;
 
   // 入口契约：resolveAllError 模式必须传 makeErrorResponse，
   // 否则 settleError 兜底 reject → resolve-mode 静默变 reject-mode

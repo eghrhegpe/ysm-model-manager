@@ -432,9 +432,9 @@
 | `frontend/src/features/version-updater.ts` | 215 |
 | `frontend/src/features/version-updater.ts` | 249 |
 | `frontend/src/features/version-updater.ts` | 259 |
-| `frontend/src/utils/3d/adapters/mount-preview-core.ts` | 387 |
+| `frontend/src/utils/3d/adapters/mount-preview-core.ts` | 383 |
 | `frontend/src/utils/3d/adapters/preview-loading.ts` | 38 |
-| `frontend/src/utils/3d/adapters/switch-preview.ts` | 139 |
+| `frontend/src/utils/3d/adapters/switch-preview.ts` | 135 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 95 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 387 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 401 |
@@ -443,8 +443,8 @@
 | `frontend/src/utils/dom/directory-picker.ts` | 45 |
 | `frontend/src/utils/dom/directory-picker.ts` | 57 |
 | `frontend/src/utils/module-loader.ts` | 17 |
-| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 28 |
-| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 174 |
+| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 58 |
+| `frontend/src/views/app-content/diagnostics/conflicts.ts` | 204 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 40 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 51 |
 | `frontend/src/views/app-content/diagnostics/init.ts` | 57 |

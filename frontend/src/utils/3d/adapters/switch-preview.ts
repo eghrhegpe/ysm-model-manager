@@ -8,12 +8,8 @@
 
 import { TOAST_MS } from "../../dom/toast-ms.ts";
 import * as THREE from "three";
-import { safeErrorMessage } from "../../safe-error-msg.ts";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { bus } from "../../../bus.ts";
-import { esc } from "../../../utils/dom/html.ts";
-import { friendlyError } from "../../../utils/dom/errors.ts";
-import { t } from "../../../core/i18n/t.ts";
 import type { LightCapability } from "../caps/light-capability.ts";
 import type { ShadowCapability } from "../caps/shadow-capability.ts";
 import type { EnvironmentCapability } from "../caps/environment-capability.ts";

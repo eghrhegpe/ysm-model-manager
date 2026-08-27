@@ -197,6 +197,7 @@ export const MOCK_DATA = {
   GetLinkMode: undefined,
   GetLitematicVoxelData: undefined,
   GetModel3DSpec: undefined,
+  GetSyncScanDirs: undefined,
   GetModelTags: undefined,
   GetNbtVoxelData: undefined,
   GetSchematicVoxelData: undefined,

@@ -1,4 +1,4 @@
-// ===== CLI Bridge 前端封装层（ADR-XXX Phase 1 打通期）=====
+// ===== CLI Bridge 前端封装层（ADR-049 打通期）=====
 // 封装 Wails ExecuteCLI 调用，处理 JSON 响应，提供类型安全的命令接口。
 // 网页版（browserAdapter）走 web 降级实现，桌面/Android 走 Wails 原逻辑。
 

@@ -6,6 +6,7 @@
 // 支持注册表自动发现 + 菜单控件 + 持久化。
 
 import * as THREE from "three";
+import { safeDispose } from "../safe-dispose.ts";
 import {
   type SceneCapability,
   type MenuControlDef,
@@ -332,7 +333,7 @@ export class GroundCapability implements SceneCapability {
 
     if (this.surfaceMat) {
       if (this.surfaceTex && this.surfaceTex !== this.customTex) {
-        try { this.surfaceTex.dispose(); } catch (_) { /* 防御性释放 */ }
+        safeDispose(this.surfaceTex);
       }
       this.surfaceMat.dispose();
     }
@@ -367,7 +368,7 @@ export class GroundCapability implements SceneCapability {
     tex.wrapT = THREE.RepeatWrapping;
     tex.colorSpace = THREE.SRGBColorSpace;
     if (this.customTex) {
-      try { this.customTex.dispose(); } catch (_) { /* 防御性释放 */ }
+      safeDispose(this.customTex);
     }
     this.customTex = tex;
     this.customTexName = name;
@@ -379,7 +380,7 @@ export class GroundCapability implements SceneCapability {
   clearCustomTexture(): void {
     const wasAttached = this.surfaceTex === this.customTex;
     if (this.customTex) {
-      try { this.customTex.dispose(); } catch (_) { /* 防御性释放 */ }
+      safeDispose(this.customTex);
       this.customTex = null;
       this.customTexName = "";
     }
@@ -533,20 +534,20 @@ export class GroundCapability implements SceneCapability {
     // 原代码仅 dispose material，normalMap 纹理未释放导致 GPU 内存泄漏
     const waterMat = this.water.material as THREE.MeshStandardMaterial;
     if (waterMat.normalMap) {
-      try { waterMat.normalMap.dispose(); } catch (_) { /* 防御性释放 */ }
+      safeDispose(waterMat.normalMap);
     }
     waterMat.dispose();
     // 表面层：材质 + 当前挂载纹理 + 自定义贴图缓存全部释放
     this.surface.geometry.dispose();
     if (this.surfaceMat) {
       if (this.surfaceTex && this.surfaceTex !== this.customTex) {
-        try { this.surfaceTex.dispose(); } catch (_) { /* 防御性释放 */ }
+        safeDispose(this.surfaceTex);
       }
       this.surfaceMat.dispose();
       this.surfaceMat = null;
     }
     if (this.customTex) {
-      try { this.customTex.dispose(); } catch (_) { /* 防御性释放 */ }
+      safeDispose(this.customTex);
       this.customTex = null;
     }
   }

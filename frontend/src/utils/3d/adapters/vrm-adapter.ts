@@ -18,6 +18,7 @@ import { createBlinkController } from "../perception/blink.ts"; // 语义表情�
 import { createFootIKController } from "../mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK，格式无关）
 import { recordLoadTrace } from "../load-trace.ts";
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
+import { renderLoadingState } from "./preview-loading.ts";
 import { b64ToBytes } from "../base64.ts";
 import { buildPerceptionControls, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
@@ -217,8 +218,7 @@ async function mdVrStage1ReadParse(
   port: VrmDataPort,
   readFn: (p: string) => Promise<string | null>,
 ): Promise<MdVrParseResult> {
-  ctx.loadingEl.innerHTML =
-    '<div style="font-size:32px">🥽</div><div>' + t("preview.loadingModel") + '</div><div style="width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden"><div style="height:100%;width:30%;background:var(--accent,#7c83ff);border-radius:2px;animation:preview-prog 1.5s ease-in-out infinite"></div></div>';
+  renderLoadingState(ctx.loadingEl, "🥽", "preview.loadingModel");
   const tStart = performance.now();
   const b64 = await readFn(path);
   await vrmDiag(port, "read-model", path, b64 ? "ok" : "fail", b64 ? `bytes=${b64.length}` : "ReadFileBytes 返回空（路径语义/守卫？）");

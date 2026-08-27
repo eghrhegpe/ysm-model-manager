@@ -18,6 +18,8 @@ import type { LightCapability } from "../caps/light-capability.ts";
 import type { ShadowCapability } from "../caps/shadow-capability.ts";
 import type { EnvironmentCapability } from "../caps/environment-capability.ts";
 import type { CameraControlBridge } from "./camera-controls.ts";
+import { safeDispose } from "../safe-dispose.ts";
+import { showLoadFailure } from "./preview-loading.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
 import type { PreviewMenuHandle } from "./preview-menu.ts";
 import { sceneRegistry, MAX_MODELS } from "./scene-registry.ts";
@@ -217,18 +219,12 @@ function recoverSwitchFailure(ctx: SwitchContext, keep: boolean, e: unknown): vo
   const prevId = sceneRegistry.getActiveId();
   if (prevId) sceneRegistry.unregister(prevId);
   for (const b of ctx.allBuilt) {
-    try { b.dispose(); } catch (_) {}
+    safeDispose(b);
   }
   ctx.allBuilt.length = 0;
   ctx.setBuilt(null);
   if (!ctx.loadingEl.parentNode) ctx.viewContainer.appendChild(ctx.loadingEl);
-  ctx.loadingEl.innerHTML =
-    `<div style="font-size:32px">⚠️</div><div>${t("preview.loadFailed")}: ${esc(safeErrorMessage(e))}</div>`;
-  bus.emit("toast:show", {
-    msg: "❌ " + friendlyError(e, t("preview.loadFailed")),
-    duration: TOAST_MS.long,
-    type: "error",
-  });
+  showLoadFailure(ctx.loadingEl, e);
   ctx.inFlight = false;
 }
 
@@ -237,7 +233,7 @@ function recoverSwitchFailure(ctx: SwitchContext, keep: boolean, e: unknown): vo
  */
 function guardSwitchAborted(ctx: SwitchContext, next: PreviewScene): boolean {
   if (ctx.aborted.v || ctx.isDisposed.v || ctx.myGen !== ctx.getGen()) {
-    try { next.dispose(); } catch (_) {}
+    safeDispose(next);
     ctx.inFlight = false;
     return true;
   }
@@ -254,7 +250,7 @@ function pushSwitchHistory(ctx: SwitchContext, keep: boolean, next: PreviewScene
     const active = ctx.getBuilt();
     for (const b of ctx.allBuilt) {
       if (b !== active) {
-        try { b.dispose(); } catch (_) { /* 防御性：个别适配器 dispose 抛错不阻塞 */ }
+        safeDispose(b);
       }
     }
     ctx.allBuilt.length = 0;

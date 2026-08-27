@@ -17,6 +17,7 @@ import { screenshotFromRenderer } from "../screenshot.ts";
 import { loadMcTints, getTintColorSync } from "../mc-tints.ts";
 import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import { textureCache } from "../texture-cache.ts";
+import { safeDispose } from "../safe-dispose.ts";
 
 /** Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） */
 export interface PackDeps {
@@ -166,10 +167,10 @@ function disposeContent(state: PackState, scene: THREE.Scene): void {
   for (const d of state.disposables) {
     d.traverse((o) => {
       const mesh = o as THREE.Mesh;
-      try { mesh.geometry?.dispose(); } catch {}
+      safeDispose(mesh.geometry);
       const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
       for (const m of mats) {
-        try { m.dispose(); } catch {}
+        safeDispose(m);
       }
     });
   }

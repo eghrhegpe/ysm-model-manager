@@ -34,7 +34,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 204 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 203 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 11 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -432,10 +432,9 @@
 | `frontend/src/features/version-updater.ts` | 215 |
 | `frontend/src/features/version-updater.ts` | 249 |
 | `frontend/src/features/version-updater.ts` | 259 |
-| `frontend/src/utils/3d/adapters/mount-preview-core.ts` | 385 |
-| `frontend/src/utils/3d/adapters/mount-preview-core.ts` | 824 |
-| `frontend/src/utils/3d/adapters/switch-preview.ts` | 137 |
-| `frontend/src/utils/3d/adapters/switch-preview.ts` | 227 |
+| `frontend/src/utils/3d/adapters/mount-preview-core.ts` | 387 |
+| `frontend/src/utils/3d/adapters/preview-loading.ts` | 38 |
+| `frontend/src/utils/3d/adapters/switch-preview.ts` | 139 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 95 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 387 |
 | `frontend/src/utils/dom/dialogs/batch-rename.ts` | 401 |

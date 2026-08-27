@@ -10,6 +10,8 @@ import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 import { recordLoadTrace } from "../load-trace.ts";
+import { safeDispose } from "../safe-dispose.ts";
+import { renderLoadingState } from "./preview-loading.ts";
 
 /** 体素数据（GetLitematicVoxelData 等返回 JSON） */
 interface VoxelData {
@@ -64,8 +66,7 @@ interface MdLiLayerControlEls {
 // ===== 阶段①：入口守卫 + 路径读取 + 数据解析 =====
 
 function mdLiShowLoading(ctx: PreviewBuildCtx): void {
-  ctx.loadingEl.innerHTML =
-    '<div style="font-size:32px">🧊</div><div>' + t("preview.loadingVoxels") + '</div><div style="width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden"><div style="height:100%;width:30%;background:var(--accent,#7c83ff);border-radius:2px;animation:preview-prog 1.5s ease-in-out infinite"></div></div>';
+  renderLoadingState(ctx.loadingEl, "🧊", "preview.loadingVoxels");
 }
 
 type MdLiLoadResult =
@@ -401,10 +402,10 @@ function mdLiBuildResult(
     menuItems,
     dispose(): void {
       unregisterModelRoot(built.modelGroup);
-      built.instancedMeshes.forEach((m) => { try { m.dispose(); } catch (_) {} });
-      built.materials.forEach((m) => { try { m.dispose(); } catch (_) {} });
+      built.instancedMeshes.forEach((m) => safeDispose(m));
+      built.materials.forEach((m) => safeDispose(m));
       built.boxGeo.dispose();
-      try { built.grid.dispose(); } catch (_) {}
+      safeDispose(built.grid);
     },
     screenshot: () => Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene, ctx.camera)),
   };

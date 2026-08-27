@@ -40,6 +40,8 @@ import { runFullCleanup, type CleanupContext } from "./cleanup-3d.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import type { SwitchContext } from "./switch-preview.ts";
 import { safeErrorMessage } from "../../safe-error-msg.ts";
+import { safeDispose } from "../safe-dispose.ts";
+import { showLoadFailure } from "./preview-loading.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import { fitCameraToRoots } from "../camera-setup.ts";
 import { assembleBoneSelectInfo, getMeshBoneId } from "../bone-raycast.ts";
@@ -411,7 +413,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     // 早期路径（cleanupFn 尚未赋值）：清理 tip 定时器 + 菜单，再拆 overlay
     if (tipTimeoutId) {
       clearTimeout(tipTimeoutId);
-      tipTimeoutId = undefined as unknown as ReturnType<typeof setTimeout>;
+      tipTimeoutId = undefined;
     }
     menuHandle.dispose();
     if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -547,7 +549,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   tip.textContent = "WASD 移动 · 空格/Shift 上下 · 拖动旋转 · 滚轮缩放 · ESC 关闭";
   overlay.insertBefore(tip, body);
   // 保存 timeoutId 供 cleanup 时 clearTimeout
-  let tipTimeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
+  let tipTimeoutId: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
     if (tip.parentNode) tip.remove();
   }, TIP_AUTO_DISMISS_MS);
 
@@ -753,7 +755,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       // ② 提示条定时器
       if (tipTimeoutId) {
         clearTimeout(tipTimeoutId);
-        tipTimeoutId = undefined as unknown as ReturnType<typeof setTimeout>;
+        tipTimeoutId = undefined;
       }
       // ③ 声明式根菜单（移除 dock/popup + 解绑 view click 监听）
       menuHandle.dispose();
@@ -772,7 +774,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
         for (const c of stale) scene.remove(c);
       }
       for (const b of allBuilt) {
-        try { b.dispose(); } catch (_) {}
+        safeDispose(b);
       }
       allBuilt.length = 0;
       sceneRegistry.reset();
@@ -820,12 +822,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     // 掩盖用户主动关闭的意图（旧实现 skeleton.ts 的 gen 守卫，迁移到核心统一承担）。
     if (aborted.v || myGen !== _gen) return;
     console.error("[preview 3D] 加载失败:", e);
-    loadingEl.innerHTML = `<div style="font-size:32px">⚠️</div><div>${t("preview.loadFailed")}: ${esc(safeErrorMessage(e))}</div>`;
-    bus.emit("toast:show", {
-      msg: "❌ " + friendlyError(e, t("preview.loadFailed")),
-      duration: TOAST_MS.long,
-      type: "error",
-    });
+    showLoadFailure(loadingEl, e);
   }
 }
 
@@ -858,7 +855,7 @@ function mpUnloadRole(ctx: MpUnloadCtx, id: string): void {
   // 无条件释放内容层 GPU：cooperate 跨 session 场景下 allBuilt 可能不含
   // entry.built（角色面板显示注册表全部角色，可卸载另一 session 注册的），
   // 以 allBuilt 命中与否决定 dispose 会漏释放（P3 round2）
-  try { entry.built.dispose(); } catch (_) { /* 防御性：个别适配器 dispose 抛错不阻塞 */ }
+  safeDispose(entry.built);
   const bi = ctx.allBuilt.indexOf(entry.built);
   if (bi >= 0) ctx.allBuilt.splice(bi, 1);
   for (const r of entry.roots) {
@@ -1026,7 +1023,7 @@ function mpSyncShadowLights(scene: THREE.Scene, shadowCap: ShadowCapability, lig
 }
 
 /** mpApplyWasdCameraMotion 的复用向量槽位（rAF loop 一次性创建，每帧传入） */
-interface MpWasmReuse {
+interface MpWasdReuse {
   camDir: THREE.Vector3;
   forward: THREE.Vector3;
   right: THREE.Vector3;
@@ -1043,7 +1040,7 @@ function mpApplyWasdCameraMotion(
   dt: number,
   orbitMode: boolean,
   ot: THREE.Vector3,
-  reuse: MpWasmReuse,
+  reuse: MpWasdReuse,
 ): void {
   cam.getWorldDirection(reuse.camDir);
   reuse.forward.set(reuse.camDir.x, 0, reuse.camDir.z).normalize();

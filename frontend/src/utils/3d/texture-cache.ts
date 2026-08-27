@@ -8,6 +8,7 @@
 // MMD/VRM 走 blob URL + 内置 Loader，暂不接入（需改造 Loader 管线，ROI 低）。
 
 import * as THREE from "three";
+import { safeDispose } from "./safe-dispose.ts";
 
 interface CacheEntry {
   tex: THREE.Texture;
@@ -48,14 +49,14 @@ export class TextureCacheImpl {
   invalidate(url: string): void {
     const entry = this.cache.get(url);
     if (!entry) return;
-    try { entry.tex.dispose(); } catch { /* defensive cleanup */ }
+    safeDispose(entry.tex);
     this.cache.delete(url);
   }
 
   /** session 结束时释放所有缓存纹理 */
   disposeAll(): void {
     for (const [, entry] of this.cache) {
-      try { entry.tex.dispose(); } catch { /* 防御性 */ }
+      safeDispose(entry.tex);
     }
     this.cache.clear();
   }

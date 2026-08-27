@@ -18,6 +18,8 @@ import { safeGet } from "../../dom/storage.ts"; // ADR-044：localStorage 统一
 import { getTextureDecoder, applyWorkerDecodedTextures, type DecodedTexture } from "./mmd-texture-decoder.ts";
 import { createPmxParser, buildPmxSceneSliced, type PmxParser, type PmxBuildResult } from "./mmd-pmx-parser.ts";
 import { Ktx2TextureLoader } from "./mmd-ktx2-texture-loader.ts";
+import { safeDispose } from "../safe-dispose.ts";
+import { renderLoadingState } from "./preview-loading.ts";
 import { startMainThreadWatch, formatLongTask } from "../../../utils/main-thread-watch.ts";
 import { recordLoadTrace } from "../load-trace.ts";
 import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
@@ -153,13 +155,13 @@ async function disposeMmdMesh(
       if (tex instanceof THREE.Texture) {
         totalGpuBytes += estimateTexGpuBytes(tex);
         texCount++;
-        try { tex.dispose(); } catch { /* 防御性 */ }
+        safeDispose(tex);
       }
     }
-    try { mat.dispose(); } catch { /* 防御性 */ }
+    safeDispose(mat);
   }
-  try { mesh.geometry.dispose();
-    mesh.skeleton?.dispose(); } catch { /* 防御性 */ }
+  safeDispose(mesh.geometry);
+  safeDispose(mesh.skeleton);
   const gpuMb = (totalGpuBytes / (1024 * 1024)).toFixed(1);
   void diag(port, op, `tex=${texCount} gpu≈${gpuMb}MB`, "ok");
 }
@@ -359,8 +361,7 @@ function mdMmDetectFormat(c: MdMmDetectFormatCtx): "pmx" | "pmd" {
 }
 
 async function mdMmStage1Input(c: MdMmStage1Ctx): Promise<void> {
-  c.ctx.loadingEl.innerHTML =
-    '<div style="font-size:32px">🎭</div><div>' + t("preview.loadingModel") + '</div><div style="width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden"><div id="ysm-mmd-progress" style="height:100%;width:5%;background:var(--accent,#7c83ff);border-radius:2px;transition:width 0.2s"></div></div>';
+  renderLoadingState(c.ctx.loadingEl, "🎭", "preview.loadingModel", "determinate", "ysm-mmd-progress");
   c.stopLongTaskWatch = startMainThreadWatch((info) => {
     void mmdDiag(c.effectivePort, "main-thread", formatLongTask(info), "warn");
   });

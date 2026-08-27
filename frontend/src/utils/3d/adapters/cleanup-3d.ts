@@ -22,6 +22,7 @@ import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { textureCache } from "../texture-cache.ts";
 import { clearModelRoots } from "../frustum-cull.ts";
 import { dbg } from "../../../utils/debug/debug.ts";
+import { safeDispose } from "../safe-dispose.ts";
 
 // ── GPU Info 类型（替代 as unknown as 类型断言）─────────────────────────────
 interface GpuMemoryInfo {
@@ -68,8 +69,8 @@ export interface CleanupContext {
   overlay: HTMLElement;
   nullHandle: () => void;
   adapter: { onClose?: () => void };
-  /** tip 自动消失定时器 ID（可变，0 表示无） */
-  getTipTimeoutId: () => ReturnType<typeof setTimeout> | 0;
+  /** tip 自动消失定时器 ID（可变，undefined 表示无） */
+  getTipTimeoutId: () => ReturnType<typeof setTimeout> | undefined;
 }
 
 // ── fullCleanup ────────────────────────────────────────────────────────────
@@ -110,14 +111,14 @@ export function runFullCleanup(ctx: CleanupContext): void {
   // 内容层先释放自身资源，核心再回收外壳
   // cooperate 模式下需逐一 dispose 所有已追加模型（adapter 专属 GPU 资源）
   for (const b of ctx.allBuilt) {
-    try { b.dispose(); } catch (_) { /* 防御性：个别适配器 dispose 抛错不阻塞全量释放 */ }
+    safeDispose(b);
   }
   ctx.allBuilt.length = 0;
   ctx.nullBuilt();
   // 程序化天空（ADR-073 L1）：还原 tone mapping 并释放 PMREM/几何/材质
   // 统一注册表：保存状态后由 registry 统一 dispose（已遍历所有能力，无需再逐个 dispose）
   try { sceneCapabilityRegistry.saveAll(); } catch (_) { /* 防御性 */ }
-  try { sceneCapabilityRegistry.dispose(); } catch (_) { /* 防御性释放 */ }
+  safeDispose(sceneCapabilityRegistry);
   // P0 纹理缓存池：session 结束释放所有缓存纹理
   try { textureCache.disposeAll(); } catch (_) { /* 防御性释放 */ }
   // 视锥裁剪：清空模型根节点注册

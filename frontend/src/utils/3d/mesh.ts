@@ -9,6 +9,7 @@
 import * as THREE from "three";
 import { type Spec3D } from "./model3d.ts"; // 仅类型 import（编译后擦除，无运行时循环依赖）
 import { applyRotationIfNonIdentity } from "./quaternion.ts";
+import { safeDispose } from "./safe-dispose.ts";
 
 /** 模型显示缩放（基岩标准 16px = 1m，严格对齐 YSMViewer ExportScale，索引 2.14 收敛） */
 const MODEL_SCALE = 1 / 16;
@@ -42,11 +43,11 @@ export function disposeMaterial(
     for (const key of ALL_TEXTURE_KEYS) {
       const tex = (m as unknown as Record<string, unknown | THREE.Texture | null>)[key];
       if (tex && typeof (tex as THREE.Texture).dispose === "function") {
-        try { (tex as THREE.Texture).dispose(); } catch {}
+        safeDispose(tex as THREE.Texture);
       }
     }
   }
-  try { m.dispose(); } catch {}
+  safeDispose(m);
 }
 
 /** 构建 3D 场景网格（组件分组 + 骨骼树），返回供渲染/交互使用的组结构。 */

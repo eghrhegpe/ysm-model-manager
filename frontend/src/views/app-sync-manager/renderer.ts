@@ -124,13 +124,18 @@ function renderScanDirs(self: SyncRenderSelf): void {
     '">' +
     esc(label) +
     "</span>";
-  if (dirs.warning) {
-    // 仓库基准疑似过宽：优先展示告警，避免静默混入
+  if (dirs.warningCode === "scan_dir_wide" && dirs.warningParams) {
+    // 仓库基准疑似过宽：优先展示告警，避免静默混入（后端只给 code+参数，文案走 i18n 组装）
+    const warnText = t("syncManager.scanDirWide", {
+      label: dirs.warningParams.label,
+      dir: dirs.warningParams.dir,
+      subDir: dirs.warningParams.subDir,
+    });
     summaryEl.innerHTML =
       '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--err)" title="' +
-      esc(dirs.warning) +
+      esc(warnText) +
       '">' +
-      esc(dirs.warning) +
+      esc(warnText) +
       "</span>";
     return;
   }

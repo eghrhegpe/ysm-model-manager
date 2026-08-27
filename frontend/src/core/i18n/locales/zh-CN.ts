@@ -600,6 +600,7 @@ export const zhCN: Record<string, string> = {
   "syncManager.scanRootsTitle": "同步目录",
   "syncManager.scanGlobal": "仓库基准：{dir}",
   "syncManager.scanInstance": "实例扫描：{dir}",
+  "syncManager.scanDirWide": "⚠️ {label} 仓库基准目录 {dir} 疑似过宽（含 mods/config/schematics 等子目录），同步可能混入其他资源；建议将专属根指向专门的 {subDir} 子目录",
   // P0 修复：右键菜单 rtype 守卫 toast（i18n 合规）
   "ctx.emptyRtype": "❌ 整合包缺少类型信息，右键操作已禁用",
   "ctx.missingPath": "❌ 整合包目录未找到",

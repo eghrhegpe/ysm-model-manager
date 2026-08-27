@@ -38,7 +38,7 @@ invariant_anchors:
 - 导出类：`AppSyncManager`
 - 监听 bus：`stats:refresh`（重新 `_loadData` + `_render`；回调内以 `isConnected` 守卫，重订阅前先清旧 `_unsubs`；`_loadData().then()` 链尾接 `.catch` 打 `console.warn`，避免 `_render` 抛错被 Promise 静默吞掉）
 - 派发 bus：`repo:rtype-changed`（类型标签切换联动 `app-sidebar`）、`toast:show`、`stats:refresh`（单文件操作成功后）
-- Go 调用（动态 import bindings）：`LoadResourceTypes`、`GetInstanceSyncStatus`、`GetSyncScanDirs`（同步目录可见性，返回 `{global, instance, warning}`；`warning` 在仓库基准疑似过宽（含 mods/config/FilesRoot 特征）时提示，防静默混入）、`PushSingleResourceToInstance`、`PullSingleResourceFromInstance`
+- Go 调用（动态 import bindings）：`LoadResourceTypes`、`GetInstanceSyncStatus`、`GetSyncScanDirs`（同步目录可见性，返回 `{global, instance, warningCode, warningParams}`；`warningCode="scan_dir_wide"` 时仓库基准疑似过宽（含 mods/config/FilesRoot 特征），显示文案由前端 i18n 组装，防静默混入）、`PushSingleResourceToInstance`、`PullSingleResourceFromInstance`
 
 ## 与其他子系统关系
 

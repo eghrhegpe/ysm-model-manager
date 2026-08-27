@@ -53,7 +53,7 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
         const dirsJson = await GetSyncScanDirs(self._selectedType, self._instance);
         if (gen !== self._gen) return;
         if (!self._scanDirs) self._scanDirs = {};
-        self._scanDirs[self._selectedType] = JSON.parse(dirsJson) as { global: string; instance: string; warning?: string };
+        self._scanDirs[self._selectedType] = JSON.parse(dirsJson) as { global: string; instance: string; warningCode?: string; warningParams?: { label: string; dir: string; subDir: string } };
       } catch {
         /* 目录摘要非关键路径，静默降级 */
       }

@@ -41,8 +41,9 @@ export interface SyncManagerSelf {
   _dirOpen: Record<string, boolean>;
   /** 各资源类型在 FilesRoot 下的仓库根路径缓存 */
   _filesRoots: Record<string, string>;
-  /** 各资源类型实际同步目录对（GetSyncScanDirs 结果：global=仓库基准, instance=实例扫描, warning=疑似过宽提示） */
-  _scanDirs: Record<string, { global: string; instance: string; warning?: string }>;
+  /** 各资源类型实际同步目录对（GetSyncScanDirs 结果：global=仓库基准, instance=实例扫描；
+   *  warningCode=结构化告警码（scan_dir_wide），warningParams=告警参数，显示文案由 i18n 组装） */
+  _scanDirs: Record<string, { global: string; instance: string; warningCode?: string; warningParams?: { label: string; dir: string; subDir: string } }>;
   isConnected?: boolean;
   innerHTML: string;
   querySelector(sel: string): HTMLElement | null;

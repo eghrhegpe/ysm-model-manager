@@ -758,9 +758,9 @@
 | `App.PullResourceFromInstance()` | `internal/app/app_install_instance:410` | PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync） |
 | `App.PullSingleResourceFromInstance()` | `internal/app/app_install_instance:452` | PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库 PullSingleResourceFromInstance 从 |
 | `App.PushSingleResourceToInstance()` | `internal/app/app_install_instance:473` | PushSingleResourceToInstance 推送单个资源到整合包（分派核心下沉 go/sync） |
-| `App.GetSyncScanDirs()` | `internal/app/app_install_instance:523` | GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。 |
-| `App.GetInstanceSyncStatus()` | `internal/app/app_install_instance:564` | GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表） subtype 可选，指定子类型目录名（如 EntityPlayer），仅 subDir |
-| `App.HasYSMMod()` | `internal/app/app_install_instance:626` | ========== YSM 检测 ========== |
+| `App.GetSyncScanDirs()` | `internal/app/app_install_instance:525` | GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。 |
+| `App.GetInstanceSyncStatus()` | `internal/app/app_install_instance:574` | GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表） subtype 可选，指定子类型目录名（如 EntityPlayer），仅 subDir |
+| `App.HasYSMMod()` | `internal/app/app_install_instance:636` | ========== YSM 检测 ========== |
 | `App.SetLinkMode()` | `internal/app/app_install_link:11` | ========== 链接模式 ========== |
 | `App.GetLinkMode()` | `internal/app/app_install_link:38` | — |
 | `App.AddImportLog()` | `internal/app/app_install_log:8` | ========== 日志 ========== |
@@ -2235,7 +2235,7 @@
 | `EventSelf()` | `frontend/src/views/app-sync-manager/events:9` | — |
 | `bindEvents()` | `frontend/src/views/app-sync-manager/events:17` | 绑定所有 DOM 事件（状态筛选 / 单行操作按钮 / dir-level 文件夹展开折叠） |
 | `SyncManagerSelf()` | `frontend/src/views/app-sync-manager/index:27` | 合并四子模块（store / renderer / events / network）对组件实例的接口需求， 一统江湖，消除各处 `as any` 桥接。各子模块可改从此导入。 |
-| `AppSyncManager()` | `frontend/src/views/app-sync-manager/index:71` | — |
+| `AppSyncManager()` | `frontend/src/views/app-sync-manager/index:72` | — |
 | `NetworkSelf()` | `frontend/src/views/app-sync-manager/network:14` | — |
 | `performSingleOp()` | `frontend/src/views/app-sync-manager/network:27` | 统一推送 / 拉取单文件操作。 |
 | `SyncRenderSelf()` | `frontend/src/views/app-sync-manager/renderer:20` | — |

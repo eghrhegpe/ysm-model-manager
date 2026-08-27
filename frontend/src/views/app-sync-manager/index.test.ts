@@ -35,7 +35,7 @@ const { mocks } = vi.hoisted(() => {
     PullSingleResourceFromInstance: vi.fn().mockResolvedValue(undefined),
     GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
     GetSyncScanDirs: vi.fn().mockResolvedValue(
-      JSON.stringify({ global: "/repo/schematics", instance: "/mc/inst/x/schematics", warning: "" }),
+      JSON.stringify({ global: "/repo/schematics", instance: "/mc/inst/x/schematics", warningCode: "" }),
     ),
     ScanModelEntriesWithLabel: vi.fn().mockResolvedValue([]),
   };
@@ -90,7 +90,7 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
 
   it("仓库基准过宽 → 摘要栏显示告警而非目录", async () => {
     mocks.GetSyncScanDirs.mockResolvedValue(
-      JSON.stringify({ global: "/mc", instance: "/mc/inst/x/schematics", warning: "⚠️ 蓝图 仓库基准目录 /mc 疑似过宽" }),
+      JSON.stringify({ global: "/mc", instance: "/mc/inst/x/schematics", warningCode: "scan_dir_wide", warningParams: { label: "蓝图", dir: "/mc", subDir: "schematics" } }),
     );
     const el = document.createElement("app-sync-manager");
     el.setAttribute("instance", "test");

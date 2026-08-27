@@ -598,6 +598,7 @@ export const ja: Record<string, string> = {
   "syncManager.scanRootsTitle": "同期ディレクトリ",
   "syncManager.scanGlobal": "リポジトリ基準：{dir}",
   "syncManager.scanInstance": "インスタンススキャン：{dir}",
+  "syncManager.scanDirWide": "⚠️ {label} リポジトリ基準ディレクトリ {dir} が広すぎます（mods/config/schematics サブディレクトリを含む）。同期に他のリソースが混入する可能性があります。専用の {subDir} サブディレクトリを指定してください",
   // P0 修正: 右クリックメニュー rtype ガード トースト（i18n 準拠）
   "ctx.emptyRtype": "❌ パックにタイプ情報がありません、右クリック操作は無効です",
   "ctx.missingPath": "❌ パックディレクトリが見つかりません",

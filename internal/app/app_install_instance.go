@@ -516,27 +516,32 @@ func globalRootSuspicious(dir string) bool {
 // GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。
 //   - global：仓库侧基准目录（GetRepoRoot 结果）
 //   - instance：实例侧实际扫描目录（types.FindInstDir 结果，可能因兜底命中非标准目录）
-//   - warning：仓库侧目录疑似过宽时的非阻断提示（空串=正常）
+//   - warningCode：仓库侧目录疑似过宽时的结构化告警码（"scan_dir_wide"，空串=正常）
+//   - warningParams：告警参数（label=类型名、dir=过宽目录、subDir=建议专属子目录）；
+//     显示文案由前端按 i18n 组装，后端不吐拼好的中文（避免 en/ja 用户看到中文警告）
 //
 // 用途：让前端同步页展示“到底从哪个文件夹扫”，尤其兜底命中 Sable-Schematics 时用户可见。
 // 不触发全量扫描，仅做目录解析 + 标准目录存在性/证据检查，体感轻量。
 func (a *App) GetSyncScanDirs(rtype, instanceName string) string {
 	cfg := a.LoadAppConfig()
 	if cfg.McRoot == "" {
-		return `{"global":"","instance":"","warning":""}`
+		return `{"global":"","instance":"","warningCode":"","warningParams":{}}`
 	}
 	globalDir, _ := a.filesRootForSync(rtype)
-	warning := ""
+	warningCode := ""
+	warningParams := map[string]string{}
 	if globalRootSuspicious(globalDir) {
 		rt := types.RegistryType(rtype)
 		label := rtype
 		if rt != nil {
 			label = rt.Name
 		}
-		warning = fmt.Sprintf(
-			"⚠️ %s 仓库基准目录 %s 疑似过宽（含 mods/config/schematics 等子目录），同步可能混入其他资源；建议将专属根指向专门的 %s 子目录",
-			label, globalDir, types.StorageSubDir(rtype),
-		)
+		warningCode = "scan_dir_wide"
+		warningParams = map[string]string{
+			"label":  label,
+			"dir":    globalDir,
+			"subDir": types.StorageSubDir(rtype),
+		}
 	}
 	instanceDir := ""
 	for _, ins := range a.ListVersionInstances(cfg.McRoot) {
@@ -549,8 +554,13 @@ func (a *App) GetSyncScanDirs(rtype, instanceName string) string {
 	}
 	return marshalJSON(
 		"GetSyncScanDirs",
-		map[string]string{"global": globalDir, "instance": instanceDir, "warning": warning},
-		`{"global":"","instance":"","warning":""}`,
+		map[string]any{
+			"global":        globalDir,
+			"instance":      instanceDir,
+			"warningCode":   warningCode,
+			"warningParams": warningParams,
+		},
+		`{"global":"","instance":"","warningCode":"","warningParams":{}}`,
 	)
 }
 

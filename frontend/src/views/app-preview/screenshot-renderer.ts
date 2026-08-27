@@ -10,16 +10,20 @@ import { buildSpecFromGeometryJSON } from "../../utils/3d/spec-builder.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
 
 // ===== 3D 场景灯光样板（原 scene-lights.ts，唯一消费者是本文件，合并回）=====
-// 标准主灯方向（renderer-setup / screenshot-renderer 口径一致）
+// 标准主灯参数（renderer-setup / screenshot-renderer 口径一致）
 const DIR_LIGHT_POS = [10, 30, 20] as const;
+const AMBIENT_LIGHT_COLOR = 0xffffff;
+const AMBIENT_LIGHT_INTENSITY = 1.0;
+const DIRECTIONAL_LIGHT_COLOR = 0xffffff;
+const DIRECTIONAL_LIGHT_INTENSITY = 2;
 
 /**
  * 添加 3D 场景标准主灯（AmbientLight 0xffffff@1.0 + DirectionalLight 0xffffff@2 位于 [10,30,20]）。
  * 原 scene-lights.ts 唯一消费者是 renderMultiAngle，17 行单函数合并回宿主（复用分析结论）。
  */
 function addStandardSceneLights(scene: THREE.Scene): void {
-  scene.add(new THREE.AmbientLight(0xffffff, 1.0));
-  const dl = new THREE.DirectionalLight(0xffffff, 2);
+  scene.add(new THREE.AmbientLight(AMBIENT_LIGHT_COLOR, AMBIENT_LIGHT_INTENSITY));
+  const dl = new THREE.DirectionalLight(DIRECTIONAL_LIGHT_COLOR, DIRECTIONAL_LIGHT_INTENSITY);
   dl.position.set(DIR_LIGHT_POS[0], DIR_LIGHT_POS[1], DIR_LIGHT_POS[2]);
   scene.add(dl);
 }

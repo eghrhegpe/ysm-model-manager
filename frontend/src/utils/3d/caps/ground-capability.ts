@@ -567,13 +567,14 @@ function gcBuildMain(cap: GroundCapability): MenuControlDef[] {
 }
 
 function gcBuildWaterGroup(cap: GroundCapability): MenuControlDef[] {
+  const WATER_GROUP = "preview.groundGroupWater";
   return [
     {
       id: "ground-wetness",
       kind: "slider",
       labelKey: "preview.groundWetness",
       fallback: "湿润度",
-      group: "preview.groundGroupWater",
+      group: WATER_GROUP,
       slider: { min: 0, max: 1, step: 0.05 },
       getValue: () => cap.getWetness(),
       setValue: (v) => cap.setWetness(v as number),
@@ -583,7 +584,7 @@ function gcBuildWaterGroup(cap: GroundCapability): MenuControlDef[] {
       kind: "color",
       labelKey: "preview.groundWaterColor",
       fallback: "水色",
-      group: "preview.groundGroupWater",
+      group: WATER_GROUP,
       getValue: () => cap.getWaterColor(),
       setValue: (v) => cap.setWaterColor(v as number),
     },
@@ -592,7 +593,7 @@ function gcBuildWaterGroup(cap: GroundCapability): MenuControlDef[] {
       kind: "slider",
       labelKey: "preview.groundWaterOpacity",
       fallback: "不透明度",
-      group: "preview.groundGroupWater",
+      group: WATER_GROUP,
       slider: { min: 0, max: 1, step: 0.05 },
       getValue: () => cap.getWaterOpacity(),
       setValue: (v) => cap.setWaterOpacity(v as number),
@@ -602,7 +603,7 @@ function gcBuildWaterGroup(cap: GroundCapability): MenuControlDef[] {
       kind: "slider",
       labelKey: "preview.groundNormalStrength",
       fallback: "法线强度",
-      group: "preview.groundGroupWater",
+      group: WATER_GROUP,
       slider: { min: 0, max: 1, step: 0.05 },
       getValue: () => cap.getNormalStrength(),
       setValue: (v) => cap.setNormalStrength(v as number),

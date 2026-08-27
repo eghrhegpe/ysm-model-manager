@@ -2155,9 +2155,9 @@
 | `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:37` | 清理场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:42` | 任意新预览派发时调用，作废在途场景加载 |
 | `resolveSceneSiblings()` | `frontend/src/views/app-preview/scene-siblings:8` | 场景模型候选（只扫 SceneModel 子目录）；失败返回 [] |
-| `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:27` | — |
-| `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:32` | — |
-| `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:39` | — |
+| `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:31` | — |
+| `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:36` | — |
+| `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:43` | — |
 | `resolveSiblingsByType()` | `frontend/src/views/app-preview/siblings:13` | 解析某资源类型的同目录候选主文件路径列表。 |
 | `PanelHandle()` | `frontend/src/views/app-preview/skeleton-fill-panel:11` | fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-fill-panel:37` | — |

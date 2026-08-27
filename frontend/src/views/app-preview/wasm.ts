@@ -11,6 +11,7 @@ import { parseYsmJsonDirect } from "./parse-ysm-json.ts";
 import { extractAnimGroupsAndConfigs } from "../../utils/format/ysm-anim-config.ts";
 import { buildOrderedTexKeys } from "./texture-order.ts";
 import { getApp } from "../../backend/app.ts";
+import { swallowError } from "../../utils/core/async.ts";
 
 /** 并发去重：同一路径在途解码共享（Android 兜底与纹理并行触发时只解一次）。
  *  无此守卫时 preloadModel 并行发起的两次 decodeYsmViaWasm 会各自完整解码
@@ -335,9 +336,7 @@ async function mdWsTryJsonDispatch(
   await mdWsLoadAvatarsForJson(ctx, finalResult);
 
   cacheSet(ctx.modelPath, { ...finalResult, _decodedBy: "🧠 JSON 直接解析" });
-  getApp()
-    .then(({ CacheModelAvatars }) => CacheModelAvatars(ctx.modelPath))
-    .catch(() => {});
+  swallowError(getApp().then(({ CacheModelAvatars }) => CacheModelAvatars(ctx.modelPath)));
   return finalResult;
 }
 
@@ -822,9 +821,7 @@ async function mdWsHandleWasmDecode(
     configMenus: meta.configMenus,
   };
   cacheSet(modelPath, { ...result, _decodedBy: "🧠 WASM 内置解码" });
-  getApp()
-    .then(({ CacheModelAvatars }) => CacheModelAvatars(modelPath))
-    .catch(() => {});
+  swallowError(getApp().then(({ CacheModelAvatars }) => CacheModelAvatars(modelPath)));
   return result;
 }
 

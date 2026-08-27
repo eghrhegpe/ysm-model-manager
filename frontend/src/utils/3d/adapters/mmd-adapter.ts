@@ -756,7 +756,10 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
                   (mat as unknown as Record<string, unknown>)[key] = compressedTex;
                   tex.dispose();
                   mat.needsUpdate = true;
-                }).catch(() => {});
+                })
+                // KTX2 缓存替换失败 → 保留原纹理，不阻断批量替换（链保持 resolve，
+                // 供外层 Promise.all await 与 replaced= 计数——不可改 fire-and-forget）
+                .catch(() => {});
               }),
             );
           }

@@ -6,6 +6,7 @@
 
 import { RESOURCE_TYPE_LABELS, resolveTypeSafe, getPreviewableTypeTabs } from "../../resource/types.ts";
 import { attachTooltip } from "../../../utils/dom/tooltip.ts";
+import { swallowError } from "../../../utils/core/async.ts";
 import { safeGet, safeSet } from "../../../utils/dom/storage.ts";
 import { t } from "../../../core/i18n/t.ts";
 import type { PreviewMenuCtx } from "./preview-menu.ts";
@@ -112,7 +113,7 @@ function applySwitchRowClick(
   const r = !sameType && ctx.switchExternal
     ? ctx.switchExternal(p, ctx.getSiblings(), ...extra)
     : ctx.switchTo(p, ...extra);
-  if (r && typeof (r as Promise<void>).then === "function") void (r as Promise<void>).catch(() => {});
+  if (r && typeof (r as Promise<void>).then === "function") swallowError(r as Promise<void>);
 }
 
 /** [子函数 5/6] 绘制单条候选行：图标 / 标签 / ➕追加按钮 / 替换行点击。 */

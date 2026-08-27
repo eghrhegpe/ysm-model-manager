@@ -1712,6 +1712,10 @@ export const autoSidebar = [
             "link": "/knowledge/ground-cap-gcbuildmaterialgroup-133"
           },
           {
+            "text": "YSM (Bedrock) 动画管线",
+            "link": "/knowledge/knowledge_ysm-anim-pipeline"
+          },
+          {
             "text": "MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现",
             "link": "/knowledge/mc-ao-tint"
           },

@@ -648,10 +648,10 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     session.sceneBaseline = new Set(i.scene.children);
     session.built = await adapter.build(
       {
-        scene: infra?.scene,
-        camera: infra?.camera,
-        controls: infra?.controls,
-        renderer: infra?.renderer,
+        scene: i.scene,
+        camera: i.camera,
+        controls: i.controls,
+        renderer: i.renderer,
         cameraControls: selfMode ? undefined : camBridge,
         viewContainer,
         loadingEl,

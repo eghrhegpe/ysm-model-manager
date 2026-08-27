@@ -2005,7 +2005,7 @@
 | `startDedup()` | `frontend/src/views/app-content/diagnostics/init` | — |
 | `getDedupConfig()` | `frontend/src/views/app-content/diagnostics/init` | — |
 | `resetDedupConfig()` | `frontend/src/views/app-content/diagnostics/init` | — |
-| `initDiagnostics()` | `frontend/src/views/app-content/diagnostics/init:207` | 初始化诊断页所有功能 |
+| `initDiagnostics()` | `frontend/src/views/app-content/diagnostics/init:227` | 初始化诊断页所有功能 |
 | `EscFn()` | `frontend/src/views/app-content/diagnostics/logs:9` | 转义函数签名（单一事实源 = utils/dom/html.ts 的 esc；调用方以 (s) =&gt; esc(String(s || "")) 包装适配） |
 | `loadDiagnosticsLogs()` | `frontend/src/views/app-content/diagnostics/logs:189` | — |
 | `loadRuntimeLogs()` | `frontend/src/views/app-content/diagnostics/logs:209` | 加载运行时日志（watcher/sync 等标准库 log 输出） |

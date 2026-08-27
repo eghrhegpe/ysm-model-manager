@@ -6,6 +6,7 @@ import { t } from "../../../core/i18n/t.ts";
 import { bus } from "../../../bus.ts";
 import { getApp } from "../../../backend/app.ts";
 import { can } from "../../../utils/dom/capabilities.ts";
+import { isViewerMode } from "../../../utils/dom/android-bridge.ts";
 import { friendlyError } from "../../../utils/dom/errors.ts";
 import { loadDiagnosticsLogs, loadRuntimeLogs, type EscFn } from "./logs.ts";
 import { scanConflicts, scanSyncConflicts } from "./conflicts.ts";
@@ -199,12 +200,32 @@ function dgInBindLogSearch(root: ShadowRoot, esc: EscFn): void {
   }
 }
 
+/** 查看器/网页版：隐藏依赖 Go 本地能力或 CLI 的诊断面板，避免“可见但不可用” */
+function dgInHideDesktopOnly(root: ShadowRoot): void {
+  if (!isViewerMode()) return;
+  for (const btn of root.querySelectorAll<HTMLElement>('[data-diag="conflict"], [data-diag="health"], [data-diag="sync-conflict"]')) {
+    btn.style.display = "none";
+  }
+  for (const id of [
+    "diag-scan-conflict",
+    "diag-scan-health",
+    "diag-scan-sync-conflict",
+    "diag-perf-run",
+    "diag-perf-gui",
+    "diag-perf-log",
+  ]) {
+    const el = root.getElementById(id);
+    if (el) el.style.display = "none";
+  }
+}
+
 /**
  * 初始化诊断页所有功能
  * @param root - 组件 shadow root
  * @param esc - HTML 转义函数
  */
 export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
+  dgInHideDesktopOnly(root);
   dgInBindRefreshClear(root, esc);
   dgInBindCopyPanel(root);
   dgInBindCopyRows(root);

@@ -47,6 +47,7 @@
   },
   "knip": {
     "ignoreDependencies": [
+      "@biomejs/biome",
       "ts-morph"
     ]
   }

@@ -55,7 +55,9 @@ export function recordLoadTrace(trace: LoadTrace): void {
 }
 
 export function getLoadTraces(): LoadTrace[] {
-  return _store;
+  // 返回浅拷贝快照，防止调用方通过 push/splice 绕过 MAX_RECORDS 上限。
+  // perf-trace.ts 的消费方式（.length / 索引 / forEach）均为只读操作，快照无损。
+  return _store.slice();
 }
 
 export function clearLoadTraces(): void {

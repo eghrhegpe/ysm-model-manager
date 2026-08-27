@@ -1609,7 +1609,7 @@
 | `LoadTrace()` | `frontend/src/utils/3d/load-trace:38` | — |
 | `recordLoadTrace()` | `frontend/src/utils/3d/load-trace:52` | — |
 | `getLoadTraces()` | `frontend/src/utils/3d/load-trace:57` | — |
-| `clearLoadTraces()` | `frontend/src/utils/3d/load-trace:61` | — |
+| `clearLoadTraces()` | `frontend/src/utils/3d/load-trace:63` | — |
 | `loadMcTints()` | `frontend/src/utils/3d/mc-tints:29` | 预载 vendored tints 表（幂等；失败抛错由调用方降级兜底）。 |
 | `getTintColorSync()` | `frontend/src/utils/3d/mc-tints:51` | 取某染色类别在某 biome 下的颜色（默认 plains）。 |
 | `bakeMeshFragments()` | `frontend/src/utils/3d/mesh-baker:10` | Bake fragments once, then batch by animated bone, texture, and alpha mode. |

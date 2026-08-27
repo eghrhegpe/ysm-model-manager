@@ -1157,6 +1157,11 @@ export const en: Record<string, string> = {
   "preview.facesLabel": "Faces",
   "preview.hidePanel": "◀ Hide info",
   "preview.showPanel": "▶ Show info",
+  "preview.noLightCap": "Open the lighting panel after entering 3D preview",
+  "preview.bone.selectHint": "Click a bone to view details",
+  "preview.customMorph": "Custom Morph",
+  "preview.sceneModel": "Scene",
+  "preview.stageAnim": "Stage",
 
   // ── Performance diagnostics (perf-cli) ──
   "perf.copyRaw": "Copy raw output to clipboard",

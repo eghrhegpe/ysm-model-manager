@@ -165,7 +165,7 @@ export async function showScenePreview(
   detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>🏗️ ${t("preview.sceneModel") || "场景"}</h3>
+  <h3>🏗️ ${t("preview.sceneModel")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center">
@@ -195,7 +195,7 @@ export async function showMorphPreview(
   detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>😊 ${t("preview.customMorph") || "自定义表情"}</h3>
+  <h3>😊 ${t("preview.customMorph")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
@@ -255,7 +255,7 @@ export async function showStagePreview(
   detailGen.invalidate();
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>🎤 ${t("preview.stageAnim") || "舞台"}</h3>
+  <h3>🎤 ${t("preview.stageAnim")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">

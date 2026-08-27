@@ -40,7 +40,7 @@
 | Go·YSM 核心 | 7 | 26 |
 | Go(internal)·应用入口 | 29 | 213 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
-| frontend/backend | 23 | 117 |
+| frontend/backend | 24 | 119 |
 | 前端·核心 | 18 | 37 |
 | 前端·特性 | 17 | 84 |
 | 前端·服务 | 2 | 18 |
@@ -50,7 +50,7 @@
 | frontend/views | 117 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **493** | **2087** |
+| **合计** | **494** | **2089** |
 
 ## Go·头像
 
@@ -946,6 +946,8 @@
 | `getStatsPoolSize()` | `frontend/src/backend/browser-adapter` | — |
 | `prefetchStatsWorker()` | `frontend/src/backend/browser-adapter` | — |
 | `browserAdapter()` | `frontend/src/backend/browser-adapter:70` | 浏览器后端（Proxy 动态形状，未实现 binding 一律 fail-fast） |
+| `CLI_ALLOWLIST()` | `frontend/src/backend/cli-allowlist:10` | 前端静态 CLI 白名单（网页版 + 桌面离线兜底，子集需与 Go 侧 curation 同步） |
+| `CLIAllowlistCommand()` | `frontend/src/backend/cli-allowlist:33` | — |
 | `isCrossOriginIsolated()` | `frontend/src/backend/coi-sw:15` | 当前是否已跨源隔离（SW 补头后 crossOriginIsolated=true；供多线程 WASM 分支） |
 | `registerCoiServiceWorker()` | `frontend/src/backend/coi-sw:20` | 注册 COI SW（网页版）：首次注册后 reload 一次让浏览器重新导航经 SW（解锁跨源隔离） |
 | `ZipEntryMeta()` | `frontend/src/backend/extract:33` | ZIP 中央目录条目元数据（pre-parse 产物） |
@@ -996,7 +998,7 @@
 | `nbtVoxelView()` | `frontend/src/backend/voxel-parse:402` | 对齐 voxel.go:286-382 BuildNbtVoxelData：structure NBT 体素视图。 |
 | `schematicVoxelView()` | `frontend/src/backend/voxel-parse:570` | 对齐 voxel.go:384-491 BuildSchematicVoxelData：schematic 体素视图。 |
 | `decodeVoxelNbt()` | `frontend/src/backend/voxel-parse:665` | 纯函数：base64 字节 → NBT root（IO 与解码解耦——本函数无任何 IO，输入 b64 字符串 输出解析后的 root 对象；readVoxelJson 等装配层只 |
-| `webCliBindings()` | `frontend/src/backend/web-cli:33` | 网页版 CLI 绑定 |
+| `webCliBindings()` | `frontend/src/backend/web-cli:12` | 网页版 CLI 绑定 |
 | `WebUnsupportedError()` | `frontend/src/backend/web-common:8` | 网页版专属错误：binding 浏览器端未实现（Phase 3 能力门控隐藏对应 UI） |
 | `WEB_ROOT()` | `frontend/src/backend/web-common:16` | 网页版虚拟仓库根（路径语义与桌面一致：/web/&lt;type&gt;/&lt;name&gt;/&lt;rel&gt;） |
 | `isWebPath()` | `frontend/src/backend/web-common:27` | 校验是否为 /web/ 虚拟仓库路径（含 type 段与至少一个后续段） |
@@ -1181,18 +1183,18 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `CLIArgs()` | `frontend/src/services/cli-bridge:13` | CLI 命令参数（统一格式：key-value map） |
-| `CLIResponse()` | `frontend/src/services/cli-bridge:35` | CLI 统一响应 |
-| `ALLOWED_CLI_COMMANDS()` | `frontend/src/services/cli-bridge:45` | 允许的 CLI 命令默认白名单（网页版降级 + 首次加载缓存用） |
-| `resetDynamicCommandsCache()` | `frontend/src/services/cli-bridge:73` | 重置动态白名单缓存（供测试使用） |
-| `executeCLI()` | `frontend/src/services/cli-bridge:120` | 执行 CLI 命令（核心入口） |
-| `getAllowedCLICommands()` | `frontend/src/services/cli-bridge:169` | 获取允许的 CLI 命令列表（优先使用动态缓存） |
-| `cliSearch()` | `frontend/src/services/cli-bridge:184` | 搜索模型 |
-| `cliList()` | `frontend/src/services/cli-bridge:193` | 列出所有模型 |
-| `cliAnalyze()` | `frontend/src/services/cli-bridge:198` | 分析模型 |
-| `cliCacheStatus()` | `frontend/src/services/cli-bridge:203` | 缓存状态查询 |
-| `buildArgsMap()` | `frontend/src/services/cli-bridge:210` | 构建参数 map（过滤 undefined 和 null） |
-| `parseCLIResponse()` | `frontend/src/services/cli-bridge:221` | 解析 CLI JSON 响应 |
+| `ALLOWED_CLI_COMMANDS()` | `frontend/src/services/cli-bridge:12` | — |
+| `CLIArgs()` | `frontend/src/services/cli-bridge:17` | CLI 命令参数（统一格式：key-value map） |
+| `CLIResponse()` | `frontend/src/services/cli-bridge:39` | CLI 统一响应 |
+| `resetDynamicCommandsCache()` | `frontend/src/services/cli-bridge:53` | 重置动态白名单缓存（供测试使用） |
+| `executeCLI()` | `frontend/src/services/cli-bridge:99` | 执行 CLI 命令（核心入口） |
+| `getAllowedCLICommands()` | `frontend/src/services/cli-bridge:148` | 获取允许的 CLI 命令列表（优先使用动态缓存） |
+| `cliSearch()` | `frontend/src/services/cli-bridge:163` | 搜索模型 |
+| `cliList()` | `frontend/src/services/cli-bridge:172` | 列出所有模型 |
+| `cliAnalyze()` | `frontend/src/services/cli-bridge:177` | 分析模型 |
+| `cliCacheStatus()` | `frontend/src/services/cli-bridge:182` | 缓存状态查询 |
+| `buildArgsMap()` | `frontend/src/services/cli-bridge:189` | 构建参数 map（过滤 undefined 和 null） |
+| `parseCLIResponse()` | `frontend/src/services/cli-bridge:200` | 解析 CLI JSON 响应 |
 | `ServiceName()` | `frontend/src/services/registry:11` | 已知服务名（新服务先在 app-modules.ts 注册，再在此登记） |
 | `register()` | `frontend/src/services/registry:18` | 注册一个服务（.ts 调用方：register("name", impl as X) 声明类型；重复注册覆盖旧实例并告警） |
 | `get()` | `frontend/src/services/registry:24` | 获取一个服务（.ts 调用方：get&lt;X&gt;("name") 断言期望类型；未注册抛错，错误含服务名） |

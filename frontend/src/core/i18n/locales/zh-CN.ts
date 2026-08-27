@@ -1160,6 +1160,12 @@ export const zhCN: Record<string, string> = {
   "preview.facesLabel": "面",
   "preview.hidePanel": "◀ 隐藏信息",
   "preview.showPanel": "▶ 显示信息",
+  "preview.noLightCap": "进入 3D 后再打开灯光面板",
+  "preview.bone.selectHint": "点击骨骼查看详情",
+  "preview.customMorph": "自定义表情",
+  "preview.sceneModel": "场景",
+  "preview.stageAnim": "舞台",
+
 
   // ── 性能诊断（perf-cli）──
   "perf.copyRaw": "复制原始输出到剪贴板",

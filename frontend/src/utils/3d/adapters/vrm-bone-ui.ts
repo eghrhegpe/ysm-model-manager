@@ -95,7 +95,7 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
 
     const renderDetail = (): void => {
       if (!tree || !activeId) {
-        detailCol.innerHTML = `<div style="color:rgba(255,255,255,0.4)">${t("preview.bone.selectHint") || "点击骨骼查看详情"}</div>`;
+        detailCol.innerHTML = `<div style="color:rgba(255,255,255,0.4)">${t("preview.bone.selectHint")}</div>`;
         return;
       }
       const d = getBoneDetail(activeId, tree);

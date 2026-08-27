@@ -1158,6 +1158,11 @@ export const ja: Record<string, string> = {
   "preview.facesLabel": "面",
   "preview.hidePanel": "◀ 情報を隠す",
   "preview.showPanel": "▶ 情報を表示",
+  "preview.noLightCap": "3D プレビューに入ってからライトパネルを開いてください",
+  "preview.bone.selectHint": "ボーンをクリックして詳細を表示",
+  "preview.customMorph": "カスタムモーフ",
+  "preview.sceneModel": "シーン",
+  "preview.stageAnim": "ステージ",
 
   // ── パフォーマンス診断（perf-cli）──
   "perf.copyRaw": "生の出力をクリップボードにコピー",

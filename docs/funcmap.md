@@ -571,7 +571,7 @@
 | `SubDirAll()` | `go/types/extensions:443` | SubDirAll 返回所有资源类型在整合包实例中的版本子目录映射 |
 | `AllSubDirs()` | `go/types/extensions:455` | AllSubDirs 返回所有资源类型的版本子目录信息（遍历用） |
 | `SubDirEntry()` | `go/types/extensions:416` | SubDirEntry 资源类型的版本子目录信息 |
-| `FindInstDir()` | `go/types/findinst:71` | FindInstDir 查找整合包中指定资源类型的子目录：  1. |
+| `FindInstDir()` | `go/types/findinst:76` | FindInstDir 查找整合包中指定资源类型的子目录：  1. |
 | `TypeByLocation()` | `go/types/location:17` | TypeByLocation 祖先目录归属判定（location 路由，MMD 子类型共享扩展名消歧）： path 的祖先目录命中某类型 storageSubDir/instanc |
 | `SetBundledRegistryJSON()` | `go/types/resource:20` | SetBundledRegistryJSON 由根包 main 注入编译期内嵌的注册表字节（单源：仓库根 resource_types.json）。 |
 | `ResourceType.EffectiveExtensions()` | `go/types/resource:101` | EffectiveExtensions 返回资源类型的有效扩展名集（小写化）。 |

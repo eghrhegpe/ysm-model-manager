@@ -6,7 +6,7 @@
 //  - scanConflicts：无游戏目录 / 无实例 / 冲突渲染 / 无冲突 / 扫描失败
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "../../../test-utils/index.ts";
-import { initDiagnostics, startDedup } from "./init.ts";
+import { initDiagnostics, startDedup, getDedupConfig, resetDedupConfig } from "./init.ts";
 
 const { busEmit, busOn, getApp, loadResourceRegistry } = vi.hoisted(() => ({
   busEmit: vi.fn(),
@@ -382,5 +382,37 @@ describe("scanConflicts（diag-scan-conflict 按钮）", () => {
         "扫描失败",
       ),
     );
+  });
+});
+
+describe("dedup config（getDedupConfig / resetDedupConfig）", () => {
+  it("getDedupConfig 返回冻结快照，调用方篡改不影响内部状态", () => {
+    const cfg = getDedupConfig();
+    expect(cfg.strategy).toBe("deep_hash");
+    expect(cfg.keepPolicy).toBe("oldest");
+    expect(cfg.priorityPath).toBe("");
+
+    // 快照是 Object.freeze，篡改会抛 TypeError
+    expect(() => {
+      (cfg as { strategy: string }).strategy = "quick_hash";
+    }).toThrow("frozen");
+
+    // 内部状态不受影响
+    expect(getDedupConfig().strategy).toBe("deep_hash");
+  });
+
+  it("多次调用 getDedupConfig 返回不同对象引用（快照独立）", () => {
+    const cfg1 = getDedupConfig();
+    const cfg2 = getDedupConfig();
+    expect(cfg1).not.toBe(cfg2);
+    expect(cfg1.strategy).toBe(cfg2.strategy);
+  });
+
+  it("resetDedupConfig 幂等：默认状态下 reset 不改变配置", () => {
+    expect(getDedupConfig().strategy).toBe("deep_hash");
+    resetDedupConfig();
+    expect(getDedupConfig().strategy).toBe("deep_hash");
+    expect(getDedupConfig().keepPolicy).toBe("oldest");
+    expect(getDedupConfig().priorityPath).toBe("");
   });
 });

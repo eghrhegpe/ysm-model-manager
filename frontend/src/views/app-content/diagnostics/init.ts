@@ -13,7 +13,7 @@ import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
 import { runHealthAudit } from "./health.ts";
 
 // 对外 API 兼容：startDedup 已迁至 dedup.ts（外部仍从本文件 import，见 init-pages.ts / init.test.ts）
-export { startDedup } from "./dedup.ts";
+export { startDedup, getDedupConfig, resetDedupConfig } from "./dedup.ts";
 
 function dgInCopyTextFallback(text: string): void {
   const ta = document.createElement("textarea");

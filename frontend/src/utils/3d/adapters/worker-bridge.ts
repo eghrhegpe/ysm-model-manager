@@ -41,15 +41,21 @@ export interface CreateWorkerBridgeOpts<Req extends { id: number }, Resp, Ok> {
   getId: (resp: Resp) => number;
   timeoutMs: number;
   timeoutMsg: string;
-  settle: (resp: Resp, api: { resolve: (v: Ok) => void; reject: (e: Error) => void }) => void;
-  /** 选 worker 策略，默认 round-robin */
   pickWorker?: (id: number, workers: Worker[]) => Worker;
-  onWorkerError?: WorkerErrorStrategy;
-  /** resolveAllError 时构造错误响应（reject-mode 可不传） */
-  makeErrorResponse?: (id: number, msg: string) => Resp;
-  /** terminatePool 后回调（清调用方的池缓存，触发重建） */
-  onPoolTerminated?: () => void;
-}
+} & (
+  | {
+      // resolve-mode：settle 拿不到 reject，编译期杜绝误用；makeErrorResponse 必传
+      onWorkerError: "resolveAllError";
+      makeErrorResponse: (id: number, msg: string) => Resp;
+      settle: (resp: Resp, api: { resolve: (v: Ok) => void }) => void;
+    }
+  | {
+      // terminate-mode：settle 可 resolve/reject；makeErrorResponse 不允许（传了即编译错）
+      onWorkerError?: "terminatePool";
+      settle: (resp: Resp, api: { resolve: (v: Ok) => void; reject: (e: Error) => void }) => void;
+      onPoolTerminated?: () => void;
+    }
+);
 
 export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
   opts: CreateWorkerBridgeOpts<Req, Resp, Ok>,

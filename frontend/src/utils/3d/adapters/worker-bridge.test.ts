@@ -435,3 +435,37 @@ describe("createResolveModeBridge", () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe("resolve-mode 入参契约（belt-and-suspenders 运行时守卫）", () => {
+  it("onWorkerError=resolveAllError 但缺 makeErrorResponse → 立即抛错（防 as any 绕过类型检查）", () => {
+    const w = makeWorker();
+    expect(() =>
+      createWorkerBridge<FakeReq, FakeResp, FakeResp>({
+        workers: [w as unknown as Worker],
+        getId: respId,
+        timeoutMs: 100,
+        timeoutMsg: "超时",
+        settle: (resp, { resolve }) => resolve(resp),
+        onWorkerError: "resolveAllError",
+      } as any),
+    ).toThrow("resolveAllError 模式必须传 makeErrorResponse");
+  });
+
+  it("onWorkerError=terminatePool 传 makeErrorResponse → 被联合类型拦在编译期；运行时不抛（传了也忽略）", () => {
+    const w = makeWorker();
+    // terminatePool 分支不检查 makeErrorResponse——传了也忽略，不抛错
+    const bridge = createWorkerBridge<FakeReq, FakeResp, FakeResp>({
+      workers: [w as unknown as Worker],
+      getId: respId,
+      timeoutMs: 100,
+      timeoutMsg: "超时",
+      settle: (resp, { resolve }) => resolve(resp),
+      onWorkerError: "terminatePool",
+      makeErrorResponse: (id, msg) => ({ id, ok: false, error: msg }),
+    } as any);
+
+    const p = bridge.request({ type: "encode" });
+    w.respond({ id: 0, ok: true });
+    return expect(p).resolves.toEqual({ id: 0, ok: true });
+  });
+});

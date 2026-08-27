@@ -18,8 +18,19 @@ let _dedupBusy = false;
 // await，重复点击会并行循环对同一批路径二次删除（误统计）；busy 命中直接返回
 let diagExecBusy = false;
 
-// ===== 全局配置状态（供 initDedupConfig 和 startDedup 共享；收敛为单一对象，重置即一行） =====
-const dedupConfig = { strategy: "deep_hash", keepPolicy: "oldest", priorityPath: "" };
+// ===== 全局配置状态（供 initDedupConfig 和 startDedup 共享） =====
+// 默认值冻结为唯一权威源；dedupConfig 为可编辑副本；reset 从默认值展开。
+// 冻结默认值防误改、防引用漂移；getDedupConfig() 返回冻结快照防外部篡改。
+const DEDUP_DEFAULTS = Object.freeze({
+  strategy: "deep_hash",
+  keepPolicy: "oldest",
+  priorityPath: "",
+});
+const dedupConfig = { ...DEDUP_DEFAULTS };
+
+export function resetDedupConfig(): void {
+  Object.assign(dedupConfig, DEDUP_DEFAULTS);
+}
 
 // ===== 类型提级（包级非导出，原 executeDedupScan 内匿名接口） =====
 interface DgDdDedupTarget {
@@ -191,14 +202,14 @@ export function initDedupConfig(list: HTMLElement): void {
 }
 
 /**
- * 获取当前去重配置（供外部调用）
+ * 获取当前去重配置（供外部调用）——返回冻结快照，防调用方篡改或跨调用污染。
  */
-function getDedupConfig(): { strategy: string; keepPolicy: string; priorityPath: string } {
-  return {
+export function getDedupConfig(): Readonly<{ strategy: string; keepPolicy: string; priorityPath: string }> {
+  return Object.freeze({
     strategy: dedupConfig.strategy,
     keepPolicy: dedupConfig.keepPolicy,
     priorityPath: dedupConfig.priorityPath,
-  };
+  });
 }
 
 // ===== startDedup / executeDedupScan 子函数 =====

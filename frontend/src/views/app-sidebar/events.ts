@@ -2,6 +2,7 @@
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
+import { toastEmptyRtype } from "../../core/context-menu-shared.ts";
 import { animateNumber } from "../../utils/animation/animate.ts";
 import { currentRepoType } from "../../features/repo-rtype.ts";
 import type { SidebarInstance } from "./data.ts";
@@ -61,7 +62,7 @@ function bindCardClickHandler(
       // 旧实现点击路径静默兜底成 YSM，MMD 实例 rtype 漏传时
       // 右侧同步面板 default-type 错成 YSM（handler-sync 同款病）。
       if (!pkg.rtype) {
-        bus.emit("toast:show", { msg: t("ctx.emptyRtype"), duration: TOAST_MS.normal, type: "error" });
+        toastEmptyRtype();
         return;
       }
       bus.emit("package:selected", pkg);
@@ -101,7 +102,7 @@ function bindCardContextHandler(
     // 点击允许 fallback（预览无害），右键拒绝（操作危险）。
     const rtype = pkg.rtype || "";
     if (!rtype) {
-      bus.emit("toast:show", { msg: t("ctx.emptyRtype"), duration: TOAST_MS.normal, type: "error" });
+      toastEmptyRtype();
       return;
     }
     const path = pkg.dir || "";
@@ -217,7 +218,7 @@ function restoreSelectedCard(
         if (!pkg?.rtype) {
           // P3 修复：设 emitKey 后再 return，让去重状态机抑制后续 reload 重复 toast
           _lastEmittedPkg = emitKey;
-          bus.emit("toast:show", { msg: t("ctx.emptyRtype"), duration: TOAST_MS.normal, type: "error" });
+          toastEmptyRtype();
           return;
         }
         _lastEmittedPkg = emitKey;

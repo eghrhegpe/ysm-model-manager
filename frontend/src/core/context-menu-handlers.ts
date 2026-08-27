@@ -13,7 +13,7 @@ import { FILE_HANDLERS } from "./context-menu-file-handlers.ts";
 import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";
 // 共享原语（toast/refreshUI/isUnsafeFolderName/resolveDstDir）下沉至
 // context-menu-shared.ts，破除 handlers ↔ {file,dir}-handlers 循环依赖
-import { refreshUI, toast, isUnsafeFolderName, resolveDstDir } from "./context-menu-shared.ts";
+import { refreshUI, toast, toastEmptyRtype, isUnsafeFolderName, resolveDstDir } from "./context-menu-shared.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { copyText } from "../utils/dom/clipboard.ts";
 
@@ -97,7 +97,7 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
     // rtype 契约必填（bus.ts 收紧）：发射点编译期强制提供非空；
     // 运行期守卫与消费方（instance-ops）的 !rtype 失败守卫对称，双保险。
     if (!ctx.rtype) {
-      toast(t("ctx.emptyRtype"), TOAST_MS.normal, "error");
+      toastEmptyRtype();
       return;
     }
     bus.emit("instance:export-list", {
@@ -107,7 +107,7 @@ export const HANDLERS: Record<string, (ctx: MenuCtx) => void> = {
   },
   "instance.clear": (ctx) => {
     if (!ctx.rtype) {
-      toast(t("ctx.emptyRtype"), TOAST_MS.normal, "error");
+      toastEmptyRtype();
       return;
     }
     bus.emit("instance:clear", {

@@ -34,7 +34,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 203 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 198 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 11 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -93,7 +93,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-sidebar/events.ts` | 112 |
+| `frontend/src/views/app-sidebar/events.ts` | 113 |
 | `frontend/src/views/app-tree/events.ts` | 295 |
 | `frontend/src/views/app-tree/events.ts` | 319 |
 | `frontend/src/views/app-tree/events.ts` | 330 |
@@ -161,7 +161,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/handlers/instance-ops.ts` | 102 |
+| `frontend/src/core/handlers/instance-ops.ts` | 103 |
 
 ### `instance:export-list`
 
@@ -173,7 +173,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/handlers/instance-ops.ts` | 15 |
+| `frontend/src/core/handlers/instance-ops.ts` | 16 |
 
 ### `lang:changed`
 
@@ -231,7 +231,7 @@
 | `frontend/src/views/app-content/site/events.ts` | 201 |
 | `frontend/src/views/app-nav/index.ts` | 22 |
 | `frontend/src/views/app-nav/index.ts` | 163 |
-| `frontend/src/views/app-sidebar/events.ts` | 239 |
+| `frontend/src/views/app-sidebar/events.ts` | 240 |
 | `frontend/src/views/app-tree/toolbar-events.ts` | 116 |
 
 **订阅方（on）：**
@@ -246,8 +246,8 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-sidebar/events.ts` | 67 |
-| `frontend/src/views/app-sidebar/events.ts` | 224 |
+| `frontend/src/views/app-sidebar/events.ts` | 68 |
+| `frontend/src/views/app-sidebar/events.ts` | 225 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -271,7 +271,7 @@
 | `frontend/src/views/app-content/init-pages.ts` | 255 |
 | `frontend/src/views/app-nav/index.ts` | 155 |
 | `frontend/src/views/app-sidebar/index.ts` | 429 |
-| `frontend/src/views/app-sync-manager/index.ts` | 175 |
+| `frontend/src/views/app-sync-manager/index.ts` | 173 |
 
 ### `repo:search-creator`
 
@@ -296,16 +296,16 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-sync-manager/index.ts` | 198 |
+| `frontend/src/views/app-sync-manager/index.ts` | 196 |
 
 ### `stats:refresh`
 
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-shared.ts` | 17 |
+| `frontend/src/core/context-menu-shared.ts` | 18 |
 | `frontend/src/core/handlers/android-events.ts` | 66 |
-| `frontend/src/core/handlers/instance-ops.ts` | 158 |
+| `frontend/src/core/handlers/instance-ops.ts` | 159 |
 | `frontend/src/core/handlers/sync.ts` | 86 |
 | `frontend/src/core/handlers/sync.ts` | 207 |
 | `frontend/src/features/community/download-queue.ts` | 111 |
@@ -318,7 +318,7 @@
 | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 353 |
 | `frontend/src/views/app-sidebar/index.ts` | 319 |
-| `frontend/src/views/app-sync-manager/index.ts` | 221 |
+| `frontend/src/views/app-sync-manager/index.ts` | 219 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 67 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 136 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 187 |
@@ -330,7 +330,7 @@
 | 文件 | 行 |
 |------|----|
 | `frontend/src/views/app-sidebar/index.ts` | 421 |
-| `frontend/src/views/app-sync-manager/index.ts` | 155 |
+| `frontend/src/views/app-sync-manager/index.ts` | 153 |
 
 ### `sync:download:done`
 
@@ -381,23 +381,21 @@
 | `frontend/src/app-modules.ts` | 78 |
 | `frontend/src/app-modules.ts` | 88 |
 | `frontend/src/app-modules.ts` | 119 |
-| `frontend/src/core/context-menu-shared.ts` | 22 |
-| `frontend/src/core/context-menu-shared.ts` | 52 |
-| `frontend/src/core/context-menu-shared.ts` | 62 |
+| `frontend/src/core/context-menu-shared.ts` | 23 |
+| `frontend/src/core/context-menu-shared.ts` | 58 |
+| `frontend/src/core/context-menu-shared.ts` | 68 |
 | `frontend/src/core/handlers/android-events.ts` | 25 |
 | `frontend/src/core/handlers/android-events.ts` | 42 |
-| `frontend/src/core/handlers/instance-ops.ts` | 29 |
-| `frontend/src/core/handlers/instance-ops.ts` | 36 |
-| `frontend/src/core/handlers/instance-ops.ts` | 75 |
-| `frontend/src/core/handlers/instance-ops.ts` | 85 |
-| `frontend/src/core/handlers/instance-ops.ts` | 91 |
-| `frontend/src/core/handlers/instance-ops.ts` | 115 |
-| `frontend/src/core/handlers/instance-ops.ts` | 125 |
-| `frontend/src/core/handlers/instance-ops.ts` | 133 |
-| `frontend/src/core/handlers/instance-ops.ts` | 149 |
-| `frontend/src/core/handlers/instance-ops.ts` | 159 |
-| `frontend/src/core/handlers/instance-ops.ts` | 165 |
-| `frontend/src/core/handlers/instance-ops.ts` | 172 |
+| `frontend/src/core/handlers/instance-ops.ts` | 37 |
+| `frontend/src/core/handlers/instance-ops.ts` | 76 |
+| `frontend/src/core/handlers/instance-ops.ts` | 86 |
+| `frontend/src/core/handlers/instance-ops.ts` | 92 |
+| `frontend/src/core/handlers/instance-ops.ts` | 126 |
+| `frontend/src/core/handlers/instance-ops.ts` | 134 |
+| `frontend/src/core/handlers/instance-ops.ts` | 150 |
+| `frontend/src/core/handlers/instance-ops.ts` | 160 |
+| `frontend/src/core/handlers/instance-ops.ts` | 166 |
+| `frontend/src/core/handlers/instance-ops.ts` | 173 |
 | `frontend/src/core/handlers/require-mcroot.ts` | 18 |
 | `frontend/src/core/handlers/sync.ts` | 41 |
 | `frontend/src/core/handlers/sync.ts` | 87 |
@@ -510,10 +508,7 @@
 | `frontend/src/views/app-preview/mmd-controls.ts` | 291 |
 | `frontend/src/views/app-preview/preview-library.ts` | 89 |
 | `frontend/src/views/app-preview/ysm-controls.ts` | 114 |
-| `frontend/src/views/app-sidebar/events.ts` | 64 |
-| `frontend/src/views/app-sidebar/events.ts` | 104 |
-| `frontend/src/views/app-sidebar/events.ts` | 109 |
-| `frontend/src/views/app-sidebar/events.ts` | 220 |
+| `frontend/src/views/app-sidebar/events.ts` | 110 |
 | `frontend/src/views/app-sidebar/index.ts` | 150 |
 | `frontend/src/views/app-sidebar/index.ts` | 264 |
 | `frontend/src/views/app-sidebar/index.ts` | 266 |
@@ -523,7 +518,7 @@
 | `frontend/src/views/app-sidebar/index.ts` | 317 |
 | `frontend/src/views/app-sidebar/index.ts` | 322 |
 | `frontend/src/views/app-sidebar/loader.ts` | 152 |
-| `frontend/src/views/app-sync-manager/index.ts` | 152 |
+| `frontend/src/views/app-sync-manager/index.ts` | 150 |
 | `frontend/src/views/app-sync-manager/network.ts` | 47 |
 | `frontend/src/views/app-sync-manager/network.ts` | 55 |
 | `frontend/src/views/app-sync-manager/store.ts` | 30 |
@@ -592,7 +587,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/core/context-menu-shared.ts` | 16 |
+| `frontend/src/core/context-menu-shared.ts` | 17 |
 | `frontend/src/core/handlers/android-events.ts` | 65 |
 | `frontend/src/core/handlers/sync.ts` | 134 |
 | `frontend/src/core/handlers/sync.ts` | 247 |

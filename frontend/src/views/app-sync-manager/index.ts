@@ -57,8 +57,6 @@ import { LAST_TYPE_KEY, _lastSelectedType, setLastSelectedType } from "./state.t
 // 2026-08-18：sm-tabs 移除后类型完全由全局 nav 下拉驱动——订阅 repo:rtype-changed 跟随，
 // 状态主键统一 repo_rtype（state.ts），LAST_TYPE_KEY 仅历史兼容。
 
-const TOAST_MS_LONG = TOAST_MS.long;
-
 /** 按需加载当前 rtype 的 FilesRoot 仓库根路径（缓存到 _filesRoots，供 renderer 建树时扫描子条目） */
 async function loadRepoRoots(self: SyncManagerSelf, rtype: string): Promise<void> {
   if (self._filesRoots[rtype]) return;
@@ -149,7 +147,7 @@ export class AppSyncManager extends WebComponentBase {
         t("sync.renderFailed") + ": " +
         esc(safeErrorMessage(e)) +
         "</div>";
-      bus.emit("toast:show", { msg: "❌ " + friendlyError(e, t("sync.renderFailed")), duration: TOAST_MS_LONG, type: "error" });
+      bus.emit("toast:show", { msg: "❌ " + friendlyError(e, t("sync.renderFailed")), duration: TOAST_MS.long, type: "error" });
     }
 
     const unsub = bus.on("stats:refresh", () => {

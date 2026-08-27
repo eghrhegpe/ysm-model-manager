@@ -40,7 +40,7 @@
 | Go(internal)·应用入口 | 28 | 212 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 22 | 110 |
-| 前端·核心 | 18 | 36 |
+| 前端·核心 | 18 | 37 |
 | 前端·特性 | 17 | 82 |
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
@@ -49,7 +49,7 @@
 | frontend/views | 115 | 337 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **488** | **2073** |
+| **合计** | **488** | **2074** |
 
 ## Go·头像
 
@@ -750,9 +750,9 @@
 | `App.PullResourceFromInstance()` | `internal/app/app_install_instance:410` | PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync） |
 | `App.PullSingleResourceFromInstance()` | `internal/app/app_install_instance:452` | PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库 PullSingleResourceFromInstance 从 |
 | `App.PushSingleResourceToInstance()` | `internal/app/app_install_instance:473` | PushSingleResourceToInstance 推送单个资源到整合包（分派核心下沉 go/sync） |
-| `App.GetSyncScanDirs()` | `internal/app/app_install_instance:501` | GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。 |
-| `App.GetInstanceSyncStatus()` | `internal/app/app_install_instance:530` | GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表） subtype 可选，指定子类型目录名（如 EntityPlayer），仅 subDir |
-| `App.HasYSMMod()` | `internal/app/app_install_instance:592` | ========== YSM 检测 ========== |
+| `App.GetSyncScanDirs()` | `internal/app/app_install_instance:523` | GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。 |
+| `App.GetInstanceSyncStatus()` | `internal/app/app_install_instance:564` | GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表） subtype 可选，指定子类型目录名（如 EntityPlayer），仅 subDir |
+| `App.HasYSMMod()` | `internal/app/app_install_instance:626` | ========== YSM 检测 ========== |
 | `App.SetLinkMode()` | `internal/app/app_install_link:11` | ========== 链接模式 ========== |
 | `App.GetLinkMode()` | `internal/app/app_install_link:38` | — |
 | `App.AddImportLog()` | `internal/app/app_install_log:8` | ========== 日志 ========== |
@@ -1038,16 +1038,17 @@
 | `FILE_HANDLERS()` | `frontend/src/core/context-menu-file-handlers:13` | file 类 handler 子表 |
 | `MenuCtx()` | `frontend/src/core/context-menu-handlers:73` | — |
 | `HANDLERS()` | `frontend/src/core/context-menu-handlers:76` | 行为 handler 表（instance + batch + merge file/dir） |
-| `refreshUI()` | `frontend/src/core/context-menu-shared:15` | 通知树组件和统计面板刷新 |
-| `toast()` | `frontend/src/core/context-menu-shared:21` | 显示 toast 通知 |
-| `isUnsafeFolderName()` | `frontend/src/core/context-menu-shared:26` | 路径安全过滤：禁止逃逸段（. |
-| `resolveDstDir()` | `frontend/src/core/context-menu-shared:38` | 解析「移动/复制到文件夹」的目标路径（batch.move / batch.copy / file.move / file.copy 共用）。 |
+| `refreshUI()` | `frontend/src/core/context-menu-shared:16` | 通知树组件和统计面板刷新 |
+| `toast()` | `frontend/src/core/context-menu-shared:22` | 显示 toast 通知 |
+| `toastEmptyRtype()` | `frontend/src/core/context-menu-shared:27` | rtype 契约缺失守卫 toast（context-menu / instance-ops / app-sidebar 7 处重复，抽一行收口） |
+| `isUnsafeFolderName()` | `frontend/src/core/context-menu-shared:32` | 路径安全过滤：禁止逃逸段（. |
+| `resolveDstDir()` | `frontend/src/core/context-menu-shared:44` | 解析「移动/复制到文件夹」的目标路径（batch.move / batch.copy / file.move / file.copy 共用）。 |
 | `registerContextMenus()` | `frontend/src/core/context-menus:77` | 注册右键菜单映射（ctx:show → menu:show）；由 registerGlobalHandlers 统一调用，unsub 收集进 unsubs 清理 |
 | `__TEST__resetDiary()` | `frontend/src/core/error-diary:29` | 仅测试用：重置注册状态使下次 registerErrorDiary 可重新注册。 |
 | `registerErrorDiary()` | `frontend/src/core/error-diary:51` | 注册 UI 报错落日记功能。 |
 | `registerAndroidEvents()` | `frontend/src/core/handlers/android-events:18` | 注册 Android 系统事件消费，push 取消订阅函数到 unsubs |
 | `registerGlobalHandlers()` | `frontend/src/core/handlers/global:12` | 注册所有 core 全局 handler，返回 unsub 函数数组（features/views 层注册由 app-content 编排） |
-| `registerInstanceOps()` | `frontend/src/core/handlers/instance-ops:12` | 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs |
+| `registerInstanceOps()` | `frontend/src/core/handlers/instance-ops:13` | 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs |
 | `requireMcRoot()` | `frontend/src/core/handlers/require-mcroot:13` | 读取游戏根目录（mcRoot），空时发 warn toast 并返回 null。 |
 | `registerSync()` | `frontend/src/core/handlers/sync:252` | 注册同步 handler，push 返回的取消订阅函数到 unsubs |
 | `SUPPORTED_LANGS()` | `frontend/src/core/i18n/locale:11` | 支持的语言列表（规划清单） |
@@ -2206,9 +2207,9 @@
 | `attachYsmBoneSelect()` | `frontend/src/views/app-preview/ysm-controls:137` | 骨骼拾取联动（YSM 特色）：未开根菜单时先打开 model 面板，更新详情框 + 滚动高亮 |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `SidebarInstance()` | `frontend/src/views/app-sidebar/data:4` | sidebar 整合包实例（loader 转换后的渲染格式） |
-| `bindCardEvents()` | `frontend/src/views/app-sidebar/events:126` | — |
-| `resetSelectedEmit()` | `frontend/src/views/app-sidebar/events:188` | 复位去重标记：组件真正卸载（disconnectedCallback）时调用—— 同组件 reload 不复位（去重跨 reload 生效），仅新挂载会话才需重置（P2 复核修复） |
-| `bindFooter()` | `frontend/src/views/app-sidebar/events:231` | — |
+| `bindCardEvents()` | `frontend/src/views/app-sidebar/events:127` | — |
+| `resetSelectedEmit()` | `frontend/src/views/app-sidebar/events:189` | 复位去重标记：组件真正卸载（disconnectedCallback）时调用—— 同组件 reload 不复位（去重跨 reload 生效），仅新挂载会话才需重置（P2 复核修复） |
+| `bindFooter()` | `frontend/src/views/app-sidebar/events:232` | — |
 | `appSidebarStyle()` | `frontend/src/views/app-sidebar/index:13` | — |
 | `MmdVariantGroups()` | `frontend/src/views/app-sidebar/loader:21` | MMD 变体聚合结果 |
 | `loadInstances()` | `frontend/src/views/app-sidebar/loader:37` | 从 Go 加载整合包实例列表，转换为 render 需要的格式（同 rtype 在途请求合并） 去重只服务「读并发」（多组件同时触发 reload），若变异完成的刷新并入变异前发起 |
@@ -2222,7 +2223,7 @@
 | `EventSelf()` | `frontend/src/views/app-sync-manager/events:9` | — |
 | `bindEvents()` | `frontend/src/views/app-sync-manager/events:17` | 绑定所有 DOM 事件（状态筛选 / 单行操作按钮 / dir-level 文件夹展开折叠） |
 | `SyncManagerSelf()` | `frontend/src/views/app-sync-manager/index:27` | 合并四子模块（store / renderer / events / network）对组件实例的接口需求， 一统江湖，消除各处 `as any` 桥接。各子模块可改从此导入。 |
-| `AppSyncManager()` | `frontend/src/views/app-sync-manager/index:73` | — |
+| `AppSyncManager()` | `frontend/src/views/app-sync-manager/index:71` | — |
 | `NetworkSelf()` | `frontend/src/views/app-sync-manager/network:14` | — |
 | `performSingleOp()` | `frontend/src/views/app-sync-manager/network:27` | 统一推送 / 拉取单文件操作。 |
 | `SyncRenderSelf()` | `frontend/src/views/app-sync-manager/renderer:20` | — |

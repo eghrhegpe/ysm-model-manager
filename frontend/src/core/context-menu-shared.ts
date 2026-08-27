@@ -8,6 +8,7 @@ import { modalPrompt } from "../utils/dom/dialogs/modal.ts";
 import { getApp } from "../backend/app.ts";
 import { RESOURCE_TYPES } from "../utils/resource/types.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import { t } from "./i18n/t.ts";
 
 type ToastType = NonNullable<ToastPayload["type"]>;
 
@@ -20,6 +21,11 @@ export function refreshUI(): void {
 /** 显示 toast 通知 */
 export function toast(msg: string, duration: number = TOAST_MS.normal, type: ToastType = "success"): void {
   bus.emit("toast:show", { msg, duration, type });
+}
+
+/** rtype 契约缺失守卫 toast（context-menu / instance-ops / app-sidebar 7 处重复，抽一行收口） */
+export function toastEmptyRtype(): void {
+  toast(t("ctx.emptyRtype"), TOAST_MS.normal, "error");
 }
 
 /** 路径安全过滤：禁止逃逸段（. / ..）与绝对路径 */

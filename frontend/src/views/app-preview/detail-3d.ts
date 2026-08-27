@@ -260,7 +260,7 @@ export async function showStagePreview(
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
       <span style="background:rgba(255,160,80,0.2);color:#ffa050;padding:1px 6px;border-radius:4px;font-weight:500">StageAnim</span>
-      <span>${t("preview.stagePerfLabel")}</span>
+      <span>${t("preview.stagePerformanceLabel")}</span>
     </div>
     <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;padding:6px;margin-top:4px"></div>
     <button class="preview-fab" id="btn-stage-load" title="${t("preview.loadStage")}" aria-label="${t("preview.loadStage")}" style="background:linear-gradient(135deg,#ffa050 0%,#e67e22 100%)"><span class="preview-ic">🎤</span></button>

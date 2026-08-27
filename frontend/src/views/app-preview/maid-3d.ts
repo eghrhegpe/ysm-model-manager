@@ -124,7 +124,7 @@ function dpRenderDetail(
   if (modelInfo?.format) rows.push(`<div class="dp-hint">📐 ${t("preview.formatVersion")}: ${esc(modelInfo.format)}</div>`);
   const sel = subs[selSubIdx];
   if (subs.length > 1 && sel) {
-    rows.push(`<div class="dp-hint">🧸 ${t("preview.selectedModel")}: <b>${esc(sel.name)}</b></div>`);
+    rows.push(`<div class="dp-hint">🧸 ${t("preview.selectedCharacter")}: <b>${esc(sel.name)}</b></div>`);
   }
   if (modelInfo?.boneCount !== undefined) rows.push(`<div class="dp-hint">🦴 ${t("preview.boneCount")}: ${modelInfo.boneCount}</div>`);
   if (modelInfo?.cubeCount !== undefined) rows.push(`<div class="dp-hint">📦 ${t("preview.cubeCount")}: ${modelInfo.cubeCount}</div>`);

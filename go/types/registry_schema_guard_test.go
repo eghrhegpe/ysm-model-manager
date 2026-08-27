@@ -260,3 +260,29 @@ func TestSchemaGuard_UniqueZipAnchor_NoWarn(t *testing.T) {
 		t.Fatalf("独占锚点的 .zip 类型不应触发违规，实际: %v", violations)
 	}
 }
+
+// ===== 守卫 6：scanInstance=true 必须声明 fallbackDir =====
+
+func TestSchemaGuard_ScanInstanceRequiresFallbackDir_Warns(t *testing.T) {
+	payload := `{
+		"resourceTypes": [
+			{"id": "bp", "name": "蓝图", "group": "g", "instanceDir": "schematics", "scanInstance": true, "extensions": [".nbt"]}
+		]
+	}`
+	violations := guardViolations(t, payload)
+	if !hasViolation(violations, "scanInstance=true 必须声明 fallbackDir") {
+		t.Fatalf("期望 scanInstance=true 且缺 fallbackDir 触发违规，实际: %v", violations)
+	}
+}
+
+func TestSchemaGuard_ScanInstanceWithFallbackDir_NoWarn(t *testing.T) {
+	payload := `{
+		"resourceTypes": [
+			{"id": "bp", "name": "蓝图", "group": "g", "instanceDir": "schematics", "scanInstance": true, "fallbackDir": "Sable-Schematics", "extensions": [".nbt"]}
+		]
+	}`
+	violations := guardViolations(t, payload)
+	if hasViolation(violations, "必须声明 fallbackDir") {
+		t.Fatalf("scanInstance=true 且 fallbackDir 非空不应触发违规，实际: %v", violations)
+	}
+}

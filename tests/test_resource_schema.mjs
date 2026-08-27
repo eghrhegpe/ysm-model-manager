@@ -216,7 +216,7 @@ function validate() {
   // Go 侧 validateRegistrySchema 同款豁免：同步管理器按壳读取 dirLevelSync）。
   const SHELL_FORBIDDEN_FIELDS = [
     'storageSubDir', 'configField', 'configFallback',
-    'isDir', 'hashable', 'installExts', 'nestedModelDir',
+    'isDir', 'hashable', 'installExts', 'nestedModelDir', 'fallbackDir',
   ];
   for (const rt of types) {
     const hasSubtypes = Array.isArray(rt?.subtypes) && rt.subtypes.length > 0;
@@ -321,6 +321,14 @@ function validate() {
       if (owner && owner !== rt.id && typeGroupOf.get(owner) !== rt?.group) {
         errors.push(`${rt.id}.${f}='${rt[f]}' 与 ${owner}.storageSubDir 撞车（跨组仓库/整合包目录混淆）`);
       }
+    }
+  }
+
+  // 守卫 7：scanInstance=true 必须声明 fallbackDir——兜底扫描只允许注册表点名目录，
+  // 缺省会退回“任一兄弟目录含扩展名即命中”的危险宽目录混入行为。
+  for (const rt of types) {
+    if (rt?.scanInstance === true && !rt?.fallbackDir) {
+      errors.push(`${rt.id}: scanInstance=true 必须声明非空 fallbackDir（限定兜底目录名）`);
     }
   }
 

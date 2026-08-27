@@ -363,6 +363,18 @@ func validateRegistrySchema(reg *ResourceTypeRegistry) []string {
 		}
 	}
 
+	// 守卫 6：scanInstance=true 必须声明 fallbackDir——兜底扫描（ScanInstance）目前
+	// 只允许「注册表显式点名的兄弟目录」；缺 fallbackDir 会退回“任一兄弟目录含扩展名
+	// 即命中”的危险行为（structures/数据包混入）。未来类型若确需兼容多个目录名，
+	// 应显式扩展 fallbackDir 语义而非留空走非限定。
+	for _, rt := range reg.ResourceTypes {
+		if rt.ScanInstance && rt.FallbackDir == "" {
+			violations = append(violations, fmt.Sprintf(
+				"类型 %s scanInstance=true 必须声明 fallbackDir（限定兜底目录名），否则兜底会越界扫兄弟目录",
+				rt.ID))
+		}
+	}
+
 	return violations
 }
 

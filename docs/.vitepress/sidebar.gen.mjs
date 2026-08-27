@@ -1418,6 +1418,10 @@ export const autoSidebar = [
             "link": "/knowledge/go-android-platform-guard"
           },
           {
+            "text": "Go 头像提取：纯函数 vs Node+WASM 解码分界",
+            "link": "/knowledge/go-avatar-decode"
+          },
+          {
             "text": "头像 go/avatar",
             "link": "/knowledge/go-avatar"
           },

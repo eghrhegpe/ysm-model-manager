@@ -213,6 +213,8 @@ const FRONTEND_STATIC_TOOLS = [
   { tool: 'event-graph.mjs', args: ['--strict'] },
   // toast 时长单一事实源守护（R7）：非阻断 [WARN] 观察期
   'check-toast-duration.mjs',
+  // Biome 增量质量闸（2026-08-27 P0）：TS 7 安全（Rust 解析器），仅查变更文件阻断
+  { tool: 'check-biome.mjs', args: ['--strict'] },
 ];
 
 /** push 模式按变更域补挂的 Go 静态工具 */

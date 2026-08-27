@@ -585,3 +585,40 @@ func TestFindInstDir_Resourcepack_NoFallback(t *testing.T) {
 		t.Fatalf("resourcepack 不得兜底，应返回标准路径: got=%s, 期望 %s", got, want)
 	}
 }
+
+// TestFindInstDir_Blueprint_UnrelatedNbtSiblingNotHit 收紧用例：标准 schematics 存在但空，
+// 兄弟目录 unrelated-structures 含 .nbt 时不得被兜底命中——避免其他资源的 nbt 混入蓝图同步。
+func TestFindInstDir_Blueprint_UnrelatedNbtSiblingNotHit(t *testing.T) {
+	versionDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(versionDir, "schematics"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	unrelated := filepath.Join(versionDir, "unrelated-structures")
+	if err := os.MkdirAll(unrelated, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(filepath.Join(unrelated, "structure.nbt"), []byte("nbt"), 0o644)
+	want := filepath.Join(versionDir, "schematics")
+	got := FindInstDir(versionDir, "schematics", "blueprint")
+	if got != want {
+		t.Fatalf("blueprint 不得兜底到无关 nbt 目录: got=%s, 期望标准 %s", got, want)
+	}
+}
+
+// TestFindInstDir_Blueprint_SableSchematicsCaseInsensitive 兜底白名单大小写不敏感。
+func TestFindInstDir_Blueprint_SableSchematicsCaseInsensitive(t *testing.T) {
+	versionDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(versionDir, "schematics"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	sable := filepath.Join(versionDir, "sable-schematics", "core")
+	if err := os.MkdirAll(sable, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(filepath.Join(sable, "c1.nbt"), []byte("nbt"), 0o644)
+	want := filepath.Join(versionDir, "sable-schematics")
+	got := FindInstDir(versionDir, "schematics", "blueprint")
+	if got != want {
+		t.Fatalf("Sable-Schematics 大小写变体应兜底命中: got=%s, 期望 %s", got, want)
+	}
+}

@@ -46,6 +46,18 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
     const json = await GetInstanceSyncStatus(self._instance, self._subtype || "", self._selectedType || "");
     if (gen !== self._gen) return;
     self._allItems = (JSON.parse(json) as SyncItem[]) || [];
+    if (self._selectedType) {
+      // 目录可见性：顺带取实际扫描目录（非阻断，失败仅不显示摘要）
+      try {
+        const { GetSyncScanDirs } = await getApp();
+        const dirsJson = await GetSyncScanDirs(self._selectedType, self._instance);
+        if (gen !== self._gen) return;
+        if (!self._scanDirs) self._scanDirs = {};
+        self._scanDirs[self._selectedType] = JSON.parse(dirsJson) as { global: string; instance: string };
+      } catch {
+        /* 目录摘要非关键路径，静默降级 */
+      }
+    }
   } catch {
     if (gen !== self._gen) return;
     self._allItems = [];

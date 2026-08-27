@@ -597,6 +597,9 @@ export const zhCN: Record<string, string> = {
   "syncManager.emptyType": "该整合包暂无资源文件",
   "syncManager.rmTitle": "资源管理器",
   "syncManager.curTypeHint": "类型选择已移至左侧导航栏（全局切换）",
+  "syncManager.scanRootsTitle": "同步目录",
+  "syncManager.scanGlobal": "仓库基准：{dir}",
+  "syncManager.scanInstance": "实例扫描：{dir}",
   // P0 修复：右键菜单 rtype 守卫 toast（i18n 合规）
   "ctx.emptyRtype": "❌ 整合包缺少类型信息，右键操作已禁用",
   "ctx.missingPath": "❌ 整合包目录未找到",

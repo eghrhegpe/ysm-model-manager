@@ -594,6 +594,9 @@ export const en: Record<string, string> = {
   "syncManager.emptyType": "No resource files in this modpack",
   "syncManager.rmTitle": "Resource Manager",
   "syncManager.curTypeHint": "Type selection moved to left sidebar (global)",
+  "syncManager.scanRootsTitle": "Sync directories",
+  "syncManager.scanGlobal": "Repo base: {dir}",
+  "syncManager.scanInstance": "Instance scan: {dir}",
   // P0 fix: context menu rtype guard toast (i18n compliance)
   "ctx.emptyRtype": "❌ Pack missing type info, right-click ops disabled",
   "ctx.missingPath": "❌ Pack directory not found",

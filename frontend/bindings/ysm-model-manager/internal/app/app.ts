@@ -533,6 +533,18 @@ export function GetSubDirMap(): $CancellablePromise<{ [_ in string]?: string } |
 }
 
 /**
+ * GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。
+ *   - global：仓库侧基准目录（GetRepoRoot 结果）
+ *   - instance：实例侧实际扫描目录（types.FindInstDir 结果，可能因兜底命中非标准目录）
+ * 
+ * 用途：让前端同步页展示“到底从哪个文件夹扫”，尤其兜底命中 Sable-Schematics 时用户可见。
+ * 不触发全量扫描，仅做目录解析 + 标准目录存在性/证据检查，体感轻量。
+ */
+export function GetSyncScanDirs(rtype: string, instanceName: string): $CancellablePromise<string> {
+    return $Call.ByID(2038029643, rtype, instanceName);
+}
+
+/**
  * GetWasmBinary 返回内嵌的 YSMParser.wasm 字节（供前端 WebView2 使用）。
  * wasmBinary 由根包 main 的 init() 经 SetEmbedded 注入。
  */

@@ -41,6 +41,8 @@ export interface SyncManagerSelf {
   _dirOpen: Record<string, boolean>;
   /** 各资源类型在 FilesRoot 下的仓库根路径缓存 */
   _filesRoots: Record<string, string>;
+  /** 各资源类型实际同步目录对（GetSyncScanDirs 结果：global=仓库基准, instance=实例扫描） */
+  _scanDirs: Record<string, { global: string; instance: string }>;
   isConnected?: boolean;
   innerHTML: string;
   querySelector(sel: string): HTMLElement | null;
@@ -87,6 +89,7 @@ export class AppSyncManager extends WebComponentBase {
   private _singleBusy = false;
   private _dirOpen: Record<string, boolean> = {};
   private _filesRoots: Record<string, string> = {};
+  private _scanDirs: Record<string, { global: string; instance: string }> = {};
 
   connectedCallback(): void {
     this._instance = this.getAttribute("instance") || "";

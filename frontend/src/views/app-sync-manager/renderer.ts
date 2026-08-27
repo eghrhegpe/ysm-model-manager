@@ -101,9 +101,32 @@ export async function render(self: SyncRenderSelf): Promise<void> {
       )
       .join("");
 
+  // — 摘要栏（实际扫描目录可见性）—
+  renderScanDirs(self);
+
   // — 列表 —
   applyFilter(self);
   await renderList(self, listEl).catch((e) => console.error("[sync-manager] renderList 失败:", e));
+}
+
+/** 渲染 `.sm-summary`：显示仓库基准目录与实例实际扫描目录，兜底路径一目了然。 */
+function renderScanDirs(self: SyncRenderSelf): void {
+  const summaryEl = self.querySelector(".sm-summary");
+  if (!summaryEl) return;
+  const dirs = self._selectedType && self._scanDirs ? self._scanDirs[self._selectedType] : undefined;
+  if (!dirs || (!dirs.global && !dirs.instance)) {
+    summaryEl.innerHTML = "";
+    return;
+  }
+  const cell = (label: string, dir: string): string =>
+    '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="' +
+    esc(dir) +
+    '">' +
+    esc(label) +
+    "</span>";
+  summaryEl.innerHTML =
+    cell(t("syncManager.scanGlobal", { dir: dirs.global || "—" }), dirs.global) +
+    cell(t("syncManager.scanInstance", { dir: dirs.instance || "—" }), dirs.instance);
 }
 
 /** 渲染列表行（含空态）——按 isDir 分流 */

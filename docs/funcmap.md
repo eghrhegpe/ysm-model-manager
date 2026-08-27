@@ -37,7 +37,7 @@
 | Go·更新器 | 1 | 10 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 26 |
-| Go(internal)·应用入口 | 28 | 211 |
+| Go(internal)·应用入口 | 28 | 212 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 22 | 110 |
 | 前端·核心 | 18 | 36 |
@@ -49,7 +49,7 @@
 | frontend/views | 115 | 337 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **489** | **2070** |
+| **合计** | **489** | **2071** |
 
 ## Go·头像
 
@@ -750,8 +750,9 @@
 | `App.PullResourceFromInstance()` | `internal/app/app_install_instance:410` | PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync） |
 | `App.PullSingleResourceFromInstance()` | `internal/app/app_install_instance:452` | PullSingleResourceFromInstance 从整合包拉取单个 extra 文件/文件夹到全局仓库 PullSingleResourceFromInstance 从 |
 | `App.PushSingleResourceToInstance()` | `internal/app/app_install_instance:473` | PushSingleResourceToInstance 推送单个资源到整合包（分派核心下沉 go/sync） |
-| `App.GetInstanceSyncStatus()` | `internal/app/app_install_instance:500` | GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表） subtype 可选，指定子类型目录名（如 EntityPlayer），仅 subDir |
-| `App.HasYSMMod()` | `internal/app/app_install_instance:562` | ========== YSM 检测 ========== |
+| `App.GetSyncScanDirs()` | `internal/app/app_install_instance:501` | GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。 |
+| `App.GetInstanceSyncStatus()` | `internal/app/app_install_instance:530` | GetInstanceSyncStatus 获取整合包下所有资源类型的同步状态（扁平列表） subtype 可选，指定子类型目录名（如 EntityPlayer），仅 subDir |
+| `App.HasYSMMod()` | `internal/app/app_install_instance:592` | ========== YSM 检测 ========== |
 | `App.SetLinkMode()` | `internal/app/app_install_link:11` | ========== 链接模式 ========== |
 | `App.GetLinkMode()` | `internal/app/app_install_link:38` | — |
 | `App.AddImportLog()` | `internal/app/app_install_log:8` | ========== 日志 ========== |
@@ -2219,7 +2220,7 @@
 | `EventSelf()` | `frontend/src/views/app-sync-manager/events:9` | — |
 | `bindEvents()` | `frontend/src/views/app-sync-manager/events:17` | 绑定所有 DOM 事件（状态筛选 / 单行操作按钮 / dir-level 文件夹展开折叠） |
 | `SyncManagerSelf()` | `frontend/src/views/app-sync-manager/index:27` | 合并四子模块（store / renderer / events / network）对组件实例的接口需求， 一统江湖，消除各处 `as any` 桥接。各子模块可改从此导入。 |
-| `AppSyncManager()` | `frontend/src/views/app-sync-manager/index:71` | — |
+| `AppSyncManager()` | `frontend/src/views/app-sync-manager/index:73` | — |
 | `NetworkSelf()` | `frontend/src/views/app-sync-manager/network:14` | — |
 | `performSingleOp()` | `frontend/src/views/app-sync-manager/network:27` | 统一推送 / 拉取单文件操作。 |
 | `SyncRenderSelf()` | `frontend/src/views/app-sync-manager/renderer:20` | — |
@@ -2230,8 +2231,8 @@
 | `SyncStoreSelf()` | `frontend/src/views/app-sync-manager/store:13` | — |
 | `loadTypeConfig()` | `frontend/src/views/app-sync-manager/store:19` | 加载资源类型配置（LoadResourceTypes） 过期代际/已卸载静默丢弃；加载失败 toast 提醒 + 空数组降级。 |
 | `loadData()` | `frontend/src/views/app-sync-manager/store:42` | 加载实例同步状态（GetInstanceSyncStatus） 过期代际丢弃；加载失败 toast 提醒 + 空数组。 |
-| `tabStatus()` | `frontend/src/views/app-sync-manager/store:63` | tabStatus：diverged 折叠进 missing tab（继承可操作属性——与 renderer 计数同规， 逐节点复用以防口径漂移）。返回该条目在 status ta |
-| `applyFilter()` | `frontend/src/views/app-sync-manager/store:111` | 应用类型 + 状态筛选，写入 self._filteredItems（递归 + keep-ancestors）。 |
+| `tabStatus()` | `frontend/src/views/app-sync-manager/store:75` | tabStatus：diverged 折叠进 missing tab（继承可操作属性——与 renderer 计数同规， 逐节点复用以防口径漂移）。返回该条目在 status ta |
+| `applyFilter()` | `frontend/src/views/app-sync-manager/store:123` | 应用类型 + 状态筛选，写入 self._filteredItems（递归 + keep-ancestors）。 |
 | `SyncItem()` | `frontend/src/views/app-sync-manager/tpl:9` | 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） |
 | `STATUS_ICON()` | `frontend/src/views/app-sync-manager/tpl:32` | — |
 | `STATUS_COLOR()` | `frontend/src/views/app-sync-manager/tpl:41` | — |

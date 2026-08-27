@@ -2,8 +2,10 @@
 /**
  * 契约测试：Android Java 桥注入时序与暴露面契约。
  *
- * 前端 utils/dom/android-bridge.ts 以「window.wails.requestStoragePermission 为函数」
- * 能力探测安卓桥。这条链路依赖四处源码级隐式契约，任一漂移即产生误判：
+ * 前端以「window.wails.requestStoragePermission 为函数」能力探测安卓桥。
+ * 探测原语自 ADR-123 P3 后下沉到 frontend/src/backend/platform.ts
+ * （android-bridge.ts 仅 re-export），契约测试须联合扫描两处，否则重构后误报漂移。
+ * 这条链路依赖四处源码级隐式契约，任一漂移即产生误判：
  *
  *   1. 时序契约：MainActivity 必须 addJavascriptInterface 先于 loadUrl——
  *      页面首行 JS 执行时桥已可见，无冷启动竞态（桌面 WebView2 异步脚本注入才有
@@ -28,7 +30,12 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MAIN_ACTIVITY = 'build/android/app/src/main/java/com/wails/app/MainActivity.java';
 const JS_BRIDGE = 'build/android/app/src/main/java/com/wails/app/WailsJSBridge.java';
 const PROGUARD = 'build/android/app/proguard-rules.pro';
-const FRONTEND_BRIDGE = path.join('frontend', 'src', 'utils', 'dom', 'android-bridge.ts');
+// ADR-123 P3：探测原语下沉 backend/platform.ts（android-bridge.ts 仅 re-export），
+// 命名契约需联合扫描两处，否则重构后误报漂移。
+const FRONTEND_BRIDGE_FILES = [
+  path.join('frontend', 'src', 'utils', 'dom', 'android-bridge.ts'),
+  path.join('frontend', 'src', 'backend', 'platform.ts'),
+];
 
 /** 前端 WailsAndroidBridge 接口声明、且 getAndroidBridge 用作存在性判定的方法 */
 const PROBED_METHODS = ['hasStoragePermission', 'requestStoragePermission'];
@@ -89,15 +96,16 @@ if (proguard !== null) {
   }
 }
 
-// ---- 4. 命名契约：前端探测目标与方法名和 Java 侧一致 ----
-const fe = read(FRONTEND_BRIDGE);
-if (fe !== null) {
+// ---- 4. 命名契约：前端探测目标与方法名和 Java 侧一致（多文件联合扫描）----
+const feParts = FRONTEND_BRIDGE_FILES.map(read).filter((t) => t !== null);
+const fe = feParts.join('\n');
+if (feParts.length > 0) {
   if (!fe.includes('.wails')) {
-    errors.push(`${FRONTEND_BRIDGE}: 未探测 window.wails（Java 侧注册名或本文件漂移，两侧需同步）`);
+    errors.push(`${FRONTEND_BRIDGE_FILES.join(' / ')}: 未探测 window.wails（Java 侧注册名或本文件漂移，两侧需同步）`);
   }
   for (const name of PROBED_METHODS) {
     if (!fe.includes(name)) {
-      errors.push(`${FRONTEND_BRIDGE}: 探口不再引用 ${name}，而 ${JS_BRIDGE} 仍暴露——删除 Java 侧方法前先同步本测试`);
+      errors.push(`${FRONTEND_BRIDGE_FILES.join(' / ')}: 探口不再引用 ${name}，而 ${JS_BRIDGE} 仍暴露——删除 Java 侧方法前先同步本测试`);
     }
   }
 }

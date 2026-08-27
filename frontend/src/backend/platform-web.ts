@@ -12,8 +12,7 @@
 // 是否可用」的判定；各功能的 web 降级动作（下载入库、导入、toast 早退）留在原地，
 // 仅消费统一谓词。resolveWebMode() 继续作为 web 单态薄谓词供既有调用方使用，
 // 不做 19 文件全量换皮。
-import { readDeclaredBackend, isWebEntryMode } from "./platform.ts";
-import { getAndroidBridge } from "../utils/dom/android-bridge.ts";
+import { readDeclaredBackend, isWebEntryMode, getAndroidBridge } from "./platform.ts";
 import { browserAdapter } from "./browser-adapter.ts";
 
 export type PlatformMode = "desktop" | "web" | "android";
@@ -53,4 +52,14 @@ export function canBinding(binding: string): boolean {
     default:
       return true;
   }
+}
+
+/**
+ * 查看器平台谓词 = 非桌面（web ∪ android）。parity 契约②的规范实现：
+ * `isViewerPlatform() === (resolvePlatformMode() !== "desktop")`（契约由
+ * platform-parity.test.ts 钉死）。android-bridge.isViewerMode 委托本函数，
+ * 不再自行拼装信号（消除「第四处拼装点」）。
+ */
+export function isViewerPlatform(): boolean {
+  return resolvePlatformMode() !== "desktop";
 }

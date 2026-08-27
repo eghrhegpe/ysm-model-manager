@@ -40,7 +40,7 @@
 | Go·YSM 核心 | 7 | 26 |
 | Go(internal)·应用入口 | 29 | 213 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
-| frontend/backend | 23 | 114 |
+| frontend/backend | 23 | 117 |
 | 前端·核心 | 18 | 37 |
 | 前端·特性 | 17 | 84 |
 | 前端·服务 | 2 | 18 |
@@ -50,7 +50,7 @@
 | frontend/views | 116 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **492** | **2084** |
+| **合计** | **492** | **2087** |
 
 ## Go·头像
 
@@ -971,13 +971,16 @@
 | `parsePackMetaJson()` | `frontend/src/backend/pack-meta:99` | pack.mcmeta 字节 → meta 对象（对齐 internal/app ReadPackMeta 的 result 形状： pack_format / descripti |
 | `packPngToThumbnail()` | `frontend/src/backend/pack-meta:132` | pack.png 字节 → data URL base64 缩略图（10MB 限额；空/超限 → ""，对齐 go 截断探测置空） |
 | `parseShaderpackLang()` | `frontend/src/backend/pack-meta:142` | lang/en_US.lang 字节 → {name, entries} JSON 字符串（对齐 go ReadShaderpackLang： &gt;1MB → 空结果；key=val |
-| `PlatformMode()` | `frontend/src/backend/platform-web:19` | — |
-| `resolvePlatformMode()` | `frontend/src/backend/platform-web:25` | 当前平台三态判定（同步）。 |
-| `ANDROID_UNAVAILABLE()` | `frontend/src/backend/platform-web:34` | Android 桌面专属/无意义 binding 黑名单（蓝本 = go-android-platform-guard.md）。原驻 capabilities.ts，P3 归位 b |
-| `canBinding()` | `frontend/src/backend/platform-web:47` | 能力矩阵（对齐 MikuMikuAR ADR-176 capabilities 矩阵范式）： desktop — Go 桥全量可用；web — adapter has 探测（未实现 |
-| `readDeclaredBackend()` | `frontend/src/backend/platform:13` | 读取入口 HTML 声明的适配器身份（'go' | 'browser'），未声明返回 undefined |
-| `isWebEntryMode()` | `frontend/src/backend/platform:19` | Tier 1：旧 web 短路标记 / vite MODE=web 构建 |
-| `resolveWebMode()` | `frontend/src/backend/platform:28` | 同步判定：当前是否应路由到 browser adapter（网页版） |
+| `PlatformMode()` | `frontend/src/backend/platform-web:18` | — |
+| `resolvePlatformMode()` | `frontend/src/backend/platform-web:24` | 当前平台三态判定（同步）。 |
+| `ANDROID_UNAVAILABLE()` | `frontend/src/backend/platform-web:33` | Android 桌面专属/无意义 binding 黑名单（蓝本 = go-android-platform-guard.md）。原驻 capabilities.ts，P3 归位 b |
+| `canBinding()` | `frontend/src/backend/platform-web:46` | 能力矩阵（对齐 MikuMikuAR ADR-176 capabilities 矩阵范式）： desktop — Go 桥全量可用；web — adapter has 探测（未实现 |
+| `isViewerPlatform()` | `frontend/src/backend/platform-web:63` | 查看器平台谓词 = 非桌面（web ∪ android）。parity 契约②的规范实现： `isViewerPlatform() === (resolvePlatformMode |
+| `WailsAndroidBridge()` | `frontend/src/backend/platform:18` | Android Java 桥最小形状（MainActivity addJavascriptInterface 注册名 "wails"；桌面端无此桥） |
+| `getAndroidBridge()` | `frontend/src/backend/platform:24` | Tier 2 原语：返回 Android Java 桥（桌面端为 null），类型安全断言（无 as any） |
+| `readDeclaredBackend()` | `frontend/src/backend/platform:30` | 读取入口 HTML 声明的适配器身份（'go' | 'browser'），未声明返回 undefined |
+| `isWebEntryMode()` | `frontend/src/backend/platform:36` | Tier 1：旧 web 短路标记 / vite MODE=web 构建 |
+| `resolveWebMode()` | `frontend/src/backend/platform:45` | 同步判定：当前是否应路由到 browser adapter（网页版） |
 | `Events()` | `frontend/src/backend/runtime:47` | — |
 | `Window()` | `frontend/src/backend/runtime:51` | — |
 | `AppBindings()` | `frontend/src/backend/types:6` | Wails v3 生成的 App 绑定模块形状（bindings 目录下 app.ts） |
@@ -1554,14 +1557,14 @@
 | `generateSurfacePixels()` | `frontend/src/utils/3d/caps/ground-surface-spec:129` | ============ 程序化像素生成（RGBA，node 可测）============ |
 | `applyGroundSurfaceStructural()` | `frontend/src/utils/3d/caps/ground-surface-spec:170` | 重建路径专用：把 structural 落到新材质上。 |
 | `applyGroundSurfaceAppearance()` | `frontend/src/utils/3d/caps/ground-surface-spec:189` | 原地/重建通用：appearance 字段统一落地（唯一入口）。 |
-| `DirectionalLightParams()` | `frontend/src/utils/3d/caps/light-capability:32` | ============ 参数类型 ============ |
-| `AmbientLightParams()` | `frontend/src/utils/3d/caps/light-capability:42` | — |
-| `SpotlightParams()` | `frontend/src/utils/3d/caps/light-capability:47` | — |
-| `VolumetricParams()` | `frontend/src/utils/3d/caps/light-capability:61` | — |
-| `LightParams()` | `frontend/src/utils/3d/caps/light-capability:75` | — |
-| `DEFAULT_LIGHT_PARAMS()` | `frontend/src/utils/3d/caps/light-capability:103` | — |
-| `LIGHT_PRESETS()` | `frontend/src/utils/3d/caps/light-capability:113` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
-| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:343` | — |
+| `DirectionalLightParams()` | `frontend/src/utils/3d/caps/light-capability:33` | ============ 参数类型 ============ |
+| `AmbientLightParams()` | `frontend/src/utils/3d/caps/light-capability:43` | — |
+| `SpotlightParams()` | `frontend/src/utils/3d/caps/light-capability:48` | — |
+| `VolumetricParams()` | `frontend/src/utils/3d/caps/light-capability:62` | — |
+| `LightParams()` | `frontend/src/utils/3d/caps/light-capability:76` | — |
+| `DEFAULT_LIGHT_PARAMS()` | `frontend/src/utils/3d/caps/light-capability:104` | — |
+| `LIGHT_PRESETS()` | `frontend/src/utils/3d/caps/light-capability:114` | 模型类别预设（对齐 SkyCapability.MODEL_SKY_PRESETS 模式） |
+| `LightCapability()` | `frontend/src/utils/3d/caps/light-capability:344` | — |
 | `ReflectionMode()` | `frontend/src/utils/3d/caps/postprocessing-capability:33` | 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） |
 | `PostprocessingParams()` | `frontend/src/utils/3d/caps/postprocessing-capability:35` | — |
 | `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/utils/3d/caps/postprocessing-capability:85` | — |
@@ -1812,11 +1815,11 @@
 | `logError()` | `frontend/src/utils/core/log:11` | 统一错误日志。 |
 | `dbg()` | `frontend/src/utils/debug/debug:38` | 输出调试日志（保留 tag 用于过滤） |
 | `safeStr()` | `frontend/src/utils/debug/debug:61` | 任意值 → 可读字符串（200 字符截断；供单测导出的纯函数） |
-| `WailsAndroidBridge()` | `frontend/src/utils/dom/android-bridge:7` | — |
-| `getAndroidBridge()` | `frontend/src/utils/dom/android-bridge:13` | 返回 Android Java 桥（桌面端为 null），类型安全断言（无 as any） |
-| `isViewerMode()` | `frontend/src/utils/dom/android-bridge:24` | 查看器模式判定（ADR-049 Phase 3 能力门控统一入口）： Android（双端桥存在）或网页版（browser adapter）——均无本地文件系统写能力、 无桌面专属 |
-| `registerAndroidBackHandler()` | `frontend/src/utils/dom/android-bridge:40` | 注册安卓返回键处理器，返回取消函数（供调用方在自身销毁/关闭时注销）。 |
-| `emitAndroidBack()` | `frontend/src/utils/dom/android-bridge:53` | 系统返回键的前端触发入口：依次从栈顶触发已注册处理器。 |
+| `getAndroidBridge()` | `frontend/src/utils/dom/android-bridge` | — |
+| `WailsAndroidBridge()` | `frontend/src/utils/dom/android-bridge` | — |
+| `isViewerMode()` | `frontend/src/utils/dom/android-bridge:16` | 查看器模式判定（ADR-049 Phase 3 能力门控统一入口）： Android（双端桥存在）或网页版（browser adapter）——均无本地文件系统写能力、 无桌面专属 |
+| `registerAndroidBackHandler()` | `frontend/src/utils/dom/android-bridge:30` | 注册安卓返回键处理器，返回取消函数（供调用方在自身销毁/关闭时注销）。 |
+| `emitAndroidBack()` | `frontend/src/utils/dom/android-bridge:43` | 系统返回键的前端触发入口：依次从栈顶触发已注册处理器。 |
 | `can()` | `frontend/src/utils/dom/capabilities:10` | 当前平台是否可用指定 binding（三态矩阵：desktop 全量 / web adapter has / Android 黑名单） |
 | `copyText()` | `frontend/src/utils/dom/clipboard:6` | 复制纯文本到剪贴板：优先 Clipboard API（需要安全上下文），降级隐藏 textarea + execCommand |
 | `refreshAdoptedStyleSheets()` | `frontend/src/utils/dom/css-hmr:13` | 热刷指定自定义元素的 Shadow DOM 样式表。 |

@@ -53,7 +53,7 @@ ADR-047「平台守卫批量」：Go 侧对 Android 上**无效或不适用的�
 ## 与其他子系统关系
 
 - **前端**：`getAndroidBridge()` 平台门控（version-updater 跳过更新）与 Go 侧守卫互补——前端先行过滤，Go 侧兜底拒绝
-- **前端能力门控镜像**（capabilities.ts，2026-08 修）：`can(binding)` 的 `ANDROID_UNAVAILABLE` 黑名单 = 本卡桌面专属项的**前端并行镜像**。蓝本一致：`RevealInExplorer`/`OpenFolder`/`RestartApplication`（本卡显式拒绝）+ `ListVersionInstances`（无 MC 整合包扫描）。其余 Go binding 在 Android 授权公共目录下均读写可达（`os.*` 直读），前端**不得一刀切 false**——P3 后黑名单单一事实源移至 `backend/platform-web.ts`（`ANDROID_UNAVAILABLE` 导出），`capabilities.ts` 仅委托 `canBinding()`——判定范式变为三态矩阵：desktop 全量 / web adapter has 探测 / android 查黑名单。若 Go 侧新增桌面专属拒绝项，同步 `platform-web.ts` 黑名单，反之亦然。
+- **前端能力门控镜像**（capabilities.ts，2026-08 修）：`can(binding)` 的 `ANDROID_UNAVAILABLE` 黑名单 = 本卡桌面专属项的**前端并行镜像**。蓝本一致：`RevealInExplorer`/`OpenFolder`/`RestartApplication`（本卡显式拒绝）+ `ListVersionInstances`（无 MC 整合包扫描）。其余 Go binding 在 Android 授权公共目录下均读写可达（`os.*` 直读），前端**不得一刀切 false**（P3 审核补强：黑名单迁至 `backend/platform-web.ts` 后，三谓词等价关系由 `platform-parity.test.ts` 12 组合全扫锁死——`resolveWebMode()===mode==='web'`、`isViewerMode()===mode!=='desktop'`；改任何 Tier 判定前先跑该测试）——P3 后黑名单单一事实源移至 `backend/platform-web.ts`（`ANDROID_UNAVAILABLE` 导出），`capabilities.ts` 仅委托 `canBinding()`——判定范式变为三态矩阵：desktop 全量 / web adapter has 探测 / android 查黑名单。若 Go 侧新增桌面专属拒绝项，同步 `platform-web.ts` 黑名单，反之亦然。
 - **PathManager**（pathmgr.go）：build-tag 双实现（desktop `os.UserConfigDir` / android 沙盒 + 公共仓库根），ADR-046 P2 参考 MikuMikuAR ADR-018
 - **updater**：`InstallUpdate` 非 Windows 拒绝（ADR-033，`updater_other.go` stub）
 

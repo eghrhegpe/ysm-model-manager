@@ -10,7 +10,8 @@ const { declaredMock, entryModeMock } = vi.hoisted(() => ({
   entryModeMock: vi.fn<() => boolean>(() => false),
 }));
 
-vi.mock("./platform.ts", () => ({
+vi.mock("./platform.ts", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   readDeclaredBackend: declaredMock,
   isWebEntryMode: entryModeMock,
 }));

@@ -19,6 +19,8 @@ import {
 } from "./scene-capability.ts";
 import { RESOURCE_TYPES } from "../../resource/types.ts";
 import { safeDispose } from "../safe-dispose.ts";
+import { dbg } from "../../debug/debug.ts";
+import { safeErrorMessage } from "../../safe-error-msg.ts";
 
 /** 角度(度)→弧度；内联等价 THREE.MathUtils.degToRad，避免对 three 测试 mock 强依赖 MathUtils 导出 */
 const degToRad = (deg: number): number => (deg * Math.PI) / 180;
@@ -813,5 +815,8 @@ function tryDisposeMat(m: THREE.Material): void {
       }
     }
     m.dispose();
-  } catch {}
+  } catch (e) {
+    // 不再静默吞掉：材质释放失败是 GPU 泄漏的高危信号，留痕便于排查
+    dbg("light-cap", { op: "tryDisposeMat-fail", type: m.type, uuid: m.uuid, err: safeErrorMessage(e) });
+  }
 }

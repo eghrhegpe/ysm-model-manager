@@ -823,7 +823,9 @@ async function mdMmStage4Anim(c: MdMmStage4Ctx): Promise<void> {
       } else {
         c.cameraClips.push(null);
       }
-    } catch {}
+    } catch (e) {
+      dbg("mmd", { op: "parse-vmd-fail", path: v, err: safeErrorMessage(e) });
+    }
   }
   c.vpdPoses = [];
   for (const v of c.vpdPaths) {
@@ -838,7 +840,9 @@ async function mdMmStage4Anim(c: MdMmStage4Ctx): Promise<void> {
         label: (v.split(/[/\\]/).pop() || "").replace(/\.vpd$/i, "") || "pose",
         vpd,
       });
-    } catch {}
+    } catch (e) {
+      dbg("mmd", { op: "parse-vpd-fail", path: v, err: safeErrorMessage(e) });
+    }
   }
   c.playing = true;
   c.curIdx = 0;
@@ -1064,7 +1068,9 @@ function mdMmStage6Result(
         lipSync.dispose();
         autoDance.dispose();
         footIK.dispose();
-      } catch {} finally {
+      } catch (e) {
+        dbg("mmd", { op: "dispose-aux-fail", err: safeErrorMessage(e) });
+      } finally {
         cancelPendingEncodings();
         c.stopLongTaskWatch();
         for (const url of c.blobUrls) URL.revokeObjectURL(url);
@@ -1072,7 +1078,9 @@ function mdMmStage6Result(
       try {
         disposeMmdMesh(c.mesh, mmdDiag, c.port, "dispose-tex");
         c.mmd?.dispose();
-      } catch {}
+      } catch (e) {
+        dbg("mmd", { op: "dispose-mesh-fail", err: safeErrorMessage(e) });
+      }
       if (renderer) {
         const memAfter = (renderer as unknown as { info?: { memory?: { geometries: number; textures: number } } }).info?.memory;
         if (memAfter) {
@@ -1094,7 +1102,9 @@ function mdMmStage6Result(
             } else {
               applyVPD(c.mmd!, pose.vpd, { ik: true, grant: true });
             }
-          } catch {}
+          } catch (e) {
+            dbg("mmd", { op: "apply-vpd-fail", index, err: safeErrorMessage(e) });
+          }
         }
       : undefined,
   };

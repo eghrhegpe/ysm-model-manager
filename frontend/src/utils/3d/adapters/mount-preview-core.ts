@@ -244,49 +244,41 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   installUiComponentsStyles();
   const myGen = ++_gen;
   const selfMode = adapter.mode === "self";
-  /** 当前模型路径：切换成功后「当前」项须指向新模型，原 path 移回候选。
-   *  siblings 不再 mount 时一次性过滤——getSiblings 基于 currentPath 动态过滤，
-   *  切换模型即「变更 filter 路径」，全程轻量不重扫。 */
-  let currentPath = path;
 
-  // ---- shared 模式相机状态（提前声明：buildCameraControls 的 bridge 闭包需在此后引用）----
-  // self 模式由适配器（如 ysm 的 renderModel3D 单例）自行驱动这些，核心只提供外壳，
-  // 避免与适配器自带 renderer/循环冲突（双重渲染 / 双重键盘劫持）。
-  let scene: THREE.Scene | undefined;
-  let camera: THREE.PerspectiveCamera | undefined;
-  let renderer: THREE.WebGLRenderer | undefined;
-  let controls: OrbitControls | undefined;
-  const isDisposed = { v: false };
+  // ---- 收敛：session 级可变状态（原 14 个裸 let，统一经此对象读写）----
+  const session: MpSessionState = {
+    currentPath: path,
+    isDisposed: { v: false },
+    aborted: { v: false },
+    cleanupFn: null,
+    camSpeed: DEFAULT_CAM_SPEED,
+    orbitMode: true,
+    euler: new THREE.Euler(0, 0, 0, "YXZ"),
+    built: null,
+    sceneBaseline: null,
+    allBuilt: [],
+    perFrame: null,
+    onUnifiedPick: null,
+    escH: () => {},
+    tipTimeoutId: undefined,
+  };
+
+  // input 状态（不进 session：bindInputHandlers 已显式接收 keys/mouseDown/lastMouse）
   const keys: Record<string, boolean> = {};
-  let camSpeed = DEFAULT_CAM_SPEED;
-  let orbitMode = true;
-  const euler = new THREE.Euler(0, 0, 0, "YXZ");
   let mouseDown = false;
   let lastMouse = { x: 0, y: 0 };
-  let orbitTarget: THREE.Vector3 | undefined;
-  // ===== §3 UI 装配（overlay/loading/菜单）=====
-  // 程序化天空能力（ADR-073 L1）：shared 模式注入统一核心，四种模型零改动继承
-  // 由 sceneCapabilityRegistry 统一创建，此处用辅助 getter 引用
-  let skyCap: SkyCapability | null = null;
-  let groundCap: GroundCapability | null = null;
-  let lightCap: LightCapability | null = null;
-  let fogCap: FogCapability | null = null;
-  let shadowCap: ShadowCapability | null = null;
-  let reflectorCap: ReflectorCapability | null = null;
-  let environmentCap: EnvironmentCapability | null = null;
-  // 后处理体积光管线（ADR-081 L2）：PostprocessingCapability（Registry 驱动）
-  // postProc 指向同一 capability，接口 PostprocessingLike：render/setSize/dispose
-  let postProc: PostprocessingLike | null = null;
-  let postProcCap: PostprocessingCapability | null = null;
-  let perFrame: ((dt: number) => void) | null = null;
+
+  // infra（scene/camera/renderer/controls/orbitTarget + 全部 cap）由 mpBuildSharedInfra
+  // 一次性构造返回；self 模式下 infra 保持 null，所有访问经 infra?. 短路为 undefined。
+  let infra: MpSharedInfra | null = null;
+
+  // 事件 handler（仅一次性赋值，cleanupCtx 按值快照；不进 session）
   let onKeyDown: (e: KeyboardEvent) => void = () => {};
   let onKeyUp: (e: KeyboardEvent) => void = () => {};
   let onDragPointerDown: (e: PointerEvent) => void = () => {};
   let onDragPointerUp: (e: PointerEvent) => void = () => {};
   let onDragPointerMove: (e: PointerEvent) => void = () => {};
   let onResize: () => void = () => {};
-  // R1-P2-1：提升为 let，使 cleanupCtx（块外构建）可访问 click 处理器
-  let onUnifiedPick: ((e: MouseEvent) => void) | null = null;
 
   // 单例外壳：首次创建，后续 mount3D 复用同一 DOM（避免重建导致黑屏）
   let overlay = _singletonOverlay;
@@ -313,19 +305,19 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   // 共用同一 bridge（操作核心内部 orbitMode/camSpeed/controls），适配器（如 ysm 底部
   // 导航）经 cameraControls 复用同一套相机状态。相机控件本身已收进声明式根菜单的 camera 项。
   const camBridge: CameraControlBridge = {
-    getOrbit: () => orbitMode,
+    getOrbit: () => session.orbitMode,
     setOrbit: (v: boolean) => {
-      orbitMode = v;
-      if (controls) controls.enableRotate = v;
+      session.orbitMode = v;
+      if (infra) infra.controls.enableRotate = v;
       if (v) {
-        if (orbitTarget && controls) orbitTarget.copy(controls.target);
+        if (infra) infra.orbitTarget.copy(infra.controls.target);
       } else {
-        if (camera) euler.setFromQuaternion(camera.quaternion);
+        if (infra) session.euler.setFromQuaternion(infra.camera.quaternion);
       }
       mouseDown = false;
     },
-    getSpeed: () => camSpeed,
-    setSpeed: (n: number) => { camSpeed = n; },
+    getSpeed: () => session.camSpeed,
+    setSpeed: (n: number) => { session.camSpeed = n; },
     // built 在 try 块内声明，此处经模块级 _handle（PreviewHandle 含 resetCamera? 契约）延迟调用
     reset: () => { _handles[_handles.length - 1]?.handle.resetCamera?.(); },
   };
@@ -349,15 +341,15 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     selfMode,
     getCap: (id: string) => sceneCapabilityRegistry.getById(id) ?? null,
     getCamBridge: () => camBridge,
-    getSiblings: () => (opts.siblings ?? []).filter((p) => p !== currentPath),
-    getCurrentPath: () => currentPath,
+    getSiblings: () => (opts.siblings ?? []).filter((p) => p !== session.currentPath),
+    getCurrentPath: () => session.currentPath,
     getCurrentRtype: () => (opts.rtype && opts.rtype.trim() ? opts.rtype : adapter.id),
     getCurrentSubtype: () => opts.subtype ?? "",
     getModelsByType: opts.getModelsByType ? (t: string, s?: string) => opts.getModelsByType!(t, s) : undefined,
     getTypeTabs: opts.getTypeTabs ? () => opts.getTypeTabs!() : undefined,
     getViewContainer: () => viewContainer,
     close: () => {
-      if (cleanupFn) cleanupFn();
+      if (session.cleanupFn) session.cleanupFn();
       else closeOverlay();
     },
     switchTo: (p: string, options?: { keepInScene?: boolean }): Promise<void> | void => {
@@ -395,21 +387,21 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   viewContainer.appendChild(loadingEl);
 
   // ===== §4 基础设施创建（scene/camera/renderer/OrbitControls/灯光/resize）=====
-  let aborted = { v: false };
+  // session.aborted 已在 mount3D 头部 session 对象初始化时声明。
   // 可变 ESC 处理函数：switchTo 后重新赋值
-  let escH = (e: KeyboardEvent): void => {
+  session.escH = (e: KeyboardEvent): void => {
     if (e.key === "Escape") {
-      if (cleanupFn) cleanupFn();
+      if (session.cleanupFn) session.cleanupFn();
       else closeOverlay();
     }
   };
   function closeOverlay(): void {
-    aborted.v = true;
-    document.removeEventListener("keydown", escH);
+    session.aborted.v = true;
+    document.removeEventListener("keydown", session.escH);
     // 早期路径（cleanupFn 尚未赋值）：清理 tip 定时器 + 菜单，再拆 overlay
-    if (tipTimeoutId) {
-      clearTimeout(tipTimeoutId);
-      tipTimeoutId = undefined;
+    if (session.tipTimeoutId) {
+      clearTimeout(session.tipTimeoutId);
+      session.tipTimeoutId = undefined;
     }
     menuHandle.dispose();
     if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -418,44 +410,40 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     if (idx >= 0) _handles.splice(idx, 1);
     adapter.onClose?.();
   }
-  document.addEventListener("keydown", escH);
+  document.addEventListener("keydown", session.escH);
 
   if (!selfMode) {
-    const infra = mpBuildSharedInfra(adapter, viewContainer, menuHandle);
-    scene = infra.scene;
-    camera = infra.camera;
-    renderer = infra.renderer;
-    controls = infra.controls;
-    orbitTarget = infra.orbitTarget;
-    skyCap = infra.skyCap;
-    groundCap = infra.groundCap;
-    lightCap = infra.lightCap;
-    fogCap = infra.fogCap;
-    shadowCap = infra.shadowCap;
-    reflectorCap = infra.reflectorCap;
-    environmentCap = infra.environmentCap;
-    postProc = infra.postProc;
-    postProcCap = infra.postProcCap;
+    infra = mpBuildSharedInfra(adapter, viewContainer, menuHandle);
+    // 块内 infra 已非 null（mpBuildSharedInfra 必返回完整对象）；用局部 const 锁定非空，
+    // 避免 animate 闭包穿越控制流回退到 MpSharedInfra | null。
+    const sc = infra.scene;
+    const cam = infra.camera;
+    const rd = infra.renderer;
+    const ctr = infra.controls;
+    const ot = infra.orbitTarget;
+    const groundCap = infra.groundCap;
+    const lightCap = infra.lightCap;
+    const postProc = infra.postProc;
 
     // ===== §4a 输入绑定（WASD 键盘 + 拖拽自转 + resize）=====
     const inputOpts: InputOptions = {
       keys,
-      getOrbitMode: () => orbitMode,
+      getOrbitMode: () => session.orbitMode,
       mouseDown: { v: mouseDown },
       lastMouse: { x: lastMouse.x, y: lastMouse.y },
-      euler,
-      camera,
-      renderer,
-      postProc,
+      euler: session.euler,
+      camera: cam,
+      renderer: rd,
+      postProc: infra.postProc,
       viewContainer,
-      isDisposed,
+      isDisposed: session.isDisposed,
     };
     const handlers = bindInputHandlers(inputOpts);
     onKeyDown = handlers.onKeyDown;
 
     // ADR-093 T5：统一多模型拾取器（仅 count>=2 激活，单模型完全沿用逐模型 registerBoneRaycast，零回归）
-    onUnifiedPick = mpMakeUnifiedPickHandler(renderer, camera, scene);
-    renderer.domElement.addEventListener("click", onUnifiedPick);
+    session.onUnifiedPick = mpMakeUnifiedPickHandler(rd, cam, sc);
+    rd.domElement.addEventListener("click", session.onUnifiedPick);
     onKeyUp = handlers.onKeyUp;
     onDragPointerDown = handlers.onDragPointerDown;
     onDragPointerUp = handlers.onDragPointerUp;
@@ -495,12 +483,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
         // 推进水面波纹动画（wetness>0 时 visible）
         const activeSession = _handles[_handles.length - 1];
         groundCap?.update(dt);
-        const cam = camera as THREE.PerspectiveCamera;
-        const sc = scene as THREE.Scene;
-        const rd = renderer as THREE.WebGLRenderer;
-        const ctr = controls as OrbitControls;
-        const ot = orbitTarget as THREE.Vector3;
-        mpApplyWasdCameraMotion(keys, cam, ctr, camSpeed, dt, orbitMode, ot, {
+        mpApplyWasdCameraMotion(keys, cam, ctr, session.camSpeed, dt, session.orbitMode, ot, {
           camDir: _camDir,
           forward: _forward,
           right: _right,
@@ -544,64 +527,57 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   tip.style.cssText = "padding:5px 12px;background:#1b1c24;border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.7);font-size:11px;text-align:center;flex-shrink:0";
   tip.textContent = "WASD 移动 · 空格/Shift 上下 · 拖动旋转 · 滚轮缩放 · ESC 关闭";
   overlay.insertBefore(tip, body);
-  // 保存 timeoutId 供 cleanup 时 clearTimeout
-  let tipTimeoutId: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
+  // 保存 timeoutId 供 cleanup 时 clearTimeout（收敛进 session.tipTimeoutId）
+  session.tipTimeoutId = setTimeout(() => {
     if (tip.parentNode) tip.remove();
   }, TIP_AUTO_DISMISS_MS);
 
-  let cleanupFn: (() => void) | null = null;
-  // switchTo 支持（ADR-066 §5.6）：提升 built 到 try 外，复用外壳重建内容层
-  let built: PreviewScene | null = null;
-  /** scene 子节点基线快照（shared 模式）：区分「场景固有装饰」与「内容层增量」——
-   *  首次 build 前捕获，切换后经 setSceneBaseline 更新为排除增量的快照；
-   *  switchTo 时用差量移除旧内容层，防场景累积 */
-  let sceneBaseline: Set<THREE.Object3D> | null = null;
-  /** cooperate 模式下已追加的内容句柄列表（fullCleanup 时逐一 dispose） */
-  const allBuilt: PreviewScene[] = [];
+  // session.cleanupFn / session.built / session.sceneBaseline / session.allBuilt
+  // 已在 mount3D 头部 session 对象初始化时声明，此处不再重复 let。
 
   const cleanupCtx: CleanupContext = {
     menuHandle,
-    isDisposed,
+    isDisposed: session.isDisposed,
     animId: _globalAnimId,
     onKeyDown,
     onKeyUp,
-    getEscH: () => escH,
+    getEscH: () => session.escH,
     onDragPointerDown,
     onDragPointerUp,
     onDragPointerMove,
     onResize,
-    onUnifiedPick,
-    allBuilt,
-    nullBuilt: () => { built = null; },
-    skyCap,
-    groundCap,
-    lightCap,
-    fogCap,
-    shadowCap,
-    reflectorCap,
-    environmentCap,
-    postProc,
-    nullPostProc: () => { postProc = null; },
-    postProcCap,
-    renderer,
-    scene,
-    controls,
+    onUnifiedPick: session.onUnifiedPick,
+    allBuilt: session.allBuilt,
+    nullBuilt: () => { session.built = null; },
+    skyCap: infra?.skyCap ?? null,
+    groundCap: infra?.groundCap ?? null,
+    lightCap: infra?.lightCap ?? null,
+    fogCap: infra?.fogCap ?? null,
+    shadowCap: infra?.shadowCap ?? null,
+    reflectorCap: infra?.reflectorCap ?? null,
+    environmentCap: infra?.environmentCap ?? null,
+    postProc: infra?.postProc ?? null,
+    nullPostProc: () => { if (infra) infra.postProc = null; },
+    postProcCap: infra?.postProcCap ?? null,
+    renderer: infra?.renderer,
+    scene: infra?.scene,
+    controls: infra?.controls,
     overlay,
     nullHandle: () => {
       const idx = _handles.findIndex(h => h.gen === myGen);
       if (idx >= 0) _handles.splice(idx, 1);
     },
     adapter,
-    getTipTimeoutId: () => tipTimeoutId,
+    getTipTimeoutId: () => session.tipTimeoutId,
   };
 
   const switchCtx: SwitchContext = {
-    scene,
-    getSceneBaseline: () => sceneBaseline,
-    setSceneBaseline: (s) => { sceneBaseline = s; },
-    getBuilt: () => built,
-    setBuilt: (s) => { built = s; },
-    allBuilt,
+    scene: infra?.scene,
+    getSceneBaseline: () => session.sceneBaseline,
+    setSceneBaseline: (s) => { session.sceneBaseline = s; },
+    getBuilt: () => session.built,
+    setBuilt: (s) => { session.built = s; },
+    allBuilt: session.allBuilt,
     loadingEl,
     viewContainer,
     overlay,
@@ -609,36 +585,36 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     adapter: { build: adapter.build.bind(adapter) },
     camBridge,
     selfMode,
-    renderer,
-    controls,
-    orbitTarget,
-    camera,
-    lightCap,
-    shadowCap,
-    environmentCap,
-    getCurrentPath: () => currentPath,
-    setCurrentPath: (p) => { currentPath = p; },
+    renderer: infra?.renderer,
+    controls: infra?.controls,
+    orbitTarget: infra?.orbitTarget,
+    camera: infra?.camera,
+    lightCap: infra?.lightCap ?? null,
+    shadowCap: infra?.shadowCap ?? null,
+    environmentCap: infra?.environmentCap ?? null,
+    getCurrentPath: () => session.currentPath,
+    setCurrentPath: (p) => { session.currentPath = p; },
     getCurrentRtype: () => (opts.rtype && opts.rtype.trim() ? opts.rtype : adapter.id),
     getCurrentSubtype: () => opts.subtype ?? "",
-    getPerFrame: () => perFrame,
+    getPerFrame: () => session.perFrame,
     setPerFrame: (f) => {
       // 切换模型时先从全局 perFrame 列表移除旧回调（防已 dispose 的旧内容层
       // update 持续执行），再注册新回调——移除/注册对称维护，初次 mount 与
       // 切换统一经此注册（rAF 引导块不再一次性 push）
-      const old = perFrame;
+      const old = session.perFrame;
       if (old) {
         const idx = _globalPerFrames.indexOf(old);
         if (idx >= 0) _globalPerFrames.splice(idx, 1);
       }
-      perFrame = f;
+      session.perFrame = f;
       // P3 对称维护：新回调非空时重新注册，否则列表与 perFrame 引用脱节
       // （初次 mount 与切换统一经 setPerFrame 注册，取代 595 行的一次性 push）
       if (f) _globalPerFrames.push(f);
     },
     getHandle: () => _handles[_handles.length - 1]?.handle ?? null,
-    aborted,
+    aborted: session.aborted,
     inFlight: false,
-    isDisposed,
+    isDisposed: session.isDisposed,
     myGen,
     getGen: () => _gen,
   };
@@ -651,12 +627,12 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   function unloadRole(id: string): void {
     mpUnloadRole(
       {
-        allBuilt,
-        scene,
-        controls,
-        camera,
+        allBuilt: session.allBuilt,
+        scene: infra?.scene,
+        controls: infra?.controls,
+        camera: infra?.camera,
         menuHandle,
-        getBuilt: () => built,
+        getBuilt: () => session.built,
         setPerFrame: (f) => switchCtx.setPerFrame(f),
       },
       id,
@@ -667,13 +643,13 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     // 代际守卫：await 期间用户已点其他文件 / 被 invalidate，丢弃本次挂载
     if (myGen !== _gen) return;
 
-    if (scene) sceneBaseline = new Set(scene.children);
-    built = await adapter.build(
+    if (infra) session.sceneBaseline = new Set(infra.scene.children);
+    session.built = await adapter.build(
       {
-        scene,
-        camera,
-        controls,
-        renderer,
+        scene: infra?.scene,
+        camera: infra?.camera,
+        controls: infra?.controls,
+        renderer: infra?.renderer,
         cameraControls: selfMode ? undefined : camBridge,
         viewContainer,
         loadingEl,
@@ -688,7 +664,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       },
       path,
     );
-    if (aborted.v || myGen !== _gen) {
+    if (session.aborted.v || myGen !== _gen) {
       // 加载期间被 ESC / invalidate 打断：完整拆除（含 rAF 循环与 WebGL renderer），
       // 避免外壳资源泄漏；内容层 GPU 资源经 fullCleanup 一并释放。
       fullCleanup();
@@ -699,46 +675,46 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     // 并保留它，核心不在此强制移除。
 
     // 同步通用相机状态到适配器已设定的取景（包围盒/尺寸定相机）——仅 shared 模式
-    if (renderer) {
-      orbitTarget!.copy((controls as OrbitControls).target);
-      euler.setFromQuaternion((camera as THREE.PerspectiveCamera).quaternion);
+    if (infra) {
+      infra.orbitTarget.copy(infra.controls.target);
+      session.euler.setFromQuaternion(infra.camera.quaternion);
     }
     // ADR-081 L1：内容层包围盒 -> 聚光灯/体积光锥瞄准对象上方
-    syncLightTargetFromContent(scene, sceneBaseline, lightCap);
+    syncLightTargetFromContent(infra?.scene, session.sceneBaseline, infra?.lightCap ?? null);
     // 首模型 mesh castShadow / receiveShadow（内容层根节点 = 刚注册的 added）
-    if (shadowCap && built) {
-      const roots = scene && sceneBaseline
-        ? scene.children.filter((c) => !sceneBaseline!.has(c))
+    if (infra?.shadowCap && session.built) {
+      const roots = infra && session.sceneBaseline
+        ? infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
         : [];
-      shadowCap.applyMeshCasts(roots);
+      infra.shadowCap.applyMeshCasts(roots);
     }
     // 首模型 mesh envMapIntensity 同步
-    if (environmentCap && built) {
-      const roots = scene && sceneBaseline
-        ? scene.children.filter((c) => !sceneBaseline!.has(c))
+    if (infra?.environmentCap && session.built) {
+      const roots = infra && session.sceneBaseline
+        ? infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
         : [];
-      environmentCap.syncMeshIntensity(roots);
+      infra.environmentCap.syncMeshIntensity(roots);
     }
-    switchCtx.setPerFrame(built.update ?? null);
+    switchCtx.setPerFrame(session.built.update ?? null);
   // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====
   // 记录初始模型到追加列表（cooperate 模式下 fullCleanup 需逐一 dispose）
-    if (built) allBuilt.push(built);
+    if (session.built) session.allBuilt.push(session.built);
     // ADR-093 T2：首模型注册进场景注册表（roots 经 scene.children 差量捕获）
-    if (built) {
-      const added = scene && sceneBaseline
-        ? scene.children.filter((c) => !sceneBaseline!.has(c))
+    if (session.built) {
+      const added = infra && session.sceneBaseline
+        ? infra.scene.children.filter((c) => !session.sceneBaseline!.has(c))
         : [];
       sceneRegistry.register({
         path,
         rtype: opts.rtype ?? adapter.id,
         roots: added,
-        built,
-        boneMaps: built.boneMaps ?? null,
-        menuItems: built.menuItems ?? null,
-        onBonePick: built.onBonePick ?? null,
+        built: session.built,
+        boneMaps: session.built.boneMaps ?? null,
+        menuItems: session.built.menuItems ?? null,
+        onBonePick: session.built.onBonePick ?? null,
       });
       // ADR-076 v2 Phase 3：注册后立刻注入菜单项，否则 dock-menu 无适配器专属控件
-      if (built.menuItems) menuHandle.setAdapterItems(built.menuItems);
+      if (session.built.menuItems) menuHandle.setAdapterItems(session.built.menuItems);
     }
 
     // ADR-076 v2 Phase 3：适配器控件全部经声明式根菜单注入（ctx.menu.setAdapterItems / built.menuItems）
@@ -747,13 +723,13 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     function fullCleanup(): void {
       // P0 修复：中止/退出路径完整拆除 DOM + 解绑监听，防泄漏
       // ① ESC 监听器（escH 经 L792 可能已被替换，移除当前引用）
-      document.removeEventListener("keydown", escH);
+      document.removeEventListener("keydown", session.escH);
       // ② 提示条定时器
-      if (tipTimeoutId) {
-        clearTimeout(tipTimeoutId);
-        tipTimeoutId = undefined;
+      if (session.tipTimeoutId) {
+        clearTimeout(session.tipTimeoutId);
+        session.tipTimeoutId = undefined;
       }
-      // ③ 声明式根菜单（移除 dock/popup + 解绑 view click 监听）
+      // ③ 声式根菜单（移除 dock/popup + 解绑 view click 监听）
       menuHandle.dispose();
       // ④ viewContainer（含 loadingEl；首次挂载时可能含 renderer.domElement）
       if (viewContainer.parentNode) viewContainer.parentNode.removeChild(viewContainer);
@@ -765,20 +741,20 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
       _singletonViewContainer = null;
       // ⑥ 只清理内容层（dispose built + 移除 scene children），保留 renderer/canvas 存活
       //    避免销毁 WebGL context 导致黑屏窗口期
-      if (scene && sceneBaseline) {
-        const stale = scene.children.filter((c): boolean => !sceneBaseline!.has(c));
-        for (const c of stale) scene.remove(c);
+      if (infra && session.sceneBaseline) {
+        const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
+        for (const c of stale) infra.scene.remove(c);
       }
-      for (const b of allBuilt) {
+      for (const b of session.allBuilt) {
         safeDispose(b);
       }
-      allBuilt.length = 0;
+      session.allBuilt.length = 0;
       sceneRegistry.reset();
       // 清掉 loadingEl（已从 viewContainer 一并移除，此处为兜底）
       if (loadingEl.parentNode) loadingEl.remove();
       // 从全局 perFrame 回调列表移除本 session
-      if (perFrame) {
-        const idx = _globalPerFrames.indexOf(perFrame);
+      if (session.perFrame) {
+        const idx = _globalPerFrames.indexOf(session.perFrame);
         if (idx >= 0) _globalPerFrames.splice(idx, 1);
       }
       // 如果所有 session 都清理完了，停止 rAF
@@ -790,33 +766,33 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
 
     // 复用 escH 可变引用，switchTo 后旧 handler 被替换，新 handler 在 cleanup 时通过 getter 正确卸载
     // R1-P1-2：先保存旧引用再替换，否则 removeEventListener 移除的是新函数（从未注册过），旧函数仍残留
-    const oldEscH = escH;
-    escH = (e: KeyboardEvent): void => {
+    const oldEscH = session.escH;
+    session.escH = (e: KeyboardEvent): void => {
       if (e.key === "Escape") fullCleanup();
     };
     document.removeEventListener("keydown", oldEscH);
-    document.addEventListener("keydown", escH);
-    cleanupFn = fullCleanup;
+    document.addEventListener("keydown", session.escH);
+    session.cleanupFn = fullCleanup;
     const sessionHandle = {
       cleanup: fullCleanup,
-      resetCamera: built.resetCamera,
-      setRotationMode: built.setRotationMode,
-      setSpeed: built.setSpeed,
-      showModelGroup: built.showModelGroup,
-      onBoneSelect: built.onBoneSelect,
-      screenshot: built.screenshot,
+      resetCamera: session.built.resetCamera,
+      setRotationMode: session.built.setRotationMode,
+      setSpeed: session.built.setSpeed,
+      showModelGroup: session.built.showModelGroup,
+      onBoneSelect: session.built.onBoneSelect,
+      screenshot: session.built.screenshot,
       // 当前会话内切换模型：复用外壳（renderer/rAF/controls/灯光）重建内容层（ADR-066 §5.6）
       // 支持 keepInScene 模式：true 时不移除旧模型，新模型追加到同一场景（多模型同台）
       switchTo: (newPath: string, options?: { keepInScene?: boolean }) => switchToSession(switchCtx, newPath, options),
     };
     _handles.push({ handle: sessionHandle, gen: myGen });
   } catch (e) {
-    document.removeEventListener("keydown", escH);
-    built?.dispose();
+    document.removeEventListener("keydown", session.escH);
+    session.built?.dispose();
     // P2 守卫（对齐旧 skeleton close3D 语义）：加载期间被 ESC/切模型/invalidate
     // 打断后迟到的失败不得再弹错——否则关闭后 1~2s 突然冒「加载失败」toast，
     // 掩盖用户主动关闭的意图（旧实现 skeleton.ts 的 gen 守卫，迁移到核心统一承担）。
-    if (aborted.v || myGen !== _gen) return;
+    if (session.aborted.v || myGen !== _gen) return;
     console.error("[preview 3D] 加载失败:", e);
     showLoadFailure(loadingEl, e);
   }
@@ -826,6 +802,42 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
 // → cleanup-3d.ts（runFullCleanup / CleanupContext）
 // → input-and-animation.ts（bindInputHandlers / InputOptions）
 // → switch-preview.ts（switchToSession / SwitchContext）
+
+/**
+ * mount3D 会话级可变状态收敛体（原 30+ 裸 let，收敛后仅剩 keys/mouseDown/lastMouse 等少量 input let）。
+ * infra 字段（scene/camera/renderer/controls/orbitTarget + 全部 cap）复用 {@link MpSharedInfra}，
+ * 本接口仅收敛 session 级可变状态——闭包读写统一经此对象，降低认知负担。
+ */
+interface MpSessionState {
+  /** 当前模型路径（switchTo 时变更，getSiblings 据此动态过滤） */
+  currentPath: string;
+  /** disposed 标记（可变引用） */
+  isDisposed: { v: boolean };
+  /** 中止标记（可变引用，ESC/invalidate 打断） */
+  aborted: { v: boolean };
+  /** cleanup 函数引用（build 成功后赋值） */
+  cleanupFn: (() => void) | null;
+  /** 相机移动速度（camBridge.setSpeed 变更） */
+  camSpeed: number;
+  /** 轨道/自由模式开关（camBridge.setOrbit 变更） */
+  orbitMode: boolean;
+  /** 每帧复用的临时欧拉角（WASD 自由相机时读 camera.quaternion） */
+  euler: THREE.Euler;
+  /** 当前会话内容层（switchTo 后会被替换） */
+  built: PreviewScene | null;
+  /** 场景子节点基线快照（区分固有装饰与内容层增量） */
+  sceneBaseline: Set<THREE.Object3D> | null;
+  /** cooperate 模式下已追加的内容句柄列表（fullCleanup 逐一 dispose） */
+  allBuilt: PreviewScene[];
+  /** 每帧回调（setPerFrame 统一注册/注销） */
+  perFrame: ((dt: number) => void) | null;
+  /** 统一多模型拾取器（仅 count>=2 激活） */
+  onUnifiedPick: ((e: MouseEvent) => void) | null;
+  /** 可变 ESC handler（switchTo 后替换，cleanup 经当前引用卸载） */
+  escH: (e: KeyboardEvent) => void;
+  /** 提示条自动消失定时器（cleanup 时 clearTimeout） */
+  tipTimeoutId: ReturnType<typeof setTimeout> | undefined;
+}
 
 /** mpUnloadRole 所需的外部会话引用（原 mount3D 内嵌闭包变量，显式参数化注入） */
 interface MpUnloadCtx {

@@ -7,7 +7,7 @@
 **平台支持**：✅ Windows (amd64) · ⚠️ macOS (实验性) · ✅ Linux (amd64) · ✅ Android (arm64，查看器模式)
 
 > 🌐 **产品主页**: [https://eghrhegpe.github.io/ysm-model-manager/](https://eghrhegpe.github.io/ysm-model-manager/) — 功能介绍、视频演示、截图展示
-> 🕸️ **网页版**（开发中，ADR-049）：纯浏览器托管（可 GitHub Pages），同一代码库经 backend 适配器路由到 IndexedDB 模型库。Phase 0/1/2 已完成，Phase 3 能力门控待实施。
+> 🕸️ **网页版**（ADR-049）：纯浏览器托管（可 GitHub Pages），同一代码库经 backend 适配器路由到 IndexedDB 模型库。Phase 0~3 已完成（含能力门控、主 UI 集成与 Web 端 e2e 回归）。
 
 ---
 
@@ -46,7 +46,7 @@
 
 ### 📦 模型仓库
 
-<p align="center"><img src="docs/preview/模型仓库.png" width="80%" alt="模型仓库"></p>
+<p align="center"><img src="docs/public/preview/模型仓库.png" width="80%" alt="模型仓库"></p>
 
 - 扫描 `.ysm` / `.zip` / `.7z` 模型文件（按 SHA256 去重）
 - 树形文件夹浏览 + 拖拽移动
@@ -60,7 +60,7 @@
 
 ### 🎮 整合包管理
 
-<p align="center"><img src="docs/preview/整合包管理.png" width="80%" alt="整合包管理"></p>
+<p align="center"><img src="docs/public/preview/整合包管理.png" width="80%" alt="整合包管理"></p>
 
 - 自动列出所有 MC 实例，支持多种启动器布局：
   - 标准 `.minecraft/versions/`（原版/PCL2/HMCL/BakaXL）
@@ -88,10 +88,10 @@
 
 ### 🎨 创作者频道
 
-<p align="center"><img src="docs/preview/创作者频道.png" width="80%" alt="创作者频道"></p>
+<p align="center"><img src="docs/public/preview/创作者频道.png" width="80%" alt="创作者频道"></p>
 
 - **站点浏览**：B站、爱发电等平台的创作者列表浏览
-- **创作者管理**：维护创作者数据库（87+ 位），按平台标签分类（bilibili / afdian / github）
+- **创作者管理**：维护创作者数据库（231+ 位），按平台标签分类（bilibili / afdian / github）
 - **渐变头像边框**：作品数越高边框越亮，conic-gradient 渐变 + 呼吸灯动画
 - **预设搜索**：一键搜索 B站 YSM 免费模型 / YSM 模型分享、爱发电 YSM
 - **内嵌/外链模式**：pill 式切换开关，tab 栏右侧
@@ -99,7 +99,7 @@
 
 ### 🧩 创意工坊
 
-<p align="center"><img src="docs/preview/创意工坊.png" width="80%" alt="创意工坊"></p>
+<p align="center"><img src="docs/public/preview/创意工坊.png" width="80%" alt="创意工坊"></p>
 
 - **GitHub 在线仓库**：读取远程仓库的 `index.json` 在线浏览模型列表
 - **一键下载**：⬇️ 直接从 GitHub 下载模型到本地仓库
@@ -107,7 +107,7 @@
 
 ### 👴 仓库元老
 
-<p align="center"><img src="docs/preview/仓库元老.png" width="80%" alt="仓库元老"></p>
+<p align="center"><img src="docs/public/preview/仓库元老.png" width="80%" alt="仓库元老"></p>
 
 - **健康度评分**：综合禁用率和重复率计算（100 分制），conic-gradient 环形展示 + 呼吸动画
 - **月度活动热力图**：一年 12 个月的活动分布一目了然
@@ -116,7 +116,7 @@
 
 ### 🔄 自动更新
 
-<p align="center"><img src="docs/preview/自动更新.png" width="80%" alt="自动更新"></p>
+<p align="center"><img src="docs/public/preview/自动更新.png" width="80%" alt="自动更新"></p>
 
 - 启动时自动检查 GitHub Releases（6 小时限频）
 - 检测到新版本右下角 toast 提示，点击弹出更新确认
@@ -131,7 +131,7 @@
 
 ### ⚙️ 设置
 
-<p align="center"><img src="docs/preview/设置页.png" width="80%" alt="设置页"></p>
+<p align="center"><img src="docs/public/preview/设置页.png" width="80%" alt="设置页"></p>
 
 - **卡片化布局**：存储策略 & 下载镜像双栏并排，字体与布局三栏并排
 - 🎮 游戏根目录 — 📂 选择 / 🔍 自动搜索 `.minecraft`（检测 versions/assets 等特征）
@@ -145,7 +145,7 @@
 
 ### ℹ️ 关于
 
-<p align="center"><img src="docs/preview/关于.png" width="80%" alt="关于"></p>
+<p align="center"><img src="docs/public/preview/关于.png" width="80%" alt="关于"></p>
 
 - 卡片式展示项目定位、技术栈、资源链接
 - **快速上手**五步指引：设置目录 → 拖入模型 → 自动归档 → 安装到整合包 → 加载资源包
@@ -192,10 +192,9 @@
 
 ```
 ysm-model-manager/
-├── app.go                     ← Wails Binding 入口
 ├── main.go                    ← Go 入口 + 窗口参数
 ├── wails.json                 ← Wails 配置
-├── build-release.ps1          ← 构建+GitHub Release 脚本
+├── internal/app/              ← Wails Binding 入口（app.go 及按域拆分）
 ├── go/                        ← Go 工具包
 │   ├── installer/             —— 模型安装（复制/硬链接/符号链接）
 │   ├── recycle/               —— 回收站
@@ -208,59 +207,69 @@ ysm-model-manager/
 │   ├── version/               —— 版本号（编译时注入）
 │   ├── paths/                 —— 路径安全校验
 │   └── types/                 —— 共享类型
+├── scripts/                   ← 构建/发布/工具脚本
+│   ├── build-release.ps1      —— 构建+GitHub Release 脚本
+│   ├── build-release.sh       —— 跨平台 bash 版发布脚本
+│   ├── android-build.mjs      —— 安卓打包
+│   └── android-install.mjs    —— 安卓安装
 ├── frontend/                  ← 前端源码
-│   ├── index.html
+│   ├── index.html             —— 桌面/网页版主 UI
+│   ├── web.html               —— 网页版 Spike 入口
+│   ├── vite.web.config.ts     —— 网页版构建配置
 │   ├── css/
 │   │   ├── variables.css      —— CSS 变量（4 套主题 + 字体系统）
 │   │   ├── layout.css         —— 主布局 + 侧栏
-│   │   └── components.css     —— 全局组件样式（部分已迁移至 Shadow DOM）
-│   └── js/
+│   │   ├── components.css     —— 全局组件样式（部分已迁移至 Shadow DOM）
+│   │   └── transitions.css    —— 过渡动画
+│   └── src/
 │       ├── bus.ts              —— 事件总线（跨 Shadow DOM 通信）
 │       ├── app-modules.ts      —— 全局入口 + 右键菜单映射
-│       ├── components/         —— Web Components（Shadow DOM）
-│       │   ├── app-nav.ts      —— 左侧导航菜单
+│       ├── backend/            —— Wails/browser/android 后端适配（resolveBackend 双实现）
+│       ├── views/              —— Web Components（Shadow DOM）
+│       │   ├── app-nav/        —— 左侧导航菜单
 │       │   ├── app-content/    —— 主内容区（页面路由 + 全局事件）
 │       │   ├── app-tree/       —— 模型仓库树
 │       │   ├── app-sidebar/    —— 整合包列表
 │       │   ├── app-preview/    —— 预览面板 + 3D/2D 渲染
-│       │   ├── app-toast.ts    —— Toast 通知
-│       │   └── context-menu.ts —— 右键菜单
-│       ├── features/           —— 业务功能（import-queue / recycle-bin / workshop 等）
-│       ├── dialogs/            —— 弹窗（modal/rename/batch-rename）
-│       ├── pages/              —— 页面渲染（repository）
-│       ├── core/               —— 基础设施（handler-dnd/handler-sync/theme/context-menus）
+│       │   ├── app-sync-manager/ —— 同步管理
+│       │   ├── app-toast/      —— Toast 通知
+│       │   └── context-menu/   —— 右键菜单
+│       ├── features/           —— 业务功能（import-dnd / recycle-bin / version-updater 等）
+│       ├── core/               —— 基础设施（context-menus / handlers / i18n / page-store）
 │       ├── services/           —— 服务注册
+│       ├── ui/                 —— UI 组件（card / collapsible / slide-menu 等）
 │       ├── utils/              —— 工具函数（display/fmt/dom/icon/summarize/preview-cache）
 │       └── wasm/               —— YSMParser WASM 解码（ysm-wasm-data.js）
 └── docs/                      ← 文档（GitHub Pages 主站）
     ├── index.md              —— 主站落地页：站点地图 + 功能一览 + 界面预览
     ├── Design.md             —— UI 设计规范（CSS 变量、布局、字体）
-    ├── adr/                  —— 架构决策记录 ADR-001~017（index.md 自动生成）
+    ├── adr/                  —— 架构决策记录 ADR-001~123（index.md 自动生成）
     ├── guide/                —— 用户指南（用户手册，index.md 索引）
     ├── knowledge/            —— AI 知识卡索引（index.md 自动生成）
-    ├── releases/             —— 各版本发版说明（README.md 索引）
-    ├── app/                  —— 网页版入口（Phase 0/1/2 完成，Phase 3 待实施）
+    ├── releases/             —— 各版本发版说明（index.md 索引）
+    ├── public/preview/       —— README 截图
     ├── novel/                —— 联邦开发 saga（小说）
     ├── archive/              —— 冻结区：旧架构/状态/复盘，禁止日常编辑
-    ├── funcmap.md            —— 函数地图（自动生成）
-    └── preview/              —— README 截图
+    └── funcmap.md            —— 函数地图（自动生成）
 ```
 
 ### 组件规范
 
-大组件按职责拆分（以 `app-content` 为例）：
+大组件按职责拆分（以 `app-content` 为例，位于 `frontend/src/views/app-content/`）：
 
 ```
 app-content/
   index.ts          # 生命周期编排、页面路由、全局事件
   tpl.ts            # HTML 模板（全部页面）
   content-css.ts    # Shadow DOM 样式表
-  community/        # 创作者频道相关子模块
+  community-data.ts # 创作者频道数据
   diagnostics/      # 诊断页
   settings/         # 设置页
+  site/             # 创作者/工坊站点视图
+  workshop-*.ts     # 创意工坊相关子模块
 ```
 
-小组件（`app-nav` / `app-toast` / `context-menu`）直接单个文件。
+小组件（`app-nav` / `app-toast` / `context-menu`）在 `frontend/src/views/` 下各自成目录。
 
 ---
 
@@ -311,10 +320,10 @@ node scripts/android-install.mjs
 | [`docs/archive/TASK_PLAN.md`](docs/archive/TASK_PLAN.md)                 | **AI 任务计划**（已归档）           |
 | [`docs/archive/SESSION_HANDOFF.md`](docs/archive/SESSION_HANDOFF.md)     | **会话交接日志**（已归档）       |
 | [`docs/archive/3D/3d-rendering-report.md`](docs/archive/3D/3d-rendering-report.md)   | **3D 渲染引擎开发报告**（已归档） |
-| [`docs/releases/`](docs/releases/)                         | 各版本发版说明（索引见 docs/releases/） |
+| [`docs/releases/index.md`](docs/releases/index.md)         | 各版本发版说明（索引）                   |
 | [`docs/index.md`](docs/index.md)         | **主站介绍**（功能一览 + 站点地图 + 界面预览）    |
 | [`docs/knowledge/index.md`](docs/knowledge/index.md)                 | AI 知识卡索引（后端绑定 + 事件总线 + 组件清单，自动生成） |
-| [`docs/adr/README.md`](docs/adr/README.md) | **ADR 决策记录登记表**（架构决策追踪）    |
+| [`docs/adr/index.md`](docs/adr/index.md) | **ADR 决策记录登记表**（架构决策追踪）    |
 | [`docs/governance-rules.md`](docs/governance-rules.md) | 前端治理规则手册（9 条规则 × 严重度 × 检测工具） |
 | [`docs/pitfalls.md`](docs/pitfalls.md) | 致命陷阱手册（11 条事故教训全量版）          |
 | [`frontend/AGENTS.md`](frontend/AGENTS.md) | 前端专属 AI 行为手册（DnD/调试/组件约束） |

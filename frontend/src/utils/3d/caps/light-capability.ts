@@ -18,6 +18,7 @@ import {
   restoreState,
 } from "./scene-capability.ts";
 import { RESOURCE_TYPES } from "../../resource/types.ts";
+import { safeDispose } from "../safe-dispose.ts";
 
 /** 角度(度)→弧度；内联等价 THREE.MathUtils.degToRad，避免对 three 测试 mock 强依赖 MathUtils 导出 */
 const degToRad = (deg: number): number => (deg * Math.PI) / 180;
@@ -515,7 +516,7 @@ export class LightCapability implements SceneCapability {
       if (this.coneGroup.parent) this.coneGroup.parent.remove(this.coneGroup);
       this.coneGroup.traverse((obj) => {
         const m = obj as THREE.Mesh;
-        try { m.geometry?.dispose(); } catch {}
+        safeDispose(m.geometry);
         const mat = (m as unknown as { material?: THREE.Material | THREE.Material[] }).material;
         if (mat) {
           if (Array.isArray(mat)) mat.forEach((mt) => tryDisposeMat(mt));
@@ -808,7 +809,7 @@ function tryDisposeMat(m: THREE.Material): void {
     for (const key of ALL_TEX_KEYS) {
       const tex = (m as unknown as Record<string, unknown | THREE.Texture | null>)[key];
       if (tex && typeof (tex as THREE.Texture).dispose === "function") {
-        try { (tex as THREE.Texture).dispose(); } catch {}
+        safeDispose(tex as THREE.Texture);
       }
     }
     m.dispose();

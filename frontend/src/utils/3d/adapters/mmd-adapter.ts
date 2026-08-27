@@ -759,7 +759,7 @@ async function mdMmStage3SceneMesh(c: MdMmStage3Ctx): Promise<void> {
                 })
                 // KTX2 缓存替换失败 → 保留原纹理，不阻断批量替换（链保持 resolve，
                 // 供外层 Promise.all await 与 replaced= 计数——不可改 fire-and-forget）
-                .catch(() => {});
+                .catch((err) => dbg("ktx2-replace-fail", { hash, key, err: safeErrorMessage(err) }));
               }),
             );
           }

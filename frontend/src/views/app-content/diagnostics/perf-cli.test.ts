@@ -11,11 +11,12 @@ describe("sectionHeader", () => {
     expect(html).toContain("性能概览");
   });
 
-  it("带 rawText → HTML 包含 rawText", () => {
+  it("带 rawText → HTML 包含 rawText（encodeURIComponent 编码）", () => {
     const html = sectionHeader("🔍", "慢查询", "TOP 10");
     expect(html).toContain("🔍");
     expect(html).toContain("慢查询");
-    expect(html).toContain("TOP 10");
+    // rawText 经 encodeURIComponent 编码后放进 data-perf-raw 属性
+    expect(html).toContain(encodeURIComponent("TOP 10"));
   });
 
   it("无 rawText → 不抛错", () => {

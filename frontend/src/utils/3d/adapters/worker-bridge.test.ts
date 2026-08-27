@@ -191,6 +191,26 @@ describe("resolve 模式 — onerror resolveAllError 分支", () => {
   });
 });
 
+describe("创建契约（resolveAllError 必须传 makeErrorResponse）", () => {
+  it("resolveAllError 且未传 makeErrorResponse → 构造期抛错，阻止静默变 reject-mode", () => {
+    expect(() =>
+      createWorkerBridge<FakeReq, FakeResp, FakeResp>({
+        workers: [makeWorker() as unknown as Worker],
+        getId: respId,
+        timeoutMs: 100,
+        timeoutMsg: "Worker 超时",
+        settle: (resp, { resolve }) => resolve(resp),
+        onWorkerError: "resolveAllError",
+        // makeErrorResponse 故意缺省
+      }),
+    ).toThrow(/resolveAllError 模式必须传 makeErrorResponse/);
+  });
+
+  it("resolveAllError 且传 makeErrorResponse → 构造成功", () => {
+    expect(() => makeResolveBridge([makeWorker()])).not.toThrow();
+  });
+});
+
 describe("超时", () => {
   it("reject 模式超时 → reject", async () => {
     const w = makeWorker();

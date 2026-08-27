@@ -15,6 +15,18 @@ beforeEach(() => {
   resetPlatform();
 });
 
+/** web 模式公共桩：mock 真 @wailsio/runtime + platform 后动态 import（隔离模块状态）。 */
+async function loadWebRuntime() {
+  vi.doMock("@wailsio/runtime", () => ({
+    Events: { On: vi.fn(), OnMultiple: vi.fn(), Off: vi.fn(), Emit: vi.fn() },
+    Window: {},
+  }));
+  vi.doMock("./platform.ts", () => ({
+    resolveWebMode: () => true,
+  }));
+  return import("./runtime.ts");
+}
+
 // ===== Tests =====
 
 describe("桌面模式（isWeb=false）— 委托真 @wailsio/runtime", () => {
@@ -49,66 +61,31 @@ describe("桌面模式（isWeb=false）— 委托真 @wailsio/runtime", () => {
 });
 
 describe("web 模式（isWeb=true）— no-op 桩不抛错", () => {
-  it("Events.On 返回 no-op unsubscribe 函数", async () => {
-    vi.doMock("@wailsio/runtime", () => ({
-      Events: { On: vi.fn(), OnMultiple: vi.fn(), Off: vi.fn(), Emit: vi.fn() },
-      Window: {},
-    }));
-    vi.doMock("./platform.ts", () => ({
-      resolveWebMode: () => true,
-    }));
+  it("Events.On / OnMultiple 返回 no-op unsubscribe 函数", async () => {
+    const { Events } = await loadWebRuntime();
 
-    const { Events } = await import("./runtime.ts");
+    const unsubOn = Events.On("test-event", () => {});
+    expect(typeof unsubOn).toBe("function");
+    expect(() => unsubOn()).not.toThrow();
 
-    // On 返回一个 unsubscribe 函数（不抛错）
-    const unsub = Events.On("test-event", () => {});
-    expect(typeof unsub).toBe("function");
-
-    // 调用 unsubscribe 不抛错
-    expect(() => unsub()).not.toThrow();
+    const unsubMultiple = Events.OnMultiple("test-event", () => {}, 3);
+    expect(typeof unsubMultiple).toBe("function");
+    expect(() => unsubMultiple()).not.toThrow();
   });
 
   it("Events.Off / Emit 是 no-op（不抛错）", async () => {
-    vi.doMock("@wailsio/runtime", () => ({
-      Events: { On: vi.fn(), OnMultiple: vi.fn(), Off: vi.fn(), Emit: vi.fn() },
-      Window: {},
-    }));
-    vi.doMock("./platform.ts", () => ({
-      resolveWebMode: () => true,
-    }));
-
-    const { Events } = await import("./runtime.ts");
+    const { Events } = await loadWebRuntime();
 
     expect(() => Events.Off("test-event")).not.toThrow();
     expect(() => Events.Emit("test-event", {})).not.toThrow();
-  });
-
-  it("Events.OnMultiple 返回 no-op unsubscribe 函数", async () => {
-    vi.doMock("@wailsio/runtime", () => ({
-      Events: { On: vi.fn(), OnMultiple: vi.fn(), Off: vi.fn(), Emit: vi.fn() },
-      Window: {},
-    }));
-    vi.doMock("./platform.ts", () => ({
-      resolveWebMode: () => true,
-    }));
-
-    const { Events } = await import("./runtime.ts");
-
-    const unsub = Events.OnMultiple("test-event", () => {}, 3);
-    expect(typeof unsub).toBe("function");
-    expect(() => unsub()).not.toThrow();
+    // 与桌面模式返回值类型一致：Emit 返回 Promise<void>（审计②盲区收口）
+    const ret = Events.Emit("test-event", {});
+    expect(ret).toBeInstanceOf(Promise);
+    await expect(ret).resolves.toBeUndefined();
   });
 
   it("Window 所有方法返回 resolved Promise（不抛错）", async () => {
-    vi.doMock("@wailsio/runtime", () => ({
-      Events: { On: vi.fn(), OnMultiple: vi.fn(), Off: vi.fn(), Emit: vi.fn() },
-      Window: {},
-    }));
-    vi.doMock("./platform.ts", () => ({
-      resolveWebMode: () => true,
-    }));
-
-    const { Window } = await import("./runtime.ts");
+    const { Window } = await loadWebRuntime();
 
     // 通过 Proxy 的 get 动态派发——任意方法名都应返回 resolved Promise
     const win = Window as unknown as Record<string, (...args: unknown[]) => Promise<void>>;

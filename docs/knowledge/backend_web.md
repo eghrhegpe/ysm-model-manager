@@ -46,7 +46,7 @@ invariant_anchors:
 | 仓库存储 | `web-store.ts` | 网页版模型仓库数据（扫描/索引/缓存） |
 | 统计 | `web-stats.ts` | 网页版模型批量统计（Web Worker 协同） |
 | 社区下载 | `web-community.ts` | 网页版社区/创意工坊下载 |
-| CLI 桥 | `web-cli.ts` | 网页版 CLI 模拟（纯前端，不需要 Go 后端） |
+| CLI 桥 | `web-cli.ts` | 仅 `GetAllowedCLICommands`（命令列表查询）；`ExecuteCLI` 已移除（ADR-123 P2：原假实现令 `can()` 门控失效，现 `'ExecuteCLI' in browserAdapter`=false 隐藏 web CLI 入口） |
 | 通用工具 | `web-common.ts` | 网页版公共工具函数 |
 | 提取 | `extract.ts` | 网页版 ZIP 提取 |
 | NBT 解析 | `nbt-parse.ts` | 网页版 NBT 格式解析（Litematic 等），含 list 长度 OOM 守卫 |

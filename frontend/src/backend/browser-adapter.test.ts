@@ -172,6 +172,16 @@ describe("browserAdapter — fail-fast（Phase 3 能力门控隐藏对应 UI）"
       "ImportModelFile",
     );
   });
+
+  // ADR-123 P2：ExecuteCLI 不在 webCliBindings——`'ExecuteCLI' in browserAdapter`
+  // 必须 false，让 can() 门控（capabilities.ts）在 web 隐藏 CLI 入口；
+  // 此前假实现返回空 success/恒 not_supported 响应但门控恒 true，UI 可见却不可用
+  it("ExecuteCLI 已移出 webImpls：has 探测 false + 直调 fail-fast", () => {
+    expect("ExecuteCLI" in browserAdapter).toBe(false);
+    expect(
+      (browserAdapter as unknown as { ExecuteCLI: () => Promise<unknown> }).ExecuteCLI(),
+    ).rejects.toThrow("ExecuteCLI");
+  });
 });
 
 describe("importWebFiles — Phase 2 数据层", () => {

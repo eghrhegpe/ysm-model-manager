@@ -30,6 +30,8 @@ const {
   loadConfigMock,
   repoRootMock,
   resolveWebModeMock,
+  importWebFilesMock,
+  fetchMock,
 } = vi.hoisted(() => ({
   enqueueMock: vi.fn(),
   statusMock: vi.fn(),
@@ -39,10 +41,20 @@ const {
   loadConfigMock: vi.fn(),
   repoRootMock: vi.fn(),
   resolveWebModeMock: vi.fn().mockReturnValue(false), // 默认桌面
+  // ADR-123 P1：web 分支下载改走 browser-adapter.importWebFiles 入库（对齐导入链路）
+  importWebFilesMock: vi.fn().mockResolvedValue({ imported: 0, failed: 0 }),
+  // web 分支小文件会真 fetch——默认回微 blob，防测试环境触网
+  fetchMock: vi.fn().mockResolvedValue(new Response(new Blob(["x"]))),
 }));
 
 vi.mock("../../backend/platform.ts", () => ({
   resolveWebMode: resolveWebModeMock,
+}));
+// store web 分支动态 import browser-adapter 拿 importWebFiles；其余导出保持原实现，
+// 防 graph 内其他消费方拿到 undefined 导出炸整条 import 链
+vi.mock("../../backend/browser-adapter.ts", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  importWebFiles: importWebFilesMock,
 }));
 vi.mock("@wailsio/runtime", () => ({ Events: { On: onMock }, Window: { Show: vi.fn(), Hide: vi.fn(), SetTitle: vi.fn(), OpenDevTools: vi.fn(), Reload: vi.fn() } }));
 vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
@@ -75,6 +87,10 @@ beforeEach(async () => {
   loadConfigMock.mockReset();
   repoRootMock.mockReset();
   resolveWebModeMock.mockReturnValue(false); // 默认桌面
+  importWebFilesMock.mockReset().mockResolvedValue({ imported: 0, failed: 0 });
+  fetchMock.mockReset().mockResolvedValue(new Response(new Blob(["x"])));
+  // web 分支可能触发真实 fetch——全局兜底防测试触网（桌面用例不受影响）
+  vi.stubGlobal("fetch", fetchMock);
   const mod = await import("./download-queue.ts");
   getState = mod.getState;
   subscribe = mod.subscribe;
@@ -161,8 +177,9 @@ describe("enqueueDownloads", () => {
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it("网页版（resolveWebMode=true）走浏览器直链下载，不调用 Go EnqueueDownloads，完成后回 idle", async () => {
+  it("网页版小文件：fetch → importWebFiles 入库（对齐导入链路），成功路径无直链、不调 Go、回 idle", async () => {
     resolveWebModeMock.mockReturnValue(true);
+    importWebFilesMock.mockResolvedValue({ imported: 1, failed: 0 });
     const origCreate = document.createElement.bind(document);
     const created: HTMLAnchorElement[] = [];
     const createElSpy = vi
@@ -173,14 +190,53 @@ describe("enqueueDownloads", () => {
         return el;
       });
     try {
-      await enqueueDownloads([{ url: "https://x/a.ysm", saveDir: "", name: "a.ysm", size: 1 }]);
+      await enqueueDownloads([
+        { url: "https://x/a.ysm", saveDir: "/web/ysm", name: "[作者]模型.ysm", size: 10 },
+      ]);
     } finally {
       createElSpy.mockRestore();
     }
     expect(enqueueMock).not.toHaveBeenCalled();
-    // 浏览器直链下载：创建了带直链 download 属性的 <a>，状态回 idle（无后端事件流，避免 UI 卡「下载中」）
-    const a = created.find((x) => x.href === "https://x/a.ysm");
-    expect(a?.download).toBe("a.ysm");
+    expect(fetchMock).toHaveBeenCalledWith("https://x/a.ysm");
+    // rtype 从 saveDir=/web/<type> 反解（web 模式 GetRepoRoot 恒返回 /web/<type>）
+    expect(importWebFilesMock).toHaveBeenCalledTimes(1);
+    const [files, webType] = importWebFilesMock.mock.calls[0];
+    expect(files[0].name).toBe("[作者]模型.ysm");
+    expect(webType).toBe("ysm");
+    expect(created.length).toBe(0); // 成功入库不再创建 <a> 直链
+    expect(getState().status).toBe("idle");
+    expect(getState().errorList).toEqual([]);
+  });
+
+  it("网页版大文件（>50MB）：不 fetch，回退浏览器直链（ADR-123 P1 回退分支）", async () => {
+    resolveWebModeMock.mockReturnValue(true);
+    await enqueueDownloads([
+      { url: "https://x/big.ysm", saveDir: "/web/ysm", name: "big.ysm", size: 50 * 1024 * 1024 + 1 },
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(importWebFilesMock).not.toHaveBeenCalled();
+    expect(getState().status).toBe("idle");
+  });
+
+  it("网页版 fetch 失败（HTTP 非 ok）：回退浏览器直链，不入 errorList（用户仍拿到文件）", async () => {
+    resolveWebModeMock.mockReturnValue(true);
+    fetchMock.mockResolvedValue(new Response("gone", { status: 404 }));
+    await enqueueDownloads([
+      { url: "https://x/a.ysm", saveDir: "/web/ysm", name: "a.ysm", size: 10 },
+    ]);
+    expect(fetchMock).toHaveBeenCalled();
+    expect(importWebFilesMock).not.toHaveBeenCalled();
+    expect(getState().errorList).toEqual([]); // 直链兜底成功 → 非错误
+    expect(getState().status).toBe("idle");
+  });
+
+  it("网页版非 http(s) URL：直接回退直链，不 fetch（协议白名单守卫）", async () => {
+    resolveWebModeMock.mockReturnValue(true);
+    await enqueueDownloads([
+      { url: "file:///etc/passwd", saveDir: "/web/ysm", name: "x.ysm", size: 10 },
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(importWebFilesMock).not.toHaveBeenCalled();
     expect(getState().status).toBe("idle");
   });
 });

@@ -9,6 +9,7 @@ import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "../../../utils/resource/ty
 import { resolveWebMode } from "../../../backend/platform.ts";
 import { stagger } from "../../../utils/animation/stagger.ts";
 import type { EscFn } from "./logs.ts";
+import type { AppConfig, VersionInstance } from "../../../utils/types-re-export.ts";
 
 // P3 修复（子代理审计，重入守卫）：scanConflicts 并发标志——快速 3 连点会并发扫描
 // 同一 list 互相覆盖（结果写 innerHTML 竞争）；busy 命中直接返回
@@ -19,6 +20,35 @@ let diagSyncBusy = false;
 
 interface DgCfInstanceFile {
   name: string;
+}
+
+// ===== 同步冲突绑定 JSON 契约类型 =====
+// DetectConflicts / ResolveConflicts 是字符串绑定（Go 侧 json.Marshal 后返回），
+// 解析后形状对齐 Go go/sync/conflict.go FileConflict / ConflictReport 与
+// internal/app/error_json.go ErrorJSON（error 字段附加）。
+interface DgCfFileConflict {
+  path: string;
+  type: "content_modified" | "size_mismatch";
+  localModTime: string;
+  remoteModTime: string;
+  localSize: number;
+  remoteSize: number;
+  localHash?: string;
+  remoteHash?: string;
+  suggestedStrategy: "force_remote" | "force_local" | "manual";
+}
+
+interface DgCfSyncDetectionResult {
+  conflicts: DgCfFileConflict[];
+  totalConflicts: number;
+  error?: string;
+}
+
+interface DgCfResolveResult {
+  resolved: number;
+  failed: number;
+  manual: number;
+  error?: string;
 }
 
 // ===== scanConflicts 子函数 =====
@@ -54,9 +84,9 @@ function dgCfRenderRadarPlaceholder(list: HTMLElement): void {
 }
 
 async function dgCfLoadCfgAndInstances(): Promise<{
-  cfg: any;
+  cfg: AppConfig;
   mcRoot: string;
-  instances: any[];
+  instances: VersionInstance[];
   errorHtml: string | null;
 }> {
   const { LoadAppConfig, ListVersionInstances } = await getApp();
@@ -84,7 +114,7 @@ async function dgCfLoadCfgAndInstances(): Promise<{
   return { cfg, mcRoot, instances, errorHtml: null };
 }
 
-async function dgCfCollectInstanceFiles(instances: any[]): Promise<Record<string, DgCfInstanceFile[]>> {
+async function dgCfCollectInstanceFiles(instances: VersionInstance[]): Promise<Record<string, DgCfInstanceFile[]>> {
   const { ScanModelEntriesWithLabel } = await getApp();
   const instanceFiles: Record<string, DgCfInstanceFile[]> = {};
   for (const ins of instances) {
@@ -198,7 +228,7 @@ async function dgCfLoadSyncContext(): Promise<{
     };
   }
   const instances = (await ListVersionInstances(mcRoot)) || [];
-  const availableInstances = instances.filter((ins: any) => ins.Exists).map((ins: any) => ins.Name);
+  const availableInstances = instances.filter((ins) => ins.Exists).map((ins) => ins.Name);
   return { mcRoot, availableInstances, errorHtml: null };
 }
 
@@ -214,7 +244,7 @@ async function dgCfRunSyncDetection(
     t("diagnostics.scanningConflicts") +
     "</div>";
   const resultJSON = await DetectConflicts(rtype, instanceName);
-  const result = JSON.parse(resultJSON);
+  const result = JSON.parse(resultJSON) as DgCfSyncDetectionResult;
   if (result.error) {
     list.innerHTML =
       '<div class="stat-row diag-msg diag-msg-error">❌ ' + esc(result.error) + "</div>";
@@ -323,7 +353,7 @@ function renderSyncConfigPanel(
 
 // ===== renderSyncConflictsResult 子函数 =====
 
-function dgCfBuildSyncConflictRows(conflicts: any[], esc: EscFn): string {
+function dgCfBuildSyncConflictRows(conflicts: DgCfFileConflict[], esc: EscFn): string {
   let html = "";
   const strategyLabels: Record<string, string> = {
     force_remote: t("diagnostics.resolveForceRemote"),
@@ -364,7 +394,7 @@ function dgCfBuildResolveSectionHtml(): string {
 async function dgCfExecuteResolve(
   list: HTMLElement,
   esc: EscFn,
-  conflicts: any[],
+  conflicts: DgCfFileConflict[],
   rtype: string,
   instanceName: string,
 ): Promise<void> {
@@ -374,7 +404,7 @@ async function dgCfExecuteResolve(
     const { ResolveConflicts } = await getApp();
     const conflictsJSON = JSON.stringify(conflicts);
     const resultJSON = await ResolveConflicts(conflictsJSON, strategy, rtype, instanceName);
-    const result = JSON.parse(resultJSON);
+    const result = JSON.parse(resultJSON) as DgCfResolveResult;
     let resultMsg = `✅ ${t("diagnostics.resolvedCount", { n: result.resolved || 0 })}`;
     if (result.failed > 0) resultMsg += ` | ❌ ${t("diagnostics.failedCount", { n: result.failed })}`;
     if (result.manual > 0) resultMsg += ` | ⚠️ ${t("diagnostics.manualCount", { n: result.manual })}`;
@@ -392,7 +422,7 @@ async function dgCfExecuteResolve(
 function renderSyncConflictsResult(
   list: HTMLElement,
   esc: EscFn,
-  conflicts: any[],
+  conflicts: DgCfFileConflict[],
   rtype: string,
   instanceName: string,
 ): void {

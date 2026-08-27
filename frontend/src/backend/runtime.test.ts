@@ -78,10 +78,10 @@ describe("web 模式（isWeb=true）— no-op 桩不抛错", () => {
 
     expect(() => Events.Off("test-event")).not.toThrow();
     expect(() => Events.Emit("test-event", {})).not.toThrow();
-    // 与桌面模式返回值类型一致：Emit 返回 Promise<void>（审计②盲区收口）
+    // 与真值返回值类型一致：Emit 返回 Promise<boolean>；web 桩诚实报告 false
     const ret = Events.Emit("test-event", {});
     expect(ret).toBeInstanceOf(Promise);
-    await expect(ret).resolves.toBeUndefined();
+    await expect(ret).resolves.toBe(false);
   });
 
   it("Window 所有方法返回 resolved Promise（不抛错）", async () => {

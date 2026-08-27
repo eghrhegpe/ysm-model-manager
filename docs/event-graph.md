@@ -209,7 +209,7 @@
 |------|----|
 | `frontend/src/features/oldest-models.ts` | 61 |
 | `frontend/src/features/recycle-bin.ts` | 183 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 377 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 385 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 228 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 295 |
 | `frontend/src/views/app-tree/events.ts` | 155 |
@@ -313,7 +313,7 @@
 | `frontend/src/features/import-executor.ts` | 218 |
 | `frontend/src/features/recycle-bin.ts` | 107 |
 | `frontend/src/features/recycle-bin.ts` | 167 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 427 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |
 | `frontend/src/views/app-content/settings/init.ts` | 141 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 353 |
@@ -601,7 +601,7 @@
 | `frontend/src/features/import-executor.ts` | 217 |
 | `frontend/src/features/recycle-bin.ts` | 108 |
 | `frontend/src/features/recycle-bin.ts` | 168 |
-| `frontend/src/views/app-content/diagnostics/dedup.ts` | 428 |
+| `frontend/src/views/app-content/diagnostics/dedup.ts` | 436 |
 | `frontend/src/views/app-sidebar/index.ts` | 320 |
 
 **订阅方（on）：**

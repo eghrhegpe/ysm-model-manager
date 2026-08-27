@@ -4,4 +4,10 @@
 // 且 bindings 是 wails3 生成物（路径由生成配置固定，不随架构大改移动）。
 // 本垫层把 bindings 路径收口为单一事实来源：生成路径变化只需改此处，
 // 消费方一律 `import type { ... } from "../../../utils/types-re-export.ts"`。
-export type { WorkshopSite, WorkshopPresetSearch } from "../../bindings/ysm-model-manager/go/types/models.ts";
+export type {
+  WorkshopSite,
+  WorkshopPresetSearch,
+  AppConfig,
+  VersionInstance,
+  ModelEntry,
+} from "../../bindings/ysm-model-manager/go/types/models.ts";

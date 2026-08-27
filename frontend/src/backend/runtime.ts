@@ -8,23 +8,28 @@ import { dbg } from "../utils/debug/debug.ts";
 
 const isWeb = resolveWebMode();
 
-// Web 桩接口：只暴露实际用到的 4 个方法，返回值与真值对齐（Emit 返回 Promise<void>
-// 而非 undefined），satisfies 编译期逐项对账——桌面模式仍直接透传 WailsEvents，
-// 不受桩接口影响。
+// Web 桩接口：只暴露 Events 模块实际用到的 6 个方法，返回值与真值对齐——
+// Emit 真值返回 Promise<boolean>，桩返回 Promise<false>（诚实报告未发送）；
+// Types/WailsEvent 是复杂类/常量对象（monkey-patch 事件表），业务侧不直接消费，
+// 故不纳入桩接口——Events 出口的 as unknown as 仅桥接该省略，见下。
 interface RuntimeEvents {
   On: (event: string, cb: (...args: unknown[]) => void) => () => void;
   OnMultiple: (event: string, cb: (...args: unknown[]) => void, n: number) => () => void;
+  Once: (event: string, cb: (...args: unknown[]) => void) => () => void;
   Off: (event: string) => void;
-  /** Web 模式：不真的 emit 事件，但返回 Promise 保持调用方 await 语义与桌面一致 */
-  Emit: (event: string, ...args: unknown[]) => Promise<void>;
+  OffAll: () => void;
+  Emit: (event: string, ...args: unknown[]) => Promise<boolean>;
 }
 
 const webEvents: RuntimeEvents = {
   On: () => () => {},
   OnMultiple: () => () => {},
+  Once: () => () => {},
   Off: () => {},
+  OffAll: () => {},
   Emit: async () => {
     dbg("runtime-bridge", "web no-op Emit");
+    return false;
   },
 };
 
@@ -37,8 +42,10 @@ const webWindow: typeof WailsWindow = new Proxy({}, {
   },
 }) as unknown as typeof WailsWindow;
 
+// Events 出口：webEvents 只实现 RuntimeEvents（6 方法），真值还有 Types/WailsEvent
+// 复杂导出；经 unknown 桥接避免把桩接口充成完整模块命名空间的类型造假。
 export const Events: typeof WailsEvents = isWeb
-  ? (webEvents as typeof WailsEvents)
+  ? (webEvents as unknown as typeof WailsEvents)
   : WailsEvents;
 
 export const Window: typeof WailsWindow = isWeb

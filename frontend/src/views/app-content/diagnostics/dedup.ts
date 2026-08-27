@@ -21,12 +21,20 @@ let diagExecBusy = false;
 // ===== 全局配置状态（供 initDedupConfig 和 startDedup 共享） =====
 // 默认值冻结为唯一权威源；dedupConfig 为可编辑副本；reset 从默认值展开。
 // 冻结默认值防误改、防引用漂移；getDedupConfig() 返回冻结快照防外部篡改。
-const DEDUP_DEFAULTS = Object.freeze({
+// 注意：显式标宽 strategy/keepPolicy/priorityPath 为 string，避免 Object.freeze
+// 泛型保留字面量类型（"deep_hash"）导致 select.value(string) 赋值失败。
+interface DedupConfigShape {
+  strategy: string;
+  keepPolicy: string;
+  priorityPath: string;
+}
+
+const DEDUP_DEFAULTS: Readonly<DedupConfigShape> = Object.freeze({
   strategy: "deep_hash",
   keepPolicy: "oldest",
   priorityPath: "",
 });
-const dedupConfig = { ...DEDUP_DEFAULTS };
+const dedupConfig: DedupConfigShape = { ...DEDUP_DEFAULTS };
 
 export function resetDedupConfig(): void {
   Object.assign(dedupConfig, DEDUP_DEFAULTS);

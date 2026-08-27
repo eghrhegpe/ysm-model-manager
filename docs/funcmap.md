@@ -965,8 +965,8 @@
 | `readDeclaredBackend()` | `frontend/src/backend/platform:13` | 读取入口 HTML 声明的适配器身份（'go' | 'browser'），未声明返回 undefined |
 | `isWebEntryMode()` | `frontend/src/backend/platform:19` | Tier 1：旧 web 短路标记 / vite MODE=web 构建 |
 | `resolveWebMode()` | `frontend/src/backend/platform:28` | 同步判定：当前是否应路由到 browser adapter（网页版） |
-| `Events()` | `frontend/src/backend/runtime:40` | — |
-| `Window()` | `frontend/src/backend/runtime:44` | — |
+| `Events()` | `frontend/src/backend/runtime:47` | — |
+| `Window()` | `frontend/src/backend/runtime:51` | — |
 | `AppBindings()` | `frontend/src/backend/types:6` | Wails v3 生成的 App 绑定模块形状（bindings 目录下 app.ts） |
 | `mapColor()` | `frontend/src/backend/voxel-colors:92` | 对齐 go/litematic/block_colors.go MapColor：方块注册名 → 近似十六进制颜色。 |
 | `resolveBlockName()` | `frontend/src/backend/voxel-colors:107` | 对齐 go/litematic/block_ids.go ResolveBlockName：schematic v1 数字 ID → 注册名（优先 "id:data" 变体，回退 |
@@ -1976,10 +1976,10 @@
 | `contentUtilCSS()` | `frontend/src/views/app-content/content-util:2` | — |
 | `scanConflicts()` | `frontend/src/views/app-content/diagnostics/conflicts:169` | — |
 | `scanSyncConflicts()` | `frontend/src/views/app-content/diagnostics/conflicts:262` | — |
-| `resetDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:31` | — |
-| `initDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:200` | 初始化去重配置面板（标签页打开时调用，配置实时保存） 扫描结果不覆盖面板，控件扫描后仍可改；code_review P3） |
-| `getDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:207` | 获取当前去重配置（供外部调用）——返回冻结快照，防调用方篡改或跨调用污染。 |
-| `startDedup()` | `frontend/src/views/app-content/diagnostics/dedup:548` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
+| `resetDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:39` | — |
+| `initDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:208` | 初始化去重配置面板（标签页打开时调用，配置实时保存） 扫描结果不覆盖面板，控件扫描后仍可改；code_review P3） |
+| `getDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:215` | 获取当前去重配置（供外部调用）——返回冻结快照，防调用方篡改或跨调用污染。 |
+| `startDedup()` | `frontend/src/views/app-content/diagnostics/dedup:556` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
 | `runHealthAudit()` | `frontend/src/views/app-content/diagnostics/health:52` | 仓库体检：调 Go 端 RepoHealthAudit（当前类型单仓库审计）并渲染结果—— 动态感知当前资源类型（repo-rtype，等价树视图 vm._filesRoot 的类 |
 | `parseHealthReport()` | `frontend/src/views/app-content/diagnostics/health:99` | 解析 RepoHealthAudit 返回的 JSON 字符串。 |
 | `renderHealthReport()` | `frontend/src/views/app-content/diagnostics/health:125` | 渲染体检报告（分数环 + 完整性/缓存/资源/去重 + 警告），全部走 esc() 防注入 |

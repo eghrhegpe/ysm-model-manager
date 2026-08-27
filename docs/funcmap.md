@@ -2011,8 +2011,8 @@
 | `renderLoadTraceSection()` | `frontend/src/views/app-content/diagnostics/perf` | — |
 | `initPerfPanel()` | `frontend/src/views/app-content/diagnostics/perf:14` | 初始化性能面板（single-bench / gui-flow / perf-log / 加载剖析） |
 | `appContentStyle()` | `frontend/src/views/app-content/index:11` | — |
-| `GithubPageCtx()` | `frontend/src/views/app-content/init-github:23` | GitHub 社群页编排上下文——把 initGithubPage 各闭包捕获的共享状态显式注入， 供 githubLoadRepos / githubShowRepo / git |
-| `initGithubPage()` | `frontend/src/views/app-content/init-github:281` | 初始化 GitHub 页（纯分派：创建 ctx + 初始化缓存 + 触发 loadRepos） |
+| `GithubPageCtx()` | `frontend/src/views/app-content/init-github:24` | GitHub 社群页编排上下文——把 initGithubPage 各闭包捕获的共享状态显式注入， 供 githubLoadRepos / githubShowRepo / git |
+| `initGithubPage()` | `frontend/src/views/app-content/init-github:282` | 初始化 GitHub 页（纯分派：创建 ctx + 初始化缓存 + 触发 loadRepos） |
 | `initDiagnosticsPage()` | `frontend/src/views/app-content/init-pages:21` | 初始化诊断页 |
 | `initInstancesPage()` | `frontend/src/views/app-content/init-pages:28` | 初始化实例页 |
 | `initWorkshopPage()` | `frontend/src/views/app-content/init-pages:288` | 初始化创意工坊页（委托到 init-workshop.ts） |
@@ -2082,8 +2082,8 @@
 | `loadFavs()` | `frontend/src/views/app-content/workshop-data:64` | — |
 | `isFaved()` | `frontend/src/views/app-content/workshop-data:76` | — |
 | `toggleFav()` | `frontend/src/views/app-content/workshop-data:80` | — |
-| `openSite()` | `frontend/src/views/app-content/workshop-site-opener:19` | 打开站点（外链/内嵌/窗口） |
-| `bindSiteEvents()` | `frontend/src/views/app-content/workshop-site-opener:73` | 绑定站点打开相关事件 |
+| `openSite()` | `frontend/src/views/app-content/workshop-site-opener:20` | 打开站点（外链/内嵌/窗口） |
+| `bindSiteEvents()` | `frontend/src/views/app-content/workshop-site-opener:74` | 绑定站点打开相关事件 |
 | `WorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:20` | 创意工坊页的共享 ref 集合——单一事实来源。 |
 | `createWorkshopRefs()` | `frontend/src/views/app-content/workshop-tabs:28` | 创建创意工坊页的共享 ref 对象（单一入口，所有消费者共享同一实例） |
 | `initWorkshopTabs()` | `frontend/src/views/app-content/workshop-tabs:40` | 初始化创意工坊 Tab |

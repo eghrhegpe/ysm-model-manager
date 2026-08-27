@@ -186,7 +186,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-content/index.ts` | 113 |
+| `frontend/src/views/app-content/index.ts` | 114 |
 | `frontend/src/views/app-nav/index.ts` | 153 |
 
 ### `menu:show`
@@ -226,8 +226,8 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-content/index.ts` | 107 |
-| `frontend/src/views/app-content/index.ts` | 179 |
+| `frontend/src/views/app-content/index.ts` | 108 |
+| `frontend/src/views/app-content/index.ts` | 180 |
 | `frontend/src/views/app-content/site/events.ts` | 201 |
 | `frontend/src/views/app-nav/index.ts` | 22 |
 | `frontend/src/views/app-nav/index.ts` | 163 |
@@ -238,7 +238,7 @@
 | 文件 | 行 |
 |------|----|
 | `frontend/src/core/page-store.ts` | 63 |
-| `frontend/src/views/app-content/index.ts` | 98 |
+| `frontend/src/views/app-content/index.ts` | 99 |
 | `frontend/src/views/app-nav/index.ts` | 139 |
 
 ### `package:selected`
@@ -284,7 +284,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-content/index.ts` | 105 |
+| `frontend/src/views/app-content/index.ts` | 106 |
 
 ### `repo:subdir-changed`
 
@@ -453,7 +453,7 @@
 | `frontend/src/views/app-content/diagnostics/init.ts` | 110 |
 | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 88 |
 | `frontend/src/views/app-content/diagnostics/perf-cli.ts` | 354 |
-| `frontend/src/views/app-content/index.ts` | 170 |
+| `frontend/src/views/app-content/index.ts` | 171 |
 | `frontend/src/views/app-content/init-pages.ts` | 168 |
 | `frontend/src/views/app-content/init-pages.ts` | 281 |
 | `frontend/src/views/app-content/settings/init.ts` | 48 |
@@ -495,12 +495,12 @@
 | `frontend/src/views/app-content/site/edit.ts` | 245 |
 | `frontend/src/views/app-content/site/events.ts` | 146 |
 | `frontend/src/views/app-content/site/events.ts` | 271 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 117 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 127 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 133 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 145 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 156 |
-| `frontend/src/views/app-content/workshop-site-opener.ts` | 162 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 118 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 128 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 134 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 146 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 157 |
+| `frontend/src/views/app-content/workshop-site-opener.ts` | 163 |
 | `frontend/src/views/app-content/workshop-tabs.ts` | 90 |
 | `frontend/src/views/app-content/workshop-tabs.ts` | 138 |
 | `frontend/src/views/app-nav/index.ts` | 102 |
@@ -612,7 +612,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-content/index.ts` | 109 |
+| `frontend/src/views/app-content/index.ts` | 110 |
 
 **订阅方（on）：**
 | 文件 | 行 |

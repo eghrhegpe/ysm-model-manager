@@ -50,11 +50,11 @@
 - **负面 / 已知遗留**：
   - P1 未完成：web 模式下下载社区模型仍走 `<a download>`，状态瞬时 idle，无进度反馈，用户体验断裂。
   - P2 未完成：CLI 命令列在 web 模式下可见但不可用，`can("ExecuteCLI")` 门控失效（`webCliBindings` 有 `ExecuteCLI` 实现，proxy `has` 陷阱返回 true）。
-  - P3 未完成：`resolveWebMode()` 散落在 12 个文件，无统一降级策略层。
+  - P3 未完成：`resolveWebMode()` 散落在 19 个文件（grep 命中 51 行），无统一降级策略层。
 - **后续待办（非本 ADR 实施进度）**：
   - P1：`download-queue-store.ts` web 分支改 IndexedDB 写入（参考 `importWebFiles` 实现）；fetch 校验 URL 可达性（安全约束：仅 http/https）；大文件回退 `<a download>` + toast 提示。
   - P2：从 `webCliBindings` 移除 `ExecuteCLI`（让 `can("ExecuteCLI")` 返回 false），或 UI 消费方加 `!can("ExecuteCLI")` 门控隐藏表格。
-  - P3：`backend/platform-web.ts` 抽象 `resolvePlatformMode()` + `isWebOnly<T>()`，12 处 `resolveWebMode()` 逐站替换。
+  - P3：`backend/platform-web.ts` 抽象 `resolvePlatformMode()` + `isWebOnly<T>()`，19 文件 51 处 `resolveWebMode()` 逐站替换。
 
 ---
 
@@ -64,5 +64,5 @@
 - `import-dnd.ts:62` — IndexedDB 直写路径，`// 网页版：无本地文件系统`
 - `cli-bridge.ts:103` — 硬编码白名单路径，`// 网页版（resolveWebMode）`
 - `browser-adapter.ts:41-47` — `webImpls` 装配（含 `webCliBindings`，导致 `can("ExecuteCLI")` 恒 true）
-- `platform.ts:28` — `resolveWebMode()` 三 Tier 判定（Tier 0 权威信号）
-- 散点：`grep resolveWebMode frontend/src -r --include="*.ts" | grep -v test` 共 12 处
+- `platform.ts:28` — `resolveWebMode()` 两档同步判定（Tier 0 `__YSM_BACKEND__` 权威信号 + Tier 1 构建模式）；头注释中的 Tier 2 运行时探测仅描述未实现，留待后续
+- 散点：`grep resolveWebMode frontend/src -r --include="*.ts" | grep -v test` = 51 行 / 19 个文件

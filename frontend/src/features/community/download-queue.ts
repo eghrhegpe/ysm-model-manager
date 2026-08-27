@@ -11,6 +11,7 @@ import { currentRepoType } from "../repo-rtype.ts";
 import { renderDisplayName } from "../../utils/dom/display.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { getApp } from "../../backend/app.ts";
+import { swallowError } from "../../utils/core/async.ts";
 import { safeErrorMessage } from "../../utils/safe-error-msg.ts";
 import {
   STATE,
@@ -99,12 +100,13 @@ function cmDqCleanupProgressUI(ctx: CmDqCtx, errorSummary?: string): void {
   const btn = cmDqDlBtn(ctx);
   if (btn) btn.disabled = false;
   try {
-    getApp()
-      .then((App) => {
-        if (App.ClearScanCache) App.ClearScanCache();
-        import("../../views/app-content/community-data.ts").then(m => m.clearAllCommunityCache()).catch((e) => console.warn("[download-queue] clearAllCommunityCache:", e));
-      })
-      .catch(() => {});
+    swallowError(
+      getApp()
+        .then((App) => {
+          if (App.ClearScanCache) App.ClearScanCache();
+          import("../../views/app-content/community-data.ts").then(m => m.clearAllCommunityCache()).catch((e) => console.warn("[download-queue] clearAllCommunityCache:", e));
+        }),
+    );
   } catch (_) {
     /* 清除缓存失败不影响清理 */
   }

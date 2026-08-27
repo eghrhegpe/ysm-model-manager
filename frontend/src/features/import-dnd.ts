@@ -11,6 +11,7 @@ import { MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
 import { dbg } from "../utils/debug/debug.ts";
+import { swallowError } from "../utils/core/async.ts";
 import { logError } from "../utils/core/log.ts";
 import { executeCollected, importWebFilesWithToast } from "./import-executor.ts";
 import { collectFiles, type CollectedFile } from "./dnd-collector.ts";
@@ -53,9 +54,9 @@ export async function handleTreeDrop(
   }
   setBusy(true);
 
-  // 写环形日志面板（Go AddOpLog）——非阻塞，失败静默
+  // 写环形日志面板（Go AddOpLog）——非阻塞，失败经 swallowError 记录
   const logDrop = (msg: string) =>
-    getApp().then((app) => app.AddOpLog?.("drop", msg, "", "", 0, "ok", "")).catch(() => {});
+    swallowError(getApp().then((app) => app.AddOpLog?.("drop", msg, "", "", 0, "ok", "")));
 
   try {
     // 网页版：无本地文件系统 → 拖入文件直接写入 IndexedDB 模型库

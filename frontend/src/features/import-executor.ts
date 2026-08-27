@@ -14,6 +14,7 @@ import type { CollectedEntry } from "./dnd-shared.ts";
 import { isFileExistsError, friendlyError } from "../utils/dom/errors.ts";
 import { dbg } from "../utils/debug/debug.ts";
 import { TOAST_MS } from "../utils/dom/toast-ms.ts";
+import { swallowError } from "../utils/core/async.ts";
 
 /** 带相对路径的 File（文件夹导入时标记 _relPath） */
 export type ImportFile = File & { _relPath?: string };
@@ -180,7 +181,7 @@ export const executeCollected = async (
   rtype = "",
 ): Promise<{ folders: number; singles: number }> => {
   const log = (msg: string) =>
-    getApp().then((app) => app.AddOpLog?.("import", msg, "", "", 0, "ok", "")).catch(() => {});
+    swallowError(getApp().then((app) => app.AddOpLog?.("import", msg, "", "", 0, "ok", "")));
   log(`执行导入 ${collected.length} 个条目`);
   const { folders, singles } = groupCollected(collected);
   log(`分组: folders=${folders.length} singles=${singles.length}`);

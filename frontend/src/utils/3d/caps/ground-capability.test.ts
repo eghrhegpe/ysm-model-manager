@@ -153,7 +153,7 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(surf!.visible).toBe(false);
   });
 
-  it("setMatSource(checker) → 可见 + 材质挂 DataTexture + repeat=50/10/1", () => {
+  it("setMatSource(checker) → 可见 + 材质挂 DataTexture + repeat=80/10/1", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();

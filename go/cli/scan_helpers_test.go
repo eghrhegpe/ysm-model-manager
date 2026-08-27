@@ -103,17 +103,17 @@ func TestScanMMDAssets(t *testing.T) {
 	}
 
 	// 注意：scanMMDAssets 中 case ".pmx", ".pmd" 共享同一分支，
-	// PmxFiles 字段语义实为"模型文件"（同时容纳 pmd）。
-	pmxNames := make(map[string]bool)
-	for _, p := range s.PmxFiles {
-		pmxNames[filepath.Base(p)] = true
+	// ModelFiles 字段语义为"模型文件"（同时容纳 pmx 与 pmd）。
+	modelNames := make(map[string]bool)
+	for _, p := range s.ModelFiles {
+		modelNames[filepath.Base(p)] = true
 	}
-	if len(s.PmxFiles) != 3 {
-		t.Errorf("PmxFiles=%d, 期望 3 (m1.pmx + m2.pmd + sub/deep.pmx)", len(s.PmxFiles))
+	if len(s.ModelFiles) != 3 {
+		t.Errorf("ModelFiles=%d, 期望 3 (m1.pmx + m2.pmd + sub/deep.pmx)", len(s.ModelFiles))
 	}
 	for _, want := range []string{"m1.pmx", "m2.pmd", "deep.pmx"} {
-		if !pmxNames[want] {
-			t.Errorf("PmxFiles 缺少 %s, 实际 %v", want, s.PmxFiles)
+		if !modelNames[want] {
+			t.Errorf("ModelFiles 缺少 %s, 实际 %v", want, s.ModelFiles)
 		}
 	}
 	if len(s.VrmFiles) != 1 {

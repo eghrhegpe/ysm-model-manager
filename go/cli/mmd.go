@@ -477,7 +477,7 @@ func runScanDir(ctx *CmdContext) error {
 // runAnalyzeMMD 分析 MMD 模型资产
 // mmdAssetScan 保存 analyze-mmd 目录扫描的聚合结果。
 type mmdAssetScan struct {
-	PmxFiles      []string
+	ModelFiles    []string
 	VrmFiles      []string
 	VmdFiles      []string
 	VpdFiles      []string
@@ -517,7 +517,7 @@ func scanMMDAssets(modelDir string) (*mmdAssetScan, error) {
 
 		switch ext {
 		case ".pmx", ".pmd":
-			s.PmxFiles = append(s.PmxFiles, path)
+			s.ModelFiles = append(s.ModelFiles, path)
 			s.ModelSize += size
 		case ".vrm":
 			s.VrmFiles = append(s.VrmFiles, path)
@@ -660,7 +660,7 @@ func runAnalyzeMMD(ctx *CmdContext) error {
 	}
 
 	fmt.Printf("📊 资产统计:\n")
-	fmt.Printf("   PMX/PMD 模型:  %d 个 (%s)\n", len(scan.PmxFiles), formatSize(scan.ModelSize))
+	fmt.Printf("   PMX/PMD 模型:  %d 个 (%s)\n", len(scan.ModelFiles), formatSize(scan.ModelSize))
 	fmt.Printf("   VRM 模型:      %d 个\n", len(scan.VrmFiles))
 	fmt.Printf("   VMD 动画:      %d 个\n", len(scan.VmdFiles))
 	fmt.Printf("   VPD 物理:      %d 个\n", len(scan.VpdFiles))
@@ -670,9 +670,9 @@ func runAnalyzeMMD(ctx *CmdContext) error {
 		printTextureDetails(scan.TextureFiles, *modelDir)
 	}
 
-	if len(scan.PmxFiles) > 0 {
+	if len(scan.ModelFiles) > 0 {
 		fmt.Printf("\n📦 模型文件:\n")
-		for i, pf := range scan.PmxFiles {
+		for i, pf := range scan.ModelFiles {
 			info, err := os.Stat(pf)
 			if err != nil {
 				continue // 文件在扫描后被移除，跳过

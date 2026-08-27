@@ -746,6 +746,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-123：跨环境降级策略统一",
+        "link": "/adr/ADR-123-cross-environment-downgrade-strategy"
+      },
+      {
         "text": "ADR-122：MdMmBuildCtx 三档重构与 tier3 Builder 化否决",
         "link": "/adr/ADR-122-mdmmbuildctx-tier3-builder"
       },

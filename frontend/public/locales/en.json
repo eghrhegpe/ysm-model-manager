@@ -205,7 +205,7 @@
   "settings.preview3d.camSpeedHint": "WASD movement speed in free camera mode; synced with the in-preview slider.",
   "settings.preview3d.rotMode": "Default Rotation Mode",
   "settings.preview3d.orbit": "Orbit Model",
-  "settings.preview3d.free": "Free Self",
+  "settings.preview3d.free": "Free Camera",
   "settings.preview3d.rotModeHint": "Default camera mode when 3D preview opens; can be switched in-preview.",
   "settings.preview3d.keymap": "Key Bindings (click then press a key to rebind)",
   "settings.preview3d.keymapHint": "Arrow keys always work as a fallback; changes apply immediately to the next 3D preview.",

@@ -470,12 +470,12 @@
 | `Logger()` | `go/sync/sync_push:19` | Logger 导入日志回调（薄壳注入 App.logger.Add） |
 | `RelinkDir()` | `go/sync/sync_relink:18` | RelinkDir 按哈希比对重链接实例目录与仓库（原子替换，失败回滚） |
 | `GetInstanceStatus()` | `go/sync/sync:28` | GetInstanceStatus 获取整合包状态（使用真实 ListVersions） rtype: 资源类型 ID（如 "ysm"），用于解析特定子目录；为空时使用 ins.C |
-| `GetInstanceStatusWith()` | `go/sync/sync:34` | GetInstanceStatusWith 可注入的整合包状态获取（测试用） rtype: 资源类型 ID（如 "ysm"），用于解析特定子目录；为空时使用 ins.CustomD |
-| `SyncToggleStatus()` | `go/sync/sync:195` | SyncToggleStatus 同步启用/禁用状态 |
-| `SyncResources()` | `go/sync/sync:364` | — |
-| `SyncResourcesWithConfig()` | `go/sync/sync:369` | SyncResourcesWithConfig 同步资源，支持配置化（含冲突检测） |
-| `SortEntries()` | `go/sync/sync:455` | SortEntries 按名称排序模型条目 |
-| `GetLinkType()` | `go/sync/sync:462` | GetLinkType 判断文件的链接类型 |
+| `GetInstanceStatusWith()` | `go/sync/sync:157` | — |
+| `SyncToggleStatus()` | `go/sync/sync:228` | SyncToggleStatus 同步启用/禁用状态 |
+| `SyncResources()` | `go/sync/sync:397` | — |
+| `SyncResourcesWithConfig()` | `go/sync/sync:402` | SyncResourcesWithConfig 同步资源，支持配置化（含冲突检测） |
+| `SortEntries()` | `go/sync/sync:488` | SortEntries 按名称排序模型条目 |
+| `GetLinkType()` | `go/sync/sync:495` | GetLinkType 判断文件的链接类型 |
 | `ScanFunc()` | `go/sync/sync:24` | ScanFunc 扫描模型（函数类型，由 app.go 注入） |
 
 ## Go·标签
@@ -1120,10 +1120,10 @@
 | `DownloadTask()` | `frontend/src/features/community/download-queue` | — |
 | `DownloadState()` | `frontend/src/features/community/download-queue` | — |
 | `QueueError()` | `frontend/src/features/community/download-queue` | — |
-| `QueueControllerOptions()` | `frontend/src/features/community/download-queue:45` | createDownloadQueue 选项 |
-| `QueueController()` | `frontend/src/features/community/download-queue:54` | 队列控制器 |
-| `DownloadQueue()` | `frontend/src/features/community/download-queue:62` | 旧契约别名（events.ts / download-tasks.ts 仍使用 DownloadQueue 命名） |
-| `createDownloadQueue()` | `frontend/src/features/community/download-queue:327` | 创建一个下载队列 UI 控制器。 |
+| `QueueControllerOptions()` | `frontend/src/features/community/download-queue:46` | createDownloadQueue 选项 |
+| `QueueController()` | `frontend/src/features/community/download-queue:55` | 队列控制器 |
+| `DownloadQueue()` | `frontend/src/features/community/download-queue:63` | 旧契约别名（events.ts / download-tasks.ts 仍使用 DownloadQueue 命名） |
+| `createDownloadQueue()` | `frontend/src/features/community/download-queue:329` | 创建一个下载队列 UI 控制器。 |
 | `DOWNLOAD_CONFIRM_BYTES()` | `frontend/src/features/community/download-tasks:7` | 超过该大小需弹窗确认（含边界值本身直接下载） |
 | `DOWNLOAD_REJECT_BYTES()` | `frontend/src/features/community/download-tasks:9` | 超过该大小直接拒绝（含边界值本身需确认） |
 | `DownloadSizeDecision()` | `frontend/src/features/community/download-tasks:11` | — |
@@ -1158,15 +1158,15 @@
 | `CollectedEntry()` | `frontend/src/features/dnd-shared:33` | 收集条目（文件 + 相对路径） |
 | `FolderGroup()` | `frontend/src/features/dnd-shared:39` | 文件夹组：dir 为顶层目录名（可能含多级嵌套，组内文件保留完整 relPath） |
 | `groupCollected()` | `frontend/src/features/dnd-shared:51` | 将收集到的条目分组： - 有目录前缀的条目 → 按「顶层目录」整组（dir = 第一段路径），组内保留完整 relPath（支持多层嵌套） - 无目录前缀的散落文件 → 单文件队列 |
-| `handleTreeDrop()` | `frontend/src/features/import-dnd:36` | 处理 drop 事件：收集文件 → 过滤 → 执行导入。 |
-| `bindTreeDnD()` | `frontend/src/features/import-dnd:152` | 在目标容器上注册仓库页 DnD 事件。 |
+| `handleTreeDrop()` | `frontend/src/features/import-dnd:37` | 处理 drop 事件：收集文件 → 过滤 → 执行导入。 |
+| `bindTreeDnD()` | `frontend/src/features/import-dnd:153` | 在目标容器上注册仓库页 DnD 事件。 |
 | `CollectedEntry()` | `frontend/src/features/import-executor` | — |
 | `isImportableFile()` | `frontend/src/features/import-executor` | — |
-| `ImportFile()` | `frontend/src/features/import-executor:19` | 带相对路径的 File（文件夹导入时标记 _relPath） |
-| `directImport()` | `frontend/src/features/import-executor:60` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
-| `importFolder()` | `frontend/src/features/import-executor:97` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） rtype：页面上下文类型（当前树根属性，派生自注册表路由配置）——非空走 Im |
-| `executeCollected()` | `frontend/src/features/import-executor:178` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
-| `importWebFilesWithToast()` | `frontend/src/features/import-executor:203` | 网页版导入执行（ADR-049 Phase 3）：拖入/选择文件 → importWebFiles 直写 IndexedDB → toast 反馈 → tree/stats 刷新。 |
+| `ImportFile()` | `frontend/src/features/import-executor:20` | 带相对路径的 File（文件夹导入时标记 _relPath） |
+| `directImport()` | `frontend/src/features/import-executor:61` | 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） |
+| `importFolder()` | `frontend/src/features/import-executor:98` | 文件夹整组导入（含 ysm.json 模型目录或普通文件夹；组内至少 1 个支持文件由调用方保证） rtype：页面上下文类型（当前树根属性，派生自注册表路由配置）——非空走 Im |
+| `executeCollected()` | `frontend/src/features/import-executor:179` | 执行一组拖拽收集的条目（静默导入入口）： 文件夹 → 整组（组内至少 1 个支持文件）；散落单文件 → 直导。 |
+| `importWebFilesWithToast()` | `frontend/src/features/import-executor:204` | 网页版导入执行（ADR-049 Phase 3）：拖入/选择文件 → importWebFiles 直写 IndexedDB → toast 反馈 → tree/stats 刷新。 |
 | `loadOldestModel()` | `frontend/src/features/oldest-models:290` | — |
 | `RecycleHost()` | `frontend/src/features/recycle-bin:23` | — |
 | `isPathInRoot()` | `frontend/src/features/recycle-bin:33` | — |

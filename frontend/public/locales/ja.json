@@ -205,7 +205,7 @@
   "settings.preview3d.camSpeedHint": "フリーカメラ（自分モード）での WASD 移動速度。プレビュー内スライダーと同期。",
   "settings.preview3d.rotMode": "デフォルト回転モード",
   "settings.preview3d.orbit": "モデル周回",
-  "settings.preview3d.free": "自身自由",
+  "settings.preview3d.free": "フリーカメラ",
   "settings.preview3d.rotModeHint": "3D プレビューを開いたときのデフォルトカメラモード。プレビュー内でも切替可。",
   "settings.preview3d.keymap": "操作キー（クリック→キーで再割り当て）",
   "settings.preview3d.keymapHint": "矢印キーは常に移動のフォールバックとして有効。変更は次の 3D プレビューで反映。",

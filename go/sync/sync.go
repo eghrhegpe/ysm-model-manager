@@ -31,6 +31,129 @@ func GetInstanceStatus(mcRoot, repoDir, rtype string, scanFn ScanFunc) []types.I
 
 // GetInstanceStatusWith 可注入的整合包状态获取（测试用）
 // rtype: 资源类型 ID（如 "ysm"），用于解析特定子目录；为空时使用 ins.CustomDir（向后兼容）
+// repoIndex 预构建的仓库索引，供每个 instance 复用。
+type repoIndex struct {
+	ByHash     map[string][]types.ModelEntry
+	ByRelKey   map[string][]types.ModelEntry
+	BannedHash map[string]bool
+	UseHash    bool
+}
+
+// buildRepoIndex 扫描仓库目录并构建哈希/relKey 双索引。
+func buildRepoIndex(scanFn ScanFunc, repoDir string) *repoIndex {
+	idx := &repoIndex{
+		ByHash:     make(map[string][]types.ModelEntry),
+		ByRelKey:   make(map[string][]types.ModelEntry),
+		BannedHash: make(map[string]bool),
+	}
+
+	for _, e := range scanFn(repoDir) {
+		// 禁用的模型（.disabled/.ban）不应出现在缺失列表，同时归入 bannedHashes
+		if types.IsDisableSuffix(e.Name) {
+			if e.Hash != "" {
+				idx.BannedHash[e.Hash] = true
+			}
+			continue
+		}
+		if e.Hash != "" {
+			idx.ByHash[e.Hash] = append(idx.ByHash[e.Hash], e)
+		}
+		// relKey 始终构建（哈希命中优先，哈希空时回退 relKey）
+		if rel := relKey(repoDir, e.Path); rel != "" {
+			idx.ByRelKey[rel] = append(idx.ByRelKey[rel], e)
+		}
+	}
+
+	idx.UseHash = len(idx.ByHash) > 0
+	return idx
+}
+
+// compareHashMode 哈希对比路径：计算 Missing/Extra/Disabled/Synced。
+func compareHashMode(idx *repoIndex, customEntries []types.ModelEntry) (missing, extra, disabled []string, synced int) {
+	for hash, entries := range idx.ByHash {
+		found := false
+		for _, c := range customEntries {
+			if c.Hash == hash {
+				found = true
+				break
+			}
+		}
+		if !found {
+			for _, e := range entries {
+				missing = append(missing, e.Path)
+			}
+		}
+	}
+
+	for _, c := range customEntries {
+		if c.Hash == "" {
+			continue
+		}
+		if idx.BannedHash[c.Hash] {
+			disabled = append(disabled, types.StripDisableSuffix(c.Name))
+		} else if _, found := idx.ByHash[c.Hash]; !found {
+			extra = append(extra, types.StripDisableSuffix(c.Name))
+		}
+	}
+
+	// Synced 口径：custom 中命中仓库哈希的文件数
+	for _, c := range customEntries {
+		if c.Hash != "" {
+			if _, found := idx.ByHash[c.Hash]; found {
+				synced++
+			}
+		}
+	}
+	return
+}
+
+// compareRelKeyMode relKey 回退路径（MMD/VRC 等无哈希类型）。
+func compareRelKeyMode(idx *repoIndex, customEntries []types.ModelEntry, scanDir string) (missing, extra []string, synced int) {
+	customByRelKey := make(map[string]bool)
+	for _, c := range customEntries {
+		if rel := relKey(scanDir, c.Path); rel != "" {
+			customByRelKey[rel] = true
+		}
+	}
+
+	// Missing: 仓库有但实例没有的 relKey
+	for rel, entries := range idx.ByRelKey {
+		if !customByRelKey[rel] {
+			for _, e := range entries {
+				missing = append(missing, e.Path)
+			}
+		}
+	}
+
+	// Extra: 实例有但仓库没有的 relKey
+	for _, c := range customEntries {
+		if rel := relKey(scanDir, c.Path); rel != "" {
+			if _, found := idx.ByRelKey[rel]; !found {
+				extra = append(extra, c.Name)
+			}
+		}
+	}
+
+	// Synced: 实例中 relKey 命中仓库的文件数
+	for _, c := range customEntries {
+		if rel := relKey(scanDir, c.Path); rel != "" {
+			if _, found := idx.ByRelKey[rel]; found {
+				synced++
+			}
+		}
+	}
+	return
+}
+
+// resolveInstanceScanDir 解析实例扫描目录。
+// rtype 不为空时使用 FindInstDir 限定子目录；否则用 ins.CustomDir。
+func resolveInstanceScanDir(ins types.VersionInstance, rtype, subDir string) string {
+	if rtype != "" && subDir != "" {
+		return types.FindInstDir(ins.VersionDir, subDir, rtype)
+	}
+	return ins.CustomDir
+}
+
 func GetInstanceStatusWith(mcRoot, repoDir, rtype string, scanFn ScanFunc, listFn ListVersionsFunc) []types.InstanceStatus {
 	if mcRoot == "" || repoDir == "" {
 		return []types.InstanceStatus{}
@@ -45,53 +168,13 @@ func GetInstanceStatusWith(mcRoot, repoDir, rtype string, scanFn ScanFunc, listF
 		subDir = types.SubDirMap(rtype)
 	}
 
-	repoEntries := scanFn(repoDir)
-	repoByHash := make(map[string][]types.ModelEntry)
-	// 预构建禁用哈希集合（循环不变量：一次遍历，后续每个 instance 复用）
-	bannedHashes := make(map[string]bool)
-	// 预构建 relKey 映射（非哈希类型回退：MMD/VRC 等 ShouldHashExt 为 false 的类型用路径+大小比对）
-	repoByRelKey := make(map[string][]types.ModelEntry)
-	for _, e := range repoEntries {
-		// 禁用的模型（.disabled/.ban）不应出现在缺失列表，同时归入 bannedHashes
-		if types.IsDisableSuffix(e.Name) {
-			if e.Hash != "" {
-				bannedHashes[e.Hash] = true
-			}
-			continue
-		}
-		if e.Hash != "" {
-			repoByHash[e.Hash] = append(repoByHash[e.Hash], e)
-		}
-		// relKey 始终构建（哈希命中优先，哈希空时回退 relKey）
-		if rel := relKey(repoDir, e.Path); rel != "" {
-			repoByRelKey[rel] = append(repoByRelKey[rel], e)
-		}
-	}
-
-	// 决定对比模式：有哈希条目走哈希对比，否则走 relKey 回退
-	useHash := len(repoByHash) > 0
-
+	idx := buildRepoIndex(scanFn, repoDir)
 	instances := listFn(mcRoot)
 	var results []types.InstanceStatus
 
 	for _, ins := range instances {
-		// 按资源类型限定扫描路径：rtype 不为空时使用 FindInstDir 解析子目录
-		scanDir := ins.CustomDir
-		if rtype != "" && subDir != "" {
-			scanDir = types.FindInstDir(ins.VersionDir, subDir, rtype)
-		}
+		scanDir := resolveInstanceScanDir(ins, rtype, subDir)
 		customEntries := scanFn(scanDir)
-
-		customByHash := make(map[string]bool)
-		customByRelKey := make(map[string]bool)
-		for _, c := range customEntries {
-			if c.Hash != "" {
-				customByHash[c.Hash] = true
-			}
-			if rel := relKey(scanDir, c.Path); rel != "" {
-				customByRelKey[rel] = true
-			}
-		}
 
 		status := types.InstanceStatus{
 			Name:      ins.Name,
@@ -102,67 +185,17 @@ func GetInstanceStatusWith(mcRoot, repoDir, rtype string, scanFn ScanFunc, listF
 			HasYSM:    ysm.HasYSMMod(filepath.Join(ins.VersionDir, "mods")),
 		}
 
-		if useHash {
-			// 哈希对比路径（YSM/蓝图等有哈希的类型）
-			for hash, entries := range repoByHash {
-				if !customByHash[hash] {
-					for _, e := range entries {
-						status.Missing = append(status.Missing, e.Path)
-					}
-				}
-			}
-
-			for _, c := range customEntries {
-				if c.Hash == "" {
-					continue
-				}
-				if bannedHashes[c.Hash] {
-					status.Disabled = append(status.Disabled, types.StripDisableSuffix(c.Name))
-				} else if _, found := repoByHash[c.Hash]; !found {
-					status.Extra = append(status.Extra, types.StripDisableSuffix(c.Name))
-				}
-			}
-
-			// Synced 口径：custom 中命中仓库哈希的文件数
-			syncedCount := 0
-			for _, c := range customEntries {
-				if c.Hash != "" {
-					if _, found := repoByHash[c.Hash]; found {
-						syncedCount++
-					}
-				}
-			}
-			status.Synced = syncedCount
+		if idx.UseHash {
+			missing, extra, disabled, synced := compareHashMode(idx, customEntries)
+			status.Missing = missing
+			status.Extra = extra
+			status.Disabled = disabled
+			status.Synced = synced
 		} else {
-			// relKey 回退路径（MMD/VRC 等无哈希类型）
-			// Missing: 仓库有但实例没有的 relKey
-			for rel, entries := range repoByRelKey {
-				if !customByRelKey[rel] {
-					for _, e := range entries {
-						status.Missing = append(status.Missing, e.Path)
-					}
-				}
-			}
-
-			// Extra + Disabled: 实例有但仓库没有的 relKey
-			for _, c := range customEntries {
-				if rel := relKey(scanDir, c.Path); rel != "" {
-					if _, found := repoByRelKey[rel]; !found {
-						status.Extra = append(status.Extra, c.Name)
-					}
-				}
-			}
-
-			// Synced: 实例中 relKey 命中仓库的文件数
-			syncedCount := 0
-			for _, c := range customEntries {
-				if rel := relKey(scanDir, c.Path); rel != "" {
-					if _, found := repoByRelKey[rel]; found {
-						syncedCount++
-					}
-				}
-			}
-			status.Synced = syncedCount
+			missing, extra, synced := compareRelKeyMode(idx, customEntries, scanDir)
+			status.Missing = missing
+			status.Extra = extra
+			status.Synced = synced
 		}
 
 		// Missing 由 repoByHash/repoByRelKey map 迭代构建——Go 运行时随机化

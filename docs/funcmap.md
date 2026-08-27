@@ -1025,9 +1025,9 @@
 | `rescanFsaRoot()` | `frontend/src/backend/web-fs` | — |
 | `selectLocalRepo()` | `frontend/src/backend/web-fs` | — |
 | `typeFromWebDir()` | `frontend/src/backend/web-fs:73` | 从 /web/&lt;type&gt;/... |
-| `scanWebModels()` | `frontend/src/backend/web-fs:79` | — |
-| `readWebFile()` | `frontend/src/backend/web-fs:138` | 读文件（/web/&lt;type&gt;/&lt;rest&gt; → IDB → base64；wasm.ts 解码链零改动复用） 模型组 name 与组内 rel 在 file key 中无缝拼接（ |
-| `scanAllWebModels()` | `frontend/src/backend/web-fs:314` | 扫描全部资源类型的模型（供标签聚合 / 子目录映射等全库操作） |
+| `scanWebModels()` | `frontend/src/backend/web-fs:82` | — |
+| `readWebFile()` | `frontend/src/backend/web-fs:177` | 读文件（/web/&lt;type&gt;/&lt;rest&gt; → IDB → base64；wasm.ts 解码链零改动复用） 模型组 name 与组内 rel 在 file key 中无缝拼接（ |
+| `scanAllWebModels()` | `frontend/src/backend/web-fs:388` | 扫描全部资源类型的模型（供标签聚合 / 子目录映射等全库操作） |
 | `WebModelStats()` | `frontend/src/backend/web-stats` | — |
 | `STATS_BATCH_LIMIT()` | `frontend/src/backend/web-stats` | — |
 | `onStatsProgress()` | `frontend/src/backend/web-stats:40` | 注册批量统计进度回调（done/total 为该批已处理模型数；传 null 注销） |

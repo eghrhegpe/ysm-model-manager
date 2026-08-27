@@ -69,18 +69,12 @@ function maskComments(src) {
 }
 
 /**
- * 遮罩「含引号的正则字面量」（如 replace(/"/g, "&quot;")），
- * 避免正则体内的引号被 STR_RE 误判为字符串边界导致后续整段代码匹配错乱。
- * 只处理 replace/match/search/split 后紧跟的正则（几乎必为正则字面量），且仅当正则体内含引号时才遮。
+ * 遮罩 TS 类型索引访问（如 `: BedrockGeometry["bones"]`）里的引号，避免类型 key 被误当字符串。
+ * 注意：曾存在 maskRegexLiterals 遮罩「正则字面量体内引号」，经实测为净负资产——
+ * 它把 `replace(/\\/g, "/")` 整段遮成空格（连引号一起遮没），破坏全局引号配对平衡，
+ * 导致后续 STR_RE 跨行误配、把几十行代码吞进一个"字符串"（wasm.ts 4 处误报的根因）；
+ * 且其声称要防的"正则含引号被误当字符串"全仓零发生（去掉后零新误报）。已删除。
  */
-function maskRegexLiterals(src) {
-  return src.replace(
-    /(replace|match|matchAll|search|split)\s*\(\s*\/((?:\\\/|[^/])*?)\/([dgimsuvy]*)/g,
-    (m) => m.replace(/[^\n]/g, " "),
-  );
-}
-
-/** 遮罩 TS 类型索引访问（如 `: BedrockGeometry["bones"]`）里的引号，避免类型 key 被误当字符串。 */
 function maskTsTypeIndex(src) {
   return src.replace(
     /:\s*[A-Za-z$_][\w$]*\s*\[\s*["'][^"']*["']\s*\]/g,
@@ -101,7 +95,7 @@ function lineOf(src, idx) {
 
 function scanFile(file) {
   const raw = fs.readFileSync(file, "utf8");
-  const masked = maskTsTypeIndex(maskRegexLiterals(maskComments(raw)));
+  const masked = maskTsTypeIndex(maskComments(raw));
   const hits = [];
   STR_RE.lastIndex = 0;
   let m;

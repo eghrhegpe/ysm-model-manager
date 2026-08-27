@@ -40,7 +40,7 @@
 | Go·YSM 核心 | 7 | 26 |
 | Go(internal)·应用入口 | 29 | 213 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
-| frontend/backend | 22 | 110 |
+| frontend/backend | 23 | 114 |
 | 前端·核心 | 18 | 37 |
 | 前端·特性 | 17 | 84 |
 | 前端·服务 | 2 | 18 |
@@ -50,7 +50,7 @@
 | frontend/views | 116 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **491** | **2080** |
+| **合计** | **492** | **2084** |
 
 ## Go·头像
 
@@ -422,18 +422,18 @@
 
 | 符号 | 文件:行 | 说明 |
 |------|--------|------|
-| `SetErrorSink()` | `go/scanner/scanner:93` | SetErrorSink 注入扫描错误回调（薄壳 internal/app 启动时调用，如 AddOpLog 包装） |
-| `EffectiveCacheTTL()` | `go/scanner/scanner:135` | EffectiveCacheTTL 导出当前生效的扫描缓存 TTL，供派生缓存（go/instance 同步结果、 go/sync 扫描缓存）写缓存时取同一刷新周期——30s 刷新 |
-| `OnCacheInvalidated()` | `go/scanner/scanner:160` | OnCacheInvalidated 注册一个扫描缓存失效回调。回调会在 InvalidateCache 或 InvalidatePath 完成清理后同步调用，适合清理依赖 sca |
-| `InvalidateCache()` | `go/scanner/scanner:179` | InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用） |
-| `InvalidatePath()` | `go/scanner/scanner:195` | InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用） |
-| `ScanEntries()` | `go/scanner/scanner:227` | ScanEntries 扫描目录下的模型文件（含 .recycle 排除、扩展名过滤、SHA256 哈希、30s TTL 缓存） |
-| `ScanEntriesWithHit()` | `go/scanner/scanner:234` | ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。 |
-| `ComputeFileHash()` | `go/scanner/scanner:473` | ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配） |
-| `ScanEntriesLite()` | `go/scanner/scanner:496` | ScanEntriesLite 轻量目录遍历（作者提取专用）：与 ScanEntries 同一套过滤口径 （recycle/.github/禁用后缀目录跳过、扩展名白名单、.jso |
-| `ListModelAuthors()` | `go/scanner/scanner:539` | ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序） |
-| `ScanLocalAuthors()` | `go/scanner/scanner:569` | ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root） |
-| `GenerateRepoIndex()` | `go/scanner/scanner:651` | GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub Actions/Linux 消费，正斜杠路径） |
+| `SetErrorSink()` | `go/scanner/scanner:95` | SetErrorSink 注入扫描错误回调（薄壳 internal/app 启动时调用，如 AddOpLog 包装） |
+| `EffectiveCacheTTL()` | `go/scanner/scanner:137` | EffectiveCacheTTL 导出当前生效的扫描缓存 TTL，供派生缓存（go/instance 同步结果、 go/sync 扫描缓存）写缓存时取同一刷新周期——30s 刷新 |
+| `OnCacheInvalidated()` | `go/scanner/scanner:162` | OnCacheInvalidated 注册一个扫描缓存失效回调。回调会在 InvalidateCache 或 InvalidatePath 完成清理后同步调用，适合清理依赖 sca |
+| `InvalidateCache()` | `go/scanner/scanner:181` | InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用） |
+| `InvalidatePath()` | `go/scanner/scanner:197` | InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用） |
+| `ScanEntries()` | `go/scanner/scanner:229` | ScanEntries 扫描目录下的模型文件（含 .recycle 排除、扩展名过滤、SHA256 哈希、30s TTL 缓存） |
+| `ScanEntriesWithHit()` | `go/scanner/scanner:236` | ScanEntriesWithHit 同 ScanEntries，但额外返回是否命中 30s 缓存。 |
+| `ComputeFileHash()` | `go/scanner/scanner:475` | ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配） |
+| `ScanEntriesLite()` | `go/scanner/scanner:498` | ScanEntriesLite 轻量目录遍历（作者提取专用）：与 ScanEntries 同一套过滤口径 （recycle/.github/禁用后缀目录跳过、扩展名白名单、.jso |
+| `ListModelAuthors()` | `go/scanner/scanner:541` | ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序） |
+| `ScanLocalAuthors()` | `go/scanner/scanner:571` | ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root） |
+| `GenerateRepoIndex()` | `go/scanner/scanner:653` | GenerateRepoIndex 扫描仓库目录，生成 index.json（供 GitHub Actions/Linux 消费，正斜杠路径） |
 
 ## Go·同步
 
@@ -583,7 +583,7 @@
 | `SetBundledRegistryJSON()` | `go/types/resource:20` | SetBundledRegistryJSON 由根包 main 注入编译期内嵌的注册表字节（单源：仓库根 resource_types.json）。 |
 | `ResourceType.EffectiveExtensions()` | `go/types/resource:102` | EffectiveExtensions 返回资源类型的有效扩展名集（小写化）。 |
 | `ResourceType.MatchZipEntry()` | `go/types/resource:120` | MatchZipEntry 检测 ZIP 条目名是否命中本类型的特征条目（小写不敏感） ADR-082 S1：任意层级段后缀匹配——对路径按 / 分段，每个段后缀都参与指纹匹配， |
-| `SetRegistryPath()` | `go/types/resource:155` | SetRegistryPath 设置注册表文件路径（仅测试用） 加锁保护：并发调用 LoadRegistry + SetRegistryPath 触发数据竞争（审计 P1 #2）。 |
+| `SetRegistryPath()` | `go/types/resource:155` | SetRegistryPath 设置注册表文件路径（仅测试用；⚠️ 禁止生产调用——生产路径不得改注册表源） 加锁保护：并发调用 LoadRegistry + SetRegistr |
 | `LoadRegistry()` | `go/types/resource:166` | LoadRegistry 加载资源类型注册表（单一事实来源 = 编译期嵌入的 resource_types.json）。 |
 | `BundledRegistryJSON()` | `go/types/resource:410` | BundledRegistryJSON 返回编译期内嵌的资源类型注册表原始 JSON 字节（单一事实来源）。 |
 | `RegistryType()` | `go/types/resource:417` | RegistryType 按 id 查找资源类型，不存在时返回 nil 返回深拷贝：结构体按值拷贝仅能防标量字段篡改，Extensions 切片仍共享缓存 底层数组——调用方修改 |
@@ -971,6 +971,10 @@
 | `parsePackMetaJson()` | `frontend/src/backend/pack-meta:99` | pack.mcmeta 字节 → meta 对象（对齐 internal/app ReadPackMeta 的 result 形状： pack_format / descripti |
 | `packPngToThumbnail()` | `frontend/src/backend/pack-meta:132` | pack.png 字节 → data URL base64 缩略图（10MB 限额；空/超限 → ""，对齐 go 截断探测置空） |
 | `parseShaderpackLang()` | `frontend/src/backend/pack-meta:142` | lang/en_US.lang 字节 → {name, entries} JSON 字符串（对齐 go ReadShaderpackLang： &gt;1MB → 空结果；key=val |
+| `PlatformMode()` | `frontend/src/backend/platform-web:19` | — |
+| `resolvePlatformMode()` | `frontend/src/backend/platform-web:25` | 当前平台三态判定（同步）。 |
+| `ANDROID_UNAVAILABLE()` | `frontend/src/backend/platform-web:34` | Android 桌面专属/无意义 binding 黑名单（蓝本 = go-android-platform-guard.md）。原驻 capabilities.ts，P3 归位 b |
+| `canBinding()` | `frontend/src/backend/platform-web:47` | 能力矩阵（对齐 MikuMikuAR ADR-176 capabilities 矩阵范式）： desktop — Go 桥全量可用；web — adapter has 探测（未实现 |
 | `readDeclaredBackend()` | `frontend/src/backend/platform:13` | 读取入口 HTML 声明的适配器身份（'go' | 'browser'），未声明返回 undefined |
 | `isWebEntryMode()` | `frontend/src/backend/platform:19` | Tier 1：旧 web 短路标记 / vite MODE=web 构建 |
 | `resolveWebMode()` | `frontend/src/backend/platform:28` | 同步判定：当前是否应路由到 browser adapter（网页版） |
@@ -1813,7 +1817,7 @@
 | `isViewerMode()` | `frontend/src/utils/dom/android-bridge:24` | 查看器模式判定（ADR-049 Phase 3 能力门控统一入口）： Android（双端桥存在）或网页版（browser adapter）——均无本地文件系统写能力、 无桌面专属 |
 | `registerAndroidBackHandler()` | `frontend/src/utils/dom/android-bridge:40` | 注册安卓返回键处理器，返回取消函数（供调用方在自身销毁/关闭时注销）。 |
 | `emitAndroidBack()` | `frontend/src/utils/dom/android-bridge:53` | 系统返回键的前端触发入口：依次从栈顶触发已注册处理器。 |
-| `can()` | `frontend/src/utils/dom/capabilities:30` | 当前平台是否可用指定 binding（web 查 adapter 实现；桌面恒 true；Android 查黑名单） |
+| `can()` | `frontend/src/utils/dom/capabilities:10` | 当前平台是否可用指定 binding（三态矩阵：desktop 全量 / web adapter has / Android 黑名单） |
 | `copyText()` | `frontend/src/utils/dom/clipboard:6` | 复制纯文本到剪贴板：优先 Clipboard API（需要安全上下文），降级隐藏 textarea + execCommand |
 | `refreshAdoptedStyleSheets()` | `frontend/src/utils/dom/css-hmr:13` | 热刷指定自定义元素的 Shadow DOM 样式表。 |
 | `btnBaseCSS()` | `frontend/src/utils/dom/css:1` | — |

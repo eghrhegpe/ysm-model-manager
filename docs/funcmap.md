@@ -45,11 +45,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 165 | 652 |
+| 前端·工具 | 164 | 651 |
 | frontend/views | 115 | 337 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **489** | **2074** |
+| **合计** | **488** | **2073** |
 
 ## Go·头像
 
@@ -1695,7 +1695,6 @@
 | `shouldRenderAtFps()` | `frontend/src/utils/3d/render-budget:101` | 帧率上限节流版：now 已到/过 nextFrame 才渲染。 |
 | `Disposable()` | `frontend/src/utils/3d/safe-dispose:6` | 可释放对象的最小形状（Three.js 的 Texture/Material/Geometry 等均满足） |
 | `safeDispose()` | `frontend/src/utils/3d/safe-dispose:11` | 安全释放：dispose 抛错不阻塞后续释放（个别适配器 dispose 会抛） |
-| `addStandardSceneLights()` | `frontend/src/utils/3d/scene-lights:13` | 添加 3D 场景标准主灯（AmbientLight 0xffffff@1.0 + DirectionalLight 0xffffff@2 位于 [10,30,20]）。 |
 | `ScreenshotOpts()` | `frontend/src/utils/3d/screenshot:13` | 截图选项 |
 | `screenshotFromRenderer()` | `frontend/src/utils/3d/screenshot:27` | 从活跃的 renderer/scene/camera 截图，返回 PNG/JPEG base64（无 data: 前缀）。 |
 | `SemanticBoneId()` | `frontend/src/utils/3d/semantic-bones:21` | 语义骨骼 id（对齐 VRM humanoid 命名；MMD 经候选名匹配；center 为 MMD 特有整体根） |
@@ -2153,9 +2152,9 @@
 | `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:37` | 清理场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:42` | 任意新预览派发时调用，作废在途场景加载 |
 | `resolveSceneSiblings()` | `frontend/src/views/app-preview/scene-siblings:8` | 场景模型候选（只扫 SceneModel 子目录）；失败返回 [] |
-| `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:13` | — |
-| `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:18` | — |
-| `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:25` | — |
+| `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:27` | — |
+| `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:32` | — |
+| `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:39` | — |
 | `resolveSiblingsByType()` | `frontend/src/views/app-preview/siblings:13` | 解析某资源类型的同目录候选主文件路径列表。 |
 | `PanelHandle()` | `frontend/src/views/app-preview/skeleton-fill-panel:11` | fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-fill-panel:37` | — |

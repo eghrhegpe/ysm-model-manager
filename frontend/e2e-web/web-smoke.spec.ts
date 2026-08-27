@@ -23,7 +23,7 @@ async function dropFile(page: Page, fileName: string, content: string): Promise<
       if (!tree) throw new Error("app-tree #tree 未就绪，无法派发组件级 DnD");
       const dt = new DataTransfer();
       dt.items.add(new File([body], name, { type: "application/octet-stream" }));
-      const ev = new DragEvent("drop", { bubbles: true, cancelable: true });
+      const ev = new DragEvent("drop", { bubbles: true, cancelable: true, composed: true });
       Object.defineProperty(ev, "dataTransfer", { value: dt, configurable: true });
       tree.dispatchEvent(ev);
     },

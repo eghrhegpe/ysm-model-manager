@@ -113,6 +113,16 @@ describe("browserAdapter — Phase 2 模型库（IndexedDB）", () => {
     expect(entries[0].Name).toBe("狐狸.ysm");
   });
 
+  it("ScanModelEntriesFiltered 按 rtype 虚拟根返回同列表（app-tree 文件树入口）", async () => {
+    await importWebFiles([new File([enc.encode("YSM")], "狐狸.ysm")], "ysm");
+    const entries = (await browserAdapter.ScanModelEntriesFiltered("/web/ysm", "ysm", "", "YSM 模型")) as Array<{
+      Name: string;
+    }>;
+    expect(entries).toHaveLength(1);
+    expect(entries[0].Name).toBe("狐狸.ysm");
+    // 未实现前 browserAdapter 会抛 WebUnsupportedError——本测试锁死该入口可用
+  });
+
   it("ReadFileBytes 读回 base64（wasm.ts 解码链零改动复用）", async () => {
     await importWebFiles([new File([enc.encode("YSM")], "狐狸.ysm")], "ysm");
     const b64 = await browserAdapter.ReadFileBytes("/web/ysm/狐狸/狐狸.ysm");

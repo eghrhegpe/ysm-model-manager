@@ -667,6 +667,9 @@ export const webFsBindings = {
   ScanModelEntries: (dir: string) => scanWebModels(dir),
   // 真实列表入口（loader/import-queue/resource-manager 等 6 处均调 WithLabel 版本）
   ScanModelEntriesWithLabel: (dir: string, _label: string) => scanWebModels(dir),
+  // app-tree/loader、preview-library/siblings 等按 rtype 扫描候选列表；网页版虚拟根
+  // /web/<rtype> 本身已按类型分区，scanWebModels(dir) 即等效“按 rtype 过滤”
+  ScanModelEntriesFiltered: (dir: string, _rtype: string, _subtype: string, _label: string) => scanWebModels(dir),
   ReadFileBytes: (path: string) => readWebFile(path),
   // CheckFileExists：IDB 虚拟库路径是否存在（file: 或 dir: key，对齐 Go os.Stat 语义）
   CheckFileExists: async (path: string) => {

@@ -27,6 +27,47 @@
 //   - app-preview 在 app-content shadowRoot 内（单层 shadow），previewContentText 穿透读取。
 //   - IndexedDB 直接读取验证落库（idbKeys 复用 web-smoke 范式）。
 import { test, expect, type Page } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
+import { zipSync } from "fflate";
+
+/** 读取仓库已跟踪的 YSM fixture 目录，现场 zip 成 .ysm 文件字节 base64（CI 可复现）。 */
+function fixtureYsmBase64(): string {
+  const root = path.resolve(__dirname, "..", "..", "tests", "fixtures", "ysm", "01_taisho_maid");
+  const files: Record<string, Uint8Array> = {};
+  const walk = (dir: string, base: string): void => {
+    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, ent.name);
+      const rel = path.join(base, ent.name).replace(/\\/g, "/");
+      if (ent.isDirectory()) walk(full, rel);
+      else files[rel] = new Uint8Array(fs.readFileSync(full));
+    }
+  };
+  walk(root, "");
+  return Buffer.from(zipSync(files)).toString("base64");
+}
+
+/** 像 dropFile 一样派发，但文件体是合法 YSM（fixture zip），用于依赖解析成功的预览断言。 */
+async function dropFixtureYsm(page: Page, fileName: string): Promise<void> {
+  const bodyB64 = fixtureYsmBase64();
+  await page.evaluate(
+    async ({ name, b64 }) => {
+      const content = document.querySelector("app-content");
+      const treeHost = content?.shadowRoot?.querySelector("app-tree");
+      const tree = treeHost?.shadowRoot?.getElementById("tree");
+      if (!tree) throw new Error("app-tree #tree 未就绪，无法派发组件级 DnD");
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const dt = new DataTransfer();
+      dt.items.add(new File([bytes], name, { type: "application/octet-stream" }));
+      const ev = new DragEvent("drop", { bubbles: true, cancelable: true, composed: true });
+      Object.defineProperty(ev, "dataTransfer", { value: dt, configurable: true });
+      tree.dispatchEvent(ev);
+    },
+    { name: fileName, b64: bodyB64 },
+  );
+}
 
 /** 页面内构造 DataTransfer + File 并注入 drop 事件（Chromium defineProperty 强制注入） */
 async function dropFile(page: Page, fileName: string, content: string): Promise<void> {
@@ -41,7 +82,7 @@ async function dropFile(page: Page, fileName: string, content: string): Promise<
       if (!tree) throw new Error("app-tree #tree 未就绪，无法派发组件级 DnD");
       const dt = new DataTransfer();
       dt.items.add(new File([body], name, { type: "application/octet-stream" }));
-      const ev = new DragEvent("drop", { bubbles: true, cancelable: true });
+      const ev = new DragEvent("drop", { bubbles: true, cancelable: true, composed: true });
       Object.defineProperty(ev, "dataTransfer", { value: dt, configurable: true });
       tree.dispatchEvent(ev);
     },
@@ -241,11 +282,11 @@ async function previewTabs(page: Page): Promise<Array<{ dataTab: string; isActiv
     const content = document.querySelector("app-content");
     const preview = content?.shadowRoot?.querySelector("app-preview");
     if (!preview?.shadowRoot) return null;
-    const tabs = preview.shadowRoot.querySelectorAll(".preview-tab");
+    const tabs = preview.shadowRoot.querySelectorAll(".pv-tab");
     if (tabs.length === 0) return null;
     return Array.from(tabs).map((btn) => ({
       dataTab: (btn as HTMLElement).dataset.tab || "",
-      isActive: (btn as HTMLElement).classList.contains("ysm-tab-active"),
+      isActive: (btn as HTMLElement).classList.contains("pv-tab-active"),
     }));
   });
 }
@@ -283,7 +324,7 @@ async function clickPreviewTab(page: Page, tabName: string): Promise<boolean> {
       const content = document.querySelector("app-content");
       const preview = content?.shadowRoot?.querySelector("app-preview");
       if (!preview?.shadowRoot) return false;
-      const tabs = preview.shadowRoot.querySelectorAll(".preview-tab");
+      const tabs = preview.shadowRoot.querySelectorAll(".pv-tab");
       for (const btn of tabs) {
         if ((btn as HTMLElement).dataset.tab === tab) {
           (btn as HTMLElement).click();
@@ -372,7 +413,7 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
   // 不触发 WebGL，headless chromium 无 GPU 也能稳定通过。
   test("预览 tab 切换：detail/skeleton data-tab 锚点硬断言", async ({ page }) => {
     // 1. 导入 .ysm 并选中（复用用例 1 的导入→选中链路）
-    await dropFile(page, "标签测试.ysm", "YSM-TAB-BYTES");
+    await dropFixtureYsm(page, "标签测试.ysm"); // 用真实 YSM fixture，否则解析失败不会有 detail/skeleton tab
     await expect.poll(async () => idbKeys(page), { timeout: 8000 }).toMatchObject({
       files: expect.arrayContaining([
         "dir:ysm/标签测试:",

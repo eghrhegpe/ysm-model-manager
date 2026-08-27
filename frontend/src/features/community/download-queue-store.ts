@@ -84,9 +84,23 @@ export function notify(): void {
   listeners.forEach((fn) => fn(STATE));
 }
 
-/** 当前状态的只读快照 */
+/**
+ * 当前状态的只读快照（浅拷贝，不返回模块级 STATE 的原始引用）。
+ *
+ * 调用方应只读快照、不可修改——修改会绕过通知链路，导致订阅者看到陈旧状态。
+ * 如需修改，请通过本模块提供的 enqueue/cancel/resume 等入口。
+ *
+ * 与 notify() 的区别：
+ * - notify() 推送模型，回调期内的 s 引用为活体，适合立即读取
+ * - getStateSnapshot() 拉取模型，返回值独立于 STATE，适合一次性渲染快照
+ */
+export function getStateSnapshot(): Readonly<DownloadState> {
+  return { ...STATE };
+}
+
+/** @deprecated 请使用 getStateSnapshot()；当前等价于 getStateSnapshot()，保留为兼容 */
 export function getState(): DownloadState {
-  return STATE;
+  return getStateSnapshot() as DownloadState;
 }
 
 /**

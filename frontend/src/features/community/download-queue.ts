@@ -29,7 +29,8 @@ import { createProgressGuard, type ProgressGuard } from "./download-queue-progre
 // ── 对外 re-export（保持消费者从本文件导入的既有契约）──
 export {
   subscribe,
-  getState,
+  getStateSnapshot,
+  getState, // @deprecated — 内部委托给 getStateSnapshot
   resume,
   enqueueDownloads,
   cancelDownloads,

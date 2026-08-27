@@ -45,7 +45,7 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/features/community/download-queue-store.ts` | 276 |
+| `frontend/src/features/community/download-queue-store.ts` | 290 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -308,7 +308,7 @@
 | `frontend/src/core/handlers/instance-ops.ts` | 159 |
 | `frontend/src/core/handlers/sync.ts` | 86 |
 | `frontend/src/core/handlers/sync.ts` | 207 |
-| `frontend/src/features/community/download-queue.ts` | 111 |
+| `frontend/src/features/community/download-queue.ts` | 112 |
 | `frontend/src/features/import-executor.ts` | 33 |
 | `frontend/src/features/import-executor.ts` | 218 |
 | `frontend/src/features/recycle-bin.ts` | 107 |
@@ -406,8 +406,8 @@
 | `frontend/src/core/handlers/sync.ts` | 200 |
 | `frontend/src/core/handlers/sync.ts` | 215 |
 | `frontend/src/core/handlers/sync.ts` | 240 |
-| `frontend/src/features/community/download-queue.ts` | 269 |
-| `frontend/src/features/community/download-queue.ts` | 295 |
+| `frontend/src/features/community/download-queue.ts` | 270 |
+| `frontend/src/features/community/download-queue.ts` | 296 |
 | `frontend/src/features/community/events.ts` | 141 |
 | `frontend/src/features/community/events.ts` | 153 |
 | `frontend/src/features/community/events.ts` | 222 |
@@ -591,7 +591,7 @@
 | `frontend/src/core/handlers/android-events.ts` | 65 |
 | `frontend/src/core/handlers/sync.ts` | 134 |
 | `frontend/src/core/handlers/sync.ts` | 247 |
-| `frontend/src/features/community/download-queue.ts` | 110 |
+| `frontend/src/features/community/download-queue.ts` | 111 |
 | `frontend/src/features/import-executor.ts` | 34 |
 | `frontend/src/features/import-executor.ts` | 217 |
 | `frontend/src/features/recycle-bin.ts` | 108 |

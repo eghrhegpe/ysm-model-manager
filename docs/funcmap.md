@@ -41,7 +41,7 @@
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 22 | 110 |
 | 前端·核心 | 18 | 37 |
-| 前端·特性 | 17 | 82 |
+| 前端·特性 | 17 | 84 |
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
@@ -49,7 +49,7 @@
 | frontend/views | 115 | 337 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **488** | **2074** |
+| **合计** | **488** | **2076** |
 
 ## Go·头像
 
@@ -1089,12 +1089,14 @@
 | `STATE()` | `frontend/src/features/community/download-queue-store:53` | 模块级共享状态（progress guard / UI 控制器 import 协作，不对外 re-export） |
 | `subscribe()` | `frontend/src/features/community/download-queue-store:75` | 订阅 STATE 变更。返回取消订阅函数。 |
 | `notify()` | `frontend/src/features/community/download-queue-store:83` | 广播 STATE 变更（UI 控制器 enqueue 失败回滚等场景也经此通知） |
-| `getState()` | `frontend/src/features/community/download-queue-store:88` | 当前状态的只读快照 |
-| `resume()` | `frontend/src/features/community/download-queue-store:97` | 页面切回时调用，从 Go 端恢复当前队列状态。 |
-| `isActiveStatus()` | `frontend/src/features/community/download-queue-store:136` | 队列是否处于活跃下载中（downloading 或 enqueued）。 |
-| `enqueueDownloads()` | `frontend/src/features/community/download-queue-store:144` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
-| `cancelDownloads()` | `frontend/src/features/community/download-queue-store:200` | 模块级取消 — 纯粹的 Go 调用。 |
+| `getStateSnapshot()` | `frontend/src/features/community/download-queue-store:97` | 当前状态的只读快照（浅拷贝，不返回模块级 STATE 的原始引用）。 |
+| `getState()` | `frontend/src/features/community/download-queue-store:102` | 当前状态的只读快照（浅拷贝，不返回模块级 STATE 的原始引用）。 |
+| `resume()` | `frontend/src/features/community/download-queue-store:111` | 页面切回时调用，从 Go 端恢复当前队列状态。 |
+| `isActiveStatus()` | `frontend/src/features/community/download-queue-store:150` | 队列是否处于活跃下载中（downloading 或 enqueued）。 |
+| `enqueueDownloads()` | `frontend/src/features/community/download-queue-store:158` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
+| `cancelDownloads()` | `frontend/src/features/community/download-queue-store:214` | 模块级取消 — 纯粹的 Go 调用。 |
 | `subscribe()` | `frontend/src/features/community/download-queue` | — |
+| `getStateSnapshot()` | `frontend/src/features/community/download-queue` | — |
 | `getState()` | `frontend/src/features/community/download-queue` | — |
 | `resume()` | `frontend/src/features/community/download-queue` | — |
 | `enqueueDownloads()` | `frontend/src/features/community/download-queue` | — |
@@ -1102,10 +1104,10 @@
 | `DownloadTask()` | `frontend/src/features/community/download-queue` | — |
 | `DownloadState()` | `frontend/src/features/community/download-queue` | — |
 | `QueueError()` | `frontend/src/features/community/download-queue` | — |
-| `QueueControllerOptions()` | `frontend/src/features/community/download-queue:44` | createDownloadQueue 选项 |
-| `QueueController()` | `frontend/src/features/community/download-queue:53` | 队列控制器 |
-| `DownloadQueue()` | `frontend/src/features/community/download-queue:61` | 旧契约别名（events.ts / download-tasks.ts 仍使用 DownloadQueue 命名） |
-| `createDownloadQueue()` | `frontend/src/features/community/download-queue:326` | 创建一个下载队列 UI 控制器。 |
+| `QueueControllerOptions()` | `frontend/src/features/community/download-queue:45` | createDownloadQueue 选项 |
+| `QueueController()` | `frontend/src/features/community/download-queue:54` | 队列控制器 |
+| `DownloadQueue()` | `frontend/src/features/community/download-queue:62` | 旧契约别名（events.ts / download-tasks.ts 仍使用 DownloadQueue 命名） |
+| `createDownloadQueue()` | `frontend/src/features/community/download-queue:327` | 创建一个下载队列 UI 控制器。 |
 | `DOWNLOAD_CONFIRM_BYTES()` | `frontend/src/features/community/download-tasks:7` | 超过该大小需弹窗确认（含边界值本身直接下载） |
 | `DOWNLOAD_REJECT_BYTES()` | `frontend/src/features/community/download-tasks:9` | 超过该大小直接拒绝（含边界值本身需确认） |
 | `DownloadSizeDecision()` | `frontend/src/features/community/download-tasks:11` | — |

@@ -20,7 +20,7 @@ use_when:
   - android-bridge
   - pickDirectory
 invariant_anchors:
-  - frontend/src/utils/dom/android-bridge.ts|requestStoragePermission
+  - frontend/src/backend/platform.ts|requestStoragePermission
 ---
 
 # Android 桥接层：存储授权 + 目录选择器
@@ -31,7 +31,7 @@ Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 
 
 ## 核心职责
 
-- **`getAndroidBridge()`**（android-bridge.ts）：类型安全返回 Java 桥（`hasStoragePermission` / `requestStoragePermission`），桌面端返回 `null`。类型断言用 `unknown` 收窄，无 `as any`（ADR-014）。
+- **`getAndroidBridge()`**（原语已下沉 backend/platform.ts，ADR-123 P3；android-bridge.ts 仅 re-export，消费路径不变）：类型安全返回 Java 桥（`hasStoragePermission` / `requestStoragePermission`），桌面端返回 `null`。类型断言用 `unknown` 收窄，无 `as any`（ADR-014）。
 - **`resolveAndroidRepoDir()`**（directory-picker.ts）：Android 目录路径解析专用入口——未授权时 warn toast + `requestStoragePermission` 引导授权并返回 `null`；已授权时 `GetDefaultRepoRoot` 定位公共仓库目录 + info toast 返回路径。设置页路径卡片与树「导入文件夹」统一复用。
 - **`pickDirectory()`**（directory-picker.ts）：跨平台统一入口——桌面走 Wails Dialog（`SelectDirectory`）；Android 有桥时委托 `resolveAndroidRepoDir()`。
 - **共享复用**：`loader.ts` 库加载失败引导授权、`version-updater.ts` 平台门控、`toolbar-events.ts` 导入文件夹均引用此桥，避免重复实现。
@@ -40,7 +40,7 @@ Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 
 ## 对外 API / 入口
 
 - `getAndroidBridge(): WailsAndroidBridge | null` — 返回桥或 null（Android 判定手段，全前端统一用它做平台门控）
-- `WailsAndroidBridge` — `hasStoragePermission?()` / `requestStoragePermission?()` 可选方法（桌面端不存在）
+- `WailsAndroidBridge`（定义于 platform.ts）— `hasStoragePermission?()` / `requestStoragePermission?()` 可选方法（桌面端不存在）
 - `resolveAndroidRepoDir(): Promise<string | null>` — Android 目录解析：授权引导 → 定位公共仓库目录（未授权返回 null）
 - `pickDirectory(): Promise<string | null>` — 跨平台选择目录；桌面 Wails Dialog，Android 委托 resolveAndroidRepoDir
 - `registerAndroidBackHandler(handler: () => boolean | void): () => void` — 注册返回键消费回调，返回注销函数（ADR-057）

@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 107 张知识卡
+> 总计: 108 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -82,12 +82,13 @@
 - **resource-packs**（资源包功能 resource-packs）：**已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager…
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（34 张）
+## go（35 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
+| 🏗 classify-routing | 分类路由与回归护栏 | architecture | — | 整合包分类, 路由, location 路由, zipentry 指纹, 蓝图, 投影, vrm, pmx, 回归, last-wins, priority 裁决 |
 | 🏗 cli_quality_audit | CLI 质量摸排 Checklist | architecture | — | CLI, 质量摸排, 代码审核, 代码审查, bug 排查, 审计, 白名单, 绑定层, 覆盖率, 健康分 |
 | 🍃 doctor_gate_overlap | 质量闸门双调度器重叠审计 | leaf | — | 双调度器, 质量闸门重叠, doctor gate 差异, 治理红线下沉 |
 | 🏗 fbx-cli-pipeline | FBX CLI 处理管线 fbx-cli-pipeline | architecture | — | FBX, CLI, 命令行, 转换, glTF, GLB, fbx2gltf, assimp, qmuntal, 加载模型, 模型格式 |
@@ -125,6 +126,7 @@
 
 ### 摘要
 
+- **classify-routing**（分类路由与回归护栏）：整合包分类的「路由不变量 + 回归护栏」设计备忘录。核心结论：**location 路由只在「同文件夹 = 同类型」时成立；一旦出现「同文件夹多类型」，必须降级到内容指纹（zipentry/ysm/mcmeta/shader），且各容器型需…
 - **cli_quality_audit**（CLI 质量摸排 Checklist）：本文档记录 YSM 项目 Go CLI 层（`go/cli/` + `internal/app/` + `frontend/src/services/`）代码审核的**高频问题模式**与**修复 Checklist**。2026-08-19…
 - **doctor_gate_overlap**（质量闸门双调度器重叠审计）：2026-08-14 摸排结论：推送测试链路本身不臃肿，但质量闸门体系存在**双调度器 + 双重实现**，约 250 行重复逻辑，已出现参数漂移。
 - **fbx-cli-pipeline**（FBX CLI 处理管线 fbx-cli-pipeline）：**CLI 模式处理 FBX 的成熟路径，不是「Go 直接解析 FBX」，而是「现成转换器转中间格式 + 成熟库读取」的双段式**：
@@ -263,7 +265,7 @@
 - **scene_capability_registry**（场景能力注册表 scene-capability-registry）：ADR-073 扩展落地的**场景能力注册表**：所有场景能力（Sky / Ground / Environment / Fog / Shadow / Reflector / Light / Postprocessing）由统一注册表**创…
 - **utils-array**（数组工具 moveItem）：纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。
 - **utils-display**（文件名显示 display）：模型文件名解析 + 美化显示管线。YSM 社区文件名遵循 `[作者]【作品】角色 日期.ext` 命名约定，本模块把它解析为结构化字段，并在原文件名上原位着色（作者/作品/日期各自样式），是 UI 侧文件名展示的唯一入口。
-- **utils-dom**（DOM 工具 dom）：HTML 转义、搜索高亮与全局 toast 时长语义常量。`esc()` 是全前端 HTML 转义的统一入口，也是治理红线指定的转义函数；`toast-ms.ts` 是全应用 toast 时长的单一事实源（6 档语义常量，消费方禁止内联魔法…
+- **utils-dom**（DOM 工具 dom）：HTML 转义、搜索高亮与全局 toast 时长语义常量。`esc()` 是全前端 HTML 转义的统一入口，也是治理红线指定的转义函数；`toast-ms.ts` 是全应用 toast 时长的单一事实源（8 档语义常量，新增 `persi…
 - **utils-errors**（错误处理 errors）：把 Go 端/运行时返回的原始错误转换为用户可读的中文提示，是异常路径 toast 文案的统一入口（治理红线：所有异常路径必须有 toast 反馈）。
 - **utils-export**（截图与导出 export）：预览产物的导出与缓存层：`screenshot-renderer.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重挂不丢失）。当前画面的单帧截图…
 - **utils-extensions**（扩展名映射 extensions）：前端扩展名 → 资源类型映射的集中定义。拖拽导入等场景需要同步判断扩展名（无法等待异步注册表加载），故提供这份静态默认表；事实来源仍是 `resource_types.json`，三端一致性由契约测试守护。

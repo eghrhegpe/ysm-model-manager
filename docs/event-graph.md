@@ -30,11 +30,11 @@
 | `repo:rtype-changed` | 3 | 6 | 0 | 0 | ✅ |
 | `repo:search-creator` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:subdir-changed` | 1 | 1 | 0 | 0 | ✅ |
-| `stats:refresh` | 22 | 2 | 0 | 0 | ✅ |
+| `stats:refresh` | 23 | 2 | 0 | 0 | ✅ |
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 198 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 200 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 11 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -315,6 +315,7 @@
 | `frontend/src/features/recycle-bin.ts` | 167 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 435 |
 | `frontend/src/views/app-content/settings/init.ts` | 141 |
+| `frontend/src/views/app-content/settings/launcher-detection.ts` | 98 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 353 |
 | `frontend/src/views/app-sidebar/index.ts` | 319 |
@@ -377,10 +378,10 @@
 **发射方：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/app-modules.ts` | 68 |
-| `frontend/src/app-modules.ts` | 78 |
-| `frontend/src/app-modules.ts` | 88 |
-| `frontend/src/app-modules.ts` | 119 |
+| `frontend/src/app-modules.ts` | 69 |
+| `frontend/src/app-modules.ts` | 79 |
+| `frontend/src/app-modules.ts` | 89 |
+| `frontend/src/app-modules.ts` | 121 |
 | `frontend/src/core/context-menu-shared.ts` | 23 |
 | `frontend/src/core/context-menu-shared.ts` | 58 |
 | `frontend/src/core/context-menu-shared.ts` | 68 |
@@ -466,6 +467,8 @@
 | `frontend/src/views/app-content/settings/keymap.ts` | 103 |
 | `frontend/src/views/app-content/settings/keymap.ts` | 114 |
 | `frontend/src/views/app-content/settings/keymap.ts` | 135 |
+| `frontend/src/views/app-content/settings/launcher-detection.ts` | 75 |
+| `frontend/src/views/app-content/settings/launcher-detection.ts` | 99 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 79 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 273 |
 | `frontend/src/views/app-content/settings/path-cards.ts` | 279 |

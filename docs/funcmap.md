@@ -21,6 +21,7 @@
 | Go·安装 | 1 | 10 |
 | go/instance | 1 | 4 |
 | go/internal | 1 | 3 |
+| go/launcher | 1 | 1 |
 | Go·Litematic | 6 | 9 |
 | Go·日志 | 2 | 12 |
 | Go·包管理 | 1 | 3 |
@@ -33,11 +34,11 @@
 | Go·标签 | 1 | 8 |
 | go/texture_cache | 1 | 13 |
 | Go·Three.js | 1 | 6 |
-| Go·类型 | 8 | 101 |
+| Go·类型 | 8 | 102 |
 | Go·更新器 | 1 | 10 |
 | Go·监听 | 1 | 6 |
 | Go·YSM 核心 | 7 | 26 |
-| Go(internal)·应用入口 | 28 | 212 |
+| Go(internal)·应用入口 | 29 | 213 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
 | frontend/backend | 22 | 110 |
 | 前端·核心 | 18 | 37 |
@@ -46,10 +47,10 @@
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
 | 前端·工具 | 164 | 651 |
-| frontend/views | 115 | 337 |
+| frontend/views | 116 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **488** | **2076** |
+| **合计** | **491** | **2080** |
 
 ## Go·头像
 
@@ -306,6 +307,12 @@
 | `CreateTestFile()` | `go/internal/testutil/testutil:14` | CreateTestFile 在 dir 下创建 name 文件（自动建父目录），返回完整路径。 |
 | `MakeZipBytes()` | `go/internal/testutil/testutil:28` | MakeZipBytes 构造内存 ZIP（entries: 条目名→内容），返回字节。 |
 | `WriteZipFile()` | `go/internal/testutil/testutil:48` | WriteZipFile 构造 ZIP 并写入 t.TempDir()/name，返回文件路径。 |
+
+## go/launcher
+
+| 符号 | 文件:行 | 说明 |
+|------|--------|------|
+| `Detect()` | `go/launcher/detect:26` | Detect identifies the launcher selected by the user and resolves every Minecraft version t |
 
 ## Go·Litematic
 
@@ -597,27 +604,28 @@
 | `LitematicBlockStat()` | `go/types/resource:591` | LitematicBlockStat 方块类型统计 |
 | `LitematicVoxelData()` | `go/types/resource:597` | LitematicVoxelData 体素渲染数据 |
 | `VoxelGroup()` | `go/types/resource:605` | VoxelGroup 同一颜色的方块组 |
-| `StatusToLevel()` | `go/types/types:130` | StatusToLevel 将 ImportLog 的 Status 字符串映射到日志级别。 |
-| `AppError.WithCause()` | `go/types/types:178` | WithCause 附加底层错误，使 errors.Is/As 可以穿透 AppError 判定 errno/哨兵。 |
-| `AppError.Unwrap()` | `go/types/types:184` | Unwrap 暴露底层错误链（ADR-051：配合 WithCause 恢复结构化错误判定能力） |
-| `AppError.Error()` | `go/types/types:186` | — |
+| `StatusToLevel()` | `go/types/types:143` | StatusToLevel 将 ImportLog 的 Status 字符串映射到日志级别。 |
+| `AppError.WithCause()` | `go/types/types:191` | WithCause 附加底层错误，使 errors.Is/As 可以穿透 AppError 判定 errno/哨兵。 |
+| `AppError.Unwrap()` | `go/types/types:197` | Unwrap 暴露底层错误链（ADR-051：配合 WithCause 恢复结构化错误判定能力） |
+| `AppError.Error()` | `go/types/types:199` | — |
 | `WindowState()` | `go/types/types:6` | WindowState 窗口位置 |
 | `AuthorInfo()` | `go/types/types:14` | AuthorInfo 作者信息（含模型计数） |
 | `ModelEntry()` | `go/types/types:21` | ModelEntry 模型文件条目 |
 | `ImportFileItem()` | `go/types/types:40` | ImportFileItem 文件夹型模型整组导入的文件项（ADR-038 关联：解压目录整组导入） |
 | `VersionInstance()` | `go/types/types:46` | VersionInstance 整合包信息 |
-| `SearchResult()` | `go/types/types:54` | SearchResult 模型搜索结果 |
-| `ImportLog()` | `go/types/types:66` | ImportLog 应用操作日志（导入、扫描、下载、同步等） |
-| `RuntimeLog()` | `go/types/types:79` | RuntimeLog 运行时日志（watcher/sync 等标准库 log 输出，诊断页可见） |
-| `LinkType()` | `go/types/types:86` | LinkType 链接类型 |
-| `ErrorCode()` | `go/types/types:97` | ErrorCode 结构化错误码（ADR-051 落地：替代裸字符串拼接，消除前后端双份分类表漂移）。 |
-| `LogLevel()` | `go/types/types:118` | LogLevel 日志级别（诊断页按 Level 过滤；向后兼容——旧日志无此字段时前端按 Status 兜底） |
-| `CustomFileInfo()` | `go/types/types:146` | CustomFileInfo custom 目录下的文件信息 |
-| `InstanceStatus()` | `go/types/types:152` | InstanceStatus 整合包状态 |
-| `AppError()` | `go/types/types:165` | — |
-| `ResourceSyncResult()` | `go/types/types:199` | ResourceSyncResult 资源同步结果 |
-| `SyncStatus()` | `go/types/types:206` | SyncStatus 资源文件同步状态 |
-| `ResourceSyncItem()` | `go/types/types:221` | ResourceSyncItem 单个资源文件的同步状态 |
+| `LauncherInstance()` | `go/types/types:56` | LauncherInstance is a Minecraft instance discovered from a launcher directory. |
+| `SearchResult()` | `go/types/types:67` | SearchResult 模型搜索结果 |
+| `ImportLog()` | `go/types/types:79` | ImportLog 应用操作日志（导入、扫描、下载、同步等） |
+| `RuntimeLog()` | `go/types/types:92` | RuntimeLog 运行时日志（watcher/sync 等标准库 log 输出，诊断页可见） |
+| `LinkType()` | `go/types/types:99` | LinkType 链接类型 |
+| `ErrorCode()` | `go/types/types:110` | ErrorCode 结构化错误码（ADR-051 落地：替代裸字符串拼接，消除前后端双份分类表漂移）。 |
+| `LogLevel()` | `go/types/types:131` | LogLevel 日志级别（诊断页按 Level 过滤；向后兼容——旧日志无此字段时前端按 Status 兜底） |
+| `CustomFileInfo()` | `go/types/types:159` | CustomFileInfo custom 目录下的文件信息 |
+| `InstanceStatus()` | `go/types/types:165` | InstanceStatus 整合包状态 |
+| `AppError()` | `go/types/types:178` | — |
+| `ResourceSyncResult()` | `go/types/types:212` | ResourceSyncResult 资源同步结果 |
+| `SyncStatus()` | `go/types/types:219` | SyncStatus 资源文件同步状态 |
+| `ResourceSyncItem()` | `go/types/types:234` | ResourceSyncItem 单个资源文件的同步状态 |
 
 ## Go·更新器
 
@@ -768,6 +776,7 @@
 | `App.RestoreFromRecycle()` | `internal/app/app_install_recycle:178` | — |
 | `App.DeleteFromRecycle()` | `internal/app/app_install_recycle:199` | — |
 | `App.EmptyRecycleBin()` | `internal/app/app_install_recycle:215` | EmptyRecycleBin 清空所有已配置资源根目录的回收站，返回删除条目总数。 |
+| `App.DetectLauncherInstances()` | `internal/app/app_launcher:10` | DetectLauncherInstances inspects a user-selected HMCL/PCL directory and returns the resolv |
 | `App.AnalyzeYSMModel()` | `internal/app/app_model:39` | — |
 | `App.ExtractYsmSummary()` | `internal/app/app_model:43` | — |
 | `App.ExtractYSMHeader()` | `internal/app/app_model:57` | — |
@@ -2018,6 +2027,7 @@
 | `PAGE_REGISTRY()` | `frontend/src/views/app-content/page-registry:30` | — |
 | `initSettings()` | `frontend/src/views/app-content/settings/init:311` | 初始化设置页所有事件绑定 |
 | `initKeymap()` | `frontend/src/views/app-content/settings/keymap:130` | 初始化 3D 预览操作：键位网格 + 恢复默认 + 相机速度 + 默认旋转模式 |
+| `registerLauncherDetection()` | `frontend/src/views/app-content/settings/launcher-detection:124` | Install launcher detection into the settings view without crossing feature/view layers. |
 | `saveCfg()` | `frontend/src/views/app-content/settings/path-cards:25` | — |
 | `bindPathClick()` | `frontend/src/views/app-content/settings/path-cards:53` | — |
 | `initAdvancedGrid()` | `frontend/src/views/app-content/settings/path-cards:194` | — |

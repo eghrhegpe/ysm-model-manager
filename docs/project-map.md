@@ -26,6 +26,7 @@
 | `installer/` | 模型安装 〔源码 1: installer.go · 测试 4〕 |
 | `instance/` | 整合包实例同步状态组装（ADR-003 补充下沉） 〔源码 1: instance.go · 测试 2〕 |
 | `internal/` | Go 内部工具（testutil 测试工具） 〔子目录 1: testutil/〕 |
+| `launcher/` | 桌面启动器（HMCL/PCL/Minecraft）实例自动检测 〔源码 1: detect.go · 测试 1〕 |
 | `litematic/` | Litematica 投影文件 (.litematic) 解析与预览数据 〔源码 10: bedrock.go block_colors.go block_ids.go block_ids_data.go nbt.go palette.go parser.go schematic.g… · 测试 7 · 子目录 1: gen/〕 |
 | `logs/` | 导入日志 〔源码 2: logs.go runtime.go · 测试 5〕 |
 | `packs/` | 资源包元数据读取（pack.mcmeta / 光影包 lang / 资源类型检测） 〔源码 1: mcmeta.go · 测试 4 · 子目录 1: testdata/〕 |
@@ -52,7 +53,7 @@
 
 | 包 | 用途 |
 |----|------|
-| `app/` | Wails Binding 入口（app.go / resource_bindings.go） 〔源码 39 · 测试 21〕 |
+| `app/` | Wails Binding 入口（app.go / resource_bindings.go） 〔源码 40 · 测试 21〕 |
 
 <!-- /GEN: internal-structure -->
 

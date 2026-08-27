@@ -219,7 +219,7 @@
 **订阅方（on）：**
 | 文件 | 行 |
 |------|----|
-| `frontend/src/views/app-preview/index.ts` | 115 |
+| `frontend/src/views/app-preview/index.ts` | 116 |
 
 ### `nav:changed`
 
@@ -508,8 +508,8 @@
 | `frontend/src/views/app-nav/index.ts` | 102 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 241 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 307 |
-| `frontend/src/views/app-preview/index.ts` | 234 |
-| `frontend/src/views/app-preview/index.ts` | 254 |
+| `frontend/src/views/app-preview/index.ts` | 235 |
+| `frontend/src/views/app-preview/index.ts` | 255 |
 | `frontend/src/views/app-preview/mmd-controls.ts` | 291 |
 | `frontend/src/views/app-preview/preview-library.ts` | 89 |
 | `frontend/src/views/app-preview/ysm-controls.ts` | 114 |

@@ -681,8 +681,8 @@ func (a *App) RepoHealthAuditAll() string {
 // rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文件路径，instanceName: 整合包名称
 func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) error {
 	cfg := a.LoadAppConfig()
-	if cfg.McRoot == "" {
-		return fmt.Errorf("请先设置游戏根目录")
+	if err := requireMcRoot(cfg); err != nil {
+		return err
 	}
 
 	// 查找目标整合包

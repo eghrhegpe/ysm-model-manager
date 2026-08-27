@@ -27,6 +27,16 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// requireMcRoot 校验游戏根目录已配置（收敛散落的 `cfg.McRoot == ""` 错误检查）。
+// 仅用于「返回 error」形态的站点；JSON 早退（GetSyncScanDirs 等）与 app.go 的
+// fallback 探测语义不同，保持原位不在此收敛。
+func requireMcRoot(cfg types.AppConfig) error {
+	if cfg.McRoot == "" {
+		return fmt.Errorf("请先设置游戏根目录")
+	}
+	return nil
+}
+
 type App struct {
 	LinkMode      string
 	logger        *logs.Logger

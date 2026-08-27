@@ -47,10 +47,10 @@
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
 | 前端·工具 | 164 | 651 |
-| frontend/views | 116 | 338 |
+| frontend/views | 117 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **492** | **2087** |
+| **合计** | **493** | **2087** |
 
 ## Go·头像
 
@@ -835,15 +835,15 @@
 | `App.BackupWorkshopCreators()` | `internal/app/app_workshop:311` | — |
 | `App.MergeWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:326` | — |
 | `App.ReplaceWorkshopCreatorsFromJSON()` | `internal/app/app_workshop:368` | — |
-| `NewApp()` | `internal/app/app:63` | — |
-| `App.SetApp()` | `internal/app/app:89` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
-| `App.GetYSMRepoRoot()` | `internal/app/app:92` | GetYSMRepoRoot 返回当前配置的 YSM 仓库根目录 |
-| `App.SetMainWindow()` | `internal/app/app:104` | SetMainWindow 注入主窗口实例，避免依赖 Window.Current()。 |
-| `App.ServiceStartup()` | `internal/app/app:107` | ServiceStartup 对应 v2 的 startup，在 app.Run() 期间由框架调用 |
-| `App.ServiceShutdown()` | `internal/app/app:206` | ServiceShutdown 对应 v2 的 shutdown，在应用退出前由框架调用 |
-| `App.OpenInBrowser()` | `internal/app/app:241` | OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌） |
-| `App.GetAppVersion()` | `internal/app/app:246` | GetAppVersion 返回当前版本号 |
-| `App()` | `internal/app/app:30` | — |
+| `NewApp()` | `internal/app/app:73` | — |
+| `App.SetApp()` | `internal/app/app:99` | SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器 |
+| `App.GetYSMRepoRoot()` | `internal/app/app:102` | GetYSMRepoRoot 返回当前配置的 YSM 仓库根目录 |
+| `App.SetMainWindow()` | `internal/app/app:114` | SetMainWindow 注入主窗口实例，避免依赖 Window.Current()。 |
+| `App.ServiceStartup()` | `internal/app/app:117` | ServiceStartup 对应 v2 的 startup，在 app.Run() 期间由框架调用 |
+| `App.ServiceShutdown()` | `internal/app/app:216` | ServiceShutdown 对应 v2 的 shutdown，在应用退出前由框架调用 |
+| `App.OpenInBrowser()` | `internal/app/app:251` | OpenInBrowser 在系统默认浏览器中打开链接（而非 WebView2 内嵌） |
+| `App.GetAppVersion()` | `internal/app/app:256` | GetAppVersion 返回当前版本号 |
+| `App()` | `internal/app/app:40` | — |
 | `SetEmbedded()` | `internal/app/assets:16` | SetEmbedded 由根包 main 的 init() 注入编译期嵌入的静态资产。 |
 | `App.SetAllowedCommands()` | `internal/app/cli_bridge:15` | SetAllowedCommands 注入可用 CLI 命令列表（由 main.go 调用 cli.GetAllowedCommands() 提供） 避免 app→cli 循环依赖 |
 | `App.ExecuteCLI()` | `internal/app/cli_bridge:31` | ExecuteCLI 执行 CLI 命令并返回 JSON 响应（Wails 绑定） |
@@ -1341,10 +1341,10 @@
 | `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:416` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层控件钩子。 |
 | `litematicMenuItems()` | `frontend/src/utils/3d/adapters/litematic-adapter:459` | 构造 litematic 专属菜单项： 分层切片调节（axis/layer 控件）作为 🧍 模型组的一个面板项， 点击后弹出面板，内含轴选择 + 分层模式 + 滑块控件。 |
 | `MmdDataPort()` | `frontend/src/utils/3d/adapters/mmd-adapter:64` | MMD 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
-| `MmdPanelHooks()` | `frontend/src/utils/3d/adapters/mmd-adapter:174` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
-| `buildMmdScene()` | `frontend/src/utils/3d/adapters/mmd-adapter:1139` | — |
-| `MmdMenuItemsOpts()` | `frontend/src/utils/3d/adapters/mmd-adapter:1212` | mmdMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `mmdMenuItems()` | `frontend/src/utils/3d/adapters/mmd-adapter:1244` | MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。 |
+| `MmdPanelHooks()` | `frontend/src/utils/3d/adapters/mmd-adapter:179` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
+| `buildMmdScene()` | `frontend/src/utils/3d/adapters/mmd-adapter:1144` | — |
+| `MmdMenuItemsOpts()` | `frontend/src/utils/3d/adapters/mmd-adapter:1217` | mmdMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `mmdMenuItems()` | `frontend/src/utils/3d/adapters/mmd-adapter:1249` | MMD 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 材质 / 播放（+ 条件 bones）。 |
 | `getCustomAnimPath()` | `frontend/src/utils/3d/adapters/mmd-anim-library:12` | 获取 MMD 动作库（CustomAnim）的绝对路径。 |
 | `filterAnimFiles()` | `frontend/src/utils/3d/adapters/mmd-anim-library:24` | 从文件列表中筛选动作文件（.vmd / .vpd） |
 | `BasisEncoderLike()` | `frontend/src/utils/3d/adapters/mmd-ktx2-basis:13` | BasisEncoder 实例的最小接口（embind 运行时提供） |
@@ -2110,17 +2110,17 @@
 | `showScenePreview()` | `frontend/src/views/app-preview/detail-3d:161` | 显示场景 MMD 预览卡（独立入口，与角色模型完全隔离） |
 | `showMorphPreview()` | `frontend/src/views/app-preview/detail-3d:191` | 显示 CustomMorph 预览卡（VPD 表情姿势 + 兄弟列表 + 应用 FAB） |
 | `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:251` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
-| `nextDetailGen()` | `frontend/src/views/app-preview/detail:25` | 跨文件共享代际：自增并返回（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） |
-| `getDetailGen()` | `frontend/src/views/app-preview/detail:30` | 跨文件共享代际：读取当前值（detail-3d.ts 过期守卫用） |
-| `showModelDetail()` | `frontend/src/views/app-preview/detail:35` | 显示模型详情（YSM 模型） |
-| `showResourcePack()` | `frontend/src/views/app-preview/detail:146` | 显示资源包信息（pack.mcmeta + pack.png） |
-| `showSimplePreview()` | `frontend/src/views/app-preview/detail:189` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
-| `showShaderpack()` | `frontend/src/views/app-preview/detail:207` | 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 |
+| `detailGen()` | `frontend/src/views/app-preview/detail:23` | 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） |
+| `showModelDetail()` | `frontend/src/views/app-preview/detail:26` | 显示模型详情（YSM 模型） |
+| `showResourcePack()` | `frontend/src/views/app-preview/detail:137` | 显示资源包信息（pack.mcmeta + pack.png） |
+| `showSimplePreview()` | `frontend/src/views/app-preview/detail:180` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
+| `showShaderpack()` | `frontend/src/views/app-preview/detail:198` | 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 |
 | `openEmpty3DFullscreen()` | `frontend/src/views/app-preview/empty-3d:35` | 打开空场景 3D 全屏预览（无需 path）。 |
 | `cleanupEmpty3D()` | `frontend/src/views/app-preview/empty-3d:40` | 清理空场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateEmptyPreview()` | `frontend/src/views/app-preview/empty-3d:45` | 作废在途空场景加载 |
 | `createFbx3D()` | `frontend/src/views/app-preview/fbx-3d:41` | 打开 FBX 3D 预览（独立资产：模型 + 内嵌动画）；siblings 透传同类型候选（ADR-066 §5.6） |
 | `resolveFbxSiblings()` | `frontend/src/views/app-preview/fbx-siblings:7` | 同类型 FBX 模型候选（GetRepoRoot(fbx) → ScanModelEntriesFiltered 主文件 Path 列表）；失败返回 []（下拉不渲染） |
+| `GenGuard()` | `frontend/src/views/app-preview/gen-guard:13` | GenGuard：统一代际守卫（bug-chronicle #18 治理）。 |
 | `BedrockCube()` | `frontend/src/views/app-preview/geometry:6` | Bedrock 方块 |
 | `BedrockSubModel()` | `frontend/src/views/app-preview/geometry:19` | SubModel 子模型条目（Go types/bedrock.go SubModel）。 |
 | `BedrockBone()` | `frontend/src/views/app-preview/geometry:26` | Bedrock 骨骼 |
@@ -2129,16 +2129,16 @@
 | `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:26` | 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 |
 | `appendLitematicPreview()` | `frontend/src/views/app-preview/litematic-3d:49` | 同台追加 Litematic/蓝图 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4），与 mmd/vrm 对称 |
 | `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:54` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
-| `invalidateLitematicPreview()` | `frontend/src/views/app-preview/litematic-meta:28` | P2 修复（code_review）：任意新预览派发时推进代际——原 litematicGen 只在 showLitematic 自身递增，litematic A 解析中切到 YS |
-| `showLitematic()` | `frontend/src/views/app-preview/litematic-meta:183` | 显示投影文件详情面板（tab 布局） |
-| `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:251` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |
+| `invalidateLitematicPreview()` | `frontend/src/views/app-preview/litematic-meta:29` | P2 修复（code_review）：任意新预览派发时推进代际——原守卫只在 showLitematic 自身递增，litematic A 解析中切到 YSM B（走 detail |
+| `showLitematic()` | `frontend/src/views/app-preview/litematic-meta:184` | 显示投影文件详情面板（tab 布局） |
+| `cleanupLitematic3D()` | `frontend/src/views/app-preview/litematic-meta:252` | 组件销毁时清理体素 3D（转发至 litematic-3d，避免 index 静态依赖 Three.js 渲染模块） |
 | `LoadModelOpts()` | `frontend/src/views/app-preview/loader:11` | loadModelData 选项（Bedrock 通用模型加载控制） |
 | `loadModelData()` | `frontend/src/views/app-preview/loader:29` | 加载模型几何数据 + 纹理（优先路径，阻塞渲染） 统一路径：缓存 → WASM 解码（仅 .ysm）→ Go AnalyzeBedrockModel 兜底 作者/头像延迟到 fil |
 | `fillAuthorsAsync()` | `frontend/src/views/app-preview/loader:232` | 异步补全作者/头像信息（不阻塞首帧渲染） 在几何渲染完成后调用，后台补齐作者名 + 头像 URL |
-| `MaidOpenOptions()` | `frontend/src/views/app-preview/maid-3d:39` | — |
-| `cleanupMaid3D()` | `frontend/src/views/app-preview/maid-3d:88` | 关闭活跃女仆 3D 预览 |
-| `invalidateMaidPreview()` | `frontend/src/views/app-preview/maid-3d:93` | 作废在途女仆 3D 加载 |
-| `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:282` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
+| `MaidOpenOptions()` | `frontend/src/views/app-preview/maid-3d:40` | — |
+| `cleanupMaid3D()` | `frontend/src/views/app-preview/maid-3d:89` | 关闭活跃女仆 3D 预览 |
+| `invalidateMaidPreview()` | `frontend/src/views/app-preview/maid-3d:94` | 作废在途女仆 3D 加载 |
+| `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:283` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
 | `createMmd3D()` | `frontend/src/views/app-preview/mmd-3d:27` | 打开 MMD 3D 预览（.pmx/.pmd 直引 @moeru/three-mmd）；siblings 提供同类型候选以渲染 topBar 切换下拉（ADR-066 §5.6） |
 | `cleanupMmd3D()` | `frontend/src/views/app-preview/mmd-3d:32` | 清理 MMD 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `appendMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:37` | 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） |
@@ -2187,9 +2187,9 @@
 | `sec()` | `frontend/src/views/app-preview/skeleton-utils:6` | 面板分区标题（3D overlay 信息面板使用） gap=false 用于面板首个分区（panel 已有 padding-top，避免顶部 10+12=22px 过空） |
 | `iRow()` | `frontend/src/views/app-preview/skeleton-utils:15` | 信息行：标签 | 值 |
 | `buildDepthMap()` | `frontend/src/views/app-preview/skeleton-utils:34` | 构建骨骼层级深度映射（用于骨骼列表缩进渲染） parentId 为空的骨骼深度为 0，其余递归计算 |
-| `closeActive3DOverlay()` | `frontend/src/views/app-preview/skeleton:35` | 关闭当前活跃的 3D 全屏 overlay（若存在）。供 app-preview/index.ts 切换模型前调用。 |
-| `setActive3DClose()` | `frontend/src/views/app-preview/skeleton:41` | 设置当前活跃的 3D 全屏 overlay 关闭函数（maid/通用 Bedrock 模型复用此机制）。 |
-| `loadModel2D()` | `frontend/src/views/app-preview/skeleton:58` | 加载模型 2D 骨骼线条图 + 统计面板 |
+| `closeActive3DOverlay()` | `frontend/src/views/app-preview/skeleton:36` | 关闭当前活跃的 3D 全屏 overlay（若存在）。供 app-preview/index.ts 切换模型前调用。 |
+| `setActive3DClose()` | `frontend/src/views/app-preview/skeleton:42` | 设置当前活跃的 3D 全屏 overlay 关闭函数（maid/通用 Bedrock 模型复用此机制）。 |
+| `loadModel2D()` | `frontend/src/views/app-preview/skeleton:59` | 加载模型 2D 骨骼线条图 + 统计面板 |
 | `resolveStageSiblings()` | `frontend/src/views/app-preview/stage-siblings:13` | 扫描 StageAnim 目录下所有资源文件（VMD + 音频 + config）；失败返回 [] |
 | `OrderedTexInput()` | `frontend/src/views/app-preview/texture-order:7` | — |
 | `buildOrderedTexKeys()` | `frontend/src/views/app-preview/texture-order:21` | 计算 3D 渲染/纹理选择器用的有序纹理名列表 |

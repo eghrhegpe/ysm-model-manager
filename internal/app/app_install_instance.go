@@ -30,8 +30,8 @@ func (a *App) CountInstanceResources(insName, rtype string) (int, error) {
 	}
 	cfg := a.LoadAppConfig()
 	mcRoot := cfg.McRoot
-	if mcRoot == "" {
-		return 0, fmt.Errorf("游戏根目录未设置")
+	if err := requireMcRoot(cfg); err != nil {
+		return 0, err
 	}
 	instances := a.ListVersionInstances(mcRoot)
 	var target *types.VersionInstance
@@ -74,8 +74,8 @@ func (a *App) ClearInstanceResources(insName, rtype string) (int, error) {
 	}
 	cfg := a.LoadAppConfig()
 	mcRoot := cfg.McRoot
-	if mcRoot == "" {
-		return 0, fmt.Errorf("游戏根目录未设置")
+	if err := requireMcRoot(cfg); err != nil {
+		return 0, err
 	}
 	instances := a.ListVersionInstances(mcRoot)
 	var target *types.VersionInstance
@@ -305,8 +305,8 @@ func (a *App) relinkDir(customDir, filesRoot, rtype string) (int, error) {
 // RelinkAllInstanceResources 重新应用链接模式到整合包所有资源类型目录
 func (a *App) RelinkAllInstanceResources(instanceName string) (int, error) {
 	cfg := a.LoadAppConfig()
-	if cfg.McRoot == "" {
-		return 0, fmt.Errorf("请先设置游戏根目录")
+	if err := requireMcRoot(cfg); err != nil {
+		return 0, err
 	}
 	instances := a.ListVersionInstances(cfg.McRoot)
 	var target *types.VersionInstance
@@ -387,8 +387,8 @@ func (a *App) SyncResources(rtype, instanceName string) string {
 // PushResourceToInstance 推送缺失资源到整合包（执行循环下沉 go/sync）
 func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 	cfg := a.LoadAppConfig()
-	if cfg.McRoot == "" {
-		return 0, fmt.Errorf("请先设置游戏根目录")
+	if err := requireMcRoot(cfg); err != nil {
+		return 0, err
 	}
 	globalDir, _ := a.filesRootForSync(rtype)
 	if globalDir == "" {
@@ -409,8 +409,8 @@ func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 // PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync）
 func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) {
 	cfg := a.LoadAppConfig()
-	if cfg.McRoot == "" {
-		return 0, fmt.Errorf("请先设置游戏根目录")
+	if err := requireMcRoot(cfg); err != nil {
+		return 0, err
 	}
 	globalDir, _ := a.filesRootForSync(rtype)
 	if globalDir == "" {
@@ -451,8 +451,8 @@ func (a *App) findInstanceDir(rtype, instanceName, mcRoot string) (string, error
 // PullSingleResourceFromInstance 从整合包拉取单个资源（复制核心下沉 go/sync）
 func (a *App) PullSingleResourceFromInstance(rtype, srcPath, instanceName string) error {
 	cfg := a.LoadAppConfig()
-	if cfg.McRoot == "" {
-		return fmt.Errorf("请先设置游戏根目录")
+	if err := requireMcRoot(cfg); err != nil {
+		return err
 	}
 	globalDir, _ := a.filesRootForSync(rtype)
 	if globalDir == "" {
@@ -472,8 +472,8 @@ func (a *App) PullSingleResourceFromInstance(rtype, srcPath, instanceName string
 // PushSingleResourceToInstance 推送单个资源到整合包（分派核心下沉 go/sync）
 func (a *App) PushSingleResourceToInstance(rtype, instanceName, filePath string) error {
 	cfg := a.LoadAppConfig()
-	if cfg.McRoot == "" {
-		return fmt.Errorf("请先设置游戏根目录")
+	if err := requireMcRoot(cfg); err != nil {
+		return err
 	}
 	globalDir, _ := a.filesRootForSync(rtype)
 	if globalDir == "" {

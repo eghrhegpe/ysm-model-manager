@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/types"
 )
 
 func TestOrDefault(t *testing.T) {
@@ -184,5 +186,17 @@ func TestValidUpdateURL(t *testing.T) {
 		if got != c.want {
 			t.Errorf("validUpdateURL(%q) = %v, 期望 %v", c.url, got, c.want)
 		}
+	}
+}
+
+// requireMcRoot：收敛 8 处「游戏根目录未配置」错误检查的统一守卫（code_review P3）
+func TestRequireMcRoot(t *testing.T) {
+	if err := requireMcRoot(types.AppConfig{}); err == nil {
+		t.Error("空 McRoot 应返回错误")
+	} else if err.Error() != "请先设置游戏根目录" {
+		t.Errorf("错误消息不符: got %q, 期望 %q", err.Error(), "请先设置游戏根目录")
+	}
+	if err := requireMcRoot(types.AppConfig{McRoot: "/mc"}); err != nil {
+		t.Errorf("非空 McRoot 应返回 nil, got %v", err)
 	}
 }

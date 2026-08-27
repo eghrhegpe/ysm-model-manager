@@ -44,14 +44,14 @@ invariant_anchors:
 ## 编译流程
 
 1. Rust 编译（compile-android-rust.mjs）: cargo build --release --target=aarch64-linux-android
-2. Go 交叉编译: go build -buildmode=c-shared -extldflags="-L<path> -l:libysm_model_manager_wails_bridge.a"
+2. Go 交叉编译: go build -buildmode=c-shared -extldflags="-L&lt;path&gt; -l:libysm_model_manager_wails_bridge.a"
 
 ## 平台陷阱（2026-08-25 全平台排查实录）
 
 - **本地 `go build ./go/...` 只验 Windows**：非 Windows 桥文件不参与本机编译，tag/类型错误全部漏网。防线 = `tests/test_rust_bridge_tags.mjs`（tag 与文件名平台一致 + 同包 tag 判重 + Entries 兜底类型一致）；全链接验证仍需 CI / WSL / 真机。
 - **build tag 必须与文件名平台一致**：`bridge_darwin.go` 曾误写 `linux && rust_backend` → Linux 构建 redeclared、macOS 无实现。
 - **Entries 兜底类型**：所有桥统一 `[]types.ModelEntry{}`（对齐 types.ScanResponse.Entries），禁 `[]interface{}{}`（非 Windows 必编译错）。
-- **链接器差异**：macOS ld64 不支持 `-l:`，Linux/macOS 统一传完整归档路径 `-extldflags="-L<dir> <dir>/lib….a"`；Android NDK lld 支持 `-l:`。
+- **链接器差异**：macOS ld64 不支持 `-l:`，Linux/macOS 统一传完整归档路径 `-extldflags="-L&lt;dir&gt; &lt;dir&gt;/lib….a"`；Android NDK lld 支持 `-l:`。
 - **tags 别漏 rust_backend**：android-build.mjs 曾只在 extldflags 判 rustBackend 而 go build tags 未加 → Rust 白编、静默走 Go stub。
 
 ## 不变量

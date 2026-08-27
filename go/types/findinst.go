@@ -47,11 +47,6 @@ func dirContainsFlag(root, flag string) bool {
 	return found
 }
 
-// blueprintFallbackDirName 是 blueprint 唯一合法兜底目标目录名（Sable-Schematics 模组布局）。
-// 2026-08-27 收紧：不再「任一兄弟目录含 .nbt/.schematic 即命中」——那会把无关目录
-// （structures/数据包等）混入蓝图同步；只认已知模组目录名，其余一律回标准 schematics。
-const blueprintFallbackDirName = "Sable-Schematics"
-
 // FindInstDir 查找整合包中指定资源类型的子目录：
 //  1. 优先使用标准子目录名（由 subDir 传入，已含多级前缀如 3d-skin/SceneModel）
 //     ——仅当其中确实包含该类型文件时返回标准目录。
@@ -140,10 +135,10 @@ func FindInstDir(versionDir, subDir, rtype string) string {
 		if !e.IsDir() {
 			continue
 		}
-		// 2026-08-27 收紧：blueprint 兜底只认已知 Sable-Schematics 模组目录名，
+		// 2026-08-27 收紧：兜底只认注册表 fallbackDir 声明的目录名，
 		// 不再「任一兄弟目录含 .nbt/.schematic 即命中」——那会把 structures/数据包
-		// 等无关目录里的 .nbt 混入蓝图同步。其余目录一律不参与兜底。
-		if rt.ID == "blueprint" && !strings.EqualFold(e.Name(), blueprintFallbackDirName) {
+		// 等无关目录里的 .nbt 混入蓝图同步。fallbackDir 为空时不限定（兼容未来类型）。
+		if rt.FallbackDir != "" && !strings.EqualFold(e.Name(), rt.FallbackDir) {
 			continue
 		}
 		sub := filepath.Join(versionDir, e.Name())

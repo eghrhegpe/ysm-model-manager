@@ -189,6 +189,7 @@
       "scanInstance": true,
       "dirLevelSync": true,
       "configField": "SchematicRoot",
+      "fallbackDir": "Sable-Schematics",
       "mod": {
         "modId": "create",
         "displayName": "Create"

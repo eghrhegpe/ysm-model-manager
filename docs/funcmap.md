@@ -578,32 +578,32 @@
 | `SubDirAll()` | `go/types/extensions:443` | SubDirAll 返回所有资源类型在整合包实例中的版本子目录映射 |
 | `AllSubDirs()` | `go/types/extensions:455` | AllSubDirs 返回所有资源类型的版本子目录信息（遍历用） |
 | `SubDirEntry()` | `go/types/extensions:416` | SubDirEntry 资源类型的版本子目录信息 |
-| `FindInstDir()` | `go/types/findinst:76` | FindInstDir 查找整合包中指定资源类型的子目录：  1. |
+| `FindInstDir()` | `go/types/findinst:71` | FindInstDir 查找整合包中指定资源类型的子目录：  1. |
 | `TypeByLocation()` | `go/types/location:17` | TypeByLocation 祖先目录归属判定（location 路由，MMD 子类型共享扩展名消歧）： path 的祖先目录命中某类型 storageSubDir/instanc |
 | `SetBundledRegistryJSON()` | `go/types/resource:20` | SetBundledRegistryJSON 由根包 main 注入编译期内嵌的注册表字节（单源：仓库根 resource_types.json）。 |
-| `ResourceType.EffectiveExtensions()` | `go/types/resource:101` | EffectiveExtensions 返回资源类型的有效扩展名集（小写化）。 |
-| `ResourceType.MatchZipEntry()` | `go/types/resource:119` | MatchZipEntry 检测 ZIP 条目名是否命中本类型的特征条目（小写不敏感） ADR-082 S1：任意层级段后缀匹配——对路径按 / 分段，每个段后缀都参与指纹匹配， |
-| `SetRegistryPath()` | `go/types/resource:154` | SetRegistryPath 设置注册表文件路径（仅测试用） 加锁保护：并发调用 LoadRegistry + SetRegistryPath 触发数据竞争（审计 P1 #2）。 |
-| `LoadRegistry()` | `go/types/resource:165` | LoadRegistry 加载资源类型注册表（单一事实来源 = 编译期嵌入的 resource_types.json）。 |
-| `BundledRegistryJSON()` | `go/types/resource:397` | BundledRegistryJSON 返回编译期内嵌的资源类型注册表原始 JSON 字节（单一事实来源）。 |
-| `RegistryType()` | `go/types/resource:404` | RegistryType 按 id 查找资源类型，不存在时返回 nil 返回深拷贝：结构体按值拷贝仅能防标量字段篡改，Extensions 切片仍共享缓存 底层数组——调用方修改 |
-| `ResourceTypeRegistry.FindByID()` | `go/types/resource:410` | FindByID 按 id 查找资源类型，不存在时返回 nil（深拷贝） |
-| `ModKeywordsFor()` | `go/types/resource:429` | ModKeywordsFor 从注册表查询资源类型的 mod 文件名关键词（ADR-110）：   - 类型自身有 mod.jarKeywords → 返回   - 类型无声明但所 |
-| `ModMetaFor()` | `go/types/resource:456` | ModMetaFor 从注册表查询内容检测型资源类型的 mod 信息（ADR-110）：   - 类型有 mod.modId → 返回 (modId, displayName) |
-| `FormatRange.UnmarshalJSON()` | `go/types/resource:471` | UnmarshalJSON 实现 json.Unmarshaler，支持 int / [int] / [int,int] 三种格式 |
-| `PackMeta.Desc()` | `go/types/resource:567` | Desc 返回 description 的可读文本（处理 string / JSON text component 对象 / 数组） |
+| `ResourceType.EffectiveExtensions()` | `go/types/resource:102` | EffectiveExtensions 返回资源类型的有效扩展名集（小写化）。 |
+| `ResourceType.MatchZipEntry()` | `go/types/resource:120` | MatchZipEntry 检测 ZIP 条目名是否命中本类型的特征条目（小写不敏感） ADR-082 S1：任意层级段后缀匹配——对路径按 / 分段，每个段后缀都参与指纹匹配， |
+| `SetRegistryPath()` | `go/types/resource:155` | SetRegistryPath 设置注册表文件路径（仅测试用） 加锁保护：并发调用 LoadRegistry + SetRegistryPath 触发数据竞争（审计 P1 #2）。 |
+| `LoadRegistry()` | `go/types/resource:166` | LoadRegistry 加载资源类型注册表（单一事实来源 = 编译期嵌入的 resource_types.json）。 |
+| `BundledRegistryJSON()` | `go/types/resource:398` | BundledRegistryJSON 返回编译期内嵌的资源类型注册表原始 JSON 字节（单一事实来源）。 |
+| `RegistryType()` | `go/types/resource:405` | RegistryType 按 id 查找资源类型，不存在时返回 nil 返回深拷贝：结构体按值拷贝仅能防标量字段篡改，Extensions 切片仍共享缓存 底层数组——调用方修改 |
+| `ResourceTypeRegistry.FindByID()` | `go/types/resource:411` | FindByID 按 id 查找资源类型，不存在时返回 nil（深拷贝） |
+| `ModKeywordsFor()` | `go/types/resource:430` | ModKeywordsFor 从注册表查询资源类型的 mod 文件名关键词（ADR-110）：   - 类型自身有 mod.jarKeywords → 返回   - 类型无声明但所 |
+| `ModMetaFor()` | `go/types/resource:457` | ModMetaFor 从注册表查询内容检测型资源类型的 mod 信息（ADR-110）：   - 类型有 mod.modId → 返回 (modId, displayName) |
+| `FormatRange.UnmarshalJSON()` | `go/types/resource:472` | UnmarshalJSON 实现 json.Unmarshaler，支持 int / [int] / [int,int] 三种格式 |
+| `PackMeta.Desc()` | `go/types/resource:568` | Desc 返回 description 的可读文本（处理 string / JSON text component 对象 / 数组） |
 | `ResourceTypeRegistry()` | `go/types/resource:25` | ResourceTypeRegistry 资源类型注册表 |
 | `ResourceType()` | `go/types/resource:30` | ResourceType 一种受支持的资源类型定义 |
-| `ModRequirement()` | `go/types/resource:63` | ModRequirement mod 依赖声明（ADR-110）：   - JarKeywords：文件名关键词匹配（如 "mmdskin" 匹配 mmdskin-1.0.jar） |
-| `Variant()` | `go/types/resource:72` | Variant 格式变体声明（ADR-111：variants 解耦）： 同一资源类型内不同格式变体的预览器路由。 |
-| `NestedPattern()` | `go/types/resource:93` | NestedPattern 嵌套模型模式配置（ADR-XXX）： 支持任意深度的嵌套路径检测，用于识别多层嵌套的模型结构。 |
-| `ZipEntryMatch()` | `go/types/resource:110` | ZipEntryMatch ZIP 内容特征条目：检测 ZIP 内是否存在命中条目名 |
-| `FormatRange()` | `go/types/resource:465` | FormatRange 资源包 supported_formats 范围（可为 int 或 [int,int]） |
-| `PackMeta()` | `go/types/resource:556` | PackMeta 资源包信息（来自 pack.mcmeta） |
-| `LitematicMeta()` | `go/types/resource:574` | LitematicMeta 投影文件元数据（对应 .litematic 中 Metadata compound） |
-| `LitematicBlockStat()` | `go/types/resource:591` | LitematicBlockStat 方块类型统计 |
-| `LitematicVoxelData()` | `go/types/resource:597` | LitematicVoxelData 体素渲染数据 |
-| `VoxelGroup()` | `go/types/resource:605` | VoxelGroup 同一颜色的方块组 |
+| `ModRequirement()` | `go/types/resource:64` | ModRequirement mod 依赖声明（ADR-110）：   - JarKeywords：文件名关键词匹配（如 "mmdskin" 匹配 mmdskin-1.0.jar） |
+| `Variant()` | `go/types/resource:73` | Variant 格式变体声明（ADR-111：variants 解耦）： 同一资源类型内不同格式变体的预览器路由。 |
+| `NestedPattern()` | `go/types/resource:94` | NestedPattern 嵌套模型模式配置（ADR-XXX）： 支持任意深度的嵌套路径检测，用于识别多层嵌套的模型结构。 |
+| `ZipEntryMatch()` | `go/types/resource:111` | ZipEntryMatch ZIP 内容特征条目：检测 ZIP 内是否存在命中条目名 |
+| `FormatRange()` | `go/types/resource:466` | FormatRange 资源包 supported_formats 范围（可为 int 或 [int,int]） |
+| `PackMeta()` | `go/types/resource:557` | PackMeta 资源包信息（来自 pack.mcmeta） |
+| `LitematicMeta()` | `go/types/resource:575` | LitematicMeta 投影文件元数据（对应 .litematic 中 Metadata compound） |
+| `LitematicBlockStat()` | `go/types/resource:592` | LitematicBlockStat 方块类型统计 |
+| `LitematicVoxelData()` | `go/types/resource:598` | LitematicVoxelData 体素渲染数据 |
+| `VoxelGroup()` | `go/types/resource:606` | VoxelGroup 同一颜色的方块组 |
 | `StatusToLevel()` | `go/types/types:143` | StatusToLevel 将 ImportLog 的 Status 字符串映射到日志级别。 |
 | `AppError.WithCause()` | `go/types/types:191` | WithCause 附加底层错误，使 errors.Is/As 可以穿透 AppError 判定 errno/哨兵。 |
 | `AppError.Unwrap()` | `go/types/types:197` | Unwrap 暴露底层错误链（ADR-051：配合 WithCause 恢复结构化错误判定能力） |

@@ -71,50 +71,28 @@ func runCacheStatus(ctx *CmdContext) error {
 }
 
 // runCacheVerify 检查模型贴图的缓存命中情况
-func runCacheVerify(ctx *CmdContext) error {
-	fs := newCmdFlagSet("cache-verify")
-	modelDir := fs.String("dir", "", "MMD 模型目录路径")
-	verbose := fs.Bool("verbose", false, "显示详细的缓存命中信息")
-	_, err := parseFlags(fs, ctx.Args)
-	if err != nil {
-		return err
-	}
+// cacheVerifyTexInfo 缓存校验单个贴图的结果。
+type cacheVerifyTexInfo struct {
+	path      string
+	size      int64
+	hash      string
+	cached    bool
+	cacheSize int64
+}
 
-	if *modelDir == "" {
-		return newParamErrf("--dir 参数不能为空")
-	}
+// cacheVerifyExts cache-verify 扫描的贴图扩展名集合。
+var cacheVerifyExts = map[string]bool{
+	".png":  true,
+	".jpg":  true,
+	".jpeg": true,
+	".tga":  true,
+	".bmp":  true,
+	".dds":  true,
+}
 
-	fmt.Printf("🔍 检查模型贴图缓存: %s\n\n", *modelDir)
-
-	var (
-		textureFiles []string
-		totalSize    int64
-		hitCount     int
-		hitSize      int64
-		missCount    int
-		missSize     int64
-	)
-
-	textureExts := map[string]bool{
-		".png":  true,
-		".jpg":  true,
-		".jpeg": true,
-		".tga":  true,
-		".bmp":  true,
-		".dds":  true,
-	}
-
-	type texInfo struct {
-		path      string
-		size      int64
-		hash      string
-		cached    bool
-		cacheSize int64
-	}
-	var texInfos []texInfo
-	var walkErrors []string
-
-	err = filepath.Walk(*modelDir, func(path string, info os.FileInfo, err error) error {
+// scanCacheVerify 遍历目录，对每个贴图计算哈希并检查缓存命中。
+func scanCacheVerify(modelDir string) (texInfos []cacheVerifyTexInfo, walkErrors []string, err error) {
+	err = filepath.Walk(modelDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			walkErrors = append(walkErrors, fmt.Sprintf("%s: %v", path, err))
 			return nil
@@ -124,17 +102,15 @@ func runCacheVerify(ctx *CmdContext) error {
 		}
 
 		ext := strings.ToLower(filepath.Ext(path))
-		if !textureExts[ext] {
+		if !cacheVerifyExts[ext] {
 			return nil
 		}
 
 		size := info.Size()
-		textureFiles = append(textureFiles, path)
-		totalSize += size
 
 		hash, err := texture_cache.TextureHash(path)
 		if err != nil {
-			texInfos = append(texInfos, texInfo{
+			texInfos = append(texInfos, cacheVerifyTexInfo{
 				path:   path,
 				size:   size,
 				hash:   "ERROR",
@@ -152,14 +128,9 @@ func runCacheVerify(ctx *CmdContext) error {
 					cacheSize = ci.Size()
 				}
 			}
-			hitCount++
-			hitSize += size
-		} else {
-			missCount++
-			missSize += size
 		}
 
-		texInfos = append(texInfos, texInfo{
+		texInfos = append(texInfos, cacheVerifyTexInfo{
 			path:      path,
 			size:      size,
 			hash:      hash,
@@ -169,74 +140,75 @@ func runCacheVerify(ctx *CmdContext) error {
 
 		return nil
 	})
+	return
+}
 
-	if err != nil {
-		return newRuntimeErrf("扫描目录失败: %v", err)
-	}
-
-	if len(walkErrors) > 0 {
-		fmt.Printf("⚠️  访问异常 %d 处:\n", len(walkErrors))
-		for _, w := range walkErrors {
-			fmt.Printf("   - %s\n", w)
+// printCacheMisses 打印未缓存的贴图列表。
+func printCacheMisses(texInfos []cacheVerifyTexInfo, modelDir string) {
+	missCount := 0
+	for _, ti := range texInfos {
+		if !ti.cached {
+			missCount++
 		}
-		fmt.Println()
+	}
+	if missCount == 0 {
+		return
 	}
 
-	fmt.Printf("📊 贴图统计:\n")
-	fmt.Printf("   贴图总数: %d\n", len(textureFiles))
-	fmt.Printf("   原始总大小: %s\n\n", formatSize(totalSize))
-
-	if len(textureFiles) == 0 {
-		fmt.Println("📭 没有找到贴图文件")
-		return nil
-	}
-
-	hitRate := 0.0
-	if len(textureFiles) > 0 {
-		hitRate = float64(hitCount) / float64(len(textureFiles)) * 100
-	}
-
-	fmt.Printf("🎯 缓存命中:\n")
-	fmt.Printf("   ✅ 命中: %d 个 (%s)\n", hitCount, formatSize(hitSize))
-	fmt.Printf("   ❌ 未命中: %d 个 (%s)\n", missCount, formatSize(missSize))
-	fmt.Printf("   📈 命中率: %.1f%%\n\n", hitRate)
-
-	if missCount > 0 {
-		fmt.Printf("⚠️  未缓存的贴图:\n")
-		for _, ti := range texInfos {
-			if !ti.cached {
-				relPath := strings.TrimPrefix(ti.path, *modelDir)
-				status := "❌"
-				if ti.hash == "ERROR" {
-					status = "⚠️ "
-				}
-				fmt.Printf("   %s %s (%s)\n", status, relPath, formatSize(ti.size))
+	fmt.Printf("⚠️  未缓存的贴图:\n")
+	for _, ti := range texInfos {
+		if !ti.cached {
+			relPath := strings.TrimPrefix(ti.path, modelDir)
+			status := "❌"
+			if ti.hash == "ERROR" {
+				status = "⚠️ "
 			}
+			fmt.Printf("   %s %s (%s)\n", status, relPath, formatSize(ti.size))
 		}
-		fmt.Println()
+	}
+	fmt.Println()
+}
+
+// printCacheHitDetails 打印缓存命中详情（verbose 模式）。
+func printCacheHitDetails(texInfos []cacheVerifyTexInfo, modelDir string) {
+	hitCount := 0
+	for _, ti := range texInfos {
+		if ti.cached {
+			hitCount++
+		}
+	}
+	if hitCount == 0 {
+		return
 	}
 
-	if *verbose && hitCount > 0 {
-		fmt.Printf("📋 缓存命中详情:\n")
-		for _, ti := range texInfos {
-			if ti.cached {
-				relPath := strings.TrimPrefix(ti.path, *modelDir)
-				compressionRatio := 0.0
-				if ti.size > 0 {
-					compressionRatio = float64(ti.cacheSize) / float64(ti.size) * 100
-				}
-				fmt.Printf("   ✅ %s\n", relPath)
-				fmt.Printf("      原始: %s → 缓存(KTX2): %s (压缩率: %.0f%%)\n",
-					formatSize(ti.size),
-					formatSize(ti.cacheSize),
-					compressionRatio)
-			}
+	fmt.Printf("📋 缓存命中详情:\n")
+	for _, ti := range texInfos {
+		if !ti.cached {
+			continue
 		}
-		fmt.Println()
+		relPath := strings.TrimPrefix(ti.path, modelDir)
+		compressionRatio := 0.0
+		if ti.size > 0 {
+			compressionRatio = float64(ti.cacheSize) / float64(ti.size) * 100
+		}
+		fmt.Printf("   ✅ %s\n", relPath)
+		fmt.Printf("      原始: %s → 缓存(KTX2): %s (压缩率: %.0f%%)\n",
+			formatSize(ti.size),
+			formatSize(ti.cacheSize),
+			compressionRatio)
 	}
+	fmt.Println()
+}
 
+// printCacheVerifySummary 打印缓存校验总结：命中率分级 + 节省估算。
+func printCacheVerifySummary(hitCount, missCount int, hitSize int64, totalFiles int) {
 	fmt.Printf("📈 总结:\n")
-	if hitCount == len(textureFiles) {
+	hitRate := 0.0
+	if totalFiles > 0 {
+		hitRate = float64(hitCount) / float64(totalFiles) * 100
+	}
+
+	if hitCount == totalFiles {
 		fmt.Printf("   🟢 所有贴图都已缓存，加载时将获得最佳性能\n")
 	} else if hitCount > 0 {
 		fmt.Printf("   🟡 部分贴图已缓存 (%.1f%%)，首次加载会有解码开销\n", hitRate)
@@ -250,6 +222,83 @@ func runCacheVerify(ctx *CmdContext) error {
 		estimatedSavedMs := float64(hitSize) / (1024 * 1024) * 5
 		fmt.Printf("   ⚡ 估计节省: ~%.0fms (%s 贴图的解码+传输开销)\n", estimatedSavedMs, formatSize(hitSize))
 	}
+}
+
+func runCacheVerify(ctx *CmdContext) error {
+	fs := newCmdFlagSet("cache-verify")
+	modelDir := fs.String("dir", "", "MMD 模型目录路径")
+	verbose := fs.Bool("verbose", false, "显示详细的缓存命中信息")
+	_, err := parseFlags(fs, ctx.Args)
+	if err != nil {
+		return err
+	}
+
+	if *modelDir == "" {
+		return newParamErrf("--dir 参数不能为空")
+	}
+
+	fmt.Printf("🔍 检查模型贴图缓存: %s\n\n", *modelDir)
+
+	texInfos, walkErrors, err := scanCacheVerify(*modelDir)
+	if err != nil {
+		return newRuntimeErrf("扫描目录失败: %v", err)
+	}
+
+	if len(walkErrors) > 0 {
+		fmt.Printf("⚠️  访问异常 %d 处:\n", len(walkErrors))
+		for _, w := range walkErrors {
+			fmt.Printf("   - %s\n", w)
+		}
+		fmt.Println()
+	}
+
+	// 聚合命中/未命中统计
+	var (
+		textureFiles int
+		totalSize    int64
+		hitCount     int
+		hitSize      int64
+		missCount    int
+		missSize     int64
+	)
+	for _, ti := range texInfos {
+		textureFiles++
+		totalSize += ti.size
+		if ti.cached {
+			hitCount++
+			hitSize += ti.size
+		} else {
+			missCount++
+			missSize += ti.size
+		}
+	}
+
+	fmt.Printf("📊 贴图统计:\n")
+	fmt.Printf("   贴图总数: %d\n", textureFiles)
+	fmt.Printf("   原始总大小: %s\n\n", formatSize(totalSize))
+
+	if textureFiles == 0 {
+		fmt.Println("📭 没有找到贴图文件")
+		return nil
+	}
+
+	hitRate := 0.0
+	if textureFiles > 0 {
+		hitRate = float64(hitCount) / float64(textureFiles) * 100
+	}
+
+	fmt.Printf("🎯 缓存命中:\n")
+	fmt.Printf("   ✅ 命中: %d 个 (%s)\n", hitCount, formatSize(hitSize))
+	fmt.Printf("   ❌ 未命中: %d 个 (%s)\n", missCount, formatSize(missSize))
+	fmt.Printf("   📈 命中率: %.1f%%\n\n", hitRate)
+
+	printCacheMisses(texInfos, *modelDir)
+
+	if *verbose {
+		printCacheHitDetails(texInfos, *modelDir)
+	}
+
+	printCacheVerifySummary(hitCount, missCount, hitSize, textureFiles)
 
 	return nil
 }

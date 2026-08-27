@@ -22,155 +22,206 @@ import (
 
 // ExtractAvatarURI 从模型文件中提取指定所有者的头像 data URI。
 // modelPath 支持 .ysm / .zip / .json（解压目录）。
-func ExtractAvatarURI(modelPath, safeName string) string {
-	ext := strings.ToLower(filepath.Ext(modelPath))
-	var authors []authorEntry
+// extractAvatarFromYSM 从 .ysm 模型包提取指定作者的头像。
+// 优先按 ysm.json 中 authors 列表匹配 avatar 字段；
+// 匹配失败时降级取 avatar/ 目录第一张图片。
+func extractAvatarFromYSM(modelPath, safeName string) string {
+	ysmData, err := readLimitedModel(modelPath)
+	if err != nil {
+		// 缓存 miss 静默，但真 IO 错误（权限/磁盘）补日志便于排障
+		if !os.IsNotExist(err) {
+			log.Printf("[avatar] 读取 .ysm 模型失败 %s: %v", modelPath, err)
+		}
+		return ""
+	}
+	files := DecodeYSMFiles(ysmData)
+	if len(files) == 0 {
+		return ""
+	}
 
-	switch ext {
-	case ".ysm":
-		ysmData, err := readLimitedModel(modelPath)
-		if err != nil {
-			// 缓存 miss 静默，但真 IO 错误（权限/磁盘）补日志便于排障
-			if !os.IsNotExist(err) {
-				log.Printf("[avatar] 读取 .ysm 模型失败 %s: %v", modelPath, err)
-			}
-			return ""
-		}
-		files := DecodeYSMFiles(ysmData)
-		if len(files) == 0 {
-			return ""
-		}
-		// 找 ysm.json
-		for _, f := range files {
-			if isYSMJSONPath(f.Path) {
-				data := toBytes(f.Data)
-				var root struct {
-					Meta struct {
-						Authors []authorEntry `json:"authors"`
-					} `json:"metadata"`
-				}
-				if json.Unmarshal(data, &root) == nil {
-					authors = root.Meta.Authors
-				}
-				break
-			}
-		}
-		if len(authors) == 0 {
-			// 降级：取 avatar/ 目录第一张
-			// 扩展名口径与 avatarCandidates 对齐：.png/.jpg/.jpeg 均认（原漏 .jpeg
-			// 使 avatar/face.jpeg 声明的头像在不走作者匹配的降级路径下被跳过）
-			for _, f := range files {
-				low := strings.ToLower(f.Path)
-				if !strings.HasSuffix(low, ".png") && !strings.HasSuffix(low, ".jpg") && !strings.HasSuffix(low, ".jpeg") {
-					continue
-				}
-				if !strings.HasPrefix(low, "avatar/") && !strings.Contains(low, "/avatar/") {
-					continue
-				}
-				mime := "image/png"
-				if strings.HasSuffix(low, ".jpg") || strings.HasSuffix(low, ".jpeg") {
-					mime = "image/jpeg"
-				}
-				return SaveAvatarData(safeName, toBytes(f.Data), mime)
-			}
-		}
-		// 按作者名匹配（avatar 引用兼容裸文件名，与 .json 分支口径一致）
-		for _, f := range files {
-			for _, au := range authors {
-				if SafeName(au.Name) == safeName && au.Avatar != "" {
-					ap := strings.ToLower(au.Avatar)
-					if !isSafeAvatarPath(ap) {
-						continue
-					}
-					fp := strings.ToLower(f.Path)
-					matched := false
-					for _, c := range avatarCandidates(ap) {
-						if fp == c || strings.HasSuffix(fp, "/"+c) || strings.HasSuffix(fp, "\\"+c) {
-							matched = true
-							break
-						}
-					}
-					if matched {
-						mime := "image/png"
-						if strings.HasSuffix(fp, ".jpg") || strings.HasSuffix(fp, ".jpeg") {
-							mime = "image/jpeg"
-						}
-						return SaveAvatarData(safeName, toBytes(f.Data), mime)
-					}
-				}
-			}
-		}
-
-	case ".zip", ".7z":
-		data, err := readLimitedModel(modelPath)
-		if err != nil {
-			if !os.IsNotExist(err) {
-				log.Printf("[avatar] 读取 %s 模型失败 %s: %v", ext, modelPath, err)
-			}
-			return ""
-		}
-
-		var r container.Reader
-		switch ext {
-		case ".zip":
-			r, err = container.OpenZipBytes(data, int64(len(data)))
-		case ".7z":
-			r, err = container.Open7zBytes(data, int64(len(data)))
-		}
-		if err != nil {
-			log.Printf("[avatar] %s 解析失败 %s: %v", ext, modelPath, err)
-			return ""
-		}
-		defer r.Close()
-
-		if avatar := extractAvatarFromContainer(r, safeName); avatar != "" {
+	authors := parseYSMJSONAuthors(files)
+	if len(authors) > 0 {
+		if avatar := matchAvatarByAuthor(files, authors, safeName); avatar != "" {
 			return avatar
 		}
+	} else {
+		// 降级：取 avatar/ 目录第一张
+		if avatar := extractFallbackAvatarFromDir(files, safeName); avatar != "" {
+			return avatar
+		}
+	}
 
-	case ".json":
-		data, err := readLimitedModel(modelPath)
-		if err != nil {
-			// 真 IO 错误补日志（IsNotExist 静默）
-			if !os.IsNotExist(err) {
-				log.Printf("[avatar] 读取 .json 模型失败 %s: %v", modelPath, err)
+	// 无 authors 或 author 匹配失败时，也尝试按作者名匹配
+	if avatar := matchAvatarByAuthor(files, authors, safeName); avatar != "" {
+		return avatar
+	}
+
+	return ""
+}
+
+// ysmFile DecodeYSMFiles 返回的文件条目（具名别名，便于 helper 传参）。
+type ysmFile = struct {
+	Path string `json:"path"`
+	Data []int  `json:"data"`
+}
+
+// parseYSMJSONAuthors 从 YSM 文件列表中找 ysm.json 并解析 authors。
+func parseYSMJSONAuthors(files []ysmFile) []authorEntry {
+	for _, f := range files {
+		if isYSMJSONPath(f.Path) {
+			data := toBytes(f.Data)
+			var root struct {
+				Meta struct {
+					Authors []authorEntry `json:"authors"`
+				} `json:"metadata"`
 			}
-			return ""
+			if json.Unmarshal(data, &root) == nil {
+				return root.Meta.Authors
+			}
+			break
 		}
-		var root struct {
-			Meta struct {
-				Authors []authorEntry `json:"authors"`
-			} `json:"metadata"`
+	}
+	return nil
+}
+
+// extractFallbackAvatarFromDir 降级路径：取 avatar/ 目录第一张图片。
+func extractFallbackAvatarFromDir(files []ysmFile, safeName string) string {
+	// 扩展名口径与 avatarCandidates 对齐：.png/.jpg/.jpeg 均认（原漏 .jpeg
+	// 使 avatar/face.jpeg 声明的头像在不走作者匹配的降级路径下被跳过）
+	for _, f := range files {
+		low := strings.ToLower(f.Path)
+		if !strings.HasSuffix(low, ".png") && !strings.HasSuffix(low, ".jpg") && !strings.HasSuffix(low, ".jpeg") {
+			continue
 		}
-		if json.Unmarshal(data, &root) == nil {
-			authors = root.Meta.Authors
+		if !strings.HasPrefix(low, "avatar/") && !strings.Contains(low, "/avatar/") {
+			continue
 		}
-		dir := filepath.Dir(modelPath)
+		mime := "image/png"
+		if strings.HasSuffix(low, ".jpg") || strings.HasSuffix(low, ".jpeg") {
+			mime = "image/jpeg"
+		}
+		return SaveAvatarData(safeName, toBytes(f.Data), mime)
+	}
+	return ""
+}
+
+// matchAvatarByAuthor 按作者名匹配 avatar 字段，找到对应图片文件后保存。
+func matchAvatarByAuthor(files []ysmFile, authors []authorEntry, safeName string) string {
+	for _, f := range files {
 		for _, au := range authors {
 			if SafeName(au.Name) == safeName && au.Avatar != "" {
 				ap := strings.ToLower(au.Avatar)
-				// 强校验（Clean + avatar/ 前缀 + 拒绝 ..），防 avatar/../../x 逃逸读任意文件
 				if !isSafeAvatarPath(ap) {
 					continue
 				}
-				// 候选列表（含裸文件名补 avatar/ 前缀与标准扩展名变体）逐个尝试——
-				// 原实现直接 Join(dir, au.Avatar) 使裸文件名声明（"sdf"）读 dir/sdf 而非
-				// dir/avatar/sdf.png，与 .ysm/.zip 分支 avatarCandidates 口径不一致（修复）
-				for _, c := range avatarCandidates(au.Avatar) {
-					avatarPath := filepath.Join(dir, c)
-					// 落盘前 Rel 复查：Join 后必须仍在模型目录内
-					if rel, err := filepath.Rel(dir, avatarPath); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-						continue
+				fp := strings.ToLower(f.Path)
+				matched := false
+				for _, c := range avatarCandidates(ap) {
+					if fp == c || strings.HasSuffix(fp, "/"+c) || strings.HasSuffix(fp, "\\"+c) {
+						matched = true
+						break
 					}
-					if avatarData, _ := readLimitedAvatar(avatarPath); avatarData != nil {
-						mime := "image/png"
-						if strings.HasSuffix(strings.ToLower(c), ".jpg") {
-							mime = "image/jpeg"
-						}
-						return SaveAvatarData(safeName, avatarData, mime)
+				}
+				if matched {
+					mime := "image/png"
+					if strings.HasSuffix(fp, ".jpg") || strings.HasSuffix(fp, ".jpeg") {
+						mime = "image/jpeg"
 					}
+					return SaveAvatarData(safeName, toBytes(f.Data), mime)
 				}
 			}
 		}
+	}
+	return ""
+}
+
+// extractAvatarFromArchive 从 .zip/.7z 压缩包提取指定作者的头像。
+func extractAvatarFromArchive(modelPath, safeName, ext string) string {
+	data, err := readLimitedModel(modelPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Printf("[avatar] 读取 %s 模型失败 %s: %v", ext, modelPath, err)
+		}
+		return ""
+	}
+
+	var r container.Reader
+	switch ext {
+	case ".zip":
+		r, err = container.OpenZipBytes(data, int64(len(data)))
+	case ".7z":
+		r, err = container.Open7zBytes(data, int64(len(data)))
+	}
+	if err != nil {
+		log.Printf("[avatar] %s 解析失败 %s: %v", ext, modelPath, err)
+		return ""
+	}
+	defer r.Close()
+
+	return extractAvatarFromContainer(r, safeName)
+}
+
+// extractAvatarFromJSON 从 .json 模型文件提取指定作者的头像。
+// 解析 metadata.authors，按 avatar 字段在模型目录下查找对应图片文件。
+func extractAvatarFromJSON(modelPath, safeName string) string {
+	data, err := readLimitedModel(modelPath)
+	if err != nil {
+		// 真 IO 错误补日志（IsNotExist 静默）
+		if !os.IsNotExist(err) {
+			log.Printf("[avatar] 读取 .json 模型失败 %s: %v", modelPath, err)
+		}
+		return ""
+	}
+	var root struct {
+		Meta struct {
+			Authors []authorEntry `json:"authors"`
+		} `json:"metadata"`
+	}
+	if json.Unmarshal(data, &root) != nil {
+		return ""
+	}
+
+	dir := filepath.Dir(modelPath)
+	for _, au := range root.Meta.Authors {
+		if SafeName(au.Name) != safeName || au.Avatar == "" {
+			continue
+		}
+		ap := strings.ToLower(au.Avatar)
+		// 强校验（Clean + avatar/ 前缀 + 拒绝 ..），防 avatar/../../x 逃逸读任意文件
+		if !isSafeAvatarPath(ap) {
+			continue
+		}
+		// 候选列表（含裸文件名补 avatar/ 前缀与标准扩展名变体）逐个尝试——
+		// 原实现直接 Join(dir, au.Avatar) 使裸文件名声明（"sdf"）读 dir/sdf 而非
+		// dir/avatar/sdf.png，与 .ysm/.zip 分支 avatarCandidates 口径不一致（修复）
+		for _, c := range avatarCandidates(au.Avatar) {
+			avatarPath := filepath.Join(dir, c)
+			// 落盘前 Rel 复查：Join 后必须仍在模型目录内
+			if rel, err := filepath.Rel(dir, avatarPath); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				continue
+			}
+			if avatarData, _ := readLimitedAvatar(avatarPath); avatarData != nil {
+				mime := "image/png"
+				if strings.HasSuffix(strings.ToLower(c), ".jpg") {
+					mime = "image/jpeg"
+				}
+				return SaveAvatarData(safeName, avatarData, mime)
+			}
+		}
+	}
+	return ""
+}
+
+func ExtractAvatarURI(modelPath, safeName string) string {
+	ext := strings.ToLower(filepath.Ext(modelPath))
+
+	switch ext {
+	case ".ysm":
+		return extractAvatarFromYSM(modelPath, safeName)
+	case ".zip", ".7z":
+		return extractAvatarFromArchive(modelPath, safeName, ext)
+	case ".json":
+		return extractAvatarFromJSON(modelPath, safeName)
 	}
 	return ""
 }

@@ -59,9 +59,9 @@
 | `SetNodeJS()` | `go/avatar/avatar_decode:39` | SetNodeJS 设置 Node.js 路径和 WASM/胶水代码加载函数。 |
 | `limitedBuffer.Write()` | `go/avatar/avatar_decode:54` | — |
 | `DecodeYSMFiles()` | `go/avatar/avatar_decode:63` | DecodeYSMFiles 底层解码，返回完整文件列表。 |
-| `ExtractAvatarURI()` | `go/avatar/avatar_extract:25` | ExtractAvatarURI 从模型文件中提取指定所有者的头像 data URI。 |
-| `CacheAvatarsFromJSON()` | `go/avatar/avatar_extract:179` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
-| `CacheAvatarsFromModel()` | `go/avatar/avatar_extract:249` | CacheAvatarsFromModel 从 .ysm/.zip/.json 模型缓存所有作者头像。 |
+| `ExtractAvatarURI()` | `go/avatar/avatar_extract:215` | — |
+| `CacheAvatarsFromJSON()` | `go/avatar/avatar_extract:230` | CacheAvatarsFromJSON 从解压目录的 ysm.json 缓存所有作者头像。 |
+| `CacheAvatarsFromModel()` | `go/avatar/avatar_extract:300` | CacheAvatarsFromModel 从 .ysm/.zip/.json 模型缓存所有作者头像。 |
 | `ReadFileFromZip()` | `go/avatar/avatar_zip:20` | ReadFileFromZip 从 ZIP 读取指定路径的文件。 |
 | `ReadFileFromContainer()` | `go/avatar/avatar_zip:55` | ReadFileFromContainer 从统一容器读取指定路径的文件（ADR-068： 容器打开统一走 container，替代 zip.NewReader + ReadFil |
 | `SafeName()` | `go/avatar/avatar:45` | SafeName 将非法文件名字符替换为下划线。 |

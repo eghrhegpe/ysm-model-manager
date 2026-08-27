@@ -475,6 +475,157 @@ func runScanDir(ctx *CmdContext) error {
 }
 
 // runAnalyzeMMD 分析 MMD 模型资产
+// mmdAssetScan 保存 analyze-mmd 目录扫描的聚合结果。
+type mmdAssetScan struct {
+	PmxFiles      []string
+	VrmFiles      []string
+	VmdFiles      []string
+	VpdFiles      []string
+	TextureFiles  []string
+	TextureSize   int64
+	ModelSize     int64
+	WalkErrCount  int
+	WalkTotalDirs int
+}
+
+// textureExts analyze-mmd 扫描的贴图扩展名集合。
+var textureExts = map[string]bool{
+	".png":  true,
+	".jpg":  true,
+	".jpeg": true,
+	".tga":  true,
+	".bmp":  true,
+	".dds":  true,
+	".ktx2": true,
+}
+
+// scanMMDAssets 遍历目录并按扩展名分类聚合资产。
+func scanMMDAssets(modelDir string) (*mmdAssetScan, error) {
+	s := &mmdAssetScan{}
+	err := filepath.Walk(modelDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			s.WalkErrCount++
+			return nil
+		}
+		if info.IsDir() {
+			s.WalkTotalDirs++
+			return nil
+		}
+
+		ext := strings.ToLower(filepath.Ext(path))
+		size := info.Size()
+
+		switch ext {
+		case ".pmx", ".pmd":
+			s.PmxFiles = append(s.PmxFiles, path)
+			s.ModelSize += size
+		case ".vrm":
+			s.VrmFiles = append(s.VrmFiles, path)
+			s.ModelSize += size
+		case ".vmd":
+			s.VmdFiles = append(s.VmdFiles, path)
+		case ".vpd":
+			s.VpdFiles = append(s.VpdFiles, path)
+		default:
+			if textureExts[ext] {
+				s.TextureFiles = append(s.TextureFiles, path)
+				s.TextureSize += size
+			}
+		}
+
+		return nil
+	})
+	return s, err
+}
+
+// texInfo 贴图信息（路径、大小、扩展名）。
+type texInfo struct {
+	path string
+	size int64
+	ext  string
+}
+
+// collectTexInfos 对贴图列表 stat 取大小，按大小降序排序后返回。
+func collectTexInfos(textureFiles []string) []texInfo {
+	var texInfos []texInfo
+	for _, tf := range textureFiles {
+		info, err := os.Stat(tf)
+		if err != nil {
+			continue // 文件在扫描后被移除，跳过
+		}
+		ext := strings.ToLower(filepath.Ext(tf))
+		texInfos = append(texInfos, texInfo{path: tf, size: info.Size(), ext: ext})
+	}
+
+	// 按大小降序排序（选择排序，贴图数量通常不大）
+	for i := 0; i < len(texInfos); i++ {
+		for j := i + 1; j < len(texInfos); j++ {
+			if texInfos[j].size > texInfos[i].size {
+				texInfos[i], texInfos[j] = texInfos[j], texInfos[i]
+			}
+		}
+	}
+
+	return texInfos
+}
+
+// printTextureDetails 打印贴图详情：按格式聚合、Top 10、性能预警。
+func printTextureDetails(textureFiles []string, modelDir string) {
+	fmt.Printf("\n🖼️  贴图详情:\n")
+
+	texInfos := collectTexInfos(textureFiles)
+
+	extSizeMap := make(map[string]int64)
+	for _, ti := range texInfos {
+		extSizeMap[ti.ext] += ti.size
+	}
+
+	fmt.Printf("   按格式:\n")
+	for ext, size := range extSizeMap {
+		fmt.Printf("     %s: %s\n", ext, formatSize(size))
+	}
+
+	fmt.Printf("\n   最大贴图 Top 10:\n")
+	for i := 0; i < min(10, len(texInfos)); i++ {
+		relPath := strings.TrimPrefix(texInfos[i].path, modelDir)
+		fmt.Printf("     [%d] %s (%s) %s\n", i+1, relPath, texInfos[i].ext, formatSize(texInfos[i].size))
+	}
+
+	fmt.Printf("\n⚠️  性能预警:\n")
+	largeTextures := 0
+	for _, ti := range texInfos {
+		if ti.size > cliTextureLargeWarning {
+			largeTextures++
+		}
+	}
+	if largeTextures > 0 {
+		fmt.Printf("   🔴 有 %d 个贴图大于 %s，建议压缩或转换为 KTX2\n", largeTextures, formatSize(cliTextureLargeWarning))
+	} else {
+		fmt.Printf("   ✅ 无超大贴图\n")
+	}
+
+	tgaSize := extSizeMap[".tga"] + extSizeMap[".dds"]
+	if tgaSize > 0 {
+		fmt.Printf("   🟡 TGA/DDS 贴图占 %s，建议转换为 PNG 或 KTX2\n", formatSize(tgaSize))
+	}
+}
+
+// printOverallAssessment 打印总体评估：总大小 + 性能分级。
+func printOverallAssessment(modelSize, textureSize int64) {
+	fmt.Printf("\n📈 总体评估:\n")
+	totalAssetsSize := modelSize + textureSize
+	fmt.Printf("   模型+贴图总大小: %s\n", formatSize(totalAssetsSize))
+
+	if totalAssetsSize > cliPerformanceWarning {
+		fmt.Printf("   🔴 大于 %s，首次加载预计 > 10s\n", formatSize(cliPerformanceWarning))
+		fmt.Printf("   💡 建议: 使用 KTX2 压缩贴图，可减少 60-70%% 体积\n")
+	} else if totalAssetsSize > cliPerformanceCaution {
+		fmt.Printf("   🟡 %s-%s，首次加载可能 5-10s\n", formatSize(cliPerformanceCaution), formatSize(cliPerformanceWarning))
+	} else {
+		fmt.Printf("   🟢 小于 %s，加载性能应该可以接受\n", formatSize(cliPerformanceCaution))
+	}
+}
+
 func runAnalyzeMMD(ctx *CmdContext) error {
 	fs := newCmdFlagSet("analyze-mmd")
 	modelDir := fs.String("dir", "", "MMD 模型目录路径")
@@ -489,63 +640,7 @@ func runAnalyzeMMD(ctx *CmdContext) error {
 
 	fmt.Printf("🎭 MMD 模型资产分析: %s\n\n", *modelDir)
 
-	var (
-		pmxFiles     []string
-		vrmFiles     []string
-		vmdFiles     []string
-		vpdFiles     []string
-		textureFiles []string
-		textureSize  int64
-		modelSize    int64
-	)
-
-	textureExts := map[string]bool{
-		".png":  true,
-		".jpg":  true,
-		".jpeg": true,
-		".tga":  true,
-		".bmp":  true,
-		".dds":  true,
-		".ktx2": true,
-	}
-
-	var walkErrCount int
-	var walkTotalDirs int
-
-	err = filepath.Walk(*modelDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			walkErrCount++
-			return nil
-		}
-		if info.IsDir() {
-			walkTotalDirs++
-			return nil
-		}
-
-		ext := strings.ToLower(filepath.Ext(path))
-		size := info.Size()
-
-		switch ext {
-		case ".pmx", ".pmd":
-			pmxFiles = append(pmxFiles, path)
-			modelSize += size
-		case ".vrm":
-			vrmFiles = append(vrmFiles, path)
-			modelSize += size
-		case ".vmd":
-			vmdFiles = append(vmdFiles, path)
-		case ".vpd":
-			vpdFiles = append(vpdFiles, path)
-		default:
-			if textureExts[ext] {
-				textureFiles = append(textureFiles, path)
-				textureSize += size
-			}
-		}
-
-		return nil
-	})
-
+	scan, err := scanMMDAssets(*modelDir)
 	if err != nil {
 		return newRuntimeErrf("分析目录失败: %v", err)
 	}
@@ -553,88 +648,31 @@ func runAnalyzeMMD(ctx *CmdContext) error {
 	// 错误率过高时提前返回（>50% 路径无法访问说明系统性问题）
 	// 分母 = 错误数 + 成功目录数（总尝试路径），与分子同口径：
 	// 文件级瞬时错误（如扫描中被删）不虚高分子，避免误中止整个分析
-	if walkTotalDirs+walkErrCount > 0 {
-		errRate := float64(walkErrCount) / float64(walkTotalDirs+walkErrCount)
+	if scan.WalkTotalDirs+scan.WalkErrCount > 0 {
+		errRate := float64(scan.WalkErrCount) / float64(scan.WalkTotalDirs+scan.WalkErrCount)
 		if errRate > 0.5 {
-			return newRuntimeErrf("扫描错误率过高: %d/%d 路径无法访问 (%.0f%%)", walkErrCount, walkTotalDirs+walkErrCount, errRate*100)
+			return newRuntimeErrf("扫描错误率过高: %d/%d 路径无法访问 (%.0f%%)", scan.WalkErrCount, scan.WalkTotalDirs+scan.WalkErrCount, errRate*100)
 		}
 	}
 
-	if walkErrCount > 0 {
-		fmt.Printf("⚠️  扫描跳过 %d 个异常路径\n", walkErrCount)
+	if scan.WalkErrCount > 0 {
+		fmt.Printf("⚠️  扫描跳过 %d 个异常路径\n", scan.WalkErrCount)
 	}
 
 	fmt.Printf("📊 资产统计:\n")
-	fmt.Printf("   PMX/PMD 模型:  %d 个 (%s)\n", len(pmxFiles), formatSize(modelSize))
-	fmt.Printf("   VRM 模型:      %d 个\n", len(vrmFiles))
-	fmt.Printf("   VMD 动画:      %d 个\n", len(vmdFiles))
-	fmt.Printf("   VPD 物理:      %d 个\n", len(vpdFiles))
-	fmt.Printf("   贴图文件:      %d 个 (%s)\n", len(textureFiles), formatSize(textureSize))
+	fmt.Printf("   PMX/PMD 模型:  %d 个 (%s)\n", len(scan.PmxFiles), formatSize(scan.ModelSize))
+	fmt.Printf("   VRM 模型:      %d 个\n", len(scan.VrmFiles))
+	fmt.Printf("   VMD 动画:      %d 个\n", len(scan.VmdFiles))
+	fmt.Printf("   VPD 物理:      %d 个\n", len(scan.VpdFiles))
+	fmt.Printf("   贴图文件:      %d 个 (%s)\n", len(scan.TextureFiles), formatSize(scan.TextureSize))
 
-	if len(textureFiles) > 0 {
-		fmt.Printf("\n🖼️  贴图详情:\n")
-
-		type texInfo struct {
-			path string
-			size int64
-			ext  string
-		}
-		var texInfos []texInfo
-		for _, tf := range textureFiles {
-			info, err := os.Stat(tf)
-			if err != nil {
-				continue // 文件在扫描后被移除，跳过
-			}
-			ext := strings.ToLower(filepath.Ext(tf))
-			texInfos = append(texInfos, texInfo{path: tf, size: info.Size(), ext: ext})
-		}
-
-		for i := 0; i < len(texInfos); i++ {
-			for j := i + 1; j < len(texInfos); j++ {
-				if texInfos[j].size > texInfos[i].size {
-					texInfos[i], texInfos[j] = texInfos[j], texInfos[i]
-				}
-			}
-		}
-
-		extSizeMap := make(map[string]int64)
-		for _, ti := range texInfos {
-			extSizeMap[ti.ext] += ti.size
-		}
-
-		fmt.Printf("   按格式:\n")
-		for ext, size := range extSizeMap {
-			fmt.Printf("     %s: %s\n", ext, formatSize(size))
-		}
-
-		fmt.Printf("\n   最大贴图 Top 10:\n")
-		for i := 0; i < min(10, len(texInfos)); i++ {
-			relPath := strings.TrimPrefix(texInfos[i].path, *modelDir)
-			fmt.Printf("     [%d] %s (%s) %s\n", i+1, relPath, texInfos[i].ext, formatSize(texInfos[i].size))
-		}
-
-		fmt.Printf("\n⚠️  性能预警:\n")
-		largeTextures := 0
-		for _, ti := range texInfos {
-			if ti.size > cliTextureLargeWarning {
-				largeTextures++
-			}
-		}
-		if largeTextures > 0 {
-			fmt.Printf("   🔴 有 %d 个贴图大于 %s，建议压缩或转换为 KTX2\n", largeTextures, formatSize(cliTextureLargeWarning))
-		} else {
-			fmt.Printf("   ✅ 无超大贴图\n")
-		}
-
-		tgaSize := extSizeMap[".tga"] + extSizeMap[".dds"]
-		if tgaSize > 0 {
-			fmt.Printf("   🟡 TGA/DDS 贴图占 %s，建议转换为 PNG 或 KTX2\n", formatSize(tgaSize))
-		}
+	if len(scan.TextureFiles) > 0 {
+		printTextureDetails(scan.TextureFiles, *modelDir)
 	}
 
-	if len(pmxFiles) > 0 {
+	if len(scan.PmxFiles) > 0 {
 		fmt.Printf("\n📦 模型文件:\n")
-		for i, pf := range pmxFiles {
+		for i, pf := range scan.PmxFiles {
 			info, err := os.Stat(pf)
 			if err != nil {
 				continue // 文件在扫描后被移除，跳过
@@ -644,18 +682,7 @@ func runAnalyzeMMD(ctx *CmdContext) error {
 		}
 	}
 
-	fmt.Printf("\n📈 总体评估:\n")
-	totalAssetsSize := modelSize + textureSize
-	fmt.Printf("   模型+贴图总大小: %s\n", formatSize(totalAssetsSize))
-
-	if totalAssetsSize > cliPerformanceWarning {
-		fmt.Printf("   🔴 大于 %s，首次加载预计 > 10s\n", formatSize(cliPerformanceWarning))
-		fmt.Printf("   💡 建议: 使用 KTX2 压缩贴图，可减少 60-70%% 体积\n")
-	} else if totalAssetsSize > cliPerformanceCaution {
-		fmt.Printf("   🟡 %s-%s，首次加载可能 5-10s\n", formatSize(cliPerformanceCaution), formatSize(cliPerformanceWarning))
-	} else {
-		fmt.Printf("   🟢 小于 %s，加载性能应该可以接受\n", formatSize(cliPerformanceCaution))
-	}
+	printOverallAssessment(scan.ModelSize, scan.TextureSize)
 
 	return nil
 }

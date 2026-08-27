@@ -30,7 +30,7 @@ invariant_anchors:
 
 ## 概览
 
-`features/community/` 是创意工坊（GitHub 模型仓库）浏览与批量下载的前端业务层，五个文件分工：`data.ts` 抓取远端 index.json（多镜像竞速）、`render.ts` 渲染站点卡片与模型列表、`events.ts` 绑定仓库页交互事件、`download-queue.ts`（UI 控制器 + 对外 re-export）与其拆分的 `download-queue-store.ts` / `download-queue-progress.ts`（模块级下载队列状态机 + 99% 卡进度守护，ADR-040 拆分：829 → 360/299/278）。下载执行桌面在 Go 端队列（go/download），前端通过 Wails 事件接收进度；网页版无 Go 队列，web 分支走 fetch→importWebFiles 入 IndexedDB（对齐导入链路），失败/超 50MB 回退 `<a download>` 直链（ADR-123 P1）。
+`features/community/` 是创意工坊（GitHub 模型仓库）浏览与批量下载的前端业务层，五个文件分工：`data.ts` 抓取远端 index.json（多镜像竞速）、`render.ts` 渲染站点卡片与模型列表、`events.ts` 绑定仓库页交互事件、`download-queue.ts`（UI 控制器 + 对外 re-export）与其拆分的 `download-queue-store.ts` / `download-queue-progress.ts`（模块级下载队列状态机 + 99% 卡进度守护，ADR-040 拆分：829 → 360/299/278）。下载执行桌面在 Go 端队列（go/download），前端通过 Wails 事件接收进度；网页版无 Go 队列，web 分支走 fetch→importWebFiles 入 IndexedDB（对齐导入链路），失败/超 50MB 回退 `<a download>` 直链（ADR-123 P1）；单文件 fetch 15s 超时（AbortController，code_review P2），挂起服务器超时亦回退直链、不卡队列（分支级 try/finally 兜底复位 idle）。
 
 ## 核心职责
 

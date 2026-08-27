@@ -197,7 +197,7 @@ describe("enqueueDownloads", () => {
       createElSpy.mockRestore();
     }
     expect(enqueueMock).not.toHaveBeenCalled();
-    expect(fetchMock).toHaveBeenCalledWith("https://x/a.ysm");
+    expect(fetchMock).toHaveBeenCalledWith("https://x/a.ysm", expect.objectContaining({ signal: expect.any(AbortSignal) }));
     // rtype 从 saveDir=/web/<type> 反解（web 模式 GetRepoRoot 恒返回 /web/<type>）
     expect(importWebFilesMock).toHaveBeenCalledTimes(1);
     const [files, webType] = importWebFilesMock.mock.calls[0];
@@ -228,6 +228,30 @@ describe("enqueueDownloads", () => {
     await enqueueDownloads([{ url: "https://x/o.ysm", saveDir: "/odd", name: "o.ysm", size: 10 }]);
     expect(importWebFilesMock).toHaveBeenCalledTimes(1);
     expect(importWebFilesMock.mock.calls[0][1]).toBe("");
+  });
+
+  it("网页版 fetch 挂起超时 → 回退直链且回 idle（P2：防永久卡 downloading）", async () => {
+    vi.useFakeTimers();
+    try {
+      resolveWebModeMock.mockReturnValue(true);
+      importWebFilesMock.mockResolvedValue({ imported: 1, failed: 0 });
+      // 永不 settle 的 fetch：仅响应 abort 信号（模拟挂起服务器，无超时即永久卡住）
+      fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(new DOMException("The operation was aborted", "AbortError")),
+          );
+        }),
+      );
+      const p = enqueueDownloads([{ url: "https://x/slow.ysm", saveDir: "/web/ysm", name: "slow.ysm", size: 10 }]);
+      await vi.advanceTimersByTimeAsync(15_000); // 前进超时窗口（=WEB_DOWNLOAD_FETCH_TIMEOUT_MS）触发 abort
+      await p;
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(importWebFilesMock).not.toHaveBeenCalled(); // 超时 → 直链兜底不入库
+      expect(getState().status).toBe("idle"); // 队列未被永久卡在 downloading
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("网页版大文件（>50MB）：不 fetch，回退浏览器直链（ADR-123 P1 回退分支）", async () => {

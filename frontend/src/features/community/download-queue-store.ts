@@ -155,6 +155,8 @@ export function isActiveStatus(s: DownloadState): boolean {
 // ADR-123 P1：web 下载入库大小上限——超限回退浏览器直链（fetch 整文件进内存 +
 // base64 转换对大文件内存压力大，web-common 的 DetectZipType 同款 50MB 量级守卫）
 const WEB_DOWNLOAD_IDB_LIMIT = 50 * 1024 * 1024;
+/** 网页版单文件 fetch 超时（code_review P2）：挂起服务器不永久卡队列，超时走直链兜底 */
+const WEB_DOWNLOAD_FETCH_TIMEOUT_MS = 15_000;
 
 /** 触发浏览器直链保存（web 下载回退分支：大文件 / 协议不符 / fetch 失败） */
 function triggerAnchorDownload(url: string, name: string): void {
@@ -194,61 +196,73 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
   // 回退分支：非 http(s) 协议、单文件超 50MB、fetch/HTTP 失败 → 浏览器直链 <a download>
   // （用户仍拿到文件但不入库）。完成后置 idle 避免队列 UI 卡「下载中」。
   if (resolveWebMode()) {
-    const { importWebFiles } = await import("../../backend/browser-adapter.ts");
-    // 目标类型段：cmDqEnqueue 已把 GetRepoRoot 结果写入 saveDir，web 模式恒为
-    // /web/<type>（web-fs.ts GetRepoRoot），从根反解即可，不改 enqueueDownloads 签名
-    const webType = (tasks[0]?.saveDir || "").split("/")[2] || "";
     let imported = 0;
     let failed = 0;
     let fallback = 0;
-    for (const task of tasks) {
-      STATE.currentFile = task.name;
-      notify();
-      let handled = false;
-      if (
-        /^https?:\/\//i.test(task.url || "") &&
-        (task.size || 0) <= WEB_DOWNLOAD_IDB_LIMIT
-      ) {
-        try {
-          const resp = await fetch(task.url);
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const blob = await resp.blob();
-          const r = await importWebFiles([new File([blob], task.name || "model")], webType);
-          imported += r.imported;
-          failed += r.failed; // 导入层的扩展名/大小校验跳过属预期过滤，不回退直链
-          handled = true;
-        } catch (e) {
-          dbg("enqueue:web-idb-fail", task.url, e); // CORS/网络失败 → 直链兜底
+    // P2 修复（code_review）：fetch 无超时 → 挂起服务器可永久卡队列（downloading 态 +
+    // 重入守卫丢弃后续入队 + web 模式无取消路径）。逐任务 AbortController 超时，
+    // 超时走既有直链兜底；分支级 try/finally 保证任何意外异常都复位 idle。
+    try {
+      const { importWebFiles } = await import("../../backend/browser-adapter.ts");
+      // 目标类型段：cmDqEnqueue 已把 GetRepoRoot 结果写入 saveDir，web 模式恒为
+      // /web/<type>（web-fs.ts GetRepoRoot），从根反解即可，不改 enqueueDownloads 签名
+      const webType = (tasks[0]?.saveDir || "").split("/")[2] || "";
+      for (const task of tasks) {
+        STATE.currentFile = task.name;
+        notify();
+        let handled = false;
+        if (
+          /^https?:\/\//i.test(task.url || "") &&
+          (task.size || 0) <= WEB_DOWNLOAD_IDB_LIMIT
+        ) {
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), WEB_DOWNLOAD_FETCH_TIMEOUT_MS);
+          try {
+            const resp = await fetch(task.url, { signal: ctrl.signal });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const blob = await resp.blob();
+            const r = await importWebFiles([new File([blob], task.name || "model")], webType);
+            imported += r.imported;
+            failed += r.failed; // 导入层的扩展名/大小校验跳过属预期过滤，不回退直链
+            handled = true;
+          } catch (e) {
+            dbg("enqueue:web-idb-fail", task.url, e); // 超时/CORS/网络失败 → 直链兜底
+          } finally {
+            clearTimeout(timer);
+          }
         }
-      }
-      if (!handled) {
-        try {
-          triggerAnchorDownload(task.url, task.name);
-          fallback++;
-        } catch (e) {
-          failed++;
-          STATE.errorList.push({ name: task.name, err: String((e as Error)?.message || e) });
+        if (!handled) {
+          try {
+            triggerAnchorDownload(task.url, task.name);
+            fallback++;
+          } catch (e) {
+            failed++;
+            STATE.errorList.push({ name: task.name, err: String((e as Error)?.message || e) });
+          }
         }
+        STATE.remaining = Math.max(0, STATE.remaining - 1);
+        notify();
       }
-      STATE.remaining = Math.max(0, STATE.remaining - 1);
+      // 汇总反馈对齐导入链路语义（importWebFilesWithToast 同款 toast + 刷新广播）
+      bus.emit("toast:show", {
+        msg:
+          failed > 0
+            ? t("community.downloadQueue.webDlFailed", { imported, fallback, failed })
+            : fallback > 0
+              ? t("community.downloadQueue.webDlFallback", { imported, fallback })
+              : t("community.downloadQueue.webDlOk", { imported }),
+        duration: TOAST_MS.verbose,
+        type: failed > 0 ? "warn" : "success",
+      });
+      bus.emit("tree:reload");
+      bus.emit("stats:refresh");
+    } catch (e) {
+      dbg("enqueue:web-branch-fail", e); // 意外异常不留 downloading 残态
+    } finally {
+      STATE.status = "idle";
+      STATE.currentFile = "";
       notify();
     }
-    // 汇总反馈对齐导入链路语义（importWebFilesWithToast 同款 toast + 刷新广播）
-    bus.emit("toast:show", {
-      msg:
-        failed > 0
-          ? `⚠️ ${imported} 个已入模型库，${fallback} 个走浏览器直链保存，${failed} 个失败`
-          : fallback > 0
-            ? `✅ ${imported} 个已入模型库，${fallback} 个走浏览器直链保存`
-            : `✅ ${imported} 个模型已导入浏览器模型库`,
-      duration: TOAST_MS.verbose,
-      type: failed > 0 ? "warn" : "success",
-    });
-    bus.emit("tree:reload");
-    bus.emit("stats:refresh");
-    STATE.status = "idle";
-    STATE.currentFile = "";
-    notify();
     return;
   }
   try {

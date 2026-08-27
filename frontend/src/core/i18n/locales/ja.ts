@@ -707,6 +707,9 @@ export const ja: Record<string, string> = {
   // ── Creators Channel ──
   "community.fromLocal": "ローカルリポジトリから",
   "community.downloadQueue.remain": "残り {n}",
+  "community.downloadQueue.webDlFailed": "⚠️ {imported} 個がモデルライブラリに保存、{fallback} 個はブラウザ直リンク、{failed} 個失敗",
+  "community.downloadQueue.webDlFallback": "✅ {imported} 個がモデルライブラリに保存、{fallback} 個はブラウザ直リンク",
+  "community.downloadQueue.webDlOk": "✅ {imported} 個のモデルをブラウザモデルライブラリにインポート",
   "gh.leftHead": "リポジトリ",
   "gh.sourceInfo": "リポジトリ",
   "gh.initialHint": "左のリポジトリをクリックしてモデルを表示",

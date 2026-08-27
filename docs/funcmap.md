@@ -1109,8 +1109,8 @@
 | `getState()` | `frontend/src/features/community/download-queue-store:103` | 当前状态的只读快照（浅拷贝，不返回模块级 STATE 的原始引用）。 |
 | `resume()` | `frontend/src/features/community/download-queue-store:112` | 页面切回时调用，从 Go 端恢复当前队列状态。 |
 | `isActiveStatus()` | `frontend/src/features/community/download-queue-store:151` | 队列是否处于活跃下载中（downloading 或 enqueued）。 |
-| `enqueueDownloads()` | `frontend/src/features/community/download-queue-store:176` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
-| `cancelDownloads()` | `frontend/src/features/community/download-queue-store:270` | 模块级取消 — 纯粹的 Go 调用。 |
+| `enqueueDownloads()` | `frontend/src/features/community/download-queue-store:178` | 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。 |
+| `cancelDownloads()` | `frontend/src/features/community/download-queue-store:284` | 模块级取消 — 纯粹的 Go 调用。 |
 | `subscribe()` | `frontend/src/features/community/download-queue` | — |
 | `getStateSnapshot()` | `frontend/src/features/community/download-queue` | — |
 | `getState()` | `frontend/src/features/community/download-queue` | — |

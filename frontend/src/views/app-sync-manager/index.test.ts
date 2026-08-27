@@ -34,6 +34,9 @@ const { mocks } = vi.hoisted(() => {
     PushSingleResourceToInstance: vi.fn().mockResolvedValue(undefined),
     PullSingleResourceFromInstance: vi.fn().mockResolvedValue(undefined),
     GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
+    GetSyncScanDirs: vi.fn().mockResolvedValue(
+      JSON.stringify({ global: "/repo/schematics", instance: "/mc/inst/x/schematics", warning: "" }),
+    ),
     ScanModelEntriesWithLabel: vi.fn().mockResolvedValue([]),
   };
   return { mocks };
@@ -46,6 +49,7 @@ vi.mock("../../backend/app.ts", () => ({
     PushSingleResourceToInstance: mocks.PushSingleResourceToInstance,
     PullSingleResourceFromInstance: mocks.PullSingleResourceFromInstance,
     GetRepoRoot: mocks.GetRepoRoot,
+    GetSyncScanDirs: mocks.GetSyncScanDirs,
     ScanModelEntriesWithLabel: mocks.ScanModelEntriesWithLabel,
   }),
 }));
@@ -81,6 +85,22 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     const pushBtn = el.querySelector('[data-testid="sm-push"]') as HTMLElement;
     expect(pushBtn).toBeTruthy();
     expect(pushBtn.textContent).toContain("推送");
+    unmountElement(el);
+  });
+
+  it("仓库基准过宽 → 摘要栏显示告警而非目录", async () => {
+    mocks.GetSyncScanDirs.mockResolvedValue(
+      JSON.stringify({ global: "/mc", instance: "/mc/inst/x/schematics", warning: "⚠️ 蓝图 仓库基准目录 /mc 疑似过宽" }),
+    );
+    const el = document.createElement("app-sync-manager");
+    el.setAttribute("instance", "test");
+    document.body.appendChild(el);
+    await waitFor(() => {
+      const sum = el.querySelector(".sm-summary");
+      return sum && sum.textContent!.includes("疑似过宽");
+    }, 5000);
+    const sum = el.querySelector(".sm-summary");
+    expect(sum!.textContent).toContain("⚠️");
     unmountElement(el);
   });
 

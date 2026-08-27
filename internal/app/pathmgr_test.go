@@ -212,3 +212,51 @@ func TestFilesRootForSync(t *testing.T) {
 		}
 	})
 }
+
+// TestGlobalRootSuspicious 仓库侧宽目录探测：含 mods/config/saves/resourcepacks/
+// shaderpacks 或 FilesRoot 特征（minecraft-mod/schematics）→ 判定过宽；专门的
+// 蓝图子目录（仅 .nbt / 普通 schematics）不应误报。
+func TestGlobalRootSuspicious(t *testing.T) {
+	base := t.TempDir()
+
+	// 普通专门目录（无宽目录特征）→ false
+	dedicated := filepath.Join(base, "blueprints")
+	if err := os.MkdirAll(dedicated, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dedicated, "a.nbt"), []byte("n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if globalRootSuspicious(dedicated) {
+		t.Errorf("专门蓝图目录不应判为过宽: %s", dedicated)
+	}
+
+	// Minecraft 实例根特征：含 mods 子目录 → true
+	inst := filepath.Join(base, "mc-instance")
+	_ = os.MkdirAll(filepath.Join(inst, "mods"), 0o755)
+	if !globalRootSuspicious(inst) {
+		t.Errorf("含 mods 的目录应判为过宽: %s", inst)
+	}
+
+	// FilesRoot 总根特征：minecraft-mod/schematics → true
+	fsroot := filepath.Join(base, "filesroot")
+	_ = os.MkdirAll(filepath.Join(fsroot, "minecraft-mod", "schematics"), 0o755)
+	if !globalRootSuspicious(fsroot) {
+		t.Errorf("FilesRoot 总根应判为过宽: %s", fsroot)
+	}
+
+	// config 子目录 → true
+	cfgDir := filepath.Join(base, "with-config")
+	_ = os.MkdirAll(filepath.Join(cfgDir, "config"), 0o755)
+	if !globalRootSuspicious(cfgDir) {
+		t.Errorf("含 config 的目录应判为过宽: %s", cfgDir)
+	}
+
+	// 空串 / 不存在目录 → false
+	if globalRootSuspicious("") {
+		t.Error("空串不应判为过宽")
+	}
+	if globalRootSuspicious(filepath.Join(base, "no-such")) {
+		t.Error("不存在目录不应判为过宽")
+	}
+}

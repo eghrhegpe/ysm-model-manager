@@ -492,18 +492,52 @@ func (a *App) PushSingleResourceToInstance(rtype, instanceName, filePath string)
 
 // ========== 整合包同步目录解析（可见性） ==========
 
+// globalRootSuspicious 判断仓库侧基准目录是否「疑似过宽」——即用户把类型专属根
+// 配成了 Minecraft 实例根 / FilesRoot 总根这类宽目录。此类配置会让目录级同步
+// 递归扫整棵树并按扩展名过滤，其他资源的 .nbt/.zip 等会混入本类型列表。
+// 探测用轻量目录名特征（mods/config/saves/resourcepacks/shaderpacks，
+// 或 FilesRoot 下的 minecraft-mod/schematics 子路径），不做全量递归扫描。
+func globalRootSuspicious(dir string) bool {
+	if dir == "" {
+		return false
+	}
+	for _, marker := range []string{"mods", "config", "saves", "resourcepacks", "shaderpacks"} {
+		if fi, err := os.Stat(filepath.Join(dir, marker)); err == nil && fi.IsDir() {
+			return true
+		}
+	}
+	// FilesRoot 总根特征：minecraft-mod 分组下含 schematics 子目录
+	if fi, err := os.Stat(filepath.Join(dir, "minecraft-mod", "schematics")); err == nil && fi.IsDir() {
+		return true
+	}
+	return false
+}
+
 // GetSyncScanDirs 返回指定资源类型在指定整合包中「实际同步使用的目录对」。
 //   - global：仓库侧基准目录（GetRepoRoot 结果）
 //   - instance：实例侧实际扫描目录（types.FindInstDir 结果，可能因兜底命中非标准目录）
+//   - warning：仓库侧目录疑似过宽时的非阻断提示（空串=正常）
 //
 // 用途：让前端同步页展示“到底从哪个文件夹扫”，尤其兜底命中 Sable-Schematics 时用户可见。
 // 不触发全量扫描，仅做目录解析 + 标准目录存在性/证据检查，体感轻量。
 func (a *App) GetSyncScanDirs(rtype, instanceName string) string {
 	cfg := a.LoadAppConfig()
 	if cfg.McRoot == "" {
-		return `{"global":"","instance":""}`
+		return `{"global":"","instance":"","warning":""}`
 	}
 	globalDir, _ := a.filesRootForSync(rtype)
+	warning := ""
+	if globalRootSuspicious(globalDir) {
+		rt := types.RegistryType(rtype)
+		label := rtype
+		if rt != nil {
+			label = rt.Name
+		}
+		warning = fmt.Sprintf(
+			"⚠️ %s 仓库基准目录 %s 疑似过宽（含 mods/config/schematics 等子目录），同步可能混入其他资源；建议将专属根指向专门的 %s 子目录",
+			label, globalDir, types.StorageSubDir(rtype),
+		)
+	}
 	instanceDir := ""
 	for _, ins := range a.ListVersionInstances(cfg.McRoot) {
 		if ins.Name == instanceName {
@@ -515,8 +549,8 @@ func (a *App) GetSyncScanDirs(rtype, instanceName string) string {
 	}
 	return marshalJSON(
 		"GetSyncScanDirs",
-		map[string]string{"global": globalDir, "instance": instanceDir},
-		`{"global":"","instance":""}`,
+		map[string]string{"global": globalDir, "instance": instanceDir, "warning": warning},
+		`{"global":"","instance":"","warning":""}`,
 	)
 }
 

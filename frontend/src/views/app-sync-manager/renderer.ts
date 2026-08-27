@@ -124,6 +124,16 @@ function renderScanDirs(self: SyncRenderSelf): void {
     '">' +
     esc(label) +
     "</span>";
+  if (dirs.warning) {
+    // 仓库基准疑似过宽：优先展示告警，避免静默混入
+    summaryEl.innerHTML =
+      '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--err)" title="' +
+      esc(dirs.warning) +
+      '">' +
+      esc(dirs.warning) +
+      "</span>";
+    return;
+  }
   summaryEl.innerHTML =
     cell(t("syncManager.scanGlobal", { dir: dirs.global || "—" }), dirs.global) +
     cell(t("syncManager.scanInstance", { dir: dirs.instance || "—" }), dirs.instance);

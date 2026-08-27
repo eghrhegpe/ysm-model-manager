@@ -3,7 +3,6 @@
 //
 // 拆分原则（ADR-066 P3）：
 // - fullCleanup：mount3D 内嵌闭包，改写成接受 CleanupContext 的纯函数
-// - safeDisposeMat：材质+纹理安全释放，无外部依赖
 
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";

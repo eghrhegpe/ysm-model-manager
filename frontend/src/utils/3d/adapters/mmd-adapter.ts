@@ -119,7 +119,7 @@ function isLikelyTga(bytes: Uint8Array): boolean {
   return type === 1 || type === 2 || type === 3 || type === 9 || type === 10 || type === 11;
 }
 
-/** 可释放的纹理字段名（MMDToonMaterial 特有 + 标准纹理，对齐 cleanup-3d.ts SAFE_DISPOSE_TEX_KEYS） */
+/** 可释放的纹理字段名（MMDToonMaterial 特有 + 标准纹理，对齐 mesh.ts ALL_TEXTURE_KEYS 且扩 MMD 专属字段） */
 const DISPOSE_TEX_KEYS = [
   "map", "emissiveMap", "normalMap", "roughnessMap",
   "metalnessMap", "aoMap", "lightMap", "alphaMap", "envMap",

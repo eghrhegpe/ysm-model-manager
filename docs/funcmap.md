@@ -45,11 +45,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 165 | 650 |
-| frontend/views | 115 | 333 |
+| 前端·工具 | 165 | 649 |
+| frontend/views | 115 | 337 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **489** | **2067** |
+| **合计** | **489** | **2070** |
 
 ## Go·头像
 
@@ -964,8 +964,8 @@
 | `readDeclaredBackend()` | `frontend/src/backend/platform:13` | 读取入口 HTML 声明的适配器身份（'go' | 'browser'），未声明返回 undefined |
 | `isWebEntryMode()` | `frontend/src/backend/platform:19` | Tier 1：旧 web 短路标记 / vite MODE=web 构建 |
 | `resolveWebMode()` | `frontend/src/backend/platform:28` | 同步判定：当前是否应路由到 browser adapter（网页版） |
-| `Events()` | `frontend/src/backend/runtime:21` | — |
-| `Window()` | `frontend/src/backend/runtime:25` | — |
+| `Events()` | `frontend/src/backend/runtime:40` | — |
+| `Window()` | `frontend/src/backend/runtime:44` | — |
 | `AppBindings()` | `frontend/src/backend/types:6` | Wails v3 生成的 App 绑定模块形状（bindings 目录下 app.ts） |
 | `mapColor()` | `frontend/src/backend/voxel-colors:92` | 对齐 go/litematic/block_colors.go MapColor：方块注册名 → 近似十六进制颜色。 |
 | `resolveBlockName()` | `frontend/src/backend/voxel-colors:107` | 对齐 go/litematic/block_ids.go ResolveBlockName：schematic v1 数字 ID → 注册名（优先 "id:data" 变体，回退 |
@@ -1295,8 +1295,8 @@
 |------|--------|------|
 | `CameraControlBridge()` | `frontend/src/utils/3d/adapters/camera-controls:13` | 相机控制桥：shared/self 双模式统一构建旋转/速度/重置控件的回调集合（方案 A：消灭 ysm-adapter 双份实现） |
 | `buildCameraControls()` | `frontend/src/utils/3d/adapters/camera-controls:31` | 在根菜单 camera 面板内追加通用相机控件（旋转模式 / 速度滑条 / 重置视角），shared/self 双模式复用 |
-| `CleanupContext()` | `frontend/src/utils/3d/adapters/cleanup-3d:41` | — |
-| `runFullCleanup()` | `frontend/src/utils/3d/adapters/cleanup-3d:80` | — |
+| `CleanupContext()` | `frontend/src/utils/3d/adapters/cleanup-3d:40` | — |
+| `runFullCleanup()` | `frontend/src/utils/3d/adapters/cleanup-3d:79` | — |
 | `FbxDataPort()` | `frontend/src/utils/3d/adapters/fbx-adapter:24` | FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
 | `FBX_TARGET_MAX_DIM()` | `frontend/src/utils/3d/adapters/fbx-adapter:31` | FBX 归一化目标：包围盒最长边（单位）。对齐 MMD 厘米惯例（1.6m 人体 ≈ 160）， 与场景能力雾距（50-800，厘米尺度）及 MMD 同框尺度一致；cm/m 导出差 |
 | `FbxScaleInfo()` | `frontend/src/utils/3d/adapters/fbx-adapter:34` | Box3 尺度归一结果（factor 供诊断日志回显，size/center 为缩放后坐标） |
@@ -1464,9 +1464,9 @@
 | `WorkerErrorStrategy()` | `frontend/src/utils/3d/adapters/worker-bridge:22` | 崩溃/终止时的结算策略 |
 | `WorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:24` | — |
 | `CreateWorkerBridgeOpts()` | `frontend/src/utils/3d/adapters/worker-bridge:39` | — |
-| `createWorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:54` | — |
-| `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:147` | — |
-| `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:154` | — |
+| `createWorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:60` | — |
+| `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:153` | — |
+| `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:160` | — |
 | `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:43` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
 | `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:472` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
 | `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:502` | 工厂：构造统一 PreviewAdapter（shared 模式） |
@@ -1692,9 +1692,8 @@
 | `sampleAdaptivePixelRatio()` | `frontend/src/utils/3d/render-budget:74` | Returns a new pixel ratio only when sustained frame delivery is too slow. |
 | `shouldRenderPreviewFrame()` | `frontend/src/utils/3d/render-budget:90` | — |
 | `shouldRenderAtFps()` | `frontend/src/utils/3d/render-budget:101` | 帧率上限节流版：now 已到/过 nextFrame 才渲染。 |
-| `Disposable()` | `frontend/src/utils/3d/safe-dispose:7` | 可释放对象的最小形状（Three.js 的 Texture/Material/Geometry 等均满足） |
-| `safeDispose()` | `frontend/src/utils/3d/safe-dispose:12` | 安全释放：dispose 抛错不阻塞后续释放（个别适配器 dispose 会抛） |
-| `safeDisposeMat()` | `frontend/src/utils/3d/safe-dispose:21` | 材质 + 纹理安全释放：先释放 map/emissiveMap 纹理，再释放材质本身 |
+| `Disposable()` | `frontend/src/utils/3d/safe-dispose:6` | 可释放对象的最小形状（Three.js 的 Texture/Material/Geometry 等均满足） |
+| `safeDispose()` | `frontend/src/utils/3d/safe-dispose:11` | 安全释放：dispose 抛错不阻塞后续释放（个别适配器 dispose 会抛） |
 | `addStandardSceneLights()` | `frontend/src/utils/3d/scene-lights:13` | 添加 3D 场景标准主灯（AmbientLight 0xffffff@1.0 + DirectionalLight 0xffffff@2 位于 [10,30,20]）。 |
 | `ScreenshotOpts()` | `frontend/src/utils/3d/screenshot:13` | 截图选项 |
 | `screenshotFromRenderer()` | `frontend/src/utils/3d/screenshot:27` | 从活跃的 renderer/scene/camera 截图，返回 PNG/JPEG base64（无 data: 前缀）。 |
@@ -1973,13 +1972,17 @@
 | `contentUtilCSS()` | `frontend/src/views/app-content/content-util:2` | — |
 | `scanConflicts()` | `frontend/src/views/app-content/diagnostics/conflicts:139` | — |
 | `scanSyncConflicts()` | `frontend/src/views/app-content/diagnostics/conflicts:232` | — |
-| `initDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:189` | 初始化去重配置面板（标签页打开时调用，配置实时保存） 扫描结果不覆盖面板，控件扫描后仍可改；code_review P3） |
-| `startDedup()` | `frontend/src/views/app-content/diagnostics/dedup:537` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
+| `resetDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:31` | — |
+| `initDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:200` | 初始化去重配置面板（标签页打开时调用，配置实时保存） 扫描结果不覆盖面板，控件扫描后仍可改；code_review P3） |
+| `getDedupConfig()` | `frontend/src/views/app-content/diagnostics/dedup:207` | 获取当前去重配置（供外部调用）——返回冻结快照，防调用方篡改或跨调用污染。 |
+| `startDedup()` | `frontend/src/views/app-content/diagnostics/dedup:548` | 去重结果容器统一显式传入（消除 mock root 包装 + 幽灵 id diag-dedup-list）。 |
 | `runHealthAudit()` | `frontend/src/views/app-content/diagnostics/health:52` | 仓库体检：调 Go 端 RepoHealthAudit（当前类型单仓库审计）并渲染结果—— 动态感知当前资源类型（repo-rtype，等价树视图 vm._filesRoot 的类 |
 | `parseHealthReport()` | `frontend/src/views/app-content/diagnostics/health:99` | 解析 RepoHealthAudit 返回的 JSON 字符串。 |
 | `renderHealthReport()` | `frontend/src/views/app-content/diagnostics/health:125` | 渲染体检报告（分数环 + 完整性/缓存/资源/去重 + 警告），全部走 esc() 防注入 |
 | `formatSize()` | `frontend/src/views/app-content/diagnostics/health:178` | 字节大小人性化——委托至 formatBytes（单一事实来源，消灭多处实现口径漂移） |
 | `startDedup()` | `frontend/src/views/app-content/diagnostics/init` | — |
+| `getDedupConfig()` | `frontend/src/views/app-content/diagnostics/init` | — |
+| `resetDedupConfig()` | `frontend/src/views/app-content/diagnostics/init` | — |
 | `initDiagnostics()` | `frontend/src/views/app-content/diagnostics/init:207` | 初始化诊断页所有功能 |
 | `EscFn()` | `frontend/src/views/app-content/diagnostics/logs:9` | 转义函数签名（单一事实源 = utils/dom/html.ts 的 esc；调用方以 (s) =&gt; esc(String(s || "")) 包装适配） |
 | `loadDiagnosticsLogs()` | `frontend/src/views/app-content/diagnostics/logs:189` | — |

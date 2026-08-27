@@ -19,8 +19,8 @@
 // │    └─ 输入绑定            → L302   WASD 键盘 + 拖拽自转                       │
 // │    └─ rAF 渲染管线        → L358   animate loop + postprocess composer        │
 // │    └─ 生命周期管理        → L445   cooperate/switchTo/代际守卫               │
-// │    └─ 通知 + 释放         → L572   toast + safeDisposeMat + fullCleanup       │
-// │  §5  私有工具             → L741   safeDisposeMat                            │
+// │    └─ 通知 + 释放         → L572   toast + fullCleanup                       │
+// │  §5  私有工具             → L741   safeDispose                              │
 // └──────────────────────────────────────────────────────────────────────────────┘
 
 import { TOAST_MS } from "../../dom/toast-ms.ts";

@@ -21,7 +21,7 @@ vi.mock("../../core/i18n/locale.ts", async () => {
   return {
     ...actual, // 保留 SUPPORTED_LANGS 等真实导出（断言用）
     getBundle, // 覆盖为 mock（控制翻译表）
-    warnedKeys: new Set<string>(), // 改名同步（原 _warned，节流测试用）
+    warnedKeys: new Set<string>(), // 节流测试用（warnedKeys 模块级共享）
   };
 });
 
@@ -55,7 +55,7 @@ describe("t()", () => {
     }
   });
 
-  it("同一缺失 key 只告警一次（_warned 节流）", () => {
+  it("同一缺失 key 只告警一次（warnedKeys 节流）", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       t("dup.missing");

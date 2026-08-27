@@ -225,7 +225,7 @@ export const zhCN: Record<string, string> = {
   "settings.preview3d.camSpeedHint": "自由相机（自身模式）下 WASD 移动的快慢，与 3D 预览内滑块同步。",
   "settings.preview3d.rotMode": "默认旋转模式",
   "settings.preview3d.orbit": "环绕模型",
-  "settings.preview3d.free": "自身自由",
+  "settings.preview3d.free": "自由相机",
   "settings.preview3d.rotModeHint": "3D 预览打开时的默认相机模式；预览内也可实时切换。",
   "settings.preview3d.keymap": "操作键位（点击后按任意键重绑）",
   "settings.preview3d.keymapHint": "方向键始终可用作移动兜底；修改即时生效，下次 3D 预览启用。",

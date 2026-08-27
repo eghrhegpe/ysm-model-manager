@@ -116,10 +116,10 @@ export const DEFAULT_LIGHT_PARAMS: LightParams = {
 export const LIGHT_PRESETS: Record<string, Partial<LightParams>> = {
   default: { spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false }, volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false } },
   ysm: {
-    // 方块哑光，顶光稍柔
+    // 方块哑光，rim增强方块边缘识别
     key: { ...DEFAULT_KEY, intensity: 1.3 },
     fill: { ...DEFAULT_FILL, intensity: 0.5 },
-    rim: { ...DEFAULT_RIM, intensity: 0.35 },
+    rim: { ...DEFAULT_RIM, intensity: 0.45 },
     spotlight: { ...DEFAULT_SPOTLIGHT, enabled: false, intensity: 1.8, angle: 30, penumbra: 0.4 },
     volumetric: { ...DEFAULT_VOLUMETRIC, enabled: false, opacity: 0.4, fogPower: 1.2 },
   },

@@ -1712,6 +1712,10 @@ export const autoSidebar = [
             "link": "/knowledge/ground-cap-gcbuildmaterialgroup-133"
           },
           {
+            "text": "联邦渲染能力 (Render Federation)",
+            "link": "/knowledge/knowledge_render_federation"
+          },
+          {
             "text": "YSM (Bedrock) 动画管线",
             "link": "/knowledge/knowledge_ysm-anim-pipeline"
           },

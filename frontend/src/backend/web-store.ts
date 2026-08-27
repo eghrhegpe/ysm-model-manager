@@ -5,6 +5,7 @@
 import { idbGet, idbSet, idbDel } from "./idb.ts";
 import { scanAllWebModels } from "./web-fs.ts";
 import { safeGet, safeSet } from "../utils/dom/storage.ts";
+import { swallowError } from "../utils/core/async.ts";
 
 // --- 配置（localStorage，缺省返回 {} 让主应用可启动）---
 const CFG_KEY = "ysm:config";
@@ -65,12 +66,12 @@ async function hydrateWebLog(ring: Array<Record<string, unknown>>): Promise<void
 }
 
 /** 追加日志：先 hydrate（合并上会话旧日志，防 fresh 会话先写后读覆盖丢失），
- *  截断后写回 IDB（fire-and-forget，隐私模式/写失败静默降级为纯内存） */
+ *  截断后写回 IDB（fire-and-forget：swallowError 记录失败；隐私模式/写失败静默降级为纯内存） */
 async function pushWebLog(ring: Array<Record<string, unknown>>, cap: number, entry: Record<string, unknown>): Promise<void> {
   await hydrateWebLog(ring);
   ring.push(entry);
   if (ring.length > cap) ring.splice(0, ring.length - cap); // 仅保留最近 cap 条（环形截断）
-  void idbSet("config", logKeyOf(ring), ring).catch(() => {});
+  swallowError(idbSet("config", logKeyOf(ring), ring));
 }
 
 async function getWebImportLogs(): Promise<unknown> {
@@ -104,13 +105,13 @@ async function addWebOpLog(
 function clearWebImportLogs(): void {
   webImportLogs.length = 0;
   webLogHydrated.import = false; // 重置：下次 hydrate 读到已删 IDB → 空环
-  void idbDel("config", LOG_IMPORT_KEY).catch(() => {});
+  swallowError(idbDel("config", LOG_IMPORT_KEY));
 }
 /** 清空运行时日志环（webImpls.ClearRuntimeLogs 调用；状态封装在 web-store 内部） */
 function clearWebRuntimeLogs(): void {
   webRuntimeLogs.length = 0;
   webLogHydrated.runtime = false;
-  void idbDel("config", LOG_RUNTIME_KEY).catch(() => {});
+  swallowError(idbDel("config", LOG_RUNTIME_KEY));
 }
 
 /** 测试钩子：重置日志环状态与 hydrated 标记（防模块级状态测试间污染） */

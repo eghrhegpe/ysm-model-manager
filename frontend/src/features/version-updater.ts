@@ -9,6 +9,7 @@ import { safeGet, safeSet } from "../utils/dom/storage.ts";
 import { getAndroidBridge, isViewerMode } from "../utils/dom/android-bridge.ts";
 import { getApp } from "../backend/app.ts";
 import { Events, Window } from "../backend/runtime.ts";
+import { swallowError } from "../utils/core/async.ts";
 
 /** 更新信息（CheckUpdate 返回） */
 export interface UpdateInfo {
@@ -88,12 +89,12 @@ async function doUpdate(
     const total = Number.isFinite(data[1]) ? (data[1] as number) : 0;
     progress.update(done, total);
     // 窗口标题同步进度（即使弹窗被意外关闭/挤兑，标题栏仍显示下载状态）；
-    // SetTitle 失败（无窗口上下文）静默忽略，不阻断下载
+    // SetTitle 失败（无窗口上下文）经 swallowError 记录（web 模式恒 resolve；桌面失败留痕），不阻断下载
     if (total > 0) {
       const pct = Math.min(100, Math.max(0, Math.round((done / total) * 100)));
-      Window.SetTitle(`⬇️ ${pct}% ${origTitle}`).catch(() => {});
+      swallowError(Window.SetTitle(`⬇️ ${pct}% ${origTitle}`));
     } else {
-      Window.SetTitle(`⬇️ ${fmtMB(done)} ${origTitle}`).catch(() => {});
+      swallowError(Window.SetTitle(`⬇️ ${fmtMB(done)} ${origTitle}`));
     }
   });
   try {
@@ -108,7 +109,7 @@ async function doUpdate(
   } finally {
     unsub();
     progress.close();
-    Window.SetTitle(origTitle).catch(() => {});
+    swallowError(Window.SetTitle(origTitle));
   }
 }
 

@@ -1586,7 +1586,7 @@
 | `ShadowParams()` | `frontend/src/utils/3d/caps/shadow-capability:24` | ============ 参数类型 ============ |
 | `DEFAULT_SHADOW_PARAMS()` | `frontend/src/utils/3d/caps/shadow-capability:39` | — |
 | `SHADOW_PRESETS()` | `frontend/src/utils/3d/caps/shadow-capability:49` | 预设（setPreset 套用到不同模型类别） |
-| `ShadowCapability()` | `frontend/src/utils/3d/caps/shadow-capability:168` | ============ ShadowCapability ============ |
+| `ShadowCapability()` | `frontend/src/utils/3d/caps/shadow-capability:171` | ============ ShadowCapability ============ |
 | `SkyParams()` | `frontend/src/utils/3d/caps/sky-capability:28` | — |
 | `DEFAULT_SKY_PARAMS()` | `frontend/src/utils/3d/caps/sky-capability:49` | — |
 | `SkyModelType()` | `frontend/src/utils/3d/caps/sky-capability:64` | 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） |

@@ -48,15 +48,13 @@ export const DEFAULT_SHADOW_PARAMS: ShadowParams = {
 /** 预设（setPreset 套用到不同模型类别） */
 export const SHADOW_PRESETS: Record<string, Partial<ShadowParams> | undefined> = {
   default: { type: "hard" },
-  // 小物品/特写：软阴影 + 高分辨率 + 窄视锥
-  prop: { type: "soft", mapSize: 2048, cameraSize: 10 },
-  small: { type: "soft", mapSize: 1024, cameraSize: 12 },
-  // 建筑/大场景：硬阴影 + 中等分辨率 + 宽视锥
-  architecture: { type: "hard", mapSize: 1024, cameraSize: 40 },
-  scene: { type: "hard", mapSize: 1024, cameraSize: 30 },
-  // 角色/生物：软阴影 + 均衡分辨率
-  character: { type: "soft", mapSize: 1024, cameraSize: 15 },
-  creature: { type: "soft", mapSize: 1024, cameraSize: 18 },
+  // v1.14: 启用 enabled:true；建筑类仍保持关闭以省 GPU
+  prop: { enabled: true, type: "soft", mapSize: 2048, cameraSize: 10 },
+  small: { enabled: true, type: "soft", mapSize: 1024, cameraSize: 12 },
+  architecture: { enabled: false, type: "hard", mapSize: 1024, cameraSize: 40 },
+  scene: { enabled: false, type: "hard", mapSize: 1024, cameraSize: 30 },
+  character: { enabled: true, type: "soft", mapSize: 1024, cameraSize: 15 },
+  creature: { enabled: true, type: "soft", mapSize: 1024, cameraSize: 18 },
 };
 
 const MAP_SIZE_OPTIONS: Array<{ value: string; label: string }> = [
@@ -142,6 +140,11 @@ function shcBuildQuality(cap: ShadowCapability): MenuControlDef[] {
 
 /** 预设与模型类别的映射（无则落回 default） */
 const PRESET_BY_MODEL: Record<string, keyof typeof SHADOW_PRESETS> = {
+  // 角色别名→character preset (soft shadow + 1024 res)
+  mmd: "character",
+  vrm: "character",
+  ysm: "character",
+  litematic: "character",
   prop: "prop",
   small: "small",
   architecture: "architecture",

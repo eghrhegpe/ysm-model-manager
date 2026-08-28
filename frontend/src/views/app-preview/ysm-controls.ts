@@ -133,59 +133,21 @@ export function fillYsmShotPanel(list: HTMLElement, ctx: YsmControlsContext): vo
   });
 }
 
-/** 骨骼拾取联动（YSM 特色）：未开根菜单时先打开 model 面板，更新详情框 + 滚动高亮 */
+/** 骨骼拾取联动（YSM 特色）：点击 3D 模型骨骼 → 打开骨骼面板（id:"bones"） */
 export function attachYsmBoneSelect(
   handle: YsmContentHandle,
   openPanel: (id: string) => void,
 ): void {
   handle.onBoneSelect = (info: BoneSelectInfo): void => {
-    let detailEl = handle._boneDetailEl;
-    if (!detailEl) {
-      // 详情框在模型面板内：未渲染则先打开 model 面板（幂等）
-      openPanel("model");
-      detailEl = handle._boneDetailEl;
-    }
-    if (detailEl) {
-      detailEl.textContent = formatBoneInfo(info);
-      if (detailEl.parentNode) (detailEl.parentNode as HTMLElement).style.display = "block";
-    }
-    const bc = document.querySelector<HTMLElement>('.ysm-preview-menu [style*="max-height:300px"]');
-    if (bc) {
-      for (const lbl of bc.querySelectorAll<HTMLLabelElement>("label")) {
-        const sp = lbl.querySelector("span");
-        if (sp && sp.textContent === info.name) {
-          lbl.scrollIntoView({ block: "nearest", behavior: "smooth" });
-          lbl.style.background = "rgba(124,131,255,0.25)";
-          setTimeout(() => {
-            lbl.style.background = "";
-          }, 1500);
-          break;
-        }
-      }
+    // 打开骨骼面板（makeBonePanelRenderer 渲染列表 + 拾取联动高亮）
+    openPanel("bones");
+    // 高亮命中的骨骼行
+    const row = document.querySelector<HTMLElement>(
+      `.bone-detail-inline, div[data-bone-id="${CSS.escape(info.name)}"]`,
+    );
+    if (row) {
+      row.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   };
 }
 
-/** 骨骼信息文本（对齐原 skeleton.ts onBoneSelect 格式） */
-function formatBoneInfo(info: BoneSelectInfo): string {
-  let txt =
-    "🦴 " +
-    info.name +
-    "\n路径: " +
-    info.path +
-    "\n父骨骼: " +
-    (info.parent || "(无)") +
-    "\n子骨骼: " +
-    info.children.length +
-    " 个\nMesh: " +
-    info.meshCount +
-    "\nlocalPos: (" +
-    info.localPos.map((v) => v.toFixed(3)).join(", ") +
-    ")\n世界坐标: (" +
-    info.worldPos.map((v) => v.toFixed(2)).join(", ") +
-    ")";
-  if (info.localRot) txt += "\nlocalRot: (" + info.localRot.map((v) => v.toFixed(4)).join(", ") + ")";
-  if (info.cubeRot) txt += "\ncubeRot: (" + info.cubeRot.map((v) => v.toFixed(4)).join(", ") + ")";
-  if (info.cubePos) txt += "\ncubePos: (" + info.cubePos.map((v) => v.toFixed(3)).join(", ") + ")";
-  return txt;
-}

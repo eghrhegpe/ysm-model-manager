@@ -2187,8 +2187,8 @@
 | `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:36` | — |
 | `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:43` | — |
 | `resolveSiblingsByType()` | `frontend/src/views/app-preview/siblings:13` | 解析某资源类型的同目录候选主文件路径列表。 |
-| `PanelHandle()` | `frontend/src/views/app-preview/skeleton-fill-panel:11` | fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） |
-| `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-fill-panel:37` | — |
+| `PanelHandle()` | `frontend/src/views/app-preview/skeleton-fill-panel:10` | fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） |
+| `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-fill-panel:36` | — |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-render` | — |
 | `setup2DCanvas()` | `frontend/src/views/app-preview/skeleton-render:19` | 创建 2D 骨骼画布并异步加载纹理 |
 | `buildToggleRow()` | `frontend/src/views/app-preview/skeleton-render:44` | 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加） |

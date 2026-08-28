@@ -474,7 +474,7 @@ describe("fill3DPanel", () => {
     return { panel, model, handle, modelSel, spec };
   }
 
-  it("统计 + 纹理列表 + 多组件选择器 + 骨骼列表缩进 + 详情框", () => {
+  it("统计 + 纹理列表 + 多组件选择器（骨骼已移至 id:bones 独立菜单项）", () => {
     const { panel, model, handle, modelSel, spec } = setup({
       groupCount: 2,
       bones: [
@@ -487,7 +487,7 @@ describe("fill3DPanel", () => {
       makeFakeTex({ userData: {}, image: null }), // 无尺寸信息 → 0×0
     ] as unknown as import("three").Texture[];
 
-    const r = fill3DPanel(panel, model, texArr, spec, handle, modelSel);
+    fill3DPanel(panel, model, texArr, spec, handle, modelSel);
 
     // 统计：多组件初始默认「All」→ 两组件骨骼/立方体汇总（2+2 根 / 5+5 个）
     expect(panel.textContent).toContain("4 根");
@@ -505,94 +505,10 @@ describe("fill3DPanel", () => {
     expect(modelSel.style.display).not.toBe("none");
     expect(modelSel.options.length).toBe(3);
     expect(modelSel.options[0]!.textContent).toContain("preview.allComponents");
-    // 骨骼列表：根无缩进，手臂缩进 12px（depth=1）
-    expect(r.boneContainer).not.toBeNull();
-    const labels = r.boneContainer!.querySelectorAll("label");
-    expect(labels.length).toBe(2);
-    const armSpan = [...r.boneContainer!.querySelectorAll("label")]
-      .find((l) => l.textContent === "手臂")!
-      .querySelector("span")!;
-    expect(armSpan.style.marginLeft).toBe("12px");
-    // 详情框绑定
-    expect(handle._boneDetailEl).toBeTruthy();
-    document.body.removeChild(panel);
-  });
-
-  it("无骨骼 → boneContainer 为 null，无骨骼列表", () => {
-    const { panel, model, handle, modelSel, spec } = setup();
-    const r = fill3DPanel(panel, model, [], spec, handle, modelSel);
-    expect(r.boneContainer).toBeNull();
-    expect(panel.querySelector("input[type=checkbox]")).toBeNull();
-    document.body.removeChild(panel);
-  });
-
-  it("搜索过滤：输入关键词后仅保留命中骨骼", () => {
-    const { panel, model, handle, modelSel, spec } = setup({
-      bones: [
-        { id: "head", name: "头", parentId: null },
-        { id: "arm", name: "手臂", parentId: "head" },
-        { id: "leg", name: "腿", parentId: "head" },
-      ],
-    });
-    fill3DPanel(panel, model, [], spec, handle, modelSel);
-    const search = panel.querySelector('input[type="text"]') as HTMLInputElement;
-    expect(search).toBeTruthy();
-    search.value = "手";
-    search.dispatchEvent(new Event("input"));
-    const labels = panel.querySelectorAll("label");
-    expect(labels.length).toBe(1);
-    expect(labels[0]!.textContent).toBe("手臂");
-    document.body.removeChild(panel);
-  });
-
-  it("显示/隐藏全部按钮：setBoneVisible 调用 + 复选框同步", () => {
-    const { panel, model, handle, modelSel, spec } = setup({
-      bones: [
-        { id: "head", name: "头", parentId: null },
-        { id: "arm", name: "手臂", parentId: "head" },
-      ],
-    });
-    fill3DPanel(panel, model, [], spec, handle, modelSel);
-    const btns = [...panel.querySelectorAll("button")].map((b) => b.textContent);
-    // 按钮序：👁（显示全部）→ ⊘（隐藏全部）→ 详情复制
-    expect(btns[0]).toBe("👁");
-    expect(btns[1]).toBe("⊘");
-    const hideAll = [...panel.querySelectorAll("button")].find((b) => b.textContent === "⊘")!;
-    hideAll.click();
-    expect(handle.setBoneVisible).toHaveBeenCalledTimes(2);
-    expect(handle.setBoneVisible).toHaveBeenCalledWith("head", false);
-    expect(handle.setBoneVisible).toHaveBeenCalledWith("arm", false);
-    // 复选框同步为未选中
-    const boxes = [...panel.querySelectorAll('input[type="checkbox"]')] as HTMLInputElement[];
-    expect(boxes.every((c) => c.checked === false)).toBe(true);
-    // 显示全部 → 复选框恢复选中
-    const showAll = [...panel.querySelectorAll("button")].find((b) => b.textContent === "👁")!;
-    showAll.click();
-    expect(handle.setBoneVisible).toHaveBeenCalledWith("head", true);
-    expect(boxes.every((c) => c.checked === true)).toBe(true);
-    document.body.removeChild(panel);
-  });
-
-  it("骨骼详情复制按钮：成功 → ✅ + 2s 恢复；失败 → 直接恢复", async () => {
-    const { panel, model, handle, modelSel, spec } = setup();
-    fill3DPanel(panel, model, [], spec, handle, modelSel);
-    const copyBtn = [...panel.querySelectorAll("button")].find(
-      (b) => b.textContent === "📋 common.copy",
-    )!;
-    // 成功路径
-    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
-    vi.useFakeTimers();
-    try {
-      copyBtn.click();
-      await Promise.resolve();
-      await Promise.resolve();
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith("");
-      expect(copyBtn.textContent).toContain("preview.copied");
-      vi.advanceTimersByTime(1500);
-      expect(copyBtn.textContent).toBe("📋 common.copy");
-    } finally {
-      vi.useRealTimers();
-    }
+    // 骨骼列表/详情框已移除——fill3DPanel 不再内嵌骨骼 section
+    expect(panel.querySelector(".bone-list")).toBeNull();
+    expect(panel.querySelector(".bone-detail")).toBeNull();
+    expect(panel.querySelector('input[type="checkbox"]')).toBeNull();
     document.body.removeChild(panel);
   });
 
@@ -625,44 +541,6 @@ describe("fill3DPanel", () => {
     modelSel.dispatchEvent(new Event("change"));
     expect(panel.textContent).toContain("arrow");
     expect(panel.textContent).not.toContain("全量");
-    document.body.removeChild(panel);
-  });
-
-  it("切换组件 → 骨骼列表重建为该组件骨骼（follow modelSel，初始默认 All，不再只显 main）", () => {
-    const panel = document.createElement("div");
-    panel.id = "preview-panel";
-    document.body.appendChild(panel);
-    const model = makeModel({ textures: ["t.png"] }) as never;
-    const handle = make3DHandle();
-    handle.getModelGroupCount = vi.fn(() => 3) as typeof handle.getModelGroupCount;
-    // 真实 getBoneList 按 modelIdx 返回组件骨骼（含 groupId）；此处按 rawIdx 分发
-    handle.getBoneList = vi.fn((i: number) => {
-      if (i === -1) return [
-        { id: "r0", name: "根", parentId: null },
-        { id: "r1", name: "根", parentId: null }, // 组件 1 同名根（跨组件可独立控制）
-      ];
-      if (i === 1) return [{ id: "arm", name: "手臂", parentId: null }];
-      return [];
-    }) as typeof handle.getBoneList;
-    const spec = {
-      models: Array.from({ length: 3 }, () => ({ bones: [], textureWidth: 64, textureHeight: 32 })),
-    } as never;
-    const modelSel = document.createElement("select");
-    fill3DPanel(panel, model, [], spec, handle, modelSel);
-    // 初始对齐下拉默认「All」：展示全组件骨骼，而非只 main
-    expect(modelSel.value).toBe("-1");
-    expect(handle.getBoneList).toHaveBeenLastCalledWith(-1);
-    expect([...panel.querySelectorAll(".bone-list label")].map((l) => l.textContent)).toEqual([
-      "根",
-      "根",
-    ]);
-    // 切到组件 1 → 骨骼列表重建为该组件骨骼
-    modelSel.value = "1";
-    modelSel.dispatchEvent(new Event("change"));
-    expect(handle.getBoneList).toHaveBeenLastCalledWith(1);
-    expect([...panel.querySelectorAll(".bone-list label")].map((l) => l.textContent)).toEqual([
-      "手臂",
-    ]);
     document.body.removeChild(panel);
   });
 });

@@ -2,7 +2,6 @@
 // 填充 3D 信息面板：统计 + 纹理 + 模型选择 + 骨骼列表 + 详情框
 import { t } from "../../core/i18n/t.ts";
 import { esc } from "../../utils/dom/html.ts";
-import { buildDepthMap } from "./skeleton-utils.ts";
 import type { BoneSelectInfo } from "../../utils/3d/model3d.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import type { Spec3D } from "../../utils/3d/model3d.ts";
@@ -41,15 +40,13 @@ export function fill3DPanel(
   spec: Spec3D,
   _model3d: PanelHandle,
   modelSel: HTMLSelectElement,
-): { boneContainer: HTMLElement | null; boneDetailText: HTMLElement } {
+): void {
   // 组件化统计 + 纹理（随 modelSel 切换；ADR-114 perComponent 专属/全局双向）
   const compTex = (spec as { componentTextures?: Record<string, string[]> }).componentTextures;
   const statsBox = mkTestDiv("model-stats");
   panel.appendChild(statsBox);
   const texBox = mkTestDiv("tex-box");
   panel.appendChild(texBox);
-
-  let boneContainerRef: HTMLElement | null = null;
 
   // 渲染分派：随模型选择器当前值刷新（组件 change 渲染 + 初始渲染共用）
   const renderComponent = (rawIdx: number): void =>
@@ -58,21 +55,16 @@ export function fill3DPanel(
     const v = parseInt(modelSel.value, 10);
     const rawIdx = Number.isInteger(v) ? v : 0;
     renderComponent(rawIdx);
-    boneContainerRef = fillBoneSection(boneSection, _model3d, rawIdx);
   };
   modelSel.addEventListener("change", renderCurrent);
 
   // 模型选择器（多组件「All」为选中默认，options 此刻已就绪）
   buildModelSelector(modelSel, _model3d, spec);
 
-  const boneSection = document.createElement("div");
-  panel.appendChild(boneSection);
   renderCurrent();
 
-  // 骨骼详情框（copy 事件在 buildBoneDetail 内绑定；面板复用 _boneDetailEl）
-  const boneDetailText = buildBoneDetail(panel, _model3d);
-
-  return { boneContainer: boneContainerRef, boneDetailText };
+  // 骨骼列表/详情已移除——骨骼只走 id:"bones" 独立菜单项（makeBonePanelRenderer），
+  // 与 MMD/VRM/FBX 对齐，消除 fill3DPanel 内嵌骨骼 section 与菜单 bones 项的重复入口。
 }
 
 // ===== 内部辅助（从 skeleton-render.ts 复用）=====
@@ -258,119 +250,5 @@ function buildModelSelector(modelSel: HTMLSelectElement, _model3d: PanelHandle, 
   }
 }
 
-/**
- * 骨骼列表（随组件动态重建；显隐键=组件维度 groupId，跨组件同名可独立控制）。
- * 返回当前渲染的骨骼容器，供 fill3DPanel 组装返回体。
- */
-function fillBoneSection(boneSection: HTMLDivElement, _model3d: PanelHandle, rawIdx: number): HTMLElement | null {
-  boneSection.innerHTML = "";
-  const boneList = _model3d.getBoneList(rawIdx);
-  if (!boneList.length) return null;
-  // 显隐键：真实 getBoneList 已带 groupId（compKey）；存量 mock/兜底无则退回全局 id
-  const keyOf = (b: { id: string; groupId?: string }): string => b.groupId ?? b.id;
-
-  const secHdr = document.createElement("div");
-  secHdr.className = "bone-section-header";
-  secHdr.dataset.testid = "bone-section";
-  secHdr.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-top:12px;margin-bottom:4px";
-  secHdr.innerHTML = `<span style="font-weight:600;color:rgba(255,255,255,0.9);font-size:12px">🦴 ${t("preview.bones", { n: boneList.length })}</span>`;
-  const btnGroup = document.createElement("div");
-  btnGroup.style.cssText = "display:flex;gap:4px";
-  Array.of<[string, boolean]>(["👁", true], ["⊘", false]).forEach(([sym, v]) => {
-    const btn = document.createElement("button");
-    btn.dataset.testid = v ? "bone-show-all" : "bone-hide-all";
-    btn.textContent = sym;
-    btn.style.cssText = "font-size:10px;padding:1px 4px;border-radius:3px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.6);cursor:pointer;line-height:1";
-    btn.onclick = (): void => {
-      boneList.forEach((b) => _model3d?.setBoneVisible(keyOf(b), v));
-      document.querySelectorAll("#preview-panel input[type=checkbox]").forEach((c) => ((c as HTMLInputElement).checked = v));
-    };
-    btnGroup.appendChild(btn);
-  });
-  secHdr.appendChild(btnGroup);
-  boneSection.appendChild(secHdr);
-
-  const searchInput = document.createElement("input");
-  searchInput.type = "text";
-  searchInput.className = "bone-search";
-  searchInput.dataset.testid = "bone-search";
-  searchInput.placeholder = "🔍 过滤骨骼…";
-  searchInput.style.cssText = "width:100%;padding:3px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.8);font-size:11px;font-family:inherit;box-sizing:border-box;margin-bottom:4px;outline:none";
-
-  const depthMap = buildDepthMap(boneList);
-  const boneContainer = document.createElement("div");
-  boneContainer.className = "bone-list";
-  boneContainer.dataset.testid = "bone-list";
-  boneContainer.style.cssText = "max-height:300px;overflow-y:auto";
-
-  renderBoneRows(boneContainer, boneList, depthMap, keyOf, "", _model3d);
-  searchInput.oninput = (): void => renderBoneRows(boneContainer, boneList, depthMap, keyOf, searchInput.value, _model3d);
-  boneSection.appendChild(searchInput);
-  boneSection.appendChild(boneContainer);
-  return boneContainer;
-}
-
-/** 渲染单骨骼行（过滤关键词 · 深度缩进 · 单骨骼 checkbox 显隐） */
-function renderBoneRows(
-  boneContainer: HTMLDivElement,
-  boneList: Array<{ id: string; name: string; parentId?: string | null }>,
-  depthMap: Record<string, number>,
-  keyOf: (b: { id: string; groupId?: string }) => string,
-  filter: string,
-  _model3d: PanelHandle,
-): void {
-  boneContainer.innerHTML = "";
-  for (const b of boneList) {
-    if (filter && !b.name.toLowerCase().includes(filter.toLowerCase())) continue;
-    const depth = depthMap[b.id] || 0;
-    const label = document.createElement("label");
-    label.style.cssText = "display:flex;align-items:center;gap:6px;padding:2px 0;cursor:pointer;font-size:11px";
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = true;
-    cb.style.cssText = "accent-color:var(--accent,#7c83ff);width:12px;height:12px;flex-shrink:0";
-    cb.dataset.boneId = keyOf(b);
-    // 单骨骼显隐：toggleBone 取反并同步勾选态
-    cb.onchange = (): void => {
-      _model3d?.toggleBone(keyOf(b));
-    };
-    label.appendChild(cb);
-    const span = document.createElement("span");
-    span.textContent = b.name;
-    span.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
-    span.style.marginLeft = depth * 12 + "px";
-    label.appendChild(span);
-    boneContainer.appendChild(label);
-  }
-}
-
-/** 骨骼详情框（copy 事件在此绑定；握手 _boneDetailEl 供外部改写文本） */
-function buildBoneDetail(panel: HTMLDivElement, _model3d: PanelHandle): HTMLElement {
-  const boneDetail = document.createElement("div");
-  boneDetail.className = "bone-detail";
-  boneDetail.dataset.testid = "bone-detail";
-  boneDetail.style.cssText = "margin-top:6px;border-radius:3px;font-size:10px;color:rgba(255,255,255,0.7);line-height:1.5;display:none;font-family:inherit";
-  const boneDetailText = document.createElement("div");
-  boneDetailText.className = "bone-detail-text";
-  boneDetailText.dataset.testid = "bone-detail-text";
-  boneDetailText.style.cssText = "padding:4px 6px;background:rgba(255,255,255,0.05);border-radius:3px 3px 0 0;white-space:pre;max-height:100px;overflow-y:auto";
-  const boneDetailCopy = document.createElement("button");
-  boneDetailCopy.className = "bone-detail-copy";
-  boneDetailCopy.dataset.testid = "bone-detail-copy";
-  boneDetailCopy.textContent = "📋 " + t("common.copy");
-  boneDetailCopy.style.cssText = "font-size:10px;padding:1px 6px;border:none;background:rgba(124,131,255,0.3);color:#fff;cursor:pointer;border-radius:0 0 3px 3px;width:100%;font-family:inherit";
-  boneDetailCopy.onclick = function (): void {
-    const txt = boneDetailText.textContent || "";
-    navigator.clipboard.writeText(txt)
-      .then(() => {
-        boneDetailCopy.textContent = "✅ " + t("preview.copied");
-        setTimeout(() => { boneDetailCopy.textContent = "📋 " + t("common.copy"); }, 1500);
-      })
-      .catch(() => { boneDetailCopy.textContent = "📋 " + t("common.copy"); });
-  };
-  boneDetail.appendChild(boneDetailText);
-  boneDetail.appendChild(boneDetailCopy);
-  panel.appendChild(boneDetail);
-  _model3d._boneDetailEl = boneDetailText;
-  return boneDetailText;
-}
+// fillBoneSection / renderBoneRows / buildBoneDetail 已随 fill3DPanel 内嵌骨骼移除而删除。
+// 骨骼列表/详情只走 id:"bones" 独立菜单项（makeBonePanelRenderer），与 MMD/VRM/FBX 对齐。

@@ -57,7 +57,7 @@ export function buildToggleRow(
   eyeBtn.className = "pv-btn";
   const savedState = safeGet("ysm_showBoneLabels") !== "false";
   let _labelsOn = savedState;
-  eyeBtn.innerHTML = _labelsOn ? `👁 ${t("preview.boneLabels")}` : `👁‍🗨 ${t("preview.boneLabels")}`;
+  eyeBtn.innerHTML = _labelsOn ? `👁 ${t("preview.field.boneNames")}` : `👁‍🗨 ${t("preview.field.boneNames")}`;
   eyeBtn.title = "切换骨骼名称显示";
   const eyeHint = document.createElement("span");
   eyeHint.className = "pv-hint";
@@ -73,7 +73,7 @@ export function buildToggleRow(
     getLabelsOn: () => _labelsOn,
     setLabelsOn: (v: boolean) => {
       _labelsOn = v;
-      eyeBtn.innerHTML = _labelsOn ? `👁 ${t("preview.boneLabels")}` : `👁‍🗨 ${t("preview.boneLabels")}`;
+      eyeBtn.innerHTML = _labelsOn ? `👁 ${t("preview.field.boneNames")}` : `👁‍🗨 ${t("preview.field.boneNames")}`;
       eyeHint.textContent = _labelsOn ? t("preview.on") : t("preview.off");
     },
   };
@@ -88,11 +88,10 @@ export function buildStatsCard(
   modelPath: string,
   _decodedBy: string,
   ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
-  scale?: { height?: number; width?: number },
 ): void {
   const card = document.createElement("div");
   card.className = "pv-card";
-  card.innerHTML = statsCardHTML(model, modelPath, _decodedBy, scale);
+  card.innerHTML = statsCardHTML(model, modelPath);
   const authors: Array<{ avatarUrl?: string | null; name?: string; role?: string; bilibili?: string }> =
     model._authors || [];
   if (authors.length > 0) {
@@ -139,11 +138,11 @@ export function buildBoneExportRow(
   boneRow.className = "pv-toggle-row";
   const boneBtn = document.createElement("button");
   boneBtn.className = "pv-btn";
-  boneBtn.textContent = "📋 " + t("preview.exportBones");
+  boneBtn.textContent = "📋 " + t("preview.action.exportBoneNames");
   boneBtn.title = "导出骨骼名称为文本文件";
   const boneHint = document.createElement("span");
   boneHint.className = "pv-hint";
-  boneHint.textContent = `${model.boneCount} ${t("preview.bones")}`;
+  boneHint.textContent = `${model.boneCount} ${t("preview.section.bones")}`;
   boneBtn.onclick = (): void => {
     const lines = buildBoneNamesText(modelPath, model.boneCount ?? 0, model.bones || []);
     const blob = new Blob([lines.join("\n")], { type: "text/plain" });

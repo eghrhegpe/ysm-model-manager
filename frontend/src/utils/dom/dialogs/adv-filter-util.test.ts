@@ -52,7 +52,7 @@ describe("validateAdvFilter", () => {
 
   it("骨骼 min>max → 报错", () => {
     expect(validateAdvFilter({ ...base, minBones: 9, maxBones: 3 })).toBe(
-      "advFilter.minGtMaxBones",
+      "advFilter.validation.minGtMaxBones",
     );
   });
 

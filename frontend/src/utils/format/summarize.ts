@@ -156,6 +156,7 @@ export function summaryCardHTML(
   summary: YsmSummary | null | undefined,
   header: YSMHeader | null | undefined,
   basename?: string,
+  decodedBy?: string,
 ): string {
   if (!summary && !header) {
     return `<div class="content" id="preview-content">
@@ -179,7 +180,6 @@ export function summaryCardHTML(
   // 摘要卡保留唯一性——作者信息不重复出现。WASM 解码失败（统计卡不渲染）时
   // 骨架 tab 会显示加载失败态，作者缺失属该降级路径的可接受损失。
   const stats = summary?.stats || {};
-  const preview = summary?.preview || {};
 
   // 动画分组（内部标识符只显示计数，有中文名的显示标签）
   // 2026-08-28：标题带有效项计数（如「其他动画（7）」）——资源行「贴图/模型/动画」已删
@@ -234,14 +234,17 @@ export function summaryCardHTML(
       : `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:var(--fs-xs);background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">🔒 ${t("format.paid")}</span>`
     : "";
 
+  // 解码器徽标（从 header 或 enriched 来源获取 decodedBy，挂标题行右侧）
+  const badgeHtml = decodedBy
+    ? `<span class="ysm-badge">${esc(decodedBy)}</span>`
+    : "";
+
   return `<div class="content" id="preview-content">
-<h3>${esc(name)}${freeBadge}</h3>
+<h3>${esc(name)}${freeBadge}${badgeHtml}</h3>
 
 ${tips ? `<div style="font-size:11px;color:var(--txt);margin-bottom:10px;line-height:1.6">${tips}</div>` : ""}
 
 <div class="md-row"><span class="md-label">${t("format.license")}</span><span class="md-value">${esc(licenseType) || t("format.unlabeled")}</span></div>
-
-${preview.heightScale || preview.widthScale ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">📐 ${t("format.scale")}</span><span class="md-value">${(preview.heightScale ?? 1).toFixed(2)} × ${(preview.widthScale || 1).toFixed(2)}</span></div>` : ""}
 
 ${animGroupHtml ? `<div class="md-divider"></div>${animGroupHtml}` : ""}
 ${configHtml ? `<div class="md-divider"></div>${configHtml}` : ""}

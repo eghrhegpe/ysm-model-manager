@@ -115,7 +115,7 @@ describe("buildToggleRow", () => {
     const container = document.createElement("div");
     const { eyeBtn, eyeHint, getLabelsOn } = buildToggleRow(container);
     expect(getLabelsOn()).toBe(true);
-    expect(eyeBtn.textContent).toContain("preview.boneLabels");
+    expect(eyeBtn.textContent).toContain("preview.field.boneNames");
     expect(eyeHint.textContent).toBe("preview.on");
     expect(container.contains(eyeBtn)).toBe(true);
   });
@@ -133,7 +133,7 @@ describe("buildToggleRow", () => {
     const { setLabelsOn, getLabelsOn, eyeBtn, eyeHint } = buildToggleRow(container);
     setLabelsOn(false);
     expect(getLabelsOn()).toBe(false);
-    expect(eyeBtn.textContent).toContain("preview.boneLabels");
+    expect(eyeBtn.textContent).toContain("preview.field.boneNames");
     expect(eyeHint.textContent).toBe("preview.off");
     setLabelsOn(true);
     expect(getLabelsOn()).toBe(true);
@@ -230,7 +230,7 @@ describe("buildBoneExportRow", () => {
     );
     const btn = container.querySelector("button") as HTMLButtonElement;
     expect(btn).toBeTruthy();
-    expect(btn.textContent).toContain("preview.exportBones");
+    expect(btn.textContent).toContain("preview.action.exportBoneNames");
     const hint = container.querySelector(".pv-hint") as HTMLElement;
     expect(hint.textContent).toContain("1");
   });

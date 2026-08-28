@@ -46,7 +46,7 @@ export function modelDetailHTML(meta: ModelDetailMeta | null): string {
 <div class="md-row"><span class="md-label">${t("preview.authorLabel")}</span><span class="md-value">${esc(meta.author || "-")}</span></div>
 <div class="md-row"><span class="md-label">${t("preview.versionLabel")}</span><span class="md-value">${esc(meta.version || "-")}</span></div>
 <div class="md-divider"></div>
-<div class="md-row"><span class="md-label">🦴 ${t("preview.bonesLabel")}</span><span class="md-value">${meta.bones || 0}</span></div>
+<div class="md-row"><span class="md-label">🦴 ${t("preview.label.bones")}</span><span class="md-value">${meta.bones || 0}</span></div>
 <div class="md-row"><span class="md-label">🖼️ ${t("preview.texturesLabel")}</span><span class="md-value">${meta.textures || 0}</span></div>
 <div class="md-row"><span class="md-label">🎬 ${t("preview.animationsLabel")}</span><span class="md-value">${meta.animations || 0}</span></div>
 <div class="md-row"><span class="md-label">🔺 ${t("preview.verticesLabel")}</span><span class="md-value">${(meta.vertices || 0).toLocaleString()}</span></div>
@@ -69,12 +69,10 @@ export interface StatsCardModel {
   subModels?: Array<{ name: string; texSlot?: number }>;
 }
 
-/** 模型统计卡片（scale 可选：来自 summary.preview，模型级缩放，缺省不渲染缩放行） */
+/** 模型统计卡片 */
 export function statsCardHTML(
   model: StatsCardModel,
   modelPath: string,
-  decodedBy: string,
-  scale?: { height?: number; width?: number },
 ): string {
   const isYsm = /\.ysm$/i.test(modelPath);
   const isJson = /\.json$/i.test(modelPath);
@@ -85,7 +83,7 @@ export function statsCardHTML(
       : modelPath.endsWith(".zip")
         ? ".zip"
         : "其他";
-  const badge = decodedBy ? `<span class="ysm-badge">${decodedBy}</span>` : "";
+  // 解码器徽标已移至 summaryCardHTML 标题行（2026-08-30），此处不再渲染
   // 纹理分类统计（区分角色纹理 vs 独立模型组件纹理，2026-08-28）：
   // 统计卡「含 N 张额外纹理」口径不再把独立模型纹理混进角色纹理
   const cats = model.textureCategories || [];
@@ -95,7 +93,7 @@ export function statsCardHTML(
     roleTexCount > 0 || compTexCount > 0
       ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">🎭 ${t("preview.roleTexCount", { role: roleTexCount, comp: compTexCount })}</div>`
       : "";
-  // L0 清单角色区块（每角色：纹理标题 + 尺寸 + 缩放）
+  // L0 清单角色区块（每角色：纹理标题 + 尺寸）
   const subs = model.subModels || [];
   const subRows =
     subs.length > 0
@@ -106,7 +104,6 @@ export function statsCardHTML(
         <span style="font-weight:600;color:var(--txt)">🎭 ${esc(s.name)}</span>
         <span style="color:var(--muted)">${esc(texName)}</span>
         ${model.texWidth && model.texHeight ? `<span style="color:var(--muted)">${model.texWidth}×${model.texHeight}px</span>` : ""}
-        ${scale?.height ? `<span style="color:var(--muted)">缩放 ${scale.height.toFixed(2)} × ${(scale.width || 1).toFixed(2)}</span>` : ""}
       </div>`;
           })
           .join("")
@@ -126,11 +123,10 @@ export function statsCardHTML(
     texMapHtml = `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">📎 ${t("preview.extraTextures", { extra: extraCount, total: texCount })}</div>`;
   }
   return `
-${badge ? `<div class="pv-card-title">${badge}</div>` : ""}
 <div class="pv-card-section pv-section-blue">
   <div class="pv-card-section-label">🔗 ${t("preview.modelStructure")}</div>
   <div class="pv-card-row">
-    <span class="pv-stat-label">${t("preview.skeletonLabel")}</span><span class="pv-card-val">${model.boneCount}</span> ${t("preview.unit")}<br>
+    <span class="pv-stat-label">${t("preview.label.skeleton")}</span><span class="pv-card-val">${model.boneCount}</span> ${t("preview.unit")}<br>
     <span class="pv-stat-label">${t("preview.cubesLabel")}</span><span class="pv-card-val">${model.cubeCount}</span> ${t("preview.unit")}
   </div>
 </div>
@@ -143,10 +139,6 @@ ${subBlock}
   ${catSummary}
   ${texMapHtml}
 </div>
-${scale?.height ? `<div class="pv-card-section pv-section-orange">
-  <div class="pv-card-section-label">📐 ${t("preview.scaleLabel")}</div>
-  <div class="pv-card-row"><span class="pv-card-val">${scale.height.toFixed(2)} × ${(scale.width || 1).toFixed(2)}</span></div>
-</div>` : ""}
 <div class="pv-card-section pv-section-orange">
   <div class="pv-card-section-label">💾 ${t("preview.fileInfo")}</div>
   <div class="pv-card-row">${fmt}</div>

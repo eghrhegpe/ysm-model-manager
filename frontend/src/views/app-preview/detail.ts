@@ -18,6 +18,7 @@ import { describeVersionRange } from "../../utils/format/pack-format.ts";
 import { t } from "../../core/i18n/t.ts";
 import { createPack3D } from "./pack-3d.ts";
 import { GenGuard } from "./gen-guard.ts";
+import { cacheGet } from "./cache.ts";
 
 /** 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） */
 export const detailGen = new GenGuard();
@@ -32,7 +33,7 @@ export async function showModelDetail(
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <div class="pv-tab-row">
     <button class="pv-tab ${savedTab === "detail" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="detail">📄 ${t("preview.detailTab")}</button>
-    <button class="pv-tab ${savedTab === "skeleton" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="skeleton">🏗️ ${t("preview.skeletonTab")}</button>
+    <button class="pv-tab ${savedTab === "skeleton" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="skeleton">🏗️ ${t("preview.tab.skeleton")}</button>
   </div>
   <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>📄 ${t("preview.modelInfo")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsing")}...</div></div></div>
   <div id="preview-skeleton"${savedTab !== "skeleton" ? ' style="display:none"' : ""}></div>
@@ -109,7 +110,8 @@ export async function showModelDetail(
     let cardHTML = "";
     const showSummary = hasRealSummary ? summary : enriched;
     if (showSummary || header) {
-      cardHTML = summaryCardHTML(showSummary, header, basename || "");
+      const decodedBy = cacheGet(path)?._decodedBy || "";
+      cardHTML = summaryCardHTML(showSummary, header, basename || "", decodedBy);
     } else {
       throw new Error(t("preview.cannotParse"));
     }
@@ -126,15 +128,7 @@ export async function showModelDetail(
 
     // 加载 2D 模型预览（骨架 tab 只留骨骼线条图；统计卡经 statsContainer 挂详情卡）
     // 进详情本身即触发 loadModel2D 异步解码，统计卡数据（骨骼/立方体/纹理/头像）无需额外请求
-    // scale 来自 summary.preview（模型级缩放），统计卡按角色区块显示缩放行（2026-08-28）
-    const scale =
-      showSummary?.preview?.heightScale || showSummary?.preview?.widthScale
-        ? {
-            height: showSummary?.preview?.heightScale,
-            width: showSummary?.preview?.widthScale,
-          }
-        : undefined;
-    loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton"), statsDiv, scale).catch(
+    loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton"), statsDiv).catch(
       (e) => console.warn("[preview] loadModel2D:", e),
     );
   } catch (err) {

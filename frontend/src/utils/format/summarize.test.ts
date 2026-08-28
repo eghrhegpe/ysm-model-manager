@@ -86,12 +86,14 @@ describe("summaryCardHTML 完整摘要", () => {
     expect(html).toContain("未标注");
   });
 
-  it("缩放值格式化为两位小数", () => {
+  it("缩放行已删除（无操作价值，2026-08-30）", () => {
     const html = summaryCardHTML(
       { name: "x", preview: { heightScale: 1.5, widthScale: 2 } },
       {},
     );
-    expect(html).toContain("1.50 × 2.00");
+    // 缩放行（📐 缩放）从摘要卡移除，与统计卡口径一致
+    expect(html).not.toContain("1.50 × 2.00");
+    expect(html).not.toContain("format.scale");
   });
 
   it("只提供 texWidth 无 texHeight → 无 undefined 泄漏（纹理行已移统计卡，P4 语义保留）", () => {
@@ -238,5 +240,26 @@ describe("summaryCardHTML 安全与折叠", () => {
     expect(html).toContain("+2"); // 10 - 8
     expect(html).not.toContain("item8");
     expect(html).not.toContain("item9");
+  });
+
+  it("decodedBy 非空 → badge 渲染在 h3 标题行右侧", () => {
+    const html = summaryCardHTML(
+      { name: "酒狐", stats: { textures: 1 } },
+      {},
+      undefined,
+      "📦 Go 原生解析",
+    );
+    expect(html).toContain("酒狐");
+    expect(html).toContain('class="ysm-badge">📦 Go 原生解析');
+    // badge 紧跟 h3，不在统计卡里
+    const h3Idx = html.indexOf("<h3>");
+    const badgeIdx = html.indexOf('class="ysm-badge"');
+    expect(badgeIdx).toBeGreaterThan(h3Idx);
+    expect(html.substring(h3Idx, badgeIdx + 50)).toContain("</h3>");
+  });
+
+  it("decodedBy 空 → h3 行不含 badge", () => {
+    const html = summaryCardHTML({ name: "酒狐" }, {}, undefined, "");
+    expect(html).not.toContain("ysm-badge");
   });
 });

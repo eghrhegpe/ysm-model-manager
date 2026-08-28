@@ -126,7 +126,7 @@ function dpRenderDetail(
   if (subs.length > 1 && sel) {
     rows.push(`<div class="dp-hint">🧸 ${t("preview.selectedCharacter")}: <b>${esc(sel.name)}</b></div>`);
   }
-  if (modelInfo?.boneCount !== undefined) rows.push(`<div class="dp-hint">🦴 ${t("preview.boneCount")}: ${modelInfo.boneCount}</div>`);
+  if (modelInfo?.boneCount !== undefined) rows.push(`<div class="dp-hint">🦴 ${t("preview.metric.boneCount")}: ${modelInfo.boneCount}</div>`);
   if (modelInfo?.cubeCount !== undefined) rows.push(`<div class="dp-hint">📦 ${t("preview.cubeCount")}: ${modelInfo.cubeCount}</div>`);
   if (modelInfo?.textureCount !== undefined && modelInfo.textureCount > 0) {
     rows.push(`<div class="dp-hint">🎨 ${t("preview.textureCount")}: ${modelInfo.textureCount}</div>`);

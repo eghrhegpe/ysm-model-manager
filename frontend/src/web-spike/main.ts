@@ -61,7 +61,7 @@ async function handle(file: File): Promise<void> {
     append(t("web.decodeSuccess", { n: files.length }));
     append(`<table><tr><th>${t("web.metric")}</th><th>${t("web.value")}</th></tr>
       <tr><td>${t("web.outputFileCount")}</td><td>${files.length}</td></tr>
-      <tr><td>${t("web.boneCount")}</td><td>${bones}</td></tr>
+      <tr><td>${t("web.metric.boneCount")}</td><td>${bones}</td></tr>
       <tr><td>${t("web.cubeCount")}</td><td>${cubes}</td></tr>
       <tr><td>${t("web.textureCount")}</td><td>${texCount}</td></tr></table>`);
     append("\n" + t("web.fileListTitle"));

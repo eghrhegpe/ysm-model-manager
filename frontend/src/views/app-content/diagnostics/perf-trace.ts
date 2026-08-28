@@ -50,7 +50,7 @@ export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
   // 资产清单
   const a = latest.assets || {};
   const assetRows = [
-    a.bones ? `<span class="perf-asset-item">🦴 ${t("diagnostics.assetsBones")}: ${a.bones}</span>` : "",
+    a.bones ? `<span class="perf-asset-item">🦴 ${t("diagnostics.metric.assetsBones")}: ${a.bones}</span>` : "",
     a.cubes ? `<span class="perf-asset-item">🧊 ${t("diagnostics.assetsCubes")}: ${a.cubes}</span>` : "",
     a.materials ? `<span class="perf-asset-item">🎨 ${t("diagnostics.assetsMats")}: ${a.materials}</span>` : "",
     a.textures ? `<span class="perf-asset-item">🖼 ${t("diagnostics.assetsTex")}: ${a.textures}</span>` : "",

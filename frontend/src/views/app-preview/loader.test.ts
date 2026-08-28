@@ -288,7 +288,7 @@ describe("loadModelData — authors 填补", () => {
 
     expect(ExtractSummaryMock).toHaveBeenCalledWith("/m/f.ysm");
     expect(goModel._authors).toEqual([
-      { name: "作者X", role: "模型", avatarUrl: null, avatarPath: "" },
+      { name: "作者X", role: "模型", avatarUrl: null, avatarPath: "", bilibili: "" },
     ]);
   });
 

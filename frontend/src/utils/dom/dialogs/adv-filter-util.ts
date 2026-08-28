@@ -35,7 +35,7 @@ export function validateAdvFilter(data: AdvFilterValue): string | null {
     data.maxBones != null &&
     data.minBones > data.maxBones
   ) {
-    return "advFilter.minGtMaxBones";
+    return "advFilter.validation.minGtMaxBones";
   }
   if (
     data.minCubes != null &&

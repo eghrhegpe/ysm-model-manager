@@ -44,29 +44,28 @@ describe("modelDetailHTML", () => {
 describe("statsCardHTML", () => {
   const base = { boneCount: 4, cubeCount: 10, texWidth: 64, texHeight: 64 };
 
-  it(".ysm 路径 → .ysm 格式 + 徽标", () => {
-    const html = statsCardHTML(base, "/repo/a.ysm", "YSMParser");
+  it(".ysm 路径 → .ysm 格式（徽标已移至 summaryCardHTML 标题行）", () => {
+    const html = statsCardHTML(base, "/repo/a.ysm");
     expect(html).toContain(".ysm");
-    expect(html).toContain('class="ysm-badge">YSMParser');
+    expect(html).not.toContain("ysm-badge"); // badge 已移到 summaryCardHTML
     expect(html).toContain("64 × 64");
   });
 
   it(".json 路径 → 解压目录说明", () => {
-    const html = statsCardHTML(base, "/repo/a.json", "");
+    const html = statsCardHTML(base, "/repo/a.json");
     expect(html).toContain(".json (解压目录)");
   });
 
   it(".zip 路径 → .zip；其他格式 → 其他", () => {
-    expect(statsCardHTML(base, "/repo/a.zip", "")).toContain(".zip");
-    // .7z 不再支持（网页版），预览不会遇到，显示「其他」
-    expect(statsCardHTML(base, "/repo/a.7z", "")).toContain("其他");
+    expect(statsCardHTML(base, "/repo/a.zip")).toContain(".zip");
+    // .7z 不再支持（网页版），预览不会遇到，显示「其他】
+    expect(statsCardHTML(base, "/repo/a.7z")).toContain("其他");
   });
 
   it("多纹理 → 额外纹理概要行", () => {
     const html = statsCardHTML(
       { ...base, textures: ["t1", "t2", "t3"] },
       "/repo/a.ysm",
-      "",
     );
     expect(html).toContain("含 2 张额外纹理（共 3 张）");
   });
@@ -79,12 +78,11 @@ describe("statsCardHTML", () => {
         textureCategories: ["player", "player", "projectile", "vehicle"],
       },
       "/repo/a.ysm",
-      "",
     );
     expect(html).toContain("角色纹理 2 张 · 独立模型 2 张");
   });
 
-  it("subModels → L0 清单角色区块（纹理标题 + 尺寸 + 缩放）", () => {
+  it("subModels → L0 清单角色区块（纹理标题 + 尺寸）", () => {
     const html = statsCardHTML(
       {
         ...base,
@@ -96,29 +94,28 @@ describe("statsCardHTML", () => {
         ],
       },
       "/repo/a.ysm",
-      "",
-      { height: 0.8, width: 0.8 },
     );
     expect(html).toContain("L0 清单角色（2）");
     expect(html).toContain("角色A");
     expect(html).toContain("main");
     expect(html).toContain("角色B");
     expect(html).toContain("arm");
-    expect(html).toContain("0.80 × 0.80");
+    // 缩放行已删除（无操作价值）
+    expect(html).not.toContain("0.80 × 0.80");
   });
 
-  it("无 scale → 不渲染缩放行", () => {
+  it("subModels → L0 清单角色区块正常渲染", () => {
     const html = statsCardHTML(
       { ...base, subModels: [{ name: "角色A", texSlot: 0 }] },
       "/repo/a.ysm",
-      "",
     );
     expect(html).not.toContain("0.80 × 0.80");
     expect(html).toContain("L0 清单角色（1）");
   });
 
-  it("无徽标（decodedBy 空）→ 不含 badge", () => {
-    const html = statsCardHTML(base, "/repo/a.ysm", "");
+  it("statsCardHTML 不再渲染 badge（已移至 summaryCardHTML）", () => {
+    const html = statsCardHTML(base, "/repo/a.ysm");
     expect(html).not.toContain("ysm-badge");
+    expect(html).not.toContain("pv-card-title");
   });
 });

@@ -61,7 +61,6 @@ export async function loadModel2D(
   modelPath: string,
   skelContainer: HTMLElement | null,
   statsContainer?: HTMLElement | null,
-  scale?: { height?: number; width?: number },
 ): Promise<void> {
   const content = skelContainer || ctx.root.getElementById("preview-content");
   if (!content) return;
@@ -122,9 +121,9 @@ export async function loadModel2D(
     // 统计卡（彩色分区 + 头像作者）渲染目标：详情卡传入 statsContainer 时挂详情卡
     // （方案 A：详情卡吸收设计），否则保持原状挂骨架区（兼容既有调用/测试）
     if (statsContainer) {
-      buildStatsCard(statsContainer, model, modelPath, _decodedBy, ctx, scale);
+      buildStatsCard(statsContainer, model, modelPath, _decodedBy, ctx);
     } else {
-      buildStatsCard(container, model, modelPath, _decodedBy, ctx, scale);
+      buildStatsCard(container, model, modelPath, _decodedBy, ctx);
     }
     buildBoneExportRow(container, model as BedrockGeometry & { boneCount?: number; bones?: Array<{ id: string; name: string; parentId?: string }> }, modelPath);
     let _is3D = false, _prefer3D = getPrefer3D(), _loading3D = false;

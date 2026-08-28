@@ -121,7 +121,9 @@ export function parseItem(block, id) {
     labelKey: field(/labelKey:\s*"([^"]+)"/),
     dockGroup: field(/dockGroup:\s*"([^"]+)"/),
     kind: field(/kind:\s*"([^"]+)"/),
-    hasRender: /(?:render|renderCustom):\s*\(/.test(block),
+    // [doc:adr-126-p4-b] children 是第三渲染通道（声明式节点，renderPreviewPanel children 分支渲染）。
+    // P4-B 系列把 model/shot 面板从 renderCustom 迁移到 children（纯数据节点）后，门禁须同步认识。
+    hasRender: /(?:render|renderCustom):\s*\(/.test(block) || /children:\s*(?:\[|[\w$.(])/.test(block),
     hasRun: /\brun:\s*\(/.test(block),
   };
 }

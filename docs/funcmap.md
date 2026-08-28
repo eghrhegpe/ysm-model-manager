@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 165 | 660 |
+| 前端·工具 | 165 | 661 |
 | frontend/views | 117 | 339 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **495** | **2100** |
+| **合计** | **495** | **2101** |
 
 ## Go·头像
 
@@ -1593,10 +1593,11 @@
 | `SHADOW_PRESETS()` | `frontend/src/utils/3d/caps/shadow-capability:49` | 预设（setPreset 套用到不同模型类别） |
 | `ShadowCapability()` | `frontend/src/utils/3d/caps/shadow-capability:171` | ============ ShadowCapability ============ |
 | `SkyParams()` | `frontend/src/utils/3d/caps/sky-capability:28` | — |
-| `DEFAULT_SKY_PARAMS()` | `frontend/src/utils/3d/caps/sky-capability:49` | — |
-| `SkyModelType()` | `frontend/src/utils/3d/caps/sky-capability:66` | 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） |
-| `MODEL_SKY_PRESETS()` | `frontend/src/utils/3d/caps/sky-capability:74` | 按模型类别的散射/曝光预设（ADR-073 #3）。 |
-| `SkyCapability()` | `frontend/src/utils/3d/caps/sky-capability:173` | — |
+| `DEFAULT_SKY_PARAMS()` | `frontend/src/utils/3d/caps/sky-capability:61` | — |
+| `SkyModelType()` | `frontend/src/utils/3d/caps/sky-capability:81` | 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） |
+| `MODEL_SKY_PRESETS()` | `frontend/src/utils/3d/caps/sky-capability:89` | 按模型类别的散射/曝光预设（ADR-073 #3）。 |
+| `injectSkySunScalePatch()` | `frontend/src/utils/3d/caps/sky-capability:124` | §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform， 把「天空底色 × 太阳强度」和「太阳盘白光强度」从硬编码改为 |
+| `SkyCapability()` | `frontend/src/utils/3d/caps/sky-capability:310` | — |
 | `disposeDebugGroup()` | `frontend/src/utils/3d/cleanup-helper:14` | 释放 debug 叠加层中的所有 Three.js 资源（geometry / material / texture）。 |
 | `disposeSceneMeshes()` | `frontend/src/utils/3d/cleanup-helper:40` | 遍历场景图释放所有 Mesh 的 geometry 和 material。 |
 | `eulerToQuaternion()` | `frontend/src/utils/3d/cube-mesh` | — |

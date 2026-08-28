@@ -44,6 +44,18 @@ export interface SkyParams {
   timeOfDay: number;
   /** ACES 曝光（天空正确显色所需，同时影响模型观感） */
   exposure: number;
+  /**
+   * §4 解耦：Preetham 模型中天空底色 Lin 被 `vSunE × 太阳强度` 强耦合，
+   * 正午 vSunE≈1000 会把整个天空散射炸白。此参数把 `vSunE` 缩放为 `vSunE × sunIntensityScale`，
+   * 让天空色（蓝/橙/紫渐变）与太阳绝对亮度解耦。合理范围 0.5~1.0，默认 0.75。
+   */
+  sunIntensityScale: number;
+  /**
+   * §4 解耦：Preetham 太阳盘本身是 `vSunE × 19000` 的白光炸弹，经过 Bloom 会染白屏幕。
+   * 此参数把 19000 缩放为 `19000 × sunDiscScale`，保留辨识度但压到不炸屏。
+   * 合理范围 0.2~1.0，默认 0.5。
+   */
+  sunDiscScale: number;
 }
 
 export const DEFAULT_SKY_PARAMS: SkyParams = {
@@ -60,6 +72,9 @@ export const DEFAULT_SKY_PARAMS: SkyParams = {
   environment: true,
   timeOfDay: 9,
   exposure: 0.5,
+  // §4 解耦：默认 0.75 / 0.5，正午蓝天从 1000² 压到 750²（削 44%），太阳盘砍半
+  sunIntensityScale: 0.75,
+  sunDiscScale: 0.5,
 };
 
 /** 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） */
@@ -74,18 +89,117 @@ export type SkyModelType = typeof RESOURCE_TYPES.YSM | "vrm" | "mmd" | "litemati
 export const MODEL_SKY_PRESETS: Record<string, Partial<SkyParams>> = {
   // §3 曝光治理：各预设 turbidity 按原比例整体下调，rayleigh 同步上调，
   // 让正午 Preetham 天空从"牛奶白"回归"通透蓝天"，同时保持预设间原有的差异梯度。
-  default: { turbidity: 7.5, rayleigh: 2.5, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5 },
+  // §4 解耦：全部预设统一携带 sunIntensityScale / sunDiscScale（0.75/0.5 默认），
+  // 后续目视验证后可按模型微调。
+  default: { turbidity: 7.5, rayleigh: 2.5, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5, sunIntensityScale: 0.75, sunDiscScale: 0.5 },
   // VRM PBR 角色：原 turbidity=7 已偏低，再微调至 6；rayleigh 轻微上浮，蓝天当背景更衬肤色
-  vrm: { turbidity: 6, rayleigh: 2.3, mieCoefficient: 0.004, mieDirectionalG: 0.85, exposure: 0.55 },
-  // MMD Toon：原 9→7.5（去雾霾感）；rayleigh 1.8→2.3（补回蓝色层次）
-  mmd: { turbidity: 7.5, rayleigh: 2.3, mieCoefficient: 0.006, mieDirectionalG: 0.8, exposure: 0.55 },
+  vrm: { turbidity: 6, rayleigh: 2.3, mieCoefficient: 0.004, mieDirectionalG: 0.85, exposure: 0.55, sunIntensityScale: 0.78, sunDiscScale: 0.55 },
+  // MMD Toon：原 9→7.5（去雾霾感）；rayleigh 1.8→2.3（补回蓝色层次）；sunDiscScale 稍低（Toon 背景易白）
+  mmd: { turbidity: 7.5, rayleigh: 2.3, mieCoefficient: 0.006, mieDirectionalG: 0.8, exposure: 0.55, sunIntensityScale: 0.72, sunDiscScale: 0.45 },
   // MMD 场景：原 14 极雾霾→10 正常云絮天；rayleigh 翻倍从 1.2→2.0，避免背景死白
-  "mmd-scene": { turbidity: 10, rayleigh: 2.0, mieCoefficient: 0.008, mieDirectionalG: 0.75, exposure: 0.55 },
+  "mmd-scene": { turbidity: 10, rayleigh: 2.0, mieCoefficient: 0.008, mieDirectionalG: 0.75, exposure: 0.55, sunIntensityScale: 0.7, sunDiscScale: 0.45 },
   // YSM 方块：原 11→8.5；哑光方块需要更强的蓝白对比
-  ysm: { turbidity: 8.5, rayleigh: 2.6, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.6 },
+  ysm: { turbidity: 8.5, rayleigh: 2.6, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.6, sunIntensityScale: 0.75, sunDiscScale: 0.5 },
   // Litematic 体素：同 default，10→7.5
-  litematic: { turbidity: 7.5, rayleigh: 2.5, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5 },
+  litematic: { turbidity: 7.5, rayleigh: 2.5, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5, sunIntensityScale: 0.75, sunDiscScale: 0.5 },
 };
+
+/**
+ * §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform，
+ * 把「天空底色 × 太阳强度」和「太阳盘白光强度」从硬编码改为可配置尺度。
+ * ——不替换 shader 主体（仍为 Preetham 物理模型），仅追加 uniforms 声明 + 两处乘法。
+ * 🔗 ADR-073：仍为 Preetham，未自写三色渐变，合规。
+ *
+ * 🔎 需要 patch 的两处硬编码（来自 three/examples/jsm/objects/Sky.js SkyShader.fragmentShader）：
+ *   ① L261:  `pow( vSunE * ((betaRTheta...) * (1.0-Fex) ), vec3(1.5))` → 把 vSunE 前乘 sunIntensityScale
+ *        →  `pow( (vSunE * sunIntensityScale) * ((betaRTheta...) * (1.0-Fex) ), vec3(1.5))`
+ *   ② L272:  `(vSunE * 19000.0 * Fex) * sundisc;` → 在 19000 后插入 sunDiscScale
+ *        →  `(vSunE * 19000.0 * sunDiscScale * Fex) * sundisc;`
+ *
+ * ⚡ 幂等：重复调用不会重复注入。未注入过时才做 shader 替换并置 needsUpdate=true。
+ *
+ * @param defaults 默认值通常是 DEFAULT_SKY_PARAMS.sunIntensityScale / sunDiscScale，
+ *                 之后通过 uniforms.value 再同步运行时参数。
+ */
+export function injectSkySunScalePatch(
+  mat: THREE.ShaderMaterial,
+  defaults: { sunIntensityScale: number; sunDiscScale: number } = {
+    sunIntensityScale: DEFAULT_SKY_PARAMS.sunIntensityScale,
+    sunDiscScale: DEFAULT_SKY_PARAMS.sunDiscScale,
+  },
+): void {
+  // 幂等守卫：检查 uniforms 里是否已经有注入标记字段
+  if (mat.uniforms.sunIntensityScale !== undefined && mat.uniforms.sunDiscScale !== undefined) {
+    // 已存在 → 只确保默认值同步到 uniforms（不改 shader，避免重编译）
+    mat.uniforms.sunIntensityScale.value = defaults.sunIntensityScale;
+    mat.uniforms.sunDiscScale.value = defaults.sunDiscScale;
+    return;
+  }
+
+  // ① 追加 uniforms（对象层先注册，即使后续 shader 替换失败也不 crash 运行时）
+  mat.uniforms.sunIntensityScale = { value: defaults.sunIntensityScale };
+  mat.uniforms.sunDiscScale = { value: defaults.sunDiscScale };
+
+  // ② patch fragmentShader：按"声明必须先于使用"的 GLSL 顺序三层独立幂等替换。
+  //    每一层都做 contains 判断，避免重复替换。如果声明层未匹配，就跳过使用层（防未声明编译报错）
+  let patched = false;
+
+  // 2a) uniform 声明：在 "uniform float showSunDisc;\nuniform float time;" 之后追加成两行新声明
+  const hasDecl = /uniform\s+float\s+sunIntensityScale\s*;/.test(mat.fragmentShader);
+  if (!hasDecl) {
+    const before = mat.fragmentShader;
+    const uniformDeclInjection = "\nuniform float sunIntensityScale;\nuniform float sunDiscScale;\n";
+    mat.fragmentShader = mat.fragmentShader.replace(
+      /(uniform\s+float\s+showSunDisc\s*;\s*\n\s*uniform\s+float\s+time\s*;)/,
+      "$1" + uniformDeclInjection,
+    );
+    if (mat.fragmentShader !== before) patched = true;
+    else {
+      // regex 未匹配（Three 未来版本可能调整 uniforms 顺序），做全局兜底：在最后一个 uniform 声明后加
+      // 取 "// Cloud noise functions" 之前最后一个 `uniform ...;` 的行尾追加
+      const fallbackIdx = mat.fragmentShader.indexOf("float hash( vec2 p )");
+      if (fallbackIdx > 0) {
+        mat.fragmentShader =
+          mat.fragmentShader.slice(0, fallbackIdx) +
+          "uniform float sunIntensityScale;\nuniform float sunDiscScale;\n" +
+          mat.fragmentShader.slice(fallbackIdx);
+        patched = true;
+      } else {
+        console.warn(
+          "[sky-capability] injectSkySunScalePatch 无法注入声明，跳过 shader patch。",
+          "请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
+        );
+        // 声明失败 → 不再继续使用层的替换，防 GLSL 编译错
+        return;
+      }
+    }
+  }
+
+  // 2b) 解耦点 ①：pow( vSunE * (  →  pow( (vSunE * sunIntensityScale) * (
+  const hasVSuScale = /vSunE\s*\*\s*sunIntensityScale/.test(mat.fragmentShader);
+  if (!hasVSuScale) {
+    const before = mat.fragmentShader;
+    mat.fragmentShader = mat.fragmentShader.replace(
+      "pow( vSunE * (",
+      "pow( (vSunE * sunIntensityScale) * (",
+    );
+    if (mat.fragmentShader !== before) patched = true;
+  }
+
+  // 2c) 解耦点 ②：19000.0 * Fex → 19000.0 * sunDiscScale * Fex
+  const hasDiscScale = /19000\.0\s*\*\s*sunDiscScale/.test(mat.fragmentShader);
+  if (!hasDiscScale) {
+    const before = mat.fragmentShader;
+    mat.fragmentShader = mat.fragmentShader.replace(
+      "19000.0 * Fex",
+      "19000.0 * sunDiscScale * Fex",
+    );
+    if (mat.fragmentShader !== before) patched = true;
+  }
+
+  // ③ 有改动才触发重编译
+  if (patched) mat.needsUpdate = true;
+}
 
 function skcBuildTime(cap: SkyCapability): MenuControlDef[] {
   return [
@@ -133,6 +247,29 @@ function skcBuildScattering(cap: SkyCapability): MenuControlDef[] {
       group: "preview.skyGroupAdvanced",
       getValue: () => cap.isEnvironmentEnabled(),
       setValue: (v) => cap.setEnvironmentEnabled(v as boolean),
+    },
+    // §4 解耦：两个太阳耦合尺度作为高级滑块（默认在 0.75/0.5 已做过优化，高级用户可再调）
+    {
+      id: "sky-sun-intensity",
+      kind: "slider",
+      labelKey: "preview.skySunIntensityScale",
+      fallback: "天空×太阳耦合",
+      hintKey: "preview.skySunIntensityScaleHint",
+      group: "preview.skyGroupAdvanced",
+      slider: { min: 0.3, max: 1.2, step: 0.05 },
+      getValue: () => cap.getSunIntensityScale(),
+      setValue: (v) => cap.setSunIntensityScale(v as number),
+    },
+    {
+      id: "sky-sun-disc",
+      kind: "slider",
+      labelKey: "preview.skySunDiscScale",
+      fallback: "太阳盘强度",
+      hintKey: "preview.skySunDiscScaleHint",
+      group: "preview.skyGroupAdvanced",
+      slider: { min: 0.0, max: 1.2, step: 0.05 },
+      getValue: () => cap.getSunDiscScale(),
+      setValue: (v) => cap.setSunDiscScale(v as number),
     },
   ];
 }
@@ -210,6 +347,12 @@ export class SkyCapability implements SceneCapability {
     // Sky 是 Mesh + ShaderMaterial，纯数据对象，构造函数不依赖 WebGL
     this.sky = this.createSky();
     this.envSky = this.createSky();
+    // §4 解耦：只给主天空 this.sky 注入 sun scale 补丁，envSky（用于 IBL）保持原生 Preetham —
+    // 这样 IBL 环境贴图的色调基准与物体反射保持物理正确，而主天空不再被 1000² 的太阳强度炸白。
+    injectSkySunScalePatch(this.sky.material as THREE.ShaderMaterial, {
+      sunIntensityScale: this.params.sunIntensityScale,
+      sunDiscScale: this.params.sunDiscScale,
+    });
     this.envScene = new THREE.Scene();
     this.envScene.add(this.envSky);
     // God Rays 初始化（默认禁用）
@@ -266,6 +409,14 @@ export class SkyCapability implements SceneCapability {
     const theta = THREE.MathUtils.degToRad(this.params.azimuth);
     const sun = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
     u["sunPosition"].value.copy(sun);
+    // §4 解耦：只有已注入过 sun scale patch 的天空（即主天空 this.sky）才同步这两个新 uniform；
+    // envSky 未注入 patch，uniforms 上没有这两个字段，跳过即可（保持原生 Preetham 物理模型）。
+    if (u["sunIntensityScale"] !== undefined) {
+      u["sunIntensityScale"].value = this.params.sunIntensityScale;
+    }
+    if (u["sunDiscScale"] !== undefined) {
+      u["sunDiscScale"].value = this.params.sunDiscScale;
+    }
   }
 
   private regenerateEnvironment(): void {
@@ -331,6 +482,32 @@ export class SkyCapability implements SceneCapability {
     this.envSky.material.uniforms["cloudCoverage"].value = this.params.cloudCoverage;
     if (regenerate && this.enabled && this.params.environment) this.regenerateEnvironment();
   }
+
+  /** §4 解耦：设置太阳强度对天空底色的耦合尺度（0.5~1.0，默认 0.75）；
+   *  1.0 = 原生 Preetham 强度（正午最白），越低天空越不被太阳光绑架。 */
+  setSunIntensityScale(v: number): void {
+    const clamped = Math.max(0, Math.min(1.5, v));
+    this.params.sunIntensityScale = clamped;
+    const u = this.sky.material.uniforms;
+    if (u["sunIntensityScale"] !== undefined) u["sunIntensityScale"].value = clamped;
+    // 环境贴图 envSky 不受这个参数影响（保持原生 Preetham，PBR 反射更真实）。
+  }
+
+  /** §4 解耦：设置太阳盘白光的尺度（0.2~1.0，默认 0.5）；
+   *  1.0 = 原生 19000× 白光炸弹，越低太阳盘越暗、Bloom 越不炸屏。 */
+  setSunDiscScale(v: number): void {
+    const clamped = Math.max(0, Math.min(1.5, v));
+    this.params.sunDiscScale = clamped;
+    const u = this.sky.material.uniforms;
+    if (u["sunDiscScale"] !== undefined) u["sunDiscScale"].value = clamped;
+  }
+
+  /** 获取解耦尺度当前值（用于 UI getter / 测试断言） */
+  getSunIntensityScale(): number { return this.params.sunIntensityScale; }
+  getSunDiscScale(): number { return this.params.sunDiscScale; }
+
+  /** 返回完整 params 浅拷贝（UI 面板 / 测试断言用，对齐其它 capability 口径） */
+  getParams(): SkyParams { return { ...this.params }; }
 
   // ── 昼夜循环动画（2026-08-20）──
   // requestAnimationFrame 循环递增 timeOfDay，让用户预览全天光照变化。
@@ -660,6 +837,9 @@ export class SkyCapability implements SceneCapability {
       environment: this.params.environment,
       enabled: this.enabled,
       godRaysEnabled: this.godRaysEnabled,
+      // §4 解耦：持久化用户调整的太阳耦合尺度
+      sunIntensityScale: this.params.sunIntensityScale,
+      sunDiscScale: this.params.sunDiscScale,
     });
   }
 
@@ -672,6 +852,9 @@ export class SkyCapability implements SceneCapability {
     if (typeof state.cloudCoverage === "number") this.params.cloudCoverage = state.cloudCoverage;
     if (typeof state.environment === "boolean") this.params.environment = state.environment;
     if (typeof state.godRaysEnabled === "boolean") this.godRaysEnabled = state.godRaysEnabled;
+    // §4 解耦：恢复用户调过的耦合尺度（如果有值）；无值保留 DEFAULT 兜底
+    if (typeof state.sunIntensityScale === "number") this.params.sunIntensityScale = state.sunIntensityScale;
+    if (typeof state.sunDiscScale === "number") this.params.sunDiscScale = state.sunDiscScale;
   }
 
   private detach(): void {

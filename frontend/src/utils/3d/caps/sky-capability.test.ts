@@ -8,10 +8,12 @@
 // - 但 apply() 仍需要 WebGL（Sky 3D 对象 + PMREMGenerator），保留 spyOn 拦截。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
+import { Sky } from "three/addons/objects/Sky.js";
 import {
   SkyCapability,
   DEFAULT_SKY_PARAMS,
   MODEL_SKY_PRESETS,
+  injectSkySunScalePatch,
 } from "./sky-capability.ts";
 
 // 拦截 apply（内部依赖 Sky 3D 对象 + PMREMGenerator，node 不可用）
@@ -336,5 +338,127 @@ describe("SkyCapability — Sunset Tint Overlay", () => {
     cap.setTime(18);
     const mesh = (cap as unknown as { sunsetTintMesh: THREE.Mesh | null }).sunsetTintMesh;
     expect(mesh?.parent).toBeNull();
+  });
+});
+
+// ============ §4 解耦：sunIntensityScale / sunDiscScale 从 Preetham 里把天空色与太阳亮度解耦 ============
+describe("SkyCapability — SkyParams 太阳耦合解耦参数", () => {
+  it("DEFAULT_SKY_PARAMS 包含解耦参数且默认值合理", () => {
+    expect(DEFAULT_SKY_PARAMS.sunIntensityScale).toBeDefined();
+    expect(DEFAULT_SKY_PARAMS.sunDiscScale).toBeDefined();
+    // 正午天空底色耦合从 1000^2 压到 750^2 ≈ 削 44%
+    expect(DEFAULT_SKY_PARAMS.sunIntensityScale).toBeGreaterThan(0.5);
+    expect(DEFAULT_SKY_PARAMS.sunIntensityScale).toBeLessThan(1.0);
+    // 太阳盘 19M 亮度砍半，保留辨识度但不炸屏
+    expect(DEFAULT_SKY_PARAMS.sunDiscScale).toBeGreaterThan(0.2);
+    expect(DEFAULT_SKY_PARAMS.sunDiscScale).toBeLessThanOrEqual(1.0);
+  });
+
+  it("MODEL_SKY_PRESETS 全部 6 类预设均携带解耦参数（统一默认，不丢失差异）", () => {
+    const all = ["default", "vrm", "mmd", "mmd-scene", "ysm", "litematic"];
+    for (const k of all) {
+      const preset = MODEL_SKY_PRESETS[k];
+      // 必须存在（预设 k 已定义）
+      expect(preset).toBeDefined();
+      // 每个预设显式携带 sunIntensityScale / sunDiscScale（显式意图，不依赖 DEFAULT 兜底 undefined）
+      expect(typeof preset!.sunIntensityScale).toBe("number");
+      expect(typeof preset!.sunDiscScale).toBe("number");
+    }
+  });
+
+  it("构造函数 params 覆盖解耦参数且通过 getter 可读", () => {
+    const cap = newCap({ params: { sunIntensityScale: 0.6, sunDiscScale: 0.35 } });
+    const params = cap.getParams();
+    expect(params.sunIntensityScale).toBeCloseTo(0.6, 4);
+    expect(params.sunDiscScale).toBeCloseTo(0.35, 4);
+  });
+
+  it("saveState/loadState 正确持久化解耦参数（不归因于「时间」或「预设」，用户可调）", () => {
+    const cap1 = newCap({ params: { sunIntensityScale: 0.62, sunDiscScale: 0.42 } });
+    cap1.saveState();
+    const cap2 = newCap();
+    cap2.loadState();
+    const params = cap2.getParams();
+    expect(params.sunIntensityScale).toBeCloseTo(0.62, 4);
+    expect(params.sunDiscScale).toBeCloseTo(0.42, 4);
+  });
+});
+
+// ============ injectSkySunScalePatch：给官方 Preetham Sky shader 追加解耦 uniforms ============
+describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patch，不越 ADR-073 红线）", () => {
+
+  it("注入后 uniforms 新增 sunIntensityScale / sunDiscScale 两项且默认值匹配 DEFAULT", () => {
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    injectSkySunScalePatch(mat);
+    expect(mat.uniforms.sunIntensityScale).toBeDefined();
+    expect(mat.uniforms.sunDiscScale).toBeDefined();
+    expect(mat.uniforms.sunIntensityScale.value).toBeCloseTo(DEFAULT_SKY_PARAMS.sunIntensityScale, 3);
+    expect(mat.uniforms.sunDiscScale.value).toBeCloseTo(DEFAULT_SKY_PARAMS.sunDiscScale, 3);
+  });
+
+  it("注入后 fragment shader 声明了两个 uniform（防止 GLSL 编译未声明报错）", () => {
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    // patch 前没有
+    expect(mat.fragmentShader.includes("sunIntensityScale")).toBe(false);
+    injectSkySunScalePatch(mat);
+    // patch 后声明存在
+    expect(mat.fragmentShader).toMatch(/uniform\s+float\s+sunIntensityScale\s*;/);
+    expect(mat.fragmentShader).toMatch(/uniform\s+float\s+sunDiscScale\s*;/);
+  });
+
+  it("解耦点 ①：天空底色 Lin 的 vSunE 被 sunIntensityScale 缩放（切断 vSunE² 对天空色的绑架）", () => {
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    injectSkySunScalePatch(mat);
+    // 原 shader L261: pow( vSunE * (
+    // 替换后:    pow( (vSunE * sunIntensityScale) * (
+    expect(mat.fragmentShader).toMatch(/vSunE\s*\*\s*sunIntensityScale/);
+    // 不丢原有的物理模型内容：(1.0 - Fex) 和 ^1.5 依然存在
+    expect(mat.fragmentShader).toMatch(/1\.0\s*-\s*Fex/);
+    expect(mat.fragmentShader).toMatch(/vec3\(\s*1\.5\s*\)/);
+  });
+
+  it("解耦点 ②：太阳盘白光被 sunDiscScale 缩放（切断 19M 白光炸弹）", () => {
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    injectSkySunScalePatch(mat);
+    // 原 shader L272: ( vSunE * 19000.0 * Fex ) * sundisc;
+    // 替换后:    ( vSunE * 19000.0 * sunDiscScale * Fex ) * sundisc;
+    expect(mat.fragmentShader).toMatch(/19000\.0\s*\*\s*sunDiscScale\s*\*\s*Fex/);
+  });
+
+  it("幂等：重复调用不会重复注入声明 / 重复乘法（避免 19000.0 * sunDiscScale * sunDiscScale 叠乘）", () => {
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    injectSkySunScalePatch(mat);
+    const shaderOnce = mat.fragmentShader;
+    const uniformCountOnce = Object.keys(mat.uniforms).length;
+    injectSkySunScalePatch(mat);
+    injectSkySunScalePatch(mat);
+    // shader 字符串完全一致（无重复注入）
+    expect(mat.fragmentShader).toBe(shaderOnce);
+    // uniforms 数量不变（没有重复新建 uniform）
+    expect(Object.keys(mat.uniforms).length).toBe(uniformCountOnce);
+    // 只出现一次 19000.0 * sunDiscScale
+    const matches = mat.fragmentShader.match(/19000\.0\s*\*\s*sunDiscScale/g) ?? [];
+    expect(matches.length).toBe(1);
+  });
+
+  it("setter 更新值只改 uniforms.value，不重编译 shader（needsUpdate=false）", () => {
+    const sky = new Sky();
+    const mat = sky.material as THREE.ShaderMaterial;
+    injectSkySunScalePatch(mat);
+    const shaderBefore = mat.fragmentShader;
+    mat.needsUpdate = false;
+    // 手动改 uniforms.value （将来 applySky 里同步时也是这么做）
+    mat.uniforms.sunIntensityScale.value = 0.55;
+    mat.uniforms.sunDiscScale.value = 0.28;
+    expect(mat.uniforms.sunIntensityScale.value).toBeCloseTo(0.55, 4);
+    expect(mat.uniforms.sunDiscScale.value).toBeCloseTo(0.28, 4);
+    // shader 不变，无重编译（Three ShaderMaterial 初始 needsUpdate 为 undefined，不应被置 true 触发重编）
+    expect(mat.fragmentShader).toBe(shaderBefore);
+    expect(mat.needsUpdate).toBeFalsy();
   });
 });

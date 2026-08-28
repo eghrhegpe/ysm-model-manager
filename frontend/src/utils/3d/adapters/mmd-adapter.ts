@@ -49,7 +49,7 @@ import { createAutoDanceController } from "../perception/autodance.ts"; // 语�
 import { buildLipMorphIndices } from "../perception/lipsync.ts"; // 多 morph index 提取
 import { createFootIKController } from "../mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK）
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
-import { buildPerceptionControls, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
+import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import { getCustomAnimPath, filterAnimFiles } from "./mmd-anim-library.ts";
 // import { createBlinkController } from "../perception/blink.ts"; // 待 three-mmd 暴露 morph 权重 API 后接入
@@ -1364,7 +1364,7 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       fallback: "感知",
       kind: "panel",
       dockGroup: "motion",
-      renderCustom:(list) => buildPerceptionControls(list, pc.state, pc.caps),
+      children: perceptionNodes(pc.state, pc.caps),
     });
   }
   return items;

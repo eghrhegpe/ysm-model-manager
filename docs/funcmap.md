@@ -1408,9 +1408,9 @@
 | `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
 | `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:24` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
 | `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:47` | 工厂：适配器持 zipPath（容器路径），buildPath 即 entry path（虚拟文件夹下的文件路径） |
-| `PerceptionState()` | `frontend/src/utils/3d/adapters/perception-controls:7` | 感知层状态：各模块开关（adapter build 时创建，update 循环读取，面板 UI 写入） |
-| `PerceptionCapability()` | `frontend/src/utils/3d/adapters/perception-controls:16` | 可用感知模块描述（由 adapter 按实际能力填写） |
-| `buildPerceptionControls()` | `frontend/src/utils/3d/adapters/perception-controls:37` | 在感知面板内渲染开关行（对齐 camera-controls.ts 范式）。 |
+| `PerceptionState()` | `frontend/src/utils/3d/adapters/perception-controls:10` | 感知层状态：各模块开关（adapter build 时创建，update 循环读取，面板 UI 写入） |
+| `PerceptionCapability()` | `frontend/src/utils/3d/adapters/perception-controls:19` | 可用感知模块描述（由 adapter 按实际能力填写） |
+| `perceptionNodes()` | `frontend/src/utils/3d/adapters/perception-controls:36` | 感知面板声明式节点（纯数据工厂零 DOM）：toggle kind 节点， control.get/set 闭包读写 adapter 内 perception state（非状态层 |
 | `PostprocessingLike()` | `frontend/src/utils/3d/adapters/postprocessing:8` | 后处理对外最小契约（PostprocessingCapability 实现此接口） |
 | `LoadingProgressMode()` | `frontend/src/utils/3d/adapters/preview-loading:14` | 加载进度条模式：indeterminate（循环动画）| determinate（固定 id + transition，供外部更新宽度） |
 | `renderLoadingState()` | `frontend/src/utils/3d/adapters/preview-loading:17` | 3D 预览加载态：loadingEl 渲染图标 + 标签 + 进度条 |
@@ -1431,11 +1431,11 @@
 | `PreviewActionMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:32` | 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） |
 | `PreviewMenuNodeKind()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:38` | 节点种类：folder 可嵌套；其余为叶节点（与 MikuMikuAR MenuKind 对齐，加 ysm 的 panel 语义） |
 | `PreviewControlSpec()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:53` | 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） |
-| `PreviewMenuNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:76` | 声明式菜单节点：菜单即数据。与 PreviewMenuItemDef 的映射见 preview-menu-defs.ts 顶部注释 |
-| `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:119` | 类型守卫：节点是否为 folder（可下钻） |
-| `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:124` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
-| `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:137` | 递归收集全部节点 id（供 id 唯一性契约测试） |
-| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu-render:265` | — |
+| `PreviewMenuNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:78` | 声明式菜单节点：菜单即数据。与 PreviewMenuItemDef 的映射见 preview-menu-defs.ts 顶部注释 |
+| `isPreviewFolderNode()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:121` | 类型守卫：节点是否为 folder（可下钻） |
+| `collectPreviewLeafNodes()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:126` | 递归收集全部叶子节点（folder 展开；供测试/审计遍历） |
+| `collectPreviewNodeIds()` | `frontend/src/utils/3d/adapters/preview-menu-node-types:139` | 递归收集全部节点 id（供 id 唯一性契约测试） |
+| `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu-render:298` | — |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu-roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
 | `modelDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:38` | — |
 | `motionDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:97` | — |
@@ -1507,10 +1507,10 @@
 | `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:158` | — |
 | `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:165` | — |
 | `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:45` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
-| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:486` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
-| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:516` | 工厂：构造统一 PreviewAdapter（shared 模式） |
-| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:535` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:573` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
+| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:493` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
+| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:523` | 工厂：构造统一 PreviewAdapter（shared 模式） |
+| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:542` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:580` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
 | `ALPHA_F_VISIBLE()` | `frontend/src/utils/3d/alpha-index:5` | — |
 | `ALPHA_F_HOLE()` | `frontend/src/utils/3d/alpha-index:6` | — |
 | `ALPHA_F_TRANSLUCENT()` | `frontend/src/utils/3d/alpha-index:7` | — |
@@ -2186,9 +2186,9 @@
 | `loadModelData()` | `frontend/src/views/app-preview/loader:29` | 加载模型几何数据 + 纹理（优先路径，阻塞渲染） 统一路径：缓存 → WASM 解码（仅 .ysm）→ Go AnalyzeBedrockModel 兜底 作者/头像延迟到 fil |
 | `fillAuthorsAsync()` | `frontend/src/views/app-preview/loader:232` | 异步补全作者/头像信息（不阻塞首帧渲染） 在几何渲染完成后调用，后台补齐作者名 + 头像 URL |
 | `MaidOpenOptions()` | `frontend/src/views/app-preview/maid-3d:44` | — |
-| `cleanupMaid3D()` | `frontend/src/views/app-preview/maid-3d:108` | 关闭活跃女仆 3D 预览 |
-| `invalidateMaidPreview()` | `frontend/src/views/app-preview/maid-3d:113` | 作废在途女仆 3D 加载 |
-| `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:327` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
+| `cleanupMaid3D()` | `frontend/src/views/app-preview/maid-3d:109` | 关闭活跃女仆 3D 预览 |
+| `invalidateMaidPreview()` | `frontend/src/views/app-preview/maid-3d:114` | 作废在途女仆 3D 加载 |
+| `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:328` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
 | `createMmd3D()` | `frontend/src/views/app-preview/mmd-3d:30` | 打开 MMD 3D 预览（.pmx/.pmd 直引 @moeru/three-mmd）；siblings 提供同类型候选以渲染 topBar 切换下拉（ADR-066 §5.6） |
 | `cleanupMmd3D()` | `frontend/src/views/app-preview/mmd-3d:35` | 清理 MMD 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `appendMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:40` | 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） |
@@ -2276,8 +2276,8 @@
 | `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:21` | — |
 | `YsmOpenOptions()` | `frontend/src/views/app-preview/ysm-3d:45` | — |
 | `createYsm3D()` | `frontend/src/views/app-preview/ysm-3d:58` | 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。 |
-| `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:111` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |
-| `invalidateYsmPreview()` | `frontend/src/views/app-preview/ysm-3d:116` | 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） |
+| `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:112` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |
+| `invalidateYsmPreview()` | `frontend/src/views/app-preview/ysm-3d:117` | 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） |
 | `CameraControlBridge()` | `frontend/src/views/app-preview/ysm-controls` | — |
 | `YsmModel()` | `frontend/src/views/app-preview/ysm-controls:22` | 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） |
 | `YsmContentHandle()` | `frontend/src/views/app-preview/ysm-controls:31` | YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） |

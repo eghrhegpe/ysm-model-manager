@@ -92,7 +92,8 @@ export async function createYsm3D(
           // [doc:adr-126-p5-收口] 订阅链闭合：ui.activeComponent 变更（无论 select 控件交互
           // 还是程序化 setStateValue）→ showModelGroup 真实切换 3D 场景组件。
           // 副作用不再挂在 select.onChange（只覆盖 UI 事件），改走状态层订阅——单一消费点。
-          subscribeSettings((changed) => {
+          // [审计 #1] 返回 off 给 adapter dispose 调用——防订阅者泄漏（listeners 只增不减）
+          return subscribeSettings((changed) => {
             if (changed === "ui.activeComponent") {
               const idx = getStateValue("ui.activeComponent") as number;
               ctx.handle.showModelGroup(idx);

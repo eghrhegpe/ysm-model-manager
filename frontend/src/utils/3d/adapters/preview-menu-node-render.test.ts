@@ -65,6 +65,31 @@ describe("renderMenu 新 kind", () => {
     expect(clicked).toEqual(["current"]);
   });
 
+  it("toggle: 渲染 label + 开关行，点击翻转 control.set", () => {
+    let on = false;
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "perception-breath",
+        kind: "toggle",
+        labelKey: "preview.perceptionBreath",
+        fallback: "呼吸",
+        control: { get: () => on, set: (v: unknown) => { on = Boolean(v); } },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="preview-perception-breath"]') as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(row.textContent).toContain("呼吸");
+    const btn = row.querySelector("button") as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    // 点击翻转（control.get 当前值取反 → control.set）
+    btn.click();
+    expect(on).toBe(true);
+    btn.click();
+    expect(on).toBe(false);
+  });
+
   it("row: 渲染动态列表行", () => {
     const nodes: PreviewMenuNode[] = [
       { id: "tex-0", kind: "row", labelKey: "skin.png", value: "64x64" },

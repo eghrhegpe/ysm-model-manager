@@ -20,7 +20,7 @@ import { recordLoadTrace } from "../load-trace.ts";
 import { screenshotFromRenderer } from "../screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { renderLoadingState } from "./preview-loading.ts";
 import { b64ToBytes } from "../base64.ts";
-import { buildPerceptionControls, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
+import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { BoneTree } from "../bone-tools.ts";
@@ -649,7 +649,7 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       fallback: "感知",
       kind: "panel",
       dockGroup: "motion",
-      renderCustom:(list) => buildPerceptionControls(list, o.perception!.state, o.perception!.caps),
+      children: perceptionNodes(o.perception!.state, o.perception!.caps),
     });
   }
   return items;

@@ -30,7 +30,7 @@ import { sceneRegistry } from "./scene-registry.ts";
 import type { BedrockGeometry } from "../../../views/app-preview/geometry.ts";
 import type { PreviewScene, PreviewBuildCtx, PreviewAdapter } from "./mount-preview-core.ts";
 import { makeBonePanelRenderer } from "./vrm-bone-ui.ts"; // ADR-074 S2: 通用骨骼面板
-import { buildPerceptionControls, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
+import { perceptionNodes, type PerceptionState, type PerceptionCapability } from "./perception-controls.ts";
 import { registerModelRoot, unregisterModelRoot } from "../frustum-cull.ts";
 import { createYsmAnimPlayer, type YsmAnimPlayer } from "../ysm-animation-player.ts";
 import { parseBedrockAnimationJSON, ysmAnimClipLabels, type AnimationClip } from "../../animation/animation.ts";
@@ -64,7 +64,9 @@ export interface YsmAdapterOptions {
     shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];
     /** [doc:adr-126-p5-c] 受控 schema 注册钩子：build 拿到 controlsCtx 后调用，
      *  视图层在此注册 buildYsmModelSchema（key="ysm-model"）——model 面板内容走 schema-registry */
-    registerModelSchema?: (ctx: YsmControlsContext) => void;
+    /** 返回取消订阅函数（off）：视图层订阅状态层变更（如 ui.activeComponent → showModelGroup）
+     *  后由 adapter dispose 调用，防 listeners Set 只增不减的订阅泄漏（审计 #1 真 bug） */
+    registerModelSchema?: (ctx: YsmControlsContext) => (() => void) | undefined;
   };
   /** 同目录文件枚举（.animation.json 扫描用；对齐 VRM listAllFilePaths 注入模式） */
   listAllFilePaths?: (dir: string) => Promise<string[] | null>;
@@ -156,6 +158,8 @@ interface MdYsMenuDebug {
   menuItems: PreviewMenuNode[];
   debugState: { debugMode: "normal" | "pivot" | "bone"; debugGroup: THREE.Group | null };
   onFKeyDown: (e: KeyboardEvent) => void;
+  /** 状态层订阅退订函数（registerModelSchema 返回）；dispose 调用防订阅泄漏（审计 #1） */
+  unsubscribeState?: () => void;
 }
 
 /** 阶段①：头部数据加载 + buildYsmObject 挂场景 */
@@ -363,7 +367,7 @@ function mdYsBuildMenuAndDebug(
   // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容由视图层注册的 builder 驱动
   // （R1 禁 utils→views，注册钩子由视图层注入实现）。所有调用者（ysm-3d / maid-3d）都
   // 经 registerModelSchema 注册；缺失时不注册 → schemaId 无 fallback（契约禁双通道），面板空渲染。
-  opts.panels?.registerModelSchema?.(controlsCtx);
+  const unsubscribeState = opts.panels?.registerModelSchema?.(controlsCtx);
   const menuItems = ysmMenuItems({
     controlsCtx,
     panels: opts.panels,
@@ -421,7 +425,7 @@ function mdYsBuildMenuAndDebug(
     });
   } catch { /* perf trace 失败不影响渲染 */ }
 
-  return { controlsCtx, perceptionState, menuItems, debugState, onFKeyDown };
+  return { controlsCtx, perceptionState, menuItems, debugState, onFKeyDown, unsubscribeState };
 }
 
 /** 阶段⑤：组装 PreviewScene 返回句柄（dispose/reset/update 等） */
@@ -454,6 +458,9 @@ function mdYsMakeSceneHandle(
       // [doc:adr-126-p5] dispose 注销 schema：防跨会话污染（陈旧 builder 闭包持有已销毁场景
       // 的 model/texArr/handle，不清理会泄漏 WebGL 纹理集 + maid 等后续预览渲染旧模型数据）
       unregisterSchema(YSM_MODEL_SCHEMA_ID);
+      // [审计 #1] 状态层订阅退订：listeners Set 只增不减会累积陈旧订阅者
+      //（闭包持有已 dispose 场景的 handle）——registerModelSchema 返回的 off 在此调用
+      menu.unsubscribeState?.();
       // 会话态组件选择重置（-1 = All）：防跨预览陈旧下标（P5-A review P2）
       resetActiveComponent();
     },
@@ -644,7 +651,7 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       fallback: "感知",
       kind: "panel",
       dockGroup: "motion",
-      renderCustom:(list) => buildPerceptionControls(list, o.perception!.state, o.perception!.caps),
+      children: perceptionNodes(o.perception!.state, o.perception!.caps),
     });
   }
   return items;

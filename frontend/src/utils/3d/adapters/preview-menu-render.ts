@@ -209,7 +209,7 @@ function rmAppendSelect(
   const sel = document.createElement("select");
   sel.className = "setting-select";
   sel.dataset.testid = "preview-" + node.id;
-  const cur = spec.get ? spec.get(snapshot[spec.bind]) : snapshot[spec.bind];
+  const cur = spec.get ? spec.get(snapshot[spec.bind!]) : snapshot[spec.bind!];
   for (const opt of spec.options) {
     const o = document.createElement("option");
     o.value = opt.value;
@@ -234,7 +234,40 @@ function rmAppendSelect(
   container.appendChild(wrap);
 }
 
-/** [子函数 5/6] divider + sectionTitle：两个轻量节点共用 tiny 子函数 */
+/** [子函数 5.5/6] toggle：label + 开关行（[doc:adr-126-p5] A 层控件分支——
+ *  ADR-125 §3.3 预留的「确有面板需要时再补」场景，perception 面板首用）。
+ *  control.get/set 闭包读写（perception state 非状态层路径，不走 bind） */
+function rmAppendToggle(container: HTMLElement, node: PreviewMenuNode): void {
+  const spec = node.control;
+  const wrap = document.createElement("div");
+  wrap.className = "slide-item";
+  wrap.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px";
+  wrap.dataset.testid = "preview-" + node.id;
+  const lb = document.createElement("span");
+  lb.className = "slide-label";
+  lb.style.cssText = "flex:1;font-size:12px;color:rgba(255,255,255,0.85)";
+  lb.textContent = rmLabel(node);
+  wrap.appendChild(lb);
+  const btn = document.createElement("button");
+  btn.style.cssText = "width:36px;height:20px;border-radius:10px;border:none;cursor:pointer;position:relative;transition:background .2s";
+  const knob = document.createElement("span");
+  knob.style.cssText = "position:absolute;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s";
+  const apply = (v: boolean): void => {
+    btn.style.background = v ? "var(--accent,#7c83ff)" : "rgba(255,255,255,0.2)";
+    knob.style.left = v ? "18px" : "2px";
+  };
+  apply(Boolean(spec?.get?.(undefined)));
+  btn.appendChild(knob);
+  btn.onclick = (): void => {
+    const next = !Boolean(spec?.get?.(undefined));
+    spec?.set?.(next);
+    apply(next);
+  };
+  wrap.appendChild(btn);
+  container.appendChild(wrap);
+}
+
+/** [子函数 6/6] divider + sectionTitle：两个轻量节点共用 tiny 子函数 */
 function rmAppendDecor(container: HTMLElement, node: PreviewMenuNode): void {
   if (node.kind === "divider") {
     const hr = document.createElement("div");
@@ -278,6 +311,8 @@ export function renderMenu(container: HTMLElement, nodes: PreviewMenuNode[], dep
       rmAppendDynamicRow(container, node, deps.actionCtx);
     } else if (node.kind === "select") {
       rmAppendSelect(container, node, snapshot, deps.menu);
+    } else if (node.kind === "toggle") {
+      rmAppendToggle(container, node);
     } else if (node.kind === "divider" || node.kind === "sectionTitle") {
       rmAppendDecor(container, node);
     } else {

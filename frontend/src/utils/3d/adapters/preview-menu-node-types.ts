@@ -51,7 +51,9 @@ export type PreviewMenuNodeKind =
 
 /** 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效） */
 export interface PreviewControlSpec {
-  bind: PreviewStatePath;
+  /** 声明式路径（走状态层读写；感知类闭包控件如 perception toggle 无状态层路径——
+   *  用 get/set 直接读写，bind 可省略） */
+  bind?: PreviewStatePath;
   min?: number;
   max?: number;
   step?: number;

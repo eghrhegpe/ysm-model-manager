@@ -90,7 +90,8 @@ async function createMaid3D(
               snap,
             ),
           );
-          subscribeSettings((changed) => {
+          // [审计 #1] 返回 off 给 adapter dispose 调用——防订阅者泄漏（与 ysm-3d 同构）
+          return subscribeSettings((changed) => {
             if (changed === "ui.activeComponent") {
               ctx.handle.showModelGroup(getStateValue("ui.activeComponent") as number);
             }

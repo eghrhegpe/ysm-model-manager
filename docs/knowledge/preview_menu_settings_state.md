@@ -26,7 +26,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 
 | 块 | 内容 | 落点 |
 |----|------|------|
-| P1 | `settingsState` 横切状态层 | `frontend/src/utils/3d/state/settings-state.ts` |
+| P1 | `settingsState` 横切状态层（[ADR-126 P4-A] 已升格为 `previewState`） | `frontend/src/utils/3d/state/preview-state.ts` |
 | P2 | 单渲染器 + 自动 cap 聚合 | `preview-menu-settings.ts` 产出 `MenuControlDef[]` 喂 `renderCapControls` |
 | P3 | visible 规则定死 | `MenuControlDef.visible` / `collectVisiblePredicates()` |
 
@@ -65,7 +65,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 getStateValue(path)                      // 读
 setStateValue(path, v, { notify?: false }) // 写（滑块高频传 notify:false）
 isPathAvailable(path)                    // cap 派生项在 cap 缺席时 false
-settingsSnapshot()                       // 全量快照，供 visibleWhen 纯函数消费
+previewSnapshot()                        // 全量快照，供 visibleWhen 纯函数消费（[ADR-126 P4-A] 升格名）
 subscribeSettings(listener) → off        // 订阅变更
 resetSettingsListeners()                 // 测试隔离
 toStatePath(path)                        // 编译期契约守卫
@@ -97,6 +97,6 @@ collectVisiblePredicates(controls)       // 纯函数，枚举带 visible 的控
 ## 相关
 
 - ADR-125（本决策）、ADR-085（S2 补全对象）、ADR-076（菜单壳）、ADR-093（声明式 Schema 类型来源）
-- 契约测试：`frontend/src/utils/3d/state/settings-state.test.ts`（20 例）
+- 契约测试：`frontend/src/utils/3d/state/preview-state.test.ts`（20 例，[ADR-126 P4-A] 随迁改名）
 - 历史病征：`f0fa3e23`（cap 已自报却手写 29 行重复 toggle）、`05fe24b7`（无状态层可订阅 → 手工 pub/sub）、`7fdfdcc7`（visible 谓词散落无清单）
 - 遗留：`auto-import.mjs` 对 ground/water 的 `private notify()` 报 2 条误判（`05fe24b7` 引入，非本卡范围）

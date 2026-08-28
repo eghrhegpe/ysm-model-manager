@@ -974,7 +974,7 @@
 | `packPngToThumbnail()` | `frontend/src/backend/pack-meta:132` | pack.png 字节 → data URL base64 缩略图（10MB 限额；空/超限 → ""，对齐 go 截断探测置空） |
 | `parseShaderpackLang()` | `frontend/src/backend/pack-meta:142` | lang/en_US.lang 字节 → {name, entries} JSON 字符串（对齐 go ReadShaderpackLang： &gt;1MB → 空结果；key=val |
 | `PlatformMode()` | `frontend/src/backend/platform-web:18` | — |
-| `resolvePlatformMode()` | `frontend/src/backend/platform-web:24` | 当前平台三态判定（同步）。 |
+| `resolvePlatformMode()` | `frontend/src/backend/platform-web:24` | 当前平台三态判定（同步）。Tier 0/1 复用 resolveWebMode 语义（tier 语义与 platform.ts 同源）， Tier 2 追加 Android 桥探测 |
 | `ANDROID_UNAVAILABLE()` | `frontend/src/backend/platform-web:33` | Android 桌面专属/无意义 binding 黑名单（蓝本 = go-android-platform-guard.md）。原驻 capabilities.ts，P3 归位 b |
 | `canBinding()` | `frontend/src/backend/platform-web:46` | 能力矩阵（对齐 MikuMikuAR ADR-176 capabilities 矩阵范式）： desktop — Go 桥全量可用；web — adapter has 探测（未实现 |
 | `isViewerPlatform()` | `frontend/src/backend/platform-web:63` | 查看器平台谓词 = 非桌面（web ∪ android）。parity 契约②的规范实现： `isViewerPlatform() === (resolvePlatformMode |
@@ -982,7 +982,7 @@
 | `getAndroidBridge()` | `frontend/src/backend/platform:24` | Tier 2 原语：返回 Android Java 桥（桌面端为 null），类型安全断言（无 as any） |
 | `readDeclaredBackend()` | `frontend/src/backend/platform:30` | 读取入口 HTML 声明的适配器身份（'go' | 'browser'），未声明返回 undefined |
 | `isWebEntryMode()` | `frontend/src/backend/platform:36` | Tier 1：旧 web 短路标记 / vite MODE=web 构建 |
-| `resolveWebMode()` | `frontend/src/backend/platform:45` | 同步判定：当前是否应路由到 browser adapter（网页版） |
+| `resolveWebMode()` | `frontend/src/backend/platform:45` | 同步判定：当前是否应路由到 browser adapter（网页版）——薄委派，复用三态源（tier 语义由 platform-web 统一承载） |
 | `Events()` | `frontend/src/backend/runtime:47` | — |
 | `Window()` | `frontend/src/backend/runtime:51` | — |
 | `AppBindings()` | `frontend/src/backend/types:6` | Wails v3 生成的 App 绑定模块形状（bindings 目录下 app.ts） |

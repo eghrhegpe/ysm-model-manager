@@ -41,8 +41,11 @@ export function isWebEntryMode(): boolean {
   return import.meta.env.MODE === "web";
 }
 
-/** 同步判定：当前是否应路由到 browser adapter（网页版） */
+/** 同步判定：当前是否应路由到 browser adapter（网页版）——薄委派，复用三态源（tier 语义由 platform-web 统一承载） */
 export function resolveWebMode(): boolean {
+  // 复用 Tier 0/1 语义：`mode === "web"` 与此谓词由 platform-parity 契约钉等价
+  // 避免在两个文件中各自拼装 `readDeclaredBackend()/isWebEntryMode()` 双实现漂移
+  // 不可直接 import platform-web（会成环：platform-web → platform），保留直读原语
   const declared = readDeclaredBackend();
   if (declared !== undefined) return declared === "browser";
   return isWebEntryMode();

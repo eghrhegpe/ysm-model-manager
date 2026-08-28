@@ -18,8 +18,8 @@ import { browserAdapter } from "./browser-adapter.ts";
 export type PlatformMode = "desktop" | "web" | "android";
 
 /**
- * 当前平台三态判定（同步）。
- * Tier 0 声明 'browser' 恒 web；声明 'go' 恒 desktop（即使 WebView 内残留 wails 桥）。
+ * 当前平台三态判定（同步）。Tier 0/1 复用 resolveWebMode 语义（tier 语义与 platform.ts 同源），
+ * Tier 2 追加 Android 桥探测。
  */
 export function resolvePlatformMode(): PlatformMode {
   const declared = readDeclaredBackend();

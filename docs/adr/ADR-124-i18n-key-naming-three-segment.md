@@ -178,7 +178,7 @@ node scripts/i18n-key-naming.mjs --check newKey1 newKey2  # 检查指定键
 | 旧键 | 新键 |
 |------|------|
 | `preview.skeletonTab` | `preview.tab.skeleton` |
-| `preview.skeletonLabel` | `preview.label.skeleton` |
+| `preview.skeletonLabel` | `preview.label.boneCount`（~~label.skeleton~~ 后续细化改名，见 [i18n_accuracy](../knowledge/i18n_accuracy.md)） |
 | `preview.bones` | `preview.section.bones` |
 | `preview.bonesLabel` | `preview.label.bones` |
 | `preview.boneLabels` | `preview.field.boneNames` |

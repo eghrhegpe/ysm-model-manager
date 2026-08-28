@@ -229,13 +229,15 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
     }
     if (hasSub) {
       row.onclick = (): void => {
-        const groups = partitionCapControlsByGroup(cap, ctrls);
+        // 根行已展示主控件（通常是启用开关），下钻子视图不再重复罗列，避免「开关套开关」
+        const subCtrls = ctrls.filter((_, i) => i !== pi);
+        const groups = partitionCapControlsByGroup(cap, subCtrls).filter((g) => g.ctrls.length > 0);
         if (groups.length <= 1) {
-          // 无分组：保持原平铺下钻
-          menu.navigate({ title: tr(cap.labelKey, cap.id), render: (subList) => { subList.replaceChildren(); renderCapControls(subList, ctrls); } });
+          // 无分组（或仅剩单组）：保持原平铺下钻
+          menu.navigate({ title: tr(cap.labelKey, cap.id), render: (subList) => { subList.replaceChildren(); renderCapControls(subList, subCtrls); } });
           return;
         }
-        // 带分组：先列分区入口（地面 / 水面 / 表面材质 …），各自下钻到该组控件
+        // 带分组：先列分区入口（形态 / 外观 / 水池 / 波纹 …），各自下钻到该组控件
         menu.navigate({
           title: tr(cap.labelKey, cap.id),
           render: (subList) => {

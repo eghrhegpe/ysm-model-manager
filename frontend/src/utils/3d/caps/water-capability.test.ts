@@ -37,18 +37,29 @@ describe("WaterCapability", () => {
     expect(scene.getObjectByName("ysm-ground-water")?.visible).toBe(true);
   });
 
-  it("getMenuControls：12 项全归 group=preview.waterGroup", () => {
+  it("getMenuControls：12 项按功能区（形态/外观/水池/波纹）分组，启用开关无 group 作根行主控件", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const controls = cap.getMenuControls();
     expect(controls.length).toBe(12);
-    expect(controls.every((c) => c.group === "preview.waterGroup")).toBe(true);
-    expect(controls.map((c) => c.id).sort()).toEqual([
-      "ground-water-enabled", "ground-water-mode", "ground-wetness",
-      "ground-water-color", "ground-water-opacity", "ground-normal-strength",
-      "ground-wave-speed", "ground-water-clarity",
-      "ground-pool-height", "ground-pool-wall-thickness", "ground-pool-wall-color", "ground-pool-roundness",
+    // 首个控件 = 启用水面，无 group（作为 cap 根行主控件，下钻子视图不再重复）
+    expect(controls[0].id).toBe("ground-water-enabled");
+    expect(controls[0].group).toBeUndefined();
+    // 其余 11 项归属 4 个功能组，且全部带 group
+    const rest = controls.slice(1);
+    expect(rest.every((c) => c.group !== undefined)).toBe(true);
+    const groups = new Set(rest.map((c) => c.group));
+    expect([...groups].sort()).toEqual([
+      "preview.waterGroupForm",
+      "preview.waterGroupLook",
+      "preview.waterGroupPool",
+      "preview.waterGroupWave",
     ].sort());
+    const byGroup = (g: string) => rest.filter((c) => c.group === g).map((c) => c.id).sort();
+    expect(byGroup("preview.waterGroupForm")).toEqual(["ground-water-mode", "ground-wetness"].sort());
+    expect(byGroup("preview.waterGroupLook")).toEqual(["ground-normal-strength", "ground-water-clarity", "ground-water-color", "ground-water-opacity"].sort());
+    expect(byGroup("preview.waterGroupPool")).toEqual(["ground-pool-height", "ground-pool-wall-color", "ground-pool-wall-thickness", "ground-pool-roundness"].sort());
+    expect(byGroup("preview.waterGroupWave")).toEqual(["ground-wave-speed"]);
   });
 
   it("getMenuControls 含 ground-normal-strength slider（group=preview.waterGroup）", () => {
@@ -58,7 +69,7 @@ describe("WaterCapability", () => {
     const normalCtrl = controls.find((c) => c.id === "ground-normal-strength");
     expect(normalCtrl).toBeDefined();
     expect(normalCtrl!.kind).toBe("slider");
-    expect(normalCtrl!.group).toBe("preview.waterGroup");
+    expect(normalCtrl!.group).toBe("preview.waterGroupLook");
     expect(normalCtrl!.slider).toEqual({ min: 0, max: 1, step: 0.05 });
   });
 

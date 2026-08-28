@@ -184,8 +184,8 @@ describe("renderEnvLevel", () => {
     expect(row).not.toBeNull();
     row.click();
 
-    // 子视图应列出三个平级分区入口（地面 / 水面 / 表面材质）
-    expect(subList.querySelector('[data-testid="cap-group-entry-base"]')).not.toBeNull();
+    // 子视图应列出分区入口（剔除根行主控件「地面」显隐后，base 空组不再渲染；仅余 水面 / 表面材质）
+    expect(subList.querySelector('[data-testid="cap-group-entry-base"]')).toBeNull();
     expect(subList.querySelector('[data-testid="cap-group-entry-preview.groundGroupWater"]')).not.toBeNull();
     expect(subList.querySelector('[data-testid="cap-group-entry-preview.groundGroupMaterial"]')).not.toBeNull();
     expect(lastTitle).toBe("地面");

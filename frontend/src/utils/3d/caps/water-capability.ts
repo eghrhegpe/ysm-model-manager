@@ -633,43 +633,50 @@ export class WaterCapability implements SceneCapability {
 }
 
 // ── 菜单控件工厂（水面专属）──
-const WATER_GROUP = "preview.waterGroup";
+// 按功能分区，使环境面板「水面 ›」下钻为 形态 / 外观 / 水池 / 波纹 四个子区，
+// 而非单折叠平铺全部控件；启用水面（enabled）无 group → 作为 cap 根行主控件，不进子区。
+const WATER_GROUP_FORM = "preview.waterGroupForm";   // 形态
+const WATER_GROUP_LOOK = "preview.waterGroupLook";   // 外观
+const WATER_GROUP_POOL = "preview.waterGroupPool";   // 水池
+const WATER_GROUP_WAVE = "preview.waterGroupWave";   // 波纹
 
 function gcBuildWaterGroup(cap: WaterCapability): MenuControlDef[] {
   const wSlider = (
     id: string,
     labelKey: string,
     fallback: string,
+    group: string,
     slider: { min: number; max: number; step: number; unit?: string },
     getValue: () => number,
     setValue: (v: number) => void,
   ): MenuControlDef => ({
-    id, kind: "slider", labelKey, fallback, group: WATER_GROUP, slider,
+    id, kind: "slider", labelKey, fallback, group, slider,
     getValue, setValue: (v) => setValue(v as number),
   });
   const wColor = (
-    id: string, labelKey: string, fallback: string,
+    id: string, labelKey: string, fallback: string, group: string,
     getValue: () => number, setValue: (v: number) => void,
   ): MenuControlDef => ({
-    id, kind: "color", labelKey, fallback, group: WATER_GROUP,
+    id, kind: "color", labelKey, fallback, group,
     getValue, setValue: (v) => setValue(v as number),
   });
   return [
     {
+      // 无 group → 成为 cap 根行主控件（与 sky/ground 对齐），下钻子视图不再重复出现
       id: "ground-water-enabled",
       kind: "toggle",
       labelKey: "preview.groundWaterEnabled",
       fallback: "启用水面",
-      group: WATER_GROUP,
       getValue: () => cap.getWaterEnabled(),
       setValue: (v) => cap.setWaterEnabled(v as boolean),
     },
+    // ── 形态 ──
     {
       id: "ground-water-mode",
       kind: "select",
       labelKey: "preview.groundWaterMode",
       fallback: "水面形态",
-      group: WATER_GROUP,
+      group: WATER_GROUP_FORM,
       select: [
         { value: "film", label: "薄膜" },
         { value: "pool", label: "水池" },
@@ -677,54 +684,52 @@ function gcBuildWaterGroup(cap: WaterCapability): MenuControlDef[] {
       getValue: () => cap.getWaterMode(),
       setValue: (v) => cap.setWaterMode(v as WaterMode),
     },
-    {
-      id: "ground-wetness",
-      kind: "slider",
-      labelKey: "preview.groundWetness",
-      fallback: "湿润度",
-      group: WATER_GROUP,
-      slider: { min: 0, max: 1, step: 0.05 },
-      getValue: () => cap.getWetness(),
-      setValue: (v) => cap.setWetness(v as number),
-    },
-    wColor("ground-water-color", "preview.groundWaterColor", "水色", () => cap.getWaterColor(), (v) => cap.setWaterColor(v)),
     wSlider(
-      "ground-water-opacity", "preview.groundWaterOpacity", "不透明度",
+      "ground-wetness", "preview.groundWetness", "湿润度", WATER_GROUP_FORM,
+      { min: 0, max: 1, step: 0.05 },
+      () => cap.getWetness(), (v) => cap.setWetness(v),
+    ),
+    // ── 外观 ──
+    wColor("ground-water-color", "preview.groundWaterColor", "水色", WATER_GROUP_LOOK,
+      () => cap.getWaterColor(), (v) => cap.setWaterColor(v)),
+    wSlider(
+      "ground-water-opacity", "preview.groundWaterOpacity", "不透明度", WATER_GROUP_LOOK,
       { min: 0, max: 1, step: 0.05 },
       () => cap.getWaterOpacity(), (v) => cap.setWaterOpacity(v),
     ),
     wSlider(
-      "ground-normal-strength", "preview.groundNormalStrength", "法线强度",
+      "ground-normal-strength", "preview.groundNormalStrength", "法线强度", WATER_GROUP_LOOK,
       { min: 0, max: 1, step: 0.05 },
       () => cap.getNormalStrength(), (v) => cap.setNormalStrength(v),
     ),
     wSlider(
-      "ground-wave-speed", "preview.groundWaveSpeed", "波速",
-      { min: 0, max: 3, step: 0.05, unit: "x" },
-      () => cap.getWaveSpeed(), (v) => cap.setWaveSpeed(v),
-    ),
-    wSlider(
-      "ground-water-clarity", "preview.groundWaterClarity", "水体通透度",
+      "ground-water-clarity", "preview.groundWaterClarity", "水体通透度", WATER_GROUP_LOOK,
       { min: 0, max: 1, step: 0.05 },
       () => cap.getClarity(), (v) => cap.setClarity(v),
     ),
-    // ── 水池专属 ──
+    // ── 水池 ──
     wSlider(
-      "ground-pool-height", "preview.groundPoolHeight", "水池高度",
+      "ground-pool-height", "preview.groundPoolHeight", "水池高度", WATER_GROUP_POOL,
       { min: 0.01, max: 5, step: 0.05, unit: "m" },
       () => cap.getPoolHeight(), (v) => cap.setPoolHeight(v),
     ),
     wSlider(
-      "ground-pool-wall-thickness", "preview.groundPoolWallThickness", "池壁厚度",
+      "ground-pool-wall-thickness", "preview.groundPoolWallThickness", "池壁厚度", WATER_GROUP_POOL,
       { min: 0.01, max: 2, step: 0.01, unit: "m" },
       () => cap.getPoolWallThickness(), (v) => cap.setPoolWallThickness(v),
     ),
-    wColor("ground-pool-wall-color", "preview.groundPoolWallColor", "池壁颜色",
+    wColor("ground-pool-wall-color", "preview.groundPoolWallColor", "池壁颜色", WATER_GROUP_POOL,
       () => cap.getPoolWallColor(), (v) => cap.setPoolWallColor(v)),
     wSlider(
-      "ground-pool-roundness", "preview.groundPoolRoundness", "边缘圆角",
+      "ground-pool-roundness", "preview.groundPoolRoundness", "边缘圆角", WATER_GROUP_POOL,
       { min: 0, max: 0.5, step: 0.01 },
       () => cap.getPoolRoundness(), (v) => cap.setPoolRoundness(v),
+    ),
+    // ── 波纹 ──
+    wSlider(
+      "ground-wave-speed", "preview.groundWaveSpeed", "波速", WATER_GROUP_WAVE,
+      { min: 0, max: 3, step: 0.05, unit: "x" },
+      () => cap.getWaveSpeed(), (v) => cap.setWaveSpeed(v),
     ),
   ];
 }

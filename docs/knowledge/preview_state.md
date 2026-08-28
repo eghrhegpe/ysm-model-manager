@@ -83,4 +83,4 @@ toStatePath(path)                         // 恒等函数（编译期守卫 Prev
 - ADR-126（本决策 P4-A）、ADR-125（P1 血统）、ADR-085（S2 补全对象）、ADR-093（sceneRegistry 归属）
 - 契约测试：`frontend/src/utils/3d/state/preview-state.test.ts`（20 例，随迁自 settings-state.test.ts）
 - 消费者：`preview-menu-settings.ts`（`buildCrossCuttingControls` 三项横切控件读写走本层）
-- 后续：P4-B 面板 schema 化、P4-D 可见性谓词化（`visibleWhen: (s: PreviewSnapshot) => boolean`）、P4-C dockGroup 解耦（按需加 `ui.activePanel`）
+- 后续：P4-B 面板 schema 化（**已落地 P4-B-1/2**）、P4-D 可见性谓词化（**已落地：`visibleWhen: (s: PreviewSnapshot) => boolean`**，node-types.ts 签名升级 + renderMenu / renderPreviewSchemaContent 调用点传 `previewSnapshot()`）、P4-C dockGroup 解耦（按需加 `ui.activePanel`）

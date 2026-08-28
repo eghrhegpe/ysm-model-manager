@@ -9,6 +9,7 @@
 import type { SlideMenuHandle, SlideMenuView } from "../../../ui/ui-slide-menu.ts";
 import { t } from "../../../core/i18n/t.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./preview-menu-node-types.ts";
+import { previewSnapshot } from "../state/preview-state.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
 const tr = (key: string, fallback: string): string => {
@@ -217,8 +218,10 @@ function rmAppendLeaf(container: HTMLElement, node: PreviewMenuNode, deps: Rende
 
 export function renderMenu(container: HTMLElement, nodes: PreviewMenuNode[], deps: RenderMenuDeps): void {
   ensureMenuStyles();
+  // [doc:adr-126-p4-d] visibleWhen 吃状态层快照（previewSnapshot()）——AGENTS.md 硬约束
+  const snapshot = previewSnapshot();
   for (const node of nodes) {
-    if (node.visibleWhen && !node.visibleWhen()) continue;
+    if (node.visibleWhen && !node.visibleWhen(snapshot)) continue;
     if (node.kind === "folder" || Array.isArray(node.children)) {
       rmAppendFolder(container, node, deps);
     } else if (node.kind === "field") {

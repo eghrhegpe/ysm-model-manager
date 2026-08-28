@@ -28,6 +28,7 @@ import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./preview-menu-roles.ts";
 import { renderMenu } from "./preview-menu-render.ts";
+import { previewSnapshot } from "../state/preview-state.ts";
 
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
 export { roleBaseName };
@@ -175,7 +176,8 @@ function renderPreviewSchemaContent(
   hideMenu: () => void,
 ): void {
   for (const node of nodes) {
-    if (node.visibleWhen && !node.visibleWhen()) continue;
+    // [doc:adr-126-p4-d] visibleWhen 吃状态层快照（previewSnapshot()）——AGENTS.md 硬约束
+    if (node.visibleWhen && !node.visibleWhen(previewSnapshot())) continue;
     if (node.kind === "sectionTitle") {
       const st = document.createElement("div");
       st.className = "section-title";

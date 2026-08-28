@@ -20,6 +20,14 @@ export type PreviewStatePath =
   | `motion.${string}`
   | `model.${string}`;
 
+/**
+ * 状态层快照：`visibleWhen: (s: PreviewSnapshot) => boolean` 纯函数谓词吃的快照形状。
+ * 由 `state/preview-state.ts` 的 `previewSnapshot()` 产出（Record<PreviewStatePath, unknown>）。
+ * 未落地路径的值为 undefined（谓词读 `s["ui.mode"]` 安全——falsy）。
+ * [doc:adr-126-p4-d] 与 AGENTS.md「3d菜单只允许 visibleWhen: (s) => boolean」对齐。
+ */
+export type PreviewSnapshot = Record<PreviewStatePath, unknown>;
+
 /** 动作节点回调上下文（与 ActionMenuCtx 对齐；ysm 侧 toast/closeOverlays 由 ctx.menu 提供） */
 export interface PreviewActionMenuCtx {
   toast: (message: string) => void;
@@ -80,8 +88,8 @@ export interface PreviewMenuNode {
   value?: string | number;
   /** 逃生舱：无法数据化的内容直接渲染（对应 PreviewMenuItemDef.render）；closePopup 可选（兼容 MikuMikuAR 单参用法） */
   renderCustom?: (container: HTMLElement, closePopup?: () => void) => (() => void) | void;
-  /** 条件守卫：返回 false 时不渲染（如 self 模式隐藏 camera） */
-  visibleWhen?: () => boolean;
+  /** 条件守卫：吃状态层快照的纯函数，返回 false 时不渲染（如 self 模式隐藏 camera）——[doc:adr-126-p4-d] 升级为 (s: PreviewSnapshot) => boolean */
+  visibleWhen?: (s: PreviewSnapshot) => boolean;
   /** action 节点回调（对应 PreviewMenuItemDef.run） */
   action?: (ctx: PreviewActionMenuCtx) => void | Promise<void>;
   /** ———— ysm 特有（预览器 dock 归属与模式守卫）———— */

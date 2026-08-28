@@ -153,6 +153,30 @@ describe("renderMenu 新 kind", () => {
     expect(container.querySelector('[data-testid="preview-visible"]')).not.toBeNull();
   });
 
+  it("[doc:adr-126-p4-d] visibleWhen 吃状态层快照：谓词读 snapshot 值做条件", () => {
+    // 谓词签名是 (s: PreviewSnapshot) => boolean——渲染器传 previewSnapshot()，
+    // 谓词可读快照中的路径值（render.maxFps 等）。此处用假快照验证谓词被传参调用。
+    let received: unknown;
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "gated",
+        kind: "field",
+        labelKey: "preview.gated",
+        value: "x",
+        visibleWhen: (s) => {
+          received = s;
+          return true;
+        },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    // 谓词收到了快照对象（Record<PreviewStatePath, unknown>）
+    expect(received).toBeTypeOf("object");
+    expect(received as Record<string, unknown>).toHaveProperty("render.maxFps");
+    expect(container.querySelector('[data-testid="preview-gated"]')).not.toBeNull();
+  });
+
   it("deep nesting: 3 层文件夹递归渲染", () => {
     const nodes: PreviewMenuNode[] = [
       {

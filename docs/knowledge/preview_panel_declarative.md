@@ -98,6 +98,6 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 ## 相关
 
 - ADR-126（本决策 P4-B）、ADR-125（设置面板单渲染器）、ADR-085（声明式收敛方向）、ADR-093（条件注入范式）
-- 落地：P4-B-1（mmd model/shot 声明式化）+ P4-B-2（YSM 截图声明式化 + 截图共享层）已完成；P4-B-3（morph/play）待续
+- 落地：P4-B-1（mmd model/shot 声明式化）+ P4-B-2（YSM 截图声明式化 + 截图共享层）+ **P4-D（`visibleWhen: (s: PreviewSnapshot) => boolean` 升级，node-types.ts 签名 + renderMenu / renderPreviewSchemaContent 传快照）** 已完成；P4-B-3（morph/play 交互面板，需先定性：接近 cap 控件而非内容节点）待续
 - 保留逃生舱：`fill3DPanel` 统计/纹理/模型选择器（多组件切换动态视图状态，声明式化收益低风险高——P4-B-2 决策）
 - 顺手修复：`fillMmdShotPanel` / `fillYsmShotPanel` 的 `saveScreenshot` 第三参误传 `screenshotFn`（被当 setShotState），实际截图走 fallback 而非活跃渲染器——`makeShotAction`（shot-panel-shared.ts）已修正（第四参传 screenshotFn）

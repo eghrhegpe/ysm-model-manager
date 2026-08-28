@@ -144,8 +144,9 @@ describe("renderMenu 新 kind", () => {
 
   it("visibleWhen: 返回 false 时节点不渲染", () => {
     const nodes: PreviewMenuNode[] = [
-      { id: "hidden", kind: "field", labelKey: "preview.hidden", value: "x", visibleWhen: () => false },
-      { id: "visible", kind: "field", labelKey: "preview.visible", value: "y", visibleWhen: () => true },
+      // [doc:adr-126-p4-d] 签名对齐 (s: PreviewSnapshot) => boolean（参数忽略，行为等价）
+      { id: "hidden", kind: "field", labelKey: "preview.hidden", value: "x", visibleWhen: (_s) => false },
+      { id: "visible", kind: "field", labelKey: "preview.visible", value: "y", visibleWhen: (_s) => true },
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);

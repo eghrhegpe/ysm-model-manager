@@ -32,7 +32,7 @@ function mountPanel(): { panel: HTMLElement; cleanup: () => void } {
 }
 
 describe("makeBonePanelRenderer", () => {
-  it("列表渲染：深度缩进（根 0，逐级 +1）+ 名称正确", () => {
+  it("列表渲染：深度缩进（根 6px base，逐级 +12px）+ 名称正确", () => {
     const { vrm, nodes } = fakeVrmWithScene(["hips", "spine", "head"]);
     nodes.get("head")!.parent = nodes.get("spine")!;
     nodes.get("spine")!.parent = nodes.get("hips")!;
@@ -44,13 +44,13 @@ describe("makeBonePanelRenderer", () => {
     try {
       const rows = panel.querySelectorAll<HTMLElement>("div[data-bone-id]");
       expect(rows.length).toBe(3);
-      // hips depth=0（padding-left=0px），spine depth=1（12px），head depth=2（24px）
+      // hips depth=0（paddingLeft=6px），spine depth=1（18px），head depth=2（30px）
       const hips = panel.querySelector<HTMLElement>("div[data-bone-id='hips']")!;
       const spine = panel.querySelector<HTMLElement>("div[data-bone-id='spine']")!;
       const head = panel.querySelector<HTMLElement>("div[data-bone-id='head']")!;
-      expect(hips.style.paddingLeft || "0px").toBe("0px");
-      expect(spine.style.paddingLeft).toBe("12px");
-      expect(head.style.paddingLeft).toBe("24px");
+      expect(hips.style.paddingLeft).toBe("6px");
+      expect(spine.style.paddingLeft).toBe("18px");
+      expect(head.style.paddingLeft).toBe("30px");
       expect(hips.querySelector("span")!.textContent).toBe("hips");
     } finally {
       done();
@@ -76,7 +76,7 @@ describe("makeBonePanelRenderer", () => {
     }
   });
 
-  it("行点击：选中高亮 + 详情区显示路径/父/子", () => {
+  it("行点击：选中高亮 + 详情块原地展开（路径/父/子）", () => {
     const { vrm, nodes } = fakeVrmWithScene(["hips", "spine", "head"]);
     nodes.get("head")!.parent = nodes.get("spine")!;
     nodes.get("spine")!.parent = nodes.get("hips")!;
@@ -86,14 +86,15 @@ describe("makeBonePanelRenderer", () => {
     try {
       const spineRow = panel.querySelector<HTMLElement>("div[data-bone-id='spine']")!;
       spineRow.click();
-      // 高亮：renderList 重建行后，新 spine 行 style.background 含 rgba（旧引用 spineRow 已脱离 DOM）
+      // 高亮：renderList 重建行后，新 spine 行 style.background 含 rgba
       const spineRowAfter = panel.querySelector<HTMLElement>("div[data-bone-id='spine']")!;
       expect(spineRowAfter.style.background).toContain("rgba");
-      // 详情区：路径含 "hips / spine"，父骨骼含 "hips"，子骨骼含 "head"
-      const detailCol = panel.children[1] as HTMLElement;
-      expect(detailCol.textContent).toContain("hips / spine");
-      expect(detailCol.textContent).toContain("hips");
-      expect(detailCol.textContent).toContain("head");
+      // 详情块：插在选中行下方（.bone-detail-inline），含路径/父/子
+      const detail = panel.querySelector<HTMLElement>(".bone-detail-inline")!;
+      expect(detail).toBeTruthy();
+      expect(detail.textContent).toContain("hips / spine");
+      expect(detail.textContent).toContain("hips");
+      expect(detail.textContent).toContain("head");
     } finally {
       done();
       cleanup();

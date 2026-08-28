@@ -33,40 +33,50 @@ export type RenderVrmBonePanel = (panel: HTMLElement, ctx: VrmBonePanelCtx) => (
 /**
  * 通用骨骼面板渲染器（ADR-074 S3：从 VRM 专属抽通用版，喂 BoneTree 而非 VRM）。
  * VRM/YSM 均用此函数——VRM 经 buildVrmBoneTree 构树后喂入，YSM 从 spec bones 构树后喂入。
+ *
+ * 布局：单列 slide-item 行（与材质/截图面板同构），点击行原地展开详情块。
+ * 不再用双栏 grid——那与根菜单 SlideMenu 单列导航风格冲突。
  */
 export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel {
-  return (panel: HTMLElement, ctx: VrmBonePanelCtx): () => void => {
+  return (panel: HTMLElement, ctx: VrmBonePanelCtx): (() => void) => {
     let activeId: string | null = null; // 拾取联动高亮项
     let disposed = false;
 
-    // --- 列表 + 详情双栏 ---
     panel.innerHTML = "";
-    panel.style.cssText +=
-      ";display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px";
+    panel.style.cssText += ";padding:4px;font-size:11px";
 
-    const listCol = document.createElement("div");
-    listCol.style.cssText = "overflow:auto;max-height:100%;font-size:11px";
-    const detailCol = document.createElement("div");
-    detailCol.style.cssText =
-      "overflow:auto;max-height:100%;font-size:11px;color:rgba(255,255,255,0.7);border-left:1px solid rgba(255,255,255,0.1);padding-left:4px";
-    panel.appendChild(listCol);
-    panel.appendChild(detailCol);
+    if (!tree || tree.roots.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "slide-sublabel";
+      empty.style.cssText = "padding:8px 10px;color:rgba(128,128,128,0.85);font-size:12px";
+      empty.textContent = t("preview.bone.empty");
+      panel.appendChild(empty);
+      return (): void => {
+        disposed = true;
+        tree = null;
+      };
+    }
+
+    // 详情容器：插在选中行下方，点击其他行时移到新位置
+    let detailEl: HTMLDivElement | null = null;
 
     const renderList = (): void => {
       if (!tree) return;
-      listCol.innerHTML = "";
+      panel.innerHTML = "";
+
       const items = listBonesWithDepth(tree);
       for (const item of items) {
         const row = document.createElement("div");
-        row.style.cssText = `display:flex;align-items:center;gap:4px;padding-left:${item.depth * 12}px;cursor:pointer`;
-        if (activeId === item.id) row.style.background = "rgba(124,131,255,0.25)";
+        row.className = "slide-item";
         row.dataset.boneId = item.id;
+        row.style.cssText = `display:flex;align-items:center;gap:6px;padding-left:${item.depth * 12 + 6}px;cursor:pointer;min-height:28px;border-radius:4px`;
+        if (activeId === item.id) row.style.background = "rgba(124,131,255,0.25)";
 
         // 显隐勾选框
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.checked = true;
-        cb.style.cssText = "flex-shrink:0;cursor:pointer";
+        cb.style.cssText = "flex-shrink:0;cursor:pointer;accent-color:var(--accent,#7c83ff)";
         cb.onchange = (): void => {
           if (!tree) return;
           const node = tree.byId.get(item.id);
@@ -76,60 +86,66 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
         cb.onclick = (e): void => e.stopPropagation();
 
         const label = document.createElement("span");
+        label.className = "slide-label";
         label.textContent = item.name;
-        label.style.cssText = "flex:1";
+        label.style.cssText = "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
 
-        row.appendChild(cb);
-        row.appendChild(label);
+        row.append(cb, label);
 
-        // 行点击：选中 + 显示详情
+        // 行点击：选中 + 重渲染（重渲染时选中行下方插入详情块）
         row.onclick = (): void => {
           activeId = item.id;
           renderList();
-          renderDetail();
         };
 
-        listCol.appendChild(row);
+        panel.appendChild(row);
+
+        // 选中行：紧随其后插入详情块
+        if (activeId === item.id) {
+          panel.appendChild(renderDetail());
+        }
       }
     };
 
-    const renderDetail = (): void => {
+    const renderDetail = (): HTMLDivElement => {
+      const d = document.createElement("div");
+      d.className = "bone-detail-inline";
+      d.style.cssText = "padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:4px;margin:2px 4px 4px;font-size:10px;color:rgba(255,255,255,0.7);border-left:2px solid var(--accent,#7c83ff)";
+
       if (!tree || !activeId) {
-        detailCol.innerHTML = `<div style="color:rgba(255,255,255,0.4)">${t("preview.bone.selectHint")}</div>`;
-        return;
+        d.innerHTML = `<div style="color:rgba(255,255,255,0.4)">${t("preview.bone.selectHint")}</div>`;
+        return d;
       }
-      const d = getBoneDetail(activeId, tree);
-      if (!d) return;
-      detailCol.innerHTML = "";
+      const det = getBoneDetail(activeId, tree);
+      if (!det) return d;
+
       const field = (k: string, v: string): void => {
         const r = document.createElement("div");
-        r.style.cssText = "margin-bottom:4px";
-        // k/v 经 textContent 注入（innerHTML 拼接会把骨骼名/路径中的
-        // <>& 当 HTML 解析——注入/破版风险），span 样式保留
+        r.style.cssText = "margin-bottom:3px";
         const span = document.createElement("span");
         span.style.color = "rgba(255,255,255,0.4)";
         span.textContent = k;
         r.appendChild(span);
         r.appendChild(document.createTextNode(": " + v));
-        detailCol.appendChild(r);
+        d.appendChild(r);
       };
-      field("名称", d.name);
-      field("路径", d.path);
+      field("名称", det.name);
+      field("路径", det.path);
       field(
         "坐标",
-        d.position ? `(${d.position.x.toFixed(2)}, ${d.position.y.toFixed(2)}, ${d.position.z.toFixed(2)})` : "—",
+        det.position ? `(${det.position.x.toFixed(2)}, ${det.position.y.toFixed(2)}, ${det.position.z.toFixed(2)})` : "—",
       );
-      field("父骨骼", d.parent ? `${d.parent.name} (${d.parent.id})` : "—（根）");
+      field("父骨骼", det.parent ? `${det.parent.name} (${det.parent.id})` : "—（根）");
       field(
         "子骨骼",
-        d.children.length ? d.children.map((c) => c.name).join("、") : "—",
+        det.children.length ? det.children.map((c) => c.name).join("、") : "—",
       );
+      return d;
     };
 
     renderList();
-    renderDetail();
 
-    // --- 拾取联动：viewContainer click → raycaster 命中 → 高亮 + 详情 ---
+    // --- 拾取联动：viewContainer click → raycaster 命中 → 高亮 ---
     const raycaster = new THREE.Raycaster();
     const ndc = new THREE.Vector2();
     const onPick = (ev: MouseEvent): void => {
@@ -142,7 +158,6 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
       if (hit) {
         activeId = hit.node.id;
         renderList();
-        renderDetail();
       }
     };
     ctx.viewContainer.addEventListener("click", onPick);

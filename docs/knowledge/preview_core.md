@@ -113,7 +113,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
   5. ✅ **稳定双轨交互**：已完成。
 
 - **L1 程序化天空已落地并目视验证**：`task dev` / `npm run dev:web` 跑通，天空渲染正常、四种模型（YSM/VRM/MMD/Litematic）零改动继承。用户评定「效果一般但能跑，作为基线收口，后续迭代」。
-- **基线参数**（`sky-capability.ts` 默认值）：`scale 12000`（相机 maxDistance 5000 留余量）、`turbidity 8 / rayleigh 2 / mieCoefficient 0.005 / mieDirectionalG 0.8`、`cloudCoverage 0`、默认太阳方位、`ACESFilmicToneMapping` + 曝光 0.5（会话级，dispose 还原）、IBL `scene.environment` 默认关。
+- **基线参数**（`sky-capability.ts` 默认值）：`scale 12000`（相机 maxDistance 5000 留余量）、`turbidity 10 / rayleigh 2 / mieCoefficient 0.005 / mieDirectionalG 0.8`、`cloudCoverage 0`、默认太阳方位、`ACESFilmicToneMapping` + 曝光 0.5（会话级，dispose 还原）、IBL `scene.environment` 默认关。**v1.14 调优后**，按模型类别预设（`MODEL_SKY_PRESETS`）覆盖默认值：VRM turbidity→7、MMD exposure→0.55、YSM exposure→0.55，其他不变。
 - **已知观感短板（后续迭代项，非阻断）**：
   1. ✅ 时间-of-day 滑块已收进**环境菜单**（🌍 环境根按钮 → 快捷直达面板，与云量/IBL/地面开关并列；`preview.timeOfDay` i18n 三语，代码层 `tr` 兜底）；默认 9:00；`oninput` 经闭包 `skyCap?.setTime(hour)`，0-24 映射日出/正午/日落，夜间转暗；
   2. ✅ IBL 已默认开启（`environment: true`，2026-08-16 目视验证通过，模型反射/环境光更真实）；如需关闭调 `setEnvironmentEnabled(false)`；

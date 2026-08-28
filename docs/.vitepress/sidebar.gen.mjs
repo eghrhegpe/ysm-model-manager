@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-126：3D 预览菜单声明式 Schema 终态——状态层泛化 + 面板 schema 化 + 可见性谓词化 + dockGroup 解耦",
+        "link": "/adr/ADR-126-menu-schema-final-form"
+      },
+      {
         "text": "ADR-125：3D 预览菜单统一：settingsState 横切状态层 + 单渲染器 + visible 规则",
         "link": "/adr/ADR-125-preview-menu-unified-state-single-renderer"
       },
@@ -1582,6 +1586,10 @@ export const autoSidebar = [
           {
             "text": "3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）",
             "link": "/knowledge/preview_menu_settings_state"
+          },
+          {
+            "text": "3D 预览全域状态层（ADR-126 P4-A）",
+            "link": "/knowledge/preview_state"
           },
           {
             "text": "共享样式 shared-styles",

@@ -1,21 +1,23 @@
-// ===== settings-state 契约测试（[doc:adr-125] P1 状态层 / P2 单渲染器 / P3 visible 规则）=====
+// ===== preview-state 契约测试（[doc:adr-126-p4-a] 升格自 ADR-125 P1 状态层）=====
 // 锁定三件事：
-//   1. 六条横切路径的读写闭环与「cap 缺席不炸、不落盘」的持久化边界
+//   1. KNOWN_PATHS 六条横切路径的读写闭环与「cap 缺席不炸、不落盘」的持久化边界
 //   2. 设置面板不再手写 cap 已自报的开关（杜绝 f0fa3e23 型重复真值来源）
 //   3. 条件显隐谓词可集中枚举（collectVisiblePredicates）
+//   4. ADR-126 P4-A 升格要点：模块名/常量名/快照函数名已升格；类型层 PreviewStatePath
+//      七域全声明；窄集合 KNOWN_PATHS 作为 `getStateValue` 等的入参类型，编译期
+//      守住"加新路径 = 扩 KNOWN_PATHS + 填 binding"
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
-  SETTINGS_PATHS,
+  KNOWN_PATHS,
   getStateValue,
   setStateValue,
   isPathAvailable,
-  settingsSnapshot,
+  previewSnapshot,
   subscribeSettings,
   resetSettingsListeners,
   toStatePath,
-  type SettingsPath,
-} from "./settings-state.ts";
+} from "./preview-state.ts";
 import {
   buildCrossCuttingControls,
   collectSettingsCapControls,
@@ -96,9 +98,9 @@ afterEach(() => {
 });
 
 describe("P1 状态层 — 横切路径读写闭环", () => {
-  it("六条路径全部注册，快照键与 SETTINGS_PATHS 一致", () => {
-    const snap = settingsSnapshot();
-    expect(Object.keys(snap).sort()).toEqual([...SETTINGS_PATHS].sort());
+  it("六条路径全部注册，快照键与 KNOWN_PATHS 一致", () => {
+    const snap = previewSnapshot();
+    expect(Object.keys(snap).sort()).toEqual([...KNOWN_PATHS].sort());
   });
 
   it("render.frustumCull 读写闭环且落 localStorage", () => {
@@ -133,7 +135,7 @@ describe("P1 状态层 — 横切路径读写闭环", () => {
 
 describe("P1 状态层 — cap 派生路径的持久化边界", () => {
   it("cap 缺席时：读安全缺省、available=false、写入静默不抛", () => {
-    for (const p of ["render.bloom", "render.wireframe", "env.pmrem"] as SettingsPath[]) {
+    for (const p of ["render.bloom", "render.wireframe", "env.pmrem"] as (typeof KNOWN_PATHS)[number][]) {
       expect(isPathAvailable(p)).toBe(false);
       expect(getStateValue(p)).toBe(false);
       expect(() => setStateValue(p, true)).not.toThrow();
@@ -192,7 +194,7 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
 
 describe("P1 状态层 — 订阅通知", () => {
   it("setStateValue 默认广播；{ notify:false } 抑制广播（高频滑块）", () => {
-    const seen: SettingsPath[] = [];
+    const seen: (typeof KNOWN_PATHS)[number][] = [];
     const off = subscribeSettings((p) => seen.push(p));
 
     setStateValue("render.frustumCull", true);
@@ -308,8 +310,8 @@ describe("P3 visible 规则 — 条件显隐可集中枚举", () => {
 });
 
 describe("契约守卫", () => {
-  it("toStatePath：SettingsPath 全部落在 PreviewStatePath 定义域内", () => {
-    // 编译期由 toStatePath 的返回类型守住；运行期仅验证透传不改写
-    for (const p of SETTINGS_PATHS) expect(toStatePath(p)).toBe(p);
+  it("toStatePath：KNOWN_PATHS 全部透传（恒等函数，编译期守卫 PreviewStatePath 定义域）", () => {
+    // 升格后 toStatePath 接受 PreviewStatePath 自身，运行期仅验证恒等不改写
+    for (const p of KNOWN_PATHS) expect(toStatePath(p)).toBe(p);
   });
 });

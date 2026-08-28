@@ -2,10 +2,9 @@
 // schemaBuilders 五个构建器：camera / lighting / shadow / postproc / settings。
 // cap 缺席时渲染单行提示行，不空白。
 //
-// [doc:adr-125] settings 面板重构（P1 状态层 + P2 单渲染器 + 自动 cap 聚合）：
+// [doc:adr-125 + adr-126-p4-a] settings 面板重构（P1 状态层 + P2 单渲染器 + 自动 cap 聚合）：
 //   - 横切设置项（视锥裁剪 / 帧率 / 分辨率）改为纯数据 MenuControlDef，读写走
-//     state/settings-state.ts 的统一路径（原为 3 段手写 DOM 闭包，各自直连
-//     模块函数与 localStorage 键）
+//     state/preview-state.ts 的统一路径（[adr-126-p4-a] 升格自 settings-state.ts）
 //   - Bloom / PMREM / 线框三个开关不再手写——它们本就是 postprocessing / sky /
 //     wireframe 三个 cap 自报控件（pp-enabled / sky-env / wireframe-toggle）的
 //     重复真值来源，改由 collectSettingsCapControls() 自动聚合
@@ -17,7 +16,7 @@ import { buildCameraControls } from "./camera-controls.ts";
 import { t } from "../../../core/i18n/t.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { MenuControlDef } from "../caps/scene-capability.ts";
-import { getStateValue, setStateValue } from "../state/settings-state.ts";
+import { getStateValue, setStateValue } from "../state/preview-state.ts";
 import type { PreviewMenuCtx } from "./preview-menu.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */

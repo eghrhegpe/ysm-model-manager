@@ -4,10 +4,12 @@ name: 3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/utils/3d/state/settings-state.ts
+  - frontend/src/utils/3d/state/preview-state.ts
   - frontend/src/utils/3d/adapters/preview-menu-settings.ts
   - frontend/src/utils/3d/adapters/preview-menu-cap-controls.ts
   - frontend/src/utils/3d/caps/scene-capability.ts
+tests:
+  - frontend/src/utils/3d/state/preview-state.test.ts
 use_when:
   - 新增 3D 预览设置项
   - 新增 cap 想让某个开关出现在设置面板

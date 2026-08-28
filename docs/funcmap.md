@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 168 | 679 |
+| 前端·工具 | 168 | 678 |
 | frontend/views | 117 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **498** | **2118** |
+| **合计** | **498** | **2117** |
 
 ## Go·头像
 
@@ -1439,14 +1439,14 @@
 | `modelDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:38` | — |
 | `motionDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:97` | — |
 | `fillRoles()` | `frontend/src/utils/3d/adapters/preview-menu-roles:267` | — |
-| `buildCameraSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:32` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
-| `buildLightingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:46` | 灯光面板 schema：从 light cap 自报控件渲染 |
-| `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:64` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
-| `buildPostprocessingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:77` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
-| `buildSettingsSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:90` | 设置面板 schema：性能（横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 |
-| `buildCrossCuttingControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:114` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
-| `collectSettingsCapControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:165` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
-| `buildSettingsControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:178` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
+| `buildCameraSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:31` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
+| `buildLightingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:45` | 灯光面板 schema：从 light cap 自报控件渲染 |
+| `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:63` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
+| `buildPostprocessingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:76` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
+| `buildSettingsSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:89` | 设置面板 schema：性能（横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 |
+| `buildCrossCuttingControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:113` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
+| `collectSettingsCapControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:164` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
+| `buildSettingsControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:177` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
 | `fillSwitch()` | `frontend/src/utils/3d/adapters/preview-menu-switch:217` | — |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
@@ -1762,15 +1762,14 @@
 | `BoneData()` | `frontend/src/utils/3d/spec-builder:99` | BoneData — Go threejs/spec.go BoneData |
 | `MeshData()` | `frontend/src/utils/3d/spec-builder:109` | MeshData — Go threejs/spec.go MeshData |
 | `buildSpecFromGeometryJSON()` | `frontend/src/utils/3d/spec-builder:128` | 从 bedrock geometry JSON 构建 3D spec（纯 TS，无 Go 依赖）。 |
-| `SettingsPath()` | `frontend/src/utils/3d/state/settings-state:33` | 本层托管的横切设置路径（ADR-125 P1 收编六项） |
-| `SETTINGS_PATHS()` | `frontend/src/utils/3d/state/settings-state:42` | 全部受管路径（供契约测试枚举 / 快照遍历） |
-| `toStatePath()` | `frontend/src/utils/3d/state/settings-state:55` | 契约守卫：SettingsPath 必须落在 `PreviewStatePath` 的定义域内。 |
-| `subscribeSettings()` | `frontend/src/utils/3d/state/settings-state:160` | 订阅横切设置变更；返回取消订阅函数 |
-| `getStateValue()` | `frontend/src/utils/3d/state/settings-state:181` | 读取路径当前值 |
-| `setStateValue()` | `frontend/src/utils/3d/state/settings-state:190` | 写入路径值。 |
-| `isPathAvailable()` | `frontend/src/utils/3d/state/settings-state:200` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
-| `settingsSnapshot()` | `frontend/src/utils/3d/state/settings-state:205` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费 |
-| `resetSettingsListeners()` | `frontend/src/utils/3d/state/settings-state:212` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
+| `KNOWN_PATHS()` | `frontend/src/utils/3d/state/preview-state:50` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
+| `toStatePath()` | `frontend/src/utils/3d/state/preview-state:65` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
+| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:172` | 订阅横切设置变更；返回取消订阅函数 |
+| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:193` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
+| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:202` | 写入路径值。 |
+| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:212` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
+| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:221` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
+| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:228` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
 | `TextureAlphaMode()` | `frontend/src/utils/3d/texture-alpha:4` | — |
 | `TextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:7` | 纹理级透明信息：整图模式 + 面级查询索引（ADR-118 Phase B） |
 | `getTextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:17` | — |

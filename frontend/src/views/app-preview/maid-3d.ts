@@ -107,7 +107,6 @@ interface MaidPreviewState {
 type MaidModelInfo = {
   boneCount?: number;
   cubeCount?: number;
-  textureCount?: number;
   format?: string;
   texWidth?: number;
   texHeight?: number;
@@ -123,8 +122,9 @@ type MaidModelInfo = {
 
 /** 车万女仆 → statsCardHTML 入参映射（复用 YSM 彩色统计卡渲染，共用 types.BedrockModel 数据源）。
  *  subModels 不传——maid 用交互式 dp-submodels 角色清单（可点击切换），
- *  与 statsCardHTML 的静态 subBlock 重复，故在此剔除。 */
-function toStatsCardModel(info: MaidModelInfo): StatsCardModel {
+ *  与 statsCardHTML 的静态 subBlock 重复，故在此剔除。
+ *  subCount 传原 subModels 长度，用于修正 extraCount 公式（多角色包：texCount - subCount）。 */
+function toStatsCardModel(info: MaidModelInfo, subCount: number): StatsCardModel {
   return {
     boneCount: info?.boneCount ?? 0,
     cubeCount: info?.cubeCount ?? 0,
@@ -133,6 +133,7 @@ function toStatsCardModel(info: MaidModelInfo): StatsCardModel {
     textures: info?.textures,
     textureNames: info?.textureNames,
     textureCategories: info?.textureCategories,
+    subCount,
   };
 }
 
@@ -210,7 +211,7 @@ function dpRenderPanel(
   // 彩色统计卡（模型结构蓝卡 / 纹理尺寸绿卡 / 文件信息橙卡）——复用 YSM statsCardHTML，
   // 共用 AnalyzeBedrockModel 返回的 types.BedrockModel 数据源，与 YSM 详情同一设计语言。
   const statsHTML = modelInfo
-    ? `<div class="pv-card">${statsCardHTML(toStatsCardModel(modelInfo), basename)}</div>`
+    ? `<div class="pv-card">${statsCardHTML(toStatsCardModel(modelInfo, subs.length), basename)}</div>`
     : "";
   const detail = dpRenderDetail(modelInfo, subs, selSubIdx);
   const subList = dpRenderSubList(subs, selSubIdx);
@@ -277,8 +278,9 @@ async function dpToggle3D(
     // 若 subModel.sourcePath 未声明（L1 兜底清单），则不走单 entry 路径，回退全量合并。
     const subPath = subs.length > 1 ? sel?.sourcePath : undefined;
     // texIdx 优先级：选中角色的 texSlot（若声明）→ 默认 0
-    const texStart = sel && typeof sel.texSlot === "number" && modelInfo?.textureCount
-      ? Math.min(sel.texSlot, modelInfo.textureCount - 1)
+    const texCount = modelInfo?.textures?.length || 0;
+    const texStart = sel && typeof sel.texSlot === "number" && texCount
+      ? Math.min(sel.texSlot, texCount - 1)
       : 0;
     await createMaid3D(path, texStart, {
       loader: async (p) =>
@@ -322,15 +324,17 @@ export async function showMaidPreview(
 <button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;
 
   // 调用 Go 端分析模型数据（含 subModels L0 清单）
-  let modelInfo: MaidModelInfo = null;
+  // baseModelInfo：聚合数据（纹理/metadata/subModels），全角色共享不变
+  // displayModelInfo：当前显示用（聚合 + 当前角色的 boneCount/cubeCount 覆盖）
+  let baseModelInfo: MaidModelInfo = null;
+  let displayModelInfo: MaidModelInfo = null;
   try {
     const { AnalyzeBedrockModel } = await getApp();
     const model = await AnalyzeBedrockModel(path);
     if (model) {
-      modelInfo = {
+      baseModelInfo = {
         boneCount: model.boneCount,
         cubeCount: model.cubeCount,
-        textureCount: (model.textures as unknown[] | undefined)?.length || (model.texture ? 1 : 0),
         format: model.format as string | undefined,
         texWidth: model.texWidth as number | undefined,
         texHeight: model.texHeight as number | undefined,
@@ -340,23 +344,44 @@ export async function showMaidPreview(
         subModels: model.subModels as BedrockSubModel[] | undefined,
         metadata: model.metadata ?? undefined,
       };
+      displayModelInfo = { ...baseModelInfo };
     }
   } catch (e) {
     console.warn("[maid-preview] AnalyzeBedrockModel:", e);
   }
 
-  const subs = modelInfo?.subModels && modelInfo.subModels.length > 0 ? modelInfo.subModels : [];
+  const subs = baseModelInfo?.subModels && baseModelInfo.subModels.length > 0 ? baseModelInfo.subModels : [];
+
+  /** 切角色时重新取该角色的 boneCount/cubeCount（AnalyzeBedrockModelEntry 返回单模型几何），
+   *  纹理/metadata/subModels 不变（聚合数据）。不阻塞渲染——异步更新后重绘。 */
+  const refreshPerEntry = async (idx: number): Promise<void> => {
+    if (!baseModelInfo || idx < 0 || idx >= subs.length) return;
+    const sub = subs[idx];
+    if (!sub.sourcePath) return; // 无 sourcePath 无法精确取数
+    try {
+      const { AnalyzeBedrockModelEntry } = await getApp();
+      const entry = await AnalyzeBedrockModelEntry(path, sub.sourcePath);
+      if (entry && displayModelInfo) {
+        displayModelInfo.boneCount = entry.boneCount;
+        displayModelInfo.cubeCount = entry.cubeCount;
+        render();
+      }
+    } catch {
+      // 取数失败不阻断——保持聚合数据
+    }
+  };
+
   // 共享局域 state：选中子模型索引 + 3D 打开并发防护
   const state: MaidPreviewState = { selSubIdx: 0, loading3D: false, model3dGuard: new GenGuard() };
   const render = (): void => {
     dpRenderPanel(
       ctx,
       basename,
-      modelInfo,
+      displayModelInfo,
       subs,
       state.selSubIdx,
-      (idx) => { state.selSubIdx = idx; render(); },
-      () => { void dpToggle3D(state, ctx, path, modelInfo, subs, state.selSubIdx); },
+      (idx) => { state.selSubIdx = idx; render(); void refreshPerEntry(idx); },
+      () => { void dpToggle3D(state, ctx, path, baseModelInfo, subs, state.selSubIdx); },
     );
   };
 

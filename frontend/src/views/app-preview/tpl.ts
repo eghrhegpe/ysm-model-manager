@@ -67,6 +67,9 @@ export interface StatsCardModel {
   textureCategories?: string[];
   /** L0 清单角色（多角色包内切换用）：name + texSlot（对应 textures 下标） */
   subModels?: Array<{ name: string; texSlot?: number }>;
+  /** 子模型数量（多角色包）：extraCount = texCount - subCount（而非固定 -1）。
+   *  默认1（单模型），多角色包时传 subModels.length */
+  subCount?: number;
 }
 
 /** 模型统计卡片 */
@@ -118,7 +121,9 @@ export function statsCardHTML(
   // 多纹理概要（仅当存在额外纹理时）
   let texMapHtml = "";
   const texCount = model.textures?.length || 0;
-  const extraCount = texCount > 0 ? texCount - 1 : 0;
+  // extraCount：单模型 = texCount - 1（主纹理 + 额外层）；多角色包 = texCount - subCount（每角色绑定一张，额外层是剩余）
+  const subCount = model.subCount || 1;
+  const extraCount = texCount > subCount ? texCount - subCount : 0;
   if (extraCount > 0) {
     texMapHtml = `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">📎 ${t("preview.extraTextures", { extra: extraCount, total: texCount })}</div>`;
   }

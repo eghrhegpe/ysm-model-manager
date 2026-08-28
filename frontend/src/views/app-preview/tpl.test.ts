@@ -113,6 +113,22 @@ describe("statsCardHTML", () => {
     expect(html).toContain("L0 清单角色（1）");
   });
 
+  it("subCount > 1 → extraCount = texCount - subCount（多角色包无额外纹理时不出行）", () => {
+    const html = statsCardHTML(
+      { ...base, textures: ["t1", "t2", "t3", "t4"], subCount: 4 },
+      "/repo/a.zip",
+    );
+    expect(html).not.toContain("额外纹理");
+  });
+
+  it("subCount + 额外纹理 → extraCount = texCount - subCount", () => {
+    const html = statsCardHTML(
+      { ...base, textures: ["t1", "t2", "t3", "t4"], subCount: 2 },
+      "/repo/a.zip",
+    );
+    expect(html).toContain("含 2 张额外纹理（共 4 张）");
+  });
+
   it("statsCardHTML 不再渲染 badge（已移至 summaryCardHTML）", () => {
     const html = statsCardHTML(base, "/repo/a.ysm");
     expect(html).not.toContain("ysm-badge");

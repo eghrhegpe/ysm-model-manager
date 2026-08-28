@@ -1,11 +1,13 @@
 // ===== 车万女仆详情预览测试 =====
-// 覆盖：showMaidPreview 渲染彩色分区（statsCardHTML 复用）、交互角色清单保留、metadata 段。
+// 覆盖：showMaidPreview 渲染彩色分区（statsCardHTML 复用）、交互角色清单保留、metadata 段、
+// 切角色重新取数（AnalyzeBedrockModelEntry）、extraCount = texCount - subCount。
 // 数据源：Go AnalyzeBedrockModel 返回 types.BedrockModel（与 YSM 同一结构）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PreviewCtx } from "./utils.ts";
 
-const { analyzeMock, mountMock, cleanupMock, makeAdapterMock, loadModelDataMock, preloadMock, androidBackMock } = vi.hoisted(() => ({
+const { analyzeMock, analyzeEntryMock, mountMock, cleanupMock, makeAdapterMock, loadModelDataMock, preloadMock, androidBackMock } = vi.hoisted(() => ({
   analyzeMock: vi.fn(),
+  analyzeEntryMock: vi.fn(),
   mountMock: vi.fn().mockResolvedValue(undefined),
   cleanupMock: vi.fn(),
   makeAdapterMock: vi.fn(() => ({})),
@@ -17,6 +19,7 @@ const { analyzeMock, mountMock, cleanupMock, makeAdapterMock, loadModelDataMock,
 vi.mock("../../backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     AnalyzeBedrockModel: analyzeMock,
+    AnalyzeBedrockModelEntry: analyzeEntryMock,
     ReadFileBytes: vi.fn().mockResolvedValue(null),
   }),
 }));
@@ -129,6 +132,37 @@ describe("showMaidPreview 车万女仆详情", () => {
     expect(html).toContain("CC BY-NC-SA 4.0");
     expect(html).toContain("作者A");
     expect(html).toContain("来自巴特蕾特学院。");
+  });
+
+  it("extraCount = texCount - subCount（2角色2纹理 → 无额外纹理行）", async () => {
+    const ctx = makeCtx();
+    await showMaidPreview(ctx, "/repo/maid.zip");
+    const html = ctx.root.innerHTML;
+    // 2 角色各绑定 1 张纹理，没有"额外纹理"
+    expect(html).not.toContain("额外纹理");
+    // 角色纹理分类行应存在（2 张 player）
+    expect(html).toContain("角色纹理 2 张");
+  });
+
+  it("切角色 → AnalyzeBedrockModelEntry 重新取该角色的 boneCount/cubeCount", async () => {
+    // 初始聚合：bone=196, cube=922
+    analyzeEntryMock.mockResolvedValue({ boneCount: 42, cubeCount: 88 });
+    const ctx = makeCtx();
+    await showMaidPreview(ctx, "/repo/maid.zip");
+    // 初始渲染显示聚合值
+    expect(ctx.root.innerHTML).toContain("196");
+
+    // 模拟点击角色2（idx=1）
+    const li = ctx.root.querySelector<HTMLLIElement>('.dp-sublist li[data-idx="1"]');
+    expect(li).toBeTruthy();
+    li!.click();
+
+    // 等待异步取数完成
+    await new Promise((r) => setTimeout(r, 20));
+    expect(analyzeEntryMock).toHaveBeenCalledWith("/repo/maid.zip", "models/arm.geo.json");
+    // 重新渲染后显示该角色的 boneCount/cubeCount
+    expect(ctx.root.innerHTML).toContain("42");
+    expect(ctx.root.innerHTML).toContain("88");
   });
 
   it("AnalyzeBedrockModel 失败 → 降级显示无法读取提示", async () => {

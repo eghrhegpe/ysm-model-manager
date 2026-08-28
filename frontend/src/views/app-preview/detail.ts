@@ -113,10 +113,8 @@ export async function showModelDetail(
     } else {
       throw new Error(t("preview.cannotParse"));
     }
-    cardHTML = cardHTML.replace(
-      '<div class="content" id="preview-content">',
-      '<div class="content" id="preview-content"><div id="ysm-author-avatars"></div>',
-    );
+    // 顶部 ysm-author-avatars 小头像行已移除（2026-08-28）：作者头像/角色由详情卡底部
+    // 统计卡（buildStatsCard）统一承载，顶部重复渲染无意义（原 detail.ts 注入容器）
     const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) detailDiv.innerHTML = cardHTML;
 

@@ -104,7 +104,7 @@ describe("showResourcePack 资源包信息", () => {
 });
 
 describe("showModelDetail YSM 详情", () => {
-  it("解析到有效摘要 → 渲染详情卡 + 作者头像槽位", async () => {
+  it("解析到有效摘要 → 渲染详情卡（顶部头像槽位已移除，作者由底部统计卡承载）", async () => {
     summaryMock.mockResolvedValue({
       name: "角色A",
       stats: { textures: 2, models: 1 },
@@ -113,8 +113,9 @@ describe("showModelDetail YSM 详情", () => {
     const ctx = makeCtx();
     await showModelDetail(ctx, "/repo/角色A.ysm");
     expect(ctx.root.innerHTML).toContain("preview-content");
-    expect(ctx.root.innerHTML).toContain("ysm-author-avatars");
     expect(ctx.root.innerHTML).toContain("角色A");
+    // 方案 A（2026-08-28）：顶部 ysm-author-avatars 小头像行已移除，作者/头像由统计卡承载
+    expect(ctx.root.innerHTML).not.toContain("ysm-author-avatars");
     // 占位已替换为详情卡
     expect(ctx.root.innerHTML).not.toContain("正在解析模型文件");
   });

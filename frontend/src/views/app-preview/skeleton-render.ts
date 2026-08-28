@@ -114,15 +114,8 @@ export function buildStatsCard(
         )
         .join("");
     card.innerHTML += authorHtml;
-    const avatarContainer = ctx.root.getElementById("ysm-author-avatars");
-    if (avatarContainer) {
-      avatarContainer.innerHTML = authors
-        .map(
-          (au) =>
-            `<img src="${esc(au.avatarUrl || "")}" title="${esc(au.name || "")}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--bd);margin:0 2px" onerror="this.style.display='none'">`,
-        )
-        .join("");
-    }
+    // 顶部 ysm-author-avatars 小头像行已移除（2026-08-28）：作者头像/角色在统计卡作者
+    // 列表内统一承载，不再向详情页顶部重复填充小头像（原 skeleton-render.ts 填充逻辑）
   }
   container.appendChild(card);
 }

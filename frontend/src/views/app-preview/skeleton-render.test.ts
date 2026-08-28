@@ -157,13 +157,8 @@ describe("buildStatsCard", () => {
     expect(container.querySelectorAll(".pv-card").length).toBe(1);
   });
 
-  it("有作者 → 卡片内作者列表 + 详情页 ysm-author-avatars 填充", () => {
+  it("有作者 → 卡片内作者列表（顶部 ysm-author-avatars 填充已移除）", () => {
     const ctx = makeCtx();
-    // getElementById 查 avatar 容器：在 ctx.root 注入
-    const avatarsRoot = document.createElement("div");
-    avatarsRoot.innerHTML = `<div id="ysm-author-avatars"></div>`;
-    (ctx.root as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
-      (id: string) => avatarsRoot.querySelector(`#${id}`);
     const container = document.createElement("div");
     buildStatsCard(
       container,
@@ -174,9 +169,11 @@ describe("buildStatsCard", () => {
     );
     expect(container.textContent).toContain("作者A");
     expect(container.textContent).toContain("建模");
-    const avatars = avatarsRoot.querySelector("#ysm-author-avatars") as HTMLElement;
-    expect(avatars.innerHTML).toContain("ava.png");
-    expect(avatars.innerHTML).toContain("作者A");
+    // 方案 A（2026-08-28）：头像在统计卡作者列表内承载（img 含 ava.png），
+    // 不再向详情页顶部 ysm-author-avatars 重复填充小头像
+    const img = container.querySelector(".pv-card img");
+    expect(img?.getAttribute("src")).toBe("ava.png");
+    expect(ctx.root.querySelector("#ysm-author-avatars")).toBeNull();
   });
 
   it("作者无 avatarUrl → 占位圆点（无 img）", () => {

@@ -97,7 +97,8 @@ function makeModel(overrides: Record<string, unknown> = {}) {
 
 function makeCtx() {
   const root = document.createElement("div");
-  root.innerHTML = `<div id="preview-content"></div><button id="btn-3d-preview"></button><div id="ysm-author-avatars"></div>`;
+  // 顶部 ysm-author-avatars 容器已移除（2026-08-28）：作者/头像由统计卡承载
+  root.innerHTML = `<div id="preview-content"></div><button id="btn-3d-preview"></button>`;
   // PreviewCtx.root 需提供 getElementById（真实为组件宿主）
   (root as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
     (id: string) => root.querySelector(`#${id}`);
@@ -192,13 +193,12 @@ describe("loadModel2D — 防御路径", () => {
     );
     const p = loadModel2D(ctx, "/m/a.ysm", container);
     // 模拟用户切到 B：showModelDetail 重建 ctx.root.innerHTML，A 的 container 被移除
-    ctx.root.innerHTML = `<div id="preview-content"></div><button id="btn-3d-preview"></button><div id="ysm-author-avatars"></div>`;
+    ctx.root.innerHTML = `<div id="preview-content"></div><button id="btn-3d-preview"></button>`;
     container.remove();
     resolveData({ model: makeModel(), decodedBy: "go" });
     await p;
     // A 不再把作者头像写进 B 的详情页、不再把 _toggle3D 绑到 B 的按钮
-    const avatars = ctx.root.querySelector("#ysm-author-avatars") as HTMLElement;
-    expect(avatars.innerHTML).not.toContain("作者A");
+    // （ysm-author-avatars 容器已移除，无此填充目标）
     const btn3d = ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement;
     expect(btn3d.onclick).toBeNull();
   });
@@ -227,13 +227,14 @@ describe("loadModel2D — 2D 成功路径", () => {
     );
   });
 
-  it("作者区同步填充详情页头像容器", async () => {
+  it("作者列表仍在统计卡内渲染（顶部头像容器已移除，无重复填充目标）", async () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
     document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
     await loadModel2D(ctx, "/m/a.ysm", container);
-    const avatars = ctx.root.querySelector("#ysm-author-avatars") as HTMLElement;
-    expect(avatars.innerHTML).toContain("作者A");
+    // 作者信息由统计卡承载（容器内作者区），详情页顶部无 ysm-author-avatars 重复填充
+    expect(container.textContent).toContain("作者A");
+    expect(ctx.root.querySelector("#ysm-author-avatars")).toBeNull();
   });
 
   it("骨骼名开关：点击 → localStorage 持久化 + 重渲染", async () => {

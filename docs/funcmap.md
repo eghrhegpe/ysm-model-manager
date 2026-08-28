@@ -1586,8 +1586,8 @@
 | `sceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:106` | 全局单例（模块级单例 + 运行时状态隔离） |
 | `MenuControlDef()` | `frontend/src/utils/3d/caps/scene-capability:16` | 菜单控件定义（声明式，由框架渲染为 DOM） |
 | `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:68` | ============ 场景能力统一接口 ============ |
-| `persistState()` | `frontend/src/utils/3d/caps/scene-capability:109` | 保存 JSON 到 localStorage |
-| `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:114` | 从 localStorage 加载 JSON |
+| `persistState()` | `frontend/src/utils/3d/caps/scene-capability:112` | 保存 JSON 到 localStorage |
+| `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:117` | 从 localStorage 加载 JSON |
 | `ShadowParams()` | `frontend/src/utils/3d/caps/shadow-capability:24` | ============ 参数类型 ============ |
 | `DEFAULT_SHADOW_PARAMS()` | `frontend/src/utils/3d/caps/shadow-capability:39` | — |
 | `SHADOW_PRESETS()` | `frontend/src/utils/3d/caps/shadow-capability:49` | 预设（setPreset 套用到不同模型类别） |
@@ -2151,7 +2151,7 @@
 | `MaidOpenOptions()` | `frontend/src/views/app-preview/maid-3d:41` | — |
 | `cleanupMaid3D()` | `frontend/src/views/app-preview/maid-3d:90` | 关闭活跃女仆 3D 预览 |
 | `invalidateMaidPreview()` | `frontend/src/views/app-preview/maid-3d:95` | 作废在途女仆 3D 加载 |
-| `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:307` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
+| `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:309` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
 | `createMmd3D()` | `frontend/src/views/app-preview/mmd-3d:28` | 打开 MMD 3D 预览（.pmx/.pmd 直引 @moeru/three-mmd）；siblings 提供同类型候选以渲染 topBar 切换下拉（ADR-066 §5.6） |
 | `cleanupMmd3D()` | `frontend/src/views/app-preview/mmd-3d:33` | 清理 MMD 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `appendMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:38` | 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） |
@@ -2210,7 +2210,7 @@
 | `ModelDetailMeta()` | `frontend/src/views/app-preview/tpl:6` | 模型统计元数据（modelDetailHTML 入参） |
 | `modelDetailHTML()` | `frontend/src/views/app-preview/tpl:20` | 模型详情面板（仓库页面） |
 | `StatsCardModel()` | `frontend/src/views/app-preview/tpl:58` | 模型统计卡片（statsCardHTML 入参的几何视图） |
-| `statsCardHTML()` | `frontend/src/views/app-preview/tpl:73` | 模型统计卡片 |
+| `statsCardHTML()` | `frontend/src/views/app-preview/tpl:76` | 模型统计卡片 |
 | `devLog()` | `frontend/src/views/app-preview/utils:6` | DEV 模式下输出调试日志 |
 | `DecodedYsm()` | `frontend/src/views/app-preview/utils:11` | WASM 解码结果（decodeYsmViaWasm 返回） |
 | `PreviewRoot()` | `frontend/src/views/app-preview/utils:32` | 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） |

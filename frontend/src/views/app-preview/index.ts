@@ -115,6 +115,13 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     this.unsubs.push(
       bus.on("model:select", async ({ path, isDir, rtype }) => {
         this._previewGuard.invalidate(); // 代际计数：子方法 await 后校验 gen !== _previewGen 即丢弃过期渲染
+        // 统一同步「最近选中模型」（左下角 3D 预览按钮的 path 来源）：所有 model:select
+        // 发射点（app-tree/仓库元老/回收站/去重/morph·stage 切换）都更新，避免旧路径残留
+        // 导致 3D 预览打开错误模型或误报类型不支持（动态 import 防与 init-pages 循环）
+        if (!isDir && path) {
+          const { rememberModelPath } = await import("../app-content/init-pages.ts");
+          rememberModelPath(path);
+        }
         // P2 修复（审核）：切换模型前关闭活跃的 3D 全屏 overlay（挂 body、不随 shadow
         // DOM 重建消失）。后台 model:select（导入队列/回收站自动选择）触发时不清旧层会
         // 双全屏叠加 + 旧 renderer 死屏残留。closeActive3DOverlay 保留 _prefer3D，

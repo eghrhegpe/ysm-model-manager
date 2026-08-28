@@ -508,8 +508,8 @@
 | `frontend/src/views/app-nav/index.ts` | 102 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 242 |
 | `frontend/src/views/app-preview/detail-3d.ts` | 308 |
-| `frontend/src/views/app-preview/index.ts` | 235 |
-| `frontend/src/views/app-preview/index.ts` | 257 |
+| `frontend/src/views/app-preview/index.ts` | 242 |
+| `frontend/src/views/app-preview/index.ts` | 264 |
 | `frontend/src/views/app-preview/mmd-controls.ts` | 291 |
 | `frontend/src/views/app-preview/preview-library.ts` | 98 |
 | `frontend/src/views/app-preview/ysm-controls.ts` | 114 |

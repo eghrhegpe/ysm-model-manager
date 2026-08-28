@@ -17,6 +17,9 @@ import type { Spec3D, BoneSelectInfo } from "../../utils/3d/model3d.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import type { CameraControlBridge } from "../../utils/3d/adapters/camera-controls.ts";
 export type { CameraControlBridge };
+import { registerSchema, YSM_MODEL_SCHEMA_ID } from "../../utils/3d/adapters/schema-registry.ts";
+import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
+import { subscribeSettings, getStateValue } from "../../utils/3d/state/preview-state.ts";
 
 /** 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） */
 export type YsmModel = BedrockGeometry & {
@@ -82,6 +85,26 @@ export function fillYsmShotPanel(list: HTMLElement, ctx: YsmControlsContext): vo
     };
     list.appendChild(item);
   }
+}
+
+/**
+ * [doc:adr-126-p5] YSM model 面板受控 schema 注册 + 组件选择副作用订阅。
+ * maid-3d / ysm-3d 共用：注册 YSM_MODEL_SCHEMA_ID（buildYsmModelSchema 吃状态层快照），
+ * 并订阅 ui.activeComponent → showModelGroup（单一消费点，防 listeners 只增不减）。
+ * 返回 off 给 adapter dispose 调用——防订阅者泄漏（审计 #1）。
+ */
+export function registerYsmModelSchema(ctx: YsmControlsContext): () => void {
+  registerSchema(YSM_MODEL_SCHEMA_ID, (snap) =>
+    buildYsmModelSchema(
+      { model: ctx.model, spec: ctx.spec, texArr: ctx.texArr as THREE.Texture[] },
+      snap,
+    ),
+  );
+  return subscribeSettings((changed) => {
+    if (changed === "ui.activeComponent") {
+      ctx.handle.showModelGroup(getStateValue("ui.activeComponent") as number);
+    }
+  });
 }
 
 

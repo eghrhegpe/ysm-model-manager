@@ -47,10 +47,10 @@
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 65 |
 | 前端·工具 | 172 | 700 |
-| frontend/views | 118 | 346 |
+| frontend/views | 118 | 347 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **503** | **2148** |
+| **合计** | **503** | **2149** |
 
 ## Go·头像
 
@@ -2188,10 +2188,10 @@
 | `LoadModelOpts()` | `frontend/src/views/app-preview/loader:11` | loadModelData 选项（Bedrock 通用模型加载控制） |
 | `loadModelData()` | `frontend/src/views/app-preview/loader:29` | 加载模型几何数据 + 纹理（优先路径，阻塞渲染） 统一路径：缓存 → WASM 解码（仅 .ysm）→ Go AnalyzeBedrockModel 兜底 作者/头像延迟到 fil |
 | `fillAuthorsAsync()` | `frontend/src/views/app-preview/loader:232` | 异步补全作者/头像信息（不阻塞首帧渲染） 在几何渲染完成后调用，后台补齐作者名 + 头像 URL |
-| `MaidOpenOptions()` | `frontend/src/views/app-preview/maid-3d:44` | — |
-| `cleanupMaid3D()` | `frontend/src/views/app-preview/maid-3d:109` | 关闭活跃女仆 3D 预览 |
-| `invalidateMaidPreview()` | `frontend/src/views/app-preview/maid-3d:114` | 作废在途女仆 3D 加载 |
-| `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:328` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
+| `MaidOpenOptions()` | `frontend/src/views/app-preview/maid-3d:41` | — |
+| `cleanupMaid3D()` | `frontend/src/views/app-preview/maid-3d:92` | 关闭活跃女仆 3D 预览 |
+| `invalidateMaidPreview()` | `frontend/src/views/app-preview/maid-3d:97` | 作废在途女仆 3D 加载 |
+| `showMaidPreview()` | `frontend/src/views/app-preview/maid-3d:311` | 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。 |
 | `createMmd3D()` | `frontend/src/views/app-preview/mmd-3d:29` | 打开 MMD 3D 预览（.pmx/.pmd 直引 @moeru/three-mmd）；siblings 提供同类型候选以渲染 topBar 切换下拉（ADR-066 §5.6） |
 | `cleanupMmd3D()` | `frontend/src/views/app-preview/mmd-3d:34` | 清理 MMD 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
 | `appendMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:39` | 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） |
@@ -2275,16 +2275,17 @@
 | `vrmModelInfoNodes()` | `frontend/src/views/app-preview/vrm-controls:26` | VRM 模型信息声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdModelInfoNodes） |
 | `vrmShotNodes()` | `frontend/src/views/app-preview/vrm-controls:42` | VRM 截图面板声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdShotNodes）： screenshotFn null（无 |
 | `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:21` | — |
-| `YsmOpenOptions()` | `frontend/src/views/app-preview/ysm-3d:45` | — |
-| `createYsm3D()` | `frontend/src/views/app-preview/ysm-3d:58` | 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。 |
-| `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:112` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |
-| `invalidateYsmPreview()` | `frontend/src/views/app-preview/ysm-3d:117` | 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） |
+| `YsmOpenOptions()` | `frontend/src/views/app-preview/ysm-3d:42` | — |
+| `createYsm3D()` | `frontend/src/views/app-preview/ysm-3d:55` | 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。 |
+| `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:92` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |
+| `invalidateYsmPreview()` | `frontend/src/views/app-preview/ysm-3d:97` | 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） |
 | `CameraControlBridge()` | `frontend/src/views/app-preview/ysm-controls` | — |
-| `YsmModel()` | `frontend/src/views/app-preview/ysm-controls:22` | 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） |
-| `YsmContentHandle()` | `frontend/src/views/app-preview/ysm-controls:31` | YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） |
-| `YsmControlsContext()` | `frontend/src/views/app-preview/ysm-controls:44` | 控件装配上下文：由 ysm-adapter 在 buildYsmScene 内组装传入 |
-| `ysmShotNodes()` | `frontend/src/views/app-preview/ysm-controls:67` | [doc:adr-126-p4-b-2] YSM 截图面板——声明式节点版。 |
-| `fillYsmShotPanel()` | `frontend/src/views/app-preview/ysm-controls:72` | 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） |
+| `YsmModel()` | `frontend/src/views/app-preview/ysm-controls:25` | 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） |
+| `YsmContentHandle()` | `frontend/src/views/app-preview/ysm-controls:34` | YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） |
+| `YsmControlsContext()` | `frontend/src/views/app-preview/ysm-controls:47` | 控件装配上下文：由 ysm-adapter 在 buildYsmScene 内组装传入 |
+| `ysmShotNodes()` | `frontend/src/views/app-preview/ysm-controls:70` | [doc:adr-126-p4-b-2] YSM 截图面板——声明式节点版。 |
+| `fillYsmShotPanel()` | `frontend/src/views/app-preview/ysm-controls:75` | 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） |
+| `registerYsmModelSchema()` | `frontend/src/views/app-preview/ysm-controls:96` | [doc:adr-126-p5] YSM model 面板受控 schema 注册 + 组件选择副作用订阅。 |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `SidebarInstance()` | `frontend/src/views/app-sidebar/data:4` | sidebar 整合包实例（loader 转换后的渲染格式） |
 | `bindCardEvents()` | `frontend/src/views/app-sidebar/events:127` | — |

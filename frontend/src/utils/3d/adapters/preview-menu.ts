@@ -9,7 +9,7 @@
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./preview-menu-defs.ts";
 import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 import type { PreviewActionMenuCtx } from "./preview-menu-node-types.ts";
-import { renderEnvLevel } from "./preview-menu-env.ts";
+import { renderEnvLevel, disposeEnvSubscriptions } from "./preview-menu-env.ts";
 import { renderCapControls } from "./preview-menu-cap-controls.ts";
 import { safeErrorMessage } from "../../safe-error-msg.ts";
 import { createSlideMenu, type SlideMenuView, type SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
@@ -572,6 +572,7 @@ export function mountPreviewRootMenu(overlay: HTMLElement, ctx: PreviewMenuCtx):
   const handle: PreviewMenuHandle = {
     dispose: (): void => {
       abortTap();
+      disposeEnvSubscriptions(); // 清环境面板 cap 订阅，防 cap 单例持有过期 menu 引用
       menu.dispose();
       dock.remove();
       popup.remove();

@@ -295,6 +295,20 @@ describe("mountPreviewRootMenu", () => {
     document.body.click();
   });
 
+  it("dispose 清环境订阅（cap 单例不持有过期 menu 引用）", () => {
+    // 进入环境面板 → rebuildEnvSubs 订阅 cap；dispose → disposeEnvSubscriptions 退订全部
+    const unsub = vi.fn();
+    const subscribe = vi.fn(() => unsub);
+    const cap = { getMenuControls: () => [], subscribe } as never;
+    const handle = mountPreviewRootMenu(overlay, makeCtx({
+      getCap: (id) => (id === "sky" ? cap : null),
+    }));
+    overlay.querySelector<HTMLElement>('[data-testid="dock-env"]')!.click();
+    expect(subscribe).toHaveBeenCalled();
+    handle.dispose();
+    expect(unsub).toHaveBeenCalled();
+  });
+
   it("角色面板加载入口：无 siblings → 显示空态（路径输入仍在，类型 tab 由 adapter 注入）", () => {
     const handle = mountPreviewRootMenu(overlay, makeCtx({ getSiblings: () => [] }));
     const modelGroupId = PREVIEW_MENU_GROUPS.find((g) => g.id === "model")!.id;

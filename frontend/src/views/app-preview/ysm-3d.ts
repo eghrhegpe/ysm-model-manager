@@ -12,11 +12,8 @@ import type { BedrockGeometry } from "./geometry.ts";
 import { preloadModel } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
-import { fillYsmShotPanel, ysmShotNodes } from "./ysm-controls.ts";
+import { fillYsmShotPanel, ysmShotNodes, registerYsmModelSchema } from "./ysm-controls.ts";
 import { fillMmdPlayPanel } from "./mmd-controls.ts";
-import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
-import { registerSchema, YSM_MODEL_SCHEMA_ID } from "../../utils/3d/adapters/schema-registry.ts";
-import { subscribeSettings, getStateValue } from "../../utils/3d/state/preview-state.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 
@@ -82,24 +79,7 @@ export async function createYsm3D(
         shotNodes: ysmShotNodes,
         // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容 = buildYsmModelSchema
         // （组件选择走 ui.activeComponent，切换副作用 = showModelGroup）
-        registerModelSchema: (ctx) => {
-          registerSchema(YSM_MODEL_SCHEMA_ID, (snap) =>
-            buildYsmModelSchema(
-              { model: ctx.model, spec: ctx.spec, texArr: ctx.texArr as import("three").Texture[] },
-              snap,
-            ),
-          );
-          // [doc:adr-126-p5-收口] 订阅链闭合：ui.activeComponent 变更（无论 select 控件交互
-          // 还是程序化 setStateValue）→ showModelGroup 真实切换 3D 场景组件。
-          // 副作用不再挂在 select.onChange（只覆盖 UI 事件），改走状态层订阅——单一消费点。
-          // [审计 #1] 返回 off 给 adapter dispose 调用——防订阅者泄漏（listeners 只增不减）
-          return subscribeSettings((changed) => {
-            if (changed === "ui.activeComponent") {
-              const idx = getStateValue("ui.activeComponent") as number;
-              ctx.handle.showModelGroup(idx);
-            }
-          });
-        },
+        registerModelSchema: registerYsmModelSchema,
       },
       fillPlayPanel: fillMmdPlayPanel,
     }),

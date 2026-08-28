@@ -223,7 +223,7 @@ export function summaryCardHTML(
       })
       .join("");
     if (configHtml) {
-      configHtml = `<div class="md-divider"></div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">${t("format.configItems")}</div>${configHtml}`;
+      configHtml = `<div style="font-size:9px;color:var(--muted);margin-bottom:2px">${t("format.configItems")}</div>${configHtml}`;
     }
   }
 
@@ -241,12 +241,10 @@ ${tips ? `<div style="font-size:11px;color:var(--txt);margin-bottom:10px;line-he
 
 <div class="md-row"><span class="md-label">${t("format.license")}</span><span class="md-value">${esc(licenseType) || t("format.unlabeled")}</span></div>
 
-<div class="md-divider"></div>
-
-${preview.heightScale || preview.widthScale ? `<div class="md-row"><span class="md-label">📐 ${t("format.scale")}</span><span class="md-value">${(preview.heightScale ?? 1).toFixed(2)} × ${(preview.widthScale || 1).toFixed(2)}</span></div>` : ""}
+${preview.heightScale || preview.widthScale ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">📐 ${t("format.scale")}</span><span class="md-value">${(preview.heightScale ?? 1).toFixed(2)} × ${(preview.widthScale || 1).toFixed(2)}</span></div>` : ""}
 
 ${animGroupHtml ? `<div class="md-divider"></div>${animGroupHtml}` : ""}
-${configHtml ? configHtml : ""}
+${configHtml ? `<div class="md-divider"></div>${configHtml}` : ""}
 
 ${summary?.links?.home ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">🔗 ${t("format.links")}</span><span class="md-value"><a href="${esc(safeUrl(summary.links.home))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.homepage")}</a>${summary.links.donate ? ` · <a href="${esc(safeUrl(summary.links.donate))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.donate")}</a>` : ""}</span></div>` : ""}
 </div>`;

@@ -42,7 +42,7 @@ const snap = (activeComponent: number): PreviewSnapshot =>
 
 describe("buildYsmModelSchema（声明式 schema）", () => {
   it("单组件：统计 2 行 field + 纹理 2 行 row，无组件选择 select", () => {
-    const nodes = buildYsmModelSchema(ctx, snap(-1), () => {});
+    const nodes = buildYsmModelSchema(ctx, snap(-1));
     // 单组件 → 无 select
     expect(nodes.some((n) => n.kind === "select")).toBe(false);
     // 统计
@@ -66,7 +66,7 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
         ],
       }),
     } as never;
-    const nodes = buildYsmModelSchema(multiCtx, snap(-1), () => {});
+    const nodes = buildYsmModelSchema(multiCtx, snap(-1));
     const sel = nodes.find((n) => n.kind === "select")!;
     expect(sel.id).toBe("ysm-component-select");
     expect(sel.control?.bind).toBe("ui.activeComponent");
@@ -86,7 +86,7 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
       texArr: [{ userData: { imgWidth: 128, imgHeight: 64 } }] as never[],
       model: { textureNames: ["armor_tex"], textures: ["a/armor.png"], textureCategories: [""] } as never,
     } as never;
-    const nodes = buildYsmModelSchema(multiCtx, snap(1), () => {});
+    const nodes = buildYsmModelSchema(multiCtx, snap(1));
     expect(nodes.find((n) => n.id === "ysm-stats-bones")?.value).toBe("1 根");
     expect(nodes.find((n) => n.id === "ysm-stats-cubes")?.value).toBe("2 个");
     // 组件 1 只有 1 个槽位

@@ -1504,10 +1504,10 @@
 | `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:158` | — |
 | `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:165` | — |
 | `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:43` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
-| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:480` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
-| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:510` | 工厂：构造统一 PreviewAdapter（shared 模式） |
-| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:529` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:569` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
+| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:482` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
+| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:512` | 工厂：构造统一 PreviewAdapter（shared 模式） |
+| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:531` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:573` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
 | `ALPHA_F_VISIBLE()` | `frontend/src/utils/3d/alpha-index:5` | — |
 | `ALPHA_F_HOLE()` | `frontend/src/utils/3d/alpha-index:6` | — |
 | `ALPHA_F_TRANSLUCENT()` | `frontend/src/utils/3d/alpha-index:7` | — |

@@ -318,6 +318,12 @@ function renderPreviewPanel(
         actionCtx,
       });
     } else if (node.renderCustom) {
+      // [doc:adr-126-p5-收口] renderCustom 是末段逃生舱——带 schemaId/children 的节点
+      // 走声明式通道（上面分支先命中）；此处到达 = 真·无法数据化的内容（note 等静态文案）。
+      // 若误带 schemaId 走这里说明注册缺失，console.warn 提示（防静默 fallback 掩盖）
+      if (node.schemaId && !getSchema(node.schemaId)) {
+        console.warn(`[preview-menu] "${node.id}" 声明 schemaId="${node.schemaId}" 但未注册——走 renderCustom 逃生舱`);
+      }
       node.renderCustom(list, () => hideMenu());
     } else if (node.action) {
       node.action(actionCtx);

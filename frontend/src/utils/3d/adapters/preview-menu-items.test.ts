@@ -213,6 +213,11 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
           typeof d.renderCustom === "function" || (d.children?.length ?? 0) > 0 || typeof d.schemaId === "string",
           `${d.id} 缺渲染通道（renderCustom / children / schemaId）`,
         ).toBe(true);
+        // [doc:adr-126-p5-收口] 受控拦截：带 schemaId 的 panel 不得同时带 renderCustom——
+        // 否则 schema 注册了也被逃生舱抢跑（渲染优先级链 schema 优先，双通道是歧义）
+        if (typeof d.schemaId === "string") {
+          expect(typeof d.renderCustom, `${d.id} 带 schemaId 不得同时带 renderCustom`).not.toBe("function");
+        }
       }
       if (d.kind === "action") expect(typeof d.action, `${d.id}.action`).toBe("function");
     });

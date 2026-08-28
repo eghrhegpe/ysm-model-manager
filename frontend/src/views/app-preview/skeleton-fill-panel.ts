@@ -308,7 +308,8 @@ export function ysmModelTextureSlots(
  * YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。
  * @param ctx YSM 控件上下文（model/spec/texArr）
  * @param snapshot 状态层快照（读 ui.activeComponent，-1 = All）
- * @param onComponentChange 组件切换副作用（views 层注入 showModelGroup）
+ * 组件切换副作用（showModelGroup）由 views 层 registerModelSchema 闭包订阅状态层驱动
+ * （[doc:adr-126-p5-收口] 订阅链闭合）——本函数只产出节点，不含副作用。
  */
 export function buildYsmModelSchema(
   ctx: {
@@ -317,7 +318,6 @@ export function buildYsmModelSchema(
     texArr: import("three").Texture[];
   },
   snapshot: PreviewSnapshot,
-  onComponentChange?: (idx: number) => void,
 ): PreviewMenuNode[] {
   const rawIdx = typeof snapshot["ui.activeComponent"] === "number" ? (snapshot["ui.activeComponent"] as number) : -1;
   const { bones, cubes, compName } = ysmModelStats(ctx.spec, rawIdx);
@@ -342,7 +342,6 @@ export function buildYsmModelSchema(
       control: {
         bind: "ui.activeComponent",
         options,
-        onChange: (v) => onComponentChange?.(Number(v)),
       },
     });
   }

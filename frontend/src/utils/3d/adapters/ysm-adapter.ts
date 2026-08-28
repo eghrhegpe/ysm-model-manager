@@ -56,7 +56,9 @@ export interface YsmAdapterOptions {
    * 缺失时菜单 render / 骨骼拾取联动退化为 no-op（测试与无面板场景安全）。
    */
   panels?: {
-    fillModelPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
+    /** [doc:adr-126-p5-收口] YSM model 面板已走 schema-registry，fillModelPanel 旧路径可选
+     *  （兼容旧装配）；新装配只传 registerModelSchema */
+    fillModelPanel?: (list: HTMLElement, ctx: YsmControlsContext) => void;
     fillShotPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
     /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
      *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
@@ -540,7 +542,9 @@ export interface YsmMenuItemsOpts {
   };
   /** 面板填充回调（视图层注入；缺失则 render 退化为 no-op，解除 utils→views 分层违规 R1） */
   panels?: {
-    fillModelPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
+    /** [doc:adr-126-p5-收口] YSM model 面板已走 schema-registry，fillModelPanel 旧路径可选
+     *  （兼容旧装配）；新装配只传 registerModelSchema */
+    fillModelPanel?: (list: HTMLElement, ctx: YsmControlsContext) => void;
     fillShotPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
     /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
      *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */

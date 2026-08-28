@@ -12,10 +12,11 @@ import type { BedrockGeometry } from "./geometry.ts";
 import { preloadModel } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
-import { fillYsmModelPanel, fillYsmShotPanel, ysmShotNodes } from "./ysm-controls.ts";
+import { fillYsmShotPanel, ysmShotNodes } from "./ysm-controls.ts";
 import { fillMmdPlayPanel } from "./mmd-controls.ts";
 import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
 import { registerSchema } from "../../utils/3d/adapters/schema-registry.ts";
+import { subscribeSettings, getStateValue } from "../../utils/3d/state/preview-state.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 
@@ -74,8 +75,9 @@ export async function createYsm3D(
       listAllFilePaths,
       readTextFile: readFileBytes,
       // 面板填充回调由视图层注入，解除 utils→views 分层违规 R1（ADR 分层契约）
+      // [doc:adr-126-p5-收口] YSM model 面板已走 schema-registry（registerModelSchema），
+      // fillYsmModelPanel 旧路径删除（死代码）；shot 走 shotNodes 声明式节点
       panels: {
-        fillModelPanel: fillYsmModelPanel,
         fillShotPanel: fillYsmShotPanel,
         shotNodes: ysmShotNodes,
         // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容 = buildYsmModelSchema
@@ -85,9 +87,17 @@ export async function createYsm3D(
             buildYsmModelSchema(
               { model: ctx.model, spec: ctx.spec, texArr: ctx.texArr as import("three").Texture[] },
               snap,
-              (idx) => ctx.handle.showModelGroup(idx),
             ),
           );
+          // [doc:adr-126-p5-收口] 订阅链闭合：ui.activeComponent 变更（无论 select 控件交互
+          // 还是程序化 setStateValue）→ showModelGroup 真实切换 3D 场景组件。
+          // 副作用不再挂在 select.onChange（只覆盖 UI 事件），改走状态层订阅——单一消费点。
+          subscribeSettings((changed) => {
+            if (changed === "ui.activeComponent") {
+              const idx = getStateValue("ui.activeComponent") as number;
+              ctx.handle.showModelGroup(idx);
+            }
+          });
         },
       },
       fillPlayPanel: fillMmdPlayPanel,

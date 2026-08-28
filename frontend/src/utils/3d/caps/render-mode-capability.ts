@@ -14,14 +14,6 @@ import {
 
 /* -------- 属性定义 -------- */
 
-export interface RenderModeState {
-  wireframe: boolean;
-  blending: THREE.Blending;
-  depthTest: boolean;
-  side: THREE.Side;
-  depthWrite: boolean;
-}
-
 /** 每个属性的 override：null = 不覆盖（保持原始值），value = 强制为该值 */
 interface RenderModeOverrides {
   wireframe: boolean | null;

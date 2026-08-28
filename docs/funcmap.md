@@ -47,10 +47,10 @@
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
 | 前端·工具 | 171 | 698 |
-| frontend/views | 118 | 347 |
+| frontend/views | 118 | 348 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **502** | **2146** |
+| **合计** | **502** | **2147** |
 
 ## Go·头像
 
@@ -1489,10 +1489,11 @@
 | `VrmDataPort()` | `frontend/src/utils/3d/adapters/vrm-adapter:30` | VRM 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
 | `VrmMetaInfo()` | `frontend/src/utils/3d/adapters/vrm-adapter:87` | VRM meta 归一化信息（meta 卡展示用） |
 | `readVrmMeta()` | `frontend/src/utils/3d/adapters/vrm-adapter:106` | 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null |
-| `VrmPanelHooks()` | `frontend/src/utils/3d/adapters/vrm-adapter:166` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
-| `buildVrmScene()` | `frontend/src/utils/3d/adapters/vrm-adapter:490` | — |
-| `VrmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/vrm-adapter:510` | vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `vrmMenuItems()` | `frontend/src/utils/3d/adapters/vrm-adapter:546` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
+| `VrmModelInfoCtx()` | `frontend/src/utils/3d/adapters/vrm-adapter:166` | VRM 模型信息（model 面板声明式节点数据源；对齐 MMD MmdBottomNavCtx 注入链） |
+| `VrmPanelHooks()` | `frontend/src/utils/3d/adapters/vrm-adapter:173` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
+| `buildVrmScene()` | `frontend/src/utils/3d/adapters/vrm-adapter:507` | — |
+| `VrmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/vrm-adapter:527` | vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `vrmMenuItems()` | `frontend/src/utils/3d/adapters/vrm-adapter:565` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
 | `VrmBonePanelCtx()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:21` | 骨骼面板上下文：core 外壳注入（extraPanel 标准契约） |
 | `RenderVrmBonePanel()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:31` | 骨骼面板渲染契约：返回清理函数（面板移除时调用） |
 | `makeBonePanelRenderer()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:40` | 通用骨骼面板渲染器（ADR-074 S3：从 VRM 专属抽通用版，喂 BoneTree 而非 VRM）。 |
@@ -1506,10 +1507,10 @@
 | `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:158` | — |
 | `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:165` | — |
 | `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:45` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
-| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:489` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
-| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:519` | 工厂：构造统一 PreviewAdapter（shared 模式） |
-| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:538` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:579` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
+| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:486` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
+| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:516` | 工厂：构造统一 PreviewAdapter（shared 模式） |
+| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:535` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:573` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
 | `ALPHA_F_VISIBLE()` | `frontend/src/utils/3d/alpha-index:5` | — |
 | `ALPHA_F_HOLE()` | `frontend/src/utils/3d/alpha-index:6` | — |
 | `ALPHA_F_TRANSLUCENT()` | `frontend/src/utils/3d/alpha-index:7` | — |
@@ -1592,8 +1593,7 @@
 | `DEFAULT_REFLECTOR_PARAMS()` | `frontend/src/utils/3d/caps/reflector-capability:34` | — |
 | `REFLECTOR_PRESETS()` | `frontend/src/utils/3d/caps/reflector-capability:45` | 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） |
 | `ReflectorCapability()` | `frontend/src/utils/3d/caps/reflector-capability:125` | — |
-| `RenderModeState()` | `frontend/src/utils/3d/caps/render-mode-capability:17` | -------- 属性定义 -------- |
-| `RenderModeCapability()` | `frontend/src/utils/3d/caps/render-mode-capability:67` | -------- 主类 -------- |
+| `RenderModeCapability()` | `frontend/src/utils/3d/caps/render-mode-capability:59` | -------- 主类 -------- |
 | `SceneCapabilityFactory()` | `frontend/src/utils/3d/caps/scene-capability-registry:22` | 能力工厂：接收 scene/renderer/camera，返回能力实例 |
 | `SceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:29` | 注册表：管理所有场景能力的工厂和实例 |
 | `sceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:108` | 全局单例（模块级单例 + 运行时状态隔离） |
@@ -2266,23 +2266,24 @@
 | `getPrefer3D()` | `frontend/src/views/app-preview/utils:60` | — |
 | `setPrefer3D()` | `frontend/src/views/app-preview/utils:63` | — |
 | `stripYsgpTextHeader()` | `frontend/src/views/app-preview/utils:147` | 剥离 YSGP 文本头部，返回标准二进制格式 |
-| `createVrm3D()` | `frontend/src/views/app-preview/vrm-3d:45` | 打开 VRM 3D 预览（.vrm 直引 three-vrm）；siblings 提供同类型候选以渲染 topBar 切换下拉 |
-| `cleanupVrm3D()` | `frontend/src/views/app-preview/vrm-3d:60` | 清理 VRM 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
-| `invalidateVrmPreview()` | `frontend/src/views/app-preview/vrm-3d:65` | 任意新预览派发时调用，作废在途 VRM 加载 |
-| `VrmMaterialControlBridge()` | `frontend/src/views/app-preview/vrm-controls:15` | 材质控制桥：复用 vrm-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在本文件 |
-| `makeVrmPanelRenderer()` | `frontend/src/views/app-preview/vrm-controls:94` | VRM 菜单面板渲染器（声明式菜单 item.render 回调） |
+| `createVrm3D()` | `frontend/src/views/app-preview/vrm-3d:50` | 打开 VRM 3D 预览（.vrm 直引 three-vrm）；siblings 提供同类型候选以渲染 topBar 切换下拉 |
+| `cleanupVrm3D()` | `frontend/src/views/app-preview/vrm-3d:65` | 清理 VRM 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
+| `invalidateVrmPreview()` | `frontend/src/views/app-preview/vrm-3d:70` | 任意新预览派发时调用，作废在途 VRM 加载 |
+| `VrmMaterialControlBridge()` | `frontend/src/views/app-preview/vrm-controls:18` | 材质控制桥：复用 vrm-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在本文件 |
+| `vrmModelInfoNodes()` | `frontend/src/views/app-preview/vrm-controls:98` | VRM 模型信息声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdModelInfoNodes） |
+| `vrmShotNodes()` | `frontend/src/views/app-preview/vrm-controls:114` | VRM 截图面板声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdShotNodes）： screenshotFn null（无 |
+| `makeVrmPanelRenderer()` | `frontend/src/views/app-preview/vrm-controls:125` | — |
 | `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:21` | — |
 | `YsmOpenOptions()` | `frontend/src/views/app-preview/ysm-3d:45` | — |
 | `createYsm3D()` | `frontend/src/views/app-preview/ysm-3d:58` | 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。 |
 | `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:111` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |
 | `invalidateYsmPreview()` | `frontend/src/views/app-preview/ysm-3d:116` | 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） |
 | `CameraControlBridge()` | `frontend/src/views/app-preview/ysm-controls` | — |
-| `YsmModel()` | `frontend/src/views/app-preview/ysm-controls:23` | 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） |
-| `YsmContentHandle()` | `frontend/src/views/app-preview/ysm-controls:32` | YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） |
-| `YsmControlsContext()` | `frontend/src/views/app-preview/ysm-controls:45` | 控件装配上下文：由 ysm-adapter 在 buildYsmScene 内组装传入 |
-| `fillYsmModelPanel()` | `frontend/src/views/app-preview/ysm-controls:67` | 模型菜单面板：统计 / 纹理 / 骨骼列表 / 骨骼详情 / 多组件切换（fill3DPanel 内容）。 |
-| `ysmShotNodes()` | `frontend/src/views/app-preview/ysm-controls:94` | [doc:adr-126-p4-b-2] YSM 截图面板——声明式节点版。 |
-| `fillYsmShotPanel()` | `frontend/src/views/app-preview/ysm-controls:99` | 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） |
+| `YsmModel()` | `frontend/src/views/app-preview/ysm-controls:22` | 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） |
+| `YsmContentHandle()` | `frontend/src/views/app-preview/ysm-controls:31` | YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） |
+| `YsmControlsContext()` | `frontend/src/views/app-preview/ysm-controls:44` | 控件装配上下文：由 ysm-adapter 在 buildYsmScene 内组装传入 |
+| `ysmShotNodes()` | `frontend/src/views/app-preview/ysm-controls:67` | [doc:adr-126-p4-b-2] YSM 截图面板——声明式节点版。 |
+| `fillYsmShotPanel()` | `frontend/src/views/app-preview/ysm-controls:72` | 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `SidebarInstance()` | `frontend/src/views/app-sidebar/data:4` | sidebar 整合包实例（loader 转换后的渲染格式） |
 | `bindCardEvents()` | `frontend/src/views/app-sidebar/events:127` | — |

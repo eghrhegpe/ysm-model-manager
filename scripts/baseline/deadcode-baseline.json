@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-28T15:17:05.961Z",
+  "generated": "2026-08-28T21:11:10.179Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -107,7 +107,6 @@
     "src/utils/3d/adapters/mmd-adapter.ts#src/utils/3d/adapters/vrm-adapter.ts",
     "src/utils/3d/adapters/mmd-ktx2-encoder.test.ts#src/utils/3d/adapters/mmd-ktx2-encoder.test.ts",
     "src/utils/3d/adapters/mmd-pmx-parser.ts#src/utils/3d/adapters/mmd-pmx-parser.ts",
-    "src/utils/3d/adapters/preview-menu-env.test.ts#src/utils/3d/adapters/preview-menu-env.test.ts",
     "src/utils/3d/adapters/preview-menu-items.test.ts#src/utils/3d/adapters/preview-menu-items.test.ts",
     "src/utils/3d/adapters/preview-menu-items.test.ts#src/utils/3d/adapters/preview-menu.roles.test.ts",
     "src/utils/3d/adapters/preview-menu-items.test.ts#src/utils/3d/adapters/preview-menu.test.ts",
@@ -140,6 +139,7 @@
     "src/views/app-content/site/edit.ts#src/views/app-content/site/edit.ts",
     "src/views/app-preview/fbx-3d.ts#src/views/app-preview/ysm-3d.ts",
     "src/views/app-preview/litematic-3d.test.ts#src/views/app-preview/litematic-3d.test.ts",
+    "src/views/app-preview/maid-3d.ts#src/views/app-preview/ysm-3d.ts",
     "src/views/app-preview/mmd-controls.test.ts#src/views/app-preview/mmd-controls.test.ts",
     "src/views/app-preview/mmd-controls.ts#src/views/app-preview/vrm-controls.ts",
     "src/views/app-preview/mmd-controls.ts#src/views/app-preview/ysm-controls.ts",

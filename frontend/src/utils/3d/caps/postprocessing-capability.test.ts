@@ -274,3 +274,128 @@ describe("PostprocessingCapability — 预设数据完整性", () => {
     }
   });
 });
+
+// ============ 曝光归权（曝光治理 §1）：enabled=false 时绝不触碰 renderer toneMapping / exposure ============
+describe("PostprocessingCapability — 曝光归权（enabled=false 不碰 renderer）", () => {
+  function makeRendererWithState(toneMapping: THREE.ToneMapping = THREE.NoToneMapping as THREE.ToneMapping, exposure: number = 0.5) {
+    const r = makeFakeRenderer();
+    r.toneMapping = toneMapping;
+    r.toneMappingExposure = exposure;
+    return r as THREE.WebGLRenderer;
+  }
+
+  it("构造 enabled=false 时，不覆盖 renderer.toneMapping / exposure（保留 SkyCapability 写入值）", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    // 模拟 SkyCapability 已经设置的状态
+    const renderer = makeRendererWithState(THREE.ACESFilmicToneMapping, 0.55);
+    // 构造默认 enabled=false（DEFAULT_POSTPROC_PARAMS.enabled=false）
+    new PostprocessingCapability({ scene, renderer, camera });
+    expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.55, 4);
+  });
+
+  it("构造 enabled=true 时，正常写入 toneMapping / exposure", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    const renderer = makeRendererWithState(THREE.NoToneMapping, 0.55);
+    new PostprocessingCapability({ scene, renderer, camera, enabled: true });
+    // 默认 toneMapping=aces, exposure=1.0
+    expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
+    expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 4);
+  });
+
+  it("apply() enabled=false 时跳 applyToneMapping，保留 renderer 原值", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    const renderer = makeRendererWithState(THREE.ACESFilmicToneMapping, 0.6);
+    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.6;
+    cap.apply();
+    expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.6, 4);
+  });
+
+  it("apply() enabled=true 时写入 toneMapping / exposure", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    const renderer = makeRendererWithState(THREE.NoToneMapping, 0.1);
+    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true, params: { exposure: 1.2 } });
+    cap.apply();
+    expect(renderer.toneMappingExposure).toBeCloseTo(1.2, 4);
+  });
+
+  it("setEnabled(false→true) 时立刻写入 renderer；setEnabled(true→false) 不还原 Sky 写入（交给 dispose 精确还原 prev 值）", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    const renderer = makeRendererWithState(THREE.NoToneMapping, 0.5);
+    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
+    expect(renderer.toneMapping).toBe(THREE.NoToneMapping);
+    expect(renderer.toneMappingExposure).toBeCloseTo(0.5, 4);
+    // 手动模拟 SkyCapability 写入值
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.58;
+    cap.setEnabled(true);
+    // 默认 exposure=1.0
+    expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 4);
+    cap.setEnabled(false);
+    // setEnabled(false) 不主动改 renderer（SkyCapability 自己仍会在 apply 时重写）
+    // 这里我们验证关闭后仍然保持最近值，不引起跳变
+    expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
+    expect(typeof renderer.toneMappingExposure).toBe("number");
+  });
+
+  it("setToneMapping/setExposure 在 enabled=false 时只改 params，不动 renderer", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    const renderer = makeRendererWithState(THREE.ACESFilmicToneMapping, 0.62);
+    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
+    // 记录 SkyCapability 写入值
+    const origTM = renderer.toneMapping;
+    const origExp = renderer.toneMappingExposure;
+    cap.setToneMapping("reinhard");
+    cap.setExposure(1.8);
+    // renderer 不动
+    expect(renderer.toneMapping).toBe(origTM);
+    expect(renderer.toneMappingExposure).toBeCloseTo(origExp, 4);
+    // params 已经更新
+    expect(cap.getParams().toneMapping).toBe("reinhard");
+    expect(cap.getParams().exposure).toBeCloseTo(1.8, 4);
+  });
+
+  it("setToneMapping/setExposure 在 enabled=true 时同步写 renderer", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    const renderer = makeRendererWithState();
+    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
+    cap.setToneMapping("linear");
+    cap.setExposure(2.0);
+    expect(renderer.toneMapping).toBe(THREE.LinearToneMapping);
+    expect(renderer.toneMappingExposure).toBeCloseTo(2.0, 4);
+  });
+
+  it("setPreset 在 enabled=false 时不碰 renderer（只更新 params）", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    const renderer = makeRendererWithState(THREE.ACESFilmicToneMapping, 0.58);
+    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
+    const origExp = renderer.toneMappingExposure;
+    const origTM = renderer.toneMapping;
+    // mmd 预设 exposure=1.05, toneMapping=aces — 但 enabled=false 不能写 renderer
+    cap.setPreset("mmd");
+    expect(renderer.toneMapping).toBe(origTM);
+    expect(renderer.toneMappingExposure).toBeCloseTo(origExp, 4);
+    // params 更新了
+    expect(cap.getParams().exposure).toBeCloseTo(1.05, 4);
+  });
+
+  it("setPreset 在 enabled=true 时正常写 tone mapping / exposure", () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    const renderer = makeRendererWithState();
+    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
+    cap.setPreset("mmd");
+    expect(renderer.toneMappingExposure).toBeCloseTo(1.05, 4);
+  });
+});

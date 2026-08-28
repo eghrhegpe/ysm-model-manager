@@ -420,7 +420,8 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.prevOutputColorSpace = this.renderer.outputColorSpace;
     this.prevExposure = this.renderer.toneMappingExposure;
 
-    this.applyToneMapping();
+    // 曝光归权：enabled=false 时绝不触碰 renderer（保留 SkyCapability 的低曝光值）
+    if (this.enabled) this.applyToneMapping();
   }
 
   /* -------- 内部：构建/销毁 composer -------- */
@@ -633,14 +634,22 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   /* -------- SceneCapability 接口 -------- */
 
   apply(): void {
-    this.applyToneMapping();
+    // 曝光归权：enabled=false 时跳 applyToneMapping，让 SkyCapability 的曝光值成为事实源
+    if (this.enabled) this.applyToneMapping();
   }
 
   setEnabled(v: boolean): void {
     this.enabled = v;
     this.params.enabled = v;
-    if (v) this.buildComposer();
-    else this.disposeComposer();
+    if (v) {
+      // 切到 on：立刻写入当前 tone mapping / exposure 到 renderer
+      this.buildComposer();
+      this.applyToneMapping();
+    } else {
+      this.disposeComposer();
+      // 切到 off：不主动改 renderer exposure/toneMapping，交给 dispose 精确还原 prev 值
+      // （SkyCapability 仍会在 apply/setTime 时重写自己的曝光值，不会长期残留 postproc 的高曝光）
+    }
     this.applyReflectorSync();
   }
 
@@ -658,7 +667,8 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     // （对齐 fog「预设不强制覆盖用户选择」口径，修复重启后 SSR 模式被静默重置为 envmap-only）
     const { reflectionMode: _presetMode, ...presetRest } = preset;
     this.params = { ...this.params, ...presetRest };
-    this.applyToneMapping();
+    // 曝光归权：enabled=false 时 applyToneMapping 不写 renderer（避免覆盖 SkyCapability 写入值）
+    if (this.enabled) this.applyToneMapping();
     if (this.composer) {
       this.buildComposer(); // 重新按预设构建（pass 组合可能改变）
     }
@@ -701,11 +711,12 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   setToneMapping(v: PostprocessingParams["toneMapping"]): void {
     this.params.toneMapping = v;
-    this.applyToneMapping();
+    // 曝光归权：enabled=false 时只更新 params，不写 renderer（让 SkyCapability 的低曝光生效）
+    if (this.enabled) this.applyToneMapping();
   }
   setExposure(v: number): void {
     this.params.exposure = v;
-    this.applyToneMapping();
+    if (this.enabled) this.applyToneMapping();
   }
 
   setReflectionMode(v: ReflectionMode): void {
@@ -810,7 +821,8 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     if (typeof state.ssrFresnel === "boolean") this.params.ssrFresnel = state.ssrFresnel;
     if (typeof state.ssrBouncing === "boolean") this.params.ssrBouncing = state.ssrBouncing;
     if (typeof state.reflectorDisableWhenSSR === "boolean") this.params.reflectorDisableWhenSSR = state.reflectorDisableWhenSSR;
-    this.applyToneMapping();
+    // 曝光归权：只有恢复出来 enabled=true 时才写入 renderer tone mapping / exposure
+    if (this.enabled) this.applyToneMapping();
     this.applyReflectorSync();
   }
 

@@ -28,6 +28,7 @@ import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import { fillRoles, modelDetailView, motionDetailView, roleBaseName } from "./preview-menu-roles.ts";
 import { renderMenu } from "./preview-menu-render.ts";
+import { getSchema } from "./schema-registry.ts";
 import { previewSnapshot } from "../state/preview-state.ts";
 
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
@@ -296,6 +297,16 @@ function renderPreviewPanel(
   try {
     if (routers.schemaBuilders[node.id]) {
       renderPreviewSchemaContent(list, routers.schemaBuilders[node.id]!(menu), hideMenu);
+    } else if (getSchema(node.schemaId ?? node.id)) {
+      // [doc:adr-126-p5-a] 受控 builder 注册优先：面板内容由 schema-registry 产出（吃状态层快照）。
+      // 新增面板必须注册（registerSchema）——renderCustom 逃生舱收编为真·无法数据化的内容。
+      const builder = getSchema(node.schemaId ?? node.id)!;
+      renderMenu(list, builder(previewSnapshot()), {
+        makeRow: panelDeps.makeRow,
+        makePanelView: panelDeps.makePanelView,
+        menu,
+        actionCtx,
+      });
     } else if (node.children?.length) {
       // [doc:adr-126-p4-b-1] 面板内容声明式通道：panel 节点带 children → 递归 renderMenu。
       // 适配器只需产出 PreviewMenuNode[]（field/button/row...），渲染全走声明式渲染器，

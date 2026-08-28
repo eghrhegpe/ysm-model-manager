@@ -204,13 +204,14 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
     });
   });
 
-  it("适配器注入项 panel 必有 render（renderCustom 或 children 声明式二选一）；action 必有 run（core 项走 fillers 映射，行为测试覆盖）", () => {
+  it("适配器注入项 panel 必有 render（renderCustom / children / schemaId 三选一）；action 必有 run（core 项走 fillers 映射，行为测试覆盖）", () => {
     [...ysmItems, ...mmdItems, ...vrmItems].forEach((d) => {
-      // [doc:adr-126-p4-b-1] panel 内容两通道：renderCustom（命令式逃生舱）或 children（声明式节点，走 renderPreviewPanel children 分支）
+      // [doc:adr-126-p4-b-1 + p5-a] panel 内容三通道：renderCustom（命令式逃生舱）/
+      // children（声明式节点）/ schemaId（受控 schema-registry 驱动）
       if (d.kind === "panel") {
         expect(
-          typeof d.renderCustom === "function" || (d.children?.length ?? 0) > 0,
-          `${d.id} 缺渲染通道（renderCustom 或 children）`,
+          typeof d.renderCustom === "function" || (d.children?.length ?? 0) > 0 || typeof d.schemaId === "string",
+          `${d.id} 缺渲染通道（renderCustom / children / schemaId）`,
         ).toBe(true);
       }
       if (d.kind === "action") expect(typeof d.action, `${d.id}.action`).toBe("function");

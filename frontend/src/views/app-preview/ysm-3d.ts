@@ -14,6 +14,8 @@ import { loadModelData } from "./loader.ts";
 import { decodeYsmViaWasm } from "./wasm.ts";
 import { fillYsmModelPanel, fillYsmShotPanel, ysmShotNodes } from "./ysm-controls.ts";
 import { fillMmdPlayPanel } from "./mmd-controls.ts";
+import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
+import { registerSchema } from "../../utils/3d/adapters/schema-registry.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 
@@ -76,6 +78,17 @@ export async function createYsm3D(
         fillModelPanel: fillYsmModelPanel,
         fillShotPanel: fillYsmShotPanel,
         shotNodes: ysmShotNodes,
+        // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容 = buildYsmModelSchema
+        // （组件选择走 ui.activeComponent，切换副作用 = showModelGroup）
+        registerModelSchema: (ctx) => {
+          registerSchema("ysm-model", (snap) =>
+            buildYsmModelSchema(
+              { model: ctx.model, spec: ctx.spec, texArr: ctx.texArr as import("three").Texture[] },
+              snap,
+              (idx) => ctx.handle.showModelGroup(idx),
+            ),
+          );
+        },
       },
       fillPlayPanel: fillMmdPlayPanel,
     }),

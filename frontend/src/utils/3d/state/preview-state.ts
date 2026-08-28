@@ -55,6 +55,9 @@ export const KNOWN_PATHS = [
   "render.bloom",
   "render.wireframe",
   "env.pmrem",
+  // [doc:adr-126-p5-b] 组件选择（YSM 多组件模型）：-1 = All，其余 = 组件下标。
+  // 会话态不落盘；面板侧 subscribe 变更 → 调 showModelGroup 副作用（views 层装配）。
+  "ui.activeComponent",
 ] as const satisfies readonly PreviewStatePath[];
 
 /**
@@ -78,6 +81,9 @@ interface PreviewStatePathBinding {
 }
 
 // ── cap 惰性解析（禁止在 schema 构建期捕获 cap 实例）──
+
+/** [doc:adr-126-p5-b] 当前选中组件（会话态内存值）：-1 = All，其余 = 组件下标 */
+let _activeComponent = -1;
 
 /** 判断对象上是否存在指定方法（结构性探测，避免 as 硬转后的运行期炸裂） */
 function hasMethod<T>(obj: unknown, name: keyof T): boolean {
@@ -163,6 +169,17 @@ const bindings: Record<typeof KNOWN_PATHS[number], PreviewStatePathBinding> = {
     get: () => envToggleCap("sky")?.isEnvironmentEnabled() ?? false,
     set: (v) => envToggleCap("sky")?.setEnvironmentEnabled(Boolean(v)),
     available: () => envToggleCap("sky") !== undefined,
+  },
+  // ── 会话态：不落盘（非持久化偏好）──
+  //   [doc:adr-126-p5-b] 组件选择（YSM 多组件模型）：-1 = All，其余 = 组件下标。
+  //   副作用（showModelGroup）由面板侧 subscribe 装配——本层只存值 + 广播。
+  "ui.activeComponent": {
+    get: () => _activeComponent,
+    set: (v) => {
+      const n = Number(v);
+      _activeComponent = Number.isFinite(n) ? n : -1;
+    },
+    available: () => true,
   },
 };
 

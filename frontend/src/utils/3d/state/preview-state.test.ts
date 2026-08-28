@@ -99,9 +99,28 @@ afterEach(() => {
 });
 
 describe("P1 状态层 — 横切路径读写闭环", () => {
-  it("六条路径全部注册，快照键与 KNOWN_PATHS 一致", () => {
+  it("全部路径注册，快照键与 KNOWN_PATHS 一致", () => {
     const snap = previewSnapshot();
     expect(Object.keys(snap).sort()).toEqual([...KNOWN_PATHS].sort());
+  });
+
+  it("[doc:adr-126-p5-b] ui.activeComponent：会话态读写 + 广播，不落盘", () => {
+    // 初始 -1（All）
+    expect(getStateValue("ui.activeComponent")).toBe(-1);
+    // 写入 + 广播
+    const seen: (typeof KNOWN_PATHS)[number][] = [];
+    const off = subscribeSettings((p) => seen.push(p));
+    setStateValue("ui.activeComponent", 2);
+    expect(getStateValue("ui.activeComponent")).toBe(2);
+    expect(seen).toEqual(["ui.activeComponent"]);
+    off();
+    // 会话态：不写 localStorage
+    expect(localStorage.getItem("ysm_3d_activeComponent")).toBeNull();
+    // 非法值回退 -1
+    setStateValue("ui.activeComponent", "abc");
+    expect(getStateValue("ui.activeComponent")).toBe(-1);
+    // 快照含该路径
+    expect(previewSnapshot()["ui.activeComponent"]).toBe(-1);
   });
 
   it("render.frustumCull 读写闭环且落 localStorage", () => {

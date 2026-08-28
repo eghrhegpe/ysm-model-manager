@@ -9,7 +9,7 @@
 import type { SlideMenuHandle, SlideMenuView } from "../../../ui/ui-slide-menu.ts";
 import { t } from "../../../core/i18n/t.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./preview-menu-node-types.ts";
-import { previewSnapshot } from "../state/preview-state.ts";
+import { previewSnapshot, setStateValue } from "../state/preview-state.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
 const tr = (key: string, fallback: string): string => {
@@ -188,6 +188,46 @@ function rmAppendDynamicRow(container: HTMLElement, node: PreviewMenuNode, actio
   container.appendChild(row);
 }
 
+/** [子函数 5/6] select：下拉选择控件（bind 到 PreviewStatePath，走状态层读写）——
+ *  [doc:adr-126-p5-c] 受控化：组件选择等交互控件不再手写 DOM 闭包，声明为节点 + control.bind */
+function rmAppendSelect(
+  container: HTMLElement,
+  node: PreviewMenuNode,
+  snapshot: Record<string, unknown>,
+): void {
+  const spec = node.control;
+  if (!spec?.options?.length) return;
+  const wrap = document.createElement("div");
+  wrap.className = "slide-item";
+  wrap.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 10px";
+  const lb = document.createElement("span");
+  lb.className = "slide-label";
+  lb.style.cssText = "flex:1;min-width:0;font-size:12px;color:rgba(255,255,255,0.7)";
+  lb.textContent = rmLabel(node);
+  wrap.appendChild(lb);
+  const sel = document.createElement("select");
+  sel.className = "setting-select";
+  sel.dataset.testid = "preview-" + node.id;
+  const cur = spec.get ? spec.get(snapshot[spec.bind]) : snapshot[spec.bind];
+  for (const opt of spec.options) {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.label;
+    o.selected = String(cur) === opt.value;
+    sel.appendChild(o);
+  }
+  sel.onchange = (): void => {
+    const raw = sel.value;
+    const v = spec.set ? spec.set(raw) : raw;
+    // [doc:adr-126-p5-c] control.bind 是声明式路径（编译期经 PreviewStatePath 守卫）；
+    // 运行期收窄到 KNOWN_PATHS 窄联合——未落地路径写前应先用 isPathAvailable 判（本层不管）
+    setStateValue(spec.bind as never, v);
+    spec.onChange?.(v);
+  };
+  wrap.appendChild(sel);
+  container.appendChild(wrap);
+}
+
 /** [子函数 5/6] divider + sectionTitle：两个轻量节点共用 tiny 子函数 */
 function rmAppendDecor(container: HTMLElement, node: PreviewMenuNode): void {
   if (node.kind === "divider") {
@@ -230,6 +270,8 @@ export function renderMenu(container: HTMLElement, nodes: PreviewMenuNode[], dep
       rmAppendButton(container, node, deps.actionCtx);
     } else if (node.kind === "row") {
       rmAppendDynamicRow(container, node, deps.actionCtx);
+    } else if (node.kind === "select") {
+      rmAppendSelect(container, node, snapshot);
     } else if (node.kind === "divider" || node.kind === "sectionTitle") {
       rmAppendDecor(container, node);
     } else {

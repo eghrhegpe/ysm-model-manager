@@ -5,6 +5,7 @@ import { esc } from "../../utils/dom/html.ts";
 import type { BoneSelectInfo } from "../../utils/3d/model3d.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import type { Spec3D } from "../../utils/3d/model3d.ts";
+import type { PreviewMenuNode, PreviewSnapshot } from "../../utils/3d/adapters/preview-menu-node-types.ts";
 
 /** fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） */
 export interface PanelHandle {
@@ -250,3 +251,134 @@ function buildModelSelector(modelSel: HTMLSelectElement, _model3d: PanelHandle, 
 
 // fillBoneSection / renderBoneRows / buildBoneDetail 已随 fill3DPanel 内嵌骨骼移除而删除。
 // 骨骼列表/详情只走 id:"bones" 独立菜单项（makeBonePanelRenderer），与 MMD/VRM/FBX 对齐。
+
+// ===== [doc:adr-126-p5-c] YSM 模型面板声明式 schema（受控 builder 注册的落地）=====
+// fill3DPanel 的命令式 DOM 构建 → 声明式节点：统计 field + 纹理 row + 组件选择 select。
+// 组件切换走 previewState 的 ui.activeComponent（renderMenu select 分支读写），
+// 消除「裸函数直接拼 DOM + 手写事件监听」的渲染逃生舱。
+
+/** 组件统计（按 activeComponent 聚合；-1 = All）：骨骼数 + 立方体数 + 组件名 */
+export interface YsmModelStats {
+  bones: number;
+  cubes: number;
+  /** 当前组件名（-1 = All 时为 "main" 或首个组件名） */
+  compName: string;
+}
+
+/** 统计聚合（与 fillPanelComponent 同逻辑，抽为纯函数供 schema 与命令式共用） */
+export function ysmModelStats(spec: Spec3D, rawIdx: number): YsmModelStats {
+  let bones = 0;
+  let cubes = 0;
+  if (rawIdx < 0) {
+    for (const m of spec.models || []) {
+      const mm = m as { bones?: Array<{ _cubeCount?: number }> };
+      bones += mm.bones?.length || 0;
+      for (const b of mm.bones || []) cubes += b._cubeCount || 0;
+    }
+  } else {
+    const mm = spec.models?.[rawIdx] as { bones?: Array<{ _cubeCount?: number }> } | undefined;
+    bones = mm?.bones?.length || 0;
+    for (const b of mm?.bones || []) cubes += b._cubeCount || 0;
+  }
+  const eff = rawIdx < 0 ? 0 : rawIdx;
+  const mg = spec.models?.[eff] as { name?: string; id?: string } | undefined;
+  return { bones, cubes, compName: mg?.name || mg?.id || "main" };
+}
+
+/** 当前组件纹理槽位（meshGroups.texIdx 去重；缺省回退全部声明纹理——与 fillPanelComponent 同逻辑） */
+export function ysmModelTextureSlots(
+  spec: Spec3D,
+  rawIdx: number,
+  texCount: number,
+): number[] {
+  const eff = rawIdx < 0 ? 0 : rawIdx;
+  const mg = spec.models?.[eff] as { meshGroups?: Array<{ texIdx?: number }> } | undefined;
+  const slots: number[] = [];
+  for (const msh of mg?.meshGroups || []) {
+    const s = msh.texIdx;
+    if (typeof s === "number" && s >= 0 && s < texCount && !slots.includes(s)) slots.push(s);
+  }
+  if (mg && slots.length === 0 && texCount > 0) {
+    for (let i = 0; i < texCount; i++) slots.push(i);
+  }
+  return slots;
+}
+
+/**
+ * YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。
+ * @param ctx YSM 控件上下文（model/spec/texArr）
+ * @param snapshot 状态层快照（读 ui.activeComponent，-1 = All）
+ * @param onComponentChange 组件切换副作用（views 层注入 showModelGroup）
+ */
+export function buildYsmModelSchema(
+  ctx: {
+    model: PanelModel;
+    spec: Spec3D;
+    texArr: import("three").Texture[];
+  },
+  snapshot: PreviewSnapshot,
+  onComponentChange?: (idx: number) => void,
+): PreviewMenuNode[] {
+  const rawIdx = typeof snapshot["ui.activeComponent"] === "number" ? (snapshot["ui.activeComponent"] as number) : -1;
+  const { bones, cubes, compName } = ysmModelStats(ctx.spec, rawIdx);
+  const slots = ysmModelTextureSlots(ctx.spec, rawIdx, ctx.texArr.length);
+
+  // 组件选择（多组件才显示；-1 = All 选项恒在）
+  const allLabel = t("preview.allComponents");
+  const options = [{ value: "-1", label: allLabel === "preview.allComponents" ? "全部组件" : allLabel }];
+  const mgCount = ctx.spec.models?.length ?? 0;
+  for (let i = 0; i < mgCount; i++) {
+    const mg = ctx.spec.models?.[i] as { name?: string; id?: string; bones?: unknown[] } | undefined;
+    options.push({ value: String(i), label: `${mg?.name || mg?.id || "model"} (${mg?.bones?.length ?? 0})` });
+  }
+
+  const nodes: PreviewMenuNode[] = [];
+  if (mgCount > 1) {
+    nodes.push({
+      id: "ysm-component-select",
+      kind: "select",
+      labelKey: "preview.component",
+      fallback: "组件",
+      control: {
+        bind: "ui.activeComponent",
+        options,
+        onChange: (v) => onComponentChange?.(Number(v)),
+      },
+    });
+  }
+
+  // 统计
+  nodes.push(
+    { id: "ysm-stats-bones", kind: "field", labelKey: "preview.section.bones", fallback: "骨骼", value: `${bones} 根` },
+    { id: "ysm-stats-cubes", kind: "field", labelKey: "preview.cubes", fallback: "立方体", value: `${cubes} 个` },
+  );
+
+  // 纹理行（当前组件绑定）
+  for (const s of slots) {
+    const tex = ctx.texArr[s];
+    const name = ctx.model.textureNames?.[s]
+      || ctx.model.textures?.[s]?.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "")
+      || `纹理 ${s + 1}`;
+    const cat = ctx.model.textureCategories?.[s] || "";
+    const declM = ctx.spec.models?.[rawIdx < 0 ? 0 : rawIdx] as
+      | { textureWidth?: number; textureHeight?: number }
+      | undefined;
+    const decl =
+      typeof declM?.textureWidth === "number" && typeof declM?.textureHeight === "number"
+        ? `${declM.textureWidth}×${declM.textureHeight}`
+        : "?";
+    const ud = (tex as unknown as { userData?: { imgWidth?: unknown; imgHeight?: unknown } })?.userData;
+    const w = typeof ud?.imgWidth === "number" ? ud.imgWidth : null;
+    const h = typeof ud?.imgHeight === "number" ? ud.imgHeight : null;
+    const size = w !== null && h !== null ? `${w}×${h}` : "?";
+    nodes.push({
+      id: `ysm-tex-${s}`,
+      kind: "row",
+      labelKey: name,
+      fallback: name,
+      value: `${cat ? cat + " · " : ""}声明 ${decl} · 加载 ${size}`,
+    });
+  }
+
+  return nodes;
+}

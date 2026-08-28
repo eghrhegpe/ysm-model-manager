@@ -99,12 +99,13 @@ function makeCtx() {
 
 /** 最近一次 setAdapterItems 收到的适配器项 */
 /** 从 preview(built) 对象读取注入的菜单项 */
-function registeredItems(preview: { menuItems?: Array<{ id: string; kind: string; render?: (list: HTMLElement, close: () => void) => void; renderCustom?: (list: HTMLElement, close?: () => void) => void; children?: Array<{ id: string; kind: string }> }> | null }): Array<{
+function registeredItems(preview: { menuItems?: Array<{ id: string; kind: string; render?: (list: HTMLElement, close: () => void) => void; renderCustom?: (list: HTMLElement, close?: () => void) => void; children?: Array<{ id: string; kind: string }>; schemaId?: string }> | null }): Array<{
   id: string;
   kind: string;
   render?: (list: HTMLElement, close: () => void) => void;
   renderCustom?: (list: HTMLElement, close?: () => void) => void;
   children?: Array<{ id: string; kind: string }>;
+  schemaId?: string;
 }> {
   return (preview.menuItems ?? []) as Array<{
     id: string;
@@ -112,6 +113,7 @@ function registeredItems(preview: { menuItems?: Array<{ id: string; kind: string
     render?: (list: HTMLElement, close: () => void) => void;
     renderCustom?: (list: HTMLElement, close?: () => void) => void;
     children?: Array<{ id: string; kind: string }>;
+    schemaId?: string;
   }>;
 }
 
@@ -134,19 +136,19 @@ describe("buildYsmScene（shared 装配）", () => {
     const items = registeredItems(preview);
     expect(items.map((i) => i.id)).toEqual(["model", "shot", "bones", "perception"]);
     items.forEach((i) => expect(i.kind).toBe("panel"));
-    // [doc:adr-126-p4-b] panel 渲染通道二选一：renderCustom（命令式逃生舱）或 children（声明式节点）
+    // [doc:adr-126-p4-b + p5-a] panel 渲染通道三选一：renderCustom / children / schemaId（受控 registry）
     items.forEach((i) =>
       expect(
-        typeof i.renderCustom === "function" || (i.children?.length ?? 0) > 0,
+        typeof i.renderCustom === "function" || (i.children?.length ?? 0) > 0 || typeof i.schemaId === "string",
         `${i.id} 缺渲染通道`,
       ).toBe(true),
     );
 
-    // model 面板渲染：fill3DPanel 输出统计行（骨骼 0 根 + 立方体 0 个）
-    const list = document.createElement("div");
+    // [doc:adr-126-p5-c] model 面板走受控 schema：schemaId="ysm-model"，registry 注册后
+    // renderPreviewPanel 查 getSchema("ysm-model") 产出声明式节点（不再 renderCustom）
     const modelItem = items.find((i) => i.id === "model")!;
-    modelItem.renderCustom!(list, () => {});
-    expect(list.textContent).toContain("模型统计");
+    expect(modelItem.schemaId).toBe("ysm-model");
+    expect(modelItem.renderCustom).toBeUndefined();
 
     preview.dispose();
     expect(mocks.buildYsmObject().removeFromScene).toHaveBeenCalledWith(ctx.scene);
@@ -183,20 +185,23 @@ describe("buildYsmScene（shared 装配）", () => {
 });
 
 describe("buildYsmScene 面板填充与骨骼拾取", () => {
-  it("fillModelPanel 被调用时正确渲染（面板注入验证）", async () => {
+  it("[doc:adr-126-p5-c] model 面板 schemaId 驱动：注册钩子被调 + 面板无 renderCustom", async () => {
     const ctx = makeCtx();
     const loader = vi.fn(async () => ({ bones: [] } as unknown as BedrockGeometry));
+    const registerModelSchema = vi.fn();
     const preview = await buildYsmScene(ctx, "/m/a.ysm", {
       loader,
       preload: mocks.preloadModel,
-      panels: fakePanels,
+      panels: { ...fakePanels, registerModelSchema },
     });
+
+    // build 时注册钩子被调（视图层在此注册 buildYsmModelSchema）
+    expect(registerModelSchema).toHaveBeenCalledTimes(1);
 
     const items = registeredItems(preview);
     const modelItem = items.find((i) => i.id === "model")!;
-    const list = document.createElement("div");
-    modelItem.renderCustom!(list, () => {});
-    expect(list.textContent).toContain("模型统计");
+    expect(modelItem.schemaId).toBe("ysm-model");
+    expect(modelItem.renderCustom).toBeUndefined();
 
     preview.dispose();
   });
@@ -259,11 +264,12 @@ describe("buildYsmScene dispose 清理行为", () => {
       preload: mocks.preloadModel,
     });
 
-    // 无 panels → 菜单项 render 退化为 no-op
+    // 无 panels → 菜单项 render 退化为 no-op（model 面板 schemaId 驱动，无注册时渲染不炸）
     const items = registeredItems(preview);
     const modelItem = items.find((i) => i.id === "model")!;
-    const list = document.createElement("div");
-    expect(() => modelItem.renderCustom!(list, () => {})).not.toThrow();
+    // 无 registerModelSchema → registry 无 "ysm-model" → renderPreviewPanel 走通道衰退（不炸）
+    expect(modelItem.schemaId).toBe("ysm-model");
+    expect(modelItem.renderCustom).toBeUndefined();
 
     preview.dispose();
   });
@@ -428,9 +434,9 @@ describe("ysmMenuItems 独立菜单表测试", () => {
     expect(items[2].dockGroup).toBe("motion");
     items.forEach((i) => {
       expect(i.kind).toBe("panel");
-      // [doc:adr-126-p4-b] panel 渲染通道二选一：renderCustom（命令式逃生舱）或 children（声明式节点）
+      // [doc:adr-126-p4-b + p5-a] panel 渲染通道三选一：renderCustom / children / schemaId（受控 registry）
       expect(
-        typeof i.renderCustom === "function" || (i.children?.length ?? 0) > 0,
+        typeof i.renderCustom === "function" || (i.children?.length ?? 0) > 0 || typeof i.schemaId === "string",
         `${i.id} 缺渲染通道`,
       ).toBe(true);
     });

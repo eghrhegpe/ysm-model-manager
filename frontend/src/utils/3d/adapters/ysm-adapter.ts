@@ -61,6 +61,9 @@ export interface YsmAdapterOptions {
     /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
      *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
     shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];
+    /** [doc:adr-126-p5-c] 受控 schema 注册钩子：build 拿到 controlsCtx 后调用，
+     *  视图层在此注册 buildYsmModelSchema（key="ysm-model"）——model 面板内容走 schema-registry */
+    registerModelSchema?: (ctx: YsmControlsContext) => void;
   };
   /** 同目录文件枚举（.animation.json 扫描用；对齐 VRM listAllFilePaths 注入模式） */
   listAllFilePaths?: (dir: string) => Promise<string[] | null>;
@@ -356,6 +359,10 @@ function mdYsBuildMenuAndDebug(
   const perceptionCaps: PerceptionCapability[] = [
     { id: "breath", labelKey: "preview.perceptionBreath", fallback: "呼吸" },
   ];
+  // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容由视图层注册的 builder 驱动
+  // （R1 禁 utils→views，注册钩子由视图层注入实现）。缺失时不注册——model 面板走
+  // 渲染通道衰退（children/renderCustom 兜底），不阻断。
+  opts.panels?.registerModelSchema?.(controlsCtx);
   const menuItems = ysmMenuItems({
     controlsCtx,
     panels: opts.panels,
@@ -538,6 +545,9 @@ export interface YsmMenuItemsOpts {
     /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
      *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
     shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];
+    /** [doc:adr-126-p5-c] 受控 schema 注册钩子：adapter build 拿到 controlsCtx 后调用，
+     *  视图层在此注册 buildYsmModelSchema（key="ysm-model"）——model 面板内容走 schema-registry */
+    registerModelSchema?: (ctx: YsmControlsContext) => void;
   };
   /** YSM 动画桥（ADR-100）；null/缺省（无 .animation.json）→ 不注入 play 项 */
   play?: MmdPlayBridge | null | undefined;
@@ -566,7 +576,9 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       dockGroup: "model",
       legacyTestId: "ysm-model-entry",
-      renderCustom:(list) => o.panels?.fillModelPanel?.(list, o.controlsCtx),
+      // [doc:adr-126-p5-c] 受控 schema 驱动：renderPreviewPanel 查 schema-registry 的 "ysm-model"，
+      // builder（buildYsmModelSchema）吃状态层快照产出声明式节点。不再走 renderCustom 逃生舱。
+      schemaId: "ysm-model",
     },
     {
       id: "shot",

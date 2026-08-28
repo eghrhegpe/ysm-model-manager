@@ -10,6 +10,7 @@ import { renderCapControls, formatCapSliderValue } from './preview-menu-cap-cont
 import type { PreviewMenuCtx } from './preview-menu.ts';
 import { t } from '../../../core/i18n/t.ts';
 import { ENV_PRESET_LINKAGE, type EnvPresetId } from '../caps/environment-capability.ts';
+import type { PreviewMenuNode } from './preview-menu-node-types.ts';
 
 const ENV_IDS = new Set(["sky", "ground", "water", "environment", "fog", "reflector"]);
 const ORDERED_IDS = ["sky", "ground", "water", "environment", "fog", "reflector"] as const;
@@ -105,6 +106,13 @@ function applyPreset(ctx: PreviewMenuCtx, presetId: Exclude<EnvPresetId, "custom
 export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: SlideMenuHandle): void {
   if (!menu) {
     const caps = orderedCaps(resolveCaps(ctx));
+    if (caps.length === 0) {
+      const r = document.createElement("div");
+      r.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
+      r.textContent = tr("preview.noEnvironment", "进入 3D 后再打开环境面板");
+      list.appendChild(r);
+      return;
+    }
     const ctrls: MenuControlDef[] = [];
     caps.forEach((cap, idx) => {
       if (idx > 0) ctrls.push({ id: "__divider_"+cap.id, kind: "divider" as const, labelKey: "", fallback: "", getValue: () => false, setValue: () => {} });
@@ -222,4 +230,22 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
     }
     list.appendChild(row);
   }
+}
+
+/** [doc:adr-126-p5-a] 环境面板声明式 schema 构建器（迁移自 fillers 过程式渲染）：
+ *  包 renderEnvLevel 进 PreviewMenuNode.custom 壳，接入 schemaBuilders 统一路由。
+ *  内部逻辑（预设栏/摘要行/分区下钻/订阅刷新）全复用 renderEnvLevel——零行为变化。
+ *  schemaBuilders 路径 menu 必传（走两级菜单分支）；renderEnvLevel 平铺回退保留
+ *  给 legacy 调用方（测试/旧路径）保留，暂不删。 */
+export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): PreviewMenuNode[] {
+  return [{
+    id: "environment",
+    kind: "custom",
+    labelKey: "preview.environment",
+    fallback: "环境",
+    icon: "🌍",
+    renderCustom: (list: HTMLElement): void => {
+      renderEnvLevel(list, ctx, menu);
+    },
+  }];
 }

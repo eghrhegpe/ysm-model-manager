@@ -9,7 +9,7 @@
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./preview-menu-defs.ts";
 import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 import type { PreviewActionMenuCtx } from "./preview-menu-node-types.ts";
-import { renderEnvLevel, disposeEnvSubscriptions } from "./preview-menu-env.ts";
+import { renderEnvLevel, disposeEnvSubscriptions, buildEnvSchema } from "./preview-menu-env.ts";
 import { renderCapControls } from "./preview-menu-cap-controls.ts";
 import { safeErrorMessage } from "../../safe-error-msg.ts";
 import { createSlideMenu, type SlideMenuView, type SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
@@ -251,9 +251,9 @@ function buildPreviewMenuRouters(
       postproc: () => buildPostprocessingSchema(ctx),
       settings: (menu) => buildSettingsSchema(ctx, menu),
       camera: () => buildCameraSchema(ctx),
+      environment: (menu) => buildEnvSchema(ctx, menu),
     },
     fillers: {
-      environment: (list, m) => renderEnvLevel(list, ctx, m),
       roles: (list, m) =>
         fillRoles(
           list,

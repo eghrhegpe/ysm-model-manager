@@ -1,6 +1,6 @@
 // ===== 环境菜单声明式 Schema 测试（对齐 MikuMikuAR getSkySchema() 范式）=====
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderEnvLevel } from "./preview-menu-env.ts";
+import { renderEnvLevel, buildEnvSchema } from "./preview-menu-env.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { PreviewMenuCtx } from "./preview-menu.ts";
 import type { SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
@@ -38,6 +38,20 @@ function makeMenu(): SlideMenuHandle {
   } as unknown as SlideMenuHandle;
 }
 
+/** 测试用 sky cap 共享工厂：两处 fakeSkyCap 构造重复 → 抽公共函数（修复 jscpd 自重复 L47/L260） */
+function makeFakeSkyCap(): never {
+  return {
+    id: "sky",
+    labelKey: "preview.sky",
+    icon: "🌤️",
+    descKey: "",
+    getMenuControls: () => [
+      { id: "sky-toggle", kind: "toggle", labelKey: "preview.skyEnabled", fallback: "天空", getValue: () => true, setValue: () => {} },
+    ],
+    apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
+  };
+}
+
 describe("renderEnvLevel", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
@@ -46,16 +60,7 @@ describe("renderEnvLevel", () => {
 
   it("无 menu 句柄时走平铺路径（renderCapControls）", () => {
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([]);
-    const fakeSkyCap = {
-      id: "sky",
-      labelKey: "preview.sky",
-      icon: "🌤️",
-      descKey: "",
-      getMenuControls: () => [
-        { id: "sky-toggle", kind: "toggle", labelKey: "preview.skyEnabled", fallback: "天空", getValue: () => true, setValue: () => {} },
-      ],
-      apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
-    };
+    const fakeSkyCap = makeFakeSkyCap();
     const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as never) : null) });
     const list = document.createElement("div");
     renderEnvLevel(list, ctx, undefined);
@@ -234,5 +239,38 @@ describe("renderEnvLevel", () => {
     const poolEntry = subList.querySelector('[data-testid="cap-group-entry-preview.waterGroupPool"]') as HTMLElement;
     poolEntry.click();
     expect(subList.querySelector('[data-testid="cap-water-pool-height"]')).not.toBeNull();
+  });
+});
+
+describe("buildEnvSchema（ADR-126 P5 声明式上岸）", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("无 cap 时返回空态单节点，renderCustom 内部走 renderEnvLevel 平铺路径", () => {
+    const ctx = makeCtx();
+    const schema = buildEnvSchema(ctx);
+    expect(schema.length).toBe(1);
+    expect(schema[0].id).toBe("environment");
+    expect(schema[0].kind).toBe("custom");
+    expect(schema[0].labelKey).toBe("preview.environment");
+    // renderCustom 调 renderEnvLevel（无 menu → 平铺路径）→ 应渲染空态提示
+    const list = document.createElement("div");
+    schema[0].renderCustom!(list);
+    expect(list.textContent).toContain("进入 3D 后再打开环境面板");
+  });
+
+  it("有 menu 时返回单 custom 节点，renderCustom 触发 renderEnvLevel 两级菜单路径", () => {
+    vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([]);
+    const fakeSkyCap = makeFakeSkyCap();
+    const ctx = makeCtx({ getCap: (id) => (id === "sky" ? (fakeSkyCap as never) : null) });
+    const menu = makeMenu();
+    const schema = buildEnvSchema(ctx, menu);
+    expect(schema.length).toBe(1);
+    const list = document.createElement("div");
+    schema[0].renderCustom!(list);
+    // 两级菜单路径：应渲染预设栏 + cap 摘要行
+    expect(list.querySelector('[data-testid="env-preset-studio"]')).not.toBeNull();
+    expect(list.querySelector('[data-testid="cap-row-sky"]')).not.toBeNull();
   });
 });

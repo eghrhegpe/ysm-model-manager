@@ -72,27 +72,30 @@ const ENTITY_DERIVED_SEGMENTS = new Set([
 // 这些命名空间下的两段键，两段本身合法（dialog 就是角色，不是子命名空间）
 const EXEMPT_NAMESPACES = new Set(['menu', 'error', 'nav', 'lang', 'ctx', 'app', 'dialog']);
 
-// ── 参数解析 ────────────────────────────────────────
-const args = parseArgs(process.argv.slice(2), {
-  bools: ['list-violations', 'help'],
-  strings: ['entity', 'check'],
-  defaults: {},
-});
+// ── 参数解析（仅直接执行时解析 argv；被 import 时跳过，见文件尾 main() guard）──
+function parseCliArgs() {
+  const args = parseArgs(process.argv.slice(2), {
+    bools: ['list-violations', 'help'],
+    strings: ['entity', 'check'],
+    defaults: {},
+  });
 
-if (args.help) {
-  const _src = readFileSync(process.argv[1], 'utf-8');
-  const _s = _src.indexOf('/**');
-  const _e = _src.indexOf('*/', _s);
-  console.log(_src.slice(_s, _e + 2).replace(/^ \* ?/gm, '').trim());
-  process.exit(0);
-}
-if (args.unknown && args.unknown.length) {
-  console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
-  process.exit(1);
-}
+  if (args.help) {
+    const _src = readFileSync(process.argv[1], 'utf-8');
+    const _s = _src.indexOf('/**');
+    const _e = _src.indexOf('*/', _s);
+    console.log(_src.slice(_s, _e + 2).replace(/^ \* ?/gm, '').trim());
+    process.exit(0);
+  }
+  if (args.unknown && args.unknown.length) {
+    console.error(`❌ 未知参数: ${args.unknown.join(', ')}（--help 查看用法）`);
+    process.exit(1);
+  }
 
-// --check：第一个值在 args.check，其余在 args._
-const allCheckKeys = [args.check, ...(args._ || [])].filter(Boolean);
+  // --check：第一个值在 args.check，其余在 args._
+  const allCheckKeys = [args.check, ...(args._ || [])].filter(Boolean);
+  return { args, allCheckKeys };
+}
 
 
 // ── 提取键 ──────────────────────────────────────────
@@ -208,19 +211,9 @@ function validateKey(key) {
 
   // 例外命名空间：自身就是角色，两段合法
   if (EXEMPT_NAMESPACES.has(ns)) {
-    if (parts.length <= 2) return { ok: true }; // menu.openFolder 合法
-    // 三段及以上：第二段须是角色（子命名空间）或已知角色
-    if (parts.length >= 3) {
-      const second = parts[1];
-      const classify = classifySecondSegment(second);
-      if (classify === 'role' && !KNOWN_ROLES.has(second)) {
-        return {
-          ok: false,
-          reason: `角色 "${second}" 不在白名单`,
-          suggestion: `建议角色：${[...KNOWN_ROLES].join(' / ')}`,
-        };
-      }
-    }
+    // 两段合法（menu.openFolder）；三段及以上第二段当子命名空间——
+    // 单凭字面无法区分子命名空间与自创角色，且 ADR-124 注释明确"角色不限于白名单"，
+    // 三段成段即默认合法，避免 audio/cache 等子命名空间词被误判为"角色不在白名单"阻断提交。
     return { ok: true };
   }
 
@@ -244,19 +237,11 @@ function validateKey(key) {
     return { ok: true };
   }
 
-  // 三段及以上：第二段须是角色或已知子命名空间
-  if (parts.length >= 3) {
-    const second = parts[1];
-    const classify = classifySecondSegment(second);
-    if (classify === 'role' && !KNOWN_ROLES.has(second) && !KNOWN_TWO_SEG_ENTITIES.has(second)) {
-      return {
-        ok: false,
-        reason: `角色 "${second}" 不在白名单`,
-        suggestion: `建议角色：${[...KNOWN_ROLES].join(' / ')}`,
-      };
-    }
-  }
-
+  // 三段及以上：<模块>.<第二段>.<实体...>
+  // 第二段在 KNOWN_ROLES → 明确角色；否则默认当子命名空间（合法）。
+  // 不再用 classifySecondSegment 的字面启发式判"角色不在白名单"——那会把
+  // audio/cache/proxy/layer/panel/network 等子命名空间意图词误判为角色并阻断提交。
+  // "实体直挂 root"违规只在两段式判定（见上方 parts.length === 2，ADR-124 主战场）。
   return { ok: true };
 }
 
@@ -442,13 +427,23 @@ function checkKeys(keys) {
   process.exit(allOk ? 0 : 1);
 }
 
-// ── 主入口 ────────────────────────────────────────
-if (args['list-violations']) {
-  listViolations();
-} else if (args.entity) {
-  listByEntity(args.entity);
-} else if (allCheckKeys.length > 0) {
-  checkKeys(allCheckKeys);
-} else {
-  checkCI();
+// ── 主入口（仅直接执行时运行；被 import 时跳过，便于单元测试）──
+function main() {
+  const { args, allCheckKeys } = parseCliArgs();
+  if (args['list-violations']) {
+    listViolations();
+  } else if (args.entity) {
+    listByEntity(args.entity);
+  } else if (allCheckKeys.length > 0) {
+    checkKeys(allCheckKeys);
+  } else {
+    checkCI();
+  }
 }
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  main();
+}
+
+// 导出纯函数供测试 import（见 scripts/i18n-key-naming.test.mjs）
+export { validateKey, classifySecondSegment, guessRole, extractKeys, loadAllKeys };

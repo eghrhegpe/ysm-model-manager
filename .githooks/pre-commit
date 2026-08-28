@@ -165,6 +165,17 @@ if [ "${YSM_SKIP_CSS_LAYER:-0}" != "1" ]; then
   node scripts/css-layer-check.mjs 2>&1 || echo "⚠️  css-layer-check 执行失败（不阻断）"
 fi
 
+# ── i18n 新增键三段式检查（非阻断提示；ADR-124）──
+# CI 模式只查本次 diff 里的新增/修改 i18n 键是否符合三段式。违规走 stderr 提示，
+# 不阻断 commit——误判/漏报由 tests/test_i18n_key_naming.mjs 在 pre-push 守护
+# （契约测试断言 validateKey 对 40 合规 + 3 违规用例的行为不回归）。
+# 逃生阀：YSM_SKIP_I18N_KEY=1。
+if [ "${YSM_SKIP_I18N_KEY:-0}" != "1" ]; then
+  echo ""
+  echo "[pre-commit] i18n 新增键三段式检查（ADR-124）..."
+  node scripts/i18n-key-naming.mjs 2>&1 || echo "⚠️  i18n-key-naming 发现违规或执行失败（不阻断，pre-push 测试兜底）"
+fi
+
 # ── gofmt 自动修复（staged go 文件；失败仅提示不阻断） ──
 # 修复必须发生在提交时：pre-push 内 commit --amend 是假成功（push 推的是钩子前快照 oid，
 # 钩子里 amend 只改本地 HEAD → 分叉，见 pre-push-gate.mjs 已知坑 2026-08-12）。

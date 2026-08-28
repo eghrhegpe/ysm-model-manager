@@ -214,6 +214,7 @@ node scripts/i18n-key-naming.mjs --check newKey1 newKey2  # 检查指定键
 - **不强制重构所有旧键**：`preview.*` 下另外 ~275 个旧键靠脚本标记违规清单，不强求一次性迁移。
 - **`menu.*` / `error.*` 等"自身就是角色"的命名空间不强制三段式**（保留现状）；如未来要重构，需另开 ADR 评估。
 - **Wails 绑定名、Go 字段名等"非 i18n 键"不受本 ADR 约束**。
+- **三段式校验放宽为默认合法**：`validateKey` 对三段及以上键，第二段在 `KNOWN_ROLES` 即角色，否则默认当子命名空间（合法），不再因"字面像角色但不在白名单"报违规。原因：单凭字面无法区分"子命名空间"（`audio`/`cache`/`proxy`/`layer`/`panel`）与"自创角色"，强报会误判阻断提交。"实体直挂 root"违规只在两段式判定（ADR 主战场）。误判回归由 `tests/test_i18n_key_naming.mjs`（pre-push 自动跑）守护；门禁接入为 pre-commit 非阻断（违规走 stderr 提示，不卡提交）。
 
 ---
 

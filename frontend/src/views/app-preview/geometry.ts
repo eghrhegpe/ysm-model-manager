@@ -50,6 +50,8 @@ export interface BedrockGeometry {
     role?: string;
     avatarUrl?: string | null;
     avatarPath?: string;
+    /** 作者 bilibili 主页（Go SummaryAuthor.Bilibili 透传，统计卡作者列表渲染 📺 链接） */
+    bilibili?: string;
   }>;
   _avatars?: Record<string, string>;
   _modelPath?: string;

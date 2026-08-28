@@ -83,8 +83,8 @@ function cleanText(text: unknown): string {
     .trim();
 }
 
-/** 安全链接：仅放行 http/https，拦截 javascript:/data: 等危险 scheme */
-function safeUrl(url: string): string {
+/** 安全链接：仅放行 http/https，拦截 javascript:/data: 等危险 scheme（导出供统计卡作者链接复用） */
+export function safeUrl(url: string): string {
   const trimmed = (url || "").trim();
   if (/^javascript:|^data:/i.test(trimmed)) return "#";
   return /^https?:\/\//i.test(trimmed) ? trimmed : "#";

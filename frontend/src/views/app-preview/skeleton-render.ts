@@ -3,6 +3,7 @@
 import { safeGet } from "../../utils/dom/storage.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import { esc } from "../../utils/dom/html.ts";
+import { safeUrl } from "../../utils/format/summarize.ts";
 import { getApp } from "../../backend/app.ts";
 import { statsCardHTML } from "./tpl.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
@@ -83,7 +84,7 @@ export function buildToggleRow(
  */
 export function buildStatsCard(
   container: HTMLElement,
-  model: BedrockGeometry & { _authors?: Array<{ avatarUrl?: string | null; name?: string; role?: string }>; _modelPath?: string },
+  model: BedrockGeometry & { _authors?: Array<{ avatarUrl?: string | null; name?: string; role?: string; bilibili?: string }>; _modelPath?: string },
   modelPath: string,
   _decodedBy: string,
   ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
@@ -92,7 +93,7 @@ export function buildStatsCard(
   const card = document.createElement("div");
   card.className = "pv-card";
   card.innerHTML = statsCardHTML(model, modelPath, _decodedBy, scale);
-  const authors: Array<{ avatarUrl?: string | null; name?: string; role?: string }> =
+  const authors: Array<{ avatarUrl?: string | null; name?: string; role?: string; bilibili?: string }> =
     model._authors || [];
   if (authors.length > 0) {
     const authorHtml =
@@ -109,6 +110,11 @@ export function buildStatsCard(
         ${
           au.role
             ? `<span style="font-size:9px;color:var(--muted)">(${esc(au.role)})</span>`
+            : ""
+        }
+        ${
+          au.bilibili
+            ? `<a href="${esc(safeUrl(au.bilibili))}" target="_blank" style="color:var(--accent);text-decoration:none;font-size:11px" title="${esc(au.bilibili)}">📺</a>`
             : ""
         }
       </div>`,

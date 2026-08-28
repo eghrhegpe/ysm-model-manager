@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 165 | 658 |
+| 前端·工具 | 165 | 659 |
 | frontend/views | 117 | 339 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **495** | **2098** |
+| **合计** | **495** | **2099** |
 
 ## Go·头像
 
@@ -1913,6 +1913,7 @@
 | `SummaryConfigMenu()` | `frontend/src/utils/format/summarize:22` | — |
 | `YsmSummary()` | `frontend/src/utils/format/summarize:27` | — |
 | `YSMHeader()` | `frontend/src/utils/format/summarize:52` | — |
+| `safeUrl()` | `frontend/src/utils/format/summarize:87` | 安全链接：仅放行 http/https，拦截 javascript:/data: 等危险 scheme（导出供统计卡作者链接复用） |
 | `summaryCardHTML()` | `frontend/src/utils/format/summarize:156` | 从 YsmSummary + YSMHeader 渲染为精简摘要卡片 |
 | `DecodedStats()` | `frontend/src/utils/format/summarize:261` | 解码统计结果（原 spike 侧 YsmSummary，改名避免与上方元数据接口撞名） |
 | `findBones()` | `frontend/src/utils/format/summarize:273` | 递归找第一个数组（骨骼列表通常嵌在 model/bones 等层级）。 |
@@ -2135,7 +2136,7 @@
 | `BedrockSubModel()` | `frontend/src/views/app-preview/geometry:19` | SubModel 子模型条目（Go types/bedrock.go SubModel）。 |
 | `BedrockBone()` | `frontend/src/views/app-preview/geometry:26` | Bedrock 骨骼 |
 | `BedrockGeometry()` | `frontend/src/views/app-preview/geometry:41` | 解析后的 Bedrock geometry |
-| `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:83` | 从 JSON 字符串解析 Bedrock geometry |
+| `parseBedrockGeometryFromJSON()` | `frontend/src/views/app-preview/geometry:85` | 从 JSON 字符串解析 Bedrock geometry |
 | `createLitematic3D()` | `frontend/src/views/app-preview/litematic-3d:26` | 打开 Litematic/蓝图 体素 3D 预览（voxelFn 由注册表 VOXEL_RPC_BY_EXT 解析）；siblings 提供同类型候选 |
 | `appendLitematicPreview()` | `frontend/src/views/app-preview/litematic-3d:49` | 同台追加 Litematic/蓝图 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4），与 mmd/vrm 对称 |
 | `cleanupVoxel3D()` | `frontend/src/views/app-preview/litematic-3d:54` | 清理体素 3D（WebGL renderer + rAF 循环）：组件销毁/再次创建前调用，防 GPU 资源残留 |
@@ -2190,11 +2191,11 @@
 | `PanelHandle()` | `frontend/src/views/app-preview/skeleton-fill-panel:10` | fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-fill-panel:36` | — |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-render` | — |
-| `setup2DCanvas()` | `frontend/src/views/app-preview/skeleton-render:19` | 创建 2D 骨骼画布并异步加载纹理 |
-| `buildToggleRow()` | `frontend/src/views/app-preview/skeleton-render:44` | 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加） |
-| `buildStatsCard()` | `frontend/src/views/app-preview/skeleton-render:84` | 构建统计卡片（含作者列表） |
-| `buildBoneExportRow()` | `frontend/src/views/app-preview/skeleton-render:127` | 构建导出骨骼名按钮行 |
-| `saveScreenshot()` | `frontend/src/views/app-preview/skeleton-render:160` | 截图保存内部逻辑（供 3D overlay 使用） |
+| `setup2DCanvas()` | `frontend/src/views/app-preview/skeleton-render:20` | 创建 2D 骨骼画布并异步加载纹理 |
+| `buildToggleRow()` | `frontend/src/views/app-preview/skeleton-render:45` | 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加） |
+| `buildStatsCard()` | `frontend/src/views/app-preview/skeleton-render:85` | 构建统计卡片（含作者列表） |
+| `buildBoneExportRow()` | `frontend/src/views/app-preview/skeleton-render:133` | 构建导出骨骼名按钮行 |
+| `saveScreenshot()` | `frontend/src/views/app-preview/skeleton-render:166` | 截图保存内部逻辑（供 3D overlay 使用） |
 | `sec()` | `frontend/src/views/app-preview/skeleton-utils:6` | 面板分区标题（3D overlay 信息面板使用） gap=false 用于面板首个分区（panel 已有 padding-top，避免顶部 10+12=22px 过空） |
 | `iRow()` | `frontend/src/views/app-preview/skeleton-utils:15` | 信息行：标签 | 值 |
 | `buildDepthMap()` | `frontend/src/views/app-preview/skeleton-utils:34` | 构建骨骼层级深度映射（用于骨骼列表缩进渲染） parentId 为空的骨骼深度为 0，其余递归计算 |

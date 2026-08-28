@@ -249,6 +249,8 @@ export async function fillAuthorsAsync(
           role: a.roles || "",
           avatarUrl: null,
           avatarPath: "",
+          // 保留作者 bilibili 主页（统计卡作者列表渲染 📺 链接用；2026-08-28 修复链路丢失）
+          bilibili: a.bilibili || "",
         }));
       }
     } catch {

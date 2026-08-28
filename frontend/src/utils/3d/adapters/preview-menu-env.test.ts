@@ -39,7 +39,7 @@ function makeMenu(): SlideMenuHandle {
 }
 
 /** 测试用 sky cap 共享工厂：两处 fakeSkyCap 构造重复 → 抽公共函数（修复 jscpd 自重复 L47/L260） */
-function makeFakeSkyCap(): never {
+function makeFakeSkyCap() {
   return {
     id: "sky",
     labelKey: "preview.sky",

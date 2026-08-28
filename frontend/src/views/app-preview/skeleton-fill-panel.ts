@@ -319,14 +319,16 @@ export function buildYsmModelSchema(
   },
   snapshot: PreviewSnapshot,
 ): PreviewMenuNode[] {
-  const rawIdx = typeof snapshot["ui.activeComponent"] === "number" ? (snapshot["ui.activeComponent"] as number) : -1;
+  const rawIdxRaw = typeof snapshot["ui.activeComponent"] === "number" ? (snapshot["ui.activeComponent"] as number) : -1;
+  const mgCount = ctx.spec.models?.length ?? 0;
+  // clamp：组件数变化后的陈旧下标（≥ mgCount）视为 -1（All）——防 stats 聚合越界 + select 无匹配项
+  const rawIdx = rawIdxRaw >= mgCount ? -1 : rawIdxRaw;
   const { bones, cubes, compName } = ysmModelStats(ctx.spec, rawIdx);
   const slots = ysmModelTextureSlots(ctx.spec, rawIdx, ctx.texArr.length);
 
   // 组件选择（多组件才显示；-1 = All 选项恒在）
   const allLabel = t("preview.allComponents");
   const options = [{ value: "-1", label: allLabel === "preview.allComponents" ? "全部组件" : allLabel }];
-  const mgCount = ctx.spec.models?.length ?? 0;
   for (let i = 0; i < mgCount; i++) {
     const mg = ctx.spec.models?.[i] as { name?: string; id?: string; bones?: unknown[] } | undefined;
     options.push({ value: String(i), label: `${mg?.name || mg?.id || "model"} (${mg?.bones?.length ?? 0})` });
@@ -342,6 +344,9 @@ export function buildYsmModelSchema(
       control: {
         bind: "ui.activeComponent",
         options,
+        // [doc:adr-126-p5] 切档后 menu.refresh() 重渲染面板——stats/纹理行按新快照重建
+        // （订阅链已切 3D 组，此处补渲染侧；否则面板内容停留在打开时的快照）
+        refreshOnChange: true,
       },
     });
   }
@@ -349,34 +354,50 @@ export function buildYsmModelSchema(
   // 统计
   nodes.push(
     { id: "ysm-stats-bones", kind: "field", labelKey: "preview.section.bones", fallback: "骨骼", value: `${bones} 根` },
-    { id: "ysm-stats-cubes", kind: "field", labelKey: "preview.cubes", fallback: "立方体", value: `${cubes} 个` },
+    { id: "ysm-stats-cubes", kind: "field", labelKey: "preview.cubesLabel", fallback: "立方体", value: `${cubes} 个` },
   );
 
   // 纹理行（当前组件绑定）
-  for (const s of slots) {
-    const tex = ctx.texArr[s];
-    const name = ctx.model.textureNames?.[s]
-      || ctx.model.textures?.[s]?.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "")
-      || `纹理 ${s + 1}`;
-    const cat = ctx.model.textureCategories?.[s] || "";
-    const declM = ctx.spec.models?.[rawIdx < 0 ? 0 : rawIdx] as
-      | { textureWidth?: number; textureHeight?: number }
-      | undefined;
-    const decl =
-      typeof declM?.textureWidth === "number" && typeof declM?.textureHeight === "number"
-        ? `${declM.textureWidth}×${declM.textureHeight}`
-        : "?";
-    const ud = (tex as unknown as { userData?: { imgWidth?: unknown; imgHeight?: unknown } })?.userData;
-    const w = typeof ud?.imgWidth === "number" ? ud.imgWidth : null;
-    const h = typeof ud?.imgHeight === "number" ? ud.imgHeight : null;
-    const size = w !== null && h !== null ? `${w}×${h}` : "?";
-    nodes.push({
-      id: `ysm-tex-${s}`,
-      kind: "row",
-      labelKey: name,
-      fallback: name,
-      value: `${cat ? cat + " · " : ""}声明 ${decl} · 加载 ${size}`,
+  // [doc:adr-126-p5] ADR-114 专属纹理回归（P5-A review P2）：componentTextures[compName] 命中
+  // → 渲染专属纹理行（对齐旧 fillPanelComponent 语义），否则走全局槽（meshGroups.texIdx 去重）
+  const compTex = (ctx.spec as { componentTextures?: Record<string, string[]> }).componentTextures;
+  const declM = ctx.spec.models?.[rawIdx < 0 ? 0 : rawIdx] as
+    | { textureWidth?: number; textureHeight?: number }
+    | undefined;
+  const decl =
+    typeof declM?.textureWidth === "number" && typeof declM?.textureHeight === "number"
+      ? `${declM.textureWidth}×${declM.textureHeight}`
+      : "?";
+  const exclusive = rawIdx >= 0 && rawIdx < mgCount ? compTex?.[compName] : undefined;
+  if (exclusive?.length) {
+    exclusive.forEach((_uri, k) => {
+      nodes.push({
+        id: `ysm-tex-ex-${k}`,
+        kind: "row",
+        labelKey: `${compName}${exclusive.length > 1 ? ` #${k + 1}` : ""}`,
+        fallback: `${compName}${exclusive.length > 1 ? ` #${k + 1}` : ""}`,
+        value: `专属纹理 声明 ${decl}`,
+      });
     });
+  } else {
+    for (const s of slots) {
+      const tex = ctx.texArr[s];
+      const name = ctx.model.textureNames?.[s]
+        || ctx.model.textures?.[s]?.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "")
+        || `纹理 ${s + 1}`;
+      const cat = ctx.model.textureCategories?.[s] || "";
+      const ud = (tex as unknown as { userData?: { imgWidth?: unknown; imgHeight?: unknown } })?.userData;
+      const w = typeof ud?.imgWidth === "number" ? ud.imgWidth : null;
+      const h = typeof ud?.imgHeight === "number" ? ud.imgHeight : null;
+      const size = w !== null && h !== null ? `${w}×${h}` : "?";
+      nodes.push({
+        id: `ysm-tex-${s}`,
+        kind: "row",
+        labelKey: name,
+        fallback: name,
+        value: `${cat ? cat + " · " : ""}声明 ${decl} · 加载 ${size}`,
+      });
+    }
   }
 
   return nodes;

@@ -183,6 +183,13 @@ const bindings: Record<typeof KNOWN_PATHS[number], PreviewStatePathBinding> = {
   },
 };
 
+/** 重置会话态组件选择（预览 dispose/重建时调用；-1 = All）。
+ *  [doc:adr-126-p5] _activeComponent 是模块级会话值，跨预览泄漏——不重置则下一个模型
+ *  读陈旧下标，越界组件 → stats 聚合错 + select 无匹配项（P5-A review P2） */
+export function resetActiveComponent(): void {
+  _activeComponent = -1;
+}
+
 // ── 订阅（供后续取代 05fe24b7 的手工 refresh 链路）──
 
 type PreviewStateListener = (changed: typeof KNOWN_PATHS[number]) => void;

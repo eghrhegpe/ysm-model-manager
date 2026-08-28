@@ -63,6 +63,9 @@ export interface PreviewControlSpec {
   set?: (v: unknown) => unknown;
   /** 控件值变更后的副作用 */
   onChange?: (v: unknown) => void;
+  /** onchange 后重渲染当前面板（menu.refresh()）：面板内容随绑定状态变化的场景
+   *  （如组件 select 切档后 stats/纹理行按新快照重建，[doc:adr-126-p5] 订阅链闭合的渲染侧） */
+  refreshOnChange?: boolean;
   /** field 类型：显示值（静态或衍生） */
   value?: string | number | boolean;
   /** button 类型：按钮文案（i18n key 或字面量） */

@@ -9,7 +9,10 @@ import { getApp } from "../../backend/app.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import { preloadModel } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
-import { fillYsmModelPanel, fillYsmShotPanel, ysmShotNodes } from "./ysm-controls.ts";
+import { fillYsmShotPanel, ysmShotNodes } from "./ysm-controls.ts";
+import { buildYsmModelSchema } from "./skeleton-fill-panel.ts";
+import { registerSchema, YSM_MODEL_SCHEMA_ID } from "../../utils/3d/adapters/schema-registry.ts";
+import { subscribeSettings, getStateValue } from "../../utils/3d/state/preview-state.ts";
 import { statsCardHTML, type StatsCardModel } from "./tpl.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
@@ -75,9 +78,24 @@ async function createMaid3D(
       onClose: opts.onClose,
       readTextFile: readFileBytes,
       panels: {
-        fillModelPanel: fillYsmModelPanel,
         fillShotPanel: fillYsmShotPanel,
         shotNodes: ysmShotNodes,
+        // [doc:adr-126-p5] 受控 schema 注册（P5-A review P1）：maid 也走 buildYsmModelSchema
+        // 注册 "ysm-model"——model 面板 schemaId 是唯一通道（无 fallback），不注册则静默空白。
+        // 组件选择副作用经状态层订阅（与 ysm-3d 同构）。
+        registerModelSchema: (ctx) => {
+          registerSchema(YSM_MODEL_SCHEMA_ID, (snap) =>
+            buildYsmModelSchema(
+              { model: ctx.model, spec: ctx.spec, texArr: ctx.texArr as import("three").Texture[] },
+              snap,
+            ),
+          );
+          subscribeSettings((changed) => {
+            if (changed === "ui.activeComponent") {
+              ctx.handle.showModelGroup(getStateValue("ui.activeComponent") as number);
+            }
+          });
+        },
       },
       subModelIdx: opts.subModelIdx ?? 0,
     } as Parameters<typeof makeYsmAdapter>[1]),

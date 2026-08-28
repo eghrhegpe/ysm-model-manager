@@ -9,7 +9,7 @@
 import type { SlideMenuHandle, SlideMenuView } from "../../../ui/ui-slide-menu.ts";
 import { t } from "../../../core/i18n/t.ts";
 import type { PreviewMenuNode, PreviewActionMenuCtx } from "./preview-menu-node-types.ts";
-import { previewSnapshot, setStateValue } from "../state/preview-state.ts";
+import { previewSnapshot, setStateValue, isPathAvailable } from "../state/preview-state.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
 const tr = (key: string, fallback: string): string => {
@@ -194,6 +194,7 @@ function rmAppendSelect(
   container: HTMLElement,
   node: PreviewMenuNode,
   snapshot: Record<string, unknown>,
+  menu?: SlideMenuHandle,
 ): void {
   const spec = node.control;
   if (!spec?.options?.length) return;
@@ -220,9 +221,14 @@ function rmAppendSelect(
     const raw = sel.value;
     const v = spec.set ? spec.set(raw) : raw;
     // [doc:adr-126-p5-c] control.bind 是声明式路径（编译期经 PreviewStatePath 守卫）；
-    // 运行期收窄到 KNOWN_PATHS 窄联合——未落地路径写前应先用 isPathAvailable 判（本层不管）
+    // 运行期收窄到 KNOWN_PATHS 窄联合——未落地路径（bindings 无对应项）写前必须
+    // isPathAvailable 守卫，否则 bindings[path] 为 undefined 直接 TypeError（P5-A review P3）
+    if (!isPathAvailable(spec.bind as never)) return;
     setStateValue(spec.bind as never, v);
     spec.onChange?.(v);
+    // [doc:adr-126-p5] refreshOnChange：面板内容随绑定状态变化（组件 select 切档后
+    // stats/纹理行按新快照重建）——menu.refresh() 重渲染当前面板，schema builder 重新执行
+    if (spec.refreshOnChange) menu?.refresh();
   };
   wrap.appendChild(sel);
   container.appendChild(wrap);
@@ -271,7 +277,7 @@ export function renderMenu(container: HTMLElement, nodes: PreviewMenuNode[], dep
     } else if (node.kind === "row") {
       rmAppendDynamicRow(container, node, deps.actionCtx);
     } else if (node.kind === "select") {
-      rmAppendSelect(container, node, snapshot);
+      rmAppendSelect(container, node, snapshot, deps.menu);
     } else if (node.kind === "divider" || node.kind === "sectionTitle") {
       rmAppendDecor(container, node);
     } else {

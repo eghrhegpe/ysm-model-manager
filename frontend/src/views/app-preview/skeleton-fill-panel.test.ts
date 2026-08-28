@@ -92,6 +92,32 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
     // 组件 1 只有 1 个槽位
     expect(nodes.filter((n) => n.kind === "row").length).toBe(1);
   });
+
+  it("多组件 + 专属纹理：componentTextures[compName] 命中 → 渲染专属纹理行（ADR-114 回归）", () => {
+    // [doc:adr-126-p5] P5-A review P2：旧 fillPanelComponent 渲染专属纹理区，
+    // 新 schema 流此前只走全局槽——此处锁「命中专属 → 替代全局槽行」契约
+    const exclusiveCtx = {
+      ...ctx,
+      spec: {
+        models: [
+          { name: "main", bones: [{ _cubeCount: 1 }], meshGroups: [{ texIdx: 0 }] },
+          { name: "armor", bones: [{ _cubeCount: 2 }], textureWidth: 128, textureHeight: 64, meshGroups: [{ texIdx: 1 }] },
+        ],
+        componentTextures: { armor: ["a/armor_skin.png", "a/armor_trim.png"] },
+      } as never,
+      texArr: [{ userData: { imgWidth: 128, imgHeight: 64 } }] as never[],
+      model: { textureNames: ["armor_tex"], textures: ["a/armor.png"], textureCategories: [""] } as never,
+    } as never;
+    const nodes = buildYsmModelSchema(exclusiveCtx, snap(1));
+    const rows = nodes.filter((n) => n.kind === "row");
+    expect(rows.length).toBe(2); // 专属纹理 2 行（替代全局槽行）
+    expect(rows[0].id).toBe("ysm-tex-ex-0");
+    expect(rows[0].labelKey).toBe("armor #1"); // 专属纹理 >1 个时带序号
+    expect(rows[0].value).toContain("专属纹理");
+    expect(rows[0].value).toContain("声明 128×64");
+    expect(rows[1].id).toBe("ysm-tex-ex-1");
+    expect(rows[1].labelKey).toBe("armor #2");
+  });
 });
 
 describe("纯函数（fillPanelComponent 同逻辑抽取）", () => {

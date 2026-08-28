@@ -1130,6 +1130,7 @@ export const en: Record<string, string> = {
   "preview.fillLight": "Fill Light",
   "preview.rimLight": "Rim Light",
   "preview.allComponents": "All Components",
+  "preview.component": "Component",
   "preview.copied": "Copied",
   "preview.blueprintDetail": "Blueprint Detail",
   "preview.web7zUnsupported": ".7z model preview is not supported on web (use desktop)",

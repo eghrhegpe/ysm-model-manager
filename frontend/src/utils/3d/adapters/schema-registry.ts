@@ -15,6 +15,9 @@
 
 import type { PreviewMenuNode, PreviewSnapshot } from "./preview-menu-node-types.ts";
 
+/** YSM model 面板 schema 键（adapter schemaId 与 views 注册共用同一常量，防漂移静默丢面板） */
+export const YSM_MODEL_SCHEMA_ID = "ysm-model";
+
 /** 面板 builder：吃状态层快照，产出声明式节点（纯数据，零 DOM） */
 export type SchemaBuilder = (snapshot: PreviewSnapshot) => PreviewMenuNode[];
 
@@ -25,6 +28,12 @@ const registry = new Map<string, SchemaBuilder>();
  * 与 setAdapterItems 换菜单语义一致；测试用 registerSchema 注册后需 resetSchemas 隔离 */
 export function registerSchema(id: string, builder: SchemaBuilder): void {
   registry.set(id, builder);
+}
+
+/** 注销面板 builder（预览 dispose 时调用，防跨会话污染：陈旧 builder 的闭包
+ *  持有已 dispose 场景的 model/texArr/handle，不清理会泄漏 WebGL 纹理集） */
+export function unregisterSchema(id: string): void {
+  registry.delete(id);
 }
 
 /** 取面板 builder；未注册返回 undefined */

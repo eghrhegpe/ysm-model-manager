@@ -23,6 +23,8 @@ import { disposeDebugGroup } from "../cleanup-helper.ts";
 import { screenshotFromRenderer } from "../screenshot.ts";
 import type { YsmContentHandle, YsmControlsContext } from "../../../views/app-preview/ysm-controls.ts";
 import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
+import { YSM_MODEL_SCHEMA_ID, unregisterSchema } from "./schema-registry.ts";
+import { resetActiveComponent } from "../state/preview-state.ts";
 import type { Spec3D, BoneSelectInfo, BoneMaps } from "../model3d.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import type { BedrockGeometry } from "../../../views/app-preview/geometry.ts";
@@ -363,7 +365,7 @@ function mdYsBuildMenuAndDebug(
   ];
   // [doc:adr-126-p5-c] 受控 schema 注册：model 面板内容由视图层注册的 builder 驱动
   // （R1 禁 utils→views，注册钩子由视图层注入实现）。缺失时不注册——model 面板走
-  // 渲染通道衰退（children/renderCustom 兜底），不阻断。
+  // renderCustom fallback（fillModelPanel，兼容 maid-3d 等未迁移调用者），不空白。
   opts.panels?.registerModelSchema?.(controlsCtx);
   const menuItems = ysmMenuItems({
     controlsCtx,
@@ -452,6 +454,11 @@ function mdYsMakeSceneHandle(
       }
       animPlayer?.dispose();
       breath?.dispose();
+      // [doc:adr-126-p5] dispose 注销 schema：防跨会话污染（陈旧 builder 闭包持有已销毁场景
+      // 的 model/texArr/handle，不清理会泄漏 WebGL 纹理集 + maid 等后续预览渲染旧模型数据）
+      unregisterSchema(YSM_MODEL_SCHEMA_ID);
+      // 会话态组件选择重置（-1 = All）：防跨预览陈旧下标（P5-A review P2）
+      resetActiveComponent();
     },
     resetCamera(): void {
       ctx.camera!.position.copy(initCamPos);
@@ -549,9 +556,8 @@ export interface YsmMenuItemsOpts {
     /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
      *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
     shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];
-    /** [doc:adr-126-p5-c] 受控 schema 注册钩子：adapter build 拿到 controlsCtx 后调用，
-     *  视图层在此注册 buildYsmModelSchema（key="ysm-model"）——model 面板内容走 schema-registry */
-    registerModelSchema?: (ctx: YsmControlsContext) => void;
+    // 注：registerModelSchema 只在 YsmAdapterOptions（makeYsmAdapter opts）消费——
+    // ysmMenuItems 不读它，不在此重复声明（防两接口分化，P5-A review P3）
   };
   /** YSM 动画桥（ADR-100）；null/缺省（无 .animation.json）→ 不注入 play 项 */
   play?: MmdPlayBridge | null | undefined;
@@ -580,9 +586,12 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       dockGroup: "model",
       legacyTestId: "ysm-model-entry",
-      // [doc:adr-126-p5-c] 受控 schema 驱动：renderPreviewPanel 查 schema-registry 的 "ysm-model"，
-      // builder（buildYsmModelSchema）吃状态层快照产出声明式节点。不再走 renderCustom 逃生舱。
-      schemaId: "ysm-model",
+      // [doc:adr-126-p5-c] 受控 schema 驱动：renderPreviewPanel 优先查 schema-registry 的
+      // YSM_MODEL_SCHEMA_ID，builder（buildYsmModelSchema）吃状态层快照产出声明式节点。
+      // schemaId 是唯一渲染通道（契约：带 schemaId 不得同时带 renderCustom——双通道歧义）；
+      // 所有 makeYsmAdapter 调用者（ysm-3d / maid-3d）必须经 registerModelSchema 注册，
+      // 缺失则面板空渲染（P5-A review P1 修复：maid-3d 已补注册）。
+      schemaId: YSM_MODEL_SCHEMA_ID,
     },
     {
       id: "shot",

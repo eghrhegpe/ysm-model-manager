@@ -1,7 +1,7 @@
 // ===== schema-registry 契约测试（[doc:adr-126-p5-a] 受控 builder 注册）=====
 // 锁定三件事：
 //   1. 注册 / 查询 / 枚举 / 清空 基本生命周期
-//   2. 重复注册抛错（防覆盖掩盖冲突）
+//   2. 重复注册覆盖旧 builder（后注册者生效——多模型同框换菜单语义，非抛错）
 //   3. builder 吃状态层快照（PreviewSnapshot）——与 P4-D visibleWhen 同构
 
 import { describe, it, expect, beforeEach } from "vitest";

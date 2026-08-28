@@ -1133,6 +1133,7 @@ export const zhCN: Record<string, string> = {
   "preview.fillLight": "补灯",
   "preview.rimLight": "轮廓灯",
   "preview.allComponents": "全部组件",
+  "preview.component": "组件",
   "preview.copied": "已复制",
   "preview.blueprintDetail": "蓝图详情",
   "preview.web7zUnsupported": "网页版暂不支持 .7z 模型预览（请使用桌面版）",

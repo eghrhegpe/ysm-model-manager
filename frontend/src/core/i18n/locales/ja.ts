@@ -1131,6 +1131,7 @@ export const ja: Record<string, string> = {
   "preview.fillLight": "フィラーライト",
   "preview.rimLight": "リムライト",
   "preview.allComponents": "すべてのコンポーネント",
+  "preview.component": "コンポーネント",
   "preview.copied": "コピーしました",
   "preview.blueprintDetail": "設計図の詳細",
   "preview.web7zUnsupported": "Web版では .7z モデルのプレビューは未対応（デスクトップ版をご利用ください）",

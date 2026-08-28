@@ -27,14 +27,14 @@ invariant_anchors:
 
 ## 核心职责
 
-- 完整摘要卡片渲染（名称/tips/许可/作者/资源统计/纹理尺寸/缩放/动画分组/配置项/链接）
-- 加密/闭源模型的头部简约卡片（无 summary 仅有 header 时）
-- 头部无名称时回退文件名解析（parseModelName 补作者/作品/角色）
+- 完整摘要卡片渲染（名称/tips/许可/资源统计/缩放/动画分组/配置项/链接；**作者/纹理尺寸已移统计卡**）
+- 加密/闭源模型的头部简约卡片（无 summary 仅有 header 时，header-only 作者/作品分行保留）
+- 头部无名称时回退文件名解析（parseModelName 补作者/作品/角色，仅 header-only 卡）
 
 ## 对外 API / 入口
 
 - 导出类型：`YsmSummary`（name/source/tips/license/authors/stats/preview/animGroups/configMenus/links）、`YSMHeader`（isYsm/name/tips/license/hasFree/isFree/authorName/authorBilibili/authorRole/linkHome/linkUpdate/hash/format/crypto）、`SummaryAuthor`、`SummaryAnimGroup`、`SummaryConfigMenu` — 与 go/ysm + go/types 结构体对齐的轻量类型
-- `summaryCardHTML(summary, header, basename?): string` — 主入口：双空 → 空态引导卡（「点击左侧仓库文件查看详情」）；无 summary 且 header.isYsm → 头部简约卡（🔒 加密提示 + 格式/加密版本号）；否则 → 完整卡片（🆓 免费 / 🔒 付费徽章由 hasFree/isFree 驱动）
+- `summaryCardHTML(summary, header, basename?): string` — 主入口：双空 → 空态引导卡（「点击左侧仓库文件查看详情」）；无 summary 且 header.isYsm → 头部简约卡（🔒 加密提示 + 格式/加密版本号）；否则 → 完整卡片（🆓 免费 / 🔒 付费徽章由 hasFree/isFree 驱动）。**方案 A 去重（2026-08-28）**：完整卡片不再渲染作者行（含文件名 `[作者]` 回退）与纹理尺寸行——作者（头像+角色）与纹理由统计卡 `buildStatsCard`（skeleton-render.ts）统一承载并挂详情卡底部 `#preview-stats`，摘要卡保留唯一性，消除信息重复
 - 内部渲染助手（未导出）：renderTips（§ 着色）、cleanText（剥离 § 码与控制字符）、safeUrl（仅放行 http/https，javascript:/data: 等替换为 "#"）
 
 ## 与其他子系统关系

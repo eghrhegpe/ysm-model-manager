@@ -65,7 +65,8 @@ MMD 与 YSM 截图面板同构（6 角度按钮 + 截图副作用），共享 `S
 ## 对外 API / 入口
 
 ```ts
-// 声明式节点工厂（新面板路径）
+// 声明式节点工厂（views/app-preview 定义，**经 panels 注入通道给 adapter**——
+// R1 禁 utils→views 运行时依赖，adapter 不得直接 import 工厂）
 mmdModelInfoNodes(ctx): PreviewMenuNode[]   // MMD 信息卡 2 行 field（纯数据零 DOM）
 mmdShotNodes(ctx, screenshotFn): PreviewMenuNode[] // MMD 截图 6 button（screenshot null → []，条件注入）
 ysmShotNodes(ctx): PreviewMenuNode[]        // YSM 截图 6 button（screenshot undefined → 面板常驻，无条件注入）
@@ -84,7 +85,8 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 
 - **ADR-125**：设置面板走 `MenuControlDef[]`（B 层），本卡的面板内容走 `PreviewMenuNode[]`（A 层 children）——两条声明式通道各自独立，不混用。
 - **renderMenu**（preview-menu-render.ts）：children 内容的渲染器，支持 field/button/row/folder/divider/sectionTitle + 逃生舱。
-- **mmd-adapter / mmd-controls**：P4-B-1 试点——model 面板改 `children: mmdModelInfoNodes`，shot 面板条件注入 `children: mmdShotNodes`；`fillMmdModelPanel` / `fillMmdShotPanel` 保留（向后兼容 + 既有测试零回归）。
+- **mmd-adapter / mmd-controls**：P4-B-1 试点——model 面板 `children: o.panels?.modelInfoNodes?.(...)`，shot 面板条件注入 `children: o.panels?.shotNodes?.(...)`；`fillMmdModelPanel` / `fillMmdShotPanel` 保留（向后兼容 + 既有测试零回归）。
+- **注入通道回归（R1 分层）**：节点工厂（`mmdModelInfoNodes` / `mmdShotNodes` / `ysmShotNodes`）定义在 views，adapter 经 `MmdPanelHooks` / `YsmMenuItemsOpts.panels` 的可选字段（`modelInfoNodes` / `shotNodes`）由视图层注入（mmd-3d / scene-3d / ysm-3d / maid-3d）——**adapter 不得直接 import views 层工厂**（check-layering R1 零容忍，曾因直接 import 阻断推送，见 `44b4e1b2`）。注入缺失 → children 空、面板不渲染（测试桩同步补注入）。
 - **ADR-085**：S2「状态单向流」的大方向——面板内容从命令式 DOM 构建收敛为数据节点。
 
 ## 不变量
@@ -92,8 +94,9 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 1. **panel 必有渲染通道**：renderCustom（命令式逃生舱）或 children（声明式节点）二选一——契约测试 `preview-menu-items.test.ts` 断言。
 2. **能力缺失 → 不注入项**（条件注入），不注入空 children 面板（对齐 bonePanel 范式）。
 3. **声明式节点零 DOM**：`mmdModelInfoNodes` / `mmdShotNodes` 是纯数据工厂，不碰 `document`（与 fillXxxPanel 命令式形成对照）。
-4. **新旧通道并存**：`fillMmdModelPanel` / `fillMmdShotPanel` 保留兼容，新面板路径走 children——每步独立可回滚。
-5. `fillRoles` **不在 P4-B 范围**（已声明式，实测 sceneRegistry + menuItems + SlideMenuView 驱动）。
+4. **R1 分层（零容忍）**：utils 侧 adapter **不得 import views 层节点工厂**——必须经 `panels` 注入通道（`modelInfoNodes` / `shotNodes` 可选字段）由视图层注入；`check-menu-health` 门禁认识 children 渲染通道（render/renderCustom/children 三选一，`f697a270` 起）。
+5. **新旧通道并存**：`fillMmdModelPanel` / `fillMmdShotPanel` 保留兼容，新面板路径走 children——每步独立可回滚。
+6. `fillRoles` **不在 P4-B 范围**（已声明式，实测 sceneRegistry + menuItems + SlideMenuView 驱动）。
 
 ## 相关
 

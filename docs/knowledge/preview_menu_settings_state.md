@@ -58,6 +58,16 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 
 只允许两种：① cap 内 `visible`（必须基于自身 params，**禁止跨 cap 探查**）；② 声明式节点 `visibleWhen(s)`（吃状态层快照的纯函数）。禁止在 schema 构建期以 `if (cap)` 做条件插入。
 
+### 性能档位（P4 延续：薄壳版，`perf-presets.ts`）
+
+一键性能档位 = **纯数据表 + 通用套用器**，刻意规避隔壁 MikuMikuAR 的坑（每个模式手写参数映射 + Go 绑定 + custom 档手动 reRender）：
+
+- `PERF_PRESETS`：低/中/高三档 → `StatePath → 值`（路径类型 `typeof KNOWN_PATHS[number]` 编译期守卫）。一期只控有状态层路径的性能项：`render.maxFps` / `render.maxPixelRatio` / `render.bloom`。wireframe/pmrem 是视觉项不进表；frustumCull 是纯优化（无画质损失）恒开不进表。
+- `applyPerfPreset(level)`：遍历表走 `setStateValue`（cap 缺席的派生路径静默跳过）；**custom 不套用**（保持用户手调，零副作用）。
+- `setPerfPreset(level)`：持久化（键 `ysm_3d_perfPreset`）+ 套用；`getPerfPreset()` 无存档回 `medium`。
+- 设置面板性能组**顶部**档位 select（低/中/高/自定义，`settings-perf-preset` 节点），切档套用后 `menu?.refresh()` 刷新兄弟控件显示。
+- 进入预览时 `mount-preview-core` 在 `loadAll → setPreset(模型类别)` **之后**调 `applyPerfPreset(getPerfPreset())`——用户显式档位最后覆盖模型预设。
+
 ## 对外 API / 入口
 
 ```ts
@@ -74,6 +84,11 @@ toStatePath(path)                        // 编译期契约守卫
 buildCrossCuttingControls()              // 3 个横切数据节点
 collectSettingsCapControls()             // 自动聚合（settingsOrder 升序 + 抹平 group）
 buildSettingsControls()                  // 横切 + 聚合，供契约测试断言
+
+// 性能档位（perf-presets.ts，薄壳版）
+PERF_PRESETS                             // 三档数据表（low/medium/high → 路径值）
+getPerfPreset() / setPerfPreset(level)   // 档位读写（持久化 ysm_3d_perfPreset + 套用）
+applyPerfPreset(level)                   // 数据表套用（custom 不套用）
 
 // P3
 collectVisiblePredicates(controls)       // 纯函数，枚举带 visible 的控件

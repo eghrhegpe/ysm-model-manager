@@ -16,13 +16,13 @@ import {
   resetDynamicCommandsCache,
 } from "./cli-bridge.ts";
 
-// Mock getApp 和 resolveWebMode
+// Mock getApp 和 isWebPlatform
 vi.mock("../backend/app.ts", () => ({
   getApp: vi.fn(),
 }));
 
-vi.mock("../backend/platform.ts", () => ({
-  resolveWebMode: vi.fn(() => false),
+vi.mock("../backend/platform-web.ts", () => ({
+  isWebPlatform: vi.fn(() => false),
 }));
 
 vi.mock("../backend/web-common.ts", () => ({
@@ -36,13 +36,13 @@ vi.mock("../backend/web-common.ts", () => ({
 
 import { getApp } from "../backend/app.ts";
 import type { AppBindings } from "../backend/types.ts";
-import { resolveWebMode } from "../backend/platform.ts";
+import { isWebPlatform } from "../backend/platform-web.ts";
 import { WebUnsupportedError } from "../backend/web-common.ts";
 
 // 重置 mock
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(resolveWebMode).mockReturnValue(false);
+  vi.mocked(isWebPlatform).mockReturnValue(false);
   resetDynamicCommandsCache();
 });
 
@@ -111,7 +111,7 @@ describe("CLI Bridge - 命令执行", () => {
 
 describe("CLI Bridge - 网页版降级", () => {
   it("网页版返回降级响应", async () => {
-    vi.mocked(resolveWebMode).mockReturnValue(true);
+    vi.mocked(isWebPlatform).mockReturnValue(true);
 
     const mockApp = {
       ExecuteCLI: vi.fn().mockResolvedValue(
@@ -137,7 +137,7 @@ describe("CLI Bridge - 网页版降级", () => {
   });
 
   it("网页版 WebUnsupportedError 处理", async () => {
-    vi.mocked(resolveWebMode).mockReturnValue(true);
+    vi.mocked(isWebPlatform).mockReturnValue(true);
 
     const mockApp = {
       ExecuteCLI: vi.fn().mockImplementation(() => {
@@ -170,7 +170,7 @@ describe("CLI Bridge - 命令列表", () => {
   });
 
   it("获取允许的命令列表（网页版降级）", async () => {
-    vi.mocked(resolveWebMode).mockReturnValue(true);
+    vi.mocked(isWebPlatform).mockReturnValue(true);
 
     const result = await getAllowedCLICommands();
 

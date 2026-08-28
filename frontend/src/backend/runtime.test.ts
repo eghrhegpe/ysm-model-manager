@@ -21,8 +21,8 @@ async function loadWebRuntime() {
     Events: { On: vi.fn(), OnMultiple: vi.fn(), Off: vi.fn(), Emit: vi.fn() },
     Window: {},
   }));
-  vi.doMock("./platform.ts", () => ({
-    resolveWebMode: () => true,
+  vi.doMock("./platform-web.ts", () => ({
+    isWebPlatform: () => true,
   }));
   return import("./runtime.ts");
 }
@@ -42,8 +42,8 @@ describe("桌面模式（isWeb=false）— 委托真 @wailsio/runtime", () => {
       Events: { On: mockOn, OnMultiple: mockOnMultiple, Off: mockOff, Emit: mockEmit },
       Window: { SetTitle: mockSetTitle, Show: mockShow },
     }));
-    vi.doMock("./platform.ts", () => ({
-      resolveWebMode: () => false,
+    vi.doMock("./platform-web.ts", () => ({
+      isWebPlatform: () => false,
     }));
 
     const { Events, Window } = await import("./runtime.ts");
@@ -117,8 +117,8 @@ describe("导出面锁定", () => {
       Events: { On: vi.fn(), OnMultiple: vi.fn(), Off: vi.fn(), Emit: vi.fn() },
       Window: { SetTitle: vi.fn(), Show: vi.fn() },
     }));
-    vi.doMock("./platform.ts", () => ({
-      resolveWebMode: () => false,
+    vi.doMock("./platform-web.ts", () => ({
+      isWebPlatform: () => false,
     }));
 
     const mod = await import("./runtime.ts");

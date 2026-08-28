@@ -3,13 +3,13 @@
 // 仅网页版注册；首次注册 reload 一次（localStorage 标记防循环）；已控制/已隔离不 reload。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isCrossOriginIsolated, registerCoiServiceWorker } from "./coi-sw.ts";
-import { resolveWebMode } from "./platform.ts";
+import { isWebPlatform } from "./platform-web.ts";
 
-const { resolveWebModeMock } = vi.hoisted(() => ({
-  resolveWebModeMock: vi.fn(() => true),
+const { isWebPlatformMock } = vi.hoisted(() => ({
+  isWebPlatformMock: vi.fn(() => true),
 }));
-vi.mock("./platform.ts", () => ({
-  resolveWebMode: resolveWebModeMock,
+vi.mock("./platform-web.ts", () => ({
+  isWebPlatform: isWebPlatformMock,
   readDeclaredBackend: () => undefined,
 }));
 
@@ -24,7 +24,7 @@ const reloadMock = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
-  resolveWebModeMock.mockReturnValue(true);
+  isWebPlatformMock.mockReturnValue(true);
   registerMock.mockResolvedValue({});
   vi.stubGlobal("crossOriginIsolated", false);
   vi.stubGlobal("navigator", {
@@ -41,10 +41,10 @@ afterEach(() => {
 });
 
 describe("COI Service Worker（ADR-079 M1）", () => {
-  it("仅网页版注册（resolveWebMode=true → register 调用；false → 不调）", () => {
+  it("仅网页版注册（isWebPlatform=true → register 调用；false → 不调）", () => {
     registerCoiServiceWorker();
     expect(registerMock).toHaveBeenCalledWith(expect.stringMatching(/sw\.js$/), { scope: expect.any(String) });
-    resolveWebModeMock.mockReturnValue(false);
+    isWebPlatformMock.mockReturnValue(false);
     registerCoiServiceWorker();
     expect(registerMock).toHaveBeenCalledTimes(1);
   });

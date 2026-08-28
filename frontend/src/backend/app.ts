@@ -5,7 +5,7 @@
 // 走 browserAdapter（browser-adapter.ts），桌面/Android 走 Wails 原逻辑——
 // 业务调用零改动。
 
-import { resolveWebMode } from "./platform.ts";
+import { isWebPlatform } from "./platform-web.ts";
 import { browserAdapter } from "./browser-adapter.ts";
 import type { AppBindings } from "./types.ts";
 
@@ -19,7 +19,7 @@ export const getApp = async (): Promise<AppBindings> => {
   // 网页版（ADR-049 Phase 1）：无 Wails 壳，路由到 browser adapter——
   // 未实现 binding fail-fast（WebUnsupportedError），杜绝 undefined 穿透。
   // 置于缓存检查之前：browserAdapter 无状态（Proxy），每次返回即可，不污染缓存
-  if (resolveWebMode()) return browserAdapter;
+  if (isWebPlatform()) return browserAdapter;
 
   // 缓存已就绪 → 直接返回
   if (_App) return _App;

@@ -10,8 +10,8 @@
 //
 // 范围边界（ADR-122 教训：针对性修复非全量重写）：本模块只收「是什么平台 / 该能力
 // 是否可用」的判定；各功能的 web 降级动作（下载入库、导入、toast 早退）留在原地，
-// 仅消费统一谓词。resolveWebMode() 继续作为 web 单态薄谓词供既有调用方使用，
-// 不做 19 文件全量换皮。
+// 仅消费统一谓词。resolveWebMode() 薄谓词保留于 platform.ts 供存量调用；本模块
+// 暴露 isWebPlatform() 作为 web-only 语义的统一入口，19 处按需渐进迁移。
 import { readDeclaredBackend, isWebEntryMode, getAndroidBridge } from "./platform.ts";
 import { browserAdapter } from "./browser-adapter.ts";
 
@@ -62,4 +62,13 @@ export function canBinding(binding: string): boolean {
  */
 export function isViewerPlatform(): boolean {
   return resolvePlatformMode() !== "desktop";
+}
+
+/**
+ * 网页版谓词 = 仅 web（非 Android）。与 platform.ts 的 resolveWebMode() 等价
+ * （契约由 platform-parity.test.ts 钉死），是 19 处 web-only 分支的统一入口。
+ * isViewerPlatform 语义为 web∪android，不可替代 web-only 判定。
+ */
+export function isWebPlatform(): boolean {
+  return resolvePlatformMode() === "web";
 }

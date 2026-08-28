@@ -3,10 +3,10 @@
 // 网页版（无 Wails 壳）走 no-op 桩——MikuMikuAR ADR-176 教训：Events/Window
 // 在纯浏览器无原生后端，须 no-op 兜底，否则 OpenDevTools 等会抛 / 行为漂移。
 import { Events as WailsEvents, Window as WailsWindow } from "@wailsio/runtime";
-import { resolveWebMode } from "./platform.ts";
+import { isWebPlatform } from "./platform-web.ts";
 import { dbg } from "../utils/debug/debug.ts";
 
-const isWeb = resolveWebMode();
+const isWeb = isWebPlatform();
 
 // Web 桩接口：只暴露 Events 模块实际用到的 6 个方法，返回值与真值对齐——
 // Emit 真值返回 Promise<boolean>，桩返回 Promise<false>（诚实报告未发送）；

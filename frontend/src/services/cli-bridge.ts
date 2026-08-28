@@ -4,7 +4,7 @@
 
 import { getApp } from "../backend/app.ts";
 import { CLI_ALLOWLIST, type CLIAllowlistCommand } from "../backend/cli-allowlist.ts";
-import { resolveWebMode } from "../backend/platform.ts";
+import { isWebPlatform } from "../backend/platform-web.ts";
 import { WebUnsupportedError } from "../backend/web-common.ts";
 import { safeErrorMessage } from "../utils/safe-error-msg.ts";
 
@@ -80,7 +80,7 @@ async function fetchDynamicCommands(): Promise<Set<string>> {
 
 /** 检查命令是否在白名单中（优先使用动态列表） */
 async function isCommandAllowed(command: string): Promise<boolean> {
-  if (resolveWebMode()) {
+  if (isWebPlatform()) {
     return ALLOWED_CLI_COMMANDS.includes(command as CLIAllowlistCommand);
   }
   const allowed = await fetchDynamicCommands();
@@ -107,7 +107,7 @@ export async function executeCLI(command: string, args: CLIArgs = {}): Promise<C
         code: "command_not_allowed",
         message: `命令 [${command}] 不在白名单中`,
       },
-      meta: { platform: resolveWebMode() ? "web" : "native" },
+      meta: { platform: isWebPlatform() ? "web" : "native" },
     };
   }
 
@@ -146,7 +146,7 @@ export async function executeCLI(command: string, args: CLIArgs = {}): Promise<C
  * 获取允许的 CLI 命令列表（优先使用动态缓存）
  */
 export async function getAllowedCLICommands(): Promise<string[]> {
-  if (resolveWebMode()) {
+  if (isWebPlatform()) {
     return [...ALLOWED_CLI_COMMANDS];
   }
   try {

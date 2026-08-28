@@ -1,10 +1,10 @@
 // ===== COI Service Worker 注册（ADR-079 M1：网页版跨源隔离注入）=====
 // GitHub Pages 静态托管无法自定义响应头 → SW 拦截同源响应补 COOP/COEP（public/sw.js），
 // 浏览器在下次导航解锁 crossOriginIsolated=true（SharedArrayBuffer → pthread WASM 前提）。
-// 仅网页版（resolveWebMode）注册；桌面走 Go CoopCoepMiddleware、Android 走
+// 仅网页版（isWebPlatform）注册；桌面走 Go CoopCoepMiddleware、Android 走
 // shouldInterceptRequest 注入（ADR-079 §1.3）。
 // 渐进增强：SW 注册失败/不支持 → 静默降级（无跨源隔离，单线程 WASM 兜底，功能不残）。
-import { resolveWebMode } from "./platform.ts";
+import { isWebPlatform } from "./platform-web.ts";
 import { safeGet, safeSet } from "../utils/dom/storage.ts";
 import { dbg } from "../utils/debug/debug.ts";
 
@@ -20,7 +20,7 @@ export function isCrossOriginIsolated(): boolean {
 export function registerCoiServiceWorker(): void {
   try {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
-    if (!resolveWebMode()) return; // 仅网页版（桌面/Android 由原生注入）
+    if (!isWebPlatform()) return; // 仅网页版（桌面/Android 由原生注入）
     const base = import.meta.env.BASE_URL;
     void navigator.serviceWorker
       .register(`${base}sw.js`, { scope: base })

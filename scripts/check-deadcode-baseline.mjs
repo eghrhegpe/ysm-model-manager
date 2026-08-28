@@ -271,6 +271,14 @@ function main() {
     for (const e of errors.slice(0, 25)) console.log(`❌ ${e}`);
     if (errors.length > 25) console.log(`  … 其余 ${errors.length - 25} 条（--json 全量）`);
     console.log('→ 归属本次改动的债：删除未引用导出，或确认保留后 --update-baseline 纳入');
+    console.log('');
+    console.log('  解读（错误行格式 <文件>|<类型>|<符号>）：');
+    console.log('    exports / types / enumMembers = 未使用的导出 / 类型 / 枚举成员（删掉或确认保留）');
+    console.log('    file = 整个文件未被引用；jscpd 项 <文件A>#<文件B> = 两文件重复代码块');
+    console.log(`  基线：${path.relative(ROOT, BASELINE_FILE)}（已知债务白名单，仅放行基线内项；`);
+    console.log('    基线中已消失项自动标记 [已清理]，下轮收编时移除）');
+    console.log('  归属：仅「本次改动文件」内新增项阻断；他人遗留债务自动收编不拦路（记账留痕）');
+    console.log('  更新基线：node scripts/check-deadcode-baseline.mjs --update-baseline');
     console.log('\n退出码 1（新增死代码/重复代码·归属本次改动，阻断）。');
     process.exit(1);
   }

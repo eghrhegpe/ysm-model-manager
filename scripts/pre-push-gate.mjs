@@ -383,7 +383,7 @@ async function main() {
           }
         }
       }
-      record(tool, ok, { time: Date.now() - t0, note, tail: !ok ? r.out.trim().split('\n').slice(-4).join('\n') : '' });
+      record(tool, ok, { time: Date.now() - t0, note, tail: !ok ? r.out.trim().split('\n').slice(-12).join('\n') : '' });
     }
   };
 
@@ -618,7 +618,11 @@ async function main() {
 
   /* --- 聚合摘要 --- */
   logPush('------------------- 结果 -------------------');
-  for (const r of results) {
+  // FAIL 前置（2026-08-29 可观测性）：失败项先出，不被 OK 洪流淹没——
+  // 28 项全跑完才出结论，若 FAIL 混排在末尾用户找不到是哪个指令有问题。
+  // 比较器：Number(true)-Number(false) = 1 → ok 排后；fail(0) 自然排前。
+  const sortedResults = [...results].sort((a, b) => Number(a.ok) - Number(b.ok));
+  for (const r of sortedResults) {
     const status = r.ok ? B.OK : B.FAIL;
     logPush(`${status} ${r.label.padEnd(20)} ${(r.time / 1000).toFixed(1)}s  ${r.note || ''}`);
     if (r.tail) {
@@ -647,6 +651,10 @@ async function main() {
     return 0;
   }
   logPush(`结论: FAIL ❌ ${results.filter((r) => r.ok).length}/${results.length} 项通过，推送已${dryRun ? '将被' : ''}阻断`);
+  // 失败项清单（2026-08-29 可观测性）：一行点名全部失败指令，无需在结果表里逐行找
+  const fails = results.filter((r) => !r.ok);
+  logPush(`失败项 (${fails.length}): ${fails.map((r) => r.label).join(' / ')}`);
+  logPush('详情见上方 [FAIL] 块（已前置到结果表最前）');
   // 修复指引：gofmt 检出未格式化（疑似 --no-verify 绕过 pre-commit）→ 手动修复后重推
   const gofmt = results.find((r) => r.label === 'gofmt');
   let gofmtHint = '';

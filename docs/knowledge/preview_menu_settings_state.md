@@ -109,6 +109,10 @@ collectVisiblePredicates(controls)       // 纯函数，枚举带 visible 的控
 4. `collectSettingsCapControls()` 不得缓存 cap 实例。
 5. 新增设置项 = 加一行数据，不是加一个 20-30 行 `renderCustom` 闭包。
 
+## e2e 覆盖边界
+
+3D 预览菜单（slide menu）的交互断言在 e2e 环境**不可行**：mock 数据下 `showModelDetail` 走 catch 分支、不绑定 `btn-3d-preview` 的 onclick（3D 不挂载，`preview.spec.ts` 注释实证），无 GPU 环境 WebGL 又 `test.skip`。故设置面板（含性能档位 select）的断言**由 vitest 层完整覆盖**（`preview-state.test` 面板接入 + `perf-presets.test` 切档语义/持久化/custom），不补「no-op 点击」类假断言。
+
 ## 相关
 
 - ADR-125（本决策）、ADR-085（S2 补全对象）、ADR-076（菜单壳）、ADR-093（声明式 Schema 类型来源）

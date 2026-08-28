@@ -10,15 +10,8 @@ use_when:
   - 工具方法
   - 纯函数
   - 防抖
-  - 深拷贝
-  - 类型守卫
-  - 格式化
-  - UUID
-  - 响应式
-  - 键盘导航
-  - 虚拟网格
-  - 数学计算
-  - 路径工具
+  - 异步
+  - 日志
 invariant_anchors:
   - frontend/src/utils/core/async.ts|swallowError
   - frontend/src/utils/core/async.ts|fireAndForget
@@ -34,25 +27,11 @@ invariant_anchors:
 
 | 工具 | 文件 | 用途 |
 |------|------|------|
-| async | `async.ts` | 异步工具（sleep、retry、timeout） |
+| async | `async.ts` | 异步工具（sleep、retry、timeout、swallowError、fireAndForget） |
 | clamp | `clamp.ts` | 数值约束（min/max/clamp） |
-| collections | `collections.ts` | 集合操作（groupBy、uniq、chunk） |
 | debounce | `debounce.ts` | 防抖/节流 |
-| deep-clone | `deep-clone.ts` | 结构化深拷贝（JSON-safe） |
 | disposable | `disposable.ts` | 资源生命周期管理（dispose 模式） |
-| format | `format.ts` | 通用格式化（大小、时长、百分比） |
-| format-timestamp | `format-timestamp.ts` | 时间戳格式化 |
-| guards | `guards.ts` | TypeScript 类型守卫（isString、isNumber、isObject） |
-| json-stringify | `json-stringify.ts` | 安全 JSON 序列化（兜底 null） |
-| keyboard-nav | `keyboard-nav.ts` | 键盘导航辅助（方向键/Enter/Esc） |
 | log | `log.ts` | 运行时日志工具（带级别过滤） |
-| math-geometry | `math-geometry.ts` | 几何数学工具（向量/矩阵/插值） |
-| path | `path.ts` | 路径工具（basename/dirname/join/relative） |
-| reactivity | `reactivity.ts` | 轻量响应式（信号/订阅/计算属性） |
-| safe-call | `safe-call.ts` | 安全调用包装（try-catch 兜底） |
-| set-key | `set-key.ts` | 深层属性设置（set-in / update-in） |
-| uuid | `uuid.ts` | UUID 生成（crypto.randomUUID 或降级） |
-| virtual-grid | `virtual-grid.ts` | 虚拟网格布局（列表/表格的视口裁剪计算） |
 
 ## 对外 API / 入口
 

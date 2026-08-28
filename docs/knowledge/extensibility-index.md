@@ -1,3 +1,17 @@
+---
+kind: extensibility-index
+name: 可拓展点发掘索引（extensibility inventory）
+tier: architecture
+category: config
+use_when:
+  - 可拓展点
+  - 扩展入口
+  - 硬编码
+  - 重复实现
+  - 插件化
+affected: false
+---
+
 <!-- 本文件为一次性发掘成果，由 AtomCode 于 2026-08-15 派发 6 个 explore 子代理汇总而成。非自动生成；如需更新请新增批次。 -->
 
 # 可拓展点发掘索引（extensibility inventory）

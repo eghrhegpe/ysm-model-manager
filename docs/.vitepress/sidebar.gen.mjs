@@ -1354,6 +1354,10 @@ export const autoSidebar = [
             "link": "/knowledge/doctor_gate_overlap"
           },
           {
+            "text": "drift-scan（双轨漂移检测）",
+            "link": "/knowledge/drift-scan"
+          },
+          {
             "text": "FBX CLI 处理管线 fbx-cli-pipeline",
             "link": "/knowledge/fbx-cli-pipeline"
           },
@@ -1766,24 +1770,6 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "优化记录 optimization-log",
-            "link": "/knowledge/optimization_log"
-          },
-          {
-            "text": "资源注册表 registry",
-            "link": "/knowledge/resource-registry"
-          }
-        ]
-      },
-      {
-        "text": "其他",
-        "collapsed": true,
-        "items": [
-          {
-            "text": "drift-scan（双轨漂移检测）",
-            "link": "/knowledge/drift-scan"
-          },
-          {
             "text": "可拓展点索引对账（vs HEAD @ d517113c…）",
             "link": "/knowledge/extensibility-index-reconciliation"
           },
@@ -1796,12 +1782,26 @@ export const autoSidebar = [
             "link": "/knowledge/extensibility-round2"
           },
           {
-            "text": "AI 急速版路由表（高频场景）",
-            "link": "/knowledge/routes-quick"
+            "text": "优化记录 optimization-log",
+            "link": "/knowledge/optimization_log"
+          },
+          {
+            "text": "资源注册表 registry",
+            "link": "/knowledge/resource-registry"
           },
           {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
+          }
+        ]
+      },
+      {
+        "text": "其他",
+        "collapsed": true,
+        "items": [
+          {
+            "text": "AI 急速版路由表（高频场景）",
+            "link": "/knowledge/routes-quick"
           },
           {
             "text": "WASM 内存管理陷阱",

@@ -1,3 +1,15 @@
+---
+kind: extensibility-index-reconciliation
+name: 可拓展点索引对账（vs HEAD @ d517113c…）
+tier: architecture
+category: config
+use_when:
+  - 拓展点对账
+  - 落地状态
+  - ADR 闭环
+affected: false
+---
+
 <!-- 拓展点索引对账（2026-08-17）——逐条核对 extensibility-index.md 中「可拓展点」与当前 HEAD（含 ADR-064/065/067/068 + web M1/M2 + 硬编码清理）的落地状态。仅调研不改代码。 -->
 
 # 可拓展点索引对账（vs HEAD @ d517113c…）

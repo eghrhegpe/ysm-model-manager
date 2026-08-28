@@ -1,3 +1,19 @@
+---
+kind: vitest-env-switch
+name: Vitest 环境切换规则
+tier: architecture
+category: config
+source_files:
+  - frontend/vitest.config.ts
+use_when:
+  - vitest
+  - 测试环境
+  - node 环境
+  - happy-dom
+  - 测试切换
+affected: false
+---
+
 # Vitest 环境切换规则
 
 > 测试文件从 `happy-dom` 切到 `@vitest-environment node` 的判定标准和修复模式。

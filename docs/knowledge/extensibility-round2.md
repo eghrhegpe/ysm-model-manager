@@ -1,3 +1,17 @@
+---
+kind: extensibility-round2
+name: 拓展点 / 扩展入口 探索报告（Round 2）
+tier: architecture
+category: config
+use_when:
+  - 新增资源类型
+  - 新增文件格式
+  - 新增网页桥接
+  - 新增同步逻辑
+  - 残留手改清单
+affected: false
+---
+
 # 拓展点 / 扩展入口 探索报告（Round 2）
 
 > 范围：基于 `resource_types.json` 单一事实来源 + ADR-064/066/067/068/069 新抽象（2026-08-16 ~ 08-17 落地）+ `docs/knowledge/extensibility-index.md`（8-15 产出，已部分过时）。

@@ -1,3 +1,17 @@
+---
+kind: drift-scan
+name: drift-scan（双轨漂移检测）
+tier: architecture
+category: go
+source_files:
+  - scripts/drift-scan.mjs
+use_when:
+  - 漂移检测
+  - 双轨
+  - 重复实现
+  - 口径漂移
+---
+
 # drift-scan（双轨漂移检测）
 
 > 自动检测项目中的核心逻辑多处实现、口径漂移问题。

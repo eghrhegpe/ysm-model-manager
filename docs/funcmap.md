@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 164 | 655 |
+| 前端·工具 | 165 | 656 |
 | frontend/views | 117 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **494** | **2094** |
+| **合计** | **495** | **2095** |
 
 ## Go·头像
 
@@ -1320,11 +1320,11 @@
 | `buildCameraControls()` | `frontend/src/utils/3d/adapters/camera-controls:31` | 在根菜单 camera 面板内追加通用相机控件（旋转模式 / 速度滑条 / 重置视角），shared/self 双模式复用 |
 | `CleanupContext()` | `frontend/src/utils/3d/adapters/cleanup-3d:40` | — |
 | `runFullCleanup()` | `frontend/src/utils/3d/adapters/cleanup-3d:79` | — |
-| `FbxDataPort()` | `frontend/src/utils/3d/adapters/fbx-adapter:24` | FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
-| `FBX_TARGET_MAX_DIM()` | `frontend/src/utils/3d/adapters/fbx-adapter:31` | FBX 归一化目标：包围盒最长边（单位）。对齐 MMD 厘米惯例（1.6m 人体 ≈ 160）， 与场景能力雾距（50-800，厘米尺度）及 MMD 同框尺度一致；cm/m 导出差 |
-| `FbxScaleInfo()` | `frontend/src/utils/3d/adapters/fbx-adapter:34` | Box3 尺度归一结果（factor 供诊断日志回显，size/center 为缩放后坐标） |
-| `normalizeFbxScale()` | `frontend/src/utils/3d/adapters/fbx-adapter:50` | Box3 尺度归一（ADR-112 P1）：DCC 导出单位混乱（cm/m/Unity units 可差 100×）时， 模型要么小到穿近平面看不见、要么顶天立地顶爆场景能力。均匀 |
-| `buildFbxScene()` | `frontend/src/utils/3d/adapters/fbx-adapter:163` | 构建 FBX 内容场景（ADR-112 地基）。 |
+| `FbxDataPort()` | `frontend/src/utils/3d/adapters/fbx-adapter:28` | FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） |
+| `FBX_TARGET_MAX_DIM()` | `frontend/src/utils/3d/adapters/fbx-adapter:35` | FBX 归一化目标：包围盒最长边（单位）。对齐 MMD 厘米惯例（1.6m 人体 ≈ 160）， 与场景能力雾距（50-800，厘米尺度）及 MMD 同框尺度一致；cm/m 导出差 |
+| `FbxScaleInfo()` | `frontend/src/utils/3d/adapters/fbx-adapter:38` | Box3 尺度归一结果（factor 供诊断日志回显，size/center 为缩放后坐标） |
+| `normalizeFbxScale()` | `frontend/src/utils/3d/adapters/fbx-adapter:54` | Box3 尺度归一（ADR-112 P1）：DCC 导出单位混乱（cm/m/Unity units 可差 100×）时， 模型要么小到穿近平面看不见、要么顶天立地顶爆场景能力。均匀 |
+| `buildFbxScene()` | `frontend/src/utils/3d/adapters/fbx-adapter:167` | 构建 FBX 内容场景（ADR-112 地基）。 |
 | `FbxParser()` | `frontend/src/utils/3d/adapters/fbx-parser:18` | FBX 解析器管理器（接口对齐 PmxParser） |
 | `createFbxParser()` | `frontend/src/utils/3d/adapters/fbx-parser:27` | 创建 FBX 解析器（Worker）。测试/受限环境无 Worker → always-fail 降级守卫， 调用方（fbx-adapter）会 fallback 到主线程 FBX |
 | `FbxSceneBuilderConfig()` | `frontend/src/utils/3d/adapters/fbx-parser:44` | 场景重建配置 |
@@ -1607,6 +1607,7 @@
 | `rebuildDebug()` | `frontend/src/utils/3d/debug-render:58` | 重建 debug 叠加层（pivot 标记 / 骨骼线框）。 |
 | `MeshFragment()` | `frontend/src/utils/3d/face-split:14` | 网格碎片：同一 meshGroup 按 alpha 特征拆出的子几何 + 渲染路径 |
 | `splitMeshByFaceAlpha()` | `frontend/src/utils/3d/face-split:24` | 按三角形 UV 包围盒查询 AlphaIndex，把 md 拆成 ≤3 个 mode 碎片。 |
+| `fbxBonesToBoneNodes()` | `frontend/src/utils/3d/fbx-bones:29` | FBX 场景骨骼 → BoneNode[]（id=骨骼索引、parentId=父骨骼索引、object=Bone 引用）。 |
 | `registerModelRoot()` | `frontend/src/utils/3d/frustum-cull:18` | 注册模型根节点（adapter 调用） |
 | `unregisterModelRoot()` | `frontend/src/utils/3d/frustum-cull:23` | 注销模型根节点（adapter dispose 时调用） |
 | `getModelRootCount()` | `frontend/src/utils/3d/frustum-cull:29` | 获取当前注册的模型根节点数 |

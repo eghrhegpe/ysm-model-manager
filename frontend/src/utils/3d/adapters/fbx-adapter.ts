@@ -19,6 +19,10 @@ import { b64ToBytes, bytesToArrayBuffer } from "../base64.ts";
 import { safeGet } from "../../dom/storage.ts"; // ADR-044：localStorage 统一走安全读写
 import { buildFbxSceneFromData, createFbxParser } from "./fbx-parser.ts";
 import type { FbxSceneData } from "./fbx-scene-to-data.ts";
+import { buildBoneTree } from "../bone-tools.ts";
+import { fbxBonesToBoneNodes } from "../fbx-bones.ts";
+import { makeBonePanelRenderer } from "./vrm-bone-ui.ts"; // ADR-074 S2: 通用骨骼面板
+import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 
 /** FBX 数据端口（视图壳注入，适配器 0 backend import——ADR-072 边界判据） */
 export interface FbxDataPort {
@@ -264,12 +268,43 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
     ctx.controls.update();
   }
 
+  // 5) 骨骼面板（ADR-074 S2 通用骨骼面板复用，ADR-112 扩展）：收拢 SkinnedMesh 骨骼
+  //    构建通用骨骼树；有骨骼才注入 🦴 菜单项，复用 makeBonePanelRenderer（列表/详情/拾取联动）
+  const boneTree = buildBoneTree(fbxBonesToBoneNodes(group));
+  const bonePanelRef: { current: (() => void) | null } = { current: null };
+  const menuItems: PreviewMenuNode[] = [];
+  if (boneTree.roots.length > 0) {
+    menuItems.push({
+      id: "bones",
+      icon: "🦴",
+      labelKey: "preview.bones",
+      fallback: "骨骼",
+      kind: "panel",
+      legacyTestId: "fbx-bones-entry",
+      dockGroup: "model", // 底栏 🧍 模型组（骨骼）
+      renderCustom: (list): void => {
+        // 通用骨骼面板：渲染进根菜单面板；重入时先清理旧 renderer（对齐 vrm/mmd 同款）
+        if (bonePanelRef.current) {
+          bonePanelRef.current();
+          bonePanelRef.current = null;
+        }
+        bonePanelRef.current = makeBonePanelRenderer(boneTree)(list, {
+          viewContainer: ctx.viewContainer!,
+          camera: ctx.camera!,
+          scene: ctx.scene!,
+        });
+      },
+    });
+  }
+
   return {
+    menuItems,
     update: (dt: number) => {
       mixer?.update(dt);
     },
     dispose: () => {
       try {
+        bonePanelRef.current?.();
         mixer?.stopAllAction();
         if (ctx.scene) ctx.scene.remove(group);
         group.traverse((o) => {

@@ -10,6 +10,7 @@ import { buildFbxScene, FBX_TARGET_MAX_DIM, normalizeFbxScale } from "./fbx-adap
 const hoisted = vi.hoisted(() => {
   const loadImpl = vi.fn();
   let withAnim = true;
+  let withBones = false;
   return {
     loadImpl,
     readBytesMock: vi.fn(),
@@ -17,6 +18,10 @@ const hoisted = vi.hoisted(() => {
       withAnim = v;
     },
     getWithAnim: () => withAnim,
+    setWithBones: (v: boolean) => {
+      withBones = v;
+    },
+    getWithBones: () => withBones,
   };
 });
 
@@ -25,8 +30,23 @@ vi.mock("three/addons/loaders/FBXLoader.js", () => ({
     constructor(_manager?: unknown) {}
     load(_url: string, onLoad: (g: unknown) => void): void {
       const g = new THREE.Group();
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
-      g.add(mesh);
+      // 骨骼开关：构造带骨架的 SkinnedMesh（ADR-074 骨骼面板注入场景）
+      if (hoisted.getWithBones()) {
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 0, 0, 1, 0, 0]), 3));
+        // Box3.setFromObject 对 SkinnedMesh 走 applyBoneTransform，需 skinIndex/skinWeight
+        // （真实 fbx-parser 产物自带；缺省会崩——mock 补齐以模拟真实解析结果）
+        geo.setAttribute("skinIndex", new THREE.BufferAttribute(new Float32Array([0, 0, 0, 0, 0, 0, 0, 0]), 4));
+        geo.setAttribute("skinWeight", new THREE.BufferAttribute(new Float32Array([1, 0, 0, 0, 1, 0, 0, 0]), 4));
+        const mesh = new THREE.SkinnedMesh(geo, new THREE.MeshStandardMaterial());
+        const bone = new THREE.Bone();
+        bone.name = "Hips";
+        mesh.bind(new THREE.Skeleton([bone]));
+        g.add(mesh);
+      } else {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
+        g.add(mesh);
+      }
       if (hoisted.getWithAnim()) {
         (g as unknown as { animations: THREE.AnimationClip[] }).animations = [
           new THREE.AnimationClip("clip1", 1, []),
@@ -55,6 +75,7 @@ describe("fbx-adapter", () => {
     hoisted.readBytesMock.mockReset();
     hoisted.loadImpl.mockReset();
     hoisted.setWithAnim(true);
+    hoisted.setWithBones(false);
   });
 
   it("build 主路径：读字节→加载→挂场景→播动画→相机取景", async () => {
@@ -105,6 +126,28 @@ describe("fbx-adapter", () => {
     const built = await buildFbxScene(ctx, "/y.fbx", { readFileBytes: hoisted.readBytesMock });
     expect(() => built.update?.(0.016)).not.toThrow();
     expect(() => built.dispose()).not.toThrow();
+  });
+
+  it("有骨骼（SkinnedMesh）→ menuItems 注入 🦴 bones 面板项（ADR-074 通用骨骼面板）", async () => {
+    hoisted.setWithBones(true);
+    hoisted.readBytesMock.mockResolvedValue(Buffer.from("fake").toString("base64"));
+    const ctx = makeCtx();
+    const built = await buildFbxScene(ctx, "/z.fbx", { readFileBytes: hoisted.readBytesMock });
+
+    const bonesItem = built.menuItems?.find((i) => i.id === "bones");
+    expect(bonesItem).toBeDefined();
+    expect(bonesItem?.kind).toBe("panel");
+    expect(bonesItem?.dockGroup).toBe("model");
+    // renderCustom 渲染通用骨骼面板不抛（真实渲染依赖 DOM，此处仅验证可调用）
+    expect(typeof bonesItem?.renderCustom).toBe("function");
+  });
+
+  it("无骨骼（普通 Mesh）→ menuItems 不含 bones 项", async () => {
+    hoisted.setWithBones(false);
+    hoisted.readBytesMock.mockResolvedValue(Buffer.from("fake").toString("base64"));
+    const ctx = makeCtx();
+    const built = await buildFbxScene(ctx, "/w.fbx", { readFileBytes: hoisted.readBytesMock });
+    expect(built.menuItems?.find((i) => i.id === "bones")).toBeUndefined();
   });
 });
 

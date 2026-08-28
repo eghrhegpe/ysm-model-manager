@@ -580,7 +580,7 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       labelKey: "preview.bones",
       fallback: "骨骼",
       kind: "panel",
-      dockGroup: "model",
+      dockGroup: "motion",
       legacyTestId: "ysm-bones-entry",
       renderCustom:(list) => {
         // 通用骨骼面板（ADR-077）：渲染进根菜单面板；重入时先清理旧 renderer

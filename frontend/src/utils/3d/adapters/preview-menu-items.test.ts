@@ -208,14 +208,28 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
     });
   });
 
-  it("ysm 必需项齐全且归 🧍 模型组（dock 可达，ADR-076 v3；允许额外注入）", () => {
+  it("ysm 必需项齐全且归属按域分（model: 统计/截图；motion: 骨骼/播放——骨骼是动作驱动目标）", () => {
     expectContainsAtLeast(extractIds(ysmItems), ["bones", "model", "shot"], "ysm 必需项");
-    ysmItems.forEach((d) => expect(d.dockGroup, `${d.id}.dockGroup`).toBe("model"));
+    // 统计/截图归模型组（dock 🧍 可达）
+    ["model", "shot"].forEach((id) => {
+      const item = ysmItems.find((d) => d.id === id)!;
+      expect(item.dockGroup, `${id}.dockGroup`).toBe("model");
+    });
+    // 骨骼归动作组（骨骼驱动动作/被动作驱动）
+    const bones = ysmItems.find((d) => d.id === "bones")!;
+    expect(bones.dockGroup, "bones.dockGroup").toBe("motion");
   });
 
-  it("vrm 必需项齐全且归 🧍 模型组（dock 可达；允许额外注入如 play）", () => {
+  it("vrm 必需项齐全且归属按域分（model: 统计/截图/材质；motion: 骨骼——骨骼是动作驱动目标）", () => {
     expectContainsAtLeast(extractIds(vrmItems), ["bones", "material", "model", "shot"], "vrm 必需项");
-    vrmItems.forEach((d) => expect(d.dockGroup, `${d.id}.dockGroup`).toBe("model"));
+    // 统计/截图/材质归模型组（dock 🧍 可达）
+    ["model", "shot", "material"].forEach((id) => {
+      const item = vrmItems.find((d) => d.id === id)!;
+      expect(item.dockGroup, `${id}.dockGroup`).toBe("model");
+    });
+    // 骨骼归动作组（骨骼驱动动作/被动作驱动）
+    const bones = vrmItems.find((d) => d.id === "bones")!;
+    expect(bones.dockGroup, "bones.dockGroup").toBe("motion");
   });
 
   it("mmd model/material/play 恒定；bones 条件注入", () => {
@@ -290,15 +304,14 @@ describe("dock 行全量渲染（遍历真实菜单数组驱动）", () => {
       expect(overlay.querySelector(`[data-testid="${tid}"]`), tid).toBeNull();
     });
 
-    // 单 panel 组（motion 组仅 play 一项，fakeMmdOpts 无 perception）→ 快捷直达 play 面板（不渲染组根行）
+    // 多 panel 组（motion 组含 play + bones，骨骼归动作组后组内 ≥2）→ 渲染组根行 + 子菜单
     const motionGroupId = PREVIEW_MENU_GROUPS.find((g) => g.id === "motion")!.id;
     const motionBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-${motionGroupId}"]`);
     expect(motionBtn).not.toBeNull();
     motionBtn!.click();
-    // 组内仅 1 panel → 直达其面板（play 控件出现），而非组根行
-    const playPanelBtn = overlay.querySelector("[data-testid=mmd-play]");
-    expect(playPanelBtn).not.toBeNull();
-    expect(overlay.querySelector('[data-testid="preview-play"]')).toBeNull();
+    // 组内 ≥2 panel → 组根视图渲染子菜单行（play + bones 都作为 row 可达，不是直达面板内容）
+    expect(overlay.querySelector('[data-testid="preview-play"]')).not.toBeNull();
+    expect(overlay.querySelector('[data-testid="preview-bones"]')).not.toBeNull();
     handle.dispose();
   });
 

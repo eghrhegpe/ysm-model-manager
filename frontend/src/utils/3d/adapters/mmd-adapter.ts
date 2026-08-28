@@ -1276,7 +1276,7 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       fallback: "表情",
       kind: "panel",
       legacyTestId: "mmd-morph-entry",
-      dockGroup: "model", // 底栏 🧍 模型组
+      dockGroup: "motion", // 底栏 💃 动作组（表情是动作系统的资产）
       renderCustom:(list) => o.panels?.fillMorphPanel?.(list, o.navCtx),
     },
     {
@@ -1320,7 +1320,7 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       labelKey: "preview.bones",
       fallback: "骨骼",
       kind: "panel",
-      dockGroup: "model", // 底栏 🧍 模型组（ADR-085：补齐，与 ysm/vrm bones 对齐）
+      dockGroup: "motion", // 底栏 💃 动作组（骨骼是动作驱动目标，归动作域）
       legacyTestId: "mmd-bones-entry",
       renderCustom:(list) => {
         // 通用骨骼面板：渲染进根菜单面板；重入时先清理旧 renderer

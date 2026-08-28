@@ -424,9 +424,12 @@ describe("ysmMenuItems 独立菜单表测试", () => {
     };
     const items = ysmMenuItems(opts);
     expect(items.map((i) => i.id)).toEqual(["model", "shot", "bones"]);
+    // model/shot 归 model 组；bones 归 motion 组（骨骼是动作驱动目标）
+    expect(items[0].dockGroup).toBe("model");
+    expect(items[1].dockGroup).toBe("model");
+    expect(items[2].dockGroup).toBe("motion");
     items.forEach((i) => {
       expect(i.kind).toBe("panel");
-      expect(i.dockGroup).toBe("model");
       expect(typeof i.renderCustom).toBe("function");
     });
   });

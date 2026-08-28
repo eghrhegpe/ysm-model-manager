@@ -589,7 +589,7 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       fallback: "骨骼",
       kind: "panel",
       legacyTestId: "vrm-bones-entry",
-      dockGroup: "model", // 底栏 🧍 模型组（骨骼）
+      dockGroup: "motion", // 底栏 💃 动作组（骨骼是动作驱动目标，归动作域）
       renderCustom:(list): void => {
         // 通用骨骼面板（ADR-077）：渲染进根菜单面板；重入时先清理旧 renderer
         if (o.bonePanel.cleanupRef.current) {

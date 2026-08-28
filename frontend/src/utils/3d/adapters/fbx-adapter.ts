@@ -281,7 +281,7 @@ export async function buildFbxScene(ctx: PreviewBuildCtx, path: string, port: Fb
       fallback: "骨骼",
       kind: "panel",
       legacyTestId: "fbx-bones-entry",
-      dockGroup: "model", // 底栏 🧍 模型组（骨骼）
+      dockGroup: "motion", // 底栏 💃 动作组（骨骼是动作驱动目标，归动作域）
       renderCustom: (list): void => {
         // 通用骨骼面板：渲染进根菜单面板；重入时先清理旧 renderer（对齐 vrm/mmd 同款）
         if (bonePanelRef.current) {

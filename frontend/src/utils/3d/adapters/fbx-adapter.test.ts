@@ -137,7 +137,7 @@ describe("fbx-adapter", () => {
     const bonesItem = built.menuItems?.find((i) => i.id === "bones");
     expect(bonesItem).toBeDefined();
     expect(bonesItem?.kind).toBe("panel");
-    expect(bonesItem?.dockGroup).toBe("model");
+    expect(bonesItem?.dockGroup).toBe("motion");
     // renderCustom 渲染通用骨骼面板不抛（真实渲染依赖 DOM，此处仅验证可调用）
     expect(typeof bonesItem?.renderCustom).toBe("function");
   });

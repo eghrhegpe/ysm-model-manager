@@ -82,26 +82,30 @@ export function roleDetailView(
         sep.style.cssText = "height:1px;background:rgba(255,255,255,0.1);margin:6px 10px";
         l.appendChild(sep);
       }
-      // ② 其余 model 项（截图/材质/骨骼）→ 工具区 section
+      // ② 其余 model 项（截图/材质）→ 单项平铺，多项折叠（避免"1项也折叠"的过度结构化）
       const sections: PreviewMenuNode[] = [];
-      if (toolItems.length > 0) {
+      if (toolItems.length === 1) {
+        sections.push(toolItems[0]); // 单项直接平铺，省去 section header
+      } else if (toolItems.length > 1) {
         sections.push({
           id: "preview-role-tools",
           kind: "folder",
           labelKey: "preview.roleToolsSection",
           fallback: "工具",
-          defaultOpen: deps.initialSection === "motion",
+          defaultOpen: true, // 多项始终展开，不折叠
           children: toolItems,
         });
       }
-      // ③ motion 组 → 动作 section
-      if (motionItems.length > 0) {
+      // ③ motion 组 → 动作 section（单项平铺，多项折叠但始终展开）
+      if (motionItems.length === 1) {
+        sections.push(motionItems[0]);
+      } else if (motionItems.length > 1) {
         sections.push({
           id: "preview-role-motion",
           kind: "folder",
           labelKey: "preview.roleMotionSection",
           fallback: "动作",
-          defaultOpen: deps.initialSection === "motion",
+          defaultOpen: true, // 始终展开——骨骼/播放/感知等项应直可视达
           children: motionItems,
         });
       }

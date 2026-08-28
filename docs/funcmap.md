@@ -1435,7 +1435,7 @@
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu-render:218` | — |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu-roles:29` | 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。 |
 | `roleDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:44` | 角色详情子面板（目标态「详情=模型信息面板本体」）： - model 组第一个 panel（恒为「模型信息」）→ renderCustom 直渲进详情主体（1 跳看内容，用户「最想 |
-| `fillRoles()` | `frontend/src/utils/3d/adapters/preview-menu-roles:273` | — |
+| `fillRoles()` | `frontend/src/utils/3d/adapters/preview-menu-roles:277` | — |
 | `buildCameraSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:31` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
 | `buildLightingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:45` | 灯光面板 schema：从 light cap 自报控件渲染 |
 | `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:66` | 阴影面板 schema：从 shadow cap 自报控件渲染 |

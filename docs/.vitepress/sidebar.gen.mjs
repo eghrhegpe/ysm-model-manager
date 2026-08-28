@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-124：i18n 键名三段式规范",
+        "link": "/adr/ADR-124-i18n-key-naming-three-segment"
+      },
+      {
         "text": "ADR-123：跨环境降级策略统一",
         "link": "/adr/ADR-123-cross-environment-downgrade-strategy"
       },

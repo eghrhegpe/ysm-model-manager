@@ -229,4 +229,34 @@ describe("WaterCapability — 旧存档迁移（legacy ground 键）", () => {
     root.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
     expect(meshes.length).toBeGreaterThanOrEqual(5);
   });
+
+  describe("subscribe（局部刷新通知）", () => {
+    it("setWaterMode 触发订阅者，同值早退不 notify，unsub 后停止", () => {
+      const scene = new THREE.Scene();
+      const cap = new WaterCapability({ scene });
+      let calls = 0;
+      const unsub = cap.subscribe!(() => { calls++; });
+      expect(typeof unsub).toBe("function");
+      cap.setWaterMode("pool");
+      expect(calls).toBe(1);
+      cap.setWaterMode("pool"); // 同值早退
+      expect(calls).toBe(1);
+      cap.setWaterMode("film");
+      expect(calls).toBe(2);
+      unsub();
+      cap.setWaterMode("pool");
+      expect(calls).toBe(2);
+    });
+
+    it("setWetness / setWaterColor 等仅改值不触发订阅者", () => {
+      const scene = new THREE.Scene();
+      const cap = new WaterCapability({ scene });
+      let calls = 0;
+      cap.subscribe!(() => { calls++; });
+      cap.setWetness(0.5);
+      cap.setWaterColor(0x112233);
+      cap.setWaterOpacity(0.7);
+      expect(calls).toBe(0);
+    });
+  });
 });

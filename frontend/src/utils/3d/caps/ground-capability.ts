@@ -73,6 +73,8 @@ export class GroundCapability implements SceneCapability {
   private customTexName = ""; // 自定义贴图文件名（菜单 hint + token）
   private params: GroundParams;
   private enabled: boolean;
+  /** 参数变更监听（menu 局部刷新用）；仅材质来源切换等影响分组可见性的离散操作 notify */
+  private listeners = new Set<() => void>();
 
   constructor(opts: {
     scene: THREE.Scene;
@@ -247,8 +249,20 @@ export class GroundCapability implements SceneCapability {
     return this.params.matSource;
   }
   setMatSource(mode: GroundSurfaceMode): void {
+    if (this.params.matSource === mode) return; // 同值早退：避免无意义材质重建 + 菜单刷新
     this.params.matSource = mode;
     this.refreshSurface();
+    this.notify(); // 材质来源切换改变表面材质分组可见性（none 隐藏全部材质控件），通知菜单局部刷新
+  }
+
+  /** 订阅参数变更（材质来源切换触发）；返回取消订阅函数 */
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
+  }
+
+  private notify(): void {
+    for (const l of this.listeners) l();
   }
   setMatColor(hex: number): void {
     this.params.matColor = hex;

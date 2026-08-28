@@ -89,6 +89,10 @@ export interface SceneCapability {
   /** 逐帧更新（可选；动态效果如水面波纹/弹簧骨骼驱动）。无动态需求的能力可不实现。 */
   update?(dt: number): void;
 
+  /** 参数变更订阅（可选）。当影响菜单可见性/分组的持久化参数变化（如水面 mode、地面材质来源）时，
+   *  由能力主动通知，供菜单侧局部刷新当前子视图。返回取消订阅函数。仅离散的模式切换触发，高频滑块不应 notify。 */
+  subscribe?(listener: () => void): () => void;
+
   /** 启用/禁用 */
   setEnabled(v: boolean): void;
   isEnabled(): boolean;

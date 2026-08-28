@@ -234,4 +234,24 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     cap.loadState();
     expect(cap.getMatSource()).toBe("none");
   });
+
+  describe("subscribe（局部刷新通知）", () => {
+    it("setMatSource 触发订阅者，同值早退不 notify，unsub 后停止", () => {
+      const scene = new THREE.Scene();
+      const cap = new GroundCapability({ scene });
+      let calls = 0;
+      const unsub = cap.subscribe!(() => { calls++; });
+      cap.setMatSource("grid");
+      expect(calls).toBe(1);
+      cap.setMatSource("grid"); // 同值早退
+      expect(calls).toBe(1);
+      cap.setMatColor(0xff0000); // 仅改值
+      expect(calls).toBe(1);
+      cap.setMatSource("none");
+      expect(calls).toBe(2);
+      unsub();
+      cap.setMatSource("plain");
+      expect(calls).toBe(2);
+    });
+  });
 });

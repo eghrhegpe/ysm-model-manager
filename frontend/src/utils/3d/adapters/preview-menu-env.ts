@@ -14,6 +14,22 @@ import type { PreviewMenuNode } from './preview-menu-node-types.ts';
 
 const ENV_IDS = new Set(["sky", "ground", "water", "environment", "fog", "reflector"]);
 const ORDERED_IDS = ["sky", "ground", "water", "environment", "fog", "reflector"] as const;
+
+// ── 环境面板局部刷新：订阅 cap 参数变更触发 menu.refresh()（重渲染栈顶 = 当前子视图）──
+// render 闭包改为每次重算（见 renderEnvLevel 下钻），故 refresh 即反映最新 visible?（模式/状态切换后分组不靠退出重进）。
+let _envCapUnsubs: Array<() => void> = [];
+function rebuildEnvSubs(caps: SceneCapability[], menu: SlideMenuHandle): void {
+  for (const u of _envCapUnsubs) u();
+  _envCapUnsubs = [];
+  for (const c of caps) {
+    if (c.subscribe) _envCapUnsubs.push(c.subscribe(() => menu.refresh()));
+  }
+}
+/** 会话结束/面板卸载时清理订阅，避免 cap 单例持有过期 menu 引用（renderEnvLevel 每次重跑也会重建，此处为显式出口） */
+export function disposeEnvSubscriptions(): void {
+  for (const u of _envCapUnsubs) u();
+  _envCapUnsubs = [];
+}
 const PRESET_ORDER = [
   { id: "studio", icon: "\u2600\uFE0F", labelKey: "preview.presetQuickStudio" },
   { id: "sunset", icon: "\uD83C\uDF05", labelKey: "preview.presetQuickSunset" },
@@ -178,6 +194,7 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
     return;
   }
   const caps = orderedCaps(resolveCaps(ctx));
+  rebuildEnvSubs(caps, menu); // 重建订阅：进入环境面板即刷新最新参数（含上一次会话遗留的 menu 引用清理）
   if (caps.length === 0) {
     const r = document.createElement("div");
     r.style.cssText = "padding:8px 10px;color:rgba(255,255,255,0.5);font-size:12px";
@@ -231,46 +248,55 @@ export function renderEnvLevel(list: HTMLElement, ctx: PreviewMenuCtx, menu?: Sl
     if (hasSub) {
       row.onclick = (): void => {
         // 根行已展示主控件（通常是启用开关），下钻子视图不再重复罗列，避免「开关套开关」
-        const subCtrls = ctrls.filter((_, i) => i !== pi);
-        const groups = partitionCapControlsByGroup(cap, subCtrls).filter((g) => g.ctrls.length > 0);
-        if (groups.length <= 1) {
-          // 无分组（或仅剩单组）：保持原平铺下钻
-          menu.navigate({ title: tr(cap.labelKey, cap.id), render: (subList) => { subList.replaceChildren(); renderCapControls(subList, subCtrls); } });
-          return;
-        }
-        // 带分组：先列分区入口（形态 / 外观 / 水池 / 波纹 …），各自下钻到该组控件
-        menu.navigate({
-          title: tr(cap.labelKey, cap.id),
-          render: (subList) => {
+        // render 闭包每次执行都从 cap 重新取控件并分区——模式切换后局部刷新能反映最新 visible?（不死快照）
+        const renderSub = (subList: HTMLElement): void => {
+          const all = cap.getMenuControls();
+          const idx = all.findIndex((cc) => cc.kind !== "divider");
+          const subCtrls = all.filter((_, i) => i !== idx);
+          const groups = partitionCapControlsByGroup(cap, subCtrls).filter((g) => g.ctrls.length > 0);
+          if (groups.length <= 1) {
+            // 无分组（或仅剩单组）：保持原平铺下钻
             subList.replaceChildren();
-            for (const g of groups) {
-              const entry = document.createElement("div");
-              entry.className = "slide-item";
-              entry.dataset.testid = "cap-group-entry-" + (g.key ?? "base");
-              entry.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer";
-              const lb = document.createElement("span");
-              lb.className = "slide-label";
-              lb.textContent = g.label;
-              lb.style.cssText = "flex:1;font-size:13px";
-              const ch = document.createElement("span");
-              ch.textContent = "›";
-              ch.style.cssText = "margin-left:auto;font-size:18px;font-weight:700;opacity:0.5;user-select:none;padding:0 4px;pointer-events:none";
-              entry.append(lb, ch);
-              entry.onclick = (): void => {
-                menu.navigate({
-                  title: g.label,
-                  render: (gsub) => {
-                    gsub.replaceChildren();
-                    // 剥掉 group 字段，避免 renderCapControls 再包一层同名 section
-                    const flat = g.ctrls.map((c) => ({ ...c, group: undefined }));
-                    renderCapControls(gsub, flat);
-                  },
-                });
-              };
-              subList.appendChild(entry);
-            }
-          },
-        });
+            renderCapControls(subList, subCtrls);
+            return;
+          }
+          // 带分组：先列分区入口（形态 / 外观 / 水池 / 波纹 …），各自下钻到该组控件
+          subList.replaceChildren();
+          for (const g of groups) {
+            const key = g.key; // 记录分组键，控件层 render 时按 key 重新取该组（每次重算）
+            const entry = document.createElement("div");
+            entry.className = "slide-item";
+            entry.dataset.testid = "cap-group-entry-" + (g.key ?? "base");
+            entry.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer";
+            const lb = document.createElement("span");
+            lb.className = "slide-label";
+            lb.textContent = g.label;
+            lb.style.cssText = "flex:1;font-size:13px";
+            const ch = document.createElement("span");
+            ch.textContent = "›";
+            ch.style.cssText = "margin-left:auto;font-size:18px;font-weight:700;opacity:0.5;user-select:none;padding:0 4px;pointer-events:none";
+            entry.append(lb, ch);
+            entry.onclick = (): void => {
+              menu.navigate({
+                title: g.label,
+                render: (gsub) => {
+                  gsub.replaceChildren();
+                  // 重新分区取该组控件（每次重算，模式切换后可见性实时生效）
+                  const cur = cap.getMenuControls();
+                  const cidx = cur.findIndex((cc) => cc.kind !== "divider");
+                  const csub = cur.filter((_, i) => i !== cidx);
+                  const grp = partitionCapControlsByGroup(cap, csub).find((x) => x.key === key);
+                  if (!grp) return;
+                  // 剥掉 group 字段，避免 renderCapControls 再包一层同名 section
+                  const flat = grp.ctrls.map((c) => ({ ...c, group: undefined }));
+                  renderCapControls(gsub, flat);
+                },
+              });
+            };
+            subList.appendChild(entry);
+          }
+        };
+        menu.navigate({ title: tr(cap.labelKey, cap.id), render: renderSub });
       };
       const ch = document.createElement("span"); ch.textContent = "›"; ch.dataset.testid = "row-chevron"; ch.style.cssText = "margin-left:auto;font-size:18px;font-weight:700;opacity:0.5;user-select:none;padding:0 4px;pointer-events:none"; row.appendChild(ch);
     }

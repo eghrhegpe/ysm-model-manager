@@ -74,6 +74,8 @@ export class WaterCapability implements SceneCapability {
   private waterTime: { value: number }; // 水面波纹动画 time uniform（波速倍率 = waveSpeed）
   private params: WaterParams;
   private enabled: boolean;
+  /** 参数变更监听（menu 局部刷新用）；仅模式切换等影响分组可见性的离散操作 notify */
+  private listeners = new Set<() => void>();
 
   constructor(opts: {
     scene: THREE.Scene;
@@ -390,6 +392,17 @@ export class WaterCapability implements SceneCapability {
     this.params.mode = m;
     this.rebuildWaterContainer(false);
     // 首次切 pool 时，film 语义的 wetness 不再直接控制 opacity，但仍保留值以允许切回 film
+    this.notify(); // 模式切换改变水面分组可见性（pool 控件仅 pool、wetness 仅 film），通知菜单局部刷新
+  }
+
+  /** 订阅参数变更（模式切换触发）；返回取消订阅函数 */
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
+  }
+
+  private notify(): void {
+    for (const l of this.listeners) l();
   }
   getWaterMode(): WaterMode { return this.params.mode; }
 

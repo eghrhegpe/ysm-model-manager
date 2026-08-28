@@ -13,7 +13,7 @@
 
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { getApp } from "../../backend/app.ts";
-import { RESOURCE_TYPE_LABELS, resolvePreviewKey, resolvePreviewKeyByExt, resolvePreviewKeyToRtype, getPreviewableTypeTabs } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPE_LABELS, resolvePreviewKey, resolvePreviewKeyByExt, resolvePreviewKeyToRtype, getPreviewableTypeTabs, extOf, resolveDefaultPreviewKey, isContainerExt } from "../../utils/resource/types.ts";
 import type { Mount3DOptions } from "../../utils/3d/adapters/mount-preview-core.ts";
 import { switchPreview, hasActivePreview, cleanupPreview } from "../../utils/3d/adapters/mount-preview-core.ts";
 
@@ -83,10 +83,16 @@ export async function openModel3DFullscreen(path: string, options?: OpenModel3DO
   }
   // ADR-111：按 variants 解析预览 key（.pmx→mmd、.vrm→vrm），无变体回退 rtype
   const routeKey = resolvePreviewKey(path, rtype);
-  // 兜底（歧义扩展名）：DetectResourceType 对 .pmx 等多声明扩展名保守返回 "other"，
-  // 而 variants 明确声明了预览适配器（如 .pmx→mmd）——按扩展名再查一次，避免
-  // 跨类型浏览 PMX 时误报「3D 预览暂不支持该类型」（仅预览路由派生，不参与类型判定）
-  const opener = _openers[routeKey] ?? (routeKey === "" || routeKey === "other" ? _openers[resolvePreviewKeyByExt(path)] : undefined);
+  // 兜底链（歧义扩展名/容器，仅预览路由派生，不参与类型判定）：
+  // 1. ext 兜底：DetectResourceType 对 .pmx 等多声明扩展名保守返回 "other"，
+  //    而 variants 明确声明了预览适配器（如 .pmx→mmd）——按扩展名再查一次；
+  // 2. 容器兜底：.zip 打包模型被路径消歧归为 rtype（如 EntityPlayer）但 variants
+  //    无 .zip → routeKey 回退 rtype 自身查表落空——按 rtype 默认预览适配器兜底
+  //    （EntityPlayer→mmd，与快捷 FAB 硬编码 createMmd3D 行为对齐）
+  const opener =
+    _openers[routeKey] ??
+    (routeKey === "" || routeKey === "other" ? _openers[resolvePreviewKeyByExt(path)] : undefined) ??
+    (isContainerExt(extOf(path)) ? _openers[resolveDefaultPreviewKey(rtype)] : undefined);
   if (opener) {
     if (!options?.cooperate && hasActivePreview()) {
       cleanupPreview();
@@ -95,7 +101,15 @@ export async function openModel3DFullscreen(path: string, options?: OpenModel3DO
     return;
   }
   const { bus } = await import("../../bus.ts");
-  bus.emit("toast:show", { msg: "3D 预览暂不支持该类型", duration: TOAST_MS.normal, type: "warn" });
+  // 失败诊断（2026-08-28 加固）：toast + 环形日志都带探测现场，不再是无因「暂不支持」
+  const ext = extOf(path) || "(无扩展名)";
+  const reason = `探测类型=${rtype || "(空)"} 路由key=${routeKey || "(空)"} 扩展名=${ext}`;
+  bus.emit("toast:show", { msg: `3D 预览暂不支持该类型（${reason}）`, duration: TOAST_MS.normal, type: "warn" });
+  // 环形日志面板留痕（AGENTS.md：排查往环形日志塞日志而非死盯 console）；失败静默不阻断
+  try {
+    const { AddOpLog } = await getApp();
+    await AddOpLog?.("preview-3d-route", path.split(/[/\\]/).pop() || path, path, "", 0, "fail", reason);
+  } catch { /* 日志失败不阻断 */ }
 }
 
 interface PreviewExtras extends Mount3DOptions {

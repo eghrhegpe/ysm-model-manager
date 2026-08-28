@@ -267,6 +267,23 @@ function resolveTypeByExt(path: string): string | null {
 /** 压缩容器扩展名：走 Go 解包提取，不由前端 WASM 直接预览 */
 const CONTAINER_EXTS = new Set([".zip", ".7z"]);
 
+/** 是否为压缩容器扩展名（.zip/.7z；容器可包裹任意类型，类型判定仍以 Go 内容检测为准） */
+export function isContainerExt(pathOrExt: string): boolean {
+  return CONTAINER_EXTS.has(extOf(pathOrExt) || pathOrExt);
+}
+
+/**
+ * 取 rtype 的默认预览 key（首个 variants 的 preview；无 variants 回退 rtype 自身）。
+ * 场景：容器扩展名（.zip 打包的 PMX）被 Go 路径消歧归为 EntityPlayer 后，resolvePreviewKey
+ * 对 .zip 无 variants 命中 → 回退 "EntityPlayer" → opener 注册表无此 key。此处按 rtype
+ * 默认预览适配器（EntityPlayer→mmd）兜底路由。仅预览路由派生，不参与类型判定。
+ */
+export function resolveDefaultPreviewKey(rtype: string): string {
+  const entry = allResourceTypes.find((t) => t.id === rtype);
+  const first = entry?.variants?.find((v) => v.preview);
+  return first?.preview ?? rtype;
+}
+
 /**
  * 资源类型图标（从 resource_types.json 的 icon 字段派生——扩展点残留清单 #3：
  * 原 icon.ts 手写 RTYPE_ICONS 与 JSON 漂移，新增类型须手改；现 JSON 加 icon 即自动生效）。

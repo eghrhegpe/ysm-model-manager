@@ -46,6 +46,8 @@ invariant_anchors:
   - `resolvePreviewKey(filePath, rtype)` — 按 variants 解析预览 key（ADR-111：`.pmx→mmd`、`.vrm→vrm`），无变体回退 rtype 自身
   - `resolvePreviewKeyToRtype(previewKey)` — 预览键反解真实资源类型 ID（"mmd"→"EntityPlayer"，`scanModelsByType` 白名单过滤用）
   - `resolvePreviewKeyByExt(filePath)` — **歧义扩展名预览路由兜底（ADR-111 兜底层）**：DetectResourceType 对多声明扩展名（如 `.pmx` 同时归属 EntityPlayer/SceneModel）保守返回 `"other"` 时，按扩展名取首个声明者的 preview key（`.pmx/.pmd→mmd`）兜底路由；只做「预览适配器路由」派生，不参与类型判定；无 variants 声明返回空串
+  - `resolveDefaultPreviewKey(rtype)` — **rtype 默认预览 key（容器兜底，2026-08-28）**：取该类型首个 variants 的 preview（EntityPlayer→mmd），无 variants 回退 rtype 自身；供 `openModel3DFullscreen` 对 `.zip` 容器（被路径消歧归 rtype 但 variants 无 `.zip`）按默认适配器路由
+  - `isContainerExt(pathOrExt)` — 压缩容器扩展名判定（`.zip`/`.7z`；容器可包裹任意类型，类型判定仍以 Go 内容检测为准）
   - 内部实现（非导出）：`RESOURCE_CAPS`（派生能力表）/`resolveTypeByExt`（反查）——外部统一走 `resolveTypeSafe`/`matchTypeByExt` 等安全入口（2026-08-16 去 export 收敛，消除死代码告警）
 
 `registry.ts`（异步加载器，知识卡旧文「resource-registry.ts」文件名漂移，实际为 `registry.ts`）：

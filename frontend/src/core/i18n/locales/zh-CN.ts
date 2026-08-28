@@ -1036,7 +1036,7 @@ export const zhCN: Record<string, string> = {
   "preview.ssaoMinDist": "SSAO 最小距离",
   "preview.ssaoMaxDist": "SSAO 最大距离",
   "preview.reflectionMode": "反射模式",
-  "preview.ssrOpacity": "SSR 反射强度",
+  "preview.ssrOpacity": "SSR 反射不透明度",
   "preview.ssrMaxDistance": "SSR 最大距离",
   "preview.ssrThickness": "SSR 厚度判定",
   "preview.ssrBlur": "SSR 模糊",

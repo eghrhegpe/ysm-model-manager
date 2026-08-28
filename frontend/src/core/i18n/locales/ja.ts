@@ -1034,7 +1034,7 @@ export const ja: Record<string, string> = {
   "preview.ssaoMinDist": "SSAO 最小距離",
   "preview.ssaoMaxDist": "SSAO 最大距離",
   "preview.reflectionMode": "反射モード",
-  "preview.ssrOpacity": "SSR 反射強度",
+  "preview.ssrOpacity": "SSR 反射不透明度",
   "preview.ssrMaxDistance": "SSR 最大距離",
   "preview.ssrThickness": "SSR 厚み判定",
   "preview.ssrBlur": "SSR ぼかし",

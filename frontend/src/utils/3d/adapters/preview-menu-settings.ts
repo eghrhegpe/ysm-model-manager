@@ -17,6 +17,8 @@ import { t } from "../../../core/i18n/t.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { MenuControlDef } from "../caps/scene-capability.ts";
 import { getStateValue, setStateValue } from "../state/preview-state.ts";
+import { getPerfPreset, setPerfPreset, type PerfLevel } from "../state/perf-presets.ts";
+import type { SlideMenuHandle } from "../../../ui/ui-slide-menu.ts";
 import type { PreviewMenuCtx } from "./preview-menu.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名 */
@@ -85,10 +87,12 @@ export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode
   }}];
 }
 
-/** 设置面板 schema：性能（横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 */
-export function buildSettingsSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
+/** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 */
+export function buildSettingsSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): PreviewMenuNode[] {
   return [
     bsBuildSectionTitle("settings-perf-header", "preview.settingsPerf", "性能"),
+    // 性能档位：一键套用低/中/高（数据表驱动）；切档后 menu.refresh() 刷新兄弟控件显示
+    bsBuildPerfPresetRow(menu),
     // 传函数引用而非求值结果：每次 DOM 渲染时重取，cap 后创建/再渲染也能看见
     bsBuildControlsRow("settings-perf", buildCrossCuttingControls),
     bsBuildSectionTitle("settings-quality-header", "preview.settingsQuality", "画质"),
@@ -181,6 +185,47 @@ export function buildSettingsControls(): MenuControlDef[] {
 }
 
 // ── 通用节点工厂 ──
+
+/** 性能档位 select（低/中/高/自定义）：切档 = 数据表套用（perf-presets.ts）+ 面板刷新。
+ *  自定义 = 不套用，保持用户手调。档位表是纯数据，新增档位/参数零代码接线。 */
+function bsBuildPerfPresetRow(menu?: SlideMenuHandle): PreviewMenuNode {
+  const LEVELS: Array<{ value: PerfLevel; labelKey: string; fallback: string }> = [
+    { value: "low", labelKey: "preview.settingsPerfLow", fallback: "低" },
+    { value: "medium", labelKey: "preview.settingsPerfMedium", fallback: "中" },
+    { value: "high", labelKey: "preview.settingsPerfHigh", fallback: "高" },
+    { value: "custom", labelKey: "preview.settingsPerfCustom", fallback: "自定义" },
+  ];
+  return {
+    id: "settings-perf-preset",
+    kind: "custom",
+    renderCustom: (list: HTMLElement): void => {
+      const row = document.createElement("div");
+      row.className = "slide-item";
+      row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px";
+      const label = document.createElement("span");
+      label.className = "slide-label";
+      label.style.cssText = "flex:1;font-size:12px";
+      label.textContent = tr("preview.settingsPerfPreset", "性能档位");
+      const sel = document.createElement("select");
+      sel.className = "setting-select";
+      sel.style.cssText = "font-size:11px;padding:2px 4px";
+      for (const lv of LEVELS) {
+        const o = document.createElement("option");
+        o.value = lv.value;
+        o.textContent = tr(lv.labelKey, lv.fallback);
+        sel.appendChild(o);
+      }
+      sel.value = getPerfPreset();
+      sel.onchange = (): void => {
+        setPerfPreset(sel.value as PerfLevel);
+        // 切档后兄弟控件（fps/分辨率/Bloom）显示值已变——重渲染当前面板
+        menu?.refresh();
+      };
+      row.append(label, sel);
+      list.appendChild(row);
+    },
+  };
+}
 
 function bsBuildSectionTitle(id: string, labelKey: string, fallback: string): PreviewMenuNode {
   return { id, kind: "sectionTitle", labelKey, fallback };

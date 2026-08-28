@@ -248,7 +248,7 @@ function buildPreviewMenuRouters(
       lighting: (_menu) => buildLightingSchema(ctx),
       shadow: () => buildShadowSchema(ctx),
       postproc: () => buildPostprocessingSchema(ctx),
-      settings: () => buildSettingsSchema(ctx),
+      settings: (menu) => buildSettingsSchema(ctx, menu),
       camera: () => buildCameraSchema(ctx),
     },
     fillers: {

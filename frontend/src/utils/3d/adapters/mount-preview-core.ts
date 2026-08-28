@@ -44,6 +44,7 @@ import type { SwitchContext } from "./switch-preview.ts";
 import { safeDispose } from "../safe-dispose.ts";
 import { showLoadFailure } from "./preview-loading.ts";
 import { sceneRegistry } from "./scene-registry.ts";
+import { applyPerfPreset, getPerfPreset } from "../state/perf-presets.ts";
 import { fitCameraToRoots } from "../camera-setup.ts";
 import { assembleBoneSelectInfo, getMeshBoneId } from "../bone-raycast.ts";
 import { cullModelGroups, isFrustumCullEnabled, restoreModelGroupsVisible } from "../frustum-cull.ts";
@@ -989,6 +990,9 @@ function mpBuildSharedInfra(adapter: PreviewAdapter, viewContainer: HTMLElement,
   postProcCap?.setPreset(adapter.id);
   // SSR↔Reflector 联动（postprocessing-capability.setReflectorCap）：SSR 开启时自动禁用单平面镜面，防 z-fighting
   postProcCap?.setReflectorCap(reflectorCap);
+  // 性能档位（薄壳版，perf-presets.ts 数据表驱动）：用户显式档位最后套用，覆盖模型预设的性能项
+  // （fps / 分辨率 / Bloom）；cap 缺席的派生路径 setStateValue 静默跳过，无副作用
+  applyPerfPreset(getPerfPreset());
   // ADR-085 S3：caps 创建后触发 refreshDock()，修复 litematic/pack 的 environment 项时序缺失
   // （菜单先于 caps 挂载，挂载时 requiresEnvironment 被过滤；此处重渲染补回）
   menuHandle.refreshDock();

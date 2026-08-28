@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 168 | 680 |
+| 前端·工具 | 169 | 687 |
 | frontend/views | 118 | 343 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **499** | **2124** |
+| **合计** | **500** | **2131** |
 
 ## Go·头像
 
@@ -1394,17 +1394,17 @@
 | `makeZipOverlayPort()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:113` | 创建 ZIP Overlay Port：包装 MmdDataPort， 将 zip 内路径前缀（如 "/repo/miku.zip!/"）路由到内存中的 zip entries。 |
 | `prepareMmdZipInput()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:202` | 构造完整的 zip 包装流程： 检测 zip → 解析 zip → 创建 overlay → 返回 { port, rootPath } 调用方只需： const { port, |
 | `zipFindEntry()` | `frontend/src/utils/3d/adapters/mmd-zip-overlay:218` | 从 zip entries 中按名称查找（大小写不敏感，basename 匹配） |
-| `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:74` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
-| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:93` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
-| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:119` | — |
-| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:129` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
-| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:178` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
-| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:183` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
-| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:203` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
-| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:216` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
-| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:222` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
-| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:227` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
-| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:245` | — |
+| `PreviewBuildCtx()` | `frontend/src/utils/3d/adapters/mount-preview-core:75` | 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） |
+| `PreviewScene()` | `frontend/src/utils/3d/adapters/mount-preview-core:94` | 适配器返回的内容场景契约（对齐 Model3DHandleX，方法全部可选，便于纯静态渲染） |
+| `PreviewAdapter()` | `frontend/src/utils/3d/adapters/mount-preview-core:120` | — |
+| `PreviewHandle()` | `frontend/src/utils/3d/adapters/mount-preview-core:130` | 统一预览句柄（D 步 ysm 接入时经此暴露内容层方法） |
+| `invalidatePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:179` | 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） |
+| `cleanupPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:184` | 清理所有 3D 预览（dispose built + 移除 scene children，保留 renderer/canvas/overlay 存活避免黑屏） |
+| `_resetSingletons()` | `frontend/src/utils/3d/adapters/mount-preview-core:204` | 测试用：重置所有模块级单例状态（不影响生产代码路径） |
+| `switchPreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:217` | 当前会话内切换到另一模型（复用外壳重建内容层，ADR-066 §5.6）；无活跃会话时 no-op |
+| `hasActivePreview()` | `frontend/src/utils/3d/adapters/mount-preview-core:223` | 是否存在活跃 3D 预览会话（多模型同台追加的前置判定，ADR-093 T4） |
+| `Mount3DOptions()` | `frontend/src/utils/3d/adapters/mount-preview-core:228` | mount3D 附加选项（ADR-066 §5.6 3D 内模型切换） |
+| `mount3D()` | `frontend/src/utils/3d/adapters/mount-preview-core:246` | — |
 | `buildPackScene()` | `frontend/src/utils/3d/adapters/pack-model-adapter` | — |
 | `PackDeps()` | `frontend/src/utils/3d/adapters/pack-model-adapter:23` | Go 绑定依赖（薄包装层经 getApp 注入，对齐 vrm/litematic 工厂模式） |
 | `makePackAdapter()` | `frontend/src/utils/3d/adapters/pack-model-adapter:39` | 工厂：适配器持 zipPath（容器路径），buildPath 即 entry path（虚拟文件夹下的文件路径） |
@@ -1440,14 +1440,14 @@
 | `modelDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:38` | — |
 | `motionDetailView()` | `frontend/src/utils/3d/adapters/preview-menu-roles:97` | — |
 | `fillRoles()` | `frontend/src/utils/3d/adapters/preview-menu-roles:267` | — |
-| `buildCameraSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:31` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
-| `buildLightingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:45` | 灯光面板 schema：从 light cap 自报控件渲染 |
-| `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:63` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
-| `buildPostprocessingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:76` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
-| `buildSettingsSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:89` | 设置面板 schema：性能（横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 |
-| `buildCrossCuttingControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:114` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
-| `collectSettingsCapControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:166` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
-| `buildSettingsControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:179` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
+| `buildCameraSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:33` | 相机面板 schema：wrap buildCameraControls 为声明式节点 |
+| `buildLightingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:47` | 灯光面板 schema：从 light cap 自报控件渲染 |
+| `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:65` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
+| `buildPostprocessingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:78` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
+| `buildSettingsSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:91` | 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 |
+| `buildCrossCuttingControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:118` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
+| `collectSettingsCapControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:170` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
+| `buildSettingsControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:183` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
 | `fillSwitch()` | `frontend/src/utils/3d/adapters/preview-menu-switch:217` | — |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
@@ -1764,6 +1764,13 @@
 | `BoneData()` | `frontend/src/utils/3d/spec-builder:99` | BoneData — Go threejs/spec.go BoneData |
 | `MeshData()` | `frontend/src/utils/3d/spec-builder:109` | MeshData — Go threejs/spec.go MeshData |
 | `buildSpecFromGeometryJSON()` | `frontend/src/utils/3d/spec-builder:128` | 从 bedrock geometry JSON 构建 3D spec（纯 TS，无 Go 依赖）。 |
+| `PerfLevel()` | `frontend/src/utils/3d/state/perf-presets:16` | 性能档位：低 / 中 / 高 + 自定义（自定义不套用，保持用户手调） |
+| `PERF_PRESET_KEY()` | `frontend/src/utils/3d/state/perf-presets:19` | 持久化键：当前档位（对齐 ysm_3d_maxFps 风格） |
+| `PERF_PRESET_DEFAULT()` | `frontend/src/utils/3d/state/perf-presets:22` | 无存档时的默认档位 |
+| `PERF_PRESETS()` | `frontend/src/utils/3d/state/perf-presets:28` | 档位表：三档 → StatePath → 值（纯数据，新增档位/参数只改这里，零接线） |
+| `getPerfPreset()` | `frontend/src/utils/3d/state/perf-presets:50` | 读取当前档位（无存档或未知值回默认） |
+| `applyPerfPreset()` | `frontend/src/utils/3d/state/perf-presets:61` | 套用档位：遍历档位表走状态层统一写口（默认广播 notify，面板订阅可自动刷新）。 |
+| `setPerfPreset()` | `frontend/src/utils/3d/state/perf-presets:70` | 切换档位：持久化 + 套用 |
 | `KNOWN_PATHS()` | `frontend/src/utils/3d/state/preview-state:51` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
 | `toStatePath()` | `frontend/src/utils/3d/state/preview-state:66` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
 | `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:175` | 订阅横切设置变更；返回取消订阅函数 |

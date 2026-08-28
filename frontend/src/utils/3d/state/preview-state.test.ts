@@ -259,6 +259,17 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     off();
   });
 
+  it("性能档位节点：settings-perf-preset 在 schema 中，渲染 4 选项 select（低/中/高/自定义）", () => {
+    const nodes = buildSettingsSchema({} as never);
+    const presetNode = nodes.find((n) => n.id === "settings-perf-preset")!;
+    expect(presetNode).toBeDefined();
+    const list = document.createElement("div");
+    (presetNode as { renderCustom: (l: HTMLElement) => void }).renderCustom(list);
+    const sel = list.querySelector("select") as HTMLSelectElement | null;
+    expect(sel).not.toBeNull();
+    expect(sel!.options.length).toBe(4);
+  });
+
   it("自动聚合：仅收 settingsOrder 声明项，升序且抹平 group", () => {
     const mk = (id: string, order: number): MenuControlDef => ({
       id,

@@ -275,6 +275,9 @@ function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNode): voi
   wrap.className = "slide-item";
   wrap.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 10px";
   wrap.dataset.testid = "preview-" + node.id;
+  // 整行可点翻转显隐（对齐旧 buildMaterialControls 的 role/tabIndex/row.onclick——249bc6d0 review P3）
+  wrap.setAttribute("role", "button");
+  wrap.tabIndex = 0;
   const eye = document.createElement("button");
   eye.type = "button";
   eye.style.cssText = "flex:0 0 auto;background:none;border:none;cursor:pointer;font-size:14px;padding:0;line-height:1";
@@ -282,13 +285,17 @@ function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNode): voi
     eye.textContent = v ? "👁" : "🚫";
     eye.title = v ? "隐藏" : "显示";
   };
-  eyeApply(node.eye?.get() ?? true);
-  eye.onclick = (e: MouseEvent): void => {
-    e.stopPropagation();
+  const toggleEye = (): void => {
     const next = !node.eye?.get();
     node.eye?.set(next);
     eyeApply(next);
   };
+  eyeApply(node.eye?.get() ?? true);
+  eye.onclick = (e: MouseEvent): void => {
+    e.stopPropagation();
+    toggleEye();
+  };
+  wrap.onclick = (): void => toggleEye();
   wrap.appendChild(eye);
   const lb = document.createElement("span");
   lb.className = "slide-label";
@@ -304,6 +311,8 @@ function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNode): voi
   op.oninput = (): void => {
     node.opacity?.set(Number(op.value));
   };
+  // 拖动滑条不触发整行翻转（对齐旧 op.onclick stopPropagation）
+  op.onclick = (e: MouseEvent): void => e.stopPropagation();
   wrap.appendChild(op);
   container.appendChild(wrap);
 }

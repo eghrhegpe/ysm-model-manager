@@ -116,6 +116,25 @@ describe("renderMenu 新 kind", () => {
     slider.value = "30";
     slider.dispatchEvent(new Event("input"));
     expect(opacity).toBe(30);
+    // 整行点击（label 区域）也翻转显隐——对齐旧 buildMaterialControls 的 row.onclick
+    row.click();
+    expect(visible).toBe(true);
+    // 滑条点击不触发整行翻转（op.onclick stopPropagation）
+    slider.click();
+    expect(visible).toBe(true);
+  });
+
+  it("material-row 空态：mat-empty field 渲染提示文本（不落 id 原文）", () => {
+    // [doc:adr-126-p5] P2 回归锁：preview.noMaterial 键缺失时 rmAppendField 的 tr 落
+    // node.id（mat-empty 原文）——补键后应渲染 locale 文本
+    const nodes: PreviewMenuNode[] = [
+      { id: "mat-empty", kind: "field", labelKey: "preview.noMaterial", fallback: "（无材质）", value: "" },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="preview-mat-empty"]') as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(row.textContent).not.toContain("mat-empty");
   });
 
   it("row: 渲染动态列表行", () => {

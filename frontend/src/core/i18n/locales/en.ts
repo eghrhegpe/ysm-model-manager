@@ -1131,6 +1131,7 @@ export const en: Record<string, string> = {
   "preview.rimLight": "Rim Light",
   "preview.allComponents": "All Components",
   "preview.component": "Component",
+  "preview.noMaterial": "No Material",
   "preview.copied": "Copied",
   "preview.blueprintDetail": "Blueprint Detail",
   "preview.web7zUnsupported": ".7z model preview is not supported on web (use desktop)",

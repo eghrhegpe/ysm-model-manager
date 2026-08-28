@@ -44,17 +44,6 @@ function makeCtx() {
   return { ctx, mesh, mmd };
 }
 
-/** 真实操作 mesh.material 的材质桥（复用 mmd-materials.ts 纯逻辑层，对齐 mmd-adapter 组装口径） */
-function makeMatBridge(ctx: MmdBottomNavCtx): MaterialControlBridge {
-  const mats = ctx.mesh.material as THREE.Material[];
-  return {
-    list: () => listMmdMaterials(ctx.mmd.pmx.materials),
-    getDetail: (i: number) => getMmdMaterialDetail(ctx.mmd.pmx.materials, mats, i),
-    setVisible: (i: number, v: boolean) => setMmdMaterialVisible(mats, i, v),
-    setOpacity: (i: number, o: number) => setMmdMaterialOpacity(mats, i, o),
-  };
-}
-
 // ---- 测试辅助工具函数 ----
 
 /** 创建空 morph 字典的 mesh（无表情） */
@@ -117,30 +106,6 @@ function makeCtxWithName(name: string): { ctx: MmdBottomNavCtx } {
   };
 }
 
-/** 创建含单个材料的极简上下文 */
-function makeSingleMatCtx(): { ctx: MmdBottomNavCtx } {
-  const rawMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    [new THREE.MeshBasicMaterial({ visible: false, opacity: 0.5 })],
-  );
-  const mesh = rawMesh as unknown as THREE.SkinnedMesh;
-  const mmd = {
-    pmx: {
-      bones: new Array(5),
-      materials: [{ name: "单材质" }],
-      morphs: [],
-    },
-  };
-  return {
-    ctx: {
-      mmd: mmd as never,
-      mesh,
-      modelName: "单材质.pmx",
-      modelPath: "/mmd/single/single.pmx",
-    } as MmdBottomNavCtx,
-  };
-}
-
 /** 创建非空 morph 的 mesh */
 function makeMultiMorphMesh(): THREE.SkinnedMesh {
   const rawMesh = new THREE.Mesh(
@@ -150,43 +115,6 @@ function makeMultiMorphMesh(): THREE.SkinnedMesh {
   rawMesh.morphTargetDictionary = { "高兴": 0, "悲伤": 1, "愤怒": 2, "惊吓": 3 };
   rawMesh.morphTargetInfluences = [0, 0, 0, 0];
   return rawMesh as unknown as THREE.SkinnedMesh;
-}
-
-/** 创建完全为空的 bridge（list 返回空数组） */
-function makeEmptyBridge(): MaterialControlBridge {
-  return {
-    list: () => [],
-    getDetail: () => null,
-    setVisible: () => {},
-    setOpacity: () => {},
-  };
-}
-
-/** 创建自定义行为的 bridge（用于隔离测试） */
-function makeStubBridge(opts: {
-  listResult?: Array<{ index: number; name: string }>;
-  detailResult?: Record<string, unknown> | null;
-  setVisibleFn?: (i: number, v: boolean) => void;
-  setOpacityFn?: (i: number, o: number) => void;
-}): MaterialControlBridge {
-  const detail = opts.detailResult ?? {
-    index: 0,
-    name: "默认材质",
-    visible: true,
-    opacity: 1,
-    transparent: false,
-    specular: null,
-    shininess: null,
-  };
-  return {
-    list: () => opts.listResult ?? [{ index: 0, name: "默认材质" }],
-    getDetail: (i: number) => {
-      if (opts.detailResult !== undefined) return opts.detailResult;
-      return detail as any;
-    },
-    setVisible: opts.setVisibleFn ?? (() => {}),
-    setOpacity: opts.setOpacityFn ?? (() => {}),
-  };
 }
 
 beforeEach(() => {

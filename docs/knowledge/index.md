@@ -234,7 +234,7 @@
 | 🍃 dom_tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
 | 🍃 format-ysm-anim-config | YSM 动画分组与配置菜单提取 | leaf | — | 动画分组, 配置菜单, ysm.json, extra_animation, summarize |
 | 🍃 ground-cap-gcbuildmaterialgroup-133 | ground-cap-gcBuildMaterialGroup-133 | leaf | — | 拆 gcBuildMaterialGroup 长函数, 评审 ground-capability.ts 菜单构建 |
-| 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | — | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（solid/plain/grid/checker/stripes/diamond/marble 像素）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
+| 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | — | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（grid/checker/solid 像素）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken |
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | — | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture | — | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
 | 🏗 model3d | 3D 预览渲染 model3d | architecture | — | 3D 预览, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底, OrbitControls |

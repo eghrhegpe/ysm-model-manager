@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-27T05:05:13.180Z",
+  "generated": "2026-08-28T04:40:34.543Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -31,6 +31,8 @@
     "src/utils/3d/adapters/worker-bridge.ts|types|WorkerErrorStrategy",
     "src/utils/3d/bone-tools.ts|exports|findAncestorBoneId",
     "src/utils/3d/caps/environment-capability.ts|exports|drawEnvEquirect",
+    "src/utils/3d/caps/ground-capability.ts|exports|DEFAULT_WATER_PARAMS",
+    "src/utils/3d/caps/ground-capability.ts|types|WaterParams",
     "src/utils/3d/caps/ground-surface-spec.ts|exports|TILE_WORLD_SIZE",
     "src/utils/3d/caps/ground-surface-spec.ts|types|GroundSurfaceAppearanceSpec",
     "src/utils/3d/caps/light-capability.ts|types|AmbientLightParams",
@@ -122,6 +124,7 @@
     "src/utils/3d/caps/fog-capability.test.ts#src/utils/3d/caps/postprocessing-capability.test.ts",
     "src/utils/3d/caps/fog-capability.test.ts#src/utils/3d/caps/reflector-capability.test.ts",
     "src/utils/3d/caps/fog-capability.test.ts#src/utils/3d/caps/shadow-capability.test.ts",
+    "src/utils/3d/caps/ground-surface-spec.ts#src/utils/3d/caps/ground-surface-spec.ts",
     "src/utils/3d/caps/postprocessing-capability.test.ts#src/utils/3d/caps/shadow-capability.test.ts",
     "src/utils/3d/model2d-draw.ts#src/utils/3d/model2d-hit-zones.ts",
     "src/utils/3d/model3d-spec.test.ts#src/utils/3d/model3d-spec.test.ts",

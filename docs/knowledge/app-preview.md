@@ -57,7 +57,7 @@ invariant_anchors:
 - `model3d-loader.ts` / `screenshot-renderer.ts` — 3D 规格加载（Go `GetModel3DSpec`）与多角度截图渲染（`renderMultiAngle`），均静态依赖 three
 - `cache.ts` — 模块级预览缓存：`cacheGet` / `cacheSet` / `cacheSetEvictHandler` + `CacheValue`
 - `tpl.ts` — `modelDetailHTML`（详情面板）/ `statsCardHTML`（统计卡：彩色分区 + L0 清单角色 + 纹理分类；**顶部「📊 模型概览」标题已移除（2026-08-28，与 tab 层级去重），badge（Go 原生解析）保留**）
-- `css.ts` — Shadow DOM 样式表 `previewCSS`（adoptedStyleSheets）
+- `css.ts` — Shadow DOM 样式表 `previewCSS`（adoptedStyleSheets）；**h3 顶格约定（2026-08-28）**：`h3` 用 `margin: 0 0 8px`（上 0）——移除 `model-detail-title` 冗余标题后浏览器默认 `margin-top: 1em` 会让模型名顶格空一行，故显式清零
 - `bone-names.ts` — `buildBoneNamesText(modelPath, boneCount, bones)`：构建「📋 导出骨骼名」文本行；`interface BoneEntry` 兼容 `DecodedYsm.bones` 元素（纯函数层，ADR-023 L3）
 - `parse-ysm-json.ts` — `parseYsmJsonDirect(json)`：解压后 YSM 的 `ysm.json` 直接解析，不依赖 WASM/IO；双格式分支——YSM 专属格式（`spec`+`files`）提取模型/纹理清单并将 `default_texture` 置首（R1 契约），标准 Bedrock 格式映射 bones/cubes 字段；向量/数值守卫防畸形 JSON（ADR-044 ②）
 - `texture-order.ts` — `buildOrderedTexKeys(input)`：纹理有序列表计算；有 `ysmTexOrder` 按声明序匹配 `matchTexKey`，`ysmDefaultTex` 置首；无声明序按 `areaOf` 降序；三处消费方（本文件、`wasm.ts orderedTexKeys`、Go `AnalyzeBedrockModel`），口径与 `internal/app/texture_order.go` 严格对称

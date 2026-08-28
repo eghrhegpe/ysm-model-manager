@@ -126,7 +126,15 @@ export async function showModelDetail(
 
     // 加载 2D 模型预览（骨架 tab 只留骨骼线条图；统计卡经 statsContainer 挂详情卡）
     // 进详情本身即触发 loadModel2D 异步解码，统计卡数据（骨骼/立方体/纹理/头像）无需额外请求
-    loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton"), statsDiv).catch(
+    // scale 来自 summary.preview（模型级缩放），统计卡按角色区块显示缩放行（2026-08-28）
+    const scale =
+      showSummary?.preview?.heightScale || showSummary?.preview?.widthScale
+        ? {
+            height: showSummary?.preview?.heightScale,
+            width: showSummary?.preview?.widthScale,
+          }
+        : undefined;
+    loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton"), statsDiv, scale).catch(
       (e) => console.warn("[preview] loadModel2D:", e),
     );
   } catch (err) {

@@ -71,6 +71,52 @@ describe("statsCardHTML", () => {
     expect(html).toContain("含 2 张额外纹理（共 3 张）");
   });
 
+  it("textureCategories 区分角色/独立模型纹理 → 分类统计行", () => {
+    const html = statsCardHTML(
+      {
+        ...base,
+        textures: ["t1", "t2", "t3", "t4"],
+        textureCategories: ["player", "player", "projectile", "vehicle"],
+      },
+      "/repo/a.ysm",
+      "",
+    );
+    expect(html).toContain("角色纹理 2 张 · 独立模型 2 张");
+  });
+
+  it("subModels → L0 清单角色区块（纹理标题 + 尺寸 + 缩放）", () => {
+    const html = statsCardHTML(
+      {
+        ...base,
+        textures: ["t1", "t2"],
+        textureNames: ["main", "arm"],
+        subModels: [
+          { name: "角色A", texSlot: 0 },
+          { name: "角色B", texSlot: 1 },
+        ],
+      },
+      "/repo/a.ysm",
+      "",
+      { height: 0.8, width: 0.8 },
+    );
+    expect(html).toContain("L0 清单角色（2）");
+    expect(html).toContain("角色A");
+    expect(html).toContain("main");
+    expect(html).toContain("角色B");
+    expect(html).toContain("arm");
+    expect(html).toContain("0.80 × 0.80");
+  });
+
+  it("无 scale → 不渲染缩放行", () => {
+    const html = statsCardHTML(
+      { ...base, subModels: [{ name: "角色A", texSlot: 0 }] },
+      "/repo/a.ysm",
+      "",
+    );
+    expect(html).not.toContain("0.80 × 0.80");
+    expect(html).toContain("L0 清单角色（1）");
+  });
+
   it("无徽标（decodedBy 空）→ 不含 badge", () => {
     const html = statsCardHTML(base, "/repo/a.ysm", "");
     expect(html).not.toContain("ysm-badge");

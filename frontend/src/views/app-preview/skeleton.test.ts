@@ -216,6 +216,7 @@ describe("loadModel2D — 2D 成功路径", () => {
       expect.objectContaining({ bones: expect.any(Array) }),
       "/m/a.ysm",
       "go",
+      undefined, // scale 未传入（loadModel2D 无 statsContainer 分支不传缩放）
     );
     expect(container.textContent).toContain("作者A");
     expect(renderModel2D).toHaveBeenCalledTimes(1);

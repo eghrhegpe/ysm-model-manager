@@ -87,10 +87,11 @@ export function buildStatsCard(
   modelPath: string,
   _decodedBy: string,
   ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
+  scale?: { height?: number; width?: number },
 ): void {
   const card = document.createElement("div");
   card.className = "pv-card";
-  card.innerHTML = statsCardHTML(model, modelPath, _decodedBy);
+  card.innerHTML = statsCardHTML(model, modelPath, _decodedBy, scale);
   const authors: Array<{ avatarUrl?: string | null; name?: string; role?: string }> =
     model._authors || [];
   if (authors.length > 0) {

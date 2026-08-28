@@ -81,8 +81,6 @@ export interface PreviewMenuHandle {
   setAdapterItems(items: PreviewMenuNode[]): void;
   openPanel(id: string): void;
   refreshDock(): void;
-  /** 当前根级面板 ID（骨骼拾取联动：仅在骨骼面板已打开时才滚动，不强制切换） */
-  getCurrentPanelId(): string | null;
 }
 
 /** 挂载预览底部根菜单，返回句柄 */
@@ -103,9 +101,8 @@ function buildPreviewMenuShell(
   dock: HTMLElement;
   popup: HTMLElement;
   menu: SlideMenuHandle;
-  showMenu: (view: SlideMenuView, panelId?: string) => void;
+  showMenu: (view: SlideMenuView) => void;
   hideMenu: () => void;
-  currentPanelId: { v: string | null };
 } {
   ensureFabStyles();
   const dock = document.createElement("div");
@@ -123,10 +120,7 @@ function buildPreviewMenuShell(
   popup.appendChild(menu.root);
   menu.root.querySelector<HTMLElement>(".slide-back")?.setAttribute("id", "preview-close-3d");
 
-  // 骨骼拾取联动：追踪当前根级面板 ID（面板已打开时才滚动，不强制跳转）
-  const currentPanelId = { v: null as string | null };
-  const showMenu = (view: SlideMenuView, panelId?: string): void => {
-    currentPanelId.v = panelId ?? null;
+  const showMenu = (view: SlideMenuView): void => {
     menu.home(view);
     popup.style.display = "flex";
   };
@@ -138,7 +132,7 @@ function buildPreviewMenuShell(
     hideMenu();
     ctx.close();
   });
-  return { dock, popup, menu, showMenu, hideMenu, currentPanelId };
+  return { dock, popup, menu, showMenu, hideMenu };
 }
 
 /** [子函数 2/9] 行工厂（原 makeRow 闭包升格）：可选 chevron 箭头导航提示 */
@@ -376,7 +370,7 @@ function renderPreviewDock(
   dock: HTMLElement,
   ctx: PreviewMenuCtx,
   menu: SlideMenuHandle,
-  showMenu: (view: SlideMenuView, panelId?: string) => void,
+  showMenu: (view: SlideMenuView) => void,
   makeRowFn: (n: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement,
   makePanelViewFn: (n: PreviewMenuNode) => SlideMenuView,
   makeGroupViewFn: (g: PreviewMenuGroupDef, items: PreviewMenuNode[]) => SlideMenuView,
@@ -406,7 +400,7 @@ function renderPreviewDock(
       // 🧍 模型组：直达 roles 角色列表（新手第一跳）
       if (g.id === "model") {
         if (rolesDef) {
-          showMenu(makePanelViewFn(rolesDef), "roles");
+          showMenu(makePanelViewFn(rolesDef));
           return;
         }
       }
@@ -421,7 +415,7 @@ function renderPreviewDock(
       }
       const panels = groupItems.filter((d) => d.kind === "panel");
       if (panels.length === 1 && groupItems.length === 1) {
-        showMenu(makePanelViewFn(panels[0]), panels[0].id);
+        showMenu(makePanelViewFn(panels[0]));
       } else {
         showMenu(makeGroupViewFn(g, groupItems));
       }
@@ -493,7 +487,7 @@ function validateAdapterItemIds(items: PreviewMenuNode[]): void {
 
 export function mountPreviewRootMenu(overlay: HTMLElement, ctx: PreviewMenuCtx): PreviewMenuHandle {
   // 阶段 1：dock + popup + SlideMenu 外壳装配（含 show/hide）
-  const { dock, popup, menu, showMenu, hideMenu, currentPanelId } = buildPreviewMenuShell(overlay, ctx);
+  const { dock, popup, menu, showMenu, hideMenu } = buildPreviewMenuShell(overlay, ctx);
   // 阶段 2：action ctx 与 handle 延迟壳（fillRoles 回调在 handle 构造前就能安全引用）
   const actionCtx: PreviewActionMenuCtx = {
     toast: ctx.toast,
@@ -537,7 +531,7 @@ export function mountPreviewRootMenu(overlay: HTMLElement, ctx: PreviewMenuCtx):
   const openPanel = (id: string): void => {
     const node = [...CORE_MENU_ITEMS, ...adapterItemsRef.v].find((d) => d.id === id);
     if (!node || node.kind !== "panel") return;
-    showMenu(makePanelViewFn(node), id);
+    showMenu(makePanelViewFn(node));
   };
   refreshDock();
 
@@ -551,7 +545,6 @@ export function mountPreviewRootMenu(overlay: HTMLElement, ctx: PreviewMenuCtx):
     setAdapterItems,
     openPanel,
     refreshDock, // ADR-085 S3：caps 创建后调用，修复 litematic/pack environment 项时序
-    getCurrentPanelId: (): string | null => currentPanelId.v,
   };
   shell.handle = handle;
   return handle;

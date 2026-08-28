@@ -44,6 +44,9 @@ export interface OpenModel3DOptions {
    * 同类型时语义最稳；跨类型（如 MMD 会话追加 VRM）需适配器按类型解析，见 ADR-093 T4-b。
    */
   cooperate?: boolean;
+  /** 已分类的资源类型 ID（如 "EntityPlayer"）：调用方已知时传入，避免歧义扩展名重复探测；
+   *  缺失（undefined/空串）时回退 Go DetectResourceType 探测 */
+  rtype?: string;
 }
 
 /**
@@ -69,11 +72,14 @@ export async function openModel3DFullscreen(path: string, options?: OpenModel3DO
     return;
   }
   const { DetectResourceType } = await getApp();
-  let rtype = "";
-  try {
-    rtype = (await DetectResourceType(path)) || "";
-  } catch {
-    /* 类型探测失败 */
+  // 发射点已分类（switchExternal 等透传 rtype）时优先用，避免歧义扩展名重复探测
+  let rtype = options?.rtype || "";
+  if (!rtype) {
+    try {
+      rtype = (await DetectResourceType(path)) || "";
+    } catch {
+      /* 类型探测失败 */
+    }
   }
   // ADR-111：按 variants 解析预览 key（.pmx→mmd、.vrm→vrm），无变体回退 rtype
   const routeKey = resolvePreviewKey(path, rtype);

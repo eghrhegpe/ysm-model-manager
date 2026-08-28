@@ -909,16 +909,16 @@
 | `normalizeTheme()` | `frontend/src/app-modules` | — |
 | `applyTheme()` | `frontend/src/app-modules` | — |
 | `initTheme()` | `frontend/src/app-modules` | — |
-| `bus()` | `frontend/src/bus:198` | 默认实例（组件直接使用） |
+| `bus()` | `frontend/src/bus:201` | 默认实例（组件直接使用） |
 | `ToastPayload()` | `frontend/src/bus:7` | — |
 | `MenuItem()` | `frontend/src/bus:18` | — |
 | `PageName()` | `frontend/src/bus:30` | 核心页面名（与 app-nav 导航菜单一致） |
 | `NavPagePayload()` | `frontend/src/bus:38` | — |
 | `ModelSelectPayload()` | `frontend/src/bus:42` | — |
-| `CtxShowPayload()` | `frontend/src/bus:47` | — |
-| `BusEvents()` | `frontend/src/bus:66` | — |
-| `BusEventName()` | `frontend/src/bus:110` | — |
-| `Bus()` | `frontend/src/bus:135` | — |
+| `CtxShowPayload()` | `frontend/src/bus:50` | — |
+| `BusEvents()` | `frontend/src/bus:69` | — |
+| `BusEventName()` | `frontend/src/bus:113` | — |
+| `Bus()` | `frontend/src/bus:138` | — |
 | `revealMainWindow()` | `frontend/src/startup-reveal:2` | Wait until the DOM has been upgraded and painted before exposing the native window. |
 | `normalizeTheme()` | `frontend/src/theme-core:17` | 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） |
 | `applyTheme()` | `frontend/src/theme-core:21` | — |
@@ -2111,12 +2111,12 @@
 | `collectBlobUrls()` | `frontend/src/views/app-preview/cache:48` | 收集缓存值中全部 blob URL（evict 释放用） |
 | `cacheSet()` | `frontend/src/views/app-preview/cache:65` | — |
 | `previewCSS()` | `frontend/src/views/app-preview/css:2` | — |
-| `showVrmMeta()` | `frontend/src/views/app-preview/detail-3d:28` | 显示 VRM meta 卡（名称/作者/许可/版本/缩略图 + FAB 进 3D，对齐 YSM 模式） |
-| `showMmdPreview()` | `frontend/src/views/app-preview/detail-3d:101` | 显示 MMD 预览卡（文件名 + FAB 进 3D；PMX/PMD 无标准 meta 读取，保持简单形态） |
-| `showFbxPreview()` | `frontend/src/views/app-preview/detail-3d:131` | 显示 FBX 预览卡（文件名 + FAB 进 3D；FBX 无标准 meta 读取，保持简单形态，ADR-112） |
-| `showScenePreview()` | `frontend/src/views/app-preview/detail-3d:161` | 显示场景 MMD 预览卡（独立入口，与角色模型完全隔离） |
-| `showMorphPreview()` | `frontend/src/views/app-preview/detail-3d:191` | 显示 CustomMorph 预览卡（VPD 表情姿势 + 兄弟列表 + 应用 FAB） |
-| `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:251` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
+| `showVrmMeta()` | `frontend/src/views/app-preview/detail-3d:29` | 显示 VRM meta 卡（名称/作者/许可/版本/缩略图 + FAB 进 3D，对齐 YSM 模式） |
+| `showMmdPreview()` | `frontend/src/views/app-preview/detail-3d:102` | 显示 MMD 预览卡（文件名 + FAB 进 3D；PMX/PMD 无标准 meta 读取，保持简单形态） |
+| `showFbxPreview()` | `frontend/src/views/app-preview/detail-3d:132` | 显示 FBX 预览卡（文件名 + FAB 进 3D；FBX 无标准 meta 读取，保持简单形态，ADR-112） |
+| `showScenePreview()` | `frontend/src/views/app-preview/detail-3d:162` | 显示场景 MMD 预览卡（独立入口，与角色模型完全隔离） |
+| `showMorphPreview()` | `frontend/src/views/app-preview/detail-3d:192` | 显示 CustomMorph 预览卡（VPD 表情姿势 + 兄弟列表 + 应用 FAB） |
+| `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:252` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
 | `detailGen()` | `frontend/src/views/app-preview/detail:23` | 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） |
 | `showModelDetail()` | `frontend/src/views/app-preview/detail:26` | 显示模型详情（YSM 模型） |
 | `showResourcePack()` | `frontend/src/views/app-preview/detail:137` | 显示资源包信息（pack.mcmeta + pack.png） |
@@ -2172,9 +2172,9 @@
 | `registerReRoute()` | `frontend/src/views/app-preview/preview-library:24` | 注册某资源类型的「打开全屏 3D」入口（由对应 createXxx3D 包装器在模块加载时调用； 第二参透传 siblings，切换后新会话「当前目录」tab 有候选，P1-2） |
 | `getRegisteredRoutes()` | `frontend/src/views/app-preview/preview-library:32` | 返回已注册的路由类型列表（供测试/CI 验证 _openers 覆盖率，审核 P3） |
 | `OpenModel3DOptions()` | `frontend/src/views/app-preview/preview-library:37` | openModel3DFullscreen 选项（ADR-093 T4：cooperate 统一多模型同台追加入口） |
-| `openModel3DFullscreen()` | `frontend/src/views/app-preview/preview-library:57` | 通用「打开一个模型 3D」路由：探测类型 → 查注册表派发 opener（跨类型换角色）。 |
-| `scanModelsByType()` | `frontend/src/views/app-preview/preview-library:112` | 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesFiltered， 复用文件树扫描缓存，不逐文件解析）。供 3D 内切 |
-| `withPreviewExtras()` | `frontend/src/views/app-preview/preview-library:129` | 给 mount3D opts 注入「跨类型换角色」入口 + 按类型懒加载数据源。各 createXxx3D 统一经此接入 |
+| `openModel3DFullscreen()` | `frontend/src/views/app-preview/preview-library:60` | 通用「打开一个模型 3D」路由：探测类型 → 查注册表派发 opener（跨类型换角色）。 |
+| `scanModelsByType()` | `frontend/src/views/app-preview/preview-library:118` | 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesFiltered， 复用文件树扫描缓存，不逐文件解析）。供 3D 内切 |
+| `withPreviewExtras()` | `frontend/src/views/app-preview/preview-library:135` | 给 mount3D opts 注入「跨类型换角色」入口 + 按类型懒加载数据源。各 createXxx3D 统一经此接入 |
 | `createScene3D()` | `frontend/src/views/app-preview/scene-3d:32` | 打开场景 MMD 3D 预览（独立入口，只加载 SceneModel 目录下的 PMX/PMD） |
 | `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:37` | 清理场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:42` | 任意新预览派发时调用，作废在途场景加载 |
@@ -2281,8 +2281,8 @@
 | `selectState()` | `frontend/src/views/app-tree/data:4` | 多选状态 |
 | `toggleSelect()` | `frontend/src/views/app-tree/data:16` | 切换选中状态 |
 | `selectSingle()` | `frontend/src/views/app-tree/data:31` | 单选：清空后选中单个并设为 lastKey（用于单击选中，避免外部直接写 selectState） |
-| `updateSelectCount()` | `frontend/src/views/app-tree/events:391` | — |
-| `bindTreeEvents()` | `frontend/src/views/app-tree/events:495` | — |
+| `updateSelectCount()` | `frontend/src/views/app-tree/events:392` | — |
+| `bindTreeEvents()` | `frontend/src/views/app-tree/events:496` | — |
 | `appTreeStyle()` | `frontend/src/views/app-tree/index:12` | — |
 | `AppTree()` | `frontend/src/views/app-tree/index:62` | — |
 | `TreeEntry()` | `frontend/src/views/app-tree/loader:11` | 树条目（loader 转换后的渲染格式） |

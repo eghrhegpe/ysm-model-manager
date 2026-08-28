@@ -248,7 +248,8 @@ function atTeClickRowFile(ctx: AtTeCtx, e: MouseEvent, fl: HTMLElement): boolean
   selectSingle(fullPath);
   vm._renderTree();
   updateSelectCount(vm._root);
-  bus.emit("model:select", { path: fullPath });
+  // 带上已分类 rtype（当前浏览类型）：消费端优先用，避免歧义扩展名重复探测
+  bus.emit("model:select", { path: fullPath, rtype: atTeGetRtype(vm) });
   rememberModelPath(fullPath);
   return true;
 }

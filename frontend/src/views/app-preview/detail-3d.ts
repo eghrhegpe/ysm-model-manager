@@ -5,6 +5,7 @@
 
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { getApp } from "../../backend/app.ts";
+import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { renderFormattedText } from "../../utils/format/mc-format.ts";
 import { esc } from "../../utils/dom/html.ts";
 import { promoteTitleIfPresent } from "../../utils/dom/tooltip.ts";
@@ -225,7 +226,7 @@ export async function showMorphPreview(
       container.querySelectorAll<HTMLElement>(".morph-item").forEach((el) => {
         el.onclick = () => {
           const p = el.dataset.path || "";
-          bus.emit("model:select", { path: p, isDir: false });
+          bus.emit("model:select", { path: p, isDir: false, rtype: RESOURCE_TYPES.CUSTOM_MORPH });
         };
       });
     } else if (container) {
@@ -292,7 +293,7 @@ export async function showStagePreview(
         container.querySelectorAll<HTMLElement>(".stage-item").forEach((el) => {
           el.onclick = () => {
             const p = el.dataset.path || "";
-            bus.emit("model:select", { path: p, isDir: false });
+            bus.emit("model:select", { path: p, isDir: false, rtype: RESOURCE_TYPES.STAGE });
           };
         });
       }

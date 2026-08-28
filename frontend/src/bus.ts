@@ -42,6 +42,9 @@ export interface NavPagePayload {
 export interface ModelSelectPayload {
   path: string;
   isDir?: boolean;
+  /** 已分类的资源类型 ID（如 "EntityPlayer"）；发射点已知时带上，消费端优先用，
+   *  缺失（undefined/空串）时回退 Go DetectResourceType 探测——避免歧义扩展名重复探测 */
+  rtype?: string;
 }
 
 export interface CtxShowPayload {

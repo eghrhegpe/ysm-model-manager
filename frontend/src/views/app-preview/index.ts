@@ -113,7 +113,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
 
     this._preloadTypeRegistry();
     this.unsubs.push(
-      bus.on("model:select", async ({ path, isDir }) => {
+      bus.on("model:select", async ({ path, isDir, rtype }) => {
         this._previewGuard.invalidate(); // 代际计数：子方法 await 后校验 gen !== _previewGen 即丢弃过期渲染
         // P2 修复（审核）：切换模型前关闭活跃的 3D 全屏 overlay（挂 body、不随 shadow
         // DOM 重建消失）。后台 model:select（导入队列/回收站自动选择）触发时不清旧层会
@@ -134,7 +134,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
           if (isDir) {
             await this._showPackInfo(path);
           } else {
-            await this._showModelDetail(path);
+            await this._showModelDetail(path, rtype);
           }
         } catch (e) {
           console.error("[preview] 加载失败:", e);
@@ -227,7 +227,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     } catch (e) { console.warn("[preview] LoadResourceTypes:", e); }
   }
 
-  private async _showModelDetail(path: string): Promise<void> {
+  private async _showModelDetail(path: string, rtypeHint?: string): Promise<void> {
     const gen = this._previewGuard.current;
     // ADR-071 M1：web 端 .7z 明确"暂不支持"（识别为 ysm 但 WASM/解压均无法处理——
     // 显示文件名即可，不尝试解析报错；替代原"点击预览必失败"）
@@ -240,12 +240,14 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       showSimplePreview(this, path, this._typeMeta(RESOURCE_TYPES.YSM));
       return;
     }
-    // 检测文件类型
-    let rtype = "";
-    try {
-      const { DetectResourceType } = await getApp();
-      rtype = (await DetectResourceType(path)) || "";
-    } catch (e) { console.warn("[preview] DetectResourceType:", e); }
+    // 检测文件类型——发射点已分类（model:select 携带 rtype）时优先用，避免歧义扩展名重复探测
+    let rtype = rtypeHint || "";
+    if (!rtype) {
+      try {
+        const { DetectResourceType } = await getApp();
+        rtype = (await DetectResourceType(path)) || "";
+      } catch (e) { console.warn("[preview] DetectResourceType:", e); }
+    }
     // 过期守卫：await 期间用户已点其他文件，丢弃本次分流
     if (this._previewGuard.stale(gen)) return;
     // ADR-072 D2：注册表驱动查表派发——新增格式 = 注册表一条目 + PREVIEW_HANDLERS 一行，

@@ -404,7 +404,7 @@ export class AppTree extends WebComponentBase {
     }
 
     updateSelectCount(this._root);
-    bus.emit("model:select", { path: nextKey });
+    bus.emit("model:select", { path: nextKey, rtype: this._rootAttr || this._typeFilter || RESOURCE_TYPES.YSM });
     rememberModelPath(nextKey);
 
     const allRows = container._vsRows || [];

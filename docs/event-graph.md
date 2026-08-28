@@ -94,9 +94,9 @@
 | 文件 | 行 |
 |------|----|
 | `frontend/src/views/app-sidebar/events.ts` | 113 |
-| `frontend/src/views/app-tree/events.ts` | 295 |
-| `frontend/src/views/app-tree/events.ts` | 319 |
-| `frontend/src/views/app-tree/events.ts` | 330 |
+| `frontend/src/views/app-tree/events.ts` | 296 |
+| `frontend/src/views/app-tree/events.ts` | 320 |
+| `frontend/src/views/app-tree/events.ts` | 331 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -210,10 +210,10 @@
 | `frontend/src/features/oldest-models.ts` | 61 |
 | `frontend/src/features/recycle-bin.ts` | 183 |
 | `frontend/src/views/app-content/diagnostics/dedup.ts` | 385 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 228 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 295 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 229 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 296 |
 | `frontend/src/views/app-tree/events.ts` | 155 |
-| `frontend/src/views/app-tree/events.ts` | 251 |
+| `frontend/src/views/app-tree/events.ts` | 252 |
 | `frontend/src/views/app-tree/index.ts` | 407 |
 
 **订阅方（on）：**
@@ -326,7 +326,7 @@
 | `frontend/src/views/app-tree/bus-handlers.ts` | 187 |
 | `frontend/src/views/app-tree/bus-handlers.ts` | 224 |
 | `frontend/src/views/app-tree/events.ts` | 98 |
-| `frontend/src/views/app-tree/events.ts` | 378 |
+| `frontend/src/views/app-tree/events.ts` | 379 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -367,7 +367,7 @@
 |------|----|
 | `frontend/src/views/app-tree/bus-handlers.ts` | 319 |
 | `frontend/src/views/app-tree/events.ts` | 96 |
-| `frontend/src/views/app-tree/events.ts` | 468 |
+| `frontend/src/views/app-tree/events.ts` | 469 |
 
 **订阅方（on）：**
 | 文件 | 行 |
@@ -506,12 +506,12 @@
 | `frontend/src/views/app-content/workshop-tabs.ts` | 90 |
 | `frontend/src/views/app-content/workshop-tabs.ts` | 138 |
 | `frontend/src/views/app-nav/index.ts` | 102 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 241 |
-| `frontend/src/views/app-preview/detail-3d.ts` | 307 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 242 |
+| `frontend/src/views/app-preview/detail-3d.ts` | 308 |
 | `frontend/src/views/app-preview/index.ts` | 235 |
-| `frontend/src/views/app-preview/index.ts` | 255 |
+| `frontend/src/views/app-preview/index.ts` | 257 |
 | `frontend/src/views/app-preview/mmd-controls.ts` | 291 |
-| `frontend/src/views/app-preview/preview-library.ts` | 92 |
+| `frontend/src/views/app-preview/preview-library.ts` | 98 |
 | `frontend/src/views/app-preview/ysm-controls.ts` | 114 |
 | `frontend/src/views/app-sidebar/events.ts` | 110 |
 | `frontend/src/views/app-sidebar/index.ts` | 150 |
@@ -553,11 +553,11 @@
 | `frontend/src/views/app-tree/events.ts` | 180 |
 | `frontend/src/views/app-tree/events.ts` | 196 |
 | `frontend/src/views/app-tree/events.ts` | 203 |
-| `frontend/src/views/app-tree/events.ts` | 381 |
-| `frontend/src/views/app-tree/events.ts` | 422 |
-| `frontend/src/views/app-tree/events.ts` | 430 |
-| `frontend/src/views/app-tree/events.ts` | 471 |
-| `frontend/src/views/app-tree/events.ts` | 484 |
+| `frontend/src/views/app-tree/events.ts` | 382 |
+| `frontend/src/views/app-tree/events.ts` | 423 |
+| `frontend/src/views/app-tree/events.ts` | 431 |
+| `frontend/src/views/app-tree/events.ts` | 472 |
+| `frontend/src/views/app-tree/events.ts` | 485 |
 | `frontend/src/views/app-tree/index.ts` | 200 |
 | `frontend/src/views/app-tree/index.ts` | 343 |
 | `frontend/src/views/app-tree/index.ts` | 351 |

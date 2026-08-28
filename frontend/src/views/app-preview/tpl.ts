@@ -93,7 +93,7 @@ export function statsCardHTML(
   const compTexCount = cats.filter((c) => c && c !== "player").length;
   const catSummary =
     roleTexCount > 0 || compTexCount > 0
-      ? `<div class="pv-card-row" style="font-size:9px;color:var(--muted);padding:1px 0">🎭 ${t("preview.roleTexCount", { role: roleTexCount, comp: compTexCount })}</div>`
+      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">🎭 ${t("preview.roleTexCount", { role: roleTexCount, comp: compTexCount })}</div>`
       : "";
   // L0 清单角色区块（每角色：纹理标题 + 尺寸 + 缩放）
   const subs = model.subModels || [];
@@ -123,7 +123,7 @@ export function statsCardHTML(
   const texCount = model.textures?.length || 0;
   const extraCount = texCount > 0 ? texCount - 1 : 0;
   if (extraCount > 0) {
-    texMapHtml = `<div class="pv-card-row" style="font-size:9px;color:var(--muted);padding:1px 0">📎 ${t("preview.extraTextures", { extra: extraCount, total: texCount })}</div>`;
+    texMapHtml = `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">📎 ${t("preview.extraTextures", { extra: extraCount, total: texCount })}</div>`;
   }
   return `
 ${badge ? `<div class="pv-card-title">${badge}</div>` : ""}

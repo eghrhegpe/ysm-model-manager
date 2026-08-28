@@ -109,7 +109,7 @@ export function buildStatsCard(
         <span style="font-size:11px;color:var(--txt)">${esc(au.name || "")}</span>
         ${
           au.role
-            ? `<span style="font-size:9px;color:var(--muted)">(${esc(au.role)})</span>`
+            ? `<span style="font-size:var(--fs-xs);color:var(--muted)">(${esc(au.role)})</span>`
             : ""
         }
         ${

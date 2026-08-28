@@ -101,8 +101,8 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   const licenseType = cleanText(header.license);
   const freeBadge = header.hasFree
     ? header.isFree
-      ? `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
-      : `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">🔒 ${t("format.paid")}</span>`
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:var(--fs-xs);background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
+      : `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:var(--fs-xs);background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">🔒 ${t("format.paid")}</span>`
     : "";
   let authorHtml = "";
   let workHtml = "";
@@ -139,10 +139,10 @@ ${tips ? `<div style="font-size:11px;color:var(--txt);margin-bottom:10px;line-he
 ${p?.author ? `<div class="md-row"><span class="md-label">${t("preview.authorLabel")}</span><span class="md-value"><span class="tag-author">${esc(p.author)}</span></span></div>` : authorHtml ? `<div class="md-row"><span class="md-label">${t("preview.authorLabel")}</span><span class="md-value">${authorHtml}</span></div>` : ""}
 ${header.linkHome ? `<div class="md-row"><span class="md-label">${t("format.homepage")}</span><span class="md-value"><a href="${esc(safeUrl(header.linkHome))}" target="_blank" style="color:var(--accent);text-decoration:none">${esc(header.linkHome.replace(/^https?:\/\//, "").replace(/\/.*$/, ""))}</a></span></div>` : ""}
 ${header.linkUpdate ? `<div class="md-row"><span class="md-label">${t("format.update")}</span><span class="md-value"><a href="${esc(safeUrl(header.linkUpdate))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.viewUpdate")}</a></span></div>` : ""}
-${header.hash ? `<div class="md-row" style="font-size:9px;color:var(--muted)"><span class="md-label">${t("format.fingerprint")}</span><span class="md-value" style="font-family:monospace;font-size:8px;word-break:break-all">${esc(header.hash)}</span></div>` : ""}
+${header.hash ? `<div class="md-row" style="font-size:var(--fs-xs);color:var(--muted)"><span class="md-label">${t("format.fingerprint")}</span><span class="md-value" style="font-family:monospace;font-size:var(--fs-xs);word-break:break-all">${esc(header.hash)}</span></div>` : ""}
 <div class="md-divider"></div>
-<div class="md-row" style="color:var(--muted);font-size:10px"><span>🔒 ${t("format.encryptedNotice")}</span></div>
-${(header.format ?? 0) > 0 || (header.crypto ?? 0) > 0 ? `<div style="font-size:8px;color:var(--muted);margin-top:4px;text-align:right">${t("format.versionLine", { format: header.format ?? 0, crypto: header.crypto ?? 0 })}</div>` : ""}
+<div class="md-row" style="color:var(--muted);font-size:var(--fs-xs)"><span>🔒 ${t("format.encryptedNotice")}</span></div>
+${(header.format ?? 0) > 0 || (header.crypto ?? 0) > 0 ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:4px;text-align:right">${t("format.versionLine", { format: header.format ?? 0, crypto: header.crypto ?? 0 })}</div>` : ""}
 </div>`;
 }
 
@@ -203,10 +203,10 @@ export function summaryCardHTML(
           displayItems
             .map(
               (it) =>
-                `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;background:color-mix(in srgb,var(--accent,#66d9ef) 14%,transparent);color:var(--accent,#66d9ef);margin:2px 3px;font-weight:500;white-space:nowrap">${esc(it)}</span>`,
+                `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:var(--fs-xs);background:color-mix(in srgb,var(--accent,#66d9ef) 14%,transparent);color:var(--accent,#66d9ef);margin:2px 3px;font-weight:500;white-space:nowrap">${esc(it)}</span>`,
             )
             .join("") + more;
-        return `<div style="margin-bottom:4px"><div style="font-size:10px;font-weight:600;color:var(--txt);margin-bottom:2px">🎬 ${esc(name)}（${items.length}）</div><div>${badges}</div></div>`;
+        return `<div style="margin-bottom:4px"><div style="font-size:var(--fs-xs);font-weight:600;color:var(--txt);margin-bottom:2px">🎬 ${esc(name)}（${items.length}）</div><div>${badges}</div></div>`;
       })
       .filter(Boolean)
       .join("");
@@ -219,19 +219,19 @@ export function summaryCardHTML(
     configHtml = summary.configMenus
       .map((m) => {
         const name = cleanText(m.name || m.id || "");
-        return `<div style="margin-bottom:2px;font-size:9px;color:var(--muted)">⚙️ ${esc(name)}</div>`;
+        return `<div style="margin-bottom:2px;font-size:var(--fs-xs);color:var(--muted)">⚙️ ${esc(name)}</div>`;
       })
       .join("");
     if (configHtml) {
-      configHtml = `<div style="font-size:9px;color:var(--muted);margin-bottom:2px">${t("format.configItems")}</div>${configHtml}`;
+      configHtml = `<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:2px">${t("format.configItems")}</div>${configHtml}`;
     }
   }
 
   // 免费/付费标记
   const freeBadge = header?.hasFree
     ? header.isFree
-      ? `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
-      : `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">🔒 ${t("format.paid")}</span>`
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:var(--fs-xs);background:color-mix(in srgb,var(--free,#1971C2) 18%,transparent);color:var(--free,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
+      : `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:var(--fs-xs);background:color-mix(in srgb,var(--paid,#c62828) 18%,transparent);color:var(--paid,#c62828);margin-left:6px;font-weight:600">🔒 ${t("format.paid")}</span>`
     : "";
 
   return `<div class="content" id="preview-content">

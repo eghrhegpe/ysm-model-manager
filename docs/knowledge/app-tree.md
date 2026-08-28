@@ -52,6 +52,7 @@ invariant_anchors:
 渲染时，搜索态走 `hl(e.name, search)`（utils/dom/html.ts）高亮命中文字，非搜索态走 `renderDisplayName()`（治理红线 4.3）。
 - **MMD 子目录分组展示（ADR-096 P3）**：`loader.ts` 的 `loadEntries` 在加载 MMD 类型扫描结果时，若 `ModelEntry.subdir` 非空（如 `SceneModel`），拼接到 `relPath` 前缀，文件树自动按子目录分组（无需改 `render.ts` 建树逻辑）；网页版 `scanWebModels`（`backend/web-fs.ts`）同步从 `name` 字段提取 `subdir` 字段
 - `_initKeyboardShortcuts` / `_deleteSelected` — 键盘快捷键 / 批量删除
+- **3D 全屏快捷键门禁（2026-08-29）**：`_onKeydown` 开头检查 `document.getElementById(PREVIEW_OVERLAY_ID)`（`ui/ui-constants.ts` 常量的 `ysm-overlay-3d`，与 mount-preview-core overlay 同源）——3D 全屏打开期间树面板不接管任何全局按键（Ctrl+F 不抢焦点、Delete 不误删选中模型、方向键不与 3D 相机平移冲突）；overlay 移除后快捷键恢复
 - 子模块：`bus-handlers.ts`（事件处理）/ `events.ts`（委托）/ `virtual-scroll.ts`（虚拟滚动）/ `loader.ts`（数据加载抽象层）/ `authors.ts`（作者列表加载）/ `toolbar-events.ts`（工具栏 UI 绑定）
 
 ### 渲染性能要点（2026-08-24）

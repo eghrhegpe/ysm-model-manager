@@ -55,7 +55,7 @@ ADR-066 落地的**统一 3D 预览核心**，收缴 vrm / litematic 复制脚�
 ## 核心职责
 
 - **外壳**：overlay + ⚙️ 声明式根菜单(`preview-menu-defs.ts`：`CORE_MENU_ITEMS` + `PREVIEW_MENU_GROUPS`，能力驱动 dock) + viewContainer + loadingEl + 适配器控件容器(`topBar`，仅 vrm/litematic 遗留 `extraControls` 单按钮，Phase 3 收编)
-- **渲染基座（shared 模式）**：创建 `scene` / `camera` / `renderer` / `OrbitControls` / 灯光，驱动 rAF 循环、WASD/拖拽自转、resize、ESC 关闭、GPU 资源释放
+- **渲染基座（shared 模式）**：创建 `scene` / `camera` / `renderer` / `OrbitControls` / 灯光，驱动 rAF 循环、WASD/拖拽自转、resize、ESC 关闭、GPU 资源释放。**WASD 键位表驱动（见 [model3d](./model3d.md) 键位消费链）**：`bindInputHandlers` 按 `KeyboardEvent.code`+`loadTdKeymap()` 映射动作表，`mpApplyWasdCameraMotion` 只查 forward/back/left/right/up/down；输入框焦点守卫防止吞打字；方向键双轨 + 修饰键左右对称。
 - **适配器注入**：内容层经 `PreviewAdapter.build()` 挂进 `ctx.scene`；每帧 `update(dt)` 驱动动态部分（VRM SpringBone、动画）
 - **VRM 动画播放（VRMA）**：`vrm-adapter` 注册 `VRMAnimationLoaderPlugin`，加载同目录 `.vrma`（`listAllFilePaths` 经端口注入，0 backend import），`createVRMAnimationClip` → `THREE.AnimationMixer`；每帧严格 `mixer.update(dt)` → `vrm.update(dt)`（后者内部已含 humanoid / springBone 更新，禁止手动 `vrm.humanoid.update()` 否则 T-pose 回归）；播放时暂停呼吸 / 视线 / 眨眼（与 MMD 行为对齐），复用 `MmdPlayBridge` + `fillMmdPlayPanel` 渲染播放 / 暂停 / 选片面板，无 `.vrma` 时优雅降级（面板不显示）
 - **3D 内模型切换**：`switchToSession(path)` 复用外壳重建内容层（ADR-066 §5.6），对外暴露为 `switchPreview`；`switchPreview(path, { keepInScene: true })` 同台追加（多角色同框，`MAX_MODELS=8` 上限）；角色面板（🧍 模型组 🎭 roles）列出已加载角色（`sceneRegistry`），支持焦点切换 / 详情 / 卸载 / 追加

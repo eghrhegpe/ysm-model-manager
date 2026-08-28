@@ -6,3 +6,6 @@
 export const SLIDER_QUARTER_LARGE_STEP = 0.15;
 /** 中左/中右微调步进：全范围 5% */
 export const SLIDER_QUARTER_SMALL_STEP = 0.05;
+
+/** 3D 全屏预览 overlay 根容器 ID（mount-preview-core 挂载 / app-tree 快捷键门禁共用） */
+export const PREVIEW_OVERLAY_ID = "ysm-overlay-3d";

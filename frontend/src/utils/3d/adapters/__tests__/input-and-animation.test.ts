@@ -62,8 +62,8 @@ describe("bindInputHandlers", () => {
     expect(handlers.onDragPointerDown).toBe(handlers.onDragPointerMove);
 
     // no-op 调用了不报错、也不改变状态
-    handlers.onKeyDown(new KeyboardEvent("keydown", { key: "w" }));
-    expect(opts.keys.w).toBeUndefined();
+    handlers.onKeyDown(new KeyboardEvent("keydown", { key: "w", code: "KeyW" }));
+    expect(opts.keys.forward).toBeUndefined();
     handlers.onResize();
     // 应无副作用
   });
@@ -95,64 +95,127 @@ describe("bindInputHandlers", () => {
     domAddSpy.mockRestore();
   });
 
-  it("onKeyDown：按下 w → keys.w 置 true 并阻止默认", () => {
+  it("onKeyDown：按下 KeyW → keys.forward 置 true 并阻止默认", () => {
     const opts = mkOptions();
     const handlers = bindInputHandlers(opts);
-    const ev = new KeyboardEvent("keydown", { key: "w", bubbles: true, cancelable: true });
+    const ev = new KeyboardEvent("keydown", { key: "w", code: "KeyW", bubbles: true, cancelable: true });
     handlers.onKeyDown(ev);
 
-    expect(opts.keys.w).toBe(true);
+    expect(opts.keys.forward).toBe(true);
     expect(ev.defaultPrevented).toBe(true);
   });
 
-  it("onKeyDown：按下 s → keys.s 置 true 并阻止默认", () => {
+  it("onKeyDown：按下 KeyS → keys.back 置 true 并阻止默认", () => {
     const opts = mkOptions();
     const handlers = bindInputHandlers(opts);
-    const ev = new KeyboardEvent("keydown", { key: "s", cancelable: true });
+    const ev = new KeyboardEvent("keydown", { key: "s", code: "KeyS", cancelable: true });
     handlers.onKeyDown(ev);
 
-    expect(opts.keys.s).toBe(true);
+    expect(opts.keys.back).toBe(true);
     expect(ev.defaultPrevented).toBe(true);
   });
 
-  it("onKeyDown：按下 arrowleft → keys.arrowleft 置 true 并阻止默认", () => {
+  it("onKeyDown：方向键双轨 → ArrowLeft 也激活 left（与 WASD 并存）", () => {
     const opts = mkOptions();
     const handlers = bindInputHandlers(opts);
-    const ev = new KeyboardEvent("keydown", { key: "ArrowLeft", cancelable: true });
+    const ev = new KeyboardEvent("keydown", { key: "ArrowLeft", code: "ArrowLeft", cancelable: true });
     handlers.onKeyDown(ev);
 
-    expect(opts.keys.arrowleft).toBe(true);
+    expect(opts.keys.left).toBe(true);
     expect(ev.defaultPrevented).toBe(true);
   });
 
-  it("onKeyDown：按下空格 → keys[' '] 置 true 并阻止默认", () => {
+  it("onKeyDown：按下空格（Space）→ keys.up 置 true 并阻止默认", () => {
     const opts = mkOptions();
     const handlers = bindInputHandlers(opts);
-    const ev = new KeyboardEvent("keydown", { key: " ", cancelable: true });
+    const ev = new KeyboardEvent("keydown", { key: " ", code: "Space", cancelable: true });
     handlers.onKeyDown(ev);
 
-    expect(opts.keys[" "]).toBe(true);
+    expect(opts.keys.up).toBe(true);
     expect(ev.defaultPrevented).toBe(true);
   });
 
-  it("onKeyDown：按下无关键 q → keys.q 置 true 但不阻止默认", () => {
+  it("onKeyDown：右 Shift 对称 → 按 ShiftRight 也激活 down（默认 down=ShiftLeft）", () => {
     const opts = mkOptions();
     const handlers = bindInputHandlers(opts);
-    const ev = new KeyboardEvent("keydown", { key: "q" });
+    const ev = new KeyboardEvent("keydown", { key: "Shift", code: "ShiftRight", cancelable: true });
     handlers.onKeyDown(ev);
 
-    expect(opts.keys.q).toBe(true);
+    expect(opts.keys.down).toBe(true);
+    // 修饰键本身不被 preventDefault（只记录按键状态，保留系统组合语义）
     expect(ev.defaultPrevented).toBe(false);
   });
 
-  it("onKeyUp：释放 w → keys.w 置 false", () => {
+  it("onKeyDown：无关键 q（KeyQ）→ 不激活任何动作、不阻止默认", () => {
     const opts = mkOptions();
     const handlers = bindInputHandlers(opts);
-    handlers.onKeyDown(new KeyboardEvent("keydown", { key: "w" }));
-    expect(opts.keys.w).toBe(true);
+    const ev = new KeyboardEvent("keydown", { key: "q", code: "KeyQ" });
+    handlers.onKeyDown(ev);
 
-    handlers.onKeyUp(new KeyboardEvent("keyup", { key: "W" }));
-    expect(opts.keys.w).toBe(false);
+    expect(opts.keys.forward).toBeUndefined();
+    expect(opts.keys.back).toBeUndefined();
+    expect(opts.keys.left).toBeUndefined();
+    expect(opts.keys.right).toBeUndefined();
+    expect(opts.keys.up).toBeUndefined();
+    expect(opts.keys.down).toBeUndefined();
+    expect(ev.defaultPrevented).toBe(false);
+  });
+
+  it("onKeyDown：焦点在 INPUT 文本框 → 不记录键位、不阻止默认（打字不受 3D 键位吞掉）", () => {
+    const opts = mkOptions();
+    const handlers = bindInputHandlers(opts);
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    const ev = new KeyboardEvent("keydown", {
+      key: "w", code: "KeyW", bubbles: true, cancelable: true,
+    });
+    // 派发到 input 上，e.target 为 input
+    input.dispatchEvent(ev);
+
+    expect(opts.keys.forward).toBeUndefined();
+    expect(ev.defaultPrevented).toBe(false);
+    document.body.removeChild(input);
+  });
+
+  it("onKeyDown：焦点在 contentEditable → 不记录键位", () => {
+    const opts = mkOptions();
+    const handlers = bindInputHandlers(opts);
+    const editable = document.createElement("div");
+    editable.contentEditable = "true";
+    document.body.appendChild(editable);
+    const ev = new KeyboardEvent("keydown", {
+      key: "w", code: "KeyW", bubbles: true, cancelable: true,
+    });
+    editable.dispatchEvent(ev);
+
+    expect(opts.keys.forward).toBeUndefined();
+    document.body.removeChild(editable);
+  });
+
+  it("onKeyDown：自定义键位生效（td-keymap forward=KeyB → 按 KeyB 激活 forward）", () => {
+    localStorage.setItem("td-keymap", JSON.stringify({ forward: "KeyB" }));
+    const opts = mkOptions();
+    const handlers = bindInputHandlers(opts);
+    const ev = new KeyboardEvent("keydown", { key: "b", code: "KeyB", cancelable: true });
+    handlers.onKeyDown(ev);
+
+    expect(opts.keys.forward).toBe(true);
+    expect(opts.keys.back).toBeUndefined();
+    // 默认 KeyW 不再生效（已被 KeyB 取代）
+    const evW = new KeyboardEvent("keydown", { key: "w", code: "KeyW", cancelable: true });
+    handlers.onKeyDown(evW);
+    expect(opts.keys.forward).toBe(true); // forward 保持 KeyB 激活态（不受 KeyW 影响）
+    localStorage.removeItem("td-keymap");
+  });
+
+  it("onKeyUp：释放 KeyW → keys.forward 置 false", () => {
+    const opts = mkOptions();
+    const handlers = bindInputHandlers(opts);
+    handlers.onKeyDown(new KeyboardEvent("keydown", { key: "w", code: "KeyW" }));
+    expect(opts.keys.forward).toBe(true);
+
+    handlers.onKeyUp(new KeyboardEvent("keyup", { key: "W", code: "KeyW" }));
+    expect(opts.keys.forward).toBe(false);
   });
 
   it("onDragPointerDown：非 orbit + 左键 → 标记 mouseDown、记录坐标、捕获指针", () => {

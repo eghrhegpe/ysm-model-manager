@@ -19,6 +19,7 @@ const appTreeStyle: CSSStyleSheet = (() => {
 })();
 export { appTreeStyle };
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
+import { PREVIEW_OVERLAY_ID } from "../../ui/ui-constants.ts";
 import { headerHTML, footerHTML, spinnerHTML } from "./tpl.ts";
 import { renderTree, updateStat, getRenderMode, setRenderMode, cleanupVirtualScroll, type RenderMode, type TreeRow } from "./render.ts";
 import { ROW_H_GRID, ROW_H_LIST } from "./virtual-scroll.ts";
@@ -312,6 +313,9 @@ export class AppTree extends WebComponentBase {
   }
 
   private async _onKeydown(e: KeyboardEvent): Promise<void> {
+    // 3D 全屏会话激活时让路：Ctrl+F 会把用户踢去树面板搜索框、Delete 会误删选中
+    // 模型、方向键与 3D 相机平移冲突——3D 打开期间树面板不接管任何全局按键。
+    if (document.getElementById(PREVIEW_OVERLAY_ID)) return;
     const target = e.target as HTMLElement | null;
     if (this._onKeyFind(e)) return;
     if (await this._onKeyDelete(e, target)) return;

@@ -177,6 +177,36 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(bindings.DeleteResourcePack).not.toHaveBeenCalled();
   });
 
+  it("3D 全屏 overlay 激活 → Ctrl+F/Delete/方向键全部让路（不接管全局按键）", async () => {
+    const el = await mountEl();
+    const srch = el.shadowRoot!.getElementById("srch") as HTMLInputElement;
+    selectState.keys.add("/repo/a.ysm");
+    const emitBefore = emitSpy.mock.calls.length;
+    // 模拟 3D 全屏 overlay 挂载（id 与 mount-preview-core 共用常量）
+    const overlay = document.createElement("div");
+    overlay.id = "ysm-overlay-3d";
+    document.body.appendChild(overlay);
+
+    dispatchKey("f", { ctrlKey: true });
+    await sleep0();
+    expect(el.shadowRoot!.activeElement).not.toBe(srch); // Ctrl+F 不抢焦点到树搜索框
+
+    dispatchKey("Delete");
+    await sleep0();
+    expect(modalConfirmMock).not.toHaveBeenCalled(); // 不弹删除确认
+    expect(bindings.DeleteResourcePack).not.toHaveBeenCalled();
+
+    dispatchKey("ArrowDown");
+    await sleep0();
+    // 方向键不引发 toast / 删除 / 选中变更（bus 无新增事件）
+    expect(emitSpy.mock.calls.length).toBe(emitBefore);
+
+    document.body.removeChild(overlay);
+    // overlay 移除后快捷键恢复
+    dispatchKey("f", { ctrlKey: true });
+    await waitFor(() => expect(el.shadowRoot!.activeElement).toBe(srch));
+  });
+
   it("Delete 网页版无删除能力 → toast，不删除", async () => {
     await mountEl();
     canMock.mockReturnValue(false); // 模拟无删除能力

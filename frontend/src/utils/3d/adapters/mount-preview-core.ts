@@ -10,7 +10,7 @@
 // 使三套渲染器最终可经注册表统一派发（P3-E）。
 //
 // ┌─ 快速跳转 ───────────────────────────────────────────────────────────────────┐
-// │  §1  常量 + 状态变量      → L100   DRAG_ROTATE_SENSITIVITY / DEFAULT_CAM_SPEED │
+// │  §1  常量 + 状态变量      → L100   DRAG_ROTATE_SENSITIVITY / TIP_AUTO_DISMISS_MS │
 // │  §2  公开 API             → L108   invalidatePreview / cleanupPreview         │
 // │  §3  switchPreview        → L123   会话内切换模型（复用外壳）                   │
 // │  §4  mount3D 入口         → L133   主挂载函数（~700 行）                       │
@@ -61,7 +61,8 @@ import { createHeaderToggle } from "../../../ui/ui-header-toggle.ts";
 import { mountPreviewRootMenu, type PreviewMenuHandle } from "./preview-menu.ts";
 import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 import { type CameraControlBridge } from "./camera-controls.ts";
-import type { BoneSelectInfo, BoneMaps } from "../model3d.ts";
+import { type BoneSelectInfo, BoneMaps, loadTdCamSpeed, loadTdRotMode } from "../model3d.ts";
+import type { TdKeyAction } from "../keymap.ts";
 import {
   PREVIEW_FRAME_INTERVAL_MS,
   createAdaptiveRenderBudget,
@@ -142,9 +143,9 @@ export interface PreviewHandle {
 
 // ===== §1 常量 + 状态变量 =====
 // 相机控制常量（buildCameraControls 已拆至 camera-controls.ts，本文件保留自身仍使用的部分：
-// DRAG_ROTATE_SENSITIVITY 拖拽旋转 / DEFAULT_CAM_SPEED 初始速度 / TIP_AUTO_DISMISS_MS 提示自动消失）
+// DRAG_ROTATE_SENSITIVITY 拖拽旋转 / TIP_AUTO_DISMISS_MS 提示自动消失）
+// camSpeed 默认值已由 keymap.ts loadTdCamSpeed()（默认 20）提供，会话初始化时读取偏好。
 const DRAG_ROTATE_SENSITIVITY = 0.003; // 自身旋转模式拖拽灵敏度（rad/px）
-const DEFAULT_CAM_SPEED = 20;
 const TIP_AUTO_DISMISS_MS = 6000;
 /** perFrame 回调单次执行超过该阈值（ms）即告警（仅测回调段，非整帧） */
 const PER_FRAME_WARN_MS = 50;
@@ -257,8 +258,9 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     isDisposed: { v: false },
     aborted: { v: false },
     cleanupFn: null,
-    camSpeed: DEFAULT_CAM_SPEED,
-    orbitMode: true,
+    // 相机偏好从 localStorage 读取（keymap.ts 同源：速度默认 20，环绕模式默认 orbit）
+    camSpeed: loadTdCamSpeed(),
+    orbitMode: loadTdRotMode(),
     euler: new THREE.Euler(0, 0, 0, "YXZ"),
     built: null,
     sceneBaseline: null,
@@ -270,7 +272,7 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
   };
 
   // input 状态（不进 session：bindInputHandlers 已显式接收 keys/mouseDown/lastMouse）
-  const keys: Record<string, boolean> = {};
+  const keys: Partial<Record<TdKeyAction, boolean>> = {};
   let mouseDown = false;
   let lastMouse = { x: 0, y: 0 };
 
@@ -432,6 +434,9 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
     const groundCap = infra.groundCap;
     const lightCap = infra.lightCap;
     const postProc = infra.postProc;
+    // 偏好同步：自由模式（orbitMode=false）关闭 OrbitControls 自身旋转，
+    // 拖拽自转走 input-and-animation 的 euler 桥（对齐 camBridge.setOrbit 语义）
+    infra.controls.enableRotate = session.orbitMode;
 
     // ===== §4a 输入绑定（WASD 键盘 + 拖拽自转 + resize）=====
     const inputOpts: InputOptions = {
@@ -1057,7 +1062,7 @@ interface MpWasdReuse {
 /** mpApplyWasdCameraMotion：rAF 帧内 WASD/方向键 → 相机平移与焦点跟随（纯函数，无单例依赖；
  *  仅改传入 cam/ctr/ot 引用，移动向量经 reuse 复用，返回值 void） */
 function mpApplyWasdCameraMotion(
-  keys: Record<string, boolean>,
+  keys: Partial<Record<TdKeyAction, boolean>>,
   cam: THREE.PerspectiveCamera,
   ctr: OrbitControls,
   camSpeed: number,
@@ -1070,12 +1075,13 @@ function mpApplyWasdCameraMotion(
   reuse.forward.set(reuse.camDir.x, 0, reuse.camDir.z).normalize();
   reuse.right.crossVectors(reuse.forward, mpUP).normalize();
   reuse.move.set(0, 0, 0);
-  if (keys["w"] || keys["arrowup"]) reuse.move.add(reuse.forward);
-  if (keys["s"] || keys["arrowdown"]) reuse.move.sub(reuse.forward);
-  if (keys["a"] || keys["arrowleft"]) reuse.move.sub(reuse.right);
-  if (keys["d"] || keys["arrowright"]) reuse.move.add(reuse.right);
-  if (keys[" "]) reuse.move.y += 1;
-  if (keys["shift"]) reuse.move.y -= 1;
+  // 动作表驱动（input-and-animation 已按键位表把 code 映射成动作；方向键双轨也在此折叠）
+  if (keys.forward) reuse.move.add(reuse.forward);
+  if (keys.back) reuse.move.sub(reuse.forward);
+  if (keys.left) reuse.move.sub(reuse.right);
+  if (keys.right) reuse.move.add(reuse.right);
+  if (keys.up) reuse.move.y += 1;
+  if (keys.down) reuse.move.y -= 1;
   if (reuse.move.length() > 0) {
     reuse.move.normalize().multiplyScalar(camSpeed * dt);
     cam.position.add(reuse.move);

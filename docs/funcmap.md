@@ -1341,7 +1341,7 @@
 | `fbxSceneToData()` | `frontend/src/utils/3d/adapters/fbx-scene-to-data:209` | — |
 | `InputOptions()` | `frontend/src/utils/3d/adapters/input-and-animation:27` | 输入绑定所需的最小依赖集（原 mount3D 内嵌状态） |
 | `InputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:42` | 输入事件 handler 集合（供 fullCleanup 解绑用） |
-| `bindInputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:111` | 创建并绑定所有 3D 预览输入事件：键盘（键位表驱动）+ 拖拽自转 + resize。 |
+| `bindInputHandlers()` | `frontend/src/utils/3d/adapters/input-and-animation:116` | 创建并绑定所有 3D 预览输入事件：键盘（键位表驱动）+ 拖拽自转 + resize。 |
 | `buildLitematicScene()` | `frontend/src/utils/3d/adapters/litematic-adapter:416` | Litematic 内容构建：把体素网格挂入核心 scene，返回 dispose + 分层控件钩子。 |
 | `litematicMenuItems()` | `frontend/src/utils/3d/adapters/litematic-adapter:459` | 构造 litematic 专属菜单项： 分层切片调节（axis/layer 控件）作为 🧍 模型组的一个面板项， 点击后弹出面板，内含轴选择 + 分层模式 + 滑块控件。 |
 | `MaterialBridgeLike()` | `frontend/src/utils/3d/adapters/material-controls:10` | material bridge 最小结构（MMD / VRM bridge 均满足——鸭子类型，无跨层依赖） |

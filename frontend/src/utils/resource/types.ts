@@ -76,6 +76,25 @@ export function resolvePreviewKeyToRtype(previewKey: string): string {
   return entry?.id ?? previewKey;
 }
 
+/**
+ * 按扩展名解析预览 key 的全局兜底（ADR-111 兜底层）。
+ * 场景：DetectResourceType 对歧义扩展名（如 .pmx 同时声明于 EntityPlayer/SceneModel）保守返回
+ * "other"，而该扩展名在任一类型的 variants 中有明确预览适配器（如 .pmx→mmd）。
+ * 此时预览路由不应直接判"暂不支持"——按扩展名取首个声明者的 preview key 兜底路由。
+ * 注意：本函数只做「预览适配器路由」派生，不参与资源类型判定（类型判定唯一事实源仍是
+ * resource_types.json + Go）；返回空串表示无任何 variants 声明该扩展名。
+ */
+export function resolvePreviewKeyByExt(filePath: string): string {
+  const ext = extOf(filePath);
+  if (!ext) return "";
+  for (const t of allResourceTypes) {
+    for (const v of t.variants ?? []) {
+      if (v.ext === ext) return v.preview;
+    }
+  }
+  return "";
+}
+
 // ===== 资源分组派生（ADR-092：FilesRoot/{group}/{storageSubDir} 两层路由）=====
 // 从各类型 group 字段派生，消除 resourceGroups 冗余源。
 // 组 = 所有类型的 group 字段去重集合，新资源注册后自动入组。

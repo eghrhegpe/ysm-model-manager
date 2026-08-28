@@ -13,7 +13,7 @@
 
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 import { getApp } from "../../backend/app.ts";
-import { RESOURCE_TYPE_LABELS, resolvePreviewKey, resolvePreviewKeyToRtype, getPreviewableTypeTabs } from "../../utils/resource/types.ts";
+import { RESOURCE_TYPE_LABELS, resolvePreviewKey, resolvePreviewKeyByExt, resolvePreviewKeyToRtype, getPreviewableTypeTabs } from "../../utils/resource/types.ts";
 import type { Mount3DOptions } from "../../utils/3d/adapters/mount-preview-core.ts";
 import { switchPreview, hasActivePreview, cleanupPreview } from "../../utils/3d/adapters/mount-preview-core.ts";
 
@@ -77,7 +77,10 @@ export async function openModel3DFullscreen(path: string, options?: OpenModel3DO
   }
   // ADR-111：按 variants 解析预览 key（.pmx→mmd、.vrm→vrm），无变体回退 rtype
   const routeKey = resolvePreviewKey(path, rtype);
-  const opener = _openers[routeKey];
+  // 兜底（歧义扩展名）：DetectResourceType 对 .pmx 等多声明扩展名保守返回 "other"，
+  // 而 variants 明确声明了预览适配器（如 .pmx→mmd）——按扩展名再查一次，避免
+  // 跨类型浏览 PMX 时误报「3D 预览暂不支持该类型」（仅预览路由派生，不参与类型判定）
+  const opener = _openers[routeKey] ?? (routeKey === "" || routeKey === "other" ? _openers[resolvePreviewKeyByExt(path)] : undefined);
   if (opener) {
     if (!options?.cooperate && hasActivePreview()) {
       cleanupPreview();

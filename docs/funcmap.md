@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 164 | 651 |
+| 前端·工具 | 164 | 655 |
 | frontend/views | 117 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **494** | **2090** |
+| **合计** | **494** | **2094** |
 
 ## Go·头像
 
@@ -1543,9 +1543,12 @@
 | `DEFAULT_FOG_PARAMS()` | `frontend/src/utils/3d/caps/fog-capability:30` | — |
 | `FOG_PRESETS()` | `frontend/src/utils/3d/caps/fog-capability:40` | 模型类别雾预设：材质特性不同，雾浓度/远近做合理初始值 |
 | `FogCapability()` | `frontend/src/utils/3d/caps/fog-capability:68` | — |
-| `GroundParams()` | `frontend/src/utils/3d/caps/ground-capability:37` | — |
-| `DEFAULT_GROUND_PARAMS()` | `frontend/src/utils/3d/caps/ground-capability:58` | — |
-| `GroundCapability()` | `frontend/src/utils/3d/caps/ground-capability:71` | — |
+| `WaterMode()` | `frontend/src/utils/3d/caps/ground-capability:38` | 水面呈现模式：film=贴地薄水膜；pool=立体水池（有侧壁 + 高度） |
+| `WaterParams()` | `frontend/src/utils/3d/caps/ground-capability:41` | — |
+| `DEFAULT_WATER_PARAMS()` | `frontend/src/utils/3d/caps/ground-capability:68` | — |
+| `GroundParams()` | `frontend/src/utils/3d/caps/ground-capability:83` | — |
+| `DEFAULT_GROUND_PARAMS()` | `frontend/src/utils/3d/caps/ground-capability:98` | — |
+| `GroundCapability()` | `frontend/src/utils/3d/caps/ground-capability:108` | — |
 | `GroundSurfaceMode()` | `frontend/src/utils/3d/caps/ground-surface-spec:17` | 地面表面模式（扁平枚举：来源 × 画布样式合一，避免双字段耦合守卫） |
 | `GroundMaterialParams()` | `frontend/src/utils/3d/caps/ground-surface-spec:19` | — |
 | `DEFAULT_GROUND_SURFACE_PARAMS()` | `frontend/src/utils/3d/caps/ground-surface-spec:46` | — |
@@ -1944,23 +1947,24 @@
 | `ALL_RESOURCE_TYPES()` | `frontend/src/utils/resource/types:47` | 全部资源类型 ID 列表（从 resource_types.json id 派生，单一事实来源） |
 | `resolvePreviewKey()` | `frontend/src/utils/resource/types:56` | 按 variants 解析预览路由 key（ADR-111：类别—格式分层）。 |
 | `resolvePreviewKeyToRtype()` | `frontend/src/utils/resource/types:72` | 预览键反解为资源类型 ID（ADR-111 逆向）。 |
-| `GROUP_META()` | `frontend/src/utils/resource/types:85` | 分组元数据（id → {name, icon, order}），从各类型 group 字段派生 |
-| `GROUP_OF()` | `frontend/src/utils/resource/types:100` | 资源类型 → 所属分组 id（无 group 字段返回空串 = 单级平铺） |
-| `groupLabelOf()` | `frontend/src/utils/resource/types:106` | 分组 id → 显示名 |
-| `GroupTypeOption()` | `frontend/src/utils/resource/types:116` | 大类(group) → 其下资源类型选项（ADR-092 双下拉导航第二级）。 |
-| `GROUP_TYPE_OPTIONS()` | `frontend/src/utils/resource/types:121` | — |
-| `groupStorageRootOf()` | `frontend/src/utils/resource/types:137` | 资源类型在 FilesRoot 下的分组存储根目录（ADR-092 两层路由）。 |
-| `extOf()` | `frontend/src/utils/resource/types:149` | 提取路径扩展名（小写、含点；无扩展名返回空串） |
-| `NO_3D_TYPES()` | `frontend/src/utils/resource/types:184` | 无 3D 预览能力的资源类型集合（从 resource_types.json preview 字段派生）。 |
-| `PreviewTab()` | `frontend/src/utils/resource/types:200` | 3D 切换面板类型 tab 的单一事实来源（ADR-111 收口）。 |
-| `getPreviewableTypeTabs()` | `frontend/src/utils/resource/types:207` | — |
-| `matchTypeByExt()` | `frontend/src/utils/resource/types:230` | 路径是否属于指定类型（按注册表 extensions 判定，不处理歧义扩展名） |
-| `typeIconOf()` | `frontend/src/utils/resource/types:255` | 资源类型图标（从 resource_types.json 的 icon 字段派生——扩展点残留清单 #3： 原 icon.ts 手写 RTYPE_ICONS 与 JSON 漂移，新 |
-| `isYsmWasmPreview()` | `frontend/src/utils/resource/types:260` | ysm 单文件（.ysm/.json）走前端 WASM 预览；.zip/.7z 容器由 Go FindPreviewImage 兜底 |
-| `VOXEL_RPC_BY_EXT()` | `frontend/src/utils/resource/types:266` | 体素类（蓝图/投影）Go 体素数据 RPC 名称，按扩展名单点映射（ADR-066 解墙） |
-| `AMBIGUOUS_EXTS()` | `frontend/src/utils/resource/types:277` | 歧义扩展名集合：同扩展名归属 ≥2 类型，禁止用 matchTypeByExt / resolveTypeByExt 直接定类型。 |
-| `resolveTypeSafe()` | `frontend/src/utils/resource/types:290` | 安全解析类型（ADR-067）：单归属扩展名直接命中；歧义扩展名（.zip/.7z 等可包裹任意资源） 返回 null，调用方必须回退到 Go DetectResourceType |
-| `matchZipEntryTS()` | `frontend/src/utils/resource/types:340` | 按注册表 zipEntries 指纹匹配 ZIP 条目名，返回命中的资源类型 ID（ADR-082 S4： 前端指纹注册表化，与 Go types.MatchZipEntry 同构 |
+| `resolvePreviewKeyByExt()` | `frontend/src/utils/resource/types:87` | 按扩展名解析预览 key 的全局兜底（ADR-111 兜底层）。 |
+| `GROUP_META()` | `frontend/src/utils/resource/types:104` | 分组元数据（id → {name, icon, order}），从各类型 group 字段派生 |
+| `GROUP_OF()` | `frontend/src/utils/resource/types:119` | 资源类型 → 所属分组 id（无 group 字段返回空串 = 单级平铺） |
+| `groupLabelOf()` | `frontend/src/utils/resource/types:125` | 分组 id → 显示名 |
+| `GroupTypeOption()` | `frontend/src/utils/resource/types:135` | 大类(group) → 其下资源类型选项（ADR-092 双下拉导航第二级）。 |
+| `GROUP_TYPE_OPTIONS()` | `frontend/src/utils/resource/types:140` | — |
+| `groupStorageRootOf()` | `frontend/src/utils/resource/types:156` | 资源类型在 FilesRoot 下的分组存储根目录（ADR-092 两层路由）。 |
+| `extOf()` | `frontend/src/utils/resource/types:168` | 提取路径扩展名（小写、含点；无扩展名返回空串） |
+| `NO_3D_TYPES()` | `frontend/src/utils/resource/types:203` | 无 3D 预览能力的资源类型集合（从 resource_types.json preview 字段派生）。 |
+| `PreviewTab()` | `frontend/src/utils/resource/types:219` | 3D 切换面板类型 tab 的单一事实来源（ADR-111 收口）。 |
+| `getPreviewableTypeTabs()` | `frontend/src/utils/resource/types:226` | — |
+| `matchTypeByExt()` | `frontend/src/utils/resource/types:249` | 路径是否属于指定类型（按注册表 extensions 判定，不处理歧义扩展名） |
+| `typeIconOf()` | `frontend/src/utils/resource/types:274` | 资源类型图标（从 resource_types.json 的 icon 字段派生——扩展点残留清单 #3： 原 icon.ts 手写 RTYPE_ICONS 与 JSON 漂移，新 |
+| `isYsmWasmPreview()` | `frontend/src/utils/resource/types:279` | ysm 单文件（.ysm/.json）走前端 WASM 预览；.zip/.7z 容器由 Go FindPreviewImage 兜底 |
+| `VOXEL_RPC_BY_EXT()` | `frontend/src/utils/resource/types:285` | 体素类（蓝图/投影）Go 体素数据 RPC 名称，按扩展名单点映射（ADR-066 解墙） |
+| `AMBIGUOUS_EXTS()` | `frontend/src/utils/resource/types:296` | 歧义扩展名集合：同扩展名归属 ≥2 类型，禁止用 matchTypeByExt / resolveTypeByExt 直接定类型。 |
+| `resolveTypeSafe()` | `frontend/src/utils/resource/types:309` | 安全解析类型（ADR-067）：单归属扩展名直接命中；歧义扩展名（.zip/.7z 等可包裹任意资源） 返回 null，调用方必须回退到 Go DetectResourceType |
+| `matchZipEntryTS()` | `frontend/src/utils/resource/types:359` | 按注册表 zipEntries 指纹匹配 ZIP 条目名，返回命中的资源类型 ID（ADR-082 S4： 前端指纹注册表化，与 Go types.MatchZipEntry 同构 |
 | `safeErrorMessage()` | `frontend/src/utils/safe-error-msg:19` | 从任意错误对象提取可读消息字符串。 |
 | `WorkshopSite()` | `frontend/src/utils/types-re-export` | — |
 | `WorkshopPresetSearch()` | `frontend/src/utils/types-re-export` | — |
@@ -2169,8 +2173,8 @@
 | `getRegisteredRoutes()` | `frontend/src/views/app-preview/preview-library:32` | 返回已注册的路由类型列表（供测试/CI 验证 _openers 覆盖率，审核 P3） |
 | `OpenModel3DOptions()` | `frontend/src/views/app-preview/preview-library:37` | openModel3DFullscreen 选项（ADR-093 T4：cooperate 统一多模型同台追加入口） |
 | `openModel3DFullscreen()` | `frontend/src/views/app-preview/preview-library:57` | 通用「打开一个模型 3D」路由：探测类型 → 查注册表派发 opener（跨类型换角色）。 |
-| `scanModelsByType()` | `frontend/src/views/app-preview/preview-library:109` | 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesFiltered， 复用文件树扫描缓存，不逐文件解析）。供 3D 内切 |
-| `withPreviewExtras()` | `frontend/src/views/app-preview/preview-library:126` | 给 mount3D opts 注入「跨类型换角色」入口 + 按类型懒加载数据源。各 createXxx3D 统一经此接入 |
+| `scanModelsByType()` | `frontend/src/views/app-preview/preview-library:112` | 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesFiltered， 复用文件树扫描缓存，不逐文件解析）。供 3D 内切 |
+| `withPreviewExtras()` | `frontend/src/views/app-preview/preview-library:129` | 给 mount3D opts 注入「跨类型换角色」入口 + 按类型懒加载数据源。各 createXxx3D 统一经此接入 |
 | `createScene3D()` | `frontend/src/views/app-preview/scene-3d:32` | 打开场景 MMD 3D 预览（独立入口，只加载 SceneModel 目录下的 PMX/PMD） |
 | `cleanupScene3D()` | `frontend/src/views/app-preview/scene-3d:37` | 清理场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateScenePreview()` | `frontend/src/views/app-preview/scene-3d:42` | 任意新预览派发时调用，作废在途场景加载 |

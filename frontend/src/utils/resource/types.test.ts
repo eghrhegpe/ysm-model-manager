@@ -342,6 +342,35 @@ describe("resolvePreviewKey 按 variants 分发预览器", () => {
   });
 });
 
+// ===== resolvePreviewKeyByExt（ADR-111 兜底层：歧义扩展名预览路由兜底）=====
+import { resolvePreviewKeyByExt } from "./types.ts";
+
+describe("resolvePreviewKeyByExt 按扩展名兜底解析预览器", () => {
+  it(".pmx 歧义扩展名 → mmd（EntityPlayer 首个声明者，跨类型浏览 PMX 的兜底路由）", () => {
+    expect(resolvePreviewKeyByExt("/repo/model.pmx")).toBe("mmd");
+  });
+
+  it(".vrm → vrm（与 resolvePreviewKey 的 EntityPlayer 变体口径一致）", () => {
+    expect(resolvePreviewKeyByExt("/repo/avatar.vrm")).toBe("vrm");
+  });
+
+  it(".pmd → mmd（EntityPlayer/SceneModel 双声明歧义，取首个声明者）", () => {
+    expect(resolvePreviewKeyByExt("/repo/model.pmd")).toBe("mmd");
+  });
+
+  it("无 variants 声明扩展名 → 空串（不误判，保持原 toast 兜底路径）", () => {
+    expect(resolvePreviewKeyByExt("/repo/unknown.xyz")).toBe("");
+  });
+
+  it("无扩展名文件 → 空串", () => {
+    expect(resolvePreviewKeyByExt("/repo/Makefile")).toBe("");
+  });
+
+  it("大小写不敏感（.PMX 与 .pmx 同命中）", () => {
+    expect(resolvePreviewKeyByExt("/repo/MODEL.PMX")).toBe("mmd");
+  });
+});
+
 // ===== resolvePreviewKeyToRtype（ADR-111 逆向，批次6 P3 补测）=====
 import { resolvePreviewKeyToRtype } from "./types.ts";
 

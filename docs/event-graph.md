@@ -511,7 +511,7 @@
 | `frontend/src/views/app-preview/index.ts` | 235 |
 | `frontend/src/views/app-preview/index.ts` | 255 |
 | `frontend/src/views/app-preview/mmd-controls.ts` | 291 |
-| `frontend/src/views/app-preview/preview-library.ts` | 89 |
+| `frontend/src/views/app-preview/preview-library.ts` | 92 |
 | `frontend/src/views/app-preview/ysm-controls.ts` | 114 |
 | `frontend/src/views/app-sidebar/events.ts` | 110 |
 | `frontend/src/views/app-sidebar/index.ts` | 150 |

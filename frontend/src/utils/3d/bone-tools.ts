@@ -126,7 +126,7 @@ export function getBoneDetail(id: string, tree: BoneTree): BoneDetail | null {
 }
 
 /** 骨骼显隐：设置该骨骼节点及其所有子网格可见性（需 object；无 object no-op） */
-export function setBoneVisible(node: BoneNode | undefined, visible: boolean): void {
+export function setBoneNodeVisible(node: BoneNode | undefined, visible: boolean): void {
   if (!node?.object) return;
   node.object.traverse((c) => {
     (c as THREE.Object3D).visible = visible;

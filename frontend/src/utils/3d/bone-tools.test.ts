@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== 通用骨骼工具层测试（bone-tools.ts）=====
 // 覆盖：buildBoneTree 层级构建 / listBonesWithDepth 深度缩进 / getBonePath /
-// getBonePosition / getBoneDetail / setBoneVisible + toggleBoneVisible。
+// getBonePosition / getBoneDetail / setBoneNodeVisible + toggleBoneVisible。
 // （拾取不在此层：ysm 走 bone-raycast、mmd 走 pickMmdBone，见 bone-tools.ts 审核注记）
 import { describe, it, expect, vi } from "vitest";
 import * as THREE from "three";
@@ -11,7 +11,7 @@ import {
   getBonePath,
   getBonePosition,
   getBoneDetail,
-  setBoneVisible,
+  setBoneNodeVisible,
   toggleBoneVisible,
   type BoneNode,
 } from "./bone-tools.ts";
@@ -114,20 +114,20 @@ describe("getBoneDetail", () => {
   });
 });
 
-describe("setBoneVisible / toggleBoneVisible", () => {
-  it("setBoneVisible：节点 + 子网格全设；无 object no-op", () => {
+describe("setBoneNodeVisible / toggleBoneVisible", () => {
+  it("setBoneNodeVisible：节点 + 子网格全设；无 object no-op", () => {
     const { tree } = treeWithObjects();
     const head = tree.byId.get("head")!;
     head.object!.add(new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial()));
     head.object!.traverse((c) => (c.visible = true));
-    setBoneVisible(head, false);
+    setBoneNodeVisible(head, false);
     let allHidden = true;
     head.object!.traverse((c) => {
       if (c.visible) allHidden = false;
     });
     expect(allHidden).toBe(true);
     // no-op：无 object 节点
-    expect(() => setBoneVisible(undefined, false)).not.toThrow();
+    expect(() => setBoneNodeVisible(undefined, false)).not.toThrow();
   });
 
   it("toggleBoneVisible：取反", () => {

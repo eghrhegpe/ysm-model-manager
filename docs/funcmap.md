@@ -1525,7 +1525,7 @@
 | `getBonePosition()` | `frontend/src/utils/3d/bone-tools:93` | 骨骼 id → 世界坐标（需 object；无 object 或缺省返回 null） |
 | `BoneDetail()` | `frontend/src/utils/3d/bone-tools:101` | 骨骼详情：路径/坐标/父骨骼/子骨骼列表（id 不存在返回 null） |
 | `getBoneDetail()` | `frontend/src/utils/3d/bone-tools:110` | — |
-| `setBoneVisible()` | `frontend/src/utils/3d/bone-tools:129` | 骨骼显隐：设置该骨骼节点及其所有子网格可见性（需 object；无 object no-op） |
+| `setBoneNodeVisible()` | `frontend/src/utils/3d/bone-tools:129` | 骨骼显隐：设置该骨骼节点及其所有子网格可见性（需 object；无 object no-op） |
 | `toggleBoneVisible()` | `frontend/src/utils/3d/bone-tools:137` | 骨骼显隐：切换（取反）该骨骼节点可见性 |
 | `findAncestorBoneId()` | `frontend/src/utils/3d/bone-tools:153` | 沿 Object3D 父链向上找最近的骨骼 id（object 引用匹配，不依赖 name 约定） |
 | `pickBone()` | `frontend/src/utils/3d/bone-tools:169` | Raycaster 拾取：命中任意 mesh → 沿父链找最近挂载在骨骼节点上的祖先（需 object）。 |

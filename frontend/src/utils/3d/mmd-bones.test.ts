@@ -1,12 +1,12 @@
 // @vitest-environment node
 // ===== MMD 骨骼适配层测试（utils/3d/mmd-bones.ts + bone-tools.ts 通用层集成）=====
 // 覆盖：mmdBonesToBoneNodes 适配正确性（id/parentId/object）、与 bone-tools 通用层集成
-// （buildBoneTree / listBonesWithDepth / getBoneDetail / setBoneVisible 作用于 MMD 数据）、
+// （buildBoneTree / listBonesWithDepth / getBoneDetail / setBoneNodeVisible 作用于 MMD 数据）、
 // pickMmdBone 拾取（射线距离命中 / 阈值 / 隐藏跳过）。
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { mmdBonesToBoneNodes, pickMmdBone } from "./mmd-bones.ts";
-import { buildBoneTree, listBonesWithDepth, getBoneDetail, setBoneVisible } from "./bone-tools.ts";
+import { buildBoneTree, listBonesWithDepth, getBoneDetail, setBoneNodeVisible } from "./bone-tools.ts";
 
 // 骨骼数据：0 骨盆（根）、1 脊柱（0 子）、2 头（1 子）、3 左腿（0 子）、4 独立根（父越界 5 → 根）
 const PMX = [
@@ -62,7 +62,7 @@ describe("与 bone-tools 通用层集成", () => {
     expect(list.find((b) => b.id === "0")!.depth).toBe(0);
   });
 
-  it("getBoneDetail：路径/父骨骼 + setBoneVisible 作用于 MMD bone", () => {
+  it("getBoneDetail：路径/父骨骼 + setBoneNodeVisible 作用于 MMD bone", () => {
     const bones = makeBones(); // 复用同一数组（tree 的 object 引用同一批 bone）
     const tree = buildBoneTree(mmdBonesToBoneNodes(PMX, bones));
     const d = getBoneDetail("2", tree)!;
@@ -72,8 +72,8 @@ describe("与 bone-tools 通用层集成", () => {
     expect(d.parent).toEqual({ id: "1", name: "脊柱" });
     expect(d.children).toEqual([]);
     expect(d.position?.y).toBeCloseTo(2, 5);
-    // 显隐：setBoneVisible 经 traverse 设置 THREE.Bone.visible（同一 bones 数组）
-    setBoneVisible(tree.byId.get("0"), false);
+    // 显隐：setBoneNodeVisible 经 traverse 设置 THREE.Bone.visible（同一 bones 数组）
+    setBoneNodeVisible(tree.byId.get("0"), false);
     expect(bones[0].visible).toBe(false);
   });
 });

@@ -183,6 +183,8 @@ export function summaryCardHTML(
   const preview = summary?.preview || {};
 
   // 动画分组（内部标识符只显示计数，有中文名的显示标签）
+  // 2026-08-28：标题带有效项计数（如「其他动画（7）」）——资源行「贴图/模型/动画」已删
+  // （贴图/模型与统计卡重叠且 Go 侧只数清单条目不准确），动画计数并入分组标题承载
   let animGroupHtml = "";
   const isInternalId = (n: string): boolean =>
     /^[a-z_]+$/.test(n) || /^(range|checkbox|radio|slider|toggle)$/i.test(n);
@@ -205,7 +207,7 @@ export function summaryCardHTML(
                 `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;background:color-mix(in srgb,var(--accent,#66d9ef) 14%,transparent);color:var(--accent,#66d9ef);margin:2px 3px;font-weight:500;white-space:nowrap">${esc(it)}</span>`,
             )
             .join("") + more;
-        return `<div style="margin-bottom:4px"><div style="font-size:10px;font-weight:600;color:var(--txt);margin-bottom:2px">🎬 ${esc(name)}</div><div>${badges}</div></div>`;
+        return `<div style="margin-bottom:4px"><div style="font-size:10px;font-weight:600;color:var(--txt);margin-bottom:2px">🎬 ${esc(name)}（${items.length}）</div><div>${badges}</div></div>`;
       })
       .filter(Boolean)
       .join("");
@@ -242,8 +244,6 @@ ${tips ? `<div style="font-size:11px;color:var(--txt);margin-bottom:10px;line-he
 <div class="md-row"><span class="md-label">${t("format.license")}</span><span class="md-value">${esc(licenseType) || t("format.unlabeled")}</span></div>
 
 <div class="md-divider"></div>
-
-<div class="md-row"><span class="md-label">📦 ${t("format.resources")}</span><span class="md-value">${t("format.resourceStats", { tex: stats.textures || 0, models: stats.models || 0, anims: stats.animations || 0 })}</span></div>
 
 ${preview.heightScale || preview.widthScale ? `<div class="md-row"><span class="md-label">📐 ${t("format.scale")}</span><span class="md-value">${(preview.heightScale ?? 1).toFixed(2)} × ${(preview.widthScale || 1).toFixed(2)}</span></div>` : ""}
 

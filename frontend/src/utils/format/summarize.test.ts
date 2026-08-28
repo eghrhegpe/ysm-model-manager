@@ -50,10 +50,13 @@ describe("summaryCardHTML 完整摘要", () => {
     expect(html).not.toContain("作者A");
   });
 
-  it("渲染资源统计（纹理尺寸已移至统计卡，摘要卡不再渲染）", () => {
+  it("资源行已删除（贴图/模型与统计卡重叠且不准；动画计数并入分组标题）", () => {
     const html = summaryCardHTML(full, {});
-    expect(html).toContain("贴图 4 · 模型 2 · 动画 6");
-    // 方案 A：纹理尺寸由统计卡彩色分区（pv-section-green）承载
+    // 资源行整体移除
+    expect(html).not.toContain("贴图 4 · 模型 2 · 动画 6");
+    // 动画计数由分组标题承载（full.animGroups 表情组清洗后剩 1 项「开心」）
+    expect(html).toContain("表情（1）");
+    // 纹理尺寸仍由统计卡承载
     expect(html).not.toContain("128 × 256 px");
   });
 

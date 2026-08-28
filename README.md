@@ -164,7 +164,7 @@
 
 ### 🧭 CLI 命令行模式
 
-- 脱离 GUI 的全量命令行操作（90+ 命令，清单见 `docs/cli-commands.md`）：扫描 / 搜索 / 安装 / 同步 / 去重 / 回收站 / 工坊 / 标签 / 配置等
+- 脱离 GUI 的全量命令行操作（39 个顶层命令，清单见 `docs/cli-commands.md`）：扫描 / 搜索 / 安装 / 同步 / 去重 / 回收站 / 工坊 / 标签 / 配置等
 - **性能诊断**：`file-bench` / `single-bench` / `concurrent-bench` 定位加载瓶颈；`analyze-mmd` 分析模型结构
 - **缓存治理**：`cache-status` / `cache-verify` / `cache-clear` 管理纹理缓存
 

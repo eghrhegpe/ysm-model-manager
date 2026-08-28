@@ -40,7 +40,7 @@
 | Go·YSM 核心 | 7 | 26 |
 | Go(internal)·应用入口 | 29 | 213 |
 | 前端·根 (app-modules/bus) | 4 | 17 |
-| frontend/backend | 24 | 119 |
+| frontend/backend | 24 | 120 |
 | 前端·核心 | 18 | 37 |
 | 前端·特性 | 17 | 84 |
 | 前端·服务 | 2 | 18 |
@@ -50,7 +50,7 @@
 | frontend/views | 117 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **494** | **2089** |
+| **合计** | **494** | **2090** |
 
 ## Go·头像
 
@@ -978,6 +978,7 @@
 | `ANDROID_UNAVAILABLE()` | `frontend/src/backend/platform-web:33` | Android 桌面专属/无意义 binding 黑名单（蓝本 = go-android-platform-guard.md）。原驻 capabilities.ts，P3 归位 b |
 | `canBinding()` | `frontend/src/backend/platform-web:46` | 能力矩阵（对齐 MikuMikuAR ADR-176 capabilities 矩阵范式）： desktop — Go 桥全量可用；web — adapter has 探测（未实现 |
 | `isViewerPlatform()` | `frontend/src/backend/platform-web:63` | 查看器平台谓词 = 非桌面（web ∪ android）。parity 契约②的规范实现： `isViewerPlatform() === (resolvePlatformMode |
+| `isWebPlatform()` | `frontend/src/backend/platform-web:72` | 网页版谓词 = 仅 web（非 Android）。与 platform.ts 的 resolveWebMode() 等价 （契约由 platform-parity.test.ts |
 | `WailsAndroidBridge()` | `frontend/src/backend/platform:18` | Android Java 桥最小形状（MainActivity addJavascriptInterface 注册名 "wails"；桌面端无此桥） |
 | `getAndroidBridge()` | `frontend/src/backend/platform:24` | Tier 2 原语：返回 Android Java 桥（桌面端为 null），类型安全断言（无 as any） |
 | `readDeclaredBackend()` | `frontend/src/backend/platform:30` | 读取入口 HTML 声明的适配器身份（'go' | 'browser'），未声明返回 undefined |

@@ -288,6 +288,10 @@ export const autoSidebar = [
         "link": "/releases/v1.13.2"
       },
       {
+        "text": "v1.14.0 — 联邦渲染能力激活 + 3D 预览重构 + 同步去重核心",
+        "link": "/releases/v1.14.0"
+      },
+      {
         "text": "v1.2.0 — 开发者对比（技术细节）",
         "link": "/releases/v1.2.0-compare"
       },

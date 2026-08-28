@@ -16,7 +16,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI_BRIDGE = path.join(ROOT, 'frontend/src/services/cli-bridge.ts');
 const CLI_ALLOWLIST = path.join(ROOT, 'frontend/src/backend/cli-allowlist.ts');
 const FLOW_GO = path.join(ROOT, 'go/cli/flow.go');
 const CONCURRENT_GO = path.join(ROOT, 'go/cli/concurrent.go');
@@ -36,7 +35,6 @@ function readOrDie(rel) {
   return fs.readFileSync(p, 'utf8');
 }
 
-const bridge = readOrDie('frontend/src/services/cli-bridge.ts');
 const allowlist = readOrDie('frontend/src/backend/cli-allowlist.ts');
 const flowGo = readOrDie('go/cli/flow.go');
 const concurrentGo = readOrDie('go/cli/concurrent.go');

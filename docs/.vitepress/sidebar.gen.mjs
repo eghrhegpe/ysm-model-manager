@@ -1245,76 +1245,16 @@ export const autoSidebar = [
         "link": "/audit/audit-framework"
       },
       {
-        "text": "第 R1 轮审核报告：3D 引擎核心层",
-        "link": "/audit/audit-r1-3d-engine-core-2026-08-18"
-      },
-      {
-        "text": "R10 审核：动画系统资源管理",
-        "link": "/audit/audit-r10-animation-resource-management-2026-08-18"
-      },
-      {
-        "text": "审计 R11 — 纹理生命周期管理",
-        "link": "/audit/audit-r11-texture-lifecycle-2026-08-18"
-      },
-      {
-        "text": "审计 R12 — 场景切换竞态与 dispose/build 重叠",
-        "link": "/audit/audit-r12-scene-switch-race-2026-08-18"
-      },
-      {
-        "text": "审计 R13 — Go 侧资源管理审计",
-        "link": "/audit/audit-r13-go-resource-management-2026-08-18"
-      },
-      {
         "text": "R14 — 全量测试覆盖率审计报告",
         "link": "/audit/audit-r14-coverage-2026-08-18"
-      },
-      {
-        "text": "第 2 轮审核报告：Go 后端路径层（fileops/sync/installer/recycle/download）",
-        "link": "/audit/audit-r2-go-backend-2026-08-18"
-      },
-      {
-        "text": "R3 审核报告：Wails Binding 层（internal/app）",
-        "link": "/audit/audit-r3-wails-binding-2026-08-18"
-      },
-      {
-        "text": "R4 审核报告：MMD 子类型目录落位（commit 7420399c）",
-        "link": "/audit/audit-r4-mmd-subdir-sync-2026-08-18"
       },
       {
         "text": "R5 审核报告：前端数据层与服务（backend/core/services）",
         "link": "/audit/audit-r5-frontend-data-layer-2026-08-18"
       },
       {
-        "text": "R6 审核报告：安全横切扫描（全仓）",
-        "link": "/audit/audit-r6-security-scan-2026-08-18"
-      },
-      {
-        "text": "R7 审核报告：性能与内存审计",
-        "link": "/audit/audit-r7-performance-memory-2026-08-18"
-      },
-      {
         "text": "R8 审核报告：测试覆盖缺口审计",
         "link": "/audit/audit-r8-test-coverage-gaps-2026-08-18"
-      },
-      {
-        "text": "R9 专项审核报告：3D 预览器资源管理问题",
-        "link": "/audit/audit-r9-3d-preview-resource-management-2026-08-18"
-      },
-      {
-        "text": "YSM 模型管理器 — 代码质量审计报告",
-        "link": "/audit/audit-report-2026-08-06"
-      },
-      {
-        "text": "YSM Model Manager — Backend 层审核报告",
-        "link": "/audit/backend-audit-report"
-      },
-      {
-        "text": "YSM Model Manager — 全量审核仲裁报告",
-        "link": "/audit/full-audit-arbitration"
-      },
-      {
-        "text": "YSM Model Manager — 第二轮审核仲裁报告",
-        "link": "/audit/round2-audit-arbitration"
       }
     ]
   },

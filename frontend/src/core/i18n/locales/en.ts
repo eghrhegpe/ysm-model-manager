@@ -1111,7 +1111,7 @@ export const en: Record<string, string> = {
   "preview.materialList": "Material List",
   "preview.formatVersion": "Format Version",
   "preview.selectedCharacter": "Selected Character",
-  "preview.metric.boneCount": "Bones",
+  "preview.metric.boneCount": "Bone Count",
   "preview.cubeCount": "Cubes",
   "preview.textureCount": "Textures",
   "preview.license": "License",

@@ -907,7 +907,7 @@ export const zhCN: Record<string, string> = {
   "preview.parseFailed": "解析失败",
   "preview.loadFailed": "3D 加载失败",
   "preview.detailTab": "详情",
-  "preview.tab.skeleton": "骨骼",
+  "preview.tab.skeleton": "骨架",
   "preview.skeletonStructure": "模型结构",
   "preview.blockCount": "{n} 个",
   "preview.uniqueBlocks": "共 {n} 种方块",

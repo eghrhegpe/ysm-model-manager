@@ -73,6 +73,25 @@ describe("GroundCapability — getMenuControls 分组", () => {
   });
 });
 
+describe("GroundCapability — 材质控件按 matSource 条件显隐", () => {
+  it("默认 matSource=none：仅 source 门控可见，其余材质控件隐藏；切源后 viz 跟随", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    const controls = cap.getMenuControls();
+    const source = controls.find((c) => c.id === "ground-mat-source")!;
+    const color = controls.find((c) => c.id === "ground-mat-color")!;
+    const texBtn = controls.find((c) => c.id === "ground-mat-texture")!;
+    expect(source.visible).toBeUndefined(); // 门控 select 常显
+    expect(color.visible?.()).toBe(false); // none → 隐藏
+    expect(texBtn.visible?.()).toBe(false); // none → 隐藏
+    cap.setMatSource("checker");
+    expect(color.visible?.()).toBe(true);
+    expect(texBtn.visible?.()).toBe(false); // checker 仍非 texture
+    cap.setMatSource("texture");
+    expect(texBtn.visible?.()).toBe(true); // 仅 texture 模式显贴图按钮
+  });
+});
+
 describe("GroundCapability — 表面材质层（spec 单源）", () => {
   it("默认 matSource=none：apply 后 surface 存在但不可见", () => {
     const scene = new THREE.Scene();

@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 describe("WaterCapability", () => {
-  it("apply 挂入场景（ysm-ground-water），默认 film + 湿润度>0 可见", () => {
+  it("apply 挂入场景（ysm-ground-water），默认 film + 水膜浓度>0 可见", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     expect(cap.getWaterMode()).toBe("film");
@@ -22,7 +22,7 @@ describe("WaterCapability", () => {
     const water = scene.getObjectByName("ysm-ground-water");
     expect(water).toBeDefined();
     expect(water).toBeInstanceOf(THREE.Mesh);
-    expect(water!.visible).toBe(true); // wetness 0.15 > 0 → 可见
+    expect(water!.visible).toBe(true); // 水膜浓度 0.15 > 0 → 可见
   });
 
   it("setWaterEnabled 独立控制 visible（与能力 enabled 解耦）", () => {
@@ -56,10 +56,25 @@ describe("WaterCapability", () => {
       "preview.waterGroupWave",
     ].sort());
     const byGroup = (g: string) => rest.filter((c) => c.group === g).map((c) => c.id).sort();
-    expect(byGroup("preview.waterGroupForm")).toEqual(["ground-water-mode", "ground-wetness"].sort());
-    expect(byGroup("preview.waterGroupLook")).toEqual(["ground-normal-strength", "ground-water-clarity", "ground-water-color", "ground-water-opacity"].sort());
+    expect(byGroup("preview.waterGroupForm")).toEqual(["ground-water-mode"]);
+    expect(byGroup("preview.waterGroupLook")).toEqual(["ground-normal-strength", "ground-water-clarity", "ground-water-color", "ground-water-opacity", "ground-wetness"].sort());
     expect(byGroup("preview.waterGroupPool")).toEqual(["ground-pool-height", "ground-pool-wall-color", "ground-pool-wall-thickness", "ground-pool-roundness"].sort());
     expect(byGroup("preview.waterGroupWave")).toEqual(["ground-wave-speed"]);
+  });
+
+  it("菜单控件条件显隐：wetness 仅 film；pool 系列仅 pool", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    const controls = cap.getMenuControls();
+    const wetness = controls.find((c) => c.id === "ground-wetness")!;
+    const poolHeight = controls.find((c) => c.id === "ground-pool-height")!;
+    // 默认 film：wetness 可见，pool 系列隐藏
+    expect(wetness.visible?.()).toBe(true);
+    expect(poolHeight.visible?.()).toBe(false);
+    // 切 pool：wetness 隐藏，pool 系列可见
+    cap.setWaterMode("pool");
+    expect(wetness.visible?.()).toBe(false);
+    expect(poolHeight.visible?.()).toBe(true);
   });
 
   it("getMenuControls 含 ground-normal-strength slider（group=preview.waterGroup）", () => {

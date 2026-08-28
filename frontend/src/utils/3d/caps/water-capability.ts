@@ -649,16 +649,20 @@ function gcBuildWaterGroup(cap: WaterCapability): MenuControlDef[] {
     slider: { min: number; max: number; step: number; unit?: string },
     getValue: () => number,
     setValue: (v: number) => void,
+    visible?: () => boolean,
   ): MenuControlDef => ({
     id, kind: "slider", labelKey, fallback, group, slider,
     getValue, setValue: (v) => setValue(v as number),
+    ...(visible ? { visible } : {}),
   });
   const wColor = (
     id: string, labelKey: string, fallback: string, group: string,
     getValue: () => number, setValue: (v: number) => void,
+    visible?: () => boolean,
   ): MenuControlDef => ({
     id, kind: "color", labelKey, fallback, group,
     getValue, setValue: (v) => setValue(v as number),
+    ...(visible ? { visible } : {}),
   });
   return [
     {
@@ -685,9 +689,10 @@ function gcBuildWaterGroup(cap: WaterCapability): MenuControlDef[] {
       setValue: (v) => cap.setWaterMode(v as WaterMode),
     },
     wSlider(
-      "ground-wetness", "preview.groundWetness", "湿润度", WATER_GROUP_FORM,
+      "ground-wetness", "preview.waterFilmDensity", "水膜浓度", WATER_GROUP_LOOK,
       { min: 0, max: 1, step: 0.05 },
       () => cap.getWetness(), (v) => cap.setWetness(v),
+      () => cap.getWaterMode() === "film", // 仅薄膜模式：pool 下 wetness 不参与 opacity（见 buildWaveWaterMaterial）
     ),
     // ── 外观 ──
     wColor("ground-water-color", "preview.groundWaterColor", "水色", WATER_GROUP_LOOK,
@@ -707,23 +712,27 @@ function gcBuildWaterGroup(cap: WaterCapability): MenuControlDef[] {
       { min: 0, max: 1, step: 0.05 },
       () => cap.getClarity(), (v) => cap.setClarity(v),
     ),
-    // ── 水池 ──
+    // ── 水池（仅 pool 模式可见；film 下为死控件，故条件隐藏）──
     wSlider(
       "ground-pool-height", "preview.groundPoolHeight", "水池高度", WATER_GROUP_POOL,
       { min: 0.01, max: 5, step: 0.05, unit: "m" },
       () => cap.getPoolHeight(), (v) => cap.setPoolHeight(v),
+      () => cap.getWaterMode() === "pool",
     ),
     wSlider(
       "ground-pool-wall-thickness", "preview.groundPoolWallThickness", "池壁厚度", WATER_GROUP_POOL,
       { min: 0.01, max: 2, step: 0.01, unit: "m" },
       () => cap.getPoolWallThickness(), (v) => cap.setPoolWallThickness(v),
+      () => cap.getWaterMode() === "pool",
     ),
     wColor("ground-pool-wall-color", "preview.groundPoolWallColor", "池壁颜色", WATER_GROUP_POOL,
-      () => cap.getPoolWallColor(), (v) => cap.setPoolWallColor(v)),
+      () => cap.getPoolWallColor(), (v) => cap.setPoolWallColor(v),
+      () => cap.getWaterMode() === "pool"),
     wSlider(
       "ground-pool-roundness", "preview.groundPoolRoundness", "边缘圆角", WATER_GROUP_POOL,
       { min: 0, max: 0.5, step: 0.01 },
       () => cap.getPoolRoundness(), (v) => cap.setPoolRoundness(v),
+      () => cap.getWaterMode() === "pool",
     ),
     // ── 波纹 ──
     wSlider(

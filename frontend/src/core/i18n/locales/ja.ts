@@ -1055,6 +1055,8 @@ export const ja: Record<string, string> = {
   "preview.fogDensity": "密度",
   "preview.fogColor": "霧色",
   "preview.fogDesc": "霧：線形/指数フォグで奥行き感を演出",
+  "preview.wireframe": "ワイヤーフレーム",
+  "preview.wireframeDesc": "メッシュのトポロジを表示、レイアウト確認用",
   "preview.shadow": "影",
   "preview.shadowType": "影タイプ",
   "preview.shadowMapSize": "影マップ精度",
@@ -1074,7 +1076,7 @@ export const ja: Record<string, string> = {
   "preview.ground": "地面",
   "preview.groundDesc": "グリッドヘルパー参考平面",
   "preview.groundGroupWater": "水面",
-  "preview.groundWetness": "湿潤度",
+  "preview.waterFilmDensity": "水膜濃度",
   "preview.groundWaterColor": "水色",
   
   "preview.groundNormalStrength": "ノーマル強度",

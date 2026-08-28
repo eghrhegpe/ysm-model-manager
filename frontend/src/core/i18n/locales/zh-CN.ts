@@ -1057,6 +1057,8 @@ export const zhCN: Record<string, string> = {
   "preview.fogDensity": "雾密度",
   "preview.fogColor": "雾色",
   "preview.fogDesc": "雾效：线性/指数雾，营造距离感",
+  "preview.wireframe": "线框模式",
+  "preview.wireframeDesc": "显示模型网格拓扑结构，调试布线用",
   "preview.shadow": "阴影",
   "preview.shadowType": "阴影类型",
   "preview.shadowMapSize": "阴影精度",
@@ -1076,7 +1078,7 @@ export const zhCN: Record<string, string> = {
   "preview.ground": "地面",
   "preview.groundDesc": "网格地面：GridHelper 辅助参考平面",
   "preview.groundGroupWater": "水面",
-  "preview.groundWetness": "湿润度",
+  "preview.waterFilmDensity": "水膜浓度",
   "preview.groundWaterColor": "水色",
   
   "preview.groundNormalStrength": "法线强度",

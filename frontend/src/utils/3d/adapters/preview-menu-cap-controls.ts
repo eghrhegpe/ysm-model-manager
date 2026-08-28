@@ -423,6 +423,7 @@ export function renderCapControls(list: HTMLElement, controls: MenuControlDef[])
   // kind 分派：divider 无 group 挂顶层作组间分隔；其余控件挂 (target ?? list)（有 group 挂 body，无 group 挂顶层）。签名不可动，本函数只做纯分派。
   const sectionMap = new Map<string, CapSectionShell>();
   for (const c of controls) {
+    if (c.visible && !c.visible()) continue; // 条件隐藏控件（模式/状态依赖）跳过，不渲染也不建空 section
     const parent = ensureCapSection(sectionMap, list, c.group) ?? list;
     switch (c.kind) {
       case "divider": renderCapDivider(parent); break;

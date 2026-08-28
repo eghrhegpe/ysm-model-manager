@@ -48,6 +48,7 @@ function partitionCapControlsByGroup(
 ): { key: string | null; label: string; ctrls: MenuControlDef[] }[] {
   const groups = new Map<string | null, MenuControlDef[]>();
   for (const c of ctrls) {
+    if (c.visible && !c.visible()) continue; // 条件隐藏控件不计入分组（空组由调用方 .filter 丢弃）
     const k = c.group ?? null;
     const arr = groups.get(k);
     if (arr) arr.push(c);

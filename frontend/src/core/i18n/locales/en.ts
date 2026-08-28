@@ -1054,6 +1054,8 @@ export const en: Record<string, string> = {
   "preview.fogDensity": "Density",
   "preview.fogColor": "Fog Color",
   "preview.fogDesc": "Fog: linear/exponential depth haze",
+  "preview.wireframe": "Wireframe",
+  "preview.wireframeDesc": "Show mesh topology for layout inspection",
   "preview.shadow": "Shadow",
   "preview.shadowType": "Shadow Type",
   "preview.shadowMapSize": "Shadow Map Size",
@@ -1073,7 +1075,7 @@ export const en: Record<string, string> = {
   "preview.ground": "Ground",
   "preview.groundDesc": "Grid helper reference plane",
   "preview.groundGroupWater": "Water Surface",
-  "preview.groundWetness": "Wetness",
+  "preview.waterFilmDensity": "Film Density",
   "preview.groundWaterColor": "Water Color",
   
   "preview.groundNormalStrength": "Normal Strength",

@@ -421,6 +421,7 @@ function gcSliderDef(
   slider: { min: number; max: number; step: number; unit?: string },
   getValue: () => number,
   setValue: (v: number) => void,
+  visible?: () => boolean,
 ): MenuControlDef {
   return {
     id,
@@ -431,6 +432,7 @@ function gcSliderDef(
     slider,
     getValue,
     setValue: (v) => setValue(v as number),
+    ...(visible ? { visible } : {}),
   };
 }
 
@@ -440,6 +442,7 @@ function gcColorDef(
   fallback: string,
   getValue: () => number,
   setValue: (v: number) => void,
+  visible?: () => boolean,
 ): MenuControlDef {
   return {
     id,
@@ -449,6 +452,7 @@ function gcColorDef(
     group: MAT_GROUP,
     getValue,
     setValue: (v) => setValue(v as number),
+    ...(visible ? { visible } : {}),
   };
 }
 
@@ -457,6 +461,7 @@ function gcButtonDef(
   labelKey: string,
   fallback: string,
   button: MenuControlDef["button"],
+  visible?: () => boolean,
 ): MenuControlDef {
   return {
     id,
@@ -467,6 +472,7 @@ function gcButtonDef(
     button,
     getValue: () => null,
     setValue: () => {},
+    ...(visible ? { visible } : {}),
   };
 }
 
@@ -497,27 +503,27 @@ function gcBuildMaterialGroup(cap: GroundCapability): MenuControlDef[] {
       getValue: () => cap.getMatSource(),
       setValue: (v) => cap.setMatSource(v as GroundSurfaceMode),
     },
-    gcColorDef("ground-mat-color", "preview.groundMatColor", "底色", () => self.params.matColor, (v) => cap.setMatColor(v)),
-    gcColorDef("ground-mat-color2", "preview.groundMatColor2", "副色", () => cap.getMatColor2(), (v) => cap.setMatColor2(v)),
-    gcColorDef("ground-mat-line-color", "preview.groundMatLineColor", "线色", () => self.params.matLineColor, (v) => cap.setMatLineColor(v)),
-    gcSliderDef("ground-mat-grid-size", "preview.groundMatGridSize", "格数", { min: 2, max: 32, step: 1 }, () => self.params.matGridSize, (v) => cap.setMatGridSize(Math.round(v))),
-    gcSliderDef("ground-mat-density", "preview.groundMatDensity", "纹理密度", { min: 0.25, max: 8, step: 0.25 }, () => cap.getMatDensity(), (v) => cap.setMatDensity(v)),
-    gcSliderDef("ground-mat-angle", "preview.groundMatAngle", "纹理角度", { min: 0, max: 360, step: 5, unit: "°" }, () => cap.getMatAngle(), (v) => cap.setMatAngle(v)),
+    gcColorDef("ground-mat-color", "preview.groundMatColor", "底色", () => self.params.matColor, (v) => cap.setMatColor(v), () => cap.getMatSource() !== "none"),
+    gcColorDef("ground-mat-color2", "preview.groundMatColor2", "副色", () => cap.getMatColor2(), (v) => cap.setMatColor2(v), () => cap.getMatSource() !== "none"),
+    gcColorDef("ground-mat-line-color", "preview.groundMatLineColor", "线色", () => self.params.matLineColor, (v) => cap.setMatLineColor(v), () => cap.getMatSource() !== "none"),
+    gcSliderDef("ground-mat-grid-size", "preview.groundMatGridSize", "格数", { min: 2, max: 32, step: 1 }, () => self.params.matGridSize, (v) => cap.setMatGridSize(Math.round(v)), () => cap.getMatSource() !== "none"),
+    gcSliderDef("ground-mat-density", "preview.groundMatDensity", "纹理密度", { min: 0.25, max: 8, step: 0.25 }, () => cap.getMatDensity(), (v) => cap.setMatDensity(v), () => cap.getMatSource() !== "none"),
+    gcSliderDef("ground-mat-angle", "preview.groundMatAngle", "纹理角度", { min: 0, max: 360, step: 5, unit: "°" }, () => cap.getMatAngle(), (v) => cap.setMatAngle(v), () => cap.getMatSource() !== "none"),
     gcButtonDef("ground-mat-texture", "preview.groundMatPick", "选择贴图", {
       textKey: "preview.groundMatPick",
       getHint: () => self.customTexName || "",
       variant: "primary",
       action: () => self.openTexturePicker(),
-    }),
+    }, () => cap.getMatSource() === "texture"),
     gcButtonDef("ground-mat-clear", "preview.groundMatClear", "清除贴图", {
       textKey: "preview.groundMatClear",
       variant: "ghost",
       action: () => cap.clearCustomTexture(),
-    }),
-    gcSliderDef("ground-mat-opacity", "preview.groundMatOpacity", "表面不透明度", { min: 0, max: 1, step: 0.05 }, () => cap.getMatOpacity(), (v) => cap.setMatOpacity(v)),
-    gcSliderDef("ground-mat-scale", "preview.groundMatScale", "纹理缩放", { min: 0.25, max: 8, step: 0.25 }, () => cap.getMatScale(), (v) => cap.setMatScale(v)),
-    gcSliderDef("ground-mat-rotation", "preview.groundMatRotation", "纹理旋转", { min: 0, max: 360, step: 5, unit: "°" }, () => cap.getMatRotation(), (v) => cap.setMatRotation(v)),
-    gcSliderDef("ground-mat-roughness", "preview.groundMatRoughness", "粗糙度", { min: 0, max: 1, step: 0.05 }, () => cap.getMatRoughness(), (v) => cap.setMatRoughness(v)),
-    gcSliderDef("ground-mat-metalness", "preview.groundMatMetalness", "金属度", { min: 0, max: 1, step: 0.05 }, () => cap.getMatMetalness(), (v) => cap.setMatMetalness(v)),
+    }, () => cap.getMatSource() === "texture"),
+    gcSliderDef("ground-mat-opacity", "preview.groundMatOpacity", "表面不透明度", { min: 0, max: 1, step: 0.05 }, () => cap.getMatOpacity(), (v) => cap.setMatOpacity(v), () => cap.getMatSource() !== "none"),
+    gcSliderDef("ground-mat-scale", "preview.groundMatScale", "纹理缩放", { min: 0.25, max: 8, step: 0.25 }, () => cap.getMatScale(), (v) => cap.setMatScale(v), () => cap.getMatSource() !== "none"),
+    gcSliderDef("ground-mat-rotation", "preview.groundMatRotation", "纹理旋转", { min: 0, max: 360, step: 5, unit: "°" }, () => cap.getMatRotation(), (v) => cap.setMatRotation(v), () => cap.getMatSource() !== "none"),
+    gcSliderDef("ground-mat-roughness", "preview.groundMatRoughness", "粗糙度", { min: 0, max: 1, step: 0.05 }, () => cap.getMatRoughness(), (v) => cap.setMatRoughness(v), () => cap.getMatSource() !== "none"),
+    gcSliderDef("ground-mat-metalness", "preview.groundMatMetalness", "金属度", { min: 0, max: 1, step: 0.05 }, () => cap.getMatMetalness(), (v) => cap.setMatMetalness(v), () => cap.getMatSource() !== "none"),
   ];
 }

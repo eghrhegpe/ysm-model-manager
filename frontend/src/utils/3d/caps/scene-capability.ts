@@ -26,6 +26,8 @@ export interface MenuControlDef {
   hintKey?: string;
   /** 分组标题 i18n 键（同一 group 的连续控件归入一个可折叠 section；group 变化时插入 section header） */
   group?: string;
+  /** 条件显隐：定义且返回 false 时控件隐藏（用于模式/状态依赖控件，如水面 wetness 仅 film、pool 控件仅 pool、地面材质仅 matSource≠none）。未定义则始终显示。 */
+  visible?: () => boolean;
   /** slider 配置 */
   slider?: {
     min: number;

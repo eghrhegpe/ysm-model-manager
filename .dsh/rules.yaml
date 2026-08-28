@@ -1,0 +1,90 @@
+# 城邦宪法 · 联邦工程纪律权限规则（user rules）
+# 插件: dsh-permission-rules (追加在内置高危基线 builtin-high-risk.yaml 之后)
+# 求值: 按文件顺序，首个命中胜出。deny 阻断 / ask 走审批接缝 / 未命中透传。
+# 内置基线已覆盖: rm -rf /、mkfs、dd→dev、chmod -R 777、chown -R、setuid、
+#   shutdown/reboot、git push --force、git reset --hard、curl|sh 下载即执行、
+#   fork bomb、.ssh/.env/.aws/.pem 等敏感路径。以下为联邦特有补充。
+
+rules:
+  # —— 并行会话保护: 禁止静默摧毁兄弟 session 的未提交改动 ——
+  - match:
+      tools: [bash, pwsh]
+      argv: { command: "git", args: ["restore"] }
+    action: ask
+    reason: "git restore 丢弃工作区未提交改动；并行 session 下可能误伤兄弟 AI 的暂存，先确认"
+    tags: [federal, parallel-session]
+
+  - match:
+      tools: [bash, pwsh]
+      argv: { command: "git", args: ["checkout"] }
+    action: ask
+    reason: "git checkout 切分支/还原文件会丢失未提交工作；并行 session 场景先确认"
+    tags: [federal, parallel-session]
+
+  - match:
+      tools: [bash, pwsh]
+      argv: { command: "git", args: ["clean"] }
+    action: ask
+    reason: "git clean 删除未跟踪文件；可能清除兄弟 session 刚产出的文件，先确认"
+    tags: [federal, parallel-session]
+
+  - match:
+      tools: [bash, pwsh]
+      argv: { command: "git", anyArg: ["stash"] }
+    action: ask
+    reason: "git stash / clear / drop 可能丢失或覆盖未提交工作，先确认"
+    tags: [federal, parallel-session]
+
+  - match:
+      tools: [bash, pwsh]
+      argv: { command: "git", args: ["rebase"] }
+    action: ask
+    reason: "git rebase 改写历史；并行 session 下易与兄弟 commit 冲突，先确认"
+    tags: [federal, parallel-session]
+
+  # —— 受保护分支推送门禁（--force 已由内置基线 ask）——
+  - match:
+      tools: [bash, pwsh]
+      argv: { command: "git", args: ["push"], anyArg: ["*main*", "*master*"] }
+    action: ask
+    reason: "向 main/master 推送会触发 CI/门禁；确认目标分支与 PR 流程"
+    tags: [federal, git]
+
+  # —— 禁止全局污染: 坚守 npm/pnpm/yarn -g 禁用纪律 ——
+  - match:
+      tools: [bash, pwsh]
+      argv:
+        command: ["npm", "pnpm", "yarn"]
+        anyArg: ["*-g", "*global*"]
+    action: ask
+    reason: "全局安装会污染用户环境、破坏联邦隔离；用项目级依赖替代，先确认"
+    tags: [federal, env-hygiene]
+
+  # —— 个人目录删除保护（Desktop/Downloads/Documents/媒体库 + 家目录根）——
+  - match:
+      tools: [bash, pwsh]
+      argv:
+        command: ["rm", "del", "Remove-Item"]
+        anyArg:
+          - "**/Desktop/**"
+          - "**/Downloads/**"
+          - "**/Documents/**"
+          - "**/Pictures/**"
+          - "**/Music/**"
+          - "**/Videos/**"
+          - "~"
+          - "/c/Users/zhujieling11"
+          - "$HOME"
+    action: ask
+    reason: "命令指向个人目录/家目录根；属高风险区域，先确认范围再删"
+    tags: [federal, personal-files]
+
+  # —— 联邦核心配置保护: .workbuddy / .dsh 不被误删（非临时缓存）——
+  - match:
+      tools: [bash, pwsh]
+      argv:
+        command: ["rm", "del", "Remove-Item"]
+        anyArg: ["**/.workbuddy/**", "**/.dsh/**"]
+    action: ask
+    reason: ".workbuddy / .dsh 存 ADR 与自动化配置，非临时缓存；删除前先确认"
+    tags: [federal, capitol]

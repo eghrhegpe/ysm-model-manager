@@ -15,7 +15,7 @@ import { ShadowCapability } from "./shadow-capability.ts";
 import { ReflectorCapability } from "./reflector-capability.ts";
 import { EnvironmentCapability } from "./environment-capability.ts";
 import { PostprocessingCapability } from "./postprocessing-capability.ts";
-import { WireframeCapability } from "./wireframe-capability.ts";
+import { RenderModeCapability } from "./render-mode-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 
 /** 能力工厂：接收 scene/renderer/camera，返回能力实例 */
@@ -123,4 +123,4 @@ sceneCapabilityRegistry.add((ctx) => new PostprocessingCapability({
   camera: ctx.camera,
 }));
 sceneCapabilityRegistry.add((ctx) => new LightCapability(ctx));
-sceneCapabilityRegistry.add((ctx) => new WireframeCapability({ scene: ctx.scene }));
+sceneCapabilityRegistry.add((ctx) => new RenderModeCapability({ scene: ctx.scene }));

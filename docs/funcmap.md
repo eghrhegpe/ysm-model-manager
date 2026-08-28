@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 170 | 693 |
+| 前端·工具 | 171 | 695 |
 | frontend/views | 118 | 347 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **501** | **2141** |
+| **合计** | **502** | **2143** |
 
 ## Go·头像
 
@@ -1454,7 +1454,7 @@
 | `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
 | `PreviewMenuCtx()` | `frontend/src/utils/3d/adapters/preview-menu:39` | 根菜单上下文：core 在 mount3D 内组装，全部经 getter 暴露避免闭包捕获过期值 |
 | `PreviewMenuHandle()` | `frontend/src/utils/3d/adapters/preview-menu:81` | 根菜单句柄：dispose 解绑；setAdapterItems 替换适配器专属项；openPanel 直接打开指定面板；refreshDock 在 caps 创建后重渲染底栏（A |
-| `mountPreviewRootMenu()` | `frontend/src/utils/3d/adapters/preview-menu:516` | — |
+| `mountPreviewRootMenu()` | `frontend/src/utils/3d/adapters/preview-menu:522` | — |
 | `ModelEntry()` | `frontend/src/utils/3d/adapters/scene-registry:21` | 单条模型记录（角色面板 fillRoles 消费：path/rtype/menuItems/roots） |
 | `sceneRegistry()` | `frontend/src/utils/3d/adapters/scene-registry:206` | 模块级单例（随活跃会话 reset） |
 | `MAX_MODELS()` | `frontend/src/utils/3d/adapters/scene-registry:209` | 同场景最大模型数（超量追加被拒，ADR-093 T6） |
@@ -1590,6 +1590,8 @@
 | `DEFAULT_REFLECTOR_PARAMS()` | `frontend/src/utils/3d/caps/reflector-capability:34` | — |
 | `REFLECTOR_PRESETS()` | `frontend/src/utils/3d/caps/reflector-capability:45` | 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） |
 | `ReflectorCapability()` | `frontend/src/utils/3d/caps/reflector-capability:125` | — |
+| `RenderModeState()` | `frontend/src/utils/3d/caps/render-mode-capability:17` | -------- 属性定义 -------- |
+| `RenderModeCapability()` | `frontend/src/utils/3d/caps/render-mode-capability:67` | -------- 主类 -------- |
 | `SceneCapabilityFactory()` | `frontend/src/utils/3d/caps/scene-capability-registry:22` | 能力工厂：接收 scene/renderer/camera，返回能力实例 |
 | `SceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:29` | 注册表：管理所有场景能力的工厂和实例 |
 | `sceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:108` | 全局单例（模块级单例 + 运行时状态隔离） |
@@ -2231,7 +2233,7 @@
 | `YsmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:261` | 组件统计（按 activeComponent 聚合；-1 = All）：骨骼数 + 立方体数 + 组件名 |
 | `ysmModelStats()` | `frontend/src/views/app-preview/skeleton-fill-panel:269` | 统计聚合（与 fillPanelComponent 同逻辑，抽为纯函数供 schema 与命令式共用） |
 | `ysmModelTextureSlots()` | `frontend/src/views/app-preview/skeleton-fill-panel:289` | 当前组件纹理槽位（meshGroups.texIdx 去重；缺省回退全部声明纹理——与 fillPanelComponent 同逻辑） |
-| `buildYsmModelSchema()` | `frontend/src/views/app-preview/skeleton-fill-panel:313` | YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。 |
+| `buildYsmModelSchema()` | `frontend/src/views/app-preview/skeleton-fill-panel:314` | YSM 模型面板声明式节点（组件选择 + 统计 + 纹理）。 |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-render` | — |
 | `setup2DCanvas()` | `frontend/src/views/app-preview/skeleton-render:21` | 创建 2D 骨骼画布并异步加载纹理 |
 | `buildToggleRow()` | `frontend/src/views/app-preview/skeleton-render:46` | 构建骨骼名开关行（不含放大按钮，放大按钮由调用方单独添加） |
@@ -2267,10 +2269,10 @@
 | `VrmMaterialControlBridge()` | `frontend/src/views/app-preview/vrm-controls:15` | 材质控制桥：复用 vrm-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在本文件 |
 | `makeVrmPanelRenderer()` | `frontend/src/views/app-preview/vrm-controls:94` | VRM 菜单面板渲染器（声明式菜单 item.render 回调） |
 | `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:21` | — |
-| `YsmOpenOptions()` | `frontend/src/views/app-preview/ysm-3d:44` | — |
-| `createYsm3D()` | `frontend/src/views/app-preview/ysm-3d:57` | 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。 |
-| `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:101` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |
-| `invalidateYsmPreview()` | `frontend/src/views/app-preview/ysm-3d:106` | 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） |
+| `YsmOpenOptions()` | `frontend/src/views/app-preview/ysm-3d:45` | — |
+| `createYsm3D()` | `frontend/src/views/app-preview/ysm-3d:58` | 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。 |
+| `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:111` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |
+| `invalidateYsmPreview()` | `frontend/src/views/app-preview/ysm-3d:116` | 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） |
 | `CameraControlBridge()` | `frontend/src/views/app-preview/ysm-controls` | — |
 | `YsmModel()` | `frontend/src/views/app-preview/ysm-controls:23` | 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） |
 | `YsmContentHandle()` | `frontend/src/views/app-preview/ysm-controls:32` | YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） |

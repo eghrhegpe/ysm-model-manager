@@ -981,9 +981,9 @@
 | `isWebPlatform()` | `frontend/src/backend/platform-web:72` | 网页版谓词 = 仅 web（非 Android）。与 platform.ts 的 resolveWebMode() 等价 （契约由 platform-parity.test.ts |
 | `WailsAndroidBridge()` | `frontend/src/backend/platform:18` | Android Java 桥最小形状（MainActivity addJavascriptInterface 注册名 "wails"；桌面端无此桥） |
 | `getAndroidBridge()` | `frontend/src/backend/platform:24` | Tier 2 原语：返回 Android Java 桥（桌面端为 null），类型安全断言（无 as any） |
-| `readDeclaredBackend()` | `frontend/src/backend/platform:30` | 读取入口 HTML 声明的适配器身份（'go' | 'browser'），未声明返回 undefined |
-| `isWebEntryMode()` | `frontend/src/backend/platform:36` | Tier 1：旧 web 短路标记 / vite MODE=web 构建 |
-| `resolveWebMode()` | `frontend/src/backend/platform:45` | 同步判定：当前是否应路由到 browser adapter（网页版）——薄委派，复用三态源（tier 语义由 platform-web 统一承载） |
+| `readDeclaredBackend()` | `frontend/src/backend/platform:31` | 读取入口 HTML 声明的适配器身份（'go' | 'browser'），未声明返回 undefined |
+| `isWebEntryMode()` | `frontend/src/backend/platform:37` | Tier 1：旧 web 短路标记 / vite MODE=web 构建 |
+| `resolveWebMode()` | `frontend/src/backend/platform:46` | 同步判定：当前是否应路由到 browser adapter（网页版）——薄委派，复用三态源（tier 语义由 platform-web 统一承载） |
 | `Events()` | `frontend/src/backend/runtime:47` | — |
 | `Window()` | `frontend/src/backend/runtime:51` | — |
 | `AppBindings()` | `frontend/src/backend/types:6` | Wails v3 生成的 App 绑定模块形状（bindings 目录下 app.ts） |

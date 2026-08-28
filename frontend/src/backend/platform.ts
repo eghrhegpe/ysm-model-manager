@@ -22,6 +22,7 @@ export interface WailsAndroidBridge {
 
 /** Tier 2 原语：返回 Android Java 桥（桌面端为 null），类型安全断言（无 as any） */
 export function getAndroidBridge(): WailsAndroidBridge | null {
+  if (typeof window === "undefined") return null; // node/SSR 无 window（纯逻辑模块 / 测试桩），先行守卫，对齐 vitest.config.ts 护栏约定
   const w = (window as unknown as { wails?: WailsAndroidBridge }).wails;
   return w && typeof w.requestStoragePermission === "function" ? w : null;
 }

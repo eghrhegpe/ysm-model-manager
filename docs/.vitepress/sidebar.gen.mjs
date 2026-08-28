@@ -1316,6 +1316,10 @@ export const autoSidebar = [
             "link": "/knowledge/global-handlers"
           },
           {
+            "text": "i18n 翻译准确度扫描记录",
+            "link": "/knowledge/i18n_accuracy"
+          },
+          {
             "text": "国际化 i18n 模块",
             "link": "/knowledge/i18n"
           },

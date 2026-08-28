@@ -70,6 +70,9 @@ export interface StatsCardModel {
   /** 子模型数量（多角色包）：extraCount = texCount - subCount（而非固定 -1）。
    *  默认1（单模型），多角色包时传 subModels.length */
   subCount?: number;
+  /** 逐组件统计数据（从3D spec 对齐）：bone/cube 按组件拆分，与3D roles 面板一致。
+   *  有数据时渲染组件化统计行替代聚合 boneCount/cubeCount。 */
+  componentCounts?: Array<{ name: string; bones: number; cubes: number }>;
 }
 
 /** 模型统计卡片 */
@@ -92,6 +95,7 @@ export function statsCardHTML(
   const cats = model.textureCategories || [];
   const roleTexCount = cats.filter((c) => c === "player").length;
   const compTexCount = cats.filter((c) => c && c !== "player").length;
+  const componentCounts = model.componentCounts || [];
   const catSummary =
     roleTexCount > 0 || compTexCount > 0
       ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">🎭 ${t("preview.roleTexCount", { role: roleTexCount, comp: compTexCount })}</div>`
@@ -130,10 +134,12 @@ export function statsCardHTML(
   return `
 <div class="pv-card-section pv-section-blue">
   <div class="pv-card-section-label">🔗 ${t("preview.modelStructure")}</div>
-  <div class="pv-card-row">
+  ${componentCounts.length > 0
+    ? componentCounts.map((c) => `<div class="pv-card-row" style="font-size:var(--fs-xs)"><span class="pv-stat-label" style="min-width:72px">${esc(c.name)}</span><span class="pv-card-val">${c.bones}</span> 骨骼 · <span class="pv-card-val">${c.cubes}</span> 立方体</div>`).join("")
+    : `<div class="pv-card-row">
     <span class="pv-stat-label">${t("preview.label.skeleton")}</span><span class="pv-card-val">${model.boneCount}</span> ${t("preview.unit")}<br>
     <span class="pv-stat-label">${t("preview.cubesLabel")}</span><span class="pv-card-val">${model.cubeCount}</span> ${t("preview.unit")}
-  </div>
+  </div>`}
 </div>
 ${subBlock}
 <div class="pv-card-section pv-section-green">

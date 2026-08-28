@@ -143,9 +143,9 @@ describe("buildToggleRow", () => {
 
 // ── buildStatsCard ─────────────────────────────────────────────
 describe("buildStatsCard", () => {
-  it("无作者 → 仅 statsCardHTML 卡片", () => {
+  it("无作者 → 仅 statsCardHTML 卡片", async () => {
     const container = document.createElement("div");
-    buildStatsCard(
+    await buildStatsCard(
       container,
       makeModel(),
       "/m/a.ysm",
@@ -157,10 +157,10 @@ describe("buildStatsCard", () => {
     expect(container.querySelectorAll(".pv-card").length).toBe(1);
   });
 
-  it("有作者 → 卡片内作者列表（顶部 ysm-author-avatars 填充已移除）", () => {
+  it("有作者 → 卡片内作者列表（顶部 ysm-author-avatars 填充已移除）", async () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
-    buildStatsCard(
+    await buildStatsCard(
       container,
       makeModel({ _authors: [{ name: "作者A", role: "建模", avatarUrl: "ava.png" }] }),
       "/m/a.ysm",
@@ -176,10 +176,10 @@ describe("buildStatsCard", () => {
     expect(ctx.root.querySelector("#ysm-author-avatars")).toBeNull();
   });
 
-  it("作者带 bilibili → 渲染 📺 链接（保留 Go SummaryAuthor.Bilibili 透传）", () => {
+  it("作者带 bilibili → 渲染 📺 链接（保留 Go SummaryAuthor.Bilibili 透传）", async () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
-    buildStatsCard(
+    await buildStatsCard(
       container,
       makeModel({ _authors: [{ name: "纸板", role: "建模", bilibili: "https://space.bilibili.com/123" }] }),
       "/m/a.ysm",
@@ -192,10 +192,10 @@ describe("buildStatsCard", () => {
     expect(link.textContent).toBe("📺");
   });
 
-  it("作者无 bilibili → 不渲染 📺 链接", () => {
+  it("作者无 bilibili → 不渲染 📺 链接", async () => {
     const ctx = makeCtx();
     const container = document.createElement("div");
-    buildStatsCard(
+    await buildStatsCard(
       container,
       makeModel({ _authors: [{ name: "匿名", role: "建模" }] }),
       "/m/a.ysm",
@@ -205,10 +205,10 @@ describe("buildStatsCard", () => {
     expect(container.querySelector(".pv-card a")).toBeNull();
   });
 
-  it("作者无 avatarUrl → 占位圆点（无 img）", () => {
+  it("作者无 avatarUrl → 占位圆点（无 img）", async () => {
     const container = document.createElement("div");
     const ctx = makeCtx();
-    buildStatsCard(
+    await buildStatsCard(
       container,
       makeModel({ _authors: [{ name: "匿名" }] }),
       "/m/a.ysm",

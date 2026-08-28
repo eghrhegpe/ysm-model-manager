@@ -11,6 +11,7 @@ import { renderMultiAngle } from "./screenshot-renderer.ts";
 import { t } from "../../core/i18n/t.ts";
 import { sec, iRow, buildDepthMap } from "./skeleton-utils.ts";
 import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
+import type { Spec3D } from "../../utils/3d/model3d.ts";
 // P1 修复（ADR-040）：fill3DPanel 已拆至 skeleton-fill-panel.ts，此处 re-export 兼容
 export { fill3DPanel } from "./skeleton-fill-panel.ts";
 
@@ -81,17 +82,49 @@ export function buildToggleRow(
 
 /**
  * 构建统计卡片（含作者列表）
+ * 异步获取3D spec 以对齐3D面板逐组件数据源——bone/cube 按 spec.models[] 拆分，
+ * 纹理尺寸取 spec 第一个组件的声明值（与3D面板一致）。
  */
-export function buildStatsCard(
+export async function buildStatsCard(
   container: HTMLElement,
   model: BedrockGeometry & { _authors?: Array<{ avatarUrl?: string | null; name?: string; role?: string; bilibili?: string }>; _modelPath?: string },
   modelPath: string,
   _decodedBy: string,
   ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
-): void {
+): Promise<void> {
   const card = document.createElement("div");
   card.className = "pv-card";
-  card.innerHTML = statsCardHTML(model, modelPath);
+  // 获取3D spec 以对齐3D面板数据源（逐组件 bone/cube + 声明纹理尺寸）
+  let spec: Spec3D | null = null;
+  try {
+    const { GetModel3DSpec } = await getApp();
+    const jsonStr = await GetModel3DSpec(modelPath);
+    if (jsonStr) spec = JSON.parse(jsonStr) as Spec3D;
+  } catch {
+    // spec 获取失败不阻断——回退到聚合数据
+  }
+  // 从 spec 提取逐组件数据：bone/cube 按 spec.models[] 拆分，纹理尺寸取第一个组件
+  const specModels = spec?.models || [];
+  const componentCounts = specModels.map((m) => {
+    const bones = m.bones?.length || 0;
+    let cubes = 0;
+    for (const b of m.bones || []) cubes += (b as { _cubeCount?: number })._cubeCount || 0;
+    return { name: m.name || m.id || "?", bones, cubes };
+  });
+  // 纹理尺寸：取第一个组件的声明值（与3D面板对齐；spec 无数据时回退到 BedrockGeometry）
+  const m0 = specModels[0] as { textureWidth?: number; textureHeight?: number } | undefined;
+  const texW = m0?.textureWidth ?? model.texWidth;
+  const texH = m0?.textureHeight ?? model.texHeight;
+  // 构造对齐3D面板的模型数据（逐组件 bone/cube + 声明纹理尺寸）
+  const enrichedModel = {
+    ...model,
+    boneCount: componentCounts.length > 0 ? componentCounts.reduce((s, c) => s + c.bones, 0) : model.boneCount,
+    cubeCount: componentCounts.length > 0 ? componentCounts.reduce((s, c) => s + c.cubes, 0) : model.cubeCount,
+    texWidth: texW,
+    texHeight: texH,
+    componentCounts,
+  };
+  card.innerHTML = statsCardHTML(enrichedModel, modelPath);
   const authors: Array<{ avatarUrl?: string | null; name?: string; role?: string; bilibili?: string }> =
     model._authors || [];
   if (authors.length > 0) {

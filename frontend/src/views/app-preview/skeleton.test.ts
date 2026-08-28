@@ -140,7 +140,10 @@ beforeEach(() => {
   document.body.innerHTML = "";
   getPrefer3D.mockReturnValue(false);
   loadModelData.mockResolvedValue({ model: makeModel(), decodedBy: "go" });
-  getApp.mockResolvedValue({ SaveScreenshotFile: vi.fn() });
+  getApp.mockResolvedValue({
+    SaveScreenshotFile: vi.fn(),
+    GetModel3DSpec: vi.fn().mockResolvedValue(JSON.stringify({ models: [{ name: "main", bones: [{}, {}], meshGroups: [] }] })),
+  });
   vi.stubGlobal("Image", FakeImage as never);
   vi.stubGlobal(
     "URL",

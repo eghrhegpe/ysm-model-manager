@@ -9,7 +9,7 @@ import { getApp } from "../../backend/app.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import { preloadModel } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
-import { fillYsmModelPanel, fillYsmShotPanel } from "./ysm-controls.ts";
+import { fillYsmModelPanel, fillYsmShotPanel, ysmShotNodes } from "./ysm-controls.ts";
 import { statsCardHTML, type StatsCardModel } from "./tpl.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
@@ -77,6 +77,7 @@ async function createMaid3D(
       panels: {
         fillModelPanel: fillYsmModelPanel,
         fillShotPanel: fillYsmShotPanel,
+        shotNodes: ysmShotNodes,
       },
       subModelIdx: opts.subModelIdx ?? 0,
     } as Parameters<typeof makeYsmAdapter>[1]),

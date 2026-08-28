@@ -27,7 +27,7 @@
 //   - bloom / pmrem / wireframe 走 cap 的 get/set 派生映射，本层不落盘；
 //     cap 存自己的域（cap.saveState），本层不重复存
 
-import type { PreviewStatePath } from "../adapters/preview-menu-node-types.ts";
+import type { PreviewStatePath, PreviewSnapshot } from "../adapters/preview-menu-node-types.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
 import type { SceneCapability } from "../caps/scene-capability.ts";
 import { isFrustumCullEnabled, setFrustumCullEnabled } from "../frustum-cull.ts";
@@ -218,10 +218,10 @@ export function isPathAvailable(path: typeof KNOWN_PATHS[number]): boolean {
 
 /**
  * 全量快照：供 `visibleWhen: (s) => boolean` 等纯函数谓词消费。
- * 返回 Record<PreviewStatePath, unknown>——七域键位都可能在（未落地项为 undefined），
- * 谓词写 `s["ui.mode"] === "self"` 安全（取到 undefined 自然为 falsy）。
+ * 返回 PreviewSnapshot（Record<PreviewStatePath, unknown>）——七域键位都可能在
+ * （未落地项为 undefined），谓词写 `s["ui.mode"] === "self"` 安全（取到 undefined 自然为 falsy）。
  */
-export function previewSnapshot(): Record<PreviewStatePath, unknown> {
+export function previewSnapshot(): PreviewSnapshot {
   const out = {} as Record<PreviewStatePath, unknown>;
   for (const p of KNOWN_PATHS) out[p] = bindings[p].get();
   return out;

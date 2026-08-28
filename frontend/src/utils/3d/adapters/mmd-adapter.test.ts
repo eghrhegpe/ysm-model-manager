@@ -85,6 +85,9 @@ function makeMmdPanels(): MmdPanelHooks {
     },
     fillShotPanel: () => {},
     buildMaterialControls: () => {},
+    // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
+    modelInfoNodes: () => [{ id: "stub-model", kind: "field", labelKey: "x", fallback: "x", value: "测试.pmx" }],
+    shotNodes: () => [],
   };
 }
 

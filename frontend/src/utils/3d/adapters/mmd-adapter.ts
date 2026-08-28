@@ -29,7 +29,6 @@ import type {
   MmdPlayBridge,
   MaterialControlBridge,
 } from "../../../views/app-preview/mmd-controls.ts";
-import { mmdModelInfoNodes, mmdShotNodes } from "../../../views/app-preview/mmd-controls.ts";
 import {
   listMmdMaterials,
   getMmdMaterialDetail,
@@ -183,6 +182,10 @@ export interface MmdPanelHooks {
   fillPlayPanel: (list: HTMLElement, bridge: MmdPlayBridge) => void;
   fillShotPanel: (list: HTMLElement, ctx: MmdBottomNavCtx, screenshot: (() => Promise<string | null>) | null) => void;
   buildMaterialControls: (container: HTMLElement, bridge: MaterialControlBridge) => void;
+  /** 声明式节点工厂（[doc:adr-126-p4-b-1] 注入通道回归）：R1 禁 utils 运行时依赖 views，
+   *  mmdModelInfoNodes / mmdShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
+  modelInfoNodes?: (ctx: MmdBottomNavCtx) => PreviewMenuNode[];
+  shotNodes?: (ctx: MmdBottomNavCtx, screenshot: (() => Promise<string | null>) | null) => PreviewMenuNode[];
 }
 
 // ===== MdMmBuildCtx 按域分组的接口组合（声明层收敛，访问路径 c.xxx 不变）=====
@@ -1268,10 +1271,10 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       legacyTestId: "mmd-model-entry",
       dockGroup: "model", // 底栏 🧍 模型组
-      // [doc:adr-126-p4-b-1] 面板内容声明式化：children = mmdModelInfoNodes 纯数据节点，
-      // 渲染走 renderMenu（preview-menu-render.ts），替代 renderCustom 手写 DOM 闭包。
+      // [doc:adr-126-p4-b-1] 面板内容声明式化：children = modelInfoNodes 纯数据节点（经 panels 注入，
+      // R1 禁 utils→views 运行时依赖），渲染走 renderMenu（preview-menu-render.ts）。
       // fillModelPanel 逃生舱保留在 MmdPanelHooks（兼容既有面板），此处走新通道。
-      children: mmdModelInfoNodes(o.navCtx),
+      children: o.panels?.modelInfoNodes?.(o.navCtx) ?? [],
     },
     {
       id: "morph",
@@ -1296,7 +1299,7 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
   ];
   // [doc:adr-126-p4-b-1] 截图面板条件注入：screenshot 能力缺失（null）→ 不注入项
   // （对齐 bonePanel 范式；比"注入空 children 面板"干净——截图能力是可选能力）。
-  // 面板内容声明式化：children = mmdShotNodes 纯数据节点（6 截图按钮），渲染走 renderMenu。
+  // 面板内容声明式化：children = shotNodes 纯数据节点（6 截图按钮，经 panels 注入），渲染走 renderMenu。
   if (o.screenshot) {
     items.push({
       id: "shot",
@@ -1306,7 +1309,7 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       dockGroup: "model", // 底栏 🧍 模型组
       legacyTestId: "mmd-shot-entry",
-      children: mmdShotNodes(o.navCtx, o.screenshot),
+      children: o.panels?.shotNodes?.(o.navCtx, o.screenshot) ?? [],
     });
   }
   // MMD 始终注入 play 项（支持用户配置的自定义动作库，空态引导选择）

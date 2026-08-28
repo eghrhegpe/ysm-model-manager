@@ -40,6 +40,7 @@ vi.mock("./model3d-loader.ts", () => ({
 vi.mock("./ysm-controls.ts", () => ({
   fillYsmModelPanel: vi.fn(),
   fillYsmShotPanel: vi.fn(),
+  ysmShotNodes: vi.fn(() => []),
 }));
 vi.mock("./preview-library.ts", () => ({
   registerReRoute: vi.fn(),

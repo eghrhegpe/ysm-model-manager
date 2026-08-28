@@ -39,6 +39,16 @@ const fakePanels = {
     list.textContent = "模型统计（骨骼 0 根 / 立方体 0 个）";
   },
   fillShotPanel: () => {},
+  // [doc:adr-126-p4-b-2] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）——
+  // 桩返回 6 个 button 节点，对齐 shotButtonNodes 结构（ysm-3d.test 断言 children.length === 6）
+  shotNodes: () =>
+    ["current", "front", "45", "side", "back45", "all"].map((k) => ({
+      id: `ysm-shot-${k}`,
+      kind: "button" as const,
+      labelKey: `preview.screenshot${k[0].toUpperCase()}${k.slice(1)}`,
+      fallback: k,
+      legacyTestId: `shot-${k}`,
+    })),
 };
 
 beforeEach(() => {
@@ -402,6 +412,12 @@ describe("ysmMenuItems 独立菜单表测试", () => {
         camera: null,
         scene: null,
         cleanupRef: { current: null },
+      },
+      // [doc:adr-126-p4-b-2] shotNodes 经 panels 注入（R1 禁 utils→views 运行时依赖）——桩保证 shot 面板有渲染通道
+      panels: {
+        fillModelPanel: () => {},
+        fillShotPanel: () => {},
+        shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x", fallback: "x" }],
       },
     };
     const items = ysmMenuItems(opts);

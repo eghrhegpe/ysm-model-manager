@@ -41,6 +41,12 @@ function fakeYsmOpts(): YsmMenuItemsOpts {
       handle: {} as never,
     },
     bonePanel: fakeBonePanel(),
+    // [doc:adr-126-p4-b-2] ysmShotNodes 经 panels 注入（R1 禁 utils→views 运行时依赖）
+    panels: {
+      fillModelPanel: () => {},
+      fillShotPanel: () => {},
+      shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x", fallback: "x" }],
+    },
   };
 }
 
@@ -77,6 +83,9 @@ function fakeMmdOpts(overrides: Partial<MmdMenuItemsOpts> = {}): MmdMenuItemsOpt
       fillPlayPanel: (list) => setHtml(list, '<button data-testid="mmd-play"></button><select data-testid="mmd-motion"></select>'),
       fillShotPanel: () => {},
       buildMaterialControls: (list) => setHtml(list, '<div data-testid="mat-0"></div>'),
+      // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
+      modelInfoNodes: () => [{ id: "mmd-model-name", kind: "field", labelKey: "x", value: "测试.pmx" }],
+      shotNodes: () => [],
     },
     ...overrides,
   };

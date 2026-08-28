@@ -22,7 +22,6 @@ import { rebuildDebug } from "../debug-render.ts";
 import { disposeDebugGroup } from "../cleanup-helper.ts";
 import { screenshotFromRenderer } from "../screenshot.ts";
 import type { YsmContentHandle, YsmControlsContext } from "../../../views/app-preview/ysm-controls.ts";
-import { ysmShotNodes } from "../../../views/app-preview/ysm-controls.ts";
 import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 import type { Spec3D, BoneSelectInfo, BoneMaps } from "../model3d.ts";
 import { sceneRegistry } from "./scene-registry.ts";
@@ -59,6 +58,9 @@ export interface YsmAdapterOptions {
   panels?: {
     fillModelPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
     fillShotPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
+    /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
+     *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
+    shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];
   };
   /** 同目录文件枚举（.animation.json 扫描用；对齐 VRM listAllFilePaths 注入模式） */
   listAllFilePaths?: (dir: string) => Promise<string[] | null>;
@@ -533,6 +535,9 @@ export interface YsmMenuItemsOpts {
   panels?: {
     fillModelPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
     fillShotPanel: (list: HTMLElement, ctx: YsmControlsContext) => void;
+    /** 声明式节点工厂（[doc:adr-126-p4-b-2] 注入通道回归）：R1 禁 utils 运行时依赖 views，
+     *  ysmShotNodes 必须经此处由视图层注入（缺失 → children 空、面板不渲染） */
+    shotNodes?: (ctx: YsmControlsContext) => PreviewMenuNode[];
   };
   /** YSM 动画桥（ADR-100）；null/缺省（无 .animation.json）→ 不注入 play 项 */
   play?: MmdPlayBridge | null | undefined;
@@ -571,9 +576,10 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       dockGroup: "model",
       legacyTestId: "ysm-shot-entry",
-      // [doc:adr-126-p4-b-2] 面板内容声明式化：children = ysmShotNodes 纯数据节点（6 截图按钮）。
-      // YSM 的 screenshot 是 ctx 可选字段（undefined 走 fallback），面板常驻——不按能力条件注入。
-      children: ysmShotNodes(o.controlsCtx),
+      // [doc:adr-126-p4-b-2] 面板内容声明式化：children = shotNodes 纯数据节点（经 panels 注入，
+      // R1 禁 utils→views 运行时依赖）。YSM 的 screenshot 是 ctx 可选字段（undefined 走 fallback），
+      // 面板常驻——不按能力条件注入。
+      children: o.panels?.shotNodes?.(o.controlsCtx) ?? [],
     },
     {
       id: "bones",

@@ -8,6 +8,7 @@
 import * as THREE from "three";
 import { SkyCapability } from "./sky-capability.ts";
 import { GroundCapability } from "./ground-capability.ts";
+import { WaterCapability } from "./water-capability.ts";
 import { LightCapability } from "./light-capability.ts";
 import { FogCapability } from "./fog-capability.ts";
 import { ShadowCapability } from "./shadow-capability.ts";
@@ -110,6 +111,7 @@ export const sceneCapabilityRegistry = new SceneCapabilityRegistry();
 // 与用户"先环境后灯光"的心智一致。
 sceneCapabilityRegistry.add((ctx) => new SkyCapability(ctx));
 sceneCapabilityRegistry.add((ctx) => new GroundCapability(ctx));
+sceneCapabilityRegistry.add((ctx) => new WaterCapability(ctx));
 sceneCapabilityRegistry.add((ctx) => new EnvironmentCapability(ctx));
 sceneCapabilityRegistry.add((ctx) => new FogCapability(ctx));
 sceneCapabilityRegistry.add((ctx) => new ShadowCapability(ctx));

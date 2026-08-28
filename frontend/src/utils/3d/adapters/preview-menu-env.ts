@@ -12,8 +12,8 @@ import { t } from '../../../core/i18n/t.ts';
 import { ENV_PRESET_LINKAGE, type EnvPresetId } from '../caps/environment-capability.ts';
 import type { PreviewMenuNode } from './preview-menu-node-types.ts';
 
-const ENV_IDS = new Set(["sky", "ground", "environment", "fog", "reflector"]);
-const ORDERED_IDS = ["sky", "ground", "environment", "fog", "reflector"] as const;
+const ENV_IDS = new Set(["sky", "ground", "water", "environment", "fog", "reflector"]);
+const ORDERED_IDS = ["sky", "ground", "water", "environment", "fog", "reflector"] as const;
 const PRESET_ORDER = [
   { id: "studio", icon: "\u2600\uFE0F", labelKey: "preview.presetQuickStudio" },
   { id: "sunset", icon: "\uD83C\uDF05", labelKey: "preview.presetQuickSunset" },
@@ -30,6 +30,8 @@ function resolveCaps(ctx: PreviewMenuCtx): SceneCapability[] {
     const groundCap = ctx.getCap("ground");
     if (skyCap && "getMenuControls" in skyCap) fb.push(Object.assign({ id: "sky" }, skyCap) as SceneCapability);
     if (groundCap && "getMenuControls" in groundCap) fb.push(Object.assign({ id: "ground" }, groundCap) as SceneCapability);
+    const waterCapFb = ctx.getCap("water");
+    if (waterCapFb && "getMenuControls" in waterCapFb) fb.push(Object.assign({ id: "water" }, waterCapFb) as SceneCapability);
     allCaps = fb;
   }
   return allCaps;

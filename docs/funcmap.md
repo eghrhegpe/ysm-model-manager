@@ -47,10 +47,10 @@
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
 | 前端·工具 | 166 | 662 |
-| frontend/views | 117 | 339 |
+| frontend/views | 117 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **496** | **2102** |
+| **合计** | **496** | **2101** |
 
 ## Go·头像
 
@@ -2238,7 +2238,6 @@
 | `YsmControlsContext()` | `frontend/src/views/app-preview/ysm-controls:43` | 控件装配上下文：由 ysm-adapter 在 buildYsmScene 内组装传入 |
 | `fillYsmModelPanel()` | `frontend/src/views/app-preview/ysm-controls:74` | 模型菜单面板：统计 / 纹理 / 骨骼列表 / 骨骼详情 / 多组件切换（fill3DPanel 内容） |
 | `fillYsmShotPanel()` | `frontend/src/views/app-preview/ysm-controls:96` | 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） |
-| `attachYsmBoneSelect()` | `frontend/src/views/app-preview/ysm-controls:137` | 骨骼拾取联动（YSM 特色）：点击 3D 模型骨骼 → 仅在骨骼面板已打开时滚动高亮对应行 |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `SidebarInstance()` | `frontend/src/views/app-sidebar/data:4` | sidebar 整合包实例（loader 转换后的渲染格式） |
 | `bindCardEvents()` | `frontend/src/views/app-sidebar/events:127` | — |

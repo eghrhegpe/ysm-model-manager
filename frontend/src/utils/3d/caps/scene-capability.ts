@@ -84,6 +84,9 @@ export interface SceneCapability {
   /** 释放资源（会话结束时调用） */
   dispose(): void;
 
+  /** 逐帧更新（可选；动态效果如水面波纹/弹簧骨骼驱动）。无动态需求的能力可不实现。 */
+  update?(dt: number): void;
+
   /** 启用/禁用 */
   setEnabled(v: boolean): void;
   isEnabled(): boolean;

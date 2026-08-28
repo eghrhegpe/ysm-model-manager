@@ -24,18 +24,18 @@ use_when:
 
 - `gcBuildMaterialGroup(cap: GroundCapability): MenuControlDef[]` — 包级函数，仅 `getMenuControls()` 调用。
 - 辅助工厂（包级、material group 专用）：`gcSliderDef` / `gcColorDef` / `gcButtonDef`。
-- `gcBuildWaterGroup` 自 T2 起也抽取了 `wSlider`/`wColor` 局部工厂，同样 DRY 组装 12 项 water 控件。
+- 水面菜单（原 `gcBuildWaterGroup` 的 12 项 water 控件）已随 2026-08-28 拆分迁至独立 `WaterCapability`（`frontend/src/utils/3d/caps/water-capability.ts`），ground 不再聚合水面组。
 
 ## 与其他子系统关系
 
-- 上游：`GroundCapability.getMenuControls()` 聚合 `gcBuildMain`/`gcBuildWaterGroup`/`gcBuildMaterialGroup` 三组（1 + 12 + 14 = 27 控件）。
+- 上游：`GroundCapability.getMenuControls()` 聚合 `gcBuildMain`/`gcBuildMaterialGroup` 两组（1 + 14 = 15 控件；水面已拆为独立 WaterCapability，其 `gcBuildWaterGroup` 在 water-capability.ts 内）。
 - 下游：`renderCapControls`（preview-menu-cap-controls.ts）消费 `MenuControlDef[]` 渲染声明式菜单。
-- 横向：`gcBuildMain` ~12 行、`gcBuildWaterGroup` ~95 行（12 控件、局部工厂）、`gcBuildMaterialGroup` ~55 行——三组长尾均 <100 行。
+- 横向：`gcBuildMain` ~12 行、`gcBuildMaterialGroup` ~55 行——组长尾均 <100 行。
 
 ## 不变量
 
 - 14 个控件项的 `id`/`labelKey`/`group`/`kind`/`slider`/`getValue`/`setValue` 字段不可变（e2e 选择器依赖）。
-- `group: "preview.groundGroupMaterial"` 所有 material 项共享，不可改；water 组对应 `preview.groundGroupWater`。
+- `group: "preview.groundGroupMaterial"` 所有 material 项共享，不可改；水面组（现 `WaterCapability`）对应 `preview.waterGroup`。
 - `GROUND_SURFACE_MODES` 白名单与 select 选项列表保持对齐（9 项）：`none/solid/plain/grid/checker/stripes/diamond/marble/texture`。
 
 ## 历史问题清单（2026-08-27 ts-package-review）— 已完成修复
@@ -46,7 +46,7 @@ use_when:
 
 ## 建议动作（续）
 
-1. 若 water 组再超 100 行，同样抽 `gcWaterSliderDef`/`gcWaterColorDef` 包级工厂（目前以局部 lambda 控制在 95 行内，先不抽）。
+1. 水面控件（12 项）已迁至 `water-capability.ts` 的 `gcBuildWaterGroup`，其工厂化演进在该卡维护。
 2. 增加 pool 模式下 4 个专属控件的条件隐藏：当前全部常显，菜单偏长——可考虑 MenuControlDef 加 `enabled?:()=>boolean` 再做（ADR-109 次优先级）。
 
 ## 相关

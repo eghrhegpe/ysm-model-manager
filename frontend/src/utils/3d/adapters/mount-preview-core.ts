@@ -27,8 +27,10 @@ import { TOAST_MS } from "../../dom/toast-ms.ts";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
+import type { SceneCapability } from "../caps/scene-capability.ts";
 import { SkyCapability } from "../caps/sky-capability.ts";
 import { GroundCapability } from "../caps/ground-capability.ts";
+import { WaterCapability } from "../caps/water-capability.ts";
 import { LightCapability } from "../caps/light-capability.ts";
 import { FogCapability } from "../caps/fog-capability.ts";
 import { ShadowCapability } from "../caps/shadow-capability.ts";
@@ -168,6 +170,9 @@ const _handles: Array<{ handle: PreviewHandle; gen: number }> = [];
 /** rAF 全局唯一标识和 perFrame 回调列表（共享同一 renderer） */
 let _globalAnimId = 0;
 let _globalPerFrames: Array<(dt: number) => void> = [];
+/** 程序化能力列表（注册表统一创建），供 rAF 循环逐帧调用 update（水面波纹/弹簧骨骼等）。
+ *  shared 模式下 caps 由 mpBuildSharedInfra 单次填充，render loop 直接遍历，避免逐能力硬编码。 */
+let _sceneCaps: SceneCapability[] = [];
 
 /** 任意新预览派发时调用，作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） */
 export function invalidatePreview(): void {
@@ -482,9 +487,9 @@ export async function mount3D(adapter: PreviewAdapter, path: string, opts: Mount
         }
         const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
-        // 推进水面波纹动画（wetness>0 时 visible）
+        // 推进逐帧动态效果（水面波纹/弹簧骨骼等；能力自行决定是否需要更新）
         const activeSession = _handles[_handles.length - 1];
-        groundCap?.update(dt);
+        for (const c of _sceneCaps) c.update?.(dt);
         mpApplyWasdCameraMotion(keys, cam, ctr, session.camSpeed, dt, session.orbitMode, ot, {
           camDir: _camDir,
           forward: _forward,
@@ -906,6 +911,7 @@ interface MpSharedInfra {
   orbitTarget: THREE.Vector3;
   skyCap: SkyCapability | null;
   groundCap: GroundCapability | null;
+  waterCap: WaterCapability | null;
   lightCap: LightCapability | null;
   fogCap: FogCapability | null;
   shadowCap: ShadowCapability | null;
@@ -953,8 +959,10 @@ function mpBuildSharedInfra(adapter: PreviewAdapter, viewContainer: HTMLElement,
   }
   // 程序化能力（ADR-073 L1 + 统一注册表）：由 registry 统一创建并持久化
   const caps = sceneCapabilityRegistry.createAll({ scene, renderer, camera });
+  _sceneCaps = caps;
   const skyCap = (sceneCapabilityRegistry.getById("sky") as SkyCapability) ?? null;
   const groundCap = (sceneCapabilityRegistry.getById("ground") as GroundCapability) ?? null;
+  const waterCap = (sceneCapabilityRegistry.getById("water") as WaterCapability) ?? null;
   const lightCap = (sceneCapabilityRegistry.getById("light") as LightCapability) ?? null;
   const fogCap = (sceneCapabilityRegistry.getById("fog") as FogCapability) ?? null;
   const shadowCap = (sceneCapabilityRegistry.getById("shadow") as ShadowCapability) ?? null;
@@ -1006,6 +1014,7 @@ function mpBuildSharedInfra(adapter: PreviewAdapter, viewContainer: HTMLElement,
     orbitTarget,
     skyCap,
     groundCap,
+    waterCap,
     lightCap,
     fogCap,
     shadowCap,

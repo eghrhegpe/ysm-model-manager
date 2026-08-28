@@ -35,7 +35,7 @@ export interface MmdBottomNavCtx {
   switchTo?(path: string): Promise<void>;
 }
 
-/** MMD 模型面板：信息卡 + 表情列表（morph 权重 0/1 切换，✓ 高亮当前开启） */
+/** MMD 模型面板：信息卡（morph 列表已拆独立菜单项 fillMmdMorphPanel，对齐材质折叠模式） */
 export function fillMmdModelPanel(list: HTMLElement, ctx: MmdBottomNavCtx): void {
   const pmx = ctx.mmd.pmx;
   cardContainer(list, (c) => {
@@ -46,8 +46,19 @@ export function fillMmdModelPanel(list: HTMLElement, ctx: MmdBottomNavCtx): void
       `${pmx.bones.length} 骨骼 · ${pmx.materials.length} 材质 · ${pmx.morphs.length} 表情`,
     );
   });
+}
+
+/** MMD 表情面板（morph 权重 0/1 切换，✓ 高亮当前开启；独立菜单项，避免 84+ 行平铺模型面板） */
+export function fillMmdMorphPanel(list: HTMLElement, ctx: MmdBottomNavCtx): void {
   const morphNames = Object.keys(ctx.mesh.morphTargetDictionary || {});
-  if (morphNames.length === 0) return;
+  if (morphNames.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "slide-sublabel";
+    empty.style.cssText = "padding:8px 10px;color:rgba(128,128,128,0.85);font-size:12px";
+    empty.textContent = t("preview.noOtherMorph");
+    list.appendChild(empty);
+    return;
+  }
   const sec = document.createElement("div");
   sec.className = "slide-sublabel";
   sec.style.cssText = "padding:6px 10px;font-size:12px;color:rgba(255,255,255,0.7)";

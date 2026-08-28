@@ -75,6 +75,7 @@ function makePort(): MmdDataPort {
 function makeMmdPanels(): MmdPanelHooks {
   return {
     fillModelPanel: () => {},
+    fillMorphPanel: () => {},
     fillPlayPanel: (list) => {
       const btn = document.createElement("button");
       btn.id = "mmd-play-btn";

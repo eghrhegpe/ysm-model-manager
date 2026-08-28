@@ -73,6 +73,7 @@ function fakeMmdOpts(overrides: Partial<MmdMenuItemsOpts> = {}): MmdMenuItemsOpt
     bonePanel: null,
     panels: {
       fillModelPanel: (list) => setHtml(list, '<div data-testid="mmd-model-card">测试.pmx</div>'),
+      fillMorphPanel: (list) => setHtml(list, '<div data-testid="mmd-morph-card"></div>'),
       fillPlayPanel: (list) => setHtml(list, '<button data-testid="mmd-play"></button><select data-testid="mmd-motion"></select>'),
       fillShotPanel: () => {},
       buildMaterialControls: (list) => setHtml(list, '<div data-testid="mat-0"></div>'),

@@ -1,10 +1,12 @@
 // ===== mmd-controls 菜单面板测试（ADR-076 v2 Phase 2：底部导航收编为根菜单面板填充）=====
-// 覆盖：fillMmdModelPanel（信息卡 + 表情列表 + morph 权重切换）、buildMaterialControls
-// （材质显隐 + 透明度）。切换模型/相机视图归 core 根菜单（switch/camera 项），此处不再覆盖。
+// 覆盖：fillMmdModelPanel（信息卡）、fillMmdMorphPanel（表情列表 + morph 权重切换）、
+// buildMaterialControls（材质显隐 + 透明度）。切换模型/相机视图归 core 根菜单
+// （switch/camera 项），此处不再覆盖。morph 已拆独立菜单项（对齐材质折叠模式，2026-08-28）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import {
   fillMmdModelPanel,
+  fillMmdMorphPanel,
   buildMaterialControls,
   type MmdBottomNavCtx,
   type MaterialControlBridge,
@@ -198,7 +200,7 @@ afterEach(() => {
 });
 
 describe("fillMmdModelPanel", () => {
-  it("渲染信息卡（名称 + 骨骼/材质/表情计数）", () => {
+  it("渲染信息卡（名称 + 骨骼/材质/表情计数），不渲染 morph 行（已拆独立面板）", () => {
     const { ctx } = makeCtx();
     const list = document.createElement("div");
     fillMmdModelPanel(list, ctx);
@@ -206,43 +208,9 @@ describe("fillMmdModelPanel", () => {
     expect(list.textContent).toContain("364");
     expect(list.textContent).toContain("28");
     expect(list.textContent).toContain("55");
-  });
-
-  it("表情行 = morph 数（testId mmd-morph-<name>），点击切换权重 0↔1 + ✓ 高亮", () => {
-    const { ctx, mesh } = makeCtx();
-    const list = document.createElement("div");
-    fillMmdModelPanel(list, ctx);
-    const rows = list.querySelectorAll('[data-testid^="mmd-morph-"]');
-    expect(rows.length).toBe(3);
-    const row = list.querySelector('[data-testid="mmd-morph-微笑"]') as HTMLElement;
-    expect(mesh.morphTargetInfluences![0]).toBe(0);
-    row.click();
-    expect(mesh.morphTargetInfluences![0]).toBe(1);
-    expect(row.querySelector("span")?.textContent).toBe("✓");
-    row.click();
-    expect(mesh.morphTargetInfluences![0]).toBe(0);
-    expect(row.querySelector("span")?.textContent).toBe("🙂");
-  });
-
-  it("空 morph 字典时不渲染表情区域（列表仅信息卡）", () => {
-    const mesh = makeEmptyMorphMesh();
-    const mmd = {
-      pmx: {
-        bones: new Array(10),
-        materials: [{ name: "mat0" }, { name: "mat1" }],
-        morphs: [],
-      },
-    };
-    const ctx: MmdBottomNavCtx = { mmd: mmd as never, mesh, modelName: "测试.pmx" };
-    const list = document.createElement("div");
-    fillMmdModelPanel(list, ctx);
-    // 没有 morph 行
+    // morph 行与标题不在此面板（fillMmdMorphPanel 专属）
     expect(list.querySelectorAll('[data-testid^="mmd-morph-"]').length).toBe(0);
-    // 信息卡仍存在
-    expect(list.textContent).toContain("测试.pmx");
-    // 不应有表情标题行
-    const sublabel = list.querySelector(".slide-sublabel");
-    expect(sublabel).toBeNull();
+    expect(list.querySelector(".slide-sublabel")).toBeNull();
   });
 
   it("骨骼数为 0 时仍正确渲染（显示 0 骨骼）", () => {
@@ -264,6 +232,41 @@ describe("fillMmdModelPanel", () => {
       expect(list.textContent).toContain(name);
     }
   });
+});
+
+describe("fillMmdMorphPanel（独立表情面板，对齐材质折叠模式）", () => {
+  it("表情行 = morph 数（testId mmd-morph-<name>），点击切换权重 0↔1 + ✓ 高亮", () => {
+    const { ctx, mesh } = makeCtx();
+    const list = document.createElement("div");
+    fillMmdMorphPanel(list, ctx);
+    const rows = list.querySelectorAll('[data-testid^="mmd-morph-"]');
+    expect(rows.length).toBe(3);
+    const row = list.querySelector('[data-testid="mmd-morph-微笑"]') as HTMLElement;
+    expect(mesh.morphTargetInfluences![0]).toBe(0);
+    row.click();
+    expect(mesh.morphTargetInfluences![0]).toBe(1);
+    expect(row.querySelector("span")?.textContent).toBe("✓");
+    row.click();
+    expect(mesh.morphTargetInfluences![0]).toBe(0);
+    expect(row.querySelector("span")?.textContent).toBe("🙂");
+  });
+
+  it("空 morph 字典时渲染空态提示（不崩溃）", () => {
+    const mesh = makeEmptyMorphMesh();
+    const mmd = {
+      pmx: {
+        bones: new Array(10),
+        materials: [{ name: "mat0" }, { name: "mat1" }],
+        morphs: [],
+      },
+    };
+    const ctx: MmdBottomNavCtx = { mmd: mmd as never, mesh, modelName: "测试.pmx" };
+    const list = document.createElement("div");
+    fillMmdMorphPanel(list, ctx);
+    // 无 morph 行，但有空态提示
+    expect(list.querySelectorAll('[data-testid^="mmd-morph-"]').length).toBe(0);
+    expect(list.textContent).not.toBe("");
+  });
 
   it("单个 morph 的点击切换行为", () => {
     const rawMesh = new THREE.Mesh(
@@ -282,7 +285,7 @@ describe("fillMmdModelPanel", () => {
     };
     const ctx: MmdBottomNavCtx = { mmd: mmd as never, mesh, modelName: "单morph.pmx" };
     const list = document.createElement("div");
-    fillMmdModelPanel(list, ctx);
+    fillMmdMorphPanel(list, ctx);
     const row = list.querySelector('[data-testid="mmd-morph-单一"]') as HTMLElement;
     expect(row).not.toBeNull();
     expect(mesh.morphTargetInfluences![0]).toBe(0);
@@ -308,7 +311,7 @@ describe("fillMmdModelPanel", () => {
     };
     const ctx: MmdBottomNavCtx = { mmd: mmd as never, mesh, modelName: "init.pmx" };
     const list = document.createElement("div");
-    fillMmdModelPanel(list, ctx);
+    fillMmdMorphPanel(list, ctx);
     const row = list.querySelector('[data-testid="mmd-morph-已激活"]') as HTMLElement;
     expect(row.querySelector("span")?.textContent).toBe("✓");
     expect(row.style.background).toContain("var(--mmd-morph-active-bg)");

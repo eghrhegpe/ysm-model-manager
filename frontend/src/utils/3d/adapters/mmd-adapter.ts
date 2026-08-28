@@ -178,6 +178,7 @@ async function disposeMmdMesh(
 /** 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） */
 export interface MmdPanelHooks {
   fillModelPanel: (list: HTMLElement, ctx: MmdBottomNavCtx) => void;
+  fillMorphPanel: (list: HTMLElement, ctx: MmdBottomNavCtx) => void;
   fillPlayPanel: (list: HTMLElement, bridge: MmdPlayBridge) => void;
   fillShotPanel: (list: HTMLElement, ctx: MmdBottomNavCtx, screenshot: (() => Promise<string | null>) | null) => void;
   buildMaterialControls: (container: HTMLElement, bridge: MaterialControlBridge) => void;
@@ -1267,6 +1268,16 @@ export function mmdMenuItems(o: MmdMenuItemsOpts): PreviewMenuNode[] {
       legacyTestId: "mmd-model-entry",
       dockGroup: "model", // 底栏 🧍 模型组
       renderCustom:(list) => o.panels?.fillModelPanel?.(list, o.navCtx),
+    },
+    {
+      id: "morph",
+      icon: "😀",
+      labelKey: "preview.mmdMorph",
+      fallback: "表情",
+      kind: "panel",
+      legacyTestId: "mmd-morph-entry",
+      dockGroup: "model", // 底栏 🧍 模型组
+      renderCustom:(list) => o.panels?.fillMorphPanel?.(list, o.navCtx),
     },
     {
       id: "shot",

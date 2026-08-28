@@ -19,7 +19,7 @@ export function aboutHTML(): string {
     <div class="stg-card-body" style="display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:center;gap:8px">
         <button class="btn-base sm stg-btn" id="set-check-update">🔄 ${t("about.checkUpdate")}</button>
-        <button class="btn-base sm" id="set-releases" title="打开 GitHub Releases">📋 ${t("about.releasePage")}</button>
+        <button class="btn-base sm" id="set-releases" title="${t("about.openReleases")}">📋 ${t("about.releasePage")}</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
         <span>🕐 ${t("settings.updateCheck.title")}:</span>

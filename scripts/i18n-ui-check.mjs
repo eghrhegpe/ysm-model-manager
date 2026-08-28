@@ -64,6 +64,7 @@ const LANG_PICKER = /value="(zh-CN|en|ja)"/;
 /** 把注释遮罩成同长空格（保留换行与字符偏移，行号才准）。 */
 function maskComments(src) {
   return src
+    .replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, " "))
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
     .replace(/(?<!:)\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, " "));
 }

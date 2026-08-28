@@ -199,12 +199,12 @@ export async function showMorphPreview(
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     <div style="font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-      <span style="background:rgba(80,200,120,0.2);color:#50c878;padding:1px 6px;border-radius:4px;font-weight:500">CustomMorph</span>
-      <span>VPD 姿势</span>
-      <span style="background:rgba(100,100,100,0.2);color:#aaa;padding:1px 6px;border-radius:4px">单帧 morph</span>
+      <span style="background:rgba(100,100,100,0.2);color:#aaa;padding:1px 6px;border-radius:4px;font-weight:500">CustomMorph</span>
+      <span>${t("preview.vpdPose")}</span>
+      <span style="background:rgba(100,100,100,0.2);color:#aaa;padding:1px 6px;border-radius:4px">${t("preview.singleFrameMorph")}</span>
     </div>
     <div id="morph-siblings" style="max-height:160px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;padding:6px;margin-top:4px"></div>
-    <button class="preview-fab" id="btn-morph-apply" title="应用表情" aria-label="应用表情" style="background:linear-gradient(135deg,#50c878 0%,#2ea043 100%)"><span class="preview-ic">😊</span></button>
+    <button class="preview-fab" id="btn-morph-apply" title="${t("preview.applyMorph")}" aria-label="${t("preview.applyMorph")}" style="background:linear-gradient(135deg,#50c878 0%,#2ea043 100%)"><span class="preview-ic">😊</span></button>
   </div>
 </div>`;
   // 加载兄弟列表

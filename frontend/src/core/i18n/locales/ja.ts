@@ -404,6 +404,7 @@ export const ja: Record<string, string> = {
   "about.version": "現在のバージョン",
   "about.checkUpdate": "アップデートを確認",
   "about.releasePage": "リリースページ",
+  "about.openReleases": "GitHub Releases を開く",
   "about.features": "これは何？",
   "about.techStack": "技術スタック",
   "about.links": "リソースリンク",
@@ -1161,6 +1162,9 @@ export const ja: Record<string, string> = {
   "preview.noLightCap": "3D プレビューに入ってからライトパネルを開いてください",
   "preview.bone.selectHint": "ボーンをクリックして詳細を表示",
   "preview.customMorph": "カスタムモーフ",
+  "preview.vpdPose": "VPD ポーズ",
+  "preview.singleFrameMorph": "単フレームモーフ",
+  "preview.applyMorph": "モーフを適用",
   "preview.sceneModel": "シーン",
   "preview.stageAnim": "ステージ",
 

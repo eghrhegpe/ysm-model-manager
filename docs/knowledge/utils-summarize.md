@@ -35,7 +35,7 @@ invariant_anchors:
 
 - 导出类型：`YsmSummary`（name/source/tips/license/authors/stats/preview/animGroups/configMenus/links）、`YSMHeader`（isYsm/name/tips/license/hasFree/isFree/authorName/authorBilibili/authorRole/linkHome/linkUpdate/hash/format/crypto）、`SummaryAuthor`、`SummaryAnimGroup`、`SummaryConfigMenu` — 与 go/ysm + go/types 结构体对齐的轻量类型
 - `summaryCardHTML(summary, header, basename?): string` — 主入口：双空 → 空态引导卡（「点击左侧仓库文件查看详情」）；无 summary 且 header.isYsm → 头部简约卡（🔒 加密提示 + 格式/加密版本号）；否则 → 完整卡片（🆓 免费 / 🔒 付费徽章由 hasFree/isFree 驱动）。**方案 A 去重（2026-08-28）**：完整卡片不再渲染作者行（含文件名 `[作者]` 回退）与纹理尺寸行——作者（头像+角色）与纹理由统计卡 `buildStatsCard`（skeleton-render.ts）统一承载并挂详情卡底部 `#preview-stats`，摘要卡保留唯一性，消除信息重复。**资源行删除（2026-08-28）**：「📦 贴图/模型/动画」行整体移除——贴图/模型计数（Go `extractFileStats` 只数 `files.player.*` 清单条目）与统计卡实际文件数（WASM `summarizeDecoded` 数 `textures/` 路径 + `.png`）口径不一致且重叠；动画计数并入动画分组标题（`🎬 ${name}（${items.length}）`，如「其他动画（7）」）
-- 内部渲染助手（未导出）：renderTips（§ 着色）、cleanText（剥离 § 码与控制字符）、safeUrl（仅放行 http/https，javascript:/data: 等替换为 "#"）
+- 内部渲染助手：renderTips（§ 着色）、cleanText（剥离 § 码与控制字符）；**`safeUrl`（2026-08-28 起导出**，供统计卡作者 bilibili 链接复用；仅放行 http/https，javascript:/data: 等替换为 "#"）
 
 ## 与其他子系统关系
 

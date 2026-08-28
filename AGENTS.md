@@ -13,7 +13,7 @@
 
 ### 归属原则——先分清「生成物」还是「手写文件」
 - **生成物**（`docs/` 下 index / funcmap / project-map / cli-commands、i18n locale JSON、`completions/` 等，由 `.githooks/pre-commit` 的 `GEN_CMDS` 产出）= 全体输入的纯函数。**不承担提交归属、不按归属裁剪**：改卡后由 pre-commit 自动 gen+stage，交就交当前全量态。
-- **手写文件**（源码、知识卡、AGENTS.md 等）→ 路径限定提交，只管自己的文件：`git commit -m "<type>: <描述>" -- <自己的文件...>`。
+- **手写文件**（源码、知识卡、AGENTS.md 等）→ 路径限定提交，只提交自己的文件：`git commit -m "<type>: <描述>" -- <自己的文件...>`。
 - 并行会话活跃时（`git status` 可见他人改动），路径限定是唯一安全的提交方式。
 
 ### 职责归属——前端 vs Go（回归红线，不可违反）
@@ -31,7 +31,6 @@
 
 ```bash
 # 手写文件，路径限定提交（并行会话活跃时尤其如此）
-git add <自己的文件...>
 git commit -m "<type>: <简短描述>" -- <自己的文件...>
 
 # 一键验证+提交（按 staged 文件自动裁剪门禁；--fast 跳 vitest / --docs 仅文档 / --check 只验不交）
@@ -42,9 +41,9 @@ git push --verbose 2>&1 | Select-Object -Last 50   # 多轮对话后统一推送
 # 速查 / 回退
 git log --oneline -5 -- <file>      # 这文件最近谁提交过
 git reflog                          # 我改过但没了
-git checkout -- <file>              # 精确恢复单文件
-git commit --amend                  # 补改提交说明
-git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
+git commit --amend                  # 修改提交说明（进入提交阶段后请勿使用）
+git checkout -- <file>              # 精确恢复单文件（进入提交阶段后请勿使用）
+git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区（进入提交阶段后请勿使用）
 ```
 
 - 验证按域裁剪：Go → `go build ./go/...`；前端 → build + typecheck；文档 → `node scripts/doctor.mjs --docs`（秒级）；发版前 → `node scripts/doctor.mjs`（全量）。

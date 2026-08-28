@@ -348,9 +348,9 @@ export const POSTPROC_PRESETS: Record<string, Partial<PostprocessingParams>> = {
     reflectionMode: "envmap-only", ssrOpacity: 0.5, ssrMaxDistance: 180, reflectorDisableWhenSSR: true,
   },
   mmd: {
-    // toon：Bloom 稍强出画面空气感，SSAO 弱开；SSR 关（toon 角色几乎没 PBR 金属度）
-    // ✨ v1.14 调优：Bloom 阈值降至 0.5，强度提到 1.0，让 Mtoon 自发光材质溢出更自然
-    enabled: true, bloomStrength: 1.0, bloomThreshold: 0.5, bloomRadius: 0.9,
+    // toon：Bloom 阈值提升防白天天空全图泛白（§2 曝光治理）；toon 自发光仍有溢出但范围收敛
+    // 前值 v1.14：strength=1.0 threshold=0.5 radius=0.9 → 过强，天空亮区 >0.5 触发 Bloom → 整片泛白
+    enabled: true, bloomStrength: 0.85, bloomThreshold: 0.7, bloomRadius: 0.8,
     ssaoEnabled: false, ssaoRadius: 6, toneMapping: "aces", exposure: 1.05,
     reflectionMode: "envmap-only",
   },
@@ -367,7 +367,8 @@ export const POSTPROC_PRESETS: Record<string, Partial<PostprocessingParams>> = {
   },
   "mmd-scene": {
     // 场景模型：Bloom 稍强出氛围，SSAO 中档增加纵深，SSR 开（场景地面反射）
-    enabled: false, bloomStrength: 0.9, bloomThreshold: 0.55, bloomRadius: 0.9,
+    // 阈值从 0.55 → 0.72（§2 曝光治理）：避免大面积天空触发 Bloom，保留场景高光与自发光溢出
+    enabled: false, bloomStrength: 0.8, bloomThreshold: 0.72, bloomRadius: 0.85,
     ssaoEnabled: false, ssaoRadius: 15, toneMapping: "aces", exposure: 1.0,
     reflectionMode: "envmap-only",
   },

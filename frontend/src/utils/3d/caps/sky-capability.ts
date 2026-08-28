@@ -49,8 +49,10 @@ export interface SkyParams {
 export const DEFAULT_SKY_PARAMS: SkyParams = {
   elevation: 10,
   azimuth: 180,
-  turbidity: 10,
-  rayleigh: 2,
+  // §3 曝光治理：turbidity 10→7.5（雾霾天→通透蓝天）；rayleigh 2→2.5（蓝调更明显）
+  // 前值 v1.14：turbidity=10 正午表现偏牛奶白，配合高曝光整片发白
+  turbidity: 7.5,
+  rayleigh: 2.5,
   mieCoefficient: 0.005,
   mieDirectionalG: 0.8,
   cloudCoverage: 0,
@@ -70,12 +72,19 @@ export type SkyModelType = typeof RESOURCE_TYPES.YSM | "vrm" | "mmd" | "litemati
  * 数值为初始合理值，观感待目视微调。
  */
 export const MODEL_SKY_PRESETS: Record<string, Partial<SkyParams>> = {
-  default: { turbidity: 10, rayleigh: 2, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5 },
-  vrm: { turbidity: 7, rayleigh: 2, mieCoefficient: 0.004, mieDirectionalG: 0.85, exposure: 0.55 },
-  mmd: { turbidity: 9, rayleigh: 1.8, mieCoefficient: 0.006, mieDirectionalG: 0.8, exposure: 0.55 }, // v1.14: brighter sky to match Bloom
-  "mmd-scene": { turbidity: 14, rayleigh: 1.2, mieCoefficient: 0.008, mieDirectionalG: 0.75, exposure: 0.55 },
-  ysm: { turbidity: 11, rayleigh: 2.2, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.6 },
-  litematic: { turbidity: 10, rayleigh: 2, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5 },
+  // §3 曝光治理：各预设 turbidity 按原比例整体下调，rayleigh 同步上调，
+  // 让正午 Preetham 天空从"牛奶白"回归"通透蓝天"，同时保持预设间原有的差异梯度。
+  default: { turbidity: 7.5, rayleigh: 2.5, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5 },
+  // VRM PBR 角色：原 turbidity=7 已偏低，再微调至 6；rayleigh 轻微上浮，蓝天当背景更衬肤色
+  vrm: { turbidity: 6, rayleigh: 2.3, mieCoefficient: 0.004, mieDirectionalG: 0.85, exposure: 0.55 },
+  // MMD Toon：原 9→7.5（去雾霾感）；rayleigh 1.8→2.3（补回蓝色层次）
+  mmd: { turbidity: 7.5, rayleigh: 2.3, mieCoefficient: 0.006, mieDirectionalG: 0.8, exposure: 0.55 },
+  // MMD 场景：原 14 极雾霾→10 正常云絮天；rayleigh 翻倍从 1.2→2.0，避免背景死白
+  "mmd-scene": { turbidity: 10, rayleigh: 2.0, mieCoefficient: 0.008, mieDirectionalG: 0.75, exposure: 0.55 },
+  // YSM 方块：原 11→8.5；哑光方块需要更强的蓝白对比
+  ysm: { turbidity: 8.5, rayleigh: 2.6, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.6 },
+  // Litematic 体素：同 default，10→7.5
+  litematic: { turbidity: 7.5, rayleigh: 2.5, mieCoefficient: 0.005, mieDirectionalG: 0.8, exposure: 0.5 },
 };
 
 function skcBuildTime(cap: SkyCapability): MenuControlDef[] {

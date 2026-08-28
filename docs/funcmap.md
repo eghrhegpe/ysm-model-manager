@@ -1572,7 +1572,7 @@
 | `PostprocessingParams()` | `frontend/src/utils/3d/caps/postprocessing-capability:35` | — |
 | `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/utils/3d/caps/postprocessing-capability:85` | — |
 | `POSTPROC_PRESETS()` | `frontend/src/utils/3d/caps/postprocessing-capability:335` | 模型类别后处理预设 |
-| `PostprocessingCapability()` | `frontend/src/utils/3d/caps/postprocessing-capability:376` | — |
+| `PostprocessingCapability()` | `frontend/src/utils/3d/caps/postprocessing-capability:377` | — |
 | `ReflectorParams()` | `frontend/src/utils/3d/caps/reflector-capability:18` | — |
 | `DEFAULT_REFLECTOR_PARAMS()` | `frontend/src/utils/3d/caps/reflector-capability:34` | — |
 | `REFLECTOR_PRESETS()` | `frontend/src/utils/3d/caps/reflector-capability:45` | 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） |
@@ -1590,9 +1590,9 @@
 | `ShadowCapability()` | `frontend/src/utils/3d/caps/shadow-capability:171` | ============ ShadowCapability ============ |
 | `SkyParams()` | `frontend/src/utils/3d/caps/sky-capability:28` | — |
 | `DEFAULT_SKY_PARAMS()` | `frontend/src/utils/3d/caps/sky-capability:49` | — |
-| `SkyModelType()` | `frontend/src/utils/3d/caps/sky-capability:64` | 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） |
-| `MODEL_SKY_PRESETS()` | `frontend/src/utils/3d/caps/sky-capability:72` | 按模型类别的散射/曝光预设（ADR-073 #3）。 |
-| `SkyCapability()` | `frontend/src/utils/3d/caps/sky-capability:164` | — |
+| `SkyModelType()` | `frontend/src/utils/3d/caps/sky-capability:66` | 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） |
+| `MODEL_SKY_PRESETS()` | `frontend/src/utils/3d/caps/sky-capability:74` | 按模型类别的散射/曝光预设（ADR-073 #3）。 |
+| `SkyCapability()` | `frontend/src/utils/3d/caps/sky-capability:173` | — |
 | `disposeDebugGroup()` | `frontend/src/utils/3d/cleanup-helper:14` | 释放 debug 叠加层中的所有 Three.js 资源（geometry / material / texture）。 |
 | `disposeSceneMeshes()` | `frontend/src/utils/3d/cleanup-helper:40` | 遍历场景图释放所有 Mesh 的 geometry 和 material。 |
 | `eulerToQuaternion()` | `frontend/src/utils/3d/cube-mesh` | — |

@@ -1491,9 +1491,9 @@
 | `readVrmMeta()` | `frontend/src/utils/3d/adapters/vrm-adapter:106` | 解析 VRM meta（不渲染 3D，parse 后立即 deepDispose），失败返回 null |
 | `VrmModelInfoCtx()` | `frontend/src/utils/3d/adapters/vrm-adapter:166` | VRM 模型信息（model 面板声明式节点数据源；对齐 MMD MmdBottomNavCtx 注入链） |
 | `VrmPanelHooks()` | `frontend/src/utils/3d/adapters/vrm-adapter:173` | 面板填充回调（视图层注入，解除 utils→views 运行时分层违规 R1；缺失时菜单 render 退化为 no-op） |
-| `buildVrmScene()` | `frontend/src/utils/3d/adapters/vrm-adapter:507` | — |
-| `VrmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/vrm-adapter:527` | vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `vrmMenuItems()` | `frontend/src/utils/3d/adapters/vrm-adapter:565` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
+| `buildVrmScene()` | `frontend/src/utils/3d/adapters/vrm-adapter:509` | — |
+| `VrmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/vrm-adapter:529` | vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `vrmMenuItems()` | `frontend/src/utils/3d/adapters/vrm-adapter:567` | VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。 |
 | `VrmBonePanelCtx()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:21` | 骨骼面板上下文：core 外壳注入（extraPanel 标准契约） |
 | `RenderVrmBonePanel()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:31` | 骨骼面板渲染契约：返回清理函数（面板移除时调用） |
 | `makeBonePanelRenderer()` | `frontend/src/utils/3d/adapters/vrm-bone-ui:40` | 通用骨骼面板渲染器（ADR-074 S3：从 VRM 专属抽通用版，喂 BoneTree 而非 VRM）。 |
@@ -2272,7 +2272,7 @@
 | `VrmMaterialControlBridge()` | `frontend/src/views/app-preview/vrm-controls:18` | 材质控制桥：复用 vrm-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在本文件 |
 | `vrmModelInfoNodes()` | `frontend/src/views/app-preview/vrm-controls:98` | VRM 模型信息声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdModelInfoNodes） |
 | `vrmShotNodes()` | `frontend/src/views/app-preview/vrm-controls:114` | VRM 截图面板声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdShotNodes）： screenshotFn null（无 |
-| `makeVrmPanelRenderer()` | `frontend/src/views/app-preview/vrm-controls:125` | — |
+| `makeVrmPanelRenderer()` | `frontend/src/views/app-preview/vrm-controls:130` | — |
 | `decodeYsmViaWasm()` | `frontend/src/views/app-preview/wasm:21` | — |
 | `YsmOpenOptions()` | `frontend/src/views/app-preview/ysm-3d:45` | — |
 | `createYsm3D()` | `frontend/src/views/app-preview/ysm-3d:58` | 打开 YSM 3D 预览（统一外壳 shared 模式，path 驱动）。 |

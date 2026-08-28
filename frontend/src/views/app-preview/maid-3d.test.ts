@@ -38,7 +38,6 @@ vi.mock("./model3d-loader.ts", () => ({
   preloadModel: preloadMock,
 }));
 vi.mock("./ysm-controls.ts", () => ({
-  fillYsmModelPanel: vi.fn(),
   fillYsmShotPanel: vi.fn(),
   ysmShotNodes: vi.fn(() => []),
 }));

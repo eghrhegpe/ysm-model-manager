@@ -6,7 +6,6 @@ import { buildYsmScene, makeYsmAdapter, ysmMenuItems } from "./ysm-adapter.ts";
 import type { BedrockGeometry } from "../../../views/app-preview/geometry.ts";
 import type { PreviewMenuHandle } from "./preview-menu.ts";
 import type { BoneTree } from "../bone-tools.ts";
-import type { YsmControlsContext } from "../../../views/app-preview/ysm-controls.ts";
 
 const mocks = vi.hoisted(() => ({
   preloadModel: vi.fn(),
@@ -35,9 +34,6 @@ const modelGroups: unknown[] = [];
 // 视图层面板填充函数（DI 注入）：单元测试仅验证适配器将 fill* 接线出去，
 // 真实 DOM 渲染由视图层测试覆盖（fill* 属 views 域，utils 不得运行时依赖）。
 const fakePanels = {
-  fillModelPanel: (list: HTMLElement, _ctx: YsmControlsContext) => {
-    list.textContent = "模型统计（骨骼 0 根 / 立方体 0 个）";
-  },
   fillShotPanel: () => {},
   // [doc:adr-126-p4-b-2] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）——
   // 桩返回 6 个 button 节点，对齐 shotButtonNodes 结构（ysm-3d.test 断言 children.length === 6）
@@ -421,7 +417,6 @@ describe("ysmMenuItems 独立菜单表测试", () => {
       },
       // [doc:adr-126-p4-b-2] shotNodes 经 panels 注入（R1 禁 utils→views 运行时依赖）——桩保证 shot 面板有渲染通道
       panels: {
-        fillModelPanel: () => {},
         fillShotPanel: () => {},
         shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x", fallback: "x" }],
       },

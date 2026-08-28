@@ -813,4 +813,34 @@ describe("vrmMenuItems 结构", () => {
     const playItem = items.find((i) => i.id === "vrma-play");
     expect(playItem?.dockGroup).toBe("motion");
   });
+
+  it("modelInfoNodes/shotNodes 收到 modelInfo/modelPath（数据源透传——构造期求值 children）", () => {
+    // [doc:adr-126-p4-b-1] P5 收尾：vrmMenuItems 构造时把 modelInfo/modelPath 传给注入工厂；
+    // 漏传 → model/shot 面板 children 静默空（a400b244 review P3）
+    const infoCb = vi.fn(() => []);
+    const shotCb = vi.fn(() => []);
+    const items = vrmMenuItems({
+      screenshot: () => Promise.resolve("shot"),
+      modelInfo: { modelName: "模型A", boneCount: 52, materialCount: 3 },
+      modelPath: "/m/模型A.vrm",
+      bonePanel: {
+        tree: { byId: new Map(), childrenMap: new Map(), roots: [], objectToId: new Map() },
+        viewContainer: null,
+        camera: null,
+        scene: null,
+        cleanupRef: { current: null },
+      },
+      material: {
+        list: () => [],
+        getDetail: () => ({ index: 0, name: "test", visible: true, opacity: 1, transparent: false, type: "mtoon" as const }),
+        setVisible: () => {},
+        setOpacity: () => {},
+      },
+      play: null,
+      panels: { makePanelRenderer: () => () => {}, modelInfoNodes: infoCb, shotNodes: shotCb },
+    });
+    expect(items.find((i) => i.id === "model")?.children?.length).toBe(0);
+    expect(infoCb).toHaveBeenCalledWith({ modelName: "模型A", boneCount: 52, materialCount: 3 });
+    expect(shotCb).toHaveBeenCalledWith(expect.any(Function), "/m/模型A.vrm");
+  });
 });

@@ -109,17 +109,22 @@ export function vrmModelInfoNodes(ctx: VrmModelInfoCtx): PreviewMenuNode[] {
 }
 
 /** VRM 截图面板声明式节点（[doc:adr-126-p4-b-1] children 样板，P5 收尾；对齐 mmdShotNodes）：
- *  screenshotFn null（无渲染器）→ 不注入按钮；modelForSave 用假对象（VRM 无离屏重建，
- *  与 MMD 同——截图走活跃渲染器 screenshotFn 通道） */
+ *  screenshotFn null（无渲染器）→ 不注入按钮；modelForSave 用假对象，截图走活跃渲染器
+ *  screenshotFn 通道（VRM 无离屏重建——.vrm 走不了 renderMultiAngle 的 YSM 解析管道） */
 export function vrmShotNodes(
   screenshot: (() => Promise<string | null>) | null,
   modelPath: string,
 ): PreviewMenuNode[] {
   if (!screenshot) return [];
+  // [doc:adr-126-p4-b-1] 只保留 current 按钮：saveScreenshot 的其余角度（front/45/side/
+  // back45/all）走 renderMultiAngle 离屏重建，VRM 不支持 → 静默 no-op（a400b244 review P2）。
+  // 按钮「假活」不如不注入——等离屏能力落地再扩回六角度。
   return shotButtonNodes(
     { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], _modelPath: modelPath, texture: "" },
     screenshot,
-  ).map((n) => ({ ...n, id: `vrm-${n.id}` }));
+  )
+    .filter((n) => n.id === "shot-current")
+    .map((n) => ({ ...n, id: `vrm-${n.id}` }));
 }
 
 export function makeVrmPanelRenderer(

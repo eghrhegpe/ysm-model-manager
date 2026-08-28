@@ -363,7 +363,9 @@ function mdVrStage4MenuPanels(
   // 模型信息数据源（model 面板 children；名称取文件名去扩展名）
   const modelInfo: VrmModelInfoCtx = {
     modelName: path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || path,
-    boneCount: boneAssy.boneTree.roots.length,
+    // 全量骨骼数（byId.size = 提取的全部 humanoid 骨骼 ~52 根；roots 只是无父骨根节点 ≈1，
+    // 用它面板会错误显示「1 骨骼」——a400b244 review P2）
+    boneCount: boneAssy.boneTree.byId.size,
     materialCount: vrmMaterials.length,
   };
   const menuItems = vrmMenuItems({

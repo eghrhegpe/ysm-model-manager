@@ -10,6 +10,7 @@ import type { BedrockGeometry } from "./geometry.ts";
 import { preloadModel } from "./model3d-loader.ts";
 import { loadModelData } from "./loader.ts";
 import { fillYsmModelPanel, fillYsmShotPanel, attachYsmBoneSelect } from "./ysm-controls.ts";
+import { statsCardHTML, type StatsCardModel } from "./tpl.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { RESOURCE_TYPES } from "../../utils/resource/types.ts";
 import { t } from "../../core/i18n/t.ts";
@@ -110,11 +111,36 @@ type MaidModelInfo = {
   format?: string;
   texWidth?: number;
   texHeight?: number;
+  /** 纹理 base64 data URI 数组（与 YSM statsCard 同源，喂 statsCardHTML 用） */
+  textures?: unknown[];
+  /** 纹理文件名（去扩展名），与 textures 同序 */
+  textureNames?: string[];
+  /** 纹理分类：player = 角色皮肤可切换；projectile/vehicle 等 = 组件专属 */
+  textureCategories?: string[];
   subModels?: BedrockSubModel[];
   metadata?: YsmMetadata;
 } | null;
 
-/** 渲染详细信息（纯字符串拼接；对 subs>1 的包摘要显示选中 subModel 的 texSlot/名字） */
+/** 车万女仆 → statsCardHTML 入参映射（复用 YSM 彩色统计卡渲染，共用 types.BedrockModel 数据源）。
+ *  subModels 不传——maid 用交互式 dp-submodels 角色清单（可点击切换），
+ *  与 statsCardHTML 的静态 subBlock 重复，故在此剔除。 */
+function toStatsCardModel(info: MaidModelInfo): StatsCardModel {
+  return {
+    boneCount: info?.boneCount ?? 0,
+    cubeCount: info?.cubeCount ?? 0,
+    texWidth: info?.texWidth,
+    texHeight: info?.texHeight,
+    textures: info?.textures,
+    textureNames: info?.textureNames,
+    textureCategories: info?.textureCategories,
+  };
+}
+
+/**
+ * 渲染补充详情（纯字符串拼接）：彩色分区（statsCardHTML）之外的补充信息——
+ * format 版本、选中角色、ysm.json metadata（name/license/tips/authors）。
+ * 骨骼/立方体/纹理数/尺寸已由 statsCardHTML 彩色分区承载，此处不重复。
+ */
 function dpRenderDetail(
   modelInfo: MaidModelInfo,
   subs: BedrockSubModel[],
@@ -125,14 +151,6 @@ function dpRenderDetail(
   const sel = subs[selSubIdx];
   if (subs.length > 1 && sel) {
     rows.push(`<div class="dp-hint">🧸 ${t("preview.selectedCharacter")}: <b>${esc(sel.name)}</b></div>`);
-  }
-  if (modelInfo?.boneCount !== undefined) rows.push(`<div class="dp-hint">🦴 ${t("preview.metric.boneCount")}: ${modelInfo.boneCount}</div>`);
-  if (modelInfo?.cubeCount !== undefined) rows.push(`<div class="dp-hint">📦 ${t("preview.cubeCount")}: ${modelInfo.cubeCount}</div>`);
-  if (modelInfo?.textureCount !== undefined && modelInfo.textureCount > 0) {
-    rows.push(`<div class="dp-hint">🎨 ${t("preview.textureCount")}: ${modelInfo.textureCount}</div>`);
-    if (modelInfo.texWidth && modelInfo.texHeight) {
-      rows.push(`<div class="dp-hint">📏 ${t("preview.textureSize")}: ${modelInfo.texWidth}×${modelInfo.texHeight}</div>`);
-    }
   }
   // ysm.json metadata 段（name/license/tips/authors，Modern YSM RawMetadata 对齐）
   const md = modelInfo?.metadata;
@@ -189,6 +207,11 @@ function dpRenderPanel(
   onSelect: (idx: number) => void,
   onToggle3d: () => void,
 ): void {
+  // 彩色统计卡（模型结构蓝卡 / 纹理尺寸绿卡 / 文件信息橙卡）——复用 YSM statsCardHTML，
+  // 共用 AnalyzeBedrockModel 返回的 types.BedrockModel 数据源，与 YSM 详情同一设计语言。
+  const statsHTML = modelInfo
+    ? `<div class="pv-card">${statsCardHTML(toStatsCardModel(modelInfo), basename)}</div>`
+    : "";
   const detail = dpRenderDetail(modelInfo, subs, selSubIdx);
   const subList = dpRenderSubList(subs, selSubIdx);
   ctx.root.innerHTML = `<div class="content" id="preview-content">
@@ -197,9 +220,10 @@ function dpRenderPanel(
     <div class="big-icon">🧸</div>
     <div class="dp-hint" style="font-weight:600">${esc(basename)}</div>
     <div class="dp-hint">Bedrock Edition Model</div>
-    ${detail ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px">${detail}</div>` : `<div class="dp-hint" style="margin-top:8px;font-size:11px;color:var(--txt-dim)">⚠️ 无法读取模型数据</div>`}
-    ${subList ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">${subList}</div>` : ""}
   </div>
+  ${statsHTML}
+  ${detail ? `<div class="pv-card" style="margin-top:8px">${detail}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:11px;color:var(--txt-dim)">⚠️ 无法读取模型数据</div>` : ""}
+  ${subList ? `<div class="pv-card" style="margin-top:8px">${subList}</div>` : ""}
 </div>
 <button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;
 
@@ -310,6 +334,9 @@ export async function showMaidPreview(
         format: model.format as string | undefined,
         texWidth: model.texWidth as number | undefined,
         texHeight: model.texHeight as number | undefined,
+        textures: model.textures as unknown[] | undefined,
+        textureNames: model.textureNames as string[] | undefined,
+        textureCategories: model.textureCategories as string[] | undefined,
         subModels: model.subModels as BedrockSubModel[] | undefined,
         metadata: model.metadata ?? undefined,
       };

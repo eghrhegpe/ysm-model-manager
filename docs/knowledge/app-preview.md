@@ -9,6 +9,7 @@ tests:
   - frontend/src/views/app-nav/index.test.ts
   - frontend/src/views/app-preview/utils.test.ts
   - frontend/src/views/app-preview/component.test.ts
+  - frontend/src/views/app-preview/maid-3d.test.ts
   - frontend/src/views/app-sidebar/loader.test.ts
   - frontend/src/views/app-sync-manager/index.test.ts
   - frontend/src/views/app-toast/index.test.ts
@@ -52,6 +53,7 @@ invariant_anchors:
 - `wasm.ts` — `decodeYsmViaWasm`：前端 WASM 解码 .ysm（经 Go `ReadFileBytes` 取字节，走 `cache.ts` 缓存）；**加密模型详情增强**（P2 修复链：`decodeYsmViaWasm` 解码后把 `properties.extra_animation*` 经 `utils/format/ysm-anim-config.ts` 的 `extractAnimGroupsAndConfigs` 抽出「其他动画 / 模型配置 / 自定义表情」，与 Go `summary.go:appendAnimGroupsAndConfigs` 口径对齐，供详情卡渲染；`.zip`/裸 `ysm.json` 共用同一提取逻辑）；**ADR-100 L1：同目录 `.animation.json` 扫描 → `parseBedrockAnimationJSON` 解析 → `createYsmAnimPlayer` 驱动骨骼**
 - `litematic-3d.ts` — `createLitematic3D` / `cleanupVoxel3D`：**ADR-066 P3 脚手架收缴**——原 627 行内联实现抽为 26 行薄包装：通用外壳（overlay/renderer/rAF 循环/相机控制/资源释放）归 `mount-preview-core.ts` 的 `mount3D(adapter, path)`（PreviewAdapter 契约），体素内容层归 `litematic-adapter.ts` 的 `buildLitematicScene`；`voxelFn` 经适配器工厂传入决定走哪条 Go RPC；vrm 预览同构迁移（`vrm-adapter.ts`）
 - `litematic-meta.ts` — `showLitematic`（Go `ReadLitematicMeta` / `ReadNbtStructure` / `ReadSchematic`）与 `cleanupLitematic3D`（转发 `cleanupVoxel3D`）
+- `maid-3d.ts` — **车万女仆详情 + 3D 预览（Bedrock generic 模式）**：`showMaidPreview`（`PREVIEW_HANDLERS[MAID]` → `AnalyzeBedrockModel`）详情卡**复用 YSM `statsCardHTML` 彩色分区**（模型结构蓝卡 / 纹理尺寸绿卡 / 文件信息橙卡）——数据源与 YSM 同一 `types.BedrockModel`（Go `AnalyzeBedrockModel` 对 .ysm/.zip/.json 统一返回，字段含 `textureNames/textureCategories/textures`），前端 `toStatsCardModel` 映射喂 `statsCardHTML`（**subModels 不传**——maid 用交互式 `dpRenderSubList` 角色清单可点击切换，避免与 statsCardHTML 静态 subBlock 重复）；补充详情 `dpRenderDetail` 只留 format 版本 / 选中角色 / ysm.json metadata（name/license/tips/authors），骨骼立方体纹理行已由彩色分区承载；`createMaid3D` 复用 YSM 适配器 `mode:"generic"` 跳过 YSM 专属特性，`registerReRoute(RESOURCE_TYPES.MAID, openMaidFullscreen)` 注册 3D 跨类型路由
 - `utils.ts` — 共享类型与工具：`PreviewCtx` 接口、`DecodedYsm`、`getPrefer3D` / `setPrefer3D`（跨模型保留 3D 偏好）、`stripYsgpTextHeader`（YSGP 文本变体转标准头，内部私有 `buildStdYsgpFromTextVariant`）、`devLog`
 - `geometry.ts` — 纯函数层：`BedrockCube` / `BedrockBone` / `BedrockGeometry` 类型 + `parseBedrockGeometryFromJSON`
 - `model3d-loader.ts` / `screenshot-renderer.ts` — 3D 规格加载（Go `GetModel3DSpec`）与多角度截图渲染（`renderMultiAngle`），均静态依赖 three

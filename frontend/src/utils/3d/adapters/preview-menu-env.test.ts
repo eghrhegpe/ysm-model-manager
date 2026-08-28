@@ -153,6 +153,52 @@ describe("renderEnvLevel", () => {
     expect(menu.navigate).toHaveBeenCalled();
   });
 
+  it("带 group 分区的 cap 子视图列出平级分区入口，水面独立下钻（方案 A）", () => {
+    vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([]);
+    const fakeGroundCap = {
+      id: "ground",
+      labelKey: "preview.ground",
+      icon: "🌐",
+      descKey: "",
+      getMenuControls: () => [
+        { id: "ground-visible", kind: "toggle", labelKey: "preview.ground", fallback: "地面", getValue: () => true, setValue: () => {} },
+        { id: "ground-water-enabled", kind: "toggle", labelKey: "preview.groundWaterEnabled", fallback: "水面", group: "preview.groundGroupWater", getValue: () => true, setValue: () => {} },
+        { id: "ground-water-mode", kind: "select", labelKey: "preview.groundWaterMode", fallback: "形态", group: "preview.groundGroupWater", select: [{ value: "film", label: "薄膜" }], getValue: () => "film", setValue: () => {} },
+        { id: "ground-mat-source", kind: "select", labelKey: "preview.groundMatSource", fallback: "材质", group: "preview.groundGroupMaterial", select: [{ value: "none", label: "无" }], getValue: () => "none", setValue: () => {} },
+      ],
+      apply: vi.fn(), dispose: vi.fn(), setEnabled: vi.fn(), isEnabled: () => true, saveState: vi.fn(), loadState: vi.fn(),
+    };
+    const ctx = makeCtx({ getCap: (id) => (id === "ground" ? (fakeGroundCap as never) : null) });
+    // 自定义 menu：navigate 立即把 view.render 落到 subList，便于断言子视图 DOM
+    const subList = document.createElement("div");
+    let lastTitle = "";
+    const menu = {
+      ...makeMenu(),
+      navigate: vi.fn((v: { title: string; render: (l: HTMLElement) => void }) => { lastTitle = v.title; v.render(subList); }),
+    } as unknown as SlideMenuHandle;
+
+    const list = document.createElement("div");
+    renderEnvLevel(list, ctx, menu);
+
+    const row = list.querySelector('[data-testid="cap-row-ground"]') as HTMLElement;
+    expect(row).not.toBeNull();
+    row.click();
+
+    // 子视图应列出三个平级分区入口（地面 / 水面 / 表面材质）
+    expect(subList.querySelector('[data-testid="cap-group-entry-base"]')).not.toBeNull();
+    expect(subList.querySelector('[data-testid="cap-group-entry-preview.groundGroupWater"]')).not.toBeNull();
+    expect(subList.querySelector('[data-testid="cap-group-entry-preview.groundGroupMaterial"]')).not.toBeNull();
+    expect(lastTitle).toBe("地面");
+
+    // 点「水面」入口 → 二级子视图仅含水面控件，且不再包同名 section
+    const waterEntry = subList.querySelector('[data-testid="cap-group-entry-preview.groundGroupWater"]') as HTMLElement;
+    waterEntry.click();
+    expect(subList.querySelector('[data-testid="cap-ground-water-enabled"]')).not.toBeNull();
+    expect(subList.querySelector('[data-testid="cap-ground-water-mode"]')).not.toBeNull();
+    expect(subList.querySelector('[data-testid="cap-ground-visible"]')).toBeNull();
+    expect(lastTitle).toBe("水面");
+  });
+
   it("预设按钮点击调用 applyPreset（通过 menu.refresh）", () => {
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([]);
     const fakeSkyCap = {

@@ -385,6 +385,11 @@ function renderPreviewDock(
     const btn = document.createElement("button");
     btn.className = "preview-dock-navbtn";
     btn.dataset.testid = "dock-" + g.id;
+    // dock 按钮同样可定位（2026-08-28 反馈通道）：组名 fallback 是「模型」但点击直达
+    // roles 面板（「加载角色」）——hover 提示写明组 id 与组内项，消除「按钮叫模型、
+    // 进去叫加载角色」的语义错位；机器可读 data-dock-group 供测试/诊断
+    btn.dataset.dockGroup = g.id;
+    btn.title = `dock: ${g.id} · ${groupItems.map((n) => n.id).join(" / ")}`;
     btn.innerHTML =
       `<span class="preview-ic">${g.icon}</span><span class="preview-dock-navlabel">${g.fallback}</span>`;
     btn.onclick = (e: MouseEvent): void => {

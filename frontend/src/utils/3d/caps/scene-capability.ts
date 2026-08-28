@@ -40,6 +40,12 @@ export interface MenuControlDef {
     max: number;
     step: number;
     unit?: string;
+    /**
+     * slider 提交回调（拖拽松手/change 事件，离散触发）。
+     * 与 setValue 的 oninput 高频写入区分：用于「拖动时抑制、提交时通知」类语义
+     * （如 pixel-ratio 拖动不触发面板重算，松手后广播一次）。
+     */
+    onCommit?: (v: number) => void;
   };
   /** select 配置 */
   select?: Array<{ value: string; label: string }>;
@@ -150,18 +156,33 @@ export interface FieldRestorer {
  * 收敛动机：该样板在 ground / sky / water 等 cap 之间构成 jscpd 10 行级重复块
  * （`ground-capability#sky-capability` 等），且每新增一个持久化字段就多复制一行。
  *
- * @returns 有存档且成功回填 true；无存档返回 false（对应早退语义）
+ * @returns 至少一个字段成功回填 true；无存档、或存档值全部类型不匹配（含损坏数据）
+ *   返回 false——「无存档」与「有存档但什么都没恢复」对调用方是同一早退语义。
  */
 export function restoreFields(
   state: Record<string, unknown> | null,
   spec: Record<string, FieldRestorer>,
 ): boolean {
   if (!state) return false;
+  let applied = false;
   for (const [key, restorer] of Object.entries(spec)) {
     const v = state[key];
-    if (typeof v === "number") restorer.number?.(v);
-    else if (typeof v === "boolean") restorer.boolean?.(v);
-    else if (typeof v === "string") restorer.string?.(v);
+    if (typeof v === "number") {
+      if (restorer.number) {
+        restorer.number(v);
+        applied = true;
+      }
+    } else if (typeof v === "boolean") {
+      if (restorer.boolean) {
+        restorer.boolean(v);
+        applied = true;
+      }
+    } else if (typeof v === "string") {
+      if (restorer.string) {
+        restorer.string(v);
+        applied = true;
+      }
+    }
   }
-  return true;
+  return applied;
 }

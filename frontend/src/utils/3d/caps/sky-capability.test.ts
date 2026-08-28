@@ -148,6 +148,26 @@ describe("SkyCapability — 持久化", () => {
     cap.loadState();
     expect(cap.getTimeOfDay()).toBe(18);
   });
+
+  it("saveState↔loadState 字段对齐：7 字段单次 round-trip 全还原（防 saveState/loadState 漂移）", () => {
+    // 锁「saveState 存了哪些字段，loadState 必须全恢复」——任一方向漏字段在此必现
+    const cap = newCap({
+      params: { timeOfDay: 16, cloudCoverage: 0.4, environment: false, sunIntensityScale: 0.7, sunDiscScale: 0.55 },
+      enabled: false,
+    });
+    cap.setGodRaysEnabled(true);
+    cap.saveState();
+    const cap2 = newCap();
+    cap2.loadState();
+    expect(cap2.getTimeOfDay()).toBe(16);
+    expect(cap2.getCloudCoverage()).toBeCloseTo(0.4, 4);
+    expect(cap2.isEnvironmentEnabled()).toBe(false);
+    expect(cap2.isEnabled()).toBe(false);
+    expect(cap2.isGodRaysEnabled()).toBe(true);
+    const p = cap2.getParams();
+    expect(p.sunIntensityScale).toBeCloseTo(0.7, 4);
+    expect(p.sunDiscScale).toBeCloseTo(0.55, 4);
+  });
 });
 
 describe("SkyCapability — getMenuControls 结构", () => {

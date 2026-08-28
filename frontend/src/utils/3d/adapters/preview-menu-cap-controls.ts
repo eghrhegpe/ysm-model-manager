@@ -118,6 +118,11 @@ function renderCapSlider(parent: HTMLElement, c: MenuControlDef): void {
     c.setValue(v);
     val.textContent = fmtVal(v);
   };
+  // slider 提交（松手/change）：高频拖拽在 oninput 已写值，此处只做离散提交回调
+  // （如 pixel-ratio 提交时 notify）。未声明 onCommit 的 slider 行为不变。
+  slider.onchange = (): void => {
+    c.slider?.onCommit?.(Number(slider.value));
+  };
   row.append(head, slider);
   parent.appendChild(row);
 }

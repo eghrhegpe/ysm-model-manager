@@ -19,7 +19,7 @@ export const PREVIEW_FRAME_INTERVAL_MS = 1000 / 60;
 // ===== 帧率上限开关 =====
 // 用户可在 3D 预览器 ⚙️ 设置弹窗调（30/60/120/无限制）。
 // 仅控制 3D 渲染器的 rAF 循环节流，不影响弹窗 UI 响应（DOM 事件驱动）。
-const MAX_FPS_DEFAULT = 60;
+export const MAX_FPS_DEFAULT = 60;
 export const MAX_FPS_KEY = "ysm_3d_maxFps";
 const FPS_UNCAPPED = 0; // 0 = 不限制（rAF 原生 ~60fps 或显示器刷新率）
 

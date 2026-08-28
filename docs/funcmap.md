@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 168 | 678 |
+| 前端·工具 | 168 | 679 |
 | frontend/views | 117 | 340 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **498** | **2119** |
+| **合计** | **498** | **2120** |
 
 ## Go·头像
 
@@ -1415,8 +1415,8 @@
 | `LoadingProgressMode()` | `frontend/src/utils/3d/adapters/preview-loading:14` | 加载进度条模式：indeterminate（循环动画）| determinate（固定 id + transition，供外部更新宽度） |
 | `renderLoadingState()` | `frontend/src/utils/3d/adapters/preview-loading:17` | 3D 预览加载态：loadingEl 渲染图标 + 标签 + 进度条 |
 | `showLoadFailure()` | `frontend/src/utils/3d/adapters/preview-loading:35` | 3D 预览加载失败：loadingEl 渲染失败提示 + 全局 toast 报错 |
-| `collectVisiblePredicates()` | `frontend/src/utils/3d/adapters/preview-menu-cap-controls:432` | [doc:adr-125 P3] 枚举控件中的条件显隐谓词。 |
-| `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu-cap-controls:436` | — |
+| `collectVisiblePredicates()` | `frontend/src/utils/3d/adapters/preview-menu-cap-controls:437` | [doc:adr-125 P3] 枚举控件中的条件显隐谓词。 |
+| `renderCapControls()` | `frontend/src/utils/3d/adapters/preview-menu-cap-controls:441` | — |
 | `PreviewMenuItemKind()` | `frontend/src/utils/3d/adapters/preview-menu-defs:30` | — |
 | `PreviewMenuGroupId()` | `frontend/src/utils/3d/adapters/preview-menu-defs:31` | — |
 | `PreviewMenuItemDef()` | `frontend/src/utils/3d/adapters/preview-menu-defs:33` | — |
@@ -1444,9 +1444,9 @@
 | `buildShadowSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:63` | 阴影面板 schema：从 shadow cap 自报控件渲染 |
 | `buildPostprocessingSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:76` | 后处理面板 schema：从 postprocessing cap 自报控件渲染 |
 | `buildSettingsSchema()` | `frontend/src/utils/3d/adapters/preview-menu-settings:89` | 设置面板 schema：性能（横切数据节点）+ 画质（自动 cap 聚合）+ 脚注 |
-| `buildCrossCuttingControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:113` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
-| `collectSettingsCapControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:164` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
-| `buildSettingsControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:177` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
+| `buildCrossCuttingControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:114` | 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道， 现统一为纯数据节点，读写经 `settingsState` 的 `rend |
+| `collectSettingsCapControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:166` | 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件，升序并入设置面板。 |
+| `buildSettingsControls()` | `frontend/src/utils/3d/adapters/preview-menu-settings:179` | 设置面板全部控件（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM |
 | `fillSwitch()` | `frontend/src/utils/3d/adapters/preview-menu-switch:217` | — |
 | `roleBaseName()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
 | `renderMenu()` | `frontend/src/utils/3d/adapters/preview-menu` | — |
@@ -1587,11 +1587,11 @@
 | `SceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:29` | 注册表：管理所有场景能力的工厂和实例 |
 | `sceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:108` | 全局单例（模块级单例 + 运行时状态隔离） |
 | `MenuControlDef()` | `frontend/src/utils/3d/caps/scene-capability:16` | 菜单控件定义（声明式，由框架渲染为 DOM） |
-| `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:76` | ============ 场景能力统一接口 ============ |
-| `persistState()` | `frontend/src/utils/3d/caps/scene-capability:124` | 保存 JSON 到 localStorage |
-| `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:129` | 从 localStorage 加载 JSON |
-| `FieldRestorer()` | `frontend/src/utils/3d/caps/scene-capability:140` | 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） |
-| `restoreFields()` | `frontend/src/utils/3d/caps/scene-capability:155` | 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的 `if (typeof state.x === "number") this.params.x = |
+| `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:82` | ============ 场景能力统一接口 ============ |
+| `persistState()` | `frontend/src/utils/3d/caps/scene-capability:130` | 保存 JSON 到 localStorage |
+| `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:135` | 从 localStorage 加载 JSON |
+| `FieldRestorer()` | `frontend/src/utils/3d/caps/scene-capability:146` | 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） |
+| `restoreFields()` | `frontend/src/utils/3d/caps/scene-capability:162` | 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的 `if (typeof state.x === "number") this.params.x = |
 | `ShadowParams()` | `frontend/src/utils/3d/caps/shadow-capability:24` | ============ 参数类型 ============ |
 | `DEFAULT_SHADOW_PARAMS()` | `frontend/src/utils/3d/caps/shadow-capability:39` | — |
 | `SHADOW_PRESETS()` | `frontend/src/utils/3d/caps/shadow-capability:49` | 预设（setPreset 套用到不同模型类别） |
@@ -1720,6 +1720,7 @@
 | `MAX_PIXEL_RATIO_KEY()` | `frontend/src/utils/3d/render-budget:5` | — |
 | `getMaxPixelRatio()` | `frontend/src/utils/3d/render-budget:10` | 读取用户设置的渲染分辨率上限（设置面板 slider 持久化）；缺省 1.5。 |
 | `PREVIEW_FRAME_INTERVAL_MS()` | `frontend/src/utils/3d/render-budget:17` | — |
+| `MAX_FPS_DEFAULT()` | `frontend/src/utils/3d/render-budget:22` | — |
 | `MAX_FPS_KEY()` | `frontend/src/utils/3d/render-budget:23` | — |
 | `invalidateMaxFpsCache()` | `frontend/src/utils/3d/render-budget:30` | — |
 | `getMaxFps()` | `frontend/src/utils/3d/render-budget:33` | — |
@@ -1762,14 +1763,14 @@
 | `BoneData()` | `frontend/src/utils/3d/spec-builder:99` | BoneData — Go threejs/spec.go BoneData |
 | `MeshData()` | `frontend/src/utils/3d/spec-builder:109` | MeshData — Go threejs/spec.go MeshData |
 | `buildSpecFromGeometryJSON()` | `frontend/src/utils/3d/spec-builder:128` | 从 bedrock geometry JSON 构建 3D spec（纯 TS，无 Go 依赖）。 |
-| `KNOWN_PATHS()` | `frontend/src/utils/3d/state/preview-state:50` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
-| `toStatePath()` | `frontend/src/utils/3d/state/preview-state:65` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
-| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:172` | 订阅横切设置变更；返回取消订阅函数 |
-| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:193` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
-| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:202` | 写入路径值。 |
-| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:212` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
-| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:221` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
-| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:228` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
+| `KNOWN_PATHS()` | `frontend/src/utils/3d/state/preview-state:51` | 本层已落地的横切设置路径（ADR-125 P1 收编六项，ADR-126 P4-A 升格为 KNOWN_PATHS 命名）。 |
+| `toStatePath()` | `frontend/src/utils/3d/state/preview-state:66` | 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。 |
+| `subscribeSettings()` | `frontend/src/utils/3d/state/preview-state:175` | 订阅横切设置变更；返回取消订阅函数 |
+| `getStateValue()` | `frontend/src/utils/3d/state/preview-state:196` | 读取路径当前值（窄类型：仅接受已落地的 KNOWN_PATHS 之一） |
+| `setStateValue()` | `frontend/src/utils/3d/state/preview-state:205` | 写入路径值。 |
+| `isPathAvailable()` | `frontend/src/utils/3d/state/preview-state:215` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
+| `previewSnapshot()` | `frontend/src/utils/3d/state/preview-state:224` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费。 |
+| `resetSettingsListeners()` | `frontend/src/utils/3d/state/preview-state:231` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
 | `TextureAlphaMode()` | `frontend/src/utils/3d/texture-alpha:4` | — |
 | `TextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:7` | 纹理级透明信息：整图模式 + 面级查询索引（ADR-118 Phase B） |
 | `getTextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:17` | — |

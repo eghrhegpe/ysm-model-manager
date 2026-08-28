@@ -35,6 +35,7 @@ import {
   getMaxFps,
   invalidateMaxFpsCache,
   MAX_FPS_KEY,
+  MAX_FPS_DEFAULT,
   getMaxPixelRatio,
   MAX_PIXEL_RATIO_KEY,
 } from "../render-budget.ts";
@@ -131,7 +132,9 @@ const bindings: Record<typeof KNOWN_PATHS[number], PreviewStatePathBinding> = {
     get: () => getMaxFps(),
     set: (v) => {
       const n = Number(v);
-      safeSet(MAX_FPS_KEY, String(Number.isFinite(n) ? n : 0));
+      // 与 getMaxFps 守卫语义对齐：非法/负数 → 安全缺省 60（而非 0=不限，0 会静默关闭节流）；
+      // 0 仍是合法值（不限帧率）。写入什么、读回什么、缺省什么三方一致。
+      safeSet(MAX_FPS_KEY, String(Number.isFinite(n) && n >= 0 ? n : MAX_FPS_DEFAULT));
       invalidateMaxFpsCache(); // rAF 热路径有模块级缓存，必须显式失效
     },
     available: () => true,

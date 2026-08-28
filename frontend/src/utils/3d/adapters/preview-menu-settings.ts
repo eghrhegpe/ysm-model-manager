@@ -89,9 +89,10 @@ export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode
 export function buildSettingsSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
   return [
     bsBuildSectionTitle("settings-perf-header", "preview.settingsPerf", "性能"),
-    bsBuildControlsRow("settings-perf", buildCrossCuttingControls()),
+    // 传函数引用而非求值结果：每次 DOM 渲染时重取，cap 后创建/再渲染也能看见
+    bsBuildControlsRow("settings-perf", buildCrossCuttingControls),
     bsBuildSectionTitle("settings-quality-header", "preview.settingsQuality", "画质"),
-    bsBuildControlsRow("settings-quality", collectSettingsCapControls()),
+    bsBuildControlsRow("settings-quality", collectSettingsCapControls),
     bsBuildNote(),
   ];
 }
@@ -138,10 +139,11 @@ export function buildCrossCuttingControls(): MenuControlDef[] {
       kind: "slider",
       labelKey: "preview.settingsMaxPixelRatio",
       fallback: "渲染分辨率上限",
-      slider: { min: 0.5, max: 2, step: 0.25, unit: "x" },
       getValue: () => getStateValue("render.maxPixelRatio") as number,
       // 拖动是高频写入：跳过通知，避免每 0.25 步进触发面板重算
       setValue: (v) => setStateValue("render.maxPixelRatio", v, { notify: false }),
+      // 松手提交是离散操作：广播一次，供 subscribe 驱动的面板重算/谓词响应
+      slider: { min: 0.5, max: 2, step: 0.25, unit: "x", onCommit: (v) => setStateValue("render.maxPixelRatio", v) },
     },
   ];
 }
@@ -184,13 +186,23 @@ function bsBuildSectionTitle(id: string, labelKey: string, fallback: string): Pr
   return { id, kind: "sectionTitle", labelKey, fallback };
 }
 
-/** 把一组 MenuControlDef 包成单个声明式节点，交给通用渲染器 renderCapControls */
-function bsBuildControlsRow(id: string, controls: MenuControlDef[]): PreviewMenuNode {
+/**
+ * 把一组 MenuControlDef 包成单个声明式节点，交给通用渲染器 renderCapControls。
+ *
+ * `controls` 传**函数引用**时每次渲染求值（惰性）——规避 ADR-125 P3 明令禁止的
+ * 「构建期求值 → cap 后创建则永不可见」（即 05fe24b7 所修同类病）：
+ * schema 只持有 supplier，cap 何时创建、面板何时重渲染，都取最新全量。
+ */
+function bsBuildControlsRow(
+  id: string,
+  controls: MenuControlDef[] | (() => MenuControlDef[]),
+): PreviewMenuNode {
   return {
     id,
     kind: "custom",
     renderCustom: (list: HTMLElement): void => {
-      renderCapControls(list, controls);
+      const resolved = typeof controls === "function" ? controls() : controls;
+      renderCapControls(list, resolved);
     },
   };
 }

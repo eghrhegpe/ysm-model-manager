@@ -22,6 +22,7 @@ import {
   buildCrossCuttingControls,
   collectSettingsCapControls,
   buildSettingsControls,
+  buildSettingsSchema,
 } from "../adapters/preview-menu-settings.ts";
 import { collectVisiblePredicates } from "../adapters/preview-menu-cap-controls.ts";
 import { sceneCapabilityRegistry } from "../caps/scene-capability-registry.ts";
@@ -125,9 +126,12 @@ describe("P1 状态层 — 横切路径读写闭环", () => {
     expect(localStorage.getItem(MAX_PIXEL_RATIO_KEY)).toBe("1.75");
   });
 
-  it("非数字写入退化为安全缺省，不产生 NaN 持久化", () => {
+  it("非数字/负数写入退化为安全缺省（60），不产生 NaN 持久化、不误入 0=不限", () => {
     setStateValue("render.maxFps", "abc");
-    expect(Number(localStorage.getItem(MAX_FPS_KEY))).toBe(0);
+    expect(Number(localStorage.getItem(MAX_FPS_KEY))).toBe(60);
+    setStateValue("render.maxFps", -5);
+    expect(Number(localStorage.getItem(MAX_FPS_KEY))).toBe(60);
+    expect(getMaxFps()).toBe(60);
     setStateValue("render.maxPixelRatio", "abc");
     expect(Number(localStorage.getItem(MAX_PIXEL_RATIO_KEY))).toBe(1.5);
   });
@@ -140,10 +144,15 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
       expect(getStateValue(p)).toBe(false);
       expect(() => setStateValue(p, true)).not.toThrow();
     }
-    // 边界核心：cap 派生项不落盘（cap 存自己的域，状态层不重复存）
-    for (const p of ["pp", "wireframe", "sky"] as const) {
-      expect(localStorage.getItem(`ysm_3d_cap_${p}`)).toBeNull();
-    }
+    // 边界核心：cap 派生项不落盘（cap 存自己的域，状态层不重复存）。
+    // 键集合前后对比而非单键判空：不依赖具体前缀，任何「状态层误落盘」都会被捕获
+    // （旧断言 `ysm_3d_cap_*` 是臆造前缀——代码从未写过它，断言无条件通过 = 假保证；
+    //  真实 cap 存储前缀见 scene-capability.ts STORAGE_PREFIX = "ysm-scene-cap-"）。
+    const keysBefore = Object.keys(localStorage);
+    setStateValue("render.bloom", true);
+    setStateValue("render.wireframe", true);
+    setStateValue("env.pmrem", true);
+    expect(Object.keys(localStorage)).toEqual(keysBefore);
   });
 
   it("cap 就位后：读写透传至 cap，且 available 转为 true", () => {
@@ -163,6 +172,12 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     setStateValue("env.pmrem", true);
     expect(sky.isEnvironmentEnabled()).toBe(true);
     expect(getStateValue("env.pmrem")).toBe(true);
+
+    // 防双写（cap 就位态）：状态层写入透传 cap.setEnabled，但绝不自行创建 cap 域存储键
+    // （cap 域键只由 cap.saveState 写，会话退出时统一落盘——真实前缀 ysm-scene-cap-）。
+    for (const capId of ["postprocessing", "wireframe", "sky"]) {
+      expect(localStorage.getItem(`ysm-scene-cap-${capId}`)).toBeNull();
+    }
   });
 
   it("结构性探测：id 对得上但方法不全的 cap 不误判为可用", () => {
@@ -231,6 +246,19 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     expect(getStateValue("render.maxFps")).toBe(30);
   });
 
+  it("pixel-ratio：拖拽写入不广播（notify:false 抑制高频），松手提交 onCommit 广播一次", () => {
+    const [, , ratio] = buildCrossCuttingControls();
+    const seen: (typeof KNOWN_PATHS)[number][] = [];
+    const off = subscribeSettings((p) => seen.push(p));
+    ratio.setValue(1.25); // 拖拽高频写入：值落盘但不通知
+    expect(localStorage.getItem(MAX_PIXEL_RATIO_KEY)).toBe("1.25");
+    expect(seen).toEqual([]);
+    ratio.slider!.onCommit!(1.5); // 松手提交：离散操作，广播一次
+    expect(localStorage.getItem(MAX_PIXEL_RATIO_KEY)).toBe("1.5");
+    expect(seen).toEqual(["render.maxPixelRatio"]);
+    off();
+  });
+
   it("自动聚合：仅收 settingsOrder 声明项，升序且抹平 group", () => {
     const mk = (id: string, order: number): MenuControlDef => ({
       id,
@@ -252,9 +280,22 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     expect(got.every((c) => c.group === undefined)).toBe(true);
   });
 
-  it("cap 缺席时不产生任何聚合控件（且不在构建期冻结）", () => {
-    expect(collectSettingsCapControls()).toEqual([]);
-    // 后挂载 cap 再来一次，能看见——即 05fe24b7 所修「声明期求值」同类病不复现
+  it("cap 缺席时不产生聚合控件；后挂载 cap 再渲染节点能看见（惰性求值，非构建期冻结）", () => {
+    // 走真实 UI 路径：schema 节点在构建时只持有 supplier，每次渲染重取注册表。
+    // 若实现是构建期求值（快照烤进 renderCustom 闭包），同一节点第二次渲染
+    // 永远看不到后挂载的 cap——正是 05fe24b7 所修「声明期求值」病的复现条件。
+    const qualityNode = buildSettingsSchema({} as never).find(
+      (n) => n.id === "settings-quality",
+    )!;
+    const renderRowIds = (): string[] => {
+      const list = document.createElement("div");
+      (qualityNode as { renderCustom: (l: HTMLElement) => void }).renderCustom(list);
+      return [...list.querySelectorAll("[data-testid^='cap-']")].map((el) =>
+        (el as HTMLElement).dataset.testid!.replace(/^cap-/, ""),
+      );
+    };
+    expect(renderRowIds()).toEqual([]);
+
     const cap = makeFakeCap("postprocessing", {
       controls: [{
         id: "pp-enabled",
@@ -267,7 +308,8 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
       }],
     });
     mountCaps(cap);
-    expect(collectSettingsCapControls().map((c) => c.id)).toEqual(["pp-enabled"]);
+    // 同一节点、第二次渲染：cap 已就位 → 控件出现
+    expect(renderRowIds()).toEqual(["pp-enabled"]);
   });
 
   it("回归红线：设置面板不再手写 cap 已自报的开关（f0fa3e23 型重复真值来源）", () => {

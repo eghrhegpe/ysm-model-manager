@@ -2,6 +2,8 @@
 kind: preview_core
 name: 统一 3D 预览核心 preview-core
 tier: architecture
+adr:
+  - ADR-125
 category: utils
 source_files:
   - frontend/src/utils/3d/adapters/

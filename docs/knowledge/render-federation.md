@@ -3,6 +3,8 @@ kind: render-federation
 name: 联邦渲染能力 (Render Federation)
 category: utils
 tier: architecture
+adr:
+  - ADR-125
 source_files:
   - frontend/src/utils/3d/caps/scene-capability-registry.ts
   - frontend/src/utils/3d/caps/sky-capability.ts

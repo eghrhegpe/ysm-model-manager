@@ -46,11 +46,11 @@
 | 前端·服务 | 2 | 18 |
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
-| 前端·工具 | 167 | 664 |
+| 前端·工具 | 168 | 674 |
 | frontend/views | 117 | 338 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **497** | **2103** |
+| **合计** | **498** | **2113** |
 
 ## Go·头像
 
@@ -1573,8 +1573,8 @@
 | `ReflectionMode()` | `frontend/src/utils/3d/caps/postprocessing-capability:33` | 反射模式三档：envmap-only 纯环境贴图、envmap+ssr SSR+屏外 fallback、ssr-only 纯 SSR（屏外会变黑） |
 | `PostprocessingParams()` | `frontend/src/utils/3d/caps/postprocessing-capability:35` | — |
 | `DEFAULT_POSTPROC_PARAMS()` | `frontend/src/utils/3d/caps/postprocessing-capability:85` | — |
-| `POSTPROC_PRESETS()` | `frontend/src/utils/3d/caps/postprocessing-capability:335` | 模型类别后处理预设 |
-| `PostprocessingCapability()` | `frontend/src/utils/3d/caps/postprocessing-capability:377` | — |
+| `POSTPROC_PRESETS()` | `frontend/src/utils/3d/caps/postprocessing-capability:338` | 模型类别后处理预设 |
+| `PostprocessingCapability()` | `frontend/src/utils/3d/caps/postprocessing-capability:380` | — |
 | `ReflectorParams()` | `frontend/src/utils/3d/caps/reflector-capability:18` | — |
 | `DEFAULT_REFLECTOR_PARAMS()` | `frontend/src/utils/3d/caps/reflector-capability:34` | — |
 | `REFLECTOR_PRESETS()` | `frontend/src/utils/3d/caps/reflector-capability:45` | 模型类别反光预设：反光强度按材质风格适配（toon 不要强反射，PBR 角色中等，方块/体素弱） |
@@ -1583,9 +1583,9 @@
 | `SceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:29` | 注册表：管理所有场景能力的工厂和实例 |
 | `sceneCapabilityRegistry()` | `frontend/src/utils/3d/caps/scene-capability-registry:108` | 全局单例（模块级单例 + 运行时状态隔离） |
 | `MenuControlDef()` | `frontend/src/utils/3d/caps/scene-capability:16` | 菜单控件定义（声明式，由框架渲染为 DOM） |
-| `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:70` | ============ 场景能力统一接口 ============ |
-| `persistState()` | `frontend/src/utils/3d/caps/scene-capability:118` | 保存 JSON 到 localStorage |
-| `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:123` | 从 localStorage 加载 JSON |
+| `SceneCapability()` | `frontend/src/utils/3d/caps/scene-capability:76` | ============ 场景能力统一接口 ============ |
+| `persistState()` | `frontend/src/utils/3d/caps/scene-capability:124` | 保存 JSON 到 localStorage |
+| `restoreState()` | `frontend/src/utils/3d/caps/scene-capability:129` | 从 localStorage 加载 JSON |
 | `ShadowParams()` | `frontend/src/utils/3d/caps/shadow-capability:24` | ============ 参数类型 ============ |
 | `DEFAULT_SHADOW_PARAMS()` | `frontend/src/utils/3d/caps/shadow-capability:39` | — |
 | `SHADOW_PRESETS()` | `frontend/src/utils/3d/caps/shadow-capability:49` | 预设（setPreset 套用到不同模型类别） |
@@ -1595,7 +1595,7 @@
 | `SkyModelType()` | `frontend/src/utils/3d/caps/sky-capability:81` | 模型类别标识（取 PreviewAdapter.id：ysm/vrm/mmd/litematic） |
 | `MODEL_SKY_PRESETS()` | `frontend/src/utils/3d/caps/sky-capability:89` | 按模型类别的散射/曝光预设（ADR-073 #3）。 |
 | `injectSkySunScalePatch()` | `frontend/src/utils/3d/caps/sky-capability:124` | §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform， 把「天空底色 × 太阳强度」和「太阳盘白光强度」从硬编码改为 |
-| `SkyCapability()` | `frontend/src/utils/3d/caps/sky-capability:310` | — |
+| `SkyCapability()` | `frontend/src/utils/3d/caps/sky-capability:313` | — |
 | `WaterMode()` | `frontend/src/utils/3d/caps/water-capability:17` | 水面呈现模式：film=贴地薄水膜；pool=立体水池（有侧壁 + 高度） |
 | `WaterParams()` | `frontend/src/utils/3d/caps/water-capability:20` | — |
 | `DEFAULT_WATER_PARAMS()` | `frontend/src/utils/3d/caps/water-capability:49` | — |
@@ -1756,6 +1756,16 @@
 | `BoneData()` | `frontend/src/utils/3d/spec-builder:99` | BoneData — Go threejs/spec.go BoneData |
 | `MeshData()` | `frontend/src/utils/3d/spec-builder:109` | MeshData — Go threejs/spec.go MeshData |
 | `buildSpecFromGeometryJSON()` | `frontend/src/utils/3d/spec-builder:128` | 从 bedrock geometry JSON 构建 3D spec（纯 TS，无 Go 依赖）。 |
+| `SettingsPath()` | `frontend/src/utils/3d/state/settings-state:33` | 本层托管的横切设置路径（ADR-125 P1 收编六项） |
+| `SETTINGS_PATHS()` | `frontend/src/utils/3d/state/settings-state:42` | 全部受管路径（供契约测试枚举 / 快照遍历） |
+| `toStatePath()` | `frontend/src/utils/3d/state/settings-state:55` | 契约守卫：SettingsPath 必须落在 `PreviewStatePath` 的定义域内。 |
+| `SettingsPathBinding()` | `frontend/src/utils/3d/state/settings-state:60` | 单个路径的读写绑定 |
+| `subscribeSettings()` | `frontend/src/utils/3d/state/settings-state:160` | 订阅横切设置变更；返回取消订阅函数 |
+| `getStateValue()` | `frontend/src/utils/3d/state/settings-state:181` | 读取路径当前值 |
+| `setStateValue()` | `frontend/src/utils/3d/state/settings-state:190` | 写入路径值。 |
+| `isPathAvailable()` | `frontend/src/utils/3d/state/settings-state:200` | 该路径当前是否有真实来源（cap 派生项在 cap 未创建时为 false） |
+| `settingsSnapshot()` | `frontend/src/utils/3d/state/settings-state:205` | 全量快照：供 `visibleWhen: (s) =&gt; boolean` 等纯函数谓词消费 |
+| `resetSettingsListeners()` | `frontend/src/utils/3d/state/settings-state:212` | 测试用：清空全部订阅者（listener 集合隔离，防止用例间串扰） |
 | `TextureAlphaMode()` | `frontend/src/utils/3d/texture-alpha:4` | — |
 | `TextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:7` | 纹理级透明信息：整图模式 + 面级查询索引（ADR-118 Phase B） |
 | `getTextureAlphaInfo()` | `frontend/src/utils/3d/texture-alpha:17` | — |

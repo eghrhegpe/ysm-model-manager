@@ -750,6 +750,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-125：3D 预览菜单统一：settingsState 横切状态层 + 单渲染器 + visible 规则",
+        "link": "/adr/ADR-125-preview-menu-unified-state-single-renderer"
+      },
+      {
         "text": "ADR-124：i18n 键名三段式规范",
         "link": "/adr/ADR-124-i18n-key-naming-three-segment"
       },

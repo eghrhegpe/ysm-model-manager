@@ -406,10 +406,13 @@ function collectParams(stripped, startRe) {
   return names;
 }
 
-// 对象/类方法定义：`{ | } | , | ; | 换行` 后跟（可选 async）名字(，且配对右括号后是 `{` 或 `:`。
+// 对象/类方法定义：`{ | } | , | ; | 换行` 后跟（可选修饰符 + 可选 async）名字(，且配对右括号后是 `{` 或 `:`。
+// 修饰符（private/public/protected/readonly/static/abstract）可多词组合、顺序任意；此前仅跳 async，
+// 漏识别 `private notify()` 等带修饰符方法（ADR-014 正则级盲点），致其被误判为缺失 import 去匹配
+// 全局导出表（如 download-queue-store 的 notify）——详见 05fe24b7 引入的 cap 私有 notify 误报。
 // `\??` 支持接口可选方法（showModelGroup?(i: number): void;）——名字后跟 `?` 再 `(`，
 // 否则可选方法名被误判为缺失 import（2026-08-17 修复）。
-const METHOD_START_RE = /(?:\{|\}|,|;|\n)\s*(?:async\s+)?([A-Za-z_$][\w$]*)\??\s*\(/g;
+const METHOD_START_RE = /(?:\{|\}|,|;|\n)\s*(?:(?:public|private|protected|readonly|static|abstract|async)\s+)*([A-Za-z_$][\w$]*)\??\s*\(/g;
 
 /** 收集对象字面量/类体中的方法定义名（`foo(): void {` 形式）及其形参名。 */
 function collectMethods(stripped) {

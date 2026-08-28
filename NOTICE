@@ -1,0 +1,25 @@
+YSM Model Manager
+Copyright 2026 YSM Model Manager Contributors
+
+This product is licensed under the Apache License, Version 2.0.
+
+This product includes software developed by third parties:
+
+=========================================================================
+MolangJS
+  https://github.com/JannisX11/molangjs
+  License: MIT
+  Copyright (c) 2019 JannisX11
+
+  Molang expression compiler embedded as source code
+  (frontend/src/utils/animation/molang-lib/).
+  Original license header preserved in source files.
+=========================================================================
+YSMParser (Yes Steve Model Parser)
+  https://github.com/OpenYSM/YSMParser
+  License: MIT
+  Copyright (c) 2026 Yes-Steve-Model Parser
+
+  YSMParser WASM binary embedded as base64
+  (frontend/src/wasm/ysm-wasm-data.js).
+=========================================================================

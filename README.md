@@ -346,4 +346,4 @@ node scripts/android-install.mjs
 
 ## 📄 许可证
 
-本项目基于 **Apache-2.0** 许可证开源（LICENSE 文件待补充）。
+本项目基于 **Apache-2.0** 许可证开源，内嵌组件版权声明见 [NOTICE](NOTICE)。

@@ -8,10 +8,14 @@ source_files:
   - frontend/src/utils/3d/adapters/preview-menu-render.ts
   - frontend/src/utils/3d/adapters/preview-menu-node-types.ts
   - frontend/src/utils/3d/adapters/mmd-adapter.ts
+  - frontend/src/utils/3d/adapters/ysm-adapter.ts
   - frontend/src/views/app-preview/mmd-controls.ts
+  - frontend/src/views/app-preview/ysm-controls.ts
+  - frontend/src/views/app-preview/shot-panel-shared.ts
 tests:
   - frontend/src/utils/3d/adapters/preview-menu-items.test.ts
   - frontend/src/views/app-preview/mmd-controls.test.ts
+  - frontend/src/views/app-preview/ysm-controls.test.ts
 use_when:
   - 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡）
   - 评估"面板内容该走 renderCustom 还是 children 声明式"
@@ -25,7 +29,7 @@ use_when:
 
 ADR-125 把**设置面板**的控件统一到 `MenuControlDef[]`（B 层单渲染器）。ADR-126 P4-B 把同一方向的**面板内容**（统计/纹理/按钮组/信息卡——非控件的内容展示）也声明式化：panel 节点带 `children: PreviewMenuNode[]`，渲染走 `renderMenu`（preview-menu-render.ts），消灭「面板内容手写 DOM 闭包」的第二渲染通道。
 
-**P4-B 分三小步**（ADR-126 §2.1 拆解）：P4-B-1 验证通道（MMD 信息卡 + 截图按钮组）→ P4-B-2 YSM 统计/纹理 → P4-B-3 morph/play 交互面板。`fillRoles` **不在范围**（实测已声明式：sceneRegistry + menuItems 过滤 + SlideMenuView 驱动）。
+**P4-B 分三小步**（ADR-126 §2.1 拆解）：P4-B-1 验证通道（MMD 信息卡 + 截图按钮组）→ P4-B-2 YSM 截图声明式化（`fill3DPanel` 统计/纹理/模型选择器**保留逃生舱**——含多组件切换动态视图状态，非静态内容）→ P4-B-3 morph/play 交互面板。`fillRoles` **不在范围**（实测已声明式：sceneRegistry + menuItems 过滤 + SlideMenuView 驱动）。
 
 ## 核心机制
 
@@ -49,17 +53,31 @@ children 分支：`node.children?.length` 时递归 `renderMenu(list, node.child
 
 - `mmdMenuItems` 的 shot 面板：`if (o.screenshot) items.push(shot节点)`——screenshot 为 null 时无 shot 项（测试断言 `expectNotContains(ids, ["shot"])`）
 - 对齐 ADR-093 `bonePanel` 条件注入范式
+- **例外（YSM）**：YSM 的 screenshot 是 **ctx 可选字段**（undefined = 走 saveScreenshot fallback，面板常驻），故 YSM shot **始终注入**（不做条件注入）
+
+### 截图面板共享层（shot-panel-shared.ts，P4-B-2）
+
+MMD 与 YSM 截图面板同构（6 角度按钮 + 截图副作用），共享 `SHOT_KEYS` / `SHOT_LABELS` / `makeShotAction` / `shotButtonNodes`，杜绝两处复制：
+
+- `makeShotAction(modelForSave, screenshotFn)`：防连点 guard + toast 错误提示；**修正**原 `fillMmdShotPanel` 的 `saveScreenshot` 第三参误传 bug（截图走 fallback 而非活跃渲染器）
+- `shotButtonNodes(modelForSave, screenshotFn)`：6 button 节点；`screenshotFn === null` 返回空数组（MMD），`undefined` 仍返回（YSM fallback）
 
 ## 对外 API / 入口
 
 ```ts
 // 声明式节点工厂（新面板路径）
 mmdModelInfoNodes(ctx): PreviewMenuNode[]   // MMD 信息卡 2 行 field（纯数据零 DOM）
-mmdShotNodes(ctx, screenshotFn): PreviewMenuNode[] // 6 截图 button（screenshot 为 null → []）
+mmdShotNodes(ctx, screenshotFn): PreviewMenuNode[] // MMD 截图 6 button（screenshot null → []，条件注入）
+ysmShotNodes(ctx): PreviewMenuNode[]        // YSM 截图 6 button（screenshot undefined → 面板常驻，无条件注入）
+
+// 截图共享层（views/app-preview/shot-panel-shared.ts）
+SHOT_KEYS / SHOT_LABELS                     // 六角度键 + i18n 键（防两处漂移）
+makeShotAction(modelForSave, screenshotFn)  // 截图副作用（防连点 + toast）
+shotButtonNodes(modelForSave, screenshotFn) // 6 button 节点
 
 // 渲染通道（panel 节点可选其一）
 children: PreviewMenuNode[]                 // 声明式（P4-B 通道，推荐新面板）
-renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面板兼容）
+renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面板兼容；fill3DPanel 动态内容保留）
 ```
 
 ## 与其他子系统关系
@@ -80,5 +98,6 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 ## 相关
 
 - ADR-126（本决策 P4-B）、ADR-125（设置面板单渲染器）、ADR-085（声明式收敛方向）、ADR-093（条件注入范式）
-- 试点：P4-B-1 已落地（mmd model/shot 声明式化）；P4-B-2（YSM 统计/纹理）、P4-B-3（morph/play）待续
-- 顺手修复：`fillMmdShotPanel` 的 `saveScreenshot` 第三参误传 `screenshotFn`（被当 setShotState），实际截图走 fallback 而非活跃渲染器——`makeMmdShotAction` 已修正（第四参传 screenshotFn）
+- 落地：P4-B-1（mmd model/shot 声明式化）+ P4-B-2（YSM 截图声明式化 + 截图共享层）已完成；P4-B-3（morph/play）待续
+- 保留逃生舱：`fill3DPanel` 统计/纹理/模型选择器（多组件切换动态视图状态，声明式化收益低风险高——P4-B-2 决策）
+- 顺手修复：`fillMmdShotPanel` / `fillYsmShotPanel` 的 `saveScreenshot` 第三参误传 `screenshotFn`（被当 setShotState），实际截图走 fallback 而非活跃渲染器——`makeShotAction`（shot-panel-shared.ts）已修正（第四参传 screenshotFn）

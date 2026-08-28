@@ -89,17 +89,19 @@ function makeCtx() {
 
 /** 最近一次 setAdapterItems 收到的适配器项 */
 /** 从 preview(built) 对象读取注入的菜单项 */
-function registeredItems(preview: { menuItems?: Array<{ id: string; kind: string; render?: (list: HTMLElement, close: () => void) => void; renderCustom?: (list: HTMLElement, close?: () => void) => void }> | null }): Array<{
+function registeredItems(preview: { menuItems?: Array<{ id: string; kind: string; render?: (list: HTMLElement, close: () => void) => void; renderCustom?: (list: HTMLElement, close?: () => void) => void; children?: Array<{ id: string; kind: string }> }> | null }): Array<{
   id: string;
   kind: string;
   render?: (list: HTMLElement, close: () => void) => void;
   renderCustom?: (list: HTMLElement, close?: () => void) => void;
+  children?: Array<{ id: string; kind: string }>;
 }> {
   return (preview.menuItems ?? []) as Array<{
     id: string;
     kind: string;
     render?: (list: HTMLElement, close: () => void) => void;
     renderCustom?: (list: HTMLElement, close?: () => void) => void;
+    children?: Array<{ id: string; kind: string }>;
   }>;
 }
 
@@ -122,7 +124,13 @@ describe("buildYsmScene（shared 装配）", () => {
     const items = registeredItems(preview);
     expect(items.map((i) => i.id)).toEqual(["model", "shot", "bones", "perception"]);
     items.forEach((i) => expect(i.kind).toBe("panel"));
-    items.forEach((i) => expect(typeof i.renderCustom).toBe("function"));
+    // [doc:adr-126-p4-b] panel 渲染通道二选一：renderCustom（命令式逃生舱）或 children（声明式节点）
+    items.forEach((i) =>
+      expect(
+        typeof i.renderCustom === "function" || (i.children?.length ?? 0) > 0,
+        `${i.id} 缺渲染通道`,
+      ).toBe(true),
+    );
 
     // model 面板渲染：fill3DPanel 输出统计行（骨骼 0 根 + 立方体 0 个）
     const list = document.createElement("div");
@@ -183,7 +191,7 @@ describe("buildYsmScene 面板填充与骨骼拾取", () => {
     preview.dispose();
   });
 
-  it("fillShotPanel 可被渲染调用（无侧效应）", async () => {
+  it("shot 面板为声明式 children（6 截图按钮节点，无 renderCustom）", async () => {
     const ctx = makeCtx();
     const loader = vi.fn(async () => ({ bones: [] } as unknown as BedrockGeometry));
     const preview = await buildYsmScene(ctx, "/m/a.ysm", {
@@ -194,10 +202,10 @@ describe("buildYsmScene 面板填充与骨骼拾取", () => {
 
     const items = registeredItems(preview);
     const shotItem = items.find((i) => i.id === "shot")!;
-    const list = document.createElement("div");
-    shotItem.renderCustom!(list, () => {});
-    // fillShotPanel 是 no-op，list 保持空
-    expect(list.textContent).toBe("");
+    // [doc:adr-126-p4-b-2] shot 面板改走声明式 children（ysmShotNodes 纯数据节点）
+    expect(shotItem.renderCustom).toBeUndefined();
+    expect(shotItem.children?.length).toBe(6);
+    expect(shotItem.children?.every((n) => n.kind === "button")).toBe(true);
 
     preview.dispose();
   });
@@ -404,7 +412,11 @@ describe("ysmMenuItems 独立菜单表测试", () => {
     expect(items[2].dockGroup).toBe("motion");
     items.forEach((i) => {
       expect(i.kind).toBe("panel");
-      expect(typeof i.renderCustom).toBe("function");
+      // [doc:adr-126-p4-b] panel 渲染通道二选一：renderCustom（命令式逃生舱）或 children（声明式节点）
+      expect(
+        typeof i.renderCustom === "function" || (i.children?.length ?? 0) > 0,
+        `${i.id} 缺渲染通道`,
+      ).toBe(true);
     });
   });
 

@@ -47,10 +47,10 @@
 | frontend/test-utils | 5 | 35 |
 | frontend/ui | 18 | 64 |
 | 前端·工具 | 168 | 679 |
-| frontend/views | 117 | 340 |
+| frontend/views | 118 | 345 |
 | 前端·WASM | 9 | 22 |
 | frontend/workers | 2 | 14 |
-| **合计** | **498** | **2120** |
+| **合计** | **499** | **2125** |
 
 ## Go·头像
 
@@ -1496,11 +1496,11 @@
 | `createWorkerBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:65` | — |
 | `ResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:158` | — |
 | `createResolveModeBridge()` | `frontend/src/utils/3d/adapters/worker-bridge:165` | — |
-| `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:43` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
-| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:470` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
-| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:500` | 工厂：构造统一 PreviewAdapter（shared 模式） |
-| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:519` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
-| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:553` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
+| `YsmAdapterOptions()` | `frontend/src/utils/3d/adapters/ysm-adapter:44` | 适配器可选项：loader 注入（预览面板语境数据加载链）/ 纹理重建 / 关闭回调 |
+| `buildYsmScene()` | `frontend/src/utils/3d/adapters/ysm-adapter:471` | 构建 YSM 3D 内容并挂载到统一外壳（shared 模式）。 |
+| `makeYsmAdapter()` | `frontend/src/utils/3d/adapters/ysm-adapter:501` | 工厂：构造统一 PreviewAdapter（shared 模式） |
+| `YsmMenuItemsOpts()` | `frontend/src/utils/3d/adapters/ysm-adapter:520` | ysmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 |
+| `ysmMenuItems()` | `frontend/src/utils/3d/adapters/ysm-adapter:554` | YSM 声明式根菜单专属项（ADR-076 v2 Phase 2）：model / 截图 / 骨骼。 |
 | `ALPHA_F_VISIBLE()` | `frontend/src/utils/3d/alpha-index:5` | — |
 | `ALPHA_F_HOLE()` | `frontend/src/utils/3d/alpha-index:6` | — |
 | `ALPHA_F_TRANSLUCENT()` | `frontend/src/utils/3d/alpha-index:7` | — |
@@ -2175,16 +2175,16 @@
 | `appendMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:38` | 同台追加 MMD 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4） |
 | `invalidateMmdPreview()` | `frontend/src/views/app-preview/mmd-3d:43` | 任意新预览派发时调用，作废在途 MMD 加载 |
 | `CameraControlBridge()` | `frontend/src/views/app-preview/mmd-controls` | — |
-| `MmdBottomNavCtx()` | `frontend/src/views/app-preview/mmd-controls:27` | — |
-| `fillMmdModelPanel()` | `frontend/src/views/app-preview/mmd-controls:40` | MMD 模型面板：信息卡（morph 列表已拆独立菜单项 fillMmdMorphPanel，对齐材质折叠模式） |
-| `mmdModelInfoNodes()` | `frontend/src/views/app-preview/mmd-controls:58` | [doc:adr-126-p4-b-1] MMD 模型信息面板——声明式节点版（通道验证）。 |
-| `fillMmdMorphPanel()` | `frontend/src/views/app-preview/mmd-controls:73` | MMD 表情面板（morph 权重 0/1 切换，✓ 高亮当前开启；独立菜单项，避免 84+ 行平铺模型面板） |
-| `MmdPlayBridge()` | `frontend/src/views/app-preview/mmd-controls:118` | MMD 播放/动作控制桥（mmd-adapter 组装，纯逻辑层状态） |
-| `fillMmdPlayPanel()` | `frontend/src/views/app-preview/mmd-controls:131` | MMD 播放面板：播放/暂停 + 多动作切换 + 空态提示 |
-| `MaterialControlBridge()` | `frontend/src/views/app-preview/mmd-controls:199` | 材质控制桥：复用 mmd-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在视图层（ADR-072） |
-| `buildMaterialControls()` | `frontend/src/views/app-preview/mmd-controls:215` | 在 container 渲染 MMD 材质面板：每行 = 显隐开关（👁/🚫）+ 名称 + 透明度滑条。 |
-| `mmdShotNodes()` | `frontend/src/views/app-preview/mmd-controls:344` | [doc:adr-126-p4-b-1] MMD 截图面板——声明式节点版（通道验证）。 |
-| `fillMmdShotPanel()` | `frontend/src/views/app-preview/mmd-controls:368` | MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。 |
+| `MmdBottomNavCtx()` | `frontend/src/views/app-preview/mmd-controls:28` | — |
+| `fillMmdModelPanel()` | `frontend/src/views/app-preview/mmd-controls:41` | MMD 模型面板：信息卡（morph 列表已拆独立菜单项 fillMmdMorphPanel，对齐材质折叠模式） |
+| `mmdModelInfoNodes()` | `frontend/src/views/app-preview/mmd-controls:59` | [doc:adr-126-p4-b-1] MMD 模型信息面板——声明式节点版（通道验证）。 |
+| `fillMmdMorphPanel()` | `frontend/src/views/app-preview/mmd-controls:74` | MMD 表情面板（morph 权重 0/1 切换，✓ 高亮当前开启；独立菜单项，避免 84+ 行平铺模型面板） |
+| `MmdPlayBridge()` | `frontend/src/views/app-preview/mmd-controls:119` | MMD 播放/动作控制桥（mmd-adapter 组装，纯逻辑层状态） |
+| `fillMmdPlayPanel()` | `frontend/src/views/app-preview/mmd-controls:132` | MMD 播放面板：播放/暂停 + 多动作切换 + 空态提示 |
+| `MaterialControlBridge()` | `frontend/src/views/app-preview/mmd-controls:200` | 材质控制桥：复用 mmd-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在视图层（ADR-072） |
+| `buildMaterialControls()` | `frontend/src/views/app-preview/mmd-controls:216` | 在 container 渲染 MMD 材质面板：每行 = 显隐开关（👁/🚫）+ 名称 + 透明度滑条。 |
+| `mmdShotNodes()` | `frontend/src/views/app-preview/mmd-controls:287` | [doc:adr-126-p4-b-2] MMD 截图面板——声明式节点版。 |
+| `fillMmdShotPanel()` | `frontend/src/views/app-preview/mmd-controls:303` | MMD 截图面板填充（ADR-052 P3：对齐 ysm-controls fillYsmShotPanel 范式）。 |
 | `makeMmdDataPort()` | `frontend/src/views/app-preview/mmd-data-port:11` | 构建一个接入 Go RPC 的 MMD 数据端口；scope 仅用于 AddOpLog 的运行时环打标 （角色预览用 "mmd-preview"，场景预览用 "mmd-scene" |
 | `resolveMmdSiblings()` | `frontend/src/views/app-preview/mmd-siblings:13` | 同类型 MMD 模型候选（委托共享底座 resolveSiblingsByType）；失败返回 []（下拉不渲染） |
 | `ModelLike()` | `frontend/src/views/app-preview/model3d-loader:12` | 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） |
@@ -2209,6 +2209,10 @@
 | `AngleShot()` | `frontend/src/views/app-preview/screenshot-renderer:31` | — |
 | `RenderMultiAngleOptions()` | `frontend/src/views/app-preview/screenshot-renderer:36` | — |
 | `renderMultiAngle()` | `frontend/src/views/app-preview/screenshot-renderer:43` | — |
+| `SHOT_KEYS()` | `frontend/src/views/app-preview/shot-panel-shared:17` | 截图六角度键（current/front/45/side/back45/all）——fillXxxShotPanel 与 shotButtonNodes 共用，防两处漂移 |
+| `SHOT_LABELS()` | `frontend/src/views/app-preview/shot-panel-shared:20` | 截图六角度 i18n 键（与 SHOT_KEYS 同序） |
+| `makeShotAction()` | `frontend/src/views/app-preview/shot-panel-shared:33` | 截图保存副作用：防连点 guard + toast 错误提示。fillXxxShotPanel（命令式）与 shotButtonNodes（声明式）共用 |
+| `shotButtonNodes()` | `frontend/src/views/app-preview/shot-panel-shared:64` | 截图面板声明式节点（6 button）：screenshotFn 为 null 时返回空数组（MMD 能力缺失不渲染）； undefined（YSM ctx 可选字段）时仍返回 6 |
 | `resolveSiblingsByType()` | `frontend/src/views/app-preview/siblings:13` | 解析某资源类型的同目录候选主文件路径列表。 |
 | `PanelHandle()` | `frontend/src/views/app-preview/skeleton-fill-panel:10` | fill3DPanel 需要的句柄子集（Model3DHandleX / YsmContentHandle 均满足——结构兼容） |
 | `fill3DPanel()` | `frontend/src/views/app-preview/skeleton-fill-panel:36` | — |
@@ -2252,11 +2256,12 @@
 | `cleanupYsm3D()` | `frontend/src/views/app-preview/ysm-3d:87` | 关闭活跃 YSM 3D 预览（WebGL renderer + rAF + overlay 全清） |
 | `invalidateYsmPreview()` | `frontend/src/views/app-preview/ysm-3d:92` | 作废在途 YSM 3D 加载（切模型前调用，防旧会话迟到渲染覆盖新模型） |
 | `CameraControlBridge()` | `frontend/src/views/app-preview/ysm-controls` | — |
-| `YsmModel()` | `frontend/src/views/app-preview/ysm-controls:21` | 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） |
-| `YsmContentHandle()` | `frontend/src/views/app-preview/ysm-controls:30` | YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） |
-| `YsmControlsContext()` | `frontend/src/views/app-preview/ysm-controls:43` | 控件装配上下文：由 ysm-adapter 在 buildYsmScene 内组装传入 |
-| `fillYsmModelPanel()` | `frontend/src/views/app-preview/ysm-controls:74` | 模型菜单面板：统计 / 纹理 / 骨骼列表 / 骨骼详情 / 多组件切换（fill3DPanel 内容） |
-| `fillYsmShotPanel()` | `frontend/src/views/app-preview/ysm-controls:96` | 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） |
+| `YsmModel()` | `frontend/src/views/app-preview/ysm-controls:23` | 模型对象（对齐 fill3DPanel / saveScreenshot 的字段需求；ysm-adapter 复用此类型） |
+| `YsmContentHandle()` | `frontend/src/views/app-preview/ysm-controls:32` | YSM 内容层句柄（shared 化：相机操作走核心 cameraControls，本句柄只管内容/骨骼） |
+| `YsmControlsContext()` | `frontend/src/views/app-preview/ysm-controls:45` | 控件装配上下文：由 ysm-adapter 在 buildYsmScene 内组装传入 |
+| `fillYsmModelPanel()` | `frontend/src/views/app-preview/ysm-controls:67` | 模型菜单面板：统计 / 纹理 / 骨骼列表 / 骨骼详情 / 多组件切换（fill3DPanel 内容）。 |
+| `ysmShotNodes()` | `frontend/src/views/app-preview/ysm-controls:94` | [doc:adr-126-p4-b-2] YSM 截图面板——声明式节点版。 |
+| `fillYsmShotPanel()` | `frontend/src/views/app-preview/ysm-controls:99` | 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） |
 | `openFullPreview()` | `frontend/src/views/app-preview/zoom:7` | 全窗放大预览（独立函数，不依赖组件实例） |
 | `SidebarInstance()` | `frontend/src/views/app-sidebar/data:4` | sidebar 整合包实例（loader 转换后的渲染格式） |
 | `bindCardEvents()` | `frontend/src/views/app-sidebar/events:127` | — |

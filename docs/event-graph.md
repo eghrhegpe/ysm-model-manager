@@ -34,7 +34,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 201 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 200 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 12 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -510,9 +510,8 @@
 | `frontend/src/views/app-preview/detail-3d.ts` | 308 |
 | `frontend/src/views/app-preview/index.ts` | 244 |
 | `frontend/src/views/app-preview/index.ts` | 266 |
-| `frontend/src/views/app-preview/mmd-controls.ts` | 327 |
 | `frontend/src/views/app-preview/preview-library.ts` | 107 |
-| `frontend/src/views/app-preview/ysm-controls.ts` | 114 |
+| `frontend/src/views/app-preview/shot-panel-shared.ts` | 48 |
 | `frontend/src/views/app-sidebar/events.ts` | 110 |
 | `frontend/src/views/app-sidebar/index.ts` | 150 |
 | `frontend/src/views/app-sidebar/index.ts` | 264 |

@@ -12,6 +12,8 @@ import { friendlyError } from "../../utils/dom/errors.ts";
 import { t } from "../../core/i18n/t.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
 import { fill3DPanel } from "./skeleton-fill-panel.ts";
+import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu-node-types.ts";
+import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
 import type { Spec3D, BoneSelectInfo } from "../../utils/3d/model3d.ts";
 import type { BedrockGeometry } from "./geometry.ts";
 import type { CameraControlBridge } from "../../utils/3d/adapters/camera-controls.ts";
@@ -57,20 +59,11 @@ export interface YsmControlsContext {
   screenshot?(): Promise<string | null>;
 }
 
-/** 连点/多菜单触发时忽略并发（防重复保存文件）——对齐原 skeleton.ts makeShotGuard */
-function makeShotGuard(): { saving: boolean; setSaving: (v: boolean) => void } {
-  let _saving = false;
-  return {
-    get saving() {
-      return _saving;
-    },
-    setSaving: (v: boolean) => {
-      _saving = v;
-    },
-  };
-}
-
-/** 模型菜单面板：统计 / 纹理 / 骨骼列表 / 骨骼详情 / 多组件切换（fill3DPanel 内容） */
+/**
+ * 模型菜单面板：统计 / 纹理 / 骨骼列表 / 骨骼详情 / 多组件切换（fill3DPanel 内容）。
+ * [doc:adr-126-p4-b-2] 本面板保留命令式逃生舱——含「模型选择器」多组件切换动态视图状态，
+ * 非静态内容，声明式化收益低风险高（P4-B-2 只声明式化截图面板，见 ysmShotNodes）。
+ */
 export function fillYsmModelPanel(list: HTMLElement, ctx: YsmControlsContext): void {
   const modelSel = document.createElement("select");
   modelSel.className = "ysm-3d-popselect";
@@ -92,45 +85,30 @@ export function fillYsmModelPanel(list: HTMLElement, ctx: YsmControlsContext): v
   );
 }
 
+/**
+ * [doc:adr-126-p4-b-2] YSM 截图面板——声明式节点版。
+ * 共享逻辑在 shot-panel-shared.ts（shotButtonNodes），screenshot 为 ctx 可选字段
+ * （undefined = 走 saveScreenshot fallback，面板常驻——与 MMD 能力缺失不注入不同）。
+ * fillYsmShotPanel 保留（向后兼容）；新面板路径走本函数。
+ */
+export function ysmShotNodes(ctx: YsmControlsContext): PreviewMenuNode[] {
+  return shotButtonNodes(ctx.model, ctx.screenshot).map((n) => ({ ...n, id: `ysm-${n.id}` }));
+}
+
 /** 截图面板：6 角度保存（原视图菜单截图子区，相机控件已归 core 根菜单 camera 项） */
 export function fillYsmShotPanel(list: HTMLElement, ctx: YsmControlsContext): void {
-  const shot = makeShotGuard();
-  const shotKeys = ["current", "front", "45", "side", "back45", "all"] as const;
-  const shotLabels = [
-    t("preview.screenshotCurrent"),
-    t("preview.screenshotFront"),
-    t("preview.screenshot45"),
-    t("preview.screenshotSide"),
-    t("preview.screenshotBack45"),
-    t("preview.screenshotAll"),
-  ];
-  const saveShot = async (key: string): Promise<void> => {
-    if (shot.saving) return;
-    shot.setSaving(true);
-    try {
-      await saveScreenshot(ctx.model, key, () => {}, ctx.screenshot);
-    } catch (e) {
-      console.error("[3D 截图]", e);
-      bus.emit("toast:show", {
-        msg: "截图保存失败：" + friendlyError(e),
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
-    } finally {
-      shot.setSaving(false);
-    }
-  };
-  shotKeys.forEach((key, i) => {
+  const saveShot = makeShotAction(ctx.model, ctx.screenshot);
+  for (const key of ["current", "front", "45", "side", "back45", "all"] as const) {
     const item = document.createElement("button");
     item.type = "button";
     item.className = "ysm-3d-popbtn ysm-3d-popbtn--row";
-    item.textContent = "📷 " + shotLabels[i];
-      item.dataset.testid = "shot-" + key;
+    item.textContent = "📷 " + t("preview.screenshot" + key[0].toUpperCase() + key.slice(1));
+    item.dataset.testid = "shot-" + key;
     item.onclick = (): void => {
       void saveShot(key);
     };
     list.appendChild(item);
-  });
+  }
 }
 
 

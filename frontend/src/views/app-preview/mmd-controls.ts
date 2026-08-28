@@ -13,6 +13,7 @@ import { bus } from "../../bus.ts";
 import { friendlyError } from "../../utils/dom/errors.ts";
 import { saveScreenshot } from "./skeleton-render.ts";
 import type { PreviewMenuNode } from "../../utils/3d/adapters/preview-menu-node-types.ts";
+import { makeShotAction, shotButtonNodes } from "./shot-panel-shared.ts";
 import {
   listMmdMaterials,
   getMmdMaterialDetail,
@@ -277,68 +278,10 @@ export function buildMaterialControls(container: HTMLElement, bridge: MaterialCo
   });
 }
 
-/** 连点/多菜单触发时忽略并发（防重复保存文件）——对齐 ysm-controls makeShotGuard */
-function makeShotGuard(): { saving: boolean; setSaving: (v: boolean) => void } {
-  let saving = false;
-  return {
-    saving,
-    setSaving: (v: boolean): void => {
-      saving = v;
-    },
-  };
-}
-
-/** MMD 截图六角度键与标签（fillMmdShotPanel / mmdShotNodes 共用，防两处漂移） */
-const MMD_SHOT_KEYS = ["current", "front", "45", "side", "back45", "all"] as const;
-const MMD_SHOT_LABELS = [
-  "preview.screenshotCurrent",
-  "preview.screenshotFront",
-  "preview.screenshot45",
-  "preview.screenshotSide",
-  "preview.screenshotBack45",
-  "preview.screenshotAll",
-] as const;
-
 /**
- * [doc:adr-126-p4-b-1] MMD 截图保存副作用（从 fillMmdShotPanel 抽出共享）：
- * 防连点 guard + toast 错误提示。fillMmdShotPanel（命令式）与 mmdShotNodes（声明式）共用，
- * 行为与原逻辑完全一致（guard 每次调用新建，与 fill 时新建等价）。
- */
-function makeMmdShotAction(
-  ctx: MmdBottomNavCtx,
-  screenshotFn: (() => Promise<string | null>) | null,
-): (key: string) => Promise<void> {
-  const shot = makeShotGuard();
-  return async (key: string): Promise<void> => {
-    if (shot.saving) return;
-    shot.setSaving(true);
-    try {
-      // 第四参传 screenshotFn（活跃渲染器截图）；第三参 setShotState 传空回调——
-      // 原 fillMmdShotPanel 误把 screenshotFn 传第三参（被当 setShotState 调），
-      // 导致实际截图走 renderMultiAngle fallback 而非活跃渲染器；此处顺手修正。
-      await saveScreenshot(
-        { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], _modelPath: ctx.modelPath, texture: "" },
-        key,
-        () => {},
-        screenshotFn ?? undefined, // 调用方已保证非 null（fillMmdShotPanel/mmdShotNodes 的 `if (!screenshotFn) return`）
-      );
-    } catch (e) {
-      console.error("[3D 截图]", e);
-      bus.emit("toast:show", {
-        msg: "截图保存失败：" + friendlyError(e),
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
-    } finally {
-      shot.setSaving(false);
-    }
-  };
-}
-
-/**
- * [doc:adr-126-p4-b-1] MMD 截图面板——声明式节点版（通道验证）。
- * 6 个 button 节点（📷 + 角度标签），action 内做截图副作用；screenshotFn 为 null 时返回空数组
- * （面板不渲染，与原 fillMmdShotPanel 的 `if (!screenshotFn) return` 一致）。
+ * [doc:adr-126-p4-b-2] MMD 截图面板——声明式节点版。
+ * 共享逻辑在 shot-panel-shared.ts（SHOT_KEYS/SHOT_LABELS/makeShotAction/shotButtonNodes），
+ * 此处只做 MMD 前缀 id 包装（`mmd-shot-*`）+ 能力缺失守卫（screenshotFn null → []）。
  * fillMmdShotPanel 保留（向后兼容）；新面板路径走本函数。
  */
 export function mmdShotNodes(
@@ -346,18 +289,10 @@ export function mmdShotNodes(
   screenshotFn: (() => Promise<string | null>) | null,
 ): PreviewMenuNode[] {
   if (!screenshotFn) return [];
-  const saveShot = makeMmdShotAction(ctx, screenshotFn);
-  return MMD_SHOT_KEYS.map((key, i) => ({
-    id: `mmd-shot-${key}`,
-    kind: "button" as const,
-    labelKey: MMD_SHOT_LABELS[i],
-    fallback: key,
-    icon: "📷",
-    legacyTestId: `shot-${key}`,
-    action: (): void => {
-      void saveShot(key);
-    },
-  }));
+  return shotButtonNodes(
+    { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], _modelPath: ctx.modelPath, texture: "" },
+    screenshotFn,
+  ).map((n) => ({ ...n, id: `mmd-${n.id}` }));
 }
 
 /**
@@ -371,16 +306,19 @@ export function fillMmdShotPanel(
   screenshotFn: (() => Promise<string | null>) | null,
 ): void {
   if (!screenshotFn) return;
-  const saveShot = makeMmdShotAction(ctx, screenshotFn);
-  MMD_SHOT_KEYS.forEach((key, i) => {
+  const saveShot = makeShotAction(
+    { boneCount: 0, cubeCount: 0, texWidth: 0, texHeight: 0, bones: [], _modelPath: ctx.modelPath, texture: "" },
+    screenshotFn,
+  );
+  for (const key of ["current", "front", "45", "side", "back45", "all"] as const) {
     const item = document.createElement("button");
     item.type = "button";
     item.className = "ysm-3d-popbtn ysm-3d-popbtn--row";
-    item.textContent = "📷 " + t(MMD_SHOT_LABELS[i]);
+    item.textContent = "📷 " + t("preview.screenshot" + key[0].toUpperCase() + key.slice(1));
     item.dataset.testid = "shot-" + key;
     item.onclick = (): void => {
       void saveShot(key);
     };
     list.appendChild(item);
-  });
+  }
 }

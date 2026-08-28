@@ -22,6 +22,7 @@ import { rebuildDebug } from "../debug-render.ts";
 import { disposeDebugGroup } from "../cleanup-helper.ts";
 import { screenshotFromRenderer } from "../screenshot.ts";
 import type { YsmContentHandle, YsmControlsContext } from "../../../views/app-preview/ysm-controls.ts";
+import { ysmShotNodes } from "../../../views/app-preview/ysm-controls.ts";
 import type { PreviewMenuNode } from "./preview-menu-node-types.ts";
 import type { Spec3D, BoneSelectInfo, BoneMaps } from "../model3d.ts";
 import { sceneRegistry } from "./scene-registry.ts";
@@ -570,7 +571,9 @@ export function ysmMenuItems(o: YsmMenuItemsOpts): PreviewMenuNode[] {
       kind: "panel",
       dockGroup: "model",
       legacyTestId: "ysm-shot-entry",
-      renderCustom:(list) => o.panels?.fillShotPanel?.(list, o.controlsCtx),
+      // [doc:adr-126-p4-b-2] 面板内容声明式化：children = ysmShotNodes 纯数据节点（6 截图按钮）。
+      // YSM 的 screenshot 是 ctx 可选字段（undefined 走 fallback），面板常驻——不按能力条件注入。
+      children: ysmShotNodes(o.controlsCtx),
     },
     {
       id: "bones",

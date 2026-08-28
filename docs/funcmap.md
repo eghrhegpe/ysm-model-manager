@@ -1915,9 +1915,9 @@
 | `YSMHeader()` | `frontend/src/utils/format/summarize:52` | — |
 | `safeUrl()` | `frontend/src/utils/format/summarize:87` | 安全链接：仅放行 http/https，拦截 javascript:/data: 等危险 scheme（导出供统计卡作者链接复用） |
 | `summaryCardHTML()` | `frontend/src/utils/format/summarize:155` | 从 YsmSummary + YSMHeader 渲染为精简摘要卡片 |
-| `DecodedStats()` | `frontend/src/utils/format/summarize:257` | 解码统计结果（原 spike 侧 YsmSummary，改名避免与上方元数据接口撞名） |
-| `findBones()` | `frontend/src/utils/format/summarize:269` | 递归找第一个数组（骨骼列表通常嵌在 model/bones 等层级）。 |
-| `summarizeDecoded()` | `frontend/src/utils/format/summarize:287` | 解析 main.json 提取骨骼/几何摘要（只做统计，不渲染） |
+| `DecodedStats()` | `frontend/src/utils/format/summarize:263` | 解码统计结果（原 spike 侧 YsmSummary，改名避免与上方元数据接口撞名） |
+| `findBones()` | `frontend/src/utils/format/summarize:275` | 递归找第一个数组（骨骼列表通常嵌在 model/bones 等层级）。 |
+| `summarizeDecoded()` | `frontend/src/utils/format/summarize:293` | 解析 main.json 提取骨骼/几何摘要（只做统计，不渲染） |
 | `YsmProperties()` | `frontend/src/utils/format/ysm-anim-config:14` | WASM 解码产物 ysm.json 的 properties 相关字段（仅取本模块需要的部分） |
 | `extractAnimGroupsAndConfigs()` | `frontend/src/utils/format/ysm-anim-config:34` | 从 ysm.json properties 提取动画分组与配置菜单。 |
 | `GH_REPO()` | `frontend/src/utils/gh-links:5` | — |
@@ -2121,11 +2121,11 @@
 | `showScenePreview()` | `frontend/src/views/app-preview/detail-3d:162` | 显示场景 MMD 预览卡（独立入口，与角色模型完全隔离） |
 | `showMorphPreview()` | `frontend/src/views/app-preview/detail-3d:192` | 显示 CustomMorph 预览卡（VPD 表情姿势 + 兄弟列表 + 应用 FAB） |
 | `showStagePreview()` | `frontend/src/views/app-preview/detail-3d:252` | 显示 StageAnim 预览卡（舞台包：VMD + 音频 + 配置） |
-| `detailGen()` | `frontend/src/views/app-preview/detail:23` | 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） |
-| `showModelDetail()` | `frontend/src/views/app-preview/detail:26` | 显示模型详情（YSM 模型） |
-| `showResourcePack()` | `frontend/src/views/app-preview/detail:150` | 显示资源包信息（pack.mcmeta + pack.png） |
-| `showSimplePreview()` | `frontend/src/views/app-preview/detail:193` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
-| `showShaderpack()` | `frontend/src/views/app-preview/detail:211` | 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 |
+| `detailGen()` | `frontend/src/views/app-preview/detail:24` | 跨文件共享代际（detail-3d.ts 等 3D 入口复用，保证快速切换时在途请求互相作废） |
+| `showModelDetail()` | `frontend/src/views/app-preview/detail:27` | 显示模型详情（YSM 模型） |
+| `showResourcePack()` | `frontend/src/views/app-preview/detail:152` | 显示资源包信息（pack.mcmeta + pack.png） |
+| `showSimplePreview()` | `frontend/src/views/app-preview/detail:195` | 显示简单类型预览（仅图标 + 名称），用于光影包/蓝图/MMD/VRChat 等 |
+| `showShaderpack()` | `frontend/src/views/app-preview/detail:213` | 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 |
 | `openEmpty3DFullscreen()` | `frontend/src/views/app-preview/empty-3d:35` | 打开空场景 3D 全屏预览（无需 path）。 |
 | `cleanupEmpty3D()` | `frontend/src/views/app-preview/empty-3d:40` | 清理空场景 3D（WebGL renderer + rAF 循环） |
 | `invalidateEmptyPreview()` | `frontend/src/views/app-preview/empty-3d:45` | 作废在途空场景加载 |

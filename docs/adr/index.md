@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **121** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **120** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 1 |
-| [✅ 已采纳](#已采纳) | 118 |
+| [✅ 已采纳](#已采纳) | 117 |
 | [❌ 已取代](#已取代) | 2 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -31,11 +31,10 @@ permalink: /adr/
 |-----|------|------|
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（118）
+### ✅ 已采纳（117）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-124](./ADR-124-i18n-key-naming-three-segment.md) | i18n 键名三段式规范 | ✅ 已采纳 ⚠️ 被 [ADR-045] |
 | [ADR-123](./ADR-123-cross-environment-downgrade-strategy.md) | 跨环境降级策略统一 | ✅ 已采纳 |
 | [ADR-121](./ADR-121-shadow-dom.md) | Shadow DOM 样式隔离铁律 | ✅ 已采纳 |
 | [ADR-120](./ADR-120-go-rust-manifest-jwalk.md) | Go/Rust 共享已扫描状态：manifest 注入跳过 jwalk | ✅ 已采纳 |
@@ -109,7 +108,7 @@ permalink: /adr/
 | [ADR-048](./ADR-048-ci-workflow-split-cache.md) | CI 工作流架构：双 workflow 拆分 + 可复用测试门禁 + 三层缓存 + 版本单点 | ✅ 已采纳 |
 | [ADR-047](./ADR-047-android-usability-plan.md) | Android 可用性落地规划：触屏交互 + FileAccessor 抽象（ADR-046 P2 实施） | ✅ 已采纳 |
 | [ADR-046](./ADR-046-cross-platform-feasibility.md) | 全平台化可行性调查（对照 MikuMikuAR） | ✅ 已采纳 |
-| [ADR-045](./ADR-045-i18n-framework.md) | 前端 i18n 轻量框架 | ✅ 已采纳 ⚠️ 被 [ADR-124] |
+| [ADR-045](./ADR-045-i18n-framework.md) | 前端 i18n 轻量框架 | ✅ 已采纳 |
 | [ADR-044](./ADR-044-code-writing-governance.md) | 代码写法治理范式：31 批审核反推的系统性不足与收敛策略 | ✅ 已采纳 |
 | [ADR-043](./ADR-043-check-scripts-fail-closed-contract.md) | 检查脚本 fail-closed 三态契约（扫描不完整必须显式暴露，禁止假绿） | ✅ 已采纳 |
 | [ADR-042](./ADR-042-modernysm-pivot-rotation.md) | 渲染复现借鉴上游 ModernYSM：二进制直读 pivot/rotation 与动画纯计算移植 | ✅ 已采纳 |
@@ -165,7 +164,6 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-124 | i18n 键名三段式规范 | ✅ 已采纳 ⚠️ 被 [ADR-045] | 2026-08-28 |
 | ADR-123 | 跨环境降级策略统一 | ✅ 已采纳 | 2026-08-27 |
 | ADR-122 | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 | 2026-08-26 |
 | ADR-121 | Shadow DOM 样式隔离铁律 | ✅ 已采纳 | 2026-08-24 |
@@ -242,7 +240,7 @@ permalink: /adr/
 | ADR-048 | CI 工作流架构：双 workflow 拆分 + 可复用测试门禁 + 三层缓存 + 版本单点 | ✅ 已采纳 | 2026-08-10 |
 | ADR-047 | Android 可用性落地规划：触屏交互 + FileAccessor 抽象（ADR-046 P2 实施） | ✅ 已采纳 | 2026-08-09 |
 | ADR-046 | 全平台化可行性调查（对照 MikuMikuAR） | ✅ 已采纳 | 2026-08-09 |
-| ADR-045 | 前端 i18n 轻量框架 | ✅ 已采纳 ⚠️ 被 [ADR-124] | 2026-08-09 |
+| ADR-045 | 前端 i18n 轻量框架 | ✅ 已采纳 | 2026-08-09 |
 | ADR-044 | 代码写法治理范式：31 批审核反推的系统性不足与收敛策略 | ✅ 已采纳 | 2026-08-09 |
 | ADR-043 | 检查脚本 fail-closed 三态契约（扫描不完整必须显式暴露，禁止假绿） | ✅ 已采纳 | 2026-08-09 |
 | ADR-042 | 渲染复现借鉴上游 ModernYSM：二进制直读 pivot/rotation 与动画纯计算移植 | ✅ 已采纳 | 2026-08-09 |

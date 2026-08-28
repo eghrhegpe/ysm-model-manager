@@ -180,9 +180,22 @@
 
 # 🔬 技术原理：
 
-## Blockbench 模型与 molang 动画
+## Blockbench 模型
 
+YSM、车万女仆 模型基于 **Blockbench** 格式（`.geo.json`），使用 Minecraft 基岩版（Bedrock）的骨骼系统与立方体网格。项目完整支持该格式的解析与渲染。
 
+### 动画系统
+
+`.animation.json` 文件采用基岩版动画格式，包含骨骼旋转/位移/缩放关键帧。项目实现完整动画管线：
+
+- **解析引擎**：`parseBedrockAnimationJSON` 解析动画 JSON，支持 loop、animation_length、bones 三通道关键帧
+- **关键帧插值**：支持线性（linear）、阶梯（step）、Catmull-Rom 三种插值模式
+- **Molang 表达式求值**：内嵌 [molangjs](https://github.com/JannisX11/molangjs) 源码（MIT 许可，Blockbench 官方依赖），将 `.animation.json` 中的 Molang 字符串编译为 `(animTime: number) => number` 求值闭包
+  - 安全口径：DSL 解析器非 `eval`，表达式不解释执行
+  - 性能口径：LRU 缓存 400 条，加载期编译 AST，运行期纯求值
+  - 变量上下文：`query.anim_time` / `q.anim_time`、`query.life_time` 等；未知变量优雅降级为 0
+- **动画控制器**：解析 `.animation_controllers.json`，支持状态机转换（Molang 条件）、on_exit 动作、blend_transition 淡入淡出
+- **旋转口径**：度→弧度 + X/Y 取负、Z 不取负（对齐上游 ModernYSM/TLM 共同口径）
 
 ## .ysm 文件组成
 
@@ -198,7 +211,7 @@
 - 开源模型以标准 `.zip` 格式分发，内含明文 `minecraft:geometry` JSON
 - 加密模型使用 YSGP 二进制格式 + AES 加密，需专用解析器解码
 
-## YSMParser 集成
+### YSMParser 集成
 
 本工具集成 [YSMParser](https://github.com/OpenYSM/YSMParser) 用于解码加密 .ysm 模型：
 
@@ -206,6 +219,49 @@
 - **WASM 内嵌**：WASM 二进制以 base64 编码打包在 `ysm-wasm-data.js` 中，无需额外下载，启动即加载；桌面 / Android / 网页版共用同一套注入（ADR-029）
 - **兼容性**：支持数组 `[u,v]` 和对象 `{face:{uv,uv_size}}` 两种 UV 格式
 - **隐私声明**：解码仅在本地进行，不联网、不存储、不导出模型文件
+
+## Three.js 渲染器
+
+项目使用 **Three.js** 作为 3D 渲染核心，支持多种模型格式的实时预览。
+
+### 渲染管线
+
+```
+YSM 文件 → [解码层] → BedrockModel JSON → [Go spec 层] → Three.js Spec JSON → [前端渲染层] → Three.js Scene
+```
+
+- **解码层**：YSMParser WASM（前端）或 Go `AnalyzeBedrockModel`（桌面）
+- **Go spec 层**：`threejs.Build()` 是骨骼坐标计算的**唯一事实来源**，输出 positions/normals/uvs/indices 格式
+- **前端渲染层**：`model3d.ts` 消费 Go spec 构建 Three.js 场景（骨骼层级 + cube mesh + 纹理）
+
+### 支持的模型格式
+
+| 格式 | 适配器 | 底层库 | 特殊能力 |
+|------|--------|--------|----------|
+| YSM | `ysm-adapter.ts` | Go `GetModel3DSpec` | 骨骼组树 + cube mesh + 感知层 |
+| VRM | `vrm-adapter.ts` | `@pixiv/three-vrm` + `GLTFLoader` | SpringBone / lookAt / 表情 / VRMA 动画 |
+| MMD | `mmd-adapter.ts` | `@moeru/three-mmd` | PMX 物理（Ammo.js）/ VMD 动画 / KTX2 纹理 |
+| Litematic | `litematic-adapter.ts` | 自研 voxel mesh | 分层控制 / 方块统计 |
+| FBX | `fbx-adapter.ts` | `FBXLoader` | 静态模型预览 |
+
+### 场景能力
+
+项目实现可扩展的场景能力注册表（`SceneCapability`），8 个能力按注册顺序创建：
+
+1. **天空**：Preetham 大气散射
+2. **地面**：平面网格
+3. **环境**：HDR IBL + PMREMGenerator
+4. **雾效**：FogExp2
+5. **阴影**：PCFSoftShadowMap
+6. **反射**：Reflector
+7. **后处理**：Bloom / SSAO / SSR
+8. **灯光**：环境光 + 方向光 + 体积光
+
+新增格式 = 加一个适配器 + 注册表一条目，所有适配器零改动继承全部能力。
+
+### 感知层（程序化生命力）
+
+让模型「活起来」的自主行为子系统：呼吸微位移、周期性眨眼、头部/眼球追踪相机、音频口型同步、BPM 节拍律动。
 
 ---
 

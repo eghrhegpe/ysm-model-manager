@@ -98,6 +98,7 @@ renderCustom: (container, closePopup) => void // 命令式逃生舱（既有面�
 ## 相关
 
 - ADR-126（本决策 P4-B）、ADR-125（设置面板单渲染器）、ADR-085（声明式收敛方向）、ADR-093（条件注入范式）
-- 落地：P4-B-1（mmd model/shot 声明式化）+ P4-B-2（YSM 截图声明式化 + 截图共享层）+ **P4-D（`visibleWhen: (s: PreviewSnapshot) => boolean` 升级，node-types.ts 签名 + renderMenu / renderPreviewSchemaContent 传快照）** 已完成；P4-B-3（morph/play 交互面板，需先定性：接近 cap 控件而非内容节点）待续
+- 落地：P4-B-1（mmd model/shot 声明式化）+ P4-B-2（YSM 截图声明式化 + 截图共享层）+ **P4-D（`visibleWhen: (s: PreviewSnapshot) => boolean` 升级，node-types.ts 签名 + renderMenu / renderPreviewSchemaContent 传快照）** 已完成；**P4-B-3 定性「保持逃生舱」**（morph/play/material 状态源均为运行时交互态——morph 权重直写 mesh / 播放走 MmdPlayBridge / 材质走 MaterialControlBridge，转声明式需先造 Capability 类；逃生舱是 ADR-125 设计内终态，非未完成）
+- P4-C（dockGroup 双语义）定性「保持观察」：模式守卫（sharedOnly/hideInSelfMode/requiresEnvironment）**早已是独立字段**，dockGroup 实际只剩「dock 分组 + 角色详情内容域划分」双语义；当前读法恰好一致（model 内容都在 model 组），概念错位非功能 bug，等真实诉求再拆（详见 ADR-126 §2.5）
 - 保留逃生舱：`fill3DPanel` 统计/纹理/模型选择器（多组件切换动态视图状态，声明式化收益低风险高——P4-B-2 决策）
 - 顺手修复：`fillMmdShotPanel` / `fillYsmShotPanel` 的 `saveScreenshot` 第三参误传 `screenshotFn`（被当 setShotState），实际截图走 fallback 而非活跃渲染器——`makeShotAction`（shot-panel-shared.ts）已修正（第四参传 screenshotFn）

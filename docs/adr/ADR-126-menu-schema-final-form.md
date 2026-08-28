@@ -54,6 +54,13 @@
 2. **B 和 D 并行可做**：B 走「面板声明式化」、D 走「谓词化」，互相不依赖
 3. **C 排最后**：dockGroup 字段在 cap 与菜单各点都有引用，最稳的迁法是等 A 的 `ui.*` 域就位后做「拆字段+改引用」一次性迁移
 
+### 2.5 实施后子步定性修正（2026-08-29 收尾复盘）
+
+P4-A/B/D 落地后，对 P4-B-3 / P4-C 的原始范围做**实施认知修正**（ADR 只记决策方向，此处补「实测定性与原假设的偏差」）：
+
+- **P4-B-3（morph/play/material 交互面板）→ 定性「保持逃生舱」**：实测三者状态源都是**运行时交互态**（morph 权重直写 `mesh.morphTargetInfluences`、播放状态走 `MmdPlayBridge`、材质显隐走 `MaterialControlBridge`），不是「静态内容展示」。转 children 声明式 = 静态快照表达不了动态交互；转 cap 控件 = 需先造 MorphCapability/PlayCapability/MaterialCapability 类（cap 注册 + 生命周期 + saveState），属另一个量级。**逃生舱是 ADR-125「三套并存」的设计内终态（node-types 注释 escapeHatch 兼容命令式），非未完成**。P4-B-1/2 已把「静态内容面板」schema 化（MMD/YSM shot、MMD model 信息）——「易维护」红线（通道统一 + 截图共享）已达成。
+- **P4-C（dockGroup 解耦）→ 修正「仅双语义，暂不拆」**：实测 `sharedOnly/hideInSelfMode/requiresEnvironment`（模式守卫）**早已是独立字段**（node-types.ts L98-103），dockGroup 实际只剩**双语义**——① dock 底栏分组（`dockGroupItemsFor` 按 `d.dockGroup === g.id` 筛）+ ② 角色详情内容域划分（`modelDetailView`/`motionDetailView` 按 `dockGroup === "model"/"motion"` 筛子项）。双语义消费者真实存在但**当前读法恰好一致**（model 内容都在 model 组）——是「概念错位」不是「功能 bug」，改 dock 归属才会误伤详情视图。真拆（panelDomain 字段）成本 = 所有 adapter 标注 + 详情逻辑 + 测试全动，收益只是「防未来改名踩坑」——ROI 低。**定性「保持观察，等真实诉求（如有人把面板挪组）再拆」**，与 §3.3 处理 `05fe24b7` env refresh 的先例一致。
+
 ### 2.2 关键约束
 
 - **每子步独立可发布、可回滚**：独立 commit；独立契约测试通过；独立知识卡记录实施进度
@@ -101,6 +108,8 @@
 - **`litematic extraControls` 顶栏常驻**（ADR-085 §3 已知遗留）——另案轨道，不在本 ADR
 - **视觉回归测试基建**——留作 P4-B 子任务的子任务（命令式→schema 化后 DOM 结构会变，e2e 选择器需同步；`legacyTestId` 字段为兼容口）
 - **`05fe24b7` 手工 refresh 链路**（`rebuildEnvSubs` + `menu.refresh()`，env 域 cap 参数订阅）——知识卡 `preview_menu_settings_state.md` L83 标记「迁移是遗留项」。本 ADR 不接管，env 域的 cap 参数订阅与 settingsState 横切六项**不同域**，硬迁 = 削足适履。除非冒出真实「设置 ↔ 环境面板联动」诉求，否则定性「保持观察」
+- **P4-B-3 交互面板**（morph/play/material）——定性「保持逃生舱」：状态源均为运行时交互态（morph 权重直写 mesh / 播放走 MmdPlayBridge / 材质走 MaterialControlBridge），转声明式需先造 Capability 类（另一量级）。逃生舱是 ADR-125 设计内终态（escapeHatch 兼容命令式），非未完成（详见 §2.5）
+- **P4-C dockGroup 双语义**（dock 分组 + 角色详情内容域划分）——定性「保持观察」：当前读法恰好一致（model 内容都在 model 组），概念错位非功能 bug；真拆 ROI 低，等真实诉求（有人把面板挪组）再拆（详见 §2.5）
 
 ## 4. 数据溯源
 

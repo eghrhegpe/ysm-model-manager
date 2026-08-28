@@ -67,6 +67,19 @@ check('parseItem 识别 panel 项 renderCustom 逃生舱入口（ADR-085）', ()
   assert.equal(item.hasRender, true, 'renderCustom: 应记为 hasRender');
 });
 
+check('parseItem 识别 panel 项 schemaId 受控通道（ADR-126 P5）', () => {
+  const item = parseItem(`{
+    id: "model",
+    icon: "🎭",
+    labelKey: "preview.modelInfo",
+    dockGroup: "model",
+    kind: "panel",
+    schemaId: YSM_MODEL_SCHEMA_ID,
+  }`, 'model');
+  assert.equal(item.kind, 'panel');
+  assert.equal(item.hasRender, true, 'schemaId: 应记为 hasRender（受控 schema 是渲染通道，renderPreviewPanel 优先查询）');
+});
+
 check('parseItem 识别 action 项 run 入口', () => {
   const item = parseItem(`{
     id: "export",

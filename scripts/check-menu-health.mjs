@@ -12,8 +12,9 @@
  *   3. labelKey 在 zh-CN 语言包存在（三语一致性由 locales-consistency.test 保证）
  *   4. dockGroup ∈ PreviewMenuGroupId 联合类型（单一事实来源，自动从 preview-menu-defs.ts 推导）或 无（非法值导致 dock 按钮进错组）
  *   5. kind ∈ {panel, action, divider}
- *   6. panel 项必有 render 或 renderCustom；action 项必有 run（缺失则面板/动作不可执行）
- *      renderCustom 为 ADR-085 逃生舱入口（PreviewMenuItemDef.render → PreviewMenuNode.renderCustom）
+ *   6. panel 项必有渲染通道；action 项必有 run（缺失则面板/动作不可执行）
+ *      渲染通道四选一：render | renderCustom（ADR-085 逃生舱）| children（ADR-126 P4-B 声明式子节点）
+ *      | schemaId（ADR-126 P5 受控 schema 驱动，renderPreviewPanel 优先查 schema-registry）
  *
  * 解析策略：正则解析 4 个菜单表文件（preview-menu-defs.ts + ysm/mmd/vrm-adapter.ts），
  * 对每个 `id: "xxx"` 匹配回溯对象块（配对 { }，跳过字符串内 { }），提取字段。
@@ -123,7 +124,9 @@ export function parseItem(block, id) {
     kind: field(/kind:\s*"([^"]+)"/),
     // [doc:adr-126-p4-b] children 是第三渲染通道（声明式节点，renderPreviewPanel children 分支渲染）。
     // P4-B 系列把 model/shot 面板从 renderCustom 迁移到 children（纯数据节点）后，门禁须同步认识。
-    hasRender: /(?:render|renderCustom):\s*\(/.test(block) || /children:\s*(?:\[|[\w$.(])/.test(block),
+    // [doc:adr-126-p5-a] schemaId 是第四通道（受控 schema 驱动：renderPreviewPanel 优先查 schema-registry；
+    // 契约「带 schemaId 不得同时带 renderCustom——双通道歧义」），如 ysm-adapter model 项。
+    hasRender: /(?:render|renderCustom):\s*\(/.test(block) || /children:\s*(?:\[|[\w$.(])/.test(block) || /schemaId:\s*[\w$.'"]/.test(block),
     hasRun: /\brun:\s*\(/.test(block),
   };
 }

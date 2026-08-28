@@ -29,7 +29,7 @@ const {
   extractAvatarMock,
   loadConfigMock,
   repoRootMock,
-  resolveWebModeMock,
+  isWebPlatformMock,
   importWebFilesMock,
   fetchMock,
 } = vi.hoisted(() => ({
@@ -40,15 +40,15 @@ const {
   extractAvatarMock: vi.fn(),
   loadConfigMock: vi.fn(),
   repoRootMock: vi.fn(),
-  resolveWebModeMock: vi.fn().mockReturnValue(false), // 默认桌面
+  isWebPlatformMock: vi.fn().mockReturnValue(false), // 默认桌面
   // ADR-123 P1：web 分支下载改走 browser-adapter.importWebFiles 入库（对齐导入链路）
   importWebFilesMock: vi.fn().mockResolvedValue({ imported: 0, failed: 0 }),
   // web 分支小文件会真 fetch——默认回微 blob，防测试环境触网
   fetchMock: vi.fn().mockResolvedValue(new Response(new Blob(["x"]))),
 }));
 
-vi.mock("../../backend/platform.ts", () => ({
-  resolveWebMode: resolveWebModeMock,
+vi.mock("../../backend/platform-web.ts", () => ({
+  isWebPlatform: isWebPlatformMock,
 }));
 // store web 分支动态 import browser-adapter 拿 importWebFiles；其余导出保持原实现，
 // 防 graph 内其他消费方拿到 undefined 导出炸整条 import 链
@@ -86,7 +86,7 @@ beforeEach(async () => {
   extractAvatarMock.mockReset();
   loadConfigMock.mockReset();
   repoRootMock.mockReset();
-  resolveWebModeMock.mockReturnValue(false); // 默认桌面
+  isWebPlatformMock.mockReturnValue(false); // 默认桌面
   importWebFilesMock.mockReset().mockResolvedValue({ imported: 0, failed: 0 });
   fetchMock.mockReset().mockResolvedValue(new Response(new Blob(["x"])));
   // web 分支可能触发真实 fetch——全局兜底防测试触网（桌面用例不受影响）
@@ -178,7 +178,7 @@ describe("enqueueDownloads", () => {
   });
 
   it("网页版小文件：fetch → importWebFiles 入库（对齐导入链路），成功路径无直链、不调 Go、回 idle", async () => {
-    resolveWebModeMock.mockReturnValue(true);
+    isWebPlatformMock.mockReturnValue(true);
     importWebFilesMock.mockResolvedValue({ imported: 1, failed: 0 });
     const origCreate = document.createElement.bind(document);
     const created: HTMLAnchorElement[] = [];
@@ -209,7 +209,7 @@ describe("enqueueDownloads", () => {
   });
 
   it("网页版 saveDir 边界：webType 反解空串/多级路径/不足三段回退", async () => {
-    resolveWebModeMock.mockReturnValue(true);
+    isWebPlatformMock.mockReturnValue(true);
     importWebFilesMock.mockResolvedValue({ imported: 1, failed: 0 });
     fetchMock.mockResolvedValue(new Response("ok"));
     // 多级路径仍取 [2] 段（GetRepoRoot 恒 /web/<type>，防御性验证）
@@ -233,7 +233,7 @@ describe("enqueueDownloads", () => {
   it("网页版 fetch 挂起超时 → 回退直链且回 idle（P2：防永久卡 downloading）", async () => {
     vi.useFakeTimers();
     try {
-      resolveWebModeMock.mockReturnValue(true);
+      isWebPlatformMock.mockReturnValue(true);
       importWebFilesMock.mockResolvedValue({ imported: 1, failed: 0 });
       // 永不 settle 的 fetch：仅响应 abort 信号（模拟挂起服务器，无超时即永久卡住）
       fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
@@ -255,7 +255,7 @@ describe("enqueueDownloads", () => {
   });
 
   it("网页版大文件（>50MB）：不 fetch，回退浏览器直链（ADR-123 P1 回退分支）", async () => {
-    resolveWebModeMock.mockReturnValue(true);
+    isWebPlatformMock.mockReturnValue(true);
     await enqueueDownloads([
       { url: "https://x/big.ysm", saveDir: "/web/ysm", name: "big.ysm", size: 50 * 1024 * 1024 + 1 },
     ]);
@@ -265,7 +265,7 @@ describe("enqueueDownloads", () => {
   });
 
   it("网页版 fetch 失败（HTTP 非 ok）：回退浏览器直链，不入 errorList（用户仍拿到文件）", async () => {
-    resolveWebModeMock.mockReturnValue(true);
+    isWebPlatformMock.mockReturnValue(true);
     fetchMock.mockResolvedValue(new Response("gone", { status: 404 }));
     await enqueueDownloads([
       { url: "https://x/a.ysm", saveDir: "/web/ysm", name: "a.ysm", size: 10 },
@@ -277,7 +277,7 @@ describe("enqueueDownloads", () => {
   });
 
   it("网页版非 http(s) URL：直接回退直链，不 fetch（协议白名单守卫）", async () => {
-    resolveWebModeMock.mockReturnValue(true);
+    isWebPlatformMock.mockReturnValue(true);
     await enqueueDownloads([
       { url: "file:///etc/passwd", saveDir: "/web/ysm", name: "x.ysm", size: 10 },
     ]);
@@ -665,7 +665,7 @@ describe("createDownloadQueue UI 层", () => {
   });
 
   it("网页版直链下载完成后按钮复位 + 状态隐藏（陷阱 #3 web 变体：无 done 事件流不卡死）", async () => {
-    resolveWebModeMock.mockReturnValue(true);
+    isWebPlatformMock.mockReturnValue(true);
     loadConfigMock.mockResolvedValue({});
     repoRootMock.mockResolvedValue("/repo");
     const { sr, ctrl } = createCtrl();

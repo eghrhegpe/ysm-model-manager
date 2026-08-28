@@ -7,7 +7,7 @@
 //   直读，用户把模型放入该目录即可使用，无需选择器）。
 import { TOAST_MS } from ".//toast-ms.ts";
 import { getApp } from "../../backend/app.ts";
-import { resolveWebMode } from "../../backend/platform.ts";
+import { isWebPlatform } from "../../backend/platform-web.ts";
 import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { getAndroidBridge, isViewerMode } from "./android-bridge.ts";
@@ -27,7 +27,7 @@ export async function resolveAndroidRepoDir(): Promise<string | null> {
   const bridge = getAndroidBridge();
   if (!bridge) {
     // 网页版：无授权概念，直接定位虚拟根（browser adapter 的 GetDefaultRepoRoot → /web）
-    if (resolveWebMode()) {
+    if (isWebPlatform()) {
       const { GetDefaultRepoRoot } = await getApp();
       const dir = await GetDefaultRepoRoot();
       if (!dir) return null;

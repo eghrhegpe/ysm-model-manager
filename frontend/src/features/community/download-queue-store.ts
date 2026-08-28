@@ -16,7 +16,7 @@ import { bus } from "../../bus.ts";
 import { t } from "../../core/i18n/t.ts";
 import { dbg } from "../../utils/debug/debug.ts";
 import { getApp } from "../../backend/app.ts";
-import { resolveWebMode } from "../../backend/platform.ts";
+import { isWebPlatform } from "../../backend/platform-web.ts";
 import { Events } from "../../backend/runtime.ts";
 import { TOAST_MS } from "../../utils/dom/toast-ms.ts";
 
@@ -195,7 +195,7 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
   // 复用 browser-adapter.importWebFiles 落库（与拖拽导入同一条 IDB/刷新/反馈链路）。
   // 回退分支：非 http(s) 协议、单文件超 50MB、fetch/HTTP 失败 → 浏览器直链 <a download>
   // （用户仍拿到文件但不入库）。完成后置 idle 避免队列 UI 卡「下载中」。
-  if (resolveWebMode()) {
+  if (isWebPlatform()) {
     let imported = 0;
     let failed = 0;
     let fallback = 0;

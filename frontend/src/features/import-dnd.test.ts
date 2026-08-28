@@ -182,7 +182,7 @@ function makeBusyPair(): [() => boolean, (v: boolean) => void] {
 // ===== handleTreeDrop：网页版分支 =====
 
 describe("handleTreeDrop — 网页版（ADR-049）", () => {
-  it("resolveWebMode → importWebFiles + tree:reload + stats:refresh", async () => {
+  it("isWebPlatform → importWebFiles + tree:reload + stats:refresh", async () => {
     (globalThis as unknown as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
     const reloadSpy = vi.fn();
     const statsSpy = vi.fn();

@@ -6,7 +6,7 @@ import { TOAST_MS } from "../utils/dom/toast-ms.ts";
 import { bus } from "../bus.ts";
 import { t } from "../core/i18n/t.ts";
 import { getApp } from "../backend/app.ts";
-import { resolveWebMode } from "../backend/platform.ts";
+import { isWebPlatform } from "../backend/platform-web.ts";
 import { MAX_IMPORT_BYTES } from "../backend/browser-adapter.ts";
 import { ALL_EXTS } from "../utils/resource/extensions.ts";
 import { friendlyError } from "../utils/dom/errors.ts";
@@ -60,7 +60,7 @@ export async function handleTreeDrop(
 
   try {
     // 网页版：无本地文件系统 → 拖入文件直接写入 IndexedDB 模型库
-    if (resolveWebMode()) {
+    if (isWebPlatform()) {
       const files = Array.from(e.dataTransfer?.files || []);
       if (files.length === 0) {
         bus.emit("toast:show", {

@@ -13,6 +13,7 @@ const { mocks } = vi.hoisted(() => ({
     GetDefaultRepoRoot: vi.fn(),
     getAndroidBridge: vi.fn(),
     isViewerMode: vi.fn(),
+    isWebPlatform: vi.fn(() => false),
     busEmit: vi.fn(),
     t: vi.fn((key: string) => key),
   },
@@ -28,6 +29,10 @@ vi.mock("../../backend/app.ts", () => ({
 vi.mock("./android-bridge.ts", () => ({
   getAndroidBridge: mocks.getAndroidBridge,
   isViewerMode: mocks.isViewerMode,
+}));
+
+vi.mock("../../backend/platform-web.ts", () => ({
+  isWebPlatform: mocks.isWebPlatform,
 }));
 
 vi.mock("../../bus.ts", () => ({
@@ -52,6 +57,7 @@ beforeEach(() => {
   mocks.SelectDirectory.mockResolvedValue("/desktop/path");
   mocks.GetDefaultRepoRoot.mockResolvedValue("/storage/emulated/0/YSM-Model-Manager");
   mocks.isViewerMode.mockReturnValue(false);
+  mocks.isWebPlatform.mockReturnValue(false);
 });
 
 describe("pickDirectory — 桌面（非查看器模式）", () => {
@@ -66,17 +72,12 @@ describe("pickDirectory — 桌面（非查看器模式）", () => {
   it("网页版（isViewerMode=true）→ 走 resolveAndroidRepoDir 定位虚拟根，不调 SelectDirectory", async () => {
     mocks.isViewerMode.mockReturnValue(true);
     mocks.getAndroidBridge.mockReturnValue(null);
+    mocks.isWebPlatform.mockReturnValue(true);
     mocks.GetDefaultRepoRoot.mockResolvedValue("/web");
-    // resolveAndroidRepoDir 内部以 resolveWebMode()（真实 platform.ts）判网页版
-    (globalThis as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
-    try {
-      const dir = await pickDirectory();
-      expect(mocks.SelectDirectory).not.toHaveBeenCalled();
-      expect(mocks.GetDefaultRepoRoot).toHaveBeenCalledTimes(1);
-      expect(dir).toBe("/web");
-    } finally {
-      delete (globalThis as Record<string, unknown>)["__YSM_BACKEND__"];
-    }
+    const dir = await pickDirectory();
+    expect(mocks.SelectDirectory).not.toHaveBeenCalled();
+    expect(mocks.GetDefaultRepoRoot).toHaveBeenCalledTimes(1);
+    expect(dir).toBe("/web");
   });
 });
 
@@ -91,20 +92,19 @@ describe("resolveAndroidRepoDir — 桌面（无 Android 桥）", () => {
 
   it("网页版（__YSM_BACKEND__=browser，无桥）→ 定位虚拟根 /web + toast", async () => {
     mocks.getAndroidBridge.mockReturnValue(null);
+    mocks.isWebPlatform.mockReturnValue(true);
     mocks.GetDefaultRepoRoot.mockResolvedValue("/web");
-    (globalThis as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
     const dir = await resolveAndroidRepoDir();
     expect(dir).toBe("/web");
     expect(mocks.GetDefaultRepoRoot).toHaveBeenCalledTimes(1);
     expect(mocks.SelectDirectory).not.toHaveBeenCalled();
-    delete (globalThis as Record<string, unknown>)["__YSM_BACKEND__"];
   });
 
   // P3 补测（审核）：网页版定位失败（虚拟根为空）→ 返回 null 且不发成功 toast
   it("网页版 GetDefaultRepoRoot 返回空 → null 且无 info toast", async () => {
     mocks.getAndroidBridge.mockReturnValue(null);
+    mocks.isWebPlatform.mockReturnValue(true);
     mocks.GetDefaultRepoRoot.mockResolvedValue("");
-    (globalThis as Record<string, unknown>)["__YSM_BACKEND__"] = "browser";
     const dir = await resolveAndroidRepoDir();
     expect(dir).toBeNull();
     expect(mocks.GetDefaultRepoRoot).toHaveBeenCalledTimes(1);
@@ -112,7 +112,6 @@ describe("resolveAndroidRepoDir — 桌面（无 Android 桥）", () => {
       "toast:show",
       expect.objectContaining({ type: "info" }),
     );
-    delete (globalThis as Record<string, unknown>)["__YSM_BACKEND__"];
   });
 });
 

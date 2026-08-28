@@ -31,7 +31,7 @@ import { dbg } from "../../debug/debug.ts";
 const SURFACE_TEX_SIZE = 512;
 /** matSource 合法值白名单（loadState 校验用） */
 const GROUND_SURFACE_MODES: readonly GroundSurfaceMode[] = [
-  "none", "solid", "plain", "grid", "checker", "texture",
+  "none", "solid", "plain", "grid", "checker", "texture", "stripes", "diamond", "marble",
 ];
 
 export interface GroundParams extends GroundMaterialParams {
@@ -461,6 +461,27 @@ export class GroundCapability implements SceneCapability {
     this.params.matMetalness = Math.max(0, Math.min(1, v));
     this.refreshSurface();
   }
+  getMatColor2(): number {
+    return this.params.matColor2;
+  }
+  setMatColor2(hex: number): void {
+    this.params.matColor2 = hex;
+    this.refreshSurface();
+  }
+  getMatDensity(): number {
+    return this.params.matDensity;
+  }
+  setMatDensity(v: number): void {
+    this.params.matDensity = Math.max(0.25, Math.min(8, v));
+    this.refreshSurface();
+  }
+  getMatAngle(): number {
+    return this.params.matAngleDeg;
+  }
+  setMatAngle(deg: number): void {
+    this.params.matAngleDeg = ((deg % 360) + 360) % 360;
+    this.refreshSurface();
+  }
 
   isEnabled(): boolean {
     return this.enabled;
@@ -483,10 +504,13 @@ export class GroundCapability implements SceneCapability {
       matSource: this.params.matSource === "texture" ? "texture" : this.params.matSource,
       matColor: this.params.matColor,
       matLineColor: this.params.matLineColor,
+      matColor2: this.params.matColor2,
       matGridSize: this.params.matGridSize,
       matOpacity: this.params.matOpacity,
       matScale: this.params.matScale,
       matRotationDeg: this.params.matRotationDeg,
+      matDensity: this.params.matDensity,
+      matAngleDeg: this.params.matAngleDeg,
       matRoughness: this.params.matRoughness,
       matMetalness: this.params.matMetalness,
     });
@@ -512,10 +536,13 @@ export class GroundCapability implements SceneCapability {
     }
     if (typeof state.matColor === "number") this.params.matColor = state.matColor;
     if (typeof state.matLineColor === "number") this.params.matLineColor = state.matLineColor;
+    if (typeof state.matColor2 === "number") this.params.matColor2 = state.matColor2;
     if (typeof state.matGridSize === "number") this.params.matGridSize = state.matGridSize;
     if (typeof state.matOpacity === "number") this.setMatOpacity(state.matOpacity);
     if (typeof state.matScale === "number") this.setMatScale(state.matScale);
     if (typeof state.matRotationDeg === "number") this.setMatRotation(state.matRotationDeg);
+    if (typeof state.matDensity === "number") this.setMatDensity(state.matDensity);
+    if (typeof state.matAngleDeg === "number") this.setMatAngle(state.matAngleDeg);
     if (typeof state.matRoughness === "number") this.setMatRoughness(state.matRoughness);
     if (typeof state.matMetalness === "number") this.setMatMetalness(state.matMetalness);
   }

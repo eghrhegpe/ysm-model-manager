@@ -1548,18 +1548,18 @@
 | `GroundCapability()` | `frontend/src/utils/3d/caps/ground-capability:71` | — |
 | `GroundSurfaceMode()` | `frontend/src/utils/3d/caps/ground-surface-spec:17` | 地面表面模式（扁平枚举：来源 × 画布样式合一，避免双字段耦合守卫） |
 | `GroundMaterialParams()` | `frontend/src/utils/3d/caps/ground-surface-spec:19` | — |
-| `DEFAULT_GROUND_SURFACE_PARAMS()` | `frontend/src/utils/3d/caps/ground-surface-spec:40` | — |
-| `GroundSurfaceStructuralSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:52` | — |
-| `GroundSurfaceAppearanceSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:61` | — |
-| `GroundSurfaceSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:69` | — |
-| `buildGroundSurfaceSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:80` | — |
-| `surfaceSpecKey()` | `frontend/src/utils/3d/caps/ground-surface-spec:102` | structural 子集确定性序列化：新增结构字段后在此补一行即自动纳入重建判别 |
-| `groundSurfaceNeedsRebuild()` | `frontend/src/utils/3d/caps/ground-surface-spec:114` | 结构性变化 → 需要重建材质与纹理；否则原地更新即可 |
-| `TILE_WORLD_SIZE()` | `frontend/src/utils/3d/caps/ground-surface-spec:121` | 每格世界单位基准：50 单位地面默认铺 5×5 次重复 |
-| `textureRepeat()` | `frontend/src/utils/3d/caps/ground-surface-spec:123` | — |
-| `generateSurfacePixels()` | `frontend/src/utils/3d/caps/ground-surface-spec:129` | ============ 程序化像素生成（RGBA，node 可测）============ |
-| `applyGroundSurfaceStructural()` | `frontend/src/utils/3d/caps/ground-surface-spec:170` | 重建路径专用：把 structural 落到新材质上。 |
-| `applyGroundSurfaceAppearance()` | `frontend/src/utils/3d/caps/ground-surface-spec:189` | 原地/重建通用：appearance 字段统一落地（唯一入口）。 |
+| `DEFAULT_GROUND_SURFACE_PARAMS()` | `frontend/src/utils/3d/caps/ground-surface-spec:46` | — |
+| `GroundSurfaceStructuralSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:61` | — |
+| `GroundSurfaceAppearanceSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:73` | — |
+| `GroundSurfaceSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:81` | — |
+| `buildGroundSurfaceSpec()` | `frontend/src/utils/3d/caps/ground-surface-spec:92` | — |
+| `surfaceSpecKey()` | `frontend/src/utils/3d/caps/ground-surface-spec:117` | structural 子集确定性序列化：新增结构字段后在此补一行即自动纳入重建判别 |
+| `groundSurfaceNeedsRebuild()` | `frontend/src/utils/3d/caps/ground-surface-spec:132` | 结构性变化 → 需要重建材质与纹理；否则原地更新即可 |
+| `TILE_WORLD_SIZE()` | `frontend/src/utils/3d/caps/ground-surface-spec:139` | 每格世界单位基准：50 单位地面默认铺 5×5 次重复 |
+| `textureRepeat()` | `frontend/src/utils/3d/caps/ground-surface-spec:141` | — |
+| `generateSurfacePixels()` | `frontend/src/utils/3d/caps/ground-surface-spec:164` | — |
+| `applyGroundSurfaceStructural()` | `frontend/src/utils/3d/caps/ground-surface-spec:261` | 重建路径专用：把 structural 落到新材质上。 |
+| `applyGroundSurfaceAppearance()` | `frontend/src/utils/3d/caps/ground-surface-spec:280` | 原地/重建通用：appearance 字段统一落地（唯一入口）。 |
 | `DirectionalLightParams()` | `frontend/src/utils/3d/caps/light-capability:35` | ============ 参数类型 ============ |
 | `AmbientLightParams()` | `frontend/src/utils/3d/caps/light-capability:45` | — |
 | `SpotlightParams()` | `frontend/src/utils/3d/caps/light-capability:50` | — |

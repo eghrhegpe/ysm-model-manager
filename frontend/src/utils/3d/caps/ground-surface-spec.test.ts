@@ -227,3 +227,79 @@ describe("Suite 5 — textureRepeat 密度不变量", () => {
     expect(textureRepeat(50, 4)).toBeLessThan(textureRepeat(50, 1));
   });
 });
+
+describe("Suite 6 — 新材质模式（stripes/diamond/marble）", () => {
+  const params = (overrides: Partial<GroundMaterialParams>): GroundMaterialParams => ({
+    ...baseParams(),
+    ...overrides,
+  });
+
+  it("stripes 模式像素：奇偶列方向（angle=0）每半 cell 交替 color / lineColor", () => {
+    // gridSize=8, sizePx=32 → cell=4px；density=1 → stripe 宽度 cell/2=2px
+    const st = buildGroundSurfaceSpec(
+      params({ matSource: "stripes", matColor: 0xff0000, matLineColor: 0x0000ff, matGridSize: 8, matAngleDeg: 0, matDensity: 1 }),
+      "",
+    ).structural;
+    const px = generateSurfacePixels(st, 32);
+    const at = (x: number, y: number): number[] => {
+      const i = (y * 32 + x) * 4;
+      return [px[i], px[i + 1], px[i + 2]];
+    };
+    // angle=0 竖条纹：x=0（第一列）应是 color 红；x=2（跨过半 cell）应是 lineColor 蓝
+    expect(at(0, 0)).toEqual([255, 0, 0]);
+    expect(at(2, 0)).toEqual([0, 0, 255]);
+    expect(at(4, 0)).toEqual([255, 0, 0]);
+    // 垂直方向同一列，颜色一致
+    expect(at(0, 10)).toEqual([255, 0, 0]);
+  });
+
+  it("diamond 模式像素：对角线存在 lineColor（黑色）绘制，面积不超过 50%", () => {
+    const st = buildGroundSurfaceSpec(
+      params({ matSource: "diamond", matColor: 0xcccccc, matLineColor: 0x000000, matGridSize: 4, matAngleDeg: 0, matDensity: 1 }),
+      "",
+    ).structural;
+    const px = generateSurfacePixels(st, 32);
+    let blackPx = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i] === 0 && px[i + 1] === 0 && px[i + 2] === 0) blackPx++;
+    }
+    const total = (32 * 32);
+    expect(blackPx).toBeGreaterThan(0);
+    expect(blackPx).toBeLessThan(total * 0.5);
+  });
+
+  it("marble 模式：像素不是完全均匀（含噪声扰动），大理石纹占比 >5%", () => {
+    const st = buildGroundSurfaceSpec(
+      params({ matSource: "marble", matColor: 0xe6dcc8, matColor2: 0xb4aa96, matGridSize: 6, matDensity: 1, matAngleDeg: 0 }),
+      "",
+    ).structural;
+    const px = generateSurfacePixels(st, 64);
+    expect(px.length).toBe(64 * 64 * 4);
+    let different = 0;
+    const [cr, cg, cb] = [230, 220, 200];
+    for (let i = 0; i < px.length; i += 4) {
+      const dr = Math.abs(px[i] - cr), dg = Math.abs(px[i + 1] - cg), db = Math.abs(px[i + 2] - cb);
+      if (dr > 2 || dg > 2 || db > 2) different++;
+    }
+    expect(different).toBeGreaterThan(64 * 64 * 0.05);
+  });
+
+  it("marble 可复现：两次同参调用像素完全一致（seed 噪声而非 Math.random）", () => {
+    const p = params({ matSource: "marble", matColor: 0xe6dcc8, matColor2: 0xb4aa96, matGridSize: 6, matDensity: 1, matAngleDeg: 0 });
+    const a = generateSurfacePixels(buildGroundSurfaceSpec(p, "").structural, 32);
+    const b = generateSurfacePixels(buildGroundSurfaceSpec(p, "").structural, 32);
+    expect(a).toEqual(b);
+  });
+
+  it("matColor2 / matDensity / matAngleDeg 变化 → structural specKey 变化（触发重建）", () => {
+    const base = params({ matSource: "solid", matColor: 0xff0000, matColor2: 0x0000ff, matDensity: 1, matAngleDeg: 0 });
+    const a = buildGroundSurfaceSpec(base, "");
+    const b = buildGroundSurfaceSpec(params({ ...base, matColor2: 0x00ff00 }), "");
+    const c = buildGroundSurfaceSpec(params({ ...base, matDensity: 2 }), "");
+    const d = buildGroundSurfaceSpec(params({ ...base, matAngleDeg: 45 }), "");
+    expect(groundSurfaceNeedsRebuild(a, b)).toBe(true);
+    expect(groundSurfaceNeedsRebuild(a, c)).toBe(true);
+    expect(groundSurfaceNeedsRebuild(a, d)).toBe(true);
+    expect(groundSurfaceNeedsRebuild(a, a)).toBe(false);
+  });
+});
